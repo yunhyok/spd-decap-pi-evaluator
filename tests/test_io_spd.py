@@ -1,0 +1,412 @@
+﻿from __future__ import annotations
+
+import mmap
+from pathlib import Path
+
+import pytest
+
+from spd_decap_pi._core.domain import PinKind, TerminalKind
+from spd_decap_pi._core.io.spd import SpdImportError, _parse_netlist, analyze_spd
+
+
+MINI_SPD = """Title tiny SPD
+.Package $Package
+* Shape description lines
+.Shape Signal$GNDpkgshape
+Polygon1::DGND+ -5mm -4mm 5mm -4mm 5mm 4mm -5mm 4mm
+.EndShape
+.Shape Signal$PWRpkgshape
+Polygon2::VDD_CORE/0+ -4mm -3mm 4mm -3mm
++ 4mm 3mm -4mm 3mm
+Polygon3::VDD_CORE/0- ViaHole_A Sub-element -0.2mm -0.2mm 0.2mm -0.2mm 0.2mm 0.2mm -0.2mm 0.2mm
+Circle4::VDD_CORE/0- ViaHole_A Sub-element 1mm 1mm 0.06mm
+Polygon5::VDD_CORE/0+ Sub-element 2mm 2mm 2.2mm 2mm 2.2mm 2.2mm 2mm 2.2mm
+.EndShape
+* Layer description lines
+Signal$TOP Thickness = 20u Material = COPPER
+Medium$D1 Thickness = 0.10mm Material = ABF
+Signal$PWR Thickness = 20u Material = COPPER
+Medium$D2 Thickness = 100um Material = ABF
+Signal$GND Thickness = 20u Material = COPPER
+* Node description lines
+Node1!!101::VDD_CORE/0 X = 0mm Y = 0mm Layer = Signal$TOP PadStack = DUT
+Node2!!102::DGND X = 0.1mm Y = 0mm Layer = Signal$TOP PadStack = DUT
+Node3!!1::VDD_CORE/0 X = 1mm Y = 2mm Layer = Signal$TOP PadStack = CAP
+Node4!!2::DGND X = 1.2mm Y = 2mm Layer = Signal$TOP PadStack = CAP
+Node5!!1::VDD_DROP/0 X = 3mm Y = 2mm Layer = Signal$TOP PadStack = CAP
+Node6!!2::DGND X = 3.2mm Y = 2mm Layer = Signal$TOP PadStack = CAP
+* Via description lines
+Via1::VDD_CORE/0 UpperNode = Node1 LowerNode = Node3 PadStack = DR-0102_60
+Via2::DGND UpperNode = Node2 LowerNode = Node4 PadStack = DR-0102_60
+* PadStack collection description lines
+.PadStackDef DR-0102_60 0.02mm Material = COPPER
+.PadDef Signal$TOP
+Regular Circle 0.03mm
+.EndPadDef
+.PadDef Signal$PWR
+Regular Circle 0.03mm
+.EndPadDef
+.EndPadStackDef
+* Material description lines
+.Material
+.DielectricModel ABF
+*Frequency(MHz) Permittivity LossTangent
+1 3.4 0.005
+1000 3.3 0.004
+.EndDielectricModel
+.MetalModel COPPER
+*Temperature(C) Conductivity(S/m)
+20 5.959e7
+.EndMetalModel
+.EndMaterial
+* Circuit description lines
+.PartialCkt CAP_0402_100NF ExtNode = 1 2
+R1 1 X 0.01
+L1 X Y 0.2n
+C1 Y 2 100n
+.EndPartialCkt
+.PartialCkt CAP_0402_100NF_NOT_MOUNTED ExtNode = 1 2
+.EndPartialCkt
+* Component description lines
+.Connect SITE0 DUT Checked = 1
+101 $Package.Node1!!101::VDD_CORE/0
+102 $Package.Node2!!102::DGND
+.EndC
+.Connect C1 CAP_0402_100NF Checked = 1
+1 $Package.Node3!!1::VDD_CORE/0
+2 $Package.Node4!!2::DGND
+.EndC
+.Connect C2 CAP_0402_100NF Checked = 1
+1 $Package.Node5!!1::VDD_DROP/0
+2 $Package.Node6!!2::DGND
+.EndC
+.Component C1 1.1mm 2mm Rotation = 90 StartLayer = Signal$TOP
+.Component C2 3.1mm 2mm StartLayer = Signal$TOP
+.Part DUT Tags = "IO"
+.Component SITE0 0mm 0mm StartLayer = Signal$TOP AttachLayer = TopAir
+* Net description lines
+.NetList
+DGND -> GroundNets Voltage = 0
+VDD_CORE/0 -> PowerNets Voltage = 0
+VDD_DROP/0::Unselected||DropShape
+.EndNetList
+.EndPackage
+"""
+
+
+def test_streaming_spd_normalizes_selected_geometry_and_passive_models(
+    tmp_path: Path,
+) -> None:
+    source = tmp_path / "tiny.spd"
+    source.write_text(MINI_SPD, encoding="ascii")
+    progress: list[tuple[int, str]] = []
+
+    analysis = analyze_spd(source, progress=lambda value, text: progress.append((value, text)))
+
+    assert analysis.source.size_bytes == source.stat().st_size
+    assert len(analysis.source.sha256) == 64
+    assert analysis.outline.width_um == pytest.approx(10_000.0)
+    assert analysis.outline.height_um == pytest.approx(8_000.0)
+    assert len(analysis.stackup_layers) == 5
+    assert sum(item.is_conductor for item in analysis.stackup_layers) == 3
+    assert analysis.stackup_layers[1].dk == pytest.approx(3.3)
+    assert analysis.stackup_layers[1].df == pytest.approx(0.004)
+    assert analysis.power_plane_nets == ("VDD_CORE/0",)
+    assert analysis.ground_nets == ("DGND",)
+    geometry = next(
+        item
+        for item in analysis.plane_geometries
+        if item.layer == "Signal$PWR" and item.net == "VDD_CORE/0"
+    )
+    assert [len(item) for item in geometry.positive_polygons_um] == [4, 4]
+    assert [len(item) for item in geometry.negative_polygons_um] == [4]
+    assert geometry.negative_circles_um == ((1_000.0, 1_000.0, 60.0),)
+    assert geometry.positive_subelement_count == 1
+    assert geometry.negative_subelement_count == 2
+    assert geometry.primitive_order == (
+        ("positive_polygon", 0),
+        ("negative_polygon", 0),
+        ("negative_circle", 0),
+        ("positive_polygon", 1),
+    )
+    assert set(analysis.cap_models) == {"CAP_0402_100NF"}
+    assert set(analysis.model_assets) == {"CAP_0402_100NF.lib"}
+    assert len(analysis.cap_instances) == 1
+    assert analysis.cap_instances[0].mounted
+    assert analysis.cap_instances[0].geometry_present
+    assert analysis.cap_instances[0].footprint == "0402"
+    assert len(analysis.pins) == 4  # selected DUT PWR/GND plus selected cap PWR/GND
+    assert {item.kind for item in analysis.pins} == {PinKind.DEVICE_BUMP, PinKind.DECAP_PAD}
+    assert {item.terminal for item in analysis.pins} == {TerminalKind.PWR, TerminalKind.GND}
+    device_power = next(
+        item
+        for item in analysis.pins
+        if item.kind == PinKind.DEVICE_BUMP and item.terminal == TerminalKind.PWR
+    )
+    device_ground = next(
+        item
+        for item in analysis.pins
+        if item.kind == PinKind.DEVICE_BUMP and item.terminal == TerminalKind.GND
+    )
+    assert device_power.site == "SITE0"
+    assert device_ground.site is None
+    padstack = next(item for item in analysis.padstacks if item.name == "DR-0102_60")
+    assert padstack.drill_diameter_um == pytest.approx(40.0)
+    assert padstack.pad_diameter_um == pytest.approx(60.0)
+    assert sum(item.count for item in analysis.via_usage) == 2
+    assert analysis.counts["mounted_cap_instances"] == 1
+    assert analysis.counts["skipped_unselected_cap_instances"] == 1
+    assert analysis.counts["partial_circuits"] == 2
+    assert progress[-1][0] == 100
+
+
+def test_consecutive_nonempty_partial_circuits_are_all_parsed(tmp_path: Path) -> None:
+    source = tmp_path / "consecutive-models.spd"
+    payload = MINI_SPD.replace(
+        ".PartialCkt CAP_0402_100NF_NOT_MOUNTED ExtNode = 1 2\n"
+        ".EndPartialCkt",
+        ".PartialCkt CAP_0402_1UF ExtNode = 1 2\n"
+        "R1 1 X 0.02\n"
+        "L1 X Y 0.3n\n"
+        "C1 Y 2 1u\n"
+        ".EndPartialCkt",
+    )
+    source.write_text(payload, encoding="ascii")
+
+    analysis = analyze_spd(source)
+
+    assert analysis.counts["partial_circuits"] == 2
+    assert set(analysis.cap_models) == {"CAP_0402_100NF", "CAP_0402_1UF"}
+    assert not any(
+        item.code == "PARTIAL_CKT_UNTERMINATED"
+        for item in analysis.diagnostics
+    )
+
+
+def test_spd_import_honors_cancellation_without_loading_source(tmp_path: Path) -> None:
+    source = tmp_path / "cancel.spd"
+    source.write_bytes((MINI_SPD * 5_000).encode("ascii"))
+
+    with pytest.raises(SpdImportError, match="cancelled"):
+        analyze_spd(source, is_cancelled=lambda: True)
+
+
+def test_selected_unknown_plane_primitive_is_not_silently_ignored(
+    tmp_path: Path,
+) -> None:
+    source = tmp_path / "unsupported-shape.spd"
+    source.write_text(
+        MINI_SPD.replace(
+            ".EndShape\n* Layer description lines",
+            "Spline9::VDD_CORE/0+ 0mm 0mm 1mm 1mm\n"
+            ".EndShape\n* Layer description lines",
+        ),
+        encoding="ascii",
+    )
+
+    analysis = analyze_spd(source)
+
+    assert any(
+        item.code == "SPD_PLANE_PRIMITIVE_UNSUPPORTED"
+        and "Spline" in item.message
+        and item.severity == "error"
+        for item in analysis.diagnostics
+    )
+    assert analysis.has_errors
+
+
+def test_polygon_trace_and_box_are_normalized_in_source_order(tmp_path: Path) -> None:
+    source = tmp_path / "normalized-shapes.spd"
+    source.write_text(
+        MINI_SPD.replace(
+            ".EndShape\n* Layer description lines",
+            "PolygonTrace6::VDD_CORE/0- ViaHole_A Sub-element "
+            "-1mm -1mm 0mm -1mm\n"
+            "+ 0mm 0mm -1mm 0mm\n"
+            "Box7::VDD_CORE/0+ Sub-element 3mm 2mm 0.4mm 0.6mm\n"
+            ".EndShape\n* Layer description lines",
+        ),
+        encoding="ascii",
+    )
+
+    analysis = analyze_spd(source)
+    geometry = next(
+        item
+        for item in analysis.plane_geometries
+        if item.layer == "Signal$PWR" and item.net == "VDD_CORE/0"
+    )
+
+    assert geometry.polygon_trace_count == 1
+    assert geometry.box_count == 1
+    assert geometry.negative_polygons_um[-1] == (
+        (-1_000.0, -1_000.0),
+        (0.0, -1_000.0),
+        (0.0, 0.0),
+        (-1_000.0, 0.0),
+    )
+    assert geometry.positive_polygons_um[-1] == (
+        (2_800.0, 1_700.0),
+        (3_200.0, 1_700.0),
+        (3_200.0, 2_300.0),
+        (2_800.0, 2_300.0),
+    )
+    assert geometry.primitive_order[-2:] == (
+        ("negative_polygon", 1),
+        ("positive_polygon", 2),
+    )
+    assert analysis.counts["selected_plane_polygon_traces"] == 1
+    assert analysis.counts["selected_plane_boxes"] == 1
+    assert not analysis.has_errors
+
+
+def test_malformed_selected_supported_primitive_blocks_import(tmp_path: Path) -> None:
+    source = tmp_path / "malformed-circle.spd"
+    source.write_text(
+        MINI_SPD.replace(
+            ".EndShape\n* Layer description lines",
+            "Circle8::VDD_CORE/0- Sub-element 1mm 2mm\n"
+            ".EndShape\n* Layer description lines",
+        ),
+        encoding="ascii",
+    )
+
+    analysis = analyze_spd(source)
+
+    assert any(
+        item.code == "SPD_PLANE_PRIMITIVE_MALFORMED"
+        and item.severity == "error"
+        for item in analysis.diagnostics
+    )
+    assert analysis.has_errors
+
+
+def test_decap_scenario_scope_includes_candidate_rails_dnp_and_pad_provenance(
+    tmp_path: Path,
+) -> None:
+    source = tmp_path / "scenario.spd"
+    scenario_spd = MINI_SPD.replace(
+        ".EndShape\n* Layer description lines",
+        ".Shape Signal$PWRpkgshape\n"
+        "Polygon9::VDD_DROP/0+ 2.5mm 1.5mm 3.5mm 1.5mm "
+        "3.5mm 2.5mm 2.5mm 2.5mm\n"
+        ".EndShape\n* Layer description lines",
+    ).replace(
+        ".Connect C2 CAP_0402_100NF Checked = 1",
+        ".Connect C2 CAP_0402_100NF_NOT_MOUNTED Usage = 0b111000",
+    )
+    source.write_text(scenario_spd, encoding="ascii")
+
+    analysis = analyze_spd(source, scope="decap_scenario")
+
+    # Scenario assignment is fail-closed to explicit .NetList PowerNets.
+    # Unselected/DNP locations remain visible inventory but are not rail choices.
+    assert analysis.power_plane_nets == ("VDD_CORE/0",)
+    assert all(
+        item.net != "VDD_DROP/0" for item in analysis.plane_geometries
+    )
+    assert [item.refdes for item in analysis.cap_instances] == ["C1", "C2"]
+    c2 = analysis.cap_instances[1]
+    assert not c2.mounted
+    assert c2.start_layer == "Signal$TOP"
+    assert c2.source_part_name == "CAP_0402_100NF_NOT_MOUNTED"
+    assert c2.power_x_um == pytest.approx(3_000.0)
+    assert c2.power_y_um == pytest.approx(2_000.0)
+    assert c2.power_padstack == "CAP"
+
+
+def test_decap_scenario_requires_explicit_power_net_classification(
+    tmp_path: Path,
+) -> None:
+    source = tmp_path / "no-power-classification.spd"
+    payload = MINI_SPD.replace(
+        "VDD_CORE/0 -> PowerNets Voltage = 0\n",
+        "VDD_CORE/0::Unselected||DropShape\n",
+    )
+    source.write_text(payload, encoding="ascii")
+
+    analysis = analyze_spd(source, scope="decap_scenario")
+
+    assert analysis.power_plane_nets == ()
+    assert any(
+        item.code == "SPD_POWER_NET_CLASSIFICATION_MISSING"
+        and item.severity == "error"
+        for item in analysis.diagnostics
+    )
+
+
+def test_decap_scenario_requires_a_ground_plane_classification(
+    tmp_path: Path,
+) -> None:
+    source = tmp_path / "no-ground-plane.spd"
+    payload = MINI_SPD.replace(
+        "Polygon1::DGND+",
+        "Polygon1::RETURN+",
+    ).replace(
+        "DGND -> GroundNets Voltage = 0\n",
+        "",
+    )
+    source.write_text(payload, encoding="ascii")
+
+    analysis = analyze_spd(source, scope="decap_scenario")
+
+    assert any(
+        item.code == "SPD_GROUND_PLANE_CLASSIFICATION_MISSING"
+        and item.severity == "error"
+        for item in analysis.diagnostics
+    )
+
+
+def test_top_io_signal_shape_is_not_promoted_to_a_power_rail(tmp_path: Path) -> None:
+    source = tmp_path / "top-io-signal.spd"
+    payload = MINI_SPD.replace(
+        ".EndShape\n* Layer description lines",
+        "Polygon8::SIG_DATA+ -4mm -3mm 4mm -3mm "
+        "4mm 3mm -4mm 3mm\n"
+        ".EndShape\n* Layer description lines",
+    ).replace(
+        "* Via description lines",
+        "Node7!!103::SIG_DATA X = 0.2mm Y = 0mm "
+        "Layer = Signal$TOP PadStack = DUT\n"
+        "* Via description lines",
+    ).replace(
+        "102 $Package.Node2!!102::DGND\n.EndC",
+        "102 $Package.Node2!!102::DGND\n"
+        "103 $Package.Node7!!103::SIG_DATA\n"
+        ".EndC",
+    ).replace(
+        ".EndNetList",
+        "SIG_DATA::Unselected||DropShape\n.EndNetList",
+    )
+    source.write_text(payload, encoding="ascii")
+
+    analysis = analyze_spd(source, scope="decap_scenario")
+
+    assert analysis.power_plane_nets == ("VDD_CORE/0",)
+    assert all(item.net != "SIG_DATA" for item in analysis.plane_geometries)
+    assert all(item.net != "SIG_DATA" for item in analysis.pins)
+
+
+def test_netlist_uses_explicit_group_markers_and_inherited_rows(tmp_path: Path) -> None:
+    source = tmp_path / "production-netlist.spd"
+    source.write_text(
+        ".NetList\n"
+        "    RiseTime = 0ps %Coupling = 0\n"
+        "    SIG_BEFORE Color = YELLOW\n"
+        "    DGND -> GroundNets Color = RED\n"
+        "    AGND Color = GREEN\n"
+        "    VDD_CORE/0 -> PowerNets::Unselected||DropShape Color = BLUE\n"
+        "    VDD_AUX/0 Color = CYAN\n"
+        "    VDD_DNP/0::Unselected||DropShape Color = MAGENTA\n"
+        ".EndNetList\n",
+        encoding="ascii",
+    )
+
+    diagnostics = []
+    with source.open("rb") as handle, mmap.mmap(
+        handle.fileno(), 0, access=mmap.ACCESS_READ
+    ) as data:
+        power, ground = _parse_netlist(data, {"dgnd", "agnd"}, diagnostics)
+
+    assert ground == ("DGND", "AGND")
+    assert power == ("VDD_CORE/0", "VDD_AUX/0")
+    assert "SIG_BEFORE" not in power

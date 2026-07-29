@@ -1,0 +1,41 @@
+name: CI
+
+permissions:
+  contents: read
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  test-and-wheel:
+    runs-on: windows-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Install
+        run: python -m pip install -e ".[dev]"
+      - name: Test
+        env:
+          QT_QPA_PLATFORM: offscreen
+        run: python -m pytest -q
+      - name: Build wheel
+        run: python -m pip wheel . --no-deps --wheel-dir wheelhouse
+      - name: Fresh wheel boundary smoke
+        run: |
+          python -m venv "$env:RUNNER_TEMP\wheel-venv"
+          $wheel = Get-ChildItem wheelhouse\*.whl | Select-Object -First 1
+          & "$env:RUNNER_TEMP\wheel-venv\Scripts\python.exe" -m pip install $wheel.FullName
+          & "$env:RUNNER_TEMP\wheel-venv\Scripts\python.exe" -m pip check
+          Push-Location $env:RUNNER_TEMP
+          try {
+            & "$env:RUNNER_TEMP\wheel-venv\Scripts\python.exe" -c "import importlib.util, spd_decap_pi; assert importlib.util.find_spec('mlo_pdn') is None; assert spd_decap_pi.APP_DISPLAY_NAME == f'SPD Decap PI Evaluator v{spd_decap_pi.__version__}'"
+          }
+          finally {
+            Pop-Location
+          }

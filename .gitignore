@@ -1,0 +1,15 @@
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.coverage
+coverage.json
+htmlcov/
+.venv/
+venv/
+build/
+dist/
+installer-output/
+*.spec
+*.log
+
