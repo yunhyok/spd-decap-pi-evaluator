@@ -8,8 +8,11 @@ normalized SPD project stored in a scenario nor the source SPD is mutated.
 from __future__ import annotations
 
 from collections import Counter
-from dataclasses import dataclass
-from typing import Any, Callable, Mapping
+from dataclasses import dataclass, replace
+from hashlib import sha256
+import json
+from math import isfinite
+from typing import Any, Callable, Mapping, Sequence
 
 from spd_decap_pi._core import services as evaluation_services
 from spd_decap_pi._core.domain import (
@@ -30,13 +33,23 @@ from spd_decap_pi._core.services import (
     LocalAIAnalysisView,
     WorkspaceState,
 )
+from spd_decap_pi._core.solver import SOLVER_VERSION
 
-from .scenario import RailEligibility, ScenarioDecap, ScenarioResultKey, ScenarioSpec
+from .scenario import (
+    CachedEvaluationMetadata,
+    EvaluationRole,
+    RailEligibility,
+    ScenarioDecap,
+    ScenarioResultKey,
+    ScenarioSpec,
+)
 
 
 ProgressCallback = Callable[[int, str], None]
 CancelCallback = Callable[[], bool]
 PLOT_ANALYST_MODE = "Plot Analyst"
+EVALUATION_ATTACHMENT_FORMAT = "spd-decap-evaluation-0.1"
+MAX_EVALUATION_ATTACHMENT_BYTES = 16 * 1024 * 1024
 
 
 class ScenarioEvaluationBuildError(ValueError):
@@ -49,11 +62,15 @@ class ScenarioEvaluationBuildError(ValueError):
         super().__init__(f"{prefix}{message}")
 
 
+class ScenarioEvaluationCacheError(ValueError):
+    """A stored result is present but cannot be trusted for comparison."""
+
+
 @dataclass(frozen=True, slots=True)
 class ScenarioEvaluation:
     """One evaluated scenario plus deterministic cache/staleness identity."""
 
-    state: WorkspaceState
+    state: WorkspaceState | None
     view: EvaluationView
     result_key: ScenarioResultKey
     scenario_revision: int
@@ -78,6 +95,670 @@ class ScenarioEvaluation:
         if scenario.design_fingerprint != self.design_fingerprint:
             return False
         return not require_revision or scenario.revision == self.scenario_revision
+
+    def compact(self) -> "ScenarioEvaluation":
+        """Drop the transient solver project while retaining plot evidence."""
+
+        return replace(self, state=None)
+
+
+@dataclass(frozen=True, slots=True)
+class RailComparison:
+    rail_id: str
+    baseline: ScenarioEvaluation
+    tuned: ScenarioEvaluation
+    baseline_from_cache: bool
+    configuration_unchanged: bool = False
+
+
+@dataclass(frozen=True, slots=True)
+class ScenarioEvaluationBatch:
+    """Atomic multi-rail Original/Tuned comparison returned by one worker."""
+
+    comparisons: tuple[RailComparison, ...]
+    updated_scenario: ScenarioSpec
+    updated_attachments: dict[str, bytes]
+    requested_design_fingerprint: str
+    requested_revision: int
+
+    @property
+    def selected_rail_ids(self) -> tuple[str, ...]:
+        return tuple(item.rail_id for item in self.comparisons)
+
+    def matches(self, scenario: ScenarioSpec) -> bool:
+        return (
+            scenario.design_fingerprint == self.requested_design_fingerprint
+            and scenario.revision == self.requested_revision
+        )
+
+    def validate_for_scenario(self, scenario: ScenarioSpec) -> None:
+        """Fail closed unless every nested result matches the batch envelope."""
+
+        if not self.matches(scenario):
+            raise ScenarioEvaluationCacheError(
+                "comparison batch no longer matches the current scenario"
+            )
+        if not self.comparisons:
+            raise ScenarioEvaluationCacheError("comparison batch is empty")
+        if self.updated_scenario.design_fingerprint != scenario.design_fingerprint:
+            raise ScenarioEvaluationCacheError(
+                "comparison batch updated scenario changed the tuned design"
+            )
+        if self.updated_scenario.revision not in {
+            scenario.revision,
+            scenario.revision + 1,
+        }:
+            raise ScenarioEvaluationCacheError(
+                "comparison batch updated scenario has an invalid revision"
+            )
+        for key, capture in scenario.baseline_captures.items():
+            if self.updated_scenario.baseline_captures.get(key) != capture:
+                raise ScenarioEvaluationCacheError(
+                    "comparison batch attempted to replace an existing baseline capture"
+                )
+        for key, metadata in scenario.evaluation_cache.items():
+            if self.updated_scenario.evaluation_cache.get(key) != metadata:
+                raise ScenarioEvaluationCacheError(
+                    "comparison batch attempted to replace an existing cached result"
+                )
+        _validated_scenario_attachments(
+            self.updated_scenario, self.updated_attachments
+        )
+
+        available = {
+            item.rail_id.casefold(): item.rail_id
+            for item in scenario.base_project.rails
+        }
+        seen: set[str] = set()
+        for comparison in self.comparisons:
+            rail_key = comparison.rail_id.casefold()
+            if rail_key not in available or rail_key in seen:
+                raise ScenarioEvaluationCacheError(
+                    f"comparison batch contains invalid or duplicate rail "
+                    f"{comparison.rail_id!r}"
+                )
+            seen.add(rail_key)
+            baseline = comparison.baseline
+            tuned = comparison.tuned
+            _validate_evaluation_view(baseline.view)
+            _validate_evaluation_view(tuned.view)
+            if (
+                baseline.view.rail_id.casefold() != rail_key
+                or tuned.view.rail_id.casefold() != rail_key
+                or baseline.result_key.rail_id.casefold() != rail_key
+                or tuned.result_key.rail_id.casefold() != rail_key
+            ):
+                raise ScenarioEvaluationCacheError(
+                    f"comparison result rail identity disagrees for {comparison.rail_id!r}"
+                )
+            if not tuned.matches(scenario):
+                raise ScenarioEvaluationCacheError(
+                    f"Tuned result for {comparison.rail_id!r} is stale"
+                )
+            if (
+                baseline.result_key.settings_sha256
+                != tuned.result_key.settings_sha256
+                or baseline.result_key.solver_version
+                != tuned.result_key.solver_version
+                or baseline.view.solver_version
+                != baseline.result_key.solver_version
+                or tuned.view.solver_version != tuned.result_key.solver_version
+                or baseline.view.target_ohm != tuned.view.target_ohm
+            ):
+                raise ScenarioEvaluationCacheError(
+                    f"Original/Tuned settings disagree for {comparison.rail_id!r}"
+                )
+            capture = next(
+                (
+                    item
+                    for key, item in self.updated_scenario.baseline_captures.items()
+                    if key.casefold() == rail_key
+                ),
+                None,
+            )
+            if (
+                capture is None
+                or baseline.design_fingerprint
+                != capture.evaluation_input_sha256
+            ):
+                raise ScenarioEvaluationCacheError(
+                    f"Original result for {comparison.rail_id!r} has no matching capture"
+                )
+            metadata = self.updated_scenario.evaluation_cache.get(
+                baseline.evaluation_fingerprint
+            )
+            if (
+                metadata is None
+                or metadata.role != EvaluationRole.BASELINE
+                or metadata.baseline_capture_sha256
+                != capture.capture_fingerprint
+            ):
+                raise ScenarioEvaluationCacheError(
+                    f"Original result for {comparison.rail_id!r} is not persisted"
+                )
+            persisted = _decode_baseline_evaluation(
+                _attachment_content(
+                    self.updated_attachments, metadata.attachment_name
+                ),
+                expected_key=baseline.result_key,
+                expected_capture_fingerprint=capture.capture_fingerprint,
+                scenario_revision=self.updated_scenario.revision,
+            )
+            if persisted.view != baseline.view:
+                raise ScenarioEvaluationCacheError(
+                    f"displayed Original result for {comparison.rail_id!r} "
+                    "differs from its persisted attachment"
+                )
+            if comparison.configuration_unchanged and baseline.view != tuned.view:
+                raise ScenarioEvaluationCacheError(
+                    f"unchanged comparison for {comparison.rail_id!r} has different results"
+                )
+
+
+def _canonical_json(data: object) -> bytes:
+    return (
+        json.dumps(
+            data,
+            ensure_ascii=False,
+            sort_keys=True,
+            separators=(",", ":"),
+            allow_nan=False,
+        )
+        + "\n"
+    ).encode("utf-8")
+
+
+def _evaluation_settings(
+    target_ohm: float | None, modal_max_index: int
+) -> dict[str, float | int | None]:
+    return {
+        "target_ohm": target_ohm,
+        "modal_max_index": modal_max_index,
+    }
+
+
+def _expected_result_key(
+    design_fingerprint: str,
+    rail_id: str,
+    *,
+    target_ohm: float | None,
+    modal_max_index: int,
+) -> ScenarioResultKey:
+    return ScenarioResultKey.from_settings(
+        design_fingerprint=design_fingerprint,
+        rail_id=rail_id,
+        settings=_evaluation_settings(target_ohm, modal_max_index),
+        solver_version=SOLVER_VERSION,
+    )
+
+
+def _canonical_rail_ids(
+    scenario: ScenarioSpec, rail_ids: Sequence[str]
+) -> tuple[str, ...]:
+    requested = {str(item).strip().casefold() for item in rail_ids if str(item).strip()}
+    if not requested:
+        raise ScenarioEvaluationBuildError(
+            "EVALUATION_RAILS_EMPTY", "select at least one PWR rail"
+        )
+    available = {
+        item.rail_id.casefold(): item.rail_id for item in scenario.base_project.rails
+    }
+    unknown = requested - set(available)
+    if unknown:
+        raise ScenarioEvaluationBuildError(
+            "EVALUATION_RAIL_UNKNOWN",
+            "unknown PWR rail selection(s): " + ", ".join(sorted(unknown)),
+        )
+    return tuple(
+        item.rail_id
+        for item in scenario.base_project.rails
+        if item.rail_id.casefold() in requested
+    )
+
+
+def _solver_project_fingerprint(project: ProjectSpec) -> str:
+    """Hash numerical rail inputs while excluding provenance-only metadata."""
+
+    payload = project.model_dump(mode="json")
+    payload.pop("metadata", None)
+    return sha256(_canonical_json(payload)).hexdigest()
+
+
+def baseline_fallback_model_refdes(
+    scenario: ScenarioSpec, rail_ids: Sequence[str]
+) -> tuple[str, ...]:
+    """Return original mounted parts whose current model would be frozen."""
+
+    canonical = _canonical_rail_ids(scenario, rail_ids)
+    uncaptured = {
+        rail_id.casefold()
+        for rail_id in canonical
+        if not any(
+            key.casefold() == rail_id.casefold()
+            for key in scenario.baseline_captures
+        )
+    }
+    return tuple(
+        item.refdes
+        for item in sorted(scenario.decaps, key=lambda entry: entry.refdes.casefold())
+        if item.source_mounted
+        and item.source_rail_id.casefold() in uncaptured
+        and item.source_model_id is None
+        and item.model_id is not None
+    )
+
+
+def _validate_evaluation_view(view: EvaluationView) -> None:
+    if not isinstance(view.rail_id, str) or not view.rail_id.strip():
+        raise ScenarioEvaluationCacheError(
+            "cached evaluation rail id must be a nonblank string"
+        )
+    if not isinstance(view.solver_version, str) or not view.solver_version.strip():
+        raise ScenarioEvaluationCacheError(
+            "cached evaluation solver version must be a nonblank string"
+        )
+    arrays = {
+        "magnitude_ohm": view.magnitude_ohm,
+        "phase_deg": view.phase_deg,
+        "target_curve_ohm": view.target_curve_ohm,
+        "z_real_ohm": view.z_real_ohm,
+        "z_imag_ohm": view.z_imag_ohm,
+    }
+    frequencies = view.frequency_hz
+    if not isinstance(frequencies, list) or any(
+        type(value) not in (int, float) for value in frequencies
+    ):
+        raise ScenarioEvaluationCacheError(
+            "cached evaluation frequencies must be a numeric JSON array"
+        )
+    for name, values in arrays.items():
+        if not isinstance(values, list) or any(
+            type(value) not in (int, float) for value in values
+        ):
+            raise ScenarioEvaluationCacheError(
+                f"cached evaluation {name} must be a numeric JSON array"
+            )
+    if len(frequencies) < 2:
+        raise ScenarioEvaluationCacheError(
+            "cached evaluation requires at least two frequency samples"
+        )
+    if any(len(values) != len(frequencies) for values in arrays.values()):
+        raise ScenarioEvaluationCacheError(
+            "cached evaluation arrays do not share one frequency grid"
+        )
+    if any(
+        not isfinite(float(value)) or float(value) <= 0.0 for value in frequencies
+    ):
+        raise ScenarioEvaluationCacheError(
+            "cached evaluation frequencies must be finite and positive"
+        )
+    if any(
+        float(right) <= float(left)
+        for left, right in zip(frequencies, frequencies[1:])
+    ):
+        raise ScenarioEvaluationCacheError(
+            "cached evaluation frequencies must be strictly increasing"
+        )
+    for name, values in arrays.items():
+        if any(not isfinite(float(value)) for value in values):
+            raise ScenarioEvaluationCacheError(
+                f"cached evaluation {name} contains non-finite values"
+            )
+    if any(float(value) < 0.0 for value in view.magnitude_ohm):
+        raise ScenarioEvaluationCacheError(
+            "cached evaluation magnitude cannot be negative"
+        )
+    if any(float(value) <= 0.0 for value in view.target_curve_ohm):
+        raise ScenarioEvaluationCacheError(
+            "cached evaluation target impedance must be positive"
+        )
+    scalar_values = (
+        view.target_ohm,
+        view.max_violation_db,
+        view.max_violation_frequency_hz,
+        view.rms_violation_db,
+        view.peak_magnitude_ohm,
+        view.peak_frequency_hz,
+        view.peak_prominence_db,
+    )
+    if any(type(value) not in (int, float) for value in scalar_values):
+        raise ScenarioEvaluationCacheError(
+            "cached evaluation metrics must be JSON numbers"
+        )
+    if any(not isfinite(float(value)) for value in scalar_values):
+        raise ScenarioEvaluationCacheError(
+            "cached evaluation metrics contain non-finite values"
+        )
+    if (
+        float(view.target_ohm) <= 0.0
+        or float(view.max_violation_frequency_hz) <= 0.0
+        or float(view.peak_frequency_hz) <= 0.0
+        or float(view.peak_magnitude_ohm) < 0.0
+        or float(view.rms_violation_db) < 0.0
+        or float(view.peak_prominence_db) < 0.0
+    ):
+        raise ScenarioEvaluationCacheError(
+            "cached evaluation metrics are outside their physical bounds"
+        )
+    if (
+        type(view.cap_count) is not int
+        or type(view.model_count) is not int
+        or view.cap_count < 0
+        or view.model_count < 0
+        or view.model_count > view.cap_count
+    ):
+        raise ScenarioEvaluationCacheError(
+            "cached evaluation cap/model counts are invalid"
+        )
+    if not isinstance(view.confidence, str) or not isinstance(
+        view.confidence_note, str
+    ):
+        raise ScenarioEvaluationCacheError(
+            "cached evaluation confidence fields must be strings"
+        )
+    if not isinstance(view.assumptions, list) or any(
+        not isinstance(value, str) for value in view.assumptions
+    ):
+        raise ScenarioEvaluationCacheError(
+            "cached evaluation assumptions must be a string array"
+        )
+    if not isinstance(view.peaks, list) or any(
+        not isinstance(value, dict) for value in view.peaks
+    ):
+        raise ScenarioEvaluationCacheError(
+            "cached evaluation peaks must be an object array"
+        )
+    if not isinstance(view.confidence_bands, list) or any(
+        not isinstance(value, dict) for value in view.confidence_bands
+    ):
+        raise ScenarioEvaluationCacheError(
+            "cached evaluation confidence bands must be an object array"
+        )
+    if not isinstance(view.solver_diagnostics, dict) or (
+        view.convergence is not None and not isinstance(view.convergence, dict)
+    ):
+        raise ScenarioEvaluationCacheError(
+            "cached evaluation diagnostics have an invalid structure"
+        )
+
+
+def _serialize_baseline_evaluation(
+    evaluation: ScenarioEvaluation, capture_fingerprint: str
+) -> bytes:
+    return _canonical_json(
+        {
+            "format": EVALUATION_ATTACHMENT_FORMAT,
+            "role": EvaluationRole.BASELINE.value,
+            "baseline_capture_sha256": capture_fingerprint,
+            "result_key": evaluation.result_key.model_dump(mode="json"),
+            "view": evaluation.view.as_dict(),
+        }
+    )
+
+
+def _decode_baseline_evaluation(
+    content: bytes,
+    *,
+    expected_key: ScenarioResultKey,
+    expected_capture_fingerprint: str,
+    scenario_revision: int,
+) -> ScenarioEvaluation:
+    if len(content) > MAX_EVALUATION_ATTACHMENT_BYTES:
+        raise ScenarioEvaluationCacheError("cached evaluation attachment is too large")
+
+    def reject_constant(value: str) -> None:
+        raise ValueError(f"non-finite JSON constant {value}")
+
+    def reject_duplicate_keys(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
+        result: dict[str, Any] = {}
+        for key, value in pairs:
+            if key in result:
+                raise ValueError(f"duplicate JSON key {key!r}")
+            result[key] = value
+        return result
+
+    try:
+        raw = json.loads(
+            content.decode("utf-8"),
+            parse_constant=reject_constant,
+            object_pairs_hook=reject_duplicate_keys,
+        )
+    except (UnicodeDecodeError, json.JSONDecodeError, ValueError) as exc:
+        raise ScenarioEvaluationCacheError(
+            "cached evaluation attachment is not strict JSON"
+        ) from exc
+    if not isinstance(raw, dict) or set(raw) != {
+        "format",
+        "role",
+        "baseline_capture_sha256",
+        "result_key",
+        "view",
+    }:
+        raise ScenarioEvaluationCacheError(
+            "cached evaluation attachment has an incompatible schema"
+        )
+    if raw["format"] != EVALUATION_ATTACHMENT_FORMAT:
+        raise ScenarioEvaluationCacheError("cached evaluation format is unsupported")
+    if raw["role"] != EvaluationRole.BASELINE.value:
+        raise ScenarioEvaluationCacheError("cached evaluation has the wrong role")
+    if raw["baseline_capture_sha256"] != expected_capture_fingerprint:
+        raise ScenarioEvaluationCacheError(
+            "cached evaluation belongs to a different baseline capture"
+        )
+    try:
+        result_key = ScenarioResultKey.model_validate(raw["result_key"])
+    except Exception as exc:
+        raise ScenarioEvaluationCacheError(
+            "cached evaluation result identity is invalid"
+        ) from exc
+    if result_key != expected_key:
+        raise ScenarioEvaluationCacheError(
+            "cached evaluation result identity is stale or incompatible"
+        )
+    view_payload = raw["view"]
+    expected_view_fields = set(EvaluationView.__dataclass_fields__)
+    if not isinstance(view_payload, dict) or set(view_payload) != expected_view_fields:
+        raise ScenarioEvaluationCacheError(
+            "cached evaluation view has an incompatible schema"
+        )
+    try:
+        view = EvaluationView(**view_payload)
+    except (TypeError, ValueError) as exc:
+        raise ScenarioEvaluationCacheError("cached evaluation view is invalid") from exc
+    _validate_evaluation_view(view)
+    if view.rail_id.casefold() != expected_key.rail_id.casefold():
+        raise ScenarioEvaluationCacheError("cached evaluation rail identity is wrong")
+    if view.solver_version != expected_key.solver_version:
+        raise ScenarioEvaluationCacheError("cached evaluation solver version is stale")
+    return ScenarioEvaluation(
+        state=None,
+        view=view,
+        result_key=result_key,
+        scenario_revision=scenario_revision,
+    )
+
+
+def _load_baseline_evaluation(
+    scenario: ScenarioSpec,
+    attachments: Mapping[str, bytes],
+    rail_id: str,
+    *,
+    target_ohm: float | None,
+    modal_max_index: int,
+) -> ScenarioEvaluation | None:
+    capture = next(
+        item
+        for key, item in scenario.baseline_captures.items()
+        if key.casefold() == rail_id.casefold()
+    )
+    expected_key = _expected_result_key(
+        capture.evaluation_input_sha256,
+        rail_id,
+        target_ohm=target_ohm,
+        modal_max_index=modal_max_index,
+    )
+    metadata = scenario.evaluation_cache.get(expected_key.cache_key)
+    if metadata is None:
+        return None
+    if metadata.role != EvaluationRole.BASELINE:
+        raise ScenarioEvaluationCacheError(
+            f"stored result for {rail_id!r} has the wrong role"
+        )
+    if metadata.baseline_capture_sha256 != capture.capture_fingerprint:
+        raise ScenarioEvaluationCacheError(
+            f"stored baseline for {rail_id!r} belongs to another capture"
+        )
+    content = _attachment_content(
+        attachments,
+        metadata.attachment_name,
+        missing_message=f"stored baseline attachment for {rail_id!r} is missing",
+    )
+    digest = sha256(content).hexdigest()
+    if digest != metadata.attachment_sha256:
+        raise ScenarioEvaluationCacheError(
+            f"stored baseline attachment for {rail_id!r} failed SHA-256 validation"
+        )
+    return _decode_baseline_evaluation(
+        content,
+        expected_key=expected_key,
+        expected_capture_fingerprint=capture.capture_fingerprint,
+        scenario_revision=scenario.revision,
+    )
+
+
+def _cache_baseline_evaluation(
+    scenario: ScenarioSpec,
+    attachments: Mapping[str, bytes],
+    rail_id: str,
+    evaluation: ScenarioEvaluation,
+) -> tuple[ScenarioSpec, dict[str, bytes]]:
+    capture = next(
+        item
+        for key, item in scenario.baseline_captures.items()
+        if key.casefold() == rail_id.casefold()
+    )
+    if evaluation.design_fingerprint != capture.evaluation_input_sha256:
+        raise ScenarioEvaluationCacheError(
+            "refusing to cache a result that does not match the original configuration"
+        )
+    content = _serialize_baseline_evaluation(
+        evaluation, capture.capture_fingerprint
+    )
+    if len(content) > MAX_EVALUATION_ATTACHMENT_BYTES:
+        raise ScenarioEvaluationCacheError(
+            "generated baseline evaluation attachment is too large"
+        )
+    attachment_name = f"results/baseline-{evaluation.evaluation_fingerprint}.json"
+    digest = sha256(content).hexdigest()
+    updated_attachments = dict(attachments)
+    existing = updated_attachments.get(attachment_name)
+    if existing is not None and existing != content:
+        raise ScenarioEvaluationCacheError(
+            f"refusing to replace unrelated attachment {attachment_name!r}"
+        )
+    updated_attachments[attachment_name] = content
+    cache = dict(scenario.evaluation_cache)
+    metadata = CachedEvaluationMetadata(
+        result_key=evaluation.result_key,
+        attachment_name=attachment_name,
+        attachment_sha256=digest,
+        role=EvaluationRole.BASELINE,
+        baseline_capture_sha256=capture.capture_fingerprint,
+        summary={
+            "configuration": "Original",
+            "rail_id": evaluation.view.rail_id,
+            "cap_count": evaluation.view.cap_count,
+            "peak_magnitude_ohm": evaluation.view.peak_magnitude_ohm,
+            "peak_frequency_hz": evaluation.view.peak_frequency_hz,
+            "max_violation_db": evaluation.view.max_violation_db,
+        },
+    )
+    cache[metadata.cache_key] = metadata
+    hashes = dict(scenario.attachment_hashes)
+    hashes[attachment_name] = digest
+    updated_scenario = ScenarioSpec.model_validate(
+        {
+            **scenario.model_dump(mode="python"),
+            "attachment_names": sorted(updated_attachments, key=str.casefold),
+            "attachment_hashes": hashes,
+            "evaluation_cache": cache,
+        }
+    )
+    return updated_scenario, updated_attachments
+
+
+def _validated_scenario_attachments(
+    scenario: ScenarioSpec, attachments: Mapping[str, bytes] | None
+) -> dict[str, bytes]:
+    """Return canonical bytes only when they match the scenario declaration."""
+
+    supplied = dict(attachments or {})
+    supplied_by_key: dict[str, tuple[str, bytes]] = {}
+    for raw_name, content in supplied.items():
+        name = str(raw_name)
+        key = name.casefold()
+        if key in supplied_by_key:
+            raise ScenarioEvaluationCacheError(
+                f"duplicate attachment name {name!r}"
+            )
+        if not isinstance(content, bytes):
+            raise ScenarioEvaluationCacheError(
+                f"attachment {name!r} must be immutable bytes"
+            )
+        supplied_by_key[key] = (name, content)
+
+    declared_hashes = {
+        name.casefold(): digest
+        for name, digest in scenario.attachment_hashes.items()
+    }
+    expected = {
+        name.casefold(): (name, declared_hashes[name.casefold()])
+        for name in scenario.attachment_names
+    }
+    missing = set(expected) - set(supplied_by_key)
+    extra = set(supplied_by_key) - set(expected)
+    if missing or extra:
+        details: list[str] = []
+        if missing:
+            details.append(
+                "missing " + ", ".join(expected[key][0] for key in sorted(missing))
+            )
+        if extra:
+            details.append(
+                "unexpected "
+                + ", ".join(supplied_by_key[key][0] for key in sorted(extra))
+            )
+        raise ScenarioEvaluationCacheError(
+            "scenario attachment set mismatch: " + "; ".join(details)
+        )
+
+    canonical: dict[str, bytes] = {}
+    for key, (expected_name, expected_hash) in expected.items():
+        _supplied_name, content = supplied_by_key[key]
+        if sha256(content).hexdigest() != expected_hash:
+            raise ScenarioEvaluationCacheError(
+                f"scenario attachment {expected_name!r} failed SHA-256 validation"
+            )
+        canonical[expected_name] = content
+    return canonical
+
+
+def _attachment_content(
+    attachments: Mapping[str, bytes],
+    attachment_name: str,
+    *,
+    missing_message: str | None = None,
+) -> bytes:
+    key = attachment_name.casefold()
+    matches = [
+        content for name, content in attachments.items() if name.casefold() == key
+    ]
+    if len(matches) != 1:
+        raise ScenarioEvaluationCacheError(
+            missing_message
+            or f"evaluation attachment {attachment_name!r} is missing or ambiguous"
+        )
+    return matches[0]
 
 
 def _lookup_casefold(items: list[Any], attribute: str) -> dict[str, Any]:
@@ -434,10 +1115,7 @@ def evaluate_scenario(
     result_key = ScenarioResultKey.from_settings(
         design_fingerprint=scenario.design_fingerprint,
         rail_id=canonical_rail,
-        settings={
-            "target_ohm": target_ohm,
-            "modal_max_index": modal_max_index,
-        },
+        settings=_evaluation_settings(target_ohm, modal_max_index),
         solver_version=view.solver_version,
     )
     return ScenarioEvaluation(
@@ -446,6 +1124,193 @@ def evaluate_scenario(
         result_key=result_key,
         scenario_revision=scenario.revision,
     )
+
+
+def evaluate_comparison_batch(
+    scenario: ScenarioSpec,
+    rail_ids: Sequence[str],
+    target_ohm: float | None = None,
+    modal_max_index: int = DEFAULT_EVALUATION_MODAL_MAX_INDEX,
+    *,
+    attachments: Mapping[str, bytes] | None = None,
+    progress: ProgressCallback | None = None,
+    is_cancelled: CancelCallback | None = None,
+) -> ScenarioEvaluationBatch:
+    """Evaluate Original and Tuned configurations for selected PWR rails.
+
+    Every requested baseline/current project is preflighted before the first
+    solver call.  Results and new baseline attachments are returned atomically;
+    the caller commits nothing when this function raises or is cancelled.
+    """
+
+    report = progress or (lambda _value, _message: None)
+    cancelled = is_cancelled or (lambda: False)
+    canonical_rails = _canonical_rail_ids(scenario, rail_ids)
+    prepared = scenario.with_baseline_captures(canonical_rails)
+    working_attachments = _validated_scenario_attachments(prepared, attachments)
+    baseline_scenarios = {
+        rail_id: prepared.original_configuration(rail_id)
+        for rail_id in canonical_rails
+    }
+
+    report(1, "Preflighting Original and Tuned rail projects")
+    baseline_project_fingerprints: dict[str, str] = {}
+    tuned_project_fingerprints: dict[str, str] = {}
+    for rail_id in canonical_rails:
+        if cancelled():
+            raise RuntimeError("evaluation cancelled")
+        baseline_project = build_evaluation_project(
+            baseline_scenarios[rail_id], evaluation_rail_id=rail_id
+        )
+        tuned_project = build_evaluation_project(prepared, evaluation_rail_id=rail_id)
+        baseline_project_fingerprints[rail_id] = _solver_project_fingerprint(
+            baseline_project
+        )
+        tuned_project_fingerprints[rail_id] = _solver_project_fingerprint(
+            tuned_project
+        )
+
+    total_stages = max(len(canonical_rails) * 2, 1)
+    completed_stages = 0
+    comparisons: list[RailComparison] = []
+    persistent_change = prepared.baseline_captures != scenario.baseline_captures
+
+    def stage_progress(stage_label: str) -> ProgressCallback:
+        stage_start = completed_stages
+
+        def update(value: int, message: str) -> None:
+            bounded = min(max(int(value), 0), 100)
+            overall = round((stage_start + bounded / 100.0) * 100 / total_stages)
+            report(overall, f"{stage_label}: {message}")
+
+        return update
+
+    for rail_id in canonical_rails:
+        if cancelled():
+            raise RuntimeError("evaluation cancelled")
+        baseline_scenario = baseline_scenarios[rail_id]
+        capture = next(
+            item
+            for key, item in prepared.baseline_captures.items()
+            if key.casefold() == rail_id.casefold()
+        )
+        configuration_unchanged = (
+            baseline_project_fingerprints[rail_id]
+            == tuned_project_fingerprints[rail_id]
+        )
+        baseline = _load_baseline_evaluation(
+            prepared,
+            working_attachments,
+            rail_id,
+            target_ohm=target_ohm,
+            modal_max_index=modal_max_index,
+        )
+        baseline_from_cache = baseline is not None
+        if baseline is None:
+            evaluated_baseline = evaluate_scenario(
+                baseline_scenario,
+                rail_id,
+                target_ohm=target_ohm,
+                modal_max_index=modal_max_index,
+                attachments=working_attachments,
+                progress=stage_progress(f"{rail_id} Original"),
+                is_cancelled=cancelled,
+            )
+            baseline = replace(
+                evaluated_baseline,
+                result_key=_expected_result_key(
+                    capture.evaluation_input_sha256,
+                    rail_id,
+                    target_ohm=target_ohm,
+                    modal_max_index=modal_max_index,
+                ),
+            )
+            prepared, working_attachments = _cache_baseline_evaluation(
+                prepared, working_attachments, rail_id, baseline
+            )
+            persistent_change = True
+        else:
+            report(
+                round((completed_stages + 1) * 100 / total_stages),
+                f"{rail_id} Original: using saved baseline",
+            )
+        completed_stages += 1
+
+        if cancelled():
+            raise RuntimeError("evaluation cancelled")
+        if configuration_unchanged:
+            tuned = replace(
+                baseline,
+                result_key=_expected_result_key(
+                    prepared.design_fingerprint,
+                    rail_id,
+                    target_ohm=target_ohm,
+                    modal_max_index=modal_max_index,
+                ),
+                scenario_revision=prepared.revision,
+            )
+            report(
+                round((completed_stages + 1) * 100 / total_stages),
+                f"{rail_id} Tuned: configuration is unchanged",
+            )
+        else:
+            tuned = evaluate_scenario(
+                prepared,
+                rail_id,
+                target_ohm=target_ohm,
+                modal_max_index=modal_max_index,
+                attachments=working_attachments,
+                progress=stage_progress(f"{rail_id} Tuned"),
+                is_cancelled=cancelled,
+            )
+        completed_stages += 1
+        comparisons.append(
+            RailComparison(
+                rail_id=rail_id,
+                baseline=baseline.compact(),
+                tuned=tuned.compact(),
+                baseline_from_cache=baseline_from_cache,
+                configuration_unchanged=configuration_unchanged,
+            )
+        )
+
+    updated_scenario = prepared
+    if persistent_change:
+        updated_scenario = ScenarioSpec.model_validate(
+            {
+                **prepared.model_dump(mode="python"),
+                "revision": scenario.revision + 1,
+            }
+        )
+    report(100, f"Completed {len(comparisons)} PWR rail comparison(s)")
+    return ScenarioEvaluationBatch(
+        comparisons=tuple(comparisons),
+        updated_scenario=updated_scenario,
+        updated_attachments=working_attachments,
+        requested_design_fingerprint=scenario.design_fingerprint,
+        requested_revision=scenario.revision,
+    )
+
+
+def rehydrate_scenario_evaluation(
+    scenario: ScenarioSpec,
+    evaluation: ScenarioEvaluation,
+    *,
+    attachments: Mapping[str, bytes] | None = None,
+) -> ScenarioEvaluation:
+    """Rebuild one transient solver state for AI analysis of a compact result."""
+
+    if not evaluation.matches(scenario):
+        raise ScenarioEvaluationBuildError(
+            "EVALUATION_STALE", "evaluation no longer matches the tuned scenario"
+        )
+    state = build_evaluation_workspace(
+        scenario,
+        attachments=attachments,
+        evaluation_rail_id=evaluation.view.rail_id,
+    )
+    state.last_evaluation = evaluation.view
+    return replace(evaluation, state=state)
 
 
 def analyze_scenario_with_local_llm(
@@ -463,6 +1328,11 @@ def analyze_scenario_with_local_llm(
     invoke Search Controller or any optimizer-mutating AI path.
     """
 
+    if evaluation.state is None:
+        raise ScenarioEvaluationBuildError(
+            "EVALUATION_STATE_MISSING",
+            "rehydrate the selected tuned result before AI analysis",
+        )
     return evaluation_services.analyze_with_local_llm(
         evaluation.state,
         endpoint,
@@ -475,11 +1345,18 @@ def analyze_scenario_with_local_llm(
 
 
 __all__ = [
+    "EVALUATION_ATTACHMENT_FORMAT",
     "PLOT_ANALYST_MODE",
+    "RailComparison",
     "ScenarioEvaluation",
+    "ScenarioEvaluationBatch",
     "ScenarioEvaluationBuildError",
+    "ScenarioEvaluationCacheError",
     "analyze_scenario_with_local_llm",
+    "baseline_fallback_model_refdes",
     "build_evaluation_project",
     "build_evaluation_workspace",
+    "evaluate_comparison_batch",
     "evaluate_scenario",
+    "rehydrate_scenario_evaluation",
 ]

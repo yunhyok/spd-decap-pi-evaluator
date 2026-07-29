@@ -1,6 +1,6 @@
 # SPD Decap PI Evaluator
 
-> 프로그램: **SPD Decap PI Evaluator v0.2.0**
+> 프로그램: **SPD Decap PI Evaluator v0.3.0**
 > 저장소: 기존 PI Calculator와 분리된 독립 프로그램
 > 해석 경계: 선택한 PWR rail의 pre-design `Zii`; 최종 PowerSI/SIwave 검증을 대체하지 않음
 
@@ -23,7 +23,13 @@ Optimization Mode는 포함하지 않는다.
 - 실제 power pad 수직 아래에 대응 PWR/DGND plane pair가 있을 때만 assignment 허용
 - assign 가능한 rail은 SPD `.NetList PowerNets`에 명시된 net으로 제한
 - 별도 passive two-terminal SPICE decap model 추가
-- 선택 rail의 deterministic Evaluation 및 evidence-grounded Local AI Plot Analyst
+- 여러 PWR NET을 선택해 한 번에 순차 Evaluation
+- 최초 Original decap 구성과 모델 binding을 불변 baseline으로 캡처
+- 최초 실행 시 Original과 Tuned를 함께 해석하고 Original 결과를 `.spdpi`에 자동 저장
+- 이후 실행은 hash 검증된 Original 결과를 재사용하고 Tuned 결과와 비교
+- PWR NET별 impedance-only subplot에서 Original(파선), Tuned(실선), Target(점선) 표시
+- 비교 표에서 decap 수, peak impedance, target violation의 Original/Tuned 변화 표시
+- 선택한 Tuned PWR NET 한 개를 명시적으로 분석하는 evidence-grounded Local AI Plot Analyst
 - 원본 SPD를 포함하지 않는 hash 검증 `.spdpi` scenario 저장/재열기
 
 ## 의도적으로 제외한 기능
@@ -61,6 +67,6 @@ powershell.exe -ExecutionPolicy Bypass -NoProfile -File .\scripts\build_spd_deca
 산출물:
 
 - `dist\SPDDecapPIEvaluator\SPDDecapPIEvaluator.exe`
-- `installer-output\SPDDecapPIEvaluatorSetup-0.2.0.exe`
+- `installer-output\SPDDecapPIEvaluatorSetup-0.3.0.exe`
 
 프로그램명과 버전은 title bar와 installer metadata에 함께 표시된다.

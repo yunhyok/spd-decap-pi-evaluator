@@ -7,7 +7,6 @@ from pathlib import Path
 import traceback
 from typing import Any, Callable
 
-import pyqtgraph as pg
 from PySide6.QtCore import QPoint, QPointF, Qt, QThreadPool, QTimer
 from PySide6.QtGui import QAction, QBrush, QColor, QCloseEvent, QPen, QPolygonF
 from PySide6.QtWidgets import (
@@ -59,6 +58,7 @@ from ..scenario_io import (
 from ..spd_adapter import ScenarioImport, import_spd_scenario, verify_scenario_source
 from ..version import APP_DISPLAY_NAME
 from .board_view import DecapBoardView
+from .comparison_plot import MultiRailComparisonPlot
 from .worker import FunctionWorker
 
 
@@ -124,9 +124,12 @@ class MainWindow(QMainWindow):
         self._worker: FunctionWorker | None = None
         self._worker_cancelable = False
         self._worker_cancel_requested = False
+        self._auto_save_after_worker = False
         self._evaluation_state: WorkspaceState | None = None
         self._last_evaluation: Any | None = None
         self._last_scenario_evaluation: Any | None = None
+        self._tuned_evaluations_by_rail: dict[str, Any] = {}
+        self._comparison_batch: Any | None = None
 
         self._build_actions()
         self._build_ui()
@@ -208,7 +211,7 @@ class MainWindow(QMainWindow):
         splitter.addWidget(self.board)
 
         side_tabs = QTabWidget()
-        side_tabs.setMinimumWidth(420)
+        side_tabs.setMinimumWidth(600)
         side_tabs.addTab(self._build_selection_tab(), "Selection")
         side_tabs.addTab(self._build_evaluation_tab(), "Evaluation")
         side_tabs.addTab(self._build_ai_tab(), "AI Assist")
@@ -272,27 +275,74 @@ class MainWindow(QMainWindow):
         page = QWidget()
         layout = QVBoxLayout(page)
         form = QFormLayout()
-        self.rail_combo = QComboBox()
+        self.rail_list = QListWidget()
+        self.rail_list.setObjectName("evaluationRailList")
+        self.rail_list.setMaximumHeight(145)
+        rail_buttons = QHBoxLayout()
+        self.select_all_rails_button = QPushButton("Select all")
+        self.select_all_rails_button.clicked.connect(
+            lambda: self._set_all_rails_checked(True)
+        )
+        self.clear_rails_button = QPushButton("Clear")
+        self.clear_rails_button.clicked.connect(
+            lambda: self._set_all_rails_checked(False)
+        )
+        rail_buttons.addWidget(self.select_all_rails_button)
+        rail_buttons.addWidget(self.clear_rails_button)
+        rail_buttons.addStretch(1)
+        rail_picker = QWidget()
+        rail_picker_layout = QVBoxLayout(rail_picker)
+        rail_picker_layout.setContentsMargins(0, 0, 0, 0)
+        rail_picker_layout.addWidget(self.rail_list)
+        rail_picker_layout.addLayout(rail_buttons)
         self.target_edit = QLineEdit()
         self.target_edit.setPlaceholderText("Optional target, e.g. 0.02")
-        form.addRow("PWR rail", self.rail_combo)
-        form.addRow("Target impedance (ohm)", self.target_edit)
+        self.target_edit.textEdited.connect(self._target_input_changed)
+        form.addRow("PWR NETs", rail_picker)
+        form.addRow("Common target impedance (ohm)", self.target_edit)
         layout.addLayout(form)
-        self.evaluate_button = QPushButton("Run evaluation")
+        self.evaluate_button = QPushButton("Run Original + Tuned evaluation")
         self.evaluate_button.setObjectName("evaluateScenarioButton")
         self.evaluate_button.clicked.connect(self.run_evaluation)
         layout.addWidget(self.evaluate_button)
-        self.plot = pg.PlotWidget(background="#171a1f")
-        self.plot.setLogMode(x=True, y=True)
-        self.plot.showGrid(x=True, y=True, alpha=0.2)
-        self.plot.setLabel("bottom", "Frequency", units="Hz")
-        self.plot.setLabel("left", "|Z|", units="ohm")
-        layout.addWidget(self.plot, 1)
+        self.plot = MultiRailComparisonPlot()
+        self.plot.setMinimumHeight(260)
+        self.comparison_table = QTableWidget(0, 7)
+        self.comparison_table.setObjectName("evaluationComparisonTable")
+        self.comparison_table.setHorizontalHeaderLabels(
+            (
+                "PWR NET",
+                "Caps Original→Tuned",
+                "Peak Original",
+                "Peak Tuned",
+                "Δ Peak",
+                "Max violation Original→Tuned",
+                "Baseline",
+            )
+        )
+        self.comparison_table.setEditTriggers(
+            QTableWidget.EditTrigger.NoEditTriggers
+        )
+        self.comparison_table.setSelectionBehavior(
+            QTableWidget.SelectionBehavior.SelectRows
+        )
         self.evaluation_summary = QTextBrowser()
-        self.evaluation_summary.setMinimumHeight(180)
-        layout.addWidget(self.evaluation_summary)
+        result_details = QTabWidget()
+        result_details.setObjectName("evaluationResultDetails")
+        result_details.addTab(self.comparison_table, "Comparison table")
+        result_details.addTab(self.evaluation_summary, "Summary")
+        result_splitter = QSplitter(Qt.Orientation.Vertical)
+        result_splitter.setObjectName("evaluationResultSplitter")
+        result_splitter.addWidget(self.plot)
+        result_splitter.addWidget(result_details)
+        result_splitter.setStretchFactor(0, 3)
+        result_splitter.setStretchFactor(1, 2)
+        result_splitter.setSizes((360, 220))
+        layout.addWidget(result_splitter, 1)
         limitation = QLabel(
-            "Evaluation reuses the existing modal PI engine. Non-rectangular PWR "
+            "Each checked PWR NET is solved sequentially. Original results are cached "
+            "inside the scenario and compared with the current Tuned state; phase is not "
+            "plotted. Evaluation reuses the existing modal PI engine. Non-rectangular PWR "
             "artwork is solved with its disclosed rectangular bbox; DGND is continuous; "
             "results are single-rail Zii without inter-rail coupling."
         )
@@ -315,6 +365,10 @@ class MainWindow(QMainWindow):
         self.ai_model = QLineEdit()
         self.ai_model.setPlaceholderText("Blank = deterministic evidence report")
         self.ai_allow_remote = QCheckBox("Allow LAN/remote endpoint for this session")
+        self.ai_rail_combo = QComboBox()
+        self.ai_rail_combo.setObjectName("aiEvaluationRailCombo")
+        self.ai_rail_combo.currentIndexChanged.connect(self._ai_rail_changed)
+        form.addRow("Tuned result rail", self.ai_rail_combo)
         form.addRow("Local endpoint", self.ai_endpoint)
         form.addRow("Model", self.ai_model)
         form.addRow("", self.ai_allow_remote)
@@ -334,13 +388,16 @@ class MainWindow(QMainWindow):
             self.search_button,
             self.fit_button,
             self.evaluate_button,
-            self.rail_combo,
+            self.rail_list,
+            self.select_all_rails_button,
+            self.clear_rails_button,
             self.target_edit,
             self.add_model_action,
             self.save_action,
             self.save_as_action,
         ):
             widget.setEnabled(loaded)
+        self.ai_rail_combo.setEnabled(loaded and bool(self._tuned_evaluations_by_rail))
         self.ai_button.setEnabled(loaded and self._last_evaluation is not None)
 
     def _set_busy(self, busy: bool) -> None:
@@ -360,7 +417,9 @@ class MainWindow(QMainWindow):
             self.fit_button,
             self.color_list,
             self.evaluate_button,
-            self.rail_combo,
+            self.rail_list,
+            self.select_all_rails_button,
+            self.clear_rails_button,
             self.target_edit,
         ):
             widget.setEnabled(not busy and self._scenario is not None)
@@ -369,12 +428,22 @@ class MainWindow(QMainWindow):
             and self._scenario is not None
             and self._last_evaluation is not None
         )
+        self.ai_rail_combo.setEnabled(
+            not busy
+            and self._scenario is not None
+            and bool(self._tuned_evaluations_by_rail)
+        )
 
     def _invalidate_evaluation(self, reason: str = "Scenario changed; run evaluation again.") -> None:
         self._evaluation_state = None
         self._last_evaluation = None
         self._last_scenario_evaluation = None
-        self.plot.clear()
+        self._tuned_evaluations_by_rail.clear()
+        self._comparison_batch = None
+        self.ai_rail_combo.clear()
+        self.ai_rail_combo.setEnabled(False)
+        self.plot.clear_comparisons()
+        self.comparison_table.setRowCount(0)
         if self._scenario is not None:
             available_models = {
                 item.model_id.casefold()
@@ -448,6 +517,8 @@ class MainWindow(QMainWindow):
 
     def _worker_finished(self) -> None:
         cancelled = self._worker_cancel_requested
+        auto_save = self._auto_save_after_worker and not cancelled
+        self._auto_save_after_worker = False
         self._worker = None
         self._worker_cancelable = False
         self._worker_cancel_requested = False
@@ -460,6 +531,8 @@ class MainWindow(QMainWindow):
             ("Opening", "Saving", "Evaluating", "Analyzing")
         ):
             self.status_text.setText("Ready")
+        if auto_save and self._scenario is not None and self._scenario_path is not None:
+            QTimer.singleShot(0, self._auto_save_scenario)
 
     def _cancel_worker(self) -> None:
         if self._worker is not None and self._worker_cancelable:
@@ -567,20 +640,39 @@ class MainWindow(QMainWindow):
             message += " (external SPD relinked; save required)"
         self.status_text.setText(message)
 
-    def save_scenario(self, *, save_as: bool = False) -> bool:
+    def _request_scenario_save_path(self) -> Path | None:
+        assert self._scenario is not None
+        filename, _ = QFileDialog.getSaveFileName(
+            self,
+            "Save SPD Decap PI Scenario",
+            f"{Path(self._scenario.source.name).stem}.spdpi",
+            "SPD PI Scenario (*.spdpi)",
+        )
+        if not filename:
+            return None
+        path = Path(filename)
+        if not path.suffix:
+            path = path.with_suffix(".spdpi")
+        if path.suffix.casefold() != ".spdpi":
+            QMessageBox.warning(
+                self, APP_DISPLAY_NAME, "Scenario file extension must be .spdpi."
+            )
+            return None
+        return path
+
+    def save_scenario(
+        self,
+        *,
+        save_as: bool = False,
+        _on_error: Callable[[str], None] | None = None,
+    ) -> bool:
         if self._scenario is None:
             return False
         path = None if save_as else self._scenario_path
         if path is None:
-            filename, _ = QFileDialog.getSaveFileName(
-                self,
-                "Save SPD Decap PI Scenario",
-                f"{Path(self._scenario.source.name).stem}.spdpi",
-                "SPD PI Scenario (*.spdpi)",
-            )
-            if not filename:
+            path = self._request_scenario_save_path()
+            if path is None:
                 return False
-            path = Path(filename)
         saved_scenario = self._scenario
         saved_fingerprint = saved_scenario.design_fingerprint
         saved_revision = saved_scenario.revision
@@ -596,9 +688,29 @@ class MainWindow(QMainWindow):
                 saved_path, saved_fingerprint, saved_revision
             ),
             label="Saving scenario...",
+            on_error=_on_error,
             cancelable=False,
         )
         return True
+
+    def _auto_save_scenario(self) -> None:
+        def failed(details: str) -> None:
+            self._dirty = True
+            path = self._scenario_path
+            name = path.name if path is not None else ".spdpi scenario"
+            message = (
+                f"Automatic save failed for {name}. Original results remain in "
+                "memory; use Save Scenario to retry."
+            )
+            summary = self.evaluation_summary.toPlainText()
+            if message not in summary:
+                self.evaluation_summary.setPlainText(
+                    f"{summary}\n{message}".strip()
+                )
+            self._worker_error(details)
+            self.status_text.setText("Automatic Original-result save failed")
+
+        self.save_scenario(_on_error=failed)
 
     def _scenario_saved(
         self, path: Path, saved_fingerprint: str, saved_revision: int
@@ -611,6 +723,14 @@ class MainWindow(QMainWindow):
             and current.revision == saved_revision
         ):
             self._dirty = False
+            summary = self.evaluation_summary.toPlainText()
+            if "will be saved automatically" in summary:
+                self.evaluation_summary.setPlainText(
+                    summary.replace(
+                        f"will be saved automatically to {path.name}",
+                        f"are saved in {path.name}",
+                    )
+                )
             self.status_text.setText(f"Saved {path.name}")
             return
         self._dirty = True
@@ -791,13 +911,48 @@ class MainWindow(QMainWindow):
 
     def _refresh_rails(self) -> None:
         assert self._scenario is not None
-        current = self.rail_combo.currentData()
-        self.rail_combo.clear()
+        had_items = self.rail_list.count() > 0
+        checked = {
+            str(self.rail_list.item(index).data(Qt.ItemDataRole.UserRole)).casefold()
+            for index in range(self.rail_list.count())
+            if self.rail_list.item(index).checkState() == Qt.CheckState.Checked
+        }
+        self.rail_list.clear()
         for rail in self._scenario.base_project.rails:
-            self.rail_combo.addItem(f"{rail.net} ({rail.rail_id})", rail.rail_id)
-        index = self.rail_combo.findData(current)
-        if index >= 0:
-            self.rail_combo.setCurrentIndex(index)
+            item = QListWidgetItem(f"{rail.net} ({rail.rail_id})")
+            item.setData(Qt.ItemDataRole.UserRole, rail.rail_id)
+            item.setFlags(
+                item.flags()
+                | Qt.ItemFlag.ItemIsUserCheckable
+                | Qt.ItemFlag.ItemIsEnabled
+            )
+            item.setCheckState(
+                Qt.CheckState.Checked
+                if rail.rail_id.casefold() in checked
+                else Qt.CheckState.Unchecked
+            )
+            self.rail_list.addItem(item)
+        if not had_items and self.rail_list.count():
+            self.rail_list.item(0).setCheckState(Qt.CheckState.Checked)
+
+    def _checked_rail_ids(self) -> tuple[str, ...]:
+        return tuple(
+            str(self.rail_list.item(index).data(Qt.ItemDataRole.UserRole))
+            for index in range(self.rail_list.count())
+            if self.rail_list.item(index).checkState() == Qt.CheckState.Checked
+        )
+
+    def _set_all_rails_checked(self, checked: bool) -> None:
+        state = Qt.CheckState.Checked if checked else Qt.CheckState.Unchecked
+        for index in range(self.rail_list.count()):
+            self.rail_list.item(index).setCheckState(state)
+
+    def _target_input_changed(self, _text: str) -> None:
+        if self._comparison_batch is not None:
+            self._invalidate_evaluation(
+                "Target impedance changed; run Original + Tuned evaluation again."
+            )
+            self.status_text.setText("Target changed; evaluation required")
 
     def _selection_changed(self, selected: tuple[str, ...]) -> None:
         if self._scenario is None:
@@ -1013,13 +1168,33 @@ class MainWindow(QMainWindow):
 
     def _restore_selected(self) -> None:
         def update(decap: ScenarioDecap) -> ScenarioDecap:
-            eligibility = decap.eligibility.get(decap.source_rail_id)
+            model_id = decap.source_model_id
+            if model_id is None and self._scenario is not None:
+                capture = next(
+                    (
+                        item
+                        for key, item in self._scenario.baseline_captures.items()
+                        if key.casefold() == decap.source_rail_id.casefold()
+                    ),
+                    None,
+                )
+                if capture is not None:
+                    binding = next(
+                        (
+                            item
+                            for item in capture.model_bindings
+                            if item.refdes.casefold() == decap.refdes.casefold()
+                        ),
+                        None,
+                    )
+                    if binding is not None:
+                        model_id = binding.model_id
             return ScenarioDecap.model_validate(
                 {
                     **decap.model_dump(mode="json"),
                     "current_net": decap.source_net,
                     "current_rail_id": decap.source_rail_id,
-                    "model_id": decap.source_model_id,
+                    "model_id": model_id,
                     "enabled": decap.source_mounted,
                 }
             )
@@ -1041,6 +1216,13 @@ class MainWindow(QMainWindow):
         )
         self._dirty = True
         self._refresh_all()
+        if self._comparison_batch is not None:
+            try:
+                self._render_comparisons(self._comparison_batch.comparisons)
+            except (KeyError, TypeError, ValueError):
+                self._invalidate_evaluation(
+                    "PWR NET colors changed and the prior comparison became invalid."
+                )
 
     def add_decap_model(self) -> None:
         if self._scenario is None:
@@ -1105,9 +1287,9 @@ class MainWindow(QMainWindow):
     def run_evaluation(self) -> None:
         if self._scenario is None:
             return
-        rail_id = self.rail_combo.currentData()
-        if not rail_id:
-            QMessageBox.warning(self, APP_DISPLAY_NAME, "Select a PWR rail.")
+        rail_ids = self._checked_rail_ids()
+        if not rail_ids:
+            QMessageBox.warning(self, APP_DISPLAY_NAME, "Select at least one PWR NET.")
             return
         target_text = self.target_edit.text().strip()
         try:
@@ -1117,17 +1299,55 @@ class MainWindow(QMainWindow):
         except ValueError:
             QMessageBox.warning(self, APP_DISPLAY_NAME, "Target impedance must be positive.")
             return
-        from ..evaluation import evaluate_scenario
+
+        from ..evaluation import (
+            baseline_fallback_model_refdes,
+            evaluate_comparison_batch,
+        )
+
+        fallback_refdes = baseline_fallback_model_refdes(self._scenario, rail_ids)
+        try:
+            prepared = self._scenario.with_baseline_captures(rail_ids)
+        except ValueError as exc:
+            QMessageBox.warning(self, APP_DISPLAY_NAME, str(exc))
+            return
+        if fallback_refdes:
+            preview = ", ".join(fallback_refdes[:12])
+            suffix = "..." if len(fallback_refdes) > 12 else ""
+            choice = QMessageBox.question(
+                self,
+                APP_DISPLAY_NAME,
+                f"The SPD does not provide electrical model assignments for "
+                f"{len(fallback_refdes):,} originally mounted decap(s). Their current "
+                "model assignments must be frozen as the immutable Original baseline "
+                f"({preview}{suffix}).\n\nContinue with this one-time baseline capture?",
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+                QMessageBox.StandardButton.No,
+            )
+            if choice != QMessageBox.StandardButton.Yes:
+                return
+        if self._scenario_path is None:
+            path = self._request_scenario_save_path()
+            if path is None:
+                return
+            self._scenario_path = path
 
         worker = FunctionWorker(
-            evaluate_scenario,
-            self._scenario,
-            str(rail_id),
+            evaluate_comparison_batch,
+            prepared,
+            rail_ids,
             target_ohm=target,
             attachments=dict(self._attachments),
         )
-        self._invalidate_evaluation("Evaluation in progress...")
-        self._run_worker(worker, self._accept_evaluation, label="Evaluating scenario...")
+        self.evaluation_summary.setPlainText(
+            f"Evaluating Original and Tuned configurations for "
+            f"{len(rail_ids):,} PWR NET(s)..."
+        )
+        self._run_worker(
+            worker,
+            self._accept_evaluation,
+            label=f"Evaluating {len(rail_ids):,} PWR NET(s)...",
+        )
 
     def _accept_evaluation(self, result: Any) -> None:
         matches = getattr(result, "matches", None)
@@ -1141,46 +1361,174 @@ class MainWindow(QMainWindow):
             )
             self.status_text.setText("Discarded stale evaluation result")
             return
-        view = getattr(result, "view", getattr(result, "evaluation", result))
-        self._evaluation_state = getattr(result, "state", None)
-        self._last_evaluation = view
-        self._last_scenario_evaluation = result
-        self.plot.clear()
-        self.plot.plot(
-            view.frequency_hz,
-            view.magnitude_ohm,
-            pen=pg.mkPen("#4da3ff", width=2),
-            name="Scenario",
-        )
-        if getattr(view, "target_curve_ohm", None):
-            self.plot.plot(
-                view.frequency_hz,
-                view.target_curve_ohm,
-                pen=pg.mkPen("#ffb84d", width=1.5, style=Qt.PenStyle.DashLine),
-                name="Target",
+        validate = getattr(result, "validate_for_scenario", None)
+        try:
+            if not callable(validate):
+                raise ValueError("comparison batch validator is missing")
+            validate(self._scenario)
+        except (TypeError, ValueError) as exc:
+            self._invalidate_evaluation(
+                "The completed comparison batch failed identity validation."
             )
+            QMessageBox.critical(self, APP_DISPLAY_NAME, str(exc))
+            self.status_text.setText("Discarded invalid evaluation result")
+            return
+        comparisons = tuple(getattr(result, "comparisons", ()))
+        updated_scenario = getattr(result, "updated_scenario", None)
+        updated_attachments = getattr(result, "updated_attachments", None)
+        if (
+            not comparisons
+            or not isinstance(updated_scenario, ScenarioSpec)
+            or not isinstance(updated_attachments, dict)
+        ):
+            self._invalidate_evaluation(
+                "The evaluation worker returned an incomplete comparison batch."
+            )
+            self.status_text.setText("Discarded invalid evaluation result")
+            return
+
+        current = self._scenario
+        try:
+            rail_labels = self._render_comparisons(comparisons)
+        except (KeyError, TypeError, ValueError) as exc:
+            self._invalidate_evaluation(
+                "The comparison plot could not validate the completed batch."
+            )
+            QMessageBox.critical(self, APP_DISPLAY_NAME, str(exc))
+            self.status_text.setText("Discarded invalid comparison plot data")
+            return
+
+        persistent_change = (
+            updated_scenario.model_dump(mode="json")
+            != current.model_dump(mode="json")
+            or updated_attachments != self._attachments
+        )
+        self._scenario = updated_scenario
+        self._attachments = dict(updated_attachments)
+        self._dirty = self._dirty or persistent_change
+        self._auto_save_after_worker = self._dirty
+        self._comparison_batch = result
+        self._evaluation_state = None
+        self._tuned_evaluations_by_rail = {
+            comparison.rail_id.casefold(): comparison.tuned
+            for comparison in comparisons
+        }
+
+        self.comparison_table.setRowCount(len(comparisons))
+        for row, comparison in enumerate(comparisons):
+            baseline = comparison.baseline.view
+            tuned = comparison.tuned.view
+            net = rail_labels[comparison.rail_id]
+            values = (
+                net,
+                f"{baseline.cap_count:,} → {tuned.cap_count:,}",
+                f"{baseline.peak_magnitude_ohm * 1_000:.3f} mΩ",
+                f"{tuned.peak_magnitude_ohm * 1_000:.3f} mΩ",
+                f"{(tuned.peak_magnitude_ohm - baseline.peak_magnitude_ohm) * 1_000:+.3f} mΩ",
+                f"{baseline.max_violation_db:.3f} → {tuned.max_violation_db:.3f} dB",
+                "Reused" if comparison.baseline_from_cache else "Saved now",
+            )
+            for column, value in enumerate(values):
+                self.comparison_table.setItem(
+                    row, column, QTableWidgetItem(str(value))
+                )
+        self.comparison_table.resizeColumnsToContents()
+
+        self.ai_rail_combo.blockSignals(True)
+        self.ai_rail_combo.clear()
+        for comparison in comparisons:
+            self.ai_rail_combo.addItem(
+                f"{rail_labels[comparison.rail_id]} ({comparison.rail_id})",
+                comparison.rail_id,
+            )
+        self.ai_rail_combo.blockSignals(False)
+        self._ai_rail_changed()
+
+        cached_count = sum(item.baseline_from_cache for item in comparisons)
+        newly_saved = len(comparisons) - cached_count
+        save_note = (
+            f"Original results will be saved automatically to {self._scenario_path.name}."
+            if newly_saved
+            else f"Original results are stored in {self._scenario_path.name}."
+        )
         self.evaluation_summary.setPlainText(
             "\n".join(
                 (
-                    f"Rail: {view.rail_id}",
-                    f"Enabled decaps: {view.cap_count} ({view.model_count} model(s))",
-                    f"Maximum violation: {view.max_violation_db:.3f} dB at {view.max_violation_frequency_hz:.6g} Hz",
-                    f"Dominant peak: {view.peak_magnitude_ohm:.6g} ohm at {view.peak_frequency_hz:.6g} Hz",
-                    f"Confidence: {view.confidence} | {view.confidence_note}",
-                    f"Solver: {view.solver_version}",
+                    f"Compared {len(comparisons):,} PWR NET(s): Original vs Tuned.",
+                    f"Original baseline: {cached_count:,} reused, {newly_saved:,} newly evaluated and staged.",
+                    "Plot: impedance only; one synchronized subplot per PWR NET.",
+                    save_note,
+                    "Select a Tuned result in AI Assist when analysis is needed.",
                 )
             )
         )
-        self.ai_button.setEnabled(True)
-        self.status_text.setText(f"Evaluation complete: {view.rail_id}")
+        self._refresh_all()
+        self.status_text.setText(
+            f"Evaluation complete: {len(comparisons):,} PWR NET(s)"
+        )
+
+    def _render_comparisons(self, comparisons: tuple[Any, ...]) -> dict[str, str]:
+        assert self._scenario is not None
+        rail_by_id = {
+            item.rail_id.casefold(): item
+            for item in self._scenario.base_project.rails
+        }
+        rail_colors = {
+            comparison.rail_id: self._scenario.net_colors.get(
+                rail_by_id[comparison.rail_id.casefold()].net, "#4DA3FF"
+            )
+            for comparison in comparisons
+        }
+        rail_labels = {
+            comparison.rail_id: rail_by_id[comparison.rail_id.casefold()].net
+            for comparison in comparisons
+        }
+        self.plot.set_comparisons(
+            comparisons,
+            rail_colors=rail_colors,
+            rail_labels=rail_labels,
+        )
+        return rail_labels
+
+    def _ai_rail_changed(self, _index: int | None = None) -> None:
+        self.ai_output.clear()
+        rail_id = self.ai_rail_combo.currentData()
+        evaluation = (
+            self._tuned_evaluations_by_rail.get(str(rail_id).casefold())
+            if rail_id
+            else None
+        )
+        self._last_scenario_evaluation = evaluation
+        self._last_evaluation = getattr(evaluation, "view", None)
+        self._evaluation_state = None
+        self.ai_button.setEnabled(
+            self._worker is None
+            and self._scenario is not None
+            and evaluation is not None
+        )
 
     def run_ai_assist(self) -> None:
         if self._last_scenario_evaluation is None or self._last_evaluation is None:
             QMessageBox.information(self, APP_DISPLAY_NAME, "Run an evaluation first.")
             return
-        from ..evaluation import analyze_scenario_with_local_llm
 
-        evaluation = self._last_scenario_evaluation
+        from ..evaluation import (
+            analyze_scenario_with_local_llm,
+            rehydrate_scenario_evaluation,
+        )
+
+        assert self._scenario is not None
+        compact = self._last_scenario_evaluation
+        try:
+            evaluation = rehydrate_scenario_evaluation(
+                self._scenario,
+                compact,
+                attachments=dict(self._attachments),
+            )
+        except (TypeError, ValueError) as exc:
+            QMessageBox.warning(self, APP_DISPLAY_NAME, str(exc))
+            return
+        rail_id = compact.view.rail_id
         evaluation_fingerprint = evaluation.evaluation_fingerprint
         worker = FunctionWorker(
             analyze_scenario_with_local_llm,
@@ -1191,12 +1539,16 @@ class MainWindow(QMainWindow):
         )
         self._run_worker(
             worker,
-            lambda result: self._accept_ai_analysis(result, evaluation_fingerprint),
-            label="Analyzing plot evidence...",
+            lambda result: self._accept_ai_analysis(
+                result, rail_id, evaluation_fingerprint
+            ),
+            label=f"Analyzing Tuned result for {rail_id}...",
         )
 
-    def _accept_ai_analysis(self, result: Any, evaluation_fingerprint: str) -> None:
-        evaluation = self._last_scenario_evaluation
+    def _accept_ai_analysis(
+        self, result: Any, rail_id: str, evaluation_fingerprint: str
+    ) -> None:
+        evaluation = self._tuned_evaluations_by_rail.get(rail_id.casefold())
         if (
             self._scenario is None
             or evaluation is None

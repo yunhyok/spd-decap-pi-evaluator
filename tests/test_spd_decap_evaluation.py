@@ -1,5 +1,11 @@
 ﻿from __future__ import annotations
 
+from dataclasses import replace
+from copy import deepcopy
+from hashlib import sha256
+import json
+
+from pydantic import ValidationError
 import pytest
 
 from spd_decap_pi._core.domain import (
@@ -21,8 +27,11 @@ from spd_decap_pi._core.services import EvaluationView
 from spd_decap_pi import evaluation as evaluation_module
 from spd_decap_pi.evaluation import (
     ScenarioEvaluationBuildError,
+    ScenarioEvaluationCacheError,
     analyze_scenario_with_local_llm,
+    baseline_fallback_model_refdes,
     build_evaluation_project,
+    evaluate_comparison_batch,
     evaluate_scenario,
 )
 from spd_decap_pi.scenario import (
@@ -33,6 +42,7 @@ from spd_decap_pi.scenario import (
     ScenarioSpec,
     SourceIdentity,
 )
+from spd_decap_pi.scenario_io import load_scenario_bundle, save_scenario
 
 
 def _base_project() -> ProjectSpec:
@@ -246,6 +256,30 @@ def _view(rail_id: str = "RAIL_VDD") -> EvaluationView:
         z_real_ohm=[0.02, 0.03],
         z_imag_ohm=[0.0, 0.0],
     )
+
+
+def _fake_evaluator(calls: list[str]):
+    def evaluate(actual, rail_id, target_ohm=None, modal_max_index=8, **_kwargs):
+        calls.append(f"{rail_id}:{actual.design_fingerprint}")
+        view = _view(rail_id)
+        view.solver_version = evaluation_module.SOLVER_VERSION
+        key = evaluation_module.ScenarioResultKey.from_settings(
+            design_fingerprint=actual.design_fingerprint,
+            rail_id=rail_id,
+            settings={
+                "target_ohm": target_ohm,
+                "modal_max_index": modal_max_index,
+            },
+            solver_version=view.solver_version,
+        )
+        return evaluation_module.ScenarioEvaluation(
+            state=object(),
+            view=view,
+            result_key=key,
+            scenario_revision=actual.revision,
+        )
+
+    return evaluate
 
 
 def test_build_evaluation_project_rebuilds_decap_electrical_state() -> None:
@@ -515,3 +549,514 @@ def test_small_scenario_runs_through_existing_evaluation_solver() -> None:
     assert len(result.view.frequency_hz) >= 2
     assert result.state.last_evaluation is result.view
     assert len(result.evaluation_fingerprint) == 64
+
+
+def test_original_capture_freezes_fallback_model_and_restores_source_state() -> None:
+    scenario = _scenario()
+    original = scenario.decaps[0]
+    setup_model = original.model_copy(
+        update={"source_model_id": None, "model_id": "M1", "enabled": False}
+    )
+    tuned = ScenarioSpec.model_validate(
+        {**scenario.model_dump(mode="python"), "decaps": [setup_model, scenario.decaps[1]]}
+    )
+
+    assert baseline_fallback_model_refdes(tuned, ["rail_vdd"]) == ("C1",)
+    captured = tuned.with_baseline_captures(("RAIL_VDD",))
+    baseline = captured.original_configuration("rail_vdd")
+    restored = baseline.decaps[0]
+
+    assert restored.enabled is True
+    assert restored.current_net == restored.source_net
+    assert restored.current_rail_id == restored.source_rail_id
+    assert restored.model_id == "M1"
+    later_tuning = ScenarioSpec.model_validate(
+        {
+            **captured.model_dump(mode="python"),
+            "decaps": [
+                captured.decaps[0].model_copy(update={"model_id": "OTHER", "enabled": False}),
+                captured.decaps[1],
+            ],
+        }
+    )
+    assert (
+        later_tuning.baseline_captures["RAIL_VDD"].capture_fingerprint
+        == captured.baseline_captures["RAIL_VDD"].capture_fingerprint
+    )
+    assert later_tuning.original_configuration("RAIL_VDD").decaps[0].model_id == "M1"
+
+
+def test_original_capture_blocks_missing_initial_models() -> None:
+    scenario = _scenario()
+    missing = scenario.decaps[0].model_copy(
+        update={"source_model_id": None, "model_id": None}
+    )
+    scenario = ScenarioSpec.model_validate(
+        {**scenario.model_dump(mode="python"), "decaps": [missing, scenario.decaps[1]]}
+    )
+
+    with pytest.raises(ValueError, match="assign initial models.*C1"):
+        scenario.with_baseline_captures(("RAIL_VDD",))
+
+
+def test_comparison_batch_caches_baseline_then_reuses_it(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    scenario = _scenario()
+    tuned = scenario.decaps[0].model_copy(update={"enabled": False})
+    scenario = ScenarioSpec.model_validate(
+        {**scenario.model_dump(mode="python"), "decaps": [tuned, scenario.decaps[1]]}
+    )
+    calls: list[str] = []
+
+    def fake_evaluate(actual, rail_id, target_ohm=None, modal_max_index=8, **_kwargs):
+        calls.append(actual.design_fingerprint)
+        view = _view(rail_id)
+        view.solver_version = evaluation_module.SOLVER_VERSION
+        key = evaluation_module.ScenarioResultKey.from_settings(
+            design_fingerprint=actual.design_fingerprint,
+            rail_id=rail_id,
+            settings={
+                "target_ohm": target_ohm,
+                "modal_max_index": modal_max_index,
+            },
+            solver_version=view.solver_version,
+        )
+        return evaluation_module.ScenarioEvaluation(
+            state=object(),
+            view=view,
+            result_key=key,
+            scenario_revision=actual.revision,
+        )
+
+    monkeypatch.setattr(evaluation_module, "evaluate_scenario", fake_evaluate)
+    first = evaluate_comparison_batch(scenario, ["rail_vdd", "RAIL_VDD"])
+
+    assert len(calls) == 2
+    assert len(first.comparisons) == 1
+    assert not first.comparisons[0].baseline_from_cache
+    assert len(first.updated_scenario.evaluation_cache) == 1
+    assert first.updated_scenario.baseline_captures
+    assert first.updated_scenario.revision == scenario.revision + 1
+
+    calls.clear()
+    second = evaluate_comparison_batch(
+        first.updated_scenario,
+        ["RAIL_VDD"],
+        attachments=first.updated_attachments,
+    )
+    assert len(calls) == 1
+    assert second.comparisons[0].baseline_from_cache
+    assert second.comparisons[0].baseline.view.magnitude_ohm == [0.02, 0.03]
+
+
+def test_comparison_batch_rejects_tampered_baseline_attachment(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(
+        evaluation_module,
+        "build_evaluation_project",
+        lambda *_args, **_kwargs: _base_project(),
+    )
+
+    def fake_evaluate(actual, rail_id, target_ohm=None, modal_max_index=8, **_kwargs):
+        view = _view(rail_id)
+        view.solver_version = evaluation_module.SOLVER_VERSION
+        return evaluation_module.ScenarioEvaluation(
+            state=object(),
+            view=view,
+            result_key=evaluation_module.ScenarioResultKey.from_settings(
+                design_fingerprint=actual.design_fingerprint,
+                rail_id=rail_id,
+                settings={
+                    "target_ohm": target_ohm,
+                    "modal_max_index": modal_max_index,
+                },
+                solver_version=view.solver_version,
+            ),
+            scenario_revision=actual.revision,
+        )
+
+    monkeypatch.setattr(evaluation_module, "evaluate_scenario", fake_evaluate)
+    first = evaluate_comparison_batch(_scenario(), ["RAIL_VDD"])
+    tampered = dict(first.updated_attachments)
+    result_name = next(name for name in tampered if name.startswith("results/"))
+    tampered[result_name] = b"{}"
+
+    with pytest.raises(ScenarioEvaluationCacheError, match="SHA-256"):
+        evaluate_comparison_batch(
+            first.updated_scenario, ["RAIL_VDD"], attachments=tampered
+        )
+
+
+def test_cached_baseline_rejects_numeric_strings_even_with_updated_hashes(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(
+        evaluation_module, "evaluate_scenario", _fake_evaluator([])
+    )
+    first = evaluate_comparison_batch(_scenario(), ["RAIL_VDD"])
+    cache_key, metadata = next(iter(first.updated_scenario.evaluation_cache.items()))
+    payload = json.loads(first.updated_attachments[metadata.attachment_name])
+    payload["view"]["frequency_hz"][0] = "100000"
+    content = json.dumps(payload, sort_keys=True).encode("utf-8")
+    digest = sha256(content).hexdigest()
+    changed_metadata = metadata.model_copy(update={"attachment_sha256": digest})
+    changed_hashes = dict(first.updated_scenario.attachment_hashes)
+    changed_hashes[metadata.attachment_name] = digest
+    changed_scenario = ScenarioSpec.model_validate(
+        {
+            **first.updated_scenario.model_dump(mode="python"),
+            "attachment_hashes": changed_hashes,
+            "evaluation_cache": {cache_key: changed_metadata},
+        }
+    )
+    changed_attachments = dict(first.updated_attachments)
+    changed_attachments[metadata.attachment_name] = content
+
+    with pytest.raises(ScenarioEvaluationCacheError, match="numeric JSON array"):
+        evaluate_comparison_batch(
+            changed_scenario,
+            ["RAIL_VDD"],
+            attachments=changed_attachments,
+        )
+
+
+def test_cached_baseline_rejects_duplicate_json_keys_with_updated_hashes(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(
+        evaluation_module, "evaluate_scenario", _fake_evaluator([])
+    )
+    first = evaluate_comparison_batch(_scenario(), ["RAIL_VDD"])
+    cache_key, metadata = next(iter(first.updated_scenario.evaluation_cache.items()))
+    original = first.updated_attachments[metadata.attachment_name]
+    content = original.replace(
+        b'"format":',
+        b'"format":"shadowed-duplicate","format":',
+        1,
+    )
+    digest = sha256(content).hexdigest()
+    changed_metadata = metadata.model_copy(update={"attachment_sha256": digest})
+    changed_hashes = dict(first.updated_scenario.attachment_hashes)
+    changed_hashes[metadata.attachment_name] = digest
+    changed_scenario = ScenarioSpec.model_validate(
+        {
+            **first.updated_scenario.model_dump(mode="python"),
+            "attachment_hashes": changed_hashes,
+            "evaluation_cache": {cache_key: changed_metadata},
+        }
+    )
+    changed_attachments = dict(first.updated_attachments)
+    changed_attachments[metadata.attachment_name] = content
+
+    with pytest.raises(ScenarioEvaluationCacheError, match="strict JSON"):
+        evaluate_comparison_batch(
+            changed_scenario,
+            ["RAIL_VDD"],
+            attachments=changed_attachments,
+        )
+
+
+def test_baseline_capture_is_frozen_and_known_source_model_cannot_be_rebound() -> None:
+    scenario = _scenario()
+    project = scenario.base_project
+    model_2 = project.cap_models[0].model_copy(
+        update={"model_id": "M2", "source_hash": "fixture-2"}
+    )
+    scenario = ScenarioSpec.model_validate(
+        {
+            **scenario.model_dump(mode="python"),
+            "normalized_project": project.model_copy(
+                update={"cap_models": [*project.cap_models, model_2]}
+            ),
+        }
+    )
+    captured = scenario.with_baseline_captures(("RAIL_VDD",))
+    capture = captured.baseline_captures["RAIL_VDD"]
+
+    with pytest.raises(ValidationError, match="frozen"):
+        capture.model_bindings[0].model_id = "M2"
+    with pytest.raises(AttributeError):
+        capture.model_bindings.append(capture.model_bindings[0])
+
+    payload = captured.model_dump(mode="python")
+    payload["baseline_captures"]["RAIL_VDD"]["model_bindings"][0][
+        "model_id"
+    ] = "M2"
+    with pytest.raises(ValidationError, match="SPD source model"):
+        ScenarioSpec.model_validate(payload)
+
+
+def test_unused_model_addition_does_not_invalidate_saved_original(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    scenario = _scenario()
+    tuned = scenario.decaps[0].model_copy(update={"enabled": False})
+    scenario = ScenarioSpec.model_validate(
+        {**scenario.model_dump(mode="python"), "decaps": [tuned, scenario.decaps[1]]}
+    )
+    calls: list[str] = []
+    monkeypatch.setattr(
+        evaluation_module, "evaluate_scenario", _fake_evaluator(calls)
+    )
+    first = evaluate_comparison_batch(scenario, ["RAIL_VDD"])
+    capture_fingerprint = first.updated_scenario.baseline_captures[
+        "RAIL_VDD"
+    ].capture_fingerprint
+
+    project = first.updated_scenario.base_project
+    unused = project.cap_models[0].model_copy(
+        update={"model_id": "UNUSED_M2", "source_hash": "unused-model"}
+    )
+    with_unused = ScenarioSpec.model_validate(
+        {
+            **first.updated_scenario.model_dump(mode="python"),
+            "normalized_project": project.model_copy(
+                update={"cap_models": [*project.cap_models, unused]}
+            ),
+            "revision": first.updated_scenario.revision + 1,
+        }
+    )
+    assert (
+        with_unused.baseline_captures["RAIL_VDD"].capture_fingerprint
+        == capture_fingerprint
+    )
+
+    calls.clear()
+    second = evaluate_comparison_batch(
+        with_unused,
+        ["RAIL_VDD"],
+        attachments=first.updated_attachments,
+    )
+
+    assert len(calls) == 1
+    assert second.comparisons[0].baseline_from_cache
+    assert len(second.updated_scenario.evaluation_cache) == 1
+
+
+def test_batch_rejects_missing_extra_or_modified_input_attachments(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    trusted = b"trusted model bytes"
+    scenario = ScenarioSpec.model_validate(
+        {
+            **_scenario().model_dump(mode="python"),
+            "attachment_names": ["models/trusted.lib"],
+            "attachment_hashes": {
+                "models/trusted.lib": sha256(trusted).hexdigest()
+            },
+        }
+    )
+    monkeypatch.setattr(
+        evaluation_module,
+        "evaluate_scenario",
+        lambda *_args, **_kwargs: pytest.fail("solver must not run"),
+    )
+
+    cases = (
+        ({}, "attachment set mismatch"),
+        ({"models/trusted.lib": b"modified"}, "SHA-256"),
+        (
+            {"models/trusted.lib": trusted, "extra.bin": b"extra"},
+            "unexpected extra.bin",
+        ),
+    )
+    for supplied, message in cases:
+        with pytest.raises(ScenarioEvaluationCacheError, match=message):
+            evaluate_comparison_batch(
+                scenario, ["RAIL_VDD"], attachments=supplied
+            )
+
+
+def test_saved_baseline_is_decoded_and_reused_after_scenario_reload(
+    tmp_path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    scenario = _scenario()
+    tuned = scenario.decaps[0].model_copy(update={"enabled": False})
+    scenario = ScenarioSpec.model_validate(
+        {**scenario.model_dump(mode="python"), "decaps": [tuned, scenario.decaps[1]]}
+    )
+    calls: list[str] = []
+    monkeypatch.setattr(
+        evaluation_module, "evaluate_scenario", _fake_evaluator(calls)
+    )
+    first = evaluate_comparison_batch(scenario, ["RAIL_VDD"])
+    path = save_scenario(
+        first.updated_scenario,
+        tmp_path / "baseline.spdpi",
+        attachments=first.updated_attachments,
+    )
+    loaded = load_scenario_bundle(path)
+
+    calls.clear()
+    second = evaluate_comparison_batch(
+        loaded.scenario,
+        ["RAIL_VDD"],
+        attachments=loaded.attachments,
+    )
+
+    assert len(calls) == 1
+    assert second.comparisons[0].baseline_from_cache
+    assert second.comparisons[0].baseline.view.magnitude_ohm == [0.02, 0.03]
+
+
+def test_batch_accepts_independent_adaptive_frequency_grids() -> None:
+    scenario = _scenario()
+    tuned = scenario.decaps[0].model_copy(update={"enabled": False})
+    scenario = ScenarioSpec.model_validate(
+        {**scenario.model_dump(mode="python"), "decaps": [tuned, scenario.decaps[1]]}
+    )
+
+    batch = evaluate_comparison_batch(
+        scenario,
+        ["RAIL_VDD"],
+        target_ohm=0.02,
+        modal_max_index=6,
+    )
+
+    comparison = batch.comparisons[0]
+    assert comparison.baseline.view.frequency_hz != comparison.tuned.view.frequency_hz
+    batch.validate_for_scenario(scenario)
+
+
+def test_batch_nested_identity_validation_rejects_a_stale_tuned_result(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    scenario = _scenario()
+    tuned_decap = scenario.decaps[0].model_copy(update={"enabled": False})
+    scenario = ScenarioSpec.model_validate(
+        {
+            **scenario.model_dump(mode="python"),
+            "decaps": [tuned_decap, scenario.decaps[1]],
+        }
+    )
+    monkeypatch.setattr(
+        evaluation_module, "evaluate_scenario", _fake_evaluator([])
+    )
+    batch = evaluate_comparison_batch(scenario, ["RAIL_VDD"])
+    batch.validate_for_scenario(scenario)
+    comparison = batch.comparisons[0]
+    stale_key = comparison.tuned.result_key.model_copy(
+        update={"design_fingerprint": "f" * 64}
+    )
+    stale = replace(
+        batch,
+        comparisons=(
+            replace(
+                comparison,
+                tuned=replace(comparison.tuned, result_key=stale_key),
+            ),
+        ),
+    )
+
+    with pytest.raises(ScenarioEvaluationCacheError, match="Tuned result.*stale"):
+        stale.validate_for_scenario(scenario)
+
+
+def test_batch_validation_compares_displayed_original_to_persisted_attachment(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    scenario = _scenario()
+    monkeypatch.setattr(
+        evaluation_module, "evaluate_scenario", _fake_evaluator([])
+    )
+    batch = evaluate_comparison_batch(scenario, ["RAIL_VDD"])
+    comparison = batch.comparisons[0]
+    changed_view = deepcopy(comparison.baseline.view)
+    changed_view.magnitude_ohm[0] = 9.99
+    changed = replace(
+        batch,
+        comparisons=(
+            replace(
+                comparison,
+                baseline=replace(comparison.baseline, view=changed_view),
+            ),
+        ),
+    )
+
+    with pytest.raises(ScenarioEvaluationCacheError, match="differs.*persisted"):
+        changed.validate_for_scenario(scenario)
+
+
+def test_cache_attachment_name_casing_reuses_after_save_and_reload(
+    tmp_path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    scenario = _scenario()
+    tuned = scenario.decaps[0].model_copy(update={"enabled": False})
+    scenario = ScenarioSpec.model_validate(
+        {**scenario.model_dump(mode="python"), "decaps": [tuned, scenario.decaps[1]]}
+    )
+    calls: list[str] = []
+    monkeypatch.setattr(
+        evaluation_module, "evaluate_scenario", _fake_evaluator(calls)
+    )
+    first = evaluate_comparison_batch(scenario, ["RAIL_VDD"])
+    cache_key, metadata = next(iter(first.updated_scenario.evaluation_cache.items()))
+    upper_metadata = metadata.model_copy(
+        update={"attachment_name": metadata.attachment_name.upper()}
+    )
+    upper_scenario = ScenarioSpec.model_validate(
+        {
+            **first.updated_scenario.model_dump(mode="python"),
+            "evaluation_cache": {cache_key: upper_metadata},
+        }
+    )
+    path = save_scenario(
+        upper_scenario,
+        tmp_path / "casefold.spdpi",
+        attachments=first.updated_attachments,
+    )
+    loaded = load_scenario_bundle(path)
+
+    calls.clear()
+    second = evaluate_comparison_batch(
+        loaded.scenario,
+        ["RAIL_VDD"],
+        attachments=loaded.attachments,
+    )
+    assert len(calls) == 1
+    assert second.comparisons[0].baseline_from_cache
+
+
+def test_generated_cache_enforces_the_same_size_limit_as_decoder(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(
+        evaluation_module, "evaluate_scenario", _fake_evaluator([])
+    )
+    monkeypatch.setattr(
+        evaluation_module, "MAX_EVALUATION_ATTACHMENT_BYTES", 100
+    )
+
+    with pytest.raises(ScenarioEvaluationCacheError, match="generated.*too large"):
+        evaluate_comparison_batch(_scenario(), ["RAIL_VDD"])
+
+
+def test_cancellation_after_original_does_not_mutate_caller_state(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    scenario = _scenario()
+    tuned = scenario.decaps[0].model_copy(update={"enabled": False})
+    scenario = ScenarioSpec.model_validate(
+        {**scenario.model_dump(mode="python"), "decaps": [tuned, scenario.decaps[1]]}
+    )
+    before = scenario.model_dump(mode="json")
+    cancelled = False
+
+    def fake_evaluate(*args, **kwargs):
+        nonlocal cancelled
+        result = _fake_evaluator([])(*args, **kwargs)
+        cancelled = True
+        return result
+
+    monkeypatch.setattr(evaluation_module, "evaluate_scenario", fake_evaluate)
+    with pytest.raises(RuntimeError, match="cancelled"):
+        evaluate_comparison_batch(
+            scenario,
+            ["RAIL_VDD"],
+            is_cancelled=lambda: cancelled,
+        )
+
+    assert scenario.model_dump(mode="json") == before
+    assert scenario.baseline_captures == {}

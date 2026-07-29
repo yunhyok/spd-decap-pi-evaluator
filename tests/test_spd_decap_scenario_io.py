@@ -9,9 +9,16 @@ from zipfile import ZIP_DEFLATED, ZipFile, ZipInfo
 from pydantic import ValidationError
 import pytest
 
-from spd_decap_pi._core.domain import MLOOutline, ProjectSpec
+from spd_decap_pi._core.domain import (
+    CapModel,
+    MLOOutline,
+    ProjectSpec,
+    RailSpec,
+    StackupLayer,
+)
 from spd_decap_pi.scenario import (
     CachedEvaluationMetadata,
+    EvaluationRole,
     RailEligibility,
     ScenarioDecap,
     ScenarioPad,
@@ -39,6 +46,42 @@ def _project() -> ProjectSpec:
         name="Imported SPD base",
         outline=MLOOutline(width_um=12_000, height_um=8_000),
         split_gap_um=0,
+        stackup_layers=[
+            StackupLayer(
+                name="L3_PWR",
+                thickness_um=18.0,
+                conductivity_s_m=5.8e7,
+                pwr_nets=["VDD_CPU"],
+            ),
+            StackupLayer(
+                name="L2_GND",
+                thickness_um=18.0,
+                conductivity_s_m=5.8e7,
+                pwr_nets=["DGND"],
+            ),
+        ],
+        rails=[
+            RailSpec(
+                rail_id="VDD_CPU",
+                family="VDD",
+                domain="VDD_CPU",
+                net="VDD_CPU",
+                site="SITE0",
+                pwr_layer="L3_PWR",
+                gnd_layer="L2_GND",
+            )
+        ],
+        cap_models=[
+            CapModel(
+                model_id="CAP_100NF",
+                capacitance_f=100e-9,
+                esr_ohm=0.01,
+                esl_h=0.5e-9,
+                footprint="0201",
+                inventory=10,
+                source_hash="fixture-cap-100nf",
+            )
+        ],
         metadata={
             "spd_import": {
                 "source_name": "board.spd",
@@ -252,6 +295,139 @@ def test_result_cache_must_be_keyed_by_the_result_key_hash() -> None:
             attachment_name="results/result.json",
             attachment_sha256="2" * 64,
             summary={"peak_ohm": float("nan")},
+        )
+
+
+def test_baseline_capture_and_result_attachment_round_trip(tmp_path: Path) -> None:
+    captured = _scenario().with_baseline_captures(("VDD_CPU",))
+    capture = captured.baseline_captures["VDD_CPU"]
+    baseline = captured.original_configuration("VDD_CPU")
+    result_key = ScenarioResultKey.from_settings(
+        design_fingerprint=baseline.design_fingerprint,
+        rail_id="VDD_CPU",
+        settings={"target_ohm": None, "modal_max_index": 8},
+        solver_version="modal-mvp-0.1.0",
+    )
+    content = b'{"fixture":"baseline"}\n'
+    name = f"results/baseline-{result_key.cache_key}.json"
+    digest = sha256(content).hexdigest()
+    metadata = CachedEvaluationMetadata(
+        result_key=result_key,
+        attachment_name=name,
+        attachment_sha256=digest,
+        role=EvaluationRole.BASELINE,
+        baseline_capture_sha256=capture.capture_fingerprint,
+    )
+    persisted = ScenarioSpec.model_validate(
+        {
+            **captured.model_dump(mode="python"),
+            "attachment_names": [name],
+            "attachment_hashes": {name: digest},
+            "evaluation_cache": {metadata.cache_key: metadata},
+        }
+    )
+
+    path = save_scenario(persisted, tmp_path / "baseline.spdpi", attachments={name: content})
+    loaded = load_scenario_bundle(path)
+
+    assert loaded.scenario.baseline_captures["VDD_CPU"] == capture
+    assert loaded.scenario.evaluation_cache[metadata.cache_key].role == EvaluationRole.BASELINE
+    assert loaded.attachments[name] == content
+
+
+def test_legacy_tuned_cache_without_attachment_is_ignored() -> None:
+    scenario = _scenario()
+    result_key = ScenarioResultKey.from_settings(
+        design_fingerprint=scenario.design_fingerprint,
+        rail_id="VDD_CPU",
+        settings={"points": 401},
+        solver_version="1",
+    )
+    metadata = CachedEvaluationMetadata(
+        result_key=result_key,
+        attachment_name="results/missing.json",
+        attachment_sha256="2" * 64,
+    )
+    legacy = ScenarioSpec.model_validate(
+        {
+            **scenario.model_dump(mode="python"),
+            "evaluation_cache": {metadata.cache_key: metadata},
+        }
+    )
+
+    assert legacy.matching_cached_evaluations() == {}
+
+
+def test_baseline_cache_metadata_requires_its_declared_attachment() -> None:
+    scenario = _scenario().with_baseline_captures(("VDD_CPU",))
+    capture = scenario.baseline_captures["VDD_CPU"]
+    result_key = ScenarioResultKey.from_settings(
+        design_fingerprint=capture.evaluation_input_sha256,
+        rail_id="VDD_CPU",
+        settings={"points": 401},
+        solver_version="1",
+    )
+    metadata = CachedEvaluationMetadata(
+        result_key=result_key,
+        attachment_name="results/missing.json",
+        attachment_sha256="2" * 64,
+        role=EvaluationRole.BASELINE,
+        baseline_capture_sha256=capture.capture_fingerprint,
+    )
+    with pytest.raises(ValidationError, match="attachment.*missing"):
+        ScenarioSpec.model_validate(
+            {
+                **scenario.model_dump(mode="python"),
+                "evaluation_cache": {metadata.cache_key: metadata},
+            }
+        )
+
+
+def test_baseline_capture_keys_are_case_insensitively_unique() -> None:
+    scenario = _scenario().with_baseline_captures(("VDD_CPU",))
+    payload = scenario.model_dump(mode="python")
+    payload["baseline_captures"]["vdd_cpu"] = payload["baseline_captures"][
+        "VDD_CPU"
+    ]
+
+    with pytest.raises(ValidationError, match="capture rail keys must be unique"):
+        ScenarioSpec.model_validate(payload)
+
+
+def test_cache_metadata_cannot_mask_an_electrical_project_attachment() -> None:
+    scenario = _scenario()
+    result_key = ScenarioResultKey.from_settings(
+        design_fingerprint=scenario.design_fingerprint,
+        rail_id="VDD_CPU",
+        settings={"points": 401},
+        solver_version="1",
+    )
+    with pytest.raises(ValidationError, match=r"results/\*\.json"):
+        CachedEvaluationMetadata(
+            result_key=result_key,
+            attachment_name="models/cap.lib",
+            attachment_sha256="2" * 64,
+        )
+
+    content = b"project-owned result-like asset"
+    digest = sha256(content).hexdigest()
+    project = scenario.base_project.model_copy(
+        update={"attachment_names": ["results/project.json"]}
+    )
+    metadata = CachedEvaluationMetadata(
+        result_key=result_key,
+        attachment_name="results/project.json",
+        attachment_sha256=digest,
+    )
+    with pytest.raises(ValidationError, match="normalized project assets"):
+        ScenarioSpec.model_validate(
+            {
+                **scenario.model_dump(mode="python"),
+                "normalized_project": project,
+                "attachment_names": ["results/project.json"],
+                "attachment_hashes": {"results/project.json": digest},
+                "evaluation_cache": {metadata.cache_key: metadata},
+            }
         )
 
 

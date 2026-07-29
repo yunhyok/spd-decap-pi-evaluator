@@ -13,7 +13,7 @@ from enum import StrEnum
 from hashlib import sha256
 import json
 from math import isfinite
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 import re
 from typing import Any, Mapping
 
@@ -224,6 +224,79 @@ class ScenarioDecap(ScenarioModel):
         return self.current_net
 
 
+class BaselineModelBinding(ScenarioModel):
+    """One model assignment frozen for an original-layout rail evaluation."""
+
+    model_config = ConfigDict(frozen=True)
+
+    refdes: str = Field(min_length=1)
+    model_id: str = Field(min_length=1)
+
+
+class BaselineCapture(ScenarioModel):
+    """Immutable model bindings used with the SPD-provided physical state.
+
+    PowerSI files often identify a mounted capacitor without embedding a usable
+    SPICE model.  The first confirmed evaluation therefore freezes the current
+    model assignment for those original locations, per rail.  Later model,
+    enable, and PWR edits cannot rewrite this capture.
+    """
+
+    model_config = ConfigDict(frozen=True)
+
+    rail_id: str = Field(min_length=1)
+    source_sha256: str
+    source_state_sha256: str
+    evaluation_input_sha256: str
+    model_bindings: tuple[BaselineModelBinding, ...]
+    captured_at_utc: datetime = Field(
+        default_factory=lambda: datetime.now(timezone.utc)
+    )
+
+    @field_validator(
+        "source_sha256", "source_state_sha256", "evaluation_input_sha256"
+    )
+    @classmethod
+    def valid_hash(cls, value: str) -> str:
+        return _validate_sha256(value)
+
+    @field_validator("captured_at_utc")
+    @classmethod
+    def timezone_is_explicit(cls, value: datetime) -> datetime:
+        if value.tzinfo is None or value.utcoffset() is None:
+            raise ValueError("captured_at_utc must include a timezone")
+        return value.astimezone(timezone.utc)
+
+    @field_validator("model_bindings")
+    @classmethod
+    def unique_refdes(
+        cls, value: tuple[BaselineModelBinding, ...]
+    ) -> tuple[BaselineModelBinding, ...]:
+        keys = [item.refdes.casefold() for item in value]
+        if len(keys) != len(set(keys)):
+            raise ValueError("baseline model binding REFDES values must be unique")
+        return tuple(sorted(value, key=lambda item: item.refdes.casefold()))
+
+    @property
+    def capture_fingerprint(self) -> str:
+        return _hash_payload(
+            {
+                "rail_id": self.rail_id,
+                "source_sha256": self.source_sha256,
+                "source_state_sha256": self.source_state_sha256,
+                "evaluation_input_sha256": self.evaluation_input_sha256,
+                "model_bindings": [
+                    item.model_dump(mode="json") for item in self.model_bindings
+                ],
+            }
+        )
+
+
+class EvaluationRole(StrEnum):
+    BASELINE = "baseline"
+    TUNED = "tuned"
+
+
 class ScenarioResultKey(ScenarioModel):
     """Inputs that make a cached electrical result reusable."""
 
@@ -268,15 +341,42 @@ class CachedEvaluationMetadata(ScenarioModel):
     result_key: ScenarioResultKey
     attachment_name: str = Field(min_length=1)
     attachment_sha256: str
+    role: EvaluationRole = EvaluationRole.TUNED
+    baseline_capture_sha256: str | None = None
     created_at_utc: datetime = Field(
         default_factory=lambda: datetime.now(timezone.utc)
     )
     summary: dict[str, Any] = Field(default_factory=dict)
 
+    @field_validator("attachment_name")
+    @classmethod
+    def result_attachment_namespace(cls, value: str) -> str:
+        path = PurePosixPath(value)
+        if (
+            "\\" in value
+            or path.is_absolute()
+            or path.as_posix() != value
+            or len(path.parts) < 2
+            or path.parts[0].casefold() != "results"
+            or path.suffix.casefold() != ".json"
+            or any(part in {"", ".", ".."} for part in path.parts)
+        ):
+            raise ValueError(
+                "evaluation cache attachments must be safe results/*.json paths"
+            )
+        return value
+
     @field_validator("attachment_sha256")
     @classmethod
     def valid_attachment_hash(cls, value: str) -> str:
         return _validate_sha256(value, label="evaluation attachment SHA-256")
+
+    @field_validator("baseline_capture_sha256")
+    @classmethod
+    def valid_optional_capture_hash(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        return _validate_sha256(value, label="baseline capture SHA-256")
 
     @field_validator("created_at_utc")
     @classmethod
@@ -293,6 +393,14 @@ class CachedEvaluationMetadata(ScenarioModel):
         except (TypeError, ValueError) as exc:
             raise ValueError("evaluation summary must contain finite JSON values") from exc
         return json.loads(encoded)
+
+    @model_validator(mode="after")
+    def baseline_has_capture_identity(self) -> "CachedEvaluationMetadata":
+        if self.role == EvaluationRole.BASELINE and self.baseline_capture_sha256 is None:
+            raise ValueError("baseline evaluation metadata requires capture identity")
+        if self.role != EvaluationRole.BASELINE and self.baseline_capture_sha256 is not None:
+            raise ValueError("only baseline evaluation metadata may name a capture")
+        return self
 
     @property
     def cache_key(self) -> str:
@@ -316,6 +424,7 @@ class ScenarioSpec(ScenarioModel):
         default_factory=dict,
         validation_alias=AliasChoices("evaluation_cache", "cached_evaluations"),
     )
+    baseline_captures: dict[str, BaselineCapture] = Field(default_factory=dict)
 
     @field_validator("schema_version")
     @classmethod
@@ -394,9 +503,110 @@ class ScenarioSpec(ScenarioModel):
                     f"evaluation cache key {cache_hash!r} does not match its result key"
                 )
             attached_hash = hash_by_key.get(metadata.attachment_name.casefold())
-            if attached_hash is not None and attached_hash != metadata.attachment_sha256:
+            if attached_hash is None:
+                # v0.2.0 exposed a metadata-only tuned-result contract without
+                # ever writing runtime result attachments.  Preserve those
+                # legacy scenarios under schema 0.1; matching_cached_evaluations
+                # ignores the orphan entry.  New Original results are always
+                # attachment-backed and must fail closed.
+                if metadata.role == EvaluationRole.BASELINE:
+                    raise ValueError(
+                        f"evaluation cache attachment {metadata.attachment_name!r} is missing"
+                    )
+                continue
+            if attached_hash != metadata.attachment_sha256:
                 raise ValueError(
                     f"evaluation cache attachment {metadata.attachment_name!r} hash disagrees"
+                )
+        cache_attachment_keys = [
+            metadata.attachment_name.casefold()
+            for metadata in self.evaluation_cache.values()
+        ]
+        if len(cache_attachment_keys) != len(set(cache_attachment_keys)):
+            raise ValueError("evaluation cache attachment names must be unique")
+        project_attachment_keys = {
+            str(name).casefold()
+            for name in self.normalized_project.get("attachment_names", [])
+        }
+        masked_project_assets = project_attachment_keys.intersection(
+            cache_attachment_keys
+        )
+        if masked_project_assets:
+            raise ValueError(
+                "evaluation cache cannot reference normalized project assets"
+            )
+
+        rail_by_key = {
+            item.rail_id.casefold(): item.rail_id for item in self.base_project.rails
+        }
+        decap_by_key = {item.refdes.casefold(): item for item in self.decaps}
+        capture_keys = [key.casefold() for key in self.baseline_captures]
+        if len(capture_keys) != len(set(capture_keys)):
+            raise ValueError("baseline capture rail keys must be unique")
+        for raw_rail_id, capture in self.baseline_captures.items():
+            rail_key = raw_rail_id.casefold()
+            if rail_key != capture.rail_id.casefold():
+                raise ValueError(
+                    f"baseline capture key {raw_rail_id!r} does not match rail "
+                    f"{capture.rail_id!r}"
+                )
+            if rail_key not in rail_by_key:
+                raise ValueError(
+                    f"baseline capture rail {capture.rail_id!r} is absent from project"
+                )
+            if capture.source_sha256 != self.source.sha256:
+                raise ValueError("baseline capture source identity does not match scenario")
+            if capture.source_state_sha256 != self.source_state_fingerprint:
+                raise ValueError("baseline capture physical source state has changed")
+            expected = {
+                item.refdes.casefold()
+                for item in self.decaps
+                if item.source_mounted
+                and item.source_rail_id.casefold() == rail_key
+            }
+            actual = {item.refdes.casefold() for item in capture.model_bindings}
+            if actual != expected:
+                raise ValueError(
+                    f"baseline capture for {capture.rail_id!r} must bind every "
+                    "originally mounted decap on that rail"
+                )
+            if any(item.refdes.casefold() not in decap_by_key for item in capture.model_bindings):
+                raise ValueError("baseline capture contains an unknown REFDES")
+            for binding in capture.model_bindings:
+                decap = decap_by_key[binding.refdes.casefold()]
+                if (
+                    decap.source_model_id is not None
+                    and binding.model_id.casefold()
+                    != decap.source_model_id.casefold()
+                ):
+                    raise ValueError(
+                        f"baseline binding for {binding.refdes!r} must use its "
+                        "SPD source model"
+                    )
+            if capture.evaluation_input_sha256 != self.baseline_evaluation_input_fingerprint(
+                capture.rail_id, capture.model_bindings
+            ):
+                raise ValueError(
+                    f"baseline solver inputs for {capture.rail_id!r} have changed"
+                )
+
+        capture_by_rail = {
+            capture.rail_id.casefold(): capture
+            for capture in self.baseline_captures.values()
+        }
+        for metadata in self.evaluation_cache.values():
+            if metadata.role != EvaluationRole.BASELINE:
+                continue
+            capture = capture_by_rail.get(metadata.result_key.rail_id.casefold())
+            if capture is None:
+                raise ValueError(
+                    f"baseline evaluation for {metadata.result_key.rail_id!r} "
+                    "has no baseline capture"
+                )
+            if metadata.baseline_capture_sha256 != capture.capture_fingerprint:
+                raise ValueError(
+                    f"baseline evaluation for {metadata.result_key.rail_id!r} "
+                    "does not match its capture"
                 )
         return self
 
@@ -435,10 +645,208 @@ class ScenarioSpec(ScenarioModel):
 
         return _hash_payload(self._design_payload())
 
-    def matching_cached_evaluations(self) -> dict[str, CachedEvaluationMetadata]:
-        """Return only results produced for the current electrical design."""
+    @property
+    def source_state_fingerprint(self) -> str:
+        """Hash immutable placement/source assignment data, excluding tuning."""
 
-        fingerprint = self.design_fingerprint
+        source_decaps = []
+        for item in sorted(self.decaps, key=lambda entry: entry.refdes.casefold()):
+            source_decaps.append(
+                {
+                    "refdes": item.refdes,
+                    "center": item.center.model_dump(mode="json"),
+                    "pwr_pad": item.pwr_pad.model_dump(mode="json"),
+                    "gnd_pad": item.gnd_pad.model_dump(mode="json"),
+                    "side": item.side,
+                    "start_layer": item.start_layer,
+                    "attach_layer": item.attach_layer,
+                    "footprint": item.footprint,
+                    "source_net": item.source_net,
+                    "source_rail_id": item.source_rail_id,
+                    "source_model_id": item.source_model_id,
+                    "source_mounted": item.source_mounted,
+                    "eligibility": {
+                        key: value.model_dump(mode="json")
+                        for key, value in sorted(
+                            item.eligibility.items(), key=lambda pair: pair[0].casefold()
+                        )
+                    },
+                }
+            )
+        return _hash_payload(
+            {"source_sha256": self.source.sha256, "decaps": source_decaps}
+        )
+
+    def baseline_evaluation_input_fingerprint(
+        self,
+        rail_id: str,
+        model_bindings: list[BaselineModelBinding]
+        | tuple[BaselineModelBinding, ...],
+    ) -> str:
+        """Hash only immutable solver inputs used by one Original rail.
+
+        The standalone application may add models to the tuning library after
+        the first evaluation.  Unused models, their source attachments, and
+        library bookkeeping must not invalidate the saved Original result.
+        Definitions of models actually bound to the Original rail remain part
+        of this identity and therefore cannot drift silently.
+        """
+
+        rail = next(
+            (
+                item
+                for item in self.base_project.rails
+                if item.rail_id.casefold() == rail_id.casefold()
+            ),
+            None,
+        )
+        if rail is None:
+            raise ValueError(f"unknown baseline rail {rail_id!r}")
+        bindings = tuple(model_bindings)
+        binding_models = {item.model_id.casefold() for item in bindings}
+        models = {
+            item.model_id.casefold(): item for item in self.base_project.cap_models
+        }
+        missing_models = binding_models - set(models)
+        if missing_models:
+            raise ValueError(
+                "baseline capture references unknown model(s): "
+                + ", ".join(sorted(missing_models))
+            )
+        decaps = {item.refdes.casefold(): item for item in self.decaps}
+        for binding in bindings:
+            decap = decaps.get(binding.refdes.casefold())
+            if decap is None:
+                raise ValueError(
+                    f"baseline capture references unknown REFDES {binding.refdes!r}"
+                )
+            model = models[binding.model_id.casefold()]
+            if model.footprint.casefold() != decap.footprint.casefold():
+                raise ValueError(
+                    f"{binding.refdes}: baseline model footprint does not match"
+                )
+
+        project = self.base_project.model_dump(mode="json")
+        project.pop("attachment_names", None)
+        project.pop("metadata", None)
+        project["cap_models"] = [
+            models[key].model_dump(mode="json") for key in sorted(binding_models)
+        ]
+        return _hash_payload(
+            {
+                "rail_id": rail.rail_id,
+                "project": project,
+                "source_state_sha256": self.source_state_fingerprint,
+                "model_bindings": [
+                    item.model_dump(mode="json")
+                    for item in sorted(bindings, key=lambda value: value.refdes.casefold())
+                ],
+            }
+        )
+
+    def with_baseline_captures(self, rail_ids: list[str] | tuple[str, ...]) -> "ScenarioSpec":
+        """Return a copy with missing per-rail original model maps frozen.
+
+        Callers must explicitly inform the user when current model assignments
+        are used because the SPD did not provide ``source_model_id``.
+        """
+
+        rail_by_key = {
+            item.rail_id.casefold(): item.rail_id for item in self.base_project.rails
+        }
+        captures = dict(self.baseline_captures)
+        for raw_rail_id in rail_ids:
+            rail_key = raw_rail_id.casefold()
+            try:
+                rail_id = rail_by_key[rail_key]
+            except KeyError as exc:
+                raise ValueError(f"unknown baseline rail {raw_rail_id!r}") from exc
+            if any(key.casefold() == rail_key for key in captures):
+                continue
+            bindings: list[BaselineModelBinding] = []
+            missing: list[str] = []
+            for decap in self.decaps:
+                if (
+                    not decap.source_mounted
+                    or decap.source_rail_id.casefold() != rail_key
+                ):
+                    continue
+                model_id = decap.source_model_id or decap.model_id
+                if model_id is None:
+                    missing.append(decap.refdes)
+                else:
+                    bindings.append(
+                        BaselineModelBinding(refdes=decap.refdes, model_id=model_id)
+                    )
+            if missing:
+                preview = ", ".join(sorted(missing, key=str.casefold)[:12])
+                suffix = "..." if len(missing) > 12 else ""
+                raise ValueError(
+                    f"{rail_id}: assign initial models to {len(missing):,} originally "
+                    f"mounted decap(s) before baseline evaluation ({preview}{suffix})"
+                )
+            captures[rail_id] = BaselineCapture(
+                rail_id=rail_id,
+                source_sha256=self.source.sha256,
+                source_state_sha256=self.source_state_fingerprint,
+                evaluation_input_sha256=self.baseline_evaluation_input_fingerprint(
+                    rail_id, bindings
+                ),
+                model_bindings=tuple(bindings),
+            )
+        return ScenarioSpec.model_validate(
+            {**self.model_dump(mode="python"), "baseline_captures": captures}
+        )
+
+    def original_configuration(self, rail_id: str) -> "ScenarioSpec":
+        """Return the immutable original physical state for one captured rail."""
+
+        capture = next(
+            (
+                item
+                for key, item in self.baseline_captures.items()
+                if key.casefold() == rail_id.casefold()
+            ),
+            None,
+        )
+        if capture is None:
+            raise ValueError(f"baseline capture for rail {rail_id!r} does not exist")
+        models = {
+            item.refdes.casefold(): item.model_id for item in capture.model_bindings
+        }
+        original_decaps: list[ScenarioDecap] = []
+        capture_rail_key = capture.rail_id.casefold()
+        for decap in self.decaps:
+            model_id = decap.source_model_id
+            if (
+                decap.source_mounted
+                and decap.source_rail_id.casefold() == capture_rail_key
+            ):
+                model_id = models[decap.refdes.casefold()]
+            original_decaps.append(
+                ScenarioDecap.model_validate(
+                    {
+                        **decap.model_dump(mode="python"),
+                        "current_net": decap.source_net,
+                        "current_rail_id": decap.source_rail_id,
+                        "model_id": model_id,
+                        "enabled": decap.source_mounted,
+                    }
+                )
+            )
+        return ScenarioSpec.model_validate(
+            {**self.model_dump(mode="python"), "decaps": original_decaps}
+        )
+
+    def matching_cached_evaluations(
+        self,
+        *,
+        design_fingerprint: str | None = None,
+        role: EvaluationRole | None = None,
+    ) -> dict[str, CachedEvaluationMetadata]:
+        """Return hash-valid results for one explicit or current design."""
+
+        fingerprint = design_fingerprint or self.design_fingerprint
         attachment_hashes = {
             name.casefold(): digest for name, digest in self.attachment_hashes.items()
         }
@@ -446,6 +854,7 @@ class ScenarioSpec(ScenarioModel):
             key: value
             for key, value in self.evaluation_cache.items()
             if value.result_key.design_fingerprint == fingerprint
+            and (role is None or value.role == role)
             and attachment_hashes.get(value.attachment_name.casefold())
             == value.attachment_sha256
         }
@@ -458,7 +867,10 @@ def scenario_design_fingerprint(scenario: ScenarioSpec) -> str:
 
 
 __all__ = [
+    "BaselineCapture",
+    "BaselineModelBinding",
     "CachedEvaluationMetadata",
+    "EvaluationRole",
     "RailEligibility",
     "SCENARIO_APP_VERSION",
     "SCENARIO_SCHEMA_VERSION",

@@ -6,18 +6,23 @@ from pathlib import Path
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 import pytest
-from PySide6.QtCore import QPointF
+from PySide6.QtCore import QPointF, Qt
+from PySide6.QtGui import QColor
 from PySide6.QtWidgets import (
     QApplication,
+    QColorDialog,
     QGraphicsEllipseItem,
     QGraphicsPolygonItem,
     QLabel,
+    QTableWidget,
 )
 
 from test_io_spd import MINI_SPD
+from spd_decap_pi import evaluation as evaluation_module
+from spd_decap_pi._core.services import EvaluationView
 from spd_decap_pi.gui.worker import FunctionWorker
 from spd_decap_pi.gui.main_window import MainWindow, _job_load_scenario
-from spd_decap_pi.scenario import ScenarioDecap, ScenarioSpec
+from spd_decap_pi.scenario import ScenarioDecap, ScenarioResultKey, ScenarioSpec
 from spd_decap_pi.scenario_io import save_scenario
 from spd_decap_pi.spd_adapter import import_spd_scenario
 from spd_decap_pi.version import APP_DISPLAY_NAME
@@ -41,6 +46,19 @@ def test_main_window_exposes_sibling_identity_and_evaluation_only_workflow() -> 
         assert "dashed rectangles mark the solver" in labels
         assert "Optimization" not in labels
         assert not window.evaluate_button.isEnabled()
+    finally:
+        window.close()
+        application.processEvents()
+
+
+def test_evaluation_layout_preserves_a_usable_plot_height() -> None:
+    application = _application()
+    window = MainWindow()
+    try:
+        window.show()
+        application.processEvents()
+        assert window.size().width() >= 1500
+        assert window.plot.height() >= 260
     finally:
         window.close()
         application.processEvents()
@@ -193,6 +211,37 @@ def test_evaluation_worker_receives_scenario_model_attachments(
     captured: dict[str, object] = {}
     try:
         window._accept_spd_import(imported)
+        assert window.scenario is not None
+        base = window.scenario.base_project
+        second_rail = base.rails[0].model_copy(
+            update={
+                "rail_id": "RAIL_SECOND",
+                "domain": "VDD_SECOND",
+                "net": "VDD_SECOND",
+            }
+        )
+        stackup = [
+            layer.model_copy(
+                update={"pwr_nets": [*layer.pwr_nets, "VDD_SECOND"]}
+            )
+            if layer.name == second_rail.pwr_layer
+            else layer
+            for layer in base.stackup_layers
+        ]
+        window._scenario = ScenarioSpec.model_validate(
+            {
+                **window.scenario.model_dump(mode="python"),
+                "normalized_project": base.model_copy(
+                    update={
+                        "rails": [*base.rails, second_rail],
+                        "stackup_layers": stackup,
+                    }
+                ),
+            }
+        )
+        window._scenario_path = tmp_path / "automatic-baseline.spdpi"
+        window._refresh_all()
+        window._set_all_rails_checked(True)
 
         def capture(worker, _on_result, **kwargs):
             captured["worker"] = worker
@@ -203,7 +252,16 @@ def test_evaluation_worker_receives_scenario_model_attachments(
 
         worker = captured["worker"]
         assert worker.kwargs["attachments"] == imported.attachments
-        assert captured["label"] == "Evaluating scenario..."
+        assert worker.function.__name__ == "evaluate_comparison_batch"
+        assert worker.args[1] == (
+            base.rails[0].rail_id,
+            "RAIL_SECOND",
+        )
+        assert set(worker.args[0].baseline_captures) == {
+            base.rails[0].rail_id,
+            "RAIL_SECOND",
+        }
+        assert captured["label"] == "Evaluating 2 PWR NET(s)..."
     finally:
         window._dirty = False
         window.close()
@@ -227,5 +285,186 @@ def test_cancelled_worker_does_not_show_a_failure_or_leave_cancelling_status() -
         assert window.status_text.text() == "Operation cancelled"
         assert window._worker is None
     finally:
+        window.close()
+        application.processEvents()
+
+
+def test_completed_comparison_populates_plot_ai_selector_and_auto_saves(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    application = _application()
+    source = tmp_path / "completed.spd"
+    source.write_text(MINI_SPD, encoding="ascii")
+    imported = import_spd_scenario(source)
+    window = MainWindow()
+    saved: list[Path] = []
+    try:
+        window._accept_spd_import(imported)
+        assert window.scenario is not None
+        rail_id = window.scenario.base_project.rails[0].rail_id
+        window._scenario_path = tmp_path / "completed.spdpi"
+
+        def fake_evaluate(
+            actual,
+            requested_rail,
+            target_ohm=None,
+            modal_max_index=8,
+            **_kwargs,
+        ):
+            view = EvaluationView(
+                rail_id=requested_rail,
+                frequency_hz=[1.0e5, 1.0e6],
+                magnitude_ohm=[0.02, 0.03],
+                phase_deg=[0.0, 1.0],
+                target_ohm=0.025,
+                target_curve_ohm=[0.025, 0.025],
+                max_violation_db=1.0,
+                max_violation_frequency_hz=1.0e6,
+                rms_violation_db=0.5,
+                peak_magnitude_ohm=0.03,
+                peak_frequency_hz=1.0e6,
+                peak_prominence_db=1.2,
+                peaks=[],
+                cap_count=1,
+                model_count=1,
+                confidence="MEDIUM",
+                confidence_note="fixture",
+                confidence_bands=[],
+                assumptions=[],
+                solver_version=evaluation_module.SOLVER_VERSION,
+                solver_diagnostics={},
+                convergence=None,
+                z_real_ohm=[0.02, 0.03],
+                z_imag_ohm=[0.0, 0.0],
+            )
+            key = ScenarioResultKey.from_settings(
+                design_fingerprint=actual.design_fingerprint,
+                rail_id=requested_rail,
+                settings={
+                    "target_ohm": target_ohm,
+                    "modal_max_index": modal_max_index,
+                },
+                solver_version=view.solver_version,
+            )
+            return evaluation_module.ScenarioEvaluation(
+                state=object(),
+                view=view,
+                result_key=key,
+                scenario_revision=actual.revision,
+            )
+
+        monkeypatch.setattr(evaluation_module, "evaluate_scenario", fake_evaluate)
+        batch = evaluation_module.evaluate_comparison_batch(
+            window.scenario,
+            [rail_id],
+            attachments=imported.attachments,
+        )
+
+        window._accept_evaluation(batch)
+
+        assert len(window.plot.plot_widgets) == 1
+        assert window.comparison_table.rowCount() == 1
+        assert (
+            window.comparison_table.editTriggers()
+            == QTableWidget.EditTrigger.NoEditTriggers
+        )
+        assert window.comparison_table.item(0, 0).text() == rail_id
+        assert window.comparison_table.item(0, 6).text() == "Saved now"
+        assert window.ai_rail_combo.count() == 1
+        assert window.ai_rail_combo.currentData() == rail_id
+        assert window._last_scenario_evaluation is batch.comparisons[0].tuned
+        assert window._dirty
+        assert window._auto_save_after_worker
+        assert "impedance only" in window.evaluation_summary.toPlainText()
+
+        monkeypatch.setattr(
+            window,
+            "save_scenario",
+            lambda **_kwargs: saved.append(window._scenario_path) or True,
+        )
+        window._worker = FunctionWorker(lambda **_kwargs: None)
+        window._worker_finished()
+        application.processEvents()
+        assert saved == [tmp_path / "completed.spdpi"]
+
+        rail_net = window.scenario.base_project.rails[0].net
+        first_color_item = next(
+            window.color_list.item(index)
+            for index in range(window.color_list.count())
+            if window.color_list.item(index).data(Qt.ItemDataRole.UserRole) == rail_net
+        )
+        monkeypatch.setattr(
+            QColorDialog,
+            "getColor",
+            lambda *_args, **_kwargs: QColor("#FF0000"),
+        )
+        window._choose_net_color(first_color_item)
+        plotted_pen = window.plot.plot_widgets[0].listDataItems()[0].opts["pen"]
+        assert plotted_pen.color().name() == "#ff0000"
+
+        window.ai_output.setPlainText("analysis for the previously selected rail")
+        window._ai_rail_changed()
+        assert window.ai_output.toPlainText() == ""
+
+        window.target_edit.setText("0.03")
+        window.target_edit.textEdited.emit("0.03")
+        assert window.plot.plot_widgets == ()
+        assert window.comparison_table.rowCount() == 0
+        assert window._comparison_batch is None
+        assert not window.ai_rail_combo.isEnabled()
+        assert window.status_text.text() == "Target changed; evaluation required"
+        assert "Target impedance changed" in window.evaluation_summary.toPlainText()
+    finally:
+        window._dirty = False
+        window.close()
+        application.processEvents()
+
+
+def test_restore_source_state_uses_the_frozen_fallback_baseline_model(
+    tmp_path: Path,
+) -> None:
+    application = _application()
+    source = tmp_path / "fallback-restore.spd"
+    source.write_text(MINI_SPD, encoding="ascii")
+    imported = import_spd_scenario(source)
+    window = MainWindow()
+    try:
+        scenario = imported.scenario
+        c1 = next(item for item in scenario.decaps if item.refdes == "C1")
+        fallback = c1.model_copy(update={"source_model_id": None})
+        scenario = ScenarioSpec.model_validate(
+            {
+                **scenario.model_dump(mode="python"),
+                "decaps": [
+                    fallback if item.refdes == "C1" else item
+                    for item in scenario.decaps
+                ],
+            }
+        ).with_baseline_captures((c1.source_rail_id,))
+        disabled = fallback.model_copy(update={"model_id": None, "enabled": False})
+        scenario = ScenarioSpec.model_validate(
+            {
+                **scenario.model_dump(mode="python"),
+                "decaps": [
+                    disabled if item.refdes == "C1" else item
+                    for item in scenario.decaps
+                ],
+            }
+        )
+        window._scenario = scenario
+        window._attachments = imported.attachments
+        window._refresh_all()
+        window.board.set_selected_refdes(("C1",))
+
+        window._restore_selected()
+
+        assert window.scenario is not None
+        restored = next(
+            item for item in window.scenario.decaps if item.refdes == "C1"
+        )
+        assert restored.enabled
+        assert restored.model_id == c1.model_id
+    finally:
+        window._dirty = False
         window.close()
         application.processEvents()
