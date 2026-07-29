@@ -69,6 +69,10 @@ from ..spd_adapter import ScenarioImport, import_spd_scenario, verify_scenario_s
 from ..version import APP_DISPLAY_NAME
 from .board_view import DecapBoardView
 from .comparison_plot import MultiRailComparisonPlot
+from .results_window import (
+    ComparisonResultsWindow,
+    impedance_transition_at_frequency,
+)
 from .worker import FunctionWorker
 
 
@@ -140,6 +144,7 @@ class MainWindow(QMainWindow):
         self._last_scenario_evaluation: Any | None = None
         self._tuned_evaluations_by_rail: dict[str, Any] = {}
         self._comparison_batch: Any | None = None
+        self._results_window: ComparisonResultsWindow | None = None
 
         self._build_actions()
         self._build_ui()
@@ -248,9 +253,19 @@ class MainWindow(QMainWindow):
     def _build_selection_tab(self) -> QWidget:
         page = QWidget()
         layout = QVBoxLayout(page)
+        splitter = QSplitter(Qt.Orientation.Vertical)
+        splitter.setObjectName("selectionSectionSplitter")
+        splitter.setChildrenCollapsible(False)
+        splitter.setHandleWidth(6)
+
+        selection_section = QWidget()
+        selection_section.setObjectName("selectionTableSection")
+        selection_section.setMinimumHeight(170)
+        selection_layout = QVBoxLayout(selection_section)
+        selection_layout.setContentsMargins(0, 0, 0, 0)
         self.selection_summary = QLabel("No decap selected")
         self.selection_summary.setWordWrap(True)
-        layout.addWidget(self.selection_summary)
+        selection_layout.addWidget(self.selection_summary)
         self.selection_table = QTableWidget(0, 6)
         self.selection_table.setHorizontalHeaderLabels(
             ("REFDES", "State", "PWR NET", "Model", "Footprint", "Eligible PWR")
@@ -258,8 +273,13 @@ class MainWindow(QMainWindow):
         self.selection_table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
         self.selection_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
         self.selection_table.horizontalHeader().setStretchLastSection(True)
-        layout.addWidget(self.selection_table, 1)
+        selection_layout.addWidget(self.selection_table, 1)
 
+        color_section = QWidget()
+        color_section.setObjectName("selectionColorSection")
+        color_section.setMinimumHeight(160)
+        color_layout = QVBoxLayout(color_section)
+        color_layout.setContentsMargins(0, 0, 0, 0)
         hint = QLabel(
             "Left click selects; drag selects many; right click changes PWR/model or "
             "enabled state. Hover a decap for its PWR NET, component, REFDES and state; "
@@ -270,7 +290,7 @@ class MainWindow(QMainWindow):
         )
         hint.setWordWrap(True)
         hint.setStyleSheet("color: #9aa4b2;")
-        layout.addWidget(hint)
+        color_layout.addWidget(hint)
 
         colors_group = QGroupBox("PWR NET colors")
         colors_layout = QVBoxLayout(colors_group)
@@ -278,12 +298,29 @@ class MainWindow(QMainWindow):
         self.color_list.itemDoubleClicked.connect(self._choose_net_color)
         colors_layout.addWidget(self.color_list)
         colors_layout.addWidget(QLabel("Double-click a net to change its color."))
-        layout.addWidget(colors_group)
+        color_layout.addWidget(colors_group, 1)
+
+        splitter.addWidget(selection_section)
+        splitter.addWidget(color_section)
+        splitter.setStretchFactor(0, 3)
+        splitter.setStretchFactor(1, 2)
+        splitter.setSizes((390, 260))
+        layout.addWidget(splitter, 1)
         return page
 
     def _build_evaluation_tab(self) -> QWidget:
         page = QWidget()
         layout = QVBoxLayout(page)
+        section_splitter = QSplitter(Qt.Orientation.Vertical)
+        section_splitter.setObjectName("evaluationSectionSplitter")
+        section_splitter.setChildrenCollapsible(False)
+        section_splitter.setHandleWidth(6)
+
+        controls_section = QWidget()
+        controls_section.setObjectName("evaluationControlsSection")
+        controls_section.setMinimumHeight(160)
+        controls_layout = QVBoxLayout(controls_section)
+        controls_layout.setContentsMargins(0, 0, 0, 0)
         form = QFormLayout()
         self.rail_list = QListWidget()
         self.rail_list.setObjectName("evaluationRailList")
@@ -311,22 +348,29 @@ class MainWindow(QMainWindow):
         self.target_edit.textEdited.connect(self._target_input_changed)
         form.addRow("PWR NETs", rail_picker)
         form.addRow("Common target impedance (ohm)", self.target_edit)
-        layout.addLayout(form)
+        controls_layout.addLayout(form)
         self.evaluate_button = QPushButton("Run Original + Tuned evaluation")
         self.evaluate_button.setObjectName("evaluateScenarioButton")
         self.evaluate_button.clicked.connect(self.run_evaluation)
-        layout.addWidget(self.evaluate_button)
+        controls_layout.addWidget(self.evaluate_button)
+
+        results_section = QWidget()
+        results_section.setObjectName("evaluationResultsSection")
+        results_section.setMinimumHeight(320)
+        results_layout = QVBoxLayout(results_section)
+        results_layout.setContentsMargins(0, 0, 0, 0)
         self.plot = MultiRailComparisonPlot()
         self.plot.setMinimumHeight(260)
+        self.plot.plotDoubleClicked.connect(self._show_results_window)
         self.comparison_table = QTableWidget(0, 7)
         self.comparison_table.setObjectName("evaluationComparisonTable")
         self.comparison_table.setHorizontalHeaderLabels(
             (
                 "PWR NET",
                 "Caps Original→Tuned",
-                "Peak Original",
-                "Peak Tuned",
-                "Δ Peak",
+                "|Z| @ 1 MHz Original→Tuned",
+                "|Z| @ 10 MHz Original→Tuned",
+                "|Z| @ 100 MHz Original→Tuned",
                 "Max violation Original→Tuned",
                 "Baseline",
             )
@@ -342,37 +386,57 @@ class MainWindow(QMainWindow):
         result_details.setObjectName("evaluationResultDetails")
         result_details.addTab(self.comparison_table, "Comparison table")
         result_details.addTab(self.evaluation_summary, "Summary")
+        evaluation_notes = QTextBrowser()
+        evaluation_notes.setObjectName("evaluationNotes")
+        evaluation_notes.setPlainText(
+            "Each checked PWR NET is solved sequentially. Original results are cached "
+            "inside the scenario and compared with the current Tuned state; phase is not "
+            "plotted. The shared plot starts with every result visible; Plot Channels and "
+            "X/Y markers only change the display. Double-click the plot for a large, "
+            "non-modal result window. Evaluation reuses the existing modal PI engine. "
+            "Non-rectangular PWR artwork is solved with its disclosed rectangular bbox; "
+            "DGND is continuous; results are single-rail Zii without inter-rail coupling."
+        )
+        evaluation_notes.setStyleSheet("color: #d6a64f;")
+        result_details.addTab(evaluation_notes, "Notes")
         result_splitter = QSplitter(Qt.Orientation.Vertical)
         result_splitter.setObjectName("evaluationResultSplitter")
+        result_splitter.setChildrenCollapsible(False)
+        result_splitter.setHandleWidth(6)
         result_splitter.addWidget(self.plot)
         result_splitter.addWidget(result_details)
         result_splitter.setStretchFactor(0, 3)
         result_splitter.setStretchFactor(1, 2)
         result_splitter.setSizes((360, 220))
-        layout.addWidget(result_splitter, 1)
-        limitation = QLabel(
-            "Each checked PWR NET is solved sequentially. Original results are cached "
-            "inside the scenario and compared with the current Tuned state; phase is not "
-            "plotted. The shared plot starts with every result visible; Plot Channels and "
-            "X/Y markers only change the display. Evaluation reuses the existing modal PI "
-            "engine. Non-rectangular PWR "
-            "artwork is solved with its disclosed rectangular bbox; DGND is continuous; "
-            "results are single-rail Zii without inter-rail coupling."
-        )
-        limitation.setWordWrap(True)
-        limitation.setStyleSheet("color: #d6a64f;")
-        layout.addWidget(limitation)
+        results_layout.addWidget(result_splitter, 1)
+
+        section_splitter.addWidget(controls_section)
+        section_splitter.addWidget(results_section)
+        section_splitter.setStretchFactor(0, 1)
+        section_splitter.setStretchFactor(1, 3)
+        section_splitter.setSizes((190, 550))
+        layout.addWidget(section_splitter, 1)
         return page
 
     def _build_ai_tab(self) -> QWidget:
         page = QWidget()
         layout = QVBoxLayout(page)
+        splitter = QSplitter(Qt.Orientation.Vertical)
+        splitter.setObjectName("aiSectionSplitter")
+        splitter.setChildrenCollapsible(False)
+        splitter.setHandleWidth(6)
+
+        controls_section = QWidget()
+        controls_section.setObjectName("aiControlsSection")
+        controls_section.setMinimumHeight(210)
+        controls_layout = QVBoxLayout(controls_section)
+        controls_layout.setContentsMargins(0, 0, 0, 0)
         intro = QLabel(
             "Evidence-grounded Plot Analyst only. AI receives solver-derived features "
             "and cannot change PWR assignments, enable decaps, or run optimization."
         )
         intro.setWordWrap(True)
-        layout.addWidget(intro)
+        controls_layout.addWidget(intro)
         form = QFormLayout()
         self.ai_endpoint = QLineEdit("http://127.0.0.1:11434")
         self.ai_model = QLineEdit()
@@ -385,13 +449,21 @@ class MainWindow(QMainWindow):
         form.addRow("Local endpoint", self.ai_endpoint)
         form.addRow("Model", self.ai_model)
         form.addRow("", self.ai_allow_remote)
-        layout.addLayout(form)
+        controls_layout.addLayout(form)
         self.ai_button = QPushButton("Analyze latest plot")
         self.ai_button.setObjectName("aiPlotAnalystButton")
         self.ai_button.clicked.connect(self.run_ai_assist)
-        layout.addWidget(self.ai_button)
+        controls_layout.addWidget(self.ai_button)
+
         self.ai_output = QTextBrowser()
-        layout.addWidget(self.ai_output, 1)
+        self.ai_output.setObjectName("aiOutputSection")
+        self.ai_output.setMinimumHeight(160)
+        splitter.addWidget(controls_section)
+        splitter.addWidget(self.ai_output)
+        splitter.setStretchFactor(0, 1)
+        splitter.setStretchFactor(1, 2)
+        splitter.setSizes((260, 420))
+        layout.addWidget(splitter, 1)
         return page
 
     def _set_loaded_state(self, loaded: bool) -> None:
@@ -457,6 +529,8 @@ class MainWindow(QMainWindow):
         self.ai_rail_combo.setEnabled(False)
         self.plot.clear_comparisons()
         self.comparison_table.setRowCount(0)
+        if self._results_window is not None:
+            self._results_window.clear_results()
         if self._scenario is not None:
             available_models = {
                 item.model_id.casefold()
@@ -1264,6 +1338,7 @@ class MainWindow(QMainWindow):
         if self._comparison_batch is not None:
             try:
                 self._render_comparisons(self._comparison_batch.comparisons)
+                self._refresh_results_window(self._comparison_batch.comparisons)
             except (KeyError, TypeError, ValueError):
                 self._invalidate_evaluation(
                     "PWR NET colors changed and the prior comparison became invalid."
@@ -1467,9 +1542,9 @@ class MainWindow(QMainWindow):
             values = (
                 net,
                 f"{baseline.cap_count:,} → {tuned.cap_count:,}",
-                f"{baseline.peak_magnitude_ohm * 1_000:.3f} mΩ",
-                f"{tuned.peak_magnitude_ohm * 1_000:.3f} mΩ",
-                f"{(tuned.peak_magnitude_ohm - baseline.peak_magnitude_ohm) * 1_000:+.3f} mΩ",
+                impedance_transition_at_frequency(baseline, tuned, 1.0e6),
+                impedance_transition_at_frequency(baseline, tuned, 10.0e6),
+                impedance_transition_at_frequency(baseline, tuned, 100.0e6),
                 f"{baseline.max_violation_db:.3f} → {tuned.max_violation_db:.3f} dB",
                 "Reused" if comparison.baseline_from_cache else "Saved now",
             )
@@ -1478,6 +1553,7 @@ class MainWindow(QMainWindow):
                     row, column, QTableWidgetItem(str(value))
                 )
         self.comparison_table.resizeColumnsToContents()
+        self._refresh_results_window(comparisons)
 
         self.ai_rail_combo.blockSignals(True)
         self.ai_rail_combo.clear()
@@ -1513,6 +1589,17 @@ class MainWindow(QMainWindow):
         )
 
     def _render_comparisons(self, comparisons: tuple[Any, ...]) -> dict[str, str]:
+        rail_colors, rail_labels = self._comparison_plot_metadata(comparisons)
+        self.plot.set_comparisons(
+            comparisons,
+            rail_colors=rail_colors,
+            rail_labels=rail_labels,
+        )
+        return rail_labels
+
+    def _comparison_plot_metadata(
+        self, comparisons: tuple[Any, ...]
+    ) -> tuple[dict[str, str], dict[str, str]]:
         assert self._scenario is not None
         rail_by_id = {
             item.rail_id.casefold(): item
@@ -1528,12 +1615,45 @@ class MainWindow(QMainWindow):
             comparison.rail_id: rail_by_id[comparison.rail_id.casefold()].net
             for comparison in comparisons
         }
-        self.plot.set_comparisons(
-            comparisons,
+        return rail_colors, rail_labels
+
+    def _show_results_window(self) -> None:
+        comparisons = tuple(
+            getattr(self._comparison_batch, "comparisons", ())
+            if self._comparison_batch is not None
+            else ()
+        )
+        if not comparisons or self._scenario is None:
+            return
+        if self._results_window is None:
+            self._results_window = ComparisonResultsWindow(self)
+        self._refresh_results_window(comparisons)
+        self._results_window.show()
+        self._results_window.raise_()
+        self._results_window.activateWindow()
+
+    def _refresh_results_window(
+        self, comparisons: tuple[Any, ...] | None = None
+    ) -> None:
+        if self._results_window is None:
+            return
+        rendered = comparisons
+        if rendered is None:
+            rendered = tuple(
+                getattr(self._comparison_batch, "comparisons", ())
+                if self._comparison_batch is not None
+                else ()
+            )
+        if not rendered or self._scenario is None:
+            self._results_window.clear_results()
+            return
+        rail_colors, rail_labels = self._comparison_plot_metadata(rendered)
+        self._results_window.set_results(
+            rendered,
             rail_colors=rail_colors,
             rail_labels=rail_labels,
+            source_table=self.comparison_table,
         )
-        return rail_labels
 
     def _ai_rail_changed(self, _index: int | None = None) -> None:
         self.ai_output.clear()

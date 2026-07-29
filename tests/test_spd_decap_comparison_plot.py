@@ -6,7 +6,9 @@ from math import log10
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 import pytest
-from PySide6.QtCore import QPointF, Qt
+from PySide6.QtCore import QEvent, QPointF, Qt
+from PySide6.QtGui import QMouseEvent
+from PySide6.QtTest import QTest
 from PySide6.QtWidgets import QApplication, QLabel, QPushButton, QScrollArea, QWidget
 import pyqtgraph as pg
 
@@ -203,6 +205,8 @@ def test_x_y_markers_place_disable_drag_and_clear() -> None:
         assert widget.y_marker_checkbox is not None
         assert widget.x_marker_line is not None
         assert widget.y_marker_line is not None
+        assert widget.x_marker_line.pen.style() == Qt.PenStyle.DashLine
+        assert widget.y_marker_line.pen.style() == Qt.PenStyle.DashLine
         assert not widget.x_marker_line.isVisible()
         assert not widget.y_marker_line.isVisible()
         assert widget.marker_readout_text == "X: off    Y: off"
@@ -226,6 +230,9 @@ def test_x_y_markers_place_disable_drag_and_clear() -> None:
         # Exercise the click path: log10 ViewBox coordinates must be converted
         # back to physical Hz and ohm values for the marker readout.
         widget._plot_clicked(ClickEvent())
+        # A single click is intentionally deferred so an arriving double-click
+        # can cancel it without moving an existing marker.
+        widget._commit_pending_marker_click()
         assert widget.marker_values == pytest.approx((1.0e6, 0.025))
         assert widget.x_marker_line.isVisible()
         assert widget.y_marker_line.isVisible()
@@ -233,6 +240,13 @@ def test_x_y_markers_place_disable_drag_and_clear() -> None:
         assert widget.y_marker_line.value() == pytest.approx(log10(0.025))
         assert "1 MHz" in widget.marker_readout_text
         assert "25 mohm" in widget.marker_readout_text
+        assert len(widget.x_marker_bubbles) == 2
+        assert {bubble.toPlainText() for bubble in widget.x_marker_bubbles} == {
+            "O 25 mohm",
+            "T 20 mohm",
+        }
+        assert len(widget.y_marker_bubbles) == 1
+        assert widget.y_marker_bubbles[0].toPlainText() == "O 1 MHz"
 
         widget.x_marker_line.setValue(7.0)
         application.processEvents()
@@ -242,13 +256,182 @@ def test_x_y_markers_place_disable_drag_and_clear() -> None:
         widget.x_marker_checkbox.setChecked(False)
         assert not widget.x_marker_line.isVisible()
         assert widget.y_marker_line.isVisible()
+        assert widget.x_marker_bubbles == ()
+        assert len(widget.y_marker_bubbles) == 1
         assert "X: off" in widget.marker_readout_text
 
         widget.clear_markers()
         assert widget.marker_values == (None, None)
         assert not widget.x_marker_line.isVisible()
         assert not widget.y_marker_line.isVisible()
+        assert widget.x_marker_bubbles == ()
+        assert widget.y_marker_bubbles == ()
         assert "Y: click plot" in widget.marker_readout_text
+    finally:
+        widget.close()
+        application.processEvents()
+
+
+def test_double_click_emits_signal_and_cancels_pending_marker_placement() -> None:
+    application = _application()
+    widget = MultiRailComparisonPlot()
+    try:
+        widget.set_comparisons(
+            (_comparison("RAIL_A"),), rail_colors={"RAIL_A": "#0088CC"}
+        )
+        assert widget.x_marker_checkbox is not None
+        assert widget.y_marker_checkbox is not None
+        widget.x_marker_checkbox.setChecked(True)
+        widget.y_marker_checkbox.setChecked(True)
+        widget.place_markers(1.0e6, 0.025)
+        original_values = widget.marker_values
+        original_bubble_texts = tuple(
+            bubble.toPlainText()
+            for bubble in (*widget.x_marker_bubbles, *widget.y_marker_bubbles)
+        )
+        widget.resize(900, 500)
+        widget.show()
+        application.processEvents()
+        (plot,) = widget.plot_widgets
+        emissions: list[bool] = []
+        widget.plotDoubleClicked.connect(lambda: emissions.append(True))
+
+        class ClickEvent:
+            def __init__(self, *, double: bool) -> None:
+                self._double = double
+                self.accepted = False
+
+            def button(self) -> Qt.MouseButton:
+                return Qt.MouseButton.LeftButton
+
+            def scenePos(self) -> QPointF:
+                return plot.plotItem.vb.mapViewToScene(QPointF(7.0, -1.8))
+
+            def double(self) -> bool:
+                return self._double
+
+            def accept(self) -> None:
+                self.accepted = True
+
+        first_click = ClickEvent(double=False)
+        widget._plot_clicked(first_click)
+        assert widget.marker_values == original_values
+
+        double_click = ClickEvent(double=True)
+        widget._plot_clicked(double_click)
+        assert emissions == [True]
+        assert double_click.accepted
+        assert widget.marker_values == original_values
+        assert tuple(
+            bubble.toPlainText()
+            for bubble in (*widget.x_marker_bubbles, *widget.y_marker_bubbles)
+        ) == original_bubble_texts
+        assert widget._pending_marker_click is None
+    finally:
+        widget.close()
+        application.processEvents()
+
+
+def test_real_viewport_double_click_emits_once_without_moving_markers() -> None:
+    application = _application()
+    widget = MultiRailComparisonPlot()
+    try:
+        widget.set_comparisons(
+            (_comparison("RAIL_A"),), rail_colors={"RAIL_A": "#0088CC"}
+        )
+        assert widget.x_marker_checkbox is not None
+        assert widget.y_marker_checkbox is not None
+        widget.x_marker_checkbox.setChecked(True)
+        widget.y_marker_checkbox.setChecked(True)
+        widget.place_markers(1.0e6, 0.025)
+        original_values = widget.marker_values
+
+        widget.resize(900, 500)
+        widget.show()
+        application.processEvents()
+        (plot,) = widget.plot_widgets
+        emissions: list[bool] = []
+        widget.plotDoubleClicked.connect(lambda: emissions.append(True))
+        scene_position = plot.plotItem.vb.mapViewToScene(QPointF(7.0, -1.8))
+        viewport_position = plot.mapFromScene(scene_position)
+
+        global_position = plot.viewport().mapToGlobal(viewport_position)
+        for event_type in (
+            QEvent.Type.MouseButtonPress,
+            QEvent.Type.MouseButtonRelease,
+            QEvent.Type.MouseButtonDblClick,
+            QEvent.Type.MouseButtonRelease,
+        ):
+            pressed_buttons = (
+                Qt.MouseButton.NoButton
+                if event_type == QEvent.Type.MouseButtonRelease
+                else Qt.MouseButton.LeftButton
+            )
+            event = QMouseEvent(
+                event_type,
+                QPointF(viewport_position),
+                QPointF(viewport_position),
+                QPointF(global_position),
+                Qt.MouseButton.LeftButton,
+                pressed_buttons,
+                Qt.KeyboardModifier.NoModifier,
+            )
+            QApplication.sendEvent(plot.viewport(), event)
+            application.processEvents()
+        QTest.qWait(QApplication.doubleClickInterval() + 20)
+
+        assert emissions == [True]
+        assert widget.marker_values == original_values
+        assert widget._pending_marker_click is None
+    finally:
+        widget.close()
+        application.processEvents()
+
+
+def test_marker_bubbles_use_log_interpolation_and_follow_curve_visibility() -> None:
+    application = _application()
+    widget = MultiRailComparisonPlot()
+    try:
+        widget.set_comparisons(
+            (_comparison("RAIL_A"), _comparison("RAIL_B")),
+            rail_colors={"RAIL_A": "#12AB34", "RAIL_B": "#9A45EF"},
+        )
+        assert widget.x_marker_checkbox is not None
+        assert widget.y_marker_checkbox is not None
+        widget.x_marker_checkbox.setChecked(True)
+        geometric_frequency = (1.0e3 * 1.0e6) ** 0.5
+        widget.place_markers(geometric_frequency, 0.020)
+
+        assert len(widget.x_marker_bubbles) == 4
+        first_original = next(
+            bubble
+            for bubble in widget.x_marker_bubbles
+            if bubble.toolTip() == "RAIL_A Original"
+        )
+        expected_impedance = (0.010 * 0.025) ** 0.5
+        assert first_original.pos().x() == pytest.approx(log10(geometric_frequency))
+        assert first_original.pos().y() == pytest.approx(log10(expected_impedance))
+
+        widget.y_marker_checkbox.setChecked(True)
+        widget.place_markers(geometric_frequency, 0.020)
+        assert len(widget.y_marker_bubbles) >= 3
+        assert all("Hz" in bubble.toPlainText() for bubble in widget.y_marker_bubbles)
+
+        widget.set_rail_visible("RAIL_A", False)
+        assert len(widget.x_marker_bubbles) == 2
+        assert all(
+            "RAIL_B" in bubble.toolTip() for bubble in widget.x_marker_bubbles
+        )
+        assert all(
+            "RAIL_A" not in bubble.toolTip() for bubble in widget.y_marker_bubbles
+        )
+
+        assert widget.x_marker_line is not None
+        assert widget.y_marker_line is not None
+        widget.x_marker_line.setValue(log10(100.0))
+        widget.y_marker_line.setValue(log10(0.100))
+        assert widget.x_marker_bubbles == ()
+        assert widget.y_marker_bubbles == ()
     finally:
         widget.close()
         application.processEvents()

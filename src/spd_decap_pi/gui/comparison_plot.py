@@ -3,11 +3,12 @@
 from __future__ import annotations
 
 from collections.abc import Hashable, Mapping, Sequence
-from math import isfinite, log10
+from math import isclose, isfinite, log10
 
-from PySide6.QtCore import Qt
+from PySide6.QtCore import QTimer, Signal, Qt
 from PySide6.QtGui import QColor
 from PySide6.QtWidgets import (
+    QApplication,
     QCheckBox,
     QHBoxLayout,
     QLabel,
@@ -37,6 +38,8 @@ class MultiRailComparisonPlot(QWidget):
     is independent UI state and never changes the evaluation selection.
     """
 
+    plotDoubleClicked = Signal()
+
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
         self.setObjectName("multiRailComparisonPlot")
@@ -47,6 +50,7 @@ class MultiRailComparisonPlot(QWidget):
         self._annotations: list[pg.TextItem] = []
         self._rail_items: dict[str, list[object]] = {}
         self._shared_target_items: list[tuple[object, tuple[str, ...]]] = []
+        self._marker_curves: list[pg.PlotDataItem] = []
         self._rail_checkboxes: dict[str, QCheckBox] = {}
         self._rail_ids: dict[str, str] = {}
 
@@ -57,6 +61,12 @@ class MultiRailComparisonPlot(QWidget):
         self._y_marker_line: pg.InfiniteLine | None = None
         self._x_marker_value_hz: float | None = None
         self._y_marker_value_ohm: float | None = None
+        self._x_marker_bubbles: list[pg.TextItem] = []
+        self._y_marker_bubbles: list[pg.TextItem] = []
+        self._pending_marker_click: tuple[float, float] | None = None
+        self._marker_click_timer = QTimer(self)
+        self._marker_click_timer.setSingleShot(True)
+        self._marker_click_timer.timeout.connect(self._commit_pending_marker_click)
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
@@ -123,6 +133,14 @@ class MultiRailComparisonPlot(QWidget):
     @property
     def marker_readout_text(self) -> str:
         return self._marker_readout.text() if self._marker_readout is not None else ""
+
+    @property
+    def x_marker_bubbles(self) -> tuple[pg.TextItem, ...]:
+        return tuple(self._x_marker_bubbles)
+
+    @property
+    def y_marker_bubbles(self) -> tuple[pg.TextItem, ...]:
+        return tuple(self._y_marker_bubbles)
 
     def clear_comparisons(self) -> None:
         """Clear a result batch and reset visibility and marker UI state."""
@@ -235,6 +253,7 @@ class MultiRailComparisonPlot(QWidget):
                     **_curve_options(),
                 )
                 rail_items.append(curve)
+                self._marker_curves.append(curve)
                 annotation = pg.TextItem(
                     f"{display_label}: Original = Tuned",
                     color=color,
@@ -261,6 +280,7 @@ class MultiRailComparisonPlot(QWidget):
                     **_curve_options(),
                 )
                 rail_items.extend((original, tuned))
+                self._marker_curves.extend((original, tuned))
 
         if show_target:
             self._add_target_curves(rendered, colors, display_labels)
@@ -454,8 +474,12 @@ class MultiRailComparisonPlot(QWidget):
         self._x_marker_line = pg.InfiniteLine(
             angle=90,
             movable=True,
-            pen=pg.mkPen(_X_MARKER_COLOR, width=1.6),
-            hoverPen=pg.mkPen(_X_MARKER_COLOR, width=2.5),
+            pen=pg.mkPen(
+                _X_MARKER_COLOR, width=1.6, style=Qt.PenStyle.DashLine
+            ),
+            hoverPen=pg.mkPen(
+                _X_MARKER_COLOR, width=2.5, style=Qt.PenStyle.DashLine
+            ),
         )
         self._x_marker_line.setObjectName("xMarkerLine")
         self._x_marker_line.setZValue(100)
@@ -465,8 +489,12 @@ class MultiRailComparisonPlot(QWidget):
         self._y_marker_line = pg.InfiniteLine(
             angle=0,
             movable=True,
-            pen=pg.mkPen(_Y_MARKER_COLOR, width=1.6),
-            hoverPen=pg.mkPen(_Y_MARKER_COLOR, width=2.5),
+            pen=pg.mkPen(
+                _Y_MARKER_COLOR, width=1.6, style=Qt.PenStyle.DashLine
+            ),
+            hoverPen=pg.mkPen(
+                _Y_MARKER_COLOR, width=2.5, style=Qt.PenStyle.DashLine
+            ),
         )
         self._y_marker_line.setObjectName("yMarkerLine")
         self._y_marker_line.setZValue(100)
@@ -554,6 +582,8 @@ class MultiRailComparisonPlot(QWidget):
             self._controls = None
 
     def _clear_plot_items(self) -> None:
+        self._marker_click_timer.stop()
+        self._pending_marker_click = None
         if self._plot is None:
             return
         self._plot.clear()
@@ -565,6 +595,7 @@ class MultiRailComparisonPlot(QWidget):
         self._annotations.clear()
         self._rail_items.clear()
         self._shared_target_items.clear()
+        self._marker_curves.clear()
         self._rail_checkboxes.clear()
         self._rail_ids.clear()
         self._x_marker_checkbox = None
@@ -574,6 +605,8 @@ class MultiRailComparisonPlot(QWidget):
         self._y_marker_line = None
         self._x_marker_value_hz = None
         self._y_marker_value_ohm = None
+        self._x_marker_bubbles.clear()
+        self._y_marker_bubbles.clear()
 
     def _set_all_rails_visible(self, visible: bool) -> None:
         for checkbox in self._rail_checkboxes.values():
@@ -593,6 +626,7 @@ class MultiRailComparisonPlot(QWidget):
                     if key in self._rail_checkboxes
                 )
             )
+        self._refresh_marker_bubbles()
 
     def _marker_mode_changed(self, _checked: bool) -> None:
         self._sync_marker_visibility()
@@ -615,6 +649,7 @@ class MultiRailComparisonPlot(QWidget):
                     and self._y_marker_value_ohm is not None
                 )
             )
+        self._refresh_marker_bubbles()
 
     def _plot_clicked(self, event: object) -> None:
         if not self._has_comparisons or self._plot is None:
@@ -626,6 +661,16 @@ class MultiRailComparisonPlot(QWidget):
         view_box = self._plot.plotItem.vb
         if scene_pos is None or not view_box.sceneBoundingRect().contains(scene_pos):
             return
+        if bool(getattr(event, "double", lambda: False)()):
+            # A single-click is deferred for the platform double-click interval,
+            # allowing the second click to cancel marker placement entirely.
+            self._marker_click_timer.stop()
+            self._pending_marker_click = None
+            accept = getattr(event, "accept", None)
+            if callable(accept):
+                accept()
+            self.plotDoubleClicked.emit()
+            return
         log_point = view_box.mapSceneToView(scene_pos)
         try:
             # pyqtgraph ViewBox coordinates are log10 values in log mode.
@@ -634,7 +679,15 @@ class MultiRailComparisonPlot(QWidget):
         except (OverflowError, TypeError, ValueError):
             return
         if isfinite(frequency) and isfinite(impedance):
-            self.place_markers(frequency, impedance)
+            self._pending_marker_click = (frequency, impedance)
+            self._marker_click_timer.start(QApplication.doubleClickInterval())
+
+    def _commit_pending_marker_click(self) -> None:
+        self._marker_click_timer.stop()
+        pending = self._pending_marker_click
+        self._pending_marker_click = None
+        if pending is not None and self._has_comparisons:
+            self.place_markers(*pending)
 
     def _x_marker_moved(self) -> None:
         if self._x_marker_line is None or not self._x_marker_line.isVisible():
@@ -646,6 +699,7 @@ class MultiRailComparisonPlot(QWidget):
         if isfinite(value) and value > 0.0:
             self._x_marker_value_hz = value
             self._update_marker_readout()
+            self._refresh_marker_bubbles()
 
     def _y_marker_moved(self) -> None:
         if self._y_marker_line is None or not self._y_marker_line.isVisible():
@@ -657,6 +711,105 @@ class MultiRailComparisonPlot(QWidget):
         if isfinite(value) and value > 0.0:
             self._y_marker_value_ohm = value
             self._update_marker_readout()
+            self._refresh_marker_bubbles()
+
+    def _refresh_marker_bubbles(self) -> None:
+        self._remove_marker_bubbles()
+        if not self._has_comparisons or self._plot is None:
+            return
+
+        x_active = bool(
+            self._x_marker_checkbox
+            and self._x_marker_checkbox.isChecked()
+            and self._x_marker_value_hz is not None
+        )
+        y_active = bool(
+            self._y_marker_checkbox
+            and self._y_marker_checkbox.isChecked()
+            and self._y_marker_value_ohm is not None
+        )
+        if not x_active and not y_active:
+            return
+
+        for curve in self._marker_curves:
+            if not curve.isVisible():
+                continue
+            if x_active and self._x_marker_value_hz is not None:
+                intersection = _curve_intersection_at_frequency(
+                    curve, self._x_marker_value_hz
+                )
+                if intersection is not None:
+                    log_x, log_y, impedance_ohm = intersection
+                    x_anchor = (
+                        (1.0, 1.0)
+                        if len(self._x_marker_bubbles) % 2 == 0
+                        else (0.0, 0.0)
+                    )
+                    bubble = self._new_marker_bubble(
+                        curve,
+                        f"{_curve_marker_tag(curve)} {_format_impedance(impedance_ohm)}",
+                        log_x,
+                        log_y,
+                        anchor=x_anchor,
+                        object_name=f"xMarkerBubble{len(self._x_marker_bubbles)}",
+                    )
+                    self._x_marker_bubbles.append(bubble)
+
+            if y_active and self._y_marker_value_ohm is not None:
+                for log_x, log_y, frequency_hz in _curve_intersections_at_impedance(
+                    curve, self._y_marker_value_ohm
+                ):
+                    y_anchor = (
+                        (1.0, 0.0)
+                        if len(self._y_marker_bubbles) % 2 == 0
+                        else (0.0, 0.0)
+                    )
+                    bubble = self._new_marker_bubble(
+                        curve,
+                        f"{_curve_marker_tag(curve)} {_format_frequency(frequency_hz)}",
+                        log_x,
+                        log_y,
+                        anchor=y_anchor,
+                        object_name=f"yMarkerBubble{len(self._y_marker_bubbles)}",
+                    )
+                    self._y_marker_bubbles.append(bubble)
+
+    def _new_marker_bubble(
+        self,
+        curve: pg.PlotDataItem,
+        text: str,
+        log_x: float,
+        log_y: float,
+        *,
+        anchor: tuple[float, float],
+        object_name: str,
+    ) -> pg.TextItem:
+        assert self._plot is not None
+        pen = curve.opts.get("pen")
+        try:
+            border_color = pen.color().name()
+        except (AttributeError, TypeError):
+            border_color = _DEFAULT_RAIL_COLOR
+        bubble = pg.TextItem(
+            text=text.strip(),
+            color="#F8FAFC",
+            fill=pg.mkBrush(23, 26, 31, 235),
+            border=pg.mkPen(border_color, width=1.2),
+            anchor=anchor,
+        )
+        bubble.setObjectName(object_name)
+        bubble.setToolTip(str(curve.name() or "Impedance curve"))
+        bubble.setZValue(120)
+        bubble.setPos(log_x, log_y)
+        self._plot.addItem(bubble, ignoreBounds=True)
+        return bubble
+
+    def _remove_marker_bubbles(self) -> None:
+        if self._plot is not None:
+            for bubble in (*self._x_marker_bubbles, *self._y_marker_bubbles):
+                self._plot.removeItem(bubble)
+        self._x_marker_bubbles.clear()
+        self._y_marker_bubbles.clear()
 
     def _update_marker_readout(self) -> None:
         if self._marker_readout is None:
@@ -678,6 +831,94 @@ class MultiRailComparisonPlot(QWidget):
             else ("click plot" if y_enabled else "off")
         )
         self._marker_readout.setText(f"X: {x_text}    Y: {y_text}")
+
+
+def _curve_log_points(
+    curve: pg.PlotDataItem,
+) -> list[tuple[float, float] | None]:
+    dataset = curve.getOriginalDataset()
+    if dataset is None:
+        return []
+    x_values, y_values = dataset
+    points: list[tuple[float, float] | None] = []
+    for x_value, y_value in zip(x_values, y_values, strict=False):
+        try:
+            x = float(x_value)
+            y = float(y_value)
+        except (TypeError, ValueError):
+            points.append(None)
+            continue
+        if not (isfinite(x) and isfinite(y) and x > 0.0 and y > 0.0):
+            # Keep an explicit break so interpolation never bridges invalid
+            # samples that pyqtgraph also disconnects with connect="finite".
+            points.append(None)
+            continue
+        points.append((log10(x), log10(y)))
+    return points
+
+
+def _curve_intersection_at_frequency(
+    curve: pg.PlotDataItem,
+    frequency_hz: float,
+) -> tuple[float, float, float] | None:
+    target_x = log10(frequency_hz)
+    points = _curve_log_points(curve)
+    for point in points:
+        if point is not None and isclose(point[0], target_x, abs_tol=1.0e-12):
+            return target_x, point[1], 10.0**point[1]
+    for first, second in zip(points, points[1:], strict=False):
+        if first is None or second is None:
+            continue
+        x0, y0 = first
+        x1, y1 = second
+        if isclose(x0, x1, abs_tol=1.0e-15):
+            continue
+        if min(x0, x1) <= target_x <= max(x0, x1):
+            ratio = (target_x - x0) / (x1 - x0)
+            target_y = y0 + ratio * (y1 - y0)
+            return target_x, target_y, 10.0**target_y
+    return None
+
+
+def _curve_intersections_at_impedance(
+    curve: pg.PlotDataItem,
+    impedance_ohm: float,
+) -> tuple[tuple[float, float, float], ...]:
+    target_y = log10(impedance_ohm)
+    points = _curve_log_points(curve)
+    intersections: list[tuple[float, float, float]] = []
+    for first, second in zip(points, points[1:], strict=False):
+        if first is None or second is None:
+            continue
+        x0, y0 = first
+        x1, y1 = second
+        if isclose(y0, y1, abs_tol=1.0e-15):
+            if not isclose(y0, target_y, abs_tol=1.0e-12):
+                continue
+            target_x = (x0 + x1) / 2.0
+        elif min(y0, y1) <= target_y <= max(y0, y1):
+            ratio = (target_y - y0) / (y1 - y0)
+            target_x = x0 + ratio * (x1 - x0)
+        else:
+            continue
+        if any(
+            isclose(existing[0], target_x, abs_tol=1.0e-12)
+            for existing in intersections
+        ):
+            continue
+        intersections.append((target_x, target_y, 10.0**target_x))
+    return tuple(intersections)
+
+
+def _curve_marker_tag(curve: pg.PlotDataItem) -> str:
+    name = str(curve.name() or "")
+    if name.endswith("Original = Tuned"):
+        return "O=T"
+    if name.endswith("Original"):
+        return "O"
+    if name.endswith("Tuned"):
+        return "T"
+    return ""
 
 
 def _comparison_identity(
@@ -734,7 +975,9 @@ def _format_frequency(value_hz: float) -> str:
         (1.0e6, "MHz"),
         (1.0e3, "kHz"),
     ):
-        if value_hz >= scale:
+        # Log interpolation can land a few ULPs below an exact engineering
+        # boundary (for example 999999.9999999999 Hz).
+        if value_hz >= scale * (1.0 - 1.0e-12):
             return f"{value_hz / scale:.4g} {suffix}"
     return f"{value_hz:.4g} Hz"
 

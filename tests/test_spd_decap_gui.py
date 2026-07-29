@@ -14,6 +14,8 @@ from PySide6.QtWidgets import (
     QGraphicsEllipseItem,
     QGraphicsPolygonItem,
     QLabel,
+    QSplitter,
+    QTabWidget,
     QTableWidget,
 )
 
@@ -22,6 +24,10 @@ from spd_decap_pi import evaluation as evaluation_module
 from spd_decap_pi._core.services import EvaluationView
 from spd_decap_pi.gui.worker import FunctionWorker
 from spd_decap_pi.gui.main_window import MainWindow, _job_load_scenario
+from spd_decap_pi.gui.results_window import (
+    impedance_transition_at_frequency,
+    log_log_interpolate_impedance,
+)
 from spd_decap_pi.scenario import ScenarioDecap, ScenarioResultKey, ScenarioSpec
 from spd_decap_pi.scenario_io import save_scenario
 from spd_decap_pi.spd_adapter import import_spd_scenario
@@ -62,6 +68,76 @@ def test_evaluation_layout_preserves_a_usable_plot_height() -> None:
     finally:
         window.close()
         application.processEvents()
+
+
+def test_right_side_sections_are_vertically_resizable_and_noncollapsible() -> None:
+    application = _application()
+    window = MainWindow()
+    try:
+        expected_minimums = {
+            "selectionSectionSplitter": (170, 160),
+            "evaluationSectionSplitter": (160, 320),
+            "aiSectionSplitter": (210, 160),
+        }
+        for object_name, minimums in expected_minimums.items():
+            splitter = window.findChild(QSplitter, object_name)
+            assert splitter is not None
+            assert splitter.orientation() == Qt.Orientation.Vertical
+            assert splitter.count() == 2
+            assert not splitter.childrenCollapsible()
+            assert splitter.handleWidth() == 6
+            assert tuple(
+                splitter.widget(index).minimumHeight() for index in range(2)
+            ) == minimums
+    finally:
+        window.close()
+        application.processEvents()
+
+
+def test_evaluation_splitters_keep_plot_and_table_usable_at_1200_by_700() -> None:
+    application = _application()
+    window = MainWindow()
+    try:
+        window.resize(1200, 700)
+        tabs = window.findChild(QTabWidget)
+        assert tabs is not None
+        tabs.setCurrentIndex(1)
+        window.show()
+        application.processEvents()
+
+        result_splitter = window.findChild(QSplitter, "evaluationResultSplitter")
+        assert result_splitter is not None
+        plot_size, details_size = result_splitter.sizes()
+        assert plot_size >= 250
+        assert details_size >= 90
+        assert window.plot.height() >= 250
+        assert window.comparison_table.height() >= 60
+    finally:
+        window.close()
+        application.processEvents()
+
+
+def test_result_table_impedance_uses_log_log_interpolation_and_compact_units() -> None:
+    class View:
+        frequency_hz = [1.0e6, 100.0e6]
+
+        def __init__(self, magnitude_ohm: list[float]) -> None:
+            self.magnitude_ohm = magnitude_ohm
+
+    original = View([0.01, 0.1])
+    tuned = View([0.005, 0.05])
+
+    assert log_log_interpolate_impedance(
+        original.frequency_hz, original.magnitude_ohm, 10.0e6
+    ) == pytest.approx(0.01 * (10.0 ** 0.5))
+    assert (
+        impedance_transition_at_frequency(original, tuned, 10.0e6)
+        == "31.6→15.8 mΩ"
+    )
+    assert log_log_interpolate_impedance(
+        original.frequency_hz, original.magnitude_ohm, 1.0e9
+    ) is None
+    assert impedance_transition_at_frequency(original, tuned, 1.0e9) == "N/A"
 
 
 def test_loaded_spd_supports_pwr_net_search_and_disabled_electrical_state(
@@ -377,6 +453,18 @@ def test_completed_comparison_populates_plot_ai_selector_and_auto_saves(
             == QTableWidget.EditTrigger.NoEditTriggers
         )
         assert window.comparison_table.item(0, 0).text() == rail_id
+        assert window.comparison_table.horizontalHeaderItem(2).text() == (
+            "|Z| @ 1 MHz Original→Tuned"
+        )
+        assert window.comparison_table.horizontalHeaderItem(3).text() == (
+            "|Z| @ 10 MHz Original→Tuned"
+        )
+        assert window.comparison_table.horizontalHeaderItem(4).text() == (
+            "|Z| @ 100 MHz Original→Tuned"
+        )
+        assert window.comparison_table.item(0, 2).text() == "30→30 mΩ"
+        assert window.comparison_table.item(0, 3).text() == "N/A"
+        assert window.comparison_table.item(0, 4).text() == "N/A"
         assert window.comparison_table.item(0, 6).text() == "Saved now"
         assert window.ai_rail_combo.count() == 1
         assert window.ai_rail_combo.currentData() == rail_id
@@ -394,6 +482,24 @@ def test_completed_comparison_populates_plot_ai_selector_and_auto_saves(
         window.plot.x_marker_checkbox.setChecked(True)
         window.plot.y_marker_checkbox.setChecked(True)
         window.plot.place_markers(1.0e6, 0.025)
+
+        window.plot.plotDoubleClicked.emit()
+        application.processEvents()
+        result_window = window._results_window
+        assert result_window is not None
+        assert result_window.isVisible()
+        assert APP_DISPLAY_NAME in result_window.windowTitle()
+        assert result_window.windowModality() == Qt.WindowModality.NonModal
+        assert len(result_window.plot.plot_widgets) == 1
+        assert result_window.table.rowCount() == 1
+        assert result_window.table.item(0, 2).text() == "30→30 mΩ"
+        assert (
+            result_window.table.editTriggers()
+            == QTableWidget.EditTrigger.NoEditTriggers
+        )
+        window.plot.plotDoubleClicked.emit()
+        application.processEvents()
+        assert window._results_window is result_window
 
         monkeypatch.setattr(
             window,
@@ -435,6 +541,10 @@ def test_completed_comparison_populates_plot_ai_selector_and_auto_saves(
         assert window.plot.y_marker_line is not None
         assert window.plot.x_marker_line.isVisible()
         assert window.plot.y_marker_line.isVisible()
+        result_plot_pen = result_window.plot.plot_widgets[0].listDataItems()[0].opts[
+            "pen"
+        ]
+        assert result_plot_pen.color().name() == "#ff0000"
 
         window.ai_output.setPlainText("analysis for the previously selected rail")
         window._ai_rail_changed()
@@ -444,11 +554,15 @@ def test_completed_comparison_populates_plot_ai_selector_and_auto_saves(
         window.target_edit.textEdited.emit("0.03")
         assert window.plot.plot_widgets == ()
         assert window.comparison_table.rowCount() == 0
+        assert result_window.plot.plot_widgets == ()
+        assert result_window.table.rowCount() == 0
         assert window._comparison_batch is None
         assert not window.ai_rail_combo.isEnabled()
         assert window.status_text.text() == "Target changed; evaluation required"
         assert "Target impedance changed" in window.evaluation_summary.toPlainText()
     finally:
+        if window._results_window is not None:
+            window._results_window.close()
         window._dirty = False
         window.close()
         application.processEvents()
