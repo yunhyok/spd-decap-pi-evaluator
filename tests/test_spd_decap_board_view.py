@@ -453,3 +453,16 @@ def test_invalid_record_coordinates_and_colors_fail_early() -> None:
     finally:
         board.close()
         application.processEvents()
+
+
+def test_public_net_color_resolver_matches_case_insensitive_board_rendering() -> None:
+    application = _application()
+    board = DecapBoardView()
+    try:
+        board.set_net_colors({"vDd_Core": "#123456"})
+        assert board.color_for_net("VDD_CORE").name() == "#123456"
+        assert board.color_for_net("missing").isValid()
+        assert board.color_for_net("missing").name() != board.FALLBACK_NET_COLOR.name()
+    finally:
+        board.close()
+        application.processEvents()

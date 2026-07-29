@@ -325,6 +325,11 @@ class DecapBoardView(pg.PlotWidget):
     def record_count(self) -> int:
         return len(self._records)
 
+    def color_for_net(self, net: str) -> QColor:
+        """Return the exact color currently used to render ``net``."""
+
+        return QColor(self._color_for_net(net))
+
     def set_decaps(
         self,
         records: Iterable[object],

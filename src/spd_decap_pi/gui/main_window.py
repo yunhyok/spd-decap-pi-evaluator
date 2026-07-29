@@ -7,8 +7,18 @@ from pathlib import Path
 import traceback
 from typing import Any, Callable
 
-from PySide6.QtCore import QPoint, QPointF, Qt, QThreadPool, QTimer
-from PySide6.QtGui import QAction, QBrush, QColor, QCloseEvent, QPen, QPolygonF
+from PySide6.QtCore import QPoint, QPointF, QSize, Qt, QThreadPool, QTimer
+from PySide6.QtGui import (
+    QAction,
+    QBrush,
+    QColor,
+    QCloseEvent,
+    QIcon,
+    QPainter,
+    QPen,
+    QPixmap,
+    QPolygonF,
+)
 from PySide6.QtWidgets import (
     QCheckBox,
     QColorDialog,
@@ -278,6 +288,7 @@ class MainWindow(QMainWindow):
         self.rail_list = QListWidget()
         self.rail_list.setObjectName("evaluationRailList")
         self.rail_list.setMaximumHeight(145)
+        self.rail_list.setIconSize(QSize(12, 12))
         rail_buttons = QHBoxLayout()
         self.select_all_rails_button = QPushButton("Select all")
         self.select_all_rails_button.clicked.connect(
@@ -342,7 +353,9 @@ class MainWindow(QMainWindow):
         limitation = QLabel(
             "Each checked PWR NET is solved sequentially. Original results are cached "
             "inside the scenario and compared with the current Tuned state; phase is not "
-            "plotted. Evaluation reuses the existing modal PI engine. Non-rectangular PWR "
+            "plotted. The shared plot starts with every result visible; Plot Channels and "
+            "X/Y markers only change the display. Evaluation reuses the existing modal PI "
+            "engine. Non-rectangular PWR "
             "artwork is solved with its disclosed rectangular bbox; DGND is continuous; "
             "results are single-rail Zii without inter-rail coupling."
         )
@@ -917,10 +930,23 @@ class MainWindow(QMainWindow):
             for index in range(self.rail_list.count())
             if self.rail_list.item(index).checkState() == Qt.CheckState.Checked
         }
+        selected = {
+            str(self.rail_list.item(index).data(Qt.ItemDataRole.UserRole)).casefold()
+            for index in range(self.rail_list.count())
+            if self.rail_list.item(index).isSelected()
+        }
+        current_item = self.rail_list.currentItem()
+        current_rail_id = (
+            str(current_item.data(Qt.ItemDataRole.UserRole)).casefold()
+            if current_item is not None
+            else None
+        )
         self.rail_list.clear()
+        restored_current_item: QListWidgetItem | None = None
         for rail in self._scenario.base_project.rails:
             item = QListWidgetItem(f"{rail.net} ({rail.rail_id})")
             item.setData(Qt.ItemDataRole.UserRole, rail.rail_id)
+            item.setIcon(self._net_color_swatch(rail.net))
             item.setFlags(
                 item.flags()
                 | Qt.ItemFlag.ItemIsUserCheckable
@@ -932,8 +958,27 @@ class MainWindow(QMainWindow):
                 else Qt.CheckState.Unchecked
             )
             self.rail_list.addItem(item)
+            if rail.rail_id.casefold() in selected:
+                item.setSelected(True)
+            if rail.rail_id.casefold() == current_rail_id:
+                restored_current_item = item
+        if restored_current_item is not None:
+            self.rail_list.setCurrentItem(restored_current_item)
         if not had_items and self.rail_list.count():
             self.rail_list.item(0).setCheckState(Qt.CheckState.Checked)
+
+    def _net_color_swatch(self, net: str) -> QIcon:
+        """Create a bordered box using the board's case-insensitive net color."""
+
+        size = self.rail_list.iconSize()
+        swatch = QPixmap(size)
+        swatch.fill(Qt.GlobalColor.transparent)
+        painter = QPainter(swatch)
+        painter.setPen(QPen(QColor("#667085"), 1))
+        painter.setBrush(QBrush(self.board.color_for_net(net)))
+        painter.drawRect(0, 0, max(size.width() - 1, 0), max(size.height() - 1, 0))
+        painter.end()
+        return QIcon(swatch)
 
     def _checked_rail_ids(self) -> tuple[str, ...]:
         return tuple(
@@ -1456,7 +1501,7 @@ class MainWindow(QMainWindow):
                 (
                     f"Compared {len(comparisons):,} PWR NET(s): Original vs Tuned.",
                     f"Original baseline: {cached_count:,} reused, {newly_saved:,} newly evaluated and staged.",
-                    "Plot: impedance only; one synchronized subplot per PWR NET.",
+                    "Plot: one shared impedance view; all PWR NETs start visible and can be filtered independently.",
                     save_note,
                     "Select a Tuned result in AI Assist when analysis is needed.",
                 )
@@ -1474,9 +1519,9 @@ class MainWindow(QMainWindow):
             for item in self._scenario.base_project.rails
         }
         rail_colors = {
-            comparison.rail_id: self._scenario.net_colors.get(
-                rail_by_id[comparison.rail_id.casefold()].net, "#4DA3FF"
-            )
+            comparison.rail_id: self.board.color_for_net(
+                rail_by_id[comparison.rail_id.casefold()].net
+            ).name()
             for comparison in comparisons
         }
         rail_labels = {

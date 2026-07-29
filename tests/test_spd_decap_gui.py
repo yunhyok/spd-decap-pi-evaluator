@@ -6,8 +6,8 @@ from pathlib import Path
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 import pytest
-from PySide6.QtCore import QPointF, Qt
-from PySide6.QtGui import QColor
+from PySide6.QtCore import QPointF, QSize, Qt
+from PySide6.QtGui import QBrush, QColor
 from PySide6.QtWidgets import (
     QApplication,
     QColorDialog,
@@ -76,6 +76,14 @@ def test_loaded_spd_supports_pwr_net_search_and_disabled_electrical_state(
         window._accept_spd_import(imported)
         assert window.board.record_count == 2
         assert window.evaluate_button.isEnabled()
+        rail_item = window.rail_list.item(0)
+        rail = window.scenario.base_project.rails[0]
+        swatch = rail_item.icon().pixmap(QSize(12, 12)).toImage()
+        assert not swatch.isNull()
+        assert swatch.pixelColor(6, 6).name() == QColor(
+            window.scenario.net_colors[rail.net]
+        ).name()
+        assert rail_item.foreground() == QBrush()
         primitive_kinds = {item.data(0) for item in window.board._plane_items}
         assert {
             "positive_polygon",
@@ -375,7 +383,17 @@ def test_completed_comparison_populates_plot_ai_selector_and_auto_saves(
         assert window._last_scenario_evaluation is batch.comparisons[0].tuned
         assert window._dirty
         assert window._auto_save_after_worker
-        assert "impedance only" in window.evaluation_summary.toPlainText()
+        assert "one shared impedance view" in window.evaluation_summary.toPlainText()
+
+        evaluation_state = window.rail_list.item(0).checkState()
+        plot_channel = window.plot.rail_checkboxes[rail_id]
+        plot_channel.setChecked(False)
+        assert window.rail_list.item(0).checkState() == evaluation_state
+        assert window.plot.x_marker_checkbox is not None
+        assert window.plot.y_marker_checkbox is not None
+        window.plot.x_marker_checkbox.setChecked(True)
+        window.plot.y_marker_checkbox.setChecked(True)
+        window.plot.place_markers(1.0e6, 0.025)
 
         monkeypatch.setattr(
             window,
@@ -393,6 +411,9 @@ def test_completed_comparison_populates_plot_ai_selector_and_auto_saves(
             for index in range(window.color_list.count())
             if window.color_list.item(index).data(Qt.ItemDataRole.UserRole) == rail_net
         )
+        evaluation_rail_item = window.rail_list.item(0)
+        evaluation_rail_item.setCheckState(Qt.CheckState.Unchecked)
+        window.rail_list.setCurrentItem(evaluation_rail_item)
         monkeypatch.setattr(
             QColorDialog,
             "getColor",
@@ -401,6 +422,19 @@ def test_completed_comparison_populates_plot_ai_selector_and_auto_saves(
         window._choose_net_color(first_color_item)
         plotted_pen = window.plot.plot_widgets[0].listDataItems()[0].opts["pen"]
         assert plotted_pen.color().name() == "#ff0000"
+        refreshed_rail_item = window.rail_list.item(0)
+        swatch = refreshed_rail_item.icon().pixmap(QSize(12, 12)).toImage()
+        assert swatch.pixelColor(6, 6).name() == "#ff0000"
+        assert refreshed_rail_item.foreground() == QBrush()
+        assert refreshed_rail_item.checkState() == Qt.CheckState.Unchecked
+        assert refreshed_rail_item.isSelected()
+        assert window.rail_list.currentItem() is refreshed_rail_item
+        assert not window.plot.rail_checkboxes[rail_id].isChecked()
+        assert window.plot.marker_values == pytest.approx((1.0e6, 0.025))
+        assert window.plot.x_marker_line is not None
+        assert window.plot.y_marker_line is not None
+        assert window.plot.x_marker_line.isVisible()
+        assert window.plot.y_marker_line.isVisible()
 
         window.ai_output.setPlainText("analysis for the previously selected rail")
         window._ai_rail_changed()
