@@ -22,6 +22,9 @@ from spd_decap_pi._core.domain import (
     PlacementAssignment,
     ProjectSpec,
     RailSpec,
+    SharedPadClusterSpec,
+    SharedPadPowerComponentSpec,
+    SharedPadViaPath,
     TerminalKind,
     TopologyKind,
     TopologyMap,
@@ -37,11 +40,16 @@ from spd_decap_pi._core.solver import SOLVER_VERSION
 
 from .scenario import (
     CachedEvaluationMetadata,
+    DecapConnectionKind,
+    DecapPadState,
     EvaluationRole,
     RailEligibility,
     ScenarioDecap,
     ScenarioResultKey,
     ScenarioSpec,
+    SharedPadClusterState,
+    derive_shared_pad_current_components,
+    shared_pad_component_eligibility,
 )
 
 
@@ -50,6 +58,7 @@ CancelCallback = Callable[[], bool]
 PLOT_ANALYST_MODE = "Plot Analyst"
 EVALUATION_ATTACHMENT_FORMAT = "spd-decap-evaluation-0.1"
 MAX_EVALUATION_ATTACHMENT_BYTES = 16 * 1024 * 1024
+MAX_SHARED_PAD_VIA_PATHS = 128
 
 
 class ScenarioEvaluationBuildError(ValueError):
@@ -338,10 +347,14 @@ def baseline_fallback_model_refdes(
             for key in scenario.baseline_captures
         )
     }
+    connected = {
+        refdes.casefold() for refdes in scenario.electrically_connected_refdes
+    }
     return tuple(
         item.refdes
         for item in sorted(scenario.decaps, key=lambda entry: entry.refdes.casefold())
         if item.source_mounted
+        and item.refdes.casefold() in connected
         and item.source_rail_id.casefold() in uncaptured
         and item.source_model_id is None
         and item.model_id is not None
@@ -857,7 +870,7 @@ def _validated_assignment(
         )
 
     model: CapModel | None = None
-    if decap.model_id is not None:
+    if decap.enabled and decap.model_id is not None:
         model = model_by_id.get(decap.model_id.casefold())
         if model is None:
             raise ScenarioEvaluationBuildError(
@@ -923,6 +936,13 @@ def _scenario_assumptions(base: ProjectSpec) -> list[str]:
         "Decap rail edits do not modify SPD plane geometry.",
         "Nonrectangular SPD planes retain the existing rectangular solver approximation.",
         "DGND is treated as continuous and inter-rail coupling is not modeled.",
+        "Shared-pad topology retains every unique PWR and GND Via without nearest "
+        "pairing. Because the calibrated template is differential, its loop "
+        "impedance is split symmetrically (Zloop/2 per terminal); a 1-PWR/1-GND "
+        "cluster reproduces the calibrated loop while unequal Via counts remain "
+        "electrically distinct under the continuous-DGND approximation.",
+        "The symmetric terminal split assumes equal PWR/GND portions of the "
+        "calibrated loop and does not add uncalibrated mutual-Via coupling.",
     )
     result: list[str] = []
     seen: set[str] = set()
@@ -954,21 +974,334 @@ def build_evaluation_project(
     device_pins = [item for item in base.pins if item.kind == PinKind.DEVICE_BUMP]
     pins: list[PinRecord] = list(device_pins)
     topologies: list[TopologyMap] = []
+    shared_pad_clusters: list[SharedPadClusterSpec] = []
     placements: list[PlacementAssignment] = []
     enabled_usage: Counter[str] = Counter()
     evaluation_rail_key = (
         evaluation_rail_id.casefold() if evaluation_rail_id is not None else None
     )
+    analysis = scenario.connection_analysis
+    if analysis is None:
+        raise ScenarioEvaluationBuildError(
+            "SHARED_PAD_ANALYSIS_REQUIRED",
+            "reopen the verified source SPD so shared-pad/via connectivity can be analyzed",
+        )
+    decap_by_key = {item.refdes.casefold(): item for item in scenario.decaps}
+    connection_by_key = {
+        item.refdes.casefold(): item for item in analysis.connections.values()
+    }
+    consumed: set[str] = set()
+
+    def on_evaluation_rail(decap: ScenarioDecap) -> bool:
+        return (
+            evaluation_rail_key is None
+            or decap.current_rail_id.casefold() == evaluation_rail_key
+        )
+
+    def model_for_member(decap: ScenarioDecap) -> CapModel | None:
+        if not decap.enabled:
+            return None
+        if decap.model_id is None:
+            raise ScenarioEvaluationBuildError(
+                "MODEL_REQUIRED",
+                "enabled Decap requires an assigned electrical model",
+                refdes=decap.refdes,
+            )
+        model = model_by_id.get(decap.model_id.casefold())
+        if model is None:
+            raise ScenarioEvaluationBuildError(
+                "MODEL_UNKNOWN",
+                f"Decap model {decap.model_id!r} is absent from the model library",
+                refdes=decap.refdes,
+            )
+        if model.footprint.casefold() != decap.footprint.casefold():
+            raise ScenarioEvaluationBuildError(
+                "FOOTPRINT_MISMATCH",
+                f"model footprint {model.footprint!r} does not match component "
+                f"footprint {decap.footprint!r}",
+                refdes=decap.refdes,
+            )
+        return model
+
+    def append_coupled_cluster(
+        *,
+        cluster_id: str,
+        member_components: tuple[tuple[ScenarioDecap, ...], ...],
+        power_landings_by_component: tuple[tuple[Any, ...], ...],
+        ground_landings: tuple[Any, ...],
+        rail: RailSpec,
+        via: ViaLoopTemplate,
+    ) -> None:
+        if len(member_components) != len(power_landings_by_component):
+            raise ScenarioEvaluationBuildError(
+                "SHARED_PAD_COMPONENT_MAPPING_INVALID",
+                f"shared-pad cluster {cluster_id!r} has inconsistent component data",
+            )
+        members = tuple(
+            member for component in member_components for member in component
+        )
+        path_count = sum(map(len, power_landings_by_component)) + len(
+            ground_landings
+        )
+        if path_count > MAX_SHARED_PAD_VIA_PATHS:
+            raise ScenarioEvaluationBuildError(
+                "SHARED_PAD_CLUSTER_TOO_LARGE",
+                f"shared-pad cluster {cluster_id!r} has {path_count:,} unique "
+                f"PWR/GND via paths; supported limit is "
+                f"{MAX_SHARED_PAD_VIA_PATHS:,}",
+            )
+        if (
+            not member_components
+            or any(not item for item in power_landings_by_component)
+            or not ground_landings
+        ):
+            raise ScenarioEvaluationBuildError(
+                "SHARED_PAD_CLUSTER_TERMINAL_MISSING",
+                f"shared-pad cluster {cluster_id!r} requires distinct PWR and GND "
+                "via evidence",
+            )
+        domain_cluster_id = f"SPDPI:CLUSTER:{cluster_id}"
+        member_slot_ids: list[str] = []
+        for decap in members:
+            slot_id = f"SPDPI:{decap.refdes}"
+            member_slot_ids.append(slot_id)
+            topologies.append(
+                TopologyMap(
+                    slot_id=slot_id,
+                    x_um=decap.pwr_pad.x_um,
+                    y_um=decap.pwr_pad.y_um,
+                    allowed_rail_ids=[rail.rail_id],
+                    allowed_footprints=[decap.footprint],
+                    topology=TopologyKind.SHARED_PAD_CLUSTER,
+                    zone="SPD",
+                    cluster_id=domain_cluster_id,
+                )
+            )
+            model = model_for_member(decap)
+            if decap.enabled:
+                assert model is not None
+                placements.append(
+                    PlacementAssignment(
+                        slot_id=slot_id,
+                        topology=TopologyKind.SHARED_PAD_CLUSTER,
+                        rail_id=rail.rail_id,
+                        cap_model_id=model.model_id,
+                    )
+                )
+                enabled_usage[model.model_id] += 1
+        power_paths: list[SharedPadViaPath] = []
+        power_components: list[SharedPadPowerComponentSpec] = []
+        for component_index, (component_members, component_landings) in enumerate(
+            zip(
+                member_components,
+                power_landings_by_component,
+                strict=True,
+            ),
+            start=1,
+        ):
+            component_path_ids: list[str] = []
+            for path_index, landing in enumerate(component_landings, start=1):
+                path_id = (
+                    f"{domain_cluster_id}:PWR:{component_index}:{path_index}"
+                )
+                component_path_ids.append(path_id)
+                power_paths.append(
+                    SharedPadViaPath(
+                        path_id=path_id,
+                        terminal=TerminalKind.PWR,
+                        x_um=landing.x_um,
+                        y_um=landing.y_um,
+                        via_template_id=via.template_id,
+                        source_via_id=landing.via_id,
+                    )
+                )
+            power_components.append(
+                SharedPadPowerComponentSpec(
+                    component_id=f"{domain_cluster_id}:PWR:{component_index}",
+                    member_slot_ids=[
+                        f"SPDPI:{decap.refdes}" for decap in component_members
+                    ],
+                    power_path_ids=component_path_ids,
+                )
+            )
+        shared_pad_clusters.append(
+            SharedPadClusterSpec(
+                cluster_id=domain_cluster_id,
+                rail_id=rail.rail_id,
+                member_slot_ids=member_slot_ids,
+                via_paths=power_paths
+                + [
+                    SharedPadViaPath(
+                        path_id=f"{domain_cluster_id}:GND:{index}",
+                        terminal=TerminalKind.GND,
+                        x_um=landing.x_um,
+                        y_um=landing.y_um,
+                        via_template_id=via.template_id,
+                        source_via_id=landing.via_id,
+                    )
+                    for index, landing in enumerate(ground_landings, start=1)
+                ],
+                power_components=power_components,
+            )
+        )
+
+    for cluster in analysis.clusters:
+        member_keys = tuple(item.casefold() for item in cluster.member_refdes)
+        members = tuple(decap_by_key[key] for key in member_keys)
+        consumed.update(member_keys)
+        if cluster.state == SharedPadClusterState.FLOATING:
+            continue
+        if cluster.state != SharedPadClusterState.ANCHORED:
+            if any(on_evaluation_rail(item) for item in members):
+                raise ScenarioEvaluationBuildError(
+                    "SHARED_PAD_CLUSTER_UNRESOLVED",
+                    cluster.reason
+                    or f"shared-pad cluster {cluster.cluster_id!r} is unresolved",
+                )
+            continue
+        derivation = derive_shared_pad_current_components(
+            cluster,
+            {key: decap_by_key[key] for key in member_keys},
+            {key: connection_by_key[key] for key in member_keys},
+        )
+        if derivation.shared_power_via_conflicts:
+            conflict = derivation.shared_power_via_conflicts[0]
+            raise ScenarioEvaluationBuildError(
+                "SHARED_PAD_POWER_VIA_CONFLICT",
+                f"physical PWR Via {conflict.via_id!r} spans more than one "
+                f"post-edit PWR component in cluster {cluster.cluster_id!r}",
+            )
+        component_rail_keys = {
+            item.current_rail_id.casefold() for item in derivation.components
+        }
+        if evaluation_rail_key is None and len(component_rail_keys) > 1:
+            raise ScenarioEvaluationBuildError(
+                "EVALUATION_RAIL_REQUIRED_FOR_SPLIT_CLUSTER",
+                f"shared-pad cluster {cluster.cluster_id!r} spans multiple current "
+                "rails; build one explicit rail evaluation to avoid duplicating "
+                "its common GND Via paths",
+            )
+        selected_components = tuple(
+            item
+            for item in derivation.components
+            if evaluation_rail_key is None
+            or item.current_rail_id.casefold() == evaluation_rail_key
+        )
+        if not selected_components:
+            continue
+        rail = rail_by_id.get(selected_components[0].current_rail_id.casefold())
+        if rail is None:
+            raise ScenarioEvaluationBuildError(
+                "RAIL_UNKNOWN",
+                f"current rail {selected_components[0].current_rail_id!r} is absent "
+                "from the project",
+            )
+        component_eligibility: list[RailEligibility] = []
+        for component in selected_components:
+            eligibility = next(
+                (
+                    item
+                    for item in shared_pad_component_eligibility(
+                        cluster, component
+                    ).values()
+                    if item.rail_id.casefold() == rail.rail_id.casefold()
+                    and item.allowed
+                ),
+                None,
+            )
+            if eligibility is None:
+                raise ScenarioEvaluationBuildError(
+                    "RAIL_INELIGIBLE",
+                    f"shared-pad PWR component {component.member_refdes!r} is not "
+                    f"physically eligible for rail {rail.rail_id!r}",
+                )
+            component_eligibility.append(eligibility)
+        template_keys = {
+            (item.via_template_id or "").casefold()
+            for item in component_eligibility
+        }
+        if len(template_keys) != 1:
+            raise ScenarioEvaluationBuildError(
+                "SHARED_PAD_COMPONENT_TEMPLATE_CONFLICT",
+                f"shared-pad cluster {cluster.cluster_id!r} requires inconsistent "
+                f"via-loop templates on rail {rail.rail_id!r}",
+            )
+        via = via_by_id.get(next(iter(template_keys)))
+        if via is None:
+            raise ScenarioEvaluationBuildError(
+                "VIA_TEMPLATE_REQUIRED",
+                f"shared-pad cluster {cluster.cluster_id!r} has no calibrated "
+                "via-loop template",
+            )
+        if (
+            via.pwr_reference_layer.casefold() != rail.pwr_layer.casefold()
+            or via.gnd_reference_layer.casefold() != rail.gnd_layer.casefold()
+        ):
+            raise ScenarioEvaluationBuildError(
+                "VIA_TEMPLATE_LAYER_MISMATCH",
+                f"via-loop template {via.template_id!r} does not reference the rail plane pair",
+            )
+        unique_ground = {
+            landing.via_id.casefold(): landing
+            for key in member_keys
+            if decap_by_key[key].pad_state != DecapPadState.ISOLATION_GAP
+            for landing in connection_by_key[key].ground_vias
+        }
+        append_coupled_cluster(
+            cluster_id=cluster.cluster_id,
+            member_components=tuple(
+                tuple(
+                    decap_by_key[refdes.casefold()]
+                    for refdes in component.member_refdes
+                )
+                for component in selected_components
+            ),
+            power_landings_by_component=tuple(
+                component.power_vias for component in selected_components
+            ),
+            ground_landings=tuple(
+                unique_ground[key] for key in sorted(unique_ground)
+            ),
+            rail=rail,
+            via=via,
+        )
 
     for decap in sorted(scenario.decaps, key=lambda item: item.refdes.casefold()):
-        # Disabled means electrically absent.  It must not require a currently
-        # valid rail/model assignment (DNP footprints can legitimately have
-        # neither) and must contribute no solver pin, port, or topology.
-        if not decap.enabled:
+        key = decap.refdes.casefold()
+        if key in consumed:
             continue
+        connection = connection_by_key[key]
+        if connection.kind == DecapConnectionKind.FLOATING_DUMMY:
+            continue
+        if connection.kind in {
+            DecapConnectionKind.UNRESOLVED,
+            DecapConnectionKind.OUT_OF_SCOPE,
+        }:
+            if on_evaluation_rail(decap):
+                raise ScenarioEvaluationBuildError(
+                    "DECAP_CONNECTION_UNRESOLVED",
+                    connection.reason or "Decap pad/via connectivity is unresolved",
+                    refdes=decap.refdes,
+                )
+            continue
+        if connection.kind != DecapConnectionKind.DIRECT:
+            raise ScenarioEvaluationBuildError(
+                "CONNECTION_CLASSIFICATION_INVALID",
+                f"unexpected unclustered connection kind {connection.kind.value!r}",
+                refdes=decap.refdes,
+            )
+        if not on_evaluation_rail(decap):
+            continue
+        unique_power = {
+            landing.via_id.casefold(): landing for landing in connection.power_vias
+        }
+        unique_ground = {
+            landing.via_id.casefold(): landing for landing in connection.ground_vias
+        }
         if (
-            evaluation_rail_key is not None
-            and decap.current_rail_id.casefold() != evaluation_rail_key
+            not decap.enabled
+            and len(unique_power) == 1
+            and len(unique_ground) == 1
         ):
             continue
         rail, _eligibility, model, via = _validated_assignment(
@@ -977,6 +1310,24 @@ def build_evaluation_project(
             model_by_id=model_by_id,
             via_by_id=via_by_id,
         )
+        if len(unique_power) > 1 or len(unique_ground) > 1:
+            append_coupled_cluster(
+                cluster_id=f"DIRECT:{decap.refdes}",
+                member_components=((decap,),),
+                power_landings_by_component=(
+                    tuple(unique_power[key] for key in sorted(unique_power)),
+                ),
+                ground_landings=tuple(
+                    unique_ground[key] for key in sorted(unique_ground)
+                ),
+                rail=rail,
+                via=via,
+            )
+            continue
+        # One differential via-loop and no populated capacitor has no retained
+        # plane stamp.  Multi-via unpopulated pads were handled above because
+        # their shared PWR copper can still couple spatial plane ports.
+        landing = next(iter(unique_power.values()))
         ground_net = _ground_net(base, rail)
         pins.extend(
             (
@@ -984,8 +1335,8 @@ def build_evaluation_project(
                     refdes=decap.refdes,
                     pin="PWR",
                     net=rail.net,
-                    x_um=decap.pwr_pad.x_um,
-                    y_um=decap.pwr_pad.y_um,
+                    x_um=landing.x_um,
+                    y_um=landing.y_um,
                     kind=PinKind.DECAP_PAD,
                     terminal=TerminalKind.PWR,
                     domain=rail.domain,
@@ -1010,8 +1361,8 @@ def build_evaluation_project(
         topologies.append(
             TopologyMap(
                 slot_id=slot_id,
-                x_um=decap.pwr_pad.x_um,
-                y_um=decap.pwr_pad.y_um,
+                x_um=landing.x_um,
+                y_um=landing.y_um,
                 allowed_rail_ids=[rail.rail_id],
                 allowed_footprints=[decap.footprint],
                 topology=TopologyKind.DIRECT,
@@ -1043,6 +1394,9 @@ def build_evaluation_project(
             "pins": [item.model_dump(mode="json") for item in pins],
             "cap_models": [item.model_dump(mode="json") for item in cap_models],
             "topology_maps": [item.model_dump(mode="json") for item in topologies],
+            "shared_pad_clusters": [
+                item.model_dump(mode="json") for item in shared_pad_clusters
+            ],
             "placements": [item.model_dump(mode="json") for item in placements],
             "partitions": [item.model_dump(mode="json") for item in partitions],
             "assumptions": _scenario_assumptions(base),

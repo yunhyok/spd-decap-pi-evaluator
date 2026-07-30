@@ -12,7 +12,14 @@ from enum import StrEnum
 from math import isfinite
 from typing import Any, Literal
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+from pydantic import (
+    AliasChoices,
+    BaseModel,
+    ConfigDict,
+    Field,
+    field_validator,
+    model_validator,
+)
 
 from .version import __version__
 
@@ -58,6 +65,7 @@ class TopologyKind(StrEnum):
     EMPTY = "EMPTY"
     DIRECT = "DIRECT"
     SHARED_PAIR = "SHARED_PAIR"
+    SHARED_PAD_CLUSTER = "SHARED_PAD_CLUSTER"
 
 
 class ViaPathKind(StrEnum):
@@ -513,6 +521,141 @@ class ViaLoopTemplate(DomainModel):
         return value
 
 
+class SharedPadViaPath(DomainModel):
+    """One physical terminal-via path into a shared top-pad bus.
+
+    ``via_template_id`` still names the calibrated *differential* PWR/GND loop
+    available to the solver.  The shared-pad network splits that impedance
+    symmetrically between explicit PWR and GND terminal branches, so every
+    physical Via is retained once without inventing a nearest PWR/GND pair.
+    """
+
+    path_id: str = Field(min_length=1)
+    terminal: TerminalKind
+    x_um: float
+    y_um: float
+    via_template_id: str = Field(min_length=1)
+    source_via_id: str | None = Field(
+        default=None,
+        validation_alias=AliasChoices("source_via_id", "source_power_via_id"),
+    )
+
+    @field_validator("x_um", "y_um")
+    @classmethod
+    def finite_path_coordinates(cls, value: float) -> float:
+        if not isfinite(value):
+            raise ValueError("shared-pad via coordinates must be finite")
+        return value
+
+    @field_validator("source_via_id")
+    @classmethod
+    def nonblank_source_via_id(cls, value: str | None) -> str | None:
+        if value is not None and not value:
+            raise ValueError("source via ID must not be blank")
+        return value
+
+
+class SharedPadPowerComponentSpec(DomainModel):
+    """One post-edit top-PWR supernode inside a source shared-pad cluster."""
+
+    component_id: str = Field(min_length=1)
+    member_slot_ids: list[str] = Field(min_length=1)
+    power_path_ids: list[str] = Field(min_length=1)
+
+    @field_validator("member_slot_ids", "power_path_ids")
+    @classmethod
+    def unique_nonblank_ids(cls, value: list[str]) -> list[str]:
+        keys = [item.strip().casefold() for item in value]
+        if any(not item for item in keys) or len(keys) != len(set(keys)):
+            raise ValueError("shared-pad component IDs must be nonblank and unique")
+        return value
+
+
+class SharedPadClusterSpec(DomainModel):
+    """One rail's PWR components sharing the source cluster's top-GND bus."""
+
+    cluster_id: str = Field(min_length=1)
+    rail_id: str = Field(min_length=1)
+    member_slot_ids: list[str] = Field(min_length=1)
+    via_paths: list[SharedPadViaPath] = Field(default_factory=list)
+    power_components: list[SharedPadPowerComponentSpec] = Field(min_length=1)
+
+    @field_validator("member_slot_ids")
+    @classmethod
+    def unique_member_slots(cls, value: list[str]) -> list[str]:
+        if any(not item.strip() for item in value):
+            raise ValueError("shared-pad member slot IDs must not be blank")
+        folded = [item.casefold() for item in value]
+        if len(folded) != len(set(folded)):
+            raise ValueError("shared-pad member slot IDs must be unique")
+        return value
+
+    @field_validator("via_paths")
+    @classmethod
+    def unique_via_paths(
+        cls, value: list[SharedPadViaPath]
+    ) -> list[SharedPadViaPath]:
+        folded = [item.path_id.casefold() for item in value]
+        if len(folded) != len(set(folded)):
+            raise ValueError("shared-pad via path IDs must be unique")
+        terminals = {item.terminal for item in value}
+        if terminals != {TerminalKind.PWR, TerminalKind.GND}:
+            raise ValueError(
+                "a connected shared-pad cluster requires both PWR and GND via paths"
+            )
+        return value
+
+    @model_validator(mode="after")
+    def complete_power_component_partition(self) -> "SharedPadClusterSpec":
+        component_keys = [item.component_id.casefold() for item in self.power_components]
+        if len(component_keys) != len(set(component_keys)):
+            raise ValueError("shared-pad power component IDs must be unique")
+
+        member_keys = [item.casefold() for item in self.member_slot_ids]
+        component_members = [
+            slot_id.casefold()
+            for component in self.power_components
+            for slot_id in component.member_slot_ids
+        ]
+        if (
+            len(component_members) != len(set(component_members))
+            or set(component_members) != set(member_keys)
+        ):
+            raise ValueError(
+                "shared-pad power components must partition every member slot"
+            )
+
+        path_by_key = {item.path_id.casefold(): item for item in self.via_paths}
+        power_path_keys = {
+            key
+            for key, path in path_by_key.items()
+            if path.terminal == TerminalKind.PWR
+        }
+        component_paths = [
+            path_id.casefold()
+            for component in self.power_components
+            for path_id in component.power_path_ids
+        ]
+        unknown_paths = set(component_paths) - set(path_by_key)
+        if unknown_paths:
+            raise ValueError(
+                "shared-pad power component references an unknown via path"
+            )
+        if (
+            len(component_paths) != len(set(component_paths))
+            or set(component_paths) != power_path_keys
+        ):
+            raise ValueError(
+                "shared-pad power components must partition every PWR via path"
+            )
+        if any(
+            path_by_key[path_key].terminal != TerminalKind.PWR
+            for path_key in component_paths
+        ):
+            raise ValueError("shared-pad components can reference only PWR via paths")
+        return self
+
+
 class TopologyMap(DomainModel):
     slot_id: str = Field(min_length=1)
     x_um: float
@@ -525,6 +668,7 @@ class TopologyMap(DomainModel):
     horizontal_template_id: str | None = None
     anchor_slot_id: str | None = None
     satellite_slot_id: str | None = None
+    cluster_id: str | None = None
 
     @field_validator("x_um", "y_um")
     @classmethod
@@ -557,9 +701,27 @@ class TopologyMap(DomainModel):
     def supported_topology(self) -> "TopologyMap":
         if self.topology == TopologyKind.EMPTY:
             raise ValueError("TopologyMap describes usable slots, not EMPTY assignments")
-        if self.via_template_id is None:
-            raise ValueError("usable topology requires via_template_id")
-        if self.topology == TopologyKind.SHARED_PAIR:
+        if self.topology == TopologyKind.SHARED_PAD_CLUSTER:
+            if self.cluster_id is None:
+                raise ValueError(
+                    "SHARED_PAD_CLUSTER topology requires cluster_id"
+                )
+            if any(
+                value is not None
+                for value in (
+                    self.via_template_id,
+                    self.horizontal_template_id,
+                    self.anchor_slot_id,
+                    self.satellite_slot_id,
+                )
+            ):
+                raise ValueError(
+                    "SHARED_PAD_CLUSTER member topology cannot own via, horizontal, "
+                    "anchor, or satellite mappings"
+                )
+        elif self.topology == TopologyKind.SHARED_PAIR:
+            if self.via_template_id is None:
+                raise ValueError("usable topology requires via_template_id")
             partner_fields = int(self.anchor_slot_id is not None) + int(
                 self.satellite_slot_id is not None
             )
@@ -572,10 +734,18 @@ class TopologyMap(DomainModel):
                 raise ValueError(
                     "SHARED_PAIR anchor requires horizontal_template_id"
                 )
-        elif self.anchor_slot_id is not None or self.satellite_slot_id is not None:
-            raise ValueError(
-                "anchor_slot_id/satellite_slot_id are only valid for SHARED_PAIR topology"
-            )
+            if self.cluster_id is not None:
+                raise ValueError("cluster_id is only valid for SHARED_PAD_CLUSTER")
+        else:
+            if self.via_template_id is None:
+                raise ValueError("usable topology requires via_template_id")
+            if self.anchor_slot_id is not None or self.satellite_slot_id is not None:
+                raise ValueError(
+                    "anchor_slot_id/satellite_slot_id are only valid for "
+                    "SHARED_PAIR topology"
+                )
+            if self.cluster_id is not None:
+                raise ValueError("cluster_id is only valid for SHARED_PAD_CLUSTER")
         return self
 
 
@@ -671,6 +841,7 @@ class ProjectSpec(DomainModel):
     cap_models: list[CapModel] = Field(default_factory=list)
     via_templates: list[ViaLoopTemplate] = Field(default_factory=list)
     topology_maps: list[TopologyMap] = Field(default_factory=list)
+    shared_pad_clusters: list[SharedPadClusterSpec] = Field(default_factory=list)
     placements: list[PlacementAssignment] = Field(default_factory=list)
     assumptions: list[str] = Field(
         default_factory=lambda: ["inter-rail/site coupling not modeled"]
@@ -710,6 +881,10 @@ class ProjectSpec(DomainModel):
             ("cap model", [item.model_id for item in self.cap_models]),
             ("via template", [item.template_id for item in self.via_templates]),
             ("topology slot", [item.slot_id for item in self.topology_maps]),
+            (
+                "shared-pad cluster",
+                [item.cluster_id for item in self.shared_pad_clusters],
+            ),
             ("placement slot", [item.slot_id for item in self.placements]),
             ("attachment", self.attachment_names),
         )
@@ -722,6 +897,9 @@ class ProjectSpec(DomainModel):
         cap_by_id = {item.model_id: item for item in self.cap_models}
         via_by_id = {item.template_id: item for item in self.via_templates}
         topology_by_slot = {item.slot_id: item for item in self.topology_maps}
+        cluster_by_id = {
+            item.cluster_id: item for item in self.shared_pad_clusters
+        }
 
         for rail in self.rails:
             for role, layer_name in (("PWR", rail.pwr_layer), ("DGND", rail.gnd_layer)):
@@ -791,7 +969,10 @@ class ProjectSpec(DomainModel):
                 raise ValueError(
                     f"slot {topology.slot_id!r} allows unknown rails: {sorted(unknown_rails)}"
                 )
-            if topology.via_template_id not in via_by_id:
+            if (
+                topology.via_template_id is not None
+                and topology.via_template_id not in via_by_id
+            ):
                 raise ValueError(
                     f"slot {topology.slot_id!r} references unknown via template "
                     f"{topology.via_template_id!r}"
@@ -831,6 +1012,86 @@ class ProjectSpec(DomainModel):
                         f"SHARED_PAIR slots {topology.slot_id!r}/{partner.slot_id!r} "
                         "must define complementary anchor and satellite roles"
                     )
+
+        clustered_slots: set[str] = set()
+        clustered_path_ids: set[str] = set()
+        clustered_source_via_ids: set[str] = set()
+        for cluster in self.shared_pad_clusters:
+            rail = rail_by_id.get(cluster.rail_id)
+            if rail is None:
+                raise ValueError(
+                    f"shared-pad cluster {cluster.cluster_id!r} references unknown "
+                    f"rail {cluster.rail_id!r}"
+                )
+            for slot_id in cluster.member_slot_ids:
+                if slot_id in clustered_slots:
+                    raise ValueError(
+                        f"shared-pad slot {slot_id!r} belongs to more than one cluster"
+                    )
+                topology = topology_by_slot.get(slot_id)
+                if topology is None:
+                    raise ValueError(
+                        f"shared-pad cluster {cluster.cluster_id!r} references "
+                        f"unknown member slot {slot_id!r}"
+                    )
+                if topology.topology != TopologyKind.SHARED_PAD_CLUSTER:
+                    raise ValueError(
+                        f"shared-pad member {slot_id!r} has incompatible topology"
+                    )
+                if topology.cluster_id != cluster.cluster_id:
+                    raise ValueError(
+                        f"shared-pad member {slot_id!r} does not reference cluster "
+                        f"{cluster.cluster_id!r}"
+                    )
+                if cluster.rail_id not in topology.allowed_rail_ids:
+                    raise ValueError(
+                        f"shared-pad cluster rail {cluster.rail_id!r} is not allowed "
+                        f"at member slot {slot_id!r}"
+                    )
+                clustered_slots.add(slot_id)
+            for path in cluster.via_paths:
+                path_key = path.path_id.casefold()
+                if path_key in clustered_path_ids:
+                    raise ValueError(
+                        f"shared-pad via path {path.path_id!r} is reused across clusters"
+                    )
+                clustered_path_ids.add(path_key)
+                if path.source_via_id is not None:
+                    source_key = path.source_via_id.casefold()
+                    if source_key in clustered_source_via_ids:
+                        raise ValueError(
+                            f"source via {path.source_via_id!r} is reused "
+                            "across shared-pad paths"
+                        )
+                    clustered_source_via_ids.add(source_key)
+                template = via_by_id.get(path.via_template_id)
+                if template is None:
+                    raise ValueError(
+                        f"shared-pad via path {path.path_id!r} references unknown "
+                        f"via template {path.via_template_id!r}"
+                    )
+                if (
+                    template.pwr_reference_layer != rail.pwr_layer
+                    or template.gnd_reference_layer != rail.gnd_layer
+                ):
+                    raise ValueError(
+                        f"shared-pad via path {path.path_id!r} reference layers do "
+                        f"not match cluster rail {cluster.rail_id!r}"
+                    )
+
+        for topology in self.topology_maps:
+            if topology.topology != TopologyKind.SHARED_PAD_CLUSTER:
+                continue
+            if topology.cluster_id not in cluster_by_id:
+                raise ValueError(
+                    f"shared-pad slot {topology.slot_id!r} references unknown cluster "
+                    f"{topology.cluster_id!r}"
+                )
+            if topology.slot_id not in clustered_slots:
+                raise ValueError(
+                    f"shared-pad slot {topology.slot_id!r} is absent from its cluster "
+                    "member list"
+                )
 
         for placement in self.placements:
             topology = topology_by_slot.get(placement.slot_id)
@@ -898,6 +1159,15 @@ class ProjectSpec(DomainModel):
             if partner.rail_id != placement.rail_id:
                 raise ValueError("SHARED_PAIR members must be assigned to the same rail")
 
+        for cluster in self.shared_pad_clusters:
+            for slot_id in cluster.member_slot_ids:
+                placement = placement_by_slot.get(slot_id)
+                if placement is not None and placement.rail_id != cluster.rail_id:
+                    raise ValueError(
+                        f"shared-pad member {slot_id!r} must be assigned to cluster "
+                        f"rail {cluster.rail_id!r}"
+                    )
+
         for pin in self.pins:
             if pin.via_template_id is not None and pin.via_template_id not in via_by_id:
                 raise ValueError(
@@ -932,6 +1202,9 @@ __all__ = [
     "ProjectSpec",
     "RailSpec",
     "RailState",
+    "SharedPadClusterSpec",
+    "SharedPadPowerComponentSpec",
+    "SharedPadViaPath",
     "StackupLayer",
     "TargetPoint",
     "TerminalKind",

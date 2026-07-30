@@ -19,6 +19,7 @@ from spd_decap_pi._core.models import (
     SeriesRLModel,
     SharedPairModel,
 )
+from spd_decap_pi._core.models.circuit import SharedPadClusterModel
 from .frequency import refine_log_grid
 from .metrics import (
     ConfidenceAssessment,
@@ -29,6 +30,7 @@ from .metrics import (
     compute_evaluation_metrics,
 )
 from .modal import (
+    CoupledShuntGroup,
     DeviceBranch,
     DeviceConnection,
     FinitePort,
@@ -40,7 +42,7 @@ from .modal import (
 )
 
 
-SOLVER_VERSION = "modal-mvp-0.1.0"
+SOLVER_VERSION = "modal-mvp-0.3.0"
 COUPLING_ASSUMPTION = "inter-rail/site coupling not modeled"
 
 
@@ -62,9 +64,13 @@ def sensitivity_port_id(
     kind = str(topology_kind).strip().upper()
     members = tuple(str(slot_id) for slot_id in member_slot_ids)
     expected_count = {"DIRECT": 1, "SHARED_PAIR": 2}.get(kind)
-    if expected_count is None or len(members) != expected_count:
+    valid_cluster = kind == "SHARED_PAD_CLUSTER" and bool(members)
+    if not valid_cluster and (
+        expected_count is None or len(members) != expected_count
+    ):
         raise EvaluationError(
-            "Sensitivity port IDs require one DIRECT member or two SHARED_PAIR members"
+            "Sensitivity IDs require one DIRECT member, two SHARED_PAIR members, "
+            "or at least one SHARED_PAD_CLUSTER member"
         )
     encoded_members = "".join(f"{len(slot_id)}:{slot_id}" for slot_id in members)
     return f"{kind}|{encoded_members}"
@@ -76,7 +82,7 @@ class EvaluationRequest:
     frequencies_hz: NDArray[np.float64]
     plane: RectangularPlane
     device: DeviceConnection
-    shunts: tuple[ShuntGroup, ...]
+    shunts: tuple[ShuntGroup | CoupledShuntGroup, ...]
     target: TargetMask
     critical_band_hz: tuple[float, float] = (1e5, 1e8)
     max_mode_x: int = 6
@@ -106,6 +112,7 @@ class ProjectEvaluationTemplate:
     via_templates: dict[str, Any]
     via_models: dict[str, ImpedanceModel]
     topology_maps: dict[str, Any]
+    shared_pad_clusters: dict[str, Any]
     device: DeviceConnection
     pairing_assumptions: tuple[str, ...]
     pairing_confident: bool
@@ -145,6 +152,10 @@ class ShuntSensitivityOutcome:
     baseline_max_violation_db: float
     without_max_violation_db: tuple[float, ...]
     worker_count: int
+
+    @property
+    def unit_ids(self) -> tuple[str, ...]:
+        return self.port_ids
 
     def __post_init__(self) -> None:
         if len(self.port_ids) != len(self.without_max_violation_db):
@@ -654,6 +665,10 @@ def compile_project_evaluation_template(
     via_templates = {item.template_id: item for item in project.via_templates}
     via_models = {key: _via_model(value) for key, value in via_templates.items()}
     topology_maps = {item.slot_id: item for item in project.topology_maps}
+    shared_pad_clusters = {
+        item.cluster_id: item
+        for item in getattr(project, "shared_pad_clusters", ())
+    }
     device, pairing_assumptions, pairing_confident = _device_connection(
         project,
         rail,
@@ -672,6 +687,7 @@ def compile_project_evaluation_template(
         via_templates=via_templates,
         via_models=via_models,
         topology_maps=topology_maps,
+        shared_pad_clusters=shared_pad_clusters,
         device=device,
         pairing_assumptions=pairing_assumptions,
         pairing_confident=pairing_confident,
@@ -740,6 +756,7 @@ def build_project_evaluation_request(
         compiled.cap_models,
         compiled.via_templates,
         compiled.via_models,
+        compiled.shared_pad_clusters,
     )
     model_min, model_max, model_validity_known = _shared_model_range(
         tuple(branch.series_path for branch in compiled.device.branches)
@@ -1185,12 +1202,192 @@ def _placement_shunts(
     cap_models: dict[str, ImpedanceModel],
     via_templates: dict[str, Any],
     via_models: dict[str, ImpedanceModel],
-) -> tuple[ShuntGroup, ...]:
+    shared_pad_clusters: dict[str, Any],
+) -> tuple[ShuntGroup | CoupledShuntGroup, ...]:
     direct_ports: dict[tuple[str, str], list[FinitePort]] = defaultdict(list)
     shared_groups: list[ShuntGroup] = []
+    cluster_groups: list[CoupledShuntGroup] = []
     consumed_shared: set[str] = set()
+    consumed_cluster: set[str] = set()
+
+    for cluster_id in sorted(shared_pad_clusters):
+        cluster = shared_pad_clusters[cluster_id]
+        if cluster.rail_id != rail_id:
+            continue
+        member_ids = tuple(str(item) for item in cluster.member_slot_ids)
+        member_capacitors: dict[str, ImpedanceModel] = {}
+        for member_id in member_ids:
+            topology = topologies.get(member_id)
+            if topology is None:
+                raise EvaluationError(
+                    f"shared-pad cluster {cluster_id!r} references unknown member "
+                    f"slot {member_id!r}"
+                )
+            mapped_kind = str(
+                getattr(topology.topology, "value", topology.topology)
+            )
+            if mapped_kind != "SHARED_PAD_CLUSTER" or topology.cluster_id != cluster_id:
+                raise EvaluationError(
+                    f"shared-pad cluster {cluster_id!r} member {member_id!r} has "
+                    "an incompatible topology mapping"
+                )
+            if rail_id not in topology.allowed_rail_ids:
+                raise EvaluationError(
+                    f"shared-pad cluster member {member_id!r} does not allow rail "
+                    f"{rail_id!r}"
+                )
+            placement = placements.get(member_id)
+            if placement is None:
+                continue
+            placement_kind = str(
+                getattr(placement.topology, "value", placement.topology)
+            )
+            if placement_kind != "SHARED_PAD_CLUSTER":
+                raise EvaluationError(
+                    f"shared-pad member {member_id!r} has incompatible placement "
+                    f"topology {placement_kind!r}"
+                )
+            if placement.rail_id != rail_id:
+                raise EvaluationError(
+                    f"shared-pad member {member_id!r} is assigned to a different rail"
+                )
+            if placement.cap_model_id not in cap_models:
+                raise EvaluationError(
+                    f"unknown cap model {placement.cap_model_id!r} for shared-pad "
+                    f"member {member_id!r}"
+                )
+            member_capacitors[member_id] = cap_models[placement.cap_model_id]
+
+        consumed_cluster.update(member_ids)
+        if not cluster.via_paths:
+            # An isolated top-pad cluster has no plane stamp.  Keeping its
+            # topology members consumed prevents a fake DIRECT via path.
+            continue
+        path_runtime: dict[str, tuple[str, FinitePort, ImpedanceModel]] = {}
+        for path in cluster.via_paths:
+            if path.via_template_id not in via_models:
+                raise EvaluationError(
+                    f"shared-pad via path {path.path_id!r} references an unknown "
+                    "via template"
+                )
+            template = via_templates[path.via_template_id]
+            _validate_template_reference_layers(
+                template,
+                pwr_layer=pwr_layer,
+                gnd_layer=gnd_layer,
+                context=f"shared-pad via path {path.path_id!r}",
+            )
+            port = _finite_port(
+                path.x_um,
+                path.y_um,
+                origin_um,
+                template,
+                str(path.path_id),
+            )
+            port.validate_inside(plane)
+            terminal = str(getattr(path.terminal, "value", path.terminal))
+            if terminal not in {"PWR", "GND"}:
+                raise EvaluationError(
+                    f"shared-pad via path {path.path_id!r} has unsupported "
+                    f"terminal {terminal!r}"
+                )
+            path_runtime[str(path.path_id)] = (
+                terminal,
+                port,
+                via_models[path.via_template_id],
+            )
+
+        power_ports: list[FinitePort] = []
+        ground_ports: list[FinitePort] = []
+        power_loops: list[ImpedanceModel] = []
+        ground_loops: list[ImpedanceModel] = []
+        power_component_indices: list[int] = []
+        cluster_capacitors: list[ImpedanceModel] = []
+        capacitor_component_indices: list[int] = []
+        consumed_power_paths: set[str] = set()
+        consumed_component_members: set[str] = set()
+        for component_index, component in enumerate(cluster.power_components):
+            for member_id in component.member_slot_ids:
+                if member_id in consumed_component_members:
+                    raise EvaluationError(
+                        f"shared-pad member {member_id!r} belongs to multiple "
+                        "PWR components"
+                    )
+                consumed_component_members.add(member_id)
+                capacitor = member_capacitors.get(member_id)
+                if capacitor is not None:
+                    cluster_capacitors.append(capacitor)
+                    capacitor_component_indices.append(component_index)
+            for path_id in component.power_path_ids:
+                if path_id in consumed_power_paths or path_id not in path_runtime:
+                    raise EvaluationError(
+                        f"shared-pad PWR component references invalid path "
+                        f"{path_id!r}"
+                    )
+                terminal, port, loop = path_runtime[path_id]
+                if terminal != "PWR":
+                    raise EvaluationError(
+                        f"shared-pad PWR component path {path_id!r} is not PWR"
+                    )
+                consumed_power_paths.add(path_id)
+                power_ports.append(port)
+                power_loops.append(loop)
+                power_component_indices.append(component_index)
+        if consumed_component_members != set(member_ids):
+            raise EvaluationError(
+                f"shared-pad cluster {cluster_id!r} PWR components do not cover "
+                "every member"
+            )
+        for path_id, (terminal, port, loop) in path_runtime.items():
+            if terminal == "PWR":
+                if path_id not in consumed_power_paths:
+                    raise EvaluationError(
+                        f"shared-pad PWR path {path_id!r} has no component"
+                    )
+                continue
+            ground_ports.append(port)
+            ground_loops.append(loop)
+        if not power_ports or not ground_ports:
+            raise EvaluationError(
+                f"shared-pad cluster {cluster_id!r} requires both PWR and GND "
+                "via paths"
+            )
+        ordered_members = tuple(sorted(member_ids, key=str.casefold))
+        network = SharedPadClusterModel(
+            model_id=f"SHARED_PAD_CLUSTER:{cluster_id}",
+            power_via_loops=tuple(power_loops),
+            ground_via_loops=tuple(ground_loops),
+            capacitors=tuple(cluster_capacitors),
+            power_component_indices=tuple(power_component_indices),
+            capacitor_component_indices=tuple(capacitor_component_indices),
+        )
+        physical_network = SharedPadClusterModel(
+            model_id=f"SHARED_PAD_CLUSTER_PHYSICAL:{cluster_id}",
+            power_via_loops=tuple(power_loops),
+            ground_via_loops=tuple(ground_loops),
+            capacitors=(),
+            power_component_indices=tuple(power_component_indices),
+        )
+        cluster_groups.append(
+            CoupledShuntGroup(
+                group_id=network.model_id,
+                ports=tuple((*power_ports, *ground_ports)),
+                network=network,
+                sensitivity_id=(
+                    sensitivity_port_id(
+                        "SHARED_PAD_CLUSTER", ordered_members
+                    )
+                    if cluster_capacitors
+                    else None
+                ),
+                sensitivity_without_network=physical_network,
+            )
+        )
+
     for slot_id in sorted(placements):
         placement = placements[slot_id]
+        if slot_id in consumed_cluster:
+            continue
         if slot_id not in topologies:
             raise EvaluationError(f"placement references unknown topology slot {slot_id!r}")
         topology = topologies[slot_id]
@@ -1288,13 +1485,14 @@ def _placement_shunts(
         else:
             raise EvaluationError(f"unsupported placement topology {topology_kind!r}")
 
-    groups: list[ShuntGroup] = []
+    groups: list[ShuntGroup | CoupledShuntGroup] = []
     for (cap_id, via_id), ports in sorted(direct_ports.items()):
         network = DirectBranchModel(
             f"DIRECT:{cap_id}:{via_id}", cap_models[cap_id], via_models[via_id]
         )
         groups.append(ShuntGroup(network.model_id, tuple(ports), network))
     groups.extend(shared_groups)
+    groups.extend(cluster_groups)
     return tuple(groups)
 
 
@@ -1335,11 +1533,11 @@ def _shared_pair_ids(slot_id: str, topology: Any) -> tuple[str, str]:
 
 
 def _shared_model_range(
-    models: tuple[ImpedanceModel, ...],
+    models: tuple[object, ...],
 ) -> tuple[float | None, float | None, bool]:
     flattened: list[ImpedanceModel] = []
 
-    def visit(model: ImpedanceModel) -> None:
+    def visit(model: object) -> None:
         if isinstance(model, DirectBranchModel):
             visit(model.capacitor)
             visit(model.via_loop)
@@ -1349,10 +1547,15 @@ def _shared_model_range(
             visit(model.satellite_capacitor)
             visit(model.horizontal_power_path)
             visit(model.horizontal_ground_path)
+        elif isinstance(model, SharedPadClusterModel):
+            for via_loop in (*model.power_via_loops, *model.ground_via_loops):
+                visit(via_loop)
+            for capacitor in model.capacitors:
+                visit(capacitor)
         elif isinstance(model, ScaledImpedanceModel):
             visit(model.source)
         else:
-            flattened.append(model)
+            flattened.append(model)  # type: ignore[arg-type]
 
     for model in models:
         visit(model)

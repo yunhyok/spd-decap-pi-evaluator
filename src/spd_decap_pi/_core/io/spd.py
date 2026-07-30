@@ -12,7 +12,7 @@ from __future__ import annotations
 from array import array
 from bisect import bisect_right
 from collections import Counter
-from collections.abc import Callable, Iterable, Iterator, Sequence
+from collections.abc import Callable, Iterable, Iterator, Mapping, Sequence
 from dataclasses import dataclass
 import hashlib
 from math import isfinite, log10
@@ -23,6 +23,15 @@ from typing import Literal
 
 from ..domain import MLOOutline, PinKind, PinRecord, StackupLayer, TerminalKind
 from ..models.spice import PassiveSubcircuitModel, SpiceModelError, parse_passive_subcircuit
+from .shared_pad import (
+    DecapPadEvidence,
+    SpdDecapConnection,
+    SpdPadShape,
+    SpdSharedPadCluster,
+    SpdTopCopperGeometry,
+    ViaTopEndpoint,
+    extract_shared_pad_connectivity,
+)
 
 
 class SpdImportError(ValueError):
@@ -53,6 +62,7 @@ class SpdPadStack:
     pad_width_um: float | None
     pad_height_um: float | None
     layers: tuple[str, ...]
+    pad_shapes: tuple[SpdPadShape, ...] = ()
 
     @property
     def pad_diameter_um(self) -> float | None:
@@ -66,6 +76,7 @@ class SpdCapInstance:
     model_id: str | None
     footprint: str
     power_net: str
+    ground_net: str
     site: str | None
     mounted: bool
     x_um: float
@@ -81,6 +92,10 @@ class SpdCapInstance:
     ground_pad_y_um: float | None = None
     power_padstack: str | None = None
     ground_padstack: str | None = None
+    power_pad_rotation_degrees: float = 0.0
+    ground_pad_rotation_degrees: float = 0.0
+    power_pad_rotation_valid: bool = True
+    ground_pad_rotation_valid: bool = True
 
     @property
     def power_pin(self) -> str:
@@ -115,13 +130,25 @@ class SpdViaUsage:
 class _SpdPolygon(Sequence[tuple[float, float]]):
     """Compact immutable X/Y sequence for multi-million-vertex SPD imports."""
 
-    __slots__ = ("_coordinates",)
+    __slots__ = ("_bbox", "_coordinates")
 
     def __init__(self, flat_coordinates_um: Iterable[float]) -> None:
         coordinates = array("d", flat_coordinates_um)
         if len(coordinates) < 6 or len(coordinates) % 2:
             raise ValueError("SPD polygon requires at least three X/Y pairs")
         self._coordinates = coordinates
+        x_values = coordinates[0::2]
+        y_values = coordinates[1::2]
+        self._bbox = (
+            min(x_values),
+            max(x_values),
+            min(y_values),
+            max(y_values),
+        )
+
+    @property
+    def bbox(self) -> tuple[float, float, float, float]:
+        return self._bbox
 
     def __len__(self) -> int:
         return len(self._coordinates) // 2
@@ -184,6 +211,8 @@ class SpdAnalysis:
     power_plane_nets: tuple[str, ...] = ()
     ground_nets: tuple[str, ...] = ()
     plane_geometries: tuple[SpdPlaneGeometry, ...] = ()
+    decap_connections: tuple[SpdDecapConnection, ...] = ()
+    shared_pad_clusters: tuple[SpdSharedPadCluster, ...] = ()
 
     @property
     def partial_models(self) -> dict[str, PassiveSubcircuitModel]:
@@ -249,6 +278,9 @@ class _Node:
     x_um: float
     y_um: float
     padstack: str | None
+    layer: str | None
+    rotation_degrees: float = 0.0
+    rotation_valid: bool = True
 
 
 @dataclass(frozen=True, slots=True)
@@ -314,7 +346,10 @@ _SHAPE_PRIMITIVE_RE = re.compile(
 )
 _SHAPE_RE = re.compile(rb"(?m)^\.Shape[ \t]+(\S+)")
 _VIA_RE = re.compile(
-    rb"(?m)^Via[^\r\n:]*::([^\s]+)[^\r\n]*?\bPadStack\s*=\s*(\S+)"
+    rb"(?m)^(Via[^\r\n:]*)::([^\s]+)\s+"
+    rb"UpperNode\s*=\s*(Node[^\s:!]+)(?:!![^\s:]+)?(?:::[^\s]+)?\s+"
+    rb"LowerNode\s*=\s*(Node[^\s:!]+)(?:!![^\s:]+)?(?:::[^\s]+)?\s+"
+    rb"PadStack\s*=\s*(\S+)([^\r\n]*)"
 )
 _NODE_ATTR_RE = re.compile(
     rb"\bX\s*=\s*(\S+)\s+Y\s*=\s*(\S+).*?(?:\bPadStack\s*=\s*(\S+))?"
@@ -469,6 +504,9 @@ def _parse_shapes(
     geometry_keys: set[str] | None,
     reporter: _Reporter,
     diagnostics: list[SpdDiagnostic],
+    *,
+    transient_geometry_keys: set[str] | None = None,
+    transient_geometry_layer: str | None = None,
 ) -> tuple[
     MLOOutline | None,
     dict[str, tuple[str, ...]],
@@ -513,12 +551,21 @@ def _parse_shapes(
             if layer is not None:
                 by_layer.setdefault(layer.casefold(), []).append(net)
 
+        retain_transient_geometry = bool(
+            layer is not None
+            and transient_geometry_layer is not None
+            and layer.casefold() == transient_geometry_layer.casefold()
+            and transient_geometry_keys is not None
+            and net.casefold() in transient_geometry_keys
+        )
+
         if primitive_kind not in supported_kinds:
             if (
                 layer is not None
                 and (
                     geometry_keys is None
                     or net.casefold() in geometry_keys
+                    or retain_transient_geometry
                 )
             ):
                 unsupported_key = (
@@ -550,6 +597,7 @@ def _parse_shapes(
                     geometry_keys is not None
                     and net.casefold() in geometry_keys
                 )
+                or retain_transient_geometry
             )
         )
         if retain_geometry:
@@ -910,6 +958,44 @@ def _parse_layers(
     return tuple(result)
 
 
+def _first_conductor_layer_name(
+    data: mmap.mmap,
+    start: int,
+    end: int,
+    metals: Mapping[str, float],
+) -> str | None:
+    """Read only the first conductor identity before the geometry pass.
+
+    The full stack-up is still built after shape NET indexing.  This lightweight
+    pre-read lets scenario imports retain configured GND geometry on TOP only,
+    avoiding both an all-layer GND import and a second shape scan.
+    """
+
+    for _, raw in _iter_lines(data, start, end):
+        stripped = raw.strip()
+        if (
+            not stripped
+            or stripped.startswith((b"*", b"+", b"."))
+            or b"Thickness" not in stripped
+        ):
+            continue
+        match = re.match(
+            rb"(\S+)\s+Thickness\s*=\s*(\S+)(.*)$",
+            stripped,
+            re.IGNORECASE,
+        )
+        if match is None:
+            continue
+        name = _decode(match.group(1))
+        material_raw = _attribute(stripped, b"Material")
+        material_key = _decode(material_raw).casefold() if material_raw else ""
+        if name.casefold().startswith(("signal$", "power$", "conductor$")) or (
+            material_key in metals
+        ):
+            return name
+    return None
+
+
 def _parse_padstacks(
     data: mmap.mmap, start: int, end: int, diagnostics: list[SpdDiagnostic]
 ) -> tuple[SpdPadStack, ...]:
@@ -919,15 +1005,35 @@ def _parse_padstacks(
     width: float | None = None
     height: float | None = None
     layers: list[str] = []
+    shapes: list[SpdPadShape] = []
+    active_layer: str | None = None
     variable = False
 
     def flush() -> None:
-        nonlocal name, drill, width, height, layers, variable
+        nonlocal name, drill, width, height, layers, shapes, active_layer, variable
         if name is not None:
-            result.append(SpdPadStack(name, drill, width, height, _unique(layers)))
+            result.append(
+                SpdPadStack(
+                    name,
+                    drill,
+                    width,
+                    height,
+                    _unique(layers),
+                    tuple(shapes),
+                )
+            )
             if variable:
                 diagnostics.append(SpdDiagnostic("info", "PADSTACK_VARIABLE_PAD", f"Padstack {name!r} has layer-dependent pad sizes; maximum width/height were retained."))
-        name, drill, width, height, layers, variable = None, None, None, None, [], False
+        name, drill, width, height, layers, shapes, active_layer, variable = (
+            None,
+            None,
+            None,
+            None,
+            [],
+            [],
+            None,
+            False,
+        )
 
     for _, raw in _iter_lines(data, start, end):
         stripped = raw.strip()
@@ -943,16 +1049,40 @@ def _parse_padstacks(
         elif name is not None and folded.startswith(b".paddef "):
             tokens = stripped.split(None, 1)
             if len(tokens) == 2:
-                layers.append(_decode(tokens[1]))
+                active_layer = _decode(tokens[1])
+                layers.append(active_layer)
+        elif name is not None and folded.startswith(b".endpaddef"):
+            active_layer = None
         elif name is not None and folded.startswith(b"regular "):
             values = _lengths(stripped)
             candidate: tuple[float, float] | None = None
+            shape_kind: Literal["CIRCLE", "RECTANGLE", "UNSUPPORTED"]
+            reason: str | None = None
             if folded.startswith(b"regular circle") and values:
                 candidate = (2.0 * values[0], 2.0 * values[0])
+                shape_kind = "CIRCLE"
             elif folded.startswith(b"regular square") and values:
                 candidate = (values[0], values[0])
+                shape_kind = "RECTANGLE"
             elif folded.startswith(b"regular box") and len(values) >= 2:
                 candidate = (values[0], values[1])
+                shape_kind = "RECTANGLE"
+            else:
+                shape_kind = "UNSUPPORTED"
+                reason = (
+                    f"padstack {name!r} uses unsupported or malformed "
+                    f"{_decode(stripped.split(None, 2)[1]) if len(stripped.split(None, 2)) > 1 else 'Regular'} geometry"
+                )
+            if active_layer is not None:
+                shapes.append(
+                    SpdPadShape(
+                        layer=active_layer,
+                        kind=shape_kind,
+                        width_um=candidate[0] if candidate is not None else None,
+                        height_um=candidate[1] if candidate is not None else None,
+                        reason=reason,
+                    )
+                )
             if candidate is not None:
                 if width is not None and (candidate[0] != width or candidate[1] != height):
                     variable = True
@@ -1239,21 +1369,37 @@ def _parse_referenced_nodes(
     end: int,
     referenced: set[str],
     reporter: _Reporter,
+    *,
+    top_layer: str | None = None,
+    progress_low: int = 58,
+    progress_high: int = 82,
 ) -> dict[str, _Node]:
     result: dict[str, _Node] = {}
-    if not referenced:
+    if not referenced and top_layer is None:
         return result
+    top_marker = (
+        b"Layer = " + top_layer.encode("utf-8") if top_layer is not None else None
+    )
     for index, (offset, raw) in enumerate(_iter_lines(data, start, end)):
         if index % 16384 == 0:
-            reporter.report(_span_percent(offset, start, end, 58, 82), "Resolving referenced Node coordinates")
+            reporter.report(
+                _span_percent(offset, start, end, progress_low, progress_high),
+                "Resolving decap and TOP Via Node coordinates",
+            )
         if not raw.startswith(b"Node"):
             continue
+        top_position = raw.find(top_marker) if top_marker is not None else -1
+        top_end = top_position + len(top_marker) if top_marker is not None else -1
+        is_top = bool(
+            top_position >= 0
+            and (top_end == len(raw) or raw[top_end : top_end + 1].isspace())
+        )
         cuts = [value for value in (raw.find(b"!!"), raw.find(b"::"), raw.find(b" ")) if value >= 0]
         if not cuts:
             continue
         node_id = _decode(raw[: min(cuts)])
         key = node_id.casefold()
-        if key not in referenced:
+        if key not in referenced and not is_top:
             continue
         match = _NODE_ATTR_RE.search(raw)
         if match is None:
@@ -1270,9 +1416,22 @@ def _parse_referenced_nodes(
             if match.group(3)
             else None
         )
-        result[key] = _Node(x_um, y_um, padstack)
-        if len(result) == len(referenced):
-            break
+        layer_raw = _attribute(raw, b"Layer")
+        rotation_raw = _attribute(raw, b"AbsoluteRotation")
+        try:
+            rotation = float(rotation_raw) if rotation_raw else 0.0
+            rotation_valid = isfinite(rotation)
+        except ValueError:
+            rotation = 0.0
+            rotation_valid = False
+        result[key] = _Node(
+            x_um,
+            y_um,
+            padstack,
+            _decode(layer_raw) if layer_raw else None,
+            rotation,
+            rotation_valid,
+        )
     return result
 
 
@@ -1323,6 +1482,7 @@ def _materialize_geometry(
                 model_id=candidate.model_id,
                 footprint=candidate.footprint,
                 power_net=candidate.power_net,
+                ground_net=candidate.ground.net,
                 site=candidate.site,
                 mounted=candidate.mounted,
                 x_um=(power_pin.x_um + ground_pin.x_um) / 2.0,
@@ -1346,6 +1506,26 @@ def _materialize_geometry(
                     if candidate.ground.node_id.casefold() in nodes
                     else None
                 ),
+                power_pad_rotation_degrees=(
+                    nodes[candidate.power.node_id.casefold()].rotation_degrees
+                    if candidate.power.node_id.casefold() in nodes
+                    else 0.0
+                ),
+                ground_pad_rotation_degrees=(
+                    nodes[candidate.ground.node_id.casefold()].rotation_degrees
+                    if candidate.ground.node_id.casefold() in nodes
+                    else 0.0
+                ),
+                power_pad_rotation_valid=(
+                    nodes[candidate.power.node_id.casefold()].rotation_valid
+                    if candidate.power.node_id.casefold() in nodes
+                    else False
+                ),
+                ground_pad_rotation_valid=(
+                    nodes[candidate.ground.node_id.casefold()].rotation_valid
+                    if candidate.ground.node_id.casefold() in nodes
+                    else False
+                ),
             )
         )
     if missing:
@@ -1360,22 +1540,124 @@ def _parse_vias(
     start: int,
     end: int,
     plane_keys: set[str],
+    connection_keys: set[str],
+    nodes: dict[str, _Node],
     reporter: _Reporter,
-) -> tuple[tuple[SpdViaUsage, ...], int]:
+    *,
+    top_layer: str | None,
+    padstacks: tuple[SpdPadStack, ...],
+) -> tuple[
+    tuple[SpdViaUsage, ...],
+    int,
+    tuple[ViaTopEndpoint, ...],
+    tuple[str, ...],
+]:
     counter: Counter[tuple[str, str]] = Counter()
     total = 0
+    endpoints: list[ViaTopEndpoint] = []
+    uncertain_nets: set[str] = set()
+    padstack_by_key = {item.name.casefold(): item for item in padstacks}
+    top_key = top_layer.casefold() if top_layer else None
+    plane_key_bytes = {item.encode("utf-8") for item in plane_keys}
+    connection_key_bytes = {item.encode("utf-8") for item in connection_keys}
+    padstack_by_bytes = {
+        key.encode("utf-8"): value for key, value in padstack_by_key.items()
+    }
+    top_padstack_keys = (
+        {
+            item.name.casefold()
+            for item in padstacks
+            if top_key in {layer.casefold() for layer in item.layers}
+        }
+        if top_key is not None
+        else set()
+    )
+    top_padstack_key_bytes = {
+        item.encode("utf-8") for item in top_padstack_keys
+    }
     for index, match in enumerate(_VIA_RE.finditer(data, start, end)):
         total += 1
         if index % 8192 == 0:
-            reporter.report(_span_percent(match.start(), start, end, 83, 96), "Counting selected-net via padstacks")
-        net, padstack = _decode(match.group(1)), _decode(match.group(2))
-        if not plane_keys or net.casefold() in plane_keys:
+            reporter.report(
+                _span_percent(match.start(), start, end, 83, 96),
+                "Counting vias and resolving TOP landing evidence",
+            )
+        net_raw = match.group(2)
+        padstack_raw = match.group(5)
+        net_key_raw = net_raw.lower()
+        padstack_key_raw = padstack_raw.lower()
+        net: str | None = None
+        padstack: str | None = None
+        if not plane_keys or net_key_raw in plane_key_bytes:
+            net = _decode(net_raw)
+            padstack = _decode(padstack_raw)
             counter[(net, padstack)] += 1
+        if top_key is None or net_key_raw not in connection_key_bytes:
+            continue
+        definition = padstack_by_bytes.get(padstack_key_raw)
+        if definition is None:
+            # An unknown padstack matters only when one of the source endpoints
+            # is demonstrably on TOP; otherwise it cannot affect TOP decaps.
+            if any(
+                (node := nodes.get(_decode(node_id).casefold())) is not None
+                and node.layer is not None
+                and node.layer.casefold() == top_key
+                for node_id in (match.group(3), match.group(4))
+            ):
+                uncertain_nets.add(net or _decode(net_raw))
+            continue
+        if padstack_key_raw not in top_padstack_key_bytes:
+            continue
+        via_id = _decode(match.group(1))
+        net = net or _decode(net_raw)
+        upper_node_id = _decode(match.group(3))
+        lower_node_id = _decode(match.group(4))
+        padstack = padstack or _decode(padstack_raw)
+        rotation_raw = _attribute(match.group(6), b"AbsoluteRotation")
+        try:
+            rotation = float(rotation_raw) if rotation_raw else 0.0
+            if not isfinite(rotation):
+                raise ValueError("non-finite Via rotation")
+        except ValueError:
+            rotation = 0.0
+            uncertain_nets.add(net)
+        for node_id in (upper_node_id, lower_node_id):
+            node = nodes.get(node_id.casefold())
+            if node is None or node.layer is None:
+                # Every TOP node is retained by the single Node pass.  A missing
+                # endpoint therefore cannot be TOP and needs no distance guess.
+                continue
+            if node.layer.casefold() != top_key:
+                continue
+            endpoints.append(
+                ViaTopEndpoint(
+                    via_id=via_id,
+                    net=net,
+                    endpoint_node_id=node_id,
+                    x_um=node.x_um,
+                    y_um=node.y_um,
+                    padstack=padstack,
+                    rotation_degrees=rotation,
+                )
+            )
     result = tuple(
         SpdViaUsage(net, padstack, count)
         for (net, padstack), count in sorted(counter.items(), key=lambda item: (item[0][0].casefold(), item[0][1].casefold()))
     )
-    return result, total
+    return (
+        result,
+        total,
+        tuple(
+            sorted(
+                endpoints,
+                key=lambda item: (
+                    item.via_id.casefold(),
+                    item.endpoint_node_id.casefold(),
+                ),
+            )
+        ),
+        tuple(sorted(uncertain_nets, key=str.casefold)),
+    )
 
 
 def analyze_spd(
@@ -1451,6 +1733,34 @@ def analyze_spd(
             first_shape = _find_line(data, b".Shape")
             shape_start = first_shape if first_shape >= 0 else 0
             shape_end = layer_marker if layer_marker > shape_start else (node_marker if node_marker > shape_start else len(data))
+
+            reporter.report(11, "Reading material and TOP-layer identity")
+            material_start = material_marker if material_marker >= 0 else 0
+            material_end_marker = _find_line(data, b".EndMaterial", material_start)
+            material_end = (
+                len(data)
+                if material_end_marker < 0
+                else _line_end(data, material_end_marker, len(data))
+            )
+            dielectrics, metals = _parse_materials(
+                data, material_start, material_end, diagnostics
+            )
+            layer_start = layer_marker if layer_marker >= 0 else shape_end
+            layer_end = (
+                node_marker
+                if node_marker > layer_start
+                else min(
+                    (
+                        value
+                        for value in (via_marker, pad_marker, len(data))
+                        if value > layer_start
+                    ),
+                    default=len(data),
+                )
+            )
+            top_layer_hint = _first_conductor_layer_name(
+                data, layer_start, layer_end, metals
+            )
 
             # Scenario mode needs candidate rails beyond the .NetList selection,
             # but retaining every signal polygon in a production SPD would be
@@ -1561,6 +1871,12 @@ def analyze_spd(
                 ),
                 reporter,
                 diagnostics,
+                transient_geometry_keys=(
+                    configured_ground_keys if scope == "decap_scenario" else None
+                ),
+                transient_geometry_layer=(
+                    top_layer_hint if scope == "decap_scenario" else None
+                ),
             )
             positive_keys = {item.casefold() for item in positive_nets}
             usable_power = _unique(
@@ -1617,14 +1933,9 @@ def analyze_spd(
                 else positive_keys
             )
 
-            reporter.report(30, "Reading material tables and stack-up")
-            material_start = material_marker if material_marker >= 0 else 0
-            material_end_marker = _find_line(data, b".EndMaterial", material_start)
-            material_end = len(data) if material_end_marker < 0 else _line_end(data, material_end_marker, len(data))
-            dielectrics, metals = _parse_materials(data, material_start, material_end, diagnostics)
-            layer_start = layer_marker if layer_marker >= 0 else shape_end
-            layer_end = node_marker if node_marker > layer_start else min((value for value in (via_marker, pad_marker, len(data)) if value > layer_start), default=len(data))
+            reporter.report(30, "Building stack-up")
             layers = _parse_layers(data, layer_start, layer_end, layer_nets, dielectrics, metals, plane_keys, diagnostics)
+            top_layer = next((item.name for item in layers if item.is_conductor), None)
 
             reporter.report(35, "Reading padstack definitions")
             pad_start = _find_line(data, b".PadStackDef", pad_marker if pad_marker >= 0 else 0)
@@ -1678,7 +1989,14 @@ def analyze_spd(
             reporter.report(57, "Resolving referenced Node coordinates")
             node_start = node_marker if node_marker >= 0 else 0
             node_end = via_marker if via_marker > node_start else (pad_marker if pad_marker > node_start else len(data))
-            nodes = _parse_referenced_nodes(data, node_start, node_end, referenced, reporter)
+            nodes = _parse_referenced_nodes(
+                data,
+                node_start,
+                node_end,
+                referenced,
+                reporter,
+                top_layer=top_layer,
+            )
             pins, cap_instances, missing_nodes = _materialize_geometry(device_candidates, cap_candidates, nodes, diagnostics)
             if not any(pin.kind == PinKind.DEVICE_BUMP for pin in pins):
                 diagnostics.append(SpdDiagnostic("warning", "DEVICE_PINS_NOT_FOUND", "No selected PWR/GND pins from a top-attached IO component were resolved."))
@@ -1686,38 +2004,153 @@ def analyze_spd(
             reporter.report(82, "Counting selected-net vias")
             via_start = via_marker if via_marker >= 0 else node_end
             via_end = pad_marker if pad_marker > via_start else (material_marker if material_marker > via_start else len(data))
-            via_usage, total_vias = _parse_vias(data, via_start, via_end, plane_keys, reporter)
+            connection_keys = {
+                candidate.power.net.casefold()
+                for candidate in cap_candidates
+            } | {
+                candidate.ground.net.casefold()
+                for candidate in cap_candidates
+            }
+            (
+                via_usage,
+                total_vias,
+                top_via_endpoints,
+                uncertain_via_nets,
+            ) = _parse_vias(
+                data,
+                via_start,
+                via_end,
+                plane_keys,
+                connection_keys,
+                nodes,
+                reporter,
+                top_layer=top_layer,
+                padstacks=padstacks,
+            )
+            padstack_shapes = {
+                item.name.casefold(): item.pad_shapes for item in padstacks
+            }
+            shared_pad = extract_shared_pad_connectivity(
+                tuple(
+                    DecapPadEvidence(
+                        refdes=instance.refdes,
+                        top_side=bool(
+                            top_layer
+                            and (
+                                (instance.start_layer or "").casefold()
+                                == top_layer.casefold()
+                                or (instance.attach_layer or "")
+                                .casefold()
+                                .replace("_", "")
+                                in {"topair", "airtop"}
+                            )
+                        ),
+                        layer=instance.start_layer,
+                        power_net=instance.power_net,
+                        ground_net=instance.ground_net,
+                        power_x_um=instance.power_x_um,
+                        power_y_um=instance.power_y_um,
+                        power_padstack=instance.power_padstack,
+                        power_rotation_degrees=instance.power_pad_rotation_degrees,
+                        ground_x_um=(
+                            instance.ground_pad_x_um
+                            if instance.ground_pad_x_um is not None
+                            else instance.x_um
+                        ),
+                        ground_y_um=(
+                            instance.ground_pad_y_um
+                            if instance.ground_pad_y_um is not None
+                            else instance.y_um
+                        ),
+                        ground_padstack=instance.ground_padstack,
+                        ground_rotation_degrees=instance.ground_pad_rotation_degrees,
+                        power_rotation_valid=instance.power_pad_rotation_valid,
+                        ground_rotation_valid=instance.ground_pad_rotation_valid,
+                    )
+                    for instance in cap_instances
+                ),
+                top_via_endpoints,
+                padstack_shapes,
+                top_layer=top_layer,
+                uncertain_via_nets=uncertain_via_nets,
+                top_copper_geometries=tuple(
+                    SpdTopCopperGeometry(
+                        layer=geometry.layer,
+                        net=geometry.net,
+                        positive_polygons_um=geometry.positive_polygons_um,
+                        negative_polygons_um=geometry.negative_polygons_um,
+                        positive_circles_um=geometry.positive_circles_um,
+                        negative_circles_um=geometry.negative_circles_um,
+                        primitive_order=geometry.primitive_order,
+                    )
+                    for geometry in plane_geometries
+                    if top_layer is not None
+                    and geometry.layer.casefold() == top_layer.casefold()
+                    and geometry.net.casefold() in connection_keys
+                ),
+            )
+            diagnostics.extend(
+                SpdDiagnostic("warning", "SPD_SHARED_PAD_UNRESOLVED", message)
+                for message in shared_pad.warnings
+            )
+            if shared_pad.source_copper_power_edges:
+                diagnostics.append(
+                    SpdDiagnostic(
+                        "info",
+                        "SPD_SHARED_PAD_TOP_COPPER_LINKS",
+                        (
+                            "Used source-positive TOP copper geometry to add "
+                            f"{shared_pad.source_copper_power_edges:,} PWR and "
+                            f"{shared_pad.source_copper_ground_edges:,} GND shared-pad "
+                            "edge(s) without a second SPD scan."
+                        ),
+                    )
+                )
+
+            persisted_plane_geometries = (
+                tuple(
+                    geometry
+                    for geometry in plane_geometries
+                    if geometry.net.casefold() in scenario_geometry_keys
+                )
+                if scope == "decap_scenario"
+                else plane_geometries
+            )
 
             counts = {
                 "positive_plane_nets": len(positive_nets),
-                "selected_plane_geometry_groups": len(plane_geometries),
+                "selected_plane_geometry_groups": len(persisted_plane_geometries),
                 "selected_plane_boundary_polygons": sum(
-                    len(item.positive_polygons_um) for item in plane_geometries
+                    len(item.positive_polygons_um)
+                    for item in persisted_plane_geometries
                 ),
                 "selected_plane_boundary_vertices": sum(
                     len(polygon)
-                    for item in plane_geometries
+                    for item in persisted_plane_geometries
                     for polygon in item.positive_polygons_um
                 ),
                 "selected_plane_negative_polygons": sum(
-                    len(item.negative_polygons_um) for item in plane_geometries
+                    len(item.negative_polygons_um)
+                    for item in persisted_plane_geometries
                 ),
                 "selected_plane_positive_circles": sum(
-                    len(item.positive_circles_um) for item in plane_geometries
+                    len(item.positive_circles_um)
+                    for item in persisted_plane_geometries
                 ),
                 "selected_plane_negative_circles": sum(
-                    len(item.negative_circles_um) for item in plane_geometries
+                    len(item.negative_circles_um)
+                    for item in persisted_plane_geometries
                 ),
                 "selected_plane_polygon_traces": sum(
-                    item.polygon_trace_count for item in plane_geometries
+                    item.polygon_trace_count for item in persisted_plane_geometries
                 ),
                 "selected_plane_boxes": sum(
-                    item.box_count for item in plane_geometries
+                    item.box_count for item in persisted_plane_geometries
                 ),
                 "selected_plane_subelements": sum(
                     item.positive_subelement_count
                     + item.negative_subelement_count
-                    for item in plane_geometries
+                    for item in persisted_plane_geometries
                 ),
                 "selected_power_nets": len(usable_power),
                 "selected_ground_nets": len(usable_ground),
@@ -1726,7 +2159,8 @@ def analyze_spd(
                 "cap_models": len(cap_models),
                 "connections": len(connections),
                 "referenced_nodes": len(referenced),
-                "resolved_nodes": len(nodes),
+                "resolved_nodes": len(referenced.intersection(nodes)),
+                "retained_top_nodes": len(nodes) - len(referenced.intersection(nodes)),
                 "unresolved_nodes": len(referenced - set(nodes)),
                 "pins": len(pins),
                 "device_pins": sum(pin.kind == PinKind.DEVICE_BUMP for pin in pins),
@@ -1740,6 +2174,26 @@ def analyze_spd(
                 "padstacks": len(padstacks),
                 "vias": total_vias,
                 "via_usage_groups": len(via_usage),
+                "top_via_endpoints": len(top_via_endpoints),
+                "shared_pad_clusters": len(shared_pad.clusters),
+                "shared_pad_anchored_clusters": sum(
+                    item.state == "ANCHORED" for item in shared_pad.clusters
+                ),
+                "shared_pad_floating_clusters": sum(
+                    item.state == "FLOATING" for item in shared_pad.clusters
+                ),
+                "shared_pad_unresolved_decaps": sum(
+                    item.kind == "UNRESOLVED" for item in shared_pad.connections
+                ),
+                "shared_pad_source_copper_power_edges": (
+                    shared_pad.source_copper_power_edges
+                ),
+                "shared_pad_source_copper_ground_edges": (
+                    shared_pad.source_copper_ground_edges
+                ),
+                "shared_pad_source_copper_members": (
+                    shared_pad.source_copper_member_count
+                ),
             }
             reporter.report(100, "SPD analysis complete")
             return SpdAnalysis(
@@ -1765,7 +2219,9 @@ def analyze_spd(
                     )
                 ),
                 ground_nets=usable_ground,
-                plane_geometries=plane_geometries,
+                plane_geometries=persisted_plane_geometries,
+                decap_connections=shared_pad.connections,
+                shared_pad_clusters=shared_pad.clusters,
             )
     except SpdImportError:
         raise
@@ -1777,11 +2233,14 @@ __all__ = [
     "SpdAnalysis",
     "SpdAnalysisScope",
     "SpdCapInstance",
+    "SpdDecapConnection",
     "SpdDiagnostic",
     "SpdImportError",
     "SpdPadStack",
+    "SpdPadShape",
     "SpdPlaneGeometry",
     "SpdSourceInfo",
+    "SpdSharedPadCluster",
     "SpdViaUsage",
     "analyze_spd",
 ]

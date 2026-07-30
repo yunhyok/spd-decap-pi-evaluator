@@ -142,7 +142,21 @@ class ComparisonResultsWindow(QMainWindow):
         splitter = QSplitter(Qt.Orientation.Vertical, self)
         splitter.setObjectName("largeResultSplitter")
         splitter.setChildrenCollapsible(False)
-        splitter.setHandleWidth(6)
+        splitter.setHandleWidth(10)
+        splitter.setStyleSheet(
+            """
+            QSplitter::handle:vertical {
+                background: #94A3B8;
+                border-top: 1px solid #CBD5E1;
+                border-bottom: 1px solid #475569;
+                margin: 2px 0px;
+            }
+            QSplitter::handle:vertical:hover,
+            QSplitter::handle:vertical:pressed {
+                background: #3B82F6;
+            }
+            """
+        )
         self.plot = MultiRailComparisonPlot(splitter)
         self.plot.setObjectName("largeResultComparisonPlot")
         self.plot.setMinimumHeight(420)
@@ -166,11 +180,31 @@ class ComparisonResultsWindow(QMainWindow):
         rail_labels: Mapping[str, str],
         source_table: QTableWidget,
     ) -> None:
+        self.set_plot_results(
+            comparisons,
+            rail_colors=rail_colors,
+            rail_labels=rail_labels,
+        )
+        self.copy_table_from(source_table)
+
+    def set_plot_results(
+        self,
+        comparisons: Sequence[Any],
+        *,
+        rail_colors: Mapping[str, str],
+        rail_labels: Mapping[str, str],
+    ) -> None:
+        """Render and validate the detached plot without copying its table."""
+
         self.plot.set_comparisons(
             comparisons,
             rail_colors=rail_colors,
             rail_labels=rail_labels,
         )
+
+    def copy_table_from(self, source_table: QTableWidget) -> None:
+        """Copy an already accepted comparison table without rerendering the plot."""
+
         self._copy_table(source_table)
 
     def clear_results(self) -> None:

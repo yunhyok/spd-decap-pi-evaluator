@@ -17,10 +17,10 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 
 def test_spd_decap_release_identity_is_explicit_and_versioned() -> None:
     assert APP_NAME == "SPD Decap PI Evaluator"
-    assert __version__ == "0.5.0"
-    assert APP_DISPLAY_NAME == "SPD Decap PI Evaluator v0.5.0"
+    assert __version__ == "0.9.1"
+    assert APP_DISPLAY_NAME == "SPD Decap PI Evaluator v0.9.1"
     assert EXECUTABLE_BASENAME == "SPDDecapPIEvaluator"
-    assert INSTALLER_BASENAME == "SPDDecapPIEvaluatorSetup-0.5.0"
+    assert INSTALLER_BASENAME == "SPDDecapPIEvaluatorSetup-0.9.1"
 
 
 def test_spd_decap_console_and_packaging_metadata_are_consistent() -> None:
@@ -40,6 +40,7 @@ def test_spd_decap_console_and_packaging_metadata_are_consistent() -> None:
     )
     assert pyproject["project"]["name"] == "spd-decap-pi-evaluator"
     assert pyproject["project"]["version"] == __version__
+    assert "XlsxWriter>=3.2" in pyproject["project"]["dependencies"]
     assert set(pyproject["project"]["scripts"]) == {"spd-decap-pi-evaluator"}
     assert f'#define AppVersion "{__version__}"' in installer
     assert f'#define AppName "{APP_NAME}"' in installer
@@ -68,6 +69,8 @@ def test_installer_build_cannot_silently_reuse_a_stale_application() -> None:
     ).read_text(encoding="utf-8")
     assert "SkipBuild" not in installer_build
     assert "build_spd_decap_pi.ps1" in installer_build
+    assert "Get-FileHash" in installer_build
+    assert '"$installer.sha256"' in installer_build
 
 
 def test_standalone_source_has_no_external_mlo_package_or_optimization_ui() -> None:
@@ -85,7 +88,7 @@ def test_windows_version_resource_matches_release_identity() -> None:
     version_info = (
         REPO_ROOT / "packaging" / "spd_decap_pi_version_info.txt"
     ).read_text(encoding="utf-8")
-    assert "filevers=(0, 5, 0, 0)" in version_info
-    assert "prodvers=(0, 5, 0, 0)" in version_info
-    assert "StringStruct('FileVersion', '0.5.0')" in version_info
-    assert "StringStruct('ProductVersion', '0.5.0')" in version_info
+    assert "filevers=(0, 9, 1, 0)" in version_info
+    assert "prodvers=(0, 9, 1, 0)" in version_info
+    assert "StringStruct('FileVersion', '0.9.1')" in version_info
+    assert "StringStruct('ProductVersion', '0.9.1')" in version_info

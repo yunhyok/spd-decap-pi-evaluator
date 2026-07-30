@@ -6,6 +6,7 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from hashlib import sha256
 from pathlib import Path
+from time import perf_counter
 from typing import Any
 
 from spd_decap_pi._core.domain import PinKind, ProjectSpec
@@ -14,12 +15,19 @@ from spd_decap_pi._core.services import build_spd_import_plan, create_workspace_
 
 from .eligibility import EligibilityResult, PlaneEligibilityIndex
 from .scenario import (
+    DecapConnectionKind,
     RailEligibility,
     ScenarioDecap,
+    ScenarioDecapConnection,
     ScenarioPad,
     ScenarioPoint,
     ScenarioSide,
     ScenarioSpec,
+    ScenarioViaLanding,
+    SHARED_PAD_ANALYSIS_VERSION,
+    SharedPadCluster,
+    SharedPadClusterState,
+    SharedPadConnectionAnalysis,
     SourceIdentity,
 )
 
@@ -40,12 +48,24 @@ _NET_PALETTE = (
     "#00A8FF",
 )
 
+@dataclass(frozen=True, slots=True)
+class ImportStageTimings:
+    """Non-persistent wall-clock timings for one read-only SPD import."""
+
+    analyze_s: float
+    plan_s: float
+    index_s: float
+    eligibility_s: float
+    finalize_s: float
+    total_s: float
+
 
 @dataclass(frozen=True, slots=True)
 class ScenarioImport:
     scenario: ScenarioSpec
     attachments: dict[str, bytes]
     diagnostics: tuple[Any, ...]
+    timings: ImportStageTimings
 
 
 def _top_conductor_name(project: ProjectSpec) -> str | None:
@@ -113,9 +133,21 @@ def _eligibility_by_rail(
     instance: SpdCapInstance,
     rail_choices_by_pair: dict[tuple[str, str, str], tuple[tuple[Any, str], ...]],
 ) -> dict[str, RailEligibility]:
-    exact: EligibilityResult = eligibility_index.query(
-        instance.power_x_um, instance.power_y_um
+    return _eligibility_at_point(
+        eligibility_index,
+        instance.power_x_um,
+        instance.power_y_um,
+        rail_choices_by_pair,
     )
+
+
+def _eligibility_at_point(
+    eligibility_index: PlaneEligibilityIndex,
+    x_um: float,
+    y_um: float,
+    rail_choices_by_pair: dict[tuple[str, str, str], tuple[tuple[Any, str], ...]],
+) -> dict[str, RailEligibility]:
+    exact: EligibilityResult = eligibility_index.query(x_um, y_um)
     result: dict[str, RailEligibility] = {}
     for plane in exact.eligible:
         pair_key = (
@@ -137,6 +169,57 @@ def _eligibility_by_rail(
                 allowed=True,
             )
     return result
+
+
+def _common_eligibility_at_points(
+    eligibility_index: PlaneEligibilityIndex,
+    points_um: tuple[tuple[float, float], ...],
+    rail_choices_by_pair: dict[tuple[str, str, str], tuple[tuple[Any, str], ...]],
+) -> dict[str, RailEligibility]:
+    """Return rails present under every unique physical PWR-via landing."""
+
+    unique_points = tuple(dict.fromkeys(points_um))
+    if not unique_points:
+        return {}
+    return _common_eligibility_maps(
+        tuple(
+            _eligibility_at_point(
+                eligibility_index,
+                x_um,
+                y_um,
+                rail_choices_by_pair,
+            )
+            for x_um, y_um in unique_points
+        )
+    )
+
+
+def _common_eligibility_maps(
+    eligibility_maps: tuple[dict[str, RailEligibility], ...],
+) -> dict[str, RailEligibility]:
+    """Intersect allowed rail identities without pairing physical vias."""
+
+    common: dict[str, RailEligibility] | None = None
+    for at_point in eligibility_maps:
+        by_key = {
+            item.rail_id.casefold(): item
+            for item in at_point.values()
+            if item.allowed
+        }
+        if common is None:
+            common = by_key
+        else:
+            common = {
+                key: value for key, value in common.items() if key in by_key
+            }
+        if not common:
+            return {}
+    if common is None:
+        return {}
+    return {
+        item.rail_id: item
+        for item in sorted(common.values(), key=lambda value: value.rail_id.casefold())
+    }
 
 
 def _rail_choice_index(
@@ -184,6 +267,7 @@ def _normalized_base_project(project: ProjectSpec) -> ProjectSpec:
                 if item.kind == PinKind.DEVICE_BUMP
             ],
             "topology_maps": [],
+            "shared_pad_clusters": [],
             "placements": [],
             "partitions": [
                 item.model_copy(update={"confirmed": True}).model_dump(mode="json")
@@ -208,10 +292,12 @@ def import_spd_scenario(
     report = progress or (lambda _value, _message: None)
     cancelled = is_cancelled or (lambda: False)
     state = create_workspace_state()
+    total_started = perf_counter()
 
     def parser_progress(value: int, message: str) -> None:
         report(round(max(0, min(100, value)) * 0.82), message)
 
+    analyze_started = perf_counter()
     analysis = analyze_spd(
         source_path,
         frequencies_hz=(
@@ -223,10 +309,16 @@ def import_spd_scenario(
         is_cancelled=cancelled,
         scope="decap_scenario",
     )
+    analyze_s = perf_counter() - analyze_started
     if cancelled():
         raise RuntimeError("SPD scenario import cancelled")
-    report(84, "Normalizing the read-only SPD evaluation model")
+    report(
+        83,
+        f"Parsed the SPD in {analyze_s:.1f}s; normalizing exact plane geometry",
+    )
+    plan_started = perf_counter()
     plan = build_spd_import_plan(state.project, analysis, source_path)
+    plan_s = perf_counter() - plan_started
     blocking = [
         item
         for item in plan.diagnostics
@@ -241,6 +333,11 @@ def import_spd_scenario(
             "SPD scenario import is blocked because exact evaluation geometry is "
             f"incomplete or invalid. {details or 'Import plan is not applicable.'}"
         )
+    report(
+        85,
+        f"Normalized exact plane geometry in {plan_s:.1f}s; building spatial index",
+    )
+    index_started = perf_counter()
     base_project = _normalized_base_project(plan.project)
     top_layer = _top_conductor_name(base_project)
     rail_choices_by_pair = _rail_choice_index(base_project)
@@ -258,21 +355,126 @@ def import_spd_scenario(
         base_project.stackup_layers,
         gnd_aliases=base_project.gnd_aliases,
     )
-    decaps: list[ScenarioDecap] = []
+    index_s = perf_counter() - index_started
+    report(
+        86,
+        "Indexed "
+        f"{eligibility_index.plane_count:,} plane groups / "
+        f"{eligibility_index.primitive_count:,} primitives in {index_s:.1f}s",
+    )
     top_instances = tuple(
         instance
         for instance in analysis.cap_instances
         if _instance_side(instance, top_layer) is ScenarioSide.TOP
     )
+    top_instance_by_key = {
+        instance.refdes.casefold(): instance for instance in top_instances
+    }
+    source_rail_id_by_key = {
+        key: (
+            rail.rail_id
+            if (rail := _rail_for_instance(base_project, instance)) is not None
+            else f"UNAVAILABLE::{instance.power_net}"
+        )
+        for key, instance in top_instance_by_key.items()
+    }
+    parsed_connection_by_key = {
+        item.refdes.casefold(): item for item in analysis.decap_connections
+    }
+    parsed_cluster_by_key = {
+        item.cluster_id.casefold(): item for item in analysis.shared_pad_clusters
+    }
+
+    # Cluster rail choices are evaluated at every unique physical PWR-via
+    # landing.  A dummy pad never receives its own virtual via or independent
+    # eligibility result.
+    cluster_state_by_key: dict[str, SharedPadClusterState] = {}
+    cluster_reason_by_key: dict[str, str | None] = {}
+    cluster_eligibility_by_key: dict[str, dict[str, RailEligibility]] = {}
+    cluster_via_eligibility_by_key: dict[
+        str, dict[str, dict[str, RailEligibility]]
+    ] = {}
+    accepted_cluster_keys: set[str] = set()
+    eligibility_started = perf_counter()
+    for cluster_key, cluster in parsed_cluster_by_key.items():
+        member_keys = {item.casefold() for item in cluster.member_refdes}
+        if not member_keys.issubset(top_instance_by_key):
+            continue
+        accepted_cluster_keys.add(cluster_key)
+        state_value = SharedPadClusterState(cluster.state)
+        reason = cluster.reason
+        source_rails = {source_rail_id_by_key[key].casefold() for key in member_keys}
+        if (
+            state_value != SharedPadClusterState.UNRESOLVED
+            and len(source_rails) != 1
+        ):
+            state_value = SharedPadClusterState.UNRESOLVED
+            reason = (
+                "shared-pad members resolve to different source rail identities"
+            )
+        eligibility: dict[str, RailEligibility] = {}
+        via_eligibility: dict[str, dict[str, RailEligibility]] = {}
+        if state_value == SharedPadClusterState.ANCHORED:
+            power_landings = {
+                landing.via_id.casefold(): landing
+                for member in cluster.member_refdes
+                for landing in parsed_connection_by_key[member.casefold()].power_vias
+            }
+            via_eligibility = {
+                landing.via_id: _eligibility_at_point(
+                    eligibility_index,
+                    landing.x_um,
+                    landing.y_um,
+                    rail_choices_by_pair,
+                )
+                for landing in sorted(
+                    power_landings.values(),
+                    key=lambda item: item.via_id.casefold(),
+                )
+            }
+            eligibility = _common_eligibility_maps(
+                tuple(via_eligibility.values())
+            )
+            source_rail_key = next(iter(source_rails), "")
+            source_present_at_every_via = bool(via_eligibility) and all(
+                source_rail_key
+                in {
+                    item.rail_id.casefold()
+                    for item in at_via.values()
+                    if item.allowed
+                }
+                for at_via in via_eligibility.values()
+            )
+            if not source_present_at_every_via:
+                state_value = SharedPadClusterState.UNRESOLVED
+                reason = (
+                    "the source rail is not present beneath every exact PWR-via "
+                    "landing in the shared-pad cluster"
+                )
+                eligibility = {}
+                via_eligibility = {}
+        cluster_state_by_key[cluster_key] = state_value
+        cluster_reason_by_key[cluster_key] = reason
+        cluster_eligibility_by_key[cluster_key] = eligibility
+        cluster_via_eligibility_by_key[cluster_key] = via_eligibility
+
+    decaps: list[ScenarioDecap] = []
+    scenario_connections: dict[str, ScenarioDecapConnection] = {}
     total_instances = len(top_instances)
     for index, instance in enumerate(top_instances, start=1):
         if index == 1 or index % 128 == 0:
             if cancelled():
                 raise RuntimeError("SPD scenario import cancelled")
             fraction = index / max(1, total_instances)
+            stage_elapsed = perf_counter() - eligibility_started
+            total_elapsed = perf_counter() - total_started
+            rate = index / max(stage_elapsed, 1.0e-9)
+            remaining = max(0.0, total_instances - index) / max(rate, 1.0e-9)
             report(
-                84 + round(fraction * 14),
-                f"Checking exact PWR-plane eligibility ({index:,}/{total_instances:,})",
+                86 + round(fraction * 12),
+                "Checking exact PWR-plane eligibility "
+                f"({index:,}/{total_instances:,}; stage {stage_elapsed:.1f}s, "
+                f"total {total_elapsed:.1f}s, ETA {remaining:.1f}s)",
             )
         side = _instance_side(instance, top_layer)
         source_rail = _rail_for_instance(base_project, instance)
@@ -281,9 +483,84 @@ def import_spd_scenario(
             if source_rail is not None
             else f"UNAVAILABLE::{instance.power_net}"
         )
-        eligibility = _eligibility_by_rail(
-            eligibility_index, instance, rail_choices_by_pair
+        parsed_connection = parsed_connection_by_key.get(instance.refdes.casefold())
+        connection_kind = DecapConnectionKind.UNRESOLVED
+        connection_cluster_id: str | None = None
+        connection_reason = "parser did not classify this TOP decap"
+        power_vias: tuple[ScenarioViaLanding, ...] = ()
+        ground_vias: tuple[ScenarioViaLanding, ...] = ()
+        eligibility: dict[str, RailEligibility] = {}
+        if parsed_connection is not None:
+            connection_kind = DecapConnectionKind(parsed_connection.kind)
+            connection_cluster_id = parsed_connection.cluster_id
+            connection_reason = parsed_connection.reason
+            power_vias = tuple(
+                ScenarioViaLanding(
+                    via_id=item.via_id,
+                    net=item.net,
+                    endpoint_node_id=item.endpoint_node_id,
+                    x_um=item.x_um,
+                    y_um=item.y_um,
+                    padstack=item.padstack,
+                    rotation_degrees=item.rotation_degrees,
+                )
+                for item in parsed_connection.power_vias
+            )
+            ground_vias = tuple(
+                ScenarioViaLanding(
+                    via_id=item.via_id,
+                    net=item.net,
+                    endpoint_node_id=item.endpoint_node_id,
+                    x_um=item.x_um,
+                    y_um=item.y_um,
+                    padstack=item.padstack,
+                    rotation_degrees=item.rotation_degrees,
+                )
+                for item in parsed_connection.ground_vias
+            )
+            if connection_cluster_id is None:
+                if connection_kind == DecapConnectionKind.DIRECT:
+                    eligibility = _common_eligibility_at_points(
+                        eligibility_index,
+                        tuple((item.x_um, item.y_um) for item in power_vias),
+                        rail_choices_by_pair,
+                    )
+                    if source_rail_id.casefold() not in {
+                        item.rail_id.casefold() for item in eligibility.values()
+                    }:
+                        connection_kind = DecapConnectionKind.UNRESOLVED
+                        connection_reason = (
+                            "the source rail is not present beneath every exact "
+                            "PWR-via landing"
+                        )
+                        eligibility = {}
+            else:
+                cluster_key = connection_cluster_id.casefold()
+                if cluster_key not in accepted_cluster_keys:
+                    connection_kind = DecapConnectionKind.UNRESOLVED
+                    connection_cluster_id = None
+                    connection_reason = (
+                        "shared-pad cluster includes a member outside the editable "
+                        "TOP-side scenario"
+                    )
+                elif (
+                    cluster_state_by_key[cluster_key]
+                    == SharedPadClusterState.UNRESOLVED
+                ):
+                    connection_kind = DecapConnectionKind.UNRESOLVED
+                    connection_reason = cluster_reason_by_key[cluster_key]
+                else:
+                    eligibility = cluster_eligibility_by_key[cluster_key]
+
+        scenario_connection = ScenarioDecapConnection(
+            refdes=instance.refdes,
+            kind=connection_kind,
+            cluster_id=connection_cluster_id,
+            power_vias=power_vias,
+            ground_vias=ground_vias,
+            reason=connection_reason,
         )
+        scenario_connections[instance.refdes] = scenario_connection
         decaps.append(
             ScenarioDecap(
                 refdes=instance.refdes,
@@ -327,6 +604,12 @@ def import_spd_scenario(
                 eligibility=eligibility,
             )
         )
+    eligibility_s = perf_counter() - eligibility_started
+    report(
+        99,
+        f"Checked {total_instances:,} decaps in {eligibility_s:.1f}s; validating scenario",
+    )
+    finalize_started = perf_counter()
     decaps.sort(key=lambda item: item.refdes.casefold())
     nets = sorted(
         {item.net for item in base_project.rails},
@@ -347,19 +630,60 @@ def import_spd_scenario(
         size_bytes=analysis.source.size_bytes,
         sha256=analysis.source.sha256,
     )
+    scenario_clusters = tuple(
+        SharedPadCluster(
+            cluster_id=cluster.cluster_id,
+            state=cluster_state_by_key[cluster_key],
+            member_refdes=cluster.member_refdes,
+            anchor_refdes=cluster.anchor_refdes,
+            dummy_refdes=cluster.dummy_refdes,
+            power_net=cluster.power_net,
+            ground_net=cluster.ground_net,
+            layer=cluster.layer,
+            power_edges=cluster.power_edges,
+            ground_edges=cluster.ground_edges,
+            isolation_gap_refdes=cluster.isolation_gap_refdes,
+            reason=cluster_reason_by_key[cluster_key],
+            eligibility=cluster_eligibility_by_key[cluster_key],
+            via_eligibility=cluster_via_eligibility_by_key[cluster_key],
+        )
+        for cluster_key, cluster in sorted(parsed_cluster_by_key.items())
+        if cluster_key in accepted_cluster_keys
+    )
+    connection_analysis = SharedPadConnectionAnalysis(
+        version=SHARED_PAD_ANALYSIS_VERSION,
+        source_sha256=analysis.source.sha256,
+        connections=scenario_connections,
+        clusters=scenario_clusters,
+    )
     scenario = ScenarioSpec(
         source=source,
         normalized_project=base_project,
         decaps=decaps,
+        connection_analysis=connection_analysis,
         net_colors=net_colors,
         attachment_names=sorted(attachments, key=str.casefold),
         attachment_hashes=attachment_hashes,
     )
-    report(100, f"Loaded {len(decaps):,} top-side decap locations")
+    finalize_s = perf_counter() - finalize_started
+    total_s = perf_counter() - total_started
+    timings = ImportStageTimings(
+        analyze_s=analyze_s,
+        plan_s=plan_s,
+        index_s=index_s,
+        eligibility_s=eligibility_s,
+        finalize_s=finalize_s,
+        total_s=total_s,
+    )
+    report(
+        100,
+        f"Loaded {len(decaps):,} top-side decap locations in {total_s:.1f}s",
+    )
     return ScenarioImport(
         scenario=scenario,
         attachments=attachments,
         diagnostics=tuple(plan.diagnostics),
+        timings=timings,
     )
 
 
@@ -404,4 +728,9 @@ def verify_scenario_source(
     return path.resolve()
 
 
-__all__ = ["ScenarioImport", "import_spd_scenario", "verify_scenario_source"]
+__all__ = [
+    "ImportStageTimings",
+    "ScenarioImport",
+    "import_spd_scenario",
+    "verify_scenario_source",
+]

@@ -1,0 +1,872 @@
+from __future__ import annotations
+
+import csv
+import os
+from pathlib import Path
+
+os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
+
+from PySide6.QtCore import QItemSelectionModel, Qt
+from PySide6.QtTest import QSignalSpy, QTest
+from PySide6.QtWidgets import QApplication, QFileDialog, QLineEdit, QSplitter
+from openpyxl import load_workbook
+
+from test_spd_decap_distribution import _direct_scenario, _with_initial_rails
+from spd_decap_pi.distribution import (
+    DistributionDistanceMode,
+    DistributionPlanStatus,
+    compute_distribution_plan,
+)
+from spd_decap_pi.gui.main_window import MainWindow
+from spd_decap_pi.scenario import ScenarioSpec
+from spd_decap_pi.scenario_io import load_scenario
+
+
+def _application() -> QApplication:
+    return QApplication.instance() or QApplication([])
+
+
+def _window_with_scenario(scenario: ScenarioSpec) -> MainWindow:
+    window = MainWindow()
+    window._scenario = scenario
+    window._attachments = {}
+    window._dirty = False
+    window._invalidate_evaluation("Distribution GUI fixture")
+    window._refresh_all()
+    return window
+
+
+def _rail_row(window: MainWindow, rail_id: str) -> int:
+    for row in range(window.distribution_table.rowCount()):
+        item = window.distribution_table.item(row, 0)
+        if str(item.data(Qt.ItemDataRole.UserRole)).casefold() == rail_id.casefold():
+            return row
+    raise AssertionError(f"rail {rail_id!r} is absent from Distribution table")
+
+
+def _set_target(
+    window: MainWindow,
+    rail_id: str,
+    value: int | str,
+    *,
+    model_id: str = "M1",
+) -> None:
+    row = _rail_row(window, rail_id)
+    column = next(
+        index
+        for index in range(window.distribution_table.columnCount())
+        if window.distribution_table.horizontalHeaderItem(index).text()
+        == f"{model_id}\nTarget"
+    )
+    window.distribution_table.item(row, column).setText(str(value))
+
+
+def _targets(window: MainWindow) -> dict[tuple[str, str], int]:
+    return dict(window._distribution_targets)
+
+
+def _set_tolerance(
+    window: MainWindow,
+    rail_id: str,
+    value: float | str,
+    *,
+    model_id: str = "M1",
+) -> None:
+    row = _rail_row(window, rail_id)
+    column = next(
+        index
+        for index in range(window.distribution_table.columnCount())
+        if window.distribution_table.horizontalHeaderItem(index).text()
+        == f"{model_id}\nTolerance (%)"
+    )
+    window.distribution_table.item(row, column).setText(str(value))
+
+
+def test_distribution_tab_matches_the_target_matrix_and_resizable_sections() -> None:
+    application = _application()
+    scenario = _direct_scenario(
+        (
+            ("C1", 0.0, ("R1", "R2")),
+            ("C2", 10.0, ("R1", "R2")),
+            ("C3", 20.0, ("R1", "R2")),
+        )
+    )
+    window = _window_with_scenario(scenario)
+    try:
+        window.resize(1200, 700)
+        window.side_tabs.setCurrentIndex(3)
+        window.show()
+        application.processEvents()
+        assert [
+            window.side_tabs.tabText(index)
+            for index in range(window.side_tabs.count())
+        ] == ["Selection", "Evaluation", "AI Assist", "De-cap Distribution"]
+        splitter = window.findChild(QSplitter, "distributionSectionSplitter")
+        assert splitter is not None
+        assert splitter.count() == 2
+        assert not splitter.childrenCollapsible()
+        assert tuple(
+            splitter.widget(index).minimumHeight() for index in range(2)
+        ) == (280, 180)
+        targets_size, results_size = splitter.sizes()
+        assert targets_size >= 280
+        assert results_size >= 180
+        for button in (
+            window.calculate_distribution_button,
+            window.apply_distribution_button,
+            window.export_distribution_csv_button,
+            window.save_distribution_button,
+        ):
+            assert button.isVisible()
+            assert button.width() >= button.sizeHint().width()
+
+        assert window.distribution_table.rowCount() == 3
+        assert window.distribution_table.selectionMode() == (
+            window.distribution_table.SelectionMode.ExtendedSelection
+        )
+        assert window.distribution_table.columnCount() == 5
+        assert window.distribution_table.horizontalHeaderItem(0).text() == "PWR NET"
+        assert window.distribution_table.horizontalHeaderItem(1).text() == (
+            "M1\nPresent"
+        )
+        assert window.distribution_table.horizontalHeaderItem(2).text() == (
+            "M1\nTarget"
+        )
+        assert window.distribution_table.horizontalHeaderItem(3).text() == (
+            "M1\nTolerance (%)"
+        )
+        assert window.distribution_table.horizontalHeaderItem(4).text() == (
+            "M1\nActual Δ"
+        )
+        row = _rail_row(window, "R1")
+        present = window.distribution_table.item(row, 1)
+        target = window.distribution_table.item(row, 2)
+        tolerance = window.distribution_table.item(row, 3)
+        actual_delta = window.distribution_table.item(row, 4)
+        assert present.text() == target.text() == "3"
+        assert tolerance.text() == "0"
+        assert not present.flags() & Qt.ItemFlag.ItemIsEditable
+        assert target.flags() & Qt.ItemFlag.ItemIsEditable
+        assert tolerance.flags() & Qt.ItemFlag.ItemIsEditable
+        assert not actual_delta.flags() & Qt.ItemFlag.ItemIsEditable
+        assert window.distribution_distance_combo.itemData(0) == "NEAREST"
+        assert window.distribution_distance_combo.itemData(1) == "FARTHEST"
+        assert not window.calculate_distribution_button.isEnabled()
+        assert "every Target equals Present" in (
+            window.distribution_validation_label.text()
+        )
+    finally:
+        window._dirty = False
+        window.close()
+        application.processEvents()
+
+
+def test_target_edit_uses_cached_inventory_and_emits_once(monkeypatch) -> None:
+    application = _application()
+    window = _window_with_scenario(
+        _direct_scenario(
+            (
+                ("C1", 0.0, ("R1", "R2")),
+                ("C2", 10.0, ("R1", "R2")),
+                ("C3", 20.0, ("R1", "R2")),
+            ),
+            rail_ids=("R1", "R2"),
+        )
+    )
+    original_getter = ScenarioSpec.base_project.fget
+    assert original_getter is not None
+    calls = 0
+
+    def counted_base_project(scenario: ScenarioSpec):
+        nonlocal calls
+        calls += 1
+        return original_getter(scenario)
+
+    monkeypatch.setattr(
+        ScenarioSpec,
+        "base_project",
+        property(counted_base_project),
+    )
+    numeric_calls = 0
+    original_numeric_state = window._distribution_numeric_state
+
+    def counted_numeric_state():
+        nonlocal numeric_calls
+        numeric_calls += 1
+        return original_numeric_state()
+
+    delta_reset_calls = 0
+    original_delta_reset = window._reset_distribution_actual_deltas
+
+    def counted_delta_reset():
+        nonlocal delta_reset_calls
+        delta_reset_calls += 1
+        return original_delta_reset()
+
+    monkeypatch.setattr(
+        window,
+        "_distribution_numeric_state",
+        counted_numeric_state,
+    )
+    monkeypatch.setattr(
+        window,
+        "_reset_distribution_actual_deltas",
+        counted_delta_reset,
+    )
+    spy = QSignalSpy(window.distribution_table.itemChanged)
+    try:
+        _set_target(window, "R1", 2)
+        application.processEvents()
+
+        assert calls == 0
+        assert numeric_calls == 1
+        assert delta_reset_calls == 0
+        assert spy.count() == 1
+        assert window._distribution_targets[("R1", "M1")] == 2
+    finally:
+        window._dirty = False
+        window.close()
+        application.processEvents()
+
+
+def test_typing_into_multiselected_targets_fills_all_cells_once() -> None:
+    application = _application()
+    window = _window_with_scenario(
+        _direct_scenario(
+            (
+                ("C1", 0.0, ("R1", "R2")),
+                ("C2", 10.0, ("R1", "R2")),
+                ("C3", 20.0, ("R1", "R2")),
+            ),
+            rail_ids=("R1", "R2"),
+        )
+    )
+    try:
+        window.side_tabs.setCurrentIndex(3)
+        window.show()
+        application.processEvents()
+
+        first = window.distribution_table.item(_rail_row(window, "R1"), 2)
+        second = window.distribution_table.item(_rail_row(window, "R2"), 2)
+        ignored_present = window.distribution_table.item(_rail_row(window, "R1"), 1)
+        ignored_tolerance = window.distribution_table.item(
+            _rail_row(window, "R2"), 3
+        )
+        ignored_delta = window.distribution_table.item(_rail_row(window, "R2"), 4)
+        selection = window.distribution_table.selectionModel()
+        selection.clearSelection()
+        for selected_item in (
+            first,
+            second,
+            ignored_present,
+            ignored_tolerance,
+            ignored_delta,
+        ):
+            selection.select(
+                window.distribution_table.indexFromItem(selected_item),
+                QItemSelectionModel.SelectionFlag.Select,
+            )
+        window.distribution_table.setCurrentItem(
+            first,
+            QItemSelectionModel.SelectionFlag.NoUpdate,
+        )
+        window.distribution_table.setFocus()
+        spy = QSignalSpy(window.distribution_table.itemChanged)
+
+        QTest.keyClick(window.distribution_table, Qt.Key.Key_1)
+        application.processEvents()
+        editor = application.focusWidget()
+        assert isinstance(editor, QLineEdit)
+        QTest.keyClick(editor, Qt.Key.Key_2)
+        QTest.keyClick(editor, Qt.Key.Key_Return)
+        application.processEvents()
+
+        assert first.text() == second.text() == "12"
+        assert ignored_present.text() == "3"
+        assert ignored_tolerance.text() == "0"
+        assert ignored_delta.text() == "0"
+        assert window._distribution_targets[("R1", "M1")] == 12
+        assert window._distribution_targets[("R2", "M1")] == 12
+        # The peer-cell fill and styling are signal-blocked, so expensive
+        # validation runs for the single committed editor change only.
+        assert spy.count() == 1
+    finally:
+        window._dirty = False
+        window.close()
+        application.processEvents()
+
+
+def test_multiselected_fill_runs_when_source_value_is_unchanged() -> None:
+    application = _application()
+    window = _window_with_scenario(
+        _direct_scenario(
+            (
+                ("C1", 0.0, ("R1", "R2")),
+                ("C2", 10.0, ("R1", "R2")),
+                ("C3", 20.0, ("R1", "R2")),
+            ),
+            rail_ids=("R1", "R2"),
+        )
+    )
+    try:
+        window.side_tabs.setCurrentIndex(3)
+        window.show()
+        application.processEvents()
+
+        first = window.distribution_table.item(_rail_row(window, "R1"), 2)
+        second = window.distribution_table.item(_rail_row(window, "R2"), 2)
+        assert (first.text(), second.text()) == ("3", "0")
+        selection = window.distribution_table.selectionModel()
+        selection.clearSelection()
+        for target in (first, second):
+            selection.select(
+                window.distribution_table.indexFromItem(target),
+                QItemSelectionModel.SelectionFlag.Select,
+            )
+        window.distribution_table.setCurrentItem(
+            first,
+            QItemSelectionModel.SelectionFlag.NoUpdate,
+        )
+        window.distribution_table.setFocus()
+        spy = QSignalSpy(window.distribution_table.itemChanged)
+
+        QTest.keyClick(window.distribution_table, Qt.Key.Key_3)
+        application.processEvents()
+        editor = application.focusWidget()
+        assert isinstance(editor, QLineEdit)
+        QTest.keyClick(editor, Qt.Key.Key_Return)
+        application.processEvents()
+        application.processEvents()
+
+        assert first.text() == second.text() == "3"
+        assert window._distribution_targets[("R1", "M1")] == 3
+        assert window._distribution_targets[("R2", "M1")] == 3
+        assert spy.count() == 0
+    finally:
+        window._dirty = False
+        window.close()
+        application.processEvents()
+
+
+def test_multiselected_tolerance_fill_is_decimal_and_never_changes_targets() -> None:
+    application = _application()
+    window = _window_with_scenario(
+        _direct_scenario(
+            (
+                ("C1", 0.0, ("R1", "R2")),
+                ("C2", 10.0, ("R1", "R2")),
+            ),
+            rail_ids=("R1", "R2"),
+        )
+    )
+    try:
+        window.side_tabs.setCurrentIndex(3)
+        window.show()
+        application.processEvents()
+
+        first = window.distribution_table.item(_rail_row(window, "R1"), 3)
+        second = window.distribution_table.item(_rail_row(window, "R2"), 3)
+        mixed_target = window.distribution_table.item(_rail_row(window, "R1"), 2)
+        original_target = mixed_target.text()
+        selection = window.distribution_table.selectionModel()
+        selection.clearSelection()
+        for selected_item in (first, second, mixed_target):
+            selection.select(
+                window.distribution_table.indexFromItem(selected_item),
+                QItemSelectionModel.SelectionFlag.Select,
+            )
+        window.distribution_table.setCurrentItem(
+            first, QItemSelectionModel.SelectionFlag.NoUpdate
+        )
+        window.distribution_table.setFocus()
+        spy = QSignalSpy(window.distribution_table.itemChanged)
+
+        QTest.keyClick(window.distribution_table, Qt.Key.Key_1)
+        application.processEvents()
+        editor = application.focusWidget()
+        assert isinstance(editor, QLineEdit)
+        QTest.keyClicks(editor, ".5")
+        QTest.keyClick(editor, Qt.Key.Key_Return)
+        application.processEvents()
+
+        assert first.text() == second.text() == "1.5"
+        assert window._distribution_tolerances[("R1", "M1")] == 1.5
+        assert window._distribution_tolerances[("R2", "M1")] == 1.5
+        assert mixed_target.text() == original_target
+        assert window._distribution_targets[("R1", "M1")] == int(
+            original_target
+        )
+        assert spy.count() == 1
+        assert "no donor/receiver demand" in (
+            window.distribution_validation_label.text()
+        )
+
+        _set_tolerance(window, "R1", "nan")
+        assert "finite percentage" in window.distribution_validation_label.text()
+        assert not window.calculate_distribution_button.isEnabled()
+    finally:
+        window._dirty = False
+        window.close()
+        application.processEvents()
+
+
+def test_numeric_shortage_blocks_calculation_before_physical_planning() -> None:
+    application = _application()
+    window = _window_with_scenario(
+        _direct_scenario(
+            (
+                ("C1", 0.0, ("R1", "R2")),
+                ("C2", 10.0, ("R1", "R2")),
+                ("C3", 20.0, ("R1", "R2")),
+            ),
+            rail_ids=("R1", "R2"),
+        )
+    )
+    try:
+        _set_target(window, "R1", 2)  # give capacity 1
+        _set_target(window, "R2", 2)  # receive demand 2
+        assert not window.calculate_distribution_button.isEnabled()
+        assert "short by 1" in window.distribution_validation_label.text()
+
+        _set_target(window, "R1", 1)
+        assert window.calculate_distribution_button.isEnabled()
+        assert "give capacity 2" in window.distribution_validation_label.text()
+        assert "receive demand 2" in window.distribution_validation_label.text()
+
+        _set_target(window, "R2", "1.5")
+        assert not window.calculate_distribution_button.isEnabled()
+        assert "nonnegative whole number" in (
+            window.distribution_validation_label.text()
+        )
+    finally:
+        window._dirty = False
+        window.close()
+        application.processEvents()
+
+
+def test_one_invalid_component_blocks_an_otherwise_valid_component() -> None:
+    application = _application()
+    base = _direct_scenario(
+        tuple(
+            (f"C{index}", float(index), ("R1", "R2"))
+            for index in range(1, 7)
+        ),
+        rail_ids=("R1", "R2"),
+    )
+    project = base.base_project
+    m2 = project.cap_models[0].model_copy(
+        update={"model_id": "M2", "source_hash": "m2"}
+    )
+    scenario = ScenarioSpec.model_validate(
+        {
+            **base.model_dump(mode="python"),
+            "normalized_project": project.model_copy(
+                update={"cap_models": [*project.cap_models, m2]}
+            ),
+            "decaps": [
+                item
+                if index < 3
+                else item.model_copy(
+                    update={"model_id": "M2", "source_model_id": "M2"}
+                )
+                for index, item in enumerate(base.decaps)
+            ],
+        }
+    )
+    window = _window_with_scenario(scenario)
+    try:
+        # M1: capacity 2, demand 2 -> valid.
+        _set_target(window, "R1", 1, model_id="M1")
+        _set_target(window, "R2", 2, model_id="M1")
+        # M2: capacity 1, demand 2 -> invalid and blocks the whole calculation.
+        _set_target(window, "R1", 2, model_id="M2")
+        _set_target(window, "R2", 2, model_id="M2")
+
+        assert not window.calculate_distribution_button.isEnabled()
+        assert "M2 is short by 1" in window.distribution_validation_label.text()
+        assert "M1" not in window.distribution_validation_label.text()
+    finally:
+        window._dirty = False
+        window.close()
+        application.processEvents()
+
+
+def test_full_preview_exports_saves_and_applies_one_atomic_revision(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    application = _application()
+    scenario = _direct_scenario(
+        (
+            ("C1", 0.0, ("R1", "R2")),
+            ("C2", 10.0, ("R1", "R2")),
+            ("C3", 20.0, ("R1", "R2")),
+        ),
+        rail_ids=("R1", "R2"),
+        bump_x={"R2": 0.0},
+    )
+    window = _window_with_scenario(scenario)
+    try:
+        _set_target(window, "R1", 1)
+        _set_target(window, "R2", 2)
+        plan = compute_distribution_plan(
+            scenario,
+            _targets(window),
+            DistributionDistanceMode.NEAREST,
+        )
+        window._accept_distribution_plan(plan)
+
+        assert plan.status == DistributionPlanStatus.FULL
+        assert window.apply_distribution_button.isEnabled()
+        assert window.export_distribution_csv_button.isEnabled()
+        assert window.save_distribution_button.isEnabled()
+        assert window.distribution_table.item(_rail_row(window, "R1"), 4).text() == "-2"
+        assert window.distribution_table.item(_rail_row(window, "R2"), 4).text() == "+2"
+        summary = window.distribution_summary.toPlainText()
+        assert "R1 donor: give capacity 2, used 2, unused 0" in summary
+        assert "R2 receiver: requested 2, fulfilled 2, shortfall 0" in summary
+
+        export_path = tmp_path / "distribution"
+        monkeypatch.setattr(
+            QFileDialog,
+            "getSaveFileName",
+            lambda *_args, **_kwargs: (str(export_path), "CSV files (*.csv)"),
+        )
+        window.export_distribution_csv_button.click()
+        actual_csv = export_path.with_suffix(".csv")
+        assert actual_csv.read_bytes().startswith(b"\xef\xbb\xbf")
+        with actual_csv.open("r", encoding="utf-8-sig", newline="") as stream:
+            rows = list(csv.reader(stream))
+        assert rows[0] == [
+            "Component",
+            "REFDES",
+            "Before NET",
+            "After NET",
+            "X (um)",
+            "Y (um)",
+        ]
+        assert len(rows) == len(scenario.decaps) + 1
+        assert {row[1] for row in rows[1:]} == {"C1", "C2", "C3"}
+
+        excel_path = tmp_path / "distribution.xlsx"
+        monkeypatch.setattr(
+            QFileDialog,
+            "getSaveFileName",
+            lambda *_args, **_kwargs: (
+                str(excel_path),
+                "Excel workbook (*.xlsx)",
+            ),
+        )
+        window.export_distribution_csv_button.click()
+        workbook = load_workbook(excel_path, data_only=False)
+        try:
+            assert workbook.sheetnames == [
+                "Decap Changes",
+                "PWR NET Distribution Targets",
+            ]
+            targets = workbook["PWR NET Distribution Targets"]
+            assert tuple(cell.value for cell in targets[1][:7]) == (
+                "PWR NET",
+                "M1\nPresent",
+                "M1\nTarget",
+                "M1\nTolerance (%)",
+                "M1\nActual Delta",
+                "M1\nActual Changed",
+                "M1\nIsolation Gaps",
+            )
+            assert tuple(cell.value for cell in targets[2][:7]) == (
+                "V1 (R1)",
+                3,
+                1,
+                0,
+                -2,
+                2,
+                0,
+            )
+            assert tuple(cell.value for cell in targets[3][:7]) == (
+                "V2 (R2)",
+                0,
+                2,
+                0,
+                2,
+                2,
+                0,
+            )
+        finally:
+            workbook.close()
+
+        def run_immediately(worker, on_result, **_kwargs):
+            result = worker.function(
+                *worker.args,
+                progress=lambda _value, _message: None,
+                is_cancelled=lambda: False,
+                **worker.kwargs,
+            )
+            on_result(result)
+
+        distributed_path = tmp_path / "preview"
+        monkeypatch.setattr(window, "_run_worker", run_immediately)
+        monkeypatch.setattr(
+            QFileDialog,
+            "getSaveFileName",
+            lambda *_args, **_kwargs: (
+                str(distributed_path),
+                "SPD PI Scenario (*.spdpi)",
+            ),
+        )
+        window.save_distribution_button.click()
+        persisted = load_scenario(distributed_path.with_suffix(".spdpi"))
+        assert persisted.revision == scenario.revision + 1
+        assert sum(item.current_rail_id == "R2" for item in persisted.decaps) == 2
+        assert window.scenario is scenario
+
+        window.apply_distribution_button.click()
+        assert window.scenario is not None
+        assert window.scenario.revision == scenario.revision + 1
+        assert sum(item.current_rail_id == "R2" for item in window.scenario.decaps) == 2
+        assert window._dirty
+        assert not window.apply_distribution_button.isEnabled()
+        assert window.export_distribution_csv_button.isEnabled()
+        assert window.save_distribution_button.isEnabled()
+        # The applied table now shows final Present values but retains the
+        # preview's signed delta for an auditable result display.
+        assert window.distribution_table.item(_rail_row(window, "R1"), 1).text() == "1"
+        assert window.distribution_table.item(_rail_row(window, "R1"), 4).text() == "-2"
+        assert window.distribution_table.item(_rail_row(window, "R2"), 1).text() == "2"
+        assert window.distribution_table.item(_rail_row(window, "R2"), 4).text() == "+2"
+
+        applied_excel_path = tmp_path / "distribution-applied.xlsx"
+        monkeypatch.setattr(
+            QFileDialog,
+            "getSaveFileName",
+            lambda *_args, **_kwargs: (
+                str(applied_excel_path),
+                "Excel workbook (*.xlsx)",
+            ),
+        )
+        window.export_distribution_csv_button.click()
+        applied_workbook = load_workbook(applied_excel_path, data_only=False)
+        try:
+            targets = applied_workbook["PWR NET Distribution Targets"]
+            # Apply refreshes the GUI inventory to final Present values, but
+            # the exported target sheet remains the immutable plan input.
+            assert tuple(cell.value for cell in targets[2][:7]) == (
+                "V1 (R1)",
+                3,
+                1,
+                0,
+                -2,
+                2,
+                0,
+            )
+            assert tuple(cell.value for cell in targets[3][:7]) == (
+                "V2 (R2)",
+                0,
+                2,
+                0,
+                2,
+                2,
+                0,
+            )
+        finally:
+            applied_workbook.close()
+
+        applied_path = tmp_path / "applied-distribution"
+        monkeypatch.setattr(
+            QFileDialog,
+            "getSaveFileName",
+            lambda *_args, **_kwargs: (
+                str(applied_path),
+                "SPD PI Scenario (*.spdpi)",
+            ),
+        )
+        window.save_distribution_button.click()
+        assert window._scenario_path == applied_path.with_suffix(".spdpi")
+        assert not window._dirty
+        assert load_scenario(window._scenario_path).design_fingerprint == (
+            window.scenario.design_fingerprint
+        )
+    finally:
+        window._dirty = False
+        window.close()
+        application.processEvents()
+
+
+def test_partial_preview_remains_applyable_and_target_edits_make_it_stale() -> None:
+    application = _application()
+    scenario = _direct_scenario(
+        (
+            ("C1", 0.0, ("R1", "R2")),
+            ("C2", 10.0, ("R1",)),
+            ("C3", 20.0, ("R1",)),
+        ),
+        rail_ids=("R1", "R2"),
+        bump_x={"R2": 0.0},
+    )
+    window = _window_with_scenario(scenario)
+    try:
+        _set_target(window, "R1", 1)
+        _set_target(window, "R2", 2)
+        plan = compute_distribution_plan(scenario, _targets(window))
+        window._accept_distribution_plan(plan)
+
+        assert plan.status == DistributionPlanStatus.PARTIAL
+        assert "Status: PARTIAL" in window.distribution_summary.toPlainText()
+        assert "shortfall 1" in window.distribution_summary.toPlainText()
+        assert "R1 donor: give capacity 2, used 1, unused 1" in (
+            window.distribution_summary.toPlainText()
+        )
+        assert "R2 receiver: requested 2, fulfilled 1, shortfall 1" in (
+            window.distribution_summary.toPlainText()
+        )
+        assert window.apply_distribution_button.isEnabled()
+        assert window.distribution_table.item(_rail_row(window, "R2"), 4).text() == "+1"
+
+        window.apply_distribution_button.click()
+        assert window.scenario is not None
+        assert window.scenario.revision == scenario.revision + 1
+        assert sum(item.current_rail_id == "R2" for item in window.scenario.decaps) == 1
+        assert window.distribution_table.item(_rail_row(window, "R2"), 4).text() == "+1"
+
+        _set_target(window, "R2", 2)
+        assert window._distribution_plan is None
+        assert not window.apply_distribution_button.isEnabled()
+        assert not window.export_distribution_csv_button.isEnabled()
+        assert not window.save_distribution_button.isEnabled()
+    finally:
+        window._dirty = False
+        window.close()
+        application.processEvents()
+
+
+def test_exchange_preview_reports_turnover_and_apply_preserves_tolerance() -> None:
+    application = _application()
+    scenario = _with_initial_rails(
+        _direct_scenario(
+            (
+                ("A0", 0.0, ("R1", "R2")),
+                ("A1", 10.0, ("R1", "R2")),
+                ("B0", 100.0, ("R2", "R3")),
+                ("B1", 110.0, ("R2", "R3")),
+            ),
+            bump_x={"R2": 100.0, "R3": 200.0},
+        ),
+        {"B0": "R2", "B1": "R2"},
+    )
+    window = _window_with_scenario(scenario)
+    try:
+        _set_target(window, "R1", 1)
+        _set_target(window, "R2", 2)
+        _set_target(window, "R3", 1)
+        _set_tolerance(window, "R2", 50)
+        assert window.calculate_distribution_button.isEnabled()
+        assert "exchange 1 cell(s) / 1 decap(s)" in (
+            window.distribution_validation_label.text()
+        )
+
+        plan = compute_distribution_plan(
+            scenario,
+            _targets(window),
+            tolerances=dict(window._distribution_tolerances),
+        )
+        window._accept_distribution_plan(plan)
+
+        assert plan.status == DistributionPlanStatus.FULL
+        assert plan.changed_count == 2
+        assert window.distribution_table.item(_rail_row(window, "R2"), 4).text() == "0"
+        assert (
+            "M1 / R2 exchange: tolerance 50% (1), sent 1, received 1, net +0"
+            in window.distribution_summary.toPlainText()
+        )
+
+        window.apply_distribution_button.click()
+        assert window._distribution_tolerances[("R2", "M1")] == 50.0
+        assert window.distribution_table.item(_rail_row(window, "R2"), 3).text() == "50"
+    finally:
+        window._dirty = False
+        window.close()
+        application.processEvents()
+
+
+def test_distribution_milp_worker_does_not_advertise_unhonored_cancel(
+    monkeypatch,
+) -> None:
+    application = _application()
+    window = _window_with_scenario(
+        _direct_scenario(
+            (
+                ("C1", 0.0, ("R1", "R2")),
+                ("C2", 10.0, ("R1", "R2")),
+                ("C3", 20.0, ("R1", "R2")),
+            ),
+            rail_ids=("R1", "R2"),
+            bump_x={"R2": 0.0},
+        )
+    )
+    captured: dict[str, object] = {}
+    try:
+        _set_target(window, "R1", 1)
+        _set_target(window, "R2", 2)
+        _set_tolerance(window, "R2", 1.25)
+
+        def capture_worker(worker, _on_result, **kwargs):
+            captured["worker"] = worker
+            captured.update(kwargs)
+
+        monkeypatch.setattr(window, "_run_worker", capture_worker)
+        window.calculate_distribution_button.click()
+
+        assert captured["label"] == "Calculating De-cap Distribution preview..."
+        assert captured["cancelable"] is False
+        worker = captured["worker"]
+        assert worker.args[2][("R2", "M1")] == 1.25
+    finally:
+        window._dirty = False
+        window.close()
+        application.processEvents()
+
+
+def test_scenario_change_and_document_reset_discard_a_stale_preview() -> None:
+    application = _application()
+    scenario = _direct_scenario(
+        (
+            ("C1", 0.0, ("R1", "R2")),
+            ("C2", 10.0, ("R1", "R2")),
+            ("C3", 20.0, ("R1", "R2")),
+        ),
+        rail_ids=("R1", "R2"),
+        bump_x={"R2": 0.0},
+    )
+    window = _window_with_scenario(scenario)
+    try:
+        _set_target(window, "R1", 1)
+        _set_target(window, "R2", 2)
+        window._accept_distribution_plan(
+            compute_distribution_plan(scenario, _targets(window))
+        )
+        assert window._distribution_plan is not None
+
+        changed = ScenarioSpec.model_validate(
+            {
+                **scenario.model_dump(mode="python"),
+                "decaps": [
+                    scenario.decaps[0].model_copy(update={"enabled": False}),
+                    *scenario.decaps[1:],
+                ],
+                "revision": scenario.revision + 1,
+            }
+        )
+        window._scenario = changed
+        window._refresh_all()
+        assert window._distribution_plan is None
+        assert window._distribution_preview_scenario is None
+        assert not window.export_distribution_csv_button.isEnabled()
+        assert "Enter Target counts" in window.distribution_summary.toPlainText()
+
+        window._reset_document_view_state()
+        assert window.distribution_table.rowCount() == 0
+        assert window._distribution_basis_fingerprint is None
+    finally:
+        window._dirty = False
+        window.close()
+        application.processEvents()

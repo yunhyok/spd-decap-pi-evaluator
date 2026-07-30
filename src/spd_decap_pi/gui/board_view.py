@@ -1,8 +1,9 @@
 """High-volume interactive top-side decap board view.
 
 The widget intentionally renders decaps in a small, fixed number of
-``ScatterPlotItem`` batches.  A board with tens of thousands of capacitors
-therefore does not create one ``QGraphicsItem`` per component.
+``ScatterPlotItem`` batches and bumps in one batch per NET.  A board with tens
+of thousands of capacitors and bumps therefore does not create one
+``QGraphicsItem`` per component.
 """
 
 from __future__ import annotations
@@ -36,6 +37,13 @@ class _BoardDecap:
     enabled: bool
     component: str
     footprint: str
+
+
+@dataclass(frozen=True, slots=True)
+class _BoardBump:
+    net: str
+    x_um: float
+    y_um: float
 
 
 class _BoardViewBox(pg.ViewBox):
@@ -112,17 +120,23 @@ class DecapBoardView(pg.PlotWidget):
     POINT_SIZE_PX = 10.0
     SELECTED_SIZE_PX = 17.0
     HIT_RADIUS_PX = 8.0
+    BUMP_SIZE_PX = 5.5
+    BUMP_HIT_RADIUS_PX = 5.0
     SELECTED_COLOR = QColor("#ffeb3b")
+    REQUIRED_COMPANION_COLOR = QColor("#f59e0b")
     DISABLED_FILL = QColor("#73777d")
     DISABLED_X_COLOR = QColor("#ff5252")
     DISABLED_X_SIZE_PX = 12.0
     FALLBACK_NET_COLOR = QColor("#5ba8ff")
+    INACTIVE_NET_COLOR = QColor("#6b7280")
 
     def __init__(
         self,
         records: Iterable[object] = (),
         net_colors: Mapping[str, object] | None = None,
         parent: QWidget | None = None,
+        *,
+        bumps: Iterable[object] = (),
     ) -> None:
         # PySide may clear Python attributes assigned before the QWidget C++
         # constructor runs, so retain the ViewBox locally until after ``super``.
@@ -157,13 +171,21 @@ class DecapBoardView(pg.PlotWidget):
 
         self._plane_items: list[QGraphicsItem] = []
         self._records: tuple[_BoardDecap, ...] = ()
+        self._bumps: tuple[_BoardBump, ...] = ()
         self._refdes_index: dict[str, int] = {}
         self._selection_keys: set[str] = set()
+        self._companion_keys: set[str] = set()
+        self._connection_labels: dict[str, str] = {}
         self._net_colors: dict[str, QColor] = {}
+        self._active_net_keys: set[str] | None = None
         self._x_values = np.empty(0, dtype=np.float64)
         self._y_values = np.empty(0, dtype=np.float64)
+        self._bump_x_values = np.empty(0, dtype=np.float64)
+        self._bump_y_values = np.empty(0, dtype=np.float64)
         self._enabled_values = np.empty(0, dtype=np.bool_)
-        self._hover_index: int | None = None
+        self._hover_target: tuple[str, int] | None = None
+        self._bump_scatters_by_net: dict[str, pg.ScatterPlotItem] = {}
+        self._bump_net_names: dict[str, str] = {}
         self._enabled_scatter = pg.ScatterPlotItem(
             name="Enabled decaps",
             pxMode=True,
@@ -188,14 +210,22 @@ class DecapBoardView(pg.PlotWidget):
             hoverable=False,
             tip=None,
         )
+        self._companion_scatter = pg.ScatterPlotItem(
+            name="Required shared-pad companions",
+            pxMode=True,
+            hoverable=False,
+            tip=None,
+        )
         self._enabled_scatter.setZValue(10)
         self._disabled_scatter.setZValue(11)
         self._disabled_x_scatter.setZValue(12)
         self._selected_scatter.setZValue(20)
+        self._companion_scatter.setZValue(19)
         self.plotItem.addItem(self._enabled_scatter)
         self.plotItem.addItem(self._disabled_scatter)
         self.plotItem.addItem(self._disabled_x_scatter)
         self.plotItem.addItem(self._selected_scatter)
+        self.plotItem.addItem(self._companion_scatter)
 
         self._view_box.leftClicked.connect(self._handle_left_click)
         self._view_box.marqueeFinished.connect(self._handle_marquee)
@@ -203,6 +233,7 @@ class DecapBoardView(pg.PlotWidget):
 
         self.set_net_colors(net_colors or {})
         self.set_decaps(records)
+        self.set_bumps(bumps)
         # PlotWidget installs PlotItem.clear as an instance attribute.  Restore
         # board semantics so callers cannot accidentally remove the fixed
         # scatter layers and leave this widget unusable.
@@ -325,10 +356,19 @@ class DecapBoardView(pg.PlotWidget):
     def record_count(self) -> int:
         return len(self._records)
 
+    @property
+    def bump_count(self) -> int:
+        return len(self._bumps)
+
     def color_for_net(self, net: str) -> QColor:
         """Return the exact color currently used to render ``net``."""
 
         return QColor(self._color_for_net(net))
+
+    def display_color_for_net(self, net: str) -> QColor:
+        """Return the focused board color, greying an inactive NET."""
+
+        return QColor(self._display_color_for_net(net))
 
     def set_decaps(
         self,
@@ -364,11 +404,18 @@ class DecapBoardView(pg.PlotWidget):
             [record.enabled for record in normalized], dtype=np.bool_
         )
         self._selection_keys.intersection_update(refdes_index)
+        self._companion_keys.intersection_update(refdes_index)
 
+        colors_changed = False
         if net_colors is not None:
-            self._net_colors = self._normalize_net_colors(net_colors)
+            normalized_colors = self._normalize_net_colors(net_colors)
+            colors_changed = normalized_colors != self._net_colors
+            self._net_colors = normalized_colors
         self._render_base_layers()
+        if colors_changed:
+            self._restyle_bump_layers()
         self._render_selection_layer()
+        self._render_companion_layer()
 
         if self.selected_refdes != old_selection:
             self.selectionChanged.emit(self.selected_refdes)
@@ -380,12 +427,112 @@ class DecapBoardView(pg.PlotWidget):
 
         self.set_decaps(())
 
+    def set_connection_labels(self, labels: Mapping[str, str]) -> None:
+        """Set source-connectivity text displayed in decap hover details."""
+
+        normalized = {
+            str(refdes).strip().casefold(): str(label).strip()
+            for refdes, label in labels.items()
+            if str(refdes).strip() and str(label).strip()
+        }
+        if normalized == self._connection_labels:
+            return
+        self._connection_labels = normalized
+        self._clear_hover_tooltip()
+
+    def set_required_companion_refdes(self, refdes: Iterable[str]) -> None:
+        """Highlight unselected members required for one atomic cluster edit."""
+
+        keys = {
+            str(item).strip().casefold()
+            for item in refdes
+            if str(item).strip()
+        }.intersection(self._refdes_index)
+        if keys == self._companion_keys:
+            return
+        self._companion_keys = keys
+        self._render_companion_layer()
+
+    def set_bumps(self, records: Iterable[object]) -> None:
+        """Replace the fixed, batched Device-bump layer."""
+
+        normalized = tuple(self._normalize_bump(record) for record in records)
+        if normalized == self._bumps:
+            return
+        self._clear_hover_tooltip()
+        had_bumps = bool(self._bumps)
+        for scatter in self._bump_scatters_by_net.values():
+            self.plotItem.removeItem(scatter)
+        self._bump_scatters_by_net.clear()
+        self._bump_net_names.clear()
+        self._bumps = normalized
+        self._bump_x_values = np.asarray(
+            [record.x_um for record in normalized], dtype=np.float64
+        )
+        self._bump_y_values = np.asarray(
+            [record.y_um for record in normalized], dtype=np.float64
+        )
+        indices_by_net: dict[str, list[int]] = {}
+        for index, record in enumerate(normalized):
+            key = record.net.casefold()
+            indices_by_net.setdefault(key, []).append(index)
+            self._bump_net_names.setdefault(key, record.net)
+        for key in sorted(indices_by_net):
+            indices = np.asarray(indices_by_net[key], dtype=np.int64)
+            net = self._bump_net_names[key]
+            color = self._display_color_for_net(net)
+            scatter = pg.ScatterPlotItem(
+                name=f"Device bumps: {net}",
+                pxMode=True,
+                hoverable=False,
+                tip=None,
+            )
+            scatter.setZValue(5)
+            scatter.setData(
+                x=self._bump_x_values[indices],
+                y=self._bump_y_values[indices],
+                data=[net] * len(indices),
+                brush=pg.mkBrush(color),
+                pen=pg.mkPen(QColor(color).darker(135), width=0.8),
+                size=self.BUMP_SIZE_PX,
+                symbol="d",
+                pxMode=True,
+            )
+            self.plotItem.addItem(scatter)
+            self._bump_scatters_by_net[key] = scatter
+        if normalized and not had_bumps:
+            self.fit_board()
+
+    def clear_bumps(self) -> None:
+        """Remove all Device bumps without disturbing decaps or planes."""
+
+        self.set_bumps(())
+
+    def set_active_nets(self, nets: Iterable[str] | None) -> None:
+        """Keep selected NETs colored and render every other NET in grey."""
+
+        normalized = (
+            None
+            if nets is None
+            else {
+                str(net).strip().casefold()
+                for net in nets
+                if str(net).strip()
+            }
+        )
+        if normalized == self._active_net_keys:
+            return
+        self._active_net_keys = normalized
+        self._render_base_layers()
+        self._restyle_bump_layers()
+
     def set_net_colors(self, net_colors: Mapping[str, object]) -> None:
         """Set case-insensitive per-net colors and refresh the base layers."""
 
         self._net_colors = self._normalize_net_colors(net_colors)
         if hasattr(self, "_enabled_scatter"):
             self._render_base_layers()
+            self._restyle_bump_layers()
 
     def set_selected_refdes(self, refdes: Iterable[str]) -> None:
         """Replace selection with exact, case-insensitive REFDES matches."""
@@ -464,9 +611,13 @@ class DecapBoardView(pg.PlotWidget):
     def fit_board(self) -> None:
         """Fit all current plane and decap batches in the viewport."""
 
-        items: list[QGraphicsItem] = [*self._plane_items]
+        items: list[QGraphicsItem] = [
+            item for item in self._plane_items if item.isVisible()
+        ]
         if self._records:
             items.extend((self._enabled_scatter, self._disabled_scatter))
+        if self._bumps:
+            items.extend(self._bump_scatters_by_net.values())
         if items:
             self._view_box.autoRange(padding=0.06, items=items)
 
@@ -499,6 +650,7 @@ class DecapBoardView(pg.PlotWidget):
 
         self.clear_plane_items()
         self.clear_decaps()
+        self.clear_bumps()
 
     def _render_base_layers(self) -> None:
         if not self._records:
@@ -515,6 +667,12 @@ class DecapBoardView(pg.PlotWidget):
         )
         self._set_disabled_x_scatter(disabled_indices)
 
+    def _restyle_bump_layers(self) -> None:
+        for key, scatter in self._bump_scatters_by_net.items():
+            color = self._display_color_for_net(self._bump_net_names[key])
+            scatter.setBrush(pg.mkBrush(color))
+            scatter.setPen(pg.mkPen(QColor(color).darker(135), width=0.8))
+
     def _set_base_scatter(
         self,
         scatter: pg.ScatterPlotItem,
@@ -526,20 +684,23 @@ class DecapBoardView(pg.PlotWidget):
             scatter.setData(x=[], y=[])
             return
         colors = [
-            self._color_for_net(self._records[index].current_net) for index in indices
+            self._display_color_for_net(self._records[index].current_net)
+            for index in indices
         ]
-        brushes = (
-            [pg.mkBrush(color) for color in colors]
-            if enabled
-            else [pg.mkBrush(self.DISABLED_FILL) for _color in colors]
-        )
-        pens = [
-            pg.mkPen(
-                QColor(color).darker(130) if enabled else color,
-                width=1.0 if enabled else 1.8,
-            )
-            for color in colors
-        ]
+        shared_disabled_brush = pg.mkBrush(self.DISABLED_FILL)
+        styles: dict[int, tuple[Any, Any]] = {}
+        for color in colors:
+            key = int(color.rgba())
+            if key not in styles:
+                styles[key] = (
+                    pg.mkBrush(color) if enabled else shared_disabled_brush,
+                    pg.mkPen(
+                        QColor(color).darker(130) if enabled else color,
+                        width=1.0 if enabled else 1.8,
+                    ),
+                )
+        brushes = [styles[int(color.rgba())][0] for color in colors]
+        pens = [styles[int(color.rgba())][1] for color in colors]
         scatter.setData(
             x=self._x_values[indices],
             y=self._y_values[indices],
@@ -585,6 +746,29 @@ class DecapBoardView(pg.PlotWidget):
             brush=pg.mkBrush(None),
             pen=pg.mkPen(self.SELECTED_COLOR, width=3.0),
             size=self.SELECTED_SIZE_PX,
+            symbol="o",
+            pxMode=True,
+        )
+
+    def _render_companion_layer(self) -> None:
+        indices = np.asarray(
+            [
+                index
+                for index, record in enumerate(self._records)
+                if record.refdes.casefold() in self._companion_keys
+            ],
+            dtype=np.int64,
+        )
+        if indices.size == 0:
+            self._companion_scatter.setData(x=[], y=[])
+            return
+        self._companion_scatter.setData(
+            x=self._x_values[indices],
+            y=self._y_values[indices],
+            data=[self._records[index].refdes for index in indices],
+            brush=pg.mkBrush(None),
+            pen=pg.mkPen(self.REQUIRED_COMPANION_COLOR, width=2.4),
+            size=self.SELECTED_SIZE_PX + 5.0,
             symbol="o",
             pxMode=True,
         )
@@ -659,36 +843,67 @@ class DecapBoardView(pg.PlotWidget):
         return index if distance[index] <= 1.0 else None
 
     def tooltip_text_at(self, position: QPointF) -> str | None:
-        """Return the user-facing hover details for the decap at ``position``."""
+        """Return decap details or, for a Device bump, only its NET name."""
 
         index = self._hit_index(position)
-        if index is None:
-            return None
-        return self._tooltip_text(self._records[index])
+        if index is not None:
+            return self._tooltip_text(self._records[index])
+        bump_index = self._hit_bump_index(position)
+        if bump_index is not None:
+            return self._bumps[bump_index].net
+        return None
 
-    @staticmethod
-    def _tooltip_text(record: _BoardDecap) -> str:
-        return "\n".join(
-            (
-                f"PWR NET: {record.current_net or 'Unassigned'}",
-                f"Component: {record.component}",
-                f"REFDES: {record.refdes}",
-                f"Footprint: {record.footprint}",
-                f"State: {'Enabled' if record.enabled else 'Disabled'}",
-            )
-        )
+    def _tooltip_text(self, record: _BoardDecap) -> str:
+        lines = [
+            f"PWR NET: {record.current_net or 'Unassigned'}",
+            f"Component: {record.component}",
+            f"REFDES: {record.refdes}",
+            f"Footprint: {record.footprint}",
+            f"State: {'Enabled' if record.enabled else 'Disabled'}",
+        ]
+        connection = self._connection_labels.get(record.refdes.casefold())
+        if connection:
+            lines.append(f"Pad/Via: {connection}")
+        return "\n".join(lines)
 
     def _update_hover_tooltip(self, viewport_position: QPoint) -> None:
-        index = self._hit_index(self._viewport_to_view(viewport_position))
-        if index == self._hover_index:
+        position = self._viewport_to_view(viewport_position)
+        decap_index = self._hit_index(position)
+        bump_index = None if decap_index is not None else self._hit_bump_index(position)
+        target = (
+            ("decap", decap_index)
+            if decap_index is not None
+            else (("bump", bump_index) if bump_index is not None else None)
+        )
+        if target == self._hover_target:
             return
-        self._hover_index = index
-        text = "" if index is None else self._tooltip_text(self._records[index])
+        self._hover_target = target
+        if target is None:
+            text = ""
+        elif target[0] == "decap":
+            text = self._tooltip_text(self._records[target[1]])
+        else:
+            text = self._bumps[target[1]].net
         self._view_box.setToolTip(text)
 
     def _clear_hover_tooltip(self) -> None:
-        self._hover_index = None
+        self._hover_target = None
         self._view_box.setToolTip("")
+
+    def _hit_bump_index(self, position: QPointF) -> int | None:
+        if not self._bumps:
+            return None
+        pixel_x, pixel_y = self._view_box.viewPixelSize()
+        pixel_x = self._safe_pixel_size(pixel_x, axis=0)
+        pixel_y = self._safe_pixel_size(pixel_y, axis=1)
+        radius_x = pixel_x * self.BUMP_HIT_RADIUS_PX
+        radius_y = pixel_y * self.BUMP_HIT_RADIUS_PX
+        distance = (
+            ((self._bump_x_values - position.x()) / radius_x) ** 2
+            + ((self._bump_y_values - position.y()) / radius_y) ** 2
+        )
+        index = int(np.argmin(distance))
+        return index if distance[index] <= 1.0 else None
 
     def _safe_pixel_size(self, value: object, *, axis: int) -> float:
         try:
@@ -733,6 +948,14 @@ class DecapBoardView(pg.PlotWidget):
             value = (value * 16_777_619) & 0xFFFFFFFF
         return QColor.fromHsv(value % 360, 170, 225)
 
+    def _display_color_for_net(self, net: str) -> QColor:
+        if (
+            self._active_net_keys is not None
+            and net.casefold() not in self._active_net_keys
+        ):
+            return QColor(self.INACTIVE_NET_COLOR)
+        return self._color_for_net(net)
+
     @classmethod
     def _normalize_record(cls, record: object) -> _BoardDecap:
         refdes = str(cls._field(record, "refdes")).strip()
@@ -766,6 +989,17 @@ class DecapBoardView(pg.PlotWidget):
             component,
             footprint or "Unknown",
         )
+
+    @classmethod
+    def _normalize_bump(cls, record: object) -> _BoardBump:
+        net = str(cls._field(record, "net")).strip()
+        if not net:
+            raise ValueError("bump NET cannot be blank")
+        x_um = float(cls._field(record, "x_um"))
+        y_um = float(cls._field(record, "y_um"))
+        if not math.isfinite(x_um) or not math.isfinite(y_um):
+            raise ValueError(f"bump on NET {net!r} has non-finite coordinates")
+        return _BoardBump(net, x_um, y_um)
 
     @staticmethod
     def _field(record: object, name: str) -> object:

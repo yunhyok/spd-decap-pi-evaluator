@@ -43,7 +43,14 @@ try {
     if (-not (Test-Path -LiteralPath $installer)) {
         throw "Inno Setup completed without producing $installer"
     }
+    $checksum = (Get-FileHash -LiteralPath $installer -Algorithm SHA256).Hash.ToLowerInvariant()
+    $checksumPath = "$installer.sha256"
+    Set-Content `
+        -LiteralPath $checksumPath `
+        -Value "$checksum *$(Split-Path -Leaf $installer)" `
+        -Encoding ascii
     Write-Host "SPD Decap PI Evaluator installer output: $installer"
+    Write-Host "SPD Decap PI Evaluator installer checksum: $checksumPath"
 }
 finally {
     Pop-Location

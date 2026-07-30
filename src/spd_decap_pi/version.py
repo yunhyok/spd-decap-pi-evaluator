@@ -1,7 +1,7 @@
 """Release identity for the SPD Decap PI Evaluator sibling application."""
 
 APP_NAME = "SPD Decap PI Evaluator"
-__version__ = "0.5.0"
+__version__ = "0.9.1"
 APP_DISPLAY_NAME = f"{APP_NAME} v{__version__}"
 EXECUTABLE_BASENAME = "SPDDecapPIEvaluator"
 INSTALLER_BASENAME = f"{EXECUTABLE_BASENAME}Setup-{__version__}"

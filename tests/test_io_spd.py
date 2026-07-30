@@ -47,6 +47,11 @@ Regular Circle 0.03mm
 Regular Circle 0.03mm
 .EndPadDef
 .EndPadStackDef
+.PadStackDef CAP 0.00mm Material = COPPER
+.PadDef Signal$TOP
+Regular Square 0.10mm
+.EndPadDef
+.EndPadStackDef
 * Material description lines
 .Material
 .DielectricModel ABF
@@ -153,6 +158,9 @@ def test_streaming_spd_normalizes_selected_geometry_and_passive_models(
     padstack = next(item for item in analysis.padstacks if item.name == "DR-0102_60")
     assert padstack.drill_diameter_um == pytest.approx(40.0)
     assert padstack.pad_diameter_um == pytest.approx(60.0)
+    assert padstack.pad_shapes[0].kind == "CIRCLE"
+    assert padstack.pad_shapes[0].layer == "Signal$TOP"
+    assert padstack.pad_shapes[0].width_um == pytest.approx(60.0)
     assert sum(item.count for item in analysis.via_usage) == 2
     assert analysis.counts["mounted_cap_instances"] == 1
     assert analysis.counts["skipped_unselected_cap_instances"] == 1
@@ -312,6 +320,50 @@ def test_decap_scenario_scope_includes_candidate_rails_dnp_and_pad_provenance(
     assert c2.power_x_um == pytest.approx(3_000.0)
     assert c2.power_y_um == pytest.approx(2_000.0)
     assert c2.power_padstack == "CAP"
+
+
+def test_single_node_and_via_passes_produce_exact_direct_connection_evidence(
+    tmp_path: Path,
+) -> None:
+    source = tmp_path / "direct-via-evidence.spd"
+    payload = MINI_SPD.replace(
+        "Node6!!2::DGND X = 3.2mm Y = 2mm Layer = Signal$TOP PadStack = CAP\n",
+        "Node6!!2::DGND X = 3.2mm Y = 2mm Layer = Signal$TOP PadStack = CAP\n"
+        "Node7::VDD_CORE/0 X = 1mm Y = 2mm Layer = Signal$TOP PadStack = DR-0102_60\n"
+        "Node8::VDD_CORE/0 X = 1mm Y = 2mm Layer = Signal$PWR PadStack = DR-0102_60\n"
+        "Node9::DGND X = 1.2mm Y = 2mm Layer = Signal$TOP PadStack = DR-0102_60\n"
+        "Node10::DGND X = 1.2mm Y = 2mm Layer = Signal$GND PadStack = DR-0102_60\n",
+    ).replace(
+        "Via1::VDD_CORE/0 UpperNode = Node1 LowerNode = Node3 PadStack = DR-0102_60\n"
+        "Via2::DGND UpperNode = Node2 LowerNode = Node4 PadStack = DR-0102_60",
+        "Via1::VDD_CORE/0 UpperNode = Node7::VDD_CORE/0 "
+        "LowerNode = Node8::VDD_CORE/0 PadStack = DR-0102_60\n"
+        "Via2::DGND UpperNode = Node9::DGND LowerNode = Node10::DGND "
+        "PadStack = DR-0102_60",
+    ).replace(
+        "* Material description lines",
+        ".PadStackDef CAP 0.01mm Material = COPPER\n"
+        ".PadDef Signal$TOP\n"
+        "Regular Square 0.10mm\n"
+        ".EndPadDef\n"
+        ".EndPadStackDef\n"
+        "* Material description lines",
+    )
+    source.write_text(payload, encoding="ascii")
+
+    analysis = analyze_spd(source, scope="decap_scenario")
+
+    by_refdes = {item.refdes: item for item in analysis.decap_connections}
+    cap_padstack = next(item for item in analysis.padstacks if item.name == "CAP")
+    assert len(cap_padstack.pad_shapes) == 1
+    assert cap_padstack.pad_shapes[0].kind == "RECTANGLE"
+    assert cap_padstack.pad_shapes[0].width_um == pytest.approx(100.0)
+    assert cap_padstack.pad_shapes[0].height_um == pytest.approx(100.0)
+    assert by_refdes["C1"].kind == "DIRECT"
+    assert [item.via_id for item in by_refdes["C1"].power_vias] == ["Via1"]
+    assert [item.via_id for item in by_refdes["C1"].ground_vias] == ["Via2"]
+    assert by_refdes["C2"].kind == "FLOATING_DUMMY"
+    assert analysis.counts["top_via_endpoints"] == 2
 
 
 def test_decap_scenario_requires_explicit_power_net_classification(

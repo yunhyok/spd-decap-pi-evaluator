@@ -48,6 +48,16 @@ def _records() -> list[object]:
     ]
 
 
+def _bumps() -> list[object]:
+    return [
+        {"net": "VDD_A", "x_um": 300.0, "y_um": 300.0},
+        {"net": "DGND", "x_um": 400.0, "y_um": 300.0},
+        {"net": "vdd_b", "x_um": 500.0, "y_um": 300.0},
+        # A collocated bump verifies that the editable decap wins hover priority.
+        {"net": "BUMP_BEHIND_C1", "x_um": 0.0, "y_um": 0.0},
+    ]
+
+
 def _show(widget: DecapBoardView) -> QApplication:
     application = _application()
     widget.resize(640, 440)
@@ -164,6 +174,105 @@ def test_hover_text_reports_net_component_refdes_footprint_and_state() -> None:
         application.processEvents()
 
 
+def test_connection_labels_and_missing_cluster_companions_are_visible() -> None:
+    application = _application()
+    board = DecapBoardView(_records())
+    try:
+        _show(board)
+        board.set_connection_labels(
+            {
+                "c1": "Via anchor · CL1",
+                "C2": "Dummy · CL1",
+            }
+        )
+        board.set_selected_refdes(("C2",))
+        board.set_required_companion_refdes(("c1", "C10", "missing"))
+
+        tooltip = board.tooltip_text_at(QPointF(100.0, 0.0))
+        assert tooltip is not None
+        assert "Pad/Via: Dummy · CL1" in tooltip
+        assert {point.data() for point in board._companion_scatter.points()} == {
+            "C1",
+            "C10",
+        }
+        assert all(
+            point.pen().color().name() == board.REQUIRED_COMPANION_COLOR.name()
+            for point in board._companion_scatter.points()
+        )
+
+        # The companion overlay is independent of Ctrl-style selection and is
+        # cleared only when the controller confirms cluster coverage.
+        board._handle_left_click(QPointF(0.0, 0.0), additive=True)
+        assert board.selected_refdes == ("C1", "C2")
+        assert len(board._companion_scatter.points()) == 2
+        board.set_required_companion_refdes(())
+        assert len(board._companion_scatter.points()) == 0
+    finally:
+        board.close()
+        application.processEvents()
+
+
+def test_bumps_are_net_batched_colored_focused_and_use_net_only_hover() -> None:
+    application = _application()
+    board = DecapBoardView(
+        _records(),
+        {"vdd_a": "#ef5350", "VDD_B": "#42a5f5", "DGND": "#26a69a"},
+        bumps=_bumps(),
+    )
+    try:
+        _show(board)
+
+        assert board.bump_count == 4
+        assert set(board._bump_scatters_by_net) == {
+            "vdd_a",
+            "dgnd",
+            "vdd_b",
+            "bump_behind_c1",
+        }
+        assert sum(
+            len(scatter.points())
+            for scatter in board._bump_scatters_by_net.values()
+        ) == 4
+        assert board.tooltip_text_at(QPointF(300.0, 300.0)) == "VDD_A"
+        assert board.tooltip_text_at(QPointF(400.0, 300.0)) == "DGND"
+        collocated = board.tooltip_text_at(QPointF(0.0, 0.0))
+        assert collocated is not None
+        assert "REFDES: C1" in collocated
+        assert "BUMP_BEHIND_C1" not in collocated
+
+        board.set_active_nets(("VDD_A",))
+        assert (
+            board._bump_scatters_by_net["vdd_a"].points()[0].brush().color().name()
+            == "#ef5350"
+        )
+        assert (
+            board._bump_scatters_by_net["dgnd"].points()[0].brush().color().name()
+            == board.INACTIVE_NET_COLOR.name()
+        )
+        enabled = {point.data(): point for point in board._enabled_scatter.points()}
+        assert enabled["C1"].brush().color().name() == "#ef5350"
+
+        board.set_decaps(
+            _records(),
+            {"vdd_a": "#00ff00", "VDD_B": "#42a5f5", "DGND": "#26a69a"},
+        )
+        assert (
+            board._bump_scatters_by_net["vdd_a"].points()[0].brush().color().name()
+            == "#00ff00"
+        )
+
+        board.set_active_nets(())
+        enabled = {point.data(): point for point in board._enabled_scatter.points()}
+        assert (
+            enabled["C1"].brush().color().name()
+            == board.INACTIVE_NET_COLOR.name()
+        )
+        assert board.color_for_net("VDD_A").name() == "#00ff00"
+    finally:
+        board.close()
+        application.processEvents()
+
+
 def test_case_insensitive_selection_search_centering_and_validation() -> None:
     application = _application()
     board = DecapBoardView(_records())
@@ -251,7 +360,9 @@ def test_offscreen_mouse_click_ctrl_toggle_and_right_click_signal() -> None:
     board = DecapBoardView(_records())
     _show(board)
     requests: list[tuple[str, ...]] = []
+    changes: list[tuple[str, ...]] = []
     board.contextMenuRequested.connect(lambda selected, _point: requests.append(selected))
+    board.selectionChanged.connect(changes.append)
     try:
         board.fit_board()
         application.processEvents()
@@ -269,6 +380,30 @@ def test_offscreen_mouse_click_ctrl_toggle_and_right_click_signal() -> None:
         )
         application.processEvents()
         assert board.selected_refdes == ("C1", "C2")
+
+        QTest.mouseClick(
+            board.viewport(),
+            Qt.MouseButton.LeftButton,
+            Qt.KeyboardModifier.ControlModifier,
+            pos=_viewport_position(board, 0.0, 0.0),
+        )
+        application.processEvents()
+        assert board.selected_refdes == ("C2",)
+
+        QTest.mouseClick(
+            board.viewport(),
+            Qt.MouseButton.LeftButton,
+            Qt.KeyboardModifier.ControlModifier,
+            pos=_viewport_position(board, 0.0, 0.0),
+        )
+        application.processEvents()
+        assert board.selected_refdes == ("C1", "C2")
+        assert changes[:4] == [
+            ("C1",),
+            ("C1", "C2"),
+            ("C2",),
+            ("C1", "C2"),
+        ]
 
         QTest.mouseClick(
             board.viewport(),
@@ -388,7 +523,7 @@ def test_plane_items_are_replaced_and_cleared_without_touching_decaps() -> None:
         application.processEvents()
 
 
-def test_ten_thousand_decaps_use_four_fixed_scatter_graphics_items() -> None:
+def test_ten_thousand_decaps_use_five_fixed_scatter_graphics_items() -> None:
     application = _application()
     records = [
         {
@@ -412,6 +547,7 @@ def test_ten_thousand_decaps_use_four_fixed_scatter_graphics_items() -> None:
             board._disabled_scatter,
             board._disabled_x_scatter,
             board._selected_scatter,
+            board._companion_scatter,
         ]
         assert sum(len(item.points()) for item in scatter_items[:2]) == 10_001
         assert len(board._disabled_x_scatter.points()) == 3_334
@@ -426,7 +562,36 @@ def test_ten_thousand_decaps_use_four_fixed_scatter_graphics_items() -> None:
                 for item in board.plotItem.items
                 if isinstance(item, pg.ScatterPlotItem)
             ]
-        ) == 4
+        ) == 5
+    finally:
+        board.close()
+        application.processEvents()
+
+
+def test_ten_thousand_bumps_scale_by_net_batches_not_point_items() -> None:
+    application = _application()
+    bumps = [
+        {
+            "net": f"NET_{index % 4}",
+            "x_um": float(index % 200),
+            "y_um": float(index // 200),
+        }
+        for index in range(10_001)
+    ]
+    board = DecapBoardView(bumps=bumps)
+    try:
+        assert board.bump_count == 10_001
+        assert len(board._bump_scatters_by_net) == 4
+        assert sum(
+            len(scatter.points())
+            for scatter in board._bump_scatters_by_net.values()
+        ) == 10_001
+        scatter_items = [
+            item
+            for item in board.plotItem.items
+            if isinstance(item, pg.ScatterPlotItem)
+        ]
+        assert len(scatter_items) == 5 + len(board._bump_scatters_by_net)
     finally:
         board.close()
         application.processEvents()

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import Protocol, runtime_checkable
 
 import numpy as np
 from numpy.typing import ArrayLike, NDArray
@@ -12,6 +13,20 @@ from .impedance import ImpedanceModel, ImpedanceModelError, frequency_array
 
 class CircuitModelError(ImpedanceModelError):
     """Raised when a local topology cannot be reduced safely."""
+
+
+@runtime_checkable
+class MultiportAdmittanceModel(Protocol):
+    """A frequency-dependent, complex-symmetric multiport admittance."""
+
+    @property
+    def port_count(self) -> int:
+        """Number of retained differential plane ports."""
+
+    def admittance_matrix(
+        self, frequencies_hz: ArrayLike
+    ) -> NDArray[np.complex128]:
+        """Return shape ``(frequency, port, port)`` in siemens."""
 
 
 def _checked_impedance(
@@ -129,3 +144,212 @@ class SharedPairModel:
         if np.any(np.abs(admittance) < np.finfo(np.float64).tiny):
             raise CircuitModelError("shared-pair reduction produced zero admittance")
         return 1.0 / admittance
+
+
+@dataclass(frozen=True, slots=True)
+class SharedPadClusterModel:
+    """Explicit terminal Vias joined by PWR-component and shared-GND buses.
+
+    The source project currently calibrates one *differential* PWR/GND
+    via-loop impedance rather than separate terminal impedances.  Each
+    physical PWR or GND Via therefore receives a symmetric ``Z_loop / 2``
+    branch.  This makes a colocated 1-PWR/1-GND cluster reproduce the calibrated
+    loop exactly while preserving unequal PWR/GND counts without pairing or
+    duplicating physical Via evidence.
+
+    Each post-edit same-rail PWR component owns one ideal top-PWR supernode.
+    The original source cluster retains one continuous ideal top-GND supernode,
+    with every physical GND Via represented once.  Capacitors bridge their PWR
+    component to that common GND node.  ``power_component_indices`` and
+    ``capacitor_component_indices`` map flattened paths/caps to those PWR
+    nodes; omitted maps mean the legacy one-PWR-component case.
+
+    All internal nodes are Kron-reduced.  Finally the raw terminal matrix is
+    transformed with ``+1/2`` for PWR and ``-1/2`` for GND; this is the
+    symmetric plane-pair incidence used by the differential modal solver.
+    Ordinary transposes are intentional because the passive network and solver
+    use complex-symmetric MNA equations.
+    """
+
+    model_id: str
+    power_via_loops: tuple[ImpedanceModel, ...]
+    ground_via_loops: tuple[ImpedanceModel, ...]
+    capacitors: tuple[ImpedanceModel, ...] = ()
+    power_component_indices: tuple[int, ...] = ()
+    capacitor_component_indices: tuple[int, ...] = ()
+
+    def __post_init__(self) -> None:
+        if not self.model_id.strip():
+            raise CircuitModelError("model_id must not be empty")
+        if not self.power_via_loops or not self.ground_via_loops:
+            raise CircuitModelError(
+                "a shared-pad cluster model requires PWR and GND via paths"
+            )
+        power_indices = self.power_component_indices or tuple(
+            0 for _item in self.power_via_loops
+        )
+        if len(power_indices) != len(self.power_via_loops) or any(
+            index < 0 for index in power_indices
+        ):
+            raise CircuitModelError(
+                "shared-pad PWR path component mapping is invalid"
+            )
+        component_ids = sorted(set(power_indices))
+        if component_ids != list(range(len(component_ids))):
+            raise CircuitModelError(
+                "shared-pad PWR component indices must be contiguous from zero"
+            )
+        capacitor_indices = self.capacitor_component_indices or tuple(
+            0 for _item in self.capacitors
+        )
+        if len(capacitor_indices) != len(self.capacitors) or any(
+            index < 0 or index >= len(component_ids)
+            for index in capacitor_indices
+        ):
+            raise CircuitModelError(
+                "shared-pad capacitor component mapping is invalid"
+            )
+        object.__setattr__(self, "power_component_indices", power_indices)
+        object.__setattr__(
+            self, "capacitor_component_indices", capacitor_indices
+        )
+
+    @property
+    def port_count(self) -> int:
+        return len(self.power_via_loops) + len(self.ground_via_loops)
+
+    @property
+    def power_component_count(self) -> int:
+        return max(self.power_component_indices) + 1
+
+    def admittance_matrix(
+        self, frequencies_hz: ArrayLike
+    ) -> NDArray[np.complex128]:
+        frequencies = frequency_array(frequencies_hz)
+        power_admittance = np.column_stack(
+            tuple(
+                2.0 / _checked_impedance(model, frequencies)
+                for model in self.power_via_loops
+            )
+        )
+        ground_admittance = np.column_stack(
+            tuple(
+                2.0 / _checked_impedance(model, frequencies)
+                for model in self.ground_via_loops
+            )
+        )
+        component_count = self.power_component_count
+        cap_admittance = np.zeros(
+            (frequencies.size, component_count), dtype=np.complex128
+        )
+        for capacitor, component_index in zip(
+            self.capacitors,
+            self.capacitor_component_indices,
+            strict=True,
+        ):
+            cap_admittance[:, component_index] += 1.0 / _checked_impedance(
+                capacitor, frequencies
+            )
+
+        power_sum = np.zeros_like(cap_admittance)
+        for path_index, component_index in enumerate(self.power_component_indices):
+            power_sum[:, component_index] += power_admittance[:, path_index]
+        ground_sum = np.sum(ground_admittance, axis=1)
+        power_node = power_sum + cap_admittance
+        power_scale = np.abs(power_sum) + np.abs(cap_admittance)
+        singular_power = np.abs(power_node) <= (
+            64.0
+            * np.finfo(np.float64).eps
+            * np.maximum(power_scale, np.finfo(float).tiny)
+        )
+        if np.any(singular_power):
+            frequency_index = int(np.argwhere(singular_power)[0, 0])
+            raise CircuitModelError(
+                "shared-pad PWR-supernode admittance is singular at "
+                f"{float(frequencies[frequency_index]):g} Hz"
+            )
+
+        # Arrowhead Schur complement for one shared GND node.  Writing
+        # c-c**2/(P+c) as c*P/(P+c) avoids large-c cancellation.
+        component_transfer = cap_admittance / power_node
+        ground_schur_terms = cap_admittance * power_sum / power_node
+        ground_schur = ground_sum + np.sum(ground_schur_terms, axis=1)
+        ground_scale = np.abs(ground_sum) + np.sum(
+            np.abs(ground_schur_terms), axis=1
+        )
+        singular_ground = np.abs(ground_schur) <= (
+            64.0
+            * np.finfo(np.float64).eps
+            * np.maximum(ground_scale, np.finfo(float).tiny)
+        )
+        if np.any(singular_ground):
+            frequency = float(
+                frequencies[int(np.flatnonzero(singular_ground)[0])]
+            )
+            raise CircuitModelError(
+                "shared-pad common-GND admittance is singular at "
+                f"{frequency:g} Hz"
+            )
+
+        power_count = len(self.power_via_loops)
+        ground_count = len(self.ground_via_loops)
+        count = power_count + ground_count
+        output = np.zeros(
+            (frequencies.size, count, count), dtype=np.complex128
+        )
+        power_block = np.zeros(
+            (frequencies.size, power_count, power_count), dtype=np.complex128
+        )
+        power_diagonal = np.arange(power_count)
+        power_block[:, power_diagonal, power_diagonal] = power_admittance
+        component_index = np.asarray(
+            self.power_component_indices, dtype=np.int64
+        )
+        inverse_power = 1.0 / power_node
+        inverse_ground = 1.0 / ground_schur
+        mapped_inverse = inverse_power[:, component_index]
+        mapped_transfer = component_transfer[:, component_index]
+        same_component = (
+            component_index[:, None] == component_index[None, :]
+        ).astype(np.float64)
+        internal_power_inverse = (
+            same_component[None, :, :]
+            * mapped_inverse[:, :, None]
+            + mapped_transfer[:, :, None]
+            * mapped_transfer[:, None, :]
+            * inverse_ground[:, None, None]
+        )
+        power_block -= (
+            power_admittance[:, :, None]
+            * power_admittance[:, None, :]
+            * internal_power_inverse
+        )
+        ground_block = np.zeros(
+            (frequencies.size, ground_count, ground_count), dtype=np.complex128
+        )
+        ground_diagonal = np.arange(ground_count)
+        ground_block[:, ground_diagonal, ground_diagonal] = ground_admittance
+        ground_block -= (
+            ground_admittance[:, :, None]
+            * ground_admittance[:, None, :]
+            * inverse_ground[:, None, None]
+        )
+        cross_block = -(
+            power_admittance[:, :, None]
+            * ground_admittance[:, None, :]
+            * (mapped_transfer * inverse_ground[:, None])[:, :, None]
+        )
+        # Symmetric plane-pair terminal transform D=diag(+1/2 PWR, -1/2 GND).
+        output[:, :power_count, :power_count] = 0.25 * power_block
+        output[:, power_count:, power_count:] = 0.25 * ground_block
+        output[:, :power_count, power_count:] = -0.25 * cross_block
+        output[:, power_count:, :power_count] = -0.25 * np.swapaxes(
+            cross_block, 1, 2
+        )
+        if not np.all(np.isfinite(output.real)) or not np.all(
+            np.isfinite(output.imag)
+        ):
+            raise CircuitModelError(
+                "shared-pad reduction produced non-finite admittance"
+            )
+        return output

@@ -17,6 +17,7 @@ import warnings
 import numpy as np
 from numpy.typing import ArrayLike, NDArray
 
+from spd_decap_pi._core.models.circuit import MultiportAdmittanceModel
 from spd_decap_pi._core.models.impedance import ImpedanceModel, frequency_array
 
 try:  # SciPy is a runtime dependency, but the NumPy fallback aids source use.
@@ -154,6 +155,63 @@ class ShuntGroup:
 
 
 @dataclass(frozen=True, slots=True)
+class CoupledShuntGroup:
+    """Plane ports coupled through one shared frequency-dependent network.
+
+    ``sensitivity_id`` identifies the complete atomic capacitor-removal group;
+    ``None`` keeps a physical-only network in the baseline without exposing a
+    no-op sensitivity candidate.  Its ports are physical via locations, not
+    independent copies of the local network.
+    ``sensitivity_without_network`` optionally describes the physical copper
+    and Via network that remains when the group's capacitors are removed; the
+    leave-one-out solve subtracts only the admittance difference.
+    """
+
+    group_id: str
+    ports: tuple[FinitePort, ...]
+    network: MultiportAdmittanceModel
+    sensitivity_id: str | None = None
+    sensitivity_without_network: MultiportAdmittanceModel | None = None
+
+    def __post_init__(self) -> None:
+        if not self.group_id.strip():
+            raise ModalSolverError("group_id must not be empty")
+        if self.sensitivity_id is not None and not self.sensitivity_id.strip():
+            raise ModalSolverError("coupled shunt sensitivity_id must not be empty")
+        if not self.ports:
+            raise ModalSolverError("a coupled shunt group needs at least one port")
+        if self.network.port_count != len(self.ports):
+            raise ModalSolverError(
+                "coupled shunt port count does not match its network"
+            )
+        if (
+            self.sensitivity_without_network is not None
+            and self.sensitivity_without_network.port_count != len(self.ports)
+        ):
+            raise ModalSolverError(
+                "coupled shunt counterfactual port count does not match its ports"
+            )
+
+
+ShuntConnection = ShuntGroup | CoupledShuntGroup
+
+
+@dataclass(frozen=True, slots=True)
+class _ScalarShuntData:
+    overlap: NDArray[np.float64]
+    admittance: NDArray[np.complex128]
+
+
+@dataclass(frozen=True, slots=True)
+class _CoupledShuntData:
+    population: NDArray[np.float64]
+    admittance: NDArray[np.complex128]
+
+
+_ShuntData = _ScalarShuntData | _CoupledShuntData
+
+
+@dataclass(frozen=True, slots=True)
 class DeviceBranch:
     """One Device P/G finite port and its differential bump/via path."""
 
@@ -280,18 +338,23 @@ class ModalSolveResult:
 
 @dataclass(frozen=True, slots=True)
 class ShuntLeaveOneOutSolveResult:
-    """Baseline and exact one-shunt-removed device impedance curves.
+    """Baseline and exact one-sensitivity-unit-removed impedance curves.
 
-    ``without_impedance_ohm[row]`` corresponds to ``port_ids[row]``.  The
-    batched solver uses the same complex-symmetric MNA equations as
-    :meth:`RectangularCavitySolver.solve_device`; it only reuses each baseline
-    factorization through an algebraically exact rank-one downdate.
+    ``port_ids`` is retained as the compatibility field name.  A scalar shunt
+    still contributes one unit per physical port; a coupled shared-pad group
+    contributes one ID for all of its ports.  The batched solver reuses each
+    complex-symmetric baseline factorization through exact rank-one or
+    low-rank downdates.
     """
 
     frequencies_hz: NDArray[np.float64]
     port_ids: tuple[str, ...]
     baseline_impedance_ohm: NDArray[np.complex128]
     without_impedance_ohm: NDArray[np.complex128]
+
+    @property
+    def unit_ids(self) -> tuple[str, ...]:
+        return self.port_ids
 
     def __post_init__(self) -> None:
         frequencies = frequency_array(self.frequencies_hz).copy()
@@ -301,10 +364,10 @@ class ShuntLeaveOneOutSolveResult:
             raise ModalSolverError("baseline leave-one-out impedance must match frequency")
         if without.shape != (len(self.port_ids), frequencies.size):
             raise ModalSolverError(
-                "leave-one-out impedance must have shape (port count, frequency count)"
+                "leave-one-out impedance must have shape (unit count, frequency count)"
             )
         if len(set(self.port_ids)) != len(self.port_ids):
-            raise ModalSolverError("leave-one-out shunt port_id values must be unique")
+            raise ModalSolverError("leave-one-out sensitivity IDs must be unique")
         if not np.all(np.isfinite(baseline.real)) or not np.all(np.isfinite(baseline.imag)):
             raise ModalSolverError("baseline leave-one-out solve produced non-finite impedance")
         if not np.all(np.isfinite(without.real)) or not np.all(np.isfinite(without.imag)):
@@ -389,7 +452,7 @@ class RectangularCavitySolver:
             )
         return result
 
-    def population_matrix(self, group: ShuntGroup) -> NDArray[np.float64]:
+    def population_matrix(self, group: ShuntConnection) -> NDArray[np.float64]:
         """Return B whose columns are exact-coordinate finite-port basis vectors."""
 
         for port in group.ports:
@@ -446,27 +509,78 @@ class RectangularCavitySolver:
     def _shunt_data(
         self,
         frequencies: NDArray[np.float64],
-        shunts: tuple[ShuntGroup, ...],
-    ) -> list[tuple[NDArray[np.float64], NDArray[np.complex128]]]:
-        data: list[tuple[NDArray[np.float64], NDArray[np.complex128]]] = []
+        shunts: tuple[ShuntConnection, ...],
+    ) -> list[_ShuntData]:
+        data: list[_ShuntData] = []
         for group in shunts:
-            impedance = np.asarray(group.network.impedance(frequencies), dtype=np.complex128)
-            if impedance.shape != frequencies.shape or not np.all(np.isfinite(impedance)):
-                raise ModalSolverError(f"shunt group {group.group_id!r} returned invalid impedance")
+            if isinstance(group, CoupledShuntGroup):
+                admittance = np.asarray(
+                    group.network.admittance_matrix(frequencies),
+                    dtype=np.complex128,
+                )
+                expected = (
+                    frequencies.size,
+                    len(group.ports),
+                    len(group.ports),
+                )
+                if admittance.shape != expected or not np.all(
+                    np.isfinite(admittance)
+                ):
+                    raise ModalSolverError(
+                        f"coupled shunt group {group.group_id!r} returned invalid "
+                        "admittance"
+                    )
+                if not np.allclose(
+                    admittance,
+                    np.swapaxes(admittance, 1, 2),
+                    rtol=1.0e-10,
+                    atol=1.0e-14,
+                ):
+                    raise ModalSolverError(
+                        f"coupled shunt group {group.group_id!r} must be "
+                        "complex-symmetric"
+                    )
+                data.append(
+                    _CoupledShuntData(
+                        self.population_matrix(group), admittance
+                    )
+                )
+                continue
+            impedance = np.asarray(
+                group.network.impedance(frequencies), dtype=np.complex128
+            )
+            if impedance.shape != frequencies.shape or not np.all(
+                np.isfinite(impedance)
+            ):
+                raise ModalSolverError(
+                    f"shunt group {group.group_id!r} returned invalid impedance"
+                )
             if np.any(np.abs(impedance) < np.finfo(float).tiny):
-                raise ModalSolverError(f"shunt group {group.group_id!r} returned zero impedance")
-            data.append((self.overlap_matrix(group), 1.0 / impedance))
+                raise ModalSolverError(
+                    f"shunt group {group.group_id!r} returned zero impedance"
+                )
+            data.append(
+                _ScalarShuntData(self.overlap_matrix(group), 1.0 / impedance)
+            )
         return data
 
     def _base_matrix(
         self,
         frequency_index: int,
         plane_admittance: NDArray[np.complex128],
-        shunt_data: list[tuple[NDArray[np.float64], NDArray[np.complex128]]],
+        shunt_data: list[_ShuntData],
     ) -> NDArray[np.complex128]:
         matrix = np.diag(plane_admittance[frequency_index]).astype(np.complex128)
-        for overlap, admittance in shunt_data:
-            matrix += admittance[frequency_index] * overlap
+        for item in shunt_data:
+            if isinstance(item, _ScalarShuntData):
+                matrix += item.admittance[frequency_index] * item.overlap
+            else:
+                population = item.population
+                matrix += (
+                    population
+                    @ item.admittance[frequency_index]
+                    @ population.T
+                )
         return matrix
 
     def solve_ideal_port(
@@ -474,7 +588,7 @@ class RectangularCavitySolver:
         frequencies_hz: ArrayLike,
         port: FinitePort,
         *,
-        shunts: tuple[ShuntGroup, ...] = (),
+        shunts: tuple[ShuntConnection, ...] = (),
     ) -> ModalSolveResult:
         """Solve Zii for an ideal finite-area source directly at the plane."""
 
@@ -547,7 +661,7 @@ class RectangularCavitySolver:
         self,
         frequency_index: int,
         plane_admittance: NDArray[np.complex128],
-        shunt_data: list[tuple[NDArray[np.float64], NDArray[np.complex128]]],
+        shunt_data: list[_ShuntData],
         branch_data: list[
             tuple[
                 NDArray[np.float64],
@@ -575,7 +689,7 @@ class RectangularCavitySolver:
         frequencies_hz: ArrayLike,
         device: DeviceConnection,
         *,
-        shunts: tuple[ShuntGroup, ...] = (),
+        shunts: tuple[ShuntConnection, ...] = (),
         max_workers: int = 1,
     ) -> ModalSolveResult:
         """Solve Zii at the external Device P/G supernode.
@@ -612,7 +726,7 @@ class RectangularCavitySolver:
         self,
         prepared: PreparedDeviceSystem,
         *,
-        shunts: tuple[ShuntGroup, ...] = (),
+        shunts: tuple[ShuntConnection, ...] = (),
         max_workers: int = 1,
     ) -> ModalSolveResult:
         """Solve new shunt placements with a prepared plane/Device kernel."""
@@ -679,18 +793,17 @@ class RectangularCavitySolver:
         frequencies_hz: ArrayLike,
         device: DeviceConnection,
         *,
-        shunts: tuple[ShuntGroup, ...] = (),
+        shunts: tuple[ShuntConnection, ...] = (),
         max_workers: int = 1,
         progress: Callable[[int, int], None] | None = None,
         is_cancelled: Callable[[], bool] | None = None,
     ) -> ShuntLeaveOneOutSolveResult:
-        """Solve every one-shunt-removed case from one factorization per frequency.
+        """Solve every atomic shunt removal from one factorization per frequency.
 
-        Removing one finite shunt port changes the complex-symmetric Device MNA
-        matrix from ``A`` to ``A - y*u*u.T``.  A batched multi-RHS solve obtains
-        ``A^-1*u`` for every port, and the Sherman-Morrison downdate then returns
-        the same Zii as an independent solve.  Near-singular downdates fall back
-        to a direct factorization of the modified matrix.
+        Scalar ports remain independent rank-one sensitivity units.  A coupled
+        shunt is one unit across all of its physical ports and is removed with
+        a complex-symmetric Woodbury downdate.  Ill-conditioned downdates fall
+        back to a direct factorization of the exactly modified matrix.
         """
 
         frequencies = frequency_array(frequencies_hz)
@@ -701,11 +814,60 @@ class RectangularCavitySolver:
         if cancelled():
             raise RuntimeError("leave-one-out calculation cancelled")
 
-        port_ids: list[str] = []
-        population_parts: list[NDArray[np.float64]] = []
-        admittance_parts: list[NDArray[np.complex128]] = []
+        unit_ids: list[str] = []
+        candidate_populations: list[NDArray[np.float64]] = []
+        candidate_admittances: list[NDArray[np.complex128]] = []
         for group in shunts:
             population = self.population_matrix(group)
+            if isinstance(group, CoupledShuntGroup):
+                if group.sensitivity_id is None:
+                    continue
+                admittance = np.asarray(
+                    group.network.admittance_matrix(frequencies),
+                    dtype=np.complex128,
+                )
+                expected = (
+                    frequencies.size,
+                    len(group.ports),
+                    len(group.ports),
+                )
+                if admittance.shape != expected or not np.all(
+                    np.isfinite(admittance)
+                ):
+                    raise ModalSolverError(
+                        f"coupled shunt group {group.group_id!r} returned invalid "
+                        "admittance"
+                    )
+                removed_admittance = admittance
+                if group.sensitivity_without_network is not None:
+                    retained_admittance = np.asarray(
+                        group.sensitivity_without_network.admittance_matrix(
+                            frequencies
+                        ),
+                        dtype=np.complex128,
+                    )
+                    if retained_admittance.shape != expected or not np.all(
+                        np.isfinite(retained_admittance)
+                    ):
+                        raise ModalSolverError(
+                            f"coupled shunt group {group.group_id!r} returned "
+                            "invalid sensitivity counterfactual admittance"
+                        )
+                    removed_admittance = admittance - retained_admittance
+                if not np.allclose(
+                    removed_admittance,
+                    np.swapaxes(removed_admittance, 1, 2),
+                    rtol=1.0e-10,
+                    atol=1.0e-14,
+                ):
+                    raise ModalSolverError(
+                        f"coupled shunt group {group.group_id!r} sensitivity "
+                        "admittance must be complex-symmetric"
+                    )
+                unit_ids.append(group.sensitivity_id)
+                candidate_populations.append(population)
+                candidate_admittances.append(removed_admittance)
+                continue
             impedance = np.asarray(
                 group.network.impedance(frequencies), dtype=np.complex128
             )
@@ -717,21 +879,24 @@ class RectangularCavitySolver:
                 raise ModalSolverError(
                     f"shunt group {group.group_id!r} returned zero impedance"
                 )
-            port_ids.extend(port.port_id for port in group.ports)
-            population_parts.append(population)
-            admittance_parts.append(
-                np.repeat((1.0 / impedance)[:, None], len(group.ports), axis=1)
-            )
-        if any(not port_id for port_id in port_ids):
+            for port_index, port in enumerate(group.ports):
+                unit_ids.append(port.port_id)
+                candidate_populations.append(
+                    population[:, port_index : port_index + 1]
+                )
+                candidate_admittances.append(
+                    (1.0 / impedance)[:, None, None]
+                )
+        if any(not unit_id for unit_id in unit_ids):
             raise ModalSolverError(
-                "leave-one-out sensitivity requires a non-empty port_id for every shunt"
+                "leave-one-out sensitivity requires a non-empty ID for every unit"
             )
-        if len(set(port_ids)) != len(port_ids):
+        if len(set(unit_ids)) != len(unit_ids):
             raise ModalSolverError(
-                "leave-one-out sensitivity requires unique shunt port_id values"
+                "leave-one-out sensitivity requires unique unit IDs"
             )
 
-        candidate_count = len(port_ids)
+        candidate_count = len(unit_ids)
         if candidate_count == 0:
             baseline = self.solve_device(frequencies, device, shunts=shunts)
             return ShuntLeaveOneOutSolveResult(
@@ -741,10 +906,23 @@ class RectangularCavitySolver:
                 np.empty((0, frequencies.size), dtype=np.complex128),
             )
 
-        population = np.column_stack(population_parts)
-        candidate_admittance = np.column_stack(admittance_parts)
+        candidate_slices: list[slice] = []
+        unique_populations: list[NDArray[np.float64]] = []
+        population_slice_by_identity: dict[int, slice] = {}
+        start = 0
+        for population in candidate_populations:
+            identity = id(population)
+            columns = population_slice_by_identity.get(identity)
+            if columns is None:
+                stop = start + population.shape[1]
+                columns = slice(start, stop)
+                population_slice_by_identity[identity] = columns
+                unique_populations.append(population)
+                start = stop
+            candidate_slices.append(columns)
+        population = np.column_stack(unique_populations)
         size = self.mode_count + 1
-        update_vectors = np.zeros((size, candidate_count), dtype=np.complex128)
+        update_vectors = np.zeros((size, start), dtype=np.complex128)
         update_vectors[:-1, :] = population
         rhs = np.zeros(size, dtype=np.complex128)
         rhs[-1] = 1.0
@@ -765,27 +943,41 @@ class RectangularCavitySolver:
             solutions = _factorized_solve_many(matrix, all_rhs, frequencies[index])
             baseline_solution = solutions[:, 0]
             update_solutions = solutions[:, 1:]
-            # The MNA matrix is complex-symmetric, not Hermitian.  These are
-            # ordinary transposes and must not conjugate either factor.
-            coupling = update_vectors.T @ baseline_solution
-            self_response = np.sum(update_vectors * update_solutions, axis=0)
-            admittance = candidate_admittance[index]
-            denominator = 1.0 - admittance * self_response
-            scale = np.maximum(1.0, np.abs(admittance * self_response))
-            unstable = (
-                ~np.isfinite(denominator)
-                | (np.abs(denominator) <= 1.0e-10 * scale)
-            )
-            with np.errstate(divide="ignore", invalid="ignore", over="ignore"):
-                without = baseline_solution[-1] + (
-                    admittance * coupling * coupling / denominator
+            without = np.empty(candidate_count, dtype=np.complex128)
+            for candidate_index, columns in enumerate(candidate_slices):
+                vectors = update_vectors[:, columns]
+                solved_vectors = update_solutions[:, columns]
+                admittance = candidate_admittances[candidate_index][index]
+                # Complex-symmetric MNA uses ordinary transposes throughout.
+                coupling = vectors.T @ baseline_solution
+                self_response = vectors.T @ solved_vectors
+                inner = np.eye(vectors.shape[1], dtype=np.complex128) - (
+                    admittance @ self_response
                 )
-            unstable |= ~np.isfinite(without)
-            for candidate_index in np.flatnonzero(unstable):
-                vector = update_vectors[:, candidate_index]
-                modified = matrix - admittance[candidate_index] * np.outer(
-                    vector, vector
+                inner_rhs = admittance @ coupling
+                unstable = not (
+                    np.all(np.isfinite(inner))
+                    and np.all(np.isfinite(inner_rhs))
                 )
+                correction: NDArray[np.complex128] | None = None
+                if not unstable:
+                    try:
+                        condition = float(np.linalg.cond(inner))
+                        if not np.isfinite(condition) or condition > 1.0e10:
+                            unstable = True
+                        else:
+                            correction = np.linalg.solve(inner, inner_rhs)
+                            unstable = not np.all(np.isfinite(correction))
+                    except np.linalg.LinAlgError:
+                        unstable = True
+                if not unstable and correction is not None:
+                    value = baseline_solution[-1] + (
+                        solved_vectors[-1, :] @ correction
+                    )
+                    if np.isfinite(value):
+                        without[candidate_index] = value
+                        continue
+                modified = matrix - vectors @ admittance @ vectors.T
                 without[candidate_index] = _factorized_solve(
                     modified, rhs, frequencies[index]
                 )[-1]
@@ -827,7 +1019,7 @@ class RectangularCavitySolver:
 
         return ShuntLeaveOneOutSolveResult(
             frequencies,
-            tuple(port_ids),
+            tuple(unit_ids),
             baseline_impedance,
             without_impedance,
         )

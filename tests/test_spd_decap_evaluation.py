@@ -20,6 +20,7 @@ from spd_decap_pi._core.domain import (
     RailSpec,
     StackupLayer,
     TerminalKind,
+    TopologyKind,
     ViaLoopTemplate,
     ViaPathKind,
 )
@@ -35,11 +36,19 @@ from spd_decap_pi.evaluation import (
     evaluate_scenario,
 )
 from spd_decap_pi.scenario import (
+    DecapConnectionKind,
+    DecapPadState,
     RailEligibility,
     ScenarioDecap,
+    ScenarioDecapConnection,
     ScenarioPad,
     ScenarioPoint,
     ScenarioSpec,
+    ScenarioViaLanding,
+    SHARED_PAD_ANALYSIS_VERSION,
+    SharedPadCluster,
+    SharedPadClusterState,
+    SharedPadConnectionAnalysis,
     SourceIdentity,
 )
 from spd_decap_pi.scenario_io import load_scenario_bundle, save_scenario
@@ -213,6 +222,37 @@ def _decap(
 
 
 def _scenario() -> ScenarioSpec:
+    decaps = [
+        _decap("C1", enabled=True, model_id="M1"),
+        _decap("C2", enabled=False, model_id=None),
+    ]
+    connections = {
+        decap.refdes: ScenarioDecapConnection(
+            refdes=decap.refdes,
+            kind=DecapConnectionKind.DIRECT,
+            power_vias=(
+                ScenarioViaLanding(
+                    via_id=f"VP-{decap.refdes}",
+                    net=decap.source_net,
+                    endpoint_node_id=f"NP-{decap.refdes}",
+                    x_um=decap.pwr_pad.x_um,
+                    y_um=decap.pwr_pad.y_um,
+                    padstack="VIA",
+                ),
+            ),
+            ground_vias=(
+                ScenarioViaLanding(
+                    via_id=f"VG-{decap.refdes}",
+                    net="DGND",
+                    endpoint_node_id=f"NG-{decap.refdes}",
+                    x_um=decap.gnd_pad.x_um,
+                    y_um=decap.gnd_pad.y_um,
+                    padstack="VIA",
+                ),
+            ),
+        )
+        for decap in decaps
+    }
     return ScenarioSpec(
         source=SourceIdentity(
             path="C:/fixtures/fixture.spd",
@@ -221,10 +261,12 @@ def _scenario() -> ScenarioSpec:
             sha256="a" * 64,
         ),
         normalized_project=_base_project(),
-        decaps=[
-            _decap("C1", enabled=True, model_id="M1"),
-            _decap("C2", enabled=False, model_id=None),
-        ],
+        decaps=decaps,
+        connection_analysis=SharedPadConnectionAnalysis(
+            version=SHARED_PAD_ANALYSIS_VERSION,
+            source_sha256="a" * 64,
+            connections=connections,
+        ),
         revision=4,
     )
 
@@ -308,6 +350,95 @@ def test_build_evaluation_project_rebuilds_decap_electrical_state() -> None:
     assert all(item.confirmed for item in project.partitions)
     assert project.metadata["plane_pair_confirmed"] is True
     assert project.metadata["spd_import"]["raw_spd_embedded"] is False
+
+
+def test_build_evaluation_project_materializes_shared_cluster_once() -> None:
+    scenario = _scenario()
+    first = scenario.decaps[0]
+    second = scenario.decaps[1].model_copy(
+        update={
+            "enabled": True,
+            "source_mounted": True,
+            "source_model_id": "M1",
+            "model_id": "M1",
+        }
+    )
+    power = ScenarioViaLanding(
+        via_id="VP-SHARED",
+        net="VDD",
+        endpoint_node_id="NP-SHARED",
+        x_um=first.pwr_pad.x_um,
+        y_um=first.pwr_pad.y_um,
+        padstack="VIA",
+    )
+    ground = ScenarioViaLanding(
+        via_id="VG-SHARED",
+        net="DGND",
+        endpoint_node_id="NG-SHARED",
+        x_um=first.gnd_pad.x_um,
+        y_um=first.gnd_pad.y_um,
+        padstack="VIA",
+    )
+    connections = {
+        item.refdes: ScenarioDecapConnection(
+            refdes=item.refdes,
+            kind=DecapConnectionKind.SHARED_ANCHOR,
+            cluster_id="CL-SHARED",
+            power_vias=(power,),
+            ground_vias=(ground,),
+        )
+        for item in (first, second)
+    }
+    analysis = SharedPadConnectionAnalysis(
+        version=SHARED_PAD_ANALYSIS_VERSION,
+        source_sha256=scenario.source.sha256,
+        connections=connections,
+        clusters=(
+            SharedPadCluster(
+                cluster_id="CL-SHARED",
+                state=SharedPadClusterState.ANCHORED,
+                member_refdes=(first.refdes, second.refdes),
+                anchor_refdes=(first.refdes, second.refdes),
+                dummy_refdes=(),
+                power_net="VDD",
+                ground_net="DGND",
+                layer="TOP",
+                power_edges=((first.refdes, second.refdes),),
+                ground_edges=((first.refdes, second.refdes),),
+                eligibility={
+                    "RAIL_VDD": first.eligibility["RAIL_VDD"]
+                },
+                via_eligibility={
+                    "VP-SHARED": {
+                        "RAIL_VDD": first.eligibility["RAIL_VDD"]
+                    }
+                },
+            ),
+        ),
+    )
+    shared = ScenarioSpec.model_validate(
+        {
+            **scenario.model_dump(mode="python"),
+            "decaps": [first, second],
+            "connection_analysis": analysis,
+        }
+    )
+
+    project = build_evaluation_project(shared, evaluation_rail_id="RAIL_VDD")
+
+    assert len(project.shared_pad_clusters) == 1
+    cluster = project.shared_pad_clusters[0]
+    assert len(cluster.member_slot_ids) == 2
+    assert [item.terminal for item in cluster.via_paths] == [
+        TerminalKind.PWR,
+        TerminalKind.GND,
+    ]
+    assert cluster.via_paths[0].source_via_id == "VP-SHARED"
+    assert len(project.placements) == 2
+    assert all(
+        item.topology == TopologyKind.SHARED_PAD_CLUSTER
+        for item in project.topology_maps
+    )
     assert "custom SPD solver assumption" in project.assumptions
     assert any("rectangular solver approximation" in item for item in project.assumptions)
 
@@ -315,6 +446,498 @@ def test_build_evaluation_project_rebuilds_decap_electrical_state() -> None:
     assert scenario.base_project.partitions[0].confirmed is False
     assert any(pin.refdes == "OLD" for pin in scenario.base_project.pins)
     assert scenario.base_project.cap_models[0].inventory == 0
+
+
+def test_isolation_gap_removes_its_power_and_ground_via_paths() -> None:
+    scenario = _scenario()
+    first = scenario.decaps[0].model_copy(
+        update={
+            "enabled": False,
+            "pad_state": DecapPadState.ISOLATION_GAP,
+        }
+    )
+    second = scenario.decaps[1].model_copy(
+        update={
+            "enabled": True,
+            "source_mounted": True,
+            "source_model_id": "M1",
+            "model_id": "M1",
+        }
+    )
+
+    def landing(refdes: str, terminal: str, x_um: float) -> ScenarioViaLanding:
+        return ScenarioViaLanding(
+            via_id=f"V{terminal}-{refdes}",
+            net="VDD" if terminal == "P" else "DGND",
+            endpoint_node_id=f"N{terminal}-{refdes}",
+            x_um=x_um,
+            y_um=0.0,
+            padstack="VIA",
+        )
+
+    connections = {
+        item.refdes: ScenarioDecapConnection(
+            refdes=item.refdes,
+            kind=DecapConnectionKind.SHARED_ANCHOR,
+            cluster_id="CL-GAP",
+            power_vias=(landing(item.refdes, "P", item.pwr_pad.x_um),),
+            ground_vias=(landing(item.refdes, "G", item.gnd_pad.x_um),),
+        )
+        for item in (first, second)
+    }
+    cluster = SharedPadCluster(
+        cluster_id="CL-GAP",
+        state=SharedPadClusterState.ANCHORED,
+        member_refdes=(first.refdes, second.refdes),
+        anchor_refdes=(first.refdes, second.refdes),
+        dummy_refdes=(),
+        power_net="VDD",
+        ground_net="DGND",
+        layer="TOP",
+        power_edges=((first.refdes, second.refdes),),
+        ground_edges=((first.refdes, second.refdes),),
+        isolation_gap_refdes=(first.refdes, second.refdes),
+        via_eligibility={
+            f"VP-{item.refdes}": {
+                "RAIL_VDD": item.eligibility["RAIL_VDD"]
+            }
+            for item in (first, second)
+        },
+    )
+    isolated = ScenarioSpec.model_validate(
+        {
+            **scenario.model_dump(mode="python"),
+            "decaps": [first, second],
+            "connection_analysis": SharedPadConnectionAnalysis(
+                version=SHARED_PAD_ANALYSIS_VERSION,
+                source_sha256=scenario.source.sha256,
+                connections=connections,
+                clusters=(cluster,),
+            ),
+        }
+    )
+
+    project = build_evaluation_project(
+        isolated, evaluation_rail_id="RAIL_VDD"
+    )
+    source_via_ids = {
+        path.source_via_id for path in project.shared_pad_clusters[0].via_paths
+    }
+    assert source_via_ids == {f"VP-{second.refdes}", f"VG-{second.refdes}"}
+
+
+def test_enabled_dummy_keeps_anchor_physical_via_when_anchor_is_dnp() -> None:
+    scenario = _scenario()
+    anchor = scenario.decaps[0].model_copy(update={"enabled": False})
+    dummy = scenario.decaps[1].model_copy(
+        update={
+            "enabled": True,
+            "source_mounted": True,
+            "source_model_id": "M1",
+            "model_id": "M1",
+        }
+    )
+    power = ScenarioViaLanding(
+        via_id="VP-ANCHOR",
+        net="VDD",
+        endpoint_node_id="NP-ANCHOR",
+        x_um=anchor.pwr_pad.x_um,
+        y_um=anchor.pwr_pad.y_um,
+        padstack="VIA",
+    )
+    ground = ScenarioViaLanding(
+        via_id="VG-ANCHOR",
+        net="DGND",
+        endpoint_node_id="NG-ANCHOR",
+        x_um=anchor.gnd_pad.x_um,
+        y_um=anchor.gnd_pad.y_um,
+        padstack="VIA",
+    )
+    power_2 = power.model_copy(
+        update={
+            "via_id": "VP-ANCHOR-2",
+            "endpoint_node_id": "NP-ANCHOR-2",
+            "x_um": power.x_um + 25.0,
+        }
+    )
+    ground_2 = ground.model_copy(
+        update={
+            "via_id": "VG-ANCHOR-2",
+            "endpoint_node_id": "NG-ANCHOR-2",
+            "x_um": ground.x_um + 25.0,
+        }
+    )
+    ground_3 = ground.model_copy(
+        update={
+            "via_id": "VG-ANCHOR-3",
+            "endpoint_node_id": "NG-ANCHOR-3",
+            "x_um": ground.x_um + 50.0,
+        }
+    )
+    analysis = SharedPadConnectionAnalysis(
+        version=SHARED_PAD_ANALYSIS_VERSION,
+        source_sha256=scenario.source.sha256,
+        connections={
+            anchor.refdes: ScenarioDecapConnection(
+                refdes=anchor.refdes,
+                kind=DecapConnectionKind.SHARED_ANCHOR,
+                cluster_id="CL-DUMMY",
+                power_vias=(power, power_2),
+                ground_vias=(ground, ground_2, ground_3),
+            ),
+            dummy.refdes: ScenarioDecapConnection(
+                refdes=dummy.refdes,
+                kind=DecapConnectionKind.SHARED_DUMMY,
+                cluster_id="CL-DUMMY",
+            ),
+        },
+        clusters=(
+            SharedPadCluster(
+                cluster_id="CL-DUMMY",
+                state=SharedPadClusterState.ANCHORED,
+                member_refdes=(anchor.refdes, dummy.refdes),
+                anchor_refdes=(anchor.refdes,),
+                dummy_refdes=(dummy.refdes,),
+                power_net="VDD",
+                ground_net="DGND",
+                layer="TOP",
+                power_edges=((anchor.refdes, dummy.refdes),),
+                ground_edges=((anchor.refdes, dummy.refdes),),
+                eligibility={"RAIL_VDD": anchor.eligibility["RAIL_VDD"]},
+                via_eligibility={
+                    item.via_id: {
+                        "RAIL_VDD": anchor.eligibility["RAIL_VDD"]
+                    }
+                    for item in (power, power_2)
+                },
+                ),
+        ),
+    )
+    shared = ScenarioSpec.model_validate(
+        {
+            **scenario.model_dump(mode="python"),
+            "decaps": [anchor, dummy],
+            "connection_analysis": analysis,
+        }
+    )
+
+    project = build_evaluation_project(shared, evaluation_rail_id="RAIL_VDD")
+
+    assert [item.slot_id for item in project.placements] == [f"SPDPI:{dummy.refdes}"]
+    assert len(project.shared_pad_clusters) == 1
+    assert project.shared_pad_clusters[0].member_slot_ids == [
+        f"SPDPI:{anchor.refdes}",
+        f"SPDPI:{dummy.refdes}",
+    ]
+    assert [
+        (item.terminal, item.source_via_id)
+        for item in project.shared_pad_clusters[0].via_paths
+    ] == [
+        (TerminalKind.PWR, "VP-ANCHOR"),
+        (TerminalKind.PWR, "VP-ANCHOR-2"),
+        (TerminalKind.GND, "VG-ANCHOR"),
+        (TerminalKind.GND, "VG-ANCHOR-2"),
+        (TerminalKind.GND, "VG-ANCHOR-3"),
+    ]
+
+
+@pytest.mark.parametrize(
+    ("power_count", "ground_count"),
+    ((1, 3), (3, 1)),
+)
+def test_direct_unequal_via_counts_use_coupled_two_terminal_model(
+    power_count: int,
+    ground_count: int,
+) -> None:
+    payload = _scenario().model_dump(mode="python")
+    connection = payload["connection_analysis"]["connections"]["C1"]
+    for terminal, count in (
+        ("power_vias", power_count),
+        ("ground_vias", ground_count),
+    ):
+        original = dict(connection[terminal][0])
+        landings = [original]
+        for index in range(2, count + 1):
+            extra = dict(original)
+            prefix = "VP" if terminal == "power_vias" else "VG"
+            extra.update(
+                {
+                    "via_id": f"{prefix}-C1-{index}",
+                    "endpoint_node_id": f"N-{prefix}-C1-{index}",
+                    "x_um": original["x_um"] + 25.0 * index,
+                }
+            )
+            landings.append(extra)
+        connection[terminal] = landings
+    scenario = ScenarioSpec.model_validate(payload)
+
+    project = build_evaluation_project(scenario, evaluation_rail_id="RAIL_VDD")
+
+    assert len(project.shared_pad_clusters) == 1
+    cluster = project.shared_pad_clusters[0]
+    assert cluster.cluster_id.endswith("DIRECT:C1")
+    assert sum(
+        item.terminal == TerminalKind.PWR for item in cluster.via_paths
+    ) == power_count
+    assert sum(
+        item.terminal == TerminalKind.GND for item in cluster.via_paths
+    ) == ground_count
+
+
+def test_shared_pad_via_limit_counts_power_and_ground_paths_together() -> None:
+    payload = _scenario().model_dump(mode="python")
+    connection = payload["connection_analysis"]["connections"]["C1"]
+
+    def expanded_landings(key: str, count: int, prefix: str) -> list[dict[str, object]]:
+        original = dict(connection[key][0])
+        result: list[dict[str, object]] = []
+        for index in range(count):
+            landing = dict(original)
+            landing.update(
+                {
+                    "via_id": f"{prefix}-{index + 1}",
+                    "endpoint_node_id": f"N-{prefix}-{index + 1}",
+                    "x_um": float(original["x_um"]) + index,
+                }
+            )
+            result.append(landing)
+        return result
+
+    connection["power_vias"] = expanded_landings("power_vias", 64, "VP")
+    connection["ground_vias"] = expanded_landings("ground_vias", 64, "VG")
+    boundary = ScenarioSpec.model_validate(payload)
+    boundary_project = build_evaluation_project(
+        boundary, evaluation_rail_id="RAIL_VDD"
+    )
+    assert len(boundary_project.shared_pad_clusters[0].via_paths) == 128
+
+    overflow_payload = deepcopy(payload)
+    overflow_connection = overflow_payload["connection_analysis"]["connections"][
+        "C1"
+    ]
+    overflow_connection["power_vias"] = expanded_landings(
+        "power_vias", 65, "VP"
+    )
+    overflow = ScenarioSpec.model_validate(overflow_payload)
+    with pytest.raises(ScenarioEvaluationBuildError) as captured:
+        build_evaluation_project(overflow, evaluation_rail_id="RAIL_VDD")
+    assert captured.value.code == "SHARED_PAD_CLUSTER_TOO_LARGE"
+
+
+def test_split_power_components_share_one_ground_network_per_evaluation_rail() -> None:
+    base_payload = _base_project().model_dump(mode="json")
+    base_payload["stackup_layers"][2]["pwr_nets"].append("VDD_ALT")
+    base_payload["rails"].append(
+        RailSpec(
+            rail_id="RAIL_ALT",
+            family="ALT",
+            domain="VDD_ALT",
+            net="VDD_ALT",
+            site="SITE0",
+            pwr_layer="PWR1",
+            gnd_layer="GND1",
+        ).model_dump(mode="json")
+    )
+    # This fixture exercises electrical cluster construction, not the spatial
+    # partitioner.  Two domains cannot intentionally share one partition cell.
+    base_payload["partitions"] = []
+    base = ProjectSpec.model_validate(base_payload)
+    vdd_eligibility = RailEligibility(
+        rail_id="RAIL_VDD",
+        net="VDD",
+        pwr_layer="PWR1",
+        gnd_layer="GND1",
+        via_template_id="VT_ALLOWED",
+        allowed=True,
+    )
+    alt_eligibility = RailEligibility(
+        rail_id="RAIL_ALT",
+        net="VDD_ALT",
+        pwr_layer="PWR1",
+        gnd_layer="GND1",
+        via_template_id="VT_ALLOWED",
+        allowed=True,
+    )
+
+    def member(refdes: str, rail_id: str, net: str) -> ScenarioDecap:
+        payload = _decap(refdes, enabled=True, model_id="M1").model_dump(
+            mode="python"
+        )
+        payload.update(
+            {
+                "current_rail_id": rail_id,
+                "current_net": net,
+                "eligibility": {
+                    "RAIL_VDD": vdd_eligibility,
+                    "RAIL_ALT": alt_eligibility,
+                },
+            }
+        )
+        return ScenarioDecap.model_validate(payload)
+
+    members = (
+        member("C-A", "RAIL_VDD", "VDD"),
+        member("C-B", "RAIL_VDD", "VDD").model_copy(
+            update={
+                "enabled": False,
+                "pad_state": DecapPadState.ISOLATION_GAP,
+            }
+        ),
+        member("C-C", "RAIL_ALT", "VDD_ALT"),
+    )
+    power_landings = {
+        item.refdes: ScenarioViaLanding(
+            via_id=f"VP-{item.refdes}",
+            net="VDD",
+            endpoint_node_id=f"NP-{item.refdes}",
+            x_um=item.pwr_pad.x_um,
+            y_um=item.pwr_pad.y_um,
+            padstack="VIA",
+        )
+        for item in members
+    }
+    shared_ground = ScenarioViaLanding(
+        via_id="VG-COMMON",
+        net="DGND",
+        endpoint_node_id="NG-COMMON",
+        x_um=members[0].gnd_pad.x_um,
+        y_um=members[0].gnd_pad.y_um,
+        padstack="VIA",
+    )
+    connections = {
+        item.refdes: ScenarioDecapConnection(
+            refdes=item.refdes,
+            kind=DecapConnectionKind.SHARED_ANCHOR,
+            cluster_id="CL-SPLIT",
+            power_vias=(power_landings[item.refdes],),
+            ground_vias=(shared_ground,) if item is members[0] else (),
+        )
+        for item in members
+    }
+    cluster = SharedPadCluster(
+        cluster_id="CL-SPLIT",
+        state=SharedPadClusterState.ANCHORED,
+        member_refdes=tuple(item.refdes for item in members),
+        anchor_refdes=tuple(item.refdes for item in members),
+        dummy_refdes=(),
+        power_net="VDD",
+        ground_net="DGND",
+        layer="TOP",
+        power_edges=(("C-A", "C-B"), ("C-B", "C-C")),
+        ground_edges=(("C-A", "C-B"), ("C-B", "C-C")),
+        isolation_gap_refdes=("C-A", "C-B", "C-C"),
+        via_eligibility={
+            "VP-C-A": {"RAIL_VDD": vdd_eligibility},
+            "VP-C-B": {"RAIL_VDD": vdd_eligibility},
+            "VP-C-C": {"RAIL_ALT": alt_eligibility},
+        },
+    )
+    scenario = ScenarioSpec(
+        source=SourceIdentity(
+            path="C:/fixtures/fixture.spd",
+            name="fixture.spd",
+            size_bytes=123,
+            sha256="b" * 64,
+        ),
+        normalized_project=base,
+        decaps=members,
+        connection_analysis=SharedPadConnectionAnalysis(
+            version=SHARED_PAD_ANALYSIS_VERSION,
+            source_sha256="b" * 64,
+            connections=connections,
+            clusters=(cluster,),
+        ),
+    )
+
+    vdd_project = build_evaluation_project(
+        scenario, evaluation_rail_id="RAIL_VDD"
+    )
+    alt_project = build_evaluation_project(
+        scenario, evaluation_rail_id="RAIL_ALT"
+    )
+
+    assert len(vdd_project.shared_pad_clusters) == 1
+    vdd_cluster = vdd_project.shared_pad_clusters[0]
+    assert [
+        component.member_slot_ids for component in vdd_cluster.power_components
+    ] == [["SPDPI:C-A"]]
+    assert sum(
+        path.terminal == TerminalKind.GND for path in vdd_cluster.via_paths
+    ) == 1
+    assert len(alt_project.shared_pad_clusters) == 1
+    alt_cluster = alt_project.shared_pad_clusters[0]
+    assert [
+        component.member_slot_ids for component in alt_cluster.power_components
+    ] == [["SPDPI:C-C"]]
+    assert sum(
+        path.terminal == TerminalKind.GND for path in alt_cluster.via_paths
+    ) == 1
+    with pytest.raises(ScenarioEvaluationBuildError) as captured:
+        build_evaluation_project(scenario)
+    assert captured.value.code == "EVALUATION_RAIL_REQUIRED_FOR_SPLIT_CLUSTER"
+
+
+def test_unresolved_shared_cluster_blocks_evaluation_fail_closed() -> None:
+    scenario = _scenario()
+    first, second = scenario.decaps
+    reason = "shared top-pad evidence is ambiguous"
+    analysis = SharedPadConnectionAnalysis(
+        version=SHARED_PAD_ANALYSIS_VERSION,
+        source_sha256=scenario.source.sha256,
+        connections={
+            item.refdes: ScenarioDecapConnection(
+                refdes=item.refdes,
+                kind=DecapConnectionKind.UNRESOLVED,
+                cluster_id="CL-UNRESOLVED",
+                reason=reason,
+            )
+            for item in (first, second)
+        },
+        clusters=(
+            SharedPadCluster(
+                cluster_id="CL-UNRESOLVED",
+                state=SharedPadClusterState.UNRESOLVED,
+                member_refdes=(first.refdes, second.refdes),
+                anchor_refdes=(first.refdes,),
+                dummy_refdes=(second.refdes,),
+                power_net="VDD",
+                ground_net="DGND",
+                layer="TOP",
+                reason=reason,
+            ),
+        ),
+    )
+    unresolved = ScenarioSpec.model_validate(
+        {
+            **scenario.model_dump(mode="python"),
+            "connection_analysis": analysis,
+        }
+    )
+
+    with pytest.raises(ScenarioEvaluationBuildError) as captured:
+        build_evaluation_project(unresolved, evaluation_rail_id="RAIL_VDD")
+
+    assert captured.value.code == "SHARED_PAD_CLUSTER_UNRESOLVED"
+
+
+def test_unresolved_direct_decap_blocks_evaluation_fail_closed() -> None:
+    scenario = _scenario()
+    payload = scenario.model_dump(mode="python")
+    connection = payload["connection_analysis"]["connections"]["C1"]
+    connection.update(
+        {
+            "kind": DecapConnectionKind.UNRESOLVED,
+            "power_vias": (),
+            "ground_vias": (),
+            "reason": "exact PWR landing cannot be proven",
+        }
+    )
+    unresolved = ScenarioSpec.model_validate(payload)
+
+    with pytest.raises(ScenarioEvaluationBuildError) as captured:
+        build_evaluation_project(unresolved, evaluation_rail_id="RAIL_VDD")
+
+    assert captured.value.code == "DECAP_CONNECTION_UNRESOLVED"
 
 
 def test_disabled_unavailable_dnp_is_electrically_absent_and_does_not_block() -> None:

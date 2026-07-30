@@ -8,6 +8,7 @@ resume experience, but is excluded from the electrical design fingerprint.
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from datetime import datetime, timezone
 from enum import StrEnum
 from hashlib import sha256
@@ -33,6 +34,11 @@ from .version import __version__
 
 SCENARIO_SCHEMA_VERSION = "0.1"
 SCENARIO_APP_VERSION = __version__
+SHARED_PAD_ANALYSIS_VERSION = "DIRECT_TOP_COPPER_PATH_V3"
+_SUPPORTED_SHARED_PAD_ANALYSIS_VERSIONS = {
+    "DIRECT_TOP_PAD_GRAPH_V2",
+    SHARED_PAD_ANALYSIS_VERSION,
+}
 _SHA256_RE = re.compile(r"[0-9a-fA-F]{64}\Z")
 _COLOR_RE = re.compile(r"#[0-9a-fA-F]{6}(?:[0-9a-fA-F]{2})?\Z")
 
@@ -145,6 +151,13 @@ class ScenarioSide(StrEnum):
     UNKNOWN = "UNKNOWN"
 
 
+class DecapPadState(StrEnum):
+    """Physical usability of one routed decap pad cell."""
+
+    NORMAL = "NORMAL"
+    ISOLATION_GAP = "ISOLATION_GAP"
+
+
 class RailEligibility(ScenarioModel):
     """Precomputed assignment eligibility at a decap's actual power pad."""
 
@@ -161,6 +174,364 @@ class RailEligibility(ScenarioModel):
         if not self.allowed and not self.reason:
             raise ValueError("ineligible rails require a reason")
         return self
+
+
+class DecapConnectionKind(StrEnum):
+    """Source-derived electrical connection of one physical decap footprint."""
+
+    DIRECT = "DIRECT"
+    SHARED_ANCHOR = "SHARED_ANCHOR"
+    SHARED_DUMMY = "SHARED_DUMMY"
+    FLOATING_DUMMY = "FLOATING_DUMMY"
+    UNRESOLVED = "UNRESOLVED"
+    OUT_OF_SCOPE = "OUT_OF_SCOPE"
+
+
+class SharedPadClusterState(StrEnum):
+    """Whether a detected pad-short component has usable via connectivity."""
+
+    ANCHORED = "ANCHORED"
+    FLOATING = "FLOATING"
+    UNRESOLVED = "UNRESOLVED"
+
+
+class ScenarioViaLanding(ScenarioPoint):
+    """Immutable source evidence for one physical via landing at a pad node."""
+
+    model_config = ConfigDict(frozen=True)
+
+    via_id: str = Field(min_length=1)
+    net: str = Field(min_length=1)
+    endpoint_node_id: str = Field(min_length=1)
+    padstack: str = Field(min_length=1)
+    rotation_degrees: float = 0.0
+
+    @field_validator("rotation_degrees")
+    @classmethod
+    def finite_rotation(cls, value: float) -> float:
+        if not isfinite(value):
+            raise ValueError("via rotation must be finite")
+        return value
+
+
+class ScenarioDecapConnection(ScenarioModel):
+    """Complete source-connectivity classification for one scenario decap."""
+
+    model_config = ConfigDict(frozen=True)
+
+    refdes: str = Field(min_length=1)
+    kind: DecapConnectionKind
+    cluster_id: str | None = None
+    power_vias: tuple[ScenarioViaLanding, ...] = ()
+    ground_vias: tuple[ScenarioViaLanding, ...] = ()
+    reason: str | None = None
+
+    @field_validator("power_vias", "ground_vias")
+    @classmethod
+    def unique_via_ids(
+        cls, value: tuple[ScenarioViaLanding, ...]
+    ) -> tuple[ScenarioViaLanding, ...]:
+        keys = [item.via_id.casefold() for item in value]
+        if len(keys) != len(set(keys)):
+            raise ValueError("connection via IDs must be unique")
+        return tuple(sorted(value, key=lambda item: item.via_id.casefold()))
+
+    @model_validator(mode="after")
+    def valid_cluster_role(self) -> "ScenarioDecapConnection":
+        clustered = self.kind in {
+            DecapConnectionKind.SHARED_ANCHOR,
+            DecapConnectionKind.SHARED_DUMMY,
+        }
+        if clustered and self.cluster_id is None:
+            raise ValueError(f"{self.kind.value} connection requires cluster_id")
+        if self.kind in {
+            DecapConnectionKind.DIRECT,
+            DecapConnectionKind.OUT_OF_SCOPE,
+        } and self.cluster_id is not None:
+            raise ValueError(f"{self.kind.value} connection cannot name a cluster")
+        if self.kind in {
+            DecapConnectionKind.UNRESOLVED,
+            DecapConnectionKind.OUT_OF_SCOPE,
+        } and not self.reason:
+            raise ValueError(f"{self.kind.value} connection requires a reason")
+        if self.kind == DecapConnectionKind.DIRECT and (
+            not self.power_vias or not self.ground_vias
+        ):
+            raise ValueError(
+                "DIRECT connection requires PWR and GND via evidence"
+            )
+        if self.kind == DecapConnectionKind.SHARED_ANCHOR and not (
+            self.power_vias or self.ground_vias
+        ):
+            raise ValueError("SHARED_ANCHOR requires PWR or GND via evidence")
+        if self.kind in {
+            DecapConnectionKind.SHARED_DUMMY,
+            DecapConnectionKind.FLOATING_DUMMY,
+        } and (self.power_vias or self.ground_vias):
+            raise ValueError(f"{self.kind.value} connection cannot contain via evidence")
+        power_ids = {item.via_id.casefold() for item in self.power_vias}
+        ground_ids = {item.via_id.casefold() for item in self.ground_vias}
+        if power_ids.intersection(ground_ids):
+            raise ValueError("one via landing cannot be both PWR and GND evidence")
+        return self
+
+
+class SharedPadCluster(ScenarioModel):
+    """One immutable set of footprints joined by both top-side pad nodes.
+
+    ``anchor_refdes`` identifies members carrying proven PWR and/or GND Via
+    evidence.  An ANCHORED cluster is usable only when its aggregate PWR and
+    GND supernodes both have evidence; no nearest PWR/GND pairing is inferred.
+    An empty anchor set represents a floating, via-less pad cluster.
+    ``eligibility`` is the conservative whole-source-cluster intersection.
+    V2 stores ``via_eligibility`` once per unique physical PWR Via so a
+    post-edit graph component can derive its own rail choices without
+    duplicating data on every member that overlaps the same landing.  V3 adds
+    ``isolation_gap_refdes`` only where source TOP copper proves a collinear,
+    axis-aligned path whose local links can be cut by removing one pad cell.
+    """
+
+    model_config = ConfigDict(frozen=True)
+
+    cluster_id: str = Field(min_length=1)
+    state: SharedPadClusterState
+    member_refdes: tuple[str, ...] = Field(min_length=1)
+    anchor_refdes: tuple[str, ...] = ()
+    dummy_refdes: tuple[str, ...] = ()
+    power_net: str | None = None
+    ground_net: str | None = None
+    layer: str | None = None
+    power_edges: tuple[tuple[str, str], ...] = ()
+    ground_edges: tuple[tuple[str, str], ...] = ()
+    isolation_gap_refdes: tuple[str, ...] = ()
+    reason: str | None = None
+    eligibility: dict[str, RailEligibility] = Field(default_factory=dict)
+    via_eligibility: dict[str, dict[str, RailEligibility]] = Field(
+        default_factory=dict
+    )
+
+    @field_validator(
+        "member_refdes",
+        "anchor_refdes",
+        "dummy_refdes",
+        "isolation_gap_refdes",
+    )
+    @classmethod
+    def unique_ordered_refdes(cls, value: tuple[str, ...]) -> tuple[str, ...]:
+        normalized = tuple(str(item).strip() for item in value)
+        keys = [item.casefold() for item in normalized]
+        if any(not item for item in normalized) or len(keys) != len(set(keys)):
+            raise ValueError("shared-pad REFDES values must be nonblank and unique")
+        return tuple(sorted(normalized, key=str.casefold))
+
+    @field_validator("eligibility")
+    @classmethod
+    def keyed_by_rail_id(
+        cls, value: dict[str, RailEligibility]
+    ) -> dict[str, RailEligibility]:
+        seen: set[str] = set()
+        for key, item in value.items():
+            normalized = key.strip().casefold()
+            if not normalized or normalized in seen:
+                raise ValueError("cluster eligibility keys must be nonblank and unique")
+            seen.add(normalized)
+            if normalized != item.rail_id.casefold():
+                raise ValueError(
+                    f"cluster eligibility key {key!r} does not match rail "
+                    f"{item.rail_id!r}"
+                )
+        return value
+
+    @field_validator("via_eligibility")
+    @classmethod
+    def keyed_by_physical_power_via(
+        cls,
+        value: dict[str, dict[str, RailEligibility]],
+    ) -> dict[str, dict[str, RailEligibility]]:
+        result: dict[str, dict[str, RailEligibility]] = {}
+        seen_vias: set[str] = set()
+        for raw_via_id, eligibility in sorted(
+            value.items(), key=lambda item: item[0].casefold()
+        ):
+            via_id = raw_via_id.strip()
+            via_key = via_id.casefold()
+            if not via_id or via_key in seen_vias:
+                raise ValueError(
+                    "shared-pad physical PWR Via IDs must be nonblank and unique"
+                )
+            seen_vias.add(via_key)
+            seen_rails: set[str] = set()
+            canonical: dict[str, RailEligibility] = {}
+            for raw_rail_id, item in sorted(
+                eligibility.items(), key=lambda pair: pair[0].casefold()
+            ):
+                rail_id = raw_rail_id.strip()
+                rail_key = rail_id.casefold()
+                if not rail_id or rail_key in seen_rails:
+                    raise ValueError(
+                        f"PWR Via {via_id!r} eligibility rail keys must be "
+                        "nonblank and unique"
+                    )
+                if rail_key != item.rail_id.casefold():
+                    raise ValueError(
+                        f"PWR Via {via_id!r} eligibility key {rail_id!r} does "
+                        f"not match rail {item.rail_id!r}"
+                    )
+                seen_rails.add(rail_key)
+                canonical[rail_id] = item
+            result[via_id] = canonical
+        return result
+
+    @field_validator("power_edges", "ground_edges")
+    @classmethod
+    def valid_edges(
+        cls, value: tuple[tuple[str, str], ...]
+    ) -> tuple[tuple[str, str], ...]:
+        normalized: list[tuple[str, str]] = []
+        seen: set[tuple[str, str]] = set()
+        for left, right in value:
+            left = left.strip()
+            right = right.strip()
+            if not left or not right or left.casefold() == right.casefold():
+                raise ValueError("shared-pad edges require two distinct REFDES values")
+            edge = tuple(sorted((left, right), key=str.casefold))
+            key = (edge[0].casefold(), edge[1].casefold())
+            if key in seen:
+                raise ValueError("shared-pad edges must be unique")
+            seen.add(key)
+            normalized.append(edge)
+        return tuple(sorted(normalized, key=lambda edge: tuple(map(str.casefold, edge))))
+
+    @model_validator(mode="after")
+    def valid_membership(self) -> "SharedPadCluster":
+        members = {item.casefold() for item in self.member_refdes}
+        anchors = {item.casefold() for item in self.anchor_refdes}
+        dummies = {item.casefold() for item in self.dummy_refdes}
+        gap_eligible = {item.casefold() for item in self.isolation_gap_refdes}
+        if not anchors.issubset(members) or not dummies.issubset(members):
+            raise ValueError("shared-pad anchors and dummies must be cluster members")
+        if anchors.intersection(dummies) or anchors.union(dummies) != members:
+            raise ValueError(
+                "shared-pad anchors and dummies must partition the cluster members"
+            )
+        if not gap_eligible.issubset(members):
+            raise ValueError(
+                "shared-pad isolation-gap eligibility must reference cluster members"
+            )
+        if gap_eligible and self.state != SharedPadClusterState.ANCHORED:
+            raise ValueError(
+                "only an ANCHORED shared-pad cluster can allow isolation gaps"
+            )
+        edge_members = {
+            refdes.casefold()
+            for edges in (self.power_edges, self.ground_edges)
+            for edge in edges
+            for refdes in edge
+        }
+        if not edge_members.issubset(members):
+            raise ValueError("shared-pad edges must reference cluster members")
+
+        def edge_graph_is_connected(
+            edges: tuple[tuple[str, str], ...]
+        ) -> bool:
+            if len(members) <= 1:
+                return True
+            adjacency = {item: set() for item in members}
+            for left, right in edges:
+                left_key, right_key = left.casefold(), right.casefold()
+                adjacency[left_key].add(right_key)
+                adjacency[right_key].add(left_key)
+            visited: set[str] = set()
+            pending = [next(iter(members))]
+            while pending:
+                current = pending.pop()
+                if current in visited:
+                    continue
+                visited.add(current)
+                pending.extend(adjacency[current] - visited)
+            return visited == members
+
+        if self.state != SharedPadClusterState.UNRESOLVED and (
+            not edge_graph_is_connected(self.power_edges)
+            or not edge_graph_is_connected(self.ground_edges)
+        ):
+            raise ValueError(
+                "resolved shared-pad cluster PWR and GND source graphs must each "
+                "connect every member"
+            )
+        if self.state == SharedPadClusterState.ANCHORED:
+            if not anchors or len(members) < 2:
+                raise ValueError(
+                    "an ANCHORED shared-pad cluster requires an anchor and two members"
+                )
+        elif self.state == SharedPadClusterState.FLOATING:
+            if anchors or dummies != members:
+                raise ValueError("a FLOATING shared-pad cluster can contain only dummies")
+            if self.eligibility or self.via_eligibility:
+                raise ValueError("a FLOATING shared-pad cluster cannot have eligibility")
+        elif self.eligibility or self.via_eligibility:
+            raise ValueError("an UNRESOLVED shared-pad cluster cannot have eligibility")
+        if self.state == SharedPadClusterState.UNRESOLVED and not self.reason:
+            raise ValueError("an UNRESOLVED shared-pad cluster requires a reason")
+        return self
+
+    @property
+    def is_floating(self) -> bool:
+        return self.state == SharedPadClusterState.FLOATING
+
+
+class SharedPadConnectionAnalysis(ScenarioModel):
+    """Versioned, complete decap-connectivity result for one source SPD."""
+
+    model_config = ConfigDict(frozen=True)
+
+    version: str = Field(min_length=1)
+    source_sha256: str
+    connections: dict[str, ScenarioDecapConnection] = Field(default_factory=dict)
+    clusters: tuple[SharedPadCluster, ...] = ()
+
+    @field_validator("version")
+    @classmethod
+    def supported_analysis_version(cls, value: str) -> str:
+        if value not in _SUPPORTED_SHARED_PAD_ANALYSIS_VERSIONS:
+            raise ValueError(
+                f"unsupported shared-pad analysis version {value!r}; expected one "
+                f"of {sorted(_SUPPORTED_SHARED_PAD_ANALYSIS_VERSIONS)!r}"
+            )
+        return value
+
+    @field_validator("source_sha256")
+    @classmethod
+    def valid_source_hash(cls, value: str) -> str:
+        return _validate_sha256(value, label="connection-analysis source SHA-256")
+
+    @field_validator("connections")
+    @classmethod
+    def keyed_by_refdes(
+        cls, value: dict[str, ScenarioDecapConnection]
+    ) -> dict[str, ScenarioDecapConnection]:
+        seen: set[str] = set()
+        for key, item in value.items():
+            normalized = key.strip().casefold()
+            if not normalized or normalized in seen:
+                raise ValueError("connection REFDES keys must be nonblank and unique")
+            seen.add(normalized)
+            if key != item.refdes:
+                raise ValueError(
+                    f"connection key {key!r} does not exactly match REFDES "
+                    f"{item.refdes!r}"
+                )
+        return value
+
+    @field_validator("clusters")
+    @classmethod
+    def unique_ordered_clusters(
+        cls, value: tuple[SharedPadCluster, ...]
+    ) -> tuple[SharedPadCluster, ...]:
+        keys = [item.cluster_id.casefold() for item in value]
+        if len(keys) != len(set(keys)):
+            raise ValueError("shared-pad cluster IDs must be unique")
+        return tuple(sorted(value, key=lambda item: item.cluster_id.casefold()))
 
 
 class ScenarioDecap(ScenarioModel):
@@ -181,6 +552,7 @@ class ScenarioDecap(ScenarioModel):
     source_model_id: str | None = None
     model_id: str | None = None
     enabled: bool = True
+    pad_state: DecapPadState = DecapPadState.NORMAL
     source_mounted: bool = True
     eligibility: dict[str, RailEligibility] = Field(default_factory=dict)
 
@@ -211,6 +583,12 @@ class ScenarioDecap(ScenarioModel):
                 )
         return value
 
+    @model_validator(mode="after")
+    def isolation_gap_is_not_populated(self) -> "ScenarioDecap":
+        if self.pad_state == DecapPadState.ISOLATION_GAP and self.enabled:
+            raise ValueError("an ISOLATION_GAP decap cannot remain enabled")
+        return self
+
     @property
     def x_um(self) -> float:
         return self.center.x_um
@@ -222,6 +600,270 @@ class ScenarioDecap(ScenarioModel):
     @property
     def power_net(self) -> str:
         return self.current_net
+
+
+@dataclass(frozen=True, slots=True)
+class SharedPadCurrentComponent:
+    """One post-edit PWR component derived from immutable source pad edges."""
+
+    cluster_id: str
+    current_rail_id: str
+    current_net: str
+    member_refdes: tuple[str, ...]
+    power_anchor_refdes: tuple[str, ...]
+    power_vias: tuple[ScenarioViaLanding, ...]
+    ground_vias: tuple[ScenarioViaLanding, ...]
+
+
+@dataclass(frozen=True, slots=True)
+class SharedPadPowerViaConflict:
+    """One physical PWR Via claimed by more than one derived NET component."""
+
+    cluster_id: str
+    via_id: str
+    owner_refdes: tuple[str, ...]
+    component_member_refdes: tuple[tuple[str, ...], ...]
+
+
+class SharedPadRailAliasConflictError(ValueError):
+    """Raised when one physical same-NET component has mixed rail identities."""
+
+    def __init__(
+        self,
+        *,
+        cluster_id: str,
+        current_net: str,
+        member_refdes: tuple[str, ...],
+        rail_ids: tuple[str, ...],
+    ) -> None:
+        self.cluster_id = cluster_id
+        self.current_net = current_net
+        self.member_refdes = member_refdes
+        self.rail_ids = rail_ids
+        super().__init__(
+            f"shared-pad cluster {cluster_id!r} same-NET component "
+            f"{member_refdes} for {current_net!r} has mixed rail IDs {rail_ids}; "
+            "every physically shorted same-NET member must use one rail identity"
+        )
+
+
+class SharedPadActiveShortError(ValueError):
+    """Raised when adjacent active pad cells carry different PWR NETs."""
+
+    def __init__(
+        self,
+        *,
+        cluster_id: str,
+        left_refdes: str,
+        right_refdes: str,
+        left_net: str,
+        right_net: str,
+    ) -> None:
+        self.cluster_id = cluster_id
+        self.left_refdes = left_refdes
+        self.right_refdes = right_refdes
+        self.left_net = left_net
+        self.right_net = right_net
+        super().__init__(
+            f"shared-pad edge {left_refdes!r}-{right_refdes!r} in "
+            f"{cluster_id!r} remains active across different NETs "
+            f"{left_net!r}/{right_net!r}; insert an ISOLATION_GAP pad cell"
+        )
+
+
+@dataclass(frozen=True, slots=True)
+class SharedPadComponentDerivation:
+    """Deterministic dynamic PWR components and fail-closed Via conflicts."""
+
+    components: tuple[SharedPadCurrentComponent, ...]
+    shared_power_via_conflicts: tuple[SharedPadPowerViaConflict, ...]
+
+
+def _casefold_index(value: Mapping[str, Any], *, label: str) -> dict[str, Any]:
+    result: dict[str, Any] = {}
+    for raw_key, item in value.items():
+        key = str(raw_key).casefold()
+        if key in result:
+            raise ValueError(f"{label} keys must be case-insensitively unique")
+        result[key] = item
+    return result
+
+
+def derive_shared_pad_current_components(
+    cluster: SharedPadCluster,
+    decap_by_refdes: Mapping[str, ScenarioDecap],
+    connection_by_refdes: Mapping[str, ScenarioDecapConnection],
+) -> SharedPadComponentDerivation:
+    """Derive active components after removing proven isolation-gap cells.
+
+    A normal/DNP source member remains a conductive graph node.  Only an
+    explicit ``ISOLATION_GAP`` removes its incident edges, and any unlike NETs
+    that still touch across an active edge are rejected as a physical short.
+    A physical PWR Via may be listed by multiple source members when its TOP pad
+    overlaps them.  Reuse inside one derived component is deduplicated; reuse
+    across components is reported as an explicit conflict.
+    """
+
+    decaps = _casefold_index(decap_by_refdes, label="decap")
+    connections = _casefold_index(connection_by_refdes, label="connection")
+    member_keys = tuple(item.casefold() for item in cluster.member_refdes)
+    missing_decaps = [
+        cluster.member_refdes[index]
+        for index, key in enumerate(member_keys)
+        if key not in decaps
+    ]
+    missing_connections = [
+        cluster.member_refdes[index]
+        for index, key in enumerate(member_keys)
+        if key not in connections
+    ]
+    if missing_decaps or missing_connections:
+        raise ValueError(
+            f"shared-pad cluster {cluster.cluster_id!r} cannot be derived "
+            f"(missing decaps={missing_decaps}, connections={missing_connections})"
+        )
+
+    order = {key: index for index, key in enumerate(member_keys)}
+    active_keys = tuple(
+        key
+        for key in member_keys
+        if decaps[key].pad_state != DecapPadState.ISOLATION_GAP
+    )
+    active_set = set(active_keys)
+    adjacency: dict[str, set[str]] = {key: set() for key in active_keys}
+    for left_refdes, right_refdes in cluster.power_edges:
+        left = left_refdes.casefold()
+        right = right_refdes.casefold()
+        if left not in active_set or right not in active_set:
+            continue
+        if decaps[left].current_net.casefold() != decaps[right].current_net.casefold():
+            raise SharedPadActiveShortError(
+                cluster_id=cluster.cluster_id,
+                left_refdes=decaps[left].refdes,
+                right_refdes=decaps[right].refdes,
+                left_net=decaps[left].current_net,
+                right_net=decaps[right].current_net,
+            )
+        adjacency[left].add(right)
+        adjacency[right].add(left)
+
+    grouped_keys: list[tuple[str, ...]] = []
+    remaining = set(active_keys)
+    while remaining:
+        first = min(remaining, key=order.__getitem__)
+        pending = [first]
+        component: set[str] = set()
+        while pending:
+            current = pending.pop()
+            if current in component:
+                continue
+            component.add(current)
+            pending.extend(adjacency[current] - component)
+        remaining.difference_update(component)
+        grouped_keys.append(tuple(sorted(component, key=order.__getitem__)))
+
+    components: list[SharedPadCurrentComponent] = []
+    via_components: dict[str, set[int]] = {}
+    via_owners: dict[str, set[str]] = {}
+    canonical_via_id: dict[str, str] = {}
+    for component_index, keys in enumerate(grouped_keys):
+        members = tuple(decaps[key].refdes for key in keys)
+        first_decap = decaps[keys[0]]
+        rail_ids_by_key = {
+            decaps[key].current_rail_id.casefold(): decaps[key].current_rail_id
+            for key in keys
+        }
+        if len(rail_ids_by_key) != 1:
+            raise SharedPadRailAliasConflictError(
+                cluster_id=cluster.cluster_id,
+                current_net=first_decap.current_net,
+                member_refdes=members,
+                rail_ids=tuple(
+                    rail_ids_by_key[key] for key in sorted(rail_ids_by_key)
+                ),
+            )
+        power_by_key: dict[str, ScenarioViaLanding] = {}
+        ground_by_key: dict[str, ScenarioViaLanding] = {}
+        anchor_refdes: list[str] = []
+        for key in keys:
+            connection = connections[key]
+            if connection.power_vias:
+                anchor_refdes.append(decaps[key].refdes)
+            for landing in connection.power_vias:
+                via_key = landing.via_id.casefold()
+                power_by_key.setdefault(via_key, landing)
+                canonical_via_id.setdefault(via_key, landing.via_id)
+                via_components.setdefault(via_key, set()).add(component_index)
+                via_owners.setdefault(via_key, set()).add(decaps[key].refdes)
+            for landing in connection.ground_vias:
+                ground_by_key.setdefault(landing.via_id.casefold(), landing)
+        components.append(
+            SharedPadCurrentComponent(
+                cluster_id=cluster.cluster_id,
+                current_rail_id=first_decap.current_rail_id,
+                current_net=first_decap.current_net,
+                member_refdes=members,
+                power_anchor_refdes=tuple(anchor_refdes),
+                power_vias=tuple(power_by_key[key] for key in sorted(power_by_key)),
+                ground_vias=tuple(
+                    ground_by_key[key] for key in sorted(ground_by_key)
+                ),
+            )
+        )
+
+    conflicts = tuple(
+        SharedPadPowerViaConflict(
+            cluster_id=cluster.cluster_id,
+            via_id=canonical_via_id[via_key],
+            owner_refdes=tuple(
+                sorted(via_owners[via_key], key=str.casefold)
+            ),
+            component_member_refdes=tuple(
+                components[index].member_refdes
+                for index in sorted(via_components[via_key])
+            ),
+        )
+        for via_key in sorted(via_components)
+        if len(via_components[via_key]) > 1
+    )
+    return SharedPadComponentDerivation(
+        components=tuple(components),
+        shared_power_via_conflicts=conflicts,
+    )
+
+
+def shared_pad_component_eligibility(
+    cluster: SharedPadCluster,
+    component: SharedPadCurrentComponent,
+) -> dict[str, RailEligibility]:
+    """Intersect rail eligibility over unique physical PWR vias in a component."""
+
+    via_eligibility = {
+        via_id.casefold(): eligibility
+        for via_id, eligibility in cluster.via_eligibility.items()
+    }
+    common: dict[str, RailEligibility] | None = None
+    for landing in component.power_vias:
+        eligibility = via_eligibility.get(landing.via_id.casefold(), {})
+        allowed = {
+            item.rail_id.casefold(): item
+            for item in eligibility.values()
+            if item.allowed
+        }
+        if common is None:
+            common = allowed
+        else:
+            common = {
+                key: item for key, item in common.items() if key in allowed
+            }
+        if not common:
+            return {}
+    if common is None:
+        return {}
+    return {
+        item.rail_id: item
+        for item in sorted(common.values(), key=lambda value: value.rail_id.casefold())
+    }
 
 
 class BaselineModelBinding(ScenarioModel):
@@ -415,6 +1057,7 @@ class ScenarioSpec(ScenarioModel):
     source: SourceIdentity
     normalized_project: dict[str, Any]
     decaps: list[ScenarioDecap] = Field(default_factory=list)
+    connection_analysis: SharedPadConnectionAnalysis | None = None
     net_colors: dict[str, str] = Field(default_factory=dict)
     selected_refdes: list[str] = Field(default_factory=list)
     revision: int = Field(default=0, ge=0)
@@ -441,9 +1084,21 @@ class ScenarioSpec(ScenarioModel):
     def validate_normalized_project(cls, value: object) -> dict[str, Any]:
         if isinstance(value, ProjectSpec):
             project = value
+            preserve_legacy_empty_clusters = False
         else:
+            preserve_legacy_empty_clusters = (
+                isinstance(value, Mapping)
+                and "shared_pad_clusters" not in value
+            )
             project = ProjectSpec.model_validate(value)
-        return project.model_dump(mode="json")
+        payload = project.model_dump(mode="json")
+        # ProjectSpec gained an optional shared-pad collection while scenario
+        # schema 0.1 remained readable.  Do not inject the new empty default
+        # into a legacy normalized project: its saved design/baseline hashes
+        # were calculated before this key existed.
+        if preserve_legacy_empty_clusters and not project.shared_pad_clusters:
+            payload.pop("shared_pad_clusters", None)
+        return payload
 
     @field_validator("net_colors")
     @classmethod
@@ -471,6 +1126,338 @@ class ScenarioSpec(ScenarioModel):
             name: _validate_sha256(digest, label=f"attachment {name!r} SHA-256")
             for name, digest in value.items()
         }
+
+    def _validate_connection_analysis(
+        self,
+        decap_by_key: dict[str, ScenarioDecap],
+    ) -> None:
+        analysis = self.connection_analysis
+        if analysis is None:
+            # Schema 0.1 scenarios written by earlier releases must retain
+            # their byte-derived fingerprints and remain readable.  PWR-edit
+            # services fail closed until source connectivity is analyzed.
+            return
+        if analysis.source_sha256 != self.source.sha256:
+            raise ValueError("connection analysis does not match the source SPD")
+
+        connection_by_key = {
+            item.refdes.casefold(): item for item in analysis.connections.values()
+        }
+        if set(connection_by_key) != set(decap_by_key):
+            missing = sorted(set(decap_by_key) - set(connection_by_key))
+            extra = sorted(set(connection_by_key) - set(decap_by_key))
+            raise ValueError(
+                "connection analysis must classify every scenario decap exactly once "
+                f"(missing={missing}, extra={extra})"
+            )
+        for key, connection in connection_by_key.items():
+            if connection.refdes != decap_by_key[key].refdes:
+                raise ValueError(
+                    "connection-analysis REFDES spelling must match the scenario decap"
+                )
+
+        physical_vias: dict[
+            str, tuple[str, str, ScenarioViaLanding]
+        ] = {}
+        for connection in connection_by_key.values():
+            unit_id = (
+                f"cluster:{connection.cluster_id.casefold()}"
+                if connection.cluster_id is not None
+                else f"decap:{connection.refdes.casefold()}"
+            )
+            for terminal, landings in (
+                ("PWR", connection.power_vias),
+                ("GND", connection.ground_vias),
+            ):
+                for landing in landings:
+                    via_key = landing.via_id.casefold()
+                    previous = physical_vias.get(via_key)
+                    if previous is None:
+                        physical_vias[via_key] = (unit_id, terminal, landing)
+                        continue
+                    previous_unit, previous_terminal, previous_landing = previous
+                    if previous_unit != unit_id:
+                        raise ValueError(
+                            f"physical Via {landing.via_id!r} is reused across "
+                            "independent decap/shared-pad units"
+                        )
+                    if (
+                        previous_terminal != terminal
+                        or previous_landing != landing
+                    ):
+                        raise ValueError(
+                            f"physical Via {landing.via_id!r} has conflicting "
+                            "terminal or landing evidence"
+                        )
+
+        cluster_by_key = {
+            item.cluster_id.casefold(): item for item in analysis.clusters
+        }
+        membership: dict[str, SharedPadCluster] = {}
+        rail_by_key = {
+            item.rail_id.casefold(): item for item in self.base_project.rails
+        }
+        for cluster in analysis.clusters:
+            member_keys = {item.casefold() for item in cluster.member_refdes}
+            anchor_keys = {item.casefold() for item in cluster.anchor_refdes}
+            unknown_members = member_keys - set(decap_by_key)
+            if unknown_members:
+                raise ValueError(
+                    f"shared-pad cluster {cluster.cluster_id!r} contains unknown "
+                    f"REFDES values: {sorted(unknown_members)}"
+                )
+            overlap = member_keys.intersection(membership)
+            if overlap:
+                raise ValueError(
+                    "scenario decaps cannot belong to more than one shared-pad "
+                    f"cluster: {sorted(overlap)}"
+                )
+            for key in member_keys:
+                membership[key] = cluster
+
+            source_nets = {
+                decap_by_key[key].source_net.casefold() for key in member_keys
+            }
+            source_rails = {
+                decap_by_key[key].source_rail_id.casefold() for key in member_keys
+            }
+            if cluster.state != SharedPadClusterState.UNRESOLVED and any(
+                len(values) != 1
+                for values in (source_nets, source_rails)
+            ):
+                raise ValueError(
+                    f"shared-pad cluster {cluster.cluster_id!r} members must share "
+                    "one source PWR assignment"
+                )
+            if cluster.state == SharedPadClusterState.ANCHORED:
+                source_rail_key = next(iter(source_rails))
+                source_rail = rail_by_key.get(source_rail_key)
+                if source_rail is None:
+                    raise ValueError(
+                        f"shared-pad cluster {cluster.cluster_id!r} references "
+                        f"unknown source rail {source_rail_key!r}"
+                    )
+                if source_rail.net.casefold() not in source_nets:
+                    raise ValueError(
+                        f"shared-pad cluster {cluster.cluster_id!r} source NET "
+                        f"does not match rail {source_rail.rail_id!r}"
+                    )
+                for key in member_keys:
+                    decap = decap_by_key[key]
+                    current_rail = rail_by_key.get(
+                        decap.current_rail_id.casefold()
+                    )
+                    if current_rail is None:
+                        raise ValueError(
+                            f"{decap.refdes}: shared-pad member references unknown "
+                            f"current rail {decap.current_rail_id!r}"
+                        )
+                    if current_rail.net.casefold() != decap.current_net.casefold():
+                        raise ValueError(
+                            f"{decap.refdes}: current NET does not match rail "
+                            f"{current_rail.rail_id!r}"
+                        )
+            if (
+                cluster.state == SharedPadClusterState.ANCHORED
+                and not cluster.via_eligibility
+            ):
+                raise ValueError(
+                    f"anchored shared-pad cluster {cluster.cluster_id!r} requires "
+                    "per-physical-PWR-Via eligibility"
+                )
+            if (
+                cluster.state != SharedPadClusterState.UNRESOLVED
+                and
+                cluster.power_net is not None
+                and cluster.power_net.casefold() not in source_nets
+            ):
+                raise ValueError(
+                    f"shared-pad cluster {cluster.cluster_id!r} PWR NET does not "
+                    "match its member source assignment"
+                )
+
+            for raw_rail_id, eligibility in cluster.eligibility.items():
+                rail = rail_by_key.get(raw_rail_id.casefold())
+                if rail is None:
+                    raise ValueError(
+                        f"shared-pad cluster {cluster.cluster_id!r} references "
+                        f"unknown rail {raw_rail_id!r}"
+                    )
+                if (
+                    eligibility.rail_id.casefold() != rail.rail_id.casefold()
+                    or eligibility.net.casefold() != rail.net.casefold()
+                    or eligibility.pwr_layer.casefold() != rail.pwr_layer.casefold()
+                    or eligibility.gnd_layer.casefold() != rail.gnd_layer.casefold()
+                ):
+                    raise ValueError(
+                        f"shared-pad cluster {cluster.cluster_id!r} eligibility "
+                        f"does not match rail {rail.rail_id!r}"
+                    )
+            for via_id, via_eligibility in cluster.via_eligibility.items():
+                for raw_rail_id, eligibility in via_eligibility.items():
+                    rail = rail_by_key.get(raw_rail_id.casefold())
+                    if rail is None:
+                        raise ValueError(
+                            f"shared-pad cluster {cluster.cluster_id!r} PWR Via "
+                            f"{via_id!r} references unknown rail {raw_rail_id!r}"
+                        )
+                    if (
+                        eligibility.rail_id.casefold() != rail.rail_id.casefold()
+                        or eligibility.net.casefold() != rail.net.casefold()
+                        or eligibility.pwr_layer.casefold()
+                        != rail.pwr_layer.casefold()
+                        or eligibility.gnd_layer.casefold()
+                        != rail.gnd_layer.casefold()
+                    ):
+                        raise ValueError(
+                            f"shared-pad cluster {cluster.cluster_id!r} PWR Via "
+                            f"{via_id!r} eligibility does not match rail "
+                            f"{rail.rail_id!r}"
+                        )
+
+            for key in member_keys:
+                connection = connection_by_key[key]
+                if connection.cluster_id != cluster.cluster_id:
+                    raise ValueError(
+                        f"{connection.refdes}: connection cluster identity does not "
+                        f"match {cluster.cluster_id!r}"
+                    )
+                if cluster.state == SharedPadClusterState.FLOATING:
+                    expected_kind = DecapConnectionKind.FLOATING_DUMMY
+                elif cluster.state == SharedPadClusterState.UNRESOLVED:
+                    expected_kind = DecapConnectionKind.UNRESOLVED
+                else:
+                    expected_kind = (
+                        DecapConnectionKind.SHARED_ANCHOR
+                        if key in anchor_keys
+                        else DecapConnectionKind.SHARED_DUMMY
+                    )
+                if connection.kind != expected_kind:
+                    raise ValueError(
+                        f"{connection.refdes}: expected connection kind "
+                        f"{expected_kind.value}, found {connection.kind.value}"
+                    )
+            if cluster.state == SharedPadClusterState.ANCHORED:
+                member_connections = (
+                    connection_by_key[key] for key in member_keys
+                )
+                aggregate_power: dict[str, ScenarioViaLanding] = {}
+                aggregate_ground: set[str] = set()
+                for connection in member_connections:
+                    for landing in connection.power_vias:
+                        aggregate_power.setdefault(
+                            landing.via_id.casefold(), landing
+                        )
+                    aggregate_ground.update(
+                        item.via_id.casefold() for item in connection.ground_vias
+                    )
+                if not aggregate_power or not aggregate_ground:
+                    raise ValueError(
+                        f"anchored shared-pad cluster {cluster.cluster_id!r} "
+                        "requires aggregate PWR and GND via evidence"
+                    )
+                eligibility_via_keys = {
+                    item.casefold() for item in cluster.via_eligibility
+                }
+                if eligibility_via_keys != set(aggregate_power):
+                    missing = sorted(set(aggregate_power) - eligibility_via_keys)
+                    extra = sorted(eligibility_via_keys - set(aggregate_power))
+                    raise ValueError(
+                        f"shared-pad cluster {cluster.cluster_id!r} must persist "
+                        "eligibility for every exact physical PWR Via "
+                        f"(missing={missing}, extra={extra})"
+                    )
+                via_eligibility_by_key = {
+                    via_id.casefold(): eligibility
+                    for via_id, eligibility in cluster.via_eligibility.items()
+                }
+                for aggregate in cluster.eligibility.values():
+                    rail_key = aggregate.rail_id.casefold()
+                    if any(
+                        not (
+                            item := next(
+                                (
+                                    value
+                                    for value in eligibility.values()
+                                    if value.rail_id.casefold() == rail_key
+                                ),
+                                None,
+                            )
+                        )
+                        or not item.allowed
+                        for eligibility in via_eligibility_by_key.values()
+                    ):
+                        raise ValueError(
+                            f"shared-pad cluster {cluster.cluster_id!r} aggregate "
+                            f"eligibility for rail {aggregate.rail_id!r} is not "
+                            "supported by every physical PWR Via"
+                        )
+
+                derivation = derive_shared_pad_current_components(
+                    cluster,
+                    {key: decap_by_key[key] for key in member_keys},
+                    {key: connection_by_key[key] for key in member_keys},
+                )
+                if derivation.shared_power_via_conflicts:
+                    conflict = derivation.shared_power_via_conflicts[0]
+                    raise ValueError(
+                        f"shared-pad cluster {cluster.cluster_id!r} physical PWR "
+                        f"Via {conflict.via_id!r} crosses current-NET components "
+                        f"{conflict.component_member_refdes}"
+                    )
+                for component in derivation.components:
+                    if not component.power_vias:
+                        raise ValueError(
+                            f"shared-pad cluster {cluster.cluster_id!r} has a "
+                            "dummy-only current-NET island without a physical PWR "
+                            f"Via anchor: {component.member_refdes}"
+                        )
+                    allowed = shared_pad_component_eligibility(
+                        cluster, component
+                    )
+                    if component.current_rail_id.casefold() not in {
+                        item.rail_id.casefold() for item in allowed.values()
+                    }:
+                        raise ValueError(
+                            f"shared-pad cluster {cluster.cluster_id!r} current rail "
+                            f"{component.current_rail_id!r} is not eligible at every "
+                            "physical PWR Via serving component "
+                            f"{component.member_refdes}"
+                        )
+
+        for key, connection in connection_by_key.items():
+            if connection.cluster_id is None:
+                if key in membership:
+                    raise ValueError(
+                        f"{connection.refdes}: cluster membership is missing from "
+                        "its connection status"
+                    )
+                continue
+            cluster = cluster_by_key.get(connection.cluster_id.casefold())
+            if cluster is None or key not in {
+                item.casefold() for item in cluster.member_refdes
+            }:
+                raise ValueError(
+                    f"{connection.refdes}: connection references an unknown or "
+                    "unrelated shared-pad cluster"
+                )
+
+        for key, decap in decap_by_key.items():
+            if decap.pad_state != DecapPadState.ISOLATION_GAP:
+                continue
+            cluster = membership.get(key)
+            if (
+                cluster is None
+                or cluster.state != SharedPadClusterState.ANCHORED
+                or key
+                not in {
+                    item.casefold() for item in cluster.isolation_gap_refdes
+                }
+            ):
+                raise ValueError(
+                    f"{decap.refdes}: ISOLATION_GAP is not authorized by a "
+                    "source-proven collinear TOP copper path"
+                )
 
     @model_validator(mode="after")
     def consistent_indexes(self) -> "ScenarioSpec":
@@ -540,6 +1527,10 @@ class ScenarioSpec(ScenarioModel):
             item.rail_id.casefold(): item.rail_id for item in self.base_project.rails
         }
         decap_by_key = {item.refdes.casefold(): item for item in self.decaps}
+        self._validate_connection_analysis(decap_by_key)
+        connected_refdes = {
+            item.casefold() for item in self.electrically_connected_refdes
+        }
         capture_keys = [key.casefold() for key in self.baseline_captures]
         if len(capture_keys) != len(set(capture_keys)):
             raise ValueError("baseline capture rail keys must be unique")
@@ -563,6 +1554,7 @@ class ScenarioSpec(ScenarioModel):
                 for item in self.decaps
                 if item.source_mounted
                 and item.source_rail_id.casefold() == rail_key
+                and item.refdes.casefold() in connected_refdes
             }
             actual = {item.refdes.casefold() for item in capture.model_bindings}
             if actual != expected:
@@ -614,6 +1606,32 @@ class ScenarioSpec(ScenarioModel):
     def base_project(self) -> ProjectSpec:
         return ProjectSpec.model_validate(self.normalized_project)
 
+    @property
+    def electrically_connected_refdes(self) -> tuple[str, ...]:
+        """Return source-order decaps that can contribute to PI evaluation.
+
+        Legacy scenarios without connection analysis retain their historical
+        all-decaps behavior until the verified source SPD is reanalyzed.
+        """
+
+        if self.connection_analysis is None:
+            return tuple(item.refdes for item in self.decaps)
+        connected_kinds = {
+            DecapConnectionKind.DIRECT,
+            DecapConnectionKind.SHARED_ANCHOR,
+            DecapConnectionKind.SHARED_DUMMY,
+        }
+        connected_keys = {
+            item.refdes.casefold()
+            for item in self.connection_analysis.connections.values()
+            if item.kind in connected_kinds
+        }
+        return tuple(
+            item.refdes
+            for item in self.decaps
+            if item.refdes.casefold() in connected_keys
+        )
+
     def _design_payload(self) -> dict[str, Any]:
         cached_attachment_keys = {
             metadata.attachment_name.casefold()
@@ -628,7 +1646,7 @@ class ScenarioSpec(ScenarioModel):
             item.model_dump(mode="json")
             for item in sorted(self.decaps, key=lambda entry: entry.refdes.casefold())
         ]
-        return {
+        payload = {
             "schema_version": self.schema_version,
             "source": {
                 "size_bytes": self.source.size_bytes,
@@ -638,6 +1656,11 @@ class ScenarioSpec(ScenarioModel):
             "decaps": decaps,
             "attachment_hashes": electrical_attachment_hashes,
         }
+        if self.connection_analysis is not None:
+            payload["connection_analysis"] = self.connection_analysis.model_dump(
+                mode="json"
+            )
+        return payload
 
     @property
     def design_fingerprint(self) -> str:
@@ -673,9 +1696,15 @@ class ScenarioSpec(ScenarioModel):
                     },
                 }
             )
-        return _hash_payload(
-            {"source_sha256": self.source.sha256, "decaps": source_decaps}
-        )
+        payload: dict[str, Any] = {
+            "source_sha256": self.source.sha256,
+            "decaps": source_decaps,
+        }
+        if self.connection_analysis is not None:
+            payload["connection_analysis"] = self.connection_analysis.model_dump(
+                mode="json"
+            )
+        return _hash_payload(payload)
 
     def baseline_evaluation_input_fingerprint(
         self,
@@ -727,6 +1756,11 @@ class ScenarioSpec(ScenarioModel):
                 )
 
         project = self.base_project.model_dump(mode="json")
+        if (
+            "shared_pad_clusters" not in self.normalized_project
+            and not project.get("shared_pad_clusters")
+        ):
+            project.pop("shared_pad_clusters", None)
         project.pop("attachment_names", None)
         project.pop("metadata", None)
         project["cap_models"] = [
@@ -754,6 +1788,9 @@ class ScenarioSpec(ScenarioModel):
         rail_by_key = {
             item.rail_id.casefold(): item.rail_id for item in self.base_project.rails
         }
+        connected_keys = {
+            item.casefold() for item in self.electrically_connected_refdes
+        }
         captures = dict(self.baseline_captures)
         for raw_rail_id in rail_ids:
             rail_key = raw_rail_id.casefold()
@@ -769,6 +1806,7 @@ class ScenarioSpec(ScenarioModel):
                 if (
                     not decap.source_mounted
                     or decap.source_rail_id.casefold() != rail_key
+                    or decap.refdes.casefold() not in connected_keys
                 ):
                     continue
                 model_id = decap.source_model_id or decap.model_id
@@ -816,11 +1854,15 @@ class ScenarioSpec(ScenarioModel):
         }
         original_decaps: list[ScenarioDecap] = []
         capture_rail_key = capture.rail_id.casefold()
+        connected_keys = {
+            item.casefold() for item in self.electrically_connected_refdes
+        }
         for decap in self.decaps:
             model_id = decap.source_model_id
             if (
                 decap.source_mounted
                 and decap.source_rail_id.casefold() == capture_rail_key
+                and decap.refdes.casefold() in connected_keys
             ):
                 model_id = models[decap.refdes.casefold()]
             original_decaps.append(
@@ -831,6 +1873,7 @@ class ScenarioSpec(ScenarioModel):
                         "current_rail_id": decap.source_rail_id,
                         "model_id": model_id,
                         "enabled": decap.source_mounted,
+                        "pad_state": DecapPadState.NORMAL,
                     }
                 )
             )
@@ -870,16 +1913,30 @@ __all__ = [
     "BaselineCapture",
     "BaselineModelBinding",
     "CachedEvaluationMetadata",
+    "DecapConnectionKind",
+    "DecapPadState",
     "EvaluationRole",
     "RailEligibility",
     "SCENARIO_APP_VERSION",
     "SCENARIO_SCHEMA_VERSION",
     "ScenarioDecap",
+    "ScenarioDecapConnection",
     "ScenarioPad",
     "ScenarioPoint",
     "ScenarioResultKey",
     "ScenarioSide",
     "ScenarioSpec",
+    "ScenarioViaLanding",
+    "SharedPadCluster",
+    "SharedPadClusterState",
+    "SharedPadComponentDerivation",
+    "SharedPadConnectionAnalysis",
+    "SharedPadCurrentComponent",
+    "SharedPadPowerViaConflict",
+    "SharedPadRailAliasConflictError",
+    "SharedPadActiveShortError",
     "SourceIdentity",
+    "derive_shared_pad_current_components",
     "scenario_design_fingerprint",
+    "shared_pad_component_eligibility",
 ]
