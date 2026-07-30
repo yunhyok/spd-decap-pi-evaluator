@@ -462,3 +462,24 @@ def test_netlist_uses_explicit_group_markers_and_inherited_rows(tmp_path: Path) 
     assert ground == ("DGND", "AGND")
     assert power == ("VDD_CORE/0", "VDD_AUX/0")
     assert "SIG_BEFORE" not in power
+
+
+def test_netlist_truncated_arrow_keeps_the_inherited_group(tmp_path: Path) -> None:
+    source = tmp_path / "truncated-arrow-netlist.spd"
+    source.write_text(
+        ".NetList\n"
+        "DGND -> GroundNets\n"
+        "VDD_CORE/0 -> PowerNets\n"
+        "VDD_AUX/0 ->\n"
+        ".EndNetList\n",
+        encoding="ascii",
+    )
+
+    diagnostics = []
+    with source.open("rb") as handle, mmap.mmap(
+        handle.fileno(), 0, access=mmap.ACCESS_READ
+    ) as data:
+        power, ground = _parse_netlist(data, {"dgnd"}, diagnostics)
+
+    assert ground == ("DGND",)
+    assert power == ("VDD_CORE/0", "VDD_AUX/0")

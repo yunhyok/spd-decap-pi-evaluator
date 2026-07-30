@@ -1,6 +1,6 @@
 # SPD Decap PI Evaluator
 
-> 프로그램: **SPD Decap PI Evaluator v0.9.1**
+> 프로그램: **SPD Decap PI Evaluator v0.9.2**
 > 저장소: 기존 PI Calculator와 분리된 독립 프로그램
 > 해석 경계: 선택한 PWR rail의 pre-design `Zii`; 최종 PowerSI/SIwave 검증을 대체하지 않음
 
@@ -84,7 +84,7 @@ powershell.exe -ExecutionPolicy Bypass -NoProfile -File .\scripts\build_spd_deca
 산출물:
 
 - `dist\SPDDecapPIEvaluator\SPDDecapPIEvaluator.exe`
-- `installer-output\SPDDecapPIEvaluatorSetup-0.9.1.exe`
-- `installer-output\SPDDecapPIEvaluatorSetup-0.9.1.exe.sha256`
+- `installer-output\SPDDecapPIEvaluatorSetup-0.9.2.exe`
+- `installer-output\SPDDecapPIEvaluatorSetup-0.9.2.exe.sha256`
 
 프로그램명과 버전은 title bar와 installer metadata에 함께 표시된다.

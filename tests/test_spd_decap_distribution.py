@@ -944,17 +944,16 @@ def test_eleven_thousand_direct_candidates_use_fast_exact_distance_flow() -> Non
         bump_x={"R2": 0.0},
     )
 
-    time_limit_s = 10.0
-    milestones: dict[int, float] = {}
+    solver_time_limit_s = 10.0
+    full_call_performance_budget_s = 30.0
+    started = perf_counter()
     plan = compute_distribution_plan(
         scenario,
         {("R1", "M1"): 10_900, ("R2", "M1"): 100},
         DistributionDistanceMode.NEAREST,
-        progress=lambda percent, _message: milestones.setdefault(
-            percent, perf_counter()
-        ),
-        time_limit_s=time_limit_s,
+        time_limit_s=solver_time_limit_s,
     )
+    elapsed = perf_counter() - started
 
     assert plan.status == DistributionPlanStatus.FULL
     assert plan.fulfilled_count == 100
@@ -965,11 +964,10 @@ def test_eleven_thousand_direct_candidates_use_fast_exact_distance_flow() -> Non
         item.code == "DISTANCE_OPTIMIZATION_FALLBACK"
         for item in plan.diagnostics
     )
-    # Both budgeted optimizer stages run between the 35% and 85% milestones.
-    # The post-solve scenario revalidation and fingerprinting that follow them
-    # are proportional to the decap count and are not covered by time_limit_s,
-    # so timing the whole call cannot be compared against that budget.
-    assert milestones[85] - milestones[35] < time_limit_s
+    # Solver time_limit_s applies independently to multiple optimizer stages;
+    # this separate, deliberately looser end-to-end target retains coverage of
+    # post-solve validation, export-row creation, and scenario fingerprinting.
+    assert elapsed < full_call_performance_budget_s
 
 
 def test_eleven_thousand_direct_exchange_candidates_use_fast_exact_flow() -> None:
@@ -995,8 +993,9 @@ def test_eleven_thousand_direct_exchange_candidates_use_fast_exact_flow() -> Non
         {f"B{index:05d}": "R2" for index in range(exchange_count)},
     )
 
-    time_limit_s = 10.0
-    milestones: dict[int, float] = {}
+    solver_time_limit_s = 10.0
+    full_call_performance_budget_s = 30.0
+    started = perf_counter()
     plan = compute_distribution_plan(
         scenario,
         {
@@ -1006,11 +1005,9 @@ def test_eleven_thousand_direct_exchange_candidates_use_fast_exact_flow() -> Non
         },
         DistributionDistanceMode.NEAREST,
         tolerances={("R2", "M1"): 2.0},
-        progress=lambda percent, _message: milestones.setdefault(
-            percent, perf_counter()
-        ),
-        time_limit_s=time_limit_s,
+        time_limit_s=solver_time_limit_s,
     )
+    elapsed = perf_counter() - started
 
     assert plan.status == DistributionPlanStatus.FULL
     assert plan.fulfilled_count == 100
@@ -1023,6 +1020,4 @@ def test_eleven_thousand_direct_exchange_candidates_use_fast_exact_flow() -> Non
         item.code == "DISTANCE_OPTIMIZATION_FALLBACK"
         for item in plan.diagnostics
     )
-    # See the direct-candidate test above: only the 35%-to-85% optimizer window
-    # is governed by time_limit_s.
-    assert milestones[85] - milestones[35] < time_limit_s
+    assert elapsed < full_call_performance_budget_s

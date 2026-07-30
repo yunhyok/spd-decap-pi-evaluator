@@ -27,6 +27,7 @@ from spd_decap_pi._core.models.circuit import (
 )
 from spd_decap_pi._core.models.impedance import ConstantImpedanceModel
 from spd_decap_pi._core.solver.evaluator import (
+    EvaluationError,
     _placement_shunts,
     sensitivity_port_id,
 )
@@ -273,6 +274,61 @@ def _plane_solver_fixture() -> tuple[
         )
     )
     return solver, device, np.geomspace(1.0e5, 1.0e8, 13)
+
+
+def test_shared_pair_missing_partner_topology_fails_with_evaluation_error() -> None:
+    via_template = ViaLoopTemplate(
+        template_id="VIA",
+        pwr_reference_layer="PWR",
+        gnd_reference_layer="GND",
+        path_kind=ViaPathKind.DIRECT,
+        finite_port_width_um=100.0,
+        finite_port_height_um=100.0,
+        loop_resistance_ohm=0.01,
+        loop_inductance_h=0.1e-9,
+    )
+    topologies = {
+        "A": TopologyMap(
+            slot_id="A",
+            x_um=5_000.0,
+            y_um=5_000.0,
+            allowed_rail_ids=["R1"],
+            topology=TopologyKind.SHARED_PAIR,
+            via_template_id="VIA",
+            horizontal_template_id="HORIZONTAL",
+            satellite_slot_id="B",
+        )
+    }
+    placements = {
+        slot_id: PlacementAssignment(
+            slot_id=slot_id,
+            topology=TopologyKind.SHARED_PAIR,
+            rail_id="R1",
+            cap_model_id="CAP",
+        )
+        for slot_id in ("A", "B")
+    }
+
+    with pytest.raises(EvaluationError, match="references an unknown topology slot"):
+        _placement_shunts(
+            "R1",
+            "PWR",
+            "GND",
+            RectangularPlane(
+                width_m=0.02,
+                height_m=0.015,
+                separation_m=100.0e-6,
+                relative_permittivity=3.4,
+                loss_tangent=0.005,
+            ),
+            (0.0, 0.0),
+            placements,
+            topologies,
+            {"CAP": _constant("CAP", 0.01 - 0.2j)},
+            {"VIA": via_template},
+            {"VIA": _constant("VIA", 0.01 + 0.03j)},
+            {},
+        )
 
 
 def test_coupled_cluster_sensitivity_removes_one_atomic_group() -> None:

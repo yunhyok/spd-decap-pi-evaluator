@@ -826,6 +826,20 @@ def test_distribution_milp_worker_does_not_advertise_unhonored_cancel(
         application.processEvents()
 
 
+def test_completed_distribution_worker_does_not_leave_calculating_status() -> None:
+    application = _application()
+    window = MainWindow()
+    try:
+        window.status_text.setText("Calculating De-cap Distribution preview...")
+
+        window._worker_finished()
+
+        assert window.status_text.text() == "Ready"
+    finally:
+        window.close()
+        application.processEvents()
+
+
 def test_scenario_change_and_document_reset_discard_a_stale_preview() -> None:
     application = _application()
     scenario = _direct_scenario(
