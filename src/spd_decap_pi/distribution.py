@@ -14,11 +14,12 @@ from decimal import Decimal, InvalidOperation, ROUND_FLOOR
 from enum import StrEnum
 from math import hypot, inf, isfinite
 from numbers import Real
+from time import monotonic
 from typing import Callable, Mapping
 
 import numpy as np
-from scipy.optimize import Bounds, LinearConstraint, linprog, milp
-from scipy.sparse import coo_matrix
+from scipy.optimize import Bounds, LinearConstraint, OptimizeResult, linprog, milp
+from scipy.sparse import coo_matrix, csr_matrix, vstack
 
 from ._core.domain import PinKind, TerminalKind
 from .scenario import (
@@ -707,6 +708,74 @@ def _distribution_inventory(scenario: ScenarioSpec) -> _DistributionInventory:
     )
 
 
+def _preexisting_evaluation_blocker_diagnostic(
+    scenario: ScenarioSpec,
+    touched_rail_keys: set[str],
+) -> DistributionDiagnostic | None:
+    """Describe inherited connection evidence that still blocks rail evaluation.
+
+    Distribution deliberately counts fixed unresolved parts while excluding them
+    from donor capacity.  A count/topology plan can therefore be valid even when
+    the input scenario was already unevaluable on one of the rails that the plan
+    touches.  Keep that distinction explicit without weakening the evaluator's
+    fail-closed landing validation.
+    """
+
+    analysis = scenario.connection_analysis
+    if analysis is None or not touched_rail_keys:
+        return None
+    decap_by_key = {item.refdes.casefold(): item for item in scenario.decaps}
+    blockers_by_rail: dict[str, list[str]] = defaultdict(list)
+    blocking_kinds = {
+        DecapConnectionKind.UNRESOLVED,
+        DecapConnectionKind.OUT_OF_SCOPE,
+    }
+    for connection in analysis.connections.values():
+        if connection.kind not in blocking_kinds:
+            continue
+        decap = decap_by_key.get(connection.refdes.casefold())
+        if decap is None:
+            continue
+        rail_key = decap.current_rail_id.casefold()
+        if rail_key in touched_rail_keys:
+            blockers_by_rail[rail_key].append(decap.refdes)
+    if not blockers_by_rail:
+        return None
+
+    rail_by_key = {
+        item.rail_id.casefold(): item.rail_id for item in scenario.base_project.rails
+    }
+    detail_items: list[str] = []
+    for rail_key in sorted(blockers_by_rail):
+        refdes = sorted(blockers_by_rail[rail_key], key=str.casefold)
+        examples = ", ".join(refdes[:2])
+        if len(refdes) > 2:
+            examples += f", +{len(refdes) - 2:,} more"
+        detail_items.append(
+            f"{rail_by_key.get(rail_key, rail_key)} ({len(refdes):,}: {examples})"
+        )
+    visible_details = "; ".join(detail_items[:5])
+    if len(detail_items) > 5:
+        visible_details += f"; +{len(detail_items) - 5:,} more rail(s)"
+    blocker_count = sum(map(len, blockers_by_rail.values()))
+    rail_count = len(blockers_by_rail)
+    only_rail_id = (
+        rail_by_key.get(next(iter(blockers_by_rail))) if rail_count == 1 else None
+    )
+    return DistributionDiagnostic(
+        code="PREEXISTING_UNRESOLVED_EVALUATION_RAILS",
+        message=(
+            f"count/topology preview is valid, but {rail_count:,} touched rail(s) "
+            f"contain {blocker_count:,} pre-existing unresolved or out-of-scope "
+            "Decap connection(s); PDN evaluation remains blocked on those rails "
+            f"until source PWR-via/plane evidence is resolved: {visible_details}"
+        ),
+        rail_id=only_rail_id,
+        requested_count=blocker_count,
+        actual_count=0,
+    )
+
+
 def distribution_present_counts(scenario: ScenarioSpec) -> dict[TargetKey, int]:
     """Return the full canonical rail×model Present matrix used by the planner."""
 
@@ -837,6 +906,163 @@ def _solve(
             + str(result.message),
         )
     return np.asarray(result.x, dtype=float)
+
+
+def _milp_with_optional_start(
+    c: np.ndarray,
+    *,
+    integrality: np.ndarray,
+    bounds: Bounds,
+    constraints: LinearConstraint | tuple[()],
+    options: Mapping[str, object],
+    start: np.ndarray | None = None,
+) -> OptimizeResult:
+    """Run HiGHS with a MIP start when SciPy's bundled API exposes it.
+
+    ``scipy.optimize.milp`` deliberately has no ``x0`` argument.  The prior
+    lexicographic stage is nevertheless a valuable feasible incumbent for the
+    next stage.  Recent SciPy wheels bundle the same HiGHS API with
+    ``setSolution``; use it opportunistically and fall back to the public
+    wrapper on older/incompatible wheels.  Solver semantics remain identical.
+    """
+
+    if start is None or not np.any(integrality):
+        return milp(
+            c,
+            integrality=integrality,
+            bounds=bounds,
+            constraints=constraints,
+            options=dict(options),
+        )
+    try:
+        from scipy.optimize._highspy import _core as highs_core
+
+        if isinstance(constraints, LinearConstraint):
+            matrix = constraints.A.tocsc()
+            row_lower = np.asarray(constraints.lb, dtype=float)
+            row_upper = np.asarray(constraints.ub, dtype=float)
+        else:
+            matrix = csr_matrix((0, len(c)), dtype=float).tocsc()
+            row_lower = np.zeros(0, dtype=float)
+            row_upper = np.zeros(0, dtype=float)
+
+        lp = highs_core.HighsLp()
+        lp.num_col_ = len(c)
+        lp.num_row_ = matrix.shape[0]
+        lp.a_matrix_.num_col_ = len(c)
+        lp.a_matrix_.num_row_ = matrix.shape[0]
+        lp.a_matrix_.format_ = highs_core.MatrixFormat.kColwise
+        lp.col_cost_ = np.asarray(c, dtype=float)
+        lp.col_lower_ = np.asarray(bounds.lb, dtype=float)
+        lp.col_upper_ = np.asarray(bounds.ub, dtype=float)
+        lp.row_lower_ = row_lower
+        lp.row_upper_ = row_upper
+        lp.a_matrix_.start_ = np.asarray(matrix.indptr, dtype=np.int32)
+        lp.a_matrix_.index_ = np.asarray(matrix.indices, dtype=np.int32)
+        lp.a_matrix_.value_ = np.asarray(matrix.data, dtype=float)
+        lp.integrality_ = [
+            highs_core.HighsVarType(int(value)) for value in integrality
+        ]
+
+        highs = highs_core._Highs()
+        highs.setOptionValue("output_flag", False)
+        highs.setOptionValue(
+            "presolve", "on" if bool(options.get("presolve", True)) else "off"
+        )
+        highs.setOptionValue(
+            "time_limit", float(options.get("time_limit", inf))
+        )
+        highs.setOptionValue(
+            "mip_rel_gap", float(options.get("mip_rel_gap", 0.0))
+        )
+        if highs.passModel(lp) == highs_core.HighsStatus.kError:
+            raise RuntimeError("HiGHS rejected the MILP model")
+        start_values = np.asarray(start, dtype=float)
+        start_status = highs.setSolution(
+            len(start_values),
+            np.arange(len(start_values), dtype=np.int32),
+            start_values,
+        )
+        if start_status == highs_core.HighsStatus.kError:
+            raise RuntimeError("HiGHS rejected the MIP start")
+        highs.run()
+        model_status = highs.getModelStatus()
+        status = {
+            highs_core.HighsModelStatus.kOptimal: 0,
+            highs_core.HighsModelStatus.kTimeLimit: 1,
+            highs_core.HighsModelStatus.kIterationLimit: 1,
+            highs_core.HighsModelStatus.kInfeasible: 2,
+            highs_core.HighsModelStatus.kUnbounded: 3,
+        }.get(model_status, 4)
+        solution = highs.getSolution()
+        info = highs.getInfo()
+        x_value = (
+            np.asarray(solution.col_value, dtype=float)
+            if solution.value_valid
+            else None
+        )
+        fun_value = (
+            float(info.objective_function_value)
+            if x_value is not None
+            else None
+        )
+        return OptimizeResult(
+            status=status,
+            success=status == 0,
+            message=highs.modelStatusToString(model_status),
+            x=x_value,
+            fun=fun_value,
+            mip_gap=(float(info.mip_gap) if x_value is not None else None),
+            mip_node_count=int(info.mip_node_count),
+        )
+    except (AttributeError, ImportError, RuntimeError, TypeError, ValueError):
+        return milp(
+            c,
+            integrality=integrality,
+            bounds=bounds,
+            constraints=constraints,
+            options=dict(options),
+        )
+
+
+def _is_feasible_milp_start(
+    start: np.ndarray,
+    *,
+    integrality: np.ndarray,
+    bounds: Bounds,
+    constraints: LinearConstraint | tuple[()],
+    tolerance: float = 1.0e-6,
+) -> bool:
+    """Return whether a prior incumbent satisfies the current local model.
+
+    Lazy topology cuts are appended between solves.  A solution that was
+    feasible before such a cut is not automatically a valid incumbent for the
+    next solve, so it must not be used by the LP-bound shortcut until it has
+    been checked against the updated rows.
+    """
+
+    candidate = np.asarray(start, dtype=float)
+    if candidate.ndim != 1 or candidate.shape != np.asarray(bounds.lb).shape:
+        return False
+    if not np.all(np.isfinite(candidate)):
+        return False
+    if np.any(candidate < np.asarray(bounds.lb) - tolerance) or np.any(
+        candidate > np.asarray(bounds.ub) + tolerance
+    ):
+        return False
+    integer_mask = np.isin(np.asarray(integrality), (1, 3))
+    if np.any(
+        np.abs(candidate[integer_mask] - np.rint(candidate[integer_mask]))
+        > tolerance
+    ):
+        return False
+    if isinstance(constraints, LinearConstraint):
+        activity = np.asarray(constraints.A @ candidate, dtype=float).reshape(-1)
+        if np.any(activity < np.asarray(constraints.lb) - tolerance) or np.any(
+            activity > np.asarray(constraints.ub) + tolerance
+        ):
+            return False
+    return True
 
 
 def _direct_distance_selection(
@@ -1287,21 +1513,12 @@ def compute_distribution_plan(
                 )
             )
 
-    distance_by_ref_rail: dict[tuple[str, str], float] = {}
-    for decap in assignable:
-        for rail_key in destination_rail_keys:
-            bumps = bumps_by_rail.get(rail_key, ())
-            if bumps:
-                distance_by_ref_rail[(decap.refdes.casefold(), rail_key)] = min(
-                    hypot(decap.x_um - bump.x_um, decap.y_um - bump.y_um)
-                    for bump in bumps
-                )
-
     builder = _MilpBuilder()
     x: dict[tuple[str, str], int] = {}
     isolation_gap: dict[str, int] = {}
     selectable_gap_variables: dict[int, str] = {}
     allowed_labels: dict[str, tuple[str, ...]] = {}
+    decap_by_key = {item.refdes.casefold(): item for item in scenario.decaps}
     physical_by_key = {item.refdes.casefold(): item for item in physical}
     assignable_keys = {item.refdes.casefold() for item in assignable}
     assignable_by_key = {item.refdes.casefold(): item for item in assignable}
@@ -1322,6 +1539,47 @@ def compute_distribution_plan(
             ):
                 return False
         return True
+
+    # A destination label can survive the rooted-flow constraints only inside
+    # a source-pad component that already contains a PWR-via anchor compatible
+    # with that rail.  Compute that necessary reachability once so via-less
+    # dummy members do not receive every destination label and leave HiGHS to
+    # rediscover millions of impossible states.
+    shared_reachable_by_cluster_rail: dict[tuple[str, str], set[str]] = {}
+    for cluster in analysis.clusters:
+        if cluster.state != SharedPadClusterState.ANCHORED:
+            continue
+        member_keys = tuple(item.casefold() for item in cluster.member_refdes)
+        adjacency: dict[str, set[str]] = {key: set() for key in member_keys}
+        for raw_left, raw_right in cluster.power_edges:
+            left, right = raw_left.casefold(), raw_right.casefold()
+            adjacency[left].add(right)
+            adjacency[right].add(left)
+        for rail_key in destination_rail_keys:
+            if not bumps_by_rail.get(rail_key):
+                continue
+            eligible: set[str] = set()
+            roots: list[str] = []
+            for ref_key in member_keys:
+                connection = connection_by_refdes[ref_key]
+                if not connection.power_vias:
+                    eligible.add(ref_key)
+                    continue
+                if shared_anchor_allows(connection, cluster, rail_key):
+                    eligible.add(ref_key)
+                    roots.append(ref_key)
+            reachable = set(roots)
+            pending = list(roots)
+            while pending:
+                current = pending.pop()
+                for neighbor in adjacency[current]:
+                    if neighbor in eligible and neighbor not in reachable:
+                        reachable.add(neighbor)
+                        pending.append(neighbor)
+            if reachable:
+                shared_reachable_by_cluster_rail[
+                    (cluster.cluster_id.casefold(), rail_key)
+                ] = reachable
 
     for decap in scenario.decaps:
         ref_key = decap.refdes.casefold()
@@ -1349,7 +1607,10 @@ def compute_distribution_plan(
                             continue
                     elif connection.cluster_id is not None:
                         cluster = cluster_by_id[connection.cluster_id.casefold()]
-                        if not shared_anchor_allows(connection, cluster, rail_key):
+                        reachable = shared_reachable_by_cluster_rail.get(
+                            (cluster.cluster_id.casefold(), rail_key), set()
+                        )
+                        if ref_key not in reachable:
                             continue
                     else:
                         continue
@@ -1395,6 +1656,21 @@ def compute_distribution_plan(
             lower=1.0,
             upper=1.0,
         )
+
+    # Distance is needed only for labels that survived exact eligibility and
+    # shared-anchor reachability pruning.  The previous all-decap/all-receiver
+    # Cartesian product was a measurable cost on large SPD files.
+    distance_by_ref_rail: dict[tuple[str, str], float] = {}
+    for ref_key, decap in assignable_by_key.items():
+        current_rail_key = decap.current_rail_id.casefold()
+        for rail_key in allowed_labels[ref_key]:
+            if rail_key == current_rail_key:
+                continue
+            bumps = bumps_by_rail[rail_key]
+            distance_by_ref_rail[(ref_key, rail_key)] = min(
+                hypot(decap.x_um - bump.x_um, decap.y_um - bump.y_um)
+                for bump in bumps
+            )
 
     # Final component-by-rail count bounds.  Receiver equality is deliberately
     # not imposed: physical shortage must yield a maximum PARTIAL plan.
@@ -1451,13 +1727,20 @@ def compute_distribution_plan(
         )
         builder.constraint(incoming, upper=allowance)
 
-    _notify(progress, 20, "Building shared-pad anchor-flow constraints")
+    _notify(progress, 20, "Building shared-pad isolation constraints")
     _check_cancelled(is_cancelled)
+    shared_cut_contexts: list[
+        tuple[
+            SharedPadCluster,
+            tuple[str, ...],
+            dict[str, set[str]],
+            dict[str, tuple[str, ...]],
+        ]
+    ] = []
     for cluster in analysis.clusters:
         if cluster.state != SharedPadClusterState.ANCHORED:
             continue
         member_keys = tuple(item.casefold() for item in cluster.member_refdes)
-        member_set = set(member_keys)
         rail_keys = sorted(
             {
                 rail_key
@@ -1488,114 +1771,184 @@ def compute_distribution_plan(
                     if coefficients:
                         builder.constraint(coefficients, lower=0.0, upper=0.0)
 
-            # Equality prevents different labels, while this extra commodity
-            # prevents one duplicated physical Via from being claimed by two
-            # disconnected components that happen to use the same label.
-            owner_set = set(owners)
-            path_capacity = float(len(owners) - 1)
-            for rail_key in rail_keys:
-                if (first, rail_key) not in x:
-                    continue
-                path_flow: dict[tuple[str, str], int] = {}
-                for raw_left, raw_right in cluster.power_edges:
-                    left, right = raw_left.casefold(), raw_right.casefold()
-                    if (left, rail_key) not in x or (right, rail_key) not in x:
-                        continue
-                    for start, end in ((left, right), (right, left)):
-                        variable = builder.variable(upper=path_capacity)
-                        path_flow[(start, end)] = variable
-                        builder.constraint(
-                            {variable: 1.0, x[(start, rail_key)]: -path_capacity},
-                            upper=0.0,
-                        )
-                        builder.constraint(
-                            {variable: 1.0, x[(end, rail_key)]: -path_capacity},
-                            upper=0.0,
-                        )
-                for ref_key in member_keys:
-                    if (ref_key, rail_key) not in x:
-                        continue
-                    coefficients: dict[int, float] = {}
-                    for (start, end), variable in path_flow.items():
-                        if end == ref_key:
-                            coefficients[variable] = coefficients.get(variable, 0.0) + 1.0
-                        if start == ref_key:
-                            coefficients[variable] = coefficients.get(variable, 0.0) - 1.0
-                    if ref_key == first:
-                        coefficients[x[(ref_key, rail_key)]] = float(len(owners) - 1)
-                    elif ref_key in owner_set:
-                        coefficients[x[(ref_key, rail_key)]] = -1.0
-                    builder.constraint(coefficients, lower=0.0, upper=0.0)
-
-        # Unlike assignments cannot coexist across a still-active physical
-        # edge.  The only legal boundary between PWR NETs is a selected
-        # isolation-gap vertex, whose partition forces every x value to zero.
+        # Active endpoints must carry the same label.  In each direction only
+        # the opposite endpoint's gap relaxes containment: x(left,r) can differ
+        # from x(right,r) only when right itself is removed.  This is both exact
+        # and markedly tighter in the LP relaxation than subtracting both gap
+        # variables, while still reducing an edge from O(labels^2) to O(labels).
         for raw_left, raw_right in cluster.power_edges:
             left, right = raw_left.casefold(), raw_right.casefold()
-            for left_rail in allowed_labels[left]:
-                for right_rail in allowed_labels[right]:
-                    if left_rail == right_rail:
-                        continue
-                    builder.constraint(
-                        {
-                            x[(left, left_rail)]: 1.0,
-                            x[(right, right_rail)]: 1.0,
-                        },
-                        upper=1.0,
-                    )
-
-        # Rooted single-commodity flow: every same-rail PWR component must
-        # consume one unit per member from one or more exact Via anchors.
-        capacity = float(max(len(member_keys), 1))
-        for rail_key in rail_keys:
-            active_members = [
-                ref_key for ref_key in member_keys if (ref_key, rail_key) in x
-            ]
-            if not active_members:
-                continue
-            directed_flow: dict[tuple[str, str], int] = {}
-            for raw_left, raw_right in cluster.power_edges:
-                left, right = raw_left.casefold(), raw_right.casefold()
-                if left not in member_set or right not in member_set:
-                    continue
-                if (left, rail_key) not in x or (right, rail_key) not in x:
-                    continue
-                for start, end in ((left, right), (right, left)):
-                    variable = builder.variable(upper=capacity)
-                    directed_flow[(start, end)] = variable
-                    builder.constraint(
-                        {variable: 1.0, x[(start, rail_key)]: -capacity},
-                        upper=0.0,
-                    )
-                    builder.constraint(
-                        {variable: 1.0, x[(end, rail_key)]: -capacity},
-                        upper=0.0,
-                    )
-            root_flow: dict[str, int] = {}
-            for ref_key in active_members:
-                connection = connections[ref_key]
-                if not connection.power_vias:
-                    continue
-                if not shared_anchor_allows(connection, cluster, rail_key):
-                    continue
-                variable = builder.variable(upper=capacity)
-                root_flow[ref_key] = variable
-                builder.constraint(
-                    {variable: 1.0, x[(ref_key, rail_key)]: -capacity},
-                    upper=0.0,
-                )
-            for ref_key in active_members:
-                coefficients: dict[int, float] = {
-                    x[(ref_key, rail_key)]: -1.0
+            edge_rails = set(allowed_labels[left]).union(allowed_labels[right])
+            for rail_key in edge_rails:
+                forward = {
+                    isolation_gap[right]: -1.0,
                 }
-                if ref_key in root_flow:
-                    coefficients[root_flow[ref_key]] = 1.0
-                for (start, end), variable in directed_flow.items():
-                    if end == ref_key:
-                        coefficients[variable] = coefficients.get(variable, 0.0) + 1.0
-                    if start == ref_key:
-                        coefficients[variable] = coefficients.get(variable, 0.0) - 1.0
-                builder.constraint(coefficients, lower=0.0, upper=0.0)
+                reverse = {isolation_gap[left]: -1.0}
+                left_variable = x.get((left, rail_key))
+                right_variable = x.get((right, rail_key))
+                if left_variable is not None:
+                    forward[left_variable] = 1.0
+                    reverse[left_variable] = -1.0
+                if right_variable is not None:
+                    forward[right_variable] = -1.0
+                    reverse[right_variable] = 1.0
+                builder.constraint(forward, upper=0.0)
+                builder.constraint(reverse, upper=0.0)
+
+        adjacency: dict[str, set[str]] = {key: set() for key in member_keys}
+        for raw_left, raw_right in cluster.power_edges:
+            left, right = raw_left.casefold(), raw_right.casefold()
+            adjacency[left].add(right)
+            adjacency[right].add(left)
+
+        # All verified clusters in the supplied design are simple paths.  On a
+        # path, a selected label at node i is rooted exactly when at least one
+        # route to the nearest compatible anchor on the left or right contains
+        # no selected gap.  Forbid every pair of left/right blockers directly;
+        # this is an exact polynomial formulation without large flow blocks or
+        # repeated incumbent-only connectivity cuts.  Non-path future inputs
+        # remain protected by the exact lazy validator below.
+        cluster_has_selectable_gap = any(
+            isolation_gap[ref_key] in selectable_gap_variables
+            for ref_key in member_keys
+        )
+        is_path = (
+            len(cluster.power_edges) == max(len(member_keys) - 1, 0)
+            and all(len(adjacency[ref_key]) <= 2 for ref_key in member_keys)
+        )
+        path_order: list[str] = []
+        if is_path and member_keys:
+            start = min(
+                (
+                    ref_key
+                    for ref_key in member_keys
+                    if len(adjacency[ref_key]) <= 1
+                ),
+                default=member_keys[0],
+            )
+            previous: str | None = None
+            current: str | None = start
+            while current is not None:
+                path_order.append(current)
+                next_items = sorted(adjacency[current] - ({previous} if previous else set()))
+                previous, current = (
+                    current,
+                    next_items[0] if next_items else None,
+                )
+            is_path = len(path_order) == len(member_keys)
+
+        if cluster_has_selectable_gap and is_path:
+            for rail_key in rail_keys:
+                potential_run: list[str] = []
+                runs: list[list[str]] = []
+                for ref_key in path_order:
+                    if (ref_key, rail_key) in x:
+                        potential_run.append(ref_key)
+                    elif potential_run:
+                        runs.append(potential_run)
+                        potential_run = []
+                if potential_run:
+                    runs.append(potential_run)
+
+                for run in runs:
+                    root_indices = [
+                        index
+                        for index, ref_key in enumerate(run)
+                        if connections[ref_key].power_vias
+                        and shared_anchor_allows(
+                            connections[ref_key], cluster, rail_key
+                        )
+                    ]
+                    root_index_set = set(root_indices)
+                    for index, ref_key in enumerate(run):
+                        if index in root_index_set:
+                            continue
+                        left_root = next(
+                            (
+                                root_index
+                                for root_index in reversed(root_indices)
+                                if root_index < index
+                            ),
+                            None,
+                        )
+                        right_root = next(
+                            (
+                                root_index
+                                for root_index in root_indices
+                                if root_index > index
+                            ),
+                            None,
+                        )
+                        left_blockers = (
+                            []
+                            if left_root is None
+                            else [
+                                isolation_gap[run[item_index]]
+                                for item_index in range(left_root, index)
+                                if builder.variables[
+                                    isolation_gap[run[item_index]]
+                                ].upper
+                                > 0.0
+                            ]
+                        )
+                        right_blockers = (
+                            []
+                            if right_root is None
+                            else [
+                                isolation_gap[run[item_index]]
+                                for item_index in range(index + 1, right_root + 1)
+                                if builder.variables[
+                                    isolation_gap[run[item_index]]
+                                ].upper
+                                > 0.0
+                            ]
+                        )
+                        # A side with an anchor and no possible blocker is
+                        # always open, so this node is already guaranteed root.
+                        if (
+                            left_root is not None and not left_blockers
+                        ) or (
+                            right_root is not None and not right_blockers
+                        ):
+                            continue
+                        node_variable = x[(ref_key, rail_key)]
+                        if left_root is None and right_root is None:
+                            builder.constraint({node_variable: 1.0}, upper=0.0)
+                        elif left_root is None:
+                            for blocker in right_blockers:
+                                builder.constraint(
+                                    {node_variable: 1.0, blocker: 1.0},
+                                    upper=1.0,
+                                )
+                        elif right_root is None:
+                            for blocker in left_blockers:
+                                builder.constraint(
+                                    {node_variable: 1.0, blocker: 1.0},
+                                    upper=1.0,
+                                )
+                        else:
+                            for left_blocker in left_blockers:
+                                for right_blocker in right_blockers:
+                                    builder.constraint(
+                                        {
+                                            node_variable: 1.0,
+                                            left_blocker: 1.0,
+                                            right_blocker: 1.0,
+                                        },
+                                        upper=2.0,
+                                    )
+        shared_cut_contexts.append(
+            (
+                cluster,
+                member_keys,
+                adjacency,
+                {
+                    via_id: tuple(owners)
+                    for via_id, owners in owners_by_via.items()
+                    if len(owners) > 1
+                },
+            )
+        )
 
     move_variables: dict[int, tuple[str, str]] = {}
     receiver_move_variables: set[int] = set()
@@ -1617,13 +1970,527 @@ def compute_distribution_plan(
             if destination_role == DistributionCellRole.RECEIVER:
                 receiver_move_variables.add(variable)
 
+    connectivity_cut_signatures: set[
+        tuple[str, str, tuple[str, ...], str | None]
+    ] = set()
+
+    def add_connectivity_cut(
+        cluster: SharedPadCluster,
+        rail_key: str,
+        component: set[str],
+        adjacency: Mapping[str, set[str]],
+        *,
+        required_refdes: str | None = None,
+    ) -> bool:
+        ordered_component = tuple(sorted(component))
+        signature = (
+            cluster.cluster_id.casefold(),
+            rail_key,
+            ordered_component,
+            required_refdes,
+        )
+        if signature in connectivity_cut_signatures:
+            return False
+        boundary = {
+            neighbor
+            for ref_key in component
+            for neighbor in adjacency[ref_key]
+            if neighbor not in component and (neighbor, rail_key) in x
+        }
+        if required_refdes is None:
+            # No member of this set can be a root.  Therefore selecting even
+            # one of them requires at least one selected boundary vertex.  The
+            # former |S|-1 cut excluded only the exact incumbent and caused
+            # hundreds of near-identical cut rounds on the real design.
+            coefficients = {
+                x[(ref_key, rail_key)]: 1.0 for ref_key in component
+            }
+            for ref_key in boundary:
+                variable = x[(ref_key, rail_key)]
+                coefficients[variable] = (
+                    coefficients.get(variable, 0.0) - float(len(component))
+                )
+            builder.constraint(coefficients, upper=0.0)
+        else:
+            # Owners of one physical Via are already constrained to one label.
+            # If an owner in this component remains active, its component must
+            # cross the boundary to reach the other active owners.
+            coefficients = {x[(required_refdes, rail_key)]: 1.0}
+            for ref_key in boundary:
+                variable = x[(ref_key, rail_key)]
+                coefficients[variable] = coefficients.get(variable, 0.0) - 1.0
+            builder.constraint(coefficients, upper=0.0)
+        connectivity_cut_signatures.add(signature)
+        return True
+
+    def add_invalid_topology_cuts(solution: np.ndarray) -> int:
+        added = 0
+        for cluster, member_keys, adjacency, owners_by_via in shared_cut_contexts:
+            label_by_refdes: dict[str, str | None] = {}
+            for ref_key in member_keys:
+                if solution[isolation_gap[ref_key]] > 0.5:
+                    label_by_refdes[ref_key] = None
+                    continue
+                selected = [
+                    rail_key
+                    for rail_key in allowed_labels[ref_key]
+                    if solution[x[(ref_key, rail_key)]] > 0.5
+                ]
+                if len(selected) != 1:
+                    raise DistributionError(
+                        "INTERNAL_OPTIMIZER_SOLUTION",
+                        f"optimizer returned an invalid label partition for "
+                        f"{cluster.cluster_id}/{ref_key}",
+                    )
+                label_by_refdes[ref_key] = selected[0]
+
+            components: list[set[str]] = []
+            component_index_by_refdes: dict[str, int] = {}
+            remaining = {
+                ref_key
+                for ref_key, rail_key in label_by_refdes.items()
+                if rail_key is not None
+            }
+            while remaining:
+                root = min(remaining)
+                remaining.remove(root)
+                rail_key = label_by_refdes[root]
+                assert rail_key is not None
+                component = {root}
+                pending = [root]
+                while pending:
+                    current = pending.pop()
+                    for neighbor in adjacency[current]:
+                        neighbor_rail = label_by_refdes[neighbor]
+                        if neighbor_rail is None:
+                            continue
+                        if neighbor_rail != rail_key:
+                            raise DistributionError(
+                                "INTERNAL_OPTIMIZER_SOLUTION",
+                                f"optimizer left active unlike labels across "
+                                f"{cluster.cluster_id}:{current}/{neighbor}",
+                            )
+                        if neighbor in remaining:
+                            remaining.remove(neighbor)
+                            component.add(neighbor)
+                            pending.append(neighbor)
+                component_index = len(components)
+                components.append(component)
+                for ref_key in component:
+                    component_index_by_refdes[ref_key] = component_index
+
+                has_compatible_anchor = any(
+                    connection_by_refdes[ref_key].power_vias
+                    and shared_anchor_allows(
+                        connection_by_refdes[ref_key], cluster, rail_key
+                    )
+                    for ref_key in component
+                )
+                if not has_compatible_anchor and add_connectivity_cut(
+                    cluster, rail_key, component, adjacency
+                ):
+                    added += 1
+
+            # Duplicated ownership is one physical Via, so all of its active
+            # owners must remain in one connected same-label component.
+            for owners in owners_by_via.values():
+                active_owners = [
+                    ref_key
+                    for ref_key in owners
+                    if label_by_refdes[ref_key] is not None
+                ]
+                owner_components = {
+                    component_index_by_refdes[ref_key]
+                    for ref_key in active_owners
+                }
+                if len(owner_components) <= 1:
+                    continue
+                for component_index in owner_components:
+                    component = components[component_index]
+                    rail_key = label_by_refdes[next(iter(component))]
+                    assert rail_key is not None
+                    component_owners = sorted(
+                        ref_key
+                        for ref_key in active_owners
+                        if component_index_by_refdes[ref_key] == component_index
+                    )
+                    if add_connectivity_cut(
+                        cluster,
+                        rail_key,
+                        component,
+                        adjacency,
+                        required_refdes=component_owners[0],
+                    ):
+                        added += 1
+        return added
+
+    # Build exact independent factor-graph blocks once.  Four board/model
+    # domains dominate the real 11k-decap design; solving them separately keeps
+    # the same additive lexicographic optimum without forcing one huge branch
+    # tree.  Tiny components are batched to avoid excessive solver startup.
+    parent = list(range(len(builder.variables)))
+    component_size = [1] * len(builder.variables)
+
+    def find_root(variable: int) -> int:
+        while parent[variable] != variable:
+            parent[variable] = parent[parent[variable]]
+            variable = parent[variable]
+        return variable
+
+    def union_variables(left: int, right: int) -> None:
+        left_root = find_root(left)
+        right_root = find_root(right)
+        if left_root == right_root:
+            return
+        if component_size[left_root] < component_size[right_root]:
+            left_root, right_root = right_root, left_root
+        parent[right_root] = left_root
+        component_size[left_root] += component_size[right_root]
+
+    for coefficients, _lower, _upper in builder.rows:
+        variables = tuple(coefficients)
+        if not variables:
+            continue
+        first = variables[0]
+        for variable in variables[1:]:
+            union_variables(first, variable)
+
+    raw_components: dict[int, list[int]] = defaultdict(list)
+    for variable in range(len(builder.variables)):
+        raw_components[find_root(variable)].append(variable)
+    large_components: list[tuple[int, ...]] = []
+    small_variables: list[int] = []
+    for variables in raw_components.values():
+        if len(variables) >= 1_000:
+            large_components.append(tuple(variables))
+        else:
+            small_variables.extend(variables)
+    solver_groups = tuple(
+        sorted(large_components, key=len, reverse=True)
+        + ([tuple(sorted(small_variables))] if small_variables else [])
+    )
+    group_by_variable: dict[int, int] = {
+        variable: group_index
+        for group_index, variables in enumerate(solver_groups)
+        for variable in variables
+    }
+    stage_fallback_flags: set[str] = set()
+    large_shared_problem = len(builder.variables) >= 50_000
+
+    def solve_decomposed(
+        objective: np.ndarray,
+        *,
+        time_limit_s: float,
+        initial_solution: np.ndarray | None = None,
+        feasibility_tiebreak: np.ndarray | None = None,
+        feasible_fallback_stage: str | None = None,
+        ignored_row_indices: set[int] | None = None,
+    ) -> np.ndarray:
+        if not builder.variables:
+            for coefficients, lower, upper in builder.rows:
+                if coefficients or not lower <= 0.0 <= upper:
+                    raise DistributionError(
+                        "OPTIMIZER_FAILED",
+                        "distribution optimizer contains an infeasible constant row",
+                    )
+            return np.zeros(0, dtype=float)
+        c, integrality, bounds, constraints = builder.scipy_inputs(objective)
+        rows_by_group: list[list[int]] = [[] for _ in solver_groups]
+        for row_index, (coefficients, lower, upper) in enumerate(builder.rows):
+            if ignored_row_indices and row_index in ignored_row_indices:
+                continue
+            row_groups = {group_by_variable[item] for item in coefficients}
+            if not row_groups:
+                if not lower <= 0.0 <= upper:
+                    raise DistributionError(
+                        "OPTIMIZER_FAILED",
+                        "distribution optimizer contains an infeasible constant row",
+                    )
+                continue
+            if len(row_groups) != 1:
+                raise DistributionError(
+                    "INTERNAL_OPTIMIZER_DECOMPOSITION",
+                    "distribution constraint unexpectedly spans independent solver groups",
+                )
+            rows_by_group[next(iter(row_groups))].append(row_index)
+
+        solution = np.zeros(len(builder.variables), dtype=float)
+        for group_index, (variables, row_indices) in enumerate(
+            zip(solver_groups, rows_by_group, strict=True), start=1
+        ):
+            _check_cancelled(is_cancelled)
+            group_deadline = monotonic() + time_limit_s
+            variable_indices = np.asarray(variables, dtype=np.int64)
+            row_index_array = np.asarray(row_indices, dtype=np.int64)
+            local_constraints: LinearConstraint | tuple[()] = ()
+            if row_indices:
+                local_constraints = LinearConstraint(
+                    constraints.A[row_index_array, :][:, variable_indices],
+                    constraints.lb[row_index_array],
+                    constraints.ub[row_index_array],
+                )
+            local_c = c[variable_indices]
+            local_integrality = integrality[variable_indices]
+            local_bounds = Bounds(
+                bounds.lb[variable_indices], bounds.ub[variable_indices]
+            )
+            local_start = (
+                None
+                if initial_solution is None
+                else np.asarray(initial_solution[variable_indices], dtype=float)
+            )
+            if local_start is not None and not _is_feasible_milp_start(
+                local_start,
+                integrality=local_integrality,
+                bounds=local_bounds,
+                constraints=local_constraints,
+            ):
+                local_start = None
+            local_feasibility_tiebreak = (
+                np.zeros_like(local_c)
+                if feasibility_tiebreak is None
+                else np.asarray(
+                    feasibility_tiebreak[variable_indices], dtype=float
+                )
+            )
+
+            def remaining_time() -> float:
+                return max(group_deadline - monotonic(), 0.0)
+
+            def run_milp(
+                run_c: np.ndarray,
+                run_integrality: np.ndarray,
+                run_constraints: LinearConstraint | tuple[()],
+                *,
+                limit: float,
+                start: np.ndarray | None = None,
+            ):
+                return _milp_with_optional_start(
+                    run_c,
+                    integrality=run_integrality,
+                    bounds=local_bounds,
+                    constraints=run_constraints,
+                    options={
+                        "presolve": True,
+                        "time_limit": float(max(limit, 1.0e-3)),
+                        "mip_rel_gap": 0.0,
+                    },
+                    start=start,
+                )
+
+            result = None
+            nonzero_objective = local_c[local_c != 0.0]
+            unit_integer_objective = bool(nonzero_objective.size) and bool(
+                np.all(np.abs(nonzero_objective) == 1.0)
+            )
+            # For the count-valued lexicographic stages, first solve the LP.
+            # Its ceiling is a rigorous integer lower bound.  Testing that
+            # single objective level as a feasibility MIP avoids a very large
+            # branch-and-bound search when the relaxation is already exact;
+            # this is the dominant speedup on the supplied 11k-decap design.
+            if unit_integer_objective:
+                lp_limit = min(
+                    remaining_time(),
+                    max(1.0, min(30.0, time_limit_s * 0.25)),
+                )
+                lp_result = run_milp(
+                    local_c,
+                    np.zeros_like(local_integrality),
+                    local_constraints,
+                    limit=lp_limit,
+                )
+                if (
+                    lp_result.status == 0
+                    and lp_result.fun is not None
+                    and isfinite(float(lp_result.fun))
+                    and remaining_time() > 0.0
+                ):
+                    integer_bound = int(
+                        np.ceil(float(lp_result.fun) - 1.0e-7)
+                    )
+                    if isinstance(local_constraints, LinearConstraint):
+                        forced_matrix = vstack(
+                            (
+                                local_constraints.A,
+                                csr_matrix(local_c.reshape(1, -1)),
+                            ),
+                            format="csc",
+                        )
+                        forced_lower = np.append(
+                            local_constraints.lb, float(integer_bound)
+                        )
+                        forced_upper = np.append(
+                            local_constraints.ub, float(integer_bound)
+                        )
+                    else:
+                        forced_matrix = csr_matrix(local_c.reshape(1, -1))
+                        forced_lower = np.asarray(
+                            [float(integer_bound)], dtype=float
+                        )
+                        forced_upper = np.asarray(
+                            [float(integer_bound)], dtype=float
+                        )
+                    incumbent_bound: int | None = None
+                    if local_start is not None:
+                        start_objective = float(np.dot(local_c, local_start))
+                        rounded_start = int(round(start_objective))
+                        if abs(start_objective - rounded_start) <= 1.0e-6:
+                            incumbent_bound = rounded_start
+
+                    level_probes = 0
+                    while remaining_time() > 0.0 and level_probes < 32:
+                        if (
+                            incumbent_bound is not None
+                            and integer_bound >= incumbent_bound
+                        ):
+                            result = OptimizeResult(
+                                status=0,
+                                success=True,
+                                message="prior lexicographic incumbent is optimal",
+                                x=local_start,
+                                fun=float(incumbent_bound),
+                            )
+                            break
+                        forced_lower[-1] = float(integer_bound)
+                        forced_upper[-1] = float(integer_bound)
+                        forced_constraints = LinearConstraint(
+                            forced_matrix, forced_lower, forced_upper
+                        )
+                        forced_result = run_milp(
+                            local_feasibility_tiebreak,
+                            local_integrality,
+                            forced_constraints,
+                            limit=min(remaining_time(), 5.0),
+                        )
+                        # At a fixed objective level, any feasible incumbent
+                        # proves that level is attainable even if HiGHS reached
+                        # its time limit before reporting a zero-objective proof.
+                        if forced_result.x is not None and forced_result.status in {
+                            0,
+                            1,
+                        }:
+                            result = OptimizeResult(
+                                status=0,
+                                success=True,
+                                message=(
+                                    "feasible at the proven primary objective "
+                                    "level"
+                                ),
+                                x=np.asarray(forced_result.x, dtype=float),
+                                fun=float(
+                                    np.dot(
+                                        local_feasibility_tiebreak,
+                                        forced_result.x,
+                                    )
+                                ),
+                            )
+                            break
+                        if forced_result.status != 2:
+                            break
+                        integer_bound += 1
+                        level_probes += 1
+
+                    if result is None and remaining_time() > 0.0:
+                        # Every rejected equality level is a proof that the
+                        # integer objective is at least the next value.  Keep
+                        # that bound in the ordinary exact-MIP fallback.
+                        forced_lower[-1] = float(integer_bound)
+                        forced_upper[-1] = inf
+                        local_constraints = LinearConstraint(
+                            forced_matrix, forced_lower, forced_upper
+                        )
+
+            if result is None and remaining_time() > 0.0:
+                result = run_milp(
+                    local_c,
+                    local_integrality,
+                    local_constraints,
+                    limit=remaining_time(),
+                    start=local_start,
+                )
+            if result is None:
+                raise DistributionError(
+                    "OPTIMIZER_TIMEOUT",
+                    f"distribution optimizer block {group_index}/"
+                    f"{len(solver_groups)} exhausted its time limit",
+                )
+            if (
+                result.status == 1
+                and result.x is not None
+                and feasible_fallback_stage is not None
+            ):
+                stage_fallback_flags.add(feasible_fallback_stage)
+            elif result.status != 0 or result.x is None:
+                code = "OPTIMIZER_TIMEOUT" if result.status == 1 else "OPTIMIZER_FAILED"
+                raise DistributionError(
+                    code,
+                    f"distribution optimizer block {group_index}/{len(solver_groups)} "
+                    f"did not prove an optimal solution: {result.message}",
+                )
+            solution[variable_indices] = result.x
+        return solution
+
+    def constrain_group_totals(
+        variables: set[int] | dict[int, tuple[str, str]],
+        solution: np.ndarray,
+    ) -> set[int]:
+        by_group: dict[int, dict[int, float]] = defaultdict(dict)
+        for variable in variables:
+            by_group[group_by_variable[variable]][variable] = 1.0
+        row_indices: set[int] = set()
+        for coefficients in by_group.values():
+            optimum = float(
+                round(sum(solution[variable] for variable in coefficients))
+            )
+            row_indices.add(len(builder.rows))
+            builder.constraint(coefficients, lower=optimum, upper=optimum)
+        return row_indices
+
+    def solve_with_topology_cuts(
+        objective: np.ndarray,
+        *,
+        progress_percent: int,
+        stage: str,
+        initial_solution: np.ndarray | None = None,
+        feasibility_tiebreak: np.ndarray | None = None,
+        solver_time_limit_s: float | None = None,
+        feasible_fallback_stage: str | None = None,
+        ignored_row_indices: set[int] | None = None,
+    ) -> np.ndarray:
+        while True:
+            _check_cancelled(is_cancelled)
+            solution = solve_decomposed(
+                objective,
+                time_limit_s=(
+                    time_limit_s
+                    if solver_time_limit_s is None
+                    else solver_time_limit_s
+                ),
+                initial_solution=initial_solution,
+                feasibility_tiebreak=feasibility_tiebreak,
+                feasible_fallback_stage=feasible_fallback_stage,
+                ignored_row_indices=ignored_row_indices,
+            )
+            added = add_invalid_topology_cuts(solution)
+            if added == 0:
+                return solution
+            initial_solution = solution
+            _notify(
+                progress,
+                progress_percent,
+                f"{stage} ({len(connectivity_cut_signatures):,} topology cuts)",
+            )
+
     direct_only = all(
         connection_by_refdes[ref_key].kind == DecapConnectionKind.DIRECT
         for ref_key, _rail_key in move_variables.values()
     )
     selected_move_variables: set[int]
     selected_gap_variables: set[int]
-    if direct_only and exchange_cells:
+    use_direct_flow = direct_only and (
+        bool(exchange_cells) or len(move_variables) >= 1_000
+    )
+    if use_direct_flow:
         _notify(
             progress,
             35,
@@ -1665,23 +2532,25 @@ def compute_distribution_plan(
         _notify(
             progress,
             35,
-            "Maximizing receiver demand with minimum exchange turnover",
+            "Maximizing receiver demand",
         )
         _check_cancelled(is_cancelled)
-        primary = np.zeros(len(builder.variables), dtype=float)
-        # Exact lexicographic weighting: maximize receiver fulfillment, then
-        # minimize sacrificed separator cells, then minimize active relabels.
-        # Each higher-priority unit outweighs the full lower-priority range.
-        population = max(len(assignable_by_key), 1)
-        sacrifice_weight = population + 1
-        fulfillment_weight = (population + 1) ** 2
-        for variable in move_variables:
-            primary[variable] = 1.0
-        for variable in selectable_gap_variables:
-            primary[variable] = float(sacrifice_weight)
+        # Keep the priorities as explicit exact stages.  The former single
+        # weighted objective was mathematically lexicographic, but its roughly
+        # population-squared coefficient range made large shared-pad models
+        # numerically difficult before HiGHS could find even a primal point.
+        fulfillment_objective = np.zeros(len(builder.variables), dtype=float)
         for variable in receiver_move_variables:
-            primary[variable] -= float(fulfillment_weight)
-        first_solution = _solve(builder, primary, time_limit_s=time_limit_s)
+            fulfillment_objective[variable] = -1.0
+        gap_tiebreak = np.zeros(len(builder.variables), dtype=float)
+        for variable in selectable_gap_variables:
+            gap_tiebreak[variable] = 1.0
+        first_solution = solve_with_topology_cuts(
+            fulfillment_objective,
+            progress_percent=35,
+            stage="Maximizing receiver demand",
+            feasibility_tiebreak=gap_tiebreak,
+        )
         fulfilled_optimum = int(
             round(
                 sum(
@@ -1690,10 +2559,9 @@ def compute_distribution_plan(
                 )
             )
         )
-        move_optimum = int(
-            round(sum(first_solution[variable] for variable in move_variables))
-        )
-        sacrifice_optimum = int(
+        constrain_group_totals(receiver_move_variables, first_solution)
+
+        provisional_gap_count = int(
             round(
                 sum(
                     first_solution[variable]
@@ -1701,28 +2569,85 @@ def compute_distribution_plan(
                 )
             )
         )
-        builder.constraint(
-            {variable: 1.0 for variable in receiver_move_variables},
-            lower=float(fulfilled_optimum),
-            upper=float(fulfilled_optimum),
+        _notify(
+            progress,
+            50,
+            "Minimizing isolation-gap sacrifices "
+            f"(provisional {provisional_gap_count:,})",
         )
-        builder.constraint(
-            {variable: 1.0 for variable in move_variables},
-            lower=float(move_optimum),
-            upper=float(move_optimum),
+        _check_cancelled(is_cancelled)
+        if selectable_gap_variables:
+            gap_objective = np.zeros(len(builder.variables), dtype=float)
+            for variable in selectable_gap_variables:
+                gap_objective[variable] = 1.0
+            first_solution = solve_with_topology_cuts(
+                gap_objective,
+                progress_percent=50,
+                stage="Minimizing isolation-gap sacrifices",
+                initial_solution=first_solution,
+                solver_time_limit_s=min(
+                    time_limit_s, 5.0 if large_shared_problem else 30.0
+                ),
+                feasible_fallback_stage="gap",
+            )
+            sacrifice_optimum = int(
+                round(
+                    sum(
+                        first_solution[variable]
+                        for variable in selectable_gap_variables
+                    )
+                )
+            )
+        else:
+            sacrifice_optimum = 0
+        if "gap" in stage_fallback_flags:
+            diagnostics.append(
+                DistributionDiagnostic(
+                    code="GAP_OPTIMIZATION_FALLBACK",
+                    message=(
+                        "maximum receiver fulfillment and all shared-pad safety "
+                        "rules were preserved, but minimum isolation-gap count "
+                        "was not proven within the optimization time limit; the "
+                        "best valid incumbent is shown"
+                    ),
+                    requested_count=provisional_gap_count,
+                    actual_count=sacrifice_optimum,
+                )
+            )
+        gap_total_row_indices = constrain_group_totals(
+            selectable_gap_variables, first_solution
         )
-        builder.constraint(
-            {variable: 1.0 for variable in selectable_gap_variables},
-            lower=float(sacrifice_optimum),
-            upper=float(sacrifice_optimum),
-        )
+
+        _notify(progress, 62, "Minimizing active PWR NET relabels")
+        _check_cancelled(is_cancelled)
+        if move_variables:
+            move_objective = np.zeros(len(builder.variables), dtype=float)
+            for variable in move_variables:
+                move_objective[variable] = 1.0
+            first_solution = solve_with_topology_cuts(
+                move_objective,
+                progress_percent=62,
+                stage="Minimizing active PWR NET relabels",
+                initial_solution=first_solution,
+            )
+            move_optimum = int(
+                round(
+                    sum(first_solution[variable] for variable in move_variables)
+                )
+            )
+        else:
+            move_optimum = 0
+        constrain_group_totals(move_variables, first_solution)
 
         _notify(
             progress,
-            65,
+            75,
             f"Applying {mode.value.lower()} bump-distance ordering",
         )
         _check_cancelled(is_cancelled)
+        joint_distance_proven = False
+        joint_distance_applied = False
+        secondary: np.ndarray | None = None
         try:
             if direct_only:
                 selected_move_variables = _direct_distance_selection(
@@ -1735,6 +2660,8 @@ def compute_distribution_plan(
                     mode,
                     time_limit_s=time_limit_s,
                 )
+                joint_distance_proven = True
+                joint_distance_applied = True
             else:
                 # Integer micrometre-thousandths avoid tiny floating tie terms
                 # that can delay proof of a numerically marginal MIP optimum.
@@ -1764,9 +2691,24 @@ def compute_distribution_plan(
                 ):
                     secondary[variable] = float(canonical_rank)
                     canonical_rank += 1
-                final_solution = _solve(
-                    builder, secondary, time_limit_s=time_limit_s
+                final_solution = solve_with_topology_cuts(
+                    secondary,
+                    progress_percent=75,
+                    stage=f"Applying {mode.value.lower()} bump-distance ordering",
+                    initial_solution=first_solution,
+                    solver_time_limit_s=min(
+                        time_limit_s, 10.0 if large_shared_problem else 30.0
+                    ),
+                    feasible_fallback_stage="distance_joint",
                 )
+                # A time-limited solver can return a valid distance incumbent.
+                # Keep the better of that incumbent and the lexicographic start
+                # explicitly because SciPy's public MILP fallback cannot accept
+                # the start on every supported wheel.
+                if float(np.dot(secondary, first_solution)) < float(
+                    np.dot(secondary, final_solution)
+                ):
+                    final_solution = first_solution
                 selected_move_variables = {
                     variable
                     for variable in move_variables
@@ -1777,6 +2719,24 @@ def compute_distribution_plan(
                     for variable in selectable_gap_variables
                     if final_solution[variable] > 0.5
                 }
+                joint_distance_proven = (
+                    "distance_joint" not in stage_fallback_flags
+                )
+                joint_distance_applied = True
+                if not joint_distance_proven:
+                    diagnostics.append(
+                        DistributionDiagnostic(
+                            code="DISTANCE_JOINT_OPTIMIZATION_FALLBACK",
+                            message=(
+                                "the joint assignment/separator distance "
+                                f"optimum was not proven; the best valid "
+                                f"{mode.value.lower()} distance incumbent is "
+                                "carried into fixed-separator refinement"
+                            ),
+                            requested_count=fulfilled_optimum,
+                            actual_count=fulfilled_optimum,
+                        )
+                    )
         except DistributionError as exc:
             if exc.code not in {"OPTIMIZER_TIMEOUT", "OPTIMIZER_FAILED"}:
                 raise
@@ -1792,32 +2752,439 @@ def compute_distribution_plan(
                 for variable in selectable_gap_variables
                 if first_solution[variable] > 0.5
             }
-            diagnostics.append(
-                DistributionDiagnostic(
-                    code="DISTANCE_OPTIMIZATION_FALLBACK",
-                    message=(
-                        f"maximum feasible count {fulfilled_optimum} and minimum "
-                        f"turnover {move_optimum} were preserved, but "
-                        f"the {mode.value.lower()} distance optimum was not proven; "
-                        "the primary feasible selection is shown"
-                    ),
-                    requested_count=fulfilled_optimum,
-                    actual_count=fulfilled_optimum,
+            if direct_only:
+                diagnostics.append(
+                    DistributionDiagnostic(
+                        code="DISTANCE_OPTIMIZATION_FALLBACK",
+                        message=(
+                            f"maximum feasible count {fulfilled_optimum} and "
+                            f"minimum turnover {move_optimum} were preserved, "
+                            f"but the {mode.value.lower()} distance optimum was "
+                            "not proven; the primary feasible selection is shown"
+                        ),
+                        requested_count=fulfilled_optimum,
+                        actual_count=fulfilled_optimum,
+                    )
                 )
-            )
+            else:
+                diagnostics.append(
+                    DistributionDiagnostic(
+                        code="DISTANCE_JOINT_OPTIMIZATION_DEFERRED",
+                        message=(
+                            "the joint assignment/separator distance solve did "
+                            "not return a valid incumbent; distance ordering is "
+                            "deferred until the exact separator positions are "
+                            "fixed"
+                        ),
+                        requested_count=fulfilled_optimum,
+                        actual_count=fulfilled_optimum,
+                    )
+                )
 
         if direct_only:
             selected_gap_variables = set()
 
+        # The first gap stage must search over both the assignment and gap
+        # choices, and can therefore time out with a safe but over-sacrificed
+        # incumbent on a large board.  Once the move set is fixed, re-open only
+        # the original-label/gap choice at every source-authorized pad and
+        # minimize the conservative MILP separator set.  Ignoring the earlier
+        # per-block gap-total rows permits both removal and relocation of
+        # separators while all inventory, shared-pad rooting, and shared-Via
+        # constraints remain active.  A later atomic-validator-backed pass can
+        # still restore pads that this conservative graph model retained.
+        if selectable_gap_variables:
+            _notify(
+                progress,
+                82,
+                "Refining minimum separator pads for the fixed assignment",
+            )
+            _check_cancelled(is_cancelled)
+            original_gap_variables = set(selected_gap_variables)
+            refinement_assignment_row_indices: set[int] = set()
+
+            def constrain_refinement_assignment(
+                coefficients: Mapping[int, float],
+                *,
+                lower: float = -inf,
+                upper: float = inf,
+            ) -> None:
+                refinement_assignment_row_indices.add(len(builder.rows))
+                builder.constraint(coefficients, lower=lower, upper=upper)
+
+            fixed_move_rail_by_refdes = {
+                ref_key: rail_key
+                for variable, (ref_key, rail_key) in move_variables.items()
+                if variable in selected_move_variables
+            }
+            refinement_start = np.zeros(len(builder.variables), dtype=float)
+            for ref_key, labels in allowed_labels.items():
+                selected_rail_key = fixed_move_rail_by_refdes.get(
+                    ref_key, decap_by_key[ref_key].current_rail_id.casefold()
+                )
+                gap_variable = isolation_gap[ref_key]
+                gap_selected = gap_variable in original_gap_variables or (
+                    decap_by_key[ref_key].pad_state
+                    == DecapPadState.ISOLATION_GAP
+                )
+                refinement_start[gap_variable] = float(gap_selected)
+                for rail_key in labels:
+                    variable = x[(ref_key, rail_key)]
+                    refinement_start[variable] = float(
+                        not gap_selected and rail_key == selected_rail_key
+                    )
+
+                if ref_key in fixed_move_rail_by_refdes:
+                    constrain_refinement_assignment(
+                        {gap_variable: 1.0}, lower=0.0, upper=0.0
+                    )
+                    for rail_key in labels:
+                        value = float(rail_key == selected_rail_key)
+                        constrain_refinement_assignment(
+                            {x[(ref_key, rail_key)]: 1.0},
+                            lower=value,
+                            upper=value,
+                        )
+                elif (
+                    decap_by_key[ref_key].pad_state
+                    == DecapPadState.ISOLATION_GAP
+                ):
+                    for rail_key in labels:
+                        constrain_refinement_assignment(
+                            {x[(ref_key, rail_key)]: 1.0},
+                            lower=0.0,
+                            upper=0.0,
+                        )
+                elif gap_variable in selectable_gap_variables:
+                    current_rail_key = decap_by_key[
+                        ref_key
+                    ].current_rail_id.casefold()
+                    for rail_key in labels:
+                        if rail_key != current_rail_key:
+                            constrain_refinement_assignment(
+                                {x[(ref_key, rail_key)]: 1.0},
+                                lower=0.0,
+                                upper=0.0,
+                            )
+                else:
+                    for rail_key in labels:
+                        value = float(rail_key == selected_rail_key)
+                        constrain_refinement_assignment(
+                            {x[(ref_key, rail_key)]: 1.0},
+                            lower=value,
+                            upper=value,
+                        )
+
+            refinement_objective = np.zeros(
+                len(builder.variables), dtype=float
+            )
+            refinement_tiebreak = np.zeros(
+                len(builder.variables), dtype=float
+            )
+            for variable in selectable_gap_variables:
+                refinement_objective[variable] = 1.0
+                # Prefer retaining an already selected physical split when the
+                # exact minimum cardinality has multiple equivalent locations.
+                refinement_tiebreak[variable] = float(
+                    variable not in original_gap_variables
+                )
+            try:
+                refined_solution = solve_with_topology_cuts(
+                    refinement_objective,
+                    progress_percent=82,
+                    stage=(
+                        "Refining minimum separator pads for the fixed "
+                        "assignment"
+                    ),
+                    initial_solution=refinement_start,
+                    feasibility_tiebreak=refinement_tiebreak,
+                    solver_time_limit_s=min(time_limit_s, 30.0),
+                    ignored_row_indices=gap_total_row_indices,
+                )
+            except DistributionError as exc:
+                if exc.code not in {"OPTIMIZER_TIMEOUT", "OPTIMIZER_FAILED"}:
+                    raise
+                diagnostics.append(
+                    DistributionDiagnostic(
+                        code="GAP_REFINEMENT_FALLBACK",
+                        message=(
+                            "the fixed-assignment minimum separator count was "
+                            "not proven; the previously validated gap set is "
+                            "preserved"
+                        ),
+                        requested_count=len(original_gap_variables),
+                        actual_count=len(original_gap_variables),
+                    )
+                )
+            else:
+                selected_gap_variables = {
+                    variable
+                    for variable in selectable_gap_variables
+                    if refined_solution[variable] > 0.5
+                }
+                if len(selected_gap_variables) < len(original_gap_variables):
+                    diagnostics.append(
+                        DistributionDiagnostic(
+                            code="FIXED_ASSIGNMENT_GAPS_REFINED",
+                            message=(
+                                "the fixed move assignment was preserved while "
+                                "the conservative MILP separator set was "
+                                "reduced; an atomic safety pass will restore "
+                                "any remaining pads that do not separate "
+                                "different PWR NET contexts"
+                            ),
+                            requested_count=len(original_gap_variables),
+                            actual_count=len(selected_gap_variables),
+                        )
+                    )
+
+                # Gap refinement deliberately froze the earlier assignment so
+                # it could minimize separators in a much smaller fixed-
+                # assignment model.
+                # That assignment must not become the final answer: fix only
+                # the resulting physical separator positions, remove both the
+                # provisional per-block gap totals and temporary assignment
+                # rows, and optimize NEAREST/FARTHEST again while retaining the
+                # already constrained fulfillment and minimum move totals.
+                # A direct-only assignment has already been optimized by the
+                # exact flow solver.  Selectable gaps can still exist in an
+                # unrelated shared cluster with no eligible move, so only run
+                # this MILP refinement when a shared distance objective exists.
+                if secondary is not None:
+                    for variable in selectable_gap_variables:
+                        value = float(variable in selected_gap_variables)
+                        builder.constraint(
+                            {variable: 1.0}, lower=value, upper=value
+                        )
+                    ignored_distance_rows = (
+                        gap_total_row_indices
+                        | refinement_assignment_row_indices
+                    )
+                    _notify(
+                        progress,
+                        87,
+                        "Applying bump-distance ordering with fixed separators",
+                    )
+                    _check_cancelled(is_cancelled)
+                    try:
+                        fixed_separator_solution = solve_with_topology_cuts(
+                            secondary,
+                            progress_percent=87,
+                            stage=(
+                                "Applying bump-distance ordering with fixed "
+                                "separators"
+                            ),
+                            initial_solution=refined_solution,
+                            solver_time_limit_s=min(
+                                time_limit_s,
+                                10.0 if large_shared_problem else 30.0,
+                            ),
+                            feasible_fallback_stage=(
+                                "distance_fixed_separator"
+                            ),
+                            ignored_row_indices=ignored_distance_rows,
+                        )
+                    except DistributionError as exc:
+                        if exc.code not in {
+                            "OPTIMIZER_TIMEOUT",
+                            "OPTIMIZER_FAILED",
+                        }:
+                            raise
+                        # Returning the pre-distance assignment here would
+                        # silently violate the requested NEAREST/FARTHEST
+                        # policy. Fail closed when no valid incumbent exists.
+                        raise DistributionError(
+                            "DISTANCE_OPTIMIZER_FAILED",
+                            "fixed-separator distance optimization did not "
+                            "return a valid incumbent; no arbitrary assignment "
+                            "was emitted",
+                            diagnostics=tuple(diagnostics),
+                        ) from exc
+
+                    # The refined assignment is a valid incumbent under the
+                    # fixed separators. Preserve it if a public-API timeout
+                    # returned a worse solution, otherwise use the best
+                    # mode-specific result.
+                    if float(np.dot(secondary, refined_solution)) < float(
+                        np.dot(secondary, fixed_separator_solution)
+                    ):
+                        fixed_separator_solution = refined_solution
+                    selected_move_variables = {
+                        variable
+                        for variable in move_variables
+                        if fixed_separator_solution[variable] > 0.5
+                    }
+                    selected_gap_variables = {
+                        variable
+                        for variable in selectable_gap_variables
+                        if fixed_separator_solution[variable] > 0.5
+                    }
+                    fixed_separator_fallback = (
+                        "distance_fixed_separator" in stage_fallback_flags
+                    )
+                    joint_distance_applied = True
+                    if fixed_separator_fallback:
+                        diagnostics.append(
+                            DistributionDiagnostic(
+                                code="DISTANCE_FIXED_SEPARATOR_FALLBACK",
+                                message=(
+                                    "fixed separator positions were honored "
+                                    f"and the best valid {mode.value.lower()} "
+                                    "distance incumbent was applied, but its "
+                                    "conditional optimum was not proven"
+                                ),
+                                requested_count=fulfilled_optimum,
+                                actual_count=fulfilled_optimum,
+                            )
+                        )
+                    elif not joint_distance_proven:
+                        diagnostics.append(
+                            DistributionDiagnostic(
+                                code="DISTANCE_FIXED_SEPARATOR_APPLIED",
+                                message=(
+                                    f"the exact {mode.value.lower()} distance "
+                                    "optimum was applied for the selected fixed "
+                                    "separator positions; this is a conditional, "
+                                    "not joint separator-position proof"
+                                ),
+                                requested_count=fulfilled_optimum,
+                                actual_count=fulfilled_optimum,
+                            )
+                        )
+
+            if not joint_distance_applied and selected_move_variables:
+                raise DistributionError(
+                    "DISTANCE_OPTIMIZER_FAILED",
+                    "separator refinement could not establish a distance-ordered "
+                    "assignment; no arbitrary assignment was emitted",
+                    diagnostics=tuple(diagnostics),
+                )
+
     assignments: dict[str, str] = {}
     distance_for_move: dict[str, float] = {}
-    decap_by_key = {item.refdes.casefold(): item for item in scenario.decaps}
     for variable, (ref_key, rail_key) in move_variables.items():
         if variable not in selected_move_variables:
             continue
         decap = decap_by_key[ref_key]
         assignments[decap.refdes] = rail_by_key[rail_key].rail_id
         distance_for_move[ref_key] = distance_by_ref_rail[(ref_key, rail_key)]
+
+    # A timed gap-minimization fallback can retain separator candidates that
+    # no longer separate two NET contexts.  Such donor-side gaps are always
+    # dominated: restoring them increases donor inventory, preserves every
+    # receiver move, and reconnects only the same source rail.  Prune them to a
+    # fixed point, then let the atomic topology validator fail closed if a
+    # non-local shared-Via relation makes any restoration unsafe.
+    original_selected_gap_count = len(selected_gap_variables)
+    selected_gap_keys = {
+        selectable_gap_variables[variable]
+        for variable in selected_gap_variables
+    }
+    fixed_gap_keys = {
+        item.refdes.casefold()
+        for item in scenario.decaps
+        if item.pad_state == DecapPadState.ISOLATION_GAP
+    }
+    assignment_rail_by_key = {
+        refdes.casefold(): rail_id.casefold()
+        for refdes, rail_id in assignments.items()
+    }
+    while selected_gap_keys:
+        removable: set[str] = set()
+        all_gap_keys = fixed_gap_keys | selected_gap_keys
+        for cluster in analysis.clusters:
+            member_keys = {item.casefold() for item in cluster.member_refdes}
+            cluster_gap_keys = member_keys & all_gap_keys
+            if not cluster_gap_keys:
+                continue
+            adjacency: dict[str, set[str]] = {
+                ref_key: set() for ref_key in member_keys
+            }
+            for raw_left, raw_right in cluster.power_edges:
+                left, right = raw_left.casefold(), raw_right.casefold()
+                adjacency[left].add(right)
+                adjacency[right].add(left)
+            remaining_gaps = set(cluster_gap_keys)
+            while remaining_gaps:
+                root = min(remaining_gaps)
+                remaining_gaps.remove(root)
+                group = {root}
+                pending = [root]
+                while pending:
+                    current = pending.pop()
+                    for neighbor in adjacency[current]:
+                        if neighbor in remaining_gaps:
+                            remaining_gaps.remove(neighbor)
+                            group.add(neighbor)
+                            pending.append(neighbor)
+                if group & fixed_gap_keys:
+                    continue
+                if not all(
+                    role_by_cell[
+                        (
+                            decap_by_key[ref_key].current_rail_id.casefold(),
+                            str(decap_by_key[ref_key].model_id).casefold(),
+                        )
+                    ]
+                    == DistributionCellRole.DONOR
+                    for ref_key in group
+                ):
+                    continue
+                active_neighbors = {
+                    neighbor
+                    for ref_key in group
+                    for neighbor in adjacency[ref_key]
+                    if neighbor not in all_gap_keys
+                }
+                surrounding_rails = {
+                    decap_by_key[ref_key].current_rail_id.casefold()
+                    for ref_key in group
+                } | {
+                    assignment_rail_by_key.get(
+                        ref_key,
+                        decap_by_key[ref_key].current_rail_id.casefold(),
+                    )
+                    for ref_key in active_neighbors
+                }
+                if len(surrounding_rails) == 1:
+                    removable.update(group)
+        if not removable:
+            break
+        selected_gap_keys.difference_update(removable)
+
+    pruned_gap_count = original_selected_gap_count - len(selected_gap_keys)
+    if pruned_gap_count:
+        pruned_gap_refdes = tuple(
+            decap_by_key[ref_key].refdes for ref_key in sorted(selected_gap_keys)
+        )
+        try:
+            assign_rails_and_isolation_gaps_atomic(
+                scenario, assignments, pruned_gap_refdes
+            )
+        except ScenarioEditError:
+            selected_gap_keys = {
+                selectable_gap_variables[variable]
+                for variable in selected_gap_variables
+            }
+        else:
+            selected_gap_variables = {
+                variable
+                for variable in selected_gap_variables
+                if selectable_gap_variables[variable] in selected_gap_keys
+            }
+            diagnostics.append(
+                DistributionDiagnostic(
+                    code="REDUNDANT_GAPS_PRUNED",
+                    message=(
+                        f"restored {pruned_gap_count:,} separator pad(s) that "
+                        "did not separate different PWR NET contexts; the "
+                        "complete scenario passed atomic topology validation "
+                        "afterward"
+                    ),
+                    requested_count=original_selected_gap_count,
+                    actual_count=len(selected_gap_keys),
+                )
+            )
     selected_gap_refdes = tuple(
         decap_by_key[selectable_gap_variables[variable]].refdes
         for variable in sorted(
@@ -1984,6 +3351,21 @@ def compute_distribution_plan(
                 bump_distance_um=distance_for_move[ref_key],
             )
         )
+
+    touched_rail_keys = {
+        rail_id.casefold()
+        for move in move_rows
+        for rail_id in (move.previous_rail_id, move.new_rail_id)
+    }
+    touched_rail_keys.update(
+        item.previous_rail_id.casefold() for item in sacrifice_rows
+    )
+    evaluation_blocker = _preexisting_evaluation_blocker_diagnostic(
+        scenario,
+        touched_rail_keys,
+    )
+    if evaluation_blocker is not None:
+        diagnostics.append(evaluation_blocker)
 
     shortfall_total = requested_total - fulfilled_total
     status = (

@@ -2,13 +2,15 @@
 
 from __future__ import annotations
 
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from math import isfinite
 from pathlib import Path
 from typing import Any
 
 from xlsxwriter import Workbook
 from xlsxwriter.exceptions import XlsxWriterException
+
+from .distribution_workbook import DISTRIBUTION_METADATA_TITLE
 
 
 DECAP_CHANGE_HEADERS = (
@@ -55,6 +57,7 @@ def write_distribution_workbook(
     *,
     inventory_headers: Sequence[str] = (),
     inventory_rows: Sequence[Sequence[object]] = (),
+    metadata: Mapping[str, object] | None = None,
 ) -> None:
     """Write Decap results and the source Distribution target matrix to XLSX."""
 
@@ -63,6 +66,9 @@ def write_distribution_workbook(
     normalized_targets = tuple(tuple(row) for row in target_rows)
     normalized_inventory_headers = tuple(str(value) for value in inventory_headers)
     normalized_inventory = tuple(tuple(row) for row in inventory_rows)
+    normalized_metadata = tuple(
+        (str(key).strip(), value) for key, value in (metadata or {}).items()
+    )
     if len(normalized_target_headers) < 1:
         raise ValueError("Distribution target headers cannot be empty")
     if any(len(row) != len(DECAP_CHANGE_HEADERS) for row in normalized_decaps):
@@ -78,6 +84,12 @@ def write_distribution_workbook(
         for row in normalized_inventory
     ):
         raise ValueError("Inventory reconciliation rows must match their headers")
+    if any(not key for key, _value in normalized_metadata):
+        raise ValueError("Distribution metadata keys cannot be empty")
+    if len({key.casefold() for key, _value in normalized_metadata}) != len(
+        normalized_metadata
+    ):
+        raise ValueError("Distribution metadata keys must be unique")
 
     options = {
         "constant_memory": True,
@@ -94,6 +106,7 @@ def write_distribution_workbook(
                 normalized_targets,
                 normalized_inventory_headers,
                 normalized_inventory,
+                normalized_metadata,
             )
     except XlsxWriterException as exc:
         raise OSError(str(exc)) from exc
@@ -106,6 +119,7 @@ def _populate_distribution_workbook(
     normalized_targets: tuple[tuple[object, ...], ...],
     normalized_inventory_headers: tuple[str, ...],
     normalized_inventory: tuple[tuple[object, ...], ...],
+    normalized_metadata: tuple[tuple[str, object], ...],
 ) -> None:
         header = workbook.add_format(
             {
@@ -264,6 +278,7 @@ def _populate_distribution_workbook(
             max(0, len(normalized_targets)),
             len(normalized_target_headers) - 1,
         )
+        metadata_row = len(normalized_targets) + 3
         if normalized_inventory:
             title_row = len(normalized_targets) + 3
             header_row = title_row + 1
@@ -325,6 +340,23 @@ def _populate_distribution_workbook(
                 - 1,
                 16,
             )
+            metadata_row = total_row + 3
+
+        if normalized_metadata:
+            target_sheet.merge_range(
+                metadata_row,
+                0,
+                metadata_row,
+                1,
+                DISTRIBUTION_METADATA_TITLE,
+                section_title,
+            )
+            for offset, (key, value) in enumerate(normalized_metadata, start=1):
+                row_index = metadata_row + offset
+                target_sheet.write_string(row_index, 0, key, text_even)
+                _write_value(target_sheet, row_index, 1, value, text_even)
+            target_sheet.set_column(0, 0, 34)
+            target_sheet.set_column(1, 1, 68)
 
 
 __all__ = ["DECAP_CHANGE_HEADERS", "write_distribution_workbook"]

@@ -84,7 +84,7 @@ from ..scenario_io import (
     save_scenario,
 )
 from ..spd_adapter import ScenarioImport, import_spd_scenario, verify_scenario_source
-from ..version import APP_DISPLAY_NAME
+from ..version import APP_DISPLAY_NAME, __version__
 from .board_view import DecapBoardView
 from .results_window import (
     ComparisonResultsWindow,
@@ -500,6 +500,7 @@ class MainWindow(QMainWindow):
         self._distribution_preview_scenario: ScenarioSpec | None = None
         self._distribution_export_rows: tuple[Any, ...] = ()
         self._distribution_table_updating = False
+        self._distribution_import_notice: str | None = None
 
         self._build_actions()
         self._build_ui()
@@ -1005,6 +1006,18 @@ class MainWindow(QMainWindow):
         )
         targets_layout.addLayout(option_row)
         calculate_row = QHBoxLayout()
+        self.import_distribution_targets_button = QPushButton("Import Targets...")
+        self.import_distribution_targets_button.setObjectName(
+            "importDistributionTargetsButton"
+        )
+        self.import_distribution_targets_button.setToolTip(
+            "Import absolute Target/Tolerance values from a prior Distribution "
+            "workbook. Present is always refreshed from the loaded SPD."
+        )
+        self.import_distribution_targets_button.clicked.connect(
+            self._import_distribution_targets
+        )
+        calculate_row.addWidget(self.import_distribution_targets_button)
         calculate_row.addStretch(1)
         calculate_row.addWidget(self.calculate_distribution_button)
         targets_layout.addLayout(calculate_row)
@@ -1164,6 +1177,14 @@ class MainWindow(QMainWindow):
     def _update_distribution_validation(self) -> None:
         numeric_state = self._distribution_numeric_state()
         valid, _has_changes, message = numeric_state
+        distance_mode = self.distribution_distance_combo.currentData()
+        if distance_mode not in {"NEAREST", "FARTHEST"}:
+            valid = False
+            message = (
+                "Select Candidate order (Nearest or Farthest) before calculation."
+            )
+        if self._distribution_import_notice:
+            message = f"{message}\n{self._distribution_import_notice}"
         self.distribution_validation_label.setText(message)
         self.distribution_validation_label.setStyleSheet(
             "color: #047857;" if valid else "color: #B45309;"
@@ -1179,9 +1200,14 @@ class MainWindow(QMainWindow):
         if numeric_state is None:
             numeric_state = self._distribution_numeric_state()
         numeric_valid, has_changes, _message = numeric_state
+        distance_ready = self.distribution_distance_combo.currentData() in {
+            "NEAREST",
+            "FARTHEST",
+        }
         self.calculate_distribution_button.setEnabled(
-            loaded and idle and numeric_valid and has_changes
+            loaded and idle and numeric_valid and has_changes and distance_ready
         )
+        self.import_distribution_targets_button.setEnabled(loaded and idle)
 
         can_apply = False
         if loaded and idle and self._distribution_plan is not None:
@@ -1237,6 +1263,13 @@ class MainWindow(QMainWindow):
         self._distribution_plan = None
         self._distribution_preview_scenario = None
         self._distribution_export_rows = ()
+        self._distribution_import_notice = None
+        if hasattr(self, "distribution_distance_combo"):
+            previous_block = self.distribution_distance_combo.blockSignals(True)
+            try:
+                self.distribution_distance_combo.setCurrentIndex(0)
+            finally:
+                self.distribution_distance_combo.blockSignals(previous_block)
         self._distribution_table_updating = True
         try:
             self.distribution_table.clear()
@@ -1290,6 +1323,13 @@ class MainWindow(QMainWindow):
         *,
         preserve_result: bool = False,
     ) -> None:
+        self._distribution_import_notice = None
+        if self.distribution_distance_combo.currentIndex() < 0:
+            previous_combo_block = self.distribution_distance_combo.blockSignals(True)
+            try:
+                self.distribution_distance_combo.setCurrentIndex(0)
+            finally:
+                self.distribution_distance_combo.blockSignals(previous_combo_block)
         preserved_tolerances = (
             {
                 (rail_id.casefold(), model_id.casefold()): value
@@ -1693,12 +1733,115 @@ class MainWindow(QMainWindow):
             self.distribution_table.blockSignals(previous_block)
             self._distribution_table_updating = False
 
-    def _distribution_option_changed(self, _index: int) -> None:
-        if self._distribution_plan is None:
+    def _import_distribution_targets(self) -> None:
+        scenario = self._scenario
+        if scenario is None:
             return
-        self._clear_distribution_preview(
-            "Candidate order changed; calculate a new preview."
+        filename, _selected_filter = QFileDialog.getOpenFileName(
+            self,
+            "Import De-cap Distribution Targets",
+            "",
+            "Excel workbook (*.xlsx);;All files (*)",
         )
+        if not filename:
+            return
+        try:
+            from ..distribution_workbook import (
+                DistributionWorkbookError,
+                load_distribution_targets,
+            )
+
+            imported = load_distribution_targets(
+                filename,
+                rail_ids=self._distribution_rail_ids,
+                model_ids=self._distribution_model_ids,
+                current_present=dict(self._distribution_present_counts),
+                current_source_sha256=scenario.source.sha256,
+                current_design_fingerprint=scenario.design_fingerprint,
+            )
+        except (OSError, ValueError) as exc:
+            # DistributionWorkbookError is a ValueError; keep this boundary broad
+            # enough for filesystem and dependency-level workbook failures.
+            QMessageBox.critical(
+                self,
+                APP_DISPLAY_NAME,
+                f"The Distribution targets could not be imported.\n\n{exc}",
+            )
+            self.status_text.setText("De-cap Distribution target import failed")
+            return
+
+        self._clear_distribution_preview(update_controls=False)
+        self._distribution_targets = dict(imported.targets)
+        self._distribution_tolerances = dict(imported.tolerances)
+        self._distribution_invalid_cells.clear()
+        self._distribution_invalid_tolerance_cells.clear()
+
+        self._distribution_table_updating = True
+        previous_block = self.distribution_table.blockSignals(True)
+        try:
+            for row in range(self.distribution_table.rowCount()):
+                rail_item = self.distribution_table.item(row, 0)
+                if rail_item is None:
+                    continue
+                rail_id = str(rail_item.data(Qt.ItemDataRole.UserRole))
+                for model_index, model_id in enumerate(self._distribution_model_ids):
+                    key = (rail_id, model_id)
+                    target_item = self.distribution_table.item(
+                        row, 2 + model_index * 4
+                    )
+                    tolerance_item = self.distribution_table.item(
+                        row, 3 + model_index * 4
+                    )
+                    if target_item is not None:
+                        target_item.setText(str(self._distribution_targets[key]))
+                        self._style_distribution_target_item(target_item, key)
+                    if tolerance_item is not None:
+                        tolerance_item.setText(
+                            f"{self._distribution_tolerances[key]:g}"
+                        )
+                        self._style_distribution_tolerance_item(tolerance_item, key)
+        finally:
+            self.distribution_table.blockSignals(previous_block)
+            self._distribution_table_updating = False
+
+        previous_combo_block = self.distribution_distance_combo.blockSignals(True)
+        try:
+            if imported.distance_mode is None:
+                self.distribution_distance_combo.setCurrentIndex(-1)
+                self.distribution_distance_combo.setPlaceholderText(
+                    "Select candidate order (not recorded in workbook)"
+                )
+            else:
+                index = self.distribution_distance_combo.findData(
+                    imported.distance_mode
+                )
+                if index < 0:
+                    raise DistributionWorkbookError(
+                        f"unsupported Candidate order {imported.distance_mode!r}"
+                    )
+                self.distribution_distance_combo.setCurrentIndex(index)
+        finally:
+            self.distribution_distance_combo.blockSignals(previous_combo_block)
+
+        summary = imported.summary(Path(filename).name)
+        self._distribution_import_notice = summary
+        self.distribution_summary.setPlainText(
+            summary
+            + "\n\nReview the refreshed donor/receiver balance, then calculate a new "
+            "preview. Previous result columns were ignored."
+        )
+        self._reset_distribution_actual_deltas()
+        self._update_distribution_validation()
+        self.status_text.setText(
+            f"Imported Distribution targets from {Path(filename).name}"
+        )
+
+    def _distribution_option_changed(self, _index: int) -> None:
+        if self._distribution_plan is not None:
+            self._clear_distribution_preview(
+                "Candidate order changed; calculate a new preview."
+            )
+        self._update_distribution_validation()
 
     def _calculate_distribution(self) -> None:
         if self._scenario is None:
@@ -1738,10 +1881,11 @@ class MainWindow(QMainWindow):
             worker,
             self._accept_distribution_plan,
             label="Calculating De-cap Distribution preview...",
-            # scipy.optimize.milp cannot be interrupted while HiGHS is inside
-            # one solve call. Do not advertise a Cancel action that cannot be
-            # honored promptly; cancellation checks still protect phase gaps.
-            cancelable=False,
+            # HiGHS cannot be interrupted inside one solve call, but the
+            # planner checks cancellation between factor blocks and stages.
+            # Keep Cancel available so a long real-board run stops at the next
+            # safe boundary instead of forcing the user to wait for every stage.
+            cancelable=True,
         )
 
     @staticmethod
@@ -1760,12 +1904,24 @@ class MainWindow(QMainWindow):
 
     def _distribution_plan_summary(self, plan: Any) -> str:
         status = self._plan_status_text(plan)
+        diagnostics = tuple(getattr(plan, "diagnostics", ()))
+        evaluation_blocked = any(
+            str(getattr(item, "code", "")).upper()
+            == "PREEXISTING_UNRESOLVED_EVALUATION_RAILS"
+            for item in diagnostics
+        )
         changes = tuple(
             getattr(plan, "changes", getattr(plan, "moves", ()))
         )
         sacrifices = tuple(getattr(plan, "sacrifices", ()))
         lines = [
-            f"Status: {status}",
+            f"Status: {status} (count/topology)",
+            (
+                "PDN evaluation: BLOCKED on inherited unresolved/out-of-scope "
+                "connections"
+                if evaluation_blocked
+                else "PDN evaluation: not blocked by inherited connection evidence"
+            ),
             f"Selected PWR NET changes: {len(changes):,} decap(s)",
             f"Isolation-gap sacrifices: {len(sacrifices):,} decap cell(s)",
         ]
@@ -1856,7 +2012,6 @@ class MainWindow(QMainWindow):
                     f"{requested:,}, fulfilled {fulfilled:,}, "
                     f"shortfall {shortfall:,}"
                 )
-        diagnostics = tuple(getattr(plan, "diagnostics", ()))
         if diagnostics:
             lines.append("Diagnostics:")
             lines.extend(
@@ -1970,8 +2125,19 @@ class MainWindow(QMainWindow):
         self.distribution_summary.setPlainText(
             self._distribution_plan_summary(plan)
         )
+        evaluation_blocked = any(
+            str(getattr(item, "code", "")).upper()
+            == "PREEXISTING_UNRESOLVED_EVALUATION_RAILS"
+            for item in tuple(getattr(plan, "diagnostics", ()))
+        )
+        status_suffix = (
+            "; PDN evaluation blocked on inherited unresolved connections"
+            if evaluation_blocked
+            else ""
+        )
         self.status_text.setText(
-            f"De-cap Distribution preview: {self._plan_status_text(plan)}"
+            "De-cap Distribution preview: "
+            f"{self._plan_status_text(plan)} (count/topology){status_suffix}"
         )
         self._update_distribution_controls()
 
@@ -2111,9 +2277,16 @@ class MainWindow(QMainWindow):
                     distribution_target_table,
                 )
                 from ..spreadsheet_export import write_distribution_workbook
+                from ..distribution_workbook import (
+                    DISTRIBUTION_WORKBOOK_FORMAT_VERSION,
+                )
 
                 target_headers, target_rows = distribution_target_table(plan)
                 inventory_headers, inventory_rows = distribution_inventory_table(plan)
+                raw_distance_mode = getattr(plan, "distance_mode", "")
+                distance_mode = str(
+                    getattr(raw_distance_mode, "value", raw_distance_mode)
+                ).upper()
                 write_distribution_workbook(
                     path,
                     decap_rows,
@@ -2121,6 +2294,23 @@ class MainWindow(QMainWindow):
                     target_rows,
                     inventory_headers=inventory_headers,
                     inventory_rows=inventory_rows,
+                    metadata={
+                        "Format Version": DISTRIBUTION_WORKBOOK_FORMAT_VERSION,
+                        "Application Version": __version__,
+                        "Source SPD Name": self._scenario.source.name,
+                        "Source SPD SHA-256": self._scenario.source.sha256,
+                        "Input Design Fingerprint": str(
+                            getattr(plan, "input_design_fingerprint", "")
+                        ),
+                        "Input Revision": int(
+                            getattr(plan, "input_revision", self._scenario.revision)
+                        ),
+                        "Distance Mode": distance_mode,
+                        "Present Inventory Total": sum(
+                            int(getattr(cell, "present_count", 0))
+                            for cell in getattr(plan, "cells", ())
+                        ),
+                    },
                 )
         except (OSError, TypeError, ValueError) as exc:
             kind = "Excel workbook" if suffix == ".xlsx" else "CSV"

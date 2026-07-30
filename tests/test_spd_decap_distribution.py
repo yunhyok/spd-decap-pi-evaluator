@@ -3,8 +3,12 @@ from __future__ import annotations
 from dataclasses import replace
 from time import perf_counter
 
+import numpy as np
 import pytest
+from scipy.optimize import Bounds, LinearConstraint, OptimizeResult
+from scipy.sparse import csr_matrix
 
+import spd_decap_pi.distribution as distribution_module
 from spd_decap_pi._core.domain import (
     CapModel,
     MLOOutline,
@@ -19,6 +23,7 @@ from spd_decap_pi.distribution import (
     DistributionDistanceMode,
     DistributionError,
     DistributionPlanStatus,
+    _is_feasible_milp_start,
     apply_distribution_plan,
     compute_distribution_plan,
     distribution_csv_rows,
@@ -500,8 +505,20 @@ def test_physical_present_counts_fixed_parts_but_donor_capacity_does_not() -> No
         {("R1", "M1"): 2, ("R2", "M1"): 1},
     )
     assert plan.assignment_map == {"MOVABLE": "R2"}
+    assert plan.status == DistributionPlanStatus.FULL
     assert _cell(plan, "R1").actual_count == 2
     assert _cell(plan, "R2").actual_count == 1
+    evaluation_blocker = next(
+        item
+        for item in plan.diagnostics
+        if item.code == "PREEXISTING_UNRESOLVED_EVALUATION_RAILS"
+    )
+    assert evaluation_blocker.rail_id == "R1"
+    assert evaluation_blocker.requested_count == 1
+    assert evaluation_blocker.actual_count == 0
+    assert "count/topology preview is valid" in evaluation_blocker.message
+    assert "PDN evaluation remains blocked" in evaluation_blocker.message
+    assert "UNRESOLVED" in evaluation_blocker.message
     headers, rows = distribution_inventory_table(plan)
     assert headers[-1] == "Reconciliation Delta"
     assert rows == (("M1", 3, 3, 1, 1, 1, 0, 0, 0, 0, 0),)
@@ -647,6 +664,72 @@ def test_shared_pad_optimizer_avoids_dummy_residual_and_applies_once() -> None:
     assert scenario.revision == 9
 
 
+@pytest.mark.parametrize(
+    ("mode", "expected_refdes"),
+    (
+        (DistributionDistanceMode.NEAREST, "A0"),
+        (DistributionDistanceMode.FARTHEST, "A2"),
+    ),
+)
+def test_fixed_separator_distance_fallback_still_honors_mode(
+    monkeypatch: pytest.MonkeyPatch,
+    mode: DistributionDistanceMode,
+    expected_refdes: str,
+) -> None:
+    scenario = _shared_chain_scenario()
+    original_solver = distribution_module._milp_with_optional_start
+    distance_call_count = 0
+
+    def joint_timeout_then_fixed_incumbent(c, **kwargs):
+        nonzero = np.asarray(c)[np.asarray(c) != 0.0]
+        is_distance_objective = bool(nonzero.size) and not bool(
+            np.all(np.abs(nonzero) == 1.0)
+        )
+        if not is_distance_objective:
+            return original_solver(c, **kwargs)
+
+        nonlocal distance_call_count
+        distance_call_count += 1
+        if distance_call_count == 1:
+            # Simulate the real failure mode: the joint assignment/separator
+            # distance stage expires without returning an incumbent.
+            return OptimizeResult(
+                status=1,
+                success=False,
+                message="fixture joint distance timeout",
+                x=None,
+                fun=None,
+            )
+
+        # The fixed-separator stage does find a valid mode-specific incumbent,
+        # but reaches its time limit before proving the conditional optimum.
+        result = original_solver(c, **kwargs)
+        result.status = 1
+        result.success = False
+        result.message = "fixture fixed-separator distance timeout"
+        return result
+
+    monkeypatch.setattr(
+        distribution_module,
+        "_milp_with_optional_start",
+        joint_timeout_then_fixed_incumbent,
+    )
+
+    plan = compute_distribution_plan(
+        scenario,
+        {("R1", "M1"): 1, ("R2", "M1"): 2},
+        mode,
+    )
+
+    assert distance_call_count == 2
+    assert plan.moves[0].refdes == expected_refdes
+    assert plan.isolation_gap_refdes == ("D1",)
+    diagnostic_codes = {item.code for item in plan.diagnostics}
+    assert "DISTANCE_JOINT_OPTIMIZATION_DEFERRED" in diagnostic_codes
+    assert "DISTANCE_FIXED_SEPARATOR_FALLBACK" in diagnostic_codes
+    assert "DISTANCE_OPTIMIZATION_FALLBACK" not in diagnostic_codes
+
+
 def test_exchange_tolerance_counts_cluster_members_and_never_strands_dummy() -> None:
     scenario = _shared_exchange_scenario()
     targets = {
@@ -726,6 +809,54 @@ def test_shared_physical_via_owners_must_remain_in_one_label_component() -> None
     assert plan.status == DistributionPlanStatus.PARTIAL
     assert plan.fulfilled_count == 0
     assert plan.moves == ()
+
+
+def test_lazy_cut_rejects_a_stale_prior_milp_incumbent() -> None:
+    start = np.asarray([1.0, 0.0])
+    bounds = Bounds(np.zeros(2), np.ones(2))
+    integrality = np.ones(2, dtype=np.uint8)
+    original = LinearConstraint(
+        csr_matrix([[1.0, 1.0]]), np.asarray([1.0]), np.asarray([1.0])
+    )
+    with_lazy_cut = LinearConstraint(
+        csr_matrix([[1.0, 1.0], [1.0, 0.0]]),
+        np.asarray([1.0, -np.inf]),
+        np.asarray([1.0, 0.0]),
+    )
+
+    assert _is_feasible_milp_start(
+        start,
+        integrality=integrality,
+        bounds=bounds,
+        constraints=original,
+    )
+    assert not _is_feasible_milp_start(
+        start,
+        integrality=integrality,
+        bounds=bounds,
+        constraints=with_lazy_cut,
+    )
+
+
+def test_fixed_assignment_gap_refinement_preserves_preexisting_gap() -> None:
+    payload = _shared_chain_scenario().model_dump(mode="python")
+    d1 = next(item for item in payload["decaps"] if item["refdes"] == "D1")
+    d1["enabled"] = False
+    d1["pad_state"] = "ISOLATION_GAP"
+    scenario = ScenarioSpec.model_validate(payload)
+
+    plan = compute_distribution_plan(
+        scenario,
+        {("R1", "M1"): 1, ("R2", "M1"): 1},
+    )
+
+    assert plan.status == DistributionPlanStatus.FULL
+    assert len(plan.moves) == 1
+    assert plan.isolation_gap_refdes == ()
+    changed = apply_distribution_plan(scenario, plan)
+    gap = next(item for item in changed.decaps if item.refdes == "D1")
+    assert gap.pad_state.value == "ISOLATION_GAP"
+    assert not gap.enabled
 
 
 def test_plan_is_stale_safe_tamper_safe_and_exports_every_decap() -> None:

@@ -17,10 +17,10 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 
 def test_spd_decap_release_identity_is_explicit_and_versioned() -> None:
     assert APP_NAME == "SPD Decap PI Evaluator"
-    assert __version__ == "0.9.2"
-    assert APP_DISPLAY_NAME == "SPD Decap PI Evaluator v0.9.2"
+    assert __version__ == "0.10.0"
+    assert APP_DISPLAY_NAME == "SPD Decap PI Evaluator v0.10.0"
     assert EXECUTABLE_BASENAME == "SPDDecapPIEvaluator"
-    assert INSTALLER_BASENAME == "SPDDecapPIEvaluatorSetup-0.9.2"
+    assert INSTALLER_BASENAME == "SPDDecapPIEvaluatorSetup-0.10.0"
 
 
 def test_spd_decap_console_and_packaging_metadata_are_consistent() -> None:
@@ -41,6 +41,7 @@ def test_spd_decap_console_and_packaging_metadata_are_consistent() -> None:
     assert pyproject["project"]["name"] == "spd-decap-pi-evaluator"
     assert pyproject["project"]["version"] == __version__
     assert "XlsxWriter>=3.2" in pyproject["project"]["dependencies"]
+    assert "openpyxl>=3.1" in pyproject["project"]["dependencies"]
     assert set(pyproject["project"]["scripts"]) == {"spd-decap-pi-evaluator"}
     assert f'#define AppVersion "{__version__}"' in installer
     assert f'#define AppName "{APP_NAME}"' in installer
@@ -88,7 +89,7 @@ def test_windows_version_resource_matches_release_identity() -> None:
     version_info = (
         REPO_ROOT / "packaging" / "spd_decap_pi_version_info.txt"
     ).read_text(encoding="utf-8")
-    assert "filevers=(0, 9, 2, 0)" in version_info
-    assert "prodvers=(0, 9, 2, 0)" in version_info
-    assert "StringStruct('FileVersion', '0.9.2')" in version_info
-    assert "StringStruct('ProductVersion', '0.9.2')" in version_info
+    assert "filevers=(0, 10, 0, 0)" in version_info
+    assert "prodvers=(0, 10, 0, 0)" in version_info
+    assert "StringStruct('FileVersion', '0.10.0')" in version_info
+    assert "StringStruct('ProductVersion', '0.10.0')" in version_info

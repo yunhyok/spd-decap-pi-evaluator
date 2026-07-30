@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import csv
 import os
+from dataclasses import replace
 from pathlib import Path
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
@@ -13,13 +14,16 @@ from openpyxl import load_workbook
 
 from test_spd_decap_distribution import _direct_scenario, _with_initial_rails
 from spd_decap_pi.distribution import (
+    DistributionDiagnostic,
     DistributionDistanceMode,
     DistributionPlanStatus,
     compute_distribution_plan,
 )
+from spd_decap_pi.distribution_workbook import DISTRIBUTION_METADATA_TITLE
 from spd_decap_pi.gui.main_window import MainWindow
 from spd_decap_pi.scenario import ScenarioSpec
 from spd_decap_pi.scenario_io import load_scenario
+from spd_decap_pi.spreadsheet_export import write_distribution_workbook
 
 
 def _application() -> QApplication:
@@ -112,6 +116,7 @@ def test_distribution_tab_matches_the_target_matrix_and_resizable_sections() -> 
         assert targets_size >= 280
         assert results_size >= 180
         for button in (
+            window.import_distribution_targets_button,
             window.calculate_distribution_button,
             window.apply_distribution_button,
             window.export_distribution_csv_button,
@@ -155,6 +160,134 @@ def test_distribution_tab_matches_the_target_matrix_and_resizable_sections() -> 
         assert "every Target equals Present" in (
             window.distribution_validation_label.text()
         )
+    finally:
+        window._dirty = False
+        window.close()
+        application.processEvents()
+
+
+def test_legacy_target_import_refreshes_present_requires_distance_and_invalidates_preview(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    application = _application()
+    scenario = _direct_scenario(
+        (
+            ("C1", 0.0, ("R1", "R2")),
+            ("C2", 10.0, ("R1", "R2")),
+            ("C3", 20.0, ("R1", "R2")),
+        ),
+        rail_ids=("R1", "R2"),
+        bump_x={"R2": 0.0},
+    )
+    path = tmp_path / "legacy-targets.xlsx"
+    write_distribution_workbook(
+        path,
+        (),
+        (
+            "PWR NET",
+            "M1\nPresent",
+            "M1\nTarget",
+            "M1\nTolerance (%)",
+            "M1\nActual Delta",
+        ),
+        (
+            ("V1 (R1)", 1, 1, 0, 0),
+            ("V2 (R2)", 0, 2, 0, 2),
+        ),
+    )
+    window = _window_with_scenario(scenario)
+    try:
+        window._distribution_plan = object()
+        window._distribution_preview_scenario = scenario
+        window._distribution_export_rows = (object(),)
+        monkeypatch.setattr(
+            QFileDialog,
+            "getOpenFileName",
+            lambda *_args, **_kwargs: (str(path), "Excel workbook (*.xlsx)"),
+        )
+
+        window.import_distribution_targets_button.click()
+
+        assert window._distribution_plan is None
+        assert window._distribution_preview_scenario is None
+        assert window._distribution_export_rows == ()
+        r1 = _rail_row(window, "R1")
+        r2 = _rail_row(window, "R2")
+        # Workbook Present was stale (1 + 0); current scenario Present wins (3 + 0).
+        assert window.distribution_table.item(r1, 1).text() == "3"
+        assert window.distribution_table.item(r2, 1).text() == "0"
+        assert window.distribution_table.item(r1, 2).text() == "1"
+        assert window.distribution_table.item(r2, 2).text() == "2"
+        assert window.distribution_distance_combo.currentIndex() == -1
+        assert not window.calculate_distribution_button.isEnabled()
+        assert "Present refreshed from the loaded SPD: 1 -> 3 (+2" in (
+            window.distribution_validation_label.text()
+        )
+        assert "Candidate order was not recorded" in (
+            window.distribution_validation_label.text()
+        )
+
+        window.distribution_distance_combo.setCurrentIndex(0)
+        assert window.distribution_distance_combo.currentData() == "NEAREST"
+        assert window.calculate_distribution_button.isEnabled()
+    finally:
+        window._dirty = False
+        window.close()
+        application.processEvents()
+
+
+def test_current_target_import_restores_recorded_distance_mode(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    application = _application()
+    scenario = _direct_scenario(
+        (
+            ("C1", 0.0, ("R1", "R2")),
+            ("C2", 10.0, ("R1", "R2")),
+            ("C3", 20.0, ("R1", "R2")),
+        ),
+        rail_ids=("R1", "R2"),
+        bump_x={"R2": 0.0},
+    )
+    path = tmp_path / "current-targets.xlsx"
+    write_distribution_workbook(
+        path,
+        (),
+        (
+            "PWR NET",
+            "M1\nPresent",
+            "M1\nTarget",
+            "M1\nTolerance (%)",
+            "M1\nActual Delta",
+            "M1\nActual Changed",
+            "M1\nIsolation Gaps",
+        ),
+        (
+            ("V1 (R1)", 3, 1, 0, -2, 2, 0),
+            ("V2 (R2)", 0, 2, 0, 2, 2, 0),
+        ),
+        metadata={
+            "Format Version": 2,
+            "Source SPD SHA-256": scenario.source.sha256,
+            "Input Design Fingerprint": scenario.design_fingerprint,
+            "Distance Mode": "FARTHEST",
+        },
+    )
+    window = _window_with_scenario(scenario)
+    try:
+        monkeypatch.setattr(
+            QFileDialog,
+            "getOpenFileName",
+            lambda *_args, **_kwargs: (str(path), "Excel workbook (*.xlsx)"),
+        )
+        window.import_distribution_targets_button.click()
+
+        assert window.distribution_distance_combo.currentData() == "FARTHEST"
+        assert window.calculate_distribution_button.isEnabled()
+        assert window._distribution_targets[("R1", "M1")] == 1
+        assert window._distribution_targets[("R2", "M1")] == 2
     finally:
         window._dirty = False
         window.close()
@@ -523,6 +656,11 @@ def test_full_preview_exports_saves_and_applies_one_atomic_revision(
         assert window.distribution_table.item(_rail_row(window, "R1"), 4).text() == "-2"
         assert window.distribution_table.item(_rail_row(window, "R2"), 4).text() == "+2"
         summary = window.distribution_summary.toPlainText()
+        assert "Status: FULL (count/topology)" in summary
+        assert (
+            "PDN evaluation: not blocked by inherited connection evidence"
+            in summary
+        )
         assert "R1 donor: give capacity 2, used 2, unused 0" in summary
         assert "R2 receiver: requested 2, fulfilled 2, shortfall 0" in summary
 
@@ -592,6 +730,21 @@ def test_full_preview_exports_saves_and_applies_one_atomic_revision(
                 2,
                 0,
             )
+            metadata_title_row = next(
+                cell.row
+                for cell in targets["A"]
+                if cell.value == DISTRIBUTION_METADATA_TITLE
+            )
+            metadata = {}
+            for row_index in range(metadata_title_row + 1, targets.max_row + 1):
+                key = targets.cell(row_index, 1).value
+                if key in (None, ""):
+                    break
+                metadata[str(key)] = targets.cell(row_index, 2).value
+            assert metadata["Format Version"] == 2
+            assert metadata["Source SPD SHA-256"] == scenario.source.sha256
+            assert metadata["Input Design Fingerprint"] == scenario.design_fingerprint
+            assert metadata["Distance Mode"] == "NEAREST"
         finally:
             workbook.close()
 
@@ -686,6 +839,56 @@ def test_full_preview_exports_saves_and_applies_one_atomic_revision(
         assert load_scenario(window._scenario_path).design_fingerprint == (
             window.scenario.design_fingerprint
         )
+    finally:
+        window._dirty = False
+        window.close()
+        application.processEvents()
+
+
+def test_full_preview_separates_topology_success_from_evaluation_block() -> None:
+    application = _application()
+    scenario = _direct_scenario(
+        (
+            ("C1", 0.0, ("R1", "R2")),
+            ("C2", 10.0, ("R1", "R2")),
+        ),
+        rail_ids=("R1", "R2"),
+        bump_x={"R2": 0.0},
+    )
+    window = _window_with_scenario(scenario)
+    try:
+        _set_target(window, "R1", 1)
+        _set_target(window, "R2", 1)
+        plan = compute_distribution_plan(
+            scenario,
+            _targets(window),
+            DistributionDistanceMode.NEAREST,
+        )
+        plan = replace(
+            plan,
+            diagnostics=plan.diagnostics
+            + (
+                DistributionDiagnostic(
+                    code="PREEXISTING_UNRESOLVED_EVALUATION_RAILS",
+                    message=(
+                        "count/topology preview is valid, but inherited "
+                        "connection evidence blocks PDN evaluation"
+                    ),
+                ),
+            ),
+        )
+
+        window._accept_distribution_plan(plan)
+
+        summary = window.distribution_summary.toPlainText()
+        assert "Status: FULL (count/topology)" in summary
+        assert (
+            "PDN evaluation: BLOCKED on inherited unresolved/out-of-scope "
+            "connections"
+            in summary
+        )
+        assert "PDN evaluation blocked" in window.status_text.text()
+        assert window.apply_distribution_button.isEnabled()
     finally:
         window._dirty = False
         window.close()
@@ -788,7 +991,7 @@ def test_exchange_preview_reports_turnover_and_apply_preserves_tolerance() -> No
         application.processEvents()
 
 
-def test_distribution_milp_worker_does_not_advertise_unhonored_cancel(
+def test_distribution_milp_worker_allows_cancel_at_safe_solver_boundaries(
     monkeypatch,
 ) -> None:
     application = _application()
@@ -817,7 +1020,7 @@ def test_distribution_milp_worker_does_not_advertise_unhonored_cancel(
         window.calculate_distribution_button.click()
 
         assert captured["label"] == "Calculating De-cap Distribution preview..."
-        assert captured["cancelable"] is False
+        assert captured["cancelable"] is True
         worker = captured["worker"]
         assert worker.args[2][("R2", "M1")] == 1.25
     finally:
