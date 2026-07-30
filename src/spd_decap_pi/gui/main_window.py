@@ -8,7 +8,6 @@ from hashlib import sha256
 from math import isfinite
 from pathlib import Path
 from time import perf_counter
-import traceback
 from typing import Any, Callable
 
 from PySide6.QtCore import QPoint, QPointF, QRectF, QSize, Qt, QThreadPool, QTimer
@@ -2400,7 +2399,7 @@ class MainWindow(QMainWindow):
         if cancelled:
             self.status_text.setText("Operation cancelled")
         elif self.status_text.text().startswith(
-            ("Opening", "Saving", "Evaluating", "Analyzing")
+            ("Opening", "Saving", "Evaluating", "Analyzing", "Calculating")
         ):
             self.status_text.setText("Ready")
         if auto_save and self._scenario is not None and self._scenario_path is not None:

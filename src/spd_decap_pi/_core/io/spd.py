@@ -473,7 +473,8 @@ def _parse_netlist(
         # e.g. ``VDD -> PowerNets::Unselected||DropShape``. The marker still
         # starts the PowerNets group and does not deselect the source token.
         if b"->" in stripped:
-            destination = stripped.split(b"->", 1)[1].split(None, 1)[0].lower()
+            tail = stripped.split(b"->", 1)[1].split(None, 1)
+            destination = (tail[0] if tail else b"").lower()
             destination = destination.split(b"::", 1)[0]
             if destination == b"groundnets":
                 active_group = "ground"

@@ -1425,12 +1425,16 @@ def _placement_shunts(
             if slot_id in consumed_shared:
                 continue
             anchor_id, satellite_id = _shared_pair_ids(slot_id, topology)
+            if anchor_id not in topologies or satellite_id not in topologies:
+                raise EvaluationError(
+                    f"SHARED_PAIR {anchor_id!r}/{satellite_id!r} references an "
+                    "unknown topology slot"
+                )
             if anchor_id not in placements or satellite_id not in placements:
                 raise EvaluationError(
                     f"SHARED_PAIR {anchor_id!r}/{satellite_id!r} requires both assignments"
                 )
             anchor_topology = topologies[anchor_id]
-            satellite_topology = topologies[satellite_id]
             anchor_placement = placements[anchor_id]
             satellite_placement = placements[satellite_id]
             if anchor_placement.rail_id != satellite_placement.rail_id:

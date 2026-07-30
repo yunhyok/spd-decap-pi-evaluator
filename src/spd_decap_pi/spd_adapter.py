@@ -10,7 +10,7 @@ from time import perf_counter
 from typing import Any
 
 from spd_decap_pi._core.domain import PinKind, ProjectSpec
-from spd_decap_pi._core.io.spd import SpdAnalysis, SpdCapInstance, SpdImportError, analyze_spd
+from spd_decap_pi._core.io.spd import SpdCapInstance, SpdImportError, analyze_spd
 from spd_decap_pi._core.services import build_spd_import_plan, create_workspace_state
 
 from .eligibility import EligibilityResult, PlaneEligibilityIndex
