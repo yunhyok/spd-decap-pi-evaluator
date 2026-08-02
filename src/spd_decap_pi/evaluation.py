@@ -71,6 +71,66 @@ class ScenarioEvaluationBuildError(ValueError):
         super().__init__(f"{prefix}{message}")
 
 
+@dataclass(frozen=True, slots=True)
+class EvaluationConnectivityBlocker:
+    """One source-connectivity classification that blocks a selected rail."""
+
+    rail_id: str
+    refdes: str
+    kind: DecapConnectionKind
+    reason: str
+
+
+@dataclass(frozen=True, slots=True)
+class EvaluationConnectivityPreflight:
+    """Structured connectivity gate for one canonical selected-rail set."""
+
+    rail_ids: tuple[str, ...]
+    blockers: tuple[EvaluationConnectivityBlocker, ...]
+
+    @property
+    def is_clear(self) -> bool:
+        return not self.blockers
+
+    def message(self, *, max_refdes_per_group: int = 6) -> str:
+        """Return a compact, actionable UI/error description without hiding rails."""
+
+        if self.is_clear:
+            return "Selected PWR rails have no unresolved decap connectivity blockers."
+        grouped: dict[tuple[str, DecapConnectionKind, str], list[str]] = {}
+        for blocker in self.blockers:
+            grouped.setdefault(
+                (blocker.rail_id, blocker.kind, blocker.reason), []
+            ).append(blocker.refdes)
+        rails: dict[str, list[str]] = {rail_id: [] for rail_id in self.rail_ids}
+        for (rail_id, kind, reason), refdes in grouped.items():
+            ordered = sorted(refdes, key=str.casefold)
+            examples = ", ".join(ordered[:max_refdes_per_group])
+            if len(ordered) > max_refdes_per_group:
+                examples += f", +{len(ordered) - max_refdes_per_group:,} more"
+            rails[rail_id].append(
+                f"{kind.value}: {examples} ({reason})"
+            )
+        details = "; ".join(
+            f"{rail_id} [{'; '.join(rails[rail_id])}]"
+            for rail_id in self.rail_ids
+            if rails[rail_id]
+        )
+        return (
+            f"Evaluation is blocked by {len(self.blockers):,} decap connection "
+            f"classification(s) on {sum(bool(items) for items in rails.values()):,} "
+            f"selected PWR rail(s): {details}"
+        )
+
+
+class ScenarioEvaluationPreflightError(ScenarioEvaluationBuildError):
+    """Raised before baseline/cache/solver work when selected rails are blocked."""
+
+    def __init__(self, preflight: EvaluationConnectivityPreflight) -> None:
+        self.preflight = preflight
+        super().__init__("EVALUATION_CONNECTIVITY_BLOCKED", preflight.message())
+
+
 class ScenarioEvaluationCacheError(ValueError):
     """A stored result is present but cannot be trusted for comparison."""
 
@@ -322,6 +382,65 @@ def _canonical_rail_ids(
         item.rail_id
         for item in scenario.base_project.rails
         if item.rail_id.casefold() in requested
+    )
+
+
+def preflight_evaluation_connectivity(
+    scenario: ScenarioSpec, rail_ids: Sequence[str]
+) -> EvaluationConnectivityPreflight:
+    """Aggregate fail-closed source-connectivity blockers for selected rails.
+
+    This intentionally follows the evaluation builder's fail-closed ordering:
+    unresolved or out-of-scope source connectivity on a selected rail blocks
+    before population or isolation-gap materialization is considered. The
+    returned rail IDs are canonical project spellings and the full blocker list
+    is retained for callers that need more than the compact UI text.
+    """
+
+    canonical_rails = _canonical_rail_ids(scenario, rail_ids)
+    analysis = scenario.connection_analysis
+    if analysis is None:
+        return EvaluationConnectivityPreflight(canonical_rails, ())
+    canonical_by_key = {
+        rail_id.casefold(): rail_id for rail_id in canonical_rails
+    }
+    rail_order = {rail_id.casefold(): index for index, rail_id in enumerate(canonical_rails)}
+    connections = {
+        item.refdes.casefold(): item for item in analysis.connections.values()
+    }
+    blockers: list[EvaluationConnectivityBlocker] = []
+    blocking_kinds = {
+        DecapConnectionKind.UNRESOLVED,
+        DecapConnectionKind.OUT_OF_SCOPE,
+    }
+    for decap in scenario.decaps:
+        if decap.current_rail_id.casefold() not in canonical_by_key:
+            continue
+        connection = connections.get(decap.refdes.casefold())
+        if connection is None or connection.kind not in blocking_kinds:
+            continue
+        blockers.append(
+            EvaluationConnectivityBlocker(
+                rail_id=canonical_by_key[decap.current_rail_id.casefold()],
+                refdes=decap.refdes,
+                kind=connection.kind,
+                reason=connection.reason
+                or "Decap pad/via connectivity is unresolved",
+            )
+        )
+    return EvaluationConnectivityPreflight(
+        canonical_rails,
+        tuple(
+            sorted(
+                blockers,
+                key=lambda item: (
+                    rail_order[item.rail_id.casefold()],
+                    item.kind.value,
+                    item.reason.casefold(),
+                    item.refdes.casefold(),
+                ),
+            )
+        ),
     )
 
 
@@ -1500,6 +1619,9 @@ def evaluate_comparison_batch(
     report = progress or (lambda _value, _message: None)
     cancelled = is_cancelled or (lambda: False)
     canonical_rails = _canonical_rail_ids(scenario, rail_ids)
+    connectivity = preflight_evaluation_connectivity(scenario, canonical_rails)
+    if not connectivity.is_clear:
+        raise ScenarioEvaluationPreflightError(connectivity)
     prepared = scenario.with_baseline_captures(canonical_rails)
     working_attachments = _validated_scenario_attachments(prepared, attachments)
     baseline_scenarios = {
@@ -1701,16 +1823,20 @@ def analyze_scenario_with_local_llm(
 __all__ = [
     "EVALUATION_ATTACHMENT_FORMAT",
     "PLOT_ANALYST_MODE",
+    "EvaluationConnectivityBlocker",
+    "EvaluationConnectivityPreflight",
     "RailComparison",
     "ScenarioEvaluation",
     "ScenarioEvaluationBatch",
     "ScenarioEvaluationBuildError",
     "ScenarioEvaluationCacheError",
+    "ScenarioEvaluationPreflightError",
     "analyze_scenario_with_local_llm",
     "baseline_fallback_model_refdes",
     "build_evaluation_project",
     "build_evaluation_workspace",
     "evaluate_comparison_batch",
     "evaluate_scenario",
+    "preflight_evaluation_connectivity",
     "rehydrate_scenario_evaluation",
 ]

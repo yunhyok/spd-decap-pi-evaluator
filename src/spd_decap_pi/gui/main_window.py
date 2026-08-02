@@ -1917,10 +1917,11 @@ class MainWindow(QMainWindow):
         lines = [
             f"Status: {status} (count/topology)",
             (
-                "PDN evaluation: BLOCKED on inherited unresolved/out-of-scope "
-                "connections"
+                "PDN evaluation (modified/touched rails): BLOCKED on inherited "
+                "unresolved/out-of-scope connections"
                 if evaluation_blocked
-                else "PDN evaluation: not blocked by inherited connection evidence"
+                else "PDN evaluation (modified/touched rails): no inherited "
+                "unresolved/out-of-scope connection blockers"
             ),
             f"Selected PWR NET changes: {len(changes):,} decap(s)",
             f"Isolation-gap sacrifices: {len(sacrifices):,} decap cell(s)",
@@ -3818,7 +3819,24 @@ class MainWindow(QMainWindow):
         from ..evaluation import (
             baseline_fallback_model_refdes,
             evaluate_comparison_batch,
+            preflight_evaluation_connectivity,
         )
+
+        try:
+            connectivity = preflight_evaluation_connectivity(self._scenario, rail_ids)
+        except ValueError as exc:
+            QMessageBox.warning(self, APP_DISPLAY_NAME, str(exc))
+            return
+        if not connectivity.is_clear:
+            details = connectivity.message()
+            self._invalidate_evaluation(
+                "Evaluation blocked before Original/Tuned processing.\n\n" + details
+            )
+            QMessageBox.warning(self, APP_DISPLAY_NAME, details)
+            self.status_text.setText(
+                "Evaluation blocked by unresolved decap connectivity"
+            )
+            return
 
         fallback_refdes = baseline_fallback_model_refdes(self._scenario, rail_ids)
         try:

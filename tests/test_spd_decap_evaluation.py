@@ -26,14 +26,22 @@ from spd_decap_pi._core.domain import (
 )
 from spd_decap_pi._core.services import EvaluationView
 from spd_decap_pi import evaluation as evaluation_module
+from spd_decap_pi.distribution import (
+    DistributionDistanceMode,
+    apply_distribution_plan,
+    compute_distribution_plan,
+)
 from spd_decap_pi.evaluation import (
+    EvaluationConnectivityPreflight,
     ScenarioEvaluationBuildError,
     ScenarioEvaluationCacheError,
+    ScenarioEvaluationPreflightError,
     analyze_scenario_with_local_llm,
     baseline_fallback_model_refdes,
     build_evaluation_project,
     evaluate_comparison_batch,
     evaluate_scenario,
+    preflight_evaluation_connectivity,
 )
 from spd_decap_pi.scenario import (
     DecapConnectionKind,
@@ -938,6 +946,258 @@ def test_unresolved_direct_decap_blocks_evaluation_fail_closed() -> None:
         build_evaluation_project(unresolved, evaluation_rail_id="RAIL_VDD")
 
     assert captured.value.code == "DECAP_CONNECTION_UNRESOLVED"
+
+
+def test_connectivity_preflight_aggregates_all_selected_rail_blockers(
+    monkeypatch,
+) -> None:
+    scenario = _scenario()
+    payload = scenario.model_dump(mode="python")
+    project = payload["normalized_project"]
+    project["stackup_layers"][2]["pwr_nets"].append("VDD_ALT")
+    project["rails"].append(
+        RailSpec(
+            rail_id="RAIL_ALT",
+            family="VDD",
+            domain="VDD",
+            net="VDD_ALT",
+            site="SITE0",
+            pwr_layer="PWR1",
+            gnd_layer="GND1",
+        ).model_dump(mode="python")
+    )
+    c2 = next(item for item in payload["decaps"] if item["refdes"] == "C2")
+    c2.update(
+        {
+            "source_net": "VDD_ALT",
+            "current_net": "VDD_ALT",
+            "source_rail_id": "RAIL_ALT",
+            "current_rail_id": "RAIL_ALT",
+            "source_model_id": "M1",
+            "model_id": "M1",
+            "enabled": True,
+            "source_mounted": True,
+            "eligibility": {
+                "RAIL_ALT": RailEligibility(
+                    rail_id="RAIL_ALT",
+                    net="VDD_ALT",
+                    pwr_layer="PWR1",
+                    gnd_layer="GND1",
+                    via_template_id="VT_ALLOWED",
+                    allowed=True,
+                ).model_dump(mode="python")
+            },
+        }
+    )
+    for refdes, kind, reason in (
+        ("C1", DecapConnectionKind.UNRESOLVED, "PWR landing not proven"),
+        ("C2", DecapConnectionKind.OUT_OF_SCOPE, "component is outside the TOP scope"),
+    ):
+        payload["connection_analysis"]["connections"][refdes].update(
+            {
+                "kind": kind,
+                "power_vias": (),
+                "ground_vias": (),
+                "reason": reason,
+            }
+        )
+    blocked = ScenarioSpec.model_validate(payload)
+
+    preflight = preflight_evaluation_connectivity(
+        blocked, ("rail_alt", "RAIL_VDD")
+    )
+
+    assert isinstance(preflight, EvaluationConnectivityPreflight)
+    assert preflight.rail_ids == ("RAIL_VDD", "RAIL_ALT")
+    assert [(item.rail_id, item.refdes, item.kind.value) for item in preflight.blockers] == [
+        ("RAIL_VDD", "C1", "UNRESOLVED"),
+        ("RAIL_ALT", "C2", "OUT_OF_SCOPE"),
+    ]
+    assert "RAIL_VDD" in preflight.message()
+    assert "RAIL_ALT" in preflight.message()
+
+    selected_only = preflight_evaluation_connectivity(blocked, ("RAIL_VDD",))
+    assert [item.refdes for item in selected_only.blockers] == ["C1"]
+
+    monkeypatch.setattr(
+        ScenarioSpec,
+        "with_baseline_captures",
+        lambda *_args, **_kwargs: pytest.fail("baseline capture must not start"),
+    )
+    with pytest.raises(ScenarioEvaluationPreflightError) as captured:
+        evaluate_comparison_batch(blocked, ("RAIL_VDD", "RAIL_ALT"))
+    assert captured.value.code == "EVALUATION_CONNECTIVITY_BLOCKED"
+    assert captured.value.preflight == preflight
+
+
+def test_connectivity_preflight_includes_disabled_unresolved_before_baseline(
+    monkeypatch,
+) -> None:
+    payload = _scenario().model_dump(mode="python")
+    payload["connection_analysis"]["connections"]["C2"].update(
+        {
+            "kind": DecapConnectionKind.UNRESOLVED,
+            "power_vias": (),
+            "ground_vias": (),
+            "reason": "disabled pad source landing is unresolved",
+        }
+    )
+    blocked = ScenarioSpec.model_validate(payload)
+
+    preflight = preflight_evaluation_connectivity(blocked, ("RAIL_VDD",))
+
+    assert [(item.refdes, item.kind.value) for item in preflight.blockers] == [
+        ("C2", "UNRESOLVED")
+    ]
+    with pytest.raises(ScenarioEvaluationBuildError) as builder_error:
+        build_evaluation_project(blocked, evaluation_rail_id="RAIL_VDD")
+    assert builder_error.value.code == "DECAP_CONNECTION_UNRESOLVED"
+
+    monkeypatch.setattr(
+        ScenarioSpec,
+        "with_baseline_captures",
+        lambda *_args, **_kwargs: pytest.fail("baseline capture must not start"),
+    )
+    with pytest.raises(ScenarioEvaluationPreflightError) as captured:
+        evaluate_comparison_batch(blocked, ("RAIL_VDD",))
+    assert captured.value.preflight == preflight
+
+
+def test_connectivity_preflight_includes_isolation_gap_unresolved_before_baseline(
+    monkeypatch,
+) -> None:
+    scenario = _scenario()
+    gap = scenario.decaps[0].model_copy(
+        update={"enabled": False, "pad_state": DecapPadState.ISOLATION_GAP}
+    )
+    connection = scenario.connection_analysis.connections[gap.refdes].model_copy(
+        update={
+            "kind": DecapConnectionKind.UNRESOLVED,
+            "power_vias": (),
+            "ground_vias": (),
+            "reason": "isolation-gap source landing is unresolved",
+        }
+    )
+    analysis = scenario.connection_analysis.model_copy(
+        update={
+            "connections": {
+                **scenario.connection_analysis.connections,
+                gap.refdes: connection,
+            }
+        }
+    )
+    # This deliberately bypasses ScenarioSpec persistence validation: persisted
+    # isolation gaps must be source-authorized shared-pad members, but the
+    # builder checks a direct connection classification before pad state.
+    blocked = scenario.model_copy(
+        update={"decaps": [gap, *scenario.decaps[1:]], "connection_analysis": analysis}
+    )
+
+    preflight = preflight_evaluation_connectivity(blocked, ("RAIL_VDD",))
+
+    assert [(item.refdes, item.kind.value) for item in preflight.blockers] == [
+        ("C1", "UNRESOLVED")
+    ]
+    with pytest.raises(ScenarioEvaluationBuildError) as builder_error:
+        build_evaluation_project(blocked, evaluation_rail_id="RAIL_VDD")
+    assert builder_error.value.code == "DECAP_CONNECTION_UNRESOLVED"
+
+    monkeypatch.setattr(
+        ScenarioSpec,
+        "with_baseline_captures",
+        lambda *_args, **_kwargs: pytest.fail("baseline capture must not start"),
+    )
+    with pytest.raises(ScenarioEvaluationPreflightError) as captured:
+        evaluate_comparison_batch(blocked, ("RAIL_VDD",))
+    assert captured.value.preflight == preflight
+
+
+def test_saved_distributed_scenario_reloads_and_builds_clean_changed_rail(
+    tmp_path,
+) -> None:
+    payload = _scenario().model_dump(mode="python")
+    project = payload["normalized_project"]
+    project["stackup_layers"][2]["pwr_nets"].append("VDD_ALT")
+    project["rails"].append(
+        RailSpec(
+            rail_id="RAIL_ALT",
+            family="VDD",
+            domain="VDD_ALT",
+            net="VDD_ALT",
+            site="SITE0",
+            pwr_layer="PWR1",
+            gnd_layer="GND1",
+        ).model_dump(mode="python")
+    )
+    project["pins"].append(
+        PinRecord(
+            refdes="U1",
+            pin="P2",
+            net="VDD_ALT",
+            x_um=2_000.0,
+            y_um=1_000.0,
+            kind=PinKind.DEVICE_BUMP,
+            terminal=TerminalKind.PWR,
+            domain="VDD_ALT",
+            site="SITE0",
+        ).model_dump(mode="python")
+    )
+    partition = project["partitions"][0]
+    partition["columns"] = 2
+    partition["cells"][0]["x_max_um"] = 5_000.0
+    partition["cells"].append(
+        PlaneCell(
+            cell_id="CELL1",
+            row=0,
+            column=1,
+            x_min_um=5_000.0,
+            x_max_um=10_000.0,
+            y_min_um=0.0,
+            y_max_um=8_000.0,
+        ).model_dump(mode="python")
+    )
+    partition["domain_to_cell"]["VDD_ALT"] = "CELL1"
+    alt_eligibility = RailEligibility(
+        rail_id="RAIL_ALT",
+        net="VDD_ALT",
+        pwr_layer="PWR1",
+        gnd_layer="GND1",
+        via_template_id="VT_ALLOWED",
+        allowed=True,
+    ).model_dump(mode="python")
+    for decap in payload["decaps"]:
+        decap.update(
+            {
+                "source_model_id": "M1",
+                "model_id": "M1",
+                "enabled": True,
+                "source_mounted": True,
+                "eligibility": {
+                    "RAIL_VDD": RailEligibility(
+                        rail_id="RAIL_VDD",
+                        net="VDD",
+                        pwr_layer="PWR1",
+                        gnd_layer="GND1",
+                        via_template_id="VT_ALLOWED",
+                        allowed=True,
+                    ).model_dump(mode="python"),
+                    "RAIL_ALT": alt_eligibility,
+                },
+            }
+        )
+    scenario = ScenarioSpec.model_validate(payload)
+    plan = compute_distribution_plan(
+        scenario,
+        {("RAIL_VDD", "M1"): 0, ("RAIL_ALT", "M1"): 2},
+        DistributionDistanceMode.NEAREST,
+    )
+    distributed = apply_distribution_plan(scenario, plan)
+    path = save_scenario(distributed, tmp_path / "distributed.spdpi")
+    reloaded = load_scenario_bundle(path).scenario
+
+    assert all(item.current_rail_id == "RAIL_ALT" for item in reloaded.decaps)
+    project = build_evaluation_project(reloaded, evaluation_rail_id="RAIL_ALT")
+    assert len(project.placements) == 2
 
 
 def test_disabled_unavailable_dnp_is_electrically_absent_and_does_not_block() -> None:

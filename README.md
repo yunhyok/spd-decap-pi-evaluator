@@ -1,6 +1,8 @@
-# SPD Decap PI Evaluator
+# SPD Decap PI Evaluator v0.10.1
 
-> 프로그램: **SPD Decap PI Evaluator v0.10.0**
+> v0.10.1 preflights every selected PWR rail before baseline capture or solver work and groups every unresolved or out-of-scope source-connectivity classification that would fail the evaluation builder, including disabled/DNP or isolation-gap state.
+
+> 프로그램: **SPD Decap PI Evaluator v0.10.1**
 > 저장소: 기존 PI Calculator와 분리된 독립 프로그램
 > 해석 경계: 선택한 PWR rail의 pre-design `Zii`; 최종 PowerSI/SIwave 검증을 대체하지 않음
 
@@ -88,7 +90,7 @@ powershell.exe -ExecutionPolicy Bypass -NoProfile -File .\scripts\build_spd_deca
 산출물:
 
 - `dist\SPDDecapPIEvaluator\SPDDecapPIEvaluator.exe`
-- `installer-output\SPDDecapPIEvaluatorSetup-0.10.0.exe`
-- `installer-output\SPDDecapPIEvaluatorSetup-0.10.0.exe.sha256`
+- `installer-output\SPDDecapPIEvaluatorSetup-0.10.1.exe`
+- `installer-output\SPDDecapPIEvaluatorSetup-0.10.1.exe.sha256`
 
 프로그램명과 버전은 title bar와 installer metadata에 함께 표시된다.

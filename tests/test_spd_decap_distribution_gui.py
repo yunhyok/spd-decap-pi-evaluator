@@ -9,7 +9,7 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 from PySide6.QtCore import QItemSelectionModel, Qt
 from PySide6.QtTest import QSignalSpy, QTest
-from PySide6.QtWidgets import QApplication, QFileDialog, QLineEdit, QSplitter
+from PySide6.QtWidgets import QApplication, QFileDialog, QLineEdit, QMessageBox, QSplitter
 from openpyxl import load_workbook
 
 from test_spd_decap_distribution import _direct_scenario, _with_initial_rails
@@ -21,7 +21,7 @@ from spd_decap_pi.distribution import (
 )
 from spd_decap_pi.distribution_workbook import DISTRIBUTION_METADATA_TITLE
 from spd_decap_pi.gui.main_window import MainWindow
-from spd_decap_pi.scenario import ScenarioSpec
+from spd_decap_pi.scenario import DecapConnectionKind, DecapPadState, ScenarioSpec
 from spd_decap_pi.scenario_io import load_scenario
 from spd_decap_pi.spreadsheet_export import write_distribution_workbook
 
@@ -658,7 +658,8 @@ def test_full_preview_exports_saves_and_applies_one_atomic_revision(
         summary = window.distribution_summary.toPlainText()
         assert "Status: FULL (count/topology)" in summary
         assert (
-            "PDN evaluation: not blocked by inherited connection evidence"
+            "PDN evaluation (modified/touched rails): no inherited "
+            "unresolved/out-of-scope connection blockers"
             in summary
         )
         assert "R1 donor: give capacity 2, used 2, unused 0" in summary
@@ -883,12 +884,137 @@ def test_full_preview_separates_topology_success_from_evaluation_block() -> None
         summary = window.distribution_summary.toPlainText()
         assert "Status: FULL (count/topology)" in summary
         assert (
-            "PDN evaluation: BLOCKED on inherited unresolved/out-of-scope "
-            "connections"
+            "PDN evaluation (modified/touched rails): BLOCKED on inherited "
+            "unresolved/out-of-scope connections"
             in summary
         )
         assert "PDN evaluation blocked" in window.status_text.text()
         assert window.apply_distribution_button.isEnabled()
+    finally:
+        window._dirty = False
+        window.close()
+        application.processEvents()
+
+
+def test_run_evaluation_preflights_all_selected_connectivity_blockers_without_worker(
+    monkeypatch,
+) -> None:
+    application = _application()
+    scenario = _with_initial_rails(
+        _direct_scenario(
+            (
+                ("C1", 0.0, ("R1",)),
+                ("C2", 10.0, ("R2",)),
+            ),
+            rail_ids=("R1", "R2"),
+        ),
+        {"C2": "R2"},
+    )
+    payload = scenario.model_dump(mode="python")
+    for refdes, kind, reason in (
+        ("C1", DecapConnectionKind.UNRESOLVED, "R1 source landing is unresolved"),
+        ("C2", DecapConnectionKind.OUT_OF_SCOPE, "R2 component is outside TOP scope"),
+    ):
+        payload["connection_analysis"]["connections"][refdes].update(
+            {
+                "kind": kind,
+                "power_vias": (),
+                "ground_vias": (),
+                "reason": reason,
+            }
+        )
+    blocked = ScenarioSpec.model_validate(payload)
+    window = _window_with_scenario(blocked)
+    warnings: list[str] = []
+    workers: list[object] = []
+    try:
+        for index in range(window.rail_list.count()):
+            window.rail_list.item(index).setCheckState(Qt.CheckState.Checked)
+        monkeypatch.setattr(
+            QMessageBox,
+            "warning",
+            lambda _parent, _title, text: warnings.append(text),
+        )
+        monkeypatch.setattr(
+            window,
+            "_run_worker",
+            lambda worker, *_args, **_kwargs: workers.append(worker),
+        )
+        window._comparison_batch = object()
+        window.comparison_table.setRowCount(1)
+
+        window.run_evaluation()
+
+        assert not workers
+        assert len(warnings) == 1
+        assert "R1" in warnings[0] and "C1" in warnings[0]
+        assert "R2" in warnings[0] and "C2" in warnings[0]
+        assert window._comparison_batch is None
+        assert window.comparison_table.rowCount() == 0
+        assert "blocked before Original/Tuned" in window.evaluation_summary.toPlainText()
+    finally:
+        window._dirty = False
+        window.close()
+        application.processEvents()
+
+
+def test_run_evaluation_preflights_disabled_and_isolation_gap_blockers_without_worker(
+    monkeypatch,
+) -> None:
+    application = _application()
+    scenario = _direct_scenario((("C1", 0.0, ("R1",)), ("C2", 10.0, ("R1",))), rail_ids=("R1",))
+    gap = scenario.decaps[0].model_copy(
+        update={"enabled": False, "pad_state": DecapPadState.ISOLATION_GAP}
+    )
+    disabled = scenario.decaps[1].model_copy(update={"enabled": False})
+    connections = dict(scenario.connection_analysis.connections)
+    connections["C1"] = connections["C1"].model_copy(
+        update={
+            "kind": DecapConnectionKind.UNRESOLVED,
+            "power_vias": (),
+            "ground_vias": (),
+            "reason": "isolation gap source landing is unresolved",
+        }
+    )
+    connections["C2"] = connections["C2"].model_copy(
+        update={
+            "kind": DecapConnectionKind.OUT_OF_SCOPE,
+            "power_vias": (),
+            "ground_vias": (),
+            "reason": "disabled pad is outside TOP scope",
+        }
+    )
+    # Direct isolation gaps are not persistable, but model_copy keeps this
+    # focused GUI regression on the builder's connection-before-pad-state path.
+    blocked = scenario.model_copy(
+        update={
+            "decaps": [gap, disabled],
+            "connection_analysis": scenario.connection_analysis.model_copy(
+                update={"connections": connections}
+            ),
+        }
+    )
+    window = _window_with_scenario(blocked)
+    warnings: list[str] = []
+    workers: list[object] = []
+    try:
+        monkeypatch.setattr(
+            QMessageBox,
+            "warning",
+            lambda _parent, _title, text: warnings.append(text),
+        )
+        monkeypatch.setattr(
+            window,
+            "_run_worker",
+            lambda worker, *_args, **_kwargs: workers.append(worker),
+        )
+
+        window.run_evaluation()
+
+        assert not workers
+        assert len(warnings) == 1
+        assert "C1" in warnings[0] and "C2" in warnings[0]
+        assert "UNRESOLVED" in warnings[0] and "OUT_OF_SCOPE" in warnings[0]
     finally:
         window._dirty = False
         window.close()
