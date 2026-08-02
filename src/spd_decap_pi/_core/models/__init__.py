@@ -17,6 +17,13 @@ from .impedance import (
     SeriesRLModel,
     frequency_array,
 )
+from .layer_pair import (
+    LayerPairNetwork,
+    LayerPairNetworkError,
+    SampledPassivityDiagnostic,
+    cascade_layer_pair_networks,
+    cascade_layer_pair_stack,
+)
 from .spice import (
     Capacitor,
     Inductor,
@@ -38,6 +45,8 @@ __all__ = [
     "ImpedanceModel",
     "ImpedanceModelError",
     "Inductor",
+    "LayerPairNetwork",
+    "LayerPairNetworkError",
     "MutualCoupling",
     "PassiveSubcircuitModel",
     "Resistor",
@@ -47,8 +56,11 @@ __all__ = [
     "SeriesRLCModel",
     "SeriesRLModel",
     "SharedPairModel",
+    "SampledPassivityDiagnostic",
     "SpiceModelError",
     "frequency_array",
+    "cascade_layer_pair_networks",
+    "cascade_layer_pair_stack",
     "kron_reduce_admittance",
     "passive_subcircuit_names",
     "parse_passive_subcircuit",
