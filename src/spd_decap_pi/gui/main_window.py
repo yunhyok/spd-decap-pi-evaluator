@@ -940,9 +940,12 @@ class MainWindow(QMainWindow):
             "PWR NETs. "
             "Evaluation reuses the existing modal PI engine. "
             "Numerical convergence preset changes only internal rectangular modal "
-            "convergence/runtime; it is not a PowerSI or absolute-accuracy setting. "
+            "convergence/runtime; Maximum is an opt-in final m10→m12 truncation "
+            "check. It is not a PowerSI or absolute-accuracy setting. "
             "Non-rectangular PWR artwork is solved with its disclosed rectangular bbox; "
-            "DGND is continuous; results are single-rail Zii without inter-rail coupling.\n\n"
+            "an immediately adjacent opposite-side DGND layer may use the shared-PWR "
+            "ideal-common-reference equivalent; results are single-rail Zii without "
+            "inter-rail coupling.\n\n"
             + _EXPLORATORY_FIDELITY_WARNING
         )
         evaluation_notes.setStyleSheet("color: #d6a64f;")

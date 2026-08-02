@@ -52,6 +52,8 @@ class RectangularPlane:
     conductivity_s_per_m: float = 5.8e7
     power_thickness_m: float = 35e-6
     ground_thickness_m: float = 35e-6
+    power_conductivity_s_per_m: float | None = None
+    ground_conductivity_s_per_m: float | None = None
 
     def __post_init__(self) -> None:
         positive = {
@@ -66,6 +68,12 @@ class RectangularPlane:
         for name, value in positive.items():
             if not np.isfinite(value) or value <= 0.0:
                 raise ModalSolverError(f"{name} must be finite and > 0")
+        for name, value in {
+            "power_conductivity_s_per_m": self.power_conductivity_s_per_m,
+            "ground_conductivity_s_per_m": self.ground_conductivity_s_per_m,
+        }.items():
+            if value is not None and (not np.isfinite(value) or value <= 0.0):
+                raise ModalSolverError(f"{name} must be finite and > 0 when supplied")
         if not np.isfinite(self.loss_tangent) or self.loss_tangent < 0.0:
             raise ModalSolverError("loss_tangent must be finite and >= 0")
 
@@ -84,9 +92,27 @@ class RectangularPlane:
 
     @property
     def sheet_resistance_ohm(self) -> float:
-        return 1.0 / (self.conductivity_s_per_m * self.power_thickness_m) + 1.0 / (
-            self.conductivity_s_per_m * self.ground_thickness_m
+        return self.power_sheet_resistance_ohm + self.ground_sheet_resistance_ohm
+
+    @property
+    def power_sheet_resistance_ohm(self) -> float:
+        return 1.0 / (
+            self.effective_power_conductivity_s_per_m * self.power_thickness_m
         )
+
+    @property
+    def ground_sheet_resistance_ohm(self) -> float:
+        return 1.0 / (
+            self.effective_ground_conductivity_s_per_m * self.ground_thickness_m
+        )
+
+    @property
+    def effective_power_conductivity_s_per_m(self) -> float:
+        return self.power_conductivity_s_per_m or self.conductivity_s_per_m
+
+    @property
+    def effective_ground_conductivity_s_per_m(self) -> float:
+        return self.ground_conductivity_s_per_m or self.conductivity_s_per_m
 
     @property
     def vertical_cutoff_hz(self) -> float:
@@ -259,6 +285,7 @@ class PreparedDeviceSystem:
     """Placement-independent numerical terms for repeated Device solves."""
 
     plane: RectangularPlane
+    parallel_planes: tuple[RectangularPlane, ...]
     modes: tuple[tuple[int, int], ...]
     frequencies_hz: NDArray[np.float64]
     plane_admittance: NDArray[np.complex128]
@@ -273,6 +300,16 @@ class PreparedDeviceSystem:
     ]
 
     def __post_init__(self) -> None:
+        parallel_planes = tuple(self.parallel_planes)
+        for component in parallel_planes:
+            if (
+                component.width_m != self.plane.width_m
+                or component.height_m != self.plane.height_m
+            ):
+                raise ModalSolverError(
+                    "prepared parallel plane components must share the primary "
+                    "plane width and height"
+                )
         frequencies = frequency_array(self.frequencies_hz).copy()
         plane_admittance = np.asarray(
             self.plane_admittance, dtype=np.complex128
@@ -325,6 +362,7 @@ class PreparedDeviceSystem:
         frequencies.setflags(write=False)
         plane_admittance.setflags(write=False)
         object.__setattr__(self, "frequencies_hz", frequencies)
+        object.__setattr__(self, "parallel_planes", parallel_planes)
         object.__setattr__(self, "modes", modes)
         object.__setattr__(self, "plane_admittance", plane_admittance)
         object.__setattr__(self, "branch_data", tuple(copied_branches))
@@ -397,18 +435,42 @@ class ShuntLeaveOneOutSolveResult:
 
 
 class RectangularCavitySolver:
-    """Galerkin modal solver for one rectangular effective plane pair."""
+    """Galerkin solver for a shared-PWR, ideal-common-reference equivalent.
+
+    ``parallel_planes`` are dielectric/return components facing the same PWR
+    sheet; they are not independent cavities with duplicated PWR resistance.
+    """
 
     def __init__(
         self,
         plane: RectangularPlane,
         *,
+        parallel_planes: tuple[RectangularPlane, ...] = (),
         max_mode_x: int = 6,
         max_mode_y: int = 6,
         mode_count: int | None = None,
     ) -> None:
         if max_mode_x < 0 or max_mode_y < 0:
             raise ModalSolverError("maximum mode indices must be >= 0")
+        parallel_planes = tuple(parallel_planes)
+        for component in parallel_planes:
+            if (
+                component.width_m != plane.width_m
+                or component.height_m != plane.height_m
+            ):
+                raise ModalSolverError(
+                    "parallel rectangular plane components must share the primary "
+                    "plane width and height"
+                )
+            if (
+                component.power_thickness_m != plane.power_thickness_m
+                or component.effective_power_conductivity_s_per_m
+                != plane.effective_power_conductivity_s_per_m
+            ):
+                raise ModalSolverError(
+                    "shared-PWR plane components must have the same power "
+                    "thickness and conductivity"
+                )
         modes = [
             (mode_x, mode_y)
             for mode_x in range(max_mode_x + 1)
@@ -427,6 +489,8 @@ class RectangularCavitySolver:
                 raise ModalSolverError("mode_count must be >= 1")
             modes = modes[:mode_count]
         self.plane = plane
+        self.parallel_planes = parallel_planes
+        self.planes = (plane, *parallel_planes)
         self.modes: tuple[tuple[int, int], ...] = tuple(modes)
         self._mode_index = {mode: index for index, mode in enumerate(self.modes)}
         self._wave_numbers_squared = np.asarray(
@@ -496,25 +560,104 @@ class RectangularCavitySolver:
         return population @ population.T
 
     def modal_impedance(self, frequencies_hz: ArrayLike) -> NDArray[np.complex128]:
-        """Return uncoupled modal impedance coefficients in ohms."""
+        """Return modal impedances for the shared-PWR cavity equivalent."""
 
         frequencies = frequency_array(frequencies_hz)
-        omega = 2.0 * np.pi * frequencies
-        complex_permittivity = (
-            EPSILON_0_F_PER_M
-            * self.plane.relative_permittivity
-            * (1.0 - 1j * self.plane.loss_tangent)
+        primary = self._component_modal_impedance(frequencies, self.plane)
+        if not self.parallel_planes:
+            # Keep the established one-pair numerical path unchanged.
+            return primary
+        shunt_admittance = sum(
+            (self._shunt_admittance_per_area(frequencies, component) for component in self.planes),
+            start=np.zeros(frequencies.shape, dtype=np.complex128),
         )
-        shunt_admittance_per_area = 1j * omega * complex_permittivity / self.plane.separation_m
-        sheet_impedance = self.plane.sheet_resistance_ohm + 1j * omega * MU_0_H_PER_M * self.plane.separation_m
-        propagation_squared = -sheet_impedance * shunt_admittance_per_area
+        return_admittance = sum(
+            (
+                np.reciprocal(self._return_sheet_impedance(frequencies, component))
+                for component in self.planes
+            ),
+            start=np.zeros(frequencies.shape, dtype=np.complex128),
+        )
+        if not np.all(np.isfinite(return_admittance)) or np.any(
+            np.abs(return_admittance) < np.finfo(float).tiny
+        ):
+            raise ModalSolverError("shared-PWR return admittance is singular")
+        sheet_impedance = self.plane.power_sheet_resistance_ohm + np.reciprocal(
+            return_admittance
+        )
+        propagation_squared = -sheet_impedance * shunt_admittance
         denominator = self._wave_numbers_squared[None, :] - propagation_squared[:, None]
         with np.errstate(divide="ignore", invalid="ignore"):
             impedance = sheet_impedance[:, None] / self.plane.area_m2 / denominator
         constant_index = self._mode_index.get((0, 0))
         if constant_index is not None:
             impedance[:, constant_index] = 1.0 / (
-                self.plane.area_m2 * shunt_admittance_per_area
+                self.plane.area_m2 * shunt_admittance
+            )
+        if not np.all(np.isfinite(impedance.real)) or not np.all(np.isfinite(impedance.imag)):
+            raise ModalSolverError(
+                "modal impedance is singular; add physical conductor/dielectric loss or avoid an exact lossless resonance"
+            )
+        return np.asarray(impedance, dtype=np.complex128)
+
+    def component_shunt_admittances(
+        self, frequencies_hz: ArrayLike
+    ) -> tuple[NDArray[np.complex128], ...]:
+        """Return per-area dielectric shunt admittances for each return component."""
+
+        frequencies = frequency_array(frequencies_hz)
+        return tuple(
+            self._shunt_admittance_per_area(frequencies, component)
+            for component in self.planes
+        )
+
+    def component_return_sheet_impedances(
+        self, frequencies_hz: ArrayLike
+    ) -> tuple[NDArray[np.complex128], ...]:
+        """Return each DGND sheet/inductive return impedance component."""
+
+        frequencies = frequency_array(frequencies_hz)
+        return tuple(
+            self._return_sheet_impedance(frequencies, component)
+            for component in self.planes
+        )
+
+    @staticmethod
+    def _shunt_admittance_per_area(
+        frequencies: NDArray[np.float64], plane: RectangularPlane
+    ) -> NDArray[np.complex128]:
+        omega = 2.0 * np.pi * frequencies
+        complex_permittivity = (
+            EPSILON_0_F_PER_M
+            * plane.relative_permittivity
+            * (1.0 - 1j * plane.loss_tangent)
+        )
+        return 1j * omega * complex_permittivity / plane.separation_m
+
+    @staticmethod
+    def _return_sheet_impedance(
+        frequencies: NDArray[np.float64], plane: RectangularPlane
+    ) -> NDArray[np.complex128]:
+        return plane.ground_sheet_resistance_ohm + 1j * (
+            2.0 * np.pi * frequencies * MU_0_H_PER_M * plane.separation_m
+        )
+
+    def _component_modal_impedance(
+        self,
+        frequencies: NDArray[np.float64],
+        plane: RectangularPlane,
+    ) -> NDArray[np.complex128]:
+        omega = 2.0 * np.pi * frequencies
+        shunt_admittance_per_area = self._shunt_admittance_per_area(frequencies, plane)
+        sheet_impedance = plane.sheet_resistance_ohm + 1j * omega * MU_0_H_PER_M * plane.separation_m
+        propagation_squared = -sheet_impedance * shunt_admittance_per_area
+        denominator = self._wave_numbers_squared[None, :] - propagation_squared[:, None]
+        with np.errstate(divide="ignore", invalid="ignore"):
+            impedance = sheet_impedance[:, None] / plane.area_m2 / denominator
+        constant_index = self._mode_index.get((0, 0))
+        if constant_index is not None:
+            impedance[:, constant_index] = 1.0 / (
+                plane.area_m2 * shunt_admittance_per_area
             )
         if not np.all(np.isfinite(impedance.real)) or not np.all(np.isfinite(impedance.imag)):
             raise ModalSolverError(
@@ -924,6 +1067,7 @@ class RectangularCavitySolver:
         frequencies = frequency_array(frequencies_hz)
         return PreparedDeviceSystem(
             plane=self.plane,
+            parallel_planes=self.parallel_planes,
             modes=self.modes,
             frequencies_hz=frequencies,
             plane_admittance=1.0 / self.modal_impedance(frequencies),
@@ -941,7 +1085,10 @@ class RectangularCavitySolver:
 
         if max_workers < 1:
             raise ModalSolverError("max_workers must be >= 1")
-        if prepared.plane != self.plane:
+        if (
+            prepared.plane != self.plane
+            or prepared.parallel_planes != self.parallel_planes
+        ):
             raise ModalSolverError("prepared Device plane does not match this solver")
         if prepared.modes != self.modes:
             raise ModalSolverError(

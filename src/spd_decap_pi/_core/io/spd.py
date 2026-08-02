@@ -1294,6 +1294,23 @@ def _site_for(refdes: str, net: str) -> str | None:
     return f"SITE{match.group(1)}" if match else None
 
 
+def _ground_alias_key(net: str, ground_keys: set[str]) -> str | None:
+    """Return a configured ground key, accepting only a trailing site suffix.
+
+    The original SPD net string remains attached to candidates.  This helper
+    is solely for classification, so ``DGND/1`` is accepted when ``DGND`` is
+    configured while unrelated nets such as ``VDD/1`` stay PWR nets.
+    """
+
+    key = net.casefold()
+    if key in ground_keys:
+        return key
+    match = re.fullmatch(r"(.+)/(\d+)", key)
+    if match and match.group(1) in ground_keys:
+        return match.group(1)
+    return None
+
+
 def _footprint_for_part(part_name: str) -> str:
     match = re.match(r"CAP_([^_]+)", part_name, re.IGNORECASE)
     return match.group(1).upper() if match else part_name
@@ -1354,17 +1371,15 @@ def _select_candidates(
         )
         if is_io:
             for port in connection.ports:
-                if port.net is None or port.net.casefold() not in plane_keys:
+                if port.net is None:
                     continue
-                terminal = TerminalKind.GND if port.net.casefold() in ground_keys else TerminalKind.PWR
-                # /0 and /1 are separate device-side sites/domains.  Shared
-                # DGND has no suffix and stays site-agnostic so coordinate
-                # pairing can select the nearest return bump for either site.
-                site = (
-                    None
-                    if terminal == TerminalKind.GND
-                    else _site_for(connection.refdes, port.net)
-                )
+                ground_key = _ground_alias_key(port.net, ground_keys)
+                if ground_key is None and port.net.casefold() not in plane_keys:
+                    continue
+                terminal = TerminalKind.GND if ground_key is not None else TerminalKind.PWR
+                # Raw Port terminals retain their refdes/net site provenance,
+                # including a site-specific DGND terminal such as ``DGND/1``.
+                site = _site_for(connection.refdes, port.net)
                 candidate = _PinCandidate(connection.refdes, port.pin, port.node_id, port.net, PinKind.DEVICE_BUMP, terminal, port.net if terminal == TerminalKind.PWR else None, site)
                 device.append(candidate)
                 referenced.add(port.node_id.casefold())
@@ -1385,8 +1400,16 @@ def _select_candidates(
             )
         ):
             continue
-        ground_ports = [port for port in connection.ports if port.net and port.net.casefold() in ground_keys]
-        power_ports = [port for port in connection.ports if port.net and port.net.casefold() not in ground_keys]
+        ground_ports = [
+            port
+            for port in connection.ports
+            if port.net and _ground_alias_key(port.net, ground_keys) is not None
+        ]
+        power_ports = [
+            port
+            for port in connection.ports
+            if port.net and _ground_alias_key(port.net, ground_keys) is None
+        ]
         if len(ground_ports) != 1 or len(power_ports) != 1:
             ambiguous += 1
             continue

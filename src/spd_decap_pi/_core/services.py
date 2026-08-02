@@ -99,6 +99,18 @@ EVALUATION_MODAL_PRESETS: tuple[EvaluationModalPreset, ...] = (
             "take several minutes on a large SPD."
         ),
     ),
+    EvaluationModalPreset(
+        key="maximum",
+        label="Maximum",
+        max_index=12,
+        mode_count=169,
+        description=(
+            "169 rectangular-cavity modes for an opt-in final truncation check; "
+            "compares against the 121-mode (10,10) basis. A representative m10→m12 "
+            "check observed up to 0.105 dB change and can take substantially longer. "
+            "It is not PowerSI calibration."
+        ),
+    ),
 )
 
 DEFAULT_EVALUATION_MODAL_MAX_INDEX = 8

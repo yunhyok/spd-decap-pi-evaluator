@@ -97,6 +97,9 @@ def test_evaluation_layout_uses_an_expanding_rail_list_and_detached_plot_button(
         assert not window.export_tuned_csv_button.isEnabled()
         assert window.evaluation_modal_preset_combo.currentData() == 8
         assert window.evaluation_modal_preset_combo.currentText() == "Balanced (81 modes)"
+        maximum_index = window.evaluation_modal_preset_combo.findData(12)
+        assert maximum_index >= 0
+        assert window.evaluation_modal_preset_combo.itemText(maximum_index) == "Maximum (169 modes)"
         notes = window.findChild(QTextBrowser, "evaluationNotes")
         assert notes is not None
         assert "not a PowerSI or absolute-accuracy setting" in notes.toPlainText()
@@ -1175,6 +1178,11 @@ def test_evaluation_worker_receives_scenario_model_attachments(
         )
         window.run_evaluation()
         assert captured["worker"].kwargs["modal_max_index"] == 10
+        window.evaluation_modal_preset_combo.setCurrentIndex(
+            window.evaluation_modal_preset_combo.findData(12)
+        )
+        window.run_evaluation()
+        assert captured["worker"].kwargs["modal_max_index"] == 12
     finally:
         window._dirty = False
         window.close()

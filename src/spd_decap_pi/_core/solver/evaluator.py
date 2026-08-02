@@ -43,13 +43,29 @@ from .modal import (
 
 
 # Cache identity: source-derived terminal branches and explicit multi-ground
-# shared-pad reduction changed the calculated transfer function in v0.12.0.
-SOLVER_VERSION = "modal-mvp-0.4.0"
+# shared-pad reduction and shared-PWR return treatment changed the calculated
+# transfer function in v0.13.0.
+SOLVER_VERSION = "modal-mvp-0.5.0"
 COUPLING_ASSUMPTION = "inter-rail/site coupling not modeled"
 
 
 class EvaluationError(ValueError):
     """Raised when a project cannot be mapped to the single-rail MVP model."""
+
+
+def _validated_parallel_planes(
+    plane: RectangularPlane, parallel_planes: tuple[RectangularPlane, ...]
+) -> tuple[RectangularPlane, ...]:
+    components = tuple(parallel_planes)
+    if any(
+        component.width_m != plane.width_m or component.height_m != plane.height_m
+        for component in components
+    ):
+        raise EvaluationError(
+            "parallel rectangular plane components must share the primary plane width "
+            "and height"
+        )
+    return components
 
 
 def sensitivity_port_id(
@@ -86,6 +102,7 @@ class EvaluationRequest:
     device: DeviceConnection
     shunts: tuple[ShuntGroup | CoupledShuntGroup, ...]
     target: TargetMask
+    parallel_planes: tuple[RectangularPlane, ...] = ()
     critical_band_hz: tuple[float, float] = (1e5, 1e8)
     max_mode_x: int = 6
     max_mode_y: int = 6
@@ -99,6 +116,11 @@ class EvaluationRequest:
             raise EvaluationError("rail_id must not be empty")
         if self.worker_count < 1:
             raise EvaluationError("worker_count must be >= 1")
+        object.__setattr__(
+            self,
+            "parallel_planes",
+            _validated_parallel_planes(self.plane, self.parallel_planes),
+        )
 
 
 @dataclass(frozen=True, slots=True)
@@ -108,6 +130,7 @@ class ProjectEvaluationTemplate:
     source_project: Any = field(repr=False, compare=False)
     rail_id: str
     plane: RectangularPlane
+    parallel_planes: tuple[RectangularPlane, ...]
     origin_um: tuple[float, float]
     partition_confirmed: bool
     cap_models: dict[str, ImpedanceModel]
@@ -116,8 +139,16 @@ class ProjectEvaluationTemplate:
     topology_maps: dict[str, Any]
     shared_pad_clusters: dict[str, Any]
     device: DeviceConnection
+    plane_assumptions: tuple[str, ...]
     pairing_assumptions: tuple[str, ...]
     pairing_confident: bool
+
+    def __post_init__(self) -> None:
+        object.__setattr__(
+            self,
+            "parallel_planes",
+            _validated_parallel_planes(self.plane, self.parallel_planes),
+        )
 
 
 @dataclass(frozen=True, slots=True)
@@ -126,6 +157,7 @@ class EvaluationKernel:
 
     rail_id: str
     plane: RectangularPlane
+    parallel_planes: tuple[RectangularPlane, ...]
     max_mode_x: int
     max_mode_y: int
     mode_count: int | None
@@ -133,6 +165,13 @@ class EvaluationKernel:
     device: DeviceConnection = field(repr=False, compare=False)
     solver: RectangularCavitySolver
     prepared_device: PreparedDeviceSystem
+
+    def __post_init__(self) -> None:
+        object.__setattr__(
+            self,
+            "parallel_planes",
+            _validated_parallel_planes(self.plane, self.parallel_planes),
+        )
 
 
 @dataclass(frozen=True, slots=True)
@@ -210,6 +249,7 @@ def compile_evaluation_kernel(request: EvaluationRequest) -> EvaluationKernel:
 
     solver = RectangularCavitySolver(
         request.plane,
+        parallel_planes=request.parallel_planes,
         max_mode_x=request.max_mode_x,
         max_mode_y=request.max_mode_y,
         mode_count=request.mode_count,
@@ -217,6 +257,7 @@ def compile_evaluation_kernel(request: EvaluationRequest) -> EvaluationKernel:
     return EvaluationKernel(
         rail_id=request.rail_id,
         plane=request.plane,
+        parallel_planes=request.parallel_planes,
         max_mode_x=request.max_mode_x,
         max_mode_y=request.max_mode_y,
         mode_count=request.mode_count,
@@ -240,6 +281,7 @@ def evaluate_rail(
     elif (
         kernel.rail_id != request.rail_id
         or kernel.plane != request.plane
+        or kernel.parallel_planes != request.parallel_planes
         or kernel.max_mode_x != request.max_mode_x
         or kernel.max_mode_y != request.max_mode_y
         or kernel.mode_count != request.mode_count
@@ -263,6 +305,7 @@ def evaluate_rail(
         solve.diagnostics,
         request.plane,
         request.confidence_inputs,
+        parallel_planes=request.parallel_planes,
     )
     assumptions = tuple(dict.fromkeys((*request.assumptions, COUPLING_ASSUMPTION)))
     return EvaluationOutcome(
@@ -289,6 +332,7 @@ def evaluate_shunt_sensitivity(
         raise RuntimeError("sensitivity calculation cancelled")
     solver = RectangularCavitySolver(
         request.plane,
+        parallel_planes=request.parallel_planes,
         max_mode_x=request.max_mode_x,
         max_mode_y=request.max_mode_y,
         mode_count=request.mode_count,
@@ -476,6 +520,7 @@ def evaluate_rail_converged(
         high.solve.diagnostics,
         final_request.plane,
         final_request.confidence_inputs,
+        parallel_planes=final_request.parallel_planes,
     )
     final_assumptions = tuple(
         dict.fromkeys((*final_request.assumptions, COUPLING_ASSUMPTION))
@@ -662,7 +707,13 @@ def compile_project_evaluation_template(
     rail = rails[rail_id]
     if str(getattr(rail.state, "value", rail.state)) != "ACTIVE":
         raise EvaluationError(f"rail {rail_id!r} is not ACTIVE")
-    plane, origin_um, partition_confirmed = _plane_from_project(project, rail)
+    (
+        plane,
+        parallel_planes,
+        origin_um,
+        partition_confirmed,
+        plane_assumptions,
+    ) = _planes_from_project(project, rail)
     cap_models = {item.model_id: _cap_model(item) for item in project.cap_models}
     via_templates = {item.template_id: item for item in project.via_templates}
     via_models = {key: _via_model(value) for key, value in via_templates.items()}
@@ -683,6 +734,7 @@ def compile_project_evaluation_template(
         source_project=project,
         rail_id=rail_id,
         plane=plane,
+        parallel_planes=parallel_planes,
         origin_um=origin_um,
         partition_confirmed=partition_confirmed,
         cap_models=cap_models,
@@ -691,6 +743,7 @@ def compile_project_evaluation_template(
         topology_maps=topology_maps,
         shared_pad_clusters=shared_pad_clusters,
         device=device,
+        plane_assumptions=plane_assumptions,
         pairing_assumptions=pairing_assumptions,
         pairing_confident=pairing_confident,
     )
@@ -771,12 +824,14 @@ def build_project_evaluation_request(
     )
     assumptions = (
         tuple(getattr(project, "assumptions", ()))
+        + compiled.plane_assumptions
         + compiled.pairing_assumptions
     )
     return EvaluationRequest(
         rail_id=rail_id,
         frequencies_hz=frequencies,
         plane=compiled.plane,
+        parallel_planes=compiled.parallel_planes,
         device=compiled.device,
         shunts=shunts,
         target=target,
@@ -893,37 +948,43 @@ def _target_from_rail(rail: Any, frequencies: NDArray[np.float64]) -> TargetMask
 def _plane_from_project(
     project: Any, rail: Any
 ) -> tuple[RectangularPlane, tuple[float, float], bool]:
+    """Compatibility view of the primary component of a project plane pair."""
+
+    plane, _parallel, origin, confirmed, _assumptions = _planes_from_project(
+        project, rail
+    )
+    return plane, origin, confirmed
+
+
+def _planes_from_project(
+    project: Any, rail: Any
+) -> tuple[
+    RectangularPlane,
+    tuple[RectangularPlane, ...],
+    tuple[float, float],
+    bool,
+    tuple[str, ...],
+]:
+    """Build the selected pair and an immediately adjacent common-DGND return.
+
+    A second component is deliberately limited to the first conductor on the
+    opposite side of the selected PWR layer.  This permits the disclosed
+    shared-PWR, ideal-common-reference equivalent without crossing another
+    conductor or treating a PWR neighbor as a return path.
+    """
+
     layers = list(project.stackup_layers)
     layer_index = {layer.name: index for index, layer in enumerate(layers)}
     if rail.pwr_layer not in layer_index or rail.gnd_layer not in layer_index:
         raise EvaluationError("selected PWR/DGND layer is absent from the stack-up")
     pwr_index = layer_index[rail.pwr_layer]
     gnd_index = layer_index[rail.gnd_layer]
-    lower, upper = sorted((pwr_index, gnd_index))
-    between = layers[lower + 1 : upper]
-    intervening_conductors = [layer.name for layer in between if layer.is_conductor]
-    if intervening_conductors:
-        raise EvaluationError(
-            "multiple effective plane pairs are unsupported; intervening conductor layers: "
-            + ", ".join(intervening_conductors)
-        )
-    dielectrics = [layer for layer in between if not layer.is_conductor]
-    if not dielectrics or any(layer.dk is None for layer in dielectrics):
-        raise EvaluationError("selected plane pair requires dielectric rows with Dk")
-    separation_um = sum(float(layer.thickness_um) for layer in dielectrics)
-    series_weight = sum(float(layer.thickness_um) / float(layer.dk) for layer in dielectrics)
-    effective_dk = separation_um / series_weight
-    effective_df = sum(
-        (float(layer.thickness_um) / float(layer.dk)) * float(layer.df or 0.0)
-        for layer in dielectrics
-    ) / series_weight
     pwr_layer = layers[pwr_index]
     gnd_layer = layers[gnd_index]
     if not pwr_layer.is_conductor or not gnd_layer.is_conductor:
         raise EvaluationError("selected PWR/DGND layers must be conductor rows")
-    gnd_keys = {str(item).casefold() for item in gnd_layer.pwr_nets}
     gnd_aliases = {str(item).casefold() for item in project.gnd_aliases}
-    if not gnd_keys or not gnd_keys.issubset(gnd_aliases):
+    if not _is_configured_ground_layer(gnd_layer, gnd_aliases):
         raise EvaluationError(
             "selected DGND layer must contain only configured GND aliases"
         )
@@ -956,20 +1017,120 @@ def _plane_from_project(
         height_um = float(cell.y_max_um - cell.y_min_um)
         origin = (float(cell.x_min_um), float(cell.y_min_um))
         confirmed = bool(partition.confirmed)
-    conductivity = min(float(pwr_layer.conductivity_s_m), float(gnd_layer.conductivity_s_m))
-    return (
-        RectangularPlane(
-            width_m=width_um * 1e-6,
-            height_m=height_um * 1e-6,
-            separation_m=separation_um * 1e-6,
-            relative_permittivity=effective_dk,
-            loss_tangent=effective_df,
-            conductivity_s_per_m=conductivity,
-            power_thickness_m=float(pwr_layer.thickness_um) * 1e-6,
-            ground_thickness_m=float(gnd_layer.thickness_um) * 1e-6,
+    primary = _plane_component(
+        pwr_layer,
+        gnd_layer,
+        layers,
+        pwr_index,
+        gnd_index,
+        width_um,
+        height_um,
+        selected=True,
+    )
+    parallel: list[RectangularPlane] = []
+    primary_direction = 1 if gnd_index > pwr_index else -1
+    opposite_direction = -primary_direction
+    candidate_index = _first_conductor_index(layers, pwr_index, opposite_direction)
+    if candidate_index is not None:
+        candidate = layers[candidate_index]
+        if _is_configured_ground_layer(candidate, gnd_aliases) and _has_valid_dielectric_rows(
+            layers, pwr_index, candidate_index
+        ):
+            parallel.append(
+                _plane_component(
+                    pwr_layer,
+                    candidate,
+                    layers,
+                    pwr_index,
+                    candidate_index,
+                    width_um,
+                    height_um,
+                    selected=False,
+                )
+            )
+    assumptions: tuple[str, ...] = ()
+    if parallel:
+        component_names = (f"{rail.pwr_layer}/{rail.gnd_layer}",)
+        component_names += (f"{rail.pwr_layer}/{layers[candidate_index].name}",)
+        assumptions = (
+            "shared-PWR ideal-common-reference components: " + "; ".join(component_names),
+            "DGND component layers are treated as an ideal common reference",
+        )
+    return primary, tuple(parallel), origin, confirmed, assumptions
+
+
+def _is_configured_ground_layer(layer: Any, gnd_aliases: set[str]) -> bool:
+    if not layer.is_conductor:
+        return False
+    keys = {str(item).casefold() for item in layer.pwr_nets}
+    return bool(keys) and keys.issubset(gnd_aliases)
+
+
+def _first_conductor_index(
+    layers: list[Any], start: int, direction: int
+) -> int | None:
+    index = start + direction
+    while 0 <= index < len(layers):
+        if layers[index].is_conductor:
+            return index
+        index += direction
+    return None
+
+
+def _has_valid_dielectric_rows(
+    layers: list[Any], first: int, second: int
+) -> bool:
+    lower, upper = sorted((first, second))
+    between = layers[lower + 1 : upper]
+    return bool(between) and all(
+        not layer.is_conductor and layer.dk is not None for layer in between
+    )
+
+
+def _plane_component(
+    pwr_layer: Any,
+    gnd_layer: Any,
+    layers: list[Any],
+    pwr_index: int,
+    gnd_index: int,
+    width_um: float,
+    height_um: float,
+    *,
+    selected: bool,
+) -> RectangularPlane:
+    lower, upper = sorted((pwr_index, gnd_index))
+    between = layers[lower + 1 : upper]
+    intervening_conductors = [layer.name for layer in between if layer.is_conductor]
+    if intervening_conductors:
+        label = "selected" if selected else "parallel"
+        raise EvaluationError(
+            f"{label} plane pair crosses intervening conductor layers: "
+            + ", ".join(intervening_conductors)
+        )
+    dielectrics = [layer for layer in between if not layer.is_conductor]
+    if not dielectrics or any(layer.dk is None for layer in dielectrics):
+        label = "selected" if selected else "parallel"
+        raise EvaluationError(f"{label} plane pair requires dielectric rows with Dk")
+    separation_um = sum(float(layer.thickness_um) for layer in dielectrics)
+    series_weight = sum(float(layer.thickness_um) / float(layer.dk) for layer in dielectrics)
+    effective_dk = separation_um / series_weight
+    effective_df = sum(
+        (float(layer.thickness_um) / float(layer.dk)) * float(layer.df or 0.0)
+        for layer in dielectrics
+    ) / series_weight
+    return RectangularPlane(
+        width_m=width_um * 1e-6,
+        height_m=height_um * 1e-6,
+        separation_m=separation_um * 1e-6,
+        relative_permittivity=effective_dk,
+        loss_tangent=effective_df,
+        conductivity_s_per_m=min(
+            float(pwr_layer.conductivity_s_m), float(gnd_layer.conductivity_s_m)
         ),
-        origin,
-        confirmed,
+        power_thickness_m=float(pwr_layer.thickness_um) * 1e-6,
+        ground_thickness_m=float(gnd_layer.thickness_um) * 1e-6,
+        power_conductivity_s_per_m=float(pwr_layer.conductivity_s_m),
+        ground_conductivity_s_per_m=float(gnd_layer.conductivity_s_m),
     )
 
 

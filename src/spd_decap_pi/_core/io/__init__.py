@@ -14,6 +14,14 @@ from .spd import (
     analyze_spd,
     recover_spd_via_paths,
 )
+from .touchstone import (
+    SToZResult,
+    TouchstoneError,
+    TouchstoneNetwork,
+    open_circuit_zpp,
+    read_touchstone,
+    s_to_z,
+)
 
 __all__ = [
     "SpdAnalysis",
@@ -28,4 +36,10 @@ __all__ = [
     "SpdViaUsage",
     "analyze_spd",
     "recover_spd_via_paths",
+    "SToZResult",
+    "TouchstoneError",
+    "TouchstoneNetwork",
+    "open_circuit_zpp",
+    "read_touchstone",
+    "s_to_z",
 ]

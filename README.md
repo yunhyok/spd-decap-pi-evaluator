@@ -1,8 +1,8 @@
-# SPD Decap PI Evaluator v0.12.0
+# SPD Decap PI Evaluator v0.13.0
 
-> v0.12.0 adds explicit V5 multi-GND shared-pad circuit topology, source-proven vertical-Via terminal geometry/R/L when raw SPD topology reaches the selected plane, deterministic recovery provenance, and source-change protection during recovery. If a terminal needs lateral TOP/inner-layer Trace routing, it remains on the disclosed legacy rail template rather than receiving an inferred Trace model. The title bar identifies the application as **SPD Decap PI Evaluator v0.12.0**. It remains an exploratory single-rail rectangular-bbox model; absolute sub-milliohm accuracy is not certified without PowerSI correlation and numerical-convergence review.
+> v0.13.0 adds the shared-PWR, ideal-common-reference dual-DGND equivalent and an opt-in Maximum (169-mode) truncation check. The title bar identifies the application as **SPD Decap PI Evaluator v0.13.0**. It remains an exploratory single-rail rectangular-bbox model; absolute sub-milliohm accuracy is not certified without PowerSI correlation and numerical-convergence review.
 
-> 프로그램: **SPD Decap PI Evaluator v0.12.0**
+> 프로그램: **SPD Decap PI Evaluator v0.13.0**
 > 저장소: 기존 PI Calculator와 분리된 독립 프로그램
 > 해석 경계: 선택한 PWR rail의 pre-design `Zii`; 최종 PowerSI/SIwave 검증을 대체하지 않음
 
@@ -10,6 +10,11 @@
 모델, enabled/disabled 상태를 바꾸면서 PI Evaluation 결과를 비교하는 Windows
 desktop 프로그램이다. Stackup, MLO 크기 또는 plane을 새로 작성하는 기능과
 Optimization Mode는 포함하지 않는다.
+
+## v0.13 evaluation accuracy
+
+- The default remains **Balanced** (max index 8, 81 modes). **Maximum** is opt-in (max index 12, 169 modes): a final m10 to m12 truncation check with up to 0.105 dB observed in the validation case and substantially higher runtime. It is not PowerSI calibration.
+- The evaluator can combine only the immediately adjacent, opposite-side conductor when it contains configured GND aliases and valid dielectric rows. It uses the disclosed shared-PWR ideal-common-reference equivalent; it does not enable a general layer cascade. See [Evaluation accuracy](docs/EVALUATION_ACCURACY.md).
 
 ## v0.12 raw-SPD terminal provenance
 
@@ -98,7 +103,7 @@ powershell.exe -ExecutionPolicy Bypass -NoProfile -File .\scripts\build_spd_deca
 산출물:
 
 - `dist\SPDDecapPIEvaluator\SPDDecapPIEvaluator.exe`
-- `installer-output\SPDDecapPIEvaluatorSetup-0.12.0.exe`
-- `installer-output\SPDDecapPIEvaluatorSetup-0.12.0.exe.sha256`
+- `installer-output\SPDDecapPIEvaluatorSetup-0.13.0.exe`
+- `installer-output\SPDDecapPIEvaluatorSetup-0.13.0.exe.sha256`
 
 프로그램명과 버전은 title bar와 installer metadata에 함께 표시된다.

@@ -36,8 +36,19 @@ from spd_decap_pi._core.models.impedance import (
 )
 from spd_decap_pi._core.solver.evaluator import (
     EvaluationError,
+    EvaluationRequest,
+    _planes_from_project,
     _placement_shunts,
+    compile_evaluation_kernel,
+    evaluate_shunt_sensitivity,
     sensitivity_port_id,
+)
+from spd_decap_pi._core.solver.metrics import (
+    ConfidenceCategory,
+    ConfidenceInputs,
+    ConfidenceLevel,
+    TargetMask,
+    assess_confidence,
 )
 from spd_decap_pi._core.solver.modal import (
     CoupledShuntGroup,
@@ -46,7 +57,9 @@ from spd_decap_pi._core.solver.modal import (
     FinitePort,
     RectangularCavitySolver,
     RectangularPlane,
+    ModalSolverError,
     ShuntGroup,
+    SolverDiagnostics,
 )
 
 
@@ -406,6 +419,292 @@ def _plane_solver_fixture() -> tuple[
         )
     )
     return solver, device, np.geomspace(1.0e5, 1.0e8, 13)
+
+
+def _shared_pwr_modal_expected(
+    solver: RectangularCavitySolver, frequencies: np.ndarray
+) -> np.ndarray:
+    shunt_admittance = sum(
+        solver.component_shunt_admittances(frequencies),
+        start=np.zeros(frequencies.shape, dtype=np.complex128),
+    )
+    return_admittance = sum(
+        (1.0 / values for values in solver.component_return_sheet_impedances(frequencies)),
+        start=np.zeros(frequencies.shape, dtype=np.complex128),
+    )
+    sheet_impedance = solver.plane.power_sheet_resistance_ohm + 1.0 / return_admittance
+    denominator = solver._wave_numbers_squared[None, :] - (
+        -sheet_impedance * shunt_admittance
+    )[:, None]
+    expected = sheet_impedance[:, None] / solver.plane.area_m2 / denominator
+    expected[:, solver.mode_index(0, 0)] = 1.0 / (
+        solver.plane.area_m2 * shunt_admittance
+    )
+    return expected
+
+
+def test_one_parallel_component_preserves_single_plane_modal_impedance() -> None:
+    solver, _device, frequencies = _plane_solver_fixture()
+
+    direct = solver.modal_impedance(frequencies)
+    explicit = solver._component_modal_impedance(frequencies, solver.plane)
+
+    np.testing.assert_array_equal(direct, explicit)
+
+
+def test_rectangular_plane_legacy_and_split_conductivity_sheet_resistance() -> None:
+    legacy = RectangularPlane(
+        width_m=0.02,
+        height_m=0.015,
+        separation_m=100.0e-6,
+        relative_permittivity=3.4,
+        conductivity_s_per_m=4.0e7,
+        power_thickness_m=20.0e-6,
+        ground_thickness_m=30.0e-6,
+    )
+    split = RectangularPlane(
+        width_m=legacy.width_m,
+        height_m=legacy.height_m,
+        separation_m=legacy.separation_m,
+        relative_permittivity=legacy.relative_permittivity,
+        conductivity_s_per_m=9.0e7,
+        power_thickness_m=legacy.power_thickness_m,
+        ground_thickness_m=legacy.ground_thickness_m,
+        power_conductivity_s_per_m=5.0e7,
+        ground_conductivity_s_per_m=6.0e7,
+    )
+
+    assert legacy.effective_power_conductivity_s_per_m == 4.0e7
+    assert legacy.effective_ground_conductivity_s_per_m == 4.0e7
+    assert legacy.sheet_resistance_ohm == pytest.approx(
+        1.0 / (4.0e7 * 20.0e-6) + 1.0 / (4.0e7 * 30.0e-6)
+    )
+    assert split.power_sheet_resistance_ohm == pytest.approx(1.0 / (5.0e7 * 20.0e-6))
+    assert split.ground_sheet_resistance_ohm == pytest.approx(1.0 / (6.0e7 * 30.0e-6))
+
+
+def test_shared_pwr_rejects_mismatched_power_layer_properties() -> None:
+    solver, _device, _frequencies = _plane_solver_fixture()
+    mismatched_power = RectangularPlane(
+        width_m=solver.plane.width_m,
+        height_m=solver.plane.height_m,
+        separation_m=solver.plane.separation_m,
+        relative_permittivity=solver.plane.relative_permittivity,
+        loss_tangent=solver.plane.loss_tangent,
+        conductivity_s_per_m=solver.plane.conductivity_s_per_m,
+        power_thickness_m=2.0 * solver.plane.power_thickness_m,
+        ground_thickness_m=solver.plane.ground_thickness_m,
+        power_conductivity_s_per_m=solver.plane.conductivity_s_per_m / 2.0,
+    )
+    assert mismatched_power.power_sheet_resistance_ohm == pytest.approx(
+        solver.plane.power_sheet_resistance_ohm
+    )
+
+    with pytest.raises(ModalSolverError, match="same power thickness and conductivity"):
+        RectangularCavitySolver(solver.plane, parallel_planes=(mismatched_power,))
+
+
+def test_identical_parallel_components_keep_one_finite_power_sheet() -> None:
+    solver, _device, frequencies = _plane_solver_fixture()
+    parallel = RectangularCavitySolver(
+        solver.plane,
+        parallel_planes=(solver.plane,),
+        max_mode_x=2,
+        max_mode_y=2,
+    )
+
+    combined = parallel.modal_impedance(frequencies)
+
+    np.testing.assert_allclose(combined, _shared_pwr_modal_expected(parallel, frequencies), rtol=1e-14)
+    assert not np.allclose(combined, solver.modal_impedance(frequencies) / 2.0, rtol=1e-5)
+
+
+def test_identical_parallel_components_approach_half_with_zero_power_sheet() -> None:
+    solver, _device, frequencies = _plane_solver_fixture()
+    nearly_ideal_power = RectangularPlane(
+        width_m=solver.plane.width_m,
+        height_m=solver.plane.height_m,
+        separation_m=solver.plane.separation_m,
+        relative_permittivity=solver.plane.relative_permittivity,
+        loss_tangent=solver.plane.loss_tangent,
+        conductivity_s_per_m=solver.plane.conductivity_s_per_m,
+        power_thickness_m=solver.plane.power_thickness_m,
+        ground_thickness_m=solver.plane.ground_thickness_m,
+        power_conductivity_s_per_m=1.0e30,
+        ground_conductivity_s_per_m=solver.plane.conductivity_s_per_m,
+    )
+    single = RectangularCavitySolver(nearly_ideal_power, max_mode_x=2, max_mode_y=2)
+    parallel = RectangularCavitySolver(
+        nearly_ideal_power,
+        parallel_planes=(nearly_ideal_power,),
+        max_mode_x=2,
+        max_mode_y=2,
+    )
+
+    np.testing.assert_allclose(
+        parallel.modal_impedance(frequencies),
+        single.modal_impedance(frequencies) / 2.0,
+        rtol=1.0e-12,
+        atol=1.0e-18,
+    )
+
+
+def test_asymmetric_parallel_components_sum_modal_admittances() -> None:
+    solver, _device, frequencies = _plane_solver_fixture()
+    second = RectangularPlane(
+        width_m=solver.plane.width_m,
+        height_m=solver.plane.height_m,
+        separation_m=65.0e-6,
+        relative_permittivity=4.1,
+        loss_tangent=0.012,
+        conductivity_s_per_m=4.2e7,
+        power_thickness_m=solver.plane.power_thickness_m,
+        ground_thickness_m=25.0e-6,
+        power_conductivity_s_per_m=solver.plane.conductivity_s_per_m,
+        ground_conductivity_s_per_m=4.2e7,
+    )
+    parallel = RectangularCavitySolver(
+        solver.plane,
+        parallel_planes=(second,),
+        max_mode_x=2,
+        max_mode_y=2,
+    )
+
+    np.testing.assert_allclose(
+        parallel.modal_impedance(frequencies),
+        _shared_pwr_modal_expected(parallel, frequencies),
+        rtol=1e-14,
+    )
+
+
+def test_parallel_component_confidence_uses_the_lowest_vertical_cutoff() -> None:
+    solver, _device, _frequencies = _plane_solver_fixture()
+    lower_cutoff = RectangularPlane(
+        width_m=solver.plane.width_m,
+        height_m=solver.plane.height_m,
+        separation_m=10.0e-3,
+        relative_permittivity=4.0,
+        power_thickness_m=solver.plane.power_thickness_m,
+        ground_thickness_m=25.0e-6,
+    )
+    frequencies = np.asarray([1.0e8, 1.0e10])
+    diagnostics = SolverDiagnostics(
+        condition_numbers=np.ones(frequencies.size),
+        relative_residuals=np.full(frequencies.size, 1.0e-12),
+        mode_count=1,
+    )
+    inputs = ConfidenceInputs(
+        model_valid_min_hz=1.0e5,
+        model_valid_max_hz=1.0e12,
+        model_validity_known=True,
+        cavity_cutoff_safety_factor=1.0,
+    )
+
+    one_plane = assess_confidence(frequencies, diagnostics, solver.plane, inputs)
+    shared_pwr = assess_confidence(
+        frequencies,
+        diagnostics,
+        solver.plane,
+        inputs,
+        parallel_planes=(lower_cutoff,),
+    )
+    coverage = lambda values: next(
+        item.level for item in values if item.category == ConfidenceCategory.MODEL_COVERAGE
+    )
+    assert coverage(one_plane) == ConfidenceLevel.HIGH
+    assert coverage(shared_pwr) == ConfidenceLevel.MEDIUM
+
+
+def test_kernel_and_sensitivity_use_parallel_components() -> None:
+    solver, device, frequencies = _plane_solver_fixture()
+    request = EvaluationRequest(
+        rail_id="R1",
+        frequencies_hz=frequencies,
+        plane=solver.plane,
+        parallel_planes=(solver.plane,),
+        device=device,
+        shunts=(),
+        target=TargetMask.constant(1.0e-9, start_hz=frequencies[0], stop_hz=frequencies[-1]),
+    )
+    kernel = compile_evaluation_kernel(request)
+    single_plane_request = EvaluationRequest(
+        rail_id="R1",
+        frequencies_hz=frequencies,
+        plane=solver.plane,
+        device=device,
+        shunts=(),
+        target=request.target,
+    )
+
+    with pytest.raises(EvaluationError, match="does not match"):
+        from spd_decap_pi._core.solver.evaluator import evaluate_rail
+
+        evaluate_rail(single_plane_request, kernel=kernel)
+
+    sensitivity = evaluate_shunt_sensitivity(request)
+    expected = RectangularCavitySolver(
+        solver.plane,
+        parallel_planes=(solver.plane,),
+        max_mode_x=request.max_mode_x,
+        max_mode_y=request.max_mode_y,
+    ).solve_device(frequencies, device)
+    np.testing.assert_allclose(
+        sensitivity.baseline_max_violation_db,
+        20.0 * np.log10(np.max(np.abs(expected.impedance_ohm)) / 1.0e-9),
+    )
+
+
+def test_adjacent_ground_sandwich_is_auto_detected_but_power_neighbor_is_not() -> None:
+    project = _cluster_project()
+    payload = project.model_dump(mode="python")
+    payload["stackup_layers"] = [
+        StackupLayer(
+            name="L08_DGND",
+            thickness_um=20.0,
+            conductivity_s_m=4.5e7,
+            pwr_nets=["DGND"],
+        ),
+        StackupLayer(name="D08", thickness_um=30.0, dk=3.7, df=0.012),
+        StackupLayer(
+            name="PWR",
+            thickness_um=18.0,
+            conductivity_s_m=5.8e7,
+            pwr_nets=["VDD"],
+        ),
+        StackupLayer(name="D10", thickness_um=30.0, dk=4.0, df=0.006),
+        StackupLayer(
+            name="GND",
+            thickness_um=25.0,
+            conductivity_s_m=5.2e7,
+            pwr_nets=["DGND"],
+        ),
+    ]
+    sandwich = ProjectSpec.model_validate(payload)
+    rail = sandwich.rails[0]
+
+    primary, parallel, _origin, _confirmed, assumptions = _planes_from_project(
+        sandwich, rail
+    )
+
+    assert primary.separation_m == pytest.approx(30.0e-6)
+    assert len(parallel) == 1
+    assert parallel[0].relative_permittivity == pytest.approx(3.7)
+    assert any("PWR/GND" in text and "PWR/L08_DGND" in text for text in assumptions)
+    assert any("shared-PWR" in text for text in assumptions)
+    assert any("ideal common reference" in text for text in assumptions)
+
+    payload["stackup_layers"][0] = StackupLayer(
+        name="L08_PWR",
+        thickness_um=20.0,
+        conductivity_s_m=4.5e7,
+        pwr_nets=["VCPU"],
+    )
+    one_sided = ProjectSpec.model_validate(payload)
+    _primary, parallel, _origin, _confirmed, assumptions = _planes_from_project(
+        one_sided, one_sided.rails[0]
+    )
+    assert parallel == ()
+    assert assumptions == ()
 
 
 def _homogeneous_cluster_groups(

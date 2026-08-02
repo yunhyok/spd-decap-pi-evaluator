@@ -262,6 +262,8 @@ def assess_confidence(
     diagnostics: SolverDiagnostics,
     plane: RectangularPlane,
     inputs: ConfidenceInputs = ConfidenceInputs(),
+    *,
+    parallel_planes: tuple[RectangularPlane, ...] = (),
 ) -> tuple[ConfidenceAssessment, ...]:
     frequencies = frequency_array(frequencies_hz)
     bands = (
@@ -327,7 +329,10 @@ def assess_confidence(
                 ),
             )
         )
-        coverage_limit = plane.vertical_cutoff_hz * inputs.cavity_cutoff_safety_factor
+        coverage_limit = min(
+            item.vertical_cutoff_hz
+            for item in (plane, *parallel_planes)
+        ) * inputs.cavity_cutoff_safety_factor
         valid_min = inputs.model_valid_min_hz or float(frequencies[0])
         valid_max = min(inputs.model_valid_max_hz or float("inf"), coverage_limit)
         inside_limits = start >= valid_min and stop <= valid_max

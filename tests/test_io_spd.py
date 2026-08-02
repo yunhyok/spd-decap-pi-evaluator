@@ -500,7 +500,8 @@ def test_streaming_spd_normalizes_selected_geometry_and_passive_models(
         if item.kind == PinKind.DEVICE_BUMP and item.terminal == TerminalKind.GND
     )
     assert device_power.site == "SITE0"
-    assert device_ground.site is None
+    assert device_power.net == "VDD_CORE/0"
+    assert device_ground.site == "SITE0"
     padstack = next(item for item in analysis.padstacks if item.name == "DR-0102_60")
     assert padstack.drill_diameter_um == pytest.approx(40.0)
     assert padstack.pad_diameter_um == pytest.approx(60.0)
@@ -512,6 +513,79 @@ def test_streaming_spd_normalizes_selected_geometry_and_passive_models(
     assert analysis.counts["skipped_unselected_cap_instances"] == 1
     assert analysis.counts["partial_circuits"] == 2
     assert progress[-1][0] == 100
+
+
+def test_device_ground_bumps_preserve_site_provenance(tmp_path: Path) -> None:
+    source = tmp_path / "two-site.spd"
+    source.write_text(
+        MINI_SPD.replace(
+            "Node6!!2::DGND X = 3.2mm Y = 2mm Layer = Signal$TOP PadStack = CAP",
+            "Node6!!2::DGND X = 3.2mm Y = 2mm Layer = Signal$TOP PadStack = CAP\n"
+            "Node7!!201::VDD_CORE/0 X = 0.2mm Y = 0mm Layer = Signal$TOP PadStack = DUT\n"
+            "Node8!!202::DGND/1 X = 0.3mm Y = 0mm Layer = Signal$TOP PadStack = DUT",
+            1,
+        ).replace(
+            ".EndC\n.Connect C1",
+            ".EndC\n.Connect SITE1 DUT Checked = 1\n"
+            "201 $Package.Node7!!201::VDD_CORE/0\n"
+            "202 $Package.Node8!!202::DGND/1\n"
+            ".EndC\n.Connect C1",
+            1,
+        ).replace(
+            ".Component SITE0 0mm 0mm StartLayer = Signal$TOP AttachLayer = TopAir",
+            ".Component SITE0 0mm 0mm StartLayer = Signal$TOP AttachLayer = TopAir\n"
+            ".Component SITE1 0.2mm 0mm StartLayer = Signal$TOP AttachLayer = TopAir",
+            1,
+        ),
+        encoding="ascii",
+    )
+
+    analysis = analyze_spd(source)
+
+    site1_power = next(
+        item
+        for item in analysis.pins
+        if item.refdes == "SITE1" and item.kind == PinKind.DEVICE_BUMP
+        and item.terminal == TerminalKind.PWR
+    )
+    assert site1_power.net == "VDD_CORE/0"
+    ground_sites = {
+        item.refdes: (item.net, item.site)
+        for item in analysis.pins
+        if item.kind == PinKind.DEVICE_BUMP and item.terminal == TerminalKind.GND
+    }
+    assert ground_sites == {
+        "SITE0": ("DGND", "SITE0"),
+        "SITE1": ("DGND/1", "SITE1"),
+    }
+
+
+def test_suffixed_configured_ground_is_classified_for_decap_ports(
+    tmp_path: Path,
+) -> None:
+    source = tmp_path / "suffixed-cap-ground.spd"
+    source.write_text(
+        MINI_SPD.replace(
+            "Node4!!2::DGND X = 1.2mm Y = 2mm Layer = Signal$TOP PadStack = CAP",
+            "Node4!!2::DGND/1 X = 1.2mm Y = 2mm Layer = Signal$TOP PadStack = CAP",
+            1,
+        ).replace(
+            "2 $Package.Node4!!2::DGND",
+            "2 $Package.Node4!!2::DGND/1",
+            1,
+        ),
+        encoding="ascii",
+    )
+
+    analysis = analyze_spd(source)
+
+    cap_ground = next(
+        item
+        for item in analysis.pins
+        if item.refdes == "C1" and item.kind == PinKind.DECAP_PAD
+        and item.terminal == TerminalKind.GND
+    )
+    assert cap_ground.net == "DGND/1"
 
 
 def test_consecutive_nonempty_partial_circuits_are_all_parsed(tmp_path: Path) -> None:

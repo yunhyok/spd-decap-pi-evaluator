@@ -5,7 +5,9 @@ complex-symmetric multiport admittance matrix. Its port order is
 `top_port_ids + bottom_port_ids`; every current is positive into the section.
 It is a numerical foundation only. It is not connected to Evaluation Analysis,
 Decap Distribution, the GUI, cache identity, or the current scalar via/rail
-templates.
+templates. The evaluator's v0.13 shared-PWR ideal-common-reference equivalent
+is intentionally narrower than this general cascade; see
+[Evaluation accuracy](EVALUATION_ACCURACY.md).
 
 For two adjacent sections, partitioned by the common interface `b`,
 

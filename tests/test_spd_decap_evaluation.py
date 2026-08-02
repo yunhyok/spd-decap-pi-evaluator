@@ -1770,6 +1770,76 @@ def test_comparison_batch_caches_baseline_then_reuses_it(
     assert second.comparisons[0].baseline.view.magnitude_ohm == [0.02, 0.03]
 
 
+def test_solver_version_change_recalculates_stale_baseline_cache(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    scenario = _scenario()
+    tuned = scenario.decaps[0].model_copy(update={"enabled": False})
+    scenario = ScenarioSpec.model_validate(
+        {**scenario.model_dump(mode="python"), "decaps": [tuned, scenario.decaps[1]]}
+    )
+    calls: list[str] = []
+    monkeypatch.setattr(evaluation_module, "evaluate_scenario", _fake_evaluator(calls))
+    first = evaluate_comparison_batch(scenario, ["RAIL_VDD"])
+    _current_key, metadata = next(iter(first.updated_scenario.evaluation_cache.items()))
+    capture = first.updated_scenario.baseline_captures["RAIL_VDD"]
+    stale_key = evaluation_module.ScenarioResultKey.from_settings(
+        design_fingerprint=capture.evaluation_input_sha256,
+        rail_id="RAIL_VDD",
+        settings={"target_ohm": None, "modal_max_index": 8},
+        solver_version="modal-mvp-0.4.0",
+    )
+    stale_payload = json.loads(first.updated_attachments[metadata.attachment_name])
+    stale_payload["result_key"]["solver_version"] = stale_key.solver_version
+    stale_payload["view"]["solver_version"] = stale_key.solver_version
+    stale_content = json.dumps(stale_payload, sort_keys=True).encode("utf-8")
+    stale_digest = sha256(stale_content).hexdigest()
+    stale_name = f"results/baseline-{stale_key.cache_key}.json"
+    stale_metadata = metadata.model_copy(
+        update={
+            "result_key": stale_key,
+            "attachment_name": stale_name,
+            "attachment_sha256": stale_digest,
+        }
+    )
+    stale_hashes = dict(first.updated_scenario.attachment_hashes)
+    del stale_hashes[metadata.attachment_name]
+    stale_hashes[stale_name] = stale_digest
+    stale_names = [
+        stale_name if name == metadata.attachment_name else name
+        for name in first.updated_scenario.attachment_names
+    ]
+    stale_scenario = ScenarioSpec.model_validate(
+        {
+            **first.updated_scenario.model_dump(mode="python"),
+            "attachment_names": stale_names,
+            "attachment_hashes": stale_hashes,
+            "evaluation_cache": {stale_key.cache_key: stale_metadata},
+        }
+    )
+    stale_attachments = dict(first.updated_attachments)
+    del stale_attachments[metadata.attachment_name]
+    stale_attachments[stale_name] = stale_content
+
+    calls.clear()
+    recalculated = evaluate_comparison_batch(
+        stale_scenario,
+        ["RAIL_VDD"],
+        attachments=stale_attachments,
+    )
+    assert len(calls) == 2
+    assert not recalculated.comparisons[0].baseline_from_cache
+
+    calls.clear()
+    reused = evaluate_comparison_batch(
+        recalculated.updated_scenario,
+        ["RAIL_VDD"],
+        attachments=recalculated.updated_attachments,
+    )
+    assert len(calls) == 1
+    assert reused.comparisons[0].baseline_from_cache
+
+
 def test_comparison_batch_rejects_tampered_baseline_attachment(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
