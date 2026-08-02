@@ -355,6 +355,38 @@ def _shared_pad_connection_summary(scenario: ScenarioSpec) -> tuple[str, str]:
     return compact, detail
 
 
+def _source_via_path_recovery_summary(scenario: ScenarioSpec) -> tuple[str, str]:
+    """Return deterministic source-Via applicability disclosure for the UI."""
+
+    raw = scenario.base_project.metadata.get("spd_via_path_recovery", {})
+    if not isinstance(raw, dict):
+        message = "Source Via paths: unavailable"
+        return message, message
+
+    def count(name: str) -> int:
+        value = raw.get(name, 0)
+        return value if isinstance(value, int) and value >= 0 else 0
+
+    requested = count("requested")
+    recovered = count("recovered")
+    fallback = count("fallback")
+    compact = (
+        f"Source Via paths: {recovered:,}/{requested:,} recovered; "
+        f"{fallback:,} fallback"
+    )
+    details = [compact]
+    if requested and not recovered:
+        details.append(
+            "No source segment R/L applied; legacy rail templates used"
+        )
+    elif recovered:
+        details.append(
+            "Recovered source paths use selected-plane pad geometry and "
+            "source-proven vertical segment R/L where applicable"
+        )
+    return compact, "; ".join(details)
+
+
 def _short_plane_layer_labels(
     stackup_layers: Any,
     partition_layers: Any,
@@ -2688,11 +2720,14 @@ class MainWindow(QMainWindow):
         connection_status, connection_details = _shared_pad_connection_summary(
             imported.scenario
         )
+        recovery_status, recovery_details = _source_via_path_recovery_summary(
+            imported.scenario
+        )
         self.status_text.setText(
             f"Loaded {len(imported.scenario.decaps):,} top-side decaps in "
             f"{visible_total_s:.1f}s (eligibility {timings.eligibility_s:.1f}s, "
             f"board {board_s + fit_s:.1f}s; {warnings} warning(s)) | "
-            f"{connection_status}"
+            f"{connection_status} | {recovery_status}"
         )
         self.status_text.setToolTip(
             " | ".join(
@@ -2700,12 +2735,14 @@ class MainWindow(QMainWindow):
                     f"SPD analysis: {timings.analyze_s:.3f}s",
                     f"Geometry normalization/compression: {timings.plan_s:.3f}s",
                     f"Spatial index build: {timings.index_s:.3f}s",
+                    f"Source Via path recovery: {timings.recovery_s:.3f}s",
                     f"Exact eligibility: {timings.eligibility_s:.3f}s",
                     f"Scenario validation: {timings.finalize_s:.3f}s",
                     f"Board scene build: {board_s:.3f}s",
                     f"Fit board: {fit_s:.3f}s",
                     f"Visible total: {visible_total_s:.3f}s",
                     connection_details,
+                    recovery_details,
                 )
             )
         )
@@ -2785,8 +2822,15 @@ class MainWindow(QMainWindow):
         connection_status, connection_details = _shared_pad_connection_summary(
             bundle.scenario
         )
-        self.status_text.setText(f"{message} | {connection_status}")
-        self.status_text.setToolTip(connection_details)
+        recovery_status, recovery_details = _source_via_path_recovery_summary(
+            bundle.scenario
+        )
+        self.status_text.setText(
+            f"{message} | {connection_status} | {recovery_status}"
+        )
+        self.status_text.setToolTip(
+            " | ".join((connection_details, recovery_details))
+        )
 
     def _request_scenario_save_path(self) -> Path | None:
         assert self._scenario is not None

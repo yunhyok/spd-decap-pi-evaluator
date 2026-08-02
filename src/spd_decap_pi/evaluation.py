@@ -11,7 +11,7 @@ from collections import Counter
 from dataclasses import dataclass, replace
 from hashlib import sha256
 import json
-from math import isfinite
+from math import isfinite, log, pi
 from typing import Any, Callable, Mapping, Sequence
 
 from spd_decap_pi._core import services as evaluation_services
@@ -22,7 +22,9 @@ from spd_decap_pi._core.domain import (
     PlacementAssignment,
     ProjectSpec,
     RailSpec,
+    SharedPadCapacitorComponentSpec,
     SharedPadClusterSpec,
+    SharedPadGroundComponentSpec,
     SharedPadPowerComponentSpec,
     SharedPadViaPath,
     TerminalKind,
@@ -80,7 +82,7 @@ def _require_current_shared_pad_analysis(scenario: ScenarioSpec) -> None:
         raise ScenarioEvaluationBuildError(
             "CONNECTION_ANALYSIS_UPGRADE_REQUIRED",
             "this scenario uses legacy shared-pad connectivity; reopen the "
-            "verified source SPD to build V4 finite-pad/ordered-boolean "
+            "verified source SPD to build V5 finite-pad/ordered-boolean "
             "TOP-copper evidence before evaluation",
         )
 
@@ -1038,6 +1040,98 @@ def _ground_net(project: ProjectSpec, rail: RailSpec) -> str:
     return project.gnd_aliases[0]
 
 
+def _source_terminal_rl(segments: Sequence[Any]) -> tuple[float, float]:
+    """Return a per-terminal barrel R/L estimate from recovered source segments.
+
+    This deliberately reuses the existing disclosed analytical assumptions used
+    when importing a rail-level template: copper conductivity of 5.959e7 S/m,
+    plating of ``min(20 um, drill / 4)``, and a straight-via inductance for each
+    source-proven vertical segment.  It does not infer mutual coupling, anti-pad
+    effects, or lateral spreading from raw SPD topology.
+    """
+
+    resistance = 0.0
+    inductance = 0.0
+    for segment in segments:
+        length_um = float(segment.length_um)
+        diameter_um = float(segment.drill_diameter_um)
+        if (
+            not isfinite(length_um)
+            or not isfinite(diameter_um)
+            or length_um <= 0.0
+            or diameter_um <= 0.0
+        ):
+            raise ScenarioEvaluationBuildError(
+                "SOURCE_VIA_PATH_INVALID",
+                "source-proven Via path has a nonphysical segment length or drill",
+            )
+        plating_um = min(20.0, diameter_um / 4.0)
+        barrel_area_m2 = pi * diameter_um * plating_um * 1.0e-12
+        resistance += length_um * 1.0e-6 / (5.959e7 * barrel_area_m2)
+        length_for_inductance = max(length_um, 1.0)
+        length_mm = length_for_inductance / 1000.0
+        ratio = max(4.0 * length_for_inductance / diameter_um, 1.0)
+        inductance += 0.2 * length_mm * (log(ratio) + 1.0) * 1.0e-9
+    if not segments or not (isfinite(resistance) and isfinite(inductance)):
+        raise ScenarioEvaluationBuildError(
+            "SOURCE_VIA_PATH_INVALID",
+            "source-proven Via path has no usable vertical segment data",
+        )
+    return max(resistance, 0.0), max(inductance, 0.0)
+
+
+def _shared_pad_path_from_landing(
+    *,
+    path_id: str,
+    terminal: TerminalKind,
+    landing: Any,
+    target_layer: str,
+    via: ViaLoopTemplate,
+) -> SharedPadViaPath:
+    """Materialize compact source evidence or name the rail-template fallback."""
+
+    evidence = landing.evidence_for_layer(target_layer)
+    fields: dict[str, Any] = {
+        "path_id": path_id,
+        "terminal": terminal,
+        "x_um": landing.x_um,
+        "y_um": landing.y_um,
+        "via_template_id": via.template_id,
+        "source_via_id": landing.via_id,
+        "terminal_provenance": "LEGACY_RAIL_TEMPLATE",
+    }
+    if evidence is None:
+        return SharedPadViaPath(**fields)
+    fields.update(
+        {
+            "x_um": evidence.x_um,
+            "y_um": evidence.y_um,
+            "landing_layer": evidence.target_layer,
+            "landing_padstack": evidence.target_padstack,
+            "landing_pad_width_um": evidence.target_pad_width_um,
+            "landing_pad_height_um": evidence.target_pad_height_um,
+        }
+    )
+    if via.impedance:
+        # A sampled template is calibrated as a differential PWR/GND loop.
+        # Retaining it exactly preserves its established symmetric branch split
+        # in SharedPadClusterModel rather than overwriting it with uncalibrated
+        # terminal R/L estimates.
+        fields["terminal_provenance"] = (
+            "SAMPLED_DIFFERENTIAL_TEMPLATE_SYMMETRIC"
+        )
+    else:
+        resistance, inductance = _source_terminal_rl(evidence.segments)
+        fields.update(
+            {
+                "terminal_resistance_ohm": resistance,
+                "terminal_inductance_h": inductance,
+                "terminal_provenance": "SOURCE_PROVEN_SEGMENT_RL",
+            }
+        )
+    return SharedPadViaPath(**fields)
+
+
 def _confirmed_metadata(scenario: ScenarioSpec) -> dict[str, Any]:
     metadata = dict(scenario.base_project.metadata)
     metadata.update(
@@ -1069,14 +1163,14 @@ def _scenario_assumptions(base: ProjectSpec) -> list[str]:
     additions = (
         "Decap rail edits do not modify SPD plane geometry.",
         "Nonrectangular SPD planes retain the existing rectangular solver approximation.",
-        "DGND is treated as continuous and inter-rail coupling is not modeled.",
+        "The selected DGND plane is treated as continuous and inter-rail coupling is not modeled; distinct source top-GND components remain electrically distinct above that plane.",
         "Shared-pad topology retains every unique PWR and GND Via without nearest "
         "pairing. Because the calibrated template is differential, its loop "
         "impedance is split symmetrically (Zloop/2 per terminal); a 1-PWR/1-GND "
         "cluster reproduces the calibrated loop while unequal Via counts remain "
         "electrically distinct under the continuous-DGND approximation.",
-        "The symmetric terminal split assumes equal PWR/GND portions of the "
-        "calibrated loop and does not add uncalibrated mutual-Via coupling.",
+        "When raw SPD proves one unique monotonic same-net vertical Via chain, its selected-plane pad geometry and per-terminal segment R/L are used. R uses 5.959e7 S/m copper and min(20 um, drill/4) barrel plating; L is a straight-segment estimate without mutual-Via, anti-pad, or spreading calibration.",
+        "A missing, branching, overshooting, trace-required, or unsupported raw Via path explicitly falls back to the rail template. Sampled differential templates retain their calibrated symmetric terminal representation.",
     )
     result: list[str] = []
     seen: set[str] = set()
@@ -1163,11 +1257,15 @@ def build_evaluation_project(
         cluster_id: str,
         member_components: tuple[tuple[ScenarioDecap, ...], ...],
         power_landings_by_component: tuple[tuple[Any, ...], ...],
-        ground_landings: tuple[Any, ...],
+        ground_member_components: tuple[tuple[ScenarioDecap, ...], ...],
+        ground_landings_by_component: tuple[tuple[Any, ...], ...],
         rail: RailSpec,
         via: ViaLoopTemplate,
     ) -> None:
-        if len(member_components) != len(power_landings_by_component):
+        if (
+            len(member_components) != len(power_landings_by_component)
+            or len(ground_member_components) != len(ground_landings_by_component)
+        ):
             raise ScenarioEvaluationBuildError(
                 "SHARED_PAD_COMPONENT_MAPPING_INVALID",
                 f"shared-pad cluster {cluster_id!r} has inconsistent component data",
@@ -1175,8 +1273,19 @@ def build_evaluation_project(
         members = tuple(
             member for component in member_components for member in component
         )
-        path_count = sum(map(len, power_landings_by_component)) + len(
-            ground_landings
+        ground_members = tuple(
+            member for component in ground_member_components for member in component
+        )
+        if {item.refdes.casefold() for item in members} != {
+            item.refdes.casefold() for item in ground_members
+        }:
+            raise ScenarioEvaluationBuildError(
+                "SHARED_PAD_COMPONENT_MAPPING_INVALID",
+                f"shared-pad cluster {cluster_id!r} PWR/GND components do not map "
+                "the same member set",
+            )
+        path_count = sum(map(len, power_landings_by_component)) + sum(
+            map(len, ground_landings_by_component)
         )
         if path_count > MAX_SHARED_PAD_VIA_PATHS:
             raise ScenarioEvaluationBuildError(
@@ -1188,7 +1297,8 @@ def build_evaluation_project(
         if (
             not member_components
             or any(not item for item in power_landings_by_component)
-            or not ground_landings
+            or not ground_member_components
+            or any(not item for item in ground_landings_by_component)
         ):
             raise ScenarioEvaluationBuildError(
                 "SHARED_PAD_CLUSTER_TERMINAL_MISSING",
@@ -1226,6 +1336,11 @@ def build_evaluation_project(
                 enabled_usage[model.model_id] += 1
         power_paths: list[SharedPadViaPath] = []
         power_components: list[SharedPadPowerComponentSpec] = []
+        ground_paths: list[SharedPadViaPath] = []
+        ground_components: list[SharedPadGroundComponentSpec] = []
+        capacitor_mappings: list[SharedPadCapacitorComponentSpec] = []
+        power_component_by_member: dict[str, str] = {}
+        ground_component_by_member: dict[str, str] = {}
         for component_index, (component_members, component_landings) in enumerate(
             zip(
                 member_components,
@@ -1241,13 +1356,12 @@ def build_evaluation_project(
                 )
                 component_path_ids.append(path_id)
                 power_paths.append(
-                    SharedPadViaPath(
+                    _shared_pad_path_from_landing(
                         path_id=path_id,
                         terminal=TerminalKind.PWR,
-                        x_um=landing.x_um,
-                        y_um=landing.y_um,
-                        via_template_id=via.template_id,
-                        source_via_id=landing.via_id,
+                        landing=landing,
+                        target_layer=rail.pwr_layer,
+                        via=via,
                     )
                 )
             power_components.append(
@@ -1259,24 +1373,68 @@ def build_evaluation_project(
                     power_path_ids=component_path_ids,
                 )
             )
+            component_id = power_components[-1].component_id
+            for decap in component_members:
+                power_component_by_member[decap.refdes.casefold()] = component_id
+        for component_index, (component_members, component_landings) in enumerate(
+            zip(
+                ground_member_components,
+                ground_landings_by_component,
+                strict=True,
+            ),
+            start=1,
+        ):
+            component_path_ids: list[str] = []
+            for path_index, landing in enumerate(component_landings, start=1):
+                path_id = f"{domain_cluster_id}:GND:{component_index}:{path_index}"
+                component_path_ids.append(path_id)
+                ground_paths.append(
+                    _shared_pad_path_from_landing(
+                        path_id=path_id,
+                        terminal=TerminalKind.GND,
+                        landing=landing,
+                        target_layer=rail.gnd_layer,
+                        via=via,
+                    )
+                )
+            ground_components.append(
+                SharedPadGroundComponentSpec(
+                    component_id=f"{domain_cluster_id}:GND:{component_index}",
+                    member_slot_ids=[
+                        f"SPDPI:{decap.refdes}" for decap in component_members
+                    ],
+                    ground_path_ids=component_path_ids,
+                )
+            )
+            component_id = ground_components[-1].component_id
+            for decap in component_members:
+                ground_component_by_member[decap.refdes.casefold()] = component_id
+        for decap in members:
+            member_key = decap.refdes.casefold()
+            power_component_id = power_component_by_member.get(member_key)
+            ground_component_id = ground_component_by_member.get(member_key)
+            if power_component_id is None or ground_component_id is None:
+                raise ScenarioEvaluationBuildError(
+                    "SHARED_PAD_COMPONENT_MAPPING_INVALID",
+                    f"shared-pad cluster {cluster_id!r} cannot map {decap.refdes!r} "
+                    "to one PWR and one GND component",
+                )
+            capacitor_mappings.append(
+                SharedPadCapacitorComponentSpec(
+                    member_slot_id=f"SPDPI:{decap.refdes}",
+                    power_component_id=power_component_id,
+                    ground_component_id=ground_component_id,
+                )
+            )
         shared_pad_clusters.append(
             SharedPadClusterSpec(
                 cluster_id=domain_cluster_id,
                 rail_id=rail.rail_id,
                 member_slot_ids=member_slot_ids,
-                via_paths=power_paths
-                + [
-                    SharedPadViaPath(
-                        path_id=f"{domain_cluster_id}:GND:{index}",
-                        terminal=TerminalKind.GND,
-                        x_um=landing.x_um,
-                        y_um=landing.y_um,
-                        via_template_id=via.template_id,
-                        source_via_id=landing.via_id,
-                    )
-                    for index, landing in enumerate(ground_landings, start=1)
-                ],
+                via_paths=power_paths + ground_paths,
                 power_components=power_components,
+                ground_components=ground_components,
+                capacitor_component_mappings=capacitor_mappings,
             )
         )
 
@@ -1298,6 +1456,7 @@ def build_evaluation_project(
             cluster,
             {key: decap_by_key[key] for key in member_keys},
             {key: connection_by_key[key] for key in member_keys},
+            analysis_version=analysis.version,
         )
         if derivation.shared_power_via_conflicts:
             conflict = derivation.shared_power_via_conflicts[0]
@@ -1305,6 +1464,13 @@ def build_evaluation_project(
                 "SHARED_PAD_POWER_VIA_CONFLICT",
                 f"physical PWR Via {conflict.via_id!r} spans more than one "
                 f"post-edit PWR component in cluster {cluster.cluster_id!r}",
+            )
+        if derivation.shared_ground_via_conflicts:
+            conflict = derivation.shared_ground_via_conflicts[0]
+            raise ScenarioEvaluationBuildError(
+                "SHARED_PAD_GROUND_VIA_CONFLICT",
+                f"physical GND Via {conflict.via_id!r} spans more than one "
+                f"post-edit GND component in cluster {cluster.cluster_id!r}",
             )
         component_rail_keys = {
             item.current_rail_id.casefold() for item in derivation.components
@@ -1376,12 +1542,24 @@ def build_evaluation_project(
                 "VIA_TEMPLATE_LAYER_MISMATCH",
                 f"via-loop template {via.template_id!r} does not reference the rail plane pair",
             )
-        unique_ground = {
-            landing.via_id.casefold(): landing
-            for key in member_keys
-            if decap_by_key[key].pad_state != DecapPadState.ISOLATION_GAP
-            for landing in connection_by_key[key].ground_vias
+        selected_member_keys = {
+            refdes.casefold()
+            for component in selected_components
+            for refdes in component.member_refdes
         }
+        selected_ground_components = tuple(
+            component
+            for component in derivation.ground_components
+            if selected_member_keys.intersection(
+                refdes.casefold() for refdes in component.member_refdes
+            )
+        )
+        if not selected_ground_components:
+            raise ScenarioEvaluationBuildError(
+                "SHARED_PAD_GROUND_COMPONENT_MISSING",
+                f"shared-pad cluster {cluster.cluster_id!r} has no GND component "
+                "for the selected rail members",
+            )
         append_coupled_cluster(
             cluster_id=cluster.cluster_id,
             member_components=tuple(
@@ -1394,8 +1572,16 @@ def build_evaluation_project(
             power_landings_by_component=tuple(
                 component.power_vias for component in selected_components
             ),
-            ground_landings=tuple(
-                unique_ground[key] for key in sorted(unique_ground)
+            ground_member_components=tuple(
+                tuple(
+                    decap_by_key[refdes.casefold()]
+                    for refdes in component.member_refdes
+                    if refdes.casefold() in selected_member_keys
+                )
+                for component in selected_ground_components
+            ),
+            ground_landings_by_component=tuple(
+                component.ground_vias for component in selected_ground_components
             ),
             rail=rail,
             via=via,
@@ -1445,15 +1631,27 @@ def build_evaluation_project(
             model_by_id=model_by_id,
             via_by_id=via_by_id,
         )
-        if len(unique_power) > 1 or len(unique_ground) > 1:
+        has_recovered_terminal_path = any(
+            landing.evidence_for_layer(rail.pwr_layer) is not None
+            for landing in unique_power.values()
+        ) or any(
+            landing.evidence_for_layer(rail.gnd_layer) is not None
+            for landing in unique_ground.values()
+        )
+        if (
+            len(unique_power) > 1
+            or len(unique_ground) > 1
+            or has_recovered_terminal_path
+        ):
             append_coupled_cluster(
                 cluster_id=f"DIRECT:{decap.refdes}",
                 member_components=((decap,),),
                 power_landings_by_component=(
                     tuple(unique_power[key] for key in sorted(unique_power)),
                 ),
-                ground_landings=tuple(
-                    unique_ground[key] for key in sorted(unique_ground)
+                ground_member_components=((decap,),),
+                ground_landings_by_component=(
+                    tuple(unique_ground[key] for key in sorted(unique_ground)),
                 ),
                 rail=rail,
                 via=via,

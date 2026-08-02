@@ -11,6 +11,7 @@ import pytest
 from spd_decap_pi._core.domain import (
     CapModel,
     ConfidenceLevel,
+    ImpedanceSample,
     MLOOutline,
     PinKind,
     PinRecord,
@@ -53,6 +54,8 @@ from spd_decap_pi.scenario import (
     ScenarioPoint,
     ScenarioSpec,
     ScenarioViaLanding,
+    ScenarioViaPathEvidence,
+    ScenarioViaSegment,
     SHARED_PAD_ANALYSIS_VERSION,
     SharedPadCluster,
     SharedPadClusterState,
@@ -456,6 +459,156 @@ def test_build_evaluation_project_materializes_shared_cluster_once() -> None:
     assert scenario.base_project.cap_models[0].inventory == 0
 
 
+def test_recovered_terminal_paths_use_target_geometry_rl_and_explicit_fallback() -> None:
+    scenario = _scenario()
+    analysis = scenario.connection_analysis
+    assert analysis is not None
+    original = analysis.connections["C1"]
+    power_segment = ScenarioViaSegment(
+        via_id="VP-C1",
+        padstack="VIA",
+        drill_diameter_um=50.0,
+        start_layer="TOP",
+        end_layer="PWR1",
+        length_um=153.0,
+        end_x_um=1_750.0,
+        end_y_um=2_250.0,
+    )
+    ground_segment = ScenarioViaSegment(
+        via_id="VG-C1",
+        padstack="VIA",
+        drill_diameter_um=75.0,
+        start_layer="TOP",
+        end_layer="GND1",
+        length_um=251.0,
+        end_x_um=1_775.0,
+        end_y_um=2_275.0,
+    )
+
+    def with_evidence(
+        landing: ScenarioViaLanding,
+        *,
+        target_layer: str,
+        target_node_id: str,
+        segment: ScenarioViaSegment,
+    ) -> ScenarioViaLanding:
+        return landing.model_copy(
+            update={
+                "path_evidence": (
+                    ScenarioViaPathEvidence(
+                        target_layer=target_layer,
+                        target_node_id=target_node_id,
+                        target_padstack="VIA",
+                        target_pad_kind="CIRCLE",
+                        target_pad_width_um=160.0,
+                        target_pad_height_um=120.0,
+                        x_um=segment.end_x_um,
+                        y_um=segment.end_y_um,
+                        segments=(segment,),
+                    ),
+                )
+            }
+        )
+
+    recovered_connection = original.model_copy(
+        update={
+            "power_vias": (
+                with_evidence(
+                    original.power_vias[0],
+                    target_layer="PWR1",
+                    target_node_id="NP-PWR1",
+                    segment=power_segment,
+                ),
+            ),
+            "ground_vias": (
+                with_evidence(
+                    original.ground_vias[0],
+                    target_layer="GND1",
+                    target_node_id="NG-GND1",
+                    segment=ground_segment,
+                ),
+            ),
+        }
+    )
+    recovered_analysis = analysis.model_copy(
+        update={
+            "connections": {**analysis.connections, "C1": recovered_connection}
+        }
+    )
+    recovered_scenario = ScenarioSpec.model_validate(
+        {
+            **scenario.model_dump(mode="python"),
+            "connection_analysis": recovered_analysis,
+        }
+    )
+
+    project = build_evaluation_project(
+        recovered_scenario, evaluation_rail_id="RAIL_VDD"
+    )
+
+    assert len(project.shared_pad_clusters) == 1
+    paths = project.shared_pad_clusters[0].via_paths
+    power_path = next(item for item in paths if item.terminal == TerminalKind.PWR)
+    ground_path = next(item for item in paths if item.terminal == TerminalKind.GND)
+    assert (power_path.x_um, power_path.y_um) == (1_750.0, 2_250.0)
+    assert (power_path.landing_pad_width_um, power_path.landing_pad_height_um) == (
+        160.0,
+        120.0,
+    )
+    assert power_path.terminal_provenance == "SOURCE_PROVEN_SEGMENT_RL"
+    assert ground_path.terminal_provenance == "SOURCE_PROVEN_SEGMENT_RL"
+    expected_power_rl = evaluation_module._source_terminal_rl((power_segment,))
+    expected_ground_rl = evaluation_module._source_terminal_rl((ground_segment,))
+    assert (power_path.terminal_resistance_ohm, power_path.terminal_inductance_h) == pytest.approx(
+        expected_power_rl
+    )
+    assert (ground_path.terminal_resistance_ohm, ground_path.terminal_inductance_h) == pytest.approx(
+        expected_ground_rl
+    )
+
+    via = recovered_scenario.base_project.via_templates[0]
+    fallback = evaluation_module._shared_pad_path_from_landing(
+        path_id="FALLBACK",
+        terminal=TerminalKind.PWR,
+        landing=original.power_vias[0],
+        target_layer="PWR1",
+        via=via,
+    )
+    assert fallback.terminal_provenance == "LEGACY_RAIL_TEMPLATE"
+    assert not fallback.has_source_landing_geometry
+    assert not fallback.has_source_terminal_rl
+
+    sampled_via = via.model_copy(
+        update={
+            "impedance": [
+                ImpedanceSample(
+                    frequency_hz=1.0e6,
+                    real_ohm=0.01,
+                    imag_ohm=0.04,
+                ),
+                ImpedanceSample(
+                    frequency_hz=1.0e8,
+                    real_ohm=0.02,
+                    imag_ohm=0.40,
+                ),
+            ]
+        }
+    )
+    sampled_path = evaluation_module._shared_pad_path_from_landing(
+        path_id="SAMPLED",
+        terminal=TerminalKind.PWR,
+        landing=recovered_connection.power_vias[0],
+        target_layer="PWR1",
+        via=sampled_via,
+    )
+    assert sampled_path.has_source_landing_geometry
+    assert not sampled_path.has_source_terminal_rl
+    assert (
+        sampled_path.terminal_provenance
+        == "SAMPLED_DIFFERENTIAL_TEMPLATE_SYMMETRIC"
+    )
+
+
 def test_isolation_gap_removes_its_power_and_ground_via_paths() -> None:
     scenario = _scenario()
     first = scenario.decaps[0].model_copy(
@@ -732,7 +885,7 @@ def test_shared_pad_via_limit_counts_power_and_ground_paths_together() -> None:
     assert captured.value.code == "SHARED_PAD_CLUSTER_TOO_LARGE"
 
 
-def test_split_power_components_share_one_ground_network_per_evaluation_rail() -> None:
+def test_split_power_components_require_ground_anchor_per_evaluation_rail() -> None:
     base_payload = _base_project().model_dump(mode="json")
     base_payload["stackup_layers"][2]["pwr_nets"].append("VDD_ALT")
     base_payload["rails"].append(
@@ -832,7 +985,10 @@ def test_split_power_components_share_one_ground_network_per_evaluation_rail() -
         ground_net="DGND",
         layer="TOP",
         power_edges=(("C-A", "C-B"), ("C-B", "C-C")),
-        ground_edges=(("C-A", "C-B"), ("C-B", "C-C")),
+        # V5 preserves a separate C-C source GND supernode.  It is permitted
+        # to deserialize, but its missing Via anchor must block only C-C's
+        # selected-rail materialization below.
+        ground_edges=(("C-A", "C-B"),),
         isolation_gap_refdes=("C-A", "C-B", "C-C"),
         via_eligibility={
             "VP-C-A": {"RAIL_VDD": vdd_eligibility},
@@ -857,11 +1013,16 @@ def test_split_power_components_share_one_ground_network_per_evaluation_rail() -
         ),
     )
 
+    with pytest.raises(ValidationError, match="legacy resolved shared-pad cluster GND"):
+        SharedPadConnectionAnalysis(
+            version="DIRECT_TOP_COPPER_PATH_V4",
+            source_sha256="b" * 64,
+            connections=connections,
+            clusters=(cluster,),
+        )
+
     vdd_project = build_evaluation_project(
         scenario, evaluation_rail_id="RAIL_VDD"
-    )
-    alt_project = build_evaluation_project(
-        scenario, evaluation_rail_id="RAIL_ALT"
     )
 
     assert len(vdd_project.shared_pad_clusters) == 1
@@ -872,6 +1033,36 @@ def test_split_power_components_share_one_ground_network_per_evaluation_rail() -
     assert sum(
         path.terminal == TerminalKind.GND for path in vdd_cluster.via_paths
     ) == 1
+    with pytest.raises(ScenarioEvaluationBuildError) as captured:
+        build_evaluation_project(scenario, evaluation_rail_id="RAIL_ALT")
+    assert captured.value.code == "SHARED_PAD_CLUSTER_TERMINAL_MISSING"
+
+    # V5 does not borrow a GND Via across a physical isolation gap.  Once the
+    # alternate rail's independently derived GND component has source evidence,
+    # its one-rail evaluation materializes normally.
+    alt_ground = ScenarioViaLanding(
+        via_id="VG-ALT",
+        net="DGND",
+        endpoint_node_id="NG-ALT",
+        x_um=members[2].gnd_pad.x_um,
+        y_um=members[2].gnd_pad.y_um,
+        padstack="VIA",
+    )
+    anchored_connections = dict(connections)
+    anchored_connections[members[2].refdes] = connections[members[2].refdes].model_copy(
+        update={"ground_vias": (alt_ground,)}
+    )
+    anchored = ScenarioSpec.model_validate(
+        {
+            **scenario.model_dump(mode="python"),
+            "connection_analysis": scenario.connection_analysis.model_copy(
+                update={"connections": anchored_connections}
+            ),
+        }
+    )
+    alt_project = build_evaluation_project(
+        anchored, evaluation_rail_id="RAIL_ALT"
+    )
     assert len(alt_project.shared_pad_clusters) == 1
     alt_cluster = alt_project.shared_pad_clusters[0]
     assert [
@@ -958,7 +1149,7 @@ def test_legacy_v3_connectivity_loads_but_blocks_all_evaluation_paths(
     with pytest.raises(ScenarioEvaluationBuildError) as preflight:
         preflight_evaluation_connectivity(legacy, ("RAIL_VDD",))
     assert preflight.value.code == "CONNECTION_ANALYSIS_UPGRADE_REQUIRED"
-    assert "V4 finite-pad/ordered-boolean" in str(preflight.value)
+    assert "V5 finite-pad/ordered-boolean" in str(preflight.value)
 
     with pytest.raises(ScenarioEvaluationBuildError) as direct:
         build_evaluation_project(legacy, evaluation_rail_id="RAIL_VDD")

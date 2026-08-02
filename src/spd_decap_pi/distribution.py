@@ -42,6 +42,7 @@ TargetKey = tuple[str, str]  # (rail_id, model_id)
 ToleranceKey = TargetKey
 ProgressCallback = Callable[[int, str], None]
 CancelCallback = Callable[[], bool]
+_DISTRIBUTION_V4_ANALYSIS_VERSION = "DIRECT_TOP_COPPER_PATH_V4"
 
 
 class DistributionDistanceMode(StrEnum):
@@ -84,6 +85,33 @@ class DistributionError(ValueError):
         self.code = code
         self.diagnostics = diagnostics
         super().__init__(message)
+
+
+def _require_distribution_compatible_connectivity(scenario: ScenarioSpec) -> None:
+    """Accept historical V4 and current V5 source connectivity for Distribution.
+
+    Distribution operates on the PWR source graph and anchors; it neither
+    materializes nor transforms the V5 explicit GND components.  Evaluation
+    remains responsible for validating those terminal components when it
+    builds the electrical circuit.
+    """
+
+    analysis = scenario.connection_analysis
+    if analysis is None:
+        raise DistributionError(
+            "CONNECTION_ANALYSIS_REQUIRED",
+            "verified shared-pad connectivity is required for distribution",
+        )
+    if analysis.version not in {
+        _DISTRIBUTION_V4_ANALYSIS_VERSION,
+        SHARED_PAD_ANALYSIS_VERSION,
+    }:
+        raise DistributionError(
+            "CONNECTION_ANALYSIS_UPGRADE_REQUIRED",
+            "this scenario uses legacy shared-pad connectivity; reopen the "
+            "verified source SPD to build V4/V5 finite-pad/ordered-boolean "
+            "TOP-copper evidence before running De-cap Distribution",
+        )
 
 
 @dataclass(frozen=True, slots=True)
@@ -843,19 +871,7 @@ def validate_distribution_targets(
 ) -> None:
     """Validate targets, exchange tolerances, and hard numeric supply."""
 
-    if scenario.connection_analysis is None:
-        raise DistributionError(
-            "CONNECTION_ANALYSIS_REQUIRED",
-            "verified shared-pad connectivity is required for distribution",
-        )
-    if scenario.connection_analysis.version != SHARED_PAD_ANALYSIS_VERSION:
-        raise DistributionError(
-            "CONNECTION_ANALYSIS_UPGRADE_REQUIRED",
-            "this scenario uses legacy shared-pad connectivity; reopen the "
-            "verified source SPD to build V4 finite-pad/ordered-boolean "
-            "TOP-copper evidence before "
-            "running De-cap Distribution",
-        )
+    _require_distribution_compatible_connectivity(scenario)
 
     canonical_present = distribution_present_counts(scenario)
     inventory = _distribution_inventory(scenario)
@@ -1393,19 +1409,7 @@ def compute_distribution_plan(
         raise DistributionError(
             "TIME_LIMIT_INVALID", "optimizer time limit must be positive"
         )
-    if scenario.connection_analysis is None:
-        raise DistributionError(
-            "CONNECTION_ANALYSIS_REQUIRED",
-            "verified shared-pad connectivity is required for distribution",
-        )
-    if scenario.connection_analysis.version != SHARED_PAD_ANALYSIS_VERSION:
-        raise DistributionError(
-            "CONNECTION_ANALYSIS_UPGRADE_REQUIRED",
-            "this scenario uses legacy shared-pad connectivity; reopen the "
-            "verified source SPD to build V4 finite-pad/ordered-boolean "
-            "TOP-copper evidence before "
-            "running De-cap Distribution",
-        )
+    _require_distribution_compatible_connectivity(scenario)
 
     _notify(progress, 2, "Validating distribution targets")
     _check_cancelled(is_cancelled)

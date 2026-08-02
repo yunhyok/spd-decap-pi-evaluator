@@ -1,12 +1,19 @@
 ﻿from __future__ import annotations
 
 import mmap
+import os
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 
 from spd_decap_pi._core.domain import PinKind, TerminalKind
-from spd_decap_pi._core.io.spd import SpdImportError, _parse_netlist, analyze_spd
+from spd_decap_pi._core.io.spd import (
+    SpdImportError,
+    _parse_netlist,
+    analyze_spd,
+    recover_spd_via_paths,
+)
 
 
 MINI_SPD = """Title tiny SPD
@@ -97,6 +104,345 @@ VDD_DROP/0::Unselected||DropShape
 .EndNetList
 .EndPackage
 """
+
+
+def _recoverable_via_source(
+    tmp_path: Path,
+    *,
+    node_lines: str,
+    via_lines: str,
+    trace_lines: str = "",
+    padstack_defs: str = "",
+) -> tuple[Path, object]:
+    """Build one small SPD while keeping the production section grammar."""
+
+    trace_section = (
+        "* Trace description lines\n" + trace_lines.rstrip() + "\n"
+        if trace_lines
+        else ""
+    )
+    payload = MINI_SPD.replace(
+        "* Via description lines",
+        node_lines.rstrip() + "\n" + trace_section + "* Via description lines",
+    ).replace(
+        "Via2::DGND UpperNode = Node2 LowerNode = Node4 PadStack = DR-0102_60",
+        "Via2::DGND UpperNode = Node2 LowerNode = Node4 PadStack = DR-0102_60\n"
+        + via_lines.rstrip(),
+    )
+    if padstack_defs:
+        payload = payload.replace(
+            "* Material description lines",
+            padstack_defs.rstrip() + "\n* Material description lines",
+        )
+    source = tmp_path / "via-recovery.spd"
+    source.write_text(payload, encoding="ascii")
+    return source, analyze_spd(source)
+
+
+def _recover_power_path(source: Path, analysis: object, **kwargs):
+    landing = SimpleNamespace(
+        via_id="ViaRoute",
+        net="VDD_CORE/0",
+        endpoint_node_id="Node10",
+        x_um=1_000.0,
+        y_um=2_000.0,
+        padstack="DR-0102_60",
+    )
+    return recover_spd_via_paths(
+        source,
+        landings=(landing,),
+        target_layers_by_net={"VDD_CORE/0": ("Signal$PWR",)},
+        stackup_layers=analysis.stackup_layers,
+        padstacks=analysis.padstacks,
+        top_layer="Signal$TOP",
+        **kwargs,
+    )
+
+
+@pytest.mark.parametrize("reversed_endpoints", [False, True])
+@pytest.mark.parametrize(
+    "target_padstack_suffix",
+    ("", " PadStack = NODE_FEATURE"),
+    ids=("target-node-has-no-padstack", "target-node-has-conflicting-padstack"),
+)
+def test_recover_spd_via_path_retains_target_pad_and_ignores_side_trace(
+    tmp_path: Path,
+    reversed_endpoints: bool,
+    target_padstack_suffix: str,
+) -> None:
+    node_lines = f"""
+Node10!!1::VDD_CORE/0 X = 1mm Y = 2mm Layer = Signal$TOP PadStack = DR-0102_60
+Node11!!1::VDD_CORE/0 X = 1.25mm Y = 2.5mm Layer = Signal$PWR{target_padstack_suffix}
+Node99!!1::VDD_CORE/0 X = 2mm Y = 2mm Layer = Signal$TOP PadStack = DR-0102_60
+"""
+    endpoints = (
+        "UpperNode = Node11::VDD_CORE/0 LowerNode = Node10::VDD_CORE/0"
+        if reversed_endpoints
+        else "UpperNode = Node10::VDD_CORE/0 LowerNode = Node11::VDD_CORE/0"
+    )
+    source, analysis = _recoverable_via_source(
+        tmp_path,
+        node_lines=node_lines,
+        via_lines=f"ViaRoute::VDD_CORE/0 {endpoints} PadStack = DR-0102_60",
+        trace_lines=(
+            "TraceSide::VDD_CORE/0 StartingNode = Node10::VDD_CORE/0 "
+            "EndingNode = Node99::VDD_CORE/0 Width = 0.10mm"
+        ),
+    )
+
+    recovery = _recover_power_path(source, analysis)
+
+    assert recovery.statistics == {
+        "requested": 1,
+        "recovered": 1,
+        "fallback": 0,
+        "segments": 1,
+    }
+    evidence = recovery.evidence_for("ViaRoute", "Signal$PWR")
+    assert evidence is not None
+    assert evidence.target_node_id == "Node11"
+    assert evidence.target_padstack == "DR-0102_60"
+    assert evidence.target_pad_kind == "CIRCLE"
+    assert (evidence.target_x_um, evidence.target_y_um) == (1_250.0, 2_500.0)
+    assert (evidence.target_pad_width_um, evidence.target_pad_height_um) == (
+        60.0,
+        60.0,
+    )
+    assert len(evidence.segments) == 1
+    assert evidence.segments[0].via_id == "ViaRoute"
+    # The target Node's feature label is not a Via landing.  The final segment
+    # remains authoritative even when its source padstack differs or the Node
+    # has no PadStack at all.
+    assert evidence.segments[0].padstack == "DR-0102_60"
+    assert evidence.segments[0].rotation_degrees == 0.0
+    # Conductor-centre depth, not an ordinal layer-index span.
+    assert evidence.segments[0].length_um == pytest.approx(120.0)
+
+
+def test_recover_spd_via_paths_rejects_source_changed_since_analysis(
+    tmp_path: Path,
+) -> None:
+    source, analysis = _recoverable_via_source(
+        tmp_path,
+        node_lines="""
+Node10!!1::VDD_CORE/0 X = 1mm Y = 2mm Layer = Signal$TOP PadStack = DR-0102_60
+Node11!!1::VDD_CORE/0 X = 1.25mm Y = 2.5mm Layer = Signal$PWR
+""",
+        via_lines=(
+            "ViaRoute::VDD_CORE/0 UpperNode = Node10::VDD_CORE/0 "
+            "LowerNode = Node11::VDD_CORE/0 PadStack = DR-0102_60"
+        ),
+    )
+    source.write_text(source.read_text(encoding="ascii") + "\n", encoding="ascii")
+
+    with pytest.raises(SpdImportError, match="changed after analysis before"):
+        _recover_power_path(source, analysis, expected_source=analysis.source)
+
+
+def test_recover_spd_via_paths_rejects_source_changed_during_recovery(
+    tmp_path: Path,
+) -> None:
+    source, analysis = _recoverable_via_source(
+        tmp_path,
+        node_lines="""
+Node10!!1::VDD_CORE/0 X = 1mm Y = 2mm Layer = Signal$TOP PadStack = DR-0102_60
+Node11!!1::VDD_CORE/0 X = 1.25mm Y = 2.5mm Layer = Signal$PWR
+""",
+        via_lines=(
+            "ViaRoute::VDD_CORE/0 UpperNode = Node10::VDD_CORE/0 "
+            "LowerNode = Node11::VDD_CORE/0 PadStack = DR-0102_60"
+        ),
+    )
+    changed = False
+
+    def mutate_after_identity(value: int, _message: str) -> None:
+        nonlocal changed
+        if changed or value < 4:
+            return
+        before = source.stat()
+        os.utime(
+            source,
+            ns=(before.st_atime_ns, before.st_mtime_ns + 1_000_000_000),
+        )
+        changed = True
+
+    with pytest.raises(SpdImportError, match="changed during source Via path recovery"):
+        _recover_power_path(
+            source,
+            analysis,
+            expected_source=analysis.source,
+            progress=mutate_after_identity,
+        )
+
+    assert changed
+
+
+def test_recovery_uses_terminal_via_rotation_for_rectangular_target_pad(
+    tmp_path: Path,
+) -> None:
+    source, analysis = _recoverable_via_source(
+        tmp_path,
+        node_lines="""
+Node10!!1::VDD_CORE/0 X = 1mm Y = 2mm Layer = Signal$TOP PadStack = RECT_ROUTE
+Node11!!1::VDD_CORE/0 X = 1.5mm Y = 2.5mm Layer = Signal$PWR PadStack = NODE_FEATURE
+""",
+        via_lines=(
+            "ViaRoute::VDD_CORE/0 UpperNode = Node10::VDD_CORE/0 "
+            "LowerNode = Node11::VDD_CORE/0 PadStack = RECT_ROUTE "
+            "AbsoluteRotation = 90"
+        ),
+        padstack_defs="""
+.PadStackDef RECT_ROUTE 0.02mm Material = COPPER
+.PadDef Signal$TOP
+Regular Box 0.10mm 0.20mm
+.EndPadDef
+.PadDef Signal$PWR
+Regular Box 0.10mm 0.20mm
+.EndPadDef
+.EndPadStackDef
+""",
+    )
+
+    recovery = _recover_power_path(source, analysis)
+
+    evidence = recovery.evidence_for("ViaRoute", "Signal$PWR")
+    assert evidence is not None
+    assert evidence.target_padstack == "RECT_ROUTE"
+    assert (evidence.target_pad_width_um, evidence.target_pad_height_um) == (
+        200.0,
+        100.0,
+    )
+    assert evidence.segments[-1].rotation_degrees == 90.0
+
+
+def test_recovery_fails_closed_for_non_axis_aligned_terminal_via_rotation(
+    tmp_path: Path,
+) -> None:
+    source, analysis = _recoverable_via_source(
+        tmp_path,
+        node_lines="""
+Node10!!1::VDD_CORE/0 X = 1mm Y = 2mm Layer = Signal$TOP PadStack = DR-0102_60
+Node11!!1::VDD_CORE/0 X = 1mm Y = 2mm Layer = Signal$PWR
+""",
+        via_lines=(
+            "ViaRoute::VDD_CORE/0 UpperNode = Node10::VDD_CORE/0 "
+            "LowerNode = Node11::VDD_CORE/0 PadStack = DR-0102_60 "
+            "AbsoluteRotation = 45"
+        ),
+    )
+
+    recovery = _recover_power_path(source, analysis)
+
+    assert recovery.statistics["recovered"] == 0
+    assert any(
+        item.code == "SPD_VIA_PATH_LEGACY_FALLBACK"
+        and "UNSUPPORTED_VIA_ROTATION" in item.message
+        for item in recovery.diagnostics
+    )
+
+
+def test_recovery_reports_monotonic_progress_and_honors_cancellation(
+    tmp_path: Path,
+) -> None:
+    source, analysis = _recoverable_via_source(
+        tmp_path,
+        node_lines="""
+Node10!!1::VDD_CORE/0 X = 1mm Y = 2mm Layer = Signal$TOP PadStack = DR-0102_60
+Node11!!1::VDD_CORE/0 X = 1mm Y = 2mm Layer = Signal$PWR
+""",
+        via_lines=(
+            "ViaRoute::VDD_CORE/0 UpperNode = Node10::VDD_CORE/0 "
+            "LowerNode = Node11::VDD_CORE/0 PadStack = DR-0102_60"
+        ),
+    )
+    updates: list[tuple[int, str]] = []
+
+    recovery = _recover_power_path(
+        source,
+        analysis,
+        progress=lambda value, message: updates.append((value, message)),
+    )
+
+    assert recovery.statistics["recovered"] == 1
+    assert [value for value, _message in updates] == sorted(
+        value for value, _message in updates
+    )
+    assert updates[0][0] == 0
+    assert updates[-1][0] == 100
+    with pytest.raises(SpdImportError, match="cancelled"):
+        _recover_power_path(source, analysis, is_cancelled=lambda: True)
+
+
+@pytest.mark.parametrize(
+    ("node_lines", "via_lines", "trace_lines", "failure_code"),
+    [
+        (
+            """
+Node10!!1::VDD_CORE/0 X = 1mm Y = 2mm Layer = Signal$TOP PadStack = DR-0102_60
+Node11!!1::VDD_CORE/0 X = 1mm Y = 2mm Layer = Medium$D1 PadStack = DR-0102_60
+Node12!!1::VDD_CORE/0 X = 1mm Y = 2mm Layer = Signal$PWR PadStack = DR-0102_60
+Node13!!1::VDD_CORE/0 X = 1.1mm Y = 2mm Layer = Signal$PWR PadStack = DR-0102_60
+""",
+            """
+ViaRoute::VDD_CORE/0 UpperNode = Node10::VDD_CORE/0 LowerNode = Node11::VDD_CORE/0 PadStack = DR-0102_60
+ViaBranchA::VDD_CORE/0 UpperNode = Node11::VDD_CORE/0 LowerNode = Node12::VDD_CORE/0 PadStack = DR-0102_60
+ViaBranchB::VDD_CORE/0 UpperNode = Node11::VDD_CORE/0 LowerNode = Node13::VDD_CORE/0 PadStack = DR-0102_60
+""",
+            "",
+            "AMBIGUOUS_VERTICAL_BRANCH",
+        ),
+        (
+            """
+Node10!!1::VDD_CORE/0 X = 1mm Y = 2mm Layer = Signal$TOP PadStack = DR-0102_60
+Node11!!1::VDD_CORE/0 X = 1mm Y = 2mm Layer = Medium$D1 PadStack = DR-0102_60
+Node12!!1::VDD_CORE/0 X = 1mm Y = 2mm Layer = Signal$PWR PadStack = DR-0102_60
+""",
+            "ViaRoute::VDD_CORE/0 UpperNode = Node10::VDD_CORE/0 LowerNode = Node11::VDD_CORE/0 PadStack = DR-0102_60",
+            "TraceNeed::VDD_CORE/0 StartingNode = Node11::VDD_CORE/0 EndingNode = Node12::VDD_CORE/0 Width = 0.10mm",
+            "TRACE_REQUIRED",
+        ),
+        (
+            """
+Node10!!1::VDD_CORE/0 X = 1mm Y = 2mm Layer = Signal$TOP PadStack = DR-0102_60
+Node11!!1::VDD_CORE/0 X = 1mm Y = 2mm Layer = Signal$PWR PadStack = DR-0102_60
+""",
+            "ViaRoute::VDD_CORE/0 UpperNode = Node10::VDD_CORE/0 LowerNode = Node11::VDD_CORE/0 PadStack = MISSING",
+            "",
+            "MISSING_PADSTACK",
+        ),
+        (
+            "Node10!!1::VDD_CORE/0 X = 1mm Y = 2mm Layer = Signal$TOP PadStack = DR-0102_60",
+            "ViaRoute::VDD_CORE/0 UpperNode = Node10::VDD_CORE/0 LowerNode = Node404::VDD_CORE/0 PadStack = DR-0102_60",
+            "",
+            "MISSING_NODE",
+        ),
+    ],
+)
+def test_recover_spd_via_path_fails_closed_for_nonunique_or_incomplete_routes(
+    tmp_path: Path,
+    node_lines: str,
+    via_lines: str,
+    trace_lines: str,
+    failure_code: str,
+) -> None:
+    source, analysis = _recoverable_via_source(
+        tmp_path,
+        node_lines=node_lines,
+        via_lines=via_lines,
+        trace_lines=trace_lines,
+    )
+
+    recovery = _recover_power_path(source, analysis)
+
+    assert recovery.statistics["requested"] == 1
+    assert recovery.statistics["recovered"] == 0
+    assert recovery.statistics["fallback"] == 1
+    assert recovery.evidence_for("ViaRoute", "Signal$PWR") is None
+    assert any(
+        diagnostic.code == "SPD_VIA_PATH_LEGACY_FALLBACK"
+        and failure_code in diagnostic.message
+        for diagnostic in recovery.diagnostics
+    )
 
 
 def test_streaming_spd_normalizes_selected_geometry_and_passive_models(

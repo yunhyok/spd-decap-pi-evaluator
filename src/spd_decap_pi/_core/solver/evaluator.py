@@ -42,7 +42,9 @@ from .modal import (
 )
 
 
-SOLVER_VERSION = "modal-mvp-0.3.0"
+# Cache identity: source-derived terminal branches and explicit multi-ground
+# shared-pad reduction changed the calculated transfer function in v0.12.0.
+SOLVER_VERSION = "modal-mvp-0.4.0"
 COUPLING_ASSUMPTION = "inter-rail/site coupling not modeled"
 
 
@@ -1011,13 +1013,46 @@ def _finite_port(
     origin_um: tuple[float, float],
     template: Any,
     port_id: str,
+    *,
+    width_um: float | None = None,
+    height_um: float | None = None,
 ) -> FinitePort:
     return FinitePort(
         x_m=(float(x_um) - origin_um[0]) * 1e-6,
         y_m=(float(y_um) - origin_um[1]) * 1e-6,
-        width_m=float(template.finite_port_width_um) * 1e-6,
-        height_m=float(template.finite_port_height_um) * 1e-6,
+        width_m=float(
+            template.finite_port_width_um if width_um is None else width_um
+        )
+        * 1e-6,
+        height_m=float(
+            template.finite_port_height_um if height_um is None else height_um
+        )
+        * 1e-6,
         port_id=port_id,
+    )
+
+
+def _shared_pad_terminal_model(
+    path: Any,
+    fallback: ImpedanceModel,
+) -> ImpedanceModel:
+    """Use source-terminal R/L unless a sampled differential template owns it.
+
+    SharedPadClusterModel stamps every terminal branch at ``2 / Zmodel``.
+    A physical source terminal impedance therefore needs a transient model of
+    ``2 * Zterminal`` so the stamped branch remains exactly ``1 / Zterminal``.
+    Returning the original fallback object verbatim keeps legacy clusters
+    eligible for the homogeneous shared-pad batch path.
+    """
+
+    if not getattr(path, "has_source_terminal_rl", False):
+        return fallback
+    if isinstance(fallback, SampledImpedanceModel):
+        return fallback
+    return SeriesRLModel(
+        f"{path.path_id}:SOURCE_TERMINAL",
+        resistance_ohm=2.0 * float(path.terminal_resistance_ohm),
+        inductance_h=2.0 * float(path.terminal_inductance_h),
     )
 
 
@@ -1283,6 +1318,16 @@ def _placement_shunts(
                 origin_um,
                 template,
                 str(path.path_id),
+                width_um=(
+                    float(path.landing_pad_width_um)
+                    if getattr(path, "has_source_landing_geometry", False)
+                    else None
+                ),
+                height_um=(
+                    float(path.landing_pad_height_um)
+                    if getattr(path, "has_source_landing_geometry", False)
+                    else None
+                ),
             )
             port.validate_inside(plane)
             terminal = str(getattr(path.terminal, "value", path.terminal))
@@ -1294,7 +1339,10 @@ def _placement_shunts(
             path_runtime[str(path.path_id)] = (
                 terminal,
                 port,
-                via_models[path.via_template_id],
+                _shared_pad_terminal_model(
+                    path,
+                    via_models[path.via_template_id],
+                ),
             )
 
         power_ports: list[FinitePort] = []
@@ -1302,10 +1350,51 @@ def _placement_shunts(
         power_loops: list[ImpedanceModel] = []
         ground_loops: list[ImpedanceModel] = []
         power_component_indices: list[int] = []
+        ground_component_indices: list[int] = []
         cluster_capacitors: list[ImpedanceModel] = []
         capacitor_component_indices: list[int] = []
+        capacitor_ground_component_indices: list[int] = []
         consumed_power_paths: set[str] = set()
+        consumed_ground_paths: set[str] = set()
         consumed_component_members: set[str] = set()
+        explicit_ground_components = tuple(
+            getattr(cluster, "ground_components", ())
+        )
+        ground_component_by_member: dict[str, int] = {}
+        if explicit_ground_components:
+            for component_index, component in enumerate(explicit_ground_components):
+                for member_id in component.member_slot_ids:
+                    if member_id in ground_component_by_member:
+                        raise EvaluationError(
+                            f"shared-pad member {member_id!r} belongs to multiple "
+                            "GND components"
+                        )
+                    ground_component_by_member[member_id] = component_index
+                for path_id in component.ground_path_ids:
+                    if path_id in consumed_ground_paths or path_id not in path_runtime:
+                        raise EvaluationError(
+                            f"shared-pad GND component references invalid path "
+                            f"{path_id!r}"
+                        )
+                    terminal, port, loop = path_runtime[path_id]
+                    if terminal != "GND":
+                        raise EvaluationError(
+                            f"shared-pad GND component path {path_id!r} is not GND"
+                        )
+                    consumed_ground_paths.add(path_id)
+                    ground_ports.append(port)
+                    ground_loops.append(loop)
+                    ground_component_indices.append(component_index)
+            if set(ground_component_by_member) != set(member_ids):
+                raise EvaluationError(
+                    f"shared-pad cluster {cluster_id!r} GND components do not cover "
+                    "every member"
+                )
+        else:
+            # V4/V3 transient projects have an implicit single continuous GND
+            # supernode.  Keep path order and algebra unchanged for exact legacy
+            # solver/batch equivalence.
+            ground_component_by_member = {member_id: 0 for member_id in member_ids}
         for component_index, component in enumerate(cluster.power_components):
             for member_id in component.member_slot_ids:
                 if member_id in consumed_component_members:
@@ -1318,6 +1407,9 @@ def _placement_shunts(
                 if capacitor is not None:
                     cluster_capacitors.append(capacitor)
                     capacitor_component_indices.append(component_index)
+                    capacitor_ground_component_indices.append(
+                        ground_component_by_member[member_id]
+                    )
             for path_id in component.power_path_ids:
                 if path_id in consumed_power_paths or path_id not in path_runtime:
                     raise EvaluationError(
@@ -1345,8 +1437,15 @@ def _placement_shunts(
                         f"shared-pad PWR path {path_id!r} has no component"
                     )
                 continue
+            if explicit_ground_components:
+                if path_id not in consumed_ground_paths:
+                    raise EvaluationError(
+                        f"shared-pad GND path {path_id!r} has no component"
+                    )
+                continue
             ground_ports.append(port)
             ground_loops.append(loop)
+            ground_component_indices.append(0)
         if not power_ports or not ground_ports:
             raise EvaluationError(
                 f"shared-pad cluster {cluster_id!r} requires both PWR and GND "
@@ -1360,6 +1459,10 @@ def _placement_shunts(
             capacitors=tuple(cluster_capacitors),
             power_component_indices=tuple(power_component_indices),
             capacitor_component_indices=tuple(capacitor_component_indices),
+            ground_component_indices=tuple(ground_component_indices),
+            capacitor_ground_component_indices=tuple(
+                capacitor_ground_component_indices
+            ),
         )
         physical_network = SharedPadClusterModel(
             model_id=f"SHARED_PAD_CLUSTER_PHYSICAL:{cluster_id}",
@@ -1367,6 +1470,7 @@ def _placement_shunts(
             ground_via_loops=tuple(ground_loops),
             capacitors=(),
             power_component_indices=tuple(power_component_indices),
+            ground_component_indices=tuple(ground_component_indices),
         )
         cluster_groups.append(
             CoupledShuntGroup(

@@ -539,6 +539,17 @@ class SharedPadViaPath(DomainModel):
         default=None,
         validation_alias=AliasChoices("source_via_id", "source_power_via_id"),
     )
+    # Raw-SPD imports may carry a source-proven landing on the selected plane.
+    # The calibrated rail template remains the compatibility fallback whenever
+    # this compact evidence is absent.  These are deliberately scalar values:
+    # the transient evaluation project must not persist the raw Via graph.
+    landing_layer: str | None = None
+    landing_padstack: str | None = None
+    landing_pad_width_um: float | None = Field(default=None, gt=0)
+    landing_pad_height_um: float | None = Field(default=None, gt=0)
+    terminal_resistance_ohm: float | None = Field(default=None, ge=0)
+    terminal_inductance_h: float | None = Field(default=None, ge=0)
+    terminal_provenance: str = "LEGACY_RAIL_TEMPLATE"
 
     @field_validator("x_um", "y_um")
     @classmethod
@@ -553,6 +564,42 @@ class SharedPadViaPath(DomainModel):
         if value is not None and not value:
             raise ValueError("source via ID must not be blank")
         return value
+
+    @model_validator(mode="after")
+    def coherent_landing_evidence(self) -> "SharedPadViaPath":
+        geometry = (self.landing_pad_width_um, self.landing_pad_height_um)
+        if any(value is not None for value in geometry) and any(
+            value is None for value in geometry
+        ):
+            raise ValueError("source landing width and height must be provided together")
+        if any(value is not None for value in geometry) and not (
+            self.landing_layer and self.landing_padstack
+        ):
+            raise ValueError(
+                "source landing geometry requires its source layer and padstack"
+            )
+        terminal_rl = (self.terminal_resistance_ohm, self.terminal_inductance_h)
+        if any(value is not None for value in terminal_rl) and any(
+            value is None for value in terminal_rl
+        ):
+            raise ValueError("terminal Via resistance and inductance must be provided together")
+        if not self.terminal_provenance.strip():
+            raise ValueError("terminal Via provenance must not be blank")
+        return self
+
+    @property
+    def has_source_landing_geometry(self) -> bool:
+        return (
+            self.landing_pad_width_um is not None
+            and self.landing_pad_height_um is not None
+        )
+
+    @property
+    def has_source_terminal_rl(self) -> bool:
+        return (
+            self.terminal_resistance_ohm is not None
+            and self.terminal_inductance_h is not None
+        )
 
 
 class SharedPadPowerComponentSpec(DomainModel):
@@ -571,14 +618,48 @@ class SharedPadPowerComponentSpec(DomainModel):
         return value
 
 
+class SharedPadGroundComponentSpec(DomainModel):
+    """One post-edit top-GND supernode inside a source shared-pad cluster."""
+
+    component_id: str = Field(min_length=1)
+    member_slot_ids: list[str] = Field(min_length=1)
+    ground_path_ids: list[str] = Field(min_length=1)
+
+    @field_validator("member_slot_ids", "ground_path_ids")
+    @classmethod
+    def unique_nonblank_ids(cls, value: list[str]) -> list[str]:
+        keys = [item.strip().casefold() for item in value]
+        if any(not item for item in keys) or len(keys) != len(set(keys)):
+            raise ValueError("shared-pad component IDs must be nonblank and unique")
+        return value
+
+
+class SharedPadCapacitorComponentSpec(DomainModel):
+    """The physical PWR/GND top-bus pair for one shared-pad capacitor slot."""
+
+    member_slot_id: str = Field(min_length=1)
+    power_component_id: str = Field(min_length=1)
+    ground_component_id: str = Field(min_length=1)
+
+
 class SharedPadClusterSpec(DomainModel):
-    """One rail's PWR components sharing the source cluster's top-GND bus."""
+    """One rail's source-derived PWR/GND shared-pad component topology.
+
+    ``ground_components`` and ``capacitor_component_mappings`` were added after
+    the original one-GND representation.  Empty collections retain that legacy
+    implicit common-GND meaning so normalized projects written by older releases
+    remain readable and numerically identical.
+    """
 
     cluster_id: str = Field(min_length=1)
     rail_id: str = Field(min_length=1)
     member_slot_ids: list[str] = Field(min_length=1)
     via_paths: list[SharedPadViaPath] = Field(default_factory=list)
     power_components: list[SharedPadPowerComponentSpec] = Field(min_length=1)
+    ground_components: list[SharedPadGroundComponentSpec] = Field(default_factory=list)
+    capacitor_component_mappings: list[SharedPadCapacitorComponentSpec] = Field(
+        default_factory=list
+    )
 
     @field_validator("member_slot_ids")
     @classmethod
@@ -653,6 +734,94 @@ class SharedPadClusterSpec(DomainModel):
             for path_key in component_paths
         ):
             raise ValueError("shared-pad components can reference only PWR via paths")
+
+        # V4 persisted projects have no explicit ground partition.  Preserve the
+        # former single common-GND topology verbatim in that case.
+        if not self.ground_components and not self.capacitor_component_mappings:
+            return self
+        if not self.ground_components:
+            raise ValueError(
+                "shared-pad capacitor mappings require explicit GND components"
+            )
+        ground_component_keys = [
+            item.component_id.casefold() for item in self.ground_components
+        ]
+        if len(ground_component_keys) != len(set(ground_component_keys)):
+            raise ValueError("shared-pad GND component IDs must be unique")
+        ground_members = [
+            slot_id.casefold()
+            for component in self.ground_components
+            for slot_id in component.member_slot_ids
+        ]
+        if len(ground_members) != len(set(ground_members)) or set(ground_members) != set(
+            member_keys
+        ):
+            raise ValueError(
+                "shared-pad GND components must partition every member slot"
+            )
+        ground_path_keys = {
+            key
+            for key, path in path_by_key.items()
+            if path.terminal == TerminalKind.GND
+        }
+        component_ground_paths = [
+            path_id.casefold()
+            for component in self.ground_components
+            for path_id in component.ground_path_ids
+        ]
+        unknown_ground_paths = set(component_ground_paths) - set(path_by_key)
+        if unknown_ground_paths:
+            raise ValueError(
+                "shared-pad GND component references an unknown via path"
+            )
+        if (
+            len(component_ground_paths) != len(set(component_ground_paths))
+            or set(component_ground_paths) != ground_path_keys
+        ):
+            raise ValueError(
+                "shared-pad GND components must partition every GND via path"
+            )
+        if any(
+            path_by_key[path_key].terminal != TerminalKind.GND
+            for path_key in component_ground_paths
+        ):
+            raise ValueError("shared-pad GND components can reference only GND via paths")
+
+        mappings = self.capacitor_component_mappings
+        if not mappings:
+            raise ValueError(
+                "explicit shared-pad GND components require capacitor mappings"
+            )
+        mapping_by_member = {
+            item.member_slot_id.casefold(): item for item in mappings
+        }
+        if len(mapping_by_member) != len(mappings) or set(mapping_by_member) != set(
+            member_keys
+        ):
+            raise ValueError(
+                "shared-pad capacitor mappings must cover every member exactly once"
+            )
+        power_component_by_key = {
+            item.component_id.casefold(): item for item in self.power_components
+        }
+        ground_component_by_key = {
+            item.component_id.casefold(): item for item in self.ground_components
+        }
+        for member_key, mapping in mapping_by_member.items():
+            power = power_component_by_key.get(mapping.power_component_id.casefold())
+            ground = ground_component_by_key.get(mapping.ground_component_id.casefold())
+            if power is None or ground is None:
+                raise ValueError(
+                    "shared-pad capacitor mapping references an unknown component"
+                )
+            if member_key not in {
+                item.casefold() for item in power.member_slot_ids
+            } or member_key not in {
+                item.casefold() for item in ground.member_slot_ids
+            }:
+                raise ValueError(
+                    "shared-pad capacitor mapping must use its member's PWR/GND components"
+                )
         return self
 
 
@@ -1202,7 +1371,9 @@ __all__ = [
     "ProjectSpec",
     "RailSpec",
     "RailState",
+    "SharedPadCapacitorComponentSpec",
     "SharedPadClusterSpec",
+    "SharedPadGroundComponentSpec",
     "SharedPadPowerComponentSpec",
     "SharedPadViaPath",
     "StackupLayer",

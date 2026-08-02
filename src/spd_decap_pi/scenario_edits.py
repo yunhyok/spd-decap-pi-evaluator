@@ -353,6 +353,11 @@ def _analyze_proposed_state(
                     refdes.casefold(): connection_by_refdes[refdes.casefold()]
                     for refdes in cluster.member_refdes
                 },
+                analysis_version=(
+                    scenario.connection_analysis.version
+                    if scenario.connection_analysis is not None
+                    else None
+                ),
             )
         except SharedPadActiveShortError as exc:
             islands.append(
@@ -920,6 +925,11 @@ def _current_assignment_allowed(
                 refdes.casefold(): connection_by_refdes[refdes.casefold()]
                 for refdes in cluster.member_refdes
             },
+            analysis_version=(
+                scenario.connection_analysis.version
+                if scenario.connection_analysis is not None
+                else None
+            ),
         )
         component = next(
             (

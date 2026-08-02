@@ -1207,9 +1207,53 @@ def test_disjoint_local_readds_remain_separate_ground_supernodes() -> None:
     )
 
     assert len(result.clusters) == 1
-    assert result.clusters[0].state == "UNRESOLVED"
+    assert result.clusters[0].state == "ANCHORED"
     assert result.clusters[0].ground_edges == ()
-    assert "GND pads do not form one connected TOP supernode" in str(
+    assert result.clusters[0].power_edges == (("LOWER", "UPPER"),)
+    assert {item.kind for item in result.connections} == {"SHARED_ANCHOR"}
+
+
+def test_disconnected_ground_component_without_via_anchor_fails_closed() -> None:
+    first = _decap("LOWER", 0.0)
+    second = _decap("UPPER", 1_000.0)
+    ground_geometry = SpdTopCopperGeometry(
+        layer=TOP,
+        net="DGND",
+        positive_polygons_um=(
+            _rectangle(0.0, -500.0, 1_000.0, 1_500.0),
+            _rectangle(400.0, -200.0, 600.0, 200.0),
+            _rectangle(400.0, 800.0, 600.0, 1_200.0),
+        ),
+        negative_polygons_um=(
+            _rectangle(300.0, -400.0, 900.0, 1_400.0),
+        ),
+        negative_circles_um=((2_000.0, 2_000.0, 100.0),),
+        primitive_order=(
+            ("positive_polygon", 0),
+            ("negative_polygon", 0),
+            ("positive_polygon", 1),
+            ("positive_polygon", 2),
+            ("negative_circle", 0),
+        ),
+    )
+    result = extract_shared_pad_connectivity(
+        (first, second),
+        (
+            _via("VP0", "VDD", 0.0, 0.0),
+            _via("VG0", "DGND", 600.0, 0.0),
+            _via("VP1", "VDD", 0.0, 1_000.0),
+        ),
+        PADSTACKS,
+        top_layer=TOP,
+        top_copper_geometries=(
+            _top_copper("VDD", (_rectangle(-200.0, -200.0, 200.0, 1_200.0),)),
+            ground_geometry,
+        ),
+    )
+
+    assert len(result.clusters) == 1
+    assert result.clusters[0].state == "UNRESOLVED"
+    assert "GND TOP component has no source Via anchor: UPPER" in str(
         result.clusters[0].reason
     )
 

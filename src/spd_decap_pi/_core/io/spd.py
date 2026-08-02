@@ -127,6 +127,59 @@ class SpdViaUsage:
     count: int
 
 
+@dataclass(frozen=True, slots=True)
+class SpdViaPathSegment:
+    """One uniquely traversed source Via segment in a recovered vertical path."""
+
+    via_id: str
+    padstack: str
+    drill_diameter_um: float
+    start_layer: str
+    end_layer: str
+    length_um: float
+    end_x_um: float
+    end_y_um: float
+    rotation_degrees: float = 0.0
+
+
+@dataclass(frozen=True, slots=True)
+class SpdViaPathEvidence:
+    """Compact source-proven TOP-to-target-plane path evidence."""
+
+    via_id: str
+    target_layer: str
+    target_node_id: str
+    target_padstack: str
+    target_pad_kind: str
+    target_pad_width_um: float
+    target_pad_height_um: float
+    target_x_um: float
+    target_y_um: float
+    segments: tuple[SpdViaPathSegment, ...]
+
+
+@dataclass(frozen=True, slots=True)
+class SpdViaPathRecovery:
+    """Ephemeral recovery output; the selected raw graph is never persisted."""
+
+    evidence_by_via: Mapping[str, tuple[SpdViaPathEvidence, ...]]
+    diagnostics: tuple[SpdDiagnostic, ...]
+    statistics: Mapping[str, int]
+
+    def evidence_for(
+        self, via_id: str, target_layer: str
+    ) -> SpdViaPathEvidence | None:
+        target_key = target_layer.casefold()
+        return next(
+            (
+                item
+                for item in self.evidence_by_via.get(via_id.casefold(), ())
+                if item.target_layer.casefold() == target_key
+            ),
+            None,
+        )
+
+
 class _SpdPolygon(Sequence[tuple[float, float]]):
     """Compact immutable X/Y sequence for multi-million-vertex SPD imports."""
 
@@ -350,6 +403,11 @@ _VIA_RE = re.compile(
     rb"UpperNode\s*=\s*(Node[^\s:!]+)(?:!![^\s:]+)?(?:::[^\s]+)?\s+"
     rb"LowerNode\s*=\s*(Node[^\s:!]+)(?:!![^\s:]+)?(?:::[^\s]+)?\s+"
     rb"PadStack\s*=\s*(\S+)([^\r\n]*)"
+)
+_TRACE_RE = re.compile(
+    rb"(?m)^(Trace[^\r\n:]*)::([^\s]+)\s+"
+    rb"StartingNode\s*=\s*(Node[^\s:!]+)(?:!![^\s:]+)?(?:::[^\s]+)?\s+"
+    rb"EndingNode\s*=\s*(Node[^\s:!]+)(?:!![^\s:]+)?(?:::[^\s]+)?"
 )
 _NODE_ATTR_RE = re.compile(
     rb"\bX\s*=\s*(\S+)\s+Y\s*=\s*(\S+).*?(?:\bPadStack\s*=\s*(\S+))?"
@@ -1661,6 +1719,647 @@ def _parse_vias(
     )
 
 
+@dataclass(frozen=True, slots=True)
+class _RecoveredViaNode:
+    node_id: str
+    net: str
+    x_um: float
+    y_um: float
+    layer: str
+    padstack: str | None
+
+
+def recover_spd_via_paths(
+    path: str | Path,
+    *,
+    landings: Iterable[object],
+    target_layers_by_net: Mapping[str, Iterable[str]],
+    stackup_layers: Sequence[StackupLayer],
+    padstacks: Iterable[SpdPadStack],
+    top_layer: str | None,
+    max_segments: int = 16,
+    expected_source: SpdSourceInfo | None = None,
+    progress: ProgressCallback | None = None,
+    is_cancelled: CancelCallback | None = None,
+) -> SpdViaPathRecovery:
+    """Recover compact, source-proven vertical Via chains after SPD planning.
+
+    This intentionally reopens the source only after the import plan has selected
+    the editable terminal Vias and plane layers.  It keeps just the frontier
+    nodes/segments for those requests, never serializes a board-wide Via graph,
+    and refuses to traverse Trace geometry.  A lateral Trace is therefore harmless
+    when one monotonic Via route reaches the requested plane; it is reported only
+    when reaching that plane would require lateral traversal.
+    """
+
+    reporter = _Reporter(progress, is_cancelled)
+    reporter.report(0, "Recovering source-proven vertical Via paths")
+    source_path = Path(path)
+    if max_segments < 1:
+        raise ValueError("max_segments must be >= 1")
+    if not source_path.is_file():
+        raise SpdImportError(f"SPD source does not exist: {source_path}")
+
+    def stat_identity(
+        *, phase: str, enforce_expected: bool = True
+    ) -> tuple[int, int]:
+        try:
+            observed = source_path.stat()
+        except OSError as exc:
+            raise SpdImportError(
+                f"cannot stat SPD source {source_path} {phase}: {exc}"
+            ) from exc
+        identity = (int(observed.st_size), int(observed.st_mtime_ns))
+        if expected_source is not None and enforce_expected:
+            try:
+                same_path = source_path.resolve() == expected_source.path.resolve()
+            except OSError as exc:
+                raise SpdImportError(
+                    f"cannot resolve SPD source identity {source_path}: {exc}"
+                ) from exc
+            expected_identity = (
+                int(expected_source.size_bytes),
+                int(expected_source.mtime_ns),
+            )
+            if not same_path or identity != expected_identity:
+                raise SpdImportError(
+                    "SPD source identity changed after analysis before source Via "
+                    "path recovery; import aborted so path evidence cannot be "
+                    "mixed with a different source SHA-256"
+                )
+        return identity
+
+    before_recovery = stat_identity(phase="before source Via path recovery")
+
+    def finish(result: SpdViaPathRecovery) -> SpdViaPathRecovery:
+        after_recovery = stat_identity(
+            phase="after source Via path recovery", enforce_expected=False
+        )
+        if after_recovery != before_recovery:
+            raise SpdImportError(
+                "SPD source changed during source Via path recovery; import "
+                "aborted and no mixed-source path evidence was persisted"
+            )
+        return result
+
+    if not top_layer:
+        return finish(SpdViaPathRecovery(
+            evidence_by_via={},
+            diagnostics=(
+                SpdDiagnostic(
+                    "warning",
+                    "SPD_VIA_PATH_FALLBACK",
+                    "No TOP conductor layer was available; terminal Via paths use "
+                    "the documented legacy rail template.",
+                ),
+            ),
+            statistics={"requested": 0, "recovered": 0, "fallback": 0},
+        ))
+
+    layer_by_key = {item.name.casefold(): item.name for item in stackup_layers}
+    depth_by_key = {
+        item.name.casefold(): index for index, item in enumerate(stackup_layers)
+    }
+    top_key = top_layer.casefold()
+    if top_key not in depth_by_key:
+        return finish(SpdViaPathRecovery(
+            evidence_by_via={},
+            diagnostics=(
+                SpdDiagnostic(
+                    "warning",
+                    "SPD_VIA_PATH_FALLBACK",
+                    "The source TOP layer is absent from the normalized stack-up; "
+                    "terminal Via paths use the documented legacy rail template.",
+                ),
+            ),
+            statistics={"requested": 0, "recovered": 0, "fallback": 0},
+        ))
+    targets_by_net = {
+        str(net).casefold(): tuple(
+            dict.fromkeys(
+                layer_by_key[layer.casefold()]
+                for layer in layers
+                if layer.casefold() in layer_by_key
+            )
+        )
+        for net, layers in target_layers_by_net.items()
+    }
+    padstack_by_key = {item.name.casefold(): item for item in padstacks}
+
+    def landing_value(landing: object, name: str) -> object:
+        try:
+            return getattr(landing, name)
+        except AttributeError as exc:
+            raise ValueError(f"Via landing lacks {name!r} source evidence") from exc
+
+    states: dict[tuple[str, str], dict[str, object]] = {}
+    nodes: dict[str, _RecoveredViaNode] = {}
+    diagnostics: list[SpdDiagnostic] = []
+    for landing in landings:
+        via_id = str(landing_value(landing, "via_id"))
+        net = str(landing_value(landing, "net"))
+        endpoint_node_id = str(landing_value(landing, "endpoint_node_id"))
+        via_key = via_id.casefold()
+        net_key = net.casefold()
+        endpoint_key = endpoint_node_id.casefold()
+        for target_layer in targets_by_net.get(net_key, ()):
+            state_key = (via_key, target_layer.casefold())
+            previous = states.get(state_key)
+            if previous is not None:
+                if previous["node_key"] != endpoint_key or previous["net_key"] != net_key:
+                    diagnostics.append(
+                        SpdDiagnostic(
+                            "warning",
+                            "SPD_VIA_PATH_FALLBACK",
+                            f"Via {via_id!r} has conflicting TOP landing evidence; "
+                            "its terminal path uses the legacy rail template.",
+                        )
+                    )
+                    previous["status"] = "CONFLICTING_TOP_LANDING"
+                continue
+            states[state_key] = {
+                "via_id": via_id,
+                "via_key": via_key,
+                "net": net,
+                "net_key": net_key,
+                "target_layer": target_layer,
+                "target_key": target_layer.casefold(),
+                "node_id": endpoint_node_id,
+                "node_key": endpoint_key,
+                "layer": top_layer,
+                "segments": [],
+                "status": "PENDING",
+            }
+            nodes.setdefault(
+                endpoint_key,
+                _RecoveredViaNode(
+                    node_id=endpoint_node_id,
+                    net=net,
+                    x_um=float(landing_value(landing, "x_um")),
+                    y_um=float(landing_value(landing, "y_um")),
+                    layer=top_layer,
+                    padstack=str(landing_value(landing, "padstack")),
+                ),
+            )
+
+    if not states:
+        return finish(SpdViaPathRecovery(
+            evidence_by_via={}, diagnostics=tuple(diagnostics),
+            statistics={"requested": 0, "recovered": 0, "fallback": 0},
+        ))
+
+    def node_id_and_net(raw: bytes) -> tuple[str, str] | None:
+        cuts = [
+            value
+            for value in (raw.find(b"!!"), raw.find(b"::"), raw.find(b" "))
+            if value >= 0
+        ]
+        separator = raw.find(b"::")
+        if not cuts or separator < 0:
+            return None
+        node_id = _decode(raw[: min(cuts)])
+        net_token = raw[separator + 2 :].split(None, 1)[0]
+        if not node_id or not net_token:
+            return None
+        return node_id, _decode(net_token)
+
+    def resolve_nodes(
+        data: mmap.mmap,
+        start: int,
+        end: int,
+        requested: set[str],
+    ) -> None:
+        missing = requested - set(nodes)
+        if not missing:
+            return
+        for line_index, (_offset, raw) in enumerate(_iter_lines(data, start, end)):
+            if line_index % 16384 == 0:
+                reporter.check()
+            if not raw.startswith(b"Node"):
+                continue
+            identity = node_id_and_net(raw)
+            if identity is None:
+                continue
+            node_id, net = identity
+            node_key = node_id.casefold()
+            if node_key not in missing:
+                continue
+            attributes = _NODE_ATTR_RE.search(raw)
+            layer_raw = _attribute(raw, b"Layer")
+            if attributes is None or layer_raw is None:
+                continue
+            try:
+                x_um = _length_um(attributes.group(1))
+                y_um = _length_um(attributes.group(2))
+            except ValueError:
+                continue
+            layer = _decode(layer_raw)
+            nodes[node_key] = _RecoveredViaNode(
+                node_id=node_id,
+                net=net,
+                x_um=x_um,
+                y_um=y_um,
+                layer=layer,
+                padstack=(
+                    _decode(_attribute(raw, b"PadStack"))
+                    if _attribute(raw, b"PadStack") is not None
+                    else _decode(attributes.group(3))
+                    if attributes.group(3) is not None
+                    else None
+                ),
+            )
+
+    def traces_touching(
+        data: mmap.mmap,
+        start: int,
+        end: int,
+        pending: Mapping[str, list[tuple[str, str]]],
+    ) -> set[tuple[str, str]]:
+        touched: set[tuple[str, str]] = set()
+        if start < 0 or end <= start:
+            return touched
+        for match_index, match in enumerate(_TRACE_RE.finditer(data, start, end)):
+            if match_index % 8192 == 0:
+                reporter.check()
+            net_key = _decode(match.group(2)).casefold()
+            first = _decode(match.group(3)).casefold()
+            second = _decode(match.group(4)).casefold()
+            for node_key in (first, second):
+                for state_key in pending.get(node_key, ()):
+                    if str(states[state_key]["net_key"]) == net_key:
+                        touched.add(state_key)
+        return touched
+
+    evidence: dict[str, list[SpdViaPathEvidence]] = {}
+    failures: Counter[str] = Counter()
+    try:
+        with source_path.open("rb") as handle, mmap.mmap(
+            handle.fileno(), 0, access=mmap.ACCESS_READ
+        ) as data:
+            node_start = _find_line(data, b"* Node description lines")
+            trace_start = _find_line(data, b"* Trace description lines")
+            via_start = _find_line(data, b"* Via description lines")
+            pad_start = _find_line(data, b"* PadStack collection description lines")
+            if node_start < 0 or via_start < 0:
+                diagnostics.append(
+                    SpdDiagnostic(
+                        "warning",
+                        "SPD_VIA_PATH_FALLBACK",
+                        "The SPD has no readable Node/Via section for per-landing "
+                        "path recovery; terminal paths use the legacy rail template.",
+                    )
+                )
+                return finish(SpdViaPathRecovery(
+                    evidence_by_via={},
+                    diagnostics=tuple(diagnostics),
+                    statistics={
+                        "requested": len(states),
+                        "recovered": 0,
+                        "fallback": len(states),
+                    },
+                ))
+            node_end = trace_start if trace_start > node_start else via_start
+            trace_end = via_start if via_start > trace_start else pad_start
+            via_end = pad_start if pad_start > via_start else len(data)
+
+            for _step in range(max_segments + 1):
+                reporter.report(
+                    min(98, 4 + round(94 * _step / max_segments)),
+                    "Recovering source-proven vertical Via paths "
+                    f"(pass {_step + 1}/{max_segments + 1})",
+                )
+                pending_by_node: dict[str, list[tuple[str, str]]] = {}
+                for state_key, state in states.items():
+                    if state["status"] != "PENDING":
+                        continue
+                    current_key = str(state["node_key"])
+                    current_node = nodes.get(current_key)
+                    if current_node is None:
+                        state["status"] = "MISSING_NODE"
+                        failures[str(state["status"])] += 1
+                        continue
+                    if current_node.layer.casefold() == str(state["target_key"]):
+                        segments = tuple(state["segments"])
+                        # Raw Node records commonly omit ``PadStack`` away from
+                        # TOP and may name a component feature rather than the
+                        # actual barrel that reaches this plane.  The last
+                        # traversed Via segment is therefore unconditionally
+                        # authoritative for target-pad geometry.
+                        target_padstack_name = (
+                            segments[-1].padstack if segments else None
+                        )
+                        padstack = (
+                            padstack_by_key.get(target_padstack_name.casefold())
+                            if target_padstack_name
+                            else None
+                        )
+                        shape = next(
+                            (
+                                item
+                                for item in (padstack.pad_shapes if padstack else ())
+                                if item.layer.casefold()
+                                == str(state["target_key"])
+                                and item.kind in {"CIRCLE", "RECTANGLE"}
+                                and item.width_um is not None
+                                and item.height_um is not None
+                            ),
+                            None,
+                        )
+                        if not segments or shape is None or target_padstack_name is None:
+                            state["status"] = "TARGET_PAD_UNSUPPORTED"
+                            failures[str(state["status"])] += 1
+                            continue
+                        target_width_um = float(shape.width_um)
+                        target_height_um = float(shape.height_um)
+                        terminal_rotation = segments[-1].rotation_degrees % 360.0
+                        if shape.kind == "RECTANGLE" and terminal_rotation in {
+                            90.0,
+                            270.0,
+                        }:
+                            target_width_um, target_height_um = (
+                                target_height_um,
+                                target_width_um,
+                            )
+                        item = SpdViaPathEvidence(
+                            via_id=str(state["via_id"]),
+                            target_layer=str(state["target_layer"]),
+                            target_node_id=current_node.node_id,
+                            target_padstack=target_padstack_name,
+                            target_pad_kind=shape.kind,
+                            target_pad_width_um=target_width_um,
+                            target_pad_height_um=target_height_um,
+                            target_x_um=current_node.x_um,
+                            target_y_um=current_node.y_um,
+                            segments=segments,
+                        )
+                        evidence.setdefault(str(state["via_key"]), []).append(item)
+                        state["status"] = "RECOVERED"
+                        continue
+                    if len(state["segments"]) >= max_segments:
+                        state["status"] = "SEGMENT_LIMIT"
+                        failures[str(state["status"])] += 1
+                        continue
+                    pending_by_node.setdefault(current_key, []).append(state_key)
+                if not pending_by_node:
+                    break
+
+                candidates: dict[
+                    tuple[str, str], list[tuple[str, str, str, float | None]]
+                ] = {
+                    state_key: []
+                    for state_keys in pending_by_node.values()
+                    for state_key in state_keys
+                }
+                candidate_nodes: set[str] = set()
+                for match_index, match in enumerate(
+                    _VIA_RE.finditer(data, via_start, via_end)
+                ):
+                    if match_index % 8192 == 0:
+                        reporter.check()
+                    upper_key = _decode(match.group(3)).casefold()
+                    lower_key = _decode(match.group(4)).casefold()
+                    if upper_key not in pending_by_node and lower_key not in pending_by_node:
+                        continue
+                    via_id = _decode(match.group(1))
+                    via_key = via_id.casefold()
+                    net_key = _decode(match.group(2)).casefold()
+                    padstack = _decode(match.group(5))
+                    rotation_raw = _attribute(match.group(6), b"AbsoluteRotation")
+                    try:
+                        raw_rotation = float(rotation_raw) if rotation_raw else 0.0
+                        if not isfinite(raw_rotation):
+                            raise ValueError("non-finite Via rotation")
+                        normalized_rotation = raw_rotation % 360.0
+                        nearest_quadrant = round(normalized_rotation / 90.0) % 4
+                        rotation = float(nearest_quadrant * 90)
+                        if abs(normalized_rotation - rotation) > 1.0e-6 and not (
+                            rotation == 0.0
+                            and abs(normalized_rotation - 360.0) <= 1.0e-6
+                        ):
+                            rotation = None
+                    except ValueError:
+                        rotation = None
+                    for current_key, next_key in ((upper_key, lower_key), (lower_key, upper_key)):
+                        for state_key in pending_by_node.get(current_key, ()):
+                            state = states[state_key]
+                            if str(state["net_key"]) != net_key:
+                                continue
+                            if not state["segments"] and via_key != str(state["via_key"]):
+                                continue
+                            candidates[state_key].append(
+                                (via_id, padstack, next_key, rotation)
+                            )
+                            candidate_nodes.add(next_key)
+                resolve_nodes(data, node_start, node_end, candidate_nodes)
+                trace_needed: dict[str, list[tuple[str, str]]] = {}
+                for state_key, state_candidates in candidates.items():
+                    state = states[state_key]
+                    current = nodes.get(str(state["node_key"]))
+                    assert current is not None
+                    current_depth = depth_by_key.get(current.layer.casefold())
+                    target_depth = depth_by_key.get(str(state["target_key"]))
+                    valid: list[
+                        tuple[str, str, _RecoveredViaNode, SpdPadStack, float]
+                    ] = []
+                    overshoot = False
+                    missing_node = False
+                    missing_padstack = False
+                    unsupported_rotation = False
+                    for via_id, padstack_name, next_key, rotation in state_candidates:
+                        next_node = nodes.get(next_key)
+                        definition = padstack_by_key.get(padstack_name.casefold())
+                        if next_node is None:
+                            missing_node = True
+                            continue
+                        if definition is None:
+                            missing_padstack = True
+                            continue
+                        if rotation is None:
+                            unsupported_rotation = True
+                            continue
+                        if (
+                            next_node.net.casefold() != str(state["net_key"])
+                            or definition.drill_diameter_um is None
+                            or definition.drill_diameter_um <= 0
+                            or current_depth is None
+                            or target_depth is None
+                        ):
+                            continue
+                        next_depth = depth_by_key.get(next_node.layer.casefold())
+                        if next_depth is None:
+                            continue
+                        direction = 1 if target_depth > current_depth else -1
+                        delta = direction * (next_depth - current_depth)
+                        remaining = direction * (target_depth - next_depth)
+                        if delta <= 0 or remaining < 0:
+                            overshoot = True
+                            continue
+                        valid.append(
+                            (via_id, padstack_name, next_node, definition, rotation)
+                        )
+                    unique_valid = {
+                        (via_id.casefold(), next_node.node_id.casefold()): item
+                        for item in valid
+                        for via_id, _padstack, next_node, _definition, _rotation in (item,)
+                    }
+                    if len(unique_valid) != 1:
+                        if len(unique_valid) > 1:
+                            state["status"] = "AMBIGUOUS_VERTICAL_BRANCH"
+                            failures[str(state["status"])] += 1
+                        elif missing_node:
+                            state["status"] = "MISSING_NODE"
+                            failures[str(state["status"])] += 1
+                        elif missing_padstack:
+                            state["status"] = "MISSING_PADSTACK"
+                            failures[str(state["status"])] += 1
+                        elif unsupported_rotation:
+                            state["status"] = "UNSUPPORTED_VIA_ROTATION"
+                            failures[str(state["status"])] += 1
+                        else:
+                            trace_needed.setdefault(str(state["node_key"]), []).append(
+                                state_key
+                            )
+                            state["overshoot"] = overshoot
+                        continue
+                    via_id, padstack_name, next_node, definition, rotation = next(
+                        iter(unique_valid.values())
+                    )
+                    segment = SpdViaPathSegment(
+                        via_id=via_id,
+                        padstack=padstack_name,
+                        drill_diameter_um=float(definition.drill_diameter_um),
+                        start_layer=current.layer,
+                        end_layer=next_node.layer,
+                        length_um=abs(
+                            float(depth_by_key[next_node.layer.casefold()])
+                            - float(depth_by_key[current.layer.casefold()])
+                        )
+                        * 1.0,
+                        end_x_um=next_node.x_um,
+                        end_y_um=next_node.y_um,
+                        rotation_degrees=rotation,
+                    )
+                    # Stack-up layer indices are monotonic but not physical
+                    # distances.  Replace the span with the actual centre-depth
+                    # distance below once the compact depth map is available.
+                    state["segments"].append(segment)
+                    state["node_id"] = next_node.node_id
+                    state["node_key"] = next_node.node_id.casefold()
+                    state["layer"] = next_node.layer
+                if trace_needed:
+                    touched = traces_touching(data, trace_start, trace_end, trace_needed)
+                    for state_keys in trace_needed.values():
+                        for state_key in state_keys:
+                            state = states[state_key]
+                            state["status"] = (
+                                "TRACE_REQUIRED"
+                                if state_key in touched
+                                else "OVERSHOOT_OR_NO_MONOTONIC_VIA"
+                            )
+                            failures[str(state["status"])] += 1
+            for state in states.values():
+                if state["status"] == "PENDING":
+                    state["status"] = "SEGMENT_LIMIT"
+                    failures[str(state["status"])] += 1
+    except OSError as exc:
+        raise SpdImportError(
+            f"cannot recover source Via paths from {source_path}: {exc}"
+        ) from exc
+
+    # Replace provisional layer-index spans with physical conductor centre spans.
+    centre_depth_um: dict[str, float] = {}
+    depth_um = 0.0
+    for layer in stackup_layers:
+        centre_depth_um[layer.name.casefold()] = depth_um + float(layer.thickness_um) / 2.0
+        depth_um += float(layer.thickness_um)
+    corrected: dict[str, list[SpdViaPathEvidence]] = {}
+    for via_key, items in evidence.items():
+        corrected[via_key] = []
+        for item in items:
+            segments = tuple(
+                SpdViaPathSegment(
+                    via_id=segment.via_id,
+                    padstack=segment.padstack,
+                    drill_diameter_um=segment.drill_diameter_um,
+                    start_layer=segment.start_layer,
+                    end_layer=segment.end_layer,
+                    length_um=abs(
+                        centre_depth_um[segment.end_layer.casefold()]
+                        - centre_depth_um[segment.start_layer.casefold()]
+                    ),
+                    end_x_um=segment.end_x_um,
+                    end_y_um=segment.end_y_um,
+                    rotation_degrees=segment.rotation_degrees,
+                )
+                for segment in item.segments
+            )
+            if any(segment.length_um <= 0 for segment in segments):
+                failures["ZERO_PHYSICAL_SPAN"] += 1
+                continue
+            corrected[via_key].append(
+                SpdViaPathEvidence(
+                    via_id=item.via_id,
+                    target_layer=item.target_layer,
+                    target_node_id=item.target_node_id,
+                    target_padstack=item.target_padstack,
+                    target_pad_kind=item.target_pad_kind,
+                    target_pad_width_um=item.target_pad_width_um,
+                    target_pad_height_um=item.target_pad_height_um,
+                    target_x_um=item.target_x_um,
+                    target_y_um=item.target_y_um,
+                    segments=segments,
+                )
+            )
+    recovered = sum(len(items) for items in corrected.values())
+    requested = len(states)
+    if recovered:
+        diagnostics.append(
+            SpdDiagnostic(
+                "info",
+                "SPD_VIA_PATH_RECOVERED",
+                f"Recovered {recovered:,}/{requested:,} unique source-proven TOP-to-plane "
+                "Via paths; only their compact segment summaries were retained.",
+            )
+        )
+    if requested - recovered:
+        failure_summary = ", ".join(
+            f"{code}={count}" for code, count in sorted(failures.items())
+        ) or "no unique source path"
+        diagnostics.append(
+            SpdDiagnostic(
+                "warning",
+                "SPD_VIA_PATH_LEGACY_FALLBACK",
+                f"{requested - recovered:,} terminal path(s) use the documented "
+                f"legacy rail template ({failure_summary}).",
+            )
+        )
+    reporter.report(100, "Recovered source-proven vertical Via paths")
+    statistics: dict[str, int] = {
+        "requested": requested,
+        "recovered": recovered,
+        "fallback": requested - recovered,
+        "segments": sum(
+            len(item.segments) for items in corrected.values() for item in items
+        ),
+    }
+    statistics.update(
+        {
+            f"failure_{code.casefold()}": int(count)
+            for code, count in sorted(failures.items())
+            if count
+        }
+    )
+    return finish(SpdViaPathRecovery(
+        evidence_by_via={
+            key: tuple(sorted(items, key=lambda item: item.target_layer.casefold()))
+            for key, items in sorted(corrected.items())
+            if items
+        },
+        diagnostics=tuple(diagnostics),
+        statistics=statistics,
+    ))
+
+
 def analyze_spd(
     path: str | Path,
     frequencies_hz: Iterable[float] = (1.0e3, 1.0e6, 1.0e9),
@@ -2242,6 +2941,10 @@ __all__ = [
     "SpdPlaneGeometry",
     "SpdSourceInfo",
     "SpdSharedPadCluster",
+    "SpdViaPathEvidence",
+    "SpdViaPathRecovery",
+    "SpdViaPathSegment",
     "SpdViaUsage",
     "analyze_spd",
+    "recover_spd_via_paths",
 ]

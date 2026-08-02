@@ -446,7 +446,44 @@ def test_legacy_v3_scenario_is_readable_but_distribution_requires_reanalysis() -
         )
 
     assert error.value.code == "CONNECTION_ANALYSIS_UPGRADE_REQUIRED"
-    assert "V4 finite-pad/ordered-boolean" in str(error.value)
+    assert "V4/V5 finite-pad/ordered-boolean" in str(error.value)
+
+
+def test_distribution_accepts_connected_v4_and_v5_shared_pad_analyses() -> None:
+    v5 = _shared_chain_scenario()
+    targets = {("R1", "M1"): 1, ("R2", "M1"): 2}
+
+    v5_plan = compute_distribution_plan(v5, targets)
+
+    payload = v5.model_dump(mode="python")
+    payload["connection_analysis"]["version"] = "DIRECT_TOP_COPPER_PATH_V4"
+    v4 = ScenarioSpec.model_validate(payload)
+    v4_plan = compute_distribution_plan(v4, targets)
+    assert v4_plan.status == v5_plan.status
+    assert v4_plan.moves == v5_plan.moves
+
+
+def test_distribution_v5_disconnected_ground_graph_matches_pwr_only_plan() -> None:
+    connected = _shared_chain_scenario()
+    assert connected.connection_analysis is not None
+    cluster = connected.connection_analysis.clusters[0].model_copy(
+        update={"ground_edges": ()}
+    )
+    disconnected = connected.model_copy(
+        update={
+            "connection_analysis": connected.connection_analysis.model_copy(
+                update={"clusters": (cluster,)}
+            )
+        }
+    )
+
+    targets = {("R1", "M1"): 1, ("R2", "M1"): 2}
+    connected_plan = compute_distribution_plan(connected, targets)
+    disconnected_plan = compute_distribution_plan(disconnected, targets)
+
+    assert disconnected_plan.status == connected_plan.status
+    assert disconnected_plan.moves == connected_plan.moves
+    assert disconnected_plan.sacrifices == connected_plan.sacrifices
 
 
 def test_present_matrix_and_public_numeric_preflight_exclude_disabled_parts() -> None:

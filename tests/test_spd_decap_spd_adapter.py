@@ -196,6 +196,7 @@ def test_spd_import_reports_monotonic_stage_progress_and_nonpersistent_timings(
     assert "Parsed the SPD" in messages
     assert "Normalized exact plane geometry" in messages
     assert "Indexed " in messages
+    assert "Recovering source-proven vertical Via paths" in messages
     assert "Checking exact PWR-plane eligibility" in messages
     assert "validating scenario" in messages
     assert progress[-1][0] == 100
@@ -205,12 +206,29 @@ def test_spd_import_reports_monotonic_stage_progress_and_nonpersistent_timings(
         timings.analyze_s,
         timings.plan_s,
         timings.index_s,
+        timings.recovery_s,
         timings.eligibility_s,
         timings.finalize_s,
     )
     assert all(math.isfinite(value) and value >= 0.0 for value in stages)
     assert timings.total_s >= sum(stages)
     assert "timings" not in imported.scenario.model_dump(mode="json")
+
+
+def test_spd_via_recovery_metadata_is_deterministic_and_excludes_wall_time(
+    tmp_path: Path,
+) -> None:
+    source = tmp_path / "deterministic-recovery.spd"
+    source.write_text(MINI_SPD, encoding="ascii")
+
+    first = import_spd_scenario(source).scenario
+    second = import_spd_scenario(source).scenario
+
+    first_metadata = first.base_project.metadata["spd_via_path_recovery"]
+    second_metadata = second.base_project.metadata["spd_via_path_recovery"]
+    assert "elapsed_s" not in first_metadata
+    assert first_metadata == second_metadata
+    assert first.design_fingerprint == second.design_fingerprint
 
 
 def test_dnp_is_included_but_initially_disabled_when_source_marks_unmounted(

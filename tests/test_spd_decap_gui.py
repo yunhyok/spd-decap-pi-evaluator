@@ -41,6 +41,7 @@ from spd_decap_pi.gui.main_window import (
     _PlaneArtworkItem,
     _excel_safe_csv_cell,
     _job_load_scenario,
+    _source_via_path_recovery_summary,
     _shared_pad_connection_summary,
     _short_plane_layer_labels,
     _tuned_decap_csv_rows,
@@ -150,6 +151,29 @@ def test_shared_pad_load_summary_exposes_blocked_connectivity_counts() -> None:
     assert "Direct: 1" in details
     assert "Unresolved (PWR edits blocked): 0" in details
     assert "Anchored clusters: 1" in details
+
+
+def test_source_via_path_summary_discloses_zero_recovery_fallback() -> None:
+    scenario = _shared_pad_scenario()
+    project = scenario.base_project.model_copy(
+        update={
+            "metadata": {
+                **scenario.base_project.metadata,
+                "spd_via_path_recovery": {
+                    "requested": 60_152,
+                    "recovered": 0,
+                    "fallback": 60_152,
+                    "algorithm": "unique_monotonic_same_net_via_chain_v1",
+                },
+            }
+        }
+    )
+    scenario = scenario.model_copy(update={"normalized_project": project})
+
+    compact, details = _source_via_path_recovery_summary(scenario)
+
+    assert compact == "Source Via paths: 0/60,152 recovered; 60,152 fallback"
+    assert "No source segment R/L applied; legacy rail templates used" in details
 
 
 def test_plane_layer_checkboxes_support_independent_multi_layer_visibility() -> None:
@@ -611,6 +635,47 @@ def test_loaded_spd_supports_pwr_net_search_and_disabled_electrical_state(
         assert "State: Disabled" in disabled_tooltip
     finally:
         # Avoid the interactive unsaved-change close prompt in an offscreen test.
+        window._dirty = False
+        window.close()
+        application.processEvents()
+
+
+def test_reopened_scenario_keeps_source_via_recovery_disclosure(
+    tmp_path: Path,
+) -> None:
+    application = _application()
+    source = tmp_path / "reopened-recovery.spd"
+    source.write_text(MINI_SPD, encoding="ascii")
+    imported = import_spd_scenario(source)
+    project = imported.scenario.base_project.model_copy(
+        update={
+            "metadata": {
+                **imported.scenario.base_project.metadata,
+                "spd_via_path_recovery": {
+                    "requested": 3,
+                    "recovered": 0,
+                    "fallback": 3,
+                    "algorithm": "unique_monotonic_same_net_via_chain_v1",
+                },
+            }
+        }
+    )
+    scenario = ScenarioSpec.model_validate(
+        {
+            **imported.scenario.model_dump(mode="python"),
+            "normalized_project": project,
+        }
+    )
+    window = MainWindow()
+    try:
+        window._accept_scenario_bundle(
+            tmp_path / "reopened-recovery.spdpi",
+            ScenarioBundle(scenario=scenario, attachments=imported.attachments),
+        )
+
+        assert "Source Via paths: 0/3 recovered; 3 fallback" in window.status_text.text()
+        assert "No source segment R/L applied; legacy rail templates used" in window.status_text.toolTip()
+    finally:
         window._dirty = False
         window.close()
         application.processEvents()

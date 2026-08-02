@@ -29,7 +29,11 @@ from spd_decap_pi._core.models.circuit import (
     DirectBranchModel,
     SharedPadClusterModel,
 )
-from spd_decap_pi._core.models.impedance import ConstantImpedanceModel
+from spd_decap_pi._core.models.impedance import (
+    ConstantImpedanceModel,
+    SampledImpedanceModel,
+    SeriesRLModel,
+)
 from spd_decap_pi._core.solver.evaluator import (
     EvaluationError,
     _placement_shunts,
@@ -190,6 +194,130 @@ def test_shared_pad_multiple_power_components_match_full_nodal_kron() -> None:
         np.testing.assert_allclose(
             actual[frequency_index], actual[frequency_index].T, rtol=1e-13
         )
+
+
+def test_shared_pad_multiple_ground_components_match_full_nodal_kron() -> None:
+    frequencies = np.asarray([1.0e6, 2.0e7])
+    power_loops = (
+        _constant("P1", 0.020 + 0.040j),
+        _constant("P2", 0.035 + 0.065j),
+    )
+    ground_loops = (
+        _constant("G1", 0.025 + 0.050j),
+        _constant("G2", 0.030 + 0.075j),
+    )
+    capacitors = (
+        _constant("C1", 0.010 - 0.20j),
+        _constant("C2", 0.015 - 0.35j),
+    )
+    power_components = (0, 1)
+    ground_components = (0, 1)
+    # Cross-map the two physical top-PWR/GND buses: this is the topology that
+    # cannot be reduced with the historic common-GND arrowhead algebra.
+    capacitor_power_components = (0, 1)
+    capacitor_ground_components = (1, 0)
+    cluster = SharedPadClusterModel(
+        "SPLIT-PWR-SPLIT-GND",
+        power_loops,
+        ground_loops,
+        capacitors,
+        power_component_indices=power_components,
+        capacitor_component_indices=capacitor_power_components,
+        ground_component_indices=ground_components,
+        capacitor_ground_component_indices=capacitor_ground_components,
+    )
+
+    actual = cluster.admittance_matrix(frequencies)
+    retained_count = len(power_loops) + len(ground_loops)
+    power_node_offset = retained_count
+    ground_node_offset = power_node_offset + 2
+    for frequency_index, frequency in enumerate(frequencies):
+        full = np.zeros((retained_count + 4, retained_count + 4), dtype=np.complex128)
+
+        def stamp_branch(first: int, second: int, admittance: complex) -> None:
+            full[first, first] += admittance
+            full[second, second] += admittance
+            full[first, second] -= admittance
+            full[second, first] -= admittance
+
+        for path_index, (loop, component_index) in enumerate(
+            zip(power_loops, power_components, strict=True)
+        ):
+            stamp_branch(
+                path_index,
+                power_node_offset + component_index,
+                2.0 / loop.impedance([frequency])[0],
+            )
+        for path_index, (loop, component_index) in enumerate(
+            zip(ground_loops, ground_components, strict=True)
+        ):
+            stamp_branch(
+                len(power_loops) + path_index,
+                ground_node_offset + component_index,
+                2.0 / loop.impedance([frequency])[0],
+            )
+        for capacitor, power_component, ground_component in zip(
+            capacitors,
+            capacitor_power_components,
+            capacitor_ground_components,
+            strict=True,
+        ):
+            stamp_branch(
+                power_node_offset + power_component,
+                ground_node_offset + ground_component,
+                1.0 / capacitor.impedance([frequency])[0],
+            )
+        retained = full[:retained_count, :retained_count]
+        coupling = full[:retained_count, retained_count:]
+        internal = full[retained_count:, retained_count:]
+        raw = retained - coupling @ np.linalg.solve(internal, coupling.T)
+        transform = np.diag([0.5] * len(power_loops) + [-0.5] * len(ground_loops))
+        expected = transform @ raw @ transform
+        np.testing.assert_allclose(actual[frequency_index], expected, rtol=1e-12)
+        np.testing.assert_allclose(
+            actual[frequency_index], actual[frequency_index].T, rtol=1e-13
+        )
+
+    # Explicit one-GND IDs intentionally preserve the V4 arrowhead result.
+    legacy = SharedPadClusterModel(
+        "LEGACY-GND",
+        power_loops,
+        ground_loops,
+        capacitors,
+        power_component_indices=power_components,
+        capacitor_component_indices=capacitor_power_components,
+    )
+    explicit_one_ground = SharedPadClusterModel(
+        "EXPLICIT-ONE-GND",
+        power_loops,
+        ground_loops,
+        capacitors,
+        power_component_indices=power_components,
+        capacitor_component_indices=capacitor_power_components,
+        ground_component_indices=(0, 0),
+        capacitor_ground_component_indices=(0, 0),
+    )
+    np.testing.assert_allclose(
+        legacy.admittance_matrix(frequencies),
+        explicit_one_ground.admittance_matrix(frequencies),
+        rtol=1e-13,
+    )
+
+
+def test_shared_pad_multiple_ground_components_singular_block_fails_closed() -> None:
+    # The PWR/GND-0 internal submatrix is singular; the independent GND-1
+    # terminal ensures this exercises the explicit multi-GND Kron path.
+    cluster = SharedPadClusterModel(
+        "SPLIT-GND-SINGULAR",
+        (_constant("P", 1.0j),),
+        (_constant("G0", 1.0j), _constant("G1", 1.0j)),
+        (_constant("C", -1.0j),),
+        ground_component_indices=(0, 1),
+        capacitor_ground_component_indices=(0,),
+    )
+
+    with pytest.raises(CircuitModelError, match="internal admittance block is singular"):
+        cluster.admittance_matrix([1.0e6])
 
 
 def test_shared_pad_120_port_smoke_is_finite_and_memory_bounded() -> None:
@@ -858,6 +986,95 @@ def test_evaluator_builds_one_coupled_group_without_member_direct_paths() -> Non
     assert len(groups[0].network.power_via_loops) == 1
     assert len(groups[0].network.ground_via_loops) == 1
     assert groups[0].network.capacitors == (cap_model,)
+
+
+def test_shared_pad_source_terminal_geometry_rl_and_sampled_fallback() -> None:
+    payload = _cluster_project().model_dump(mode="json")
+    power_path, ground_path = payload["shared_pad_clusters"][0]["via_paths"]
+    power_path.update(
+        {
+            "x_um": 2_000.0,
+            "y_um": 3_000.0,
+            "landing_layer": "PWR",
+            "landing_padstack": "PWR_PAD",
+            "landing_pad_width_um": 180.0,
+            "landing_pad_height_um": 120.0,
+            "terminal_resistance_ohm": 0.004,
+            "terminal_inductance_h": 0.30e-9,
+            "terminal_provenance": "SOURCE_PROVEN_SEGMENT_RL",
+        }
+    )
+    ground_path.update(
+        {
+            "x_um": 2_100.0,
+            "y_um": 3_100.0,
+            "landing_layer": "GND",
+            "landing_padstack": "GND_PAD",
+            "landing_pad_width_um": 140.0,
+            "landing_pad_height_um": 160.0,
+            "terminal_resistance_ohm": 0.006,
+            "terminal_inductance_h": 0.50e-9,
+            "terminal_provenance": "SOURCE_PROVEN_SEGMENT_RL",
+        }
+    )
+    project = ProjectSpec.model_validate(payload)
+    rail = project.rails[0]
+    plane = RectangularPlane(
+        width_m=0.01,
+        height_m=0.01,
+        separation_m=100.0e-6,
+        relative_permittivity=3.4,
+        loss_tangent=0.005,
+    )
+    cap_model = _constant("CAP", 0.02 - 0.2j)
+
+    def groups(via_model):
+        return _placement_shunts(
+            rail.rail_id,
+            rail.pwr_layer,
+            rail.gnd_layer,
+            plane,
+            (0.0, 0.0),
+            {item.slot_id: item for item in project.placements},
+            {item.slot_id: item for item in project.topology_maps},
+            {"CAP": cap_model},
+            {"VIA": project.via_templates[0]},
+            {"VIA": via_model},
+            {"CL1": project.shared_pad_clusters[0]},
+        )
+
+    raw_groups = groups(_constant("VIA", 0.01 + 0.03j))
+    assert len(raw_groups) == 1
+    raw_group = raw_groups[0]
+    assert isinstance(raw_group, CoupledShuntGroup)
+    assert (raw_group.ports[0].x_m, raw_group.ports[0].y_m) == (
+        2.0e-3,
+        3.0e-3,
+    )
+    assert (raw_group.ports[0].width_m, raw_group.ports[0].height_m) == pytest.approx(
+        (180.0e-6, 120.0e-6)
+    )
+    assert (raw_group.ports[1].width_m, raw_group.ports[1].height_m) == pytest.approx(
+        (140.0e-6, 160.0e-6)
+    )
+    raw_network = raw_group.network
+    assert isinstance(raw_network.power_via_loops[0], SeriesRLModel)
+    assert isinstance(raw_network.ground_via_loops[0], SeriesRLModel)
+    assert raw_network.power_via_loops[0].resistance_ohm == pytest.approx(0.008)
+    assert raw_network.power_via_loops[0].inductance_h == pytest.approx(0.60e-9)
+    assert raw_network.ground_via_loops[0].resistance_ohm == pytest.approx(0.012)
+    assert raw_network.ground_via_loops[0].inductance_h == pytest.approx(1.00e-9)
+
+    sampled = SampledImpedanceModel(
+        "VIA_SAMPLED",
+        np.asarray([1.0e6, 1.0e8]),
+        np.asarray([0.01 + 0.03j, 0.02 + 0.30j]),
+    )
+    sampled_group = groups(sampled)[0]
+    assert isinstance(sampled_group, CoupledShuntGroup)
+    assert sampled_group.network.power_via_loops[0] is sampled
+    assert sampled_group.network.ground_via_loops[0] is sampled
+    assert sampled_group.network.homogeneous_one_component_via_model() is sampled
 
 
 def test_full_solver_distinguishes_one_vs_three_ground_vias() -> None:

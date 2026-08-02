@@ -1,8 +1,8 @@
-# SPD Decap PI Evaluator v0.11.0
+# SPD Decap PI Evaluator v0.12.0
 
-> v0.11.0 adds exact short-cluster batch evaluation, corrected copper-boundary handling, and explicit numerical-convergence/fidelity status. It remains an exploratory single-rail rectangular-bbox model; absolute sub-milliohm accuracy is not certified without PowerSI correlation.
+> v0.12.0 adds explicit V5 multi-GND shared-pad circuit topology, source-proven vertical-Via terminal geometry/R/L when raw SPD topology reaches the selected plane, deterministic recovery provenance, and source-change protection during recovery. If a terminal needs lateral TOP/inner-layer Trace routing, it remains on the disclosed legacy rail template rather than receiving an inferred Trace model. The title bar identifies the application as **SPD Decap PI Evaluator v0.12.0**. It remains an exploratory single-rail rectangular-bbox model; absolute sub-milliohm accuracy is not certified without PowerSI correlation and numerical-convergence review.
 
-> 프로그램: **SPD Decap PI Evaluator v0.11.0**
+> 프로그램: **SPD Decap PI Evaluator v0.12.0**
 > 저장소: 기존 PI Calculator와 분리된 독립 프로그램
 > 해석 경계: 선택한 PWR rail의 pre-design `Zii`; 최종 PowerSI/SIwave 검증을 대체하지 않음
 
@@ -10,6 +10,14 @@
 모델, enabled/disabled 상태를 바꾸면서 PI Evaluation 결과를 비교하는 Windows
 desktop 프로그램이다. Stackup, MLO 크기 또는 plane을 새로 작성하는 기능과
 Optimization Mode는 포함하지 않는다.
+
+## v0.12 raw-SPD terminal provenance
+
+- The load status and tooltip show `Source Via paths: recovered/requested; fallback count`. A zero-recovery import explicitly says that no source segment R/L was applied and legacy rail templates were used.
+- A recovered terminal must be one unique, monotonic, same-NET vertical Via chain from the TOP landing to the selected PWR or GND plane. The selected-plane pad shape comes from the final Via segment's padstack, not a Node feature label.
+- Recovered non-sampled terminals use the source segment barrel estimate (5.959e7 S/m copper and `min(20 um, drill/4)` plating). Mutual Via, anti-pad, spreading, and lateral Trace inductance are not inferred.
+- Missing, branching, overshooting, Trace-required, or unsupported-rotation paths do not infer a source path and explicitly fall back to the legacy rail template. A source-changed path aborts import so mixed-source evidence is never persisted. Sampled differential templates retain their calibrated symmetric terminal representation.
+- V5 preserves separate source PWR and GND components for evaluation. Distribution remains PWR-topology based and accepts compatible V4/V5 saved analyses; evaluation still blocks an unresolved terminal component.
 
 ## 주요 기능
 
@@ -90,7 +98,7 @@ powershell.exe -ExecutionPolicy Bypass -NoProfile -File .\scripts\build_spd_deca
 산출물:
 
 - `dist\SPDDecapPIEvaluator\SPDDecapPIEvaluator.exe`
-- `installer-output\SPDDecapPIEvaluatorSetup-0.11.0.exe`
-- `installer-output\SPDDecapPIEvaluatorSetup-0.11.0.exe.sha256`
+- `installer-output\SPDDecapPIEvaluatorSetup-0.12.0.exe`
+- `installer-output\SPDDecapPIEvaluatorSetup-0.12.0.exe.sha256`
 
 프로그램명과 버전은 title bar와 installer metadata에 함께 표시된다.

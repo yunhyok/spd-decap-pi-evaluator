@@ -7,8 +7,12 @@ from .spd import (
     SpdImportError,
     SpdPadStack,
     SpdSourceInfo,
+    SpdViaPathEvidence,
+    SpdViaPathRecovery,
+    SpdViaPathSegment,
     SpdViaUsage,
     analyze_spd,
+    recover_spd_via_paths,
 )
 
 __all__ = [
@@ -18,6 +22,10 @@ __all__ = [
     "SpdImportError",
     "SpdPadStack",
     "SpdSourceInfo",
+    "SpdViaPathEvidence",
+    "SpdViaPathRecovery",
+    "SpdViaPathSegment",
     "SpdViaUsage",
     "analyze_spd",
+    "recover_spd_via_paths",
 ]

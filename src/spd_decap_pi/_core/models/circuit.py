@@ -164,6 +164,11 @@ class SharedPadClusterModel:
     ``capacitor_component_indices`` map flattened paths/caps to those PWR
     nodes; omitted maps mean the legacy one-PWR-component case.
 
+    Newer source scenarios can also preserve multiple physical top-GND
+    components.  ``ground_component_indices`` and
+    ``capacitor_ground_component_indices`` map GND paths/caps to those nodes.
+    Omitting both deliberately retains the former one-GND arrowhead model.
+
     All internal nodes are Kron-reduced.  Finally the raw terminal matrix is
     transformed with ``+1/2`` for PWR and ``-1/2`` for GND; this is the
     symmetric plane-pair incidence used by the differential modal solver.
@@ -177,6 +182,8 @@ class SharedPadClusterModel:
     capacitors: tuple[ImpedanceModel, ...] = ()
     power_component_indices: tuple[int, ...] = ()
     capacitor_component_indices: tuple[int, ...] = ()
+    ground_component_indices: tuple[int, ...] = ()
+    capacitor_ground_component_indices: tuple[int, ...] = ()
 
     def __post_init__(self) -> None:
         if not self.model_id.strip():
@@ -213,6 +220,34 @@ class SharedPadClusterModel:
         object.__setattr__(
             self, "capacitor_component_indices", capacitor_indices
         )
+        ground_indices = self.ground_component_indices or tuple(
+            0 for _item in self.ground_via_loops
+        )
+        if len(ground_indices) != len(self.ground_via_loops) or any(
+            index < 0 for index in ground_indices
+        ):
+            raise CircuitModelError(
+                "shared-pad GND path component mapping is invalid"
+            )
+        ground_component_ids = sorted(set(ground_indices))
+        if ground_component_ids != list(range(len(ground_component_ids))):
+            raise CircuitModelError(
+                "shared-pad GND component indices must be contiguous from zero"
+            )
+        capacitor_ground_indices = self.capacitor_ground_component_indices or tuple(
+            0 for _item in self.capacitors
+        )
+        if len(capacitor_ground_indices) != len(self.capacitors) or any(
+            index < 0 or index >= len(ground_component_ids)
+            for index in capacitor_ground_indices
+        ):
+            raise CircuitModelError(
+                "shared-pad capacitor GND component mapping is invalid"
+            )
+        object.__setattr__(self, "ground_component_indices", ground_indices)
+        object.__setattr__(
+            self, "capacitor_ground_component_indices", capacitor_ground_indices
+        )
 
     @property
     def port_count(self) -> int:
@@ -221,6 +256,10 @@ class SharedPadClusterModel:
     @property
     def power_component_count(self) -> int:
         return max(self.power_component_indices) + 1
+
+    @property
+    def ground_component_count(self) -> int:
+        return max(self.ground_component_indices) + 1
 
     def homogeneous_one_component_via_model(self) -> ImpedanceModel | None:
         """Return the one exact terminal Via model for the batch fast path.
@@ -233,7 +272,7 @@ class SharedPadClusterModel:
         prevents an accidental approximation of distinct calibrated paths.
         """
 
-        if self.power_component_count != 1:
+        if self.power_component_count != 1 or self.ground_component_count != 1:
             return None
         candidate = self.power_via_loops[0]
         if any(model is not candidate for model in self.power_via_loops):
@@ -245,6 +284,8 @@ class SharedPadClusterModel:
     def admittance_matrix(
         self, frequencies_hz: ArrayLike
     ) -> NDArray[np.complex128]:
+        if self.ground_component_count != 1:
+            return self._multi_ground_admittance_matrix(frequencies_hz)
         frequencies = frequency_array(frequencies_hz)
         power_admittance = np.column_stack(
             tuple(
@@ -371,5 +412,108 @@ class SharedPadClusterModel:
         ):
             raise CircuitModelError(
                 "shared-pad reduction produced non-finite admittance"
+            )
+        return output
+
+    def _multi_ground_admittance_matrix(
+        self, frequencies_hz: ArrayLike
+    ) -> NDArray[np.complex128]:
+        """Exactly Kron-reduce the general multiple-PWR/multiple-GND topology.
+
+        The legacy single-GND arrowhead above remains untouched for both its
+        established numerical behavior and its batched modal fast path.  A
+        multi-GND cluster is materially less common and has a bounded source
+        path count, so explicit complex-symmetric MNA followed by the existing
+        exact Kron routine is the clearest fail-closed representation.
+        """
+
+        frequencies = frequency_array(frequencies_hz)
+        power_admittance = np.column_stack(
+            tuple(
+                2.0 / _checked_impedance(model, frequencies)
+                for model in self.power_via_loops
+            )
+        )
+        ground_admittance = np.column_stack(
+            tuple(
+                2.0 / _checked_impedance(model, frequencies)
+                for model in self.ground_via_loops
+            )
+        )
+        cap_admittance = np.column_stack(
+            tuple(
+                1.0 / _checked_impedance(model, frequencies)
+                for model in self.capacitors
+            )
+        ) if self.capacitors else np.empty((frequencies.size, 0), dtype=np.complex128)
+
+        power_count = len(self.power_via_loops)
+        ground_count = len(self.ground_via_loops)
+        terminal_count = power_count + ground_count
+        power_node_start = terminal_count
+        ground_node_start = power_node_start + self.power_component_count
+        node_count = ground_node_start + self.ground_component_count
+        retained = tuple(range(terminal_count))
+        output = np.empty(
+            (frequencies.size, terminal_count, terminal_count), dtype=np.complex128
+        )
+
+        def stamp(
+            matrix: NDArray[np.complex128],
+            left: int,
+            right: int,
+            admittance: complex,
+        ) -> None:
+            matrix[left, left] += admittance
+            matrix[right, right] += admittance
+            matrix[left, right] -= admittance
+            matrix[right, left] -= admittance
+
+        for frequency_index in range(frequencies.size):
+            full = np.zeros((node_count, node_count), dtype=np.complex128)
+            for path_index, component_index in enumerate(
+                self.power_component_indices
+            ):
+                stamp(
+                    full,
+                    path_index,
+                    power_node_start + component_index,
+                    power_admittance[frequency_index, path_index],
+                )
+            for path_index, component_index in enumerate(
+                self.ground_component_indices
+            ):
+                stamp(
+                    full,
+                    power_count + path_index,
+                    ground_node_start + component_index,
+                    ground_admittance[frequency_index, path_index],
+                )
+            for cap_index, (power_component, ground_component) in enumerate(
+                zip(
+                    self.capacitor_component_indices,
+                    self.capacitor_ground_component_indices,
+                    strict=True,
+                )
+            ):
+                stamp(
+                    full,
+                    power_node_start + power_component,
+                    ground_node_start + ground_component,
+                    cap_admittance[frequency_index, cap_index],
+                )
+            reduced = kron_reduce_admittance(full, retained)
+            terminal_sign = np.asarray(
+                [*(0.5 for _item in self.power_via_loops), *(-0.5 for _item in self.ground_via_loops)],
+                dtype=np.float64,
+            )
+            output[frequency_index] = (
+                terminal_sign[:, None] * reduced * terminal_sign[None, :]
+            )
+        if not np.all(np.isfinite(output.real)) or not np.all(
+            np.isfinite(output.imag)
+        ):
+            raise CircuitModelError(
+                "shared-pad multiple-GND reduction produced non-finite admittance"
             )
         return output

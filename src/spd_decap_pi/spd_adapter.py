@@ -10,7 +10,12 @@ from time import perf_counter
 from typing import Any
 
 from spd_decap_pi._core.domain import PinKind, ProjectSpec
-from spd_decap_pi._core.io.spd import SpdCapInstance, SpdImportError, analyze_spd
+from spd_decap_pi._core.io.spd import (
+    SpdCapInstance,
+    SpdImportError,
+    analyze_spd,
+    recover_spd_via_paths,
+)
 from spd_decap_pi._core.services import build_spd_import_plan, create_workspace_state
 
 from .eligibility import EligibilityResult, PlaneEligibilityIndex
@@ -24,6 +29,8 @@ from .scenario import (
     ScenarioSide,
     ScenarioSpec,
     ScenarioViaLanding,
+    ScenarioViaPathEvidence,
+    ScenarioViaSegment,
     SHARED_PAD_ANALYSIS_VERSION,
     SharedPadCluster,
     SharedPadClusterState,
@@ -55,6 +62,7 @@ class ImportStageTimings:
     analyze_s: float
     plan_s: float
     index_s: float
+    recovery_s: float
     eligibility_s: float
     finalize_s: float
     total_s: float
@@ -169,6 +177,137 @@ def _eligibility_at_point(
                 allowed=True,
             )
     return result
+
+
+def _eligibility_for_via_landing(
+    eligibility_index: PlaneEligibilityIndex,
+    landing: ScenarioViaLanding,
+    rail_choices_by_pair: dict[tuple[str, str, str], tuple[tuple[Any, str], ...]],
+) -> dict[str, RailEligibility]:
+    """Use a source-proven target-plane landing, or name the legacy fallback.
+
+    A recovered Via path is authoritative for every rail whose PWR reference
+    layer matches its target.  If it cannot prove a target landing, the existing
+    TOP-endpoint eligibility/template behavior remains an explicit compatibility
+    fallback rather than an inferred intermediate-layer geometry.
+    """
+
+    result = _eligibility_at_point(
+        eligibility_index,
+        landing.x_um,
+        landing.y_um,
+        rail_choices_by_pair,
+    )
+    rail_layer_by_key = {
+        rail.rail_id.casefold(): rail.pwr_layer.casefold()
+        for choices in rail_choices_by_pair.values()
+        for rail, _template_id in choices
+    }
+    for evidence in landing.path_evidence:
+        target_key = evidence.target_layer.casefold()
+        target_rail_keys = {
+            rail_key
+            for rail_key, pwr_layer in rail_layer_by_key.items()
+            if pwr_layer == target_key
+        }
+        for rail_id in tuple(result):
+            if rail_id.casefold() in target_rail_keys:
+                result.pop(rail_id)
+        at_target = _eligibility_at_point(
+            eligibility_index,
+            evidence.x_um,
+            evidence.y_um,
+            rail_choices_by_pair,
+        )
+        result.update(
+            {
+                rail_id: item
+                for rail_id, item in at_target.items()
+                if item.pwr_layer.casefold() == target_key
+            }
+        )
+    return result
+
+
+def _common_eligibility_at_landings(
+    eligibility_index: PlaneEligibilityIndex,
+    landings: tuple[ScenarioViaLanding, ...],
+    rail_choices_by_pair: dict[tuple[str, str, str], tuple[tuple[Any, str], ...]],
+) -> dict[str, RailEligibility]:
+    return _common_eligibility_maps(
+        tuple(
+            _eligibility_for_via_landing(
+                eligibility_index, landing, rail_choices_by_pair
+            )
+            for landing in landings
+        )
+    )
+
+
+def _scenario_via_landing(
+    landing: Any,
+    recovery: Any,
+) -> ScenarioViaLanding:
+    """Convert ephemeral path recovery output into compact persisted evidence."""
+
+    evidence = tuple(
+        ScenarioViaPathEvidence(
+            target_layer=item.target_layer,
+            target_node_id=item.target_node_id,
+            target_padstack=item.target_padstack,
+            target_pad_kind=item.target_pad_kind,
+            target_pad_width_um=item.target_pad_width_um,
+            target_pad_height_um=item.target_pad_height_um,
+            x_um=item.target_x_um,
+            y_um=item.target_y_um,
+            segments=tuple(
+                ScenarioViaSegment(
+                    via_id=segment.via_id,
+                    padstack=segment.padstack,
+                    drill_diameter_um=segment.drill_diameter_um,
+                    start_layer=segment.start_layer,
+                    end_layer=segment.end_layer,
+                    length_um=segment.length_um,
+                    end_x_um=segment.end_x_um,
+                    end_y_um=segment.end_y_um,
+                    rotation_degrees=segment.rotation_degrees,
+                )
+                for segment in item.segments
+            ),
+        )
+        for item in recovery.evidence_by_via.get(landing.via_id.casefold(), ())
+    )
+    return ScenarioViaLanding(
+        via_id=landing.via_id,
+        net=landing.net,
+        endpoint_node_id=landing.endpoint_node_id,
+        x_um=landing.x_um,
+        y_um=landing.y_um,
+        padstack=landing.padstack,
+        rotation_degrees=landing.rotation_degrees,
+        path_evidence=evidence,
+    )
+
+
+def _via_target_layers_by_net(project: ProjectSpec) -> dict[str, tuple[str, ...]]:
+    """Target layers requested from recovery for every selected terminal net."""
+
+    result: dict[str, set[str]] = {}
+    ground_nets = {item.casefold() for item in project.gnd_aliases}
+    for rail in project.rails:
+        result.setdefault(rail.net.casefold(), set()).add(rail.pwr_layer)
+        gnd_layer = next(
+            (item for item in project.stackup_layers if item.name == rail.gnd_layer),
+            None,
+        )
+        if gnd_layer is not None:
+            ground_nets.update(item.casefold() for item in gnd_layer.pwr_nets)
+            for net in ground_nets:
+                result.setdefault(net, set()).add(rail.gnd_layer)
+    return {
+        net: tuple(sorted(layers, key=str.casefold))
+        for net, layers in sorted(result.items())
+    }
 
 
 def _common_eligibility_at_points(
@@ -384,6 +523,47 @@ def import_spd_scenario(
     parsed_cluster_by_key = {
         item.cluster_id.casefold(): item for item in analysis.shared_pad_clusters
     }
+    source_landings = tuple(
+        landing
+        for connection in analysis.decap_connections
+        for landing in (*connection.power_vias, *connection.ground_vias)
+    )
+    recovery_started = perf_counter()
+    def recovery_progress(value: int, message: str) -> None:
+        report(87 + round(max(0, min(100, value)) * 4 / 100), message)
+
+    path_recovery = recover_spd_via_paths(
+        source_path,
+        landings=source_landings,
+        target_layers_by_net=_via_target_layers_by_net(base_project),
+        stackup_layers=base_project.stackup_layers,
+        padstacks=analysis.padstacks,
+        top_layer=top_layer,
+        expected_source=analysis.source,
+        progress=recovery_progress,
+        is_cancelled=cancelled,
+    )
+    path_recovery_s = perf_counter() - recovery_started
+    recovery_metadata = dict(base_project.metadata)
+    recovery_metadata["spd_via_path_recovery"] = {
+        **dict(path_recovery.statistics),
+        "algorithm": "unique_monotonic_same_net_via_chain_v1",
+        "fallback_behavior": "legacy_rail_template",
+    }
+    base_project = base_project.model_copy(update={"metadata": recovery_metadata})
+    report(
+        92,
+        "Recovered source-proven Via path summaries; checking exact PWR-plane eligibility",
+    )
+    landing_cache: dict[str, ScenarioViaLanding] = {}
+
+    def scenario_landing(landing: Any) -> ScenarioViaLanding:
+        key = landing.via_id.casefold()
+        result = landing_cache.get(key)
+        if result is None:
+            result = _scenario_via_landing(landing, path_recovery)
+            landing_cache[key] = result
+        return result
 
     # Cluster rail choices are evaluated at every unique physical PWR-via
     # landing.  A dummy pad never receives its own virtual via or independent
@@ -416,15 +596,14 @@ def import_spd_scenario(
         via_eligibility: dict[str, dict[str, RailEligibility]] = {}
         if state_value == SharedPadClusterState.ANCHORED:
             power_landings = {
-                landing.via_id.casefold(): landing
+                landing.via_id.casefold(): scenario_landing(landing)
                 for member in cluster.member_refdes
                 for landing in parsed_connection_by_key[member.casefold()].power_vias
             }
             via_eligibility = {
-                landing.via_id: _eligibility_at_point(
+                landing.via_id: _eligibility_for_via_landing(
                     eligibility_index,
-                    landing.x_um,
-                    landing.y_um,
+                    landing,
                     rail_choices_by_pair,
                 )
                 for landing in sorted(
@@ -471,7 +650,7 @@ def import_spd_scenario(
             rate = index / max(stage_elapsed, 1.0e-9)
             remaining = max(0.0, total_instances - index) / max(rate, 1.0e-9)
             report(
-                86 + round(fraction * 12),
+                92 + round(fraction * 7),
                 "Checking exact PWR-plane eligibility "
                 f"({index:,}/{total_instances:,}; stage {stage_elapsed:.1f}s, "
                 f"total {total_elapsed:.1f}s, ETA {remaining:.1f}s)",
@@ -495,34 +674,18 @@ def import_spd_scenario(
             connection_cluster_id = parsed_connection.cluster_id
             connection_reason = parsed_connection.reason
             power_vias = tuple(
-                ScenarioViaLanding(
-                    via_id=item.via_id,
-                    net=item.net,
-                    endpoint_node_id=item.endpoint_node_id,
-                    x_um=item.x_um,
-                    y_um=item.y_um,
-                    padstack=item.padstack,
-                    rotation_degrees=item.rotation_degrees,
-                )
+                scenario_landing(item)
                 for item in parsed_connection.power_vias
             )
             ground_vias = tuple(
-                ScenarioViaLanding(
-                    via_id=item.via_id,
-                    net=item.net,
-                    endpoint_node_id=item.endpoint_node_id,
-                    x_um=item.x_um,
-                    y_um=item.y_um,
-                    padstack=item.padstack,
-                    rotation_degrees=item.rotation_degrees,
-                )
+                scenario_landing(item)
                 for item in parsed_connection.ground_vias
             )
             if connection_cluster_id is None:
                 if connection_kind == DecapConnectionKind.DIRECT:
-                    eligibility = _common_eligibility_at_points(
+                    eligibility = _common_eligibility_at_landings(
                         eligibility_index,
-                        tuple((item.x_um, item.y_um) for item in power_vias),
+                        power_vias,
                         rail_choices_by_pair,
                     )
                     if source_rail_id.casefold() not in {
@@ -671,6 +834,7 @@ def import_spd_scenario(
         analyze_s=analyze_s,
         plan_s=plan_s,
         index_s=index_s,
+        recovery_s=path_recovery_s,
         eligibility_s=eligibility_s,
         finalize_s=finalize_s,
         total_s=total_s,
@@ -682,7 +846,7 @@ def import_spd_scenario(
     return ScenarioImport(
         scenario=scenario,
         attachments=attachments,
-        diagnostics=tuple(plan.diagnostics),
+        diagnostics=tuple((*plan.diagnostics, *path_recovery.diagnostics)),
         timings=timings,
     )
 

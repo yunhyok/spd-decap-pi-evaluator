@@ -34,10 +34,11 @@ from .version import __version__
 
 SCENARIO_SCHEMA_VERSION = "0.1"
 SCENARIO_APP_VERSION = __version__
-SHARED_PAD_ANALYSIS_VERSION = "DIRECT_TOP_COPPER_PATH_V4"
+SHARED_PAD_ANALYSIS_VERSION = "DIRECT_TOP_COPPER_PATH_VIA_CHAIN_V5"
 _SUPPORTED_SHARED_PAD_ANALYSIS_VERSIONS = {
     "DIRECT_TOP_PAD_GRAPH_V2",
     "DIRECT_TOP_COPPER_PATH_V3",
+    "DIRECT_TOP_COPPER_PATH_V4",
     SHARED_PAD_ANALYSIS_VERSION,
 }
 _SHA256_RE = re.compile(r"[0-9a-fA-F]{64}\Z")
@@ -206,12 +207,75 @@ class ScenarioViaLanding(ScenarioPoint):
     endpoint_node_id: str = Field(min_length=1)
     padstack: str = Field(min_length=1)
     rotation_degrees: float = 0.0
+    path_evidence: tuple["ScenarioViaPathEvidence", ...] = ()
 
     @field_validator("rotation_degrees")
     @classmethod
     def finite_rotation(cls, value: float) -> float:
         if not isfinite(value):
             raise ValueError("via rotation must be finite")
+        return value
+
+    @field_validator("path_evidence")
+    @classmethod
+    def unique_path_targets(
+        cls, value: tuple["ScenarioViaPathEvidence", ...]
+    ) -> tuple["ScenarioViaPathEvidence", ...]:
+        keys = [item.target_layer.casefold() for item in value]
+        if len(keys) != len(set(keys)):
+            raise ValueError("Via path evidence must have one result per target layer")
+        return tuple(sorted(value, key=lambda item: item.target_layer.casefold()))
+
+    def evidence_for_layer(self, layer: str) -> "ScenarioViaPathEvidence | None":
+        key = layer.casefold()
+        return next(
+            (item for item in self.path_evidence if item.target_layer.casefold() == key),
+            None,
+        )
+
+
+class ScenarioViaSegment(ScenarioModel):
+    """One source-proven vertical Via segment kept in a saved scenario."""
+
+    model_config = ConfigDict(frozen=True)
+
+    via_id: str = Field(min_length=1)
+    padstack: str = Field(min_length=1)
+    drill_diameter_um: float = Field(gt=0)
+    start_layer: str = Field(min_length=1)
+    end_layer: str = Field(min_length=1)
+    length_um: float = Field(gt=0)
+    end_x_um: float
+    end_y_um: float
+    rotation_degrees: float = 0.0
+
+    @field_validator("end_x_um", "end_y_um", "rotation_degrees")
+    @classmethod
+    def finite_end_coordinate(cls, value: float) -> float:
+        if not isfinite(value):
+            raise ValueError("Via segment coordinates and rotation must be finite")
+        return value
+
+
+class ScenarioViaPathEvidence(ScenarioPoint):
+    """Compact unique TOP-to-plane path result; raw graph data is not retained."""
+
+    model_config = ConfigDict(frozen=True)
+
+    target_layer: str = Field(min_length=1)
+    target_node_id: str = Field(min_length=1)
+    target_padstack: str = Field(min_length=1)
+    target_pad_kind: str = Field(min_length=1)
+    target_pad_width_um: float = Field(gt=0)
+    target_pad_height_um: float = Field(gt=0)
+    segments: tuple[ScenarioViaSegment, ...] = Field(min_length=1)
+    provenance: str = "SOURCE_PROVEN_MONOTONIC_VIA_CHAIN"
+
+    @field_validator("provenance")
+    @classmethod
+    def nonblank_provenance(cls, value: str) -> str:
+        if not value.strip():
+            raise ValueError("Via path provenance must not be blank")
         return value
 
 
@@ -432,33 +496,12 @@ class SharedPadCluster(ScenarioModel):
         if not edge_members.issubset(members):
             raise ValueError("shared-pad edges must reference cluster members")
 
-        def edge_graph_is_connected(
-            edges: tuple[tuple[str, str], ...]
-        ) -> bool:
-            if len(members) <= 1:
-                return True
-            adjacency = {item: set() for item in members}
-            for left, right in edges:
-                left_key, right_key = left.casefold(), right.casefold()
-                adjacency[left_key].add(right_key)
-                adjacency[right_key].add(left_key)
-            visited: set[str] = set()
-            pending = [next(iter(members))]
-            while pending:
-                current = pending.pop()
-                if current in visited:
-                    continue
-                visited.add(current)
-                pending.extend(adjacency[current] - visited)
-            return visited == members
-
-        if self.state != SharedPadClusterState.UNRESOLVED and (
-            not edge_graph_is_connected(self.power_edges)
-            or not edge_graph_is_connected(self.ground_edges)
+        if self.state != SharedPadClusterState.UNRESOLVED and not self.source_graph_is_connected(
+            self.power_edges
         ):
             raise ValueError(
-                "resolved shared-pad cluster PWR and GND source graphs must each "
-                "connect every member"
+                "resolved shared-pad cluster PWR source graph must connect every "
+                "member"
             )
         if self.state == SharedPadClusterState.ANCHORED:
             if not anchors or len(members) < 2:
@@ -475,6 +518,29 @@ class SharedPadCluster(ScenarioModel):
         if self.state == SharedPadClusterState.UNRESOLVED and not self.reason:
             raise ValueError("an UNRESOLVED shared-pad cluster requires a reason")
         return self
+
+    def source_graph_is_connected(
+        self, edges: tuple[tuple[str, str], ...]
+    ) -> bool:
+        """Whether one immutable source terminal graph spans every member."""
+
+        members = {item.casefold() for item in self.member_refdes}
+        if len(members) <= 1:
+            return True
+        adjacency = {item: set() for item in members}
+        for left, right in edges:
+            left_key, right_key = left.casefold(), right.casefold()
+            adjacency[left_key].add(right_key)
+            adjacency[right_key].add(left_key)
+        visited: set[str] = set()
+        pending = [next(iter(members))]
+        while pending:
+            current = pending.pop()
+            if current in visited:
+                continue
+            visited.add(current)
+            pending.extend(adjacency[current] - visited)
+        return visited == members
 
     @property
     def is_floating(self) -> bool:
@@ -533,6 +599,28 @@ class SharedPadConnectionAnalysis(ScenarioModel):
         if len(keys) != len(set(keys)):
             raise ValueError("shared-pad cluster IDs must be unique")
         return tuple(sorted(value, key=lambda item: item.cluster_id.casefold()))
+
+    @model_validator(mode="after")
+    def legacy_ground_graph_remains_connected(self) -> "SharedPadConnectionAnalysis":
+        """Keep V2-V4's documented one-GND source topology unchanged.
+
+        V5 is the first analysis format that can represent disconnected source
+        top-GND components explicitly.  Older saved analyses remain readable
+        but retain their historical validation/semantics until a source reimport.
+        """
+
+        if self.version == SHARED_PAD_ANALYSIS_VERSION:
+            return self
+        for cluster in self.clusters:
+            if (
+                cluster.state != SharedPadClusterState.UNRESOLVED
+                and not cluster.source_graph_is_connected(cluster.ground_edges)
+            ):
+                raise ValueError(
+                    "legacy resolved shared-pad cluster GND source graph must "
+                    "connect every member"
+                )
+        return self
 
 
 class ScenarioDecap(ScenarioModel):
@@ -617,8 +705,37 @@ class SharedPadCurrentComponent:
 
 
 @dataclass(frozen=True, slots=True)
+class SharedPadGroundComponent:
+    """One post-edit GND component derived solely from source ``ground_edges``."""
+
+    cluster_id: str
+    member_refdes: tuple[str, ...]
+    ground_anchor_refdes: tuple[str, ...]
+    ground_vias: tuple[ScenarioViaLanding, ...]
+
+
+@dataclass(frozen=True, slots=True)
+class SharedPadCapacitorComponentMapping:
+    """The PWR/GND supernodes joined by one active capacitor footprint."""
+
+    refdes: str
+    power_component_index: int
+    ground_component_index: int
+
+
+@dataclass(frozen=True, slots=True)
 class SharedPadPowerViaConflict:
     """One physical PWR Via claimed by more than one derived NET component."""
+
+    cluster_id: str
+    via_id: str
+    owner_refdes: tuple[str, ...]
+    component_member_refdes: tuple[tuple[str, ...], ...]
+
+
+@dataclass(frozen=True, slots=True)
+class SharedPadGroundViaConflict:
+    """One physical GND Via claimed by multiple post-edit GND components."""
 
     cluster_id: str
     via_id: str
@@ -674,10 +791,13 @@ class SharedPadActiveShortError(ValueError):
 
 @dataclass(frozen=True, slots=True)
 class SharedPadComponentDerivation:
-    """Deterministic dynamic PWR components and fail-closed Via conflicts."""
+    """Deterministic source-edge PWR/GND components and Via conflicts."""
 
     components: tuple[SharedPadCurrentComponent, ...]
-    shared_power_via_conflicts: tuple[SharedPadPowerViaConflict, ...]
+    ground_components: tuple[SharedPadGroundComponent, ...] = ()
+    capacitor_component_mappings: tuple[SharedPadCapacitorComponentMapping, ...] = ()
+    shared_power_via_conflicts: tuple[SharedPadPowerViaConflict, ...] = ()
+    shared_ground_via_conflicts: tuple[SharedPadGroundViaConflict, ...] = ()
 
 
 def _casefold_index(value: Mapping[str, Any], *, label: str) -> dict[str, Any]:
@@ -694,15 +814,16 @@ def derive_shared_pad_current_components(
     cluster: SharedPadCluster,
     decap_by_refdes: Mapping[str, ScenarioDecap],
     connection_by_refdes: Mapping[str, ScenarioDecapConnection],
+    *,
+    analysis_version: str | None = None,
 ) -> SharedPadComponentDerivation:
-    """Derive active components after removing proven isolation-gap cells.
+    """Derive active PWR/GND components after removing isolation-gap cells.
 
-    A normal/DNP source member remains a conductive graph node.  Only an
-    explicit ``ISOLATION_GAP`` removes its incident edges, and any unlike NETs
-    that still touch across an active edge are rejected as a physical short.
-    A physical PWR Via may be listed by multiple source members when its TOP pad
-    overlaps them.  Reuse inside one derived component is deduplicated; reuse
-    across components is reported as an explicit conflict.
+    The two source graphs are intentionally independent.  A V5 analysis uses
+    ``power_edges`` and ``ground_edges`` to map every capacitor onto exactly one
+    PWR and one GND component.  Older persisted analyses retain their documented
+    implicit continuous-GND semantics; they are readable but must be reanalyzed
+    before the accuracy evaluator accepts them.
     """
 
     decaps = _casefold_index(decap_by_refdes, label="decap")
@@ -731,37 +852,56 @@ def derive_shared_pad_current_components(
         if decaps[key].pad_state != DecapPadState.ISOLATION_GAP
     )
     active_set = set(active_keys)
-    adjacency: dict[str, set[str]] = {key: set() for key in active_keys}
-    for left_refdes, right_refdes in cluster.power_edges:
-        left = left_refdes.casefold()
-        right = right_refdes.casefold()
-        if left not in active_set or right not in active_set:
-            continue
-        if decaps[left].current_net.casefold() != decaps[right].current_net.casefold():
-            raise SharedPadActiveShortError(
-                cluster_id=cluster.cluster_id,
-                left_refdes=decaps[left].refdes,
-                right_refdes=decaps[right].refdes,
-                left_net=decaps[left].current_net,
-                right_net=decaps[right].current_net,
-            )
-        adjacency[left].add(right)
-        adjacency[right].add(left)
-
-    grouped_keys: list[tuple[str, ...]] = []
-    remaining = set(active_keys)
-    while remaining:
-        first = min(remaining, key=order.__getitem__)
-        pending = [first]
-        component: set[str] = set()
-        while pending:
-            current = pending.pop()
-            if current in component:
+    def grouped_edges(
+        edges: tuple[tuple[str, str], ...],
+        *,
+        check_active_short: bool,
+    ) -> list[tuple[str, ...]]:
+        adjacency: dict[str, set[str]] = {key: set() for key in active_keys}
+        for left_refdes, right_refdes in edges:
+            left = left_refdes.casefold()
+            right = right_refdes.casefold()
+            if left not in active_set or right not in active_set:
                 continue
-            component.add(current)
-            pending.extend(adjacency[current] - component)
-        remaining.difference_update(component)
-        grouped_keys.append(tuple(sorted(component, key=order.__getitem__)))
+            if check_active_short and (
+                decaps[left].current_net.casefold()
+                != decaps[right].current_net.casefold()
+            ):
+                raise SharedPadActiveShortError(
+                    cluster_id=cluster.cluster_id,
+                    left_refdes=decaps[left].refdes,
+                    right_refdes=decaps[right].refdes,
+                    left_net=decaps[left].current_net,
+                    right_net=decaps[right].current_net,
+                )
+            adjacency[left].add(right)
+            adjacency[right].add(left)
+        result: list[tuple[str, ...]] = []
+        remaining = set(active_keys)
+        while remaining:
+            first = min(remaining, key=order.__getitem__)
+            pending = [first]
+            component: set[str] = set()
+            while pending:
+                current = pending.pop()
+                if current in component:
+                    continue
+                component.add(current)
+                pending.extend(adjacency[current] - component)
+            remaining.difference_update(component)
+            result.append(tuple(sorted(component, key=order.__getitem__)))
+        return result
+
+    grouped_keys = grouped_edges(cluster.power_edges, check_active_short=True)
+    # A pre-V5 scenario was written under the documented one-GND model.  Keep
+    # that semantic for deserialization/legacy hashing rather than silently
+    # deriving a different topology before a fresh source analysis.
+    explicit_ground = analysis_version in {None, SHARED_PAD_ANALYSIS_VERSION}
+    ground_grouped_keys = (
+        grouped_edges(cluster.ground_edges, check_active_short=False)
+        if explicit_ground
+        else [active_keys] if active_keys else []
+    )
 
     components: list[SharedPadCurrentComponent] = []
     via_components: dict[str, set[int]] = {}
@@ -784,7 +924,6 @@ def derive_shared_pad_current_components(
                 ),
             )
         power_by_key: dict[str, ScenarioViaLanding] = {}
-        ground_by_key: dict[str, ScenarioViaLanding] = {}
         anchor_refdes: list[str] = []
         for key in keys:
             connection = connections[key]
@@ -796,8 +935,6 @@ def derive_shared_pad_current_components(
                 canonical_via_id.setdefault(via_key, landing.via_id)
                 via_components.setdefault(via_key, set()).add(component_index)
                 via_owners.setdefault(via_key, set()).add(decaps[key].refdes)
-            for landing in connection.ground_vias:
-                ground_by_key.setdefault(landing.via_id.casefold(), landing)
         components.append(
             SharedPadCurrentComponent(
                 cluster_id=cluster.cluster_id,
@@ -806,9 +943,7 @@ def derive_shared_pad_current_components(
                 member_refdes=members,
                 power_anchor_refdes=tuple(anchor_refdes),
                 power_vias=tuple(power_by_key[key] for key in sorted(power_by_key)),
-                ground_vias=tuple(
-                    ground_by_key[key] for key in sorted(ground_by_key)
-                ),
+                ground_vias=(),
             )
         )
 
@@ -827,9 +962,94 @@ def derive_shared_pad_current_components(
         for via_key in sorted(via_components)
         if len(via_components[via_key]) > 1
     )
+    ground_components: list[SharedPadGroundComponent] = []
+    ground_via_components: dict[str, set[int]] = {}
+    ground_via_owners: dict[str, set[str]] = {}
+    ground_canonical_via_id: dict[str, str] = {}
+    for component_index, keys in enumerate(ground_grouped_keys):
+        members = tuple(decaps[key].refdes for key in keys)
+        ground_by_key: dict[str, ScenarioViaLanding] = {}
+        anchor_refdes: list[str] = []
+        for key in keys:
+            connection = connections[key]
+            if connection.ground_vias:
+                anchor_refdes.append(decaps[key].refdes)
+            for landing in connection.ground_vias:
+                via_key = landing.via_id.casefold()
+                ground_by_key.setdefault(via_key, landing)
+                ground_canonical_via_id.setdefault(via_key, landing.via_id)
+                ground_via_components.setdefault(via_key, set()).add(component_index)
+                ground_via_owners.setdefault(via_key, set()).add(decaps[key].refdes)
+        ground_components.append(
+            SharedPadGroundComponent(
+                cluster_id=cluster.cluster_id,
+                member_refdes=members,
+                ground_anchor_refdes=tuple(anchor_refdes),
+                ground_vias=tuple(
+                    ground_by_key[key] for key in sorted(ground_by_key)
+                ),
+            )
+        )
+    ground_conflicts = tuple(
+        SharedPadGroundViaConflict(
+            cluster_id=cluster.cluster_id,
+            via_id=ground_canonical_via_id[via_key],
+            owner_refdes=tuple(
+                sorted(ground_via_owners[via_key], key=str.casefold)
+            ),
+            component_member_refdes=tuple(
+                ground_components[index].member_refdes
+                for index in sorted(ground_via_components[via_key])
+            ),
+        )
+        for via_key in sorted(ground_via_components)
+        if len(ground_via_components[via_key]) > 1
+    )
+    power_by_member = {
+        refdes.casefold(): component_index
+        for component_index, component in enumerate(components)
+        for refdes in component.member_refdes
+    }
+    ground_by_member = {
+        refdes.casefold(): component_index
+        for component_index, component in enumerate(ground_components)
+        for refdes in component.member_refdes
+    }
+    capacitor_mappings = tuple(
+        SharedPadCapacitorComponentMapping(
+            refdes=decaps[key].refdes,
+            power_component_index=power_by_member[key],
+            ground_component_index=ground_by_member[key],
+        )
+        for key in active_keys
+    )
+    # Preserve the former convenience field for callers that only report PWR
+    # components.  Evaluation uses the explicit GND components/mappings above.
+    all_ground_vias = {
+        landing.via_id.casefold(): landing
+        for component in ground_components
+        for landing in component.ground_vias
+    }
+    components = [
+        SharedPadCurrentComponent(
+            cluster_id=component.cluster_id,
+            current_rail_id=component.current_rail_id,
+            current_net=component.current_net,
+            member_refdes=component.member_refdes,
+            power_anchor_refdes=component.power_anchor_refdes,
+            power_vias=component.power_vias,
+            ground_vias=tuple(
+                all_ground_vias[key] for key in sorted(all_ground_vias)
+            ),
+        )
+        for component in components
+    ]
     return SharedPadComponentDerivation(
         components=tuple(components),
+        ground_components=tuple(ground_components),
+        capacitor_component_mappings=capacitor_mappings,
         shared_power_via_conflicts=conflicts,
+        shared_ground_via_conflicts=ground_conflicts,
     )
 
 
@@ -1398,12 +1618,20 @@ class ScenarioSpec(ScenarioModel):
                     cluster,
                     {key: decap_by_key[key] for key in member_keys},
                     {key: connection_by_key[key] for key in member_keys},
+                    analysis_version=analysis.version,
                 )
                 if derivation.shared_power_via_conflicts:
                     conflict = derivation.shared_power_via_conflicts[0]
                     raise ValueError(
                         f"shared-pad cluster {cluster.cluster_id!r} physical PWR "
                         f"Via {conflict.via_id!r} crosses current-NET components "
+                        f"{conflict.component_member_refdes}"
+                    )
+                if derivation.shared_ground_via_conflicts:
+                    conflict = derivation.shared_ground_via_conflicts[0]
+                    raise ValueError(
+                        f"shared-pad cluster {cluster.cluster_id!r} physical GND "
+                        f"Via {conflict.via_id!r} crosses current GND components "
                         f"{conflict.component_member_refdes}"
                     )
                 for component in derivation.components:
@@ -1927,12 +2155,17 @@ __all__ = [
     "ScenarioResultKey",
     "ScenarioSide",
     "ScenarioSpec",
+    "ScenarioViaPathEvidence",
+    "ScenarioViaSegment",
     "ScenarioViaLanding",
     "SharedPadCluster",
     "SharedPadClusterState",
     "SharedPadComponentDerivation",
     "SharedPadConnectionAnalysis",
+    "SharedPadCapacitorComponentMapping",
     "SharedPadCurrentComponent",
+    "SharedPadGroundComponent",
+    "SharedPadGroundViaConflict",
     "SharedPadPowerViaConflict",
     "SharedPadRailAliasConflictError",
     "SharedPadActiveShortError",

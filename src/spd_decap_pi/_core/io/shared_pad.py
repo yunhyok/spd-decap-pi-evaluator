@@ -2512,8 +2512,6 @@ def extract_shared_pad_connectivity(
         reasons: list[str] = []
         if not _connected(active_members, component_power_edges):
             reasons.append("PWR pads do not form one connected TOP supernode")
-        if not _connected(active_members, component_ground_edges):
-            reasons.append("GND pads do not form one connected TOP supernode")
         power_nets = {evidence[index].power_net.casefold() for index in active_members}
         ground_nets = {evidence[index].ground_net.casefold() for index in active_members}
         if len(power_nets) != 1 or len(ground_nets) != 1:
@@ -2536,6 +2534,47 @@ def extract_shared_pad_connectivity(
         aggregate_ground_vias = {
             key for index in active_members for key in ground_vias.get(index, {})
         }
+        if aggregate_power_vias and aggregate_ground_vias:
+            # V5 carries the source PWR and GND copper graphs separately.  A
+            # shared PWR pad component can legitimately span multiple isolated
+            # GND top supernodes; each capacitor will later map to exactly one
+            # of those components.  Do not merge them, but fail closed when an
+            # otherwise anchored cluster has a physical GND component with no
+            # source-proven Via anchor.  A fully via-less cluster remains the
+            # documented FLOATING state.
+            remaining_ground = set(active_members)
+            ground_components: list[set[int]] = []
+            ground_adjacency = {index: set() for index in active_members}
+            for first, second in component_ground_edges:
+                ground_adjacency[first].add(second)
+                ground_adjacency[second].add(first)
+            while remaining_ground:
+                first = min(
+                    remaining_ground,
+                    key=lambda value: evidence[value].refdes.casefold(),
+                )
+                pending = [first]
+                component: set[int] = set()
+                while pending:
+                    current = pending.pop()
+                    if current in component:
+                        continue
+                    component.add(current)
+                    pending.extend(ground_adjacency[current] - component)
+                remaining_ground.difference_update(component)
+                ground_components.append(component)
+            for component in ground_components:
+                if any(ground_vias.get(index) for index in component):
+                    continue
+                member_names = ", ".join(
+                    evidence[index].refdes
+                    for index in sorted(
+                        component, key=lambda value: evidence[value].refdes.casefold()
+                    )
+                )
+                reasons.append(
+                    "GND TOP component has no source Via anchor: " + member_names
+                )
         if len(active_members) == 1:
             if bool(aggregate_power_vias) != bool(aggregate_ground_vias):
                 reasons.append(
