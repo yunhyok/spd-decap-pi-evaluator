@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "spd-decap-pi-evaluator"
-version = "0.10.1"
+version = "0.11.0"
 description = "Standalone PowerSI SPD decap PWR assignment and PI evaluation desktop tool"
 readme = "README.md"
 requires-python = ">=3.12"

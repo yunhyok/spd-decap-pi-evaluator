@@ -435,6 +435,20 @@ def test_legacy_v2_scenario_is_readable_but_distribution_requires_reanalysis() -
     assert error.value.code == "CONNECTION_ANALYSIS_UPGRADE_REQUIRED"
 
 
+def test_legacy_v3_scenario_is_readable_but_distribution_requires_reanalysis() -> None:
+    payload = _shared_chain_scenario().model_dump(mode="python")
+    payload["connection_analysis"]["version"] = "DIRECT_TOP_COPPER_PATH_V3"
+    legacy = ScenarioSpec.model_validate(payload)
+
+    with pytest.raises(DistributionError) as error:
+        compute_distribution_plan(
+            legacy, {("R1", "M1"): 1, ("R2", "M1"): 2}
+        )
+
+    assert error.value.code == "CONNECTION_ANALYSIS_UPGRADE_REQUIRED"
+    assert "V4 finite-pad/ordered-boolean" in str(error.value)
+
+
 def test_present_matrix_and_public_numeric_preflight_exclude_disabled_parts() -> None:
     scenario = _direct_scenario(
         (

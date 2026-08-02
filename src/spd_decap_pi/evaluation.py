@@ -44,6 +44,7 @@ from .scenario import (
     DecapPadState,
     EvaluationRole,
     RailEligibility,
+    SHARED_PAD_ANALYSIS_VERSION,
     ScenarioDecap,
     ScenarioResultKey,
     ScenarioSpec,
@@ -69,6 +70,19 @@ class ScenarioEvaluationBuildError(ValueError):
         self.refdes = refdes
         prefix = f"{refdes}: " if refdes else ""
         super().__init__(f"{prefix}{message}")
+
+
+def _require_current_shared_pad_analysis(scenario: ScenarioSpec) -> None:
+    """Block stale connectivity classifications before they reach the solver."""
+
+    analysis = scenario.connection_analysis
+    if analysis is not None and analysis.version != SHARED_PAD_ANALYSIS_VERSION:
+        raise ScenarioEvaluationBuildError(
+            "CONNECTION_ANALYSIS_UPGRADE_REQUIRED",
+            "this scenario uses legacy shared-pad connectivity; reopen the "
+            "verified source SPD to build V4 finite-pad/ordered-boolean "
+            "TOP-copper evidence before evaluation",
+        )
 
 
 @dataclass(frozen=True, slots=True)
@@ -398,6 +412,7 @@ def preflight_evaluation_connectivity(
     """
 
     canonical_rails = _canonical_rail_ids(scenario, rail_ids)
+    _require_current_shared_pad_analysis(scenario)
     analysis = scenario.connection_analysis
     if analysis is None:
         return EvaluationConnectivityPreflight(canonical_rails, ())
@@ -1100,6 +1115,7 @@ def build_evaluation_project(
         evaluation_rail_id.casefold() if evaluation_rail_id is not None else None
     )
     analysis = scenario.connection_analysis
+    _require_current_shared_pad_analysis(scenario)
     if analysis is None:
         raise ScenarioEvaluationBuildError(
             "SHARED_PAD_ANALYSIS_REQUIRED",

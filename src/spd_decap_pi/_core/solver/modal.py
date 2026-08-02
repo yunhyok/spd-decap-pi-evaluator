@@ -17,7 +17,10 @@ import warnings
 import numpy as np
 from numpy.typing import ArrayLike, NDArray
 
-from spd_decap_pi._core.models.circuit import MultiportAdmittanceModel
+from spd_decap_pi._core.models.circuit import (
+    MultiportAdmittanceModel,
+    SharedPadClusterModel,
+)
 from spd_decap_pi._core.models.impedance import ImpedanceModel, frequency_array
 
 try:  # SciPy is a runtime dependency, but the NumPy fallback aids source use.
@@ -208,7 +211,20 @@ class _CoupledShuntData:
     admittance: NDArray[np.complex128]
 
 
-_ShuntData = _ScalarShuntData | _CoupledShuntData
+@dataclass(frozen=True, slots=True)
+class _HomogeneousSharedPadBatchData:
+    """Exact aggregate modal stamp for homogeneous one-component clusters.
+
+    The stamp is the exact sum of ``B @ Y @ B.T`` for every physical Via
+    terminal.  It is precomputed only after the guard has proved that every
+    group has the same SharedPadClusterModel arrowhead signature.  No terminal
+    coordinate, mode, or network degree of freedom is collapsed.
+    """
+
+    stamp: NDArray[np.complex128]
+
+
+_ShuntData = _ScalarShuntData | _CoupledShuntData | _HomogeneousSharedPadBatchData
 
 
 @dataclass(frozen=True, slots=True)
@@ -511,8 +527,48 @@ class RectangularCavitySolver:
         frequencies: NDArray[np.float64],
         shunts: tuple[ShuntConnection, ...],
     ) -> list[_ShuntData]:
+        # Partition only the provably homogeneous shared-pad groups.  A mixed
+        # solve may contain direct shunts, general coupled networks, split-PWR
+        # clusters, or clusters whose terminal Via models differ.  Those
+        # established dense/scalar paths must not disable batching for the
+        # independent eligible subsets, nor may an eligible group be stamped
+        # both here and below.
+        homogeneous_groups: dict[
+            int, list[tuple[int, CoupledShuntGroup]]
+        ] = {}
+        for index, group in enumerate(shunts):
+            if not isinstance(group, CoupledShuntGroup) or not isinstance(
+                group.network, SharedPadClusterModel
+            ):
+                continue
+            via_model = group.network.homogeneous_one_component_via_model()
+            if via_model is None:
+                continue
+            homogeneous_groups.setdefault(id(via_model), []).append((index, group))
+
+        batched_by_first_index: dict[int, _HomogeneousSharedPadBatchData] = {}
+        batched_indices: set[int] = set()
+        for indexed_groups in homogeneous_groups.values():
+            batch = self._homogeneous_shared_pad_batch_data(
+                frequencies,
+                tuple(group for _index, group in indexed_groups),
+            )
+            if batch is None:
+                # Preserve the established per-group validation and diagnostic
+                # path whenever an otherwise eligible batch cannot be formed.
+                continue
+            first_index = indexed_groups[0][0]
+            batched_by_first_index[first_index] = batch
+            batched_indices.update(index for index, _group in indexed_groups)
+
         data: list[_ShuntData] = []
-        for group in shunts:
+        for index, group in enumerate(shunts):
+            batch = batched_by_first_index.get(index)
+            if batch is not None:
+                data.append(batch)
+                continue
+            if index in batched_indices:
+                continue
             if isinstance(group, CoupledShuntGroup):
                 admittance = np.asarray(
                     group.network.admittance_matrix(frequencies),
@@ -564,6 +620,156 @@ class RectangularCavitySolver:
             )
         return data
 
+    def _homogeneous_shared_pad_batch_data(
+        self,
+        frequencies: NDArray[np.float64],
+        shunts: tuple[ShuntConnection, ...],
+    ) -> _HomogeneousSharedPadBatchData | None:
+        """Return an exact batched stamp for the common shared-pad topology.
+
+        A ``SharedPadClusterModel`` with one PWR component and the same Via
+        model on all of its physical PWR/GND terminals has an arrowhead Kron
+        reduction.  Summing that reduction analytically across clusters avoids
+        the prohibitively large per-cluster ``port x port`` matrices while
+        preserving the same terminal population matrix B and therefore every
+        input coordinate.  Any mixed or more general topology takes the
+        established dense path below.
+        """
+
+        if not shunts:
+            return None
+        groups: list[tuple[CoupledShuntGroup, SharedPadClusterModel, ImpedanceModel]] = []
+        via_model: ImpedanceModel | None = None
+        for group in shunts:
+            if not isinstance(group, CoupledShuntGroup) or not isinstance(
+                group.network, SharedPadClusterModel
+            ):
+                return None
+            candidate = group.network.homogeneous_one_component_via_model()
+            if candidate is None:
+                return None
+            if via_model is None:
+                via_model = candidate
+            elif candidate is not via_model:
+                return None
+            groups.append((group, group.network, candidate))
+        assert via_model is not None
+
+        try:
+            via_impedance = np.asarray(via_model.impedance(frequencies), dtype=np.complex128)
+        except Exception:
+            # Preserve the dense path's model-specific diagnostic where
+            # possible; this fast path must never make an eligible solve less
+            # robust than the established representation.
+            return None
+        if (
+            via_impedance.shape != frequencies.shape
+            or not np.all(np.isfinite(via_impedance))
+            or np.any(np.abs(via_impedance) < np.finfo(float).tiny)
+        ):
+            return None
+        via_admittance = 2.0 / via_impedance
+
+        diagonal_overlap = np.zeros((self.mode_count, self.mode_count), dtype=np.float64)
+        power_sums: list[NDArray[np.float64]] = []
+        ground_sums: list[NDArray[np.float64]] = []
+        power_counts: list[float] = []
+        ground_counts: list[float] = []
+        capacitor_admittances: list[NDArray[np.complex128]] = []
+        capacitor_cache: dict[int, NDArray[np.complex128]] = {}
+        for group, network, _candidate in groups:
+            population = self.population_matrix(group)
+            power_count = len(network.power_via_loops)
+            power_population = population[:, :power_count]
+            ground_population = population[:, power_count:]
+            diagonal_overlap += population @ population.T
+            power_sums.append(np.sum(power_population, axis=1))
+            ground_sums.append(np.sum(ground_population, axis=1))
+            power_counts.append(float(power_count))
+            ground_counts.append(float(len(network.ground_via_loops)))
+
+            capacitor_admittance = np.zeros(frequencies.size, dtype=np.complex128)
+            for capacitor in network.capacitors:
+                values = capacitor_cache.get(id(capacitor))
+                if values is None:
+                    try:
+                        impedance = np.asarray(
+                            capacitor.impedance(frequencies), dtype=np.complex128
+                        )
+                    except Exception:
+                        return None
+                    if (
+                        impedance.shape != frequencies.shape
+                        or not np.all(np.isfinite(impedance))
+                        or np.any(np.abs(impedance) < np.finfo(float).tiny)
+                    ):
+                        return None
+                    values = 1.0 / impedance
+                    capacitor_cache[id(capacitor)] = values
+                capacitor_admittance += values
+            capacitor_admittances.append(capacitor_admittance)
+
+        power_basis_sum = np.column_stack(power_sums)
+        ground_basis_sum = np.column_stack(ground_sums)
+        power_count = np.asarray(power_counts, dtype=np.float64)
+        ground_count = np.asarray(ground_counts, dtype=np.float64)
+        capacitor_admittance = np.column_stack(capacitor_admittances)
+        power_sum = via_admittance[:, None] * power_count[None, :]
+        power_node = power_sum + capacitor_admittance
+        power_scale = np.abs(power_sum) + np.abs(capacitor_admittance)
+        if np.any(
+            np.abs(power_node)
+            <= 64.0 * np.finfo(np.float64).eps * np.maximum(power_scale, np.finfo(float).tiny)
+        ):
+            return None
+        transfer = capacitor_admittance / power_node
+        ground_schur_terms = capacitor_admittance * power_sum / power_node
+        ground_schur = via_admittance[:, None] * ground_count[None, :] + ground_schur_terms
+        ground_scale = np.abs(via_admittance[:, None] * ground_count[None, :]) + np.abs(ground_schur_terms)
+        if np.any(
+            np.abs(ground_schur)
+            <= 64.0 * np.finfo(np.float64).eps * np.maximum(ground_scale, np.finfo(float).tiny)
+        ):
+            return None
+
+        stamp = 0.25 * via_admittance[:, None, None] * diagonal_overlap[None, :, :]
+        power_weight = via_admittance[:, None] ** 2 / power_node
+        shared_weight = via_admittance[:, None] ** 2 / ground_schur
+        # Keep the weighted terminal population solve bounded to one frequency.
+        # Materializing all frequencies at once would allocate an F x M x G
+        # complex array (about 440 MiB for 401 x 81 x 847) even though the only
+        # retained result is F x M x M.  These two ordinary-transpose Gram
+        # products are the same arrowhead Schur terms, evaluated with at most a
+        # handful of M x G temporaries so memory is independent of F here.
+        for frequency_index in range(frequencies.size):
+            weighted_power = (
+                power_basis_sum * power_weight[frequency_index][None, :]
+            )
+            stamp[frequency_index] -= 0.25 * (
+                weighted_power @ power_basis_sum.T
+            )
+            shared_population = (
+                transfer[frequency_index][None, :] * power_basis_sum
+                - ground_basis_sum
+            )
+            weighted_shared = (
+                shared_population * shared_weight[frequency_index][None, :]
+            )
+            stamp[frequency_index] -= 0.25 * (
+                weighted_shared @ shared_population.T
+            )
+        if not np.all(np.isfinite(stamp)):
+            return None
+        stamp = np.asarray(stamp, dtype=np.complex128)
+        stamp.setflags(write=False)
+        # The result is intentionally solve-scoped.  ImpedanceModel is a
+        # protocol and may be mutable/stateful; retaining this stamp on the
+        # solver would silently reuse obsolete model values on a later solve
+        # and would also pin a frequency x mode x mode allocation.  _shunt_data
+        # computes it once and every frequency step in the current solve reuses
+        # that one object.
+        return _HomogeneousSharedPadBatchData(stamp)
+
     def _base_matrix(
         self,
         frequency_index: int,
@@ -574,13 +780,15 @@ class RectangularCavitySolver:
         for item in shunt_data:
             if isinstance(item, _ScalarShuntData):
                 matrix += item.admittance[frequency_index] * item.overlap
-            else:
+            elif isinstance(item, _CoupledShuntData):
                 population = item.population
                 matrix += (
                     population
                     @ item.admittance[frequency_index]
                     @ population.T
                 )
+            else:
+                matrix += item.stamp[frequency_index]
         return matrix
 
     def solve_ideal_port(

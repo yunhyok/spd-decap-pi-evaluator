@@ -7,11 +7,13 @@ and nearest-neighbour distances are never electrical evidence.
 
 from __future__ import annotations
 
+from bisect import bisect_left, bisect_right
 from dataclasses import dataclass
 from hashlib import sha256
-from math import cos, floor, hypot, radians, sin
+from math import atan2, cos, floor, hypot, pi, radians, sin
 from statistics import median
-from typing import Literal, Mapping, Sequence
+from sys import float_info
+from typing import Callable, Literal, Mapping, Sequence
 
 
 PadShapeKind = Literal["CIRCLE", "RECTANGLE", "UNSUPPORTED"]
@@ -32,6 +34,7 @@ DecapConnectionKind = Literal[
 SharedPadClusterState = Literal["ANCHORED", "FLOATING", "UNRESOLVED"]
 
 _GEOMETRY_EPS_UM = 1.0e-9
+_GENERIC_PATH_WORK_BUDGET = 200_000
 
 
 @dataclass(frozen=True, slots=True)
@@ -454,24 +457,355 @@ def _primitive_bounds(
     return x_min, x_max, y_min, y_max
 
 
+def _bounds_strictly_disjoint(
+    first: tuple[float, float, float, float],
+    second: tuple[float, float, float, float],
+) -> bool:
+    """Prove two primitive closures are separated by a positive axis gap.
+
+    Bounding-box overlap or contact is deliberately inconclusive.  This helper
+    is used only to ignore a later subtraction that cannot reach a positive
+    primitive at all; every touching or overlapping case stays fail-closed.
+    """
+
+    return (
+        first[1] < second[0] - _GEOMETRY_EPS_UM
+        or second[1] < first[0] - _GEOMETRY_EPS_UM
+        or first[3] < second[2] - _GEOMETRY_EPS_UM
+        or second[3] < first[2] - _GEOMETRY_EPS_UM
+    )
+
+
 def _point_in_primitive(
     shape: _PlacedPad,
     kind: CopperPrimitiveKind,
     primitive: Sequence[tuple[float, float]] | tuple[float, float, float],
 ) -> Literal["positive", "boundary", "none"]:
+    return _point_in_primitive_at(shape.x_um, shape.y_um, kind, primitive)
+
+
+def _point_in_primitive_at(
+    x_um: float,
+    y_um: float,
+    kind: CopperPrimitiveKind,
+    primitive: Sequence[tuple[float, float]] | tuple[float, float, float],
+) -> Literal["positive", "boundary", "none"]:
     if kind.endswith("circle"):
         center_x, center_y, radius = primitive  # type: ignore[misc]
-        margin = radius - hypot(shape.x_um - center_x, shape.y_um - center_y)
+        margin = radius - hypot(x_um - center_x, y_um - center_y)
         if margin > _GEOMETRY_EPS_UM:
             return "positive"
         if margin >= -_GEOMETRY_EPS_UM:
             return "boundary"
         return "none"
     return _point_in_polygon(
-        shape.x_um,
-        shape.y_um,
+        x_um,
+        y_um,
         primitive,  # type: ignore[arg-type]
     )
+
+
+def _point_to_segment_distance(
+    x_um: float,
+    y_um: float,
+    first: tuple[float, float],
+    second: tuple[float, float],
+) -> float:
+    """Return the Euclidean distance from a point to one closed segment."""
+
+    x1, y1 = first
+    x2, y2 = second
+    delta_x, delta_y = x2 - x1, y2 - y1
+    squared_length = delta_x * delta_x + delta_y * delta_y
+    if squared_length <= _GEOMETRY_EPS_UM * _GEOMETRY_EPS_UM:
+        return hypot(x_um - x1, y_um - y1)
+    fraction = max(
+        0.0,
+        min(
+            1.0,
+            ((x_um - x1) * delta_x + (y_um - y1) * delta_y) / squared_length,
+        ),
+    )
+    return hypot(x_um - (x1 + fraction * delta_x), y_um - (y1 + fraction * delta_y))
+
+
+def _primitive_boundary_distance(
+    x_um: float,
+    y_um: float,
+    kind: CopperPrimitiveKind,
+    primitive: Sequence[tuple[float, float]] | tuple[float, float, float],
+) -> float:
+    if kind.endswith("circle"):
+        center_x, center_y, radius = primitive  # type: ignore[misc]
+        return abs(hypot(x_um - center_x, y_um - center_y) - radius)
+    polygon = primitive  # type: ignore[assignment]
+    if len(polygon) < 2:
+        return float("inf")
+    return min(
+        _point_to_segment_distance(x_um, y_um, previous, current)
+        for previous, current in zip((polygon[-1], *polygon[:-1]), polygon)
+    )
+
+
+def _replay_copper_fill(
+    x_um: float,
+    y_um: float,
+    primitives: Sequence[
+        tuple[
+            CopperPrimitiveKind,
+            Sequence[tuple[float, float]] | tuple[float, float, float],
+        ]
+    ],
+) -> bool | None:
+    """Replay source boolean primitives at one non-boundary point.
+
+    ``None`` means the point falls on an input primitive boundary.  Callers
+    resolve that case against the *final* boolean fill, rather than treating an
+    internal tessellation edge as an electrical ambiguity.
+    """
+
+    filled = False
+    for kind, primitive in primitives:
+        relation = _point_in_primitive_at(x_um, y_um, kind, primitive)
+        if relation == "boundary":
+            return None
+        if relation == "positive":
+            filled = kind.startswith("positive_")
+    return filled
+
+
+def _incident_boundary_angles(
+    x_um: float,
+    y_um: float,
+    kind: CopperPrimitiveKind,
+    primitive: Sequence[tuple[float, float]] | tuple[float, float, float],
+) -> tuple[tuple[float, ...], tuple[float, ...]]:
+    """Return local boundary rays and safe incident-length limits.
+
+    These rays are derived from the actual curves through the query point.  A
+    sector between every consecutive pair is a constant local boolean cell;
+    unlike a fixed set of probe directions, this cannot step over a narrow
+    wedge whose vertex is the terminal centre.
+    """
+
+    if kind.endswith("circle"):
+        center_x, center_y, radius = primitive  # type: ignore[misc]
+        if _point_in_primitive_at(x_um, y_um, kind, primitive) != "boundary":
+            return (), ()
+        radial = atan2(y_um - center_y, x_um - center_x)
+        return (
+            ((radial - pi / 2.0) % (2.0 * pi), (radial + pi / 2.0) % (2.0 * pi)),
+            (radius,),
+        )
+
+    polygon = tuple(primitive)  # type: ignore[arg-type]
+    rays: list[float] = []
+    lengths: list[float] = []
+    for previous, current in zip((polygon[-1], *polygon[:-1]), polygon):
+        if not _point_on_segment(x_um, y_um, previous, current):
+            continue
+        first_distance = hypot(previous[0] - x_um, previous[1] - y_um)
+        second_distance = hypot(current[0] - x_um, current[1] - y_um)
+        if first_distance > _GEOMETRY_EPS_UM:
+            rays.append(atan2(previous[1] - y_um, previous[0] - x_um) % (2.0 * pi))
+            lengths.append(first_distance)
+        if second_distance > _GEOMETRY_EPS_UM:
+            rays.append(atan2(current[1] - y_um, current[0] - x_um) % (2.0 * pi))
+            lengths.append(second_distance)
+    return tuple(rays), tuple(lengths)
+
+
+def _final_copper_relation_at(
+    x_um: float,
+    y_um: float,
+    primitives: Sequence[
+        tuple[
+            CopperPrimitiveKind,
+            Sequence[tuple[float, float]] | tuple[float, float, float],
+        ]
+    ],
+) -> Literal["positive", "boundary", "none"]:
+    """Classify one point against the final source copper boolean.
+
+    At an input boundary, the incident curve rays form the complete local
+    arrangement.  Replaying one point in every induced angular sector decides
+    whether a full neighbourhood is filled (an internal tessellation seam),
+    empty, or mixed (a true final boundary).  The probe directions therefore
+    come from source topology rather than a fixed angular sampling pattern.
+    """
+
+    direct = _replay_copper_fill(x_um, y_um, primitives)
+    if direct is not None:
+        return "positive" if direct else "none"
+
+    angles: list[float] = []
+    incident_limits: list[float] = []
+    incident_boundaries: list[
+        tuple[
+            CopperPrimitiveKind,
+            Sequence[tuple[float, float]] | tuple[float, float, float],
+            tuple[float, ...],
+        ]
+    ] = []
+    unrelated_clearances: list[float] = []
+    for kind, primitive in primitives:
+        rays, lengths = _incident_boundary_angles(x_um, y_um, kind, primitive)
+        if rays:
+            angles.extend(rays)
+            incident_limits.extend(lengths)
+            incident_boundaries.append((kind, primitive, rays))
+            continue
+        distance = _primitive_boundary_distance(x_um, y_um, kind, primitive)
+        if distance > _GEOMETRY_EPS_UM:
+            unrelated_clearances.append(distance)
+    if not angles:
+        return "boundary"
+
+    # Angular sectors describe first-order boundary topology.  Two different
+    # curves with the same tangent can still enclose an arbitrarily narrow
+    # second-order cusp (for example, tangent negative and later positive
+    # circles).  No finite-radius sector probe can prove that cusp filled, so
+    # fail closed whenever a curved incident boundary is tangent to a distinct
+    # source boundary.  Exact duplicate circles are one coincident curve and
+    # remain decidable by ordered replay.
+    for first_index, (first_kind, first_primitive, first_rays) in enumerate(
+        incident_boundaries
+    ):
+        for second_kind, second_primitive, second_rays in incident_boundaries[
+            first_index + 1 :
+        ]:
+            if not (first_kind.endswith("circle") or second_kind.endswith("circle")):
+                continue
+            if (
+                first_kind.endswith("circle")
+                and second_kind.endswith("circle")
+                and tuple(first_primitive) == tuple(second_primitive)
+            ):
+                continue
+            if any(
+                abs(sin(first_angle - second_angle)) <= 1.0e-12
+                for first_angle in first_rays
+                for second_angle in second_rays
+            ):
+                return "boundary"
+
+    ordered_angles: list[float] = []
+    for angle in sorted(angles):
+        if not ordered_angles or abs(angle - ordered_angles[-1]) > 1.0e-12:
+            ordered_angles.append(angle)
+    # Stay within the same local arrangement cell.  The cap limits magnitude
+    # only; angular coverage is derived exactly from every incident boundary.
+    radius = min(
+        1.0e-3,
+        min(incident_limits, default=4.0e-3) / 4.0,
+        min(unrelated_clearances, default=4.0e-3) / 4.0,
+    )
+    if radius <= _GEOMETRY_EPS_UM * 8.0:
+        return "boundary"
+
+    samples: set[bool] = set()
+    for index, angle in enumerate(ordered_angles):
+        next_angle = ordered_angles[(index + 1) % len(ordered_angles)]
+        if index + 1 == len(ordered_angles):
+            next_angle += 2.0 * pi
+        probe_angle = (angle + next_angle) / 2.0
+        sample = _replay_copper_fill(
+            x_um + radius * cos(probe_angle),
+            y_um + radius * sin(probe_angle),
+            primitives,
+        )
+        if sample is None:
+            return "boundary"
+        samples.add(sample)
+    if len(samples) != 1:
+        return "boundary"
+    return "positive" if samples.pop() else "none"
+
+
+def _final_copper_relation(
+    shape: _PlacedPad,
+    primitives: Sequence[
+        tuple[
+            CopperPrimitiveKind,
+            Sequence[tuple[float, float]] | tuple[float, float, float],
+        ]
+    ],
+) -> Literal["positive", "boundary", "none"]:
+    return _final_copper_relation_at(shape.x_um, shape.y_um, primitives)
+
+
+def _pad_interior_radius(shape: _PlacedPad) -> float:
+    """Return a radius whose open disc is provably inside ``shape``."""
+
+    if shape.kind == "CIRCLE":
+        return shape.radius_um
+    return min(shape.width_um, shape.height_um) / 2.0
+
+
+def _filled_sector_witness_at_pad_center(
+    shape: _PlacedPad,
+    primitives: Sequence[
+        tuple[
+            CopperPrimitiveKind,
+            Sequence[tuple[float, float]] | tuple[float, float, float],
+        ]
+    ],
+) -> tuple[float, float] | None:
+    """Prove a positive-area final-fill sector inside a finite terminal pad.
+
+    This deliberately has different semantics from
+    :func:`_final_copper_relation_at`.  A point on the final copper boundary is
+    ambiguous for a zero-width topology path, but a terminal is a finite pad:
+    one non-boundary filled witness in an incident angular sector proves an
+    open copper overlap.  Sector directions still come from every source curve
+    through the centre, so a narrow polygon wedge cannot be skipped by a fixed
+    angular sampling grid.
+    """
+
+    angles: list[float] = []
+    incident_limits: list[float] = []
+    unrelated_clearances: list[float] = []
+    for kind, primitive in primitives:
+        rays, lengths = _incident_boundary_angles(
+            shape.x_um, shape.y_um, kind, primitive
+        )
+        if rays:
+            angles.extend(rays)
+            incident_limits.extend(lengths)
+            continue
+        distance = _primitive_boundary_distance(
+            shape.x_um, shape.y_um, kind, primitive
+        )
+        if distance > _GEOMETRY_EPS_UM:
+            unrelated_clearances.append(distance)
+    if not angles:
+        return None
+
+    ordered_angles: list[float] = []
+    for angle in sorted(angles):
+        if not ordered_angles or abs(angle - ordered_angles[-1]) > 1.0e-12:
+            ordered_angles.append(angle)
+    radius = min(
+        1.0e-3,
+        _pad_interior_radius(shape) / 4.0,
+        min(incident_limits, default=4.0e-3) / 4.0,
+        min(unrelated_clearances, default=4.0e-3) / 4.0,
+    )
+    if radius <= _GEOMETRY_EPS_UM * 8.0:
+        return None
+
+    for index, angle in enumerate(ordered_angles):
+        next_angle = ordered_angles[(index + 1) % len(ordered_angles)]
+        if index + 1 == len(ordered_angles):
+            next_angle += 2.0 * pi
+        probe_angle = (angle + next_angle) / 2.0
+        witness = (
+            shape.x_um + radius * cos(probe_angle),
+            shape.y_um + radius * sin(probe_angle),
+        )
+        if _replay_copper_fill(*witness, primitives) is True:
+            return witness
+    return None
 
 
 def _ordered_copper_primitives(
@@ -513,6 +847,938 @@ def _ordered_copper_primitives(
     return tuple(result)
 
 
+def _axis_aligned_rectangle_bounds(
+    primitive: Sequence[tuple[float, float]] | tuple[float, float, float],
+) -> tuple[float, float, float, float] | None:
+    if len(primitive) != 4:
+        return None
+    points = tuple(primitive)  # type: ignore[arg-type]
+    x_values = sorted({point[0] for point in points})
+    y_values = sorted({point[1] for point in points})
+    if (
+        len(x_values) != 2
+        or len(y_values) != 2
+        or set(points)
+        != {(x_um, y_um) for x_um in x_values for y_um in y_values}
+        or x_values[1] - x_values[0] <= _GEOMETRY_EPS_UM
+        or y_values[1] - y_values[0] <= _GEOMETRY_EPS_UM
+    ):
+        return None
+    return x_values[0], x_values[1], y_values[0], y_values[1]
+
+
+def _rectangle_as_pad(
+    bounds: tuple[float, float, float, float],
+) -> _PlacedPad:
+    """Represent one non-degenerate axis-aligned open cell for SAT overlap."""
+
+    x_min, x_max, y_min, y_max = bounds
+    return _PlacedPad(
+        owner_index=-1,
+        terminal="VIA",
+        net_key="",
+        x_um=(x_min + x_max) / 2.0,
+        y_um=(y_min + y_max) / 2.0,
+        kind="RECTANGLE",
+        width_um=x_max - x_min,
+        height_um=y_max - y_min,
+        rotation_degrees=0.0,
+    )
+
+
+def _pad_rectangle_relation(
+    shape: _PlacedPad,
+    bounds: tuple[float, float, float, float],
+) -> Literal["positive", "boundary", "none"]:
+    """Classify finite-pad intersection with one axis-aligned rectangle.
+
+    ``positive`` means positive area, while ``boundary`` is closure-only edge
+    or point contact.  The existing circle/OBB and OBB/OBB exact predicates
+    make this independent of terminal rotation.
+    """
+
+    return _relation(shape, _rectangle_as_pad(bounds))
+
+
+def _cell_indices_overlapping_interval(
+    lower: float,
+    upper: float,
+    coordinates: Sequence[float],
+) -> tuple[int, ...]:
+    """Return coordinate cells whose closure intersects one closed interval."""
+
+    if len(coordinates) < 2:
+        return ()
+    first = max(0, bisect_left(coordinates, lower - _GEOMETRY_EPS_UM) - 1)
+    last = min(
+        len(coordinates) - 2,
+        bisect_right(coordinates, upper + _GEOMETRY_EPS_UM) - 1,
+    )
+    return tuple(
+        index
+        for index in range(first, last + 1)
+        if coordinates[index + 1] >= lower - _GEOMETRY_EPS_UM
+        and coordinates[index] <= upper + _GEOMETRY_EPS_UM
+    )
+
+
+def _rectangle_intersection_witness(
+    shape: _PlacedPad,
+    bounds: tuple[float, float, float, float],
+) -> tuple[float, float] | None:
+    """Return an interior witness for a proven positive pad/rectangle overlap."""
+
+    if _pad_rectangle_relation(shape, bounds) != "positive":
+        return None
+    if shape.kind == "CIRCLE":
+        x_min, x_max, y_min, y_max = bounds
+        closest_x = min(x_max, max(x_min, shape.x_um))
+        closest_y = min(y_max, max(y_min, shape.y_um))
+        distance = hypot(closest_x - shape.x_um, closest_y - shape.y_um)
+        margin = shape.radius_um - distance
+        inset = min(
+            max(margin, _GEOMETRY_EPS_UM * 16.0) / 8.0,
+            (x_max - x_min) / 4.0,
+            (y_max - y_min) / 4.0,
+        )
+        return (
+            min(x_max - inset, max(x_min + inset, shape.x_um)),
+            min(y_max - inset, max(y_min + inset, shape.y_um)),
+        )
+
+    axis_x, axis_y = shape.axes
+    half_x, half_y = shape.width_um / 2.0, shape.height_um / 2.0
+    polygon = [
+        (
+            shape.x_um + sign_x * half_x * axis_x[0] + sign_y * half_y * axis_y[0],
+            shape.y_um + sign_x * half_x * axis_x[1] + sign_y * half_y * axis_y[1],
+        )
+        for sign_x, sign_y in ((-1.0, -1.0), (1.0, -1.0), (1.0, 1.0), (-1.0, 1.0))
+    ]
+
+    def clip(
+        points: list[tuple[float, float]],
+        inside: Callable[[tuple[float, float]], bool],
+        intersect: Callable[
+            [tuple[float, float], tuple[float, float]], tuple[float, float]
+        ],
+    ) -> list[tuple[float, float]]:
+        if not points:
+            return []
+        result: list[tuple[float, float]] = []
+        previous = points[-1]
+        previous_inside = inside(previous)
+        for current in points:
+            current_inside = inside(current)
+            if current_inside != previous_inside:
+                result.append(intersect(previous, current))
+            if current_inside:
+                result.append(current)
+            previous, previous_inside = current, current_inside
+        return result
+
+    x_min, x_max, y_min, y_max = bounds
+
+    def x_intersection(
+        first: tuple[float, float], second: tuple[float, float], value: float
+    ) -> tuple[float, float]:
+        fraction = (value - first[0]) / (second[0] - first[0])
+        return value, first[1] + fraction * (second[1] - first[1])
+
+    def y_intersection(
+        first: tuple[float, float], second: tuple[float, float], value: float
+    ) -> tuple[float, float]:
+        fraction = (value - first[1]) / (second[1] - first[1])
+        return first[0] + fraction * (second[0] - first[0]), value
+
+    polygon = clip(
+        polygon,
+        lambda point: point[0] >= x_min,
+        lambda first, second: x_intersection(first, second, x_min),
+    )
+    polygon = clip(
+        polygon,
+        lambda point: point[0] <= x_max,
+        lambda first, second: x_intersection(first, second, x_max),
+    )
+    polygon = clip(
+        polygon,
+        lambda point: point[1] >= y_min,
+        lambda first, second: y_intersection(first, second, y_min),
+    )
+    polygon = clip(
+        polygon,
+        lambda point: point[1] <= y_max,
+        lambda first, second: y_intersection(first, second, y_max),
+    )
+    if len(polygon) < 3:
+        return None
+    # A convex polygon's vertex mean is strictly interior when it has positive
+    # area; the SAT predicate above already excludes degenerate intersections.
+    return (
+        sum(point[0] for point in polygon) / len(polygon),
+        sum(point[1] for point in polygon) / len(polygon),
+    )
+
+
+def _circle_intersection_witness(
+    shape: _PlacedPad,
+    circle: tuple[float, float, float],
+) -> tuple[float, float] | None:
+    """Return an interior witness for a proven positive pad/circle overlap."""
+
+    center_x, center_y, radius = circle
+    circle_pad = _PlacedPad(
+        -1, "VIA", "", center_x, center_y, "CIRCLE", 2.0 * radius, 2.0 * radius, 0.0
+    )
+    if _relation(shape, circle_pad) != "positive":
+        return None
+    if shape.kind == "RECTANGLE":
+        # Reuse the exact circle/OBB closest-point construction in the pad's
+        # local coordinates, then inset toward the OBB interior by less than
+        # the proven circle margin.
+        axis_x, axis_y = shape.axes
+        delta_x, delta_y = center_x - shape.x_um, center_y - shape.y_um
+        local_x = delta_x * axis_x[0] + delta_y * axis_x[1]
+        local_y = delta_x * axis_y[0] + delta_y * axis_y[1]
+        half_x, half_y = shape.width_um / 2.0, shape.height_um / 2.0
+        closest_x = min(half_x, max(-half_x, local_x))
+        closest_y = min(half_y, max(-half_y, local_y))
+        distance = hypot(local_x - closest_x, local_y - closest_y)
+        margin = radius - distance
+        inset = min(
+            max(margin, _GEOMETRY_EPS_UM * 16.0) / 8.0,
+            half_x / 4.0,
+            half_y / 4.0,
+        )
+        witness_x = min(half_x - inset, max(-half_x + inset, local_x))
+        witness_y = min(half_y - inset, max(-half_y + inset, local_y))
+        return (
+            shape.x_um + witness_x * axis_x[0] + witness_y * axis_y[0],
+            shape.y_um + witness_x * axis_x[1] + witness_y * axis_y[1],
+        )
+
+    delta_x, delta_y = center_x - shape.x_um, center_y - shape.y_um
+    distance = hypot(delta_x, delta_y)
+    if distance <= _GEOMETRY_EPS_UM:
+        return shape.x_um, shape.y_um
+    direction_x, direction_y = delta_x / distance, delta_y / distance
+    lower = max(-shape.radius_um, distance - radius)
+    upper = min(shape.radius_um, distance + radius)
+    parameter = (lower + upper) / 2.0
+    return (
+        shape.x_um + parameter * direction_x,
+        shape.y_um + parameter * direction_y,
+    )
+
+
+def _pad_primitive_relation(
+    shape: _PlacedPad,
+    kind: CopperPrimitiveKind,
+    primitive: Sequence[tuple[float, float]] | tuple[float, float, float],
+) -> Literal["positive", "boundary", "none"]:
+    """Conservatively classify finite-pad overlap with one source primitive."""
+
+    if kind.endswith("circle"):
+        center_x, center_y, radius = primitive  # type: ignore[misc]
+        source = _PlacedPad(
+            -1,
+            "VIA",
+            "",
+            center_x,
+            center_y,
+            "CIRCLE",
+            2.0 * radius,
+            2.0 * radius,
+            0.0,
+        )
+        return _relation(shape, source)
+    rectangle = _axis_aligned_rectangle_bounds(primitive)
+    if rectangle is not None:
+        return _pad_rectangle_relation(shape, rectangle)
+    center_relation = _point_in_primitive(shape, kind, primitive)
+    if center_relation == "positive":
+        return "positive"
+    if center_relation == "boundary":
+        positive_kind: CopperPrimitiveKind = "positive_polygon"
+        if _filled_sector_witness_at_pad_center(
+            shape, ((positive_kind, primitive),)
+        ) is not None:
+            return "positive"
+        return "boundary"
+    return "none"
+
+
+def _rectangle_vertices(shape: _PlacedPad) -> tuple[tuple[float, float], ...]:
+    """Return the four corners of a placed rectangular terminal."""
+
+    axis_x, axis_y = shape.axes
+    half_x, half_y = shape.width_um / 2.0, shape.height_um / 2.0
+    return tuple(
+        (
+            shape.x_um
+            + sign_x * half_x * axis_x[0]
+            + sign_y * half_y * axis_y[0],
+            shape.y_um
+            + sign_x * half_x * axis_x[1]
+            + sign_y * half_y * axis_y[1],
+        )
+        for sign_x, sign_y in (
+            (-1.0, -1.0),
+            (1.0, -1.0),
+            (1.0, 1.0),
+            (-1.0, 1.0),
+        )
+    )
+
+
+def _pad_strictly_inside_primitive(
+    shape: _PlacedPad,
+    kind: CopperPrimitiveKind,
+    primitive: Sequence[tuple[float, float]] | tuple[float, float, float],
+) -> bool:
+    """Prove that the complete closed terminal lies inside one primitive.
+
+    This is used only to prove that an ordered negative primitive completely
+    erases earlier source copper under a finite pad.  Sampling is deliberately
+    insufficient: polygon containment requires a simple boundary, strict
+    interior vertices/centre, and no pad-boundary crossing.
+    """
+
+    if kind.endswith("circle"):
+        center_x, center_y, radius = primitive  # type: ignore[misc]
+        if shape.kind == "CIRCLE":
+            return (
+                hypot(shape.x_um - center_x, shape.y_um - center_y)
+                + shape.radius_um
+                < radius - _GEOMETRY_EPS_UM
+            )
+        return all(
+            hypot(x_um - center_x, y_um - center_y)
+            < radius - _GEOMETRY_EPS_UM
+            for x_um, y_um in _rectangle_vertices(shape)
+        )
+
+    polygon = tuple(primitive)  # type: ignore[arg-type]
+    if len(polygon) >= 2 and polygon[0] == polygon[-1]:
+        polygon = polygon[:-1]
+    positive_kind: CopperPrimitiveKind = "positive_polygon"
+    if not _primitive_is_simple_connected(positive_kind, polygon):
+        return False
+    polygon_edges = tuple(zip(polygon, (*polygon[1:], polygon[0])))
+    if shape.kind == "CIRCLE":
+        if _point_in_polygon(shape.x_um, shape.y_um, polygon) != "positive":
+            return False
+        clearance = min(
+            _point_to_segment_distance(
+                shape.x_um, shape.y_um, edge_start, edge_end
+            )
+            for edge_start, edge_end in polygon_edges
+        )
+        return clearance > shape.radius_um + _GEOMETRY_EPS_UM
+
+    vertices = _rectangle_vertices(shape)
+    if any(
+        _point_in_polygon(x_um, y_um, polygon) != "positive"
+        for x_um, y_um in vertices
+    ):
+        return False
+    pad_edges = tuple(zip(vertices, (*vertices[1:], vertices[0])))
+    return not any(
+        _segment_intersects_segment(*pad_edge, *polygon_edge)
+        for pad_edge in pad_edges
+        for polygon_edge in polygon_edges
+    )
+
+
+def _finite_pad_final_copper_relation(
+    shape: _PlacedPad,
+    primitives: Sequence[
+        tuple[
+            CopperPrimitiveKind,
+            Sequence[tuple[float, float]] | tuple[float, float, float],
+        ]
+    ],
+) -> Literal["positive", "boundary", "none"]:
+    """Classify a finite terminal pad against the ordered final copper fill.
+
+    A retained ``positive`` always has an explicit open-area witness.  A
+    closure-only contact or an overlap whose ordered subtraction cannot be
+    resolved stays ``boundary`` and therefore fail-closed.
+    """
+
+    center_relation = _final_copper_relation(shape, primitives)
+    if center_relation == "positive":
+        return "positive"
+    if center_relation == "boundary":
+        if _filled_sector_witness_at_pad_center(shape, primitives) is not None:
+            return "positive"
+        return "boundary"
+
+    # A terminal can sit wholly inside an explicit TOP-copper void while its
+    # own pad and Via still form a valid direct branch.  Earlier positive board
+    # artwork is then irrelevant.  Return ``none`` only with a strict geometry
+    # proof: one later negative contains the complete pad and no still-later
+    # positive primitive can touch its closure.  Partial subtraction, boundary
+    # contact, non-simple polygons, and later re-adds remain fail-closed below.
+    for primitive_index, (kind, primitive) in enumerate(primitives):
+        if not kind.startswith("negative_") or not _pad_strictly_inside_primitive(
+            shape, kind, primitive
+        ):
+            continue
+        pad_bounds = shape.bbox
+        if all(
+            not later_kind.startswith("positive_")
+            or (
+                (later_bounds := _primitive_bounds(later_kind, later_primitive))[1]
+                < pad_bounds[0] - _GEOMETRY_EPS_UM
+                or later_bounds[0] > pad_bounds[1] + _GEOMETRY_EPS_UM
+                or later_bounds[3] < pad_bounds[2] - _GEOMETRY_EPS_UM
+                or later_bounds[2] > pad_bounds[3] + _GEOMETRY_EPS_UM
+            )
+            for later_kind, later_primitive in primitives[primitive_index + 1 :]
+        ):
+            return "none"
+
+    saw_boundary_contact = False
+    saw_unresolved_positive_overlap = False
+    for kind, primitive in primitives:
+        if not kind.startswith("positive_"):
+            continue
+        relation = _pad_primitive_relation(shape, kind, primitive)
+        if relation == "boundary":
+            saw_boundary_contact = True
+            continue
+        if relation != "positive":
+            continue
+        witness: tuple[float, float] | None
+        if kind.endswith("circle"):
+            witness = _circle_intersection_witness(
+                shape, primitive  # type: ignore[arg-type]
+            )
+        elif (bounds := _axis_aligned_rectangle_bounds(primitive)) is not None:
+            witness = _rectangle_intersection_witness(shape, bounds)
+        else:
+            witness = (
+                (shape.x_um, shape.y_um)
+                if _point_in_primitive(shape, kind, primitive) == "positive"
+                else None
+            )
+        if witness is not None and _replay_copper_fill(*witness, primitives) is True:
+            return "positive"
+        saw_unresolved_positive_overlap = True
+    if saw_boundary_contact or saw_unresolved_positive_overlap:
+        return "boundary"
+    return "none"
+
+
+def _rectangular_primitives(
+    primitives: Sequence[
+        tuple[
+            CopperPrimitiveKind,
+            Sequence[tuple[float, float]] | tuple[float, float, float],
+        ]
+    ],
+) -> tuple[tuple[CopperPrimitiveKind, tuple[float, float, float, float]], ...] | None:
+    result: list[tuple[CopperPrimitiveKind, tuple[float, float, float, float]]] = []
+    for kind, primitive in primitives:
+        if kind.endswith("circle"):
+            return None
+        bounds = _axis_aligned_rectangle_bounds(primitive)
+        if bounds is None:
+            return None
+        result.append((kind, bounds))
+    return tuple(result)
+
+
+def _rectangles_share_copper(
+    first: tuple[float, float, float, float],
+    second: tuple[float, float, float, float],
+) -> bool:
+    """Whether two closed rectangles meet along area or a non-zero edge."""
+
+    overlap_x = min(first[1], second[1]) - max(first[0], second[0])
+    overlap_y = min(first[3], second[3]) - max(first[2], second[2])
+    return (
+        overlap_x >= -_GEOMETRY_EPS_UM
+        and overlap_y >= -_GEOMETRY_EPS_UM
+        and (overlap_x > _GEOMETRY_EPS_UM or overlap_y > _GEOMETRY_EPS_UM)
+    )
+
+
+def _positive_primitives_proven_connected(
+    first_kind: CopperPrimitiveKind,
+    first_primitive: Sequence[tuple[float, float]] | tuple[float, float, float],
+    second_kind: CopperPrimitiveKind,
+    second_primitive: Sequence[tuple[float, float]] | tuple[float, float, float],
+) -> bool:
+    """Prove positive-area/edge connectivity without a global path replay."""
+
+    first_rectangle = (
+        None
+        if first_kind.endswith("circle")
+        else _axis_aligned_rectangle_bounds(first_primitive)
+    )
+    second_rectangle = (
+        None
+        if second_kind.endswith("circle")
+        else _axis_aligned_rectangle_bounds(second_primitive)
+    )
+    if first_rectangle is not None and second_rectangle is not None:
+        return _rectangles_share_copper(first_rectangle, second_rectangle)
+    if first_kind.endswith("circle") and second_kind.endswith("circle"):
+        first_x, first_y, first_radius = first_primitive  # type: ignore[misc]
+        second_x, second_y, second_radius = second_primitive  # type: ignore[misc]
+        return (
+            hypot(first_x - second_x, first_y - second_y)
+            < first_radius + second_radius - _GEOMETRY_EPS_UM
+        )
+    if first_rectangle is not None and second_kind.endswith("circle"):
+        rectangle = first_rectangle
+        circle_x, circle_y, radius = second_primitive  # type: ignore[misc]
+    elif second_rectangle is not None and first_kind.endswith("circle"):
+        rectangle = second_rectangle
+        circle_x, circle_y, radius = first_primitive  # type: ignore[misc]
+    else:
+        return False
+    outside_x = max(rectangle[0] - circle_x, 0.0, circle_x - rectangle[1])
+    outside_y = max(rectangle[2] - circle_y, 0.0, circle_y - rectangle[3])
+    return hypot(outside_x, outside_y) < radius - _GEOMETRY_EPS_UM
+
+
+def _segment_intersects_segment(
+    first_start: tuple[float, float],
+    first_end: tuple[float, float],
+    second_start: tuple[float, float],
+    second_end: tuple[float, float],
+) -> bool:
+    def orientation(
+        start: tuple[float, float],
+        end: tuple[float, float],
+        point: tuple[float, float],
+    ) -> float:
+        return (end[0] - start[0]) * (point[1] - start[1]) - (
+            end[1] - start[1]
+        ) * (point[0] - start[0])
+
+    first_second = orientation(first_start, first_end, second_start)
+    first_end_second = orientation(first_start, first_end, second_end)
+    second_first = orientation(second_start, second_end, first_start)
+    second_end_first = orientation(second_start, second_end, first_end)
+    if (
+        (first_second > _GEOMETRY_EPS_UM and first_end_second < -_GEOMETRY_EPS_UM)
+        or (first_second < -_GEOMETRY_EPS_UM and first_end_second > _GEOMETRY_EPS_UM)
+    ) and (
+        (second_first > _GEOMETRY_EPS_UM and second_end_first < -_GEOMETRY_EPS_UM)
+        or (second_first < -_GEOMETRY_EPS_UM and second_end_first > _GEOMETRY_EPS_UM)
+    ):
+        return True
+    return (
+        abs(first_second) <= _GEOMETRY_EPS_UM
+        and _point_on_segment(*second_start, first_start, first_end)
+    ) or (
+        abs(first_end_second) <= _GEOMETRY_EPS_UM
+        and _point_on_segment(*second_end, first_start, first_end)
+    ) or (
+        abs(second_first) <= _GEOMETRY_EPS_UM
+        and _point_on_segment(*first_start, second_start, second_end)
+    ) or (
+        abs(second_end_first) <= _GEOMETRY_EPS_UM
+        and _point_on_segment(*first_end, second_start, second_end)
+    )
+
+
+def _primitive_is_simple_connected(
+    kind: CopperPrimitiveKind,
+    primitive: Sequence[tuple[float, float]] | tuple[float, float, float],
+) -> bool:
+    """Conservatively prove that one positive primitive has one 2-D interior."""
+
+    if kind.endswith("circle"):
+        return primitive[2] > _GEOMETRY_EPS_UM  # type: ignore[index]
+    points = tuple(primitive)  # type: ignore[arg-type]
+    if len(points) >= 2 and points[0] == points[-1]:
+        points = points[:-1]
+    if len(points) < 3 or len(points) > 512:
+        return False
+    edges = tuple(zip(points, (*points[1:], points[0])))
+    if any(hypot(end[0] - start[0], end[1] - start[1]) <= _GEOMETRY_EPS_UM for start, end in edges):
+        return False
+    twice_area = sum(
+        start[0] * end[1] - start[1] * end[0] for start, end in edges
+    )
+    if abs(twice_area) <= _GEOMETRY_EPS_UM:
+        return False
+    for first_index, first_edge in enumerate(edges):
+        for second_index in range(first_index + 1, len(edges)):
+            if second_index in {
+                first_index,
+                first_index + 1,
+            } or (first_index == 0 and second_index == len(edges) - 1):
+                continue
+            if _segment_intersects_segment(*first_edge, *edges[second_index]):
+                return False
+    return True
+
+
+def _merged_coordinates(values: Sequence[float]) -> tuple[float, ...]:
+    result: list[float] = []
+    for value in sorted(values):
+        if not result or value - result[-1] > _GEOMETRY_EPS_UM:
+            result.append(value)
+    return tuple(result)
+
+
+def _rectangular_copper_memberships(
+    shapes: Sequence[_PlacedPad],
+    shape_grid: _ShapeGrid,
+    net_key: str,
+    primitives: Sequence[
+        tuple[
+            CopperPrimitiveKind,
+            Sequence[tuple[float, float]] | tuple[float, float, float],
+        ]
+    ],
+    rectangles: Sequence[
+        tuple[CopperPrimitiveKind, tuple[float, float, float, float]]
+    ],
+) -> tuple[tuple[set[int], ...], set[int]] | None:
+    """Return exact final-fill components for ordered rectangular booleans.
+
+    Coordinate compression turns every source edge into a grid line.  Boolean
+    fill is constant inside each open cell, so four-neighbour components are
+    exactly the positive-area connected components.  Corner-only contact is
+    intentionally not conductive, while adjacent tile edges join naturally.
+    Potential positive-rectangle components are processed independently to
+    keep thousands of short production clusters linear in practice.
+    """
+
+    positive = [
+        (index, bounds)
+        for index, (kind, bounds) in enumerate(rectangles)
+        if kind.startswith("positive_")
+    ]
+    if not positive:
+        return (), set()
+
+    parents = list(range(len(positive)))
+
+    def root(index: int) -> int:
+        while parents[index] != index:
+            parents[index] = parents[parents[index]]
+            index = parents[index]
+        return index
+
+    # A small spatial hash keeps a board-wide base rectangle as one broad item
+    # while comparing each of thousands of local re-add rectangles only with
+    # shapes in its neighbourhood.
+    positive_sizes = [
+        max(bounds[1] - bounds[0], bounds[3] - bounds[2])
+        for _index, bounds in positive
+    ]
+    cell_um = max(1.0, median(positive_sizes))
+    rectangle_cells: dict[tuple[int, int], list[int]] = {}
+    broad_rectangles: list[int] = []
+    for current in range(len(positive)):
+        current_bounds = positive[current][1]
+        ix0 = floor(current_bounds[0] / cell_um)
+        ix1 = floor(current_bounds[1] / cell_um)
+        iy0 = floor(current_bounds[2] / cell_um)
+        iy1 = floor(current_bounds[3] / cell_um)
+        key_count = (ix1 - ix0 + 1) * (iy1 - iy0 + 1)
+        if key_count > 256:
+            keys: tuple[tuple[int, int], ...] = ()
+            candidates = set(range(current))
+        else:
+            keys = tuple(
+                (x_index, y_index)
+                for x_index in range(ix0, ix1 + 1)
+                for y_index in range(iy0, iy1 + 1)
+            )
+            candidates = set(broad_rectangles)
+            for key in keys:
+                candidates.update(rectangle_cells.get(key, ()))
+        for other in candidates:
+            if not _rectangles_share_copper(current_bounds, positive[other][1]):
+                continue
+            left, right = root(current), root(other)
+            if left != right:
+                parents[max(left, right)] = min(left, right)
+        if key_count > 256:
+            broad_rectangles.append(current)
+        else:
+            for key in keys:
+                rectangle_cells.setdefault(key, []).append(current)
+
+    positive_components: dict[int, list[int]] = {}
+    for index in range(len(positive)):
+        positive_components.setdefault(root(index), []).append(index)
+
+    owners_by_positive_component: dict[int, set[int]] = {}
+    for positive_index, (_primitive_index, bounds) in enumerate(positive):
+        for candidate_index in shape_grid.query(bounds):
+            shape = shapes[candidate_index]
+            if shape.net_key != net_key:
+                continue
+            # Candidate ownership follows the finite terminal pad.  A centre
+            # may lie exactly on (or even outside) a source rectangle while a
+            # substantial part of its copper overlaps the rectangle.
+            if _pad_rectangle_relation(shape, bounds) != "none":
+                owners_by_positive_component.setdefault(root(positive_index), set()).add(
+                    shape.owner_index
+                )
+
+    shapes_by_owner = {shape.owner_index: shape for shape in shapes}
+    groups: list[set[int]] = []
+    # A terminal can meet more than one disjoint source-positive component.
+    # Keep area membership and closure-only contact separate until every
+    # component has been considered: positive overlap with one component must
+    # not be invalidated merely because another component touches the far edge
+    # of the same finite pad.  The boundary-only component is intentionally not
+    # attached, while a terminal with no positive-area membership still fails
+    # closed below.
+    positive_owners: set[int] = set()
+    boundary_candidates: set[int] = set()
+    for component_root, positive_indices in positive_components.items():
+        owners = owners_by_positive_component.get(component_root, set())
+        if not owners:
+            continue
+        member_bounds = [positive[index][1] for index in positive_indices]
+        component_bounds = (
+            min(item[0] for item in member_bounds),
+            max(item[1] for item in member_bounds),
+            min(item[2] for item in member_bounds),
+            max(item[3] for item in member_bounds),
+        )
+        x_values = [component_bounds[0], component_bounds[1]]
+        y_values = [component_bounds[2], component_bounds[3]]
+        relevant_indices: list[int] = []
+        for primitive_index, (_kind, bounds) in enumerate(rectangles):
+            if not _rectangles_share_copper(component_bounds, bounds):
+                continue
+            relevant_indices.append(primitive_index)
+            x_values.extend(
+                (max(component_bounds[0], bounds[0]), min(component_bounds[1], bounds[1]))
+            )
+            y_values.extend(
+                (max(component_bounds[2], bounds[2]), min(component_bounds[3], bounds[3]))
+            )
+        x_coordinates = _merged_coordinates(x_values)
+        y_coordinates = _merged_coordinates(y_values)
+        cell_count = (len(x_coordinates) - 1) * (len(y_coordinates) - 1)
+        # A pathological board-wide boolean arrangement is not allowed to turn
+        # import into an unbounded quadratic allocation.  The generic fallback
+        # below remains fail-closed for subtractive geometry.
+        if (
+            cell_count > 250_000
+            or cell_count * max(1, len(relevant_indices)) > 2_000_000
+        ):
+            return None
+        relevant_primitives = tuple(primitives[index] for index in relevant_indices)
+
+        filled: set[tuple[int, int]] = set()
+        for x_index, (x_left, x_right) in enumerate(
+            zip(x_coordinates, x_coordinates[1:])
+        ):
+            x_mid = (x_left + x_right) / 2.0
+            for y_index, (y_bottom, y_top) in enumerate(
+                zip(y_coordinates, y_coordinates[1:])
+            ):
+                y_mid = (y_bottom + y_top) / 2.0
+                if _replay_copper_fill(x_mid, y_mid, relevant_primitives):
+                    filled.add((x_index, y_index))
+
+        cell_parents = {cell: cell for cell in filled}
+
+        def cell_root(cell: tuple[int, int]) -> tuple[int, int]:
+            while cell_parents[cell] != cell:
+                cell_parents[cell] = cell_parents[cell_parents[cell]]
+                cell = cell_parents[cell]
+            return cell
+
+        for cell in sorted(filled):
+            for neighbour in ((cell[0] - 1, cell[1]), (cell[0], cell[1] - 1)):
+                if neighbour not in filled:
+                    continue
+                left, right = cell_root(cell), cell_root(neighbour)
+                if left != right:
+                    canonical = min(left, right)
+                    cell_parents[left] = canonical
+                    cell_parents[right] = canonical
+
+        members_by_cell_component: dict[tuple[int, int], set[int]] = {}
+        for owner in owners:
+            shape = shapes_by_owner[owner]
+            x_min, x_max, y_min, y_max = shape.bbox
+            positive_roots: set[tuple[int, int]] = set()
+            boundary_contact = False
+            for x_index in _cell_indices_overlapping_interval(
+                x_min, x_max, x_coordinates
+            ):
+                for y_index in _cell_indices_overlapping_interval(
+                    y_min, y_max, y_coordinates
+                ):
+                    cell = (x_index, y_index)
+                    if cell not in filled:
+                        continue
+                    relation = _pad_rectangle_relation(
+                        shape,
+                        (
+                            x_coordinates[x_index],
+                            x_coordinates[x_index + 1],
+                            y_coordinates[y_index],
+                            y_coordinates[y_index + 1],
+                        ),
+                    )
+                    if relation == "positive":
+                        positive_roots.add(cell_root(cell))
+                    elif relation == "boundary":
+                        boundary_contact = True
+
+            # One physical terminal may overlap multiple disconnected source
+            # fill components.  Attach it to every such component: the finite
+            # pad itself is then the real electrical bridge.  Mere edge/point
+            # contact never adds a root.
+            if positive_roots:
+                positive_owners.add(owner)
+                for component in positive_roots:
+                    members_by_cell_component.setdefault(component, set()).add(owner)
+            elif boundary_contact:
+                boundary_candidates.add(owner)
+        groups.extend(
+            members for members in members_by_cell_component.values() if len(members) >= 2
+        )
+    return tuple(groups), boundary_candidates - positive_owners
+
+
+def _segment_boundary_parameters(
+    first: tuple[float, float],
+    second: tuple[float, float],
+    kind: CopperPrimitiveKind,
+    primitive: Sequence[tuple[float, float]] | tuple[float, float, float],
+) -> tuple[float, ...]:
+    """Return exact path parameters where one primitive boundary is met."""
+
+    x0, y0 = first
+    delta_x, delta_y = second[0] - x0, second[1] - y0
+    result: list[float] = []
+    if kind.endswith("circle"):
+        center_x, center_y, radius = primitive  # type: ignore[misc]
+        a = delta_x * delta_x + delta_y * delta_y
+        if a <= _GEOMETRY_EPS_UM * _GEOMETRY_EPS_UM:
+            return ()
+        offset_x, offset_y = x0 - center_x, y0 - center_y
+        b = 2.0 * (offset_x * delta_x + offset_y * delta_y)
+        c = offset_x * offset_x + offset_y * offset_y - radius * radius
+        b_squared = b * b
+        four_ac = 4.0 * a * c
+        discriminant = b_squared - four_ac
+        # At board-scale coordinates an exact tangent subtracts two ~1e10
+        # terms.  Its rounded discriminant can therefore be slightly negative
+        # even though the circle is met.  Clamp only within a scale-aware
+        # floating-point error envelope; treating a numerically indistinguish-
+        # able near tangent as a boundary is the required fail-closed choice.
+        discriminant_tolerance = (
+            64.0 * float_info.epsilon * (abs(b_squared) + abs(four_ac))
+        )
+        if discriminant >= -discriminant_tolerance:
+            root_discriminant = max(discriminant, 0.0) ** 0.5
+            for value in (
+                (-b - root_discriminant) / (2.0 * a),
+                (-b + root_discriminant) / (2.0 * a),
+            ):
+                if -_GEOMETRY_EPS_UM <= value <= 1.0 + _GEOMETRY_EPS_UM:
+                    result.append(min(1.0, max(0.0, value)))
+        return tuple(result)
+
+    polygon = tuple(primitive)  # type: ignore[arg-type]
+    for start, end in zip((polygon[-1], *polygon[:-1]), polygon):
+        edge_x, edge_y = end[0] - start[0], end[1] - start[1]
+        offset_x, offset_y = start[0] - x0, start[1] - y0
+        denominator = delta_x * edge_y - delta_y * edge_x
+        if abs(denominator) <= _GEOMETRY_EPS_UM:
+            cross = offset_x * delta_y - offset_y * delta_x
+            if abs(cross) > _GEOMETRY_EPS_UM:
+                continue
+            squared = delta_x * delta_x + delta_y * delta_y
+            if squared <= _GEOMETRY_EPS_UM * _GEOMETRY_EPS_UM:
+                continue
+            for point in (start, end):
+                value = ((point[0] - x0) * delta_x + (point[1] - y0) * delta_y) / squared
+                if -_GEOMETRY_EPS_UM <= value <= 1.0 + _GEOMETRY_EPS_UM:
+                    result.append(min(1.0, max(0.0, value)))
+            continue
+        path_parameter = (offset_x * edge_y - offset_y * edge_x) / denominator
+        edge_parameter = (offset_x * delta_y - offset_y * delta_x) / denominator
+        if (
+            -_GEOMETRY_EPS_UM <= path_parameter <= 1.0 + _GEOMETRY_EPS_UM
+            and -_GEOMETRY_EPS_UM <= edge_parameter <= 1.0 + _GEOMETRY_EPS_UM
+        ):
+            result.append(min(1.0, max(0.0, path_parameter)))
+    return tuple(result)
+
+
+def _segment_is_final_copper(
+    first: _PlacedPad,
+    second: _PlacedPad,
+    primitives: Sequence[
+        tuple[
+            CopperPrimitiveKind,
+            Sequence[tuple[float, float]] | tuple[float, float, float],
+        ]
+    ],
+) -> bool:
+    """Prove a straight positive-width-region path in the final boolean fill."""
+
+    start = (first.x_um, first.y_um)
+    end = (second.x_um, second.y_um)
+    path_bounds = (
+        min(first.x_um, second.x_um),
+        max(first.x_um, second.x_um),
+        min(first.y_um, second.y_um),
+        max(first.y_um, second.y_um),
+    )
+    relevant_primitives = tuple(
+        (kind, primitive)
+        for kind, primitive in primitives
+        if (
+            (bounds := _primitive_bounds(kind, primitive))[1]
+            >= path_bounds[0] - _GEOMETRY_EPS_UM
+            and bounds[0] <= path_bounds[1] + _GEOMETRY_EPS_UM
+            and bounds[3] >= path_bounds[2] - _GEOMETRY_EPS_UM
+            and bounds[2] <= path_bounds[3] + _GEOMETRY_EPS_UM
+        )
+    )
+    parameters = [0.0, 1.0]
+    for kind, primitive in relevant_primitives:
+        parameters.extend(
+            _segment_boundary_parameters(start, end, kind, primitive)
+        )
+    ordered: list[float] = []
+    for value in sorted(parameters):
+        if not ordered or value - ordered[-1] > 1.0e-12:
+            ordered.append(value)
+    for left, right in zip(ordered, ordered[1:]):
+        if right - left <= 1.0e-12:
+            continue
+        parameter = (left + right) / 2.0
+        if not _replay_copper_fill(
+            first.x_um + parameter * (second.x_um - first.x_um),
+            first.y_um + parameter * (second.y_um - first.y_um),
+            relevant_primitives,
+        ):
+            return False
+    for parameter in ordered[1:-1]:
+        relation = _final_copper_relation_at(
+            first.x_um + parameter * (second.x_um - first.x_um),
+            first.y_um + parameter * (second.y_um - first.y_um),
+            relevant_primitives,
+        )
+        if relation != "positive":
+            return False
+    return True
+
+
 def _copper_memberships(
     shapes: Sequence[_PlacedPad],
     grid: _ShapeGrid,
@@ -520,62 +1786,219 @@ def _copper_memberships(
     *,
     top_layer: str,
 ) -> tuple[tuple[set[int], ...], set[int], tuple[set[int], ...]]:
-    """Return source-positive primitive memberships after boolean fill replay."""
+    """Return memberships of provable final-boolean copper components."""
 
     groups: list[set[int]] = []
     separator_groups: list[set[int]] = []
     boundary_owners: set[int] = set()
     shape_net_keys = {shape.net_key for shape in shapes}
+    shape_by_owner = {shape.owner_index: shape for shape in shapes}
     for geometry in geometries:
         if geometry.layer.casefold() != top_layer.casefold():
             continue
         net_key = geometry.net.casefold()
         if net_key not in shape_net_keys:
             continue
-        filled: dict[int, bool] = {}
+        primitives = _ordered_copper_primitives(geometry)
+        rectangular = _rectangular_primitives(primitives)
+        if rectangular is not None:
+            exact = _rectangular_copper_memberships(
+                shapes,
+                grid,
+                net_key,
+                primitives,
+                rectangular,
+            )
+            if exact is not None:
+                exact_groups, exact_boundary = exact
+                groups.extend(exact_groups)
+                boundary_owners.update(exact_boundary)
+                if (
+                    len(rectangular) == 1
+                    and rectangular[0][0] == "positive_polygon"
+                ):
+                    separator_groups.extend(
+                        group
+                        for group in exact_groups
+                        if _collinear_pad_centers(group, shapes)
+                    )
+                continue
+
+        primitive_bounds_by_index = tuple(
+            _primitive_bounds(kind, primitive) for kind, primitive in primitives
+        )
         local_groups: list[
             tuple[
+                int,
                 CopperPrimitiveKind,
                 Sequence[tuple[float, float]] | tuple[float, float, float],
                 set[int],
             ]
         ] = []
-        for kind, primitive in _ordered_copper_primitives(geometry):
-            bounds = _primitive_bounds(kind, primitive)
+        candidate_primitives: dict[
+            int,
+            list[
+                tuple[
+                    CopperPrimitiveKind,
+                    Sequence[tuple[float, float]] | tuple[float, float, float],
+                ]
+            ],
+        ] = {}
+        for primitive_index, (kind, primitive) in enumerate(primitives):
+            bounds = primitive_bounds_by_index[primitive_index]
             members: set[int] = set()
             for candidate_index in grid.query(bounds):
                 candidate = shapes[candidate_index]
                 if candidate.net_key != net_key:
                     continue
-                relation = _point_in_primitive(candidate, kind, primitive)
-                if relation == "boundary":
-                    boundary_owners.add(candidate.owner_index)
-                    continue
-                if relation != "positive":
-                    continue
-                is_positive = kind.startswith("positive_")
-                filled[candidate.owner_index] = is_positive
-                if is_positive:
+                candidate_primitives.setdefault(candidate.owner_index, []).append(
+                    (kind, primitive)
+                )
+                relation = _pad_primitive_relation(candidate, kind, primitive)
+                # Keep only positive-area finite-pad overlap provisionally in
+                # its source primitive.  Closure-only contact cannot make this
+                # terminal an owner of another positive copper component.
+                # ``final_members`` below still replays the full ordered boolean
+                # and removes subtracted or otherwise ambiguous copper.
+                if relation == "positive" and kind.startswith("positive_"):
                     members.add(candidate.owner_index)
             if kind.startswith("positive_") and members:
-                local_groups.append((kind, primitive, members))
-        final_members = {
-            owner for owner, is_filled in filled.items() if is_filled
-        } - boundary_owners
-        for kind, primitive, members in local_groups:
+                local_groups.append((primitive_index, kind, primitive, members))
+        final_members: set[int] = set()
+        for owner, owner_primitives in candidate_primitives.items():
+            relation = _finite_pad_final_copper_relation(
+                shape_by_owner[owner], owner_primitives
+            )
+            if relation == "boundary":
+                boundary_owners.add(owner)
+            elif relation == "positive":
+                final_members.add(owner)
+
+        # Non-rectangular/circular arrangements use only explicit connectivity
+        # proofs.  A source positive primitive is intrinsically connected when
+        # no later subtraction can split it; otherwise every retained edge must
+        # have a straight path whose complete boundary arrangement is filled.
+        retained_groups: list[
+            tuple[int, CopperPrimitiveKind, object, set[int], bool]
+        ] = []
+        parents = {owner: owner for owner in final_members}
+
+        def owner_root(owner: int) -> int:
+            while parents[owner] != owner:
+                parents[owner] = parents[parents[owner]]
+                owner = parents[owner]
+            return owner
+
+        def join(first: int, second: int) -> None:
+            left, right = owner_root(first), owner_root(second)
+            if left != right:
+                parents[max(left, right)] = min(left, right)
+
+        for primitive_index, kind, primitive, members in local_groups:
             retained = members & final_members
-            if len(retained) < 2:
+            if not retained:
                 continue
-            groups.append(retained)
+            primitive_bounds = primitive_bounds_by_index[primitive_index]
+            later_subtraction_can_reach = any(
+                later_kind.startswith("negative_")
+                and not _bounds_strictly_disjoint(
+                    primitive_bounds,
+                    primitive_bounds_by_index[later_index],
+                )
+                for later_index, (later_kind, _later_primitive) in enumerate(
+                    primitives[primitive_index + 1 :],
+                    start=primitive_index + 1,
+                )
+            )
+            safe_whole_primitive = (
+                not later_subtraction_can_reach
+                and _primitive_is_simple_connected(kind, primitive)
+            )
+            retained_groups.append(
+                (primitive_index, kind, primitive, retained, safe_whole_primitive)
+            )
+            ordered_members = sorted(retained)
+            if safe_whole_primitive:
+                for owner in ordered_members[1:]:
+                    join(ordered_members[0], owner)
+            elif (
+                len(ordered_members) <= 64
+                and len(ordered_members) * (len(ordered_members) - 1) // 2
+                * len(primitives)
+                <= _GENERIC_PATH_WORK_BUDGET
+            ):
+                for first_index, first_owner in enumerate(ordered_members):
+                    for second_owner in ordered_members[first_index + 1 :]:
+                        if _segment_is_final_copper(
+                            shape_by_owner[first_owner],
+                            shape_by_owner[second_owner],
+                            primitives,
+                        ):
+                            join(first_owner, second_owner)
+
+        # Merge tessellated positive primitives only through a source-replayed
+        # path.  This accepts edge seams, but rejects point contacts and voids.
+        safe_groups = [
+            (*group, primitive_bounds_by_index[group[0]])
+            for group in retained_groups
+            if group[4]
+        ]
+        active_groups: list[tuple[object, ...]] = []
+        for second_group in sorted(
+            safe_groups, key=lambda group: group[5][0]  # type: ignore[index]
+        ):
+            second_bounds = second_group[5]  # type: ignore[assignment]
+            active_groups = [
+                group
+                for group in active_groups
+                if group[5][1] >= second_bounds[0] - _GEOMETRY_EPS_UM  # type: ignore[index]
+            ]
+            for first_group in active_groups:
+                first_bounds = first_group[5]  # type: ignore[assignment]
+                if not _rectangles_share_copper(first_bounds, second_bounds):
+                    continue
+                if _positive_primitives_proven_connected(
+                    first_group[1],  # type: ignore[arg-type]
+                    first_group[2],  # type: ignore[arg-type]
+                    second_group[1],  # type: ignore[arg-type]
+                    second_group[2],  # type: ignore[arg-type]
+                ):
+                    join(
+                        next(iter(first_group[3])),  # type: ignore[arg-type]
+                        next(iter(second_group[3])),  # type: ignore[arg-type]
+                    )
+                    continue
+                connected = False
+                for first_owner in sorted(first_group[3]):
+                    for second_owner in sorted(second_group[3]):
+                        if _segment_is_final_copper(
+                            shape_by_owner[first_owner],
+                            shape_by_owner[second_owner],
+                            primitives,
+                        ):
+                            join(first_owner, second_owner)
+                            connected = True
+                            break
+                    if connected:
+                        break
+            active_groups.append(second_group)
+
+        component_members: dict[int, set[int]] = {}
+        for owner in final_members:
+            component_members.setdefault(owner_root(owner), set()).add(owner)
+        groups.extend(
+            members for members in component_members.values() if len(members) >= 2
+        )
+        for _primitive_index, kind, primitive, members, _safe in retained_groups:
             if (
                 kind == "positive_polygon"
                 and not geometry.negative_polygons_um
                 and not geometry.positive_circles_um
                 and not geometry.negative_circles_um
                 and _axis_aligned_rectangle(primitive)
-                and _collinear_pad_centers(retained, shapes)
+                and _collinear_pad_centers(members, shapes)
             ):
-                separator_groups.append(retained)
+                separator_groups.append(members)
     return tuple(groups), boundary_owners, tuple(separator_groups)
 
 
@@ -933,7 +2356,7 @@ def extract_shared_pad_connectivity(
         )
     for index in copper_power_boundary | copper_ground_boundary:
         invalid.setdefault(index, []).append(
-            "terminal center lies on a source TOP copper boundary"
+            "terminal pad has only boundary contact or unresolved overlap with source TOP copper"
         )
 
     power_vias: dict[int, dict[str, SpdViaLanding]] = {

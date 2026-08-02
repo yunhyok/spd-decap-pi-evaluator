@@ -1,5 +1,9 @@
 from __future__ import annotations
 
+import gc
+import tracemalloc
+import weakref
+
 import numpy as np
 import pytest
 from pydantic import ValidationError
@@ -274,6 +278,278 @@ def _plane_solver_fixture() -> tuple[
         )
     )
     return solver, device, np.geomspace(1.0e5, 1.0e8, 13)
+
+
+def _homogeneous_cluster_groups(
+    *,
+    homogeneous: bool,
+    seed: int = 7,
+) -> tuple[CoupledShuntGroup, ...]:
+    """Create numerically identical eligible and dense-fallback clusters."""
+
+    rng = np.random.default_rng(seed)
+    shared_via = _constant("SHARED-VIA", 0.012 + 0.035j)
+    groups: list[CoupledShuntGroup] = []
+    for cluster_index in range(4):
+        power_count = int(rng.integers(1, 4))
+        ground_count = int(rng.integers(1, 4))
+        if homogeneous:
+            power = tuple(shared_via for _ in range(power_count))
+            ground = tuple(shared_via for _ in range(ground_count))
+        else:
+            # Equal impedance values but distinct objects must deliberately
+            # take the established dense path.
+            power = tuple(
+                _constant(f"P-{cluster_index}-{index}", 0.012 + 0.035j)
+                for index in range(power_count)
+            )
+            ground = tuple(
+                _constant(f"G-{cluster_index}-{index}", 0.012 + 0.035j)
+                for index in range(ground_count)
+            )
+        capacitors = tuple(
+            _constant(f"C-{cluster_index}-{index}", 0.006 - 0.25j)
+            for index in range(int(rng.integers(1, 4)))
+        )
+        network = SharedPadClusterModel(
+            f"CLUSTER-{cluster_index}", power, ground, capacitors
+        )
+        ports = tuple(
+            FinitePort(
+                float(rng.uniform(0.001, 0.019)),
+                float(rng.uniform(0.001, 0.014)),
+                100.0e-6,
+                100.0e-6,
+                f"{cluster_index}-{port_index}",
+            )
+            for port_index in range(power_count + ground_count)
+        )
+        groups.append(CoupledShuntGroup(f"CLUSTER-{cluster_index}", ports, network))
+    return tuple(groups)
+
+
+def test_homogeneous_shared_pad_batch_matches_dense_curve_randomized() -> None:
+    solver, device, frequencies = _plane_solver_fixture()
+    batched_groups = _homogeneous_cluster_groups(homogeneous=True)
+    dense_groups = _homogeneous_cluster_groups(homogeneous=False)
+
+    batch_data = solver._shunt_data(frequencies, batched_groups)
+    dense_data = solver._shunt_data(frequencies, dense_groups)
+    assert len(batch_data) == 1
+    assert type(batch_data[0]).__name__ == "_HomogeneousSharedPadBatchData"
+    assert all(type(item).__name__ == "_CoupledShuntData" for item in dense_data)
+
+    batched = solver.solve_device(frequencies, device, shunts=batched_groups)
+    dense = solver.solve_device(frequencies, device, shunts=dense_groups)
+    np.testing.assert_allclose(
+        batched.impedance_ohm,
+        dense.impedance_ohm,
+        rtol=3.0e-12,
+        atol=3.0e-12,
+    )
+
+
+def test_homogeneous_shared_pad_batches_partition_a_mixed_shunt_solve_exactly() -> None:
+    solver, _device, frequencies = _plane_solver_fixture()
+    common_groups = _homogeneous_cluster_groups(homogeneous=True)[:2]
+
+    second_via = _constant("SECOND-VIA", 0.019 + 0.052j)
+    second_network = SharedPadClusterModel(
+        "SECOND-BATCH",
+        (second_via, second_via),
+        (second_via,),
+        (_constant("SECOND-CAP", 0.011 - 0.41j),),
+    )
+    second_group = CoupledShuntGroup(
+        "SECOND-BATCH",
+        (
+            FinitePort(0.0120, 0.0040, 100.0e-6, 100.0e-6, "B-P1"),
+            FinitePort(0.0128, 0.0040, 100.0e-6, 100.0e-6, "B-P2"),
+            FinitePort(0.0124, 0.0048, 100.0e-6, 100.0e-6, "B-G1"),
+        ),
+        second_network,
+    )
+
+    mixed_power_via = _constant("MIXED-P", 0.014 + 0.041j)
+    mixed_ground_via = _constant("MIXED-G", 0.021 + 0.066j)
+    mixed_group = CoupledShuntGroup(
+        "MIXED-VIA",
+        (
+            FinitePort(0.0030, 0.0110, 100.0e-6, 100.0e-6, "M-P"),
+            FinitePort(0.0038, 0.0110, 100.0e-6, 100.0e-6, "M-G"),
+        ),
+        SharedPadClusterModel(
+            "MIXED-VIA",
+            (mixed_power_via,),
+            (mixed_ground_via,),
+            (_constant("MIXED-CAP", 0.009 - 0.31j),),
+        ),
+    )
+
+    split_via = _constant("SPLIT-VIA", 0.017 + 0.048j)
+    split_group = CoupledShuntGroup(
+        "SPLIT-PWR",
+        (
+            FinitePort(0.0150, 0.0100, 100.0e-6, 100.0e-6, "S-P1"),
+            FinitePort(0.0158, 0.0100, 100.0e-6, 100.0e-6, "S-P2"),
+            FinitePort(0.0154, 0.0108, 100.0e-6, 100.0e-6, "S-G"),
+        ),
+        SharedPadClusterModel(
+            "SPLIT-PWR",
+            (split_via, split_via),
+            (split_via,),
+            (
+                _constant("SPLIT-C1", 0.008 - 0.22j),
+                _constant("SPLIT-C2", 0.010 - 0.37j),
+            ),
+            power_component_indices=(0, 1),
+            capacitor_component_indices=(0, 1),
+        ),
+    )
+    scalar_group = ShuntGroup(
+        "DIRECT",
+        (FinitePort(0.0090, 0.0030, 100.0e-6, 100.0e-6, "DIRECT"),),
+        _constant("DIRECT", 0.025 - 0.18j),
+    )
+    shunts = (
+        common_groups[0],
+        scalar_group,
+        mixed_group,
+        common_groups[1],
+        split_group,
+        second_group,
+    )
+
+    data = solver._shunt_data(frequencies, shunts)
+    names = [type(item).__name__ for item in data]
+    assert names.count("_HomogeneousSharedPadBatchData") == 2
+    assert names.count("_CoupledShuntData") == 2
+    assert names.count("_ScalarShuntData") == 1
+
+    expected = np.zeros(
+        (frequencies.size, solver.mode_count, solver.mode_count),
+        dtype=np.complex128,
+    )
+    for group in shunts:
+        population = solver.population_matrix(group)
+        if isinstance(group, CoupledShuntGroup):
+            expected += np.einsum(
+                "mp,fpq,nq->fmn",
+                population,
+                group.network.admittance_matrix(frequencies),
+                population,
+                optimize=True,
+            )
+        else:
+            expected += (
+                1.0 / group.network.impedance(frequencies)
+            )[:, None, None] * (population @ population.T)[None, :, :]
+
+    zero_plane = np.zeros(
+        (frequencies.size, solver.mode_count), dtype=np.complex128
+    )
+    actual = np.stack(
+        [
+            solver._base_matrix(index, zero_plane, data)
+            for index in range(frequencies.size)
+        ]
+    )
+    np.testing.assert_allclose(actual, expected, rtol=5.0e-12, atol=5.0e-12)
+
+
+def test_homogeneous_shared_pad_batch_avoids_full_frequency_mode_group_temp() -> None:
+    base_solver, _device, _frequencies = _plane_solver_fixture()
+    solver = RectangularCavitySolver(
+        base_solver.plane, max_mode_x=6, max_mode_y=6
+    )
+    frequencies = np.geomspace(1.0e5, 1.0e8, 29)
+    groups = _homogeneous_cluster_groups(homogeneous=True) * 128
+
+    gc.collect()
+    tracemalloc.start()
+    try:
+        data = solver._shunt_data(frequencies, groups)
+        _current_bytes, peak_bytes = tracemalloc.get_traced_memory()
+    finally:
+        tracemalloc.stop()
+
+    assert len(data) == 1
+    assert type(data[0]).__name__ == "_HomogeneousSharedPadBatchData"
+    forbidden_temporary_bytes = (
+        frequencies.size
+        * solver.mode_count
+        * len(groups)
+        * np.dtype(np.complex128).itemsize
+    )
+    # A full F x M x G weighted population alone would exceed this bound;
+    # retained F x M x M stamp storage and bounded M x G work arrays do not.
+    assert peak_bytes < 0.75 * forbidden_temporary_bytes
+
+
+class _MutableImpedance:
+    def __init__(self, value: complex) -> None:
+        self.value = value
+
+    def impedance(self, frequencies_hz: object) -> np.ndarray:
+        frequencies = np.asarray(frequencies_hz, dtype=np.float64)
+        return np.full(frequencies.shape, self.value, dtype=np.complex128)
+
+
+def test_homogeneous_shared_pad_batch_is_rebuilt_after_model_mutation() -> None:
+    solver, _device, frequencies = _plane_solver_fixture()
+    via = _MutableImpedance(0.012 + 0.035j)
+    capacitor = _MutableImpedance(0.006 - 0.25j)
+    ports = (
+        FinitePort(0.006, 0.006, 100.0e-6, 100.0e-6, "P1"),
+        FinitePort(0.007, 0.006, 100.0e-6, 100.0e-6, "P2"),
+        FinitePort(0.0065, 0.007, 100.0e-6, 100.0e-6, "G1"),
+    )
+    group = CoupledShuntGroup(
+        "MUTABLE",
+        ports,
+        SharedPadClusterModel("MUTABLE", (via, via), (via,), (capacitor,)),
+    )
+
+    first = solver._shunt_data(frequencies, (group,))[0]
+    first_stamp = first.stamp.copy()  # type: ignore[attr-defined]
+    retained_stamp = weakref.ref(first.stamp)  # type: ignore[attr-defined]
+
+    via.value = 0.019 + 0.052j
+    capacitor.value = 0.011 - 0.41j
+    second = solver._shunt_data(frequencies.copy(), (group,))[0]
+    assert not np.allclose(second.stamp, first_stamp)  # type: ignore[attr-defined]
+
+    dense_network = SharedPadClusterModel(
+        "DENSE",
+        (
+            _constant("DP1", via.value),
+            _constant("DP2", via.value),
+        ),
+        (_constant("DG1", via.value),),
+        (_constant("DC1", capacitor.value),),
+    )
+    dense_group = CoupledShuntGroup("DENSE", ports, dense_network)
+    dense = solver._shunt_data(frequencies, (dense_group,))[0]
+    population = dense.population  # type: ignore[attr-defined]
+    expected = np.einsum(
+        "mp,fpq,nq->fmn",
+        population,
+        dense.admittance,  # type: ignore[attr-defined]
+        population,
+        optimize=True,
+    )
+    np.testing.assert_allclose(
+        second.stamp,  # type: ignore[attr-defined]
+        expected,
+        rtol=3.0e-12,
+        atol=3.0e-12,
+    )
+
+    # The solver retains no frequency x mode x mode stamps between requests.
+    del first
+    gc.collect()
+    assert retained_stamp() is None
+    assert not hasattr(solver, "_homogeneous_batch_cache")
 
 
 def test_shared_pair_missing_partner_topology_fails_with_evaluation_error() -> None:

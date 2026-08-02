@@ -9,6 +9,7 @@ from test_io_spd import MINI_SPD
 from spd_decap_pi._core import services as core_services
 from spd_decap_pi._core.io.spd import SpdImportError
 from spd_decap_pi._core.services import WorkspaceState, import_cap_spice
+from spd_decap_pi.scenario import SHARED_PAD_ANALYSIS_VERSION
 from spd_decap_pi.spd_adapter import import_spd_scenario
 
 
@@ -22,6 +23,8 @@ def test_read_only_spd_import_builds_top_side_editable_scenario(tmp_path: Path):
     assert source.read_bytes() == before
     assert imported.scenario.source.path == str(source.resolve())
     assert len(imported.scenario.source.sha256) == 64
+    assert imported.scenario.connection_analysis is not None
+    assert imported.scenario.connection_analysis.version == SHARED_PAD_ANALYSIS_VERSION
     assert [item.refdes for item in imported.scenario.decaps] == ["C1", "C2"]
     decap = imported.scenario.decaps[0]
     assert decap.pwr_pad.x_um == 1_000.0

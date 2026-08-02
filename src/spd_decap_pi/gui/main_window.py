@@ -57,6 +57,8 @@ from PySide6.QtWidgets import (
 )
 
 from spd_decap_pi._core.services import (
+    DEFAULT_EVALUATION_MODAL_MAX_INDEX,
+    EVALUATION_MODAL_PRESETS,
     WorkspaceState,
     cap_spice_subcircuit_names,
     import_cap_spice,
@@ -96,6 +98,25 @@ from .worker import FunctionWorker
 _DISTRIBUTION_FIELD_ROLE = int(Qt.ItemDataRole.UserRole) + 1
 _DISTRIBUTION_TARGET_FIELD = "target"
 _DISTRIBUTION_TOLERANCE_FIELD = "tolerance"
+
+_EXPLORATORY_FIDELITY_WARNING = (
+    "Exploratory: rectangular PWR bbox, continuous DGND, single-rail Zii; "
+    "absolute sub-milliohm accuracy not certified."
+)
+
+
+def _modal_convergence_text(view: Any) -> str:
+    """Summarize solver-internal modal convergence without implying model accuracy."""
+
+    convergence = getattr(view, "convergence", None)
+    if not isinstance(convergence, dict):
+        return "Not reported"
+    converged = convergence.get("modal_converged")
+    delta = convergence.get("modal_max_delta_db")
+    if not isinstance(delta, (int, float)) or isinstance(delta, bool):
+        return "Converged" if converged is True else "Not converged"
+    state = "Converged" if converged is True else "Not converged"
+    return f"{state} (Δmax {delta:.3f} dB)"
 
 
 def _whole_decap_tolerance(present: int, tolerance_percent: float) -> int:
@@ -791,8 +812,29 @@ class MainWindow(QMainWindow):
         self.target_edit = QLineEdit()
         self.target_edit.setPlaceholderText("Optional target, e.g. 0.02")
         self.target_edit.textEdited.connect(self._target_input_changed)
+        self.evaluation_modal_preset_combo = QComboBox()
+        self.evaluation_modal_preset_combo.setObjectName(
+            "evaluationModalPresetCombo"
+        )
+        for preset in EVALUATION_MODAL_PRESETS:
+            self.evaluation_modal_preset_combo.addItem(
+                f"{preset.label} ({preset.mode_count} modes)", preset.max_index
+            )
+        default_index = self.evaluation_modal_preset_combo.findData(
+            DEFAULT_EVALUATION_MODAL_MAX_INDEX
+        )
+        if default_index >= 0:
+            self.evaluation_modal_preset_combo.setCurrentIndex(default_index)
+        self.evaluation_modal_preset_combo.setToolTip(
+            "Changes only the internal rectangular modal convergence/runtime. "
+            "It does not calibrate to PowerSI or certify absolute impedance accuracy."
+        )
+        self.evaluation_modal_preset_combo.currentIndexChanged.connect(
+            self._evaluation_modal_preset_changed
+        )
         form.addRow("PWR NETs", rail_picker)
         form.addRow("Common target impedance (ohm)", self.target_edit)
+        form.addRow("Numerical convergence preset", self.evaluation_modal_preset_combo)
         controls_layout.addLayout(form)
         self.evaluate_button = QPushButton("Run Original + Tuned evaluation")
         self.evaluate_button.setObjectName("evaluateScenarioButton")
@@ -829,7 +871,7 @@ class MainWindow(QMainWindow):
         results_actions.addWidget(self.export_tuned_csv_button)
         results_actions.addWidget(self.open_results_button)
         results_layout.addLayout(results_actions)
-        self.comparison_table = QTableWidget(0, 7)
+        self.comparison_table = QTableWidget(0, 9)
         self.comparison_table.setObjectName("evaluationComparisonTable")
         self.comparison_table.setHorizontalHeaderLabels(
             (
@@ -840,6 +882,8 @@ class MainWindow(QMainWindow):
                 "|Z| @ 100 MHz Original→Tuned",
                 "Max violation Original→Tuned",
                 "Baseline",
+                "Overall confidence Original→Tuned",
+                "Modal convergence Original→Tuned",
             )
         )
         self.comparison_table.setEditTriggers(
@@ -863,8 +907,11 @@ class MainWindow(QMainWindow):
             "Export Tuned CSV writes the final enabled assignments for evaluated "
             "PWR NETs. "
             "Evaluation reuses the existing modal PI engine. "
+            "Numerical convergence preset changes only internal rectangular modal "
+            "convergence/runtime; it is not a PowerSI or absolute-accuracy setting. "
             "Non-rectangular PWR artwork is solved with its disclosed rectangular bbox; "
-            "DGND is continuous; results are single-rail Zii without inter-rail coupling."
+            "DGND is continuous; results are single-rail Zii without inter-rail coupling.\n\n"
+            + _EXPLORATORY_FIDELITY_WARNING
         )
         evaluation_notes.setStyleSheet("color: #d6a64f;")
         result_details.addTab(evaluation_notes, "Notes")
@@ -2423,6 +2470,7 @@ class MainWindow(QMainWindow):
             self.select_all_rails_button,
             self.clear_rails_button,
             self.target_edit,
+            self.evaluation_modal_preset_combo,
             self.add_model_action,
             self.save_action,
             self.save_as_action,
@@ -2457,6 +2505,7 @@ class MainWindow(QMainWindow):
             self.select_all_rails_button,
             self.clear_rails_button,
             self.target_edit,
+            self.evaluation_modal_preset_combo,
             self.plane_layer_bar,
             self.distribution_table,
             self.distribution_distance_combo,
@@ -3352,6 +3401,19 @@ class MainWindow(QMainWindow):
             )
             self.status_text.setText("Target changed; evaluation required")
 
+    def _evaluation_modal_preset_changed(self, _index: int) -> None:
+        if self._comparison_batch is not None:
+            self._invalidate_evaluation(
+                "Numerical convergence preset changed; run Original + Tuned evaluation again."
+            )
+            self.status_text.setText("Numerical convergence preset changed; evaluation required")
+
+    def _selected_evaluation_modal_max_index(self) -> int:
+        value = self.evaluation_modal_preset_combo.currentData()
+        if isinstance(value, bool) or not isinstance(value, int):
+            return DEFAULT_EVALUATION_MODAL_MAX_INDEX
+        return value
+
     def _selection_changed(self, selected: tuple[str, ...]) -> None:
         if self._scenario is None:
             return
@@ -3815,6 +3877,7 @@ class MainWindow(QMainWindow):
         except ValueError:
             QMessageBox.warning(self, APP_DISPLAY_NAME, "Target impedance must be positive.")
             return
+        modal_max_index = self._selected_evaluation_modal_max_index()
 
         from ..evaluation import (
             baseline_fallback_model_refdes,
@@ -3870,11 +3933,13 @@ class MainWindow(QMainWindow):
             prepared,
             rail_ids,
             target_ohm=target,
+            modal_max_index=modal_max_index,
             attachments=dict(self._attachments),
         )
         self.evaluation_summary.setPlainText(
             f"Evaluating Original and Tuned configurations for "
-            f"{len(rail_ids):,} PWR NET(s)..."
+            f"{len(rail_ids):,} PWR NET(s) with "
+            f"{self.evaluation_modal_preset_combo.currentText()} numerical convergence..."
         )
         self._run_worker(
             worker,
@@ -3961,6 +4026,14 @@ class MainWindow(QMainWindow):
                 impedance_transition_at_frequency(baseline, tuned, 100.0e6),
                 f"{baseline.max_violation_db:.3f} → {tuned.max_violation_db:.3f} dB",
                 "Reused" if comparison.baseline_from_cache else "Saved now",
+                (
+                    f"{baseline.confidence}: {baseline.confidence_note}"
+                    f" → {tuned.confidence}: {tuned.confidence_note}"
+                ),
+                (
+                    f"{_modal_convergence_text(baseline)}"
+                    f" → {_modal_convergence_text(tuned)}"
+                ),
             )
             for column, value in enumerate(values):
                 self.comparison_table.setItem(
@@ -3994,6 +4067,13 @@ class MainWindow(QMainWindow):
                     f"Original baseline: {cached_count:,} reused, {newly_saved:,} newly evaluated and staged.",
                     "Result plot window: one shared impedance view; all PWR NETs start visible and can be filtered independently.",
                     "Tuned Decap CSV: enabled final assignments from the evaluated PWR NETs.",
+                    (
+                        "Numerical convergence preset: "
+                        f"{self.evaluation_modal_preset_combo.currentText()}. "
+                        "It changes internal rectangular modal convergence/runtime only; "
+                        "it is not a PowerSI or absolute-accuracy setting."
+                    ),
+                    _EXPLORATORY_FIDELITY_WARNING,
                     save_note,
                     "Select a Tuned result in AI Assist when analysis is needed.",
                 )

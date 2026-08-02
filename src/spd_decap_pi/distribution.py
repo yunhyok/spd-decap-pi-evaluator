@@ -852,7 +852,8 @@ def validate_distribution_targets(
         raise DistributionError(
             "CONNECTION_ANALYSIS_UPGRADE_REQUIRED",
             "this scenario uses legacy shared-pad connectivity; reopen the "
-            "verified source SPD to build V3 TOP-copper path evidence before "
+            "verified source SPD to build V4 finite-pad/ordered-boolean "
+            "TOP-copper evidence before "
             "running De-cap Distribution",
         )
 
@@ -1401,7 +1402,8 @@ def compute_distribution_plan(
         raise DistributionError(
             "CONNECTION_ANALYSIS_UPGRADE_REQUIRED",
             "this scenario uses legacy shared-pad connectivity; reopen the "
-            "verified source SPD to build V3 TOP-copper path evidence before "
+            "verified source SPD to build V4 finite-pad/ordered-boolean "
+            "TOP-copper evidence before "
             "running De-cap Distribution",
         )
 

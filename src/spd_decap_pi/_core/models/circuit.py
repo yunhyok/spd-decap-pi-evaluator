@@ -222,6 +222,26 @@ class SharedPadClusterModel:
     def power_component_count(self) -> int:
         return max(self.power_component_indices) + 1
 
+    def homogeneous_one_component_via_model(self) -> ImpedanceModel | None:
+        """Return the one exact terminal Via model for the batch fast path.
+
+        The modal solver can avoid materializing this cluster's dense terminal
+        admittance only for the special arrowhead topology with one PWR
+        supernode and an *identical object* on every PWR and GND terminal.
+        Identity, rather than impedance equality, is intentional: it keeps the
+        optimization a purely algebraic regrouping of the existing model and
+        prevents an accidental approximation of distinct calibrated paths.
+        """
+
+        if self.power_component_count != 1:
+            return None
+        candidate = self.power_via_loops[0]
+        if any(model is not candidate for model in self.power_via_loops):
+            return None
+        if any(model is not candidate for model in self.ground_via_loops):
+            return None
+        return candidate
+
     def admittance_matrix(
         self, frequencies_hz: ArrayLike
     ) -> NDArray[np.complex128]:

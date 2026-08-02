@@ -1,6 +1,7 @@
 ﻿from __future__ import annotations
 
 import csv
+from dataclasses import replace
 import os
 from pathlib import Path
 from types import SimpleNamespace
@@ -23,6 +24,7 @@ from PySide6.QtWidgets import (
     QSplitter,
     QTabWidget,
     QTableWidget,
+    QTextBrowser,
 )
 
 from test_io_spd import MINI_SPD
@@ -92,6 +94,12 @@ def test_evaluation_layout_uses_an_expanding_rail_list_and_detached_plot_button(
         assert not window.open_results_button.isEnabled()
         assert window.export_tuned_csv_button.text() == "Export Tuned CSV..."
         assert not window.export_tuned_csv_button.isEnabled()
+        assert window.evaluation_modal_preset_combo.currentData() == 8
+        assert window.evaluation_modal_preset_combo.currentText() == "Balanced (81 modes)"
+        notes = window.findChild(QTextBrowser, "evaluationNotes")
+        assert notes is not None
+        assert "not a PowerSI or absolute-accuracy setting" in notes.toPlainText()
+        assert "absolute sub-milliohm accuracy not certified" in notes.toPlainText()
     finally:
         window.close()
         application.processEvents()
@@ -1085,6 +1093,7 @@ def test_evaluation_worker_receives_scenario_model_attachments(
 
         worker = captured["worker"]
         assert worker.kwargs["attachments"] == imported.attachments
+        assert worker.kwargs["modal_max_index"] == 8
         assert worker.function.__name__ == "evaluate_comparison_batch"
         assert worker.args[1] == (
             base.rails[0].rail_id,
@@ -1095,6 +1104,12 @@ def test_evaluation_worker_receives_scenario_model_attachments(
             "RAIL_SECOND",
         }
         assert captured["label"] == "Evaluating 2 PWR NET(s)..."
+
+        window.evaluation_modal_preset_combo.setCurrentIndex(
+            window.evaluation_modal_preset_combo.findData(10)
+        )
+        window.run_evaluation()
+        assert captured["worker"].kwargs["modal_max_index"] == 10
     finally:
         window._dirty = False
         window.close()
@@ -1204,6 +1219,25 @@ def test_completed_comparison_populates_plot_ai_selector_and_auto_saves(
             [rail_id],
             attachments=imported.attachments,
         )
+        tuned = replace(
+            batch.comparisons[0].tuned,
+            view=replace(
+                batch.comparisons[0].tuned.view,
+                confidence="LOW",
+                confidence_note="tuned fixture",
+                convergence={"modal_converged": False, "modal_max_delta_db": 1.25},
+            ),
+        )
+        batch = replace(
+            batch,
+            comparisons=(
+                replace(
+                    batch.comparisons[0],
+                    tuned=tuned,
+                    configuration_unchanged=False,
+                ),
+            ),
+        )
 
         window._accept_evaluation(batch)
 
@@ -1233,12 +1267,17 @@ def test_completed_comparison_populates_plot_ai_selector_and_auto_saves(
         assert window.comparison_table.item(0, 3).text() == "N/A"
         assert window.comparison_table.item(0, 4).text() == "N/A"
         assert window.comparison_table.item(0, 6).text() == "Saved now"
+        assert window.comparison_table.horizontalHeaderItem(7).text() == "Overall confidence Original→Tuned"
+        assert window.comparison_table.horizontalHeaderItem(8).text() == "Modal convergence Original→Tuned"
+        assert window.comparison_table.item(0, 7).text() == "MEDIUM: fixture → LOW: tuned fixture"
+        assert window.comparison_table.item(0, 8).text() == "Not reported → Not converged (Δmax 1.250 dB)"
         assert window.ai_rail_combo.count() == 1
         assert window.ai_rail_combo.currentData() == rail_id
         assert window._last_scenario_evaluation is batch.comparisons[0].tuned
         assert window._dirty
         assert window._auto_save_after_worker
         assert "one shared impedance view" in window.evaluation_summary.toPlainText()
+        assert "absolute sub-milliohm accuracy not certified" in window.evaluation_summary.toPlainText()
 
         evaluation_state = window.rail_list.item(0).checkState()
         plot_channel = result_window.plot.rail_checkboxes[rail_id]

@@ -948,6 +948,32 @@ def test_unresolved_direct_decap_blocks_evaluation_fail_closed() -> None:
     assert captured.value.code == "DECAP_CONNECTION_UNRESOLVED"
 
 
+def test_legacy_v3_connectivity_loads_but_blocks_all_evaluation_paths(
+    monkeypatch,
+) -> None:
+    payload = _scenario().model_dump(mode="python")
+    payload["connection_analysis"]["version"] = "DIRECT_TOP_COPPER_PATH_V3"
+    legacy = ScenarioSpec.model_validate(payload)
+
+    with pytest.raises(ScenarioEvaluationBuildError) as preflight:
+        preflight_evaluation_connectivity(legacy, ("RAIL_VDD",))
+    assert preflight.value.code == "CONNECTION_ANALYSIS_UPGRADE_REQUIRED"
+    assert "V4 finite-pad/ordered-boolean" in str(preflight.value)
+
+    with pytest.raises(ScenarioEvaluationBuildError) as direct:
+        build_evaluation_project(legacy, evaluation_rail_id="RAIL_VDD")
+    assert direct.value.code == "CONNECTION_ANALYSIS_UPGRADE_REQUIRED"
+
+    monkeypatch.setattr(
+        ScenarioSpec,
+        "with_baseline_captures",
+        lambda *_args, **_kwargs: pytest.fail("baseline capture must not start"),
+    )
+    with pytest.raises(ScenarioEvaluationBuildError) as batch:
+        evaluate_comparison_batch(legacy, ("RAIL_VDD",))
+    assert batch.value.code == "CONNECTION_ANALYSIS_UPGRADE_REQUIRED"
+
+
 def test_connectivity_preflight_aggregates_all_selected_rail_blockers(
     monkeypatch,
 ) -> None:
@@ -1356,6 +1382,26 @@ def test_evaluate_scenario_returns_deterministic_fingerprint(
     assert first.matches(ui_only)
     assert not first.matches(ui_only, require_revision=True)
     assert first.state.last_evaluation is first.view
+
+
+def test_evaluate_scenario_modal_preset_is_part_of_cache_identity(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    def fake_evaluate(state, rail_id, *_args, **_kwargs):
+        view = _view(rail_id)
+        state.last_evaluation = view
+        return view
+
+    monkeypatch.setattr(
+        evaluation_module.evaluation_services, "evaluate_workspace", fake_evaluate
+    )
+    scenario = _scenario()
+
+    fast = evaluate_scenario(scenario, "RAIL_VDD", modal_max_index=6)
+    high = evaluate_scenario(scenario, "RAIL_VDD", modal_max_index=10)
+
+    assert fast.result_key.settings_sha256 != high.result_key.settings_sha256
+    assert fast.result_key.cache_key != high.result_key.cache_key
 
 
 def test_ai_helper_forces_plot_analyst_mode(monkeypatch: pytest.MonkeyPatch) -> None:
