@@ -158,6 +158,8 @@ class SpdViaPathEvidence:
     target_x_um: float
     target_y_um: float
     segments: tuple[SpdViaPathSegment, ...]
+    trace_hops: int = 0
+    trace_alternate_exit: bool = False
 
 
 @dataclass(frozen=True, slots=True)
@@ -180,6 +182,28 @@ class SpdViaPathRecovery:
             ),
             None,
         )
+
+
+@dataclass(frozen=True, slots=True)
+class SpdGroundReachability:
+    """Batch raw-graph reachability for mixed-reference GND landings.
+
+    Unlike :class:`SpdViaPathRecovery`, this is deliberately not an electrical
+    path extractor.  Its single claim is whether a landing's same-NET
+    Via+Trace component reaches an exact named target layer.  Branches are
+    valid evidence here and no RL is inferred from them.
+    """
+
+    reachable_keys: frozenset[tuple[str, str, str]]
+    unreachable_keys: frozenset[tuple[str, str, str]]
+    statistics: Mapping[str, int]
+
+    def reaches(self, landing: object, target_layer: str) -> bool:
+        return (
+            str(getattr(landing, "via_id")).casefold(),
+            str(getattr(landing, "endpoint_node_id")).casefold(),
+            target_layer.casefold(),
+        ) in self.reachable_keys
 
 
 class _SpdPolygon(Sequence[tuple[float, float]]):
@@ -565,9 +589,6 @@ def _parse_shapes(
     geometry_keys: set[str] | None,
     reporter: _Reporter,
     diagnostics: list[SpdDiagnostic],
-    *,
-    transient_geometry_keys: set[str] | None = None,
-    transient_geometry_layer: str | None = None,
 ) -> tuple[
     MLOOutline | None,
     dict[str, tuple[str, ...]],
@@ -612,21 +633,12 @@ def _parse_shapes(
             if layer is not None:
                 by_layer.setdefault(layer.casefold(), []).append(net)
 
-        retain_transient_geometry = bool(
-            layer is not None
-            and transient_geometry_layer is not None
-            and layer.casefold() == transient_geometry_layer.casefold()
-            and transient_geometry_keys is not None
-            and net.casefold() in transient_geometry_keys
-        )
-
         if primitive_kind not in supported_kinds:
             if (
                 layer is not None
                 and (
                     geometry_keys is None
                     or net.casefold() in geometry_keys
-                    or retain_transient_geometry
                 )
             ):
                 unsupported_key = (
@@ -658,7 +670,6 @@ def _parse_shapes(
                     geometry_keys is not None
                     and net.casefold() in geometry_keys
                 )
-                or retain_transient_geometry
             )
         )
         if retain_geometry:
@@ -803,10 +814,14 @@ def _parse_shapes(
                 elif primitive_kind == b"Box":
                     entry["box_count"] = int(entry["box_count"]) + 1
 
-    filtered: dict[str, tuple[str, ...]] = {}
-    for key, nets in by_layer.items():
-        kept = [item for item in _unique(nets) if not selected_keys or item.casefold() in selected_keys]
-        filtered[key] = tuple(kept)
+    # Stack-up occupancy is a safety boundary, not a rail-selection list.
+    # Preserve every non-subelement positive NET seen on each conductor so a
+    # mixed reference layer can never be normalized into a pure GND layer by
+    # the selected-PWR filter.  ``geometry_keys`` still bounds exact artwork
+    # retention and explicit .NetList PowerNets still governs rail creation.
+    filtered: dict[str, tuple[str, ...]] = {
+        key: _unique(nets) for key, nets in by_layer.items()
+    }
     outline = None
     if best_bbox is not None and best_bbox[1] > best_bbox[0] and best_bbox[3] > best_bbox[2]:
         outline = MLOOutline(
@@ -1777,9 +1792,8 @@ def recover_spd_via_paths(
     This intentionally reopens the source only after the import plan has selected
     the editable terminal Vias and plane layers.  It keeps just the frontier
     nodes/segments for those requests, never serializes a board-wide Via graph,
-    and refuses to traverse Trace geometry.  A lateral Trace is therefore harmless
-    when one monotonic Via route reaches the requested plane; it is reported only
-    when reaching that plane would require lateral traversal.
+    and retains only bounded route evidence.  A same-NET Trace may bridge Via
+    segments only when that continuation is unique; its RL is not inferred.
     """
 
     reporter = _Reporter(progress, is_cancelled)
@@ -1918,6 +1932,12 @@ def recover_spd_via_paths(
                 "node_key": endpoint_key,
                 "layer": top_layer,
                 "segments": [],
+                # Trace hops are retained only as provenance used to reach a
+                # terminal plane.  The compact electrical evidence schema is
+                # Via-RL-only, so their RL is deliberately not invented here.
+                "trace_steps": 0,
+                "transition_steps": 0,
+                "visited_node_keys": {endpoint_key},
                 "status": "PENDING",
             }
             nodes.setdefault(
@@ -1953,15 +1973,22 @@ def recover_spd_via_paths(
             return None
         return node_id, _decode(net_token)
 
+    path_node_section_passes = 0
+
     def resolve_nodes(
         data: mmap.mmap,
         start: int,
         end: int,
         requested: set[str],
     ) -> None:
-        missing = requested - set(nodes)
+        nonlocal path_node_section_passes
+        # Do not materialize all accumulated node keys on every frontier pass.
+        # The recovery cache can contain hundreds of thousands of entries on a
+        # production SPD, while each pass requests only the next compact frontier.
+        missing = {node_key for node_key in requested if node_key not in nodes}
         if not missing:
             return
+        path_node_section_passes += 1
         for line_index, (_offset, raw) in enumerate(_iter_lines(data, start, end)):
             if line_index % 16384 == 0:
                 reporter.check()
@@ -1999,26 +2026,224 @@ def recover_spd_via_paths(
                 ),
             )
 
-    def traces_touching(
+    def trace_neighbors(
         data: mmap.mmap,
         start: int,
         end: int,
         pending: Mapping[str, list[tuple[str, str]]],
-    ) -> set[tuple[str, str]]:
-        touched: set[tuple[str, str]] = set()
+    ) -> dict[tuple[str, str], set[str]]:
+        """Return same-NET Trace neighbors for pending vertical paths.
+
+        Trace traversal is intentionally a one-hop-at-a-time continuation: a
+        state may move only through one unique neighboring node, and the main
+        loop then proves the next vertical step.  This keeps branches and
+        cycles fail-closed without treating arbitrary copper as a Via model.
+        """
+
+        neighbors: dict[tuple[str, str], set[str]] = {}
         if start < 0 or end <= start:
-            return touched
+            return neighbors
         for match_index, match in enumerate(_TRACE_RE.finditer(data, start, end)):
             if match_index % 8192 == 0:
                 reporter.check()
             net_key = _decode(match.group(2)).casefold()
             first = _decode(match.group(3)).casefold()
             second = _decode(match.group(4)).casefold()
-            for node_key in (first, second):
+            for node_key, other_key in ((first, second), (second, first)):
                 for state_key in pending.get(node_key, ()):
                     if str(states[state_key]["net_key"]) == net_key:
-                        touched.add(state_key)
-        return touched
+                        neighbors.setdefault(state_key, set()).add(other_key)
+        return neighbors
+
+    trace_graph_by_net: dict[str, dict[str, set[str]]] = {}
+    via_neighbors_by_net: dict[str, dict[str, set[str]]] = {}
+    component_id_by_node: dict[tuple[str, str], str] = {}
+    component_members_by_id: dict[tuple[str, str], frozenset[str]] = {}
+    alternate_exit_cache: dict[tuple[str, str, str, str], bool] = {}
+    alternate_node_metadata: dict[str, tuple[str, str]] = {}
+    alternate_node_section_passes = 0
+    graph_index_ready = False
+
+    def ensure_trace_via_index(
+        data: mmap.mmap, *, trace_start: int, trace_end: int, via_start: int, via_end: int
+    ) -> None:
+        nonlocal graph_index_ready, alternate_node_section_passes
+        if graph_index_ready:
+            return
+        relevant_net_keys = {
+            str(state["net_key"]) for state in states.values()
+        }
+        if trace_start >= 0 and trace_end > trace_start:
+            for match in _TRACE_RE.finditer(data, trace_start, trace_end):
+                net = _decode(match.group(2)).casefold()
+                if net not in relevant_net_keys:
+                    continue
+                first, second = _decode(match.group(3)).casefold(), _decode(match.group(4)).casefold()
+                graph = trace_graph_by_net.setdefault(net, {})
+                graph.setdefault(first, set()).add(second)
+                graph.setdefault(second, set()).add(first)
+        for match in _VIA_RE.finditer(data, via_start, via_end):
+            net = _decode(match.group(2)).casefold()
+            if net not in relevant_net_keys:
+                continue
+            first = _decode(match.group(3)).casefold()
+            second = _decode(match.group(4)).casefold()
+            trace_nodes = trace_graph_by_net.get(net)
+            if not trace_nodes:
+                continue
+            neighbors = via_neighbors_by_net.setdefault(net, {})
+            # Alternate-exit detection only queries Via neighbors from nodes in
+            # a same-layer Trace component.  Retaining the other ~millions of
+            # relevant-NET Via edges duplicates the main vertical-path scan and
+            # can consume gigabytes without changing any decision.
+            if first in trace_nodes:
+                neighbors.setdefault(first, set()).add(second)
+            if second in trace_nodes:
+                neighbors.setdefault(second, set()).add(first)
+        # Alternate-exit decisions need only source NET and layer identity.  A
+        # prior implementation called ``resolve_nodes`` once or twice for every
+        # unseen Trace component, repeatedly scanning the complete production
+        # Node section and growing the main path-node cache.  Collect the exact
+        # compact key set now and resolve it in one dedicated Node pass instead.
+        alternate_node_keys = {
+            node_key
+            for graph in trace_graph_by_net.values()
+            for node_key in graph
+        }
+        alternate_node_keys.update(
+            node_key
+            for by_node in via_neighbors_by_net.values()
+            for source, destinations in by_node.items()
+            for node_key in (source, *destinations)
+        )
+        if alternate_node_keys:
+            alternate_node_section_passes += 1
+            for line_index, (_offset, raw) in enumerate(
+                _iter_lines(data, node_start, node_end)
+            ):
+                if line_index % 16384 == 0:
+                    reporter.check()
+                if not raw.startswith(b"Node"):
+                    continue
+                identity = node_id_and_net(raw)
+                if identity is None:
+                    continue
+                node_id, net = identity
+                node_key = node_id.casefold()
+                if node_key not in alternate_node_keys:
+                    continue
+                attributes = _NODE_ATTR_RE.search(raw)
+                layer_raw = _attribute(raw, b"Layer")
+                if attributes is None or layer_raw is None:
+                    continue
+                # Match the main resolver's validity gate without retaining the
+                # coordinates or padstack that alternate-exit checks never use.
+                try:
+                    _length_um(attributes.group(1))
+                    _length_um(attributes.group(2))
+                except ValueError:
+                    continue
+                alternate_node_metadata[node_key] = (
+                    net.casefold(),
+                    _decode(layer_raw).casefold(),
+                )
+        graph_index_ready = True
+
+    def trace_component(net_key: str, start_key: str) -> tuple[str, frozenset[str]]:
+        known_id = component_id_by_node.get((net_key, start_key))
+        if known_id is not None:
+            return known_id, component_members_by_id[(net_key, known_id)]
+        adjacency = trace_graph_by_net.get(net_key, {})
+        component = {start_key}
+        pending = [start_key]
+        while pending:
+            node_key = pending.pop()
+            for neighbor in adjacency.get(node_key, ()):
+                if neighbor not in component:
+                    component.add(neighbor)
+                    pending.append(neighbor)
+        component_id = min(component)
+        frozen = frozenset(component)
+        component_members_by_id[(net_key, component_id)] = frozen
+        for node_key in frozen:
+            component_id_by_node[(net_key, node_key)] = component_id
+        return component_id, frozen
+
+    def trace_component_has_alternate_exit(
+        data: mmap.mmap,
+        state: dict[str, Any],
+        current: _RecoveredViaNode,
+        *,
+        trace_start: int,
+        trace_end: int,
+        via_start: int,
+        via_end: int,
+    ) -> bool:
+        """Prove a direct Via is not secretly one serial terminal path.
+
+        A direct monotonic Via is insufficient if same-layer source copper can
+        reach another monotonic Via.  We retain that connectivity evidence but
+        force the complete legacy terminal template because trace RL was not
+        extracted.  This scan is deliberately conservative and bounded by the
+        parsed Trace section.
+        """
+
+        if trace_start < 0 or trace_end <= trace_start:
+            return False
+        ensure_trace_via_index(
+            data, trace_start=trace_start, trace_end=trace_end,
+            via_start=via_start, via_end=via_end,
+        )
+        net_key = str(state["net_key"])
+        adjacency = trace_graph_by_net.get(net_key, {})
+        start_key = current.node_id.casefold()
+        if start_key not in adjacency:
+            return False
+        component_id, component = trace_component(net_key, start_key)
+        cache_key = (
+            net_key,
+            component_id,
+            current.layer.casefold(),
+            str(state["target_key"]),
+        )
+        cached = alternate_exit_cache.get(cache_key)
+        if cached is not None:
+            return cached
+        same_layer = {
+            node_key
+            for node_key in component
+            if alternate_node_metadata.get(node_key)
+            == (net_key, current.layer.casefold())
+            and node_key != start_key
+        }
+        if not same_layer:
+            alternate_exit_cache[cache_key] = False
+            return False
+        current_depth = depth_by_key.get(current.layer.casefold())
+        target_depth = depth_by_key.get(str(state["target_key"]))
+        if current_depth is None or target_depth is None:
+            alternate_exit_cache[cache_key] = False
+            return False
+        direction = 1 if target_depth > current_depth else -1
+        alternate_destinations = {
+            destination
+            for source in same_layer
+            for destination in via_neighbors_by_net.get(net_key, {}).get(source, ())
+        }
+        for destination in alternate_destinations:
+            next_metadata = alternate_node_metadata.get(destination)
+            if next_metadata is None or next_metadata[0] != net_key:
+                continue
+            next_depth = depth_by_key.get(next_metadata[1])
+            if next_depth is None:
+                continue
+            delta = direction * (next_depth - current_depth)
+            remaining = direction * (target_depth - next_depth)
+            if delta > 0 and remaining >= 0:
+                alternate_exit_cache[cache_key] = True
+                return True
+        alternate_exit_cache[cache_key] = False
+        return False
 
     evidence: dict[str, list[SpdViaPathEvidence]] = {}
     failures: Counter[str] = Counter()
@@ -2052,11 +2277,13 @@ def recover_spd_via_paths(
             trace_end = via_start if via_start > trace_start else pad_start
             via_end = pad_start if pad_start > via_start else len(data)
 
-            for _step in range(max_segments + 1):
+            max_trace_steps = max_segments
+            max_total_steps = max_segments + max_trace_steps
+            for _step in range(max_total_steps + 1):
                 reporter.report(
-                    min(98, 4 + round(94 * _step / max_segments)),
+                    min(98, 4 + round(94 * _step / max_total_steps)),
                     "Recovering source-proven vertical Via paths "
-                    f"(pass {_step + 1}/{max_segments + 1})",
+                    f"(pass {_step + 1}/{max_total_steps + 1})",
                 )
                 pending_by_node: dict[str, list[tuple[str, str]]] = {}
                 for state_key, state in states.items():
@@ -2121,12 +2348,20 @@ def recover_spd_via_paths(
                             target_x_um=current_node.x_um,
                             target_y_um=current_node.y_um,
                             segments=segments,
+                            trace_hops=int(state["trace_steps"]),
+                            trace_alternate_exit=bool(
+                                state.get("trace_alternate_exit", False)
+                            ),
                         )
                         evidence.setdefault(str(state["via_key"]), []).append(item)
                         state["status"] = "RECOVERED"
                         continue
                     if len(state["segments"]) >= max_segments:
                         state["status"] = "SEGMENT_LIMIT"
+                        failures[str(state["status"])] += 1
+                        continue
+                    if int(state["transition_steps"]) >= max_total_steps:
+                        state["status"] = "TOTAL_TRANSITION_LIMIT"
                         failures[str(state["status"])] += 1
                         continue
                     pending_by_node.setdefault(current_key, []).append(state_key)
@@ -2254,6 +2489,16 @@ def recover_spd_via_paths(
                     via_id, padstack_name, next_node, definition, rotation = next(
                         iter(unique_valid.values())
                     )
+                    if trace_component_has_alternate_exit(
+                        data,
+                        state,
+                        current,
+                        trace_start=trace_start,
+                        trace_end=trace_end,
+                        via_start=via_start,
+                        via_end=via_end,
+                    ):
+                        state["trace_alternate_exit"] = True
                     segment = SpdViaPathSegment(
                         via_id=via_id,
                         padstack=padstack_name,
@@ -2277,17 +2522,69 @@ def recover_spd_via_paths(
                     state["node_id"] = next_node.node_id
                     state["node_key"] = next_node.node_id.casefold()
                     state["layer"] = next_node.layer
+                    state["visited_node_keys"].add(next_node.node_id.casefold())
+                    state["transition_steps"] = int(state["transition_steps"]) + 1
                 if trace_needed:
-                    touched = traces_touching(data, trace_start, trace_end, trace_needed)
+                    neighbors_by_state = trace_neighbors(
+                        data, trace_start, trace_end, trace_needed
+                    )
+                    candidate_nodes = {
+                        node_key
+                        for node_keys in neighbors_by_state.values()
+                        for node_key in node_keys
+                    }
+                    resolve_nodes(data, node_start, node_end, candidate_nodes)
                     for state_keys in trace_needed.values():
                         for state_key in state_keys:
                             state = states[state_key]
-                            state["status"] = (
-                                "TRACE_REQUIRED"
-                                if state_key in touched
-                                else "OVERSHOOT_OR_NO_MONOTONIC_VIA"
-                            )
-                            failures[str(state["status"])] += 1
+                            current = nodes.get(str(state["node_key"]))
+                            assert current is not None
+                            candidate_keys = neighbors_by_state.get(state_key, set())
+                            valid_neighbors = {
+                                key: nodes[key]
+                                for key in candidate_keys
+                                if key in nodes
+                                and nodes[key].net.casefold() == str(state["net_key"])
+                                and nodes[key].layer.casefold() == current.layer.casefold()
+                                and key not in state["visited_node_keys"]
+                            }
+                            if not valid_neighbors:
+                                same_layer_neighbors = {
+                                    key
+                                    for key in candidate_keys
+                                    if key in nodes
+                                    and nodes[key].net.casefold() == str(state["net_key"])
+                                    and nodes[key].layer.casefold() == current.layer.casefold()
+                                }
+                                state["status"] = (
+                                    "TRACE_CYCLE"
+                                    if same_layer_neighbors
+                                    and same_layer_neighbors.issubset(state["visited_node_keys"])
+                                    else "TRACE_REQUIRED"
+                                    if candidate_keys
+                                    else "OVERSHOOT_OR_NO_MONOTONIC_VIA"
+                                )
+                                failures[str(state["status"])] += 1
+                                continue
+                            if len(valid_neighbors) != 1:
+                                state["status"] = "AMBIGUOUS_TRACE_BRANCH"
+                                failures[str(state["status"])] += 1
+                                continue
+                            next_key, next_node = next(iter(valid_neighbors.items()))
+                            if int(state["trace_steps"]) >= max_trace_steps:
+                                state["status"] = "TRACE_SEGMENT_LIMIT"
+                                failures[str(state["status"])] += 1
+                                continue
+                            if int(state["transition_steps"]) >= max_total_steps:
+                                state["status"] = "TOTAL_TRANSITION_LIMIT"
+                                failures[str(state["status"])] += 1
+                                continue
+                            state["trace_steps"] = int(state["trace_steps"]) + 1
+                            state["transition_steps"] = int(state["transition_steps"]) + 1
+                            state["visited_node_keys"].add(next_key)
+                            state["node_id"] = next_node.node_id
+                            state["node_key"] = next_key
+                            state["layer"] = next_node.layer
             for state in states.values():
                 if state["status"] == "PENDING":
                     state["status"] = "SEGMENT_LIMIT"
@@ -2340,6 +2637,8 @@ def recover_spd_via_paths(
                     target_x_um=item.target_x_um,
                     target_y_um=item.target_y_um,
                     segments=segments,
+                    trace_hops=item.trace_hops,
+                    trace_alternate_exit=item.trace_alternate_exit,
                 )
             )
     recovered = sum(len(items) for items in corrected.values())
@@ -2373,6 +2672,21 @@ def recover_spd_via_paths(
         "segments": sum(
             len(item.segments) for items in corrected.values() for item in items
         ),
+        # Structural performance evidence: each relevant trace component and
+        # (component, current-layer, target-layer) exit decision is memoized.
+        "trace_components_indexed": len(component_members_by_id),
+        "alternate_exit_cache_entries": len(alternate_exit_cache),
+        "alternate_exit_trace_nodes_indexed": sum(
+            len(graph) for graph in trace_graph_by_net.values()
+        ),
+        "alternate_exit_via_edges_indexed": sum(
+            len(destinations)
+            for by_node in via_neighbors_by_net.values()
+            for destinations in by_node.values()
+        ),
+        "path_node_section_passes": path_node_section_passes,
+        "alternate_exit_node_section_passes": alternate_node_section_passes,
+        "alternate_exit_nodes_resolved": len(alternate_node_metadata),
     }
     statistics.update(
         {
@@ -2390,6 +2704,221 @@ def recover_spd_via_paths(
         diagnostics=tuple(diagnostics),
         statistics=statistics,
     ))
+
+
+def recover_spd_ground_reachability(
+    path: str | Path,
+    *,
+    landings: Iterable[object],
+    target_layers_by_net: Mapping[str, Iterable[str]],
+    target_node_predicate: Callable[[str, str, str, float, float], bool] | None = None,
+    expected_source: SpdSourceInfo | None = None,
+    progress: ProgressCallback | None = None,
+    is_cancelled: CancelCallback | None = None,
+) -> SpdGroundReachability:
+    """Prove same-NET GND landing reachability to exact target layers.
+
+    This is intentionally a separate batched graph pass from unique Via-path
+    recovery: a branching Trace/Via graph is valid for return connectivity but
+    cannot be condensed into one serial RL chain.  Only target-net records are
+    retained, and every Node, Trace, and Via section is scanned at most once.
+    """
+
+    reporter = _Reporter(progress, is_cancelled)
+    reporter.report(0, "Checking mixed-reference GND landing reachability")
+    source_path = Path(path)
+    if not source_path.is_file():
+        raise SpdImportError(f"SPD source does not exist: {source_path}")
+    target_layers = {
+        str(net).casefold(): {str(layer).casefold() for layer in layers}
+        for net, layers in target_layers_by_net.items()
+        if str(net).strip() and any(str(layer).strip() for layer in layers)
+    }
+    requested_by_key: dict[tuple[str, str, str], str] = {}
+    for landing in landings:
+        try:
+            net_key = str(getattr(landing, "net")).casefold()
+            via_key = str(getattr(landing, "via_id")).casefold()
+            node_key = str(getattr(landing, "endpoint_node_id")).casefold()
+        except AttributeError as exc:
+            raise ValueError("GND landing lacks source graph identity") from exc
+        for target_layer in target_layers.get(net_key, ()):
+            requested_by_key[(via_key, node_key, target_layer)] = net_key
+    requested = sorted(requested_by_key)
+    if not requested:
+        return SpdGroundReachability(frozenset(), frozenset(), {
+            "requested": 0, "reachable": 0, "unreachable": 0,
+            "node_section_passes": 0, "trace_section_passes": 0,
+            "via_section_passes": 0, "components": 0,
+        })
+
+    try:
+        observed = source_path.stat()
+    except OSError as exc:
+        raise SpdImportError(f"cannot stat SPD source {source_path}: {exc}") from exc
+    if expected_source is not None:
+        try:
+            same_path = source_path.resolve() == expected_source.path.resolve()
+        except OSError as exc:
+            raise SpdImportError(f"cannot resolve SPD source identity {source_path}: {exc}") from exc
+        if not same_path or (int(observed.st_size), int(observed.st_mtime_ns)) != (
+            int(expected_source.size_bytes), int(expected_source.mtime_ns)
+        ):
+            raise SpdImportError(
+                "SPD source identity changed after analysis before mixed-reference "
+                "GND reachability recovery"
+            )
+
+    adjacency: dict[str, dict[str, set[str]]] = {
+        net: {} for net in target_layers
+    }
+    targets: dict[tuple[str, str], set[str]] = {
+        (net, layer): set()
+        for net, layers in target_layers.items()
+        for layer in layers
+    }
+
+    def node_identity(raw: bytes) -> tuple[str, str] | None:
+        cuts = [
+            value for value in (raw.find(b"!!"), raw.find(b"::"), raw.find(b" "))
+            if value >= 0
+        ]
+        separator = raw.find(b"::")
+        if not cuts or separator < 0:
+            return None
+        node_id = _decode(raw[: min(cuts)])
+        net_token = raw[separator + 2 :].split(None, 1)[0]
+        return (node_id, _decode(net_token)) if node_id and net_token else None
+
+    try:
+        with source_path.open("rb") as handle, mmap.mmap(
+            handle.fileno(), 0, access=mmap.ACCESS_READ
+        ) as data:
+            node_start = _find_line(data, b"* Node description lines")
+            trace_start = _find_line(data, b"* Trace description lines")
+            via_start = _find_line(data, b"* Via description lines")
+            pad_start = _find_line(data, b"* PadStack collection description lines")
+            if node_start < 0 or via_start < 0:
+                return SpdGroundReachability(
+                    frozenset(), frozenset(requested), {
+                        "requested": len(requested), "reachable": 0,
+                        "unreachable": len(requested), "node_section_passes": 0,
+                        "trace_section_passes": 0, "via_section_passes": 0,
+                        "components": 0,
+                    }
+                )
+            node_end = trace_start if trace_start > node_start else via_start
+            trace_end = via_start if via_start > trace_start else pad_start
+            via_end = pad_start if pad_start > via_start else len(data)
+            reporter.report(15, "Indexing exact mixed-reference GND target nodes")
+            for index, (_offset, raw) in enumerate(_iter_lines(data, node_start, node_end)):
+                if index % 16384 == 0:
+                    reporter.check()
+                if not raw.startswith(b"Node"):
+                    continue
+                identity = node_identity(raw)
+                if identity is None:
+                    continue
+                node_id, net = identity
+                net_key = net.casefold()
+                if net_key not in target_layers:
+                    continue
+                layer_raw = _attribute(raw, b"Layer")
+                if layer_raw is None:
+                    continue
+                layer_key = _decode(layer_raw).casefold()
+                if layer_key in target_layers[net_key]:
+                    if target_node_predicate is not None:
+                        attributes = _NODE_ATTR_RE.search(raw)
+                        if attributes is None:
+                            continue
+                        try:
+                            x_um = _length_um(attributes.group(1))
+                            y_um = _length_um(attributes.group(2))
+                        except ValueError:
+                            continue
+                        if not target_node_predicate(
+                            net, _decode(layer_raw), node_id, x_um, y_um
+                        ):
+                            continue
+                    targets[(net_key, layer_key)].add(node_id.casefold())
+            if trace_start >= 0 and trace_end > trace_start:
+                reporter.report(40, "Indexing same-NET GND Trace connectivity")
+                for index, match in enumerate(_TRACE_RE.finditer(data, trace_start, trace_end)):
+                    if index % 8192 == 0:
+                        reporter.check()
+                    net_key = _decode(match.group(2)).casefold()
+                    if net_key not in adjacency:
+                        continue
+                    first, second = _decode(match.group(3)).casefold(), _decode(match.group(4)).casefold()
+                    graph = adjacency[net_key]
+                    graph.setdefault(first, set()).add(second)
+                    graph.setdefault(second, set()).add(first)
+            reporter.report(65, "Indexing same-NET GND Via connectivity")
+            for index, match in enumerate(_VIA_RE.finditer(data, via_start, via_end)):
+                if index % 8192 == 0:
+                    reporter.check()
+                net_key = _decode(match.group(2)).casefold()
+                if net_key not in adjacency:
+                    continue
+                first, second = _decode(match.group(3)).casefold(), _decode(match.group(4)).casefold()
+                graph = adjacency[net_key]
+                graph.setdefault(first, set()).add(second)
+                graph.setdefault(second, set()).add(first)
+    except OSError as exc:
+        raise SpdImportError(
+            f"cannot recover mixed-reference GND graph from {source_path}: {exc}"
+        ) from exc
+
+    reporter.report(85, "Reducing mixed-reference GND graph components")
+    component_target_layers: dict[tuple[str, str], set[str]] = {}
+    component_by_node: dict[tuple[str, str], str] = {}
+    components = 0
+    for net_key, graph in adjacency.items():
+        all_nodes = set(graph)
+        all_nodes.update(node for (net, _layer), nodes in targets.items() if net == net_key for node in nodes)
+        all_nodes.update(
+            node
+            for _via, node, _layer in requested
+            if requested_by_key[(_via, node, _layer)] == net_key
+        )
+        for start in sorted(all_nodes):
+            if (net_key, start) in component_by_node:
+                continue
+            components += 1
+            component_id = start
+            pending = [start]
+            members: set[str] = set()
+            while pending:
+                node = pending.pop()
+                if node in members:
+                    continue
+                members.add(node)
+                pending.extend(graph.get(node, ()) - members)
+            layers = {
+                layer
+                for (target_net, layer), nodes in targets.items()
+                if target_net == net_key and members.intersection(nodes)
+            }
+            for node in members:
+                component_by_node[(net_key, node)] = component_id
+            component_target_layers[(net_key, component_id)] = layers
+    reachable: set[tuple[str, str, str]] = set()
+    for via, node, target_layer in requested:
+        net_key = requested_by_key[(via, node, target_layer)]
+        component_id = component_by_node.get((net_key, node))
+        if component_id is not None and target_layer in component_target_layers.get((net_key, component_id), set()):
+            reachable.add((via, node, target_layer))
+    unreachable = set(requested) - reachable
+    reporter.report(100, "Checked mixed-reference GND landing reachability")
+    return SpdGroundReachability(
+        frozenset(reachable), frozenset(unreachable), {
+            "requested": len(requested), "reachable": len(reachable),
+            "unreachable": len(unreachable), "node_section_passes": 1,
+            "trace_section_passes": int(trace_start >= 0 and trace_end > trace_start),
+            "via_section_passes": 1, "components": components,
+        }
+    )
 
 
 def analyze_spd(
@@ -2466,7 +2995,7 @@ def analyze_spd(
             shape_start = first_shape if first_shape >= 0 else 0
             shape_end = layer_marker if layer_marker > shape_start else (node_marker if node_marker > shape_start else len(data))
 
-            reporter.report(11, "Reading material and TOP-layer identity")
+            reporter.report(11, "Reading material models")
             material_start = material_marker if material_marker >= 0 else 0
             material_end_marker = _find_line(data, b".EndMaterial", material_start)
             material_end = (
@@ -2490,10 +3019,6 @@ def analyze_spd(
                     default=len(data),
                 )
             )
-            top_layer_hint = _first_conductor_layer_name(
-                data, layer_start, layer_end, metals
-            )
-
             # Scenario mode needs candidate rails beyond the .NetList selection,
             # but retaining every signal polygon in a production SPD would be
             # prohibitively expensive.  Index compact Part/Connect metadata first
@@ -2581,8 +3106,9 @@ def analyze_spd(
 
             reporter.report(14, "Scanning positive plane polygons")
             # Editable scenario rails are fail-closed to explicit .NetList
-            # PowerNets declarations.  Unselected capacitor locations remain
-            # visible inventory, but signal/non-declared shapes are not choices.
+            # PowerNets declarations.  Exact configured-GND artwork is retained
+            # on every layer for mixed-reference certification; it is never
+            # promoted into the selected power-rail set.
             scenario_geometry_keys = scenario_power_keys
             shape_selected_keys = (
                 selected_keys
@@ -2597,18 +3123,12 @@ def analyze_spd(
                 (
                     {item.casefold() for item in selected_power}
                     if scope == "selected_pi" and selected_power
-                    else scenario_geometry_keys
+                    else scenario_geometry_keys | configured_ground_keys
                     if scope == "decap_scenario"
                     else None
                 ),
                 reporter,
                 diagnostics,
-                transient_geometry_keys=(
-                    configured_ground_keys if scope == "decap_scenario" else None
-                ),
-                transient_geometry_layer=(
-                    top_layer_hint if scope == "decap_scenario" else None
-                ),
             )
             positive_keys = {item.casefold() for item in positive_nets}
             usable_power = _unique(
@@ -2844,6 +3364,7 @@ def analyze_spd(
                     geometry
                     for geometry in plane_geometries
                     if geometry.net.casefold() in scenario_geometry_keys
+                    or geometry.net.casefold() in ground_keys
                 )
                 if scope == "decap_scenario"
                 else plane_geometries
@@ -2967,6 +3488,7 @@ __all__ = [
     "SpdCapInstance",
     "SpdDecapConnection",
     "SpdDiagnostic",
+    "SpdGroundReachability",
     "SpdImportError",
     "SpdPadStack",
     "SpdPadShape",
@@ -2979,4 +3501,5 @@ __all__ = [
     "SpdViaUsage",
     "analyze_spd",
     "recover_spd_via_paths",
+    "recover_spd_ground_reachability",
 ]

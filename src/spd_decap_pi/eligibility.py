@@ -15,7 +15,11 @@ from dataclasses import dataclass
 from math import ceil, floor, hypot, isfinite, sqrt
 from typing import Literal
 
-from spd_decap_pi._core.domain import PlanePairSuggestion, StackupLayer
+from spd_decap_pi._core.domain import (
+    MixedReferenceCertificate,
+    PlanePairSuggestion,
+    StackupLayer,
+)
 from spd_decap_pi._core.io.spd import SpdPlaneGeometry
 from spd_decap_pi._core.plane_pairs import suggest_effective_plane_pairs
 
@@ -574,6 +578,8 @@ class PlaneEligibilityIndex:
         stackup_layers: Iterable[StackupLayer],
         *,
         gnd_aliases: Iterable[str] = ("DGND", "GND"),
+        mixed_reference_certificates: Iterable[MixedReferenceCertificate] = (),
+        selected_pairs: Iterable[PlanePairSuggestion] = (),
         tolerance_um: float = 1.0e-6,
     ) -> None:
         if not isfinite(tolerance_um) or tolerance_um < 0:
@@ -581,15 +587,23 @@ class PlaneEligibilityIndex:
         self.tolerance_um = tolerance_um
         stack = tuple(stackup_layers)
         aliases = tuple(gnd_aliases)
+        certificates = tuple(mixed_reference_certificates)
+        selected_by_net = {}
+        for pair in selected_pairs:
+            selected_by_net.setdefault(pair.rail_net.casefold(), []).append(pair)
         pair_cache: dict[str, tuple[PlanePairSuggestion, ...]] = {}
         indexed: list[_IndexedPlane] = []
         for geometry in plane_geometries:
             net_key = geometry.net.casefold()
             pairs = pair_cache.setdefault(
                 net_key,
-                tuple(
+                tuple(selected_by_net.get(net_key, ()))
+                or tuple(
                     suggest_effective_plane_pairs(
-                        stack, rail_net=geometry.net, gnd_aliases=aliases
+                        stack,
+                        rail_net=geometry.net,
+                        gnd_aliases=aliases,
+                        mixed_reference_certificates=certificates,
                     )
                 ),
             )

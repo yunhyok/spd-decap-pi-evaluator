@@ -14,7 +14,7 @@ from typing import Any, Callable, Iterable, Mapping, Sequence
 import zlib
 import numpy as np
 from .ai import AssistantSource, EvidenceKind, FeatureEvidence, LocalLLMClient, LocalLLMConfig, PlotFeatures, local_llm_endpoint_requires_remote_access
-from .domain import CapModel, CoordinateTransform, CoordinateUnit, FrequencySettings, ImpedanceSample, MLOOutline, PinKind, PlaneCell, PlacementAssignment as DomainPlacement, PlanePartitionSpec, ProjectSpec, RailSpec, RailState, StackupLayer, TargetPoint, TerminalKind, TopologyKind, TopologyMap, ViaLoopTemplate, ViaPathKind
+from .domain import CapModel, CoordinateTransform, CoordinateUnit, FrequencySettings, ImpedanceSample, MLOOutline, MIXED_REFERENCE_MIN_COVERAGE, MIXED_REFERENCE_MIN_DOMINANT_COMPONENT, MixedReferenceCertificate, PinKind, PlaneCell, PlacementAssignment as DomainPlacement, PlanePartitionSpec, ProjectSpec, RailSpec, RailState, StackupLayer, TargetPoint, TerminalKind, TopologyKind, TopologyMap, ViaLoopTemplate, ViaPathKind
 from .models import PassiveSubcircuitModel, parse_passive_subcircuit, passive_subcircuit_names
 from .plane_pairs import suggest_effective_plane_pairs
 from .solver.evaluator import EvaluationOutcome, evaluate_project_rail_converged
@@ -783,7 +783,7 @@ def _compress_spd_geometry_payload(
 
 def _spd_plane_geometry_assets(
     analysis: Any,
-    selected_power_keys: set[str],
+    retained_net_keys: set[str],
     diagnostics: list[Any],
 ) -> tuple[list[dict[str, Any]], dict[str, bytes]]:
     """Compress exact Polygon/Circle primitives and return a compact project index."""
@@ -793,7 +793,7 @@ def _spd_plane_geometry_assets(
     for item in getattr(analysis, "plane_geometries", ()):
         net = str(getattr(item, "net", ""))
         layer = str(getattr(item, "layer", ""))
-        if not net or not layer or net.casefold() not in selected_power_keys:
+        if not net or not layer or net.casefold() not in retained_net_keys:
             continue
         positive_polygons = getattr(item, "positive_polygons_um", ())
         if not positive_polygons and not getattr(item, "positive_circles_um", ()):
@@ -877,6 +877,247 @@ def _spd_plane_geometry_assets(
             }
         )
     return index, assets
+
+
+def _ordered_spd_geometry(record: Mapping[str, Any]) -> Any | None:
+    """Return the exact ordered PowerSI boolean geometry, or fail closed."""
+
+    try:
+        from shapely.errors import GEOSException
+        from shapely.geometry import GeometryCollection, Point, Polygon
+        from shapely.ops import unary_union
+    except ImportError:  # packaging must provide Shapely; do not guess geometry.
+        return None
+    positive_polygons = record.get("positive_polygons_um", ())
+    negative_polygons = record.get("negative_polygons_um", ())
+    positive_circles = record.get("positive_circles_um", ())
+    negative_circles = record.get("negative_circles_um", ())
+    collections = {
+        "positive_polygon": positive_polygons,
+        "negative_polygon": negative_polygons,
+        "positive_circle": positive_circles,
+        "negative_circle": negative_circles,
+    }
+    shape = GeometryCollection()
+    order = record.get("primitive_order", ())
+    if not isinstance(order, Sequence) or not order:
+        return None
+    try:
+        runs: list[tuple[bool, list[Any]]] = []
+        for step in order:
+            if not isinstance(step, Sequence) or len(step) != 2:
+                return None
+            kind, offset = str(step[0]), int(step[1])
+            source = collections.get(kind)
+            if source is None or offset < 0 or offset >= len(source):
+                return None
+            raw = source[offset]
+            if kind.endswith("polygon"):
+                primitive = Polygon(raw)
+            else:
+                x_um, y_um, radius_um = map(float, raw)
+                if not math.isfinite(radius_um) or radius_um <= 0:
+                    return None
+                # The only curved primitive PowerSI emits is a circle.  This fixed
+                # resolution is part of the versioned method, never a solver scale.
+                primitive = Point(x_um, y_um).buffer(radius_um, quad_segs=64)
+            if primitive.is_empty or not primitive.is_valid or primitive.area <= 0:
+                return None
+            positive = kind.startswith("positive_")
+            if runs and runs[-1][0] == positive:
+                runs[-1][1].append(primitive)
+            else:
+                runs.append((positive, [primitive]))
+        # Preserve exact PowerSI ordering at polarity boundaries while avoiding
+        # one expensive GEOS boolean per primitive.  Union is associative, and
+        # consecutive differences A\B\C are exactly A\(B union C).
+        for positive, primitives in runs:
+            batch = unary_union(primitives)
+            if batch.is_empty or not batch.is_valid or batch.area <= 0:
+                return None
+            shape = shape.union(batch) if positive else shape.difference(batch)
+    except (TypeError, ValueError, IndexError, ArithmeticError, GEOSException):
+        return None
+    return None if shape.is_empty or not shape.is_valid or shape.area <= 0 else shape
+
+
+def _mixed_reference_certificates(
+    records: Sequence[Mapping[str, Any]],
+    assets: Mapping[str, bytes],
+    layers: Sequence[StackupLayer],
+    *,
+    power_keys: set[str],
+    ground_keys: set[str],
+    failures: list[dict[str, Any]] | None = None,
+) -> tuple[MixedReferenceCertificate, ...]:
+    """Certify mixed GND layers from retained source artwork, never net names alone."""
+
+    layer_by_key = {item.name.casefold(): item for item in layers}
+    layer_index = {item.name.casefold(): index for index, item in enumerate(layers)}
+    result: list[MixedReferenceCertificate] = []
+    decoded: list[dict[str, Any]] = []
+    geometry_by_digest: dict[str, Any | None] = {}
+    for record in records:
+        asset = str(record.get("asset", ""))
+        digest = str(record.get("asset_sha256", ""))
+        try:
+            payload = _decode_spd_geometry_asset(digest, assets[asset])
+            _validate_spd_geometry_payload(
+                payload,
+                expected_layer=str(record.get("layer", "")),
+                expected_net=str(record.get("net", "")),
+            )
+        except (KeyError, ValueError):
+            continue
+        payload["asset_sha256"] = digest
+        decoded.append(payload)
+
+    def geometry_for(payload: Mapping[str, Any]) -> Any | None:
+        digest = str(payload.get("asset_sha256", ""))
+        if digest not in geometry_by_digest:
+            geometry_by_digest[digest] = _ordered_spd_geometry(payload)
+        return geometry_by_digest[digest]
+
+    try:
+        from shapely.errors import GEOSException
+        shapely_available = True
+    except ImportError:
+        class GEOSException(Exception):
+            pass
+        shapely_available = False
+
+    def record_failure(
+        *,
+        rail_net: str,
+        pwr_layer: str,
+        gnd_layer: str,
+        gnd_net: str,
+        reason: str,
+        code: str = "SPD_MIXED_REFERENCE_CERTIFICATE_REJECTED",
+        blocking: bool = False,
+    ) -> None:
+        if failures is None:
+            return
+        item = {
+            "rail_net": rail_net,
+            "pwr_layer": pwr_layer,
+            "gnd_layer": gnd_layer,
+            "gnd_net": gnd_net,
+            "reason": reason,
+            "code": code,
+            "blocking": blocking,
+        }
+        if item not in failures:
+            failures.append(item)
+
+    for pwr in decoded:
+        net = str(pwr.get("net", ""))
+        pwr_layer = str(pwr.get("layer", ""))
+        if net.casefold() not in power_keys or not pwr_layer:
+            continue
+        pwr_shape = geometry_for(pwr) if shapely_available else None
+        for gnd in decoded:
+            gnd_layer = str(gnd.get("layer", ""))
+            if gnd_layer.casefold() == pwr_layer.casefold() or str(gnd.get("net", "")).casefold() not in ground_keys:
+                continue
+            stack_layer = layer_by_key.get(gnd_layer.casefold())
+            if stack_layer is None or not stack_layer.is_conductor:
+                continue
+            layer_keys = {value.casefold() for value in stack_layer.pwr_nets}
+            if not layer_keys or layer_keys.issubset(ground_keys):
+                continue
+            if not any(alias in stack_layer.name.casefold() for alias in ground_keys):
+                continue
+            pwr_index = layer_index.get(pwr_layer.casefold())
+            gnd_index = layer_index.get(gnd_layer.casefold())
+            if pwr_index is None or gnd_index is None:
+                continue
+            lower, upper = sorted((pwr_index, gnd_index))
+            between = layers[lower + 1 : upper]
+            if (
+                not between
+                or any(item.is_conductor for item in between)
+                or any(item.dk is None for item in between)
+            ):
+                continue
+            gnd_net = str(gnd.get("net", ""))
+            if net.casefold() in layer_keys:
+                record_failure(
+                    rail_net=net, pwr_layer=pwr_layer, gnd_layer=gnd_layer,
+                    gnd_net=gnd_net, reason="target rail is present on proposed DGND layer",
+                )
+                continue
+            # A certificate binds one exact DGND artwork asset.  Multiple ground
+            # assets on a mixed return layer are intentionally not merged silently.
+            matching_ground = [
+                item for item in records
+                if str(item.get("layer", "")).casefold() == gnd_layer.casefold()
+                and str(item.get("net", "")).casefold() in ground_keys
+            ]
+            if len(matching_ground) != 1:
+                record_failure(
+                    rail_net=net, pwr_layer=pwr_layer, gnd_layer=gnd_layer,
+                    gnd_net=gnd_net, reason="ground artwork asset is missing or ambiguous",
+                )
+                continue
+            gnd_shape = geometry_for(gnd) if shapely_available else None
+            if pwr_shape is None or gnd_shape is None:
+                record_failure(
+                    rail_net=net, pwr_layer=pwr_layer, gnd_layer=gnd_layer,
+                    gnd_net=gnd_net,
+                    reason=(
+                        "Shapely geometry engine is unavailable"
+                        if not shapely_available
+                        else "ordered PWR/DGND artwork geometry is invalid or unsupported"
+                    ),
+                    code="SPD_MIXED_REFERENCE_GEOMETRY_UNAVAILABLE",
+                    blocking=True,
+                )
+                continue
+            try:
+                overlap = pwr_shape.intersection(gnd_shape)
+            except GEOSException:
+                record_failure(
+                    rail_net=net, pwr_layer=pwr_layer, gnd_layer=gnd_layer,
+                    gnd_net=gnd_net, reason="GEOS intersection failed",
+                    code="SPD_MIXED_REFERENCE_GEOMETRY_UNAVAILABLE",
+                    blocking=True,
+                )
+                continue
+            if overlap.is_empty or overlap.area <= 0:
+                record_failure(
+                    rail_net=net, pwr_layer=pwr_layer, gnd_layer=gnd_layer,
+                    gnd_net=gnd_net, reason="PWR and DGND artwork do not overlap",
+                )
+                continue
+            coverage = float(overlap.area / pwr_shape.area)
+            components = getattr(overlap, "geoms", (overlap,))
+            dominant = float(max(part.area for part in components) / overlap.area)
+            if (
+                coverage < MIXED_REFERENCE_MIN_COVERAGE
+                or dominant < MIXED_REFERENCE_MIN_DOMINANT_COMPONENT
+            ):
+                record_failure(
+                    rail_net=net, pwr_layer=pwr_layer, gnd_layer=gnd_layer,
+                    gnd_net=gnd_net,
+                    reason=(
+                        f"coverage {coverage:.6f} or dominant component "
+                        f"{dominant:.6f} is below v1 thresholds"
+                    ),
+                )
+                continue
+            pwr_hash = str(pwr.get("asset_sha256", ""))
+            gnd_hash = str(gnd.get("asset_sha256", ""))
+            if len(pwr_hash) != 64 or len(gnd_hash) != 64:
+                continue
+            result.append(MixedReferenceCertificate(
+                rail_net=net, gnd_net=str(gnd.get("net", "")),
+                pwr_layer=pwr_layer, gnd_layer=gnd_layer,
+                pwr_asset_sha256=pwr_hash, gnd_asset_sha256=gnd_hash,
+                overlap_fraction=coverage,
+                dominant_overlap_component_fraction=dominant,
+            ))
+    return tuple(result)
 
 def _axis_aligned_rectangle(
     polygon: Sequence[Sequence[float]], *, tolerance_um: float = 1.0e-6
@@ -1048,7 +1289,7 @@ def build_spd_import_plan(
     selected_power_nets = _unique_strings(analysis.power_plane_nets)
     selected_power_keys = {item.casefold() for item in selected_power_nets}
     plane_geometry_payload, plane_geometry_assets = _spd_plane_geometry_assets(
-        analysis, selected_power_keys, diagnostics
+        analysis, selected_power_keys | ground_keys, diagnostics
     )
     incomplete_plane_primitives = any(
         str(getattr(item, "code", ""))
@@ -1067,21 +1308,34 @@ def build_spd_import_plan(
         and item.model_id in analysis.cap_models
     }
 
-    layers = [
-        item.model_copy(
-            update={
-                "pwr_nets": [
-                    net
-                    for net in item.pwr_nets
-                    if net.casefold() in selected_power_keys
-                    or net.casefold() in ground_keys
-                ]
-            }
+    # Keep the parser's full positive-NET occupancy on every conductor.  This
+    # is deliberately broader than selected_power_nets: rail creation remains
+    # selected-PWR-only, while ground-purity checks must see incidental/signal
+    # copper that shares a proposed reference layer.
+    layers = list(analysis.stackup_layers)
+    mixed_reference_failures: list[dict[str, Any]] = []
+    mixed_reference_certificates = _mixed_reference_certificates(
+        plane_geometry_payload,
+        plane_geometry_assets,
+        layers,
+        power_keys=selected_power_keys,
+        ground_keys=ground_keys,
+        failures=mixed_reference_failures,
+    )
+    diagnostics.extend(
+        _SpdServiceDiagnostic(
+            severity="error" if item.get("blocking") else "warning",
+            code=str(
+                item.get("code", "SPD_MIXED_REFERENCE_CERTIFICATE_REJECTED")
+            ),
+            message=(
+                f"Rejected mixed-reference candidate {item['rail_net']} "
+                f"{item['pwr_layer']}/{item['gnd_layer']}: {item['reason']}. "
+                "The candidate is not eligible for rail selection."
+            ),
         )
-        if item.is_conductor
-        else item
-        for item in analysis.stackup_layers
-    ]
+        for item in mixed_reference_failures
+    )
     pins = [
         item
         for item in analysis.pins
@@ -1120,9 +1374,9 @@ def build_spd_import_plan(
             "current rectangular modal solver"
         ),
         (
-            "DGND source artwork and cutouts are not intersected with the selected-PWR "
-            "drawing; the solver assumes a continuous reference plane across each "
-            "rail's solver rectangle"
+            "Mixed-reference DGND artwork is retained and must pass a versioned "
+            "ordered-boolean coverage certificate; the rectangular solver still "
+            "assumes a continuous return across the selected rail rectangle"
         ),
         (
             "SPD via-loop R/L values are analytical estimates and require "
@@ -1144,6 +1398,7 @@ def build_spd_import_plan(
             "ground_nets": list(analysis.ground_nets),
             "counts": counts,
             _SPD_PLANE_GEOMETRIES_KEY: plane_geometry_payload,
+            "mixed_reference_certificate_failures": mixed_reference_failures,
             "source_geometry_fidelity": (
                 "selected_pwr_incomplete_blocked"
                 if incomplete_plane_primitives
@@ -1151,15 +1406,15 @@ def build_spd_import_plan(
                 if plane_geometry_payload
                 else "bounding_box_only"
             ),
-            "source_geometry_scope": "selected_pwr_nets_only",
+            "source_geometry_scope": "selected_pwr_and_configured_ground_nets",
             "normalized_primitive_types": [
                 "Polygon",
                 "PolygonTrace",
                 "Circle",
                 "Box",
             ],
-            "ground_reference_geometry": "continuous_reference_plane_assumption",
-            "ground_source_primitives_retained": False,
+            "ground_reference_geometry": "exact_artwork_retained_for_mixed_reference_certification",
+            "ground_source_primitives_retained": True,
         },
     }
     project_name = (
@@ -1196,9 +1451,12 @@ def build_spd_import_plan(
         stackup_layers=layers,
         pins=pins,
         assumptions=assumptions,
+        attachment_names=sorted(plane_geometry_assets, key=str.casefold),
         metadata=metadata,
     )
-    rails = _preserve_spd_rail_preferences(_derive_rails(base), current.rails)
+    rails = _preserve_spd_rail_preferences(
+        _derive_rails(base, mixed_reference_certificates), current.rails
+    )
     project = _validated_project_copy(base, rails=rails)
 
     if not selected_power_nets:
@@ -1368,9 +1626,10 @@ def build_spd_import_plan(
             "cap_instances_without_model_excluded": skipped_without_model,
             "cap_instances_outside_selected_rails_excluded": skipped_without_rail,
             "geometry_model": (
-                "selected-PWR PowerSI Polygon/PolygonTrace/Circle/Box add/subtract "
-                "primitives retained by layer/net; DGND artwork is not intersected and "
-                "a continuous reference plane is assumed; "
+                "selected-PWR and configured-DGND PowerSI Polygon/PolygonTrace/"
+                "Circle/Box add/subtract primitives retained by layer/net; mixed "
+                "references require ordered-boolean coverage certification, while "
+                "the modal solver uses a disclosed continuous rectangular return; "
                 "each non-rectangular rail is evaluated with its disclosed per-net "
                 "rectangular modal-solver bounding box"
             ),
@@ -1405,8 +1664,9 @@ def build_spd_import_plan(
                 **project.metadata["spd_import"],
                 "geometry_model": (
                     "exact normalized PowerSI Polygon/PolygonTrace/Circle/Box source "
-                    "primitives by selected PWR layer/net; DGND source artwork is not "
-                    "retained and a continuous reference plane is assumed; "
+                    "primitives by selected PWR and configured DGND layer/net; mixed "
+                    "DGND source artwork is intersected for certificate coverage, and "
+                    "the modal solver then uses a disclosed continuous rectangular return; "
                     "solver geometry is exact only for void-free axis-aligned rectangles, "
                     "otherwise a per-net bounding box"
                 ),
@@ -1445,11 +1705,10 @@ def build_spd_import_plan(
                 severity="warning",
                 code="SPD_GROUND_CONTINUOUS_REFERENCE_ASSUMPTION",
                 message=(
-                    "Selected DGND artwork, voids, and cutouts are not retained or "
-                    "intersected with PWR geometry. The modal solver assumes a continuous "
-                    "DGND reference across each displayed solver rectangle. Imported "
-                    "solver geometry is confirmed by default, but this assumption remains "
-                    "visible for review."
+                    "Mixed-reference DGND artwork and cutouts are retained for certificate "
+                    "validation. The modal solver still assumes a continuous DGND reference "
+                    "across each displayed solver rectangle, so certificate-backed results "
+                    "remain LOW geometry confidence."
                 ),
             )
         )
@@ -2365,7 +2624,31 @@ def _evaluation_view(project: ProjectSpec, outcome: EvaluationOutcome) -> Evalua
         existing = category_summary.get(item.category.value)
         if existing is None or level_order[item.level.value] < level_order[existing]:
             category_summary[item.category.value] = item.level.value
-    confidence_note = " · ".join(f"{key} {value}" for key, value in category_summary.items())
+    confidence_note = " | ".join(f"{key} {value}" for key, value in category_summary.items())
+    evaluated_rail = next(
+        (
+            item
+            for item in project.rails
+            if item.rail_id.casefold() == outcome.rail_id.casefold()
+        ),
+        None,
+    )
+    certificate = (
+        evaluated_rail.mixed_reference_certificate
+        if evaluated_rail is not None
+        else None
+    )
+    if certificate is not None:
+        disclosure = (
+            "Mixed reference "
+            f"{certificate.pwr_layer}/{certificate.gnd_layer}: overlap "
+            f"{certificate.overlap_fraction:.2%}, dominant "
+            f"{certificate.dominant_overlap_component_fraction:.2%}; "
+            "continuous rectangular-return approximation (LOW geometry confidence)"
+        )
+        confidence_note = (
+            f"{confidence_note} | {disclosure}" if confidence_note else disclosure
+        )
     placements = [item for item in project.placements if item.rail_id == outcome.rail_id]
     model_count = len({item.cap_model_id for item in placements})
     return EvaluationView(
@@ -2408,7 +2691,10 @@ def _evaluation_view(project: ProjectSpec, outcome: EvaluationOutcome) -> Evalua
         z_imag_ohm=[float(value) for value in outcome.solve.impedance_ohm.imag],
     )
 
-def _derive_rails(project: ProjectSpec) -> list[RailSpec]:
+def _derive_rails(
+    project: ProjectSpec,
+    mixed_reference_certificates: Sequence[MixedReferenceCertificate] = (),
+) -> list[RailSpec]:
     if not project.stackup_layers or not project.pins:
         return project.rails
     existing_by_net = {item.net.casefold(): item for item in project.rails}
@@ -2427,7 +2713,10 @@ def _derive_rails(project: ProjectSpec) -> list[RailSpec]:
     rails: list[RailSpec] = []
     for index, net in enumerate(nets):
         suggestions = suggest_effective_plane_pairs(
-            project.stackup_layers, rail_net=net, gnd_aliases=project.gnd_aliases
+            project.stackup_layers,
+            rail_net=net,
+            gnd_aliases=project.gnd_aliases,
+            mixed_reference_certificates=mixed_reference_certificates,
         )
         if not suggestions:
             continue
@@ -2450,6 +2739,7 @@ def _derive_rails(project: ProjectSpec) -> list[RailSpec]:
                 target_mask=existing.target_mask if existing and existing.target_mask else _constant_target(0.020),
                 min_near_slots=existing.min_near_slots if existing else 0,
                 reserved_slot_ids=existing.reserved_slot_ids if existing else [],
+                mixed_reference_certificate=suggestion.mixed_reference_certificate,
             )
         )
     return rails

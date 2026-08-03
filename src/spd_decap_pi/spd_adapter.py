@@ -5,15 +5,24 @@ from __future__ import annotations
 from collections.abc import Callable
 from dataclasses import dataclass
 from hashlib import sha256
+import json
 from pathlib import Path
 from time import perf_counter
 from typing import Any
 
-from spd_decap_pi._core.domain import PinKind, ProjectSpec
+from spd_decap_pi._core.domain import (
+    MixedReferenceGroundWitness,
+    PinKind,
+    PlanePairSuggestion,
+    ProjectSpec,
+)
+from spd_decap_pi._core import services as core_services
 from spd_decap_pi._core.io.spd import (
     SpdCapInstance,
+    SpdDiagnostic,
     SpdImportError,
     analyze_spd,
+    recover_spd_ground_reachability,
     recover_spd_via_paths,
 )
 from spd_decap_pi._core.services import build_spd_import_plan, create_workspace_state
@@ -36,6 +45,7 @@ from .scenario import (
     SharedPadClusterState,
     SharedPadConnectionAnalysis,
     SourceIdentity,
+    mixed_reference_ground_landing_identity,
 )
 
 
@@ -275,6 +285,15 @@ def _scenario_via_landing(
                 )
                 for segment in item.segments
             ),
+            trace_hops=item.trace_hops,
+            trace_alternate_exit=item.trace_alternate_exit,
+            provenance=(
+                "SOURCE_PROVEN_TRACE_ALTERNATE_EXIT_LEGACY_TEMPLATE"
+                if item.trace_alternate_exit
+                else "SOURCE_PROVEN_UNIQUE_TRACE_VIA_CHAIN"
+                if item.trace_hops
+                else "SOURCE_PROVEN_MONOTONIC_VIA_CHAIN"
+            ),
         )
         for item in recovery.evidence_by_via.get(landing.via_id.casefold(), ())
     )
@@ -294,21 +313,173 @@ def _via_target_layers_by_net(project: ProjectSpec) -> dict[str, tuple[str, ...]
     """Target layers requested from recovery for every selected terminal net."""
 
     result: dict[str, set[str]] = {}
-    ground_nets = {item.casefold() for item in project.gnd_aliases}
+    aliases = {item.casefold() for item in project.gnd_aliases}
     for rail in project.rails:
         result.setdefault(rail.net.casefold(), set()).add(rail.pwr_layer)
+        gnd_net = (
+            rail.mixed_reference_certificate.gnd_net
+            if rail.mixed_reference_certificate is not None
+            else None
+        )
         gnd_layer = next(
             (item for item in project.stackup_layers if item.name == rail.gnd_layer),
             None,
         )
-        if gnd_layer is not None:
-            ground_nets.update(item.casefold() for item in gnd_layer.pwr_nets)
-            for net in ground_nets:
-                result.setdefault(net, set()).add(rail.gnd_layer)
+        candidates = [
+            net for net in (gnd_layer.pwr_nets if gnd_layer is not None else ())
+            if net.casefold() in aliases
+            and (gnd_net is None or net.casefold() == gnd_net.casefold())
+        ]
+        if len(candidates) == 1:
+            result.setdefault(candidates[0].casefold(), set()).add(rail.gnd_layer)
+    spd_import = project.metadata.get("spd_import", {})
+    failures = (
+        spd_import.get("mixed_reference_certificate_failures", ())
+        if isinstance(spd_import, dict)
+        else ()
+    )
+    for item in failures if isinstance(failures, list) else ():
+        if not isinstance(item, dict):
+            continue
+        net = str(item.get("rail_net", "")).casefold()
+        layer = str(item.get("pwr_layer", ""))
+        if net and layer:
+            result.setdefault(net, set()).add(layer)
     return {
         net: tuple(sorted(layers, key=str.casefold))
         for net, layers in sorted(result.items())
     }
+
+
+def _mixed_reference_target_node_predicate(
+    project: ProjectSpec, attachments: dict[str, bytes]
+) -> Callable[[str, str, str, float, float], bool]:
+    """Build fail-closed strict-interior tests for certificate DGND artwork."""
+
+    try:
+        from shapely.geometry import Point
+        from shapely.prepared import prep
+    except ImportError as exc:
+        raise SpdImportError(
+            "SPD_MIXED_REFERENCE_GND_ARTWORK_REQUIRED: Shapely is required "
+            "to verify GND target-node artwork"
+        ) from exc
+    spd_import = project.metadata.get("spd_import")
+    records = spd_import.get("plane_geometries") if isinstance(spd_import, dict) else None
+    if not isinstance(records, list):
+        raise SpdImportError(
+            "SPD_MIXED_REFERENCE_GND_ARTWORK_REQUIRED: retained DGND geometry index is missing"
+        )
+    shapes: dict[tuple[str, str], tuple[Any, tuple[float, float, float, float]]] = {}
+    for rail in project.rails:
+        certificate = rail.mixed_reference_certificate
+        if certificate is None:
+            continue
+        key = (certificate.gnd_net.casefold(), certificate.gnd_layer.casefold())
+        if key in shapes:
+            continue
+        matching = [
+            item for item in records
+            if isinstance(item, dict)
+            and str(item.get("net", "")).casefold() == key[0]
+            and str(item.get("layer", "")).casefold() == key[1]
+            and str(item.get("asset_sha256", "")) == certificate.gnd_asset_sha256
+        ]
+        if len(matching) != 1:
+            raise SpdImportError(
+                "SPD_MIXED_REFERENCE_GND_ARTWORK_REQUIRED: certificate DGND "
+                f"asset binding is missing or ambiguous for {rail.rail_id}"
+            )
+        record = matching[0]
+        asset_name = str(record.get("asset", ""))
+        compressed = attachments.get(asset_name)
+        if compressed is None:
+            raise SpdImportError(
+                "SPD_MIXED_REFERENCE_GND_ARTWORK_REQUIRED: certificate DGND "
+                f"asset is absent for {rail.rail_id}"
+            )
+        try:
+            payload = core_services._decode_spd_geometry_asset(
+                certificate.gnd_asset_sha256, compressed
+            )
+            core_services._validate_spd_geometry_payload(
+                payload,
+                expected_layer=certificate.gnd_layer,
+                expected_net=certificate.gnd_net,
+            )
+            shape = core_services._ordered_spd_geometry(payload)
+        except (ValueError, ArithmeticError) as exc:
+            raise SpdImportError(
+                "SPD_MIXED_REFERENCE_GND_ARTWORK_REQUIRED: certificate DGND "
+                f"geometry is invalid for {rail.rail_id}: {exc}"
+            ) from exc
+        if shape is None:
+            raise SpdImportError(
+                "SPD_MIXED_REFERENCE_GND_ARTWORK_REQUIRED: certificate DGND "
+                f"geometry cannot be constructed for {rail.rail_id}"
+            )
+        shapes[key] = (prep(shape), tuple(map(float, shape.bounds)))
+
+    def accepts(net: str, layer: str, _node_id: str, x_um: float, y_um: float) -> bool:
+        prepared = shapes.get((net.casefold(), layer.casefold()))
+        if prepared is None:
+            return False
+        shape, (x_min, y_min, x_max, y_max) = prepared
+        if not (x_min < x_um < x_max and y_min < y_um < y_max):
+            return False
+        # Strict interior is intentional: a target exactly on an artwork edge
+        # is numerically/physically ambiguous, so the certificate fails closed.
+        try:
+            return bool(shape.contains(Point(float(x_um), float(y_um))))
+        except Exception as exc:  # GEOS failures must never become connectivity.
+            raise SpdImportError(
+                "SPD_MIXED_REFERENCE_GND_ARTWORK_REQUIRED: DGND target-node "
+                f"geometry check failed: {exc}"
+            ) from exc
+
+    return accepts
+
+
+def _raise_for_rejected_mixed_reference_landings(
+    project: ProjectSpec,
+    source_landings: tuple[Any, ...],
+    path_recovery: Any,
+) -> None:
+    """Block a fallback pair when source Via evidence lands on a rejected pair."""
+
+    spd_import = project.metadata.get("spd_import")
+    failed_candidates = (
+        spd_import.get("mixed_reference_certificate_failures", ())
+        if isinstance(spd_import, dict)
+        else ()
+    )
+    blocking_failures: list[dict[str, Any]] = []
+    for failure in failed_candidates if isinstance(failed_candidates, list) else ():
+        if not isinstance(failure, dict):
+            continue
+        net_key = str(failure.get("rail_net", "")).casefold()
+        target_key = str(failure.get("pwr_layer", "")).casefold()
+        if any(
+            landing.net.casefold() == net_key
+            and any(
+                evidence.target_layer.casefold() == target_key
+                for evidence in path_recovery.evidence_by_via.get(
+                    landing.via_id.casefold(), ()
+                )
+            )
+            for landing in source_landings
+        ):
+            blocking_failures.append(failure)
+    if not blocking_failures:
+        return
+    details = "; ".join(
+        f"{item.get('rail_net')} {item.get('pwr_layer')}/{item.get('gnd_layer')}"
+        for item in blocking_failures[:5]
+    )
+    raise SpdImportError(
+        "SPD_MIXED_REFERENCE_CERTIFICATE_REQUIRED: source Via path evidence "
+        f"lands on rejected mixed-reference pair(s): {details}"
+    )
 
 
 def _common_eligibility_at_points(
@@ -494,6 +665,23 @@ def import_spd_scenario(
         ),
         base_project.stackup_layers,
         gnd_aliases=base_project.gnd_aliases,
+        mixed_reference_certificates=tuple(
+            rail.mixed_reference_certificate
+            for rail in base_project.rails
+            if rail.mixed_reference_certificate is not None
+        ),
+        selected_pairs=tuple(
+            PlanePairSuggestion(
+                rail_net=rail.net,
+                pwr_layer=rail.pwr_layer,
+                gnd_layer=rail.gnd_layer,
+                pwr_index=0,
+                gnd_index=0,
+                separation_um=0.0,
+                mixed_reference_certificate=rail.mixed_reference_certificate,
+            )
+            for rail in base_project.rails
+        ),
     )
     index_s = perf_counter() - index_started
     report(
@@ -545,13 +733,221 @@ def import_spd_scenario(
         is_cancelled=cancelled,
     )
     path_recovery_s = perf_counter() - recovery_started
+    _raise_for_rejected_mixed_reference_landings(
+        base_project,
+        source_landings,
+        path_recovery,
+    )
+    # A mixed-reference artwork certificate establishes plane overlap, not the
+    # source GND topology.  Build one stable witness universe per mixed rail:
+    # every DIRECT source landing whose PWR evidence is eligible for that rail,
+    # independent of the mutable current_rail_id.  This lets distribution
+    # reassign a proven-compatible decap into/out of the rail without making a
+    # source witness stale.  The evaluation preflight separately requires the
+    # enabled *current* assignment to be a witnessed subset.  This batched pass
+    # accepts branches (connectivity proof) and intentionally does not turn
+    # them into a unique RL path; the terminal model remains legacy-template.
+    mixed_rails = {
+        rail.rail_id.casefold(): rail
+        for rail in base_project.rails
+        if rail.mixed_reference_certificate is not None
+    }
+    mixed_ground_landings_by_rail: dict[str, list[tuple[str, Any]]] = {
+        key: [] for key in mixed_rails
+    }
+    shared_cluster_rail_eligibility: dict[tuple[str, str], bool] = {}
+    mixed_target_layers_by_net: dict[str, set[str]] = {}
+    for rail_key, rail in mixed_rails.items():
+        processed_shared_clusters: set[str] = set()
+        certificate = rail.mixed_reference_certificate
+        assert certificate is not None
+        mixed_target_layers_by_net.setdefault(certificate.gnd_net.casefold(), set()).add(
+            certificate.gnd_layer
+        )
+        for instance in top_instances:
+            connection = parsed_connection_by_key.get(instance.refdes.casefold())
+            if connection is None or connection.kind not in {"DIRECT", "SHARED_ANCHOR"}:
+                continue
+            if connection.kind == "DIRECT":
+                power_vias = tuple(
+                    _scenario_via_landing(landing, path_recovery)
+                    for landing in connection.power_vias
+                )
+                eligible = _common_eligibility_at_landings(
+                    eligibility_index,
+                    power_vias,
+                    rail_choices_by_pair,
+                )
+                rail_eligibility = next(
+                    (
+                        item
+                        for rail_id, item in eligible.items()
+                        if rail_id.casefold() == rail_key
+                    ),
+                    None,
+                )
+                if rail_eligibility is None or not rail_eligibility.allowed:
+                    continue
+            else:
+                assert connection.cluster_id is not None
+                cluster_key = connection.cluster_id.casefold()
+                cache_key = (cluster_key, rail_key)
+                allowed = shared_cluster_rail_eligibility.get(cache_key)
+                if allowed is None:
+                    cluster = parsed_cluster_by_key.get(cluster_key)
+                    if cluster is None:
+                        allowed = False
+                    else:
+                        power_landings = {
+                            landing.via_id.casefold(): _scenario_via_landing(
+                                landing, path_recovery
+                            )
+                            for member in cluster.member_refdes
+                            for landing in parsed_connection_by_key[
+                                member.casefold()
+                            ].power_vias
+                        }
+                        by_via = tuple(
+                            _eligibility_for_via_landing(
+                                eligibility_index, landing, rail_choices_by_pair
+                            )
+                            for landing in power_landings.values()
+                        )
+                        common = _common_eligibility_maps(by_via)
+                        candidate = next(
+                            (
+                                item for rail_id, item in common.items()
+                                if rail_id.casefold() == rail_key
+                            ),
+                            None,
+                        )
+                        allowed = bool(candidate is not None and candidate.allowed)
+                    shared_cluster_rail_eligibility[cache_key] = allowed
+                if not allowed:
+                    continue
+                cluster = parsed_cluster_by_key[cluster_key]
+                if cluster_key in processed_shared_clusters:
+                    continue
+                processed_shared_clusters.add(cluster_key)
+                owner = f"cluster:{cluster.cluster_id}"
+                for member in cluster.member_refdes:
+                    member_connection = parsed_connection_by_key[member.casefold()]
+                    for landing in member_connection.ground_vias:
+                        if landing.net.casefold() == certificate.gnd_net.casefold():
+                            mixed_ground_landings_by_rail[rail_key].append(
+                                (owner, landing)
+                            )
+                continue
+            owner = (
+                f"cluster:{connection.cluster_id}"
+                if connection.cluster_id is not None
+                else instance.refdes
+            )
+            for landing in connection.ground_vias:
+                if landing.net.casefold() == certificate.gnd_net.casefold():
+                    mixed_ground_landings_by_rail[rail_key].append(
+                        (owner, landing)
+                    )
+    ground_reachability = recover_spd_ground_reachability(
+        source_path,
+        landings=(
+            landing
+            for entries in mixed_ground_landings_by_rail.values()
+            for _refdes, landing in entries
+        ),
+        target_layers_by_net=mixed_target_layers_by_net,
+        target_node_predicate=_mixed_reference_target_node_predicate(
+            base_project, dict(plan.attachments)
+        ),
+        expected_source=analysis.source,
+        progress=lambda value, message: report(91 + round(max(0, min(100, value)) * 1 / 100), message),
+        is_cancelled=cancelled,
+    )
+    mixed_witnesses: dict[str, MixedReferenceGroundWitness] = {}
+    mixed_ground_reachability_by_rail: list[dict[str, Any]] = []
+    mixed_ground_reachability_diagnostics: list[SpdDiagnostic] = []
+    for rail_key, rail in mixed_rails.items():
+        certificate = rail.mixed_reference_certificate
+        assert certificate is not None
+        identities: list[str] = []
+        unreachable: list[str] = []
+        for refdes, landing in mixed_ground_landings_by_rail[rail_key]:
+            identity = mixed_reference_ground_landing_identity(refdes, landing)
+            if ground_reachability.reaches(landing, certificate.gnd_layer):
+                identities.append(identity)
+            else:
+                unreachable.append(identity)
+        canonical = tuple(sorted(set(identities)))
+        landing_hash = sha256(
+            (json.dumps(list(canonical), ensure_ascii=False, separators=(",", ":")) + "\n").encode("utf-8")
+        ).hexdigest()
+        mixed_witnesses[rail_key] = MixedReferenceGroundWitness(
+            rail_net=rail.net,
+            gnd_net=certificate.gnd_net,
+            pwr_layer=rail.pwr_layer,
+            gnd_layer=rail.gnd_layer,
+            gnd_asset_sha256=certificate.gnd_asset_sha256,
+            source_sha256=analysis.source.sha256,
+            landing_identities=canonical,
+            landing_count=len(canonical),
+            landing_identities_sha256=landing_hash,
+        )
+        unreachable_examples = tuple(sorted(set(unreachable))[:5])
+        mixed_ground_reachability_by_rail.append(
+            {
+                "rail_id": rail.rail_id,
+                "candidate_landing_count": len(
+                    {
+                        mixed_reference_ground_landing_identity(owner, landing)
+                        for owner, landing in mixed_ground_landings_by_rail[rail_key]
+                    }
+                ),
+                "reachable_landing_count": len(canonical),
+                "unreachable_landing_count": len(set(unreachable)),
+                "unreachable_examples": list(unreachable_examples),
+            }
+        )
+        if unreachable_examples:
+            mixed_ground_reachability_diagnostics.append(
+                SpdDiagnostic(
+                    severity="warning",
+                    code="SPD_MIXED_REFERENCE_GND_REACHABILITY_INCOMPLETE",
+                    message=(
+                        f"{rail.rail_id}: {len(set(unreachable))} source GND "
+                        f"landing(s) do not reach certified {certificate.gnd_net} "
+                        f"artwork on {certificate.gnd_layer}; this rail is blocked "
+                        "only if selected for evaluation (examples: "
+                        + ", ".join(unreachable_examples)
+                        + ")"
+                    ),
+                )
+            )
     recovery_metadata = dict(base_project.metadata)
     recovery_metadata["spd_via_path_recovery"] = {
         **dict(path_recovery.statistics),
         "algorithm": "unique_monotonic_same_net_via_chain_v1",
         "fallback_behavior": "legacy_rail_template",
+        "mixed_reference_ground_reachability": {
+            **dict(ground_reachability.statistics),
+            "algorithm": "same_net_via_trace_reachability_v1",
+            "by_rail": mixed_ground_reachability_by_rail,
+        },
     }
-    base_project = base_project.model_copy(update={"metadata": recovery_metadata})
+    base_project = base_project.model_copy(
+        update={
+            "metadata": recovery_metadata,
+            "rails": [
+                rail.model_copy(
+                    update={
+                        "mixed_reference_ground_witness": mixed_witnesses.get(
+                            rail.rail_id.casefold()
+                        )
+                    }
+                )
+                for rail in base_project.rails
+            ],
+        }
+    )
     report(
         92,
         "Recovered source-proven Via path summaries; checking exact PWR-plane eligibility",
@@ -689,15 +1085,11 @@ def import_spd_scenario(
                         power_vias,
                         rail_choices_by_pair,
                     )
-                    if source_rail_id.casefold() not in {
-                        item.rail_id.casefold() for item in eligibility.values()
-                    }:
-                        connection_kind = DecapConnectionKind.UNRESOLVED
-                        connection_reason = (
-                            "the source rail is not present beneath every exact "
-                            "PWR-via landing"
-                        )
-                        eligibility = {}
+                    # Exact landing eligibility is an assignment/distribution
+                    # constraint.  It must never rewrite parser-proven source
+                    # connectivity: the unedited source rail can be modeled
+                    # from its source terminals even when an alternate-plane
+                    # eligibility query cannot prove that rail at every Via.
             else:
                 cluster_key = connection_cluster_id.casefold()
                 if cluster_key not in accepted_cluster_keys:
@@ -847,7 +1239,9 @@ def import_spd_scenario(
     return ScenarioImport(
         scenario=scenario,
         attachments=attachments,
-        diagnostics=tuple((*plan.diagnostics, *path_recovery.diagnostics)),
+        diagnostics=tuple(
+            (*plan.diagnostics, *path_recovery.diagnostics, *mixed_ground_reachability_diagnostics)
+        ),
         timings=timings,
     )
 

@@ -9,6 +9,8 @@ from __future__ import annotations
 
 from collections import Counter
 from enum import StrEnum
+from hashlib import sha256
+import json
 from math import isfinite
 from typing import Any, Literal
 
@@ -25,6 +27,8 @@ from .version import __version__
 
 
 SCHEMA_VERSION = "0.4"
+MIXED_REFERENCE_MIN_COVERAGE = 0.90
+MIXED_REFERENCE_MIN_DOMINANT_COMPONENT = 0.99
 
 
 class DomainModel(BaseModel):
@@ -169,6 +173,72 @@ class TargetPoint(DomainModel):
     impedance_ohm: float = Field(gt=0)
 
 
+class MixedReferenceCertificate(DomainModel):
+    """Geometry evidence allowing a selected PWR rail to use a mixed layer.
+
+    This is intentionally attached to the rail rather than inferred from a
+    layer name at solve time.  The hashes bind the result to the exact retained
+    PowerSI artwork used for the boolean intersection.
+    """
+
+    version: Literal["mixed-reference-v1"] = "mixed-reference-v1"
+    method: Literal["ordered-shapely-boolean-v1"] = "ordered-shapely-boolean-v1"
+    rail_net: str = Field(min_length=1)
+    gnd_net: str = Field(min_length=1)
+    pwr_layer: str = Field(min_length=1)
+    gnd_layer: str = Field(min_length=1)
+    pwr_asset_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+    gnd_asset_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+    overlap_fraction: float = Field(ge=0, le=1)
+    dominant_overlap_component_fraction: float = Field(ge=0, le=1)
+
+
+class MixedReferenceGroundWitness(DomainModel):
+    """Source-graph evidence for GND landings on a mixed return layer.
+
+    A mixed-reference geometry certificate proves that the selected rail and
+    the named DGND artwork overlap.  It cannot, by itself, prove that a decap
+    GND landing reaches that particular artwork rather than another net on the
+    same physical layer.  This compact witness records the result of a
+    same-net raw SPD Via+Trace graph reachability check for every covered
+    landing.  It deliberately records reachability, not a unique RL path.
+    """
+
+    version: Literal["mixed-reference-ground-reachability-v1"] = (
+        "mixed-reference-ground-reachability-v1"
+    )
+    method: Literal["same-net-via-trace-reachability-v1"] = (
+        "same-net-via-trace-reachability-v1"
+    )
+    rail_net: str = Field(min_length=1)
+    gnd_net: str = Field(min_length=1)
+    pwr_layer: str = Field(min_length=1)
+    gnd_layer: str = Field(min_length=1)
+    gnd_asset_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+    source_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+    landing_identities: tuple[str, ...] = ()
+    landing_count: int = Field(ge=0)
+    landing_identities_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+
+    @model_validator(mode="after")
+    def canonical_landing_identities(self) -> "MixedReferenceGroundWitness":
+        identities = tuple(item.strip().casefold() for item in self.landing_identities)
+        if any(not item for item in identities):
+            raise ValueError("mixed-reference ground witness identities must be nonblank")
+        if identities != tuple(sorted(identities)) or len(identities) != len(set(identities)):
+            raise ValueError(
+                "mixed-reference ground witness identities must be unique and canonically sorted"
+            )
+        if self.landing_count != len(identities):
+            raise ValueError("mixed-reference ground witness landing count disagrees")
+        digest = sha256(
+            (json.dumps(list(identities), ensure_ascii=False, separators=(",", ":")) + "\n").encode("utf-8")
+        ).hexdigest()
+        if self.landing_identities_sha256 != digest:
+            raise ValueError("mixed-reference ground witness landing hash disagrees")
+        return self
+
+
 class RailSpec(DomainModel):
     rail_id: str = Field(min_length=1)
     family: str = Field(min_length=1)
@@ -182,6 +252,8 @@ class RailSpec(DomainModel):
     target_mask: list[TargetPoint] = Field(default_factory=list)
     min_near_slots: int = Field(default=0, ge=0)
     reserved_slot_ids: list[str] = Field(default_factory=list)
+    mixed_reference_certificate: MixedReferenceCertificate | None = None
+    mixed_reference_ground_witness: MixedReferenceGroundWitness | None = None
 
     @field_validator("target_mask")
     @classmethod
@@ -237,6 +309,7 @@ class PlanePairSuggestion(DomainModel):
     pwr_index: int = Field(ge=0)
     gnd_index: int = Field(ge=0)
     separation_um: float = Field(ge=0)
+    mixed_reference_certificate: MixedReferenceCertificate | None = None
 
 
 class PinRecord(DomainModel):
@@ -1105,11 +1178,96 @@ class ProjectSpec(DomainModel):
             gnd_layer = layer_by_name[rail.gnd_layer]
             gnd_keys = {item.casefold() for item in gnd_layer.pwr_nets}
             aliases = {item.casefold() for item in self.gnd_aliases}
-            if not gnd_keys or not gnd_keys.issubset(aliases):
+            pure_ground = bool(gnd_keys) and gnd_keys.issubset(aliases)
+            certificate = rail.mixed_reference_certificate
+            witness = rail.mixed_reference_ground_witness
+            if pure_ground and certificate is not None:
+                raise ValueError(
+                    f"rail {rail.rail_id!r} has an unnecessary mixed-reference certificate"
+                )
+            if not pure_ground and certificate is None:
                 raise ValueError(
                     f"rail {rail.rail_id!r} DGND layer {rail.gnd_layer!r} "
-                    "must contain only configured GND aliases"
+                    "must contain only configured GND aliases or a valid mixed-reference certificate"
                 )
+            if certificate is not None:
+                if (
+                    certificate.rail_net.casefold() != rail.net.casefold()
+                    or certificate.pwr_layer.casefold() != rail.pwr_layer.casefold()
+                    or certificate.gnd_layer.casefold() != rail.gnd_layer.casefold()
+                ):
+                    raise ValueError(
+                        f"rail {rail.rail_id!r} mixed-reference certificate does not bind its selected pair"
+                    )
+                if certificate.gnd_net.casefold() not in aliases:
+                    raise ValueError(
+                        f"rail {rail.rail_id!r} certificate ground net is not a configured alias"
+                    )
+                if certificate.gnd_net.casefold() not in gnd_keys:
+                    raise ValueError(
+                        f"rail {rail.rail_id!r} certificate ground net is absent from its DGND layer"
+                    )
+                if rail.net.casefold() in gnd_keys:
+                    raise ValueError(
+                        f"rail {rail.rail_id!r} target rail cannot appear on its mixed DGND layer"
+                    )
+                if not any(alias in gnd_layer.name.casefold() for alias in aliases):
+                    raise ValueError(
+                        f"rail {rail.rail_id!r} mixed DGND layer must have an explicit ground-like name"
+                    )
+                if (
+                    certificate.overlap_fraction < MIXED_REFERENCE_MIN_COVERAGE
+                    or certificate.dominant_overlap_component_fraction
+                    < MIXED_REFERENCE_MIN_DOMINANT_COMPONENT
+                ):
+                    raise ValueError(
+                        f"rail {rail.rail_id!r} mixed-reference certificate is below fail-closed coverage thresholds"
+                    )
+                spd_import = self.metadata.get("spd_import")
+                records = (
+                    spd_import.get("plane_geometries")
+                    if isinstance(spd_import, dict)
+                    else None
+                )
+                if not isinstance(records, list):
+                    raise ValueError(
+                        f"rail {rail.rail_id!r} certificate requires retained SPD geometry index"
+                    )
+                def asset_match(net: str, layer_name: str, digest: str) -> list[dict[str, Any]]:
+                    return [
+                        item for item in records if isinstance(item, dict)
+                        and str(item.get("net", "")).casefold() == net.casefold()
+                        and str(item.get("layer", "")).casefold() == layer_name.casefold()
+                        and str(item.get("asset_sha256", "")) == digest
+                    ]
+                pwr_assets = asset_match(rail.net, rail.pwr_layer, certificate.pwr_asset_sha256)
+                gnd_assets = asset_match(certificate.gnd_net, rail.gnd_layer, certificate.gnd_asset_sha256)
+                if len(pwr_assets) != 1 or len(gnd_assets) != 1:
+                    raise ValueError(
+                        f"rail {rail.rail_id!r} certificate asset binding is missing or ambiguous"
+                    )
+                attachment_keys = {name.casefold() for name in self.attachment_names}
+                for item in (*pwr_assets, *gnd_assets):
+                    asset = str(item.get("asset", ""))
+                    if asset.casefold() not in attachment_keys:
+                        raise ValueError(
+                            f"rail {rail.rail_id!r} certificate geometry asset is not attached"
+                        )
+            if witness is not None:
+                if certificate is None:
+                    raise ValueError(
+                        f"rail {rail.rail_id!r} has a mixed-reference ground witness without a certificate"
+                    )
+                if (
+                    witness.rail_net.casefold() != rail.net.casefold()
+                    or witness.gnd_net.casefold() != certificate.gnd_net.casefold()
+                    or witness.pwr_layer.casefold() != rail.pwr_layer.casefold()
+                    or witness.gnd_layer.casefold() != rail.gnd_layer.casefold()
+                    or witness.gnd_asset_sha256 != certificate.gnd_asset_sha256
+                ):
+                    raise ValueError(
+                        f"rail {rail.rail_id!r} mixed-reference ground witness does not bind its selected pair"
+                    )
 
         for template in self.via_templates:
             if template.pwr_reference_layer not in layer_by_name:
@@ -1374,6 +1532,8 @@ __all__ = [
     "FrequencySettings",
     "ImpedanceSample",
     "MLOOutline",
+    "MixedReferenceCertificate",
+    "MixedReferenceGroundWitness",
     "PeakMetric",
     "PinKind",
     "PinRecord",

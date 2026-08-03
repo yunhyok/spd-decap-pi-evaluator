@@ -354,6 +354,9 @@ def test_legacy_normalized_project_without_cluster_field_keeps_hash_identity() -
     legacy_payload = current.model_dump(mode="python")
     legacy_project = legacy_payload["normalized_project"]
     legacy_project.pop("shared_pad_clusters")
+    for rail in legacy_project.get("rails", []):
+        rail.pop("mixed_reference_certificate", None)
+        rail.pop("mixed_reference_ground_witness", None)
 
     legacy = ScenarioSpec.model_validate(legacy_payload)
 

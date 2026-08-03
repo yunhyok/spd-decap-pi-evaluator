@@ -1243,6 +1243,7 @@ def test_connectivity_preflight_aggregates_all_selected_rail_blockers(
     ]
     assert "RAIL_VDD" in preflight.message()
     assert "RAIL_ALT" in preflight.message()
+    assert "2 of 2 selected PWR rail(s)" in preflight.message()
 
     selected_only = preflight_evaluation_connectivity(blocked, ("RAIL_VDD",))
     assert [item.refdes for item in selected_only.blockers] == ["C1"]
@@ -1256,6 +1257,48 @@ def test_connectivity_preflight_aggregates_all_selected_rail_blockers(
         evaluate_comparison_batch(blocked, ("RAIL_VDD", "RAIL_ALT"))
     assert captured.value.code == "EVALUATION_CONNECTIVITY_BLOCKED"
     assert captured.value.preflight == preflight
+
+
+def test_direct_missing_eligibility_is_preflighted_before_baseline_worker(
+    monkeypatch,
+) -> None:
+    payload = _scenario().model_dump(mode="python")
+    c1 = next(item for item in payload["decaps"] if item["refdes"] == "C1")
+    c1["eligibility"] = {}
+    blocked = ScenarioSpec.model_validate(payload)
+
+    preflight = preflight_evaluation_connectivity(blocked, ("RAIL_VDD",))
+
+    assert [(item.refdes, item.kind.value) for item in preflight.blockers] == [
+        ("C1", "DIRECT")
+    ]
+    assert "evaluation modelability" in preflight.blockers[0].reason
+    monkeypatch.setattr(
+        ScenarioSpec,
+        "with_baseline_captures",
+        lambda *_args, **_kwargs: pytest.fail("baseline worker must not start"),
+    )
+    with pytest.raises(ScenarioEvaluationPreflightError) as captured:
+        evaluate_comparison_batch(blocked, ("RAIL_VDD",))
+    assert captured.value.preflight == preflight
+
+
+def test_disabled_direct_multi_via_still_requires_modelability_preflight() -> None:
+    payload = _scenario().model_dump(mode="python")
+    c2 = next(item for item in payload["decaps"] if item["refdes"] == "C2")
+    c2["eligibility"] = {}
+    connection = payload["connection_analysis"]["connections"]["C2"]
+    second_power = dict(connection["power_vias"][0])
+    second_power.update({"via_id": "VP-C2-B", "endpoint_node_id": "NP-C2-B"})
+    connection["power_vias"] = (*connection["power_vias"], second_power)
+    blocked = ScenarioSpec.model_validate(payload)
+
+    preflight = preflight_evaluation_connectivity(blocked, ("RAIL_VDD",))
+
+    assert [(item.refdes, item.kind.value) for item in preflight.blockers] == [
+        ("C2", "DIRECT")
+    ]
+    assert "evaluation modelability" in preflight.blockers[0].reason
 
 
 def test_connectivity_preflight_includes_disabled_unresolved_before_baseline(
@@ -1528,6 +1571,22 @@ def test_build_rejects_ineligible_current_rail_with_reason() -> None:
     assert captured.value.code == "RAIL_INELIGIBLE"
     assert captured.value.refdes == "C1"
     assert "actual PWR pad point" in str(captured.value)
+
+
+def test_connectivity_message_reports_blocked_rails_out_of_selected_total() -> None:
+    preflight = EvaluationConnectivityPreflight(
+        ("R1", "R2", "R3", "R4", "R5", "R6"),
+        (
+            evaluation_module.EvaluationConnectivityBlocker(
+                rail_id="R1", refdes="C1", kind=DecapConnectionKind.UNRESOLVED, reason="missing path"
+            ),
+            evaluation_module.EvaluationConnectivityBlocker(
+                rail_id="R2", refdes="C2", kind=DecapConnectionKind.OUT_OF_SCOPE, reason="TOP scope"
+            ),
+        ),
+    )
+
+    assert "2 of 6 selected PWR rail(s)" in preflight.message()
 
 
 @pytest.mark.parametrize(

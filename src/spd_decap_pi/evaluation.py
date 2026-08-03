@@ -53,6 +53,7 @@ from .scenario import (
     ScenarioSpec,
     SharedPadClusterState,
     derive_shared_pad_current_components,
+    mixed_reference_ground_witness_failures,
     shared_pad_component_eligibility,
 )
 
@@ -136,7 +137,7 @@ class EvaluationConnectivityPreflight:
         return (
             f"Evaluation is blocked by {len(self.blockers):,} decap connection "
             f"classification(s) on {sum(bool(items) for items in rails.values()):,} "
-            f"selected PWR rail(s): {details}"
+            f"of {len(self.rail_ids):,} selected PWR rail(s): {details}"
         )
 
 
@@ -426,7 +427,19 @@ def preflight_evaluation_connectivity(
     connections = {
         item.refdes.casefold(): item for item in analysis.connections.values()
     }
+    mixed_witness_failures = mixed_reference_ground_witness_failures(scenario)
     blockers: list[EvaluationConnectivityBlocker] = []
+    for rail_id, reason in mixed_witness_failures.items():
+        if rail_id.casefold() not in canonical_by_key:
+            continue
+        blockers.append(
+            EvaluationConnectivityBlocker(
+                rail_id=canonical_by_key[rail_id.casefold()],
+                refdes="<mixed-reference GND>",
+                kind=DecapConnectionKind.UNRESOLVED,
+                reason=reason,
+            )
+        )
     blocking_kinds = {
         DecapConnectionKind.UNRESOLVED,
         DecapConnectionKind.OUT_OF_SCOPE,
@@ -435,17 +448,94 @@ def preflight_evaluation_connectivity(
         if decap.current_rail_id.casefold() not in canonical_by_key:
             continue
         connection = connections.get(decap.refdes.casefold())
-        if connection is None or connection.kind not in blocking_kinds:
+        if connection is None:
             continue
-        blockers.append(
-            EvaluationConnectivityBlocker(
-                rail_id=canonical_by_key[decap.current_rail_id.casefold()],
-                refdes=decap.refdes,
-                kind=connection.kind,
-                reason=connection.reason
-                or "Decap pad/via connectivity is unresolved",
+        if connection.kind in blocking_kinds:
+            blockers.append(
+                EvaluationConnectivityBlocker(
+                    rail_id=canonical_by_key[decap.current_rail_id.casefold()],
+                    refdes=decap.refdes,
+                    kind=connection.kind,
+                    reason=connection.reason
+                    or "Decap pad/via connectivity is unresolved",
+                )
             )
+            continue
+        if connection.kind != DecapConnectionKind.DIRECT:
+            continue
+        unique_power_vias = {
+            item.via_id.casefold() for item in connection.power_vias
+        }
+        unique_ground_vias = {
+            item.via_id.casefold() for item in connection.ground_vias
+        }
+        if (
+            not decap.enabled
+            and len(unique_power_vias) == 1
+            and len(unique_ground_vias) == 1
+        ):
+            continue
+        rail = next(
+            (
+                item
+                for item in scenario.base_project.rails
+                if item.rail_id.casefold() == decap.current_rail_id.casefold()
+            ),
+            None,
         )
+        eligibility = next(
+            (
+                item
+                for rail_id, item in decap.eligibility.items()
+                if rail_id.casefold() == decap.current_rail_id.casefold()
+            ),
+            None,
+        )
+        reason: str | None = None
+        if rail is None:
+            reason = "evaluation modelability: current rail is absent"
+        elif eligibility is None:
+            reason = "evaluation modelability: current-rail eligibility is missing"
+        elif not eligibility.allowed:
+            reason = (
+                "evaluation modelability: current-rail eligibility is blocked"
+                + (f" ({eligibility.reason})" if eligibility.reason else "")
+            )
+        elif (
+            eligibility.rail_id.casefold() != rail.rail_id.casefold()
+            or eligibility.net.casefold() != rail.net.casefold()
+            or eligibility.pwr_layer.casefold() != rail.pwr_layer.casefold()
+            or eligibility.gnd_layer.casefold() != rail.gnd_layer.casefold()
+        ):
+            reason = "evaluation modelability: eligibility does not match the selected rail pair"
+        elif not eligibility.via_template_id:
+            reason = "evaluation modelability: current-rail via template is missing"
+        else:
+            template = next(
+                (
+                    item
+                    for item in scenario.base_project.via_templates
+                    if item.template_id.casefold()
+                    == eligibility.via_template_id.casefold()
+                ),
+                None,
+            )
+            if template is None:
+                reason = "evaluation modelability: current-rail via template is absent"
+            elif (
+                template.pwr_reference_layer.casefold() != rail.pwr_layer.casefold()
+                or template.gnd_reference_layer.casefold() != rail.gnd_layer.casefold()
+            ):
+                reason = "evaluation modelability: via template does not match the selected rail pair"
+        if reason is not None:
+            blockers.append(
+                EvaluationConnectivityBlocker(
+                    rail_id=canonical_by_key[decap.current_rail_id.casefold()],
+                    refdes=decap.refdes,
+                    kind=DecapConnectionKind.DIRECT,
+                    reason=reason,
+                )
+            )
     return EvaluationConnectivityPreflight(
         canonical_rails,
         tuple(
@@ -1036,9 +1126,24 @@ def _ground_net(project: ProjectSpec, rail: RailSpec) -> str:
         (item for item in project.stackup_layers if item.name == rail.gnd_layer),
         None,
     )
-    if layer is not None and layer.pwr_nets:
-        return layer.pwr_nets[0]
-    return project.gnd_aliases[0]
+    aliases = {item.casefold() for item in project.gnd_aliases}
+    configured = (
+        rail.mixed_reference_certificate.gnd_net
+        if rail.mixed_reference_certificate is not None
+        else None
+    )
+    matches = [
+        item
+        for item in (layer.pwr_nets if layer is not None else ())
+        if item.casefold() in aliases
+        and (configured is None or item.casefold() == configured.casefold())
+    ]
+    if len(matches) == 1:
+        return matches[0]
+    raise ScenarioEvaluationBuildError(
+        "GROUND_NET_UNRESOLVED",
+        f"rail {rail.rail_id!r} requires exactly one configured ground NET on {rail.gnd_layer!r}",
+    )
 
 
 def _source_terminal_estimate(
@@ -1116,6 +1221,12 @@ def _shared_pad_path_from_landing(
             "landing_pad_height_um": evidence.target_pad_height_um,
         }
     )
+    if evidence.trace_hops or evidence.trace_alternate_exit:
+        # Connectivity is source-proven, but no trace RL was persisted.  Do not
+        # combine a partial Via estimate with an unmodeled copper trace; use
+        # the complete rail-template terminal model instead.
+        fields["terminal_provenance"] = "SOURCE_PROVEN_TRACE_CONNECTIVITY_LEGACY_TEMPLATE"
+        return SharedPadViaPath(**fields)
     if via.impedance:
         # A sampled template is calibrated as a differential PWR/GND loop.
         # Retaining it exactly preserves its established symmetric branch split
@@ -1237,6 +1348,30 @@ def build_evaluation_project(
             "SHARED_PAD_ANALYSIS_REQUIRED",
             "reopen the verified source SPD so shared-pad/via connectivity can be analyzed",
         )
+    # ``build_evaluation_project`` is also a public boundary used by callers
+    # that bypass UI batch preflight.  Keep the mixed-reference source-GND
+    # witness fail-closed here, but only for rails this project will consume;
+    # an unrelated source candidate with no certified DGND reachability must
+    # remain loadable and must not block a supported selected rail.
+    selected_mixed_rail_keys = (
+        {evaluation_rail_key}
+        if evaluation_rail_key is not None
+        else {
+            rail.rail_id.casefold()
+            for rail in base.rails
+            if rail.mixed_reference_certificate is not None
+        }
+    )
+    mixed_witness_failures = mixed_reference_ground_witness_failures(scenario)
+    for rail in base.rails:
+        if rail.rail_id.casefold() not in selected_mixed_rail_keys:
+            continue
+        reason = mixed_witness_failures.get(rail.rail_id)
+        if reason is not None:
+            raise ScenarioEvaluationBuildError(
+                "MIXED_REFERENCE_GND_REACHABILITY_REQUIRED",
+                reason,
+            )
     decap_by_key = {item.refdes.casefold(): item for item in scenario.decaps}
     connection_by_key = {
         item.refdes.casefold(): item for item in analysis.connections.values()

@@ -4,17 +4,26 @@ from datetime import datetime, timezone
 from hashlib import sha256
 import json
 from pathlib import Path
+from types import SimpleNamespace
 from zipfile import ZIP_DEFLATED, ZipFile
 
 from pydantic import ValidationError
 import pytest
 
+from test_io_spd import MINI_SPD
+
 from spd_decap_pi._core.domain import (
     CapModel,
     MLOOutline,
+    MixedReferenceGroundWitness,
     ProjectSpec,
     RailSpec,
     StackupLayer,
+)
+from spd_decap_pi.evaluation import (
+    ScenarioEvaluationBuildError,
+    build_evaluation_project,
+    preflight_evaluation_connectivity,
 )
 from spd_decap_pi.scenario import (
     CachedEvaluationMetadata,
@@ -30,8 +39,12 @@ from spd_decap_pi.scenario import (
     ScenarioViaLanding,
     ScenarioViaPathEvidence,
     ScenarioViaSegment,
+    SharedPadCluster,
     SharedPadConnectionAnalysis,
+    SharedPadClusterState,
     SourceIdentity,
+    mixed_reference_ground_landing_identity,
+    mixed_reference_ground_witness_failures,
 )
 from spd_decap_pi.scenario_io import (
     MANIFEST_FILENAME,
@@ -45,6 +58,8 @@ from spd_decap_pi.scenario_io import (
     save_scenario,
     save_scenario_bundle,
 )
+import spd_decap_pi.spd_adapter as spd_adapter
+from spd_decap_pi.spd_adapter import import_spd_scenario
 
 
 def _project() -> ProjectSpec:
@@ -254,6 +269,445 @@ def _rewrite_archive(path: Path, edits) -> None:
     with ZipFile(path, "w", compression=ZIP_DEFLATED) as archive:
         for name, content in rewritten:
             archive.writestr(name, content)
+
+
+def _mixed_reference_shared_scenario(
+    tmp_path: Path,
+    *,
+    cluster_eligible: bool = True,
+    remote_ground_anchor: bool = False,
+) -> ScenarioSpec:
+    """Return a small, intentionally asymmetric anchored shared cluster.
+
+    ``A_DUMMY`` sorts before the source Via anchor.  This makes it a compact
+    regression fixture for source-witness ownership: the cluster must never
+    assume the first member owns either terminal.  With ``remote_ground_anchor``
+    the PWR and GND anchors deliberately reside on different members.
+    """
+
+    source = tmp_path / "mixed-shared-witness.spd"
+    source.write_text(
+        MINI_SPD.replace(
+            "Node4!!2::DGND X = 1.2mm Y = 2mm Layer = Signal$TOP PadStack = CAP",
+            "Node4!!2::DGND X = 1.2mm Y = 2mm Layer = Signal$TOP PadStack = CAP\n"
+            "Node7!!7::DGND X = 1.2mm Y = 2mm Layer = Signal$GND PadStack = DR-0102_60",
+        ).replace(
+            "Via2::DGND UpperNode = Node2 LowerNode = Node4 PadStack = DR-0102_60",
+            "Via2::DGND UpperNode = Node2 LowerNode = Node4 PadStack = DR-0102_60\n"
+            "Via7::DGND UpperNode = Node4 LowerNode = Node7 PadStack = DR-0102_60",
+        ).replace(
+            "Polygon1::DGND+ -5mm -4mm 5mm -4mm 5mm 4mm -5mm 4mm",
+            "Polygon1::DGND+ -5mm -4mm 5mm -4mm 5mm 4mm -5mm 4mm\n"
+            "PolygonSIG::SIG_RETURN+ -5mm -4mm 5mm -4mm 5mm 4mm -5mm 4mm",
+        ),
+        encoding="ascii",
+    )
+    imported = import_spd_scenario(source).scenario
+    rail = imported.base_project.rails[0]
+    certificate = rail.mixed_reference_certificate
+    assert certificate is not None
+    original_decap = imported.decaps[0]
+    original_connection = imported.connection_analysis.connections["C1"]  # type: ignore[union-attr]
+    eligibility = original_decap.eligibility[rail.rail_id]
+    if not cluster_eligible:
+        eligibility = eligibility.model_copy(
+            update={"allowed": False, "reason": "outside exact mixed-rail artwork"}
+        )
+
+    dummy = original_decap.model_copy(update={"refdes": "A_DUMMY"})
+    pwr_anchor = original_decap.model_copy(update={"refdes": "Z_PWR"})
+    ground_anchor = (
+        original_decap.model_copy(update={"refdes": "Y_GND"})
+        if remote_ground_anchor
+        else pwr_anchor
+    )
+    member_refdes = (
+        ("A_DUMMY", "Y_GND", "Z_PWR")
+        if remote_ground_anchor
+        else ("A_DUMMY", "Z_PWR")
+    )
+    anchor_refdes = (
+        ("Y_GND", "Z_PWR") if remote_ground_anchor else ("Z_PWR",)
+    )
+    connections = {
+        "A_DUMMY": ScenarioDecapConnection(
+            refdes="A_DUMMY",
+            kind=DecapConnectionKind.SHARED_DUMMY,
+            cluster_id="CL-MIXED",
+        ),
+        "Z_PWR": ScenarioDecapConnection(
+            refdes="Z_PWR",
+            kind=DecapConnectionKind.SHARED_ANCHOR,
+            cluster_id="CL-MIXED",
+            power_vias=original_connection.power_vias,
+            ground_vias=() if remote_ground_anchor else original_connection.ground_vias,
+        ),
+    }
+    if remote_ground_anchor:
+        connections["Y_GND"] = ScenarioDecapConnection(
+            refdes="Y_GND",
+            kind=DecapConnectionKind.SHARED_ANCHOR,
+            cluster_id="CL-MIXED",
+            ground_vias=original_connection.ground_vias,
+        )
+    cluster = SharedPadCluster(
+        cluster_id="CL-MIXED",
+        state=SharedPadClusterState.ANCHORED,
+        member_refdes=member_refdes,
+        anchor_refdes=anchor_refdes,
+        dummy_refdes=("A_DUMMY",),
+        power_net=rail.net,
+        ground_net=certificate.gnd_net,
+        layer="Signal$TOP",
+        power_edges=tuple(zip(member_refdes, member_refdes[1:])),
+        ground_edges=tuple(zip(member_refdes, member_refdes[1:])),
+        eligibility={rail.rail_id: eligibility},
+        via_eligibility={
+            original_connection.power_vias[0].via_id: {rail.rail_id: eligibility}
+        },
+    )
+    analysis = SharedPadConnectionAnalysis(
+        version="DIRECT_TOP_COPPER_PATH_VIA_CHAIN_V5",
+        source_sha256=imported.source.sha256,
+        connections=connections,
+        clusters=(cluster,),
+    )
+    identities = (
+        tuple(
+            sorted(
+                {
+                    mixed_reference_ground_landing_identity(
+                        "cluster:CL-MIXED", landing
+                    )
+                    for landing in original_connection.ground_vias
+                }
+            )
+        )
+        if cluster_eligible
+        else ()
+    )
+    landing_bytes = (
+        json.dumps(list(identities), ensure_ascii=False, separators=(",", ":"))
+        + "\n"
+    ).encode("utf-8")
+    witness = MixedReferenceGroundWitness(
+        rail_net=rail.net,
+        gnd_net=certificate.gnd_net,
+        pwr_layer=rail.pwr_layer,
+        gnd_layer=rail.gnd_layer,
+        gnd_asset_sha256=certificate.gnd_asset_sha256,
+        source_sha256=imported.source.sha256,
+        landing_identities=identities,
+        landing_count=len(identities),
+        landing_identities_sha256=sha256(landing_bytes).hexdigest(),
+    )
+    project = imported.base_project.model_copy(
+        update={"rails": [rail.model_copy(update={"mixed_reference_ground_witness": witness})]}
+    )
+    decaps = [dummy, pwr_anchor]
+    if remote_ground_anchor:
+        decaps.append(ground_anchor)
+    # ``model_copy`` is deliberate: the fixture's ineligible variant models a
+    # foreign shared cluster during import, before it is made selectable for a
+    # particular current rail.  The witness/preflight functions are the unit
+    # under test, not full scenario-deserialization validation.
+    return imported.model_copy(
+        update={
+            "normalized_project": project,
+            "decaps": decaps,
+            "connection_analysis": analysis,
+        }
+    )
+
+
+def test_mixed_witness_covers_eligible_shared_cluster_when_dummy_sorts_first(
+    tmp_path: Path,
+) -> None:
+    scenario = _mixed_reference_shared_scenario(tmp_path)
+
+    assert mixed_reference_ground_witness_failures(scenario) == {}
+    assert not preflight_evaluation_connectivity(
+        scenario, [scenario.base_project.rails[0].rail_id]
+    ).blockers
+
+
+def test_mixed_witness_requires_remote_derived_shared_ground_anchor(
+    tmp_path: Path,
+) -> None:
+    scenario = _mixed_reference_shared_scenario(
+        tmp_path, remote_ground_anchor=True
+    )
+    rail = scenario.base_project.rails[0]
+    witness = rail.mixed_reference_ground_witness
+    assert witness is not None
+    remote = "cluster:cl-mixed|gnd|via7|dgnd|node4"
+    assert remote in witness.landing_identities
+    assert mixed_reference_ground_witness_failures(scenario) == {}
+
+    missing_witness = witness.model_copy(
+        update={
+            "landing_identities": (),
+            "landing_count": 0,
+            "landing_identities_sha256": sha256(b"[]\n").hexdigest(),
+        }
+    )
+    blocked = scenario.model_copy(
+        update={
+            "normalized_project": scenario.base_project.model_copy(
+                update={
+                    "rails": [
+                        rail.model_copy(
+                            update={
+                                "mixed_reference_ground_witness": missing_witness
+                            }
+                        )
+                    ]
+                }
+            )
+        }
+    )
+    failures = mixed_reference_ground_witness_failures(blocked)
+    assert rail.rail_id in failures
+    assert remote in failures[rail.rail_id]
+    preflight = preflight_evaluation_connectivity(blocked, [rail.rail_id])
+    assert preflight.blockers
+    assert preflight.blockers[0].refdes == "<mixed-reference GND>"
+
+
+def test_ineligible_shared_cluster_does_not_expand_mixed_witness_scope(
+    tmp_path: Path,
+) -> None:
+    """Foreign/outside-artwork shared landings must not poison this rail's import."""
+
+    scenario = _mixed_reference_shared_scenario(tmp_path, cluster_eligible=False)
+    rail = scenario.base_project.rails[0]
+    assert rail.mixed_reference_ground_witness is not None
+    assert rail.mixed_reference_ground_witness.landing_identities == ()
+    assert mixed_reference_ground_witness_failures(scenario) == {}
+    assert not preflight_evaluation_connectivity(scenario, [rail.rail_id]).blockers
+
+
+def test_unreachable_mixed_candidate_imports_loads_and_blocks_only_selected_rail(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    """One unsupported mixed rail is warning-only until its evaluation is requested."""
+
+    source = tmp_path / "unreachable-mixed-candidate.spd"
+    source.write_text(
+        MINI_SPD.replace(
+            "Node4!!2::DGND X = 1.2mm Y = 2mm Layer = Signal$TOP PadStack = CAP",
+            "Node4!!2::DGND X = 1.2mm Y = 2mm Layer = Signal$TOP PadStack = CAP\n"
+            "Node7!!7::DGND X = 1.2mm Y = 2mm Layer = Signal$GND PadStack = DR-0102_60",
+        ).replace(
+            "Via2::DGND UpperNode = Node2 LowerNode = Node4 PadStack = DR-0102_60",
+            "Via2::DGND UpperNode = Node2 LowerNode = Node4 PadStack = DR-0102_60\n"
+            "Via7::DGND UpperNode = Node4 LowerNode = Node7 PadStack = DR-0102_60",
+        ).replace(
+            "Polygon1::DGND+ -5mm -4mm 5mm -4mm 5mm 4mm -5mm 4mm",
+            "Polygon1::DGND+ -5mm -4mm 5mm -4mm 5mm 4mm -5mm 4mm\n"
+            "PolygonSIG::SIG_RETURN+ -5mm -4mm 5mm -4mm 5mm 4mm -5mm 4mm",
+        ),
+        encoding="ascii",
+    )
+    monkeypatch.setattr(
+        spd_adapter,
+        "recover_spd_ground_reachability",
+        lambda *_args, **_kwargs: SimpleNamespace(
+            reaches=lambda *_landing_and_layer: False,
+            statistics={"fixture": "all-unreachable"},
+        ),
+    )
+
+    imported = import_spd_scenario(source)
+    rail = imported.scenario.base_project.rails[0]
+    witness = rail.mixed_reference_ground_witness
+    assert witness is not None
+    assert witness.landing_identities == ()
+    assert any(
+        item.code == "SPD_MIXED_REFERENCE_GND_REACHABILITY_INCOMPLETE"
+        for item in imported.diagnostics
+    )
+    by_rail = imported.scenario.base_project.metadata["spd_via_path_recovery"][
+        "mixed_reference_ground_reachability"
+    ]["by_rail"]
+    record = next(item for item in by_rail if item["rail_id"] == rail.rail_id)
+    assert record["reachable_landing_count"] == 0
+    assert record["unreachable_landing_count"] > 0
+
+    archive = save_scenario(
+        imported.scenario, tmp_path / "unreachable-mixed.spdpi", attachments=imported.attachments
+    )
+    loaded = load_scenario_bundle(archive).scenario
+    preflight = preflight_evaluation_connectivity(loaded, (rail.rail_id,))
+    assert preflight.blockers
+    assert "lack mixed-reference reachability evidence" in preflight.blockers[0].reason
+
+
+def test_certified_ground_attachment_tamper_cannot_be_loaded(
+    tmp_path: Path,
+) -> None:
+    source = tmp_path / "certified-source.spd"
+    source.write_text(
+        MINI_SPD.replace(
+            "Node4!!2::DGND X = 1.2mm Y = 2mm Layer = Signal$TOP PadStack = CAP",
+            "Node4!!2::DGND X = 1.2mm Y = 2mm Layer = Signal$TOP PadStack = CAP\n"
+            "Node7!!7::DGND X = 1.2mm Y = 2mm Layer = Signal$GND PadStack = DR-0102_60",
+        ).replace(
+            "Via2::DGND UpperNode = Node2 LowerNode = Node4 PadStack = DR-0102_60",
+            "Via2::DGND UpperNode = Node2 LowerNode = Node4 PadStack = DR-0102_60\n"
+            "Via7::DGND UpperNode = Node4 LowerNode = Node7 PadStack = DR-0102_60",
+        ).replace(
+            "Polygon1::DGND+ -5mm -4mm 5mm -4mm 5mm 4mm -5mm 4mm",
+            "Polygon1::DGND+ -5mm -4mm 5mm -4mm 5mm 4mm -5mm 4mm\n"
+            "PolygonSIG::SIG_RETURN+ -5mm -4mm 5mm -4mm 5mm 4mm -5mm 4mm",
+        ),
+        encoding="ascii",
+    )
+    imported = import_spd_scenario(source)
+    rail = imported.scenario.base_project.rails[0]
+    certificate = rail.mixed_reference_certificate
+    assert certificate is not None
+    witness = rail.mixed_reference_ground_witness
+    assert witness is not None
+    assert witness.landing_count == len(witness.landing_identities)
+    assert "c1|gnd|via2|dgnd|node4" in witness.landing_identities
+    assert not preflight_evaluation_connectivity(
+        imported.scenario, (rail.rail_id,)
+    ).blockers
+    payload = imported.scenario.model_dump(mode="json")
+    witness_payload = payload["normalized_project"]["rails"][0][
+        "mixed_reference_ground_witness"
+    ]
+    witness_payload["source_sha256"] = "0" * 64
+    with pytest.raises(ValidationError, match="GND witness"):
+        ScenarioSpec.model_validate(payload)
+
+    payload = imported.scenario.model_dump(mode="json")
+    witness_payload = payload["normalized_project"]["rails"][0][
+        "mixed_reference_ground_witness"
+    ]
+    witness_payload["landing_identities"] = []
+    witness_payload["landing_count"] = 0
+    witness_payload["landing_identities_sha256"] = sha256(b"[]\n").hexdigest()
+    # Incomplete source reachability on this rail is evaluation-time evidence,
+    # not a document-integrity failure.  The scenario must remain loadable so
+    # another supported mixed rail can be selected; preflight/build then block
+    # this exact rail before the solver receives any terminal model.
+    incomplete = ScenarioSpec.model_validate(payload)
+    preflight = preflight_evaluation_connectivity(incomplete, (rail.rail_id,))
+    assert preflight.blockers
+    assert "lack mixed-reference reachability evidence" in preflight.blockers[0].reason
+    with pytest.raises(ScenarioEvaluationBuildError, match="reachability evidence") as blocked:
+        build_evaluation_project(incomplete, evaluation_rail_id=rail.rail_id)
+    assert blocked.value.code == "MIXED_REFERENCE_GND_REACHABILITY_REQUIRED"
+    record = next(
+        item
+        for item in imported.scenario.base_project.metadata["spd_import"][
+            "plane_geometries"
+        ]
+        if item["layer"] == rail.gnd_layer and item["net"] == certificate.gnd_net
+    )
+    asset = record["asset"]
+    archive_path = save_scenario(
+        imported.scenario,
+        tmp_path / "certified.spdpi",
+        attachments=imported.attachments,
+    )
+
+    def rewrite_with_self_consistent_tamper(members):
+        by_name = {name: content for name, content in members}
+        attachment_path = f"attachments/{asset}"
+        changed = by_name[attachment_path] + b"tampered"
+        changed_digest = sha256(changed).hexdigest()
+        scenario = json.loads(by_name[SCENARIO_FILENAME])
+        scenario["attachment_hashes"][asset] = changed_digest
+        scenario_bytes = (
+            json.dumps(
+                scenario,
+                ensure_ascii=False,
+                sort_keys=True,
+                separators=(",", ":"),
+                allow_nan=False,
+            )
+            + "\n"
+        ).encode("utf-8")
+        manifest = json.loads(by_name[MANIFEST_FILENAME])
+        manifest["scenario_size"] = len(scenario_bytes)
+        manifest["scenario_sha256"] = sha256(scenario_bytes).hexdigest()
+        entry = next(item for item in manifest["attachments"] if item["name"] == asset)
+        entry["size"] = len(changed)
+        entry["sha256"] = changed_digest
+        manifest_bytes = (
+            json.dumps(
+                manifest,
+                ensure_ascii=False,
+                sort_keys=True,
+                separators=(",", ":"),
+                allow_nan=False,
+            )
+            + "\n"
+        ).encode("utf-8")
+        return [
+            (
+                name,
+                manifest_bytes
+                if name == MANIFEST_FILENAME
+                else scenario_bytes
+                if name == SCENARIO_FILENAME
+                else changed
+                if name == attachment_path
+                else content,
+            )
+            for name, content in members
+        ]
+
+    _rewrite_archive(archive_path, rewrite_with_self_consistent_tamper)
+
+    with pytest.raises(ScenarioFormatError, match="certified artwork"):
+        load_scenario_bundle(archive_path)
+
+
+def test_mixed_ground_witness_survives_compatible_current_rail_reassignment(
+    tmp_path: Path,
+) -> None:
+    """Witness scope is PWR eligibility, never the mutable rail assignment."""
+
+    source = tmp_path / "reassignment-source.spd"
+    source.write_text(
+        MINI_SPD.replace(
+            "Node4!!2::DGND X = 1.2mm Y = 2mm Layer = Signal$TOP PadStack = CAP",
+            "Node4!!2::DGND X = 1.2mm Y = 2mm Layer = Signal$TOP PadStack = CAP\n"
+            "Node7!!7::DGND X = 1.2mm Y = 2mm Layer = Signal$GND PadStack = DR-0102_60",
+        ).replace(
+            "Via2::DGND UpperNode = Node2 LowerNode = Node4 PadStack = DR-0102_60",
+            "Via2::DGND UpperNode = Node2 LowerNode = Node4 PadStack = DR-0102_60\n"
+            "Via7::DGND UpperNode = Node4 LowerNode = Node7 PadStack = DR-0102_60",
+        ).replace(
+            "Polygon1::DGND+ -5mm -4mm 5mm -4mm 5mm 4mm -5mm 4mm",
+            "Polygon1::DGND+ -5mm -4mm 5mm -4mm 5mm 4mm -5mm 4mm\n"
+            "PolygonSIG::SIG_RETURN+ -5mm -4mm 5mm -4mm 5mm 4mm -5mm 4mm",
+        ),
+        encoding="ascii",
+    )
+    payload = import_spd_scenario(source).scenario.model_dump(mode="json")
+    rail = payload["normalized_project"]["rails"][0]
+    compatible = dict(rail)
+    compatible.update({"rail_id": "COMPATIBLE", "family": "COMPATIBLE", "domain": "COMPATIBLE"})
+    payload["normalized_project"]["rails"].append(compatible)
+    c1 = next(item for item in payload["decaps"] if item["refdes"] == "C1")
+    eligible = dict(c1["eligibility"][rail["rail_id"]])
+    eligible["rail_id"] = "COMPATIBLE"
+    c1["eligibility"]["COMPATIBLE"] = eligible
+    c1["current_rail_id"] = "COMPATIBLE"
+    reassigned_out = ScenarioSpec.model_validate(payload)
+    assert reassigned_out.base_project.rails[0].mixed_reference_ground_witness is not None
+
+    payload = reassigned_out.model_dump(mode="json")
+    c1 = next(item for item in payload["decaps"] if item["refdes"] == "C1")
+    c1["current_rail_id"] = rail["rail_id"]
+    reassigned_in = ScenarioSpec.model_validate(payload)
+    assert reassigned_in.decaps[0].current_rail_id == rail["rail_id"]
 
 
 def _without_padstack_material(value):

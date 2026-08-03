@@ -1,8 +1,8 @@
-# SPD Decap PI Evaluator v0.14.0
+# SPD Decap PI Evaluator v0.15.0
 
-> v0.14.0 classifies qualified MLO source microvias as copper-filled while retaining plated-barrel fallback for every non-qualified source path. The title bar identifies the application as **SPD Decap PI Evaluator v0.14.0**. It remains an exploratory single-rail rectangular-bbox model; absolute sub-milliohm accuracy is not certified without PowerSI correlation and numerical-convergence review.
+> v0.15.0 supports a certificate-gated mixed DGND reference only when exact persisted PWR/DGND artwork demonstrates a dominant, high-coverage overlap. It requires source-proven same-net Via+Trace GND reachability to a target node strictly inside the certified DGND artwork for DIRECT and shared-pad paths, and recovers trace-aware Via paths without applying a partial source-Via R/L term. The title bar identifies the application as **SPD Decap PI Evaluator v0.15.0**. It remains an exploratory single-rail rectangular-bbox model; absolute sub-milliohm accuracy is not certified without PowerSI correlation and numerical-convergence review.
 
-> 프로그램: **SPD Decap PI Evaluator v0.14.0**
+> 프로그램: **SPD Decap PI Evaluator v0.15.0**
 > 저장소: 기존 PI Calculator와 분리된 독립 프로그램
 > 해석 경계: 선택한 PWR rail의 pre-design `Zii`; 최종 PowerSI/SIwave 검증을 대체하지 않음
 
@@ -11,10 +11,12 @@
 desktop 프로그램이다. Stackup, MLO 크기 또는 plane을 새로 작성하는 기능과
 Optimization Mode는 포함하지 않는다.
 
-## v0.14 evaluation accuracy
+## v0.15 evaluation accuracy
 
 - The default remains **Balanced** (max index 8, 81 modes). **Maximum** is opt-in (max index 12, 169 modes): a final m10 to m12 truncation check with up to 0.105 dB observed in the validation case and substantially higher runtime. It is not PowerSI calibration.
 - The evaluator can combine only the immediately adjacent, opposite-side conductor when it contains configured GND aliases and valid dielectric rows. It uses the disclosed shared-PWR ideal-common-reference equivalent; it does not enable a general layer cascade. A true layer cascade is a full complex multiport Y-matrix Schur/Kron reduction, not scalar-Z or scalar-admittance merging. See [Evaluation accuracy](docs/EVALUATION_ACCURACY.md).
+- A mixed PWR/DGND return layer is accepted only through a versioned certificate tied to SHA-256-verified exact plane artwork. The certificate requires at least 90% PWR-area overlap with the configured DGND artwork and a 99% dominant overlap component; it is fail-closed if geometry verification is unavailable. Result confidence remains **LOW** and displays the overlap evidence plus the continuous rectangular-return approximation.
+- When a source terminal reaches the selected plane through a same-net Trace, or an alternate Trace-to-Via exit exists, evaluation uses the complete legacy terminal template instead of adding an incomplete source-Via R/L contribution. Compact node indexing avoids repeated full-SPD Node scans during this recovery.
 
 ## v0.12 raw-SPD terminal provenance
 
@@ -103,7 +105,7 @@ powershell.exe -ExecutionPolicy Bypass -NoProfile -File .\scripts\build_spd_deca
 산출물:
 
 - `dist\SPDDecapPIEvaluator\SPDDecapPIEvaluator.exe`
-- `installer-output\SPDDecapPIEvaluatorSetup-0.14.0.exe`
-- `installer-output\SPDDecapPIEvaluatorSetup-0.14.0.exe.sha256`
+- `installer-output\SPDDecapPIEvaluatorSetup-0.15.0.exe`
+- `installer-output\SPDDecapPIEvaluatorSetup-0.15.0.exe.sha256`
 
 프로그램명과 버전은 title bar와 installer metadata에 함께 표시된다.

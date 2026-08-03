@@ -27,7 +27,10 @@ from pydantic import (
     model_validator,
 )
 
-from spd_decap_pi._core.domain import ProjectSpec
+from spd_decap_pi._core.domain import (
+    MixedReferenceGroundWitness,
+    ProjectSpec,
+)
 
 from .version import __version__
 
@@ -81,13 +84,30 @@ def _connection_analysis_fingerprint_payload(
             return {
                 key: without_unknown_material(item)
                 for key, item in value.items()
-                if key != "padstack_material" or item is not None
+                if (key != "padstack_material" or item is not None)
+                and (key != "trace_hops" or item != 0)
+                and (key != "trace_alternate_exit" or item is not False)
             }
         if isinstance(value, list):
             return [without_unknown_material(item) for item in value]
         return value
 
     return without_unknown_material(analysis.model_dump(mode="json"))
+
+
+def _normalized_project_fingerprint_payload(value: Any) -> Any:
+    """Preserve historical hashes when a new optional rail certificate is absent."""
+
+    if isinstance(value, dict):
+        return {
+            key: _normalized_project_fingerprint_payload(item)
+            for key, item in value.items()
+            if key not in {"mixed_reference_certificate", "mixed_reference_ground_witness"}
+            or item is not None
+        }
+    if isinstance(value, list):
+        return [_normalized_project_fingerprint_payload(item) for item in value]
+    return value
 
 
 def _validate_sha256(value: str, *, label: str = "SHA-256") -> str:
@@ -296,6 +316,8 @@ class ScenarioViaPathEvidence(ScenarioPoint):
     target_pad_width_um: float = Field(gt=0)
     target_pad_height_um: float = Field(gt=0)
     segments: tuple[ScenarioViaSegment, ...] = Field(min_length=1)
+    trace_hops: int = Field(default=0, ge=0)
+    trace_alternate_exit: bool = False
     provenance: str = "SOURCE_PROVEN_MONOTONIC_VIA_CHAIN"
 
     @field_validator("provenance")
@@ -1297,6 +1319,221 @@ class CachedEvaluationMetadata(ScenarioModel):
         return self.result_key.cache_key
 
 
+def mixed_reference_ground_landing_identity(
+    refdes: str, landing: ScenarioViaLanding
+) -> str:
+    """Stable identity for one source GND landing covered by a witness."""
+
+    return "|".join(
+        (
+            str(refdes).strip().casefold(),
+            "gnd",
+            landing.via_id.strip().casefold(),
+            landing.net.strip().casefold(),
+            landing.endpoint_node_id.strip().casefold(),
+        )
+    )
+
+
+def mixed_reference_ground_witness_failures(
+    scenario: "ScenarioSpec", *, require_current_coverage: bool = True
+) -> dict[str, str]:
+    """Return fail-closed mixed-reference GND witness diagnostics by rail.
+
+    A witness may include a disabled source decap so a normal DNP edit does not
+    invalidate source evidence.  The witness universe is keyed by immutable
+    PWR eligibility rather than mutable ``current_rail_id``.  Persistence
+    validation uses ``require_current_coverage=False`` so an unsupported,
+    unselected rail cannot prevent opening an otherwise valid source drawing.
+    Evaluation preflight leaves it enabled and requires every consumed DIRECT
+    or derived shared-pad GND landing to be present.
+    """
+
+    analysis = scenario.connection_analysis
+    if analysis is None:
+        return {
+            rail.rail_id: "mixed-reference GND reachability witness requires source connection analysis"
+            for rail in scenario.base_project.rails
+            if rail.mixed_reference_certificate is not None
+        }
+    decaps = {item.refdes.casefold(): item for item in scenario.decaps}
+    connections = {
+        item.refdes.casefold(): item for item in analysis.connections.values()
+    }
+    failures: dict[str, str] = {}
+    for rail in scenario.base_project.rails:
+        certificate = rail.mixed_reference_certificate
+        if certificate is None:
+            continue
+        witness = rail.mixed_reference_ground_witness
+        if witness is None:
+            failures[rail.rail_id] = "mixed-reference GND reachability witness is missing"
+            continue
+        try:
+            # Revalidate because Pydantic ``model_copy`` intentionally skips
+            # validation and is used by scenario edit services.
+            witness = MixedReferenceGroundWitness.model_validate(
+                witness.model_dump(mode="json")
+            )
+        except ValueError as exc:
+            failures[rail.rail_id] = f"mixed-reference GND witness is invalid ({exc})"
+            continue
+        if (
+            witness.source_sha256 != scenario.source.sha256
+            or witness.rail_net.casefold() != rail.net.casefold()
+            or witness.gnd_net.casefold() != certificate.gnd_net.casefold()
+            or witness.pwr_layer.casefold() != rail.pwr_layer.casefold()
+            or witness.gnd_layer.casefold() != rail.gnd_layer.casefold()
+            or witness.gnd_asset_sha256 != certificate.gnd_asset_sha256
+        ):
+            failures[rail.rail_id] = "mixed-reference GND witness does not match current source or rail pair"
+            continue
+        stable_universe: set[str] = set()
+        enabled_required: set[str] = set()
+        enabled_wrong_net: set[str] = set()
+        for key, decap in decaps.items():
+            connection = connections.get(key)
+            # Shared-pad evidence is collected below per *cluster*.  In
+            # particular, evaluation joins a selected PWR component to its
+            # intersecting derived GND component, whose Via anchor may belong
+            # to a different member.  Treating a SHARED_ANCHOR as an ordinary
+            # decap here makes the stable universe depend on which member
+            # happened to own a source Via (and used to make an earlier dummy
+            # a tempting but incorrect proxy).
+            if connection is None or connection.kind != DecapConnectionKind.DIRECT:
+                continue
+            eligibility = next(
+                (
+                    item
+                    for rail_id, item in decap.eligibility.items()
+                    if rail_id.casefold() == rail.rail_id.casefold()
+                ),
+                None,
+            )
+            pwr_eligible = bool(eligibility is not None and eligibility.allowed)
+            owner = decap.refdes
+            for landing in connection.ground_vias:
+                if landing.net.casefold() != certificate.gnd_net.casefold():
+                    if (
+                        pwr_eligible
+                        and decap.enabled
+                        and decap.current_rail_id.casefold() == rail.rail_id.casefold()
+                    ):
+                        enabled_wrong_net.add(
+                            "|".join(
+                                (
+                                    decap.refdes.casefold(), "gnd",
+                                    landing.via_id.casefold(), landing.net.casefold(),
+                                    landing.endpoint_node_id.casefold(),
+                                )
+                            )
+                        )
+                    continue
+                identity = mixed_reference_ground_landing_identity(owner, landing)
+                if pwr_eligible:
+                    stable_universe.add(identity)
+                if (
+                    pwr_eligible
+                    and decap.enabled
+                    and decap.current_rail_id.casefold() == rail.rail_id.casefold()
+                ):
+                    enabled_required.add(identity)
+        # Shared-pad evaluation consumes the complete derived GND component,
+        # not merely anchors attached to a PWR component's own REFDES.  Mirror
+        # the evaluator's component-to-ground-component selection so an anchor
+        # owned by another rail member cannot bypass this return-path witness.
+        for cluster in analysis.clusters:
+            if cluster.state != SharedPadClusterState.ANCHORED:
+                continue
+            # Import writes source witness entries only for the conservative
+            # whole-cluster intersection of its physical PWR-via eligibility.
+            # Keep that narrowing here: a later isolation-gap edit must not
+            # silently widen a witness to a hypothetical subset of this
+            # aggregate source cluster.
+            cluster_eligibility = next(
+                (
+                    item
+                    for rail_id, item in cluster.eligibility.items()
+                    if rail_id.casefold() == rail.rail_id.casefold()
+                ),
+                None,
+            )
+            if cluster_eligibility is None or not cluster_eligibility.allowed:
+                continue
+            members = {
+                key: decaps[key]
+                for key in (item.casefold() for item in cluster.member_refdes)
+                if key in decaps
+            }
+            member_connections = {
+                key: connections[key] for key in members if key in connections
+            }
+            if len(members) != len(cluster.member_refdes) or len(member_connections) != len(members):
+                continue
+            # The import-side witness owns all source GND landings by cluster,
+            # after the conservative aggregate PWR eligibility check above.
+            # Populate that immutable universe before considering the mutable
+            # post-edit current assignment below.
+            for connection in member_connections.values():
+                for landing in connection.ground_vias:
+                    if landing.net.casefold() == certificate.gnd_net.casefold():
+                        stable_universe.add(
+                            mixed_reference_ground_landing_identity(
+                                f"cluster:{cluster.cluster_id}", landing
+                            )
+                        )
+            try:
+                derivation = derive_shared_pad_current_components(
+                    cluster, members, member_connections, analysis_version=analysis.version
+                )
+            except ValueError:
+                # Connection preflight reports the actionable cluster failure.
+                continue
+            selected = tuple(
+                component
+                for component in derivation.components
+                if component.current_rail_id.casefold() == rail.rail_id.casefold()
+                and any(decaps[refdes.casefold()].enabled for refdes in component.member_refdes)
+            )
+            selected_members = {
+                refdes.casefold()
+                for component in selected
+                for refdes in component.member_refdes
+            }
+            for component in derivation.ground_components:
+                if not selected_members.intersection(
+                    refdes.casefold() for refdes in component.member_refdes
+                ):
+                    continue
+                for landing in component.ground_vias:
+                    identity = mixed_reference_ground_landing_identity(
+                        f"cluster:{cluster.cluster_id}", landing
+                    )
+                    if landing.net.casefold() != certificate.gnd_net.casefold():
+                        enabled_wrong_net.add(identity)
+                    else:
+                        enabled_required.add(identity)
+        witnessed = set(witness.landing_identities)
+        stale = witnessed - stable_universe
+        missing = enabled_required - witnessed
+        if require_current_coverage and enabled_wrong_net:
+            failures[rail.rail_id] = (
+                "enabled evaluation GND landing(s) do not use the certificate exact "
+                "DGND net: " + ", ".join(sorted(enabled_wrong_net)[:3])
+            )
+        elif stale:
+            failures[rail.rail_id] = (
+                "mixed-reference GND witness contains stale/unmapped landing(s): "
+                + ", ".join(sorted(stale)[:3])
+            )
+        elif require_current_coverage and missing:
+            failures[rail.rail_id] = (
+                "enabled evaluation GND landing(s) lack mixed-reference reachability evidence: "
+                + ", ".join(sorted(missing)[:3])
+            )
+    return failures
+
+
 class ScenarioSpec(ScenarioModel):
     """Complete editable SPD decap scenario, including resumable UI state."""
 
@@ -1740,6 +1977,60 @@ class ScenarioSpec(ScenarioModel):
         if self.attachment_hashes and set(hash_by_key) != set(attachment_keys):
             raise ValueError("attachment names and attachment hashes must match")
 
+        project = self.base_project
+        spd_import = project.metadata.get("spd_import")
+        geometry_records = (
+            spd_import.get("plane_geometries")
+            if isinstance(spd_import, dict)
+            else None
+        )
+        if any(
+            rail.mixed_reference_certificate is not None
+            for rail in project.rails
+        ) and not isinstance(geometry_records, list):
+            raise ValueError(
+                "mixed-reference certificates require the persisted SPD plane index"
+            )
+        for rail in project.rails:
+            certificate = rail.mixed_reference_certificate
+            if certificate is None:
+                continue
+            bindings = (
+                (
+                    rail.net,
+                    rail.pwr_layer,
+                    certificate.pwr_asset_sha256,
+                    "PWR",
+                ),
+                (
+                    certificate.gnd_net,
+                    rail.gnd_layer,
+                    certificate.gnd_asset_sha256,
+                    "DGND",
+                ),
+            )
+            for net, layer, digest, role in bindings:
+                matches = [
+                    item
+                    for item in geometry_records or ()
+                    if isinstance(item, dict)
+                    and str(item.get("net", "")).casefold() == net.casefold()
+                    and str(item.get("layer", "")).casefold() == layer.casefold()
+                    and str(item.get("asset_sha256", "")) == digest
+                ]
+                if len(matches) != 1:
+                    raise ValueError(
+                        f"rail {rail.rail_id!r} certificate {role} plane asset "
+                        "binding is missing or ambiguous"
+                    )
+                asset_name = str(matches[0].get("asset", ""))
+                actual_digest = hash_by_key.get(asset_name.casefold())
+                if actual_digest != digest:
+                    raise ValueError(
+                        f"rail {rail.rail_id!r} certificate {role} attachment "
+                        f"{asset_name!r} hash disagrees with certified artwork"
+                    )
+
         for cache_hash, metadata in self.evaluation_cache.items():
             if cache_hash != metadata.cache_key:
                 raise ValueError(
@@ -1784,6 +2075,12 @@ class ScenarioSpec(ScenarioModel):
         }
         decap_by_key = {item.refdes.casefold(): item for item in self.decaps}
         self._validate_connection_analysis(decap_by_key)
+        witness_failures = mixed_reference_ground_witness_failures(
+            self, require_current_coverage=False
+        )
+        if witness_failures:
+            rail_id, reason = next(iter(sorted(witness_failures.items())))
+            raise ValueError(f"rail {rail_id!r} {reason}")
         connected_refdes = {
             item.casefold() for item in self.electrically_connected_refdes
         }
@@ -1908,7 +2205,9 @@ class ScenarioSpec(ScenarioModel):
                 "size_bytes": self.source.size_bytes,
                 "sha256": self.source.sha256,
             },
-            "normalized_project": self.normalized_project,
+            "normalized_project": _normalized_project_fingerprint_payload(
+                self.normalized_project
+            ),
             "decaps": decaps,
             "attachment_hashes": electrical_attachment_hashes,
         }
@@ -2185,6 +2484,8 @@ __all__ = [
     "ScenarioViaPathEvidence",
     "ScenarioViaSegment",
     "ScenarioViaLanding",
+    "mixed_reference_ground_landing_identity",
+    "mixed_reference_ground_witness_failures",
     "SharedPadCluster",
     "SharedPadClusterState",
     "SharedPadComponentDerivation",

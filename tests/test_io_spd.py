@@ -2,18 +2,34 @@
 
 import mmap
 import os
+from hashlib import sha256
 from pathlib import Path
 from types import SimpleNamespace
 
+import numpy as np
 import pytest
 
-from spd_decap_pi._core.domain import PinKind, TerminalKind
+from spd_decap_pi._core import services as core_services
+from spd_decap_pi._core.domain import (
+    MixedReferenceGroundWitness,
+    PinKind,
+    TerminalKind,
+)
+from spd_decap_pi._core.io import spd as spd_io
 from spd_decap_pi._core.io.spd import (
     SpdImportError,
     _parse_netlist,
     analyze_spd,
     recover_spd_via_paths,
+    recover_spd_ground_reachability,
 )
+from spd_decap_pi._core.io.shared_pad import SpdViaLanding
+from spd_decap_pi._core.services import (
+    _evaluation_view,
+    build_spd_import_plan,
+    create_workspace_state,
+)
+from spd_decap_pi._core.solver.evaluator import EvaluationError, _planes_from_project
 
 
 MINI_SPD = """Title tiny SPD
@@ -104,6 +120,76 @@ VDD_DROP/0::Unselected||DropShape
 .EndNetList
 .EndPackage
 """
+
+
+def test_mixed_reference_ground_reachability_accepts_branching_via_graph(
+    tmp_path: Path,
+) -> None:
+    """Return reachability permits branches even though RL recovery cannot."""
+
+    source = tmp_path / "branching-ground.spd"
+    payload = MINI_SPD.replace(
+        "Node4!!2::DGND X = 1.2mm Y = 2mm Layer = Signal$TOP PadStack = CAP",
+        "Node4!!2::DGND X = 1.2mm Y = 2mm Layer = Signal$TOP PadStack = CAP\n"
+        "Node7!!7::DGND X = 1.2mm Y = 2mm Layer = Signal$PWR PadStack = DR-0102_60\n"
+        "Node8!!8::DGND X = 1.3mm Y = 2mm Layer = Signal$PWR PadStack = DR-0102_60\n"
+        "Node9!!9::DGND X = 1.3mm Y = 2mm Layer = Signal$GND PadStack = DR-0102_60",
+    ).replace(
+        "Via2::DGND UpperNode = Node2 LowerNode = Node4 PadStack = DR-0102_60",
+        "Via2::DGND UpperNode = Node2 LowerNode = Node4 PadStack = DR-0102_60\n"
+        "Via7::DGND UpperNode = Node4 LowerNode = Node7 PadStack = DR-0102_60\n"
+        "Via8::DGND UpperNode = Node4 LowerNode = Node8 PadStack = DR-0102_60\n"
+        "Via9::DGND UpperNode = Node8 LowerNode = Node9 PadStack = DR-0102_60",
+    )
+    source.write_text(payload, encoding="ascii")
+    landing = SpdViaLanding(
+        via_id="Via2", net="DGND", endpoint_node_id="Node4", x_um=1200,
+        y_um=2000, padstack="DR-0102_60",
+    )
+    result = recover_spd_ground_reachability(
+        source,
+        landings=(landing,),
+        target_layers_by_net={"DGND": ("Signal$GND",)},
+        target_node_predicate=lambda _net, _layer, _node, x_um, y_um: (
+            x_um == 1300 and y_um == 2000
+        ),
+    )
+    assert result.reaches(landing, "Signal$GND")
+    assert result.statistics["reachable"] == 1
+    assert result.statistics["node_section_passes"] == 1
+    assert result.statistics["via_section_passes"] == 1
+    outside = recover_spd_ground_reachability(
+        source,
+        landings=(landing,),
+        target_layers_by_net={"DGND": ("Signal$GND",)},
+        target_node_predicate=lambda *_args: False,
+    )
+    assert not outside.reaches(landing, "Signal$GND")
+    # ``contains`` rather than ``covers`` is the production boundary policy:
+    # an artwork-edge target cannot be promoted into a certified return path.
+    boundary = recover_spd_ground_reachability(
+        source,
+        landings=(landing,),
+        target_layers_by_net={"DGND": ("Signal$GND",)},
+        target_node_predicate=lambda _net, _layer, _node, x_um, _y_um: x_um > 1300,
+    )
+    assert not boundary.reaches(landing, "Signal$GND")
+
+
+def test_mixed_reference_ground_reachability_fails_closed_when_target_unreachable(
+    tmp_path: Path,
+) -> None:
+    source = tmp_path / "unreachable-ground.spd"
+    source.write_text(MINI_SPD, encoding="ascii")
+    landing = SpdViaLanding(
+        via_id="Via2", net="DGND", endpoint_node_id="Node4", x_um=1200,
+        y_um=2000, padstack="DR-0102_60",
+    )
+    result = recover_spd_ground_reachability(
+        source, landings=(landing,), target_layers_by_net={"DGND": ("Signal$GND",)}
+    )
+    assert not result.reaches(landing, "Signal$GND")
+    assert result.statistics["unreachable"] == 1
 
 
 def _recoverable_via_source(
@@ -206,6 +292,13 @@ Node99!!1::VDD_CORE/0 X = 2mm Y = 2mm Layer = Signal$TOP PadStack = DR-0102_60
         "recovered": 1,
         "fallback": 0,
         "segments": 1,
+        "trace_components_indexed": 1,
+        "alternate_exit_cache_entries": 1,
+        "alternate_exit_trace_nodes_indexed": 2,
+        "alternate_exit_via_edges_indexed": 1,
+        "path_node_section_passes": 1,
+        "alternate_exit_node_section_passes": 1,
+        "alternate_exit_nodes_resolved": 3,
     }
     evidence = recovery.evidence_for("ViaRoute", "Signal$PWR")
     assert evidence is not None
@@ -226,6 +319,159 @@ Node99!!1::VDD_CORE/0 X = 2mm Y = 2mm Layer = Signal$TOP PadStack = DR-0102_60
     assert evidence.segments[0].rotation_degrees == 0.0
     # Conductor-centre depth, not an ordinal layer-index span.
     assert evidence.segments[0].length_um == pytest.approx(120.0)
+
+
+def test_direct_via_with_trace_to_alternate_via_marks_parallel_mesh(
+    tmp_path: Path,
+) -> None:
+    """The alternate Via's far node starts outside the recovery node cache."""
+
+    irrelevant_vias = "\n".join(
+        f"ViaIrrelevant{index}::VDD_CORE/0 UpperNode = JunkA{index} "
+        f"LowerNode = JunkB{index} PadStack = DR-0102_60"
+        for index in range(2_000)
+    )
+    source, analysis = _recoverable_via_source(
+        tmp_path,
+        node_lines="""
+Node10!!1::VDD_CORE/0 X = 1mm Y = 2mm Layer = Signal$TOP PadStack = DR-0102_60
+Node11!!1::VDD_CORE/0 X = 1mm Y = 2mm Layer = Signal$PWR PadStack = DR-0102_60
+Node12!!1::VDD_CORE/0 X = 1.2mm Y = 2mm Layer = Signal$TOP PadStack = DR-0102_60
+Node13!!1::VDD_CORE/0 X = 1.2mm Y = 2mm Layer = Signal$PWR PadStack = DR-0102_60
+""",
+        via_lines="""
+ViaRoute::VDD_CORE/0 UpperNode = Node10::VDD_CORE/0 LowerNode = Node11::VDD_CORE/0 PadStack = DR-0102_60
+ViaAlternate::VDD_CORE/0 UpperNode = Node12::VDD_CORE/0 LowerNode = Node13::VDD_CORE/0 PadStack = DR-0102_60
+""" + irrelevant_vias,
+        trace_lines=(
+            "TraceMesh::VDD_CORE/0 StartingNode = Node10::VDD_CORE/0 "
+            "EndingNode = Node12::VDD_CORE/0 Width = 0.10mm"
+        ),
+    )
+
+    landings = tuple(
+        SimpleNamespace(
+            via_id=via_id,
+            net="VDD_CORE/0",
+            endpoint_node_id=node_id,
+            x_um=x_um,
+            y_um=2_000.0,
+            padstack="DR-0102_60",
+        )
+        for via_id, node_id, x_um in (
+            ("ViaRoute", "Node10", 1_000.0),
+            ("ViaAlternate", "Node12", 1_200.0),
+        )
+    )
+    recovery = recover_spd_via_paths(
+        source,
+        landings=landings,
+        target_layers_by_net={"VDD_CORE/0": ("Signal$PWR",)},
+        stackup_layers=analysis.stackup_layers,
+        padstacks=analysis.padstacks,
+        top_layer="Signal$TOP",
+    )
+    evidence = recovery.evidence_for("ViaRoute", "Signal$PWR")
+
+    assert evidence is not None
+    assert evidence.trace_hops == 0
+    assert evidence.trace_alternate_exit is True
+    assert [item.via_id for item in evidence.segments] == ["ViaRoute"]
+    assert recovery.evidence_for(
+        "ViaAlternate", "Signal$PWR"
+    ).trace_alternate_exit is True
+    assert recovery.statistics["trace_components_indexed"] == 1
+    assert recovery.statistics["alternate_exit_cache_entries"] == 1
+    assert recovery.statistics["alternate_exit_trace_nodes_indexed"] == 2
+    # The 2,000 additional same-NET Vias are not Trace-incident and therefore
+    # never enter the memory-heavy alternate-exit neighbor index.
+    assert recovery.statistics["alternate_exit_via_edges_indexed"] == 2
+
+
+def test_many_trace_components_share_one_compact_alternate_node_scan(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    component_count = 32
+    node_lines = "\n".join(
+        line
+        for index in range(component_count)
+        for line in (
+            f"NodeRouteTop{index}!!1::VDD_CORE/0 X = {index}mm Y = 2mm "
+            "Layer = Signal$TOP PadStack = DR-0102_60",
+            f"NodeRoutePwr{index}!!1::VDD_CORE/0 X = {index}mm Y = 2mm "
+            "Layer = Signal$PWR PadStack = DR-0102_60",
+            f"NodeSideTop{index}!!1::VDD_CORE/0 X = {index}.1mm Y = 2mm "
+            "Layer = Signal$TOP PadStack = DR-0102_60",
+            f"NodeSidePwr{index}!!1::VDD_CORE/0 X = {index}.1mm Y = 2mm "
+            "Layer = Signal$PWR PadStack = DR-0102_60",
+        )
+    )
+    trace_lines = "\n".join(
+        f"TraceMesh{index}::VDD_CORE/0 StartingNode = NodeRouteTop{index} "
+        f"EndingNode = NodeSideTop{index} Width = 0.10mm"
+        for index in range(component_count)
+    )
+    via_lines = "\n".join(
+        line
+        for index in range(component_count)
+        for line in (
+            f"ViaRoute{index}::VDD_CORE/0 UpperNode = NodeRouteTop{index} "
+            f"LowerNode = NodeRoutePwr{index} PadStack = DR-0102_60",
+            f"ViaAlternate{index}::VDD_CORE/0 UpperNode = NodeSideTop{index} "
+            f"LowerNode = NodeSidePwr{index} PadStack = DR-0102_60",
+        )
+    )
+    source, analysis = _recoverable_via_source(
+        tmp_path,
+        node_lines=node_lines,
+        via_lines=via_lines,
+        trace_lines=trace_lines,
+    )
+    landings = tuple(
+        SimpleNamespace(
+            via_id=f"ViaRoute{index}",
+            net="VDD_CORE/0",
+            endpoint_node_id=f"NodeRouteTop{index}",
+            x_um=float(index) * 1_000.0,
+            y_um=2_000.0,
+            padstack="DR-0102_60",
+        )
+        for index in range(component_count)
+    )
+    original_iter_lines = spd_io._iter_lines
+    section_passes = 0
+
+    def counted_iter_lines(data, start, end):
+        nonlocal section_passes
+        section_passes += 1
+        return original_iter_lines(data, start, end)
+
+    monkeypatch.setattr(spd_io, "_iter_lines", counted_iter_lines)
+
+    recovery = recover_spd_via_paths(
+        source,
+        landings=landings,
+        target_layers_by_net={"VDD_CORE/0": ("Signal$PWR",)},
+        stackup_layers=analysis.stackup_layers,
+        padstacks=analysis.padstacks,
+        top_layer="Signal$TOP",
+    )
+
+    assert recovery.statistics["requested"] == component_count
+    assert recovery.statistics["recovered"] == component_count
+    assert recovery.statistics["trace_components_indexed"] == component_count
+    assert recovery.statistics["alternate_exit_cache_entries"] == component_count
+    assert recovery.statistics["path_node_section_passes"] == 1
+    assert recovery.statistics["alternate_exit_node_section_passes"] == 1
+    assert recovery.statistics["alternate_exit_nodes_resolved"] == 4 * component_count
+    # One path-frontier pass plus one compact alternate-exit pass: component
+    # count no longer multiplies complete Node-section scans.
+    assert section_passes == 2
+    assert all(
+        recovery.evidence_for(f"ViaRoute{index}", "Signal$PWR").trace_alternate_exit
+        for index in range(component_count)
+    )
 
 
 def test_recover_spd_via_paths_rejects_source_changed_since_analysis(
@@ -452,6 +698,78 @@ def test_recover_spd_via_path_fails_closed_for_nonunique_or_incomplete_routes(
         and failure_code in diagnostic.message
         for diagnostic in recovery.diagnostics
     )
+
+
+def test_recover_spd_via_path_allows_one_unique_same_net_trace_hop(tmp_path: Path) -> None:
+    source, analysis = _recoverable_via_source(
+        tmp_path,
+        node_lines="""
+Node10!!1::VDD_CORE/0 X = 1mm Y = 2mm Layer = Signal$TOP PadStack = DR-0102_60
+Node11!!1::VDD_CORE/0 X = 1mm Y = 2mm Layer = Medium$D1 PadStack = DR-0102_60
+Node12!!1::VDD_CORE/0 X = 1.2mm Y = 2mm Layer = Medium$D1 PadStack = DR-0102_60
+Node13!!1::VDD_CORE/0 X = 1.4mm Y = 2mm Layer = Medium$D1 PadStack = DR-0102_60
+Node14!!1::VDD_CORE/0 X = 1.4mm Y = 2mm Layer = Signal$PWR PadStack = DR-0102_60
+""",
+        via_lines="""
+ViaRoute::VDD_CORE/0 UpperNode = Node10::VDD_CORE/0 LowerNode = Node11::VDD_CORE/0 PadStack = DR-0102_60
+ViaTarget::VDD_CORE/0 UpperNode = Node13::VDD_CORE/0 LowerNode = Node14::VDD_CORE/0 PadStack = DR-0102_60
+""",
+        trace_lines="""
+TraceNeedA::VDD_CORE/0 StartingNode = Node11::VDD_CORE/0 EndingNode = Node12::VDD_CORE/0 Width = 0.10mm
+TraceNeedB::VDD_CORE/0 StartingNode = Node12::VDD_CORE/0 EndingNode = Node13::VDD_CORE/0 Width = 0.10mm
+""",
+    )
+
+    evidence = _recover_power_path(source, analysis).evidence_for("ViaRoute", "Signal$PWR")
+
+    assert evidence is not None
+    assert evidence.target_node_id == "Node14"
+    assert evidence.trace_hops == 2
+    assert [item.via_id for item in evidence.segments] == ["ViaRoute", "ViaTarget"]
+
+
+@pytest.mark.parametrize(
+    ("trace_lines", "failure_code"),
+    [
+        (
+            "\n".join(
+                (
+                    "TraceA::VDD_CORE/0 StartingNode = Node11::VDD_CORE/0 EndingNode = Node12::VDD_CORE/0 Width = 0.10mm",
+                    "TraceB::VDD_CORE/0 StartingNode = Node11::VDD_CORE/0 EndingNode = Node13::VDD_CORE/0 Width = 0.10mm",
+                )
+            ),
+            "AMBIGUOUS_TRACE_BRANCH",
+        ),
+        (
+            "\n".join(
+                (
+                    "TraceA::VDD_CORE/0 StartingNode = Node11::VDD_CORE/0 EndingNode = Node12::VDD_CORE/0 Width = 0.10mm",
+                    "TraceB::VDD_CORE/0 StartingNode = Node12::VDD_CORE/0 EndingNode = Node11::VDD_CORE/0 Width = 0.10mm",
+                )
+            ),
+            "TRACE_CYCLE",
+        ),
+    ],
+)
+def test_recover_spd_via_path_fails_closed_for_trace_branch_or_cycle(
+    tmp_path: Path, trace_lines: str, failure_code: str
+) -> None:
+    source, analysis = _recoverable_via_source(
+        tmp_path,
+        node_lines="""
+Node10!!1::VDD_CORE/0 X = 1mm Y = 2mm Layer = Signal$TOP PadStack = DR-0102_60
+Node11!!1::VDD_CORE/0 X = 1mm Y = 2mm Layer = Medium$D1 PadStack = DR-0102_60
+Node12!!1::VDD_CORE/0 X = 1.2mm Y = 2mm Layer = Medium$D1 PadStack = DR-0102_60
+Node13!!1::VDD_CORE/0 X = 1.4mm Y = 2mm Layer = Medium$D1 PadStack = DR-0102_60
+""",
+        via_lines="ViaRoute::VDD_CORE/0 UpperNode = Node10::VDD_CORE/0 LowerNode = Node11::VDD_CORE/0 PadStack = DR-0102_60",
+        trace_lines=trace_lines,
+    )
+
+    recovery = _recover_power_path(source, analysis)
+
+    assert recovery.statistics["recovered"] == 0
+    assert any(failure_code in item.message for item in recovery.diagnostics)
 
 
 def test_streaming_spd_normalizes_selected_geometry_and_passive_models(
@@ -696,6 +1014,62 @@ def test_polygon_trace_and_box_are_normalized_in_source_order(tmp_path: Path) ->
     assert not analysis.has_errors
 
 
+def test_ordered_geometry_batches_polarity_runs_without_changing_semantics(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from shapely.geometry import GeometryCollection, Polygon
+    import shapely.ops
+
+    positive = [
+        [(0.0, 0.0), (10.0, 0.0), (10.0, 10.0), (0.0, 10.0)],
+        [(8.0, 0.0), (18.0, 0.0), (18.0, 10.0), (8.0, 10.0)],
+        [(3.0, 3.0), (4.0, 3.0), (4.0, 4.0), (3.0, 4.0)],
+    ]
+    negative = [
+        [(2.0, 2.0), (5.0, 2.0), (5.0, 5.0), (2.0, 5.0)],
+        [(12.0, 2.0), (15.0, 2.0), (15.0, 5.0), (12.0, 5.0)],
+    ]
+    order = [
+        ("positive_polygon", 0),
+        ("positive_polygon", 1),
+        ("negative_polygon", 0),
+        ("negative_polygon", 1),
+        ("positive_polygon", 2),
+    ]
+    record = {
+        "positive_polygons_um": positive,
+        "negative_polygons_um": negative,
+        "positive_circles_um": [],
+        "negative_circles_um": [],
+        "primitive_order": order,
+    }
+    expected = GeometryCollection()
+    for kind, index in order:
+        primitive = Polygon(
+            positive[index] if kind.startswith("positive_") else negative[index]
+        )
+        expected = (
+            expected.union(primitive)
+            if kind.startswith("positive_")
+            else expected.difference(primitive)
+        )
+    original_unary_union = shapely.ops.unary_union
+    batches: list[int] = []
+
+    def counted_unary_union(items):
+        values = list(items)
+        batches.append(len(values))
+        return original_unary_union(values)
+
+    monkeypatch.setattr(shapely.ops, "unary_union", counted_unary_union)
+
+    actual = core_services._ordered_spd_geometry(record)
+
+    assert actual is not None
+    assert actual.symmetric_difference(expected).area == pytest.approx(0.0)
+    assert batches == [2, 2, 1]
+
+
 def test_malformed_selected_supported_primitive_blocks_import(tmp_path: Path) -> None:
     source = tmp_path / "malformed-circle.spd"
     source.write_text(
@@ -749,6 +1123,207 @@ def test_decap_scenario_scope_includes_candidate_rails_dnp_and_pad_provenance(
     assert c2.power_x_um == pytest.approx(3_000.0)
     assert c2.power_y_um == pytest.approx(2_000.0)
     assert c2.power_padstack == "CAP"
+
+
+def test_decap_scenario_retains_non_top_configured_ground_geometry(
+    tmp_path: Path,
+) -> None:
+    source = tmp_path / "non-top-ground.spd"
+    source.write_text(MINI_SPD, encoding="ascii")
+
+    analysis = analyze_spd(source, scope="decap_scenario")
+
+    assert any(
+        item.layer == "Signal$GND" and item.net == "DGND"
+        for item in analysis.plane_geometries
+    )
+    assert analysis.power_plane_nets == ("VDD_CORE/0",)
+
+
+def test_unselected_positive_net_keeps_ground_layer_mixed_and_requires_certificate(
+    tmp_path: Path,
+) -> None:
+    source = tmp_path / "mixed-ground.spd"
+    payload = MINI_SPD.replace(
+        "Polygon1::DGND+ -5mm -4mm 5mm -4mm 5mm 4mm -5mm 4mm",
+        "Polygon1::DGND+ -1mm -1mm 1mm -1mm 1mm 1mm -1mm 1mm\n"
+        "PolygonSIG::SIG_RETURN+ -5mm -4mm 5mm -4mm 5mm 4mm -5mm 4mm",
+    )
+    source.write_text(payload, encoding="ascii")
+
+    analysis = analyze_spd(source, scope="decap_scenario")
+    gnd_layer = next(
+        item for item in analysis.stackup_layers if item.name == "Signal$GND"
+    )
+    assert {item.casefold() for item in gnd_layer.pwr_nets} == {
+        "dgnd",
+        "sig_return",
+    }
+    assert any(
+        item.layer == "Signal$GND" and item.net == "DGND"
+        for item in analysis.plane_geometries
+    )
+    assert all(item.net != "SIG_RETURN" for item in analysis.plane_geometries)
+
+    plan = build_spd_import_plan(
+        create_workspace_state().project,
+        analysis,
+        source,
+    )
+
+    # DGND covers only a small part of the selected PWR artwork.  Retaining
+    # SIG_RETURN occupancy prevents this layer from masquerading as pure GND,
+    # and the failed coverage gate means no rail can be formed.
+    assert plan.project.rails == []
+    assert any(item.code == "SPD_NO_RAILS" for item in plan.diagnostics)
+    assert any(
+        item.code == "SPD_MIXED_REFERENCE_CERTIFICATE_REJECTED"
+        and "coverage" in item.message
+        for item in plan.diagnostics
+    )
+    failures = plan.project.metadata["spd_import"][
+        "mixed_reference_certificate_failures"
+    ]
+    assert failures[0]["rail_net"] == "VDD_CORE/0"
+    assert failures[0]["pwr_layer"] == "Signal$PWR"
+
+
+def test_valid_mixed_reference_certificate_binds_assets_and_low_confidence(
+    tmp_path: Path,
+) -> None:
+    source = tmp_path / "certified-mixed-ground.spd"
+    payload = MINI_SPD.replace(
+        "Polygon1::DGND+ -5mm -4mm 5mm -4mm 5mm 4mm -5mm 4mm",
+        "Polygon1::DGND+ -5mm -4mm 5mm -4mm 5mm 4mm -5mm 4mm\n"
+        "PolygonSIG::SIG_RETURN+ -5mm -4mm 5mm -4mm 5mm 4mm -5mm 4mm",
+    )
+    source.write_text(payload, encoding="ascii")
+    analysis = analyze_spd(source, scope="decap_scenario")
+
+    plan = build_spd_import_plan(
+        create_workspace_state().project,
+        analysis,
+        source,
+    )
+
+    rail = next(item for item in plan.project.rails if item.net == "VDD_CORE/0")
+    certificate = rail.mixed_reference_certificate
+    assert certificate is not None
+    assert (rail.pwr_layer, rail.gnd_layer) == ("Signal$PWR", "Signal$GND")
+    assert certificate.gnd_net == "DGND"
+    assert certificate.overlap_fraction == pytest.approx(1.0)
+    assert certificate.dominant_overlap_component_fraction == pytest.approx(1.0)
+    records = plan.project.metadata["spd_import"]["plane_geometries"]
+    pwr_record = next(
+        item for item in records
+        if item["layer"] == rail.pwr_layer and item["net"] == rail.net
+    )
+    gnd_record = next(
+        item for item in records
+        if item["layer"] == rail.gnd_layer and item["net"] == certificate.gnd_net
+    )
+    assert certificate.pwr_asset_sha256 == pwr_record["asset_sha256"]
+    assert certificate.gnd_asset_sha256 == gnd_record["asset_sha256"]
+    assert pwr_record["asset"] in plan.project.attachment_names
+    assert gnd_record["asset"] in plan.project.attachment_names
+    with pytest.raises(EvaluationError, match="source-ground reachability witness"):
+        _planes_from_project(plan.project, rail)
+    witness = MixedReferenceGroundWitness(
+        rail_net=rail.net,
+        gnd_net=certificate.gnd_net,
+        pwr_layer=rail.pwr_layer,
+        gnd_layer=rail.gnd_layer,
+        gnd_asset_sha256=certificate.gnd_asset_sha256,
+        source_sha256=analysis.source.sha256,
+        landing_identities=(),
+        landing_count=0,
+        landing_identities_sha256=sha256(b"[]\n").hexdigest(),
+    )
+    rail = rail.model_copy(update={"mixed_reference_ground_witness": witness})
+    project = plan.project.model_copy(
+        update={
+            "rails": [
+                rail if item.rail_id == rail.rail_id else item
+                for item in plan.project.rails
+            ]
+        }
+    )
+    _plane, _parallel, _origin, _confirmed, assumptions = _planes_from_project(
+        project, rail
+    )
+    assert any("LOW confidence: mixed-reference" in item for item in assumptions)
+    assert not any(
+        item.code == "SPD_MIXED_REFERENCE_CERTIFICATE_REJECTED"
+        for item in plan.diagnostics
+    )
+    frequencies = np.asarray([1.0e5, 1.0e6])
+    outcome = SimpleNamespace(
+        rail_id=rail.rail_id,
+        solve=SimpleNamespace(
+            frequencies_hz=frequencies,
+            impedance_ohm=np.asarray([0.01 + 0.0j, 0.02 + 0.0j]),
+            diagnostics=SimpleNamespace(
+                mode_count=4,
+                max_condition_number=1.0,
+                max_relative_residual=0.0,
+            ),
+        ),
+        metrics=SimpleNamespace(
+            magnitude_ohm=np.asarray([0.01, 0.02]),
+            phase_deg=np.asarray([0.0, 0.0]),
+            target_ohm=np.asarray([0.02, 0.02]),
+            violation_db=np.asarray([-6.0, 0.0]),
+            max_violation_db=0.0,
+            rms_violation_db=0.0,
+            peaks=(),
+        ),
+        confidence=(
+            SimpleNamespace(
+                category=SimpleNamespace(value="Geometry"),
+                level=SimpleNamespace(value="LOW"),
+                start_hz=1.0e5,
+                stop_hz=1.0e6,
+                reason="mixed reference",
+            ),
+        ),
+        assumptions=(),
+        solver_version="test",
+        convergence=None,
+    )
+
+    view = _evaluation_view(plan.project, outcome)
+
+    assert "Mixed reference Signal$PWR/Signal$GND" in view.confidence_note
+    assert "overlap 100.00%, dominant 100.00%" in view.confidence_note
+    assert "rectangular-return approximation" in view.confidence_note
+
+
+def test_mixed_reference_geometry_failure_blocks_import_plan(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    source = tmp_path / "mixed-geometry-failure.spd"
+    payload = MINI_SPD.replace(
+        "Polygon1::DGND+ -5mm -4mm 5mm -4mm 5mm 4mm -5mm 4mm",
+        "Polygon1::DGND+ -5mm -4mm 5mm -4mm 5mm 4mm -5mm 4mm\n"
+        "PolygonSIG::SIG_RETURN+ -5mm -4mm 5mm -4mm 5mm 4mm -5mm 4mm",
+    )
+    source.write_text(payload, encoding="ascii")
+    analysis = analyze_spd(source, scope="decap_scenario")
+    monkeypatch.setattr(core_services, "_ordered_spd_geometry", lambda _record: None)
+
+    plan = build_spd_import_plan(
+        create_workspace_state().project,
+        analysis,
+        source,
+    )
+
+    assert not plan.can_apply
+    assert any(
+        item.severity == "error"
+        and item.code == "SPD_MIXED_REFERENCE_GEOMETRY_UNAVAILABLE"
+        for item in plan.diagnostics
+    )
 
 
 def test_single_node_and_via_passes_produce_exact_direct_connection_evidence(

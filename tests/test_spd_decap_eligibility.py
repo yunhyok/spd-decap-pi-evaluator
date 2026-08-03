@@ -233,6 +233,17 @@ def test_geometry_without_adjacent_solver_supported_ground_is_not_eligible():
     assert eligible_power_planes(10.0, 10.0, (_geometry(),), stack).nets == ()
 
 
+def test_mixed_ground_layer_is_not_a_continuous_solver_reference():
+    stack = list(_stackup())
+    stack[-1] = stack[-1].model_copy(update={"pwr_nets": ["DGND", "VDD_OTHER"]})
+
+    pairs = suggest_effective_plane_pairs(stack, rail_net="VDD")
+
+    assert pairs == []
+    stack[-1] = stack[-1].model_copy(update={"pwr_nets": ["VDD_OTHER"]})
+    assert suggest_effective_plane_pairs(stack, rail_net="VDD") == []
+
+
 def test_same_net_boundary_on_other_layer_does_not_hide_valid_plane_pair():
     stack = (
         StackupLayer(

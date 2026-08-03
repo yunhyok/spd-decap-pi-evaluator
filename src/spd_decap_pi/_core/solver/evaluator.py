@@ -20,6 +20,10 @@ from spd_decap_pi._core.models import (
     SharedPairModel,
 )
 from spd_decap_pi._core.models.circuit import SharedPadClusterModel
+from spd_decap_pi._core.domain import (
+    MIXED_REFERENCE_MIN_COVERAGE,
+    MIXED_REFERENCE_MIN_DOMINANT_COMPONENT,
+)
 from .frequency import refine_log_grid
 from .metrics import (
     ConfidenceAssessment,
@@ -851,6 +855,9 @@ def build_project_evaluation_request(
             model_valid_max_hz=model_max,
             model_validity_known=model_validity_known,
             modal_converged=None,
+            mixed_reference_rectangular_approximation=(
+                getattr(rail, "mixed_reference_certificate", None) is not None
+            ),
         ),
         assumptions=assumptions,
     )
@@ -984,7 +991,17 @@ def _planes_from_project(
     if not pwr_layer.is_conductor or not gnd_layer.is_conductor:
         raise EvaluationError("selected PWR/DGND layers must be conductor rows")
     gnd_aliases = {str(item).casefold() for item in project.gnd_aliases}
-    if not _is_configured_ground_layer(gnd_layer, gnd_aliases):
+    certificate = getattr(rail, "mixed_reference_certificate", None)
+    witness = getattr(rail, "mixed_reference_ground_witness", None)
+    if certificate is not None and witness is None:
+        raise EvaluationError(
+            "mixed-reference DGND evaluation requires a source-ground reachability witness"
+        )
+    if certificate is not None and getattr(witness, "gnd_asset_sha256", None) != certificate.gnd_asset_sha256:
+        raise EvaluationError(
+            "mixed-reference DGND witness does not match the certificate DGND artwork"
+        )
+    if not _is_configured_ground_layer(gnd_layer, gnd_aliases, certificate, rail):
         raise EvaluationError(
             "selected DGND layer must contain only configured GND aliases"
         )
@@ -1049,21 +1066,46 @@ def _planes_from_project(
                 )
             )
     assumptions: tuple[str, ...] = ()
+    if certificate is not None:
+        assumptions = (
+            "LOW confidence: mixed-reference rectangular approximation; "
+            f"DGND overlap {certificate.overlap_fraction:.2%}, dominant overlap "
+            f"component {certificate.dominant_overlap_component_fraction:.2%}; "
+            "coverage does not scale plane electrical parameters",
+        )
     if parallel:
         component_names = (f"{rail.pwr_layer}/{rail.gnd_layer}",)
         component_names += (f"{rail.pwr_layer}/{layers[candidate_index].name}",)
-        assumptions = (
+        assumptions += (
             "shared-PWR ideal-common-reference components: " + "; ".join(component_names),
             "DGND component layers are treated as an ideal common reference",
         )
     return primary, tuple(parallel), origin, confirmed, assumptions
 
 
-def _is_configured_ground_layer(layer: Any, gnd_aliases: set[str]) -> bool:
+def _is_configured_ground_layer(
+    layer: Any,
+    gnd_aliases: set[str],
+    certificate: Any | None = None,
+    rail: Any | None = None,
+) -> bool:
     if not layer.is_conductor:
         return False
     keys = {str(item).casefold() for item in layer.pwr_nets}
-    return bool(keys) and keys.issubset(gnd_aliases)
+    if bool(keys) and keys.issubset(gnd_aliases):
+        return certificate is None
+    if certificate is None or rail is None:
+        return False
+    return (
+        str(certificate.rail_net).casefold() == str(rail.net).casefold()
+        and str(certificate.pwr_layer).casefold() == str(rail.pwr_layer).casefold()
+        and str(certificate.gnd_layer).casefold() == str(rail.gnd_layer).casefold()
+        and str(rail.net).casefold() not in keys
+        and any(alias in str(layer.name).casefold() for alias in gnd_aliases)
+        and float(certificate.overlap_fraction) >= MIXED_REFERENCE_MIN_COVERAGE
+        and float(certificate.dominant_overlap_component_fraction)
+        >= MIXED_REFERENCE_MIN_DOMINANT_COMPONENT
+    )
 
 
 def _first_conductor_index(

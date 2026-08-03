@@ -115,6 +115,7 @@ class ConfidenceInputs:
     model_valid_max_hz: float | None = None
     model_validity_known: bool = False
     modal_converged: bool | None = None
+    mixed_reference_rectangular_approximation: bool = False
     cavity_cutoff_safety_factor: float = 0.1
 
     def __post_init__(self) -> None:
@@ -298,6 +299,12 @@ def assess_confidence(
         if inputs.geometry_confirmed
         else "geometry passed bounds checks but partition/ports were not user-confirmed"
     )
+    if inputs.mixed_reference_rectangular_approximation:
+        geometry_level = ConfidenceLevel.LOW
+        geometry_reason = (
+            "mixed-reference coverage is geometry-certified, but the solver uses a "
+            "continuous rectangular return approximation"
+        )
     template_level = ConfidenceLevel.HIGH if inputs.templates_calibrated else ConfidenceLevel.MEDIUM
     template_reason = (
         "via and local topology templates are calibrated"

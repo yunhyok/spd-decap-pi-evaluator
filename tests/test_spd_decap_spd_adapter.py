@@ -1,6 +1,7 @@
 ﻿from pathlib import Path
 
 import math
+from types import SimpleNamespace
 
 import pytest
 
@@ -10,7 +11,12 @@ from spd_decap_pi._core import services as core_services
 from spd_decap_pi._core.io.spd import SpdImportError
 from spd_decap_pi._core.services import WorkspaceState, import_cap_spice
 from spd_decap_pi.scenario import SHARED_PAD_ANALYSIS_VERSION
-from spd_decap_pi.spd_adapter import import_spd_scenario
+from spd_decap_pi.scenario_io import ScenarioFormatError, save_scenario
+from spd_decap_pi.spd_adapter import (
+    _raise_for_rejected_mixed_reference_landings,
+    _via_target_layers_by_net,
+    import_spd_scenario,
+)
 
 
 def test_read_only_spd_import_builds_top_side_editable_scenario(tmp_path: Path):
@@ -306,6 +312,96 @@ def test_oversized_plane_artwork_is_blocked_before_scenario_creation(
         match="SPD_PLANE_GEOMETRY_ASSET_TOO_LARGE",
     ):
         import_spd_scenario(source)
+
+
+def test_rejected_l11_pair_is_recovered_and_blocks_fallback_top_pair() -> None:
+    """Rejected pair targets must be requested before fallback can hide them."""
+
+    failure = {
+        "rail_net": "VCPU",
+        "pwr_layer": "L11",
+        "gnd_layer": "L10",
+        "gnd_net": "DGND",
+        "reason": "coverage below v1 threshold",
+    }
+    project = SimpleNamespace(
+        rails=(
+            SimpleNamespace(
+                net="VCPU",
+                pwr_layer="TOP",
+                gnd_layer="L02",
+                mixed_reference_certificate=None,
+            ),
+        ),
+        stackup_layers=(SimpleNamespace(name="L02", pwr_nets=("DGND",)),),
+        gnd_aliases=("DGND", "GND"),
+        metadata={
+            "spd_import": {
+                "mixed_reference_certificate_failures": [failure],
+            }
+        },
+    )
+
+    targets = _via_target_layers_by_net(project)
+
+    assert targets["vcpu"] == ("L11", "TOP")
+    assert targets["dgnd"] == ("L02",)
+    landing = SimpleNamespace(via_id="VP-VCPU", net="VCPU")
+    recovery = SimpleNamespace(
+        evidence_by_via={
+            "vp-vcpu": (SimpleNamespace(target_layer="L11"),),
+        }
+    )
+    with pytest.raises(SpdImportError, match=r"VCPU L11/L10"):
+        _raise_for_rejected_mixed_reference_landings(
+            project,
+            (landing,),
+            recovery,
+        )
+
+
+def test_certified_ground_attachment_tamper_cannot_be_saved(
+    tmp_path: Path,
+) -> None:
+    source = tmp_path / "certified-mixed.spd"
+    payload = MINI_SPD.replace(
+        "Node4!!2::DGND X = 1.2mm Y = 2mm Layer = Signal$TOP PadStack = CAP",
+        "Node4!!2::DGND X = 1.2mm Y = 2mm Layer = Signal$TOP PadStack = CAP\n"
+        "Node7!!7::DGND X = 1.2mm Y = 2mm Layer = Signal$GND PadStack = DR-0102_60",
+    ).replace(
+        "Via2::DGND UpperNode = Node2 LowerNode = Node4 PadStack = DR-0102_60",
+        "Via2::DGND UpperNode = Node2 LowerNode = Node4 PadStack = DR-0102_60\n"
+        "Via7::DGND UpperNode = Node4 LowerNode = Node7 PadStack = DR-0102_60",
+    ).replace(
+        "Polygon1::DGND+ -5mm -4mm 5mm -4mm 5mm 4mm -5mm 4mm",
+        "Polygon1::DGND+ -5mm -4mm 5mm -4mm 5mm 4mm -5mm 4mm\n"
+        "PolygonSIG::SIG_RETURN+ -5mm -4mm 5mm -4mm 5mm 4mm -5mm 4mm",
+    )
+    source.write_text(payload, encoding="ascii")
+    imported = import_spd_scenario(source)
+    rail = imported.scenario.base_project.rails[0]
+    certificate = rail.mixed_reference_certificate
+    assert certificate is not None
+    records = imported.scenario.base_project.metadata["spd_import"][
+        "plane_geometries"
+    ]
+    gnd_record = next(
+        item for item in records
+        if item["layer"] == rail.gnd_layer and item["net"] == certificate.gnd_net
+    )
+    asset = gnd_record["asset"]
+    tampered = dict(imported.attachments)
+    tampered[asset] = tampered[asset] + b"tampered"
+
+    with pytest.raises(
+        ScenarioFormatError,
+        match="certified artwork",
+    ):
+        save_scenario(
+            imported.scenario,
+            tmp_path / "tampered.spdpi",
+            attachments=tampered,
+        )
 
 
 def test_colliding_safe_model_ids_keep_distinct_source_assets(
