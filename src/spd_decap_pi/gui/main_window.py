@@ -106,17 +106,77 @@ _EXPLORATORY_FIDELITY_WARNING = (
 
 
 def _modal_convergence_text(view: Any) -> str:
-    """Summarize solver-internal modal convergence without implying model accuracy."""
+    """Summarize combined numerical convergence without implying model accuracy."""
 
     convergence = getattr(view, "convergence", None)
     if not isinstance(convergence, dict):
         return "Not reported"
-    converged = convergence.get("modal_converged")
-    delta = convergence.get("modal_max_delta_db")
-    if not isinstance(delta, (int, float)) or isinstance(delta, bool):
-        return "Converged" if converged is True else "Not converged"
-    state = "Converged" if converged is True else "Not converged"
-    return f"{state} (Δmax {delta:.3f} dB)"
+    state = "Converged" if _combined_converged(convergence) else "Not converged"
+    frequency_state = (
+        "frequency converged"
+        if convergence.get("frequency_converged") is True
+        else "frequency failed"
+    )
+    if convergence.get("frequency_budget_exhausted") is True:
+        frequency_state += "; budget exhausted"
+    modal_state = (
+        "modal converged"
+        if convergence.get("modal_converged") is True
+        else "modal failed"
+    )
+    frequency_max = _convergence_delta_text(
+        convergence.get("frequency_max_delta_db")
+    )
+    modal_max = _convergence_delta_text(convergence.get("modal_max_delta_db"))
+    return (
+        f"{state} ({frequency_state}, Δmax {frequency_max}; "
+        f"{modal_state}, Δmax {modal_max})"
+    )
+
+
+def _convergence_delta_text(value: Any) -> str:
+    if isinstance(value, (int, float)) and not isinstance(value, bool):
+        return f"{value:.3f} dB"
+    return "N/A"
+
+
+def _combined_converged(convergence: Any) -> bool:
+    """Require every reported numerical convergence gate to pass explicitly."""
+
+    return isinstance(convergence, dict) and all(
+        convergence.get(key) is True
+        for key in ("converged", "frequency_converged", "modal_converged")
+    )
+
+
+def _rejected_comparison_convergence(
+    comparisons: tuple[Any, ...],
+) -> tuple[str, ...]:
+    """Return complete per-configuration evidence for a fail-closed batch gate."""
+
+    rejected: list[str] = []
+    for comparison in comparisons:
+        rail_id = str(getattr(comparison, "rail_id", "unknown rail"))
+        for configuration, evaluation in (
+            ("Original", getattr(comparison, "baseline", None)),
+            ("Tuned", getattr(comparison, "tuned", None)),
+        ):
+            view = getattr(evaluation, "view", None)
+            convergence = getattr(view, "convergence", None)
+            if _combined_converged(convergence):
+                continue
+            values = convergence if isinstance(convergence, dict) else {}
+            rejected.append(
+                f"{rail_id} / {configuration}: combined convergence "
+                f"{'missing' if not isinstance(convergence, dict) else 'failed'}; "
+                "frequency RMS "
+                f"{_convergence_delta_text(values.get('frequency_rms_delta_db'))}, "
+                f"max {_convergence_delta_text(values.get('frequency_max_delta_db'))}; "
+                "modal RMS "
+                f"{_convergence_delta_text(values.get('modal_rms_delta_db'))}, "
+                f"max {_convergence_delta_text(values.get('modal_max_delta_db'))}."
+            )
+    return tuple(rejected)
 
 
 def _whole_decap_tolerance(present: int, tolerance_percent: float) -> int:
@@ -859,7 +919,9 @@ class MainWindow(QMainWindow):
             self.evaluation_modal_preset_combo.setCurrentIndex(default_index)
         self.evaluation_modal_preset_combo.setToolTip(
             "Changes only the internal rectangular modal convergence/runtime. "
-            "It does not calibrate to PowerSI or certify absolute impedance accuracy."
+            "Experimental m12 check uses PowerSI evidence for comparison only; the "
+            "2026-07-29 benchmark took 4,139 s and more modes worsened external "
+            "correlation in that case, which does not justify selecting a lower order."
         )
         self.evaluation_modal_preset_combo.currentIndexChanged.connect(
             self._evaluation_modal_preset_changed
@@ -915,7 +977,7 @@ class MainWindow(QMainWindow):
                 "Max violation Original→Tuned",
                 "Baseline",
                 "Overall confidence Original→Tuned",
-                "Modal convergence Original→Tuned",
+                "Combined convergence Original→Tuned",
             )
         )
         self.comparison_table.setEditTriggers(
@@ -940,8 +1002,9 @@ class MainWindow(QMainWindow):
             "PWR NETs. "
             "Evaluation reuses the existing modal PI engine. "
             "Numerical convergence preset changes only internal rectangular modal "
-            "convergence/runtime; Maximum is an opt-in final m10→m12 truncation "
-            "check. It is not a PowerSI or absolute-accuracy setting. "
+            "convergence/runtime; Experimental m12 check is an opt-in m10-to-m12 "
+            "check, not a PowerSI or absolute-accuracy setting. A batch is accepted "
+            "only when every Original and Tuned result reports combined convergence. "
             "Non-rectangular PWR artwork is solved with its disclosed rectangular bbox; "
             "an immediately adjacent opposite-side DGND layer may use the shared-PWR "
             "ideal-common-reference equivalent; results are single-rail Zii without "
@@ -4030,6 +4093,21 @@ class MainWindow(QMainWindow):
                 "The evaluation worker returned an incomplete comparison batch."
             )
             self.status_text.setText("Discarded invalid evaluation result")
+            return
+
+        rejected_convergence = _rejected_comparison_convergence(comparisons)
+        if rejected_convergence:
+            message = (
+                "Evaluation rejected: every Original and Tuned result must report "
+                "combined frequency and modal convergence. No scenario, cache, "
+                "or autosave mutation was accepted; prior plot, export, and AI state "
+                "was cleared.\n\n"
+                + "\n".join(rejected_convergence)
+            )
+            self._auto_save_after_worker = False
+            self._invalidate_evaluation(message)
+            QMessageBox.warning(self, APP_DISPLAY_NAME, message)
+            self.status_text.setText("Rejected nonconverged evaluation batch")
             return
 
         current = self._scenario

@@ -107,14 +107,15 @@ EVALUATION_MODAL_PRESETS: tuple[EvaluationModalPreset, ...] = (
     ),
     EvaluationModalPreset(
         key="maximum",
-        label="Maximum",
+        label="Experimental m12 check",
         max_index=12,
         mode_count=169,
         description=(
-            "169 rectangular-cavity modes for an opt-in final truncation check; "
-            "compares against the 121-mode (10,10) basis. A representative m10→m12 "
-            "check observed up to 0.105 dB change and can take substantially longer. "
-            "It is not PowerSI calibration."
+            "169 rectangular-cavity modes for an experimental m10-to-m12 "
+            "truncation check; compares against the 121-mode (10,10) basis. "
+            "PowerSI evidence is comparison-only; it can take more than an hour "
+            "on the 2026-07-29 benchmark, and must never be used to choose a "
+            "lower modal order."
         ),
     ),
 )

@@ -67,11 +67,13 @@ not by a local user path. SPD: `S4LB002-2Para_260724_1_injected.spd`, SHA-256
 
 ## Numerical convergence and validation
 
-Balanced is the default: max index 8 (81 modes). Maximum is opt-in: max index
-12 (169 modes), a final m10-to-m12 truncation check. The observed maximum
-change in the validation case was 0.105 dB; it can take substantially longer
-on a large SPD. This is an internal modal truncation check, not PowerSI
-calibration.
+Balanced is the default: max index 8 (81 modes). **Experimental m12 check**
+retains max index 12 (169 modes) as an opt-in m10-to-m12 check. The 2026-07-29
+loaded benchmark changed VTRIP1 maximum magnitude by up to 1.346 dB from m10
+to m12, left 3 of 6 loaded configurations nonconverged, and used 4,139 s of
+solver runtime. More modes worsened external correlation in that benchmark,
+but this does not justify selecting a lower modal order. PowerSI is
+comparison-only, never a calibration input.
 
 Adaptive evaluation reports frequency-grid and modal deltas, including RMS,
 maximum dB difference, and dominant-peak shift. For the validation comparison,
@@ -84,14 +86,13 @@ from `5.65/11.03 deg` to `4.93/9.89 deg`. VINT1 phase RMS improved from
 `5.19 deg` to `3.72 deg`, while its maximum phase error worsened from
 `7.92 deg` to `8.88 deg`. The one-sided VCPU result remains exactly unchanged.
 
-A fresh v0.13 scenario run with the latest safe validator used **Maximum**
-(max index 12), adaptive 433-point grids, and solver `modal-mvp-0.5.0`.
-VINT0 signed/RMS/max magnitude error was `+0.391/+0.842/+2.007 dB`, with
-RMS/max `62.1/145.8 uOhm` and phase RMS/max `4.86/9.83 deg`; its m10-to-m12
-modal RMS/max delta was `0.0408/0.0953 dB` and converged. VINT1 was
-`+0.119/+0.539/+1.771 dB`, `41.9/124.9 uOhm`, and `3.61/8.84 deg`, with
-m10-to-m12 modal RMS/max `0.0480/0.1054 dB` and converged. This corroborates
-the comparison evidence above; it is not calibration or reference feedback.
+The 2026-07-29 loaded six-configuration benchmark is the release-relevant
+evidence for this preset. Its mode 6/8/12 loaded PowerSI RMS values were
+`3.1874/3.5387/4.0106 dB`; all six loaded configurations were nonconverged at
+m6 and m8, and VTRIP0, VTRIP1, and VCPU0 remained nonconverged at m12.
+Consequently, this preset is only an experimental check: acceptance requires
+combined frequency and modal convergence for every Original and Tuned rail,
+and a failed m12 check must not silently fall back to a lower order.
 
 The comparison contract is `Z = Z0(I+S)(I-S)^-1`; all non-driven currents are
 zero (open), and the selected result is row-major `Zpp`. The tracked,

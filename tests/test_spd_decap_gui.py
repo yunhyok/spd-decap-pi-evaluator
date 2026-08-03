@@ -41,6 +41,8 @@ from spd_decap_pi.gui.main_window import (
     _PlaneArtworkItem,
     _excel_safe_csv_cell,
     _job_load_scenario,
+    _modal_convergence_text,
+    _rejected_comparison_convergence,
     _source_via_path_recovery_summary,
     _shared_pad_connection_summary,
     _short_plane_layer_labels,
@@ -99,7 +101,10 @@ def test_evaluation_layout_uses_an_expanding_rail_list_and_detached_plot_button(
         assert window.evaluation_modal_preset_combo.currentText() == "Balanced (81 modes)"
         maximum_index = window.evaluation_modal_preset_combo.findData(12)
         assert maximum_index >= 0
-        assert window.evaluation_modal_preset_combo.itemText(maximum_index) == "Maximum (169 modes)"
+        assert window.evaluation_modal_preset_combo.itemText(maximum_index) == (
+            "Experimental m12 check (169 modes)"
+        )
+        assert "4,139 s" in window.evaluation_modal_preset_combo.toolTip()
         notes = window.findChild(QTextBrowser, "evaluationNotes")
         assert notes is not None
         assert "not a PowerSI or absolute-accuracy setting" in notes.toPlainText()
@@ -1266,7 +1271,16 @@ def test_completed_comparison_populates_plot_ai_selector_and_auto_saves(
                 assumptions=[],
                 solver_version=evaluation_module.SOLVER_VERSION,
                 solver_diagnostics={},
-                convergence=None,
+                convergence={
+                    "converged": True,
+                    "frequency_converged": True,
+                    "frequency_budget_exhausted": False,
+                    "frequency_rms_delta_db": 0.01,
+                    "frequency_max_delta_db": 0.02,
+                    "modal_converged": True,
+                    "modal_rms_delta_db": 0.03,
+                    "modal_max_delta_db": 0.04,
+                },
                 z_real_ohm=[0.02, 0.03],
                 z_imag_ohm=[0.0, 0.0],
             )
@@ -1298,7 +1312,7 @@ def test_completed_comparison_populates_plot_ai_selector_and_auto_saves(
                 batch.comparisons[0].tuned.view,
                 confidence="LOW",
                 confidence_note="tuned fixture",
-                convergence={"modal_converged": False, "modal_max_delta_db": 1.25},
+                convergence=batch.comparisons[0].tuned.view.convergence,
             ),
         )
         batch = replace(
@@ -1341,9 +1355,16 @@ def test_completed_comparison_populates_plot_ai_selector_and_auto_saves(
         assert window.comparison_table.item(0, 4).text() == "N/A"
         assert window.comparison_table.item(0, 6).text() == "Saved now"
         assert window.comparison_table.horizontalHeaderItem(7).text() == "Overall confidence Original→Tuned"
-        assert window.comparison_table.horizontalHeaderItem(8).text() == "Modal convergence Original→Tuned"
+        assert window.comparison_table.horizontalHeaderItem(8).text() == (
+            "Combined convergence Original→Tuned"
+        )
         assert window.comparison_table.item(0, 7).text() == "MEDIUM: fixture → LOW: tuned fixture"
-        assert window.comparison_table.item(0, 8).text() == "Not reported → Not converged (Δmax 1.250 dB)"
+        assert window.comparison_table.item(0, 8).text() == (
+            "Converged (frequency converged, Δmax 0.020 dB; "
+            "modal converged, Δmax 0.040 dB) → Converged "
+            "(frequency converged, Δmax 0.020 dB; modal converged, "
+            "Δmax 0.040 dB)"
+        )
         assert window.ai_rail_combo.count() == 1
         assert window.ai_rail_combo.currentData() == rail_id
         assert window._last_scenario_evaluation is batch.comparisons[0].tuned
@@ -1470,6 +1491,141 @@ def test_completed_comparison_populates_plot_ai_selector_and_auto_saves(
         window._dirty = False
         window.close()
         application.processEvents()
+
+
+def test_nonconverged_rail_rejects_the_entire_batch_before_persistence_or_results(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    application = _application()
+    source = tmp_path / "rejected.spd"
+    source.write_text(MINI_SPD, encoding="ascii")
+    imported = import_spd_scenario(source)
+    window = MainWindow()
+    warnings: list[str] = []
+    try:
+        window._accept_spd_import(imported)
+        assert window.scenario is not None
+        original_scenario = window.scenario
+        original_attachments = dict(window._attachments)
+        original_cache = dict(original_scenario.evaluation_cache)
+        failed_view = SimpleNamespace(
+            convergence={
+                "converged": False,
+                "frequency_converged": False,
+                "frequency_budget_exhausted": True,
+                "frequency_rms_delta_db": 0.12,
+                "frequency_max_delta_db": 0.34,
+                "modal_converged": True,
+                "modal_rms_delta_db": 0.01,
+                "modal_max_delta_db": 0.02,
+            }
+        )
+        converged_view = SimpleNamespace(
+            convergence={
+                "converged": True,
+                "frequency_converged": True,
+                "frequency_budget_exhausted": False,
+                "frequency_rms_delta_db": 0.01,
+                "frequency_max_delta_db": 0.02,
+                "modal_converged": True,
+                "modal_rms_delta_db": 0.03,
+                "modal_max_delta_db": 0.04,
+            }
+        )
+        failed_rail = SimpleNamespace(
+            rail_id="RAIL_FAILED",
+            baseline=SimpleNamespace(view=failed_view),
+            tuned=SimpleNamespace(view=converged_view),
+        )
+        converged_rail = SimpleNamespace(
+            rail_id="RAIL_OK",
+            baseline=SimpleNamespace(view=converged_view),
+            tuned=SimpleNamespace(view=converged_view),
+        )
+        previous_result = SimpleNamespace(comparisons=(converged_rail,))
+        window._comparison_batch = previous_result
+        window._tuned_evaluations_by_rail = {"rail_ok": converged_rail.tuned}
+        window._last_scenario_evaluation = converged_rail.tuned
+        window._last_evaluation = converged_view
+        window.comparison_table.setRowCount(1)
+        window.ai_rail_combo.addItem("RAIL_OK", "RAIL_OK")
+        window.ai_rail_combo.setEnabled(True)
+        window.ai_button.setEnabled(True)
+        window._auto_save_after_worker = True
+        window._update_result_plot_button()
+        assert window.open_results_button.isEnabled()
+        assert window.export_tuned_csv_button.isEnabled()
+        result = SimpleNamespace(
+            matches=lambda _scenario: True,
+            validate_for_scenario=lambda _scenario: None,
+            comparisons=(failed_rail, converged_rail),
+            updated_scenario=original_scenario.model_copy(
+                update={"revision": original_scenario.revision + 1}
+            ),
+            updated_attachments={"results/should-not-be-used.json": b"new"},
+        )
+        monkeypatch.setattr(
+            QMessageBox,
+            "warning",
+            lambda *_args: warnings.append(str(_args[2])),
+        )
+
+        window._accept_evaluation(result)
+
+        assert window.scenario is original_scenario
+        assert window._attachments == original_attachments
+        assert window.scenario.evaluation_cache == original_cache
+        assert not window._dirty
+        assert not window._auto_save_after_worker
+        assert window._comparison_batch is None
+        assert window.comparison_table.rowCount() == 0
+        assert window.ai_rail_combo.count() == 0
+        assert not window.ai_rail_combo.isEnabled()
+        assert not window.open_results_button.isEnabled()
+        assert not window.export_tuned_csv_button.isEnabled()
+        assert not window.ai_button.isEnabled()
+        assert warnings and "RAIL_FAILED / Original" in warnings[0]
+        assert "frequency RMS 0.120 dB, max 0.340 dB" in warnings[0]
+        assert "modal RMS 0.010 dB, max 0.020 dB" in warnings[0]
+    finally:
+        window._dirty = False
+        window.close()
+        application.processEvents()
+
+
+def test_combined_convergence_text_and_gate_reject_frequency_only_failure() -> None:
+    failed_view = SimpleNamespace(
+        convergence={
+            "converged": True,
+            "frequency_converged": False,
+            "frequency_budget_exhausted": True,
+            "frequency_max_delta_db": 0.42,
+            "modal_converged": True,
+            "modal_max_delta_db": 0.01,
+        }
+    )
+    comparison = SimpleNamespace(
+        rail_id="VCPU0",
+        baseline=SimpleNamespace(view=failed_view),
+        tuned=SimpleNamespace(
+            view=SimpleNamespace(
+                convergence={
+                    "converged": True,
+                    "frequency_converged": True,
+                    "modal_converged": True,
+                }
+            )
+        ),
+    )
+
+    assert _modal_convergence_text(failed_view) == (
+        "Not converged (frequency failed; budget exhausted, Δmax 0.420 dB; "
+        "modal converged, Δmax 0.010 dB)"
+    )
+    assert _rejected_comparison_convergence((comparison,)) == (
+        "VCPU0 / Original: combined convergence failed; frequency RMS N/A, "
+        "max 0.420 dB; modal RMS N/A, max 0.010 dB.",
+    )
 
 
 def test_restore_source_state_uses_the_frozen_fallback_baseline_model(
