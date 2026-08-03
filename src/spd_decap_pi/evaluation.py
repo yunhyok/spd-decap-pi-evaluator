@@ -11,7 +11,7 @@ from collections import Counter
 from dataclasses import dataclass, replace
 from hashlib import sha256
 import json
-from math import isfinite, log, pi
+from math import isfinite
 from typing import Any, Callable, Mapping, Sequence
 
 from spd_decap_pi._core import services as evaluation_services
@@ -39,6 +39,7 @@ from spd_decap_pi._core.services import (
     WorkspaceState,
 )
 from spd_decap_pi._core.solver import SOLVER_VERSION
+from spd_decap_pi._core.via_model import ViaModelError, estimate_via_segment_rl
 
 from .scenario import (
     CachedEvaluationMetadata,
@@ -1040,44 +1041,46 @@ def _ground_net(project: ProjectSpec, rail: RailSpec) -> str:
     return project.gnd_aliases[0]
 
 
-def _source_terminal_rl(segments: Sequence[Any]) -> tuple[float, float]:
-    """Return a per-terminal barrel R/L estimate from recovered source segments.
-
-    This deliberately reuses the existing disclosed analytical assumptions used
-    when importing a rail-level template: copper conductivity of 5.959e7 S/m,
-    plating of ``min(20 um, drill / 4)``, and a straight-via inductance for each
-    source-proven vertical segment.  It does not infer mutual coupling, anti-pad
-    effects, or lateral spreading from raw SPD topology.
-    """
-
+def _source_terminal_estimate(
+    segments: Sequence[Any], stackup_layers: Sequence[Any]
+) -> tuple[float, float, tuple[Any, ...]]:
+    """Return source-proven terminal R/L plus every segment classification."""
     resistance = 0.0
     inductance = 0.0
+    models: list[Any] = []
     for segment in segments:
-        length_um = float(segment.length_um)
-        diameter_um = float(segment.drill_diameter_um)
-        if (
-            not isfinite(length_um)
-            or not isfinite(diameter_um)
-            or length_um <= 0.0
-            or diameter_um <= 0.0
-        ):
+        try:
+            model = estimate_via_segment_rl(
+                length_um=segment.length_um,
+                drill_diameter_um=segment.drill_diameter_um,
+                padstack_material=getattr(segment, "padstack_material", None),
+                start_layer=getattr(segment, "start_layer", None),
+                end_layer=getattr(segment, "end_layer", None),
+                stackup_layers=stackup_layers,
+            )
+        except ViaModelError as exc:
             raise ScenarioEvaluationBuildError(
                 "SOURCE_VIA_PATH_INVALID",
-                "source-proven Via path has a nonphysical segment length or drill",
-            )
-        plating_um = min(20.0, diameter_um / 4.0)
-        barrel_area_m2 = pi * diameter_um * plating_um * 1.0e-12
-        resistance += length_um * 1.0e-6 / (5.959e7 * barrel_area_m2)
-        length_for_inductance = max(length_um, 1.0)
-        length_mm = length_for_inductance / 1000.0
-        ratio = max(4.0 * length_for_inductance / diameter_um, 1.0)
-        inductance += 0.2 * length_mm * (log(ratio) + 1.0) * 1.0e-9
+                str(exc),
+            ) from exc
+        resistance += model.resistance_ohm
+        inductance += model.inductance_h
+        models.append(model)
     if not segments or not (isfinite(resistance) and isfinite(inductance)):
         raise ScenarioEvaluationBuildError(
             "SOURCE_VIA_PATH_INVALID",
             "source-proven Via path has no usable vertical segment data",
         )
-    return max(resistance, 0.0), max(inductance, 0.0)
+    return max(resistance, 0.0), max(inductance, 0.0), tuple(models)
+
+
+def _source_terminal_rl(
+    segments: Sequence[Any], stackup_layers: Sequence[Any] = ()
+) -> tuple[float, float]:
+    """Compatibility view of the source-proven terminal R/L estimate."""
+
+    resistance, inductance, _models = _source_terminal_estimate(segments, stackup_layers)
+    return resistance, inductance
 
 
 def _shared_pad_path_from_landing(
@@ -1087,6 +1090,7 @@ def _shared_pad_path_from_landing(
     landing: Any,
     target_layer: str,
     via: ViaLoopTemplate,
+    stackup_layers: Sequence[Any] = (),
 ) -> SharedPadViaPath:
     """Materialize compact source evidence or name the rail-template fallback."""
 
@@ -1121,12 +1125,30 @@ def _shared_pad_path_from_landing(
             "SAMPLED_DIFFERENTIAL_TEMPLATE_SYMMETRIC"
         )
     else:
-        resistance, inductance = _source_terminal_rl(evidence.segments)
+        resistance, inductance, segment_models = _source_terminal_estimate(
+            evidence.segments, stackup_layers
+        )
+        classifications = tuple(item.classification for item in segment_models)
+        conductor_models = {item.conductor_model for item in classifications}
         fields.update(
             {
                 "terminal_resistance_ohm": resistance,
                 "terminal_inductance_h": inductance,
                 "terminal_provenance": "SOURCE_PROVEN_SEGMENT_RL",
+                "conductor_model": (
+                    classifications[0].conductor_model
+                    if len(conductor_models) == 1
+                    else "MIXED_SOURCE_SEGMENT_CONDUCTOR_MODELS"
+                ),
+                "fill_provenance": "; ".join(
+                    dict.fromkeys(item.fill_provenance for item in classifications)
+                ),
+                "classification_basis": "; ".join(
+                    dict.fromkeys(item.classification_basis for item in classifications)
+                ),
+                "effective_area_m2": min(
+                    item.effective_area_m2 for item in classifications
+                ),
             }
         )
     return SharedPadViaPath(**fields)
@@ -1169,7 +1191,7 @@ def _scenario_assumptions(base: ProjectSpec) -> list[str]:
         "impedance is split symmetrically (Zloop/2 per terminal); a 1-PWR/1-GND "
         "cluster reproduces the calibrated loop while unequal Via counts remain "
         "electrically distinct under the continuous-DGND approximation.",
-        "When raw SPD proves one unique monotonic same-net vertical Via chain, its selected-plane pad geometry and per-terminal segment R/L are used. R uses 5.959e7 S/m copper and min(20 um, drill/4) barrel plating; L is a straight-segment estimate without mutual-Via, anti-pad, or spreading calibration.",
+        "When raw SPD proves one unique monotonic same-net vertical Via chain, its selected-plane pad geometry and per-terminal segment R/L are used. A source COPPER MLO microvia (drill <=150 um, two conductor layers, one dielectric, dielectric/drill <=1) uses its full circular copper area; all other or unclassified vias retain min(20 um, drill/4) barrel plating. L is a straight-segment estimate without mutual-Via, anti-pad, or spreading calibration.",
         "A missing, branching, overshooting, trace-required, or unsupported raw Via path explicitly falls back to the rail template. Sampled differential templates retain their calibrated symmetric terminal representation.",
     )
     result: list[str] = []
@@ -1362,6 +1384,7 @@ def build_evaluation_project(
                         landing=landing,
                         target_layer=rail.pwr_layer,
                         via=via,
+                        stackup_layers=base.stackup_layers,
                     )
                 )
             power_components.append(
@@ -1395,6 +1418,7 @@ def build_evaluation_project(
                         landing=landing,
                         target_layer=rail.gnd_layer,
                         via=via,
+                        stackup_layers=base.stackup_layers,
                     )
                 )
             ground_components.append(

@@ -550,6 +550,10 @@ class SharedPadViaPath(DomainModel):
     terminal_resistance_ohm: float | None = Field(default=None, ge=0)
     terminal_inductance_h: float | None = Field(default=None, ge=0)
     terminal_provenance: str = "LEGACY_RAIL_TEMPLATE"
+    conductor_model: str | None = None
+    fill_provenance: str | None = None
+    classification_basis: str | None = None
+    effective_area_m2: float | None = Field(default=None, gt=0)
 
     @field_validator("x_um", "y_um")
     @classmethod
@@ -585,6 +589,16 @@ class SharedPadViaPath(DomainModel):
             raise ValueError("terminal Via resistance and inductance must be provided together")
         if not self.terminal_provenance.strip():
             raise ValueError("terminal Via provenance must not be blank")
+        conductor_evidence = (
+            self.conductor_model,
+            self.fill_provenance,
+            self.classification_basis,
+            self.effective_area_m2,
+        )
+        if any(value is not None for value in conductor_evidence) and any(
+            value is None for value in conductor_evidence
+        ):
+            raise ValueError("terminal Via conductor evidence must be provided together")
         return self
 
     @property

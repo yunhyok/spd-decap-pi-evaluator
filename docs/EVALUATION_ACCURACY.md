@@ -36,6 +36,27 @@ component must therefore have the same PWR thickness and conductivity. DGND
 layers are treated as an ideal common reference; their measured tie topology,
 slotting, and spreading impedance are not solved.
 
+This is not a general layer-by-layer cascade. A physical cascade requires full
+complex multiport Y matrices with explicit shared-interface degrees of freedom,
+then eliminates each interface by Schur/Kron reduction. Scalar impedance or
+admittance merging is not a cascade. The standalone SPD import does not extract
+those section matrices, so the production evaluator remains disconnected from
+the `LayerPairNetwork` foundation.
+
+## MLO microvia conductor model
+
+For a source-proven vertical segment, v0.14 uses a solid copper-filled area
+`A = pi(d/2)^2` only when its source padstack declares `Material=COPPER`, its
+drill is at most 150 um, its endpoints are exactly two conductor layers with
+one intervening dielectric row, and `dielectric thickness / drill <= 1.0`.
+The `USER_CONFIRMED_MLO_COPPER_FILL_ASSUMPTION...` provenance identifies a
+user-confirmed fabrication assumption supported by source material and
+geometry; the SPD does not itself prove copper fill or provide a generic
+manufacturing fill flag. Any missing, conflicting, deep/core, or non-qualifying evidence
+keeps the prior conservative plated-barrel area
+`A = pi*d*min(20 um, d/4)`. The straight-segment inductance expression is
+unchanged.
+
 The source audit supporting this approximation recorded 15,859 DGND tie
 evidence items (5.056/mm2); the reported spacing statistics were p50 130 um
 and p95 184 um. Reports identify the validation inputs by basename/hash only,
@@ -88,8 +109,8 @@ numerical stability of this disclosed model.
 
 - Non-rectangular PWR artwork is a rectangular bounding-box approximation.
 - Terminal paths may use source-proven vertical Via geometry/R/L or a disclosed
-  fallback template; lateral trace, mutual Via, anti-pad, and spreading terms
-  are not inferred.
+  fallback template. Only qualified MLO microvias use solid copper; lateral
+  trace, mutual Via, anti-pad, and spreading terms are not inferred.
 - Inter-rail and site-transfer coupling, DC IR drop, and DGND tie impedance
   are not modeled.
 - There is no general layer cascade and no field-solver feedback/calibration.

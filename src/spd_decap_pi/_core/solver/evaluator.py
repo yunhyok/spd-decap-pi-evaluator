@@ -44,8 +44,8 @@ from .modal import (
 
 # Cache identity: source-derived terminal branches and explicit multi-ground
 # shared-pad reduction and shared-PWR return treatment changed the calculated
-# transfer function in v0.13.0.
-SOLVER_VERSION = "modal-mvp-0.5.0"
+# transfer function in v0.14.0.
+SOLVER_VERSION = "modal-mvp-0.6.0"
 COUPLING_ASSUMPTION = "inter-rail/site coupling not modeled"
 
 

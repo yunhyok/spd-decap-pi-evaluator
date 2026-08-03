@@ -18,6 +18,12 @@ from .domain import CapModel, CoordinateTransform, CoordinateUnit, FrequencySett
 from .models import PassiveSubcircuitModel, parse_passive_subcircuit, passive_subcircuit_names
 from .plane_pairs import suggest_effective_plane_pairs
 from .solver.evaluator import EvaluationOutcome, evaluate_project_rail_converged
+from .via_model import (
+    COPPER_CONDUCTIVITY_S_PER_M,
+    ViaModelError,
+    ViaSegmentElectricalModel,
+    estimate_via_segment_rl,
+)
 from .version import __version__
 
 ProgressCallback = Callable[[int, str], None]
@@ -1696,6 +1702,9 @@ def _spd_via_templates(
     padstack_by_name = {item.name.casefold(): item for item in analysis.padstacks}
     usages = list(analysis.via_usage)
     layer_centers = _spd_layer_center_depths(project.stackup_layers)
+    top_conductor_layer = next(
+        (layer.name for layer in project.stackup_layers if layer.is_conductor), None
+    )
     ground_keys = {item.casefold() for item in project.gnd_aliases}
     templates: list[ViaLoopTemplate] = []
     provenance: dict[str, dict[str, Any]] = {}
@@ -1748,10 +1757,26 @@ def _spd_via_templates(
         drill_diameter = min(drill_diameters, default=None)
         pwr_depth = layer_centers.get(rail.pwr_layer, 125.0)
         gnd_depth = layer_centers.get(rail.gnd_layer, 125.0)
+        power_leg = _spd_via_leg_estimate(
+            padstack=power_padstack,
+            length_um=pwr_depth,
+            start_layer=top_conductor_layer,
+            end_layer=rail.pwr_layer,
+            stackup_layers=project.stackup_layers,
+        )
+        ground_leg = _spd_via_leg_estimate(
+            padstack=ground_padstack,
+            length_um=gnd_depth,
+            start_layer=top_conductor_layer,
+            end_layer=rail.gnd_layer,
+            stackup_layers=project.stackup_layers,
+        )
         resistance, inductance = _spd_uncalibrated_loop_estimate(
             pwr_depth_um=pwr_depth,
             gnd_depth_um=gnd_depth,
             drill_diameter_um=drill_diameter,
+            power_leg=power_leg,
+            ground_leg=ground_leg,
         )
         template_id = f"SPD_{_safe_id(rail.rail_id)}_VIA"
         templates.append(
@@ -1791,6 +1816,8 @@ def _spd_via_templates(
             "barrel_plating_assumption_um": (
                 min(20.0, drill_diameter / 4.0) if drill_diameter is not None else None
             ),
+            "power_leg": _via_leg_provenance(power_leg),
+            "ground_leg": _via_leg_provenance(ground_leg),
         }
     return templates, provenance
 
@@ -1807,7 +1834,14 @@ def _spd_uncalibrated_loop_estimate(
     pwr_depth_um: float,
     gnd_depth_um: float,
     drill_diameter_um: float | None,
+    power_leg: ViaSegmentElectricalModel | None = None,
+    ground_leg: ViaSegmentElectricalModel | None = None,
 ) -> tuple[float, float]:
+    if power_leg is not None and ground_leg is not None:
+        return (
+            max(power_leg.resistance_ohm + ground_leg.resistance_ohm, 0.0),
+            max(power_leg.inductance_h + ground_leg.inductance_h, 0.0),
+        )
     total_length_um = max(float(pwr_depth_um), 1.0) + max(float(gnd_depth_um), 1.0)
     if drill_diameter_um is None or drill_diameter_um <= 0:
         scale = max(total_length_um / 500.0, 0.25)
@@ -1815,7 +1849,9 @@ def _spd_uncalibrated_loop_estimate(
     diameter_um = float(drill_diameter_um)
     plating_um = min(20.0, diameter_um / 4.0)
     barrel_area_m2 = math.pi * diameter_um * plating_um * 1.0e-12
-    resistance = total_length_um * 1.0e-6 / (5.959e7 * barrel_area_m2)
+    resistance = total_length_um * 1.0e-6 / (
+        COPPER_CONDUCTIVITY_S_PER_M * barrel_area_m2
+    )
 
     def straight_via_inductance(length_um: float) -> float:
         length_mm = max(length_um, 1.0) / 1000.0
@@ -1826,6 +1862,48 @@ def _spd_uncalibrated_loop_estimate(
         gnd_depth_um
     )
     return max(float(resistance), 0.0), max(float(inductance), 0.0)
+
+
+def _spd_via_leg_estimate(
+    *,
+    padstack: Any | None,
+    length_um: float,
+    start_layer: str | None,
+    end_layer: str,
+    stackup_layers: Sequence[StackupLayer],
+) -> ViaSegmentElectricalModel | None:
+    """Return one source-backed rail-template leg, or retain legacy fallback."""
+
+    if padstack is None or padstack.drill_diameter_um is None:
+        return None
+    try:
+        return estimate_via_segment_rl(
+            length_um=length_um,
+            drill_diameter_um=padstack.drill_diameter_um,
+            padstack_material=padstack.material,
+            start_layer=start_layer,
+            end_layer=end_layer,
+            stackup_layers=stackup_layers,
+        )
+    except ViaModelError as exc:
+        raise ValueError(f"source Via template leg is nonphysical: {exc}") from exc
+
+
+def _via_leg_provenance(leg: ViaSegmentElectricalModel | None) -> dict[str, Any]:
+    if leg is None:
+        return {
+            "conductor_model": "LEGACY_RAIL_TEMPLATE_NO_SOURCE_LEG",
+            "fill_provenance": "LEGACY_PLATED_BARREL_FALLBACK",
+            "classification_basis": "no matched source padstack/drill for this leg",
+            "effective_area_m2": None,
+        }
+    classification = leg.classification
+    return {
+        "conductor_model": classification.conductor_model,
+        "fill_provenance": classification.fill_provenance,
+        "classification_basis": classification.classification_basis,
+        "effective_area_m2": classification.effective_area_m2,
+    }
 
 def _unique_strings(values: Iterable[Any]) -> list[str]:
     result: list[str] = []

@@ -64,6 +64,32 @@ def _hash_payload(data: object) -> str:
     return sha256(_canonical_json(data)).hexdigest()
 
 
+def _connection_analysis_fingerprint_payload(
+    analysis: "SharedPadConnectionAnalysis",
+) -> dict[str, Any]:
+    """Serialize source connectivity without inventing legacy MLO fill evidence.
+
+    ``padstack_material`` was added in v0.14.  Earlier scenario bundles did
+    not serialize the field at all; after Pydantic supplies its ``None``
+    default, including that new key would change their persisted electrical
+    identities.  A real source material remains in the payload and therefore
+    deliberately changes the fingerprint.
+    """
+
+    def without_unknown_material(value: Any) -> Any:
+        if isinstance(value, dict):
+            return {
+                key: without_unknown_material(item)
+                for key, item in value.items()
+                if key != "padstack_material" or item is not None
+            }
+        if isinstance(value, list):
+            return [without_unknown_material(item) for item in value]
+        return value
+
+    return without_unknown_material(analysis.model_dump(mode="json"))
+
+
 def _validate_sha256(value: str, *, label: str = "SHA-256") -> str:
     normalized = value.strip().lower()
     if _SHA256_RE.fullmatch(normalized) is None:
@@ -248,6 +274,7 @@ class ScenarioViaSegment(ScenarioModel):
     end_x_um: float
     end_y_um: float
     rotation_degrees: float = 0.0
+    padstack_material: str | None = None
 
     @field_validator("end_x_um", "end_y_um", "rotation_degrees")
     @classmethod
@@ -1886,8 +1913,8 @@ class ScenarioSpec(ScenarioModel):
             "attachment_hashes": electrical_attachment_hashes,
         }
         if self.connection_analysis is not None:
-            payload["connection_analysis"] = self.connection_analysis.model_dump(
-                mode="json"
+            payload["connection_analysis"] = _connection_analysis_fingerprint_payload(
+                self.connection_analysis
             )
         return payload
 
@@ -1930,8 +1957,8 @@ class ScenarioSpec(ScenarioModel):
             "decaps": source_decaps,
         }
         if self.connection_analysis is not None:
-            payload["connection_analysis"] = self.connection_analysis.model_dump(
-                mode="json"
+            payload["connection_analysis"] = _connection_analysis_fingerprint_payload(
+                self.connection_analysis
             )
         return _hash_payload(payload)
 

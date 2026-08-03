@@ -467,12 +467,13 @@ def test_recovered_terminal_paths_use_target_geometry_rl_and_explicit_fallback()
     power_segment = ScenarioViaSegment(
         via_id="VP-C1",
         padstack="VIA",
-        drill_diameter_um=50.0,
+        drill_diameter_um=100.0,
         start_layer="TOP",
         end_layer="PWR1",
         length_um=153.0,
         end_x_um=1_750.0,
         end_y_um=2_250.0,
+        padstack_material="COPPER",
     )
     ground_segment = ScenarioViaSegment(
         via_id="VG-C1",
@@ -557,14 +558,24 @@ def test_recovered_terminal_paths_use_target_geometry_rl_and_explicit_fallback()
     )
     assert power_path.terminal_provenance == "SOURCE_PROVEN_SEGMENT_RL"
     assert ground_path.terminal_provenance == "SOURCE_PROVEN_SEGMENT_RL"
-    expected_power_rl = evaluation_module._source_terminal_rl((power_segment,))
-    expected_ground_rl = evaluation_module._source_terminal_rl((ground_segment,))
+    expected_power_rl = evaluation_module._source_terminal_rl(
+        (power_segment,), recovered_scenario.base_project.stackup_layers
+    )
+    expected_ground_rl = evaluation_module._source_terminal_rl(
+        (ground_segment,), recovered_scenario.base_project.stackup_layers
+    )
     assert (power_path.terminal_resistance_ohm, power_path.terminal_inductance_h) == pytest.approx(
         expected_power_rl
     )
     assert (ground_path.terminal_resistance_ohm, ground_path.terminal_inductance_h) == pytest.approx(
         expected_ground_rl
     )
+    assert power_path.conductor_model == "SOLID_COPPER_FILLED_MICROVIA"
+    assert (
+        power_path.fill_provenance
+        == "USER_CONFIRMED_MLO_COPPER_FILL_ASSUMPTION_WITH_SOURCE_COPPER_AND_GEOMETRY"
+    )
+    assert ground_path.conductor_model == "HOLLOW_PLATED_BARREL"
 
     via = recovered_scenario.base_project.via_templates[0]
     fallback = evaluation_module._shared_pad_path_from_landing(

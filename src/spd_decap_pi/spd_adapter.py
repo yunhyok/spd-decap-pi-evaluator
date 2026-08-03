@@ -271,6 +271,7 @@ def _scenario_via_landing(
                     end_x_um=segment.end_x_um,
                     end_y_um=segment.end_y_um,
                     rotation_degrees=segment.rotation_degrees,
+                    padstack_material=segment.padstack_material,
                 )
                 for segment in item.segments
             ),

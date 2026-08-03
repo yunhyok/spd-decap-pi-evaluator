@@ -18,13 +18,19 @@ from spd_decap_pi._core.domain import (
 )
 from spd_decap_pi.scenario import (
     CachedEvaluationMetadata,
+    DecapConnectionKind,
     EvaluationRole,
     RailEligibility,
+    ScenarioDecapConnection,
     ScenarioDecap,
     ScenarioPad,
     ScenarioPoint,
     ScenarioResultKey,
     ScenarioSpec,
+    ScenarioViaLanding,
+    ScenarioViaPathEvidence,
+    ScenarioViaSegment,
+    SharedPadConnectionAnalysis,
     SourceIdentity,
 )
 from spd_decap_pi.scenario_io import (
@@ -158,6 +164,89 @@ def _scenario(*, revision: int = 0) -> ScenarioSpec:
     )
 
 
+def _scenario_with_via_material(material: str | None) -> ScenarioSpec:
+    base = _scenario()
+    power_path = ScenarioViaPathEvidence(
+        x_um=1075.0,
+        y_um=2200.0,
+        target_layer="L3_PWR",
+        target_node_id="PWR_NODE",
+        target_padstack="CAP_PAD",
+        target_pad_kind="ROUND",
+        target_pad_width_um=100.0,
+        target_pad_height_um=100.0,
+        segments=(
+            ScenarioViaSegment(
+                via_id="VP",
+                padstack="CAP_PAD",
+                padstack_material=material,
+                drill_diameter_um=100.0,
+                start_layer="TOP",
+                end_layer="L3_PWR",
+                length_um=60.0,
+                end_x_um=1075.0,
+                end_y_um=2200.0,
+            ),
+        ),
+    )
+    ground_path = ScenarioViaPathEvidence(
+        x_um=1125.0,
+        y_um=2200.0,
+        target_layer="L2_GND",
+        target_node_id="GND_NODE",
+        target_padstack="CAP_PAD",
+        target_pad_kind="ROUND",
+        target_pad_width_um=100.0,
+        target_pad_height_um=100.0,
+        segments=(
+            ScenarioViaSegment(
+                via_id="VG",
+                padstack="CAP_PAD",
+                padstack_material=material,
+                drill_diameter_um=100.0,
+                start_layer="TOP",
+                end_layer="L2_GND",
+                length_um=60.0,
+                end_x_um=1125.0,
+                end_y_um=2200.0,
+            ),
+        ),
+    )
+    analysis = SharedPadConnectionAnalysis(
+        version="DIRECT_TOP_COPPER_PATH_VIA_CHAIN_V5",
+        source_sha256=base.source.sha256,
+        connections={
+            "C101": ScenarioDecapConnection(
+                refdes="C101",
+                kind=DecapConnectionKind.DIRECT,
+                power_vias=(
+                    ScenarioViaLanding(
+                        via_id="VP",
+                        net="VDD_CPU",
+                        endpoint_node_id="PWR_ENDPOINT",
+                        padstack="CAP_PAD",
+                        x_um=1075.0,
+                        y_um=2200.0,
+                        path_evidence=(power_path,),
+                    ),
+                ),
+                ground_vias=(
+                    ScenarioViaLanding(
+                        via_id="VG",
+                        net="DGND",
+                        endpoint_node_id="GND_ENDPOINT",
+                        padstack="CAP_PAD",
+                        x_um=1125.0,
+                        y_um=2200.0,
+                        path_evidence=(ground_path,),
+                    ),
+                ),
+            )
+        },
+    )
+    return base.model_copy(update={"connection_analysis": analysis})
+
+
 def _rewrite_archive(path: Path, edits) -> None:
     with ZipFile(path) as archive:
         members = [(info.filename, archive.read(info.filename)) for info in archive.infolist()]
@@ -165,6 +254,131 @@ def _rewrite_archive(path: Path, edits) -> None:
     with ZipFile(path, "w", compression=ZIP_DEFLATED) as archive:
         for name, content in rewritten:
             archive.writestr(name, content)
+
+
+def _without_padstack_material(value):
+    if isinstance(value, dict):
+        return {
+            key: _without_padstack_material(item)
+            for key, item in value.items()
+            if key != "padstack_material"
+        }
+    if isinstance(value, list):
+        return [_without_padstack_material(item) for item in value]
+    return value
+
+
+def _legacy_design_fingerprint(scenario: ScenarioSpec) -> str:
+    payload = _without_padstack_material(scenario._design_payload())
+    return sha256(
+        (
+            json.dumps(
+                payload,
+                ensure_ascii=False,
+                sort_keys=True,
+                separators=(",", ":"),
+                allow_nan=False,
+            )
+            + "\n"
+        ).encode("utf-8")
+    ).hexdigest()
+
+
+def test_legacy_via_payload_without_material_preserves_manifest_fingerprint(
+    tmp_path: Path,
+) -> None:
+    """Pre-v0.14 connection analysis omits this new optional segment field."""
+
+    scenario = _scenario_with_via_material(None)
+    expected_fingerprint = _legacy_design_fingerprint(scenario)
+    archive_path = save_scenario(scenario, tmp_path / "legacy.spdpi")
+
+    def rewrite_as_legacy(members):
+        raw_scenario = json.loads(
+            next(content for name, content in members if name == SCENARIO_FILENAME)
+        )
+        legacy_scenario = _without_padstack_material(raw_scenario)
+        assert "padstack_material" not in json.dumps(legacy_scenario)
+        legacy_bytes = (
+            json.dumps(
+                legacy_scenario,
+                ensure_ascii=False,
+                sort_keys=True,
+                separators=(",", ":"),
+                allow_nan=False,
+            )
+            + "\n"
+        ).encode("utf-8")
+        manifest = json.loads(
+            next(content for name, content in members if name == MANIFEST_FILENAME)
+        )
+        manifest["scenario_size"] = len(legacy_bytes)
+        manifest["scenario_sha256"] = sha256(legacy_bytes).hexdigest()
+        manifest["design_fingerprint"] = expected_fingerprint
+        manifest_bytes = (
+            json.dumps(
+                manifest,
+                ensure_ascii=False,
+                sort_keys=True,
+                separators=(",", ":"),
+                allow_nan=False,
+            )
+            + "\n"
+        ).encode("utf-8")
+        return [
+            (
+                name,
+                legacy_bytes
+                if name == SCENARIO_FILENAME
+                else manifest_bytes
+                if name == MANIFEST_FILENAME
+                else content,
+            )
+            for name, content in members
+        ]
+
+    _rewrite_archive(archive_path, rewrite_as_legacy)
+
+    loaded = load_scenario(archive_path)
+
+    assert loaded.design_fingerprint == expected_fingerprint
+
+
+def test_actual_v014_source_material_changes_design_fingerprint() -> None:
+    assert (
+        _scenario_with_via_material("COPPER").design_fingerprint
+        != _scenario_with_via_material(None).design_fingerprint
+    )
+
+
+def test_actual_v013_bundle_loads_with_its_legacy_design_fingerprint() -> None:
+    """A v0.13 payload lacks ``padstack_material`` on recovered segments."""
+
+    bundle_path = (
+        Path(__file__).resolve().parents[1]
+        / ".codex"
+        / "raw_260729_v013_final.spdpi"
+    )
+    if not bundle_path.is_file():
+        pytest.skip("local v0.13 SPD regression bundle is not available")
+    with ZipFile(bundle_path) as archive:
+        manifest = json.loads(archive.read(MANIFEST_FILENAME))
+
+    bundle = load_scenario_bundle(bundle_path)
+
+    assert bundle.scenario.app_version == "0.13.0"
+    assert bundle.scenario.design_fingerprint == manifest["design_fingerprint"]
+    analysis = bundle.scenario.connection_analysis
+    assert analysis is not None
+    segments = [
+        segment
+        for connection in analysis.connections.values()
+        for landing in (*connection.power_vias, *connection.ground_vias)
+        for evidence in landing.path_evidence
+        for segment in evidence.segments
+    ]
+    assert segments
+    assert all(segment.padstack_material is None for segment in segments)
 
 
 def test_source_identity_hashes_a_file_without_embedding_it(tmp_path) -> None:

@@ -159,6 +159,15 @@ def _recover_power_path(source: Path, analysis: object, **kwargs):
     )
 
 
+def test_padstack_material_is_retained_for_microvia_classification(tmp_path: Path) -> None:
+    source = tmp_path / "material.spd"
+    source.write_text(MINI_SPD, encoding="ascii")
+    analysis = analyze_spd(source)
+
+    padstack = next(item for item in analysis.padstacks if item.name == "DR-0102_60")
+    assert padstack.material == "COPPER"
+
+
 @pytest.mark.parametrize("reversed_endpoints", [False, True])
 @pytest.mark.parametrize(
     "target_padstack_suffix",

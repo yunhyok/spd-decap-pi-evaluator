@@ -5,7 +5,7 @@ complex-symmetric multiport admittance matrix. Its port order is
 `top_port_ids + bottom_port_ids`; every current is positive into the section.
 It is a numerical foundation only. It is not connected to Evaluation Analysis,
 Decap Distribution, the GUI, cache identity, or the current scalar via/rail
-templates. The evaluator's v0.13 shared-PWR ideal-common-reference equivalent
+templates. The evaluator's v0.14 shared-PWR ideal-common-reference equivalent
 is intentionally narrower than this general cascade; see
 [Evaluation accuracy](EVALUATION_ACCURACY.md).
 
@@ -41,6 +41,12 @@ Hermitian-conductance PSD diagnostic evaluates each frequency with
 worst frequency/index, eigenvalue, tolerance, and margin. It deliberately
 makes no continuous-frequency passivity, causality, or physical-realizability
 claim.
+
+This Y-domain Schur/Kron composition is the intended meaning of a matrix
+network cascade. For a valid two-port transfer conversion it is mathematically
+equivalent to multiplying ABCD matrices in section order; it is not `Y1 @ Y2`,
+nor scalar-Z merging. Conversion can be singular for otherwise meaningful
+admittance sections, so the public implementation stays in the Y domain.
 
 ## What this does not establish
 

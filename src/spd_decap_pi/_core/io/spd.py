@@ -63,6 +63,7 @@ class SpdPadStack:
     pad_height_um: float | None
     layers: tuple[str, ...]
     pad_shapes: tuple[SpdPadShape, ...] = ()
+    material: str | None = None
 
     @property
     def pad_diameter_um(self) -> float | None:
@@ -140,6 +141,7 @@ class SpdViaPathSegment:
     end_x_um: float
     end_y_um: float
     rotation_degrees: float = 0.0
+    padstack_material: str | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -1067,9 +1069,10 @@ def _parse_padstacks(
     shapes: list[SpdPadShape] = []
     active_layer: str | None = None
     variable = False
+    material: str | None = None
 
     def flush() -> None:
-        nonlocal name, drill, width, height, layers, shapes, active_layer, variable
+        nonlocal name, drill, width, height, layers, shapes, active_layer, variable, material
         if name is not None:
             result.append(
                 SpdPadStack(
@@ -1079,11 +1082,12 @@ def _parse_padstacks(
                     height,
                     _unique(layers),
                     tuple(shapes),
+                    material,
                 )
             )
             if variable:
                 diagnostics.append(SpdDiagnostic("info", "PADSTACK_VARIABLE_PAD", f"Padstack {name!r} has layer-dependent pad sizes; maximum width/height were retained."))
-        name, drill, width, height, layers, shapes, active_layer, variable = (
+        name, drill, width, height, layers, shapes, active_layer, variable, material = (
             None,
             None,
             None,
@@ -1092,6 +1096,7 @@ def _parse_padstacks(
             [],
             None,
             False,
+            None,
         )
 
     for _, raw in _iter_lines(data, start, end):
@@ -1103,6 +1108,8 @@ def _parse_padstacks(
             name = _decode(tokens[1]) if len(tokens) > 1 else ""
             values = _lengths(b" ".join(tokens[2:]))
             drill = 2.0 * values[0] if values else None
+            material_raw = _attribute(stripped, b"Material")
+            material = _decode(material_raw) if material_raw else None
         elif folded.startswith(b".endpadstackdef"):
             flush()
         elif name is not None and folded.startswith(b".paddef "):
@@ -2261,6 +2268,7 @@ def recover_spd_via_paths(
                         end_x_um=next_node.x_um,
                         end_y_um=next_node.y_um,
                         rotation_degrees=rotation,
+                        padstack_material=definition.material,
                     )
                     # Stack-up layer indices are monotonic but not physical
                     # distances.  Replace the span with the actual centre-depth
@@ -2313,6 +2321,7 @@ def recover_spd_via_paths(
                     end_x_um=segment.end_x_um,
                     end_y_um=segment.end_y_um,
                     rotation_degrees=segment.rotation_degrees,
+                    padstack_material=segment.padstack_material,
                 )
                 for segment in item.segments
             )

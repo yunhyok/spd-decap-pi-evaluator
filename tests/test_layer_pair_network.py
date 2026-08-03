@@ -98,6 +98,64 @@ def _monolithic_reference(networks: tuple[LayerPairNetwork, ...]) -> np.ndarray:
     return output
 
 
+def _abcd_from_two_port_y(matrix: np.ndarray) -> np.ndarray:
+    """Independent conventional [V1, I1] = T [V2, -I2] conversion."""
+
+    y11, y12 = matrix[0, 0], matrix[0, 1]
+    y21, y22 = matrix[1, 0], matrix[1, 1]
+    determinant = y11 * y22 - y12 * y21
+    return np.asarray(
+        [
+            [-y22 / y21, -1.0 / y21],
+            [-determinant / y21, -y11 / y21],
+        ],
+        dtype=np.complex128,
+    )
+
+
+def _two_port_y_from_abcd(matrix: np.ndarray) -> np.ndarray:
+    """Independent inverse of ``_abcd_from_two_port_y`` for B != 0."""
+
+    a, b = matrix[0, 0], matrix[0, 1]
+    c, d = matrix[1, 0], matrix[1, 1]
+    y21 = -1.0 / b
+    y11 = d / b
+    y22 = a / b
+    y12 = (y11 * y22 - c / b) / y21
+    return np.asarray([[y11, y12], [y21, y22]], dtype=np.complex128)
+
+
+def test_public_y_cascade_matches_independent_two_port_abcd_chain() -> None:
+    frequencies = np.asarray([1.0e6, 9.0e6], dtype=np.float64)
+    first = _pair_from_branches(
+        frequencies,
+        ("A",),
+        ("B",),
+        ((0, 1, 0.8, 1.2e-7),),
+        grounding=0.15 + 0.03j,
+    )
+    second = _pair_from_branches(
+        frequencies,
+        ("B",),
+        ("C",),
+        ((0, 1, 0.6, -0.8e-7),),
+        grounding=0.11 + 0.02j,
+    )
+
+    cascaded = cascade_layer_pair_networks(first, second)
+    expected = np.asarray(
+        [
+            _two_port_y_from_abcd(
+                _abcd_from_two_port_y(y_first) @ _abcd_from_two_port_y(y_second)
+            )
+            for y_first, y_second in zip(
+                first.admittance_siemens, second.admittance_siemens, strict=True
+            )
+        ]
+    )
+    np.testing.assert_allclose(cascaded.admittance_siemens, expected, rtol=1e-11, atol=1e-11)
+
+
 def _passive_stack(pair_count: int) -> tuple[LayerPairNetwork, ...]:
     frequencies = np.asarray([1.0e6, 4.0e6, 2.0e7], dtype=np.float64)
     interfaces = tuple(
