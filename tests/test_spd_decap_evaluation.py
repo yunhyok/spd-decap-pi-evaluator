@@ -1840,9 +1840,48 @@ def test_comparison_batch_caches_baseline_then_reuses_it(
     assert second.comparisons[0].baseline.view.magnitude_ohm == [0.02, 0.03]
 
 
-def test_solver_version_change_recalculates_stale_baseline_cache(
+def test_legacy_stackup_schema_baseline_cache_remains_reusable(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    payload = _scenario().model_dump(mode="python")
+    for row in payload["normalized_project"]["stackup_layers"]:
+        row.pop("material", None)
+        row.pop("dielectric_properties", None)
+    legacy = ScenarioSpec.model_validate(payload)
+    assert all(
+        "material" not in row and "dielectric_properties" not in row
+        for row in legacy.normalized_project["stackup_layers"]
+    )
+    tuned = legacy.decaps[0].model_copy(update={"enabled": False})
+    legacy = ScenarioSpec.model_validate(
+        {**legacy.model_dump(mode="python"), "decaps": [tuned, legacy.decaps[1]]}
+    )
+    calls: list[str] = []
+    monkeypatch.setattr(evaluation_module, "evaluate_scenario", _fake_evaluator(calls))
+
+    first = evaluate_comparison_batch(legacy, ["RAIL_VDD"])
+    persisted = ScenarioSpec.model_validate(
+        first.updated_scenario.model_dump(mode="python")
+    )
+    assert all(
+        "material" not in row and "dielectric_properties" not in row
+        for row in persisted.normalized_project["stackup_layers"]
+    )
+
+    calls.clear()
+    second = evaluate_comparison_batch(
+        persisted,
+        ["RAIL_VDD"],
+        attachments=first.updated_attachments,
+    )
+    assert len(calls) == 1
+    assert second.comparisons[0].baseline_from_cache
+
+
+def test_solver_version_0_7_recalculates_0_6_baseline_cache(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    assert evaluation_module.SOLVER_VERSION == "modal-mvp-0.7.0"
     scenario = _scenario()
     tuned = scenario.decaps[0].model_copy(update={"enabled": False})
     scenario = ScenarioSpec.model_validate(
@@ -1857,7 +1896,7 @@ def test_solver_version_change_recalculates_stale_baseline_cache(
         design_fingerprint=capture.evaluation_input_sha256,
         rail_id="RAIL_VDD",
         settings={"target_ohm": None, "modal_max_index": 8},
-        solver_version="modal-mvp-0.4.0",
+        solver_version="modal-mvp-0.6.0",
     )
     stale_payload = json.loads(first.updated_attachments[metadata.attachment_name])
     stale_payload["result_key"]["solver_version"] = stale_key.solver_version

@@ -275,6 +275,27 @@ class RailSpec(DomainModel):
         return value
 
 
+class DielectricPropertyPoint(DomainModel):
+    """One source-tabulated dielectric property point.
+
+    The SPD material table is retained verbatim in SI frequency units instead
+    of silently collapsing it to one nominal row.  ``StackupLayer.dk`` and
+    ``df`` remain the legacy nominal values used by older project files and
+    displays; frequency-dependent solvers consume this table when present.
+    """
+
+    frequency_hz: float = Field(gt=0)
+    dk: float = Field(gt=0)
+    df: float = Field(ge=0)
+
+    @field_validator("frequency_hz", "dk", "df")
+    @classmethod
+    def finite_property(cls, value: float) -> float:
+        if not isfinite(value):
+            raise ValueError("dielectric property values must be finite")
+        return value
+
+
 class StackupLayer(DomainModel):
     """One physical row of a top-to-bottom stack-up table."""
 
@@ -283,6 +304,8 @@ class StackupLayer(DomainModel):
     conductivity_s_m: float | None = Field(default=None, gt=0)
     dk: float | None = Field(default=None, gt=0)
     df: float | None = Field(default=None, ge=0)
+    material: str | None = None
+    dielectric_properties: list[DielectricPropertyPoint] = Field(default_factory=list)
     pwr_nets: list[str] = Field(default_factory=list)
 
     @property
@@ -300,6 +323,18 @@ class StackupLayer(DomainModel):
                 result.append(normalized)
                 seen.add(normalized.casefold())
         return result
+
+    @model_validator(mode="after")
+    def ordered_dielectric_properties(self) -> "StackupLayer":
+        properties = self.dielectric_properties
+        frequencies = [item.frequency_hz for item in properties]
+        if frequencies != sorted(frequencies) or len(frequencies) != len(set(frequencies)):
+            raise ValueError(
+                "dielectric property frequencies must be strictly increasing and unique"
+            )
+        if properties and self.is_conductor:
+            raise ValueError("conductor stackup rows cannot carry dielectric properties")
+        return self
 
 
 class PlanePairSuggestion(DomainModel):

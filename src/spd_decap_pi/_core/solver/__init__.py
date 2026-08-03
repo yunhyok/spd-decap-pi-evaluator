@@ -47,6 +47,7 @@ from .modal import (
     ShuntGroup,
     ShuntLeaveOneOutSolveResult,
     SolverDiagnostics,
+    copper_slab_surface_impedance_per_square,
 )
 
 __all__ = [
@@ -74,6 +75,7 @@ __all__ = [
     "Peak",
     "RectangularCavitySolver",
     "RectangularPlane",
+    "copper_slab_surface_impedance_per_square",
     "ShuntGroup",
     "ShuntLeaveOneOutSolveResult",
     "ShuntSensitivityOutcome",

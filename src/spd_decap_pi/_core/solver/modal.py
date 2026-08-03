@@ -36,8 +36,142 @@ MU_0_H_PER_M = 1.256_637_062_12e-6
 LIGHT_SPEED_M_PER_S = 299_792_458.0
 
 
+def copper_slab_surface_impedance_per_square(
+    frequencies_hz: ArrayLike,
+    *,
+    thickness_m: float,
+    conductivity_s_per_m: float,
+) -> NDArray[np.complex128]:
+    """Return the finite-thickness copper surface impedance per square.
+
+    This is the exact one-dimensional diffusion result for a slab carrying
+    sheet current on one face::
+
+        Zs = sqrt(j*w*mu/sigma) coth(t sqrt(j*w*mu*sigma)).
+
+    The small-argument form avoids the removable DC ``0/0`` and the large
+    argument form avoids a complex ``tanh`` overflow.  It deliberately models
+    *only* conductor diffusion.  The separate external magnetic term for the
+    PWR--GND spacing remains in the cavity equations below.
+    """
+
+    frequencies = np.asarray(frequencies_hz, dtype=np.float64)
+    if frequencies.ndim != 1 or not np.all(np.isfinite(frequencies)) or np.any(
+        frequencies < 0.0
+    ):
+        raise ModalSolverError("frequencies_hz must be a finite one-dimensional array >= 0")
+    if not np.isfinite(thickness_m) or thickness_m <= 0.0:
+        raise ModalSolverError("thickness_m must be finite and > 0")
+    if not np.isfinite(conductivity_s_per_m) or conductivity_s_per_m <= 0.0:
+        raise ModalSolverError("conductivity_s_per_m must be finite and > 0")
+    dc = 1.0 / (conductivity_s_per_m * thickness_m)
+    omega = 2.0 * np.pi * frequencies
+    argument = thickness_m * np.sqrt(
+        1j * omega * MU_0_H_PER_M * conductivity_s_per_m
+    )
+    correction = np.empty(argument.shape, dtype=np.complex128)
+    small = np.abs(argument) < 1.0e-3
+    if np.any(small):
+        value = argument[small]
+        squared = value * value
+        # u/tanh(u) = 1 + u^2/3 - u^4/45 + 2*u^6/945 + O(u^8)
+        correction[small] = 1.0 + squared / 3.0 - squared * squared / 45.0 + (
+            2.0 * squared * squared * squared / 945.0
+        )
+    ordinary = ~small
+    if np.any(ordinary):
+        value = argument[ordinary]
+        large = value.real > 20.0
+        result = np.empty(value.shape, dtype=np.complex128)
+        if np.any(~large):
+            result[~large] = value[~large] / np.tanh(value[~large])
+        if np.any(large):
+            # coth(u) = (1 + exp(-2u)) / (1 - exp(-2u)); this remains
+            # well-conditioned as Re(u) grows.
+            exponential = np.exp(-2.0 * value[large])
+            result[large] = value[large] * (1.0 + exponential) / (1.0 - exponential)
+        correction[ordinary] = result
+    impedance = np.asarray(dc * correction, dtype=np.complex128)
+    if not np.all(np.isfinite(impedance)) or np.any(impedance.real < -dc * 1.0e-12):
+        raise ModalSolverError("finite-thickness copper surface impedance is non-passive")
+    return impedance
+
+
 class ModalSolverError(ValueError):
     """Raised when cavity geometry or a modal solve is invalid."""
+
+
+@dataclass(frozen=True, slots=True)
+class DielectricDispersion:
+    """Immutable source-tabulated dielectric properties.
+
+    Values are linearly interpolated against log10(frequency); source end
+    points are deliberately clamped rather than extrapolated.  This is a
+    transparent interpolation of the imported material data, not a fitted
+    Debye/Djordjevic-Sarkar model.
+    """
+
+    frequencies_hz: tuple[float, ...]
+    relative_permittivities: tuple[float, ...]
+    loss_tangents: tuple[float, ...]
+
+    def __post_init__(self) -> None:
+        frequencies = np.asarray(self.frequencies_hz, dtype=np.float64)
+        permittivities = np.asarray(self.relative_permittivities, dtype=np.float64)
+        tangents = np.asarray(self.loss_tangents, dtype=np.float64)
+        if frequencies.ndim != 1 or frequencies.size == 0:
+            raise ModalSolverError("dielectric dispersion requires at least one frequency")
+        if (
+            permittivities.shape != frequencies.shape
+            or tangents.shape != frequencies.shape
+        ):
+            raise ModalSolverError("dielectric dispersion arrays must have equal length")
+        if (
+            not np.all(np.isfinite(frequencies))
+            or not np.all(np.isfinite(permittivities))
+            or not np.all(np.isfinite(tangents))
+            or np.any(frequencies <= 0.0)
+            or np.any(permittivities <= 0.0)
+            or np.any(tangents < 0.0)
+            or np.any(np.diff(frequencies) <= 0.0)
+        ):
+            raise ModalSolverError(
+                "dielectric dispersion frequencies must be finite, positive, and strictly increasing; "
+                "Dk must be > 0 and Df must be >= 0"
+            )
+
+    def interpolate(
+        self, frequencies_hz: ArrayLike
+    ) -> tuple[NDArray[np.float64], NDArray[np.float64]]:
+        """Return clamped log-frequency-linear ``(Dk, Df)`` arrays."""
+
+        frequencies = frequency_array(frequencies_hz)
+        source = np.asarray(self.frequencies_hz, dtype=np.float64)
+        query = np.log10(frequencies)
+        source_log = np.log10(source)
+        return (
+            np.asarray(
+                np.interp(query, source_log, self.relative_permittivities),
+                dtype=np.float64,
+            ),
+            np.asarray(
+                np.interp(query, source_log, self.loss_tangents),
+                dtype=np.float64,
+            ),
+        )
+
+
+@dataclass(frozen=True, slots=True)
+class DielectricLayer:
+    """One physical dielectric row in a series PWR-to-return stack."""
+
+    thickness_m: float
+    dispersion: DielectricDispersion
+    material: str | None = None
+
+    def __post_init__(self) -> None:
+        if not np.isfinite(self.thickness_m) or self.thickness_m <= 0.0:
+            raise ModalSolverError("dielectric layer thickness_m must be finite and > 0")
 
 
 @dataclass(frozen=True, slots=True)
@@ -54,6 +188,7 @@ class RectangularPlane:
     ground_thickness_m: float = 35e-6
     power_conductivity_s_per_m: float | None = None
     ground_conductivity_s_per_m: float | None = None
+    dielectric_layers: tuple[DielectricLayer, ...] = ()
 
     def __post_init__(self) -> None:
         positive = {
@@ -76,6 +211,17 @@ class RectangularPlane:
                 raise ModalSolverError(f"{name} must be finite and > 0 when supplied")
         if not np.isfinite(self.loss_tangent) or self.loss_tangent < 0.0:
             raise ModalSolverError("loss_tangent must be finite and >= 0")
+        if self.dielectric_layers:
+            total_thickness = sum(layer.thickness_m for layer in self.dielectric_layers)
+            if not np.isclose(
+                total_thickness,
+                self.separation_m,
+                rtol=1e-12,
+                atol=max(self.separation_m, total_thickness) * 1e-15,
+            ):
+                raise ModalSolverError(
+                    "dielectric layer thicknesses must sum to separation_m"
+                )
 
     @property
     def area_m2(self) -> float:
@@ -571,9 +717,14 @@ class RectangularCavitySolver:
             (self._shunt_admittance_per_area(frequencies, component) for component in self.planes),
             start=np.zeros(frequencies.shape, dtype=np.complex128),
         )
+        # A shared PWR surface drives multiple return-plane faces.  The
+        # one-face slab coth solution is not valid for that topology unless a
+        # coupled two-face coth/csch transfer matrix is assembled.  Preserve
+        # the established scalar DC-sheet approximation exactly until that
+        # matrix model exists.
         return_admittance = sum(
             (
-                np.reciprocal(self._return_sheet_impedance(frequencies, component))
+                np.reciprocal(self._legacy_return_sheet_impedance(frequencies, component))
                 for component in self.planes
             ),
             start=np.zeros(frequencies.shape, dtype=np.complex128),
@@ -618,8 +769,24 @@ class RectangularCavitySolver:
 
         frequencies = frequency_array(frequencies_hz)
         return tuple(
-            self._return_sheet_impedance(frequencies, component)
+            (
+                self._legacy_return_sheet_impedance(frequencies, component)
+                if self.parallel_planes
+                else self._return_sheet_impedance(frequencies, component)
+            )
             for component in self.planes
+        )
+
+    @staticmethod
+    def _legacy_return_sheet_impedance(
+        frequencies: NDArray[np.float64], plane: RectangularPlane
+    ) -> NDArray[np.complex128]:
+        """v0.15 shared-PWR return sheet, retained pending a 2-face slab model."""
+
+        return np.asarray(
+            plane.ground_sheet_resistance_ohm
+            + 1j * (2.0 * np.pi * frequencies * MU_0_H_PER_M * plane.separation_m),
+            dtype=np.complex128,
         )
 
     @staticmethod
@@ -627,6 +794,16 @@ class RectangularCavitySolver:
         frequencies: NDArray[np.float64], plane: RectangularPlane
     ) -> NDArray[np.complex128]:
         omega = 2.0 * np.pi * frequencies
+        if plane.dielectric_layers:
+            series_inverse_permittivity = np.zeros(
+                frequencies.shape, dtype=np.complex128
+            )
+            for layer in plane.dielectric_layers:
+                dk, df = layer.dispersion.interpolate(frequencies)
+                series_inverse_permittivity += layer.thickness_m / (
+                    EPSILON_0_F_PER_M * dk * (1.0 - 1j * df)
+                )
+            return np.asarray(1j * omega / series_inverse_permittivity, dtype=np.complex128)
         complex_permittivity = (
             EPSILON_0_F_PER_M
             * plane.relative_permittivity
@@ -638,8 +815,24 @@ class RectangularCavitySolver:
     def _return_sheet_impedance(
         frequencies: NDArray[np.float64], plane: RectangularPlane
     ) -> NDArray[np.complex128]:
-        return plane.ground_sheet_resistance_ohm + 1j * (
+        return copper_slab_surface_impedance_per_square(
+            frequencies,
+            thickness_m=plane.ground_thickness_m,
+            conductivity_s_per_m=plane.effective_ground_conductivity_s_per_m,
+        ) + 1j * (
             2.0 * np.pi * frequencies * MU_0_H_PER_M * plane.separation_m
+        )
+
+    @staticmethod
+    def _power_sheet_impedance(
+        frequencies: NDArray[np.float64], plane: RectangularPlane
+    ) -> NDArray[np.complex128]:
+        """Copper diffusion only; gap external L is stamped separately."""
+
+        return copper_slab_surface_impedance_per_square(
+            frequencies,
+            thickness_m=plane.power_thickness_m,
+            conductivity_s_per_m=plane.effective_power_conductivity_s_per_m,
         )
 
     def _component_modal_impedance(
@@ -649,7 +842,13 @@ class RectangularCavitySolver:
     ) -> NDArray[np.complex128]:
         omega = 2.0 * np.pi * frequencies
         shunt_admittance_per_area = self._shunt_admittance_per_area(frequencies, plane)
-        sheet_impedance = plane.sheet_resistance_ohm + 1j * omega * MU_0_H_PER_M * plane.separation_m
+        sheet_impedance = self._power_sheet_impedance(
+            frequencies, plane
+        ) + copper_slab_surface_impedance_per_square(
+            frequencies,
+            thickness_m=plane.ground_thickness_m,
+            conductivity_s_per_m=plane.effective_ground_conductivity_s_per_m,
+        ) + 1j * omega * MU_0_H_PER_M * plane.separation_m
         propagation_squared = -sheet_impedance * shunt_admittance_per_area
         denominator = self._wave_numbers_squared[None, :] - propagation_squared[:, None]
         with np.errstate(divide="ignore", invalid="ignore"):

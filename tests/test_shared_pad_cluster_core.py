@@ -58,8 +58,10 @@ from spd_decap_pi._core.solver.modal import (
     RectangularCavitySolver,
     RectangularPlane,
     ModalSolverError,
+    MU_0_H_PER_M,
     ShuntGroup,
     SolverDiagnostics,
+    copper_slab_surface_impedance_per_square,
 )
 
 
@@ -432,6 +434,8 @@ def _shared_pwr_modal_expected(
         (1.0 / values for values in solver.component_return_sheet_impedances(frequencies)),
         start=np.zeros(frequencies.shape, dtype=np.complex128),
     )
+    # Shared-PWR keeps the v0.15 scalar sheet model until a coupled two-face
+    # slab transfer matrix is available.
     sheet_impedance = solver.plane.power_sheet_resistance_ohm + 1.0 / return_admittance
     denominator = solver._wave_numbers_squared[None, :] - (
         -sheet_impedance * shunt_admittance
@@ -483,6 +487,69 @@ def test_rectangular_plane_legacy_and_split_conductivity_sheet_resistance() -> N
     assert split.ground_sheet_resistance_ohm == pytest.approx(1.0 / (6.0e7 * 30.0e-6))
 
 
+def test_finite_thickness_copper_slab_has_dc_skin_and_passive_limits() -> None:
+    sigma = 5.959e7
+    thickness = 20.0e-6
+    frequencies = np.asarray([0.0, 1.0, 1.0e9], dtype=np.float64)
+    values = copper_slab_surface_impedance_per_square(
+        frequencies, thickness_m=thickness, conductivity_s_per_m=sigma
+    )
+
+    dc = 1.0 / (sigma * thickness)
+    assert values[0] == pytest.approx(dc + 0.0j, rel=1.0e-14, abs=1.0e-18)
+    assert values[1].real == pytest.approx(dc, rel=1.0e-10)
+    assert values[1].imag > 0.0
+    assert np.all(values.real >= 0.0)
+    delta = np.sqrt(2.0 / (2.0 * np.pi * 1.0e9 * 1.256_637_062_12e-6 * sigma))
+    high_frequency_limit = (1.0 + 1.0j) / (sigma * delta)
+    np.testing.assert_allclose(values[-1], high_frequency_limit, rtol=0.05)
+
+
+def test_shared_pwr_uses_exact_legacy_dc_sheet_fallback_not_one_face_slab() -> None:
+    solver, _device, frequencies = _plane_solver_fixture()
+    return_plane = RectangularPlane(
+        width_m=solver.plane.width_m,
+        height_m=solver.plane.height_m,
+        separation_m=140.0e-6,
+        relative_permittivity=3.1,
+        loss_tangent=0.004,
+        conductivity_s_per_m=solver.plane.conductivity_s_per_m,
+        power_thickness_m=solver.plane.power_thickness_m,
+        ground_thickness_m=30.0e-6,
+        power_conductivity_s_per_m=solver.plane.effective_power_conductivity_s_per_m,
+    )
+    shared = RectangularCavitySolver(
+        solver.plane, parallel_planes=(return_plane,), max_mode_x=2, max_mode_y=2
+    )
+
+    expected_power = np.full(
+        frequencies.shape, solver.plane.power_sheet_resistance_ohm, dtype=np.complex128
+    )
+    expected_return = tuple(
+        plane.ground_sheet_resistance_ohm
+        + 1j * 2.0 * np.pi * frequencies * MU_0_H_PER_M * plane.separation_m
+        for plane in shared.planes
+    )
+    # The finite one-face slab is intentionally different at high frequency;
+    # using it for this shared conductor would imply unsupported face currents.
+    finite_power = copper_slab_surface_impedance_per_square(
+        frequencies,
+        thickness_m=solver.plane.power_thickness_m,
+        conductivity_s_per_m=solver.plane.effective_power_conductivity_s_per_m,
+    )
+
+    np.testing.assert_array_equal(expected_power, np.full(frequencies.shape, shared.plane.power_sheet_resistance_ohm, dtype=np.complex128))
+    np.testing.assert_allclose(
+        shared.component_return_sheet_impedances(frequencies), expected_return,
+        rtol=0.0, atol=0.0,
+    )
+    assert not np.allclose(finite_power, expected_power)
+    np.testing.assert_allclose(
+        shared.modal_impedance(frequencies), _shared_pwr_modal_expected(shared, frequencies),
+        rtol=1.0e-13, atol=1.0e-15,
+    )
+
+
 def test_shared_pwr_rejects_mismatched_power_layer_properties() -> None:
     solver, _device, _frequencies = _plane_solver_fixture()
     mismatched_power = RectangularPlane(
@@ -519,7 +586,7 @@ def test_identical_parallel_components_keep_one_finite_power_sheet() -> None:
     assert not np.allclose(combined, solver.modal_impedance(frequencies) / 2.0, rtol=1e-5)
 
 
-def test_identical_parallel_components_approach_half_with_zero_power_sheet() -> None:
+def test_identical_parallel_components_keep_legacy_shared_sheet_fallback() -> None:
     solver, _device, frequencies = _plane_solver_fixture()
     nearly_ideal_power = RectangularPlane(
         width_m=solver.plane.width_m,
@@ -543,9 +610,12 @@ def test_identical_parallel_components_approach_half_with_zero_power_sheet() -> 
 
     np.testing.assert_allclose(
         parallel.modal_impedance(frequencies),
-        single.modal_impedance(frequencies) / 2.0,
-        rtol=1.0e-12,
+        _shared_pwr_modal_expected(parallel, frequencies),
+        rtol=1.0e-13,
         atol=1.0e-18,
+    )
+    assert not np.allclose(
+        parallel.modal_impedance(frequencies), single.modal_impedance(frequencies) / 2.0
     )
 
 

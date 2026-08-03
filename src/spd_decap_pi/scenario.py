@@ -110,6 +110,43 @@ def _normalized_project_fingerprint_payload(value: Any) -> Any:
     return value
 
 
+def _preserve_legacy_stackup_row_shape(
+    serialized_project: dict[str, Any], source_project: Mapping[str, object]
+) -> None:
+    """Remove newly defaulted stack-up keys that an old payload omitted.
+
+    Scenario schema 0.1 predates ``material`` and
+    ``dielectric_properties``.  Pydantic must still materialize those defaults
+    for runtime use, but persisted electrical identities must be calculated
+    from the old row shape when the source payload did not contain the keys.
+    """
+
+    source_rows = source_project.get("stackup_layers")
+    serialized_rows = serialized_project.get("stackup_layers")
+    if not isinstance(source_rows, list) or not isinstance(serialized_rows, list):
+        return
+    if len(source_rows) != len(serialized_rows):
+        return
+    if not all(
+        isinstance(source_row, Mapping) and isinstance(serialized_row, dict)
+        for source_row, serialized_row in zip(source_rows, serialized_rows, strict=True)
+    ):
+        return
+    if any(
+        source_row.get("name") != serialized_row.get("name")
+        for source_row, serialized_row in zip(source_rows, serialized_rows, strict=True)
+    ):
+        return
+    for source_row, serialized_row in zip(source_rows, serialized_rows, strict=True):
+        if "material" not in source_row and serialized_row.get("material") is None:
+            serialized_row.pop("material", None)
+        if (
+            "dielectric_properties" not in source_row
+            and serialized_row.get("dielectric_properties") == []
+        ):
+            serialized_row.pop("dielectric_properties", None)
+
+
 def _validate_sha256(value: str, *, label: str = "SHA-256") -> str:
     normalized = value.strip().lower()
     if _SHA256_RE.fullmatch(normalized) is None:
@@ -1570,11 +1607,13 @@ class ScenarioSpec(ScenarioModel):
         if isinstance(value, ProjectSpec):
             project = value
             preserve_legacy_empty_clusters = False
+            legacy_project: Mapping[str, object] | None = None
         else:
             preserve_legacy_empty_clusters = (
                 isinstance(value, Mapping)
                 and "shared_pad_clusters" not in value
             )
+            legacy_project = value if isinstance(value, Mapping) else None
             project = ProjectSpec.model_validate(value)
         payload = project.model_dump(mode="json")
         # ProjectSpec gained an optional shared-pad collection while scenario
@@ -1583,6 +1622,12 @@ class ScenarioSpec(ScenarioModel):
         # were calculated before this key existed.
         if preserve_legacy_empty_clusters and not project.shared_pad_clusters:
             payload.pop("shared_pad_clusters", None)
+        # Frequency-dependent dielectric data was added without a scenario
+        # schema bump.  Keep historical scenario hashes stable when an older
+        # normalized project did not carry either new stackup key; source data
+        # that does carry a table remains part of the electrical fingerprint.
+        if legacy_project is not None:
+            _preserve_legacy_stackup_row_shape(payload, legacy_project)
         return payload
 
     @field_validator("net_colors")
@@ -2311,6 +2356,7 @@ class ScenarioSpec(ScenarioModel):
                 )
 
         project = self.base_project.model_dump(mode="json")
+        _preserve_legacy_stackup_row_shape(project, self.normalized_project)
         if (
             "shared_pad_clusters" not in self.normalized_project
             and not project.get("shared_pad_clusters")

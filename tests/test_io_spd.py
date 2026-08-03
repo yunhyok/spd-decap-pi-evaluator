@@ -789,6 +789,11 @@ def test_streaming_spd_normalizes_selected_geometry_and_passive_models(
     assert sum(item.is_conductor for item in analysis.stackup_layers) == 3
     assert analysis.stackup_layers[1].dk == pytest.approx(3.3)
     assert analysis.stackup_layers[1].df == pytest.approx(0.004)
+    assert analysis.stackup_layers[1].material == "ABF"
+    assert [
+        (item.frequency_hz, item.dk, item.df)
+        for item in analysis.stackup_layers[1].dielectric_properties
+    ] == pytest.approx([(1.0e6, 3.4, 0.005), (1.0e9, 3.3, 0.004)])
     assert analysis.power_plane_nets == ("VDD_CORE/0",)
     assert analysis.ground_nets == ("DGND",)
     geometry = next(

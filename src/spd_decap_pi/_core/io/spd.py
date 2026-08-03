@@ -21,7 +21,14 @@ from pathlib import Path
 import re
 from typing import Literal
 
-from ..domain import MLOOutline, PinKind, PinRecord, StackupLayer, TerminalKind
+from ..domain import (
+    DielectricPropertyPoint,
+    MLOOutline,
+    PinKind,
+    PinRecord,
+    StackupLayer,
+    TerminalKind,
+)
 from ..models.spice import PassiveSubcircuitModel, SpiceModelError, parse_passive_subcircuit
 from .shared_pad import (
     DecapPadEvidence,
@@ -36,6 +43,15 @@ from .shared_pad import (
 
 class SpdImportError(ValueError):
     """Raised when an SPD source cannot be opened or analysis is cancelled."""
+
+
+@dataclass(frozen=True, slots=True)
+class _DielectricMaterial:
+    """Nominal and source-tabulated properties for one SPD dielectric model."""
+
+    nominal_dk: float
+    nominal_df: float
+    properties: tuple[DielectricPropertyPoint, ...] = ()
 
 
 @dataclass(frozen=True, slots=True)
@@ -907,8 +923,8 @@ def _frequency_scale(header: bytes) -> float | None:
 
 def _parse_materials(
     data: mmap.mmap, start: int, end: int, diagnostics: list[SpdDiagnostic]
-) -> tuple[dict[str, tuple[float, float]], dict[str, float]]:
-    dielectrics: dict[str, tuple[float, float]] = {}
+) -> tuple[dict[str, _DielectricMaterial], dict[str, float]]:
+    dielectrics: dict[str, _DielectricMaterial] = {}
     metals: dict[str, float] = {}
     kind: str | None = None
     name = ""
@@ -926,7 +942,37 @@ def _parse_materials(
         else:
             chosen = min(rows, key=lambda row: abs(row[0] - 20.0))
         if kind == "dielectric" and len(chosen) >= 3:
-            dielectrics[name.casefold()] = (chosen[1], chosen[2])
+            properties: tuple[DielectricPropertyPoint, ...] = ()
+            if scale is not None:
+                raw_properties = [
+                    (row[0] * scale, row[1], row[2])
+                    for row in rows
+                    if len(row) >= 3
+                    and row[0] > 0.0
+                    and row[1] > 0.0
+                    and row[2] >= 0.0
+                ]
+                raw_properties.sort(key=lambda row: row[0])
+                frequencies = [row[0] for row in raw_properties]
+                if len(raw_properties) != len(rows) or len(frequencies) != len(set(frequencies)):
+                    diagnostics.append(
+                        SpdDiagnostic(
+                            "warning",
+                            "DIELECTRIC_MODEL_TABLE_INVALID",
+                            f"Dielectric model {name!r} has invalid or duplicate frequency rows; "
+                            "its frequency table was not retained.",
+                        )
+                    )
+                else:
+                    properties = tuple(
+                        DielectricPropertyPoint(
+                            frequency_hz=frequency_hz, dk=dk, df=df
+                        )
+                        for frequency_hz, dk, df in raw_properties
+                    )
+            dielectrics[name.casefold()] = _DielectricMaterial(
+                nominal_dk=chosen[1], nominal_df=chosen[2], properties=properties
+            )
         elif kind == "metal" and len(chosen) >= 2:
             metals[name.casefold()] = chosen[1]
         kind, name, rows, scale = None, "", [], None
@@ -966,7 +1012,7 @@ def _parse_layers(
     start: int,
     end: int,
     layer_nets: dict[str, tuple[str, ...]],
-    dielectrics: dict[str, tuple[float, float]],
+    dielectrics: dict[str, _DielectricMaterial],
     metals: dict[str, float],
     selected_keys: set[str],
     diagnostics: list[SpdDiagnostic],
@@ -1002,10 +1048,25 @@ def _parse_layers(
         loss_raw = _attribute(stripped, b"LossTangent")
         dk = float(permittivity_raw) if permittivity_raw else None
         df = float(loss_raw) if loss_raw else None
-        if (dk is None or df is None) and material_key in dielectrics:
-            material_dk, material_df = dielectrics[material_key]
-            dk = material_dk if dk is None else dk
-            df = material_df if df is None else df
+        material_model = dielectrics.get(material_key)
+        if (dk is None or df is None) and material_model is not None:
+            dk = material_model.nominal_dk if dk is None else dk
+            df = material_model.nominal_df if df is None else df
+        dielectric_properties: list[DielectricPropertyPoint] = []
+        if not conductor and material_model is not None:
+            # Layer attributes are explicit source overrides and therefore win
+            # independently over the corresponding material-table axis.  A
+            # one-axis override keeps the other material curve; two overrides
+            # are exactly the legacy scalar model and need no attached table.
+            if not (permittivity_raw and loss_raw):
+                dielectric_properties = [
+                    DielectricPropertyPoint(
+                        frequency_hz=item.frequency_hz,
+                        dk=float(dk) if permittivity_raw else item.dk,
+                        df=float(df) if loss_raw else item.df,
+                    )
+                    for item in material_model.properties
+                ]
         nets = list(layer_nets.get(key, ())) if conductor else []
         if conductor and not nets:
             parenthesized = re.search(r"\(([^)]+)\)", name)
@@ -1023,6 +1084,8 @@ def _parse_layers(
                     conductivity_s_m=conductivity,
                     dk=dk,
                     df=df,
+                    material=material or None,
+                    dielectric_properties=dielectric_properties,
                     pwr_nets=nets,
                 )
             )

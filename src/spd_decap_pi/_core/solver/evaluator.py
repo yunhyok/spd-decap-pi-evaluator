@@ -35,6 +35,8 @@ from .metrics import (
 )
 from .modal import (
     CoupledShuntGroup,
+    DielectricDispersion,
+    DielectricLayer,
     DeviceBranch,
     DeviceConnection,
     FinitePort,
@@ -49,7 +51,7 @@ from .modal import (
 # Cache identity: source-derived terminal branches and explicit multi-ground
 # shared-pad reduction and shared-PWR return treatment changed the calculated
 # transfer function in v0.14.0.
-SOLVER_VERSION = "modal-mvp-0.6.0"
+SOLVER_VERSION = "modal-mvp-0.7.0"
 COUPLING_ASSUMPTION = "inter-rail/site coupling not modeled"
 
 
@@ -1080,6 +1082,14 @@ def _planes_from_project(
             "shared-PWR ideal-common-reference components: " + "; ".join(component_names),
             "DGND component layers are treated as an ideal common reference",
         )
+    if any(
+        not layer.is_conductor and bool(getattr(layer, "dielectric_properties", ()))
+        for layer in layers
+    ):
+        assumptions += (
+            "frequency-dependent SPD dielectric tables use clamped log-frequency-linear Dk/Df interpolation; no material curve fitting is applied",
+            "resonance metadata retains the nominal series Dk while the modal shunt admittance uses the source dielectric table",
+        )
     return primary, tuple(parallel), origin, confirmed, assumptions
 
 
@@ -1160,6 +1170,38 @@ def _plane_component(
         (float(layer.thickness_um) / float(layer.dk)) * float(layer.df or 0.0)
         for layer in dielectrics
     ) / series_weight
+    has_dispersion = any(
+        bool(getattr(layer, "dielectric_properties", ())) for layer in dielectrics
+    )
+    dielectric_layers = ()
+    if has_dispersion:
+        rows: list[DielectricLayer] = []
+        for layer in dielectrics:
+            properties = tuple(getattr(layer, "dielectric_properties", ()))
+            if properties:
+                frequencies = tuple(float(item.frequency_hz) for item in properties)
+                dk_values = tuple(float(item.dk) for item in properties)
+                df_values = tuple(float(item.df) for item in properties)
+            else:
+                # An un-tabulated row remains its documented legacy scalar
+                # while its neighboring source-tabulated rows are evaluated at
+                # frequency.  It must still participate in the series complex
+                # dielectric impedance rather than being averaged separately.
+                frequencies = (1.0e9,)
+                dk_values = (float(layer.dk),)
+                df_values = (float(layer.df or 0.0),)
+            rows.append(
+                DielectricLayer(
+                    thickness_m=float(layer.thickness_um) * 1e-6,
+                    dispersion=DielectricDispersion(
+                        frequencies_hz=frequencies,
+                        relative_permittivities=dk_values,
+                        loss_tangents=df_values,
+                    ),
+                    material=getattr(layer, "material", None),
+                )
+            )
+        dielectric_layers = tuple(rows)
     return RectangularPlane(
         width_m=width_um * 1e-6,
         height_m=height_um * 1e-6,
@@ -1173,6 +1215,7 @@ def _plane_component(
         ground_thickness_m=float(gnd_layer.thickness_um) * 1e-6,
         power_conductivity_s_per_m=float(pwr_layer.conductivity_s_m),
         ground_conductivity_s_per_m=float(gnd_layer.conductivity_s_m),
+        dielectric_layers=dielectric_layers,
     )
 
 

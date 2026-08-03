@@ -1379,8 +1379,9 @@ def build_spd_import_plan(
             "assumes a continuous return across the selected rail rectangle"
         ),
         (
-            "SPD via-loop R/L values are analytical estimates and require "
-            "PowerSI or measurement calibration"
+            "SPD via-loop R/L values are uncalibrated analytical estimates; "
+            "no PowerSI fit is applied, so PowerSI or measurement comparison is "
+            "required for validation"
         ),
         "PowerSI plane-pair and solver geometry require user confirmation",
     ]
@@ -2071,7 +2072,7 @@ def _spd_via_templates(
             "ground_usage_count": int(ground_usage.count) if ground_usage is not None else 0,
             "pwr_depth_um": pwr_depth,
             "gnd_depth_um": gnd_depth,
-            "calibration": "uncalibrated analytical estimate",
+            "calibration": "uncalibrated analytical estimate; no PowerSI fit applied",
             "barrel_plating_assumption_um": (
                 min(20.0, drill_diameter / 4.0) if drill_diameter is not None else None
             ),
