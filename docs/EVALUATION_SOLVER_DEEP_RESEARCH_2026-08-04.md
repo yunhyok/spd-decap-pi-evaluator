@@ -1,8 +1,14 @@
 # Evaluation Solver Deep-Research Decision Record
 
 - Date: 2026-08-04
-- Status: research decision record; not a production-solver claim
+- Status: synthesized research decision record; not a production-solver claim
 - Scope: Evaluation Analysis accuracy and responsiveness only; De-cap Distribution is out of scope
+- Independent review input: Claude branch
+  `claude/pdn-analysis-algorithm-research-dojd6i`, commit
+  [`26d7698`](https://github.com/yunhyok/probe-card-mlo-pdn/commit/26d76982ec6965c744f062dd6213e04a9fd94a51)
+- Synthesis rule: a proposal is promoted only when source-only physics,
+  nonoverlapping ownership, numerical conditioning, and an independent
+  validation path are all defined
 
 ## Executive decision
 
@@ -13,15 +19,34 @@ solution: on the loaded six-rail benchmark, the PowerSI magnitude RMS error
 worsened from `3.1874 dB` at mode index 6 to `3.5387 dB` at index 8 and
 `4.0106 dB` at index 12.
 
+The independent Claude review confirms that model-form error is the primary
+diagnosis and usefully adds causal-material, intrinsic via-plane, selected-pair
+CIM, perforation-homogenization, regime-specific validation, and adaptive
+sampling candidates. Independent re-review accepts those problem statements
+but not all claimed outcomes. In particular:
+
+- the `10.61%` to `14.59%` actual-artwork result is a static capacitance result,
+  not evidence that a scalar constant-mode transplant produces the same loaded
+  `Zii` error;
+- a `1.13 GHz` first resonance computed from one `73 mm` bounding rectangle is
+  useful context, not proof that every irregular rail/site/load configuration is
+  quasi-static over the entire band;
+- `5-10x` adaptive-sampling speedup, `30k-150k` layer nodes, a `<= 1 GiB`
+  dense CIM factorization, and similar resource figures are hypotheses until
+  measured on the named SPD with the final matrix structure.
+
 The selected production direction is therefore:
 
-1. compile the actual SPD conductor artwork and connectivity into an auditable
-   electrical topology;
+1. harden the comparison contract, then compile the actual SPD conductor
+   artwork and connectivity into an auditable electrical topology;
 2. solve every adjacent conductor gap with a nonuniform Delaunay/Voronoi
-   triangular surface network;
-3. replace or defect-correct the corresponding core blocks with local PEEC/SIE
-   models around via, pad, anti-pad, spreading, and tightly coupled terminals;
-4. stamp all subdomains and vertical interconnects into one passive sparse MNA
+   triangular surface network, using analytic cases and a small independent
+   CIM/BEM/SIE/FEM oracle set rather than a second full-board production solver;
+3. replace or defect-correct the corresponding core blocks with a matched
+   intrinsic via-plane or local PEEC/SIE model around via, pad, anti-pad,
+   spreading, and tightly coupled terminals;
+4. stamp all subdomains, causal/passive constitutive blocks, shared copper
+   faces, and vertical interconnects into one passive sparse MNA
    system, then eliminate internal interfaces by Schur/Kron reduction;
 5. correlate retrospectively against the present PowerSI dataset, then validate
    a frozen candidate against newly generated or otherwise unseen data;
@@ -36,6 +61,12 @@ The selected production direction is therefore:
 The proposed `matrix-free residual operator` is a conditional accelerator, not
 the primary field model. A uniform whole-board FFT/BEM discretization and an
 unqualified layer transfer-matrix product are rejected for this geometry.
+
+Two near-term ideas remain valuable as *diagnostic experiments*, not default
+solver changes: (a) an actual-artwork low-frequency uniform-admittance bridge
+and (b) a source-table-only causal dielectric fit. Both must be isolated behind
+research flags, compared against the complete actual-artwork operator, and
+removed without changing scenario files if their gates fail.
 
 ```mermaid
 flowchart LR
@@ -151,8 +182,13 @@ would only solve the wrong network more accurately.
 | Method | Decision | Intended role | Main reason |
 |---|---|---|---|
 | Nonuniform Delaunay/Voronoi triangular surface network | Adopt | primary layer-domain solver | actual artwork, local refinement, sparse passive stamps |
-| Local PEEC/SIE | Adopt locally | nonoverlapping via/pad/anti-pad/spreading and mutual replacement/correction | resolves localized 3-D inductive/resistive physics without double stamping |
+| Actual-artwork uniform-admittance bridge | Diagnostic experiment only | test whether low-band capacitance can be improved before the full core exists | static `C_art` is promising, but scalar `C00` replacement omits `K0n`, per-gap dispersion, floating-conductor, and loaded-network effects |
+| Source-table causal dielectric model | Compare constrained candidates | per-gap constitutive block after source-only fit validation | causality is desirable, but a sparse SPD table does not uniquely select Djordjevic-Sarkar over generalized Debye alternatives |
+| Intrinsic via-plane / local PEEC-SIE | Adopt as a gated local candidate | nonoverlapping via/pad/anti-pad/spreading and mutual replacement/correction | resolves localized 3-D inductive/resistive physics only when modal split, port normalization, and core ownership match |
+| Selected-pair CIM/BEM/SIE/FEM | Experiment as an oracle | small independent kernel cross-checks | circular-port CIM has strong precedent, but it is neither the only oracle nor a production dependency |
+| Perforation homogenization | Conditional experiment | periodic or locally stationary interior zones only | can control mesh growth, but exact zones and scale-separation limits must be measured rather than set to an assumed pitch count |
 | Global sparse MNA + interface Schur reduction | Adopt | authoritative layer/via composition | preserves arbitrary topology and explicit shared DOFs |
+| Adaptive frequency sampling | Conditional experiment after physics validation | choose expensive solve points; never substitute an unchecked interpolant for reported truth | rational uncertainty can guide sampling, but the claimed `5-10x` gain is unmeasured for this PDN |
 | Matrix-free spectral operator | Conditional GO | nonlocal backend, or certified `A_reference - A_core` correction | avoids dense blocks only if nonoverlap, symmetry, and passivity are retained |
 | Spectral Ewald + NUFFT | Conditional | implementation of the residual far field | fast nonuniform evaluation with controllable truncation |
 | H2 matrix compression | Fallback | residual/operator compression | geometry-agnostic alternative if Ewald structure is unsuitable |
@@ -303,6 +339,32 @@ conditioning and compare consistent S, Y, and Z views where practical; an
 ill-conditioned low-frequency transform must not be mistaken for physical
 nonpassivity or used as a fitting target.
 
+Before numerical comparison, a hard port-manifest gate must match port name,
+index, physical launch, reference conductor, reference impedance,
+renormalization, open/terminated status, and driven-observation convention.
+The comparison record must also retain the available PowerSI meshing,
+material-model, frequency-grid, solver, and convergence settings. Missing
+settings are disclosed uncertainty, never implicit permission to tune a source
+parameter to the reference.
+
+Claude proposed the following regime-decomposed diagnostics. The diagnostics
+are adopted because they localize a failing physical block; their thresholds
+remain *investigation targets*, not promotion gates, until reference noise and
+transform conditioning show that they are measurable:
+
+| Regime diagnostic | Initial experiment target | Likely owning block |
+|---|---:|---|
+| No-decap low-band `C_eff` error | `<= 5%` | artwork and dielectric `G/C` |
+| Series-resonance resistance floor error | `<= 10%` | copper/via/contact `R(f)` |
+| Inductive-slope `L_eff` error | `<= 10%` | via/return/mutual `L(f)` |
+| Resonance and antiresonance location error | `<= 5%` | assembled topology and reactive blocks |
+| Resonance-Q error | `<= 20%` | distributed conductor and dielectric loss |
+
+Blind validation is procedural: publish the frozen code, parameter, source,
+port-manifest, and solver-profile hashes; obtain an unseen reference afterward;
+record the predictions before opening that reference; then run the comparison.
+The current 92-port file can never be relabeled as blind evidence.
+
 The following are proposed engineering targets, not achieved measurements:
 
 - after substrate-cache creation, six selected rails complete within 120 s;
@@ -330,29 +392,48 @@ and renders the board in stages. The new solver must preserve that separation:
 
 ## Implementation sequence
 
-1. **Topology/compiler:** add polygon contact, trace-width provenance or a
-   fail-closed source rule, DGND connectivity, shared-pad terminals, and
-   microvia-fill evidence; create deterministic graph certificates.
-2. **Layer-domain core:** create adaptive Delaunay/Voronoi meshes on the actual
-   artwork, with convergence indicators and passive R/L/G/C stamps.
-3. **Local 3-D correction:** replace the rectangular finite-port approximation
-   with source-proven actual pad/circular shapes where needed, and apply PEEC/SIE
-   via, pad, anti-pad, spreading, skin/proximity, and mutual blocks only as a
-   nonoverlapping replacement or `exact - core` correction.
+1. **Comparison contract and topology/compiler:** freeze the port manifest and
+   source/reference hashes; add polygon contact, trace-width provenance or a
+   fail-closed source rule, DGND connectivity, shared-pad terminals, copper-face
+   ownership, and microvia-fill evidence; create deterministic certificates.
+2. **Low-band research bridge:** test a per-gap/multi-net actual-artwork uniform
+   admittance against the complete Maxwell-C operator, with scalar `C00` only as
+   a deliberately weaker control; compare passive causal dielectric candidates
+   against the untouched SPD table. Do not enable either path by default.
+3. **Layer-domain core and independent oracle:** create conservative adaptive
+   Delaunay/Voronoi stamps on the actual artwork, then cross-check manufactured
+   cases and selected small pairs against analytic, CIM/BEM/SIE, or 3-D FEM
+   references. CIM is chosen only if it adds useful independence.
 4. **Global composition:** assemble adjacent gaps and vertical connections into
-   sparse MNA and eliminate internal interfaces with sparse Schur solves.
-5. **Correlation and blind validation:** regress retrospectively on all ten VQPS
-   ports, all 92 ports, and the selected VTRIP/VINT/VCPU rails; then freeze the
-   candidate before evaluating newly generated or otherwise unseen reference
-   data.
-6. **Acceleration decision:** run the matrix-free operator falsification suite;
-   use H2/local direct alternatives if it fails.
-7. **Passive MOR and product integration:** build a cached fixed substrate,
-   first realize tabulated dielectric/copper, skin-effect, and nonlocal
-   frequency dependence as a passive causal descriptor; leave decap branches
-   mutable only while preserving their complete attachment-port subspace,
-   preserve cancellation/progress/UI heartbeat, and enable the solver only
-   behind an experimental accuracy option until every promotion gate passes.
+   sparse MNA, own each physical copper sheet exactly once, and eliminate
+   internal interfaces with sparse Schur solves.
+5. **Shared-sheet and local 3-D physics:** add a reciprocal passive two-face
+   copper operator only where both faces are real interface degrees of freedom;
+   add intrinsic via-plane or PEEC/SIE pad, anti-pad, spreading,
+   skin/proximity, and mutual blocks only as a matched replacement or
+   `exact - core` correction.
+6. **Conditional mesh control:** investigate homogenization only in compiler-
+   certified periodic or locally stationary interior regions. Derive the exact
+   near-zone size from an a-posteriori error sweep, not an assumed `2-3 pitch`
+   rule.
+7. **Correlation and blind validation:** regress retrospectively on all ten VQPS
+   ports, all 92 ports, and the selected VTRIP/VINT/VCPU rails; then freeze and
+   preregister a candidate before evaluating newly generated or otherwise
+   unseen reference data.
+8. **Acceleration decision:** test adaptive sampling first as a sample selector
+   with mandatory anchors and a dense verification sweep. Keep a query/operator
+   interface available early, but implement matrix-free Ewald/NUFFT or H2 only
+   after measured scale and residual tests justify it.
+9. **Passive MOR and product integration:** build a cached fixed substrate,
+   realize every frequency-dependent block as a passive causal descriptor, and
+   leave decap branches mutable only while preserving their complete
+   attachment-port subspace. Preserve cancellation, progress, UI heartbeat, and
+   rollback; enable the solver only behind an experimental accuracy option until
+   every promotion gate passes.
+
+The code-level change map, feature flags, cache identities, and phase exit tests
+are specified separately in
+[Evaluation Solver Implementation Plan](EVALUATION_SOLVER_IMPLEMENTATION_PLAN_2026-08-04.md).
 
 ## Current blockers and nonclaims
 
@@ -362,6 +443,17 @@ and renders the board in stages. The new solver must preserve that separation:
   impedance result has been accepted.
 - The exact-artwork result is a capacitance benchmark, not a complete R/L/G/C
   or loaded-decoupling validation.
+- A scalar actual-artwork `C00` transplant has not proved consistent coupling to
+  the retained rectangular high modes; actual masks generally also change
+  constant-to-nonconstant and nonconstant-to-nonconstant terms.
+- Intrinsic via, two-face copper, and homogenized perforation blocks do not
+  become nonoverlapping merely by being described separately. Their interface
+  variables, modal split, normalization, and `exact - core` ownership still
+  require proof.
+- Claude's mesh, dense-CIM, factorization-time, memory, and adaptive-sampling
+  figures are unverified forecasts. For example, one `8000 x 8000`
+  `complex128` matrix is already `0.954 GiB` before dense factorization
+  workspace. Production budgets remain gates, not achieved estimates.
 - The PowerSI data confirms comparison error; it is not a calibration input and
   cannot prove the correctness of an unmeasured internal decomposition.
 - This record changes documentation only. It does not change v0.17.0 solver
@@ -376,16 +468,36 @@ hash-bound research artifacts. They are intentionally not production inputs:
 - `vqps_bulk_capacitance_benchmark.json`
 - `fft_bem_capacitance_benchmark.json`
 - `full_multinet_loaded_hybrid_benchmark.json`
+- `powersi_blas1_mode12/correlation_report.json`
 
 The production modeling boundary and already shipped validation results remain
 documented in [Evaluation Accuracy and Modeling Boundary](EVALUATION_ACCURACY.md).
 
 ## Review status
 
-The architecture and matrix-free proposal received multiple internal
-algorithm-review passes. No Claude review result is included in this revision.
-The next revision should record Claude findings as accepted, rejected, or
-requiring experiment, with a concrete reason and evidence for each disposition.
+Claude's independent document was reviewed from commit `26d7698`, then checked
+against the tracked evaluator, local hash-bound reports, primary literature, and
+multiple independent Sol algorithm reviews. The resulting disposition is:
+
+| Claude item | Synthesis disposition | Reason / constraint |
+|---|---|---|
+| C1 model-form diagnosis | **Accept with qualification** | mode growth does not cure correlation, but one bbox resonance estimate does not prove every irregular loaded rail is quasi-static |
+| C2 intrinsic via-plane framework | **Revise + experiment** | a strong canonical local candidate only with matched ports, reference planes, modal split, and replacement/defect ownership |
+| C3 CIM/BEM gap | **Accept oracle requirement; experiment CIM** | analytic, mesh-refined FEM, and independent SIE are also valid oracles; CIM is not unique truth |
+| C4 perforation homogenization | **Experiment only** | permit only compiler-certified periodic/locally stationary interiors; determine exact halo by convergence, not an assumed pitch count |
+| C5 causal dielectric | **Accept problem; compare candidates** | the current pointwise interpolation is not a causal realization, but sparse SPD data does not uniquely justify one D-S fit |
+| C6 DGND/two-face slab | **Accept problem; gated experiment** | a reciprocal `coth/csch` face matrix is valid only when both physical faces and their ties are explicit DOFs |
+| C7 comparison contract | **Accept** | port manifest, S/Y/Z views, conditioning, reference settings, and source-only provenance become hard requirements |
+| C8 regime-specific gates | **Accept diagnostics; experiment thresholds** | C/R/L/resonance/Q separation localizes error, but proposed percentages are not yet tied to reference uncertainty |
+| C9 adaptive sampling | **Experiment; reject speed promise** | `5-10x` is not measured; AAA is a rational approximant, not by itself a safe expensive-query policy |
+| C10 matrix-free priority | **Split decision** | keep physics before acceleration and delay a specific fast method, but design a query/linear-operator interface and run scale pilots early |
+| C11 blind preregistration | **Accept** | freeze compiler, material, port, frequency, metric, and code hashes before opening unseen truth |
+
+The `4,139 s` value cited by Claude is a valid older six-rail Maximum-preset
+record, while the later `fe35daa` mode-12 report completed in approximately
+`224.95 s` with `432/433` refined points. Neither run establishes AFS speedup;
+runtime claims must identify the exact code/profile/source hash and be measured
+again on the candidate solver.
 
 ## Primary references
 
@@ -436,3 +548,27 @@ requiring experiment, with a concrete reason and evidence for each disposition.
 - A. Odabasioglu, M. Celik, and L. T. Pileggi, ["PRIMA: Passive Reduced-Order
   Interconnect Macromodeling Algorithm"](https://doi.org/10.1109/43.712097),
   IEEE TCAD, 1998.
+- Y. J. Zhang and J. Fan, ["An Intrinsic Circuit Model for Multiple Vias in an
+  Irregular Plate Pair Through Rigorous Electromagnetic
+  Analysis"](https://doi.org/10.1109/TMTT.2010.2052956), IEEE T-MTT, 2010.
+- R. Rimolo-Donadio et al., ["Physics-Based Via and Trace Models for Efficient
+  Link Simulation on Multilayer Structures up to 40
+  GHz"](https://doi.org/10.1109/TMTT.2009.2025470), IEEE T-MTT, 2009.
+- X. Duan et al., ["Circular Ports in Parallel-Plate Waveguide Analysis With
+  Isotropic Excitations"](https://doi.org/10.1109/TEMC.2011.2170998), IEEE
+  TEMC, 2012.
+- X. Duan, H.-D. Bruns, and C. Schuster, ["Efficient DC Analysis of Power
+  Planes Using Contour Integral Method With Circular
+  Elements"](https://doi.org/10.1109/TCPMT.2013.2264838), IEEE TCPMT, 2013.
+- A. E. Engin, K. Bharath, and M. Swaminathan, ["Multilayered
+  Finite-Difference Method (MFDM) for Modeling of Package and Printed Circuit
+  Board Planes"](https://doi.org/10.1109/TEMC.2007.893331), IEEE TEMC, 2007.
+- A. R. Djordjevic et al., ["Wideband Frequency-Domain Characterization of
+  FR-4 and Time-Domain Causality"](https://doi.org/10.1109/15.974647), IEEE
+  TEMC, 2001.
+- S. De Ridder et al., ["Adaptive Frequency Sampling Using Linear Bayesian
+  Vector Fitting"](https://doi.org/10.1049/el.2018.6668), Electronics Letters,
+  2019.
+- Y. Nakatsukasa, O. Sete, and L. N. Trefethen, ["The AAA Algorithm for
+  Rational Approximation"](https://doi.org/10.1137/16M1106122), SIAM Journal on
+  Scientific Computing, 2018.
