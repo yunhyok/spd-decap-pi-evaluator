@@ -11,7 +11,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 import warnings
 
 import numpy as np
@@ -427,6 +427,51 @@ class DeviceConnection:
 
 
 @dataclass(frozen=True, slots=True)
+class LegacyUniformC00Term:
+    """One explicitly owned legacy rectangular ``(0,0)`` plane term.
+
+    This is deliberately separate from Device branches, Via paths, decap
+    shunts, and every higher modal term.  A research bridge may replace this
+    term through :meth:`RectangularCavitySolver.replace_uniform_c00_term`, but
+    it is never allowed to restamp an arbitrary prepared matrix supplied by a
+    caller.
+    """
+
+    mode_index: int
+    modes: tuple[tuple[int, int], ...]
+    legacy_admittance_s: NDArray[np.complex128]
+    rectangular_uniform_normalization: float = 1.0
+
+    def __post_init__(self) -> None:
+        modes = tuple((int(x), int(y)) for x, y in self.modes)
+        if (
+            self.mode_index < 0
+            or self.mode_index >= len(modes)
+            or modes[self.mode_index] != (0, 0)
+        ):
+            raise ModalSolverError("legacy uniform term must own modal (0,0)")
+        values = np.asarray(self.legacy_admittance_s, dtype=np.complex128).copy()
+        if values.ndim != 1 or not values.size or not np.all(np.isfinite(values)):
+            raise ModalSolverError("legacy uniform C00 admittance must be finite")
+        if self.rectangular_uniform_normalization != 1.0:
+            raise ModalSolverError(
+                "rectangular modal uniform normalization must be exactly one"
+            )
+        values.setflags(write=False)
+        object.__setattr__(self, "modes", modes)
+        object.__setattr__(self, "legacy_admittance_s", values)
+
+    @property
+    def uniform_projection(self) -> NDArray[np.float64]:
+        """The rectangular area-average basis is exactly one at ``(0,0)``."""
+
+        projection = np.zeros(len(self.modes), dtype=np.float64)
+        projection[self.mode_index] = self.rectangular_uniform_normalization
+        projection.setflags(write=False)
+        return projection
+
+
+@dataclass(frozen=True, slots=True)
 class PreparedDeviceSystem:
     """Placement-independent numerical terms for repeated Device solves."""
 
@@ -444,6 +489,7 @@ class PreparedDeviceSystem:
         ],
         ...,
     ]
+    legacy_uniform_c00_term: LegacyUniformC00Term | None = None
 
     def __post_init__(self) -> None:
         parallel_planes = tuple(self.parallel_planes)
@@ -472,6 +518,12 @@ class PreparedDeviceSystem:
             raise ModalSolverError(
                 "prepared modal basis must contain one unique mode per admittance column"
             )
+        uniform_term = self.legacy_uniform_c00_term
+        if uniform_term is not None:
+            if uniform_term.modes != modes or uniform_term.legacy_admittance_s.shape != frequencies.shape:
+                raise ModalSolverError(
+                    "prepared legacy uniform C00 term does not match this modal/frequency grid"
+                )
 
         copied_branches = []
         for overlap, basis_sum, branch_count, admittance in self.branch_data:
@@ -512,6 +564,7 @@ class PreparedDeviceSystem:
         object.__setattr__(self, "modes", modes)
         object.__setattr__(self, "plane_admittance", plane_admittance)
         object.__setattr__(self, "branch_data", tuple(copied_branches))
+        object.__setattr__(self, "legacy_uniform_c00_term", uniform_term)
 
 
 @dataclass(frozen=True, slots=True)
@@ -1264,14 +1317,63 @@ class RectangularCavitySolver:
         """Compile modal plane and Device branch terms once for repeated shunts."""
 
         frequencies = frequency_array(frequencies_hz)
+        plane_admittance = 1.0 / self.modal_impedance(frequencies)
+        try:
+            zero_index = self.mode_index(0, 0)
+        except ModalSolverError as exc:  # pragma: no cover - all public bases include (0,0)
+            raise ModalSolverError(
+                "prepared rectangular Device system requires a legacy uniform (0,0) mode"
+            ) from exc
         return PreparedDeviceSystem(
             plane=self.plane,
             parallel_planes=self.parallel_planes,
             modes=self.modes,
             frequencies_hz=frequencies,
-            plane_admittance=1.0 / self.modal_impedance(frequencies),
+            plane_admittance=plane_admittance,
             branch_data=tuple(self._device_branch_data(frequencies, device)),
+            legacy_uniform_c00_term=LegacyUniformC00Term(
+                mode_index=zero_index,
+                modes=self.modes,
+                legacy_admittance_s=plane_admittance[:, zero_index],
+            ),
         )
+
+    def replace_uniform_c00_term(
+        self,
+        prepared: PreparedDeviceSystem,
+        replacement_admittance_s: ArrayLike,
+    ) -> PreparedDeviceSystem:
+        """Replace exactly the solver-owned legacy uniform plane term.
+
+        The returned prepared system preserves Device branch data and all
+        nonuniform modal columns bit-for-bit.  This is the only production
+        replacement API for the research C00 bridge.
+        """
+
+        if (
+            prepared.plane != self.plane
+            or prepared.parallel_planes != self.parallel_planes
+            or prepared.modes != self.modes
+        ):
+            raise ModalSolverError("prepared Device system does not belong to this solver")
+        term = prepared.legacy_uniform_c00_term
+        if term is None:
+            raise ModalSolverError(
+                "prepared Device system does not expose an owned legacy uniform C00 term"
+            )
+        replacement = np.asarray(replacement_admittance_s, dtype=np.complex128)
+        if replacement.shape != prepared.frequencies_hz.shape or not np.all(
+            np.isfinite(replacement)
+        ):
+            raise ModalSolverError(
+                "uniform C00 replacement must match the prepared frequency grid"
+            )
+        scale = max(float(np.max(np.abs(replacement))), 1.0e-30)
+        if float(np.min(replacement.real)) < -scale * 1.0e-10:
+            raise ModalSolverError("uniform C00 replacement has a non-passive real part")
+        matrix = np.array(prepared.plane_admittance, copy=True)
+        matrix[:, term.mode_index] = replacement
+        return replace(prepared, plane_admittance=matrix)
 
     def solve_prepared_device(
         self,

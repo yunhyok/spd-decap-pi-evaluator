@@ -9,10 +9,12 @@ from typing import Any
 
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
+    QLabel,
     QMainWindow,
     QSplitter,
     QTableWidget,
     QTableWidgetItem,
+    QVBoxLayout,
     QWidget,
 )
 
@@ -139,7 +141,20 @@ class ComparisonResultsWindow(QMainWindow):
         self.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose, False)
         self.resize(1280, 820)
 
-        splitter = QSplitter(Qt.Orientation.Vertical, self)
+        central = QWidget(self)
+        central_layout = QVBoxLayout(central)
+        central_layout.setContentsMargins(8, 8, 8, 8)
+        central_layout.setSpacing(6)
+        self.provenance_label = QLabel(central)
+        self.provenance_label.setObjectName("resultSolverProvenance")
+        self.provenance_label.setWordWrap(True)
+        self.provenance_label.setTextInteractionFlags(
+            Qt.TextInteractionFlag.TextSelectableByMouse
+        )
+        self.provenance_label.hide()
+        central_layout.addWidget(self.provenance_label)
+
+        splitter = QSplitter(Qt.Orientation.Vertical, central)
         splitter.setObjectName("largeResultSplitter")
         splitter.setChildrenCollapsible(False)
         splitter.setHandleWidth(10)
@@ -170,7 +185,35 @@ class ComparisonResultsWindow(QMainWindow):
         splitter.setStretchFactor(0, 4)
         splitter.setStretchFactor(1, 1)
         splitter.setSizes((620, 180))
-        self.setCentralWidget(splitter)
+        central_layout.addWidget(splitter, 1)
+        self.setCentralWidget(central)
+
+    def set_provenance(
+        self,
+        text: str,
+        *,
+        research: bool,
+        details: str | None = None,
+    ) -> None:
+        """Show immutable result-derived solver identity above the plot."""
+
+        normalized = str(text).strip()
+        if not normalized:
+            raise ValueError("result solver provenance must be nonblank")
+        self.provenance_label.setText(normalized)
+        self.provenance_label.setToolTip(str(details or normalized).strip())
+        self.provenance_label.setStyleSheet(
+            (
+                "color: #d6a64f; background: #2a2415; border: 1px solid #806b2c; "
+                "padding: 6px; font-weight: 700;"
+            )
+            if research
+            else (
+                "color: #b9d6ee; background: #172431; border: 1px solid #3a607c; "
+                "padding: 6px; font-weight: 600;"
+            )
+        )
+        self.provenance_label.show()
 
     def set_results(
         self,
@@ -211,6 +254,8 @@ class ComparisonResultsWindow(QMainWindow):
         self.plot.clear_comparisons()
         self.table.clearContents()
         self.table.setRowCount(0)
+        self.provenance_label.clear()
+        self.provenance_label.hide()
 
     def _copy_table(self, source: QTableWidget) -> None:
         self.table.clear()

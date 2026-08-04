@@ -5,7 +5,7 @@ from __future__ import annotations
 from collections import defaultdict
 from collections.abc import Callable
 from dataclasses import dataclass, field, replace
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import numpy as np
 from numpy.typing import NDArray
@@ -46,6 +46,14 @@ from .modal import (
     RectangularPlane,
     ShuntGroup,
 )
+from .profiles import (
+    DEFAULT_SOLVER_PROFILE_KEY,
+    LEGACY_MODAL_PROFILE,
+    RESEARCH_UNIFORM_ADMITTANCE_PROFILE,
+    solver_profile,
+)
+if TYPE_CHECKING:
+    from .research_uniform_profile import UniformC00SourceModel
 
 
 # Cache identity: source-derived terminal branches and explicit multi-ground
@@ -116,6 +124,10 @@ class EvaluationRequest:
     worker_count: int = 1
     confidence_inputs: ConfidenceInputs = ConfidenceInputs()
     assumptions: tuple[str, ...] = (COUPLING_ASSUMPTION,)
+    solver_profile_key: str = DEFAULT_SOLVER_PROFILE_KEY
+    uniform_c00_source: "UniformC00SourceModel | None" = field(
+        default=None, repr=False, compare=False
+    )
 
     def __post_init__(self) -> None:
         if not self.rail_id.strip():
@@ -127,6 +139,19 @@ class EvaluationRequest:
             "parallel_planes",
             _validated_parallel_planes(self.plane, self.parallel_planes),
         )
+        profile = solver_profile(self.solver_profile_key)
+        object.__setattr__(self, "solver_profile_key", profile.key)
+        if profile == LEGACY_MODAL_PROFILE and self.uniform_c00_source is not None:
+            raise EvaluationError(
+                "legacy_modal_v017 cannot accept a research uniform C00 source"
+            )
+        if (
+            profile == RESEARCH_UNIFORM_ADMITTANCE_PROFILE
+            and self.uniform_c00_source is None
+        ):
+            raise EvaluationError(
+                "research_uniform_admittance requires a source-proven uniform C00 model"
+            )
 
 
 @dataclass(frozen=True, slots=True)
@@ -171,12 +196,17 @@ class EvaluationKernel:
     device: DeviceConnection = field(repr=False, compare=False)
     solver: RectangularCavitySolver
     prepared_device: PreparedDeviceSystem
+    solver_profile_key: str = DEFAULT_SOLVER_PROFILE_KEY
+    uniform_evidence_sha256: str | None = None
 
     def __post_init__(self) -> None:
         object.__setattr__(
             self,
             "parallel_planes",
             _validated_parallel_planes(self.plane, self.parallel_planes),
+        )
+        object.__setattr__(
+            self, "solver_profile_key", solver_profile(self.solver_profile_key).key
         )
 
 
@@ -189,6 +219,8 @@ class EvaluationOutcome:
     assumptions: tuple[str, ...]
     solver_version: str = SOLVER_VERSION
     convergence: "ConvergenceReport | None" = None
+    solver_profile_key: str = DEFAULT_SOLVER_PROFILE_KEY
+    solver_provenance: dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass(frozen=True, slots=True)
@@ -260,6 +292,31 @@ def compile_evaluation_kernel(request: EvaluationRequest) -> EvaluationKernel:
         max_mode_y=request.max_mode_y,
         mode_count=request.mode_count,
     )
+    prepared = solver.prepare_device(
+        request.frequencies_hz,
+        request.device,
+    )
+    evidence_sha256: str | None = None
+    if request.uniform_c00_source is not None:
+        # Local import avoids making the legacy evaluator depend on the
+        # source-artwork/services adapter during package initialization.
+        from .uniform_c00 import (
+            UniformC00Error,
+            replace_prepared_uniform_c00_from_assembly,
+        )
+
+        assembly = request.uniform_c00_source.assemble(request.frequencies_hz)
+        try:
+            prepared = replace_prepared_uniform_c00_from_assembly(
+                solver,
+                prepared,
+                assembly=assembly,
+            )
+        except UniformC00Error as exc:
+            raise EvaluationError(
+                f"source-only uniform C00 replacement failed closed: {exc}"
+            ) from exc
+        evidence_sha256 = request.uniform_c00_source.evidence_sha256
     return EvaluationKernel(
         rail_id=request.rail_id,
         plane=request.plane,
@@ -270,10 +327,9 @@ def compile_evaluation_kernel(request: EvaluationRequest) -> EvaluationKernel:
         frequencies_hz=request.frequencies_hz.copy(),
         device=request.device,
         solver=solver,
-        prepared_device=solver.prepare_device(
-            request.frequencies_hz,
-            request.device,
-        ),
+        prepared_device=prepared,
+        solver_profile_key=request.solver_profile_key,
+        uniform_evidence_sha256=evidence_sha256,
     )
 
 
@@ -293,6 +349,13 @@ def evaluate_rail(
         or kernel.mode_count != request.mode_count
         or not np.array_equal(kernel.frequencies_hz, request.frequencies_hz)
         or kernel.device is not request.device
+        or kernel.solver_profile_key != request.solver_profile_key
+        or kernel.uniform_evidence_sha256
+        != (
+            request.uniform_c00_source.evidence_sha256
+            if request.uniform_c00_source is not None
+            else None
+        )
     ):
         raise EvaluationError("prepared evaluation kernel does not match request shape")
     solve = kernel.solver.solve_prepared_device(
@@ -313,13 +376,44 @@ def evaluate_rail(
         request.confidence_inputs,
         parallel_planes=request.parallel_planes,
     )
-    assumptions = tuple(dict.fromkeys((*request.assumptions, COUPLING_ASSUMPTION)))
+    profile = solver_profile(request.solver_profile_key)
+    assumptions = tuple(
+        dict.fromkeys(
+            (
+                *request.assumptions,
+                COUPLING_ASSUMPTION,
+                f"Solver profile {profile.key}: {profile.description}",
+                *(
+                    (
+                        "research uniform admittance replaces only modal (0,0); nonuniform rectangular-bbox modes remain the legacy basis",
+                        "PowerSI/Touchstone is comparison-only and was not used to construct research parameters",
+                    )
+                    if profile.experimental
+                    else ()
+                ),
+            )
+        )
+    )
+    provenance = (
+        dict(request.uniform_c00_source.provenance)
+        if request.uniform_c00_source is not None
+        else {
+            "profile_key": profile.key,
+            "profile_badge": profile.badge,
+            "status": "legacy_regression",
+            "source_only": True,
+            "powersi_used_for_parameters": False,
+            "validation_status": "legacy_regression",
+        }
+    )
     return EvaluationOutcome(
         rail_id=request.rail_id,
         solve=solve,
         metrics=metrics,
         confidence=confidence,
         assumptions=assumptions,
+        solver_profile_key=profile.key,
+        solver_provenance=provenance,
     )
 
 
@@ -767,6 +861,8 @@ def build_project_evaluation_request(
     templates_calibrated: bool = False,
     template: ProjectEvaluationTemplate | None = None,
     assume_static_template_compatible: bool = False,
+    solver_profile_key: str = DEFAULT_SOLVER_PROFILE_KEY,
+    uniform_c00_source: "UniformC00SourceModel | None" = None,
 ) -> EvaluationRequest:
     """Adapt ``spd_decap_pi._core.domain.ProjectSpec`` into the numerical request.
 
@@ -862,6 +958,8 @@ def build_project_evaluation_request(
             ),
         ),
         assumptions=assumptions,
+        solver_profile_key=solver_profile_key,
+        uniform_c00_source=uniform_c00_source,
     )
 
 

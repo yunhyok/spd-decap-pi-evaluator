@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import csv
+from collections.abc import Mapping
 from dataclasses import dataclass
 from decimal import Decimal, ROUND_FLOOR
 from hashlib import sha256
@@ -66,6 +67,14 @@ from spd_decap_pi._core.services import (
     scoped_blas_threads,
 )
 from spd_decap_pi._core.domain import PinKind, ProjectSpec
+from spd_decap_pi._core.solver.profiles import (
+    LEGACY_MODAL_PROFILE,
+    RESEARCH_UNIFORM_ADMITTANCE_PROFILE,
+    solver_profile_static_identity_sha256,
+)
+from spd_decap_pi._core.solver.research_uniform_profile import (
+    PROFILE_COMPILER_VERSION as RESEARCH_PROFILE_COMPILER_VERSION,
+)
 
 from ..scenario import DecapConnectionKind, ScenarioDecap, ScenarioSpec
 from ..scenario_edits import (
@@ -104,6 +113,244 @@ _EXPLORATORY_FIDELITY_WARNING = (
     "Exploratory: rectangular PWR bbox, continuous DGND, single-rail Zii; "
     "absolute sub-milliohm accuracy not certified."
 )
+
+_LEGACY_SOLVER_PROFILE_KEY = "legacy_modal_v017"
+_RESEARCH_SOLVER_PROFILE_KEY = "research_uniform_admittance"
+_SOLVER_PROFILE_ITEMS: tuple[tuple[str, str], ...] = (
+    ("Legacy modal", _LEGACY_SOLVER_PROFILE_KEY),
+    (
+        "Experimental: actual-artwork uniform C00 (topology certificate required)",
+        _RESEARCH_SOLVER_PROFILE_KEY,
+    ),
+)
+
+_RESEARCH_HASH_FIELDS = (
+    "artwork_evidence_sha256",
+    "research_identity_sha256",
+    "static_compiler_algorithm_sha256",
+    "source_sha256",
+    "geometry_manifest_sha256",
+    "component_manifest_sha256",
+    "material_manifest_sha256",
+    "topology_certificate_sha256",
+)
+
+
+@dataclass(frozen=True, slots=True)
+class _SolverProvenancePresentation:
+    """Result-derived solver identity rendered consistently across the GUI."""
+
+    key: str
+    label: str
+    badge: str
+    solver_version: str
+    source_only: bool
+    source_only_status: str
+    validation_status: str
+    powersi_used_for_parameters: bool
+    compiler_algorithm_id: str
+    compiler_version: str
+    artwork_evidence_sha256: str = ""
+    research_identity_sha256: str = ""
+    static_compiler_algorithm_sha256: str = ""
+    source_sha256: str = ""
+    geometry_manifest_sha256: str = ""
+    component_manifest_sha256: str = ""
+    material_manifest_sha256: str = ""
+    topology_certificate_sha256: str = ""
+
+    @property
+    def banner_text(self) -> str:
+        source_text = "Yes" if self.source_only else "No"
+        validation = (
+            "RESEARCH / not PowerSI-validated"
+            if self.validation_status == "research_not_validated"
+            else "Legacy regression baseline"
+        )
+        identity = (
+            f"compiler {self.compiler_algorithm_id} / {self.compiler_version} · "
+            f"evidence {self.research_identity_sha256[:12]}… · "
+            if self.badge == "RESEARCH"
+            else ""
+        )
+        return (
+            f"[{self.badge}] {self.label} · {identity}"
+            f"modal backend {self.solver_version} · "
+            f"Source-only: {source_text} ({self.source_only_status}) · {validation} · "
+            "PowerSI parameter fitting: never"
+        )
+
+    @property
+    def details_text(self) -> str:
+        """Return copyable full identities for tooltip/result audit details."""
+
+        if self.badge != "RESEARCH":
+            return self.banner_text
+        return "\n".join(
+            (
+                self.banner_text,
+                f"Compiler algorithm ID: {self.compiler_algorithm_id}",
+                f"Compiler version: {self.compiler_version}",
+                f"Artwork evidence SHA-256: {self.artwork_evidence_sha256}",
+                f"Research identity SHA-256: {self.research_identity_sha256}",
+                f"Static compiler/algorithm SHA-256: {self.static_compiler_algorithm_sha256}",
+                f"Source SHA-256: {self.source_sha256}",
+                f"Geometry manifest SHA-256: {self.geometry_manifest_sha256}",
+                f"Component manifest SHA-256: {self.component_manifest_sha256}",
+                f"Material manifest SHA-256: {self.material_manifest_sha256}",
+                f"Topology certificate SHA-256: {self.topology_certificate_sha256}",
+            )
+        )
+
+
+def _solver_provenance_for_view(view: Any) -> _SolverProvenancePresentation:
+    """Normalize new provenance fields while keeping old cached views readable."""
+
+    raw = getattr(view, "solver_provenance", {})
+    provenance: Mapping[str, Any] = raw if isinstance(raw, Mapping) else {}
+    key = str(
+        getattr(view, "solver_profile_key", None)
+        or provenance.get("profile_key")
+        or _LEGACY_SOLVER_PROFILE_KEY
+    ).strip()
+    if key not in {_LEGACY_SOLVER_PROFILE_KEY, _RESEARCH_SOLVER_PROFILE_KEY}:
+        raise ValueError(f"Evaluation result has unknown solver profile {key!r}.")
+    research = key == _RESEARCH_SOLVER_PROFILE_KEY
+    label = str(
+        getattr(view, "solver_profile_label", None)
+        or ("Actual-artwork uniform mode" if research else "Legacy modal")
+    ).strip()
+    badge = str(
+        getattr(view, "solver_profile_badge", None)
+        or provenance.get("profile_badge")
+        or ("RESEARCH" if research else "LEGACY")
+    ).strip().upper()
+    solver_version = str(getattr(view, "solver_version", "unknown")).strip()
+    expected_badge = "RESEARCH" if research else "LEGACY"
+    if not label or badge != expected_badge or not solver_version:
+        raise ValueError("Evaluation result has incomplete solver identity provenance.")
+    powersi_used = provenance.get("powersi_used_for_parameters") is True
+    if powersi_used:
+        raise ValueError(
+            "Evaluation result provenance is invalid: PowerSI data must remain "
+            "comparison-only and cannot be used for solver parameter fitting."
+        )
+    # An old/default legacy view has no explicit provenance.  Keep it readable,
+    # but do not promote an absent field into a source-only claim.  Research is
+    # stricter: every required provenance gate must be present and exact.
+    if research and (
+        provenance.get("profile_key") != _RESEARCH_SOLVER_PROFILE_KEY
+        or provenance.get("profile_badge") != "RESEARCH"
+        or provenance.get("source_only") is not True
+        or provenance.get("validation_status") != "research_not_validated"
+        or provenance.get("powersi_used_for_parameters") is not False
+    ):
+        raise ValueError(
+            "Research evaluation result is missing explicit source-only, "
+            "validation, or PowerSI-parameter provenance."
+        )
+    research_hashes: dict[str, str] = {}
+    if research:
+        for name in _RESEARCH_HASH_FIELDS:
+            value = str(provenance.get(name, "")).strip().lower()
+            if len(value) != 64 or any(
+                character not in "0123456789abcdef" for character in value
+            ):
+                raise ValueError(
+                    "Research evaluation result is missing complete "
+                    f"{name} provenance."
+                )
+            research_hashes[name] = value
+        if (
+            research_hashes["artwork_evidence_sha256"]
+            != research_hashes["research_identity_sha256"]
+        ):
+            raise ValueError(
+                "Research evaluation result has mismatched artwork and research "
+                "evidence identities."
+            )
+        expected_static = solver_profile_static_identity_sha256(
+            RESEARCH_UNIFORM_ADMITTANCE_PROFILE
+        )
+        if research_hashes["static_compiler_algorithm_sha256"] != expected_static:
+            raise ValueError(
+                "Research evaluation result was produced by a different compiler "
+                "algorithm identity."
+            )
+        declared_algorithm = provenance.get("compiler_algorithm_id")
+        if declared_algorithm not in {
+            None,
+            RESEARCH_UNIFORM_ADMITTANCE_PROFILE.compiler_algorithm_id,
+        }:
+            raise ValueError(
+                "Research evaluation result has an unexpected compiler algorithm ID."
+            )
+        declared_compiler = provenance.get("compiler_version")
+        if declared_compiler not in {None, RESEARCH_PROFILE_COMPILER_VERSION}:
+            raise ValueError(
+                "Research evaluation result has an unexpected compiler version."
+            )
+    source_only = provenance.get("source_only", False) is True
+    source_only_status = str(
+        provenance.get("status")
+        or ("source_only_research" if research else "legacy_regression")
+    ).strip()
+    validation_status = str(
+        provenance.get("validation_status")
+        or ("research_not_validated" if research else "legacy_regression")
+    ).strip()
+    if research and not source_only:
+        raise ValueError(
+            "Research evaluation result is missing its source-only provenance gate."
+        )
+    if research and validation_status != "research_not_validated":
+        raise ValueError(
+            "Research evaluation result must remain marked as not PowerSI-validated."
+        )
+    return _SolverProvenancePresentation(
+        key=key,
+        label=label,
+        badge=badge,
+        solver_version=solver_version,
+        source_only=source_only,
+        source_only_status=source_only_status,
+        validation_status=validation_status,
+        powersi_used_for_parameters=False,
+        compiler_algorithm_id=(
+            RESEARCH_UNIFORM_ADMITTANCE_PROFILE.compiler_algorithm_id
+            if research
+            else LEGACY_MODAL_PROFILE.compiler_algorithm_id
+        ),
+        compiler_version=(
+            RESEARCH_PROFILE_COMPILER_VERSION if research else "legacy-v0.17"
+        ),
+        **research_hashes,
+    )
+
+
+def _comparison_solver_provenance(
+    comparisons: tuple[Any, ...],
+) -> _SolverProvenancePresentation:
+    """Require one unambiguous solver identity across an accepted batch."""
+
+    presentations = tuple(
+        _solver_provenance_for_view(view)
+        for comparison in comparisons
+        for evaluation in (
+            getattr(comparison, "baseline", None),
+            getattr(comparison, "tuned", None),
+        )
+        if (view := getattr(evaluation, "view", None)) is not None
+    )
+    if not presentations:
+        raise ValueError("Evaluation result is missing solver provenance.")
+    first = presentations[0]
+    if any(item != first for item in presentations[1:]):
+        raise ValueError(
+            "Evaluation result mixes solver profile, version, or source-only status; "
+            "the batch was rejected."
+        )
+    return first
 
 
 @dataclass(frozen=True, slots=True)
@@ -1233,7 +1480,7 @@ class MainWindow(QMainWindow):
 
         controls_section = QWidget()
         controls_section.setObjectName("evaluationControlsSection")
-        controls_section.setMinimumHeight(230)
+        controls_section.setMinimumHeight(285)
         controls_layout = QVBoxLayout(controls_section)
         controls_layout.setContentsMargins(0, 0, 0, 0)
         controls_heading = QLabel("PWR NET Selection & Evaluation")
@@ -1273,6 +1520,39 @@ class MainWindow(QMainWindow):
         self.target_edit = QLineEdit()
         self.target_edit.setPlaceholderText("Optional target, e.g. 0.02")
         self.target_edit.textEdited.connect(self._target_input_changed)
+        self.evaluation_solver_profile_combo = QComboBox()
+        self.evaluation_solver_profile_combo.setObjectName(
+            "evaluationSolverProfileCombo"
+        )
+        for label, key in _SOLVER_PROFILE_ITEMS:
+            self.evaluation_solver_profile_combo.addItem(label, key)
+        self.evaluation_solver_profile_combo.setCurrentIndex(
+            self.evaluation_solver_profile_combo.findData(
+                _LEGACY_SOLVER_PROFILE_KEY
+            )
+        )
+        self.evaluation_solver_profile_combo.setToolTip(
+            "Legacy modal is the default regression path. The actual-artwork "
+            "uniform-C00 profile is an EXPERIMENTAL research opt-in and requires "
+            "a complete topology certificate: it replaces "
+            "only the uniform C00 plane term, keeps nonuniform rectangular-bbox "
+            "modes, and refuses to run when source topology evidence is incomplete. "
+            "PowerSI data remains comparison-only and is never used for fitting."
+        )
+        self.evaluation_solver_profile_combo.currentIndexChanged.connect(
+            self._evaluation_solver_profile_changed
+        )
+        self.evaluation_solver_profile_status = QLabel()
+        self.evaluation_solver_profile_status.setObjectName(
+            "evaluationSolverProfileStatus"
+        )
+        self.evaluation_solver_profile_status.setWordWrap(True)
+        profile_picker = QWidget()
+        profile_picker_layout = QVBoxLayout(profile_picker)
+        profile_picker_layout.setContentsMargins(0, 0, 0, 0)
+        profile_picker_layout.setSpacing(3)
+        profile_picker_layout.addWidget(self.evaluation_solver_profile_combo)
+        profile_picker_layout.addWidget(self.evaluation_solver_profile_status)
         self.evaluation_modal_preset_combo = QComboBox()
         self.evaluation_modal_preset_combo.setObjectName(
             "evaluationModalPresetCombo"
@@ -1297,8 +1577,10 @@ class MainWindow(QMainWindow):
         )
         form.addRow("PWR NETs", rail_picker)
         form.addRow("Common target impedance (ohm)", self.target_edit)
+        form.addRow("Physics model", profile_picker)
         form.addRow("Numerical convergence preset", self.evaluation_modal_preset_combo)
         controls_layout.addLayout(form)
+        self._update_evaluation_solver_profile_help()
         self.evaluate_button = QPushButton("Run Original + Tuned evaluation")
         self.evaluate_button.setObjectName("evaluateScenarioButton")
         self.evaluate_button.clicked.connect(self.run_evaluation)
@@ -1334,7 +1616,7 @@ class MainWindow(QMainWindow):
         results_actions.addWidget(self.export_tuned_csv_button)
         results_actions.addWidget(self.open_results_button)
         results_layout.addLayout(results_actions)
-        self.comparison_table = QTableWidget(0, 9)
+        self.comparison_table = QTableWidget(0, 10)
         self.comparison_table.setObjectName("evaluationComparisonTable")
         self.comparison_table.setHorizontalHeaderLabels(
             (
@@ -1347,6 +1629,7 @@ class MainWindow(QMainWindow):
                 "Baseline",
                 "Overall confidence Original→Tuned",
                 "Combined convergence Original→Tuned",
+                "Solver provenance",
             )
         )
         self.comparison_table.setEditTriggers(
@@ -1360,35 +1643,18 @@ class MainWindow(QMainWindow):
         result_details.setObjectName("evaluationResultDetails")
         result_details.addTab(self.comparison_table, "Comparison table")
         result_details.addTab(self.evaluation_summary, "Summary")
-        evaluation_notes = QTextBrowser()
-        evaluation_notes.setObjectName("evaluationNotes")
-        evaluation_notes.setPlainText(
-            "Each checked PWR NET is solved sequentially. Original results are cached "
-            "inside the scenario and compared with the current Tuned state; phase is not "
-            "plotted. Open Result Plot shows the shared impedance plot in a large, "
-            "non-modal window; Plot Channels and X/Y markers only change that display. "
-            "Export Tuned CSV writes the final enabled assignments for evaluated "
-            "PWR NETs. "
-            "Evaluation reuses the existing modal PI engine. "
-            "Numerical convergence preset changes only internal rectangular modal "
-            "convergence/runtime; Experimental m12 check is an opt-in m10-to-m12 "
-            "check, not a PowerSI or absolute-accuracy setting. A batch is accepted "
-            "only when every Original and Tuned result reports combined convergence. "
-            "Non-rectangular PWR artwork is solved with its disclosed rectangular bbox; "
-            "an immediately adjacent opposite-side DGND layer may use the shared-PWR "
-            "ideal-common-reference equivalent; results are single-rail Zii without "
-            "inter-rail coupling.\n\n"
-            + _EXPLORATORY_FIDELITY_WARNING
-        )
-        evaluation_notes.setStyleSheet("color: #d6a64f;")
-        result_details.addTab(evaluation_notes, "Notes")
+        self.evaluation_notes = QTextBrowser()
+        self.evaluation_notes.setObjectName("evaluationNotes")
+        self.evaluation_notes.setStyleSheet("color: #d6a64f;")
+        self._update_evaluation_notes()
+        result_details.addTab(self.evaluation_notes, "Notes")
         results_layout.addWidget(result_details, 1)
 
         section_splitter.addWidget(controls_section)
         section_splitter.addWidget(results_section)
         section_splitter.setStretchFactor(0, 1)
         section_splitter.setStretchFactor(1, 3)
-        section_splitter.setSizes((350, 390))
+        section_splitter.setSizes((405, 335))
         layout.addWidget(section_splitter, 1)
         return page
 
@@ -2959,6 +3225,7 @@ class MainWindow(QMainWindow):
             self.select_all_rails_button,
             self.clear_rails_button,
             self.target_edit,
+            self.evaluation_solver_profile_combo,
             self.evaluation_modal_preset_combo,
             self.add_model_action,
             self.save_action,
@@ -2994,6 +3261,7 @@ class MainWindow(QMainWindow):
             self.select_all_rails_button,
             self.clear_rails_button,
             self.target_edit,
+            self.evaluation_solver_profile_combo,
             self.evaluation_modal_preset_combo,
             self.plane_layer_bar,
             self.distribution_table,
@@ -3073,6 +3341,11 @@ class MainWindow(QMainWindow):
                     "Assign models before evaluating their PWR rail."
                 )
         self.evaluation_summary.setPlainText(reason)
+        self.export_tuned_csv_button.setToolTip(
+            "Export enabled Decaps from the evaluated Tuned PWR NETs as "
+            "Component, REFDES and NET Name, with solver provenance."
+        )
+        self._update_evaluation_notes()
         self.ai_output.clear()
         self.ai_button.setEnabled(False)
 
@@ -3128,6 +3401,32 @@ class MainWindow(QMainWindow):
         box = QMessageBox(QMessageBox.Icon.Critical, APP_DISPLAY_NAME, final_line, parent=self)
         box.setDetailedText(details)
         box.exec()
+
+    def _evaluation_worker_error(self, details: str) -> None:
+        """Expose research evidence blockers without changing the selected model."""
+
+        final_line = next(
+            (line for line in reversed(details.strip().splitlines()) if line.strip()),
+            "Evaluation failed",
+        )
+        profile_key = self._selected_evaluation_solver_profile()
+        profile_label = self.evaluation_solver_profile_combo.currentText()
+        if profile_key == _RESEARCH_SOLVER_PROFILE_KEY:
+            self.evaluation_summary.setPlainText(
+                "Research evaluation did not run. Legacy modal was not used as a "
+                "fallback, and the open source/scenario was preserved.\n\n"
+                + final_line
+                + "\n\nRepair the reported source/topology evidence or explicitly "
+                "select Legacy modal and run again."
+            )
+            self.status_text.setText("Research evaluation blocked by source evidence")
+        else:
+            self.evaluation_summary.setPlainText(
+                f"Evaluation failed with physics model {profile_label}.\n\n"
+                + final_line
+            )
+            self.status_text.setText("Evaluation failed")
+        self._worker_error(details)
 
     def _worker_failed(
         self, details: str, handler: Callable[[str], None]
@@ -3957,6 +4256,104 @@ class MainWindow(QMainWindow):
             )
             self.status_text.setText("Numerical convergence preset changed; evaluation required")
 
+    def _evaluation_solver_profile_changed(self, _index: int) -> None:
+        """Invalidate results when the selected physics contract changes."""
+
+        self._update_evaluation_solver_profile_help()
+        self._update_evaluation_notes()
+        if self._comparison_batch is not None:
+            self._invalidate_evaluation(
+                "Physics model changed; run Original + Tuned evaluation again."
+            )
+            self.status_text.setText("Physics model changed; evaluation required")
+
+    def _selected_evaluation_solver_profile(self) -> str:
+        value = self.evaluation_solver_profile_combo.currentData()
+        if value in {
+            _LEGACY_SOLVER_PROFILE_KEY,
+            _RESEARCH_SOLVER_PROFILE_KEY,
+        }:
+            return str(value)
+        return _LEGACY_SOLVER_PROFILE_KEY
+
+    def _update_evaluation_solver_profile_help(self) -> None:
+        research = (
+            self._selected_evaluation_solver_profile()
+            == _RESEARCH_SOLVER_PROFILE_KEY
+        )
+        if research:
+            self.evaluation_solver_profile_status.setText(
+                "EXPERIMENTAL RESEARCH · topology certificate required · "
+                "transient / not cached · not PowerSI-validated"
+            )
+            self.evaluation_solver_profile_status.setStyleSheet(
+                "color: #d6a64f; font-weight: 700;"
+            )
+        else:
+            self.evaluation_solver_profile_status.setText(
+                "LEGACY · default regression path"
+            )
+            self.evaluation_solver_profile_status.setStyleSheet(
+                "color: #7aa2c7; font-weight: 600;"
+            )
+
+    def _update_evaluation_notes(
+        self,
+        provenance: _SolverProvenancePresentation | None = None,
+    ) -> None:
+        if not hasattr(self, "evaluation_notes"):
+            return
+        if provenance is not None:
+            first_line = "Result provenance: " + provenance.banner_text
+        elif (
+            self._selected_evaluation_solver_profile()
+            == _RESEARCH_SOLVER_PROFILE_KEY
+        ):
+            first_line = (
+                "Selected physics model: [RESEARCH] Actual-artwork uniform mode · "
+                "EXPERIMENTAL / not PowerSI-validated · topology certificate required."
+            )
+        else:
+            first_line = (
+                "Selected physics model: [LEGACY] Legacy modal · default regression path."
+            )
+        research = (
+            provenance.badge == "RESEARCH"
+            if provenance is not None
+            else self._selected_evaluation_solver_profile()
+            == _RESEARCH_SOLVER_PROFILE_KEY
+        )
+        cache_note = (
+            "Research Original is recomputed for each run and remains transient: "
+            "it is not cached, persisted, saved, or reused. "
+            if research
+            else (
+                "Original results are cached inside the scenario and compared with "
+                "the current Tuned state. "
+            )
+        )
+        self.evaluation_notes.setPlainText(
+            first_line
+            + "\n\n"
+            + "Each checked PWR NET is solved sequentially in a background worker. "
+            + cache_note
+            + "Phase is not plotted. Open Result Plot shows the "
+            "shared impedance plot in a large, non-modal window; Plot Channels and "
+            "X/Y markers only change that display. Export Tuned CSV writes the final "
+            "enabled assignments plus result-derived solver provenance. "
+            "The research profile replaces only the actual-artwork uniform C00 plane "
+            "term; nonuniform modes retain the disclosed rectangular bounding-box "
+            "approximation. Incomplete topology or source/reference evidence blocks "
+            "research evaluation without falling back to Legacy modal. PowerSI data "
+            "is comparison-only and is never used to fit R, L, C, or solver parameters. "
+            "Numerical convergence preset changes only internal rectangular modal "
+            "convergence/runtime; Experimental m12 check is an opt-in m10-to-m12 "
+            "check, not a PowerSI or absolute-accuracy setting. A batch is accepted "
+            "only when every Original and Tuned result reports combined convergence. "
+            "Results are single-rail Zii without inter-rail coupling.\n\n"
+            + _EXPLORATORY_FIDELITY_WARNING
+        )
+
     def _selected_evaluation_modal_max_index(self) -> int:
         value = self.evaluation_modal_preset_combo.currentData()
         if isinstance(value, bool) or not isinstance(value, int):
@@ -4427,6 +4824,7 @@ class MainWindow(QMainWindow):
             QMessageBox.warning(self, APP_DISPLAY_NAME, "Target impedance must be positive.")
             return
         modal_max_index = self._selected_evaluation_modal_max_index()
+        solver_profile = self._selected_evaluation_solver_profile()
 
         from ..evaluation import (
             baseline_fallback_model_refdes,
@@ -4483,17 +4881,26 @@ class MainWindow(QMainWindow):
             rail_ids,
             target_ohm=target,
             modal_max_index=modal_max_index,
+            solver_profile=solver_profile,
             attachments=dict(self._attachments),
+        )
+        profile_prefix = (
+            "RESEARCH / not PowerSI-validated · "
+            if solver_profile == _RESEARCH_SOLVER_PROFILE_KEY
+            else "LEGACY · "
         )
         self.evaluation_summary.setPlainText(
             f"Evaluating Original and Tuned configurations for "
             f"{len(rail_ids):,} PWR NET(s) with "
-            f"{self.evaluation_modal_preset_combo.currentText()} numerical convergence..."
+            f"{profile_prefix}{self.evaluation_solver_profile_combo.currentText()} and "
+            f"{self.evaluation_modal_preset_combo.currentText()} numerical convergence. "
+            "All computation runs in the background; Cancel remains available."
         )
         self._run_worker(
             worker,
             self._accept_evaluation,
             label=f"Evaluating {len(rail_ids):,} PWR NET(s)...",
+            on_error=self._evaluation_worker_error,
         )
 
     def _accept_evaluation(self, result: Any) -> None:
@@ -4551,7 +4958,11 @@ class MainWindow(QMainWindow):
 
         current = self._scenario
         try:
-            rail_labels = self._render_comparisons(comparisons)
+            provenance = _comparison_solver_provenance(comparisons)
+            rail_labels = self._render_comparisons(
+                comparisons,
+                provenance=provenance,
+            )
         except (KeyError, RuntimeError, TypeError, ValueError) as exc:
             self._invalidate_evaluation(
                 "The comparison plot could not validate the completed batch."
@@ -4576,6 +4987,10 @@ class MainWindow(QMainWindow):
             for comparison in comparisons
         }
         self._update_result_plot_button()
+        self.export_tuned_csv_button.setToolTip(
+            "Export enabled Decaps from the evaluated Tuned PWR NETs with "
+            "result-derived solver provenance.\n\n" + provenance.details_text
+        )
 
         self.comparison_table.setRowCount(len(comparisons))
         for row, comparison in enumerate(comparisons):
@@ -4589,7 +5004,13 @@ class MainWindow(QMainWindow):
                 impedance_transition_at_frequency(baseline, tuned, 10.0e6),
                 impedance_transition_at_frequency(baseline, tuned, 100.0e6),
                 f"{baseline.max_violation_db:.3f} → {tuned.max_violation_db:.3f} dB",
-                "Reused" if comparison.baseline_from_cache else "Saved now",
+                (
+                    "Transient / not cached"
+                    if provenance.badge == "RESEARCH"
+                    else (
+                        "Reused" if comparison.baseline_from_cache else "Saved now"
+                    )
+                ),
                 (
                     f"{baseline.confidence}: {baseline.confidence_note}"
                     f" → {tuned.confidence}: {tuned.confidence_note}"
@@ -4598,11 +5019,13 @@ class MainWindow(QMainWindow):
                     f"{_modal_convergence_text(baseline)}"
                     f" → {_modal_convergence_text(tuned)}"
                 ),
+                provenance.banner_text,
             )
             for column, value in enumerate(values):
-                self.comparison_table.setItem(
-                    row, column, QTableWidgetItem(str(value))
-                )
+                item = QTableWidgetItem(str(value))
+                if column == 9:
+                    item.setToolTip(provenance.details_text)
+                self.comparison_table.setItem(row, column, item)
         self.comparison_table.resizeColumnsToContents()
         assert self._results_window is not None
         self._results_window.copy_table_from(self.comparison_table)
@@ -4617,18 +5040,34 @@ class MainWindow(QMainWindow):
         self.ai_rail_combo.blockSignals(False)
         self._ai_rail_changed()
 
-        cached_count = sum(item.baseline_from_cache for item in comparisons)
-        newly_saved = len(comparisons) - cached_count
-        save_note = (
-            f"Original results will be saved automatically to {self._scenario_path.name}."
-            if newly_saved
-            else f"Original results are stored in {self._scenario_path.name}."
-        )
+        research = provenance.badge == "RESEARCH"
+        if research:
+            baseline_note = (
+                "Original baseline: recomputed for this run; transient / not cached "
+                "or persisted."
+            )
+            save_note = (
+                "Research result curves are session-only and are not written to the "
+                "scenario baseline cache."
+            )
+        else:
+            cached_count = sum(item.baseline_from_cache for item in comparisons)
+            newly_saved = len(comparisons) - cached_count
+            baseline_note = (
+                f"Original baseline: {cached_count:,} reused, {newly_saved:,} newly "
+                "evaluated and staged."
+            )
+            save_note = (
+                f"Original results will be saved automatically to {self._scenario_path.name}."
+                if newly_saved
+                else f"Original results are stored in {self._scenario_path.name}."
+            )
         self.evaluation_summary.setPlainText(
             "\n".join(
                 (
+                    "Solver provenance: " + provenance.banner_text,
                     f"Compared {len(comparisons):,} PWR NET(s): Original vs Tuned.",
-                    f"Original baseline: {cached_count:,} reused, {newly_saved:,} newly evaluated and staged.",
+                    baseline_note,
                     "Result plot window: one shared impedance view; all PWR NETs start visible and can be filtered independently.",
                     "Tuned Decap CSV: enabled final assignments from the evaluated PWR NETs.",
                     (
@@ -4643,15 +5082,26 @@ class MainWindow(QMainWindow):
                 )
             )
         )
+        self._update_evaluation_notes(provenance)
         self._refresh_all()
         self.status_text.setText(
             f"Evaluation complete: {len(comparisons):,} PWR NET(s)"
         )
 
-    def _render_comparisons(self, comparisons: tuple[Any, ...]) -> dict[str, str]:
+    def _render_comparisons(
+        self,
+        comparisons: tuple[Any, ...],
+        *,
+        provenance: _SolverProvenancePresentation,
+    ) -> dict[str, str]:
         rail_colors, rail_labels = self._comparison_plot_metadata(comparisons)
         if self._results_window is None:
             self._results_window = ComparisonResultsWindow(self)
+        self._results_window.set_provenance(
+            provenance.banner_text,
+            research=provenance.badge == "RESEARCH",
+            details=provenance.details_text,
+        )
         # Validate the exact detached plot before accepting completed results.
         # The window stays hidden until the user presses the explicit button.
         self._results_window.set_plot_results(
@@ -4715,6 +5165,12 @@ class MainWindow(QMainWindow):
             self._scenario,
             tuple(str(comparison.rail_id) for comparison in comparisons),
         )
+        try:
+            provenance = _comparison_solver_provenance(comparisons)
+        except ValueError as exc:
+            QMessageBox.critical(self, APP_DISPLAY_NAME, str(exc))
+            self.status_text.setText("Tuned Decap CSV provenance validation failed")
+            return
         evaluated_keys = {
             str(comparison.rail_id).casefold() for comparison in comparisons
         }
@@ -4743,8 +5199,50 @@ class MainWindow(QMainWindow):
         try:
             with path.open("w", encoding="utf-8-sig", newline="") as stream:
                 writer = csv.writer(stream, lineterminator="\n")
-                writer.writerow(("Component", "REFDES", "NET Name"))
-                writer.writerows(rows)
+                writer.writerow(
+                    (
+                        "Component",
+                        "REFDES",
+                        "NET Name",
+                        "Solver Profile",
+                        "Profile Badge",
+                        "Solver Version",
+                        "Source-only Status",
+                        "PowerSI Parameter Use",
+                        "Compiler Algorithm ID",
+                        "Compiler Version",
+                        "Artwork Evidence SHA-256",
+                        "Research Identity SHA-256",
+                        "Static Compiler Algorithm SHA-256",
+                        "Source SHA-256",
+                        "Geometry Manifest SHA-256",
+                        "Component Manifest SHA-256",
+                        "Material Manifest SHA-256",
+                        "Topology Certificate SHA-256",
+                    )
+                )
+                source_only = "Yes" if provenance.source_only else "No"
+                writer.writerows(
+                    (
+                        *row,
+                        provenance.label,
+                        provenance.badge,
+                        provenance.solver_version,
+                        f"{source_only} ({provenance.source_only_status})",
+                        "None (comparison-only)",
+                        provenance.compiler_algorithm_id,
+                        provenance.compiler_version,
+                        provenance.artwork_evidence_sha256,
+                        provenance.research_identity_sha256,
+                        provenance.static_compiler_algorithm_sha256,
+                        provenance.source_sha256,
+                        provenance.geometry_manifest_sha256,
+                        provenance.component_manifest_sha256,
+                        provenance.material_manifest_sha256,
+                        provenance.topology_certificate_sha256,
+                    )
+                    for row in rows
+                )
         except OSError as exc:
             QMessageBox.critical(
                 self,
@@ -4759,7 +5257,8 @@ class MainWindow(QMainWindow):
             else ""
         )
         self.status_text.setText(
-            f"Exported {len(rows):,} Tuned Decap(s) to {path.name}{suffix}"
+            f"Exported {len(rows):,} Tuned Decap(s) to {path.name} "
+            f"[{provenance.badge} · {provenance.solver_version}]{suffix}"
         )
 
     def _refresh_results_window(
@@ -4777,6 +5276,12 @@ class MainWindow(QMainWindow):
         if not rendered or self._scenario is None:
             self._results_window.clear_results()
             return
+        provenance = _comparison_solver_provenance(rendered)
+        self._results_window.set_provenance(
+            provenance.banner_text,
+            research=provenance.badge == "RESEARCH",
+            details=provenance.details_text,
+        )
         rail_colors, rail_labels = self._comparison_plot_metadata(rendered)
         self._results_window.set_results(
             rendered,

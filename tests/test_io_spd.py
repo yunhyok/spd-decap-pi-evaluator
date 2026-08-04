@@ -1301,6 +1301,11 @@ def test_valid_mixed_reference_certificate_binds_assets_and_low_confidence(
     assert "Mixed reference Signal$PWR/Signal$GND" in view.confidence_note
     assert "overlap 100.00%, dominant 100.00%" in view.confidence_note
     assert "rectangular-return approximation" in view.confidence_note
+    # Lightweight legacy outcomes predate the profile/provenance contract.
+    # They must remain displayable as the conservative default, not research.
+    assert view.solver_profile_key == "legacy_modal_v017"
+    assert view.solver_profile_badge == "LEGACY"
+    assert view.solver_provenance == {}
 
 
 def test_mixed_reference_geometry_failure_blocks_import_plan(

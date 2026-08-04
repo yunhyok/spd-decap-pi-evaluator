@@ -37,6 +37,10 @@ from test_spd_decap_scenario_edits import (
 from spd_decap_pi import evaluation as evaluation_module
 from spd_decap_pi._core.domain import StackupLayer
 from spd_decap_pi._core.services import EvaluationView
+from spd_decap_pi._core.solver.profiles import (
+    RESEARCH_UNIFORM_ADMITTANCE_PROFILE,
+    solver_profile_static_identity_sha256,
+)
 from spd_decap_pi.gui.worker import FunctionWorker
 from spd_decap_pi.gui.main_window import (
     MainWindow,
@@ -49,6 +53,7 @@ from spd_decap_pi.gui.main_window import (
     _modal_convergence_text,
     _rejected_comparison_convergence,
     _source_via_path_recovery_summary,
+    _solver_provenance_for_view,
     _shared_pad_connection_summary,
     _short_plane_layer_labels,
     _tuned_decap_csv_rows,
@@ -66,6 +71,32 @@ from spd_decap_pi.version import APP_DISPLAY_NAME
 
 def _application() -> QApplication:
     return QApplication.instance() or QApplication([])
+
+
+def _research_provenance() -> dict[str, object]:
+    """Return a complete current-profile identity for GUI-only result fixtures."""
+
+    evidence = "1" * 64
+    return {
+        "profile_key": "research_uniform_admittance",
+        "profile_badge": "RESEARCH",
+        "status": "source_only_research",
+        "source_only": True,
+        "powersi_used_for_parameters": False,
+        "validation_status": "research_not_validated",
+        "artwork_evidence_sha256": evidence,
+        "research_identity_sha256": evidence,
+        "static_compiler_algorithm_sha256": (
+            solver_profile_static_identity_sha256(
+                RESEARCH_UNIFORM_ADMITTANCE_PROFILE
+            )
+        ),
+        "source_sha256": "2" * 64,
+        "geometry_manifest_sha256": "3" * 64,
+        "component_manifest_sha256": "4" * 64,
+        "material_manifest_sha256": "5" * 64,
+        "topology_certificate_sha256": "6" * 64,
+    }
 
 
 def test_function_worker_coalesces_progress_before_it_reaches_the_gui() -> None:
@@ -268,8 +299,25 @@ def test_evaluation_layout_uses_an_expanding_rail_list_and_detached_plot_button(
             "Experimental m12 check (169 modes)"
         )
         assert "4,139 s" in window.evaluation_modal_preset_combo.toolTip()
+        assert window.evaluation_solver_profile_combo.currentData() == (
+            "legacy_modal_v017"
+        )
+        assert window.evaluation_solver_profile_combo.currentText() == "Legacy modal"
+        research_index = window.evaluation_solver_profile_combo.findData(
+            "research_uniform_admittance"
+        )
+        assert research_index >= 0
+        assert window.evaluation_solver_profile_combo.itemText(research_index) == (
+            "Experimental: actual-artwork uniform C00 "
+            "(topology certificate required)"
+        )
+        assert "comparison-only" in window.evaluation_solver_profile_combo.toolTip()
+        assert "LEGACY" in window.evaluation_solver_profile_status.text()
         notes = window.findChild(QTextBrowser, "evaluationNotes")
         assert notes is not None
+        assert notes.toPlainText().startswith("Selected physics model: [LEGACY]")
+        assert "actual-artwork uniform C00" in notes.toPlainText()
+        assert "without falling back" in notes.toPlainText()
         assert "not a PowerSI or absolute-accuracy setting" in notes.toPlainText()
         assert "absolute sub-milliohm accuracy not certified" in notes.toPlainText()
     finally:
@@ -489,7 +537,7 @@ def test_right_side_sections_are_vertically_resizable_and_noncollapsible() -> No
     try:
         expected_minimums = {
             "selectionSectionSplitter": (170, 160),
-            "evaluationSectionSplitter": (230, 180),
+            "evaluationSectionSplitter": (285, 180),
             "aiSectionSplitter": (210, 160),
         }
         for object_name, minimums in expected_minimums.items():
@@ -1342,6 +1390,7 @@ def test_evaluation_worker_receives_scenario_model_attachments(
         worker = captured["worker"]
         assert worker.kwargs["attachments"] == imported.attachments
         assert worker.kwargs["modal_max_index"] == 8
+        assert worker.kwargs["solver_profile"] == "legacy_modal_v017"
         assert worker.function.__name__ == "evaluate_comparison_batch"
         assert worker.args[1] == (
             base.rails[0].rail_id,
@@ -1363,6 +1412,18 @@ def test_evaluation_worker_receives_scenario_model_attachments(
         )
         window.run_evaluation()
         assert captured["worker"].kwargs["modal_max_index"] == 12
+        window.evaluation_solver_profile_combo.setCurrentIndex(
+            window.evaluation_solver_profile_combo.findData(
+                "research_uniform_admittance"
+            )
+        )
+        window.run_evaluation()
+        assert captured["worker"].kwargs["solver_profile"] == (
+            "research_uniform_admittance"
+        )
+        assert "RESEARCH / not PowerSI-validated" in (
+            window.evaluation_summary.toPlainText()
+        )
     finally:
         window._dirty = False
         window.close()
@@ -1386,6 +1447,348 @@ def test_cancelled_worker_does_not_show_a_failure_or_leave_cancelling_status() -
         assert window.status_text.text() == "Operation cancelled"
         assert window._worker is None
     finally:
+        window.close()
+        application.processEvents()
+
+
+def test_solver_profile_change_clears_results_and_marks_research_as_opt_in() -> None:
+    application = _application()
+    window = MainWindow()
+    try:
+        window._comparison_batch = object()
+        window.comparison_table.setRowCount(1)
+        research_index = window.evaluation_solver_profile_combo.findData(
+            "research_uniform_admittance"
+        )
+
+        window.evaluation_solver_profile_combo.setCurrentIndex(research_index)
+
+        assert window._comparison_batch is None
+        assert window.comparison_table.rowCount() == 0
+        assert window.status_text.text() == (
+            "Physics model changed; evaluation required"
+        )
+        assert "RESEARCH" in window.evaluation_solver_profile_status.text()
+        assert "not PowerSI-validated" in (
+            window.evaluation_solver_profile_status.text()
+        )
+        notes = window.findChild(QTextBrowser, "evaluationNotes")
+        assert notes is not None
+        assert notes.toPlainText().startswith("Selected physics model: [RESEARCH]")
+        assert "topology certificate required" in notes.toPlainText()
+        assert "not cached, persisted, saved, or reused" in notes.toPlainText()
+    finally:
+        window.close()
+        application.processEvents()
+
+
+def test_research_evaluation_error_is_actionable_without_legacy_fallback(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    application = _application()
+    window = MainWindow()
+    shown: list[str] = []
+    try:
+        window.evaluation_solver_profile_combo.setCurrentIndex(
+            window.evaluation_solver_profile_combo.findData(
+                "research_uniform_admittance"
+            )
+        )
+        monkeypatch.setattr(window, "_worker_error", shown.append)
+        details = (
+            "Traceback (most recent call last):\n"
+            "ResearchProfileUnavailable: Research profile unavailable "
+            "[TOPOLOGY_INCOMPLETE]: polygon connectivity is not proven. "
+            "Switch to Legacy modal or repair source evidence."
+        )
+
+        window._evaluation_worker_error(details)
+
+        assert shown == [details]
+        assert window.evaluation_solver_profile_combo.currentData() == (
+            "research_uniform_admittance"
+        )
+        assert window.status_text.text() == (
+            "Research evaluation blocked by source evidence"
+        )
+        summary = window.evaluation_summary.toPlainText()
+        assert "Legacy modal was not used as a fallback" in summary
+        assert "TOPOLOGY_INCOMPLETE" in summary
+        assert "repair" in summary.casefold()
+    finally:
+        window.close()
+        application.processEvents()
+
+
+def test_research_evaluation_worker_keeps_qt_heartbeat_responsive(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    application = _application()
+    source = tmp_path / "research-worker.spd"
+    source.write_text(MINI_SPD, encoding="ascii")
+    imported = import_spd_scenario(source)
+    window = MainWindow()
+    result_threads: list[int] = []
+    accepted: list[object] = []
+    heartbeats: list[None] = []
+    try:
+        window._accept_spd_import(imported)
+        assert window.scenario is not None
+        window._scenario_path = tmp_path / "research-worker.spdpi"
+        window.evaluation_solver_profile_combo.setCurrentIndex(
+            window.evaluation_solver_profile_combo.findData(
+                "research_uniform_admittance"
+            )
+        )
+
+        def fake_batch(
+            *_args,
+            solver_profile,
+            progress,
+            is_cancelled,
+            **_kwargs,
+        ):
+            assert solver_profile == "research_uniform_admittance"
+            result_threads.append(threading.get_ident())
+            for step in range(6):
+                if is_cancelled():
+                    return object()
+                progress(step * 15, f"research step {step}")
+                sleep(0.02)
+            progress(100, "research complete")
+            return object()
+
+        monkeypatch.setattr(evaluation_module, "evaluate_comparison_batch", fake_batch)
+        monkeypatch.setattr(window, "_accept_evaluation", accepted.append)
+        window.show()
+        application.processEvents()
+        heartbeat = QTimer(window)
+        heartbeat.setInterval(5)
+        heartbeat.timeout.connect(lambda: heartbeats.append(None))
+        heartbeat.start()
+
+        window.run_evaluation()
+        assert window._worker is not None
+        assert not window.evaluation_solver_profile_combo.isEnabled()
+        assert not window.cancel_button.isHidden()
+
+        timeout = QTimer(window)
+        timeout.setSingleShot(True)
+        loop = QEventLoop(window)
+        timeout.timeout.connect(loop.quit)
+
+        def finish_when_idle() -> None:
+            if window._worker is None:
+                loop.quit()
+            else:
+                QTimer.singleShot(5, finish_when_idle)
+
+        QTimer.singleShot(5, finish_when_idle)
+        timeout.start(5_000)
+        loop.exec()
+        heartbeat.stop()
+
+        assert window._worker is None
+        assert accepted
+        assert result_threads == [result_threads[0]]
+        assert result_threads[0] != threading.get_ident()
+        assert len(heartbeats) >= 5
+        assert window.evaluation_solver_profile_combo.isEnabled()
+        assert window.cancel_button.isHidden()
+        assert window.evaluation_solver_profile_combo.currentData() == (
+            "research_uniform_admittance"
+        )
+    finally:
+        window._dirty = False
+        window.close()
+        application.processEvents()
+
+
+def test_research_solver_provenance_requires_source_only_and_no_powersi_fit() -> None:
+    view = SimpleNamespace(
+        solver_profile_key="research_uniform_admittance",
+        solver_profile_label="Actual-artwork uniform mode",
+        solver_profile_badge="RESEARCH",
+        solver_version="research-test-1",
+        solver_provenance=_research_provenance(),
+    )
+
+    presentation = _solver_provenance_for_view(view)
+
+    assert presentation.source_only
+    assert "[RESEARCH]" in presentation.banner_text
+    assert "research-uniform-c00-source-only-v2" in presentation.banner_text
+    assert "research-uniform-source-v1" in presentation.banner_text
+    assert "evidence 111111111111…" in presentation.banner_text
+    assert "modal backend research-test-1" in presentation.banner_text
+    assert "not PowerSI-validated" in presentation.banner_text
+    assert "PowerSI parameter fitting: never" in presentation.banner_text
+    assert "Source SHA-256: " + "2" * 64 in presentation.details_text
+    assert "Topology certificate SHA-256: " + "6" * 64 in (
+        presentation.details_text
+    )
+
+    incomplete = SimpleNamespace(
+        solver_profile_key=view.solver_profile_key,
+        solver_profile_label=view.solver_profile_label,
+        solver_profile_badge=view.solver_profile_badge,
+        solver_version=view.solver_version,
+        solver_provenance=dict(view.solver_provenance),
+    )
+    incomplete.solver_provenance.pop("topology_certificate_sha256")
+    with pytest.raises(ValueError, match="topology_certificate_sha256"):
+        _solver_provenance_for_view(incomplete)
+
+    view.solver_provenance["powersi_used_for_parameters"] = True
+    with pytest.raises(ValueError, match="comparison-only"):
+        _solver_provenance_for_view(view)
+
+
+def test_research_success_is_transient_and_exports_full_composite_identity(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    application = _application()
+    source = tmp_path / "research-success.spd"
+    source.write_text(MINI_SPD, encoding="ascii")
+    imported = import_spd_scenario(source)
+    window = MainWindow()
+    try:
+        window._accept_spd_import(imported)
+        assert window.scenario is not None
+        window._scenario_path = tmp_path / "research-success.spdpi"
+        window._dirty = False
+        rail_id = window.scenario.base_project.rails[0].rail_id
+        profile_index = window.evaluation_solver_profile_combo.findData(
+            "research_uniform_admittance"
+        )
+        window.evaluation_solver_profile_combo.setCurrentIndex(profile_index)
+        provenance = _research_provenance()
+        convergence = {
+            "converged": True,
+            "frequency_converged": True,
+            "frequency_budget_exhausted": False,
+            "frequency_rms_delta_db": 0.01,
+            "frequency_max_delta_db": 0.02,
+            "modal_converged": True,
+            "modal_rms_delta_db": 0.03,
+            "modal_max_delta_db": 0.04,
+        }
+        view = EvaluationView(
+            rail_id=rail_id,
+            frequency_hz=[1.0e5, 1.0e6],
+            magnitude_ohm=[0.02, 0.03],
+            phase_deg=[0.0, 1.0],
+            target_ohm=0.025,
+            target_curve_ohm=[0.025, 0.025],
+            max_violation_db=1.0,
+            max_violation_frequency_hz=1.0e6,
+            rms_violation_db=0.5,
+            peak_magnitude_ohm=0.03,
+            peak_frequency_hz=1.0e6,
+            peak_prominence_db=1.2,
+            peaks=[],
+            cap_count=1,
+            model_count=1,
+            confidence="LOW",
+            confidence_note="research fixture",
+            confidence_bands=[],
+            assumptions=[],
+            solver_version=evaluation_module.SOLVER_VERSION,
+            solver_diagnostics={},
+            convergence=convergence,
+            z_real_ohm=[0.02, 0.03],
+            z_imag_ohm=[0.0, 0.0],
+            solver_profile_key="research_uniform_admittance",
+            solver_profile_label="Research: actual-artwork uniform mode",
+            solver_profile_badge="RESEARCH",
+            solver_provenance=dict(provenance),
+        )
+        design_fingerprint = window.scenario.design_fingerprint
+        result_key = ScenarioResultKey.from_settings(
+            design_fingerprint=design_fingerprint,
+            rail_id=rail_id,
+            settings={"solver_profile": "research_uniform_admittance"},
+            solver_version=view.solver_version,
+        )
+        evaluation = SimpleNamespace(
+            view=view,
+            result_key=result_key,
+            design_fingerprint=design_fingerprint,
+        )
+        comparison = SimpleNamespace(
+            rail_id=rail_id,
+            baseline=evaluation,
+            tuned=evaluation,
+            baseline_from_cache=False,
+            configuration_unchanged=True,
+        )
+        scenario_before = window.scenario.model_dump(mode="json")
+        attachments_before = dict(imported.attachments)
+        batch = SimpleNamespace(
+            comparisons=(comparison,),
+            updated_scenario=window.scenario,
+            updated_attachments=dict(imported.attachments),
+            matches=lambda _scenario: True,
+            validate_for_scenario=lambda _scenario: None,
+        )
+
+        window._accept_evaluation(batch)
+
+        assert window.comparison_table.item(0, 6).text() == (
+            "Transient / not cached"
+        )
+        summary = window.evaluation_summary.toPlainText()
+        assert "recomputed for this run; transient / not cached" in summary
+        assert "reused" not in summary
+        assert "newly evaluated and staged" not in summary
+        assert "will be saved" not in summary
+        assert window.scenario.model_dump(mode="json") == scenario_before
+        assert window._attachments == attachments_before
+        assert window.scenario.evaluation_cache == {}
+        assert not window._dirty
+        result_window = window._results_window
+        assert result_window is not None
+        banner = result_window.provenance_label.text()
+        assert "research-uniform-c00-source-only-v2" in banner
+        assert "research-uniform-source-v1" in banner
+        assert "evidence 111111111111…" in banner
+        assert f"modal backend {evaluation_module.SOLVER_VERSION}" in banner
+        assert "Topology certificate SHA-256: " + "6" * 64 in (
+            result_window.provenance_label.toolTip()
+        )
+        assert "Source SHA-256: " + "2" * 64 in (
+            window.comparison_table.item(0, 9).toolTip()
+        )
+
+        export_path = tmp_path / "research-tuned.csv"
+        monkeypatch.setattr(
+            QFileDialog,
+            "getSaveFileName",
+            lambda *_args, **_kwargs: (str(export_path), "CSV files (*.csv)"),
+        )
+        window.export_tuned_csv_button.click()
+        with export_path.open("r", encoding="utf-8-sig", newline="") as stream:
+            exported = list(csv.DictReader(stream))
+        assert len(exported) == 1
+        row = exported[0]
+        assert row["Compiler Algorithm ID"] == (
+            "research-uniform-c00-source-only-v2"
+        )
+        assert row["Compiler Version"] == "research-uniform-source-v1"
+        assert row["Research Identity SHA-256"] == "1" * 64
+        assert row["Static Compiler Algorithm SHA-256"] == (
+            solver_profile_static_identity_sha256(
+                RESEARCH_UNIFORM_ADMITTANCE_PROFILE
+            )
+        )
+        assert row["Source SHA-256"] == "2" * 64
+        assert row["Geometry Manifest SHA-256"] == "3" * 64
+        assert row["Component Manifest SHA-256"] == "4" * 64
+        assert row["Material Manifest SHA-256"] == "5" * 64
+        assert row["Topology Certificate SHA-256"] == "6" * 64
+    finally:
+        window._dirty = False
         window.close()
         application.processEvents()
 
@@ -1540,6 +1943,13 @@ def test_completed_comparison_populates_plot_ai_selector_and_auto_saves(
             "(frequency converged, Δmax 0.020 dB; modal converged, "
             "Δmax 0.040 dB)"
         )
+        assert window.comparison_table.horizontalHeaderItem(9).text() == (
+            "Solver provenance"
+        )
+        assert "[LEGACY] Legacy modal" in window.comparison_table.item(0, 9).text()
+        assert evaluation_module.SOLVER_VERSION in (
+            window.comparison_table.item(0, 9).text()
+        )
         assert window.ai_rail_combo.count() == 1
         assert window.ai_rail_combo.currentData() == rail_id
         assert window._last_scenario_evaluation is batch.comparisons[0].tuned
@@ -1547,6 +1957,16 @@ def test_completed_comparison_populates_plot_ai_selector_and_auto_saves(
         assert window._auto_save_after_worker
         assert "one shared impedance view" in window.evaluation_summary.toPlainText()
         assert "absolute sub-milliohm accuracy not certified" in window.evaluation_summary.toPlainText()
+        assert window.evaluation_summary.toPlainText().startswith(
+            "Solver provenance: [LEGACY]"
+        )
+        assert not result_window.provenance_label.isHidden()
+        assert "PowerSI parameter fitting: never" in (
+            result_window.provenance_label.text()
+        )
+        notes = window.findChild(QTextBrowser, "evaluationNotes")
+        assert notes is not None
+        assert notes.toPlainText().startswith("Result provenance: [LEGACY]")
 
         evaluation_state = window.rail_list.item(0).checkState()
         plot_channel = result_window.plot.rail_checkboxes[rail_id]
@@ -1593,10 +2013,26 @@ def test_completed_comparison_populates_plot_ai_selector_and_auto_saves(
                 "Component": "CAP_0402_100NF",
                 "REFDES": "C1",
                 "NET Name": "VDD_CORE/0",
+                "Solver Profile": "Legacy modal",
+                "Profile Badge": "LEGACY",
+                "Solver Version": evaluation_module.SOLVER_VERSION,
+                "Source-only Status": "No (legacy_regression)",
+                "PowerSI Parameter Use": "None (comparison-only)",
+                "Compiler Algorithm ID": "legacy-modal-v017-regression",
+                "Compiler Version": "legacy-v0.17",
+                "Artwork Evidence SHA-256": "",
+                "Research Identity SHA-256": "",
+                "Static Compiler Algorithm SHA-256": "",
+                "Source SHA-256": "",
+                "Geometry Manifest SHA-256": "",
+                "Component Manifest SHA-256": "",
+                "Material Manifest SHA-256": "",
+                "Topology Certificate SHA-256": "",
             }
         ]
         assert window.status_text.text() == (
-            "Exported 1 Tuned Decap(s) to tuned-decaps.csv"
+            "Exported 1 Tuned Decap(s) to tuned-decaps.csv "
+            f"[LEGACY · {evaluation_module.SOLVER_VERSION}]"
         )
 
         monkeypatch.setattr(
@@ -1654,6 +2090,7 @@ def test_completed_comparison_populates_plot_ai_selector_and_auto_saves(
         assert window.comparison_table.rowCount() == 0
         assert result_window.plot.plot_widgets == ()
         assert result_window.table.rowCount() == 0
+        assert result_window.provenance_label.isHidden()
         assert window._comparison_batch is None
         assert not window.open_results_button.isEnabled()
         assert not window.export_tuned_csv_button.isEnabled()

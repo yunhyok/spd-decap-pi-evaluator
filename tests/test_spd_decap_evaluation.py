@@ -417,10 +417,14 @@ def _fake_evaluator(calls: list[str]):
         key = evaluation_module.ScenarioResultKey.from_settings(
             design_fingerprint=actual.design_fingerprint,
             rail_id=rail_id,
-            settings={
-                "target_ohm": target_ohm,
-                "modal_max_index": modal_max_index,
-            },
+            settings=evaluation_module._evaluation_settings(
+                target_ohm,
+                modal_max_index,
+                _kwargs.get(
+                    "solver_profile",
+                    evaluation_module.DEFAULT_SOLVER_PROFILE_KEY,
+                ),
+            ),
             solver_version=view.solver_version,
         )
         return evaluation_module.ScenarioEvaluation(

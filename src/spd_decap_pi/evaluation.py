@@ -40,6 +40,11 @@ from spd_decap_pi._core.services import (
     scoped_blas_threads,
 )
 from spd_decap_pi._core.solver import SOLVER_VERSION
+from spd_decap_pi._core.solver.profiles import (
+    DEFAULT_SOLVER_PROFILE_KEY,
+    LEGACY_MODAL_PROFILE,
+    solver_profile as resolve_solver_profile,
+)
 from spd_decap_pi._core.via_model import ViaModelError, estimate_via_segment_rl
 
 from .scenario import (
@@ -291,11 +296,38 @@ class ScenarioEvaluationBatch:
                 or baseline.view.solver_version
                 != baseline.result_key.solver_version
                 or tuned.view.solver_version != tuned.result_key.solver_version
+                or baseline.view.solver_profile_key
+                != tuned.view.solver_profile_key
                 or baseline.view.target_ohm != tuned.view.target_ohm
             ):
                 raise ScenarioEvaluationCacheError(
                     f"Original/Tuned settings disagree for {comparison.rail_id!r}"
                 )
+            profile = resolve_solver_profile(baseline.view.solver_profile_key)
+            if profile.experimental:
+                # Research baselines deliberately have no persisted cache
+                # attachment: evidence identity exists only after compilation.
+                # Both curves must nevertheless bind the identical evidence.
+                baseline_identity = baseline.view.solver_provenance.get(
+                    "research_identity_sha256"
+                )
+                tuned_identity = tuned.view.solver_provenance.get(
+                    "research_identity_sha256"
+                )
+                if (
+                    not isinstance(baseline_identity, str)
+                    or baseline_identity != tuned_identity
+                    or baseline.view.solver_provenance
+                    != tuned.view.solver_provenance
+                ):
+                    raise ScenarioEvaluationCacheError(
+                        f"Original/Tuned research evidence identity disagrees for {comparison.rail_id!r}"
+                    )
+                if comparison.configuration_unchanged and baseline.view != tuned.view:
+                    raise ScenarioEvaluationCacheError(
+                        f"unchanged comparison for {comparison.rail_id!r} has different results"
+                    )
+                continue
             capture = next(
                 (
                     item
@@ -357,12 +389,63 @@ def _canonical_json(data: object) -> bytes:
 
 
 def _evaluation_settings(
-    target_ohm: float | None, modal_max_index: int
-) -> dict[str, float | int | None]:
-    return {
+    target_ohm: float | None,
+    modal_max_index: int,
+    solver_profile: str = DEFAULT_SOLVER_PROFILE_KEY,
+    *,
+    solver_provenance: Mapping[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Return cache/result settings without ever guessing research evidence.
+
+    Legacy settings deliberately retain their v0.17 spelling.  An experimental
+    solver gets a complete source/compiler/material/component/geometry identity
+    only after its fail-closed evidence gate succeeds; without that identity it
+    is explicitly marked non-cacheable rather than accidentally colliding with
+    a prior experimental calculation.
+    """
+
+    profile = resolve_solver_profile(solver_profile)
+    settings: dict[str, Any] = {
         "target_ohm": target_ohm,
         "modal_max_index": modal_max_index,
+        "solver_profile": profile.key,
     }
+    if not profile.experimental:
+        return settings
+    if solver_provenance is None:
+        settings["experimental_cache_policy"] = "disabled_until_evidence_compiled"
+        return settings
+    if not isinstance(solver_provenance, Mapping):
+        raise ScenarioEvaluationBuildError(
+            "RESEARCH_IDENTITY_INVALID",
+            "research solver provenance must be a complete identity object",
+        )
+    identity_fields = (
+        "research_identity_sha256",
+        "static_compiler_algorithm_sha256",
+        "source_sha256",
+        "component_manifest_sha256",
+        "material_manifest_sha256",
+        "geometry_manifest_sha256",
+    )
+    identity = {name: str(solver_provenance.get(name, "")).lower() for name in identity_fields}
+    if any(
+        len(value) != 64
+        or any(character not in "0123456789abcdef" for character in value)
+        for value in identity.values()
+    ):
+        raise ScenarioEvaluationBuildError(
+            "RESEARCH_IDENTITY_INVALID",
+            "research evaluation is missing a complete compiler/source/material/component/geometry evidence identity",
+        )
+    if solver_provenance.get("artwork_evidence_sha256") != identity["research_identity_sha256"]:
+        raise ScenarioEvaluationBuildError(
+            "RESEARCH_IDENTITY_INVALID",
+            "research result identity does not match its artwork evidence hash",
+        )
+    settings["research_identity"] = identity
+    settings["experimental_cache_policy"] = "disabled"
+    return settings
 
 
 def _expected_result_key(
@@ -371,12 +454,47 @@ def _expected_result_key(
     *,
     target_ohm: float | None,
     modal_max_index: int,
+    solver_profile: str = DEFAULT_SOLVER_PROFILE_KEY,
+    solver_provenance: Mapping[str, Any] | None = None,
 ) -> ScenarioResultKey:
+    profile = resolve_solver_profile(solver_profile)
+    if profile.experimental and solver_provenance is None:
+        raise ScenarioEvaluationCacheError(
+            "experimental research results cannot be looked up before their evidence identity is compiled"
+        )
     return ScenarioResultKey.from_settings(
         design_fingerprint=design_fingerprint,
         rail_id=rail_id,
-        settings=_evaluation_settings(target_ohm, modal_max_index),
+        settings=_evaluation_settings(
+            target_ohm,
+            modal_max_index,
+            solver_profile,
+            solver_provenance=solver_provenance,
+        ),
         solver_version=SOLVER_VERSION,
+    )
+
+
+def _result_key_from_view(
+    design_fingerprint: str,
+    rail_id: str,
+    *,
+    target_ohm: float | None,
+    modal_max_index: int,
+    view: EvaluationView,
+) -> ScenarioResultKey:
+    """Bind an emitted curve to its actual profile/evidence identity."""
+
+    return ScenarioResultKey.from_settings(
+        design_fingerprint=design_fingerprint,
+        rail_id=rail_id,
+        settings=_evaluation_settings(
+            target_ohm,
+            modal_max_index,
+            view.solver_profile_key,
+            solver_provenance=view.solver_provenance,
+        ),
+        solver_version=view.solver_version,
     )
 
 
@@ -598,6 +716,55 @@ def _validate_evaluation_view(view: EvaluationView) -> None:
         raise ScenarioEvaluationCacheError(
             "cached evaluation solver version must be a nonblank string"
         )
+    try:
+        profile = resolve_solver_profile(view.solver_profile_key)
+    except ValueError as exc:
+        raise ScenarioEvaluationCacheError(
+            "cached evaluation solver profile is unknown"
+        ) from exc
+    if (
+        view.solver_profile_label != profile.label
+        or view.solver_profile_badge != profile.badge
+    ):
+        raise ScenarioEvaluationCacheError(
+            "cached evaluation solver profile disclosure is inconsistent"
+        )
+    if not isinstance(view.solver_provenance, dict):
+        raise ScenarioEvaluationCacheError(
+            "cached evaluation solver provenance must be an object"
+        )
+    if view.solver_provenance:
+        if (
+            view.solver_provenance.get("profile_key") != profile.key
+            or view.solver_provenance.get("profile_badge") != profile.badge
+            or view.solver_provenance.get("powersi_used_for_parameters") is not False
+        ):
+            raise ScenarioEvaluationCacheError(
+                "cached evaluation solver provenance is inconsistent"
+            )
+        if profile.experimental and (
+            view.solver_provenance.get("source_only") is not True
+            or view.solver_provenance.get("validation_status")
+            != "research_not_validated"
+        ):
+            raise ScenarioEvaluationCacheError(
+                "cached research evaluation lacks source-only/validation provenance"
+            )
+        if profile.experimental:
+            # Experimental curves are intentionally never read from the
+            # baseline cache, but this validation still protects an exported
+            # attachment/result from falsely claiming a source-artwork identity.
+            try:
+                _evaluation_settings(
+                    view.target_ohm,
+                    0,
+                    profile.key,
+                    solver_provenance=view.solver_provenance,
+                )
+            except ScenarioEvaluationBuildError as exc:
+                raise ScenarioEvaluationCacheError(
+                    "cached research evaluation has an incomplete evidence identity"
+                ) from exc
     arrays = {
         "magnitude_ohm": view.magnitude_ohm,
         "phase_deg": view.phase_deg,
@@ -798,10 +965,39 @@ def _decode_baseline_evaluation(
         )
     view_payload = raw["view"]
     expected_view_fields = set(EvaluationView.__dataclass_fields__)
-    if not isinstance(view_payload, dict) or set(view_payload) != expected_view_fields:
+    profile_view_fields = {
+        "solver_profile_key",
+        "solver_profile_label",
+        "solver_profile_badge",
+        "solver_provenance",
+    }
+    actual_view_fields = (
+        frozenset(view_payload) if isinstance(view_payload, dict) else frozenset()
+    )
+    if not isinstance(view_payload, dict) or actual_view_fields not in {
+        frozenset(expected_view_fields),
+        frozenset(expected_view_fields - profile_view_fields),
+    }:
         raise ScenarioEvaluationCacheError(
             "cached evaluation view has an incompatible schema"
         )
+    if not profile_view_fields.intersection(view_payload):
+        # v0.17 attachments predate explicit profile identity.  They can only
+        # mean the legacy regression backend; never infer a research profile.
+        view_payload = {
+            **view_payload,
+            "solver_profile_key": LEGACY_MODAL_PROFILE.key,
+            "solver_profile_label": LEGACY_MODAL_PROFILE.label,
+            "solver_profile_badge": LEGACY_MODAL_PROFILE.badge,
+            "solver_provenance": {
+                "profile_key": LEGACY_MODAL_PROFILE.key,
+                "profile_badge": LEGACY_MODAL_PROFILE.badge,
+                "status": "legacy_regression",
+                "source_only": True,
+                "powersi_used_for_parameters": False,
+                "validation_status": "legacy_regression",
+            },
+        }
     try:
         view = EvaluationView(**view_payload)
     except (TypeError, ValueError) as exc:
@@ -826,7 +1022,13 @@ def _load_baseline_evaluation(
     *,
     target_ohm: float | None,
     modal_max_index: int,
+    solver_profile: str = DEFAULT_SOLVER_PROFILE_KEY,
 ) -> ScenarioEvaluation | None:
+    if resolve_solver_profile(solver_profile).experimental:
+        # Evidence is compiled only inside the source-only evaluation path.
+        # Reusing a result before that proof would make cache identity depend on
+        # a prediction, so research baseline cache reads are intentionally off.
+        return None
     capture = next(
         item
         for key, item in scenario.baseline_captures.items()
@@ -837,6 +1039,7 @@ def _load_baseline_evaluation(
         rail_id,
         target_ohm=target_ohm,
         modal_max_index=modal_max_index,
+        solver_profile=solver_profile,
     )
     metadata = scenario.evaluation_cache.get(expected_key.cache_key)
     if metadata is None:
@@ -873,6 +1076,10 @@ def _cache_baseline_evaluation(
     rail_id: str,
     evaluation: ScenarioEvaluation,
 ) -> tuple[ScenarioSpec, dict[str, bytes]]:
+    if resolve_solver_profile(evaluation.view.solver_profile_key).experimental:
+        raise ScenarioEvaluationCacheError(
+            "experimental research baseline results are intentionally not persisted or reused"
+        )
     capture = next(
         item
         for key, item in scenario.baseline_captures.items()
@@ -1930,6 +2137,7 @@ def evaluate_scenario(
     attachments: Mapping[str, bytes] | None = None,
     progress: ProgressCallback | None = None,
     is_cancelled: CancelCallback | None = None,
+    solver_profile: str = DEFAULT_SOLVER_PROFILE_KEY,
 ) -> ScenarioEvaluation:
     """Evaluate one rail and bind the view to deterministic scenario identity."""
 
@@ -1959,11 +2167,17 @@ def evaluate_scenario(
             modal_max_index,
             progress=progress,
             is_cancelled=is_cancelled,
+            solver_profile=solver_profile,
         )
     result_key = ScenarioResultKey.from_settings(
         design_fingerprint=scenario.design_fingerprint,
         rail_id=canonical_rail,
-        settings=_evaluation_settings(target_ohm, modal_max_index),
+        settings=_evaluation_settings(
+            target_ohm,
+            modal_max_index,
+            solver_profile,
+            solver_provenance=view.solver_provenance,
+        ),
         solver_version=view.solver_version,
     )
     return ScenarioEvaluation(
@@ -1983,6 +2197,7 @@ def evaluate_comparison_batch(
     attachments: Mapping[str, bytes] | None = None,
     progress: ProgressCallback | None = None,
     is_cancelled: CancelCallback | None = None,
+    solver_profile: str = DEFAULT_SOLVER_PROFILE_KEY,
 ) -> ScenarioEvaluationBatch:
     """Evaluate Original and Tuned configurations for selected PWR rails.
 
@@ -1993,6 +2208,7 @@ def evaluate_comparison_batch(
 
     report = progress or (lambda _value, _message: None)
     cancelled = is_cancelled or (lambda: False)
+    profile = resolve_solver_profile(solver_profile)
     canonical_rails = _canonical_rail_ids(scenario, rail_ids)
     connectivity = preflight_evaluation_connectivity(scenario, canonical_rails)
     if not connectivity.is_clear:
@@ -2055,6 +2271,7 @@ def evaluate_comparison_batch(
             rail_id,
             target_ohm=target_ohm,
             modal_max_index=modal_max_index,
+            solver_profile=solver_profile,
         )
         baseline_from_cache = baseline is not None
         if baseline is None:
@@ -2066,19 +2283,32 @@ def evaluate_comparison_batch(
                 attachments=working_attachments,
                 progress=stage_progress(f"{rail_id} Original"),
                 is_cancelled=cancelled,
+                solver_profile=solver_profile,
             )
             baseline = replace(
                 evaluated_baseline,
-                result_key=_expected_result_key(
-                    capture.evaluation_input_sha256,
-                    rail_id,
-                    target_ohm=target_ohm,
-                    modal_max_index=modal_max_index,
+                result_key=(
+                    _result_key_from_view(
+                        capture.evaluation_input_sha256,
+                        rail_id,
+                        target_ohm=target_ohm,
+                        modal_max_index=modal_max_index,
+                        view=evaluated_baseline.view,
+                    )
+                    if profile.experimental
+                    else _expected_result_key(
+                        capture.evaluation_input_sha256,
+                        rail_id,
+                        target_ohm=target_ohm,
+                        modal_max_index=modal_max_index,
+                        solver_profile=solver_profile,
+                    )
                 ),
             )
-            prepared, working_attachments = _cache_baseline_evaluation(
-                prepared, working_attachments, rail_id, baseline
-            )
+            if not profile.experimental:
+                prepared, working_attachments = _cache_baseline_evaluation(
+                    prepared, working_attachments, rail_id, baseline
+                )
             persistent_change = True
         else:
             report(
@@ -2092,11 +2322,22 @@ def evaluate_comparison_batch(
         if configuration_unchanged:
             tuned = replace(
                 baseline,
-                result_key=_expected_result_key(
-                    prepared.design_fingerprint,
-                    rail_id,
-                    target_ohm=target_ohm,
-                    modal_max_index=modal_max_index,
+                result_key=(
+                    _result_key_from_view(
+                        prepared.design_fingerprint,
+                        rail_id,
+                        target_ohm=target_ohm,
+                        modal_max_index=modal_max_index,
+                        view=baseline.view,
+                    )
+                    if profile.experimental
+                    else _expected_result_key(
+                        prepared.design_fingerprint,
+                        rail_id,
+                        target_ohm=target_ohm,
+                        modal_max_index=modal_max_index,
+                        solver_profile=solver_profile,
+                    )
                 ),
                 scenario_revision=prepared.revision,
             )
@@ -2113,6 +2354,7 @@ def evaluate_comparison_batch(
                 attachments=working_attachments,
                 progress=stage_progress(f"{rail_id} Tuned"),
                 is_cancelled=cancelled,
+                solver_profile=solver_profile,
             )
         completed_stages += 1
         comparisons.append(

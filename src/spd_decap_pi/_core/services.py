@@ -20,7 +20,16 @@ from .ai import AssistantSource, EvidenceKind, FeatureEvidence, LocalLLMClient, 
 from .domain import CapModel, CoordinateTransform, CoordinateUnit, FrequencySettings, ImpedanceSample, MLOOutline, MIXED_REFERENCE_MIN_COVERAGE, MIXED_REFERENCE_MIN_DOMINANT_COMPONENT, MixedReferenceCertificate, PinKind, PlaneCell, PlacementAssignment as DomainPlacement, PlanePartitionSpec, ProjectSpec, RailSpec, RailState, StackupLayer, TargetPoint, TerminalKind, TopologyKind, TopologyMap, ViaLoopTemplate, ViaPathKind
 from .models import PassiveSubcircuitModel, parse_passive_subcircuit, passive_subcircuit_names
 from .plane_pairs import suggest_effective_plane_pairs
-from .solver.evaluator import EvaluationOutcome, evaluate_project_rail_converged
+from .solver.evaluator import (
+    EvaluationOutcome,
+    compile_project_evaluation_template,
+    evaluate_project_rail_converged,
+)
+from .solver.profiles import (
+    DEFAULT_SOLVER_PROFILE_KEY,
+    RESEARCH_UNIFORM_ADMITTANCE_PROFILE,
+    solver_profile as resolve_solver_profile,
+)
 from .via_model import (
     COPPER_CONDUCTIVITY_S_PER_M,
     ViaModelError,
@@ -213,6 +222,10 @@ class EvaluationView:
     convergence: dict[str, Any] | None
     z_real_ohm: list[float]
     z_imag_ohm: list[float]
+    solver_profile_key: str = DEFAULT_SOLVER_PROFILE_KEY
+    solver_profile_label: str = "Legacy modal"
+    solver_profile_badge: str = "LEGACY"
+    solver_provenance: dict[str, Any] = field(default_factory=dict)
 
     def as_dict(self) -> dict[str, Any]:
         return asdict(self)
@@ -564,7 +577,9 @@ def evaluate_workspace(
     *,
     progress: ProgressCallback | None = None,
     is_cancelled: CancelCallback | None = None,
+    solver_profile: str = DEFAULT_SOLVER_PROFILE_KEY,
 ) -> EvaluationView:
+    profile = resolve_solver_profile(solver_profile)
     modal_preset = evaluation_modal_preset(modal_max_index)
     progress = progress or _noop_progress
     is_cancelled = is_cancelled or _never_cancelled
@@ -576,27 +591,49 @@ def evaluate_workspace(
             raise ValueError("target impedance must be greater than zero")
         project = _project_with_target(project, rail_id, target_ohm)
     progress(
-        10,
-        f"Validating geometry and templates · {modal_preset.label} · "
+        8,
+        f"Profile audit · {profile.label} [{profile.badge}] · "
         f"{modal_preset.mode_count} modes…",
     )
     _require_evaluable(project, rail_id)
     if is_cancelled():
         raise RuntimeError("evaluation cancelled")
+    request_options: dict[str, Any] = {
+        "max_mode_x": modal_preset.max_index,
+        "max_mode_y": modal_preset.max_index,
+        "worker_count": numerical_worker_count(project.frequency.points),
+        "solver_profile_key": profile.key,
+    }
+    if profile == RESEARCH_UNIFORM_ADMITTANCE_PROFILE:
+        # Keep the default legacy import graph independent of the optional
+        # exact-artwork research bridge and its geometry dependencies.
+        from .solver.research_uniform_profile import build_uniform_c00_source_model
+
+        progress(
+            15,
+            "Auditing source-only artwork, reference, partition, and Device evidence…",
+        )
+        template = compile_project_evaluation_template(project, rail_id)
+        request_options["template"] = template
+        request_options["uniform_c00_source"] = build_uniform_c00_source_model(
+            project,
+            state.attachments,
+            rail_id,
+            template,
+        )
+        if is_cancelled():
+            raise RuntimeError("evaluation cancelled")
+        progress(22, "Source-only uniform C00 evidence gate passed; compiling replacement…")
     progress(
         25,
-        f"Solving finite-port rectangular cavity · {modal_preset.label} · max "
+        f"Solving {profile.label} [{profile.badge}] · {modal_preset.label} · max "
         f"index ({modal_preset.max_index},{modal_preset.max_index}) · "
         f"{modal_preset.mode_count} modes…",
     )
     outcome = evaluate_project_rail_converged(
         project,
         rail_id,
-        request_options={
-            "max_mode_x": modal_preset.max_index,
-            "max_mode_y": modal_preset.max_index,
-            "worker_count": numerical_worker_count(project.frequency.points),
-        },
+        request_options=request_options,
         max_mode_x=modal_preset.max_index,
         max_mode_y=modal_preset.max_index,
         max_refinement_iterations=1,
@@ -604,7 +641,7 @@ def evaluate_workspace(
     )
     if is_cancelled():
         raise RuntimeError("evaluation cancelled")
-    progress(90, "Extracting target and resonance metrics…")
+    progress(90, f"Extracting metrics and {profile.badge} provenance…")
     view = _evaluation_view(project, outcome)
     state.last_evaluation = view
     state.evaluation_history.append(view)
@@ -2632,6 +2669,13 @@ def _require_evaluable(project: ProjectSpec, rail_id: str) -> None:
         )
 
 def _evaluation_view(project: ProjectSpec, outcome: EvaluationOutcome) -> EvaluationView:
+    # Import/legacy compatibility: a few callers construct lightweight outcome
+    # views rather than the current EvaluationOutcome dataclass.  Those results
+    # predate solver profiles and must continue to mean the default legacy
+    # backend, never the research backend.
+    profile = resolve_solver_profile(
+        getattr(outcome, "solver_profile_key", DEFAULT_SOLVER_PROFILE_KEY)
+    )
     frequencies = outcome.solve.frequencies_hz
     magnitude = outcome.metrics.magnitude_ohm
     phase = outcome.metrics.phase_deg
@@ -2737,6 +2781,10 @@ def _evaluation_view(project: ProjectSpec, outcome: EvaluationOutcome) -> Evalua
         convergence=(asdict(outcome.convergence) if outcome.convergence else None),
         z_real_ohm=[float(value) for value in outcome.solve.impedance_ohm.real],
         z_imag_ohm=[float(value) for value in outcome.solve.impedance_ohm.imag],
+        solver_profile_key=profile.key,
+        solver_profile_label=profile.label,
+        solver_profile_badge=profile.badge,
+        solver_provenance=dict(getattr(outcome, "solver_provenance", {})),
     )
 
 def _derive_rails(

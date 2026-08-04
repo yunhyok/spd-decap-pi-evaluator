@@ -49,9 +49,27 @@ from .modal import (
     SolverDiagnostics,
     copper_slab_surface_impedance_per_square,
 )
+from .profiles import (
+    DEFAULT_SOLVER_PROFILE_KEY,
+    LEGACY_MODAL_PROFILE,
+    RESEARCH_UNIFORM_ADMITTANCE_PROFILE,
+    SOLVER_PROFILES,
+    SolverProfile,
+    SolverProfileError,
+    solver_profile,
+)
+from .research_uniform_profile import (
+    ResearchProfileUnavailable,
+    UniformC00SourceModel,
+    build_uniform_c00_source_model,
+)
 
 __all__ = [
     "COUPLING_ASSUMPTION",
+    "DEFAULT_SOLVER_PROFILE_KEY",
+    "LEGACY_MODAL_PROFILE",
+    "RESEARCH_UNIFORM_ADMITTANCE_PROFILE",
+    "SOLVER_PROFILES",
     "SOLVER_VERSION",
     "ConfidenceAssessment",
     "ConfidenceCategory",
@@ -80,9 +98,12 @@ __all__ = [
     "ShuntLeaveOneOutSolveResult",
     "ShuntSensitivityOutcome",
     "SolverDiagnostics",
+    "SolverProfile",
+    "SolverProfileError",
     "TargetMask",
     "assess_confidence",
     "build_project_evaluation_request",
+    "build_uniform_c00_source_model",
     "compile_evaluation_kernel",
     "compile_project_evaluation_template",
     "compute_evaluation_metrics",
@@ -95,4 +116,7 @@ __all__ = [
     "extract_local_peaks",
     "refine_log_grid",
     "to_domain_evaluation_result",
+    "ResearchProfileUnavailable",
+    "UniformC00SourceModel",
+    "solver_profile",
 ]

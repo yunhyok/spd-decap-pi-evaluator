@@ -1,8 +1,8 @@
-# SPD Decap PI Evaluator v0.17.0
+# SPD Decap PI Evaluator v0.18.0
 
-> v0.17.0 retains the v0.16.0 solver physics and accuracy algorithms unchanged: source SPD dielectric Dk/Df tables use log-frequency interpolation clamped to source endpoints; the finite-thickness one-face copper-slab and legacy scalar-sheet boundaries are unchanged; PowerSI Touchstone remains comparison-only. The verified changes are operational: BLAS oversubscription suppression, worker-side document preparation, coalesced progress updates, cancellation-race protection, and responsive staged board rendering. Exact component C00, multilayer finite-difference network (MFDM), partial-element equivalent-circuit (PEEC), and other research-only solvers are not production-enabled. The title bar identifies the application as **SPD Decap PI Evaluator v0.17.0**. This remains an exploratory single-rail rectangular-bbox model; sub-milliohm and sign-off accuracy are not certified.
+> **v0.18.0 keeps the legacy modal v0.17 physics, default selection, rollback path, and resulting curve unchanged.** It adds an explicit **Research: actual-artwork uniform mode** option. That option is an experimental, source-only `C00` replacement scaffold: it never fits to PowerSI, requires a source-bound topology/connectivity certificate, and fails closed when its evidence is incomplete. It is not a verified accuracy improvement, does not certify sub-milliohm behavior, and is not for sign-off. The title bar identifies the application as **SPD Decap PI Evaluator v0.18.0**.
 
-> 프로그램: **SPD Decap PI Evaluator v0.17.0**
+> 프로그램: **SPD Decap PI Evaluator v0.18.0**
 > 저장소: 기존 PI Calculator와 분리된 독립 프로그램
 > 해석 경계: 선택한 PWR rail의 pre-design `Zii`; 최종 PowerSI/SIwave 검증을 대체하지 않음
 
@@ -11,10 +11,14 @@
 desktop 프로그램이다. Stackup, MLO 크기 또는 plane을 새로 작성하는 기능과
 Optimization Mode는 포함하지 않는다.
 
-## v0.16 evaluation accuracy
+## v0.18 evaluation solver status
 
 - The 2026-08-04 [evaluation-solver deep-research decision record](docs/EVALUATION_SOLVER_DEEP_RESEARCH_2026-08-04.md) documents the 92-port PowerSI evidence, actual-artwork capacitance experiments, layer-network composition, matrix-free residual go/no-go criteria, selected sparse-MNA architecture, validation gates, and staged implementation order. It is a research record only; no experimental solver is production-enabled by that document.
-- The companion [evaluation-solver implementation plan](docs/EVALUATION_SOLVER_IMPLEMENTATION_PLAN_2026-08-04.md) converts the synthesized Claude/Sol review into proposed module boundaries, feature flags, cache identities, phase exit tests, UI/process safeguards, and rollback rules. It is planning only and does not change the v0.17.0 runtime.
+- The companion [evaluation-solver implementation plan](docs/EVALUATION_SOLVER_IMPLEMENTATION_PLAN_2026-08-04.md) and the [v0.18 implementation status](docs/EVALUATION_SOLVER_IMPLEMENTATION_STATUS_2026-08-04.md) distinguish shipped guarded infrastructure from research prototypes. The legacy modal backend remains the default production path.
+- The explicit research profile replaces only the source-side uniform `C00` contribution; it does not add a parallel capacitance term and it leaves non-uniform modal terms unchanged. It requires a SHA-bound topology certificate and independent PWR/DGND port-connectivity evidence. If that proof is absent, evaluation stops with an actionable readiness error and never falls back silently or emits a partial curve.
+- Research Original/Tuned curves are transient: Original is recomputed for every run and is neither persisted to nor reused from the scenario baseline cache. Legacy retains its existing `Saved now`/cache-reuse behavior.
+- The named source SPD with SHA-256 prefix `40cb44b2376f` currently lacks the required topology certificate. Consequently the research option is intentionally blocked for that source and no accuracy-improvement claim is made for it.
+- The source-only uniform `C00` scaffold above is the only shipped research profile. Separate global MNA, MFDM, PEEC, and associated artwork/via prototypes were investigated but excluded from the v0.18 product release. PowerSI Touchstone remains comparison-only and is never used for parameter fitting.
 - The default remains **Balanced** (max index 8, 81 modes). **Experimental m12 check** keeps the existing max index 12 / 169-mode API for a comparison-only m10-to-m12 check. In the 2026-07-29 loaded benchmark, VTRIP1 changed by up to 1.346 dB in maximum magnitude from m10 to m12, 3 of 6 loaded configurations still did not converge, and solver runtime was 4,139 s. More modes worsened external correlation in that case, but this does not justify selecting a lower order; PowerSI remains comparison-only.
 - The evaluator can combine only the immediately adjacent, opposite-side conductor when it contains configured GND aliases and valid dielectric rows. It uses the disclosed shared-PWR ideal-common-reference equivalent; it does not enable a general layer cascade. A true layer cascade is a full complex multiport Y-matrix Schur/Kron reduction, not scalar-Z or scalar-admittance merging. See [Evaluation accuracy](docs/EVALUATION_ACCURACY.md).
 - A mixed PWR/DGND return layer is accepted only through a versioned certificate tied to SHA-256-verified exact plane artwork. The certificate requires at least 90% PWR-area overlap with the configured DGND artwork and a 99% dominant overlap component; it is fail-closed if geometry verification is unavailable. Result confidence remains **LOW** and displays the overlap evidence plus the continuous rectangular-return approximation.
@@ -107,7 +111,7 @@ powershell.exe -ExecutionPolicy Bypass -NoProfile -File .\scripts\build_spd_deca
 산출물:
 
 - `dist\SPDDecapPIEvaluator\SPDDecapPIEvaluator.exe`
-- `installer-output\SPDDecapPIEvaluatorSetup-0.17.0.exe`
-- `installer-output\SPDDecapPIEvaluatorSetup-0.17.0.exe.sha256`
+- `installer-output\SPDDecapPIEvaluatorSetup-0.18.0.exe`
+- `installer-output\SPDDecapPIEvaluatorSetup-0.18.0.exe.sha256`
 
 프로그램명과 버전은 title bar와 installer metadata에 함께 표시된다.
