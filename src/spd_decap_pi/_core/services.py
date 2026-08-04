@@ -90,6 +90,11 @@ def _requested_blas_thread_limit() -> int | None:
 _SPD_PLANE_GEOMETRIES_KEY = "plane_geometries"
 
 _SPD_GEOMETRY_MAX_UNCOMPRESSED_BYTES = 64 * 1024 * 1024
+# Level 6 preserves nearly all of level 9's storage saving for real SPD artwork,
+# while materially reducing time on the background import path.  The compressed
+# bytes remain the versioned asset identity (SHA-256), rather than treating a
+# decoded JSON equivalence as interchangeable content.
+_SPD_GEOMETRY_COMPRESSION_LEVEL = 6
 
 class EvaluationReadinessError(ValueError):
     """Actionable project prerequisite failure raised before a solver starts."""
@@ -473,11 +478,19 @@ def _validate_spd_geometry_payload(
                     raise ValueError(
                         "PowerSI geometry asset Polygon vertices must be X/Y pairs"
                     )
-                if not all(
-                    isinstance(value, (int, float))
-                    and not isinstance(value, bool)
-                    and math.isfinite(float(value))
-                    for value in point
+                x, y = point
+                # Geometry payloads can contain millions of JSON coordinate
+                # values.  Keep the exact type/bool/finite contract, but avoid
+                # creating one generator and calling ``all`` for every vertex.
+                # This is on the background loading path, before any payload is
+                # admitted to the preview or project state.
+                if (
+                    not isinstance(x, (int, float))
+                    or isinstance(x, bool)
+                    or not math.isfinite(float(x))
+                    or not isinstance(y, (int, float))
+                    or isinstance(y, bool)
+                    or not math.isfinite(float(y))
                 ):
                     raise ValueError(
                         "PowerSI geometry asset Polygon vertices must be finite"
@@ -486,12 +499,19 @@ def _validate_spd_geometry_payload(
         for circle in payload[name]:
             if not isinstance(circle, list) or len(circle) != 3:
                 raise ValueError("PowerSI geometry asset contains an invalid Circle")
-            if not all(
-                isinstance(value, (int, float))
-                and not isinstance(value, bool)
-                and math.isfinite(float(value))
-                for value in circle
-            ) or float(circle[2]) <= 0:
+            center_x, center_y, radius = circle
+            if (
+                not isinstance(center_x, (int, float))
+                or isinstance(center_x, bool)
+                or not math.isfinite(float(center_x))
+                or not isinstance(center_y, (int, float))
+                or isinstance(center_y, bool)
+                or not math.isfinite(float(center_y))
+                or not isinstance(radius, (int, float))
+                or isinstance(radius, bool)
+                or not math.isfinite(float(radius))
+                or float(radius) <= 0
+            ):
                 raise ValueError(
                     "PowerSI geometry asset Circle requires finite X/Y and positive radius"
                 )
@@ -800,7 +820,7 @@ def _compress_spd_geometry_payload(
     at a time into a compressor instead.
     """
 
-    compressor = zlib.compressobj(level=9)
+    compressor = zlib.compressobj(level=_SPD_GEOMETRY_COMPRESSION_LEVEL)
     compressed = bytearray()
     uncompressed_bytes = 0
 
@@ -1039,9 +1059,14 @@ def _mixed_reference_certificates(
     layer_by_key = {item.name.casefold(): item for item in layers}
     layer_index = {item.name.casefold(): index for index, item in enumerate(layers)}
     result: list[MixedReferenceCertificate] = []
-    decoded: list[dict[str, Any]] = []
-    geometry_by_digest: dict[str, Any | None] = {}
+    ground_records_by_layer: dict[str, list[Mapping[str, Any]]] = {}
     for record in records:
+        layer = str(record.get("layer", ""))
+        net = str(record.get("net", ""))
+        if layer and net.casefold() in ground_keys:
+            ground_records_by_layer.setdefault(layer.casefold(), []).append(record)
+
+    def load_valid_payload(record: Mapping[str, Any]) -> dict[str, Any] | None:
         asset = str(record.get("asset", ""))
         digest = str(record.get("asset_sha256", ""))
         try:
@@ -1052,15 +1077,28 @@ def _mixed_reference_certificates(
                 expected_net=str(record.get("net", "")),
             )
         except (KeyError, ValueError):
-            continue
+            return None
         payload["asset_sha256"] = digest
-        decoded.append(payload)
+        return payload
 
-    def geometry_for(payload: Mapping[str, Any]) -> Any | None:
-        digest = str(payload.get("asset_sha256", ""))
-        if digest not in geometry_by_digest:
-            geometry_by_digest[digest] = _ordered_spd_geometry(payload)
-        return geometry_by_digest[digest]
+    # GND artwork is reused by many PWR candidates.  Keep only those few
+    # payloads/GEOS shapes cached; a PWR payload and shape live only for its
+    # current outer record so an import does not retain every plane at once.
+    ground_payload_by_identity: dict[
+        tuple[str, str, str], dict[str, Any] | None
+    ] = {}
+    ground_shape_by_digest: dict[str, Any | None] = {}
+
+    def ground_payload_for(record: Mapping[str, Any]) -> dict[str, Any] | None:
+        digest = str(record.get("asset_sha256", ""))
+        identity = (
+            digest,
+            str(record.get("layer", "")).casefold(),
+            str(record.get("net", "")).casefold(),
+        )
+        if identity not in ground_payload_by_identity:
+            ground_payload_by_identity[identity] = load_valid_payload(record)
+        return ground_payload_by_identity[identity]
 
     try:
         from shapely.errors import GEOSException
@@ -1094,15 +1132,22 @@ def _mixed_reference_certificates(
         if item not in failures:
             failures.append(item)
 
-    for pwr in decoded:
-        net = str(pwr.get("net", ""))
-        pwr_layer = str(pwr.get("layer", ""))
+    for pwr_record in records:
+        net = str(pwr_record.get("net", ""))
+        pwr_layer = str(pwr_record.get("layer", ""))
         if net.casefold() not in power_keys or not pwr_layer:
             continue
-        pwr_shape = geometry_for(pwr) if shapely_available else None
-        for gnd in decoded:
-            gnd_layer = str(gnd.get("layer", ""))
-            if gnd_layer.casefold() == pwr_layer.casefold() or str(gnd.get("net", "")).casefold() not in ground_keys:
+        pwr_payload: dict[str, Any] | None = None
+        pwr_payload_checked = False
+        pwr_shape: Any | None = None
+        pwr_shape_checked = False
+        for gnd_record in records:
+            gnd_layer = str(gnd_record.get("layer", ""))
+            gnd_record_net = str(gnd_record.get("net", ""))
+            if (
+                gnd_layer.casefold() == pwr_layer.casefold()
+                or gnd_record_net.casefold() not in ground_keys
+            ):
                 continue
             stack_layer = layer_by_key.get(gnd_layer.casefold())
             if stack_layer is None or not stack_layer.is_conductor:
@@ -1124,30 +1169,61 @@ def _mixed_reference_certificates(
                 or any(item.dk is None for item in between)
             ):
                 continue
-            gnd_net = str(gnd.get("net", ""))
+            # The former eager pass excluded invalid PWR/GND assets before any
+            # structural failure could be recorded.  Retain that behavior, but
+            # only validate assets after this compact structural candidate gate.
+            if not pwr_payload_checked:
+                pwr_payload = load_valid_payload(pwr_record)
+                pwr_payload_checked = True
+            if pwr_payload is None:
+                break
+            gnd_payload = ground_payload_for(gnd_record)
+            if gnd_payload is None:
+                continue
+            pwr_net = str(pwr_payload.get("net", ""))
+            pwr_payload_layer = str(pwr_payload.get("layer", ""))
+            gnd_net = str(gnd_payload.get("net", ""))
+            gnd_payload_layer = str(gnd_payload.get("layer", ""))
             if net.casefold() in layer_keys:
                 record_failure(
-                    rail_net=net, pwr_layer=pwr_layer, gnd_layer=gnd_layer,
+                    rail_net=pwr_net, pwr_layer=pwr_payload_layer,
+                    gnd_layer=gnd_payload_layer,
                     gnd_net=gnd_net, reason="target rail is present on proposed DGND layer",
                 )
                 continue
             # A certificate binds one exact DGND artwork asset.  Multiple ground
             # assets on a mixed return layer are intentionally not merged silently.
-            matching_ground = [
-                item for item in records
-                if str(item.get("layer", "")).casefold() == gnd_layer.casefold()
-                and str(item.get("net", "")).casefold() in ground_keys
-            ]
+            matching_ground = ground_records_by_layer.get(gnd_layer.casefold(), [])
             if len(matching_ground) != 1:
                 record_failure(
-                    rail_net=net, pwr_layer=pwr_layer, gnd_layer=gnd_layer,
+                    rail_net=pwr_net, pwr_layer=pwr_payload_layer,
+                    gnd_layer=gnd_payload_layer,
                     gnd_net=gnd_net, reason="ground artwork asset is missing or ambiguous",
                 )
                 continue
-            gnd_shape = geometry_for(gnd) if shapely_available else None
+            # Most retained PWR artwork never has a structurally eligible mixed
+            # DGND candidate.  Do the inexpensive stackup/identity gates first,
+            # then construct the costly ordered Boolean shape only when this
+            # branch can actually issue a certificate or a geometry failure.
+            if not pwr_shape_checked:
+                pwr_shape = (
+                    _ordered_spd_geometry(pwr_payload)
+                    if shapely_available
+                    else None
+                )
+                pwr_shape_checked = True
+            gnd_digest = str(gnd_payload.get("asset_sha256", ""))
+            if gnd_digest not in ground_shape_by_digest:
+                ground_shape_by_digest[gnd_digest] = (
+                    _ordered_spd_geometry(gnd_payload)
+                    if shapely_available
+                    else None
+                )
+            gnd_shape = ground_shape_by_digest[gnd_digest]
             if pwr_shape is None or gnd_shape is None:
                 record_failure(
-                    rail_net=net, pwr_layer=pwr_layer, gnd_layer=gnd_layer,
+                    rail_net=pwr_net, pwr_layer=pwr_payload_layer,
+                    gnd_layer=gnd_payload_layer,
                     gnd_net=gnd_net,
                     reason=(
                         "Shapely geometry engine is unavailable"
@@ -1162,7 +1238,8 @@ def _mixed_reference_certificates(
                 overlap = pwr_shape.intersection(gnd_shape)
             except GEOSException:
                 record_failure(
-                    rail_net=net, pwr_layer=pwr_layer, gnd_layer=gnd_layer,
+                    rail_net=pwr_net, pwr_layer=pwr_payload_layer,
+                    gnd_layer=gnd_payload_layer,
                     gnd_net=gnd_net, reason="GEOS intersection failed",
                     code="SPD_MIXED_REFERENCE_GEOMETRY_UNAVAILABLE",
                     blocking=True,
@@ -1170,7 +1247,8 @@ def _mixed_reference_certificates(
                 continue
             if overlap.is_empty or overlap.area <= 0:
                 record_failure(
-                    rail_net=net, pwr_layer=pwr_layer, gnd_layer=gnd_layer,
+                    rail_net=pwr_net, pwr_layer=pwr_payload_layer,
+                    gnd_layer=gnd_payload_layer,
                     gnd_net=gnd_net, reason="PWR and DGND artwork do not overlap",
                 )
                 continue
@@ -1182,7 +1260,8 @@ def _mixed_reference_certificates(
                 or dominant < MIXED_REFERENCE_MIN_DOMINANT_COMPONENT
             ):
                 record_failure(
-                    rail_net=net, pwr_layer=pwr_layer, gnd_layer=gnd_layer,
+                    rail_net=pwr_net, pwr_layer=pwr_payload_layer,
+                    gnd_layer=gnd_payload_layer,
                     gnd_net=gnd_net,
                     reason=(
                         f"coverage {coverage:.6f} or dominant component "
@@ -1190,13 +1269,13 @@ def _mixed_reference_certificates(
                     ),
                 )
                 continue
-            pwr_hash = str(pwr.get("asset_sha256", ""))
-            gnd_hash = str(gnd.get("asset_sha256", ""))
+            pwr_hash = str(pwr_payload.get("asset_sha256", ""))
+            gnd_hash = str(gnd_payload.get("asset_sha256", ""))
             if len(pwr_hash) != 64 or len(gnd_hash) != 64:
                 continue
             result.append(MixedReferenceCertificate(
-                rail_net=net, gnd_net=str(gnd.get("net", "")),
-                pwr_layer=pwr_layer, gnd_layer=gnd_layer,
+                rail_net=pwr_net, gnd_net=gnd_net,
+                pwr_layer=pwr_payload_layer, gnd_layer=gnd_payload_layer,
                 pwr_asset_sha256=pwr_hash, gnd_asset_sha256=gnd_hash,
                 overlap_fraction=coverage,
                 dominant_overlap_component_fraction=dominant,

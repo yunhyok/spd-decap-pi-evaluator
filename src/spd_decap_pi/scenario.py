@@ -23,6 +23,7 @@ from pydantic import (
     BaseModel,
     ConfigDict,
     Field,
+    ValidationInfo,
     field_validator,
     model_validator,
 )
@@ -1373,7 +1374,10 @@ def mixed_reference_ground_landing_identity(
 
 
 def mixed_reference_ground_witness_failures(
-    scenario: "ScenarioSpec", *, require_current_coverage: bool = True
+    scenario: "ScenarioSpec",
+    *,
+    require_current_coverage: bool = True,
+    _project: ProjectSpec | None = None,
 ) -> dict[str, str]:
     """Return fail-closed mixed-reference GND witness diagnostics by rail.
 
@@ -1398,7 +1402,8 @@ def mixed_reference_ground_witness_failures(
         item.refdes.casefold(): item for item in analysis.connections.values()
     }
     failures: dict[str, str] = {}
-    for rail in scenario.base_project.rails:
+    project = _project if _project is not None else scenario.base_project
+    for rail in project.rails:
         certificate = rail.mixed_reference_certificate
         if certificate is None:
             continue
@@ -1571,6 +1576,53 @@ def mixed_reference_ground_witness_failures(
     return failures
 
 
+@dataclass(slots=True)
+class _ScenarioValidationMemo:
+    """One-call scratch state for full, non-persistent scenario validation.
+
+    A memo is created by the archive loader and passed through Pydantic's
+    validation context.  Every value in it is still derived from the decoded
+    scenario during this validation call; no persisted digest or prior load is
+    trusted.  Keeping the object outside ``ScenarioSpec`` also prevents stale
+    identities after an edit or ``model_copy``.
+    """
+
+    owner: Any | None = None
+    project: ProjectSpec | None = None
+    connection_payload: dict[str, Any] | None = None
+    source_state_fingerprint: str | None = None
+    design_fingerprint: str | None = None
+    decap_by_key: dict[str, ScenarioDecap] | None = None
+    rail_by_key: dict[str, Any] | None = None
+    cap_model_by_key: dict[str, Any] | None = None
+    cap_model_payload_by_key: dict[str, dict[str, Any]] | None = None
+    sorted_decaps: tuple[ScenarioDecap, ...] | None = None
+    baseline_project_payload: dict[str, Any] | None = None
+
+    def reset(self, project: ProjectSpec) -> None:
+        """Discard derived values and retain only the newly validated project."""
+
+        self.owner = None
+        self.project = project
+        self.connection_payload = None
+        self.source_state_fingerprint = None
+        self.design_fingerprint = None
+        self.decap_by_key = None
+        self.rail_by_key = None
+        self.cap_model_by_key = None
+        self.cap_model_payload_by_key = None
+        self.sorted_decaps = None
+        self.baseline_project_payload = None
+
+    def bind(self, owner: Any, project: ProjectSpec) -> None:
+        """Bind all derived values to one exact ScenarioSpec object identity."""
+
+        if self.owner is owner and self.project is project:
+            return
+        self.reset(project)
+        self.owner = owner
+
+
 class ScenarioSpec(ScenarioModel):
     """Complete editable SPD decap scenario, including resumable UI state."""
 
@@ -1603,7 +1655,9 @@ class ScenarioSpec(ScenarioModel):
 
     @field_validator("normalized_project", mode="before")
     @classmethod
-    def validate_normalized_project(cls, value: object) -> dict[str, Any]:
+    def validate_normalized_project(
+        cls, value: object, info: ValidationInfo
+    ) -> dict[str, Any]:
         if isinstance(value, ProjectSpec):
             project = value
             preserve_legacy_empty_clusters = False
@@ -1615,6 +1669,10 @@ class ScenarioSpec(ScenarioModel):
             )
             legacy_project = value if isinstance(value, Mapping) else None
             project = ProjectSpec.model_validate(value)
+        if isinstance(info.context, _ScenarioValidationMemo):
+            # The context is deliberately reset here so even accidental reuse
+            # across two model_validate calls cannot reuse a prior design.
+            info.context.reset(project)
         payload = project.model_dump(mode="json")
         # ProjectSpec gained an optional shared-pad collection while scenario
         # schema 0.1 remained readable.  Do not inject the new empty default
@@ -1660,6 +1718,8 @@ class ScenarioSpec(ScenarioModel):
     def _validate_connection_analysis(
         self,
         decap_by_key: dict[str, ScenarioDecap],
+        *,
+        project: ProjectSpec | None = None,
     ) -> None:
         analysis = self.connection_analysis
         if analysis is None:
@@ -1724,8 +1784,9 @@ class ScenarioSpec(ScenarioModel):
             item.cluster_id.casefold(): item for item in analysis.clusters
         }
         membership: dict[str, SharedPadCluster] = {}
+        validated_project = project if project is not None else self.base_project
         rail_by_key = {
-            item.rail_id.casefold(): item for item in self.base_project.rails
+            item.rail_id.casefold(): item for item in validated_project.rails
         }
         for cluster in analysis.clusters:
             member_keys = {item.casefold() for item in cluster.member_refdes}
@@ -1998,10 +2059,23 @@ class ScenarioSpec(ScenarioModel):
                 )
 
     @model_validator(mode="after")
-    def consistent_indexes(self) -> "ScenarioSpec":
+    def consistent_indexes(self, info: ValidationInfo) -> "ScenarioSpec":
+        memo = (
+            info.context
+            if isinstance(info.context, _ScenarioValidationMemo)
+            else _ScenarioValidationMemo()
+        )
+        project = memo.project
+        if project is None:
+            project = ProjectSpec.model_validate(self.normalized_project)
+            memo.project = project
+        memo.bind(self, project)
+
         refdes_keys = [item.refdes.casefold() for item in self.decaps]
         if len(refdes_keys) != len(set(refdes_keys)):
             raise ValueError("scenario decap REFDES values must be unique")
+        decap_by_key = {item.refdes.casefold(): item for item in self.decaps}
+        memo.decap_by_key = decap_by_key
 
         selected_keys = [item.casefold() for item in self.selected_refdes]
         if len(selected_keys) != len(set(selected_keys)):
@@ -2022,7 +2096,6 @@ class ScenarioSpec(ScenarioModel):
         if self.attachment_hashes and set(hash_by_key) != set(attachment_keys):
             raise ValueError("attachment names and attachment hashes must match")
 
-        project = self.base_project
         spd_import = project.metadata.get("spd_import")
         geometry_records = (
             spd_import.get("plane_geometries")
@@ -2115,13 +2188,19 @@ class ScenarioSpec(ScenarioModel):
                 "evaluation cache cannot reference normalized project assets"
             )
 
-        rail_by_key = {
-            item.rail_id.casefold(): item.rail_id for item in self.base_project.rails
+        rail_specs_by_key = {
+            item.rail_id.casefold(): item for item in project.rails
         }
-        decap_by_key = {item.refdes.casefold(): item for item in self.decaps}
-        self._validate_connection_analysis(decap_by_key)
+        memo.rail_by_key = rail_specs_by_key
+        rail_by_key = {
+            key: item.rail_id for key, item in rail_specs_by_key.items()
+        }
+        memo.cap_model_by_key = {
+            item.model_id.casefold(): item for item in project.cap_models
+        }
+        self._validate_connection_analysis(decap_by_key, project=project)
         witness_failures = mixed_reference_ground_witness_failures(
-            self, require_current_coverage=False
+            self, require_current_coverage=False, _project=project
         )
         if witness_failures:
             rail_id, reason = next(iter(sorted(witness_failures.items())))
@@ -2132,6 +2211,15 @@ class ScenarioSpec(ScenarioModel):
         capture_keys = [key.casefold() for key in self.baseline_captures]
         if len(capture_keys) != len(set(capture_keys)):
             raise ValueError("baseline capture rail keys must be unique")
+        expected_capture_refdes_by_rail: dict[str, set[str]] = {}
+        if self.baseline_captures:
+            for decap in self.decaps:
+                decap_key = decap.refdes.casefold()
+                if decap.source_mounted and decap_key in connected_refdes:
+                    expected_capture_refdes_by_rail.setdefault(
+                        decap.source_rail_id.casefold(), set()
+                    ).add(decap_key)
+        source_state_fingerprint: str | None = None
         for raw_rail_id, capture in self.baseline_captures.items():
             rail_key = raw_rail_id.casefold()
             if rail_key != capture.rail_id.casefold():
@@ -2145,15 +2233,11 @@ class ScenarioSpec(ScenarioModel):
                 )
             if capture.source_sha256 != self.source.sha256:
                 raise ValueError("baseline capture source identity does not match scenario")
-            if capture.source_state_sha256 != self.source_state_fingerprint:
+            if source_state_fingerprint is None:
+                source_state_fingerprint = self._source_state_fingerprint(memo)
+            if capture.source_state_sha256 != source_state_fingerprint:
                 raise ValueError("baseline capture physical source state has changed")
-            expected = {
-                item.refdes.casefold()
-                for item in self.decaps
-                if item.source_mounted
-                and item.source_rail_id.casefold() == rail_key
-                and item.refdes.casefold() in connected_refdes
-            }
+            expected = expected_capture_refdes_by_rail.get(rail_key, set())
             actual = {item.refdes.casefold() for item in capture.model_bindings}
             if actual != expected:
                 raise ValueError(
@@ -2173,8 +2257,13 @@ class ScenarioSpec(ScenarioModel):
                         f"baseline binding for {binding.refdes!r} must use its "
                         "SPD source model"
                     )
-            if capture.evaluation_input_sha256 != self.baseline_evaluation_input_fingerprint(
-                capture.rail_id, capture.model_bindings
+            if (
+                capture.evaluation_input_sha256
+                != self._baseline_evaluation_input_fingerprint(
+                    capture.rail_id,
+                    capture.model_bindings,
+                    memo=memo,
+                )
             ):
                 raise ValueError(
                     f"baseline solver inputs for {capture.rail_id!r} have changed"
@@ -2184,16 +2273,28 @@ class ScenarioSpec(ScenarioModel):
             capture.rail_id.casefold(): capture
             for capture in self.baseline_captures.values()
         }
-        for metadata in self.evaluation_cache.values():
-            if metadata.role != EvaluationRole.BASELINE:
-                continue
+        baseline_cache_entries = tuple(
+            metadata
+            for metadata in self.evaluation_cache.values()
+            if metadata.role == EvaluationRole.BASELINE
+        )
+        capture_fingerprint_by_rail: dict[str, str] = {}
+        if baseline_cache_entries:
+            capture_fingerprint_by_rail = {
+                rail_key: capture.capture_fingerprint
+                for rail_key, capture in capture_by_rail.items()
+            }
+        for metadata in baseline_cache_entries:
             capture = capture_by_rail.get(metadata.result_key.rail_id.casefold())
             if capture is None:
                 raise ValueError(
                     f"baseline evaluation for {metadata.result_key.rail_id!r} "
                     "has no baseline capture"
                 )
-            if metadata.baseline_capture_sha256 != capture.capture_fingerprint:
+            if (
+                metadata.baseline_capture_sha256
+                != capture_fingerprint_by_rail[capture.rail_id.casefold()]
+            ):
                 raise ValueError(
                     f"baseline evaluation for {metadata.result_key.rail_id!r} "
                     "does not match its capture"
@@ -2230,7 +2331,43 @@ class ScenarioSpec(ScenarioModel):
             if item.refdes.casefold() in connected_keys
         )
 
-    def _design_payload(self) -> dict[str, Any]:
+    def _owned_validation_memo(
+        self, memo: _ScenarioValidationMemo | None
+    ) -> _ScenarioValidationMemo | None:
+        """Return scratch data only when it belongs to this exact instance."""
+
+        return memo if memo is not None and memo.owner is self else None
+
+    def _sorted_decaps_for_validation(
+        self, memo: _ScenarioValidationMemo | None
+    ) -> tuple[ScenarioDecap, ...]:
+        memo = self._owned_validation_memo(memo)
+        if memo is not None and memo.sorted_decaps is not None:
+            return memo.sorted_decaps
+        ordered = tuple(
+            sorted(self.decaps, key=lambda entry: entry.refdes.casefold())
+        )
+        if memo is not None:
+            memo.sorted_decaps = ordered
+        return ordered
+
+    def _connection_payload_for_validation(
+        self, memo: _ScenarioValidationMemo | None
+    ) -> dict[str, Any] | None:
+        memo = self._owned_validation_memo(memo)
+        if self.connection_analysis is None:
+            return None
+        if memo is not None and memo.connection_payload is not None:
+            return memo.connection_payload
+        payload = _connection_analysis_fingerprint_payload(self.connection_analysis)
+        if memo is not None:
+            memo.connection_payload = payload
+        return payload
+
+    def _design_payload(
+        self, memo: _ScenarioValidationMemo | None = None
+    ) -> dict[str, Any]:
+        memo = self._owned_validation_memo(memo)
         cached_attachment_keys = {
             metadata.attachment_name.casefold()
             for metadata in self.evaluation_cache.values()
@@ -2242,7 +2379,7 @@ class ScenarioSpec(ScenarioModel):
         }
         decaps = [
             item.model_dump(mode="json")
-            for item in sorted(self.decaps, key=lambda entry: entry.refdes.casefold())
+            for item in self._sorted_decaps_for_validation(memo)
         ]
         payload = {
             "schema_version": self.schema_version,
@@ -2256,24 +2393,43 @@ class ScenarioSpec(ScenarioModel):
             "decaps": decaps,
             "attachment_hashes": electrical_attachment_hashes,
         }
-        if self.connection_analysis is not None:
-            payload["connection_analysis"] = _connection_analysis_fingerprint_payload(
-                self.connection_analysis
-            )
+        connection_payload = self._connection_payload_for_validation(memo)
+        if connection_payload is not None:
+            payload["connection_analysis"] = connection_payload
         return payload
+
+    def _design_fingerprint(
+        self, memo: _ScenarioValidationMemo | None = None
+    ) -> str:
+        memo = self._owned_validation_memo(memo)
+        if memo is not None and memo.design_fingerprint is not None:
+            return memo.design_fingerprint
+        digest = _hash_payload(self._design_payload(memo))
+        if memo is not None:
+            memo.design_fingerprint = digest
+        return digest
 
     @property
     def design_fingerprint(self) -> str:
         """Hash of electrical design state, excluding UI/cache/revision/source path."""
 
-        return _hash_payload(self._design_payload())
+        return self._design_fingerprint()
 
     @property
     def source_state_fingerprint(self) -> str:
         """Hash immutable placement/source assignment data, excluding tuning."""
 
+        return self._source_state_fingerprint()
+
+    def _source_state_fingerprint(
+        self, memo: _ScenarioValidationMemo | None = None
+    ) -> str:
+        memo = self._owned_validation_memo(memo)
+        if memo is not None and memo.source_state_fingerprint is not None:
+            return memo.source_state_fingerprint
+
         source_decaps = []
-        for item in sorted(self.decaps, key=lambda entry: entry.refdes.casefold()):
+        for item in self._sorted_decaps_for_validation(memo):
             source_decaps.append(
                 {
                     "refdes": item.refdes,
@@ -2300,11 +2456,13 @@ class ScenarioSpec(ScenarioModel):
             "source_sha256": self.source.sha256,
             "decaps": source_decaps,
         }
-        if self.connection_analysis is not None:
-            payload["connection_analysis"] = _connection_analysis_fingerprint_payload(
-                self.connection_analysis
-            )
-        return _hash_payload(payload)
+        connection_payload = self._connection_payload_for_validation(memo)
+        if connection_payload is not None:
+            payload["connection_analysis"] = connection_payload
+        digest = _hash_payload(payload)
+        if memo is not None:
+            memo.source_state_fingerprint = digest
+        return digest
 
     def baseline_evaluation_input_fingerprint(
         self,
@@ -2321,28 +2479,56 @@ class ScenarioSpec(ScenarioModel):
         of this identity and therefore cannot drift silently.
         """
 
-        rail = next(
-            (
-                item
-                for item in self.base_project.rails
-                if item.rail_id.casefold() == rail_id.casefold()
-            ),
-            None,
+        return self._baseline_evaluation_input_fingerprint(
+            rail_id, model_bindings, memo=None
         )
+
+    def _baseline_evaluation_input_fingerprint(
+        self,
+        rail_id: str,
+        model_bindings: list[BaselineModelBinding]
+        | tuple[BaselineModelBinding, ...],
+        *,
+        memo: _ScenarioValidationMemo | None,
+    ) -> str:
+        memo = self._owned_validation_memo(memo)
+        project = (
+            memo.project
+            if memo is not None and memo.project is not None
+            else self.base_project
+        )
+        if memo is not None and memo.rail_by_key is not None:
+            rails = memo.rail_by_key
+        else:
+            rails = {item.rail_id.casefold(): item for item in project.rails}
+            if memo is not None:
+                memo.rail_by_key = rails
+        rail = rails.get(rail_id.casefold())
+
         if rail is None:
             raise ValueError(f"unknown baseline rail {rail_id!r}")
         bindings = tuple(model_bindings)
         binding_models = {item.model_id.casefold() for item in bindings}
-        models = {
-            item.model_id.casefold(): item for item in self.base_project.cap_models
-        }
+        if memo is not None and memo.cap_model_by_key is not None:
+            models = memo.cap_model_by_key
+        else:
+            models = {
+                item.model_id.casefold(): item for item in project.cap_models
+            }
+            if memo is not None:
+                memo.cap_model_by_key = models
         missing_models = binding_models - set(models)
         if missing_models:
             raise ValueError(
                 "baseline capture references unknown model(s): "
                 + ", ".join(sorted(missing_models))
             )
-        decaps = {item.refdes.casefold(): item for item in self.decaps}
+        if memo is not None and memo.decap_by_key is not None:
+            decaps = memo.decap_by_key
+        else:
+            decaps = {item.refdes.casefold(): item for item in self.decaps}
+            if memo is not None:
+                memo.decap_by_key = decaps
         for binding in bindings:
             decap = decaps.get(binding.refdes.casefold())
             if decap is None:
@@ -2355,23 +2541,40 @@ class ScenarioSpec(ScenarioModel):
                     f"{binding.refdes}: baseline model footprint does not match"
                 )
 
-        project = self.base_project.model_dump(mode="json")
-        _preserve_legacy_stackup_row_shape(project, self.normalized_project)
-        if (
-            "shared_pad_clusters" not in self.normalized_project
-            and not project.get("shared_pad_clusters")
-        ):
-            project.pop("shared_pad_clusters", None)
-        project.pop("attachment_names", None)
-        project.pop("metadata", None)
-        project["cap_models"] = [
-            models[key].model_dump(mode="json") for key in sorted(binding_models)
-        ]
+        if memo is not None and memo.baseline_project_payload is not None:
+            baseline_project = memo.baseline_project_payload
+        else:
+            baseline_project = project.model_dump(mode="json")
+            _preserve_legacy_stackup_row_shape(
+                baseline_project, self.normalized_project
+            )
+            if (
+                "shared_pad_clusters" not in self.normalized_project
+                and not baseline_project.get("shared_pad_clusters")
+            ):
+                baseline_project.pop("shared_pad_clusters", None)
+            baseline_project.pop("attachment_names", None)
+            baseline_project.pop("metadata", None)
+            if memo is not None:
+                memo.baseline_project_payload = baseline_project
+        if memo is not None and memo.cap_model_payload_by_key is not None:
+            model_payloads = memo.cap_model_payload_by_key
+        else:
+            model_payloads = {
+                key: model.model_dump(mode="json")
+                for key, model in models.items()
+            }
+            if memo is not None:
+                memo.cap_model_payload_by_key = model_payloads
+        selected_project = {
+            **baseline_project,
+            "cap_models": [model_payloads[key] for key in sorted(binding_models)],
+        }
         return _hash_payload(
             {
                 "rail_id": rail.rail_id,
-                "project": project,
-                "source_state_sha256": self.source_state_fingerprint,
+                "project": selected_project,
+                "source_state_sha256": self._source_state_fingerprint(memo),
                 "model_bindings": [
                     item.model_dump(mode="json")
                     for item in sorted(bindings, key=lambda value: value.refdes.casefold())

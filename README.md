@@ -1,8 +1,8 @@
-# SPD Decap PI Evaluator v0.18.0
+# SPD Decap PI Evaluator v0.18.1
 
-> **v0.18.0 keeps the legacy modal v0.17 physics, default selection, rollback path, and resulting curve unchanged.** It adds an explicit **Research: actual-artwork uniform mode** option. That option is an experimental, source-only `C00` replacement scaffold: it never fits to PowerSI, requires a source-bound topology/connectivity certificate, and fails closed when its evidence is incomplete. It is not a verified accuracy improvement, does not certify sub-milliohm behavior, and is not for sign-off. The title bar identifies the application as **SPD Decap PI Evaluator v0.18.0**.
+> **v0.18.1 keeps the legacy modal v0.17 physics, default selection, rollback path, and resulting curve unchanged.** It adds an explicit **Research: actual-artwork uniform mode** option. That option is an experimental, source-only `C00` replacement scaffold: it never fits to PowerSI, requires a source-bound topology/connectivity certificate, and fails closed when its evidence is incomplete. It is not a verified accuracy improvement, does not certify sub-milliohm behavior, and is not for sign-off. The title bar identifies the application as **SPD Decap PI Evaluator v0.18.1**.
 
-> 프로그램: **SPD Decap PI Evaluator v0.18.0**
+> 프로그램: **SPD Decap PI Evaluator v0.18.1**
 > 저장소: 기존 PI Calculator와 분리된 독립 프로그램
 > 해석 경계: 선택한 PWR rail의 pre-design `Zii`; 최종 PowerSI/SIwave 검증을 대체하지 않음
 
@@ -11,14 +11,15 @@
 desktop 프로그램이다. Stackup, MLO 크기 또는 plane을 새로 작성하는 기능과
 Optimization Mode는 포함하지 않는다.
 
-## v0.18 evaluation solver status
+## v0.18.1 evaluation solver and loading status
 
 - The 2026-08-04 [evaluation-solver deep-research decision record](docs/EVALUATION_SOLVER_DEEP_RESEARCH_2026-08-04.md) documents the 92-port PowerSI evidence, actual-artwork capacitance experiments, layer-network composition, matrix-free residual go/no-go criteria, selected sparse-MNA architecture, validation gates, and staged implementation order. It is a research record only; no experimental solver is production-enabled by that document.
-- The companion [evaluation-solver implementation plan](docs/EVALUATION_SOLVER_IMPLEMENTATION_PLAN_2026-08-04.md) and the [v0.18 implementation status](docs/EVALUATION_SOLVER_IMPLEMENTATION_STATUS_2026-08-04.md) distinguish shipped guarded infrastructure from research prototypes. The legacy modal backend remains the default production path.
+- The companion [evaluation-solver implementation plan](docs/EVALUATION_SOLVER_IMPLEMENTATION_PLAN_2026-08-04.md) and the [v0.18.1 implementation status](docs/EVALUATION_SOLVER_IMPLEMENTATION_STATUS_2026-08-04.md) distinguish shipped guarded infrastructure from research prototypes. The legacy modal backend remains the default production path.
+- v0.18.1 loading hardening reduced the final guarded, named 1.116 GB raw-SPD import from 591.6 s to 272.5 s (53.9%) and observed peak private memory from about 4.7 GiB to 2.42 GiB. The actual `.spdpi` app-equivalent path, including source SHA verification and prepared-view construction, loaded 11,050 decaps and 92 rails in 26.304 s with design fingerprint prefix `2fe31c68a0e7`. Separate component measurements were 6.09 s for scenario validation and about 8.03 s for bundle decode/validation; they are not complete app-load times. Exact parser audit counts were retained, the resource guard fails closed, and this loading work does not change the solver/research status.
 - The explicit research profile replaces only the source-side uniform `C00` contribution; it does not add a parallel capacitance term and it leaves non-uniform modal terms unchanged. It requires a SHA-bound topology certificate and independent PWR/DGND port-connectivity evidence. If that proof is absent, evaluation stops with an actionable readiness error and never falls back silently or emits a partial curve.
 - Research Original/Tuned curves are transient: Original is recomputed for every run and is neither persisted to nor reused from the scenario baseline cache. Legacy retains its existing `Saved now`/cache-reuse behavior.
 - The named source SPD with SHA-256 prefix `40cb44b2376f` currently lacks the required topology certificate. Consequently the research option is intentionally blocked for that source and no accuracy-improvement claim is made for it.
-- The source-only uniform `C00` scaffold above is the only shipped research profile. Separate global MNA, MFDM, PEEC, and associated artwork/via prototypes were investigated but excluded from the v0.18 product release. PowerSI Touchstone remains comparison-only and is never used for parameter fitting.
+- The source-only uniform `C00` scaffold above is the only shipped research profile. Separate global MNA, MFDM, PEEC, and associated artwork/via prototypes were investigated but excluded from the v0.18.1 prerelease. PowerSI Touchstone remains comparison-only and is never used for parameter fitting. v0.18.1 remains a prerelease until the documented accuracy-promotion gates, including end-to-end and blinded holdout evidence, are passed.
 - The default remains **Balanced** (max index 8, 81 modes). **Experimental m12 check** keeps the existing max index 12 / 169-mode API for a comparison-only m10-to-m12 check. In the 2026-07-29 loaded benchmark, VTRIP1 changed by up to 1.346 dB in maximum magnitude from m10 to m12, 3 of 6 loaded configurations still did not converge, and solver runtime was 4,139 s. More modes worsened external correlation in that case, but this does not justify selecting a lower order; PowerSI remains comparison-only.
 - The evaluator can combine only the immediately adjacent, opposite-side conductor when it contains configured GND aliases and valid dielectric rows. It uses the disclosed shared-PWR ideal-common-reference equivalent; it does not enable a general layer cascade. A true layer cascade is a full complex multiport Y-matrix Schur/Kron reduction, not scalar-Z or scalar-admittance merging. See [Evaluation accuracy](docs/EVALUATION_ACCURACY.md).
 - A mixed PWR/DGND return layer is accepted only through a versioned certificate tied to SHA-256-verified exact plane artwork. The certificate requires at least 90% PWR-area overlap with the configured DGND artwork and a 99% dominant overlap component; it is fail-closed if geometry verification is unavailable. Result confidence remains **LOW** and displays the overlap evidence plus the continuous rectangular-return approximation.
@@ -111,7 +112,7 @@ powershell.exe -ExecutionPolicy Bypass -NoProfile -File .\scripts\build_spd_deca
 산출물:
 
 - `dist\SPDDecapPIEvaluator\SPDDecapPIEvaluator.exe`
-- `installer-output\SPDDecapPIEvaluatorSetup-0.18.0.exe`
-- `installer-output\SPDDecapPIEvaluatorSetup-0.18.0.exe.sha256`
+- `installer-output\SPDDecapPIEvaluatorSetup-0.18.1.exe`
+- `installer-output\SPDDecapPIEvaluatorSetup-0.18.1.exe.sha256`
 
 프로그램명과 버전은 title bar와 installer metadata에 함께 표시된다.

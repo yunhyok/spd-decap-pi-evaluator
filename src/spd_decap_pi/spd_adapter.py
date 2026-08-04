@@ -73,6 +73,8 @@ class ImportStageTimings:
     plan_s: float
     index_s: float
     recovery_s: float
+    mixed_witness_selection_s: float
+    ground_recovery_s: float
     eligibility_s: float
     finalize_s: float
     total_s: float
@@ -533,6 +535,123 @@ def _common_eligibility_maps(
     }
 
 
+def _select_mixed_reference_ground_landings(
+    *,
+    mixed_rails: dict[str, Any],
+    top_instances: tuple[SpdCapInstance, ...],
+    parsed_connection_by_key: dict[str, Any],
+    parsed_cluster_by_key: dict[str, Any],
+    path_recovery: Any,
+    eligibility_index: PlaneEligibilityIndex,
+    rail_choices_by_pair: dict[tuple[str, str, str], tuple[tuple[Any, str], ...]],
+) -> tuple[dict[str, list[tuple[str, Any]]], dict[str, set[str]]]:
+    """Select source GND landing witnesses once per physical decap/cluster.
+
+    The previous rail-major traversal recomputed a direct decap's common PWR
+    eligibility once for every mixed rail.  Invert that traversal: calculate
+    it once, then append its matching source GND landings to each eligible
+    mixed rail.  ``top_instances`` remains the outer order, so each per-rail
+    witness list keeps the prior source order and shared clusters remain at
+    their first anchor occurrence.
+    """
+
+    result: dict[str, list[tuple[str, Any]]] = {
+        key: [] for key in mixed_rails
+    }
+    target_layers_by_net: dict[str, set[str]] = {}
+    mixed_key_by_rail_id: dict[str, str] = {}
+    gnd_key_by_mixed_rail: dict[str, str] = {}
+    for rail_key, rail in mixed_rails.items():
+        certificate = rail.mixed_reference_certificate
+        assert certificate is not None
+        mixed_key_by_rail_id[rail.rail_id.casefold()] = rail_key
+        gnd_key = certificate.gnd_net.casefold()
+        gnd_key_by_mixed_rail[rail_key] = gnd_key
+        target_layers_by_net.setdefault(gnd_key, set()).add(certificate.gnd_layer)
+
+    def eligible_mixed_keys(
+        eligibility: dict[str, RailEligibility],
+    ) -> tuple[str, ...]:
+        # ``_common_eligibility_*`` already returns only allowed entries.  Keep
+        # the explicit check as a fail-closed guard for future callers.
+        return tuple(
+            mixed_key
+            for rail_id, item in eligibility.items()
+            if item.allowed
+            and (mixed_key := mixed_key_by_rail_id.get(rail_id.casefold()))
+            is not None
+        )
+
+    processed_shared_clusters: set[str] = set()
+    for instance in top_instances:
+        connection = parsed_connection_by_key.get(instance.refdes.casefold())
+        if connection is None or connection.kind not in {"DIRECT", "SHARED_ANCHOR"}:
+            continue
+        if connection.kind == "DIRECT":
+            power_vias = tuple(
+                _scenario_via_landing(landing, path_recovery)
+                for landing in connection.power_vias
+            )
+            eligible = _common_eligibility_at_landings(
+                eligibility_index,
+                power_vias,
+                rail_choices_by_pair,
+            )
+            mixed_keys = eligible_mixed_keys(eligible)
+            owner = (
+                f"cluster:{connection.cluster_id}"
+                if connection.cluster_id is not None
+                else instance.refdes
+            )
+            for rail_key in mixed_keys:
+                gnd_key = gnd_key_by_mixed_rail[rail_key]
+                result[rail_key].extend(
+                    (owner, landing)
+                    for landing in connection.ground_vias
+                    if landing.net.casefold() == gnd_key
+                )
+            continue
+
+        assert connection.cluster_id is not None
+        cluster_key = connection.cluster_id.casefold()
+        if cluster_key in processed_shared_clusters:
+            continue
+        processed_shared_clusters.add(cluster_key)
+        cluster = parsed_cluster_by_key.get(cluster_key)
+        if cluster is None:
+            continue
+        power_landings = {
+            landing.via_id.casefold(): _scenario_via_landing(landing, path_recovery)
+            for member in cluster.member_refdes
+            for landing in parsed_connection_by_key[member.casefold()].power_vias
+        }
+        common = _common_eligibility_maps(
+            tuple(
+                _eligibility_for_via_landing(
+                    eligibility_index, landing, rail_choices_by_pair
+                )
+                for landing in power_landings.values()
+            )
+        )
+        mixed_keys = eligible_mixed_keys(common)
+        if not mixed_keys:
+            continue
+        owner = f"cluster:{cluster.cluster_id}"
+        ground_landings = tuple(
+            landing
+            for member in cluster.member_refdes
+            for landing in parsed_connection_by_key[member.casefold()].ground_vias
+        )
+        for rail_key in mixed_keys:
+            gnd_key = gnd_key_by_mixed_rail[rail_key]
+            result[rail_key].extend(
+                (owner, landing)
+                for landing in ground_landings
+                if landing.net.casefold() == gnd_key
+            )
+    return result, target_layers_by_net
+
+
 def _rail_choice_index(
     project: ProjectSpec,
 ) -> dict[tuple[str, str, str], tuple[tuple[Any, str], ...]]:
@@ -752,102 +871,22 @@ def import_spd_scenario(
         for rail in base_project.rails
         if rail.mixed_reference_certificate is not None
     }
-    mixed_ground_landings_by_rail: dict[str, list[tuple[str, Any]]] = {
-        key: [] for key in mixed_rails
-    }
-    shared_cluster_rail_eligibility: dict[tuple[str, str], bool] = {}
-    mixed_target_layers_by_net: dict[str, set[str]] = {}
-    for rail_key, rail in mixed_rails.items():
-        processed_shared_clusters: set[str] = set()
-        certificate = rail.mixed_reference_certificate
-        assert certificate is not None
-        mixed_target_layers_by_net.setdefault(certificate.gnd_net.casefold(), set()).add(
-            certificate.gnd_layer
-        )
-        for instance in top_instances:
-            connection = parsed_connection_by_key.get(instance.refdes.casefold())
-            if connection is None or connection.kind not in {"DIRECT", "SHARED_ANCHOR"}:
-                continue
-            if connection.kind == "DIRECT":
-                power_vias = tuple(
-                    _scenario_via_landing(landing, path_recovery)
-                    for landing in connection.power_vias
-                )
-                eligible = _common_eligibility_at_landings(
-                    eligibility_index,
-                    power_vias,
-                    rail_choices_by_pair,
-                )
-                rail_eligibility = next(
-                    (
-                        item
-                        for rail_id, item in eligible.items()
-                        if rail_id.casefold() == rail_key
-                    ),
-                    None,
-                )
-                if rail_eligibility is None or not rail_eligibility.allowed:
-                    continue
-            else:
-                assert connection.cluster_id is not None
-                cluster_key = connection.cluster_id.casefold()
-                cache_key = (cluster_key, rail_key)
-                allowed = shared_cluster_rail_eligibility.get(cache_key)
-                if allowed is None:
-                    cluster = parsed_cluster_by_key.get(cluster_key)
-                    if cluster is None:
-                        allowed = False
-                    else:
-                        power_landings = {
-                            landing.via_id.casefold(): _scenario_via_landing(
-                                landing, path_recovery
-                            )
-                            for member in cluster.member_refdes
-                            for landing in parsed_connection_by_key[
-                                member.casefold()
-                            ].power_vias
-                        }
-                        by_via = tuple(
-                            _eligibility_for_via_landing(
-                                eligibility_index, landing, rail_choices_by_pair
-                            )
-                            for landing in power_landings.values()
-                        )
-                        common = _common_eligibility_maps(by_via)
-                        candidate = next(
-                            (
-                                item for rail_id, item in common.items()
-                                if rail_id.casefold() == rail_key
-                            ),
-                            None,
-                        )
-                        allowed = bool(candidate is not None and candidate.allowed)
-                    shared_cluster_rail_eligibility[cache_key] = allowed
-                if not allowed:
-                    continue
-                cluster = parsed_cluster_by_key[cluster_key]
-                if cluster_key in processed_shared_clusters:
-                    continue
-                processed_shared_clusters.add(cluster_key)
-                owner = f"cluster:{cluster.cluster_id}"
-                for member in cluster.member_refdes:
-                    member_connection = parsed_connection_by_key[member.casefold()]
-                    for landing in member_connection.ground_vias:
-                        if landing.net.casefold() == certificate.gnd_net.casefold():
-                            mixed_ground_landings_by_rail[rail_key].append(
-                                (owner, landing)
-                            )
-                continue
-            owner = (
-                f"cluster:{connection.cluster_id}"
-                if connection.cluster_id is not None
-                else instance.refdes
-            )
-            for landing in connection.ground_vias:
-                if landing.net.casefold() == certificate.gnd_net.casefold():
-                    mixed_ground_landings_by_rail[rail_key].append(
-                        (owner, landing)
-                    )
+    report(91, "Selecting mixed-reference GND witness landings")
+    mixed_witness_selection_started = perf_counter()
+    (
+        mixed_ground_landings_by_rail,
+        mixed_target_layers_by_net,
+    ) = _select_mixed_reference_ground_landings(
+        mixed_rails=mixed_rails,
+        top_instances=top_instances,
+        parsed_connection_by_key=parsed_connection_by_key,
+        parsed_cluster_by_key=parsed_cluster_by_key,
+        path_recovery=path_recovery,
+        eligibility_index=eligibility_index,
+        rail_choices_by_pair=rail_choices_by_pair,
+    )
+    mixed_witness_selection_s = perf_counter() - mixed_witness_selection_started
+    ground_recovery_started = perf_counter()
     ground_reachability = recover_spd_ground_reachability(
         source_path,
         landings=(
@@ -863,6 +902,7 @@ def import_spd_scenario(
         progress=lambda value, message: report(91 + round(max(0, min(100, value)) * 1 / 100), message),
         is_cancelled=cancelled,
     )
+    ground_recovery_s = perf_counter() - ground_recovery_started
     mixed_witnesses: dict[str, MixedReferenceGroundWitness] = {}
     mixed_ground_reachability_by_rail: list[dict[str, Any]] = []
     mixed_ground_reachability_diagnostics: list[SpdDiagnostic] = []
@@ -1228,6 +1268,8 @@ def import_spd_scenario(
         plan_s=plan_s,
         index_s=index_s,
         recovery_s=path_recovery_s,
+        mixed_witness_selection_s=mixed_witness_selection_s,
+        ground_recovery_s=ground_recovery_s,
         eligibility_s=eligibility_s,
         finalize_s=finalize_s,
         total_s=total_s,

@@ -18,6 +18,7 @@ from pydantic import ValidationError
 from .scenario import (
     SCENARIO_SCHEMA_VERSION,
     ScenarioSpec,
+    _ScenarioValidationMemo,
 )
 
 
@@ -216,6 +217,7 @@ def save_scenario(
     attachment_hashes = {
         name: sha256(attachment_bytes[name]).hexdigest() for name in ordered_names
     }
+    validation_memo = _ScenarioValidationMemo()
     try:
         persisted = ScenarioSpec.model_validate(
             scenario.model_copy(
@@ -223,7 +225,8 @@ def save_scenario(
                     "attachment_names": ordered_names,
                     "attachment_hashes": attachment_hashes,
                 }
-            ).model_dump(mode="python")
+            ).model_dump(mode="python"),
+            context=validation_memo,
         )
     except ValidationError as exc:
         raise ScenarioFormatError(f"scenario data failed validation: {exc}") from exc
@@ -261,7 +264,7 @@ def save_scenario(
         "scenario_file": SCENARIO_FILENAME,
         "scenario_size": len(scenario_bytes),
         "scenario_sha256": sha256(scenario_bytes).hexdigest(),
-        "design_fingerprint": persisted.design_fingerprint,
+        "design_fingerprint": persisted._design_fingerprint(validation_memo),
         "raw_spd_embedded": False,
         "attachments": entries,
     }
@@ -482,8 +485,11 @@ def load_scenario_bundle(path: str | os.PathLike[str]) -> ScenarioBundle:
                 raise ScenarioFormatError(
                     "scenario schema version disagrees with manifest"
                 )
+            validation_memo = _ScenarioValidationMemo()
             try:
-                scenario = ScenarioSpec.model_validate(raw_scenario)
+                scenario = ScenarioSpec.model_validate(
+                    raw_scenario, context=validation_memo
+                )
             except ValidationError as exc:
                 raise ScenarioFormatError(
                     f"scenario data failed schema validation: {exc}"
@@ -532,7 +538,10 @@ def load_scenario_bundle(path: str | os.PathLike[str]) -> ScenarioBundle:
             expected_fingerprint = _manifest_hash(
                 manifest.get("design_fingerprint"), label="design fingerprint"
             )
-            if scenario.design_fingerprint != expected_fingerprint:
+            if (
+                scenario._design_fingerprint(validation_memo)
+                != expected_fingerprint
+            ):
                 raise ScenarioFormatError(
                     "scenario design fingerprint does not match its manifest"
                 )

@@ -709,8 +709,12 @@ def test_loaded_spd_supports_pwr_net_search_and_disabled_electrical_state(
         assert window.board.record_count == 2
         assert window.evaluate_button.isEnabled()
         assert "eligibility" in window.status_text.text()
+        assert "Mixed-reference witness selection" in window.status_text.text()
+        assert "Mixed-reference GND recovery" in window.status_text.text()
         assert "SPD analysis:" in window.status_text.toolTip()
         assert "Spatial index build:" in window.status_text.toolTip()
+        assert "Mixed-reference witness selection:" in window.status_text.toolTip()
+        assert "Mixed-reference GND recovery:" in window.status_text.toolTip()
         assert "Board scene build:" in window.status_text.toolTip()
         assert "Pad/Via A " in window.status_text.text()
         assert "Unresolved (PWR edits blocked):" in window.status_text.toolTip()

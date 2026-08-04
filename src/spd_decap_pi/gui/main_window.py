@@ -3521,6 +3521,9 @@ class MainWindow(QMainWindow):
         self.status_text.setText(
             f"Loaded {len(imported.scenario.decaps):,} top-side decaps in "
             f"{visible_total_s:.1f}s (eligibility {timings.eligibility_s:.1f}s, "
+            f"Mixed-reference witness selection "
+            f"{timings.mixed_witness_selection_s:.1f}s, "
+            f"Mixed-reference GND recovery {timings.ground_recovery_s:.1f}s, "
             f"board {board_s + fit_s:.1f}s; {warnings} warning(s)) | "
             f"{connection_status} | {recovery_status}"
         )
@@ -3531,6 +3534,9 @@ class MainWindow(QMainWindow):
                     f"Geometry normalization/compression: {timings.plan_s:.3f}s",
                     f"Spatial index build: {timings.index_s:.3f}s",
                     f"Source Via path recovery: {timings.recovery_s:.3f}s",
+                    f"Mixed-reference witness selection: "
+                    f"{timings.mixed_witness_selection_s:.3f}s",
+                    f"Mixed-reference GND recovery: {timings.ground_recovery_s:.3f}s",
                     f"Exact eligibility: {timings.eligibility_s:.3f}s",
                     f"Scenario validation: {timings.finalize_s:.3f}s",
                     f"Board scene build: {board_s:.3f}s",

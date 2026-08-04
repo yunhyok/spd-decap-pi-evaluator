@@ -13,6 +13,7 @@ from spd_decap_pi._core import services as core_services
 from spd_decap_pi._core.domain import (
     MixedReferenceGroundWitness,
     PinKind,
+    StackupLayer,
     TerminalKind,
 )
 from spd_decap_pi._core.io import spd as spd_io
@@ -122,6 +123,136 @@ VDD_DROP/0::Unselected||DropShape
 """
 
 
+def test_chunked_shape_headers_preserve_offsets_across_crlf_lf_boundaries(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    source = tmp_path / "chunked-shapes.spd"
+    source.write_bytes(
+        b".Shape Signal$TOPpkgshape\r\n"
+        b"Polygon1::VDD_A+ 0mm 0mm 1mm 0mm 1mm 1mm\r\n"
+        b".Shape Signal$L01pkgshape\n"
+        b"Polygon2::VDD_B+ 0mm 0mm 1mm 0mm 1mm 1mm\n"
+        b".Shape Signal$L02pkgshape\r\n"
+    )
+    monkeypatch.setattr(spd_io, "_SHAPE_INDEX_CHUNK_BYTES", 37)
+
+    with source.open("rb") as handle, mmap.mmap(
+        handle.fileno(), 0, access=mmap.ACCESS_READ
+    ) as data:
+        expected = [
+            (match.start(), match.group(1))
+            for match in spd_io._SHAPE_RE.finditer(data, 0, len(data))
+        ]
+        actual = [
+            (match.start(), match.group(1))
+            for match in spd_io._iter_shape_headers(
+                data, 0, len(data), spd_io._Reporter(None, None)
+            )
+        ]
+        chunks = list(spd_io._iter_line_bounded_chunks(data, 0, len(data)))
+        raw = data[:]
+
+    assert actual == expected
+    assert len(chunks) > 1
+    assert all(end == len(raw) or raw[end - 1 : end] == b"\n" for _start, end in chunks)
+
+
+def test_chunked_shape_headers_check_cancellation_between_chunks(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    source = tmp_path / "cancel-chunked-shapes.spd"
+    source.write_bytes(
+        b".Shape Signal$TOPpkgshape\n"
+        + b"x" * 30
+        + b"\n.Shape Signal$L01pkgshape\n"
+        + b"y" * 30
+        + b"\n.Shape Signal$L02pkgshape\n"
+    )
+    monkeypatch.setattr(spd_io, "_SHAPE_INDEX_CHUNK_BYTES", 24)
+    checks = 0
+
+    def cancelled() -> bool:
+        nonlocal checks
+        checks += 1
+        return checks >= 2
+
+    with source.open("rb") as handle, mmap.mmap(
+        handle.fileno(), 0, access=mmap.ACCESS_READ
+    ) as data:
+        with pytest.raises(SpdImportError, match="SPD import cancelled"):
+            list(
+                spd_io._iter_shape_headers(
+                    data, 0, len(data), spd_io._Reporter(None, cancelled)
+                )
+            )
+
+    assert checks == 2
+
+
+def test_chunked_find_line_matches_whole_range_reference_at_boundaries(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    source = tmp_path / "chunked-find-line.spd"
+    raw = (
+        b".NetList\r\n"
+        b"not-a-marker .NetList\n"
+        + b"x" * 97
+        + b"\n.NetList\n"
+        + b"y" * 91
+        + b"\r\n.EndNetList\r\n"
+        + b".NetList trailing\n"
+        + b"\r.NetListCRonly\r"
+    )
+    source.write_bytes(raw)
+    monkeypatch.setattr(spd_io, "_SHAPE_INDEX_CHUNK_BYTES", 31)
+
+    def whole_range_reference(
+        data: mmap.mmap, prefix: bytes, start: int = 0, end: int | None = None
+    ) -> int:
+        stop = len(data) if end is None else end
+        search = max(0, start)
+        while search < stop:
+            found = data.find(prefix, search, stop)
+            if found < 0:
+                return -1
+            if found == 0 or data[found - 1 : found] in {b"\n", b"\r"}:
+                return found
+            search = found + max(1, len(prefix))
+        return -1
+
+    second = raw.find(b"\n.NetList", 1) + 1
+    end_marker = raw.find(b".EndNetList")
+    cr_only = raw.find(b".NetListCRonly")
+    cases = (
+        (b".NetList", 0, None),
+        (b".NetList", 1, None),
+        (b".NetList", second, None),
+        (b".NetList", second + 1, None),
+        (b".NetList", 0, second + len(b".NetList")),
+        (b".NetList", 0, second + len(b".NetList") - 1),
+        (b".EndNetList", 0, None),
+        (b".EndNetList", 0, end_marker + len(b".EndNetList")),
+        (b".EndNetList", 0, end_marker + len(b".EndNetList") - 1),
+        (b".NetListCRonly", cr_only - 1, None),
+        (b".NetListCRonly", cr_only, cr_only + len(b".NetListCRonly")),
+        (b".NetListCRonly", cr_only, cr_only + len(b".NetListCRonly") - 1),
+    )
+    with source.open("rb") as handle, mmap.mmap(
+        handle.fileno(), 0, access=mmap.ACCESS_READ
+    ) as data:
+        chunk_starts = {
+            start for start, _end in spd_io._iter_line_bounded_chunks(data, 0, len(data))
+        }
+        assert second in chunk_starts
+        for prefix, start, end in cases:
+            assert spd_io._find_line(data, prefix, start, end) == whole_range_reference(
+                data, prefix, start, end
+            )
+
+
 def test_mixed_reference_ground_reachability_accepts_branching_via_graph(
     tmp_path: Path,
 ) -> None:
@@ -192,6 +323,123 @@ def test_mixed_reference_ground_reachability_fails_closed_when_target_unreachabl
     assert result.statistics["unreachable"] == 1
 
 
+def test_mixed_reference_ground_reachability_uses_compact_dense_components(
+    tmp_path: Path,
+) -> None:
+    """Large sparse source graphs must not become nested Python edge sets."""
+
+    edge_count = 2_048
+    node_lines = "\n".join(
+        f"NodeRoute{index}!!1::DGND X = {index}um Y = 0um "
+        f"Layer = {'Signal$GND' if index == edge_count else 'Signal$TOP'} "
+        "PadStack = DR-0102_60"
+        for index in range(edge_count + 1)
+    )
+    trace_lines = "\n".join(
+        f"TraceRoute{index}::DGND StartingNode = NodeRoute{index}::DGND "
+        f"EndingNode = NodeRoute{index + 1}::DGND Width = 0.10mm"
+        for index in range(edge_count)
+    )
+    source, _analysis = _recoverable_via_source(
+        tmp_path,
+        node_lines=node_lines,
+        via_lines="",
+        trace_lines=trace_lines,
+    )
+    landing = SpdViaLanding(
+        via_id="ViaRoute",
+        net="DGND",
+        endpoint_node_id="NodeRoute0",
+        x_um=0.0,
+        y_um=0.0,
+        padstack="DR-0102_60",
+    )
+
+    result = recover_spd_ground_reachability(
+        source,
+        landings=(landing,),
+        target_layers_by_net={"DGND": ("Signal$GND",)},
+        target_node_predicate=lambda _net, _layer, node_id, _x, _y: (
+            node_id == f"NodeRoute{edge_count}"
+        ),
+    )
+
+    assert result.reaches(landing, "Signal$GND")
+    assert result.statistics["graph_edges"] >= edge_count
+    assert result.statistics["graph_nodes"] >= edge_count + 1
+    assert result.statistics["components"] >= 1
+
+
+def test_mixed_reference_ground_reachability_rejects_source_changed_during_recovery(
+    tmp_path: Path,
+) -> None:
+    source = tmp_path / "changed-ground.spd"
+    source.write_text(MINI_SPD, encoding="ascii")
+    landing = SpdViaLanding(
+        via_id="Via2",
+        net="DGND",
+        endpoint_node_id="Node4",
+        x_um=1200.0,
+        y_um=2000.0,
+        padstack="DR-0102_60",
+    )
+    changed = False
+
+    def mutate_after_open(value: int, _message: str) -> None:
+        nonlocal changed
+        if changed or value < 15:
+            return
+        before = source.stat()
+        os.utime(
+            source,
+            ns=(before.st_atime_ns, before.st_mtime_ns + 1_000_000_000),
+        )
+        changed = True
+
+    with pytest.raises(SpdImportError, match="changed during mixed-reference GND"):
+        recover_spd_ground_reachability(
+            source,
+            landings=(landing,),
+            target_layers_by_net={"DGND": ("Signal$GND",)},
+            progress=mutate_after_open,
+        )
+
+
+def _replace_source_bytes_preserving_size_and_mtime(path: Path) -> None:
+    """Model a same-stat replacement that only the recorded source hash catches."""
+
+    before = path.stat()
+    original = path.read_bytes()
+    replacement = original.replace(b"Title tiny SPD", b"Title tiny SPX", 1)
+    assert replacement != original
+    assert len(replacement) == len(original)
+    path.write_bytes(replacement)
+    os.utime(path, ns=(before.st_atime_ns, before.st_mtime_ns))
+    after = path.stat()
+    assert (after.st_size, after.st_mtime_ns) == (before.st_size, before.st_mtime_ns)
+
+
+def test_mixed_reference_ground_reachability_rejects_same_stat_source_replacement(
+    tmp_path: Path,
+) -> None:
+    source = tmp_path / "replaced-ground.spd"
+    source.write_text(MINI_SPD, encoding="ascii")
+    analysis = analyze_spd(source)
+    _replace_source_bytes_preserving_size_and_mtime(source)
+    landing = SpdViaLanding(
+        via_id="Via2", net="DGND", endpoint_node_id="Node4", x_um=1200.0,
+        y_um=2000.0, padstack="DR-0102_60",
+    )
+
+    with pytest.raises(SpdImportError, match="SHA-256 mismatch"):
+        recover_spd_ground_reachability(
+            source,
+            landings=(landing,),
+            target_layers_by_net={"DGND": ("Signal$GND",)},
+            expected_source=analysis.source,
+        )
+
+
 def _recoverable_via_source(
     tmp_path: Path,
     *,
@@ -245,6 +493,105 @@ def _recover_power_path(source: Path, analysis: object, **kwargs):
     )
 
 
+def test_recover_spd_via_paths_fails_closed_when_trace_proof_exceeds_budget(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    source, analysis = _recoverable_via_source(
+        tmp_path,
+        node_lines="""
+Node10!!1::VDD_CORE/0 X = 1mm Y = 2mm Layer = Signal$TOP PadStack = DR-0102_60
+Node11!!1::VDD_CORE/0 X = 1mm Y = 2mm Layer = Signal$PWR PadStack = DR-0102_60
+Node12!!1::VDD_CORE/0 X = 1.2mm Y = 2mm Layer = Signal$TOP PadStack = DR-0102_60
+Node13!!1::VDD_CORE/0 X = 1.3mm Y = 2mm Layer = Signal$TOP PadStack = DR-0102_60
+Node14!!1::VDD_CORE/0 X = 1.4mm Y = 2mm Layer = Signal$TOP PadStack = DR-0102_60
+""",
+        via_lines=(
+            "ViaRoute::VDD_CORE/0 UpperNode = Node10::VDD_CORE/0 "
+            "LowerNode = Node11::VDD_CORE/0 PadStack = DR-0102_60"
+        ),
+        trace_lines="""
+Trace1::VDD_CORE/0 StartingNode = Node10::VDD_CORE/0 EndingNode = Node12::VDD_CORE/0 Width = 0.10mm
+Trace2::VDD_CORE/0 StartingNode = Node12::VDD_CORE/0 EndingNode = Node13::VDD_CORE/0 Width = 0.10mm
+Trace3::VDD_CORE/0 StartingNode = Node13::VDD_CORE/0 EndingNode = Node14::VDD_CORE/0 Width = 0.10mm
+""",
+    )
+    monkeypatch.setattr(spd_io, "_SPD_VIA_PATH_MAX_RELEVANT_TRACE_RECORDS", 2)
+
+    recovery = _recover_power_path(source, analysis)
+
+    assert recovery.evidence_for("ViaRoute", "Signal$PWR") is None
+    assert recovery.statistics["requested"] == 1
+    assert recovery.statistics["recovered"] == 0
+    assert recovery.statistics["resource_guard_fallback"] == 1
+    assert recovery.statistics["relevant_trace_records_examined"] == 3
+    assert any(item.code == "SPD_VIA_PATH_RESOURCE_GUARD" for item in recovery.diagnostics)
+
+
+def _alternate_exit_budget_source(tmp_path: Path) -> tuple[Path, object]:
+    return _recoverable_via_source(
+        tmp_path,
+        node_lines="""
+Node10!!1::VDD_CORE/0 X = 1mm Y = 2mm Layer = Signal$TOP PadStack = DR-0102_60
+Node11!!1::VDD_CORE/0 X = 1mm Y = 2mm Layer = Signal$PWR PadStack = DR-0102_60
+Node12!!1::VDD_CORE/0 X = 1.2mm Y = 2mm Layer = Signal$TOP PadStack = DR-0102_60
+Node13!!1::VDD_CORE/0 X = 1.2mm Y = 2mm Layer = Signal$PWR PadStack = DR-0102_60
+""",
+        via_lines="""
+ViaRoute::VDD_CORE/0 UpperNode = Node10::VDD_CORE/0 LowerNode = Node11::VDD_CORE/0 PadStack = DR-0102_60
+ViaAlternate::VDD_CORE/0 UpperNode = Node12::VDD_CORE/0 LowerNode = Node13::VDD_CORE/0 PadStack = DR-0102_60
+""",
+        trace_lines=(
+            "TraceMesh::VDD_CORE/0 StartingNode = Node10::VDD_CORE/0 "
+            "EndingNode = Node12::VDD_CORE/0 Width = 0.10mm"
+        ),
+    )
+
+
+def test_recover_spd_via_paths_fails_closed_when_alternate_exit_via_edge_budget_exceeds(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    source, analysis = _alternate_exit_budget_source(tmp_path)
+
+    normal = _recover_power_path(source, analysis)
+    assert normal.evidence_for("ViaRoute", "Signal$PWR") is not None
+    assert normal.statistics["alternate_exit_via_edges_retained"] == 2
+
+    monkeypatch.setattr(
+        spd_io, "_SPD_VIA_PATH_MAX_RETAINED_ALTERNATE_EXIT_VIA_EDGES", 1
+    )
+    recovery = _recover_power_path(source, analysis)
+
+    assert recovery.evidence_for("ViaRoute", "Signal$PWR") is None
+    assert recovery.statistics["requested"] == 1
+    assert recovery.statistics["recovered"] == 0
+    assert recovery.statistics["resource_guard_fallback"] == 1
+    assert recovery.statistics["alternate_exit_via_edges_retained"] == 1
+    assert recovery.statistics["alternate_exit_via_edge_limit"] == 1
+    assert recovery.statistics["alternate_exit_nodes_retained"] == 3
+    assert any(item.code == "SPD_VIA_PATH_RESOURCE_GUARD" for item in recovery.diagnostics)
+
+
+def test_recover_spd_via_paths_fails_closed_when_alternate_exit_node_budget_exceeds(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    source, analysis = _alternate_exit_budget_source(tmp_path)
+    monkeypatch.setattr(spd_io, "_SPD_VIA_PATH_MAX_RETAINED_ALTERNATE_NODES", 2)
+
+    recovery = _recover_power_path(source, analysis)
+
+    assert recovery.evidence_for("ViaRoute", "Signal$PWR") is None
+    assert recovery.statistics["requested"] == 1
+    assert recovery.statistics["recovered"] == 0
+    assert recovery.statistics["resource_guard_fallback"] == 1
+    assert recovery.statistics["alternate_exit_via_edges_retained"] == 0
+    assert recovery.statistics["alternate_exit_nodes_retained"] == 2
+    assert recovery.statistics["alternate_exit_node_limit"] == 2
+    assert any(item.code == "SPD_VIA_PATH_RESOURCE_GUARD" for item in recovery.diagnostics)
+
+
 def test_padstack_material_is_retained_for_microvia_classification(tmp_path: Path) -> None:
     source = tmp_path / "material.spd"
     source.write_text(MINI_SPD, encoding="ascii")
@@ -296,6 +643,10 @@ Node99!!1::VDD_CORE/0 X = 2mm Y = 2mm Layer = Signal$TOP PadStack = DR-0102_60
         "alternate_exit_cache_entries": 1,
         "alternate_exit_trace_nodes_indexed": 2,
         "alternate_exit_via_edges_indexed": 1,
+        "alternate_exit_via_edges_retained": 1,
+        "alternate_exit_via_edge_limit": 250_000,
+        "alternate_exit_nodes_retained": 3,
+        "alternate_exit_node_limit": 750_000,
         "path_node_section_passes": 1,
         "alternate_exit_node_section_passes": 1,
         "alternate_exit_nodes_resolved": 3,
@@ -491,6 +842,26 @@ Node11!!1::VDD_CORE/0 X = 1.25mm Y = 2.5mm Layer = Signal$PWR
     source.write_text(source.read_text(encoding="ascii") + "\n", encoding="ascii")
 
     with pytest.raises(SpdImportError, match="changed after analysis before"):
+        _recover_power_path(source, analysis, expected_source=analysis.source)
+
+
+def test_recover_spd_via_paths_rejects_same_stat_source_replacement(
+    tmp_path: Path,
+) -> None:
+    source, analysis = _recoverable_via_source(
+        tmp_path,
+        node_lines="""
+Node10!!1::VDD_CORE/0 X = 1mm Y = 2mm Layer = Signal$TOP PadStack = DR-0102_60
+Node11!!1::VDD_CORE/0 X = 1.25mm Y = 2.5mm Layer = Signal$PWR
+""",
+        via_lines=(
+            "ViaRoute::VDD_CORE/0 UpperNode = Node10::VDD_CORE/0 "
+            "LowerNode = Node11::VDD_CORE/0 PadStack = DR-0102_60"
+        ),
+    )
+    _replace_source_bytes_preserving_size_and_mtime(source)
+
+    with pytest.raises(SpdImportError, match="SHA-256 mismatch"):
         _recover_power_path(source, analysis, expected_source=analysis.source)
 
 
@@ -1073,6 +1444,212 @@ def test_ordered_geometry_batches_polarity_runs_without_changing_semantics(
     assert actual is not None
     assert actual.symmetric_difference(expected).area == pytest.approx(0.0)
     assert batches == [2, 2, 1]
+
+
+def test_mixed_reference_defers_pwr_geometry_until_structural_gates(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """PWR artwork without a candidate DGND layer must not enter GEOS."""
+
+    def geometry_record(layer: str, net: str) -> tuple[dict[str, object], bytes]:
+        compressed, uncompressed_bytes = core_services._compress_spd_geometry_payload(
+            layer=layer,
+            net=net,
+            positive_polygons=(((0.0, 0.0), (10.0, 0.0), (10.0, 10.0)),),
+            negative_polygons=(),
+            positive_circles=(),
+            negative_circles=(),
+            primitive_order=(("positive_polygon", 0),),
+            positive_subelement_count=1,
+            negative_subelement_count=0,
+            polygon_trace_count=0,
+            box_count=0,
+        )
+        digest = sha256(compressed).hexdigest()
+        return (
+            {
+                "layer": layer,
+                "net": net,
+                "asset": f"geometry/{net}.spdgeom.zlib",
+                "asset_sha256": digest,
+                "uncompressed_bytes": uncompressed_bytes,
+            },
+            compressed,
+        )
+
+    eligible, eligible_content = geometry_record("PWR0", "VDD_ELIGIBLE")
+    ground, ground_content = geometry_record("DGND_MIX", "DGND")
+    no_candidate, no_candidate_content = geometry_record("PWR_NO_GND", "VDD_SKIP")
+    records = [eligible, ground, no_candidate]
+    attachments = {
+        str(record["asset"]): content
+        for record, content in (
+            (eligible, eligible_content),
+            (ground, ground_content),
+            (no_candidate, no_candidate_content),
+        )
+    }
+    layers = [
+        StackupLayer(
+            name="PWR0", thickness_um=20.0, conductivity_s_m=5.8e7,
+            pwr_nets=("VDD_ELIGIBLE",),
+        ),
+        StackupLayer(name="D1", thickness_um=80.0, dk=4.0, df=0.01),
+        StackupLayer(
+            name="DGND_MIX", thickness_um=20.0, conductivity_s_m=5.8e7,
+            pwr_nets=("DGND", "SIG_RETURN"),
+        ),
+        StackupLayer(
+            name="PWR_NO_GND", thickness_um=20.0, conductivity_s_m=5.8e7,
+            pwr_nets=("VDD_SKIP",),
+        ),
+    ]
+    calls: list[str] = []
+
+    def counted_geometry(payload: object):
+        from shapely.geometry import box
+
+        assert isinstance(payload, dict)
+        calls.append(str(payload["net"]))
+        return box(0.0, 0.0, 10.0, 10.0)
+
+    monkeypatch.setattr(core_services, "_ordered_spd_geometry", counted_geometry)
+    certificates = core_services._mixed_reference_certificates(
+        records,
+        attachments,
+        layers,
+        power_keys={"vdd_eligible", "vdd_skip"},
+        ground_keys={"dgnd"},
+    )
+
+    assert len(certificates) == 1
+    assert calls == ["VDD_ELIGIBLE", "DGND"]
+
+
+def test_mixed_reference_decodes_only_candidates_and_caches_shared_ground(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    def geometry_record(layer: str, net: str) -> tuple[dict[str, object], bytes]:
+        compressed, _uncompressed_bytes = core_services._compress_spd_geometry_payload(
+            layer=layer,
+            net=net,
+            positive_polygons=(((0.0, 0.0), (10.0, 0.0), (10.0, 10.0)),),
+            negative_polygons=(),
+            positive_circles=(),
+            negative_circles=(),
+            primitive_order=(("positive_polygon", 0),),
+            positive_subelement_count=1,
+            negative_subelement_count=0,
+            polygon_trace_count=0,
+            box_count=0,
+        )
+        digest = sha256(compressed).hexdigest()
+        return (
+            {
+                "layer": layer,
+                "net": net,
+                "asset": f"geometry/{net}.spdgeom.zlib",
+                "asset_sha256": digest,
+            },
+            compressed,
+        )
+
+    pwr_a, pwr_a_content = geometry_record("PWR0", "VDD_A")
+    pwr_b, pwr_b_content = geometry_record("PWR0", "VDD_B")
+    unrelated, unrelated_content = geometry_record("UNRELATED", "VDD_SKIP")
+    ground, ground_content = geometry_record("DGND_MIX", "DGND")
+    records = [pwr_a, pwr_b, unrelated, ground]
+    attachments = {
+        str(record["asset"]): content
+        for record, content in (
+            (pwr_a, pwr_a_content),
+            (pwr_b, pwr_b_content),
+            (unrelated, unrelated_content),
+            (ground, ground_content),
+        )
+    }
+    layers = [
+        StackupLayer(
+            name="PWR0", thickness_um=20.0, conductivity_s_m=5.8e7,
+            pwr_nets=("VDD_A", "VDD_B"),
+        ),
+        StackupLayer(name="D1", thickness_um=80.0, dk=4.0, df=0.01),
+        StackupLayer(
+            name="DGND_MIX", thickness_um=20.0, conductivity_s_m=5.8e7,
+            pwr_nets=("DGND", "SIG_RETURN"),
+        ),
+    ]
+    original_decode = core_services._decode_spd_geometry_asset
+    decoded_digests: list[str] = []
+    ordered_nets: list[str] = []
+
+    def counted_decode(digest: str, content: bytes):
+        decoded_digests.append(digest)
+        return original_decode(digest, content)
+
+    def counted_geometry(payload: object):
+        from shapely.geometry import box
+
+        assert isinstance(payload, dict)
+        ordered_nets.append(str(payload["net"]))
+        return box(0.0, 0.0, 10.0, 10.0)
+
+    monkeypatch.setattr(core_services, "_decode_spd_geometry_asset", counted_decode)
+    monkeypatch.setattr(core_services, "_ordered_spd_geometry", counted_geometry)
+    certificates = core_services._mixed_reference_certificates(
+        records,
+        attachments,
+        layers,
+        power_keys={"vdd_a", "vdd_b", "vdd_skip"},
+        ground_keys={"dgnd"},
+    )
+
+    assert len(certificates) == 2
+    assert decoded_digests == [
+        str(pwr_a["asset_sha256"]),
+        str(ground["asset_sha256"]),
+        str(pwr_b["asset_sha256"]),
+    ]
+    assert str(unrelated["asset_sha256"]) not in decoded_digests
+    assert ordered_nets == ["VDD_A", "DGND", "VDD_B"]
+
+
+def test_geometry_asset_compression_is_deterministic_roundtrips_and_keeps_limit(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    kwargs = {
+        "layer": "Signal$PWR",
+        "net": "VDD_CORE/0",
+        "positive_polygons": ([[-1.0, -1.0], [1.0, -1.0], [1.0, 1.0]],),
+        "negative_polygons": (),
+        "positive_circles": (),
+        "negative_circles": (),
+        "primitive_order": (("positive_polygon", 0),),
+        "positive_subelement_count": 1,
+        "negative_subelement_count": 0,
+        "polygon_trace_count": 0,
+        "box_count": 0,
+    }
+
+    first, first_size = core_services._compress_spd_geometry_payload(**kwargs)
+    second, second_size = core_services._compress_spd_geometry_payload(**kwargs)
+    digest = sha256(first).hexdigest()
+
+    assert first == second
+    assert first_size == second_size
+    decoded = core_services._decode_spd_geometry_asset(digest, first)
+    core_services._validate_spd_geometry_payload(
+        decoded,
+        expected_layer="Signal$PWR",
+        expected_net="VDD_CORE/0",
+    )
+    assert decoded["positive_polygons_um"] == list(kwargs["positive_polygons"])
+    with pytest.raises(ValueError, match="SHA-256 mismatch"):
+        core_services._decode_spd_geometry_asset(digest, first + b"\\x00")
+
+    monkeypatch.setattr(core_services, "_SPD_GEOMETRY_MAX_UNCOMPRESSED_BYTES", 1)
+    with pytest.raises(core_services._SpdGeometryAssetTooLarge):
+        core_services._compress_spd_geometry_payload(**kwargs)
 
 
 def test_malformed_selected_supported_primitive_blocks_import(tmp_path: Path) -> None:

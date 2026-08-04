@@ -440,6 +440,7 @@ _SHAPE_PRIMITIVE_RE = re.compile(
     rb"(?m)^([A-Za-z_]+)[^\r\n\s]*::(\S+?)([+-])(?:\s+|$)"
 )
 _SHAPE_RE = re.compile(rb"(?m)^\.Shape[ \t]+(\S+)")
+_SHAPE_INDEX_CHUNK_BYTES = 8 * 1024 * 1024
 _VIA_RE = re.compile(
     rb"(?m)^(Via[^\r\n:]*)::([^\s]+)\s+"
     rb"UpperNode\s*=\s*(Node[^\s:!]+)(?:!![^\s:]+)?(?:::[^\s]+)?\s+"
@@ -482,17 +483,79 @@ def _iter_lines(data: mmap.mmap, start: int, end: int):
         position = newline + 1
 
 
+def _iter_line_bounded_chunks(
+    data: mmap.mmap,
+    start: int,
+    end: int,
+    *,
+    chunk_bytes: int | None = None,
+):
+    """Yield bounded mmap spans whose internal boundaries follow newlines.
+
+    Regex searches on one very large Shape section can monopolize the import
+    worker long enough that UI cancellation/heartbeat checks cannot run.  Shape
+    headers are single-line records, so splitting only after ``\\n`` preserves
+    their byte offsets and CRLF/LF semantics.  A pathological line longer than
+    the nominal chunk is kept intact rather than truncating a header.
+    """
+
+    chunk_bytes = _SHAPE_INDEX_CHUNK_BYTES if chunk_bytes is None else chunk_bytes
+    if chunk_bytes <= 0:
+        raise ValueError("chunk_bytes must be positive")
+    position = max(0, start)
+    while position < end:
+        limit = min(end, position + chunk_bytes)
+        if limit == end:
+            stop = end
+        else:
+            newline = data.rfind(b"\n", position, limit)
+            if newline < position:
+                newline = data.find(b"\n", limit, end)
+            stop = end if newline < 0 else newline + 1
+        yield position, stop
+        position = stop
+
+
+def _iter_shape_headers(
+    data: mmap.mmap,
+    start: int,
+    end: int,
+    reporter: _Reporter,
+):
+    """Yield Shape-header regex matches with bounded cancellation latency."""
+
+    for chunk_start, chunk_end in _iter_line_bounded_chunks(data, start, end):
+        reporter.check()
+        yield from _SHAPE_RE.finditer(data, chunk_start, chunk_end)
+
+
 def _find_line(data: mmap.mmap, prefix: bytes, start: int = 0, end: int | None = None) -> int:
     stop = len(data) if end is None else end
     candidate = max(0, start)
     if (
         candidate < stop
         and (candidate == 0 or data[candidate - 1 : candidate] in {b"\n", b"\r"})
+        and candidate + len(prefix) <= stop
         and data[candidate : candidate + len(prefix)] == prefix
     ):
         return candidate
-    found = data.find(b"\n" + prefix, candidate, stop)
-    return -1 if found < 0 else found + 1
+    for chunk_start, chunk_end in _iter_line_bounded_chunks(
+        data, candidate, stop
+    ):
+        # A chunk begins immediately after a newline, so direct prefix scans
+        # cannot lose a line-start match at a chunk boundary.  Check the byte
+        # before each candidate rather than searching only ``b"\\n" + prefix``:
+        # this also preserves CR-only source lines and makes the explicit
+        # ``end`` bound apply to every matched prefix.
+        search = max(candidate, chunk_start)
+        while search < chunk_end:
+            found = data.find(prefix, search, chunk_end)
+            if found < 0:
+                break
+            if found == 0 or data[found - 1 : found] in {b"\n", b"\r"}:
+                return found
+            search = found + max(1, len(prefix))
+    return -1
 
 
 def _unique(values: Iterable[str]) -> tuple[str, ...]:
@@ -611,7 +674,7 @@ def _parse_shapes(
     tuple[str, ...],
     tuple[SpdPlaneGeometry, ...],
 ]:
-    shape_matches = list(_SHAPE_RE.finditer(data, start, end))
+    shape_matches = list(_iter_shape_headers(data, start, end, reporter))
     shape_offsets = [item.start() for item in shape_matches]
     shape_names = [_decode(item.group(1)) for item in shape_matches]
     by_layer: dict[str, list[str]] = {}
@@ -1837,6 +1900,34 @@ class _RecoveredViaNode:
     padstack: str | None
 
 
+_SPD_VIA_PATH_MAX_RELEVANT_TRACE_RECORDS = 250_000
+# A trace section within the record budget can still have one or more nodes
+# incident to an unbounded number of Via records.  Alternate-exit proof only
+# needs those incident directed edges, but retaining all of them would restore
+# the multi-gigabyte graph risk that the Trace-record guard removes.  Keep
+# independently bounded, exact sets for the retained proof graph.
+_SPD_VIA_PATH_MAX_RETAINED_ALTERNATE_EXIT_VIA_EDGES = 250_000
+_SPD_VIA_PATH_MAX_RETAINED_ALTERNATE_NODES = 750_000
+
+
+class _ViaPathAlternateExitResourceGuard(RuntimeError):
+    """Abort alternate-exit proof before any partial path evidence is accepted."""
+
+    def __init__(
+        self,
+        *,
+        resource: str,
+        limit: int,
+        retained_via_edges: int,
+        retained_nodes: int,
+    ) -> None:
+        super().__init__(resource)
+        self.resource = resource
+        self.limit = limit
+        self.retained_via_edges = retained_via_edges
+        self.retained_nodes = retained_nodes
+
+
 def recover_spd_via_paths(
     path: str | Path,
     *,
@@ -2125,12 +2216,15 @@ def recover_spd_via_paths(
     alternate_exit_cache: dict[tuple[str, str, str, str], bool] = {}
     alternate_node_metadata: dict[str, tuple[str, str]] = {}
     alternate_node_section_passes = 0
+    alternate_exit_via_edges_retained = 0
+    alternate_exit_nodes_retained = 0
     graph_index_ready = False
 
     def ensure_trace_via_index(
         data: mmap.mmap, *, trace_start: int, trace_end: int, via_start: int, via_end: int
     ) -> None:
         nonlocal graph_index_ready, alternate_node_section_passes
+        nonlocal alternate_exit_via_edges_retained, alternate_exit_nodes_retained
         if graph_index_ready:
             return
         relevant_net_keys = {
@@ -2145,6 +2239,68 @@ def recover_spd_via_paths(
                 graph = trace_graph_by_net.setdefault(net, {})
                 graph.setdefault(first, set()).add(second)
                 graph.setdefault(second, set()).add(first)
+
+        # This set is the exact initial alternate-exit node universe: every
+        # same-layer Trace endpoint.  Check it before admitting any Via edge;
+        # an over-budget proof is never used to accept even a previously found
+        # serial path.
+        alternate_node_keys = {
+            node_key
+            for graph in trace_graph_by_net.values()
+            for node_key in graph
+        }
+        if len(alternate_node_keys) > _SPD_VIA_PATH_MAX_RETAINED_ALTERNATE_NODES:
+            raise _ViaPathAlternateExitResourceGuard(
+                resource="alternate-node",
+                limit=_SPD_VIA_PATH_MAX_RETAINED_ALTERNATE_NODES,
+                retained_via_edges=0,
+                retained_nodes=0,
+            )
+        alternate_exit_nodes_retained = len(alternate_node_keys)
+
+        def retain_alternate_exit_via_edge(
+            net: str, source: str, destination: str
+        ) -> None:
+            """Retain one unique directed Trace-incident Via edge exactly once."""
+
+            nonlocal alternate_exit_via_edges_retained, alternate_exit_nodes_retained
+            neighbors = via_neighbors_by_net.setdefault(net, {})
+            destinations = neighbors.get(source)
+            if destinations is not None and destination in destinations:
+                return
+            if (
+                alternate_exit_via_edges_retained
+                >= _SPD_VIA_PATH_MAX_RETAINED_ALTERNATE_EXIT_VIA_EDGES
+            ):
+                raise _ViaPathAlternateExitResourceGuard(
+                    resource="alternate-exit Via-edge",
+                    limit=_SPD_VIA_PATH_MAX_RETAINED_ALTERNATE_EXIT_VIA_EDGES,
+                    retained_via_edges=alternate_exit_via_edges_retained,
+                    retained_nodes=alternate_exit_nodes_retained,
+                )
+            new_node_keys = {
+                node_key
+                for node_key in (source, destination)
+                if node_key not in alternate_node_keys
+            }
+            if (
+                len(alternate_node_keys) + len(new_node_keys)
+                > _SPD_VIA_PATH_MAX_RETAINED_ALTERNATE_NODES
+            ):
+                raise _ViaPathAlternateExitResourceGuard(
+                    resource="alternate-node",
+                    limit=_SPD_VIA_PATH_MAX_RETAINED_ALTERNATE_NODES,
+                    retained_via_edges=alternate_exit_via_edges_retained,
+                    retained_nodes=alternate_exit_nodes_retained,
+                )
+            if destinations is None:
+                destinations = set()
+                neighbors[source] = destinations
+            destinations.add(destination)
+            alternate_node_keys.update(new_node_keys)
+            alternate_exit_via_edges_retained += 1
+            alternate_exit_nodes_retained = len(alternate_node_keys)
+
         for match in _VIA_RE.finditer(data, via_start, via_end):
             net = _decode(match.group(2)).casefold()
             if net not in relevant_net_keys:
@@ -2154,31 +2310,19 @@ def recover_spd_via_paths(
             trace_nodes = trace_graph_by_net.get(net)
             if not trace_nodes:
                 continue
-            neighbors = via_neighbors_by_net.setdefault(net, {})
             # Alternate-exit detection only queries Via neighbors from nodes in
             # a same-layer Trace component.  Retaining the other ~millions of
             # relevant-NET Via edges duplicates the main vertical-path scan and
             # can consume gigabytes without changing any decision.
             if first in trace_nodes:
-                neighbors.setdefault(first, set()).add(second)
+                retain_alternate_exit_via_edge(net, first, second)
             if second in trace_nodes:
-                neighbors.setdefault(second, set()).add(first)
+                retain_alternate_exit_via_edge(net, second, first)
         # Alternate-exit decisions need only source NET and layer identity.  A
         # prior implementation called ``resolve_nodes`` once or twice for every
         # unseen Trace component, repeatedly scanning the complete production
         # Node section and growing the main path-node cache.  Collect the exact
         # compact key set now and resolve it in one dedicated Node pass instead.
-        alternate_node_keys = {
-            node_key
-            for graph in trace_graph_by_net.values()
-            for node_key in graph
-        }
-        alternate_node_keys.update(
-            node_key
-            for by_node in via_neighbors_by_net.values()
-            for source, destinations in by_node.items()
-            for node_key in (source, *destinations)
-        )
         if alternate_node_keys:
             alternate_node_section_passes += 1
             for line_index, (_offset, raw) in enumerate(
@@ -2314,6 +2458,14 @@ def recover_spd_via_paths(
         with source_path.open("rb") as handle, mmap.mmap(
             handle.fileno(), 0, access=mmap.ACCESS_READ
         ) as data:
+            if expected_source is not None:
+                observed_sha256 = hashlib.sha256(data).hexdigest()
+                if observed_sha256.casefold() != expected_source.sha256.casefold():
+                    raise SpdImportError(
+                        "SPD source SHA-256 mismatch after analysis before source "
+                        "Via path recovery; import aborted so path evidence cannot "
+                        "be mixed with replacement bytes"
+                    )
             node_start = _find_line(data, b"* Node description lines")
             trace_start = _find_line(data, b"* Trace description lines")
             via_start = _find_line(data, b"* Via description lines")
@@ -2339,6 +2491,53 @@ def recover_spd_via_paths(
             node_end = trace_start if trace_start > node_start else via_start
             trace_end = via_start if via_start > trace_start else pad_start
             via_end = pad_start if pad_start > via_start else len(data)
+
+            # Alternate-exit proof needs a complete same-NET Trace graph.  Do
+            # not start constructing a partially indexed graph and then admit
+            # a source path from incomplete evidence: when the compact proof
+            # budget is exceeded, every affected terminal remains on the
+            # documented legacy template.  This is deliberately fail-closed.
+            # The production source has more than a million relevant traces;
+            # the prior nested dict/set graph retained millions of Python
+            # strings and edges before eventually falling back for every path.
+            relevant_trace_records = 0
+            relevant_net_keys = {str(state["net_key"]) for state in states.values()}
+            if trace_start >= 0 and trace_end > trace_start:
+                for trace_index, trace_match in enumerate(
+                    _TRACE_RE.finditer(data, trace_start, trace_end)
+                ):
+                    if trace_index % 8192 == 0:
+                        reporter.check()
+                    if _decode(trace_match.group(2)).casefold() not in relevant_net_keys:
+                        continue
+                    relevant_trace_records += 1
+                    if relevant_trace_records > _SPD_VIA_PATH_MAX_RELEVANT_TRACE_RECORDS:
+                        diagnostics.append(
+                            SpdDiagnostic(
+                                "warning",
+                                "SPD_VIA_PATH_RESOURCE_GUARD",
+                                (
+                                    "The source has more than "
+                                    f"{_SPD_VIA_PATH_MAX_RELEVANT_TRACE_RECORDS:,} "
+                                    "relevant Trace records. Complete alternate-exit "
+                                    "proof was not retained, so all terminal paths use "
+                                    "the documented legacy rail template; no partial "
+                                    "source Via evidence was accepted."
+                                ),
+                            )
+                        )
+                        return finish(SpdViaPathRecovery(
+                            evidence_by_via={},
+                            diagnostics=tuple(diagnostics),
+                            statistics={
+                                "requested": len(states),
+                                "recovered": 0,
+                                "fallback": len(states),
+                                "resource_guard_fallback": len(states),
+                                "relevant_trace_records_examined": relevant_trace_records,
+                                "relevant_trace_record_limit": _SPD_VIA_PATH_MAX_RELEVANT_TRACE_RECORDS,
+                            },
+                        ))
 
             max_trace_steps = max_segments
             max_total_steps = max_segments + max_trace_steps
@@ -2652,6 +2851,34 @@ def recover_spd_via_paths(
                 if state["status"] == "PENDING":
                     state["status"] = "SEGMENT_LIMIT"
                     failures[str(state["status"])] += 1
+    except _ViaPathAlternateExitResourceGuard as guard:
+        diagnostics.append(
+            SpdDiagnostic(
+                "warning",
+                "SPD_VIA_PATH_RESOURCE_GUARD",
+                (
+                    "The source exceeded the retained alternate-exit "
+                    f"{guard.resource} budget ({guard.limit:,}). Complete "
+                    "alternate-exit proof was not retained, so all terminal paths "
+                    "use the documented legacy rail template; no partial source "
+                    "Via evidence was accepted."
+                ),
+            )
+        )
+        return finish(SpdViaPathRecovery(
+            evidence_by_via={},
+            diagnostics=tuple(diagnostics),
+            statistics={
+                "requested": len(states),
+                "recovered": 0,
+                "fallback": len(states),
+                "resource_guard_fallback": len(states),
+                "alternate_exit_via_edges_retained": guard.retained_via_edges,
+                "alternate_exit_via_edge_limit": _SPD_VIA_PATH_MAX_RETAINED_ALTERNATE_EXIT_VIA_EDGES,
+                "alternate_exit_nodes_retained": guard.retained_nodes,
+                "alternate_exit_node_limit": _SPD_VIA_PATH_MAX_RETAINED_ALTERNATE_NODES,
+            },
+        ))
     except OSError as exc:
         raise SpdImportError(
             f"cannot recover source Via paths from {source_path}: {exc}"
@@ -2747,6 +2974,10 @@ def recover_spd_via_paths(
             for by_node in via_neighbors_by_net.values()
             for destinations in by_node.values()
         ),
+        "alternate_exit_via_edges_retained": alternate_exit_via_edges_retained,
+        "alternate_exit_via_edge_limit": _SPD_VIA_PATH_MAX_RETAINED_ALTERNATE_EXIT_VIA_EDGES,
+        "alternate_exit_nodes_retained": alternate_exit_nodes_retained,
+        "alternate_exit_node_limit": _SPD_VIA_PATH_MAX_RETAINED_ALTERNATE_NODES,
         "path_node_section_passes": path_node_section_passes,
         "alternate_exit_node_section_passes": alternate_node_section_passes,
         "alternate_exit_nodes_resolved": len(alternate_node_metadata),
@@ -2832,14 +3063,86 @@ def recover_spd_ground_reachability(
                 "GND reachability recovery"
             )
 
-    adjacency: dict[str, dict[str, set[str]]] = {
+    before_identity = (int(observed.st_size), int(observed.st_mtime_ns))
+
+    def finish(result: SpdGroundReachability) -> SpdGroundReachability:
+        try:
+            after = source_path.stat()
+        except OSError as exc:
+            raise SpdImportError(
+                f"cannot stat SPD source {source_path} after mixed-reference "
+                f"GND reachability recovery: {exc}"
+            ) from exc
+        if (int(after.st_size), int(after.st_mtime_ns)) != before_identity:
+            raise SpdImportError(
+                "SPD source changed during mixed-reference GND reachability "
+                "recovery; import aborted and no mixed-source witness was persisted"
+            )
+        return result
+
+    # A set-valued adjacency graph holds two Python objects for virtually every
+    # source edge.  Large SPD files can have millions of GND Trace/Via records,
+    # making that representation several gigabytes even though reachability only
+    # needs connected-component membership.  Keep one string-to-dense-index map
+    # per NET and a compact disjoint-set forest instead.  This remains exact:
+    # every accepted same-NET Trace/Via edge is unioned and target-layer bits are
+    # reduced only after all components are complete.
+    target_bit_by_key = {
+        key: 1 << index
+        for index, key in enumerate(
+            sorted(
+                (net, layer)
+                for net, layers in target_layers.items()
+                for layer in layers
+            )
+        )
+    }
+    target_nodes_by_net: dict[str, dict[str, int]] = {
         net: {} for net in target_layers
     }
-    targets: dict[tuple[str, str], set[str]] = {
-        (net, layer): set()
-        for net, layers in target_layers.items()
-        for layer in layers
+    node_index_by_net: dict[str, dict[str, int]] = {
+        net: {} for net in target_layers
     }
+    parents = array("I")
+    ranks = bytearray()
+    components = 0
+    graph_edges = 0
+
+    def index_for(net_key: str, node_key: str) -> int:
+        nonlocal components
+        by_node = node_index_by_net[net_key]
+        existing = by_node.get(node_key)
+        if existing is not None:
+            return existing
+        index = len(parents)
+        by_node[node_key] = index
+        parents.append(index)
+        ranks.append(0)
+        components += 1
+        return index
+
+    def find(index: int) -> int:
+        root = index
+        while parents[root] != root:
+            root = parents[root]
+        while parents[index] != index:
+            parent = parents[index]
+            parents[index] = root
+            index = parent
+        return root
+
+    def union(net_key: str, first: str, second: str) -> None:
+        nonlocal components
+        first_root = find(index_for(net_key, first))
+        second_root = find(index_for(net_key, second))
+        if first_root == second_root:
+            return
+        if ranks[first_root] < ranks[second_root]:
+            first_root, second_root = second_root, first_root
+        parents[second_root] = first_root
+        if ranks[first_root] == ranks[second_root]:
+            ranks[first_root] += 1
+        components -= 1
 
     def node_identity(raw: bytes) -> tuple[str, str] | None:
         cuts = [
@@ -2857,19 +3160,27 @@ def recover_spd_ground_reachability(
         with source_path.open("rb") as handle, mmap.mmap(
             handle.fileno(), 0, access=mmap.ACCESS_READ
         ) as data:
+            if expected_source is not None:
+                observed_sha256 = hashlib.sha256(data).hexdigest()
+                if observed_sha256.casefold() != expected_source.sha256.casefold():
+                    raise SpdImportError(
+                        "SPD source SHA-256 mismatch after analysis before mixed-reference "
+                        "GND reachability recovery; import aborted so connectivity "
+                        "evidence cannot be mixed with replacement bytes"
+                    )
             node_start = _find_line(data, b"* Node description lines")
             trace_start = _find_line(data, b"* Trace description lines")
             via_start = _find_line(data, b"* Via description lines")
             pad_start = _find_line(data, b"* PadStack collection description lines")
             if node_start < 0 or via_start < 0:
-                return SpdGroundReachability(
+                return finish(SpdGroundReachability(
                     frozenset(), frozenset(requested), {
                         "requested": len(requested), "reachable": 0,
                         "unreachable": len(requested), "node_section_passes": 0,
                         "trace_section_passes": 0, "via_section_passes": 0,
                         "components": 0,
                     }
-                )
+                ))
             node_end = trace_start if trace_start > node_start else via_start
             trace_end = via_start if via_start > trace_start else pad_start
             via_end = pad_start if pad_start > via_start else len(data)
@@ -2904,84 +3215,63 @@ def recover_spd_ground_reachability(
                             net, _decode(layer_raw), node_id, x_um, y_um
                         ):
                             continue
-                    targets[(net_key, layer_key)].add(node_id.casefold())
+                    node_key = node_id.casefold()
+                    target_nodes = target_nodes_by_net[net_key]
+                    target_nodes[node_key] = (
+                        target_nodes.get(node_key, 0)
+                        | target_bit_by_key[(net_key, layer_key)]
+                    )
             if trace_start >= 0 and trace_end > trace_start:
                 reporter.report(40, "Indexing same-NET GND Trace connectivity")
                 for index, match in enumerate(_TRACE_RE.finditer(data, trace_start, trace_end)):
                     if index % 8192 == 0:
                         reporter.check()
                     net_key = _decode(match.group(2)).casefold()
-                    if net_key not in adjacency:
+                    if net_key not in node_index_by_net:
                         continue
                     first, second = _decode(match.group(3)).casefold(), _decode(match.group(4)).casefold()
-                    graph = adjacency[net_key]
-                    graph.setdefault(first, set()).add(second)
-                    graph.setdefault(second, set()).add(first)
+                    union(net_key, first, second)
+                    graph_edges += 1
             reporter.report(65, "Indexing same-NET GND Via connectivity")
             for index, match in enumerate(_VIA_RE.finditer(data, via_start, via_end)):
                 if index % 8192 == 0:
                     reporter.check()
                 net_key = _decode(match.group(2)).casefold()
-                if net_key not in adjacency:
+                if net_key not in node_index_by_net:
                     continue
                 first, second = _decode(match.group(3)).casefold(), _decode(match.group(4)).casefold()
-                graph = adjacency[net_key]
-                graph.setdefault(first, set()).add(second)
-                graph.setdefault(second, set()).add(first)
+                union(net_key, first, second)
+                graph_edges += 1
     except OSError as exc:
         raise SpdImportError(
             f"cannot recover mixed-reference GND graph from {source_path}: {exc}"
         ) from exc
 
     reporter.report(85, "Reducing mixed-reference GND graph components")
-    component_target_layers: dict[tuple[str, str], set[str]] = {}
-    component_by_node: dict[tuple[str, str], str] = {}
-    components = 0
-    for net_key, graph in adjacency.items():
-        all_nodes = set(graph)
-        all_nodes.update(node for (net, _layer), nodes in targets.items() if net == net_key for node in nodes)
-        all_nodes.update(
-            node
-            for _via, node, _layer in requested
-            if requested_by_key[(_via, node, _layer)] == net_key
-        )
-        for start in sorted(all_nodes):
-            if (net_key, start) in component_by_node:
-                continue
-            components += 1
-            component_id = start
-            pending = [start]
-            members: set[str] = set()
-            while pending:
-                node = pending.pop()
-                if node in members:
-                    continue
-                members.add(node)
-                pending.extend(graph.get(node, ()) - members)
-            layers = {
-                layer
-                for (target_net, layer), nodes in targets.items()
-                if target_net == net_key and members.intersection(nodes)
-            }
-            for node in members:
-                component_by_node[(net_key, node)] = component_id
-            component_target_layers[(net_key, component_id)] = layers
+    component_target_masks: dict[int, int] = {}
+    for net_key, targets in target_nodes_by_net.items():
+        for node_key, target_mask in targets.items():
+            root = find(index_for(net_key, node_key))
+            component_target_masks[root] = (
+                component_target_masks.get(root, 0) | target_mask
+            )
     reachable: set[tuple[str, str, str]] = set()
     for via, node, target_layer in requested:
         net_key = requested_by_key[(via, node, target_layer)]
-        component_id = component_by_node.get((net_key, node))
-        if component_id is not None and target_layer in component_target_layers.get((net_key, component_id), set()):
+        root = find(index_for(net_key, node))
+        if component_target_masks.get(root, 0) & target_bit_by_key[(net_key, target_layer)]:
             reachable.add((via, node, target_layer))
     unreachable = set(requested) - reachable
     reporter.report(100, "Checked mixed-reference GND landing reachability")
-    return SpdGroundReachability(
+    return finish(SpdGroundReachability(
         frozenset(reachable), frozenset(unreachable), {
             "requested": len(requested), "reachable": len(reachable),
             "unreachable": len(unreachable), "node_section_passes": 1,
             "trace_section_passes": int(trace_start >= 0 and trace_end > trace_start),
             "via_section_passes": 1, "components": components,
+            "graph_nodes": len(parents), "graph_edges": graph_edges,
         }
-    )
+    ))
 
 
 def analyze_spd(

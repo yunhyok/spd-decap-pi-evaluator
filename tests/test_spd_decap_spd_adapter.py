@@ -7,10 +7,14 @@ import pytest
 
 from test_io_spd import MINI_SPD
 
+from spd_decap_pi import spd_adapter
 from spd_decap_pi._core import services as core_services
 from spd_decap_pi._core.io.spd import SpdImportError
 from spd_decap_pi._core.services import WorkspaceState, import_cap_spice
-from spd_decap_pi.scenario import SHARED_PAD_ANALYSIS_VERSION
+from spd_decap_pi.scenario import (
+    SHARED_PAD_ANALYSIS_VERSION,
+    mixed_reference_ground_landing_identity,
+)
 from spd_decap_pi.scenario_io import ScenarioFormatError, save_scenario
 from spd_decap_pi.spd_adapter import (
     _raise_for_rejected_mixed_reference_landings,
@@ -203,6 +207,7 @@ def test_spd_import_reports_monotonic_stage_progress_and_nonpersistent_timings(
     assert "Normalized exact plane geometry" in messages
     assert "Indexed " in messages
     assert "Recovering source-proven vertical Via paths" in messages
+    assert "Selecting mixed-reference GND witness landings" in messages
     assert "Checking exact PWR-plane eligibility" in messages
     assert "validating scenario" in messages
     assert progress[-1][0] == 100
@@ -213,12 +218,218 @@ def test_spd_import_reports_monotonic_stage_progress_and_nonpersistent_timings(
         timings.plan_s,
         timings.index_s,
         timings.recovery_s,
+        timings.mixed_witness_selection_s,
+        timings.ground_recovery_s,
         timings.eligibility_s,
         timings.finalize_s,
     )
     assert all(math.isfinite(value) and value >= 0.0 for value in stages)
     assert timings.total_s >= sum(stages)
     assert "timings" not in imported.scenario.model_dump(mode="json")
+
+
+def test_mixed_witness_selection_batches_direct_and_shared_candidates_exactly(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The inverted traversal must preserve the former rail-major witnesses."""
+
+    def landing(via_id: str, net: str) -> SimpleNamespace:
+        return SimpleNamespace(
+            via_id=via_id,
+            net=net,
+            endpoint_node_id=f"NODE-{via_id}",
+        )
+
+    def allowed(rail_id: str) -> SimpleNamespace:
+        return SimpleNamespace(rail_id=rail_id, allowed=True)
+
+    r1 = SimpleNamespace(
+        rail_id="R1",
+        mixed_reference_certificate=SimpleNamespace(
+            gnd_net="DGND", gnd_layer="L10"
+        ),
+    )
+    r2 = SimpleNamespace(
+        rail_id="R2",
+        mixed_reference_certificate=SimpleNamespace(
+            gnd_net="AGND", gnd_layer="L12"
+        ),
+    )
+    mixed_rails = {"r1": r1, "r2": r2}
+    connections = {
+        "d1": SimpleNamespace(
+            kind="DIRECT", cluster_id=None,
+            power_vias=(landing("P-D1", "VDD"),),
+            ground_vias=(landing("G-D1-D", "DGND"), landing("G-D1-A", "AGND")),
+        ),
+        "s1": SimpleNamespace(
+            kind="SHARED_ANCHOR", cluster_id="CL-A",
+            power_vias=(landing("P-S1", "VDD"),),
+            ground_vias=(landing("G-S1-D", "DGND"), landing("G-S1-A", "AGND")),
+        ),
+        "s2": SimpleNamespace(
+            kind="SHARED_ANCHOR", cluster_id="CL-A",
+            power_vias=(landing("P-S2", "VDD"),),
+            ground_vias=(landing("G-S2-A", "AGND"),),
+        ),
+        "d4": SimpleNamespace(
+            kind="DIRECT", cluster_id=None,
+            power_vias=(landing("P-D4", "VDD"),),
+            ground_vias=(landing("G-D4-A", "AGND"),),
+        ),
+    }
+    clusters = {
+        "cl-a": SimpleNamespace(cluster_id="CL-A", member_refdes=("S1", "S2")),
+    }
+    top_instances = tuple(
+        SimpleNamespace(refdes=refdes) for refdes in ("D1", "S2", "S1", "D4")
+    )
+    direct_calls: list[tuple[str, ...]] = []
+    shared_calls: list[str] = []
+
+    def fake_common_at_landings(_index, power_vias, _choices):
+        keys = tuple(item.via_id for item in power_vias)
+        direct_calls.append(keys)
+        return {
+            "P-D1": {"R1": allowed("R1"), "R2": allowed("R2")},
+            "P-D4": {"R2": allowed("R2")},
+        }[keys[0]]
+
+    def fake_eligibility_for_via(_index, value, _choices):
+        shared_calls.append(value.via_id)
+        return {
+            "P-S1": {"R1": allowed("R1"), "R2": allowed("R2")},
+            "P-S2": {"R2": allowed("R2")},
+        }[value.via_id]
+
+    monkeypatch.setattr(spd_adapter, "_scenario_via_landing", lambda value, _recovery: value)
+    monkeypatch.setattr(
+        spd_adapter, "_common_eligibility_at_landings", fake_common_at_landings
+    )
+    monkeypatch.setattr(
+        spd_adapter, "_eligibility_for_via_landing", fake_eligibility_for_via
+    )
+
+    def rail_major_reference():
+        result = {key: [] for key in mixed_rails}
+        targets: dict[str, set[str]] = {}
+        shared_cluster_rail_eligibility: dict[tuple[str, str], bool] = {}
+        for rail_key, rail in mixed_rails.items():
+            processed_shared_clusters: set[str] = set()
+            certificate = rail.mixed_reference_certificate
+            targets.setdefault(certificate.gnd_net.casefold(), set()).add(
+                certificate.gnd_layer
+            )
+            for instance in top_instances:
+                connection = connections.get(instance.refdes.casefold())
+                if connection is None or connection.kind not in {
+                    "DIRECT", "SHARED_ANCHOR"
+                }:
+                    continue
+                if connection.kind == "DIRECT":
+                    power_vias = tuple(
+                        spd_adapter._scenario_via_landing(item, object())
+                        for item in connection.power_vias
+                    )
+                    eligible = spd_adapter._common_eligibility_at_landings(
+                        object(), power_vias, {}
+                    )
+                    candidate = next(
+                        (
+                            item for rail_id, item in eligible.items()
+                            if rail_id.casefold() == rail_key
+                        ),
+                        None,
+                    )
+                    if candidate is None or not candidate.allowed:
+                        continue
+                else:
+                    cluster_key = connection.cluster_id.casefold()
+                    cache_key = (cluster_key, rail_key)
+                    candidate_allowed = shared_cluster_rail_eligibility.get(cache_key)
+                    if candidate_allowed is None:
+                        cluster = clusters.get(cluster_key)
+                        if cluster is None:
+                            candidate_allowed = False
+                        else:
+                            power_landings = {
+                                item.via_id.casefold(): spd_adapter._scenario_via_landing(
+                                    item, object()
+                                )
+                                for member in cluster.member_refdes
+                                for item in connections[member.casefold()].power_vias
+                            }
+                            common = spd_adapter._common_eligibility_maps(
+                                tuple(
+                                    spd_adapter._eligibility_for_via_landing(
+                                        object(), item, {}
+                                    )
+                                    for item in power_landings.values()
+                                )
+                            )
+                            candidate = next(
+                                (
+                                    item for rail_id, item in common.items()
+                                    if rail_id.casefold() == rail_key
+                                ),
+                                None,
+                            )
+                            candidate_allowed = bool(
+                                candidate is not None and candidate.allowed
+                            )
+                        shared_cluster_rail_eligibility[cache_key] = candidate_allowed
+                    if not candidate_allowed:
+                        continue
+                    cluster = clusters[cluster_key]
+                    if cluster_key in processed_shared_clusters:
+                        continue
+                    processed_shared_clusters.add(cluster_key)
+                    owner = f"cluster:{cluster.cluster_id}"
+                    for member in cluster.member_refdes:
+                        for item in connections[member.casefold()].ground_vias:
+                            if item.net.casefold() == certificate.gnd_net.casefold():
+                                result[rail_key].append((owner, item))
+                    continue
+                owner = instance.refdes
+                for item in connection.ground_vias:
+                    if item.net.casefold() == certificate.gnd_net.casefold():
+                        result[rail_key].append((owner, item))
+        return result, targets
+
+    reference, reference_targets = rail_major_reference()
+    direct_calls.clear()
+    shared_calls.clear()
+    actual, targets = spd_adapter._select_mixed_reference_ground_landings(
+        mixed_rails=mixed_rails,
+        top_instances=top_instances,
+        parsed_connection_by_key=connections,
+        parsed_cluster_by_key=clusters,
+        path_recovery=object(),
+        eligibility_index=object(),
+        rail_choices_by_pair={},
+    )
+
+    assert actual == reference
+    assert targets == reference_targets == {
+        "dgnd": {"L10"}, "agnd": {"L12"}
+    }
+    assert direct_calls == [("P-D1",), ("P-D4",)]
+    assert shared_calls == ["P-S1", "P-S2"]
+    assert {
+        key: tuple(
+            mixed_reference_ground_landing_identity(owner, value)
+            for owner, value in entries
+        )
+        for key, entries in actual.items()
+    } == {
+        "r1": ("d1|gnd|g-d1-d|dgnd|node-g-d1-d",),
+        "r2": (
+            "d1|gnd|g-d1-a|agnd|node-g-d1-a",
+            "cluster:cl-a|gnd|g-s1-a|agnd|node-g-s1-a",
+            "cluster:cl-a|gnd|g-s2-a|agnd|node-g-s2-a",
+            "d4|gnd|g-d4-a|agnd|node-g-d4-a",
+        ),
+    }
 
 
 def test_spd_via_recovery_metadata_is_deterministic_and_excludes_wall_time(

@@ -59,6 +59,7 @@ from spd_decap_pi.scenario_io import (
     save_scenario_bundle,
 )
 import spd_decap_pi.spd_adapter as spd_adapter
+import spd_decap_pi.scenario as scenario_module
 from spd_decap_pi.spd_adapter import import_spd_scenario
 
 
@@ -1001,6 +1002,132 @@ def test_baseline_capture_and_result_attachment_round_trip(tmp_path: Path) -> No
     assert loaded.scenario.baseline_captures["VDD_CPU"] == capture
     assert loaded.scenario.evaluation_cache[metadata.cache_key].role == EvaluationRole.BASELINE
     assert loaded.attachments[name] == content
+
+
+def test_bundle_load_memoizes_design_scale_validation_across_cache_entries(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """One load recomputes full source/topology evidence once, never per cache."""
+
+    captured = _scenario_with_via_material("COPPER").with_baseline_captures(
+        ("VDD_CPU",)
+    )
+    capture = captured.baseline_captures["VDD_CPU"]
+    attachments: dict[str, bytes] = {}
+    attachment_hashes: dict[str, str] = {}
+    cache: dict[str, CachedEvaluationMetadata] = {}
+    for index in range(12):
+        result_key = ScenarioResultKey.from_settings(
+            design_fingerprint=capture.evaluation_input_sha256,
+            rail_id="VDD_CPU",
+            settings={"fixture_index": index},
+            solver_version="memo-fixture-1",
+        )
+        content = f'{{"fixture_index":{index}}}\n'.encode("ascii")
+        name = f"results/baseline-{result_key.cache_key}.json"
+        digest = sha256(content).hexdigest()
+        metadata = CachedEvaluationMetadata(
+            result_key=result_key,
+            attachment_name=name,
+            attachment_sha256=digest,
+            role=EvaluationRole.BASELINE,
+            baseline_capture_sha256=capture.capture_fingerprint,
+        )
+        attachments[name] = content
+        attachment_hashes[name] = digest
+        cache[metadata.cache_key] = metadata
+    persisted = ScenarioSpec.model_validate(
+        {
+            **captured.model_dump(mode="python"),
+            "attachment_names": list(attachments),
+            "attachment_hashes": attachment_hashes,
+            "evaluation_cache": cache,
+        }
+    )
+    path = save_scenario(
+        persisted, tmp_path / "memoized-load.spdpi", attachments=attachments
+    )
+
+    counts = {"connection_payload": 0, "capture_fingerprint": 0}
+    original_connection_payload = (
+        scenario_module._connection_analysis_fingerprint_payload
+    )
+    original_hash_payload = scenario_module._hash_payload
+
+    def counted_connection_payload(analysis):
+        counts["connection_payload"] += 1
+        return original_connection_payload(analysis)
+
+    def counted_hash_payload(payload):
+        if isinstance(payload, dict) and set(payload) == {
+            "rail_id",
+            "source_sha256",
+            "source_state_sha256",
+            "evaluation_input_sha256",
+            "model_bindings",
+        }:
+            counts["capture_fingerprint"] += 1
+        return original_hash_payload(payload)
+
+    monkeypatch.setattr(
+        scenario_module,
+        "_connection_analysis_fingerprint_payload",
+        counted_connection_payload,
+    )
+    monkeypatch.setattr(scenario_module, "_hash_payload", counted_hash_payload)
+
+    loaded = load_scenario_bundle(path)
+
+    assert len(loaded.scenario.evaluation_cache) == 12
+    assert counts == {"connection_payload": 1, "capture_fingerprint": 1}
+    assert loaded.scenario.design_fingerprint == persisted.design_fingerprint
+
+
+def test_validation_memo_is_reset_and_cannot_hide_source_state_tamper() -> None:
+    captured = _scenario_with_via_material("COPPER").with_baseline_captures(
+        ("VDD_CPU",)
+    )
+    memo = scenario_module._ScenarioValidationMemo()
+    ScenarioSpec.model_validate(captured.model_dump(mode="python"), context=memo)
+    tampered = captured.model_dump(mode="python")
+    tampered["decaps"][0]["center"]["x_um"] += 1.0
+
+    with pytest.raises(ValidationError, match="physical source state has changed"):
+        ScenarioSpec.model_validate(tampered, context=memo)
+
+
+def test_validation_memo_owner_rejects_existing_instance_shortcut() -> None:
+    original = _scenario_with_via_material("COPPER")
+    memo = scenario_module._ScenarioValidationMemo()
+    validated = ScenarioSpec.model_validate(
+        original.model_dump(mode="python"), context=memo
+    )
+    original_design = validated._design_fingerprint(memo)
+    original_source_state = validated._source_state_fingerprint(memo)
+    changed_sha256 = "2" * 64
+    assert validated.connection_analysis is not None
+    changed = validated.model_copy(
+        update={
+            "source": validated.source.model_copy(
+                update={"sha256": changed_sha256}
+            ),
+            "connection_analysis": validated.connection_analysis.model_copy(
+                update={"source_sha256": changed_sha256}
+            ),
+        }
+    )
+
+    # Pydantic may return an existing instance without rebuilding all fields.
+    # The stale memo must still be unusable because its owner is the exact
+    # prior ScenarioSpec object, not merely an equal payload.
+    assert changed._design_fingerprint(memo) == changed.design_fingerprint
+    assert changed._source_state_fingerprint(memo) == changed.source_state_fingerprint
+    shortcut = ScenarioSpec.model_validate(changed, context=memo)
+    assert shortcut is changed
+    assert changed._design_fingerprint(memo) == changed.design_fingerprint
+    assert changed._source_state_fingerprint(memo) == changed.source_state_fingerprint
+    assert changed._design_fingerprint(memo) != original_design
+    assert changed._source_state_fingerprint(memo) != original_source_state
 
 
 def test_legacy_tuned_cache_without_attachment_is_ignored() -> None:
