@@ -7,9 +7,12 @@ import math
 import os
 import re
 from collections import Counter
+from collections.abc import Iterator
+from contextlib import contextmanager
 from dataclasses import asdict, dataclass, field
 from hashlib import sha256
 from pathlib import Path
+from threading import RLock
 from typing import Any, Callable, Iterable, Mapping, Sequence
 import zlib
 import numpy as np
@@ -26,11 +29,54 @@ from .via_model import (
 )
 from .version import __version__
 
+try:
+    from threadpoolctl import threadpool_limits
+except ImportError:  # pragma: no cover - packaging declares the dependency
+    threadpool_limits: Any = None
+
 ProgressCallback = Callable[[int, str], None]
 
 CancelCallback = Callable[[], bool]
 
 _CAP_MODEL_SOURCES_KEY = "cap_model_sources"
+
+_BLAS_THREAD_OVERRIDE = "SPD_DECAP_PI_BLAS_THREADS"
+_BLAS_THREADPOOL_LOCK = RLock()
+
+
+@contextmanager
+def scoped_blas_threads() -> Iterator[None]:
+    """Limit unmanaged BLAS pools for one numerical operation.
+
+    The desktop evaluator runs one background job at a time.  A library pool
+    that consumes every core can starve the Qt event loop, while a single BLAS
+    thread is faster for this application's repeated small dense solves.
+    Default to one thread even when a generic backend environment variable is
+    present.  ``SPD_DECAP_PI_BLAS_THREADS`` may set a positive limit, while
+    ``auto``/``inherit`` explicitly opts out.  The process-wide lock prevents
+    overlapping threadpoolctl contexts from restoring another job's setting.
+    """
+
+    requested = _requested_blas_thread_limit()
+    if requested is None or threadpool_limits is None:
+        yield None
+        return
+    with _BLAS_THREADPOOL_LOCK:
+        with threadpool_limits(limits=requested, user_api="blas"):
+            yield None
+
+
+def _requested_blas_thread_limit() -> int | None:
+    override = os.environ.get(_BLAS_THREAD_OVERRIDE)
+    if override is not None:
+        if override.strip().casefold() in {"auto", "inherit"}:
+            return None
+        try:
+            value = int(override)
+        except ValueError:
+            return 1
+        return value if value > 0 else 1
+    return 1
 
 _SPD_PLANE_GEOMETRIES_KEY = "plane_geometries"
 

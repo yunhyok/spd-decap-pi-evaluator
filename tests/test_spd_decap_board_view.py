@@ -631,3 +631,36 @@ def test_public_net_color_resolver_matches_case_insensitive_board_rendering() ->
     finally:
         board.close()
         application.processEvents()
+
+
+def test_staged_decap_render_is_invalidated_by_direct_replacement() -> None:
+    application = _application()
+    board = DecapBoardView()
+    try:
+        board.set_decaps(_records(), staged=True)
+        assert board._base_render_pending
+        board.set_decaps(())
+        application.processEvents()
+        assert not board._base_render_pending
+        assert board.record_count == 0
+    finally:
+        board.close()
+        application.processEvents()
+
+
+def test_active_net_change_restyles_visible_bumps_during_staged_decap_render(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    application = _application()
+    board = DecapBoardView(bumps=_bumps())
+    calls: list[None] = []
+    try:
+        board._base_render_pending = True
+        monkeypatch.setattr(
+            board, "_restyle_bump_layers", lambda: calls.append(None)
+        )
+        board.set_active_nets(("VDD_A",))
+        assert calls == [None]
+    finally:
+        board.close()
+        application.processEvents()

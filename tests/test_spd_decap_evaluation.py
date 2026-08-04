@@ -1,9 +1,12 @@
 ﻿from __future__ import annotations
 
+from contextlib import nullcontext
 from dataclasses import replace
 from copy import deepcopy
 from hashlib import sha256
 import json
+from threading import Event, Thread
+from time import sleep
 
 from pydantic import ValidationError
 import pytest
@@ -25,6 +28,7 @@ from spd_decap_pi._core.domain import (
     ViaLoopTemplate,
     ViaPathKind,
 )
+from spd_decap_pi._core import services as core_services
 from spd_decap_pi._core.services import EvaluationView
 from spd_decap_pi import evaluation as evaluation_module
 from spd_decap_pi.distribution import (
@@ -63,6 +67,100 @@ from spd_decap_pi.scenario import (
     SourceIdentity,
 )
 from spd_decap_pi.scenario_io import load_scenario_bundle, save_scenario
+
+
+def test_default_scoped_blas_limit_is_one_without_user_backend_configuration(
+    monkeypatch,
+) -> None:
+    monkeypatch.delenv("SPD_DECAP_PI_BLAS_THREADS", raising=False)
+
+    assert core_services._requested_blas_thread_limit() == 1
+
+
+def test_spd_blas_override_controls_default_and_explicit_opt_out(monkeypatch) -> None:
+    monkeypatch.setenv("OPENBLAS_NUM_THREADS", "24")
+    assert core_services._requested_blas_thread_limit() == 1
+
+    monkeypatch.setenv("SPD_DECAP_PI_BLAS_THREADS", "3")
+    assert core_services._requested_blas_thread_limit() == 3
+
+    monkeypatch.setenv("SPD_DECAP_PI_BLAS_THREADS", "auto")
+    assert core_services._requested_blas_thread_limit() is None
+
+    monkeypatch.setenv("SPD_DECAP_PI_BLAS_THREADS", "inherit")
+    assert core_services._requested_blas_thread_limit() is None
+
+    monkeypatch.setenv("SPD_DECAP_PI_BLAS_THREADS", "bad")
+    assert core_services._requested_blas_thread_limit() == 1
+    monkeypatch.setenv("SPD_DECAP_PI_BLAS_THREADS", "0")
+    assert core_services._requested_blas_thread_limit() == 1
+
+
+def test_scoped_blas_limit_calls_threadpoolctl_only_without_user_configuration(
+    monkeypatch,
+) -> None:
+    calls: list[tuple[int, str]] = []
+    monkeypatch.delenv("SPD_DECAP_PI_BLAS_THREADS", raising=False)
+    monkeypatch.setattr(
+        core_services,
+        "threadpool_limits",
+        lambda *, limits, user_api: calls.append((limits, user_api)) or nullcontext(),
+    )
+
+    with core_services.scoped_blas_threads():
+        pass
+
+    assert calls == [(1, "blas")]
+
+
+def test_scoped_blas_limit_serializes_overlapping_contexts_and_restores_on_error(
+    monkeypatch,
+) -> None:
+    active = 0
+    maximum_active = 0
+    lock_entered = Event()
+    release_first = Event()
+
+    class Limit:
+        def __enter__(self):
+            nonlocal active, maximum_active
+            active += 1
+            maximum_active = max(maximum_active, active)
+            lock_entered.set()
+            return self
+
+        def __exit__(self, *_args):
+            nonlocal active
+            active -= 1
+            return False
+
+    monkeypatch.setattr(core_services, "threadpool_limits", lambda **_kwargs: Limit())
+
+    def first() -> None:
+        with core_services.scoped_blas_threads():
+            release_first.wait(1)
+
+    first_thread = Thread(target=first)
+    first_thread.start()
+    assert lock_entered.wait(1)
+    second_done = Event()
+    def second() -> None:
+        try:
+            with core_services.scoped_blas_threads():
+                raise RuntimeError("expected")
+        except RuntimeError:
+            second_done.set()
+
+    second_thread = Thread(target=second)
+    second_thread.start()
+    sleep(0.03)
+    assert not second_done.is_set()
+    release_first.set()
+    first_thread.join(1)
+    second_thread.join(1)
+    assert second_done.is_set()
+    assert maximum_active == 1
+    assert active == 0
 
 
 def _base_project() -> ProjectSpec:

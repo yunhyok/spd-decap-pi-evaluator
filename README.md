@@ -1,8 +1,8 @@
-# SPD Decap PI Evaluator v0.16.0
+# SPD Decap PI Evaluator v0.17.0
 
-> v0.16.0 retains source SPD dielectric Dk/Df tables and evaluates them by log-frequency interpolation, clamped to the source table endpoints. A finite-thickness, one-face copper-slab model is used only where the extracted topology supports it; shared-PWR or multiple-return cases retain the legacy scalar sheet pending a physically complete two-face matrix treatment. Conservative legacy via templates remain in production because the proposed aggregate-via replacement failed holdout validation. PowerSI Touchstone data is comparison-only and is never fitted back into the solver. Exact component C00, multilayer finite-difference network (MFDM), and partial-element equivalent-circuit (PEEC) work remains research-only and is not production-enabled. The title bar identifies the application as **SPD Decap PI Evaluator v0.16.0**. This remains an exploratory single-rail rectangular-bbox model; sub-milliohm and sign-off accuracy are not certified.
+> v0.17.0 retains the v0.16.0 solver physics and accuracy algorithms unchanged: source SPD dielectric Dk/Df tables use log-frequency interpolation clamped to source endpoints; the finite-thickness one-face copper-slab and legacy scalar-sheet boundaries are unchanged; PowerSI Touchstone remains comparison-only. The verified changes are operational: BLAS oversubscription suppression, worker-side document preparation, coalesced progress updates, cancellation-race protection, and responsive staged board rendering. Exact component C00, multilayer finite-difference network (MFDM), partial-element equivalent-circuit (PEEC), and other research-only solvers are not production-enabled. The title bar identifies the application as **SPD Decap PI Evaluator v0.17.0**. This remains an exploratory single-rail rectangular-bbox model; sub-milliohm and sign-off accuracy are not certified.
 
-> 프로그램: **SPD Decap PI Evaluator v0.16.0**
+> 프로그램: **SPD Decap PI Evaluator v0.17.0**
 > 저장소: 기존 PI Calculator와 분리된 독립 프로그램
 > 해석 경계: 선택한 PWR rail의 pre-design `Zii`; 최종 PowerSI/SIwave 검증을 대체하지 않음
 
@@ -105,7 +105,7 @@ powershell.exe -ExecutionPolicy Bypass -NoProfile -File .\scripts\build_spd_deca
 산출물:
 
 - `dist\SPDDecapPIEvaluator\SPDDecapPIEvaluator.exe`
-- `installer-output\SPDDecapPIEvaluatorSetup-0.16.0.exe`
-- `installer-output\SPDDecapPIEvaluatorSetup-0.16.0.exe.sha256`
+- `installer-output\SPDDecapPIEvaluatorSetup-0.17.0.exe`
+- `installer-output\SPDDecapPIEvaluatorSetup-0.17.0.exe.sha256`
 
 프로그램명과 버전은 title bar와 installer metadata에 함께 표시된다.

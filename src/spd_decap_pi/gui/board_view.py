@@ -14,7 +14,7 @@ import math
 from typing import Any
 
 import numpy as np
-from PySide6.QtCore import QEvent, QPoint, QPointF, QRect, QRectF, Qt, Signal
+from PySide6.QtCore import QEvent, QPoint, QPointF, QRect, QRectF, Qt, QTimer, Signal
 from PySide6.QtGui import QColor, QMouseEvent, QWheelEvent
 from PySide6.QtWidgets import (
     QApplication,
@@ -374,11 +374,19 @@ class DecapBoardView(pg.PlotWidget):
         self,
         records: Iterable[object],
         net_colors: Mapping[str, object] | None = None,
+        *,
+        fit: bool = True,
+        normalized: bool = False,
+        staged: bool = False,
     ) -> None:
         """Replace the rendered decap records while preserving valid selection."""
 
         self._clear_hover_tooltip()
-        normalized = tuple(self._normalize_record(record) for record in records)
+        self._base_render_token = getattr(self, "_base_render_token", 0) + 1
+        # A direct replacement invalidates any queued staged append and must
+        # not leave later focus changes believing a render is still pending.
+        self._base_render_pending = False
+        normalized = tuple(records) if normalized else self.prepare_decaps(records)
         refdes_index: dict[str, int] = {}
         for index, record in enumerate(normalized):
             key = record.refdes.casefold()
@@ -411,7 +419,10 @@ class DecapBoardView(pg.PlotWidget):
             normalized_colors = self._normalize_net_colors(net_colors)
             colors_changed = normalized_colors != self._net_colors
             self._net_colors = normalized_colors
-        self._render_base_layers()
+        if staged:
+            self._render_base_layers_staged(self._base_render_token)
+        else:
+            self._render_base_layers()
         if colors_changed:
             self._restyle_bump_layers()
         self._render_selection_layer()
@@ -419,7 +430,7 @@ class DecapBoardView(pg.PlotWidget):
 
         if self.selected_refdes != old_selection:
             self.selectionChanged.emit(self.selected_refdes)
-        if normalized and not had_records:
+        if fit and normalized and not had_records:
             self.fit_board()
 
     def clear_decaps(self) -> None:
@@ -453,10 +464,17 @@ class DecapBoardView(pg.PlotWidget):
         self._companion_keys = keys
         self._render_companion_layer()
 
-    def set_bumps(self, records: Iterable[object]) -> None:
+    def set_bumps(
+        self,
+        records: Iterable[object],
+        *,
+        fit: bool = True,
+        normalized: bool = False,
+        staged: bool = False,
+    ) -> None:
         """Replace the fixed, batched Device-bump layer."""
 
-        normalized = tuple(self._normalize_bump(record) for record in records)
+        normalized = tuple(records) if normalized else self.prepare_bumps(records)
         if normalized == self._bumps:
             return
         self._clear_hover_tooltip()
@@ -477,36 +495,49 @@ class DecapBoardView(pg.PlotWidget):
             key = record.net.casefold()
             indices_by_net.setdefault(key, []).append(index)
             self._bump_net_names.setdefault(key, record.net)
-        for key in sorted(indices_by_net):
-            indices = np.asarray(indices_by_net[key], dtype=np.int64)
-            net = self._bump_net_names[key]
-            color = self._display_color_for_net(net)
-            scatter = pg.ScatterPlotItem(
-                name=f"Device bumps: {net}",
-                pxMode=True,
-                hoverable=False,
-                tip=None,
-            )
-            scatter.setZValue(5)
-            scatter.setData(
-                x=self._bump_x_values[indices],
-                y=self._bump_y_values[indices],
-                data=[net] * len(indices),
-                brush=pg.mkBrush(color),
-                pen=pg.mkPen(QColor(color).darker(135), width=0.8),
-                size=self.BUMP_SIZE_PX,
-                symbol="d",
-                pxMode=True,
-            )
-            self.plotItem.addItem(scatter)
-            self._bump_scatters_by_net[key] = scatter
-        if normalized and not had_bumps:
+        keys = sorted(indices_by_net)
+        self._bump_render_token = getattr(self, "_bump_render_token", 0) + 1
+        token = self._bump_render_token
+        if staged:
+            def append(index: int) -> None:
+                if token != self._bump_render_token or index >= len(keys):
+                    return
+                key = keys[index]
+                self._add_bump_scatter(key, indices_by_net[key])
+                QTimer.singleShot(0, lambda: append(index + 1))
+
+            QTimer.singleShot(0, lambda: append(0))
+        else:
+            for key in keys:
+                self._add_bump_scatter(key, indices_by_net[key])
+        if fit and normalized and not had_bumps:
             self.fit_board()
 
     def clear_bumps(self) -> None:
         """Remove all Device bumps without disturbing decaps or planes."""
 
         self.set_bumps(())
+
+    def _add_bump_scatter(self, key: str, source_indices: list[int]) -> None:
+        indices = np.asarray(source_indices, dtype=np.int64)
+        net = self._bump_net_names[key]
+        color = self._display_color_for_net(net)
+        scatter = pg.ScatterPlotItem(
+            name=f"Device bumps: {net}", pxMode=True, hoverable=False, tip=None
+        )
+        scatter.setZValue(5)
+        scatter.setData(
+            x=self._bump_x_values[indices],
+            y=self._bump_y_values[indices],
+            data=[net] * len(indices),
+            brush=pg.mkBrush(color),
+            pen=pg.mkPen(QColor(color).darker(135), width=0.8),
+            size=self.BUMP_SIZE_PX,
+            symbol="d",
+            pxMode=True,
+        )
+        self.plotItem.addItem(scatter)
+        self._bump_scatters_by_net[key] = scatter
 
     def set_active_nets(self, nets: Iterable[str] | None) -> None:
         """Keep selected NETs colored and render every other NET in grey."""
@@ -523,6 +554,12 @@ class DecapBoardView(pg.PlotWidget):
         if normalized == self._active_net_keys:
             return
         self._active_net_keys = normalized
+        if getattr(self, "_base_render_pending", False):
+            # Bumps may already be visible (or be appended asynchronously).
+            # Restyle the visible portion; each later append reads the current
+            # active NET set.
+            self._restyle_bump_layers()
+            return
         self._render_base_layers()
         self._restyle_bump_layers()
 
@@ -625,6 +662,11 @@ class DecapBoardView(pg.PlotWidget):
         """Replace board-plane graphics and keep them behind decap markers."""
 
         self.clear_plane_items()
+        self.append_plane_items(items)
+
+    def append_plane_items(self, items: Iterable[QGraphicsItem]) -> None:
+        """Append a render chunk of board-plane graphics behind decap markers."""
+
         seen: set[int] = set()
         for item in items:
             if id(item) in seen:
@@ -667,6 +709,40 @@ class DecapBoardView(pg.PlotWidget):
         )
         self._set_disabled_x_scatter(disabled_indices)
 
+    def _render_base_layers_staged(self, token: int) -> None:
+        """Append modest decap batches so initial large-board paint yields."""
+
+        enabled_indices = np.flatnonzero(self._enabled_values)
+        disabled_indices = np.flatnonzero(~self._enabled_values)
+        batches = (
+            (self._enabled_scatter, enabled_indices, True),
+            (self._disabled_scatter, disabled_indices, False),
+        )
+        self._enabled_scatter.setData(x=[], y=[])
+        self._disabled_scatter.setData(x=[], y=[])
+        self._base_render_pending = True
+
+        def append(batch_index: int, offset: int) -> None:
+            if token != self._base_render_token:
+                return
+            if batch_index >= len(batches):
+                self._base_render_pending = False
+                self._set_disabled_x_scatter(disabled_indices)
+                self._render_selection_layer()
+                self._render_companion_layer()
+                return
+            scatter, indices, enabled = batches[batch_index]
+            chunk = indices[offset : offset + 1_000]
+            if chunk.size:
+                scatter.addPoints(**self._base_scatter_payload(chunk, enabled=enabled))
+            next_offset = offset + len(chunk)
+            if next_offset < len(indices):
+                QTimer.singleShot(0, lambda: append(batch_index, next_offset))
+            else:
+                QTimer.singleShot(0, lambda: append(batch_index + 1, 0))
+
+        QTimer.singleShot(0, lambda: append(0, 0))
+
     def _restyle_bump_layers(self) -> None:
         for key, scatter in self._bump_scatters_by_net.items():
             color = self._display_color_for_net(self._bump_net_names[key])
@@ -683,6 +759,11 @@ class DecapBoardView(pg.PlotWidget):
         if indices.size == 0:
             scatter.setData(x=[], y=[])
             return
+        scatter.setData(**self._base_scatter_payload(indices, enabled=enabled))
+
+    def _base_scatter_payload(
+        self, indices: np.ndarray, *, enabled: bool
+    ) -> dict[str, Any]:
         colors = [
             self._display_color_for_net(self._records[index].current_net)
             for index in indices
@@ -701,16 +782,16 @@ class DecapBoardView(pg.PlotWidget):
                 )
         brushes = [styles[int(color.rgba())][0] for color in colors]
         pens = [styles[int(color.rgba())][1] for color in colors]
-        scatter.setData(
-            x=self._x_values[indices],
-            y=self._y_values[indices],
-            data=[self._records[index].refdes for index in indices],
-            brush=brushes,
-            pen=pens,
-            size=self.POINT_SIZE_PX,
-            symbol="o",
-            pxMode=True,
-        )
+        return {
+            "x": self._x_values[indices],
+            "y": self._y_values[indices],
+            "data": [self._records[index].refdes for index in indices],
+            "brush": brushes,
+            "pen": pens,
+            "size": self.POINT_SIZE_PX,
+            "symbol": "o",
+            "pxMode": True,
+        }
 
     def _set_disabled_x_scatter(self, indices: np.ndarray) -> None:
         if indices.size == 0:
@@ -955,6 +1036,18 @@ class DecapBoardView(pg.PlotWidget):
         ):
             return QColor(self.INACTIVE_NET_COLOR)
         return self._color_for_net(net)
+
+    @classmethod
+    def prepare_decaps(cls, records: Iterable[object]) -> tuple[_BoardDecap, ...]:
+        """Pure record normalization suitable for a document worker."""
+
+        return tuple(cls._normalize_record(record) for record in records)
+
+    @classmethod
+    def prepare_bumps(cls, records: Iterable[object]) -> tuple[_BoardBump, ...]:
+        """Pure bump normalization suitable for a document worker."""
+
+        return tuple(cls._normalize_bump(record) for record in records)
 
     @classmethod
     def _normalize_record(cls, record: object) -> _BoardDecap:

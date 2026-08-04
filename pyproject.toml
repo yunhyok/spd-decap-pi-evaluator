@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "spd-decap-pi-evaluator"
-version = "0.16.0"
+version = "0.17.0"
 description = "Standalone PowerSI SPD decap PWR assignment and PI evaluation desktop tool"
 readme = "README.md"
 requires-python = ">=3.12"
@@ -20,6 +20,7 @@ dependencies = [
   "httpx>=0.27",
   "XlsxWriter>=3.2",
   "openpyxl>=3.1",
+  "threadpoolctl>=3.5",
 ]
 
 [project.optional-dependencies]

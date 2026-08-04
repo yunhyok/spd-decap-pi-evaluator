@@ -37,6 +37,7 @@ from spd_decap_pi._core.services import (
     EvaluationView,
     LocalAIAnalysisView,
     WorkspaceState,
+    scoped_blas_threads,
 )
 from spd_decap_pi._core.solver import SOLVER_VERSION
 from spd_decap_pi._core.via_model import ViaModelError, estimate_via_segment_rl
@@ -1950,14 +1951,15 @@ def evaluate_scenario(
         attachments=attachments,
         evaluation_rail_id=canonical_rail,
     )
-    view = evaluation_services.evaluate_workspace(
-        state,
-        canonical_rail,
-        target_ohm,
-        modal_max_index,
-        progress=progress,
-        is_cancelled=is_cancelled,
-    )
+    with scoped_blas_threads():
+        view = evaluation_services.evaluate_workspace(
+            state,
+            canonical_rail,
+            target_ohm,
+            modal_max_index,
+            progress=progress,
+            is_cancelled=is_cancelled,
+        )
     result_key = ScenarioResultKey.from_settings(
         design_fingerprint=scenario.design_fingerprint,
         rail_id=canonical_rail,

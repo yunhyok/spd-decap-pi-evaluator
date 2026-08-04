@@ -4,12 +4,14 @@ import csv
 from dataclasses import replace
 import os
 from pathlib import Path
+import threading
+from time import sleep
 from types import SimpleNamespace
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 import pytest
-from PySide6.QtCore import QPointF, QRectF, QSize, Qt
+from PySide6.QtCore import QEventLoop, QPointF, QRectF, QSize, Qt, QThreadPool, QTimer
 from PySide6.QtGui import QBrush, QColor, QImage, QPainter, QPainterPath
 from PySide6.QtWidgets import (
     QApplication,
@@ -39,7 +41,10 @@ from spd_decap_pi.gui.worker import FunctionWorker
 from spd_decap_pi.gui.main_window import (
     MainWindow,
     _PlaneArtworkItem,
+    _PlanePathBuilder,
+    _PreparedScenarioBundle,
     _excel_safe_csv_cell,
+    _job_compute_distribution,
     _job_load_scenario,
     _modal_convergence_text,
     _rejected_comparison_convergence,
@@ -61,6 +66,164 @@ from spd_decap_pi.version import APP_DISPLAY_NAME
 
 def _application() -> QApplication:
     return QApplication.instance() or QApplication([])
+
+
+def test_function_worker_coalesces_progress_before_it_reaches_the_gui() -> None:
+    delivered: list[tuple[int, str]] = []
+
+    def noisy_job(*, progress, is_cancelled) -> str:
+        for value in range(2_000):
+            assert not is_cancelled()
+            progress(value % 100, f"step {value}")
+        progress(100, "complete")
+        return "done"
+
+    worker = FunctionWorker(noisy_job)
+    worker.signals.progress.connect(
+        lambda value, message: delivered.append((value, message))
+    )
+    worker.run()
+
+    assert delivered[0] == (0, "step 0")
+    assert delivered[-1] == (100, "complete")
+    assert len(delivered) < 20
+
+
+def test_incremental_plane_builder_yields_to_the_qt_event_loop_for_large_polygon() -> None:
+    """A single huge PowerSI polygon must not monopolize a GUI render callback."""
+
+    application = _application()
+    geometry = {
+        "positive_polygons_um": [
+            [
+                (float(index), float((index * index) % 97))
+                for index in range(12_000)
+            ]
+        ],
+        "negative_polygons_um": [],
+        "positive_circles_um": [],
+        "negative_circles_um": [],
+        "primitive_order": [("positive_polygon", 0)],
+    }
+    builder = _PlanePathBuilder(geometry, QColor("#2563EB"))
+    heartbeats: list[int] = []
+    render_calls: list[int] = []
+    loop = QEventLoop()
+
+    heartbeat = QTimer()
+    heartbeat.setInterval(1)
+    heartbeat.timeout.connect(lambda: heartbeats.append(1))
+
+    def render_step() -> None:
+        render_calls.append(1)
+        if builder.step(1, maximum_points=48):
+            loop.quit()
+            return
+        QTimer.singleShot(0, render_step)
+
+    heartbeat.start()
+    QTimer.singleShot(0, render_step)
+    timeout = QTimer()
+    timeout.setSingleShot(True)
+    timeout.timeout.connect(loop.quit)
+    timeout.start(3_000)
+    loop.exec()
+    heartbeat.stop()
+
+    assert builder.done
+    assert len(render_calls) > 100
+    assert heartbeats
+    assert builder.item() is not None
+
+
+def test_function_worker_runs_jobs_off_the_qt_gui_thread() -> None:
+    application = _application()
+    main_thread_id = threading.get_ident()
+    results: list[int] = []
+    heartbeats: list[None] = []
+    loop = QEventLoop(application)
+    heartbeat = QTimer(application)
+    heartbeat.setInterval(10)
+    heartbeat.timeout.connect(lambda: heartbeats.append(None))
+    worker = FunctionWorker(
+        lambda **_kwargs: sleep(0.12) or threading.get_ident()
+    )
+    worker.signals.result.connect(lambda result: results.append(result))
+    worker.signals.finished.connect(loop.quit)
+
+    heartbeat.start()
+    QThreadPool.globalInstance().start(worker)
+    QTimer.singleShot(5_000, loop.quit)
+    loop.exec()
+    heartbeat.stop()
+
+    assert results and results == [results[0]]
+    assert results[0] != main_thread_id
+    assert len(heartbeats) >= 5
+
+
+def test_cancel_after_worker_result_emission_does_not_apply_queued_result() -> None:
+    """Cancellation wins even when the worker returned before Qt delivers result."""
+
+    application = _application()
+    window = MainWindow()
+    applied: list[str] = []
+    worker = FunctionWorker(lambda **_kwargs: "must not apply")
+    try:
+        window._run_worker(worker, applied.append, label="Testing cancellation")
+        assert QThreadPool.globalInstance().waitForDone(3_000)
+        # QRunnable signals are queued, but the GUI event queue is not pumped.
+        window._cancel_worker()
+        application.processEvents()
+        assert applied == []
+    finally:
+        window.close()
+        application.processEvents()
+
+
+def test_distribution_worker_prepares_preview_and_export_before_gui_acceptance(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from spd_decap_pi import distribution as distribution_module
+
+    plan = object()
+    preview = object()
+    calls: list[str] = []
+    progress: list[tuple[int, str]] = []
+    monkeypatch.setattr(
+        distribution_module,
+        "compute_distribution_plan",
+        lambda *_args, **kwargs: calls.append("plan") or plan,
+    )
+    monkeypatch.setattr(
+        distribution_module,
+        "apply_distribution_plan",
+        lambda *_args: calls.append("preview") or preview,
+    )
+    monkeypatch.setattr(
+        distribution_module,
+        "distribution_csv_rows",
+        lambda _plan: calls.append("export")
+        or (("Component", "REFDES"), ("CAP", "C1")),
+    )
+
+    result = _job_compute_distribution(
+        object(),
+        {},
+        {},
+        object(),
+        progress=lambda value, message: progress.append((value, message)),
+        is_cancelled=lambda: False,
+    )
+
+    assert calls == ["plan", "preview", "export"]
+    assert result.plan is plan
+    assert result.preview_scenario is preview
+    assert result.export_rows == (("CAP", "C1"),)
+    assert progress[-2:] == [
+        (92, "Preparing atomic De-cap Distribution preview"),
+        (100, "De-cap Distribution preview complete"),
+    ]
 
 
 def test_main_window_exposes_sibling_identity_and_evaluation_only_workflow() -> None:
@@ -1063,6 +1226,18 @@ def test_scenario_load_can_relink_only_an_identical_external_spd(tmp_path: Path)
 
     assert bundle.scenario.source.path == str(moved.resolve())
     assert bundle.scenario.design_fingerprint == original_fingerprint
+
+    prepared = _job_load_scenario(
+        scenario_path,
+        moved,
+        prepare_view=True,
+        progress=lambda _value, _message: None,
+        is_cancelled=lambda: False,
+    )
+    assert isinstance(prepared, _PreparedScenarioBundle)
+    assert prepared.view.design_fingerprint == original_fingerprint
+    assert prepared.view.plane_cells
+    assert all(not hasattr(cell, "geometry") for cell in prepared.view.plane_cells)
 
     mismatched = tmp_path / "mismatched.spd"
     payload = bytearray(moved.read_bytes())

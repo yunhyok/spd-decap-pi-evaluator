@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import csv
+from dataclasses import dataclass
 from decimal import Decimal, ROUND_FLOOR
 from hashlib import sha256
 from math import isfinite
@@ -10,7 +11,7 @@ from pathlib import Path
 from time import perf_counter
 from typing import Any, Callable
 
-from PySide6.QtCore import QPoint, QPointF, QRectF, QSize, Qt, QThreadPool, QTimer
+from PySide6.QtCore import QPoint, QRectF, QSize, Qt, QThreadPool, QTimer
 from PySide6.QtGui import (
     QAction,
     QBrush,
@@ -21,7 +22,6 @@ from PySide6.QtGui import (
     QPainterPath,
     QPen,
     QPixmap,
-    QPolygonF,
 )
 from PySide6.QtWidgets import (
     QAbstractItemView,
@@ -63,8 +63,9 @@ from spd_decap_pi._core.services import (
     cap_spice_subcircuit_names,
     import_cap_spice,
     plane_cell_source_geometry,
+    scoped_blas_threads,
 )
-from spd_decap_pi._core.domain import PinKind
+from spd_decap_pi._core.domain import PinKind, ProjectSpec
 
 from ..scenario import DecapConnectionKind, ScenarioDecap, ScenarioSpec
 from ..scenario_edits import (
@@ -103,6 +104,170 @@ _EXPLORATORY_FIDELITY_WARNING = (
     "Exploratory: rectangular PWR bbox, continuous DGND, single-rail Zii; "
     "absolute sub-milliohm accuracy not certified."
 )
+
+
+@dataclass(frozen=True, slots=True)
+class _PreparedDistributionPreview:
+    """Worker-prepared, still-unapplied data for one atomic distribution preview."""
+
+    plan: Any
+    preview_scenario: ScenarioSpec
+    export_rows: tuple[Any, ...]
+
+
+@dataclass(frozen=True, slots=True)
+class _PreparedPlaneCell:
+    """Reentrant Qt paths prepared off-thread; GUI only creates scene items."""
+
+    cell: Any
+    net: str
+    layer: str
+    runs: tuple[tuple[str, QPainterPath], ...]
+    primitive_kinds: frozenset[str]
+    artwork_bounds: QRectF | None
+
+
+@dataclass(frozen=True, slots=True)
+class _PreparedDocumentView:
+    """CPU-only document preview work completed before GUI item creation."""
+
+    source_sha256: str
+    plane_cells: tuple[_PreparedPlaneCell, ...]
+    layer_labels: tuple[tuple[str, str], ...]
+    distribution_counts: dict[tuple[str, str], int]
+    design_fingerprint: str
+    project: ProjectSpec
+    bumps: tuple[Any, ...]
+    decap_records: tuple[Any, ...]
+    model_keys: frozenset[str]
+    connection_summary: tuple[str, str]
+    recovery_summary: tuple[str, str]
+
+
+@dataclass(frozen=True, slots=True)
+class _PreparedScenarioImport:
+    imported: ScenarioImport
+    view: _PreparedDocumentView
+
+
+@dataclass(frozen=True, slots=True)
+class _PreparedScenarioBundle:
+    bundle: ScenarioBundle
+    view: _PreparedDocumentView
+
+
+def _distribution_counts_for_preview(
+    scenario: ScenarioSpec,
+) -> dict[tuple[str, str], int]:
+    """Compute the table inventory without touching a QWidget."""
+
+    try:
+        from ..distribution import distribution_present_counts
+    except ImportError:
+        counts: dict[tuple[str, str], int] = {}
+        for decap in scenario.decaps:
+            if decap.enabled and decap.model_id is not None:
+                key = (decap.current_rail_id, decap.model_id)
+                counts[key] = counts.get(key, 0) + 1
+        return counts
+    return distribution_present_counts(scenario)
+
+
+def _prepared_plane_paths(
+    geometry: dict[str, Any],
+) -> tuple[tuple[tuple[str, QPainterPath], ...], frozenset[str], QRectF | None]:
+    """Build reentrant QPainterPath values without creating graphics items."""
+
+    builder = _PlanePathBuilder(geometry, QColor())
+    while not builder.step(builder.primitive_count, maximum_points=100_000):
+        pass
+    runs, primitive_kinds = builder.paths()
+    if not runs:
+        return (), primitive_kinds, None
+    bounds = QRectF()
+    for _kind, path in runs:
+        path_bounds = path.boundingRect()
+        bounds = path_bounds if bounds.isNull() else bounds.united(path_bounds)
+    return runs, primitive_kinds, bounds.adjusted(-1.0, -1.0, 1.0, 1.0)
+
+
+def _prepare_document_view(
+    scenario: ScenarioSpec,
+    attachments: dict[str, bytes],
+    *,
+    progress: Callable[[int, str], None],
+    is_cancelled: Callable[[], bool],
+    progress_start: int = 65,
+    progress_end: int = 96,
+) -> _PreparedDocumentView:
+    """Decode source geometry and inventory in a worker; never create Qt items."""
+
+    project = scenario.base_project
+    rail_by_domain = {item.domain: item for item in project.rails}
+    cell_count = sum(len(partition.cells) for partition in project.partitions)
+    prepared: list[_PreparedPlaneCell] = []
+    completed = 0
+    progress(progress_start, "Preparing source plane geometry")
+    for partition in project.partitions:
+        domain_by_cell = {
+            cell_id: domain for domain, cell_id in partition.domain_to_cell.items()
+        }
+        for cell in partition.cells:
+            if is_cancelled():
+                raise RuntimeError("document opening cancelled")
+            domain = domain_by_cell.get(cell.cell_id, cell.cell_id)
+            rail = rail_by_domain.get(domain)
+            net = rail.net if rail is not None else domain
+            geometry = plane_cell_source_geometry(
+                cell, attachments, expected_layer=partition.layer
+            )
+            runs, primitive_kinds, artwork_bounds = _prepared_plane_paths(
+                dict(geometry)
+            )
+            prepared.append(
+                _PreparedPlaneCell(
+                    cell,
+                    str(net),
+                    partition.layer,
+                    runs,
+                    primitive_kinds,
+                    artwork_bounds,
+                )
+            )
+            completed += 1
+            if cell_count:
+                progress(
+                    progress_start
+                    + round((progress_end - progress_start - 2) * completed / cell_count),
+                    f"Prepared {completed:,}/{cell_count:,} plane cells",
+                )
+    if is_cancelled():
+        raise RuntimeError("document opening cancelled")
+    progress(progress_end - 1, "Preparing component distribution")
+    counts = _distribution_counts_for_preview(scenario)
+    progress(progress_end, "Ready to render board")
+    return _PreparedDocumentView(
+        source_sha256=scenario.source.sha256,
+        plane_cells=tuple(prepared),
+        layer_labels=_short_plane_layer_labels(
+            project.stackup_layers, (partition.layer for partition in project.partitions)
+        ),
+        distribution_counts=counts,
+        # This can serialize thousands of decaps.  Compute it here so opening
+        # a large current-schema scenario does not repeat that work on Qt's
+        # event loop thread.
+        design_fingerprint=scenario.design_fingerprint,
+        project=project,
+        bumps=DecapBoardView.prepare_bumps(
+            item
+            for item in scenario.normalized_project.get("pins", ())
+            if str(item.get("kind", "")) == PinKind.DEVICE_BUMP.value
+        ),
+        decap_records=DecapBoardView.prepare_decaps(scenario.decaps),
+        model_keys=frozenset(item.model_id.casefold() for item in project.cap_models),
+        connection_summary=_shared_pad_connection_summary(scenario),
+        recovery_summary=_source_via_path_recovery_summary_from_project(project),
+    )
 
 
 def _modal_convergence_text(view: Any) -> str:
@@ -197,6 +362,7 @@ class _PlaneArtworkItem(QGraphicsItem):
         runs: tuple[tuple[str, QPainterPath], ...],
         color: QColor,
         primitive_kinds: set[str],
+        bounds: QRectF | None = None,
     ) -> None:
         super().__init__()
         self._runs = runs
@@ -207,11 +373,13 @@ class _PlaneArtworkItem(QGraphicsItem):
         # only this cell's copper instead of painting over other visible
         # layers in the shared scene.
         self.setCacheMode(QGraphicsItem.CacheMode.DeviceCoordinateCache)
-        bounds = QRectF()
-        for _kind, path in runs:
-            path_bounds = path.boundingRect()
-            bounds = path_bounds if bounds.isNull() else bounds.united(path_bounds)
-        self._bounds = bounds.adjusted(-1.0, -1.0, 1.0, 1.0)
+        if bounds is None:
+            bounds = QRectF()
+            for _kind, path in runs:
+                path_bounds = path.boundingRect()
+                bounds = path_bounds if bounds.isNull() else bounds.united(path_bounds)
+            bounds = bounds.adjusted(-1.0, -1.0, 1.0, 1.0)
+        self._bounds = QRectF(bounds)
 
     def boundingRect(self) -> QRectF:  # noqa: N802 - Qt virtual name
         return QRectF(self._bounds)
@@ -256,6 +424,150 @@ class _PlaneArtworkItem(QGraphicsItem):
         pen = QPen(self._color)
         pen.setCosmetic(True)
         return pen
+
+
+class _PlanePathBuilder:
+    """Incrementally turn normalized primitives into reentrant QPainterPaths."""
+
+    def __init__(self, geometry: dict[str, Any] | Any, color: QColor) -> None:
+        self._polygons = {
+            "positive_polygon": geometry["positive_polygons_um"],
+            "negative_polygon": geometry["negative_polygons_um"],
+        }
+        self._circles = {
+            "positive_circle": geometry["positive_circles_um"],
+            "negative_circle": geometry["negative_circles_um"],
+        }
+        order = list(geometry["primitive_order"])
+        self._order = order or [
+            *(("positive_polygon", index) for index in range(len(self._polygons["positive_polygon"]))),
+            *(("positive_circle", index) for index in range(len(self._circles["positive_circle"]))),
+            *(("negative_polygon", index) for index in range(len(self._polygons["negative_polygon"]))),
+            *(("negative_circle", index) for index in range(len(self._circles["negative_circle"]))),
+        ]
+        self._color = QColor(color)
+        self._index = 0
+        self._runs: list[tuple[str, QPainterPath]] = []
+        self._primitive_kinds: set[str] = set()
+        self._active_kind: str | None = None
+        self._active_path: QPainterPath | None = None
+        self._pending_polygon: tuple[str, Any] | None = None
+        self._pending_area_index = 0
+        self._pending_area = 0.0
+        self._pending_build_index = 0
+        self._pending_direction = 1
+        self._pending_built = 0
+
+    @property
+    def done(self) -> bool:
+        return self._index >= len(self._order) and self._pending_polygon is None
+
+    @property
+    def primitive_count(self) -> int:
+        return len(self._order)
+
+    def step(self, maximum_primitives: int, maximum_points: int = 2048) -> bool:
+        """Build bounded primitive and vertex counts, returning completion state."""
+
+        completed_primitives = 0
+        remaining_points = max(1, maximum_points)
+        while completed_primitives < max(1, maximum_primitives):
+            if self.done:
+                return True
+            if self._pending_polygon is not None:
+                kind, values = self._pending_polygon
+                point_count = len(values)
+                while self._pending_area_index < point_count and remaining_points:
+                    index = self._pending_area_index
+                    x0, y0 = values[index]
+                    x1, y1 = values[(index + 1) % point_count]
+                    self._pending_area += float(x0) * float(y1) - float(x1) * float(y0)
+                    self._pending_area_index += 1
+                    remaining_points -= 1
+                if self._pending_area_index < point_count:
+                    return False
+                if self._pending_built == 0:
+                    if self._pending_area < 0.0:
+                        self._pending_build_index = point_count - 1
+                        self._pending_direction = -1
+                    self._path_for(kind).moveTo(
+                        float(values[self._pending_build_index][0]),
+                        float(values[self._pending_build_index][1]),
+                    )
+                    self._pending_build_index += self._pending_direction
+                    self._pending_built = 1
+                path = self._path_for(kind)
+                while self._pending_built < point_count and remaining_points:
+                    x, y = values[self._pending_build_index]
+                    path.lineTo(float(x), float(y))
+                    self._pending_build_index += self._pending_direction
+                    self._pending_built += 1
+                    remaining_points -= 1
+                if self._pending_built < point_count:
+                    return False
+                path.closeSubpath()
+                self._primitive_kinds.add(kind)
+                self._pending_polygon = None
+                self._pending_area_index = 0
+                self._pending_area = 0.0
+                self._pending_built = 0
+                completed_primitives += 1
+                if not remaining_points:
+                    return False
+                continue
+            kind, index = self._order[self._index]
+            self._index += 1
+            if kind in self._polygons:
+                values = self._polygons[kind]
+                if index < 0 or index >= len(values):
+                    continue
+                if len(values[index]) < 3:
+                    continue
+                self._pending_polygon = (kind, values[index])
+                self._pending_area_index = 0
+                self._pending_area = 0.0
+                self._pending_build_index = 0
+                self._pending_direction = 1
+                self._pending_built = 0
+                continue
+            elif kind in self._circles:
+                values = self._circles[kind]
+                if index < 0 or index >= len(values):
+                    continue
+                center_x, center_y, radius = values[index]
+                self._path_for(kind).addEllipse(
+                    float(center_x - radius),
+                    float(center_y - radius),
+                    float(2.0 * radius),
+                    float(2.0 * radius),
+                )
+                self._primitive_kinds.add(kind)
+            completed_primitives += 1
+            if not remaining_points:
+                return False
+        return self.done
+
+    def item(self) -> _PlaneArtworkItem | None:
+        if not self.done:
+            raise RuntimeError("cannot create source artwork before path construction finishes")
+        if not self._runs:
+            return None
+        result = _PlaneArtworkItem(tuple(self._runs), self._color, self._primitive_kinds)
+        result.setData(0, "source_geometry")
+        return result
+
+    def paths(self) -> tuple[tuple[tuple[str, QPainterPath], ...], frozenset[str]]:
+        if not self.done:
+            raise RuntimeError("cannot access source paths before construction finishes")
+        return tuple(self._runs), frozenset(self._primitive_kinds)
+
+    def _path_for(self, kind: str) -> QPainterPath:
+        if self._active_path is None or kind != self._active_kind:
+            self._active_kind = kind
+            self._active_path = QPainterPath()
+            self._active_path.setFillRule(Qt.FillRule.WindingFill)
+            self._runs.append((kind, self._active_path))
+        return self._active_path
 
 
 def _excel_safe_csv_cell(value: object) -> str:
@@ -418,7 +730,15 @@ def _shared_pad_connection_summary(scenario: ScenarioSpec) -> tuple[str, str]:
 def _source_via_path_recovery_summary(scenario: ScenarioSpec) -> tuple[str, str]:
     """Return deterministic source-Via applicability disclosure for the UI."""
 
-    raw = scenario.base_project.metadata.get("spd_via_path_recovery", {})
+    return _source_via_path_recovery_summary_from_project(scenario.base_project)
+
+
+def _source_via_path_recovery_summary_from_project(
+    project: ProjectSpec,
+) -> tuple[str, str]:
+    """Return recovery disclosure from an already-validated project."""
+
+    raw = project.metadata.get("spd_via_path_recovery", {})
     if not isinstance(raw, dict):
         message = "Source Via paths: unavailable"
         return message, message
@@ -493,17 +813,18 @@ def _short_plane_layer_labels(
 def _job_load_scenario(
     path: Path,
     source_override: Path | None = None,
+    prepare_view: bool = False,
     *,
     progress: Callable[[int, str], None],
     is_cancelled: Callable[[], bool],
-) -> ScenarioBundle:
+) -> ScenarioBundle | _PreparedScenarioBundle:
     progress(5, "Reading .spdpi scenario")
     bundle = load_scenario_with_recovery(path)
     progress(35, "Validating external SPD identity")
     resolved = verify_scenario_source(
         bundle.scenario,
         source_override,
-        progress=lambda value, message: progress(35 + round(value * 0.65), message),
+        progress=lambda value, message: progress(35 + round(value * 0.30), message),
         is_cancelled=is_cancelled,
     )
     if str(resolved) != bundle.scenario.source.path:
@@ -517,7 +838,36 @@ def _job_load_scenario(
             recovered_from=bundle.recovered_from,
             recovery_reason=bundle.recovery_reason,
         )
-    return bundle
+    if not prepare_view:
+        return bundle
+    view = _prepare_document_view(
+        bundle.scenario,
+        bundle.attachments,
+        progress=progress,
+        is_cancelled=is_cancelled,
+    )
+    return _PreparedScenarioBundle(bundle, view)
+
+
+def _job_import_spd(
+    path: Path,
+    *,
+    progress: Callable[[int, str], None],
+    is_cancelled: Callable[[], bool],
+) -> _PreparedScenarioImport:
+    """Import and complete expensive pure preview preparation off the GUI thread."""
+
+    imported = import_spd_scenario(
+        path, progress=lambda value, message: progress(round(value * 0.65), message),
+        is_cancelled=is_cancelled,
+    )
+    view = _prepare_document_view(
+        imported.scenario,
+        imported.attachments,
+        progress=progress,
+        is_cancelled=is_cancelled,
+    )
+    return _PreparedScenarioImport(imported, view)
 
 
 def _job_save_scenario(
@@ -552,20 +902,35 @@ def _job_compute_distribution(
     if is_cancelled():
         raise RuntimeError("distribution calculation cancelled")
     progress(5, "Validating De-cap Distribution targets")
-    result = compute_distribution_plan(
-        scenario,
-        targets,
-        distance_mode,
-        tolerances=tolerances,
-        progress=lambda value, message: progress(
-            10 + round(float(value) * 0.85), message
-        ),
-        is_cancelled=is_cancelled,
-    )
+    with scoped_blas_threads():
+        result = compute_distribution_plan(
+            scenario,
+            targets,
+            distance_mode,
+            tolerances=tolerances,
+            progress=lambda value, message: progress(
+                10 + round(float(value) * 0.85), message
+            ),
+            is_cancelled=is_cancelled,
+        )
+        if is_cancelled():
+            raise RuntimeError("distribution calculation cancelled")
+        progress(92, "Preparing atomic De-cap Distribution preview")
+        from ..distribution import apply_distribution_plan, distribution_csv_rows
+
+        preview = apply_distribution_plan(scenario, result)
+        exported = tuple(distribution_csv_rows(result))
+        export_rows = (
+            exported[1:]
+            if exported
+            and isinstance(exported[0], (tuple, list))
+            and tuple(exported[0])[:2] == ("Component", "REFDES")
+            else exported
+        )
     if is_cancelled():
         raise RuntimeError("distribution calculation cancelled")
     progress(100, "De-cap Distribution preview complete")
-    return result
+    return _PreparedDistributionPreview(result, preview, export_rows)
 
 
 class MainWindow(QMainWindow):
@@ -598,6 +963,10 @@ class MainWindow(QMainWindow):
         self._rendered_plane_net_colors: dict[str, str] = {}
         self._plane_items_by_net: dict[str, list[QGraphicsItem]] = {}
         self._plane_items_by_layer: dict[str, list[QGraphicsItem]] = {}
+        self._plane_render_token = 0
+        self._plane_render_cells: tuple[_PreparedPlaneCell, ...] = ()
+        self._plane_render_index = 0
+        self._plane_render_builder: _PlanePathBuilder | None = None
         self._plane_layer_checks: dict[str, QCheckBox] = {}
         self._hidden_plane_layer_keys: set[str] = set()
         self._plane_layer_selection_initialized = False
@@ -1467,6 +1836,9 @@ class MainWindow(QMainWindow):
         scenario: ScenarioSpec,
         *,
         preserve_result: bool = False,
+        prepared_counts: dict[tuple[str, str], int] | None = None,
+        prepared_fingerprint: str | None = None,
+        project: ProjectSpec | None = None,
     ) -> None:
         self._distribution_import_notice = None
         if self.distribution_distance_combo.currentIndex() < 0:
@@ -1483,19 +1855,13 @@ class MainWindow(QMainWindow):
             if preserve_result
             else {}
         )
-        try:
-            from ..distribution import distribution_present_counts
-        except ImportError:
-            raw_counts: dict[tuple[str, str], int] = {}
-            for decap in scenario.decaps:
-                if not decap.enabled or decap.model_id is None:
-                    continue
-                key = (decap.current_rail_id, decap.model_id)
-                raw_counts[key] = raw_counts.get(key, 0) + 1
-        else:
-            raw_counts = distribution_present_counts(scenario)
+        raw_counts = (
+            prepared_counts
+            if prepared_counts is not None
+            else _distribution_counts_for_preview(scenario)
+        )
         self._scenario = scenario
-        project = scenario.base_project
+        project = project if project is not None else scenario.base_project
         rails = tuple(project.rails)
         models = tuple(project.cap_models)
         rail_ids = tuple(rail.rail_id for rail in rails)
@@ -1516,7 +1882,11 @@ class MainWindow(QMainWindow):
         }
         self._distribution_invalid_cells.clear()
         self._distribution_invalid_tolerance_cells.clear()
-        self._distribution_basis_fingerprint = scenario.design_fingerprint
+        self._distribution_basis_fingerprint = (
+            prepared_fingerprint
+            if prepared_fingerprint is not None
+            else scenario.design_fingerprint
+        )
         if not preserve_result:
             self._distribution_plan = None
             self._distribution_preview_scenario = None
@@ -1626,19 +1996,33 @@ class MainWindow(QMainWindow):
             self._distribution_table_updating = False
         self._update_distribution_validation()
 
-    def _refresh_distribution_tab(self) -> None:
+    def _refresh_distribution_tab(
+        self,
+        prepared_counts: dict[tuple[str, str], int] | None = None,
+        prepared_fingerprint: str | None = None,
+        project: ProjectSpec | None = None,
+    ) -> None:
         scenario = self._scenario
         if scenario is None:
             self._reset_distribution_state()
             return
-        fingerprint = scenario.design_fingerprint
+        fingerprint = (
+            prepared_fingerprint
+            if prepared_fingerprint is not None
+            else scenario.design_fingerprint
+        )
         if (
             fingerprint == self._distribution_basis_fingerprint
             and self.distribution_table.rowCount()
         ):
             self._update_distribution_controls()
             return
-        self._populate_distribution_table(scenario)
+        self._populate_distribution_table(
+            scenario,
+            prepared_counts=prepared_counts,
+            prepared_fingerprint=prepared_fingerprint,
+            project=project,
+        )
 
     def _style_distribution_target_item(
         self, item: QTableWidgetItem, key: tuple[str, str]
@@ -2230,10 +2614,14 @@ class MainWindow(QMainWindow):
             self.distribution_table.blockSignals(previous_block)
             self._distribution_table_updating = False
 
-    def _accept_distribution_plan(self, plan: Any) -> None:
+    def _accept_distribution_plan(self, result: Any) -> None:
         scenario = self._scenario
         if scenario is None:
             return
+        prepared = (
+            result if isinstance(result, _PreparedDistributionPreview) else None
+        )
+        plan = prepared.plan if prepared is not None else result
         if (
             str(getattr(plan, "input_design_fingerprint", ""))
             != scenario.design_fingerprint
@@ -2242,20 +2630,23 @@ class MainWindow(QMainWindow):
             self.status_text.setText("Discarded stale De-cap Distribution preview")
             return
         try:
-            from ..distribution import (
-                apply_distribution_plan,
-                distribution_csv_rows,
-            )
+            if prepared is not None:
+                preview = prepared.preview_scenario
+                export_rows = prepared.export_rows
+            else:
+                # Direct callers (including legacy plugins/tests) remain supported;
+                # normal GUI runs prepare this CPU work in the worker.
+                from ..distribution import apply_distribution_plan, distribution_csv_rows
 
-            preview = apply_distribution_plan(scenario, plan)
-            exported = tuple(distribution_csv_rows(plan))
-            export_rows = (
-                exported[1:]
-                if exported
-                and isinstance(exported[0], (tuple, list))
-                and tuple(exported[0])[:2] == ("Component", "REFDES")
-                else exported
-            )
+                preview = apply_distribution_plan(scenario, plan)
+                exported = tuple(distribution_csv_rows(plan))
+                export_rows = (
+                    exported[1:]
+                    if exported
+                    and isinstance(exported[0], (tuple, list))
+                    and tuple(exported[0])[:2] == ("Component", "REFDES")
+                    else exported
+                )
         except (TypeError, ValueError) as exc:
             QMessageBox.critical(
                 self,
@@ -2636,7 +3027,13 @@ class MainWindow(QMainWindow):
         self.open_results_button.setEnabled(enabled)
         self.export_tuned_csv_button.setEnabled(enabled)
 
-    def _invalidate_evaluation(self, reason: str = "Scenario changed; run evaluation again.") -> None:
+    def _invalidate_evaluation(
+        self,
+        reason: str = "Scenario changed; run evaluation again.",
+        *,
+        project: ProjectSpec | None = None,
+        model_keys: frozenset[str] | None = None,
+    ) -> None:
         self._evaluation_state = None
         self._last_evaluation = None
         self._last_scenario_evaluation = None
@@ -2649,10 +3046,14 @@ class MainWindow(QMainWindow):
         if self._results_window is not None:
             self._results_window.clear_results()
         if self._scenario is not None:
-            available_models = {
-                item.model_id.casefold()
-                for item in self._scenario.base_project.cap_models
-            }
+            available_models = (
+                model_keys
+                if model_keys is not None
+                else {
+                    item.model_id.casefold()
+                    for item in (project if project is not None else self._scenario.base_project).cap_models
+                }
+            )
             connected = {
                 refdes.casefold()
                 for refdes in self._scenario.electrically_connected_refdes
@@ -2696,7 +3097,19 @@ class MainWindow(QMainWindow):
         self.cancel_button.setVisible(cancelable)
         self.status_text.setText(label)
         worker.signals.progress.connect(self._worker_progress)
-        worker.signals.result.connect(on_result)
+
+        def accept_result(result: Any) -> None:
+            # QRunnable emits before its queued result reaches the GUI.  A user
+            # may press Cancel during that gap, so never mutate from a stale
+            # result even if the worker itself finished just before cancellation.
+            if (
+                self._worker is worker
+                and not worker.cancelled
+                and not self._worker_cancel_requested
+            ):
+                on_result(result)
+
+        worker.signals.result.connect(accept_result)
         worker.signals.error.connect(
             lambda details: self._worker_failed(details, on_error or self._worker_error)
         )
@@ -2757,22 +3170,35 @@ class MainWindow(QMainWindow):
         )
         if not filename:
             return
-        worker = FunctionWorker(import_spd_scenario, Path(filename))
+        worker = FunctionWorker(_job_import_spd, Path(filename))
         self._run_worker(worker, self._accept_spd_import, label="Opening SPD...")
 
-    def _accept_spd_import(self, imported: ScenarioImport) -> None:
+    def _accept_spd_import(
+        self, prepared_import: _PreparedScenarioImport | ScenarioImport
+    ) -> None:
+        if isinstance(prepared_import, _PreparedScenarioImport):
+            imported = prepared_import.imported
+            prepared_view = prepared_import.view
+        else:
+            # Retain the direct hook for focused GUI tests and integrations.
+            imported = prepared_import
+            prepared_view = None
         self._reset_document_view_state()
         self._scenario = imported.scenario
         self._attachments = imported.attachments
         self._scenario_path = None
         self._dirty = False
-        self._invalidate_evaluation("Run an evaluation to generate a PI plot.")
+        self._invalidate_evaluation(
+            "Run an evaluation to generate a PI plot.",
+            project=prepared_view.project if prepared_view is not None else None,
+            model_keys=prepared_view.model_keys if prepared_view is not None else None,
+        )
         self.progress_bar.setValue(99)
         self.status_text.setText("Rendering board planes and component markers...")
         self.progress_bar.repaint()
         self.status_text.repaint()
         board_started = perf_counter()
-        self._refresh_all()
+        self._refresh_all(prepared_view)
         board_s = perf_counter() - board_started
         fit_started = perf_counter()
         self.board.fit_board()
@@ -2783,11 +3209,15 @@ class MainWindow(QMainWindow):
         )
         timings = imported.timings
         visible_total_s = timings.total_s + board_s + fit_s
-        connection_status, connection_details = _shared_pad_connection_summary(
-            imported.scenario
+        connection_status, connection_details = (
+            prepared_view.connection_summary
+            if prepared_view is not None
+            else _shared_pad_connection_summary(imported.scenario)
         )
-        recovery_status, recovery_details = _source_via_path_recovery_summary(
-            imported.scenario
+        recovery_status, recovery_details = (
+            prepared_view.recovery_summary
+            if prepared_view is not None
+            else _source_via_path_recovery_summary(imported.scenario)
         )
         self.status_text.setText(
             f"Loaded {len(imported.scenario.decaps):,} top-side decaps in "
@@ -2826,11 +3256,13 @@ class MainWindow(QMainWindow):
     def _start_scenario_load(
         self, path: Path, source_override: Path | None = None
     ) -> None:
-        worker = FunctionWorker(_job_load_scenario, path, source_override)
+        worker = FunctionWorker(
+            _job_load_scenario, path, source_override, prepare_view=True
+        )
         self._run_worker(
             worker,
-            lambda bundle: self._accept_scenario_bundle(
-                path, bundle, relinked=source_override is not None
+            lambda prepared_bundle: self._accept_scenario_bundle(
+                path, prepared_bundle, relinked=source_override is not None
             ),
             label="Opening scenario...",
             on_error=lambda details: self._scenario_load_error(path, details),
@@ -2870,26 +3302,44 @@ class MainWindow(QMainWindow):
             )
 
     def _accept_scenario_bundle(
-        self, path: Path, bundle: ScenarioBundle, *, relinked: bool = False
+        self,
+        path: Path,
+        prepared_bundle: _PreparedScenarioBundle | ScenarioBundle,
+        *,
+        relinked: bool = False,
     ) -> None:
+        if isinstance(prepared_bundle, _PreparedScenarioBundle):
+            bundle = prepared_bundle.bundle
+            prepared_view = prepared_bundle.view
+        else:
+            bundle = prepared_bundle
+            prepared_view = None
         self._reset_document_view_state()
         self._scenario = bundle.scenario
         self._attachments = bundle.attachments
         self._scenario_path = path
         self._dirty = bundle.recovered_from is not None or relinked
-        self._invalidate_evaluation("Run an evaluation to generate a PI plot.")
-        self._refresh_all()
+        self._invalidate_evaluation(
+            "Run an evaluation to generate a PI plot.",
+            project=prepared_view.project if prepared_view is not None else None,
+            model_keys=prepared_view.model_keys if prepared_view is not None else None,
+        )
+        self._refresh_all(prepared_view)
         self.board.fit_board()
         message = f"Opened {path.name}"
         if bundle.recovered_from is not None:
             message += f" (recovered from {bundle.recovered_from.name}; save required)"
         elif relinked:
             message += " (external SPD relinked; save required)"
-        connection_status, connection_details = _shared_pad_connection_summary(
-            bundle.scenario
+        connection_status, connection_details = (
+            prepared_view.connection_summary
+            if prepared_view is not None
+            else _shared_pad_connection_summary(bundle.scenario)
         )
-        recovery_status, recovery_details = _source_via_path_recovery_summary(
-            bundle.scenario
+        recovery_status, recovery_details = (
+            prepared_view.recovery_summary
+            if prepared_view is not None
+            else _source_via_path_recovery_summary(bundle.scenario)
         )
         self.status_text.setText(
             f"{message} | {connection_status} | {recovery_status}"
@@ -3012,6 +3462,10 @@ class MainWindow(QMainWindow):
         """Drop rendering and picker state that must not cross documents."""
 
         self.status_text.setToolTip("")
+        self._plane_render_token += 1
+        self._plane_render_cells = ()
+        self._plane_render_index = 0
+        self._plane_render_builder = None
         self._reset_distribution_state()
         self.board.clear_plane_items()
         signals_were_blocked = self.rail_list.blockSignals(True)
@@ -3025,7 +3479,7 @@ class MainWindow(QMainWindow):
         self._plane_items_by_layer.clear()
         self._clear_plane_layer_controls(reset_hidden=True)
 
-    def _refresh_all(self) -> None:
+    def _refresh_all(self, prepared_view: _PreparedDocumentView | None = None) -> None:
         scenario = self._scenario
         if scenario is None:
             self.board.clear_board()
@@ -3043,7 +3497,20 @@ class MainWindow(QMainWindow):
             f"{scenario.source.name} | {scenario.source.size_bytes / (1024**2):,.1f} MiB | "
             f"SHA-256 {scenario.source.sha256[:12]}... | rev {scenario.revision}"
         )
-        self.board.set_decaps(scenario.decaps, scenario.net_colors)
+        # Import accepts both batched board layers, then performs one explicit
+        # fit.  Avoid the otherwise redundant fit after decaps and again after
+        # bumps, which is visible on large SPDs.
+        self.board.set_decaps(
+            prepared_view.decap_records if prepared_view is not None else scenario.decaps,
+            scenario.net_colors,
+            fit=False,
+            normalized=prepared_view is not None,
+            staged=prepared_view is not None,
+        )
+        if prepared_view is not None and prepared_view.project.rails:
+            # Establish the default focus before staged scatter creation so a
+            # later rail-list refresh does not synchronously repaint 10k+ dots.
+            self.board.set_active_nets((prepared_view.project.rails[0].net,))
         self.board.set_connection_labels(
             {
                 decap.refdes: _connection_label(scenario, decap.refdes)
@@ -3052,21 +3519,30 @@ class MainWindow(QMainWindow):
         )
         if self._rendered_bump_source_sha256 != scenario.source.sha256:
             self.board.set_bumps(
-                item
-                for item in scenario.normalized_project.get("pins", ())
-                if str(item.get("kind", "")) == PinKind.DEVICE_BUMP.value
+                prepared_view.bumps if prepared_view is not None else (
+                    item
+                    for item in scenario.normalized_project.get("pins", ())
+                    if str(item.get("kind", "")) == PinKind.DEVICE_BUMP.value
+                ),
+                fit=False,
+                normalized=prepared_view is not None,
+                staged=prepared_view is not None,
             )
             self._rendered_bump_source_sha256 = scenario.source.sha256
         self.board.set_selected_refdes(scenario.selected_refdes)
         self._refresh_colors()
-        self._refresh_rails()
-        self._refresh_distribution_tab()
+        self._refresh_rails(prepared_view.project if prepared_view is not None else None)
+        self._refresh_distribution_tab(
+            prepared_view.distribution_counts if prepared_view is not None else None,
+            prepared_view.design_fingerprint if prepared_view is not None else None,
+            prepared_view.project if prepared_view is not None else None,
+        )
         plane_colors = {
             str(net).casefold(): str(color).casefold()
             for net, color in scenario.net_colors.items()
         }
         if self._rendered_plane_source_sha256 != scenario.source.sha256:
-            self._refresh_plane_preview()
+            self._refresh_plane_preview(prepared_view)
             self._rendered_plane_source_sha256 = scenario.source.sha256
         else:
             changed_color_keys = {
@@ -3083,61 +3559,32 @@ class MainWindow(QMainWindow):
         else:
             self._set_busy(True)
 
-    def _refresh_plane_preview(self) -> None:
+    def _refresh_plane_preview(
+        self, prepared_view: _PreparedDocumentView | None = None
+    ) -> None:
+        """Start bounded GUI-thread artwork construction from prepared primitives."""
+
         assert self._scenario is not None
-        project = self._scenario.base_project
-        rail_by_domain = {item.domain: item for item in project.rails}
-        items: list[QGraphicsItem] = []
-        items_by_net: dict[str, list[QGraphicsItem]] = {}
-        items_by_layer: dict[str, list[QGraphicsItem]] = {}
-        for partition in project.partitions:
-            domain_by_cell = {
-                cell_id: domain for domain, cell_id in partition.domain_to_cell.items()
-            }
-            for cell in partition.cells:
-                domain = domain_by_cell.get(cell.cell_id, cell.cell_id)
-                rail = rail_by_domain.get(domain)
-                net = rail.net if rail is not None else domain
-                color = self.board.display_color_for_net(net)
-                fill = QColor(color)
-                fill.setAlpha(24)
-                source_geometry = plane_cell_source_geometry(
-                    cell,
-                    self._attachments,
-                    expected_layer=partition.layer,
-                )
-                source_items = self._source_plane_items(source_geometry, color)
-                if source_items:
-                    for item in source_items:
-                        item.setData(1, net)
-                        item.setData(2, partition.layer)
-                    items.extend(source_items)
-                    items_by_net.setdefault(net.casefold(), []).extend(source_items)
-                    items_by_layer.setdefault(partition.layer.casefold(), []).extend(
-                        source_items
-                    )
-                rectangle = QGraphicsRectItem(
-                    cell.x_min_um,
-                    cell.y_min_um,
-                    cell.x_max_um - cell.x_min_um,
-                    cell.y_max_um - cell.y_min_um,
-                )
-                pen = QPen(color)
-                pen.setCosmetic(True)
-                if source_items or cell.solver_geometry == "spd_bounding_box":
-                    pen.setStyle(Qt.PenStyle.DashLine)
-                rectangle.setPen(pen)
-                rectangle.setBrush(QBrush() if source_items else QBrush(fill))
-                rectangle.setData(0, "solver_bounds" if source_items else "plane_cell")
-                rectangle.setData(1, net)
-                rectangle.setData(2, partition.layer)
-                rectangle.setZValue(-30.0)
-                items.append(rectangle)
-                items_by_net.setdefault(net.casefold(), []).append(rectangle)
-                items_by_layer.setdefault(partition.layer.casefold(), []).append(
-                    rectangle
-                )
-        if not items:
+        if (
+            prepared_view is None
+            or prepared_view.source_sha256 != self._scenario.source.sha256
+        ):
+            prepared_view = _prepare_document_view(
+                self._scenario,
+                self._attachments,
+                progress=lambda _value, _message: None,
+                is_cancelled=lambda: False,
+            )
+        project = prepared_view.project
+        self._plane_render_token += 1
+        self._plane_render_cells = prepared_view.plane_cells
+        self._plane_render_index = 0
+        self._plane_render_builder = None
+        self.board.clear_plane_items()
+        self._plane_items_by_net = {}
+        self._plane_items_by_layer = {}
+        self._rebuild_plane_layer_controls(prepared_view.layer_labels)
+        if not self._plane_render_cells:
             outline = project.outline
             rectangle = QGraphicsRectItem(
                 outline.origin_x_um,
@@ -3150,16 +3597,91 @@ class MainWindow(QMainWindow):
             rectangle.setPen(pen)
             rectangle.setData(0, "board_outline")
             rectangle.setZValue(-30.0)
-            items.append(rectangle)
-        self.board.set_plane_items(items)
-        self._plane_items_by_net = items_by_net
-        self._plane_items_by_layer = items_by_layer
-        layer_labels = _short_plane_layer_labels(
-            project.stackup_layers,
-            (partition.layer for partition in project.partitions),
+            self.board.append_plane_items((rectangle,))
+            return
+        token = self._plane_render_token
+        self._render_plane_chunk(token)
+
+    def _render_plane_chunk(self, token: int) -> None:
+        """Render about one event-loop frame of plane primitives, then yield."""
+
+        if token != self._plane_render_token or self._scenario is None:
+            return
+        started = perf_counter()
+        added: list[QGraphicsItem] = []
+        while self._plane_render_index < len(self._plane_render_cells):
+            prepared = self._plane_render_cells[self._plane_render_index]
+            source_item: QGraphicsItem | None = None
+            if prepared.runs:
+                source_item = _PlaneArtworkItem(
+                    prepared.runs,
+                    QColor(self.board.display_color_for_net(prepared.net)),
+                    set(prepared.primitive_kinds),
+                    prepared.artwork_bounds,
+                )
+            cell_items = self._plane_cell_items(prepared, source_item)
+            added.extend(cell_items)
+            net_items = self._plane_items_by_net.setdefault(
+                prepared.net.casefold(), []
+            )
+            layer_items = self._plane_items_by_layer.setdefault(
+                prepared.layer.casefold(), []
+            )
+            net_items.extend(cell_items)
+            layer_items.extend(cell_items)
+            self._plane_render_index += 1
+            if perf_counter() - started >= 0.012:
+                break
+        if added:
+            self.board.append_plane_items(added)
+            self._apply_plane_layer_visibility()
+        if self._plane_render_index >= len(self._plane_render_cells):
+            self._plane_render_cells = ()
+            self._plane_render_builder = None
+            self.board.fit_board()
+            if self.status_text.text().startswith("Rendering PWR artwork"):
+                self.status_text.setText("PWR artwork ready")
+            return
+        self.status_text.setText(
+            f"Rendering PWR artwork {self._plane_render_index:,}/"
+            f"{len(self._plane_render_cells):,} cells..."
         )
-        self._rebuild_plane_layer_controls(layer_labels)
-        self._apply_plane_layer_visibility()
+        QTimer.singleShot(0, lambda: self._render_plane_chunk(token))
+
+    def _plane_cell_items(
+        self,
+        prepared: _PreparedPlaneCell,
+        source_item: QGraphicsItem | None,
+    ) -> list[QGraphicsItem]:
+        """Create one completed cell's graphics on the GUI thread."""
+
+        cell = prepared.cell
+        color = self.board.display_color_for_net(prepared.net)
+        result: list[QGraphicsItem] = []
+        if source_item is not None:
+            source_item.setData(1, prepared.net)
+            source_item.setData(2, prepared.layer)
+            result.append(source_item)
+        fill = QColor(color)
+        fill.setAlpha(24)
+        rectangle = QGraphicsRectItem(
+            cell.x_min_um,
+            cell.y_min_um,
+            cell.x_max_um - cell.x_min_um,
+            cell.y_max_um - cell.y_min_um,
+        )
+        pen = QPen(color)
+        pen.setCosmetic(True)
+        if source_item is not None or cell.solver_geometry == "spd_bounding_box":
+            pen.setStyle(Qt.PenStyle.DashLine)
+        rectangle.setPen(pen)
+        rectangle.setBrush(QBrush() if source_item is not None else QBrush(fill))
+        rectangle.setData(0, "solver_bounds" if source_item is not None else "plane_cell")
+        rectangle.setData(1, prepared.net)
+        rectangle.setData(2, prepared.layer)
+        rectangle.setZValue(-30.0)
+        result.append(rectangle)
+        return result
 
     def _clear_plane_layer_controls(self, *, reset_hidden: bool = False) -> None:
         while self.plane_layer_layout.count() > 1:
@@ -3235,94 +3757,11 @@ class MainWindow(QMainWindow):
         color: QColor,
     ) -> list[QGraphicsItem]:
         """Batch normalized PowerSI artwork while preserving source run order."""
-
-        polygons = {
-            "positive_polygon": geometry["positive_polygons_um"],
-            "negative_polygon": geometry["negative_polygons_um"],
-        }
-        circles = {
-            "positive_circle": geometry["positive_circles_um"],
-            "negative_circle": geometry["negative_circles_um"],
-        }
-        order = list(geometry["primitive_order"])
-        if not order:
-            order = [
-                *(
-                    ("positive_polygon", index)
-                    for index in range(len(polygons["positive_polygon"]))
-                ),
-                *(
-                    ("positive_circle", index)
-                    for index in range(len(circles["positive_circle"]))
-                ),
-                *(
-                    ("negative_polygon", index)
-                    for index in range(len(polygons["negative_polygon"]))
-                ),
-                *(
-                    ("negative_circle", index)
-                    for index in range(len(circles["negative_circle"]))
-                ),
-            ]
-        if not order:
-            return []
-
-        runs: list[tuple[str, QPainterPath]] = []
-        primitive_kinds: set[str] = set()
-        active_kind: str | None = None
-        active_path: QPainterPath | None = None
-
-        def path_for(kind: str) -> QPainterPath:
-            nonlocal active_kind, active_path
-            if active_path is None or kind != active_kind:
-                active_kind = kind
-                active_path = QPainterPath()
-                active_path.setFillRule(Qt.FillRule.WindingFill)
-                runs.append((kind, active_path))
-            return active_path
-
-        for kind, index in order:
-            if kind in polygons:
-                values = polygons[kind]
-                if index < 0 or index >= len(values):
-                    continue
-                points = [
-                    QPointF(float(x), float(y)) for x, y in values[index]
-                ]
-                if len(points) < 3:
-                    continue
-                signed_area = sum(
-                    points[position].x()
-                    * points[(position + 1) % len(points)].y()
-                    - points[(position + 1) % len(points)].x()
-                    * points[position].y()
-                    for position in range(len(points))
-                )
-                if signed_area < 0.0:
-                    points.reverse()
-                path = path_for(kind)
-                path.addPolygon(QPolygonF(points))
-                path.closeSubpath()
-                primitive_kinds.add(kind)
-            elif kind in circles:
-                values = circles[kind]
-                if index < 0 or index >= len(values):
-                    continue
-                center_x, center_y, radius = values[index]
-                path_for(kind).addEllipse(
-                    float(center_x - radius),
-                    float(center_y - radius),
-                    float(2.0 * radius),
-                    float(2.0 * radius),
-                )
-                primitive_kinds.add(kind)
-            else:
-                continue
-        if not runs:
-            return []
-        item = _PlaneArtworkItem(tuple(runs), color, primitive_kinds)
-        item.setData(0, "source_geometry")
-        return [item]
+        builder = _PlanePathBuilder(geometry, color)
+        while not builder.step(builder.primitive_count, maximum_points=100_000_000):
+            pass
+        item = builder.item()
+        return [] if item is None else [item]
 
     def _restyle_plane_items(self, changed_net_keys: set[str] | None = None) -> None:
         """Restyle existing plane graphics without rebuilding SPD primitives."""
@@ -3375,7 +3814,7 @@ class MainWindow(QMainWindow):
             item.setForeground(QBrush(QColor("#ffffff")))
             self.color_list.addItem(item)
 
-    def _refresh_rails(self) -> None:
+    def _refresh_rails(self, project: ProjectSpec | None = None) -> None:
         assert self._scenario is not None
         had_items = self.rail_list.count() > 0
         checked = {
@@ -3397,7 +3836,7 @@ class MainWindow(QMainWindow):
         signals_were_blocked = self.rail_list.blockSignals(True)
         self.rail_list.clear()
         restored_current_item: QListWidgetItem | None = None
-        for rail in self._scenario.base_project.rails:
+        for rail in (project if project is not None else self._scenario.base_project).rails:
             item = QListWidgetItem(f"{rail.net} ({rail.rail_id})")
             item.setData(Qt.ItemDataRole.UserRole, rail.rail_id)
             item.setIcon(self._net_color_swatch(rail.net))
