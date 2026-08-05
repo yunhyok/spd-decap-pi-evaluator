@@ -150,7 +150,8 @@ def test_distribution_tab_matches_the_target_matrix_and_resizable_sections() -> 
         assert window.distribution_table.rowCount() == 3
         plane_note = window.findChild(QLabel, "alternatePwrPlaneRoutingNote")
         assert plane_note is not None
-        assert "re-termination/reroute" in plane_note.text()
+        assert "VIA STACK CHANGE REQUIRED" in plane_note.text()
+        assert "plane artwork remains unchanged" in plane_note.text()
         assert "does not prove" in plane_note.toolTip()
         assert window.distribution_table.selectionMode() == (
             window.distribution_table.SelectionMode.ExtendedSelection
@@ -183,9 +184,10 @@ def test_distribution_tab_matches_the_target_matrix_and_resizable_sections() -> 
         assert window.distribution_distance_combo.itemData(0) == "NEAREST"
         assert window.distribution_distance_combo.itemData(1) == "FARTHEST"
         assert not window.calculate_distribution_button.isEnabled()
-        assert "every Target equals Present" in (
-            window.distribution_validation_label.text()
+        assert window.distribution_validation_label.text() == (
+            "M1: Donor 0 | Receiver 0 | Balance +0"
         )
+        assert "every Target equals Present" in window.distribution_summary.toPlainText()
     finally:
         window._dirty = False
         window.close()
@@ -241,6 +243,191 @@ def test_distribution_table_double_click_opens_detached_window_and_exports_templ
             current_design_fingerprint=scenario.design_fingerprint,
         )
         assert imported.targets == window._distribution_targets
+    finally:
+        window._dirty = False
+        window.close()
+        application.processEvents()
+
+
+def test_distribution_balance_strip_stays_compact_and_logs_shortage_narrative() -> None:
+    application = _application()
+    window = _window_with_scenario(
+        _direct_scenario(
+            (
+                ("C1", 0.0, ("R1", "R2")),
+                ("C2", 10.0, ("R1", "R2")),
+                ("C3", 20.0, ("R1", "R2")),
+            ),
+            rail_ids=("R1", "R2"),
+        )
+    )
+    try:
+        _set_target(window, "R1", 1)
+        _set_target(window, "R2", 4)
+
+        strip = window.distribution_validation_label
+        assert not strip.wordWrap()
+        assert strip.text() == "M1: Donor 2 | Receiver 4 | Balance -2"
+        assert "Invalid" not in strip.text()
+        assert "short" not in strip.text().casefold()
+        assert "M1 is short by 2" in window.distribution_summary.toPlainText()
+    finally:
+        window._dirty = False
+        window.close()
+        application.processEvents()
+
+
+def test_physical_landing_retarget_has_no_obsolete_column_warning() -> None:
+    """The compact balance strip remains free of superseded column wording."""
+
+    application = _application()
+    scenario = _direct_scenario(
+        (("C1", 5.0, ("R1", "R2")),), rail_ids=("R1", "R2")
+    )
+    window = _window_with_scenario(scenario)
+    try:
+        _set_target(window, "R1", 0)
+        _set_target(window, "R2", 1)
+        plan = compute_distribution_plan(
+            scenario,
+            _targets(window),
+            DistributionDistanceMode.NEAREST,
+        )
+        assert not any(
+            item.code == "DISTRIBUTION_VIA_COLUMN_EVIDENCE_MISSING"
+            for item in plan.diagnostics
+        )
+
+        window._accept_distribution_plan(plan)
+
+        compact = window.distribution_validation_label.text()
+        assert compact == "M1: Donor 1 | Receiver 1 | Balance +0"
+        assert "Via-column" not in compact
+        assert "reopen" not in compact.casefold()
+        assert "Via-column" not in window.distribution_summary.toPlainText()
+        assert (
+            "VIA STACK CHANGE REQUIRED — exact target plane exists at immutable "
+            "PWR landing XY; plane artwork unchanged"
+            in window.distribution_summary.toPlainText()
+        )
+    finally:
+        window._dirty = False
+        window.close()
+        application.processEvents()
+
+
+def test_detached_distribution_controls_follow_main_worker_busy_state() -> None:
+    application = _application()
+    window = _window_with_scenario(
+        _direct_scenario(
+            (("C1", 0.0, ("R1", "R2")),),
+            rail_ids=("R1", "R2"),
+        )
+    )
+    try:
+        window._show_distribution_window()
+        dialog = window._distribution_window
+        assert dialog is not None
+
+        window._worker = object()  # type: ignore[assignment]
+        window._set_busy(True)
+        assert not dialog.import_targets_button.isEnabled()
+        assert not dialog.export_template_button.isEnabled()
+        assert not dialog.original_board_checkbox.isEnabled()
+
+        window._worker = None
+        window._set_busy(False)
+        assert dialog.import_targets_button.isEnabled()
+        assert dialog.export_template_button.isEnabled()
+        assert dialog.original_board_checkbox.isEnabled()
+    finally:
+        window._worker = None
+        window._dirty = False
+        window.close()
+        application.processEvents()
+
+
+def test_detached_distribution_window_closes_with_main_window() -> None:
+    application = _application()
+    window = _window_with_scenario(
+        _direct_scenario(
+            (("C1", 0.0, ("R1", "R2")),),
+            rail_ids=("R1", "R2"),
+        )
+    )
+    try:
+        window.show()
+        window._show_distribution_window()
+        dialog = window._distribution_window
+        assert dialog is not None
+        application.processEvents()
+        assert dialog.isVisible()
+
+        window.close()
+        application.processEvents()
+        assert not dialog.isVisible()
+    finally:
+        window._dirty = False
+        dialog = window._distribution_window
+        if dialog is not None:
+            dialog.close()
+        window.close()
+        application.processEvents()
+
+
+def test_distribution_worker_result_is_discarded_when_targets_change(
+    monkeypatch,
+) -> None:
+    application = _application()
+    window = _window_with_scenario(
+        _direct_scenario(
+            (("C1", 0.0, ("R1", "R2")), ("C2", 10.0, ("R1", "R2"))),
+            rail_ids=("R1", "R2"),
+        )
+    )
+    accepted: list[object] = []
+    try:
+        expected = window._distribution_request_fingerprint()
+        _set_target(window, "R1", 1)
+        monkeypatch.setattr(
+            window, "_accept_distribution_plan", lambda result: accepted.append(result)
+        )
+
+        window._accept_distribution_plan_if_current(object(), expected)
+
+        assert accepted == []
+        assert "Discarded stale De-cap Distribution preview" == window.status_text.text()
+    finally:
+        window._dirty = False
+        window.close()
+        application.processEvents()
+
+
+def test_distribution_worker_result_is_discarded_when_tolerance_or_order_changes(
+    monkeypatch,
+) -> None:
+    application = _application()
+    window = _window_with_scenario(
+        _direct_scenario(
+            (("C1", 0.0, ("R1", "R2")), ("C2", 10.0, ("R1", "R2"))),
+            rail_ids=("R1", "R2"),
+        )
+    )
+    accepted: list[object] = []
+    try:
+        monkeypatch.setattr(
+            window, "_accept_distribution_plan", lambda result: accepted.append(result)
+        )
+        expected_tolerance = window._distribution_request_fingerprint()
+        _set_tolerance(window, "R1", 25)
+        window._accept_distribution_plan_if_current(object(), expected_tolerance)
+
+        expected_order = window._distribution_request_fingerprint()
+        window.distribution_distance_combo.setCurrentIndex(1)
+        window._accept_distribution_plan_if_current(object(), expected_order)
+
+        assert accepted == []
+        assert "Discarded stale De-cap Distribution preview" == window.status_text.text()
     finally:
         window._dirty = False
         window.close()
@@ -349,12 +536,16 @@ def test_board_original_toggle_restores_shared_chain_isolation_gap_display() -> 
         assert current_gap.pad_state == DecapPadState.ISOLATION_GAP
 
         window._show_original_distribution_board(True)
-        original_gap = next(item for item in window.board._records if item.refdes == "D1")
+        original_gap = next(
+            item for item in window.board._records if item.refdes == "D1"
+        )
         assert original_gap.enabled
         assert original_gap.current_net == current_gap.source_net
 
         window._show_original_distribution_board(False)
-        restored_current = next(item for item in window.board._records if item.refdes == "D1")
+        restored_current = next(
+            item for item in window.board._records if item.refdes == "D1"
+        )
         assert not restored_current.enabled
     finally:
         window._dirty = False
@@ -374,7 +565,8 @@ def test_detached_distribution_window_clears_stale_document_and_exposes_routing_
         window._show_distribution_window()
         dialog = window._distribution_window
         assert dialog is not None
-        assert "re-termination/reroute" in dialog.alternate_plane_note.text()
+        assert "VIA STACK CHANGE REQUIRED" in dialog.alternate_plane_note.text()
+        assert "plane artwork remains unchanged" in dialog.alternate_plane_note.text()
         assert "does not prove" in dialog.alternate_plane_note.toolTip()
         assert dialog.table.accessibleName() == "Distribution target matrix"
         assert dialog.import_targets_button.accessibleName() == "Import distribution XLSX"
@@ -450,10 +642,10 @@ def test_legacy_target_import_refreshes_present_requires_distance_and_invalidate
         assert window.distribution_distance_combo.currentIndex() == -1
         assert not window.calculate_distribution_button.isEnabled()
         assert "Present refreshed from the loaded SPD: 1 -> 3 (+2" in (
-            window.distribution_validation_label.text()
+            window.distribution_summary.toPlainText()
         )
         assert "Candidate order was not recorded" in (
-            window.distribution_validation_label.text()
+            window.distribution_summary.toPlainText()
         )
 
         window.distribution_distance_combo.setCurrentIndex(0)
@@ -549,12 +741,12 @@ def test_target_edit_uses_cached_inventory_and_emits_once(monkeypatch) -> None:
         property(counted_base_project),
     )
     numeric_calls = 0
-    original_numeric_state = window._distribution_numeric_state
+    original_balance_state = window._distribution_balance_state
 
-    def counted_numeric_state():
+    def counted_balance_state():
         nonlocal numeric_calls
         numeric_calls += 1
-        return original_numeric_state()
+        return original_balance_state()
 
     delta_reset_calls = 0
     original_delta_reset = window._reset_distribution_actual_deltas
@@ -566,8 +758,8 @@ def test_target_edit_uses_cached_inventory_and_emits_once(monkeypatch) -> None:
 
     monkeypatch.setattr(
         window,
-        "_distribution_numeric_state",
-        counted_numeric_state,
+        "_distribution_balance_state",
+        counted_balance_state,
     )
     monkeypatch.setattr(
         window,
@@ -758,12 +950,10 @@ def test_multiselected_tolerance_fill_is_decimal_and_never_changes_targets() -> 
             original_target
         )
         assert spy.count() == 1
-        assert "no donor/receiver demand" in (
-            window.distribution_validation_label.text()
-        )
+        assert "no donor/receiver demand" in window.distribution_summary.toPlainText()
 
         _set_tolerance(window, "R1", "nan")
-        assert "finite percentage" in window.distribution_validation_label.text()
+        assert "finite percentage" in window.distribution_summary.toPlainText()
         assert not window.calculate_distribution_button.isEnabled()
     finally:
         window._dirty = False
@@ -787,18 +977,20 @@ def test_numeric_shortage_blocks_calculation_before_physical_planning() -> None:
         _set_target(window, "R1", 2)  # give capacity 1
         _set_target(window, "R2", 2)  # receive demand 2
         assert not window.calculate_distribution_button.isEnabled()
-        assert "short by 1" in window.distribution_validation_label.text()
+        assert window.distribution_validation_label.text() == (
+            "M1: Donor 1 | Receiver 2 | Balance -1"
+        )
+        assert "short by 1" in window.distribution_summary.toPlainText()
 
         _set_target(window, "R1", 1)
         assert window.calculate_distribution_button.isEnabled()
-        assert "give capacity 2" in window.distribution_validation_label.text()
-        assert "receive demand 2" in window.distribution_validation_label.text()
+        assert window.distribution_validation_label.text() == (
+            "M1: Donor 2 | Receiver 2 | Balance +0"
+        )
 
         _set_target(window, "R2", "1.5")
         assert not window.calculate_distribution_button.isEnabled()
-        assert "nonnegative whole number" in (
-            window.distribution_validation_label.text()
-        )
+        assert "nonnegative whole number" in window.distribution_summary.toPlainText()
     finally:
         window._dirty = False
         window.close()
@@ -866,9 +1058,12 @@ def test_fixed_donor_capacity_is_not_reported_as_movable_capacity() -> None:
         _set_target(window, "R2", 2)
 
         assert not window.calculate_distribution_button.isEnabled()
-        message = window.distribution_validation_label.text()
-        assert "give capacity 1" in message
-        assert "receive demand 2" in message
+        assert window.distribution_validation_label.text() == (
+            "M1: Donor 1 | Receiver 2 | Balance -1"
+        )
+        message = window.distribution_summary.toPlainText()
+        assert "donor 1" in message
+        assert "receiver 2" in message
         assert "fixed/unassignable 1" in message
         assert "short by 1" in message
     finally:
@@ -927,10 +1122,13 @@ def test_gnd_only_unresolved_donor_enables_calculation_with_exact_proof_pending(
         _set_target(window, "R2", 3)
 
         assert window.calculate_distribution_button.isEnabled()
-        message = window.distribution_validation_label.text()
+        assert window.distribution_validation_label.text() == (
+            "M1: Donor 3 | Receiver 3 | Balance +0"
+        )
+        message = window.distribution_summary.toPlainText()
         assert "exact retained-artwork proof pending" in message
-        assert "give capacity 3" in message
-        assert "receive demand 3" in message
+        assert "donor 3" in message
+        assert "receiver 3" in message
     finally:
         window._dirty = False
         window.close()
@@ -952,6 +1150,10 @@ def test_distribution_worker_reuses_one_projection_for_validate_compute_and_appl
 
     def build(*_args, **kwargs):
         assert kwargs["targets"] == {("R1", "M1"): 0, ("R2", "M1"): 1}
+        assert kwargs["tolerances"] == {
+            ("R1", "M1"): 0.0,
+            ("R2", "M1"): 0.0,
+        }
         seen.append(("build", None))
         return projection
 
@@ -1037,8 +1239,10 @@ def test_one_invalid_component_blocks_an_otherwise_valid_component() -> None:
         _set_target(window, "R2", 2, model_id="M2")
 
         assert not window.calculate_distribution_button.isEnabled()
-        assert "M2 is short by 1" in window.distribution_validation_label.text()
-        assert "M1" not in window.distribution_validation_label.text()
+        assert "M2 is short by 1" in window.distribution_summary.toPlainText()
+        assert "M1: Donor 2 | Receiver 2 | Balance +0" in (
+            window.distribution_validation_label.text()
+        )
     finally:
         window._dirty = False
         window.close()
@@ -1511,7 +1715,7 @@ def test_exchange_preview_reports_turnover_and_apply_preserves_tolerance() -> No
         _set_tolerance(window, "R2", 50)
         assert window.calculate_distribution_button.isEnabled()
         assert "exchange 1 cell(s) / 1 decap(s)" in (
-            window.distribution_validation_label.text()
+            window.distribution_summary.toPlainText()
         )
 
         plan = compute_distribution_plan(
@@ -1625,7 +1829,7 @@ def test_scenario_change_and_document_reset_discard_a_stale_preview() -> None:
         assert window._distribution_plan is None
         assert window._distribution_preview_scenario is None
         assert not window.export_distribution_csv_button.isEnabled()
-        assert "Enter Target counts" in window.distribution_summary.toPlainText()
+        assert "every Target equals Present" in window.distribution_summary.toPlainText()
 
         window._reset_document_view_state()
         assert window.distribution_table.rowCount() == 0

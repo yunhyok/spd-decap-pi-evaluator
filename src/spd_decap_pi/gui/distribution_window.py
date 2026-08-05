@@ -46,15 +46,15 @@ class DistributionTargetsWindow(QWidget):
         instructions.setWordWrap(True)
         layout.addWidget(instructions)
         self.alternate_plane_note = QLabel(
-            "Alternate PWR plane: assessed as possible via re-termination/reroute "
-            "at the same landing XY; existing via-barrel depth is not proven."
+            "Alternate PWR plane: VIA STACK CHANGE REQUIRED — exact target-plane "
+            "copper is assessed at the immutable PWR landing XY; plane artwork "
+            "remains unchanged."
         )
         self.alternate_plane_note.setObjectName("alternatePwrPlaneRoutingNote")
         self.alternate_plane_note.setWordWrap(True)
         self.alternate_plane_note.setToolTip(
-            "Alternate PWR plane assessment permits a possible via "
-            "re-termination/reroute at the same landing XY. It does not prove the "
-            "existing via barrel reaches that depth."
+            "This is a filled-Cu microvia-stack retarget/rebuild planning result, "
+            "and does not prove that the existing via barrel already reaches that layer."
         )
         layout.addWidget(self.alternate_plane_note)
         self.table = QTableWidget(0, 1)
@@ -127,8 +127,11 @@ class DistributionTargetsWindow(QWidget):
         self.original_board_checkbox.setEnabled(False)
         self.hide()
 
-    def set_document_active(self, active: bool) -> None:
-        self.table.setEnabled(active)
-        self.import_targets_button.setEnabled(active)
-        self.export_template_button.setEnabled(active)
-        self.original_board_checkbox.setEnabled(active)
+    def set_document_active(self, active: bool, *, busy: bool = False) -> None:
+        """Synchronize document lifetime and main-window worker exclusivity."""
+
+        enabled = active and not busy
+        self.table.setEnabled(enabled)
+        self.import_targets_button.setEnabled(enabled)
+        self.export_template_button.setEnabled(enabled)
+        self.original_board_checkbox.setEnabled(enabled)

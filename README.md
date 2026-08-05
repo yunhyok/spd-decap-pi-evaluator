@@ -1,8 +1,8 @@
-# SPD Decap PI Evaluator v0.19.0
+# SPD Decap PI Evaluator v0.20.0
 
-> **v0.19.0 extends De-cap Distribution across every valid retained PWR-plane pair, adds a detached target table with strict XLSX round-trip, and provides a display-only Original/Distributed board toggle.** Alternate planes use exact ordered copper at the source landing XY under a disclosed via re-termination/reroute planning assumption. The title bar identifies the application as **SPD Decap PI Evaluator v0.19.0**.
+> **v0.20.0 corrects De-cap Distribution to evaluate every retained target PWR layer at the immutable physical PWR landing XY, preserves the filled-Cu microvia-stack retarget/rebuild planning assumption, and removes the over-restrictive existing-via-depth gate.** It also keeps numeric balance separate from the detailed preview log, rejects stale background results, and does not add an extra raw-SPD Via-column loading pass. The title bar identifies the application as **SPD Decap PI Evaluator v0.20.0**.
 
-> 프로그램: **SPD Decap PI Evaluator v0.19.0**
+> 프로그램: **SPD Decap PI Evaluator v0.20.0**
 > 저장소: 기존 PI Calculator와 분리된 독립 프로그램
 > 해석 경계: 선택한 PWR rail의 pre-design `Zii`; 최종 PowerSI/SIwave 검증을 대체하지 않음
 
@@ -10,6 +10,16 @@
 모델, enabled/disabled 상태를 바꾸면서 PI Evaluation 결과를 비교하는 Windows
 desktop 프로그램이다. Stackup, MLO 크기 또는 plane을 새로 작성하는 기능과
 Optimization Mode는 포함하지 않는다.
+
+## v0.20.0 De-cap Distribution correction
+
+- Distribution uses the actual source-classified PWR Via landing, never the decap center or a lateral Trace/path endpoint, and strictly tests that immutable XY against the target NET's final ordered copper artwork.
+- A target may be on any retained PWR conductor layer. GND-side Via/layer evidence is not a destination gate because this workflow changes only the PWR assignment and leaves all plane artwork unchanged.
+- Eligibility is a disclosed placement-planning result: `VIA STACK CHANGE REQUIRED` means a filled-Cu microvia stack must be retargeted/rebuilt at that landing. It is not an as-built connectivity claim and the application does not edit the SPD Via or plane artwork.
+- Any one real PWR landing can anchor an active PWR component. Dummy caps still cannot create their own root and may move only through the existing shared-pad anchor, separator, shared-Via, and isolation-gap rules.
+- Exact destination permissions replace stale Evaluation-derived alternatives. Missing/malformed artwork, voids, and boundary-only contact remain fail-closed.
+- The table-adjacent status is limited to per-model Donor/Receiver/Balance; detailed validation, import, planning-assumption, partial-result, and stale-result messages are shown in `Distribution Status / Preview Log`.
+- File loading and Distribution calculation remain worker-threaded. v0.20.0 removes the abandoned existing-column recovery pass, so this correction does not add another full Node/Via scan to raw-SPD loading.
 
 ## v0.18.1 evaluation solver and loading status
 
@@ -64,7 +74,7 @@ Optimization Mode는 포함하지 않는다.
 - Evaluation PWR NET 선택 목록에 도면 색상과 동기화된 color box를 표시하고 우클릭으로 색상 변경
 - 비교 표에서 decap 수, 1 MHz/10 MHz/100 MHz 임피던스, target violation의 Original/Tuned 변화 표시
 - De-cap Distribution 표에서 PWR NET·Component별 현재 수량과 목표 수량을 지정하고, 수치 공급량을 사전 검수한 뒤 실제 PWR plane·bump·shared-pad 조건을 만족하는 최대 수량을 자동 재배정
-- Distribution은 Evaluation에 선택된 단일 pair뿐 아니라 source SPD에 보존된 모든 유효 PWR/DGND pair의 ordered copper를 동일 VIA landing XY에서 검사하며, 이 대체-plane 판정은 기존 VIA 깊이 증명이 아닌 재종단/재라우팅 계획 가정임을 UI에 명시
+- Distribution은 Evaluation에 선택된 단일 pair와 무관하게 source SPD에 보존된 모든 target PWR layer의 ordered copper를 동일 PWR VIA landing XY에서 검사한다. GND layer는 destination gate가 아니며, 판정은 기존 VIA 깊이 증명이 아닌 filled-Cu microvia-stack retarget/rebuild 계획 가정임을 UI에 명시한다.
 - 현재치와 목표치가 같은 PWR NET도 `Tolerance (%)`가 양수이면 최종 수량을 유지한 채 `floor(현재 수량 × tolerance / 100)`개까지 주고받는 교환 경로로 참여; 0%이면 기존처럼 연산에서 제외
 - Distribution의 Target/Tolerance 셀은 캐시된 수량으로 즉시 검증하며, `Ctrl`/`Shift`로 같은 종류의 셀을 여러 개 선택한 뒤 숫자를 한 번 입력해 동일 값으로 일괄 변경
 - Distribution 후보를 수신 PWR NET bump에서 가까운 순서 또는 먼 순서로 선택하고, 물리 제약으로 목표에 미달해도 가능한 변경과 `Actual Δ`·`Actual Changed`·`Isolation Gaps`·shortfall을 표시
@@ -74,7 +84,7 @@ Optimization Mode는 포함하지 않는다.
 - Distribution 결과의 전체 Decap을 `Component`, `REFDES`, `Before NET`, `After NET`, `X`, `Y` 열 CSV 또는 Excel로 내보내며, 희생 cell은 `UNUSED (ISOLATION GAP)`으로 기록하고 Excel의 두 번째 sheet에는 계산 당시 `PWR NET Distribution Targets` 표와 input inventory reconciliation을 보존
 - 새 Distribution Excel은 source SPD SHA-256, design fingerprint, revision, 후보 순서와 프로그램 버전을 두 번째 sheet에 함께 기록하며, 변경 대상 rail의 기존 unresolved connection은 해석 차단 경고로 별도 표시
 - 원본 source TOP copper 경로가 없는 구형 V2 scenario에서는 Distribution을 fail-closed로 차단하고 원본 SPD 재열기를 안내하며, 변경된 배치는 별도 `.spdpi`로 저장
-- De-cap Distribution의 수량·PWR plane/VIA·shared-pad/dummy·isolation-gap·부분 충족·Apply·입출력 규칙은 [`docs/DECAP_DISTRIBUTION_RULES.md`](docs/DECAP_DISTRIBUTION_RULES.md)에 명시하고, 지정된 실파일 검증 결과는 [`docs/DECAP_DISTRIBUTION_VALIDATION_2026-08-05.md`](docs/DECAP_DISTRIBUTION_VALIDATION_2026-08-05.md)에 기록
+- De-cap Distribution의 수량·PWR plane/VIA·shared-pad/dummy·isolation-gap·부분 충족·Apply·입출력 규칙은 [`docs/DECAP_DISTRIBUTION_RULES.md`](docs/DECAP_DISTRIBUTION_RULES.md)에 명시하고, 지정된 실파일 검증 결과는 [`docs/DECAP_DISTRIBUTION_VALIDATION_2026-08-06.md`](docs/DECAP_DISTRIBUTION_VALIDATION_2026-08-06.md)에 기록
 - Selection, Evaluation, AI Assist, De-cap Distribution의 내부 section 높이를 선명한 가로 splitter bar로 조절
 - 선택한 Tuned PWR NET 한 개를 명시적으로 분석하는 evidence-grounded Local AI Plot Analyst
 - 원본 SPD를 포함하지 않는 hash 검증 `.spdpi` scenario 저장/재열기
@@ -114,7 +124,7 @@ powershell.exe -ExecutionPolicy Bypass -NoProfile -File .\scripts\build_spd_deca
 산출물:
 
 - `dist\SPDDecapPIEvaluator\SPDDecapPIEvaluator.exe`
-- `installer-output\SPDDecapPIEvaluatorSetup-0.19.0.exe`
-- `installer-output\SPDDecapPIEvaluatorSetup-0.19.0.exe.sha256`
+- `installer-output\SPDDecapPIEvaluatorSetup-0.20.0.exe`
+- `installer-output\SPDDecapPIEvaluatorSetup-0.20.0.exe.sha256`
 
 프로그램명과 버전은 title bar와 installer metadata에 함께 표시된다.

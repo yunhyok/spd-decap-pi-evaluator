@@ -1143,13 +1143,35 @@ def derive_shared_pad_current_components(
 def shared_pad_component_eligibility(
     cluster: SharedPadCluster,
     component: SharedPadCurrentComponent,
+    *,
+    require_all_vias: bool = True,
 ) -> dict[str, RailEligibility]:
-    """Intersect rail eligibility over unique physical PWR vias in a component."""
+    """Reduce rail eligibility over physical PWR Via roots in a component.
+
+    Evaluation retains its historical all-Via loop-template requirement.  Decap
+    Distribution uses ``require_all_vias=False`` because an already connected
+    PWR pad component is assignable when at least one physical PWR Via root
+    crosses the receiver copper; a dummy is never a root.
+    """
 
     via_eligibility = {
         via_id.casefold(): eligibility
         for via_id, eligibility in cluster.via_eligibility.items()
     }
+    if not require_all_vias:
+        union: dict[str, RailEligibility] = {}
+        for landing in component.power_vias:
+            eligibility = via_eligibility.get(landing.via_id.casefold(), {})
+            for item in eligibility.values():
+                if item.allowed:
+                    union.setdefault(item.rail_id.casefold(), item)
+        return {
+            item.rail_id: item
+            for item in sorted(
+                union.values(), key=lambda value: value.rail_id.casefold()
+            )
+        }
+
     common: dict[str, RailEligibility] | None = None
     for landing in component.power_vias:
         eligibility = via_eligibility.get(landing.via_id.casefold(), {})
@@ -1964,24 +1986,16 @@ class ScenarioSpec(ScenarioModel):
                 }
                 for aggregate in cluster.eligibility.values():
                     rail_key = aggregate.rail_id.casefold()
-                    if any(
-                        not (
-                            item := next(
-                                (
-                                    value
-                                    for value in eligibility.values()
-                                    if value.rail_id.casefold() == rail_key
-                                ),
-                                None,
-                            )
-                        )
-                        or not item.allowed
+                    if not any(
+                        item.allowed
                         for eligibility in via_eligibility_by_key.values()
+                        for item in eligibility.values()
+                        if item.rail_id.casefold() == rail_key
                     ):
                         raise ValueError(
                             f"shared-pad cluster {cluster.cluster_id!r} aggregate "
                             f"eligibility for rail {aggregate.rail_id!r} is not "
-                            "supported by every physical PWR Via"
+                            "supported by any physical PWR Via"
                         )
 
                 derivation = derive_shared_pad_current_components(
@@ -2012,14 +2026,14 @@ class ScenarioSpec(ScenarioModel):
                             f"Via anchor: {component.member_refdes}"
                         )
                     allowed = shared_pad_component_eligibility(
-                        cluster, component
+                        cluster, component, require_all_vias=False
                     )
                     if component.current_rail_id.casefold() not in {
                         item.rail_id.casefold() for item in allowed.values()
                     }:
                         raise ValueError(
                             f"shared-pad cluster {cluster.cluster_id!r} current rail "
-                            f"{component.current_rail_id!r} is not eligible at every "
+                            f"{component.current_rail_id!r} is not eligible at any "
                             "physical PWR Via serving component "
                             f"{component.member_refdes}"
                         )

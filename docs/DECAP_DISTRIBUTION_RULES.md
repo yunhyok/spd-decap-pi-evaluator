@@ -1,6 +1,6 @@
 # De-cap Distribution 변동 규칙
 
-> 적용 프로그램: **SPD Decap PI Evaluator v0.19.0**
+> 적용 프로그램: **SPD Decap PI Evaluator v0.20.0**
 >
 > 문서 상태: 현재 구현 및 회귀 테스트에 대응하는 동작 규칙
 >
@@ -122,30 +122,42 @@ Receiver Demand = sum(max(Target - Present, 0))
 
 ### 5.1 PWR plane 및 VIA
 
-NET 변경 가능 여부는 De-cap 중심 좌표가 아니라 고유한 물리 PWR VIA의 정확한
-landing 좌표에서 판정한다. Evaluation용으로 저장된 단일 plane pair만 보지 않고,
-source SPD에 보존된 대상 NET의 모든 유효 PWR/DGND plane pair를 검토한다.
+NET 변경 가능 여부는 De-cap 중심 좌표가 아니라 source SPD 연결 분석으로 확인된
+고유한 물리 TOP-side PWR VIA의 정확한 landing 좌표에서 판정한다. 대상 NET의
+retained PWR conductor layer 중 하나에 대해 다음을 모두 만족할 때에만
+destination으로 허용한다.
 
-- landing이 대상 PWR plane 내부에 있어야 한다.
-- plane void 또는 경계에만 닿는 경우는 허용하지 않는다.
-- Evaluation solver가 지원하는 대응 PWR/DGND plane pair가 함께 존재해야 한다.
-- direct De-cap은 자신의 PWR VIA eligibility를 만족해야 한다.
-- shared-pad 활성 구간은 그 구간이 사용하는 모든 고유 PWR VIA의 eligibility
-  교집합을 만족해야 한다.
+- source-classified physical PWR VIA landing이 존재한다. 기존 VIA column이 대상
+  layer까지 이미 span할 필요는 없다.
+- immutable PWR-via landing XY가 대상 NET의 final ordered copper 내부에 strict하게
+  포함된다. void, boundary contact, 누락/손상 artwork는 허용하지 않는다.
+- direct De-cap 또는 변경 후의 shared-pad 활성 PWR component에 적어도 하나의
+  위 조건을 만족하는 실제 PWR-via root가 있다. Dummy는 독립 root를 만들지 않는다.
 - 적격성이 불명확하면 허용으로 추정하지 않고 fail-closed로 제외한다.
 
-대체 내부 PWR plane 적격성은 동일 landing XY에서 VIA를 해당 plane으로 재종단하거나
-재라우팅할 수 있다는 배치 계획 가정이다. source VIA barrel이 변경 없이 그 깊이까지
-도달한다는 증거는 아니다. UI와 검증 문서는 이 가정을 명시하며, 최종 제작 가능성은
-stack/via 설계 및 PowerSI 등 전문 도구에서 별도로 확인해야 한다.
+이는 고정된 동일 XY에서 filled-Cu microvia stack을 target NET에 맞춰
+retarget/rebuild할 수 있다는 제작 계획 가정이다. preview/apply는 plane artwork,
+stack-up, attachment를 변경하지 않는다. Trace/path evidence는 landing을 새로
+만들거나 destination copper를 허용하거나 query XY를 옆으로 이동시키는 근거가 될 수
+없다. Distribution proof는 Evaluation의 PWR/GND pair 선택과 solver 계약을 변경하지
+않는다.
+
+GND-side via/layer는 destination의 위치·layer 적격성 gate가 아니다. GND는 이
+PWR channel reassignment에서 destination 판정 대상이 아니며, Evaluation Analysis의
+별도 PWR/GND 조건을 Distribution에 역으로 요구하지 않는다.
+
+이 proof projection은 직접 RECEIVER뿐 아니라 실제 whole-De-cap allowance가 있는
+EXCHANGE chain의 destination에도 동일하게 수행한다. 반대로 `Target == Present`와
+`Tolerance = 0`인 중립 cell은 exchange 후보를 만들지 않는다.
 
 ### 5.2 수신 PWR NET bump
 
-RECEIVER 또는 EXCHANGE destination에는 해당 PWR NET의 Device bump가 최소 한 개
-있어야 한다. 없으면 그 destination은 수신할 수 없고 물리 shortfall 진단을 남긴다.
+Device bump는 NEAREST/FARTHEST ranking에 사용한다. destination PWR NET에 bump가
+없어도 위의 physical-landing/exact-copper proof를 만족하면 수신 가능하다. 이 경우
+deterministic canonical order를 사용하고 진단을 남긴다.
 
-후보 거리는 De-cap 좌표와 destination PWR NET의 각 bump 사이 Euclidean XY 거리
-중 최솟값이다.
+후보 거리는 bump가 있을 때 De-cap 좌표와 destination PWR NET의 각 bump 사이
+Euclidean XY 거리 중 최솟값이다.
 
 ```text
 Candidate Distance = min(distance(Decap, each destination PWR bump))
@@ -153,9 +165,9 @@ Candidate Distance = min(distance(Decap, each destination PWR bump))
 
 ### 5.3 최신 연결 분석 요구
 
-Distribution은 현재 형식의 source TOP shared-pad 연결 분석을 필요로 한다. 구형
-V2 scenario처럼 source TOP copper 경로가 없거나 분석 버전이 오래된 경우에는
-추정 계산을 하지 않고 원본 SPD를 다시 열어 분석하도록 요구한다.
+Distribution은 현재 형식의 source TOP shared-pad 연결 분석과 source-classified
+physical PWR VIA landing을 필요로 한다. 분석 버전이 오래되거나 PWR landing이 없는
+경우에는 추정 계산을 하지 않고 hash-matched 원본 SPD를 다시 열어 분석하도록 요구한다.
 
 ## 6. Shared-pad cluster 및 dummy 규칙
 
@@ -227,7 +239,7 @@ dummy만 변경하는 partial cluster 변경도 가능하다. 단, assignment와
 - 서로 다른 활성 NET이 gap 없이 맞닿지 않는다.
 - 모든 활성 same-NET component에 적격 PWR VIA anchor가 있다.
 - 하나의 물리 PWR VIA가 여러 component로 분할되지 않는다.
-- 모든 VIA의 target rail eligibility가 유효하다.
+- 각 활성 component의 실제 PWR-via root에 대한 target destination proof가 유효하다.
 - 같은 물리 short component에서 rail identity가 하나로 일치한다.
 
 NET assignment와 isolation gap은 한 revision에서 함께 검증하고 commit한다. 중간
@@ -445,6 +457,20 @@ PWR_B의 Present와 Target이 1,000개이고 Tolerance가 1%이면 최대 10개�
 실제 감소에 포함된다. 따라서 이 allowance 안에서는 최대 `Sent = 9`,
 `Sacrificed = 1`, `Received = 10`과 같이 구성해야 하며, 10개를 보내고 gap 1개를
 추가하는 11개 turnover는 허용하지 않는다.
+
+## 14A. Filled-Cu microvia stack 재지정 가정
+
+Distribution에서는 source SPD 연결 분석으로 확인된 물리적인 TOP-side PWR VIA
+landing의 고정 XY를 모든 retained destination PWR plane에 수직으로 투영한다. 해당
+plane의 최종 ordered copper가 이 XY를 strict하게 포함할 때만 destination으로
+허용한다(VOID 및 boundary 접촉은 불가).
+
+이 판정은 동일 XY에서 filled-Cu microvia stack을 target NET에 맞춰
+retarget/rebuild할 수 있다는 제작 계획 가정에 기반한다. 따라서 기존 VIA column이
+destination layer까지 이미 span할 필요는 없다. Trace/path evidence는 PWR landing을
+새로 만들거나, destination copper를 허용하거나, query XY를 옆으로 이동시키는 근거가
+될 수 없다. PWR plane artwork는 변경하지 않는다. GND는 destination gate가 아니며,
+dummy는 독립 PWR root를 만들지 않고 기존 anchored shared-pad rule을 그대로 따른다.
 
 ## 15. 구현 및 회귀 테스트 추적
 

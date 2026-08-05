@@ -413,7 +413,9 @@ def _analyze_proposed_state(
                     )
                 )
                 continue
-            allowed = shared_pad_component_eligibility(cluster, component)
+            allowed = shared_pad_component_eligibility(
+                cluster, component, require_all_vias=False
+            )
             if component.current_rail_id.casefold() not in {
                 item.rail_id.casefold() for item in allowed.values()
             }:
@@ -943,7 +945,9 @@ def _current_assignment_allowed(
         if component is None or derivation.shared_power_via_conflicts:
             return False
         eligibility = _casefold_eligibility(
-            shared_pad_component_eligibility(cluster, component),
+            shared_pad_component_eligibility(
+                cluster, component, require_all_vias=False
+            ),
             decap.current_rail_id,
         )
     return eligibility is not None and eligibility.allowed

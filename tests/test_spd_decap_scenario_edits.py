@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from dataclasses import replace
 from hashlib import sha256
 import json
 
@@ -30,6 +31,7 @@ from spd_decap_pi.scenario import (
     SHARED_PAD_ANALYSIS_VERSION,
     SourceIdentity,
     derive_shared_pad_current_components,
+    shared_pad_component_eligibility,
 )
 from spd_decap_pi.scenario_edits import (
     ScenarioEditError,
@@ -464,6 +466,77 @@ def test_v2_requires_exact_per_physical_power_via_eligibility() -> None:
     }
     with pytest.raises(ValidationError, match="every exact physical PWR Via"):
         ScenarioSpec.model_validate(extra_payload)
+
+
+@pytest.mark.parametrize("mode", ("missing", "disallowed"))
+def test_cluster_aggregate_rail_requires_one_allowed_physical_via(
+    mode: str,
+) -> None:
+    payload = _diagram_scenario().model_dump(mode="python")
+    cluster = payload["connection_analysis"]["clusters"][0]
+    for eligibility in cluster["via_eligibility"].values():
+        if mode == "missing":
+            eligibility.pop("R2")
+        else:
+            eligibility["R2"].update(
+                {"allowed": False, "reason": "does not cross target PWR plane"}
+            )
+
+    with pytest.raises(
+        ValidationError, match="supported by any physical PWR Via"
+    ):
+        ScenarioSpec.model_validate(payload)
+
+
+def test_cluster_aggregate_rail_accepts_one_allowed_physical_via() -> None:
+    payload = _diagram_scenario().model_dump(mode="python")
+    cluster = payload["connection_analysis"]["clusters"][0]
+    for via_id, eligibility in cluster["via_eligibility"].items():
+        if via_id != "VP4":
+            eligibility["R2"].update(
+                {"allowed": False, "reason": "does not cross target PWR plane"}
+            )
+
+    validated = ScenarioSpec.model_validate(payload)
+
+    assert validated.connection_analysis is not None
+
+
+def test_any_via_component_eligibility_does_not_depend_on_blind_via_order() -> None:
+    scenario = _diagram_scenario()
+    assert scenario.connection_analysis is not None
+    cluster = scenario.connection_analysis.clusters[0].model_copy(
+        update={
+            "via_eligibility": {
+                "VP0": {},
+                "VP2": {"R2": _eligibility("R2", "V2")},
+                "VP4": {},
+            }
+        }
+    )
+    connection_by_key = {
+        refdes.casefold(): connection
+        for refdes, connection in scenario.connection_analysis.connections.items()
+    }
+    decap_by_key = {item.refdes.casefold(): item for item in scenario.decaps}
+    component = derive_shared_pad_current_components(
+        cluster,
+        {key: decap_by_key[key] for key in connection_by_key},
+        connection_by_key,
+        analysis_version=scenario.connection_analysis.version,
+    ).components[0]
+
+    forward = shared_pad_component_eligibility(
+        cluster, component, require_all_vias=False
+    )
+    reverse = shared_pad_component_eligibility(
+        cluster,
+        replace(component, power_vias=tuple(reversed(component.power_vias))),
+        require_all_vias=False,
+    )
+
+    assert set(forward) == {"R2"}
+    assert set(reverse) == {"R2"}
 
 
 def test_persisted_unisolated_cross_net_short_is_rejected() -> None:

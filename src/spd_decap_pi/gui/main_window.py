@@ -385,6 +385,48 @@ class _PreparedDistributionPreview:
 
 
 @dataclass(frozen=True, slots=True)
+class _DistributionModelBalance:
+    """One model's numeric Distribution capacity, kept separate from its log."""
+
+    model_id: str
+    donor: int
+    receiver: int
+    balance: int
+    fixed: int = 0
+    proof_pending: int = 0
+    exchange_cells: int = 0
+    exchange_capacity: int = 0
+
+    @property
+    def compact_text(self) -> str:
+        """The deliberately terse, one-line table-adjacent presentation."""
+
+        return (
+            f"{self.model_id}: Donor {self.donor:,} | "
+            f"Receiver {self.receiver:,} | Balance {self.balance:+,}"
+        )
+
+
+@dataclass(frozen=True, slots=True)
+class _DistributionBalanceState:
+    """Structured validation state for both controls and separate UI renderers."""
+
+    valid: bool
+    has_changes: bool
+    balances: tuple[_DistributionModelBalance, ...]
+    narrative: str
+
+    @property
+    def compact_text(self) -> str:
+        return " | ".join(item.compact_text for item in self.balances)
+
+    def legacy_tuple(self) -> tuple[bool, bool, str]:
+        """Preserve the former narrow tuple API for plugins and focused tests."""
+
+        return self.valid, self.has_changes, self.narrative
+
+
+@dataclass(frozen=True, slots=True)
 class _PreparedPlaneCell:
     """Reentrant Qt paths prepared off-thread; GUI only creates scene items."""
 
@@ -1185,6 +1227,7 @@ def _job_compute_distribution(
             scenario,
             attachments,
             targets=targets,
+            tolerances=tolerances,
             progress=lambda value, message: progress(
                 3 + round(float(value) * 0.27), message
             ),
@@ -1293,6 +1336,7 @@ class MainWindow(QMainWindow):
         self._distribution_export_rows: tuple[Any, ...] = ()
         self._distribution_table_updating = False
         self._distribution_import_notice: str | None = None
+        self._distribution_status_notice: str | None = None
 
         self._build_actions()
         self._build_ui()
@@ -1797,16 +1841,16 @@ class MainWindow(QMainWindow):
         intro.setStyleSheet("color: #9aa4b2;")
         targets_layout.addWidget(intro)
         alternate_plane_note = QLabel(
-            "Alternate PWR plane: assessed as possible via re-termination/reroute "
-            "at the same landing XY; existing via-barrel depth is not proven."
+            "Alternate PWR plane: VIA STACK CHANGE REQUIRED — exact target-plane "
+            "copper is assessed at the immutable PWR landing XY; plane artwork "
+            "remains unchanged."
         )
         alternate_plane_note.setObjectName("alternatePwrPlaneRoutingNote")
         alternate_plane_note.setWordWrap(True)
         alternate_plane_note.setStyleSheet("color: #9aa4b2;")
         alternate_plane_note.setToolTip(
-            "Alternate PWR plane assessment permits a possible via "
-            "re-termination/reroute at the same landing XY. It does not prove the "
-            "existing via barrel reaches that depth."
+            "This is a filled-Cu microvia-stack retarget/rebuild planning result, "
+            "and does not prove that the existing via barrel already reaches that layer."
         )
         targets_layout.addWidget(alternate_plane_note)
 
@@ -1842,7 +1886,11 @@ class MainWindow(QMainWindow):
         self.distribution_validation_label.setObjectName(
             "distributionValidationStatus"
         )
-        self.distribution_validation_label.setWordWrap(True)
+        self.distribution_validation_label.setWordWrap(False)
+        self.distribution_validation_label.setToolTip(
+            "Per-model numeric Distribution balance. Detailed validation and "
+            "preview messages are shown below."
+        )
         targets_layout.addWidget(self.distribution_validation_label)
 
         option_row = QHBoxLayout()
@@ -1891,7 +1939,7 @@ class MainWindow(QMainWindow):
         result_section.setMinimumHeight(180)
         result_layout = QVBoxLayout(result_section)
         result_layout.setContentsMargins(0, 0, 0, 0)
-        result_heading = QLabel("Distribution Preview")
+        result_heading = QLabel("Distribution Status / Preview Log")
         result_heading.setStyleSheet("font-weight: 700;")
         result_layout.addWidget(result_heading)
         self.distribution_summary = QTextBrowser()
@@ -2029,28 +2077,34 @@ class MainWindow(QMainWindow):
                 pending[cell] = pending.get(cell, 0) + 1
         return potential, pending
 
-    def _distribution_numeric_state(self) -> tuple[bool, bool, str]:
+    def _distribution_balance_state(self) -> _DistributionBalanceState:
+        """Build numeric balances once, then render strip and log independently."""
+
         if self._scenario is None or not self._distribution_present_counts:
-            return False, False, "No distribution inventory is loaded."
+            return _DistributionBalanceState(
+                False, False, (), "No distribution inventory is loaded."
+            )
         if self._distribution_invalid_cells:
-            return (
+            return _DistributionBalanceState(
                 False,
                 True,
+                (),
                 "Target must be a nonnegative whole number in every edited cell.",
             )
         if self._distribution_invalid_tolerance_cells:
-            return (
+            return _DistributionBalanceState(
                 False,
                 True,
+                (),
                 "Tolerance must be a finite percentage from 0 through 100.",
             )
 
         potential_assignable, _pending_by_cell = (
             self._distribution_potential_assignable_counts()
         )
-        summaries: list[str] = []
+        balances: list[_DistributionModelBalance] = []
+        details: list[str] = []
         shortages: list[str] = []
-        shortage_summaries: list[str] = []
         has_changes = False
         has_exchange_participants = False
         total_demand = 0
@@ -2091,8 +2145,6 @@ class MainWindow(QMainWindow):
                     exchange_capacity += _whole_decap_tolerance(
                         present, self._distribution_tolerances[key]
                     )
-            if not model_changed and not exchange_cells:
-                continue
             has_changes = has_changes or model_changed
             has_exchange_participants = (
                 has_exchange_participants or exchange_cells > 0
@@ -2100,100 +2152,126 @@ class MainWindow(QMainWindow):
             total_demand += demand
             total_pending_capacity += pending_capacity
             unused = capacity - demand
-            exchange_text = (
-                f", exchange {exchange_cells:,} cell(s) / "
-                f"{exchange_capacity:,} decap(s)"
-                if exchange_cells
-                else ""
+            balance = _DistributionModelBalance(
+                model_id=model_id,
+                donor=capacity,
+                receiver=demand,
+                balance=unused,
+                fixed=fixed_capacity,
+                proof_pending=pending_capacity,
+                exchange_cells=exchange_cells,
+                exchange_capacity=exchange_capacity,
             )
-            fixed_text = (
-                f", fixed/unassignable {fixed_capacity:,}"
-                if fixed_capacity
-                else ""
-            )
-            pending_text = (
-                f", exact-proof pending {pending_capacity:,}"
-                if pending_capacity
-                else ""
-            )
-            summaries.append(
-                f"{model_id}: give capacity {capacity:,}, "
-                f"receive demand {demand:,}{fixed_text}{pending_text}"
-                f"{exchange_text}, "
+            balances.append(balance)
+            detail = (
+                f"{model_id}: donor {capacity:,}, receiver {demand:,}, "
                 f"balance {unused:+,}"
             )
+            if fixed_capacity:
+                detail += f", fixed/unassignable {fixed_capacity:,}"
+            if pending_capacity:
+                detail += f", exact retained-artwork proof pending {pending_capacity:,}"
+            if exchange_cells:
+                detail += (
+                    f", exchange {exchange_cells:,} cell(s) / "
+                    f"{exchange_capacity:,} decap(s)"
+                )
+            details.append(detail)
             if demand > capacity:
                 detail = f"{model_id} is short by {demand - capacity:,}"
                 if fixed_capacity:
                     detail += (
                         f" ({fixed_capacity:,} donor decap(s) are "
                         "fixed/unassignable)"
-                    )
+                )
                 shortages.append(detail)
-                shortage_summaries.append(summaries[-1])
 
         if shortages:
-            return (
+            return _DistributionBalanceState(
                 False,
                 has_changes,
-                "Invalid — "
-                + " | ".join(shortage_summaries)
-                + "; "
-                + "; ".join(shortages),
+                tuple(balances),
+                "Invalid numeric balance.\n"
+                + "\n".join(shortages)
+                + "\n\n"
+                + "\n".join(details),
             )
         if not has_changes:
             if has_exchange_participants:
-                return (
+                return _DistributionBalanceState(
                     False,
                     False,
+                    tuple(balances),
                     "Exchange participants are defined, but no donor/receiver "
                     "demand exists; no redistribution is needed.",
                 )
-            return (
+            return _DistributionBalanceState(
                 False,
                 False,
+                tuple(balances),
                 "No changes requested; every Target equals Present.",
             )
         if total_demand == 0:
-            return (
+            return _DistributionBalanceState(
                 False,
                 False,
+                tuple(balances),
                 "No receiver demand is defined; unused donor capacity remains "
-                "on its current PWR NET.",
+                "on its current PWR NET.\n\n"
+                + "\n".join(details),
             )
-        prefix = (
-            "Valid (exact retained-artwork proof pending) — "
+        narrative_prefix = (
+            "Exact retained-artwork proof pending for one or more donor cells.\n\n"
             if total_pending_capacity
-            else "Valid — "
+            else "Numeric donor/receiver balance is valid.\n\n"
         )
-        return True, True, prefix + " | ".join(summaries)
+        return _DistributionBalanceState(
+            True,
+            True,
+            tuple(balances),
+            narrative_prefix + "\n".join(details),
+        )
+
+    def _distribution_numeric_state(self) -> tuple[bool, bool, str]:
+        """Compatibility wrapper for legacy internal callers and plugins."""
+
+        return self._distribution_balance_state().legacy_tuple()
 
     def _update_distribution_validation(self) -> None:
-        numeric_state = self._distribution_numeric_state()
-        valid, _has_changes, message = numeric_state
+        balance_state = self._distribution_balance_state()
+        valid = balance_state.valid
+        narrative = balance_state.narrative
         distance_mode = self.distribution_distance_combo.currentData()
         if distance_mode not in {"NEAREST", "FARTHEST"}:
             valid = False
-            message = (
-                "Select Candidate order (Nearest or Farthest) before calculation."
+            narrative = (
+                "Select Candidate order (Nearest or Farthest) before calculation.\n\n"
+                + narrative
             )
+        if self._distribution_status_notice:
+            narrative += f"\n\n{self._distribution_status_notice}"
         if self._distribution_import_notice:
-            message = f"{message}\n{self._distribution_import_notice}"
-        self.distribution_validation_label.setText(message)
+            narrative += f"\n\n{self._distribution_import_notice}"
+        self.distribution_validation_label.setText(balance_state.compact_text)
         self.distribution_validation_label.setStyleSheet(
             "color: #047857;" if valid else "color: #B45309;"
         )
-        self._update_distribution_controls(numeric_state)
+        self.distribution_summary.setPlainText(narrative)
+        self._update_distribution_controls(balance_state)
 
     def _update_distribution_controls(
         self,
-        numeric_state: tuple[bool, bool, str] | None = None,
+        numeric_state: tuple[bool, bool, str] | _DistributionBalanceState | None = None,
     ) -> None:
         loaded = self._scenario is not None
         idle = self._worker is None
         if numeric_state is None:
-            numeric_state = self._distribution_numeric_state()
-        numeric_valid, has_changes, _message = numeric_state
+            numeric_state = self._distribution_balance_state()
+        if isinstance(numeric_state, _DistributionBalanceState):
+            numeric_valid = numeric_state.valid
+            has_changes = numeric_state.has_changes
+        else:
+            numeric_valid, has_changes, _message = numeric_state
         distance_ready = self.distribution_distance_combo.currentData() in {
             "NEAREST",
             "FARTHEST",
@@ -2243,6 +2321,7 @@ class MainWindow(QMainWindow):
         if had_result:
             self._reset_distribution_actual_deltas()
         if reason is not None:
+            self._distribution_status_notice = reason
             self.distribution_summary.setPlainText(reason)
         if update_controls:
             self._update_distribution_controls()
@@ -2262,6 +2341,7 @@ class MainWindow(QMainWindow):
         self._distribution_power_projection = None
         self._distribution_export_rows = ()
         self._distribution_import_notice = None
+        self._distribution_status_notice = None
         if hasattr(self, "distribution_distance_combo"):
             previous_block = self.distribution_distance_combo.blockSignals(True)
             try:
@@ -2783,10 +2863,46 @@ class MainWindow(QMainWindow):
         )
         return headers, rows
 
+    def _distribution_request_fingerprint(self) -> str:
+        """Fingerprint every planner input editable from either Distribution view."""
+
+        scenario = self._scenario
+        if scenario is None:
+            return ""
+        target_items = tuple(
+            sorted(
+                (str(rail_id).casefold(), str(model_id).casefold(), int(value))
+                for (rail_id, model_id), value in self._distribution_targets.items()
+            )
+        )
+        tolerance_items = tuple(
+            sorted(
+                (
+                    str(rail_id).casefold(),
+                    str(model_id).casefold(),
+                    float(value),
+                )
+                for (rail_id, model_id), value in self._distribution_tolerances.items()
+            )
+        )
+        payload = repr(
+            (
+                scenario.design_fingerprint,
+                scenario.revision,
+                target_items,
+                tolerance_items,
+                self.distribution_distance_combo.currentData(),
+            )
+        ).encode("utf-8")
+        return sha256(payload).hexdigest()
+
     def _sync_distribution_window(self) -> None:
         if self._distribution_window is None:
             return
-        self._distribution_window.set_document_active(self._scenario is not None)
+        self._distribution_window.set_document_active(
+            self._scenario is not None,
+            busy=self._worker is not None,
+        )
         headers, rows = self._distribution_matrix_values()
         self._distribution_window.set_matrix(headers, rows)
         self._distribution_window.set_original_board_checked(
@@ -2966,7 +3082,10 @@ class MainWindow(QMainWindow):
     def _calculate_distribution(self) -> None:
         if self._scenario is None:
             return
-        numeric_valid, has_changes, message = self._distribution_numeric_state()
+        balance_state = self._distribution_balance_state()
+        numeric_valid = balance_state.valid
+        has_changes = balance_state.has_changes
+        message = balance_state.narrative
         if not numeric_valid or not has_changes:
             QMessageBox.warning(self, APP_DISPLAY_NAME, message)
             return
@@ -2976,7 +3095,9 @@ class MainWindow(QMainWindow):
             validate = getattr(
                 distribution_module, "validate_distribution_targets", None
             )
-            exact_proof_pending = "proof pending" in message.casefold()
+            exact_proof_pending = any(
+                item.proof_pending for item in balance_state.balances
+            )
             if validate is not None and not exact_proof_pending:
                 validate(
                     self._scenario,
@@ -2995,9 +3116,10 @@ class MainWindow(QMainWindow):
             if detail_text:
                 error_text += f"\n\n{detail_text}"
             QMessageBox.warning(self, APP_DISPLAY_NAME, error_text)
-            self.distribution_validation_label.setText(f"Invalid — {error_text}")
-            self.distribution_validation_label.setStyleSheet("color: #B91C1C;")
+            self._distribution_status_notice = f"Invalid input: {error_text}"
+            self._update_distribution_validation()
             return
+        request_fingerprint = self._distribution_request_fingerprint()
         worker = FunctionWorker(
             _job_compute_distribution,
             self._scenario,
@@ -3008,7 +3130,9 @@ class MainWindow(QMainWindow):
         )
         self._run_worker(
             worker,
-            self._accept_distribution_plan,
+            lambda result, expected=request_fingerprint: (
+                self._accept_distribution_plan_if_current(result, expected)
+            ),
             label="Calculating De-cap Distribution preview...",
             # HiGHS cannot be interrupted inside one solve call, but the
             # planner checks cancellation between factor blocks and stages.
@@ -3045,6 +3169,8 @@ class MainWindow(QMainWindow):
         sacrifices = tuple(getattr(plan, "sacrifices", ()))
         lines = [
             f"Status: {status} (count/topology)",
+            "VIA STACK CHANGE REQUIRED — exact target plane exists at immutable "
+            "PWR landing XY; plane artwork unchanged",
             (
                 "PDN evaluation (modified/touched rails): BLOCKED on inherited "
                 "unresolved/out-of-scope connections"
@@ -3266,6 +3392,7 @@ class MainWindow(QMainWindow):
             self.status_text.setText("De-cap Distribution preview validation failed")
             return
         self._distribution_plan = plan
+        self._distribution_status_notice = None
         self._distribution_preview_scenario = preview
         self._distribution_power_projection = power_projection
         self._distribution_export_rows = export_rows
@@ -3288,6 +3415,21 @@ class MainWindow(QMainWindow):
             f"{self._plan_status_text(plan)} (count/topology){status_suffix}"
         )
         self._update_distribution_controls()
+
+    def _accept_distribution_plan_if_current(
+        self, result: Any, expected_request_fingerprint: str
+    ) -> None:
+        """Reject a planner result if targets, tolerances, or order changed."""
+
+        if expected_request_fingerprint != self._distribution_request_fingerprint():
+            self._distribution_status_notice = (
+                "Targets, tolerances, or Candidate order changed while the preview "
+                "was calculating. The result was discarded."
+            )
+            self.status_text.setText("Discarded stale De-cap Distribution preview")
+            self._update_distribution_validation()
+            return
+        self._accept_distribution_plan(result)
 
     def _apply_distribution_preview(self) -> None:
         scenario = self._scenario
@@ -3592,6 +3734,7 @@ class MainWindow(QMainWindow):
         self.plane_layer_bar.setEnabled(loaded and bool(self._plane_layer_checks))
         self._update_result_plot_button()
         self._update_distribution_controls()
+        self._sync_distribution_window()
 
     def _set_busy(self, busy: bool) -> None:
         for action in (
@@ -3633,6 +3776,7 @@ class MainWindow(QMainWindow):
         )
         self._update_result_plot_button()
         self._update_distribution_controls()
+        self._sync_distribution_window()
 
     def _update_result_plot_button(self) -> None:
         comparisons = (
@@ -5802,6 +5946,8 @@ class MainWindow(QMainWindow):
             return
         if self._results_window is not None:
             self._results_window.close()
+        if self._distribution_window is not None:
+            self._distribution_window.close()
         event.accept()
 
 

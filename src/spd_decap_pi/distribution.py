@@ -15,7 +15,7 @@ from enum import StrEnum
 from math import hypot, inf, isfinite
 from numbers import Real
 from time import monotonic
-from typing import Callable, Mapping, Sequence
+from typing import Callable, Collection, Mapping, Sequence
 
 import numpy as np
 from scipy.optimize import Bounds, LinearConstraint, OptimizeResult, linprog, milp
@@ -30,7 +30,6 @@ from ._core.io.shared_pad import (
     _minimum_distance_tree,
 )
 from ._core.io.spd import SpdPlaneGeometry
-from ._core.plane_pairs import suggest_effective_plane_pairs
 from .eligibility import PlaneEligibilityIndex
 from .scenario import (
     DecapConnectionKind,
@@ -403,7 +402,16 @@ def _distribution_plane_geometries(
 
     project = scenario.base_project
     result: list[SpdPlaneGeometry] = []
-    seen: set[tuple[str, str, str]] = set()
+    # A retained raw-SPD geometry asset is authoritative for its own NET/layer
+    # pair.  Older bundles can still have exact artwork only on selected
+    # Evaluation partitions, however, so compatibility recovery must be done
+    # *per missing pair*, not only when every retained asset is absent.
+    #
+    # Keep the digest in the identity: one NET/layer may legitimately contain
+    # several disjoint retained assets.  Their source ordering is stable and
+    # must be preserved for deterministic exact-geometry evaluation.
+    seen_assets: set[tuple[str, str, str]] = set()
+    recovered_pairs: set[tuple[str, str]] = set()
     spd_import = project.metadata.get("spd_import")
     records = (
         spd_import.get("plane_geometries")
@@ -431,10 +439,12 @@ def _distribution_plane_geometries(
             )
         except (ValueError, ArithmeticError):
             continue
-        identity = (net.casefold(), layer.casefold(), digest.casefold())
-        if identity in seen:
+        pair = (net.casefold(), layer.casefold())
+        identity = (*pair, digest.casefold())
+        if identity in seen_assets:
             continue
-        seen.add(identity)
+        seen_assets.add(identity)
+        recovered_pairs.add(pair)
         result.append(
             SpdPlaneGeometry(
                 layer=layer,
@@ -461,18 +471,36 @@ def _distribution_plane_geometries(
                 ),  # type: ignore[arg-type]
             )
         )
-    if result:
-        return tuple(result)
-
     # Compatibility fallback for older bundles that retained only partition
     # assets.  It remains exact but can cover only their selected rail pair.
-    for partition in project.partitions:
+    # Do not let it replace a valid retained raw-SPD asset for the same pair;
+    # it is solely a fill-in for a pair for which metadata was unavailable or
+    # failed its digest/payload validation.
+    seen_partition_sources: set[tuple[str, str, str]] = set()
+    for partition_index, partition in enumerate(project.partitions):
         for cell in partition.cells:
+            pair = (
+                str(cell.source_net or "").casefold(),
+                partition.layer.casefold(),
+            )
             if (
                 cell.source_net is None
-                or (cell.source_net.casefold(), partition.layer.casefold())
-                not in wanted_pairs
+                or pair not in wanted_pairs
+                or pair in recovered_pairs
             ):
+                continue
+            # A partition cell is a distinct exact source region.  If it owns
+            # an asset, use its digest so duplicate references are decoded
+            # once; inline primitives retain their partition/cell identity.
+            # Do not merge different cells or discard their holes/primitive
+            # ordering merely because their bounding boxes happen to match.
+            source_identity = (
+                str(cell.source_geometry_sha256).casefold()
+                if cell.source_geometry_sha256
+                else f"partition-{partition_index}:cell-{cell.cell_id.casefold()}"
+            )
+            cell_identity = (*pair, source_identity)
+            if cell_identity in seen_partition_sources:
                 continue
             try:
                 payload = core_services.plane_cell_source_geometry(
@@ -480,6 +508,7 @@ def _distribution_plane_geometries(
                 )
             except (ValueError, ArithmeticError):
                 continue
+            seen_partition_sources.add(cell_identity)
             result.append(
                 SpdPlaneGeometry(
                     layer=partition.layer,
@@ -524,7 +553,15 @@ def _distribution_rail_choices(
     dict[tuple[str, str, str], tuple[tuple[object, str | None], ...]],
     tuple[PlanePairSuggestion, ...],
 ]:
-    """Return every source-valid pair for each rail needed by Distribution."""
+    """Return Distribution candidates without changing any plane or GND data.
+
+    Evaluation intentionally ranks electrically useful adjacent PWR/GND pairs.
+    Distribution has a different, physical contract: a receiver may use any
+    retained conductor layer that lists its target PWR net *at the immutable
+    decap PWR-via landing*.  Its proven GND topology is not re-selected or
+    rewritten, so every such PWR option carries the rail's existing GND layer.
+    Source-recovery-only rails retain the historical selected-pair fallback.
+    """
 
     from .spd_adapter import _rail_choice_index
 
@@ -535,11 +572,6 @@ def _distribution_rail_choices(
         for choices in selected_choices.values()
         for rail, template_id in choices
     }
-    certificates = tuple(
-        rail.mixed_reference_certificate
-        for rail in project.rails
-        if rail.mixed_reference_certificate is not None
-    )
     choices_by_pair: dict[
         tuple[str, str, str], list[tuple[object, str | None]]
     ] = defaultdict(list)
@@ -549,21 +581,38 @@ def _distribution_rail_choices(
         if alternate_rail_keys is None
         else alternate_rail_keys
     )
+    layer_index = {
+        layer.name.casefold(): index
+        for index, layer in enumerate(project.stackup_layers)
+    }
     for rail in project.rails:
         rail_key = rail.rail_id.casefold()
         if required_rail_keys and rail_key not in required_rail_keys:
             continue
-        suggestions = (
-            suggest_effective_plane_pairs(
-                project.stackup_layers,
-                rail_net=rail.net,
-                gnd_aliases=project.gnd_aliases,
-                mixed_reference_certificates=certificates,
-            )
-            if rail_key in alternate_keys
-            else []
-        )
+        if rail_key in alternate_keys:
+            # Do not require an adjacent Evaluation PWR/GND pair here.  The
+            # GND terminal and its source topology remain unchanged; this is
+            # only a same-XY target-PWR copper eligibility enumeration.
+            suggestions = [
+                PlanePairSuggestion(
+                    rail_net=rail.net,
+                    pwr_layer=layer.name,
+                    gnd_layer=rail.gnd_layer,
+                    pwr_index=index,
+                    gnd_index=layer_index.get(rail.gnd_layer.casefold(), -1),
+                    separation_um=0.0,
+                    mixed_reference_certificate=rail.mixed_reference_certificate,
+                )
+                for index, layer in enumerate(project.stackup_layers)
+                if layer.is_conductor
+                and rail.net.casefold()
+                in {net.casefold() for net in layer.pwr_nets}
+            ]
+        else:
+            suggestions = []
         if not suggestions:
+            # Source-recovery-only rails deliberately retain the evaluation
+            # pair contract; they are not additional receiver destinations.
             suggestions = [
                 PlanePairSuggestion(
                     rail_net=rail.net,
@@ -653,16 +702,121 @@ def _distribution_via_eligibility(
     rail_choices_by_pair: Mapping[
         tuple[str, str, str], Sequence[tuple[object, str | None]]
     ],
+    *,
+    pwr_layer_order: Mapping[str, int] | None = None,
 ) -> dict[str, RailEligibility]:
-    """Use the shared indexed exact query and its legacy endpoint contract."""
+    """Use the immutable source PWR-via landing for compatibility callers.
+
+    This compatibility helper is not used by the vectorized Distribution
+    projection, but retains the same physical rule for direct callers.  A
+    source-classified PWR Via is projected vertically under Distribution's
+    filled-Cu microvia-stack retarget/rebuild planning assumption.  It
+    intentionally passes no path coordinate into the legacy adapter: trace or
+    path evidence may never move the physical assignment location sideways.
+    """
 
     from .spd_adapter import _eligibility_for_via_landing
 
+    if not _is_distribution_physical_pwr_landing(landing):
+        return {}
+    model_copy = getattr(landing, "model_copy", None)
+    if callable(model_copy):
+        landing = model_copy(update={"path_evidence": ()})
     return _eligibility_for_via_landing(
         eligibility_index,
         landing,  # type: ignore[arg-type]
         dict(rail_choices_by_pair),  # type: ignore[arg-type]
     )
+
+
+def _is_distribution_physical_pwr_landing(landing: object) -> bool:
+    """Validate a persisted source-classified PWR Via landing.
+
+    ``connection.power_vias`` is created only by source SPD connectivity
+    classification.  Distribution uses that immutable TOP-side PWR landing as
+    the vertical projection origin.  It does *not* require a pre-existing
+    blind/buried Via span to the target layer: changing the channel is planned
+    as a filled-Cu microvia-stack retarget/rebuild while retaining the exact XY
+    and all PWR-plane artwork.  This deliberately does not inspect
+    ``path_evidence`` or any recovered route detail.
+    """
+
+    try:
+        landing_x = float(getattr(landing, "x_um"))
+        landing_y = float(getattr(landing, "y_um"))
+    except (TypeError, ValueError):
+        return False
+    return (
+        isfinite(landing_x)
+        and isfinite(landing_y)
+        and all(
+            bool(str(getattr(landing, name, "")).strip())
+            for name in ("via_id", "net", "endpoint_node_id", "padstack")
+        )
+    )
+
+
+def _distribution_component_eligibility(
+    per_via: Sequence[Mapping[str, RailEligibility]],
+) -> dict[str, RailEligibility]:
+    """Union PWR permissions of roots in one already-proven PWR component.
+
+    A connected direct/shared PWR pad component needs one physical PWR Via that
+    crosses the target copper.  Requiring every Via to cross it is needlessly
+    restrictive, while a dummy remains ineligible on its own because only
+    physical PWR Via maps enter this reducer.
+    """
+
+    result: dict[str, RailEligibility] = {}
+    for values in per_via:
+        for item in values.values():
+            if not item.allowed:
+                continue
+            result.setdefault(item.rail_id.casefold(), item)
+    return {
+        item.rail_id: item
+        for _key, item in sorted(result.items(), key=lambda item: item[0])
+    }
+
+
+def _distribution_replace_destination_eligibility(
+    existing: Mapping[str, RailEligibility],
+    exact: Mapping[str, RailEligibility],
+    *,
+    destination_rail_keys: Collection[str],
+    protected_rail_keys: Collection[str],
+) -> dict[str, RailEligibility]:
+    """Replace, rather than extend, destination permissions for Distribution.
+
+    ``eligibility`` and ``via_eligibility`` pre-date the exact Distribution
+    proof and may contain Evaluation-derived alternate rails.  They cannot be
+    used as a fallback when physical PWR-landing or destination-copper proof is
+    absent.  Keep the source/current rail entries solely for unchanged and
+    restoration semantics (and their Evaluation-selected pair metadata); every
+    other candidate destination must be reintroduced by ``exact``.
+    """
+
+    destination_keys = {str(item).casefold() for item in destination_rail_keys}
+    protected_keys = {str(item).casefold() for item in protected_rail_keys}
+    result: dict[str, RailEligibility] = {}
+    for item in existing.values():
+        rail_key = item.rail_id.casefold()
+        if rail_key in destination_keys and rail_key not in protected_keys:
+            continue
+        result[item.rail_id] = item
+
+    # The exact map is the sole authority for a non-protected destination.
+    # Remove by canonical rail ID first so manually authored casing cannot
+    # leave a legacy duplicate beside the proof-backed item.
+    for item in exact.values():
+        rail_key = item.rail_id.casefold()
+        if rail_key in protected_keys:
+            continue
+        for existing_rail_id in tuple(result):
+            if existing_rail_id.casefold() == rail_key:
+                del result[existing_rail_id]
+        result[item.rail_id] = item
+    return result
 
 
 def _distribution_batch_via_eligibility(
@@ -672,6 +826,7 @@ def _distribution_batch_via_eligibility(
         tuple[str, str, str], Sequence[tuple[object, str | None]]
     ],
     *,
+    pwr_layer_order: Mapping[str, int] | None = None,
     progress: ProgressCallback | None = None,
     is_cancelled: CancelCallback | None = None,
 ) -> dict[str, dict[str, RailEligibility]]:
@@ -680,8 +835,9 @@ def _distribution_batch_via_eligibility(
     Building one Python polygon search for every Via/rail pair is exact but too
     slow on production SPDs.  GEOS constructs each final PowerSI boolean shape
     once, then Shapely's vectorized predicates test all relevant landings in C.
-    Boundary contact remains fail-closed and recovered target-layer coordinates
-    override the legacy endpoint projection on that layer.
+    Boundary contact remains fail-closed.  Every test uses the immutable
+    decap PWR-via landing coordinate; a routed/bent path endpoint must never
+    move the physical component assignment location sideways.
     """
 
     try:
@@ -706,6 +862,22 @@ def _distribution_batch_via_eligibility(
     pairs_by_plane: dict[tuple[str, str], list[tuple[str, str, str]]] = defaultdict(list)
     for pair_key in rail_choices_by_pair:
         pairs_by_plane[(pair_key[0], pair_key[1])].append(pair_key)
+    # A source-classified PWR landing is projected vertically at its immutable
+    # XY to every retained destination PWR plane.  Existing Via-column reach is
+    # intentionally not a gate: the Distribution operation plans a filled-Cu
+    # microvia-stack retarget/rebuild, not a copper-plane artwork change.
+    landing_by_key = {
+        via_key: landing
+        for via_key, landing in landing_by_key.items()
+        if _is_distribution_physical_pwr_landing(landing)
+    }
+    ordered_landings = tuple(landing_by_key.values())
+    if not ordered_landings:
+        return {}
+    pwr_layer_name_by_key: dict[str, str] = {}
+    for geometry in plane_geometries:
+        key = geometry.layer.casefold()
+        pwr_layer_name_by_key.setdefault(key, geometry.layer)
     allowed_pairs: dict[str, set[tuple[str, str, str]]] = defaultdict(set)
     boundary_pairs: dict[str, set[tuple[str, str, str]]] = defaultdict(set)
     for index, geometry in enumerate(plane_geometries):
@@ -726,24 +898,10 @@ def _distribution_batch_via_eligibility(
         shape = core_services._ordered_spd_geometry(payload)
         if shape is None:
             continue
-        layer_key = geometry.layer.casefold()
-        coordinates = []
-        for landing in ordered_landings:
-            evidence = next(
-                (
-                    item
-                    for item in getattr(landing, "path_evidence", ())
-                    if str(getattr(item, "target_layer", "")).casefold()
-                    == layer_key
-                ),
-                None,
-            )
-            coordinates.append(
-                (
-                    float(getattr(evidence or landing, "x_um")),
-                    float(getattr(evidence or landing, "y_um")),
-                )
-            )
+        coordinates = [
+            (float(getattr(landing, "x_um")), float(getattr(landing, "y_um")))
+            for landing in ordered_landings
+        ]
         xs = np.asarray([item[0] for item in coordinates], dtype=float)
         ys = np.asarray([item[1] for item in coordinates], dtype=float)
         inside = np.asarray(contains_xy(shape, xs, ys), dtype=bool)
@@ -776,21 +934,39 @@ def _distribution_batch_via_eligibility(
     result: dict[str, dict[str, RailEligibility]] = {}
     for via_key, landing in landing_by_key.items():
         at_landing: dict[str, RailEligibility] = {}
-        for pair_key in allowed_pairs.get(via_key, set()) - boundary_pairs.get(
+        pair_keys = allowed_pairs.get(via_key, set()) - boundary_pairs.get(
             via_key, set()
+        )
+        for pair_key in sorted(
+            pair_keys,
+            key=lambda item: (
+                (pwr_layer_order or {}).get(item[1].casefold(), inf),
+                item[1].casefold(),
+                item[2].casefold(),
+                item[0].casefold(),
+            ),
         ):
             for rail, template_id in rail_choices_by_pair.get(pair_key, ()):
                 rail_id = str(getattr(rail, "rail_id"))
+                # A rail can have copper on several retained PWR layers.  The
+                # nearest stack-order layer is deterministic Distribution proof
+                # metadata; no GND layer or connectivity is changed.
+                if rail_id in at_landing:
+                    continue
                 at_landing[rail_id] = RailEligibility(
                     rail_id=rail_id,
                     net=str(getattr(rail, "net")),
+                    # Evaluation validates these generic fields against its
+                    # selected pair, so Distribution must preserve them.
                     pwr_layer=str(getattr(rail, "pwr_layer")),
                     gnd_layer=str(getattr(rail, "gnd_layer")),
                     via_template_id=template_id,
                     allowed=True,
                     reason=(
-                        "Distribution source artwork projection via "
-                        f"{pair_key[1]}/{pair_key[2]}"
+                        "VIA STACK CHANGE REQUIRED — exact target plane exists at "
+                        "immutable PWR landing XY; plane artwork unchanged "
+                        f"({pwr_layer_name_by_key.get(pair_key[1], pair_key[1])}); "
+                        "Evaluation-selected PWR/GND pair retained"
                     ),
                 )
         result[str(getattr(landing, "via_id"))] = at_landing
@@ -803,6 +979,7 @@ def build_distribution_power_projection(
     *,
     plane_geometries: Sequence[SpdPlaneGeometry] | None = None,
     targets: Mapping[TargetKey, int] | None = None,
+    tolerances: Mapping[ToleranceKey, float] | None = None,
     relevant_rail_ids: Sequence[str] | None = None,
     progress: ProgressCallback | None = None,
     is_cancelled: CancelCallback | None = None,
@@ -828,14 +1005,16 @@ def build_distribution_power_projection(
             present_by_cell[
                 (decap.current_rail_id.casefold(), decap.model_id.casefold())
             ] += 1
-    target_by_cell = (
-        {
-            (str(rail_id).casefold(), str(model_id).casefold()): int(value)
-            for (rail_id, model_id), value in targets.items()
-        }
-        if targets is not None
-        else {}
-    )
+    if targets is not None:
+        target_by_cell, rail_by_key, model_by_key = _canonical_targets(
+            scenario, targets, present_by_cell
+        )
+        tolerance_by_cell = _canonical_tolerances(
+            tolerances, rail_by_key, model_by_key
+        )
+    else:
+        target_by_cell = {}
+        tolerance_by_cell = {}
     donor_cells = {
         key
         for key, present in present_by_cell.items()
@@ -844,10 +1023,31 @@ def build_distribution_power_projection(
     explicit_rail_keys = {
         str(item).casefold() for item in (relevant_rail_ids or ())
     }
-    receiver_rail_keys = {
+    receiver_cells = {
+        key
+        for key, target in target_by_cell.items()
+        if target > int(present_by_cell.get(key, 0))
+    }
+    exchange_cells = {
+        key
+        for key, target in target_by_cell.items()
+        if target == int(present_by_cell.get(key, 0))
+        and distribution_tolerance_count(
+            int(present_by_cell.get(key, 0)),
+            float(tolerance_by_cell.get(key, 0.0)),
+        )
+        > 0
+    }
+    # An exchange cell can receive a donor decap and then donate one of its
+    # own existing sites to a final receiver.  Its existing decaps therefore
+    # need the same fresh physical PWR-column proof as ordinary donors.  Do
+    # not limit the projection to the initial donor set: that would make a
+    # count-neutral R1 -> R2 -> R3 chain depend on stale eligibility cached
+    # before the target R3 artwork was examined.
+    participating_source_cells = donor_cells | exchange_cells
+    destination_rail_keys = {
         rail_key
-        for (rail_key, model_key), target in target_by_cell.items()
-        if target > present_by_cell.get((rail_key, model_key), 0)
+        for rail_key, _model_key in receiver_cells | exchange_cells
     }
 
     candidates = tuple(
@@ -863,7 +1063,7 @@ def build_distribution_power_projection(
                     decap_by_key[refdes.casefold()].current_rail_id.casefold(),
                     str(decap_by_key[refdes.casefold()].model_id).casefold(),
                 )
-                in donor_cells
+                in participating_source_cells
                 for refdes in cluster.member_refdes
                 if decap_by_key[refdes.casefold()].model_id is not None
             )
@@ -880,39 +1080,58 @@ def build_distribution_power_projection(
         )
         in donor_cells
     }
-    donor_cluster_keys = {
+    exchange_refdes_keys = {
+        decap.refdes.casefold()
+        for decap in scenario.decaps
+        if decap.enabled
+        and decap.model_id is not None
+        and (
+            decap.current_rail_id.casefold(),
+            decap.model_id.casefold(),
+        )
+        in exchange_cells
+    }
+    projection_refdes_keys = donor_refdes_keys | exchange_refdes_keys
+    participating_cluster_keys = {
         cluster.cluster_id.casefold()
         for cluster in analysis.clusters
-        if any(refdes.casefold() in donor_refdes_keys for refdes in cluster.member_refdes)
+        if any(
+            refdes.casefold() in projection_refdes_keys
+            for refdes in cluster.member_refdes
+        )
     }
-    direct_donor_keys = {
+    direct_participating_keys = {
         key
-        for key in donor_refdes_keys
+        for key in projection_refdes_keys
         if (connection := connection_by_key.get(key)) is not None
         and connection.kind == DecapConnectionKind.DIRECT
         and bool(connection.power_vias)
     }
-    anchored_donor_cluster_keys = {
+    anchored_participating_cluster_keys = {
         cluster.cluster_id.casefold()
         for cluster in analysis.clusters
-        if cluster.cluster_id.casefold() in donor_cluster_keys
+        if cluster.cluster_id.casefold() in participating_cluster_keys
         and cluster.state == SharedPadClusterState.ANCHORED
     }
-    if not candidates and not direct_donor_keys and not anchored_donor_cluster_keys:
+    if (
+        not candidates
+        and not direct_participating_keys
+        and not anchored_participating_cluster_keys
+    ):
         return None
     if is_cancelled is not None and is_cancelled():
         raise RuntimeError("distribution projection cancelled")
     if progress is not None:
         progress(5, "Indexing retained PWR-plane geometry")
 
-    from .spd_adapter import _common_eligibility_maps
-
     candidate_source_rail_keys = {
         decap_by_key[refdes.casefold()].source_rail_id.casefold()
         for cluster in candidates
         for refdes in cluster.member_refdes
     }
-    alternate_rail_keys = receiver_rail_keys | explicit_rail_keys
+    # Exchange cells can become an intermediate receiver before donating again,
+    # so they require the same retained-plane enumeration as final receivers.
+    alternate_rail_keys = destination_rail_keys | explicit_rail_keys
     projection_rail_keys = alternate_rail_keys | candidate_source_rail_keys
     rail_choices, _selected_pairs = _distribution_rail_choices(
         scenario,
@@ -938,9 +1157,10 @@ def build_distribution_power_projection(
             if (geometry.net.casefold(), geometry.layer.casefold())
             in wanted_plane_pairs
         )
-    if not exact_planes:
-        return None
-    relevant_cluster_keys = anchored_donor_cluster_keys | {
+    # Absence of retained destination artwork is not permission to fall back
+    # to pre-v0.20 Evaluation eligibility.  Continue with an empty exact map
+    # so the projection can scrub every alternate destination fail-closed.
+    relevant_cluster_keys = anchored_participating_cluster_keys | {
         cluster.cluster_id.casefold() for cluster in candidates
     }
     projection_landings: dict[str, object] = {}
@@ -950,7 +1170,10 @@ def build_distribution_power_projection(
             if connection.cluster_id is not None
             else None
         )
-        if refdes_key not in direct_donor_keys and cluster_key not in relevant_cluster_keys:
+        if (
+            refdes_key not in direct_participating_keys
+            and cluster_key not in relevant_cluster_keys
+        ):
             continue
         for landing in connection.power_vias:
             key = landing.via_id.casefold()
@@ -962,6 +1185,10 @@ def build_distribution_power_projection(
         exact_planes,
         tuple(projection_landings.values()),
         rail_choices,
+        pwr_layer_order={
+            layer.name.casefold(): index
+            for index, layer in enumerate(scenario.base_project.stackup_layers)
+        },
         progress=(
             (lambda value, message: progress(5 + round(value * 0.50), message))
             if progress is not None
@@ -973,8 +1200,8 @@ def build_distribution_power_projection(
         via_id.casefold(): values
         for via_id, values in batch_via_eligibility.items()
     }
-    if not batch_via_eligibility_by_key:
-        return None
+    # Likewise, an empty exact proof is a valid *negative* result.  Returning
+    # ``None`` here would hand planning the legacy eligibility maps unchanged.
 
     wanted_top = {
         (str(cluster.layer).casefold(), str(net).casefold())
@@ -999,17 +1226,21 @@ def build_distribution_power_projection(
     for decap in scenario.decaps:
         key = decap.refdes.casefold()
         connection = connection_by_key.get(key)
-        if key not in direct_donor_keys or connection is None:
+        if key not in direct_participating_keys or connection is None:
             projected_decaps.append(decap)
             continue
-        common = _common_eligibility_maps(
+        common = _distribution_component_eligibility(
             tuple(
                 batch_via_eligibility_by_key.get(landing.via_id.casefold(), {})
                 for landing in connection.power_vias
             )
         )
-        merged = dict(decap.eligibility)
-        merged.update(common)
+        merged = _distribution_replace_destination_eligibility(
+            decap.eligibility,
+            common,
+            destination_rail_keys=destination_rail_keys,
+            protected_rail_keys=(decap.source_rail_id, decap.current_rail_id),
+        )
         if merged != decap.eligibility:
             expanded_direct += 1
             projected_decaps.append(
@@ -1028,7 +1259,7 @@ def build_distribution_power_projection(
         if is_cancelled is not None and is_cancelled():
             raise RuntimeError("distribution projection cancelled")
         cluster_key = cluster.cluster_id.casefold()
-        if cluster_key in anchored_donor_cluster_keys:
+        if cluster_key in anchored_participating_cluster_keys:
             landing_by_key = {
                 landing.via_id.casefold(): landing
                 for refdes in cluster.member_refdes
@@ -1038,17 +1269,31 @@ def build_distribution_power_projection(
                 via_id.casefold(): values
                 for via_id, values in cluster.via_eligibility.items()
             }
+            protected_rail_keys = {
+                rail_id
+                for refdes in cluster.member_refdes
+                for rail_id in (
+                    decap_by_key[refdes.casefold()].source_rail_id,
+                    decap_by_key[refdes.casefold()].current_rail_id,
+                )
+            }
             via_eligibility = {
-                landing.via_id: {
-                    **source_via_eligibility.get(landing.via_id.casefold(), {}),
-                    **batch_via_eligibility_by_key.get(
-                        landing.via_id.casefold(), {}
-                    ),
-                }
+                landing.via_id: _distribution_replace_destination_eligibility(
+                    source_via_eligibility.get(landing.via_id.casefold(), {}),
+                    batch_via_eligibility_by_key.get(
+                        landing.via_id.casefold(), {}),
+                    destination_rail_keys=destination_rail_keys,
+                    protected_rail_keys=protected_rail_keys,
+                )
                 for landing in landing_by_key.values()
             }
-            common = _common_eligibility_maps(tuple(via_eligibility.values()))
-            merged_common = {**cluster.eligibility, **common}
+            common = _distribution_component_eligibility(tuple(via_eligibility.values()))
+            merged_common = _distribution_replace_destination_eligibility(
+                cluster.eligibility,
+                common,
+                destination_rail_keys=destination_rail_keys,
+                protected_rail_keys=protected_rail_keys,
+            )
             updated = cluster.model_copy(
                 update={
                     "eligibility": merged_common,
@@ -1143,14 +1388,8 @@ def build_distribution_power_projection(
             at_landing = batch_via_eligibility_by_key.get(
                 landing.via_id.casefold(), {}
             )
-            if not at_landing:
-                invalid_via_identity = True
-                break
             via_eligibility[landing.via_id] = at_landing
-        if invalid_via_identity:
-            projected_clusters.append(cluster)
-            continue
-        common = _common_eligibility_maps(tuple(via_eligibility.values()))
+        common = _distribution_component_eligibility(tuple(via_eligibility.values()))
         source_rail_keys = {
             decap_by_key[refdes.casefold()].source_rail_id.casefold()
             for refdes in cluster.member_refdes
@@ -2788,10 +3027,11 @@ def compute_distribution_plan(
         if not bumps:
             diagnostics.append(
                 DistributionDiagnostic(
-                    code="MISSING_TARGET_BUMP",
+                    code="MISSING_TARGET_BUMP_CANONICAL_FALLBACK",
                     message=(
                         f"{rail.rail_id}: no PWR bump is available for distance "
-                        "ranking; this destination cannot receive a decap"
+                        "ranking; exact-plane eligibility remains valid and "
+                        "canonical zero-distance ordering will be used"
                     ),
                     rail_id=rail.rail_id,
                 )
@@ -2831,16 +3071,17 @@ def compute_distribution_plan(
         rail_key: str,
     ) -> bool:
         if not connection.power_vias:
-            return True
-        for landing in connection.power_vias:
-            eligibility = _casefold_item(
-                cluster.via_eligibility, landing.via_id
+            return False
+        return any(
+            isinstance(
+                eligibility := _casefold_item(
+                    cluster.via_eligibility, landing.via_id
+                ),
+                Mapping,
             )
-            if not isinstance(eligibility, Mapping) or not _allowed_rail(
-                eligibility, rail_by_key[rail_key].rail_id
-            ):
-                return False
-        return True
+            and _allowed_rail(eligibility, rail_by_key[rail_key].rail_id)
+            for landing in connection.power_vias
+        )
 
     # A destination label can survive the rooted-flow constraints only inside
     # a source-pad component that already contains a PWR-via anchor compatible
@@ -2858,17 +3099,15 @@ def compute_distribution_plan(
             adjacency[left].add(right)
             adjacency[right].add(left)
         for rail_key in destination_rail_keys:
-            if not bumps_by_rail.get(rail_key):
-                continue
-            eligible: set[str] = set()
+            # Every active pad member belongs to the already-proven physical
+            # PWR component.  A member's own Via may be blind to this target;
+            # the component is rooted when any physical PWR Via reaches it.
+            # Via-less dummies therefore propagate a root but never create one.
+            eligible: set[str] = set(member_keys)
             roots: list[str] = []
             for ref_key in member_keys:
                 connection = connection_by_refdes[ref_key]
-                if not connection.power_vias:
-                    eligible.add(ref_key)
-                    continue
                 if shared_anchor_allows(connection, cluster, rail_key):
-                    eligible.add(ref_key)
                     roots.append(ref_key)
             reachable = set(roots)
             pending = list(roots)
@@ -2899,8 +3138,6 @@ def compute_distribution_plan(
                     if destination_model_key != model_key:
                         continue
                     if rail_key == current_rail_key:
-                        continue
-                    if not bumps_by_rail.get(rail_key):
                         continue
                     if connection.kind == DecapConnectionKind.DIRECT:
                         if not _allowed_rail(
@@ -2969,9 +3206,13 @@ def compute_distribution_plan(
             if rail_key == current_rail_key:
                 continue
             bumps = bumps_by_rail[rail_key]
-            distance_by_ref_rail[(ref_key, rail_key)] = min(
-                hypot(decap.x_um - bump.x_um, decap.y_um - bump.y_um)
-                for bump in bumps
+            distance_by_ref_rail[(ref_key, rail_key)] = (
+                min(
+                    hypot(decap.x_um - bump.x_um, decap.y_um - bump.y_um)
+                    for bump in bumps
+                )
+                if bumps
+                else 0.0
             )
 
     # Final component-by-rail count bounds.  Receiver equality is deliberately
@@ -3102,7 +3343,6 @@ def compute_distribution_plan(
             left, right = raw_left.casefold(), raw_right.casefold()
             adjacency[left].add(right)
             adjacency[right].add(left)
-
         # All verified clusters in the supplied design are simple paths.  On a
         # path, a selected label at node i is rooted exactly when at least one
         # route to the nearest compatible anchor on the left or right contains
@@ -3275,7 +3515,6 @@ def compute_distribution_plan(
     connectivity_cut_signatures: set[
         tuple[str, str, tuple[str, ...], str | None]
     ] = set()
-
     def add_connectivity_cut(
         cluster: SharedPadCluster,
         rail_key: str,
