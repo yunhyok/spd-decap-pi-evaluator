@@ -4,24 +4,46 @@ import csv
 import os
 from dataclasses import replace
 from pathlib import Path
+from types import SimpleNamespace
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 from PySide6.QtCore import QItemSelectionModel, Qt
 from PySide6.QtTest import QSignalSpy, QTest
-from PySide6.QtWidgets import QApplication, QFileDialog, QLineEdit, QMessageBox, QSplitter
+from PySide6.QtWidgets import (
+    QApplication,
+    QFileDialog,
+    QLabel,
+    QLineEdit,
+    QMessageBox,
+    QSplitter,
+)
 from openpyxl import load_workbook
 
-from test_spd_decap_distribution import _direct_scenario, _with_initial_rails
+from test_spd_decap_distribution import (
+    _direct_scenario,
+    _shared_chain_scenario,
+    _with_initial_rails,
+)
 from spd_decap_pi.distribution import (
     DistributionDiagnostic,
     DistributionDistanceMode,
     DistributionPlanStatus,
+    apply_distribution_plan,
     compute_distribution_plan,
 )
-from spd_decap_pi.distribution_workbook import DISTRIBUTION_METADATA_TITLE
-from spd_decap_pi.gui.main_window import MainWindow
-from spd_decap_pi.scenario import DecapConnectionKind, DecapPadState, ScenarioSpec
+from spd_decap_pi.distribution_workbook import (
+    DISTRIBUTION_METADATA_TITLE,
+    load_distribution_targets,
+)
+from spd_decap_pi.gui.main_window import MainWindow, _job_compute_distribution
+from spd_decap_pi.scenario import (
+    DecapConnectionKind,
+    DecapPadState,
+    ScenarioDecapConnection,
+    ScenarioSpec,
+    SharedPadClusterState,
+)
 from spd_decap_pi.scenario_io import load_scenario
 from spd_decap_pi.spreadsheet_export import write_distribution_workbook
 
@@ -126,6 +148,10 @@ def test_distribution_tab_matches_the_target_matrix_and_resizable_sections() -> 
             assert button.width() >= button.sizeHint().width()
 
         assert window.distribution_table.rowCount() == 3
+        plane_note = window.findChild(QLabel, "alternatePwrPlaneRoutingNote")
+        assert plane_note is not None
+        assert "re-termination/reroute" in plane_note.text()
+        assert "does not prove" in plane_note.toolTip()
         assert window.distribution_table.selectionMode() == (
             window.distribution_table.SelectionMode.ExtendedSelection
         )
@@ -166,6 +192,206 @@ def test_distribution_tab_matches_the_target_matrix_and_resizable_sections() -> 
         application.processEvents()
 
 
+def test_distribution_table_double_click_opens_detached_window_and_exports_template(
+    tmp_path: Path, monkeypatch
+) -> None:
+    application = _application()
+    scenario = _direct_scenario(
+        (("C1", 0.0, ("R1", "R2")),),
+        rail_ids=("R1", "R2"),
+        bump_x={"R2": 0.0},
+    )
+    window = _window_with_scenario(scenario)
+    try:
+        window.side_tabs.setCurrentIndex(3)
+        window.show()
+        application.processEvents()
+        target = window.distribution_table.item(_rail_row(window, "R1"), 2)
+        window.distribution_table.itemDoubleClicked.emit(target)
+        application.processEvents()
+
+        dialog = window._distribution_window
+        assert dialog is not None
+        assert dialog.isVisible()
+        assert dialog.table.rowCount() == window.distribution_table.rowCount()
+        assert dialog.export_template_button.isEnabled()
+
+        path = tmp_path / "targets-template.xlsx"
+        monkeypatch.setattr(
+            QFileDialog,
+            "getSaveFileName",
+            lambda *_args, **_kwargs: (str(path), "Excel workbook (*.xlsx)"),
+        )
+        dialog.export_template_button.click()
+        workbook = load_workbook(path, data_only=False)
+        try:
+            assert workbook.sheetnames == [
+                "Decap Changes",
+                "PWR NET Distribution Targets",
+            ]
+            assert workbook["PWR NET Distribution Targets"]["A1"].value == "PWR NET"
+        finally:
+            workbook.close()
+        imported = load_distribution_targets(
+            path,
+            rail_ids=("R1", "R2"),
+            model_ids=("M1",),
+            current_present=dict(window._distribution_present_counts),
+            current_source_sha256=scenario.source.sha256,
+            current_design_fingerprint=scenario.design_fingerprint,
+        )
+        assert imported.targets == window._distribution_targets
+    finally:
+        window._dirty = False
+        window.close()
+        application.processEvents()
+
+
+def test_detached_distribution_import_applies_targets_without_mutating_scenario(
+    tmp_path: Path, monkeypatch
+) -> None:
+    application = _application()
+    scenario = _direct_scenario(
+        (("C1", 0.0, ("R1", "R2")), ("C2", 10.0, ("R1", "R2"))),
+        rail_ids=("R1", "R2"),
+        bump_x={"R2": 0.0},
+    )
+    path = tmp_path / "edited-targets.xlsx"
+    write_distribution_workbook(
+        path,
+        (),
+        ("PWR NET", "M1\nPresent", "M1\nTarget", "M1\nTolerance (%)"),
+        (("V1 (R1)", 2, 1, 0), ("V2 (R2)", 0, 1, 0)),
+        metadata={
+            "Format Version": 2,
+            "Source SPD SHA-256": scenario.source.sha256,
+            "Distance Mode": "NEAREST",
+        },
+    )
+    window = _window_with_scenario(scenario)
+    try:
+        window._distribution_plan = object()
+        window._distribution_preview_scenario = scenario
+        original_fingerprint = scenario.design_fingerprint
+        window._show_distribution_window()
+        dialog = window._distribution_window
+        assert dialog is not None
+        monkeypatch.setattr(
+            QFileDialog,
+            "getOpenFileName",
+            lambda *_args, **_kwargs: (str(path), "Excel workbook (*.xlsx)"),
+        )
+        dialog.import_targets_button.click()
+        application.processEvents()
+
+        assert window._distribution_targets[("R1", "M1")] == 1
+        assert window._distribution_targets[("R2", "M1")] == 1
+        assert window._distribution_plan is None
+        assert window._distribution_preview_scenario is None
+        assert window.scenario is not None
+        assert window.scenario.design_fingerprint == original_fingerprint
+        assert not window._dirty
+    finally:
+        window._dirty = False
+        window.close()
+        application.processEvents()
+
+
+def test_board_distribution_toggle_is_display_only() -> None:
+    application = _application()
+    scenario = _direct_scenario(
+        (("C1", 0.0, ("R1", "R2")), ("C2", 10.0, ("R1", "R2"))),
+        rail_ids=("R1", "R2"),
+        bump_x={"R2": 0.0},
+    )
+    distributed = ScenarioSpec.model_validate(
+        {
+            **scenario.model_dump(mode="python"),
+            "decaps": [
+                scenario.decaps[0].model_copy(
+                    update={"current_net": "V2", "current_rail_id": "R2"}
+                ),
+                scenario.decaps[1],
+            ],
+            "revision": scenario.revision + 1,
+        }
+    )
+    window = _window_with_scenario(distributed)
+    try:
+        fingerprint = distributed.design_fingerprint
+        revision = distributed.revision
+        window._show_original_distribution_board(True)
+        assert window.board._records[0].current_net == distributed.decaps[0].source_net
+        assert window.scenario is not None
+        assert window.scenario.design_fingerprint == fingerprint
+        assert window.scenario.revision == revision
+        assert not window._dirty
+
+        window._show_original_distribution_board(False)
+        assert window.board._records[0].current_net == "V2"
+    finally:
+        window._dirty = False
+        window.close()
+        application.processEvents()
+
+
+def test_board_original_toggle_restores_shared_chain_isolation_gap_display() -> None:
+    application = _application()
+    source = _shared_chain_scenario()
+    distributed = apply_distribution_plan(
+        source,
+        compute_distribution_plan(source, {("R1", "M1"): 1, ("R2", "M1"): 2}),
+    )
+    window = _window_with_scenario(distributed)
+    try:
+        current_gap = next(item for item in distributed.decaps if item.refdes == "D1")
+        assert not current_gap.enabled
+        assert current_gap.pad_state == DecapPadState.ISOLATION_GAP
+
+        window._show_original_distribution_board(True)
+        original_gap = next(item for item in window.board._records if item.refdes == "D1")
+        assert original_gap.enabled
+        assert original_gap.current_net == current_gap.source_net
+
+        window._show_original_distribution_board(False)
+        restored_current = next(item for item in window.board._records if item.refdes == "D1")
+        assert not restored_current.enabled
+    finally:
+        window._dirty = False
+        window.close()
+        application.processEvents()
+
+
+def test_detached_distribution_window_clears_stale_document_and_exposes_routing_scope() -> None:
+    application = _application()
+    window = _window_with_scenario(
+        _direct_scenario(
+            (("C1", 0.0, ("R1", "R2")),),
+            rail_ids=("R1", "R2"),
+        )
+    )
+    try:
+        window._show_distribution_window()
+        dialog = window._distribution_window
+        assert dialog is not None
+        assert "re-termination/reroute" in dialog.alternate_plane_note.text()
+        assert "does not prove" in dialog.alternate_plane_note.toolTip()
+        assert dialog.table.accessibleName() == "Distribution target matrix"
+        assert dialog.import_targets_button.accessibleName() == "Import distribution XLSX"
+        assert dialog.export_template_button.accessibleName() == "Export distribution XLSX template"
+        assert dialog.original_board_checkbox.accessibleName() == "Show original board assignments"
+
+        window._reset_document_view_state()
+        assert not dialog.isVisible()
+        assert dialog.table.rowCount() == 0
+        assert not dialog.import_targets_button.isEnabled()
+        assert not dialog.export_template_button.isEnabled()
+    finally:
+        window._dirty = False
+        window.close()
+        application.processEvents()
+
+
 def test_legacy_target_import_refreshes_present_requires_distance_and_invalidates_preview(
     tmp_path: Path,
     monkeypatch,
@@ -200,6 +426,7 @@ def test_legacy_target_import_refreshes_present_requires_distance_and_invalidate
     try:
         window._distribution_plan = object()
         window._distribution_preview_scenario = scenario
+        window._distribution_power_projection = object()
         window._distribution_export_rows = (object(),)
         monkeypatch.setattr(
             QFileDialog,
@@ -211,6 +438,7 @@ def test_legacy_target_import_refreshes_present_requires_distance_and_invalidate
 
         assert window._distribution_plan is None
         assert window._distribution_preview_scenario is None
+        assert window._distribution_power_projection is None
         assert window._distribution_export_rows == ()
         r1 = _rail_row(window, "R1")
         r2 = _rail_row(window, "R2")
@@ -575,6 +803,199 @@ def test_numeric_shortage_blocks_calculation_before_physical_planning() -> None:
         window._dirty = False
         window.close()
         application.processEvents()
+
+
+def test_distribution_table_sorts_numeric_columns_and_keeps_rail_keys() -> None:
+    application = _application()
+    scenario = _with_initial_rails(
+        _direct_scenario(
+            tuple((f"C{index}", float(index), ("R1", "R2")) for index in range(12)),
+            rail_ids=("R1", "R2"),
+        ),
+        {"C0": "R2", "C1": "R2"},
+    )
+    window = _window_with_scenario(scenario)
+    try:
+        assert window.distribution_table.isSortingEnabled()
+        # Ascending numeric order is 2 then 10; lexical order would be 10 then 2.
+        window.distribution_table.sortItems(1, Qt.SortOrder.AscendingOrder)
+        assert window.distribution_table.item(0, 0).data(Qt.ItemDataRole.UserRole) == "R2"
+
+        _set_target(window, "R2", 1)
+        assert window._distribution_targets[("R2", "M1")] == 1
+        assert window._distribution_targets[("R1", "M1")] == 10
+    finally:
+        window._dirty = False
+        window.close()
+        application.processEvents()
+
+
+def test_fixed_donor_capacity_is_not_reported_as_movable_capacity() -> None:
+    """The table preflight must match the planner's verified-movable inventory."""
+
+    application = _application()
+    scenario = _direct_scenario(
+        (
+            ("MOVABLE", 0.0, ("R1", "R2")),
+            ("FIXED1", 10.0, ("R1", "R2")),
+            ("FIXED2", 20.0, ("R1", "R2")),
+        ),
+        rail_ids=("R1", "R2"),
+    )
+    assert scenario.connection_analysis is not None
+    connections = dict(scenario.connection_analysis.connections)
+    for refdes in ("FIXED1", "FIXED2"):
+        connections[refdes] = ScenarioDecapConnection(
+            refdes=refdes,
+            kind=DecapConnectionKind.UNRESOLVED,
+            reason="source topology is ambiguous",
+        )
+    scenario = ScenarioSpec.model_validate(
+        {
+            **scenario.model_dump(mode="python"),
+            "connection_analysis": scenario.connection_analysis.model_copy(
+                update={"connections": connections}
+            ),
+        }
+    )
+    window = _window_with_scenario(scenario)
+    try:
+        # Physical inventory says this donor can give two. Only MOVABLE has
+        # verified connectivity, so numeric donor capacity is one.
+        _set_target(window, "R1", 1)
+        _set_target(window, "R2", 2)
+
+        assert not window.calculate_distribution_button.isEnabled()
+        message = window.distribution_validation_label.text()
+        assert "give capacity 1" in message
+        assert "receive demand 2" in message
+        assert "fixed/unassignable 1" in message
+        assert "short by 1" in message
+    finally:
+        window._dirty = False
+        window.close()
+        application.processEvents()
+
+
+def test_gnd_only_unresolved_donor_enables_calculation_with_exact_proof_pending() -> None:
+    application = _application()
+    source = _shared_chain_scenario()
+    assert source.connection_analysis is not None
+    connections = {
+        refdes: connection.model_copy(
+            update={
+                "kind": DecapConnectionKind.UNRESOLVED,
+                "reason": (
+                    "GND TOP component has no source Via anchor: "
+                    f"{refdes}"
+                ),
+            }
+        )
+        for refdes, connection in source.connection_analysis.connections.items()
+    }
+    cluster = source.connection_analysis.clusters[0].model_copy(
+        update={
+            "state": SharedPadClusterState.UNRESOLVED,
+            "ground_edges": (),
+            "isolation_gap_refdes": (),
+            "reason": "GND TOP component has no source Via anchor: A0, D1, A2",
+            "eligibility": {},
+            "via_eligibility": {},
+        }
+    )
+    decaps = tuple(
+        item.model_copy(
+            update={
+                "pwr_pad": item.pwr_pad.model_copy(update={"padstack": "PAD"}),
+                "gnd_pad": item.gnd_pad.model_copy(update={"padstack": "PAD"}),
+            }
+        )
+        for item in source.decaps
+    )
+    scenario = ScenarioSpec.model_validate(
+        {
+            **source.model_dump(mode="python"),
+            "decaps": decaps,
+            "connection_analysis": source.connection_analysis.model_copy(
+                update={"connections": connections, "clusters": (cluster,)}
+            ),
+        }
+    )
+    window = _window_with_scenario(scenario)
+    try:
+        _set_target(window, "R1", 0)
+        _set_target(window, "R2", 3)
+
+        assert window.calculate_distribution_button.isEnabled()
+        message = window.distribution_validation_label.text()
+        assert "exact retained-artwork proof pending" in message
+        assert "give capacity 3" in message
+        assert "receive demand 3" in message
+    finally:
+        window._dirty = False
+        window.close()
+        application.processEvents()
+
+
+def test_distribution_worker_reuses_one_projection_for_validate_compute_and_apply(
+    monkeypatch,
+) -> None:
+    import spd_decap_pi.distribution as distribution_module
+
+    scenario = _direct_scenario(
+        (("C1", 0.0, ("R1", "R2")),),
+        rail_ids=("R1", "R2"),
+    )
+    projection = object()
+    plan = SimpleNamespace()
+    seen: list[tuple[str, object | None]] = []
+
+    def build(*_args, **kwargs):
+        assert kwargs["targets"] == {("R1", "M1"): 0, ("R2", "M1"): 1}
+        seen.append(("build", None))
+        return projection
+
+    def validate(*_args, **kwargs):
+        seen.append(("validate", kwargs.get("power_projection")))
+
+    def compute(*_args, **kwargs):
+        seen.append(("compute", kwargs.get("power_projection")))
+        return plan
+
+    def apply(*_args, **kwargs):
+        seen.append(("apply", kwargs.get("power_projection")))
+        return scenario
+
+    monkeypatch.setattr(
+        distribution_module, "build_distribution_power_projection", build
+    )
+    monkeypatch.setattr(distribution_module, "validate_distribution_targets", validate)
+    monkeypatch.setattr(distribution_module, "compute_distribution_plan", compute)
+    monkeypatch.setattr(distribution_module, "apply_distribution_plan", apply)
+    monkeypatch.setattr(
+        distribution_module,
+        "distribution_csv_rows",
+        lambda _plan: (("Component", "REFDES"), ("M1", "C1")),
+    )
+
+    result = _job_compute_distribution(
+        scenario,
+        {"geometry/test": b"payload"},
+        {("R1", "M1"): 0, ("R2", "M1"): 1},
+        {("R1", "M1"): 0.0, ("R2", "M1"): 0.0},
+        DistributionDistanceMode.NEAREST,
+        progress=lambda _value, _message: None,
+        is_cancelled=lambda: False,
+    )
+
+    assert seen == [
+        ("build", None),
+        ("validate", projection),
+        ("compute", projection),
+        ("apply", projection),
+    ]
+    assert result.power_projection is projection
+    assert result.preview_scenario is scenario
 
 
 def test_one_invalid_component_blocks_an_otherwise_valid_component() -> None:
@@ -1148,7 +1569,7 @@ def test_distribution_milp_worker_allows_cancel_at_safe_solver_boundaries(
         assert captured["label"] == "Calculating De-cap Distribution preview..."
         assert captured["cancelable"] is True
         worker = captured["worker"]
-        assert worker.args[2][("R2", "M1")] == 1.25
+        assert worker.args[3][("R2", "M1")] == 1.25
     finally:
         window._dirty = False
         window.close()

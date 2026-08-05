@@ -3007,6 +3007,7 @@ def recover_spd_ground_reachability(
     target_layers_by_net: Mapping[str, Iterable[str]],
     target_node_predicate: Callable[[str, str, str, float, float], bool] | None = None,
     expected_source: SpdSourceInfo | None = None,
+    include_traces: bool = True,
     progress: ProgressCallback | None = None,
     is_cancelled: CancelCallback | None = None,
 ) -> SpdGroundReachability:
@@ -3016,6 +3017,10 @@ def recover_spd_ground_reachability(
     recovery: a branching Trace/Via graph is valid for return connectivity but
     cannot be condensed into one serial RL chain.  Only target-net records are
     retained, and every Node, Trace, and Via section is scanned at most once.
+
+    ``include_traces=False`` restricts the result to a directly joined local Via
+    stack.  Distribution audits use that mode to distinguish unchanged-barrel
+    reachability from the separate same-XY re-termination planning assumption.
     """
 
     reporter = _Reporter(progress, is_cancelled)
@@ -3221,7 +3226,7 @@ def recover_spd_ground_reachability(
                         target_nodes.get(node_key, 0)
                         | target_bit_by_key[(net_key, layer_key)]
                     )
-            if trace_start >= 0 and trace_end > trace_start:
+            if include_traces and trace_start >= 0 and trace_end > trace_start:
                 reporter.report(40, "Indexing same-NET GND Trace connectivity")
                 for index, match in enumerate(_TRACE_RE.finditer(data, trace_start, trace_end)):
                     if index % 8192 == 0:
@@ -3267,7 +3272,9 @@ def recover_spd_ground_reachability(
         frozenset(reachable), frozenset(unreachable), {
             "requested": len(requested), "reachable": len(reachable),
             "unreachable": len(unreachable), "node_section_passes": 1,
-            "trace_section_passes": int(trace_start >= 0 and trace_end > trace_start),
+            "trace_section_passes": int(
+                include_traces and trace_start >= 0 and trace_end > trace_start
+            ),
             "via_section_passes": 1, "components": components,
             "graph_nodes": len(parents), "graph_edges": graph_edges,
         }

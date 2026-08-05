@@ -1,6 +1,6 @@
 # De-cap Distribution 변동 규칙
 
-> 적용 프로그램: **SPD Decap PI Evaluator v0.16.0**
+> 적용 프로그램: **SPD Decap PI Evaluator v0.19.0**
 >
 > 문서 상태: 현재 구현 및 회귀 테스트에 대응하는 동작 규칙
 >
@@ -123,7 +123,8 @@ Receiver Demand = sum(max(Target - Present, 0))
 ### 5.1 PWR plane 및 VIA
 
 NET 변경 가능 여부는 De-cap 중심 좌표가 아니라 고유한 물리 PWR VIA의 정확한
-landing 좌표에서 판정한다.
+landing 좌표에서 판정한다. Evaluation용으로 저장된 단일 plane pair만 보지 않고,
+source SPD에 보존된 대상 NET의 모든 유효 PWR/DGND plane pair를 검토한다.
 
 - landing이 대상 PWR plane 내부에 있어야 한다.
 - plane void 또는 경계에만 닿는 경우는 허용하지 않는다.
@@ -132,6 +133,11 @@ landing 좌표에서 판정한다.
 - shared-pad 활성 구간은 그 구간이 사용하는 모든 고유 PWR VIA의 eligibility
   교집합을 만족해야 한다.
 - 적격성이 불명확하면 허용으로 추정하지 않고 fail-closed로 제외한다.
+
+대체 내부 PWR plane 적격성은 동일 landing XY에서 VIA를 해당 plane으로 재종단하거나
+재라우팅할 수 있다는 배치 계획 가정이다. source VIA barrel이 변경 없이 그 깊이까지
+도달한다는 증거는 아니다. UI와 검증 문서는 이 가정을 명시하며, 최종 제작 가능성은
+stack/via 설계 및 PowerSI 등 전문 도구에서 별도로 확인해야 한다.
 
 ### 5.2 수신 PWR NET bump
 
@@ -319,11 +325,21 @@ out-of-scope 연결이 있으면 PDN Evaluation은 별도로 차단될 수 있�
   않는다.
 - 값은 캐시된 Present를 이용해 즉시 검증하며, 매 keystroke마다 물리 최적화를
   실행하지 않는다.
+- 메인 Distribution 표의 cell을 더블클릭하면 동일 내용을 읽기 전용으로 보여주는
+  비모달 분리창을 연다. 상태의 단일 소유자는 메인 창이며 분리창은 별도 사본을
+  편집하지 않는다.
+- 분리창의 Original/Distributed 표시는 도면 렌더링만 전환하며 scenario, revision,
+  dirty 상태, target 및 plan을 변경하지 않는다. Original은 source NET/rail뿐 아니라
+  Distribution이 만든 isolation-gap의 enabled/pad 상태도 source 상태로 복원해 표시한다.
 
 ## 11. Excel Target 가져오기
 
 Target Workbook은 `PWR NET Distribution Targets` sheet를 사용하며 A1은
 `PWR NET`이어야 한다.
+
+분리창에서 현재 Target 표를 계산 전후 언제든 XLSX template으로 내보낼 수 있다.
+사용자는 XLSX의 Target/Tolerance만 수정한 뒤 가져오며, 성공한 가져오기는 메인 표에
+즉시 반영되고 기존 Preview는 무효화된다.
 
 - 가져오는 값은 절대 수량 `Target`과 `Tolerance (%)`뿐이다.
 - Workbook의 Present는 감사용이며, 현재 열린 SPD에서 다시 계산한 Present가 항상

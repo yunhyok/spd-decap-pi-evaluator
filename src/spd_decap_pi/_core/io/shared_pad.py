@@ -10,7 +10,7 @@ from __future__ import annotations
 from bisect import bisect_left, bisect_right
 from dataclasses import dataclass
 from hashlib import sha256
-from math import atan2, cos, floor, hypot, pi, radians, sin
+from math import atan2, cos, floor, hypot, isfinite, pi, radians, sin
 from statistics import median
 from sys import float_info
 from typing import Callable, Literal, Mapping, Sequence
@@ -1779,6 +1779,137 @@ def _segment_is_final_copper(
     return True
 
 
+def _ordered_final_copper_shape(
+    primitives: Sequence[
+        tuple[
+            CopperPrimitiveKind,
+            Sequence[tuple[float, float]] | tuple[float, float, float],
+        ]
+    ],
+):
+    """Build exact ordered boolean copper for a bounded fallback proof."""
+
+    try:
+        from shapely.errors import GEOSException
+        from shapely.geometry import GeometryCollection, Point, Polygon
+        from shapely.ops import unary_union
+    except ImportError:
+        return None
+
+    shape = GeometryCollection()
+    runs: list[tuple[bool, list[object]]] = []
+    try:
+        for kind, raw in primitives:
+            if kind.endswith("polygon"):
+                primitive = Polygon(raw)  # type: ignore[arg-type]
+            else:
+                x_um, y_um, radius_um = map(float, raw)
+                if not isfinite(radius_um) or radius_um <= 0.0:
+                    return None
+                primitive = Point(x_um, y_um).buffer(radius_um, quad_segs=64)
+            if primitive.is_empty or not primitive.is_valid or primitive.area <= 0.0:
+                return None
+            positive = kind.startswith("positive_")
+            if runs and runs[-1][0] == positive:
+                runs[-1][1].append(primitive)
+            else:
+                runs.append((positive, [primitive]))
+        for positive, run in runs:
+            batch = unary_union(run)
+            if batch.is_empty or not batch.is_valid or batch.area <= 0.0:
+                return None
+            shape = shape.union(batch) if positive else shape.difference(batch)
+    except (TypeError, ValueError, IndexError, ArithmeticError, GEOSException):
+        return None
+    return None if shape.is_empty or not shape.is_valid or shape.area <= 0.0 else shape
+
+
+def _placed_pad_polygon(shape: _PlacedPad):
+    """Return one exact regular terminal shape for final-component queries."""
+
+    from shapely.geometry import Point, Polygon
+
+    if shape.kind == "CIRCLE":
+        return Point(shape.x_um, shape.y_um).buffer(shape.radius_um, quad_segs=64)
+    axis_x, axis_y = shape.axes
+    half_x = shape.width_um / 2.0
+    half_y = shape.height_um / 2.0
+    return Polygon(
+        tuple(
+            (
+                shape.x_um + x_sign * half_x * axis_x[0] + y_sign * half_y * axis_y[0],
+                shape.y_um + x_sign * half_x * axis_x[1] + y_sign * half_y * axis_y[1],
+            )
+            for x_sign, y_sign in ((1.0, 1.0), (-1.0, 1.0), (-1.0, -1.0), (1.0, -1.0))
+        )
+    )
+
+
+def _exact_final_component_memberships(
+    final_members: set[int],
+    shapes_by_owner: Mapping[int, _PlacedPad],
+    primitives: Sequence[
+        tuple[
+            CopperPrimitiveKind,
+            Sequence[tuple[float, float]] | tuple[float, float, float],
+        ]
+    ],
+) -> tuple[tuple[set[int], ...], set[int]] | None:
+    """Map pads to exact final copper components after pair-budget exhaustion."""
+
+    try:
+        from shapely.errors import GEOSException
+        from shapely.strtree import STRtree
+    except ImportError:
+        return None
+    final_shape = _ordered_final_copper_shape(primitives)
+    if final_shape is None:
+        return None
+    components = tuple(
+        item
+        for item in (
+            final_shape.geoms
+            if hasattr(final_shape, "geoms")
+            else (final_shape,)
+        )
+        if item.geom_type in {"Polygon", "MultiPolygon"}
+        and not item.is_empty
+        and item.area > 0.0
+    )
+    if not components:
+        return None
+    tree = STRtree(components)
+    memberships = [set() for _item in components]
+    boundary_owners: set[int] = set()
+    try:
+        for owner in sorted(final_members):
+            pad = _placed_pad_polygon(shapes_by_owner[owner])
+            positive = False
+            boundary = False
+            for raw_index in tree.query(pad, predicate="intersects"):
+                component_index = int(raw_index)
+                overlap = components[component_index].intersection(pad)
+                if overlap.area > 0.0:
+                    memberships[component_index].add(owner)
+                    positive = True
+                elif not overlap.is_empty:
+                    boundary = True
+            if not positive:
+                if boundary:
+                    boundary_owners.add(owner)
+                else:
+                    # The analytic ordered replay admitted this finite pad, but
+                    # GEOS could not place it in a final component.  Do not use
+                    # a partial exact proof in that inconsistent state.
+                    return None
+    except (KeyError, TypeError, ValueError, ArithmeticError, GEOSException):
+        return None
+    return (
+        tuple(members for members in memberships if len(members) >= 2),
+        boundary_owners,
+    )
+
+
 def _copper_memberships(
     shapes: Sequence[_PlacedPad],
     grid: _ShapeGrid,
@@ -1881,6 +2012,7 @@ def _copper_memberships(
         retained_groups: list[
             tuple[int, CopperPrimitiveKind, object, set[int], bool]
         ] = []
+        exact_component_fallback_needed = False
         parents = {owner: owner for owner in final_members}
 
         def owner_root(owner: int) -> int:
@@ -1935,6 +2067,8 @@ def _copper_memberships(
                             primitives,
                         ):
                             join(first_owner, second_owner)
+            else:
+                exact_component_fallback_needed = True
 
         # Merge tessellated positive primitives only through a source-replayed
         # path.  This accepts edge seams, but rejects point contacts and voids.
@@ -1982,6 +2116,18 @@ def _copper_memberships(
                     if connected:
                         break
             active_groups.append(second_group)
+
+        if exact_component_fallback_needed:
+            exact = _exact_final_component_memberships(
+                final_members,
+                shape_by_owner,
+                primitives,
+            )
+            if exact is not None:
+                exact_groups, exact_boundary = exact
+                groups.extend(exact_groups)
+                boundary_owners.update(exact_boundary)
+                continue
 
         component_members: dict[int, set[int]] = {}
         for owner in final_members:

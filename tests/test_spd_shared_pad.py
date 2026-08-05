@@ -639,7 +639,7 @@ def test_self_intersecting_positive_polygon_lobes_are_not_false_joined() -> None
     assert all(item.kind not in {"SHARED_ANCHOR", "SHARED_DUMMY"} for item in result.connections)
 
 
-def test_generic_path_fallback_has_a_fail_closed_work_budget() -> None:
+def test_generic_path_budget_uses_exact_final_component_proof() -> None:
     decaps = tuple(
         replace(_decap(f"C{index}", 0.0), power_x_um=index * 500.0)
         for index in range(64)
@@ -663,8 +663,14 @@ def test_generic_path_fallback_has_a_fail_closed_work_budget() -> None:
     )
 
     # 2,016 candidate terminal pairs x 1,002 ordered primitives exceeds the
-    # explicit proof budget.  No unproven connectivity is inferred.
-    assert result.clusters == ()
+    # pairwise path budget.  The ordered final copper still proves that every
+    # PWR terminal belongs to one component; the remote holes do not split it.
+    assert len(result.clusters) == 1
+    assert result.clusters[0].state == "FLOATING"
+    assert result.clusters[0].member_refdes == tuple(
+        sorted((f"C{index}" for index in range(64)), key=str.casefold)
+    )
+    assert len(result.clusters[0].power_edges) == 63
 
 
 def test_finite_pads_on_outer_and_cutout_boundaries_keep_area_membership() -> None:

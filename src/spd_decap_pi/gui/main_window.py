@@ -76,7 +76,7 @@ from spd_decap_pi._core.solver.research_uniform_profile import (
     PROFILE_COMPILER_VERSION as RESEARCH_PROFILE_COMPILER_VERSION,
 )
 
-from ..scenario import DecapConnectionKind, ScenarioDecap, ScenarioSpec
+from ..scenario import DecapConnectionKind, DecapPadState, ScenarioDecap, ScenarioSpec
 from ..scenario_edits import (
     ProposedRailAssignmentAnalysis,
     ScenarioEditError,
@@ -98,6 +98,7 @@ from ..scenario_io import (
 from ..spd_adapter import ScenarioImport, import_spd_scenario, verify_scenario_source
 from ..version import APP_DISPLAY_NAME, __version__
 from .board_view import DecapBoardView
+from .distribution_window import DistributionTargetsWindow
 from .results_window import (
     ComparisonResultsWindow,
     impedance_transition_at_frequency,
@@ -108,6 +109,26 @@ from .worker import FunctionWorker
 _DISTRIBUTION_FIELD_ROLE = int(Qt.ItemDataRole.UserRole) + 1
 _DISTRIBUTION_TARGET_FIELD = "target"
 _DISTRIBUTION_TOLERANCE_FIELD = "tolerance"
+
+
+class _DistributionNumericItem(QTableWidgetItem):
+    """A table item whose live editable text sorts as a numeric value."""
+
+    @staticmethod
+    def _sort_key(item: QTableWidgetItem) -> tuple[int, float | str]:
+        try:
+            value = float(item.text().replace(",", ""))
+            if isfinite(value):
+                return (0, value)
+        except ValueError:
+            pass
+        # Keep temporarily invalid editor text sortable and visibly after valid
+        # numeric cells rather than silently treating it as zero.
+        return (1, item.text().casefold())
+
+    def __lt__(self, other: QTableWidgetItem) -> bool:
+        return self._sort_key(self) < self._sort_key(other)
+
 
 _EXPLORATORY_FIDELITY_WARNING = (
     "Exploratory: rectangular PWR bbox, continuous DGND, single-rail Zii; "
@@ -360,6 +381,7 @@ class _PreparedDistributionPreview:
     plan: Any
     preview_scenario: ScenarioSpec
     export_rows: tuple[Any, ...]
+    power_projection: Any | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -382,6 +404,7 @@ class _PreparedDocumentView:
     plane_cells: tuple[_PreparedPlaneCell, ...]
     layer_labels: tuple[tuple[str, str], ...]
     distribution_counts: dict[tuple[str, str], int]
+    distribution_assignable_counts: dict[tuple[str, str], int]
     design_fingerprint: str
     project: ProjectSpec
     bumps: tuple[Any, ...]
@@ -403,21 +426,23 @@ class _PreparedScenarioBundle:
     view: _PreparedDocumentView
 
 
-def _distribution_counts_for_preview(
+def _distribution_inventory_counts_for_preview(
     scenario: ScenarioSpec,
-) -> dict[tuple[str, str], int]:
-    """Compute the table inventory without touching a QWidget."""
+) -> tuple[dict[tuple[str, str], int], dict[tuple[str, str], int]]:
+    """Compute both distribution inventories without touching a QWidget."""
 
     try:
-        from ..distribution import distribution_present_counts
+        from ..distribution import distribution_inventory_counts
     except ImportError:
-        counts: dict[tuple[str, str], int] = {}
+        present: dict[tuple[str, str], int] = {}
         for decap in scenario.decaps:
             if decap.enabled and decap.model_id is not None:
                 key = (decap.current_rail_id, decap.model_id)
-                counts[key] = counts.get(key, 0) + 1
-        return counts
-    return distribution_present_counts(scenario)
+                present[key] = present.get(key, 0) + 1
+        # Without the Distribution module a safe preview is unavailable; do not
+        # overstate donor capacity.
+        return present, {}
+    return distribution_inventory_counts(scenario)
 
 
 def _prepared_plane_paths(
@@ -491,7 +516,7 @@ def _prepare_document_view(
     if is_cancelled():
         raise RuntimeError("document opening cancelled")
     progress(progress_end - 1, "Preparing component distribution")
-    counts = _distribution_counts_for_preview(scenario)
+    counts, assignable_counts = _distribution_inventory_counts_for_preview(scenario)
     progress(progress_end, "Ready to render board")
     return _PreparedDocumentView(
         source_sha256=scenario.source.sha256,
@@ -500,6 +525,7 @@ def _prepare_document_view(
             project.stackup_layers, (partition.layer for partition in project.partitions)
         ),
         distribution_counts=counts,
+        distribution_assignable_counts=assignable_counts,
         # This can serialize thousands of decaps.  Compute it here so opening
         # a large current-schema scenario does not repeat that work on Qt's
         # event loop thread.
@@ -1135,6 +1161,7 @@ def _job_save_scenario(
 
 def _job_compute_distribution(
     scenario: ScenarioSpec,
+    attachments: dict[str, bytes],
     targets: dict[tuple[str, str], int],
     tolerances: dict[tuple[str, str], float],
     distance_mode: Any,
@@ -1144,19 +1171,42 @@ def _job_compute_distribution(
 ) -> Any:
     """Run the CPU-bound distribution planner behind the shared GUI worker."""
 
-    from ..distribution import compute_distribution_plan
+    from ..distribution import (
+        build_distribution_power_projection,
+        compute_distribution_plan,
+        validate_distribution_targets,
+    )
 
     if is_cancelled():
         raise RuntimeError("distribution calculation cancelled")
-    progress(5, "Validating De-cap Distribution targets")
+    progress(3, "Rebuilding exact Distribution PWR proof from retained artwork")
     with scoped_blas_threads():
+        power_projection = build_distribution_power_projection(
+            scenario,
+            attachments,
+            targets=targets,
+            progress=lambda value, message: progress(
+                3 + round(float(value) * 0.27), message
+            ),
+            is_cancelled=is_cancelled,
+        )
+        if is_cancelled():
+            raise RuntimeError("distribution calculation cancelled")
+        progress(31, "Validating exact De-cap Distribution donor capacity")
+        validate_distribution_targets(
+            scenario,
+            targets,
+            tolerances,
+            power_projection=power_projection,
+        )
         result = compute_distribution_plan(
             scenario,
             targets,
             distance_mode,
             tolerances=tolerances,
+            power_projection=power_projection,
             progress=lambda value, message: progress(
-                10 + round(float(value) * 0.85), message
+                32 + round(float(value) * 0.60), message
             ),
             is_cancelled=is_cancelled,
         )
@@ -1165,7 +1215,11 @@ def _job_compute_distribution(
         progress(92, "Preparing atomic De-cap Distribution preview")
         from ..distribution import apply_distribution_plan, distribution_csv_rows
 
-        preview = apply_distribution_plan(scenario, result)
+        preview = apply_distribution_plan(
+            scenario,
+            result,
+            power_projection=power_projection,
+        )
         exported = tuple(distribution_csv_rows(result))
         export_rows = (
             exported[1:]
@@ -1177,7 +1231,12 @@ def _job_compute_distribution(
     if is_cancelled():
         raise RuntimeError("distribution calculation cancelled")
     progress(100, "De-cap Distribution preview complete")
-    return _PreparedDistributionPreview(result, preview, export_rows)
+    return _PreparedDistributionPreview(
+        result,
+        preview,
+        export_rows,
+        power_projection,
+    )
 
 
 class MainWindow(QMainWindow):
@@ -1203,6 +1262,8 @@ class MainWindow(QMainWindow):
         self._tuned_evaluations_by_rail: dict[str, Any] = {}
         self._comparison_batch: Any | None = None
         self._results_window: ComparisonResultsWindow | None = None
+        self._distribution_window: DistributionTargetsWindow | None = None
+        self._distribution_show_original_board = False
         self._decap_context_menu: QMenu | None = None
         self._active_board_net_keys: frozenset[str] | None = None
         self._rendered_bump_source_sha256: str | None = None
@@ -1219,6 +1280,7 @@ class MainWindow(QMainWindow):
         self._plane_layer_selection_initialized = False
         self._distribution_basis_fingerprint: str | None = None
         self._distribution_present_counts: dict[tuple[str, str], int] = {}
+        self._distribution_assignable_counts: dict[tuple[str, str], int] = {}
         self._distribution_targets: dict[tuple[str, str], int] = {}
         self._distribution_tolerances: dict[tuple[str, str], float] = {}
         self._distribution_rail_ids: tuple[str, ...] = ()
@@ -1227,6 +1289,7 @@ class MainWindow(QMainWindow):
         self._distribution_invalid_tolerance_cells: set[tuple[str, str]] = set()
         self._distribution_plan: Any | None = None
         self._distribution_preview_scenario: ScenarioSpec | None = None
+        self._distribution_power_projection: Any | None = None
         self._distribution_export_rows: tuple[Any, ...] = ()
         self._distribution_table_updating = False
         self._distribution_import_notice: str | None = None
@@ -1720,7 +1783,8 @@ class MainWindow(QMainWindow):
         intro = QLabel(
             "Present is the enabled, model-assigned physical inventory. A cap with "
             "unresolved or floating connectivity is included in Present but remains "
-            "fixed on its current PWR NET. For a donor, "
+            "fixed on its current PWR NET; the donor check reports only verified "
+            "movable capacity. For a donor, "
             "Target is the minimum count to retain (maximum give capacity); for a "
             "receiver it is the requested final count. Unused donor capacity stays "
             "on its current PWR NET. When Target equals Present, Tolerance 0% "
@@ -1732,9 +1796,26 @@ class MainWindow(QMainWindow):
         intro.setWordWrap(True)
         intro.setStyleSheet("color: #9aa4b2;")
         targets_layout.addWidget(intro)
+        alternate_plane_note = QLabel(
+            "Alternate PWR plane: assessed as possible via re-termination/reroute "
+            "at the same landing XY; existing via-barrel depth is not proven."
+        )
+        alternate_plane_note.setObjectName("alternatePwrPlaneRoutingNote")
+        alternate_plane_note.setWordWrap(True)
+        alternate_plane_note.setStyleSheet("color: #9aa4b2;")
+        alternate_plane_note.setToolTip(
+            "Alternate PWR plane assessment permits a possible via "
+            "re-termination/reroute at the same landing XY. It does not prove the "
+            "existing via barrel reaches that depth."
+        )
+        targets_layout.addWidget(alternate_plane_note)
 
         self.distribution_table = QTableWidget(0, 1)
         self.distribution_table.setObjectName("distributionTargetTable")
+        self.distribution_table.setAccessibleName("Distribution target matrix")
+        self.distribution_table.setToolTip(
+            "Double-click a cell to open the detached Distribution XLSX window."
+        )
         self.distribution_table.setHorizontalHeaderLabels(("PWR NET",))
         self.distribution_table.setAlternatingRowColors(True)
         self.distribution_table.setSelectionBehavior(
@@ -1746,6 +1827,9 @@ class MainWindow(QMainWindow):
         self.distribution_table.setMinimumHeight(150)
         self.distribution_table.itemChanged.connect(
             self._distribution_target_changed
+        )
+        self.distribution_table.itemDoubleClicked.connect(
+            lambda _item: self._show_distribution_window()
         )
         self.distribution_table.itemDelegate().commitData.connect(
             self._distribution_editor_committed
@@ -1865,6 +1949,86 @@ class MainWindow(QMainWindow):
         layout.addWidget(splitter, 1)
         return page
 
+    def _distribution_potential_assignable_counts(
+        self,
+    ) -> tuple[dict[tuple[str, str], int], dict[tuple[str, str], int]]:
+        """Cheap load-safe upper bound for legacy GND-only unresolved clusters.
+
+        Opening a large bundle must not rebuild exact artwork.  This pass uses
+        only persisted source topology/Via metadata so the UI can enable
+        Calculate when the apparent shortage may be repaired.  The worker then
+        performs the authoritative retained-artwork proof and repeats numeric
+        validation before planning.
+        """
+
+        potential = dict(self._distribution_assignable_counts)
+        pending: dict[tuple[str, str], int] = {}
+        scenario = self._scenario
+        analysis = scenario.connection_analysis if scenario is not None else None
+        if scenario is None or analysis is None:
+            return potential, pending
+        decap_by_key = {item.refdes.casefold(): item for item in scenario.decaps}
+        connection_by_key = {
+            item.refdes.casefold(): item
+            for item in analysis.connections.values()
+        }
+        prefix = "gnd top component has no source via anchor:"
+        for cluster in analysis.clusters:
+            if (
+                str(getattr(cluster.state, "value", cluster.state)).upper()
+                != "UNRESOLVED"
+                or len(cluster.member_refdes) < 2
+                or not cluster.layer
+                or not cluster.power_net
+                or not cluster.ground_net
+                or not cluster.source_graph_is_connected(cluster.power_edges)
+            ):
+                continue
+            members: list[tuple[Any, Any]] = []
+            power_via_count = 0
+            ground_via_count = 0
+            valid = True
+            for refdes in cluster.member_refdes:
+                key = refdes.casefold()
+                decap = decap_by_key.get(key)
+                connection = connection_by_key.get(key)
+                reasons = tuple(
+                    item.strip().casefold()
+                    for item in str(getattr(connection, "reason", "") or "").split(";")
+                    if item.strip()
+                )
+                if (
+                    decap is None
+                    or connection is None
+                    or connection.kind != DecapConnectionKind.UNRESOLVED
+                    or connection.cluster_id is None
+                    or connection.cluster_id.casefold()
+                    != cluster.cluster_id.casefold()
+                    or not reasons
+                    or not all(item.startswith(prefix) for item in reasons)
+                    or decap.pwr_pad.layer is None
+                    or decap.gnd_pad.layer is None
+                    or decap.pwr_pad.layer.casefold() != cluster.layer.casefold()
+                    or decap.gnd_pad.layer.casefold() != cluster.layer.casefold()
+                    or decap.source_net.casefold() != cluster.power_net.casefold()
+                    or not decap.pwr_pad.padstack
+                    or not decap.gnd_pad.padstack
+                ):
+                    valid = False
+                    break
+                power_via_count += len(connection.power_vias)
+                ground_via_count += len(connection.ground_vias)
+                members.append((decap, connection))
+            if not valid or power_via_count == 0 or ground_via_count == 0:
+                continue
+            for decap, _connection in members:
+                if not decap.enabled or decap.model_id is None:
+                    continue
+                cell = (decap.current_rail_id, decap.model_id)
+                potential[cell] = potential.get(cell, 0) + 1
+                pending[cell] = pending.get(cell, 0) + 1
+        return potential, pending
+
     def _distribution_numeric_state(self) -> tuple[bool, bool, str]:
         if self._scenario is None or not self._distribution_present_counts:
             return False, False, "No distribution inventory is loaded."
@@ -1881,13 +2045,20 @@ class MainWindow(QMainWindow):
                 "Tolerance must be a finite percentage from 0 through 100.",
             )
 
+        potential_assignable, _pending_by_cell = (
+            self._distribution_potential_assignable_counts()
+        )
         summaries: list[str] = []
         shortages: list[str] = []
+        shortage_summaries: list[str] = []
         has_changes = False
         has_exchange_participants = False
         total_demand = 0
+        total_pending_capacity = 0
         for model_id in self._distribution_model_ids:
             capacity = 0
+            fixed_capacity = 0
+            pending_capacity = 0
             demand = 0
             exchange_cells = 0
             exchange_capacity = 0
@@ -1897,7 +2068,20 @@ class MainWindow(QMainWindow):
                 present = self._distribution_present_counts.get(key, 0)
                 target = self._distribution_targets.get(key, present)
                 if target < present:
-                    capacity += present - target
+                    physical_capacity = present - target
+                    verified_assignable = self._distribution_assignable_counts.get(
+                        key, 0
+                    )
+                    assignable = potential_assignable.get(key, verified_assignable)
+                    usable_capacity = min(physical_capacity, assignable)
+                    verified_capacity = min(
+                        physical_capacity, verified_assignable
+                    )
+                    capacity += usable_capacity
+                    pending_capacity += max(
+                        usable_capacity - verified_capacity, 0
+                    )
+                    fixed_capacity += physical_capacity - usable_capacity
                     model_changed = True
                 elif target > present:
                     demand += target - present
@@ -1914,6 +2098,7 @@ class MainWindow(QMainWindow):
                 has_exchange_participants or exchange_cells > 0
             )
             total_demand += demand
+            total_pending_capacity += pending_capacity
             unused = capacity - demand
             exchange_text = (
                 f", exchange {exchange_cells:,} cell(s) / "
@@ -1921,17 +2106,41 @@ class MainWindow(QMainWindow):
                 if exchange_cells
                 else ""
             )
+            fixed_text = (
+                f", fixed/unassignable {fixed_capacity:,}"
+                if fixed_capacity
+                else ""
+            )
+            pending_text = (
+                f", exact-proof pending {pending_capacity:,}"
+                if pending_capacity
+                else ""
+            )
             summaries.append(
                 f"{model_id}: give capacity {capacity:,}, "
-                f"receive demand {demand:,}{exchange_text}, balance {unused:+,}"
+                f"receive demand {demand:,}{fixed_text}{pending_text}"
+                f"{exchange_text}, "
+                f"balance {unused:+,}"
             )
             if demand > capacity:
-                shortages.append(
-                    f"{model_id} is short by {demand - capacity:,}"
-                )
+                detail = f"{model_id} is short by {demand - capacity:,}"
+                if fixed_capacity:
+                    detail += (
+                        f" ({fixed_capacity:,} donor decap(s) are "
+                        "fixed/unassignable)"
+                    )
+                shortages.append(detail)
+                shortage_summaries.append(summaries[-1])
 
         if shortages:
-            return False, has_changes, "Invalid — " + "; ".join(shortages)
+            return (
+                False,
+                has_changes,
+                "Invalid — "
+                + " | ".join(shortage_summaries)
+                + "; "
+                + "; ".join(shortages),
+            )
         if not has_changes:
             if has_exchange_participants:
                 return (
@@ -1952,7 +2161,12 @@ class MainWindow(QMainWindow):
                 "No receiver demand is defined; unused donor capacity remains "
                 "on its current PWR NET.",
             )
-        return True, True, "Valid — " + " | ".join(summaries)
+        prefix = (
+            "Valid (exact retained-artwork proof pending) — "
+            if total_pending_capacity
+            else "Valid — "
+        )
+        return True, True, prefix + " | ".join(summaries)
 
     def _update_distribution_validation(self) -> None:
         numeric_state = self._distribution_numeric_state()
@@ -2019,10 +2233,12 @@ class MainWindow(QMainWindow):
         had_result = bool(
             self._distribution_plan is not None
             or self._distribution_preview_scenario is not None
+            or self._distribution_power_projection is not None
             or self._distribution_export_rows
         )
         self._distribution_plan = None
         self._distribution_preview_scenario = None
+        self._distribution_power_projection = None
         self._distribution_export_rows = ()
         if had_result:
             self._reset_distribution_actual_deltas()
@@ -2034,6 +2250,7 @@ class MainWindow(QMainWindow):
     def _reset_distribution_state(self) -> None:
         self._distribution_basis_fingerprint = None
         self._distribution_present_counts.clear()
+        self._distribution_assignable_counts.clear()
         self._distribution_targets.clear()
         self._distribution_tolerances.clear()
         self._distribution_rail_ids = ()
@@ -2042,6 +2259,7 @@ class MainWindow(QMainWindow):
         self._distribution_invalid_tolerance_cells.clear()
         self._distribution_plan = None
         self._distribution_preview_scenario = None
+        self._distribution_power_projection = None
         self._distribution_export_rows = ()
         self._distribution_import_notice = None
         if hasattr(self, "distribution_distance_combo"):
@@ -2103,6 +2321,7 @@ class MainWindow(QMainWindow):
         *,
         preserve_result: bool = False,
         prepared_counts: dict[tuple[str, str], int] | None = None,
+        prepared_assignable_counts: dict[tuple[str, str], int] | None = None,
         prepared_fingerprint: str | None = None,
         project: ProjectSpec | None = None,
     ) -> None:
@@ -2121,11 +2340,13 @@ class MainWindow(QMainWindow):
             if preserve_result
             else {}
         )
-        raw_counts = (
-            prepared_counts
-            if prepared_counts is not None
-            else _distribution_counts_for_preview(scenario)
-        )
+        if prepared_counts is None or prepared_assignable_counts is None:
+            raw_counts, raw_assignable_counts = _distribution_inventory_counts_for_preview(
+                scenario
+            )
+        else:
+            raw_counts = prepared_counts
+            raw_assignable_counts = prepared_assignable_counts
         self._scenario = scenario
         project = project if project is not None else scenario.base_project
         rails = tuple(project.rails)
@@ -2133,9 +2354,13 @@ class MainWindow(QMainWindow):
         rail_ids = tuple(rail.rail_id for rail in rails)
         model_ids = tuple(model.model_id for model in models)
         counts = self._canonical_distribution_counts(raw_counts, rail_ids, model_ids)
+        assignable_counts = self._canonical_distribution_counts(
+            raw_assignable_counts, rail_ids, model_ids
+        )
         self._distribution_rail_ids = rail_ids
         self._distribution_model_ids = model_ids
         self._distribution_present_counts = counts
+        self._distribution_assignable_counts = assignable_counts
         self._distribution_targets = dict(counts)
         self._distribution_tolerances = {
             (rail_id, model_id): float(
@@ -2156,6 +2381,7 @@ class MainWindow(QMainWindow):
         if not preserve_result:
             self._distribution_plan = None
             self._distribution_preview_scenario = None
+            self._distribution_power_projection = None
             self._distribution_export_rows = ()
             self.distribution_summary.setPlainText(
                 "Enter Target counts and calculate a preview. Numeric capacity is "
@@ -2197,7 +2423,7 @@ class MainWindow(QMainWindow):
                     target_column = present_column + 1
                     tolerance_column = present_column + 2
                     delta_column = present_column + 3
-                    present_item = QTableWidgetItem(f"{present:d}")
+                    present_item = _DistributionNumericItem(f"{present:d}")
                     present_item.setTextAlignment(
                         Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter
                     )
@@ -2209,7 +2435,7 @@ class MainWindow(QMainWindow):
                         "SHARED parts may move; floating or unresolved parts are counted "
                         "but fixed on their current NET."
                     )
-                    target_item = QTableWidgetItem(f"{present:d}")
+                    target_item = _DistributionNumericItem(f"{present:d}")
                     target_item.setData(Qt.ItemDataRole.UserRole, key)
                     target_item.setData(
                         _DISTRIBUTION_FIELD_ROLE, _DISTRIBUTION_TARGET_FIELD
@@ -2222,7 +2448,7 @@ class MainWindow(QMainWindow):
                         "receive demand; equal uses Tolerance to include or exclude"
                     )
                     tolerance = self._distribution_tolerances[key]
-                    tolerance_item = QTableWidgetItem(f"{tolerance:g}")
+                    tolerance_item = _DistributionNumericItem(f"{tolerance:g}")
                     tolerance_item.setData(Qt.ItemDataRole.UserRole, key)
                     tolerance_item.setData(
                         _DISTRIBUTION_FIELD_ROLE,
@@ -2236,7 +2462,7 @@ class MainWindow(QMainWindow):
                         "positive = equal give/receive turnover limited to "
                         "floor(Present × Tolerance / 100)."
                     )
-                    delta_item = QTableWidgetItem("0")
+                    delta_item = _DistributionNumericItem("0")
                     delta_item.setData(Qt.ItemDataRole.UserRole, key)
                     delta_item.setTextAlignment(
                         Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter
@@ -2260,11 +2486,14 @@ class MainWindow(QMainWindow):
         finally:
             self.distribution_table.blockSignals(previous_block)
             self._distribution_table_updating = False
+        self.distribution_table.setSortingEnabled(True)
         self._update_distribution_validation()
+        self._sync_distribution_window()
 
     def _refresh_distribution_tab(
         self,
         prepared_counts: dict[tuple[str, str], int] | None = None,
+        prepared_assignable_counts: dict[tuple[str, str], int] | None = None,
         prepared_fingerprint: str | None = None,
         project: ProjectSpec | None = None,
     ) -> None:
@@ -2286,6 +2515,7 @@ class MainWindow(QMainWindow):
         self._populate_distribution_table(
             scenario,
             prepared_counts=prepared_counts,
+            prepared_assignable_counts=prepared_assignable_counts,
             prepared_fingerprint=prepared_fingerprint,
             project=project,
         )
@@ -2437,6 +2667,7 @@ class MainWindow(QMainWindow):
             update_controls=False,
         )
         self._update_distribution_validation()
+        self._sync_distribution_window()
 
     def _distribution_target_changed(self, item: QTableWidgetItem) -> None:
         if self._distribution_table_updating:
@@ -2516,6 +2747,11 @@ class MainWindow(QMainWindow):
         if not hasattr(self, "distribution_table"):
             return
         self._distribution_table_updating = True
+        sorting_enabled = self.distribution_table.isSortingEnabled()
+        header = self.distribution_table.horizontalHeader()
+        sort_section = header.sortIndicatorSection()
+        sort_order = header.sortIndicatorOrder()
+        self.distribution_table.setSortingEnabled(False)
         previous_block = self.distribution_table.blockSignals(True)
         try:
             for row in range(self.distribution_table.rowCount()):
@@ -2526,7 +2762,95 @@ class MainWindow(QMainWindow):
                         item.setBackground(QBrush())
         finally:
             self.distribution_table.blockSignals(previous_block)
+            self.distribution_table.setSortingEnabled(sorting_enabled)
+            if sorting_enabled and sort_section >= 0:
+                self.distribution_table.sortItems(sort_section, sort_order)
             self._distribution_table_updating = False
+
+    def _distribution_matrix_values(self) -> tuple[tuple[str, ...], tuple[tuple[object, ...], ...]]:
+        headers = tuple(
+            self.distribution_table.horizontalHeaderItem(column).text()
+            for column in range(self.distribution_table.columnCount())
+        )
+        rows = tuple(
+            tuple(
+                self.distribution_table.item(row, column).text()
+                if self.distribution_table.item(row, column) is not None
+                else ""
+                for column in range(self.distribution_table.columnCount())
+            )
+            for row in range(self.distribution_table.rowCount())
+        )
+        return headers, rows
+
+    def _sync_distribution_window(self) -> None:
+        if self._distribution_window is None:
+            return
+        self._distribution_window.set_document_active(self._scenario is not None)
+        headers, rows = self._distribution_matrix_values()
+        self._distribution_window.set_matrix(headers, rows)
+        self._distribution_window.set_original_board_checked(
+            self._distribution_show_original_board
+        )
+
+    def _show_distribution_window(self) -> None:
+        if self._scenario is None:
+            return
+        if self._distribution_window is None:
+            self._distribution_window = DistributionTargetsWindow(self)
+            self._distribution_window.importRequested.connect(
+                self._import_distribution_targets
+            )
+            self._distribution_window.exportTemplateRequested.connect(
+                self._export_distribution_template
+            )
+            self._distribution_window.originalBoardToggled.connect(
+                self._show_original_distribution_board
+            )
+        self._sync_distribution_window()
+        self._distribution_window.show()
+        self._distribution_window.raise_()
+        self._distribution_window.activateWindow()
+
+    def _export_distribution_template(self) -> None:
+        scenario = self._scenario
+        if scenario is None:
+            return
+        default_name = f"{Path(scenario.source.name).stem}_distribution_targets.xlsx"
+        filename, _selected_filter = QFileDialog.getSaveFileName(
+            self,
+            "Export De-cap Distribution Target Template",
+            default_name,
+            "Excel workbook (*.xlsx);;All files (*)",
+        )
+        if not filename:
+            return
+        path = Path(filename).with_suffix(".xlsx")
+        headers, rows = self._distribution_matrix_values()
+        try:
+            from ..distribution_workbook import DISTRIBUTION_WORKBOOK_FORMAT_VERSION
+            from ..spreadsheet_export import write_distribution_workbook
+
+            raw_distance_mode = self.distribution_distance_combo.currentData()
+            metadata: dict[str, object] = {
+                "Format Version": DISTRIBUTION_WORKBOOK_FORMAT_VERSION,
+                "Application Version": __version__,
+                "Source SPD Name": scenario.source.name,
+                "Source SPD SHA-256": scenario.source.sha256,
+                "Input Design Fingerprint": scenario.design_fingerprint,
+            }
+            if raw_distance_mode in {"NEAREST", "FARTHEST"}:
+                metadata["Distance Mode"] = raw_distance_mode
+            write_distribution_workbook(path, (), headers, rows, metadata=metadata)
+        except (OSError, TypeError, ValueError) as exc:
+            QMessageBox.critical(
+                self,
+                APP_DISPLAY_NAME,
+                f"The De-cap Distribution target template could not be written.\n\n{exc}",
+            )
+            self.status_text.setText("De-cap Distribution template export failed")
+            return
+        self.status_text.setText(f"Exported Distribution target template to {path.name}")
 
     def _import_distribution_targets(self) -> None:
         scenario = self._scenario
@@ -2627,6 +2951,7 @@ class MainWindow(QMainWindow):
         )
         self._reset_distribution_actual_deltas()
         self._update_distribution_validation()
+        self._sync_distribution_window()
         self.status_text.setText(
             f"Imported Distribution targets from {Path(filename).name}"
         )
@@ -2651,7 +2976,8 @@ class MainWindow(QMainWindow):
             validate = getattr(
                 distribution_module, "validate_distribution_targets", None
             )
-            if validate is not None:
+            exact_proof_pending = "proof pending" in message.casefold()
+            if validate is not None and not exact_proof_pending:
                 validate(
                     self._scenario,
                     dict(self._distribution_targets),
@@ -2661,13 +2987,21 @@ class MainWindow(QMainWindow):
                 str(self.distribution_distance_combo.currentData()).upper()
             )
         except (TypeError, ValueError) as exc:
-            QMessageBox.warning(self, APP_DISPLAY_NAME, str(exc))
-            self.distribution_validation_label.setText(f"Invalid — {exc}")
+            diagnostic_details = tuple(getattr(exc, "diagnostics", ()))
+            detail_text = "; ".join(
+                str(getattr(item, "message", item)) for item in diagnostic_details
+            )
+            error_text = str(exc)
+            if detail_text:
+                error_text += f"\n\n{detail_text}"
+            QMessageBox.warning(self, APP_DISPLAY_NAME, error_text)
+            self.distribution_validation_label.setText(f"Invalid — {error_text}")
             self.distribution_validation_label.setStyleSheet("color: #B91C1C;")
             return
         worker = FunctionWorker(
             _job_compute_distribution,
             self._scenario,
+            dict(self._attachments),
             dict(self._distribution_targets),
             dict(self._distribution_tolerances),
             distance_mode,
@@ -2855,6 +3189,11 @@ class MainWindow(QMainWindow):
             for (rail, model), value in self._distribution_actual_delta_map(plan).items()
         }
         self._distribution_table_updating = True
+        sorting_enabled = self.distribution_table.isSortingEnabled()
+        header = self.distribution_table.horizontalHeader()
+        sort_section = header.sortIndicatorSection()
+        sort_order = header.sortIndicatorOrder()
+        self.distribution_table.setSortingEnabled(False)
         previous_block = self.distribution_table.blockSignals(True)
         try:
             for row in range(self.distribution_table.rowCount()):
@@ -2878,6 +3217,9 @@ class MainWindow(QMainWindow):
                         item.setBackground(QBrush())
         finally:
             self.distribution_table.blockSignals(previous_block)
+            self.distribution_table.setSortingEnabled(sorting_enabled)
+            if sorting_enabled and sort_section >= 0:
+                self.distribution_table.sortItems(sort_section, sort_order)
             self._distribution_table_updating = False
 
     def _accept_distribution_plan(self, result: Any) -> None:
@@ -2899,12 +3241,14 @@ class MainWindow(QMainWindow):
             if prepared is not None:
                 preview = prepared.preview_scenario
                 export_rows = prepared.export_rows
+                power_projection = prepared.power_projection
             else:
                 # Direct callers (including legacy plugins/tests) remain supported;
                 # normal GUI runs prepare this CPU work in the worker.
                 from ..distribution import apply_distribution_plan, distribution_csv_rows
 
                 preview = apply_distribution_plan(scenario, plan)
+                power_projection = None
                 exported = tuple(distribution_csv_rows(plan))
                 export_rows = (
                     exported[1:]
@@ -2923,6 +3267,7 @@ class MainWindow(QMainWindow):
             return
         self._distribution_plan = plan
         self._distribution_preview_scenario = preview
+        self._distribution_power_projection = power_projection
         self._distribution_export_rows = export_rows
         self._render_distribution_actual_deltas(plan)
         self.distribution_summary.setPlainText(
@@ -2971,7 +3316,11 @@ class MainWindow(QMainWindow):
         try:
             from ..distribution import apply_distribution_plan
 
-            preview = apply_distribution_plan(scenario, plan)
+            preview = apply_distribution_plan(
+                scenario,
+                plan,
+                power_projection=self._distribution_power_projection,
+            )
         except (TypeError, ValueError) as exc:
             QMessageBox.warning(
                 self,
@@ -3145,7 +3494,11 @@ class MainWindow(QMainWindow):
                 try:
                     from ..distribution import apply_distribution_plan
 
-                    scenario_to_save = apply_distribution_plan(self._scenario, plan)
+                    scenario_to_save = apply_distribution_plan(
+                        self._scenario,
+                        plan,
+                        power_projection=self._distribution_power_projection,
+                    )
                 except (TypeError, ValueError) as exc:
                     QMessageBox.warning(
                         self,
@@ -3767,6 +4120,9 @@ class MainWindow(QMainWindow):
         """Drop rendering and picker state that must not cross documents."""
 
         self.status_text.setToolTip("")
+        self._distribution_show_original_board = False
+        if self._distribution_window is not None:
+            self._distribution_window.clear_for_no_document()
         self._plane_render_token += 1
         self._plane_render_cells = ()
         self._plane_render_index = 0
@@ -3805,13 +4161,7 @@ class MainWindow(QMainWindow):
         # Import accepts both batched board layers, then performs one explicit
         # fit.  Avoid the otherwise redundant fit after decaps and again after
         # bumps, which is visible on large SPDs.
-        self.board.set_decaps(
-            prepared_view.decap_records if prepared_view is not None else scenario.decaps,
-            scenario.net_colors,
-            fit=False,
-            normalized=prepared_view is not None,
-            staged=prepared_view is not None,
-        )
+        self._refresh_distribution_board_decaps(prepared_view)
         if prepared_view is not None and prepared_view.project.rails:
             # Establish the default focus before staged scatter creation so a
             # later rail-list refresh does not synchronously repaint 10k+ dots.
@@ -3839,6 +4189,11 @@ class MainWindow(QMainWindow):
         self._refresh_rails(prepared_view.project if prepared_view is not None else None)
         self._refresh_distribution_tab(
             prepared_view.distribution_counts if prepared_view is not None else None,
+            (
+                prepared_view.distribution_assignable_counts
+                if prepared_view is not None
+                else None
+            ),
             prepared_view.design_fingerprint if prepared_view is not None else None,
             prepared_view.project if prepared_view is not None else None,
         )
@@ -3863,6 +4218,57 @@ class MainWindow(QMainWindow):
             self._set_loaded_state(True)
         else:
             self._set_busy(True)
+
+    def _board_decaps_for_distribution_display(self) -> tuple[ScenarioDecap, ...]:
+        scenario = self._scenario
+        if scenario is None:
+            return ()
+        if not self._distribution_show_original_board:
+            return tuple(scenario.decaps)
+        return tuple(
+            decap.model_copy(
+                update={
+                    "current_net": decap.source_net,
+                    "current_rail_id": decap.source_rail_id,
+                    "model_id": decap.source_model_id,
+                    "enabled": decap.source_mounted,
+                    "pad_state": DecapPadState.NORMAL,
+                }
+            )
+            for decap in scenario.decaps
+        )
+
+    def _refresh_distribution_board_decaps(
+        self, prepared_view: _PreparedDocumentView | None = None
+    ) -> None:
+        assert self._scenario is not None
+        showing_original = self._distribution_show_original_board
+        self.board.set_decaps(
+            (
+                self._board_decaps_for_distribution_display()
+                if showing_original
+                else (
+                    prepared_view.decap_records
+                    if prepared_view is not None
+                    else self._scenario.decaps
+                )
+            ),
+            self._scenario.net_colors,
+            fit=False,
+            normalized=prepared_view is not None and not showing_original,
+            staged=prepared_view is not None and not showing_original,
+        )
+
+    def _show_original_distribution_board(self, show_original: bool) -> None:
+        show_original = bool(show_original)
+        if self._distribution_show_original_board == show_original:
+            return
+        self._distribution_show_original_board = show_original
+        if self._scenario is not None:
+            self._refresh_distribution_board_decaps()
+            self.board.set_selected_refdes(self._scenario.selected_refdes)
+            self._refresh_selection_table()
+        self._sync_distribution_window()
 
     def _refresh_plane_preview(
         self, prepared_view: _PreparedDocumentView | None = None

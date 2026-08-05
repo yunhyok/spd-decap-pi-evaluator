@@ -6,11 +6,13 @@ $ErrorActionPreference = "Stop"
 $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
 $pythonExe = (Get-Command python).Source
 
-$buildArguments = @()
+$applicationBuildScript = Join-Path $PSScriptRoot "build_spd_decap_pi.ps1"
 if ($SkipTests) {
-    $buildArguments += "-SkipTests"
+    & $applicationBuildScript -SkipTests
 }
-& (Join-Path $PSScriptRoot "build_spd_decap_pi.ps1") @buildArguments
+else {
+    & $applicationBuildScript
+}
 if ($LASTEXITCODE -ne 0) {
     throw "SPD Decap PI Evaluator application build failed"
 }

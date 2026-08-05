@@ -370,6 +370,56 @@ def test_mixed_reference_ground_reachability_uses_compact_dense_components(
     assert result.statistics["components"] >= 1
 
 
+def test_same_net_reachability_can_exclude_lateral_trace_connections(
+    tmp_path: Path,
+) -> None:
+    """A Via-only audit must not treat a distant Trace branch as local reach."""
+
+    source, _analysis = _recoverable_via_source(
+        tmp_path,
+        node_lines=(
+            "NodeLocal!!1::PWR X = 0um Y = 0um Layer = Signal$TOP "
+            "PadStack = DR-0102_60\n"
+            "NodeRemoteTop!!1::PWR X = 1000um Y = 0um Layer = Signal$TOP "
+            "PadStack = DR-0102_60\n"
+            "NodeRemotePwr!!1::PWR X = 1000um Y = 0um Layer = Signal$PWR "
+            "PadStack = DR-0102_60"
+        ),
+        trace_lines=(
+            "TraceRoute::PWR StartingNode = NodeLocal::PWR "
+            "EndingNode = NodeRemoteTop::PWR Width = 0.10mm"
+        ),
+        via_lines=(
+            "ViaRemote::PWR UpperNode = NodeRemoteTop LowerNode = NodeRemotePwr "
+            "PadStack = DR-0102_60"
+        ),
+    )
+    landing = SpdViaLanding(
+        via_id="ViaLocal",
+        net="PWR",
+        endpoint_node_id="NodeLocal",
+        x_um=0.0,
+        y_um=0.0,
+        padstack="DR-0102_60",
+    )
+
+    trace_connected = recover_spd_ground_reachability(
+        source,
+        landings=(landing,),
+        target_layers_by_net={"PWR": ("Signal$PWR",)},
+    )
+    via_only = recover_spd_ground_reachability(
+        source,
+        landings=(landing,),
+        target_layers_by_net={"PWR": ("Signal$PWR",)},
+        include_traces=False,
+    )
+
+    assert trace_connected.reaches(landing, "Signal$PWR")
+    assert not via_only.reaches(landing, "Signal$PWR")
+    assert via_only.statistics["trace_section_passes"] == 0
+
+
 def test_mixed_reference_ground_reachability_rejects_source_changed_during_recovery(
     tmp_path: Path,
 ) -> None:

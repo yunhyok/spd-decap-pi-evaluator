@@ -12,6 +12,7 @@ import spd_decap_pi.distribution as distribution_module
 from spd_decap_pi._core.domain import (
     CapModel,
     MLOOutline,
+    PlanePairSuggestion,
     PinKind,
     PinRecord,
     ProjectSpec,
@@ -27,11 +28,14 @@ from spd_decap_pi.distribution import (
     apply_distribution_plan,
     compute_distribution_plan,
     distribution_csv_rows,
+    distribution_assignable_counts,
     distribution_inventory_table,
     distribution_present_counts,
     distribution_target_table,
     validate_distribution_targets,
 )
+from spd_decap_pi._core.io.spd import SpdPlaneGeometry
+from spd_decap_pi.eligibility import PlaneEligibilityIndex
 from spd_decap_pi.scenario import (
     DecapConnectionKind,
     RailEligibility,
@@ -41,6 +45,8 @@ from spd_decap_pi.scenario import (
     ScenarioPoint,
     ScenarioSpec,
     ScenarioViaLanding,
+    ScenarioViaPathEvidence,
+    ScenarioViaSegment,
     SharedPadCluster,
     SharedPadClusterState,
     SharedPadConnectionAnalysis,
@@ -486,6 +492,350 @@ def test_distribution_v5_disconnected_ground_graph_matches_pwr_only_plan() -> No
     assert disconnected_plan.sacrifices == connected_plan.sacrifices
 
 
+def test_distribution_power_projection_repairs_gnd_unresolved_cluster_for_atomic_move() -> None:
+    projected = _shared_chain_scenario()
+    assert projected.connection_analysis is not None
+    unresolved_connections = {
+        refdes: connection.model_copy(
+            update={
+                "kind": DecapConnectionKind.UNRESOLVED,
+                "reason": (
+                    "GND TOP component has no source Via anchor: "
+                    f"{refdes}"
+                ),
+            }
+        )
+        for refdes, connection in projected.connection_analysis.connections.items()
+    }
+    unresolved_cluster = projected.connection_analysis.clusters[0].model_copy(
+        update={
+            "state": SharedPadClusterState.UNRESOLVED,
+            "ground_edges": (),
+            "isolation_gap_refdes": (),
+            "reason": (
+                "GND TOP component has no source Via anchor: A0, D1, A2"
+            ),
+            "eligibility": {},
+            "via_eligibility": {},
+        }
+    )
+    unresolved = ScenarioSpec.model_validate(
+        {
+            **projected.model_dump(mode="python"),
+            "connection_analysis": projected.connection_analysis.model_copy(
+                update={
+                    "connections": unresolved_connections,
+                    "clusters": (unresolved_cluster,),
+                }
+            ),
+        }
+    )
+    projection = distribution_module._DistributionPowerProjection(
+        source_sha256=unresolved.source.sha256,
+        input_design_fingerprint=unresolved.design_fingerprint,
+        input_revision=unresolved.revision,
+        source_decaps=tuple(unresolved.decaps),
+        projected_decaps=tuple(unresolved.decaps),
+        source_analysis=unresolved.connection_analysis,
+        projected_analysis=projected.connection_analysis,
+        promoted_cluster_ids=("CHAIN",),
+    )
+
+    plan = compute_distribution_plan(
+        unresolved,
+        {("R1", "M1"): 0, ("R2", "M1"): 3},
+        power_projection=projection,
+    )
+    result = apply_distribution_plan(
+        unresolved,
+        plan,
+        power_projection=projection,
+    )
+
+    assert plan.status == DistributionPlanStatus.FULL
+    assert set(plan.assignment_map) == {"A0", "D1", "A2"}
+    assert {item.current_rail_id for item in result.decaps} == {"R2"}
+    assert result.connection_analysis is not None
+    assert {
+        item.kind for item in result.connection_analysis.connections.values()
+    } == {
+        DecapConnectionKind.SHARED_ANCHOR,
+        DecapConnectionKind.SHARED_DUMMY,
+    }
+    assert result.connection_analysis.clusters[0].state == SharedPadClusterState.ANCHORED
+
+
+def test_distribution_projection_via_eligibility_uses_source_path_or_legacy_endpoint() -> None:
+    """The indexed proof retains the adapter's documented no-path fallback."""
+
+    rail = _rail("R1")
+    geometry = SpdPlaneGeometry(
+        layer="PWR",
+        net="V1",
+        positive_polygons_um=(((0.0, 0.0), (10.0, 0.0), (10.0, 10.0), (0.0, 10.0)),),
+        negative_polygons_um=(),
+        positive_circles_um=(),
+        negative_circles_um=(),
+        primitive_order=(("positive_polygon", 0),),
+    )
+    index = PlaneEligibilityIndex(
+        (geometry,),
+        _project(("R1",)).stackup_layers,
+        selected_pairs=(
+            PlanePairSuggestion(
+                rail_net="V1",
+                pwr_layer="PWR",
+                gnd_layer="GND",
+                pwr_index=0,
+                gnd_index=1,
+                separation_um=1.0,
+            ),
+        ),
+    )
+    choices = {("v1", "pwr", "gnd"): ((rail, "VT1"),)}
+    legacy = ScenarioViaLanding(
+        via_id="V1",
+        net="V1",
+        endpoint_node_id="N1",
+        padstack="P1",
+        x_um=5.0,
+        y_um=5.0,
+    )
+    evidence = ScenarioViaPathEvidence(
+        target_layer="PWR",
+        target_node_id="N2",
+        target_padstack="P2",
+        target_pad_kind="CIRCLE",
+        target_pad_width_um=1.0,
+        target_pad_height_um=1.0,
+        x_um=20.0,
+        y_um=20.0,
+        segments=(
+            ScenarioViaSegment(
+                via_id="V1",
+                padstack="P1",
+                drill_diameter_um=1.0,
+                start_layer="TOP",
+                end_layer="PWR",
+                length_um=1.0,
+                end_x_um=20.0,
+                end_y_um=20.0,
+            ),
+        ),
+    )
+
+    legacy_result = distribution_module._distribution_via_eligibility(
+        index, legacy, choices
+    )
+    assert set(legacy_result) == {"R1"}
+    assert legacy_result["R1"].via_template_id == "VT1"
+    assert distribution_module._distribution_via_eligibility(
+        index, legacy.model_copy(update={"path_evidence": (evidence,)}), choices
+    ) == {}
+
+
+def test_batch_via_eligibility_rejects_outer_and_negative_hole_tolerance_boundaries() -> None:
+    geometry = SpdPlaneGeometry(
+        layer="PWR",
+        net="V1",
+        positive_polygons_um=(((0.0, 0.0), (10.0, 0.0), (10.0, 10.0), (0.0, 10.0)),),
+        negative_polygons_um=(((4.0, 4.0), (6.0, 4.0), (6.0, 6.0), (4.0, 6.0)),),
+        positive_circles_um=(),
+        negative_circles_um=(),
+        primitive_order=(("positive_polygon", 0), ("negative_polygon", 0)),
+    )
+    rail = _rail("R1")
+    choices = {("v1", "pwr", "gnd"): ((rail, "VT1"),)}
+    outer_near_edge = ScenarioViaLanding(
+        via_id="OUTER", net="V1", endpoint_node_id="N1", padstack="P", x_um=1.0e-7, y_um=5.0
+    )
+    hole_near_edge = ScenarioViaLanding(
+        via_id="HOLE", net="V1", endpoint_node_id="N2", padstack="P", x_um=3.9999995, y_um=5.0
+    )
+
+    result = distribution_module._distribution_batch_via_eligibility(
+        (geometry,), (outer_near_edge, hole_near_edge), choices
+    )
+
+    assert result == {"OUTER": {}, "HOLE": {}}
+
+
+def test_batch_via_eligibility_keeps_all_ground_pairs_for_one_power_plane() -> None:
+    geometry = SpdPlaneGeometry(
+        layer="PWR",
+        net="V1",
+        positive_polygons_um=(((0.0, 0.0), (10.0, 0.0), (10.0, 10.0), (0.0, 10.0)),),
+        negative_polygons_um=(),
+        positive_circles_um=(),
+        negative_circles_um=(),
+        primitive_order=(("positive_polygon", 0),),
+    )
+    r1 = _rail("R1").model_copy(update={"gnd_layer": "GND1"})
+    r2 = _rail("R2").model_copy(update={"gnd_layer": "GND2"})
+    choices = {
+        ("v1", "pwr", "gnd1"): ((r1, "VT1"),),
+        ("v1", "pwr", "gnd2"): ((r2, "VT2"),),
+    }
+    landing = ScenarioViaLanding(
+        via_id="V1", net="V1", endpoint_node_id="N1", padstack="P", x_um=5.0, y_um=5.0
+    )
+
+    result = distribution_module._distribution_batch_via_eligibility(
+        (geometry,), (landing,), choices
+    )
+
+    assert set(result["V1"]) == {"R1", "R2"}
+    assert result["V1"]["R1"].gnd_layer == "GND1"
+    assert result["V1"]["R2"].gnd_layer == "GND2"
+
+
+def test_timeout_incumbent_requires_feasibility_and_full_receiver_demand() -> None:
+    bounds = Bounds(np.zeros(2), np.ones(2))
+    integrality = np.ones(2, dtype=np.uint8)
+    constraints = LinearConstraint(
+        np.asarray([[1.0, 1.0]]), np.asarray([1.0]), np.asarray([1.0])
+    )
+    assert distribution_module._valid_timeout_incumbent(
+        np.asarray([1.0, 0.0]),
+        integrality=integrality,
+        bounds=bounds,
+        constraints=constraints,
+        fulfilled_count=2,
+        receiver_demand_total=2,
+    )
+    for candidate in (np.asarray([0.5, 0.5]), np.asarray([1.0, 1.0])):
+        assert not distribution_module._valid_timeout_incumbent(
+            candidate,
+            integrality=integrality,
+            bounds=bounds,
+            constraints=constraints,
+            fulfilled_count=2,
+            receiver_demand_total=2,
+        )
+    assert not distribution_module._valid_timeout_incumbent(
+        np.asarray([1.0, 0.0]),
+        integrality=integrality,
+        bounds=bounds,
+        constraints=constraints,
+        fulfilled_count=1,
+        receiver_demand_total=2,
+    )
+
+
+def test_shared_chain_full_demand_accepts_feasible_status_one_incumbent(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    original_solver = distribution_module._milp_with_optional_start
+    timed_out = False
+
+    def status_one_feasible_incumbent(c, **kwargs):
+        nonlocal timed_out
+        result = original_solver(c, **kwargs)
+        if (
+            not timed_out
+            and np.any(np.asarray(kwargs["integrality"]) != 0)
+                and result.x is not None
+        ):
+            timed_out = True
+            result.status = 1
+            result.success = False
+            result.message = "fixture feasible fulfillment timeout"
+        return result
+
+    monkeypatch.setattr(
+        distribution_module, "_milp_with_optional_start", status_one_feasible_incumbent
+    )
+    plan = compute_distribution_plan(
+        _shared_chain_scenario(),
+        {("R1", "M1"): 1, ("R2", "M1"): 1},
+    )
+
+    assert timed_out
+    assert plan.status == DistributionPlanStatus.FULL
+    assert plan.fulfilled_count == 1
+
+
+def test_distribution_projection_uses_unselected_internal_power_plane_for_direct_donor() -> None:
+    """Distribution must not discard a real lower plane because Evaluation chose TOP."""
+
+    scenario = _direct_scenario(
+        (("C1", 5.0, ("R1",)),),
+        rail_ids=("R1", "R2"),
+        bump_x={"R1": 0.0, "R2": 10.0},
+    )
+    project = scenario.base_project.model_copy(
+        update={
+            "stackup_layers": [
+                StackupLayer(
+                    name="TOP",
+                    thickness_um=18.0,
+                    conductivity_s_m=5.8e7,
+                    pwr_nets=["V1", "V2"],
+                ),
+                StackupLayer(name="D1", thickness_um=20.0, dk=4.0, df=0.01),
+                StackupLayer(
+                    name="GND1",
+                    thickness_um=18.0,
+                    conductivity_s_m=5.8e7,
+                    pwr_nets=["DGND"],
+                ),
+                StackupLayer(name="D_MID", thickness_um=20.0, dk=4.0, df=0.01),
+                StackupLayer(
+                    name="PWR_ALT",
+                    thickness_um=18.0,
+                    conductivity_s_m=5.8e7,
+                    pwr_nets=["V2"],
+                ),
+                StackupLayer(name="D2", thickness_um=20.0, dk=4.0, df=0.01),
+                StackupLayer(
+                    name="GND_ALT",
+                    thickness_um=18.0,
+                    conductivity_s_m=5.8e7,
+                    pwr_nets=["DGND"],
+                ),
+            ],
+            "rails": [
+                rail.model_copy(update={"pwr_layer": "TOP", "gnd_layer": "GND1"})
+                for rail in scenario.base_project.rails
+            ],
+        }
+    )
+    scenario = ScenarioSpec.model_validate(
+        {
+            **scenario.model_dump(mode="python"),
+            "normalized_project": project.model_dump(mode="python"),
+        }
+    )
+    alternate = SpdPlaneGeometry(
+        layer="PWR_ALT",
+        net="V2",
+        positive_polygons_um=(
+            ((0.0, -5.0), (10.0, -5.0), (10.0, 5.0), (0.0, 5.0)),
+        ),
+        negative_polygons_um=(),
+        positive_circles_um=(),
+        negative_circles_um=(),
+        primitive_order=(("positive_polygon", 0),),
+    )
+    targets = {("R1", "M1"): 0, ("R2", "M1"): 1}
+
+    projection = distribution_module.build_distribution_power_projection(
+        scenario,
+        {},
+        plane_geometries=(alternate,),
+        targets=targets,
+    )
+
+    assert projection is not None
+    plan = compute_distribution_plan(
+        scenario,
+        targets,
+        power_projection=projection,
+    )
+    assert plan.status == DistributionPlanStatus.FULL
+    assert plan.assignment_map == {"C1": "R2"}
+
+
 def test_present_matrix_and_public_numeric_preflight_exclude_disabled_parts() -> None:
     scenario = _direct_scenario(
         (
@@ -549,6 +899,10 @@ def test_physical_present_counts_fixed_parts_but_donor_capacity_does_not() -> No
 
     assert distribution_present_counts(scenario) == {
         ("R1", "M1"): 3,
+        ("R2", "M1"): 0,
+    }
+    assert distribution_assignable_counts(scenario) == {
+        ("R1", "M1"): 1,
         ("R2", "M1"): 0,
     }
     plan = compute_distribution_plan(

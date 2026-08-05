@@ -229,7 +229,7 @@ def test_distribution_worker_prepares_preview_and_export_before_gui_acceptance(
     monkeypatch.setattr(
         distribution_module,
         "apply_distribution_plan",
-        lambda *_args: calls.append("preview") or preview,
+        lambda *_args, **_kwargs: calls.append("preview") or preview,
     )
     monkeypatch.setattr(
         distribution_module,
@@ -237,9 +237,20 @@ def test_distribution_worker_prepares_preview_and_export_before_gui_acceptance(
         lambda _plan: calls.append("export")
         or (("Component", "REFDES"), ("CAP", "C1")),
     )
+    monkeypatch.setattr(
+        distribution_module,
+        "build_distribution_power_projection",
+        lambda *_args, **_kwargs: calls.append("projection") or object(),
+    )
+    monkeypatch.setattr(
+        distribution_module,
+        "validate_distribution_targets",
+        lambda *_args, **_kwargs: calls.append("validate"),
+    )
 
     result = _job_compute_distribution(
         object(),
+        {},
         {},
         {},
         object(),
@@ -247,7 +258,7 @@ def test_distribution_worker_prepares_preview_and_export_before_gui_acceptance(
         is_cancelled=lambda: False,
     )
 
-    assert calls == ["plan", "preview", "export"]
+    assert calls == ["projection", "validate", "plan", "preview", "export"]
     assert result.plan is plan
     assert result.preview_scenario is preview
     assert result.export_rows == (("CAP", "C1"),)

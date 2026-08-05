@@ -15,22 +15,34 @@ from enum import StrEnum
 from math import hypot, inf, isfinite
 from numbers import Real
 from time import monotonic
-from typing import Callable, Mapping
+from typing import Callable, Mapping, Sequence
 
 import numpy as np
 from scipy.optimize import Bounds, LinearConstraint, OptimizeResult, linprog, milp
 from scipy.sparse import coo_matrix, csr_matrix, vstack
 
-from ._core.domain import PinKind, TerminalKind
+from ._core import services as core_services
+from ._core.domain import PinKind, PlanePairSuggestion, TerminalKind
+from ._core.io.shared_pad import (
+    DecapPadEvidence,
+    SpdTopCopperGeometry,
+    _PlacedPad,
+    _minimum_distance_tree,
+)
+from ._core.io.spd import SpdPlaneGeometry
+from ._core.plane_pairs import suggest_effective_plane_pairs
+from .eligibility import PlaneEligibilityIndex
 from .scenario import (
     DecapConnectionKind,
     DecapPadState,
+    RailEligibility,
     ScenarioDecap,
     ScenarioDecapConnection,
     ScenarioSpec,
     SHARED_PAD_ANALYSIS_VERSION,
     SharedPadCluster,
     SharedPadClusterState,
+    SharedPadConnectionAnalysis,
 )
 from .scenario_edits import (
     ScenarioEditError,
@@ -85,6 +97,1196 @@ class DistributionError(ValueError):
         self.code = code
         self.diagnostics = diagnostics
         super().__init__(message)
+
+
+@dataclass(frozen=True, slots=True)
+class _DistributionPowerProjection:
+    """Exact source-backed PWR projection used only by Distribution.
+
+    V5 evaluation classifies a shared cluster as ``UNRESOLVED`` when either
+    terminal lacks a complete TOP-component proof.  Distribution edits the PWR
+    graph, so a saved bundle can repair that source metadata from its retained
+    exact TOP artwork and persisted Via landings without reopening the 1+ GiB
+    SPD.  The repaired analysis is kept with the resulting scenario; no
+    evaluator rule is weakened or bypassed.
+    """
+
+    source_sha256: str
+    input_design_fingerprint: str
+    input_revision: int
+    source_decaps: tuple[ScenarioDecap, ...]
+    projected_decaps: tuple[ScenarioDecap, ...]
+    source_analysis: SharedPadConnectionAnalysis
+    projected_analysis: SharedPadConnectionAnalysis
+    promoted_cluster_ids: tuple[str, ...]
+
+
+_GND_UNRESOLVED_PREFIX = "gnd top component has no source via anchor:"
+_DISTRIBUTION_PROBE_DIAMETER_UM = 2.0e-6
+
+
+@dataclass(frozen=True, slots=True)
+class _DistributionTopArtwork:
+    geometry: SpdTopCopperGeometry
+    components: tuple[object, ...]
+    component_tree: object
+
+
+def _projection_candidate_cluster(
+    scenario: ScenarioSpec,
+    cluster: SharedPadCluster,
+    connection_by_key: Mapping[str, ScenarioDecapConnection],
+    decap_by_key: Mapping[str, ScenarioDecap],
+) -> bool:
+    """Fail closed before any retained-geometry work is attempted."""
+
+    if (
+        cluster.state != SharedPadClusterState.UNRESOLVED
+        or len(cluster.member_refdes) < 2
+        or not cluster.layer
+        or not cluster.power_net
+        or not cluster.ground_net
+        or not cluster.source_graph_is_connected(cluster.power_edges)
+    ):
+        return False
+    members = {item.casefold() for item in cluster.member_refdes}
+    if set(decap_by_key).isdisjoint(members):
+        return False
+    aggregate_power_vias = 0
+    aggregate_ground_vias = 0
+    for refdes in cluster.member_refdes:
+        key = refdes.casefold()
+        decap = decap_by_key.get(key)
+        connection = connection_by_key.get(key)
+        if (
+            decap is None
+            or connection is None
+            or connection.kind != DecapConnectionKind.UNRESOLVED
+            or connection.cluster_id is None
+            or connection.cluster_id.casefold() != cluster.cluster_id.casefold()
+            or decap.pwr_pad.layer is None
+            or decap.gnd_pad.layer is None
+            or decap.pwr_pad.layer.casefold() != cluster.layer.casefold()
+            or decap.gnd_pad.layer.casefold() != cluster.layer.casefold()
+            or decap.source_net.casefold() != cluster.power_net.casefold()
+            or not decap.pwr_pad.padstack
+            or not decap.gnd_pad.padstack
+        ):
+            return False
+        # The reason is only a scope guard.  Readiness below is independently
+        # rebuilt from retained ordered boolean artwork and Via evidence.
+        reasons = tuple(
+            item.strip().casefold()
+            for item in (connection.reason or "").split(";")
+            if item.strip()
+        )
+        if not reasons or not all(
+            item.startswith(_GND_UNRESOLVED_PREFIX) for item in reasons
+        ):
+            return False
+        aggregate_power_vias += len(connection.power_vias)
+        aggregate_ground_vias += len(connection.ground_vias)
+    return aggregate_power_vias > 0 and aggregate_ground_vias > 0
+
+
+def _point_probe(
+    owner_index: int,
+    terminal: str,
+    net: str,
+    x_um: float,
+    y_um: float,
+) -> _PlacedPad:
+    """Represent a proven regular terminal by a strict-interior finite probe.
+
+    Saved scenarios retain the terminal padstack identity but older schemas do
+    not retain its dimensions.  The original shared-pad analysis proves that
+    each named terminal padstack was a finite regular shape centered at this
+    point.  A tiny positive-area probe entirely inside final copper is therefore
+    a conservative sufficient condition for positive terminal/copper overlap;
+    boundary or missing-artwork cases remain rejected.
+    """
+
+    return _PlacedPad(
+        owner_index=owner_index,
+        terminal=terminal,  # type: ignore[arg-type]
+        net_key=net.casefold(),
+        x_um=float(x_um),
+        y_um=float(y_um),
+        kind="CIRCLE",
+        width_um=_DISTRIBUTION_PROBE_DIAMETER_UM,
+        height_um=_DISTRIBUTION_PROBE_DIAMETER_UM,
+        rotation_degrees=0.0,
+    )
+
+
+def _cluster_pad_evidence(
+    cluster: SharedPadCluster,
+    decap_by_key: Mapping[str, ScenarioDecap],
+) -> tuple[DecapPadEvidence, ...]:
+    return tuple(
+        DecapPadEvidence(
+            refdes=(decap := decap_by_key[refdes.casefold()]).refdes,
+            top_side=True,
+            layer=cluster.layer,
+            power_net=cluster.power_net or decap.source_net,
+            ground_net=cluster.ground_net or "",
+            power_x_um=decap.pwr_pad.x_um,
+            power_y_um=decap.pwr_pad.y_um,
+            power_padstack=decap.pwr_pad.padstack,
+            power_rotation_degrees=0.0,
+            ground_x_um=decap.gnd_pad.x_um,
+            ground_y_um=decap.gnd_pad.y_um,
+            ground_padstack=decap.gnd_pad.padstack,
+            ground_rotation_degrees=0.0,
+        )
+        for refdes in cluster.member_refdes
+    )
+
+
+def _canonical_ref_edges(
+    edges: Sequence[tuple[int, int]],
+    evidence: Sequence[DecapPadEvidence],
+) -> tuple[tuple[str, str], ...]:
+    result = []
+    for left, right in edges:
+        refs = sorted(
+            (evidence[left].refdes, evidence[right].refdes), key=str.casefold
+        )
+        result.append((refs[0], refs[1]))
+    return tuple(
+        sorted(result, key=lambda item: (item[0].casefold(), item[1].casefold()))
+    )
+
+
+def _decode_top_distribution_geometries(
+    scenario: ScenarioSpec,
+    attachments: Mapping[str, bytes],
+    wanted: set[tuple[str, str]],
+) -> tuple[_DistributionTopArtwork, ...]:
+    project = scenario.base_project
+    spd_import = project.metadata.get("spd_import")
+    records = (
+        spd_import.get("plane_geometries")
+        if isinstance(spd_import, dict)
+        else None
+    )
+    if not isinstance(records, list):
+        return ()
+    try:
+        from shapely import STRtree
+    except ImportError:
+        return ()
+    result: list[_DistributionTopArtwork] = []
+    for record in records:
+        if not isinstance(record, dict):
+            continue
+        layer = str(record.get("layer", ""))
+        net = str(record.get("net", ""))
+        if (layer.casefold(), net.casefold()) not in wanted:
+            continue
+        asset = str(record.get("asset", ""))
+        digest = str(record.get("asset_sha256", ""))
+        compressed = attachments.get(asset)
+        if compressed is None or not digest:
+            continue
+        try:
+            payload = core_services._decode_spd_geometry_asset(
+                digest, bytes(compressed)
+            )
+            core_services._validate_spd_geometry_payload(
+                payload, expected_layer=layer, expected_net=net
+            )
+        except (ValueError, ArithmeticError):
+            continue
+        geometry = SpdTopCopperGeometry(
+                layer=layer,
+                net=net,
+                positive_polygons_um=tuple(
+                    tuple((float(x_um), float(y_um)) for x_um, y_um in polygon)
+                    for polygon in payload["positive_polygons_um"]
+                ),
+                negative_polygons_um=tuple(
+                    tuple((float(x_um), float(y_um)) for x_um, y_um in polygon)
+                    for polygon in payload["negative_polygons_um"]
+                ),
+                positive_circles_um=tuple(
+                    tuple(map(float, item))
+                    for item in payload["positive_circles_um"]
+                ),
+                negative_circles_um=tuple(
+                    tuple(map(float, item))
+                    for item in payload["negative_circles_um"]
+                ),
+                primitive_order=tuple(
+                    (str(kind), int(index))
+                    for kind, index in payload["primitive_order"]
+                ),  # type: ignore[arg-type]
+            )
+        try:
+            final_shape = core_services._ordered_spd_geometry(payload)
+        except (ValueError, TypeError, ArithmeticError):
+            continue
+        if final_shape is None or final_shape.is_empty:
+            continue
+        if final_shape.geom_type == "Polygon":
+            components = (final_shape,)
+        else:
+            components = tuple(
+                item
+                for item in getattr(final_shape, "geoms", ())
+                if item.geom_type == "Polygon" and not item.is_empty
+            )
+        if not components:
+            continue
+        result.append(
+            _DistributionTopArtwork(
+                geometry=geometry,
+                components=components,
+                component_tree=STRtree(components),
+            )
+        )
+    return tuple(result)
+
+
+def _strict_component_index(
+    artwork: _DistributionTopArtwork,
+    points_um: Sequence[tuple[float, float]],
+) -> int | None:
+    try:
+        from shapely.geometry import Point
+    except ImportError:
+        return None
+    common: int | None = None
+    try:
+        for x_um, y_um in points_um:
+            point = Point(float(x_um), float(y_um))
+            matches = tuple(
+                int(index)
+                for index in artwork.component_tree.query(point)
+                if artwork.components[int(index)].contains(point)
+            )
+            if len(matches) != 1:
+                return None
+            if common is None:
+                common = matches[0]
+            elif common != matches[0]:
+                return None
+    except (TypeError, ValueError, ArithmeticError):
+        return None
+    return common
+
+
+def _component_is_axis_aligned_rectangle(
+    component: object,
+) -> bool:
+    try:
+        from shapely.geometry import box
+
+        x_min, y_min, x_max, y_max = component.bounds
+        return bool(component.equals(box(x_min, y_min, x_max, y_max)))
+    except (AttributeError, TypeError, ValueError, ArithmeticError):
+        return False
+
+
+def _distribution_plane_geometries(
+    scenario: ScenarioSpec,
+    attachments: Mapping[str, bytes],
+    *,
+    wanted_pairs: set[tuple[str, str]],
+) -> tuple[SpdPlaneGeometry, ...]:
+    """Decode exact retained artwork for every Distribution candidate layer.
+
+    ``ProjectSpec.partitions`` intentionally contains only the one plane pair
+    selected for Evaluation.  Distribution must instead inspect every retained
+    source plane that belongs to a valid pair for the destination rail.
+    """
+
+    project = scenario.base_project
+    result: list[SpdPlaneGeometry] = []
+    seen: set[tuple[str, str, str]] = set()
+    spd_import = project.metadata.get("spd_import")
+    records = (
+        spd_import.get("plane_geometries")
+        if isinstance(spd_import, dict)
+        else None
+    )
+    for record in records if isinstance(records, list) else ():
+        if not isinstance(record, dict):
+            continue
+        layer = str(record.get("layer", ""))
+        net = str(record.get("net", ""))
+        if (net.casefold(), layer.casefold()) not in wanted_pairs:
+            continue
+        asset = str(record.get("asset", ""))
+        digest = str(record.get("asset_sha256", ""))
+        compressed = attachments.get(asset)
+        if compressed is None or not digest:
+            continue
+        try:
+            payload = core_services._decode_spd_geometry_asset(
+                digest, bytes(compressed)
+            )
+            core_services._validate_spd_geometry_payload(
+                payload, expected_layer=layer, expected_net=net
+            )
+        except (ValueError, ArithmeticError):
+            continue
+        identity = (net.casefold(), layer.casefold(), digest.casefold())
+        if identity in seen:
+            continue
+        seen.add(identity)
+        result.append(
+            SpdPlaneGeometry(
+                layer=layer,
+                net=net,
+                positive_polygons_um=tuple(
+                    tuple((float(x_um), float(y_um)) for x_um, y_um in polygon)
+                    for polygon in payload["positive_polygons_um"]
+                ),
+                negative_polygons_um=tuple(
+                    tuple((float(x_um), float(y_um)) for x_um, y_um in polygon)
+                    for polygon in payload["negative_polygons_um"]
+                ),
+                positive_circles_um=tuple(
+                    tuple(map(float, item))
+                    for item in payload["positive_circles_um"]
+                ),
+                negative_circles_um=tuple(
+                    tuple(map(float, item))
+                    for item in payload["negative_circles_um"]
+                ),
+                primitive_order=tuple(
+                    (str(kind), int(index))
+                    for kind, index in payload["primitive_order"]
+                ),  # type: ignore[arg-type]
+            )
+        )
+    if result:
+        return tuple(result)
+
+    # Compatibility fallback for older bundles that retained only partition
+    # assets.  It remains exact but can cover only their selected rail pair.
+    for partition in project.partitions:
+        for cell in partition.cells:
+            if (
+                cell.source_net is None
+                or (cell.source_net.casefold(), partition.layer.casefold())
+                not in wanted_pairs
+            ):
+                continue
+            try:
+                payload = core_services.plane_cell_source_geometry(
+                    cell, attachments, expected_layer=partition.layer
+                )
+            except (ValueError, ArithmeticError):
+                continue
+            result.append(
+                SpdPlaneGeometry(
+                    layer=partition.layer,
+                    net=cell.source_net,
+                    positive_polygons_um=tuple(
+                        tuple(
+                            (float(x_um), float(y_um))
+                            for x_um, y_um in polygon
+                        )
+                        for polygon in payload["positive_polygons_um"]
+                    ),
+                    negative_polygons_um=tuple(
+                        tuple(
+                            (float(x_um), float(y_um))
+                            for x_um, y_um in polygon
+                        )
+                        for polygon in payload["negative_polygons_um"]
+                    ),
+                    positive_circles_um=tuple(
+                        tuple(map(float, item))
+                        for item in payload["positive_circles_um"]
+                    ),
+                    negative_circles_um=tuple(
+                        tuple(map(float, item))
+                        for item in payload["negative_circles_um"]
+                    ),
+                    primitive_order=tuple(
+                        (str(kind), int(index))
+                        for kind, index in payload["primitive_order"]
+                    ),  # type: ignore[arg-type]
+                )
+            )
+    return tuple(result)
+
+
+def _distribution_rail_choices(
+    scenario: ScenarioSpec,
+    required_rail_keys: set[str],
+    *,
+    alternate_rail_keys: set[str] | None = None,
+) -> tuple[
+    dict[tuple[str, str, str], tuple[tuple[object, str | None], ...]],
+    tuple[PlanePairSuggestion, ...],
+]:
+    """Return every source-valid pair for each rail needed by Distribution."""
+
+    from .spd_adapter import _rail_choice_index
+
+    project = scenario.base_project
+    selected_choices = _rail_choice_index(project)
+    template_by_rail = {
+        str(getattr(rail, "rail_id")).casefold(): template_id
+        for choices in selected_choices.values()
+        for rail, template_id in choices
+    }
+    certificates = tuple(
+        rail.mixed_reference_certificate
+        for rail in project.rails
+        if rail.mixed_reference_certificate is not None
+    )
+    choices_by_pair: dict[
+        tuple[str, str, str], list[tuple[object, str | None]]
+    ] = defaultdict(list)
+    selected_pairs: list[PlanePairSuggestion] = []
+    alternate_keys = (
+        required_rail_keys
+        if alternate_rail_keys is None
+        else alternate_rail_keys
+    )
+    for rail in project.rails:
+        rail_key = rail.rail_id.casefold()
+        if required_rail_keys and rail_key not in required_rail_keys:
+            continue
+        suggestions = (
+            suggest_effective_plane_pairs(
+                project.stackup_layers,
+                rail_net=rail.net,
+                gnd_aliases=project.gnd_aliases,
+                mixed_reference_certificates=certificates,
+            )
+            if rail_key in alternate_keys
+            else []
+        )
+        if not suggestions:
+            suggestions = [
+                PlanePairSuggestion(
+                    rail_net=rail.net,
+                    pwr_layer=rail.pwr_layer,
+                    gnd_layer=rail.gnd_layer,
+                    pwr_index=0,
+                    gnd_index=0,
+                    separation_um=0.0,
+                    mixed_reference_certificate=rail.mixed_reference_certificate,
+                )
+            ]
+        for pair in suggestions:
+            key = (
+                rail.net.casefold(),
+                pair.pwr_layer.casefold(),
+                pair.gnd_layer.casefold(),
+            )
+            choices_by_pair[key].append((rail, template_by_rail.get(rail_key)))
+            selected_pairs.append(pair)
+    return (
+        {key: tuple(value) for key, value in choices_by_pair.items()},
+        tuple(selected_pairs),
+    )
+
+
+def _positive_geometry_bounds(
+    geometry: SpdPlaneGeometry,
+) -> tuple[float, float, float, float] | None:
+    bounds: list[tuple[float, float, float, float]] = []
+    for polygon in geometry.positive_polygons_um:
+        if polygon:
+            x_values = [item[0] for item in polygon]
+            y_values = [item[1] for item in polygon]
+            bounds.append(
+                (min(x_values), max(x_values), min(y_values), max(y_values))
+            )
+    for x_um, y_um, radius_um in geometry.positive_circles_um:
+        bounds.append(
+            (
+                x_um - radius_um,
+                x_um + radius_um,
+                y_um - radius_um,
+                y_um + radius_um,
+            )
+        )
+    if not bounds:
+        return None
+    return (
+        min(item[0] for item in bounds),
+        max(item[1] for item in bounds),
+        min(item[2] for item in bounds),
+        max(item[3] for item in bounds),
+    )
+
+
+def _distribution_geometry_choices(
+    plane_geometries: Sequence[SpdPlaneGeometry],
+    rail_choices: Mapping[tuple[str, str, str], Sequence[tuple[object, str]]],
+) -> tuple[
+    tuple[
+        SpdPlaneGeometry,
+        tuple[float, float, float, float],
+        tuple[tuple[object, str], ...],
+    ],
+    ...,
+]:
+    result = []
+    for geometry in plane_geometries:
+        bounds = _positive_geometry_bounds(geometry)
+        if bounds is None:
+            continue
+        choices = tuple(
+            choice
+            for (net_key, pwr_key, _gnd_key), values in rail_choices.items()
+            if net_key == geometry.net.casefold()
+            and pwr_key == geometry.layer.casefold()
+            for choice in values
+        )
+        if choices:
+            result.append((geometry, bounds, choices))
+    return tuple(result)
+
+
+def _distribution_via_eligibility(
+    eligibility_index: PlaneEligibilityIndex,
+    landing: object,
+    rail_choices_by_pair: Mapping[
+        tuple[str, str, str], Sequence[tuple[object, str | None]]
+    ],
+) -> dict[str, RailEligibility]:
+    """Use the shared indexed exact query and its legacy endpoint contract."""
+
+    from .spd_adapter import _eligibility_for_via_landing
+
+    return _eligibility_for_via_landing(
+        eligibility_index,
+        landing,  # type: ignore[arg-type]
+        dict(rail_choices_by_pair),  # type: ignore[arg-type]
+    )
+
+
+def _distribution_batch_via_eligibility(
+    plane_geometries: Sequence[SpdPlaneGeometry],
+    landings: Sequence[object],
+    rail_choices_by_pair: Mapping[
+        tuple[str, str, str], Sequence[tuple[object, str | None]]
+    ],
+    *,
+    progress: ProgressCallback | None = None,
+    is_cancelled: CancelCallback | None = None,
+) -> dict[str, dict[str, RailEligibility]]:
+    """Vectorize exact ordered-copper queries for thousands of PWR Via sites.
+
+    Building one Python polygon search for every Via/rail pair is exact but too
+    slow on production SPDs.  GEOS constructs each final PowerSI boolean shape
+    once, then Shapely's vectorized predicates test all relevant landings in C.
+    Boundary contact remains fail-closed and recovered target-layer coordinates
+    override the legacy endpoint projection on that layer.
+    """
+
+    try:
+        import numpy as np
+        from shapely import contains_xy, dwithin, points
+    except ImportError:
+        return {}
+    landing_by_key: dict[str, object] = {}
+    for landing in landings:
+        via_id = str(getattr(landing, "via_id", ""))
+        key = via_id.casefold()
+        if not key:
+            continue
+        previous = landing_by_key.get(key)
+        if previous is not None and previous != landing:
+            return {}
+        landing_by_key[key] = landing
+    ordered_landings = tuple(landing_by_key.values())
+    if not ordered_landings:
+        return {}
+
+    pairs_by_plane: dict[tuple[str, str], list[tuple[str, str, str]]] = defaultdict(list)
+    for pair_key in rail_choices_by_pair:
+        pairs_by_plane[(pair_key[0], pair_key[1])].append(pair_key)
+    allowed_pairs: dict[str, set[tuple[str, str, str]]] = defaultdict(set)
+    boundary_pairs: dict[str, set[tuple[str, str, str]]] = defaultdict(set)
+    for index, geometry in enumerate(plane_geometries):
+        if is_cancelled is not None and is_cancelled():
+            raise RuntimeError("distribution projection cancelled")
+        pair_keys = pairs_by_plane.get(
+            (geometry.net.casefold(), geometry.layer.casefold())
+        )
+        if not pair_keys:
+            continue
+        payload = {
+            "positive_polygons_um": geometry.positive_polygons_um,
+            "negative_polygons_um": geometry.negative_polygons_um,
+            "positive_circles_um": geometry.positive_circles_um,
+            "negative_circles_um": geometry.negative_circles_um,
+            "primitive_order": geometry.primitive_order,
+        }
+        shape = core_services._ordered_spd_geometry(payload)
+        if shape is None:
+            continue
+        layer_key = geometry.layer.casefold()
+        coordinates = []
+        for landing in ordered_landings:
+            evidence = next(
+                (
+                    item
+                    for item in getattr(landing, "path_evidence", ())
+                    if str(getattr(item, "target_layer", "")).casefold()
+                    == layer_key
+                ),
+                None,
+            )
+            coordinates.append(
+                (
+                    float(getattr(evidence or landing, "x_um")),
+                    float(getattr(evidence or landing, "y_um")),
+                )
+            )
+        xs = np.asarray([item[0] for item in coordinates], dtype=float)
+        ys = np.asarray([item[1] for item in coordinates], dtype=float)
+        inside = np.asarray(contains_xy(shape, xs, ys), dtype=bool)
+        # Match PlaneEligibilityIndex's 1e-6 um fail-closed edge rule.  GEOS
+        # contains() alone accepts points infinitesimally inside either the
+        # outer copper boundary or a negative-hole boundary.
+        near_boundary = np.asarray(
+            dwithin(points(xs, ys), shape.boundary, 1.0e-6), dtype=bool
+        )
+        for landing_index in np.flatnonzero(inside):
+            via_key = str(
+                getattr(ordered_landings[int(landing_index)], "via_id")
+            ).casefold()
+            for pair_key in pair_keys:
+                allowed_pairs[via_key].add(pair_key)
+        for landing_index in np.flatnonzero(near_boundary):
+            via_key = str(
+                getattr(ordered_landings[int(landing_index)], "via_id")
+            ).casefold()
+            for pair_key in pair_keys:
+                boundary_pairs[via_key].add(pair_key)
+        if progress is not None and (
+            index == len(plane_geometries) - 1 or (index + 1) % 8 == 0
+        ):
+            progress(
+                round(100 * (index + 1) / max(len(plane_geometries), 1)),
+                f"Checked {index + 1:,}/{len(plane_geometries):,} exact PWR planes",
+            )
+
+    result: dict[str, dict[str, RailEligibility]] = {}
+    for via_key, landing in landing_by_key.items():
+        at_landing: dict[str, RailEligibility] = {}
+        for pair_key in allowed_pairs.get(via_key, set()) - boundary_pairs.get(
+            via_key, set()
+        ):
+            for rail, template_id in rail_choices_by_pair.get(pair_key, ()):
+                rail_id = str(getattr(rail, "rail_id"))
+                at_landing[rail_id] = RailEligibility(
+                    rail_id=rail_id,
+                    net=str(getattr(rail, "net")),
+                    pwr_layer=str(getattr(rail, "pwr_layer")),
+                    gnd_layer=str(getattr(rail, "gnd_layer")),
+                    via_template_id=template_id,
+                    allowed=True,
+                    reason=(
+                        "Distribution source artwork projection via "
+                        f"{pair_key[1]}/{pair_key[2]}"
+                    ),
+                )
+        result[str(getattr(landing, "via_id"))] = at_landing
+    return result
+
+
+def build_distribution_power_projection(
+    scenario: ScenarioSpec,
+    attachments: Mapping[str, bytes],
+    *,
+    plane_geometries: Sequence[SpdPlaneGeometry] | None = None,
+    targets: Mapping[TargetKey, int] | None = None,
+    relevant_rail_ids: Sequence[str] | None = None,
+    progress: ProgressCallback | None = None,
+    is_cancelled: CancelCallback | None = None,
+) -> _DistributionPowerProjection | None:
+    """Repair Distribution connectivity from retained exact bundle evidence.
+
+    Only GND-only V5 unresolved clusters are candidates.  PWR/GND TOP copper,
+    physical Via anchors, exact destination plane eligibility, and separator
+    topology must all be reconstructed successfully; each failure simply leaves
+    that cluster fixed and unresolved.
+    """
+
+    analysis = scenario.connection_analysis
+    if analysis is None or analysis.version != SHARED_PAD_ANALYSIS_VERSION:
+        return None
+    decap_by_key = {item.refdes.casefold(): item for item in scenario.decaps}
+    connection_by_key = {
+        item.refdes.casefold(): item for item in analysis.connections.values()
+    }
+    present_by_cell: dict[tuple[str, str], int] = defaultdict(int)
+    for decap in scenario.decaps:
+        if decap.enabled and decap.model_id is not None:
+            present_by_cell[
+                (decap.current_rail_id.casefold(), decap.model_id.casefold())
+            ] += 1
+    target_by_cell = (
+        {
+            (str(rail_id).casefold(), str(model_id).casefold()): int(value)
+            for (rail_id, model_id), value in targets.items()
+        }
+        if targets is not None
+        else {}
+    )
+    donor_cells = {
+        key
+        for key, present in present_by_cell.items()
+        if key in target_by_cell and target_by_cell[key] < present
+    }
+    explicit_rail_keys = {
+        str(item).casefold() for item in (relevant_rail_ids or ())
+    }
+    receiver_rail_keys = {
+        rail_key
+        for (rail_key, model_key), target in target_by_cell.items()
+        if target > present_by_cell.get((rail_key, model_key), 0)
+    }
+
+    candidates = tuple(
+        cluster
+        for cluster in analysis.clusters
+        if _projection_candidate_cluster(
+            scenario, cluster, connection_by_key, decap_by_key
+        )
+        and (
+            targets is None
+            or any(
+                (
+                    decap_by_key[refdes.casefold()].current_rail_id.casefold(),
+                    str(decap_by_key[refdes.casefold()].model_id).casefold(),
+                )
+                in donor_cells
+                for refdes in cluster.member_refdes
+                if decap_by_key[refdes.casefold()].model_id is not None
+            )
+        )
+    )
+    donor_refdes_keys = {
+        decap.refdes.casefold()
+        for decap in scenario.decaps
+        if decap.enabled
+        and decap.model_id is not None
+        and (
+            decap.current_rail_id.casefold(),
+            decap.model_id.casefold(),
+        )
+        in donor_cells
+    }
+    donor_cluster_keys = {
+        cluster.cluster_id.casefold()
+        for cluster in analysis.clusters
+        if any(refdes.casefold() in donor_refdes_keys for refdes in cluster.member_refdes)
+    }
+    direct_donor_keys = {
+        key
+        for key in donor_refdes_keys
+        if (connection := connection_by_key.get(key)) is not None
+        and connection.kind == DecapConnectionKind.DIRECT
+        and bool(connection.power_vias)
+    }
+    anchored_donor_cluster_keys = {
+        cluster.cluster_id.casefold()
+        for cluster in analysis.clusters
+        if cluster.cluster_id.casefold() in donor_cluster_keys
+        and cluster.state == SharedPadClusterState.ANCHORED
+    }
+    if not candidates and not direct_donor_keys and not anchored_donor_cluster_keys:
+        return None
+    if is_cancelled is not None and is_cancelled():
+        raise RuntimeError("distribution projection cancelled")
+    if progress is not None:
+        progress(5, "Indexing retained PWR-plane geometry")
+
+    from .spd_adapter import _common_eligibility_maps
+
+    candidate_source_rail_keys = {
+        decap_by_key[refdes.casefold()].source_rail_id.casefold()
+        for cluster in candidates
+        for refdes in cluster.member_refdes
+    }
+    alternate_rail_keys = receiver_rail_keys | explicit_rail_keys
+    projection_rail_keys = alternate_rail_keys | candidate_source_rail_keys
+    rail_choices, _selected_pairs = _distribution_rail_choices(
+        scenario,
+        projection_rail_keys,
+        alternate_rail_keys=alternate_rail_keys,
+    )
+    if not rail_choices:
+        return None
+    wanted_plane_pairs = {
+        (net_key, pwr_key) for net_key, pwr_key, _gnd_key in rail_choices
+    }
+    exact_planes = tuple(plane_geometries or ())
+    if not exact_planes:
+        exact_planes = _distribution_plane_geometries(
+            scenario,
+            attachments,
+            wanted_pairs=wanted_plane_pairs,
+        )
+    else:
+        exact_planes = tuple(
+            geometry
+            for geometry in exact_planes
+            if (geometry.net.casefold(), geometry.layer.casefold())
+            in wanted_plane_pairs
+        )
+    if not exact_planes:
+        return None
+    relevant_cluster_keys = anchored_donor_cluster_keys | {
+        cluster.cluster_id.casefold() for cluster in candidates
+    }
+    projection_landings: dict[str, object] = {}
+    for refdes_key, connection in connection_by_key.items():
+        cluster_key = (
+            connection.cluster_id.casefold()
+            if connection.cluster_id is not None
+            else None
+        )
+        if refdes_key not in direct_donor_keys and cluster_key not in relevant_cluster_keys:
+            continue
+        for landing in connection.power_vias:
+            key = landing.via_id.casefold()
+            previous = projection_landings.get(key)
+            if previous is not None and previous != landing:
+                return None
+            projection_landings[key] = landing
+    batch_via_eligibility = _distribution_batch_via_eligibility(
+        exact_planes,
+        tuple(projection_landings.values()),
+        rail_choices,
+        progress=(
+            (lambda value, message: progress(5 + round(value * 0.50), message))
+            if progress is not None
+            else None
+        ),
+        is_cancelled=is_cancelled,
+    )
+    batch_via_eligibility_by_key = {
+        via_id.casefold(): values
+        for via_id, values in batch_via_eligibility.items()
+    }
+    if not batch_via_eligibility_by_key:
+        return None
+
+    wanted_top = {
+        (str(cluster.layer).casefold(), str(net).casefold())
+        for cluster in candidates
+        for net in (cluster.power_net, cluster.ground_net)
+        if net
+    }
+    top_geometries = _decode_top_distribution_geometries(
+        scenario, attachments, wanted_top
+    )
+    geometry_by_key: dict[
+        tuple[str, str], list[_DistributionTopArtwork]
+    ] = defaultdict(list)
+    for artwork in top_geometries:
+        geometry = artwork.geometry
+        geometry_by_key[
+            (geometry.layer.casefold(), geometry.net.casefold())
+        ].append(artwork)
+
+    projected_decaps: list[ScenarioDecap] = []
+    expanded_direct = 0
+    for decap in scenario.decaps:
+        key = decap.refdes.casefold()
+        connection = connection_by_key.get(key)
+        if key not in direct_donor_keys or connection is None:
+            projected_decaps.append(decap)
+            continue
+        common = _common_eligibility_maps(
+            tuple(
+                batch_via_eligibility_by_key.get(landing.via_id.casefold(), {})
+                for landing in connection.power_vias
+            )
+        )
+        merged = dict(decap.eligibility)
+        merged.update(common)
+        if merged != decap.eligibility:
+            expanded_direct += 1
+            projected_decaps.append(
+                ScenarioDecap.model_validate(
+                    {**decap.model_dump(mode="python"), "eligibility": merged}
+                )
+            )
+        else:
+            projected_decaps.append(decap)
+
+    projected_connections = dict(analysis.connections)
+    projected_clusters: list[SharedPadCluster] = []
+    promoted: list[str] = []
+    expanded_clusters = 0
+    for index, cluster in enumerate(analysis.clusters):
+        if is_cancelled is not None and is_cancelled():
+            raise RuntimeError("distribution projection cancelled")
+        cluster_key = cluster.cluster_id.casefold()
+        if cluster_key in anchored_donor_cluster_keys:
+            landing_by_key = {
+                landing.via_id.casefold(): landing
+                for refdes in cluster.member_refdes
+                for landing in connection_by_key[refdes.casefold()].power_vias
+            }
+            source_via_eligibility = {
+                via_id.casefold(): values
+                for via_id, values in cluster.via_eligibility.items()
+            }
+            via_eligibility = {
+                landing.via_id: {
+                    **source_via_eligibility.get(landing.via_id.casefold(), {}),
+                    **batch_via_eligibility_by_key.get(
+                        landing.via_id.casefold(), {}
+                    ),
+                }
+                for landing in landing_by_key.values()
+            }
+            common = _common_eligibility_maps(tuple(via_eligibility.values()))
+            merged_common = {**cluster.eligibility, **common}
+            updated = cluster.model_copy(
+                update={
+                    "eligibility": merged_common,
+                    "via_eligibility": via_eligibility,
+                }
+            )
+            if updated != cluster:
+                expanded_clusters += 1
+            projected_clusters.append(updated)
+            continue
+        if cluster not in candidates:
+            projected_clusters.append(cluster)
+            continue
+        assert cluster.layer and cluster.power_net and cluster.ground_net
+        evidence = _cluster_pad_evidence(cluster, decap_by_key)
+        power_shapes = tuple(
+            _point_probe(
+                owner,
+                "PWR",
+                cluster.power_net,
+                item.power_x_um,
+                item.power_y_um,
+            )
+            for owner, item in enumerate(evidence)
+        )
+        ground_shapes = tuple(
+            _point_probe(
+                owner,
+                "GND",
+                cluster.ground_net,
+                item.ground_x_um,
+                item.ground_y_um,
+            )
+            for owner, item in enumerate(evidence)
+        )
+        power_artwork = tuple(
+            geometry_by_key.get(
+                (cluster.layer.casefold(), cluster.power_net.casefold()), ()
+            )
+        )
+        ground_artwork = tuple(
+            geometry_by_key.get(
+                (cluster.layer.casefold(), cluster.ground_net.casefold()), ()
+            )
+        )
+        if len(power_artwork) != 1 or len(ground_artwork) != 1:
+            projected_clusters.append(cluster)
+            continue
+        power_component_index = _strict_component_index(
+            power_artwork[0],
+            tuple((item.power_x_um, item.power_y_um) for item in evidence),
+        )
+        ground_component_index = _strict_component_index(
+            ground_artwork[0],
+            tuple((item.ground_x_um, item.ground_y_um) for item in evidence),
+        )
+        if power_component_index is None or ground_component_index is None:
+            projected_clusters.append(cluster)
+            continue
+        members = set(range(len(evidence)))
+        power_tree = _minimum_distance_tree(
+            tuple(members),
+            {item.owner_index: item for item in power_shapes},
+            evidence,
+        )
+        canonical_power_edges = _canonical_ref_edges(power_tree, evidence)
+        ground_tree = _minimum_distance_tree(
+            tuple(members),
+            {item.owner_index: item for item in ground_shapes},
+            evidence,
+        )
+        canonical_ground_edges = _canonical_ref_edges(ground_tree, evidence)
+
+        via_eligibility: dict[str, dict[str, RailEligibility]] = {}
+        landing_by_key = {}
+        invalid_via_identity = False
+        for refdes in cluster.member_refdes:
+            connection = connection_by_key[refdes.casefold()]
+            for landing in connection.power_vias:
+                key = landing.via_id.casefold()
+                previous = landing_by_key.get(key)
+                if previous is not None and previous != landing:
+                    invalid_via_identity = True
+                    break
+                landing_by_key[key] = landing
+            if invalid_via_identity:
+                break
+        if invalid_via_identity or not landing_by_key:
+            projected_clusters.append(cluster)
+            continue
+        for landing in landing_by_key.values():
+            at_landing = batch_via_eligibility_by_key.get(
+                landing.via_id.casefold(), {}
+            )
+            if not at_landing:
+                invalid_via_identity = True
+                break
+            via_eligibility[landing.via_id] = at_landing
+        if invalid_via_identity:
+            projected_clusters.append(cluster)
+            continue
+        common = _common_eligibility_maps(tuple(via_eligibility.values()))
+        source_rail_keys = {
+            decap_by_key[refdes.casefold()].source_rail_id.casefold()
+            for refdes in cluster.member_refdes
+        }
+        if not source_rail_keys or not source_rail_keys.issubset(
+            {item.rail_id.casefold() for item in common.values() if item.allowed}
+        ):
+            projected_clusters.append(cluster)
+            continue
+
+        power_component = power_artwork[0].components[power_component_index]
+        collinear = (
+            max(item.power_x_um for item in evidence)
+            - min(item.power_x_um for item in evidence)
+            <= 1.0e-9
+            or max(item.power_y_um for item in evidence)
+            - min(item.power_y_um for item in evidence)
+            <= 1.0e-9
+        )
+        gap_refdes = (
+            cluster.member_refdes
+            if collinear
+            and _component_is_axis_aligned_rectangle(power_component)
+            and canonical_power_edges == tuple(cluster.power_edges)
+            else ()
+        )
+        anchor_refdes = tuple(
+            refdes
+            for refdes in cluster.member_refdes
+            if (
+                connection_by_key[refdes.casefold()].power_vias
+                or connection_by_key[refdes.casefold()].ground_vias
+            )
+        )
+        dummy_refdes = tuple(
+            refdes
+            for refdes in cluster.member_refdes
+            if refdes.casefold()
+            not in {item.casefold() for item in anchor_refdes}
+        )
+        projected_cluster = SharedPadCluster.model_validate(
+            {
+                **cluster.model_dump(mode="python"),
+                "state": SharedPadClusterState.ANCHORED,
+                "anchor_refdes": anchor_refdes,
+                "dummy_refdes": dummy_refdes,
+                "ground_edges": canonical_ground_edges,
+                "isolation_gap_refdes": gap_refdes,
+                "reason": None,
+                "eligibility": common,
+                "via_eligibility": via_eligibility,
+            }
+        )
+        projected_clusters.append(projected_cluster)
+        promoted.append(cluster.cluster_id)
+        for refdes in cluster.member_refdes:
+            connection = connection_by_key[refdes.casefold()]
+            projected_connections[connection.refdes] = connection.model_copy(
+                update={
+                    "kind": (
+                        DecapConnectionKind.SHARED_ANCHOR
+                        if connection.power_vias or connection.ground_vias
+                        else DecapConnectionKind.SHARED_DUMMY
+                    ),
+                    "reason": None,
+                }
+            )
+        if progress is not None:
+            progress(
+                10 + round(85 * (index + 1) / max(len(analysis.clusters), 1)),
+                f"Verified {len(promoted):,} Distribution PWR cluster(s)",
+            )
+
+    if not promoted and not expanded_direct and not expanded_clusters:
+        return None
+    projected_analysis = analysis.model_copy(
+        update={
+            "connections": projected_connections,
+            "clusters": tuple(projected_clusters),
+        }
+    )
+    if progress is not None:
+        progress(100, f"Distribution PWR proof ready ({len(promoted):,} clusters)")
+    return _DistributionPowerProjection(
+        source_sha256=scenario.source.sha256,
+        input_design_fingerprint=scenario.design_fingerprint,
+        input_revision=scenario.revision,
+        source_decaps=tuple(scenario.decaps),
+        projected_decaps=tuple(projected_decaps),
+        source_analysis=analysis,
+        projected_analysis=projected_analysis,
+        promoted_cluster_ids=tuple(sorted(promoted, key=str.casefold)),
+    )
+
+
+def _scenario_with_distribution_power_projection(
+    scenario: ScenarioSpec,
+    projection: _DistributionPowerProjection | None,
+) -> ScenarioSpec:
+    if projection is None:
+        return scenario
+    if projection.source_sha256.casefold() != scenario.source.sha256.casefold():
+        raise DistributionError(
+            "POWER_PROJECTION_STALE",
+            "Distribution PWR proof belongs to a different source SPD",
+        )
+    if (
+        scenario.design_fingerprint != projection.input_design_fingerprint
+        or scenario.revision != projection.input_revision
+    ):
+        raise DistributionError(
+            "POWER_PROJECTION_STALE",
+            "scenario changed after Distribution PWR proof was prepared",
+        )
+    if (
+        scenario.connection_analysis != projection.source_analysis
+        and scenario.connection_analysis != projection.projected_analysis
+    ):
+        raise DistributionError(
+            "POWER_PROJECTION_STALE",
+            "source connectivity changed after Distribution PWR proof was prepared",
+        )
+    if (
+        tuple(scenario.decaps) != projection.source_decaps
+        and tuple(scenario.decaps) != projection.projected_decaps
+    ):
+        raise DistributionError(
+            "POWER_PROJECTION_STALE",
+            "decap state changed after Distribution PWR proof was prepared",
+        )
+    return scenario.model_copy(
+        update={
+            "decaps": list(projection.projected_decaps),
+            "connection_analysis": projection.projected_analysis,
+        }
+    )
 
 
 def _require_distribution_compatible_connectivity(scenario: ScenarioSpec) -> None:
@@ -804,26 +2006,79 @@ def _preexisting_evaluation_blocker_diagnostic(
     )
 
 
-def distribution_present_counts(scenario: ScenarioSpec) -> dict[TargetKey, int]:
-    """Return the full canonical rail×model Present matrix used by the planner."""
+def distribution_inventory_counts(
+    scenario: ScenarioSpec,
+    *,
+    power_projection: _DistributionPowerProjection | None = None,
+) -> tuple[dict[TargetKey, int], dict[TargetKey, int]]:
+    """Return canonical physical-Present and verified-movable count matrices.
 
+    Present includes all enabled, model-assigned physical decaps. The second
+    matrix includes only verified electrical connections, and both are derived
+    from one inventory scan for background document preparation.
+    """
+
+    scenario = _scenario_with_distribution_power_projection(
+        scenario, power_projection
+    )
     project = scenario.base_project
     rail_by_key = {item.rail_id.casefold(): item for item in project.rails}
     model_by_key = {item.model_id.casefold(): item for item in project.cap_models}
-    result: dict[TargetKey, int] = {
+    present_result: dict[TargetKey, int] = {
+        (rail.rail_id, model.model_id): 0
+        for rail in project.rails
+        for model in project.cap_models
+    }
+    assignable_result: dict[TargetKey, int] = {
         (rail.rail_id, model.model_id): 0
         for rail in project.rails
         for model in project.cap_models
     }
     inventory = _distribution_inventory(scenario)
-    for decap in inventory.physical:
-        rail = rail_by_key.get(decap.current_rail_id.casefold())
-        model = model_by_key.get(decap.model_id.casefold())
-        if rail is None or model is None:
-            continue
-        key = (rail.rail_id, model.model_id)
-        result[key] += 1
-    return result
+    for raw_counts, result in (
+        (inventory.present_by_cell, present_result),
+        (inventory.assignable_by_cell, assignable_result),
+    ):
+        for (rail_key, model_key), count in raw_counts.items():
+            rail = rail_by_key.get(rail_key)
+            model = model_by_key.get(model_key)
+            if rail is None or model is None:
+                continue
+            result[(rail.rail_id, model.model_id)] = int(count)
+    return present_result, assignable_result
+
+
+def distribution_present_counts(
+    scenario: ScenarioSpec,
+    *,
+    power_projection: _DistributionPowerProjection | None = None,
+) -> dict[TargetKey, int]:
+    """Return the full canonical rail×model Present matrix used by the planner."""
+
+    present, _assignable = distribution_inventory_counts(
+        scenario, power_projection=power_projection
+    )
+    return present
+
+
+def distribution_assignable_counts(
+    scenario: ScenarioSpec,
+    *,
+    power_projection: _DistributionPowerProjection | None = None,
+) -> dict[TargetKey, int]:
+    """Return the canonical rail/model matrix of decaps eligible to move.
+
+    ``Present`` includes every enabled, model-assigned physical decap so the
+    target table remains an honest inventory. A decap without verified
+    electrical connectivity must remain fixed, however, and therefore cannot
+    provide numeric donor capacity. The GUI uses this companion matrix to show
+    the same numeric preflight enforced by the planner.
+    """
+
+    _present, assignable = distribution_inventory_counts(
+        scenario, power_projection=power_projection
+    )
+    return assignable
 
 
 def _numeric_shortage_diagnostics(
@@ -868,9 +2123,14 @@ def validate_distribution_targets(
     scenario: ScenarioSpec,
     targets: Mapping[TargetKey, int],
     tolerances: Mapping[ToleranceKey, float] | None = None,
+    *,
+    power_projection: _DistributionPowerProjection | None = None,
 ) -> None:
     """Validate targets, exchange tolerances, and hard numeric supply."""
 
+    scenario = _scenario_with_distribution_power_projection(
+        scenario, power_projection
+    )
     _require_distribution_compatible_connectivity(scenario)
 
     canonical_present = distribution_present_counts(scenario)
@@ -1080,6 +2340,33 @@ def _is_feasible_milp_start(
         ):
             return False
     return True
+
+
+def _valid_timeout_incumbent(
+    candidate: np.ndarray,
+    *,
+    integrality: np.ndarray,
+    bounds: Bounds,
+    constraints: LinearConstraint | tuple[()],
+    fulfilled_count: int,
+    receiver_demand_total: int,
+    require_full_demand: bool = True,
+) -> bool:
+    """Accept a time-limit incumbent only when it is safe to publish.
+
+    A feasible solution is globally sufficient after it fills all explicit
+    receiver demand; otherwise the timeout has not proved maximum fulfillment.
+    """
+
+    return (
+        (not require_full_demand or fulfilled_count == receiver_demand_total)
+        and _is_feasible_milp_start(
+            candidate,
+            integrality=integrality,
+            bounds=bounds,
+            constraints=constraints,
+        )
+    )
 
 
 def _direct_distance_selection(
@@ -1387,6 +2674,7 @@ def compute_distribution_plan(
     distance_mode: DistributionDistanceMode | str = DistributionDistanceMode.NEAREST,
     *,
     tolerances: Mapping[ToleranceKey, float] | None = None,
+    power_projection: _DistributionPowerProjection | None = None,
     progress: ProgressCallback | None = None,
     is_cancelled: CancelCallback | None = None,
     time_limit_s: float = 120.0,
@@ -1399,6 +2687,10 @@ def compute_distribution_plan(
     ordering with a deterministic canonical-rank tie break.
     """
 
+    input_scenario = scenario
+    scenario = _scenario_with_distribution_power_projection(
+        scenario, power_projection
+    )
     try:
         mode = DistributionDistanceMode(str(distance_mode).upper())
     except ValueError as exc:
@@ -1472,6 +2764,10 @@ def compute_distribution_plan(
     receiver_cells = {
         key for key, role in role_by_cell.items() if role == DistributionCellRole.RECEIVER
     }
+    receiver_demand_total = sum(
+        max(target_by_cell[cell] - int(present.get(cell, 0)), 0)
+        for cell in receiver_cells
+    )
     exchange_cells = {
         key for key, role in role_by_cell.items() if role == DistributionCellRole.EXCHANGE
     }
@@ -2227,6 +3523,12 @@ def compute_distribution_plan(
             _check_cancelled(is_cancelled)
             group_deadline = monotonic() + time_limit_s
             variable_indices = np.asarray(variables, dtype=np.int64)
+            local_receiver_indices = np.flatnonzero(
+                np.isin(
+                    variable_indices,
+                    np.fromiter(receiver_move_variables, dtype=np.int64),
+                )
+            )
             row_index_array = np.asarray(row_indices, dtype=np.int64)
             local_constraints: LinearConstraint | tuple[()] = ()
             if row_indices:
@@ -2259,6 +3561,9 @@ def compute_distribution_plan(
                     feasibility_tiebreak[variable_indices], dtype=float
                 )
             )
+
+            def local_fulfilled_count(candidate: np.ndarray) -> int:
+                return int(round(float(np.sum(candidate[local_receiver_indices]))))
 
             def remaining_time() -> float:
                 return max(group_deadline - monotonic(), 0.0)
@@ -2371,10 +3676,27 @@ def compute_distribution_plan(
                         # At a fixed objective level, any feasible incumbent
                         # proves that level is attainable even if HiGHS reached
                         # its time limit before reporting a zero-objective proof.
-                        if forced_result.x is not None and forced_result.status in {
-                            0,
-                            1,
-                        }:
+                        if forced_result.x is not None and (
+                            forced_result.status == 0
+                            or (
+                                forced_result.status == 1
+                                and _valid_timeout_incumbent(
+                                    np.asarray(forced_result.x, dtype=float),
+                                    integrality=local_integrality,
+                                    bounds=local_bounds,
+                                    constraints=forced_constraints,
+                                    fulfilled_count=local_fulfilled_count(
+                                        np.asarray(forced_result.x, dtype=float)
+                                    ),
+                                    receiver_demand_total=receiver_demand_total,
+                                    # A forced equality row proves the local
+                                    # lexicographic objective.  Global demand
+                                    # is checked after all independent groups
+                                    # have been assembled below.
+                                    require_full_demand=False,
+                                )
+                            )
+                        ):
                             result = OptimizeResult(
                                 status=0,
                                 success=True,
@@ -2424,6 +3746,20 @@ def compute_distribution_plan(
                 result.status == 1
                 and result.x is not None
                 and feasible_fallback_stage is not None
+                and _valid_timeout_incumbent(
+                    np.asarray(result.x, dtype=float),
+                    integrality=local_integrality,
+                    bounds=local_bounds,
+                    constraints=local_constraints,
+                    fulfilled_count=local_fulfilled_count(
+                        np.asarray(result.x, dtype=float)
+                    ),
+                    receiver_demand_total=receiver_demand_total,
+                    # A status=1 result is only provisional for the
+                    # fulfillment stage; the assembled full-demand proof is
+                    # enforced immediately after solve_decomposed returns.
+                    require_full_demand=False,
+                )
             ):
                 stage_fallback_flags.add(feasible_fallback_stage)
             elif result.status != 0 or result.x is None:
@@ -2556,6 +3892,7 @@ def compute_distribution_plan(
             progress_percent=35,
             stage="Maximizing receiver demand",
             feasibility_tiebreak=gap_tiebreak,
+            feasible_fallback_stage="fulfillment",
         )
         fulfilled_optimum = int(
             round(
@@ -2565,6 +3902,19 @@ def compute_distribution_plan(
                 )
             )
         )
+        if "fulfillment" in stage_fallback_flags:
+            if fulfilled_optimum < receiver_demand_total:
+                raise DistributionError(
+                    "OPTIMIZER_TIMEOUT",
+                    "distribution optimizer found a topology-safe incumbent but "
+                    f"fulfilled only {fulfilled_optimum:,}/{receiver_demand_total:,} "
+                    "receiver decaps before the time limit, so maximum fulfillment "
+                    "was not proven",
+                )
+            # No plan can exceed the explicit receiver demand.  An incumbent that
+            # fills every requested cell is therefore a rigorous global optimum
+            # even when HiGHS did not close its generic MIP bound in time.
+            stage_fallback_flags.remove("fulfillment")
         constrain_group_totals(receiver_move_variables, first_solution)
 
         provisional_gap_count = int(
@@ -3381,8 +4731,8 @@ def compute_distribution_plan(
     )
     _notify(progress, 100, f"Distribution plan ready ({status.value})")
     return DistributionPlan(
-        input_design_fingerprint=scenario.design_fingerprint,
-        input_revision=scenario.revision,
+        input_design_fingerprint=input_scenario.design_fingerprint,
+        input_revision=input_scenario.revision,
         output_design_fingerprint=preview.design_fingerprint,
         output_revision=preview.revision,
         distance_mode=mode,
@@ -3402,6 +4752,8 @@ def compute_distribution_plan(
 def apply_distribution_plan(
     scenario: ScenarioSpec,
     plan: DistributionPlan,
+    *,
+    power_projection: _DistributionPowerProjection | None = None,
 ) -> ScenarioSpec:
     """Apply one verified plan once, rejecting stale or tampered inputs."""
 
@@ -3414,6 +4766,9 @@ def apply_distribution_plan(
             "scenario changed after this distribution plan was calculated",
         )
     try:
+        scenario = _scenario_with_distribution_power_projection(
+            scenario, power_projection
+        )
         result = assign_rails_and_isolation_gaps_atomic(
             scenario,
             plan.assignment_map,
@@ -3451,7 +4806,10 @@ __all__ = [
     "TargetKey",
     "ToleranceKey",
     "apply_distribution_plan",
+    "build_distribution_power_projection",
     "compute_distribution_plan",
+    "distribution_assignable_counts",
+    "distribution_inventory_counts",
     "distribution_present_counts",
     "distribution_csv_rows",
     "distribution_inventory_table",
