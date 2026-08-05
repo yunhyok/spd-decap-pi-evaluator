@@ -1,0 +1,45 @@
+[build-system]
+requires = ["setuptools>=75", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "spd-decap-pi-evaluator"
+version = "0.20.0"
+description = "Standalone PowerSI SPD decap PWR assignment and PI evaluation desktop tool"
+readme = "README.md"
+requires-python = ">=3.12"
+license = {text = "Proprietary"}
+authors = [{name = "Probe Card MLO PDN Team"}]
+dependencies = [
+  "numpy>=2.0",
+  "scipy>=1.15",
+  "shapely>=2.0",
+  "pydantic>=2.10",
+  "PySide6>=6.8",
+  "pyqtgraph>=0.13",
+  "httpx>=0.27",
+  "XlsxWriter>=3.2",
+  "openpyxl>=3.1",
+  "threadpoolctl>=3.5",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=8.3",
+  "pytest-cov>=6.0",
+  "pyinstaller>=6.12",
+]
+
+[project.scripts]
+spd-decap-pi-evaluator = "spd_decap_pi.gui.app:main"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+addopts = "-ra"
+testpaths = ["tests"]
+pythonpath = ["src"]

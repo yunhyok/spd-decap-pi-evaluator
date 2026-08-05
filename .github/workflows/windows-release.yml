@@ -1,0 +1,40 @@
+name: Windows release artifact
+
+permissions:
+  contents: read
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  installer:
+    runs-on: windows-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Install Inno Setup
+        run: choco install innosetup --no-progress --yes
+      - name: Build and test installer
+        run: >-
+          powershell.exe -ExecutionPolicy Bypass -NoProfile
+          -File .\scripts\build_spd_decap_pi_installer.ps1
+      - name: Write SHA-256 checksum
+        run: |
+          $installer = Get-ChildItem installer-output\SPDDecapPIEvaluatorSetup-*.exe | Select-Object -First 1
+          $hash = (Get-FileHash $installer.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
+          "$hash *$($installer.Name)" | Set-Content "$($installer.FullName).sha256" -Encoding ascii
+      - name: Upload installer
+        uses: actions/upload-artifact@v4
+        with:
+          name: SPDDecapPIEvaluator-${{ github.ref_name }}
+          path: |
+            installer-output/SPDDecapPIEvaluatorSetup-*.exe
+            installer-output/SPDDecapPIEvaluatorSetup-*.exe.sha256
+          if-no-files-found: error
