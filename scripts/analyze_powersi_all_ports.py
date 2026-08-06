@@ -10,7 +10,6 @@ import argparse
 from hashlib import sha256
 import json
 from pathlib import Path
-import re
 from typing import Any, Mapping
 
 import numpy as np
@@ -18,6 +17,7 @@ import numpy as np
 from spd_decap_pi._core.io.touchstone import (
     TouchstoneNetwork,
     open_circuit_zpp,
+    powersi_rail_from_header_label,
     read_touchstone,
     s_to_z,
     validate_port_manifest,
@@ -32,9 +32,6 @@ ANCHORS_HZ: tuple[tuple[str, float], ...] = (
 )
 LOW_BAND_HZ = (1.0e5, 1.0e6)
 RESIDUAL_BAND_HZ = (1.0e7, 1.0e8)
-_POWER_SI_LABEL = re.compile(r"^2nd_SITE[01]-(.+/[01])$")
-
-
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--touchstone", required=True, type=Path)
@@ -59,17 +56,28 @@ def complete_92_port_manifest(network: TouchstoneNetwork) -> dict[str, int]:
     if set(network.port_mapping) != set(range(1, port_count + 1)):
         raise ValueError("92-port PowerSI header is incomplete")
     manifest: dict[str, int] = {}
+    expected_labels: dict[str, str] = {}
     for port, header_label in sorted(network.port_mapping.items()):
-        matched = _POWER_SI_LABEL.fullmatch(header_label)
-        if matched is None:
+        try:
+            rail_label = powersi_rail_from_header_label(header_label)
+        except ValueError as exc:
+            if "does not match" in str(exc):
+                raise ValueError(
+                    f"PowerSI header site mismatch at port {port}: {header_label!r}"
+                ) from exc
             raise ValueError(
                 f"port {port} does not use the exact PowerSI SITE header convention"
-            )
-        rail_label = matched.group(1)
+            ) from exc
         if rail_label in manifest:
             raise ValueError(f"PowerSI header maps multiple ports to {rail_label!r}")
         manifest[rail_label] = port
-    validate_port_manifest(network, manifest, require_complete_header=True)
+        expected_labels[rail_label] = header_label
+    validate_port_manifest(
+        network,
+        manifest,
+        expected_header_labels=expected_labels,
+        require_complete_header=True,
+    )
     return manifest
 
 

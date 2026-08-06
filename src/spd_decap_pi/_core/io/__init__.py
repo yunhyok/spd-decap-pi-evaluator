@@ -19,6 +19,7 @@ from .touchstone import (
     TouchstoneError,
     TouchstoneNetwork,
     open_circuit_zpp,
+    powersi_rail_from_header_label,
     read_touchstone,
     s_to_z,
 )
@@ -40,6 +41,7 @@ __all__ = [
     "TouchstoneError",
     "TouchstoneNetwork",
     "open_circuit_zpp",
+    "powersi_rail_from_header_label",
     "read_touchstone",
     "s_to_z",
 ]

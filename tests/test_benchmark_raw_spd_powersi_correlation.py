@@ -99,6 +99,35 @@ def test_complete_manifest_requires_exact_92_port_power_si_header():
         module.complete_92_port_manifest(incomplete)
 
 
+def test_complete_manifest_accepts_export_run_qualified_site_labels():
+    labels = {
+        index: f"SITE{(index - 1) % 2}_0805-ADC_VDD_{index:03d}/{(index - 1) % 2}"
+        for index in range(1, 93)
+    }
+    network = module.TouchstoneNetwork(
+        frequencies_hz=np.asarray([1e5]),
+        s_parameters=np.zeros((1, 92, 92), dtype=complex),
+        reference_ohm=1.0,
+        port_mapping=labels,
+        data_format="RI",
+    )
+
+    manifest = module.complete_92_port_manifest(network)
+
+    assert manifest["ADC_VDD_001/0"] == 1
+    assert manifest["ADC_VDD_092/1"] == 92
+    module.validate_selected_port_manifest(
+        network,
+        {"ADC_VDD_001/0": 1, "ADC_VDD_092/1": 92},
+    )
+
+    with pytest.raises(ValueError, match="port-label mismatch"):
+        module.validate_selected_port_manifest(
+            network,
+            {"ADC_VDD_001/0": 2},
+        )
+
+
 def test_cli_defaults_to_development_and_holdout_modes_and_requires_new_output():
     args = module.parse_args(["--spd", "raw.spd", "--touchstone", "r.s92p", "--out-dir", "result"])
     assert args.modal_max_index is None
@@ -166,3 +195,88 @@ def test_default_control_flow_still_runs_every_candidate_mode(monkeypatch):
     assert runs == {"6": {"mode": 6}, "12": {"mode": 12}}
     assert execution["status"] == "completed"
     assert execution["completed_modal_max_indices"] == [6, 12]
+    assert execution["blocked_rails_by_modal_max_index"] == {}
+
+
+def test_candidate_mode_execution_reports_partial_without_hiding_blocked_rail(monkeypatch):
+    monkeypatch.setattr(
+        module,
+        "_run_one",
+        lambda *_args, modal_index, **_kwargs: {
+            "modal_max_index": modal_index,
+            "rails": {
+                "CLEAR/0": {"status": "completed"},
+                "BLOCKED/0": {"status": "blocked", "reason": "outside cavity"},
+            },
+        },
+    )
+
+    runs, execution = module._run_candidate_modes(
+        object(), object(), object(), {}, modes=(6,), legacy_via_only=False
+    )
+
+    assert runs["6"]["rails"]["BLOCKED/0"]["reason"] == "outside cavity"
+    assert execution["status"] == "partial"
+    assert execution["blocked_rails_by_modal_max_index"] == {
+        "6": ["BLOCKED/0"]
+    }
+
+
+def test_run_one_keeps_modelability_blocker_and_continues_controls(monkeypatch):
+    class Outcome:
+        solver_version = "test-solver"
+        convergence = None
+        solve = type(
+            "Solve",
+            (),
+            {
+                "frequencies_hz": np.asarray([1.0e5]),
+                "impedance_ohm": np.asarray([1.0 + 0.0j]),
+                "diagnostics": type(
+                    "Diagnostics",
+                    (),
+                    {
+                        "mode_count": 1,
+                        "condition_numbers": np.asarray([1.0]),
+                        "relative_residuals": np.asarray([0.0]),
+                    },
+                )(),
+            },
+        )()
+
+    def build(_scenario, *, evaluation_rail_id):
+        if evaluation_rail_id == "BLOCKED/0":
+            raise module.ScenarioEvaluationBuildError(
+                "TERMINAL_OUTSIDE_SELECTED_PLANE", "outside cavity"
+            )
+        return object()
+
+    monkeypatch.setattr(module, "build_evaluation_project", build)
+    monkeypatch.setattr(
+        module, "evaluate_project_rail_converged", lambda *_args, **_kwargs: Outcome()
+    )
+    monkeypatch.setattr(
+        module,
+        "correlation_metrics",
+        lambda *_args, **_kwargs: {"rms_db": 0.0},
+    )
+    monkeypatch.setattr(
+        module, "open_circuit_zpp", lambda _converted, _port: np.asarray([1.0 + 0.0j])
+    )
+    monkeypatch.setitem(module.GROUP_BY_RAIL, "BLOCKED/0", "loaded_final_holdout")
+    monkeypatch.setitem(module.GROUP_BY_RAIL, "CONTROL/0", "vqps_development")
+    network = module.TouchstoneNetwork(
+        np.asarray([1.0e5]), np.zeros((1, 2, 2), dtype=complex), 1.0, {}, "RI"
+    )
+
+    result = module._run_one(
+        object(),
+        network,
+        np.zeros((1, 2, 2), dtype=complex),
+        {"BLOCKED/0": 1, "CONTROL/0": 2},
+        modal_index=6,
+    )
+
+    assert result["rails"]["BLOCKED/0"]["status"] == "blocked"
+    assert "outside cavity" in result["rails"]["BLOCKED/0"]["reason"]
+    assert result["rails"]["CONTROL/0"]["status"] == "completed"

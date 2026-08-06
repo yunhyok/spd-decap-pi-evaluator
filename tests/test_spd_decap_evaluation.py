@@ -30,6 +30,7 @@ from spd_decap_pi._core.domain import (
 )
 from spd_decap_pi._core import services as core_services
 from spd_decap_pi._core.services import EvaluationView
+from spd_decap_pi._core.solver.evaluator import build_project_evaluation_request
 from spd_decap_pi import evaluation as evaluation_module
 from spd_decap_pi.distribution import (
     DistributionDistanceMode,
@@ -46,6 +47,7 @@ from spd_decap_pi.evaluation import (
     build_evaluation_project,
     evaluate_comparison_batch,
     evaluate_scenario,
+    preflight_evaluation_comparison,
     preflight_evaluation_connectivity,
 )
 from spd_decap_pi.scenario import (
@@ -377,6 +379,31 @@ def _scenario() -> ScenarioSpec:
             connections=connections,
         ),
         revision=4,
+    )
+
+
+def _scenario_with_connection(
+    scenario: ScenarioSpec,
+    refdes: str,
+    connection: ScenarioDecapConnection,
+    *,
+    decaps: list[ScenarioDecap] | None = None,
+) -> ScenarioSpec:
+    assert scenario.connection_analysis is not None
+    analysis = scenario.connection_analysis.model_copy(
+        update={
+            "connections": {
+                **scenario.connection_analysis.connections,
+                refdes: connection,
+            }
+        }
+    )
+    return ScenarioSpec.model_validate(
+        {
+            **scenario.model_dump(mode="python"),
+            "decaps": decaps or scenario.decaps,
+            "connection_analysis": analysis,
+        }
     )
 
 
@@ -745,7 +772,7 @@ def test_isolation_gap_removes_its_power_and_ground_via_paths() -> None:
             net="VDD" if terminal == "P" else "DGND",
             endpoint_node_id=f"N{terminal}-{refdes}",
             x_um=x_um,
-            y_um=0.0,
+            y_um=2_000.0,
             padstack="VIA",
         )
 
@@ -798,6 +825,102 @@ def test_isolation_gap_removes_its_power_and_ground_via_paths() -> None:
         path.source_via_id for path in project.shared_pad_clusters[0].via_paths
     }
     assert source_via_ids == {f"VP-{second.refdes}", f"VG-{second.refdes}"}
+
+
+def test_explicit_rail_build_skips_unrelated_anchored_cluster_derivation(
+    monkeypatch,
+) -> None:
+    scenario = _scenario()
+    payload = scenario.model_dump(mode="python")
+    project = payload["normalized_project"]
+    alternate = deepcopy(project["rails"][0])
+    alternate.update(
+        {
+            "rail_id": "RAIL_ALT",
+            "family": "VDD_ALT",
+            "domain": "VDD_ALT",
+            "net": "VDD_ALT",
+        }
+    )
+    project["rails"].append(alternate)
+    next(
+        item for item in project["stackup_layers"] if item["name"] == "PWR1"
+    )["pwr_nets"].append("VDD_ALT")
+    project["pins"].append(
+        PinRecord(
+            refdes="U1",
+            pin="P2",
+            net="VDD_ALT",
+            x_um=2_000.0,
+            y_um=2_000.0,
+            kind=PinKind.DEVICE_BUMP,
+            terminal=TerminalKind.PWR,
+            domain="VDD_ALT",
+            site="SITE0",
+        ).model_dump(mode="python")
+    )
+    assert scenario.connection_analysis is not None
+    c1, c2 = scenario.decaps
+    c1_connection = scenario.connection_analysis.connections["C1"].model_copy(
+        update={
+            "kind": DecapConnectionKind.SHARED_ANCHOR,
+            "cluster_id": "CL-UNRELATED",
+            "power_vias": (
+                *scenario.connection_analysis.connections["C1"].power_vias,
+                *scenario.connection_analysis.connections["C2"].power_vias,
+            ),
+            "ground_vias": (
+                *scenario.connection_analysis.connections["C1"].ground_vias,
+                *scenario.connection_analysis.connections["C2"].ground_vias,
+            ),
+        }
+    )
+    c2_connection = scenario.connection_analysis.connections["C2"].model_copy(
+        update={
+            "kind": DecapConnectionKind.SHARED_DUMMY,
+            "cluster_id": "CL-UNRELATED",
+            "power_vias": (),
+            "ground_vias": (),
+        }
+    )
+    payload["connection_analysis"]["connections"]["C1"] = c1_connection.model_dump(
+        mode="python"
+    )
+    payload["connection_analysis"]["connections"]["C2"] = c2_connection.model_dump(
+        mode="python"
+    )
+    payload["connection_analysis"]["clusters"] = (
+        SharedPadCluster(
+            cluster_id="CL-UNRELATED",
+            state=SharedPadClusterState.ANCHORED,
+            member_refdes=("C1", "C2"),
+            anchor_refdes=("C1",),
+            dummy_refdes=("C2",),
+            power_net="VDD",
+            ground_net="DGND",
+            layer="TOP",
+            power_edges=(("C1", "C2"),),
+            ground_edges=(("C1", "C2"),),
+            via_eligibility={
+                **{
+                    landing.via_id: {"RAIL_VDD": c1.eligibility["RAIL_VDD"]}
+                    for landing in c1_connection.power_vias
+                },
+            },
+        ).model_dump(mode="python"),
+    )
+    unrelated = ScenarioSpec.model_validate(payload)
+    monkeypatch.setattr(
+        evaluation_module,
+        "derive_shared_pad_current_components",
+        lambda *_args, **_kwargs: pytest.fail(
+            "unrelated anchored cluster must not be derived"
+        ),
+    )
+
+    built = build_evaluation_project(unrelated, evaluation_rail_id="RAIL_ALT")
+
+    assert built.shared_pad_clusters == []
 
 
 def test_enabled_dummy_keeps_anchor_physical_via_when_anchor_is_dnp() -> None:
@@ -958,7 +1081,64 @@ def test_direct_unequal_via_counts_use_coupled_two_terminal_model(
     ) == ground_count
 
 
-def test_shared_pad_via_limit_counts_power_and_ground_paths_together() -> None:
+def test_exact_batched_shared_pad_limit_allows_real_324_path_shape() -> None:
+    payload = _scenario().model_dump(mode="python")
+    connection = payload["connection_analysis"]["connections"]["C1"]
+
+    def expanded_landings(key: str, count: int, prefix: str) -> list[dict[str, object]]:
+        original = dict(connection[key][0])
+        result: list[dict[str, object]] = []
+        for index in range(count):
+            landing = dict(original)
+            landing.update(
+                {
+                    "via_id": f"{prefix}-{index + 1}",
+                    "endpoint_node_id": f"N-{prefix}-{index + 1}",
+                    "x_um": float(original["x_um"]) + index,
+                }
+            )
+            result.append(landing)
+        return result
+
+    connection["power_vias"] = expanded_landings("power_vias", 162, "VP")
+    connection["ground_vias"] = expanded_landings("ground_vias", 162, "VG")
+    payload["normalized_project"]["rails"][0]["target_mask"] = (
+        {"frequency_hz": 1.0e3, "impedance_ohm": 0.1},
+        {"frequency_hz": 1.0e9, "impedance_ohm": 0.1},
+    )
+    production_shape = ScenarioSpec.model_validate(payload)
+    project = build_evaluation_project(
+        production_shape, evaluation_rail_id="RAIL_VDD"
+    )
+    assert len(project.shared_pad_clusters[0].via_paths) == 324
+    request = build_project_evaluation_request(
+        project,
+        "RAIL_VDD",
+        max_mode_x=1,
+        max_mode_y=1,
+    )
+    cluster_group = max(request.shunts, key=lambda item: len(item.ports))
+    assert len(cluster_group.ports) == 324
+    assert cluster_group.network.homogeneous_one_component_via_model() is not None
+
+    overflow_payload = deepcopy(payload)
+    overflow_connection = overflow_payload["connection_analysis"]["connections"][
+        "C1"
+    ]
+    overflow_connection["power_vias"] = expanded_landings(
+        "power_vias", 257, "VP"
+    )
+    overflow_connection["ground_vias"] = expanded_landings(
+        "ground_vias", 256, "VG"
+    )
+    overflow = ScenarioSpec.model_validate(overflow_payload)
+    with pytest.raises(ScenarioEvaluationBuildError) as captured:
+        build_evaluation_project(overflow, evaluation_rail_id="RAIL_VDD")
+    assert captured.value.code == "SHARED_PAD_CLUSTER_TOO_LARGE"
+    assert "exact-batched supported limit is 512" in str(captured.value)
+
+
+def test_dense_shared_pad_via_limit_remains_128_for_source_terminal_models() -> None:
     payload = _scenario().model_dump(mode="python")
     connection = payload["connection_analysis"]["connections"]["C1"]
 
@@ -979,11 +1159,36 @@ def test_shared_pad_via_limit_counts_power_and_ground_paths_together() -> None:
 
     connection["power_vias"] = expanded_landings("power_vias", 64, "VP")
     connection["ground_vias"] = expanded_landings("ground_vias", 64, "VG")
-    boundary = ScenarioSpec.model_validate(payload)
-    boundary_project = build_evaluation_project(
-        boundary, evaluation_rail_id="RAIL_VDD"
+    source_landing = connection["power_vias"][0]
+    source_landing["path_evidence"] = (
+        {
+            "target_layer": "PWR1",
+            "target_node_id": "SOURCE-PWR-NODE",
+            "target_padstack": "VIA",
+            "target_pad_kind": "CIRCLE",
+            "target_pad_width_um": 100.0,
+            "target_pad_height_um": 100.0,
+            "x_um": source_landing["x_um"],
+            "y_um": source_landing["y_um"],
+            "segments": (
+                {
+                    "via_id": source_landing["via_id"],
+                    "padstack": "VIA",
+                    "drill_diameter_um": 100.0,
+                    "start_layer": "TOP",
+                    "end_layer": "PWR1",
+                    "length_um": 153.0,
+                    "end_x_um": source_landing["x_um"],
+                    "end_y_um": source_landing["y_um"],
+                },
+            ),
+        },
     )
-    assert len(boundary_project.shared_pad_clusters[0].via_paths) == 128
+    boundary = ScenarioSpec.model_validate(payload)
+    project = build_evaluation_project(boundary, evaluation_rail_id="RAIL_VDD")
+    paths = project.shared_pad_clusters[0].via_paths
+    assert len(paths) == 128
+    assert sum(item.has_source_terminal_rl for item in paths) == 1
 
     overflow_payload = deepcopy(payload)
     overflow_connection = overflow_payload["connection_analysis"]["connections"][
@@ -996,6 +1201,8 @@ def test_shared_pad_via_limit_counts_power_and_ground_paths_together() -> None:
     with pytest.raises(ScenarioEvaluationBuildError) as captured:
         build_evaluation_project(overflow, evaluation_rail_id="RAIL_VDD")
     assert captured.value.code == "SHARED_PAD_CLUSTER_TOO_LARGE"
+    assert "requires a dense terminal model" in str(captured.value)
+    assert "supported dense limit is 128" in str(captured.value)
 
 
 def test_split_power_components_require_ground_anchor_per_evaluation_rail() -> None:
@@ -1361,31 +1568,410 @@ def test_connectivity_preflight_aggregates_all_selected_rail_blockers(
     assert captured.value.preflight == preflight
 
 
-def test_direct_missing_eligibility_is_preflighted_before_baseline_worker(
-    monkeypatch,
-) -> None:
-    payload = _scenario().model_dump(mode="python")
-    c1 = next(item for item in payload["decaps"] if item["refdes"] == "C1")
-    c1["eligibility"] = {}
-    blocked = ScenarioSpec.model_validate(payload)
+def test_geometry_preflight_aggregates_power_and_ground_terminal_overruns() -> None:
+    scenario = _scenario()
+    assert scenario.connection_analysis is not None
+    c1_connection = scenario.connection_analysis.connections["C1"]
+    outside_power = c1_connection.power_vias[0].model_copy(
+        update={"x_um": -100.0}
+    )
+    scenario = _scenario_with_connection(
+        scenario,
+        "C1",
+        c1_connection.model_copy(update={"power_vias": (outside_power,)}),
+    )
+    assert scenario.connection_analysis is not None
+    c2_connection = scenario.connection_analysis.connections["C2"]
+    outside_ground = c2_connection.ground_vias[0].model_copy(
+        update={
+            "via_id": "VG-C2-OUTSIDE",
+            "endpoint_node_id": "NG-C2-OUTSIDE",
+            "x_um": 10_050.0,
+        }
+    )
+    enabled_c2 = scenario.decaps[1].model_copy(
+        update={
+            "enabled": True,
+            "source_mounted": True,
+            "source_model_id": "M1",
+            "model_id": "M1",
+        }
+    )
+    scenario = _scenario_with_connection(
+        scenario,
+        "C2",
+        c2_connection.model_copy(
+            update={
+                "ground_vias": (*c2_connection.ground_vias, outside_ground),
+            }
+        ),
+        decaps=[scenario.decaps[0], enabled_c2],
+    )
 
-    preflight = preflight_evaluation_connectivity(blocked, ("RAIL_VDD",))
+    preflight = preflight_evaluation_connectivity(scenario, ("RAIL_VDD",))
 
-    assert [(item.refdes, item.kind.value) for item in preflight.blockers] == [
-        ("C1", "DIRECT")
-    ]
-    assert "evaluation modelability" in preflight.blockers[0].reason
+    assert {(item.refdes, item.terminal) for item in preflight.blockers} == {
+        ("C1", TerminalKind.PWR),
+        ("C2", TerminalKind.GND),
+    }
+    power = next(item for item in preflight.blockers if item.terminal == TerminalKind.PWR)
+    ground = next(item for item in preflight.blockers if item.terminal == TerminalKind.GND)
+    assert power.overrun_left_um == pytest.approx(150.0)
+    assert ground.overrun_right_um == pytest.approx(100.0)
+    assert power.source_via_id == "VP-C1"
+    assert ground.path_id == "SPDPI:CLUSTER:DIRECT:C2:GND:1:2"
+    assert "clamp, expand, or drop" in preflight.message()
+
+
+def test_geometry_preflight_checks_complete_port_footprint_at_plane_edge() -> None:
+    scenario = _scenario()
+    assert scenario.connection_analysis is not None
+    connection = scenario.connection_analysis.connections["C1"]
+    edge_crossing = connection.power_vias[0].model_copy(update={"x_um": 25.0})
+    scenario = _scenario_with_connection(
+        scenario,
+        "C1",
+        connection.model_copy(update={"power_vias": (edge_crossing,)}),
+    )
+
+    preflight = preflight_evaluation_connectivity(scenario, ("RAIL_VDD",))
+
+    assert len(preflight.blockers) == 1
+    blocker = preflight.blockers[0]
+    assert blocker.center_x_um == 25.0
+    assert blocker.width_um == 100.0
+    assert blocker.overrun_left_um == pytest.approx(25.0)
+
+
+def test_geometry_preflight_keeps_disabled_multi_via_physical_cluster_fail_closed() -> None:
+    scenario = _scenario()
+    assert scenario.connection_analysis is not None
+    connection = scenario.connection_analysis.connections["C2"]
+    outside_ground = connection.ground_vias[0].model_copy(
+        update={
+            "via_id": "VG-C2-PHYSICAL",
+            "endpoint_node_id": "NG-C2-PHYSICAL",
+            "x_um": 10_050.0,
+        }
+    )
+    scenario = _scenario_with_connection(
+        scenario,
+        "C2",
+        connection.model_copy(
+            update={"ground_vias": (*connection.ground_vias, outside_ground)}
+        ),
+    )
+
+    preflight = preflight_evaluation_connectivity(scenario, ("RAIL_VDD",))
+
+    assert len(preflight.blockers) == 1
+    assert preflight.blockers[0].refdes == "C2"
+    assert preflight.blockers[0].terminal == TerminalKind.GND
+    assert preflight.blockers[0].source_via_id == "VG-C2-PHYSICAL"
+
+
+def test_geometry_preflight_uses_source_target_landing_not_top_via_coordinate() -> None:
+    scenario = _scenario()
+    assert scenario.connection_analysis is not None
+    connection = scenario.connection_analysis.connections["C1"]
+    segment = ScenarioViaSegment(
+        via_id="VP-C1",
+        padstack="VIA",
+        drill_diameter_um=75.0,
+        start_layer="TOP",
+        end_layer="PWR1",
+        length_um=150.0,
+        end_x_um=100.0,
+        end_y_um=2_000.0,
+    )
+    source_target = ScenarioViaPathEvidence(
+        target_layer="PWR1",
+        target_node_id="NP-C1-PWR1",
+        target_padstack="VIA",
+        target_pad_kind="CIRCLE",
+        target_pad_width_um=100.0,
+        target_pad_height_um=100.0,
+        x_um=100.0,
+        y_um=2_000.0,
+        segments=(segment,),
+    )
+    physical_outside = connection.power_vias[0].model_copy(
+        update={
+            "x_um": -500.0,
+            "path_evidence": (source_target,),
+        }
+    )
+    scenario = _scenario_with_connection(
+        scenario,
+        "C1",
+        connection.model_copy(update={"power_vias": (physical_outside,)}),
+    )
+
+    preflight = preflight_evaluation_connectivity(scenario, ("RAIL_VDD",))
+    project = build_evaluation_project(scenario, evaluation_rail_id="RAIL_VDD")
+
+    assert preflight.is_clear
+    power_path = next(
+        path
+        for path in project.shared_pad_clusters[0].via_paths
+        if path.terminal == TerminalKind.PWR
+    )
+    assert power_path.x_um == 100.0
+    assert power_path.landing_pad_width_um == 100.0
+
+
+def test_geometry_preflight_blocks_before_baseline_or_solver_worker(monkeypatch) -> None:
+    scenario = _scenario()
+    assert scenario.connection_analysis is not None
+    connection = scenario.connection_analysis.connections["C1"]
+    outside = connection.power_vias[0].model_copy(update={"x_um": -100.0})
+    scenario = _scenario_with_connection(
+        scenario,
+        "C1",
+        connection.model_copy(update={"power_vias": (outside,)}),
+    )
     monkeypatch.setattr(
         ScenarioSpec,
         "with_baseline_captures",
         lambda *_args, **_kwargs: pytest.fail("baseline worker must not start"),
     )
+    monkeypatch.setattr(
+        evaluation_module,
+        "evaluate_scenario",
+        lambda *_args, **_kwargs: pytest.fail("solver worker must not start"),
+    )
+
     with pytest.raises(ScenarioEvaluationPreflightError) as captured:
-        evaluate_comparison_batch(blocked, ("RAIL_VDD",))
-    assert captured.value.preflight == preflight
+        evaluate_comparison_batch(scenario, ("RAIL_VDD",))
+
+    assert captured.value.preflight.blockers[0].terminal == TerminalKind.PWR
 
 
-def test_disabled_direct_multi_via_still_requires_modelability_preflight() -> None:
+def test_comparison_preflight_catches_original_reenabled_direct_terminal(
+    monkeypatch,
+) -> None:
+    scenario = _scenario()
+    assert scenario.connection_analysis is not None
+    connection = scenario.connection_analysis.connections["C1"]
+    outside_source = connection.power_vias[0].model_copy(update={"x_um": -100.0})
+    current_disabled = scenario.decaps[0].model_copy(
+        update={"enabled": False, "model_id": None}
+    )
+    scenario = _scenario_with_connection(
+        scenario,
+        "C1",
+        connection.model_copy(update={"power_vias": (outside_source,)}),
+        decaps=[current_disabled, *scenario.decaps[1:]],
+    )
+
+    assert preflight_evaluation_connectivity(scenario, ("RAIL_VDD",)).is_clear
+    comparison = preflight_evaluation_comparison(scenario, ("RAIL_VDD",))
+
+    assert len(comparison.blockers) == 1
+    blocker = comparison.blockers[0]
+    assert blocker.configuration == evaluation_module.EvaluationRole.BASELINE
+    assert blocker.refdes == "C1"
+    assert blocker.terminal == TerminalKind.PWR
+    assert "Original DIRECT" in comparison.message()
+    monkeypatch.setattr(
+        ScenarioSpec,
+        "with_baseline_captures",
+        lambda *_args, **_kwargs: pytest.fail("baseline capture must not start"),
+    )
+    with pytest.raises(ScenarioEvaluationPreflightError) as captured:
+        evaluate_comparison_batch(scenario, ("RAIL_VDD",))
+    assert captured.value.preflight == comparison
+
+
+@pytest.mark.parametrize(
+    ("model_id", "reason_fragment"),
+    (
+        (None, "electrical model is missing"),
+        ("UNKNOWN_MODEL", "is absent from the model library"),
+    ),
+)
+def test_comparison_preflight_catches_tuned_enabled_model_failure_before_capture(
+    model_id: str | None,
+    reason_fragment: str,
+    monkeypatch,
+) -> None:
+    scenario = _scenario()
+    tuned = scenario.decaps[0].model_copy(update={"model_id": model_id})
+    scenario = scenario.model_copy(update={"decaps": (tuned, *scenario.decaps[1:])})
+
+    comparison = preflight_evaluation_comparison(scenario, ("RAIL_VDD",))
+
+    assert len(comparison.blockers) == 1
+    blocker = comparison.blockers[0]
+    assert blocker.configuration == evaluation_module.EvaluationRole.TUNED
+    assert blocker.rail_id == "RAIL_VDD"
+    assert blocker.refdes == "C1"
+    assert reason_fragment in blocker.reason
+    assert "Tuned DIRECT" in comparison.message()
+    monkeypatch.setattr(
+        ScenarioSpec,
+        "with_baseline_captures",
+        lambda *_args, **_kwargs: pytest.fail("baseline capture must not start"),
+    )
+    with pytest.raises(ScenarioEvaluationPreflightError) as captured:
+        evaluate_comparison_batch(scenario, ("RAIL_VDD",))
+    assert captured.value.preflight == comparison
+
+
+def test_comparison_preflight_converts_state_specific_dry_build_failure(
+    monkeypatch,
+) -> None:
+    scenario = _scenario()
+    current_disabled = scenario.decaps[0].model_copy(
+        update={"enabled": False, "model_id": None}
+    )
+    scenario = scenario.model_copy(
+        update={"decaps": (current_disabled, *scenario.decaps[1:])}
+    )
+    calls: list[bool] = []
+
+    def dry_build(candidate, *, evaluation_rail_id=None, **_kwargs):
+        source_mounted_is_enabled = candidate.decaps[0].enabled
+        calls.append(source_mounted_is_enabled)
+        if source_mounted_is_enabled:
+            raise ScenarioEvaluationBuildError(
+                "SHARED_PAD_CLUSTER_TOO_LARGE",
+                "source cluster exceeds the exact-batched path limit",
+                refdes="C1",
+            )
+        return candidate.base_project
+
+    monkeypatch.setattr(evaluation_module, "build_evaluation_project", dry_build)
+
+    comparison = preflight_evaluation_comparison(scenario, ("RAIL_VDD",))
+
+    assert calls == [False, True]
+    assert len(comparison.blockers) == 1
+    blocker = comparison.blockers[0]
+    assert blocker.configuration == evaluation_module.EvaluationRole.BASELINE
+    assert blocker.rail_id == "RAIL_VDD"
+    assert blocker.refdes == "C1"
+    assert "SHARED_PAD_CLUSTER_TOO_LARGE" in blocker.reason
+
+
+def test_geometry_preflight_keeps_bare_vqps_style_rail_clear() -> None:
+    scenario = _scenario()
+    payload = scenario.model_dump(mode="python")
+    payload["decaps"] = []
+    payload["connection_analysis"]["connections"] = {}
+    bare = ScenarioSpec.model_validate(payload)
+
+    assert preflight_evaluation_connectivity(bare, ("RAIL_VDD",)).is_clear
+
+
+def test_comparison_preflight_blocks_bare_legacy_scenario_without_analysis(
+    monkeypatch,
+) -> None:
+    payload = _scenario().model_dump(mode="python")
+    payload["decaps"] = []
+    payload["connection_analysis"] = None
+    legacy = ScenarioSpec.model_validate(payload)
+    monkeypatch.setattr(
+        evaluation_module,
+        "build_evaluation_project",
+        lambda *_args, **_kwargs: pytest.fail(
+            "analysis-required rail must not reach the production dry build"
+        ),
+    )
+
+    comparison = preflight_evaluation_comparison(legacy, ("RAIL_VDD",))
+
+    assert len(comparison.blockers) == 1
+    blocker = comparison.blockers[0]
+    assert blocker.configuration is None
+    assert blocker.rail_id == "RAIL_VDD"
+    assert blocker.refdes == "<connection analysis>"
+    assert blocker.kind == DecapConnectionKind.UNRESOLVED
+    assert "source connection analysis is missing" in blocker.reason
+
+
+def test_direct_source_assignment_uses_imported_template_without_plane_eligibility() -> None:
+    payload = _scenario().model_dump(mode="python")
+    c1 = next(item for item in payload["decaps"] if item["refdes"] == "C1")
+    c1["eligibility"] = {}
+    connection = payload["connection_analysis"]["connections"]["C1"]
+    for terminal, prefix in (("power_vias", "VP"), ("ground_vias", "VG")):
+        second = dict(connection[terminal][0])
+        second.update(
+            {
+                "via_id": f"{prefix}-C1-B",
+                "endpoint_node_id": f"N-{prefix}-C1-B",
+                "x_um": float(second["x_um"]) + 25.0,
+            }
+        )
+        connection[terminal] = (*connection[terminal], second)
+    source = ScenarioSpec.model_validate(payload)
+
+    preflight = preflight_evaluation_connectivity(source, ("RAIL_VDD",))
+
+    assert preflight.is_clear
+    project = build_evaluation_project(source, evaluation_rail_id="RAIL_VDD")
+    assert len(project.shared_pad_clusters) == 1
+    paths = project.shared_pad_clusters[0].via_paths
+    assert len(paths) == 4
+    assert {item.via_template_id for item in paths} == {"VT_ALLOWED"}
+    assert {item.terminal_provenance for item in paths} == {
+        "LEGACY_RAIL_TEMPLATE"
+    }
+
+
+def test_moved_direct_missing_exact_eligibility_is_preflighted_before_baseline_worker(
+    monkeypatch,
+) -> None:
+    payload = _scenario().model_dump(mode="python")
+    alternate = deepcopy(payload["normalized_project"]["rails"][0])
+    alternate.update(
+        {
+            "rail_id": "RAIL_ALT",
+            "family": "VDD_ALT",
+            "domain": "VDD_ALT",
+            "net": "VDD_ALT",
+        }
+    )
+    payload["normalized_project"]["rails"].append(alternate)
+    pwr_layer = next(
+        item
+        for item in payload["normalized_project"]["stackup_layers"]
+        if item["name"] == "PWR1"
+    )
+    pwr_layer["pwr_nets"].append("VDD_ALT")
+    c1 = next(item for item in payload["decaps"] if item["refdes"] == "C1")
+    c1.update(
+        {
+            "current_net": "VDD_ALT",
+            "current_rail_id": "RAIL_ALT",
+            "eligibility": {},
+        }
+    )
+    blocked = ScenarioSpec.model_validate(payload)
+
+    preflight = preflight_evaluation_connectivity(blocked, ("RAIL_ALT",))
+
+    assert [(item.refdes, item.kind.value) for item in preflight.blockers] == [
+        ("C1", "DIRECT")
+    ]
+    assert "current-rail eligibility is missing" in preflight.blockers[0].reason
+    monkeypatch.setattr(
+        ScenarioSpec,
+        "with_baseline_captures",
+        lambda *_args, **_kwargs: pytest.fail("baseline worker must not start"),
+    )
+    comparison = preflight_evaluation_comparison(blocked, ("RAIL_ALT",))
+    assert comparison.blockers[0].configuration == evaluation_module.EvaluationRole.TUNED
+    with pytest.raises(ScenarioEvaluationPreflightError) as captured:
+        evaluate_comparison_batch(blocked, ("RAIL_ALT",))
+    assert captured.value.preflight == comparison
+    with pytest.raises(ScenarioEvaluationBuildError) as direct:
+        build_evaluation_project(blocked, evaluation_rail_id="RAIL_ALT")
+    assert direct.value.code == "ELIGIBILITY_MISSING"
+
+
+def test_disabled_direct_multi_via_source_assignment_uses_template_fallback() -> None:
     payload = _scenario().model_dump(mode="python")
     c2 = next(item for item in payload["decaps"] if item["refdes"] == "C2")
     c2["eligibility"] = {}
@@ -1393,14 +1979,16 @@ def test_disabled_direct_multi_via_still_requires_modelability_preflight() -> No
     second_power = dict(connection["power_vias"][0])
     second_power.update({"via_id": "VP-C2-B", "endpoint_node_id": "NP-C2-B"})
     connection["power_vias"] = (*connection["power_vias"], second_power)
-    blocked = ScenarioSpec.model_validate(payload)
+    source = ScenarioSpec.model_validate(payload)
 
-    preflight = preflight_evaluation_connectivity(blocked, ("RAIL_VDD",))
+    preflight = preflight_evaluation_connectivity(source, ("RAIL_VDD",))
 
-    assert [(item.refdes, item.kind.value) for item in preflight.blockers] == [
-        ("C2", "DIRECT")
-    ]
-    assert "evaluation modelability" in preflight.blockers[0].reason
+    assert preflight.is_clear
+    project = build_evaluation_project(source, evaluation_rail_id="RAIL_VDD")
+    cluster = next(
+        item for item in project.shared_pad_clusters if item.cluster_id.endswith("DIRECT:C2")
+    )
+    assert {item.via_template_id for item in cluster.via_paths} == {"VT_ALLOWED"}
 
 
 def test_connectivity_preflight_includes_disabled_unresolved_before_baseline(
@@ -1485,7 +2073,7 @@ def test_connectivity_preflight_includes_isolation_gap_unresolved_before_baselin
     assert captured.value.preflight == preflight
 
 
-def test_saved_distributed_scenario_reloads_and_builds_clean_changed_rail(
+def test_saved_distributed_scenario_reloads_and_blocks_outside_changed_rail(
     tmp_path,
 ) -> None:
     payload = _scenario().model_dump(mode="python")
@@ -1569,8 +2157,15 @@ def test_saved_distributed_scenario_reloads_and_builds_clean_changed_rail(
     reloaded = load_scenario_bundle(path).scenario
 
     assert all(item.current_rail_id == "RAIL_ALT" for item in reloaded.decaps)
-    project = build_evaluation_project(reloaded, evaluation_rail_id="RAIL_ALT")
-    assert len(project.placements) == 2
+    preflight = preflight_evaluation_connectivity(reloaded, ("RAIL_ALT",))
+
+    assert {item.refdes for item in preflight.blockers} == {"C1", "C2"}
+    assert all(
+        "TERMINAL_OUTSIDE_SELECTED_PLANE" in item.reason
+        for item in preflight.blockers
+    )
+    with pytest.raises(ScenarioEvaluationPreflightError):
+        build_evaluation_project(reloaded, evaluation_rail_id="RAIL_ALT")
 
 
 def test_disabled_unavailable_dnp_is_electrically_absent_and_does_not_block() -> None:

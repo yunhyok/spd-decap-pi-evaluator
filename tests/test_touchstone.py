@@ -6,6 +6,7 @@ from spd_decap_pi._core.io.touchstone import (
     TouchstoneNetwork,
     open_circuit_zpp,
     powersi_header_label_for_rail,
+    powersi_rail_from_header_label,
     read_touchstone,
     s_to_z,
     validate_port_manifest,
@@ -113,6 +114,42 @@ def test_port_manifest_allows_only_explicit_header_override_or_powersi_site_conv
         validate_port_manifest(network, {"ADC_VDD_075_VCPU/0": 1})
     with pytest.raises(TouchstoneError, match="requires a rail"):
         powersi_header_label_for_rail("ADC_VDD_075_VCPU")
+
+
+def test_run_qualified_power_si_header_is_exactly_canonicalized(tmp_path):
+    network = read_touchstone(
+        write(
+            tmp_path,
+            "x.s2p",
+            "! Port[1] = SITE0_0805-VDD/0\n"
+            "! Port[2] = SITE1_0805-VDD/1\n"
+            "# Hz S RI R 50\n1 .1 0 .2 0 .3 0 .4 0",
+        )
+    )
+
+    assert powersi_rail_from_header_label("2nd_SITE0-VDD/0") == "VDD/0"
+    assert powersi_rail_from_header_label("SITE1_0805-VDD/1") == "VDD/1"
+    assert validate_port_manifest(
+        network,
+        {"VDD/0": 1, "VDD/1": 2},
+        require_complete_header=True,
+    ) == {1: "SITE0_0805-VDD/0", 2: "SITE1_0805-VDD/1"}
+
+
+@pytest.mark.parametrize(
+    "label",
+    (
+        "SITE1_0805-VDD/0",
+        "SITE0-VDD/0",
+        "2nd_SITE0_0805-VDD/0",
+        "third_SITE0-VDD/0",
+        "SITE0__0805-VDD/0",
+        "SITE0_0805-VDD",
+    ),
+)
+def test_power_si_header_parser_rejects_wrong_site_or_unknown_spelling(label):
+    with pytest.raises(TouchstoneError):
+        powersi_rail_from_header_label(label)
 
 
 def test_explicit_header_override_supports_a_non_site_scenario_rail(tmp_path):

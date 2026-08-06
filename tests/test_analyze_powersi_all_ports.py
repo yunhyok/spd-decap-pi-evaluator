@@ -121,6 +121,22 @@ def test_complete_manifest_rejects_incomplete_or_site_mismatched_header() -> Non
         MODULE.complete_92_port_manifest(mismatched)
 
 
+def test_complete_manifest_accepts_exact_export_run_qualified_site_labels() -> None:
+    parameters = np.zeros((1, 92, 92), dtype=np.complex128)
+    labels = {
+        port: f"SITE{(port - 1) % 2}_0805-R{port}/{(port - 1) % 2}"
+        for port in range(1, 93)
+    }
+    network = MODULE.TouchstoneNetwork(
+        np.asarray([1.0e5]), parameters, 1.0, labels, "RI"
+    )
+
+    manifest = MODULE.complete_92_port_manifest(network)
+
+    assert manifest["R1/0"] == 1
+    assert manifest["R92/1"] == 92
+
+
 def test_vqps_residual_is_null_with_an_explicit_reason_when_undersampled() -> None:
     frequencies = np.asarray([1.0e5, 1.0e6, 1.0e7, 1.0e8])
     omega = 2.0 * np.pi * frequencies

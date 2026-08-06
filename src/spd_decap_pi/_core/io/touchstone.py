@@ -31,6 +31,10 @@ class SToZResult:
 
 
 _PORT_COMMENT = re.compile(r"^\s*Port\[(\d+)]\s*=\s*(.*?)\s*$", re.IGNORECASE)
+_LEGACY_POWER_SI_HEADER_LABEL = re.compile(r"^2nd_SITE([01])-(.+/([01]))$")
+_RUN_QUALIFIED_POWER_SI_HEADER_LABEL = re.compile(
+    r"^SITE([01])_[A-Za-z0-9]+(?:_[A-Za-z0-9]+)*-(.+/([01]))$"
+)
 _SUFFIX = re.compile(r"\.s(\d+)p$", re.IGNORECASE)
 _FREQUENCY_SCALE = {"hz": 1.0, "khz": 1.0e3, "mhz": 1.0e6, "ghz": 1.0e9}
 _NUMERIC_FIELD = r"[+-]?(?:(?:\d+(?:\.\d*)?)|(?:\.\d+))(?:[EeDd][+-]?\d+)?"
@@ -70,6 +74,29 @@ def powersi_header_label_for_rail(rail: str) -> str:
     return f"2nd_SITE{site}-{rail}"
 
 
+def powersi_rail_from_header_label(label: str) -> str:
+    """Return the exact rail encoded by a supported PowerSI port label.
+
+    PowerSI exports observed in production use either the legacy
+    ``2nd_SITE0-<rail>`` spelling or a run-qualified spelling such as
+    ``SITE0_0805-<rail>``.  Qualifiers remain part of the exact header evidence;
+    this parser only canonicalizes the rail after proving that the prefix site
+    matches the rail's terminal ``/0`` or ``/1``.
+    """
+
+    if not isinstance(label, str):
+        raise TouchstoneError("PowerSI header label must be text")
+    matched = _LEGACY_POWER_SI_HEADER_LABEL.fullmatch(label)
+    if matched is None:
+        matched = _RUN_QUALIFIED_POWER_SI_HEADER_LABEL.fullmatch(label)
+    if matched is None:
+        raise TouchstoneError("unsupported PowerSI SITE header label")
+    header_site, rail, rail_site = matched.groups()
+    if header_site != rail_site:
+        raise TouchstoneError("PowerSI header SITE does not match the rail terminal")
+    return rail
+
+
 def validate_port_manifest(
     network: TouchstoneNetwork,
     rail_to_port: Mapping[str, int],
@@ -85,12 +112,13 @@ def validate_port_manifest(
     whitespace is removed; aliases and fuzzy net-name matching are unsafe for
     correlation data.
 
-    Unless explicitly overridden by ``expected_header_labels``, the only
-    permitted translation is PowerSI's exact ``2nd_SITE{0|1}-<rail>``
-    convention. ``require_complete_header`` additionally requires one unique
-    label for every matrix port, which is useful when a full scenario manifest
-    is known. The returned copy is ordered by one-based port number for report
-    storage.
+    Unless explicitly overridden by ``expected_header_labels``, the permitted
+    translations are PowerSI's exact legacy ``2nd_SITE{0|1}-<rail>`` and exact
+    run-qualified ``SITE{0|1}_<run>-<rail>`` conventions. The encoded rail and
+    site must match exactly. ``require_complete_header`` additionally requires
+    one unique label for every matrix port, which is useful when a full
+    scenario manifest is known. The returned copy is ordered by one-based port
+    number for report storage.
     """
 
     ports = network.s_parameters.shape[1]
@@ -114,16 +142,24 @@ def validate_port_manifest(
         if not 1 <= number <= ports or number in seen_ports:
             raise TouchstoneError("scenario rail manifest contains an invalid or duplicate port")
         seen_ports.add(number)
-        # ``dict.get`` evaluates its default eagerly, which would reject an
-        # explicitly supplied non-site rail before the override can apply.
-        expected = overrides[rail] if rail in overrides else powersi_header_label_for_rail(rail)
-        if not isinstance(expected, str) or not expected:
-            raise TouchstoneError("expected Touchstone port-label map contains an invalid header label")
-        if header.get(number) != expected:
-            actual = header.get(number)
-            raise TouchstoneError(
-                f"Touchstone port-label mismatch at port {number}: expected {expected!r}, got {actual!r}"
-            )
+        actual = header.get(number)
+        if rail in overrides:
+            expected = overrides[rail]
+            if not isinstance(expected, str) or not expected:
+                raise TouchstoneError("expected Touchstone port-label map contains an invalid header label")
+            if actual == expected:
+                continue
+        else:
+            try:
+                parsed_rail = powersi_rail_from_header_label(actual)  # type: ignore[arg-type]
+            except TouchstoneError:
+                parsed_rail = None
+            if parsed_rail == rail:
+                continue
+            expected = powersi_header_label_for_rail(rail)
+        raise TouchstoneError(
+            f"Touchstone port-label mismatch at port {number}: expected {expected!r}, got {actual!r}"
+        )
     return dict(sorted(header.items()))
 
 

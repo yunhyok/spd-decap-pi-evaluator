@@ -451,6 +451,7 @@ class _PreparedDocumentView:
     project: ProjectSpec
     bumps: tuple[Any, ...]
     decap_records: tuple[Any, ...]
+    source_decap_records: tuple[Any, ...]
     model_keys: frozenset[str]
     connection_summary: tuple[str, str]
     recovery_summary: tuple[str, str]
@@ -466,6 +467,50 @@ class _PreparedScenarioImport:
 class _PreparedScenarioBundle:
     bundle: ScenarioBundle
     view: _PreparedDocumentView
+
+
+@dataclass(frozen=True, slots=True)
+class _EvaluationRunRequest:
+    """Immutable UI selections carried through the background preflight."""
+
+    scenario: ScenarioSpec
+    rail_ids: tuple[str, ...]
+    target_ohm: float | None
+    modal_max_index: int
+    solver_profile: str
+    attachments: dict[str, bytes]
+
+
+@dataclass(frozen=True, slots=True)
+class _EvaluationRunManifest:
+    """Explicit selected/run/blocked scope for one Evaluation Analysis run."""
+
+    selected_rail_ids: tuple[str, ...]
+    runnable_rail_ids: tuple[str, ...]
+    blocked_rail_ids: tuple[str, ...]
+    blocker_count: int
+    blocker_details: str
+
+    @property
+    def is_partial(self) -> bool:
+        return bool(self.blocked_rail_ids)
+
+    def summary_lines(self) -> tuple[str, ...]:
+        return (
+            "Evaluation scope manifest:",
+            f"Selected PWR NETs: {len(self.selected_rail_ids):,}.",
+            (
+                f"Clear and evaluated: {len(self.runnable_rail_ids):,} "
+                f"({', '.join(self.runnable_rail_ids)})."
+            ),
+            (
+                f"Blocked and NOT evaluated: {len(self.blocked_rail_ids):,} "
+                f"({', '.join(self.blocked_rail_ids) or 'none'})."
+            ),
+            f"Connectivity/modelability blockers: {self.blocker_count:,}.",
+            "Blocked details:",
+            self.blocker_details if self.blocked_rail_ids else "None.",
+        )
 
 
 def _distribution_inventory_counts_for_preview(
@@ -485,6 +530,38 @@ def _distribution_inventory_counts_for_preview(
         # overstate donor capacity.
         return present, {}
     return distribution_inventory_counts(scenario)
+
+
+def _source_model_ids_by_refdes(scenario: ScenarioSpec) -> dict[str, str]:
+    """Return source-model bindings, including legacy baseline fallbacks."""
+
+    result = {
+        decap.refdes.casefold(): decap.source_model_id
+        for decap in scenario.decaps
+        if decap.source_model_id is not None
+    }
+    for capture in scenario.baseline_captures.values():
+        for binding in capture.model_bindings:
+            result.setdefault(binding.refdes.casefold(), binding.model_id)
+    return result
+
+
+def _prepare_source_board_decaps(scenario: ScenarioSpec) -> tuple[Any, ...]:
+    """Build immutable source-SPD display records for the board view."""
+
+    source_models = _source_model_ids_by_refdes(scenario)
+    return DecapBoardView.prepare_decaps(
+        {
+            "refdes": decap.refdes,
+            "x_um": decap.x_um,
+            "y_um": decap.y_um,
+            "current_net": decap.source_net,
+            "enabled": decap.source_mounted,
+            "model_id": source_models.get(decap.refdes.casefold()),
+            "footprint": decap.footprint,
+        }
+        for decap in scenario.decaps
+    )
 
 
 def _prepared_plane_paths(
@@ -579,6 +656,7 @@ def _prepare_document_view(
             if str(item.get("kind", "")) == PinKind.DEVICE_BUMP.value
         ),
         decap_records=DecapBoardView.prepare_decaps(scenario.decaps),
+        source_decap_records=_prepare_source_board_decaps(scenario),
         model_keys=frozenset(item.model_id.casefold() for item in project.cap_models),
         connection_summary=_shared_pad_connection_summary(scenario),
         recovery_summary=_source_via_path_recovery_summary_from_project(project),
@@ -1201,6 +1279,34 @@ def _job_save_scenario(
     return result
 
 
+def _job_preflight_evaluation(
+    scenario: ScenarioSpec,
+    rail_ids: tuple[str, ...],
+    *,
+    progress: Callable[[int, str], None],
+    is_cancelled: Callable[[], bool],
+) -> Any:
+    """Run the potentially expensive geometry/connectivity gate off-thread."""
+
+    if is_cancelled():
+        raise RuntimeError("evaluation preflight cancelled")
+    progress(5, "Checking Evaluation Analysis connectivity and geometry")
+    from ..evaluation import preflight_evaluation_comparison
+
+    result = preflight_evaluation_comparison(
+        scenario,
+        rail_ids,
+        progress=lambda value, message: progress(
+            5 + round(min(max(value, 0), 100) * 0.9), message
+        ),
+        is_cancelled=is_cancelled,
+    )
+    if is_cancelled():
+        raise RuntimeError("evaluation preflight cancelled")
+    progress(100, "Evaluation Analysis preflight complete")
+    return result
+
+
 def _job_compute_distribution(
     scenario: ScenarioSpec,
     attachments: dict[str, bytes],
@@ -1299,6 +1405,10 @@ class MainWindow(QMainWindow):
         self._worker_cancelable = False
         self._worker_cancel_requested = False
         self._auto_save_after_worker = False
+        self._pending_evaluation_launch: tuple[
+            _EvaluationRunRequest, _EvaluationRunManifest
+        ] | None = None
+        self._active_evaluation_manifest: _EvaluationRunManifest | None = None
         self._evaluation_state: WorkspaceState | None = None
         self._last_evaluation: Any | None = None
         self._last_scenario_evaluation: Any | None = None
@@ -1307,6 +1417,9 @@ class MainWindow(QMainWindow):
         self._results_window: ComparisonResultsWindow | None = None
         self._distribution_window: DistributionTargetsWindow | None = None
         self._distribution_show_original_board = False
+        self._source_board_records: tuple[Any, ...] = ()
+        self._source_board_cache_key: tuple[str, int] | None = None
+        self._source_board_comparison_cache: bool | None = None
         self._decap_context_menu: QMenu | None = None
         self._active_board_net_keys: frozenset[str] | None = None
         self._rendered_bump_source_sha256: str | None = None
@@ -1405,10 +1518,26 @@ class MainWindow(QMainWindow):
         self.search_button.clicked.connect(self.apply_search)
         self.fit_button = QPushButton("Fit board")
         self.fit_button.clicked.connect(self._fit_board)
+        self.source_board_checkbox = QCheckBox("Show source SPD assignments")
+        self.source_board_checkbox.setObjectName("showSourceSpdBoardAssignments")
+        self.source_board_checkbox.setAccessibleName(
+            "Show source SPD board assignments"
+        )
+        self.source_board_checkbox.setToolTip(
+            "Compare the immutable source-SPD assignment with the current board. "
+            "Source view is display-only; physical X/Y positions do not move."
+        )
+        self.source_board_checkbox.toggled.connect(
+            self._show_original_distribution_board
+        )
+        self.board_assignment_view_label = QLabel("Board: Current")
+        self.board_assignment_view_label.setObjectName("boardAssignmentViewStatus")
         search_row.addWidget(self.search_mode)
         search_row.addWidget(self.search_edit, 1)
         search_row.addWidget(self.search_button)
         search_row.addWidget(self.fit_button)
+        search_row.addWidget(self.source_board_checkbox)
+        search_row.addWidget(self.board_assignment_view_label)
         root_layout.addLayout(search_row)
 
         self.plane_layer_bar = QWidget()
@@ -2319,7 +2448,7 @@ class MainWindow(QMainWindow):
         self._distribution_power_projection = None
         self._distribution_export_rows = ()
         if had_result:
-            self._reset_distribution_actual_deltas()
+            self._reset_distribution_assignment_failures()
         if reason is not None:
             self._distribution_status_notice = reason
             self.distribution_summary.setPlainText(reason)
@@ -2420,6 +2549,14 @@ class MainWindow(QMainWindow):
             if preserve_result
             else {}
         )
+        preserved_targets = (
+            {
+                (rail_id.casefold(), model_id.casefold()): value
+                for (rail_id, model_id), value in self._distribution_targets.items()
+            }
+            if preserve_result
+            else {}
+        )
         if prepared_counts is None or prepared_assignable_counts is None:
             raw_counts, raw_assignable_counts = _distribution_inventory_counts_for_preview(
                 scenario
@@ -2441,7 +2578,16 @@ class MainWindow(QMainWindow):
         self._distribution_model_ids = model_ids
         self._distribution_present_counts = counts
         self._distribution_assignable_counts = assignable_counts
-        self._distribution_targets = dict(counts)
+        self._distribution_targets = {
+            (rail_id, model_id): int(
+                preserved_targets.get(
+                    (rail_id.casefold(), model_id.casefold()),
+                    counts[(rail_id, model_id)],
+                )
+            )
+            for rail_id in rail_ids
+            for model_id in model_ids
+        }
         self._distribution_tolerances = {
             (rail_id, model_id): float(
                 preserved_tolerances.get(
@@ -2475,7 +2621,7 @@ class MainWindow(QMainWindow):
                     f"{model.model_id}\nPresent",
                     f"{model.model_id}\nTarget",
                     f"{model.model_id}\nTolerance (%)",
-                    f"{model.model_id}\nActual Δ",
+                    f"{model.model_id}\nAssignment Failed",
                 )
             )
         self._distribution_table_updating = True
@@ -2502,7 +2648,7 @@ class MainWindow(QMainWindow):
                     present_column = 1 + model_index * 4
                     target_column = present_column + 1
                     tolerance_column = present_column + 2
-                    delta_column = present_column + 3
+                    failure_column = present_column + 3
                     present_item = _DistributionNumericItem(f"{present:d}")
                     present_item.setTextAlignment(
                         Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter
@@ -2515,7 +2661,9 @@ class MainWindow(QMainWindow):
                         "SHARED parts may move; floating or unresolved parts are counted "
                         "but fixed on their current NET."
                     )
-                    target_item = _DistributionNumericItem(f"{present:d}")
+                    target_item = _DistributionNumericItem(
+                        f"{self._distribution_targets[key]:d}"
+                    )
                     target_item.setData(Qt.ItemDataRole.UserRole, key)
                     target_item.setData(
                         _DISTRIBUTION_FIELD_ROLE, _DISTRIBUTION_TARGET_FIELD
@@ -2542,13 +2690,17 @@ class MainWindow(QMainWindow):
                         "positive = equal give/receive turnover limited to "
                         "floor(Present × Tolerance / 100)."
                     )
-                    delta_item = _DistributionNumericItem("0")
-                    delta_item.setData(Qt.ItemDataRole.UserRole, key)
-                    delta_item.setTextAlignment(
+                    failure_item = _DistributionNumericItem("0")
+                    failure_item.setData(Qt.ItemDataRole.UserRole, key)
+                    failure_item.setTextAlignment(
                         Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter
                     )
-                    delta_item.setFlags(
-                        delta_item.flags() & ~Qt.ItemFlag.ItemIsEditable
+                    failure_item.setFlags(
+                        failure_item.flags() & ~Qt.ItemFlag.ItemIsEditable
+                    )
+                    failure_item.setToolTip(
+                        "Unfulfilled receiver demand: Target minus Actual. Donor "
+                        "unused capacity and optional exchange turnover are not failures."
                     )
                     self.distribution_table.setItem(
                         row, present_column, present_item
@@ -2557,7 +2709,9 @@ class MainWindow(QMainWindow):
                     self.distribution_table.setItem(
                         row, tolerance_column, tolerance_item
                     )
-                    self.distribution_table.setItem(row, delta_column, delta_item)
+                    self.distribution_table.setItem(
+                        row, failure_column, failure_item
+                    )
                     self._style_distribution_target_item(target_item, key)
                     self._style_distribution_tolerance_item(tolerance_item, key)
             self.distribution_table.setColumnWidth(0, 220)
@@ -2823,7 +2977,7 @@ class MainWindow(QMainWindow):
         self._apply_distribution_target_text(item, target_items)
         self._distribution_targets_edited()
 
-    def _reset_distribution_actual_deltas(self) -> None:
+    def _reset_distribution_assignment_failures(self) -> None:
         if not hasattr(self, "distribution_table"):
             return
         self._distribution_table_updating = True
@@ -2897,17 +3051,69 @@ class MainWindow(QMainWindow):
         return sha256(payload).hexdigest()
 
     def _sync_distribution_window(self) -> None:
+        self._sync_board_assignment_controls()
         if self._distribution_window is None:
             return
         self._distribution_window.set_document_active(
             self._scenario is not None,
             busy=self._worker is not None,
+            source_comparison_available=self._source_board_comparison_available(),
         )
         headers, rows = self._distribution_matrix_values()
         self._distribution_window.set_matrix(headers, rows)
         self._distribution_window.set_original_board_checked(
             self._distribution_show_original_board
         )
+
+    def _source_board_comparison_available(self) -> bool:
+        if self._source_board_comparison_cache is not None:
+            return self._source_board_comparison_cache
+        scenario = self._scenario
+        if scenario is None:
+            return False
+        source_models = _source_model_ids_by_refdes(scenario)
+        available = any(
+            decap.current_net.casefold() != decap.source_net.casefold()
+            or decap.current_rail_id.casefold() != decap.source_rail_id.casefold()
+            or (decap.model_id or "").casefold()
+            != (source_models.get(decap.refdes.casefold()) or "").casefold()
+            or decap.enabled != decap.source_mounted
+            or decap.pad_state != DecapPadState.NORMAL
+            for decap in scenario.decaps
+        )
+        self._source_board_comparison_cache = available
+        return available
+
+    def _sync_board_assignment_controls(self) -> None:
+        if not hasattr(self, "source_board_checkbox"):
+            return
+        available = self._source_board_comparison_available()
+        if not available:
+            self._distribution_show_original_board = False
+        previous = self.source_board_checkbox.blockSignals(True)
+        try:
+            self.source_board_checkbox.setChecked(
+                self._distribution_show_original_board
+            )
+        finally:
+            self.source_board_checkbox.blockSignals(previous)
+        self.source_board_checkbox.setEnabled(
+            available and self._worker is None
+        )
+        if self._scenario is None:
+            text = "Board: No document"
+            style = "color: #9aa4b2;"
+        elif self._distribution_show_original_board:
+            text = "Board: Source SPD (read-only)"
+            style = "color: #d6a64f; font-weight: 700;"
+        elif available:
+            text = "Board: Current / distributed"
+            style = "color: #7aa2c7; font-weight: 600;"
+        else:
+            text = "Board: Current (matches source)"
+            style = "color: #9aa4b2;"
+        self.board_assignment_view_label.setText(text)
+        self.board_assignment_view_label.setStyleSheet(style)
 
     def _show_distribution_window(self) -> None:
         if self._scenario is None:
@@ -3065,7 +3271,7 @@ class MainWindow(QMainWindow):
             + "\n\nReview the refreshed donor/receiver balance, then calculate a new "
             "preview. Previous result columns were ignored."
         )
-        self._reset_distribution_actual_deltas()
+        self._reset_distribution_assignment_failures()
         self._update_distribution_validation()
         self._sync_distribution_window()
         self.status_text.setText(
@@ -3282,37 +3488,36 @@ class MainWindow(QMainWindow):
             )
         return "\n".join(lines)
 
-    def _distribution_actual_delta_map(
+    def _distribution_assignment_failure_map(
         self, plan: Any
     ) -> dict[tuple[str, str], int]:
-        raw = getattr(plan, "actual_delta", None)
+        raw = getattr(plan, "assignment_failed", None)
         if raw is None:
-            raw = getattr(plan, "actual_deltas", None)
+            raw = getattr(plan, "assignment_failures", None)
         result: dict[tuple[str, str], int] = {}
         if isinstance(raw, dict):
             for key, value in raw.items():
                 if isinstance(key, tuple) and len(key) == 2:
-                    result[(str(key[0]), str(key[1]))] = int(value)
+                    result[(str(key[0]), str(key[1]))] = max(int(value), 0)
         cells = getattr(plan, "cells", ())
         if isinstance(cells, dict):
             cells = cells.values()
         for cell in cells:
             rail_id = self._plan_cell_value(cell, "rail_id")
             model_id = self._plan_cell_value(cell, "model_id", "component")
-            delta = self._plan_cell_value(cell, "actual_delta", "delta")
-            if delta is None:
-                actual_count = self._plan_cell_value(cell, "actual_count")
-                present_count = self._plan_cell_value(cell, "present_count")
-                if actual_count is not None and present_count is not None:
-                    delta = int(actual_count) - int(present_count)
-            if rail_id is not None and model_id is not None and delta is not None:
-                result[(str(rail_id), str(model_id))] = int(delta)
+            failed = self._plan_cell_value(
+                cell, "assignment_failed", "shortfall", "shortfall_count"
+            )
+            if rail_id is not None and model_id is not None and failed is not None:
+                result[(str(rail_id), str(model_id))] = max(int(failed), 0)
         return result
 
-    def _render_distribution_actual_deltas(self, plan: Any) -> None:
-        actual = {
+    def _render_distribution_assignment_failures(self, plan: Any) -> None:
+        failures = {
             (rail.casefold(), model.casefold()): value
-            for (rail, model), value in self._distribution_actual_delta_map(plan).items()
+            for (rail, model), value in (
+                self._distribution_assignment_failure_map(plan).items()
+            )
         }
         self._distribution_table_updating = True
         sorting_enabled = self.distribution_table.isSortingEnabled()
@@ -3330,15 +3535,13 @@ class MainWindow(QMainWindow):
                     raw_key = item.data(Qt.ItemDataRole.UserRole)
                     if not isinstance(raw_key, tuple) or len(raw_key) != 2:
                         continue
-                    value = actual.get(
+                    value = failures.get(
                         (str(raw_key[0]).casefold(), str(raw_key[1]).casefold()),
                         0,
                     )
-                    item.setText(f"{value:+d}" if value else "0")
+                    item.setText(str(value))
                     if value > 0:
-                        item.setBackground(QColor("#FEF3C7"))
-                    elif value < 0:
-                        item.setBackground(QColor("#DBEAFE"))
+                        item.setBackground(QColor("#FECACA"))
                     else:
                         item.setBackground(QBrush())
         finally:
@@ -3396,7 +3599,7 @@ class MainWindow(QMainWindow):
         self._distribution_preview_scenario = preview
         self._distribution_power_projection = power_projection
         self._distribution_export_rows = export_rows
-        self._render_distribution_actual_deltas(plan)
+        self._render_distribution_assignment_failures(plan)
         self.distribution_summary.setPlainText(
             self._distribution_plan_summary(plan)
         )
@@ -3481,7 +3684,7 @@ class MainWindow(QMainWindow):
             "De-cap Distribution applied; run Original + Tuned evaluation again."
         )
         self._populate_distribution_table(preview, preserve_result=True)
-        self._render_distribution_actual_deltas(plan)
+        self._render_distribution_assignment_failures(plan)
         self._refresh_all()
         self.distribution_summary.setPlainText(
             f"{summary}\nApplied atomically at scenario revision {preview.revision}."
@@ -3799,6 +4002,8 @@ class MainWindow(QMainWindow):
         project: ProjectSpec | None = None,
         model_keys: frozenset[str] | None = None,
     ) -> None:
+        self._pending_evaluation_launch = None
+        self._active_evaluation_manifest = None
         self._evaluation_state = None
         self._last_evaluation = None
         self._last_scenario_evaluation = None
@@ -3925,6 +4130,18 @@ class MainWindow(QMainWindow):
             self.status_text.setText("Evaluation failed")
         self._worker_error(details)
 
+    def _evaluation_preflight_worker_error(self, details: str) -> None:
+        final_line = next(
+            (line for line in reversed(details.strip().splitlines()) if line.strip()),
+            "Evaluation Analysis preflight failed",
+        )
+        self.evaluation_summary.setPlainText(
+            "Evaluation Analysis did not start because its connectivity/geometry "
+            "preflight failed. No selected PWR NET was evaluated.\n\n" + final_line
+        )
+        self.status_text.setText("Evaluation Analysis preflight failed")
+        self._worker_error(details)
+
     def _worker_failed(
         self, details: str, handler: Callable[[str], None]
     ) -> None:
@@ -3936,6 +4153,10 @@ class MainWindow(QMainWindow):
     def _worker_finished(self) -> None:
         cancelled = self._worker_cancel_requested
         auto_save = self._auto_save_after_worker and not cancelled
+        pending_evaluation = (
+            self._pending_evaluation_launch if not cancelled else None
+        )
+        self._pending_evaluation_launch = None
         self._auto_save_after_worker = False
         self._worker = None
         self._worker_cancelable = False
@@ -3951,6 +4172,14 @@ class MainWindow(QMainWindow):
             self.status_text.setText("Ready")
         if auto_save and self._scenario is not None and self._scenario_path is not None:
             QTimer.singleShot(0, self._auto_save_scenario)
+        if pending_evaluation is not None:
+            request, manifest = pending_evaluation
+            # The preflight runnable is fully released at this point, so the
+            # evaluation runnable can be chained synchronously.  Leaving this
+            # to a zero-delay timer exposes a transient ``_worker is None``
+            # state to the UI/test heartbeat and can make the two-stage
+            # operation look complete before Evaluation has even started.
+            self._launch_evaluation_after_preflight(request, manifest)
 
     def _cancel_worker(self) -> None:
         if self._worker is not None and self._worker_cancelable:
@@ -4265,6 +4494,18 @@ class MainWindow(QMainWindow):
 
         self.status_text.setToolTip("")
         self._distribution_show_original_board = False
+        self._source_board_records = ()
+        self._source_board_cache_key = None
+        self._source_board_comparison_cache = None
+        if hasattr(self, "source_board_checkbox"):
+            previous = self.source_board_checkbox.blockSignals(True)
+            try:
+                self.source_board_checkbox.setChecked(False)
+                self.source_board_checkbox.setEnabled(False)
+            finally:
+                self.source_board_checkbox.blockSignals(previous)
+            self.board_assignment_view_label.setText("Board: No document")
+            self.board_assignment_view_label.setStyleSheet("color: #9aa4b2;")
         if self._distribution_window is not None:
             self._distribution_window.clear_for_no_document()
         self._plane_render_token += 1
@@ -4286,6 +4527,7 @@ class MainWindow(QMainWindow):
 
     def _refresh_all(self, prepared_view: _PreparedDocumentView | None = None) -> None:
         scenario = self._scenario
+        self._source_board_comparison_cache = None
         if scenario is None:
             self.board.clear_board()
             self._reset_distribution_state()
@@ -4302,9 +4544,15 @@ class MainWindow(QMainWindow):
             f"{scenario.source.name} | {scenario.source.size_bytes / (1024**2):,.1f} MiB | "
             f"SHA-256 {scenario.source.sha256[:12]}... | rev {scenario.revision}"
         )
+        source_board_cache_key = (scenario.source.sha256, len(scenario.decaps))
+        if self._source_board_cache_key != source_board_cache_key:
+            self._source_board_records = ()
+            self._source_board_cache_key = source_board_cache_key
         # Import accepts both batched board layers, then performs one explicit
         # fit.  Avoid the otherwise redundant fit after decaps and again after
         # bumps, which is visible on large SPDs.
+        if prepared_view is not None:
+            self._source_board_records = prepared_view.source_decap_records
         self._refresh_distribution_board_decaps(prepared_view)
         if prepared_view is not None and prepared_view.project.rails:
             # Establish the default focus before staged scatter creation so a
@@ -4363,49 +4611,72 @@ class MainWindow(QMainWindow):
         else:
             self._set_busy(True)
 
-    def _board_decaps_for_distribution_display(self) -> tuple[ScenarioDecap, ...]:
+    def _source_display_decap(
+        self,
+        decap: ScenarioDecap,
+        source_models: Mapping[str, str] | None = None,
+    ) -> ScenarioDecap:
+        scenario = self._scenario
+        assert scenario is not None
+        bindings = (
+            _source_model_ids_by_refdes(scenario)
+            if source_models is None
+            else source_models
+        )
+        source_model_id = bindings.get(decap.refdes.casefold())
+        return decap.model_copy(
+            update={
+                "current_net": decap.source_net,
+                "current_rail_id": decap.source_rail_id,
+                "model_id": source_model_id,
+                "enabled": decap.source_mounted,
+                "pad_state": DecapPadState.NORMAL,
+            }
+        )
+
+    def _board_decaps_for_distribution_display(self) -> tuple[Any, ...]:
         scenario = self._scenario
         if scenario is None:
             return ()
         if not self._distribution_show_original_board:
             return tuple(scenario.decaps)
-        return tuple(
-            decap.model_copy(
-                update={
-                    "current_net": decap.source_net,
-                    "current_rail_id": decap.source_rail_id,
-                    "model_id": decap.source_model_id,
-                    "enabled": decap.source_mounted,
-                    "pad_state": DecapPadState.NORMAL,
-                }
+        if not self._source_board_records:
+            self._source_board_records = _prepare_source_board_decaps(scenario)
+            self._source_board_cache_key = (
+                scenario.source.sha256,
+                len(scenario.decaps),
             )
-            for decap in scenario.decaps
-        )
+        return self._source_board_records
 
     def _refresh_distribution_board_decaps(
         self, prepared_view: _PreparedDocumentView | None = None
     ) -> None:
         assert self._scenario is not None
         showing_original = self._distribution_show_original_board
+        if showing_original:
+            records = self._board_decaps_for_distribution_display()
+            normalized = True
+            staged = False
+        elif prepared_view is not None:
+            records = prepared_view.decap_records
+            normalized = True
+            staged = True
+        else:
+            records = self._scenario.decaps
+            normalized = False
+            staged = False
         self.board.set_decaps(
-            (
-                self._board_decaps_for_distribution_display()
-                if showing_original
-                else (
-                    prepared_view.decap_records
-                    if prepared_view is not None
-                    else self._scenario.decaps
-                )
-            ),
+            records,
             self._scenario.net_colors,
             fit=False,
-            normalized=prepared_view is not None and not showing_original,
-            staged=prepared_view is not None and not showing_original,
+            normalized=normalized,
+            staged=staged,
         )
 
     def _show_original_distribution_board(self, show_original: bool) -> None:
-        show_original = bool(show_original)
+        show_original = bool(show_original) and self._source_board_comparison_available()
         if self._distribution_show_original_board == show_original:
+            self._sync_distribution_window()
             return
         self._distribution_show_original_board = show_original
         if self._scenario is not None:
@@ -4938,8 +5209,22 @@ class MainWindow(QMainWindow):
 
     def _refresh_selection_table(self) -> None:
         selected = self._selected_decaps()
+        if self._distribution_show_original_board and self._scenario is not None:
+            source_models = _source_model_ids_by_refdes(self._scenario)
+            displayed = [
+                self._source_display_decap(item, source_models) for item in selected
+            ]
+        else:
+            displayed = selected
         if not selected or self._scenario is None:
             self.selection_summary.setText("No decap selected")
+            self.board.set_required_companion_refdes(())
+        elif self._distribution_show_original_board:
+            self.selection_summary.setText(
+                "Source SPD view (read-only) | "
+                f"{len(displayed):,} selected | "
+                f"{sum(item.enabled for item in displayed):,} enabled"
+            )
             self.board.set_required_companion_refdes(())
         else:
             coverage = analyze_cluster_selection(
@@ -4955,7 +5240,7 @@ class MainWindow(QMainWindow):
             )
             summary = (
                 f"{len(selected):,} selected | "
-                f"{sum(item.enabled for item in selected):,} enabled"
+                f"{sum(item.enabled for item in displayed):,} enabled"
             )
             if coverage.blocked_decaps:
                 summary += f" | PWR edit blocked: {coverage.blocked_decaps[0].reason}"
@@ -4997,8 +5282,8 @@ class MainWindow(QMainWindow):
                     summary += f" | PWR edit blocked: {exc}"
             self.selection_summary.setText(summary)
             self.board.set_required_companion_refdes(source_cluster_companions)
-        self.selection_table.setRowCount(len(selected))
-        for row, decap in enumerate(selected):
+        self.selection_table.setRowCount(len(displayed))
+        for row, decap in enumerate(displayed):
             values = (
                 decap.refdes,
                 "Enabled" if decap.enabled else "Disabled",
@@ -5006,7 +5291,11 @@ class MainWindow(QMainWindow):
                 decap.model_id or "Unassigned",
                 decap.footprint,
                 _connection_label(self._scenario, decap.refdes),
-                _eligible_pwr_label(self._scenario, decap),
+                (
+                    "Read-only source view"
+                    if self._distribution_show_original_board
+                    else _eligible_pwr_label(self._scenario, decap)
+                ),
             )
             for column, value in enumerate(values):
                 self.selection_table.setItem(row, column, QTableWidgetItem(value))
@@ -5024,7 +5313,12 @@ class MainWindow(QMainWindow):
             matches = [
                 item.refdes
                 for item in self._scenario.decaps
-                if query in item.current_net.casefold()
+                if query
+                in (
+                    item.source_net
+                    if self._distribution_show_original_board
+                    else item.current_net
+                ).casefold()
             ]
             self.board.set_selected_refdes(matches)
             selected = self.board.selected_refdes
@@ -5039,6 +5333,12 @@ class MainWindow(QMainWindow):
         self, selected_refdes: tuple[str, ...], global_position: QPoint
     ) -> None:
         if self._scenario is None or not selected_refdes:
+            return
+        if self._distribution_show_original_board:
+            self.status_text.setText(
+                "Source SPD board view is read-only; switch to Current / distributed "
+                "view to edit assignments"
+            )
             return
         selected_keys = {item.casefold() for item in selected_refdes}
         selected = [
@@ -5381,29 +5681,133 @@ class MainWindow(QMainWindow):
             return
         modal_max_index = self._selected_evaluation_modal_max_index()
         solver_profile = self._selected_evaluation_solver_profile()
+        request = _EvaluationRunRequest(
+            scenario=self._scenario,
+            rail_ids=tuple(rail_ids),
+            target_ohm=target,
+            modal_max_index=modal_max_index,
+            solver_profile=solver_profile,
+            attachments=dict(self._attachments),
+        )
+        self._pending_evaluation_launch = None
+        worker = FunctionWorker(
+            _job_preflight_evaluation,
+            request.scenario,
+            request.rail_ids,
+        )
+        self._run_worker(
+            worker,
+            lambda connectivity: self._accept_evaluation_preflight(
+                connectivity, request
+            ),
+            label=(
+                f"Checking Evaluation Analysis for "
+                f"{len(request.rail_ids):,} PWR NET(s)..."
+            ),
+            on_error=self._evaluation_preflight_worker_error,
+        )
+
+    def _accept_evaluation_preflight(
+        self, connectivity: Any, request: _EvaluationRunRequest
+    ) -> None:
+        """Present an exact partial-run manifest and require explicit consent."""
+
+        if self._scenario is not request.scenario:
+            self.status_text.setText("Discarded stale Evaluation Analysis preflight")
+            return
+        selected = tuple(str(item) for item in connectivity.rail_ids)
+        blocked_keys = {
+            str(blocker.rail_id).casefold() for blocker in connectivity.blockers
+        }
+        runnable = tuple(
+            rail_id for rail_id in selected if rail_id.casefold() not in blocked_keys
+        )
+        blocked = tuple(
+            rail_id for rail_id in selected if rail_id.casefold() in blocked_keys
+        )
+        details = str(connectivity.message())
+        manifest = _EvaluationRunManifest(
+            selected_rail_ids=selected,
+            runnable_rail_ids=runnable,
+            blocked_rail_ids=blocked,
+            blocker_count=len(connectivity.blockers),
+            blocker_details=details,
+        )
+
+        if not runnable:
+            self._invalidate_evaluation(
+                "Evaluation blocked before Original/Tuned processing.\n\n"
+                + "\n".join(manifest.summary_lines())
+            )
+            summary = (
+                f"Evaluation cannot start: {manifest.blocker_count:,} decap "
+                f"connectivity/modelability blocker(s) affect {len(blocked):,} of "
+                f"{len(selected):,} selected PWR rail(s)."
+            )
+            warning = QMessageBox(self)
+            warning.setIcon(QMessageBox.Icon.Warning)
+            warning.setWindowTitle(APP_DISPLAY_NAME)
+            warning.setText(summary)
+            warning.setInformativeText(
+                "Use Show Details to review the affected rails and components. "
+                "The complete list is also available in Evaluation Summary."
+            )
+            warning.setDetailedText(details)
+            warning.setStandardButtons(QMessageBox.StandardButton.Ok)
+            warning.exec()
+            self.status_text.setText(
+                "Evaluation blocked: 0 clear PWR NETs; no worker started"
+            )
+            return
+
+        if blocked:
+            prompt = QMessageBox(self)
+            prompt.setIcon(QMessageBox.Icon.Warning)
+            prompt.setWindowTitle(APP_DISPLAY_NAME)
+            prompt.setText(
+                "Run a partial Evaluation Analysis?"
+            )
+            prompt.setInformativeText(
+                f"{len(runnable):,} clear PWR NET(s) will run; "
+                f"{len(blocked):,} blocked PWR NET(s) will NOT run. "
+                "No selected rail will be silently dropped. Use Show Details "
+                "to review the exact run/blocked manifest."
+            )
+            prompt.setDetailedText("\n".join(manifest.summary_lines()))
+            prompt.setStandardButtons(
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
+            )
+            prompt.setDefaultButton(QMessageBox.StandardButton.No)
+            if prompt.exec() != QMessageBox.StandardButton.Yes:
+                self.evaluation_summary.setPlainText(
+                    "Partial Evaluation Analysis cancelled by user; no new "
+                    "results were produced.\n\n"
+                    + "\n".join(manifest.summary_lines())
+                )
+                self.status_text.setText(
+                    f"Partial evaluation cancelled: {len(runnable):,} clear / "
+                    f"{len(blocked):,} blocked"
+                )
+                return
+
+        # The preflight worker still owns the busy state while its result signal
+        # is being handled.  Defer the evaluation worker until finished clears
+        # that state, avoiding a GUI-thread preflight and a worker-chain race.
+        self._pending_evaluation_launch = (request, manifest)
+
+    def _launch_evaluation_after_preflight(
+        self, request: _EvaluationRunRequest, manifest: _EvaluationRunManifest
+    ) -> None:
+        if self._scenario is not request.scenario:
+            self.status_text.setText("Discarded stale Evaluation Analysis request")
+            return
 
         from ..evaluation import (
             baseline_fallback_model_refdes,
             evaluate_comparison_batch,
-            preflight_evaluation_connectivity,
         )
 
-        try:
-            connectivity = preflight_evaluation_connectivity(self._scenario, rail_ids)
-        except ValueError as exc:
-            QMessageBox.warning(self, APP_DISPLAY_NAME, str(exc))
-            return
-        if not connectivity.is_clear:
-            details = connectivity.message()
-            self._invalidate_evaluation(
-                "Evaluation blocked before Original/Tuned processing.\n\n" + details
-            )
-            QMessageBox.warning(self, APP_DISPLAY_NAME, details)
-            self.status_text.setText(
-                "Evaluation blocked by unresolved decap connectivity"
-            )
-            return
-
+        rail_ids = manifest.runnable_rail_ids
         fallback_refdes = baseline_fallback_model_refdes(self._scenario, rail_ids)
         try:
             prepared = self._scenario.with_baseline_captures(rail_ids)
@@ -5424,25 +5828,40 @@ class MainWindow(QMainWindow):
                 QMessageBox.StandardButton.No,
             )
             if choice != QMessageBox.StandardButton.Yes:
+                self.evaluation_summary.setPlainText(
+                    "Evaluation Analysis cancelled before baseline capture.\n\n"
+                    + "\n".join(manifest.summary_lines())
+                )
+                self.status_text.setText("Evaluation Analysis cancelled")
                 return
         if self._scenario_path is None:
             path = self._request_scenario_save_path()
             if path is None:
+                self.evaluation_summary.setPlainText(
+                    "Evaluation Analysis cancelled before choosing a scenario "
+                    "save path.\n\n" + "\n".join(manifest.summary_lines())
+                )
+                self.status_text.setText("Evaluation Analysis cancelled")
                 return
             self._scenario_path = path
 
+        if manifest.is_partial:
+            self._invalidate_evaluation(
+                "Starting explicitly confirmed partial Evaluation Analysis."
+            )
+        self._active_evaluation_manifest = manifest
         worker = FunctionWorker(
             evaluate_comparison_batch,
             prepared,
             rail_ids,
-            target_ohm=target,
-            modal_max_index=modal_max_index,
-            solver_profile=solver_profile,
-            attachments=dict(self._attachments),
+            target_ohm=request.target_ohm,
+            modal_max_index=request.modal_max_index,
+            solver_profile=request.solver_profile,
+            attachments=dict(request.attachments),
         )
         profile_prefix = (
             "RESEARCH / not PowerSI-validated · "
-            if solver_profile == _RESEARCH_SOLVER_PROFILE_KEY
+            if request.solver_profile == _RESEARCH_SOLVER_PROFILE_KEY
             else "LEGACY · "
         )
         self.evaluation_summary.setPlainText(
@@ -5450,7 +5869,8 @@ class MainWindow(QMainWindow):
             f"{len(rail_ids):,} PWR NET(s) with "
             f"{profile_prefix}{self.evaluation_solver_profile_combo.currentText()} and "
             f"{self.evaluation_modal_preset_combo.currentText()} numerical convergence. "
-            "All computation runs in the background; Cancel remains available."
+            "All computation runs in the background; Cancel remains available.\n\n"
+            + "\n".join(manifest.summary_lines())
         )
         self._run_worker(
             worker,
@@ -5532,6 +5952,12 @@ class MainWindow(QMainWindow):
             != current.model_dump(mode="json")
             or updated_attachments != self._attachments
         )
+        if updated_scenario.baseline_captures != current.baseline_captures:
+            # Legacy scenarios can acquire immutable source-model bindings at
+            # the first accepted baseline capture. Rebuild only that source
+            # display cache; ordinary current/distribution edits keep it hot.
+            self._source_board_records = ()
+            self._source_board_cache_key = None
         self._scenario = updated_scenario
         self._attachments = dict(updated_attachments)
         self._dirty = self._dirty or persistent_change
@@ -5618,6 +6044,14 @@ class MainWindow(QMainWindow):
                 if newly_saved
                 else f"Original results are stored in {self._scenario_path.name}."
             )
+        manifest = self._active_evaluation_manifest
+        partial_scope_lines: tuple[str, ...] = ()
+        if manifest is not None and manifest.is_partial:
+            partial_scope_lines = (
+                "",
+                "PARTIAL EVALUATION — results do not cover every selected PWR NET.",
+                *manifest.summary_lines(),
+            )
         self.evaluation_summary.setPlainText(
             "\n".join(
                 (
@@ -5635,14 +6069,21 @@ class MainWindow(QMainWindow):
                     _EXPLORATORY_FIDELITY_WARNING,
                     save_note,
                     "Select a Tuned result in AI Assist when analysis is needed.",
+                    *partial_scope_lines,
                 )
             )
         )
         self._update_evaluation_notes(provenance)
         self._refresh_all()
-        self.status_text.setText(
-            f"Evaluation complete: {len(comparisons):,} PWR NET(s)"
-        )
+        if manifest is not None and manifest.is_partial:
+            self.status_text.setText(
+                f"Evaluation complete (PARTIAL): {len(comparisons):,} clear ran; "
+                f"{len(manifest.blocked_rail_ids):,} blocked NOT evaluated"
+            )
+        else:
+            self.status_text.setText(
+                f"Evaluation complete: {len(comparisons):,} PWR NET(s)"
+            )
 
     def _render_comparisons(
         self,

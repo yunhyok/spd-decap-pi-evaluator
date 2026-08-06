@@ -14,7 +14,6 @@ from dataclasses import asdict
 from hashlib import sha256
 import json
 from pathlib import Path
-import re
 from time import perf_counter
 from collections.abc import Callable
 from types import SimpleNamespace
@@ -27,6 +26,7 @@ from spd_decap_pi._core.io.spd import analyze_spd
 from spd_decap_pi._core.io.touchstone import (
     TouchstoneNetwork,
     open_circuit_zpp,
+    powersi_rail_from_header_label,
     read_touchstone,
     s_to_z,
     validate_port_manifest,
@@ -37,9 +37,18 @@ from spd_decap_pi._core.services import (
     _spd_via_leg_estimate,
     create_workspace_state,
 )
-from spd_decap_pi._core.solver.evaluator import evaluate_project_rail_converged
-from spd_decap_pi._core.solver.modal import copper_slab_surface_impedance_per_square
-from spd_decap_pi.evaluation import build_evaluation_project
+from spd_decap_pi._core.solver.evaluator import (
+    EvaluationError,
+    evaluate_project_rail_converged,
+)
+from spd_decap_pi._core.solver.modal import (
+    ModalSolverError,
+    copper_slab_surface_impedance_per_square,
+)
+from spd_decap_pi.evaluation import (
+    ScenarioEvaluationBuildError,
+    build_evaluation_project,
+)
 from spd_decap_pi.scenario import ScenarioSpec, SourceIdentity
 from spd_decap_pi.scenario_io import ScenarioFormatError, load_scenario_bundle, save_scenario
 from spd_decap_pi.spd_adapter import import_spd_scenario
@@ -73,9 +82,6 @@ SCORE_LOW_HZ = 1.0e5
 SCORE_HIGH_HZ = 1.0e8
 SCORE_POINTS = 241
 ANCHORS_HZ = (1.0e5, 1.0e6, 1.0e7, 1.0e8)
-_POWER_SI_LABEL = re.compile(r"^2nd_SITE[01]-(.+/[01])$")
-
-
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--spd", required=True, type=Path, help="raw, undistributed SPD")
@@ -307,16 +313,38 @@ def complete_92_port_manifest(network: TouchstoneNetwork) -> dict[str, int]:
     if set(network.port_mapping) != set(range(1, ports + 1)):
         raise ValueError("92-port PowerSI header is incomplete")
     result: dict[str, int] = {}
+    expected_labels: dict[str, str] = {}
     for port, label in sorted(network.port_mapping.items()):
-        matched = _POWER_SI_LABEL.fullmatch(label)
-        if matched is None:
-            raise ValueError(f"port {port} does not use the exact PowerSI SITE header convention")
-        rail = matched.group(1)
+        try:
+            rail = powersi_rail_from_header_label(label)
+        except ValueError as exc:
+            if "does not match" in str(exc):
+                raise ValueError(
+                    f"PowerSI header site mismatch at port {port}: {label!r}"
+                ) from exc
+            raise ValueError(
+                f"port {port} does not use the exact PowerSI SITE header convention"
+            ) from exc
         if rail in result:
             raise ValueError(f"92-port header maps multiple ports to {rail!r}")
         result[rail] = port
-    validate_port_manifest(network, result, require_complete_header=True)
+        expected_labels[rail] = label
+    validate_port_manifest(
+        network,
+        result,
+        expected_header_labels=expected_labels,
+        require_complete_header=True,
+    )
     return result
+
+
+def validate_selected_port_manifest(
+    network: TouchstoneNetwork,
+    selected_ports: Mapping[str, int],
+) -> None:
+    """Revalidate a selected subset against its already-proven exact labels."""
+
+    validate_port_manifest(network, selected_ports)
 
 
 def _source_identity_report(spd: Path, scenario: Any) -> dict[str, Any]:
@@ -451,18 +479,32 @@ def _run_one(
     rails: dict[str, Any] = {}
     started = perf_counter()
     for rail, port in rail_ports.items():
-        project = build_evaluation_project(scenario, evaluation_rail_id=rail)
-        if project_transform is not None:
-            project = project_transform(project)
         rail_started = perf_counter()
-        outcome = evaluate_project_rail_converged(
-            project, rail,
-            request_options={"max_mode_x": modal_index, "max_mode_y": modal_index, "worker_count": 1},
-            max_mode_x=modal_index, max_mode_y=modal_index,
-            max_refinement_iterations=1, max_new_frequency_points=32,
-        )
+        try:
+            project = build_evaluation_project(scenario, evaluation_rail_id=rail)
+            if project_transform is not None:
+                project = project_transform(project)
+            outcome = evaluate_project_rail_converged(
+                project, rail,
+                request_options={"max_mode_x": modal_index, "max_mode_y": modal_index, "worker_count": 1},
+                max_mode_x=modal_index, max_mode_y=modal_index,
+                max_refinement_iterations=1, max_new_frequency_points=32,
+            )
+        except (ScenarioEvaluationBuildError, EvaluationError, ModalSolverError) as exc:
+            # A comparison report must retain every predeclared rail.  A
+            # source/modelability blocker is explicit evidence, not a reason to
+            # abort the VQPS controls or silently omit the affected loaded rail.
+            rails[rail] = {
+                "group": GROUP_BY_RAIL[rail],
+                "status": "blocked",
+                "runtime_s": perf_counter() - rail_started,
+                "error_type": type(exc).__name__,
+                "reason": str(exc),
+            }
+            continue
         rails[rail] = {
             "group": GROUP_BY_RAIL[rail],
+            "status": "completed",
             "runtime_s": perf_counter() - rail_started,
             "solver_version": outcome.solver_version,
             "mode_max_index": modal_index,
@@ -507,11 +549,28 @@ def _run_candidate_modes(
         )
         for mode in modes
     }
+    blocked_by_mode = {
+        mode: [
+            rail
+            for rail, result in run.get("rails", {}).items()
+            if result.get("status") == "blocked"
+        ]
+        for mode, run in runs.items()
+    }
+    blocked_by_mode = {
+        mode: rails for mode, rails in blocked_by_mode.items() if rails
+    }
     return runs, {
-        "status": "completed",
-        "reason": None,
+        "status": "partial" if blocked_by_mode else "completed",
+        "reason": (
+            "Source/modelability blockers are retained per rail; clear rails "
+            "completed and no selected rail was silently omitted."
+            if blocked_by_mode
+            else None
+        ),
         "requested_modal_max_indices": list(modes),
         "completed_modal_max_indices": list(modes),
+        "blocked_rails_by_modal_max_index": blocked_by_mode,
     }
 
 
@@ -585,7 +644,11 @@ def main(argv: list[str] | None = None) -> int:
     if unavailable:
         raise ValueError(f"candidate SPD scenario cannot evaluate predeclared rails: {unavailable}")
     selected_ports = {rail: manifest[rail] for rail in SELECTED_RAILS}
-    validate_port_manifest(source_network, selected_ports)
+    # ``complete_92_port_manifest`` already proved the full exact header. Keep
+    # the selected-subset guard exact as well, including PowerSI's run-qualified
+    # labels (for example ``SITE0_0805-...``), instead of silently translating
+    # them back to the legacy ``2nd_SITE0-...`` spelling.
+    validate_selected_port_manifest(source_network, selected_ports)
     network, discarded_dc_count = _positive_frequency_network(source_network)
     converted = s_to_z(network)
 

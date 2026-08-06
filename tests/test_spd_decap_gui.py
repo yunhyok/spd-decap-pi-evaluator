@@ -44,12 +44,14 @@ from spd_decap_pi._core.solver.profiles import (
 from spd_decap_pi.gui.worker import FunctionWorker
 from spd_decap_pi.gui.main_window import (
     MainWindow,
+    _EvaluationRunManifest,
     _PlaneArtworkItem,
     _PlanePathBuilder,
     _PreparedScenarioBundle,
     _excel_safe_csv_cell,
     _job_compute_distribution,
     _job_load_scenario,
+    _job_preflight_evaluation,
     _modal_convergence_text,
     _rejected_comparison_convergence,
     _source_via_path_recovery_summary,
@@ -1395,12 +1397,28 @@ def test_evaluation_worker_receives_scenario_model_attachments(
         window._refresh_all()
         window._set_all_rails_checked(True)
 
-        def capture(worker, _on_result, **kwargs):
+        def capture(worker, on_result, **kwargs):
             captured["worker"] = worker
+            captured["on_result"] = on_result
             captured.update(kwargs)
 
         monkeypatch.setattr(window, "_run_worker", capture)
-        window.run_evaluation()
+
+        def run_through_preflight() -> None:
+            captured.clear()
+            window.run_evaluation()
+            preflight_worker = captured["worker"]
+            assert preflight_worker.function.__name__ == "_job_preflight_evaluation"
+            connectivity = evaluation_module.preflight_evaluation_comparison(
+                preflight_worker.args[0], preflight_worker.args[1]
+            )
+            captured["on_result"](connectivity)
+            request, manifest = window._pending_evaluation_launch
+            window._pending_evaluation_launch = None
+            captured.clear()
+            window._launch_evaluation_after_preflight(request, manifest)
+
+        run_through_preflight()
 
         worker = captured["worker"]
         assert worker.kwargs["attachments"] == imported.attachments
@@ -1420,19 +1438,19 @@ def test_evaluation_worker_receives_scenario_model_attachments(
         window.evaluation_modal_preset_combo.setCurrentIndex(
             window.evaluation_modal_preset_combo.findData(10)
         )
-        window.run_evaluation()
+        run_through_preflight()
         assert captured["worker"].kwargs["modal_max_index"] == 10
         window.evaluation_modal_preset_combo.setCurrentIndex(
             window.evaluation_modal_preset_combo.findData(12)
         )
-        window.run_evaluation()
+        run_through_preflight()
         assert captured["worker"].kwargs["modal_max_index"] == 12
         window.evaluation_solver_profile_combo.setCurrentIndex(
             window.evaluation_solver_profile_combo.findData(
                 "research_uniform_admittance"
             )
         )
-        window.run_evaluation()
+        run_through_preflight()
         assert captured["worker"].kwargs["solver_profile"] == (
             "research_uniform_admittance"
         )
@@ -1443,6 +1461,37 @@ def test_evaluation_worker_receives_scenario_model_attachments(
         window._dirty = False
         window.close()
         application.processEvents()
+
+
+def test_background_evaluation_preflight_uses_original_and_tuned_gate(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    source = tmp_path / "comparison-preflight.spd"
+    source.write_text(MINI_SPD, encoding="ascii")
+    scenario = import_spd_scenario(source).scenario
+    calls: list[tuple[ScenarioSpec, tuple[str, ...]]] = []
+    progress_events: list[tuple[int, str]] = []
+    sentinel = SimpleNamespace(rail_ids=(scenario.base_project.rails[0].rail_id,))
+
+    def comparison_gate(candidate, rail_ids, **_kwargs):
+        calls.append((candidate, tuple(rail_ids)))
+        return sentinel
+
+    monkeypatch.setattr(
+        evaluation_module, "preflight_evaluation_comparison", comparison_gate
+    )
+
+    result = _job_preflight_evaluation(
+        scenario,
+        sentinel.rail_ids,
+        progress=lambda value, message: progress_events.append((value, message)),
+        is_cancelled=lambda: False,
+    )
+
+    assert result is sentinel
+    assert calls == [(scenario, sentinel.rail_ids)]
+    assert progress_events[0][0] == 5
+    assert progress_events[-1] == (100, "Evaluation Analysis preflight complete")
 
 
 def test_cancelled_worker_does_not_show_a_failure_or_leave_cancelling_status() -> None:
@@ -1747,6 +1796,13 @@ def test_research_success_is_transient_and_exports_full_composite_identity(
             matches=lambda _scenario: True,
             validate_for_scenario=lambda _scenario: None,
         )
+        window._active_evaluation_manifest = _EvaluationRunManifest(
+            selected_rail_ids=(rail_id, "RAIL_BLOCKED"),
+            runnable_rail_ids=(rail_id,),
+            blocked_rail_ids=("RAIL_BLOCKED",),
+            blocker_count=3,
+            blocker_details="RAIL_BLOCKED [UNRESOLVED: C9, C10, C11]",
+        )
 
         window._accept_evaluation(batch)
 
@@ -1758,6 +1814,12 @@ def test_research_success_is_transient_and_exports_full_composite_identity(
         assert "reused" not in summary
         assert "newly evaluated and staged" not in summary
         assert "will be saved" not in summary
+        assert "PARTIAL EVALUATION" in summary
+        assert "Blocked and NOT evaluated: 1 (RAIL_BLOCKED)" in summary
+        assert "RAIL_BLOCKED [UNRESOLVED: C9, C10, C11]" in summary
+        assert "Evaluation complete (PARTIAL): 1 clear ran" in (
+            window.status_text.text()
+        )
         assert window.scenario.model_dump(mode="json") == scenario_before
         assert window._attachments == attachments_before
         assert window.scenario.evaluation_cache == {}

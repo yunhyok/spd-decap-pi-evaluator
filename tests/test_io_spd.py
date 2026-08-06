@@ -543,39 +543,48 @@ def _recover_power_path(source: Path, analysis: object, **kwargs):
     )
 
 
-def test_recover_spd_via_paths_fails_closed_when_trace_proof_exceeds_budget(
+def test_recover_spd_via_paths_indexes_more_than_legacy_250k_trace_budget(
     tmp_path: Path,
-    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    edge_count = 250_001
     source, analysis = _recoverable_via_source(
         tmp_path,
-        node_lines="""
-Node10!!1::VDD_CORE/0 X = 1mm Y = 2mm Layer = Signal$TOP PadStack = DR-0102_60
-Node11!!1::VDD_CORE/0 X = 1mm Y = 2mm Layer = Signal$PWR PadStack = DR-0102_60
-Node12!!1::VDD_CORE/0 X = 1.2mm Y = 2mm Layer = Signal$TOP PadStack = DR-0102_60
-Node13!!1::VDD_CORE/0 X = 1.3mm Y = 2mm Layer = Signal$TOP PadStack = DR-0102_60
-Node14!!1::VDD_CORE/0 X = 1.4mm Y = 2mm Layer = Signal$TOP PadStack = DR-0102_60
-""",
+        node_lines="\n".join(
+            (
+                "Node10!!1::VDD_CORE/0 X = 1mm Y = 2mm Layer = "
+                "Signal$TOP PadStack = DR-0102_60",
+                "Node11!!1::VDD_CORE/0 X = 1mm Y = 2mm Layer = "
+                "Signal$PWR PadStack = DR-0102_60",
+                *(
+                    f"Node{index + 12}!!1::VDD_CORE/0 X = {index + 2}um "
+                    "Y = 2mm Layer = Signal$TOP PadStack = DR-0102_60"
+                    for index in range(edge_count + 1)
+                ),
+            )
+        ),
         via_lines=(
             "ViaRoute::VDD_CORE/0 UpperNode = Node10::VDD_CORE/0 "
             "LowerNode = Node11::VDD_CORE/0 PadStack = DR-0102_60"
         ),
-        trace_lines="""
-Trace1::VDD_CORE/0 StartingNode = Node10::VDD_CORE/0 EndingNode = Node12::VDD_CORE/0 Width = 0.10mm
-Trace2::VDD_CORE/0 StartingNode = Node12::VDD_CORE/0 EndingNode = Node13::VDD_CORE/0 Width = 0.10mm
-Trace3::VDD_CORE/0 StartingNode = Node13::VDD_CORE/0 EndingNode = Node14::VDD_CORE/0 Width = 0.10mm
-""",
+        trace_lines="\n".join(
+            f"Trace{index}::VDD_CORE/0 StartingNode = "
+            f"Node{10 if index == 0 else index + 11}::VDD_CORE/0 "
+            f"EndingNode = Node{index + 12}::VDD_CORE/0 Width = 0.10mm"
+            for index in range(edge_count)
+        ),
     )
-    monkeypatch.setattr(spd_io, "_SPD_VIA_PATH_MAX_RELEVANT_TRACE_RECORDS", 2)
 
     recovery = _recover_power_path(source, analysis)
 
-    assert recovery.evidence_for("ViaRoute", "Signal$PWR") is None
+    assert recovery.evidence_for("ViaRoute", "Signal$PWR") is not None
     assert recovery.statistics["requested"] == 1
-    assert recovery.statistics["recovered"] == 0
-    assert recovery.statistics["resource_guard_fallback"] == 1
-    assert recovery.statistics["relevant_trace_records_examined"] == 3
-    assert any(item.code == "SPD_VIA_PATH_RESOURCE_GUARD" for item in recovery.diagnostics)
+    assert recovery.statistics["recovered"] == 1
+    assert recovery.statistics["relevant_trace_records_indexed"] == edge_count
+    assert recovery.statistics["alternate_exit_trace_nodes_indexed"] == edge_count + 1
+    assert not any(
+        item.code == "SPD_VIA_PATH_RESOURCE_GUARD"
+        for item in recovery.diagnostics
+    )
 
 
 def _alternate_exit_budget_source(tmp_path: Path) -> tuple[Path, object]:
@@ -598,37 +607,39 @@ ViaAlternate::VDD_CORE/0 UpperNode = Node12::VDD_CORE/0 LowerNode = Node13::VDD_
     )
 
 
-def test_recover_spd_via_paths_fails_closed_when_alternate_exit_via_edge_budget_exceeds(
+def test_recover_spd_via_paths_compact_index_retains_exact_parallel_exit(
     tmp_path: Path,
-    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     source, analysis = _alternate_exit_budget_source(tmp_path)
 
-    normal = _recover_power_path(source, analysis)
-    assert normal.evidence_for("ViaRoute", "Signal$PWR") is not None
-    assert normal.statistics["alternate_exit_via_edges_retained"] == 2
-
-    monkeypatch.setattr(
-        spd_io, "_SPD_VIA_PATH_MAX_RETAINED_ALTERNATE_EXIT_VIA_EDGES", 1
-    )
     recovery = _recover_power_path(source, analysis)
 
-    assert recovery.evidence_for("ViaRoute", "Signal$PWR") is None
+    evidence = recovery.evidence_for("ViaRoute", "Signal$PWR")
+    assert evidence is not None
+    assert evidence.trace_alternate_exit is True
     assert recovery.statistics["requested"] == 1
-    assert recovery.statistics["recovered"] == 0
-    assert recovery.statistics["resource_guard_fallback"] == 1
-    assert recovery.statistics["alternate_exit_via_edges_retained"] == 1
-    assert recovery.statistics["alternate_exit_via_edge_limit"] == 1
-    assert recovery.statistics["alternate_exit_nodes_retained"] == 3
-    assert any(item.code == "SPD_VIA_PATH_RESOURCE_GUARD" for item in recovery.diagnostics)
+    assert recovery.statistics["recovered"] == 1
+    assert recovery.statistics["alternate_exit_via_edges_retained"] == 2
+    assert recovery.statistics["alternate_exit_nodes_retained"] == 4
 
 
-def test_recover_spd_via_paths_fails_closed_when_alternate_exit_node_budget_exceeds(
+def test_recover_spd_via_paths_fails_closed_if_compact_index_cannot_complete(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     source, analysis = _alternate_exit_budget_source(tmp_path)
-    monkeypatch.setattr(spd_io, "_SPD_VIA_PATH_MAX_RETAINED_ALTERNATE_NODES", 2)
+    original = spd_io._TRACE_RE
+
+    class _ExhaustedTraceIndex:
+        calls = 0
+
+        def finditer(self, *args, **kwargs):
+            self.calls += 1
+            if self.calls == 2:
+                raise MemoryError
+            return original.finditer(*args, **kwargs)
+
+    monkeypatch.setattr(spd_io, "_TRACE_RE", _ExhaustedTraceIndex())
 
     recovery = _recover_power_path(source, analysis)
 
@@ -637,8 +648,7 @@ def test_recover_spd_via_paths_fails_closed_when_alternate_exit_node_budget_exce
     assert recovery.statistics["recovered"] == 0
     assert recovery.statistics["resource_guard_fallback"] == 1
     assert recovery.statistics["alternate_exit_via_edges_retained"] == 0
-    assert recovery.statistics["alternate_exit_nodes_retained"] == 2
-    assert recovery.statistics["alternate_exit_node_limit"] == 2
+    assert recovery.statistics["alternate_exit_nodes_retained"] == 0
     assert any(item.code == "SPD_VIA_PATH_RESOURCE_GUARD" for item in recovery.diagnostics)
 
 
@@ -691,12 +701,12 @@ Node99!!1::VDD_CORE/0 X = 2mm Y = 2mm Layer = Signal$TOP PadStack = DR-0102_60
         "segments": 1,
         "trace_components_indexed": 1,
         "alternate_exit_cache_entries": 1,
+        "relevant_trace_records_indexed": 1,
         "alternate_exit_trace_nodes_indexed": 2,
         "alternate_exit_via_edges_indexed": 1,
         "alternate_exit_via_edges_retained": 1,
-        "alternate_exit_via_edge_limit": 250_000,
         "alternate_exit_nodes_retained": 3,
-        "alternate_exit_node_limit": 750_000,
+        "alternate_exit_numeric_capacity": 100,
         "path_node_section_passes": 1,
         "alternate_exit_node_section_passes": 1,
         "alternate_exit_nodes_resolved": 3,
@@ -782,7 +792,9 @@ ViaAlternate::VDD_CORE/0 UpperNode = Node12::VDD_CORE/0 LowerNode = Node13::VDD_
         "ViaAlternate", "Signal$PWR"
     ).trace_alternate_exit is True
     assert recovery.statistics["trace_components_indexed"] == 1
-    assert recovery.statistics["alternate_exit_cache_entries"] == 1
+    # Start identity participates in the exact cache key because each query
+    # excludes its own Via source while considering the other source.
+    assert recovery.statistics["alternate_exit_cache_entries"] == 2
     assert recovery.statistics["alternate_exit_trace_nodes_indexed"] == 2
     # The 2,000 additional same-NET Vias are not Trace-incident and therefore
     # never enter the memory-heavy alternate-exit neighbor index.

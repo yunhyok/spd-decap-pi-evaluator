@@ -80,7 +80,7 @@ def test_current_export_keeps_two_sheets_a1_matrix_and_round_trips_metadata(
         "M1\nTarget",
         "M1\nTolerance (%)",
         "M1\nActual Delta",
-        "M1\nActual Changed",
+        "M1\nAssignment Failed",
         "M1\nIsolation Gaps",
     )
     write_distribution_workbook(
@@ -91,7 +91,7 @@ def test_current_export_keeps_two_sheets_a1_matrix_and_round_trips_metadata(
         inventory_headers=("Component", "Physical Present"),
         inventory_rows=(("M1", 4),),
         metadata={
-            "Format Version": 2,
+            "Format Version": 3,
             "Application Version": "0.9.3",
             "Source SPD SHA-256": source_sha,
             "Input Design Fingerprint": fingerprint,
@@ -125,8 +125,38 @@ def test_current_export_keeps_two_sheets_a1_matrix_and_round_trips_metadata(
     assert imported.targets[("R1", "M1")] == 3
     assert imported.tolerances[("R1", "M1")] == 1.25
     assert imported.distance_mode == "FARTHEST"
-    assert imported.format_version == 2
+    assert imported.format_version == 3
     assert imported.source_sha256 == source_sha
+
+
+@pytest.mark.parametrize("result_header", ("Actual Changed", "Assignment Failed"))
+def test_import_ignores_legacy_and_current_assignment_result_columns(
+    tmp_path: Path,
+    result_header: str,
+) -> None:
+    path = tmp_path / f"result-{result_header.casefold().replace(' ', '-')}.xlsx"
+    headers = (
+        "PWR NET",
+        "M1\nPresent",
+        "M1\nTarget",
+        f"M1\n{result_header}",
+    )
+    write_distribution_workbook(
+        path,
+        (),
+        headers,
+        (("V1 (R1)", 3, 2, 99),),
+        metadata={"Format Version": 2 if result_header == "Actual Changed" else 3},
+    )
+
+    imported = load_distribution_targets(
+        path,
+        rail_ids=("R1",),
+        model_ids=("M1",),
+        current_present={("R1", "M1"): 3},
+    )
+
+    assert imported.targets == {("R1", "M1"): 2}
 
 
 def test_import_streams_bounded_ranges_and_skips_result_columns_for_target_rows(

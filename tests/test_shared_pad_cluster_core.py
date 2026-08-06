@@ -1155,6 +1155,59 @@ def test_coupled_cluster_sensitivity_removes_one_atomic_group() -> None:
     ) > 1.0e-9
 
 
+def test_large_exact_batched_cluster_sensitivity_fails_before_dense_allocation(
+    monkeypatch,
+) -> None:
+    solver, device, frequencies = _plane_solver_fixture()
+    via = _constant("VIA", 0.02 + 0.04j)
+    cap = _constant("CAP", 0.01 - 0.30j)
+    power_count = 65
+    ground_count = 64
+    network = SharedPadClusterModel(
+        "LARGE-CLUSTER",
+        tuple(via for _ in range(power_count)),
+        tuple(via for _ in range(ground_count)),
+        (cap,),
+    )
+    physical = SharedPadClusterModel(
+        "LARGE-CLUSTER-PHYSICAL",
+        tuple(via for _ in range(power_count)),
+        tuple(via for _ in range(ground_count)),
+        (),
+    )
+    ports = tuple(
+        FinitePort(
+            0.002 + 0.0001 * (index % 100),
+            0.002 + 0.0001 * (index // 100),
+            50.0e-6,
+            50.0e-6,
+            f"PATH-{index}",
+        )
+        for index in range(power_count + ground_count)
+    )
+    group = CoupledShuntGroup(
+        "LARGE-CLUSTER",
+        ports,
+        network,
+        "LARGE-SENSITIVITY",
+        sensitivity_without_network=physical,
+    )
+    monkeypatch.setattr(
+        SharedPadClusterModel,
+        "admittance_matrix",
+        lambda _self, _frequencies: pytest.fail(
+            "dense populated admittance must not be allocated"
+        ),
+    )
+
+    with pytest.raises(ModalSolverError, match="dense leave-one-out limit is 128"):
+        solver.solve_device_shunt_leave_one_out(
+            frequencies,
+            device,
+            shunts=(group,),
+        )
+
+
 def test_physical_only_cluster_is_not_a_sensitivity_candidate() -> None:
     solver, device, frequencies = _plane_solver_fixture()
     network = SharedPadClusterModel(
