@@ -1,6 +1,6 @@
 # De-cap Distribution 변동 규칙
 
-> 적용 프로그램: **SPD Decap PI Evaluator v0.20.0**
+> 적용 프로그램: **SPD Decap PI Evaluator v0.21.0**
 >
 > 문서 상태: 현재 구현 및 회귀 테스트에 대응하는 동작 규칙
 >
@@ -23,6 +23,9 @@
    `PARTIAL` 결과를 반환한다.
 6. 원자적 topology 검증을 통과하지 못한 Preview 또는 Apply는 fail-closed로
    거부한다.
+7. Distribution의 `FULL/PARTIAL`은 수량/topology 상태이고 Evaluation의
+   connectivity/modelability 상태와 동일하지 않다. Apply 후 Evaluation은 Original과
+   Tuned/current 양쪽을 별도 preflight한다.
 
 ## 2. 용어와 수량 정의
 
@@ -36,8 +39,8 @@
 | Sent | 해당 PWR NET에서 다른 PWR NET으로 실제 이동한 De-cap 수 |
 | Received | 다른 PWR NET에서 해당 PWR NET으로 실제 이동해 온 De-cap 수 |
 | Sacrificed | 서로 다른 활성 PWR NET을 분리하기 위해 `ISOLATION_GAP`으로 제거한 De-cap cell 수 |
-| Actual Changed | 각 PWR NET·Component cell에서 계산한 `Sent + Received + Sacrificed`; 수량이 유지되는 교환도 포함하는 cell-local gross count |
-| Shortfall | receiver의 `Target - Actual` |
+| Assignment Failed | receiver의 미충족 수요 `max(Target - Actual, 0)`; donor의 미사용 여유와 선택적인 exchange 회전은 실패로 세지 않음 |
+| Shortfall | `Assignment Failed`와 같은 계산 결과 필드 |
 | Anchor De-cap | 실제 PWR VIA를 가진 shared-pad De-cap |
 | Dummy De-cap | 자체 PWR VIA가 없고 동일 활성 pad 구간의 anchor VIA를 사용해야 하는 De-cap |
 | Isolation gap | source TOP copper가 분리 가능하다고 입증한 pad cell을 비활성화하여 PWR pad 연결을 실제로 끊은 상태 |
@@ -58,9 +61,9 @@ Actual = Present - Sent - Sacrificed + Received
 receiver가 얻는 수량에는 실제로 이동해 온 De-cap만 포함되며 isolation gap은
 receiver 수량으로 계산하지 않는다.
 
-`Actual Changed`는 고유하게 변경된 De-cap row 수가 아니다. 하나의 De-cap NET
-이동은 donor cell의 Sent에 한 번, receiver cell의 Received에 한 번 집계되므로
-Target 표 전체의 `Actual Changed` 합계는 고유 export row 수보다 클 수 있다.
+`Assignment Failed`는 특정 후보 RefDes에 대한 실패 목록이 아니다. Optimizer는
+유효한 최대 부분집합만 선택하므로 receiver cell에서 채우지 못한 최종 수량을
+표시한다. `0`은 해당 receiver 요청이 충족되었거나 receiver 요청이 없다는 뜻이다.
 
 ## 3. Target 표의 cell 역할
 
@@ -313,6 +316,30 @@ out-of-scope 연결이 있으면 PDN Evaluation은 별도로 차단될 수 있�
 `PREEXISTING_UNRESOLVED_EVALUATION_RAILS` 진단을 표시하며, Distribution의
 `FULL/PARTIAL`과 `PDN evaluation: BLOCKED`를 서로 다른 상태로 취급한다.
 
+### 8.1 Evaluation Analysis handoff
+
+Evaluation 시작 전 background comparison preflight는 선택한 각 rail의 **Original
+baseline**과 **Tuned/current**를 모두 검사한다. 이 검사는 실제 project builder와 같은
+connectivity/modelability 계약을 사용하며, 한쪽이라도 build할 수 없으면 해당 rail 전체를
+blocked로 분류한다. 따라서 Original에서는 mounted였지만 Tuned에서 disabled가 된
+De-cap도 Original footprint 검사를 생략하지 않고, model ID가 없거나 유한 port footprint가
+선택 cavity를 벗어나는 경우도 UI preflight와 builder가 동일하게 fail-closed 한다.
+
+Eligibility가 없는 unchanged source `DIRECT` connection은 import가 보존한 PWR/GND landing,
+source rail/net 일치 및 rail-template binding이 모두 확인될 때만 source fallback을 사용할 수
+있다. Distribution으로 이동한 assignment는 exact destination eligibility가 계속 필요하다.
+이 fallback은 누락된 connectivity record를 복구하는 규칙이지 terminal 좌표를 clamp하거나,
+cavity를 확장하거나, off-cavity port를 제외하는 geometry 예외가 아니다.
+
+- 모든 선택 rail이 clear이면 전체 비교를 실행한다.
+- clear와 blocked가 섞이면 전체 blocker manifest를 보여주고, 기본값 `No`인 명시적 확인 후에만
+  clear rail을 실행한다.
+- 이 mixed 실행은 `PARTIAL`로 표시하고 blocked rail을 `NOT evaluated`로 남긴다. blocked rail을
+  성공으로 간주하거나 조용히 생략하지 않는다.
+- clear rail이 하나도 없으면 Evaluation을 시작하지 않는다.
+- no-decap control도 같은 검사를 받는다. 지정된 두 92-port case의 `VQPS` 10개 rail은
+  Original/Tuned exact preflight에서 모두 clear다.
+
 ## 9. Preview 및 Apply 규칙
 
 1. Preview는 입력 scenario의 design fingerprint와 revision을 기록한다.
@@ -329,7 +356,7 @@ out-of-scope 연결이 있으면 PDN Evaluation은 별도로 차단될 수 있�
 
 ## 10. Target 입력 및 다중 cell 편집
 
-- `Present`와 `Actual Δ`는 읽기 전용이다.
+- `Present`와 `Assignment Failed`는 읽기 전용이다.
 - `Target`과 `Tolerance (%)`만 편집할 수 있다.
 - `Ctrl`/`Shift`로 여러 cell을 선택한 뒤 숫자를 입력하면 같은 종류의 편집 가능
   cell에 동일 값을 적용한다.
@@ -340,9 +367,12 @@ out-of-scope 연결이 있으면 PDN Evaluation은 별도로 차단될 수 있�
 - 메인 Distribution 표의 cell을 더블클릭하면 동일 내용을 읽기 전용으로 보여주는
   비모달 분리창을 연다. 상태의 단일 소유자는 메인 창이며 분리창은 별도 사본을
   편집하지 않는다.
-- 분리창의 Original/Distributed 표시는 도면 렌더링만 전환하며 scenario, revision,
-  dirty 상태, target 및 plan을 변경하지 않는다. Original은 source NET/rail뿐 아니라
-  Distribution이 만든 isolation-gap의 enabled/pad 상태도 source 상태로 복원해 표시한다.
+- 메인 창의 `Show source SPD assignments`와 분리창의 동기화된 control은 표시 label을
+  `Current / distributed` 또는 `Source SPD (read-only)`로 전환한다. 이는 도면 렌더링만
+  바꾸며 scenario, revision, dirty 상태, target 및 plan을 변경하지 않는다. Source SPD view는
+  source NET/rail뿐 아니라 Distribution이 만든 isolation-gap의 enabled/pad 상태도 source
+  상태로 복원해 표시하고, context edit를 허용하지 않는다. Search, selection 및 viewport는
+  전환 전후에 보존한다.
 
 ## 11. Excel Target 가져오기
 
@@ -391,7 +421,7 @@ Excel은 정확히 두 sheet를 생성한다.
    - 전체 De-cap의 6개 결과 열
 2. `PWR NET Distribution Targets`
    - 계산 당시의 immutable Present/Target/Tolerance
-   - Actual Delta, Actual Changed, Isolation Gaps
+   - Actual Delta, Assignment Failed, Isolation Gaps
    - 전체 inventory reconciliation
    - application/format version, source SPD 이름 및 SHA-256
    - 입력 fingerprint/revision과 distance mode

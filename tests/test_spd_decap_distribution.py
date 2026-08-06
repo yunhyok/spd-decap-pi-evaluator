@@ -1928,6 +1928,11 @@ def test_physical_shortage_returns_maximum_partial_plan() -> None:
     assert _cell(plan, "R1").actual_count == 2
     assert _cell(plan, "R2").actual_count == 1
     assert any(item.code == "PHYSICAL_CAPACITY_SHORTAGE" for item in plan.diagnostics)
+    headers, rows = distribution_target_table(plan)
+    assert "M1\nAssignment Failed" in headers
+    failed_column = headers.index("M1\nAssignment Failed")
+    assert next(row for row in rows if row[0] == "V1 (R1)")[failed_column] == 0
+    assert next(row for row in rows if row[0] == "V2 (R2)")[failed_column] == 1
     applied = apply_distribution_plan(scenario, plan)
     assert applied.revision == scenario.revision + 1
     assert next(item for item in applied.decaps if item.refdes == "C1").current_rail_id == "R2"
@@ -2186,7 +2191,7 @@ def test_exchange_tolerance_counts_cluster_members_and_never_strands_dummy() -> 
     assert enough.isolation_gap_refdes == ("D1",)
     _headers, target_rows = distribution_target_table(enough)
     r2_row = next(row for row in target_rows if row[0] == "V2 (R2)")
-    assert r2_row[4:] == (0, 4, 1)
+    assert r2_row[4:] == (0, 0, 1)
 
 
 def test_exchange_can_be_full_when_donor_covers_move_and_separator_loss() -> None:
@@ -2309,12 +2314,12 @@ def test_plan_is_stale_safe_tamper_safe_and_exports_every_decap() -> None:
         "M1\nTarget",
         "M1\nTolerance (%)",
         "M1\nActual Delta",
-        "M1\nActual Changed",
+        "M1\nAssignment Failed",
         "M1\nIsolation Gaps",
     )
     assert target_rows == (
-        ("V1 (R1)", 2, 1, 0.0, -1, 1, 0),
-        ("V2 (R2)", 0, 1, 0.0, 1, 1, 0),
+        ("V1 (R1)", 2, 1, 0.0, -1, 0, 0),
+        ("V2 (R2)", 0, 1, 0.0, 1, 0, 0),
     )
 
     stale = scenario.model_copy(update={"revision": scenario.revision + 1})

@@ -34,6 +34,11 @@ except ImportError:  # pragma: no cover - exercised only in minimal environments
 EPSILON_0_F_PER_M = 8.854_187_812_8e-12
 MU_0_H_PER_M = 1.256_637_062_12e-6
 LIGHT_SPEED_M_PER_S = 299_792_458.0
+# Coupled leave-one-out currently needs both the populated and physical
+# F x N x N terminal admittances.  Ordinary Evaluation has an exact compressed
+# shared-pad fast path, but sensitivity must fail before allocating a larger
+# dense candidate until it gains an equivalent compressed downdate.
+MAX_DENSE_COUPLED_SENSITIVITY_PORTS = 128
 
 
 def copper_slab_surface_impedance_per_square(
@@ -1469,6 +1474,25 @@ class RectangularCavitySolver:
         cancelled = is_cancelled or (lambda: False)
         if cancelled():
             raise RuntimeError("leave-one-out calculation cancelled")
+
+        oversized_coupled = next(
+            (
+                group
+                for group in shunts
+                if isinstance(group, CoupledShuntGroup)
+                and group.sensitivity_id is not None
+                and len(group.ports) > MAX_DENSE_COUPLED_SENSITIVITY_PORTS
+            ),
+            None,
+        )
+        if oversized_coupled is not None:
+            raise ModalSolverError(
+                "coupled shunt sensitivity for "
+                f"{oversized_coupled.group_id!r} has "
+                f"{len(oversized_coupled.ports):,} ports; the dense "
+                "leave-one-out limit is "
+                f"{MAX_DENSE_COUPLED_SENSITIVITY_PORTS:,}"
+            )
 
         unit_ids: list[str] = []
         candidate_populations: list[NDArray[np.float64]] = []

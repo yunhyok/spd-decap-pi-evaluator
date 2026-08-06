@@ -64,11 +64,16 @@ class DistributionTargetsWindow(QWidget):
         self.table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
         self.table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectItems)
         layout.addWidget(self.table, 1)
-        self.original_board_checkbox = QCheckBox("Show original board assignments")
+        self.original_board_checkbox = QCheckBox(
+            "Show source SPD assignments on the board"
+        )
         self.original_board_checkbox.setObjectName("showOriginalDistributionBoard")
-        self.original_board_checkbox.setAccessibleName("Show original board assignments")
+        self.original_board_checkbox.setAccessibleName(
+            "Show source SPD board assignments"
+        )
         self.original_board_checkbox.setToolTip(
-            "Display source PWR assignments only. This does not modify the scenario."
+            "Compare the immutable source-SPD assignment with the current board. "
+            "Source view is display-only; physical X/Y positions do not move."
         )
         self.original_board_checkbox.toggled.connect(self.originalBoardToggled)
         layout.addWidget(self.original_board_checkbox)
@@ -124,14 +129,23 @@ class DistributionTargetsWindow(QWidget):
         self.table.setEnabled(False)
         self.import_targets_button.setEnabled(False)
         self.export_template_button.setEnabled(False)
+        self.set_original_board_checked(False)
         self.original_board_checkbox.setEnabled(False)
         self.hide()
 
-    def set_document_active(self, active: bool, *, busy: bool = False) -> None:
+    def set_document_active(
+        self,
+        active: bool,
+        *,
+        busy: bool = False,
+        source_comparison_available: bool = False,
+    ) -> None:
         """Synchronize document lifetime and main-window worker exclusivity."""
 
         enabled = active and not busy
         self.table.setEnabled(enabled)
         self.import_targets_button.setEnabled(enabled)
         self.export_template_button.setEnabled(enabled)
-        self.original_board_checkbox.setEnabled(enabled)
+        self.original_board_checkbox.setEnabled(
+            enabled and source_comparison_available
+        )

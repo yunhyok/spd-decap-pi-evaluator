@@ -8,7 +8,7 @@ from types import SimpleNamespace
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
-from PySide6.QtCore import QItemSelectionModel, Qt
+from PySide6.QtCore import QItemSelectionModel, QPoint, Qt
 from PySide6.QtTest import QSignalSpy, QTest
 from PySide6.QtWidgets import (
     QApplication,
@@ -36,6 +36,7 @@ from spd_decap_pi.distribution_workbook import (
     DISTRIBUTION_METADATA_TITLE,
     load_distribution_targets,
 )
+from spd_decap_pi.evaluation import preflight_evaluation_connectivity
 from spd_decap_pi.gui.main_window import MainWindow, _job_compute_distribution
 from spd_decap_pi.scenario import (
     DecapConnectionKind,
@@ -157,6 +158,10 @@ def test_distribution_tab_matches_the_target_matrix_and_resizable_sections() -> 
             window.distribution_table.SelectionMode.ExtendedSelection
         )
         assert window.distribution_table.columnCount() == 5
+        assert not window.source_board_checkbox.isEnabled()
+        assert window.board_assignment_view_label.text() == (
+            "Board: Current (matches source)"
+        )
         assert window.distribution_table.horizontalHeaderItem(0).text() == "PWR NET"
         assert window.distribution_table.horizontalHeaderItem(1).text() == (
             "M1\nPresent"
@@ -168,19 +173,20 @@ def test_distribution_tab_matches_the_target_matrix_and_resizable_sections() -> 
             "M1\nTolerance (%)"
         )
         assert window.distribution_table.horizontalHeaderItem(4).text() == (
-            "M1\nActual Δ"
+            "M1\nAssignment Failed"
         )
         row = _rail_row(window, "R1")
         present = window.distribution_table.item(row, 1)
         target = window.distribution_table.item(row, 2)
         tolerance = window.distribution_table.item(row, 3)
-        actual_delta = window.distribution_table.item(row, 4)
+        assignment_failed = window.distribution_table.item(row, 4)
         assert present.text() == target.text() == "3"
         assert tolerance.text() == "0"
         assert not present.flags() & Qt.ItemFlag.ItemIsEditable
         assert target.flags() & Qt.ItemFlag.ItemIsEditable
         assert tolerance.flags() & Qt.ItemFlag.ItemIsEditable
-        assert not actual_delta.flags() & Qt.ItemFlag.ItemIsEditable
+        assert not assignment_failed.flags() & Qt.ItemFlag.ItemIsEditable
+        assert "Unfulfilled receiver demand" in assignment_failed.toolTip()
         assert window.distribution_distance_combo.itemData(0) == "NEAREST"
         assert window.distribution_distance_combo.itemData(1) == "FARTHEST"
         assert not window.calculate_distribution_button.isEnabled()
@@ -318,12 +324,20 @@ def test_physical_landing_retarget_has_no_obsolete_column_warning() -> None:
 
 def test_detached_distribution_controls_follow_main_worker_busy_state() -> None:
     application = _application()
-    window = _window_with_scenario(
-        _direct_scenario(
-            (("C1", 0.0, ("R1", "R2")),),
-            rail_ids=("R1", "R2"),
-        )
+    source = _direct_scenario(
+        (("C1", 0.0, ("R1", "R2")),),
+        rail_ids=("R1", "R2"),
     )
+    distributed = source.model_copy(
+        update={
+            "decaps": (
+                source.decaps[0].model_copy(
+                    update={"current_net": "V2", "current_rail_id": "R2"}
+                ),
+            )
+        }
+    )
+    window = _window_with_scenario(distributed)
     try:
         window._show_distribution_window()
         dialog = window._distribution_window
@@ -334,12 +348,14 @@ def test_detached_distribution_controls_follow_main_worker_busy_state() -> None:
         assert not dialog.import_targets_button.isEnabled()
         assert not dialog.export_template_button.isEnabled()
         assert not dialog.original_board_checkbox.isEnabled()
+        assert not window.source_board_checkbox.isEnabled()
 
         window._worker = None
         window._set_busy(False)
         assert dialog.import_targets_button.isEnabled()
         assert dialog.export_template_button.isEnabled()
         assert dialog.original_board_checkbox.isEnabled()
+        assert window.source_board_checkbox.isEnabled()
     finally:
         window._worker = None
         window._dirty = False
@@ -507,15 +523,68 @@ def test_board_distribution_toggle_is_display_only() -> None:
     try:
         fingerprint = distributed.design_fingerprint
         revision = distributed.revision
-        window._show_original_distribution_board(True)
+        window._show_distribution_window()
+        dialog = window._distribution_window
+        assert dialog is not None
+        window.board.set_selected_refdes(("C1",))
+        window.board._view_box.setRange(
+            xRange=(-25.0, 25.0), yRange=(-10.0, 10.0), padding=0.0
+        )
+        application.processEvents()
+        view_before = window.board._view_box.viewRange()
+        assert window.source_board_checkbox.isEnabled()
+        assert window.board_assignment_view_label.text() == (
+            "Board: Current / distributed"
+        )
+        window.source_board_checkbox.click()
+        view_after = window.board._view_box.viewRange()
+        assert all(
+            abs(before - after) < 1.0e-9
+            for before_axis, after_axis in zip(view_before, view_after, strict=True)
+            for before, after in zip(before_axis, after_axis, strict=True)
+        )
+        assert dialog.original_board_checkbox.isChecked()
         assert window.board._records[0].current_net == distributed.decaps[0].source_net
+        assert window.board.selected_refdes == ("C1",)
+        assert window.board_assignment_view_label.text() == (
+            "Board: Source SPD (read-only)"
+        )
+        assert window.selection_table.item(0, 2).text() == "V1"
         assert window.scenario is not None
         assert window.scenario.design_fingerprint == fingerprint
         assert window.scenario.revision == revision
         assert not window._dirty
 
-        window._show_original_distribution_board(False)
+        window.search_mode.setCurrentText("PWR NET")
+        window.search_edit.setText("V1")
+        window.apply_search()
+        assert window.board.selected_refdes == ("C1", "C2")
+        window._show_decap_context_menu(("C1",), QPoint())
+        assert "read-only" in window.status_text.text()
+
+        dialog.original_board_checkbox.click()
+        assert not window.source_board_checkbox.isChecked()
         assert window.board._records[0].current_net == "V2"
+        window.search_edit.setText("V1")
+        window.apply_search()
+        assert window.board.selected_refdes == ("C2",)
+
+        cached_source_records = window._source_board_records
+        edited_current = distributed.model_copy(
+            update={
+                "decaps": (
+                    distributed.decaps[0],
+                    distributed.decaps[1].model_copy(update={"enabled": False}),
+                ),
+                "revision": distributed.revision + 1,
+            }
+        )
+        window._scenario = edited_current
+        window._refresh_all()
+        assert window._source_board_records is cached_source_records
+        window.source_board_checkbox.click()
+        assert all(record.current_net == "V1" for record in window.board._records)
+        assert all(record.enabled for record in window.board._records)
     finally:
         window._dirty = False
         window.close()
@@ -535,12 +604,16 @@ def test_board_original_toggle_restores_shared_chain_isolation_gap_display() -> 
         assert not current_gap.enabled
         assert current_gap.pad_state == DecapPadState.ISOLATION_GAP
 
+        window.board.set_selected_refdes(("D1",))
         window._show_original_distribution_board(True)
         original_gap = next(
             item for item in window.board._records if item.refdes == "D1"
         )
         assert original_gap.enabled
         assert original_gap.current_net == current_gap.source_net
+        assert window.board._companion_keys == set()
+        assert "read-only" in window.selection_summary.text().casefold()
+        assert window.selection_table.item(0, 6).text() == "Read-only source view"
 
         window._show_original_distribution_board(False)
         restored_current = next(
@@ -555,12 +628,20 @@ def test_board_original_toggle_restores_shared_chain_isolation_gap_display() -> 
 
 def test_detached_distribution_window_clears_stale_document_and_exposes_routing_scope() -> None:
     application = _application()
-    window = _window_with_scenario(
-        _direct_scenario(
-            (("C1", 0.0, ("R1", "R2")),),
-            rail_ids=("R1", "R2"),
-        )
+    source = _direct_scenario(
+        (("C1", 0.0, ("R1", "R2")),),
+        rail_ids=("R1", "R2"),
     )
+    distributed = source.model_copy(
+        update={
+            "decaps": (
+                source.decaps[0].model_copy(
+                    update={"current_net": "V2", "current_rail_id": "R2"}
+                ),
+            )
+        }
+    )
+    window = _window_with_scenario(distributed)
     try:
         window._show_distribution_window()
         dialog = window._distribution_window
@@ -571,13 +652,21 @@ def test_detached_distribution_window_clears_stale_document_and_exposes_routing_
         assert dialog.table.accessibleName() == "Distribution target matrix"
         assert dialog.import_targets_button.accessibleName() == "Import distribution XLSX"
         assert dialog.export_template_button.accessibleName() == "Export distribution XLSX template"
-        assert dialog.original_board_checkbox.accessibleName() == "Show original board assignments"
+        assert dialog.original_board_checkbox.accessibleName() == (
+            "Show source SPD board assignments"
+        )
+        window.source_board_checkbox.click()
+        assert window.source_board_checkbox.isChecked()
 
         window._reset_document_view_state()
         assert not dialog.isVisible()
         assert dialog.table.rowCount() == 0
         assert not dialog.import_targets_button.isEnabled()
         assert not dialog.export_template_button.isEnabled()
+        assert not dialog.original_board_checkbox.isChecked()
+        assert not window.source_board_checkbox.isChecked()
+        assert not window.source_board_checkbox.isEnabled()
+        assert window.board_assignment_view_label.text() == "Board: No document"
     finally:
         window._dirty = False
         window.close()
@@ -748,13 +837,13 @@ def test_target_edit_uses_cached_inventory_and_emits_once(monkeypatch) -> None:
         numeric_calls += 1
         return original_balance_state()
 
-    delta_reset_calls = 0
-    original_delta_reset = window._reset_distribution_actual_deltas
+    failure_reset_calls = 0
+    original_failure_reset = window._reset_distribution_assignment_failures
 
-    def counted_delta_reset():
-        nonlocal delta_reset_calls
-        delta_reset_calls += 1
-        return original_delta_reset()
+    def counted_failure_reset():
+        nonlocal failure_reset_calls
+        failure_reset_calls += 1
+        return original_failure_reset()
 
     monkeypatch.setattr(
         window,
@@ -763,8 +852,8 @@ def test_target_edit_uses_cached_inventory_and_emits_once(monkeypatch) -> None:
     )
     monkeypatch.setattr(
         window,
-        "_reset_distribution_actual_deltas",
-        counted_delta_reset,
+        "_reset_distribution_assignment_failures",
+        counted_failure_reset,
     )
     spy = QSignalSpy(window.distribution_table.itemChanged)
     try:
@@ -773,7 +862,7 @@ def test_target_edit_uses_cached_inventory_and_emits_once(monkeypatch) -> None:
 
         assert calls == 0
         assert numeric_calls == 1
-        assert delta_reset_calls == 0
+        assert failure_reset_calls == 0
         assert spy.count() == 1
         assert window._distribution_targets[("R1", "M1")] == 2
     finally:
@@ -1278,8 +1367,8 @@ def test_full_preview_exports_saves_and_applies_one_atomic_revision(
         assert window.apply_distribution_button.isEnabled()
         assert window.export_distribution_csv_button.isEnabled()
         assert window.save_distribution_button.isEnabled()
-        assert window.distribution_table.item(_rail_row(window, "R1"), 4).text() == "-2"
-        assert window.distribution_table.item(_rail_row(window, "R2"), 4).text() == "+2"
+        assert window.distribution_table.item(_rail_row(window, "R1"), 4).text() == "0"
+        assert window.distribution_table.item(_rail_row(window, "R2"), 4).text() == "0"
         summary = window.distribution_summary.toPlainText()
         assert "Status: FULL (count/topology)" in summary
         assert (
@@ -1335,7 +1424,7 @@ def test_full_preview_exports_saves_and_applies_one_atomic_revision(
                 "M1\nTarget",
                 "M1\nTolerance (%)",
                 "M1\nActual Delta",
-                "M1\nActual Changed",
+                "M1\nAssignment Failed",
                 "M1\nIsolation Gaps",
             )
             assert tuple(cell.value for cell in targets[2][:7]) == (
@@ -1344,7 +1433,7 @@ def test_full_preview_exports_saves_and_applies_one_atomic_revision(
                 1,
                 0,
                 -2,
-                2,
+                0,
                 0,
             )
             assert tuple(cell.value for cell in targets[3][:7]) == (
@@ -1353,7 +1442,7 @@ def test_full_preview_exports_saves_and_applies_one_atomic_revision(
                 2,
                 0,
                 2,
-                2,
+                0,
                 0,
             )
             metadata_title_row = next(
@@ -1367,7 +1456,7 @@ def test_full_preview_exports_saves_and_applies_one_atomic_revision(
                 if key in (None, ""):
                     break
                 metadata[str(key)] = targets.cell(row_index, 2).value
-            assert metadata["Format Version"] == 2
+            assert metadata["Format Version"] == 3
             assert metadata["Source SPD SHA-256"] == scenario.source.sha256
             assert metadata["Input Design Fingerprint"] == scenario.design_fingerprint
             assert metadata["Distance Mode"] == "NEAREST"
@@ -1407,12 +1496,14 @@ def test_full_preview_exports_saves_and_applies_one_atomic_revision(
         assert not window.apply_distribution_button.isEnabled()
         assert window.export_distribution_csv_button.isEnabled()
         assert window.save_distribution_button.isEnabled()
-        # The applied table now shows final Present values but retains the
-        # preview's signed delta for an auditable result display.
+        # The applied table shows final Present values, preserves the requested
+        # Target, and retains the preview's assignment-failure result.
         assert window.distribution_table.item(_rail_row(window, "R1"), 1).text() == "1"
-        assert window.distribution_table.item(_rail_row(window, "R1"), 4).text() == "-2"
+        assert window.distribution_table.item(_rail_row(window, "R1"), 2).text() == "1"
+        assert window.distribution_table.item(_rail_row(window, "R1"), 4).text() == "0"
         assert window.distribution_table.item(_rail_row(window, "R2"), 1).text() == "2"
-        assert window.distribution_table.item(_rail_row(window, "R2"), 4).text() == "+2"
+        assert window.distribution_table.item(_rail_row(window, "R2"), 2).text() == "2"
+        assert window.distribution_table.item(_rail_row(window, "R2"), 4).text() == "0"
 
         applied_excel_path = tmp_path / "distribution-applied.xlsx"
         monkeypatch.setattr(
@@ -1435,7 +1526,7 @@ def test_full_preview_exports_saves_and_applies_one_atomic_revision(
                 1,
                 0,
                 -2,
-                2,
+                0,
                 0,
             )
             assert tuple(cell.value for cell in targets[3][:7]) == (
@@ -1444,7 +1535,7 @@ def test_full_preview_exports_saves_and_applies_one_atomic_revision(
                 2,
                 0,
                 2,
-                2,
+                0,
                 0,
             )
         finally:
@@ -1550,33 +1641,52 @@ def test_run_evaluation_preflights_all_selected_connectivity_blockers_without_wo
         )
     blocked = ScenarioSpec.model_validate(payload)
     window = _window_with_scenario(blocked)
-    warnings: list[str] = []
-    workers: list[object] = []
+    warnings: list[tuple[str, str, str]] = []
+    workers: list[tuple[object, object]] = []
     try:
         for index in range(window.rail_list.count()):
             window.rail_list.item(index).setCheckState(Qt.CheckState.Checked)
         monkeypatch.setattr(
             QMessageBox,
-            "warning",
-            lambda _parent, _title, text: warnings.append(text),
+            "exec",
+            lambda box: warnings.append(
+                (box.text(), box.informativeText(), box.detailedText())
+            ),
         )
         monkeypatch.setattr(
             window,
             "_run_worker",
-            lambda worker, *_args, **_kwargs: workers.append(worker),
+            lambda worker, on_result, **_kwargs: workers.append(
+                (worker, on_result)
+            ),
         )
         window._comparison_batch = object()
         window.comparison_table.setRowCount(1)
 
         window.run_evaluation()
 
-        assert not workers
+        assert len(workers) == 1
+        preflight_worker, accept_preflight = workers[0]
+        assert preflight_worker.function.__name__ == "_job_preflight_evaluation"
+        accept_preflight(
+            preflight_evaluation_connectivity(blocked, ("R1", "R2"))
+        )
+        assert len(workers) == 1  # all blocked: no Evaluation Analysis worker
         assert len(warnings) == 1
-        assert "R1" in warnings[0] and "C1" in warnings[0]
-        assert "R2" in warnings[0] and "C2" in warnings[0]
+        summary, guidance, details = warnings[0]
+        assert summary == (
+            "Evaluation cannot start: 2 decap connectivity/modelability blocker(s) "
+            "affect 2 of 2 selected PWR rail(s)."
+        )
+        assert "R1" not in summary and "C1" not in summary
+        assert "Show Details" in guidance and "Evaluation Summary" in guidance
+        assert "R1" in details and "C1" in details
+        assert "R2" in details and "C2" in details
         assert window._comparison_batch is None
         assert window.comparison_table.rowCount() == 0
-        assert "blocked before Original/Tuned" in window.evaluation_summary.toPlainText()
+        evaluation_summary = window.evaluation_summary.toPlainText()
+        assert "blocked before Original/Tuned" in evaluation_summary
+        assert details in evaluation_summary
     finally:
         window._dirty = False
         window.close()
@@ -1620,26 +1730,161 @@ def test_run_evaluation_preflights_disabled_and_isolation_gap_blockers_without_w
         }
     )
     window = _window_with_scenario(blocked)
-    warnings: list[str] = []
-    workers: list[object] = []
+    warnings: list[tuple[str, str]] = []
+    workers: list[tuple[object, object]] = []
     try:
         monkeypatch.setattr(
             QMessageBox,
-            "warning",
-            lambda _parent, _title, text: warnings.append(text),
+            "exec",
+            lambda box: warnings.append((box.text(), box.detailedText())),
         )
         monkeypatch.setattr(
             window,
             "_run_worker",
-            lambda worker, *_args, **_kwargs: workers.append(worker),
+            lambda worker, on_result, **_kwargs: workers.append(
+                (worker, on_result)
+            ),
         )
 
         window.run_evaluation()
 
-        assert not workers
+        assert len(workers) == 1
+        preflight_worker, accept_preflight = workers[0]
+        assert preflight_worker.function.__name__ == "_job_preflight_evaluation"
+        accept_preflight(preflight_evaluation_connectivity(blocked, ("R1",)))
+        assert len(workers) == 1  # all blocked: no Evaluation Analysis worker
         assert len(warnings) == 1
-        assert "C1" in warnings[0] and "C2" in warnings[0]
-        assert "UNRESOLVED" in warnings[0] and "OUT_OF_SCOPE" in warnings[0]
+        summary, details = warnings[0]
+        assert "1 of 1 selected PWR rail(s)" in summary
+        assert "C1" not in summary and "C2" not in summary
+        assert "C1" in details and "C2" in details
+        assert "UNRESOLVED" in details and "OUT_OF_SCOPE" in details
+    finally:
+        window._dirty = False
+        window.close()
+        application.processEvents()
+
+
+def test_partial_evaluation_requires_yes_and_worker_receives_only_clear_bare_rail(
+    tmp_path: Path, monkeypatch,
+) -> None:
+    """A VQPS-style bare rail may run, but a blocked peer is never hidden."""
+
+    application = _application()
+    scenario = _direct_scenario(
+        (("C1", 0.0, ("R1",)),),
+        rail_ids=("R1", "R2"),
+    )
+    payload = scenario.model_dump(mode="python")
+    payload["connection_analysis"]["connections"]["C1"].update(
+        {
+            "kind": DecapConnectionKind.UNRESOLVED,
+            "power_vias": (),
+            "ground_vias": (),
+            "reason": "R1 source landing is unresolved",
+        }
+    )
+    blocked = ScenarioSpec.model_validate(payload)
+    window = _window_with_scenario(blocked)
+    window._scenario_path = tmp_path / "partial.spdpi"
+    workers: list[tuple[object, object]] = []
+    prompts: list[tuple[str, str, str]] = []
+    try:
+        window._set_all_rails_checked(True)
+        monkeypatch.setattr(
+            QMessageBox,
+            "exec",
+            lambda box: (
+                prompts.append(
+                    (box.text(), box.informativeText(), box.detailedText())
+                )
+                or QMessageBox.StandardButton.Yes
+            ),
+        )
+        monkeypatch.setattr(
+            window,
+            "_run_worker",
+            lambda worker, on_result, **_kwargs: workers.append(
+                (worker, on_result)
+            ),
+        )
+
+        window.run_evaluation()
+        assert len(workers) == 1
+        workers[0][1](
+            preflight_evaluation_connectivity(blocked, ("R1", "R2"))
+        )
+
+        assert len(prompts) == 1
+        title, guidance, details = prompts[0]
+        assert title == "Run a partial Evaluation Analysis?"
+        assert "1 clear PWR NET(s) will run" in guidance
+        assert "1 blocked PWR NET(s) will NOT run" in guidance
+        assert "R2" in details and "Clear and evaluated" in details
+        assert "R1" in details and "Blocked and NOT evaluated" in details
+
+        request, manifest = window._pending_evaluation_launch
+        window._pending_evaluation_launch = None
+        window._launch_evaluation_after_preflight(request, manifest)
+        assert len(workers) == 2
+        evaluation_worker = workers[1][0]
+        assert evaluation_worker.function.__name__ == "evaluate_comparison_batch"
+        assert evaluation_worker.args[1] == ("R2",)
+        assert set(evaluation_worker.args[0].baseline_captures) == {"R2"}
+        summary = window.evaluation_summary.toPlainText()
+        assert "Selected PWR NETs: 2" in summary
+        assert "Blocked and NOT evaluated: 1 (R1)" in summary
+    finally:
+        window._dirty = False
+        window.close()
+        application.processEvents()
+
+
+def test_partial_evaluation_no_cancels_without_analysis_worker(
+    tmp_path: Path, monkeypatch,
+) -> None:
+    application = _application()
+    scenario = _direct_scenario(
+        (("C1", 0.0, ("R1",)),),
+        rail_ids=("R1", "R2"),
+    )
+    payload = scenario.model_dump(mode="python")
+    payload["connection_analysis"]["connections"]["C1"].update(
+        {
+            "kind": DecapConnectionKind.UNRESOLVED,
+            "power_vias": (),
+            "ground_vias": (),
+            "reason": "R1 source landing is unresolved",
+        }
+    )
+    blocked = ScenarioSpec.model_validate(payload)
+    window = _window_with_scenario(blocked)
+    window._scenario_path = tmp_path / "partial-no.spdpi"
+    workers: list[tuple[object, object]] = []
+    try:
+        window._set_all_rails_checked(True)
+        monkeypatch.setattr(
+            QMessageBox,
+            "exec",
+            lambda _box: QMessageBox.StandardButton.No,
+        )
+        monkeypatch.setattr(
+            window,
+            "_run_worker",
+            lambda worker, on_result, **_kwargs: workers.append(
+                (worker, on_result)
+            ),
+        )
+
+        window.run_evaluation()
+        workers[0][1](
+            preflight_evaluation_connectivity(blocked, ("R1", "R2"))
+        )
+
+        assert len(workers) == 1
+        assert window._pending_evaluation_launch is None
+        assert "cancelled by user" in window.evaluation_summary.toPlainText()
+        assert "1 clear / 1 blocked" in window.status_text.text()
     finally:
         window._dirty = False
         window.close()
@@ -1674,15 +1919,17 @@ def test_partial_preview_remains_applyable_and_target_edits_make_it_stale() -> N
             window.distribution_summary.toPlainText()
         )
         assert window.apply_distribution_button.isEnabled()
-        assert window.distribution_table.item(_rail_row(window, "R2"), 4).text() == "+1"
+        assert window.distribution_table.item(_rail_row(window, "R1"), 4).text() == "0"
+        assert window.distribution_table.item(_rail_row(window, "R2"), 4).text() == "1"
 
         window.apply_distribution_button.click()
         assert window.scenario is not None
         assert window.scenario.revision == scenario.revision + 1
         assert sum(item.current_rail_id == "R2" for item in window.scenario.decaps) == 1
-        assert window.distribution_table.item(_rail_row(window, "R2"), 4).text() == "+1"
+        assert window.distribution_table.item(_rail_row(window, "R2"), 2).text() == "2"
+        assert window.distribution_table.item(_rail_row(window, "R2"), 4).text() == "1"
 
-        _set_target(window, "R2", 2)
+        _set_target(window, "R2", 3)
         assert window._distribution_plan is None
         assert not window.apply_distribution_button.isEnabled()
         assert not window.export_distribution_csv_button.isEnabled()

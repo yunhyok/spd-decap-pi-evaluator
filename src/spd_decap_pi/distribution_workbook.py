@@ -13,7 +13,7 @@ from zipfile import BadZipFile
 
 DISTRIBUTION_TARGET_SHEET = "PWR NET Distribution Targets"
 DISTRIBUTION_METADATA_TITLE = "Distribution Run Metadata"
-DISTRIBUTION_WORKBOOK_FORMAT_VERSION = 2
+DISTRIBUTION_WORKBOOK_FORMAT_VERSION = 3
 
 TargetKey = tuple[str, str]
 
@@ -24,6 +24,7 @@ _KNOWN_FIELDS = {
     "actual delta": "result",
     "actual δ": "result",
     "actual changed": "result",
+    "assignment failed": "result",
     "isolation gaps": "result",
 }
 _RAIL_ID_RE = re.compile(r"\(([^()]*)\)\s*$")

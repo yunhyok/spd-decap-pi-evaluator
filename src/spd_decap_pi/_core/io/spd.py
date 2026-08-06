@@ -1900,34 +1900,6 @@ class _RecoveredViaNode:
     padstack: str | None
 
 
-_SPD_VIA_PATH_MAX_RELEVANT_TRACE_RECORDS = 250_000
-# A trace section within the record budget can still have one or more nodes
-# incident to an unbounded number of Via records.  Alternate-exit proof only
-# needs those incident directed edges, but retaining all of them would restore
-# the multi-gigabyte graph risk that the Trace-record guard removes.  Keep
-# independently bounded, exact sets for the retained proof graph.
-_SPD_VIA_PATH_MAX_RETAINED_ALTERNATE_EXIT_VIA_EDGES = 250_000
-_SPD_VIA_PATH_MAX_RETAINED_ALTERNATE_NODES = 750_000
-
-
-class _ViaPathAlternateExitResourceGuard(RuntimeError):
-    """Abort alternate-exit proof before any partial path evidence is accepted."""
-
-    def __init__(
-        self,
-        *,
-        resource: str,
-        limit: int,
-        retained_via_edges: int,
-        retained_nodes: int,
-    ) -> None:
-        super().__init__(resource)
-        self.resource = resource
-        self.limit = limit
-        self.retained_via_edges = retained_via_edges
-        self.retained_nodes = retained_nodes
-
-
 def recover_spd_via_paths(
     path: str | Path,
     *,
@@ -2209,121 +2181,230 @@ def recover_spd_via_paths(
                         neighbors.setdefault(state_key, set()).add(other_key)
         return neighbors
 
-    trace_graph_by_net: dict[str, dict[str, set[str]]] = {}
-    via_neighbors_by_net: dict[str, dict[str, set[str]]] = {}
-    component_id_by_node: dict[tuple[str, str], str] = {}
-    component_members_by_id: dict[tuple[str, str], frozenset[str]] = {}
-    alternate_exit_cache: dict[tuple[str, str, str, str], bool] = {}
-    alternate_node_metadata: dict[str, tuple[str, str]] = {}
+    # Alternate-exit proof used to retain a nested Node -> set[Node] Trace
+    # adjacency graph.  Production sources can contain more than a million
+    # relevant Trace records, for which the Python object overhead alone is
+    # several gigabytes.  Reachability needs only connected-component identity,
+    # so retain one exact dense union-find forest plus compact directed
+    # Trace-incident Via edges.  After Node layers are resolved, every component
+    # is reduced to (source-layer, destination-depth) exit witnesses.  Two
+    # distinct source IDs per bucket are sufficient and exact: a query excludes
+    # only its own start node, so one of two witnesses must remain.
+    alternate_node_index_by_net: dict[str, dict[str, int]] = {}
+    alternate_net_code_by_key: dict[str, int] = {}
+    alternate_numeric_net_codes = array("i")
+    alternate_numeric_capacity = 0
+    alternate_parents = array("I")
+    alternate_ranks = bytearray()
+    alternate_trace_nodes = bytearray()
+    alternate_node_depths = array("i")
+    alternate_via_sources = array("I")
+    alternate_via_destinations = array("I")
+    alternate_exit_sources: dict[
+        tuple[int, int], dict[int, tuple[int, int | None]]
+    ] = {}
+    alternate_exit_cache: dict[tuple[str, int, int, int, int], bool] = {}
     alternate_node_section_passes = 0
     alternate_exit_via_edges_retained = 0
     alternate_exit_nodes_retained = 0
+    alternate_nodes_resolved = 0
+    relevant_trace_records_indexed = 0
+    alternate_trace_components = 0
     graph_index_ready = False
+
+    def canonical_numeric_node_id(node_key: str) -> int | None:
+        """Return the dense PowerSI Node number without conflating aliases."""
+
+        if not node_key.startswith("node"):
+            return None
+        digits = node_key[4:]
+        if not digits or not digits.isascii() or not digits.isdecimal():
+            return None
+        # ``Node01`` and ``Node1`` are distinct under the established
+        # case-folded string identity and therefore must not share an index.
+        if len(digits) > 1 and digits.startswith("0"):
+            return None
+        return int(digits)
+
+    def alternate_find(index: int) -> int:
+        root = index
+        while alternate_parents[root] != root:
+            root = alternate_parents[root]
+        while alternate_parents[index] != index:
+            parent = alternate_parents[index]
+            alternate_parents[index] = root
+            index = parent
+        return root
+
+    def alternate_index_for(
+        net_key: str, node_key: str, *, trace_node: bool
+    ) -> int:
+        nonlocal alternate_trace_components, alternate_exit_nodes_retained
+        net_code = alternate_net_code_by_key.setdefault(
+            net_key, len(alternate_net_code_by_key)
+        )
+        numeric_id = canonical_numeric_node_id(node_key)
+        if numeric_id is not None and numeric_id < alternate_numeric_capacity:
+            owner = alternate_numeric_net_codes[numeric_id]
+            if owner in {-1, net_code}:
+                if owner < 0:
+                    alternate_numeric_net_codes[numeric_id] = net_code
+                    alternate_exit_nodes_retained += 1
+                if trace_node and not alternate_trace_nodes[numeric_id]:
+                    alternate_trace_nodes[numeric_id] = 1
+                    alternate_trace_components += 1
+                return numeric_id
+        by_node = alternate_node_index_by_net.setdefault(net_key, {})
+        existing = by_node.get(node_key)
+        if existing is not None:
+            if trace_node and not alternate_trace_nodes[existing]:
+                alternate_trace_nodes[existing] = 1
+                alternate_trace_components += 1
+            return existing
+        index = len(alternate_parents)
+        by_node[node_key] = index
+        alternate_parents.append(index)
+        alternate_ranks.append(0)
+        alternate_trace_nodes.append(int(trace_node))
+        alternate_node_depths.append(-1)
+        alternate_exit_nodes_retained += 1
+        if trace_node:
+            alternate_trace_components += 1
+        return index
+
+    def alternate_lookup(net_key: str, node_key: str) -> int | None:
+        net_code = alternate_net_code_by_key.get(net_key)
+        numeric_id = canonical_numeric_node_id(node_key)
+        if (
+            net_code is not None
+            and numeric_id is not None
+            and numeric_id < alternate_numeric_capacity
+            and alternate_numeric_net_codes[numeric_id] == net_code
+        ):
+            return numeric_id
+        return alternate_node_index_by_net.get(net_key, {}).get(node_key)
+
+    def alternate_union(net_key: str, first: str, second: str) -> None:
+        nonlocal alternate_trace_components
+        first_root = alternate_find(
+            alternate_index_for(net_key, first, trace_node=True)
+        )
+        second_root = alternate_find(
+            alternate_index_for(net_key, second, trace_node=True)
+        )
+        if first_root == second_root:
+            return
+        if alternate_ranks[first_root] < alternate_ranks[second_root]:
+            first_root, second_root = second_root, first_root
+        alternate_parents[second_root] = first_root
+        if alternate_ranks[first_root] == alternate_ranks[second_root]:
+            alternate_ranks[first_root] += 1
+        alternate_trace_components -= 1
 
     def ensure_trace_via_index(
         data: mmap.mmap, *, trace_start: int, trace_end: int, via_start: int, via_end: int
     ) -> None:
         nonlocal graph_index_ready, alternate_node_section_passes
         nonlocal alternate_exit_via_edges_retained, alternate_exit_nodes_retained
+        nonlocal relevant_trace_records_indexed, alternate_numeric_capacity
+        nonlocal alternate_nodes_resolved
         if graph_index_ready:
             return
         relevant_net_keys = {
             str(state["net_key"]) for state in states.values()
         }
+        numeric_max = -1
+        numeric_endpoints = 0
+        all_trace_endpoints_numeric = True
         if trace_start >= 0 and trace_end > trace_start:
-            for match in _TRACE_RE.finditer(data, trace_start, trace_end):
+            for match_index, match in enumerate(
+                _TRACE_RE.finditer(data, trace_start, trace_end)
+            ):
+                if match_index % 8192 == 0:
+                    reporter.check()
                 net = _decode(match.group(2)).casefold()
                 if net not in relevant_net_keys:
                     continue
-                first, second = _decode(match.group(3)).casefold(), _decode(match.group(4)).casefold()
-                graph = trace_graph_by_net.setdefault(net, {})
-                graph.setdefault(first, set()).add(second)
-                graph.setdefault(second, set()).add(first)
+                relevant_trace_records_indexed += 1
+                for raw_node in (match.group(3), match.group(4)):
+                    node_number = canonical_numeric_node_id(
+                        _decode(raw_node).casefold()
+                    )
+                    if node_number is None:
+                        all_trace_endpoints_numeric = False
+                    else:
+                        numeric_endpoints += 1
+                        numeric_max = max(numeric_max, node_number)
 
-        # This set is the exact initial alternate-exit node universe: every
-        # same-layer Trace endpoint.  Check it before admitting any Via edge;
-        # an over-budget proof is never used to accept even a previously found
-        # serial path.
-        alternate_node_keys = {
-            node_key
-            for graph in trace_graph_by_net.values()
-            for node_key in graph
-        }
-        if len(alternate_node_keys) > _SPD_VIA_PATH_MAX_RETAINED_ALTERNATE_NODES:
-            raise _ViaPathAlternateExitResourceGuard(
-                resource="alternate-node",
-                limit=_SPD_VIA_PATH_MAX_RETAINED_ALTERNATE_NODES,
-                retained_via_edges=0,
-                retained_nodes=0,
+        # PowerSI production Node IDs are canonical, globally sparse integers.
+        # When their numeric range is reasonably dense, using that integer as
+        # the initial DSU index removes millions of Python string/dict/value
+        # objects.  Any noncanonical, very sparse, or cross-NET identity falls
+        # through to the exact arbitrary-string map below.
+        if (
+            all_trace_endpoints_numeric
+            and numeric_max >= 0
+            and numeric_max <= max(4_096, numeric_endpoints * 2)
+            and numeric_max < 0xFFFF_FFFF
+        ):
+            alternate_numeric_capacity = numeric_max + 1
+            alternate_parents.extend(range(alternate_numeric_capacity))
+            alternate_ranks.extend(b"\0" * alternate_numeric_capacity)
+            alternate_trace_nodes.extend(b"\0" * alternate_numeric_capacity)
+            alternate_node_depths.extend(
+                array("i", [-1]) * alternate_numeric_capacity
             )
-        alternate_exit_nodes_retained = len(alternate_node_keys)
+            alternate_numeric_net_codes.extend(
+                array("i", [-1]) * alternate_numeric_capacity
+            )
 
-        def retain_alternate_exit_via_edge(
-            net: str, source: str, destination: str
-        ) -> None:
-            """Retain one unique directed Trace-incident Via edge exactly once."""
-
-            nonlocal alternate_exit_via_edges_retained, alternate_exit_nodes_retained
-            neighbors = via_neighbors_by_net.setdefault(net, {})
-            destinations = neighbors.get(source)
-            if destinations is not None and destination in destinations:
-                return
-            if (
-                alternate_exit_via_edges_retained
-                >= _SPD_VIA_PATH_MAX_RETAINED_ALTERNATE_EXIT_VIA_EDGES
+        if trace_start >= 0 and trace_end > trace_start:
+            for match_index, match in enumerate(
+                _TRACE_RE.finditer(data, trace_start, trace_end)
             ):
-                raise _ViaPathAlternateExitResourceGuard(
-                    resource="alternate-exit Via-edge",
-                    limit=_SPD_VIA_PATH_MAX_RETAINED_ALTERNATE_EXIT_VIA_EDGES,
-                    retained_via_edges=alternate_exit_via_edges_retained,
-                    retained_nodes=alternate_exit_nodes_retained,
-                )
-            new_node_keys = {
-                node_key
-                for node_key in (source, destination)
-                if node_key not in alternate_node_keys
-            }
-            if (
-                len(alternate_node_keys) + len(new_node_keys)
-                > _SPD_VIA_PATH_MAX_RETAINED_ALTERNATE_NODES
-            ):
-                raise _ViaPathAlternateExitResourceGuard(
-                    resource="alternate-node",
-                    limit=_SPD_VIA_PATH_MAX_RETAINED_ALTERNATE_NODES,
-                    retained_via_edges=alternate_exit_via_edges_retained,
-                    retained_nodes=alternate_exit_nodes_retained,
-                )
-            if destinations is None:
-                destinations = set()
-                neighbors[source] = destinations
-            destinations.add(destination)
-            alternate_node_keys.update(new_node_keys)
-            alternate_exit_via_edges_retained += 1
-            alternate_exit_nodes_retained = len(alternate_node_keys)
+                if match_index % 8192 == 0:
+                    reporter.check()
+                net = _decode(match.group(2)).casefold()
+                if net not in relevant_net_keys:
+                    continue
+                first = _decode(match.group(3)).casefold()
+                second = _decode(match.group(4)).casefold()
+                alternate_union(net, first, second)
 
-        for match in _VIA_RE.finditer(data, via_start, via_end):
+        for match_index, match in enumerate(_VIA_RE.finditer(data, via_start, via_end)):
+            if match_index % 8192 == 0:
+                reporter.check()
             net = _decode(match.group(2)).casefold()
             if net not in relevant_net_keys:
                 continue
             first = _decode(match.group(3)).casefold()
             second = _decode(match.group(4)).casefold()
-            trace_nodes = trace_graph_by_net.get(net)
-            if not trace_nodes:
-                continue
-            # Alternate-exit detection only queries Via neighbors from nodes in
-            # a same-layer Trace component.  Retaining the other ~millions of
-            # relevant-NET Via edges duplicates the main vertical-path scan and
-            # can consume gigabytes without changing any decision.
-            if first in trace_nodes:
-                retain_alternate_exit_via_edge(net, first, second)
-            if second in trace_nodes:
-                retain_alternate_exit_via_edge(net, second, first)
+            first_index = alternate_lookup(net, first)
+            second_index = alternate_lookup(net, second)
+            first_is_trace = (
+                first_index is not None and bool(alternate_trace_nodes[first_index])
+            )
+            second_is_trace = (
+                second_index is not None and bool(alternate_trace_nodes[second_index])
+            )
+            if first_is_trace:
+                if second_index is None:
+                    second_index = alternate_index_for(
+                        net, second, trace_node=False
+                    )
+                alternate_via_sources.append(first_index)
+                alternate_via_destinations.append(second_index)
+            if second_is_trace:
+                if first_index is None:
+                    first_index = alternate_index_for(net, first, trace_node=False)
+                alternate_via_sources.append(second_index)
+                alternate_via_destinations.append(first_index)
+
+        alternate_exit_via_edges_retained = len(alternate_via_sources)
         # Alternate-exit decisions need only source NET and layer identity.  A
-        # prior implementation called ``resolve_nodes`` once or twice for every
-        # unseen Trace component, repeatedly scanning the complete production
-        # Node section and growing the main path-node cache.  Collect the exact
-        # compact key set now and resolve it in one dedicated Node pass instead.
-        if alternate_node_keys:
+        # single compact Node pass resolves every Trace endpoint and every far
+        # endpoint of a Trace-incident Via; no coordinates or padstack are kept.
+        if alternate_parents:
             alternate_node_section_passes += 1
             for line_index, (_offset, raw) in enumerate(
                 _iter_lines(data, node_start, node_end)
@@ -2337,7 +2418,9 @@ def recover_spd_via_paths(
                     continue
                 node_id, net = identity
                 node_key = node_id.casefold()
-                if node_key not in alternate_node_keys:
+                net_key = net.casefold()
+                node_index = alternate_lookup(net_key, node_key)
+                if node_index is None:
                     continue
                 attributes = _NODE_ATTR_RE.search(raw)
                 layer_raw = _attribute(raw, b"Layer")
@@ -2350,31 +2433,29 @@ def recover_spd_via_paths(
                     _length_um(attributes.group(2))
                 except ValueError:
                     continue
-                alternate_node_metadata[node_key] = (
-                    net.casefold(),
-                    _decode(layer_raw).casefold(),
-                )
-        graph_index_ready = True
+                layer_depth = depth_by_key.get(_decode(layer_raw).casefold())
+                if layer_depth is not None:
+                    if alternate_node_depths[node_index] < 0:
+                        alternate_nodes_resolved += 1
+                    alternate_node_depths[node_index] = layer_depth
 
-    def trace_component(net_key: str, start_key: str) -> tuple[str, frozenset[str]]:
-        known_id = component_id_by_node.get((net_key, start_key))
-        if known_id is not None:
-            return known_id, component_members_by_id[(net_key, known_id)]
-        adjacency = trace_graph_by_net.get(net_key, {})
-        component = {start_key}
-        pending = [start_key]
-        while pending:
-            node_key = pending.pop()
-            for neighbor in adjacency.get(node_key, ()):
-                if neighbor not in component:
-                    component.add(neighbor)
-                    pending.append(neighbor)
-        component_id = min(component)
-        frozen = frozenset(component)
-        component_members_by_id[(net_key, component_id)] = frozen
-        for node_key in frozen:
-            component_id_by_node[(net_key, node_key)] = component_id
-        return component_id, frozen
+        for source_index, destination_index in zip(
+            alternate_via_sources, alternate_via_destinations, strict=True
+        ):
+            source_depth = alternate_node_depths[source_index]
+            destination_depth = alternate_node_depths[destination_index]
+            if source_depth < 0 or destination_depth < 0:
+                continue
+            component_root = alternate_find(source_index)
+            by_destination = alternate_exit_sources.setdefault(
+                (component_root, source_depth), {}
+            )
+            witnesses = by_destination.get(destination_depth)
+            if witnesses is None:
+                by_destination[destination_depth] = (source_index, None)
+            elif witnesses[0] != source_index and witnesses[1] is None:
+                by_destination[destination_depth] = (witnesses[0], source_index)
+        graph_index_ready = True
 
     def trace_component_has_alternate_exit(
         data: mmap.mmap,
@@ -2402,51 +2483,35 @@ def recover_spd_via_paths(
             via_start=via_start, via_end=via_end,
         )
         net_key = str(state["net_key"])
-        adjacency = trace_graph_by_net.get(net_key, {})
         start_key = current.node_id.casefold()
-        if start_key not in adjacency:
+        start_index = alternate_lookup(net_key, start_key)
+        if start_index is None or not alternate_trace_nodes[start_index]:
             return False
-        component_id, component = trace_component(net_key, start_key)
+        component_root = alternate_find(start_index)
+        current_depth = depth_by_key.get(current.layer.casefold())
+        target_depth = depth_by_key.get(str(state["target_key"]))
+        if current_depth is None or target_depth is None:
+            return False
         cache_key = (
             net_key,
-            component_id,
-            current.layer.casefold(),
-            str(state["target_key"]),
+            component_root,
+            start_index,
+            current_depth,
+            target_depth,
         )
         cached = alternate_exit_cache.get(cache_key)
         if cached is not None:
             return cached
-        same_layer = {
-            node_key
-            for node_key in component
-            if alternate_node_metadata.get(node_key)
-            == (net_key, current.layer.casefold())
-            and node_key != start_key
-        }
-        if not same_layer:
-            alternate_exit_cache[cache_key] = False
-            return False
-        current_depth = depth_by_key.get(current.layer.casefold())
-        target_depth = depth_by_key.get(str(state["target_key"]))
-        if current_depth is None or target_depth is None:
-            alternate_exit_cache[cache_key] = False
-            return False
         direction = 1 if target_depth > current_depth else -1
-        alternate_destinations = {
-            destination
-            for source in same_layer
-            for destination in via_neighbors_by_net.get(net_key, {}).get(source, ())
-        }
-        for destination in alternate_destinations:
-            next_metadata = alternate_node_metadata.get(destination)
-            if next_metadata is None or next_metadata[0] != net_key:
-                continue
-            next_depth = depth_by_key.get(next_metadata[1])
-            if next_depth is None:
-                continue
-            delta = direction * (next_depth - current_depth)
-            remaining = direction * (target_depth - next_depth)
-            if delta > 0 and remaining >= 0:
+        by_destination = alternate_exit_sources.get(
+            (component_root, current_depth), {}
+        )
+        for next_depth, witnesses in by_destination.items():
+            if (
+                direction * (next_depth - current_depth) > 0
+                and direction * (target_depth - next_depth) >= 0
+                and (witnesses[0] != start_index or witnesses[1] is not None)
+            ):
                 alternate_exit_cache[cache_key] = True
                 return True
         alternate_exit_cache[cache_key] = False
@@ -2491,53 +2556,6 @@ def recover_spd_via_paths(
             node_end = trace_start if trace_start > node_start else via_start
             trace_end = via_start if via_start > trace_start else pad_start
             via_end = pad_start if pad_start > via_start else len(data)
-
-            # Alternate-exit proof needs a complete same-NET Trace graph.  Do
-            # not start constructing a partially indexed graph and then admit
-            # a source path from incomplete evidence: when the compact proof
-            # budget is exceeded, every affected terminal remains on the
-            # documented legacy template.  This is deliberately fail-closed.
-            # The production source has more than a million relevant traces;
-            # the prior nested dict/set graph retained millions of Python
-            # strings and edges before eventually falling back for every path.
-            relevant_trace_records = 0
-            relevant_net_keys = {str(state["net_key"]) for state in states.values()}
-            if trace_start >= 0 and trace_end > trace_start:
-                for trace_index, trace_match in enumerate(
-                    _TRACE_RE.finditer(data, trace_start, trace_end)
-                ):
-                    if trace_index % 8192 == 0:
-                        reporter.check()
-                    if _decode(trace_match.group(2)).casefold() not in relevant_net_keys:
-                        continue
-                    relevant_trace_records += 1
-                    if relevant_trace_records > _SPD_VIA_PATH_MAX_RELEVANT_TRACE_RECORDS:
-                        diagnostics.append(
-                            SpdDiagnostic(
-                                "warning",
-                                "SPD_VIA_PATH_RESOURCE_GUARD",
-                                (
-                                    "The source has more than "
-                                    f"{_SPD_VIA_PATH_MAX_RELEVANT_TRACE_RECORDS:,} "
-                                    "relevant Trace records. Complete alternate-exit "
-                                    "proof was not retained, so all terminal paths use "
-                                    "the documented legacy rail template; no partial "
-                                    "source Via evidence was accepted."
-                                ),
-                            )
-                        )
-                        return finish(SpdViaPathRecovery(
-                            evidence_by_via={},
-                            diagnostics=tuple(diagnostics),
-                            statistics={
-                                "requested": len(states),
-                                "recovered": 0,
-                                "fallback": len(states),
-                                "resource_guard_fallback": len(states),
-                                "relevant_trace_records_examined": relevant_trace_records,
-                                "relevant_trace_record_limit": _SPD_VIA_PATH_MAX_RELEVANT_TRACE_RECORDS,
-                            },
-                        ))
 
             max_trace_steps = max_segments
             max_total_steps = max_segments + max_trace_steps
@@ -2851,17 +2869,16 @@ def recover_spd_via_paths(
                 if state["status"] == "PENDING":
                     state["status"] = "SEGMENT_LIMIT"
                     failures[str(state["status"])] += 1
-    except _ViaPathAlternateExitResourceGuard as guard:
+    except (MemoryError, OverflowError):
         diagnostics.append(
             SpdDiagnostic(
                 "warning",
                 "SPD_VIA_PATH_RESOURCE_GUARD",
                 (
-                    "The source exceeded the retained alternate-exit "
-                    f"{guard.resource} budget ({guard.limit:,}). Complete "
-                    "alternate-exit proof was not retained, so all terminal paths "
-                    "use the documented legacy rail template; no partial source "
-                    "Via evidence was accepted."
+                    "The exact compact alternate-exit component index could not "
+                    "be completed with available process resources, so all "
+                    "terminal paths use the documented legacy rail template; no "
+                    "partial source Via evidence was accepted."
                 ),
             )
         )
@@ -2873,10 +2890,9 @@ def recover_spd_via_paths(
                 "recovered": 0,
                 "fallback": len(states),
                 "resource_guard_fallback": len(states),
-                "alternate_exit_via_edges_retained": guard.retained_via_edges,
-                "alternate_exit_via_edge_limit": _SPD_VIA_PATH_MAX_RETAINED_ALTERNATE_EXIT_VIA_EDGES,
-                "alternate_exit_nodes_retained": guard.retained_nodes,
-                "alternate_exit_node_limit": _SPD_VIA_PATH_MAX_RETAINED_ALTERNATE_NODES,
+                "relevant_trace_records_indexed": relevant_trace_records_indexed,
+                "alternate_exit_via_edges_retained": alternate_exit_via_edges_retained,
+                "alternate_exit_nodes_retained": alternate_exit_nodes_retained,
             },
         ))
     except OSError as exc:
@@ -2964,23 +2980,17 @@ def recover_spd_via_paths(
         ),
         # Structural performance evidence: each relevant trace component and
         # (component, current-layer, target-layer) exit decision is memoized.
-        "trace_components_indexed": len(component_members_by_id),
+        "trace_components_indexed": alternate_trace_components,
         "alternate_exit_cache_entries": len(alternate_exit_cache),
-        "alternate_exit_trace_nodes_indexed": sum(
-            len(graph) for graph in trace_graph_by_net.values()
-        ),
-        "alternate_exit_via_edges_indexed": sum(
-            len(destinations)
-            for by_node in via_neighbors_by_net.values()
-            for destinations in by_node.values()
-        ),
+        "relevant_trace_records_indexed": relevant_trace_records_indexed,
+        "alternate_exit_trace_nodes_indexed": int(sum(alternate_trace_nodes)),
+        "alternate_exit_via_edges_indexed": alternate_exit_via_edges_retained,
         "alternate_exit_via_edges_retained": alternate_exit_via_edges_retained,
-        "alternate_exit_via_edge_limit": _SPD_VIA_PATH_MAX_RETAINED_ALTERNATE_EXIT_VIA_EDGES,
         "alternate_exit_nodes_retained": alternate_exit_nodes_retained,
-        "alternate_exit_node_limit": _SPD_VIA_PATH_MAX_RETAINED_ALTERNATE_NODES,
+        "alternate_exit_numeric_capacity": alternate_numeric_capacity,
         "path_node_section_passes": path_node_section_passes,
         "alternate_exit_node_section_passes": alternate_node_section_passes,
-        "alternate_exit_nodes_resolved": len(alternate_node_metadata),
+        "alternate_exit_nodes_resolved": alternate_nodes_resolved,
     }
     statistics.update(
         {

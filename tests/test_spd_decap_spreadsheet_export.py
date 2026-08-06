@@ -116,7 +116,7 @@ def test_distribution_workbook_formats_distribution_columns_for_multiple_models(
                 f"{model_id}\nTarget",
                 f"{model_id}\nTolerance (%)",
                 f"{model_id}\nActual Delta",
-                f"{model_id}\nActual Changed",
+                f"{model_id}\nAssignment Failed",
                 f"{model_id}\nIsolation Gaps",
             )
         )

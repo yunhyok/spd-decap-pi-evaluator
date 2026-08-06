@@ -1704,7 +1704,13 @@ def distribution_csv_rows(
 def distribution_target_table(
     plan: DistributionPlan,
 ) -> tuple[tuple[str, ...], tuple[tuple[object, ...], ...]]:
-    """Return the immutable Present/Target/Tolerance/Actual matrix from a plan."""
+    """Return the immutable target/result matrix from a plan.
+
+    ``Assignment Failed`` is receiver shortfall, not a count of candidate rows
+    that the optimizer attempted and rejected. Donor capacity is optional and
+    count-neutral exchange is bounded rather than required, so neither is a
+    failed assignment.
+    """
 
     rail_order: list[tuple[str, str]] = []
     model_order: list[str] = []
@@ -1735,7 +1741,7 @@ def distribution_target_table(
                 f"{model_id}\nTarget",
                 f"{model_id}\nTolerance (%)",
                 f"{model_id}\nActual Delta",
-                f"{model_id}\nActual Changed",
+                f"{model_id}\nAssignment Failed",
                 f"{model_id}\nIsolation Gaps",
             )
         )
@@ -1756,7 +1762,7 @@ def distribution_target_table(
                     cell.target_count,
                     cell.tolerance_percent,
                     cell.actual_count - cell.present_count,
-                    cell.changed_count,
+                    cell.shortfall_count,
                     cell.sacrificed_count,
                 )
             )

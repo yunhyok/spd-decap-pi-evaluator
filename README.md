@@ -1,8 +1,8 @@
-# SPD Decap PI Evaluator v0.20.0
+# SPD Decap PI Evaluator v0.21.0
 
-> **v0.20.0 corrects De-cap Distribution to evaluate every retained target PWR layer at the immutable physical PWR landing XY, preserves the filled-Cu microvia-stack retarget/rebuild planning assumption, and removes the over-restrictive existing-via-depth gate.** It also keeps numeric balance separate from the detailed preview log, rejects stale background results, and does not add an extra raw-SPD Via-column loading pass. The title bar identifies the application as **SPD Decap PI Evaluator v0.20.0**.
+> **v0.21.0 reconnects De-cap Distribution with Evaluation Analysis without weakening moved-assignment validation.** An unchanged DIRECT capacitor may use its parser-proven source rail template when an alternate-assignment eligibility record is absent; a moved capacitor still requires exact destination eligibility and remains fail-closed. Distribution results now report `Assignment Failed`, and the main board exposes a read-only Source SPD / Current comparison. The title bar identifies the application as **SPD Decap PI Evaluator v0.21.0**.
 
-> 프로그램: **SPD Decap PI Evaluator v0.20.0**
+> 프로그램: **SPD Decap PI Evaluator v0.21.0**
 > 저장소: 기존 PI Calculator와 분리된 독립 프로그램
 > 해석 경계: 선택한 PWR rail의 pre-design `Zii`; 최종 PowerSI/SIwave 검증을 대체하지 않음
 
@@ -10,6 +10,19 @@
 모델, enabled/disabled 상태를 바꾸면서 PI Evaluation 결과를 비교하는 Windows
 desktop 프로그램이다. Stackup, MLO 크기 또는 plane을 새로 작성하는 기능과
 Optimization Mode는 포함하지 않는다.
+
+## v0.21.0 Evaluation / Distribution integration
+
+- Evaluation resolves a missing DIRECT eligibility only for the immutable source rail/net and only from the imported rail-template binding. Exact eligibility takes precedence; redistributed assignments without destination proof still block preflight and build.
+- The comparison preflight runs in the background and applies the same build-time connectivity/modelability contract to both **Original** and **Tuned/current**. A rail is runnable only when both sides build. If a selection mixes runnable and blocked rails, an explicit confirmation (default `No`) offers to run only the clear rails; the summary remains `PARTIAL` and marks every omitted rail `NOT evaluated`.
+- The source-DIRECT fallback removed all 470 missing-eligibility blockers in the captured Distribution replay's connectivity-only check. It is not a geometry bypass: a fresh 260804 import still has 2,010 exact finite-port footprint blockers on 68 of 92 rails (1,232 GND and 778 PWR). Coordinates are never clamped, the cavity is never expanded, and blocked ports are never dropped.
+- Compact exact route recovery found 11,874 of 117,810 requested source paths in the fresh 260804 import; 105,936 paths retained the disclosed legacy-template fallback. The same exact geometry preflight still reported 2,010 blockers, so route recovery is evidence preservation, not permission to treat an off-cavity terminal as modelable.
+- The authoritative fresh 260804 active-checkout Distribution replay completed `NEAREST` as `FULL`: 696/696 receiver assignments, shortfall 0, 696 moves and 208 isolation sacrifices. Measured stages were scenario load 5.569 s, targets 2.340 s, proof projection plus validation 53.167 s, planner 157.501 s and atomic Apply 8.345 s; route metadata remained 11,874/117,810 recovered.
+- After that Apply, the two-sided Original/Tuned comparison preflight reported 2,807 blockers on 73 rails and 19 clear rails: the fresh-source 2,010 blockers remained common, while redistribution added 797 Tuned-only blockers. Of the total, 2,802 were geometry and 5 connectivity blockers. This is intentionally different from the fresh-source 2,010 blockers on 68 rails; all 10 VQPS controls remained clear. The optimized all-rail preflight performance rerun is still pending, so no interim timing is treated as a release result.
+- The Distribution grid reports unfulfilled receiver demand as `Assignment Failed`. Requested targets remain visible after Apply so partial results stay auditable.
+- A main-board `Show source SPD assignments` control switches the board between `Current / distributed` and `Source SPD (read-only)` at the same physical XY. Search, selection and viewport are preserved, and source view blocks editing.
+- PowerSI comparison utilities accept both exact legacy `2nd_SITE#-...` and exact run-qualified `SITE#_<run>-...` headers while continuing to reject site/rail mismatches. Touchstone remains comparison-only and is never used for fitting.
+- All 10 no-decap `VQPS` rails are clear in exact preflight and remain bare-PDN controls. Their measured correlation still exposes a systematic accuracy limitation, so this release does not silently promote an experimental numerical solver. See the [v0.21.0 validation record](docs/EVALUATION_DISTRIBUTION_VALIDATION_2026-08-06.md).
 
 ## v0.20.0 De-cap Distribution correction
 
@@ -64,6 +77,7 @@ Optimization Mode는 포함하지 않는다.
 - assign 가능한 rail은 SPD `.NetList PowerNets`에 명시된 net으로 제한
 - 별도 passive two-terminal SPICE decap model 추가
 - 여러 PWR NET을 선택해 한 번에 순차 Evaluation
+- Evaluation 전 Original과 Tuned/current를 동일한 builder-time connectivity/modelability 기준으로 검사하고, clear/blocked rail이 섞이면 명시적 확인 후 clear rail만 실행; 결과에는 blocked rail을 `NOT evaluated`로 남기고 `PARTIAL`임을 표시
 - 최초 Original decap 구성과 모델 binding을 불변 baseline으로 캡처
 - 최초 실행 시 Original과 Tuned를 함께 해석하고 Original 결과를 `.spdpi`에 자동 저장
 - 이후 실행은 hash 검증된 Original 결과를 재사용하고 Tuned 결과와 비교
@@ -77,10 +91,10 @@ Optimization Mode는 포함하지 않는다.
 - Distribution은 Evaluation에 선택된 단일 pair와 무관하게 source SPD에 보존된 모든 target PWR layer의 ordered copper를 동일 PWR VIA landing XY에서 검사한다. GND layer는 destination gate가 아니며, 판정은 기존 VIA 깊이 증명이 아닌 filled-Cu microvia-stack retarget/rebuild 계획 가정임을 UI에 명시한다.
 - 현재치와 목표치가 같은 PWR NET도 `Tolerance (%)`가 양수이면 최종 수량을 유지한 채 `floor(현재 수량 × tolerance / 100)`개까지 주고받는 교환 경로로 참여; 0%이면 기존처럼 연산에서 제외
 - Distribution의 Target/Tolerance 셀은 캐시된 수량으로 즉시 검증하며, `Ctrl`/`Shift`로 같은 종류의 셀을 여러 개 선택한 뒤 숫자를 한 번 입력해 동일 값으로 일괄 변경
-- Distribution 후보를 수신 PWR NET bump에서 가까운 순서 또는 먼 순서로 선택하고, 물리 제약으로 목표에 미달해도 가능한 변경과 `Actual Δ`·`Actual Changed`·`Isolation Gaps`·shortfall을 표시
+- Distribution 후보를 수신 PWR NET bump에서 가까운 순서 또는 먼 순서로 선택하고, 물리 제약으로 목표에 미달해도 가능한 변경과 `Assignment Failed`·`Isolation Gaps`·shortfall을 표시
 - shared-pad 대형 문제에서 수량·이동 assignment를 먼저 고정한 뒤 separator pad를 재최적화하고, 원자적 topology 검증을 통과한 불필요 gap을 복원하여 서로 다른 NET 경계에 실제로 필요한 isolation gap만 남김
 - 이전 Distribution Excel의 절대 `Target`·`Tolerance (%)`를 `Import Targets...`로 재사용하며, `Present`는 현재 SPD에서 즉시 다시 계산하고 기록되지 않은 후보 순서는 사용자가 명시적으로 선택
-- Distribution 표를 더블클릭하면 비모달 분리창을 열고, 계산 전후 Target XLSX를 내보내거나 엄격히 검증해 다시 가져오며, 표시 전용 토글로 원본/재배치 assignment와 isolation-gap 상태를 번갈아 확인
+- Distribution 표를 더블클릭하면 비모달 분리창을 열고, 계산 전후 Target XLSX를 내보내거나 엄격히 검증해 다시 가져오며, 메인 도면과 분리창에서 `Current / distributed`와 `Source SPD (read-only)` assignment/isolation-gap 상태를 번갈아 확인
 - Distribution 결과의 전체 Decap을 `Component`, `REFDES`, `Before NET`, `After NET`, `X`, `Y` 열 CSV 또는 Excel로 내보내며, 희생 cell은 `UNUSED (ISOLATION GAP)`으로 기록하고 Excel의 두 번째 sheet에는 계산 당시 `PWR NET Distribution Targets` 표와 input inventory reconciliation을 보존
 - 새 Distribution Excel은 source SPD SHA-256, design fingerprint, revision, 후보 순서와 프로그램 버전을 두 번째 sheet에 함께 기록하며, 변경 대상 rail의 기존 unresolved connection은 해석 차단 경고로 별도 표시
 - 원본 source TOP copper 경로가 없는 구형 V2 scenario에서는 Distribution을 fail-closed로 차단하고 원본 SPD 재열기를 안내하며, 변경된 배치는 별도 `.spdpi`로 저장
@@ -124,7 +138,7 @@ powershell.exe -ExecutionPolicy Bypass -NoProfile -File .\scripts\build_spd_deca
 산출물:
 
 - `dist\SPDDecapPIEvaluator\SPDDecapPIEvaluator.exe`
-- `installer-output\SPDDecapPIEvaluatorSetup-0.20.0.exe`
-- `installer-output\SPDDecapPIEvaluatorSetup-0.20.0.exe.sha256`
+- `installer-output\SPDDecapPIEvaluatorSetup-0.21.0.exe`
+- `installer-output\SPDDecapPIEvaluatorSetup-0.21.0.exe.sha256`
 
 프로그램명과 버전은 title bar와 installer metadata에 함께 표시된다.

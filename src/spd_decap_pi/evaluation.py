@@ -55,6 +55,7 @@ from .scenario import (
     RailEligibility,
     SHARED_PAD_ANALYSIS_VERSION,
     ScenarioDecap,
+    ScenarioDecapConnection,
     ScenarioResultKey,
     ScenarioSpec,
     SharedPadClusterState,
@@ -69,7 +70,14 @@ CancelCallback = Callable[[], bool]
 PLOT_ANALYST_MODE = "Plot Analyst"
 EVALUATION_ATTACHMENT_FORMAT = "spd-decap-evaluation-0.1"
 MAX_EVALUATION_ATTACHMENT_BYTES = 16 * 1024 * 1024
+# General shared-pad networks materialize one dense F x N x N terminal
+# admittance before the modal stamp.  Keep that established resource bound.
 MAX_SHARED_PAD_VIA_PATHS = 128
+# A one-PWR/one-GND-component cluster whose every terminal uses the same rail
+# template is handled by the solver's exact aggregate arrowhead stamp.  That
+# path never materializes N x N terminal matrices during ordinary Evaluation,
+# so permit the largest source-proven production cluster with bounded headroom.
+MAX_BATCHED_SHARED_PAD_VIA_PATHS = 512
 
 
 class ScenarioEvaluationBuildError(ValueError):
@@ -103,6 +111,22 @@ class EvaluationConnectivityBlocker:
     refdes: str
     kind: DecapConnectionKind
     reason: str
+    configuration: EvaluationRole | None = None
+    terminal: TerminalKind | None = None
+    path_id: str | None = None
+    source_via_id: str | None = None
+    center_x_um: float | None = None
+    center_y_um: float | None = None
+    width_um: float | None = None
+    height_um: float | None = None
+    plane_x_min_um: float | None = None
+    plane_x_max_um: float | None = None
+    plane_y_min_um: float | None = None
+    plane_y_max_um: float | None = None
+    overrun_left_um: float = 0.0
+    overrun_right_um: float = 0.0
+    overrun_bottom_um: float = 0.0
+    overrun_top_um: float = 0.0
 
 
 @dataclass(frozen=True, slots=True)
@@ -121,19 +145,34 @@ class EvaluationConnectivityPreflight:
 
         if self.is_clear:
             return "Selected PWR rails have no unresolved decap connectivity blockers."
-        grouped: dict[tuple[str, DecapConnectionKind, str], list[str]] = {}
+        grouped: dict[
+            tuple[str, EvaluationRole | None, DecapConnectionKind, str], list[str]
+        ] = {}
         for blocker in self.blockers:
             grouped.setdefault(
-                (blocker.rail_id, blocker.kind, blocker.reason), []
+                (
+                    blocker.rail_id,
+                    blocker.configuration,
+                    blocker.kind,
+                    blocker.reason,
+                ),
+                [],
             ).append(blocker.refdes)
         rails: dict[str, list[str]] = {rail_id: [] for rail_id in self.rail_ids}
-        for (rail_id, kind, reason), refdes in grouped.items():
+        for (rail_id, configuration, kind, reason), refdes in grouped.items():
             ordered = sorted(refdes, key=str.casefold)
             examples = ", ".join(ordered[:max_refdes_per_group])
             if len(ordered) > max_refdes_per_group:
                 examples += f", +{len(ordered) - max_refdes_per_group:,} more"
+            configuration_label = (
+                "Original "
+                if configuration == EvaluationRole.BASELINE
+                else "Tuned "
+                if configuration == EvaluationRole.TUNED
+                else ""
+            )
             rails[rail_id].append(
-                f"{kind.value}: {examples} ({reason})"
+                f"{configuration_label}{kind.value}: {examples} ({reason})"
             )
         details = "; ".join(
             f"{rail_id} [{'; '.join(rails[rail_id])}]"
@@ -141,8 +180,9 @@ class EvaluationConnectivityPreflight:
             if rails[rail_id]
         )
         return (
-            f"Evaluation is blocked by {len(self.blockers):,} decap connection "
-            f"classification(s) on {sum(bool(items) for items in rails.values()):,} "
+            f"Evaluation is blocked by {len(self.blockers):,} decap "
+            f"connectivity/modelability blocker(s) on "
+            f"{sum(bool(items) for items in rails.values()):,} "
             f"of {len(self.rail_ids):,} selected PWR rail(s): {details}"
         )
 
@@ -499,16 +539,18 @@ def _result_key_from_view(
 
 
 def _canonical_rail_ids(
-    scenario: ScenarioSpec, rail_ids: Sequence[str]
+    scenario: ScenarioSpec,
+    rail_ids: Sequence[str],
+    *,
+    _project: ProjectSpec | None = None,
 ) -> tuple[str, ...]:
     requested = {str(item).strip().casefold() for item in rail_ids if str(item).strip()}
     if not requested:
         raise ScenarioEvaluationBuildError(
             "EVALUATION_RAILS_EMPTY", "select at least one PWR rail"
         )
-    available = {
-        item.rail_id.casefold(): item.rail_id for item in scenario.base_project.rails
-    }
+    project = _project if _project is not None else scenario.base_project
+    available = {item.rail_id.casefold(): item.rail_id for item in project.rails}
     unknown = requested - set(available)
     if unknown:
         raise ScenarioEvaluationBuildError(
@@ -517,13 +559,475 @@ def _canonical_rail_ids(
         )
     return tuple(
         item.rail_id
-        for item in scenario.base_project.rails
+        for item in project.rails
         if item.rail_id.casefold() in requested
     )
 
 
+def _via_template_ids_by_rail(project: ProjectSpec) -> dict[str, str]:
+    """Resolve the imported rail-template binding without using plane eligibility."""
+
+    provenance = project.metadata.get("spd_via_template_provenance", {})
+    result: dict[str, str] = {}
+    for rail in project.rails:
+        template_id: str | None = None
+        if isinstance(provenance, Mapping):
+            template_id = next(
+                (
+                    str(raw_template_id)
+                    for raw_template_id, raw in provenance.items()
+                    if isinstance(raw, Mapping)
+                    and str(raw.get("rail_id", "")).casefold()
+                    == rail.rail_id.casefold()
+                ),
+                None,
+            )
+        if template_id is None:
+            template_id = next(
+                (
+                    item.template_id
+                    for item in project.via_templates
+                    if item.pwr_reference_layer.casefold()
+                    == rail.pwr_layer.casefold()
+                    and item.gnd_reference_layer.casefold()
+                    == rail.gnd_layer.casefold()
+                ),
+                None,
+            )
+        if template_id:
+            result[rail.rail_id.casefold()] = template_id
+    return result
+
+
+def _source_direct_fallback_eligibility(
+    decap: ScenarioDecap,
+    connection: ScenarioDecapConnection,
+    rail: RailSpec,
+    template_ids_by_rail: Mapping[str, str],
+) -> RailEligibility | None:
+    """Model only an unchanged source DIRECT assignment without plane permission.
+
+    ``ScenarioDecap.eligibility`` is the mutable-assignment/Distribution gate.
+    The imported DIRECT connection is separate immutable evidence for the
+    original source assignment.  Preserve that distinction: a redistributed
+    assignment must still carry exact eligibility, while the source state may
+    use its imported rail-loop template when the ordered-plane query omitted
+    the source rail at one of its physical Via landings.
+    """
+
+    if (
+        connection.kind != DecapConnectionKind.DIRECT
+        or not connection.power_vias
+        or not connection.ground_vias
+        or decap.current_rail_id.casefold() != decap.source_rail_id.casefold()
+        or decap.current_net.casefold() != decap.source_net.casefold()
+        or rail.rail_id.casefold() != decap.source_rail_id.casefold()
+        or rail.net.casefold() != decap.source_net.casefold()
+        or any(
+            landing.net.casefold() != decap.source_net.casefold()
+            for landing in connection.power_vias
+        )
+    ):
+        return None
+    template_id = template_ids_by_rail.get(rail.rail_id.casefold())
+    if not template_id:
+        return None
+    return RailEligibility(
+        rail_id=rail.rail_id,
+        net=rail.net,
+        pwr_layer=rail.pwr_layer,
+        gnd_layer=rail.gnd_layer,
+        via_template_id=template_id,
+        allowed=True,
+    )
+
+
+@dataclass(frozen=True, slots=True)
+class _TerminalFootprint:
+    x_um: float
+    y_um: float
+    width_um: float
+    height_um: float
+
+
+def _selected_rail_plane_bounds_um(
+    project: ProjectSpec, rail: RailSpec
+) -> tuple[float, float, float, float]:
+    """Return the exact rectangle used by the modal solver for one rail."""
+
+    partition = next(
+        (
+            item
+            for item in project.partitions
+            if item.layer == rail.pwr_layer and rail.domain in item.domain_to_cell
+        ),
+        None,
+    )
+    if partition is None:
+        x_min = float(project.outline.origin_x_um)
+        y_min = float(project.outline.origin_y_um)
+        return (
+            x_min,
+            x_min + float(project.outline.width_um),
+            y_min,
+            y_min + float(project.outline.height_um),
+        )
+    cell_id = partition.domain_to_cell[rail.domain]
+    cell = next(item for item in partition.cells if item.cell_id == cell_id)
+    return (
+        float(cell.x_min_um),
+        float(cell.x_max_um),
+        float(cell.y_min_um),
+        float(cell.y_max_um),
+    )
+
+
+def _terminal_footprint(
+    landing: Any, target_layer: str, via: ViaLoopTemplate
+) -> _TerminalFootprint:
+    """Mirror the worker's source-landing-first finite-port construction."""
+
+    evidence = landing.evidence_for_layer(target_layer)
+    if evidence is not None:
+        return _TerminalFootprint(
+            x_um=float(evidence.x_um),
+            y_um=float(evidence.y_um),
+            width_um=float(evidence.target_pad_width_um),
+            height_um=float(evidence.target_pad_height_um),
+        )
+    return _TerminalFootprint(
+        x_um=float(landing.x_um),
+        y_um=float(landing.y_um),
+        width_um=float(via.finite_port_width_um),
+        height_um=float(via.finite_port_height_um),
+    )
+
+
+def _outside_terminal_blocker(
+    *,
+    rail: RailSpec,
+    refdes: str,
+    kind: DecapConnectionKind,
+    terminal: TerminalKind,
+    path_id: str,
+    landing: Any,
+    target_layer: str,
+    via: ViaLoopTemplate,
+    bounds: tuple[float, float, float, float],
+) -> EvaluationConnectivityBlocker | None:
+    footprint = _terminal_footprint(landing, target_layer, via)
+    x_min, x_max, y_min, y_max = bounds
+    footprint_x_min = footprint.x_um - footprint.width_um / 2.0
+    footprint_x_max = footprint.x_um + footprint.width_um / 2.0
+    footprint_y_min = footprint.y_um - footprint.height_um / 2.0
+    footprint_y_max = footprint.y_um + footprint.height_um / 2.0
+    tolerance_um = max(x_max - x_min, y_max - y_min) * 1e-12
+    overruns = (
+        max(0.0, x_min - footprint_x_min),
+        max(0.0, footprint_x_max - x_max),
+        max(0.0, y_min - footprint_y_min),
+        max(0.0, footprint_y_max - y_max),
+    )
+    if max(overruns) <= tolerance_um:
+        return None
+    left, right, bottom, top = overruns
+    terminal_value = terminal.value
+    reason = (
+        "TERMINAL_OUTSIDE_SELECTED_PLANE: "
+        f"{terminal_value} terminal {landing.via_id!r}, path {path_id!r}, "
+        f"footprint center=({footprint.x_um:.6g}, {footprint.y_um:.6g}) um, "
+        f"size=({footprint.width_um:.6g} x {footprint.height_um:.6g}) um; "
+        f"selected plane x=[{x_min:.6g}, {x_max:.6g}] um, "
+        f"y=[{y_min:.6g}, {y_max:.6g}] um; overruns "
+        f"left={left:.6g}, right={right:.6g}, bottom={bottom:.6g}, "
+        f"top={top:.6g} um. Source coordinates and landing geometry are "
+        "preserved; Evaluation does not clamp, expand, or drop the terminal."
+    )
+    return EvaluationConnectivityBlocker(
+        rail_id=rail.rail_id,
+        refdes=refdes,
+        kind=kind,
+        reason=reason,
+        terminal=terminal,
+        path_id=path_id,
+        source_via_id=landing.via_id,
+        center_x_um=footprint.x_um,
+        center_y_um=footprint.y_um,
+        width_um=footprint.width_um,
+        height_um=footprint.height_um,
+        plane_x_min_um=x_min,
+        plane_x_max_um=x_max,
+        plane_y_min_um=y_min,
+        plane_y_max_um=y_max,
+        overrun_left_um=left,
+        overrun_right_um=right,
+        overrun_bottom_um=bottom,
+        overrun_top_um=top,
+    )
+
+
+def _evaluation_geometry_blockers(
+    scenario: ScenarioSpec,
+    canonical_rails: Sequence[str],
+    *,
+    _project: ProjectSpec | None = None,
+) -> tuple[EvaluationConnectivityBlocker, ...]:
+    """Aggregate every finite terminal footprint that the worker cannot stamp."""
+
+    analysis = scenario.connection_analysis
+    if analysis is None:
+        return ()
+    project = _project if _project is not None else scenario.base_project
+    selected_keys = {item.casefold() for item in canonical_rails}
+    rail_by_key = {item.rail_id.casefold(): item for item in project.rails}
+    via_by_key = {item.template_id.casefold(): item for item in project.via_templates}
+    template_ids_by_rail = _via_template_ids_by_rail(project)
+    decap_by_key = {item.refdes.casefold(): item for item in scenario.decaps}
+    connections = {
+        item.refdes.casefold(): item for item in analysis.connections.values()
+    }
+    landing_owner_by_terminal = {
+        TerminalKind.PWR: {},
+        TerminalKind.GND: {},
+    }
+    for refdes_key in sorted(connections):
+        connection = connections[refdes_key]
+        for terminal, landings in (
+            (TerminalKind.PWR, connection.power_vias),
+            (TerminalKind.GND, connection.ground_vias),
+        ):
+            for landing in landings:
+                landing_owner_by_terminal[terminal].setdefault(
+                    landing.via_id.casefold(), connection.refdes
+                )
+    bounds_by_rail = {
+        key: _selected_rail_plane_bounds_um(project, rail)
+        for key, rail in rail_by_key.items()
+        if key in selected_keys
+    }
+    blockers: list[EvaluationConnectivityBlocker] = []
+
+    def append_landing(
+        *,
+        rail: RailSpec,
+        refdes: str,
+        kind: DecapConnectionKind,
+        terminal: TerminalKind,
+        path_id: str,
+        landing: Any,
+        via: ViaLoopTemplate,
+    ) -> None:
+        blocker = _outside_terminal_blocker(
+            rail=rail,
+            refdes=refdes,
+            kind=kind,
+            terminal=terminal,
+            path_id=path_id,
+            landing=landing,
+            target_layer=(
+                rail.pwr_layer if terminal == TerminalKind.PWR else rail.gnd_layer
+            ),
+            via=via,
+            bounds=bounds_by_rail[rail.rail_id.casefold()],
+        )
+        if blocker is not None:
+            blockers.append(blocker)
+
+    consumed: set[str] = set()
+    for cluster in analysis.clusters:
+        member_keys = tuple(item.casefold() for item in cluster.member_refdes)
+        consumed.update(member_keys)
+        if cluster.state != SharedPadClusterState.ANCHORED or any(
+            key not in decap_by_key or key not in connections for key in member_keys
+        ):
+            continue
+        if not any(
+            decap_by_key[key].current_rail_id.casefold() in selected_keys
+            for key in member_keys
+        ):
+            continue
+        derivation = derive_shared_pad_current_components(
+            cluster,
+            {key: decap_by_key[key] for key in member_keys},
+            {key: connections[key] for key in member_keys},
+            analysis_version=analysis.version,
+        )
+        if (
+            derivation.shared_power_via_conflicts
+            or derivation.shared_ground_via_conflicts
+        ):
+            continue
+        components_by_rail: dict[str, list[Any]] = {}
+        for component in derivation.components:
+            rail_key = component.current_rail_id.casefold()
+            if rail_key in selected_keys:
+                components_by_rail.setdefault(rail_key, []).append(component)
+        for rail_key, grouped_components in components_by_rail.items():
+            rail = rail_by_key.get(rail_key)
+            if rail is None:
+                continue
+            selected_components = tuple(grouped_components)
+            component_eligibility = []
+            for component in selected_components:
+                eligibility = next(
+                    (
+                        item
+                        for item in shared_pad_component_eligibility(
+                            cluster, component
+                        ).values()
+                        if item.rail_id.casefold() == rail_key and item.allowed
+                    ),
+                    None,
+                )
+                if eligibility is None:
+                    component_eligibility = []
+                    break
+                component_eligibility.append(eligibility)
+            template_keys = {
+                (item.via_template_id or "").casefold()
+                for item in component_eligibility
+            }
+            if len(template_keys) != 1:
+                continue
+            via = via_by_key.get(next(iter(template_keys)))
+            if via is None or (
+                via.pwr_reference_layer.casefold() != rail.pwr_layer.casefold()
+                or via.gnd_reference_layer.casefold() != rail.gnd_layer.casefold()
+            ):
+                continue
+            selected_member_keys = {
+                refdes.casefold()
+                for component in selected_components
+                for refdes in component.member_refdes
+            }
+            selected_ground_components = tuple(
+                component
+                for component in derivation.ground_components
+                if selected_member_keys.intersection(
+                    refdes.casefold() for refdes in component.member_refdes
+                )
+            )
+            domain_cluster_id = f"SPDPI:CLUSTER:{cluster.cluster_id}"
+            for component_index, component in enumerate(
+                selected_components, start=1
+            ):
+                for path_index, landing in enumerate(component.power_vias, start=1):
+                    append_landing(
+                        rail=rail,
+                        refdes=landing_owner_by_terminal[TerminalKind.PWR].get(
+                            landing.via_id.casefold(),
+                            sorted(component.member_refdes, key=str.casefold)[0],
+                        ),
+                        kind=DecapConnectionKind.SHARED_ANCHOR,
+                        terminal=TerminalKind.PWR,
+                        path_id=(
+                            f"{domain_cluster_id}:PWR:{component_index}:{path_index}"
+                        ),
+                        landing=landing,
+                        via=via,
+                    )
+            for component_index, component in enumerate(
+                selected_ground_components, start=1
+            ):
+                for path_index, landing in enumerate(component.ground_vias, start=1):
+                    append_landing(
+                        rail=rail,
+                        refdes=landing_owner_by_terminal[TerminalKind.GND].get(
+                            landing.via_id.casefold(),
+                            sorted(component.member_refdes, key=str.casefold)[0],
+                        ),
+                        kind=DecapConnectionKind.SHARED_ANCHOR,
+                        terminal=TerminalKind.GND,
+                        path_id=(
+                            f"{domain_cluster_id}:GND:{component_index}:{path_index}"
+                        ),
+                        landing=landing,
+                        via=via,
+                    )
+
+    for decap in scenario.decaps:
+        decap_key = decap.refdes.casefold()
+        if decap_key in consumed or decap.current_rail_id.casefold() not in selected_keys:
+            continue
+        connection = connections.get(decap_key)
+        if connection is None or connection.kind != DecapConnectionKind.DIRECT:
+            continue
+        unique_power = {
+            item.via_id.casefold(): item for item in connection.power_vias
+        }
+        unique_ground = {
+            item.via_id.casefold(): item for item in connection.ground_vias
+        }
+        if not decap.enabled and len(unique_power) == 1 and len(unique_ground) == 1:
+            continue
+        rail = rail_by_key.get(decap.current_rail_id.casefold())
+        if rail is None:
+            continue
+        eligibility = next(
+            (
+                item
+                for rail_id, item in decap.eligibility.items()
+                if rail_id.casefold() == rail.rail_id.casefold()
+            ),
+            None,
+        )
+        if eligibility is None:
+            eligibility = _source_direct_fallback_eligibility(
+                decap, connection, rail, template_ids_by_rail
+            )
+        if eligibility is None or not eligibility.allowed or not eligibility.via_template_id:
+            continue
+        via = via_by_key.get(eligibility.via_template_id.casefold())
+        if via is None or (
+            via.pwr_reference_layer.casefold() != rail.pwr_layer.casefold()
+            or via.gnd_reference_layer.casefold() != rail.gnd_layer.casefold()
+        ):
+            continue
+        has_recovered_path = any(
+            item.evidence_for_layer(rail.pwr_layer) is not None
+            for item in unique_power.values()
+        ) or any(
+            item.evidence_for_layer(rail.gnd_layer) is not None
+            for item in unique_ground.values()
+        )
+        coupled = len(unique_power) > 1 or len(unique_ground) > 1 or has_recovered_path
+        power_landings = tuple(unique_power[key] for key in sorted(unique_power))
+        ground_landings = tuple(unique_ground[key] for key in sorted(unique_ground))
+        for path_index, landing in enumerate(power_landings, start=1):
+            append_landing(
+                rail=rail,
+                refdes=decap.refdes,
+                kind=DecapConnectionKind.DIRECT,
+                terminal=TerminalKind.PWR,
+                path_id=(
+                    f"SPDPI:CLUSTER:DIRECT:{decap.refdes}:PWR:1:{path_index}"
+                    if coupled
+                    else f"SPDPI:{decap.refdes}:PWR"
+                ),
+                landing=landing,
+                via=via,
+            )
+        if coupled:
+            for path_index, landing in enumerate(ground_landings, start=1):
+                append_landing(
+                    rail=rail,
+                    refdes=decap.refdes,
+                    kind=DecapConnectionKind.DIRECT,
+                    terminal=TerminalKind.GND,
+                    path_id=(
+                        f"SPDPI:CLUSTER:DIRECT:{decap.refdes}:GND:1:{path_index}"
+                    ),
+                    landing=landing,
+                    via=via,
+                )
+    return tuple(blockers)
+
+
 def preflight_evaluation_connectivity(
-    scenario: ScenarioSpec, rail_ids: Sequence[str]
+    scenario: ScenarioSpec,
+    rail_ids: Sequence[str],
+    *,
+    _project: ProjectSpec | None = None,
 ) -> EvaluationConnectivityPreflight:
     """Aggregate fail-closed source-connectivity blockers for selected rails.
 
@@ -534,19 +1038,39 @@ def preflight_evaluation_connectivity(
     is retained for callers that need more than the compact UI text.
     """
 
-    canonical_rails = _canonical_rail_ids(scenario, rail_ids)
+    project = _project if _project is not None else scenario.base_project
+    canonical_rails = _canonical_rail_ids(scenario, rail_ids, _project=project)
     _require_current_shared_pad_analysis(scenario)
     analysis = scenario.connection_analysis
     if analysis is None:
-        return EvaluationConnectivityPreflight(canonical_rails, ())
+        return EvaluationConnectivityPreflight(
+            canonical_rails,
+            tuple(
+                EvaluationConnectivityBlocker(
+                    rail_id=rail_id,
+                    refdes="<connection analysis>",
+                    kind=DecapConnectionKind.UNRESOLVED,
+                    reason=(
+                        "evaluation modelability: source connection analysis is "
+                        "missing; reopen the verified SPD before evaluation"
+                    ),
+                )
+                for rail_id in canonical_rails
+            ),
+        )
     canonical_by_key = {
         rail_id.casefold(): rail_id for rail_id in canonical_rails
     }
+    rail_by_key = {item.rail_id.casefold(): item for item in project.rails}
+    via_by_key = {item.template_id.casefold(): item for item in project.via_templates}
+    template_ids_by_rail = _via_template_ids_by_rail(project)
     rail_order = {rail_id.casefold(): index for index, rail_id in enumerate(canonical_rails)}
     connections = {
         item.refdes.casefold(): item for item in analysis.connections.values()
     }
-    mixed_witness_failures = mixed_reference_ground_witness_failures(scenario)
+    mixed_witness_failures = mixed_reference_ground_witness_failures(
+        scenario, _project=project
+    )
     blockers: list[EvaluationConnectivityBlocker] = []
     for rail_id, reason in mixed_witness_failures.items():
         if rail_id.casefold() not in canonical_by_key:
@@ -594,14 +1118,7 @@ def preflight_evaluation_connectivity(
             and len(unique_ground_vias) == 1
         ):
             continue
-        rail = next(
-            (
-                item
-                for item in scenario.base_project.rails
-                if item.rail_id.casefold() == decap.current_rail_id.casefold()
-            ),
-            None,
-        )
+        rail = rail_by_key.get(decap.current_rail_id.casefold())
         eligibility = next(
             (
                 item
@@ -610,6 +1127,13 @@ def preflight_evaluation_connectivity(
             ),
             None,
         )
+        if eligibility is None and rail is not None:
+            eligibility = _source_direct_fallback_eligibility(
+                decap,
+                connection,
+                rail,
+                template_ids_by_rail,
+            )
         reason: str | None = None
         if rail is None:
             reason = "evaluation modelability: current rail is absent"
@@ -630,15 +1154,7 @@ def preflight_evaluation_connectivity(
         elif not eligibility.via_template_id:
             reason = "evaluation modelability: current-rail via template is missing"
         else:
-            template = next(
-                (
-                    item
-                    for item in scenario.base_project.via_templates
-                    if item.template_id.casefold()
-                    == eligibility.via_template_id.casefold()
-                ),
-                None,
-            )
+            template = via_by_key.get(eligibility.via_template_id.casefold())
             if template is None:
                 reason = "evaluation modelability: current-rail via template is absent"
             elif (
@@ -655,6 +1171,11 @@ def preflight_evaluation_connectivity(
                     reason=reason,
                 )
             )
+    blockers.extend(
+        _evaluation_geometry_blockers(
+            scenario, canonical_rails, _project=project
+        )
+    )
     return EvaluationConnectivityPreflight(
         canonical_rails,
         tuple(
@@ -665,6 +1186,389 @@ def preflight_evaluation_connectivity(
                     item.kind.value,
                     item.reason.casefold(),
                     item.refdes.casefold(),
+                ),
+            )
+        ),
+    )
+
+
+def _comparison_original_configuration(scenario: ScenarioSpec) -> ScenarioSpec:
+    """Return one all-source physical state for comparison preflight only.
+
+    Original connectivity and terminal geometry do not depend on the selected
+    rail's baseline model capture.  Preparing one source state therefore checks
+    every selected Original rail in a single connectivity/geometry pass instead
+    of constructing two full solver projects per rail.  Stored capture bindings
+    remain authoritative; a missing capture uses the same source-model/current-
+    model fallback as :meth:`ScenarioSpec.with_baseline_captures`.
+    """
+
+    captured_models: dict[str, str] = {}
+    for capture in scenario.baseline_captures.values():
+        for binding in capture.model_bindings:
+            captured_models.setdefault(binding.refdes.casefold(), binding.model_id)
+    connected = {
+        refdes.casefold() for refdes in scenario.electrically_connected_refdes
+    }
+    original_decaps = tuple(
+        decap.model_copy(
+            update={
+                "current_net": decap.source_net,
+                "current_rail_id": decap.source_rail_id,
+                "model_id": (
+                    captured_models.get(decap.refdes.casefold())
+                    or decap.source_model_id
+                    or decap.model_id
+                    if decap.source_mounted
+                    and decap.refdes.casefold() in connected
+                    else decap.source_model_id
+                ),
+                "enabled": decap.source_mounted,
+                "pad_state": DecapPadState.NORMAL,
+            }
+        )
+        for decap in scenario.decaps
+    )
+    return scenario.model_copy(update={"decaps": original_decaps})
+
+
+def _evaluation_modelability_blockers(
+    scenario: ScenarioSpec,
+    canonical_rails: Sequence[str],
+    *,
+    _project: ProjectSpec | None = None,
+) -> tuple[EvaluationConnectivityBlocker, ...]:
+    """Mirror the builder's enabled-model checks without building a project."""
+
+    selected = {rail_id.casefold(): rail_id for rail_id in canonical_rails}
+    connected = {
+        refdes.casefold() for refdes in scenario.electrically_connected_refdes
+    }
+    project = _project if _project is not None else scenario.base_project
+    models = {model.model_id.casefold(): model for model in project.cap_models}
+    connections = (
+        {
+            connection.refdes.casefold(): connection
+            for connection in scenario.connection_analysis.connections.values()
+        }
+        if scenario.connection_analysis is not None
+        else {}
+    )
+    blockers: list[EvaluationConnectivityBlocker] = []
+    for decap in scenario.decaps:
+        rail_id = selected.get(decap.current_rail_id.casefold())
+        if (
+            rail_id is None
+            or not decap.enabled
+            or decap.refdes.casefold() not in connected
+        ):
+            continue
+        model = (
+            models.get(decap.model_id.casefold())
+            if decap.model_id is not None
+            else None
+        )
+        if decap.model_id is None:
+            reason = "evaluation modelability: enabled decap electrical model is missing"
+        elif model is None:
+            reason = (
+                "evaluation modelability: electrical model "
+                f"{decap.model_id!r} is absent from the model library"
+            )
+        elif model.footprint.casefold() != decap.footprint.casefold():
+            reason = (
+                "evaluation modelability: electrical model footprint "
+                f"{model.footprint!r} does not match component footprint "
+                f"{decap.footprint!r}"
+            )
+        else:
+            continue
+        connection = connections.get(decap.refdes.casefold())
+        blockers.append(
+            EvaluationConnectivityBlocker(
+                rail_id=rail_id,
+                refdes=decap.refdes,
+                kind=(
+                    connection.kind
+                    if connection is not None
+                    else DecapConnectionKind.DIRECT
+                ),
+                reason=reason,
+            )
+        )
+    return tuple(blockers)
+
+
+def _comparison_blocker_identity(
+    blocker: EvaluationConnectivityBlocker,
+) -> EvaluationConnectivityBlocker:
+    """Return the hashable blocker identity shared by Original and Tuned."""
+
+    return replace(blocker, configuration=None)
+
+
+def _builder_preflight_blockers(
+    scenario: ScenarioSpec,
+    canonical_rails: Sequence[str],
+    existing: Sequence[EvaluationConnectivityBlocker],
+    *,
+    project: ProjectSpec,
+    progress: ProgressCallback | None = None,
+    is_cancelled: CancelCallback | None = None,
+    stage_offset: int = 0,
+    stage_count: int = 1,
+    skip_rail_ids: frozenset[str] = frozenset(),
+) -> tuple[EvaluationConnectivityBlocker, ...]:
+    """Dry-build structurally clear rails and convert every build failure."""
+
+    report = progress or (lambda _value, _message: None)
+    cancelled = is_cancelled or (lambda: False)
+    blocked = {item.rail_id.casefold() for item in existing}
+    connections = (
+        {
+            item.refdes.casefold(): item
+            for item in scenario.connection_analysis.connections.values()
+        }
+        if scenario.connection_analysis is not None
+        else {}
+    )
+    result: list[EvaluationConnectivityBlocker] = []
+    connected = {
+        refdes.casefold() for refdes in scenario.electrically_connected_refdes
+    }
+    populated_rail_keys = {
+        decap.current_rail_id.casefold()
+        for decap in scenario.decaps
+        if decap.refdes.casefold() in connected
+    }
+    design_fingerprint = scenario.design_fingerprint
+    total = max(stage_count, 1)
+    for index, rail_id in enumerate(canonical_rails):
+        if cancelled():
+            raise RuntimeError("evaluation preflight cancelled")
+        stage = stage_offset + index
+        report(
+            round(stage * 100 / total),
+            f"Preflighting {rail_id} solver project",
+        )
+        rail_key = rail_id.casefold()
+        if (
+            rail_key in blocked
+            or rail_key in skip_rail_ids
+            or rail_key not in populated_rail_keys
+        ):
+            continue
+        try:
+            build_evaluation_project(
+                scenario,
+                evaluation_rail_id=rail_id,
+                _project=project,
+                _design_fingerprint=design_fingerprint,
+            )
+        except ScenarioEvaluationPreflightError as exc:
+            result.extend(exc.preflight.blockers)
+        except ScenarioEvaluationBuildError as exc:
+            connection = (
+                connections.get(exc.refdes.casefold())
+                if exc.refdes is not None
+                else None
+            )
+            result.append(
+                EvaluationConnectivityBlocker(
+                    rail_id=rail_id,
+                    refdes=exc.refdes or "<rail project>",
+                    kind=(
+                        connection.kind
+                        if connection is not None
+                        else DecapConnectionKind.UNRESOLVED
+                    ),
+                    reason=f"evaluation builder [{exc.code}]: {exc}",
+                )
+            )
+        except ValueError as exc:
+            # Some source-topology derivation errors intentionally carry richer
+            # domain exception types than ScenarioEvaluationBuildError.  They
+            # are still predictable pre-solver failures and belong in the same
+            # per-rail manifest rather than escaping after user consent.
+            result.append(
+                EvaluationConnectivityBlocker(
+                    rail_id=rail_id,
+                    refdes="<rail project>",
+                    kind=DecapConnectionKind.UNRESOLVED,
+                    reason=(
+                        "evaluation builder [PROJECT_BUILD_FAILED]: "
+                        f"{type(exc).__name__}: {exc}"
+                    ),
+                )
+            )
+    return tuple(result)
+
+
+def _rail_builder_input_sha256_by_rail(
+    scenario: ScenarioSpec, canonical_rails: Sequence[str]
+) -> dict[str, str]:
+    """Hash per-rail mutable build inputs in one board-scale pass."""
+
+    selected = {rail_id.casefold() for rail_id in canonical_rails}
+    decap_by_key = {item.refdes.casefold(): item for item in scenario.decaps}
+    relevant_by_rail: dict[str, set[str]] = {key: set() for key in selected}
+    for key, decap in decap_by_key.items():
+        rail_key = decap.current_rail_id.casefold()
+        if rail_key in relevant_by_rail:
+            relevant_by_rail[rail_key].add(key)
+    analysis = scenario.connection_analysis
+    if analysis is not None:
+        for cluster in analysis.clusters:
+            member_keys = {item.casefold() for item in cluster.member_refdes}
+            touching = {
+                decap_by_key[key].current_rail_id.casefold()
+                for key in member_keys
+                if key in decap_by_key
+                and decap_by_key[key].current_rail_id.casefold() in selected
+            }
+            for rail_key in touching:
+                relevant_by_rail[rail_key].update(member_keys)
+    return {
+        rail_key: sha256(
+            _canonical_json(
+                [
+                    decap_by_key[key].model_dump(mode="json")
+                    for key in sorted(relevant)
+                ]
+            )
+        ).hexdigest()
+        for rail_key, relevant in relevant_by_rail.items()
+    }
+
+
+def preflight_evaluation_comparison(
+    scenario: ScenarioSpec,
+    rail_ids: Sequence[str],
+    *,
+    progress: ProgressCallback | None = None,
+    is_cancelled: CancelCallback | None = None,
+) -> EvaluationConnectivityPreflight:
+    """Gate both Original and Tuned states before baseline or solver work.
+
+    Connectivity, finite-terminal geometry, and enabled-model assignments are
+    checked for both configurations.  Identical blockers are reported once;
+    state-specific blockers are explicitly labeled Original or Tuned.  Original
+    geometry is prepared once for all rails.  Structurally clear rail/state
+    pairs are then dry-built through the production project builder so a rail
+    cannot be labeled runnable and subsequently fail before its first solve.
+    """
+
+    project = scenario.base_project
+    canonical_rails = _canonical_rail_ids(scenario, rail_ids, _project=project)
+    tuned = preflight_evaluation_connectivity(
+        scenario, canonical_rails, _project=project
+    )
+    original_scenario = _comparison_original_configuration(scenario)
+    original = preflight_evaluation_connectivity(
+        original_scenario, canonical_rails, _project=project
+    )
+    tuned_items = (
+        *tuned.blockers,
+        *_evaluation_modelability_blockers(
+            scenario, canonical_rails, _project=project
+        ),
+    )
+    original_items = (
+        *original.blockers,
+        *_evaluation_modelability_blockers(
+            original_scenario, canonical_rails, _project=project
+        ),
+    )
+    stage_count = len(canonical_rails) * 2
+    tuned_items = (
+        *tuned_items,
+        *_builder_preflight_blockers(
+            scenario,
+            canonical_rails,
+            tuned_items,
+            project=project,
+            progress=progress,
+            is_cancelled=is_cancelled,
+            stage_count=stage_count,
+        ),
+    )
+    tuned_input_sha = _rail_builder_input_sha256_by_rail(
+        scenario, canonical_rails
+    )
+    original_input_sha = _rail_builder_input_sha256_by_rail(
+        original_scenario, canonical_rails
+    )
+    identical_rail_keys = frozenset(
+        rail_key
+        for rail_key in tuned_input_sha
+        if tuned_input_sha[rail_key] == original_input_sha[rail_key]
+    )
+    original_items = (
+        *original_items,
+        *(
+            blocker
+            for blocker in tuned_items
+            if blocker.rail_id.casefold() in identical_rail_keys
+        ),
+    )
+    original_items = (
+        *original_items,
+        *_builder_preflight_blockers(
+            original_scenario,
+            canonical_rails,
+            original_items,
+            project=project,
+            progress=progress,
+            is_cancelled=is_cancelled,
+            stage_offset=len(canonical_rails),
+            stage_count=stage_count,
+            skip_rail_ids=identical_rail_keys,
+        ),
+    )
+    tuned_by_identity = {
+        _comparison_blocker_identity(item): item for item in tuned_items
+    }
+    original_by_identity = {
+        _comparison_blocker_identity(item): item for item in original_items
+    }
+    merged: list[EvaluationConnectivityBlocker] = []
+    for identity in set(tuned_by_identity) | set(original_by_identity):
+        in_tuned = identity in tuned_by_identity
+        in_original = identity in original_by_identity
+        merged.append(
+            identity
+            if in_tuned and in_original
+            else replace(
+                (
+                    tuned_by_identity[identity]
+                    if in_tuned
+                    else original_by_identity[identity]
+                ),
+                configuration=(
+                    EvaluationRole.TUNED if in_tuned else EvaluationRole.BASELINE
+                ),
+            )
+        )
+    rail_order = {
+        rail_id.casefold(): index for index, rail_id in enumerate(canonical_rails)
+    }
+    role_order = {
+        EvaluationRole.BASELINE: 0,
+        EvaluationRole.TUNED: 1,
+        None: 2,
+    }
+    return EvaluationConnectivityPreflight(
+        canonical_rails,
+        tuple(
+            sorted(
+                merged,
+                key=lambda item: (
+                    rail_order[item.rail_id.casefold()],
+                    role_order[item.configuration],
+                    item.kind.value,
+                    item.reason.casefold(),
+                    item.refdes.casefold(),
+                    item.path_id or "",
                 ),
             )
         ),
@@ -1213,7 +2117,11 @@ def _lookup_casefold(items: list[Any], attribute: str) -> dict[str, Any]:
     return {str(getattr(item, attribute)).casefold(): item for item in items}
 
 
-def _eligibility_for(decap: ScenarioDecap) -> RailEligibility:
+def _eligibility_for(
+    decap: ScenarioDecap,
+    *,
+    fallback: RailEligibility | None = None,
+) -> RailEligibility:
     eligibility = decap.eligibility.get(decap.current_rail_id)
     if eligibility is None:
         folded = decap.current_rail_id.casefold()
@@ -1221,6 +2129,8 @@ def _eligibility_for(decap: ScenarioDecap) -> RailEligibility:
             (item for key, item in decap.eligibility.items() if key.casefold() == folded),
             None,
         )
+    if eligibility is None:
+        eligibility = fallback
     if eligibility is None:
         raise ScenarioEvaluationBuildError(
             "ELIGIBILITY_MISSING",
@@ -1243,6 +2153,7 @@ def _validated_assignment(
     rail_by_id: Mapping[str, RailSpec],
     model_by_id: Mapping[str, CapModel],
     via_by_id: Mapping[str, ViaLoopTemplate],
+    fallback_eligibility: RailEligibility | None = None,
 ) -> tuple[RailSpec, RailEligibility, CapModel | None, ViaLoopTemplate]:
     rail = rail_by_id.get(decap.current_rail_id.casefold())
     if rail is None:
@@ -1258,7 +2169,7 @@ def _validated_assignment(
             refdes=decap.refdes,
         )
 
-    eligibility = _eligibility_for(decap)
+    eligibility = _eligibility_for(decap, fallback=fallback_eligibility)
     if eligibility.rail_id.casefold() != rail.rail_id.casefold():
         raise ScenarioEvaluationBuildError(
             "ELIGIBILITY_RAIL_MISMATCH",
@@ -1473,14 +2384,22 @@ def _shared_pad_path_from_landing(
     return SharedPadViaPath(**fields)
 
 
-def _confirmed_metadata(scenario: ScenarioSpec) -> dict[str, Any]:
-    metadata = dict(scenario.base_project.metadata)
+def _confirmed_metadata(
+    scenario: ScenarioSpec,
+    *,
+    design_fingerprint: str | None = None,
+    project: ProjectSpec | None = None,
+) -> dict[str, Any]:
+    base = project if project is not None else scenario.base_project
+    metadata = dict(base.metadata)
     metadata.update(
         {
             "plane_pair_confirmed": True,
             "geometry_user_reviewed": False,
             "geometry_confirmation_source": "validated_read_only_spd_scenario",
-            "scenario_design_fingerprint": scenario.design_fingerprint,
+            "scenario_design_fingerprint": (
+                design_fingerprint or scenario.design_fingerprint
+            ),
         }
     )
     nested = metadata.get("spd_import")
@@ -1527,6 +2446,8 @@ def build_evaluation_project(
     scenario: ScenarioSpec,
     *,
     evaluation_rail_id: str | None = None,
+    _project: ProjectSpec | None = None,
+    _design_fingerprint: str | None = None,
 ) -> ProjectSpec:
     """Build and validate a solver project for the current scenario state.
 
@@ -1535,10 +2456,11 @@ def build_evaluation_project(
     mounted capacitor on an unrelated rail must not block the requested rail.
     """
 
-    base = scenario.base_project
+    base = _project if _project is not None else scenario.base_project
     rail_by_id = _lookup_casefold(base.rails, "rail_id")
     model_by_id = _lookup_casefold(base.cap_models, "model_id")
     via_by_id = _lookup_casefold(base.via_templates, "template_id")
+    template_ids_by_rail = _via_template_ids_by_rail(base)
 
     device_pins = [item for item in base.pins if item.kind == PinKind.DEVICE_BUMP]
     pins: list[PinRecord] = list(device_pins)
@@ -1556,6 +2478,19 @@ def build_evaluation_project(
             "SHARED_PAD_ANALYSIS_REQUIRED",
             "reopen the verified source SPD so shared-pad/via connectivity can be analyzed",
         )
+    geometry_rail_ids = tuple(
+        rail.rail_id
+        for rail in base.rails
+        if evaluation_rail_key is None
+        or rail.rail_id.casefold() == evaluation_rail_key
+    )
+    geometry_blockers = _evaluation_geometry_blockers(
+        scenario, geometry_rail_ids, _project=base
+    )
+    if geometry_blockers:
+        raise ScenarioEvaluationPreflightError(
+            EvaluationConnectivityPreflight(geometry_rail_ids, geometry_blockers)
+        )
     # ``build_evaluation_project`` is also a public boundary used by callers
     # that bypass UI batch preflight.  Keep the mixed-reference source-GND
     # witness fail-closed here, but only for rails this project will consume;
@@ -1570,7 +2505,9 @@ def build_evaluation_project(
             if rail.mixed_reference_certificate is not None
         }
     )
-    mixed_witness_failures = mixed_reference_ground_witness_failures(scenario)
+    mixed_witness_failures = mixed_reference_ground_witness_failures(
+        scenario, _project=base
+    )
     for rail in base.rails:
         if rail.rail_id.casefold() not in selected_mixed_rail_keys:
             continue
@@ -1652,12 +2589,12 @@ def build_evaluation_project(
         path_count = sum(map(len, power_landings_by_component)) + sum(
             map(len, ground_landings_by_component)
         )
-        if path_count > MAX_SHARED_PAD_VIA_PATHS:
+        if path_count > MAX_BATCHED_SHARED_PAD_VIA_PATHS:
             raise ScenarioEvaluationBuildError(
                 "SHARED_PAD_CLUSTER_TOO_LARGE",
                 f"shared-pad cluster {cluster_id!r} has {path_count:,} unique "
-                f"PWR/GND via paths; supported limit is "
-                f"{MAX_SHARED_PAD_VIA_PATHS:,}",
+                "PWR/GND via paths; exact-batched supported limit is "
+                f"{MAX_BATCHED_SHARED_PAD_VIA_PATHS:,}",
             )
         if (
             not member_components
@@ -1776,6 +2713,21 @@ def build_evaluation_project(
             component_id = ground_components[-1].component_id
             for decap in component_members:
                 ground_component_by_member[decap.refdes.casefold()] = component_id
+        exact_batch_eligible = (
+            len(power_components) == 1
+            and len(ground_components) == 1
+            and all(
+                not path.has_source_terminal_rl
+                for path in (*power_paths, *ground_paths)
+            )
+        )
+        if path_count > MAX_SHARED_PAD_VIA_PATHS and not exact_batch_eligible:
+            raise ScenarioEvaluationBuildError(
+                "SHARED_PAD_CLUSTER_TOO_LARGE",
+                f"shared-pad cluster {cluster_id!r} has {path_count:,} unique "
+                "PWR/GND via paths and requires a dense terminal model; "
+                f"supported dense limit is {MAX_SHARED_PAD_VIA_PATHS:,}",
+            )
         for decap in members:
             member_key = decap.refdes.casefold()
             power_component_id = power_component_by_member.get(member_key)
@@ -1818,6 +2770,15 @@ def build_evaluation_project(
                     cluster.reason
                     or f"shared-pad cluster {cluster.cluster_id!r} is unresolved",
                 )
+            continue
+        if evaluation_rail_key is not None and not any(
+            item.current_rail_id.casefold() == evaluation_rail_key
+            for item in members
+        ):
+            # A one-rail evaluation cannot consume an unrelated anchored
+            # cluster.  Avoid deriving its full current topology (and avoid
+            # letting a defect on another rail block the selected rail); a
+            # selected member still takes the exact fail-closed path below.
             continue
         derivation = derive_shared_pad_current_components(
             cluster,
@@ -1992,11 +2953,23 @@ def build_evaluation_project(
             and len(unique_ground) == 1
         ):
             continue
+        direct_rail = rail_by_id.get(decap.current_rail_id.casefold())
+        fallback_eligibility = (
+            _source_direct_fallback_eligibility(
+                decap,
+                connection,
+                direct_rail,
+                template_ids_by_rail,
+            )
+            if direct_rail is not None
+            else None
+        )
         rail, _eligibility, model, via = _validated_assignment(
             decap,
             rail_by_id=rail_by_id,
             model_by_id=model_by_id,
             via_by_id=via_by_id,
+            fallback_eligibility=fallback_eligibility,
         )
         has_recovered_terminal_path = any(
             landing.evidence_for_layer(rail.pwr_layer) is not None
@@ -2100,7 +3073,11 @@ def build_evaluation_project(
             "placements": [item.model_dump(mode="json") for item in placements],
             "partitions": [item.model_dump(mode="json") for item in partitions],
             "assumptions": _scenario_assumptions(base),
-            "metadata": _confirmed_metadata(scenario),
+            "metadata": _confirmed_metadata(
+                scenario,
+                design_fingerprint=_design_fingerprint,
+                project=base,
+            ),
         }
     )
     try:
@@ -2210,7 +3187,11 @@ def evaluate_comparison_batch(
     cancelled = is_cancelled or (lambda: False)
     profile = resolve_solver_profile(solver_profile)
     canonical_rails = _canonical_rail_ids(scenario, rail_ids)
-    connectivity = preflight_evaluation_connectivity(scenario, canonical_rails)
+    connectivity = preflight_evaluation_comparison(
+        scenario,
+        canonical_rails,
+        is_cancelled=cancelled,
+    )
     if not connectivity.is_clear:
         raise ScenarioEvaluationPreflightError(connectivity)
     prepared = scenario.with_baseline_captures(canonical_rails)
@@ -2454,6 +3435,7 @@ __all__ = [
     "build_evaluation_workspace",
     "evaluate_comparison_batch",
     "evaluate_scenario",
+    "preflight_evaluation_comparison",
     "preflight_evaluation_connectivity",
     "rehydrate_scenario_evaluation",
 ]
