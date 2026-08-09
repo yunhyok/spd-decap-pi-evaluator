@@ -1384,6 +1384,45 @@ def test_spd_import_honors_cancellation_without_loading_source(tmp_path: Path) -
         analyze_spd(source, is_cancelled=lambda: True)
 
 
+def test_spd_routing_asset_compile_does_not_swallow_one_shot_cancellation(
+    tmp_path: Path,
+) -> None:
+    source = tmp_path / "cancel-routing-asset.spd"
+    source.write_text(
+        MINI_SPD.replace(
+            "* Via description lines",
+            "* Trace description lines\n"
+            "Trace1::VDD_CORE/0 StartingNode = Node1!!101::VDD_CORE/0 "
+            "EndingNode = Node3!!1::VDD_CORE/0 Width = 0.02mm\n"
+            "* Via description lines",
+        ),
+        encoding="ascii",
+    )
+    compiling_routing = False
+    cancelled_once = False
+
+    def progress(_percent: int, message: str) -> None:
+        nonlocal compiling_routing
+        compiling_routing = message == "Compiling immutable signal-routing evidence"
+
+    def cancelled() -> bool:
+        nonlocal cancelled_once
+        if compiling_routing and not cancelled_once:
+            cancelled_once = True
+            return True
+        return False
+
+    with pytest.raises(SpdImportError, match="SPD import cancelled"):
+        analyze_spd(
+            source,
+            scope="decap_scenario",
+            progress=progress,
+            is_cancelled=cancelled,
+        )
+
+    assert cancelled_once
+
+
 def test_selected_unknown_plane_primitive_is_not_silently_ignored(
     tmp_path: Path,
 ) -> None:

@@ -975,6 +975,142 @@ def test_distribution_routing_protection_off_preserves_baseline_and_on_blocks() 
     )
 
 
+def test_routing_protection_off_matches_v021_distribution_regression_matrix() -> None:
+    """Freeze the legacy v0.21.0 planner outcomes when protection is OFF."""
+
+    direct_trap = _direct_scenario(
+        (
+            ("FLEX", 0.0, ("R1", "R2", "R3")),
+            ("ONLY_R2", 100.0, ("R1", "R2")),
+        ),
+        bump_x={"R2": 0.0, "R3": 0.0},
+    )
+    distance = _direct_scenario(
+        (
+            ("NEAR", 0.0, ("R1", "R2")),
+            ("MID", 50.0, ("R1", "R2")),
+            ("FAR", 100.0, ("R1", "R2")),
+        ),
+        rail_ids=("R1", "R2"),
+        bump_x={"R2": 0.0},
+    )
+    shared = _shared_chain_scenario()
+    exchange = _shared_exchange_scenario()
+    count_neutral = _with_initial_rails(
+        _direct_scenario(
+            (
+                ("A0", 0.0, ("R1", "R2")),
+                ("A1", 10.0, ("R1", "R2")),
+                ("B0", 100.0, ("R2", "R3")),
+                ("B1", 110.0, ("R2", "R3")),
+            ),
+            bump_x={"R2": 100.0, "R3": 200.0},
+        ),
+        {"B0": "R2", "B1": "R2"},
+    )
+    cases = (
+        (
+            "direct_trap",
+            direct_trap,
+            {("R1", "M1"): 0, ("R2", "M1"): 1, ("R3", "M1"): 1},
+            {},
+            DistributionDistanceMode.NEAREST,
+            ("FULL", 2, {"FLEX": "R3", "ONLY_R2": "R2"}, (), ()),
+        ),
+        (
+            "direct_nearest",
+            distance,
+            {("R1", "M1"): 2, ("R2", "M1"): 1},
+            {},
+            DistributionDistanceMode.NEAREST,
+            ("FULL", 1, {"NEAR": "R2"}, (), ()),
+        ),
+        (
+            "direct_farthest",
+            distance,
+            {("R1", "M1"): 2, ("R2", "M1"): 1},
+            {},
+            DistributionDistanceMode.FARTHEST,
+            ("FULL", 1, {"FAR": "R2"}, (), ()),
+        ),
+        (
+            "shared_chain",
+            shared,
+            {("R1", "M1"): 1, ("R2", "M1"): 2},
+            {},
+            DistributionDistanceMode.NEAREST,
+            (
+                "PARTIAL",
+                1,
+                {"A0": "R2"},
+                ("D1",),
+                ("PHYSICAL_CAPACITY_SHORTAGE",),
+            ),
+        ),
+        (
+            "shared_exchange_partial",
+            exchange,
+            {("R1", "M1"): 0, ("R2", "M1"): 3, ("R3", "M1"): 2},
+            {("R2", "M1"): 67.0},
+            DistributionDistanceMode.NEAREST,
+            (
+                "PARTIAL",
+                1,
+                {"A0": "R3", "X0": "R2", "X1": "R2"},
+                ("D1",),
+                ("PHYSICAL_CAPACITY_SHORTAGE",),
+            ),
+        ),
+        (
+            "shared_exchange_full",
+            exchange,
+            {("R1", "M1"): 0, ("R2", "M1"): 3, ("R3", "M1"): 1},
+            {("R2", "M1"): 67.0},
+            DistributionDistanceMode.NEAREST,
+            (
+                "FULL",
+                1,
+                {"A0": "R3", "X0": "R2", "X1": "R2"},
+                ("D1",),
+                (),
+            ),
+        ),
+        (
+            "count_neutral_exchange",
+            count_neutral,
+            {("R1", "M1"): 1, ("R2", "M1"): 2, ("R3", "M1"): 1},
+            {("R2", "M1"): 50.0},
+            DistributionDistanceMode.NEAREST,
+            ("FULL", 1, {"A1": "R2", "B1": "R3"}, (), ()),
+        ),
+    )
+
+    for name, scenario, targets, tolerances, mode, expected in cases:
+        default_off = compute_distribution_plan(
+            scenario,
+            targets,
+            mode,
+            tolerances=tolerances,
+        )
+        explicit_off = compute_distribution_plan(
+            scenario,
+            targets,
+            mode,
+            tolerances=tolerances,
+            routing_policy=SignalTraceAvoidancePolicy.disabled(),
+        )
+        assert explicit_off == default_off, name
+        assert default_off.routing_summary is None, name
+        actual = (
+            default_off.status.value,
+            default_off.fulfilled_count,
+            default_off.assignment_map,
+            default_off.isolation_gap_refdes,
+            tuple(item.code for item in default_off.diagnostics),
+        )
+        assert actual == expected, name
+
+
 def test_distribution_routing_unknown_is_hard_blocked_before_milp() -> None:
     scenario, attachments, plane = _scenario_with_routing_asset(
         trace_y_um=1_000.0, incomplete_layer="SIG1"
@@ -1065,6 +1201,77 @@ def test_protected_plan_apply_requires_the_same_routing_projection() -> None:
             off_plan,
             power_projection=protected_projection,
         )
+
+
+def test_protected_projection_is_bound_to_the_current_scenario_routing_asset() -> None:
+    safe_scenario, safe_attachments, plane = _scenario_with_routing_asset(
+        trace_y_um=1_000.0
+    )
+    blocked_scenario, _blocked_attachments, _blocked_plane = (
+        _scenario_with_routing_asset(trace_y_um=0.0)
+    )
+    assert blocked_scenario.design_fingerprint == safe_scenario.design_fingerprint
+    assert blocked_scenario.revision == safe_scenario.revision
+    assert (
+        blocked_scenario.routing_obstacle_asset
+        != safe_scenario.routing_obstacle_asset
+    )
+
+    targets = {("R1", "M1"): 0, ("R2", "M1"): 1}
+    policy = SignalTraceAvoidancePolicy.fixed(0.0)
+    safe_projection = distribution_module.build_distribution_power_projection(
+        safe_scenario,
+        safe_attachments,
+        plane_geometries=(plane,),
+        targets=targets,
+        routing_policy=policy,
+    )
+    assert safe_projection is not None
+    safe_plan = compute_distribution_plan(
+        safe_scenario,
+        targets,
+        power_projection=safe_projection,
+        routing_policy=policy,
+    )
+    assert safe_plan.assignment_map == {"C1": "R2"}
+
+    with pytest.raises(DistributionError) as compute_error:
+        compute_distribution_plan(
+            blocked_scenario,
+            targets,
+            power_projection=safe_projection,
+            routing_policy=policy,
+        )
+    assert compute_error.value.code == "ROUTING_PROJECTION_STALE"
+
+    with pytest.raises(DistributionError) as apply_error:
+        apply_distribution_plan(
+            blocked_scenario,
+            safe_plan,
+            power_projection=safe_projection,
+        )
+    assert apply_error.value.code == "ROUTING_PROJECTION_STALE"
+
+    # Routing evidence is intentionally outside the electrical fingerprint.
+    # OFF plans therefore remain reusable across evidence-only attachment drift.
+    off_projection = distribution_module.build_distribution_power_projection(
+        safe_scenario,
+        safe_attachments,
+        plane_geometries=(plane,),
+        targets=targets,
+    )
+    assert off_projection is not None
+    off_plan = compute_distribution_plan(
+        safe_scenario,
+        targets,
+        power_projection=off_projection,
+    )
+    off_applied = apply_distribution_plan(
+        blocked_scenario,
+        off_plan,
+        power_projection=off_projection,
+    )
+    assert off_applied.decaps[0].current_rail_id == "R2"
 
 
 def test_anchored_cluster_cannot_reuse_another_members_legacy_protected_rail() -> None:
@@ -1771,8 +1978,8 @@ def test_batch_via_eligibility_keeps_all_ground_pairs_for_one_power_plane() -> N
     assert result["V1"]["R2"].gnd_layer == "GND2"
 
 
-def test_batch_via_eligibility_persists_first_stack_order_target_layer() -> None:
-    """Several valid target planes choose the nearest layer from the mount side."""
+def test_batch_via_eligibility_keeps_legacy_off_order_and_protected_mount_side() -> None:
+    """OFF keeps v0.21 ordering; ON selects the nearest layer from the mount side."""
 
     def geometry(layer: str) -> SpdPlaneGeometry:
         return SpdPlaneGeometry(
@@ -1821,8 +2028,38 @@ def test_batch_via_eligibility_persists_first_stack_order_target_layer() -> None
         mount_side_by_via={"v1": "BOTTOM"},
     )
 
-    assert bottom["V1"]["R1"].destination_pwr_layer == "PWR_ALT"
-    assert "PWR_ALT" in str(bottom["V1"]["R1"].reason)
+    assert bottom["V1"]["R1"].destination_pwr_layer is None
+    assert "TOP" in str(bottom["V1"]["R1"].reason)
+
+    asset = RoutingObstacleAsset(
+        source_sha256="a" * 64,
+        stackup_fingerprint="b" * 64,
+        conductor_layers=("TOP", "PWR_ALT", "GND"),
+        segments=(),
+        layer_completeness=tuple(
+            RoutingLayerCompleteness(layer=name)
+            for name in ("TOP", "PWR_ALT", "GND")
+        ),
+        via_profiles=(
+            PlannedViaProfile(
+                profile_id="VT1",
+                radius_um_by_layer=(("TOP", 1.0), ("PWR_ALT", 1.0)),
+                fallback_barrel_radius_um=1.0,
+            ),
+        ),
+    )
+    protected_bottom = distribution_module._distribution_batch_via_eligibility(
+        (geometry("PWR_ALT"), geometry("TOP")),
+        (landing,),
+        choices,
+        pwr_layer_order={"top": 0, "pwr_alt": 3},
+        routing_asset=asset,
+        routing_policy=SignalTraceAvoidancePolicy.fixed(0.0),
+        mount_side_by_via={"v1": "BOTTOM"},
+    )
+
+    assert protected_bottom["V1"]["R1"].destination_pwr_layer == "PWR_ALT"
+    assert "PWR_ALT" in str(protected_bottom["V1"]["R1"].reason)
 
 
 def test_timeout_incumbent_requires_feasibility_and_full_receiver_demand() -> None:
@@ -1967,7 +2204,7 @@ def test_distribution_projection_uses_unselected_internal_power_plane_for_direct
     projected = projection.projected_decaps[0].eligibility["R2"]
     assert projected.pwr_layer == "TOP"
     assert projected.gnd_layer == "GND1"
-    assert projected.destination_pwr_layer == "PWR_ALT"
+    assert projected.destination_pwr_layer is None
     assert "PWR_ALT" in str(projected.reason)
     plan = compute_distribution_plan(
         scenario,

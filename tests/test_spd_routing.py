@@ -268,3 +268,38 @@ def test_duplicate_node_attribute_on_one_line_is_ambiguous(tmp_path: Path) -> No
 
     assert result.segments == ()
     assert result.statistics["unresolved_endpoint_records"] == 1
+
+
+def test_out_of_range_signal_geometry_is_unknown_without_aborting_import(
+    tmp_path: Path,
+) -> None:
+    payload = (
+        ".NetList\nSIG_A\n.EndNetList\n"
+        "* Node description lines\n"
+        "Node1::SIG_A X = 2000000000mm Y = 0mm Layer = SIG1\n"
+        "Node2::SIG_A X = 0mm Y = 0mm Layer = SIG1\n"
+        "* Trace description lines\n"
+        "Trace1::SIG_A StartingNode = Node1::SIG_A "
+        "EndingNode = Node2::SIG_A Width = 20um\n"
+        "* Via description lines\n"
+    ).encode()
+    path = tmp_path / "out-of-range-routing.spd"
+    path.write_bytes(payload)
+    with path.open("rb") as handle, mmap.mmap(
+        handle.fileno(), 0, access=mmap.ACCESS_READ
+    ) as data:
+        result = extract_spd_routing_obstacles(
+            data,
+            trace_start=data.find(b"* Trace description lines"),
+            trace_end=data.find(b"* Via description lines"),
+            node_start=data.find(b"* Node description lines"),
+            node_end=data.find(b"* Trace description lines"),
+            conductor_layers=("TOP", "SIG1", "BOTTOM"),
+            net_roles=parse_spd_routing_net_roles(data),
+        )
+
+    assert result.segments == ()
+    assert result.statistics["invalid_geometry_records"] == 1
+    sig1 = next(item for item in result.layer_completeness if item.layer == "SIG1")
+    assert not sig1.complete
+    assert "TRACE_GEOMETRY_OUT_OF_RANGE" in sig1.unresolved_codes

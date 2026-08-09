@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import csv
+from hashlib import sha256
 import os
 from dataclasses import replace
 from pathlib import Path
@@ -22,6 +23,7 @@ from openpyxl import load_workbook
 
 from test_spd_decap_distribution import (
     _direct_scenario,
+    _scenario_with_routing_asset,
     _shared_chain_scenario,
     _with_initial_rails,
 )
@@ -436,6 +438,39 @@ def test_routing_option_and_clearance_are_request_inputs_and_fail_closed_without
     )
     try:
         baseline = window._distribution_request_fingerprint()
+        legacy_payload = repr(
+            (
+                window._scenario.design_fingerprint,
+                window._scenario.revision,
+                tuple(
+                    sorted(
+                        (
+                            str(rail_id).casefold(),
+                            str(model_id).casefold(),
+                            int(value),
+                        )
+                        for (rail_id, model_id), value in (
+                            window._distribution_targets.items()
+                        )
+                    )
+                ),
+                tuple(
+                    sorted(
+                        (
+                            str(rail_id).casefold(),
+                            str(model_id).casefold(),
+                            float(value),
+                        )
+                        for (rail_id, model_id), value in (
+                            window._distribution_tolerances.items()
+                        )
+                    )
+                ),
+                window.distribution_distance_combo.currentData(),
+            )
+        ).encode("utf-8")
+        assert baseline == sha256(legacy_payload).hexdigest()
+        assert window._distribution_workbook_contract() == (3, {})
         window.distribution_protect_signal_routing_checkbox.setChecked(True)
         enabled_without_clearance = window._distribution_request_fingerprint()
         assert enabled_without_clearance != baseline
@@ -465,6 +500,39 @@ def test_routing_option_and_clearance_are_request_inputs_and_fail_closed_without
         window.distribution_protect_signal_routing_checkbox.setChecked(False)
         assert window._distribution_routing_policy().enabled is False
         assert not window.distribution_trace_clearance_edit.isEnabled()
+    finally:
+        window._dirty = False
+        window.close()
+        application.processEvents()
+
+
+def test_routing_asset_identity_affects_requests_only_when_protection_is_on() -> None:
+    application = _application()
+    scenario, _attachments, _plane = _scenario_with_routing_asset(trace_y_um=0.0)
+    reference = scenario.routing_obstacle_asset
+    assert reference is not None
+    drifted = scenario.model_copy(
+        update={
+            "routing_obstacle_asset": reference.model_copy(
+                update={"content_sha256": "0" * 64}
+            )
+        }
+    )
+    assert drifted.design_fingerprint == scenario.design_fingerprint
+    window = _window_with_scenario(scenario)
+    try:
+        off_original = window._distribution_request_fingerprint()
+        window._scenario = drifted
+        off_drifted = window._distribution_request_fingerprint()
+        assert off_drifted == off_original
+
+        window._scenario = scenario
+        window.distribution_protect_signal_routing_checkbox.setChecked(True)
+        window.distribution_trace_clearance_edit.setText("0")
+        on_original = window._distribution_request_fingerprint()
+        window._scenario = drifted
+        on_drifted = window._distribution_request_fingerprint()
+        assert on_drifted != on_original
     finally:
         window._dirty = False
         window.close()
@@ -1508,8 +1576,8 @@ def test_full_preview_exports_saves_and_applies_one_atomic_revision(
                 if key in (None, ""):
                     break
                 metadata[str(key)] = targets.cell(row_index, 2).value
-            assert metadata["Format Version"] == 4
-            assert metadata["Signal Routing Protection"] == "OFF"
+            assert metadata["Format Version"] == 3
+            assert "Signal Routing Protection" not in metadata
             assert metadata["Source SPD SHA-256"] == scenario.source.sha256
             assert metadata["Input Design Fingerprint"] == scenario.design_fingerprint
             assert metadata["Distance Mode"] == "NEAREST"

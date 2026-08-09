@@ -3175,24 +3175,46 @@ class MainWindow(QMainWindow):
                 for (rail_id, model_id), value in self._distribution_tolerances.items()
             )
         )
+        legacy_inputs: tuple[object, ...] = (
+            scenario.design_fingerprint,
+            scenario.revision,
+            target_items,
+            tolerance_items,
+            self.distribution_distance_combo.currentData(),
+        )
         try:
-            routing_policy_fingerprint = self._distribution_routing_policy().fingerprint
+            routing_policy = self._distribution_routing_policy()
         except ValueError:
-            routing_policy_fingerprint = (
-                "INVALID",
-                self.distribution_protect_signal_routing_checkbox.isChecked(),
-                self.distribution_trace_clearance_edit.text().strip(),
+            request_inputs = (
+                *legacy_inputs,
+                (
+                    "INVALID",
+                    self.distribution_protect_signal_routing_checkbox.isChecked(),
+                    self.distribution_trace_clearance_edit.text().strip(),
+                ),
             )
-        payload = repr(
-            (
-                scenario.design_fingerprint,
-                scenario.revision,
-                target_items,
-                tolerance_items,
-                self.distribution_distance_combo.currentData(),
-                routing_policy_fingerprint,
-            )
-        ).encode("utf-8")
+        else:
+            if not routing_policy.enabled:
+                request_inputs = legacy_inputs
+            else:
+                reference = scenario.routing_obstacle_asset
+                asset_identity = (
+                    None
+                    if reference is None
+                    else (
+                        reference.attachment_name,
+                        reference.attachment_sha256,
+                        reference.content_sha256,
+                        reference.schema_version,
+                        reference.compiler_policy,
+                    )
+                )
+                request_inputs = (
+                    *legacy_inputs,
+                    routing_policy.fingerprint,
+                    asset_identity,
+                )
+        payload = repr(request_inputs).encode("utf-8")
         return sha256(payload).hexdigest()
 
     def _distribution_routing_metadata(self, plan: Any | None = None) -> dict[str, object]:
@@ -3217,8 +3239,10 @@ class MainWindow(QMainWindow):
                 result["Trace-to-via Clearance (um)"] = policy.clearance_um
             return result
         policy = self._distribution_routing_policy()
+        if not policy.enabled:
+            return {}
         result = {
-            "Signal Routing Protection": "ON" if policy.enabled else "OFF",
+            "Signal Routing Protection": "ON",
             "Routing Protection Scope": policy.scope.value,
             "Routing Policy Version": policy.policy_version,
             "Routing Clearance Mode": policy.clearance_mode.value,
@@ -3227,16 +3251,37 @@ class MainWindow(QMainWindow):
             result["Trace-to-via Clearance (um)"] = policy.clearance_um
         scenario = self._scenario
         reference = scenario.routing_obstacle_asset if scenario is not None else None
-        if reference is not None:
-            result.update(
-                {
-                    "Routing Asset SHA-256": reference.attachment_sha256,
-                    "Routing Asset Content SHA-256": reference.content_sha256,
-                    "Routing Compiler Policy": reference.compiler_policy,
-                    "Routing Production Ready": reference.production_ready,
-                }
+        if reference is None:
+            raise ValueError(
+                "Signal-routing protection cannot be exported without a routing asset."
             )
+        result.update(
+            {
+                "Routing Asset SHA-256": reference.attachment_sha256,
+                "Routing Asset Content SHA-256": reference.content_sha256,
+                "Routing Compiler Policy": reference.compiler_policy,
+                "Routing Production Ready": reference.production_ready,
+            }
+        )
         return result
+
+    def _distribution_workbook_contract(
+        self, plan: Any | None = None
+    ) -> tuple[int, dict[str, object]]:
+        from ..distribution_workbook import (
+            DISTRIBUTION_LEGACY_OFF_WORKBOOK_FORMAT_VERSION,
+            DISTRIBUTION_WORKBOOK_FORMAT_VERSION,
+        )
+
+        routing_metadata = self._distribution_routing_metadata(plan)
+        return (
+            (
+                DISTRIBUTION_WORKBOOK_FORMAT_VERSION
+                if routing_metadata
+                else DISTRIBUTION_LEGACY_OFF_WORKBOOK_FORMAT_VERSION
+            ),
+            routing_metadata,
+        )
 
     def _sync_distribution_window(self) -> None:
         self._sync_board_assignment_controls()
@@ -3338,12 +3383,12 @@ class MainWindow(QMainWindow):
         path = Path(filename).with_suffix(".xlsx")
         headers, rows = self._distribution_matrix_values()
         try:
-            from ..distribution_workbook import DISTRIBUTION_WORKBOOK_FORMAT_VERSION
             from ..spreadsheet_export import write_distribution_workbook
 
             raw_distance_mode = self.distribution_distance_combo.currentData()
+            format_version, routing_metadata = self._distribution_workbook_contract()
             metadata: dict[str, object] = {
-                "Format Version": DISTRIBUTION_WORKBOOK_FORMAT_VERSION,
+                "Format Version": format_version,
                 "Application Version": __version__,
                 "Source SPD Name": scenario.source.name,
                 "Source SPD SHA-256": scenario.source.sha256,
@@ -3351,7 +3396,7 @@ class MainWindow(QMainWindow):
             }
             if raw_distance_mode in {"NEAREST", "FARTHEST"}:
                 metadata["Distance Mode"] = raw_distance_mode
-            metadata.update(self._distribution_routing_metadata())
+            metadata.update(routing_metadata)
             write_distribution_workbook(path, (), headers, rows, metadata=metadata)
         except (OSError, TypeError, ValueError) as exc:
             QMessageBox.critical(
@@ -4036,16 +4081,15 @@ class MainWindow(QMainWindow):
                     distribution_target_table,
                 )
                 from ..spreadsheet_export import write_distribution_workbook
-                from ..distribution_workbook import (
-                    DISTRIBUTION_WORKBOOK_FORMAT_VERSION,
-                )
-
                 target_headers, target_rows = distribution_target_table(plan)
                 inventory_headers, inventory_rows = distribution_inventory_table(plan)
                 raw_distance_mode = getattr(plan, "distance_mode", "")
                 distance_mode = str(
                     getattr(raw_distance_mode, "value", raw_distance_mode)
                 ).upper()
+                format_version, routing_metadata = (
+                    self._distribution_workbook_contract(plan)
+                )
                 write_distribution_workbook(
                     path,
                     decap_rows,
@@ -4054,7 +4098,7 @@ class MainWindow(QMainWindow):
                     inventory_headers=inventory_headers,
                     inventory_rows=inventory_rows,
                     metadata={
-                        "Format Version": DISTRIBUTION_WORKBOOK_FORMAT_VERSION,
+                        "Format Version": format_version,
                         "Application Version": __version__,
                         "Source SPD Name": self._scenario.source.name,
                         "Source SPD SHA-256": self._scenario.source.sha256,
@@ -4069,7 +4113,7 @@ class MainWindow(QMainWindow):
                             int(getattr(cell, "present_count", 0))
                             for cell in getattr(plan, "cells", ())
                         ),
-                        **self._distribution_routing_metadata(plan),
+                        **routing_metadata,
                     },
                 )
         except (OSError, TypeError, ValueError) as exc:

@@ -19,6 +19,7 @@ from .scenario import (
     SCENARIO_SCHEMA_VERSION,
     ScenarioSpec,
     _ScenarioValidationMemo,
+    _without_absent_destination_pwr_layer,
 )
 from .routing_obstacles import decode_routing_obstacle_asset
 
@@ -281,7 +282,15 @@ def save_scenario(
             f"{sorted(missing_project_assets)}"
         )
 
-    scenario_bytes = _canonical_json(persisted.model_dump(mode="json"))
+    scenario_payload = _without_absent_destination_pwr_layer(
+        persisted.model_dump(mode="json")
+    )
+    # Schema 0.1 predates the optional routing evidence reference.  Omitting a
+    # null reference keeps a legacy bundle that was merely opened and saved
+    # readable by v0.21; a non-null research asset remains intentionally new.
+    if scenario_payload.get("routing_obstacle_asset") is None:
+        scenario_payload.pop("routing_obstacle_asset", None)
+    scenario_bytes = _canonical_json(scenario_payload)
     if len(scenario_bytes) > MAX_SCENARIO_MEMBER_BYTES:
         raise ScenarioFormatError("scenario.json exceeds size limit")
     entries = [

@@ -10,7 +10,10 @@ from typing import Any
 from xlsxwriter import Workbook
 from xlsxwriter.exceptions import XlsxWriterException
 
-from .distribution_workbook import DISTRIBUTION_METADATA_TITLE
+from .distribution_workbook import (
+    DISTRIBUTION_METADATA_TITLE,
+    DISTRIBUTION_WORKBOOK_FORMAT_VERSION,
+)
 
 
 DECAP_CHANGE_HEADERS = (
@@ -90,6 +93,24 @@ def write_distribution_workbook(
         normalized_metadata
     ):
         raise ValueError("Distribution metadata keys must be unique")
+    metadata_by_key = {
+        key.casefold(): value for key, value in normalized_metadata
+    }
+    raw_format = metadata_by_key.get("format version")
+    if raw_format not in (None, ""):
+        try:
+            numeric_format = float(raw_format)
+        except (TypeError, ValueError):
+            numeric_format = -1.0
+        if (
+            isfinite(numeric_format)
+            and numeric_format.is_integer()
+            and int(numeric_format) >= DISTRIBUTION_WORKBOOK_FORMAT_VERSION
+            and "signal routing protection" not in metadata_by_key
+        ):
+            raise ValueError(
+                "format 4 Distribution metadata must record Signal Routing Protection"
+            )
 
     options = {
         "constant_memory": True,

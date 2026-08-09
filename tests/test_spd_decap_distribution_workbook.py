@@ -129,6 +129,38 @@ def test_current_export_keeps_two_sheets_a1_matrix_and_round_trips_metadata(
     assert imported.source_sha256 == source_sha
 
 
+def test_format3_without_source_keeps_both_legacy_warnings(tmp_path: Path) -> None:
+    path = tmp_path / "legacy-no-source.xlsx"
+    write_distribution_workbook(
+        path,
+        (),
+        ("PWR NET", "M1\nTarget"),
+        (("V1 (R1)", 1),),
+        metadata={"Format Version": 3},
+    )
+
+    imported = load_distribution_targets(
+        path,
+        rail_ids=("R1",),
+        model_ids=("M1",),
+        current_present={("R1", "M1"): 1},
+    )
+
+    assert any("restored OFF" in item for item in imported.warnings)
+    assert any("source identity was not recorded" in item for item in imported.warnings)
+
+
+def test_writer_rejects_format4_without_routing_mode_metadata(tmp_path: Path) -> None:
+    with pytest.raises(ValueError, match="Signal Routing Protection"):
+        write_distribution_workbook(
+            tmp_path / "invalid-v4.xlsx",
+            (),
+            ("PWR NET", "M1\nTarget"),
+            (("V1 (R1)", 1),),
+            metadata={"Format Version": 4},
+        )
+
+
 @pytest.mark.parametrize("result_header", ("Actual Changed", "Assignment Failed"))
 def test_import_ignores_legacy_and_current_assignment_result_columns(
     tmp_path: Path,

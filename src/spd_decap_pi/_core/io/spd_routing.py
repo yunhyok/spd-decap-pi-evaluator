@@ -360,8 +360,8 @@ def extract_spd_routing_obstacles(
                 record.trace_id,
                 "unresolved_provenance_count",
             )
-        segments.append(
-            RoutingTraceSegment(
+        try:
+            segment = RoutingTraceSegment(
                 trace_id=record.trace_id,
                 net=record.net,
                 layer=layer,
@@ -376,7 +376,20 @@ def extract_spd_routing_obstacles(
                 source_offset=record.source_offset,
                 thermal=record.thermal,
             )
-        )
+        except ValueError:
+            # Routing evidence is optional while protection is OFF.  A source
+            # geometry outside the bounded asset format must therefore make
+            # this layer UNKNOWN for protected planning, not abort the legacy
+            # SPD import path that does not consume the asset.
+            statistics["invalid_geometry_records"] += 1
+            mark_layer(
+                layer,
+                "TRACE_GEOMETRY_OUT_OF_RANGE",
+                record.trace_id,
+                "unresolved_provenance_count",
+            )
+            continue
+        segments.append(segment)
         layer_counts[layer.casefold()]["resolved_segments"] += 1
 
     completeness = tuple(

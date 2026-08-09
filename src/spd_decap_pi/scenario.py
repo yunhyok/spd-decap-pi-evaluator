@@ -2456,10 +2456,16 @@ class ScenarioSpec(ScenarioModel):
             metadata.attachment_name.casefold()
             for metadata in self.evaluation_cache.values()
         }
+        routing_attachment_key = (
+            self.routing_obstacle_asset.attachment_name.casefold()
+            if self.routing_obstacle_asset is not None
+            else None
+        )
         electrical_attachment_hashes = {
             name: digest
             for name, digest in self.attachment_hashes.items()
             if name.casefold() not in cached_attachment_keys
+            and name.casefold() != routing_attachment_key
         }
         decaps = [
             _without_absent_destination_pwr_layer(item.model_dump(mode="json"))
@@ -2480,10 +2486,6 @@ class ScenarioSpec(ScenarioModel):
         connection_payload = self._connection_payload_for_validation(memo)
         if connection_payload is not None:
             payload["connection_analysis"] = connection_payload
-        if self.routing_obstacle_asset is not None:
-            payload["routing_obstacle_asset"] = self.routing_obstacle_asset.model_dump(
-                mode="json"
-            )
         return payload
 
     def _design_fingerprint(

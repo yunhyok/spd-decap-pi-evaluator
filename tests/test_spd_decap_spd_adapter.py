@@ -16,6 +16,12 @@ from spd_decap_pi.scenario import (
     mixed_reference_ground_landing_identity,
 )
 from spd_decap_pi.scenario_io import ScenarioFormatError, save_scenario
+from spd_decap_pi.routing_obstacles import (
+    RoutingCandidateState,
+    SignalTraceAvoidancePolicy,
+    decode_routing_obstacle_asset,
+    evaluate_routing_candidate,
+)
 from spd_decap_pi.spd_adapter import (
     _raise_for_rejected_mixed_reference_landings,
     _via_target_layers_by_net,
@@ -46,6 +52,86 @@ def test_read_only_spd_import_builds_top_side_editable_scenario(tmp_path: Path):
     assert imported.scenario.base_project.placements == []
     assert imported.scenario.base_project.topology_maps == []
     assert all(item.confirmed for item in imported.scenario.base_project.partitions)
+
+
+def test_optional_routing_asset_bounds_do_not_break_legacy_spd_import(
+    tmp_path: Path,
+) -> None:
+    source = tmp_path / "out-of-range-signal-trace.spd"
+    payload = MINI_SPD.replace(
+        "* Via description lines",
+        "NodeRoute1::SIG_A X = 2000000000mm Y = 0mm "
+        "Layer = Signal$TOP\n"
+        "NodeRoute2::SIG_A X = 0mm Y = 0mm Layer = Signal$TOP\n"
+        "* Trace description lines\n"
+        "TraceRoute::SIG_A StartingNode = NodeRoute1::SIG_A "
+        "EndingNode = NodeRoute2::SIG_A Width = 20um\n"
+        "* Via description lines",
+    ).replace(
+        ".NetList\nDGND -> GroundNets",
+        ".NetList\nSIG_A\nDGND -> GroundNets",
+    )
+    source.write_text(payload, encoding="ascii")
+
+    imported = import_spd_scenario(source)
+
+    assert [item.refdes for item in imported.scenario.decaps] == ["C1", "C2"]
+    reference = imported.scenario.routing_obstacle_asset
+    assert reference is not None
+    asset = decode_routing_obstacle_asset(
+        imported.attachments[reference.attachment_name],
+        expected_source_sha256=imported.scenario.source.sha256,
+        expected_stackup_fingerprint=reference.stackup_fingerprint,
+    )
+    top = next(
+        item for item in asset.layer_completeness if item.layer == "Signal$TOP"
+    )
+    assert "TRACE_GEOMETRY_OUT_OF_RANGE" in top.unresolved_codes
+    assert asset.via_profiles
+    proof = evaluate_routing_candidate(
+        asset,
+        x_um=1_000.0,
+        y_um=2_000.0,
+        destination_layer="Signal$PWR",
+        mount_side="TOP",
+        profile_id=asset.via_profiles[0].profile_id,
+        policy=SignalTraceAvoidancePolicy.fixed(0.0),
+    )
+    assert proof.state == RoutingCandidateState.UNKNOWN
+
+
+def test_optional_routing_attachment_failure_does_not_break_import(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    source = tmp_path / "optional-routing-attachment-failure.spd"
+    payload = MINI_SPD.replace(
+        "* Via description lines",
+        "NodeRoute1::SIG_A X = 0mm Y = 0mm Layer = Signal$TOP\n"
+        "NodeRoute2::SIG_A X = 1mm Y = 0mm Layer = Signal$TOP\n"
+        "* Trace description lines\n"
+        "TraceRoute::SIG_A StartingNode = NodeRoute1::SIG_A "
+        "EndingNode = NodeRoute2::SIG_A Width = 20um\n"
+        "* Via description lines",
+    ).replace(
+        ".NetList\nDGND -> GroundNets",
+        ".NetList\nSIG_A\nDGND -> GroundNets",
+    )
+    source.write_text(payload, encoding="ascii")
+    monkeypatch.setattr(
+        spd_adapter,
+        "encode_routing_obstacle_asset",
+        lambda _asset: (_ for _ in ()).throw(ValueError("fixture asset failure")),
+    )
+
+    imported = import_spd_scenario(source)
+
+    assert [item.refdes for item in imported.scenario.decaps] == ["C1", "C2"]
+    assert imported.scenario.routing_obstacle_asset is None
+    assert any(
+        item.code == "SPD_SIGNAL_ROUTING_RESEARCH_ASSET_UNAVAILABLE"
+        for item in imported.diagnostics
+    )
 
 
 def test_adapter_preserves_many_to_many_cluster_via_evidence(

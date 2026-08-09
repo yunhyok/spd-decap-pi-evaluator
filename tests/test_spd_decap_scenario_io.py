@@ -281,6 +281,20 @@ def _rewrite_archive(path: Path, edits) -> None:
             archive.writestr(name, content)
 
 
+def test_noop_save_omits_new_null_fields_for_v021_readability(
+    tmp_path: Path,
+) -> None:
+    scenario = _scenario()
+    path = save_scenario(scenario, tmp_path / "legacy-compatible.spdpi")
+
+    with ZipFile(path) as archive:
+        raw = json.loads(archive.read(SCENARIO_FILENAME))
+
+    assert "routing_obstacle_asset" not in raw
+    assert "destination_pwr_layer" not in json.dumps(raw, sort_keys=True)
+    assert load_scenario(path).design_fingerprint == scenario.design_fingerprint
+
+
 def _mixed_reference_shared_scenario(
     tmp_path: Path,
     *,
@@ -930,6 +944,7 @@ def test_routing_attachment_binding_round_trips_and_rejects_metadata_drift(
             "routing_obstacle_asset": reference.model_dump(mode="python"),
         }
     )
+    assert persisted.design_fingerprint == base.design_fingerprint
 
     path = save_scenario(
         persisted,

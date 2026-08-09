@@ -287,7 +287,6 @@ def _eligibility_at_point(
                 net=rail.net,
                 pwr_layer=rail.pwr_layer,
                 gnd_layer=rail.gnd_layer,
-                destination_pwr_layer=plane.pwr_layer,
                 via_template_id=template_id,
                 allowed=True,
             )
@@ -1320,43 +1319,53 @@ def import_spd_scenario(
     }
     attachments = dict(plan.attachments)
     routing_asset_ref: RoutingObstacleAssetRef | None = None
+    routing_asset_diagnostics: list[SpdDiagnostic] = []
     if analysis.routing_extraction is not None:
-        conductor_layers = tuple(
-            item.name for item in base_project.stackup_layers if item.is_conductor
-        )
-        routing_asset = RoutingObstacleAsset(
-            source_sha256=analysis.source.sha256,
-            stackup_fingerprint=stackup_fingerprint(base_project.stackup_layers),
-            conductor_layers=conductor_layers,
-            segments=analysis.routing_extraction.segments,
-            layer_completeness=analysis.routing_extraction.layer_completeness,
-            via_profiles=_routing_via_profiles(base_project, analysis.padstacks),
-            compiler_policy=analysis.routing_extraction.compiler_policy,
-            production_ready=analysis.routing_extraction.production_ready,
-        )
-        routing_payload = encode_routing_obstacle_asset(routing_asset)
-        routing_name = routing_attachment_name(routing_payload)
-        attachments[routing_name] = routing_payload
-        decoded_routing_asset = decode_routing_obstacle_asset(
-            routing_payload,
-            expected_source_sha256=analysis.source.sha256,
-            expected_stackup_fingerprint=routing_asset.stackup_fingerprint,
-        )
-        routing_asset_ref = RoutingObstacleAssetRef(
-            attachment_name=routing_name,
-            attachment_sha256=sha256(routing_payload).hexdigest(),
-            content_sha256=str(decoded_routing_asset.content_sha256),
-            schema_version=decoded_routing_asset.schema_version,
-            source_sha256=decoded_routing_asset.source_sha256,
-            stackup_fingerprint=decoded_routing_asset.stackup_fingerprint,
-            scope=decoded_routing_asset.scope.value,
-            compiler_policy=decoded_routing_asset.compiler_policy,
-            production_ready=decoded_routing_asset.production_ready,
-            scope_limitation=decoded_routing_asset.scope_limitation,
-            via_profile_ids=tuple(
-                item.profile_id for item in decoded_routing_asset.via_profiles
-            ),
-        )
+        try:
+            conductor_layers = tuple(
+                item.name for item in base_project.stackup_layers if item.is_conductor
+            )
+            routing_asset = RoutingObstacleAsset(
+                source_sha256=analysis.source.sha256,
+                stackup_fingerprint=stackup_fingerprint(base_project.stackup_layers),
+                conductor_layers=conductor_layers,
+                segments=analysis.routing_extraction.segments,
+                layer_completeness=analysis.routing_extraction.layer_completeness,
+                via_profiles=_routing_via_profiles(base_project, analysis.padstacks),
+                compiler_policy=analysis.routing_extraction.compiler_policy,
+                production_ready=analysis.routing_extraction.production_ready,
+            )
+            routing_payload = encode_routing_obstacle_asset(routing_asset)
+            routing_name = routing_attachment_name(routing_payload)
+            decoded_routing_asset = decode_routing_obstacle_asset(
+                routing_payload,
+                expected_source_sha256=analysis.source.sha256,
+                expected_stackup_fingerprint=routing_asset.stackup_fingerprint,
+            )
+            attachments[routing_name] = routing_payload
+            routing_asset_ref = RoutingObstacleAssetRef(
+                attachment_name=routing_name,
+                attachment_sha256=sha256(routing_payload).hexdigest(),
+                content_sha256=str(decoded_routing_asset.content_sha256),
+                schema_version=decoded_routing_asset.schema_version,
+                source_sha256=decoded_routing_asset.source_sha256,
+                stackup_fingerprint=decoded_routing_asset.stackup_fingerprint,
+                scope=decoded_routing_asset.scope.value,
+                compiler_policy=decoded_routing_asset.compiler_policy,
+                production_ready=decoded_routing_asset.production_ready,
+                scope_limitation=decoded_routing_asset.scope_limitation,
+                via_profile_ids=tuple(
+                    item.profile_id for item in decoded_routing_asset.via_profiles
+                ),
+            )
+        except (ValueError, OverflowError) as exc:
+            routing_asset_diagnostics.append(
+                SpdDiagnostic(
+                    "warning",
+                    "SPD_SIGNAL_ROUTING_RESEARCH_ASSET_UNAVAILABLE",
+                    f"Optional signal-routing attachment was not created: {exc}",
+                )
+            )
     attachment_hashes = {
         name: sha256(payload).hexdigest()
         for name, payload in attachments.items()
@@ -1424,7 +1433,12 @@ def import_spd_scenario(
         scenario=scenario,
         attachments=attachments,
         diagnostics=tuple(
-            (*plan.diagnostics, *path_recovery.diagnostics, *mixed_ground_reachability_diagnostics)
+            (
+                *plan.diagnostics,
+                *path_recovery.diagnostics,
+                *mixed_ground_reachability_diagnostics,
+                *routing_asset_diagnostics,
+            )
         ),
         timings=timings,
     )

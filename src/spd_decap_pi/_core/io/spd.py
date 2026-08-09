@@ -3640,32 +3640,51 @@ def analyze_spd(
                 conductor_layers = tuple(
                     item.name for item in layers if item.is_conductor
                 )
-                routing_extraction = extract_spd_routing_obstacles(
-                    data,
-                    trace_start=trace_marker,
-                    trace_end=via_marker,
-                    node_start=node_marker if node_marker >= 0 else 0,
-                    node_end=(
-                        trace_marker
-                        if trace_marker > node_marker
-                        else via_marker
-                    ),
-                    conductor_layers=conductor_layers,
-                    net_roles=routing_roles,
-                    check=reporter.check,
-                )
-                diagnostics.append(
-                    SpdDiagnostic(
-                        "info",
-                        "SPD_SIGNAL_ROUTING_RESEARCH_ASSET",
-                        (
-                            "Compiled width-resolved SIGNAL-role Trace evidence "
-                            "for optional Distribution protection. This initial "
-                            "scope is research/provisional and does not certify "
-                            "routed PWR/GND, signal vias, pins or fanout pads."
+                try:
+                    routing_extraction = extract_spd_routing_obstacles(
+                        data,
+                        trace_start=trace_marker,
+                        trace_end=via_marker,
+                        node_start=node_marker if node_marker >= 0 else 0,
+                        node_end=(
+                            trace_marker
+                            if trace_marker > node_marker
+                            else via_marker
                         ),
+                        conductor_layers=conductor_layers,
+                        net_roles=routing_roles,
+                        check=reporter.check,
                     )
-                )
+                except SpdImportError:
+                    # Cancellation and other import-control failures are not
+                    # optional research-asset compiler failures.
+                    raise
+                except (ValueError, OverflowError) as exc:
+                    # This research evidence is optional for the legacy OFF
+                    # workflow.  Isolate bounded-format/compiler rejection to
+                    # the asset; protection ON will fail closed because no
+                    # asset is attached to the imported scenario.
+                    routing_extraction = None
+                    diagnostics.append(
+                        SpdDiagnostic(
+                            "warning",
+                            "SPD_SIGNAL_ROUTING_RESEARCH_ASSET_UNAVAILABLE",
+                            f"Optional signal-routing evidence was not compiled: {exc}",
+                        )
+                    )
+                else:
+                    diagnostics.append(
+                        SpdDiagnostic(
+                            "info",
+                            "SPD_SIGNAL_ROUTING_RESEARCH_ASSET",
+                            (
+                                "Compiled width-resolved SIGNAL-role Trace evidence "
+                                "for optional Distribution protection. This initial "
+                                "scope is research/provisional and does not certify "
+                                "routed PWR/GND, signal vias, pins or fanout pads."
+                            ),
+                        )
+                    )
 
             reporter.report(57, "Resolving referenced Node coordinates")
             node_start = node_marker if node_marker >= 0 else 0

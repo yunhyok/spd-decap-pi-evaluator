@@ -1126,7 +1126,12 @@ def _distribution_batch_via_eligibility(
     for via_key, landing in landing_by_key.items():
         at_landing: dict[str, RailEligibility] = {}
         mount_side = (mount_side_by_via or {}).get(via_key, "UNKNOWN").upper()
-        layer_direction = -1 if mount_side == "BOTTOM" else 1
+        # Preserve v0.21 top-to-bottom candidate ordering while protection is
+        # OFF.  Mount-side span ordering is routing-policy evidence and applies
+        # only to protected candidates.
+        layer_direction = (
+            -1 if routing_policy.enabled and mount_side == "BOTTOM" else 1
+        )
         pair_keys = allowed_pairs.get(via_key, set()) - boundary_pairs.get(
             via_key, set()
         )
@@ -1193,7 +1198,9 @@ def _distribution_batch_via_eligibility(
                     # selected pair, so Distribution must preserve them.
                     pwr_layer=str(getattr(rail, "pwr_layer")),
                     gnd_layer=str(getattr(rail, "gnd_layer")),
-                    destination_pwr_layer=destination_layer,
+                    destination_pwr_layer=(
+                        destination_layer if routing_policy.enabled else None
+                    ),
                     via_template_id=template_id,
                     allowed=True,
                     reason=(
@@ -1843,6 +1850,28 @@ def _scenario_with_distribution_power_projection(
 ) -> ScenarioSpec:
     if projection is None:
         return scenario
+    routing_summary = projection.routing_summary
+    if routing_summary is not None:
+        routing_reference = scenario.routing_obstacle_asset
+        if (
+            routing_reference is None
+            or routing_reference.attachment_name.casefold()
+            != routing_summary.asset_attachment_name.casefold()
+            or routing_reference.attachment_sha256.casefold()
+            != routing_summary.asset_attachment_sha256.casefold()
+            or routing_reference.content_sha256.casefold()
+            != routing_summary.asset_content_sha256.casefold()
+            or routing_reference.compiler_policy
+            != routing_summary.compiler_policy
+            or routing_reference.production_ready
+            != routing_summary.production_ready
+            or routing_reference.scope_limitation
+            != routing_summary.scope_limitation
+        ):
+            raise DistributionError(
+                "ROUTING_PROJECTION_STALE",
+                "routing asset changed after Distribution routing proof was prepared",
+            )
     if projection.source_sha256.casefold() != scenario.source.sha256.casefold():
         raise DistributionError(
             "POWER_PROJECTION_STALE",

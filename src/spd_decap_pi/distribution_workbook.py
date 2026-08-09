@@ -15,6 +15,7 @@ from .routing_obstacles import ROUTING_POLICY_VERSION
 
 DISTRIBUTION_TARGET_SHEET = "PWR NET Distribution Targets"
 DISTRIBUTION_METADATA_TITLE = "Distribution Run Metadata"
+DISTRIBUTION_LEGACY_OFF_WORKBOOK_FORMAT_VERSION = 3
 DISTRIBUTION_WORKBOOK_FORMAT_VERSION = 4
 
 TargetKey = tuple[str, str]
@@ -586,7 +587,7 @@ def load_distribution_targets(
             "Legacy workbook: immutable signal-routing protection was not recorded "
             "and was restored OFF."
         )
-    elif source_sha256 is None:
+    if source_sha256 is None:
         warnings.append(
             "Workbook source identity was not recorded; rail/component IDs were "
             "validated against the loaded SPD."
@@ -638,6 +639,7 @@ def load_distribution_targets(
 
 
 __all__ = [
+    "DISTRIBUTION_LEGACY_OFF_WORKBOOK_FORMAT_VERSION",
     "DISTRIBUTION_METADATA_TITLE",
     "DISTRIBUTION_TARGET_SHEET",
     "DISTRIBUTION_WORKBOOK_FORMAT_VERSION",
