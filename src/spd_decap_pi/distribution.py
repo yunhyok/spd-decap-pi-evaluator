@@ -12,6 +12,7 @@ from collections import defaultdict
 from dataclasses import dataclass
 from decimal import Decimal, InvalidOperation, ROUND_FLOOR
 from enum import StrEnum
+from hashlib import sha256
 from math import hypot, inf, isfinite
 from numbers import Real
 from time import monotonic
@@ -46,6 +47,14 @@ from .scenario import (
 from .scenario_edits import (
     ScenarioEditError,
     assign_rails_and_isolation_gaps_atomic,
+)
+from .routing_obstacles import (
+    RoutingCandidateState,
+    RoutingCollisionEvidence,
+    SignalTraceAvoidancePolicy,
+    decode_routing_obstacle_asset,
+    evaluate_routing_candidate,
+    stackup_fingerprint,
 )
 
 
@@ -83,6 +92,33 @@ class DistributionDiagnostic:
     actual_count: int | None = None
 
 
+@dataclass(frozen=True, slots=True)
+class DistributionRoutingEvidence:
+    via_id: str
+    x_um: float
+    y_um: float
+    destination_rail_id: str
+    destination_layer: str
+    state: RoutingCandidateState
+    detail: RoutingCollisionEvidence
+
+
+@dataclass(frozen=True, slots=True)
+class DistributionRoutingSummary:
+    policy: SignalTraceAvoidancePolicy
+    asset_attachment_name: str
+    asset_attachment_sha256: str
+    asset_content_sha256: str
+    compiler_policy: str
+    production_ready: bool
+    scope_limitation: str
+    checked_count: int
+    safe_count: int
+    blocked_count: int
+    unknown_count: int
+    evidence: tuple[DistributionRoutingEvidence, ...] = ()
+
+
 class DistributionError(ValueError):
     """Fail-closed planning or stale-plan error with UI-ready diagnostics."""
 
@@ -118,6 +154,7 @@ class _DistributionPowerProjection:
     source_analysis: SharedPadConnectionAnalysis
     projected_analysis: SharedPadConnectionAnalysis
     promoted_cluster_ids: tuple[str, ...]
+    routing_summary: DistributionRoutingSummary | None = None
 
 
 _GND_UNRESOLVED_PREFIX = "gnd top component has no source via anchor:"
@@ -758,6 +795,12 @@ def _is_distribution_physical_pwr_landing(landing: object) -> bool:
 
 def _distribution_component_eligibility(
     per_via: Sequence[Mapping[str, RailEligibility]],
+    *,
+    require_all_vias: bool = False,
+    per_via_layer_candidates: Sequence[
+        Mapping[tuple[str, str], RailEligibility]
+    ]
+    | None = None,
 ) -> dict[str, RailEligibility]:
     """Union PWR permissions of roots in one already-proven PWR component.
 
@@ -766,6 +809,52 @@ def _distribution_component_eligibility(
     restrictive, while a dummy remains ineligible on its own because only
     physical PWR Via maps enter this reducer.
     """
+
+    if require_all_vias:
+        if not per_via:
+            return {}
+        if per_via_layer_candidates is not None:
+            if len(per_via_layer_candidates) != len(per_via):
+                raise ValueError("per-via layer candidates do not match Via count")
+            common_layer_keys = set.intersection(
+                *(set(values) for values in per_via_layer_candidates)
+            )
+            result: dict[str, RailEligibility] = {}
+            # Candidate maps are inserted in mount-side-nearest stack order.
+            # Select the first layer that every retained column proved SAFE.
+            for key, item in per_via_layer_candidates[0].items():
+                rail_key, _layer_key = key
+                if key in common_layer_keys and item.allowed:
+                    result.setdefault(rail_key, item)
+            return {
+                item.rail_id: item
+                for _key, item in sorted(result.items(), key=lambda item: item[0])
+            }
+        allowed_keys_by_via = [
+            {
+                (
+                    item.rail_id.casefold(),
+                    (item.destination_pwr_layer or "").casefold(),
+                )
+                for item in values.values()
+                if item.allowed
+            }
+            for values in per_via
+        ]
+        common_keys = set.intersection(*allowed_keys_by_via)
+        result = {}
+        for values in per_via:
+            for item in values.values():
+                item_key = (
+                    item.rail_id.casefold(),
+                    (item.destination_pwr_layer or "").casefold(),
+                )
+                if item.allowed and item_key in common_keys:
+                    result.setdefault(item.rail_id.casefold(), item)
+        return {
+            item.rail_id: item
+            for _key, item in sorted(result.items(), key=lambda item: item[0])
+        }
 
     result: dict[str, RailEligibility] = {}
     for values in per_via:
@@ -777,6 +866,99 @@ def _distribution_component_eligibility(
         item.rail_id: item
         for _key, item in sorted(result.items(), key=lambda item: item[0])
     }
+
+
+def _distribution_align_via_layers(
+    via_eligibility: Mapping[str, Mapping[str, RailEligibility]],
+    layer_candidates_by_via: Mapping[
+        str, Mapping[tuple[str, str], RailEligibility]
+    ],
+    common: Mapping[str, RailEligibility],
+) -> dict[str, dict[str, RailEligibility]]:
+    """Persist the same all-columns destination layer selected by the reducer."""
+
+    result: dict[str, dict[str, RailEligibility]] = {}
+    for via_id, existing in via_eligibility.items():
+        updated = dict(existing)
+        candidates = layer_candidates_by_via.get(via_id.casefold(), {})
+        for selected in common.values():
+            destination = selected.destination_pwr_layer
+            if destination is None:
+                continue
+            key = (selected.rail_id.casefold(), destination.casefold())
+            candidate = candidates.get(key)
+            if candidate is None:
+                raise ValueError(
+                    "common Distribution layer is missing from one retained Via"
+                )
+            for raw_rail_id in tuple(updated):
+                if raw_rail_id.casefold() == selected.rail_id.casefold():
+                    del updated[raw_rail_id]
+            updated[candidate.rail_id] = candidate
+        result[via_id] = updated
+    return result
+
+
+def _distribution_routing_asset(
+    scenario: ScenarioSpec,
+    attachments: Mapping[str, bytes],
+    policy: SignalTraceAvoidancePolicy,
+):
+    if not policy.enabled:
+        return None
+    reference = scenario.routing_obstacle_asset
+    if reference is None:
+        raise DistributionError(
+            "ROUTING_ASSET_REQUIRED",
+            "routing protection is enabled but this scenario has no immutable "
+            "signal-routing asset; reopen the verified source SPD with this version",
+        )
+    payload = next(
+        (
+            content
+            for name, content in attachments.items()
+            if name.casefold() == reference.attachment_name.casefold()
+        ),
+        None,
+    )
+    if payload is None:
+        raise DistributionError(
+            "ROUTING_ASSET_REQUIRED",
+            f"routing attachment {reference.attachment_name!r} is missing",
+        )
+    if sha256(payload).hexdigest() != reference.attachment_sha256:
+        raise DistributionError(
+            "ROUTING_ASSET_STALE",
+            "routing attachment hash does not match the scenario binding",
+        )
+    try:
+        asset = decode_routing_obstacle_asset(
+            payload,
+            expected_source_sha256=scenario.source.sha256,
+            expected_stackup_fingerprint=stackup_fingerprint(
+                scenario.base_project.stackup_layers
+            ),
+        )
+    except ValueError as exc:
+        raise DistributionError(
+            "ROUTING_ASSET_STALE",
+            f"routing attachment failed validation: {exc}",
+        ) from exc
+    if (
+        asset.content_sha256 != reference.content_sha256
+        or asset.schema_version != reference.schema_version
+        or asset.scope.value != reference.scope
+        or asset.compiler_policy != reference.compiler_policy
+        or asset.production_ready != reference.production_ready
+        or asset.scope_limitation != reference.scope_limitation
+        or tuple(item.profile_id for item in asset.via_profiles)
+        != reference.via_profile_ids
+    ):
+        raise DistributionError(
+            "ROUTING_ASSET_STALE",
+            "routing attachment metadata does not match the scenario binding",
+        )
+    return asset
 
 
 def _distribution_replace_destination_eligibility(
@@ -827,6 +1009,15 @@ def _distribution_batch_via_eligibility(
     ],
     *,
     pwr_layer_order: Mapping[str, int] | None = None,
+    routing_asset: object | None = None,
+    routing_policy: SignalTraceAvoidancePolicy = SignalTraceAvoidancePolicy(),
+    mount_side_by_via: Mapping[str, str] | None = None,
+    routing_counts: dict[str, int] | None = None,
+    routing_evidence: list[DistributionRoutingEvidence] | None = None,
+    routing_layer_candidates: dict[
+        str, dict[tuple[str, str], RailEligibility]
+    ]
+    | None = None,
     progress: ProgressCallback | None = None,
     is_cancelled: CancelCallback | None = None,
 ) -> dict[str, dict[str, RailEligibility]]:
@@ -934,13 +1125,20 @@ def _distribution_batch_via_eligibility(
     result: dict[str, dict[str, RailEligibility]] = {}
     for via_key, landing in landing_by_key.items():
         at_landing: dict[str, RailEligibility] = {}
+        mount_side = (mount_side_by_via or {}).get(via_key, "UNKNOWN").upper()
+        layer_direction = -1 if mount_side == "BOTTOM" else 1
         pair_keys = allowed_pairs.get(via_key, set()) - boundary_pairs.get(
             via_key, set()
         )
         for pair_key in sorted(
             pair_keys,
             key=lambda item: (
-                (pwr_layer_order or {}).get(item[1].casefold(), inf),
+                (
+                    layer_direction
+                    * (pwr_layer_order or {})[item[1].casefold()]
+                    if item[1].casefold() in (pwr_layer_order or {})
+                    else inf
+                ),
                 item[1].casefold(),
                 item[2].casefold(),
                 item[0].casefold(),
@@ -951,15 +1149,51 @@ def _distribution_batch_via_eligibility(
                 # A rail can have copper on several retained PWR layers.  The
                 # nearest stack-order layer is deterministic Distribution proof
                 # metadata; no GND layer or connectivity is changed.
-                if rail_id in at_landing:
+                if not routing_policy.enabled and rail_id in at_landing:
                     continue
-                at_landing[rail_id] = RailEligibility(
+                destination_layer = pwr_layer_name_by_key.get(
+                    pair_key[1], pair_key[1]
+                )
+                if routing_policy.enabled:
+                    assert routing_asset is not None
+                    proof = evaluate_routing_candidate(
+                        routing_asset,  # type: ignore[arg-type]
+                        x_um=float(getattr(landing, "x_um")),
+                        y_um=float(getattr(landing, "y_um")),
+                        destination_layer=destination_layer,
+                        mount_side=mount_side,
+                        profile_id=(str(template_id) if template_id else None),
+                        policy=routing_policy,
+                    )
+                    if routing_counts is not None:
+                        routing_counts["checked"] = routing_counts.get("checked", 0) + 1
+                        key = proof.state.value.casefold()
+                        routing_counts[key] = routing_counts.get(key, 0) + 1
+                    if proof.state != RoutingCandidateState.SAFE:
+                        if routing_evidence is not None:
+                            for detail in proof.evidence[:4]:
+                                if len(routing_evidence) >= 256:
+                                    break
+                                routing_evidence.append(
+                                    DistributionRoutingEvidence(
+                                        via_id=str(getattr(landing, "via_id")),
+                                        x_um=float(getattr(landing, "x_um")),
+                                        y_um=float(getattr(landing, "y_um")),
+                                        destination_rail_id=rail_id,
+                                        destination_layer=destination_layer,
+                                        state=proof.state,
+                                        detail=detail,
+                                    )
+                                )
+                        continue
+                eligibility = RailEligibility(
                     rail_id=rail_id,
                     net=str(getattr(rail, "net")),
                     # Evaluation validates these generic fields against its
                     # selected pair, so Distribution must preserve them.
                     pwr_layer=str(getattr(rail, "pwr_layer")),
                     gnd_layer=str(getattr(rail, "gnd_layer")),
+                    destination_pwr_layer=destination_layer,
                     via_template_id=template_id,
                     allowed=True,
                     reason=(
@@ -969,6 +1203,14 @@ def _distribution_batch_via_eligibility(
                         "Evaluation-selected PWR/GND pair retained"
                     ),
                 )
+                if routing_policy.enabled and routing_layer_candidates is not None:
+                    routing_layer_candidates.setdefault(
+                        str(getattr(landing, "via_id")), {}
+                    ).setdefault(
+                        (rail_id.casefold(), destination_layer.casefold()),
+                        eligibility,
+                    )
+                at_landing.setdefault(rail_id, eligibility)
         result[str(getattr(landing, "via_id"))] = at_landing
     return result
 
@@ -981,6 +1223,7 @@ def build_distribution_power_projection(
     targets: Mapping[TargetKey, int] | None = None,
     tolerances: Mapping[ToleranceKey, float] | None = None,
     relevant_rail_ids: Sequence[str] | None = None,
+    routing_policy: SignalTraceAvoidancePolicy = SignalTraceAvoidancePolicy(),
     progress: ProgressCallback | None = None,
     is_cancelled: CancelCallback | None = None,
 ) -> _DistributionPowerProjection | None:
@@ -992,6 +1235,9 @@ def build_distribution_power_projection(
     that cluster fixed and unresolved.
     """
 
+    routing_asset = _distribution_routing_asset(
+        scenario, attachments, routing_policy
+    )
     analysis = scenario.connection_analysis
     if analysis is None or analysis.version != SHARED_PAD_ANALYSIS_VERSION:
         return None
@@ -1164,6 +1410,7 @@ def build_distribution_power_projection(
         cluster.cluster_id.casefold() for cluster in candidates
     }
     projection_landings: dict[str, object] = {}
+    mount_side_by_via: dict[str, str] = {}
     for refdes_key, connection in connection_by_key.items():
         cluster_key = (
             connection.cluster_id.casefold()
@@ -1181,6 +1428,18 @@ def build_distribution_power_projection(
             if previous is not None and previous != landing:
                 return None
             projection_landings[key] = landing
+            side = decap_by_key[refdes_key].side.value
+            previous_side = mount_side_by_via.get(key)
+            mount_side_by_via[key] = (
+                side
+                if previous_side is None or previous_side == side
+                else "UNKNOWN"
+            )
+    routing_counts: dict[str, int] = {}
+    routing_evidence: list[DistributionRoutingEvidence] = []
+    routing_layer_candidates: dict[
+        str, dict[tuple[str, str], RailEligibility]
+    ] = {}
     batch_via_eligibility = _distribution_batch_via_eligibility(
         exact_planes,
         tuple(projection_landings.values()),
@@ -1189,6 +1448,12 @@ def build_distribution_power_projection(
             layer.name.casefold(): index
             for index, layer in enumerate(scenario.base_project.stackup_layers)
         },
+        routing_asset=routing_asset,
+        routing_policy=routing_policy,
+        mount_side_by_via=mount_side_by_via,
+        routing_counts=routing_counts,
+        routing_evidence=routing_evidence,
+        routing_layer_candidates=routing_layer_candidates,
         progress=(
             (lambda value, message: progress(5 + round(value * 0.50), message))
             if progress is not None
@@ -1199,6 +1464,10 @@ def build_distribution_power_projection(
     batch_via_eligibility_by_key = {
         via_id.casefold(): values
         for via_id, values in batch_via_eligibility.items()
+    }
+    routing_layer_candidates_by_key = {
+        via_id.casefold(): values
+        for via_id, values in routing_layer_candidates.items()
     }
     # Likewise, an empty exact proof is a valid *negative* result.  Returning
     # ``None`` here would hand planning the legacy eligibility maps unchanged.
@@ -1233,13 +1502,28 @@ def build_distribution_power_projection(
             tuple(
                 batch_via_eligibility_by_key.get(landing.via_id.casefold(), {})
                 for landing in connection.power_vias
-            )
+            ),
+            require_all_vias=routing_policy.enabled,
+            per_via_layer_candidates=(
+                tuple(
+                    routing_layer_candidates_by_key.get(
+                        landing.via_id.casefold(), {}
+                    )
+                    for landing in connection.power_vias
+                )
+                if routing_policy.enabled
+                else None
+            ),
         )
         merged = _distribution_replace_destination_eligibility(
             decap.eligibility,
             common,
             destination_rail_keys=destination_rail_keys,
-            protected_rail_keys=(decap.source_rail_id, decap.current_rail_id),
+            protected_rail_keys=(
+                ()
+                if routing_policy.enabled
+                else (decap.source_rail_id, decap.current_rail_id)
+            ),
         )
         if merged != decap.eligibility:
             expanded_direct += 1
@@ -1277,6 +1561,11 @@ def build_distribution_power_projection(
                     decap_by_key[refdes.casefold()].current_rail_id,
                 )
             }
+            if routing_policy.enabled:
+                # Current labels are retained independently by the MILP.  A
+                # cluster-wide legacy permission must not become a movement
+                # root for another member whose own retained Via is BLOCKED.
+                protected_rail_keys = set()
             via_eligibility = {
                 landing.via_id: _distribution_replace_destination_eligibility(
                     source_via_eligibility.get(landing.via_id.casefold(), {}),
@@ -1287,7 +1576,26 @@ def build_distribution_power_projection(
                 )
                 for landing in landing_by_key.values()
             }
-            common = _distribution_component_eligibility(tuple(via_eligibility.values()))
+            common = _distribution_component_eligibility(
+                tuple(via_eligibility.values()),
+                require_all_vias=routing_policy.enabled,
+                per_via_layer_candidates=(
+                    tuple(
+                        routing_layer_candidates_by_key.get(
+                            landing.via_id.casefold(), {}
+                        )
+                        for landing in landing_by_key.values()
+                    )
+                    if routing_policy.enabled
+                    else None
+                ),
+            )
+            if routing_policy.enabled:
+                via_eligibility = _distribution_align_via_layers(
+                    via_eligibility,
+                    routing_layer_candidates_by_key,
+                    common,
+                )
             merged_common = _distribution_replace_destination_eligibility(
                 cluster.eligibility,
                 common,
@@ -1389,7 +1697,26 @@ def build_distribution_power_projection(
                 landing.via_id.casefold(), {}
             )
             via_eligibility[landing.via_id] = at_landing
-        common = _distribution_component_eligibility(tuple(via_eligibility.values()))
+        common = _distribution_component_eligibility(
+            tuple(via_eligibility.values()),
+            require_all_vias=routing_policy.enabled,
+            per_via_layer_candidates=(
+                tuple(
+                    routing_layer_candidates_by_key.get(
+                        landing.via_id.casefold(), {}
+                    )
+                    for landing in landing_by_key.values()
+                )
+                if routing_policy.enabled
+                else None
+            ),
+        )
+        if routing_policy.enabled:
+            via_eligibility = _distribution_align_via_layers(
+                via_eligibility,
+                routing_layer_candidates_by_key,
+                common,
+            )
         source_rail_keys = {
             decap_by_key[refdes.casefold()].source_rail_id.casefold()
             for refdes in cluster.member_refdes
@@ -1463,7 +1790,12 @@ def build_distribution_power_projection(
                 f"Verified {len(promoted):,} Distribution PWR cluster(s)",
             )
 
-    if not promoted and not expanded_direct and not expanded_clusters:
+    if (
+        not routing_policy.enabled
+        and not promoted
+        and not expanded_direct
+        and not expanded_clusters
+    ):
         return None
     projected_analysis = analysis.model_copy(
         update={
@@ -1473,6 +1805,25 @@ def build_distribution_power_projection(
     )
     if progress is not None:
         progress(100, f"Distribution PWR proof ready ({len(promoted):,} clusters)")
+    routing_summary = None
+    if routing_policy.enabled:
+        assert scenario.routing_obstacle_asset is not None
+        routing_summary = DistributionRoutingSummary(
+            policy=routing_policy,
+            asset_attachment_name=scenario.routing_obstacle_asset.attachment_name,
+            asset_attachment_sha256=(
+                scenario.routing_obstacle_asset.attachment_sha256
+            ),
+            asset_content_sha256=scenario.routing_obstacle_asset.content_sha256,
+            compiler_policy=scenario.routing_obstacle_asset.compiler_policy,
+            production_ready=scenario.routing_obstacle_asset.production_ready,
+            scope_limitation=scenario.routing_obstacle_asset.scope_limitation,
+            checked_count=routing_counts.get("checked", 0),
+            safe_count=routing_counts.get("safe", 0),
+            blocked_count=routing_counts.get("blocked", 0),
+            unknown_count=routing_counts.get("unknown", 0),
+            evidence=tuple(routing_evidence),
+        )
     return _DistributionPowerProjection(
         source_sha256=scenario.source.sha256,
         input_design_fingerprint=scenario.design_fingerprint,
@@ -1482,6 +1833,7 @@ def build_distribution_power_projection(
         source_analysis=analysis,
         projected_analysis=projected_analysis,
         promoted_cluster_ids=tuple(sorted(promoted, key=str.casefold)),
+        routing_summary=routing_summary,
     )
 
 
@@ -1658,6 +2010,7 @@ class DistributionPlan:
     export_rows: tuple[DistributionExportRow, ...]
     inventory_rows: tuple[DistributionInventoryRow, ...] = ()
     diagnostics: tuple[DistributionDiagnostic, ...] = ()
+    routing_summary: DistributionRoutingSummary | None = None
 
     @property
     def changed_count(self) -> int:
@@ -2920,6 +3273,7 @@ def compute_distribution_plan(
     *,
     tolerances: Mapping[ToleranceKey, float] | None = None,
     power_projection: _DistributionPowerProjection | None = None,
+    routing_policy: SignalTraceAvoidancePolicy = SignalTraceAvoidancePolicy(),
     progress: ProgressCallback | None = None,
     is_cancelled: CancelCallback | None = None,
     time_limit_s: float = 120.0,
@@ -2933,6 +3287,28 @@ def compute_distribution_plan(
     """
 
     input_scenario = scenario
+    projection_routing = (
+        power_projection.routing_summary
+        if power_projection is not None
+        else None
+    )
+    if routing_policy.enabled:
+        if projection_routing is None:
+            raise DistributionError(
+                "ROUTING_PROJECTION_REQUIRED",
+                "routing protection is enabled but no matching pre-MILP routing "
+                "projection was supplied",
+            )
+        if projection_routing.policy.fingerprint != routing_policy.fingerprint:
+            raise DistributionError(
+                "ROUTING_PROJECTION_STALE",
+                "routing protection policy changed after projection",
+            )
+    elif projection_routing is not None:
+        raise DistributionError(
+            "ROUTING_PROJECTION_STALE",
+            "a routing-protected projection cannot be used with protection OFF",
+        )
     scenario = _scenario_with_distribution_power_projection(
         scenario, power_projection
     )
@@ -3006,6 +3382,43 @@ def compute_distribution_plan(
 
     bumps_by_rail: dict[str, tuple[object, ...]] = {}
     diagnostics: list[DistributionDiagnostic] = []
+    if projection_routing is not None:
+        diagnostics.append(
+            DistributionDiagnostic(
+                code="IMMUTABLE_SIGNAL_ROUTING_FILTER_APPLIED",
+                message=(
+                    "pre-MILP immutable signal-routing filter checked "
+                    f"{projection_routing.checked_count:,} landing/destination "
+                    f"candidate(s): safe={projection_routing.safe_count:,}, "
+                    f"blocked={projection_routing.blocked_count:,}, "
+                    f"unknown={projection_routing.unknown_count:,}"
+                ),
+                requested_count=projection_routing.checked_count,
+                actual_count=projection_routing.safe_count,
+            )
+        )
+        if not projection_routing.production_ready:
+            diagnostics.append(
+                DistributionDiagnostic(
+                    code="ROUTING_RESEARCH_PROXY_ACTIVE",
+                    message=(
+                        "signal-routing protection is using the provisional "
+                        f"{projection_routing.compiler_policy} research classifier; "
+                        + projection_routing.scope_limitation
+                    ),
+                )
+            )
+        for evidence in projection_routing.evidence[:16]:
+            diagnostics.append(
+                DistributionDiagnostic(
+                    code=evidence.detail.code,
+                    message=(
+                        f"Via {evidence.via_id} -> {evidence.destination_rail_id}/"
+                        f"{evidence.destination_layer}: {evidence.detail.message}"
+                    ),
+                    rail_id=evidence.destination_rail_id,
+                )
+            )
     receiver_cells = {
         key for key, role in role_by_cell.items() if role == DistributionCellRole.RECEIVER
     }
@@ -3075,9 +3488,22 @@ def compute_distribution_plan(
         connection: ScenarioDecapConnection,
         cluster: SharedPadCluster,
         rail_key: str,
+        *,
+        allow_current_root: bool = True,
     ) -> bool:
         if not connection.power_vias:
             return False
+        if routing_policy.enabled:
+            decap = decap_by_key[connection.refdes.casefold()]
+            if allow_current_root and decap.current_rail_id.casefold() == rail_key:
+                # Keeping the already-realized current column requires no
+                # Distribution rebuild.  This exception is local to the Via
+                # owner and must not become another member's movement proof.
+                return True
+            if not _allowed_rail(
+                cluster.eligibility, rail_by_key[rail_key].rail_id
+            ):
+                return False
         return any(
             isinstance(
                 eligibility := _casefold_item(
@@ -3102,6 +3528,11 @@ def compute_distribution_plan(
         adjacency: dict[str, set[str]] = {key: set() for key in member_keys}
         for raw_left, raw_right in cluster.power_edges:
             left, right = raw_left.casefold(), raw_right.casefold()
+            if (
+                decap_by_key[left].pad_state == DecapPadState.ISOLATION_GAP
+                or decap_by_key[right].pad_state == DecapPadState.ISOLATION_GAP
+            ):
+                continue
             adjacency[left].add(right)
             adjacency[right].add(left)
         for rail_key in destination_rail_keys:
@@ -3109,11 +3540,20 @@ def compute_distribution_plan(
             # PWR component.  A member's own Via may be blind to this target;
             # the component is rooted when any physical PWR Via reaches it.
             # Via-less dummies therefore propagate a root but never create one.
-            eligible: set[str] = set(member_keys)
+            eligible: set[str] = {
+                key
+                for key in member_keys
+                if decap_by_key[key].pad_state != DecapPadState.ISOLATION_GAP
+            }
             roots: list[str] = []
             for ref_key in member_keys:
                 connection = connection_by_refdes[ref_key]
-                if shared_anchor_allows(connection, cluster, rail_key):
+                if shared_anchor_allows(
+                    connection,
+                    cluster,
+                    rail_key,
+                    allow_current_root=False,
+                ):
                     roots.append(ref_key)
             reachable = set(roots)
             pending = list(roots)
@@ -4991,6 +5431,7 @@ def compute_distribution_plan(
         export_rows=tuple(export_rows),
         inventory_rows=inventory.reconciliation_rows,
         diagnostics=tuple((*diagnostics, *physical_shortage)),
+        routing_summary=projection_routing,
     )
 
 
@@ -5010,6 +5451,30 @@ def apply_distribution_plan(
             "PLAN_STALE",
             "scenario changed after this distribution plan was calculated",
         )
+    projection_summary = (
+        power_projection.routing_summary
+        if power_projection is not None
+        else None
+    )
+    if (plan.routing_summary is None) != (projection_summary is None):
+        raise DistributionError(
+            "ROUTING_PROJECTION_STALE",
+            "plan and apply routing-protection modes do not match",
+        )
+    if plan.routing_summary is not None:
+        assert projection_summary is not None
+        if (
+            projection_summary.policy.fingerprint
+            != plan.routing_summary.policy.fingerprint
+            or projection_summary.asset_attachment_sha256
+            != plan.routing_summary.asset_attachment_sha256
+            or projection_summary.asset_content_sha256
+            != plan.routing_summary.asset_content_sha256
+        ):
+            raise DistributionError(
+                "ROUTING_PROJECTION_STALE",
+                "routing asset or clearance policy changed before plan apply",
+            )
     try:
         scenario = _scenario_with_distribution_power_projection(
             scenario, power_projection
@@ -5047,6 +5512,8 @@ __all__ = [
     "DistributionMove",
     "DistributionPlan",
     "DistributionPlanStatus",
+    "DistributionRoutingEvidence",
+    "DistributionRoutingSummary",
     "DistributionSacrifice",
     "TargetKey",
     "ToleranceKey",

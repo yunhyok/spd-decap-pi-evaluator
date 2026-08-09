@@ -2,15 +2,15 @@
 
 > 적용 프로그램: **SPD Decap PI Evaluator**
 >
-> GitHub 원격 게시 baseline: **v0.21.0 (`origin/main`)**
+> GitHub 원격 기준: **v0.21.0 (`origin/main`)**, 구현 PR: **v0.22.0**
 >
-> 연구에 사용한 로컬 snapshot: **v0.22.0 working tree (미출시)**
+> 구현 snapshot: **v0.22.0 `codex/decap-signal-trace-research-doc`**
 >
-> 문서 상태: **향후 코드 수정을 위한 연구·개선 지시서**
+> 문서 상태: **연구·개선 지시서 및 v0.22.0 구현 추적 기록**
 >
 > 작성 기준일: **2026-08-09**
 >
-> 현재 상태: 이 문서 작성 시점에는 production code에 trace 회피 기능을 구현하지 않았다.
+> 현재 상태: Phase A–C의 초기 `SIGNAL_NET_ONLY` research/provisional 구현을 PR에 반영했다. Phase D의 PowerSI 대조, LQ real-SPD 전체 oracle, 성능/메모리, packaged/installed UI sign-off는 아직 완료하지 않았다.
 
 ## 1. 목적
 
@@ -48,7 +48,7 @@ feasibility filter**로 구현한다.
 - 실제 SPD 두 개와 synthetic fixture를 이용한 회귀 기준
 - 향후 GUI option과 clearance 입력값이 보존되어야 할 metadata
 
-### 2.2 이번 연구에서 구현하지 않는 범위
+### 2.2 연구 작성 당시 구현하지 않는 범위
 
 - production parser, ScenarioSpec, GUI 또는 optimizer 코드 변경
 - 실제 SPD artwork 수정 또는 신규 antipad 작성
@@ -476,7 +476,7 @@ trace 제약으로 발생한 capacity shortfall을 표시한다.
 기본값은 기존 PI-first 동작과 호환되는 OFF로 둔다.
 
 ```text
-[ ] Protect immutable signal routing clearances
+[ ] Experimental: protect immutable signal routing clearances
     Trace-to-via clearance: [      ] µm
 ```
 
@@ -796,3 +796,54 @@ PWR1/PWR2 target과 PWR3/PWR4 target의 pass/block matrix를 고정한다.
 이 문서의 수치 결과는 연구용 `C=2w` 정책과 명시된 via profile에 종속된다. 향후
 사용자 입력 clearance를 도입하면 동일 fixture를 새 policy version으로 다시 계산하고,
 기존 결과를 덮어쓰지 말고 별도 baseline으로 보존한다.
+
+## 20. v0.22.0 구현 추적 (PR #3)
+
+### 20.1 구현 완료
+
+- logical Trace parser: inline Width, `+ Width`, `Thermal`, diagonal/zero-length, endpoint Node/layer join
+- `.NetList` group 기반 `SIGNAL/POWER/GROUND/UNKNOWN` role 분류; layer명과 net prefix heuristic 미사용
+- deterministic `SPD_SIGNAL_ROUTING_V1` zlib attachment, source/stackup/content/attachment SHA 검증 및 bounded decode
+- layer completeness와 `SAFE/BLOCKED/UNKNOWN` 상태, `BLOCKED > UNKNOWN > SAFE` 우선순위
+- point-to-segment exact distance, endpoint round-cap, `1e-6 µm` 접선 fail-closed
+- layer별 planned-via pad envelope와 명시적 analytical barrel provenance
+- exact destination PWR layer를 `RailEligibility.destination_pwr_layer`로 보존하고 legacy `None` fingerprint 호환
+- exact PWR-plane → routing filter → 동일 목적층의 all-retained-column 교집합 → MILP 순서 통합
+- `SIGNAL_NET_ONLY_RESEARCH_V1` Experimental UI checkbox, fixed clearance µm 입력, request/worker/apply stale 처리, preview diagnostics
+- workbook format 4의 option/clearance/policy/asset hash round-trip; 이전 format은 OFF 복원 경고
+- 합성 TOP–PWR1–SIG1–PWR3–BOTTOM span의 overlap, clearance, tangency, TOP/BOTTOM 방향, common destination, UNKNOWN, OFF 회귀
+- malformed/unsupported Trace grammar, duplicate Node ambiguity, bounded decode/index와 비정상 대형 clearance를 fail-closed 처리
+
+### 20.2 PC_2116 구현 parser 실측
+
+`D:\Downloads\PC_2116_S5I5600X08_1P_260606_final_1.spd`를 v0.22.0 parser로
+다시 스캔한 결과 source identity는 문서의 SHA/size와 일치했다.
+
+```text
+SHA-256 = 5eb8e34fc9bf3813e3d7b2a48a9b8b0c0a4b429ee647b3f8558ae49d23e261e6
+size    = 241,269,544 bytes
+Trace logical records = 903,114
+raw inline Width = 84,496
+raw continuation Width = 1,680
+raw unresolved Width = 816,938
+SIGNAL_NET_ONLY retained width-resolved segments = 3,578
+scope-excluded POWER/GROUND records = 898,625
+possible-signal width-unresolved records = 911
+referenced endpoint nodes = 8,978; resolved node identities = 7,082
+conductor layers = 38; incomplete layers = 5
+```
+
+이 수치는 `XX_*` prefix heuristic 집계와 동일한 지표가 아니다. 구현은 `.NetList` role을
+사용하며, width-unbounded possible-signal Trace를 mesh라고 간주하지 않는다. endpoint layer가
+확정되면 그 layer만 `UNKNOWN`으로 국소화하고, endpoint 자체가 불명확한 경우에만 보수적으로
+범위를 넓힌다. 따라서 이 파일은 parser/collision 연습에는 사용 가능하지만 현재의
+`SPD_NO_RAILS` import 제한과 incomplete evidence 때문에 end-to-end GUI golden file 또는
+production-safe block-rate 증거로 사용하지 않는다.
+
+### 20.3 명시적 제한과 남은 Phase D
+
+- `WIDTHED_SIGNAL_TRACE_PROXY_V1`은 physical-routing의 provisional research proxy이며 `production_ready=false`이다.
+- routed PWR/GND Trace, signal via, pin, pad, fanout pad는 초기 scope 밖이다.
+- barrel 외곽은 source pad shape가 없는 layer에서 기존 analytical plating assumption을 사용하며 provenance에 표시한다.
+- PC의 width-unresolved signal candidate가 911개 있으므로 해당 span은 fail-closed `UNKNOWN`이 될 수 있다.
+- LQ015B0 전체 parser/CORE/Thermal real-file 재실행, PC exact-plane collision oracle 재산출, PowerSI 수동 대조, 성능/메모리 benchmark, packaged EXE/installer UI 검증은 별도 sign-off 작업으로 남는다.

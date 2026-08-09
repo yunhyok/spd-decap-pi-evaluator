@@ -77,6 +77,7 @@ from spd_decap_pi._core.solver.research_uniform_profile import (
 )
 
 from ..scenario import DecapConnectionKind, DecapPadState, ScenarioDecap, ScenarioSpec
+from ..routing_obstacles import SignalTraceAvoidancePolicy
 from ..scenario_edits import (
     ProposedRailAssignmentAnalysis,
     ScenarioEditError,
@@ -1313,6 +1314,7 @@ def _job_compute_distribution(
     targets: dict[tuple[str, str], int],
     tolerances: dict[tuple[str, str], float],
     distance_mode: Any,
+    routing_policy: SignalTraceAvoidancePolicy = SignalTraceAvoidancePolicy(),
     *,
     progress: Callable[[int, str], None],
     is_cancelled: Callable[[], bool],
@@ -1334,6 +1336,7 @@ def _job_compute_distribution(
             attachments,
             targets=targets,
             tolerances=tolerances,
+            routing_policy=routing_policy,
             progress=lambda value, message: progress(
                 3 + round(float(value) * 0.27), message
             ),
@@ -1354,6 +1357,7 @@ def _job_compute_distribution(
             distance_mode,
             tolerances=tolerances,
             power_projection=power_projection,
+            routing_policy=routing_policy,
             progress=lambda value, message: progress(
                 32 + round(float(value) * 0.60), message
             ),
@@ -2046,6 +2050,49 @@ class MainWindow(QMainWindow):
             self._calculate_distribution
         )
         targets_layout.addLayout(option_row)
+        routing_row = QHBoxLayout()
+        self.distribution_protect_signal_routing_checkbox = QCheckBox(
+            "Experimental: protect immutable signal routing clearances"
+        )
+        self.distribution_protect_signal_routing_checkbox.setObjectName(
+            "distributionProtectSignalRouting"
+        )
+        self.distribution_protect_signal_routing_checkbox.setChecked(False)
+        self.distribution_protect_signal_routing_checkbox.setToolTip(
+            "When enabled, BLOCKED and UNKNOWN signal-Trace/via-column candidates "
+            "are removed before optimization. This is a provisional research "
+            "classifier; initial scope is SIGNAL Trace only."
+        )
+        self.distribution_protect_signal_routing_checkbox.toggled.connect(
+            self._distribution_routing_option_changed
+        )
+        routing_row.addWidget(self.distribution_protect_signal_routing_checkbox)
+        routing_row.addStretch(1)
+        routing_row.addWidget(QLabel("Trace-to-via clearance"))
+        self.distribution_trace_clearance_edit = QLineEdit()
+        self.distribution_trace_clearance_edit.setObjectName(
+            "distributionTraceClearanceUm"
+        )
+        self.distribution_trace_clearance_edit.setAccessibleName(
+            "Trace-to-via clearance in micrometres"
+        )
+        self.distribution_trace_clearance_edit.setPlaceholderText("enter value")
+        self.distribution_trace_clearance_edit.setMaximumWidth(110)
+        self.distribution_trace_clearance_edit.setEnabled(False)
+        self.distribution_trace_clearance_edit.textChanged.connect(
+            self._distribution_routing_clearance_changed
+        )
+        routing_row.addWidget(self.distribution_trace_clearance_edit)
+        routing_row.addWidget(QLabel("µm"))
+        targets_layout.addLayout(routing_row)
+        routing_scope_note = QLabel(
+            "Initial protection scope: width-resolved SIGNAL Trace objects. "
+            "Routed PWR/GND, signal vias, pins and fanout pads are not yet certified."
+        )
+        routing_scope_note.setObjectName("distributionSignalRoutingScopeNote")
+        routing_scope_note.setWordWrap(True)
+        routing_scope_note.setStyleSheet("color: #9aa4b2;")
+        targets_layout.addWidget(routing_scope_note)
         calculate_row = QHBoxLayout()
         self.import_distribution_targets_button = QPushButton("Import Targets...")
         self.import_distribution_targets_button.setObjectName(
@@ -2366,6 +2413,38 @@ class MainWindow(QMainWindow):
 
         return self._distribution_balance_state().legacy_tuple()
 
+    def _distribution_routing_policy(self) -> SignalTraceAvoidancePolicy:
+        if not self.distribution_protect_signal_routing_checkbox.isChecked():
+            return SignalTraceAvoidancePolicy.disabled()
+        raw = self.distribution_trace_clearance_edit.text().strip()
+        if not raw:
+            raise ValueError(
+                "Enter Trace-to-via clearance in µm when signal-routing "
+                "protection is enabled."
+            )
+        try:
+            clearance_um = float(raw)
+        except ValueError as exc:
+            raise ValueError("Trace-to-via clearance must be numeric.") from exc
+        return SignalTraceAvoidancePolicy.fixed(clearance_um)
+
+    def _distribution_routing_option_changed(self, checked: bool) -> None:
+        self.distribution_trace_clearance_edit.setEnabled(
+            checked and self._scenario is not None and self._worker is None
+        )
+        if self._distribution_plan is not None:
+            self._clear_distribution_preview(
+                "Signal-routing protection changed; calculate a new preview."
+            )
+        self._update_distribution_validation()
+
+    def _distribution_routing_clearance_changed(self, _text: str) -> None:
+        if self._distribution_plan is not None:
+            self._clear_distribution_preview(
+                "Trace-to-via clearance changed; calculate a new preview."
+            )
+        self._update_distribution_validation()
+
     def _update_distribution_validation(self) -> None:
         balance_state = self._distribution_balance_state()
         valid = balance_state.valid
@@ -2377,6 +2456,23 @@ class MainWindow(QMainWindow):
                 "Select Candidate order (Nearest or Farthest) before calculation.\n\n"
                 + narrative
             )
+        try:
+            routing_policy = self._distribution_routing_policy()
+        except ValueError as exc:
+            valid = False
+            narrative = f"{exc}\n\n" + narrative
+        else:
+            if (
+                routing_policy.enabled
+                and self._scenario is not None
+                and self._scenario.routing_obstacle_asset is None
+            ):
+                valid = False
+                narrative = (
+                    "This scenario has no immutable signal-routing asset. Reopen "
+                    "the verified source SPD with this version, or turn protection "
+                    "OFF.\n\n" + narrative
+                )
         if self._distribution_status_notice:
             narrative += f"\n\n{self._distribution_status_notice}"
         if self._distribution_import_notice:
@@ -2405,10 +2501,32 @@ class MainWindow(QMainWindow):
             "NEAREST",
             "FARTHEST",
         }
+        try:
+            routing_policy = self._distribution_routing_policy()
+            routing_ready = not (
+                routing_policy.enabled
+                and self._scenario is not None
+                and self._scenario.routing_obstacle_asset is None
+            )
+        except ValueError:
+            routing_ready = False
         self.calculate_distribution_button.setEnabled(
-            loaded and idle and numeric_valid and has_changes and distance_ready
+            loaded
+            and idle
+            and numeric_valid
+            and has_changes
+            and distance_ready
+            and routing_ready
         )
         self.import_distribution_targets_button.setEnabled(loaded and idle)
+        self.distribution_protect_signal_routing_checkbox.setEnabled(
+            loaded and idle
+        )
+        self.distribution_trace_clearance_edit.setEnabled(
+            loaded
+            and idle
+            and self.distribution_protect_signal_routing_checkbox.isChecked()
+        )
 
         can_apply = False
         if loaded and idle and self._distribution_plan is not None:
@@ -2477,6 +2595,24 @@ class MainWindow(QMainWindow):
                 self.distribution_distance_combo.setCurrentIndex(0)
             finally:
                 self.distribution_distance_combo.blockSignals(previous_block)
+        if hasattr(self, "distribution_protect_signal_routing_checkbox"):
+            previous_check_block = (
+                self.distribution_protect_signal_routing_checkbox.blockSignals(True)
+            )
+            previous_clearance_block = (
+                self.distribution_trace_clearance_edit.blockSignals(True)
+            )
+            try:
+                self.distribution_protect_signal_routing_checkbox.setChecked(False)
+                self.distribution_trace_clearance_edit.clear()
+                self.distribution_trace_clearance_edit.setEnabled(False)
+            finally:
+                self.distribution_protect_signal_routing_checkbox.blockSignals(
+                    previous_check_block
+                )
+                self.distribution_trace_clearance_edit.blockSignals(
+                    previous_clearance_block
+                )
         self._distribution_table_updating = True
         try:
             self.distribution_table.clear()
@@ -3039,6 +3175,14 @@ class MainWindow(QMainWindow):
                 for (rail_id, model_id), value in self._distribution_tolerances.items()
             )
         )
+        try:
+            routing_policy_fingerprint = self._distribution_routing_policy().fingerprint
+        except ValueError:
+            routing_policy_fingerprint = (
+                "INVALID",
+                self.distribution_protect_signal_routing_checkbox.isChecked(),
+                self.distribution_trace_clearance_edit.text().strip(),
+            )
         payload = repr(
             (
                 scenario.design_fingerprint,
@@ -3046,9 +3190,53 @@ class MainWindow(QMainWindow):
                 target_items,
                 tolerance_items,
                 self.distribution_distance_combo.currentData(),
+                routing_policy_fingerprint,
             )
         ).encode("utf-8")
         return sha256(payload).hexdigest()
+
+    def _distribution_routing_metadata(self, plan: Any | None = None) -> dict[str, object]:
+        summary = getattr(plan, "routing_summary", None) if plan is not None else None
+        if summary is not None:
+            policy = summary.policy
+            result: dict[str, object] = {
+                "Signal Routing Protection": "ON",
+                "Routing Protection Scope": policy.scope.value,
+                "Routing Policy Version": policy.policy_version,
+                "Routing Clearance Mode": policy.clearance_mode.value,
+                "Routing Asset SHA-256": summary.asset_attachment_sha256,
+                "Routing Asset Content SHA-256": summary.asset_content_sha256,
+                "Routing Checked Candidates": summary.checked_count,
+                "Routing Safe Candidates": summary.safe_count,
+                "Routing Blocked Candidates": summary.blocked_count,
+                "Routing Unknown Candidates": summary.unknown_count,
+                "Routing Compiler Policy": summary.compiler_policy,
+                "Routing Production Ready": summary.production_ready,
+            }
+            if policy.clearance_um is not None:
+                result["Trace-to-via Clearance (um)"] = policy.clearance_um
+            return result
+        policy = self._distribution_routing_policy()
+        result = {
+            "Signal Routing Protection": "ON" if policy.enabled else "OFF",
+            "Routing Protection Scope": policy.scope.value,
+            "Routing Policy Version": policy.policy_version,
+            "Routing Clearance Mode": policy.clearance_mode.value,
+        }
+        if policy.clearance_um is not None:
+            result["Trace-to-via Clearance (um)"] = policy.clearance_um
+        scenario = self._scenario
+        reference = scenario.routing_obstacle_asset if scenario is not None else None
+        if reference is not None:
+            result.update(
+                {
+                    "Routing Asset SHA-256": reference.attachment_sha256,
+                    "Routing Asset Content SHA-256": reference.content_sha256,
+                    "Routing Compiler Policy": reference.compiler_policy,
+                    "Routing Production Ready": reference.production_ready,
+                }
+            )
+        return result
 
     def _sync_distribution_window(self) -> None:
         self._sync_board_assignment_controls()
@@ -3163,6 +3351,7 @@ class MainWindow(QMainWindow):
             }
             if raw_distance_mode in {"NEAREST", "FARTHEST"}:
                 metadata["Distance Mode"] = raw_distance_mode
+            metadata.update(self._distribution_routing_metadata())
             write_distribution_workbook(path, (), headers, rows, metadata=metadata)
         except (OSError, TypeError, ValueError) as exc:
             QMessageBox.critical(
@@ -3199,7 +3388,25 @@ class MainWindow(QMainWindow):
                 current_present=dict(self._distribution_present_counts),
                 current_source_sha256=scenario.source.sha256,
                 current_design_fingerprint=scenario.design_fingerprint,
+                current_routing_asset_sha256=(
+                    scenario.routing_obstacle_asset.attachment_sha256
+                    if scenario.routing_obstacle_asset is not None
+                    else None
+                ),
+                current_routing_asset_content_sha256=(
+                    scenario.routing_obstacle_asset.content_sha256
+                    if scenario.routing_obstacle_asset is not None
+                    else None
+                ),
             )
+            if (
+                imported.routing_protection_enabled
+                and scenario.routing_obstacle_asset is None
+            ):
+                raise DistributionWorkbookError(
+                    "protected target workbook requires a routing asset, but the "
+                    "loaded scenario has none"
+                )
         except (OSError, ValueError) as exc:
             # DistributionWorkbookError is a ValueError; keep this boundary broad
             # enough for filesystem and dependency-level workbook failures.
@@ -3264,6 +3471,29 @@ class MainWindow(QMainWindow):
         finally:
             self.distribution_distance_combo.blockSignals(previous_combo_block)
 
+        previous_check_block = (
+            self.distribution_protect_signal_routing_checkbox.blockSignals(True)
+        )
+        previous_clearance_block = self.distribution_trace_clearance_edit.blockSignals(
+            True
+        )
+        try:
+            self.distribution_protect_signal_routing_checkbox.setChecked(
+                imported.routing_protection_enabled
+            )
+            self.distribution_trace_clearance_edit.setText(
+                ""
+                if imported.routing_clearance_um is None
+                else f"{imported.routing_clearance_um:g}"
+            )
+        finally:
+            self.distribution_protect_signal_routing_checkbox.blockSignals(
+                previous_check_block
+            )
+            self.distribution_trace_clearance_edit.blockSignals(
+                previous_clearance_block
+            )
+
         summary = imported.summary(Path(filename).name)
         self._distribution_import_notice = summary
         self.distribution_summary.setPlainText(
@@ -3313,6 +3543,7 @@ class MainWindow(QMainWindow):
             distance_mode = distribution_module.DistributionDistanceMode(
                 str(self.distribution_distance_combo.currentData()).upper()
             )
+            routing_policy = self._distribution_routing_policy()
         except (TypeError, ValueError) as exc:
             diagnostic_details = tuple(getattr(exc, "diagnostics", ()))
             detail_text = "; ".join(
@@ -3333,6 +3564,7 @@ class MainWindow(QMainWindow):
             dict(self._distribution_targets),
             dict(self._distribution_tolerances),
             distance_mode,
+            routing_policy,
         )
         self._run_worker(
             worker,
@@ -3387,6 +3619,36 @@ class MainWindow(QMainWindow):
             f"Selected PWR NET changes: {len(changes):,} decap(s)",
             f"Isolation-gap sacrifices: {len(sacrifices):,} decap cell(s)",
         ]
+        routing_summary = getattr(plan, "routing_summary", None)
+        if routing_summary is None:
+            lines.append("Immutable signal-routing protection: OFF")
+        else:
+            clearance = routing_summary.policy.clearance_um
+            clearance_text = (
+                f"{clearance:g} µm"
+                if clearance is not None
+                else (
+                    f"{routing_summary.policy.trace_width_multiplier:g}× trace width"
+                )
+            )
+            lines.extend(
+                (
+                    "Immutable signal-routing protection: ON "
+                    f"({routing_summary.policy.scope.value}, clearance "
+                    f"{clearance_text})",
+                    "Routing candidates: "
+                    f"checked {routing_summary.checked_count:,}, "
+                    f"safe {routing_summary.safe_count:,}, "
+                    f"blocked {routing_summary.blocked_count:,}, "
+                    f"unknown {routing_summary.unknown_count:,}",
+                    (
+                        "Routing evidence: production-ready"
+                        if routing_summary.production_ready
+                        else "Routing evidence: provisional research proxy; "
+                        + routing_summary.scope_limitation
+                    ),
+                )
+            )
         cells = getattr(plan, "cells", ())
         if isinstance(cells, dict):
             cells = cells.values()
@@ -3807,6 +4069,7 @@ class MainWindow(QMainWindow):
                             int(getattr(cell, "present_count", 0))
                             for cell in getattr(plan, "cells", ())
                         ),
+                        **self._distribution_routing_metadata(plan),
                     },
                 )
         except (OSError, TypeError, ValueError) as exc:
@@ -3930,6 +4193,7 @@ class MainWindow(QMainWindow):
             self.save_as_action,
             self.distribution_table,
             self.distribution_distance_combo,
+            self.distribution_protect_signal_routing_checkbox,
         ):
             widget.setEnabled(loaded)
         self.ai_rail_combo.setEnabled(loaded and bool(self._tuned_evaluations_by_rail))
@@ -3965,6 +4229,8 @@ class MainWindow(QMainWindow):
             self.plane_layer_bar,
             self.distribution_table,
             self.distribution_distance_combo,
+            self.distribution_protect_signal_routing_checkbox,
+            self.distribution_trace_clearance_edit,
         ):
             widget.setEnabled(not busy and self._scenario is not None)
         self.ai_button.setEnabled(

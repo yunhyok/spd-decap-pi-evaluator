@@ -38,6 +38,7 @@ from spd_decap_pi.distribution_workbook import (
 )
 from spd_decap_pi.evaluation import preflight_evaluation_connectivity
 from spd_decap_pi.gui.main_window import MainWindow, _job_compute_distribution
+from spd_decap_pi.routing_obstacles import SignalTraceAvoidancePolicy
 from spd_decap_pi.scenario import (
     DecapConnectionKind,
     DecapPadState,
@@ -189,6 +190,11 @@ def test_distribution_tab_matches_the_target_matrix_and_resizable_sections() -> 
         assert "Unfulfilled receiver demand" in assignment_failed.toolTip()
         assert window.distribution_distance_combo.itemData(0) == "NEAREST"
         assert window.distribution_distance_combo.itemData(1) == "FARTHEST"
+        assert not window.distribution_protect_signal_routing_checkbox.isChecked()
+        assert not window.distribution_trace_clearance_edit.isEnabled()
+        scope_note = window.findChild(QLabel, "distributionSignalRoutingScopeNote")
+        assert scope_note is not None
+        assert "SIGNAL Trace" in scope_note.text()
         assert not window.calculate_distribution_button.isEnabled()
         assert window.distribution_validation_label.text() == (
             "M1: Donor 0 | Receiver 0 | Balance +0"
@@ -413,6 +419,52 @@ def test_distribution_worker_result_is_discarded_when_targets_change(
 
         assert accepted == []
         assert "Discarded stale De-cap Distribution preview" == window.status_text.text()
+    finally:
+        window._dirty = False
+        window.close()
+        application.processEvents()
+
+
+def test_routing_option_and_clearance_are_request_inputs_and_fail_closed_without_asset(
+    monkeypatch,
+) -> None:
+    application = _application()
+    window = _window_with_scenario(
+        _direct_scenario(
+            (("C1", 0.0, ("R1", "R2")),), rail_ids=("R1", "R2")
+        )
+    )
+    try:
+        baseline = window._distribution_request_fingerprint()
+        window.distribution_protect_signal_routing_checkbox.setChecked(True)
+        enabled_without_clearance = window._distribution_request_fingerprint()
+        assert enabled_without_clearance != baseline
+        assert window.distribution_trace_clearance_edit.isEnabled()
+        assert "Enter Trace-to-via clearance" in window.distribution_summary.toPlainText()
+
+        window.distribution_trace_clearance_edit.setText("12.5")
+        with_clearance = window._distribution_request_fingerprint()
+        assert with_clearance != enabled_without_clearance
+        original_policy = window._distribution_routing_policy
+        monkeypatch.setattr(
+            window,
+            "_distribution_routing_policy",
+            lambda: SignalTraceAvoidancePolicy(
+                enabled=True,
+                clearance_um=12.5,
+                policy_version="SIGNAL_NET_ONLY_V_NEXT",
+            ),
+        )
+        assert window._distribution_request_fingerprint() != with_clearance
+        monkeypatch.setattr(window, "_distribution_routing_policy", original_policy)
+        assert not window.calculate_distribution_button.isEnabled()
+        assert "no immutable signal-routing asset" in (
+            window.distribution_summary.toPlainText()
+        )
+
+        window.distribution_protect_signal_routing_checkbox.setChecked(False)
+        assert window._distribution_routing_policy().enabled is False
+        assert not window.distribution_trace_clearance_edit.isEnabled()
     finally:
         window._dirty = False
         window.close()
@@ -1456,7 +1508,8 @@ def test_full_preview_exports_saves_and_applies_one_atomic_revision(
                 if key in (None, ""):
                     break
                 metadata[str(key)] = targets.cell(row_index, 2).value
-            assert metadata["Format Version"] == 3
+            assert metadata["Format Version"] == 4
+            assert metadata["Signal Routing Protection"] == "OFF"
             assert metadata["Source SPD SHA-256"] == scenario.source.sha256
             assert metadata["Input Design Fingerprint"] == scenario.design_fingerprint
             assert metadata["Distance Mode"] == "NEAREST"

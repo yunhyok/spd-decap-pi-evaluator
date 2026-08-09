@@ -1,6 +1,6 @@
 # De-cap Distribution 변동 규칙
 
-> 적용 프로그램: **SPD Decap PI Evaluator v0.21.0**
+> 적용 프로그램: **SPD Decap PI Evaluator v0.22.0**
 >
 > 문서 상태: 현재 구현 및 회귀 테스트에 대응하는 동작 규칙
 >
@@ -26,6 +26,21 @@
 7. Distribution의 `FULL/PARTIAL`은 수량/topology 상태이고 Evaluation의
    connectivity/modelability 상태와 동일하지 않다. Apply 후 Evaluation은 Original과
    Tuned/current 양쪽을 별도 preflight한다.
+
+## 1.1 Immutable signal routing 보호 옵션 (v0.22.0)
+
+- 기본값은 `OFF`이며 routing asset decode/collision filter를 완전히 우회하고 v0.21.0의 plane-containment/MILP 의미를 유지한다. v0.22.0은 보호 상태와 무관하게 선택된 exact 목적층 metadata를 기록한다.
+- `ON`이면 사용자가 `Trace-to-via clearance (µm)`를 직접 입력한다. 값은 finite, `>= 0`이어야 한다.
+- exact 목적 PWR-plane 판정 뒤, component/MILP 판정 전에 surface→실제 목적 PWR layer span의 routing obstacle을 검사한다.
+- 금지 반경은 `planned via radius + trace width / 2 + user clearance`이며 접선도 충돌로 처리한다.
+- 후보 상태는 `SAFE`, `BLOCKED`, `UNKNOWN`이다. `ON`에서는 `BLOCKED`와 `UNKNOWN`을 모두 hard-block한다.
+- 여러 PWR landing column을 유지하는 terminal은 `ON`에서 동일한 `(rail, exact destination layer)`에 대해 모든 column이 `SAFE`여야 한다.
+- 초기 scope는 `SIGNAL_NET_ONLY`이며 width-resolved SIGNAL-role `Trace`만 직접 충돌 검사한다. routed PWR/GND, signal via/pin/pad/fanout은 아직 scope 밖이다.
+- 현재 physical-routing 판정은 `WIDTHED_SIGNAL_TRACE_PROXY_V1` 연구 proxy이므로 PowerSI/DRC sign-off가 아니다. 이 상태와 scope limitation을 preview, diagnostics, workbook에 남긴다.
+- option, clearance, `SIGNAL_NET_ONLY_RESEARCH_V1` policy version, obstacle asset SHA는 request fingerprint와 workbook format 4에 포함된다. 옵션/값이 바뀌면 기존 preview는 stale 처리한다.
+
+상세 parser, asset, span, collision evidence 및 실제 SPD 연구 결과는
+[`DECAP_DISTRIBUTION_SIGNAL_TRACE_AVOIDANCE_RESEARCH_2026-08-09.md`](DECAP_DISTRIBUTION_SIGNAL_TRACE_AVOIDANCE_RESEARCH_2026-08-09.md)를 따른다.
 
 ## 2. 용어와 수량 정의
 

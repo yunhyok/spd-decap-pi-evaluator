@@ -20,6 +20,7 @@ from .scenario import (
     ScenarioSpec,
     _ScenarioValidationMemo,
 )
+from .routing_obstacles import decode_routing_obstacle_asset
 
 
 SCENARIO_FORMAT: Final = "spd-decap-pi-scenario"
@@ -179,6 +180,40 @@ def _write_member(archive: ZipFile, name: str, content: bytes) -> None:
     archive.writestr(_zip_info(name), content)
 
 
+def _validate_routing_attachment_binding(
+    scenario: ScenarioSpec, attachments: Mapping[str, bytes]
+) -> None:
+    reference = scenario.routing_obstacle_asset
+    if reference is None:
+        return
+    payload_by_key = {name.casefold(): payload for name, payload in attachments.items()}
+    payload = payload_by_key.get(reference.attachment_name.casefold())
+    if payload is None:
+        raise ScenarioFormatError("routing obstacle attachment is missing")
+    try:
+        asset = decode_routing_obstacle_asset(
+            payload,
+            expected_source_sha256=reference.source_sha256,
+            expected_stackup_fingerprint=reference.stackup_fingerprint,
+        )
+    except ValueError as exc:
+        raise ScenarioFormatError(f"routing obstacle attachment is invalid: {exc}") from exc
+    if asset.content_sha256 != reference.content_sha256:
+        raise ScenarioFormatError("routing obstacle content hash disagrees with scenario")
+    if asset.schema_version != reference.schema_version:
+        raise ScenarioFormatError("routing obstacle schema disagrees with scenario")
+    if asset.scope.value != reference.scope:
+        raise ScenarioFormatError("routing obstacle scope disagrees with scenario")
+    if asset.compiler_policy != reference.compiler_policy:
+        raise ScenarioFormatError("routing obstacle compiler policy disagrees with scenario")
+    if asset.production_ready != reference.production_ready:
+        raise ScenarioFormatError("routing obstacle readiness disagrees with scenario")
+    if asset.scope_limitation != reference.scope_limitation:
+        raise ScenarioFormatError("routing obstacle scope limitation disagrees with scenario")
+    if tuple(item.profile_id for item in asset.via_profiles) != reference.via_profile_ids:
+        raise ScenarioFormatError("routing obstacle via profiles disagree with scenario")
+
+
 def save_scenario(
     scenario: ScenarioSpec,
     path: str | os.PathLike[str],
@@ -230,6 +265,8 @@ def save_scenario(
         )
     except ValidationError as exc:
         raise ScenarioFormatError(f"scenario data failed validation: {exc}") from exc
+
+    _validate_routing_attachment_binding(persisted, attachment_bytes)
 
     project_attachment_names = {
         str(name).casefold()
@@ -535,6 +572,7 @@ def load_scenario_bundle(path: str | os.PathLike[str]) -> ScenarioBundle:
                 raise ScenarioFormatError(
                     "scenario attachment hashes do not match manifest attachments"
                 )
+            _validate_routing_attachment_binding(scenario, attachments)
             expected_fingerprint = _manifest_hash(
                 manifest.get("design_fingerprint"), label="design fingerprint"
             )

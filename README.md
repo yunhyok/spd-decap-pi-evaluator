@@ -1,8 +1,8 @@
-# SPD Decap PI Evaluator v0.21.0
+# SPD Decap PI Evaluator v0.22.0
 
-> **v0.21.0 reconnects De-cap Distribution with Evaluation Analysis without weakening moved-assignment validation.** An unchanged DIRECT capacitor may use its parser-proven source rail template when an alternate-assignment eligibility record is absent; a moved capacitor still requires exact destination eligibility and remains fail-closed. Distribution results now report `Assignment Failed`, and the main board exposes a read-only Source SPD / Current comparison. The title bar identifies the application as **SPD Decap PI Evaluator v0.21.0**.
+> **v0.22.0 adds optional, fail-closed immutable signal-Trace avoidance to De-cap Distribution.** The default remains OFF and preserves the v0.21 behavior. When enabled, the user supplies a fixed trace-to-via clearance in µm; `BLOCKED` and incomplete `UNKNOWN` landing/destination candidates are removed before MILP planning. The title bar identifies the application as **SPD Decap PI Evaluator v0.22.0**.
 
-> 프로그램: **SPD Decap PI Evaluator v0.21.0**
+> 프로그램: **SPD Decap PI Evaluator v0.22.0**
 > 저장소: 기존 PI Calculator와 분리된 독립 프로그램
 > 해석 경계: 선택한 PWR rail의 pre-design `Zii`; 최종 PowerSI/SIwave 검증을 대체하지 않음
 
@@ -10,6 +10,26 @@
 모델, enabled/disabled 상태를 바꾸면서 PI Evaluation 결과를 비교하는 Windows
 desktop 프로그램이다. Stackup, MLO 크기 또는 plane을 새로 작성하는 기능과
 Optimization Mode는 포함하지 않는다.
+
+## v0.22.0 optional signal-routing protection
+
+- Raw SPD import now reads logical `Trace` records, including inline Width, `+ Width` continuations, `Thermal` records, diagonal/zero-length segments, endpoint coordinates and conductor layers.
+- A deterministic SHA-bound routing attachment is stored in `.spdpi`; saved scenarios can reproduce the same routing decision without reopening the raw SPD. Attachment content, source SHA, stack-up fingerprint, schema, scope and planned-via profiles are validated on save/load.
+- `Experimental: protect immutable signal routing clearances` is OFF by default. When ON, `Trace-to-via clearance` is a finite nonnegative user value in µm. The documented `C = 2w` rule remains an offline research mode and is not a GUI default.
+- The filter runs after exact destination-plane containment and before component eligibility/MILP label creation. Tangency is blocked, and evidence gaps produce `UNKNOWN`, which is also rejected.
+- The first implementation scope is `SIGNAL_NET_ONLY`. Width-resolved SIGNAL-role Trace objects use the disclosed `WIDTHED_SIGNAL_TRACE_PROXY_V1` research classifier; routed PWR/GND copper, signal vias, pins, pads and fanout pads are not yet certified. The UI, diagnostics and workbook metadata disclose this limitation.
+- For a terminal with multiple retained PWR via columns, protection ON requires all retained columns to be safe. Protection OFF retains the historical one-root component rule.
+- Distribution workbook format 4 round-trips the protection option, fixed clearance, policy version and routing asset hashes. Older workbooks reopen with protection OFF and an explicit warning.
+- The supplied `PC_2116_S5I5600X08_1P_260606_final_1.spd` is supported as an offline parser/collision research corpus. Its existing scenario import limitation remains separate; it is not claimed as a GUI Import→Distribution golden file.
+
+Offline research scan example:
+
+```powershell
+python scripts\analyze_signal_routing_avoidance.py `
+  D:\Downloads\PC_2116_S5I5600X08_1P_260606_final_1.spd
+```
+
+See [the research and implementation directive](docs/DECAP_DISTRIBUTION_SIGNAL_TRACE_AVOIDANCE_RESEARCH_2026-08-09.md) for formulas, evidence policy, real-SPD measurements and remaining sign-off work.
 
 ## v0.21.0 Evaluation / Distribution integration
 
@@ -138,7 +158,7 @@ powershell.exe -ExecutionPolicy Bypass -NoProfile -File .\scripts\build_spd_deca
 산출물:
 
 - `dist\SPDDecapPIEvaluator\SPDDecapPIEvaluator.exe`
-- `installer-output\SPDDecapPIEvaluatorSetup-0.21.0.exe`
-- `installer-output\SPDDecapPIEvaluatorSetup-0.21.0.exe.sha256`
+- `installer-output\SPDDecapPIEvaluatorSetup-0.22.0.exe`
+- `installer-output\SPDDecapPIEvaluatorSetup-0.22.0.exe.sha256`
 
 프로그램명과 버전은 title bar와 installer metadata에 함께 표시된다.

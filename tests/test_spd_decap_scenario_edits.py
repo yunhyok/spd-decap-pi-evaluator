@@ -380,6 +380,15 @@ def test_legacy_normalized_project_without_cluster_field_keeps_hash_identity() -
         ).encode("utf-8")
         return sha256(encoded).hexdigest()
 
+    def legacy_decap_payload(item: ScenarioDecap) -> dict[str, object]:
+        payload = item.model_dump(mode="json")
+        for eligibility in payload.get("eligibility", {}).values():
+            if isinstance(eligibility, dict) and eligibility.get(
+                "destination_pwr_layer"
+            ) is None:
+                eligibility.pop("destination_pwr_layer", None)
+        return payload
+
     expected_design_fingerprint = legacy_hash(
         {
             "schema_version": legacy.schema_version,
@@ -388,8 +397,8 @@ def test_legacy_normalized_project_without_cluster_field_keeps_hash_identity() -
                 "sha256": legacy.source.sha256,
             },
             "normalized_project": legacy_project,
-            "decaps": [
-                item.model_dump(mode="json")
+                "decaps": [
+                    legacy_decap_payload(item)
                 for item in sorted(
                     legacy.decaps, key=lambda entry: entry.refdes.casefold()
                 )
