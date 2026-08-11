@@ -142,6 +142,8 @@ def test_policy_is_hash_bound_regression_only_and_has_exact_manifests():
     policy = _policy()
 
     assert MODULE._policy_sha256(POLICY) == MODULE.POLICY_SHA256
+    assert MODULE.RELEASE_IDENTITY["app_version"] == "0.23.0"
+    assert policy["release_identity"]["app_version"] == "0.23.0"
     assert policy["policy_name"] == "known_case_nonregression"
     assert policy["policy_hash_semantics"] == "canonical_json_utf8_sort_keys_compact"
     assert policy["claim_scope"] == "regression_only_not_accuracy"
@@ -382,6 +384,7 @@ def test_policy_schema_rejects_provenance_and_formula_tamper():
 def test_tracked_v5_validator_is_hash_bound_and_rejects_incomplete_report(tmp_path):
     validator = SCRIPT.with_name("validate_correlation_v5.py")
     assert MODULE._tracked_text_sha256(validator) == MODULE.TRACKED_V5_SHA256
+    assert 'APP_VERSION = "0.23.0"' in validator.read_text(encoding="utf-8")
     report_path = tmp_path / "incomplete.json"
     _write_json(report_path, {"schema_version": "powersi-correlation-report-v5"})
 

@@ -6,7 +6,7 @@
   "normalization": "none",
   "release_condition": "v5_pass_and_known_case_nonregression_sidecar_pass",
   "release_identity": {
-    "app_version": "0.22.0",
+    "app_version": "0.23.0",
     "solver_version": "modal-mvp-0.8.3",
     "solver_profile": "layerwise_admittance_v1",
     "solver_profile_key": "layerwise_admittance_v1",

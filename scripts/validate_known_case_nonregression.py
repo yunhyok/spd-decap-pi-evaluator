@@ -19,8 +19,8 @@ from pathlib import Path
 from typing import Any
 
 
-POLICY_SHA256 = "a36679b817dfe6f2c878f05825c31e72d67044808708053eedc8b6887a247bf3"
-TRACKED_V5_SHA256 = "28a23ceb2383dfaeaf2454242a2e12dbea3414d77e776c2cc97bb2f6baffffaa"
+POLICY_SHA256 = "a65ba24439825d53a65129a3af3269ac388e1e1a9cae40e2b194aad71dc6a8f7"
+TRACKED_V5_SHA256 = "2fe022df2977cb72fe87b659883cc02abd040b9e760dd47be886dcad06ceec51"
 BENCHMARK_SOURCE_SHA256 = (
     "5a777379eefdafee07d087f439489f93a80cba607497328966fadf36bcaad052"
 )
@@ -36,7 +36,7 @@ POLICY_METRIC_PATHS = {
     name: "metrics." + ".".join(path) for name, path in METRIC_PATHS.items()
 }
 RELEASE_IDENTITY = {
-    "app_version": "0.22.0",
+    "app_version": "0.23.0",
     "solver_version": "modal-mvp-0.8.3",
     "solver_profile": "layerwise_admittance_v1",
     "solver_profile_key": "layerwise_admittance_v1",
