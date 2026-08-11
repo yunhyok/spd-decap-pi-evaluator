@@ -3,6 +3,7 @@ from __future__ import annotations
 from hashlib import sha256
 import json
 from dataclasses import replace
+from types import SimpleNamespace
 
 import numpy as np
 import pytest
@@ -32,6 +33,7 @@ from spd_decap_pi._core.solver.evaluator import (
     evaluate_rail,
 )
 from spd_decap_pi._core.solver.profiles import (
+    APPLICATION_DEFAULT_SOLVER_PROFILE_KEY,
     DEFAULT_SOLVER_PROFILE_KEY,
     RESEARCH_UNIFORM_ADMITTANCE_PROFILE,
 )
@@ -256,6 +258,7 @@ def _manufactured_project(*, include_certificate: bool = True) -> tuple[ProjectS
 
 def test_profile_identity_is_immutable_default_and_cache_distinct() -> None:
     assert DEFAULT_SOLVER_PROFILE_KEY == "legacy_modal_v017"
+    assert APPLICATION_DEFAULT_SOLVER_PROFILE_KEY == "layerwise_admittance_v1"
     legacy = ScenarioResultKey.from_settings(
         design_fingerprint="b" * 64,
         rail_id="VDD/0",
@@ -358,6 +361,89 @@ def test_research_profile_never_falls_back_without_topology_certificate() -> Non
         build_uniform_c00_source_model(project, attachments, "VDD/0", template)
     assert caught.value.code == "TOPOLOGY_CERTIFICATE_MISSING"
     assert "Legacy modal" in str(caught.value)
+
+
+def test_workspace_forwards_progress_and_cancel_into_converged_solver(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    project, attachments = _manufactured_project()
+    events: list[tuple[int, str]] = []
+    captured: dict[str, object] = {}
+
+    def cancel_probe() -> bool:
+        return False
+
+    def fake_converged(
+        *_args,
+        progress,
+        is_cancelled,
+        **kwargs,
+    ):
+        captured["is_cancelled"] = is_cancelled
+        captured["max_refinement_iterations"] = kwargs[
+            "max_refinement_iterations"
+        ]
+        captured["max_new_frequency_points"] = kwargs[
+            "max_new_frequency_points"
+        ]
+        progress(50, "inner converged solve")
+        raise RuntimeError("stop after callback proof")
+
+    monkeypatch.setattr(
+        services, "evaluate_project_rail_converged", fake_converged
+    )
+
+    with pytest.raises(RuntimeError, match="stop after callback proof"):
+        services.evaluate_workspace(
+            WorkspaceState(project=project, attachments=attachments),
+            "VDD/0",
+            progress=lambda value, message: events.append((value, message)),
+            is_cancelled=cancel_probe,
+            solver_profile="legacy_modal_v017",
+        )
+
+    assert captured["is_cancelled"] is cancel_probe
+    assert captured["max_refinement_iterations"] == 3
+    assert captured["max_new_frequency_points"] == 64
+    assert (57, "inner converged solve") in events
+
+
+def test_layerwise_workspace_never_runs_without_mounted_termination_factory(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    project, attachments = _manufactured_project()
+    source = SimpleNamespace(substrate=object())
+    from spd_decap_pi._core.solver import layerwise_network
+
+    monkeypatch.setattr(
+        layerwise_network,
+        "build_layerwise_uniform_source_model",
+        lambda *_args, **_kwargs: source,
+    )
+
+    with pytest.raises(services.EvaluationReadinessError) as caught:
+        services.evaluate_workspace(
+            WorkspaceState(project=project, attachments=attachments),
+            "VDD/0",
+            solver_profile="layerwise_admittance_v1",
+        )
+
+    assert caught.value.code == "LAYERWISE_TERMINATION_MANIFEST_REQUIRED"
+
+
+def test_layerwise_records_shared_m12_schema_ceiling_without_stamping_modes() -> None:
+    assert services.evaluation_modal_convergence_ceiling(
+        8, "layerwise_admittance_v1"
+    ) == 12
+    assert services.evaluation_modal_convergence_ceiling(
+        10, "layerwise_admittance_v1"
+    ) == 12
+    assert services.evaluation_modal_convergence_ceiling(
+        6, "layerwise_admittance_v1"
+    ) == 6
+    assert services.evaluation_modal_convergence_ceiling(
+        8, "legacy_modal_v017"
+    ) == 8
 
 
 def test_missing_topology_certificate_precedes_device_pairing_diagnostic() -> None:

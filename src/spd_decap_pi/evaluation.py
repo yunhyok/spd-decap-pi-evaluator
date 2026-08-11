@@ -37,13 +37,29 @@ from spd_decap_pi._core.services import (
     EvaluationView,
     LocalAIAnalysisView,
     WorkspaceState,
+    evaluation_modal_convergence_ceiling,
     scoped_blas_threads,
 )
-from spd_decap_pi._core.solver import SOLVER_VERSION
+from spd_decap_pi._core.solver import (
+    CONVERGENCE_POLICY_VERSION,
+    DEFAULT_CURVATURE_THRESHOLD_DB,
+    DEFAULT_MAX_NEW_FREQUENCY_POINTS,
+    DEFAULT_MAX_REFINEMENT_ITERATIONS,
+    DEFAULT_MAX_TOLERANCE_DB,
+    DEFAULT_PEAK_SHIFT_TOLERANCE_PERCENT,
+    DEFAULT_RMS_TOLERANCE_DB,
+    SOLVER_VERSION,
+    compile_project_evaluation_template,
+)
 from spd_decap_pi._core.solver.profiles import (
     DEFAULT_SOLVER_PROFILE_KEY,
+    LAYERWISE_ADMITTANCE_PROFILE,
     LEGACY_MODAL_PROFILE,
     solver_profile as resolve_solver_profile,
+    solver_profile_static_identity_sha256,
+)
+from spd_decap_pi._core.solver.layerwise_network import (
+    LAYERWISE_COMPILER_VERSION,
 )
 from spd_decap_pi._core.via_model import ViaModelError, estimate_via_segment_rl
 
@@ -78,6 +94,21 @@ MAX_SHARED_PAD_VIA_PATHS = 128
 # path never materializes N x N terminal matrices during ordinary Evaluation,
 # so permit the largest source-proven production cluster with bounded headroom.
 MAX_BATCHED_SHARED_PAD_VIA_PATHS = 512
+
+_LAYERWISE_PROVENANCE_HASH_FIELDS = (
+    "static_compiler_algorithm_sha256",
+    "source_sha256",
+    "geometry_manifest_sha256",
+    "material_manifest_sha256",
+    "substrate_identity_sha256",
+    "ground_alias_manifest_sha256",
+    "via_group_evidence_sha256",
+    "surface_connectivity_evidence_sha256",
+    "terminal_surface_contact_proof_sha256",
+    "base_layerwise_evidence_sha256",
+    "termination_manifest_sha256",
+    "layerwise_identity_sha256",
+)
 
 
 class ScenarioEvaluationBuildError(ValueError):
@@ -368,6 +399,53 @@ class ScenarioEvaluationBatch:
                         f"unchanged comparison for {comparison.rail_id!r} has different results"
                     )
                 continue
+            if profile == LAYERWISE_ADMITTANCE_PROFILE:
+                # The layer-surface solve includes mounted terminations from
+                # every other rail.  Its Original identity is therefore the
+                # complete board-wide source configuration, not the legacy
+                # selected-rail BaselineCapture fingerprint.  Layerwise
+                # results are deliberately not persisted because the v0.1
+                # attachment schema cannot encode that all-rail dependency.
+                original = _comparison_original_configuration(
+                    self.updated_scenario
+                )
+                if (
+                    comparison.baseline_from_cache
+                    or baseline.design_fingerprint
+                    != original.design_fingerprint
+                ):
+                    raise ScenarioEvaluationCacheError(
+                        f"Original layerwise result for {comparison.rail_id!r} "
+                        "does not match the board-wide source configuration"
+                    )
+                for label, evaluation in (
+                    ("Original", baseline),
+                    ("Tuned", tuned),
+                ):
+                    manifest_sha = evaluation.view.solver_provenance.get(
+                        "termination_manifest_sha256"
+                    )
+                    if (
+                        not isinstance(manifest_sha, str)
+                        or len(manifest_sha) != 64
+                        or any(
+                            character not in "0123456789abcdef"
+                            for character in manifest_sha.casefold()
+                        )
+                    ):
+                        raise ScenarioEvaluationCacheError(
+                            f"{label} layerwise result for "
+                            f"{comparison.rail_id!r} has no mounted-state identity"
+                        )
+                if (
+                    comparison.configuration_unchanged
+                    and baseline.view != tuned.view
+                ):
+                    raise ScenarioEvaluationCacheError(
+                        f"unchanged comparison for {comparison.rail_id!r} "
+                        "has different results"
+                    )
+                continue
             capture = next(
                 (
                     item
@@ -449,7 +527,28 @@ def _evaluation_settings(
         "target_ohm": target_ohm,
         "modal_max_index": modal_max_index,
         "solver_profile": profile.key,
+        "modal_convergence_ceiling_index": evaluation_modal_convergence_ceiling(
+            modal_max_index, profile.key
+        ),
+        "convergence_policy": {
+            "version": CONVERGENCE_POLICY_VERSION,
+            "max_refinement_iterations": DEFAULT_MAX_REFINEMENT_ITERATIONS,
+            "max_new_frequency_points_per_iteration": (
+                DEFAULT_MAX_NEW_FREQUENCY_POINTS
+            ),
+            "curvature_threshold_db": DEFAULT_CURVATURE_THRESHOLD_DB,
+            "rms_tolerance_db": DEFAULT_RMS_TOLERANCE_DB,
+            "max_tolerance_db": DEFAULT_MAX_TOLERANCE_DB,
+            "peak_shift_tolerance_percent": (
+                DEFAULT_PEAK_SHIFT_TOLERANCE_PERCENT
+            ),
+        },
     }
+    if profile == LAYERWISE_ADMITTANCE_PROFILE:
+        settings["solver_static_identity_sha256"] = (
+            solver_profile_static_identity_sha256(profile)
+        )
+        return settings
     if not profile.experimental:
         return settings
     if solver_provenance is None:
@@ -637,6 +736,7 @@ def _source_direct_fallback_eligibility(
         net=rail.net,
         pwr_layer=rail.pwr_layer,
         gnd_layer=rail.gnd_layer,
+        destination_pwr_layer=rail.pwr_layer,
         via_template_id=template_id,
         allowed=True,
     )
@@ -1023,21 +1123,221 @@ def _evaluation_geometry_blockers(
     return tuple(blockers)
 
 
+def _layerwise_artwork_bounds_um(
+    project: ProjectSpec, rail: RailSpec
+) -> tuple[float, float, float, float]:
+    """Union every retained layer bbox for one net without decoding geometry."""
+
+    spd_import = project.metadata.get("spd_import")
+    records = (
+        spd_import.get("plane_geometries", ())
+        if isinstance(spd_import, Mapping)
+        else ()
+    )
+    bounds: list[tuple[float, float, float, float]] = []
+    for record in records:
+        if (
+            not isinstance(record, Mapping)
+            or str(record.get("net", "")).casefold() != rail.net.casefold()
+        ):
+            continue
+        raw = record.get("bbox_um")
+        if (
+            not isinstance(raw, Sequence)
+            or isinstance(raw, (str, bytes))
+            or len(raw) != 4
+        ):
+            continue
+        candidate = tuple(float(value) for value in raw)
+        if (
+            all(isfinite(value) for value in candidate)
+            and candidate[1] > candidate[0]
+            and candidate[3] > candidate[2]
+        ):
+            bounds.append(candidate)  # type: ignore[arg-type]
+    if not bounds:
+        raise ScenarioEvaluationBuildError(
+            "LAYERWISE_ARTWORK_BOUNDS_MISSING",
+            f"rail {rail.rail_id!r} has no retained multilayer artwork bbox",
+        )
+    return (
+        min(item[0] for item in bounds),
+        max(item[1] for item in bounds),
+        min(item[2] for item in bounds),
+        max(item[3] for item in bounds),
+    )
+
+
+def _layerwise_profile_project(
+    scenario: ScenarioSpec,
+    project: ProjectSpec,
+    rail_ids: Sequence[str],
+) -> ProjectSpec:
+    """Return a transient aggregate-artwork/terminal compatibility envelope.
+
+    Exact adjacent-gap blocks and external Device ports come from retained
+    source evidence.  The shared request/template schema still requires a
+    finite rectangle, so use the union of retained layer bboxes and extend it
+    only as far as a real Device launch footprint requires.  In the production
+    terminal-complete path this rectangle is provenance/compatibility data: no
+    legacy rectangular modal term or higher-mode correction is added to Zii.
+    Mounted decaps therefore never expand it.  No Device terminal is clamped,
+    moved, or dropped; every extension remains recorded for audit.
+    """
+
+    selected = {item.casefold() for item in rail_ids}
+    rail_by_key = {
+        rail.rail_id.casefold(): rail
+        for rail in project.rails
+        if rail.rail_id.casefold() in selected
+    }
+    artwork_bounds = {
+        key: _layerwise_artwork_bounds_um(project, rail)
+        for key, rail in rail_by_key.items()
+    }
+
+    def rebuild_partitions(
+        bounds_by_key: Mapping[str, tuple[float, float, float, float]]
+    ) -> tuple[Any, ...]:
+        updated = []
+        for partition in project.partitions:
+            domain_to_rail = {
+                rail.domain: key
+                for key, rail in rail_by_key.items()
+                if rail.pwr_layer.casefold() == partition.layer.casefold()
+                and rail.domain in partition.domain_to_cell
+            }
+            cell_key = {
+                partition.domain_to_cell[domain]: key
+                for domain, key in domain_to_rail.items()
+            }
+            cells = []
+            for cell in partition.cells:
+                key = cell_key.get(cell.cell_id)
+                if key is None:
+                    cells.append(cell)
+                    continue
+                x_min, x_max, y_min, y_max = bounds_by_key[key]
+                cells.append(
+                    cell.model_copy(
+                        update={
+                            "x_min_um": x_min,
+                            "x_max_um": x_max,
+                            "y_min_um": y_min,
+                            "y_max_um": y_max,
+                            "nominal_x_min_um": None,
+                            "nominal_x_max_um": None,
+                            "nominal_y_min_um": None,
+                            "nominal_y_max_um": None,
+                            "source_net": None,
+                            "source_geometry_asset": None,
+                            "source_geometry_sha256": None,
+                            "source_positive_polygons_um": [],
+                            "source_negative_polygons_um": [],
+                            "source_positive_circles_um": [],
+                            "source_negative_circles_um": [],
+                            "source_primitive_order": [],
+                            "source_positive_subelement_count": 0,
+                            "source_negative_subelement_count": 0,
+                            "solver_geometry": "active_bounds",
+                        }
+                    )
+                )
+            updated.append(partition.model_copy(update={"cells": cells}))
+        return tuple(updated)
+
+    terminal_bounds = dict(artwork_bounds)
+
+    # Preserve a finite compatibility envelope around the exact Device launch
+    # evidence. The terminal-complete global-Y solve uses the certified exposed
+    # quotient port directly and does not evaluate rectangular higher modes.
+    for key, rail in rail_by_key.items():
+        power_pins = [
+            pin
+            for pin in project.pins
+            if pin.kind == PinKind.DEVICE_BUMP
+            and pin.terminal == TerminalKind.PWR
+            and pin.net.casefold() == rail.net.casefold()
+        ]
+        groups = {
+            (str(pin.site or "").casefold(), str(pin.bump_group or "").casefold())
+            for pin in power_pins
+            if pin.bump_group
+        }
+        related_ground = [
+            pin
+            for pin in project.pins
+            if pin.kind == PinKind.DEVICE_BUMP
+            and pin.terminal == TerminalKind.GND
+            and pin.bump_group
+            and (
+                str(pin.site or "").casefold(),
+                str(pin.bump_group or "").casefold(),
+            )
+            in groups
+        ]
+        x_min, x_max, y_min, y_max = terminal_bounds[key]
+        for pin in (*power_pins, *related_ground):
+            x_min = min(x_min, float(pin.x_um) - 50.0)
+            x_max = max(x_max, float(pin.x_um) + 50.0)
+            y_min = min(y_min, float(pin.y_um) - 50.0)
+            y_max = max(y_max, float(pin.y_um) + 50.0)
+        terminal_bounds[key] = (x_min, x_max, y_min, y_max)
+
+    expansion_by_rail = {
+        rail_by_key[key].rail_id: {
+            "artwork_bbox_um": list(artwork_bounds[key]),
+            "terminal_envelope_um": list(terminal_bounds[key]),
+            "extension_um": [
+                max(0.0, artwork_bounds[key][0] - terminal_bounds[key][0]),
+                max(0.0, terminal_bounds[key][1] - artwork_bounds[key][1]),
+                max(0.0, artwork_bounds[key][2] - terminal_bounds[key][2]),
+                max(0.0, terminal_bounds[key][3] - artwork_bounds[key][3]),
+            ],
+        }
+        for key in rail_by_key
+    }
+    metadata = {
+        **project.metadata,
+        "layerwise_solver_envelopes": expansion_by_rail,
+    }
+    assumptions = list(
+        dict.fromkeys(
+            (
+                *project.assumptions,
+                "Terminal-complete Layerwise uses exact retained adjacent artwork and the external Device-port global-Y Zii alone; the recorded artwork/terminal rectangle is compatibility provenance and adds no legacy modal correction.",
+            )
+        )
+    )
+    return project.model_copy(
+        update={
+            "partitions": list(rebuild_partitions(terminal_bounds)),
+            "metadata": metadata,
+            "assumptions": assumptions,
+        }
+    )
+
+
 def preflight_evaluation_connectivity(
     scenario: ScenarioSpec,
     rail_ids: Sequence[str],
     *,
     _project: ProjectSpec | None = None,
+    solver_profile: str = DEFAULT_SOLVER_PROFILE_KEY,
 ) -> EvaluationConnectivityPreflight:
     """Aggregate fail-closed source-connectivity blockers for selected rails.
 
     This intentionally follows the evaluation builder's fail-closed ordering:
-    unresolved or out-of-scope source connectivity on a selected rail blocks
-    before population or isolation-gap materialization is considered. The
-    returned rail IDs are canonical project spellings and the full blocker list
-    is retained for callers that need more than the compact UI text.
+    unresolved or out-of-scope source connectivity on a selected legacy rail
+    blocks before population or isolation-gap materialization is considered.
+    The layerwise profile defers only ``UNRESOLVED`` classifications to its
+    stricter exact endpoint-island termination compiler; ``OUT_OF_SCOPE`` and
+    every missing/ambiguous endpoint still fail closed.  The returned rail IDs
+    are canonical project spellings and the full blocker list is retained for
+    callers that need more than the compact UI text.
     """
 
+    profile = resolve_solver_profile(solver_profile)
     project = _project if _project is not None else scenario.base_project
     canonical_rails = _canonical_rail_ids(scenario, rail_ids, _project=project)
     _require_current_shared_pad_analysis(scenario)
@@ -1083,10 +1383,9 @@ def preflight_evaluation_connectivity(
                 reason=reason,
             )
         )
-    blocking_kinds = {
-        DecapConnectionKind.UNRESOLVED,
-        DecapConnectionKind.OUT_OF_SCOPE,
-    }
+    blocking_kinds = {DecapConnectionKind.OUT_OF_SCOPE}
+    if profile != LAYERWISE_ADMITTANCE_PROFILE:
+        blocking_kinds.add(DecapConnectionKind.UNRESOLVED)
     for decap in scenario.decaps:
         if decap.current_rail_id.casefold() not in canonical_by_key:
             continue
@@ -1171,11 +1470,19 @@ def preflight_evaluation_connectivity(
                     reason=reason,
                 )
             )
-    blockers.extend(
-        _evaluation_geometry_blockers(
-            scenario, canonical_rails, _project=project
+    # The legacy modal worker stamps finite terminals into one selected
+    # rectangular plane, so a terminal outside that rectangle is a real build
+    # error for that profile.  Terminal-complete Layerwise instead binds every
+    # launch and mounted component to an exact retained (layer, NET) surface in
+    # ``_builder_preflight_blockers``.  Applying the legacy rectangle here
+    # would reject valid contacts on non-rectangular or disconnected artwork
+    # before the exact surface/endpoint certificate can be consulted.
+    if profile != LAYERWISE_ADMITTANCE_PROFILE:
+        blockers.extend(
+            _evaluation_geometry_blockers(
+                scenario, canonical_rails, _project=project
+            )
         )
-    )
     return EvaluationConnectivityPreflight(
         canonical_rails,
         tuple(
@@ -1207,9 +1514,6 @@ def _comparison_original_configuration(scenario: ScenarioSpec) -> ScenarioSpec:
     for capture in scenario.baseline_captures.values():
         for binding in capture.model_bindings:
             captured_models.setdefault(binding.refdes.casefold(), binding.model_id)
-    connected = {
-        refdes.casefold() for refdes in scenario.electrically_connected_refdes
-    }
     original_decaps = tuple(
         decap.model_copy(
             update={
@@ -1220,7 +1524,6 @@ def _comparison_original_configuration(scenario: ScenarioSpec) -> ScenarioSpec:
                     or decap.source_model_id
                     or decap.model_id
                     if decap.source_mounted
-                    and decap.refdes.casefold() in connected
                     else decap.source_model_id
                 ),
                 "enabled": decap.source_mounted,
@@ -1318,8 +1621,17 @@ def _builder_preflight_blockers(
     stage_offset: int = 0,
     stage_count: int = 1,
     skip_rail_ids: frozenset[str] = frozenset(),
+    solver_profile: str = DEFAULT_SOLVER_PROFILE_KEY,
+    attachments: Mapping[str, bytes] | None = None,
 ) -> tuple[EvaluationConnectivityBlocker, ...]:
-    """Dry-build structurally clear rails and convert every build failure."""
+    """Dry-build structurally clear rails and convert every build failure.
+
+    The layerwise profile also compiles its retained artwork/certificates and
+    selected terminal binding here.  A project-only dry build cannot discover
+    a missing attachment, a stale certificate, or a missing selected surface;
+    reporting such a rail as runnable would defer a deterministic source
+    failure until after the user accepted the run manifest.
+    """
 
     report = progress or (lambda _value, _message: None)
     cancelled = is_cancelled or (lambda: False)
@@ -1333,15 +1645,23 @@ def _builder_preflight_blockers(
         else {}
     )
     result: list[EvaluationConnectivityBlocker] = []
-    connected = {
-        refdes.casefold() for refdes in scenario.electrically_connected_refdes
-    }
-    populated_rail_keys = {
-        decap.current_rail_id.casefold()
-        for decap in scenario.decaps
-        if decap.refdes.casefold() in connected
-    }
     design_fingerprint = scenario.design_fingerprint
+    profile = resolve_solver_profile(solver_profile)
+    # A v4 Layerwise scenario binding is the complete mutable board topology
+    # and mounted-termination inventory.  It is independent of the selected
+    # measurement rail: the binding identity covers the Scenario design,
+    # source/certificate, base substrate, every capacitor model, and every Via
+    # template.  Keep the first successful binding local to this one
+    # Original-or-Tuned preflight pass instead of recomputing its board-scale
+    # cache identity for every rail.
+    #
+    # Only failures raised *while creating that binding* are board-global and
+    # replayed for the remaining clear rails.  Project/template/source-model
+    # construction and ``with_termination_manifest`` stay outside this narrow
+    # failure cache because they retain selected-rail endpoint/port checks.
+    layerwise_board_binding: Any = None
+    layerwise_board_binding_ready = False
+    layerwise_board_binding_error: ValueError | None = None
     total = max(stage_count, 1)
     for index, rail_id in enumerate(canonical_rails):
         if cancelled():
@@ -1352,19 +1672,71 @@ def _builder_preflight_blockers(
             f"Preflighting {rail_id} solver project",
         )
         rail_key = rail_id.casefold()
-        if (
-            rail_key in blocked
-            or rail_key in skip_rail_ids
-            or rail_key not in populated_rail_keys
-        ):
+        if rail_key in blocked or rail_key in skip_rail_ids:
             continue
         try:
-            build_evaluation_project(
+            candidate = build_evaluation_project(
                 scenario,
                 evaluation_rail_id=rail_id,
                 _project=project,
                 _design_fingerprint=design_fingerprint,
+                solver_profile=profile.key,
             )
+            if profile == LAYERWISE_ADMITTANCE_PROFILE:
+                from spd_decap_pi._core.solver.layerwise_network import (
+                    build_layerwise_uniform_source_model,
+                )
+
+                template = compile_project_evaluation_template(candidate, rail_id)
+
+                def source_progress(value: int, message: str) -> None:
+                    bounded = min(max(int(value), 0), 100)
+                    report(
+                        round((stage + bounded / 100.0) * 100 / total),
+                        f"Preflighting {rail_id}: {message}",
+                    )
+
+                source_model = build_layerwise_uniform_source_model(
+                    candidate,
+                    dict(attachments or {}),
+                    rail_id,
+                    template,
+                    progress=source_progress,
+                    is_cancelled=cancelled,
+                )
+                from .layerwise_termination_adapter import (
+                    LayerwiseScenarioTerminationFactory,
+                )
+
+                if layerwise_board_binding_error is not None:
+                    raise layerwise_board_binding_error
+                if not layerwise_board_binding_ready:
+                    try:
+                        layerwise_board_binding = (
+                            LayerwiseScenarioTerminationFactory(
+                                scenario=scenario,
+                                project=candidate,
+                                attachments=dict(attachments or {}),
+                            )(source_model.substrate, template)
+                        )
+                    except ValueError as exc:
+                        # The factory consumes the complete Scenario and the
+                        # board-wide substrate/model inventories; no selected
+                        # rail enters its binding identity.  A deterministic
+                        # failure here therefore makes every selected global-Y
+                        # measurement unmodelable.  Cache only this narrow
+                        # board-global failure, never a rail proof failure.
+                        layerwise_board_binding_error = exc
+                        raise
+                    layerwise_board_binding_ready = True
+                # Binding performs the same physical-surface mapping audit as
+                # the numerical service.  Requiring it here keeps the UI
+                # manifest honest: a rail cannot be shown as runnable and then
+                # silently fall back to a source-only layerwise solve.
+                source_model.with_termination_manifest(
+                    layerwise_board_binding,
+                    required=True,
+                )
         except ScenarioEvaluationPreflightError as exc:
             result.extend(exc.preflight.blockers)
         except ScenarioEvaluationBuildError as exc:
@@ -1396,7 +1768,8 @@ def _builder_preflight_blockers(
                     refdes="<rail project>",
                     kind=DecapConnectionKind.UNRESOLVED,
                     reason=(
-                        "evaluation builder [PROJECT_BUILD_FAILED]: "
+                        "evaluation builder "
+                        f"[{getattr(exc, 'code', 'PROJECT_BUILD_FAILED')}]: "
                         f"{type(exc).__name__}: {exc}"
                     ),
                 )
@@ -1405,12 +1778,33 @@ def _builder_preflight_blockers(
 
 
 def _rail_builder_input_sha256_by_rail(
-    scenario: ScenarioSpec, canonical_rails: Sequence[str]
+    scenario: ScenarioSpec,
+    canonical_rails: Sequence[str],
+    *,
+    include_all_decaps: bool = False,
 ) -> dict[str, str]:
-    """Hash per-rail mutable build inputs in one board-scale pass."""
+    """Hash mutable build inputs in one board-scale pass.
+
+    Legacy modal rails are independent and retain their historical per-rail
+    identity.  The production layer-surface network includes mounted
+    *other-rail* terminations in one global Y solve, so every requested rail
+    must bind the complete board decap state.  Otherwise Original preflight or
+    an unchanged-result shortcut could be reused after an electrically visible
+    change on another rail.
+    """
 
     selected = {rail_id.casefold() for rail_id in canonical_rails}
     decap_by_key = {item.refdes.casefold(): item for item in scenario.decaps}
+    if include_all_decaps:
+        board_sha256 = sha256(
+            _canonical_json(
+                [
+                    decap_by_key[key].model_dump(mode="json")
+                    for key in sorted(decap_by_key)
+                ]
+            )
+        ).hexdigest()
+        return {rail_key: board_sha256 for rail_key in selected}
     relevant_by_rail: dict[str, set[str]] = {key: set() for key in selected}
     for key, decap in decap_by_key.items():
         rail_key = decap.current_rail_id.casefold()
@@ -1447,6 +1841,8 @@ def preflight_evaluation_comparison(
     *,
     progress: ProgressCallback | None = None,
     is_cancelled: CancelCallback | None = None,
+    solver_profile: str = DEFAULT_SOLVER_PROFILE_KEY,
+    attachments: Mapping[str, bytes] | None = None,
 ) -> EvaluationConnectivityPreflight:
     """Gate both Original and Tuned states before baseline or solver work.
 
@@ -1458,14 +1854,28 @@ def preflight_evaluation_comparison(
     cannot be labeled runnable and subsequently fail before its first solve.
     """
 
-    project = scenario.base_project
-    canonical_rails = _canonical_rail_ids(scenario, rail_ids, _project=project)
+    profile = resolve_solver_profile(solver_profile)
+    source_project = scenario.base_project
+    canonical_rails = _canonical_rail_ids(
+        scenario, rail_ids, _project=source_project
+    )
+    project = (
+        _layerwise_profile_project(scenario, source_project, canonical_rails)
+        if profile == LAYERWISE_ADMITTANCE_PROFILE
+        else source_project
+    )
     tuned = preflight_evaluation_connectivity(
-        scenario, canonical_rails, _project=project
+        scenario,
+        canonical_rails,
+        _project=project,
+        solver_profile=profile.key,
     )
     original_scenario = _comparison_original_configuration(scenario)
     original = preflight_evaluation_connectivity(
-        original_scenario, canonical_rails, _project=project
+        original_scenario,
+        canonical_rails,
+        _project=project,
+        solver_profile=profile.key,
     )
     tuned_items = (
         *tuned.blockers,
@@ -1490,13 +1900,19 @@ def preflight_evaluation_comparison(
             progress=progress,
             is_cancelled=is_cancelled,
             stage_count=stage_count,
+            solver_profile=profile.key,
+            attachments=attachments,
         ),
     )
     tuned_input_sha = _rail_builder_input_sha256_by_rail(
-        scenario, canonical_rails
+        scenario,
+        canonical_rails,
+        include_all_decaps=(profile == LAYERWISE_ADMITTANCE_PROFILE),
     )
     original_input_sha = _rail_builder_input_sha256_by_rail(
-        original_scenario, canonical_rails
+        original_scenario,
+        canonical_rails,
+        include_all_decaps=(profile == LAYERWISE_ADMITTANCE_PROFILE),
     )
     identical_rail_keys = frozenset(
         rail_key
@@ -1523,6 +1939,8 @@ def preflight_evaluation_comparison(
             stage_offset=len(canonical_rails),
             stage_count=stage_count,
             skip_rail_ids=identical_rail_keys,
+            solver_profile=profile.key,
+            attachments=attachments,
         ),
     )
     tuned_by_identity = {
@@ -1584,7 +2002,10 @@ def _solver_project_fingerprint(project: ProjectSpec) -> str:
 
 
 def baseline_fallback_model_refdes(
-    scenario: ScenarioSpec, rail_ids: Sequence[str]
+    scenario: ScenarioSpec,
+    rail_ids: Sequence[str],
+    *,
+    include_all_source_mounted: bool = False,
 ) -> tuple[str, ...]:
     """Return original mounted parts whose current model would be frozen."""
 
@@ -1604,7 +2025,10 @@ def baseline_fallback_model_refdes(
         item.refdes
         for item in sorted(scenario.decaps, key=lambda entry: entry.refdes.casefold())
         if item.source_mounted
-        and item.refdes.casefold() in connected
+        and (
+            include_all_source_mounted
+            or item.refdes.casefold() in connected
+        )
         and item.source_rail_id.casefold() in uncaptured
         and item.source_model_id is None
         and item.model_id is not None
@@ -1637,6 +2061,10 @@ def _validate_evaluation_view(view: EvaluationView) -> None:
         raise ScenarioEvaluationCacheError(
             "cached evaluation solver provenance must be an object"
         )
+    if profile == LAYERWISE_ADMITTANCE_PROFILE and not view.solver_provenance:
+        raise ScenarioEvaluationCacheError(
+            "cached layerwise evaluation has incomplete source/compiler provenance"
+        )
     if view.solver_provenance:
         if (
             view.solver_provenance.get("profile_key") != profile.key
@@ -1654,6 +2082,34 @@ def _validate_evaluation_view(view: EvaluationView) -> None:
             raise ScenarioEvaluationCacheError(
                 "cached research evaluation lacks source-only/validation provenance"
             )
+        if profile == LAYERWISE_ADMITTANCE_PROFILE:
+            provenance = view.solver_provenance
+
+            def layerwise_hash(name: str) -> str:
+                raw_value = provenance.get(name)
+                if name == "terminal_surface_contact_proof_sha256" and not raw_value:
+                    # Read the pre-v0.22 field only as a compatibility alias,
+                    # matching the result UI's disclosure validator.
+                    raw_value = provenance.get("terminal_artwork_proof_sha256")
+                return str(raw_value or "").strip().casefold()
+
+            if (
+                provenance.get("source_only") is not True
+                or any(
+                    len(value := layerwise_hash(name)) != 64
+                    or any(character not in "0123456789abcdef" for character in value)
+                    for name in _LAYERWISE_PROVENANCE_HASH_FIELDS
+                )
+                or provenance.get("compiler_algorithm_id")
+                != LAYERWISE_ADMITTANCE_PROFILE.compiler_algorithm_id
+                or provenance.get("compiler_version") != LAYERWISE_COMPILER_VERSION
+                or provenance.get("termination_manifest_required") is not True
+                or provenance.get("static_compiler_algorithm_sha256")
+                != solver_profile_static_identity_sha256(profile)
+            ):
+                raise ScenarioEvaluationCacheError(
+                    "cached layerwise evaluation has incomplete source/compiler provenance"
+                )
         if profile.experimental:
             # Experimental curves are intentionally never read from the
             # baseline cache, but this validation still protects an exported
@@ -1661,7 +2117,7 @@ def _validate_evaluation_view(view: EvaluationView) -> None:
             try:
                 _evaluation_settings(
                     view.target_ohm,
-                    0,
+                    DEFAULT_EVALUATION_MODAL_MAX_INDEX,
                     profile.key,
                     solver_provenance=view.solver_provenance,
                 )
@@ -1928,10 +2384,14 @@ def _load_baseline_evaluation(
     modal_max_index: int,
     solver_profile: str = DEFAULT_SOLVER_PROFILE_KEY,
 ) -> ScenarioEvaluation | None:
-    if resolve_solver_profile(solver_profile).experimental:
+    profile = resolve_solver_profile(solver_profile)
+    if profile.experimental or profile == LAYERWISE_ADMITTANCE_PROFILE:
         # Evidence is compiled only inside the source-only evaluation path.
-        # Reusing a result before that proof would make cache identity depend on
-        # a prediction, so research baseline cache reads are intentionally off.
+        # The layerwise result additionally owns all-board mounted
+        # terminations, while the historical BaselineCapture schema freezes
+        # only the selected rail's fallback models.  Reusing either result
+        # before compiling that full evidence would make cache identity depend
+        # on a prediction, so these baseline cache reads are intentionally off.
         return None
     capture = next(
         item
@@ -1980,9 +2440,10 @@ def _cache_baseline_evaluation(
     rail_id: str,
     evaluation: ScenarioEvaluation,
 ) -> tuple[ScenarioSpec, dict[str, bytes]]:
-    if resolve_solver_profile(evaluation.view.solver_profile_key).experimental:
+    profile = resolve_solver_profile(evaluation.view.solver_profile_key)
+    if profile.experimental or profile == LAYERWISE_ADMITTANCE_PROFILE:
         raise ScenarioEvaluationCacheError(
-            "experimental research baseline results are intentionally not persisted or reused"
+            "source-compiled/all-board baseline results are intentionally not persisted or reused"
         )
     capture = next(
         item
@@ -2448,6 +2909,7 @@ def build_evaluation_project(
     evaluation_rail_id: str | None = None,
     _project: ProjectSpec | None = None,
     _design_fingerprint: str | None = None,
+    solver_profile: str = DEFAULT_SOLVER_PROFILE_KEY,
 ) -> ProjectSpec:
     """Build and validate a solver project for the current scenario state.
 
@@ -2456,7 +2918,18 @@ def build_evaluation_project(
     mounted capacitor on an unrelated rail must not block the requested rail.
     """
 
-    base = _project if _project is not None else scenario.base_project
+    source_base = _project if _project is not None else scenario.base_project
+    profile = resolve_solver_profile(solver_profile)
+    profile_rail_ids = (
+        (evaluation_rail_id,)
+        if evaluation_rail_id is not None
+        else tuple(rail.rail_id for rail in source_base.rails)
+    )
+    base = (
+        _layerwise_profile_project(scenario, source_base, profile_rail_ids)
+        if profile == LAYERWISE_ADMITTANCE_PROFILE
+        else source_base
+    )
     rail_by_id = _lookup_casefold(base.rails, "rail_id")
     model_by_id = _lookup_casefold(base.cap_models, "model_id")
     via_by_id = _lookup_casefold(base.via_templates, "template_id")
@@ -2484,13 +2957,17 @@ def build_evaluation_project(
         if evaluation_rail_key is None
         or rail.rail_id.casefold() == evaluation_rail_key
     )
-    geometry_blockers = _evaluation_geometry_blockers(
-        scenario, geometry_rail_ids, _project=base
-    )
-    if geometry_blockers:
-        raise ScenarioEvaluationPreflightError(
-            EvaluationConnectivityPreflight(geometry_rail_ids, geometry_blockers)
+    # Only the rectangular legacy modal builder consumes this geometry gate.
+    # Layerwise performs the stronger exact retained-surface/endpoint binding
+    # when its source model and termination manifest are compiled.
+    if profile != LAYERWISE_ADMITTANCE_PROFILE:
+        geometry_blockers = _evaluation_geometry_blockers(
+            scenario, geometry_rail_ids, _project=base
         )
+        if geometry_blockers:
+            raise ScenarioEvaluationPreflightError(
+                EvaluationConnectivityPreflight(geometry_rail_ids, geometry_blockers)
+            )
     # ``build_evaluation_project`` is also a public boundary used by callers
     # that bypass UI batch preflight.  Keep the mixed-reference source-GND
     # witness fail-closed here, but only for rails this project will consume;
@@ -2517,6 +2994,44 @@ def build_evaluation_project(
                 "MIXED_REFERENCE_GND_REACHABILITY_REQUIRED",
                 reason,
             )
+    if profile == LAYERWISE_ADMITTANCE_PROFILE:
+        # All mounted decaps, including the selected rail, are physical loads
+        # owned by the exact endpoint-island termination manifest.  Creating
+        # legacy modal placements here would both re-run the old surface-under-
+        # every-landing classifier and stamp the same capacitor again after the
+        # global Kron reduction.  Keep only Device launches in the transient
+        # project; model/via libraries and the full Scenario remain available
+        # to the manifest compiler.
+        partitions = [
+            item.model_copy(update={"confirmed": True}) for item in base.partitions
+        ]
+        payload = base.model_dump(mode="json")
+        payload.update(
+            {
+                "pins": [
+                    item.model_dump(mode="json")
+                    for item in base.pins
+                    if item.kind == PinKind.DEVICE_BUMP
+                ],
+                "topology_maps": [],
+                "shared_pad_clusters": [],
+                "placements": [],
+                "partitions": [item.model_dump(mode="json") for item in partitions],
+                "assumptions": _scenario_assumptions(base),
+                "metadata": _confirmed_metadata(
+                    scenario,
+                    design_fingerprint=_design_fingerprint,
+                    project=base,
+                ),
+            }
+        )
+        try:
+            return ProjectSpec.model_validate(payload)
+        except ValueError as exc:
+            raise ScenarioEvaluationBuildError(
+                "PROJECT_VALIDATION_FAILED",
+                f"transient layerwise evaluation project is invalid: {exc}",
+            ) from exc
     decap_by_key = {item.refdes.casefold(): item for item in scenario.decaps}
     connection_by_key = {
         item.refdes.casefold(): item for item in analysis.connections.values()
@@ -2716,10 +3231,6 @@ def build_evaluation_project(
         exact_batch_eligible = (
             len(power_components) == 1
             and len(ground_components) == 1
-            and all(
-                not path.has_source_terminal_rl
-                for path in (*power_paths, *ground_paths)
-            )
         )
         if path_count > MAX_SHARED_PAD_VIA_PATHS and not exact_batch_eligible:
             raise ScenarioEvaluationBuildError(
@@ -3094,15 +3605,91 @@ def build_evaluation_workspace(
     *,
     attachments: Mapping[str, bytes] | None = None,
     evaluation_rail_id: str | None = None,
+    solver_profile: str = DEFAULT_SOLVER_PROFILE_KEY,
 ) -> WorkspaceState:
     """Return an isolated workspace for evaluation; source scenario stays immutable."""
 
-    return WorkspaceState(
-        project=build_evaluation_project(
-            scenario, evaluation_rail_id=evaluation_rail_id
-        ),
-        attachments=dict(attachments or {}),
+    project = build_evaluation_project(
+        scenario,
+        evaluation_rail_id=evaluation_rail_id,
+        solver_profile=solver_profile,
     )
+    termination_factory = None
+    if resolve_solver_profile(solver_profile) == LAYERWISE_ADMITTANCE_PROFILE:
+        from .layerwise_termination_adapter import (
+            LayerwiseScenarioTerminationFactory,
+        )
+
+        termination_factory = LayerwiseScenarioTerminationFactory(
+            scenario=scenario,
+            project=project,
+            attachments=dict(attachments or {}),
+        )
+    return WorkspaceState(
+        project=project,
+        attachments=dict(attachments or {}),
+        layerwise_termination_factory=termination_factory,
+    )
+
+
+def _with_layerwise_mounted_view_counts(
+    scenario: ScenarioSpec,
+    rail_id: str,
+    view: EvaluationView,
+) -> EvaluationView:
+    """Replace cleared legacy-placement counts with bound termination counts.
+
+    Layerwise deliberately removes ``ProjectSpec.placements`` to avoid stamping
+    each capacitor twice.  Therefore its UI counts must come from the exact
+    solve-bound termination provenance, not from that transient empty list.
+    """
+
+    if (
+        resolve_solver_profile(view.solver_profile_key)
+        != LAYERWISE_ADMITTANCE_PROFILE
+    ):
+        return view
+
+    raw_cap_count = view.solver_provenance.get(
+        "termination_active_selected_rail_cluster_count"
+    )
+    if (
+        not isinstance(raw_cap_count, int)
+        or isinstance(raw_cap_count, bool)
+        or raw_cap_count < 0
+    ):
+        raise ScenarioEvaluationBuildError(
+            "LAYERWISE_MOUNTED_COUNT_PROVENANCE_MISSING",
+            "layerwise solve did not prove the selected-rail mounted-cap count",
+        )
+
+    rail_key = rail_id.casefold()
+    mounted = tuple(
+        item
+        for item in scenario.decaps
+        if item.enabled
+        and item.pad_state != DecapPadState.ISOLATION_GAP
+        and item.current_rail_id.casefold() == rail_key
+    )
+    if raw_cap_count != len(mounted):
+        raise ScenarioEvaluationBuildError(
+            "LAYERWISE_MOUNTED_COUNT_MISMATCH",
+            f"bound termination manifest reports {raw_cap_count} mounted cap(s) "
+            f"for rail {rail_id!r}, but the evaluated Scenario requires "
+            f"{len(mounted)}",
+        )
+
+    model_keys: set[str] = set()
+    for item in mounted:
+        model_id = str(item.model_id or "").strip()
+        if not model_id:
+            raise ScenarioEvaluationBuildError(
+                "LAYERWISE_MOUNTED_MODEL_MISSING",
+                "enabled layerwise termination has no capacitor model",
+                refdes=item.refdes,
+            )
+        model_keys.add(model_id.casefold())
+    return replace(view, cap_count=raw_cap_count, model_count=len(model_keys))
 
 
 def evaluate_scenario(
@@ -3135,9 +3722,10 @@ def evaluate_scenario(
         scenario,
         attachments=attachments,
         evaluation_rail_id=canonical_rail,
+        solver_profile=solver_profile,
     )
     with scoped_blas_threads():
-        view = evaluation_services.evaluate_workspace(
+        solved_view = evaluation_services.evaluate_workspace(
             state,
             canonical_rail,
             target_ohm,
@@ -3146,6 +3734,16 @@ def evaluate_scenario(
             is_cancelled=is_cancelled,
             solver_profile=solver_profile,
         )
+    view = _with_layerwise_mounted_view_counts(
+        scenario,
+        canonical_rail,
+        solved_view,
+    )
+    if view is not solved_view:
+        state.last_evaluation = view
+        state.evaluation_history = [
+            view if item is solved_view else item for item in state.evaluation_history
+        ]
     result_key = ScenarioResultKey.from_settings(
         design_fingerprint=scenario.design_fingerprint,
         rail_id=canonical_rail,
@@ -3187,30 +3785,66 @@ def evaluate_comparison_batch(
     cancelled = is_cancelled or (lambda: False)
     profile = resolve_solver_profile(solver_profile)
     canonical_rails = _canonical_rail_ids(scenario, rail_ids)
+    preflight_span = 5
+    solve_span = 100 - preflight_span
+
+    def repeat_preflight_progress(value: int, message: str) -> None:
+        bounded = min(max(int(value), 0), 100)
+        report(
+            round(bounded * preflight_span / 100),
+            f"Rechecking worker-side Original/Tuned preflight: {message}",
+        )
+
+    report(0, "Rechecking worker-side Original/Tuned preflight")
     connectivity = preflight_evaluation_comparison(
         scenario,
         canonical_rails,
+        progress=repeat_preflight_progress,
         is_cancelled=cancelled,
+        solver_profile=profile.key,
+        attachments=dict(attachments or {}),
     )
     if not connectivity.is_clear:
         raise ScenarioEvaluationPreflightError(connectivity)
-    prepared = scenario.with_baseline_captures(canonical_rails)
+    capture_rails = (
+        tuple(item.rail_id for item in scenario.base_project.rails)
+        if profile == LAYERWISE_ADMITTANCE_PROFILE
+        else canonical_rails
+    )
+    prepared = scenario.with_baseline_captures(
+        capture_rails,
+        include_all_source_mounted=(
+            profile == LAYERWISE_ADMITTANCE_PROFILE
+        ),
+    )
     working_attachments = _validated_scenario_attachments(prepared, attachments)
-    baseline_scenarios = {
-        rail_id: prepared.original_configuration(rail_id)
-        for rail_id in canonical_rails
-    }
+    if profile == LAYERWISE_ADMITTANCE_PROFILE:
+        board_original = _comparison_original_configuration(prepared)
+        baseline_scenarios = {
+            rail_id: board_original for rail_id in canonical_rails
+        }
+    else:
+        baseline_scenarios = {
+            rail_id: prepared.original_configuration(rail_id)
+            for rail_id in canonical_rails
+        }
 
-    report(1, "Preflighting Original and Tuned rail projects")
+    report(preflight_span, "Preparing Original and Tuned rail projects")
     baseline_project_fingerprints: dict[str, str] = {}
     tuned_project_fingerprints: dict[str, str] = {}
     for rail_id in canonical_rails:
         if cancelled():
             raise RuntimeError("evaluation cancelled")
         baseline_project = build_evaluation_project(
-            baseline_scenarios[rail_id], evaluation_rail_id=rail_id
+            baseline_scenarios[rail_id],
+            evaluation_rail_id=rail_id,
+            solver_profile=profile.key,
         )
-        tuned_project = build_evaluation_project(prepared, evaluation_rail_id=rail_id)
+        tuned_project = build_evaluation_project(
+            prepared,
+            evaluation_rail_id=rail_id,
+            solver_profile=profile.key,
+        )
         baseline_project_fingerprints[rail_id] = _solver_project_fingerprint(
             baseline_project
         )
@@ -3228,7 +3862,9 @@ def evaluate_comparison_batch(
 
         def update(value: int, message: str) -> None:
             bounded = min(max(int(value), 0), 100)
-            overall = round((stage_start + bounded / 100.0) * 100 / total_stages)
+            overall = preflight_span + round(
+                (stage_start + bounded / 100.0) * solve_span / total_stages
+            )
             report(overall, f"{stage_label}: {message}")
 
         return update
@@ -3243,8 +3879,15 @@ def evaluate_comparison_batch(
             if key.casefold() == rail_id.casefold()
         )
         configuration_unchanged = (
-            baseline_project_fingerprints[rail_id]
-            == tuned_project_fingerprints[rail_id]
+            (
+                baseline_scenario.design_fingerprint
+                == prepared.design_fingerprint
+            )
+            if profile == LAYERWISE_ADMITTANCE_PROFILE
+            else (
+                baseline_project_fingerprints[rail_id]
+                == tuned_project_fingerprints[rail_id]
+            )
         )
         baseline = _load_baseline_evaluation(
             prepared,
@@ -3266,34 +3909,42 @@ def evaluate_comparison_batch(
                 is_cancelled=cancelled,
                 solver_profile=solver_profile,
             )
-            baseline = replace(
-                evaluated_baseline,
-                result_key=(
-                    _result_key_from_view(
-                        capture.evaluation_input_sha256,
-                        rail_id,
-                        target_ohm=target_ohm,
-                        modal_max_index=modal_max_index,
-                        view=evaluated_baseline.view,
-                    )
-                    if profile.experimental
-                    else _expected_result_key(
-                        capture.evaluation_input_sha256,
-                        rail_id,
-                        target_ohm=target_ohm,
-                        modal_max_index=modal_max_index,
-                        solver_profile=solver_profile,
-                    )
-                ),
+            baseline = (
+                evaluated_baseline
+                if profile == LAYERWISE_ADMITTANCE_PROFILE
+                else replace(
+                    evaluated_baseline,
+                    result_key=(
+                        _result_key_from_view(
+                            capture.evaluation_input_sha256,
+                            rail_id,
+                            target_ohm=target_ohm,
+                            modal_max_index=modal_max_index,
+                            view=evaluated_baseline.view,
+                        )
+                        if profile.experimental
+                        else _expected_result_key(
+                            capture.evaluation_input_sha256,
+                            rail_id,
+                            target_ohm=target_ohm,
+                            modal_max_index=modal_max_index,
+                            solver_profile=solver_profile,
+                        )
+                    ),
+                )
             )
-            if not profile.experimental:
+            if (
+                not profile.experimental
+                and profile != LAYERWISE_ADMITTANCE_PROFILE
+            ):
                 prepared, working_attachments = _cache_baseline_evaluation(
                     prepared, working_attachments, rail_id, baseline
                 )
-            persistent_change = True
+                persistent_change = True
         else:
             report(
-                round((completed_stages + 1) * 100 / total_stages),
+                preflight_span
+                + round((completed_stages + 1) * solve_span / total_stages),
                 f"{rail_id} Original: using saved baseline",
             )
         completed_stages += 1
@@ -3323,7 +3974,8 @@ def evaluate_comparison_batch(
                 scenario_revision=prepared.revision,
             )
             report(
-                round((completed_stages + 1) * 100 / total_stages),
+                preflight_span
+                + round((completed_stages + 1) * solve_span / total_stages),
                 f"{rail_id} Tuned: configuration is unchanged",
             )
         else:

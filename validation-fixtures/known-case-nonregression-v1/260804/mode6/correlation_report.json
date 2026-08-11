@@ -1,0 +1,3065 @@
+{
+  "contract": "PowerSI is comparison-only; this runner never fits solver parameters from Touchstone values.",
+  "source": {
+    "basename": "S4LB002-2Para_260804_1_injected.spd",
+    "size_bytes": 1120159188,
+    "sha256": "45253f438fc7c328c50364fe610a7ecfbf72ca842a032921fbbb8d645e2a4f35",
+    "embedded_in_bundle": false
+  },
+  "candidate_bundle": {
+    "basename": "S4LB002-2Para_260804_1_injected_candidate.spdpi",
+    "sha256": "145c5877767acbc0bca590e70133320f1f359a27f8b0ccefaeb9bda2ad6105ce",
+    "reuse_requested": false
+  },
+  "import": {
+    "mode": "fresh_import",
+    "runtime_s": 761.1583652002737,
+    "stage_timings_s": {
+      "analyze_s": 137.5547728999518,
+      "plan_s": 107.84400920011103,
+      "index_s": 5.264923799782991,
+      "recovery_s": 159.91156719997525,
+      "mixed_witness_selection_s": 239.05601639999077,
+      "ground_recovery_s": 71.03116909973323,
+      "eligibility_s": 11.738452399615198,
+      "finalize_s": 2.636131000239402,
+      "total_s": 735.9844541000202
+    }
+  },
+  "touchstone": {
+    "basename": "S4LB002-2Para_260804_1_injected_080526_104445_27112_S.s92p",
+    "sha256": "cd103f42412c2a63518105d7e10fae8a0538c84982e1eddbfb74829a6972951b",
+    "full_file_sha256": "cd103f42412c2a63518105d7e10fae8a0538c84982e1eddbfb74829a6972951b",
+    "ports": 92,
+    "format": "RI",
+    "reference_ohm": 1.0,
+    "source_record_count": 826,
+    "converted_positive_frequency_record_count": 825,
+    "discarded_dc_record_count": 1,
+    "header_manifest_validated": true,
+    "manifest_92": {
+      "ADC_VDD_050_VDDQ_DDRH/0": 1,
+      "ADC_VDD_050_VDDQ_DDRL/0": 2,
+      "ADC_VDD_055_VTRIP/0": 3,
+      "ADC_VDD_070_VAON/0": 4,
+      "ADC_VDD_070_VDDA_DDRH_REF_CLK/0": 5,
+      "ADC_VDD_070_VDDA_DDRL_REF_CLK/0": 6,
+      "ADC_VDD_070_VINT/0": 7,
+      "ADC_VDD_070_VPDIG_PHY_PCI/0": 8,
+      "ADC_VDD_070_VP_AON/0": 9,
+      "ADC_VDD_070_VP_CAM0/0": 10,
+      "ADC_VDD_070_VP_CAM12/0": 11,
+      "ADC_VDD_070_VP_HSIO/0": 12,
+      "ADC_VDD_070_VP_PCI/0": 13,
+      "ADC_VDD_075_VAON_SRAM/0": 14,
+      "ADC_VDD_075_VCPU/0": 15,
+      "ADC_VDD_075_VINT_SRAM/0": 16,
+      "ADC_VDD_075_VP_UFS/0": 17,
+      "ADC_VDD_075_VTRIP_SRAM/0": 18,
+      "ADC_VDD_105_VAA_DDRH/0": 19,
+      "ADC_VDD_105_VAA_DDRL/0": 20,
+      "ADC_VDD_105_VDD2H_DDRH/0": 21,
+      "ADC_VDD_105_VDD2H_DDRL/0": 22,
+      "ADC_VDD_120_VDDA_LSIO/0": 23,
+      "ADC_VDD_120_VDDA_P_CL1_M/0": 24,
+      "ADC_VDD_120_VDDA_P_CL1_P/0": 25,
+      "ADC_VDD_120_VDDA_P_CL2_M/0": 26,
+      "ADC_VDD_120_VDDA_P_CL2_P/0": 27,
+      "ADC_VDD_120_VDDA_P_CL3_M/0": 28,
+      "ADC_VDD_120_VDDA_P_CL3_P/0": 29,
+      "ADC_VDD_120_VDDA_P_CL4_M/0": 30,
+      "ADC_VDD_120_VDDA_P_CL4_P/0": 31,
+      "ADC_VDD_120_VDDA_P_CL5_M/0": 32,
+      "ADC_VDD_120_VDDA_P_CL5_P/0": 33,
+      "ADC_VDD_120_VPH_AON/0": 34,
+      "ADC_VDD_120_VPH_CAM/0": 35,
+      "ADC_VDD_120_VPH_HSIO/0": 36,
+      "ADC_VDD_120_VPH_PCI/0": 37,
+      "ADC_VDD_120_VPH_UFS/0": 38,
+      "ADC_VDD_120_VP_OD_PCI/0": 39,
+      "ADC_VDD_180_VIO_AON/0": 40,
+      "ADC_VDD_180_VIO_LSIO/0": 41,
+      "ADC_VDD_180_VQPS_OTP_TOP_AON/0": 42,
+      "ADC_VDD_180_VQPS_SYS_0_AON/0": 43,
+      "ADC_VDD_180_VQPS_SYS_1_AON/0": 44,
+      "ADC_VDD_180_VQPS_SYS_2_AON/0": 45,
+      "ADC_VDD_180_VQPS_SYS_3_AON/0": 46,
+      "ADC_VDD_050_VDDQ_DDRH/1": 47,
+      "ADC_VDD_050_VDDQ_DDRL/1": 48,
+      "ADC_VDD_055_VTRIP/1": 49,
+      "ADC_VDD_070_VAON/1": 50,
+      "ADC_VDD_070_VDDA_DDRH_REF_CLK/1": 51,
+      "ADC_VDD_070_VDDA_DDRL_REF_CLK/1": 52,
+      "ADC_VDD_070_VINT/1": 53,
+      "ADC_VDD_070_VPDIG_PHY_PCI/1": 54,
+      "ADC_VDD_070_VP_AON/1": 55,
+      "ADC_VDD_070_VP_CAM0/1": 56,
+      "ADC_VDD_070_VP_CAM12/1": 57,
+      "ADC_VDD_070_VP_HSIO/1": 58,
+      "ADC_VDD_070_VP_PCI/1": 59,
+      "ADC_VDD_075_VAON_SRAM/1": 60,
+      "ADC_VDD_075_VCPU/1": 61,
+      "ADC_VDD_075_VINT_SRAM/1": 62,
+      "ADC_VDD_075_VP_UFS/1": 63,
+      "ADC_VDD_075_VTRIP_SRAM/1": 64,
+      "ADC_VDD_105_VAA_DDRH/1": 65,
+      "ADC_VDD_105_VAA_DDRL/1": 66,
+      "ADC_VDD_105_VDD2H_DDRH/1": 67,
+      "ADC_VDD_105_VDD2H_DDRL/1": 68,
+      "ADC_VDD_120_VDDA_LSIO/1": 69,
+      "ADC_VDD_120_VDDA_P_CL1_M/1": 70,
+      "ADC_VDD_120_VDDA_P_CL1_P/1": 71,
+      "ADC_VDD_120_VDDA_P_CL2_M/1": 72,
+      "ADC_VDD_120_VDDA_P_CL2_P/1": 73,
+      "ADC_VDD_120_VDDA_P_CL3_M/1": 74,
+      "ADC_VDD_120_VDDA_P_CL3_P/1": 75,
+      "ADC_VDD_120_VDDA_P_CL4_M/1": 76,
+      "ADC_VDD_120_VDDA_P_CL4_P/1": 77,
+      "ADC_VDD_120_VDDA_P_CL5_M/1": 78,
+      "ADC_VDD_120_VDDA_P_CL5_P/1": 79,
+      "ADC_VDD_120_VPH_AON/1": 80,
+      "ADC_VDD_120_VPH_CAM/1": 81,
+      "ADC_VDD_120_VPH_HSIO/1": 82,
+      "ADC_VDD_120_VPH_PCI/1": 83,
+      "ADC_VDD_120_VPH_UFS/1": 84,
+      "ADC_VDD_120_VP_OD_PCI/1": 85,
+      "ADC_VDD_180_VIO_AON/1": 86,
+      "ADC_VDD_180_VIO_LSIO/1": 87,
+      "ADC_VDD_180_VQPS_OTP_TOP_AON/1": 88,
+      "ADC_VDD_180_VQPS_SYS_0_AON/1": 89,
+      "ADC_VDD_180_VQPS_SYS_1_AON/1": 90,
+      "ADC_VDD_180_VQPS_SYS_2_AON/1": 91,
+      "ADC_VDD_180_VQPS_SYS_3_AON/1": 92
+    },
+    "selected_rail_ports": {
+      "ADC_VDD_180_VQPS_OTP_TOP_AON/0": 42,
+      "ADC_VDD_180_VQPS_SYS_0_AON/0": 43,
+      "ADC_VDD_180_VQPS_SYS_1_AON/0": 44,
+      "ADC_VDD_180_VQPS_SYS_2_AON/0": 45,
+      "ADC_VDD_180_VQPS_SYS_3_AON/0": 46,
+      "ADC_VDD_180_VQPS_OTP_TOP_AON/1": 88,
+      "ADC_VDD_180_VQPS_SYS_0_AON/1": 89,
+      "ADC_VDD_180_VQPS_SYS_1_AON/1": 90,
+      "ADC_VDD_180_VQPS_SYS_2_AON/1": 91,
+      "ADC_VDD_180_VQPS_SYS_3_AON/1": 92,
+      "ADC_VDD_055_VTRIP/0": 3,
+      "ADC_VDD_055_VTRIP/1": 49,
+      "ADC_VDD_070_VINT/0": 7,
+      "ADC_VDD_070_VINT/1": 53,
+      "ADC_VDD_075_VCPU/0": 15,
+      "ADC_VDD_075_VCPU/1": 61
+    }
+  },
+  "score_split": {
+    "vqps_development": [
+      "ADC_VDD_180_VQPS_OTP_TOP_AON/0",
+      "ADC_VDD_180_VQPS_SYS_0_AON/0",
+      "ADC_VDD_180_VQPS_SYS_1_AON/0",
+      "ADC_VDD_180_VQPS_SYS_2_AON/0",
+      "ADC_VDD_180_VQPS_SYS_3_AON/0"
+    ],
+    "vqps_holdout": [
+      "ADC_VDD_180_VQPS_OTP_TOP_AON/1",
+      "ADC_VDD_180_VQPS_SYS_0_AON/1",
+      "ADC_VDD_180_VQPS_SYS_1_AON/1",
+      "ADC_VDD_180_VQPS_SYS_2_AON/1",
+      "ADC_VDD_180_VQPS_SYS_3_AON/1"
+    ],
+    "loaded_final_holdout": [
+      "ADC_VDD_055_VTRIP/0",
+      "ADC_VDD_055_VTRIP/1",
+      "ADC_VDD_070_VINT/0",
+      "ADC_VDD_070_VINT/1",
+      "ADC_VDD_075_VCPU/0",
+      "ADC_VDD_075_VCPU/1"
+    ]
+  },
+  "run_schema": "runs.candidate is keyed by string modal_max_index; it is empty only when run_execution.candidate records an explicit skipped status",
+  "solver_profile": "layerwise_admittance_v1",
+  "run_execution": {
+    "candidate": {
+      "status": "completed",
+      "reason": null,
+      "requested_modal_max_indices": [
+        6
+      ],
+      "completed_modal_max_indices": [
+        6
+      ],
+      "blocked_rails_by_modal_max_index": {}
+    }
+  },
+  "runs": {
+    "candidate": {
+      "6": {
+        "solver_profile": "layerwise_admittance_v1",
+        "modal_max_index": 6,
+        "runtime_s": 874.5770777999423,
+        "rails": {
+          "ADC_VDD_180_VQPS_OTP_TOP_AON/0": {
+            "group": "vqps_development",
+            "status": "completed",
+            "runtime_s": 582.5845260997303,
+            "solver_version": "modal-mvp-0.7.0",
+            "mode_max_index": 6,
+            "mode_count": 49,
+            "convergence": {
+              "initial_frequency_points": 401,
+              "final_frequency_points": 433,
+              "refinement_iterations": 1,
+              "lower_mode_x": 4,
+              "lower_mode_y": 4,
+              "final_mode_x": 6,
+              "final_mode_y": 6,
+              "critical_rms_delta_db": 0.24004687791380835,
+              "critical_max_delta_db": 3.4515432097721614,
+              "dominant_peak_shift_percent": 0.0,
+              "frequency_rms_delta_db": 0.24004687791380835,
+              "frequency_max_delta_db": 3.4515432097721614,
+              "frequency_peak_shift_percent": 0.0,
+              "frequency_converged": false,
+              "frequency_budget_exhausted": true,
+              "modal_rms_delta_db": 0.012507349079927548,
+              "modal_max_delta_db": 0.09683362494396874,
+              "modal_peak_shift_percent": 0.0,
+              "modal_converged": true,
+              "converged": false
+            },
+            "solver_diagnostics": {
+              "max_condition": 58689807336.93395,
+              "max_relative_residual": 3.067196247901596e-19
+            },
+            "metrics": {
+              "grid": {
+                "low_hz": 100000.0,
+                "high_hz": 100000000.0,
+                "points": 241
+              },
+              "complex": {
+                "rms_uohm": 31707276.760592032,
+                "median_uohm": 4116291.3789404295,
+                "p95_uohm": 82322251.74402891,
+                "max_uohm": 117027262.01966326
+              },
+              "magnitude_db": {
+                "signed_mean_db": 0.5243695608306765,
+                "rms_db": 2.5534060076123244,
+                "median_abs_db": 1.065660240924739,
+                "p95_abs_db": 3.2058128511935347,
+                "max_abs_db": 20.939471710947664
+              },
+              "phase_deg": {
+                "rms_deg": 23.421057029097405,
+                "p95_abs_deg": 1.8758484089212102,
+                "max_abs_deg": 151.35969722694102
+              },
+              "anchors": {
+                "0.1MHz": {
+                  "model_magnitude_ohm": 1037.2830305071677,
+                  "reference_magnitude_ohm": 920.2560108405983,
+                  "absolute_complex_error_uohm": 117027262.01966327,
+                  "signed_magnitude_error_uohm": 117027019.66656946,
+                  "signed_magnitude_error_db": 1.0397722055238932,
+                  "phase_error_deg": 0.013966971428989495
+                },
+                "1MHz": {
+                  "model_magnitude_ohm": 103.69960896286176,
+                  "reference_magnitude_ohm": 92.016838420559,
+                  "absolute_complex_error_uohm": 11682778.70630585,
+                  "signed_magnitude_error_uohm": 11682770.542302763,
+                  "signed_magnitude_error_db": 1.038196226753335,
+                  "phase_error_deg": 0.00810102545889312
+                },
+                "10MHz": {
+                  "model_magnitude_ohm": 10.522046215381472,
+                  "reference_magnitude_ohm": 9.122270390271225,
+                  "absolute_complex_error_uohm": 1399815.9254650737,
+                  "signed_magnitude_error_uohm": 1399775.825110247,
+                  "signed_magnitude_error_db": 1.2399452822783064,
+                  "phase_error_deg": -0.061964441684598026
+                },
+                "100MHz": {
+                  "model_magnitude_ohm": 0.4407589675884289,
+                  "reference_magnitude_ohm": 0.18581671789340004,
+                  "absolute_complex_error_uohm": 597742.8044266007,
+                  "signed_magnitude_error_uohm": 254942.24969502888,
+                  "signed_magnitude_error_db": 7.502327446408858,
+                  "phase_error_deg": 141.67357605924252
+                }
+              },
+              "resonances": {
+                "model_local_peaks": [],
+                "reference_local_peaks": [],
+                "model_imaginary_zero_crossings_hz": [
+                  84439071.87984928
+                ],
+                "reference_imaginary_zero_crossings_hz": []
+              },
+              "sub_1_mohm": {
+                "reference_grid_samples": 0,
+                "complex_rms_uohm": null,
+                "complex_p95_uohm": null,
+                "complex_max_uohm": null
+              }
+            }
+          },
+          "ADC_VDD_180_VQPS_SYS_0_AON/0": {
+            "group": "vqps_development",
+            "status": "completed",
+            "runtime_s": 11.3180933999829,
+            "solver_version": "modal-mvp-0.7.0",
+            "mode_max_index": 6,
+            "mode_count": 49,
+            "convergence": {
+              "initial_frequency_points": 401,
+              "final_frequency_points": 433,
+              "refinement_iterations": 1,
+              "lower_mode_x": 4,
+              "lower_mode_y": 4,
+              "final_mode_x": 6,
+              "final_mode_y": 6,
+              "critical_rms_delta_db": 0.23703914973957338,
+              "critical_max_delta_db": 3.418049078427721,
+              "dominant_peak_shift_percent": 0.0,
+              "frequency_rms_delta_db": 0.23703914973957338,
+              "frequency_max_delta_db": 3.418049078427721,
+              "frequency_peak_shift_percent": 0.0,
+              "frequency_converged": false,
+              "frequency_budget_exhausted": true,
+              "modal_rms_delta_db": 0.012053284601756229,
+              "modal_max_delta_db": 0.0950975177993989,
+              "modal_peak_shift_percent": 0.0,
+              "modal_converged": true,
+              "converged": false
+            },
+            "solver_diagnostics": {
+              "max_condition": 56028493762.00851,
+              "max_relative_residual": 3.3037752413878196e-19
+            },
+            "metrics": {
+              "grid": {
+                "low_hz": 100000.0,
+                "high_hz": 100000000.0,
+                "points": 241
+              },
+              "complex": {
+                "rms_uohm": 33095546.837260026,
+                "median_uohm": 4253545.054273688,
+                "p95_uohm": 85937130.4566956,
+                "max_uohm": 122091491.62274499
+              },
+              "magnitude_db": {
+                "signed_mean_db": 0.5592274005725175,
+                "rms_db": 2.7641019233139192,
+                "median_abs_db": 1.163833941507714,
+                "p95_abs_db": 4.056145425179476,
+                "max_abs_db": 21.84078453503448
+              },
+              "phase_deg": {
+                "rms_deg": 26.386005383978077,
+                "p95_abs_deg": 1.349885141269357,
+                "max_abs_deg": 155.82668886151157
+              },
+              "anchors": {
+                "0.1MHz": {
+                  "model_magnitude_ohm": 990.3289157639954,
+                  "reference_magnitude_ohm": 868.2376391707995,
+                  "absolute_complex_error_uohm": 122091491.622745,
+                  "signed_magnitude_error_uohm": 122091276.59319586,
+                  "signed_magnitude_error_db": 1.1428170143111125,
+                  "phase_error_deg": 0.014158595604802975
+                },
+                "1MHz": {
+                  "model_magnitude_ohm": 99.00450543522047,
+                  "reference_magnitude_ohm": 86.81580122570266,
+                  "absolute_complex_error_uohm": 12188712.710021447,
+                  "signed_magnitude_error_uohm": 12188704.209517809,
+                  "signed_magnitude_error_db": 1.1411236186318672,
+                  "phase_error_deg": 0.00889635153981226
+                },
+                "10MHz": {
+                  "model_magnitude_ohm": 10.035611733982773,
+                  "reference_magnitude_ohm": 8.609685814488818,
+                  "absolute_complex_error_uohm": 1425952.0322811748,
+                  "signed_magnitude_error_uohm": 1425925.9194939542,
+                  "signed_magnitude_error_db": 1.3311309439878145,
+                  "phase_error_deg": -0.053192347083403944
+                },
+                "100MHz": {
+                  "model_magnitude_ohm": 0.5222118905667905,
+                  "reference_magnitude_ohm": 0.1966287494046288,
+                  "absolute_complex_error_uohm": 695354.6422234994,
+                  "signed_magnitude_error_uohm": 325583.1411621617,
+                  "signed_magnitude_error_db": 8.4839947857838,
+                  "phase_error_deg": 146.95772603855977
+                }
+              },
+              "resonances": {
+                "model_local_peaks": [],
+                "reference_local_peaks": [],
+                "model_imaginary_zero_crossings_hz": [
+                  81644528.17201501
+                ],
+                "reference_imaginary_zero_crossings_hz": []
+              },
+              "sub_1_mohm": {
+                "reference_grid_samples": 0,
+                "complex_rms_uohm": null,
+                "complex_p95_uohm": null,
+                "complex_max_uohm": null
+              }
+            }
+          },
+          "ADC_VDD_180_VQPS_SYS_1_AON/0": {
+            "group": "vqps_development",
+            "status": "completed",
+            "runtime_s": 14.442086299881339,
+            "solver_version": "modal-mvp-0.7.0",
+            "mode_max_index": 6,
+            "mode_count": 49,
+            "convergence": {
+              "initial_frequency_points": 401,
+              "final_frequency_points": 433,
+              "refinement_iterations": 1,
+              "lower_mode_x": 4,
+              "lower_mode_y": 4,
+              "final_mode_x": 6,
+              "final_mode_y": 6,
+              "critical_rms_delta_db": 0.002066574308265076,
+              "critical_max_delta_db": 0.010263392274490801,
+              "dominant_peak_shift_percent": 0.0,
+              "frequency_rms_delta_db": 0.0009340845853411622,
+              "frequency_max_delta_db": 0.007917357150014404,
+              "frequency_peak_shift_percent": 0.0,
+              "frequency_converged": true,
+              "frequency_budget_exhausted": false,
+              "modal_rms_delta_db": 0.002066574308265076,
+              "modal_max_delta_db": 0.010263392274490801,
+              "modal_peak_shift_percent": 0.0,
+              "modal_converged": true,
+              "converged": true
+            },
+            "solver_diagnostics": {
+              "max_condition": 243056009094.70767,
+              "max_relative_residual": 4.444978803573982e-19
+            },
+            "metrics": {
+              "grid": {
+                "low_hz": 100000.0,
+                "high_hz": 100000000.0,
+                "points": 241
+              },
+              "complex": {
+                "rms_uohm": 93044893.58337077,
+                "median_uohm": 11732404.17548437,
+                "p95_uohm": 241662372.9371796,
+                "max_uohm": 342815562.6801672
+              },
+              "magnitude_db": {
+                "signed_mean_db": 1.51628165506028,
+                "rms_db": 1.553410113899547,
+                "median_abs_db": 1.544444534812104,
+                "p95_abs_db": 1.7624973810330011,
+                "max_abs_db": 1.7662337822160015
+              },
+              "phase_deg": {
+                "rms_deg": 0.2864470081749581,
+                "p95_abs_deg": 0.7469742959536653,
+                "max_abs_deg": 1.4081231046452138
+              },
+              "anchors": {
+                "0.1MHz": {
+                  "model_magnitude_ohm": 2147.7312244540963,
+                  "reference_magnitude_ohm": 1804.916928815594,
+                  "absolute_complex_error_uohm": 342815562.68016726,
+                  "signed_magnitude_error_uohm": 342814295.63850224,
+                  "signed_magnitude_error_db": 1.5104542555877587,
+                  "phase_error_deg": 0.02712341513240116
+                },
+                "1MHz": {
+                  "model_magnitude_ohm": 214.73392682454457,
+                  "reference_magnitude_ohm": 180.48539861154902,
+                  "absolute_complex_error_uohm": 34248633.72032637,
+                  "signed_magnitude_error_uohm": 34248528.21299555,
+                  "signed_magnitude_error_db": 1.5091718627390844,
+                  "phase_error_deg": 0.024741662198893448
+                },
+                "10MHz": {
+                  "model_magnitude_ohm": 21.994013171131552,
+                  "reference_magnitude_ohm": 18.000888122543337,
+                  "absolute_complex_error_uohm": 3993126.175429151,
+                  "signed_magnitude_error_uohm": 3993125.0485882154,
+                  "signed_magnitude_error_db": 1.7402109614015981,
+                  "phase_error_deg": 0.008638258928155512
+                },
+                "100MHz": {
+                  "model_magnitude_ohm": 1.1752658596373668,
+                  "reference_magnitude_ohm": 1.2716589676994479,
+                  "absolute_complex_error_uohm": 100966.74915336829,
+                  "signed_magnitude_error_uohm": -96393.10806208101,
+                  "signed_magnitude_error_db": -0.6846907550348507,
+                  "phase_error_deg": -1.4081231046452138
+                }
+              },
+              "resonances": {
+                "model_local_peaks": [],
+                "reference_local_peaks": [],
+                "model_imaginary_zero_crossings_hz": [],
+                "reference_imaginary_zero_crossings_hz": []
+              },
+              "sub_1_mohm": {
+                "reference_grid_samples": 0,
+                "complex_rms_uohm": null,
+                "complex_p95_uohm": null,
+                "complex_max_uohm": null
+              }
+            }
+          },
+          "ADC_VDD_180_VQPS_SYS_2_AON/0": {
+            "group": "vqps_development",
+            "status": "completed",
+            "runtime_s": 9.619459699839354,
+            "solver_version": "modal-mvp-0.7.0",
+            "mode_max_index": 6,
+            "mode_count": 49,
+            "convergence": {
+              "initial_frequency_points": 401,
+              "final_frequency_points": 433,
+              "refinement_iterations": 1,
+              "lower_mode_x": 4,
+              "lower_mode_y": 4,
+              "final_mode_x": 6,
+              "final_mode_y": 6,
+              "critical_rms_delta_db": 0.001997558501039441,
+              "critical_max_delta_db": 0.009947830072869479,
+              "dominant_peak_shift_percent": 0.0,
+              "frequency_rms_delta_db": 0.0009581901258409882,
+              "frequency_max_delta_db": 0.00814175908008341,
+              "frequency_peak_shift_percent": 0.0,
+              "frequency_converged": true,
+              "frequency_budget_exhausted": false,
+              "modal_rms_delta_db": 0.001997558501039441,
+              "modal_max_delta_db": 0.009947830072869479,
+              "modal_peak_shift_percent": 0.0,
+              "modal_converged": true,
+              "converged": true
+            },
+            "solver_diagnostics": {
+              "max_condition": 253363289349.0113,
+              "max_relative_residual": 6.351286927720184e-19
+            },
+            "metrics": {
+              "grid": {
+                "low_hz": 100000.0,
+                "high_hz": 100000000.0,
+                "points": 241
+              },
+              "complex": {
+                "rms_uohm": 92229619.1417889,
+                "median_uohm": 11676841.502734486,
+                "p95_uohm": 239533179.67421955,
+                "max_uohm": 339883978.9938608
+              },
+              "magnitude_db": {
+                "signed_mean_db": 1.4339671465483004,
+                "rms_db": 1.4746352554672806,
+                "median_abs_db": 1.4641530330402492,
+                "p95_abs_db": 1.6819810655924634,
+                "max_abs_db": 1.6856484460431844
+              },
+              "phase_deg": {
+                "rms_deg": 0.3099521538648832,
+                "p95_abs_deg": 0.8071124481918446,
+                "max_abs_deg": 1.527806548535485
+              },
+              "anchors": {
+                "0.1MHz": {
+                  "model_magnitude_ohm": 2238.823848465725,
+                  "reference_magnitude_ohm": 1898.9412127413202,
+                  "absolute_complex_error_uohm": 339883978.9938607,
+                  "signed_magnitude_error_uohm": 339882635.72440475,
+                  "signed_magnitude_error_db": 1.4301680873991423,
+                  "phase_error_deg": 0.026553293721426573
+                },
+                "1MHz": {
+                  "model_magnitude_ohm": 223.8414093519257,
+                  "reference_magnitude_ohm": 189.8874604599602,
+                  "absolute_complex_error_uohm": 33954057.42664642,
+                  "signed_magnitude_error_uohm": 33953948.89196549,
+                  "signed_magnitude_error_db": 1.428882905043365,
+                  "phase_error_deg": 0.023858824010727555
+                },
+                "10MHz": {
+                  "model_magnitude_ohm": 22.92566926015626,
+                  "reference_magnitude_ohm": 18.937894052813665,
+                  "absolute_complex_error_uohm": 3987775.5693162847,
+                  "signed_magnitude_error_uohm": 3987775.207342594,
+                  "signed_magnitude_error_db": 1.6598068027027844,
+                  "phase_error_deg": 0.004672126828174327
+                },
+                "100MHz": {
+                  "model_magnitude_ohm": 1.2131783449730436,
+                  "reference_magnitude_ohm": 1.3324884286267937,
+                  "absolute_complex_error_uohm": 124033.26213406406,
+                  "signed_magnitude_error_uohm": -119310.08365375017,
+                  "signed_magnitude_error_db": -0.8147759332446168,
+                  "phase_error_deg": -1.527806548535485
+                }
+              },
+              "resonances": {
+                "model_local_peaks": [],
+                "reference_local_peaks": [],
+                "model_imaginary_zero_crossings_hz": [],
+                "reference_imaginary_zero_crossings_hz": []
+              },
+              "sub_1_mohm": {
+                "reference_grid_samples": 0,
+                "complex_rms_uohm": null,
+                "complex_p95_uohm": null,
+                "complex_max_uohm": null
+              }
+            }
+          },
+          "ADC_VDD_180_VQPS_SYS_3_AON/0": {
+            "group": "vqps_development",
+            "status": "completed",
+            "runtime_s": 11.10541220009327,
+            "solver_version": "modal-mvp-0.7.0",
+            "mode_max_index": 6,
+            "mode_count": 49,
+            "convergence": {
+              "initial_frequency_points": 401,
+              "final_frequency_points": 433,
+              "refinement_iterations": 1,
+              "lower_mode_x": 4,
+              "lower_mode_y": 4,
+              "final_mode_x": 6,
+              "final_mode_y": 6,
+              "critical_rms_delta_db": 0.0564297629689051,
+              "critical_max_delta_db": 0.4734510290841172,
+              "dominant_peak_shift_percent": 0.0,
+              "frequency_rms_delta_db": 0.0564297629689051,
+              "frequency_max_delta_db": 0.4734510290841172,
+              "frequency_peak_shift_percent": 0.0,
+              "frequency_converged": true,
+              "frequency_budget_exhausted": false,
+              "modal_rms_delta_db": 0.01184599634708056,
+              "modal_max_delta_db": 0.09478316075329118,
+              "modal_peak_shift_percent": 0.0,
+              "modal_converged": true,
+              "converged": true
+            },
+            "solver_diagnostics": {
+              "max_condition": 51018885785.269585,
+              "max_relative_residual": 2.839870094164314e-19
+            },
+            "metrics": {
+              "grid": {
+                "low_hz": 100000.0,
+                "high_hz": 100000000.0,
+                "points": 241
+              },
+              "complex": {
+                "rms_uohm": 40295675.37485254,
+                "median_uohm": 5050649.218205691,
+                "p95_uohm": 104665449.70547637,
+                "max_uohm": 148455291.34850636
+              },
+              "magnitude_db": {
+                "signed_mean_db": 1.053549978339112,
+                "rms_db": 3.041592993417793,
+                "median_abs_db": 1.5699684265789318,
+                "p95_abs_db": 4.43900100595905,
+                "max_abs_db": 20.837831028122572
+              },
+              "phase_deg": {
+                "rms_deg": 27.779221237554996,
+                "p95_abs_deg": 1.8640853903252288,
+                "max_abs_deg": 152.1010942397185
+              },
+              "anchors": {
+                "0.1MHz": {
+                  "model_magnitude_ohm": 904.2486181471863,
+                  "reference_magnitude_ohm": 755.7933863769432,
+                  "absolute_complex_error_uohm": 148455291.34850633,
+                  "signed_magnitude_error_uohm": 148455231.77024314,
+                  "signed_magnitude_error_db": 1.5576953296323837,
+                  "phase_error_deg": 0.00921794000575919
+                },
+                "1MHz": {
+                  "model_magnitude_ohm": 90.39745604549097,
+                  "reference_magnitude_ohm": 75.57191131820564,
+                  "absolute_complex_error_uohm": 14825544.911355723,
+                  "signed_magnitude_error_uohm": 14825544.727285333,
+                  "signed_magnitude_error_db": 1.5559160503673914,
+                  "phase_error_deg": 0.0016194838482360356
+                },
+                "10MHz": {
+                  "model_magnitude_ohm": 9.148088797197865,
+                  "reference_magnitude_ohm": 7.488924134280005,
+                  "absolute_complex_error_uohm": 1659212.0656130763,
+                  "signed_magnitude_error_uohm": 1659164.6629178599,
+                  "signed_magnitude_error_db": 1.738218809172059,
+                  "phase_error_deg": -0.08681847138556166
+                },
+                "100MHz": {
+                  "model_magnitude_ohm": 0.6291905256470298,
+                  "reference_magnitude_ohm": 0.1325935548001477,
+                  "absolute_complex_error_uohm": 704129.393379198,
+                  "signed_magnitude_error_uohm": 496596.97084688215,
+                  "signed_magnitude_error_db": 13.525195205991698,
+                  "phase_error_deg": 119.56866508916347
+                }
+              },
+              "resonances": {
+                "model_local_peaks": [],
+                "reference_local_peaks": [],
+                "model_imaginary_zero_crossings_hz": [
+                  77594853.72049546
+                ],
+                "reference_imaginary_zero_crossings_hz": []
+              },
+              "sub_1_mohm": {
+                "reference_grid_samples": 0,
+                "complex_rms_uohm": null,
+                "complex_p95_uohm": null,
+                "complex_max_uohm": null
+              }
+            }
+          },
+          "ADC_VDD_180_VQPS_OTP_TOP_AON/1": {
+            "group": "vqps_holdout",
+            "status": "completed",
+            "runtime_s": 14.625067399814725,
+            "solver_version": "modal-mvp-0.7.0",
+            "mode_max_index": 6,
+            "mode_count": 49,
+            "convergence": {
+              "initial_frequency_points": 401,
+              "final_frequency_points": 433,
+              "refinement_iterations": 1,
+              "lower_mode_x": 4,
+              "lower_mode_y": 4,
+              "final_mode_x": 6,
+              "final_mode_y": 6,
+              "critical_rms_delta_db": 0.1628355308603,
+              "critical_max_delta_db": 2.36883400155925,
+              "dominant_peak_shift_percent": 0.0,
+              "frequency_rms_delta_db": 0.1628355308603,
+              "frequency_max_delta_db": 2.36883400155925,
+              "frequency_peak_shift_percent": 0.0,
+              "frequency_converged": false,
+              "frequency_budget_exhausted": true,
+              "modal_rms_delta_db": 0.014397694998444956,
+              "modal_max_delta_db": 0.11486733494951196,
+              "modal_peak_shift_percent": 0.0,
+              "modal_converged": true,
+              "converged": false
+            },
+            "solver_diagnostics": {
+              "max_condition": 34257184046.483723,
+              "max_relative_residual": 2.9618370275055603e-19
+            },
+            "metrics": {
+              "grid": {
+                "low_hz": 100000.0,
+                "high_hz": 100000000.0,
+                "points": 241
+              },
+              "complex": {
+                "rms_uohm": 20443180.115081802,
+                "median_uohm": 2620379.745245043,
+                "p95_uohm": 53084361.77104276,
+                "max_uohm": 75415122.48863249
+              },
+              "magnitude_db": {
+                "signed_mean_db": 1.1106704947472439,
+                "rms_db": 3.584955685432583,
+                "median_abs_db": 1.1697219014733775,
+                "p95_abs_db": 11.110337099174366,
+                "max_abs_db": 18.465450156846256
+              },
+              "phase_deg": {
+                "rms_deg": 26.289352260133356,
+                "p95_abs_deg": 34.74808451373629,
+                "max_abs_deg": 146.37176549542744
+              },
+              "anchors": {
+                "0.1MHz": {
+                  "model_magnitude_ohm": 608.764857277036,
+                  "reference_magnitude_ohm": 533.349878090578,
+                  "absolute_complex_error_uohm": 75415122.48863247,
+                  "signed_magnitude_error_uohm": 75414979.18645792,
+                  "signed_magnitude_error_db": 1.1487474682912748,
+                  "phase_error_deg": 0.01478298543482276
+                },
+                "1MHz": {
+                  "model_magnitude_ohm": 60.85343547657745,
+                  "reference_magnitude_ohm": 53.326298792768426,
+                  "absolute_complex_error_uohm": 7527138.551019494,
+                  "signed_magnitude_error_uohm": 7527136.683809026,
+                  "signed_magnitude_error_db": 1.1468731916167885,
+                  "phase_error_deg": 0.005332562135204523
+                },
+                "10MHz": {
+                  "model_magnitude_ohm": 6.11161110932807,
+                  "reference_magnitude_ohm": 5.25108534666157,
+                  "absolute_complex_error_uohm": 860608.3257929175,
+                  "signed_magnitude_error_uohm": 860525.7626664997,
+                  "signed_magnitude_error_db": 1.3181326932622142,
+                  "phase_error_deg": -0.12056485726785161
+                },
+                "100MHz": {
+                  "model_magnitude_ohm": 0.8958954900714237,
+                  "reference_magnitude_ohm": 0.24931045734770035,
+                  "absolute_complex_error_uohm": 668429.3989624849,
+                  "signed_magnitude_error_uohm": 646585.0327237232,
+                  "signed_magnitude_error_db": 11.110337099174366,
+                  "phase_error_deg": 20.659218475551473
+                }
+              },
+              "resonances": {
+                "model_local_peaks": [],
+                "reference_local_peaks": [],
+                "model_imaginary_zero_crossings_hz": [
+                  64532538.773263276
+                ],
+                "reference_imaginary_zero_crossings_hz": [
+                  83213044.38086443
+                ]
+              },
+              "sub_1_mohm": {
+                "reference_grid_samples": 0,
+                "complex_rms_uohm": null,
+                "complex_p95_uohm": null,
+                "complex_max_uohm": null
+              }
+            }
+          },
+          "ADC_VDD_180_VQPS_SYS_0_AON/1": {
+            "group": "vqps_holdout",
+            "status": "completed",
+            "runtime_s": 11.312216499820352,
+            "solver_version": "modal-mvp-0.7.0",
+            "mode_max_index": 6,
+            "mode_count": 49,
+            "convergence": {
+              "initial_frequency_points": 401,
+              "final_frequency_points": 433,
+              "refinement_iterations": 1,
+              "lower_mode_x": 4,
+              "lower_mode_y": 4,
+              "final_mode_x": 6,
+              "final_mode_y": 6,
+              "critical_rms_delta_db": 0.061294053681632876,
+              "critical_max_delta_db": 0.584910226751159,
+              "dominant_peak_shift_percent": 0.0,
+              "frequency_rms_delta_db": 0.061294053681632876,
+              "frequency_max_delta_db": 0.584910226751159,
+              "frequency_peak_shift_percent": 0.0,
+              "frequency_converged": false,
+              "frequency_budget_exhausted": true,
+              "modal_rms_delta_db": 0.015679982078564098,
+              "modal_max_delta_db": 0.12295248886361776,
+              "modal_peak_shift_percent": 0.0,
+              "modal_converged": true,
+              "converged": false
+            },
+            "solver_diagnostics": {
+              "max_condition": 38307936954.839325,
+              "max_relative_residual": 3.3913643542463023e-19
+            },
+            "metrics": {
+              "grid": {
+                "low_hz": 100000.0,
+                "high_hz": 100000000.0,
+                "points": 241
+              },
+              "complex": {
+                "rms_uohm": 24528687.842292227,
+                "median_uohm": 3123024.355249697,
+                "p95_uohm": 63698536.82675355,
+                "max_uohm": 90454125.15394183
+              },
+              "magnitude_db": {
+                "signed_mean_db": 1.0696700552487477,
+                "rms_db": 3.755452707668264,
+                "median_abs_db": 1.25270641293209,
+                "p95_abs_db": 8.050420600574798,
+                "max_abs_db": 19.35414537405001
+              },
+              "phase_deg": {
+                "rms_deg": 29.77039933159304,
+                "p95_abs_deg": 47.89789556236572,
+                "max_abs_deg": 152.94021607366489
+              },
+              "anchors": {
+                "0.1MHz": {
+                  "model_magnitude_ohm": 680.7483552534865,
+                  "reference_magnitude_ohm": 590.2943849600214,
+                  "absolute_complex_error_uohm": 90454125.15394183,
+                  "signed_magnitude_error_uohm": 90453970.2934651,
+                  "signed_magnitude_error_db": 1.2383589721263668,
+                  "phase_error_deg": 0.015128445459203733
+                },
+                "1MHz": {
+                  "model_magnitude_ohm": 68.050524352232,
+                  "reference_magnitude_ohm": 59.02150171969632,
+                  "absolute_complex_error_uohm": 9029026.74847151,
+                  "signed_magnitude_error_uohm": 9029022.632535685,
+                  "signed_magnitude_error_db": 1.2364244123292132,
+                  "phase_error_deg": 0.007794198862330692
+                },
+                "10MHz": {
+                  "model_magnitude_ohm": 6.849289387024045,
+                  "reference_magnitude_ohm": 5.8284135146044,
+                  "absolute_complex_error_uohm": 1020919.0254190536,
+                  "signed_magnitude_error_uohm": 1020875.8724196452,
+                  "signed_magnitude_error_db": 1.4019031857555684,
+                  "phase_error_deg": -0.08512091569845755
+                },
+                "100MHz": {
+                  "model_magnitude_ohm": 0.8513658089574181,
+                  "reference_magnitude_ohm": 0.14186100901902415,
+                  "absolute_complex_error_uohm": 742825.9896518987,
+                  "signed_magnitude_error_uohm": 709504.7999383939,
+                  "signed_magnitude_error_db": 15.565063205687178,
+                  "phase_error_deg": 36.90275485345528
+                }
+              },
+              "resonances": {
+                "model_local_peaks": [],
+                "reference_local_peaks": [],
+                "model_imaginary_zero_crossings_hz": [
+                  67570542.41758546
+                ],
+                "reference_imaginary_zero_crossings_hz": [
+                  91632201.34076856
+                ]
+              },
+              "sub_1_mohm": {
+                "reference_grid_samples": 0,
+                "complex_rms_uohm": null,
+                "complex_p95_uohm": null,
+                "complex_max_uohm": null
+              }
+            }
+          },
+          "ADC_VDD_180_VQPS_SYS_1_AON/1": {
+            "group": "vqps_holdout",
+            "status": "completed",
+            "runtime_s": 13.2387287998572,
+            "solver_version": "modal-mvp-0.7.0",
+            "mode_max_index": 6,
+            "mode_count": 49,
+            "convergence": {
+              "initial_frequency_points": 401,
+              "final_frequency_points": 433,
+              "refinement_iterations": 1,
+              "lower_mode_x": 4,
+              "lower_mode_y": 4,
+              "final_mode_x": 6,
+              "final_mode_y": 6,
+              "critical_rms_delta_db": 0.006488913716432224,
+              "critical_max_delta_db": 0.0378895973347495,
+              "dominant_peak_shift_percent": 0.0,
+              "frequency_rms_delta_db": 0.003896933669727151,
+              "frequency_max_delta_db": 0.0378895973347495,
+              "frequency_peak_shift_percent": 0.0,
+              "frequency_converged": true,
+              "frequency_budget_exhausted": false,
+              "modal_rms_delta_db": 0.006488913716432224,
+              "modal_max_delta_db": 0.0377189738877588,
+              "modal_peak_shift_percent": 0.0,
+              "modal_converged": true,
+              "converged": true
+            },
+            "solver_diagnostics": {
+              "max_condition": 159512407824.33347,
+              "max_relative_residual": 4.709777526814111e-19
+            },
+            "metrics": {
+              "grid": {
+                "low_hz": 100000.0,
+                "high_hz": 100000000.0,
+                "points": 241
+              },
+              "complex": {
+                "rms_uohm": 64858379.132023185,
+                "median_uohm": 8138967.27110957,
+                "p95_uohm": 168464276.06645948,
+                "max_uohm": 238914363.07209644
+              },
+              "magnitude_db": {
+                "signed_mean_db": 1.486281071090516,
+                "rms_db": 1.664606056830172,
+                "median_abs_db": 1.62742162724241,
+                "p95_abs_db": 1.8382878302889105,
+                "max_abs_db": 4.110601959110281
+              },
+              "phase_deg": {
+                "rms_deg": 0.46183271307982704,
+                "p95_abs_deg": 1.2683819416836744,
+                "max_abs_deg": 1.9686118719008108
+              },
+              "anchors": {
+                "0.1MHz": {
+                  "model_magnitude_ohm": 1417.2103683861437,
+                  "reference_magnitude_ohm": 1178.2968078397128,
+                  "absolute_complex_error_uohm": 238914363.07209644,
+                  "signed_magnitude_error_uohm": 238913560.54643098,
+                  "signed_magnitude_error_db": 1.6035923974382469,
+                  "phase_error_deg": 0.027456384849334405
+                },
+                "1MHz": {
+                  "model_magnitude_ohm": 141.6914511934943,
+                  "reference_magnitude_ohm": 117.82334798565002,
+                  "absolute_complex_error_uohm": 23868163.10346756,
+                  "signed_magnitude_error_uohm": 23868103.207844272,
+                  "signed_magnitude_error_db": 1.6022457829736614,
+                  "phase_error_deg": 0.023711383784755062
+                },
+                "10MHz": {
+                  "model_magnitude_ohm": 14.475204180682326,
+                  "reference_magnitude_ohm": 11.729805984536169,
+                  "absolute_complex_error_uohm": 2745399.509631342,
+                  "signed_magnitude_error_uohm": 2745398.196146157,
+                  "signed_magnitude_error_db": 1.8266773925117763,
+                  "phase_error_deg": -0.011808512145129445
+                },
+                "100MHz": {
+                  "model_magnitude_ohm": 0.39821127312279037,
+                  "reference_magnitude_ohm": 0.6392101292871689,
+                  "absolute_complex_error_uohm": 241537.73734338974,
+                  "signed_magnitude_error_uohm": -240998.85616437855,
+                  "signed_magnitude_error_db": -4.110601959110283,
+                  "phase_error_deg": -1.8313618179186246
+                }
+              },
+              "resonances": {
+                "model_local_peaks": [],
+                "reference_local_peaks": [],
+                "model_imaginary_zero_crossings_hz": [],
+                "reference_imaginary_zero_crossings_hz": []
+              },
+              "sub_1_mohm": {
+                "reference_grid_samples": 0,
+                "complex_rms_uohm": null,
+                "complex_p95_uohm": null,
+                "complex_max_uohm": null
+              }
+            }
+          },
+          "ADC_VDD_180_VQPS_SYS_2_AON/1": {
+            "group": "vqps_holdout",
+            "status": "completed",
+            "runtime_s": 12.026414600200951,
+            "solver_version": "modal-mvp-0.7.0",
+            "mode_max_index": 6,
+            "mode_count": 49,
+            "convergence": {
+              "initial_frequency_points": 401,
+              "final_frequency_points": 433,
+              "refinement_iterations": 1,
+              "lower_mode_x": 4,
+              "lower_mode_y": 4,
+              "final_mode_x": 6,
+              "final_mode_y": 6,
+              "critical_rms_delta_db": 0.006862021634403559,
+              "critical_max_delta_db": 0.06750227581127533,
+              "dominant_peak_shift_percent": 0.0,
+              "frequency_rms_delta_db": 0.0063368116990640865,
+              "frequency_max_delta_db": 0.06750227581127533,
+              "frequency_peak_shift_percent": 0.0,
+              "frequency_converged": true,
+              "frequency_budget_exhausted": false,
+              "modal_rms_delta_db": 0.006862021634403559,
+              "modal_max_delta_db": 0.043918220217680215,
+              "modal_peak_shift_percent": 0.0,
+              "modal_converged": true,
+              "converged": true
+            },
+            "solver_diagnostics": {
+              "max_condition": 153385286834.4815,
+              "max_relative_residual": 4.311978648237625e-19
+            },
+            "metrics": {
+              "grid": {
+                "low_hz": 100000.0,
+                "high_hz": 100000000.0,
+                "points": 241
+              },
+              "complex": {
+                "rms_uohm": 59598528.582216315,
+                "median_uohm": 7503795.385361433,
+                "p95_uohm": 154796094.65264812,
+                "max_uohm": 219579343.24056575
+              },
+              "magnitude_db": {
+                "signed_mean_db": 1.364233299321851,
+                "rms_db": 1.651110088236383,
+                "median_abs_db": 1.5496694786675076,
+                "p95_abs_db": 1.7574222252506826,
+                "max_abs_db": 6.013087136269915
+              },
+              "phase_deg": {
+                "rms_deg": 0.5267013056343239,
+                "p95_abs_deg": 1.5037430661685622,
+                "max_abs_deg": 2.2139707146752086
+              },
+              "anchors": {
+                "0.1MHz": {
+                  "model_magnitude_ohm": 1362.9347424020984,
+                  "reference_magnitude_ohm": 1143.3562064870582,
+                  "absolute_complex_error_uohm": 219579343.24056575,
+                  "signed_magnitude_error_uohm": 219578535.91504022,
+                  "signed_magnitude_error_db": 1.5258701726547197,
+                  "phase_error_deg": 0.027329331594532456
+                },
+                "1MHz": {
+                  "model_magnitude_ohm": 136.26402222784716,
+                  "reference_magnitude_ohm": 114.32885545564564,
+                  "absolute_complex_error_uohm": 21935222.78753112,
+                  "signed_magnitude_error_uohm": 21935166.772201527,
+                  "signed_magnitude_error_db": 1.5245069691088455,
+                  "phase_error_deg": 0.022755862375878164
+                },
+                "10MHz": {
+                  "model_magnitude_ohm": 13.910684151920858,
+                  "reference_magnitude_ohm": 11.375562014389862,
+                  "absolute_complex_error_uohm": 2535126.810523211,
+                  "signed_magnitude_error_uohm": 2535122.137530996,
+                  "signed_magnitude_error_db": 1.7475125504930467,
+                  "phase_error_deg": -0.02217043066975139
+                },
+                "100MHz": {
+                  "model_magnitude_ohm": 0.2818577042830667,
+                  "reference_magnitude_ohm": 0.5632280391284566,
+                  "absolute_complex_error_uohm": 281569.1062313575,
+                  "signed_magnitude_error_uohm": -281370.33484538994,
+                  "signed_magnitude_error_db": -6.013087136269915,
+                  "phase_error_deg": -1.5211991396124194
+                }
+              },
+              "resonances": {
+                "model_local_peaks": [],
+                "reference_local_peaks": [],
+                "model_imaginary_zero_crossings_hz": [],
+                "reference_imaginary_zero_crossings_hz": []
+              },
+              "sub_1_mohm": {
+                "reference_grid_samples": 0,
+                "complex_rms_uohm": null,
+                "complex_p95_uohm": null,
+                "complex_max_uohm": null
+              }
+            }
+          },
+          "ADC_VDD_180_VQPS_SYS_3_AON/1": {
+            "group": "vqps_holdout",
+            "status": "completed",
+            "runtime_s": 14.315726900007576,
+            "solver_version": "modal-mvp-0.7.0",
+            "mode_max_index": 6,
+            "mode_count": 49,
+            "convergence": {
+              "initial_frequency_points": 401,
+              "final_frequency_points": 433,
+              "refinement_iterations": 1,
+              "lower_mode_x": 4,
+              "lower_mode_y": 4,
+              "final_mode_x": 6,
+              "final_mode_y": 6,
+              "critical_rms_delta_db": 0.115497039383312,
+              "critical_max_delta_db": 1.6713872729688894,
+              "dominant_peak_shift_percent": 0.0,
+              "frequency_rms_delta_db": 0.115497039383312,
+              "frequency_max_delta_db": 1.6713872729688894,
+              "frequency_peak_shift_percent": 0.0,
+              "frequency_converged": false,
+              "frequency_budget_exhausted": true,
+              "modal_rms_delta_db": 0.011465352458610191,
+              "modal_max_delta_db": 0.0868003153015735,
+              "modal_peak_shift_percent": 0.0,
+              "modal_converged": true,
+              "converged": false
+            },
+            "solver_diagnostics": {
+              "max_condition": 29980049586.39581,
+              "max_relative_residual": 2.512036077330727e-19
+            },
+            "metrics": {
+              "grid": {
+                "low_hz": 100000.0,
+                "high_hz": 100000000.0,
+                "points": 241
+              },
+              "complex": {
+                "rms_uohm": 31492018.12966612,
+                "median_uohm": 3865648.2128678025,
+                "p95_uohm": 81817902.20171966,
+                "max_uohm": 115907387.12321916
+              },
+              "magnitude_db": {
+                "signed_mean_db": 2.1451571612575555,
+                "rms_db": 4.083804550885489,
+                "median_abs_db": 2.141417449505406,
+                "p95_abs_db": 11.208254258355339,
+                "max_abs_db": 17.714514624531848
+              },
+              "phase_deg": {
+                "rms_deg": 26.501856810185576,
+                "p95_abs_deg": 42.118336316345975,
+                "max_abs_deg": 144.36002574112865
+              },
+              "anchors": {
+                "0.1MHz": {
+                  "model_magnitude_ohm": 531.4055546990791,
+                  "reference_magnitude_ohm": 415.4981868971915,
+                  "absolute_complex_error_uohm": 115907387.12321916,
+                  "signed_magnitude_error_uohm": 115907367.80188757,
+                  "signed_magnitude_error_db": 2.137139134197156,
+                  "phase_error_deg": 0.008160449589888161
+                },
+                "1MHz": {
+                  "model_magnitude_ohm": 53.11805579455011,
+                  "reference_magnitude_ohm": 41.542229694211414,
+                  "absolute_complex_error_uohm": 11575828.89266634,
+                  "signed_magnitude_error_uohm": 11575826.100338696,
+                  "signed_magnitude_error_db": 2.1350473617673673,
+                  "phase_error_deg": -0.0098068798676104
+                },
+                "10MHz": {
+                  "model_magnitude_ohm": 5.310623003152975,
+                  "reference_magnitude_ohm": 4.082807080021655,
+                  "absolute_complex_error_uohm": 1227964.020750337,
+                  "signed_magnitude_error_uohm": 1227815.9231313204,
+                  "signed_magnitude_error_db": 2.2837322617151914,
+                  "phase_error_deg": -0.2346602518659651
+                },
+                "100MHz": {
+                  "model_magnitude_ohm": 1.02614745573696,
+                  "reference_magnitude_ohm": 0.2955790815449474,
+                  "absolute_complex_error_uohm": 754436.2341633867,
+                  "signed_magnitude_error_uohm": 730568.3741920127,
+                  "signed_magnitude_error_db": 10.81072154726495,
+                  "phase_error_deg": 19.682904087770357
+                }
+              },
+              "resonances": {
+                "model_local_peaks": [],
+                "reference_local_peaks": [],
+                "model_imaginary_zero_crossings_hz": [
+                  59336168.11737823
+                ],
+                "reference_imaginary_zero_crossings_hz": [
+                  77092488.05091445
+                ]
+              },
+              "sub_1_mohm": {
+                "reference_grid_samples": 0,
+                "complex_rms_uohm": null,
+                "complex_p95_uohm": null,
+                "complex_max_uohm": null
+              }
+            }
+          },
+          "ADC_VDD_055_VTRIP/0": {
+            "group": "loaded_final_holdout",
+            "status": "completed",
+            "runtime_s": 29.74071449972689,
+            "solver_version": "modal-mvp-0.7.0",
+            "mode_max_index": 6,
+            "mode_count": 49,
+            "convergence": {
+              "initial_frequency_points": 401,
+              "final_frequency_points": 433,
+              "refinement_iterations": 1,
+              "lower_mode_x": 4,
+              "lower_mode_y": 4,
+              "final_mode_x": 6,
+              "final_mode_y": 6,
+              "critical_rms_delta_db": 0.732167827498832,
+              "critical_max_delta_db": 1.8549668656036573,
+              "dominant_peak_shift_percent": 0.0,
+              "frequency_rms_delta_db": 0.004800886738659075,
+              "frequency_max_delta_db": 0.027963613493469097,
+              "frequency_peak_shift_percent": 0.0,
+              "frequency_converged": true,
+              "frequency_budget_exhausted": false,
+              "modal_rms_delta_db": 0.732167827498832,
+              "modal_max_delta_db": 1.8549668656036573,
+              "modal_peak_shift_percent": 0.0,
+              "modal_converged": false,
+              "converged": false
+            },
+            "solver_diagnostics": {
+              "max_condition": 1105352.9898292809,
+              "max_relative_residual": 1.5886487985956936e-16
+            },
+            "metrics": {
+              "grid": {
+                "low_hz": 100000.0,
+                "high_hz": 100000000.0,
+                "points": 241
+              },
+              "complex": {
+                "rms_uohm": 428.71655344717766,
+                "median_uohm": 223.83391997960734,
+                "p95_uohm": 1039.5974841317864,
+                "max_uohm": 1461.3550418603209
+              },
+              "magnitude_db": {
+                "signed_mean_db": 4.1587204041029056,
+                "rms_db": 4.630803597675459,
+                "median_abs_db": 5.077282844688002,
+                "p95_abs_db": 6.297096990440511,
+                "max_abs_db": 6.915903359335616
+              },
+              "phase_deg": {
+                "rms_deg": 14.629594647567549,
+                "p95_abs_deg": 22.891409601077637,
+                "max_abs_deg": 37.33608598911488
+              },
+              "anchors": {
+                "0.1MHz": {
+                  "model_magnitude_ohm": 0.0010684500329608256,
+                  "reference_magnitude_ohm": 0.0009921509113295763,
+                  "absolute_complex_error_uohm": 237.90606782898018,
+                  "signed_magnitude_error_uohm": 76.29912163124928,
+                  "signed_magnitude_error_db": 0.6435296232581493,
+                  "phase_error_deg": 12.565042658739559
+                },
+                "1MHz": {
+                  "model_magnitude_ohm": 0.00036575772296006305,
+                  "reference_magnitude_ohm": 0.00017704676958221698,
+                  "absolute_complex_error_uohm": 189.92962387188462,
+                  "signed_magnitude_error_uohm": 188.71095337784607,
+                  "signed_magnitude_error_db": 6.30210996061847,
+                  "phase_error_deg": 4.838019681772975
+                },
+                "10MHz": {
+                  "model_magnitude_ohm": 0.0003538254437119916,
+                  "reference_magnitude_ohm": 0.0003146571022545411,
+                  "absolute_complex_error_uohm": 186.22028839048647,
+                  "signed_magnitude_error_uohm": 39.168341457450545,
+                  "signed_magnitude_error_db": 1.0190304226479872,
+                  "phase_error_deg": -31.662929939556477
+                },
+                "100MHz": {
+                  "model_magnitude_ohm": 0.0031299805176575627,
+                  "reference_magnitude_ohm": 0.0016847331995820587,
+                  "absolute_complex_error_uohm": 1461.3550418603209,
+                  "signed_magnitude_error_uohm": 1445.2473180755042,
+                  "signed_magnitude_error_db": 5.380210002108687,
+                  "phase_error_deg": 5.400785654328694
+                }
+              },
+              "resonances": {
+                "model_local_peaks": [
+                  {
+                    "frequency_hz": 7498942.093324558,
+                    "magnitude_ohm": 0.0005616041573928007
+                  }
+                ],
+                "reference_local_peaks": [],
+                "model_imaginary_zero_crossings_hz": [
+                  2186716.042925217
+                ],
+                "reference_imaginary_zero_crossings_hz": [
+                  1904710.9014361624
+                ]
+              },
+              "sub_1_mohm": {
+                "reference_grid_samples": 221,
+                "complex_rms_uohm": 285.6615305277021,
+                "complex_p95_uohm": 607.6453446010634,
+                "complex_max_uohm": 829.1814340351939
+              }
+            }
+          },
+          "ADC_VDD_055_VTRIP/1": {
+            "group": "loaded_final_holdout",
+            "status": "completed",
+            "runtime_s": 39.14639740018174,
+            "solver_version": "modal-mvp-0.7.0",
+            "mode_max_index": 6,
+            "mode_count": 49,
+            "convergence": {
+              "initial_frequency_points": 401,
+              "final_frequency_points": 433,
+              "refinement_iterations": 1,
+              "lower_mode_x": 4,
+              "lower_mode_y": 4,
+              "final_mode_x": 6,
+              "final_mode_y": 6,
+              "critical_rms_delta_db": 1.267389811020925,
+              "critical_max_delta_db": 2.027364222077452,
+              "dominant_peak_shift_percent": 1.7121126999967464,
+              "frequency_rms_delta_db": 0.005848473368872934,
+              "frequency_max_delta_db": 0.03419172221535405,
+              "frequency_peak_shift_percent": 1.7121126999967464,
+              "frequency_converged": true,
+              "frequency_budget_exhausted": false,
+              "modal_rms_delta_db": 1.267389811020925,
+              "modal_max_delta_db": 2.027364222077452,
+              "modal_peak_shift_percent": 0.0,
+              "modal_converged": false,
+              "converged": false
+            },
+            "solver_diagnostics": {
+              "max_condition": 2866016.483391017,
+              "max_relative_residual": 2.1996615853567508e-16
+            },
+            "metrics": {
+              "grid": {
+                "low_hz": 100000.0,
+                "high_hz": 100000000.0,
+                "points": 241
+              },
+              "complex": {
+                "rms_uohm": 178.3473209731939,
+                "median_uohm": 170.01213062467122,
+                "p95_uohm": 248.91918795845768,
+                "max_uohm": 306.4460239707632
+              },
+              "magnitude_db": {
+                "signed_mean_db": 2.068582843772351,
+                "rms_db": 3.634614691696611,
+                "median_abs_db": 3.4479299997640793,
+                "p95_abs_db": 5.723599301894939,
+                "max_abs_db": 5.80365063643907
+              },
+              "phase_deg": {
+                "rms_deg": 17.21823745080824,
+                "p95_abs_deg": 36.00727089466099,
+                "max_abs_deg": 46.92262696331279
+              },
+              "anchors": {
+                "0.1MHz": {
+                  "model_magnitude_ohm": 0.0010552505662635254,
+                  "reference_magnitude_ohm": 0.000983390688830569,
+                  "absolute_complex_error_uohm": 215.89970437920587,
+                  "signed_magnitude_error_uohm": 71.85987743295644,
+                  "signed_magnitude_error_db": 0.6125900398078445,
+                  "phase_error_deg": 11.47000002652275
+                },
+                "1MHz": {
+                  "model_magnitude_ohm": 0.0003385859934415084,
+                  "reference_magnitude_ohm": 0.0001736071432677721,
+                  "absolute_complex_error_uohm": 165.0656407419094,
+                  "signed_magnitude_error_uohm": 164.9788501737363,
+                  "signed_magnitude_error_db": 5.802027951532461,
+                  "phase_error_deg": 1.2648402320618009
+                },
+                "10MHz": {
+                  "model_magnitude_ohm": 0.0004926512472280189,
+                  "reference_magnitude_ohm": 0.0003143448218751665,
+                  "absolute_complex_error_uohm": 287.3632308624763,
+                  "signed_magnitude_error_uohm": 178.30642535285236,
+                  "signed_magnitude_error_db": 3.9026655179255565,
+                  "phase_error_deg": -33.27638073737693
+                },
+                "100MHz": {
+                  "model_magnitude_ohm": 0.0016532133379248764,
+                  "reference_magnitude_ohm": 0.0016875090055196247,
+                  "absolute_complex_error_uohm": 145.85770082844087,
+                  "signed_magnitude_error_uohm": -34.2956675947483,
+                  "signed_magnitude_error_db": -0.1783439739117263,
+                  "phase_error_deg": 4.864575926796908
+                }
+              },
+              "resonances": {
+                "model_local_peaks": [
+                  {
+                    "frequency_hz": 10000000.0,
+                    "magnitude_ohm": 0.0004926512472280189
+                  },
+                  {
+                    "frequency_hz": 16311729.092278397,
+                    "magnitude_ohm": 0.0002750419033442584
+                  }
+                ],
+                "reference_local_peaks": [],
+                "model_imaginary_zero_crossings_hz": [
+                  2919840.885732949,
+                  10945069.401176028,
+                  13543306.127222883
+                ],
+                "reference_imaginary_zero_crossings_hz": [
+                  1849827.9069109764
+                ]
+              },
+              "sub_1_mohm": {
+                "reference_grid_samples": 221,
+                "complex_rms_uohm": 181.9692733180264,
+                "complex_p95_uohm": 259.0085941021569,
+                "complex_max_uohm": 306.4460239707632
+              }
+            }
+          },
+          "ADC_VDD_070_VINT/0": {
+            "group": "loaded_final_holdout",
+            "status": "completed",
+            "runtime_s": 34.64684669999406,
+            "solver_version": "modal-mvp-0.7.0",
+            "mode_max_index": 6,
+            "mode_count": 49,
+            "convergence": {
+              "initial_frequency_points": 401,
+              "final_frequency_points": 433,
+              "refinement_iterations": 1,
+              "lower_mode_x": 4,
+              "lower_mode_y": 4,
+              "final_mode_x": 6,
+              "final_mode_y": 6,
+              "critical_rms_delta_db": 2.723017566164837,
+              "critical_max_delta_db": 5.746244659558741,
+              "dominant_peak_shift_percent": 1.7121126999968503,
+              "frequency_rms_delta_db": 0.005214536723218206,
+              "frequency_max_delta_db": 0.023327208794569287,
+              "frequency_peak_shift_percent": 1.7121126999968503,
+              "frequency_converged": true,
+              "frequency_budget_exhausted": false,
+              "modal_rms_delta_db": 2.723017566164837,
+              "modal_max_delta_db": 5.746244659558741,
+              "modal_peak_shift_percent": 0.0,
+              "modal_converged": false,
+              "converged": false
+            },
+            "solver_diagnostics": {
+              "max_condition": 4175865.5437286273,
+              "max_relative_residual": 1.7111790606623183e-16
+            },
+            "metrics": {
+              "grid": {
+                "low_hz": 100000.0,
+                "high_hz": 100000000.0,
+                "points": 241
+              },
+              "complex": {
+                "rms_uohm": 212.77925407762743,
+                "median_uohm": 135.58650148700488,
+                "p95_uohm": 443.06405544724726,
+                "max_uohm": 667.2628125752327
+              },
+              "magnitude_db": {
+                "signed_mean_db": 1.294679150567989,
+                "rms_db": 1.5506377536799159,
+                "median_abs_db": 1.4156338238571917,
+                "p95_abs_db": 2.6392799800823754,
+                "max_abs_db": 3.217316693836474
+              },
+              "phase_deg": {
+                "rms_deg": 5.604532206686503,
+                "p95_abs_deg": 10.22272776256505,
+                "max_abs_deg": 16.68866383992941
+              },
+              "anchors": {
+                "0.1MHz": {
+                  "model_magnitude_ohm": 0.002744802279594718,
+                  "reference_magnitude_ohm": 0.0027146285336768707,
+                  "absolute_complex_error_uohm": 136.12906749964694,
+                  "signed_magnitude_error_uohm": 30.173745917847548,
+                  "signed_magnitude_error_db": 0.09601312101501047,
+                  "phase_error_deg": 2.7865438540550143
+                },
+                "1MHz": {
+                  "model_magnitude_ohm": 0.0006383447924595725,
+                  "reference_magnitude_ohm": 0.0005302702975696072,
+                  "absolute_complex_error_uohm": 118.38659566126046,
+                  "signed_magnitude_error_uohm": 108.07449488996527,
+                  "signed_magnitude_error_db": 1.611160369504958,
+                  "phase_error_deg": 4.760379917374079
+                },
+                "10MHz": {
+                  "model_magnitude_ohm": 0.0010589096073573274,
+                  "reference_magnitude_ohm": 0.0007347833426176347,
+                  "absolute_complex_error_uohm": 331.56804452812435,
+                  "signed_magnitude_error_uohm": 324.1262647396927,
+                  "signed_magnitude_error_db": 3.1739917248385408,
+                  "phase_error_deg": -4.538540343848227
+                },
+                "100MHz": {
+                  "model_magnitude_ohm": 0.0036401955835423396,
+                  "reference_magnitude_ohm": 0.0030094008723865976,
+                  "absolute_complex_error_uohm": 667.2628125752328,
+                  "signed_magnitude_error_uohm": 630.794711155742,
+                  "signed_magnitude_error_db": 1.652893517783459,
+                  "phase_error_deg": 3.7670555425915286
+                }
+              },
+              "resonances": {
+                "model_local_peaks": [
+                  {
+                    "frequency_hz": 10592537.251772897,
+                    "magnitude_ohm": 0.0010739020648649685
+                  },
+                  {
+                    "frequency_hz": 19386526.359522056,
+                    "magnitude_ohm": 0.0007205244021388332
+                  }
+                ],
+                "reference_local_peaks": [
+                  {
+                    "frequency_hz": 10592537.251772897,
+                    "magnitude_ohm": 0.0007416901695844818
+                  }
+                ],
+                "model_imaginary_zero_crossings_hz": [
+                  2219511.2417898024
+                ],
+                "reference_imaginary_zero_crossings_hz": [
+                  2553204.9019683646
+                ]
+              },
+              "sub_1_mohm": {
+                "reference_grid_samples": 164,
+                "complex_rms_uohm": 159.8893714638291,
+                "complex_p95_uohm": 315.46055896059386,
+                "complex_max_uohm": 356.16982205113925
+              }
+            }
+          },
+          "ADC_VDD_070_VINT/1": {
+            "group": "loaded_final_holdout",
+            "status": "completed",
+            "runtime_s": 37.66402680007741,
+            "solver_version": "modal-mvp-0.7.0",
+            "mode_max_index": 6,
+            "mode_count": 49,
+            "convergence": {
+              "initial_frequency_points": 401,
+              "final_frequency_points": 433,
+              "refinement_iterations": 1,
+              "lower_mode_x": 4,
+              "lower_mode_y": 4,
+              "final_mode_x": 6,
+              "final_mode_y": 6,
+              "critical_rms_delta_db": 2.6734740932818255,
+              "critical_max_delta_db": 5.127484191411071,
+              "dominant_peak_shift_percent": 0.0,
+              "frequency_rms_delta_db": 0.0036042974722493354,
+              "frequency_max_delta_db": 0.018079414444059694,
+              "frequency_peak_shift_percent": 0.0,
+              "frequency_converged": true,
+              "frequency_budget_exhausted": false,
+              "modal_rms_delta_db": 2.6734740932818255,
+              "modal_max_delta_db": 5.127484191411071,
+              "modal_peak_shift_percent": 0.0,
+              "modal_converged": false,
+              "converged": false
+            },
+            "solver_diagnostics": {
+              "max_condition": 4335426.6807409935,
+              "max_relative_residual": 1.7985683713474964e-16
+            },
+            "metrics": {
+              "grid": {
+                "low_hz": 100000.0,
+                "high_hz": 100000000.0,
+                "points": 241
+              },
+              "complex": {
+                "rms_uohm": 208.28301737201235,
+                "median_uohm": 108.43681935031617,
+                "p95_uohm": 466.77593442144496,
+                "max_uohm": 697.4244739482145
+              },
+              "magnitude_db": {
+                "signed_mean_db": 0.9518860047511328,
+                "rms_db": 1.3824966734313868,
+                "median_abs_db": 0.7671881231601491,
+                "p95_abs_db": 2.8949173397520696,
+                "max_abs_db": 3.670418622431977
+              },
+              "phase_deg": {
+                "rms_deg": 6.119388512773853,
+                "p95_abs_deg": 12.912505876084438,
+                "max_abs_deg": 19.33342894108478
+              },
+              "anchors": {
+                "0.1MHz": {
+                  "model_magnitude_ohm": 0.002742899929504443,
+                  "reference_magnitude_ohm": 0.0027420839097412894,
+                  "absolute_complex_error_uohm": 32.86317470846098,
+                  "signed_magnitude_error_uohm": 0.8160197631536248,
+                  "signed_magnitude_error_db": 0.0025844589027991223,
+                  "phase_error_deg": 0.6863655309287024
+                },
+                "1MHz": {
+                  "model_magnitude_ohm": 0.0006248528806869711,
+                  "reference_magnitude_ohm": 0.00059372543417913,
+                  "absolute_complex_error_uohm": 76.72947268311721,
+                  "signed_magnitude_error_uohm": 31.12744650784116,
+                  "signed_magnitude_error_db": 0.4438424517158561,
+                  "phase_error_deg": 6.600809377563469
+                },
+                "10MHz": {
+                  "model_magnitude_ohm": 0.0010341201768374697,
+                  "reference_magnitude_ohm": 0.0006837415266042585,
+                  "absolute_complex_error_uohm": 353.94988364613835,
+                  "signed_magnitude_error_uohm": 350.37865023321115,
+                  "signed_magnitude_error_db": 3.5935810896229836,
+                  "phase_error_deg": -3.417844511894355
+                },
+                "100MHz": {
+                  "model_magnitude_ohm": 0.0037095148919125617,
+                  "reference_magnitude_ohm": 0.003049487332534924,
+                  "absolute_complex_error_uohm": 697.4244739482145,
+                  "signed_magnitude_error_uohm": 660.0275593776377,
+                  "signed_magnitude_error_db": 1.7018057050020636,
+                  "phase_error_deg": 3.8389462200207083
+                }
+              },
+              "resonances": {
+                "model_local_peaks": [
+                  {
+                    "frequency_hz": 10292005.271944286,
+                    "magnitude_ohm": 0.0010431704322751022
+                  }
+                ],
+                "reference_local_peaks": [
+                  {
+                    "frequency_hz": 10292005.271944286,
+                    "magnitude_ohm": 0.000684538612577411
+                  }
+                ],
+                "model_imaginary_zero_crossings_hz": [
+                  2265412.5746710263
+                ],
+                "reference_imaginary_zero_crossings_hz": [
+                  3015294.3233475196
+                ]
+              },
+              "sub_1_mohm": {
+                "reference_grid_samples": 160,
+                "complex_rms_uohm": 151.47183805559632,
+                "complex_p95_uohm": 337.6934237315294,
+                "complex_max_uohm": 378.3430596452791
+              }
+            }
+          },
+          "ADC_VDD_075_VCPU/0": {
+            "group": "loaded_final_holdout",
+            "status": "completed",
+            "runtime_s": 18.919098700396717,
+            "solver_version": "modal-mvp-0.7.0",
+            "mode_max_index": 6,
+            "mode_count": 49,
+            "convergence": {
+              "initial_frequency_points": 401,
+              "final_frequency_points": 433,
+              "refinement_iterations": 1,
+              "lower_mode_x": 4,
+              "lower_mode_y": 4,
+              "final_mode_x": 6,
+              "final_mode_y": 6,
+              "critical_rms_delta_db": 1.4725194183799468,
+              "critical_max_delta_db": 3.840358390045189,
+              "dominant_peak_shift_percent": 99.89648578333207,
+              "frequency_rms_delta_db": 0.006190665612324851,
+              "frequency_max_delta_db": 0.03259964721168984,
+              "frequency_peak_shift_percent": 0.0,
+              "frequency_converged": true,
+              "frequency_budget_exhausted": false,
+              "modal_rms_delta_db": 1.4725194183799468,
+              "modal_max_delta_db": 3.840358390045189,
+              "modal_peak_shift_percent": 99.89648578333207,
+              "modal_converged": false,
+              "converged": false
+            },
+            "solver_diagnostics": {
+              "max_condition": 6500908.5712645175,
+              "max_relative_residual": 1.372049697175447e-16
+            },
+            "metrics": {
+              "grid": {
+                "low_hz": 100000.0,
+                "high_hz": 100000000.0,
+                "points": 241
+              },
+              "complex": {
+                "rms_uohm": 1233.8437836758042,
+                "median_uohm": 296.1804689909032,
+                "p95_uohm": 2979.1567142201848,
+                "max_uohm": 3956.9133832348953
+              },
+              "magnitude_db": {
+                "signed_mean_db": -1.654058394389071,
+                "rms_db": 2.459110998618798,
+                "median_abs_db": 1.1855167749357836,
+                "p95_abs_db": 5.465765505628712,
+                "max_abs_db": 6.538209110476593
+              },
+              "phase_deg": {
+                "rms_deg": 9.257962616542777,
+                "p95_abs_deg": 23.107032793512843,
+                "max_abs_deg": 36.72523862995994
+              },
+              "anchors": {
+                "0.1MHz": {
+                  "model_magnitude_ohm": 0.008399869330092822,
+                  "reference_magnitude_ohm": 0.008393348076192906,
+                  "absolute_complex_error_uohm": 72.75637809008202,
+                  "signed_magnitude_error_uohm": 6.521253899915632,
+                  "signed_magnitude_error_db": 0.006745925233179609,
+                  "phase_error_deg": -0.49446961590448646
+                },
+                "1MHz": {
+                  "model_magnitude_ohm": 0.0011969903854571072,
+                  "reference_magnitude_ohm": 0.001254509707823554,
+                  "absolute_complex_error_uohm": 176.63261045655162,
+                  "signed_magnitude_error_uohm": -57.5193223664467,
+                  "signed_magnitude_error_db": -0.4076672865971642,
+                  "phase_error_deg": -7.814585378412179
+                },
+                "10MHz": {
+                  "model_magnitude_ohm": 0.0029155524934767582,
+                  "reference_magnitude_ohm": 0.002737243031176035,
+                  "absolute_complex_error_uohm": 781.6774320153173,
+                  "signed_magnitude_error_uohm": 178.30946230072308,
+                  "signed_magnitude_error_db": 0.5481501276883572,
+                  "phase_error_deg": -15.482870903309182
+                },
+                "100MHz": {
+                  "model_magnitude_ohm": 0.00954457887294454,
+                  "reference_magnitude_ohm": 0.013468730851911836,
+                  "absolute_complex_error_uohm": 3956.9133832348953,
+                  "signed_magnitude_error_uohm": -3924.151978967297,
+                  "signed_magnitude_error_db": -2.9913980651758925,
+                  "phase_error_deg": 2.567976113777135
+                }
+              },
+              "resonances": {
+                "model_local_peaks": [
+                  {
+                    "frequency_hz": 9440608.762859225,
+                    "magnitude_ohm": 0.00298497316366161
+                  }
+                ],
+                "reference_local_peaks": [
+                  {
+                    "frequency_hz": 8912509.381337458,
+                    "magnitude_ohm": 0.0028786183818702636
+                  }
+                ],
+                "model_imaginary_zero_crossings_hz": [
+                  2014890.5328508737,
+                  10218599.167137703,
+                  13837889.798749264
+                ],
+                "reference_imaginary_zero_crossings_hz": [
+                  1650340.9155227023
+                ]
+              },
+              "sub_1_mohm": {
+                "reference_grid_samples": 0,
+                "complex_rms_uohm": null,
+                "complex_p95_uohm": null,
+                "complex_max_uohm": null
+              }
+            }
+          },
+          "ADC_VDD_075_VCPU/1": {
+            "group": "loaded_final_holdout",
+            "status": "completed",
+            "runtime_s": 19.839980899821967,
+            "solver_version": "modal-mvp-0.7.0",
+            "mode_max_index": 6,
+            "mode_count": 49,
+            "convergence": {
+              "initial_frequency_points": 401,
+              "final_frequency_points": 433,
+              "refinement_iterations": 1,
+              "lower_mode_x": 4,
+              "lower_mode_y": 4,
+              "final_mode_x": 6,
+              "final_mode_y": 6,
+              "critical_rms_delta_db": 1.9688087635943816,
+              "critical_max_delta_db": 5.534745441054724,
+              "dominant_peak_shift_percent": 99.89648578333207,
+              "frequency_rms_delta_db": 0.006098311842986367,
+              "frequency_max_delta_db": 0.03786587903147165,
+              "frequency_peak_shift_percent": 0.0,
+              "frequency_converged": true,
+              "frequency_budget_exhausted": false,
+              "modal_rms_delta_db": 1.9688087635943816,
+              "modal_max_delta_db": 5.534745441054724,
+              "modal_peak_shift_percent": 99.89648578333207,
+              "modal_converged": false,
+              "converged": false
+            },
+            "solver_diagnostics": {
+              "max_condition": 5088145.364634544,
+              "max_relative_residual": 1.377508177242807e-16
+            },
+            "metrics": {
+              "grid": {
+                "low_hz": 100000.0,
+                "high_hz": 100000000.0,
+                "points": 241
+              },
+              "complex": {
+                "rms_uohm": 542.1913182557762,
+                "median_uohm": 386.6950297459359,
+                "p95_uohm": 1051.1906605816412,
+                "max_uohm": 1243.4024342961823
+              },
+              "magnitude_db": {
+                "signed_mean_db": 0.9917681221814022,
+                "rms_db": 1.7480748931585117,
+                "median_abs_db": 1.0249123562287799,
+                "p95_abs_db": 2.8392460440574774,
+                "max_abs_db": 3.9825446286694453
+              },
+              "phase_deg": {
+                "rms_deg": 9.328716675710444,
+                "p95_abs_deg": 23.311025982790397,
+                "max_abs_deg": 28.822501156134077
+              },
+              "anchors": {
+                "0.1MHz": {
+                  "model_magnitude_ohm": 0.008460386753904542,
+                  "reference_magnitude_ohm": 0.008399041671302444,
+                  "absolute_complex_error_uohm": 386.67296421129265,
+                  "signed_magnitude_error_uohm": 61.34508260209788,
+                  "signed_magnitude_error_db": 0.06320961249797864,
+                  "phase_error_deg": 2.5951243737224767
+                },
+                "1MHz": {
+                  "model_magnitude_ohm": 0.0015771205898018703,
+                  "reference_magnitude_ohm": 0.0012309276727808926,
+                  "absolute_complex_error_uohm": 391.2824095444494,
+                  "signed_magnitude_error_uohm": 346.19291702097775,
+                  "signed_magnitude_error_db": 2.1526473270047166,
+                  "phase_error_deg": 7.504051013920448
+                },
+                "10MHz": {
+                  "model_magnitude_ohm": 0.00202334509113884,
+                  "reference_magnitude_ohm": 0.002038491737253189,
+                  "absolute_complex_error_uohm": 998.290144143,
+                  "signed_magnitude_error_uohm": -15.146646114348826,
+                  "signed_magnitude_error_db": -0.06477990717684393,
+                  "phase_error_deg": -28.45190728896182
+                },
+                "100MHz": {
+                  "model_magnitude_ohm": 0.008957504436464881,
+                  "reference_magnitude_ohm": 0.007954495905059937,
+                  "absolute_complex_error_uohm": 1084.3750372663578,
+                  "signed_magnitude_error_uohm": 1003.008531404944,
+                  "signed_magnitude_error_db": 1.0314873866761356,
+                  "phase_error_deg": 2.797627524733029
+                }
+              },
+              "resonances": {
+                "model_local_peaks": [
+                  {
+                    "frequency_hz": 1678804.018122559,
+                    "magnitude_ohm": 0.001529771362813703
+                  },
+                  {
+                    "frequency_hz": 7717915.155850127,
+                    "magnitude_ohm": 0.003033235748446746
+                  }
+                ],
+                "reference_local_peaks": [
+                  {
+                    "frequency_hz": 8413951.416451948,
+                    "magnitude_ohm": 0.0022840457964052614
+                  }
+                ],
+                "model_imaginary_zero_crossings_hz": [
+                  2366518.7054377664,
+                  7600848.213359531,
+                  13568338.009533685
+                ],
+                "reference_imaginary_zero_crossings_hz": [
+                  2165629.3499636296,
+                  9924496.1308243,
+                  12225868.226479786
+                ]
+              },
+              "sub_1_mohm": {
+                "reference_grid_samples": 0,
+                "complex_rms_uohm": null,
+                "complex_p95_uohm": null,
+                "complex_max_uohm": null
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "ablations": {
+    "copper_sheet_loss": {
+      "solver_ablation_executed": false,
+      "reason": "the production request has no supported DC-sheet-loss override; monkey-patching would not be a rigorous read-only ablation",
+      "frequencies_hz": [
+        100000.0,
+        1000000.0,
+        10000000.0,
+        100000000.0
+      ],
+      "source_finite_slab_evidence": [
+        {
+          "layer": "Signal$TOP",
+          "dc_ohm_per_square": 0.000839066957543212,
+          "finite_slab_ohm_per_square": [
+            [
+              0.00083907356187463,
+              5.2637771792092305e-06
+            ],
+            [
+              0.0008397271702078642,
+              5.26260567885692e-05
+            ],
+            [
+              0.0009029605070798463,
+              0.0005149499640894226
+            ],
+            [
+              0.002583306085269617,
+              0.0025866080076475152
+            ]
+          ]
+        },
+        {
+          "layer": "Signal$L02(DGND)",
+          "dc_ohm_per_square": 0.001678133915086424,
+          "finite_slab_ohm_per_square": [
+            [
+              0.001678134740630462,
+              2.6318941384646245e-06
+            ],
+            [
+              0.0016782164677671563,
+              2.631857516676768e-05
+            ],
+            [
+              0.0016863719913918897,
+              0.0002628203507517502
+            ],
+            [
+              0.0023617359822453066,
+              0.0023293844364309277
+            ]
+          ]
+        },
+        {
+          "layer": "Signal$L03(SIG1)",
+          "dc_ohm_per_square": 0.001678133915086424,
+          "finite_slab_ohm_per_square": [
+            [
+              0.001678134740630462,
+              2.6318941384646245e-06
+            ],
+            [
+              0.0016782164677671563,
+              2.631857516676768e-05
+            ],
+            [
+              0.0016863719913918897,
+              0.0002628203507517502
+            ],
+            [
+              0.0023617359822453066,
+              0.0023293844364309277
+            ]
+          ]
+        },
+        {
+          "layer": "Signal$L04(DGND)",
+          "dc_ohm_per_square": 0.001678133915086424,
+          "finite_slab_ohm_per_square": [
+            [
+              0.001678134740630462,
+              2.6318941384646245e-06
+            ],
+            [
+              0.0016782164677671563,
+              2.631857516676768e-05
+            ],
+            [
+              0.0016863719913918897,
+              0.0002628203507517502
+            ],
+            [
+              0.0023617359822453066,
+              0.0023293844364309277
+            ]
+          ]
+        },
+        {
+          "layer": "Signal$L05(SIG2)",
+          "dc_ohm_per_square": 0.001678133915086424,
+          "finite_slab_ohm_per_square": [
+            [
+              0.001678134740630462,
+              2.6318941384646245e-06
+            ],
+            [
+              0.0016782164677671563,
+              2.631857516676768e-05
+            ],
+            [
+              0.0016863719913918897,
+              0.0002628203507517502
+            ],
+            [
+              0.0023617359822453066,
+              0.0023293844364309277
+            ]
+          ]
+        },
+        {
+          "layer": "Signal$L06(DGND)",
+          "dc_ohm_per_square": 0.001678133915086424,
+          "finite_slab_ohm_per_square": [
+            [
+              0.001678134740630462,
+              2.6318941384646245e-06
+            ],
+            [
+              0.0016782164677671563,
+              2.631857516676768e-05
+            ],
+            [
+              0.0016863719913918897,
+              0.0002628203507517502
+            ],
+            [
+              0.0023617359822453066,
+              0.0023293844364309277
+            ]
+          ]
+        },
+        {
+          "layer": "Signal$L07(SIG3)",
+          "dc_ohm_per_square": 0.001678133915086424,
+          "finite_slab_ohm_per_square": [
+            [
+              0.001678134740630462,
+              2.6318941384646245e-06
+            ],
+            [
+              0.0016782164677671563,
+              2.631857516676768e-05
+            ],
+            [
+              0.0016863719913918897,
+              0.0002628203507517502
+            ],
+            [
+              0.0023617359822453066,
+              0.0023293844364309277
+            ]
+          ]
+        },
+        {
+          "layer": "Signal$L08(DGND)",
+          "dc_ohm_per_square": 0.001678133915086424,
+          "finite_slab_ohm_per_square": [
+            [
+              0.001678134740630462,
+              2.6318941384646245e-06
+            ],
+            [
+              0.0016782164677671563,
+              2.631857516676768e-05
+            ],
+            [
+              0.0016863719913918897,
+              0.0002628203507517502
+            ],
+            [
+              0.0023617359822453066,
+              0.0023293844364309277
+            ]
+          ]
+        },
+        {
+          "layer": "Signal$L09(MAIN_POWER1)",
+          "dc_ohm_per_square": 0.000839066957543212,
+          "finite_slab_ohm_per_square": [
+            [
+              0.00083907356187463,
+              5.2637771792092305e-06
+            ],
+            [
+              0.0008397271702078642,
+              5.26260567885692e-05
+            ],
+            [
+              0.0009029605070798463,
+              0.0005149499640894226
+            ],
+            [
+              0.002583306085269617,
+              0.0025866080076475152
+            ]
+          ]
+        },
+        {
+          "layer": "Signal$L10(DGND)",
+          "dc_ohm_per_square": 0.000839066957543212,
+          "finite_slab_ohm_per_square": [
+            [
+              0.00083907356187463,
+              5.2637771792092305e-06
+            ],
+            [
+              0.0008397271702078642,
+              5.26260567885692e-05
+            ],
+            [
+              0.0009029605070798463,
+              0.0005149499640894226
+            ],
+            [
+              0.002583306085269617,
+              0.0025866080076475152
+            ]
+          ]
+        },
+        {
+          "layer": "Signal$L11(MAIN_POWER2)",
+          "dc_ohm_per_square": 0.000839066957543212,
+          "finite_slab_ohm_per_square": [
+            [
+              0.00083907356187463,
+              5.2637771792092305e-06
+            ],
+            [
+              0.0008397271702078642,
+              5.26260567885692e-05
+            ],
+            [
+              0.0009029605070798463,
+              0.0005149499640894226
+            ],
+            [
+              0.002583306085269617,
+              0.0025866080076475152
+            ]
+          ]
+        },
+        {
+          "layer": "Signal$L12(MAIN_POWER3)",
+          "dc_ohm_per_square": 0.000839066957543212,
+          "finite_slab_ohm_per_square": [
+            [
+              0.00083907356187463,
+              5.2637771792092305e-06
+            ],
+            [
+              0.0008397271702078642,
+              5.26260567885692e-05
+            ],
+            [
+              0.0009029605070798463,
+              0.0005149499640894226
+            ],
+            [
+              0.002583306085269617,
+              0.0025866080076475152
+            ]
+          ]
+        },
+        {
+          "layer": "Signal$L13(DGND)",
+          "dc_ohm_per_square": 0.000839066957543212,
+          "finite_slab_ohm_per_square": [
+            [
+              0.00083907356187463,
+              5.2637771792092305e-06
+            ],
+            [
+              0.0008397271702078642,
+              5.26260567885692e-05
+            ],
+            [
+              0.0009029605070798463,
+              0.0005149499640894226
+            ],
+            [
+              0.002583306085269617,
+              0.0025866080076475152
+            ]
+          ]
+        },
+        {
+          "layer": "Signal$L14(MAIN_POWER4)",
+          "dc_ohm_per_square": 0.000839066957543212,
+          "finite_slab_ohm_per_square": [
+            [
+              0.00083907356187463,
+              5.2637771792092305e-06
+            ],
+            [
+              0.0008397271702078642,
+              5.26260567885692e-05
+            ],
+            [
+              0.0009029605070798463,
+              0.0005149499640894226
+            ],
+            [
+              0.002583306085269617,
+              0.0025866080076475152
+            ]
+          ]
+        },
+        {
+          "layer": "Signal$L15(MAIN_POWER5)",
+          "dc_ohm_per_square": 0.000839066957543212,
+          "finite_slab_ohm_per_square": [
+            [
+              0.00083907356187463,
+              5.2637771792092305e-06
+            ],
+            [
+              0.0008397271702078642,
+              5.26260567885692e-05
+            ],
+            [
+              0.0009029605070798463,
+              0.0005149499640894226
+            ],
+            [
+              0.002583306085269617,
+              0.0025866080076475152
+            ]
+          ]
+        },
+        {
+          "layer": "Signal$L16(DGND)",
+          "dc_ohm_per_square": 0.000839066957543212,
+          "finite_slab_ohm_per_square": [
+            [
+              0.00083907356187463,
+              5.2637771792092305e-06
+            ],
+            [
+              0.0008397271702078642,
+              5.26260567885692e-05
+            ],
+            [
+              0.0009029605070798463,
+              0.0005149499640894226
+            ],
+            [
+              0.002583306085269617,
+              0.0025866080076475152
+            ]
+          ]
+        },
+        {
+          "layer": "Signal$L17(SIG4)",
+          "dc_ohm_per_square": 0.000839066957543212,
+          "finite_slab_ohm_per_square": [
+            [
+              0.00083907356187463,
+              5.2637771792092305e-06
+            ],
+            [
+              0.0008397271702078642,
+              5.26260567885692e-05
+            ],
+            [
+              0.0009029605070798463,
+              0.0005149499640894226
+            ],
+            [
+              0.002583306085269617,
+              0.0025866080076475152
+            ]
+          ]
+        },
+        {
+          "layer": "Signal$L18(DGND)",
+          "dc_ohm_per_square": 0.000839066957543212,
+          "finite_slab_ohm_per_square": [
+            [
+              0.00083907356187463,
+              5.2637771792092305e-06
+            ],
+            [
+              0.0008397271702078642,
+              5.26260567885692e-05
+            ],
+            [
+              0.0009029605070798463,
+              0.0005149499640894226
+            ],
+            [
+              0.002583306085269617,
+              0.0025866080076475152
+            ]
+          ]
+        },
+        {
+          "layer": "Signal$L19(SIG5)",
+          "dc_ohm_per_square": 0.000839066957543212,
+          "finite_slab_ohm_per_square": [
+            [
+              0.00083907356187463,
+              5.2637771792092305e-06
+            ],
+            [
+              0.0008397271702078642,
+              5.26260567885692e-05
+            ],
+            [
+              0.0009029605070798463,
+              0.0005149499640894226
+            ],
+            [
+              0.002583306085269617,
+              0.0025866080076475152
+            ]
+          ]
+        },
+        {
+          "layer": "Signal$L20(DGND)",
+          "dc_ohm_per_square": 0.000839066957543212,
+          "finite_slab_ohm_per_square": [
+            [
+              0.00083907356187463,
+              5.2637771792092305e-06
+            ],
+            [
+              0.0008397271702078642,
+              5.26260567885692e-05
+            ],
+            [
+              0.0009029605070798463,
+              0.0005149499640894226
+            ],
+            [
+              0.002583306085269617,
+              0.0025866080076475152
+            ]
+          ]
+        },
+        {
+          "layer": "Signal$L21(DGND)",
+          "dc_ohm_per_square": 0.0004794668328818354,
+          "finite_slab_ohm_per_square": [
+            [
+              0.0004795022269701318,
+              9.211436494126048e-06
+            ],
+            [
+              0.00048299519326796295,
+              9.192266577696925e-05
+            ],
+            [
+              0.000749807243397156,
+              0.0007755022674186384
+            ],
+            [
+              0.002573772104123963,
+              0.0025739884208070447
+            ]
+          ]
+        },
+        {
+          "layer": "Signal$L22(MAIN_POWER2)",
+          "dc_ohm_per_square": 0.0005244168484645075,
+          "finite_slab_ohm_per_square": [
+            [
+              0.0005244438992992268,
+              8.421938303390226e-06
+            ],
+            [
+              0.0005271160255445707,
+              8.409678825089736e-05
+            ],
+            [
+              0.0007465930415355721,
+              0.0007415883097945208
+            ],
+            [
+              0.002573542184848843,
+              0.002573756488694954
+            ]
+          ]
+        },
+        {
+          "layer": "Signal$L23(MAIN_POWER3)",
+          "dc_ohm_per_square": 0.0005244168484645075,
+          "finite_slab_ohm_per_square": [
+            [
+              0.0005244438992992268,
+              8.421938303390226e-06
+            ],
+            [
+              0.0005271160255445707,
+              8.409678825089736e-05
+            ],
+            [
+              0.0007465930415355721,
+              0.0007415883097945208
+            ],
+            [
+              0.002573542184848843,
+              0.002573756488694954
+            ]
+          ]
+        },
+        {
+          "layer": "Signal$L24(DGND)",
+          "dc_ohm_per_square": 0.0005244168484645075,
+          "finite_slab_ohm_per_square": [
+            [
+              0.0005244438992992268,
+              8.421938303390226e-06
+            ],
+            [
+              0.0005271160255445707,
+              8.409678825089736e-05
+            ],
+            [
+              0.0007465930415355721,
+              0.0007415883097945208
+            ],
+            [
+              0.002573542184848843,
+              0.002573756488694954
+            ]
+          ]
+        },
+        {
+          "layer": "Signal$L25(MAIN_POWER4)",
+          "dc_ohm_per_square": 0.0005244168484645075,
+          "finite_slab_ohm_per_square": [
+            [
+              0.0005244438992992268,
+              8.421938303390226e-06
+            ],
+            [
+              0.0005271160255445707,
+              8.409678825089736e-05
+            ],
+            [
+              0.0007465930415355721,
+              0.0007415883097945208
+            ],
+            [
+              0.002573542184848843,
+              0.002573756488694954
+            ]
+          ]
+        },
+        {
+          "layer": "Signal$L26(MAIN_POWER5)",
+          "dc_ohm_per_square": 0.0005244168484645075,
+          "finite_slab_ohm_per_square": [
+            [
+              0.0005244438992992268,
+              8.421938303390226e-06
+            ],
+            [
+              0.0005271160255445707,
+              8.409678825089736e-05
+            ],
+            [
+              0.0007465930415355721,
+              0.0007415883097945208
+            ],
+            [
+              0.002573542184848843,
+              0.002573756488694954
+            ]
+          ]
+        },
+        {
+          "layer": "Signal$L27(DGND)",
+          "dc_ohm_per_square": 0.0005244168484645075,
+          "finite_slab_ohm_per_square": [
+            [
+              0.0005244438992992268,
+              8.421938303390226e-06
+            ],
+            [
+              0.0005271160255445707,
+              8.409678825089736e-05
+            ],
+            [
+              0.0007465930415355721,
+              0.0007415883097945208
+            ],
+            [
+              0.002573542184848843,
+              0.002573756488694954
+            ]
+          ]
+        },
+        {
+          "layer": "Signal$L28(DGND)",
+          "dc_ohm_per_square": 0.0004794668328818354,
+          "finite_slab_ohm_per_square": [
+            [
+              0.0004795022269701318,
+              9.211436494126048e-06
+            ],
+            [
+              0.00048299519326796295,
+              9.192266577696925e-05
+            ],
+            [
+              0.000749807243397156,
+              0.0007755022674186384
+            ],
+            [
+              0.002573772104123963,
+              0.0025739884208070447
+            ]
+          ]
+        },
+        {
+          "layer": "Signal$L29(DGND)",
+          "dc_ohm_per_square": 0.000839066957543212,
+          "finite_slab_ohm_per_square": [
+            [
+              0.00083907356187463,
+              5.2637771792092305e-06
+            ],
+            [
+              0.0008397271702078642,
+              5.26260567885692e-05
+            ],
+            [
+              0.0009029605070798463,
+              0.0005149499640894226
+            ],
+            [
+              0.002583306085269617,
+              0.0025866080076475152
+            ]
+          ]
+        },
+        {
+          "layer": "Signal$L30(OTHER_POWER1)",
+          "dc_ohm_per_square": 0.000839066957543212,
+          "finite_slab_ohm_per_square": [
+            [
+              0.00083907356187463,
+              5.2637771792092305e-06
+            ],
+            [
+              0.0008397271702078642,
+              5.26260567885692e-05
+            ],
+            [
+              0.0009029605070798463,
+              0.0005149499640894226
+            ],
+            [
+              0.002583306085269617,
+              0.0025866080076475152
+            ]
+          ]
+        },
+        {
+          "layer": "Signal$L31(OTHER_POWER2)",
+          "dc_ohm_per_square": 0.000839066957543212,
+          "finite_slab_ohm_per_square": [
+            [
+              0.00083907356187463,
+              5.2637771792092305e-06
+            ],
+            [
+              0.0008397271702078642,
+              5.26260567885692e-05
+            ],
+            [
+              0.0009029605070798463,
+              0.0005149499640894226
+            ],
+            [
+              0.002583306085269617,
+              0.0025866080076475152
+            ]
+          ]
+        },
+        {
+          "layer": "Signal$L32(DGND)",
+          "dc_ohm_per_square": 0.000839066957543212,
+          "finite_slab_ohm_per_square": [
+            [
+              0.00083907356187463,
+              5.2637771792092305e-06
+            ],
+            [
+              0.0008397271702078642,
+              5.26260567885692e-05
+            ],
+            [
+              0.0009029605070798463,
+              0.0005149499640894226
+            ],
+            [
+              0.002583306085269617,
+              0.0025866080076475152
+            ]
+          ]
+        },
+        {
+          "layer": "Signal$L33(OTHER_POWER3)",
+          "dc_ohm_per_square": 0.000839066957543212,
+          "finite_slab_ohm_per_square": [
+            [
+              0.00083907356187463,
+              5.2637771792092305e-06
+            ],
+            [
+              0.0008397271702078642,
+              5.26260567885692e-05
+            ],
+            [
+              0.0009029605070798463,
+              0.0005149499640894226
+            ],
+            [
+              0.002583306085269617,
+              0.0025866080076475152
+            ]
+          ]
+        },
+        {
+          "layer": "Signal$L34(OTHER_POWER4)",
+          "dc_ohm_per_square": 0.000839066957543212,
+          "finite_slab_ohm_per_square": [
+            [
+              0.00083907356187463,
+              5.2637771792092305e-06
+            ],
+            [
+              0.0008397271702078642,
+              5.26260567885692e-05
+            ],
+            [
+              0.0009029605070798463,
+              0.0005149499640894226
+            ],
+            [
+              0.002583306085269617,
+              0.0025866080076475152
+            ]
+          ]
+        },
+        {
+          "layer": "Signal$L35(DGND)",
+          "dc_ohm_per_square": 0.000839066957543212,
+          "finite_slab_ohm_per_square": [
+            [
+              0.00083907356187463,
+              5.2637771792092305e-06
+            ],
+            [
+              0.0008397271702078642,
+              5.26260567885692e-05
+            ],
+            [
+              0.0009029605070798463,
+              0.0005149499640894226
+            ],
+            [
+              0.002583306085269617,
+              0.0025866080076475152
+            ]
+          ]
+        },
+        {
+          "layer": "Signal$L36(OTHER_POWER5)",
+          "dc_ohm_per_square": 0.000839066957543212,
+          "finite_slab_ohm_per_square": [
+            [
+              0.00083907356187463,
+              5.2637771792092305e-06
+            ],
+            [
+              0.0008397271702078642,
+              5.26260567885692e-05
+            ],
+            [
+              0.0009029605070798463,
+              0.0005149499640894226
+            ],
+            [
+              0.002583306085269617,
+              0.0025866080076475152
+            ]
+          ]
+        },
+        {
+          "layer": "Signal$L37(OTHER_POWER6)",
+          "dc_ohm_per_square": 0.000839066957543212,
+          "finite_slab_ohm_per_square": [
+            [
+              0.00083907356187463,
+              5.2637771792092305e-06
+            ],
+            [
+              0.0008397271702078642,
+              5.26260567885692e-05
+            ],
+            [
+              0.0009029605070798463,
+              0.0005149499640894226
+            ],
+            [
+              0.002583306085269617,
+              0.0025866080076475152
+            ]
+          ]
+        },
+        {
+          "layer": "Signal$L38(DGND)",
+          "dc_ohm_per_square": 0.000839066957543212,
+          "finite_slab_ohm_per_square": [
+            [
+              0.00083907356187463,
+              5.2637771792092305e-06
+            ],
+            [
+              0.0008397271702078642,
+              5.26260567885692e-05
+            ],
+            [
+              0.0009029605070798463,
+              0.0005149499640894226
+            ],
+            [
+              0.002583306085269617,
+              0.0025866080076475152
+            ]
+          ]
+        },
+        {
+          "layer": "Signal$L39(OTHER_POWER7)",
+          "dc_ohm_per_square": 0.000839066957543212,
+          "finite_slab_ohm_per_square": [
+            [
+              0.00083907356187463,
+              5.2637771792092305e-06
+            ],
+            [
+              0.0008397271702078642,
+              5.26260567885692e-05
+            ],
+            [
+              0.0009029605070798463,
+              0.0005149499640894226
+            ],
+            [
+              0.002583306085269617,
+              0.0025866080076475152
+            ]
+          ]
+        },
+        {
+          "layer": "Signal$L40(OTHER_POWER8)",
+          "dc_ohm_per_square": 0.000839066957543212,
+          "finite_slab_ohm_per_square": [
+            [
+              0.00083907356187463,
+              5.2637771792092305e-06
+            ],
+            [
+              0.0008397271702078642,
+              5.26260567885692e-05
+            ],
+            [
+              0.0009029605070798463,
+              0.0005149499640894226
+            ],
+            [
+              0.002583306085269617,
+              0.0025866080076475152
+            ]
+          ]
+        },
+        {
+          "layer": "Signal$L41(DGND)",
+          "dc_ohm_per_square": 0.001678133915086424,
+          "finite_slab_ohm_per_square": [
+            [
+              0.001678134740630462,
+              2.6318941384646245e-06
+            ],
+            [
+              0.0016782164677671563,
+              2.631857516676768e-05
+            ],
+            [
+              0.0016863719913918897,
+              0.0002628203507517502
+            ],
+            [
+              0.0023617359822453066,
+              0.0023293844364309277
+            ]
+          ]
+        },
+        {
+          "layer": "Signal$L42(OTHER_POWER9)",
+          "dc_ohm_per_square": 0.001678133915086424,
+          "finite_slab_ohm_per_square": [
+            [
+              0.001678134740630462,
+              2.6318941384646245e-06
+            ],
+            [
+              0.0016782164677671563,
+              2.631857516676768e-05
+            ],
+            [
+              0.0016863719913918897,
+              0.0002628203507517502
+            ],
+            [
+              0.0023617359822453066,
+              0.0023293844364309277
+            ]
+          ]
+        },
+        {
+          "layer": "Signal$L43(OTHER_POWER10)",
+          "dc_ohm_per_square": 0.001678133915086424,
+          "finite_slab_ohm_per_square": [
+            [
+              0.001678134740630462,
+              2.6318941384646245e-06
+            ],
+            [
+              0.0016782164677671563,
+              2.631857516676768e-05
+            ],
+            [
+              0.0016863719913918897,
+              0.0002628203507517502
+            ],
+            [
+              0.0023617359822453066,
+              0.0023293844364309277
+            ]
+          ]
+        },
+        {
+          "layer": "Signal$L44(DGND)",
+          "dc_ohm_per_square": 0.001678133915086424,
+          "finite_slab_ohm_per_square": [
+            [
+              0.001678134740630462,
+              2.6318941384646245e-06
+            ],
+            [
+              0.0016782164677671563,
+              2.631857516676768e-05
+            ],
+            [
+              0.0016863719913918897,
+              0.0002628203507517502
+            ],
+            [
+              0.0023617359822453066,
+              0.0023293844364309277
+            ]
+          ]
+        },
+        {
+          "layer": "Signal$L45(OTHER_POWER11)",
+          "dc_ohm_per_square": 0.001678133915086424,
+          "finite_slab_ohm_per_square": [
+            [
+              0.001678134740630462,
+              2.6318941384646245e-06
+            ],
+            [
+              0.0016782164677671563,
+              2.631857516676768e-05
+            ],
+            [
+              0.0016863719913918897,
+              0.0002628203507517502
+            ],
+            [
+              0.0023617359822453066,
+              0.0023293844364309277
+            ]
+          ]
+        },
+        {
+          "layer": "Signal$L46(OTHER_POWER12)",
+          "dc_ohm_per_square": 0.001678133915086424,
+          "finite_slab_ohm_per_square": [
+            [
+              0.001678134740630462,
+              2.6318941384646245e-06
+            ],
+            [
+              0.0016782164677671563,
+              2.631857516676768e-05
+            ],
+            [
+              0.0016863719913918897,
+              0.0002628203507517502
+            ],
+            [
+              0.0023617359822453066,
+              0.0023293844364309277
+            ]
+          ]
+        },
+        {
+          "layer": "Signal$L47(DGND)",
+          "dc_ohm_per_square": 0.001678133915086424,
+          "finite_slab_ohm_per_square": [
+            [
+              0.001678134740630462,
+              2.6318941384646245e-06
+            ],
+            [
+              0.0016782164677671563,
+              2.631857516676768e-05
+            ],
+            [
+              0.0016863719913918897,
+              0.0002628203507517502
+            ],
+            [
+              0.0023617359822453066,
+              0.0023293844364309277
+            ]
+          ]
+        },
+        {
+          "layer": "Signal$BOTTOM",
+          "dc_ohm_per_square": 0.000839066957543212,
+          "finite_slab_ohm_per_square": [
+            [
+              0.00083907356187463,
+              5.2637771792092305e-06
+            ],
+            [
+              0.0008397271702078642,
+              5.26260567885692e-05
+            ],
+            [
+              0.0009029605070798463,
+              0.0005149499640894226
+            ],
+            [
+              0.002583306085269617,
+              0.0025866080076475152
+            ]
+          ]
+        }
+      ]
+    }
+  }
+}

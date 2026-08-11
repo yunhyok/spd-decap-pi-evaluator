@@ -960,6 +960,9 @@ def _distribution_batch_via_eligibility(
                     # selected pair, so Distribution must preserve them.
                     pwr_layer=str(getattr(rail, "pwr_layer")),
                     gnd_layer=str(getattr(rail, "gnd_layer")),
+                    destination_pwr_layer=pwr_layer_name_by_key.get(
+                        pair_key[1], pair_key[1]
+                    ),
                     via_template_id=template_id,
                     allowed=True,
                     reason=(
@@ -3980,6 +3983,25 @@ def compute_distribution_plan(
                     local_constraints,
                     limit=remaining_time(),
                     start=local_start,
+                )
+            if (
+                feasible_fallback_stage == "gap"
+                and local_start is not None
+                and (result is None or (result.status == 1 and result.x is None))
+            ):
+                # The isolation-gap stage may exhaust its proof budget
+                # without returning a new incumbent.  The previous stage's
+                # solution was revalidated against this exact local MILP above,
+                # so retaining it preserves every primary optimum and topology
+                # constraint.  Only the secondary optimum remains unproven and
+                # is disclosed through the existing stage-specific diagnostic.
+                stage_fallback_flags.add(feasible_fallback_stage)
+                result = OptimizeResult(
+                    status=0,
+                    success=True,
+                    message="retained the validated prior-stage incumbent",
+                    x=local_start,
+                    fun=float(np.dot(local_c, local_start)),
                 )
             if result is None:
                 raise DistributionError(

@@ -7,9 +7,13 @@ coverage.json
 htmlcov/
 .venv/
 venv/
+.codex/*
+!.codex/capture_r4_numerical_source_manifest.py
+!.codex/run_release_correlations_r4.ps1
 build/
 dist/
 installer-output/
+outputs/
+validation-output/
 *.spec
 *.log
-

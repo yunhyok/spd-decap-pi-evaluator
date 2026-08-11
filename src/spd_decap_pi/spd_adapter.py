@@ -2,10 +2,11 @@
 
 from __future__ import annotations
 
-from collections.abc import Callable
+from collections.abc import Callable, Iterable, Mapping
 from dataclasses import dataclass
 from hashlib import sha256
 import json
+from math import isclose, isfinite
 from pathlib import Path
 from time import perf_counter
 from typing import Any
@@ -26,8 +27,17 @@ from spd_decap_pi._core.io.spd import (
     recover_spd_via_paths,
 )
 from spd_decap_pi._core.services import build_spd_import_plan, create_workspace_state
+from spd_decap_pi._core.solver.evaluator import (
+    compile_project_evaluation_template,
+)
 
+from .compiled_topology_asset import COMPILED_TOPOLOGY_ASSET_METADATA_KEY
 from .eligibility import EligibilityResult, PlaneEligibilityIndex
+from .raw_spatial_contact_asset import (
+    RAW_SPATIAL_CONTACT_ASSET_METADATA_KEY,
+    validate_project_raw_spatial_contact_asset_envelope,
+)
+from .raw_spatial_contact_compiler import compile_raw_spatial_contact_asset
 from .scenario import (
     DecapConnectionKind,
     RailEligibility,
@@ -47,6 +57,11 @@ from .scenario import (
     SourceIdentity,
     mixed_reference_ground_landing_identity,
 )
+from .surface_certificate_asset import (
+    SurfaceCertificateAssetError,
+    canonical_surface_certificate_sha256,
+    externalize_project_surface_certificate,
+)
 
 
 ProgressCallback = Callable[[int, str], None]
@@ -64,6 +79,107 @@ _NET_PALETTE = (
     "#E84393",
     "#00A8FF",
 )
+
+_LAYER_SURFACE_CONNECTIVITY_SCHEMA = "spd-layer-surface-connectivity-v4"
+_LAYER_SURFACE_CONNECTIVITY_COMPILER = (
+    "powersi-same-layer-trace-artwork-finite-via-quotient-v4"
+)
+
+
+def _has_compiled_topology_manifest(project: ProjectSpec) -> bool:
+    """Return whether the finalized project carries a real compiled manifest."""
+
+    metadata = project.metadata
+    spd_import = metadata.get("spd_import") if isinstance(metadata, Mapping) else None
+    if not isinstance(spd_import, Mapping):
+        return False
+    if COMPILED_TOPOLOGY_ASSET_METADATA_KEY not in spd_import:
+        return False
+    if not isinstance(spd_import[COMPILED_TOPOLOGY_ASSET_METADATA_KEY], Mapping):
+        raise SpdImportError(
+            "RAW_SPATIAL_COMPILED_TOPOLOGY_INVALID: finalized compiled topology "
+            "metadata is not a manifest"
+        )
+    return True
+
+
+def _merge_raw_spatial_contact_asset(
+    project: ProjectSpec,
+    attachments: Mapping[str, bytes],
+    manifest: Mapping[str, Any],
+    generated: tuple[str, bytes],
+) -> tuple[ProjectSpec, dict[str, bytes]]:
+    """Bind one generated raw asset without overwriting any sibling state."""
+
+    if not isinstance(manifest, Mapping):
+        raise SpdImportError(
+            "RAW_SPATIAL_MANIFEST_INVALID: compiler did not return a manifest"
+        )
+    try:
+        asset_name, asset_payload = generated
+    except (TypeError, ValueError) as exc:
+        raise SpdImportError(
+            "RAW_SPATIAL_ATTACHMENT_INVALID: compiler did not return one attachment"
+        ) from exc
+    if (
+        type(asset_name) is not str
+        or not asset_name
+        or type(asset_payload) is not bytes
+        or manifest.get("asset_name") != asset_name
+    ):
+        raise SpdImportError(
+            "RAW_SPATIAL_ATTACHMENT_INVALID: generated member differs from its manifest"
+        )
+
+    updated_attachments = dict(attachments)
+    matches = [
+        name
+        for name in updated_attachments
+        if type(name) is str and name.casefold() == asset_name.casefold()
+    ]
+    if matches and (
+        len(matches) != 1
+        or matches[0] != asset_name
+        or updated_attachments[matches[0]] != asset_payload
+    ):
+        raise SpdImportError(
+            "RAW_SPATIAL_ASSET_COLLISION: scenario already contains a different "
+            f"attachment named {asset_name!r}"
+        )
+    if not matches:
+        updated_attachments[asset_name] = asset_payload
+
+    metadata = dict(project.metadata)
+    source_spd_import = metadata.get("spd_import", {})
+    if not isinstance(source_spd_import, Mapping):
+        raise SpdImportError(
+            "RAW_SPATIAL_PROJECT_INVALID: finalized SPD import metadata is not a mapping"
+        )
+    spd_import = dict(source_spd_import)
+    matching_metadata_keys = [
+        key
+        for key in spd_import
+        if type(key) is str
+        and key.casefold() == RAW_SPATIAL_CONTACT_ASSET_METADATA_KEY.casefold()
+    ]
+    if matching_metadata_keys and matching_metadata_keys != [
+        RAW_SPATIAL_CONTACT_ASSET_METADATA_KEY
+    ]:
+        raise SpdImportError(
+            "RAW_SPATIAL_METADATA_COLLISION: finalized project contains a "
+            "non-canonical raw spatial metadata key"
+        )
+    existing_manifest = spd_import.get(RAW_SPATIAL_CONTACT_ASSET_METADATA_KEY)
+    normalized_manifest = dict(manifest)
+    if existing_manifest is not None and existing_manifest != normalized_manifest:
+        raise SpdImportError(
+            "RAW_SPATIAL_METADATA_COLLISION: finalized project already contains "
+            "different raw spatial metadata"
+        )
+    spd_import[RAW_SPATIAL_CONTACT_ASSET_METADATA_KEY] = normalized_manifest
+    metadata["spd_import"] = spd_import
+    return project.model_copy(update={"metadata": metadata}), updated_attachments
+
 
 @dataclass(frozen=True, slots=True)
 class ImportStageTimings:
@@ -86,6 +202,44 @@ class ScenarioImport:
     attachments: dict[str, bytes]
     diagnostics: tuple[Any, ...]
     timings: ImportStageTimings
+
+
+@dataclass(frozen=True, slots=True)
+class _SourceGraphLanding:
+    """Minimal landing identity accepted by raw SPD graph recovery."""
+
+    via_id: str
+    net: str
+    endpoint_node_id: str
+    x_um: float
+    y_um: float
+    padstack: str
+    pin_id: str
+    contact_path_kind: str
+
+
+@dataclass(frozen=True, slots=True)
+class _RetargetLandingDestinationRequest:
+    """Exact Distribution destination found under one physical PWR Via XY.
+
+    Distribution may rebuild a PWR Via column to a retained plane that has no
+    source-path Node evidence.  This compact row preserves the independent
+    ordered-artwork query needed to bind that destination to the global finite
+    Via quotient without serializing the raw SPD Node inventory.
+    """
+
+    refdes: str
+    via_id: str
+    endpoint_node_id: str
+    source_net: str
+    x_um: float
+    y_um: float
+    destination_net: str
+    destination_layer: str
+    destination_island_id: str
+    geometry_asset_sha256: str
+    target_rail_id: str
+    via_template_id: str | None
 
 
 def _top_conductor_name(project: ProjectSpec) -> str | None:
@@ -185,6 +339,7 @@ def _eligibility_at_point(
                 net=rail.net,
                 pwr_layer=rail.pwr_layer,
                 gnd_layer=rail.gnd_layer,
+                destination_pwr_layer=plane.pwr_layer,
                 via_template_id=template_id,
                 allowed=True,
             )
@@ -350,6 +505,3713 @@ def _via_target_layers_by_net(project: ProjectSpec) -> dict[str, tuple[str, ...]
     return {
         net: tuple(sorted(layers, key=str.casefold))
         for net, layers in sorted(result.items())
+    }
+
+
+def _ephemeral_anchor_compile_project(
+    project: ProjectSpec,
+    *,
+    source_sha256: str,
+) -> ProjectSpec:
+    """Break the mixed-witness/anchor extraction cycle without persistence.
+
+    The evaluation compiler checks that mixed-reference artwork has a witness
+    before it constructs Device branches.  Raw-graph recovery needs those
+    branch anchors first.  This in-memory copy supplies only the certificate's
+    exact GND asset identity; it is never persisted and makes no connectivity
+    claim (zero landings).  The real project receives only the later recovery
+    result.
+    """
+
+    empty_landing_hash = sha256(b"[]\n").hexdigest()
+    changed = False
+    rails = []
+    for rail in project.rails:
+        certificate = rail.mixed_reference_certificate
+        if certificate is None or rail.mixed_reference_ground_witness is not None:
+            rails.append(rail)
+            continue
+        changed = True
+        rails.append(
+            rail.model_copy(
+                update={
+                    "mixed_reference_ground_witness": (
+                        MixedReferenceGroundWitness(
+                            rail_net=rail.net,
+                            gnd_net=certificate.gnd_net,
+                            pwr_layer=rail.pwr_layer,
+                            gnd_layer=rail.gnd_layer,
+                            gnd_asset_sha256=certificate.gnd_asset_sha256,
+                            source_sha256=source_sha256,
+                            landing_identities=(),
+                            landing_count=0,
+                            landing_identities_sha256=empty_landing_hash,
+                        )
+                    )
+                }
+            )
+        )
+    return project.model_copy(update={"rails": rails}) if changed else project
+
+
+def _compile_active_rail_anchor_bindings(
+    project: ProjectSpec,
+    *,
+    source_sha256: str,
+) -> tuple[list[dict[str, str]], list[dict[str, str]]]:
+    """Compile every ACTIVE rail and flatten exact Device branch anchors."""
+
+    compile_project = _ephemeral_anchor_compile_project(
+        project, source_sha256=source_sha256
+    )
+    bindings: list[dict[str, str]] = []
+    failures: list[dict[str, str]] = []
+    active_rails = sorted(
+        (
+            rail
+            for rail in project.rails
+            if str(getattr(rail.state, "value", rail.state)) == "ACTIVE"
+        ),
+        key=lambda rail: (rail.rail_id.casefold(), rail.rail_id),
+    )
+    for rail in active_rails:
+        try:
+            template = compile_project_evaluation_template(
+                compile_project, rail.rail_id
+            )
+        except Exception as exc:
+            failures.append(
+                {
+                    "rail_id": rail.rail_id,
+                    "code": type(exc).__name__,
+                    "message": str(exc),
+                }
+            )
+            continue
+        branches = tuple(getattr(template.device, "branches", ()) or ())
+        if not branches:
+            failures.append(
+                {
+                    "rail_id": rail.rail_id,
+                    "code": "DEVICE_BRANCHES_MISSING",
+                    "message": "compiled evaluation template has no Device branch",
+                }
+            )
+            continue
+        for branch in sorted(
+            branches,
+            key=lambda item: (
+                str(getattr(item, "branch_id", "")).casefold(),
+                str(getattr(item, "branch_id", "")),
+            ),
+        ):
+            branch_id = str(getattr(branch, "branch_id", "")).strip()
+            for role, attribute in (
+                ("power", "source_power_pin_id"),
+                ("ground", "source_ground_pin_id"),
+            ):
+                pin_id = str(getattr(branch, attribute, "") or "").strip()
+                if not branch_id or not pin_id:
+                    failures.append(
+                        {
+                            "rail_id": rail.rail_id,
+                            "code": "ANCHOR_BINDING_MISSING",
+                            "message": (
+                                f"compiled branch {branch_id or '<blank>'!r} "
+                                f"has no {attribute}"
+                            ),
+                        }
+                    )
+                    continue
+                bindings.append(
+                    {
+                        "rail_id": rail.rail_id,
+                        "branch_id": branch_id,
+                        "role": role,
+                        "pin_id": pin_id,
+                    }
+                )
+    bindings = sorted(
+        {
+            (
+                item["rail_id"].casefold(),
+                item["branch_id"].casefold(),
+                item["role"],
+                item["pin_id"].casefold(),
+            ): item
+            for item in bindings
+        }.values(),
+        key=lambda item: (
+            item["rail_id"].casefold(),
+            item["branch_id"].casefold(),
+            item["role"],
+            item["pin_id"].casefold(),
+        ),
+    )
+    failures.sort(
+        key=lambda item: (
+            item["rail_id"].casefold(),
+            item["code"].casefold(),
+            item["message"],
+        )
+    )
+    return bindings, failures
+
+
+def _anchor_graph_landings(
+    bindings: Iterable[Mapping[str, str]],
+    device_terminal_endpoints: Iterable[Any],
+) -> tuple[
+    dict[str, _SourceGraphLanding],
+    dict[str, dict[str, Any]],
+]:
+    """Map only compiled anchor pin IDs into raw source-graph starts."""
+
+    endpoint_by_pin: dict[str, list[Any]] = {}
+    for endpoint in device_terminal_endpoints:
+        pin_id = str(getattr(endpoint, "pin_id", "")).strip()
+        if pin_id:
+            endpoint_by_pin.setdefault(pin_id.casefold(), []).append(endpoint)
+    required_pin_ids = sorted(
+        {
+            str(item["pin_id"]).strip()
+            for item in bindings
+            if str(item.get("pin_id", "")).strip()
+        },
+        key=lambda value: (value.casefold(), value),
+    )
+    landings: dict[str, _SourceGraphLanding] = {}
+    contacts: dict[str, dict[str, Any]] = {}
+    for pin_id in required_pin_ids:
+        pin_key = pin_id.casefold()
+        candidates = endpoint_by_pin.get(pin_key, ())
+        issues: list[str] = []
+        endpoint = candidates[0] if len(candidates) == 1 else None
+        if not candidates:
+            issues.append("terminal_endpoint_missing")
+        elif len(candidates) != 1:
+            issues.append("terminal_endpoint_ambiguous")
+        net = str(getattr(endpoint, "net", "") or "").strip()
+        source_node_id = str(
+            getattr(endpoint, "source_node_id", "") or ""
+        ).strip()
+        source_layer = str(
+            getattr(endpoint, "source_layer", "") or ""
+        ).strip()
+        first_via_status = str(
+            getattr(endpoint, "status", "") or ""
+        ).strip()
+        if first_via_status and first_via_status != "complete":
+            issues.append(f"first_via_status:{first_via_status}")
+        incident_via_id = str(
+            getattr(endpoint, "incident_via_id", "") or ""
+        ).strip()
+        incident_net = str(
+            getattr(endpoint, "incident_net", "") or net
+        ).strip()
+        incident_opposite_node_id = str(
+            getattr(endpoint, "incident_opposite_node_id", "") or ""
+        ).strip()
+        incident_padstack = str(
+            getattr(endpoint, "incident_padstack", "") or ""
+        ).strip()
+        if incident_net and net and incident_net.casefold() != net.casefold():
+            issues.append("incident_net_mismatch")
+        x_um = getattr(endpoint, "source_x_um", None)
+        y_um = getattr(endpoint, "source_y_um", None)
+        source_identity_valid = bool(
+            endpoint is not None
+            and net
+            and source_node_id
+            and source_layer
+            and isinstance(x_um, (int, float))
+            and isinstance(y_um, (int, float))
+            and isfinite(float(x_um))
+            and isfinite(float(y_um))
+        )
+        if not source_identity_valid:
+            issues.append("source_node_identity_incomplete")
+        if source_identity_valid:
+            padstack = str(
+                incident_padstack
+                or getattr(endpoint, "source_padstack", "")
+                or ""
+            ).strip()
+            landing = _SourceGraphLanding(
+                via_id=(
+                    incident_via_id
+                    if incident_via_id
+                    else f"source-node:{source_node_id}"
+                ),
+                net=net,
+                endpoint_node_id=source_node_id,
+                x_um=float(x_um),
+                y_um=float(y_um),
+                padstack=padstack,
+                pin_id=pin_id,
+                contact_path_kind=(
+                    "direct_via_landing"
+                    if incident_via_id
+                    else "trace_component"
+                ),
+            )
+            landings[pin_key] = landing
+        contacts[pin_key] = {
+            "pin_id": pin_id,
+            "net": net,
+            "source_node_id": source_node_id or None,
+            "incident_via_id": incident_via_id or None,
+            "incident_net": incident_net or None,
+            "incident_opposite_node_id": incident_opposite_node_id or None,
+            "incident_padstack": incident_padstack or None,
+            "source_layer": source_layer or None,
+            "contact_path_kind": (
+                "direct_via_landing"
+                if incident_via_id
+                else "trace_component"
+                if source_identity_valid
+                else "unresolved"
+            ),
+            "contact_layers": [],
+            "status": "pending" if source_identity_valid else "incomplete",
+            "issues": sorted(set(issues)),
+        }
+    return landings, contacts
+
+
+def _retained_surface_artwork(
+    project: ProjectSpec,
+    attachments: Mapping[str, bytes],
+    *,
+    progress: ProgressCallback | None = None,
+    is_cancelled: CancelCallback | None = None,
+) -> tuple[
+    Callable[[str, str, str, float, float], bool],
+    Callable[[str, str, str, float, float], str | None],
+    Callable[[str, str, str, float, float], str | None],
+    list[dict[str, Any]],
+    dict[str, set[str]],
+    dict[tuple[str, str], tuple[str, ...]],
+]:
+    """Load and hash-verify every retained exact layer/NET artwork asset."""
+
+    raw_report = progress or (lambda _value, _message: None)
+    last_reported_progress = -1
+
+    def report(value: int, message: str) -> None:
+        nonlocal last_reported_progress
+        bounded = max(last_reported_progress, min(100, max(0, int(value))))
+        last_reported_progress = bounded
+        raw_report(bounded, message)
+    cancelled = is_cancelled or (lambda: False)
+    callbacks_requested = progress is not None or is_cancelled is not None
+    last_progress = -1
+
+    def check_cancelled() -> None:
+        if cancelled():
+            raise RuntimeError("SPD retained-surface artwork compilation cancelled")
+
+    def emit(value: int, message: str) -> None:
+        nonlocal last_progress
+        bounded = max(0, min(100, int(value)))
+        if bounded <= last_progress:
+            return
+        last_progress = bounded
+        report(bounded, message)
+
+    check_cancelled()
+    emit(0, "Loading retained layer-surface artwork")
+    try:
+        from shapely.geometry import Point
+        from shapely.prepared import prep
+    except ImportError as exc:
+        raise SpdImportError(
+            "SPD_LAYER_SURFACE_ARTWORK_REQUIRED: Shapely is required to "
+            "verify exact layer-surface contacts"
+        ) from exc
+    spd_import = project.metadata.get("spd_import")
+    records = (
+        spd_import.get("plane_geometries")
+        if isinstance(spd_import, dict)
+        else None
+    )
+    if not isinstance(records, list) or not records:
+        raise SpdImportError(
+            "SPD_LAYER_SURFACE_ARTWORK_REQUIRED: retained geometry index is missing"
+        )
+    shapes: dict[
+        tuple[str, str],
+        tuple[
+            tuple[str, Any, Any, tuple[float, float, float, float]], ...
+        ],
+    ] = {}
+    identities: list[dict[str, Any]] = []
+    target_layers_by_net: dict[str, set[str]] = {}
+    target_surface_island_ids: dict[tuple[str, str], tuple[str, ...]] = {}
+    total_records = len(records)
+    for record_index, record in enumerate(records):
+        check_cancelled()
+        record_low = round(record_index * 99 / max(1, total_records))
+        record_high = round((record_index + 1) * 99 / max(1, total_records))
+        emit(
+            record_low,
+            "Loading retained layer-surface artwork "
+            f"({record_index}/{total_records})",
+        )
+        if not isinstance(record, dict):
+            raise SpdImportError(
+                "SPD_LAYER_SURFACE_ARTWORK_REQUIRED: geometry index row is invalid"
+            )
+        layer = str(record.get("layer", "")).strip()
+        net = str(record.get("net", "")).strip()
+        asset = str(record.get("asset", "")).strip()
+        asset_sha256 = str(record.get("asset_sha256", "")).strip().casefold()
+        if not layer or not net or not asset or len(asset_sha256) != 64:
+            raise SpdImportError(
+                "SPD_LAYER_SURFACE_ARTWORK_REQUIRED: geometry asset identity is incomplete"
+            )
+        compressed = attachments.get(asset)
+        if compressed is None or sha256(compressed).hexdigest() != asset_sha256:
+            raise SpdImportError(
+                "SPD_LAYER_SURFACE_ARTWORK_REQUIRED: geometry attachment hash "
+                f"mismatch for {net!r} on {layer!r}"
+            )
+        try:
+            check_cancelled()
+            payload = core_services._decode_spd_geometry_asset(
+                asset_sha256, compressed
+            )
+            check_cancelled()
+            core_services._validate_spd_geometry_payload(
+                payload, expected_layer=layer, expected_net=net
+            )
+
+            def geometry_progress(value: int, message: str) -> None:
+                span = max(0, record_high - record_low)
+                emit(record_low + round(span * 0.72 * value / 100), message)
+
+            shape = (
+                core_services._ordered_spd_geometry(
+                    payload,
+                    progress=geometry_progress,
+                    is_cancelled=cancelled,
+                )
+                if callbacks_requested
+                else core_services._ordered_spd_geometry(payload)
+            )
+        except (ValueError, ArithmeticError) as exc:
+            raise SpdImportError(
+                "SPD_LAYER_SURFACE_ARTWORK_REQUIRED: invalid exact geometry "
+                f"for {net!r} on {layer!r}: {exc}"
+            ) from exc
+        if shape is None or bool(getattr(shape, "is_empty", False)):
+            raise SpdImportError(
+                "SPD_LAYER_SURFACE_ARTWORK_REQUIRED: exact geometry cannot be "
+                f"constructed for {net!r} on {layer!r}"
+            )
+        key = (net.casefold(), layer.casefold())
+        if key in shapes:
+            raise SpdImportError(
+                "SPD_LAYER_SURFACE_ARTWORK_REQUIRED: multiple geometry assets "
+                f"claim the same exact {net!r}/{layer!r} surface"
+            )
+        try:
+            def island_progress(value: int, message: str) -> None:
+                span = max(0, record_high - record_low)
+                emit(
+                    record_low
+                    + round(span * (0.72 + 0.18 * value / 100)),
+                    message,
+                )
+
+            island_kwargs: dict[str, Any] = {}
+            if callbacks_requested:
+                island_kwargs = {
+                    "progress": island_progress,
+                    "is_cancelled": cancelled,
+                }
+            islands = core_services._spd_surface_islands(
+                layer=layer,
+                net=net,
+                asset_sha256=asset_sha256,
+                shape=shape,
+                **island_kwargs,
+            )
+        except ValueError as exc:
+            raise SpdImportError(
+                "SPD_LAYER_SURFACE_ARTWORK_REQUIRED: cannot identify connected "
+                f"islands for {net!r} on {layer!r}: {exc}"
+            ) from exc
+        prepared_islands: list[
+            tuple[str, Any, Any, tuple[float, float, float, float]]
+        ] = []
+        for island_index, (island_id, island) in enumerate(islands, start=1):
+            check_cancelled()
+            prepared = prep(island)
+            bounds = tuple(map(float, island.bounds))
+            check_cancelled()
+            # Keep the connected island itself beside its prepared predicate.
+            # Distribution's strict-interior check can then evaluate only the
+            # one small connected component covering a landing, instead of
+            # re-running contains/distance against the complete layer/NET
+            # union (hundreds of thousands of very large GEOS walks on the
+            # supplied 696-landing board).
+            prepared_islands.append((island_id, prepared, island, bounds))
+            span = max(0, record_high - record_low)
+            emit(
+                record_low
+                + round(span * (0.90 + 0.09 * island_index / len(islands))),
+                f"Preparing surface-island spatial indexes for {net} on {layer} "
+                f"({island_index}/{len(islands)})",
+            )
+        shapes[key] = tuple(prepared_islands)
+        target_surface_island_ids[key] = tuple(
+            island_id for island_id, _island in islands
+        )
+        target_layers_by_net.setdefault(net.casefold(), set()).add(layer)
+        identities.append(
+            {
+                "layer": layer,
+                "net": net,
+                "asset": asset,
+                "asset_sha256": asset_sha256,
+                "island_ids": list(target_surface_island_ids[key]),
+            }
+        )
+        emit(
+            record_high,
+            f"Loaded retained surface artwork for {net} on {layer}",
+        )
+    check_cancelled()
+    emit(100, f"Loaded {len(identities)} retained layer-surface artwork asset(s)")
+    identities.sort(
+        key=lambda item: (
+            item["net"].casefold(),
+            item["layer"].casefold(),
+            item["asset"].casefold(),
+            item["asset_sha256"],
+        )
+    )
+
+    def resolve_island(
+        net: str,
+        layer: str,
+        _node_id: str,
+        x_um: float,
+        y_um: float,
+    ) -> str | None:
+        candidates = shapes.get((net.casefold(), layer.casefold()), ())
+        if not candidates:
+            return None
+        point = Point(float(x_um), float(y_um))
+        try:
+            matches = [
+                island_id
+                for island_id, shape, _island, (x_min, y_min, x_max, y_max) in candidates
+                if (
+                x_min <= x_um <= x_max
+                and y_min <= y_um <= y_max
+                and bool(shape.covers(point))
+                )
+            ]
+        except Exception as exc:
+            raise SpdImportError(
+                "SPD_LAYER_SURFACE_ARTWORK_REQUIRED: exact point-cover check "
+                f"failed for {net!r} on {layer!r}: {exc}"
+            ) from exc
+        if len(matches) > 1:
+            raise SpdImportError(
+                "SPD_LAYER_SURFACE_ARTWORK_REQUIRED: one source Node is covered "
+                f"by multiple disconnected islands for {net!r} on {layer!r}"
+            )
+        return matches[0] if matches else None
+
+    def covers(
+        net: str,
+        layer: str,
+        node_id: str,
+        x_um: float,
+        y_um: float,
+    ) -> bool:
+        return resolve_island(net, layer, node_id, x_um, y_um) is not None
+
+    def resolve_strict_interior_island(
+        net: str,
+        layer: str,
+        node_id: str,
+        x_um: float,
+        y_um: float,
+    ) -> str | None:
+        """Match Distribution's fail-closed exact-XY artwork predicate."""
+
+        candidates = shapes.get((net.casefold(), layer.casefold()), ())
+        if not candidates:
+            return None
+        point = Point(float(x_um), float(y_um))
+        try:
+            matches = [
+                island_id
+                for island_id, prepared, island, (
+                    x_min,
+                    y_min,
+                    x_max,
+                    y_max,
+                ) in candidates
+                if (
+                    x_min < x_um < x_max
+                    and y_min < y_um < y_max
+                    and bool(prepared.contains(point))
+                    and float(point.distance(island.boundary)) > 1.0e-6
+                )
+            ]
+        except Exception as exc:
+            raise SpdImportError(
+                "SPD_LAYER_SURFACE_ARTWORK_REQUIRED: exact strict-interior "
+                f"point check failed for {net!r} on {layer!r}: {exc}"
+            ) from exc
+        if len(matches) > 1:
+            raise SpdImportError(
+                "SPD_LAYER_SURFACE_ARTWORK_REQUIRED: one strict-interior "
+                f"point is covered by multiple islands for {net!r} on {layer!r}"
+            )
+        return matches[0] if matches else None
+
+    return (
+        covers,
+        resolve_island,
+        resolve_strict_interior_island,
+        identities,
+        target_layers_by_net,
+        target_surface_island_ids,
+    )
+
+
+def _compile_retarget_landing_destination_requests(
+    *,
+    project: ProjectSpec,
+    decap_connections: Iterable[Any],
+    geometry_assets: Iterable[Mapping[str, Any]],
+    strict_island_resolver: Callable[
+        [str, str, str, float, float], str | None
+    ],
+    progress: ProgressCallback | None = None,
+    is_cancelled: CancelCallback | None = None,
+) -> tuple[
+    tuple[_RetargetLandingDestinationRequest, ...],
+    dict[str, Any],
+]:
+    """Enumerate every exact Distribution destination at immutable PWR-Via XY.
+
+    The enumeration is intentionally independent of source Via path evidence.
+    A rail is a candidate on every retained conductor layer carrying its NET,
+    exactly matching Distribution's vertical filled-Cu retarget projection.
+    """
+
+    report = progress or (lambda _value, _message: None)
+    cancelled = is_cancelled or (lambda: False)
+    connections = tuple(decap_connections)
+    total_landings = sum(
+        len(tuple(getattr(connection, "power_vias", ())))
+        for connection in connections
+    )
+    processed_landings = 0
+    report(
+        0,
+        "Indexing exact Distribution retarget destinations "
+        f"for {total_landings:,} PWR landing(s)",
+    )
+    rails_by_net: dict[str, list[dict[str, str | None]]] = {}
+    for rail in getattr(project, "rails", ()):
+        rail_id = str(getattr(rail, "rail_id", "")).strip()
+        net = str(getattr(rail, "net", "")).strip()
+        if rail_id and net:
+            rails_by_net.setdefault(net.casefold(), []).append(
+                {
+                    "rail_id": rail_id,
+                    "via_template_id": _template_for_rail(project, rail_id),
+                }
+            )
+    rails_by_net = {
+        net_key: sorted(
+            {
+                str(item["rail_id"]).casefold(): item
+                for item in rail_rows
+            }.values(),
+            key=lambda item: str(item["rail_id"]).casefold(),
+        )
+        for net_key, rail_rows in rails_by_net.items()
+    }
+
+    conductor_net_layers = {
+        (str(net).strip().casefold(), layer_name.casefold())
+        for raw_layer in getattr(project, "stackup_layers", ())
+        if bool(getattr(raw_layer, "is_conductor", False))
+        and (layer_name := str(getattr(raw_layer, "name", "")).strip())
+        for net in getattr(raw_layer, "pwr_nets", ())
+        if str(net).strip()
+    }
+    surfaces: list[dict[str, Any]] = []
+    seen_surface_keys: set[tuple[str, str]] = set()
+    for raw_asset in geometry_assets:
+        net = str(raw_asset.get("net", "")).strip()
+        layer = str(raw_asset.get("layer", "")).strip()
+        asset_sha256 = str(raw_asset.get("asset_sha256", "")).strip().casefold()
+        key = (net.casefold(), layer.casefold())
+        eligible_rails = rails_by_net.get(key[0], [])
+        if (
+            not net
+            or not layer
+            or len(asset_sha256) != 64
+            or not eligible_rails
+            or (
+                conductor_net_layers
+                and key not in conductor_net_layers
+            )
+        ):
+            continue
+        if key in seen_surface_keys:
+            raise SpdImportError(
+                "SPD_RETARGET_LANDING_SURFACE_DUPLICATE: retained geometry "
+                f"repeats {net!r} on {layer!r}"
+            )
+        seen_surface_keys.add(key)
+        surfaces.append(
+            {
+                "net": net,
+                "layer": layer,
+                "asset_sha256": asset_sha256,
+                "eligible_rails": eligible_rails,
+            }
+        )
+    surfaces.sort(
+        key=lambda item: (
+            item["net"].casefold(),
+            item["layer"].casefold(),
+            item["asset_sha256"],
+        )
+    )
+
+    landing_identities: list[dict[str, str]] = []
+    requests: list[_RetargetLandingDestinationRequest] = []
+    seen_landing_keys: set[tuple[str, str, str]] = set()
+    for connection in sorted(
+        connections,
+        key=lambda item: str(getattr(item, "refdes", "")).casefold(),
+    ):
+        refdes = str(getattr(connection, "refdes", "")).strip()
+        for landing in tuple(getattr(connection, "power_vias", ())):
+            if cancelled():
+                raise RuntimeError("SPD retarget destination scan cancelled")
+            if processed_landings % 16 == 0:
+                report(
+                    round(100 * processed_landings / max(1, total_landings)),
+                    "Indexing exact Distribution retarget destinations "
+                    f"({processed_landings:,}/{total_landings:,})",
+                )
+            via_id = str(getattr(landing, "via_id", "")).strip()
+            node_id = str(
+                getattr(landing, "endpoint_node_id", "")
+            ).strip()
+            source_net = str(getattr(landing, "net", "")).strip()
+            try:
+                x_um = float(getattr(landing, "x_um"))
+                y_um = float(getattr(landing, "y_um"))
+            except (AttributeError, TypeError, ValueError) as exc:
+                raise SpdImportError(
+                    "SPD_RETARGET_LANDING_IDENTITY_INVALID: every PWR Via "
+                    "landing requires finite immutable XY coordinates"
+                ) from exc
+            landing_key = (
+                refdes.casefold(),
+                via_id.casefold(),
+                node_id.casefold(),
+            )
+            if (
+                not all((refdes, via_id, node_id, source_net))
+                or not isfinite(x_um)
+                or not isfinite(y_um)
+                or landing_key in seen_landing_keys
+            ):
+                raise SpdImportError(
+                    "SPD_RETARGET_LANDING_IDENTITY_INVALID: PWR landing "
+                    "REFDES/Via/Node identities must be nonblank and unique"
+                )
+            seen_landing_keys.add(landing_key)
+            landing_identities.append(
+                {
+                    "refdes": refdes.casefold(),
+                    "via_id": via_id.casefold(),
+                    "endpoint_node_id": node_id.casefold(),
+                }
+            )
+            for surface in surfaces:
+                island_id = strict_island_resolver(
+                    surface["net"],
+                    surface["layer"],
+                    f"retarget:{refdes}:{via_id}:{node_id}",
+                    x_um,
+                    y_um,
+                )
+                if island_id is None:
+                    continue
+                requests.extend(
+                    _RetargetLandingDestinationRequest(
+                        refdes=refdes,
+                        via_id=via_id,
+                        endpoint_node_id=node_id,
+                        source_net=source_net,
+                        x_um=x_um,
+                        y_um=y_um,
+                        destination_net=surface["net"],
+                        destination_layer=surface["layer"],
+                        destination_island_id=str(island_id),
+                        geometry_asset_sha256=surface["asset_sha256"],
+                        target_rail_id=str(rail["rail_id"]),
+                        via_template_id=(
+                            str(rail["via_template_id"])
+                            if rail["via_template_id"] is not None
+                            else None
+                        ),
+                    )
+                    for rail in surface["eligible_rails"]
+                )
+            processed_landings += 1
+    requests.sort(
+        key=lambda item: (
+            item.refdes.casefold(),
+            item.via_id.casefold(),
+            item.endpoint_node_id.casefold(),
+            item.destination_net.casefold(),
+            item.destination_layer.casefold(),
+            item.target_rail_id.casefold(),
+            item.destination_island_id,
+        )
+    )
+    request_identities = [
+        {
+            "refdes": item.refdes.casefold(),
+            "via_id": item.via_id.casefold(),
+            "endpoint_node_id": item.endpoint_node_id.casefold(),
+            "destination_net": item.destination_net.casefold(),
+            "destination_layer": item.destination_layer.casefold(),
+            "destination_island_id": item.destination_island_id,
+            "target_rail_id": item.target_rail_id.casefold(),
+        }
+        for item in requests
+    ]
+    coverage = {
+        "power_landing_count": len(landing_identities),
+        "scanned_landing_count": len(seen_landing_keys),
+        "candidate_surface_count": len(surfaces),
+        "candidate_surface_rail_count": sum(
+            len(item["eligible_rails"]) for item in surfaces
+        ),
+        "landing_surface_test_count": len(seen_landing_keys) * len(surfaces),
+        "covered_destination_count": len(requests),
+        "power_landing_ids_sha256": core_services._canonical_metadata_sha256(
+            {"landings": landing_identities}
+        ),
+        "candidate_surface_ids_sha256": (
+            core_services._canonical_metadata_sha256({"surfaces": surfaces})
+        ),
+        "covered_destination_ids_sha256": (
+            core_services._canonical_metadata_sha256(
+                {"destinations": request_identities}
+            )
+        ),
+        "artwork_predicate": (
+            "ordered_geometry_strict_interior_boundary_distance_gt_1e-6_um"
+        ),
+        "status": "complete",
+    }
+    report(
+        100,
+        "Indexed exact Distribution retarget destinations "
+        f"({len(requests):,} destination binding(s))",
+    )
+    return tuple(requests), coverage
+
+
+def _bind_certified_surface_islands(
+    plane_geometry_records: object,
+    certified_geometry_assets: Iterable[Mapping[str, Any]],
+) -> list[dict[str, Any]]:
+    """Bind exact connected-island IDs back to the project geometry index.
+
+    The compiled-only topology compiler consumes the project plane-geometry
+    manifest, while exact island discovery happens later when retained artwork
+    is reconstructed.  Keep those two views atomically identical; otherwise a
+    production-complete certificate is incorrectly routed to the legacy raw
+    multi-GiB certificate path.
+    """
+
+    if not isinstance(plane_geometry_records, list):
+        raise SpdImportError(
+            "SPD_LAYER_SURFACE_GEOMETRY_MANIFEST_INVALID: retained project "
+            "plane geometry index is not a list"
+        )
+
+    def identity(row: Mapping[str, Any]) -> tuple[str, str, str, str]:
+        return (
+            str(row.get("net", "")).strip().casefold(),
+            str(row.get("layer", "")).strip().casefold(),
+            str(row.get("asset", "")).strip(),
+            str(row.get("asset_sha256", "")).strip().casefold(),
+        )
+
+    certified_by_identity: dict[
+        tuple[str, str, str, str], tuple[str, ...]
+    ] = {}
+    for raw_certified in certified_geometry_assets:
+        if not isinstance(raw_certified, Mapping):
+            raise SpdImportError(
+                "SPD_LAYER_SURFACE_GEOMETRY_MANIFEST_INVALID: certified "
+                "surface geometry row is not a mapping"
+            )
+        key = identity(raw_certified)
+        raw_islands = raw_certified.get("island_ids")
+        islands = (
+            tuple(str(item).strip() for item in raw_islands)
+            if isinstance(raw_islands, (list, tuple))
+            else ()
+        )
+        if (
+            not all(key)
+            or len(key[3]) != 64
+            or any(character not in "0123456789abcdef" for character in key[3])
+            or not islands
+            or any(not item for item in islands)
+            or len(set(islands)) != len(islands)
+            or key in certified_by_identity
+        ):
+            raise SpdImportError(
+                "SPD_LAYER_SURFACE_GEOMETRY_MANIFEST_INVALID: certified "
+                "surface geometry identity/island partition is incomplete "
+                "or duplicated"
+            )
+        certified_by_identity[key] = islands
+
+    merged: list[dict[str, Any]] = []
+    seen_project_identities: set[tuple[str, str, str, str]] = set()
+    for raw_record in plane_geometry_records:
+        if not isinstance(raw_record, Mapping):
+            raise SpdImportError(
+                "SPD_LAYER_SURFACE_GEOMETRY_MANIFEST_INVALID: retained project "
+                "plane geometry row is not a mapping"
+            )
+        key = identity(raw_record)
+        islands = certified_by_identity.get(key)
+        if (
+            not all(key)
+            or key in seen_project_identities
+            or islands is None
+        ):
+            raise SpdImportError(
+                "SPD_LAYER_SURFACE_GEOMETRY_MANIFEST_MISMATCH: retained project "
+                "and certified surface geometry identities differ"
+            )
+        seen_project_identities.add(key)
+        existing = raw_record.get("island_ids")
+        if existing is not None and (
+            not isinstance(existing, (list, tuple))
+            or tuple(str(item).strip() for item in existing) != islands
+        ):
+            raise SpdImportError(
+                "SPD_LAYER_SURFACE_GEOMETRY_MANIFEST_MISMATCH: an existing "
+                "surface-island partition conflicts with exact artwork"
+            )
+        merged.append({**dict(raw_record), "island_ids": list(islands)})
+
+    if seen_project_identities != set(certified_by_identity):
+        raise SpdImportError(
+            "SPD_LAYER_SURFACE_GEOMETRY_MANIFEST_MISMATCH: certified surface "
+            "geometry coverage is not exact"
+        )
+    return merged
+
+
+def _layer_surface_connectivity_certificate(
+    *,
+    project: ProjectSpec,
+    source_sha256: str,
+    geometry_assets: list[dict[str, Any]],
+    rail_anchor_bindings: list[dict[str, str]],
+    compile_failures: list[dict[str, str]],
+    contact_seeds: dict[str, dict[str, Any]],
+    landing_by_pin: dict[str, _SourceGraphLanding],
+    reachability: Any,
+    decap_connections: Iterable[Any] = (),
+    shared_pad_clusters: Iterable[Any] = (),
+    retarget_landing_destination_requests: Iterable[Any] = (),
+    retarget_landing_scan_coverage: Mapping[str, Any] | None = None,
+    progress: ProgressCallback | None = None,
+    is_cancelled: CancelCallback | None = None,
+) -> dict[str, Any]:
+    """Create deterministic persisted evidence from one exact graph pass."""
+
+    raw_report = progress or (lambda _value, _message: None)
+    last_reported_progress = -1
+
+    def report(value: int, message: str) -> None:
+        nonlocal last_reported_progress
+        bounded = max(
+            last_reported_progress, min(100, max(0, int(value)))
+        )
+        last_reported_progress = bounded
+        raw_report(bounded, message)
+
+    cancelled = is_cancelled or (lambda: False)
+
+    def check_cancelled(phase: str) -> None:
+        if cancelled():
+            raise SpdImportError(
+                "SPD_LAYER_SURFACE_CONNECTIVITY_CERTIFICATE_CANCELLED: "
+                f"cancelled while {phase}"
+            )
+
+    def retarget_landing_order_key(item: Any) -> tuple[str, ...]:
+        return (
+            str(getattr(item, "refdes", "")).casefold(),
+            str(getattr(item, "via_id", "")).casefold(),
+            str(getattr(item, "endpoint_node_id", "")).casefold(),
+            str(getattr(item, "destination_net", "")).casefold(),
+            str(getattr(item, "destination_layer", "")).casefold(),
+            str(getattr(item, "target_rail_id", "")).casefold(),
+            str(getattr(item, "destination_island_id", "")),
+        )
+
+    def canonical_concrete_row_bytes(row: Mapping[str, Any]) -> bytes:
+        return json.dumps(
+            row,
+            ensure_ascii=False,
+            sort_keys=True,
+            separators=(",", ":"),
+            allow_nan=False,
+        ).encode("utf-8")
+
+    report(0, "Normalizing layer-surface connectivity certificate evidence")
+    check_cancelled("starting layer-surface certificate compilation")
+    decap_connections = tuple(decap_connections)
+    shared_pad_clusters = tuple(shared_pad_clusters)
+    retarget_landing_destination_requests = tuple(
+        retarget_landing_destination_requests
+    )
+    previous_order_key: tuple[str, ...] | None = None
+    retarget_requests_are_sorted = True
+    for request_index, request in enumerate(
+        retarget_landing_destination_requests
+    ):
+        if request_index % 4096 == 0:
+            check_cancelled("normalizing exact retarget landing bindings")
+        order_key = retarget_landing_order_key(request)
+        if previous_order_key is not None and order_key < previous_order_key:
+            retarget_requests_are_sorted = False
+            break
+        previous_order_key = order_key
+    if not retarget_requests_are_sorted:
+        retarget_landing_destination_requests = tuple(
+            sorted(
+                retarget_landing_destination_requests,
+                key=retarget_landing_order_key,
+            )
+        )
+    scenario_topology_requested = bool(decap_connections)
+
+    if not isinstance(geometry_assets, list) or not all(
+        isinstance(item, Mapping) for item in geometry_assets
+    ):
+        raise SpdImportError(
+            "SPD_LAYER_SURFACE_GEOMETRY_MANIFEST_INVALID: every retained "
+            "plane-geometry row must be a mapping"
+        )
+
+    conductor_position_by_key: dict[str, int] = {}
+    conductor_center_um_by_key: dict[str, float] = {}
+    duplicate_conductor_keys: set[str] = set()
+    depth_um = 0.0
+    conductor_ordinal = 0
+    for raw_layer in getattr(project, "stackup_layers", ()):
+        name = str(getattr(raw_layer, "name", "")).strip()
+        try:
+            thickness_um = float(getattr(raw_layer, "thickness_um"))
+        except (AttributeError, TypeError, ValueError):
+            thickness_um = float("nan")
+        if bool(getattr(raw_layer, "is_conductor", False)) and name:
+            key = name.casefold()
+            if key in conductor_position_by_key:
+                duplicate_conductor_keys.add(key)
+            else:
+                conductor_position_by_key[key] = conductor_ordinal
+                if isfinite(thickness_um) and thickness_um > 0.0:
+                    conductor_center_um_by_key[key] = (
+                        depth_um + thickness_um / 2.0
+                    )
+            conductor_ordinal += 1
+        if isfinite(thickness_um) and thickness_um > 0.0:
+            depth_um += thickness_um
+
+    def segment_stackup_issues(
+        segments: list[dict[str, Any]],
+        *,
+        expected_start_layer: object,
+        expected_end_layer: object,
+    ) -> set[str]:
+        """Re-certify one Via chain against the current project stack-up."""
+
+        issues: set[str] = set()
+        if not segments:
+            return {"physical_segment_chain_missing"}
+        start_key = str(expected_start_layer or "").strip().casefold()
+        end_key = str(expected_end_layer or "").strip().casefold()
+        ordinals = [int(item.get("ordinal", -1)) for item in segments]
+        if ordinals != list(range(len(segments))):
+            issues.add("segment_chain_ordinal_invalid")
+        segment_pairs = [
+            (
+                str(item.get("start_layer", "")).strip().casefold(),
+                str(item.get("end_layer", "")).strip().casefold(),
+            )
+            for item in segments
+        ]
+        if (
+            not start_key
+            or not end_key
+            or segment_pairs[0][0] != start_key
+            or segment_pairs[-1][1] != end_key
+            or any(
+                first[1] != second[0]
+                for first, second in zip(
+                    segment_pairs, segment_pairs[1:], strict=False
+                )
+            )
+        ):
+            issues.add("segment_chain_endpoint_or_continuity_mismatch")
+        path_layer_keys = [segment_pairs[0][0]] + [
+            pair[1] for pair in segment_pairs
+        ]
+        if len(set(path_layer_keys)) != len(path_layer_keys):
+            issues.add("segment_stackup_path_repeats_layer")
+        if any(
+            not key
+            or key in duplicate_conductor_keys
+            or key not in conductor_position_by_key
+            or key not in conductor_center_um_by_key
+            for key in path_layer_keys
+        ):
+            issues.add("segment_stackup_layer_missing_or_ambiguous")
+            return issues
+        positions = [conductor_position_by_key[key] for key in path_layer_keys]
+        deltas = [
+            second - first
+            for first, second in zip(positions, positions[1:], strict=False)
+        ]
+        if not deltas or not (
+            all(delta > 0 for delta in deltas)
+            or all(delta < 0 for delta in deltas)
+        ):
+            issues.add("segment_stackup_path_non_monotonic")
+        for item, (first_key, second_key) in zip(
+            segments, segment_pairs, strict=True
+        ):
+            try:
+                length_um = float(item.get("length_um"))
+            except (TypeError, ValueError):
+                issues.add("segment_length_stackup_mismatch")
+                continue
+            expected_length_um = abs(
+                conductor_center_um_by_key[second_key]
+                - conductor_center_um_by_key[first_key]
+            )
+            if (
+                not isfinite(length_um)
+                or length_um <= 0.0
+                or not isclose(
+                    length_um,
+                    expected_length_um,
+                    rel_tol=1e-12,
+                    abs_tol=1e-9,
+                )
+            ):
+                issues.add("segment_length_stackup_mismatch")
+        return issues
+
+    raw_layers_by_landing = getattr(
+        reachability, "surface_layers_by_landing", {}
+    )
+    raw_islands_by_landing = getattr(
+        reachability, "surface_islands_by_landing", {}
+    )
+    raw_finite_vertex_by_landing = getattr(
+        reachability, "finite_via_vertex_id_by_landing", {}
+    )
+    raw_finite_edge_by_landing = getattr(
+        reachability, "finite_via_edge_id_by_landing", {}
+    )
+    raw_landing_surface_contacts = tuple(
+        getattr(reachability, "landing_surface_contacts", ())
+    )
+    landing_contact_identity_by_via: dict[str, tuple[str, str]] = {}
+    for item in raw_landing_surface_contacts:
+        if str(
+            getattr(item, "terminal_owner_kind", "unknown")
+        ).strip().casefold() != "device":
+            continue
+        via_key = str(getattr(item, "via_id", "")).strip().casefold()
+        identity = (
+            str(getattr(item, "net", "")).strip().casefold(),
+            str(getattr(item, "endpoint_node_id", "")).strip().casefold(),
+        )
+        if not via_key:
+            continue
+        previous = landing_contact_identity_by_via.get(via_key)
+        if previous is not None:
+            raise SpdImportError(
+                "SPD_LAYER_SURFACE_TERMINAL_VIA_OWNERSHIP_INVALID: one physical "
+                "terminal Via ID has multiple persisted landing contacts"
+            )
+        landing_contact_identity_by_via[via_key] = identity
+    direct_via_owner_by_key: dict[str, str] = {}
+    for pin_key, landing in landing_by_pin.items():
+        seed = contact_seeds.get(pin_key, {})
+        if str(seed.get("contact_path_kind", "")).strip() != "direct_via_landing":
+            continue
+        via_key = str(getattr(landing, "via_id", "")).strip().casefold()
+        if not via_key:
+            continue
+        previous_pin = direct_via_owner_by_key.get(via_key)
+        if previous_pin is not None and previous_pin != pin_key:
+            raise SpdImportError(
+                "SPD_LAYER_SURFACE_TERMINAL_VIA_OWNERSHIP_INVALID: one physical "
+                "terminal Via ID is assigned to multiple device pins"
+            )
+        direct_via_owner_by_key[via_key] = pin_key
+    landing_surface_contact_by_key = {
+        (
+            str(getattr(item, "via_id", "")).casefold(),
+            str(getattr(item, "endpoint_node_id", "")).casefold(),
+        ): item
+        for item in raw_landing_surface_contacts
+        if str(getattr(item, "via_id", "")).strip()
+        and str(getattr(item, "endpoint_node_id", "")).strip()
+    }
+    terminal_contacts: list[dict[str, Any]] = []
+    for pin_key in sorted(contact_seeds):
+        contact = dict(contact_seeds[pin_key])
+        issues = list(contact["issues"])
+        landing = landing_by_pin.get(pin_key)
+        contact_layers: tuple[str, ...] = ()
+        if landing is not None:
+            contact_layers = tuple(
+                raw_layers_by_landing.get(
+                    (
+                        landing.via_id.casefold(),
+                        landing.endpoint_node_id.casefold(),
+                    ),
+                    (),
+                )
+            )
+        contact["contact_layers"] = sorted(
+            {str(layer) for layer in contact_layers}, key=str.casefold
+        )
+        contact["contact_island_ids"] = sorted(
+            {
+                str(island_id)
+                for island_id in (
+                    raw_islands_by_landing.get(
+                        (
+                            landing.via_id.casefold(),
+                            landing.endpoint_node_id.casefold(),
+                        ),
+                        (),
+                    )
+                    if landing is not None
+                    else ()
+                )
+                if str(island_id).strip()
+            }
+        )
+        landing_surface_contact = (
+            landing_surface_contact_by_key.get(
+                (
+                    landing.via_id.casefold(),
+                    landing.endpoint_node_id.casefold(),
+                )
+            )
+            if landing is not None
+            else None
+        )
+        contact["contact_island_ids_by_layer"] = {
+            str(layer): list(island_ids)
+            for layer, island_ids in sorted(
+                dict(
+                    getattr(
+                        landing_surface_contact,
+                        "contact_island_ids_by_layer",
+                        {},
+                    )
+                ).items(),
+                key=lambda item: (str(item[0]).casefold(), str(item[0])),
+            )
+        }
+        contact["external_endpoint_node_id"] = (
+            landing.endpoint_node_id if landing is not None else None
+        )
+        finite_landing_key = (
+            (
+                landing.via_id.casefold(),
+                landing.endpoint_node_id.casefold(),
+            )
+            if landing is not None
+            else None
+        )
+        contact["exposed_quotient_vertex_id"] = (
+            raw_finite_vertex_by_landing.get(finite_landing_key)
+            if finite_landing_key is not None
+            else None
+        )
+        contact["first_via_quotient_edge_id"] = (
+            raw_finite_edge_by_landing.get(finite_landing_key)
+            if finite_landing_key is not None
+            else None
+        )
+        contact["internal_endpoint_node_id"] = getattr(
+            landing_surface_contact, "internal_endpoint_node_id", None
+        )
+        expected_internal_node_id = str(
+            contact.get("incident_opposite_node_id") or ""
+        ).strip()
+        observed_internal_node_id = str(
+            contact.get("internal_endpoint_node_id") or ""
+        ).strip()
+        if (
+            expected_internal_node_id
+            and observed_internal_node_id
+            and expected_internal_node_id.casefold()
+            != observed_internal_node_id.casefold()
+        ):
+            issues.append("incident_opposite_endpoint_mismatch")
+        direct_rows = contact["contact_island_ids_by_layer"]
+        contact["endpoint_layer"] = (
+            next(iter(direct_rows)) if len(direct_rows) == 1 else None
+        )
+        contact["endpoint_island_id"] = (
+            next(iter(direct_rows.values()))[0]
+            if len(direct_rows) == 1
+            and len(next(iter(direct_rows.values()))) == 1
+            else None
+        )
+        contact["issues"] = sorted(set(issues))
+        contact["status"] = (
+            "complete"
+            if landing is not None
+            and bool(contact["contact_layers"])
+            and bool(contact["contact_island_ids"])
+            and len(contact["contact_island_ids_by_layer"]) == 1
+            and len(
+                next(iter(contact["contact_island_ids_by_layer"].values()))
+            )
+            == 1
+            and contact["endpoint_layer"]
+            in contact["contact_island_ids_by_layer"]
+            and contact["endpoint_island_id"]
+            == contact["contact_island_ids_by_layer"][
+                contact["endpoint_layer"]
+            ][0]
+            and bool(contact["internal_endpoint_node_id"])
+            and "incident_opposite_endpoint_mismatch" not in issues
+            else "incomplete"
+        )
+        terminal_contacts.append(contact)
+
+    components: list[dict[str, Any]] = []
+    for component in getattr(reachability, "surface_components", ()):
+        net = str(getattr(component, "net", "")).strip()
+        layers = sorted(
+            {str(item).strip() for item in getattr(component, "layers", ()) if str(item).strip()},
+            key=str.casefold,
+        )
+        if not net or len(layers) < 2:
+            continue
+        identity = core_services._canonical_metadata_sha256(
+            {
+                "source_sha256": source_sha256.casefold(),
+                "net": net.casefold(),
+                "layers": [item.casefold() for item in layers],
+            }
+        )
+        components.append(
+            {
+                "component_id": f"spd-surface-component:{identity[:24]}",
+                "net": net,
+                "layers": layers,
+            }
+        )
+    components = sorted(
+        {
+            (
+                item["net"].casefold(),
+                tuple(layer.casefold() for layer in item["layers"]),
+            ): item
+            for item in components
+        }.values(),
+        key=lambda item: (
+            item["net"].casefold(),
+            tuple(layer.casefold() for layer in item["layers"]),
+        ),
+    )
+    proof_contacted_islands_by_surface = {
+        (
+            str(getattr(item, "net", "")).strip().casefold(),
+            str(getattr(item, "layer", "")).strip().casefold(),
+        ): frozenset(
+            str(value).strip()
+            for value in getattr(item, "contacted_island_ids", ())
+            if str(value).strip()
+        )
+        for item in getattr(reachability, "surface_equivalence_proofs", ())
+    }
+    surface_equivalence_components = [
+        {
+            "net": str(getattr(item, "net", "")).strip(),
+            "layer": str(getattr(item, "layer", "")).strip(),
+            "island_ids": list(getattr(item, "island_ids", ())),
+        }
+        for item in getattr(
+            reachability, "surface_equivalence_components", ()
+        )
+    ]
+    surface_equivalence_components.sort(
+        key=lambda item: (
+            item["net"].casefold(),
+            item["layer"].casefold(),
+            tuple(item["island_ids"]),
+            item["net"],
+            item["layer"],
+        )
+    )
+    surface_component_by_island: dict[
+        tuple[str, str, str], dict[str, Any]
+    ] = {}
+    surface_component_by_id: dict[str, dict[str, Any]] = {}
+    surface_component_by_identity: dict[
+        tuple[str, str, tuple[str, ...]], dict[str, Any]
+    ] = {}
+    for item in surface_equivalence_components:
+        item["island_ids"] = sorted(str(value) for value in item["island_ids"])
+        identity_payload = {
+            "source_sha256": source_sha256.casefold(),
+            "net": item["net"].casefold(),
+            "layer": item["layer"].casefold(),
+            "island_ids": item["island_ids"],
+        }
+        evidence_sha256 = core_services._canonical_metadata_sha256(
+            identity_payload
+        )
+        item["component_id"] = (
+            f"spd-surface-equivalence-component:{evidence_sha256[:24]}"
+        )
+        item["representative_island_id"] = item["island_ids"][0]
+        item["component_evidence_sha256"] = evidence_sha256
+        contacted_islands = proof_contacted_islands_by_surface.get(
+            (item["net"].casefold(), item["layer"].casefold()), frozenset()
+        )
+        item["contact_status"] = (
+            "complete"
+            if set(item["island_ids"]) <= contacted_islands
+            else "uncontacted"
+        )
+        surface_component_by_id[item["component_id"]] = item
+        identity = (
+            item["net"].casefold(),
+            item["layer"].casefold(),
+            tuple(item["island_ids"]),
+        )
+        surface_component_by_identity[identity] = item
+        for island_id in item["island_ids"]:
+            surface_component_by_island[
+                (
+                    item["net"].casefold(),
+                    item["layer"].casefold(),
+                    island_id,
+                )
+            ] = item
+    finite_via_vertices = []
+    finite_vertex_by_id: dict[str, dict[str, Any]] = {}
+    for raw_vertex in getattr(reachability, "finite_via_vertices", ()):
+        retained_rows = dict(
+            getattr(
+                raw_vertex,
+                "retained_component_island_ids_by_layer",
+                {},
+            )
+        )
+        retained_component_ids: list[str] = []
+        retained_component_evidence_sha256s: list[str] = []
+        retained_binding_issues: list[str] = []
+        for layer, island_ids in sorted(
+            retained_rows.items(), key=lambda row: str(row[0]).casefold()
+        ):
+            component = surface_component_by_identity.get(
+                (
+                    str(getattr(raw_vertex, "net", "")).casefold(),
+                    str(layer).casefold(),
+                    tuple(sorted(str(value) for value in island_ids)),
+                )
+            )
+            if component is None:
+                retained_binding_issues.append(
+                    f"retained_component_unresolved:{layer}"
+                )
+            elif component["contact_status"] != "complete":
+                retained_binding_issues.append(
+                    f"retained_component_uncontacted:{layer}"
+                )
+            else:
+                retained_component_ids.append(component["component_id"])
+                retained_component_evidence_sha256s.append(
+                    component["component_evidence_sha256"]
+                )
+        roles = list(getattr(raw_vertex, "roles", ()))
+        vertex = {
+            "vertex_id": str(getattr(raw_vertex, "vertex_id", "")).strip(),
+            "net": str(getattr(raw_vertex, "net", "")).strip(),
+            "layer": str(getattr(raw_vertex, "layer", "")).strip(),
+            "representative_node_id": str(
+                getattr(raw_vertex, "representative_node_id", "")
+            ).strip(),
+            "source_node_count": int(
+                getattr(raw_vertex, "source_node_count", 0)
+            ),
+            "source_node_ids_sha256": str(
+                getattr(raw_vertex, "source_node_ids_sha256", "")
+            ).casefold(),
+            "roles": roles,
+            "terminal_ids": list(getattr(raw_vertex, "terminal_ids", ())),
+            "retained_component_ids": retained_component_ids,
+            "retained_component_evidence_sha256s": (
+                retained_component_evidence_sha256s
+            ),
+            "retained_component_island_ids_by_layer": {
+                str(layer): list(island_ids)
+                for layer, island_ids in sorted(
+                    retained_rows.items(),
+                    key=lambda row: str(row[0]).casefold(),
+                )
+            },
+            "component_binding_status": (
+                "complete" if not retained_binding_issues else "incomplete"
+            ),
+            "component_binding_issues": retained_binding_issues,
+        }
+        finite_via_vertices.append(vertex)
+        finite_vertex_by_id[vertex["vertex_id"]] = vertex
+    finite_via_vertices.sort(key=lambda item: item["vertex_id"])
+    finite_vertex_ids_by_component_id: dict[str, list[str]] = {}
+    for vertex in finite_via_vertices:
+        for component_id in vertex["retained_component_ids"]:
+            finite_vertex_ids_by_component_id.setdefault(
+                component_id, []
+            ).append(vertex["vertex_id"])
+    for vertex_ids in finite_vertex_ids_by_component_id.values():
+        vertex_ids.sort()
+
+    finite_via_edges = []
+    for raw_edge in getattr(reachability, "finite_via_edges", ()):
+        terms = []
+        edge_physical_issues = set(
+            str(item)
+            for item in getattr(raw_edge, "physical_model_issues", ())
+            if str(item)
+        )
+        for raw_term in getattr(raw_edge, "series_terms", ()):
+            segments = [
+                {
+                    "ordinal": int(getattr(segment, "ordinal")),
+                    "start_layer": str(
+                        getattr(segment, "start_layer", "")
+                    ).strip(),
+                    "end_layer": str(
+                        getattr(segment, "end_layer", "")
+                    ).strip(),
+                    "length_um": float(getattr(segment, "length_um")),
+                }
+                for segment in getattr(raw_term, "segments", ())
+            ]
+            term_issues = set(
+                str(item)
+                for item in getattr(
+                    raw_term, "physical_model_issues", ()
+                )
+                if str(item)
+            )
+            term_issues.update(
+                segment_stackup_issues(
+                    segments,
+                    expected_start_layer=getattr(
+                        raw_term, "start_layer", None
+                    ),
+                    expected_end_layer=getattr(raw_term, "end_layer", None),
+                )
+            )
+            edge_physical_issues.update(term_issues)
+            terms.append(
+                {
+                    "ordinal": int(getattr(raw_term, "ordinal")),
+                    "count": int(getattr(raw_term, "count")),
+                    "padstack": str(
+                        getattr(raw_term, "padstack", "")
+                    ).strip(),
+                    "start_layer": str(
+                        getattr(raw_term, "start_layer", "")
+                    ).strip(),
+                    "end_layer": str(
+                        getattr(raw_term, "end_layer", "")
+                    ).strip(),
+                    "drill_diameter_um": getattr(
+                        raw_term, "drill_diameter_um", None
+                    ),
+                    "material": getattr(raw_term, "material", None),
+                    "segments": segments,
+                    "resistance_ohm": getattr(
+                        raw_term, "resistance_ohm", None
+                    ),
+                    "inductance_h": getattr(
+                        raw_term, "inductance_h", None
+                    ),
+                    "length_um": getattr(raw_term, "length_um", None),
+                    "physical_model_status": str(
+                        getattr(
+                            raw_term,
+                            "physical_model_status",
+                            "incomplete",
+                        )
+                    ).casefold(),
+                    "physical_model_issues": sorted(term_issues),
+                }
+            )
+        start_vertex_id = str(
+            getattr(raw_edge, "start_vertex_id", "")
+        ).strip()
+        end_vertex_id = str(
+            getattr(raw_edge, "end_vertex_id", "")
+        ).strip()
+        endpoint_issues = []
+        start_vertex = finite_vertex_by_id.get(start_vertex_id)
+        end_vertex = finite_vertex_by_id.get(end_vertex_id)
+        edge_net = str(getattr(raw_edge, "net", "")).strip()
+        if start_vertex is None:
+            endpoint_issues.append("start_vertex_unresolved")
+        elif start_vertex["net"].casefold() != edge_net.casefold():
+            endpoint_issues.append("start_vertex_net_mismatch")
+        if end_vertex is None:
+            endpoint_issues.append("end_vertex_unresolved")
+        elif end_vertex["net"].casefold() != edge_net.casefold():
+            endpoint_issues.append("end_vertex_net_mismatch")
+        via_digest = str(
+            getattr(raw_edge, "raw_via_ids_sha256", "")
+        ).casefold()
+        raw_via_count = int(getattr(raw_edge, "raw_via_count", 0))
+        owner_ids = list(getattr(raw_edge, "owner_ids", ()))
+        edge = {
+            "edge_id": str(getattr(raw_edge, "edge_id", "")).strip(),
+            "net": edge_net,
+            "start_vertex_id": start_vertex_id,
+            "end_vertex_id": end_vertex_id,
+            "parallel_path_count": int(
+                getattr(raw_edge, "parallel_path_count", 1)
+            ),
+            "per_path_via_count": int(
+                getattr(raw_edge, "per_path_via_count", 0)
+            ),
+            "raw_via_count": raw_via_count,
+            "raw_via_ids_sha256": via_digest,
+            "owner_ids": owner_ids,
+            "raw_owner_token": (
+                f"spd-raw-via-set:{via_digest}:{raw_via_count}"
+            ),
+            "mode": str(getattr(raw_edge, "mode", "")).casefold(),
+            "series_terms": terms,
+            "resistance_ohm": getattr(raw_edge, "resistance_ohm", None),
+            "inductance_h": getattr(raw_edge, "inductance_h", None),
+            "length_um": getattr(raw_edge, "length_um", None),
+            "endpoint_binding_status": (
+                "complete" if not endpoint_issues else "incomplete"
+            ),
+            "endpoint_binding_issues": endpoint_issues,
+            "physical_model_status": (
+                "complete"
+                if str(
+                    getattr(raw_edge, "physical_model_status", "")
+                ).casefold()
+                == "complete"
+                and not edge_physical_issues
+                else "incomplete"
+            ),
+            "physical_model_issues": sorted(edge_physical_issues),
+        }
+        edge["status"] = (
+            "complete"
+            if edge["endpoint_binding_status"] == "complete"
+            and edge["physical_model_status"] == "complete"
+            else "incomplete"
+        )
+        finite_via_edges.append(edge)
+    finite_via_edges.sort(key=lambda item: item["edge_id"])
+    finite_edge_by_id = {
+        item["edge_id"]: item for item in finite_via_edges
+    }
+    finite_owner_assignments = [
+        (str(owner_id), item["edge_id"])
+        for item in finite_via_edges
+        for owner_id in item["owner_ids"]
+    ]
+    finite_owner_keys = [
+        owner_id.casefold() for owner_id, _edge_id in finite_owner_assignments
+    ]
+    finite_owner_assignment_hash = sha256()
+    for owner_id, edge_id in sorted(
+        finite_owner_assignments,
+        key=lambda row: (row[0].casefold(), row[1].casefold(), row),
+    ):
+        for token in (owner_id.casefold(), edge_id.casefold()):
+            encoded = token.encode("utf-8")
+            finite_owner_assignment_hash.update(
+                len(encoded).to_bytes(4, "big")
+            )
+            finite_owner_assignment_hash.update(encoded)
+    finite_owner_canonical_hash = sha256()
+    for owner_id in sorted(
+        (owner_id for owner_id, _edge_id in finite_owner_assignments),
+        key=lambda value: (value.casefold(), value),
+    ):
+        encoded = owner_id.casefold().encode("utf-8")
+        finite_owner_canonical_hash.update(len(encoded).to_bytes(4, "big"))
+        finite_owner_canonical_hash.update(encoded)
+    raw_finite_coverage = getattr(
+        reachability, "finite_via_coverage", None
+    )
+    finite_owner_ledger_complete = bool(
+        raw_finite_coverage is not None
+        and len(finite_owner_keys)
+        == int(getattr(raw_finite_coverage, "modeled_global_via_count"))
+        and len(set(finite_owner_keys)) == len(finite_owner_keys)
+        and finite_owner_canonical_hash.hexdigest()
+        == str(
+            getattr(
+                raw_finite_coverage,
+                "modeled_owner_canonical_sha256",
+                "",
+            )
+        ).casefold()
+    )
+    finite_via_coverage = (
+        {
+            "raw_target_via_count": int(
+                getattr(raw_finite_coverage, "raw_target_via_count")
+            ),
+            "modeled_global_via_count": int(
+                getattr(raw_finite_coverage, "modeled_global_via_count")
+            ),
+            "pruned_dangling_via_count": int(
+                getattr(raw_finite_coverage, "pruned_dangling_via_count")
+            ),
+            "outside_scope_via_count": int(
+                getattr(raw_finite_coverage, "outside_scope_via_count")
+            ),
+            "physical_complete_via_count": int(
+                getattr(raw_finite_coverage, "physical_complete_via_count")
+            ),
+            "physical_incomplete_via_count": int(
+                getattr(raw_finite_coverage, "physical_incomplete_via_count")
+            ),
+            "raw_target_via_ids_sha256": str(
+                getattr(raw_finite_coverage, "raw_target_via_ids_sha256")
+            ).casefold(),
+            "modeled_global_via_ids_sha256": str(
+                getattr(
+                    raw_finite_coverage,
+                    "modeled_global_via_ids_sha256",
+                )
+            ).casefold(),
+            "modeled_owner_ledger_sha256": str(
+                getattr(
+                    raw_finite_coverage,
+                    "modeled_owner_ledger_sha256",
+                )
+            ).casefold(),
+            "modeled_owner_canonical_sha256": str(
+                getattr(
+                    raw_finite_coverage,
+                    "modeled_owner_canonical_sha256",
+                )
+            ).casefold(),
+            "pruned_dangling_via_ids_sha256": str(
+                getattr(
+                    raw_finite_coverage,
+                    "outside_scope_via_ids_sha256",
+                )
+            ).casefold(),
+            "terminal_exclusive_via_count": int(
+                getattr(
+                    raw_finite_coverage,
+                    "terminal_exclusive_via_count",
+                    0,
+                )
+            ),
+            "modeled_owner_count": len(finite_owner_keys),
+            "modeled_owner_unique_count": len(set(finite_owner_keys)),
+            "modeled_owner_edge_assignment_sha256": (
+                finite_owner_assignment_hash.hexdigest()
+            ),
+            "owner_ledger_status": (
+                "complete" if finite_owner_ledger_complete else "incomplete"
+            ),
+            "owner_policy": "global_mna_with_scenario_retarget_cut_suppression",
+            "status": str(getattr(raw_finite_coverage, "status")),
+        }
+        if raw_finite_coverage is not None
+        else None
+    )
+    raw_scenario_isolation_coverage = getattr(
+        reachability,
+        "finite_via_scenario_isolation_coverage",
+        None,
+    )
+    scenario_isolated_landing_keys = {
+        (str(raw_key[0]).casefold(), str(raw_key[1]).casefold())
+        for raw_key in getattr(
+            reachability,
+            "finite_via_scenario_isolated_landing_keys",
+            (),
+        )
+        if len(raw_key) == 2
+    }
+    finite_via_scenario_isolation_coverage = (
+        {
+            "requested_landing_count": int(
+                getattr(
+                    raw_scenario_isolation_coverage,
+                    "requested_landing_count",
+                )
+            ),
+            "isolated_landing_count": int(
+                getattr(
+                    raw_scenario_isolation_coverage,
+                    "isolated_landing_count",
+                )
+            ),
+            "isolated_node_count": int(
+                getattr(
+                    raw_scenario_isolation_coverage,
+                    "isolated_node_count",
+                )
+            ),
+            "suppressed_artwork_contact_count": int(
+                getattr(
+                    raw_scenario_isolation_coverage,
+                    "suppressed_artwork_contact_count",
+                )
+            ),
+            "suppressed_trace_edge_count": int(
+                getattr(
+                    raw_scenario_isolation_coverage,
+                    "suppressed_trace_edge_count",
+                )
+            ),
+            "requested_landing_ids_sha256": str(
+                getattr(
+                    raw_scenario_isolation_coverage,
+                    "requested_landing_ids_sha256",
+                )
+            ).casefold(),
+            "isolated_landing_ids_sha256": str(
+                getattr(
+                    raw_scenario_isolation_coverage,
+                    "isolated_landing_ids_sha256",
+                )
+            ).casefold(),
+            "same_layer_base_policy": (
+                "editable_decap_landing_nodes_excluded_from_permanent_"
+                "trace_and_artwork_union"
+            ),
+            "status": str(
+                getattr(raw_scenario_isolation_coverage, "status")
+            ).casefold(),
+        }
+        if raw_scenario_isolation_coverage is not None
+        else None
+    )
+    raw_retarget_destination_vertex_by_key = {
+        tuple(str(item).casefold() for item in raw_key): str(vertex_id).strip()
+        for raw_key, vertex_id in dict(
+            getattr(
+                reachability,
+                "finite_via_vertex_id_by_retarget_destination",
+                {},
+            )
+        ).items()
+        if len(raw_key) == 3 and str(vertex_id).strip()
+    }
+    raw_retarget_destination_coverage = getattr(
+        reachability,
+        "finite_via_retarget_destination_coverage",
+        None,
+    )
+    finite_via_retarget_destination_coverage = (
+        {
+            "requested_destination_count": int(
+                getattr(
+                    raw_retarget_destination_coverage,
+                    "requested_destination_count",
+                )
+            ),
+            "resolved_destination_count": int(
+                getattr(
+                    raw_retarget_destination_coverage,
+                    "resolved_destination_count",
+                )
+            ),
+            "requested_destination_ids_sha256": str(
+                getattr(
+                    raw_retarget_destination_coverage,
+                    "requested_destination_ids_sha256",
+                )
+            ).casefold(),
+            "resolved_destination_ids_sha256": str(
+                getattr(
+                    raw_retarget_destination_coverage,
+                    "resolved_destination_ids_sha256",
+                )
+            ).casefold(),
+            "status": str(
+                getattr(raw_retarget_destination_coverage, "status")
+            ).casefold(),
+        }
+        if raw_retarget_destination_coverage is not None
+        else None
+    )
+    landing_surface_contacts = [
+        {
+            "via_id": str(getattr(item, "via_id", "")).strip(),
+            "endpoint_node_id": str(
+                getattr(item, "endpoint_node_id", "")
+            ).strip(),
+            "external_endpoint_node_id": str(
+                getattr(item, "endpoint_node_id", "")
+            ).strip(),
+            "landing_key": [
+                str(getattr(item, "via_id", "")).strip().casefold(),
+                str(getattr(item, "endpoint_node_id", "")).strip().casefold(),
+            ],
+            "exposed_quotient_vertex_id": raw_finite_vertex_by_landing.get(
+                (
+                    str(getattr(item, "via_id", "")).strip().casefold(),
+                    str(getattr(item, "endpoint_node_id", ""))
+                    .strip()
+                    .casefold(),
+                )
+            ),
+            "first_via_quotient_edge_id": raw_finite_edge_by_landing.get(
+                (
+                    str(getattr(item, "via_id", "")).strip().casefold(),
+                    str(getattr(item, "endpoint_node_id", ""))
+                    .strip()
+                    .casefold(),
+                )
+            ),
+            "internal_endpoint_node_id": getattr(
+                item, "internal_endpoint_node_id", None
+            ),
+            "terminal_owner_kind": str(
+                getattr(item, "terminal_owner_kind", "unknown")
+            ).strip().casefold(),
+            "external_endpoint_layer": getattr(
+                item, "external_endpoint_layer", None
+            ),
+            "padstack": getattr(item, "padstack", None),
+            "drill_diameter_um": getattr(
+                item, "drill_diameter_um", None
+            ),
+            "material": getattr(item, "material", None),
+            "segments": [
+                {
+                    "ordinal": int(getattr(segment, "ordinal")),
+                    "start_layer": str(
+                        getattr(segment, "start_layer", "")
+                    ).strip(),
+                    "end_layer": str(
+                        getattr(segment, "end_layer", "")
+                    ).strip(),
+                    "length_um": float(getattr(segment, "length_um")),
+                }
+                for segment in getattr(item, "segments", ())
+            ],
+            "physical_model_status": str(
+                getattr(item, "physical_model_status", "incomplete")
+            ).strip().casefold(),
+            "physical_model_issues": list(
+                getattr(item, "physical_model_issues", ())
+            ),
+            "net": str(getattr(item, "net", "")).strip(),
+            "contact_island_ids_by_layer": {
+                str(layer): list(island_ids)
+                for layer, island_ids in sorted(
+                    dict(
+                        getattr(item, "contact_island_ids_by_layer", {})
+                    ).items(),
+                    key=lambda row: (
+                        str(row[0]).casefold(),
+                        str(row[0]),
+                    ),
+                )
+            },
+            "endpoint_layer": getattr(item, "endpoint_layer", None),
+            "endpoint_island_id": getattr(
+                item, "endpoint_island_id", None
+            ),
+        }
+        for item in raw_landing_surface_contacts
+    ]
+    landing_surface_contacts.sort(
+        key=lambda item: (
+            item["via_id"].casefold(),
+            item["endpoint_node_id"].casefold(),
+            item["net"].casefold(),
+            item["via_id"],
+            item["endpoint_node_id"],
+            item["net"],
+        )
+    )
+    for item in landing_surface_contacts:
+        contact_rows = item["contact_island_ids_by_layer"]
+        component = None
+        if len(contact_rows) == 1:
+            component_layer = next(iter(contact_rows))
+            component_island_ids = tuple(
+                sorted(next(iter(contact_rows.values())))
+            )
+            component = surface_component_by_identity.get(
+                (
+                    item["net"].casefold(),
+                    component_layer.casefold(),
+                    component_island_ids,
+                )
+            )
+        resolved_component = (
+            component
+            if component is not None
+            and component["contact_status"] == "complete"
+            else None
+        )
+        item["contact_path_kind"] = "direct_via_landing"
+        item["endpoint_resolution_kind"] = (
+            "same_layer_trace_artwork_component"
+            if resolved_component is not None
+            else "unresolved"
+        )
+        item["contact_component_id"] = (
+            resolved_component["component_id"]
+            if resolved_component is not None
+            else None
+        )
+        item["component_layer"] = (
+            resolved_component["layer"]
+            if resolved_component is not None
+            else None
+        )
+        item["component_island_ids"] = (
+            list(resolved_component["island_ids"])
+            if resolved_component is not None
+            else []
+        )
+        item["representative_island_id"] = (
+            resolved_component["representative_island_id"]
+            if resolved_component is not None
+            else None
+        )
+        item["component_evidence_sha256"] = (
+            resolved_component["component_evidence_sha256"]
+            if resolved_component is not None
+            else None
+        )
+        item["candidate_component_ids"] = (
+            [component["component_id"]] if component is not None else []
+        )
+        item["component_binding_status"] = (
+            "complete" if resolved_component is not None else "incomplete"
+        )
+        item["component_binding_issues"] = (
+            []
+            if resolved_component is not None
+            else [
+                "contact_component_uncontacted"
+                if component is not None
+                else "contact_component_unresolved"
+            ]
+        )
+        item["endpoint_layer"] = item["component_layer"]
+        item["endpoint_island_id"] = item["representative_island_id"]
+        physical_issues = set(item["physical_model_issues"])
+        physical_issues.update(
+            segment_stackup_issues(
+                item["segments"],
+                expected_start_layer=item["external_endpoint_layer"],
+                expected_end_layer=item["component_layer"],
+            )
+        )
+        item["physical_model_issues"] = sorted(physical_issues)
+        if physical_issues:
+            item["physical_model_status"] = "incomplete"
+        item["status"] = (
+            "complete"
+            if resolved_component is not None
+            and bool(item["internal_endpoint_node_id"])
+            and item["physical_model_status"] == "complete"
+            else "incomplete"
+        )
+        exposed_vertex = finite_vertex_by_id.get(
+            str(item.get("exposed_quotient_vertex_id") or "")
+        )
+        first_via_edge = finite_edge_by_id.get(
+            str(item.get("first_via_quotient_edge_id") or "")
+        )
+        quotient_issues: list[str] = []
+        if exposed_vertex is None:
+            quotient_issues.append("exposed_quotient_vertex_unresolved")
+        elif exposed_vertex["net"].casefold() != item["net"].casefold():
+            quotient_issues.append("exposed_quotient_vertex_net_mismatch")
+        if not str(item["via_id"]).startswith("source-node:"):
+            expected_owner_id = f"via:{item['via_id']}"
+            if first_via_edge is None:
+                quotient_issues.append("first_via_global_edge_unresolved")
+            elif item["exposed_quotient_vertex_id"] not in {
+                first_via_edge["start_vertex_id"],
+                first_via_edge["end_vertex_id"],
+            }:
+                quotient_issues.append("first_via_global_edge_not_incident")
+            elif expected_owner_id.casefold() not in {
+                str(owner_id).casefold()
+                for owner_id in first_via_edge["owner_ids"]
+            }:
+                quotient_issues.append("first_via_raw_owner_unresolved")
+        else:
+            expected_owner_id = None
+        item["first_via_owner_id"] = expected_owner_id
+        item["scenario_isolated_base_contact"] = (
+            tuple(item["landing_key"]) in scenario_isolated_landing_keys
+        )
+        if (
+            item["terminal_owner_kind"] == "decap"
+            and scenario_topology_requested
+            and not item["scenario_isolated_base_contact"]
+        ):
+            quotient_issues.append("scenario_base_contact_not_isolated")
+        item["global_quotient_binding_status"] = (
+            "complete" if not quotient_issues else "incomplete"
+        )
+        item["global_quotient_binding_issues"] = quotient_issues
+        item["retarget_cut_status"] = (
+            "complete"
+            if item["terminal_owner_kind"] == "decap"
+            and first_via_edge is not None
+            and first_via_edge["mode"] == "retained_explicit"
+            and first_via_edge["raw_via_count"] == 1
+            and [
+                str(owner_id).casefold()
+                for owner_id in first_via_edge["owner_ids"]
+            ]
+            == [str(expected_owner_id).casefold()]
+            else "not_applicable"
+            if item["terminal_owner_kind"] != "decap"
+            else "incomplete"
+        )
+    finite_via_terminal_bindings = [
+        {
+            "landing_key": list(item["landing_key"]),
+            "via_id": item["via_id"],
+            "external_endpoint_node_id": item["external_endpoint_node_id"],
+            "net": item["net"],
+            "terminal_owner_kind": item["terminal_owner_kind"],
+            "exposed_quotient_vertex_id": item[
+                "exposed_quotient_vertex_id"
+            ],
+            "first_via_quotient_edge_id": item[
+                "first_via_quotient_edge_id"
+            ],
+            "first_via_owner_id": item["first_via_owner_id"],
+            "global_quotient_binding_status": item[
+                "global_quotient_binding_status"
+            ],
+            "global_quotient_binding_issues": list(
+                item["global_quotient_binding_issues"]
+            ),
+            "retarget_cut_status": item["retarget_cut_status"],
+            "scenario_isolated_base_contact": item[
+                "scenario_isolated_base_contact"
+            ],
+            "source_route_owner": "global_mna",
+        }
+        for item in landing_surface_contacts
+    ]
+    finite_via_terminal_bindings.sort(
+        key=lambda item: tuple(item["landing_key"])
+    )
+
+    def scenario_topology_id(prefix: str, *tokens: object) -> str:
+        digest = sha256()
+        for token in (source_sha256.casefold(), *tokens):
+            encoded = str(token).strip().casefold().encode("utf-8")
+            digest.update(len(encoded).to_bytes(4, "big"))
+            digest.update(encoded)
+        return f"{prefix}:{digest.hexdigest()[:24]}"
+
+    def enum_text(value: object) -> str:
+        return str(getattr(value, "value", value)).strip().upper()
+
+    connection_by_refdes: dict[str, Any] = {}
+    for connection in decap_connections:
+        refdes = str(getattr(connection, "refdes", "")).strip()
+        key = refdes.casefold()
+        if not refdes or key in connection_by_refdes:
+            raise SpdImportError(
+                "SPD_SCENARIO_TERMINAL_TOPOLOGY_CONNECTION_ID_INVALID: "
+                "decap connection REFDES values must be nonblank and unique"
+            )
+        connection_by_refdes[key] = connection
+    participating_cluster_keys = {
+        str(getattr(connection, "cluster_id", "") or "").strip().casefold()
+        for connection in connection_by_refdes.values()
+        if str(getattr(connection, "cluster_id", "") or "").strip()
+    }
+    cluster_by_id: dict[str, Any] = {}
+    for cluster in shared_pad_clusters:
+        cluster_id = str(getattr(cluster, "cluster_id", "")).strip()
+        key = cluster_id.casefold()
+        if not cluster_id:
+            raise SpdImportError(
+                "SPD_SCENARIO_TERMINAL_TOPOLOGY_CLUSTER_ID_INVALID: shared-pad "
+                "cluster IDs must be nonblank and unique"
+            )
+        if key not in participating_cluster_keys:
+            # UNRESOLVED/FLOATING clusters have no scenario-editable terminal
+            # vertices.  Their raw connectivity remains in the immutable base
+            # graph and must not create dangling synthetic shared links.
+            continue
+        if key in cluster_by_id:
+            raise SpdImportError(
+                "SPD_SCENARIO_TERMINAL_TOPOLOGY_CLUSTER_ID_INVALID: shared-pad "
+                "cluster IDs must be nonblank and unique"
+            )
+        cluster_by_id[key] = cluster
+
+    scenario_terminal_vertices: list[dict[str, Any]] = []
+    scenario_terminal_vertex_by_ref_role: dict[tuple[str, str], str] = {}
+    scenario_conditional_contacts: list[dict[str, Any]] = []
+    scenario_contacts_by_ref_role: dict[
+        tuple[str, str], list[dict[str, Any]]
+    ] = {}
+    scenario_topology_issues: set[str] = set()
+    for refdes_key, connection in sorted(connection_by_refdes.items()):
+        refdes = str(getattr(connection, "refdes", "")).strip()
+        connection_kind = enum_text(getattr(connection, "kind", ""))
+        cluster_id = str(getattr(connection, "cluster_id", "") or "").strip()
+        cluster = cluster_by_id.get(cluster_id.casefold()) if cluster_id else None
+        if connection_kind == "OUT_OF_SCOPE":
+            continue
+        for role, raw_landings in (
+            ("power", tuple(getattr(connection, "power_vias", ()))),
+            ("ground", tuple(getattr(connection, "ground_vias", ()))),
+        ):
+            net_by_key = {
+                str(getattr(landing, "net", "")).strip().casefold(): str(
+                    getattr(landing, "net", "")
+                ).strip()
+                for landing in raw_landings
+                if str(getattr(landing, "net", "")).strip()
+            }
+            if not net_by_key and cluster is not None:
+                cluster_net = str(
+                    getattr(
+                        cluster,
+                        "power_net" if role == "power" else "ground_net",
+                        "",
+                    )
+                ).strip()
+                if cluster_net:
+                    net_by_key[cluster_net.casefold()] = cluster_net
+            terminal_issues: list[str] = []
+            if len(net_by_key) != 1:
+                terminal_issues.append("terminal_net_unresolved_or_ambiguous")
+                terminal_net = ""
+            else:
+                terminal_net = net_by_key[next(iter(sorted(net_by_key)))]
+            if connection_kind in {"UNRESOLVED", "FLOATING_DUMMY"}:
+                terminal_issues.append(
+                    f"connection_kind_{connection_kind.casefold()}"
+                )
+            terminal_vertex_id = scenario_topology_id(
+                "spd-decap-terminal",
+                refdes,
+                role,
+            )
+            scenario_terminal_vertex_by_ref_role[
+                (refdes_key, role)
+            ] = terminal_vertex_id
+            scenario_terminal_vertices.append(
+                {
+                    "terminal_vertex_id": terminal_vertex_id,
+                    "refdes": refdes,
+                    "role": role,
+                    "net": terminal_net,
+                    "connection_kind": connection_kind,
+                    "cluster_id": cluster_id or None,
+                    "body_stamp_policy": "cap_body_between_synthetic_terminals",
+                    "normal_disabled_policy": (
+                        "retain_topology_contacts_omit_cap_body"
+                    ),
+                    "status": "complete" if not terminal_issues else "incomplete",
+                    "issues": terminal_issues,
+                }
+            )
+            scenario_topology_issues.update(terminal_issues)
+            contact_bucket = scenario_contacts_by_ref_role.setdefault(
+                (refdes_key, role), []
+            )
+            for landing in raw_landings:
+                via_id = str(getattr(landing, "via_id", "")).strip()
+                node_id = str(
+                    getattr(landing, "endpoint_node_id", "")
+                ).strip()
+                landing_key = (via_id.casefold(), node_id.casefold())
+                exposed_vertex_id = raw_finite_vertex_by_landing.get(landing_key)
+                first_edge_id = raw_finite_edge_by_landing.get(landing_key)
+                first_edge = finite_edge_by_id.get(str(first_edge_id or ""))
+                expected_owner_id = f"via:{via_id}"
+                contact_issues: list[str] = []
+                if exposed_vertex_id is None:
+                    contact_issues.append("exposed_quotient_vertex_unresolved")
+                if first_edge is None:
+                    contact_issues.append("first_via_global_edge_unresolved")
+                elif [
+                    str(owner_id).casefold()
+                    for owner_id in first_edge["owner_ids"]
+                ] != [expected_owner_id.casefold()]:
+                    contact_issues.append("first_via_owner_not_exclusive")
+                if landing_key not in scenario_isolated_landing_keys:
+                    contact_issues.append("raw_same_layer_contact_not_isolated")
+                contact_id = scenario_topology_id(
+                    "spd-decap-contact",
+                    refdes,
+                    role,
+                    via_id,
+                    node_id,
+                )
+                contact = {
+                    "contact_id": contact_id,
+                    "terminal_vertex_id": terminal_vertex_id,
+                    "refdes": refdes,
+                    "role": role,
+                    "net": str(getattr(landing, "net", "")).strip(),
+                    "landing_key": [landing_key[0], landing_key[1]],
+                    "landing_vertex_id": exposed_vertex_id,
+                    "first_via_edge_id": first_edge_id,
+                    "first_via_owner_id": expected_owner_id,
+                    "link_kind": "topology_only_ideal",
+                    "default_state": "enabled",
+                    "disable_on": (
+                        ["moved", "isolation_gap"]
+                        if role == "power"
+                        else ["isolation_gap"]
+                    ),
+                    "moved_retarget_policy": (
+                        "disable_source_contact_then_add_each_eligible_"
+                        "destination_finite_route"
+                        if role == "power"
+                        else "retain_source_contact"
+                    ),
+                    "raw_same_layer_bypass_status": (
+                        "blocked"
+                        if landing_key in scenario_isolated_landing_keys
+                        else "unresolved"
+                    ),
+                    "status": "complete" if not contact_issues else "incomplete",
+                    "issues": contact_issues,
+                }
+                scenario_conditional_contacts.append(contact)
+                contact_bucket.append(contact)
+                scenario_topology_issues.update(contact_issues)
+
+    retarget_destination_bindings: list[dict[str, Any]] = []
+    retarget_binding_identity_keys: set[
+        tuple[str, str, str, str, str, str]
+    ] = set()
+    retarget_expected_destination_keys: set[tuple[str, str, str]] = set()
+    for refdes_key, connection in sorted(connection_by_refdes.items()):
+        refdes = str(getattr(connection, "refdes", "")).strip()
+        for role, raw_landings in (
+            ("power", tuple(getattr(connection, "power_vias", ()))),
+            ("ground", tuple(getattr(connection, "ground_vias", ()))),
+        ):
+            for landing in raw_landings:
+                via_id = str(getattr(landing, "via_id", "")).strip()
+                node_id = str(
+                    getattr(landing, "endpoint_node_id", "")
+                ).strip()
+                net = str(getattr(landing, "net", "")).strip()
+                source_landing_key = (
+                    via_id.casefold(),
+                    node_id.casefold(),
+                )
+                for evidence in tuple(getattr(landing, "path_evidence", ())):
+                    target_layer = str(
+                        getattr(evidence, "target_layer", "")
+                    ).strip()
+                    target_node_id = str(
+                        getattr(evidence, "target_node_id", "")
+                    ).strip()
+                    destination_key = (
+                        net.casefold(),
+                        target_layer.casefold(),
+                        target_node_id.casefold(),
+                    )
+                    identity_key = (
+                        refdes_key,
+                        role,
+                        source_landing_key[0],
+                        source_landing_key[1],
+                        destination_key[1],
+                        destination_key[2],
+                    )
+                    if identity_key in retarget_binding_identity_keys:
+                        raise SpdImportError(
+                            "SPD_RETARGET_DESTINATION_BINDING_DUPLICATE: one "
+                            "source landing/path target is repeated"
+                        )
+                    retarget_binding_identity_keys.add(identity_key)
+                    retarget_expected_destination_keys.add(destination_key)
+                    destination_vertex_id = (
+                        raw_retarget_destination_vertex_by_key.get(
+                            destination_key
+                        )
+                    )
+                    destination_vertex = finite_vertex_by_id.get(
+                        str(destination_vertex_id or "")
+                    )
+                    binding_issues: list[str] = []
+                    if not all(destination_key):
+                        binding_issues.append("destination_identity_invalid")
+                    if destination_vertex is None:
+                        binding_issues.append(
+                            "destination_quotient_vertex_unresolved"
+                        )
+                        destination_island_ids: list[str] = []
+                        destination_component = None
+                    else:
+                        if destination_vertex["net"].casefold() != net.casefold():
+                            binding_issues.append("destination_vertex_net_mismatch")
+                        if (
+                            destination_vertex["layer"].casefold()
+                            != target_layer.casefold()
+                        ):
+                            binding_issues.append(
+                                "destination_vertex_layer_mismatch"
+                            )
+                        retained_rows = destination_vertex[
+                            "retained_component_island_ids_by_layer"
+                        ]
+                        matching_layers = [
+                            layer
+                            for layer in retained_rows
+                            if layer.casefold() == target_layer.casefold()
+                        ]
+                        destination_island_ids = (
+                            sorted(retained_rows[matching_layers[0]])
+                            if len(matching_layers) == 1
+                            else []
+                        )
+                        destination_component = (
+                            surface_component_by_identity.get(
+                                (
+                                    net.casefold(),
+                                    target_layer.casefold(),
+                                    tuple(destination_island_ids),
+                                )
+                            )
+                            if destination_island_ids
+                            else None
+                        )
+                        if len(matching_layers) != 1:
+                            binding_issues.append(
+                                "destination_retained_layer_binding_unresolved"
+                            )
+                        if destination_component is None:
+                            binding_issues.append(
+                                "destination_surface_component_unresolved"
+                            )
+                        elif destination_component["contact_status"] != "complete":
+                            binding_issues.append(
+                                "destination_surface_component_uncontacted"
+                            )
+                    row = {
+                        "refdes": refdes,
+                        "role": role,
+                        "net": net,
+                        "source_landing_key": [
+                            source_landing_key[0],
+                            source_landing_key[1],
+                        ],
+                        "source_landing_vertex_id": (
+                            raw_finite_vertex_by_landing.get(
+                                source_landing_key
+                            )
+                        ),
+                        "source_first_via_edge_id": (
+                            raw_finite_edge_by_landing.get(source_landing_key)
+                        ),
+                        "source_first_via_owner_id": f"via:{via_id}",
+                        "target_layer": target_layer,
+                        "target_node_id": target_node_id,
+                        "destination_vertex_id": destination_vertex_id,
+                        "destination_component_id": (
+                            destination_component["component_id"]
+                            if destination_component is not None
+                            else None
+                        ),
+                        "destination_island_ids": destination_island_ids,
+                        "destination_representative_island_id": (
+                            destination_component["representative_island_id"]
+                            if destination_component is not None
+                            else None
+                        ),
+                        "destination_component_evidence_sha256": (
+                            destination_component["component_evidence_sha256"]
+                            if destination_component is not None
+                            else None
+                        ),
+                        "status": (
+                            "complete" if not binding_issues else "incomplete"
+                        ),
+                        "issues": binding_issues,
+                    }
+                    row["binding_evidence_sha256"] = (
+                        core_services._canonical_metadata_sha256(row)
+                    )
+                    retarget_destination_bindings.append(row)
+                    scenario_topology_issues.update(binding_issues)
+    retarget_destination_bindings.sort(
+        key=lambda item: (
+            item["refdes"].casefold(),
+            item["role"],
+            tuple(item["source_landing_key"]),
+            item["target_layer"].casefold(),
+            item["target_node_id"].casefold(),
+        )
+    )
+    retarget_binding_rows_sha256 = core_services._canonical_metadata_sha256(
+        {"bindings": retarget_destination_bindings}
+    )
+    if finite_via_retarget_destination_coverage is None:
+        retarget_destination_coverage = {
+            "requested_destination_count": len(
+                retarget_expected_destination_keys
+            ),
+            "resolved_destination_count": len(
+                raw_retarget_destination_vertex_by_key
+            ),
+            "requested_destination_ids_sha256": None,
+            "resolved_destination_ids_sha256": None,
+            "binding_rows_sha256": retarget_binding_rows_sha256,
+            "status": (
+                "complete"
+                if not retarget_expected_destination_keys
+                and not raw_retarget_destination_vertex_by_key
+                else "incomplete"
+            ),
+        }
+    else:
+        retarget_destination_coverage = {
+            **finite_via_retarget_destination_coverage,
+            "binding_rows_sha256": retarget_binding_rows_sha256,
+        }
+        if (
+            retarget_destination_coverage["requested_destination_count"]
+            != len(retarget_expected_destination_keys)
+            or retarget_destination_coverage["resolved_destination_count"]
+            != len(raw_retarget_destination_vertex_by_key)
+            or set(raw_retarget_destination_vertex_by_key)
+            != retarget_expected_destination_keys
+            or any(
+                item["status"] != "complete"
+                for item in retarget_destination_bindings
+            )
+        ):
+            retarget_destination_coverage["status"] = "incomplete"
+            scenario_topology_issues.add(
+                "retarget_destination_binding_coverage_incomplete"
+            )
+
+    retarget_landing_xy_bindings: list[dict[str, Any]] = []
+    previous_landing_identity_key: (
+        tuple[str, str, str, str, str, str] | None
+    ) = None
+    request_identity_digest = sha256()
+    request_identity_digest.update(b'{"destinations":[')
+    binding_rows_digest = sha256()
+    binding_rows_digest.update(b'{"bindings":[')
+    rail_by_key = {
+        str(getattr(rail, "rail_id", "")).strip().casefold(): rail
+        for rail in getattr(project, "rails", ())
+        if str(getattr(rail, "rail_id", "")).strip()
+    }
+    total_retarget_landing_bindings = len(
+        retarget_landing_destination_requests
+    )
+    report(
+        60,
+        "Normalizing exact retarget landing bindings "
+        f"(0/{total_retarget_landing_bindings:,})",
+    )
+    report(61, "Hashing exact retarget landing bindings")
+    for request_index, request in enumerate(
+        retarget_landing_destination_requests
+    ):
+        if request_index % 2048 == 0:
+            check_cancelled("normalizing exact retarget landing bindings")
+            report(
+                61
+                + round(
+                    20
+                    * request_index
+                    / max(1, total_retarget_landing_bindings)
+                ),
+                "Normalizing exact retarget landing bindings "
+                f"({request_index:,}/{total_retarget_landing_bindings:,})",
+            )
+        refdes = str(getattr(request, "refdes", "")).strip()
+        via_id = str(getattr(request, "via_id", "")).strip()
+        node_id = str(
+            getattr(request, "endpoint_node_id", "")
+        ).strip()
+        source_net = str(getattr(request, "source_net", "")).strip()
+        destination_net = str(
+            getattr(request, "destination_net", "")
+        ).strip()
+        destination_layer = str(
+            getattr(request, "destination_layer", "")
+        ).strip()
+        destination_island_id = str(
+            getattr(request, "destination_island_id", "")
+        ).strip()
+        geometry_asset_sha256 = str(
+            getattr(request, "geometry_asset_sha256", "")
+        ).strip().casefold()
+        target_rail_id = str(
+            getattr(request, "target_rail_id", "")
+        ).strip()
+        via_template_id = getattr(request, "via_template_id", None)
+        if via_template_id is not None:
+            via_template_id = str(via_template_id).strip() or None
+        try:
+            x_um = float(getattr(request, "x_um"))
+            y_um = float(getattr(request, "y_um"))
+        except (AttributeError, TypeError, ValueError):
+            x_um = float("nan")
+            y_um = float("nan")
+        identity_key = (
+            refdes.casefold(),
+            via_id.casefold(),
+            node_id.casefold(),
+            target_rail_id.casefold(),
+            destination_net.casefold(),
+            destination_layer.casefold(),
+        )
+        if identity_key == previous_landing_identity_key:
+            raise SpdImportError(
+                "SPD_RETARGET_LANDING_BINDING_DUPLICATE: one physical PWR "
+                "landing repeats a destination NET/layer"
+            )
+        previous_landing_identity_key = identity_key
+        source_landing_key = (via_id.casefold(), node_id.casefold())
+        destination_component = surface_component_by_island.get(
+            (
+                destination_net.casefold(),
+                destination_layer.casefold(),
+                destination_island_id,
+            )
+        )
+        destination_vertex_ids = (
+            finite_vertex_ids_by_component_id.get(
+                destination_component["component_id"], []
+            )
+            if destination_component is not None
+            else []
+        )
+        destination_vertex_id = (
+            destination_vertex_ids[0]
+            if len(destination_vertex_ids) == 1
+            else None
+        )
+        destination_vertex = finite_vertex_by_id.get(
+            str(destination_vertex_id or "")
+        )
+        source_vertex_id = raw_finite_vertex_by_landing.get(
+            source_landing_key
+        )
+        source_first_edge_id = raw_finite_edge_by_landing.get(
+            source_landing_key
+        )
+        source_first_edge = finite_edge_by_id.get(
+            str(source_first_edge_id or "")
+        )
+        binding_issues: list[str] = []
+        if (
+            not all(
+                (
+                    refdes,
+                    via_id,
+                    node_id,
+                    source_net,
+                    destination_net,
+                    destination_layer,
+                    destination_island_id,
+                    target_rail_id,
+                )
+            )
+            or not isfinite(x_um)
+            or not isfinite(y_um)
+            or len(geometry_asset_sha256) != 64
+        ):
+            binding_issues.append("landing_xy_destination_identity_invalid")
+        if refdes.casefold() not in connection_by_refdes:
+            binding_issues.append("source_refdes_connection_unresolved")
+        if source_vertex_id is None:
+            binding_issues.append("source_landing_vertex_unresolved")
+        if source_first_edge is None:
+            binding_issues.append("source_first_via_edge_unresolved")
+        elif [
+            str(owner_id).casefold()
+            for owner_id in source_first_edge["owner_ids"]
+        ] != [f"via:{via_id}".casefold()]:
+            binding_issues.append("source_first_via_owner_not_exclusive")
+        if source_landing_key not in scenario_isolated_landing_keys:
+            binding_issues.append("source_landing_not_scenario_isolated")
+        target_rail = rail_by_key.get(target_rail_id.casefold())
+        if target_rail is None:
+            binding_issues.append("target_rail_unresolved")
+        elif (
+            str(getattr(target_rail, "net", "")).casefold()
+            != destination_net.casefold()
+        ):
+            binding_issues.append("target_rail_destination_net_mismatch")
+        if destination_component is None:
+            binding_issues.append("destination_surface_component_unresolved")
+        elif destination_component["contact_status"] != "complete":
+            binding_issues.append("destination_surface_component_uncontacted")
+        if not destination_vertex_ids:
+            binding_issues.append("destination_quotient_vertex_unresolved")
+        elif len(destination_vertex_ids) != 1:
+            binding_issues.append("destination_quotient_vertex_ambiguous")
+        elif destination_vertex is None:
+            binding_issues.append("destination_quotient_vertex_missing")
+        else:
+            if (
+                destination_vertex["net"].casefold()
+                != destination_net.casefold()
+            ):
+                binding_issues.append("destination_vertex_net_mismatch")
+            if (
+                destination_component is not None
+                and destination_component["component_id"]
+                not in destination_vertex["retained_component_ids"]
+            ):
+                binding_issues.append(
+                    "destination_vertex_component_binding_mismatch"
+                )
+        request_identity = {
+            "refdes": refdes.casefold(),
+            "via_id": via_id.casefold(),
+            "endpoint_node_id": node_id.casefold(),
+            "destination_net": destination_net.casefold(),
+            "destination_layer": destination_layer.casefold(),
+            "destination_island_id": destination_island_id,
+            "target_rail_id": target_rail_id.casefold(),
+        }
+        if request_index:
+            request_identity_digest.update(b",")
+        request_identity_digest.update(
+            canonical_concrete_row_bytes(request_identity)
+        )
+        row = {
+            "binding_kind": "landing_xy_exact_artwork",
+            "refdes": refdes,
+            "role": "power",
+            "source_net": source_net,
+            "source_landing_key": [
+                source_landing_key[0],
+                source_landing_key[1],
+            ],
+            "source_landing_vertex_id": source_vertex_id,
+            "source_first_via_edge_id": source_first_edge_id,
+            "source_first_via_owner_id": f"via:{via_id}",
+            "landing_x_um": x_um,
+            "landing_y_um": y_um,
+            "target_rail_id": target_rail_id,
+            "target_net": destination_net,
+            "target_layer": destination_layer,
+            "via_template_id": via_template_id,
+            "destination_net": destination_net,
+            "destination_layer": destination_layer,
+            "destination_pwr_layer": destination_layer,
+            "destination_island_id": destination_island_id,
+            "destination_island_ids": (
+                list(destination_component["island_ids"])
+                if destination_component is not None
+                else []
+            ),
+            "destination_component_id": (
+                destination_component["component_id"]
+                if destination_component is not None
+                else None
+            ),
+            "destination_representative_island_id": (
+                destination_component["representative_island_id"]
+                if destination_component is not None
+                else None
+            ),
+            "destination_component_evidence_sha256": (
+                destination_component["component_evidence_sha256"]
+                if destination_component is not None
+                else None
+            ),
+            "destination_vertex_id": destination_vertex_id,
+            "geometry_asset_sha256": geometry_asset_sha256,
+            "status": "complete" if not binding_issues else "incomplete",
+            "issues": binding_issues,
+        }
+        row["binding_evidence_sha256"] = sha256(
+            canonical_concrete_row_bytes(row)
+        ).hexdigest()
+        retarget_landing_xy_bindings.append(row)
+        if request_index:
+            binding_rows_digest.update(b",")
+        binding_rows_digest.update(canonical_concrete_row_bytes(row))
+        scenario_topology_issues.update(binding_issues)
+
+    check_cancelled("normalizing exact retarget landing bindings")
+    request_identity_digest.update(b"]}")
+    binding_rows_digest.update(b"]}")
+    request_identity_sha256 = request_identity_digest.hexdigest()
+    binding_rows_sha256 = binding_rows_digest.hexdigest()
+    report(
+        82,
+        "Hashed exact retarget landing bindings "
+        f"({total_retarget_landing_bindings:,} binding(s))",
+    )
+    expected_power_landing_count = sum(
+        len(tuple(getattr(connection, "power_vias", ())))
+        for connection in connection_by_refdes.values()
+    )
+    scan_coverage = (
+        dict(retarget_landing_scan_coverage)
+        if retarget_landing_scan_coverage is not None
+        else None
+    )
+    retarget_landing_xy_coverage = {
+        **(scan_coverage or {}),
+        "requested_binding_count": len(
+            retarget_landing_destination_requests
+        ),
+        "resolved_binding_count": sum(
+            item["status"] == "complete"
+            for item in retarget_landing_xy_bindings
+        ),
+        "missing_binding_count": sum(
+            item["status"] != "complete"
+            for item in retarget_landing_xy_bindings
+        ),
+        "requested_binding_ids_sha256": request_identity_sha256,
+        "binding_rows_sha256": binding_rows_sha256,
+        "lookup_key_policy": (
+            "refdes_via_target_rail_destination_pwr_layer"
+        ),
+    }
+    landing_coverage_issues: list[str] = []
+    if scenario_topology_requested and scan_coverage is None:
+        landing_coverage_issues.append(
+            "retarget_landing_scan_coverage_missing"
+        )
+    if scan_coverage is not None:
+        if str(scan_coverage.get("status", "")).casefold() != "complete":
+            landing_coverage_issues.append(
+                "retarget_landing_scan_status_incomplete"
+            )
+        if int(scan_coverage.get("power_landing_count", -1)) != (
+            expected_power_landing_count
+        ):
+            landing_coverage_issues.append(
+                "retarget_landing_scan_power_count_mismatch"
+            )
+        if int(scan_coverage.get("scanned_landing_count", -1)) != (
+            expected_power_landing_count
+        ):
+            landing_coverage_issues.append(
+                "retarget_landing_scan_coverage_incomplete"
+            )
+        if int(scan_coverage.get("covered_destination_count", -1)) != len(
+            retarget_landing_destination_requests
+        ):
+            landing_coverage_issues.append(
+                "retarget_landing_scan_destination_count_mismatch"
+            )
+        if (
+            str(
+                scan_coverage.get("covered_destination_ids_sha256", "")
+            ).casefold()
+            != request_identity_sha256
+        ):
+            landing_coverage_issues.append(
+                "retarget_landing_scan_destination_hash_mismatch"
+            )
+    if any(
+        item["status"] != "complete"
+        for item in retarget_landing_xy_bindings
+    ):
+        landing_coverage_issues.append(
+            "retarget_landing_xy_binding_incomplete"
+        )
+    retarget_landing_xy_coverage["status"] = (
+        "complete" if not landing_coverage_issues else "incomplete"
+    )
+    retarget_landing_xy_coverage["issues"] = sorted(
+        set(landing_coverage_issues)
+    )
+    if landing_coverage_issues:
+        scenario_topology_issues.add(
+            "retarget_landing_xy_binding_coverage_incomplete"
+        )
+
+    scenario_shared_ideal_links: list[dict[str, Any]] = []
+    scenario_link_by_cluster_role_refs: dict[
+        tuple[str, str, tuple[str, str]], dict[str, Any]
+    ] = {}
+    for cluster_id_key, cluster in sorted(cluster_by_id.items()):
+        cluster_id = str(getattr(cluster, "cluster_id", "")).strip()
+        for role, raw_edges in (
+            ("power", tuple(getattr(cluster, "power_edges", ()))),
+            ("ground", tuple(getattr(cluster, "ground_edges", ()))),
+        ):
+            for raw_left, raw_right in raw_edges:
+                left = str(raw_left).strip()
+                right = str(raw_right).strip()
+                ordered_refs = tuple(sorted((left, right), key=str.casefold))
+                left_vertex_id = scenario_terminal_vertex_by_ref_role.get(
+                    (ordered_refs[0].casefold(), role)
+                )
+                right_vertex_id = scenario_terminal_vertex_by_ref_role.get(
+                    (ordered_refs[1].casefold(), role)
+                )
+                link_issues: list[str] = []
+                if left_vertex_id is None or right_vertex_id is None:
+                    link_issues.append("shared_terminal_vertex_unresolved")
+                link = {
+                    "link_id": scenario_topology_id(
+                        "spd-shared-pad-link",
+                        cluster_id,
+                        role,
+                        ordered_refs[0],
+                        ordered_refs[1],
+                    ),
+                    "cluster_id": cluster_id,
+                    "role": role,
+                    "member_refdes": list(ordered_refs),
+                    "start_terminal_vertex_id": left_vertex_id,
+                    "end_terminal_vertex_id": right_vertex_id,
+                    "link_kind": "topology_only_ideal",
+                    "default_state": "enabled",
+                    "disable_when_endpoint_pad_state": "isolation_gap",
+                    "status": "complete" if not link_issues else "incomplete",
+                    "issues": link_issues,
+                }
+                scenario_shared_ideal_links.append(link)
+                scenario_link_by_cluster_role_refs[
+                    (cluster_id_key, role, tuple(item.casefold() for item in ordered_refs))
+                ] = link
+                scenario_topology_issues.update(link_issues)
+
+    def post_gap_components(
+        member_refdes: tuple[str, ...],
+        raw_edges: tuple[tuple[str, str], ...],
+        gap_refdes: str,
+    ) -> list[list[str]]:
+        display_by_key = {
+            str(item).casefold(): str(item).strip()
+            for item in member_refdes
+            if str(item).strip()
+            and str(item).casefold() != gap_refdes.casefold()
+        }
+        adjacency = {key: set() for key in display_by_key}
+        for raw_left, raw_right in raw_edges:
+            left = str(raw_left).casefold()
+            right = str(raw_right).casefold()
+            if left in adjacency and right in adjacency:
+                adjacency[left].add(right)
+                adjacency[right].add(left)
+        components: list[list[str]] = []
+        remaining = set(adjacency)
+        while remaining:
+            first = min(remaining)
+            pending = [first]
+            component: set[str] = set()
+            while pending:
+                current = pending.pop()
+                if current in component:
+                    continue
+                component.add(current)
+                pending.extend(adjacency[current] - component)
+            remaining.difference_update(component)
+            components.append(
+                [display_by_key[key] for key in sorted(component)]
+            )
+        return components
+
+    scenario_gap_cut_proofs: list[dict[str, Any]] = []
+    for cluster_id_key, cluster in sorted(cluster_by_id.items()):
+        cluster_id = str(getattr(cluster, "cluster_id", "")).strip()
+        members = tuple(getattr(cluster, "member_refdes", ()))
+        power_edges = tuple(getattr(cluster, "power_edges", ()))
+        ground_edges = tuple(getattr(cluster, "ground_edges", ()))
+        for gap_refdes in tuple(
+            getattr(cluster, "isolation_gap_refdes", ())
+        ):
+            gap_refdes = str(gap_refdes).strip()
+            proof_issues: list[str] = []
+            cluster_contacts = [
+                contact
+                for (ref_key, _role), contacts in scenario_contacts_by_ref_role.items()
+                if ref_key
+                in {str(member).casefold() for member in members}
+                for contact in contacts
+            ]
+            if any(contact["status"] != "complete" for contact in cluster_contacts):
+                proof_issues.append("cluster_raw_contacts_not_fully_isolated")
+            expected_link_count = len(power_edges) + len(ground_edges)
+            actual_links = [
+                link
+                for link in scenario_shared_ideal_links
+                if link["cluster_id"].casefold() == cluster_id_key
+            ]
+            if len(actual_links) != expected_link_count or any(
+                link["status"] != "complete" for link in actual_links
+            ):
+                proof_issues.append("conditional_shared_link_set_incomplete")
+            power_components = post_gap_components(
+                members, power_edges, gap_refdes
+            )
+            ground_components = post_gap_components(
+                members, ground_edges, gap_refdes
+            )
+            component_index_by_ref = {
+                refdes.casefold(): index
+                for index, component in enumerate(power_components)
+                for refdes in component
+            }
+            landing_component_indexes: dict[str, set[int]] = {}
+            for (ref_key, role), contacts in scenario_contacts_by_ref_role.items():
+                if role != "power" or ref_key not in component_index_by_ref:
+                    continue
+                component_index = component_index_by_ref[ref_key]
+                for contact in contacts:
+                    identity = str(
+                        contact.get("landing_vertex_id")
+                        or contact.get("first_via_owner_id")
+                        or ""
+                    ).casefold()
+                    if identity:
+                        landing_component_indexes.setdefault(identity, set()).add(
+                            component_index
+                        )
+            if any(
+                len(component_indexes) > 1
+                for component_indexes in landing_component_indexes.values()
+            ):
+                proof_issues.append(
+                    "raw_landing_shared_across_post_gap_components"
+                )
+            removed_contact_ids = sorted(
+                contact["contact_id"]
+                for role in ("power", "ground")
+                for contact in scenario_contacts_by_ref_role.get(
+                    (gap_refdes.casefold(), role), []
+                )
+            )
+            removed_link_ids = sorted(
+                link["link_id"]
+                for link in actual_links
+                if gap_refdes.casefold()
+                in {item.casefold() for item in link["member_refdes"]}
+            )
+            proof = {
+                "proof_id": scenario_topology_id(
+                    "spd-gap-cut-proof", cluster_id, gap_refdes
+                ),
+                "cluster_id": cluster_id,
+                "gap_refdes": gap_refdes,
+                "removed_terminal_vertex_ids": [
+                    scenario_terminal_vertex_by_ref_role.get(
+                        (gap_refdes.casefold(), role)
+                    )
+                    for role in ("power", "ground")
+                ],
+                "removed_contact_ids": removed_contact_ids,
+                "removed_ideal_link_ids": removed_link_ids,
+                "post_gap_power_components": power_components,
+                "post_gap_ground_components": ground_components,
+                "raw_top_pad_bypass_status": (
+                    "blocked" if not proof_issues else "unresolved"
+                ),
+                "status": "complete" if not proof_issues else "incomplete",
+                "issues": proof_issues,
+            }
+            scenario_gap_cut_proofs.append(proof)
+            scenario_topology_issues.update(proof_issues)
+
+    scenario_terminal_vertices.sort(
+        key=lambda item: (item["refdes"].casefold(), item["role"])
+    )
+    scenario_conditional_contacts.sort(key=lambda item: item["contact_id"])
+    scenario_shared_ideal_links.sort(key=lambda item: item["link_id"])
+    scenario_gap_cut_proofs.sort(key=lambda item: item["proof_id"])
+    scenario_conditional_landing_keys = {
+        tuple(contact["landing_key"])
+        for contact in scenario_conditional_contacts
+    }
+    scenario_isolation_complete = bool(
+        not scenario_topology_requested
+        or finite_via_scenario_isolation_coverage is not None
+        and finite_via_scenario_isolation_coverage["status"] == "complete"
+        and finite_via_scenario_isolation_coverage["requested_landing_count"]
+        == len(scenario_conditional_landing_keys)
+    )
+    scenario_decap_terminal_topology = {
+        "schema_version": "spd-scenario-decap-terminal-topology-v1",
+        "base_union_policy": (
+            "editable_decap_landing_nodes_excluded_from_permanent_"
+            "trace_and_artwork_union"
+        ),
+        "scenario_compile_policy": (
+            "rebuild_ideal_aliases_from_active_contacts_and_shared_links"
+        ),
+        "moved_component_policy": (
+            "disable_all_source_power_contacts_and_retarget_every_eligible_"
+            "root_require_at_least_one"
+        ),
+        "moved_destination_binding_policy": (
+            "lookup_refdes_via_target_rail_destination_pwr_layer_in_exact_"
+            "landing_xy_quotient_bindings"
+        ),
+        "normal_disabled_policy": "retain_topology_contacts_omit_cap_body",
+        "isolation_gap_policy": (
+            "remove_terminal_incident_power_ground_links_contacts_and_body"
+        ),
+        "vertices": scenario_terminal_vertices,
+        "conditional_contacts": scenario_conditional_contacts,
+        "conditional_shared_links": scenario_shared_ideal_links,
+        "retarget_destination_bindings": retarget_destination_bindings,
+        "retarget_destination_coverage": retarget_destination_coverage,
+        "retarget_landing_xy_bindings": retarget_landing_xy_bindings,
+        "retarget_landing_xy_coverage": retarget_landing_xy_coverage,
+        "gap_cut_proofs": scenario_gap_cut_proofs,
+        "base_isolation_coverage": finite_via_scenario_isolation_coverage,
+        "status": (
+            "complete"
+            if scenario_isolation_complete and not scenario_topology_issues
+            else "incomplete"
+        ),
+        "issues": sorted(scenario_topology_issues),
+    }
+    via_island_pair_aggregates = [
+        {
+            "net": str(getattr(item, "net", "")).strip(),
+            "padstack": str(getattr(item, "padstack", "")).strip(),
+            "start_layer": str(getattr(item, "start_layer", "")).strip(),
+            "end_layer": str(getattr(item, "end_layer", "")).strip(),
+            "start_island_id": str(
+                getattr(item, "start_island_id", "")
+            ).strip(),
+            "end_island_id": str(
+                getattr(item, "end_island_id", "")
+            ).strip(),
+            "start_component_island_ids": list(
+                getattr(item, "start_component_island_ids", ())
+            ),
+            "end_component_island_ids": list(
+                getattr(item, "end_component_island_ids", ())
+            ),
+            "count": int(getattr(item, "count")),
+            "via_ids_sha256": str(
+                getattr(item, "via_ids_sha256", "")
+            ).casefold(),
+            "terminal_owned_count": getattr(
+                item, "terminal_owned_count", None
+            ),
+            "substrate_count": getattr(item, "substrate_count", None),
+            "drill_diameter_um": getattr(
+                item, "drill_diameter_um", None
+            ),
+            "material": getattr(item, "material", None),
+            "segments": [
+                {
+                    "ordinal": int(getattr(segment, "ordinal")),
+                    "start_layer": str(
+                        getattr(segment, "start_layer", "")
+                    ).strip(),
+                    "end_layer": str(
+                        getattr(segment, "end_layer", "")
+                    ).strip(),
+                    "length_um": float(getattr(segment, "length_um")),
+                }
+                for segment in getattr(item, "segments", ())
+            ],
+            "physical_model_status": str(
+                getattr(item, "physical_model_status", "incomplete")
+            ).strip().casefold(),
+            "physical_model_issues": list(
+                getattr(item, "physical_model_issues", ())
+            ),
+        }
+        for item in getattr(reachability, "via_island_pair_aggregates", ())
+    ]
+    via_island_pair_aggregates.sort(
+        key=lambda item: (
+            item["net"].casefold(),
+            item["padstack"].casefold(),
+            item["start_layer"].casefold(),
+            item["end_layer"].casefold(),
+            item["start_island_id"],
+            item["end_island_id"],
+        )
+    )
+    for item in via_island_pair_aggregates:
+        start_component = surface_component_by_identity.get(
+            (
+                item["net"].casefold(),
+                item["start_layer"].casefold(),
+                tuple(sorted(item["start_component_island_ids"])),
+            )
+        )
+        end_component = surface_component_by_identity.get(
+            (
+                item["net"].casefold(),
+                item["end_layer"].casefold(),
+                tuple(sorted(item["end_component_island_ids"])),
+            )
+        )
+        item["start_component_id"] = (
+            start_component["component_id"]
+            if start_component is not None
+            else None
+        )
+        item["start_component_evidence_sha256"] = (
+            start_component["component_evidence_sha256"]
+            if start_component is not None
+            else None
+        )
+        item["end_component_id"] = (
+            end_component["component_id"]
+            if end_component is not None
+            else None
+        )
+        item["end_component_evidence_sha256"] = (
+            end_component["component_evidence_sha256"]
+            if end_component is not None
+            else None
+        )
+        component_issues: list[str] = []
+        if start_component is None:
+            component_issues.append("start_component_unresolved")
+        elif start_component["contact_status"] != "complete":
+            component_issues.append("start_component_uncontacted")
+        elif item["start_island_id"] != start_component[
+            "representative_island_id"
+        ]:
+            component_issues.append("start_representative_mismatch")
+        if end_component is None:
+            component_issues.append("end_component_unresolved")
+        elif end_component["contact_status"] != "complete":
+            component_issues.append("end_component_uncontacted")
+        elif item["end_island_id"] != end_component[
+            "representative_island_id"
+        ]:
+            component_issues.append("end_representative_mismatch")
+        item["component_binding_status"] = (
+            "complete" if not component_issues else "incomplete"
+        )
+        item["component_binding_issues"] = component_issues
+        physical_issues = set(item["physical_model_issues"])
+        physical_issues.update(
+            segment_stackup_issues(
+                item["segments"],
+                expected_start_layer=item["start_layer"],
+                expected_end_layer=item["end_layer"],
+            )
+        )
+        item["physical_model_issues"] = sorted(physical_issues)
+        if physical_issues:
+            item["physical_model_status"] = "incomplete"
+    raw_via_island_pair_coverage = getattr(
+        reachability, "via_island_pair_coverage", None
+    )
+    via_island_pair_coverage = (
+        {
+            "raw_target_via_count": int(
+                getattr(raw_via_island_pair_coverage, "raw_target_via_count")
+            ),
+            "paired_via_count": int(
+                getattr(raw_via_island_pair_coverage, "paired_via_count")
+            ),
+            "terminal_owned_unpaired_count": int(
+                getattr(
+                    raw_via_island_pair_coverage,
+                    "terminal_owned_unpaired_count",
+                )
+            ),
+            "terminal_owned_unpaired_via_ids_sha256": str(
+                getattr(
+                    raw_via_island_pair_coverage,
+                    "terminal_owned_unpaired_via_ids_sha256",
+                )
+            ).casefold(),
+            "unsupported_missing_endpoint_count": int(
+                getattr(
+                    raw_via_island_pair_coverage,
+                    "unsupported_missing_endpoint_count",
+                )
+            ),
+            "unsupported_missing_endpoint_via_ids_sha256": str(
+                getattr(
+                    raw_via_island_pair_coverage,
+                    "unsupported_missing_endpoint_via_ids_sha256",
+                )
+            ).casefold(),
+            "outside_retained_interface_scope_count": int(
+                getattr(
+                    raw_via_island_pair_coverage,
+                    "outside_retained_interface_scope_count",
+                )
+            ),
+            "outside_retained_interface_scope_via_ids_sha256": str(
+                getattr(
+                    raw_via_island_pair_coverage,
+                    "outside_retained_interface_scope_via_ids_sha256",
+                )
+            ).casefold(),
+            "outside_retained_interface_scope_reason": (
+                "outside_retained_interface_scope"
+            ),
+            "model_relevant_via_count": int(
+                getattr(
+                    raw_via_island_pair_coverage,
+                    "model_relevant_via_count",
+                )
+            ),
+            "terminal_owned_ids_supplied": bool(
+                getattr(
+                    raw_via_island_pair_coverage,
+                    "terminal_owned_ids_supplied",
+                )
+            ),
+            "terminal_owned_declared_count": int(
+                getattr(
+                    raw_via_island_pair_coverage,
+                    "terminal_owned_declared_count",
+                )
+            ),
+            "terminal_owned_observed_count": int(
+                getattr(
+                    raw_via_island_pair_coverage,
+                    "terminal_owned_observed_count",
+                )
+            ),
+            "paired_terminal_owned_count": getattr(
+                raw_via_island_pair_coverage,
+                "paired_terminal_owned_count",
+            ),
+            "paired_substrate_count": getattr(
+                raw_via_island_pair_coverage,
+                "paired_substrate_count",
+            ),
+            "status": str(
+                getattr(raw_via_island_pair_coverage, "status")
+            ),
+        }
+        if raw_via_island_pair_coverage is not None
+        else None
+    )
+    serialized_landing_contact_by_key = {
+        tuple(item["landing_key"]): item
+        for item in landing_surface_contacts
+    }
+    rail_by_key = {
+        rail.rail_id.casefold(): rail
+        for rail in getattr(project, "rails", ())
+    }
+    required_layer_keys_by_pin: dict[str, set[str]] = {}
+    for binding in rail_anchor_bindings:
+        pin_key = str(binding.get("pin_id", "")).strip().casefold()
+        rail = rail_by_key.get(
+            str(binding.get("rail_id", "")).strip().casefold()
+        )
+        role = str(binding.get("role", "")).strip().casefold()
+        if not pin_key or rail is None or role not in {"power", "ground"}:
+            continue
+        layer = rail.pwr_layer if role == "power" else rail.gnd_layer
+        required_layer_keys_by_pin.setdefault(pin_key, set()).add(
+            layer.casefold()
+        )
+    for contact in terminal_contacts:
+        pin_key = str(contact.get("pin_id", "")).strip().casefold()
+        net_key = str(contact.get("net", "")).strip().casefold()
+        required_layer_keys = required_layer_keys_by_pin.get(pin_key, set())
+        path_kind = str(
+            contact.get("contact_path_kind", "unresolved")
+        ).strip()
+        candidate_components: dict[str, dict[str, Any]] = {}
+        landing = landing_by_pin.get(pin_key)
+        serialized_landing_contact = (
+            serialized_landing_contact_by_key.get(
+                (
+                    landing.via_id.casefold(),
+                    landing.endpoint_node_id.casefold(),
+                )
+            )
+            if landing is not None
+            else None
+        )
+        # v4 binds the external Device pin to its quotient vertex.  Required
+        # rail surfaces may be reached through any finite branch/cycle network;
+        # the first Via's immediate opposite endpoint is not required to be
+        # artwork and multiple reachable surface components are valid MNA
+        # boundaries rather than an ambiguity.
+        for island_id in contact.get("contact_island_ids", ()):
+            for required_layer_key in required_layer_keys:
+                component = surface_component_by_island.get(
+                    (net_key, required_layer_key, str(island_id))
+                )
+                if (
+                    component is not None
+                    and component["contact_status"] == "complete"
+                ):
+                    candidate_components[component["component_id"]] = component
+        candidates = sorted(
+            (
+                component
+                for component in candidate_components.values()
+                if component["net"].casefold() == net_key
+                and component["layer"].casefold() in required_layer_keys
+            ),
+            key=lambda item: item["component_id"],
+        )
+        issues = {
+            str(item)
+            for item in contact.get("issues", ())
+            if str(item)
+        }
+        exposed_vertex_id = str(
+            contact.get("exposed_quotient_vertex_id") or ""
+        ).strip()
+        exposed_vertex = finite_vertex_by_id.get(exposed_vertex_id)
+        first_via_edge_id = str(
+            contact.get("first_via_quotient_edge_id") or ""
+        ).strip()
+        first_via_edge = finite_edge_by_id.get(first_via_edge_id)
+        if exposed_vertex is None:
+            issues.add("exposed_quotient_vertex_unresolved")
+        else:
+            if exposed_vertex["net"].casefold() != net_key:
+                issues.add("exposed_quotient_vertex_net_mismatch")
+            if "terminal" not in exposed_vertex["roles"]:
+                issues.add("exposed_quotient_vertex_not_terminal")
+        if path_kind == "direct_via_landing":
+            if first_via_edge is None:
+                issues.add("first_via_global_edge_unresolved")
+            elif exposed_vertex_id not in {
+                first_via_edge["start_vertex_id"],
+                first_via_edge["end_vertex_id"],
+            }:
+                issues.add("first_via_global_edge_not_incident")
+            elif first_via_edge["status"] != "complete":
+                issues.add("first_via_global_edge_incomplete")
+        if path_kind == "trace_component" and candidates:
+            issues = {
+                item
+                for item in issues
+                if item != "first_via_status:missing_incident_via"
+            }
+        if not required_layer_keys:
+            issues.add("required_rail_surface_missing")
+        if not candidates:
+            issues.add("required_surface_component_unresolved")
+        if path_kind not in {
+            "direct_via_landing",
+            "trace_component",
+            "unresolved",
+        }:
+            issues.add("contact_path_kind_invalid")
+        contact["contact_component_ids"] = [
+            item["component_id"] for item in candidates
+        ]
+        contact["reachable_required_component_ids"] = list(
+            contact["contact_component_ids"]
+        )
+        contact["contact_component_evidence_sha256s"] = [
+            item["component_evidence_sha256"] for item in candidates
+        ]
+        contact["contact_component_id"] = (
+            candidates[0]["component_id"] if len(candidates) == 1 else None
+        )
+        contact["contact_component_evidence_sha256"] = (
+            candidates[0]["component_evidence_sha256"]
+            if len(candidates) == 1
+            else None
+        )
+        contact["contact_component_island_ids"] = (
+            list(candidates[0]["island_ids"])
+            if len(candidates) == 1
+            else sorted(
+                {
+                    island_id
+                    for item in candidates
+                    for island_id in item["island_ids"]
+                }
+            )
+        )
+        contact["representative_island_id"] = (
+            candidates[0]["representative_island_id"]
+            if len(candidates) == 1
+            else None
+        )
+        contact["contact_component_layer"] = (
+            candidates[0]["layer"] if len(candidates) == 1 else None
+        )
+        contact["issues"] = sorted(issues)
+        contact["status"] = (
+            "complete"
+            if landing is not None
+            and bool(candidates)
+            and exposed_vertex is not None
+            and not issues
+            and path_kind in {"direct_via_landing", "trace_component"}
+            else "incomplete"
+        )
+    surface_equivalence_proofs = [
+        {
+            "net": str(getattr(item, "net", "")).strip(),
+            "layer": str(getattr(item, "layer", "")).strip(),
+            "island_ids": list(getattr(item, "island_ids", ())),
+            "contacted_island_ids": list(
+                getattr(item, "contacted_island_ids", ())
+            ),
+            "graph_component_count": int(
+                getattr(item, "graph_component_count", -1)
+            ),
+            "partition_kind": (
+                "single_component"
+                if int(getattr(item, "graph_component_count", -1)) == 1
+                else "split_components"
+            ),
+            "status": str(getattr(item, "status", "")).strip(),
+        }
+        for item in getattr(reachability, "surface_equivalence_proofs", ())
+    ]
+    surface_equivalence_proofs.sort(
+        key=lambda item: (
+            item["net"].casefold(),
+            item["layer"].casefold(),
+            item["net"],
+            item["layer"],
+        )
+    )
+    proof_keys = {
+        (item["net"].casefold(), item["layer"].casefold())
+        for item in surface_equivalence_proofs
+    }
+    geometry_keys = {
+        (str(item.get("net", "")).casefold(), str(item.get("layer", "")).casefold())
+        for item in geometry_assets
+    }
+    geometry_islands_by_key = {
+        (str(item.get("net", "")).casefold(), str(item.get("layer", "")).casefold()): tuple(
+            sorted(str(value) for value in item.get("island_ids", ()))
+        )
+        for item in geometry_assets
+    }
+    proof_islands_by_key = {
+        (item["net"].casefold(), item["layer"].casefold()): tuple(
+            sorted(str(value) for value in item["island_ids"])
+        )
+        for item in surface_equivalence_proofs
+    }
+    partition_islands_by_key: dict[tuple[str, str], set[str]] = {}
+    for item in surface_equivalence_components:
+        partition_islands_by_key.setdefault(
+            (item["net"].casefold(), item["layer"].casefold()), set()
+        ).update(str(value) for value in item["island_ids"])
+    surface_partition_complete = bool(
+        surface_equivalence_proofs
+        and proof_keys == geometry_keys
+        and proof_islands_by_key == geometry_islands_by_key
+        and {
+            key: tuple(sorted(values))
+            for key, values in partition_islands_by_key.items()
+        }
+        == geometry_islands_by_key
+    )
+    recovery_statistics = {
+        str(key): value
+        for key, value in sorted(dict(reachability.statistics).items())
+    }
+    via_ownership_complete = bool(
+        finite_via_coverage is not None
+        and finite_via_coverage["status"] == "complete"
+        and finite_via_coverage["owner_ledger_status"] == "complete"
+        and finite_via_coverage["terminal_exclusive_via_count"] == 0
+    )
+    finite_vertex_bindings_complete = bool(finite_via_vertices) and all(
+        item["component_binding_status"] == "complete"
+        and not item["component_binding_issues"]
+        for item in finite_via_vertices
+    )
+    finite_edges_complete = finite_via_coverage is not None and all(
+        item["status"] == "complete"
+        and not item["endpoint_binding_issues"]
+        and not item["physical_model_issues"]
+        for item in finite_via_edges
+    )
+    finite_terminal_bindings_complete = bool(
+        finite_via_terminal_bindings
+    ) and all(
+        item["global_quotient_binding_status"] == "complete"
+        and not item["global_quotient_binding_issues"]
+        and (
+            item["terminal_owner_kind"] != "decap"
+            or item["retarget_cut_status"] == "complete"
+        )
+        for item in finite_via_terminal_bindings
+    )
+    scenario_terminal_topology_complete = (
+        scenario_decap_terminal_topology["status"] == "complete"
+    )
+    retarget_destination_bindings_complete = (
+        retarget_destination_coverage["status"] == "complete"
+    )
+    retarget_landing_xy_bindings_complete = (
+        retarget_landing_xy_coverage["status"] == "complete"
+    )
+    source_hash_valid = bool(
+        len(source_sha256) == 64
+        and all(character in "0123456789abcdef" for character in source_sha256.casefold())
+    )
+    payload: dict[str, Any] = {
+        "schema_version": _LAYER_SURFACE_CONNECTIVITY_SCHEMA,
+        "compiler_id": _LAYER_SURFACE_CONNECTIVITY_COMPILER,
+        "source_sha256": source_sha256.casefold(),
+        "geometry_assets": geometry_assets,
+        "components": components,
+        "surface_equivalence_components": surface_equivalence_components,
+        "surface_equivalence_proofs": surface_equivalence_proofs,
+        "rail_anchor_bindings": rail_anchor_bindings,
+        "terminal_contacts": terminal_contacts,
+        "terminal_landing_contacts": landing_surface_contacts,
+        "finite_via_quotient": {
+            "schema_version": "spd-finite-via-quotient-v1",
+            "reducer_id": "finite-route-reduction-v1-compact-csr",
+            "same_layer_union_policy": "trace_and_exact_artwork_only",
+            "finite_edge_policy": "every_relevant_raw_via_global_mna",
+            "scenario_retarget_policy": (
+                "suppress_explicit_decap_first_via_then_stamp_destination_path"
+            ),
+            "vertices": finite_via_vertices,
+            "edges": finite_via_edges,
+            "terminal_bindings": finite_via_terminal_bindings,
+            "coverage": finite_via_coverage,
+            "scenario_isolation_coverage": (
+                finite_via_scenario_isolation_coverage
+            ),
+            "retarget_destination_bindings": (
+                retarget_destination_bindings
+            ),
+            "retarget_destination_coverage": (
+                retarget_destination_coverage
+            ),
+            "retarget_landing_xy_bindings": (
+                retarget_landing_xy_bindings
+            ),
+            "retarget_landing_xy_coverage": (
+                retarget_landing_xy_coverage
+            ),
+            "status": (
+                "complete"
+                if via_ownership_complete
+                and finite_vertex_bindings_complete
+                and finite_edges_complete
+                and finite_terminal_bindings_complete
+                and scenario_terminal_topology_complete
+                and retarget_destination_bindings_complete
+                and retarget_landing_xy_bindings_complete
+                else "incomplete"
+            ),
+        },
+        "scenario_decap_terminal_topology": (
+            scenario_decap_terminal_topology
+        ),
+        "via_island_pair_aggregates": via_island_pair_aggregates,
+        "via_island_pair_coverage": via_island_pair_coverage,
+        "compile_failures": compile_failures,
+        "recovery_statistics": recovery_statistics,
+        "status": (
+            "complete"
+            if source_hash_valid
+            and bool(geometry_assets)
+            and bool(rail_anchor_bindings)
+            and not compile_failures
+            and surface_partition_complete
+            and terminal_contacts
+            and all(item["status"] == "complete" for item in terminal_contacts)
+            and via_ownership_complete
+            and finite_vertex_bindings_complete
+            and finite_edges_complete
+            and finite_terminal_bindings_complete
+            and scenario_terminal_topology_complete
+            and retarget_destination_bindings_complete
+            and retarget_landing_xy_bindings_complete
+            else "incomplete"
+        ),
+    }
+    report(95, "Hashing complete layer-surface certificate evidence")
+    check_cancelled("hashing complete layer-surface certificate evidence")
+    try:
+        evidence_sha256 = canonical_surface_certificate_sha256(
+            payload,
+            is_cancelled=cancelled,
+            concrete_containers=True,
+        )
+    except SurfaceCertificateAssetError as exc:
+        if exc.code == "SURFACE_CERTIFICATE_CANCELLED":
+            raise SpdImportError(
+                "SPD_LAYER_SURFACE_CONNECTIVITY_CERTIFICATE_CANCELLED: "
+                "cancelled while hashing complete layer-surface certificate "
+                "evidence"
+            ) from exc
+        raise
+    report(100, "Compiled layer-surface connectivity certificate evidence")
+    return {
+        **payload,
+        # This certificate is multi-GiB on the supplied production boards.
+        # Stream the exact same canonical JSON bytes into SHA-256 instead of
+        # materializing one full Unicode string and a second UTF-8 copy.  The
+        # import owns a concrete dict/list tree, so the standard streaming
+        # encoder preserves the wire bytes while avoiding per-scalar dispatch.
+        "evidence_sha256": evidence_sha256,
     }
 
 
@@ -535,12 +4397,111 @@ def _common_eligibility_maps(
     }
 
 
+def _compile_shared_cluster_eligibility(
+    *,
+    parsed_cluster_by_key: dict[str, Any],
+    top_instance_by_key: dict[str, SpdCapInstance],
+    source_rail_id_by_key: dict[str, str],
+    parsed_connection_by_key: dict[str, Any],
+    scenario_landing: Callable[[Any], ScenarioViaLanding],
+    eligibility_index: PlaneEligibilityIndex,
+    rail_choices_by_pair: dict[
+        tuple[str, str, str], tuple[tuple[Any, str], ...]
+    ],
+) -> tuple[
+    set[str],
+    dict[str, SharedPadClusterState],
+    dict[str, str | None],
+    dict[str, dict[str, RailEligibility]],
+    dict[str, dict[str, dict[str, RailEligibility]]],
+]:
+    """Compile the one canonical persisted state for every editable cluster.
+
+    Mixed-reference witness selection and the final scenario must consume this
+    same result.  Computing witnesses from raw parser state first can certify a
+    cluster that is later demoted to UNRESOLVED when its source rail is absent
+    beneath one exact PWR-via landing.
+    """
+
+    accepted_cluster_keys: set[str] = set()
+    state_by_key: dict[str, SharedPadClusterState] = {}
+    reason_by_key: dict[str, str | None] = {}
+    eligibility_by_key: dict[str, dict[str, RailEligibility]] = {}
+    via_eligibility_by_key: dict[
+        str, dict[str, dict[str, RailEligibility]]
+    ] = {}
+    for cluster_key, cluster in parsed_cluster_by_key.items():
+        member_keys = {item.casefold() for item in cluster.member_refdes}
+        if not member_keys.issubset(top_instance_by_key):
+            continue
+        accepted_cluster_keys.add(cluster_key)
+        state_value = SharedPadClusterState(cluster.state)
+        reason = cluster.reason
+        source_rails = {source_rail_id_by_key[key].casefold() for key in member_keys}
+        if (
+            state_value != SharedPadClusterState.UNRESOLVED
+            and len(source_rails) != 1
+        ):
+            state_value = SharedPadClusterState.UNRESOLVED
+            reason = "shared-pad members resolve to different source rail identities"
+        eligibility: dict[str, RailEligibility] = {}
+        via_eligibility: dict[str, dict[str, RailEligibility]] = {}
+        if state_value == SharedPadClusterState.ANCHORED:
+            power_landings = {
+                landing.via_id.casefold(): scenario_landing(landing)
+                for member in cluster.member_refdes
+                for landing in parsed_connection_by_key[member.casefold()].power_vias
+            }
+            via_eligibility = {
+                landing.via_id: _eligibility_for_via_landing(
+                    eligibility_index,
+                    landing,
+                    rail_choices_by_pair,
+                )
+                for landing in sorted(
+                    power_landings.values(), key=lambda item: item.via_id.casefold()
+                )
+            }
+            eligibility = _common_eligibility_maps(tuple(via_eligibility.values()))
+            source_rail_key = next(iter(source_rails), "")
+            source_present_at_every_via = bool(via_eligibility) and all(
+                source_rail_key
+                in {
+                    item.rail_id.casefold()
+                    for item in at_via.values()
+                    if item.allowed
+                }
+                for at_via in via_eligibility.values()
+            )
+            if not source_present_at_every_via:
+                state_value = SharedPadClusterState.UNRESOLVED
+                reason = (
+                    "the source rail is not present beneath every exact PWR-via "
+                    "landing in the shared-pad cluster"
+                )
+                eligibility = {}
+                via_eligibility = {}
+        state_by_key[cluster_key] = state_value
+        reason_by_key[cluster_key] = reason
+        eligibility_by_key[cluster_key] = eligibility
+        via_eligibility_by_key[cluster_key] = via_eligibility
+    return (
+        accepted_cluster_keys,
+        state_by_key,
+        reason_by_key,
+        eligibility_by_key,
+        via_eligibility_by_key,
+    )
+
+
 def _select_mixed_reference_ground_landings(
     *,
     mixed_rails: dict[str, Any],
     top_instances: tuple[SpdCapInstance, ...],
     parsed_connection_by_key: dict[str, Any],
     parsed_cluster_by_key: dict[str, Any],
+    cluster_state_by_key: dict[str, SharedPadClusterState],
+    cluster_eligibility_by_key: dict[str, dict[str, RailEligibility]],
     path_recovery: Any,
     eligibility_index: PlaneEligibilityIndex,
     rail_choices_by_pair: dict[tuple[str, str, str], tuple[tuple[Any, str], ...]],
@@ -588,6 +4549,11 @@ def _select_mixed_reference_ground_landings(
         if connection is None or connection.kind not in {"DIRECT", "SHARED_ANCHOR"}:
             continue
         if connection.kind == "DIRECT":
+            # A persisted DIRECT connection cannot name a cluster.  Do not
+            # create witness evidence for malformed raw classifier output that
+            # final scenario normalization cannot retain as DIRECT.
+            if connection.cluster_id is not None:
+                continue
             power_vias = tuple(
                 _scenario_via_landing(landing, path_recovery)
                 for landing in connection.power_vias
@@ -598,11 +4564,9 @@ def _select_mixed_reference_ground_landings(
                 rail_choices_by_pair,
             )
             mixed_keys = eligible_mixed_keys(eligible)
-            owner = (
-                f"cluster:{connection.cluster_id}"
-                if connection.cluster_id is not None
-                else instance.refdes
-            )
+            # DIRECT connections are persisted and revalidated by physical
+            # RefDes.  Only SHARED_ANCHOR branches use a cluster owner identity.
+            owner = instance.refdes
             for rail_key in mixed_keys:
                 gnd_key = gnd_key_by_mixed_rail[rail_key]
                 result[rail_key].extend(
@@ -618,21 +4582,13 @@ def _select_mixed_reference_ground_landings(
             continue
         processed_shared_clusters.add(cluster_key)
         cluster = parsed_cluster_by_key.get(cluster_key)
-        if cluster is None:
+        if (
+            cluster is None
+            or cluster_state_by_key.get(cluster_key)
+            != SharedPadClusterState.ANCHORED
+        ):
             continue
-        power_landings = {
-            landing.via_id.casefold(): _scenario_via_landing(landing, path_recovery)
-            for member in cluster.member_refdes
-            for landing in parsed_connection_by_key[member.casefold()].power_vias
-        }
-        common = _common_eligibility_maps(
-            tuple(
-                _eligibility_for_via_landing(
-                    eligibility_index, landing, rail_choices_by_pair
-                )
-                for landing in power_landings.values()
-            )
-        )
+        common = cluster_eligibility_by_key.get(cluster_key, {})
         mixed_keys = eligible_mixed_keys(common)
         if not mixed_keys:
             continue
@@ -719,7 +4675,15 @@ def import_spd_scenario(
     """Create a sibling-app scenario without ever modifying the source SPD."""
 
     source_path = Path(path)
-    report = progress or (lambda _value, _message: None)
+    raw_report = progress or (lambda _value, _message: None)
+    last_reported_progress = -1
+
+    def report(value: int, message: str) -> None:
+        nonlocal last_reported_progress
+        bounded = max(last_reported_progress, min(100, max(0, int(value))))
+        last_reported_progress = bounded
+        raw_report(bounded, message)
+
     cancelled = is_cancelled or (lambda: False)
     state = create_workspace_state()
     total_started = perf_counter()
@@ -747,7 +4711,17 @@ def import_spd_scenario(
         f"Parsed the SPD in {analyze_s:.1f}s; normalizing exact plane geometry",
     )
     plan_started = perf_counter()
-    plan = build_spd_import_plan(state.project, analysis, source_path)
+
+    def plan_progress(value: int, message: str) -> None:
+        report(83 + round(max(0, min(100, value)) * 2 / 100), message)
+
+    plan = build_spd_import_plan(
+        state.project,
+        analysis,
+        source_path,
+        progress=plan_progress,
+        is_cancelled=cancelled,
+    )
     plan_s = perf_counter() - plan_started
     blocking = [
         item
@@ -857,6 +4831,33 @@ def import_spd_scenario(
         source_landings,
         path_recovery,
     )
+    landing_cache: dict[str, ScenarioViaLanding] = {}
+
+    def scenario_landing(landing: Any) -> ScenarioViaLanding:
+        key = landing.via_id.casefold()
+        result = landing_cache.get(key)
+        if result is None:
+            result = _scenario_via_landing(landing, path_recovery)
+            landing_cache[key] = result
+        return result
+
+    cluster_eligibility_started = perf_counter()
+    (
+        accepted_cluster_keys,
+        cluster_state_by_key,
+        cluster_reason_by_key,
+        cluster_eligibility_by_key,
+        cluster_via_eligibility_by_key,
+    ) = _compile_shared_cluster_eligibility(
+        parsed_cluster_by_key=parsed_cluster_by_key,
+        top_instance_by_key=top_instance_by_key,
+        source_rail_id_by_key=source_rail_id_by_key,
+        parsed_connection_by_key=parsed_connection_by_key,
+        scenario_landing=scenario_landing,
+        eligibility_index=eligibility_index,
+        rail_choices_by_pair=rail_choices_by_pair,
+    )
+    cluster_eligibility_s = perf_counter() - cluster_eligibility_started
     # A mixed-reference artwork certificate establishes plane overlap, not the
     # source GND topology.  Build one stable witness universe per mixed rail:
     # every DIRECT source landing whose PWR evidence is eligible for that rail,
@@ -881,25 +4882,159 @@ def import_spd_scenario(
         top_instances=top_instances,
         parsed_connection_by_key=parsed_connection_by_key,
         parsed_cluster_by_key=parsed_cluster_by_key,
+        cluster_state_by_key=cluster_state_by_key,
+        cluster_eligibility_by_key=cluster_eligibility_by_key,
         path_recovery=path_recovery,
         eligibility_index=eligibility_index,
         rail_choices_by_pair=rail_choices_by_pair,
     )
+    rail_anchor_bindings, anchor_compile_failures = (
+        _compile_active_rail_anchor_bindings(
+            base_project,
+            source_sha256=analysis.source.sha256,
+        )
+    )
+    anchor_landings_by_pin, anchor_contact_seeds = _anchor_graph_landings(
+        rail_anchor_bindings,
+        analysis.device_terminal_via_endpoints,
+    )
+    (
+        _surface_target_predicate,
+        surface_target_island_resolver,
+        strict_surface_target_island_resolver,
+        surface_geometry_assets,
+        surface_target_layers_by_net,
+        surface_target_island_ids,
+    ) = _retained_surface_artwork(
+        base_project,
+        dict(plan.attachments),
+        progress=lambda value, message: report(
+            91 + round(max(0, min(100, value)) * 1 / 100), message
+        ),
+        is_cancelled=cancelled,
+    )
+    for net, layers in mixed_target_layers_by_net.items():
+        surface_target_layers_by_net.setdefault(net.casefold(), set()).update(
+            layers
+        )
     mixed_witness_selection_s = perf_counter() - mixed_witness_selection_started
     ground_recovery_started = perf_counter()
+    mixed_recovery_landings = tuple(
+        landing
+        for entries in mixed_ground_landings_by_rail.values()
+        for _refdes, landing in entries
+    )
+    recovery_landing_by_key: dict[tuple[str, str, str], Any] = {}
+    for landing in (*mixed_recovery_landings, *anchor_landings_by_pin.values()):
+        key = (
+            str(getattr(landing, "via_id")).casefold(),
+            str(getattr(landing, "endpoint_node_id")).casefold(),
+            str(getattr(landing, "net")).casefold(),
+        )
+        recovery_landing_by_key.setdefault(key, landing)
+    active_cap_keys = set(top_instance_by_key)
+    surface_target_net_keys = set(surface_target_layers_by_net)
+    def source_connection_kind(connection: object) -> str:
+        value = getattr(connection, "kind", "")
+        return str(getattr(value, "value", value)).strip().upper()
+
+    scenario_topology_connection_kinds = {
+        "DIRECT",
+        "SHARED_ANCHOR",
+        "SHARED_DUMMY",
+    }
+    certificate_decap_connections = tuple(
+        ScenarioDecapConnection(
+            refdes=connection.refdes,
+            kind=DecapConnectionKind(source_connection_kind(connection)),
+            cluster_id=connection.cluster_id,
+            power_vias=tuple(
+                scenario_landing(landing)
+                for landing in connection.power_vias
+            ),
+            ground_vias=tuple(
+                scenario_landing(landing)
+                for landing in connection.ground_vias
+            ),
+            reason=connection.reason,
+        )
+        for connection in analysis.decap_connections
+        if connection.refdes.casefold() in active_cap_keys
+        and source_connection_kind(connection)
+        in scenario_topology_connection_kinds
+    )
+    (
+        retarget_landing_destination_requests,
+        retarget_landing_scan_coverage,
+    ) = _compile_retarget_landing_destination_requests(
+        project=base_project,
+        decap_connections=certificate_decap_connections,
+        geometry_assets=surface_geometry_assets,
+        strict_island_resolver=strict_surface_target_island_resolver,
+        progress=lambda value, message: report(
+            92 + round(max(0, min(100, value)) * 1 / 100), message
+        ),
+        is_cancelled=cancelled,
+    )
+    terminal_decap_landings = tuple(
+        landing
+        for connection in certificate_decap_connections
+        for landing in (*connection.power_vias, *connection.ground_vias)
+        if landing.net.casefold() in surface_target_net_keys
+    )
+    retarget_destination_requests = tuple(
+        (
+            landing.net,
+            evidence.target_layer,
+            evidence.target_node_id,
+        )
+        for connection in certificate_decap_connections
+        for landing in (*connection.power_vias, *connection.ground_vias)
+        for evidence in landing.path_evidence
+        if landing.net.casefold() in surface_target_net_keys
+    )
+    terminal_contact_landing_by_key: dict[tuple[str, str, str], Any] = {}
+    for landing in (
+        *terminal_decap_landings,
+        *anchor_landings_by_pin.values(),
+    ):
+        key = (
+            str(getattr(landing, "via_id")).casefold(),
+            str(getattr(landing, "endpoint_node_id")).casefold(),
+            str(getattr(landing, "net")).casefold(),
+        )
+        terminal_contact_landing_by_key.setdefault(key, landing)
+    terminal_owned_via_ids = {
+        str(landing.via_id).strip()
+        for landing in terminal_decap_landings
+        if str(landing.via_id).strip()
+    }
+    terminal_owned_via_ids.update(
+        str(endpoint.incident_via_id).strip()
+        for endpoint in analysis.device_terminal_via_endpoints
+        if endpoint.status == "complete"
+        and endpoint.incident_via_id is not None
+        and endpoint.incident_net is not None
+        and endpoint.incident_net.casefold() in surface_target_net_keys
+        and str(endpoint.incident_via_id).strip()
+    )
     ground_reachability = recover_spd_ground_reachability(
         source_path,
-        landings=(
-            landing
-            for entries in mixed_ground_landings_by_rail.values()
-            for _refdes, landing in entries
+        landings=tuple(recovery_landing_by_key.values()),
+        terminal_contact_landings=tuple(
+            terminal_contact_landing_by_key.values()
         ),
-        target_layers_by_net=mixed_target_layers_by_net,
-        target_node_predicate=_mixed_reference_target_node_predicate(
-            base_project, dict(plan.attachments)
-        ),
+        scenario_isolated_terminal_landings=terminal_decap_landings,
+        retarget_destination_requests=retarget_destination_requests,
+        terminal_owned_via_ids=terminal_owned_via_ids,
+        padstacks=analysis.padstacks,
+        stackup_layers=base_project.stackup_layers,
+        target_layers_by_net=surface_target_layers_by_net,
+        target_node_predicate=None,
+        target_node_surface_resolver=surface_target_island_resolver,
+        target_surface_island_ids=surface_target_island_ids,
         expected_source=analysis.source,
-        progress=lambda value, message: report(91 + round(max(0, min(100, value)) * 1 / 100), message),
+        progress=lambda value, message: report(92 + round(max(0, min(100, value)) * 1 / 100), message),
         is_cancelled=cancelled,
     )
     ground_recovery_s = perf_counter() - ground_recovery_started
@@ -962,7 +5097,70 @@ def import_spd_scenario(
                     ),
                 )
             )
+    surface_connectivity_certificate = _layer_surface_connectivity_certificate(
+        project=base_project,
+        source_sha256=analysis.source.sha256,
+        geometry_assets=surface_geometry_assets,
+        rail_anchor_bindings=rail_anchor_bindings,
+        compile_failures=anchor_compile_failures,
+        contact_seeds=anchor_contact_seeds,
+        landing_by_pin=anchor_landings_by_pin,
+        reachability=ground_reachability,
+        decap_connections=certificate_decap_connections,
+        shared_pad_clusters=analysis.shared_pad_clusters,
+        retarget_landing_destination_requests=(
+            retarget_landing_destination_requests
+        ),
+        retarget_landing_scan_coverage=retarget_landing_scan_coverage,
+        progress=lambda value, message: report(
+            93 + round(max(0, min(100, value)) * 1 / 100), message
+        ),
+        is_cancelled=cancelled,
+    )
+    surface_connectivity_diagnostics: list[SpdDiagnostic] = []
+    if surface_connectivity_certificate["status"] != "complete":
+        surface_connectivity_diagnostics.append(
+            SpdDiagnostic(
+                severity="warning",
+                code="SPD_LAYER_SURFACE_CONNECTIVITY_INCOMPLETE",
+                message=(
+                    "The global layer-surface connectivity certificate is "
+                    "incomplete; selected-rail proof must validate its own "
+                    "compiled anchors and exact artwork contacts. "
+                    f"compile_failures={len(anchor_compile_failures)}, "
+                    "incomplete_contacts="
+                    f"{sum(item['status'] != 'complete' for item in surface_connectivity_certificate['terminal_contacts'])}."
+                ),
+            )
+        )
     recovery_metadata = dict(base_project.metadata)
+    spd_import_metadata = dict(recovery_metadata.get("spd_import", {}))
+    spd_import_metadata["plane_geometries"] = (
+        _bind_certified_surface_islands(
+            spd_import_metadata.get("plane_geometries"),
+            surface_geometry_assets,
+        )
+    )
+    spd_import_metadata["layerwise_surface_connectivity_certificate"] = (
+        surface_connectivity_certificate
+    )
+    quotient_status = str(
+        surface_connectivity_certificate.get("finite_via_quotient", {}).get(
+            "status", "missing"
+        )
+    )
+    topology_status = str(
+        surface_connectivity_certificate.get(
+            "scenario_decap_terminal_topology", {}
+        ).get("status", "missing")
+    )
+    report(
+        94,
+        "Bound exact surface-island manifest; "
+        f"certificate={surface_connectivity_certificate['status']}, "
+        f"quotient={quotient_status}, scenario={topology_status}",
+    )
+    recovery_metadata["spd_import"] = spd_import_metadata
     recovery_metadata["spd_via_path_recovery"] = {
         **dict(path_recovery.statistics),
         "algorithm": "unique_monotonic_same_net_via_chain_v1",
@@ -988,91 +5186,27 @@ def import_spd_scenario(
             ],
         }
     )
+    # Externalize before ScenarioSpec validation.  A real v4 quotient has
+    # millions of rows; allowing Pydantic to copy that nested tree drove fresh
+    # import peak memory above 26 GiB.  The authoritative canonical certificate
+    # and its safe compiled fast path are persisted now, and only their small
+    # manifests enter ScenarioSpec.
+    base_project, scenario_attachments = externalize_project_surface_certificate(
+        base_project,
+        dict(plan.attachments),
+        progress=lambda value, message: report(
+            94 + round(max(0, min(100, value)) * 3 / 100), message
+        ),
+        is_cancelled=cancelled,
+    )
+    del surface_connectivity_certificate
+    del spd_import_metadata
+    del recovery_metadata
     report(
-        92,
+        97,
         "Recovered source-proven Via path summaries; checking exact PWR-plane eligibility",
     )
-    landing_cache: dict[str, ScenarioViaLanding] = {}
-
-    def scenario_landing(landing: Any) -> ScenarioViaLanding:
-        key = landing.via_id.casefold()
-        result = landing_cache.get(key)
-        if result is None:
-            result = _scenario_via_landing(landing, path_recovery)
-            landing_cache[key] = result
-        return result
-
-    # Cluster rail choices are evaluated at every unique physical PWR-via
-    # landing.  A dummy pad never receives its own virtual via or independent
-    # eligibility result.
-    cluster_state_by_key: dict[str, SharedPadClusterState] = {}
-    cluster_reason_by_key: dict[str, str | None] = {}
-    cluster_eligibility_by_key: dict[str, dict[str, RailEligibility]] = {}
-    cluster_via_eligibility_by_key: dict[
-        str, dict[str, dict[str, RailEligibility]]
-    ] = {}
-    accepted_cluster_keys: set[str] = set()
     eligibility_started = perf_counter()
-    for cluster_key, cluster in parsed_cluster_by_key.items():
-        member_keys = {item.casefold() for item in cluster.member_refdes}
-        if not member_keys.issubset(top_instance_by_key):
-            continue
-        accepted_cluster_keys.add(cluster_key)
-        state_value = SharedPadClusterState(cluster.state)
-        reason = cluster.reason
-        source_rails = {source_rail_id_by_key[key].casefold() for key in member_keys}
-        if (
-            state_value != SharedPadClusterState.UNRESOLVED
-            and len(source_rails) != 1
-        ):
-            state_value = SharedPadClusterState.UNRESOLVED
-            reason = (
-                "shared-pad members resolve to different source rail identities"
-            )
-        eligibility: dict[str, RailEligibility] = {}
-        via_eligibility: dict[str, dict[str, RailEligibility]] = {}
-        if state_value == SharedPadClusterState.ANCHORED:
-            power_landings = {
-                landing.via_id.casefold(): scenario_landing(landing)
-                for member in cluster.member_refdes
-                for landing in parsed_connection_by_key[member.casefold()].power_vias
-            }
-            via_eligibility = {
-                landing.via_id: _eligibility_for_via_landing(
-                    eligibility_index,
-                    landing,
-                    rail_choices_by_pair,
-                )
-                for landing in sorted(
-                    power_landings.values(),
-                    key=lambda item: item.via_id.casefold(),
-                )
-            }
-            eligibility = _common_eligibility_maps(
-                tuple(via_eligibility.values())
-            )
-            source_rail_key = next(iter(source_rails), "")
-            source_present_at_every_via = bool(via_eligibility) and all(
-                source_rail_key
-                in {
-                    item.rail_id.casefold()
-                    for item in at_via.values()
-                    if item.allowed
-                }
-                for at_via in via_eligibility.values()
-            )
-            if not source_present_at_every_via:
-                state_value = SharedPadClusterState.UNRESOLVED
-                reason = (
-                    "the source rail is not present beneath every exact PWR-via "
-                    "landing in the shared-pad cluster"
-                )
-                eligibility = {}
-                via_eligibility = {}
-        cluster_state_by_key[cluster_key] = state_value
-        cluster_reason_by_key[cluster_key] = reason
-        cluster_eligibility_by_key[cluster_key] = eligibility
-        cluster_via_eligibility_by_key[cluster_key] = via_eligibility
 
     decaps: list[ScenarioDecap] = []
     scenario_connections: dict[str, ScenarioDecapConnection] = {}
@@ -1087,7 +5221,7 @@ def import_spd_scenario(
             rate = index / max(stage_elapsed, 1.0e-9)
             remaining = max(0.0, total_instances - index) / max(rate, 1.0e-9)
             report(
-                92 + round(fraction * 7),
+                97 + round(fraction * 2),
                 "Checking exact PWR-plane eligibility "
                 f"({index:,}/{total_instances:,}; stage {stage_elapsed:.1f}s, "
                 f"total {total_elapsed:.1f}s, ETA {remaining:.1f}s)",
@@ -1200,12 +5334,41 @@ def import_spd_scenario(
                 eligibility=eligibility,
             )
         )
-    eligibility_s = perf_counter() - eligibility_started
+    eligibility_s = cluster_eligibility_s + (perf_counter() - eligibility_started)
     report(
         99,
-        f"Checked {total_instances:,} decaps in {eligibility_s:.1f}s; validating scenario",
+        f"Checked {total_instances:,} decaps in {eligibility_s:.1f}s; "
+        "validating scenario and compressing finite-topology evidence",
     )
     finalize_started = perf_counter()
+    if _has_compiled_topology_manifest(base_project):
+        report(
+            99,
+            "Compiling exact raw SPD spatial-contact evidence",
+        )
+        raw_spatial_manifest, raw_spatial_generated = (
+            compile_raw_spatial_contact_asset(
+                source_path,
+                analysis=analysis,
+                project=base_project,
+                attachments=scenario_attachments,
+                is_cancelled=cancelled,
+            )
+        )
+        base_project, scenario_attachments = _merge_raw_spatial_contact_asset(
+            base_project,
+            scenario_attachments,
+            raw_spatial_manifest,
+            raw_spatial_generated,
+        )
+        validate_project_raw_spatial_contact_asset_envelope(
+            base_project,
+            scenario_attachments,
+        )
+        report(
+            99,
+            "Compiled and bound exact raw SPD spatial-contact evidence",
+        )
     decaps.sort(key=lambda item: item.refdes.casefold())
     nets = sorted(
         {item.net for item in base_project.rails},
@@ -1215,7 +5378,7 @@ def import_spd_scenario(
         net: _NET_PALETTE[index % len(_NET_PALETTE)]
         for index, net in enumerate(nets)
     }
-    attachments = dict(plan.attachments)
+    attachments = dict(scenario_attachments)
     attachment_hashes = {
         name: sha256(payload).hexdigest()
         for name, payload in attachments.items()
@@ -1282,7 +5445,12 @@ def import_spd_scenario(
         scenario=scenario,
         attachments=attachments,
         diagnostics=tuple(
-            (*plan.diagnostics, *path_recovery.diagnostics, *mixed_ground_reachability_diagnostics)
+            (
+                *plan.diagnostics,
+                *path_recovery.diagnostics,
+                *mixed_ground_reachability_diagnostics,
+                *surface_connectivity_diagnostics,
+            )
         ),
         timings=timings,
     )

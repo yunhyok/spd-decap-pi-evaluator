@@ -24,7 +24,7 @@ from spd_decap_pi._core.domain import (
     MIXED_REFERENCE_MIN_COVERAGE,
     MIXED_REFERENCE_MIN_DOMINANT_COMPONENT,
 )
-from .frequency import refine_log_grid
+from .frequency import DEFAULT_CURVATURE_THRESHOLD_DB, refine_log_grid
 from .metrics import (
     ConfidenceAssessment,
     ConfidenceInputs,
@@ -48,23 +48,50 @@ from .modal import (
 )
 from .profiles import (
     DEFAULT_SOLVER_PROFILE_KEY,
+    LAYERWISE_ADMITTANCE_PROFILE,
     LEGACY_MODAL_PROFILE,
     RESEARCH_UNIFORM_ADMITTANCE_PROFILE,
     solver_profile,
 )
 if TYPE_CHECKING:
+    from .layerwise_network import LayerwiseUniformSourceModel
     from .research_uniform_profile import UniformC00SourceModel
 
 
-# Cache identity: source-derived terminal branches and explicit multi-ground
-# shared-pad reduction and shared-PWR return treatment changed the calculated
-# transfer function in v0.14.0.
-SOLVER_VERSION = "modal-mvp-0.7.0"
+# Cache identity: v0.22.0 adds the production layer-surface C00 replacement,
+# exact source-node terminal contact proof, and bounded-memory heterogeneous
+# shared-pad stamping. Persisted results must not mix that transfer function
+# with the earlier modal backend identity.  v0.8.1 froze the production
+# adaptive-frequency policy.  v0.8.2 moves selected-rail mounted decaps into
+# the same global layer-surface Y/Kron solve as every other physical cluster
+# and removes their legacy modal-shunt duplicate, so older artifacts must not
+# share a solver identity with this transfer function.  v0.8.3 adds one bounded
+# refinement depth after two passes proved insufficient for a narrow real-board
+# holdout feature without relaxing any convergence tolerance.
+SOLVER_VERSION = "modal-mvp-0.8.3"
+CONVERGENCE_POLICY_VERSION = "adaptive-frequency-modal-v4"
+DEFAULT_MAX_REFINEMENT_ITERATIONS = 3
+DEFAULT_MAX_NEW_FREQUENCY_POINTS = 64
+DEFAULT_RMS_TOLERANCE_DB = 0.2
+DEFAULT_MAX_TOLERANCE_DB = 0.5
+DEFAULT_PEAK_SHIFT_TOLERANCE_PERCENT = 2.0
 COUPLING_ASSUMPTION = "inter-rail/site coupling not modeled"
+ProgressCallback = Callable[[int, str], None]
+CancelCallback = Callable[[], bool]
 
 
 class EvaluationError(ValueError):
     """Raised when a project cannot be mapped to the single-rail MVP model."""
+
+
+def _require_terminal_complete_layerwise_input(source: Any) -> None:
+    scope = getattr(source, "uniform_port_scope", None)
+    if scope != "external_device_port":
+        raise EvaluationError(
+            "[TERMINAL_COMPLETE_INPUT_REQUIRED] layerwise_admittance_v1 requires "
+            "uniform_port_scope='external_device_port'; legacy surface_pair input "
+            "is compatibility/research-only and cannot enter production Evaluation"
+        )
 
 
 def _validated_parallel_planes(
@@ -125,7 +152,7 @@ class EvaluationRequest:
     confidence_inputs: ConfidenceInputs = ConfidenceInputs()
     assumptions: tuple[str, ...] = (COUPLING_ASSUMPTION,)
     solver_profile_key: str = DEFAULT_SOLVER_PROFILE_KEY
-    uniform_c00_source: "UniformC00SourceModel | None" = field(
+    uniform_c00_source: "UniformC00SourceModel | LayerwiseUniformSourceModel | None" = field(
         default=None, repr=False, compare=False
     )
 
@@ -143,15 +170,41 @@ class EvaluationRequest:
         object.__setattr__(self, "solver_profile_key", profile.key)
         if profile == LEGACY_MODAL_PROFILE and self.uniform_c00_source is not None:
             raise EvaluationError(
-                "legacy_modal_v017 cannot accept a research uniform C00 source"
+                "legacy_modal_v017 cannot accept a source-derived uniform model"
             )
         if (
-            profile == RESEARCH_UNIFORM_ADMITTANCE_PROFILE
+            profile in (
+                RESEARCH_UNIFORM_ADMITTANCE_PROFILE,
+                LAYERWISE_ADMITTANCE_PROFILE,
+            )
             and self.uniform_c00_source is None
         ):
             raise EvaluationError(
-                "research_uniform_admittance requires a source-proven uniform C00 model"
+                f"{profile.key} requires a source-derived uniform C00 model"
             )
+        if profile == RESEARCH_UNIFORM_ADMITTANCE_PROFILE:
+            from .research_uniform_profile import UniformC00SourceModel
+
+            if not isinstance(self.uniform_c00_source, UniformC00SourceModel):
+                raise EvaluationError(
+                    f"{profile.key} requires UniformC00SourceModel, not "
+                    f"{type(self.uniform_c00_source).__name__}"
+                )
+        if profile == LAYERWISE_ADMITTANCE_PROFILE:
+            from .layerwise_network import LayerwiseUniformSourceModel
+
+            if not isinstance(self.uniform_c00_source, LayerwiseUniformSourceModel):
+                raise EvaluationError(
+                    f"{profile.key} requires LayerwiseUniformSourceModel, not "
+                    f"{type(self.uniform_c00_source).__name__}"
+                )
+            _require_terminal_complete_layerwise_input(self.uniform_c00_source)
+            if self.shunts:
+                raise EvaluationError(
+                    f"{profile.key} requires every mounted decap to be embedded "
+                    "in the global layer-surface termination manifest; legacy "
+                    "modal placement shunts would double-count physical branches"
+                )
 
 
 @dataclass(frozen=True, slots=True)
@@ -248,9 +301,16 @@ class ShuntSensitivityOutcome:
 
 @dataclass(frozen=True, slots=True)
 class ConvergenceReport:
+    policy_version: str
     initial_frequency_points: int
     final_frequency_points: int
     refinement_iterations: int
+    max_refinement_iterations: int
+    max_new_frequency_points_per_iteration: int
+    curvature_threshold_db: float
+    rms_tolerance_db: float
+    max_tolerance_db: float
+    peak_shift_tolerance_percent: float
     lower_mode_x: int
     lower_mode_y: int
     final_mode_x: int
@@ -282,19 +342,67 @@ class _FrequencyRefinementResult:
     budget_exhausted: bool
 
 
-def compile_evaluation_kernel(request: EvaluationRequest) -> EvaluationKernel:
+def _uses_terminal_complete_external_input(request: EvaluationRequest) -> bool:
+    """Return whether rectangular modal order is analytically irrelevant."""
+
+    if solver_profile(request.solver_profile_key) != LAYERWISE_ADMITTANCE_PROFILE:
+        return False
+    _require_terminal_complete_layerwise_input(request.uniform_c00_source)
+    return True
+
+
+def compile_evaluation_kernel(
+    request: EvaluationRequest,
+    *,
+    progress: ProgressCallback | None = None,
+    is_cancelled: CancelCallback | None = None,
+) -> EvaluationKernel:
     """Prepare placement-independent modal and Device terms for one request shape."""
 
+    report = progress or (lambda _value, _message: None)
+    cancelled = is_cancelled or (lambda: False)
+    if cancelled():
+        raise RuntimeError("evaluation cancelled")
+    profile = solver_profile(request.solver_profile_key)
+    external_layerwise_input = _uses_terminal_complete_external_input(request)
+    report(
+        0,
+        (
+            "Preparing external layer-surface input kernel"
+            if external_layerwise_input
+            else "Preparing modal and Device kernel"
+        ),
+    )
     solver = RectangularCavitySolver(
         request.plane,
         parallel_planes=request.parallel_planes,
-        max_mode_x=request.max_mode_x,
-        max_mode_y=request.max_mode_y,
-        mode_count=request.mode_count,
+        # A terminal-complete external Device-port input returns before any
+        # rectangular basis column is read.  Retain one compatibility C00
+        # column instead of allocating a mode-dependent dummy matrix; this
+        # makes the reported physical solve shape exactly invariant as well as
+        # the impedance trace.
+        max_mode_x=0 if external_layerwise_input else request.max_mode_x,
+        max_mode_y=0 if external_layerwise_input else request.max_mode_y,
+        mode_count=1 if external_layerwise_input else request.mode_count,
     )
-    prepared = solver.prepare_device(
-        request.frequencies_hz,
-        request.device,
+    prepared: PreparedDeviceSystem | None = None
+    if not external_layerwise_input:
+        # Legacy modal, Research C00, and older non-terminal-complete
+        # compatibility inputs retain their established preparation path.
+        # Only an explicitly terminal-complete external Device port bypasses it.
+        prepared = solver.prepare_device(
+            request.frequencies_hz,
+            request.device,
+        )
+    if cancelled():
+        raise RuntimeError("evaluation cancelled")
+    report(
+        10,
+        (
+            "External input compatibility kernel prepared"
+            if external_layerwise_input
+            else "Modal and Device kernel prepared"
+        ),
     )
     evidence_sha256: str | None = None
     if request.uniform_c00_source is not None:
@@ -302,21 +410,50 @@ def compile_evaluation_kernel(request: EvaluationRequest) -> EvaluationKernel:
         # source-artwork/services adapter during package initialization.
         from .uniform_c00 import (
             UniformC00Error,
+            prepare_external_uniform_input_from_assembly,
             replace_prepared_uniform_c00_from_assembly,
         )
 
-        assembly = request.uniform_c00_source.assemble(request.frequencies_hz)
-        try:
-            prepared = replace_prepared_uniform_c00_from_assembly(
-                solver,
-                prepared,
-                assembly=assembly,
+        if profile == LAYERWISE_ADMITTANCE_PROFILE:
+            assembly = request.uniform_c00_source.assemble(
+                request.frequencies_hz,
+                progress=lambda completed, total: report(
+                    10 + round(85 * completed / max(total, 1)),
+                    f"Layer-surface Schur/Kron {completed:,}/{total:,} frequencies",
+                ),
+                is_cancelled=cancelled,
             )
+        else:
+            assembly = request.uniform_c00_source.assemble(request.frequencies_hz)
+        if cancelled():
+            raise RuntimeError("evaluation cancelled")
+        try:
+            if external_layerwise_input:
+                prepared = prepare_external_uniform_input_from_assembly(
+                    solver,
+                    request.frequencies_hz,
+                    assembly=assembly,
+                )
+            else:
+                assert prepared is not None
+                prepared = replace_prepared_uniform_c00_from_assembly(
+                    solver,
+                    prepared,
+                    assembly=assembly,
+                )
         except UniformC00Error as exc:
             raise EvaluationError(
-                f"source-only uniform C00 replacement failed closed: {exc}"
+                (
+                    "terminal-complete layer-surface input binding failed closed: "
+                    if external_layerwise_input
+                    else "source-only uniform C00 replacement failed closed: "
+                )
+                + str(exc)
             ) from exc
         evidence_sha256 = request.uniform_c00_source.evidence_sha256
+    if prepared is None:  # pragma: no cover - guarded by request/profile invariants
+        raise EvaluationError("numerical kernel preparation produced no Device system")
+    report(100, "Numerical kernel ready")
     return EvaluationKernel(
         rail_id=request.rail_id,
         plane=request.plane,
@@ -337,9 +474,21 @@ def evaluate_rail(
     request: EvaluationRequest,
     *,
     kernel: EvaluationKernel | None = None,
+    progress: ProgressCallback | None = None,
+    is_cancelled: CancelCallback | None = None,
 ) -> EvaluationOutcome:
+    report = progress or (lambda _value, _message: None)
+    cancelled = is_cancelled or (lambda: False)
+    if cancelled():
+        raise RuntimeError("evaluation cancelled")
     if kernel is None:
-        kernel = compile_evaluation_kernel(request)
+        kernel = compile_evaluation_kernel(
+            request,
+            progress=lambda value, message: report(
+                round(min(max(value, 0), 100) * 0.7), message
+            ),
+            is_cancelled=cancelled,
+        )
     elif (
         kernel.rail_id != request.rail_id
         or kernel.plane != request.plane
@@ -358,11 +507,29 @@ def evaluate_rail(
         )
     ):
         raise EvaluationError("prepared evaluation kernel does not match request shape")
+    if cancelled():
+        raise RuntimeError("evaluation cancelled")
     solve = kernel.solver.solve_prepared_device(
         kernel.prepared_device,
         shunts=request.shunts,
         max_workers=request.worker_count,
+        preparation_progress=lambda value, message: report(
+            70 + round(5 * min(max(value, 0), 100) / 100),
+            message,
+        ),
+        progress=lambda completed, total: report(
+            75 + round(20 * completed / max(total, 1)),
+            (
+                f"External Device-port solve {completed:,}/{total:,} frequencies"
+                if _uses_terminal_complete_external_input(request)
+                else f"Modal solve {completed:,}/{total:,} frequencies"
+            ),
+        ),
+        is_cancelled=cancelled,
     )
+    if cancelled():
+        raise RuntimeError("evaluation cancelled")
+    report(97, "Reducing impedance curve to metrics and confidence")
     metrics = compute_evaluation_metrics(
         solve.frequencies_hz,
         solve.impedance_ohm,
@@ -377,11 +544,23 @@ def evaluate_rail(
         parallel_planes=request.parallel_planes,
     )
     profile = solver_profile(request.solver_profile_key)
+    request_assumptions = tuple(
+        item
+        for item in request.assumptions
+        if not (
+            profile == LAYERWISE_ADMITTANCE_PROFILE
+            and item == COUPLING_ASSUMPTION
+        )
+    )
     assumptions = tuple(
         dict.fromkeys(
             (
-                *request.assumptions,
-                COUPLING_ASSUMPTION,
+                *request_assumptions,
+                *(
+                    ()
+                    if profile == LAYERWISE_ADMITTANCE_PROFILE
+                    else (COUPLING_ASSUMPTION,)
+                ),
                 f"Solver profile {profile.key}: {profile.description}",
                 *(
                     (
@@ -389,7 +568,19 @@ def evaluate_rail(
                         "PowerSI/Touchstone is comparison-only and was not used to construct research parameters",
                     )
                     if profile.experimental
-                    else ()
+                    else (
+                        (
+                            "physical layer/net surfaces remain separate; only exact same-layer artwork/Trace evidence establishes ideal conductor equivalence",
+                            "all adjacent complex Maxwell Y blocks, source-proven finite Via links, and exact same-layer Trace connectivity are assembled before one global sparse Schur/Kron reduction",
+                            "all mounted physical decap clusters, including the selected rail, are internal source-proven global-Y terminations; only external Device measurement ports remain open",
+                            "Layerwise requests carry no legacy modal placement shunts; mounted decap branches are stamped once before Kron and are not double-counted afterward",
+                            "Trace width is absent in these SPD inputs, so no Trace series R/L is invented; terminal and decap loop R/L remain separately owned",
+                            "the terminal-complete global layer-surface result is the sole passive driving-point input; legacy rectangular higher-mode one-port differences are omitted until an exact shared-boundary embedding exists",
+                            "PowerSI/Touchstone is comparison-only and was not used to construct layerwise parameters",
+                        )
+                        if profile == LAYERWISE_ADMITTANCE_PROFILE
+                        else ()
+                    )
                 ),
             )
         )
@@ -406,6 +597,7 @@ def evaluate_rail(
             "validation_status": "legacy_regression",
         }
     )
+    report(100, "Rail solve complete")
     return EvaluationOutcome(
         rail_id=request.rail_id,
         solve=solve,
@@ -491,27 +683,84 @@ def evaluate_shunt_sensitivity(
 def evaluate_rail_converged(
     request: EvaluationRequest,
     *,
-    max_refinement_iterations: int = 2,
-    max_new_frequency_points: int = 64,
+    max_refinement_iterations: int = DEFAULT_MAX_REFINEMENT_ITERATIONS,
+    max_new_frequency_points: int = DEFAULT_MAX_NEW_FREQUENCY_POINTS,
     max_mode_x: int = 10,
     max_mode_y: int = 10,
-    rms_tolerance_db: float = 0.2,
-    max_tolerance_db: float = 0.5,
-    peak_shift_tolerance_percent: float = 2.0,
+    rms_tolerance_db: float = DEFAULT_RMS_TOLERANCE_DB,
+    max_tolerance_db: float = DEFAULT_MAX_TOLERANCE_DB,
+    peak_shift_tolerance_percent: float = DEFAULT_PEAK_SHIFT_TOLERANCE_PERCENT,
+    progress: ProgressCallback | None = None,
+    is_cancelled: CancelCallback | None = None,
 ) -> EvaluationOutcome:
-    """Adapt the log grid and modal order until both documented gates settle."""
+    """Adapt the log grid and any participating modal basis to convergence.
 
+    A terminal-complete external Device-port source is analytically invariant
+    to rectangular modal order, so only its frequency-grid gate participates.
+    """
+
+    emit = progress or (lambda _value, _message: None)
+    cancelled = is_cancelled or (lambda: False)
     if max_refinement_iterations < 0:
         raise EvaluationError("max_refinement_iterations must be non-negative")
     if max_new_frequency_points < 0:
         raise EvaluationError("max_new_frequency_points must be non-negative")
     if min(rms_tolerance_db, max_tolerance_db, peak_shift_tolerance_percent) <= 0.0:
         raise EvaluationError("convergence tolerances must be positive")
+    if cancelled():
+        raise RuntimeError("evaluation cancelled")
 
     initial_count = int(request.frequencies_hz.size)
     working = request
     high_x = min(request.max_mode_x, max_mode_x)
     high_y = min(request.max_mode_y, max_mode_y)
+    external_terminal_complete = _uses_terminal_complete_external_input(request)
+    if external_terminal_complete:
+        # One adaptive frequency pass can perform an initial solve plus at
+        # most ``max_refinement_iterations`` refined-grid solves.  There is no
+        # lower/high modal pair because the direct external-input solve never
+        # reads a rectangular basis column.
+        maximum_solve_calls = max(1, max_refinement_iterations + 1)
+    else:
+        modal_level_count = 1 + max(
+            max(0, (max_mode_x - high_x + 1) // 2),
+            max(0, (max_mode_y - high_y + 1) // 2),
+        )
+        maximum_solve_calls = max(
+            1, modal_level_count * (max_refinement_iterations + 2)
+        )
+    completed_solve_calls = 0
+
+    def solve_request(candidate: EvaluationRequest, label: str) -> EvaluationOutcome:
+        nonlocal completed_solve_calls
+        if cancelled():
+            raise RuntimeError("evaluation cancelled")
+        call_index = completed_solve_calls
+
+        def solve_progress(value: int, message: str) -> None:
+            bounded = min(max(int(value), 0), 100)
+            overall = round(
+                (call_index + bounded / 100.0) * 95 / maximum_solve_calls
+            )
+            emit(overall, f"{label}: {message}")
+
+        outcome = evaluate_rail(
+            candidate,
+            progress=solve_progress,
+            is_cancelled=cancelled,
+        )
+        completed_solve_calls += 1
+        return outcome
+
+    emit(
+        0,
+        (
+            "Starting adaptive frequency convergence; rectangular modal order "
+            "is not applicable to the terminal-complete external input"
+            if external_terminal_complete
+            else "Starting adaptive frequency and modal convergence"
+        ),
+    )
     frequency_result = _refine_frequency_for_modes(
         working,
         mode_x=high_x,
@@ -521,42 +770,31 @@ def evaluate_rail_converged(
         rms_tolerance_db=rms_tolerance_db,
         max_tolerance_db=max_tolerance_db,
         peak_shift_tolerance_percent=peak_shift_tolerance_percent,
+        solve_request=solve_request,
+        label_prefix=(
+            "External Device-port frequency convergence"
+            if external_terminal_complete
+            else f"Modes {high_x}x{high_y}"
+        ),
     )
     working = frequency_result.request
     high = frequency_result.outcome
     refinements = frequency_result.iterations
 
-    lower_x = max(0, high_x - 2)
-    lower_y = max(0, high_y - 2)
-    low = evaluate_rail(replace(working, max_mode_x=lower_x, max_mode_y=lower_y))
-    modal_values = _modal_convergence_delta(
-        request,
-        low,
-        high,
-        rms_tolerance_db=rms_tolerance_db,
-        max_tolerance_db=max_tolerance_db,
-        peak_shift_tolerance_percent=peak_shift_tolerance_percent,
-    )
-    while not modal_values[3] and (high_x < max_mode_x or high_y < max_mode_y):
+    if external_terminal_complete:
+        # ConvergenceReport keeps its established bool/float schema.  Equal
+        # lower/final orders plus exact-zero deltas encode the analytic
+        # invariant; provenance and assumptions below state applicability
+        # explicitly instead of claiming that a modal sweep was performed.
         lower_x, lower_y = high_x, high_y
-        high_x = min(max_mode_x, high_x + 2)
-        high_y = min(max_mode_y, high_y + 2)
-        # Newly admitted modes can reveal resonances missing from the previous
-        # curve, so run frequency refinement again after every mode increase.
-        frequency_result = _refine_frequency_for_modes(
-            working,
-            mode_x=high_x,
-            mode_y=high_y,
-            max_refinement_iterations=max_refinement_iterations,
-            max_new_frequency_points=max_new_frequency_points,
-            rms_tolerance_db=rms_tolerance_db,
-            max_tolerance_db=max_tolerance_db,
-            peak_shift_tolerance_percent=peak_shift_tolerance_percent,
+        modal_values = (0.0, 0.0, 0.0, True)
+    else:
+        lower_x = max(0, high_x - 2)
+        lower_y = max(0, high_y - 2)
+        low = solve_request(
+            replace(working, max_mode_x=lower_x, max_mode_y=lower_y),
+            f"Modal check {lower_x}x{lower_y}",
         )
-        working = frequency_result.request
-        high = frequency_result.outcome
-        refinements += frequency_result.iterations
-        low = evaluate_rail(replace(working, max_mode_x=lower_x, max_mode_y=lower_y))
         modal_values = _modal_convergence_delta(
             request,
             low,
@@ -565,6 +803,39 @@ def evaluate_rail_converged(
             max_tolerance_db=max_tolerance_db,
             peak_shift_tolerance_percent=peak_shift_tolerance_percent,
         )
+        while not modal_values[3] and (high_x < max_mode_x or high_y < max_mode_y):
+            lower_x, lower_y = high_x, high_y
+            high_x = min(max_mode_x, high_x + 2)
+            high_y = min(max_mode_y, high_y + 2)
+            # Newly admitted modes can reveal resonances missing from the previous
+            # curve, so run frequency refinement again after every mode increase.
+            frequency_result = _refine_frequency_for_modes(
+                working,
+                mode_x=high_x,
+                mode_y=high_y,
+                max_refinement_iterations=max_refinement_iterations,
+                max_new_frequency_points=max_new_frequency_points,
+                rms_tolerance_db=rms_tolerance_db,
+                max_tolerance_db=max_tolerance_db,
+                peak_shift_tolerance_percent=peak_shift_tolerance_percent,
+                solve_request=solve_request,
+                label_prefix=f"Modes {high_x}x{high_y}",
+            )
+            working = frequency_result.request
+            high = frequency_result.outcome
+            refinements += frequency_result.iterations
+            low = solve_request(
+                replace(working, max_mode_x=lower_x, max_mode_y=lower_y),
+                f"Modal check {lower_x}x{lower_y}",
+            )
+            modal_values = _modal_convergence_delta(
+                request,
+                low,
+                high,
+                rms_tolerance_db=rms_tolerance_db,
+                max_tolerance_db=max_tolerance_db,
+                peak_shift_tolerance_percent=peak_shift_tolerance_percent,
+            )
 
     modal_rms, modal_max, modal_peak_shift, modal_converged = modal_values
     frequency_converged = frequency_result.converged
@@ -572,10 +843,17 @@ def evaluate_rail_converged(
     combined_max = max(frequency_result.max_delta_db, modal_max)
     combined_peak_shift = max(frequency_result.peak_shift_percent, modal_peak_shift)
     converged = frequency_converged and modal_converged
-    report = ConvergenceReport(
+    convergence_report = ConvergenceReport(
+        policy_version=CONVERGENCE_POLICY_VERSION,
         initial_frequency_points=initial_count,
         final_frequency_points=int(working.frequencies_hz.size),
         refinement_iterations=refinements,
+        max_refinement_iterations=max_refinement_iterations,
+        max_new_frequency_points_per_iteration=max_new_frequency_points,
+        curvature_threshold_db=DEFAULT_CURVATURE_THRESHOLD_DB,
+        rms_tolerance_db=rms_tolerance_db,
+        max_tolerance_db=max_tolerance_db,
+        peak_shift_tolerance_percent=peak_shift_tolerance_percent,
         lower_mode_x=lower_x,
         lower_mode_y=lower_y,
         final_mode_x=high_x,
@@ -606,15 +884,31 @@ def evaluate_rail_converged(
                 f"{working.frequencies_hz.size} points; converged={frequency_converged}"
             ),
             (
-                f"modal convergence: {lower_x}x{lower_y} -> {high_x}x{high_y}, "
-                f"RMS {modal_rms:.3f} dB, max {modal_max:.3f} dB, "
-                f"peak shift {modal_peak_shift:.3f}%"
+                "modal convergence: not applicable; terminal-complete external "
+                "Device-port input is analytically invariant to rectangular "
+                "modal order"
+                if external_terminal_complete
+                else (
+                    f"modal convergence: {lower_x}x{lower_y} -> {high_x}x{high_y}, "
+                    f"RMS {modal_rms:.3f} dB, max {modal_max:.3f} dB, "
+                    f"peak shift {modal_peak_shift:.3f}%"
+                )
             ),
         ),
     )
     # ``high`` is already the exact solve for ``final_request``'s frequency
     # grid and modal order.  Recomputing it only to refresh confidence and
     # assumptions used to duplicate the most expensive high-order solve.
+    if cancelled():
+        raise RuntimeError("evaluation cancelled")
+    emit(
+        98,
+        (
+            "Finalizing frequency convergence confidence"
+            if external_terminal_complete
+            else "Finalizing convergence confidence"
+        ),
+    )
     final_confidence = assess_confidence(
         high.solve.frequencies_hz,
         high.solve.diagnostics,
@@ -622,15 +916,56 @@ def evaluate_rail_converged(
         final_request.confidence_inputs,
         parallel_planes=final_request.parallel_planes,
     )
+    profile = solver_profile(final_request.solver_profile_key)
+    combined_assumptions = (*high.assumptions, *final_request.assumptions)
     final_assumptions = tuple(
-        dict.fromkeys((*final_request.assumptions, COUPLING_ASSUMPTION))
+        dict.fromkeys(
+            (
+                *(
+                    item
+                    for item in combined_assumptions
+                    if not (
+                        profile == LAYERWISE_ADMITTANCE_PROFILE
+                        and item == COUPLING_ASSUMPTION
+                    )
+                ),
+                *(
+                    ()
+                    if profile == LAYERWISE_ADMITTANCE_PROFILE
+                    else (COUPLING_ASSUMPTION,)
+                ),
+            )
+        )
     )
-    return replace(
+    final_provenance = dict(high.solver_provenance)
+    if external_terminal_complete:
+        final_provenance.update(
+            {
+                "modal_convergence_applicability": "not_applicable",
+                "modal_order_invariance": (
+                    "analytic_terminal_complete_external_device_port"
+                ),
+                "modal_convergence_solve_count": 0,
+                "frequency_convergence_pass_count": 1,
+            }
+        )
+    result = replace(
         high,
         confidence=final_confidence,
         assumptions=final_assumptions,
-        convergence=report,
+        convergence=convergence_report,
+        solver_provenance=final_provenance,
     )
+    emit(
+        100,
+        (
+            "Adaptive frequency convergence complete; rectangular modal order "
+            "not applicable"
+            if external_terminal_complete
+            else "Adaptive frequency and modal convergence complete"
+        ),
+    )
+    return result
 
 
 def _refine_frequency_for_modes(
@@ -643,9 +978,12 @@ def _refine_frequency_for_modes(
     rms_tolerance_db: float,
     max_tolerance_db: float,
     peak_shift_tolerance_percent: float,
+    solve_request: Callable[[EvaluationRequest, str], EvaluationOutcome] | None = None,
+    label_prefix: str = "Frequency convergence",
 ) -> _FrequencyRefinementResult:
     working = replace(request, max_mode_x=mode_x, max_mode_y=mode_y)
-    current = evaluate_rail(working)
+    runner = solve_request or (lambda candidate, _label: evaluate_rail(candidate))
+    current = runner(working, f"{label_prefix} initial grid")
     iterations = 0
     last_rms = rms_tolerance_db
     last_max = max_tolerance_db
@@ -672,6 +1010,7 @@ def _refine_frequency_for_modes(
         refined = refine_log_grid(
             current.solve.frequencies_hz,
             current.solve.impedance_ohm,
+            curvature_threshold_db=DEFAULT_CURVATURE_THRESHOLD_DB,
             max_new_points=probe_points,
         ).frequencies_hz
         if refined.size == current.solve.frequencies_hz.size:
@@ -685,7 +1024,10 @@ def _refine_frequency_for_modes(
 
         previous = current
         working = replace(working, frequencies_hz=refined)
-        current = evaluate_rail(working)
+        current = runner(
+            working,
+            f"{label_prefix} frequency refinement {iterations + 1}",
+        )
         iterations += 1
         last_rms, last_max, last_peak_shift, converged = _frequency_grid_delta(
             request,
@@ -862,7 +1204,7 @@ def build_project_evaluation_request(
     template: ProjectEvaluationTemplate | None = None,
     assume_static_template_compatible: bool = False,
     solver_profile_key: str = DEFAULT_SOLVER_PROFILE_KEY,
-    uniform_c00_source: "UniformC00SourceModel | None" = None,
+    uniform_c00_source: "UniformC00SourceModel | LayerwiseUniformSourceModel | None" = None,
 ) -> EvaluationRequest:
     """Adapt ``spd_decap_pi._core.domain.ProjectSpec`` into the numerical request.
 
@@ -894,6 +1236,7 @@ def build_project_evaluation_request(
             "topology, and via data are unchanged"
         )
 
+    profile = solver_profile(solver_profile_key)
     frequencies = _project_frequencies(project.frequency)
     target = _target_from_rail(rail, frequencies)
     placements = {
@@ -902,23 +1245,67 @@ def build_project_evaluation_request(
         if item.rail_id == rail_id and str(getattr(item.topology, "value", item.topology)) != "EMPTY"
     }
 
-    shunts = _placement_shunts(
-        rail_id,
-        rail.pwr_layer,
-        rail.gnd_layer,
-        compiled.plane,
-        compiled.origin_um,
-        placements,
-        compiled.topology_maps,
-        compiled.cap_models,
-        compiled.via_templates,
-        compiled.via_models,
-        compiled.shared_pad_clusters,
+    # The layerwise manifest owns every mounted physical decap, including the
+    # selected rail, and stamps it before the one global Kron reduction.  Keep
+    # the shared request's Device/plane fields as compatibility provenance, but
+    # do not prepare that rectangular basis or construct legacy placement shunts
+    # a second time. Other profiles retain their established modal/research path.
+    shunts = (
+        ()
+        if profile == LAYERWISE_ADMITTANCE_PROFILE
+        else _placement_shunts(
+            rail_id,
+            rail.pwr_layer,
+            rail.gnd_layer,
+            compiled.plane,
+            compiled.origin_um,
+            placements,
+            compiled.topology_maps,
+            compiled.cap_models,
+            compiled.via_templates,
+            compiled.via_models,
+            compiled.shared_pad_clusters,
+        )
     )
-    model_min, model_max, model_validity_known = _shared_model_range(
+    confidence_models: tuple[object, ...] = (
         tuple(branch.series_path for branch in compiled.device.branches)
         + tuple(group.network for group in shunts)
     )
+    layerwise_manifest = None
+    if profile == LAYERWISE_ADMITTANCE_PROFILE:
+        layerwise_manifest = getattr(
+            uniform_c00_source, "termination_manifest", None
+        )
+        if layerwise_manifest is None:
+            # A low-level source may rely on the substrate-owned default.  The
+            # solver resolves the same fallback, so confidence must inspect the
+            # identical effective mounted-board manifest.
+            layerwise_manifest = getattr(
+                getattr(uniform_c00_source, "substrate", None),
+                "termination_manifest",
+                None,
+            )
+    if layerwise_manifest is not None:
+        # The terminal-complete layerwise solve embeds every mounted decap and
+        # connection element in this global manifest instead of ``shunts``.
+        # Include those exact physical models in the confidence envelope so a
+        # valid-frequency limit cannot disappear merely because the legacy
+        # rectangular modal shunt list is intentionally empty.
+        confidence_models += tuple(
+            branch.model
+            for cluster in layerwise_manifest.clusters
+            for branch in cluster.source.branches
+        )
+    model_min, model_max, model_validity_known = _shared_model_range(
+        confidence_models
+    )
+    if profile == LAYERWISE_ADMITTANCE_PROFILE and layerwise_manifest is None:
+        # Production sources are manifest-bound before request construction.
+        # Synthetic/low-level compatibility objects cannot prove the model
+        # envelope and therefore fail closed to an unknown confidence range.
+        model_min = None
+        model_max = None
+        model_validity_known = False
     confirmed = (
         compiled.partition_confirmed and compiled.pairing_confident
         if geometry_confirmed is None
@@ -958,7 +1345,7 @@ def build_project_evaluation_request(
             ),
         ),
         assumptions=assumptions,
-        solver_profile_key=solver_profile_key,
+        solver_profile_key=profile.key,
         uniform_c00_source=uniform_c00_source,
     )
 
@@ -1529,6 +1916,7 @@ def _device_connection(
                 "coordinate-pairing anchor"
             )
         anchor_power = power_lookup[anchor_pairs[0].power_pin_id]
+        anchor_ground = ground_lookup[anchor_pairs[0].ground_pin_id]
         # The modal cavity is the selected PWR artwork with a continuous DGND
         # reference.  Locate the excitation at the original paired PWR terminal,
         # just as decap ports use their PWR-pad coordinate.  A PWR/DGND midpoint
@@ -1551,6 +1939,8 @@ def _device_connection(
                 branch_id,
                 port,
                 via_models[template.template_id],
+                source_power_pin_id=anchor_power.pin_id,
+                source_ground_pin_id=anchor_ground.pin_id,
             )
         )
     pairing_level = str(getattr(pairing.confidence, "value", pairing.confidence))

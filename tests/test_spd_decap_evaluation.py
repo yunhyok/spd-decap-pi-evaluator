@@ -7,6 +7,7 @@ from hashlib import sha256
 import json
 from threading import Event, Thread
 from time import sleep
+from types import SimpleNamespace
 
 from pydantic import ValidationError
 import pytest
@@ -29,9 +30,28 @@ from spd_decap_pi._core.domain import (
     ViaPathKind,
 )
 from spd_decap_pi._core import services as core_services
+from spd_decap_pi._core.solver import evaluator as solver_evaluator_module
 from spd_decap_pi._core.services import EvaluationView
-from spd_decap_pi._core.solver.evaluator import build_project_evaluation_request
+from spd_decap_pi._core.solver.evaluator import (
+    EvaluationError,
+    build_project_evaluation_request,
+    compile_project_evaluation_template,
+)
+from spd_decap_pi._core.models.impedance import SeriesRLModel
+from spd_decap_pi._core.solver.layer_surface_termination import (
+    LayerSurfaceTerminationError,
+)
+from spd_decap_pi._core.solver.layerwise_network import (
+    LayerwiseNetworkUnavailable,
+    LayerwiseUniformSourceModel,
+)
+from spd_decap_pi._core.solver.profiles import (
+    LAYERWISE_ADMITTANCE_PROFILE,
+    RESEARCH_UNIFORM_ADMITTANCE_PROFILE,
+)
+from spd_decap_pi._core.solver.research_uniform_profile import UniformC00SourceModel
 from spd_decap_pi import evaluation as evaluation_module
+from spd_decap_pi import scenario as scenario_module
 from spd_decap_pi.distribution import (
     DistributionDistanceMode,
     apply_distribution_plan,
@@ -45,6 +65,7 @@ from spd_decap_pi.evaluation import (
     analyze_scenario_with_local_llm,
     baseline_fallback_model_refdes,
     build_evaluation_project,
+    build_evaluation_workspace,
     evaluate_comparison_batch,
     evaluate_scenario,
     preflight_evaluation_comparison,
@@ -490,6 +511,341 @@ def test_build_evaluation_project_rebuilds_decap_electrical_state() -> None:
     assert all(item.confirmed for item in project.partitions)
     assert project.metadata["plane_pair_confirmed"] is True
     assert project.metadata["spd_import"]["raw_spd_embedded"] is False
+
+
+def test_layerwise_workspace_binds_exact_scenario_and_transient_project(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    scenario = _scenario()
+    transient = _base_project()
+    monkeypatch.setattr(
+        evaluation_module,
+        "build_evaluation_project",
+        lambda *_args, **_kwargs: transient,
+    )
+
+    state = build_evaluation_workspace(
+        scenario,
+        evaluation_rail_id="RAIL_VDD",
+        solver_profile="layerwise_admittance_v1",
+    )
+
+    factory = state.layerwise_termination_factory
+    assert factory is not None
+    assert factory.scenario is scenario
+    assert factory.project is state.project is transient
+
+
+def test_layerwise_request_keeps_compatibility_envelope_but_omits_modal_shunts(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    payload = _scenario().model_dump(mode="python")
+    payload["normalized_project"]["rails"][0]["target_mask"] = (
+        {"frequency_hz": 1.0e3, "impedance_ohm": 0.1},
+        {"frequency_hz": 1.0e9, "impedance_ohm": 0.1},
+    )
+    project = build_evaluation_project(
+        ScenarioSpec.model_validate(payload), evaluation_rail_id="RAIL_VDD"
+    )
+    template = compile_project_evaluation_template(project, "RAIL_VDD")
+    legacy = build_project_evaluation_request(
+        project,
+        "RAIL_VDD",
+        max_mode_x=3,
+        max_mode_y=3,
+        template=template,
+    )
+    research = build_project_evaluation_request(
+        project,
+        "RAIL_VDD",
+        max_mode_x=3,
+        max_mode_y=3,
+        template=template,
+        solver_profile_key=RESEARCH_UNIFORM_ADMITTANCE_PROFILE.key,
+        uniform_c00_source=object.__new__(UniformC00SourceModel),
+    )
+    layerwise_source = object.__new__(LayerwiseUniformSourceModel)
+    object.__setattr__(
+        layerwise_source,
+        "uniform_port_scope",
+        "external_device_port",
+    )
+    unbound_layerwise = build_project_evaluation_request(
+        project,
+        "RAIL_VDD",
+        max_mode_x=3,
+        max_mode_y=3,
+        template=template,
+        solver_profile_key=LAYERWISE_ADMITTANCE_PROFILE.key,
+        uniform_c00_source=layerwise_source,
+    )
+    assert unbound_layerwise.confidence_inputs.model_validity_known is False
+    assert unbound_layerwise.confidence_inputs.model_valid_min_hz is None
+    assert unbound_layerwise.confidence_inputs.model_valid_max_hz is None
+
+    termination_model = SeriesRLModel(
+        model_id="mounted-termination",
+        resistance_ohm=0.01,
+        inductance_h=1.0e-9,
+        valid_min_hz=2.0e3,
+        valid_max_hz=4.0e8,
+    )
+    substrate_manifest = SimpleNamespace(
+        clusters=(
+            SimpleNamespace(
+                source=SimpleNamespace(
+                    branches=(SimpleNamespace(model=termination_model),)
+                )
+            ),
+        )
+    )
+    object.__setattr__(
+        layerwise_source,
+        "substrate",
+        SimpleNamespace(termination_manifest=substrate_manifest),
+    )
+    captured_confidence_models: list[tuple[object, ...]] = []
+    original_shared_model_range = solver_evaluator_module._shared_model_range
+
+    def capture_shared_model_range(
+        models: tuple[object, ...],
+    ) -> tuple[float | None, float | None, bool]:
+        captured_confidence_models.append(models)
+        assert original_shared_model_range((termination_model,)) == (
+            2.0e3,
+            4.0e8,
+            True,
+        )
+        return 2.0e3, 4.0e8, True
+
+    monkeypatch.setattr(
+        solver_evaluator_module,
+        "_shared_model_range",
+        capture_shared_model_range,
+    )
+    layerwise = build_project_evaluation_request(
+        project,
+        "RAIL_VDD",
+        max_mode_x=3,
+        max_mode_y=3,
+        template=template,
+        solver_profile_key=LAYERWISE_ADMITTANCE_PROFILE.key,
+        uniform_c00_source=layerwise_source,
+    )
+
+    assert legacy.shunts
+    assert research.shunts == legacy.shunts
+    assert layerwise.shunts == ()
+    assert layerwise.device is legacy.device
+    assert layerwise.plane == legacy.plane
+    assert (layerwise.max_mode_x, layerwise.max_mode_y) == (3, 3)
+    assert any(
+        item is termination_model for item in captured_confidence_models[-1]
+    )
+    assert layerwise.confidence_inputs.model_valid_min_hz == 2.0e3
+    assert layerwise.confidence_inputs.model_valid_max_hz == 4.0e8
+    assert layerwise.confidence_inputs.model_validity_known is True
+    with pytest.raises(EvaluationError, match="double-count physical branches"):
+        replace(layerwise, shunts=legacy.shunts)
+
+
+def _complete_layerwise_view_provenance() -> dict[str, object]:
+    profile = evaluation_module.LAYERWISE_ADMITTANCE_PROFILE
+    hash_values = {
+        name: f"{index:x}" * 64
+        for index, name in enumerate(
+            evaluation_module._LAYERWISE_PROVENANCE_HASH_FIELDS,
+            start=1,
+        )
+    }
+    hash_values["static_compiler_algorithm_sha256"] = (
+        evaluation_module.solver_profile_static_identity_sha256(profile)
+    )
+    return {
+        "profile_key": profile.key,
+        "profile_badge": profile.badge,
+        "source_only": True,
+        "powersi_used_for_parameters": False,
+        "compiler_algorithm_id": profile.compiler_algorithm_id,
+        "compiler_version": evaluation_module.LAYERWISE_COMPILER_VERSION,
+        "termination_manifest_required": True,
+        **hash_values,
+    }
+
+
+def _layerwise_view() -> EvaluationView:
+    profile = evaluation_module.LAYERWISE_ADMITTANCE_PROFILE
+    view = _view()
+    view.solver_profile_key = profile.key
+    view.solver_profile_label = profile.label
+    view.solver_profile_badge = profile.badge
+    view.solver_provenance = _complete_layerwise_view_provenance()
+    return view
+
+
+def test_layerwise_view_counts_use_bound_termination_state() -> None:
+    view = _layerwise_view()
+    view.cap_count = 0
+    view.model_count = 0
+    view.solver_provenance["termination_active_selected_rail_cluster_count"] = 1
+
+    actual = evaluation_module._with_layerwise_mounted_view_counts(
+        _scenario(), "RAIL_VDD", view
+    )
+
+    assert actual.cap_count == 1
+    assert actual.model_count == 1
+
+
+@pytest.mark.parametrize("provenance_count", [None, 0])
+def test_layerwise_view_counts_fail_closed_without_matching_termination_proof(
+    provenance_count: int | None,
+) -> None:
+    view = _layerwise_view()
+    if provenance_count is not None:
+        view.solver_provenance[
+            "termination_active_selected_rail_cluster_count"
+        ] = provenance_count
+
+    with pytest.raises(ScenarioEvaluationBuildError) as error:
+        evaluation_module._with_layerwise_mounted_view_counts(
+            _scenario(), "RAIL_VDD", view
+        )
+
+    assert error.value.code == (
+        "LAYERWISE_MOUNTED_COUNT_PROVENANCE_MISSING"
+        if provenance_count is None
+        else "LAYERWISE_MOUNTED_COUNT_MISMATCH"
+    )
+
+
+def test_layerwise_view_rejects_empty_provenance() -> None:
+    view = _layerwise_view()
+    view.solver_provenance = {}
+
+    with pytest.raises(
+        ScenarioEvaluationCacheError,
+        match="incomplete source/compiler provenance",
+    ):
+        evaluation_module._validate_evaluation_view(view)
+
+
+def test_layerwise_view_accepts_complete_canonical_provenance() -> None:
+    evaluation_module._validate_evaluation_view(_layerwise_view())
+
+
+def test_layerwise_view_accepts_pre_v022_terminal_proof_alias() -> None:
+    view = _layerwise_view()
+    terminal_hash = view.solver_provenance.pop(
+        "terminal_surface_contact_proof_sha256"
+    )
+    view.solver_provenance["terminal_artwork_proof_sha256"] = terminal_hash
+
+    evaluation_module._validate_evaluation_view(view)
+
+
+@pytest.mark.parametrize(
+    "removed_field",
+    evaluation_module._LAYERWISE_PROVENANCE_HASH_FIELDS,
+)
+def test_layerwise_view_requires_bound_mounted_state_provenance(
+    removed_field: str,
+) -> None:
+    view = _layerwise_view()
+    view.solver_provenance.pop(removed_field)
+
+    with pytest.raises(
+        ScenarioEvaluationCacheError,
+        match="incomplete source/compiler provenance",
+    ):
+        evaluation_module._validate_evaluation_view(view)
+
+
+@pytest.mark.parametrize(
+    ("field", "invalid_value"),
+    (
+        ("source_only", False),
+        ("powersi_used_for_parameters", True),
+        ("compiler_algorithm_id", "wrong-compiler"),
+        ("compiler_version", "wrong-version"),
+        ("termination_manifest_required", False),
+    ),
+)
+def test_layerwise_view_rejects_incomplete_identity_flags(
+    field: str, invalid_value: object
+) -> None:
+    view = _layerwise_view()
+    view.solver_provenance[field] = invalid_value
+
+    with pytest.raises(
+        ScenarioEvaluationCacheError,
+        match="inconsistent|incomplete source/compiler provenance",
+    ):
+        evaluation_module._validate_evaluation_view(view)
+
+
+def test_layerwise_baseline_freezes_source_mounted_unresolved_other_loads() -> None:
+    scenario = _scenario()
+    unresolved = scenario.decaps[1].model_copy(
+        update={
+            "enabled": True,
+            "source_mounted": True,
+            "model_id": "M1",
+            "source_model_id": None,
+        }
+    )
+    connection = scenario.connection_analysis.connections["C2"].model_copy(
+        update={
+            "kind": DecapConnectionKind.UNRESOLVED,
+            "reason": "source graph requires cluster-level proof",
+        }
+    )
+    scenario = _scenario_with_connection(
+        scenario,
+        "C2",
+        connection,
+        decaps=[scenario.decaps[0], unresolved],
+    )
+
+    assert baseline_fallback_model_refdes(
+        scenario, ("RAIL_VDD",)
+    ) == ()
+    assert baseline_fallback_model_refdes(
+        scenario,
+        ("RAIL_VDD",),
+        include_all_source_mounted=True,
+    ) == ("C2",)
+    legacy = scenario.with_baseline_captures(("RAIL_VDD",))
+    expanded = scenario.with_baseline_captures(
+        ("RAIL_VDD",),
+        include_all_source_mounted=True,
+    )
+    assert {
+        item.refdes for item in legacy.baseline_captures["RAIL_VDD"].model_bindings
+    } == {"C1"}
+    assert {
+        item.refdes
+        for item in expanded.baseline_captures["RAIL_VDD"].model_bindings
+    } == {"C1", "C2"}
+
+    restored_without_capture = evaluation_module._comparison_original_configuration(
+        scenario
+    )
+    restored_with_capture = evaluation_module._comparison_original_configuration(
+        expanded
+    )
+    unresolved_without_capture = next(
+        item for item in restored_without_capture.decaps if item.refdes == "C2"
+    )
+    unresolved_with_capture = next(
+        item for item in restored_with_capture.decaps if item.refdes == "C2"
+    )
+    assert unresolved_without_capture.enabled is True
+    assert unresolved_without_capture.current_rail_id == unresolved.source_rail_id
+    assert unresolved_without_capture.model_id == "M1"
+    assert unresolved_with_capture.enabled is True
+    assert unresolved_with_capture.current_rail_id == unresolved.source_rail_id
+    assert unresolved_with_capture.model_id == "M1"
 
 
 def test_build_evaluation_project_materializes_shared_cluster_once() -> None:
@@ -1138,7 +1494,7 @@ def test_exact_batched_shared_pad_limit_allows_real_324_path_shape() -> None:
     assert "exact-batched supported limit is 512" in str(captured.value)
 
 
-def test_dense_shared_pad_via_limit_remains_128_for_source_terminal_models() -> None:
+def test_one_component_shared_pad_source_terminal_models_batch_to_512_paths() -> None:
     payload = _scenario().model_dump(mode="python")
     connection = payload["connection_analysis"]["connections"]["C1"]
 
@@ -1190,19 +1546,40 @@ def test_dense_shared_pad_via_limit_remains_128_for_source_terminal_models() -> 
     assert len(paths) == 128
     assert sum(item.has_source_terminal_rl for item in paths) == 1
 
+    batched_payload = deepcopy(payload)
+    batched_connection = batched_payload["connection_analysis"]["connections"][
+        "C1"
+    ]
+    extra_power_landing = dict(batched_connection["power_vias"][-1])
+    extra_power_landing.update(
+        {
+            "via_id": "VP-65",
+            "endpoint_node_id": "N-VP-65",
+            "x_um": float(extra_power_landing["x_um"]) + 1.0,
+        }
+    )
+    batched_connection["power_vias"].append(extra_power_landing)
+    batched = ScenarioSpec.model_validate(batched_payload)
+    batched_project = build_evaluation_project(
+        batched, evaluation_rail_id="RAIL_VDD"
+    )
+    assert len(batched_project.shared_pad_clusters[0].via_paths) == 129
+
     overflow_payload = deepcopy(payload)
     overflow_connection = overflow_payload["connection_analysis"]["connections"][
         "C1"
     ]
     overflow_connection["power_vias"] = expanded_landings(
-        "power_vias", 65, "VP"
+        "power_vias", 257, "VP"
+    )
+    overflow_connection["ground_vias"] = expanded_landings(
+        "ground_vias", 256, "VG"
     )
     overflow = ScenarioSpec.model_validate(overflow_payload)
     with pytest.raises(ScenarioEvaluationBuildError) as captured:
         build_evaluation_project(overflow, evaluation_rail_id="RAIL_VDD")
     assert captured.value.code == "SHARED_PAD_CLUSTER_TOO_LARGE"
-    assert "requires a dense terminal model" in str(captured.value)
-    assert "supported dense limit is 128" in str(captured.value)
+    assert "exact-batched supported limit is 512" in str(captured.value)
 
 
 def test_split_power_components_require_ground_anchor_per_evaluation_rail() -> None:
@@ -1457,6 +1834,55 @@ def test_unresolved_direct_decap_blocks_evaluation_fail_closed() -> None:
         build_evaluation_project(unresolved, evaluation_rail_id="RAIL_VDD")
 
     assert captured.value.code == "DECAP_CONNECTION_UNRESOLVED"
+
+
+def test_layerwise_defers_unresolved_classification_to_exact_termination_compiler(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    scenario = _scenario()
+    payload = scenario.model_dump(mode="python")
+    payload["connection_analysis"]["connections"]["C1"].update(
+        {
+            "kind": DecapConnectionKind.UNRESOLVED,
+            "power_vias": (),
+            "ground_vias": (),
+            "reason": "legacy plane-under-landing classifier is inconclusive",
+        }
+    )
+    unresolved = ScenarioSpec.model_validate(payload)
+
+    legacy = preflight_evaluation_connectivity(unresolved, ("RAIL_VDD",))
+    layerwise = preflight_evaluation_connectivity(
+        unresolved,
+        ("RAIL_VDD",),
+        solver_profile="layerwise_admittance_v1",
+    )
+
+    assert [(item.refdes, item.kind) for item in legacy.blockers] == [
+        ("C1", DecapConnectionKind.UNRESOLVED)
+    ]
+    assert layerwise.is_clear
+
+    # The profile project shell deliberately owns no modal decap placements.
+    # Production preflight next compiles the exact endpoint-island manifest;
+    # this fixture has no retained artwork and therefore tests only the clean
+    # ownership boundary, not permission to run an unproven termination.
+    monkeypatch.setattr(
+        evaluation_module,
+        "_layerwise_profile_project",
+        lambda _scenario, project, _rail_ids: project,
+    )
+    project = build_evaluation_project(
+        unresolved,
+        evaluation_rail_id="RAIL_VDD",
+        solver_profile="layerwise_admittance_v1",
+    )
+
+    assert not project.placements
+    assert not project.topology_maps
+    assert not project.shared_pad_clusters
+    assert project.pins
+    assert all(pin.kind == PinKind.DEVICE_BUMP for pin in project.pins)
 
 
 def test_legacy_v3_connectivity_loads_but_blocks_all_evaluation_paths(
@@ -1854,6 +2280,284 @@ def test_comparison_preflight_converts_state_specific_dry_build_failure(
     assert "SHARED_PAD_CLUSTER_TOO_LARGE" in blocker.reason
 
 
+def test_layerwise_builder_preflight_compiles_one_board_binding_and_proves_92_rails(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from spd_decap_pi._core.solver import layerwise_network as layerwise_network_module
+    from spd_decap_pi import layerwise_termination_adapter as termination_adapter
+
+    rails = tuple(f"R{index:02d}" for index in range(92))
+    scenario = SimpleNamespace(
+        design_fingerprint="a" * 64,
+        connection_analysis=SimpleNamespace(connections={}),
+    )
+    project = SimpleNamespace()
+    substrate = object()
+    binding = object()
+    project_builds: list[str] = []
+    source_proofs: list[str] = []
+    bound_rails: list[tuple[str, object, bool]] = []
+    factory_scenarios: list[object] = []
+    factory_calls: list[tuple[object, object]] = []
+
+    def build_project(
+        _scenario: object, *, evaluation_rail_id: str, **_kwargs: object
+    ) -> object:
+        project_builds.append(evaluation_rail_id)
+        return SimpleNamespace(rail_id=evaluation_rail_id)
+
+    def compile_template(candidate: object, rail_id: str) -> object:
+        assert candidate.rail_id == rail_id
+        return SimpleNamespace(rail_id=rail_id, cap_models={"M1": object()})
+
+    class SourceModel:
+        def __init__(self, rail_id: str) -> None:
+            self.rail_id = rail_id
+            self.substrate = substrate
+
+        def with_termination_manifest(
+            self, observed: object, *, required: bool
+        ) -> "SourceModel":
+            bound_rails.append((self.rail_id, observed, required))
+            return self
+
+    def build_source(
+        _candidate: object,
+        _attachments: object,
+        rail_id: str,
+        _template: object,
+        **_kwargs: object,
+    ) -> SourceModel:
+        source_proofs.append(rail_id)
+        return SourceModel(rail_id)
+
+    def factory(
+        *, scenario: object, project: object, attachments: object
+    ) -> object:
+        del project, attachments
+        factory_scenarios.append(scenario)
+
+        def compile_binding(observed_substrate: object, template: object) -> object:
+            factory_calls.append((observed_substrate, template))
+            return binding
+
+        return compile_binding
+
+    monkeypatch.setattr(evaluation_module, "build_evaluation_project", build_project)
+    monkeypatch.setattr(
+        evaluation_module, "compile_project_evaluation_template", compile_template
+    )
+    monkeypatch.setattr(
+        layerwise_network_module, "build_layerwise_uniform_source_model", build_source
+    )
+    monkeypatch.setattr(
+        termination_adapter, "LayerwiseScenarioTerminationFactory", factory
+    )
+
+    blockers = evaluation_module._builder_preflight_blockers(
+        scenario,
+        rails,
+        (),
+        project=project,
+        solver_profile=LAYERWISE_ADMITTANCE_PROFILE.key,
+        attachments={"proof": b"bytes"},
+        stage_count=len(rails),
+    )
+
+    assert blockers == ()
+    assert project_builds == list(rails)
+    assert source_proofs == list(rails)
+    assert factory_scenarios == [scenario]
+    assert len(factory_calls) == 1
+    assert factory_calls[0][0] is substrate
+    assert bound_rails == [(rail_id, binding, True) for rail_id in rails]
+
+
+def test_layerwise_builder_preflight_caches_only_board_binding_failure(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from spd_decap_pi._core.solver import layerwise_network as layerwise_network_module
+    from spd_decap_pi import layerwise_termination_adapter as termination_adapter
+
+    rails = ("R_BAD_PORT", "R_BOARD_FIRST", "R_BOARD_REPLAY")
+    scenario = SimpleNamespace(
+        design_fingerprint="b" * 64,
+        connection_analysis=SimpleNamespace(connections={}),
+    )
+    substrate = object()
+    source_attempts: list[str] = []
+    factory_calls = 0
+
+    monkeypatch.setattr(
+        evaluation_module,
+        "build_evaluation_project",
+        lambda _scenario, *, evaluation_rail_id, **_kwargs: SimpleNamespace(
+            rail_id=evaluation_rail_id
+        ),
+    )
+    monkeypatch.setattr(
+        evaluation_module,
+        "compile_project_evaluation_template",
+        lambda _candidate, rail_id: SimpleNamespace(
+            rail_id=rail_id, cap_models={"M1": object()}
+        ),
+    )
+
+    class SourceModel:
+        def __init__(self, rail_id: str) -> None:
+            self.rail_id = rail_id
+            self.substrate = substrate
+
+        def with_termination_manifest(
+            self, _manifest: object, *, required: bool
+        ) -> "SourceModel":
+            pytest.fail("a failed board binding must never be attached")
+
+    def build_source(
+        _candidate: object,
+        _attachments: object,
+        rail_id: str,
+        _template: object,
+        **_kwargs: object,
+    ) -> SourceModel:
+        source_attempts.append(rail_id)
+        if rail_id == "R_BAD_PORT":
+            raise LayerwiseNetworkUnavailable(
+                "RAIL_PORT_MISSING", "selected rail has no external Device port"
+            )
+        return SourceModel(rail_id)
+
+    def factory(**_kwargs: object) -> object:
+        def fail_binding(_substrate: object, _template: object) -> object:
+            nonlocal factory_calls
+            factory_calls += 1
+            raise LayerSurfaceTerminationError(
+                "BOARD_BINDING_FAILED",
+                "one mounted board termination has no exact endpoint",
+            )
+
+        return fail_binding
+
+    monkeypatch.setattr(
+        layerwise_network_module, "build_layerwise_uniform_source_model", build_source
+    )
+    monkeypatch.setattr(
+        termination_adapter, "LayerwiseScenarioTerminationFactory", factory
+    )
+
+    blockers = evaluation_module._builder_preflight_blockers(
+        scenario,
+        rails,
+        (),
+        project=SimpleNamespace(),
+        solver_profile=LAYERWISE_ADMITTANCE_PROFILE.key,
+        attachments={},
+        stage_count=len(rails),
+    )
+
+    assert source_attempts == list(rails)
+    assert factory_calls == 1
+    assert [item.rail_id for item in blockers] == list(rails)
+    by_rail = {item.rail_id: item for item in blockers}
+    assert "RAIL_PORT_MISSING" in by_rail["R_BAD_PORT"].reason
+    assert "BOARD_BINDING_FAILED" in by_rail["R_BOARD_FIRST"].reason
+    assert "BOARD_BINDING_FAILED" in by_rail["R_BOARD_REPLAY"].reason
+
+
+def test_layerwise_board_binding_is_separate_for_tuned_and_original_builder_passes(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from spd_decap_pi._core.solver import layerwise_network as layerwise_network_module
+    from spd_decap_pi import layerwise_termination_adapter as termination_adapter
+
+    rails = ("R1", "R2")
+    tuned = SimpleNamespace(
+        design_fingerprint="c" * 64,
+        connection_analysis=SimpleNamespace(connections={}),
+    )
+    original = SimpleNamespace(
+        design_fingerprint="d" * 64,
+        connection_analysis=SimpleNamespace(connections={}),
+    )
+    bindings: dict[str, object] = {}
+    factory_calls: list[str] = []
+    attached: list[tuple[str, str, object]] = []
+    substrate = object()
+
+    monkeypatch.setattr(
+        evaluation_module,
+        "build_evaluation_project",
+        lambda scenario, *, evaluation_rail_id, **_kwargs: SimpleNamespace(
+            scenario=scenario, rail_id=evaluation_rail_id
+        ),
+    )
+    monkeypatch.setattr(
+        evaluation_module,
+        "compile_project_evaluation_template",
+        lambda candidate, rail_id: SimpleNamespace(
+            scenario=candidate.scenario,
+            rail_id=rail_id,
+            cap_models={"M1": object()},
+        ),
+    )
+
+    class SourceModel:
+        def __init__(self, scenario: object, rail_id: str) -> None:
+            self.scenario = scenario
+            self.rail_id = rail_id
+            self.substrate = substrate
+
+        def with_termination_manifest(
+            self, manifest: object, *, required: bool
+        ) -> "SourceModel":
+            assert required
+            attached.append(
+                (self.scenario.design_fingerprint, self.rail_id, manifest)
+            )
+            return self
+
+    monkeypatch.setattr(
+        layerwise_network_module,
+        "build_layerwise_uniform_source_model",
+        lambda candidate, _attachments, rail_id, _template, **_kwargs: SourceModel(
+            candidate.scenario, rail_id
+        ),
+    )
+
+    def factory(*, scenario: object, **_kwargs: object) -> object:
+        fingerprint = scenario.design_fingerprint
+        factory_calls.append(fingerprint)
+        binding = bindings.setdefault(fingerprint, object())
+        return lambda _substrate, _template: binding
+
+    monkeypatch.setattr(
+        termination_adapter, "LayerwiseScenarioTerminationFactory", factory
+    )
+
+    for scenario in (tuned, original):
+        assert evaluation_module._builder_preflight_blockers(
+            scenario,
+            rails,
+            (),
+            project=SimpleNamespace(),
+            solver_profile=LAYERWISE_ADMITTANCE_PROFILE.key,
+            attachments={},
+            stage_count=len(rails),
+        ) == ()
+
+    assert factory_calls == [tuned.design_fingerprint, original.design_fingerprint]
+    assert [item[:2] for item in attached] == [
+        (tuned.design_fingerprint, "R1"),
+        (tuned.design_fingerprint, "R2"),
+        (original.design_fingerprint, "R1"),
+        (original.design_fingerprint, "R2"),
+    ]
+    assert all(
+        manifest is bindings[fingerprint]
+        for fingerprint, _rail_id, manifest in attached
+    )
+
+
 def test_geometry_preflight_keeps_bare_vqps_style_rail_clear() -> None:
     scenario = _scenario()
     payload = scenario.model_dump(mode="python")
@@ -1862,6 +2566,70 @@ def test_geometry_preflight_keeps_bare_vqps_style_rail_clear() -> None:
     bare = ScenarioSpec.model_validate(payload)
 
     assert preflight_evaluation_connectivity(bare, ("RAIL_VDD",)).is_clear
+    assert preflight_evaluation_connectivity(
+        bare,
+        ("RAIL_VDD",),
+        solver_profile="layerwise_admittance_v1",
+    ).is_clear
+
+
+def test_layerwise_geometry_bypass_still_fails_closed_on_pre_v4_source() -> None:
+    scenario = _scenario()
+    assert scenario.connection_analysis is not None
+    connection = scenario.connection_analysis.connections["C1"]
+    outside = connection.power_vias[0].model_copy(update={"x_um": -100.0})
+    scenario = _scenario_with_connection(
+        scenario,
+        "C1",
+        connection.model_copy(update={"power_vias": (outside,)}),
+    )
+
+    base = scenario.base_project
+    metadata = {
+        **base.metadata,
+        "spd_import": {
+            **base.metadata["spd_import"],
+            "plane_geometries": [
+                {
+                    "layer": "PWR1",
+                    "net": "VDD",
+                    "bbox_um": [0.0, 10_000.0, 0.0, 8_000.0],
+                },
+                {
+                    "layer": "GND1",
+                    "net": "DGND",
+                    "bbox_um": [0.0, 10_000.0, 0.0, 8_000.0],
+                },
+            ],
+        },
+    }
+    project = base.model_copy(update={"metadata": metadata})
+    scenario = scenario.model_copy(
+        update={"normalized_project": project.model_dump(mode="json")}
+    )
+
+    legacy = preflight_evaluation_connectivity(scenario, ("RAIL_VDD",))
+    assert any(
+        "TERMINAL_OUTSIDE_SELECTED_PLANE" in item.reason
+        for item in legacy.blockers
+    )
+
+    layerwise = preflight_evaluation_comparison(
+        scenario,
+        ("RAIL_VDD",),
+        solver_profile=LAYERWISE_ADMITTANCE_PROFILE.key,
+        attachments={},
+    )
+
+    assert not layerwise.is_clear
+    assert all(
+        "TERMINAL_OUTSIDE_SELECTED_PLANE" not in item.reason
+        for item in layerwise.blockers
+    )
+    assert any(
+        "TERMINAL_COMPLETE_REIMPORT_REQUIRED" in item.reason
+        for item in layerwise.blockers
+    )
 
 
 def test_comparison_preflight_blocks_bare_legacy_scenario_without_analysis(
@@ -2075,6 +2843,7 @@ def test_connectivity_preflight_includes_isolation_gap_unresolved_before_baselin
 
 def test_saved_distributed_scenario_reloads_and_blocks_outside_changed_rail(
     tmp_path,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     payload = _scenario().model_dump(mode="python")
     project = payload["normalized_project"]
@@ -2166,6 +2935,31 @@ def test_saved_distributed_scenario_reloads_and_blocks_outside_changed_rail(
     )
     with pytest.raises(ScenarioEvaluationPreflightError):
         build_evaluation_project(reloaded, evaluation_rail_id="RAIL_ALT")
+
+    # The terminal-complete layerwise network does not stamp these contacts
+    # into the legacy rectangular modal plane.  It binds them to exact retained
+    # (layer, NET) surfaces later in the production builder preflight.
+    layerwise = preflight_evaluation_connectivity(
+        reloaded,
+        ("RAIL_ALT",),
+        solver_profile="layerwise_admittance_v1",
+    )
+    assert layerwise.is_clear
+
+    # Isolate this public project-builder boundary from retained-artwork setup;
+    # exact source and termination certificate failures remain covered by the
+    # layerwise builder-preflight tests.
+    monkeypatch.setattr(
+        evaluation_module,
+        "_layerwise_profile_project",
+        lambda _scenario, project, _rail_ids: project,
+    )
+    layerwise_project = build_evaluation_project(
+        reloaded,
+        evaluation_rail_id="RAIL_ALT",
+        solver_profile="layerwise_admittance_v1",
+    )
+    assert not layerwise_project.placements
 
 
 def test_disabled_unavailable_dnp_is_electrically_absent_and_does_not_block() -> None:
@@ -2575,10 +3369,133 @@ def test_legacy_stackup_schema_baseline_cache_remains_reusable(
     assert second.comparisons[0].baseline_from_cache
 
 
-def test_solver_version_0_7_recalculates_0_6_baseline_cache(
+def test_convergence_policy_is_explicit_and_changes_result_identity(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    assert evaluation_module.SOLVER_VERSION == "modal-mvp-0.7.0"
+    settings = evaluation_module._evaluation_settings(None, 8)
+    assert settings["convergence_policy"] == {
+        "version": "adaptive-frequency-modal-v4",
+        "max_refinement_iterations": 3,
+        "max_new_frequency_points_per_iteration": 64,
+        "curvature_threshold_db": 0.75,
+        "rms_tolerance_db": 0.2,
+        "max_tolerance_db": 0.5,
+        "peak_shift_tolerance_percent": 2.0,
+    }
+    assert settings["modal_convergence_ceiling_index"] == 8
+    layerwise_settings = evaluation_module._evaluation_settings(
+        None, 8, "layerwise_admittance_v1"
+    )
+    assert layerwise_settings["modal_convergence_ceiling_index"] == 12
+    original = evaluation_module.ScenarioResultKey.from_settings(
+        design_fingerprint="a" * 64,
+        rail_id="RAIL_VDD",
+        settings=settings,
+        solver_version=evaluation_module.SOLVER_VERSION,
+    )
+    monkeypatch.setattr(evaluation_module, "DEFAULT_MAX_NEW_FREQUENCY_POINTS", 65)
+    changed = evaluation_module.ScenarioResultKey.from_settings(
+        design_fingerprint="a" * 64,
+        rail_id="RAIL_VDD",
+        settings=evaluation_module._evaluation_settings(None, 8),
+        solver_version=evaluation_module.SOLVER_VERSION,
+    )
+    assert original.settings_sha256 != changed.settings_sha256
+
+
+def test_layerwise_batch_uses_board_original_identity_without_cache(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    scenario = _scenario()
+    tuned = scenario.decaps[0].model_copy(update={"enabled": False})
+    scenario = scenario.model_copy(
+        update={"decaps": [tuned, scenario.decaps[1]]}
+    )
+    calls: list[ScenarioSpec] = []
+    profile = evaluation_module.LAYERWISE_ADMITTANCE_PROFILE
+
+    monkeypatch.setattr(
+        evaluation_module,
+        "preflight_evaluation_comparison",
+        lambda _scenario, rail_ids, **_kwargs: EvaluationConnectivityPreflight(
+            tuple(rail_ids), ()
+        ),
+    )
+    monkeypatch.setattr(
+        evaluation_module,
+        "build_evaluation_project",
+        lambda *_args, **_kwargs: _base_project(),
+    )
+
+    def fake_layerwise(actual, rail_id, target_ohm=None, modal_max_index=8, **_kwargs):
+        calls.append(actual)
+        view = _view(rail_id)
+        view.solver_profile_key = profile.key
+        view.solver_profile_label = profile.label
+        view.solver_profile_badge = profile.badge
+        view.solver_version = evaluation_module.SOLVER_VERSION
+        state_digit = actual.design_fingerprint[0]
+        view.solver_provenance = {
+            **_complete_layerwise_view_provenance(),
+            "status": "source_layerwise_production",
+            "validation_status": "two_named_case_validation_required",
+            "termination_manifest_sha256": state_digit * 64,
+            "layerwise_identity_sha256": state_digit * 64,
+        }
+        key = evaluation_module.ScenarioResultKey.from_settings(
+            design_fingerprint=actual.design_fingerprint,
+            rail_id=rail_id,
+            settings=evaluation_module._evaluation_settings(
+                target_ohm,
+                modal_max_index,
+                profile.key,
+                solver_provenance=view.solver_provenance,
+            ),
+            solver_version=view.solver_version,
+        )
+        return evaluation_module.ScenarioEvaluation(
+            state=object(),
+            view=view,
+            result_key=key,
+            scenario_revision=actual.revision,
+        )
+
+    monkeypatch.setattr(evaluation_module, "evaluate_scenario", fake_layerwise)
+
+    batch = evaluate_comparison_batch(
+        scenario,
+        ["RAIL_VDD"],
+        solver_profile=profile.key,
+    )
+
+    assert len(calls) == 2
+    assert not batch.comparisons[0].baseline_from_cache
+    assert batch.updated_scenario.evaluation_cache == {}
+    original = evaluation_module._comparison_original_configuration(
+        batch.updated_scenario
+    )
+    assert batch.comparisons[0].baseline.design_fingerprint == (
+        original.design_fingerprint
+    )
+    batch.validate_for_scenario(scenario)
+
+    repeated = evaluate_comparison_batch(
+        batch.updated_scenario,
+        ["RAIL_VDD"],
+        attachments=batch.updated_attachments,
+        solver_profile=profile.key,
+    )
+    assert repeated.updated_scenario.revision == batch.updated_scenario.revision
+    assert repeated.updated_scenario.baseline_captures == (
+        batch.updated_scenario.baseline_captures
+    )
+    assert repeated.updated_scenario.evaluation_cache == {}
+
+
+def test_solver_version_0_8_2_recalculates_0_6_baseline_cache(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    assert evaluation_module.SOLVER_VERSION == "modal-mvp-0.8.3"
     scenario = _scenario()
     tuned = scenario.decaps[0].model_copy(update={"enabled": False})
     scenario = ScenarioSpec.model_validate(
@@ -2782,6 +3699,39 @@ def test_baseline_capture_is_frozen_and_known_source_model_cannot_be_rebound() -
     ] = "M2"
     with pytest.raises(ValidationError, match="SPD source model"):
         ScenarioSpec.model_validate(payload)
+
+
+def test_baseline_capture_reuses_one_source_state_hash_without_full_revalidation(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    scenario = _scenario()
+    source_state_hashes = 0
+    real_hash_payload = scenario_module._hash_payload
+
+    def counted_hash_payload(payload: object) -> str:
+        nonlocal source_state_hashes
+        if (
+            isinstance(payload, dict)
+            and "source_sha256" in payload
+            and "decaps" in payload
+        ):
+            source_state_hashes += 1
+        return real_hash_payload(payload)
+
+    def reject_full_scenario_revalidation(*args: object, **kwargs: object) -> object:
+        raise AssertionError("baseline capture must not fully revalidate ScenarioSpec")
+
+    monkeypatch.setattr(scenario_module, "_hash_payload", counted_hash_payload)
+    monkeypatch.setattr(
+        ScenarioSpec,
+        "model_validate",
+        reject_full_scenario_revalidation,
+    )
+
+    captured = scenario.with_baseline_captures(("RAIL_VDD",))
+
+    assert tuple(captured.baseline_captures) == ("RAIL_VDD",)
+    assert source_state_hashes == 1
 
 
 def test_unused_model_addition_does_not_invalidate_saved_original(

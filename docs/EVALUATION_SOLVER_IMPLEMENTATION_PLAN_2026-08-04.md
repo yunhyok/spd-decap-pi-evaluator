@@ -1,5 +1,8 @@
 # Evaluation Solver Implementation Plan
 
+> Historical implementation plan. The v0.22.0 production status and named-case
+> evidence are recorded in the layer-surface validation record.
+
 - Date: 2026-08-04
 - Status: planning only; no runtime code is changed by this document
 - Target: improve Evaluation Analysis accuracy and responsiveness

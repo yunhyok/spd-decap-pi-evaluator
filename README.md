@@ -1,8 +1,8 @@
-# SPD Decap PI Evaluator v0.21.0
+# SPD Decap PI Evaluator v0.22.0
 
-> **v0.21.0 reconnects De-cap Distribution with Evaluation Analysis without weakening moved-assignment validation.** An unchanged DIRECT capacitor may use its parser-proven source rail template when an alternate-assignment eligibility record is absent; a moved capacitor still requires exact destination eligibility and remains fail-closed. Distribution results now report `Assignment Failed`, and the main board exposes a read-only Source SPD / Current comparison. The title bar identifies the application as **SPD Decap PI Evaluator v0.21.0**.
+> **v0.22.0 implements the source-derived multilayer layer-surface network and binds its release decision to both named SPD/PowerSI cases.** Exact adjacent-gap artwork Maxwell-Y blocks share physical `(layer, NET)` surface nodes, exact same-NET Trace/Via components provide only source-observed connectivity, and all internal interfaces are eliminated by one global sparse Schur/Kron solve. Touchstone remains comparison-only. Distribution reports `Assignment Failed`, and the main board can switch between Source SPD and Current cap assignments at their fixed physical XY. The title bar identifies the application as **SPD Decap PI Evaluator v0.22.0**.
 
-> 프로그램: **SPD Decap PI Evaluator v0.21.0**
+> 프로그램: **SPD Decap PI Evaluator v0.22.0**
 > 저장소: 기존 PI Calculator와 분리된 독립 프로그램
 > 해석 경계: 선택한 PWR rail의 pre-design `Zii`; 최종 PowerSI/SIwave 검증을 대체하지 않음
 
@@ -11,14 +11,26 @@
 desktop 프로그램이다. Stackup, MLO 크기 또는 plane을 새로 작성하는 기능과
 Optimization Mode는 포함하지 않는다.
 
-## v0.21.0 Evaluation / Distribution integration
+## v0.22.0 multilayer Evaluation
+
+- The desktop default is **Layer-surface terminal-complete network**. Each retained physical `(layer, NET)` surface remains independent until exact raw-SPD same-NET Trace/Via topology proves a connection.
+- Every adjacent dielectric gap contributes its exact ordered-artwork complex Maxwell-Y block. The blocks and source-observed vertical topology are embedded in one sparse network, then all internal interfaces are eliminated together by an open-port Schur/Kron solve.
+- A branched topology component contributes no invented serial R/L. Device and decap loop R/L remain separately owned external branches. Gap-isolated retained surfaces may carry certified topology, but the evaluator does not synthesize missing capacitance or fringing for them.
+- The terminal-complete global-Y result at the external Device port is the **sole** Layerwise driving-point input. The legacy rectangular modal matrix is not prepared, and no aggregate higher-mode one-port difference is added. This remains a source-derived circuit model, not a full-wave S-parameter solver.
+- Frequency refinement uses the versioned three-iteration/64-point bounded policy. The shared Balanced/m-index field remains in run provenance for schema compatibility, but it does not stamp rectangular modes into a terminal-complete Layerwise result. Legacy and Research retain their documented modal-order behavior; PowerSI never selects the order.
+- PowerSI Touchstone files are never read while building or fitting the model. They are used only by the validation benchmark. The two named 92-port cases, including all ten no-decap `VQPS` controls and six loaded rails per case, are recorded in the [v0.22.0 validation record](docs/EVALUATION_LAYER_SURFACE_VALIDATION_2026-08-06.md).
+- Evaluation after De-cap Distribution shares the same evidence/compiler path. Unchanged source DIRECT assignments can use their immutable source template, while moved assignments still require exact destination eligibility and remain fail-closed.
+- The Distribution grid reports receiver shortfall as `Assignment Failed`; the board toolbar switches between `Current / distributed` and `Source SPD (read-only)` assignments at fixed physical XY without changing the scenario.
+- **Legacy modal** remains an explicit rollback/regression profile. There is no silent fallback when layer-surface source evidence is incomplete.
+
+## v0.21.0 Evaluation / Distribution integration (historical)
 
 - Evaluation resolves a missing DIRECT eligibility only for the immutable source rail/net and only from the imported rail-template binding. Exact eligibility takes precedence; redistributed assignments without destination proof still block preflight and build.
 - The comparison preflight runs in the background and applies the same build-time connectivity/modelability contract to both **Original** and **Tuned/current**. A rail is runnable only when both sides build. If a selection mixes runnable and blocked rails, an explicit confirmation (default `No`) offers to run only the clear rails; the summary remains `PARTIAL` and marks every omitted rail `NOT evaluated`.
 - The source-DIRECT fallback removed all 470 missing-eligibility blockers in the captured Distribution replay's connectivity-only check. It is not a geometry bypass: a fresh 260804 import still has 2,010 exact finite-port footprint blockers on 68 of 92 rails (1,232 GND and 778 PWR). Coordinates are never clamped, the cavity is never expanded, and blocked ports are never dropped.
 - Compact exact route recovery found 11,874 of 117,810 requested source paths in the fresh 260804 import; 105,936 paths retained the disclosed legacy-template fallback. The same exact geometry preflight still reported 2,010 blockers, so route recovery is evidence preservation, not permission to treat an off-cavity terminal as modelable.
 - The authoritative fresh 260804 active-checkout Distribution replay completed `NEAREST` as `FULL`: 696/696 receiver assignments, shortfall 0, 696 moves and 208 isolation sacrifices. Measured stages were scenario load 5.569 s, targets 2.340 s, proof projection plus validation 53.167 s, planner 157.501 s and atomic Apply 8.345 s; route metadata remained 11,874/117,810 recovered.
-- After that Apply, the two-sided Original/Tuned comparison preflight reported 2,807 blockers on 73 rails and 19 clear rails: the fresh-source 2,010 blockers remained common, while redistribution added 797 Tuned-only blockers. Of the total, 2,802 were geometry and 5 connectivity blockers. This is intentionally different from the fresh-source 2,010 blockers on 68 rails; all 10 VQPS controls remained clear. The optimized all-rail preflight performance rerun is still pending, so no interim timing is treated as a release result.
+- After that Apply, the two-sided Original/Tuned comparison preflight reported 2,807 blockers on 73 rails and 19 clear rails: the fresh-source 2,010 blockers remained common, while redistribution added 797 Tuned-only blockers. Of the total, 2,802 were geometry and 5 connectivity blockers. This is intentionally different from the fresh-source 2,010 blockers on 68 rails; all 10 VQPS controls remained clear. The v0.21 optimized all-rail preflight rerun completed in 10.083 s and preserved the 2,010-blocker/68-rail source manifest; v0.22 replaces that legacy rectangular geometry gate with exact retained-surface binding only for the Layerwise profile.
 - The Distribution grid reports unfulfilled receiver demand as `Assignment Failed`. Requested targets remain visible after Apply so partial results stay auditable.
 - A main-board `Show source SPD assignments` control switches the board between `Current / distributed` and `Source SPD (read-only)` at the same physical XY. Search, selection and viewport are preserved, and source view blocks editing.
 - PowerSI comparison utilities accept both exact legacy `2nd_SITE#-...` and exact run-qualified `SITE#_<run>-...` headers while continuing to reject site/rail mismatches. Touchstone remains comparison-only and is never used for fitting.
@@ -34,7 +46,7 @@ Optimization Mode는 포함하지 않는다.
 - The table-adjacent status is limited to per-model Donor/Receiver/Balance; detailed validation, import, planning-assumption, partial-result, and stale-result messages are shown in `Distribution Status / Preview Log`.
 - File loading and Distribution calculation remain worker-threaded. v0.20.0 removes the abandoned existing-column recovery pass, so this correction does not add another full Node/Via scan to raw-SPD loading.
 
-## v0.18.1 evaluation solver and loading status
+## v0.18.1 evaluation solver and loading status (historical)
 
 - The 2026-08-04 [evaluation-solver deep-research decision record](docs/EVALUATION_SOLVER_DEEP_RESEARCH_2026-08-04.md) documents the 92-port PowerSI evidence, actual-artwork capacitance experiments, layer-network composition, matrix-free residual go/no-go criteria, selected sparse-MNA architecture, validation gates, and staged implementation order. It is a research record only; no experimental solver is production-enabled by that document.
 - The companion [evaluation-solver implementation plan](docs/EVALUATION_SOLVER_IMPLEMENTATION_PLAN_2026-08-04.md) and the [v0.18.1 implementation status](docs/EVALUATION_SOLVER_IMPLEMENTATION_STATUS_2026-08-04.md) distinguish shipped guarded infrastructure from research prototypes. The legacy modal backend remains the default production path.
@@ -138,7 +150,7 @@ powershell.exe -ExecutionPolicy Bypass -NoProfile -File .\scripts\build_spd_deca
 산출물:
 
 - `dist\SPDDecapPIEvaluator\SPDDecapPIEvaluator.exe`
-- `installer-output\SPDDecapPIEvaluatorSetup-0.21.0.exe`
-- `installer-output\SPDDecapPIEvaluatorSetup-0.21.0.exe.sha256`
+- `installer-output\SPDDecapPIEvaluatorSetup-0.22.0.exe`
+- `installer-output\SPDDecapPIEvaluatorSetup-0.22.0.exe.sha256`
 
 프로그램명과 버전은 title bar와 installer metadata에 함께 표시된다.

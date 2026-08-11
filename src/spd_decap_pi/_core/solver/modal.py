@@ -411,10 +411,28 @@ class DeviceBranch:
     branch_id: str
     port: FinitePort
     series_path: ImpedanceModel
+    source_power_pin_id: str | None = None
+    source_ground_pin_id: str | None = None
 
     def __post_init__(self) -> None:
         if not self.branch_id.strip():
             raise ModalSolverError("branch_id must not be empty")
+        source_power = self.source_power_pin_id
+        source_ground = self.source_ground_pin_id
+        if (source_power is None) != (source_ground is None):
+            raise ModalSolverError(
+                "Device branch source PWR/GND anchor IDs must be supplied together"
+            )
+        if source_power is None or source_ground is None:
+            return
+        source_power = source_power.strip()
+        source_ground = source_ground.strip()
+        if not source_power or not source_ground:
+            raise ModalSolverError("Device branch source anchor IDs must not be blank")
+        if source_power.casefold() == source_ground.casefold():
+            raise ModalSolverError("Device branch source PWR/GND anchors must be distinct")
+        object.__setattr__(self, "source_power_pin_id", source_power)
+        object.__setattr__(self, "source_ground_pin_id", source_ground)
 
 
 @dataclass(frozen=True, slots=True)
@@ -495,6 +513,7 @@ class PreparedDeviceSystem:
         ...,
     ]
     legacy_uniform_c00_term: LegacyUniformC00Term | None = None
+    external_uniform_admittance_s: NDArray[np.complex128] | None = None
 
     def __post_init__(self) -> None:
         parallel_planes = tuple(self.parallel_planes)
@@ -529,6 +548,24 @@ class PreparedDeviceSystem:
                 raise ModalSolverError(
                     "prepared legacy uniform C00 term does not match this modal/frequency grid"
                 )
+        external_uniform = self.external_uniform_admittance_s
+        if external_uniform is not None:
+            external_uniform = np.asarray(
+                external_uniform, dtype=np.complex128
+            ).copy()
+            if (
+                external_uniform.shape != frequencies.shape
+                or not np.all(np.isfinite(external_uniform))
+            ):
+                raise ModalSolverError(
+                    "prepared external uniform admittance must match the frequency grid"
+                )
+            scale = max(float(np.max(np.abs(external_uniform))), 1.0e-30)
+            if float(np.min(external_uniform.real)) < -scale * 1.0e-10:
+                raise ModalSolverError(
+                    "prepared external uniform admittance must be passive"
+                )
+            external_uniform.setflags(write=False)
 
         copied_branches = []
         for overlap, basis_sum, branch_count, admittance in self.branch_data:
@@ -570,6 +607,9 @@ class PreparedDeviceSystem:
         object.__setattr__(self, "plane_admittance", plane_admittance)
         object.__setattr__(self, "branch_data", tuple(copied_branches))
         object.__setattr__(self, "legacy_uniform_c00_term", uniform_term)
+        object.__setattr__(
+            self, "external_uniform_admittance_s", external_uniform
+        )
 
 
 @dataclass(frozen=True, slots=True)
@@ -926,7 +966,28 @@ class RectangularCavitySolver:
         self,
         frequencies: NDArray[np.float64],
         shunts: tuple[ShuntConnection, ...],
+        *,
+        progress: Callable[[int, str], None] | None = None,
+        is_cancelled: Callable[[], bool] | None = None,
     ) -> list[_ShuntData]:
+        cancelled = is_cancelled or (lambda: False)
+        last_progress = -1
+
+        def checkpoint() -> None:
+            if cancelled():
+                raise RuntimeError("evaluation cancelled")
+
+        def report(value: int, message: str) -> None:
+            nonlocal last_progress
+            bounded = min(max(int(value), 0), 100)
+            if bounded <= last_progress:
+                return
+            last_progress = bounded
+            if progress is not None:
+                progress(bounded, message)
+
+        checkpoint()
+        report(0, "Preparing decap shunt stamps")
         # Partition only the provably homogeneous shared-pad groups.  A mixed
         # solve may contain direct shunts, general coupled networks, split-PWR
         # clusters, or clusters whose terminal Via models differ.  Those
@@ -936,7 +997,13 @@ class RectangularCavitySolver:
         homogeneous_groups: dict[
             int, list[tuple[int, CoupledShuntGroup]]
         ] = {}
+        shunt_count = len(shunts)
         for index, group in enumerate(shunts):
+            checkpoint()
+            report(
+                round(10 * index / max(shunt_count, 1)),
+                f"Classifying decap shunt {index + 1:,}/{shunt_count:,}",
+            )
             if not isinstance(group, CoupledShuntGroup) or not isinstance(
                 group.network, SharedPadClusterModel
             ):
@@ -945,13 +1012,45 @@ class RectangularCavitySolver:
             if via_model is None:
                 continue
             homogeneous_groups.setdefault(id(via_model), []).append((index, group))
+        report(10, "Decap shunt classification complete")
 
         batched_by_first_index: dict[int, _HomogeneousSharedPadBatchData] = {}
         batched_indices: set[int] = set()
-        for indexed_groups in homogeneous_groups.values():
+        homogeneous_batches = tuple(homogeneous_groups.values())
+        for batch_index, indexed_groups in enumerate(homogeneous_batches):
+            checkpoint()
+
+            def homogeneous_progress(completed: int, total: int) -> None:
+                report(
+                    10
+                    + round(
+                        35
+                        * (batch_index + completed / max(total, 1))
+                        / max(len(homogeneous_batches), 1)
+                    ),
+                    (
+                        "Stamping homogeneous shared-pad batch "
+                        f"{batch_index + 1:,}/{len(homogeneous_batches):,}"
+                    ),
+                )
+
             batch = self._homogeneous_shared_pad_batch_data(
                 frequencies,
                 tuple(group for _index, group in indexed_groups),
+                progress=homogeneous_progress,
+                is_cancelled=cancelled,
+            )
+            report(
+                10
+                + round(
+                    35
+                    * (batch_index + 1)
+                    / max(len(homogeneous_batches), 1)
+                ),
+                (
+                    "Prepared homogeneous shared-pad batch "
+                    f"{batch_index + 1:,}/{len(homogeneous_batches):,}"
+                ),
             )
             if batch is None:
                 # Preserve the established per-group validation and diagnostic
@@ -961,19 +1060,94 @@ class RectangularCavitySolver:
             batched_by_first_index[first_index] = batch
             batched_indices.update(index for index, _group in indexed_groups)
 
+        # A one-PWR/one-GND shared-pad network has the same arrowhead topology
+        # even when recovered source Via R/L differs per terminal.  Stamp that
+        # exact Schur form directly in modal space instead of materializing an
+        # F x terminal x terminal dense matrix.  Homogeneous groups above keep
+        # their more aggressively grouped fast path.
+        heterogeneous_by_index: dict[int, _HomogeneousSharedPadBatchData] = {}
+        for index, group in enumerate(shunts):
+            checkpoint()
+            if index in batched_indices:
+                report(
+                    45 + round(30 * (index + 1) / max(shunt_count, 1)),
+                    f"Preparing shared-pad shunt {index + 1:,}/{shunt_count:,}",
+                )
+                continue
+            if not isinstance(group, CoupledShuntGroup) or not isinstance(
+                group.network, SharedPadClusterModel
+            ):
+                report(
+                    45 + round(30 * (index + 1) / max(shunt_count, 1)),
+                    f"Preparing shared-pad shunt {index + 1:,}/{shunt_count:,}",
+                )
+                continue
+            if (
+                group.network.power_component_count != 1
+                or group.network.ground_component_count != 1
+            ):
+                report(
+                    45 + round(30 * (index + 1) / max(shunt_count, 1)),
+                    f"Preparing shared-pad shunt {index + 1:,}/{shunt_count:,}",
+                )
+                continue
+
+            def heterogeneous_progress(completed: int, total: int) -> None:
+                report(
+                    45
+                    + round(
+                        30
+                        * (index + completed / max(total, 1))
+                        / max(shunt_count, 1)
+                    ),
+                    f"Stamping shared-pad shunt {index + 1:,}/{shunt_count:,}",
+                )
+
+            batch = self._one_component_shared_pad_data(
+                frequencies,
+                group,
+                progress=heterogeneous_progress,
+                is_cancelled=cancelled,
+            )
+            if batch is not None:
+                heterogeneous_by_index[index] = batch
+            report(
+                45 + round(30 * (index + 1) / max(shunt_count, 1)),
+                f"Prepared shared-pad shunt {index + 1:,}/{shunt_count:,}",
+            )
+
         data: list[_ShuntData] = []
         for index, group in enumerate(shunts):
+            checkpoint()
             batch = batched_by_first_index.get(index)
             if batch is not None:
                 data.append(batch)
+                report(
+                    75 + round(25 * (index + 1) / max(shunt_count, 1)),
+                    f"Finalizing decap shunt {index + 1:,}/{shunt_count:,}",
+                )
                 continue
             if index in batched_indices:
+                report(
+                    75 + round(25 * (index + 1) / max(shunt_count, 1)),
+                    f"Finalizing decap shunt {index + 1:,}/{shunt_count:,}",
+                )
+                continue
+            heterogeneous = heterogeneous_by_index.get(index)
+            if heterogeneous is not None:
+                data.append(heterogeneous)
+                report(
+                    75 + round(25 * (index + 1) / max(shunt_count, 1)),
+                    f"Finalizing decap shunt {index + 1:,}/{shunt_count:,}",
+                )
                 continue
             if isinstance(group, CoupledShuntGroup):
+                checkpoint()
                 admittance = np.asarray(
                     group.network.admittance_matrix(frequencies),
                     dtype=np.complex128,
                 )
+                checkpoint()
                 expected = (
                     frequencies.size,
                     len(group.ports),
@@ -1001,10 +1175,16 @@ class RectangularCavitySolver:
                         self.population_matrix(group), admittance
                     )
                 )
+                report(
+                    75 + round(25 * (index + 1) / max(shunt_count, 1)),
+                    f"Finalizing decap shunt {index + 1:,}/{shunt_count:,}",
+                )
                 continue
+            checkpoint()
             impedance = np.asarray(
                 group.network.impedance(frequencies), dtype=np.complex128
             )
+            checkpoint()
             if impedance.shape != frequencies.shape or not np.all(
                 np.isfinite(impedance)
             ):
@@ -1018,12 +1198,21 @@ class RectangularCavitySolver:
             data.append(
                 _ScalarShuntData(self.overlap_matrix(group), 1.0 / impedance)
             )
+            report(
+                75 + round(25 * (index + 1) / max(shunt_count, 1)),
+                f"Finalizing decap shunt {index + 1:,}/{shunt_count:,}",
+            )
+        checkpoint()
+        report(100, "Decap shunt stamps prepared")
         return data
 
     def _homogeneous_shared_pad_batch_data(
         self,
         frequencies: NDArray[np.float64],
         shunts: tuple[ShuntConnection, ...],
+        *,
+        progress: Callable[[int, int], None] | None = None,
+        is_cancelled: Callable[[], bool] | None = None,
     ) -> _HomogeneousSharedPadBatchData | None:
         """Return an exact batched stamp for the common shared-pad topology.
 
@@ -1036,11 +1225,19 @@ class RectangularCavitySolver:
         established dense path below.
         """
 
+        cancelled = is_cancelled or (lambda: False)
+
+        def checkpoint() -> None:
+            if cancelled():
+                raise RuntimeError("evaluation cancelled")
+
+        checkpoint()
         if not shunts:
             return None
         groups: list[tuple[CoupledShuntGroup, SharedPadClusterModel, ImpedanceModel]] = []
         via_model: ImpedanceModel | None = None
         for group in shunts:
+            checkpoint()
             if not isinstance(group, CoupledShuntGroup) or not isinstance(
                 group.network, SharedPadClusterModel
             ):
@@ -1055,6 +1252,21 @@ class RectangularCavitySolver:
             groups.append((group, group.network, candidate))
         assert via_model is not None
 
+        total_work = (
+            1
+            + len(groups)
+            + sum(len(network.capacitors) for _group, network, _candidate in groups)
+            + int(frequencies.size)
+        )
+        completed_work = 0
+
+        def completed() -> None:
+            nonlocal completed_work
+            completed_work += 1
+            if progress is not None:
+                progress(completed_work, total_work)
+
+        checkpoint()
         try:
             via_impedance = np.asarray(via_model.impedance(frequencies), dtype=np.complex128)
         except Exception:
@@ -1062,6 +1274,8 @@ class RectangularCavitySolver:
             # possible; this fast path must never make an eligible solve less
             # robust than the established representation.
             return None
+        checkpoint()
+        completed()
         if (
             via_impedance.shape != frequencies.shape
             or not np.all(np.isfinite(via_impedance))
@@ -1078,6 +1292,7 @@ class RectangularCavitySolver:
         capacitor_admittances: list[NDArray[np.complex128]] = []
         capacitor_cache: dict[int, NDArray[np.complex128]] = {}
         for group, network, _candidate in groups:
+            checkpoint()
             population = self.population_matrix(group)
             power_count = len(network.power_via_loops)
             power_population = population[:, :power_count]
@@ -1090,6 +1305,7 @@ class RectangularCavitySolver:
 
             capacitor_admittance = np.zeros(frequencies.size, dtype=np.complex128)
             for capacitor in network.capacitors:
+                checkpoint()
                 values = capacitor_cache.get(id(capacitor))
                 if values is None:
                     try:
@@ -1106,9 +1322,13 @@ class RectangularCavitySolver:
                         return None
                     values = 1.0 / impedance
                     capacitor_cache[id(capacitor)] = values
+                checkpoint()
                 capacitor_admittance += values
+                completed()
             capacitor_admittances.append(capacitor_admittance)
+            completed()
 
+        checkpoint()
         power_basis_sum = np.column_stack(power_sums)
         ground_basis_sum = np.column_stack(ground_sums)
         power_count = np.asarray(power_counts, dtype=np.float64)
@@ -1142,6 +1362,7 @@ class RectangularCavitySolver:
         # products are the same arrowhead Schur terms, evaluated with at most a
         # handful of M x G temporaries so memory is independent of F here.
         for frequency_index in range(frequencies.size):
+            checkpoint()
             weighted_power = (
                 power_basis_sum * power_weight[frequency_index][None, :]
             )
@@ -1158,6 +1379,9 @@ class RectangularCavitySolver:
             stamp[frequency_index] -= 0.25 * (
                 weighted_shared @ shared_population.T
             )
+            checkpoint()
+            completed()
+        checkpoint()
         if not np.all(np.isfinite(stamp)):
             return None
         stamp = np.asarray(stamp, dtype=np.complex128)
@@ -1168,6 +1392,180 @@ class RectangularCavitySolver:
         # and would also pin a frequency x mode x mode allocation.  _shunt_data
         # computes it once and every frequency step in the current solve reuses
         # that one object.
+        return _HomogeneousSharedPadBatchData(stamp)
+
+    def _one_component_shared_pad_data(
+        self,
+        frequencies: NDArray[np.float64],
+        group: CoupledShuntGroup,
+        *,
+        progress: Callable[[int, int], None] | None = None,
+        is_cancelled: Callable[[], bool] | None = None,
+    ) -> _HomogeneousSharedPadBatchData | None:
+        """Exact bounded-memory arrowhead stamp for heterogeneous Via paths."""
+
+        cancelled = is_cancelled or (lambda: False)
+
+        def checkpoint() -> None:
+            if cancelled():
+                raise RuntimeError("evaluation cancelled")
+
+        checkpoint()
+        network = group.network
+        if not isinstance(network, SharedPadClusterModel) or (
+            network.power_component_count != 1
+            or network.ground_component_count != 1
+        ):
+            return None
+
+        total_work = (
+            2 * len(network.power_via_loops)
+            + 2 * len(network.ground_via_loops)
+            + len(network.capacitors)
+            + int(frequencies.size)
+        )
+        completed_work = 0
+
+        def completed() -> None:
+            nonlocal completed_work
+            completed_work += 1
+            if progress is not None:
+                progress(completed_work, max(total_work, 1))
+
+        checkpoint()
+        population = self.population_matrix(group)
+        power_count = len(network.power_via_loops)
+        power_population = population[:, :power_count]
+        ground_population = population[:, power_count:]
+        if (
+            power_population.shape[1] != len(network.power_via_loops)
+            or ground_population.shape[1] != len(network.ground_via_loops)
+        ):
+            return None
+
+        impedance_cache: dict[int, NDArray[np.complex128]] = {}
+
+        def terminal_admittance(
+            models: tuple[ImpedanceModel, ...],
+        ) -> NDArray[np.complex128] | None:
+            columns: list[NDArray[np.complex128]] = []
+            for model in models:
+                checkpoint()
+                values = impedance_cache.get(id(model))
+                if values is None:
+                    try:
+                        values = np.asarray(
+                            model.impedance(frequencies), dtype=np.complex128
+                        )
+                    except Exception:
+                        return None
+                    if (
+                        values.shape != frequencies.shape
+                        or not np.all(np.isfinite(values))
+                        or np.any(np.abs(values) < np.finfo(float).tiny)
+                    ):
+                        return None
+                    impedance_cache[id(model)] = values
+                checkpoint()
+                columns.append(2.0 / values)
+                completed()
+            return np.column_stack(columns)
+
+        power_admittance = terminal_admittance(network.power_via_loops)
+        ground_admittance = terminal_admittance(network.ground_via_loops)
+        if power_admittance is None or ground_admittance is None:
+            return None
+        capacitor_admittance = np.zeros(frequencies.size, dtype=np.complex128)
+        for capacitor in network.capacitors:
+            checkpoint()
+            try:
+                impedance = np.asarray(
+                    capacitor.impedance(frequencies), dtype=np.complex128
+                )
+            except Exception:
+                return None
+            if (
+                impedance.shape != frequencies.shape
+                or not np.all(np.isfinite(impedance))
+                or np.any(np.abs(impedance) < np.finfo(float).tiny)
+            ):
+                return None
+            checkpoint()
+            capacitor_admittance += 1.0 / impedance
+            completed()
+
+        checkpoint()
+        power_sum = np.sum(power_admittance, axis=1)
+        ground_sum = np.sum(ground_admittance, axis=1)
+        power_node = power_sum + capacitor_admittance
+        power_scale = np.abs(power_sum) + np.abs(capacitor_admittance)
+        if np.any(
+            np.abs(power_node)
+            <= 64.0
+            * np.finfo(np.float64).eps
+            * np.maximum(power_scale, np.finfo(float).tiny)
+        ):
+            return None
+        transfer = capacitor_admittance / power_node
+        ground_schur_terms = capacitor_admittance * power_sum / power_node
+        ground_schur = ground_sum + ground_schur_terms
+        ground_scale = np.abs(ground_sum) + np.abs(ground_schur_terms)
+        if np.any(
+            np.abs(ground_schur)
+            <= 64.0
+            * np.finfo(np.float64).eps
+            * np.maximum(ground_scale, np.finfo(float).tiny)
+        ):
+            return None
+
+        stamp = np.zeros(
+            (frequencies.size, self.mode_count, self.mode_count),
+            dtype=np.complex128,
+        )
+        # Direct terminal diagonals.  Looping over paths keeps the largest
+        # temporary F x M x M rather than F x M x terminal.
+        for path_index in range(power_admittance.shape[1]):
+            checkpoint()
+            basis = power_population[:, path_index]
+            stamp += 0.25 * power_admittance[:, path_index, None, None] * (
+                basis[:, None] @ basis[None, :]
+            )[None, :, :]
+            checkpoint()
+            completed()
+        for path_index in range(ground_admittance.shape[1]):
+            checkpoint()
+            basis = ground_population[:, path_index]
+            stamp += 0.25 * ground_admittance[:, path_index, None, None] * (
+                basis[:, None] @ basis[None, :]
+            )[None, :, :]
+            checkpoint()
+            completed()
+
+        for frequency_index in range(frequencies.size):
+            checkpoint()
+            power_vector = (
+                power_population @ power_admittance[frequency_index]
+            )
+            ground_vector = (
+                ground_population @ ground_admittance[frequency_index]
+            )
+            stamp[frequency_index] -= 0.25 * (
+                np.outer(power_vector, power_vector)
+                / power_node[frequency_index]
+            )
+            shared_vector = (
+                transfer[frequency_index] * power_vector - ground_vector
+            )
+            stamp[frequency_index] -= 0.25 * (
+                np.outer(shared_vector, shared_vector)
+                / ground_schur[frequency_index]
+            )
+            checkpoint()
+            completed()
+        checkpoint()
+        if not np.all(np.isfinite(stamp)):
+            return None
+        stamp.setflags(write=False)
         return _HomogeneousSharedPadBatchData(stamp)
 
     def _base_matrix(
@@ -1299,6 +1697,8 @@ class RectangularCavitySolver:
         *,
         shunts: tuple[ShuntConnection, ...] = (),
         max_workers: int = 1,
+        progress: Callable[[int, int], None] | None = None,
+        is_cancelled: Callable[[], bool] | None = None,
     ) -> ModalSolveResult:
         """Solve Zii at the external Device P/G supernode.
 
@@ -1312,6 +1712,8 @@ class RectangularCavitySolver:
             prepared,
             shunts=shunts,
             max_workers=max_workers,
+            progress=progress,
+            is_cancelled=is_cancelled,
         )
 
     def prepare_device(
@@ -1341,6 +1743,51 @@ class RectangularCavitySolver:
                 modes=self.modes,
                 legacy_admittance_s=plane_admittance[:, zero_index],
             ),
+        )
+
+    def prepare_external_uniform_input(
+        self,
+        frequencies_hz: ArrayLike,
+        external_admittance_s: ArrayLike,
+    ) -> PreparedDeviceSystem:
+        """Prepare a terminal-complete input without modal/Device stamping.
+
+        The supplied one-port admittance already contains the physical Device
+        escape paths and every mounted termination.  ``solve_prepared_device``
+        consequently returns it directly and never reads rectangular plane or
+        Device branch terms.  Building those terms here would be both wasted
+        work and an avoidable failure dependency, so this API creates only the
+        compatibility-shaped immutable carrier required by the solver.
+
+        This method is deliberately separate from ``prepare_device`` and from
+        the legacy C00 replacement API.  Callers must have explicit evidence
+        that their source model is reduced at the external Device port.
+        """
+
+        frequencies = frequency_array(frequencies_hz)
+        external = np.asarray(external_admittance_s, dtype=np.complex128)
+        if external.shape != frequencies.shape or not np.all(np.isfinite(external)):
+            raise ModalSolverError(
+                "external uniform input must match the prepared frequency grid"
+            )
+        scale = max(float(np.max(np.abs(external))), 1.0e-30)
+        if float(np.min(external.real)) < -scale * 1.0e-10:
+            raise ModalSolverError(
+                "external uniform input has a non-passive real part"
+            )
+        return PreparedDeviceSystem(
+            plane=self.plane,
+            parallel_planes=self.parallel_planes,
+            modes=self.modes,
+            frequencies_hz=frequencies,
+            # These columns are compatibility shape only.  The external-input
+            # solve returns before reading them, and branch_data is empty.
+            plane_admittance=np.zeros(
+                (frequencies.size, self.mode_count), dtype=np.complex128
+            ),
+            branch_data=(),
+            legacy_uniform_c00_term=None,
+            external_uniform_admittance_s=external,
         )
 
     def replace_uniform_c00_term(
@@ -1380,17 +1827,78 @@ class RectangularCavitySolver:
         matrix[:, term.mode_index] = replacement
         return replace(prepared, plane_admittance=matrix)
 
+    def replace_uniform_c00_with_external_input(
+        self,
+        prepared: PreparedDeviceSystem,
+        replacement_admittance_s: ArrayLike,
+    ) -> PreparedDeviceSystem:
+        """Externalize an already terminal-complete uniform input network.
+
+        A layerwise global-Y model may include the physical Device escape
+        routes and return the admittance seen at the external differential
+        Device port.  Such a result is not a plane shunt and must not be fed
+        through the same Device branches again.  The supplied passive global
+        input is therefore the sole driving-point result.  Legacy higher modes
+        are not combined as a one-port difference because that difference is
+        not guaranteed to be positive real without an exact shared-boundary
+        embedding.
+        """
+
+        if (
+            prepared.plane != self.plane
+            or prepared.parallel_planes != self.parallel_planes
+            or prepared.modes != self.modes
+        ):
+            raise ModalSolverError(
+                "prepared Device system does not belong to this solver"
+            )
+        term = prepared.legacy_uniform_c00_term
+        if term is None:
+            raise ModalSolverError(
+                "prepared Device system does not expose an owned legacy uniform C00 term"
+            )
+        if prepared.external_uniform_admittance_s is not None:
+            raise ModalSolverError(
+                "prepared Device system already has an external uniform input"
+            )
+        replacement = np.asarray(
+            replacement_admittance_s, dtype=np.complex128
+        )
+        if replacement.shape != prepared.frequencies_hz.shape or not np.all(
+            np.isfinite(replacement)
+        ):
+            raise ModalSolverError(
+                "external uniform input must match the prepared frequency grid"
+            )
+        scale = max(float(np.max(np.abs(replacement))), 1.0e-30)
+        if float(np.min(replacement.real)) < -scale * 1.0e-10:
+            raise ModalSolverError(
+                "external uniform input has a non-passive real part"
+            )
+
+        return replace(
+            prepared,
+            external_uniform_admittance_s=replacement,
+        )
+
     def solve_prepared_device(
         self,
         prepared: PreparedDeviceSystem,
         *,
         shunts: tuple[ShuntConnection, ...] = (),
         max_workers: int = 1,
+        progress: Callable[[int, int], None] | None = None,
+        preparation_progress: Callable[[int, str], None] | None = None,
+        is_cancelled: Callable[[], bool] | None = None,
     ) -> ModalSolveResult:
         """Solve new shunt placements with a prepared plane/Device kernel."""
 
         if max_workers < 1:
             raise ModalSolverError("max_workers must be >= 1")
+        report = progress or (lambda _completed, _total: None)
+        cancelled = is_cancelled or (lambda: False)
+        if cancelled():
+            raise RuntimeError("evaluation cancelled")
         if (
             prepared.plane != self.plane
             or prepared.parallel_planes != self.parallel_planes
@@ -1403,7 +1911,39 @@ class RectangularCavitySolver:
         frequencies = prepared.frequencies_hz
         plane_admittance = prepared.plane_admittance
         branch_data = list(prepared.branch_data)
-        shunt_data = self._shunt_data(frequencies, shunts)
+        external_uniform = prepared.external_uniform_admittance_s
+        if external_uniform is not None:
+            if shunts:
+                raise ModalSolverError(
+                    "an external terminal-complete input already owns every mounted "
+                    "termination; local shunts would double-stamp component admittance"
+                )
+            if np.any(np.abs(external_uniform) <= np.finfo(float).tiny):
+                raise ModalSolverError(
+                    "external terminal-complete admittance is singular"
+                )
+            # Do not factor the unrelated legacy modal/Device matrix here.  It
+            # can be singular even when the independently assembled global
+            # MNA is valid, and its condition/residual would describe the
+            # wrong solve.  The layer-surface diagnostics are carried by the
+            # external assembly provenance; local diagnostics intentionally
+            # report an identity pass-through.
+            if cancelled():
+                raise RuntimeError("evaluation cancelled")
+            report(int(frequencies.size), int(frequencies.size))
+            return _result(
+                frequencies,
+                1.0 / external_uniform,
+                np.ones(frequencies.shape, dtype=np.float64),
+                np.zeros(frequencies.shape, dtype=np.float64),
+                self.mode_count,
+            )
+        shunt_data = self._shunt_data(
+            frequencies,
+            shunts,
+            progress=preparation_progress,
+            is_cancelled=cancelled,
+        )
 
         size = self.mode_count + 1
         rhs = np.zeros(size, dtype=np.complex128)
@@ -1419,34 +1959,56 @@ class RectangularCavitySolver:
                 index, plane_admittance, shunt_data, branch_data
             )
             solution = _factorized_solve(matrix, rhs, frequencies[index])
+            condition = float(np.linalg.cond(matrix))
+            residual = _relative_residual(matrix, solution, rhs)
+            impedance = complex(solution[-1])
             return (
                 index,
-                complex(solution[-1]),
-                float(np.linalg.cond(matrix)),
-                _relative_residual(matrix, solution, rhs),
+                impedance,
+                condition,
+                residual,
             )
 
         worker_count = min(max_workers, int(frequencies.size))
         if worker_count == 1:
-            results = (solve_frequency(index) for index in range(frequencies.size))
-            for solved_index, z_value, condition, residual in results:
+            for solved_index in range(frequencies.size):
+                if cancelled():
+                    raise RuntimeError("evaluation cancelled")
+                _, z_value, condition, residual = solve_frequency(solved_index)
+                if cancelled():
+                    raise RuntimeError("evaluation cancelled")
                 impedance[solved_index] = z_value
                 conditions[solved_index] = condition
                 residuals[solved_index] = residual
+                report(solved_index + 1, int(frequencies.size))
         else:
-            with ThreadPoolExecutor(
+            executor = ThreadPoolExecutor(
                 max_workers=worker_count,
                 thread_name_prefix="mlo-evaluation",
-            ) as executor:
+            )
+            futures = []
+            try:
                 futures = [
                     executor.submit(solve_frequency, index)
                     for index in range(frequencies.size)
                 ]
-                for future in as_completed(futures):
+                for completed, future in enumerate(as_completed(futures), start=1):
+                    if cancelled():
+                        raise RuntimeError("evaluation cancelled")
                     solved_index, z_value, condition, residual = future.result()
                     impedance[solved_index] = z_value
                     conditions[solved_index] = condition
                     residuals[solved_index] = residual
+                    report(completed, int(frequencies.size))
+            finally:
+                if cancelled():
+                    for future in futures:
+                        future.cancel()
+                    executor.shutdown(wait=False, cancel_futures=True)
+                else:
+                    executor.shutdown(wait=True)
+        if cancelled():
+            raise RuntimeError("evaluation cancelled")
         return _result(frequencies, impedance, conditions, residuals, self.mode_count)
 
     def solve_device_shunt_leave_one_out(
@@ -1609,7 +2171,11 @@ class RectangularCavitySolver:
         all_rhs = np.column_stack((rhs, update_vectors))
 
         plane_admittance = 1.0 / self.modal_impedance(frequencies)
-        shunt_data = self._shunt_data(frequencies, shunts)
+        shunt_data = self._shunt_data(
+            frequencies,
+            shunts,
+            is_cancelled=cancelled,
+        )
         branch_data = self._device_branch_data(frequencies, device)
         baseline_impedance = np.empty(frequencies.shape, dtype=np.complex128)
         without_impedance = np.empty(

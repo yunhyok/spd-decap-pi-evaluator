@@ -13,28 +13,664 @@ jobs:
   installer:
     runs-on: windows-latest
     timeout-minutes: 30
+    outputs:
+      source_commit: ${{ steps.release_identity.outputs.source_commit }}
+      source_tree: ${{ steps.release_identity.outputs.source_tree }}
+      source_manifest_sha256: ${{ steps.release_identity.outputs.source_manifest_sha256 }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: actions/setup-python@v5
         with:
-          python-version: "3.12"
+          python-version: "3.12.10"
           cache: pip
+      - name: Resolve release identity
+        id: release_identity
+        shell: pwsh
+        run: |
+          $version = (& python -c `
+            "import pathlib,tomllib; print(tomllib.loads(pathlib.Path('pyproject.toml').read_text(encoding='utf-8'))['project']['version'])"
+          ).Trim()
+          if ($version -notmatch '^\d+\.\d+\.\d+$') {
+            throw "Invalid application version: $version"
+          }
+          if (
+            $env:GITHUB_REF -like "refs/tags/*" -and
+            $env:GITHUB_REF_NAME -ne "v$version"
+          ) {
+            throw (
+              "Release tag $env:GITHUB_REF_NAME does not match " +
+              "application version v$version"
+            )
+          }
+          $sourceCommit = (& git rev-parse "HEAD^{commit}").Trim()
+          $sourceTree = (& git rev-parse "HEAD^{tree}").Trim()
+          $eventCommit = (& git rev-parse "$env:GITHUB_SHA^{commit}").Trim()
+          if (
+            -not $sourceCommit -or
+            -not $sourceTree -or
+            $eventCommit -ne $sourceCommit
+          ) {
+            throw "Checked-out release source does not match GITHUB_SHA"
+          }
+          if ($env:GITHUB_REF -like "refs/tags/*") {
+            $tagType = (& git cat-file -t "refs/tags/$env:GITHUB_REF_NAME").Trim()
+            $tagCommit = (& git rev-parse `
+              "refs/tags/$env:GITHUB_REF_NAME^{commit}").Trim()
+            if ($tagType -ne "tag" -or $tagCommit -ne $sourceCommit) {
+              throw "Release tag is not an annotated tag for the checked-out commit"
+            }
+            & git fetch --no-tags origin `
+              "+refs/heads/main:refs/remotes/origin/main"
+            if ($LASTEXITCODE -ne 0) {
+              throw "Unable to fetch origin/main for release ancestry verification"
+            }
+            & git merge-base --is-ancestor $sourceCommit refs/remotes/origin/main
+            if ($LASTEXITCODE -ne 0) {
+              throw "Release tag commit is not reachable from origin/main"
+            }
+          }
+          $sourceManifestSha256 = `
+            "e7512fe41612aaf8c591d4a0fc8ebd60420d52f623f396d1edf65886dbb8702e"
+          "SPD_DECAP_APP_VERSION=$version" | Out-File `
+            -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          "SPD_DECAP_SOURCE_COMMIT=$sourceCommit" | Out-File `
+            -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          "SPD_DECAP_SOURCE_TREE=$sourceTree" | Out-File `
+            -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          "SPD_DECAP_R4_MANIFEST_SHA256=$sourceManifestSha256" | Out-File `
+            -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          "source_commit=$sourceCommit" | Out-File `
+            -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
+          "source_tree=$sourceTree" | Out-File `
+            -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
+          "source_manifest_sha256=$sourceManifestSha256" | Out-File `
+            -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
+      - name: Validate tracked v5/r4 evidence
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $policy = "validation-policies/known_case_nonregression_v1.json"
+          $v5Validator = "scripts/validate_correlation_v5.py"
+          $knownCaseValidator = "scripts/validate_known_case_nonregression.py"
+          $sourceManifest = "validation-fixtures/r4-numerical-source-start-manifest.json"
+          $sourceVerifier = ".codex/capture_r4_numerical_source_manifest.py"
+          $sourceRunner = ".codex/run_release_correlations_r4.ps1"
+          $expectedSourceManifestSha256 = `
+            $env:SPD_DECAP_R4_MANIFEST_SHA256
+          $reports = [ordered]@{
+            "260729" = "validation-fixtures/known-case-nonregression-v1/260729/r4/correlation_report.json"
+            "260804" = "validation-fixtures/known-case-nonregression-v1/260804/r4/correlation_report.json"
+          }
+          $requiredTrackedPaths = @(
+            $policy
+            $v5Validator
+            $knownCaseValidator
+            $sourceManifest
+            $sourceVerifier
+            $sourceRunner
+          ) + @($reports.Values)
+          foreach ($path in $requiredTrackedPaths) {
+            if (-not (Test-Path -LiteralPath $path)) {
+              throw "Required release evidence is missing: $path"
+            }
+            & git ls-files --error-unmatch -- $path *> $null
+            if ($LASTEXITCODE -ne 0) {
+              throw "Required release evidence is not tracked: $path"
+            }
+          }
+          $sourceManifestSha256 = (
+            Get-FileHash -LiteralPath $sourceManifest -Algorithm SHA256
+          ).Hash.ToLowerInvariant()
+          if ($sourceManifestSha256 -ne $expectedSourceManifestSha256) {
+            throw "R4 numerical-source manifest identity changed"
+          }
+          & python $sourceVerifier --verify $sourceManifest
+          if ($LASTEXITCODE -ne 0) {
+            throw "R4 numerical-source byte verification failed"
+          }
+          $sourceIdentity = Get-Content -LiteralPath $sourceManifest -Raw |
+            ConvertFrom-Json
+          $currentPythonVersion = (& python -c "import platform; print(platform.python_version())").Trim()
+          if ($currentPythonVersion -ne $sourceIdentity.runtime.python_version) {
+            throw (
+              "Release Python $currentPythonVersion differs from validated " +
+              "R4 Python $($sourceIdentity.runtime.python_version)"
+            )
+          }
+          $constraintPath = Join-Path $env:RUNNER_TEMP "spd-decap-r4-runtime-constraints.txt"
+          @(
+            "numpy==$($sourceIdentity.runtime.numpy_version)"
+            "scipy==$($sourceIdentity.runtime.scipy_version)"
+          ) | Set-Content -LiteralPath $constraintPath -Encoding ascii
+          "PIP_CONSTRAINT=$constraintPath" | Out-File `
+            -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          "SPD_DECAP_R4_SOURCE_MANIFEST=$sourceManifest" | Out-File `
+            -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          "SPD_DECAP_R4_SOURCE_VERIFIER=$sourceVerifier" | Out-File `
+            -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          $sidecarDir = Join-Path $env:RUNNER_TEMP "spd-decap-release-attestations"
+          New-Item -ItemType Directory -Path $sidecarDir -ErrorAction Stop | Out-Null
+          foreach ($caseId in $reports.Keys) {
+            $report = $reports[$caseId]
+            $sidecar = Join-Path $sidecarDir "$caseId-known-case-nonregression.json"
+            & python $v5Validator $report
+            if ($LASTEXITCODE -ne 0) {
+              throw "Tracked v5 validation failed for $caseId"
+            }
+            & python $knownCaseValidator `
+              --policy $policy `
+              --report $report `
+              --sidecar $sidecar `
+              --case $caseId `
+              --baseline-root . `
+              --benchmark-root .
+            if ($LASTEXITCODE -ne 0) {
+              throw "Known-case non-regression validation failed for $caseId"
+            }
+            & python $knownCaseValidator `
+              --verify-sidecar `
+              --policy $policy `
+              --report $report `
+              --sidecar $sidecar `
+              --baseline-root . `
+              --benchmark-root .
+            if ($LASTEXITCODE -ne 0) {
+              throw "Known-case sidecar verification failed for $caseId"
+            }
+            $attestation = Get-Content -LiteralPath $sidecar -Raw | ConvertFrom-Json
+            if ($attestation.status -ne "PASS") {
+              throw "Known-case sidecar is not PASS for $caseId"
+            }
+          }
       - name: Install Inno Setup
         run: choco install innosetup --no-progress --yes
       - name: Build and test installer
         run: >-
           powershell.exe -ExecutionPolicy Bypass -NoProfile
           -File .\scripts\build_spd_decap_pi_installer.ps1
+      - name: Verify exact R4 source and build-host runtime
+        shell: pwsh
+        run: |
+          $env:PYTHONNOUSERSITE = "1"
+          & python $env:SPD_DECAP_R4_SOURCE_VERIFIER `
+            --verify $env:SPD_DECAP_R4_SOURCE_MANIFEST `
+            --verify-runtime
+          if ($LASTEXITCODE -ne 0) {
+            throw "Build-host runtime differs from validated R4 runtime"
+          }
+      - name: Verify exact installer identity
+        shell: pwsh
+        run: |
+          $installerPath = (
+            "installer-output/SPDDecapPIEvaluatorSetup-{0}.exe" -f
+            $env:SPD_DECAP_APP_VERSION
+          )
+          if (-not (Test-Path -LiteralPath $installerPath)) {
+            throw "Exact installer was not produced: $installerPath"
+          }
+          $buildManifestPath = "$installerPath.build.json"
+          if (-not (Test-Path -LiteralPath $buildManifestPath)) {
+            throw "Installer build manifest is missing: $buildManifestPath"
+          }
+          $buildManifest = Get-Content -LiteralPath $buildManifestPath -Raw |
+            ConvertFrom-Json
+          $installer = Get-Item -LiteralPath $installerPath
+          $installerSha256 = (
+            Get-FileHash -LiteralPath $installerPath -Algorithm SHA256
+          ).Hash.ToLowerInvariant()
+          if (
+            $buildManifest.schema -ne "spd-decap-installer-build-v1" -or
+            $buildManifest.source.commit -ne $env:SPD_DECAP_SOURCE_COMMIT -or
+            $buildManifest.source.tree -ne $env:SPD_DECAP_SOURCE_TREE -or
+            $buildManifest.source.worktree_clean -ne $true -or
+            $buildManifest.source.dirty_override_used -ne $false -or
+            $buildManifest.installer.size_bytes -ne $installer.Length -or
+            $buildManifest.installer.sha256 -ne $installerSha256
+          ) {
+            throw "Installer build manifest is not bound to the validated source"
+          }
+          "SPD_DECAP_INSTALLER=$installerPath" | Out-File `
+            -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          "SPD_DECAP_BUILD_MANIFEST=$buildManifestPath" | Out-File `
+            -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+      - name: Silent install and test installed application
+        shell: pwsh
+        run: |
+          $installer = Get-Item -LiteralPath $env:SPD_DECAP_INSTALLER
+          $installDir = Join-Path $env:RUNNER_TEMP "SPDDecapPIEvaluator-installed"
+          $install = Start-Process `
+            -FilePath $installer.FullName `
+            -ArgumentList @(
+              "/VERYSILENT",
+              "/SUPPRESSMSGBOXES",
+              "/NORESTART",
+              "/DIR=$installDir"
+            ) `
+            -Wait `
+            -PassThru `
+            -WindowStyle Hidden
+          if ($install.ExitCode -ne 0) {
+            throw "Silent installer failed with exit code $($install.ExitCode)"
+          }
+          $installedExe = Join-Path $installDir "SPDDecapPIEvaluator.exe"
+          if (-not (Test-Path -LiteralPath $installedExe)) {
+            throw "Installed application is missing: $installedExe"
+          }
+          $expectedVersion = [version]$env:SPD_DECAP_APP_VERSION
+          $installedVersion = (Get-Item -LiteralPath $installedExe).VersionInfo
+          $fileVersion = [version]::new(
+            $installedVersion.FileMajorPart,
+            $installedVersion.FileMinorPart,
+            $installedVersion.FileBuildPart,
+            $installedVersion.FilePrivatePart
+          )
+          $productVersion = [version]::new(
+            $installedVersion.ProductMajorPart,
+            $installedVersion.ProductMinorPart,
+            $installedVersion.ProductBuildPart,
+            $installedVersion.ProductPrivatePart
+          )
+          $expectedQuadVersion = [version]::new(
+            $expectedVersion.Major,
+            $expectedVersion.Minor,
+            $expectedVersion.Build,
+            0
+          )
+          if ($fileVersion -ne $expectedQuadVersion) {
+            throw "Installed FileVersion $fileVersion is not $expectedQuadVersion"
+          }
+          if ($productVersion -ne $expectedQuadVersion) {
+            throw "Installed ProductVersion $productVersion is not $expectedQuadVersion"
+          }
+          if ($installedVersion.FileVersion -ne $env:SPD_DECAP_APP_VERSION) {
+            throw "Installed FileVersion string is not the application version"
+          }
+          if ($installedVersion.ProductVersion -ne $env:SPD_DECAP_APP_VERSION) {
+            throw "Installed ProductVersion string is not the application version"
+          }
+          $smoke = Start-Process `
+            -FilePath $installedExe `
+            -ArgumentList "--smoke-test" `
+            -Wait `
+            -PassThru `
+            -WindowStyle Hidden
+          if ($smoke.ExitCode -ne 0) {
+            throw "Installed application smoke test failed with exit code $($smoke.ExitCode)"
+          }
       - name: Write SHA-256 checksum
         run: |
-          $installer = Get-ChildItem installer-output\SPDDecapPIEvaluatorSetup-*.exe | Select-Object -First 1
+          $installer = Get-Item -LiteralPath $env:SPD_DECAP_INSTALLER
           $hash = (Get-FileHash $installer.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
           "$hash *$($installer.Name)" | Set-Content "$($installer.FullName).sha256" -Encoding ascii
+      - name: Stage exact release assets
+        shell: pwsh
+        run: |
+          $releaseDir = Join-Path $PWD "release-artifacts"
+          if (Test-Path -LiteralPath $releaseDir) {
+            throw "Release staging directory already exists: $releaseDir"
+          }
+          New-Item -ItemType Directory -Path $releaseDir -ErrorAction Stop | Out-Null
+          $installer = Get-Item -LiteralPath $env:SPD_DECAP_INSTALLER
+          $checksum = Get-Item -LiteralPath "$($installer.FullName).sha256"
+          Copy-Item -LiteralPath $installer.FullName -Destination $releaseDir
+          Copy-Item -LiteralPath $checksum.FullName -Destination $releaseDir
+          $sidecarDir = Join-Path $env:RUNNER_TEMP "spd-decap-release-attestations"
+          $sidecars = @(Get-ChildItem -LiteralPath $sidecarDir -Filter "*.json")
+          if ($sidecars.Count -ne 2) {
+            throw "Expected exactly two known-case sidecars before staging"
+          }
+          foreach ($sidecar in $sidecars) {
+            Copy-Item -LiteralPath $sidecar.FullName -Destination $releaseDir
+          }
+          $reports = [ordered]@{
+            "260729" = "validation-fixtures/known-case-nonregression-v1/260729/r4/correlation_report.json"
+            "260804" = "validation-fixtures/known-case-nonregression-v1/260804/r4/correlation_report.json"
+          }
+          foreach ($caseId in $reports.Keys) {
+            $destination = Join-Path $releaseDir "$caseId-r4-correlation_report.json"
+            Copy-Item -LiteralPath $reports[$caseId] -Destination $destination
+          }
+          $payloads = @(Get-ChildItem -LiteralPath $releaseDir -File | Sort-Object Name)
+          if ($payloads.Count -ne 6) {
+            throw "Expected exactly six release payloads before provenance"
+          }
+          $buildManifest = Get-Content -LiteralPath $env:SPD_DECAP_BUILD_MANIFEST -Raw |
+            ConvertFrom-Json
+          $sourceManifest = Get-Content `
+            -LiteralPath $env:SPD_DECAP_R4_SOURCE_MANIFEST `
+            -Raw | ConvertFrom-Json
+          $payloadRecords = @(
+            foreach ($payload in $payloads) {
+              [ordered]@{
+                name = $payload.Name
+                size_bytes = $payload.Length
+                sha256 = (
+                  Get-FileHash -LiteralPath $payload.FullName -Algorithm SHA256
+                ).Hash.ToLowerInvariant()
+              }
+            }
+          )
+          $provenance = [ordered]@{
+            schema = "spd-decap-release-provenance-v1"
+            app_version = $env:SPD_DECAP_APP_VERSION
+            source = [ordered]@{
+              commit = $env:SPD_DECAP_SOURCE_COMMIT
+              tree = $env:SPD_DECAP_SOURCE_TREE
+              tag = $env:GITHUB_REF_NAME
+              r4_manifest_sha256 = $env:SPD_DECAP_R4_MANIFEST_SHA256
+            }
+            build_host_runtime = [ordered]@{
+              implementation = $sourceManifest.runtime.implementation
+              python_version = $sourceManifest.runtime.python_version
+              numpy_version = $sourceManifest.runtime.numpy_version
+              scipy_version = $sourceManifest.runtime.scipy_version
+            }
+            executable = [ordered]@{
+              name = "SPDDecapPIEvaluator.exe"
+              size_bytes = $buildManifest.executable.size_bytes
+              sha256 = $buildManifest.executable.sha256
+            }
+            release_payloads = $payloadRecords
+          }
+          $provenancePath = Join-Path `
+            $releaseDir `
+            "SPDDecapPIEvaluator-$($env:SPD_DECAP_APP_VERSION)-release-provenance.json"
+          $provenanceJson = $provenance | ConvertTo-Json -Depth 8
+          $utf8NoBom = [Text.UTF8Encoding]::new($false)
+          [IO.File]::WriteAllText(
+            $provenancePath,
+            "$provenanceJson`n",
+            $utf8NoBom
+          )
+          $staged = @(Get-ChildItem -LiteralPath $releaseDir -File)
+          if ($staged.Count -ne 7) {
+            throw "Expected exactly seven staged release assets; found $($staged.Count)"
+          }
       - name: Upload installer
         uses: actions/upload-artifact@v4
         with:
-          name: SPDDecapPIEvaluator-${{ github.ref_name }}
-          path: |
-            installer-output/SPDDecapPIEvaluatorSetup-*.exe
-            installer-output/SPDDecapPIEvaluatorSetup-*.exe.sha256
+          name: SPDDecapPIEvaluator-${{ github.run_id }}
+          path: release-artifacts/*
           if-no-files-found: error
+          overwrite: true
+
+  publish:
+    if: startsWith(github.ref, 'refs/tags/')
+    needs: installer
+    runs-on: windows-latest
+    permissions:
+      contents: write
+    env:
+      SPD_DECAP_SOURCE_COMMIT: ${{ needs.installer.outputs.source_commit }}
+      SPD_DECAP_SOURCE_TREE: ${{ needs.installer.outputs.source_tree }}
+      SPD_DECAP_R4_MANIFEST_SHA256: ${{ needs.installer.outputs.source_manifest_sha256 }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ needs.installer.outputs.source_commit }}
+      - name: Verify release tag and validated source commit
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $headCommit = (& git rev-parse "HEAD^{commit}").Trim()
+          $headTree = (& git rev-parse "HEAD^{tree}").Trim()
+          $eventCommit = (& git rev-parse "$env:GITHUB_SHA^{commit}").Trim()
+          $tagType = (& git cat-file -t "refs/tags/$env:GITHUB_REF_NAME").Trim()
+          $tagCommit = (& git rev-parse `
+            "refs/tags/$env:GITHUB_REF_NAME^{commit}").Trim()
+          if (
+            $headCommit -ne $env:SPD_DECAP_SOURCE_COMMIT -or
+            $eventCommit -ne $env:SPD_DECAP_SOURCE_COMMIT -or
+            $tagCommit -ne $env:SPD_DECAP_SOURCE_COMMIT -or
+            $headTree -ne $env:SPD_DECAP_SOURCE_TREE -or
+            $tagType -ne "tag"
+          ) {
+            throw "Publish job source/tag identity differs from the installer job"
+          }
+          & git fetch --no-tags origin `
+            "+refs/heads/main:refs/remotes/origin/main"
+          if ($LASTEXITCODE -ne 0) {
+            throw "Unable to fetch origin/main before publication"
+          }
+          & git merge-base --is-ancestor `
+            $env:SPD_DECAP_SOURCE_COMMIT `
+            refs/remotes/origin/main
+          if ($LASTEXITCODE -ne 0) {
+            throw "Validated release commit is not reachable from origin/main"
+          }
+      - name: Download exact release assets
+        uses: actions/download-artifact@v4
+        with:
+          name: SPDDecapPIEvaluator-${{ github.run_id }}
+          path: release-artifacts
+      - name: Publish GitHub Release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $ErrorActionPreference = "Stop"
+          $assets = @(Get-ChildItem -LiteralPath release-artifacts -File)
+          if ($assets.Count -ne 7) {
+            throw "Expected exactly seven downloaded release assets"
+          }
+          $installers = @($assets | Where-Object Name -Like "*.exe")
+          $checksums = @($assets | Where-Object Name -Like "*.exe.sha256")
+          $sidecars = @($assets | Where-Object Name -Like "*-known-case-nonregression.json")
+          $reports = @($assets | Where-Object Name -Like "*-r4-correlation_report.json")
+          $provenanceFiles = @($assets | Where-Object Name -Like "*-release-provenance.json")
+          if (
+            $installers.Count -ne 1 -or
+            $checksums.Count -ne 1 -or
+            $sidecars.Count -ne 2 -or
+            $reports.Count -ne 2 -or
+            $provenanceFiles.Count -ne 1
+          ) {
+            throw "Downloaded release asset inventory is invalid"
+          }
+          $provenanceFile = $provenanceFiles[0]
+          $provenance = Get-Content -LiteralPath $provenanceFile.FullName -Raw |
+            ConvertFrom-Json
+          if (
+            $provenance.schema -ne "spd-decap-release-provenance-v1" -or
+            $provenance.source.commit -ne $env:SPD_DECAP_SOURCE_COMMIT -or
+            $provenance.source.tree -ne $env:SPD_DECAP_SOURCE_TREE -or
+            $provenance.source.tag -ne $env:GITHUB_REF_NAME -or
+            $provenance.source.r4_manifest_sha256 -ne `
+              $env:SPD_DECAP_R4_MANIFEST_SHA256
+          ) {
+            throw "Release provenance is not bound to the validated source/tag"
+          }
+          $payloads = @($assets | Where-Object FullName -ne $provenanceFile.FullName)
+          $recordNames = @($provenance.release_payloads.name | Sort-Object)
+          $payloadNames = @($payloads.Name | Sort-Object)
+          if (
+            @($provenance.release_payloads).Count -ne 6 -or
+            (Compare-Object $recordNames $payloadNames)
+          ) {
+            throw "Release provenance payload inventory is not exact"
+          }
+          foreach ($record in $provenance.release_payloads) {
+            $payload = Get-Item -LiteralPath `
+              (Join-Path $provenanceFile.DirectoryName $record.name)
+            $payloadHash = (
+              Get-FileHash -LiteralPath $payload.FullName -Algorithm SHA256
+            ).Hash.ToLowerInvariant()
+            if (
+              $payload.Length -ne $record.size_bytes -or
+              $payloadHash -ne $record.sha256
+            ) {
+              throw "Release provenance payload identity mismatch: $($record.name)"
+            }
+          }
+          $labeledAssets = @(
+            "$($installers[0].FullName)#Windows installer"
+            "$($checksums[0].FullName)#SHA-256 checksum"
+          )
+          foreach ($sidecar in ($sidecars | Sort-Object Name)) {
+            $labeledAssets += `
+              "$($sidecar.FullName)#Known-case non-regression attestation"
+          }
+          foreach ($report in ($reports | Sort-Object Name)) {
+            $caseId = $report.Name.Split('-')[0]
+            $labeledAssets += "$($report.FullName)#PowerSI correlation report $caseId"
+          }
+          $provenanceAsset = `
+            "$($provenanceFile.FullName)#Release provenance"
+          function Get-RemoteTagCommit {
+            $tag = $env:GITHUB_REF_NAME
+            $remoteRefs = @(& git ls-remote `
+              origin `
+              "refs/tags/$tag" `
+              "refs/tags/$tag^{}")
+            if ($LASTEXITCODE -ne 0) {
+              throw "Unable to read the remote release tag"
+            }
+            $peeled = @($remoteRefs | Where-Object { $_ -like "*refs/tags/$tag^{}" })
+            if ($peeled.Count -ne 1) {
+              throw "Remote release tag is not exactly one annotated tag"
+            }
+            return ($peeled[0] -split "`t")[0].ToLowerInvariant()
+          }
+          $remoteTagBefore = Get-RemoteTagCommit
+          if ($remoteTagBefore -ne $env:SPD_DECAP_SOURCE_COMMIT) {
+            throw "Remote release tag moved before publication"
+          }
+          $title = "SPD Decap PI Evaluator $env:GITHUB_REF_NAME"
+          $releaseJson = & gh release view `
+            $env:GITHUB_REF_NAME `
+            --json tagName,isDraft,isPrerelease,isImmutable,assets,url `
+            2>$null
+          $releaseExists = $LASTEXITCODE -eq 0
+          if (-not $releaseExists) {
+            & gh release create `
+              $env:GITHUB_REF_NAME `
+              --verify-tag `
+              --title $title `
+              --generate-notes
+            if ($LASTEXITCODE -ne 0) {
+              throw "GitHub Release creation failed"
+            }
+          }
+          $release = (& gh release view `
+            $env:GITHUB_REF_NAME `
+            --json tagName,isDraft,isPrerelease,isImmutable,url) |
+            ConvertFrom-Json
+          if ($LASTEXITCODE -ne 0) {
+            throw "Published GitHub Release could not be read back"
+          }
+          if (
+            $release.tagName -ne $env:GITHUB_REF_NAME -or
+            $release.isDraft -or
+            $release.isPrerelease -or
+            $release.isImmutable
+          ) {
+            throw "Existing GitHub Release state is incompatible with publication"
+          }
+          if ($releaseExists) {
+            $existingRelease = $releaseJson | ConvertFrom-Json
+            $existingNames = @($existingRelease.assets.name | Sort-Object)
+            $unexpectedNames = @(
+              Compare-Object `
+                $existingNames `
+                @($assets.Name | Sort-Object) |
+                Where-Object SideIndicator -eq "<="
+            )
+            if ($unexpectedNames.Count -ne 0) {
+              throw "Existing GitHub Release contains unexpected assets"
+            }
+            if ($existingNames.Count -gt 0) {
+              if ($provenanceFile.Name -notin $existingNames) {
+                throw "Existing GitHub Release has assets without provenance"
+              }
+              $existingDir = Join-Path `
+                $env:RUNNER_TEMP `
+                "spd-decap-existing-release-provenance"
+              & gh release download `
+                $env:GITHUB_REF_NAME `
+                --dir $existingDir `
+                --pattern $provenanceFile.Name
+              if ($LASTEXITCODE -ne 0) {
+                throw "Existing release provenance could not be downloaded"
+              }
+              $existingProvenance = Get-Content `
+                -LiteralPath (Join-Path $existingDir $provenanceFile.Name) `
+                -Raw | ConvertFrom-Json
+              if (
+                $existingProvenance.source.commit -ne `
+                  $env:SPD_DECAP_SOURCE_COMMIT -or
+                $existingProvenance.source.r4_manifest_sha256 -ne `
+                  $env:SPD_DECAP_R4_MANIFEST_SHA256
+              ) {
+                throw "Existing GitHub Release provenance differs from this build"
+              }
+            }
+            & gh release edit `
+              $env:GITHUB_REF_NAME `
+              --verify-tag `
+              --title $title `
+              --latest
+            if ($LASTEXITCODE -ne 0) {
+              throw "Existing GitHub Release refresh failed"
+            }
+          }
+          & gh release upload `
+            $env:GITHUB_REF_NAME `
+            $provenanceAsset `
+            --clobber
+          if ($LASTEXITCODE -ne 0) {
+            throw "GitHub Release provenance upload failed"
+          }
+          foreach ($asset in $labeledAssets) {
+            & gh release upload $env:GITHUB_REF_NAME $asset --clobber
+            if ($LASTEXITCODE -ne 0) {
+              throw "GitHub Release asset upload failed: $asset"
+            }
+          }
+          $remoteRelease = (& gh release view `
+            $env:GITHUB_REF_NAME `
+            --json assets,url) | ConvertFrom-Json
+          if ($LASTEXITCODE -ne 0) {
+            throw "GitHub Release asset inventory could not be read back"
+          }
+          $expectedNames = @($assets.Name | Sort-Object)
+          $remoteNames = @($remoteRelease.assets.name | Sort-Object)
+          if (
+            $remoteNames.Count -ne $expectedNames.Count -or
+            (Compare-Object $expectedNames $remoteNames)
+          ) {
+            throw "GitHub Release remote asset inventory is not exact"
+          }
+          $downloadDir = Join-Path $env:RUNNER_TEMP "spd-decap-remote-release-assets"
+          if (Test-Path -LiteralPath $downloadDir) {
+            throw "Remote release verification directory already exists"
+          }
+          & gh release download `
+            $env:GITHUB_REF_NAME `
+            --dir $downloadDir `
+            --pattern "*"
+          if ($LASTEXITCODE -ne 0) {
+            throw "GitHub Release remote asset download failed"
+          }
+          foreach ($local in $assets) {
+            $remotePath = Join-Path $downloadDir $local.Name
+            if (-not (Test-Path -LiteralPath $remotePath)) {
+              throw "Downloaded release asset is missing: $($local.Name)"
+            }
+            $remote = Get-Item -LiteralPath $remotePath
+            $localHash = (Get-FileHash $local.FullName -Algorithm SHA256).Hash
+            $remoteHash = (Get-FileHash $remote.FullName -Algorithm SHA256).Hash
+            if ($remote.Length -ne $local.Length -or $remoteHash -ne $localHash) {
+              throw "Downloaded release asset identity mismatch: $($local.Name)"
+            }
+          }
+          $remoteTagAfter = Get-RemoteTagCommit
+          if (
+            $remoteTagAfter -ne $env:SPD_DECAP_SOURCE_COMMIT -or
+            $remoteTagAfter -ne $remoteTagBefore
+          ) {
+            throw "Remote release tag moved during publication"
+          }
+          "Published and byte-verified $($remoteRelease.url)"

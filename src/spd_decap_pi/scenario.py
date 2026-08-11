@@ -88,12 +88,33 @@ def _connection_analysis_fingerprint_payload(
                 if (key != "padstack_material" or item is not None)
                 and (key != "trace_hops" or item != 0)
                 and (key != "trace_alternate_exit" or item is not False)
+                and (key != "destination_pwr_layer" or item is not None)
             }
         if isinstance(value, list):
             return [without_unknown_material(item) for item in value]
         return value
 
     return without_unknown_material(analysis.model_dump(mode="json"))
+
+
+def _without_absent_destination_pwr_layer(value: Any) -> Any:
+    """Keep pre-destination-certificate scenario fingerprints readable.
+
+    ``model_dump`` materializes optional defaults on every archive save.  The
+    only round-trip-stable compatibility rule is therefore to omit a null
+    destination field universally; an actual destination layer remains part
+    of every electrical identity.
+    """
+
+    if isinstance(value, dict):
+        return {
+            key: _without_absent_destination_pwr_layer(item)
+            for key, item in value.items()
+            if key != "destination_pwr_layer" or item is not None
+        }
+    if isinstance(value, list):
+        return [_without_absent_destination_pwr_layer(item) for item in value]
+    return value
 
 
 def _normalized_project_fingerprint_payload(value: Any) -> Any:
@@ -146,6 +167,59 @@ def _preserve_legacy_stackup_row_shape(
             and serialized_row.get("dielectric_properties") == []
         ):
             serialized_row.pop("dielectric_properties", None)
+
+
+def _preserve_legacy_pin_row_shape(
+    serialized_project: dict[str, Any], source_project: Mapping[str, object]
+) -> None:
+    """Keep pre-terminal-provenance PinRecord rows byte-shape compatible.
+
+    Scenario schema 0.1 predates the optional raw-SPD source attachment fields
+    on :class:`PinRecord`.  Runtime validation must still materialize their
+    ``None`` defaults, but doing so must not alter a legacy bundle's persisted
+    electrical fingerprint.  Match rows by the already-unique ``refdes:pin``
+    identity and remove only defaults whose keys were absent from the source
+    JSON; an explicitly persisted ``null`` remains part of the new row shape.
+    """
+
+    source_rows = source_project.get("pins")
+    serialized_rows = serialized_project.get("pins")
+    if not isinstance(source_rows, list) or not isinstance(serialized_rows, list):
+        return
+    if len(source_rows) != len(serialized_rows):
+        return
+    if not all(isinstance(row, Mapping) for row in source_rows) or not all(
+        isinstance(row, dict) for row in serialized_rows
+    ):
+        return
+
+    def identity(row: Mapping[str, object]) -> tuple[str, str] | None:
+        refdes = row.get("refdes")
+        pin = row.get("pin")
+        if not isinstance(refdes, str) or not isinstance(pin, str):
+            return None
+        return refdes.casefold(), pin.casefold()
+
+    source_by_identity: dict[tuple[str, str], Mapping[str, object]] = {}
+    for row in source_rows:
+        key = identity(row)
+        if key is None or key in source_by_identity:
+            return
+        source_by_identity[key] = row
+    serialized_by_identity: dict[tuple[str, str], dict[str, Any]] = {}
+    for row in serialized_rows:
+        key = identity(row)
+        if key is None or key in serialized_by_identity:
+            return
+        serialized_by_identity[key] = row
+    if set(source_by_identity) != set(serialized_by_identity):
+        return
+
+    for key, source_row in source_by_identity.items():
+        serialized_row = serialized_by_identity[key]
+        for field in ("source_node_id", "source_layer", "source_padstack"):
+            if field not in source_row and serialized_row.get(field) is None:
+                serialized_row.pop(field, None)
 
 
 def _validate_sha256(value: str, *, label: str = "SHA-256") -> str:
@@ -251,14 +325,31 @@ class RailEligibility(ScenarioModel):
     net: str = Field(min_length=1)
     pwr_layer: str = Field(min_length=1)
     gnd_layer: str = Field(min_length=1)
+    destination_pwr_layer: str | None = Field(default=None, min_length=1)
     via_template_id: str | None = None
     allowed: bool
     reason: str | None = None
+
+    @field_validator(
+        "pwr_layer", "gnd_layer", "destination_pwr_layer", mode="before"
+    )
+    @classmethod
+    def canonical_layer_name(cls, value: object) -> object:
+        if isinstance(value, str):
+            return value.strip()
+        return value
 
     @model_validator(mode="after")
     def actionable_reason(self) -> "RailEligibility":
         if not self.allowed and not self.reason:
             raise ValueError("ineligible rails require a reason")
+        if (
+            self.destination_pwr_layer is not None
+            and self.destination_pwr_layer.casefold() == self.pwr_layer.casefold()
+        ):
+            # A same-layer certificate uses the rail's canonical spelling.
+            # A genuinely different Distribution target must remain distinct.
+            self.destination_pwr_layer = self.pwr_layer
         return self
 
 
@@ -1620,6 +1711,7 @@ class _ScenarioValidationMemo:
     cap_model_payload_by_key: dict[str, dict[str, Any]] | None = None
     sorted_decaps: tuple[ScenarioDecap, ...] | None = None
     baseline_project_payload: dict[str, Any] | None = None
+    baseline_project_sha256_by_model_keys: dict[tuple[str, ...], str] | None = None
 
     def reset(self, project: ProjectSpec) -> None:
         """Discard derived values and retain only the newly validated project."""
@@ -1635,6 +1727,7 @@ class _ScenarioValidationMemo:
         self.cap_model_payload_by_key = None
         self.sorted_decaps = None
         self.baseline_project_payload = None
+        self.baseline_project_sha256_by_model_keys = None
 
     def bind(self, owner: Any, project: ProjectSpec) -> None:
         """Bind all derived values to one exact ScenarioSpec object identity."""
@@ -1708,6 +1801,7 @@ class ScenarioSpec(ScenarioModel):
         # that does carry a table remains part of the electrical fingerprint.
         if legacy_project is not None:
             _preserve_legacy_stackup_row_shape(payload, legacy_project)
+            _preserve_legacy_pin_row_shape(payload, legacy_project)
         return payload
 
     @field_validator("net_colors")
@@ -2226,9 +2320,14 @@ class ScenarioSpec(ScenarioModel):
         if len(capture_keys) != len(set(capture_keys)):
             raise ValueError("baseline capture rail keys must be unique")
         expected_capture_refdes_by_rail: dict[str, set[str]] = {}
+        full_source_capture_refdes_by_rail: dict[str, set[str]] = {}
         if self.baseline_captures:
             for decap in self.decaps:
                 decap_key = decap.refdes.casefold()
+                if decap.source_mounted:
+                    full_source_capture_refdes_by_rail.setdefault(
+                        decap.source_rail_id.casefold(), set()
+                    ).add(decap_key)
                 if decap.source_mounted and decap_key in connected_refdes:
                     expected_capture_refdes_by_rail.setdefault(
                         decap.source_rail_id.casefold(), set()
@@ -2252,11 +2351,17 @@ class ScenarioSpec(ScenarioModel):
             if capture.source_state_sha256 != source_state_fingerprint:
                 raise ValueError("baseline capture physical source state has changed")
             expected = expected_capture_refdes_by_rail.get(rail_key, set())
+            full_source_expected = full_source_capture_refdes_by_rail.get(
+                rail_key, set()
+            )
             actual = {item.refdes.casefold() for item in capture.model_bindings}
-            if actual != expected:
+            if frozenset(actual) not in {
+                frozenset(expected),
+                frozenset(full_source_expected),
+            }:
                 raise ValueError(
                     f"baseline capture for {capture.rail_id!r} must bind every "
-                    "originally mounted decap on that rail"
+                    "legacy-connected or every source-mounted decap on that rail"
                 )
             if any(item.refdes.casefold() not in decap_by_key for item in capture.model_bindings):
                 raise ValueError("baseline capture contains an unknown REFDES")
@@ -2271,17 +2376,28 @@ class ScenarioSpec(ScenarioModel):
                         f"baseline binding for {binding.refdes!r} must use its "
                         "SPD source model"
                     )
-            if (
-                capture.evaluation_input_sha256
-                != self._baseline_evaluation_input_fingerprint(
+            optimized_fingerprint = self._baseline_evaluation_input_fingerprint(
+                capture.rail_id,
+                capture.model_bindings,
+                memo=memo,
+            )
+            if capture.evaluation_input_sha256 != optimized_fingerprint:
+                # Pre-v0.22 captures embedded the complete selected ProjectSpec
+                # in the outer hash.  New board-wide layerwise capture uses a
+                # cached project digest so 92 rails do not repeatedly serialize
+                # the same retained artwork metadata.  Accept the old exact
+                # identity as a read-compatibility fallback, but only pay that
+                # large hash cost when the optimized identity did not match.
+                legacy_fingerprint = self._baseline_evaluation_input_fingerprint(
                     capture.rail_id,
                     capture.model_bindings,
                     memo=memo,
+                    legacy_payload=True,
                 )
-            ):
-                raise ValueError(
-                    f"baseline solver inputs for {capture.rail_id!r} have changed"
-                )
+                if capture.evaluation_input_sha256 != legacy_fingerprint:
+                    raise ValueError(
+                        f"baseline solver inputs for {capture.rail_id!r} have changed"
+                    )
 
         capture_by_rail = {
             capture.rail_id.casefold(): capture
@@ -2392,7 +2508,7 @@ class ScenarioSpec(ScenarioModel):
             if name.casefold() not in cached_attachment_keys
         }
         decaps = [
-            item.model_dump(mode="json")
+            _without_absent_destination_pwr_layer(item.model_dump(mode="json"))
             for item in self._sorted_decaps_for_validation(memo)
         ]
         payload = {
@@ -2459,7 +2575,9 @@ class ScenarioSpec(ScenarioModel):
                     "source_model_id": item.source_model_id,
                     "source_mounted": item.source_mounted,
                     "eligibility": {
-                        key: value.model_dump(mode="json")
+                        key: _without_absent_destination_pwr_layer(
+                            value.model_dump(mode="json")
+                        )
                         for key, value in sorted(
                             item.eligibility.items(), key=lambda pair: pair[0].casefold()
                         )
@@ -2494,7 +2612,10 @@ class ScenarioSpec(ScenarioModel):
         """
 
         return self._baseline_evaluation_input_fingerprint(
-            rail_id, model_bindings, memo=None
+            rail_id,
+            model_bindings,
+            memo=None,
+            legacy_payload=True,
         )
 
     def _baseline_evaluation_input_fingerprint(
@@ -2504,6 +2625,7 @@ class ScenarioSpec(ScenarioModel):
         | tuple[BaselineModelBinding, ...],
         *,
         memo: _ScenarioValidationMemo | None,
+        legacy_payload: bool = False,
     ) -> str:
         memo = self._owned_validation_memo(memo)
         project = (
@@ -2562,6 +2684,9 @@ class ScenarioSpec(ScenarioModel):
             _preserve_legacy_stackup_row_shape(
                 baseline_project, self.normalized_project
             )
+            _preserve_legacy_pin_row_shape(
+                baseline_project, self.normalized_project
+            )
             if (
                 "shared_pad_clusters" not in self.normalized_project
                 and not baseline_project.get("shared_pad_clusters")
@@ -2580,14 +2705,50 @@ class ScenarioSpec(ScenarioModel):
             }
             if memo is not None:
                 memo.cap_model_payload_by_key = model_payloads
-        selected_project = {
-            **baseline_project,
-            "cap_models": [model_payloads[key] for key in sorted(binding_models)],
-        }
+        model_keys = tuple(sorted(binding_models))
+        if legacy_payload:
+            return _hash_payload(
+                {
+                    "rail_id": rail.rail_id,
+                    "project": {
+                        **baseline_project,
+                        "cap_models": [
+                            model_payloads[key] for key in model_keys
+                        ],
+                    },
+                    "source_state_sha256": self._source_state_fingerprint(memo),
+                    "model_bindings": [
+                        item.model_dump(mode="json")
+                        for item in sorted(
+                            model_bindings,
+                            key=lambda entry: entry.refdes.casefold(),
+                        )
+                    ],
+                }
+            )
+        selected_project_sha256: str | None = None
+        if memo is not None:
+            if memo.baseline_project_sha256_by_model_keys is None:
+                memo.baseline_project_sha256_by_model_keys = {}
+            selected_project_sha256 = (
+                memo.baseline_project_sha256_by_model_keys.get(model_keys)
+            )
+        if selected_project_sha256 is None:
+            selected_project_sha256 = _hash_payload(
+                {
+                    **baseline_project,
+                    "cap_models": [model_payloads[key] for key in model_keys],
+                }
+            )
+            if memo is not None:
+                assert memo.baseline_project_sha256_by_model_keys is not None
+                memo.baseline_project_sha256_by_model_keys[model_keys] = (
+                    selected_project_sha256
+                )
         return _hash_payload(
             {
                 "rail_id": rail.rail_id,
-                "project": selected_project,
+                "project_sha256": selected_project_sha256,
                 "source_state_sha256": self._source_state_fingerprint(memo),
                 "model_bindings": [
                     item.model_dump(mode="json")
@@ -2596,16 +2757,28 @@ class ScenarioSpec(ScenarioModel):
             }
         )
 
-    def with_baseline_captures(self, rail_ids: list[str] | tuple[str, ...]) -> "ScenarioSpec":
+    def with_baseline_captures(
+        self,
+        rail_ids: list[str] | tuple[str, ...],
+        *,
+        include_all_source_mounted: bool = False,
+    ) -> "ScenarioSpec":
         """Return a copy with missing per-rail original model maps frozen.
 
         Callers must explicitly inform the user when current model assignments
         are used because the SPD did not provide ``source_model_id``.
         """
 
+        project = self.base_project
+        memo = _ScenarioValidationMemo()
+        memo.bind(self, project)
         rail_by_key = {
-            item.rail_id.casefold(): item.rail_id for item in self.base_project.rails
+            item.rail_id.casefold(): item.rail_id for item in project.rails
         }
+        memo.rail_by_key = {
+            item.rail_id.casefold(): item for item in project.rails
+        }
+        source_state_sha256 = self._source_state_fingerprint(memo)
         connected_keys = {
             item.casefold() for item in self.electrically_connected_refdes
         }
@@ -2616,7 +2789,38 @@ class ScenarioSpec(ScenarioModel):
                 rail_id = rail_by_key[rail_key]
             except KeyError as exc:
                 raise ValueError(f"unknown baseline rail {raw_rail_id!r}") from exc
-            if any(key.casefold() == rail_key for key in captures):
+            existing = next(
+                (
+                    item
+                    for key, item in captures.items()
+                    if key.casefold() == rail_key
+                ),
+                None,
+            )
+            if existing is not None:
+                if include_all_source_mounted:
+                    bound = {
+                        item.refdes.casefold() for item in existing.model_bindings
+                    }
+                    missing_fallback = [
+                        decap.refdes
+                        for decap in self.decaps
+                        if decap.source_mounted
+                        and decap.source_rail_id.casefold() == rail_key
+                        and decap.refdes.casefold() not in bound
+                        and decap.source_model_id is None
+                    ]
+                    if missing_fallback:
+                        preview = ", ".join(
+                            sorted(missing_fallback, key=str.casefold)[:12]
+                        )
+                        suffix = "..." if len(missing_fallback) > 12 else ""
+                        raise ValueError(
+                            f"{rail_id}: existing legacy baseline capture cannot "
+                            f"freeze {len(missing_fallback):,} additional "
+                            "layerwise other-rail load model(s); create a new "
+                            f"scenario from the verified SPD ({preview}{suffix})"
+                        )
                 continue
             bindings: list[BaselineModelBinding] = []
             missing: list[str] = []
@@ -2624,7 +2828,10 @@ class ScenarioSpec(ScenarioModel):
                 if (
                     not decap.source_mounted
                     or decap.source_rail_id.casefold() != rail_key
-                    or decap.refdes.casefold() not in connected_keys
+                    or (
+                        not include_all_source_mounted
+                        and decap.refdes.casefold() not in connected_keys
+                    )
                 ):
                     continue
                 model_id = decap.source_model_id or decap.model_id
@@ -2644,15 +2851,23 @@ class ScenarioSpec(ScenarioModel):
             captures[rail_id] = BaselineCapture(
                 rail_id=rail_id,
                 source_sha256=self.source.sha256,
-                source_state_sha256=self.source_state_fingerprint,
-                evaluation_input_sha256=self.baseline_evaluation_input_fingerprint(
-                    rail_id, bindings
+                source_state_sha256=source_state_sha256,
+                evaluation_input_sha256=self._baseline_evaluation_input_fingerprint(
+                    rail_id,
+                    bindings,
+                    memo=memo,
                 ),
                 model_bindings=tuple(bindings),
             )
-        return ScenarioSpec.model_validate(
-            {**self.model_dump(mode="python"), "baseline_captures": captures}
-        )
+        # Every new capture above was constructed through its validated model
+        # type and checked against this exact scenario's rails, decaps and model
+        # library.  Re-validating the otherwise unchanged 10k+ decap Scenario
+        # here repeats the complete source/certificate audit and made a 92-rail
+        # capture spend about a minute after all capture work was already done.
+        # Keep the operation atomic by publishing only this new mapping after
+        # the loop succeeds; untrusted archive input still takes the full
+        # ScenarioSpec.model_validate path in scenario_io.
+        return self.model_copy(update={"baseline_captures": captures})
 
     def original_configuration(self, rail_id: str) -> "ScenarioSpec":
         """Return the immutable original physical state for one captured rail."""
@@ -2672,15 +2887,12 @@ class ScenarioSpec(ScenarioModel):
         }
         original_decaps: list[ScenarioDecap] = []
         capture_rail_key = capture.rail_id.casefold()
-        connected_keys = {
-            item.casefold() for item in self.electrically_connected_refdes
-        }
         for decap in self.decaps:
             model_id = decap.source_model_id
             if (
                 decap.source_mounted
                 and decap.source_rail_id.casefold() == capture_rail_key
-                and decap.refdes.casefold() in connected_keys
+                and decap.refdes.casefold() in models
             ):
                 model_id = models[decap.refdes.casefold()]
             original_decaps.append(

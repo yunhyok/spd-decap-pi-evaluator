@@ -5,6 +5,8 @@ param(
 $ErrorActionPreference = "Stop"
 $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
 $pythonExe = (Get-Command python).Source
+$expectedPackageRoot = (Join-Path $repoRoot "src\spd_decap_pi")
+$previousPythonNoUserSite = $env:PYTHONNOUSERSITE
 
 function Invoke-Native {
     param(
@@ -19,10 +21,27 @@ function Invoke-Native {
 
 Push-Location $repoRoot
 try {
+    $env:PYTHONNOUSERSITE = "1"
     Invoke-Native $pythonExe @("-m", "pip", "install", "-e", ".[dev]")
+    $originCheck = @'
+import pathlib
+import sys
+
+import spd_decap_pi
+
+expected = pathlib.Path(sys.argv[1]).resolve()
+actual = pathlib.Path(spd_decap_pi.__file__).resolve().parent
+if actual != expected:
+    raise SystemExit(
+        f"active-checkout import guard failed: expected {expected}, imported {actual}"
+    )
+print(actual)
+'@
+    Invoke-Native $pythonExe @("-c", $originCheck, $expectedPackageRoot)
     if (-not $SkipTests) {
         Invoke-Native $pythonExe @("-m", "pytest")
     }
+    $applicationBuildStartedAt = Get-Date
     Invoke-Native $pythonExe @(
         "-m", "PyInstaller",
         "--noconfirm",
@@ -41,6 +60,10 @@ try {
     if (-not (Test-Path -LiteralPath $builtExe)) {
         throw "PyInstaller completed without producing $builtExe"
     }
+    $builtExeItem = Get-Item -LiteralPath $builtExe
+    if ($builtExeItem.LastWriteTime -lt $applicationBuildStartedAt) {
+        throw "PyInstaller did not refresh the application executable: $builtExe"
+    }
     $smoke = Start-Process -FilePath $builtExe -ArgumentList "--smoke-test" -Wait -PassThru -WindowStyle Hidden
     if ($smoke.ExitCode -ne 0) {
         throw "Built SPD Decap PI Evaluator smoke test failed with exit code $($smoke.ExitCode)"
@@ -48,5 +71,11 @@ try {
     Write-Host "Built and smoke-tested SPD Decap PI Evaluator: $builtExe"
 }
 finally {
+    if ($null -eq $previousPythonNoUserSite) {
+        Remove-Item Env:PYTHONNOUSERSITE -ErrorAction SilentlyContinue
+    }
+    else {
+        $env:PYTHONNOUSERSITE = $previousPythonNoUserSite
+    }
     Pop-Location
 }

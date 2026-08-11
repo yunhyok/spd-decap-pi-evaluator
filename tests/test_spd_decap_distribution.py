@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import replace
 from hashlib import sha256
 import json
+from pathlib import Path
 from time import perf_counter
 
 import numpy as np
@@ -59,6 +60,7 @@ from spd_decap_pi.scenario import (
     SHARED_PAD_ANALYSIS_VERSION,
     SourceIdentity,
 )
+from spd_decap_pi.scenario_io import load_scenario, save_scenario
 
 
 def _rail(rail_id: str) -> RailSpec:
@@ -1328,6 +1330,7 @@ def test_batch_via_eligibility_persists_first_stack_order_target_layer() -> None
     )
 
     assert result["V1"]["R1"].pwr_layer == "PWR"
+    assert result["V1"]["R1"].destination_pwr_layer == "TOP"
     assert "TOP" in str(result["V1"]["R1"].reason)
 
 
@@ -1397,7 +1400,132 @@ def test_shared_chain_full_demand_accepts_feasible_status_one_incumbent(
     assert plan.fulfilled_count == 1
 
 
-def test_distribution_projection_uses_unselected_internal_power_plane_for_direct_donor() -> None:
+def test_secondary_stage_timeout_without_incumbent_retains_validated_prior_solution(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    original_solver = distribution_module._milp_with_optional_start
+    timeout_count = 0
+    gap_timeout_active = False
+
+    def timeout_gap_proof_without_incumbent(c, **kwargs):
+        nonlocal gap_timeout_active, timeout_count
+        objective = np.asarray(c, dtype=float)
+        integrality = np.asarray(kwargs["integrality"])
+        nonzero = objective[objective != 0.0]
+        if (
+            np.any(integrality != 0)
+            and not np.any(objective != 0.0)
+        ):
+            gap_timeout_active = True
+            timeout_count += 1
+            return OptimizeResult(
+                status=1,
+                success=False,
+                message="fixture secondary proof timeout without incumbent",
+                x=None,
+                fun=None,
+            )
+        if (
+            gap_timeout_active
+            and np.any(integrality != 0)
+            and kwargs.get("start") is not None
+            and bool(nonzero.size)
+            and np.all(nonzero == 1.0)
+        ):
+            timeout_count += 1
+            return OptimizeResult(
+                status=1,
+                success=False,
+                message="fixture exact gap timeout without incumbent",
+                x=None,
+                fun=None,
+            )
+        return original_solver(c, **kwargs)
+
+    monkeypatch.setattr(
+        distribution_module,
+        "_milp_with_optional_start",
+        timeout_gap_proof_without_incumbent,
+    )
+    plan = compute_distribution_plan(
+        _shared_chain_scenario(),
+        {("R1", "M1"): 1, ("R2", "M1"): 1},
+    )
+
+    assert timeout_count == 2
+    assert plan.status == DistributionPlanStatus.FULL
+    assert plan.fulfilled_count == 1
+    assert any(
+        item.code == "GAP_OPTIMIZATION_FALLBACK" for item in plan.diagnostics
+    )
+
+
+def test_gap_deadline_without_result_retains_exact_validated_prior_solution(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    scenario = _shared_chain_scenario()
+    original_solver = distribution_module._milp_with_optional_start
+    clock = 0.0
+    gap_probe_exhausted_deadline = False
+
+    def fake_monotonic() -> float:
+        return clock
+
+    def exhaust_deadline_during_gap_probe(c, **kwargs):
+        nonlocal clock, gap_probe_exhausted_deadline
+        objective = np.asarray(c, dtype=float)
+        integrality = np.asarray(kwargs["integrality"])
+        if (
+            not gap_probe_exhausted_deadline
+            and np.any(integrality != 0)
+            and not np.any(objective != 0.0)
+        ):
+            gap_probe_exhausted_deadline = True
+            # The gap stage has a 30-second deadline for this small fixture.
+            # Advancing beyond it leaves `result` as None, which is the exact
+            # path observed in the real replay rather than a returned timeout
+            # result with x=None.
+            clock = 100.0
+            return OptimizeResult(
+                status=1,
+                success=False,
+                message="fixture gap proof exhausted the block deadline",
+                x=None,
+                fun=None,
+            )
+        return original_solver(c, **kwargs)
+
+    monkeypatch.setattr(distribution_module, "monotonic", fake_monotonic)
+    monkeypatch.setattr(
+        distribution_module,
+        "_milp_with_optional_start",
+        exhaust_deadline_during_gap_probe,
+    )
+
+    plan = compute_distribution_plan(
+        scenario,
+        {("R1", "M1"): 1, ("R2", "M1"): 1},
+    )
+
+    assert gap_probe_exhausted_deadline
+    assert plan.status == DistributionPlanStatus.FULL
+    assert plan.fulfilled_count == 1
+    assert plan.assignment_map == {"A0": "R2"}
+    assert plan.isolation_gap_refdes == ("D1",)
+    assert any(
+        item.code == "GAP_OPTIMIZATION_FALLBACK" for item in plan.diagnostics
+    )
+
+    applied = apply_distribution_plan(scenario, plan)
+    by_refdes = {item.refdes: item for item in applied.decaps}
+    assert by_refdes["A0"].current_rail_id == "R2"
+    assert by_refdes["D1"].pad_state.value == "ISOLATION_GAP"
+    assert applied.design_fingerprint == plan.output_design_fingerprint
+
+
+def test_distribution_projection_uses_unselected_internal_power_plane_for_direct_donor(
+    tmp_path: Path,
+) -> None:
     """Distribution must not discard a real lower plane because Evaluation chose TOP."""
 
     scenario = _direct_scenario(
@@ -1473,6 +1601,7 @@ def test_distribution_projection_uses_unselected_internal_power_plane_for_direct
     projected = projection.projected_decaps[0].eligibility["R2"]
     assert projected.pwr_layer == "TOP"
     assert projected.gnd_layer == "GND1"
+    assert projected.destination_pwr_layer == "PWR_ALT"
     assert "PWR_ALT" in str(projected.reason)
     plan = compute_distribution_plan(
         scenario,
@@ -1481,6 +1610,18 @@ def test_distribution_projection_uses_unselected_internal_power_plane_for_direct
     )
     assert plan.status == DistributionPlanStatus.FULL
     assert plan.assignment_map == {"C1": "R2"}
+    applied = apply_distribution_plan(
+        scenario,
+        plan,
+        power_projection=projection,
+    )
+    archive = save_scenario(applied, tmp_path / "projected-exact-layer.spdpi")
+    restored = load_scenario(archive)
+    assert restored.decaps[0].current_rail_id == "R2"
+    assert (
+        restored.decaps[0].eligibility["R2"].destination_pwr_layer
+        == "PWR_ALT"
+    )
 
 
 def test_distribution_plane_data_is_immutable_after_projection_plan_apply() -> None:
@@ -2149,6 +2290,47 @@ def test_fixed_separator_distance_fallback_still_honors_mode(
     assert "DISTANCE_JOINT_OPTIMIZATION_DEFERRED" in diagnostic_codes
     assert "DISTANCE_FIXED_SEPARATOR_FALLBACK" in diagnostic_codes
     assert "DISTANCE_OPTIMIZATION_FALLBACK" not in diagnostic_codes
+
+
+def test_distance_no_incumbent_remains_fail_closed(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    original_solver = distribution_module._milp_with_optional_start
+    distance_call_count = 0
+
+    def no_distance_incumbent(c, **kwargs):
+        nonlocal distance_call_count
+        objective = np.asarray(c, dtype=float)
+        nonzero = objective[objective != 0.0]
+        is_distance_objective = bool(nonzero.size) and not bool(
+            np.all(np.abs(nonzero) == 1.0)
+        )
+        if not is_distance_objective:
+            return original_solver(c, **kwargs)
+        distance_call_count += 1
+        return OptimizeResult(
+            status=1,
+            success=False,
+            message="fixture distance timeout without incumbent",
+            x=None,
+            fun=None,
+        )
+
+    monkeypatch.setattr(
+        distribution_module,
+        "_milp_with_optional_start",
+        no_distance_incumbent,
+    )
+
+    with pytest.raises(DistributionError) as caught:
+        compute_distribution_plan(
+            _shared_chain_scenario(),
+            {("R1", "M1"): 1, ("R2", "M1"): 2},
+        )
+
+    assert distance_call_count == 2
+    assert caught.value.code == "DISTANCE_OPTIMIZER_FAILED"
+    assert "no arbitrary assignment was emitted" in str(caught.value)
 
 
 def test_exchange_tolerance_counts_cluster_members_and_never_strands_dummy() -> None:

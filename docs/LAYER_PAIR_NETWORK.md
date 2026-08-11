@@ -3,11 +3,12 @@
 `LayerPairNetwork` represents one adjacent-layer section as a sampled,
 complex-symmetric multiport admittance matrix. Its port order is
 `top_port_ids + bottom_port_ids`; every current is positive into the section.
-It is a numerical foundation only. It is not connected to Evaluation Analysis,
-Decap Distribution, the GUI, cache identity, or the current scalar via/rail
-templates. The evaluator's v0.14 shared-PWR ideal-common-reference equivalent
-is intentionally narrower than this general cascade; see
-[Evaluation accuracy](EVALUATION_ACCURACY.md).
+It remains a standalone sampled-matrix numerical foundation and is not the
+class used by Evaluation Analysis, De-cap Distribution, the GUI, or cache
+identity. v0.22.0 implements the same shared-interface composition principle
+through the separate source-derived layer-surface compiler: adjacent artwork
+Maxwell-Y blocks are embedded on common `(layer, NET)` surface nodes and then
+globally Schur/Kron reduced. See [Evaluation accuracy](EVALUATION_ACCURACY.md).
 
 For two adjacent sections, partitioned by the common interface `b`,
 

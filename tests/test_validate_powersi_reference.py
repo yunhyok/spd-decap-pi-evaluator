@@ -98,9 +98,28 @@ def test_cli_filters_singular_dc_before_s_to_z_and_reports_it(monkeypatch,tmp_pa
  outcome=SimpleNamespace(solve=solve,solver_version='test-solver',convergence=None)
  monkeypatch.setattr(module,'load_scenario_bundle',lambda _path: SimpleNamespace(scenario=object()))
  monkeypatch.setattr(module,'build_evaluation_project',lambda *_args,**_kwargs: object())
- monkeypatch.setattr(module,'evaluate_project_rail_converged',lambda *_args,**_kwargs: outcome)
- module.main(['--scenario',str(scenario),'--touchstone',str(touchstone),'--rail-port','R=1','--output',str(output)])
+ captured={}
+ def evaluate(*_args,**kwargs):
+  captured.update(kwargs); return outcome
+ monkeypatch.setattr(module,'evaluate_project_rail_converged',evaluate)
+ module.main(['--scenario',str(scenario),'--touchstone',str(touchstone),'--rail-port','R=1','--modal-max-index','8','--modal-ceiling-index','12','--output',str(output)])
  report=json.loads(output.read_text(encoding='utf-8'))
+ assert captured['max_refinement_iterations']==3
+ assert captured['max_new_frequency_points']==64
+ assert captured['max_mode_x']==12 and captured['max_mode_y']==12
+ assert report['modal_max_index']==8
+ assert report['modal_convergence_ceiling_index']==12
+ assert report['convergence_policy']=={
+  'version':'adaptive-frequency-modal-v4',
+  'max_refinement_iterations':3,
+  'max_new_frequency_points_per_iteration':64,
+  'curvature_threshold_db':0.75,
+  'rms_tolerance_db':0.2,
+  'max_tolerance_db':0.5,
+ 'peak_shift_tolerance_percent':2.0,
+  'modal_start_index':8,
+  'modal_ceiling_index':12,
+ }
  assert report['touchstone']['discarded_dc_record_count']==1
  assert report['touchstone']['source_record_count']==5
  assert report['touchstone']['converted_positive_frequency_record_count']==4

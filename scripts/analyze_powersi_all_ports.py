@@ -10,9 +10,31 @@ import argparse
 from hashlib import sha256
 import json
 from pathlib import Path
+import sys
 from typing import Any, Mapping
 
 import numpy as np
+
+_REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
+_REPOSITORY_SOURCE_ROOT = (_REPOSITORY_ROOT / "src").resolve()
+_EXPECTED_PACKAGE_ROOT = (_REPOSITORY_SOURCE_ROOT / "spd_decap_pi").resolve()
+sys.path.insert(0, str(_REPOSITORY_SOURCE_ROOT))
+
+import spd_decap_pi as _runtime_package
+
+_runtime_package_file = getattr(_runtime_package, "__file__", None)
+_runtime_package_root = (
+    Path(_runtime_package_file).resolve().parent
+    if _runtime_package_file is not None
+    else None
+)
+if _runtime_package_root != _EXPECTED_PACKAGE_ROOT:
+    raise RuntimeError(
+        "active-checkout import guard failed: expected spd_decap_pi from "
+        f"{_EXPECTED_PACKAGE_ROOT}, imported {_runtime_package_root!s}. "
+        "A stale editable install or preloaded package from another worktree "
+        "must not run this validation."
+    )
 
 from spd_decap_pi._core.io.touchstone import (
     TouchstoneNetwork,
