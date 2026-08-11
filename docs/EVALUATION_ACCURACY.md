@@ -11,37 +11,55 @@ The v0.11 actual-short cluster handling remains in force: source-established
 TOP copper shorts are represented as one physical cluster, rather than being
 split into synthetic independent decap branches.
 
-## Rectangular shared-PWR equivalent
+## Production layer-surface composition
 
-The selected PWR/DGND pair establishes the rectangular bbox basis. If the
-first conductor on the *opposite* side of that same PWR layer is also a
-configured-GND-only layer, with only valid dielectric rows in between, it is
-included as one additional return component. No conductor is crossed and a
-neighbor containing PWR is not a return component. A general multilayer
-cascade is deliberately inactive.
-
-For components `i`, the ideal-common-reference equivalent uses
+v0.22.0 keeps every retained physical `(layer, NET)` artwork surface as an
+independent circuit node. For every adjacent conductor gap `k`, exact ordered
+add/subtract artwork produces a multi-NET Maxwell capacitance block `Ck`.
+Frequency-dependent dielectric data convert it to a complex gap admittance,
+and a Boolean embedding matrix `Ek` maps the local block into the global
+surface-node ordering:
 
 ```text
-Ysh = sum_i(j omega epsilon_i / h_i)
-Zreturn,i = Rg,i + j omega mu0 h_i
-Zsheet = Rp + 1 / sum_i(1 / Zreturn,i)
-gamma^2 = -Zsheet Ysh
-Zmodal(k) = Zsheet / A / (k^2 - gamma^2)
-Zmodal(0,0) = 1 / (A Ysh)
+Ygap,k(f) = j 2 pi f * epsilon_ratio,k(f) * Ck
+Yglobal(f) = sum_k transpose(Ek) * Ygap,k(f) * Ek + Yvia(f)
 ```
 
-`Rp` is one shared PWR sheet resistance, not one copy per cavity. Every
-component must therefore have the same PWR thickness and conductivity. DGND
-layers are treated as an ideal common reference; their measured tie topology,
-slotting, and spreading impedance are not solved.
+Raw-SPD same-NET Trace/Via connected components coalesce only the physical
+surfaces whose retained artwork they actually contact. A component with
+branched topology provides an ideal topology link but no invented serial R/L.
+A uniquely owned source Via link may contribute its finite passive R/L once;
+Device-terminal and decap-loop R/L remain external branches and are not
+duplicated inside the substrate.
 
-This is not a general layer-by-layer cascade. A physical cascade requires full
-complex multiport Y matrices with explicit shared-interface degrees of freedom,
-then eliminates each interface by Schur/Kron reduction. Scalar impedance or
-admittance merging is not a cascade. The standalone SPD import does not extract
-those section matrices, so the production evaluator remains disconnected from
-the `LayerPairNetwork` foundation.
+For a selected port incidence vector `b`, one gauge is removed and the sparse
+system is solved rather than explicitly inverted:
+
+```text
+Yreduced * v = b
+Zport = transpose(b) * v
+Yport = 1 / Zport
+```
+
+This is the open-port Schur/Kron equivalent of eliminating all internal layer
+interfaces together. It is not the same as multiplying scalar impedances or
+raw two-port S matrices. An S-parameter/ABCD product is valid only for sections
+with compatible wave-port bases and a simple cascade. Shared planes, floating
+copper, branched Vias, and shunt decaps require common internal unknowns and a
+global network elimination (or an equivalent Redheffer-star construction).
+
+For the production terminal-complete scope, the global-Y Schur/Kron result is
+read directly at the external differential Device port. It is the sole Zii
+input: the rectangular modal matrix is not prepared, modal C00 is not
+double-stamped, and no legacy higher-mode one-port difference is added in
+parallel. This is still a source-derived quasi-static circuit network, not a
+full-wave layer-pair S-parameter solver. PowerSI Touchstone data are
+comparison-only and are never read while constructing the network or fitting
+its parameters.
+
+The previous rectangular shared-PWR formulation remains available only through
+the explicit **Legacy modal** rollback profile; it is no longer the desktop
+application default.
 
 ## MLO microvia conductor model
 
@@ -67,13 +85,29 @@ not by a local user path. SPD: `S4LB002-2Para_260724_1_injected.spd`, SHA-256
 
 ## Numerical convergence and validation
 
-Balanced is the default: max index 8 (81 modes). **Experimental m12 check**
-retains max index 12 (169 modes) as an opt-in m10-to-m12 check. The 2026-07-29
-loaded benchmark changed VTRIP1 maximum magnitude by up to 1.346 dB from m10
-to m12, left 3 of 6 loaded configurations nonconverged, and used 4,139 s of
-solver runtime. More modes worsened external correlation in that benchmark,
-but this does not justify selecting a lower modal order. PowerSI is
-comparison-only, never a calibration input.
+The v0.22.0 release evidence for the production layer-surface profile is kept
+in the [two-case validation record](EVALUATION_LAYER_SURFACE_VALIDATION_2026-08-06.md).
+The measurements below predate that profile and are retained as the historical
+Legacy-modal/mode-selection baseline; they are not v0.22 layer-surface results.
+
+Balanced remains the desktop's shared preset and the m-index fields remain in
+the cache/report identity for compatibility. They do not select or add modes
+for a terminal-complete Layerwise solve. Its bounded frequency policy allows
+three refinement iterations with at most 64 new points per iteration. The
+existing convergence-report modal slots encode “not applicable” as equal
+lower/final indices with exact-zero deltas and a passing analytic invariance
+flag; no lower/higher modal matrices are evaluated. Acceptance therefore uses
+the frequency gate plus that external-input invariance. Legacy and Research
+continue to use the actual rectangular modal orders documented for those
+profiles. PowerSI error and runtime never select an order.
+
+The modal figures below are a historical pre-v0.22 Legacy/modal-selection
+baseline, not the current layer-surface release result. The 2026-07-29 loaded
+benchmark changed VTRIP1 maximum magnitude by up to 1.346 dB from m10 to m12,
+left 3 of 6 loaded configurations nonconverged, and used 4,139 s of solver
+runtime. More modes worsened external correlation in that historical run, but
+that does not justify selecting a lower modal order. PowerSI is comparison-only,
+never a calibration input.
 
 Adaptive evaluation reports frequency-grid and modal deltas, including RMS,
 maximum dB difference, and dominant-peak shift. For the validation comparison,
@@ -86,13 +120,14 @@ from `5.65/11.03 deg` to `4.93/9.89 deg`. VINT1 phase RMS improved from
 `5.19 deg` to `3.72 deg`, while its maximum phase error worsened from
 `7.92 deg` to `8.88 deg`. The one-sided VCPU result remains exactly unchanged.
 
-The 2026-07-29 loaded six-configuration benchmark is the release-relevant
-evidence for this preset. Its mode 6/8/12 loaded PowerSI RMS values were
+In that historical 2026-07-29 loaded six-configuration benchmark, the mode
+6/8/12 loaded PowerSI RMS values were
 `3.1874/3.5387/4.0106 dB`; all six loaded configurations were nonconverged at
 m6 and m8, and VTRIP0, VTRIP1, and VCPU0 remained nonconverged at m12.
-Consequently, this preset is only an experimental check: acceptance requires
-combined frequency and modal convergence for every Original and Tuned rail,
-and a failed m12 check must not silently fall back to a lower order.
+Those numbers remain diagnostic history only. Current release acceptance uses
+frequency convergence plus terminal-complete external-input invariance for
+Layerwise, and combined frequency/modal convergence for Research and Legacy.
+A failed Research/Legacy m12 check must not silently fall back to a lower order.
 
 The comparison contract is `Z = Z0(I+S)(I-S)^-1`; all non-driven currents are
 zero (open), and the selected result is row-major `Zpp`. The tracked,
@@ -108,13 +143,18 @@ numerical stability of this disclosed model.
 
 ## Remaining limits
 
-- Non-rectangular PWR artwork is a rectangular bounding-box approximation.
+- The terminal-complete Layerwise result uses exact retained-artwork Maxwell-Y
+  and does not add a rectangular nonuniform correction. It is nevertheless a
+  quasi-static circuit extraction, not a nonuniform/full-wave plane field solve.
 - Terminal paths may use source-proven vertical Via geometry/R/L or a disclosed
-  fallback template. Only qualified MLO microvias use solid copper; lateral
-  trace, mutual Via, anti-pad, and spreading terms are not inferred.
+  fallback template. Only qualified MLO microvias use solid copper. Trace/Via
+  components prove connectivity, but lateral trace impedance, Via mutual
+  coupling, anti-pad fields, copper spreading, and plane-sheet nonuniform R/L
+  are not inferred by the layer-surface substrate.
 - Inter-rail and site-transfer coupling, DC IR drop, and DGND tie impedance
   are not modeled.
-- There is no general layer cascade and no field-solver feedback/calibration.
+- There is no field-solver feedback/calibration and no claim of full-wave
+  layer-pair S-parameter extraction.
 
 ## Primary references
 

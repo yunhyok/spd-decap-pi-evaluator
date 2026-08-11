@@ -11,6 +11,7 @@ from pydantic import ValidationError
 import pytest
 
 from test_io_spd import MINI_SPD
+from test_raw_spatial_contact_asset import _build as _build_raw_spatial_asset
 
 from spd_decap_pi._core.domain import (
     CapModel,
@@ -69,6 +70,7 @@ from spd_decap_pi.scenario_io import (
 )
 import spd_decap_pi.spd_adapter as spd_adapter
 import spd_decap_pi.scenario as scenario_module
+import spd_decap_pi.scenario_io as scenario_io_module
 from spd_decap_pi.spd_adapter import import_spd_scenario
 
 
@@ -774,6 +776,123 @@ def _legacy_design_fingerprint(scenario: ScenarioSpec) -> str:
     ).hexdigest()
 
 
+def _without_pin_source_provenance(value):
+    payload = json.loads(json.dumps(value))
+    project = payload.get("normalized_project", {})
+    for pin in project.get("pins", []):
+        pin.pop("source_node_id", None)
+        pin.pop("source_layer", None)
+        pin.pop("source_padstack", None)
+    return payload
+
+
+def test_legacy_pin_rows_without_source_provenance_preserve_manifest_fingerprint(
+    tmp_path: Path,
+) -> None:
+    """Pre-terminal-certificate scenario pins omit the new optional fields."""
+
+    project_payload = _project().model_dump(mode="json")
+    project_payload["pins"] = [
+        {
+            "refdes": "SITE0",
+            "pin": "13787",
+            "net": "VDD_CPU",
+            "x_um": -3254.8,
+            "y_um": 15813.2,
+            "kind": "DEVICE_BUMP",
+            "terminal": "PWR",
+            "domain": "VDD_CPU",
+            "site": "SITE0",
+            "bump_group": "SITE0",
+            "via_template_id": None,
+        }
+    ]
+    project = ProjectSpec.model_validate(project_payload)
+    scenario = ScenarioSpec(
+        source=SourceIdentity(
+            path=r"C:\designs\board.spd",
+            name="board.spd",
+            size=1234,
+            sha256="1" * 64,
+        ),
+        normalized_project=project,
+        decaps=[_decap()],
+    )
+    legacy_design_payload = _without_pin_source_provenance(
+        scenario._design_payload()
+    )
+    expected_fingerprint = sha256(
+        (
+            json.dumps(
+                legacy_design_payload,
+                ensure_ascii=False,
+                sort_keys=True,
+                separators=(",", ":"),
+                allow_nan=False,
+            )
+            + "\n"
+        ).encode("utf-8")
+    ).hexdigest()
+    archive_path = save_scenario(scenario, tmp_path / "legacy-pin.spdpi")
+
+    def rewrite_as_legacy(members):
+        raw_scenario = json.loads(
+            next(content for name, content in members if name == SCENARIO_FILENAME)
+        )
+        legacy_scenario = _without_pin_source_provenance(raw_scenario)
+        legacy_pin = legacy_scenario["normalized_project"]["pins"][0]
+        assert "source_node_id" not in legacy_pin
+        assert "source_layer" not in legacy_pin
+        assert "source_padstack" not in legacy_pin
+        legacy_bytes = (
+            json.dumps(
+                legacy_scenario,
+                ensure_ascii=False,
+                sort_keys=True,
+                separators=(",", ":"),
+                allow_nan=False,
+            )
+            + "\n"
+        ).encode("utf-8")
+        manifest = json.loads(
+            next(content for name, content in members if name == MANIFEST_FILENAME)
+        )
+        manifest["scenario_size"] = len(legacy_bytes)
+        manifest["scenario_sha256"] = sha256(legacy_bytes).hexdigest()
+        manifest["design_fingerprint"] = expected_fingerprint
+        manifest_bytes = (
+            json.dumps(
+                manifest,
+                ensure_ascii=False,
+                sort_keys=True,
+                separators=(",", ":"),
+                allow_nan=False,
+            )
+            + "\n"
+        ).encode("utf-8")
+        return [
+            (
+                name,
+                legacy_bytes
+                if name == SCENARIO_FILENAME
+                else manifest_bytes
+                if name == MANIFEST_FILENAME
+                else content,
+            )
+            for name, content in members
+        ]
+
+    _rewrite_archive(archive_path, rewrite_as_legacy)
+
+    loaded = load_scenario_bundle(archive_path).scenario
+
+    assert loaded.design_fingerprint == expected_fingerprint
+    assert "source_node_id" not in loaded.normalized_project["pins"][0]
+    assert "source_layer" not in loaded.normalized_project["pins"][0]
+    assert "source_padstack" not in loaded.normalized_project["pins"][0]
+    assert loaded.base_project.pins[0].source_node_id is None
+
+
 def test_legacy_via_payload_without_material_preserves_manifest_fingerprint(
     tmp_path: Path,
 ) -> None:
@@ -884,6 +1003,233 @@ def test_source_identity_hashes_a_file_without_embedding_it(tmp_path) -> None:
     assert identity.sha256 == sha256(b"raw-spd-secret").hexdigest()
 
 
+def _scenario_with_raw_spatial_manifest(
+    manifest: dict[str, object] | None,
+) -> ScenarioSpec:
+    payload = _scenario().model_dump(mode="python")
+    project = dict(payload["normalized_project"])
+    metadata = dict(project["metadata"])
+    spd_import = dict(metadata["spd_import"])
+    if manifest is None:
+        spd_import.pop("raw_spatial_contact_asset", None)
+        project["attachment_names"] = []
+    else:
+        compiled = {
+            "storage_schema": "spd-layerwise-compiled-topology-asset-v1",
+            "payload_schema": "spd-layerwise-compiled-topology-sqlite-v1",
+            "compiler_id": "layerwise-compiled-topology-sqlite-v1",
+            "surface_schema_version": "spd-layer-surface-connectivity-v4",
+            "surface_compiler_id": (
+                "powersi-same-layer-trace-artwork-finite-via-quotient-v4"
+            ),
+            "source_sha256": manifest["source_sha256"],
+            "certificate_evidence_sha256": manifest[
+                "certificate_evidence_sha256"
+            ],
+            "surface_asset_uncompressed_size_bytes": 0,
+            "surface_asset_uncompressed_sha256": "7" * 64,
+            "project_binding_sha256": manifest["project_binding_sha256"],
+            "topology_identity_sha256": manifest[
+                "compiled_topology_identity_sha256"
+            ],
+            "logical_rows_sha256": "8" * 64,
+            "asset_name": (
+                "topology/layerwise-compiled-topology-v1-"
+                f"{str(manifest['certificate_evidence_sha256'])[:16]}.sqlite.zlib"
+            ),
+            "compression": "zlib",
+            "compressed_size_bytes": 0,
+            "compressed_sha256": "9" * 64,
+            "uncompressed_size_bytes": 0,
+            "uncompressed_sha256": "a" * 64,
+        }
+        spd_import.update(
+            {
+                "source_name": "board.spd",
+                "source_size_bytes": 1000,
+                "source_sha256": manifest["source_sha256"],
+                "layerwise_compiled_topology_asset": compiled,
+                "raw_spatial_contact_asset": manifest,
+            }
+        )
+        project["attachment_names"] = [str(manifest["asset_name"])]
+        payload["source"] = SourceIdentity(
+            path=r"C:\designs\board.spd",
+            name="board.spd",
+            size=1000,
+            sha256=str(manifest["source_sha256"]),
+        ).model_dump(mode="python")
+    metadata["spd_import"] = spd_import
+    project["metadata"] = metadata
+    payload["normalized_project"] = project
+    payload["attachment_names"] = []
+    payload["attachment_hashes"] = {}
+    return ScenarioSpec.model_validate(payload)
+
+
+def _isolate_raw_spatial_scenario_gate(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(
+        scenario_io_module,
+        "externalize_scenario_surface_certificate",
+        lambda scenario, attachments: (scenario, dict(attachments)),
+    )
+    monkeypatch.setattr(
+        scenario_io_module,
+        "validate_project_topology_storage_envelope",
+        lambda project, attachments: (None, None),
+    )
+
+
+def test_raw_spatial_asset_survives_moved_save_bundle_round_trip(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    _isolate_raw_spatial_scenario_gate(monkeypatch)
+    manifest, (asset_name, content) = _build_raw_spatial_asset()
+    scenario = _scenario_with_raw_spatial_manifest(manifest)
+
+    original = save_scenario(
+        scenario,
+        tmp_path / "raw-spatial.spdpi",
+        attachments={asset_name: content},
+    )
+    moved = tmp_path / "moved" / "raw-spatial.spdpi"
+    moved.parent.mkdir()
+    original.replace(moved)
+    loaded = load_scenario_bundle(moved)
+    copied = save_scenario_bundle(loaded, tmp_path / "copied.spdpi")
+    copied_bundle = load_scenario_bundle(copied)
+
+    assert loaded.attachments == {asset_name: content}
+    assert copied_bundle.attachments == loaded.attachments
+    assert (
+        copied_bundle.scenario.normalized_project["metadata"]["spd_import"][
+            "raw_spatial_contact_asset"
+        ]
+        == manifest
+    )
+
+
+@pytest.mark.parametrize(
+    ("case", "expected_code"),
+    (
+        ("missing", "RAW_SPATIAL_ATTACHMENT_INVALID"),
+        ("tampered", "RAW_SPATIAL_COMPRESSED_SIZE_MISMATCH"),
+        ("wrong-case", "RAW_SPATIAL_ATTACHMENT_INVALID"),
+        ("orphan", "RAW_SPATIAL_ATTACHMENT_ORPHANED"),
+    ),
+)
+def test_save_wraps_raw_spatial_envelope_failures_with_stable_code(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    case: str,
+    expected_code: str,
+) -> None:
+    _isolate_raw_spatial_scenario_gate(monkeypatch)
+    manifest, (asset_name, content) = _build_raw_spatial_asset()
+    scenario = _scenario_with_raw_spatial_manifest(
+        None if case == "orphan" else manifest
+    )
+    attachments = {
+        "missing": {},
+        "tampered": {asset_name: content + b"tampered"},
+        "wrong-case": {asset_name.upper(): content},
+        "orphan": {asset_name: content},
+    }[case]
+
+    with pytest.raises(
+        ScenarioFormatError,
+        match=rf"raw spatial contact attachment failed validation \[{expected_code}\]",
+    ):
+        save_scenario(
+            scenario,
+            tmp_path / f"raw-spatial-{case}.spdpi",
+            attachments=attachments,
+        )
+
+
+def test_save_rejects_raw_spatial_attachment_casefold_collision(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    _isolate_raw_spatial_scenario_gate(monkeypatch)
+    manifest, (asset_name, content) = _build_raw_spatial_asset()
+
+    with pytest.raises(ScenarioFormatError, match="duplicate scenario attachment"):
+        save_scenario(
+            _scenario_with_raw_spatial_manifest(manifest),
+            tmp_path / "raw-spatial-casefold-collision.spdpi",
+            attachments={asset_name: content, asset_name.upper(): content},
+        )
+
+
+def test_save_and_load_reject_raw_spatial_scenario_source_mismatch(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    _isolate_raw_spatial_scenario_gate(monkeypatch)
+    manifest, (asset_name, content) = _build_raw_spatial_asset()
+    payload = _scenario_with_raw_spatial_manifest(manifest).model_dump(mode="python")
+    payload["connection_analysis"] = None
+    payload["source"]["sha256"] = "f" * 64
+    scenario = ScenarioSpec.model_validate(payload)
+
+    with pytest.raises(ScenarioFormatError, match="RAW_SPATIAL_BINDING_MISMATCH"):
+        save_scenario(
+            scenario,
+            tmp_path / "raw-spatial-source-mismatch-save.spdpi",
+            attachments={asset_name: content},
+        )
+
+    with monkeypatch.context() as save_patch:
+        save_patch.setattr(
+            scenario_io_module,
+            "validate_project_raw_spatial_contact_asset_envelope",
+            lambda project, attachments: None,
+        )
+        archive = save_scenario(
+            scenario,
+            tmp_path / "raw-spatial-source-mismatch-load.spdpi",
+            attachments={asset_name: content},
+        )
+
+    with pytest.raises(ScenarioFormatError, match="RAW_SPATIAL_BINDING_MISMATCH"):
+        load_scenario_bundle(archive)
+
+
+def test_load_wraps_raw_spatial_envelope_failure_with_stable_code(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    _isolate_raw_spatial_scenario_gate(monkeypatch)
+    source = save_scenario(_scenario(), tmp_path / "plain.spdpi")
+
+    def fail_raw_envelope(project: object, attachments: object) -> None:
+        del project, attachments
+        from spd_decap_pi.raw_spatial_contact_asset import (
+            RawSpatialContactAssetError,
+        )
+
+        raise RawSpatialContactAssetError(
+            "RAW_SPATIAL_TEST_FAILURE", "synthetic load failure"
+        )
+
+    monkeypatch.setattr(
+        scenario_io_module,
+        "validate_project_raw_spatial_contact_asset_envelope",
+        fail_raw_envelope,
+    )
+
+    with pytest.raises(
+        ScenarioFormatError,
+        match=(
+            r"raw spatial contact attachment failed validation "
+            r"\[RAW_SPATIAL_TEST_FAILURE\]"
+        ),
+    ):
+        load_scenario_bundle(source)
+
+
 def test_scenario_round_trip_is_independent_and_deterministic(tmp_path) -> None:
     attachments = {
         "geometry/L3.spdgeom.zlib": b"compressed geometry",
@@ -980,6 +1326,71 @@ def test_routing_attachment_binding_round_trips_and_rejects_metadata_drift(
             tmp_path / "routing-drift.spdpi",
             attachments={name: payload},
         )
+
+
+def test_exact_destination_power_layer_survives_scenario_archive(tmp_path) -> None:
+    scenario = _scenario()
+    decap = scenario.decaps[0]
+    source = decap.eligibility["VDD_CPU"]
+    exact = RailEligibility.model_validate(
+        {
+            **source.model_dump(mode="python"),
+            "destination_pwr_layer": "  L7_EXACT_PWR  ",
+        }
+    )
+    updated = decap.model_copy(
+        update={"eligibility": {**decap.eligibility, "VDD_CPU": exact}}
+    )
+    persisted = scenario.model_copy(update={"decaps": [updated]})
+
+    archive = save_scenario(persisted, tmp_path / "exact-destination.spdpi")
+    loaded = load_scenario(archive)
+
+    assert (
+        loaded.decaps[0].eligibility["VDD_CPU"].destination_pwr_layer
+        == "L7_EXACT_PWR"
+    )
+
+
+def test_destination_power_layer_is_optional_and_canonicalized() -> None:
+    legacy = RailEligibility(
+        rail_id="R1",
+        net="V1",
+        pwr_layer="L3_PWR",
+        gnd_layer="L2_GND",
+        allowed=True,
+    )
+    same_layer = legacy.model_copy(update={"destination_pwr_layer": "l3_pwr"})
+    same_layer = RailEligibility.model_validate(same_layer.model_dump(mode="python"))
+
+    assert legacy.destination_pwr_layer is None
+    assert same_layer.destination_pwr_layer == "L3_PWR"
+    with pytest.raises(ValidationError):
+        RailEligibility(
+            rail_id="R1",
+            net="V1",
+            pwr_layer="L3_PWR",
+            gnd_layer="L2_GND",
+            destination_pwr_layer="   ",
+            allowed=True,
+        )
+
+
+def test_normalized_project_fingerprint_preserves_primitive_values() -> None:
+    payload = {
+        "name": "board",
+        "count": 3,
+        "enabled": False,
+        "values": [1.25, "L3_PWR", None],
+        "mixed_reference_certificate": None,
+    }
+
+    assert scenario_module._normalized_project_fingerprint_payload(payload) == {
+        "name": "board",
+        "count": 3,
+        "enabled": False,
+        "values": [1.25, "L3_PWR", None],
+    }
 
 
 def test_design_fingerprint_excludes_ui_revision_cache_and_source_location() -> None:

@@ -397,8 +397,8 @@ def test_legacy_normalized_project_without_cluster_field_keeps_hash_identity() -
                 "sha256": legacy.source.sha256,
             },
             "normalized_project": legacy_project,
-                "decaps": [
-                    legacy_decap_payload(item)
+            "decaps": [
+                legacy_decap_payload(item)
                 for item in sorted(
                     legacy.decaps, key=lambda entry: entry.refdes.casefold()
                 )

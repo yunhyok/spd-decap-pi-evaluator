@@ -42,8 +42,13 @@ from spd_decap_pi._core import services as core_services
 from spd_decap_pi._core.domain import StackupLayer
 from spd_decap_pi._core.services import EvaluationView
 from spd_decap_pi._core.solver.profiles import (
+    APPLICATION_DEFAULT_SOLVER_PROFILE_KEY,
+    LAYERWISE_ADMITTANCE_PROFILE,
     RESEARCH_UNIFORM_ADMITTANCE_PROFILE,
     solver_profile_static_identity_sha256,
+)
+from spd_decap_pi._core.solver.layerwise_network import (
+    LAYERWISE_COMPILER_VERSION,
 )
 from spd_decap_pi.distribution import (
     _distribution_plane_geometries,
@@ -54,6 +59,7 @@ from spd_decap_pi.gui import main_window as main_window_module
 from spd_decap_pi.gui.main_window import (
     MainWindow,
     _EvaluationRunManifest,
+    _comparison_solver_provenance,
     _PlaneArtworkItem,
     _PlanePathBuilder,
     _PreparedScenarioBundle,
@@ -112,6 +118,36 @@ def _research_provenance() -> dict[str, object]:
     }
 
 
+def _layerwise_provenance() -> dict[str, object]:
+    return {
+        "profile_key": "layerwise_admittance_v1",
+        "profile_badge": "LAYERWISE",
+        "status": "source_layerwise_production",
+        "source_only": True,
+        "powersi_used_for_parameters": False,
+        "validation_status": "validated_two_named_cases",
+        "compiler_version": LAYERWISE_COMPILER_VERSION,
+        "compiler_algorithm_id": (
+            LAYERWISE_ADMITTANCE_PROFILE.compiler_algorithm_id
+        ),
+        "static_compiler_algorithm_sha256": (
+            solver_profile_static_identity_sha256(LAYERWISE_ADMITTANCE_PROFILE)
+        ),
+        "source_sha256": "a" * 64,
+        "geometry_manifest_sha256": "b" * 64,
+        "material_manifest_sha256": "c" * 64,
+        "substrate_identity_sha256": "d" * 64,
+        "ground_alias_manifest_sha256": "e" * 64,
+        "via_group_evidence_sha256": "f" * 64,
+        "surface_connectivity_evidence_sha256": "0" * 64,
+        "terminal_surface_contact_proof_sha256": "1" * 64,
+        "base_layerwise_evidence_sha256": "2" * 64,
+        "termination_manifest_sha256": "3" * 64,
+        "layerwise_identity_sha256": "4" * 64,
+        "termination_manifest_required": True,
+    }
+
+
 def test_function_worker_coalesces_progress_before_it_reaches_the_gui() -> None:
     delivered: list[tuple[int, str]] = []
 
@@ -131,6 +167,56 @@ def test_function_worker_coalesces_progress_before_it_reaches_the_gui() -> None:
     assert delivered[0] == (0, "step 0")
     assert delivered[-1] == (100, "complete")
     assert len(delivered) < 20
+
+
+def test_evaluation_batch_worker_surfaces_repeat_preflight_progress(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    source = tmp_path / "repeat-preflight-progress.spd"
+    source.write_text(MINI_SPD, encoding="ascii")
+    scenario = import_spd_scenario(source).scenario
+    rail_id = scenario.base_project.rails[0].rail_id
+    delivered: list[tuple[int, str]] = []
+    failures: list[str] = []
+
+    def repeat_preflight(
+        _scenario,
+        _rail_ids,
+        *,
+        progress,
+        is_cancelled,
+        **_kwargs,
+    ):
+        assert not is_cancelled()
+        sleep(FunctionWorker.PROGRESS_MINIMUM_INTERVAL_S + 0.01)
+        progress(40, "dry-built worker preflight rail")
+        raise RuntimeError("stop after repeat-preflight progress proof")
+
+    monkeypatch.setattr(
+        evaluation_module,
+        "preflight_evaluation_comparison",
+        repeat_preflight,
+    )
+    worker = FunctionWorker(
+        evaluation_module.evaluate_comparison_batch,
+        scenario,
+        (rail_id,),
+        solver_profile="legacy_modal_v017",
+    )
+    worker.signals.progress.connect(
+        lambda value, message: delivered.append((value, message))
+    )
+    worker.signals.error.connect(failures.append)
+
+    worker.run()
+
+    assert failures and "repeat-preflight progress proof" in failures[0]
+    assert (
+        2,
+        "Rechecking worker-side Original/Tuned preflight: "
+        "dry-built worker preflight rail",
+    ) in delivered
 
 
 def test_incremental_plane_builder_yields_to_the_qt_event_loop_for_large_polygon() -> None:
@@ -327,17 +413,32 @@ def test_evaluation_layout_uses_an_expanding_rail_list_and_detached_plot_button(
         assert window.export_tuned_csv_button.text() == "Export Tuned CSV..."
         assert not window.export_tuned_csv_button.isEnabled()
         assert window.evaluation_modal_preset_combo.currentData() == 8
-        assert window.evaluation_modal_preset_combo.currentText() == "Balanced (81 modes)"
+        assert window.evaluation_modal_preset_combo.currentText() == (
+            "Balanced (Legacy/Research: 81 modes)"
+        )
         maximum_index = window.evaluation_modal_preset_combo.findData(12)
         assert maximum_index >= 0
         assert window.evaluation_modal_preset_combo.itemText(maximum_index) == (
-            "Experimental m12 check (169 modes)"
+            "Experimental m12 check (Legacy/Research: 169 modes)"
         )
-        assert "4,139 s" in window.evaluation_modal_preset_combo.toolTip()
+        assert "terminal-complete Layerwise" in window.evaluation_modal_preset_combo.toolTip()
+        assert "adds no rectangular modal correction" in (
+            window.evaluation_modal_preset_combo.toolTip()
+        )
+        assert "PowerSI is comparison-only" in window.evaluation_modal_preset_combo.toolTip()
         assert window.evaluation_solver_profile_combo.currentData() == (
+            APPLICATION_DEFAULT_SOLVER_PROFILE_KEY
+        )
+        assert window.evaluation_solver_profile_combo.currentText() == (
+            "Layer-surface global Y (terminal-complete)"
+        )
+        legacy_index = window.evaluation_solver_profile_combo.findData(
             "legacy_modal_v017"
         )
-        assert window.evaluation_solver_profile_combo.currentText() == "Legacy modal"
+        assert legacy_index >= 0
+        assert window.evaluation_solver_profile_combo.itemText(legacy_index) == (
+            "Legacy modal"
+        )
         research_index = window.evaluation_solver_profile_combo.findData(
             "research_uniform_admittance"
         )
@@ -347,14 +448,31 @@ def test_evaluation_layout_uses_an_expanding_rail_list_and_detached_plot_button(
             "(topology certificate required)"
         )
         assert "comparison-only" in window.evaluation_solver_profile_combo.toolTip()
-        assert "LEGACY" in window.evaluation_solver_profile_status.text()
+        assert "LAYERWISE" in window.evaluation_solver_profile_status.text()
         notes = window.findChild(QTextBrowser, "evaluationNotes")
         assert notes is not None
-        assert notes.toPlainText().startswith("Selected physics model: [LEGACY]")
-        assert "actual-artwork uniform C00" in notes.toPlainText()
+        assert notes.toPlainText().startswith("Selected physics model: [LAYERWISE]")
+        assert "terminal-complete exact retained-surface Maxwell-Y" in notes.toPlainText()
+        assert "global Schur/Kron reduction" in notes.toPlainText()
+        assert "terminal-complete global-Y Zii is the sole passive input" in (
+            notes.toPlainText()
+        )
+        assert "no legacy rectangular higher-mode one-port difference is added" in (
+            notes.toPlainText()
+        )
+        assert "topology-only surfaces receive zero synthesized adjacent-gap" in (
+            notes.toPlainText()
+        )
+        assert "no synthesized fringing" in notes.toPlainText()
+        assert "one external Zii rather than a full multiport Z matrix" in (
+            notes.toPlainText()
+        )
+        assert "no full-wave claim" in notes.toPlainText()
         assert "without falling back" in notes.toPlainText()
         assert "not a PowerSI or absolute-accuracy setting" in notes.toPlainText()
-        assert "absolute sub-milliohm accuracy not certified" in notes.toPlainText()
+        assert "absolute sub-milliohm accuracy is not certified" in (
+            notes.toPlainText()
+        )
     finally:
         window.close()
         application.processEvents()
@@ -767,8 +885,39 @@ def test_source_via_path_summary_discloses_zero_recovery_fallback() -> None:
 
     compact, details = _source_via_path_recovery_summary(scenario)
 
-    assert compact == "Source Via paths: 0/60,152 recovered; 60,152 fallback"
-    assert "No source segment R/L applied; legacy rail templates used" in details
+    assert compact == (
+        "Compatibility Via paths: 0/60,152 recovered; "
+        "60,152 rail-template fallback"
+    )
+    assert "legacy/compatibility terminal models" in details
+    assert "Layerwise v4 topology readiness is validated separately" in details
+
+
+def test_source_via_path_summary_scopes_recovered_paths_to_compatibility() -> None:
+    scenario = _shared_pad_scenario()
+    project = scenario.base_project.model_copy(
+        update={
+            "metadata": {
+                **scenario.base_project.metadata,
+                "spd_via_path_recovery": {
+                    "requested": 10,
+                    "recovered": 3,
+                    "fallback": 7,
+                    "algorithm": "unique_monotonic_same_net_via_chain_v1",
+                },
+            }
+        }
+    )
+    scenario = scenario.model_copy(update={"normalized_project": project})
+
+    compact, details = _source_via_path_recovery_summary(scenario)
+
+    assert compact == (
+        "Compatibility Via paths: 3/10 recovered; 7 rail-template fallback"
+    )
+    assert "Legacy/compatibility terminal models" in details
+    assert "per-landing selected-plane pad geometry" in details
+    assert "Layerwise v4 topology readiness is validated separately" in details
 
 
 def test_plane_layer_checkboxes_support_independent_multi_layer_visibility() -> None:
@@ -913,7 +1062,7 @@ def test_right_side_sections_are_vertically_resizable_and_noncollapsible() -> No
     try:
         expected_minimums = {
             "selectionSectionSplitter": (170, 160),
-            "evaluationSectionSplitter": (285, 180),
+            "evaluationSectionSplitter": (285, 120),
             "aiSectionSplitter": (210, 160),
         }
         for object_name, minimums in expected_minimums.items():
@@ -1272,8 +1421,13 @@ def test_reopened_scenario_keeps_source_via_recovery_disclosure(
             ScenarioBundle(scenario=scenario, attachments=imported.attachments),
         )
 
-        assert "Source Via paths: 0/3 recovered; 3 fallback" in window.status_text.text()
-        assert "No source segment R/L applied; legacy rail templates used" in window.status_text.toolTip()
+        assert (
+            "Compatibility Via paths: 0/3 recovered; 3 rail-template fallback"
+            in window.status_text.text()
+        )
+        tooltip = window.status_text.toolTip()
+        assert "legacy/compatibility terminal models" in tooltip
+        assert "Layerwise v4 topology readiness is validated separately" in tooltip
     finally:
         window._dirty = False
         window.close()
@@ -1759,6 +1913,11 @@ def test_evaluation_worker_receives_scenario_model_attachments(
         window._scenario_path = tmp_path / "automatic-baseline.spdpi"
         window._refresh_all()
         window._set_all_rails_checked(True)
+        window.evaluation_solver_profile_combo.setCurrentIndex(
+            window.evaluation_solver_profile_combo.findData(
+                "legacy_modal_v017"
+            )
+        )
 
         def capture(worker, on_result, **kwargs):
             captured["worker"] = worker
@@ -1773,7 +1932,9 @@ def test_evaluation_worker_receives_scenario_model_attachments(
             preflight_worker = captured["worker"]
             assert preflight_worker.function.__name__ == "_job_preflight_evaluation"
             connectivity = evaluation_module.preflight_evaluation_comparison(
-                preflight_worker.args[0], preflight_worker.args[1]
+                preflight_worker.args[0],
+                preflight_worker.args[1],
+                solver_profile=preflight_worker.args[2],
             )
             captured["on_result"](connectivity)
             request, manifest = window._pending_evaluation_launch
@@ -1826,18 +1987,129 @@ def test_evaluation_worker_receives_scenario_model_attachments(
         application.processEvents()
 
 
+def test_layerwise_baseline_consent_and_capture_cover_unselected_board_rails(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    application = _application()
+    source = tmp_path / "board-wide-baseline.spd"
+    source.write_text(MINI_SPD, encoding="ascii")
+    imported = import_spd_scenario(source)
+    scenario = imported.scenario
+    base = scenario.base_project
+    second = base.rails[0].model_copy(
+        update={
+            "rail_id": "RAIL_UNSELECTED",
+            "domain": "VDD_UNSELECTED",
+            "net": "VDD_UNSELECTED",
+        }
+    )
+    stackup = tuple(
+        layer.model_copy(
+            update={"pwr_nets": (*layer.pwr_nets, "VDD_UNSELECTED")}
+        )
+        if layer.name == second.pwr_layer
+        else layer
+        for layer in base.stackup_layers
+    )
+    scenario = scenario.model_copy(
+        update={
+            "normalized_project": base.model_copy(
+                update={
+                    "rails": (*base.rails, second),
+                    "stackup_layers": stackup,
+                }
+            )
+        }
+    )
+    window = MainWindow()
+    captured: dict[str, object] = {}
+    try:
+        window._scenario = scenario
+        window._attachments = dict(imported.attachments)
+        window._scenario_path = tmp_path / "board-wide-baseline.spdpi"
+        selected = base.rails[0].rail_id
+        request = SimpleNamespace(
+            scenario=scenario,
+            rail_ids=(selected,),
+            target_ohm=None,
+            modal_max_index=8,
+            solver_profile="layerwise_admittance_v1",
+            attachments=dict(imported.attachments),
+        )
+        manifest = _EvaluationRunManifest(
+            selected_rail_ids=(selected,),
+            runnable_rail_ids=(selected,),
+            blocked_rail_ids=(),
+            blocker_count=0,
+            blocker_details="",
+        )
+
+        def fallback(_scenario, rail_ids, **kwargs):
+            captured["fallback_rails"] = tuple(rail_ids)
+            captured["fallback_all_source"] = kwargs[
+                "include_all_source_mounted"
+            ]
+            return ("C_UNSELECTED",)
+
+        def captures(self, rail_ids, **kwargs):
+            assert self is scenario
+            captured["capture_rails"] = tuple(rail_ids)
+            captured["capture_all_source"] = kwargs[
+                "include_all_source_mounted"
+            ]
+            return self
+
+        monkeypatch.setattr(
+            evaluation_module, "baseline_fallback_model_refdes", fallback
+        )
+        monkeypatch.setattr(ScenarioSpec, "with_baseline_captures", captures)
+        monkeypatch.setattr(
+            QMessageBox,
+            "question",
+            lambda *_args: captured.setdefault("prompt", str(_args[2]))
+            and QMessageBox.StandardButton.Yes,
+        )
+        monkeypatch.setattr(
+            window,
+            "_run_worker",
+            lambda worker, _on_result, **_kwargs: captured.setdefault(
+                "worker", worker
+            ),
+        )
+
+        window._launch_evaluation_after_preflight(request, manifest)
+
+        expected = (selected, "RAIL_UNSELECTED")
+        assert captured["fallback_rails"] == expected
+        assert captured["capture_rails"] == expected
+        assert captured["fallback_all_source"] is True
+        assert captured["capture_all_source"] is True
+        assert "C_UNSELECTED" in str(captured["prompt"])
+        worker = captured["worker"]
+        assert worker.args[1] == (selected,)
+    finally:
+        window._dirty = False
+        window.close()
+        application.processEvents()
+
+
 def test_background_evaluation_preflight_uses_original_and_tuned_gate(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     source = tmp_path / "comparison-preflight.spd"
     source.write_text(MINI_SPD, encoding="ascii")
-    scenario = import_spd_scenario(source).scenario
-    calls: list[tuple[ScenarioSpec, tuple[str, ...]]] = []
+    imported = import_spd_scenario(source)
+    scenario = imported.scenario
+    calls: list[tuple[ScenarioSpec, tuple[str, ...], str, dict[str, bytes]]] = []
     progress_events: list[tuple[int, str]] = []
     sentinel = SimpleNamespace(rail_ids=(scenario.base_project.rails[0].rail_id,))
 
-    def comparison_gate(candidate, rail_ids, **_kwargs):
-        calls.append((candidate, tuple(rail_ids)))
+    def comparison_gate(
+        candidate, rail_ids, *, solver_profile, attachments, **_kwargs
+    ):
+        calls.append(
+            (candidate, tuple(rail_ids), solver_profile, dict(attachments))
+        )
         return sentinel
 
     monkeypatch.setattr(
@@ -1847,14 +2119,43 @@ def test_background_evaluation_preflight_uses_original_and_tuned_gate(
     result = _job_preflight_evaluation(
         scenario,
         sentinel.rail_ids,
+        "layerwise_admittance_v1",
+        imported.attachments,
         progress=lambda value, message: progress_events.append((value, message)),
         is_cancelled=lambda: False,
     )
 
     assert result is sentinel
-    assert calls == [(scenario, sentinel.rail_ids)]
+    assert calls == [
+        (
+            scenario,
+            sentinel.rail_ids,
+            "layerwise_admittance_v1",
+            imported.attachments,
+        )
+    ]
     assert progress_events[0][0] == 5
     assert progress_events[-1] == (100, "Evaluation Analysis preflight complete")
+
+
+def test_layerwise_preflight_blocks_missing_artwork_before_run_manifest(
+    tmp_path: Path,
+) -> None:
+    source = tmp_path / "layerwise-missing-artwork.spd"
+    source.write_text(MINI_SPD, encoding="ascii")
+    scenario = import_spd_scenario(source).scenario
+    rail_id = scenario.base_project.rails[0].rail_id
+
+    result = evaluation_module.preflight_evaluation_comparison(
+        scenario,
+        (rail_id,),
+        solver_profile="layerwise_admittance_v1",
+        attachments={},
+    )
+
+    assert not result.is_clear
+    assert len(result.blockers) == 1
+    assert "ARTWORK_ATTACHMENTS_MISSING" in result.blockers[0].reason
 
 
 def test_cancelled_worker_does_not_show_a_failure_or_leave_cancelling_status() -> None:
@@ -1962,6 +2263,28 @@ def test_solver_profile_change_clears_results_and_marks_research_as_opt_in() -> 
         assert notes.toPlainText().startswith("Selected physics model: [RESEARCH]")
         assert "topology certificate required" in notes.toPlainText()
         assert "not cached, persisted, saved, or reused" in notes.toPlainText()
+        assert "Research model boundary: source-only exact-artwork uniform C00" in (
+            notes.toPlainText()
+        )
+        assert "rectangular-envelope continuous-DGND correction" in (
+            notes.toPlainText()
+        )
+        assert "exact retained-surface uniform Maxwell-Y" not in notes.toPlainText()
+
+        legacy_index = window.evaluation_solver_profile_combo.findData(
+            "legacy_modal_v017"
+        )
+        window.evaluation_solver_profile_combo.setCurrentIndex(legacy_index)
+        assert "rectangular PWR bounding-box cavity" in (
+            window.evaluation_solver_profile_status.text()
+        )
+        assert "continuous DGND" in window.evaluation_solver_profile_status.text()
+        assert notes.toPlainText().startswith("Selected physics model: [LEGACY]")
+        assert "Legacy model boundary: rectangular PWR bounding-box modal cavity" in (
+            notes.toPlainText()
+        )
+        assert "no full-wave claim" in notes.toPlainText()
+        assert "exact retained-surface uniform Maxwell-Y" not in notes.toPlainText()
     finally:
         window.close()
         application.processEvents()
@@ -2106,7 +2429,10 @@ def test_research_solver_provenance_requires_source_only_and_no_powersi_fit() ->
     assert "research-uniform-c00-source-only-v2" in presentation.banner_text
     assert "research-uniform-source-v1" in presentation.banner_text
     assert "evidence 111111111111…" in presentation.banner_text
-    assert "modal backend research-test-1" in presentation.banner_text
+    assert (
+        "research uniform-C00 + modal-correction engine research-test-1"
+        in presentation.banner_text
+    )
     assert "not PowerSI-validated" in presentation.banner_text
     assert "PowerSI parameter fitting: never" in presentation.banner_text
     assert "Source SHA-256: " + "2" * 64 in presentation.details_text
@@ -2128,6 +2454,135 @@ def test_research_solver_provenance_requires_source_only_and_no_powersi_fit() ->
     view.solver_provenance["powersi_used_for_parameters"] = True
     with pytest.raises(ValueError, match="comparison-only"):
         _solver_provenance_for_view(view)
+
+
+def test_layerwise_solver_provenance_exposes_and_validates_substrate_identity() -> None:
+    view = SimpleNamespace(
+        solver_profile_key="layerwise_admittance_v1",
+        solver_profile_label="Layer-surface terminal-complete network",
+        solver_profile_badge="LAYERWISE",
+        solver_version="layerwise-test-1",
+        solver_provenance=_layerwise_provenance(),
+    )
+
+    presentation = _solver_provenance_for_view(view)
+
+    assert presentation.source_only
+    assert presentation.source_model_identity_sha256 == "4" * 64
+    assert "[LAYERWISE]" in presentation.banner_text
+    assert "validated on the two named SPD/PowerSI cases" in (
+        presentation.banner_text
+    )
+    assert "evidence 444444444444…" in presentation.banner_text
+    assert (
+        "terminal-complete global-Y Device-port engine layerwise-test-1"
+        in presentation.banner_text
+    )
+    assert "Layer-surface substrate SHA-256: " + "d" * 64 in (
+        presentation.details_text
+    )
+    assert "Via-group evidence SHA-256: " + "f" * 64 in presentation.details_text
+    assert "Terminal surface-contact proof SHA-256: " + "1" * 64 in presentation.details_text
+    assert "Mounted-state termination manifest SHA-256" in presentation.details_text
+    assert "3" * 64 in presentation.details_text
+    assert "Research identity SHA-256" not in presentation.details_text
+
+    compatibility = SimpleNamespace(
+        solver_profile_key=view.solver_profile_key,
+        solver_profile_label=view.solver_profile_label,
+        solver_profile_badge=view.solver_profile_badge,
+        solver_version=view.solver_version,
+        solver_provenance=dict(view.solver_provenance),
+    )
+    compatibility.solver_provenance["terminal_artwork_proof_sha256"] = (
+        compatibility.solver_provenance.pop(
+            "terminal_surface_contact_proof_sha256"
+        )
+    )
+    assert (
+        _solver_provenance_for_view(
+            compatibility
+        ).terminal_surface_contact_proof_sha256
+        == "1" * 64
+    )
+
+    for field, match in (
+        ("substrate_identity_sha256", "substrate_identity_sha256"),
+        ("base_layerwise_evidence_sha256", "base_layerwise_evidence_sha256"),
+        ("termination_manifest_sha256", "termination_manifest_sha256"),
+        ("layerwise_identity_sha256", "layerwise_identity_sha256"),
+        ("compiler_algorithm_id", "source-only"),
+        ("compiler_version", "compiler version"),
+    ):
+        malformed = SimpleNamespace(
+            solver_profile_key=view.solver_profile_key,
+            solver_profile_label=view.solver_profile_label,
+            solver_profile_badge=view.solver_profile_badge,
+            solver_version=view.solver_version,
+            solver_provenance=dict(view.solver_provenance),
+        )
+        malformed.solver_provenance.pop(field)
+        with pytest.raises(ValueError, match=match):
+            _solver_provenance_for_view(malformed)
+
+    optional_manifest = SimpleNamespace(
+        solver_profile_key=view.solver_profile_key,
+        solver_profile_label=view.solver_profile_label,
+        solver_profile_badge=view.solver_profile_badge,
+        solver_version=view.solver_version,
+        solver_provenance=dict(view.solver_provenance),
+    )
+    optional_manifest.solver_provenance["termination_manifest_required"] = False
+    with pytest.raises(ValueError, match="did not require"):
+        _solver_provenance_for_view(optional_manifest)
+
+    fitted = SimpleNamespace(
+        solver_profile_key=view.solver_profile_key,
+        solver_profile_label=view.solver_profile_label,
+        solver_profile_badge=view.solver_profile_badge,
+        solver_version=view.solver_version,
+        solver_provenance=dict(view.solver_provenance),
+    )
+    fitted.solver_provenance["powersi_used_for_parameters"] = True
+    with pytest.raises(ValueError, match="comparison-only"):
+        _solver_provenance_for_view(fitted)
+
+
+def test_layerwise_comparison_provenance_aggregates_original_and_tuned_state() -> None:
+    baseline_provenance = _layerwise_provenance()
+    tuned_provenance = {
+        **baseline_provenance,
+        "termination_manifest_sha256": "5" * 64,
+        "layerwise_identity_sha256": "6" * 64,
+    }
+
+    def view(provenance):
+        return SimpleNamespace(
+            solver_profile_key="layerwise_admittance_v1",
+            solver_profile_label="Layer-surface terminal-complete network",
+            solver_profile_badge="LAYERWISE",
+            solver_version="layerwise-test-1",
+            solver_provenance=provenance,
+        )
+
+    presentation = _comparison_solver_provenance(
+        (
+            SimpleNamespace(
+                baseline=SimpleNamespace(view=view(baseline_provenance)),
+                tuned=SimpleNamespace(view=view(tuned_provenance)),
+            ),
+        )
+    )
+
+    assert presentation.substrate_identity_sha256 == "d" * 64
+    assert presentation.termination_manifest_sha256 not in {
+        "3" * 64,
+        "5" * 64,
+    }
+    assert presentation.source_model_identity_sha256 not in {
+        "4" * 64,
+        "6" * 64,
+    }
 
 
 def test_research_success_is_transient_and_exports_full_composite_identity(
@@ -2251,7 +2706,10 @@ def test_research_success_is_transient_and_exports_full_composite_identity(
         assert "research-uniform-c00-source-only-v2" in banner
         assert "research-uniform-source-v1" in banner
         assert "evidence 111111111111…" in banner
-        assert f"modal backend {evaluation_module.SOLVER_VERSION}" in banner
+        assert (
+            "research uniform-C00 + modal-correction engine "
+            f"{evaluation_module.SOLVER_VERSION}"
+        ) in banner
         assert "Topology certificate SHA-256: " + "6" * 64 in (
             result_window.provenance_label.toolTip()
         )
@@ -2274,6 +2732,7 @@ def test_research_success_is_transient_and_exports_full_composite_identity(
             "research-uniform-c00-source-only-v2"
         )
         assert row["Compiler Version"] == "research-uniform-source-v1"
+        assert row["Source Model Identity SHA-256"] == "1" * 64
         assert row["Research Identity SHA-256"] == "1" * 64
         assert row["Static Compiler Algorithm SHA-256"] == (
             solver_profile_static_identity_sha256(
@@ -2455,6 +2914,14 @@ def test_completed_comparison_populates_plot_ai_selector_and_auto_saves(
         assert window._auto_save_after_worker
         assert "one shared impedance view" in window.evaluation_summary.toPlainText()
         assert "absolute sub-milliohm accuracy not certified" in window.evaluation_summary.toPlainText()
+        assert "Legacy model boundary: rectangular PWR bounding-box modal cavity" in (
+            window.evaluation_summary.toPlainText()
+        )
+        assert "continuous DGND return" in window.evaluation_summary.toPlainText()
+        assert "no full-wave claim" in window.evaluation_summary.toPlainText()
+        assert "exact retained-surface uniform Maxwell-Y" not in (
+            window.evaluation_summary.toPlainText()
+        )
         assert window.evaluation_summary.toPlainText().startswith(
             "Solver provenance: [LEGACY]"
         )
@@ -2518,6 +2985,7 @@ def test_completed_comparison_populates_plot_ai_selector_and_auto_saves(
                 "PowerSI Parameter Use": "None (comparison-only)",
                 "Compiler Algorithm ID": "legacy-modal-v017-regression",
                 "Compiler Version": "legacy-v0.17",
+                "Source Model Identity SHA-256": "",
                 "Artwork Evidence SHA-256": "",
                 "Research Identity SHA-256": "",
                 "Static Compiler Algorithm SHA-256": "",
@@ -2733,8 +3201,26 @@ def test_combined_convergence_text_and_gate_reject_frequency_only_failure() -> N
         "modal converged, Δmax 0.010 dB)"
     )
     assert _rejected_comparison_convergence((comparison,)) == (
-        "VCPU0 / Original: combined convergence failed; frequency RMS N/A, "
+        "VCPU0 / Original: profile-specific convergence failed; frequency RMS N/A, "
         "max 0.420 dB; modal RMS N/A, max 0.010 dB.",
+    )
+
+    layerwise_view = SimpleNamespace(
+        solver_profile_key="layerwise_admittance_v1",
+        convergence={
+            "converged": True,
+            "frequency_converged": True,
+            "frequency_max_delta_db": 0.02,
+            "modal_converged": True,
+            "modal_rms_delta_db": 0.0,
+            "modal_max_delta_db": 0.0,
+            "lower_mode_x": 12,
+            "final_mode_x": 12,
+        },
+    )
+    assert _modal_convergence_text(layerwise_view) == (
+        "Converged (frequency converged, Δmax 0.020 dB; rectangular modal sweep "
+        "N/A, external-input invariance passed)"
     )
 
 

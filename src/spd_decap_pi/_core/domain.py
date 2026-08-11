@@ -359,6 +359,14 @@ class PinRecord(DomainModel):
     site: str | None = None
     bump_group: str | None = None
     via_template_id: str | None = None
+    # Optional raw-SPD attachment provenance.  These fields deliberately do
+    # not claim an electrical ViaLoopTemplate or a complete vertical path;
+    # they identify only the exact source Node used by the Connect record.
+    # Defaults preserve compatibility with projects written before the source
+    # terminal attachment compiler was introduced.
+    source_node_id: str | None = Field(default=None, min_length=1)
+    source_layer: str | None = Field(default=None, min_length=1)
+    source_padstack: str | None = Field(default=None, min_length=1)
 
     @field_validator("x_um", "y_um")
     @classmethod

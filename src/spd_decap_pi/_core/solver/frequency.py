@@ -10,6 +10,9 @@ from numpy.typing import ArrayLike, NDArray
 from spd_decap_pi._core.models.impedance import ImpedanceModelError, frequency_array
 
 
+DEFAULT_CURVATURE_THRESHOLD_DB = 0.75
+
+
 @dataclass(frozen=True, slots=True)
 class FrequencyGrid:
     """A validated, strictly increasing frequency sweep."""
@@ -51,7 +54,7 @@ def refine_log_grid(
     frequencies_hz: ArrayLike,
     values: ArrayLike,
     *,
-    curvature_threshold_db: float = 0.75,
+    curvature_threshold_db: float = DEFAULT_CURVATURE_THRESHOLD_DB,
     max_new_points: int = 64,
 ) -> FrequencyGrid:
     """Insert geometric midpoints around rapidly curving magnitude intervals.

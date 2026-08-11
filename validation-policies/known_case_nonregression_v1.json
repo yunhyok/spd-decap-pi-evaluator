@@ -1,0 +1,369 @@
+{
+  "schema_version": "known-case-nonregression-policy-v1",
+  "policy_name": "known_case_nonregression",
+  "policy_hash_semantics": "canonical_json_utf8_sort_keys_compact",
+  "claim_scope": "regression_only_not_accuracy",
+  "normalization": "none",
+  "release_condition": "v5_pass_and_known_case_nonregression_sidecar_pass",
+  "release_identity": {
+    "app_version": "0.22.0",
+    "solver_version": "modal-mvp-0.8.3",
+    "solver_profile": "layerwise_admittance_v1",
+    "solver_profile_key": "layerwise_admittance_v1",
+    "compiler_algorithm_id": "layer-surface-adjacent-y-island-finite-via-termination-kron-v8",
+    "compiler_version": "layer-surface-adjacent-y-island-finite-via-termination-kron-v8",
+    "static_compiler_algorithm_sha256": "3894d6174dd6765f5f830bc19511cd1bb843f3f88b1b305ceb5be32c52056615"
+  },
+  "benchmark_source": {
+    "path": "scripts/benchmark_raw_spd_powersi_correlation.py",
+    "hash_semantics": "utf8_lf_normalized",
+    "sha256": "5a777379eefdafee07d087f439489f93a80cba607497328966fadf36bcaad052"
+  },
+  "trust_boundary": {
+    "generator": "controlled_r4_benchmark_with_frozen_source",
+    "validated_scope": "immutable_report_structure_identity_and_nonregression_metrics",
+    "excluded_scope": "does_not_recompute_solver_curves_or_reported_metrics",
+    "generator_authentication": "not_cryptographic"
+  },
+  "group_aggregation": "equal_rail_macro_mean",
+  "metric_paths": {
+    "complex_rms_uohm": "metrics.complex.rms_uohm",
+    "magnitude_rms_db": "metrics.magnitude_db.rms_db",
+    "magnitude_p95_abs_db": "metrics.magnitude_db.p95_abs_db",
+    "phase_p95_abs_deg": "metrics.phase_deg.p95_abs_deg"
+  },
+  "critical_grid": {
+    "low_hz": 100000.0,
+    "high_hz": 100000000.0,
+    "points": 241
+  },
+  "threshold_derivation": {
+    "rail": "max_of_named_mode6_and_mode8_baseline_per_rail",
+    "group": "max_of_named_mode6_and_mode8_equal_rail_macro_mean",
+    "comparison": "candidate_value_must_be_less_than_or_equal_to_threshold"
+  },
+  "groups": {
+    "vqps_development": [
+      "ADC_VDD_180_VQPS_OTP_TOP_AON/0",
+      "ADC_VDD_180_VQPS_SYS_0_AON/0",
+      "ADC_VDD_180_VQPS_SYS_1_AON/0",
+      "ADC_VDD_180_VQPS_SYS_2_AON/0",
+      "ADC_VDD_180_VQPS_SYS_3_AON/0"
+    ],
+    "vqps_holdout": [
+      "ADC_VDD_180_VQPS_OTP_TOP_AON/1",
+      "ADC_VDD_180_VQPS_SYS_0_AON/1",
+      "ADC_VDD_180_VQPS_SYS_1_AON/1",
+      "ADC_VDD_180_VQPS_SYS_2_AON/1",
+      "ADC_VDD_180_VQPS_SYS_3_AON/1"
+    ],
+    "loaded_final_holdout": [
+      "ADC_VDD_055_VTRIP/0",
+      "ADC_VDD_055_VTRIP/1",
+      "ADC_VDD_070_VINT/0",
+      "ADC_VDD_070_VINT/1",
+      "ADC_VDD_075_VCPU/0",
+      "ADC_VDD_075_VCPU/1"
+    ]
+  },
+  "cases": {
+    "260729": {
+      "source": {
+        "basename": "S4LB002-2Para_260729_1_injected.spd",
+        "size_bytes": 1116717287,
+        "sha256": "40cb44b2376f59d6b606eb9b4d138204fe51b2dc6b3332d3b7c0e7d4202866d2"
+      },
+      "touchstone": {
+        "basename": "S4LB002-2Para_260729_1_injected_073026_100913_33216_S.s92p",
+        "sha256": "c5fca21da6f3b1f1e097ac6fc4c2c4f40a44201617502a9e5bf864e2a5fe7a11",
+        "ports": 92
+      },
+      "candidate": {
+        "basename": "S4LB002-2Para_260729_1_injected_candidate.spdpi",
+        "size_bytes": 245102022,
+        "sha256": "956f9aa35f66083cc1c455639988f3268c5393d6167eabed4d562246fab7f79c"
+      },
+      "baseline_reports": [
+        {
+          "modal_max_index": 6,
+          "path": "validation-fixtures/known-case-nonregression-v1/260729/mode6/correlation_report.json",
+          "size_bytes": 115902,
+          "sha256": "2c8af1dc523dea50eb135aa24e7a8130880a3b4d5c3e744082b24a12e9375805"
+        },
+        {
+          "modal_max_index": 8,
+          "path": "validation-fixtures/known-case-nonregression-v1/260729/mode8/correlation_report.json",
+          "size_bytes": 220437,
+          "sha256": "2238b155d992b3d72734e74386e40ef7187d4a0ed4cf3fbb67b2895d9d0f3843"
+        }
+      ],
+      "rail_thresholds": {
+        "ADC_VDD_180_VQPS_OTP_TOP_AON/0": {
+          "complex_rms_uohm": 106072942.81784782,
+          "magnitude_rms_db": 1.2252959603632043,
+          "magnitude_p95_abs_db": 1.3315865495669785,
+          "phase_p95_abs_deg": 1.2027590279237486
+        },
+        "ADC_VDD_180_VQPS_SYS_0_AON/0": {
+          "complex_rms_uohm": 111614062.547866,
+          "magnitude_rms_db": 1.3160172263470531,
+          "magnitude_p95_abs_db": 1.4236732470305542,
+          "phase_p95_abs_deg": 1.1071753055597897
+        },
+        "ADC_VDD_180_VQPS_SYS_1_AON/0": {
+          "complex_rms_uohm": 131811312.99893901,
+          "magnitude_rms_db": 1.5196129866478312,
+          "magnitude_p95_abs_db": 1.6288574281191828,
+          "phase_p95_abs_deg": 0.5724599829696252
+        },
+        "ADC_VDD_180_VQPS_SYS_2_AON/0": {
+          "complex_rms_uohm": 131971725.53892618,
+          "magnitude_rms_db": 1.4529013209461914,
+          "magnitude_p95_abs_db": 1.5613807710942988,
+          "phase_p95_abs_deg": 0.6100795131695425
+        },
+        "ADC_VDD_180_VQPS_SYS_3_AON/0": {
+          "complex_rms_uohm": 120904901.29019557,
+          "magnitude_rms_db": 1.6402637939465505,
+          "magnitude_p95_abs_db": 1.7637484904544358,
+          "phase_p95_abs_deg": 1.5340649462810581
+        },
+        "ADC_VDD_180_VQPS_OTP_TOP_AON/1": {
+          "complex_rms_uohm": 66310283.465599366,
+          "magnitude_rms_db": 1.4767301546667679,
+          "magnitude_p95_abs_db": 1.4236680100855823,
+          "phase_p95_abs_deg": 2.2478000129099476
+        },
+        "ADC_VDD_180_VQPS_SYS_0_AON/1": {
+          "complex_rms_uohm": 78815553.33508615,
+          "magnitude_rms_db": 1.5163024775722722,
+          "magnitude_p95_abs_db": 1.5140103221023617,
+          "phase_p95_abs_deg": 1.7186614258684392
+        },
+        "ADC_VDD_180_VQPS_SYS_1_AON/1": {
+          "complex_rms_uohm": 92304927.70587634,
+          "magnitude_rms_db": 1.5986085793192759,
+          "magnitude_p95_abs_db": 1.7213727438115423,
+          "phase_p95_abs_deg": 0.9346324543304767
+        },
+        "ADC_VDD_180_VQPS_SYS_2_AON/1": {
+          "complex_rms_uohm": 85605415.99248536,
+          "magnitude_rms_db": 1.5388754874423394,
+          "magnitude_p95_abs_db": 1.6558950703342177,
+          "phase_p95_abs_deg": 1.0850026688681669
+        },
+        "ADC_VDD_180_VQPS_SYS_3_AON/1": {
+          "complex_rms_uohm": 91781048.08185099,
+          "magnitude_rms_db": 2.620631424894015,
+          "magnitude_p95_abs_db": 2.327528994569029,
+          "phase_p95_abs_deg": 3.2701383718679575
+        },
+        "ADC_VDD_055_VTRIP/0": {
+          "complex_rms_uohm": 488.37572939109765,
+          "magnitude_rms_db": 5.255378699859552,
+          "magnitude_p95_abs_db": 7.433425556809739,
+          "phase_p95_abs_deg": 24.419973750428063
+        },
+        "ADC_VDD_055_VTRIP/1": {
+          "complex_rms_uohm": 484.40583928819257,
+          "magnitude_rms_db": 5.187314922670553,
+          "magnitude_p95_abs_db": 7.3135992400506655,
+          "phase_p95_abs_deg": 24.001831820810597
+        },
+        "ADC_VDD_070_VINT/0": {
+          "complex_rms_uohm": 497.5795009530077,
+          "magnitude_rms_db": 2.661483267373321,
+          "magnitude_p95_abs_db": 3.932417550469161,
+          "phase_p95_abs_deg": 11.422890397207428
+        },
+        "ADC_VDD_070_VINT/1": {
+          "complex_rms_uohm": 483.2625461389574,
+          "magnitude_rms_db": 2.426832025449028,
+          "magnitude_p95_abs_db": 3.8561747157345163,
+          "phase_p95_abs_deg": 10.797256399479483
+        },
+        "ADC_VDD_075_VCPU/0": {
+          "complex_rms_uohm": 618.0072868349504,
+          "magnitude_rms_db": 1.2890147519966173,
+          "magnitude_p95_abs_db": 3.319923786485903,
+          "phase_p95_abs_deg": 14.185334740707006
+        },
+        "ADC_VDD_075_VCPU/1": {
+          "complex_rms_uohm": 1132.1273589995176,
+          "magnitude_rms_db": 2.7728642332407896,
+          "magnitude_p95_abs_db": 3.9332445475506135,
+          "phase_p95_abs_deg": 23.02288298313485
+        }
+      },
+      "group_thresholds": {
+        "vqps_development": {
+          "complex_rms_uohm": 120474989.03875491,
+          "magnitude_rms_db": 1.4308147492514942,
+          "magnitude_p95_abs_db": 1.5418492972530902,
+          "phase_p95_abs_deg": 1.0053077551807528
+        },
+        "vqps_holdout": {
+          "complex_rms_uohm": 82963445.71617964,
+          "magnitude_rms_db": 1.750212293098095,
+          "magnitude_p95_abs_db": 1.7284950281805465,
+          "phase_p95_abs_deg": 1.8512469867689976
+        },
+        "loaded_final_holdout": {
+          "complex_rms_uohm": 573.663890026207,
+          "magnitude_rms_db": 3.1983271593090614,
+          "magnitude_p95_abs_db": 4.781624354226197,
+          "phase_p95_abs_deg": 17.84496505002141
+        }
+      }
+    },
+    "260804": {
+      "source": {
+        "basename": "S4LB002-2Para_260804_1_injected.spd",
+        "size_bytes": 1120159188,
+        "sha256": "45253f438fc7c328c50364fe610a7ecfbf72ca842a032921fbbb8d645e2a4f35"
+      },
+      "touchstone": {
+        "basename": "S4LB002-2Para_260804_1_injected_080526_104445_27112_S.s92p",
+        "sha256": "cd103f42412c2a63518105d7e10fae8a0538c84982e1eddbfb74829a6972951b",
+        "ports": 92
+      },
+      "candidate": {
+        "basename": "S4LB002-2Para_260804_1_injected_candidate.spdpi",
+        "size_bytes": 170345432,
+        "sha256": "2fc0448b79ce28d074f251e3190b29a621aa66dd7afcf5dec452a8215521e1aa"
+      },
+      "baseline_reports": [
+        {
+          "modal_max_index": 6,
+          "path": "validation-fixtures/known-case-nonregression-v1/260804/mode6/correlation_report.json",
+          "size_bytes": 115342,
+          "sha256": "6bacfee72439f9891b43e61af2bb282e717d2e3e1c5517a7d0c05ea4d5efe620"
+        },
+        {
+          "modal_max_index": 8,
+          "path": "validation-fixtures/known-case-nonregression-v1/260804/mode8/correlation_report.json",
+          "size_bytes": 219591,
+          "sha256": "bdc48e524bee60000589acca8f58a162d6c5ce20ae3affd8a37d3759c232bce6"
+        }
+      ],
+      "rail_thresholds": {
+        "ADC_VDD_180_VQPS_OTP_TOP_AON/0": {
+          "complex_rms_uohm": 31707276.760592032,
+          "magnitude_rms_db": 2.5534060076123244,
+          "magnitude_p95_abs_db": 3.2058128511935347,
+          "phase_p95_abs_deg": 1.8758484089212102
+        },
+        "ADC_VDD_180_VQPS_SYS_0_AON/0": {
+          "complex_rms_uohm": 33095546.837260026,
+          "magnitude_rms_db": 2.7641019233139192,
+          "magnitude_p95_abs_db": 4.056145425179476,
+          "phase_p95_abs_deg": 1.3498851412693571
+        },
+        "ADC_VDD_180_VQPS_SYS_1_AON/0": {
+          "complex_rms_uohm": 93044893.58337077,
+          "magnitude_rms_db": 1.5534101138995471,
+          "magnitude_p95_abs_db": 1.7624973810330011,
+          "phase_p95_abs_deg": 0.7469742959536653
+        },
+        "ADC_VDD_180_VQPS_SYS_2_AON/0": {
+          "complex_rms_uohm": 92229619.1417889,
+          "magnitude_rms_db": 1.4746352554672806,
+          "magnitude_p95_abs_db": 1.6819810655924634,
+          "phase_p95_abs_deg": 0.8071124481918446
+        },
+        "ADC_VDD_180_VQPS_SYS_3_AON/0": {
+          "complex_rms_uohm": 40295675.37485254,
+          "magnitude_rms_db": 3.0416867452787963,
+          "magnitude_p95_abs_db": 4.43900100595905,
+          "phase_p95_abs_deg": 1.9238440353053723
+        },
+        "ADC_VDD_180_VQPS_OTP_TOP_AON/1": {
+          "complex_rms_uohm": 20443180.115081802,
+          "magnitude_rms_db": 3.5856697788290437,
+          "magnitude_p95_abs_db": 11.118187637992364,
+          "phase_p95_abs_deg": 34.74808451373629
+        },
+        "ADC_VDD_180_VQPS_SYS_0_AON/1": {
+          "complex_rms_uohm": 24528687.842292227,
+          "magnitude_rms_db": 3.7560826090945496,
+          "magnitude_p95_abs_db": 8.064583222174415,
+          "phase_p95_abs_deg": 48.44381655494663
+        },
+        "ADC_VDD_180_VQPS_SYS_1_AON/1": {
+          "complex_rms_uohm": 64858379.132023185,
+          "magnitude_rms_db": 1.6651365078111906,
+          "magnitude_p95_abs_db": 1.8382878302889105,
+          "phase_p95_abs_deg": 1.2683819416836744
+        },
+        "ADC_VDD_180_VQPS_SYS_2_AON/1": {
+          "complex_rms_uohm": 59598528.582216315,
+          "magnitude_rms_db": 1.6527087057689593,
+          "magnitude_p95_abs_db": 1.7574222252506826,
+          "phase_p95_abs_deg": 1.5037430661685622
+        },
+        "ADC_VDD_180_VQPS_SYS_3_AON/1": {
+          "complex_rms_uohm": 31492018.12966612,
+          "magnitude_rms_db": 4.08467748878563,
+          "magnitude_p95_abs_db": 11.208254258355339,
+          "phase_p95_abs_deg": 42.118336316345975
+        },
+        "ADC_VDD_055_VTRIP/0": {
+          "complex_rms_uohm": 487.0543281045848,
+          "magnitude_rms_db": 5.078578746559622,
+          "magnitude_p95_abs_db": 6.75437638003487,
+          "phase_p95_abs_deg": 23.2818833931884
+        },
+        "ADC_VDD_055_VTRIP/1": {
+          "complex_rms_uohm": 198.92923161050302,
+          "magnitude_rms_db": 4.0078672627532,
+          "magnitude_p95_abs_db": 6.310840881641132,
+          "phase_p95_abs_deg": 36.257074487691796
+        },
+        "ADC_VDD_070_VINT/0": {
+          "complex_rms_uohm": 339.25809177722317,
+          "magnitude_rms_db": 2.3020006184299358,
+          "magnitude_p95_abs_db": 3.1033587653571115,
+          "phase_p95_abs_deg": 10.302186076234658
+        },
+        "ADC_VDD_070_VINT/1": {
+          "complex_rms_uohm": 326.3546027435047,
+          "magnitude_rms_db": 1.9713126478619794,
+          "magnitude_p95_abs_db": 2.954566208875425,
+          "phase_p95_abs_deg": 12.912505876084438
+        },
+        "ADC_VDD_075_VCPU/0": {
+          "complex_rms_uohm": 1233.8437836758042,
+          "magnitude_rms_db": 2.459110998618798,
+          "magnitude_p95_abs_db": 5.465765505628712,
+          "phase_p95_abs_deg": 23.107032793512843
+        },
+        "ADC_VDD_075_VCPU/1": {
+          "complex_rms_uohm": 677.7630053098438,
+          "magnitude_rms_db": 1.8378759945659762,
+          "magnitude_p95_abs_db": 2.8392460440574774,
+          "phase_p95_abs_deg": 23.311025982790397
+        }
+      },
+      "group_thresholds": {
+        "vqps_development": {
+          "complex_rms_uohm": 58074602.33957286,
+          "magnitude_rms_db": 2.277429258742173,
+          "magnitude_p95_abs_db": 3.0290875457915054,
+          "phase_p95_abs_deg": 1.3341957619757736
+        },
+        "vqps_holdout": {
+          "complex_rms_uohm": 40184158.76025593,
+          "magnitude_rms_db": 2.9488550180578743,
+          "magnitude_p95_abs_db": 6.7929444027288195,
+          "phase_p95_abs_deg": 25.595300517892575
+        },
+        "loaded_final_holdout": {
+          "complex_rms_uohm": 486.762553127506,
+          "magnitude_rms_db": 2.8394250021660206,
+          "magnitude_p95_abs_db": 4.324898820271018,
+          "phase_p95_abs_deg": 21.408662151781893
+        }
+      }
+    }
+  }
+}

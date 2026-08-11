@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import csv
 from collections.abc import Mapping
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from decimal import Decimal, ROUND_FLOOR
 from hashlib import sha256
 from math import hypot, isfinite
@@ -46,6 +46,7 @@ from PySide6.QtWidgets import (
     QProgressBar,
     QPushButton,
     QScrollArea,
+    QSizePolicy,
     QSplitter,
     QStatusBar,
     QTabWidget,
@@ -62,6 +63,7 @@ from spd_decap_pi._core.services import (
     EVALUATION_MODAL_PRESETS,
     WorkspaceState,
     cap_spice_subcircuit_names,
+    evaluation_model_boundary_disclosure,
     import_cap_spice,
     plane_cell_source_geometry_with_size,
     scoped_blas_threads,
@@ -69,12 +71,18 @@ from spd_decap_pi._core.services import (
 )
 from spd_decap_pi._core.domain import PinKind, ProjectSpec
 from spd_decap_pi._core.solver.profiles import (
+    APPLICATION_DEFAULT_SOLVER_PROFILE_KEY,
+    DEFAULT_SOLVER_PROFILE_KEY,
+    LAYERWISE_ADMITTANCE_PROFILE,
     LEGACY_MODAL_PROFILE,
     RESEARCH_UNIFORM_ADMITTANCE_PROFILE,
     solver_profile_static_identity_sha256,
 )
 from spd_decap_pi._core.solver.research_uniform_profile import (
     PROFILE_COMPILER_VERSION as RESEARCH_PROFILE_COMPILER_VERSION,
+)
+from spd_decap_pi._core.solver.layerwise_network import (
+    LAYERWISE_COMPILER_VERSION,
 )
 
 from ..scenario import DecapConnectionKind, DecapPadState, ScenarioDecap, ScenarioSpec
@@ -138,14 +146,11 @@ class _DistributionNumericItem(QTableWidgetItem):
         return self._sort_key(self) < self._sort_key(other)
 
 
-_EXPLORATORY_FIDELITY_WARNING = (
-    "Exploratory: rectangular PWR bbox, continuous DGND, single-rail Zii; "
-    "absolute sub-milliohm accuracy not certified."
-)
-
 _LEGACY_SOLVER_PROFILE_KEY = "legacy_modal_v017"
+_LAYERWISE_SOLVER_PROFILE_KEY = "layerwise_admittance_v1"
 _RESEARCH_SOLVER_PROFILE_KEY = "research_uniform_admittance"
 _SOLVER_PROFILE_ITEMS: tuple[tuple[str, str], ...] = (
+    ("Layer-surface global Y (terminal-complete)", _LAYERWISE_SOLVER_PROFILE_KEY),
     ("Legacy modal", _LEGACY_SOLVER_PROFILE_KEY),
     (
         "Experimental: actual-artwork uniform C00 (topology certificate required)",
@@ -187,24 +192,49 @@ class _SolverProvenancePresentation:
     component_manifest_sha256: str = ""
     material_manifest_sha256: str = ""
     topology_certificate_sha256: str = ""
+    substrate_identity_sha256: str = ""
+    ground_alias_manifest_sha256: str = ""
+    via_group_evidence_sha256: str = ""
+    surface_connectivity_evidence_sha256: str = ""
+    terminal_surface_contact_proof_sha256: str = ""
+    base_layerwise_evidence_sha256: str = ""
+    termination_manifest_sha256: str = ""
+    layerwise_identity_sha256: str = ""
+
+    @property
+    def source_model_identity_sha256(self) -> str:
+        return (
+            self.layerwise_identity_sha256
+            or self.substrate_identity_sha256
+            or self.research_identity_sha256
+        )
 
     @property
     def banner_text(self) -> str:
         source_text = "Yes" if self.source_only else "No"
-        validation = (
-            "RESEARCH / not PowerSI-validated"
-            if self.validation_status == "research_not_validated"
-            else "Legacy regression baseline"
-        )
+        validation = {
+            "research_not_validated": "RESEARCH / not PowerSI-validated",
+            "two_named_case_validation_required": "layerwise validation pending",
+            "validated_two_named_cases": "validated on the two named SPD/PowerSI cases",
+            "legacy_regression": "Legacy regression baseline",
+        }.get(self.validation_status, self.validation_status)
+        evidence_identity = self.source_model_identity_sha256
         identity = (
             f"compiler {self.compiler_algorithm_id} / {self.compiler_version} · "
-            f"evidence {self.research_identity_sha256[:12]}… · "
-            if self.badge == "RESEARCH"
+            f"evidence {evidence_identity[:12]}… · "
+            if self.badge in {"RESEARCH", "LAYERWISE"}
             else ""
+        )
+        engine = (
+            "terminal-complete global-Y Device-port engine"
+            if self.badge == "LAYERWISE"
+            else "research uniform-C00 + modal-correction engine"
+            if self.badge == "RESEARCH"
+            else "modal backend"
         )
         return (
             f"[{self.badge}] {self.label} · {identity}"
-            f"modal backend {self.solver_version} · "
+            f"{engine} {self.solver_version} · "
             f"Source-only: {source_text} ({self.source_only_status}) · {validation} · "
             "PowerSI parameter fitting: never"
         )
@@ -213,20 +243,40 @@ class _SolverProvenancePresentation:
     def details_text(self) -> str:
         """Return copyable full identities for tooltip/result audit details."""
 
-        if self.badge != "RESEARCH":
+        if self.badge not in {"RESEARCH", "LAYERWISE"}:
             return self.banner_text
+        common = (
+            self.banner_text,
+            f"Compiler algorithm ID: {self.compiler_algorithm_id}",
+            f"Compiler version: {self.compiler_version}",
+            f"Source model identity SHA-256: {self.source_model_identity_sha256}",
+            f"Static compiler/algorithm SHA-256: {self.static_compiler_algorithm_sha256}",
+            f"Source SHA-256: {self.source_sha256}",
+            f"Geometry manifest SHA-256: {self.geometry_manifest_sha256}",
+            f"Material manifest SHA-256: {self.material_manifest_sha256}",
+        )
+        if self.badge == "LAYERWISE":
+            return "\n".join(
+                (
+                    *common,
+                    f"Layer-surface substrate SHA-256: {self.substrate_identity_sha256}",
+                    f"Ground-alias manifest SHA-256: {self.ground_alias_manifest_sha256}",
+                    f"Via-group evidence SHA-256: {self.via_group_evidence_sha256}",
+                    f"Surface-connectivity evidence SHA-256: {self.surface_connectivity_evidence_sha256}",
+                    f"Terminal surface-contact proof SHA-256: {self.terminal_surface_contact_proof_sha256}",
+                    f"Base selected-rail evidence SHA-256: {self.base_layerwise_evidence_sha256}",
+                    "Mounted-state termination manifest SHA-256 "
+                    f"(single result or batch aggregate): {self.termination_manifest_sha256}",
+                    "Bound layerwise result identity SHA-256 "
+                    f"(single result or batch aggregate): {self.layerwise_identity_sha256}",
+                )
+            )
         return "\n".join(
             (
-                self.banner_text,
-                f"Compiler algorithm ID: {self.compiler_algorithm_id}",
-                f"Compiler version: {self.compiler_version}",
+                *common,
                 f"Artwork evidence SHA-256: {self.artwork_evidence_sha256}",
                 f"Research identity SHA-256: {self.research_identity_sha256}",
-                f"Static compiler/algorithm SHA-256: {self.static_compiler_algorithm_sha256}",
-                f"Source SHA-256: {self.source_sha256}",
-                f"Geometry manifest SHA-256: {self.geometry_manifest_sha256}",
                 f"Component manifest SHA-256: {self.component_manifest_sha256}",
-                f"Material manifest SHA-256: {self.material_manifest_sha256}",
                 f"Topology certificate SHA-256: {self.topology_certificate_sha256}",
             )
         )
@@ -242,20 +292,31 @@ def _solver_provenance_for_view(view: Any) -> _SolverProvenancePresentation:
         or provenance.get("profile_key")
         or _LEGACY_SOLVER_PROFILE_KEY
     ).strip()
-    if key not in {_LEGACY_SOLVER_PROFILE_KEY, _RESEARCH_SOLVER_PROFILE_KEY}:
+    if key not in {
+        _LEGACY_SOLVER_PROFILE_KEY,
+        _LAYERWISE_SOLVER_PROFILE_KEY,
+        _RESEARCH_SOLVER_PROFILE_KEY,
+    }:
         raise ValueError(f"Evaluation result has unknown solver profile {key!r}.")
     research = key == _RESEARCH_SOLVER_PROFILE_KEY
+    layerwise = key == _LAYERWISE_SOLVER_PROFILE_KEY
     label = str(
         getattr(view, "solver_profile_label", None)
-        or ("Actual-artwork uniform mode" if research else "Legacy modal")
+        or (
+            "Layer-surface terminal-complete network"
+            if layerwise
+            else "Actual-artwork uniform mode"
+            if research
+            else "Legacy modal"
+        )
     ).strip()
     badge = str(
         getattr(view, "solver_profile_badge", None)
         or provenance.get("profile_badge")
-        or ("RESEARCH" if research else "LEGACY")
+        or ("LAYERWISE" if layerwise else "RESEARCH" if research else "LEGACY")
     ).strip().upper()
     solver_version = str(getattr(view, "solver_version", "unknown")).strip()
-    expected_badge = "RESEARCH" if research else "LEGACY"
+    expected_badge = "LAYERWISE" if layerwise else "RESEARCH" if research else "LEGACY"
     if not label or badge != expected_badge or not solver_version:
         raise ValueError("Evaluation result has incomplete solver identity provenance.")
     powersi_used = provenance.get("powersi_used_for_parameters") is True
@@ -277,6 +338,18 @@ def _solver_provenance_for_view(view: Any) -> _SolverProvenancePresentation:
         raise ValueError(
             "Research evaluation result is missing explicit source-only, "
             "validation, or PowerSI-parameter provenance."
+        )
+    if layerwise and (
+        provenance.get("profile_key") != _LAYERWISE_SOLVER_PROFILE_KEY
+        or provenance.get("profile_badge") != "LAYERWISE"
+        or provenance.get("source_only") is not True
+        or provenance.get("powersi_used_for_parameters") is not False
+        or provenance.get("compiler_algorithm_id")
+        != LAYERWISE_ADMITTANCE_PROFILE.compiler_algorithm_id
+    ):
+        raise ValueError(
+            "Layerwise evaluation result is missing explicit source-only or "
+            "PowerSI-parameter provenance."
         )
     research_hashes: dict[str, str] = {}
     if research:
@@ -319,14 +392,69 @@ def _solver_provenance_for_view(view: Any) -> _SolverProvenancePresentation:
             raise ValueError(
                 "Research evaluation result has an unexpected compiler version."
             )
+    if layerwise:
+        for name in (
+            "static_compiler_algorithm_sha256",
+            "source_sha256",
+            "geometry_manifest_sha256",
+            "material_manifest_sha256",
+            "substrate_identity_sha256",
+            "ground_alias_manifest_sha256",
+            "via_group_evidence_sha256",
+            "surface_connectivity_evidence_sha256",
+            "terminal_surface_contact_proof_sha256",
+            "base_layerwise_evidence_sha256",
+            "termination_manifest_sha256",
+            "layerwise_identity_sha256",
+        ):
+            raw_value = provenance.get(name)
+            if name == "terminal_surface_contact_proof_sha256" and not raw_value:
+                # Read the pre-v0.22 field only as a compatibility alias.
+                raw_value = provenance.get("terminal_artwork_proof_sha256")
+            value = str(raw_value or "").strip().lower()
+            if len(value) != 64 or any(
+                character not in "0123456789abcdef" for character in value
+            ):
+                raise ValueError(
+                    f"Layerwise evaluation result is missing complete {name} provenance."
+                )
+            research_hashes[name] = value
+        if research_hashes["static_compiler_algorithm_sha256"] != (
+            solver_profile_static_identity_sha256(LAYERWISE_ADMITTANCE_PROFILE)
+        ):
+            raise ValueError(
+                "Layerwise evaluation result was produced by a different compiler identity."
+            )
+        declared_compiler = provenance.get("compiler_version")
+        if declared_compiler != LAYERWISE_COMPILER_VERSION:
+            raise ValueError(
+                "Layerwise evaluation result has an unexpected compiler version."
+            )
+        if provenance.get("termination_manifest_required") is not True:
+            raise ValueError(
+                "Layerwise evaluation result did not require its mounted-state "
+                "termination manifest."
+            )
     source_only = provenance.get("source_only", False) is True
     source_only_status = str(
         provenance.get("status")
-        or ("source_only_research" if research else "legacy_regression")
+        or (
+            "source_layerwise_production"
+            if layerwise
+            else "source_only_research"
+            if research
+            else "legacy_regression"
+        )
     ).strip()
     validation_status = str(
         provenance.get("validation_status")
-        or ("research_not_validated" if research else "legacy_regression")
+        or (
+            "two_named_case_validation_required"
+            if layerwise
+            else "research_not_validated"
+            if research
+            else "legacy_regression"
+        )
     ).strip()
     if research and not source_only:
         raise ValueError(
@@ -346,12 +474,18 @@ def _solver_provenance_for_view(view: Any) -> _SolverProvenancePresentation:
         validation_status=validation_status,
         powersi_used_for_parameters=False,
         compiler_algorithm_id=(
-            RESEARCH_UNIFORM_ADMITTANCE_PROFILE.compiler_algorithm_id
+            LAYERWISE_ADMITTANCE_PROFILE.compiler_algorithm_id
+            if layerwise
+            else RESEARCH_UNIFORM_ADMITTANCE_PROFILE.compiler_algorithm_id
             if research
             else LEGACY_MODAL_PROFILE.compiler_algorithm_id
         ),
         compiler_version=(
-            RESEARCH_PROFILE_COMPILER_VERSION if research else "legacy-v0.17"
+            LAYERWISE_COMPILER_VERSION
+            if layerwise
+            else RESEARCH_PROFILE_COMPILER_VERSION
+            if research
+            else "legacy-v0.17"
         ),
         **research_hashes,
     )
@@ -374,6 +508,48 @@ def _comparison_solver_provenance(
     if not presentations:
         raise ValueError("Evaluation result is missing solver provenance.")
     first = presentations[0]
+    if first.badge == "LAYERWISE":
+        varying = {
+            "terminal_surface_contact_proof_sha256": "",
+            "base_layerwise_evidence_sha256": "",
+            "termination_manifest_sha256": "",
+            "layerwise_identity_sha256": "",
+        }
+        common = replace(first, **varying)
+        if any(
+            item.badge != "LAYERWISE" or replace(item, **varying) != common
+            for item in presentations[1:]
+        ):
+            raise ValueError(
+                "Evaluation result mixes layerwise compiler, substrate, or "
+                "source identities; the batch was rejected."
+            )
+
+        def aggregate(field: str) -> str:
+            values = "\n".join(
+                str(getattr(item, field)) for item in presentations
+            )
+            return sha256((values + "\n").encode("ascii")).hexdigest()
+
+        # A batch legitimately contains a different selected-terminal proof per
+        # rail and different mounted-state manifests for Original versus Tuned.
+        # Present a deterministic aggregate while preserving and validating the
+        # common source/substrate/compiler identity above.
+        return replace(
+            first,
+            terminal_surface_contact_proof_sha256=aggregate(
+                "terminal_surface_contact_proof_sha256"
+            ),
+            base_layerwise_evidence_sha256=aggregate(
+                "base_layerwise_evidence_sha256"
+            ),
+            termination_manifest_sha256=aggregate(
+                "termination_manifest_sha256"
+            ),
+            layerwise_identity_sha256=aggregate(
+                "layerwise_identity_sha256"
+            ),
+        )
     if any(item != first for item in presentations[1:]):
         raise ValueError(
             "Evaluation result mixes solver profile, version, or source-only status; "
@@ -972,7 +1148,7 @@ def _job_prepare_plane_layer(
 
 
 def _modal_convergence_text(view: Any) -> str:
-    """Summarize combined numerical convergence without implying model accuracy."""
+    """Summarize profile-specific convergence without implying model accuracy."""
 
     convergence = getattr(view, "convergence", None)
     if not isinstance(convergence, dict):
@@ -985,14 +1161,34 @@ def _modal_convergence_text(view: Any) -> str:
     )
     if convergence.get("frequency_budget_exhausted") is True:
         frequency_state += "; budget exhausted"
+    frequency_max = _convergence_delta_text(
+        convergence.get("frequency_max_delta_db")
+    )
+    if (
+        str(getattr(view, "solver_profile_key", ""))
+        == _LAYERWISE_SOLVER_PROFILE_KEY
+    ):
+        invariance_state = (
+            "external-input invariance passed"
+            if convergence.get("modal_converged") is True
+            else "external-input invariance failed"
+        )
+        return (
+            f"{state} ({frequency_state}, Δmax {frequency_max}; "
+            f"rectangular modal sweep N/A, {invariance_state})"
+        )
     modal_state = (
         "modal converged"
         if convergence.get("modal_converged") is True
         else "modal failed"
     )
-    frequency_max = _convergence_delta_text(
-        convergence.get("frequency_max_delta_db")
-    )
+    lower_mode = convergence.get("lower_mode_x")
+    final_mode = convergence.get("final_mode_x")
+    if all(
+        isinstance(value, int) and not isinstance(value, bool)
+        for value in (lower_mode, final_mode)
+    ):
+        modal_state += f" m{lower_mode}→m{final_mode}"
     modal_max = _convergence_delta_text(convergence.get("modal_max_delta_db"))
     return (
         f"{state} ({frequency_state}, Δmax {frequency_max}; "
@@ -1032,16 +1228,37 @@ def _rejected_comparison_convergence(
             if _combined_converged(convergence):
                 continue
             values = convergence if isinstance(convergence, dict) else {}
-            rejected.append(
-                f"{rail_id} / {configuration}: combined convergence "
+            prefix = (
+                f"{rail_id} / {configuration}: profile-specific convergence "
                 f"{'missing' if not isinstance(convergence, dict) else 'failed'}; "
                 "frequency RMS "
                 f"{_convergence_delta_text(values.get('frequency_rms_delta_db'))}, "
                 f"max {_convergence_delta_text(values.get('frequency_max_delta_db'))}; "
-                "modal RMS "
-                f"{_convergence_delta_text(values.get('modal_rms_delta_db'))}, "
-                f"max {_convergence_delta_text(values.get('modal_max_delta_db'))}."
             )
+            if (
+                str(getattr(view, "solver_profile_key", ""))
+                == _LAYERWISE_SOLVER_PROFILE_KEY
+            ):
+                invariance_state = (
+                    "passed"
+                    if values.get("modal_converged") is True
+                    else "failed"
+                )
+                rejected.append(
+                    prefix
+                    + "rectangular modal sweep N/A; external-input invariance "
+                    + invariance_state
+                    + "."
+                )
+            else:
+                rejected.append(
+                    prefix
+                    + "modal RMS "
+                    + _convergence_delta_text(values.get("modal_rms_delta_db"))
+                    + ", max "
+                    + _convergence_delta_text(values.get("modal_max_delta_db"))
+                    + "."
+                )
     return tuple(rejected)
 
 
@@ -1441,7 +1658,7 @@ def _source_via_path_recovery_summary_from_project(
 
     raw = project.metadata.get("spd_via_path_recovery", {})
     if not isinstance(raw, dict):
-        message = "Source Via paths: unavailable"
+        message = "Compatibility Via paths: unavailable"
         return message, message
 
     def count(name: str) -> int:
@@ -1452,18 +1669,22 @@ def _source_via_path_recovery_summary_from_project(
     recovered = count("recovered")
     fallback = count("fallback")
     compact = (
-        f"Source Via paths: {recovered:,}/{requested:,} recovered; "
-        f"{fallback:,} fallback"
+        f"Compatibility Via paths: {recovered:,}/{requested:,} recovered; "
+        f"{fallback:,} rail-template fallback"
     )
     details = [compact]
     if requested and not recovered:
         details.append(
-            "No source segment R/L applied; legacy rail templates used"
+            "No per-landing source segment R/L is available to "
+            "legacy/compatibility terminal models; rail templates are used there. "
+            "Layerwise v4 topology readiness is validated separately"
         )
     elif recovered:
         details.append(
-            "Recovered source paths use selected-plane pad geometry and "
-            "source-proven vertical segment R/L where applicable"
+            "Legacy/compatibility terminal models use recovered per-landing "
+            "selected-plane pad geometry and source-proven vertical segment R/L "
+            "where applicable. Layerwise v4 topology readiness is validated "
+            "separately"
         )
     return compact, "; ".join(details)
 
@@ -1590,6 +1811,8 @@ def _job_save_scenario(
 def _job_preflight_evaluation(
     scenario: ScenarioSpec,
     rail_ids: tuple[str, ...],
+    solver_profile: str = DEFAULT_SOLVER_PROFILE_KEY,
+    attachments: dict[str, bytes] | None = None,
     *,
     progress: Callable[[int, str], None],
     is_cancelled: Callable[[], bool],
@@ -1608,6 +1831,8 @@ def _job_preflight_evaluation(
             5 + round(min(max(value, 0), 100) * 0.9), message
         ),
         is_cancelled=is_cancelled,
+        solver_profile=solver_profile,
+        attachments=attachments,
     )
     if is_cancelled():
         raise RuntimeError("evaluation preflight cancelled")
@@ -2141,6 +2366,10 @@ class MainWindow(QMainWindow):
         self.rail_list = QListWidget()
         self.rail_list.setObjectName("evaluationRailList")
         self.rail_list.setMinimumHeight(140)
+        self.rail_list.setSizePolicy(
+            QSizePolicy.Policy.Expanding,
+            QSizePolicy.Policy.Expanding,
+        )
         self.rail_list.setIconSize(QSize(12, 12))
         self.rail_list.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         self.rail_list.itemChanged.connect(self._evaluation_rail_check_changed)
@@ -2163,6 +2392,10 @@ class MainWindow(QMainWindow):
         rail_buttons.addWidget(self.clear_rails_button)
         rail_buttons.addStretch(1)
         rail_picker = QWidget()
+        rail_picker.setSizePolicy(
+            QSizePolicy.Policy.Expanding,
+            QSizePolicy.Policy.Expanding,
+        )
         rail_picker_layout = QVBoxLayout(rail_picker)
         rail_picker_layout.setContentsMargins(0, 0, 0, 0)
         rail_picker_layout.addWidget(self.rail_list)
@@ -2178,16 +2411,19 @@ class MainWindow(QMainWindow):
             self.evaluation_solver_profile_combo.addItem(label, key)
         self.evaluation_solver_profile_combo.setCurrentIndex(
             self.evaluation_solver_profile_combo.findData(
-                _LEGACY_SOLVER_PROFILE_KEY
+                APPLICATION_DEFAULT_SOLVER_PROFILE_KEY
             )
         )
         self.evaluation_solver_profile_combo.setToolTip(
-            "Legacy modal is the default regression path. The actual-artwork "
-            "uniform-C00 profile is an EXPERIMENTAL research opt-in and requires "
-            "a complete topology certificate: it replaces "
-            "only the uniform C00 plane term, keeps nonuniform rectangular-bbox "
-            "modes, and refuses to run when source topology evidence is incomplete. "
-            "PowerSI data remains comparison-only and is never used for fitting."
+            "Layerwise uses exact retained-surface Maxwell-Y blocks, finite Via/Trace "
+            "topology, mounted decaps, and one global Schur/Kron reduction at the "
+            "external Device port. That terminal-complete Zii is used alone; no legacy "
+            "rectangular higher-mode one-port difference is added. Topology-only "
+            "surfaces receive zero synthesized adjacent-gap capacitance or fringing. Legacy "
+            "uses a rectangular PWR bounding-box cavity with continuous DGND. Research "
+            "replaces only uniform C00 with exact artwork and retains the rectangular "
+            "nonuniform correction. Every profile is single-rail Zii with no inter-rail/"
+            "site coupling and no full-wave claim. PowerSI is comparison-only."
         )
         self.evaluation_solver_profile_combo.currentIndexChanged.connect(
             self._evaluation_solver_profile_changed
@@ -2209,7 +2445,8 @@ class MainWindow(QMainWindow):
         )
         for preset in EVALUATION_MODAL_PRESETS:
             self.evaluation_modal_preset_combo.addItem(
-                f"{preset.label} ({preset.mode_count} modes)", preset.max_index
+                f"{preset.label} (Legacy/Research: {preset.mode_count} modes)",
+                preset.max_index,
             )
         default_index = self.evaluation_modal_preset_combo.findData(
             DEFAULT_EVALUATION_MODAL_MAX_INDEX
@@ -2217,10 +2454,11 @@ class MainWindow(QMainWindow):
         if default_index >= 0:
             self.evaluation_modal_preset_combo.setCurrentIndex(default_index)
         self.evaluation_modal_preset_combo.setToolTip(
-            "Changes only the internal rectangular modal convergence/runtime. "
-            "Experimental m12 check uses PowerSI evidence for comparison only; the "
-            "2026-07-29 benchmark took 4,139 s and more modes worsened external "
-            "correlation in that case, which does not justify selecting a lower order."
+            "Changes rectangular modal order only for Legacy and Research. The "
+            "production terminal-complete Layerwise path uses its global-Y external "
+            "Device-port Zii alone and adds no rectangular modal correction; the "
+            "shared preset remains recorded in run provenance. PowerSI is "
+            "comparison-only and never selects an order."
         )
         self.evaluation_modal_preset_combo.currentIndexChanged.connect(
             self._evaluation_modal_preset_changed
@@ -2229,7 +2467,7 @@ class MainWindow(QMainWindow):
         form.addRow("Common target impedance (ohm)", self.target_edit)
         form.addRow("Physics model", profile_picker)
         form.addRow("Numerical convergence preset", self.evaluation_modal_preset_combo)
-        controls_layout.addLayout(form)
+        controls_layout.addLayout(form, 1)
         self._update_evaluation_solver_profile_help()
         self.evaluate_button = QPushButton("Run Original + Tuned evaluation")
         self.evaluate_button.setObjectName("evaluateScenarioButton")
@@ -2238,7 +2476,10 @@ class MainWindow(QMainWindow):
 
         results_section = QWidget()
         results_section.setObjectName("evaluationResultsSection")
-        results_section.setMinimumHeight(180)
+        # Keep the default result pane comfortably above 180 px, while still
+        # allowing a user to drag it smaller when they need a taller 92-rail
+        # selector on a 700 px display.
+        results_section.setMinimumHeight(120)
         results_layout = QVBoxLayout(results_section)
         results_layout.setContentsMargins(0, 0, 0, 0)
         results_heading = QLabel("Evaluation Results")
@@ -5002,6 +5243,17 @@ class MainWindow(QMainWindow):
                 "select Legacy modal and run again."
             )
             self.status_text.setText("Research evaluation blocked by source evidence")
+        elif profile_key == _LAYERWISE_SOLVER_PROFILE_KEY:
+            self.evaluation_summary.setPlainText(
+                "Layerwise evaluation did not run. Legacy modal was not used as "
+                "an automatic fallback, and the open source/scenario was preserved.\n\n"
+                + final_line
+                + "\n\nRe-import or repair the reported source artwork/network "
+                "evidence, or explicitly select Legacy modal and run again."
+            )
+            self.status_text.setText(
+                "Layerwise evaluation blocked by source/network evidence"
+            )
         else:
             self.evaluation_summary.setPlainText(
                 f"Evaluation failed with physics model {profile_label}.\n\n"
@@ -6132,27 +6384,37 @@ class MainWindow(QMainWindow):
         value = self.evaluation_solver_profile_combo.currentData()
         if value in {
             _LEGACY_SOLVER_PROFILE_KEY,
+            _LAYERWISE_SOLVER_PROFILE_KEY,
             _RESEARCH_SOLVER_PROFILE_KEY,
         }:
             return str(value)
-        return _LEGACY_SOLVER_PROFILE_KEY
+        return APPLICATION_DEFAULT_SOLVER_PROFILE_KEY
 
     def _update_evaluation_solver_profile_help(self) -> None:
-        research = (
-            self._selected_evaluation_solver_profile()
-            == _RESEARCH_SOLVER_PROFILE_KEY
-        )
+        selected = self._selected_evaluation_solver_profile()
+        research = selected == _RESEARCH_SOLVER_PROFILE_KEY
+        layerwise = selected == _LAYERWISE_SOLVER_PROFILE_KEY
         if research:
             self.evaluation_solver_profile_status.setText(
-                "EXPERIMENTAL RESEARCH · topology certificate required · "
+                "EXPERIMENTAL RESEARCH · exact-artwork uniform C00 only · "
+                "rectangular nonuniform correction · topology certificate required · "
                 "transient / not cached · not PowerSI-validated"
             )
             self.evaluation_solver_profile_status.setStyleSheet(
                 "color: #d6a64f; font-weight: 700;"
             )
+        elif layerwise:
+            self.evaluation_solver_profile_status.setText(
+                "LAYERWISE · terminal-complete Maxwell-Y/Kron Device port · "
+                "no legacy modal add-on"
+            )
+            self.evaluation_solver_profile_status.setStyleSheet(
+                "color: #54b887; font-weight: 700;"
+            )
         else:
             self.evaluation_solver_profile_status.setText(
-                "LEGACY · default regression path"
+                "LEGACY · rectangular PWR bounding-box cavity · continuous DGND · "
+                "rollback/regression path"
             )
             self.evaluation_solver_profile_status.setStyleSheet(
                 "color: #7aa2c7; font-weight: 600;"
@@ -6164,25 +6426,33 @@ class MainWindow(QMainWindow):
     ) -> None:
         if not hasattr(self, "evaluation_notes"):
             return
+        profile_key = (
+            provenance.key
+            if provenance is not None
+            else self._selected_evaluation_solver_profile()
+        )
         if provenance is not None:
             first_line = "Result provenance: " + provenance.banner_text
-        elif (
-            self._selected_evaluation_solver_profile()
-            == _RESEARCH_SOLVER_PROFILE_KEY
-        ):
+        elif profile_key == _RESEARCH_SOLVER_PROFILE_KEY:
             first_line = (
                 "Selected physics model: [RESEARCH] Actual-artwork uniform mode · "
                 "EXPERIMENTAL / not PowerSI-validated · topology certificate required."
             )
+        elif profile_key == _LAYERWISE_SOLVER_PROFILE_KEY:
+            first_line = (
+                "Selected physics model: [LAYERWISE] terminal-complete adjacent-gap Maxwell Y · "
+                "exact same-NET Trace/Via surface contacts · global merge before "
+                "per-frequency Schur/Kron at the external Device port · "
+                "global-Y Zii used alone, with no legacy modal add-on."
+            )
         else:
             first_line = (
-                "Selected physics model: [LEGACY] Legacy modal · default regression path."
+                "Selected physics model: [LEGACY] Legacy modal · rollback/regression path."
             )
         research = (
             provenance.badge == "RESEARCH"
             if provenance is not None
-            else self._selected_evaluation_solver_profile()
-            == _RESEARCH_SOLVER_PROFILE_KEY
+            else profile_key == _RESEARCH_SOLVER_PROFILE_KEY
         )
         cache_note = (
             "Research Original is recomputed for each run and remains transient: "
@@ -6193,6 +6463,38 @@ class MainWindow(QMainWindow):
                 "the current Tuned state. "
             )
         )
+        if profile_key == _LAYERWISE_SOLVER_PROFILE_KEY:
+            profile_note = (
+                "Layerwise assembles all retained adjacent-gap uniform Maxwell-Y "
+                "blocks and exact same-NET Trace/Via surface contacts before one "
+                "global per-frequency Schur/Kron reduction at the external Device "
+                "port. This terminal-complete global-Y Zii is the sole passive input; "
+                "no legacy rectangular higher-mode one-port difference is added. "
+                "Incomplete retained-"
+                "surface, material, topology, or terminal-contact evidence blocks "
+                "Layerwise evaluation without falling back to Legacy modal. "
+            )
+        elif profile_key == _RESEARCH_SOLVER_PROFILE_KEY:
+            profile_note = (
+                "Research replaces only the exact-artwork uniform C00 plane term; "
+                "nonuniform modes retain the disclosed rectangular-envelope "
+                "approximation. Incomplete topology or source/reference evidence "
+                "blocks Research evaluation without falling back to Legacy modal. "
+            )
+        else:
+            profile_note = (
+                "Legacy is the rollback/regression path and retains its rectangular "
+                "PWR bounding-box cavity with a continuous DGND return. "
+            )
+        convergence_note = (
+            "For terminal-complete Layerwise, the shared numerical preset is retained "
+            "in run provenance but does not add rectangular modal terms; convergence "
+            "uses frequency refinement plus an external-input invariance check. "
+            if profile_key == _LAYERWISE_SOLVER_PROFILE_KEY
+            else "Numerical convergence preset changes only internal rectangular modal "
+            "convergence/runtime; Experimental m12 check is an opt-in m10-to-m12 "
+            "check. "
+        )
         self.evaluation_notes.setPlainText(
             first_line
             + "\n\n"
@@ -6202,17 +6504,15 @@ class MainWindow(QMainWindow):
             "shared impedance plot in a large, non-modal window; Plot Channels and "
             "X/Y markers only change that display. Export Tuned CSV writes the final "
             "enabled assignments plus result-derived solver provenance. "
-            "The research profile replaces only the actual-artwork uniform C00 plane "
-            "term; nonuniform modes retain the disclosed rectangular bounding-box "
-            "approximation. Incomplete topology or source/reference evidence blocks "
-            "research evaluation without falling back to Legacy modal. PowerSI data "
+            + profile_note
+            + "PowerSI data "
             "is comparison-only and is never used to fit R, L, C, or solver parameters. "
-            "Numerical convergence preset changes only internal rectangular modal "
-            "convergence/runtime; Experimental m12 check is an opt-in m10-to-m12 "
-            "check, not a PowerSI or absolute-accuracy setting. A batch is accepted "
-            "only when every Original and Tuned result reports combined convergence. "
-            "Results are single-rail Zii without inter-rail coupling.\n\n"
-            + _EXPLORATORY_FIDELITY_WARNING
+            + convergence_note
+            + "The preset is not a PowerSI or absolute-accuracy setting. A batch is accepted "
+            "only when every Original and Tuned result passes its profile-specific "
+            "numerical convergence gates. "
+            "\n\n"
+            + evaluation_model_boundary_disclosure(profile_key)
         )
 
     def _selected_evaluation_modal_max_index(self) -> int:
@@ -6728,6 +7028,8 @@ class MainWindow(QMainWindow):
             _job_preflight_evaluation,
             request.scenario,
             request.rail_ids,
+            request.solver_profile,
+            request.attachments,
         )
         self._run_worker(
             worker,
@@ -6842,9 +7144,25 @@ class MainWindow(QMainWindow):
         )
 
         rail_ids = manifest.runnable_rail_ids
-        fallback_refdes = baseline_fallback_model_refdes(self._scenario, rail_ids)
+        baseline_rail_ids = (
+            tuple(item.rail_id for item in self._scenario.base_project.rails)
+            if request.solver_profile == _LAYERWISE_SOLVER_PROFILE_KEY
+            else rail_ids
+        )
+        fallback_refdes = baseline_fallback_model_refdes(
+            self._scenario,
+            baseline_rail_ids,
+            include_all_source_mounted=(
+                request.solver_profile == _LAYERWISE_SOLVER_PROFILE_KEY
+            ),
+        )
         try:
-            prepared = self._scenario.with_baseline_captures(rail_ids)
+            prepared = self._scenario.with_baseline_captures(
+                baseline_rail_ids,
+                include_all_source_mounted=(
+                    request.solver_profile == _LAYERWISE_SOLVER_PROFILE_KEY
+                ),
+            )
         except ValueError as exc:
             QMessageBox.warning(self, APP_DISPLAY_NAME, str(exc))
             return
@@ -6896,7 +7214,9 @@ class MainWindow(QMainWindow):
         profile_prefix = (
             "RESEARCH / not PowerSI-validated · "
             if request.solver_profile == _RESEARCH_SOLVER_PROFILE_KEY
-            else "LEGACY · "
+            else "LAYERWISE · adjacent-gap Y/Kron · "
+            if request.solver_profile == _LAYERWISE_SOLVER_PROFILE_KEY
+            else "LEGACY rollback · "
         )
         self.evaluation_summary.setPlainText(
             f"Evaluating Original and Tuned configurations for "
@@ -6955,7 +7275,9 @@ class MainWindow(QMainWindow):
         if rejected_convergence:
             message = (
                 "Evaluation rejected: every Original and Tuned result must report "
-                "combined frequency and modal convergence. No scenario, cache, "
+                "profile-specific numerical convergence (frequency plus external-input "
+                "invariance for Layerwise; frequency plus modal convergence for "
+                "Research/Legacy). No scenario, cache, "
                 "or autosave mutation was accepted; prior plot, export, and AI state "
                 "was cleared.\n\n"
                 + "\n".join(rejected_convergence)
@@ -7097,10 +7419,15 @@ class MainWindow(QMainWindow):
                     (
                         "Numerical convergence preset: "
                         f"{self.evaluation_modal_preset_combo.currentText()}. "
-                        "It changes internal rectangular modal convergence/runtime only; "
-                        "it is not a PowerSI or absolute-accuracy setting."
+                        + (
+                            "The terminal-complete Layerwise result uses global-Y "
+                            "Device-port Zii alone; the preset adds no rectangular modal term."
+                            if provenance.key == _LAYERWISE_SOLVER_PROFILE_KEY
+                            else "It changes rectangular modal convergence/runtime only."
+                        )
+                        + " It is not a PowerSI or absolute-accuracy setting."
                     ),
-                    _EXPLORATORY_FIDELITY_WARNING,
+                    evaluation_model_boundary_disclosure(provenance.key),
                     save_note,
                     "Select a Tuned result in AI Assist when analysis is needed.",
                     *partial_scope_lines,
@@ -7242,6 +7569,7 @@ class MainWindow(QMainWindow):
                         "PowerSI Parameter Use",
                         "Compiler Algorithm ID",
                         "Compiler Version",
+                        "Source Model Identity SHA-256",
                         "Artwork Evidence SHA-256",
                         "Research Identity SHA-256",
                         "Static Compiler Algorithm SHA-256",
@@ -7263,6 +7591,7 @@ class MainWindow(QMainWindow):
                         "None (comparison-only)",
                         provenance.compiler_algorithm_id,
                         provenance.compiler_version,
+                        provenance.source_model_identity_sha256,
                         provenance.artwork_evidence_sha256,
                         provenance.research_identity_sha256,
                         provenance.static_compiler_algorithm_sha256,

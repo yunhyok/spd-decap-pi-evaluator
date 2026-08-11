@@ -28,6 +28,8 @@ from test_spd_decap_distribution import (
     _shared_chain_scenario,
     _with_initial_rails,
 )
+from test_spd_decap_evaluation import _scenario as _evaluation_scenario
+from spd_decap_pi._core.domain import TerminalKind
 from spd_decap_pi.distribution import (
     DistributionDiagnostic,
     DistributionDistanceMode,
@@ -39,17 +41,23 @@ from spd_decap_pi.distribution_workbook import (
     DISTRIBUTION_METADATA_TITLE,
     load_distribution_targets,
 )
-from spd_decap_pi.evaluation import preflight_evaluation_connectivity
+from spd_decap_pi.evaluation import (
+    preflight_evaluation_comparison,
+    preflight_evaluation_connectivity,
+)
 from spd_decap_pi.gui.main_window import MainWindow, _job_compute_distribution
 from spd_decap_pi.routing_obstacles import SignalTraceAvoidancePolicy
 from spd_decap_pi.scenario import (
     DecapConnectionKind,
     DecapPadState,
+    RailEligibility,
     ScenarioDecapConnection,
     ScenarioSpec,
+    ScenarioViaPathEvidence,
+    ScenarioViaSegment,
     SharedPadClusterState,
 )
-from spd_decap_pi.scenario_io import load_scenario
+from spd_decap_pi.scenario_io import load_scenario, save_scenario
 from spd_decap_pi.spreadsheet_export import write_distribution_workbook
 
 
@@ -1638,11 +1646,37 @@ def test_full_preview_exports_saves_and_applies_one_atomic_revision(
         assert sum(item.current_rail_id == "R2" for item in persisted.decaps) == 2
         assert window.scenario is scenario
 
+        window._pending_evaluation_launch = object()
+        window._active_evaluation_manifest = object()
+        window._evaluation_state = object()
+        window._last_evaluation = object()
+        window._last_scenario_evaluation = object()
+        window._tuned_evaluations_by_rail["R1"] = object()
+        window._comparison_batch = SimpleNamespace(comparisons=(object(),))
+        window.ai_rail_combo.addItem("stale evaluated rail")
+        window.comparison_table.setRowCount(1)
+        window.open_results_button.setEnabled(True)
+        window.export_tuned_csv_button.setEnabled(True)
+
         window.apply_distribution_button.click()
         assert window.scenario is not None
         assert window.scenario.revision == scenario.revision + 1
         assert sum(item.current_rail_id == "R2" for item in window.scenario.decaps) == 2
         assert window._dirty
+        assert window._pending_evaluation_launch is None
+        assert window._active_evaluation_manifest is None
+        assert window._evaluation_state is None
+        assert window._last_evaluation is None
+        assert window._last_scenario_evaluation is None
+        assert window._tuned_evaluations_by_rail == {}
+        assert window._comparison_batch is None
+        assert window.ai_rail_combo.count() == 0
+        assert window.comparison_table.rowCount() == 0
+        assert not window.open_results_button.isEnabled()
+        assert not window.export_tuned_csv_button.isEnabled()
+        assert window.evaluation_summary.toPlainText() == (
+            "De-cap Distribution applied; run Original + Tuned evaluation again."
+        )
         assert not window.apply_distribution_button.isEnabled()
         assert window.export_distribution_csv_button.isEnabled()
         assert window.save_distribution_button.isEnabled()
@@ -1654,6 +1688,29 @@ def test_full_preview_exports_saves_and_applies_one_atomic_revision(
         assert window.distribution_table.item(_rail_row(window, "R2"), 1).text() == "2"
         assert window.distribution_table.item(_rail_row(window, "R2"), 2).text() == "2"
         assert window.distribution_table.item(_rail_row(window, "R2"), 4).text() == "0"
+
+        # Apply and the source/current board comparison are one continuous UX:
+        # the toggle becomes available immediately, changes display state only,
+        # and returns to the just-applied assignments without losing revision.
+        applied_fingerprint = window.scenario.design_fingerprint
+        applied_revision = window.scenario.revision
+        moved_refdes = {
+            item.refdes
+            for item in window.scenario.decaps
+            if item.current_rail_id == "R2"
+        }
+        assert window.source_board_checkbox.isEnabled()
+        current_records = {item.refdes: item for item in window.board._records}
+        assert all(current_records[refdes].current_net == "V2" for refdes in moved_refdes)
+        window.source_board_checkbox.click()
+        assert window.board_assignment_view_label.text() == "Board: Source SPD (read-only)"
+        assert all(item.current_net == "V1" for item in window.board._records)
+        assert window.scenario.design_fingerprint == applied_fingerprint
+        assert window.scenario.revision == applied_revision
+        window.source_board_checkbox.click()
+        restored_records = {item.refdes: item for item in window.board._records}
+        assert all(restored_records[refdes].current_net == "V2" for refdes in moved_refdes)
+        assert window._dirty
 
         applied_excel_path = tmp_path / "distribution-applied.xlsx"
         monkeypatch.setattr(
@@ -1756,6 +1813,200 @@ def test_full_preview_separates_topology_success_from_evaluation_block() -> None
         )
         assert "PDN evaluation blocked" in window.status_text.text()
         assert window.apply_distribution_button.isEnabled()
+    finally:
+        window._dirty = False
+        window.close()
+        application.processEvents()
+
+
+def test_applied_distribution_reloads_clear_into_layerwise_evaluation_workers(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    application = _application()
+    source = _evaluation_scenario()
+    base = source.base_project
+    source_rail = base.rails[0]
+    alternate_rail = source_rail.model_copy(
+        update={
+            "rail_id": "RAIL_ALT",
+            "family": "VDD_ALT",
+            "domain": "VDD_ALT",
+            "net": "VDD_ALT",
+        }
+    )
+    stackup = [
+        layer.model_copy(update={"pwr_nets": [*layer.pwr_nets, "VDD_ALT"]})
+        if layer.name == "PWR1"
+        else layer
+        for layer in base.stackup_layers
+    ]
+    source_pwr_pin = next(
+        pin
+        for pin in base.pins
+        if pin.terminal == TerminalKind.PWR and pin.refdes == "U1"
+    )
+    alternate_pwr_pin = source_pwr_pin.model_copy(
+        update={
+            "pin": "P2",
+            "net": "VDD_ALT",
+            "domain": "VDD_ALT",
+            "x_um": 7_000.0,
+        }
+    )
+    project = base.model_copy(
+        update={
+            "rails": [source_rail, alternate_rail],
+            "stackup_layers": stackup,
+            "pins": [*base.pins, alternate_pwr_pin],
+        }
+    )
+    alternate_eligibility = RailEligibility(
+        rail_id="RAIL_ALT",
+        net="VDD_ALT",
+        pwr_layer="PWR1",
+        gnd_layer="GND1",
+        via_template_id="VT_ALLOWED",
+        allowed=True,
+    )
+    source_decap = source.decaps[0].model_copy(
+        update={"eligibility": {"RAIL_ALT": alternate_eligibility}}
+    )
+    assert source.connection_analysis is not None
+    connections = {}
+    for refdes, connection in source.connection_analysis.connections.items():
+        power_vias = []
+        for landing in connection.power_vias:
+            segment = ScenarioViaSegment(
+                via_id=landing.via_id,
+                padstack=landing.padstack,
+                drill_diameter_um=75.0,
+                start_layer="TOP",
+                end_layer="PWR1",
+                length_um=250.0,
+                end_x_um=landing.x_um,
+                end_y_um=landing.y_um,
+            )
+            power_vias.append(
+                landing.model_copy(
+                    update={
+                        "path_evidence": (
+                            ScenarioViaPathEvidence(
+                                target_layer="PWR1",
+                                target_node_id=f"{landing.endpoint_node_id}-PWR1",
+                                target_padstack=landing.padstack,
+                                target_pad_kind="CIRCLE",
+                                target_pad_width_um=100.0,
+                                target_pad_height_um=100.0,
+                                x_um=landing.x_um,
+                                y_um=landing.y_um,
+                                segments=(segment,),
+                            ),
+                        )
+                    }
+                )
+            )
+        connections[refdes] = connection.model_copy(
+            update={"power_vias": tuple(power_vias)}
+        )
+    connection_analysis = source.connection_analysis.model_copy(
+        update={"connections": connections}
+    )
+    scenario = ScenarioSpec.model_validate(
+        {
+            **source.model_dump(mode="python"),
+            "normalized_project": project,
+            "decaps": [source_decap, source.decaps[1]],
+            "connection_analysis": connection_analysis,
+        }
+    )
+
+    plan = compute_distribution_plan(
+        scenario,
+        {("RAIL_VDD", "M1"): 0, ("RAIL_ALT", "M1"): 1},
+    )
+    assert plan.status == DistributionPlanStatus.FULL
+    assert plan.assignment_map == {"C1": "RAIL_ALT"}
+    applied = apply_distribution_plan(scenario, plan)
+    saved_path = save_scenario(
+        applied, tmp_path / "distributed-layerwise.spdpi"
+    )
+    reloaded = load_scenario(saved_path)
+    moved = next(item for item in reloaded.decaps if item.refdes == "C1")
+    assert moved.source_rail_id == "RAIL_VDD"
+    assert moved.current_rail_id == "RAIL_ALT"
+    assert set(moved.eligibility) == {"RAIL_ALT"}
+    assert moved.eligibility["RAIL_ALT"] == alternate_eligibility
+    assert reloaded.connection_analysis is not None
+    assert (
+        reloaded.connection_analysis.connections["C1"].kind
+        == DecapConnectionKind.DIRECT
+    )
+    # Original comparison must recover the immutable DIRECT source assignment
+    # without a source-rail eligibility row.  The tuned/moved state must not use
+    # that fallback and therefore keeps the exact destination row above.
+    assert "RAIL_VDD" not in moved.eligibility
+
+    # This fixture deliberately has no retained SPD artwork attachments.  The
+    # production layerwise preflight must fail closed without them (covered by
+    # the evaluation builder/preflight tests); this test is scoped to proving
+    # that a saved Distribution assignment survives reload and is handed to
+    # the layerwise comparison worker.
+    monkeypatch.setattr(
+        "spd_decap_pi.evaluation._builder_preflight_blockers",
+        lambda *args, **kwargs: (),
+    )
+    monkeypatch.setattr(
+        "spd_decap_pi.evaluation._layerwise_artwork_bounds_um",
+        lambda *args, **kwargs: (0.0, 10_000.0, 0.0, 8_000.0),
+    )
+
+    comparison_preflight = preflight_evaluation_comparison(
+        reloaded,
+        ("RAIL_VDD", "RAIL_ALT"),
+        solver_profile="layerwise_admittance_v1",
+    )
+    assert comparison_preflight.is_clear, tuple(
+        (item.rail_id, item.refdes, item.reason)
+        for item in comparison_preflight.blockers
+    )
+    assert comparison_preflight.blockers == ()
+
+    window = _window_with_scenario(reloaded)
+    workers: list[tuple[object, object, dict[str, object]]] = []
+    try:
+        window._scenario_path = saved_path
+        window._set_all_rails_checked(True)
+        monkeypatch.setattr(
+            window,
+            "_run_worker",
+            lambda worker, on_result, **kwargs: workers.append(
+                (worker, on_result, kwargs)
+            ),
+        )
+
+        assert window.evaluation_solver_profile_combo.currentData() == (
+            "layerwise_admittance_v1"
+        )
+        window.run_evaluation()
+        assert len(workers) == 1
+        preflight_worker, accept_preflight, _kwargs = workers[0]
+        assert preflight_worker.function.__name__ == "_job_preflight_evaluation"
+        assert preflight_worker.args[2] == "layerwise_admittance_v1"
+        accept_preflight(comparison_preflight)
+        request, manifest = window._pending_evaluation_launch
+        assert request.solver_profile == "layerwise_admittance_v1"
+        assert manifest.runnable_rail_ids == ("RAIL_VDD", "RAIL_ALT")
+        window._pending_evaluation_launch = None
+        window._launch_evaluation_after_preflight(request, manifest)
+
+        assert len(workers) == 2
+        evaluation_worker = workers[1][0]
+        assert evaluation_worker.function.__name__ == "evaluate_comparison_batch"
+        assert evaluation_worker.args[1] == ("RAIL_VDD", "RAIL_ALT")
+        assert evaluation_worker.kwargs["solver_profile"] == (
+            "layerwise_admittance_v1"
+        )
     finally:
         window._dirty = False
         window.close()
@@ -1980,7 +2231,10 @@ def test_partial_evaluation_requires_yes_and_worker_receives_only_clear_bare_rai
         evaluation_worker = workers[1][0]
         assert evaluation_worker.function.__name__ == "evaluate_comparison_batch"
         assert evaluation_worker.args[1] == ("R2",)
-        assert set(evaluation_worker.args[0].baseline_captures) == {"R2"}
+        # Layerwise compiles one board-wide termination state, so immutable
+        # source captures are prepared for every rail even though the worker's
+        # requested solve list still contains only the preflight-clear rail.
+        assert set(evaluation_worker.args[0].baseline_captures) == {"R1", "R2"}
         summary = window.evaluation_summary.toPlainText()
         assert "Selected PWR NETs: 2" in summary
         assert "Blocked and NOT evaluated: 1 (R1)" in summary

@@ -1551,9 +1551,12 @@ def _distribution_batch_via_eligibility(
                     # selected pair, so Distribution must preserve them.
                     pwr_layer=str(getattr(rail, "pwr_layer")),
                     gnd_layer=str(getattr(rail, "gnd_layer")),
-                    destination_pwr_layer=(
-                        destination_layer if routing_policy.enabled else None
-                    ),
+                    # Persist the exact copper layer selected by the source
+                    # proof even when the optional signal-routing filter is
+                    # disabled.  The filter still controls candidate ordering
+                    # and clearance checks; it must not erase physical layer
+                    # evidence needed by scenario reload and Layerwise build.
+                    destination_pwr_layer=destination_layer,
                     via_template_id=template_id,
                     allowed=True,
                     reason=(
@@ -5020,6 +5023,25 @@ def compute_distribution_plan(
                     limit=remaining_time(),
                     start=local_start,
                 )
+            if (
+                feasible_fallback_stage == "gap"
+                and local_start is not None
+                and (result is None or (result.status == 1 and result.x is None))
+            ):
+                # The isolation-gap stage may exhaust its proof budget
+                # without returning a new incumbent.  The previous stage's
+                # solution was revalidated against this exact local MILP above,
+                # so retaining it preserves every primary optimum and topology
+                # constraint.  Only the secondary optimum remains unproven and
+                # is disclosed through the existing stage-specific diagnostic.
+                stage_fallback_flags.add(feasible_fallback_stage)
+                result = OptimizeResult(
+                    status=0,
+                    success=True,
+                    message="retained the validated prior-stage incumbent",
+                    x=local_start,
+                    fun=float(np.dot(local_c, local_start)),
+                )
             if result is None:
                 raise DistributionError(
                     "OPTIMIZER_TIMEOUT",
@@ -5594,19 +5616,40 @@ def compute_distribution_plan(
                     )
                 )
             else:
-                diagnostics.append(
-                    DistributionDiagnostic(
-                        code="DISTANCE_JOINT_OPTIMIZATION_DEFERRED",
-                        message=(
-                            "the joint assignment/separator distance solve did "
-                            "not return a valid incumbent; distance ordering is "
-                            "deferred until the exact separator positions are "
-                            "fixed"
-                        ),
-                        requested_count=fulfilled_optimum,
-                        actual_count=fulfilled_optimum,
-                    )
+                can_defer_to_fixed_separators = (
+                    optimization_policy == DistributionOptimizationPolicy.MIN_GAPS
+                    and selectable_gap_variables
+                    and selected_move_variables
                 )
+                if not can_defer_to_fixed_separators:
+                    # BALANCED policies have no later fixed-separator distance
+                    # pass. Returning the fulfillment-stage incumbent here
+                    # would silently ignore the requested distance ordering.
+                    # MIN_GAPS may defer only when its explicit separator
+                    # refinement can still establish that ordering.
+                    if selected_move_variables:
+                        raise DistributionError(
+                            "DISTANCE_OPTIMIZER_FAILED",
+                            "joint distance optimization did not return a "
+                            "valid incumbent; no arbitrary assignment was "
+                            "emitted",
+                            diagnostics=tuple(diagnostics),
+                        ) from exc
+                    joint_distance_applied = True
+                else:
+                    diagnostics.append(
+                        DistributionDiagnostic(
+                            code="DISTANCE_JOINT_OPTIMIZATION_DEFERRED",
+                            message=(
+                                "the joint assignment/separator distance solve "
+                                "did not return a valid incumbent; distance "
+                                "ordering is deferred until the exact separator "
+                                "positions are fixed"
+                            ),
+                            requested_count=fulfilled_optimum,
+                            actual_count=fulfilled_optimum,
+                        )
+                    )
 
         if direct_only:
             selected_gap_variables = set()

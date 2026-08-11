@@ -16,17 +16,22 @@ from threading import RLock
 from typing import Any, Callable, Iterable, Mapping, Sequence
 import zlib
 import numpy as np
+from ..canonical_json import iter_canonical_json_bytes
 from .ai import AssistantSource, EvidenceKind, FeatureEvidence, LocalLLMClient, LocalLLMConfig, PlotFeatures, local_llm_endpoint_requires_remote_access
 from .domain import CapModel, CoordinateTransform, CoordinateUnit, FrequencySettings, ImpedanceSample, MLOOutline, MIXED_REFERENCE_MIN_COVERAGE, MIXED_REFERENCE_MIN_DOMINANT_COMPONENT, MixedReferenceCertificate, PinKind, PlaneCell, PlacementAssignment as DomainPlacement, PlanePartitionSpec, ProjectSpec, RailSpec, RailState, StackupLayer, TargetPoint, TerminalKind, TopologyKind, TopologyMap, ViaLoopTemplate, ViaPathKind
+from .geometry.ordered_boolean import ordered_spd_geometry
 from .models import PassiveSubcircuitModel, parse_passive_subcircuit, passive_subcircuit_names
 from .plane_pairs import suggest_effective_plane_pairs
 from .solver.evaluator import (
+    DEFAULT_MAX_NEW_FREQUENCY_POINTS,
+    DEFAULT_MAX_REFINEMENT_ITERATIONS,
     EvaluationOutcome,
     compile_project_evaluation_template,
     evaluate_project_rail_converged,
 )
 from .solver.profiles import (
     DEFAULT_SOLVER_PROFILE_KEY,
+    LAYERWISE_ADMITTANCE_PROFILE,
     RESEARCH_UNIFORM_ADMITTANCE_PROFILE,
     solver_profile as resolve_solver_profile,
 )
@@ -89,6 +94,22 @@ def _requested_blas_thread_limit() -> int | None:
 
 _SPD_PLANE_GEOMETRIES_KEY = "plane_geometries"
 
+_SPD_LAYERWISE_VIA_GROUPS_KEY = "layerwise_via_group_certificate"
+_SPD_LAYERWISE_VIA_GROUP_SCHEMA = "spd-layerwise-via-groups-v2"
+_SPD_LAYERWISE_VIA_GROUP_COMPILER = (
+    "powersi-via-usage-padstack-terminal-ownership-v2"
+)
+
+_SPD_LAYERWISE_DEVICE_TERMINAL_VIAS_KEY = (
+    "layerwise_device_terminal_via_certificate"
+)
+_SPD_LAYERWISE_DEVICE_TERMINAL_VIA_SCHEMA = (
+    "spd-layerwise-device-terminal-vias-v1"
+)
+_SPD_LAYERWISE_DEVICE_TERMINAL_VIA_COMPILER = (
+    "powersi-direct-device-top-via-v1"
+)
+
 _SPD_GEOMETRY_MAX_UNCOMPRESSED_BYTES = 64 * 1024 * 1024
 # Level 6 preserves nearly all of level 9's storage saving for real SPD artwork,
 # while materially reducing time on the background import path.  The compressed
@@ -124,7 +145,7 @@ class LocalAIAnalysisView:
 
 @dataclass(frozen=True, slots=True)
 class EvaluationModalPreset:
-    """One supported square modal-basis internal-convergence/runtime trade-off."""
+    """Shared run preset; modal order applies only to Legacy/Research paths."""
 
     key: str
     label: str
@@ -139,8 +160,9 @@ EVALUATION_MODAL_PRESETS: tuple[EvaluationModalPreset, ...] = (
         max_index=6,
         mode_count=49,
         description=(
-            "49 rectangular-cavity modes for quicker exploratory evaluation; "
-            "compares against the 25-mode maximum-index (4,4) basis."
+            "Legacy/Research: 49 rectangular-cavity modes for a quicker "
+            "exploratory evaluation. Terminal-complete Layerwise does not stamp "
+            "this modal basis into its external Device-port result."
         ),
     ),
     EvaluationModalPreset(
@@ -149,8 +171,9 @@ EVALUATION_MODAL_PRESETS: tuple[EvaluationModalPreset, ...] = (
         max_index=8,
         mode_count=81,
         description=(
-            "81 rectangular-cavity modes for the default internal-convergence/"
-            "runtime balance; compares against the 49-mode (6,6) basis."
+            "Legacy/Research: starts with 81 rectangular-cavity modes for the "
+            "default runtime balance. Terminal-complete Layerwise records the "
+            "shared policy identity but uses only its global-Y Device-port result."
         ),
     ),
     EvaluationModalPreset(
@@ -159,10 +182,9 @@ EVALUATION_MODAL_PRESETS: tuple[EvaluationModalPreset, ...] = (
         max_index=10,
         mode_count=121,
         description=(
-            "121 rectangular-cavity modes for a stricter internal truncation "
-            "check; compares against the 81-mode (8,8) basis. More modes do not "
-            "correct polygon, shared-DGND, or via-model approximations and can "
-            "take several minutes on a large SPD."
+            "Legacy/Research: starts with 121 rectangular-cavity modes for a "
+            "stricter truncation check. Terminal-complete Layerwise does not add "
+            "a rectangular one-port difference to its global-Y result."
         ),
     ),
     EvaluationModalPreset(
@@ -171,16 +193,15 @@ EVALUATION_MODAL_PRESETS: tuple[EvaluationModalPreset, ...] = (
         max_index=12,
         mode_count=169,
         description=(
-            "169 rectangular-cavity modes for an experimental m10-to-m12 "
-            "truncation check; compares against the 121-mode (10,10) basis. "
-            "PowerSI evidence is comparison-only; it can take more than an hour "
-            "on the 2026-07-29 benchmark, and must never be used to choose a "
-            "lower modal order."
+            "Legacy/Research: 169 rectangular-cavity modes for a fixed m10-to-m12 "
+            "truncation check. Terminal-complete Layerwise remains a sole global-Y "
+            "Device-port solve. PowerSI never selects an order."
         ),
     ),
 )
 
 DEFAULT_EVALUATION_MODAL_MAX_INDEX = 8
+DEFAULT_LAYERWISE_MODAL_CEILING_INDEX = 12
 
 _EVALUATION_MODAL_PRESETS_BY_INDEX = {
     preset.max_index: preset for preset in EVALUATION_MODAL_PRESETS
@@ -200,6 +221,64 @@ def evaluation_modal_preset(max_index: int) -> EvaluationModalPreset:
         raise ValueError(
             f"evaluation modal maximum index must be one of {choices}; got {max_index}"
         ) from exc
+
+
+def evaluation_modal_convergence_ceiling(
+    max_index: int,
+    solver_profile: str = DEFAULT_SOLVER_PROFILE_KEY,
+) -> int:
+    """Return the fail-closed modal ceiling for one requested start preset.
+
+    The shared adaptive schema retains the established m12 ceiling for a
+    Layerwise request identity.  A terminal-complete external Device-port
+    kernel is invariant to that rectangular order and does not stamp any modal
+    correction; Legacy and Research retain their actual modal-order behavior.
+    """
+
+    preset = evaluation_modal_preset(max_index)
+    profile = resolve_solver_profile(solver_profile)
+    if (
+        profile == LAYERWISE_ADMITTANCE_PROFILE
+        and preset.max_index in (8, 10)
+    ):
+        return DEFAULT_LAYERWISE_MODAL_CEILING_INDEX
+    return preset.max_index
+
+
+def evaluation_model_boundary_disclosure(solver_profile: str) -> str:
+    """Return the user-facing modeling boundary for one solver profile."""
+
+    profile = resolve_solver_profile(solver_profile)
+    if profile.key == LAYERWISE_ADMITTANCE_PROFILE.key:
+        return (
+            "Layerwise model boundary: terminal-complete exact retained-surface "
+            "Maxwell-Y "
+            "blocks, source-proven finite Via links and exact same-layer Trace "
+            "connectivity, all mounted decap terminations, and one global "
+            "Schur/Kron reduction at the external Device port; this global-Y Zii "
+            "is the sole driving-point result and no legacy rectangular higher-mode "
+            "one-port difference is added; topology-only surfaces "
+            "receive zero synthesized adjacent-gap capacitance and no synthesized "
+            "fringing; the output is one external Zii rather than a full multiport "
+            "Z matrix, with no package/connector coupling and no full-wave "
+            "claim; absolute "
+            "sub-milliohm accuracy is not certified."
+        )
+    if profile.key == RESEARCH_UNIFORM_ADMITTANCE_PROFILE.key:
+        return (
+            "Research model boundary: source-only exact-artwork uniform C00 "
+            "replacement; nonuniform modes retain the rectangular-envelope "
+            "continuous-DGND correction; single-rail Zii only, with no inter-rail/"
+            "site coupling and no full-wave claim; absolute sub-milliohm accuracy "
+            "not certified."
+        )
+    return (
+        "Legacy model boundary: rectangular PWR bounding-box modal cavity with a "
+        "continuous DGND return; single-rail Zii only, with no inter-rail/site "
+        "coupling and no full-wave claim; absolute sub-milliohm accuracy not "
+        "certified."
+    )
+
 
 @dataclass(slots=True)
 class EvaluationView:
@@ -258,6 +337,11 @@ class _SpdServiceDiagnostic:
 class WorkspaceState:
     project: ProjectSpec
     attachments: dict[str, bytes] = field(default_factory=dict)
+    # Scenario-owned, solve-scoped adapter.  It is intentionally transient:
+    # ProjectSpec and saved SPDPI payloads remain JSON-only, while the
+    # production layerwise path must bind the exact Original/Tuned mounted
+    # state before any numerical solve can start.
+    layerwise_termination_factory: Callable[[Any, Any], Any] | None = None
     last_evaluation: EvaluationView | None = None
     evaluation_history: list[EvaluationView] = field(default_factory=list)
 
@@ -690,6 +774,9 @@ def evaluate_workspace(
 ) -> EvaluationView:
     profile = resolve_solver_profile(solver_profile)
     modal_preset = evaluation_modal_preset(modal_max_index)
+    modal_ceiling_index = evaluation_modal_convergence_ceiling(
+        modal_preset.max_index, profile.key
+    )
     progress = progress or _noop_progress
     is_cancelled = is_cancelled or _never_cancelled
     if is_cancelled():
@@ -699,10 +786,14 @@ def evaluate_workspace(
         if not math.isfinite(target_ohm) or target_ohm <= 0:
             raise ValueError("target impedance must be greater than zero")
         project = _project_with_target(project, rail_id, target_ohm)
+    profile_numerics = (
+        "terminal-complete external Device-port global Y; no modal add-on"
+        if profile == LAYERWISE_ADMITTANCE_PROFILE
+        else f"{modal_preset.mode_count} rectangular modes"
+    )
     progress(
         8,
-        f"Profile audit · {profile.label} [{profile.badge}] · "
-        f"{modal_preset.mode_count} modes…",
+        f"Profile audit · {profile.label} [{profile.badge}] · {profile_numerics}",
     )
     _require_evaluable(project, rail_id)
     if is_cancelled():
@@ -713,40 +804,96 @@ def evaluate_workspace(
         "worker_count": numerical_worker_count(project.frequency.points),
         "solver_profile_key": profile.key,
     }
-    if profile == RESEARCH_UNIFORM_ADMITTANCE_PROFILE:
+    if profile in (
+        LAYERWISE_ADMITTANCE_PROFILE,
+        RESEARCH_UNIFORM_ADMITTANCE_PROFILE,
+    ):
         # Keep the default legacy import graph independent of the optional
-        # exact-artwork research bridge and its geometry dependencies.
-        from .solver.research_uniform_profile import build_uniform_c00_source_model
+        # exact-artwork bridges and their geometry dependencies.
 
         progress(
             15,
-            "Auditing source-only artwork, reference, partition, and Device evidence…",
+            "Auditing source artwork, adjacent layers, reference, and Device evidence…",
         )
         template = compile_project_evaluation_template(project, rail_id)
         request_options["template"] = template
-        request_options["uniform_c00_source"] = build_uniform_c00_source_model(
-            project,
-            state.attachments,
-            rail_id,
-            template,
-        )
+        if profile == LAYERWISE_ADMITTANCE_PROFILE:
+            from .solver.layerwise_network import (
+                build_layerwise_uniform_source_model,
+            )
+
+            source_model = build_layerwise_uniform_source_model(
+                project,
+                state.attachments,
+                rail_id,
+                template,
+                progress=lambda value, message: progress(
+                    15 + round(min(max(value, 0), 70) / 7), message
+                ),
+                is_cancelled=is_cancelled,
+            )
+            termination_factory = state.layerwise_termination_factory
+            if termination_factory is None:
+                raise EvaluationReadinessError(
+                    "LAYERWISE_TERMINATION_MANIFEST_REQUIRED",
+                    "production layerwise evaluation requires the exact "
+                    "Original/Tuned mounted-decap termination state",
+                )
+            try:
+                termination_manifest = termination_factory(
+                    source_model.substrate, template
+                )
+                source_model = source_model.with_termination_manifest(
+                    termination_manifest, required=True
+                )
+            except ValueError as exc:
+                code = str(
+                    getattr(exc, "code", "LAYERWISE_TERMINATION_BUILD_FAILED")
+                )
+                raise EvaluationReadinessError(code, str(exc)) from exc
+            request_options["uniform_c00_source"] = source_model
+            progress(
+                25,
+                "Layer-surface Maxwell Y, finite Via links, exact same-layer Trace connectivity, and all mounted decap terminations assembled; terminal-complete external Device-port Schur/Kron ready with no legacy modal add-on",
+            )
+        else:
+            from .solver.research_uniform_profile import (
+                build_uniform_c00_source_model,
+            )
+
+            request_options["uniform_c00_source"] = build_uniform_c00_source_model(
+                project,
+                state.attachments,
+                rail_id,
+                template,
+            )
         if is_cancelled():
             raise RuntimeError("evaluation cancelled")
-        progress(22, "Source-only uniform C00 evidence gate passed; compiling replacement…")
-    progress(
-        25,
-        f"Solving {profile.label} [{profile.badge}] · {modal_preset.label} · max "
-        f"index ({modal_preset.max_index},{modal_preset.max_index}) · "
-        f"{modal_preset.mode_count} modes…",
+        if profile == RESEARCH_UNIFORM_ADMITTANCE_PROFILE:
+            progress(22, "Source-only uniform C00 evidence gate passed")
+    solve_boundary = (
+        "terminal-complete global-Y Device-port solve; shared preset recorded "
+        "without rectangular modal stamping"
+        if profile == LAYERWISE_ADMITTANCE_PROFILE
+        else (
+            f"{modal_preset.label} · start index "
+            f"({modal_preset.max_index},{modal_preset.max_index}) · adaptive ceiling "
+            f"({modal_ceiling_index},{modal_ceiling_index})"
+        )
     )
+    progress(25, f"Solving {profile.label} [{profile.badge}] · {solve_boundary}")
     outcome = evaluate_project_rail_converged(
         project,
         rail_id,
         request_options=request_options,
-        max_mode_x=modal_preset.max_index,
-        max_mode_y=modal_preset.max_index,
-        max_refinement_iterations=1,
-        max_new_frequency_points=32,
+        max_mode_x=modal_ceiling_index,
+        max_mode_y=modal_ceiling_index,
+        max_refinement_iterations=DEFAULT_MAX_REFINEMENT_ITERATIONS,
+        max_new_frequency_points=DEFAULT_MAX_NEW_FREQUENCY_POINTS,
+        progress=lambda value, message: progress(
+            25 + round(min(max(value, 0), 100) * 0.63), message
+        ),
+        is_cancelled=is_cancelled,
     )
     if is_cancelled():
         raise RuntimeError("evaluation cancelled")
@@ -978,12 +1125,33 @@ def _spd_plane_geometry_assets(
     analysis: Any,
     retained_net_keys: set[str],
     diagnostics: list[Any],
+    *,
+    progress: ProgressCallback | None = None,
+    is_cancelled: CancelCallback | None = None,
 ) -> tuple[list[dict[str, Any]], dict[str, bytes]]:
     """Compress exact Polygon/Circle primitives and return a compact project index."""
 
+    report = progress or _noop_progress
+    cancelled = is_cancelled or _never_cancelled
+    records = getattr(analysis, "plane_geometries", ())
+    total = len(records)
+
+    def check_cancelled() -> None:
+        if cancelled():
+            raise RuntimeError("SPD plane-geometry asset compilation cancelled")
+
+    check_cancelled()
+    report(0, "Compressing retained PowerSI plane geometry assets")
     index: list[dict[str, Any]] = []
     assets: dict[str, bytes] = {}
-    for item in getattr(analysis, "plane_geometries", ()):
+    for position, item in enumerate(records):
+        check_cancelled()
+        if position:
+            report(
+                round(position * 99 / max(1, total)),
+                "Compressing retained PowerSI plane geometry assets "
+                f"({position}/{total})",
+            )
         net = str(getattr(item, "net", ""))
         layer = str(getattr(item, "layer", ""))
         if not net or not layer or net.casefold() not in retained_net_keys:
@@ -1020,6 +1188,7 @@ def _spd_plane_geometry_assets(
             and not negative_circles
         )
         try:
+            check_cancelled()
             compressed, uncompressed_bytes = _compress_spd_geometry_payload(
                 layer=layer,
                 net=net,
@@ -1033,6 +1202,7 @@ def _spd_plane_geometry_assets(
                 polygon_trace_count=polygon_trace_count,
                 box_count=box_count,
             )
+            check_cancelled()
         except _SpdGeometryAssetTooLarge:
             diagnostics.append(
                 _SpdServiceDiagnostic(
@@ -1069,69 +1239,118 @@ def _spd_plane_geometry_assets(
                 "compressed_bytes": len(compressed),
             }
         )
+    check_cancelled()
+    report(100, f"Compressed {len(index)} retained plane geometry asset(s)")
     return index, assets
 
 
-def _ordered_spd_geometry(record: Mapping[str, Any]) -> Any | None:
-    """Return the exact ordered PowerSI boolean geometry, or fail closed."""
+def _ordered_spd_geometry(
+    record: Mapping[str, Any],
+    *,
+    progress: ProgressCallback | None = None,
+    is_cancelled: CancelCallback | None = None,
+) -> Any | None:
+    """Compatibility facade over the bounded ordered-boolean implementation."""
 
-    try:
-        from shapely.errors import GEOSException
-        from shapely.geometry import GeometryCollection, Point, Polygon
-        from shapely.ops import unary_union
-    except ImportError:  # packaging must provide Shapely; do not guess geometry.
-        return None
-    positive_polygons = record.get("positive_polygons_um", ())
-    negative_polygons = record.get("negative_polygons_um", ())
-    positive_circles = record.get("positive_circles_um", ())
-    negative_circles = record.get("negative_circles_um", ())
-    collections = {
-        "positive_polygon": positive_polygons,
-        "negative_polygon": negative_polygons,
-        "positive_circle": positive_circles,
-        "negative_circle": negative_circles,
-    }
-    shape = GeometryCollection()
-    order = record.get("primitive_order", ())
-    if not isinstance(order, Sequence) or not order:
-        return None
-    try:
-        runs: list[tuple[bool, list[Any]]] = []
-        for step in order:
-            if not isinstance(step, Sequence) or len(step) != 2:
-                return None
-            kind, offset = str(step[0]), int(step[1])
-            source = collections.get(kind)
-            if source is None or offset < 0 or offset >= len(source):
-                return None
-            raw = source[offset]
-            if kind.endswith("polygon"):
-                primitive = Polygon(raw)
-            else:
-                x_um, y_um, radius_um = map(float, raw)
-                if not math.isfinite(radius_um) or radius_um <= 0:
-                    return None
-                # The only curved primitive PowerSI emits is a circle.  This fixed
-                # resolution is part of the versioned method, never a solver scale.
-                primitive = Point(x_um, y_um).buffer(radius_um, quad_segs=64)
-            if primitive.is_empty or not primitive.is_valid or primitive.area <= 0:
-                return None
-            positive = kind.startswith("positive_")
-            if runs and runs[-1][0] == positive:
-                runs[-1][1].append(primitive)
-            else:
-                runs.append((positive, [primitive]))
-        # Preserve exact PowerSI ordering at polarity boundaries while avoiding
-        # one expensive GEOS boolean per primitive.  Union is associative, and
-        # consecutive differences A\B\C are exactly A\(B union C).
-        for positive, primitives in runs:
-            batch = unary_union(primitives)
-            if batch.is_empty or not batch.is_valid or batch.area <= 0:
-                return None
-            shape = shape.union(batch) if positive else shape.difference(batch)
-    except (TypeError, ValueError, IndexError, ArithmeticError, GEOSException):
-        return None
-    return None if shape.is_empty or not shape.is_valid or shape.area <= 0 else shape
+    return ordered_spd_geometry(
+        record,
+        progress=progress,
+        is_cancelled=is_cancelled,
+    )
+
+
+def _spd_surface_islands(
+    *,
+    layer: str,
+    net: str,
+    asset_sha256: str,
+    shape: Any,
+    progress: ProgressCallback | None = None,
+    is_cancelled: CancelCallback | None = None,
+) -> tuple[tuple[str, Any], ...]:
+    """Return deterministic connected-polygon identities for one artwork asset.
+
+    A layer/NET asset may be a ``MultiPolygon``.  Treating that geometry as one
+    equipotential surface silently shorts physically disconnected copper.  The
+    import-side raw graph compiler and the production layerwise gate share these
+    source-asset-bound IDs so a Node coordinate can prove which exact island it
+    contacts.  IDs use normalized WKB and therefore do not depend on GEOS's
+    ``MultiPolygon`` member ordering.
+    """
+
+    report = progress or _noop_progress
+    cancelled = is_cancelled or _never_cancelled
+    last_progress = -1
+
+    def check_cancelled() -> None:
+        if cancelled():
+            raise RuntimeError("SPD surface-island compilation cancelled")
+
+    def emit(value: int, message: str) -> None:
+        nonlocal last_progress
+        bounded = max(0, min(100, int(value)))
+        if bounded <= last_progress:
+            return
+        last_progress = bounded
+        report(bounded, message)
+
+    check_cancelled()
+    emit(0, f"Identifying connected surface islands for {net} on {layer}")
+    layer_text = str(layer).strip()
+    net_text = str(net).strip()
+    digest = str(asset_sha256).strip().casefold()
+    if (
+        not layer_text
+        or not net_text
+        or not re.fullmatch(r"[0-9a-f]{64}", digest)
+    ):
+        raise ValueError("surface-island identity needs layer, NET, and asset SHA-256")
+    geometry_type = str(getattr(shape, "geom_type", ""))
+    if geometry_type == "Polygon":
+        parts = (shape,)
+    elif geometry_type == "MultiPolygon":
+        parts = tuple(getattr(shape, "geoms", ()))
+    else:
+        raise ValueError(
+            "surface-island identity requires Polygon or MultiPolygon artwork"
+        )
+    if not parts:
+        raise ValueError("surface artwork has no connected polygon island")
+
+    identified: list[tuple[str, Any]] = []
+    for index, part in enumerate(parts, start=1):
+        check_cancelled()
+        if (
+            str(getattr(part, "geom_type", "")) != "Polygon"
+            or bool(getattr(part, "is_empty", True))
+            or not bool(getattr(part, "is_valid", False))
+            or float(getattr(part, "area", 0.0)) <= 0.0
+        ):
+            raise ValueError("surface artwork contains a nonphysical polygon island")
+        check_cancelled()
+        normalized = part.normalize()
+        check_cancelled()
+        polygon_sha256 = sha256(bytes(normalized.wkb)).hexdigest()
+        identity = _canonical_metadata_sha256(
+            {
+                "asset_sha256": digest,
+                "layer": layer_text.casefold(),
+                "net": net_text.casefold(),
+                "normalized_polygon_wkb_sha256": polygon_sha256,
+            }
+        )
+        identified.append((f"spd-surface-island:{identity[:24]}", part))
+        emit(
+            round(index * 99 / len(parts)),
+            f"Identifying connected surface islands for {net} on {layer} "
+            f"({index}/{len(parts)})",
+        )
+    identified.sort(key=lambda item: item[0])
+    if len({item[0] for item in identified}) != len(identified):
+        raise ValueError("surface artwork has duplicate deterministic island identities")
+    check_cancelled()
+    emit(100, f"Identified {len(identified)} surface island(s) for {net} on {layer}")
+    return tuple(identified)
 
 
 def _mixed_reference_certificates(
@@ -1142,9 +1361,30 @@ def _mixed_reference_certificates(
     power_keys: set[str],
     ground_keys: set[str],
     failures: list[dict[str, Any]] | None = None,
+    progress: ProgressCallback | None = None,
+    is_cancelled: CancelCallback | None = None,
 ) -> tuple[MixedReferenceCertificate, ...]:
     """Certify mixed GND layers from retained source artwork, never net names alone."""
 
+    report = progress or _noop_progress
+    cancelled = is_cancelled or _never_cancelled
+    callbacks_requested = progress is not None or is_cancelled is not None
+    last_progress = -1
+
+    def check_cancelled() -> None:
+        if cancelled():
+            raise RuntimeError("SPD mixed-reference certification cancelled")
+
+    def emit(value: int, message: str) -> None:
+        nonlocal last_progress
+        bounded = max(0, min(100, int(value)))
+        if bounded <= last_progress:
+            return
+        last_progress = bounded
+        report(bounded, message)
+
+    check_cancelled()
+    emit(0, "Certifying ordered mixed-reference artwork")
     layer_by_key = {item.name.casefold(): item for item in layers}
     layer_index = {item.name.casefold(): index for index, item in enumerate(layers)}
     result: list[MixedReferenceCertificate] = []
@@ -1156,10 +1396,12 @@ def _mixed_reference_certificates(
             ground_records_by_layer.setdefault(layer.casefold(), []).append(record)
 
     def load_valid_payload(record: Mapping[str, Any]) -> dict[str, Any] | None:
+        check_cancelled()
         asset = str(record.get("asset", ""))
         digest = str(record.get("asset_sha256", ""))
         try:
             payload = _decode_spd_geometry_asset(digest, assets[asset])
+            check_cancelled()
             _validate_spd_geometry_payload(
                 payload,
                 expected_layer=str(record.get("layer", "")),
@@ -1168,6 +1410,7 @@ def _mixed_reference_certificates(
         except (KeyError, ValueError):
             return None
         payload["asset_sha256"] = digest
+        check_cancelled()
         return payload
 
     # GND artwork is reused by many PWR candidates.  Keep only those few
@@ -1221,7 +1464,33 @@ def _mixed_reference_certificates(
         if item not in failures:
             failures.append(item)
 
-    for pwr_record in records:
+    total_records = len(records)
+    for pwr_position, pwr_record in enumerate(records):
+        check_cancelled()
+        outer_low = round(pwr_position * 99 / max(1, total_records))
+        outer_high = round((pwr_position + 1) * 99 / max(1, total_records))
+        emit(
+            outer_low,
+            "Certifying ordered mixed-reference artwork "
+            f"({pwr_position}/{total_records})",
+        )
+
+        def ordered_geometry(payload: Mapping[str, Any]) -> Any | None:
+            if not callbacks_requested:
+                # Preserve one-positional-argument compatibility for callers
+                # and tests that replace the legacy facade.
+                return _ordered_spd_geometry(payload)
+
+            def geometry_progress(value: int, message: str) -> None:
+                span = max(0, outer_high - outer_low)
+                emit(outer_low + round(span * value / 100), message)
+
+            return _ordered_spd_geometry(
+                payload,
+                progress=geometry_progress,
+                is_cancelled=cancelled,
+            )
+
         net = str(pwr_record.get("net", ""))
         pwr_layer = str(pwr_record.get("layer", ""))
         if net.casefold() not in power_keys or not pwr_layer:
@@ -1231,6 +1500,7 @@ def _mixed_reference_certificates(
         pwr_shape: Any | None = None
         pwr_shape_checked = False
         for gnd_record in records:
+            check_cancelled()
             gnd_layer = str(gnd_record.get("layer", ""))
             gnd_record_net = str(gnd_record.get("net", ""))
             if (
@@ -1296,7 +1566,7 @@ def _mixed_reference_certificates(
             # branch can actually issue a certificate or a geometry failure.
             if not pwr_shape_checked:
                 pwr_shape = (
-                    _ordered_spd_geometry(pwr_payload)
+                    ordered_geometry(pwr_payload)
                     if shapely_available
                     else None
                 )
@@ -1304,7 +1574,7 @@ def _mixed_reference_certificates(
             gnd_digest = str(gnd_payload.get("asset_sha256", ""))
             if gnd_digest not in ground_shape_by_digest:
                 ground_shape_by_digest[gnd_digest] = (
-                    _ordered_spd_geometry(gnd_payload)
+                    ordered_geometry(gnd_payload)
                     if shapely_available
                     else None
                 )
@@ -1324,7 +1594,9 @@ def _mixed_reference_certificates(
                 )
                 continue
             try:
+                check_cancelled()
                 overlap = pwr_shape.intersection(gnd_shape)
+                check_cancelled()
             except GEOSException:
                 record_failure(
                     rail_net=pwr_net, pwr_layer=pwr_payload_layer,
@@ -1369,6 +1641,8 @@ def _mixed_reference_certificates(
                 overlap_fraction=coverage,
                 dominant_overlap_component_fraction=dominant,
             ))
+    check_cancelled()
+    emit(100, f"Certified {len(result)} mixed-reference artwork pair(s)")
     return tuple(result)
 
 def _axis_aligned_rectangle(
@@ -1530,19 +1804,877 @@ def _spd_plane_partitions(project: ProjectSpec) -> list[PlanePartitionSpec]:
             )
     return partitions
 
+
+def _canonical_metadata_sha256(payload: Any) -> str:
+    digest = sha256()
+    for chunk in iter_canonical_json_bytes(payload):
+        digest.update(chunk)
+    return digest.hexdigest()
+
+
+def _spd_layerwise_device_terminal_via_certificate(
+    analysis: Any,
+    *,
+    device_pins: Sequence[Any],
+    selected_power_nets: Sequence[str],
+    ground_nets: Sequence[str],
+    source_sha256: str,
+) -> tuple[dict[str, Any], tuple[_SpdServiceDiagnostic, ...]]:
+    """Persist exact Device source-Node to first-Via attachment evidence.
+
+    The certificate is intentionally narrower than a terminal Via path: one
+    complete row proves that a selected Device Connect pin is directly
+    incident to exactly one same-NET Via on TOP.  That exact Via ID and its
+    PadStackDef may be subtracted from the matching aggregate source population
+    so the terminal-owned barrel is not stamped again as substrate.  The row
+    does not by itself invent a terminal branch or finite Trace model.
+    """
+
+    source_digest = str(source_sha256).strip().casefold()
+    power_by_key = {
+        item.casefold(): item for item in _unique_strings(selected_power_nets)
+    }
+    ground_by_key = {
+        item.casefold(): item for item in _unique_strings(ground_nets)
+    }
+
+    def optional_text(value: Any) -> str | None:
+        if value is None:
+            return None
+        text = str(value).strip()
+        return text or None
+
+    def ground_key(net: str) -> str | None:
+        key = net.casefold()
+        if key in ground_by_key:
+            return key
+        match = re.fullmatch(r"(.+)/(\d+)", key)
+        if match and match.group(1) in ground_by_key:
+            return match.group(1)
+        return None
+
+    selected_pins = [
+        pin
+        for pin in device_pins
+        if getattr(pin, "kind", None) == PinKind.DEVICE_BUMP
+        and (
+            (
+                getattr(pin, "terminal", None) == TerminalKind.PWR
+                and str(getattr(pin, "net", "")).strip().casefold()
+                in power_by_key
+            )
+            or (
+                getattr(pin, "terminal", None) == TerminalKind.GND
+                and ground_key(str(getattr(pin, "net", "")).strip())
+                is not None
+            )
+        )
+    ]
+    selected_pins.sort(
+        key=lambda pin: (
+            str(getattr(pin, "pin_id", "")).casefold(),
+            str(getattr(pin, "pin_id", "")),
+        )
+    )
+
+    evidence_by_pin: dict[str, list[Any]] = {}
+    for endpoint in getattr(analysis, "device_terminal_via_endpoints", ()):
+        pin_id = str(getattr(endpoint, "pin_id", "")).strip()
+        if pin_id:
+            evidence_by_pin.setdefault(pin_id.casefold(), []).append(endpoint)
+    for items in evidence_by_pin.values():
+        items.sort(
+            key=lambda endpoint: (
+                str(getattr(endpoint, "incident_via_id", "")).casefold(),
+                str(getattr(endpoint, "incident_padstack", "")).casefold(),
+                str(getattr(endpoint, "status", "")).casefold(),
+            )
+        )
+
+    pin_key_counts = Counter(
+        str(getattr(pin, "pin_id", "")).strip().casefold()
+        for pin in selected_pins
+    )
+    terminals: list[dict[str, Any]] = []
+    for pin in selected_pins:
+        pin_id = str(getattr(pin, "pin_id", "")).strip()
+        pin_key = pin_id.casefold()
+        candidates = evidence_by_pin.get(pin_key, ())
+        endpoint = candidates[0] if len(candidates) == 1 else None
+        source_node_id = optional_text(getattr(pin, "source_node_id", None))
+        source_layer = optional_text(getattr(pin, "source_layer", None))
+        source_padstack = optional_text(
+            getattr(pin, "source_padstack", None)
+        )
+        issues: list[str] = []
+        if pin_key_counts[pin_key] != 1:
+            status = "duplicate_selected_pin_id"
+            issues.append(status)
+        elif not candidates:
+            status = "endpoint_evidence_missing"
+            issues.append(status)
+        elif len(candidates) != 1:
+            status = "endpoint_evidence_ambiguous"
+            issues.append(status)
+        else:
+            status = str(getattr(endpoint, "status", "")).strip()
+            issues.extend(
+                str(item).strip()
+                for item in tuple(getattr(endpoint, "issues", ()) or ())
+                if str(item).strip()
+            )
+            evidence_identity = (
+                optional_text(getattr(endpoint, "source_node_id", None)),
+                optional_text(getattr(endpoint, "source_layer", None)),
+                optional_text(getattr(endpoint, "source_padstack", None)),
+                str(getattr(endpoint, "net", "")).strip().casefold(),
+                float(getattr(endpoint, "source_x_um")),
+                float(getattr(endpoint, "source_y_um")),
+            )
+            pin_identity = (
+                source_node_id,
+                source_layer,
+                source_padstack,
+                str(getattr(pin, "net", "")).strip().casefold(),
+                float(getattr(pin, "x_um")),
+                float(getattr(pin, "y_um")),
+            )
+            if evidence_identity != pin_identity:
+                status = "pin_record_evidence_mismatch"
+                issues.append(status)
+        if not status:
+            status = "endpoint_status_missing"
+            issues.append(status)
+
+        candidate_via_ids = tuple(
+            str(item)
+            for item in (
+                tuple(getattr(endpoint, "candidate_via_ids", ()) or ())
+                if endpoint is not None
+                else ()
+            )
+        )
+        endpoint_identity = _canonical_metadata_sha256(
+            {
+                "source_sha256": source_digest,
+                "pin_id_key": pin_key,
+                "source_node_id_key": (
+                    source_node_id.casefold() if source_node_id else None
+                ),
+            }
+        )
+        terminals.append(
+            {
+                "endpoint_id": (
+                    f"spd-device-terminal-via:{endpoint_identity[:24]}"
+                ),
+                "pin_id": pin_id,
+                "refdes": str(getattr(pin, "refdes", "")).strip(),
+                "pin": str(getattr(pin, "pin", "")).strip(),
+                "terminal": str(getattr(pin, "terminal", "")),
+                "net": str(getattr(pin, "net", "")).strip(),
+                "source_node_id": source_node_id,
+                "source_layer": source_layer,
+                "source_padstack": source_padstack,
+                "source_x_um": float(getattr(pin, "x_um")),
+                "source_y_um": float(getattr(pin, "y_um")),
+                "incident_via_id": (
+                    optional_text(getattr(endpoint, "incident_via_id", None))
+                    if endpoint is not None
+                    else None
+                ),
+                "incident_net": (
+                    optional_text(getattr(endpoint, "incident_net", None))
+                    if endpoint is not None
+                    else None
+                ),
+                "incident_padstack": (
+                    optional_text(getattr(endpoint, "incident_padstack", None))
+                    if endpoint is not None
+                    else None
+                ),
+                "incident_opposite_node_id": (
+                    optional_text(
+                        getattr(endpoint, "incident_opposite_node_id", None)
+                    )
+                    if endpoint is not None
+                    else None
+                ),
+                "candidate_count": (
+                    int(getattr(endpoint, "candidate_count", 0))
+                    if endpoint is not None
+                    else 0
+                ),
+                "candidate_via_ids_sha256": _canonical_metadata_sha256(
+                    candidate_via_ids
+                ),
+                "status": status,
+                "issues": sorted(set(issues)),
+            }
+        )
+
+    incomplete = [item for item in terminals if item["status"] != "complete"]
+    source_hash_valid = bool(re.fullmatch(r"[0-9a-f]{64}", source_digest))
+    payload: dict[str, Any] = {
+        "schema_version": _SPD_LAYERWISE_DEVICE_TERMINAL_VIA_SCHEMA,
+        "compiler_id": _SPD_LAYERWISE_DEVICE_TERMINAL_VIA_COMPILER,
+        "source_sha256": source_digest,
+        "raw_spd_embedded": False,
+        "scope": {
+            "selected_power_nets": sorted(
+                power_by_key.values(), key=str.casefold
+            ),
+            "ground_nets": sorted(ground_by_key.values(), key=str.casefold),
+        },
+        "terminals": terminals,
+        "terminal_count": len(terminals),
+        "complete_terminal_count": len(terminals) - len(incomplete),
+        "incomplete_terminal_count": len(incomplete),
+        "status": (
+            "complete"
+            if source_hash_valid and bool(terminals) and not incomplete
+            else "incomplete"
+        ),
+    }
+    certificate = {
+        **payload,
+        "evidence_sha256": _canonical_metadata_sha256(payload),
+    }
+
+    diagnostics: list[_SpdServiceDiagnostic] = []
+    if not source_hash_valid:
+        diagnostics.append(
+            _SpdServiceDiagnostic(
+                severity="warning",
+                code="SPD_LAYERWISE_DEVICE_TERMINAL_VIA_SOURCE_HASH_INVALID",
+                message=(
+                    "Device terminal first-Via certificate has no valid "
+                    "64-digit source SHA-256; layerwise terminal proof must "
+                    "reject it."
+                ),
+            )
+        )
+    if not terminals:
+        diagnostics.append(
+            _SpdServiceDiagnostic(
+                severity="warning",
+                code="SPD_LAYERWISE_DEVICE_TERMINAL_VIAS_MISSING",
+                message=(
+                    "No selected Device PWR/GND terminal was available for "
+                    "source first-Via attachment proof."
+                ),
+            )
+        )
+    if incomplete:
+        counts = Counter(str(item["status"]) for item in incomplete)
+        diagnostics.append(
+            _SpdServiceDiagnostic(
+                severity="warning",
+                code="SPD_LAYERWISE_DEVICE_TERMINAL_VIA_INCOMPLETE",
+                message=(
+                    f"{len(incomplete)} of {len(terminals)} selected Device "
+                    "terminal first-Via attachment(s) are incomplete: "
+                    + ", ".join(
+                        f"{status}={count}"
+                        for status, count in sorted(counts.items())
+                    )
+                    + ". No endpoint is inferred by distance or envelope."
+                ),
+            )
+        )
+    return certificate, tuple(diagnostics)
+
+
+def _spd_layerwise_via_group_certificate(
+    analysis: Any,
+    stackup_layers: Sequence[StackupLayer],
+    *,
+    selected_power_nets: Sequence[str],
+    ground_nets: Sequence[str],
+    source_sha256: str,
+    device_terminal_via_certificate: Mapping[str, Any],
+    terminal_owned_refdes: Iterable[str] | None = None,
+) -> tuple[dict[str, Any], tuple[_SpdServiceDiagnostic, ...]]:
+    """Persist compact source Via populations for a later layerwise compiler.
+
+    ``SpdViaUsage`` is the parser's exact aggregate count for one NET and
+    PadStackDef.  This certificate binds those counts to deterministic physical
+    conductor endpoints without retaining, reopening, or rescanning the raw
+    SPD.  Complete Device-terminal first-Via certificate rows contribute their
+    exact incident Via IDs to the same ``(NET, PadStackDef)`` owner set as exact
+    decap landings.  An incomplete endpoint blocks only the exact group named by
+    its observed incident NET/padstack; Device-pin presence alone never widens
+    that uncertainty.  Missing PadStackDef, layer, drill, and ownership evidence
+    remains explicit; no fallback dimensions or invented endpoints are written.
+    """
+
+    source_digest = str(source_sha256).strip().casefold()
+    power_by_key = {
+        item.casefold(): item
+        for item in _unique_strings(selected_power_nets)
+    }
+    ground_by_key = {
+        item.casefold(): item
+        for item in _unique_strings(ground_nets)
+    }
+    selected_keys = set(power_by_key) | set(ground_by_key)
+
+    conductor_rows = [item for item in stackup_layers if item.is_conductor]
+    conductor_positions: dict[str, list[int]] = {}
+    for index, layer in enumerate(conductor_rows):
+        conductor_positions.setdefault(layer.name.casefold(), []).append(index)
+    layer_centers = _spd_layer_center_depths(stackup_layers)
+
+    padstacks_by_key: dict[str, list[Any]] = {}
+    for padstack in getattr(analysis, "padstacks", ()):
+        key = str(getattr(padstack, "name", "")).strip().casefold()
+        if key:
+            padstacks_by_key.setdefault(key, []).append(padstack)
+
+    # Decap connection classification preserves exact source landing Via IDs.
+    # The separately hashed Device-terminal certificate preserves exact source
+    # first-Via IDs.  Only complete rows become owners; incomplete rows can
+    # affect a group only when their observed incident NET and padstack name it.
+    terminal_vias: dict[tuple[str, str], set[str]] = {}
+    owned_refdes_keys = (
+        {str(item).strip().casefold() for item in terminal_owned_refdes}
+        if terminal_owned_refdes is not None
+        else None
+    )
+    for connection in getattr(analysis, "decap_connections", ()):
+        if owned_refdes_keys is not None and (
+            str(getattr(connection, "refdes", "")).strip().casefold()
+            not in owned_refdes_keys
+        ):
+            continue
+        landings = (
+            *tuple(getattr(connection, "power_vias", ()) or ()),
+            *tuple(getattr(connection, "ground_vias", ()) or ()),
+        )
+        for landing in landings:
+            net_key = str(getattr(landing, "net", "")).strip().casefold()
+            padstack_key = (
+                str(getattr(landing, "padstack", "")).strip().casefold()
+            )
+            via_id = str(getattr(landing, "via_id", "")).strip().casefold()
+            if net_key in selected_keys and padstack_key and via_id:
+                terminal_vias.setdefault((net_key, padstack_key), set()).add(via_id)
+
+    terminal_certificate = device_terminal_via_certificate
+    if (
+        not isinstance(terminal_certificate, Mapping)
+        or terminal_certificate.get("schema_version")
+        != _SPD_LAYERWISE_DEVICE_TERMINAL_VIA_SCHEMA
+        or terminal_certificate.get("compiler_id")
+        != _SPD_LAYERWISE_DEVICE_TERMINAL_VIA_COMPILER
+    ):
+        raise ValueError(
+            "layerwise Device-terminal Via certificate schema/compiler is invalid"
+        )
+    terminal_source_sha256 = str(
+        terminal_certificate.get("source_sha256", "")
+    ).strip().casefold()
+    if terminal_source_sha256 != source_digest:
+        raise ValueError(
+            "layerwise Device-terminal Via certificate source SHA-256 mismatches"
+        )
+    terminal_evidence_sha256 = str(
+        terminal_certificate.get("evidence_sha256", "")
+    ).strip().casefold()
+    terminal_unsigned = {
+        key: terminal_certificate[key]
+        for key in terminal_certificate
+        if key != "evidence_sha256"
+    }
+    if (
+        not re.fullmatch(r"[0-9a-f]{64}", terminal_evidence_sha256)
+        or _canonical_metadata_sha256(terminal_unsigned)
+        != terminal_evidence_sha256
+    ):
+        raise ValueError(
+            "layerwise Device-terminal Via certificate evidence SHA-256 mismatches"
+        )
+    terminal_rows_raw = terminal_certificate.get("terminals")
+    if not isinstance(terminal_rows_raw, Sequence) or isinstance(
+        terminal_rows_raw, (str, bytes)
+    ):
+        raise ValueError(
+            "layerwise Device-terminal Via certificate terminal rows are invalid"
+        )
+    terminal_rows = tuple(terminal_rows_raw)
+    if not all(isinstance(item, Mapping) for item in terminal_rows):
+        raise ValueError(
+            "layerwise Device-terminal Via certificate has a non-mapping row"
+        )
+
+    incomplete_device_endpoints_by_group: dict[
+        tuple[str, str], set[str]
+    ] = {}
+    unmapped_incomplete_device_endpoint_ids: set[str] = set()
+    complete_device_owned_via_ids: set[str] = set()
+    for row in terminal_rows:
+        endpoint_id = str(row.get("endpoint_id", "")).strip()
+        status = str(row.get("status", "")).strip()
+        incident_net_key = str(row.get("incident_net", "") or "").strip().casefold()
+        incident_padstack_key = (
+            str(row.get("incident_padstack", "") or "").strip().casefold()
+        )
+        incident_via_id = str(
+            row.get("incident_via_id", "") or ""
+        ).strip().casefold()
+        if status == "complete":
+            if (
+                not endpoint_id
+                or incident_net_key not in selected_keys
+                or not incident_padstack_key
+                or not incident_via_id
+            ):
+                raise ValueError(
+                    "complete Device-terminal Via row has incomplete incident identity"
+                )
+            terminal_vias.setdefault(
+                (incident_net_key, incident_padstack_key), set()
+            ).add(incident_via_id)
+            complete_device_owned_via_ids.add(incident_via_id)
+            continue
+        if (
+            endpoint_id
+            and incident_net_key in selected_keys
+            and incident_padstack_key
+        ):
+            incomplete_device_endpoints_by_group.setdefault(
+                (incident_net_key, incident_padstack_key), set()
+            ).add(endpoint_id)
+        elif endpoint_id:
+            unmapped_incomplete_device_endpoint_ids.add(endpoint_id)
+
+    raw_usages = [
+        usage
+        for usage in getattr(analysis, "via_usage", ())
+        if str(getattr(usage, "net", "")).strip().casefold() in selected_keys
+    ]
+    raw_usages.sort(
+        key=lambda item: (
+            str(getattr(item, "net", "")).strip().casefold(),
+            str(getattr(item, "padstack", "")).strip().casefold(),
+            str(getattr(item, "net", "")).strip(),
+            str(getattr(item, "padstack", "")).strip(),
+        )
+    )
+
+    seen_usage_keys: set[tuple[str, str]] = set()
+    groups: list[dict[str, Any]] = []
+    for usage in raw_usages:
+        net = str(getattr(usage, "net", "")).strip()
+        padstack_name = str(getattr(usage, "padstack", "")).strip()
+        net_key = net.casefold()
+        padstack_key = padstack_name.casefold()
+        usage_key = (net_key, padstack_key)
+        issues: list[str] = []
+
+        if usage_key in seen_usage_keys:
+            issues.append("duplicate_net_padstack_usage_record")
+        seen_usage_keys.add(usage_key)
+
+        try:
+            count = int(getattr(usage, "count"))
+        except (TypeError, ValueError):
+            count = None
+            issues.append("via_count_not_an_integer")
+        if count is not None and count <= 0:
+            issues.append("via_count_not_positive")
+
+        definitions = padstacks_by_key.get(padstack_key, [])
+        padstack = definitions[0] if len(definitions) == 1 else None
+        if not definitions:
+            issues.append("padstack_definition_missing")
+        elif len(definitions) > 1:
+            issues.append("padstack_definition_ambiguous")
+
+        declared_layers = _unique_strings(
+            getattr(padstack, "layers", ()) if padstack is not None else ()
+        )
+        unknown_layers = [
+            name
+            for name in declared_layers
+            if len(conductor_positions.get(name.casefold(), ())) != 1
+        ]
+        if unknown_layers:
+            issues.append("padstack_conductor_layer_missing_or_ambiguous")
+        known_layers = [
+            name
+            for name in declared_layers
+            if len(conductor_positions.get(name.casefold(), ())) == 1
+        ]
+        conductor_layers = sorted(
+            known_layers,
+            key=lambda name: conductor_positions[name.casefold()][0],
+        )
+        if len(conductor_layers) < 2:
+            issues.append("fewer_than_two_physical_conductor_layers")
+
+        start_layer = conductor_layers[0] if conductor_layers else None
+        end_layer = conductor_layers[-1] if conductor_layers else None
+        physical_layer_span: list[str] = []
+        if start_layer is not None and end_layer is not None:
+            start_index = conductor_positions[start_layer.casefold()][0]
+            end_index = conductor_positions[end_layer.casefold()][0]
+            physical_layer_span = [
+                item.name for item in conductor_rows[start_index : end_index + 1]
+            ]
+
+        def source_dimension(name: str) -> float | None:
+            if padstack is None:
+                return None
+            value = getattr(padstack, name, None)
+            if value is None:
+                return None
+            try:
+                number = float(value)
+            except (TypeError, ValueError):
+                issues.append(f"{name}_not_positive_finite")
+                return None
+            if not math.isfinite(number) or number <= 0.0:
+                issues.append(f"{name}_not_positive_finite")
+                return None
+            return number
+
+        drill_diameter_um = source_dimension("drill_diameter_um")
+        pad_width_um = source_dimension("pad_width_um")
+        pad_height_um = source_dimension("pad_height_um")
+        if drill_diameter_um is None:
+            issues.append("drill_diameter_um_missing")
+        raw_material = (
+            getattr(padstack, "material", None)
+            if padstack is not None
+            else None
+        )
+        material = str(raw_material).strip() if raw_material is not None else ""
+        material = material or None
+        optional_missing = [
+            name
+            for name, value in (
+                ("pad_width_um", pad_width_um),
+                ("pad_height_um", pad_height_um),
+                ("material", material),
+            )
+            if value in (None, "")
+        ]
+
+        identity_digest = _canonical_metadata_sha256(
+            {
+                "source_sha256": source_digest,
+                "net_key": net_key,
+                "padstack_key": padstack_key,
+            }
+        )
+        group_id = f"spd-via-group:{identity_digest[:24]}"
+        owner_id = f"source-via-population:{identity_digest}"
+        segments: list[dict[str, Any]] = []
+        if count is not None and count > 0 and len(conductor_layers) >= 2:
+            for index, (upper, lower) in enumerate(
+                zip(conductor_layers, conductor_layers[1:], strict=False)
+            ):
+                length_um = abs(
+                    float(layer_centers[lower]) - float(layer_centers[upper])
+                )
+                if not math.isfinite(length_um) or length_um <= 0.0:
+                    issues.append("segment_length_not_positive_finite")
+                    continue
+                segment_digest = _canonical_metadata_sha256(
+                    {
+                        "group_id": group_id,
+                        "ordinal": index,
+                        "start_layer": upper.casefold(),
+                        "end_layer": lower.casefold(),
+                    }
+                )
+                segments.append(
+                    {
+                        "segment_id": f"spd-via-segment:{segment_digest[:24]}",
+                        "owner_id": owner_id,
+                        "ordinal": index,
+                        "start_layer": upper,
+                        "end_layer": lower,
+                        "length_um": length_um,
+                        "count": count,
+                    }
+                )
+
+        owned_ids = sorted(terminal_vias.get(usage_key, ()))
+        terminal_owned_count = len(owned_ids)
+        incomplete_device_endpoint_ids = sorted(
+            incomplete_device_endpoints_by_group.get(usage_key, ())
+        )
+        ownership_issues: list[str] = []
+        if count is not None and terminal_owned_count > count:
+            ownership_issues.append("terminal_owned_count_exceeds_via_count")
+        if incomplete_device_endpoint_ids:
+            ownership_issues.append(
+                "incomplete_device_terminal_endpoint_affects_group"
+            )
+        ownership_complete = not ownership_issues
+        substrate_count = (
+            count - terminal_owned_count
+            if ownership_complete and count is not None and count > 0
+            else None
+        )
+
+        groups.append(
+            {
+                "group_id": group_id,
+                "owner_id": owner_id,
+                "net": net,
+                "role": "power" if net_key in power_by_key else "ground",
+                "padstack": padstack_name,
+                "count": count,
+                "declared_layers": declared_layers,
+                "conductor_layers": conductor_layers,
+                "start_layer": start_layer,
+                "end_layer": end_layer,
+                "physical_layer_span": physical_layer_span,
+                "drill_diameter_um": drill_diameter_um,
+                "pad_width_um": pad_width_um,
+                "pad_height_um": pad_height_um,
+                "material": material,
+                "segments": segments,
+                "status": "complete" if not issues else "incomplete",
+                "issues": sorted(set(issues)),
+                "missing_optional_fields": sorted(set(optional_missing)),
+                "terminal_owned_count": terminal_owned_count,
+                "terminal_owned_via_ids_sha256": _canonical_metadata_sha256(
+                    owned_ids
+                ),
+                "terminal_ownership_method": (
+                    "exact-decap-landing-and-device-incident-via-id-v2"
+                ),
+                "incomplete_device_terminal_endpoint_count": len(
+                    incomplete_device_endpoint_ids
+                ),
+                "incomplete_device_terminal_endpoint_ids_sha256": (
+                    _canonical_metadata_sha256(incomplete_device_endpoint_ids)
+                ),
+                "ownership_status": (
+                    "complete" if ownership_complete else "unresolved"
+                ),
+                "ownership_issues": sorted(set(ownership_issues)),
+                "substrate_count": substrate_count,
+            }
+        )
+
+    covered_power_keys = {
+        str(item["net"]).casefold()
+        for item in groups
+        if item["role"] == "power"
+    }
+    covered_ground_keys = {
+        str(item["net"]).casefold()
+        for item in groups
+        if item["role"] == "ground"
+    }
+    missing_power_nets = sorted(
+        (power_by_key[key] for key in set(power_by_key) - covered_power_keys),
+        key=str.casefold,
+    )
+    missing_ground_nets = sorted(
+        (ground_by_key[key] for key in set(ground_by_key) - covered_ground_keys),
+        key=str.casefold,
+    )
+    incomplete_groups = [item for item in groups if item["status"] != "complete"]
+    unresolved_ownership = [
+        item for item in groups if item["ownership_status"] != "complete"
+    ]
+    compiled_usage_keys = {
+        (str(item["net"]).casefold(), str(item["padstack"]).casefold())
+        for item in groups
+    }
+    affecting_incomplete_device_endpoint_ids = {
+        endpoint_id
+        for group_key, endpoint_ids in incomplete_device_endpoints_by_group.items()
+        if group_key in compiled_usage_keys
+        for endpoint_id in endpoint_ids
+    }
+    nonaffecting_incomplete_device_endpoint_ids = {
+        *unmapped_incomplete_device_endpoint_ids,
+        *(
+            endpoint_id
+            for group_key, endpoint_ids in incomplete_device_endpoints_by_group.items()
+            if group_key not in compiled_usage_keys
+            for endpoint_id in endpoint_ids
+        ),
+    }
+    source_hash_valid = bool(re.fullmatch(r"[0-9a-f]{64}", source_digest))
+    payload: dict[str, Any] = {
+        "schema_version": _SPD_LAYERWISE_VIA_GROUP_SCHEMA,
+        "compiler_id": _SPD_LAYERWISE_VIA_GROUP_COMPILER,
+        "source_sha256": source_digest,
+        "raw_spd_embedded": False,
+        "scope": {
+            "selected_power_nets": sorted(power_by_key.values(), key=str.casefold),
+            "ground_nets": sorted(ground_by_key.values(), key=str.casefold),
+        },
+        "groups": groups,
+        "group_count": len(groups),
+        "complete_group_count": len(groups) - len(incomplete_groups),
+        "ownership_resolved_group_count": len(groups) - len(unresolved_ownership),
+        "device_terminal_via_evidence_sha256": terminal_evidence_sha256,
+        "device_terminal_certificate_status": str(
+            terminal_certificate.get("status", "")
+        ),
+        "complete_device_terminal_owned_via_count": len(
+            complete_device_owned_via_ids
+        ),
+        "affecting_incomplete_device_terminal_endpoint_count": len(
+            affecting_incomplete_device_endpoint_ids
+        ),
+        "nonaffecting_incomplete_device_terminal_endpoint_count": len(
+            nonaffecting_incomplete_device_endpoint_ids
+        ),
+        "nonaffecting_incomplete_device_terminal_endpoint_ids_sha256": (
+            _canonical_metadata_sha256(
+                sorted(nonaffecting_incomplete_device_endpoint_ids)
+            )
+        ),
+        "missing_power_nets": missing_power_nets,
+        "missing_ground_nets": missing_ground_nets,
+        "status": (
+            "complete"
+            if source_hash_valid
+            and not incomplete_groups
+            and not unresolved_ownership
+            and not missing_power_nets
+            and bool(groups)
+            else "incomplete"
+        ),
+    }
+    certificate = {
+        **payload,
+        "evidence_sha256": _canonical_metadata_sha256(payload),
+    }
+
+    diagnostics: list[_SpdServiceDiagnostic] = []
+    if not source_hash_valid:
+        diagnostics.append(
+            _SpdServiceDiagnostic(
+                severity="warning",
+                code="SPD_LAYERWISE_VIA_SOURCE_HASH_INVALID",
+                message=(
+                    "Layerwise Via-group certificate has no valid 64-digit source "
+                    "SHA-256; the layerwise compiler must reject it."
+                ),
+            )
+        )
+    if not groups:
+        diagnostics.append(
+            _SpdServiceDiagnostic(
+                severity="warning",
+                code="SPD_LAYERWISE_VIA_GROUPS_MISSING",
+                message=(
+                    "No selected-PWR/configured-GND source Via usage group was "
+                    "available; no layerwise Via branch was fabricated."
+                ),
+            )
+        )
+    if incomplete_groups:
+        diagnostics.append(
+            _SpdServiceDiagnostic(
+                severity="warning",
+                code="SPD_LAYERWISE_VIA_GROUP_INCOMPLETE",
+                message=(
+                    f"{len(incomplete_groups)} layerwise Via group(s) have "
+                    "incomplete source padstack/count/layer/drill evidence; those "
+                    "groups are retained as incomplete and cannot be stamped."
+                ),
+            )
+        )
+    if unresolved_ownership:
+        diagnostics.append(
+            _SpdServiceDiagnostic(
+                severity="warning",
+                code="SPD_LAYERWISE_VIA_OWNERSHIP_UNRESOLVED",
+                message=(
+                    f"{len(unresolved_ownership)} layerwise Via group(s) have "
+                    "an incomplete Device-terminal endpoint whose observed "
+                    "incident NET/padstack maps to that group, or another exact "
+                    "ownership-count conflict. substrate_count remains null only "
+                    "for those affected groups to prevent double stamping."
+                ),
+            )
+        )
+    if nonaffecting_incomplete_device_endpoint_ids:
+        diagnostics.append(
+            _SpdServiceDiagnostic(
+                severity="warning",
+                code="SPD_LAYERWISE_DEVICE_TERMINAL_ENDPOINT_NONAFFECTING",
+                message=(
+                    f"{len(nonaffecting_incomplete_device_endpoint_ids)} incomplete "
+                    "Device-terminal first-Via endpoint(s) do not name a retained "
+                    "selected-NET/padstack Via group. They are disclosed and hash-"
+                    "bound but do not widen uncertainty to unrelated groups."
+                ),
+            )
+        )
+    if missing_power_nets:
+        diagnostics.append(
+            _SpdServiceDiagnostic(
+                severity="warning",
+                code="SPD_LAYERWISE_POWER_VIA_GROUP_MISSING",
+                message=(
+                    "No source Via usage group was found for selected PWR NET(s): "
+                    + ", ".join(missing_power_nets)
+                ),
+            )
+        )
+    if groups and not covered_ground_keys:
+        diagnostics.append(
+            _SpdServiceDiagnostic(
+                severity="warning",
+                code="SPD_LAYERWISE_GROUND_VIA_GROUP_MISSING",
+                message=(
+                    "No configured-GND source Via usage group was found; no ground "
+                    "Via population was fabricated."
+                ),
+            )
+        )
+    return certificate, tuple(diagnostics)
+
 def build_spd_import_plan(
     current: ProjectSpec,
     analysis: Any,
     source_path: Path,
+    *,
+    progress: ProgressCallback | None = None,
+    is_cancelled: CancelCallback | None = None,
 ) -> SpdImportPlan:
+    report = progress or _noop_progress
+    cancelled = is_cancelled or _never_cancelled
+
+    def check_cancelled() -> None:
+        if cancelled():
+            raise RuntimeError("SPD import-plan construction cancelled")
+
+    check_cancelled()
+    report(0, "Preparing retained PowerSI plane geometry")
     diagnostics: list[Any] = list(analysis.diagnostics)
     ground_nets = _unique_strings([*current.gnd_aliases, *analysis.ground_nets])
     ground_keys = {item.casefold() for item in ground_nets}
     selected_power_nets = _unique_strings(analysis.power_plane_nets)
     selected_power_keys = {item.casefold() for item in selected_power_nets}
+    geometry_asset_kwargs: dict[str, Any] = {}
+    if progress is not None:
+        geometry_asset_kwargs["progress"] = lambda value, message: report(
+            round(max(0, min(100, value)) * 0.30), message
+        )
+    if is_cancelled is not None:
+        geometry_asset_kwargs["is_cancelled"] = cancelled
     plane_geometry_payload, plane_geometry_assets = _spd_plane_geometry_assets(
-        analysis, selected_power_keys | ground_keys, diagnostics
+        analysis,
+        selected_power_keys | ground_keys,
+        diagnostics,
+        **geometry_asset_kwargs,
     )
+    check_cancelled()
+    report(30, "Retained plane geometry assets compressed")
     incomplete_plane_primitives = any(
         str(getattr(item, "code", ""))
         in {
@@ -1566,6 +2698,13 @@ def build_spd_import_plan(
     # copper that shares a proposed reference layer.
     layers = list(analysis.stackup_layers)
     mixed_reference_failures: list[dict[str, Any]] = []
+    mixed_reference_kwargs: dict[str, Any] = {}
+    if progress is not None:
+        mixed_reference_kwargs["progress"] = lambda value, message: report(
+            30 + round(max(0, min(100, value)) * 0.40), message
+        )
+    if is_cancelled is not None:
+        mixed_reference_kwargs["is_cancelled"] = cancelled
     mixed_reference_certificates = _mixed_reference_certificates(
         plane_geometry_payload,
         plane_geometry_assets,
@@ -1573,7 +2712,10 @@ def build_spd_import_plan(
         power_keys=selected_power_keys,
         ground_keys=ground_keys,
         failures=mixed_reference_failures,
+        **mixed_reference_kwargs,
     )
+    check_cancelled()
+    report(70, "Mixed-reference artwork certification complete")
     diagnostics.extend(
         _SpdServiceDiagnostic(
             severity="error" if item.get("blocking") else "warning",
@@ -1612,6 +2754,30 @@ def build_spd_import_plan(
     source_name, source_size, source_hash = _spd_source_identity(
         analysis.source, source_path
     )
+    device_terminal_via_certificate, device_terminal_via_diagnostics = (
+        _spd_layerwise_device_terminal_via_certificate(
+            analysis,
+            device_pins=pins,
+            selected_power_nets=selected_power_nets,
+            ground_nets=ground_nets,
+            source_sha256=source_hash,
+        )
+    )
+    diagnostics.extend(device_terminal_via_diagnostics)
+    layerwise_via_certificate, layerwise_via_diagnostics = (
+        _spd_layerwise_via_group_certificate(
+            analysis,
+            layers,
+            selected_power_nets=selected_power_nets,
+            ground_nets=ground_nets,
+            source_sha256=source_hash,
+            device_terminal_via_certificate=device_terminal_via_certificate,
+            terminal_owned_refdes=active_cap_refdes,
+        )
+    )
+    diagnostics.extend(layerwise_via_diagnostics)
+    check_cancelled()
+    report(75, "Source Via ownership certificates compiled")
     counts = {
         str(key): int(value)
         for key, value in dict(analysis.counts).items()
@@ -1650,6 +2816,10 @@ def build_spd_import_plan(
             "selected_power_net_count": len(selected_power_nets),
             "ground_nets": list(analysis.ground_nets),
             "counts": counts,
+            _SPD_LAYERWISE_DEVICE_TERMINAL_VIAS_KEY: (
+                device_terminal_via_certificate
+            ),
+            _SPD_LAYERWISE_VIA_GROUPS_KEY: layerwise_via_certificate,
             _SPD_PLANE_GEOMETRIES_KEY: plane_geometry_payload,
             "mixed_reference_certificate_failures": mixed_reference_failures,
             "source_geometry_fidelity": (
@@ -1711,6 +2881,8 @@ def build_spd_import_plan(
         _derive_rails(base, mixed_reference_certificates), current.rails
     )
     project = _validated_project_copy(base, rails=rails)
+    check_cancelled()
+    report(80, "Power rails and exact geometry metadata normalized")
 
     if not selected_power_nets:
         diagnostics.append(
@@ -1785,9 +2957,14 @@ def build_spd_import_plan(
     for instance in analysis.cap_instances:
         footprint_by_model.setdefault(instance.model_id, instance.footprint or "GENERIC")
     cap_models: list[CapModel] = []
-    for model_id, parsed in sorted(
-        analysis.cap_models.items(), key=lambda item: str(item[0]).casefold()
+    for model_index, (model_id, parsed) in enumerate(
+        sorted(
+            analysis.cap_models.items(),
+            key=lambda item: str(item[0]).casefold(),
+        )
     ):
+        if model_index % 32 == 0:
+            check_cancelled()
         impedance = parsed.impedance(frequencies)
         cap_models.append(
             CapModel(
@@ -1813,7 +2990,9 @@ def build_spd_import_plan(
     skipped_without_model = 0
     skipped_without_rail = 0
     used_slot_ids: set[str] = set()
-    for instance in analysis.cap_instances:
+    for instance_index, instance in enumerate(analysis.cap_instances):
+        if instance_index % 128 == 0:
+            check_cancelled()
         if not instance.mounted:
             skipped_inactive += 1
             continue
@@ -1868,6 +3047,8 @@ def build_spd_import_plan(
             )
         )
 
+    check_cancelled()
+    report(90, "Capacitor models and source placements normalized")
     metadata["spd_via_template_provenance"] = via_provenance
     metadata["spd_import"].update(
         {
@@ -1945,11 +3126,12 @@ def build_spd_import_plan(
                     code="SPD_PLANE_SOLVER_BBOX_APPROXIMATION",
                     message=(
                         f"Exact normalized PowerSI selected-PWR drawings are retained for "
-                        f"Geometry review, "
-                        f"but the rectangular modal solver uses the separate per-net "
-                        f"bounding box for {len(approximation_cells)} non-rectangular, "
-                        "cutout, or disjoint rail domain(s). Validated imported solver "
-                        "geometry is confirmed by default; review the approximation as needed."
+                        "the Layerwise exact retained-surface uniform Maxwell-Y/global "
+                        "Kron network and the Research exact-artwork uniform C00 term. "
+                        "Research nonuniform modes and the Legacy modal path use a "
+                        f"separate per-net bounding box for "
+                        f"{len(approximation_cells)} non-rectangular, cutout, or disjoint "
+                        "rail domain(s)."
                     ),
                 )
             )
@@ -1957,14 +3139,16 @@ def build_spd_import_plan(
             _SpdServiceDiagnostic(
                 severity="warning",
                 code="SPD_GROUND_CONTINUOUS_REFERENCE_ASSUMPTION",
-                message=(
-                    "Mixed-reference DGND artwork and cutouts are retained for certificate "
-                    "validation. The modal solver still assumes a continuous DGND reference "
-                    "across each displayed solver rectangle, so certificate-backed results "
-                    "remain LOW geometry confidence."
-                ),
+                    message=(
+                        "Mixed-reference DGND artwork and cutouts are retained for certificate "
+                        "validation and the Layerwise exact retained-surface uniform "
+                        "Maxwell-Y/global Kron network. Research nonuniform modes and "
+                        "the Legacy modal path assume "
+                        "a continuous DGND reference, so certificate-backed results remain "
+                        "LOW geometry confidence."
+                    ),
+                )
             )
-        )
         missing_domains = [
             rail.domain for rail in project.rails if rail.domain not in mapped_domains
         ]
@@ -1987,7 +3171,9 @@ def build_spd_import_plan(
                 "geometry_model": (
                     "whole selected-net bounding box fallback using the extracted "
                     "outline for each rail; selected PWR source primitives were not "
-                    "available; continuous DGND reference assumed"
+                    "available; the Layerwise exact retained-surface uniform Maxwell-Y/"
+                    "global Kron network is unavailable; Research nonuniform and Legacy "
+                    "modal paths assume a continuous DGND reference"
                 ),
             },
         }
@@ -2005,6 +3191,8 @@ def build_spd_import_plan(
             )
         )
 
+    check_cancelled()
+    report(95, "Exact plane partitions and geometry disclosures finalized")
     if not cap_models:
         diagnostics.append(
             _SpdServiceDiagnostic(
@@ -2057,8 +3245,12 @@ def build_spd_import_plan(
         (
             f"PowerSI PWR geometry: {geometry_domain_count} rail domain(s) across "
             f"{len(project.partitions)} PWR layer(s); {solver_bbox_count} domain(s) "
-            "use disclosed solver bounding boxes; normalized source primitives "
-            "retained; continuous DGND reference assumed"
+            "use disclosed Research-nonuniform/Legacy bounding boxes; normalized "
+            "source primitives retained for the Layerwise exact retained-surface "
+            "terminal-complete Maxwell-Y/global Kron network; no legacy modal "
+            "one-port difference, synthesized topology-only surface capacitance, "
+            "or synthesized fringing is added; Research/Legacy modal terms assume "
+            "a continuous DGND reference"
             if project.partitions
             else "PowerSI plane geometry: unavailable; whole-outline fallback"
         ),
@@ -2161,11 +3353,12 @@ def build_spd_import_plan(
         },
         attachment_names=sorted(attachments, key=str.casefold),
     )
+    check_cancelled()
     can_apply = not any(
         str(getattr(item, "severity", "")).casefold() == "error"
         for item in diagnostics
     )
-    return SpdImportPlan(
+    result = SpdImportPlan(
         project=project,
         attachments=attachments,
         diagnostics=tuple(diagnostics),
@@ -2175,6 +3368,9 @@ def build_spd_import_plan(
         summary_lines=summary_lines,
         can_apply=can_apply,
     )
+    check_cancelled()
+    report(100, "SPD import plan complete")
+    return result
 
 def _spd_source_identity(source: Any, path: Path) -> tuple[str, int, str]:
     name = str(
@@ -2884,7 +4080,11 @@ def _evaluation_view(project: ProjectSpec, outcome: EvaluationOutcome) -> Evalua
         existing = category_summary.get(item.category.value)
         if existing is None or level_order[item.level.value] < level_order[existing]:
             category_summary[item.category.value] = item.level.value
-    confidence_note = " | ".join(f"{key} {value}" for key, value in category_summary.items())
+    confidence_note_parts = [
+        *(f"{key} {value}" for key, value in category_summary.items()),
+        evaluation_model_boundary_disclosure(profile.key),
+    ]
+    confidence_note = " | ".join(confidence_note_parts)
     evaluated_rail = next(
         (
             item
@@ -2899,16 +4099,31 @@ def _evaluation_view(project: ProjectSpec, outcome: EvaluationOutcome) -> Evalua
         else None
     )
     if certificate is not None:
-        disclosure = (
+        mixed_reference = (
             "Mixed reference "
             f"{certificate.pwr_layer}/{certificate.gnd_layer}: overlap "
             f"{certificate.overlap_fraction:.2%}, dominant "
-            f"{certificate.dominant_overlap_component_fraction:.2%}; "
-            "continuous rectangular-return approximation (LOW geometry confidence)"
+            f"{certificate.dominant_overlap_component_fraction:.2%}"
         )
-        confidence_note = (
-            f"{confidence_note} | {disclosure}" if confidence_note else disclosure
-        )
+        if profile.key == LAYERWISE_ADMITTANCE_PROFILE.key:
+            disclosure = (
+                f"{mixed_reference}; exact retained artwork is used by the "
+                "terminal-complete Maxwell-Y/global Kron network and its external "
+                "Device-port Zii is used alone; no legacy rectangular higher-mode "
+                "one-port difference is added (LOW geometry confidence)"
+            )
+        elif profile.key == RESEARCH_UNIFORM_ADMITTANCE_PROFILE.key:
+            disclosure = (
+                f"{mixed_reference}; exact artwork is used by the uniform C00 term, "
+                "while nonuniform modes retain the continuous rectangular-return "
+                "approximation (LOW geometry confidence)"
+            )
+        else:
+            disclosure = (
+                f"{mixed_reference}; continuous rectangular-return approximation "
+                "(LOW geometry confidence)"
+            )
+        confidence_note = f"{confidence_note} | {disclosure}"
     placements = [item for item in project.placements if item.rail_id == outcome.rail_id]
     model_count = len({item.cap_model_id for item in placements})
     return EvaluationView(
@@ -2988,7 +4203,16 @@ def _derive_rails(
         matching = [item for item in power_pins if item.net.casefold() == net.casefold()]
         domain = next((item.domain for item in matching if item.domain), net)
         site = next((item.site for item in matching if item.site), "SITE0")
-        suggestion = suggestions[0]
+        # Distribution can add a small TOP-layer polygon for a rail that still
+        # has its real, board-scale plane on an internal layer.  Pure vertical
+        # separation then promotes TOP/L02 even when most of the rail's source
+        # terminals cannot be stamped inside that tiny rectangle.  Rank every
+        # electrically eligible adjacent pair against the retained artwork and
+        # source terminal envelope before using separation as the tie-break.
+        suggestion = min(
+            suggestions,
+            key=lambda item: _plane_pair_source_rank(project, net, item),
+        )
         rails.append(
             RailSpec(
                 rail_id=existing.rail_id if existing else str(domain),
@@ -3007,6 +4231,108 @@ def _derive_rails(
             )
         )
     return rails
+
+
+def _plane_pair_source_rank(
+    project: ProjectSpec,
+    rail_net: str,
+    suggestion: Any,
+) -> tuple[float, ...]:
+    """Return a deterministic source-geometry rank for one eligible pair.
+
+    Plane-pair selection ranks the selected PWR artwork envelope against the
+    imported Device bumps and mounted decap pads, so center/footprint-envelope
+    misses are a much stronger primary criterion than physical layer separation.
+    Research/Legacy later use the selected bounding box as their finite modal
+    domain; terminal-complete Layerwise instead retains the exact source artwork.
+    No Touchstone result or fitted coefficient is used here.
+    """
+
+    metadata = project.metadata.get("spd_import")
+    records = (
+        metadata.get(_SPD_PLANE_GEOMETRIES_KEY, ())
+        if isinstance(metadata, Mapping)
+        else ()
+    )
+    record = next(
+        (
+            item
+            for item in records
+            if isinstance(item, Mapping)
+            and str(item.get("layer", "")).casefold()
+            == str(suggestion.pwr_layer).casefold()
+            and str(item.get("net", "")).casefold() == rail_net.casefold()
+        ),
+        None,
+    )
+    bounds = _spd_geometry_bounds(record) if record is not None else None
+    if bounds is None:
+        return (
+            float("inf"),
+            float("inf"),
+            float(suggestion.separation_um),
+            0.0,
+            float(suggestion.pwr_index),
+            float(suggestion.gnd_index),
+        )
+
+    power_pins = [
+        pin
+        for pin in project.pins
+        if pin.terminal == TerminalKind.PWR
+        and pin.net.casefold() == rail_net.casefold()
+    ]
+    power_refdes = {pin.refdes.casefold() for pin in power_pins}
+    power_groups = {
+        (str(pin.site or "").casefold(), str(pin.bump_group or "").casefold())
+        for pin in power_pins
+        if pin.kind == PinKind.DEVICE_BUMP and pin.bump_group
+    }
+    related_ground = [
+        pin
+        for pin in project.pins
+        if pin.terminal == TerminalKind.GND
+        and (
+            pin.refdes.casefold() in power_refdes
+            or (
+                pin.kind == PinKind.DEVICE_BUMP
+                and pin.bump_group
+                and (
+                    str(pin.site or "").casefold(),
+                    str(pin.bump_group or "").casefold(),
+                )
+                in power_groups
+            )
+        )
+    ]
+    terminals = (*power_pins, *related_ground)
+    # Import has not compiled rail-specific via templates yet.  Fifty microns
+    # is the conservative half-extent of the 100 um fallback finite port used
+    # by the same source adapter; the production preflight later rechecks the
+    # exact recovered landing dimensions.
+    half_extent_um = 50.0
+    x_min, x_max, y_min, y_max = bounds
+    outside_count = 0
+    total_overrun_um = 0.0
+    for pin in terminals:
+        overruns = (
+            max(0.0, x_min - (float(pin.x_um) - half_extent_um)),
+            max(0.0, (float(pin.x_um) + half_extent_um) - x_max),
+            max(0.0, y_min - (float(pin.y_um) - half_extent_um)),
+            max(0.0, (float(pin.y_um) + half_extent_um) - y_max),
+        )
+        if max(overruns) > 0.0:
+            outside_count += 1
+            total_overrun_um += sum(overruns)
+    bbox_area_um2 = (x_max - x_min) * (y_max - y_min)
+    return (
+        float(outside_count),
+        total_overrun_um,
+        float(suggestion.separation_um),
+        -bbox_area_um2,
+        float(suggestion.pwr_index),
+        float(suggestion.gnd_index),
+    )
 
 def _rail_family(net: str) -> str:
     value = re.sub(r"/\d+$", "", net)
@@ -3046,6 +4372,7 @@ def _never_cancelled() -> bool:
 
 __all__ = [
     'DEFAULT_EVALUATION_MODAL_MAX_INDEX',
+    'DEFAULT_LAYERWISE_MODAL_CEILING_INDEX',
     'EVALUATION_MODAL_PRESETS',
     'EvaluationModalPreset',
     'EvaluationReadinessError',
@@ -3059,6 +4386,7 @@ __all__ = [
     'create_workspace_state',
     'evaluate_workspace',
     'evaluation_modal_preset',
+    'evaluation_modal_convergence_ceiling',
     'import_cap_spice',
     'plane_cell_source_geometry',
     'plane_cell_source_geometry_with_size',

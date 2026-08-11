@@ -1,6 +1,6 @@
 # De-cap Distribution 변동 규칙
 
-> 적용 프로그램: **SPD Decap PI Evaluator v0.22.1**
+> 적용 프로그램: **SPD Decap PI Evaluator v0.23.0**
 >
 > 문서 상태: 현재 구현 및 회귀 테스트에 대응하는 동작 규칙
 >

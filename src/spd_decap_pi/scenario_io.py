@@ -11,10 +11,14 @@ from pathlib import Path, PurePosixPath
 import shutil
 import tempfile
 from typing import Any, Final
-from zipfile import ZIP_DEFLATED, BadZipFile, ZipFile, ZipInfo
+from zipfile import ZIP_DEFLATED, ZIP_STORED, BadZipFile, ZipFile, ZipInfo
 
 from pydantic import ValidationError
 
+from .raw_spatial_contact_asset import (
+    RawSpatialContactAssetError,
+    validate_project_raw_spatial_contact_asset_envelope,
+)
 from .scenario import (
     SCENARIO_SCHEMA_VERSION,
     ScenarioSpec,
@@ -22,6 +26,11 @@ from .scenario import (
     _without_absent_destination_pwr_layer,
 )
 from .routing_obstacles import decode_routing_obstacle_asset
+from .surface_certificate_asset import (
+    SurfaceCertificateAssetError,
+    externalize_scenario_surface_certificate,
+    validate_project_topology_storage_envelope,
+)
 
 
 SCENARIO_FORMAT: Final = "spd-decap-pi-scenario"
@@ -29,8 +38,12 @@ SCENARIO_FORMAT_VERSION: Final = 1
 SCENARIO_FILENAME: Final = "scenario.json"
 MANIFEST_FILENAME: Final = "manifest.json"
 ATTACHMENT_PREFIX: Final = "attachments"
-MAX_SCENARIO_MEMBER_BYTES: Final = 256 * 1024 * 1024
-MAX_TOTAL_UNCOMPRESSED_BYTES: Final = 1024 * 1024 * 1024
+# Both named production certificates crossed the former 384 MiB member bound.
+# Keep the archive finite at 1 GiB per member and 2 GiB aggregate while the
+# attachment-backed surface evidence retains bounded expansion/canonical/hash
+# gates.  Complete production evidence uses the smaller compiled-only contract.
+MAX_SCENARIO_MEMBER_BYTES: Final = 1024 * 1024 * 1024
+MAX_TOTAL_UNCOMPRESSED_BYTES: Final = 2 * 1024 * 1024 * 1024
 
 
 class ScenarioFormatError(ValueError):
@@ -172,7 +185,10 @@ def _reject_raw_spd_payload(content: bytes, *, scenario: ScenarioSpec) -> bytes:
 
 def _zip_info(name: str) -> ZipInfo:
     info = ZipInfo(name, date_time=(1980, 1, 1, 0, 0, 0))
-    info.compress_type = ZIP_DEFLATED
+    # Topology/geometry ``.zlib`` payloads already carry bounded compression
+    # and independent hashes.  Re-deflating hundreds of MiB adds CPU/IO delay
+    # without useful size reduction.
+    info.compress_type = ZIP_STORED if name.casefold().endswith(".zlib") else ZIP_DEFLATED
     info.external_attr = 0o100644 << 16
     return info
 
@@ -244,6 +260,37 @@ def save_scenario(
             raise ScenarioFormatError(f"scenario attachment {name!r} exceeds size limit")
         attachment_bytes[name] = content
 
+    try:
+        scenario, attachment_bytes = externalize_scenario_surface_certificate(
+            scenario, attachment_bytes
+        )
+        raw_manifest = validate_project_raw_spatial_contact_asset_envelope(
+            scenario.normalized_project, attachment_bytes
+        )
+        if (
+            raw_manifest is not None
+            and raw_manifest["source_sha256"] != scenario.source.sha256
+        ):
+            raise RawSpatialContactAssetError(
+                "RAW_SPATIAL_BINDING_MISMATCH",
+                "raw spatial source differs from the scenario source identity",
+            )
+    except SurfaceCertificateAssetError as exc:
+        raise ScenarioFormatError(
+            f"surface certificate attachment failed validation [{exc.code}]: {exc}"
+        ) from exc
+    except RawSpatialContactAssetError as exc:
+        raise ScenarioFormatError(
+            f"raw spatial contact attachment failed validation [{exc.code}]: {exc}"
+        ) from exc
+    except ValidationError as exc:
+        raise ScenarioFormatError(f"scenario data failed validation: {exc}") from exc
+
+    if any(
+        len(content) > MAX_SCENARIO_MEMBER_BYTES
+        for content in attachment_bytes.values()
+    ):
+        raise ScenarioFormatError("scenario attachment exceeds size limit")
     if sum(len(content) for content in attachment_bytes.values()) > (
         MAX_TOTAL_UNCOMPRESSED_BYTES
     ):
@@ -592,6 +639,32 @@ def load_scenario_bundle(path: str | os.PathLike[str]) -> ScenarioBundle:
                 raise ScenarioFormatError(
                     "scenario design fingerprint does not match its manifest"
                 )
+            try:
+                validate_project_topology_storage_envelope(
+                    scenario.normalized_project, attachments
+                )
+            except SurfaceCertificateAssetError as exc:
+                raise ScenarioFormatError(
+                    "surface certificate attachment failed validation "
+                    f"[{exc.code}]: {exc}"
+                ) from exc
+            try:
+                raw_manifest = validate_project_raw_spatial_contact_asset_envelope(
+                    scenario.normalized_project, attachments
+                )
+                if (
+                    raw_manifest is not None
+                    and raw_manifest["source_sha256"] != scenario.source.sha256
+                ):
+                    raise RawSpatialContactAssetError(
+                        "RAW_SPATIAL_BINDING_MISMATCH",
+                        "raw spatial source differs from the scenario source identity",
+                    )
+            except RawSpatialContactAssetError as exc:
+                raise ScenarioFormatError(
+                    "raw spatial contact attachment failed validation "
+                    f"[{exc.code}]: {exc}"
+                ) from exc
             return ScenarioBundle(scenario=scenario, attachments=attachments)
     except FileNotFoundError as exc:
         raise ScenarioFormatError(f"scenario file does not exist: {source}") from exc
