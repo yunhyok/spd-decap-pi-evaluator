@@ -1,0 +1,417 @@
+{
+  "ownershipMarker": "Owned by Markdown HTML Companion v0.1.0",
+  "schemaVersion": 1,
+  "generator": {
+    "name": "Markdown HTML Companion",
+    "version": "0.1.0"
+  },
+  "generatedAt": "2026-08-11T02:13:59.367536+00:00",
+  "repository": "yunhyok/spd-decap-pi-evaluator",
+  "baseBranch": "main",
+  "baseSha": "6d588f3dc5a1aff3073d268d215a493095600671",
+  "branch": "codex/add-html-companions-20260811",
+  "sourceMarkdownCount": 15,
+  "generatedHtmlCount": 15,
+  "documents": [
+    {
+      "source": "README.md",
+      "sourceBlobSha": "a6e7f7115e04894b83bad2376d88bd86f4caa5b3",
+      "sourceSha256": "9634ef07842e7f7af2c5f76203520a90552aa12acede6c3ab28345709f584065",
+      "output": "README.companion.html",
+      "outputSha256": "0e9bf12eeb47a32b48e9870139fe1f37f4df2eb7673b54e98dccb96300e66bdf",
+      "headingCount": 10,
+      "visualClassification": "DOCUMENT_MAP",
+      "visualTitle": "Evaluator documentation map",
+      "diagramAdded": true,
+      "evidence": [
+        {
+          "lineStart": 1,
+          "lineEnd": 25,
+          "summary": "Version heading and v0.21 Evaluation/Distribution integration sections define the release scope and linked contracts."
+        },
+        {
+          "lineStart": 27,
+          "lineEnd": 57,
+          "summary": "Correction, solver/loading, and raw-SPD provenance sections form the remaining release hierarchy."
+        },
+        {
+          "lineStart": 59,
+          "lineEnd": 80,
+          "summary": "Feature and workflow sections define the user-facing branch under the release notes."
+        }
+      ],
+      "urlCount": 19
+    },
+    {
+      "source": "docs/CORE_EXTRACTION.md",
+      "sourceBlobSha": "1d717da5470ae784f564459906bc3eaa22ee4c77",
+      "sourceSha256": "153fa060b4207119805aca6b3aecf70fa678c333ce1c99dcfce9875d6fcb2810",
+      "output": "docs/CORE_EXTRACTION.companion.html",
+      "outputSha256": "32634c5d257c352c1b5129b54643d1b2b419bba99059677de37cddc4babcdc5f",
+      "headingCount": 1,
+      "visualClassification": "NONE",
+      "visualTitle": "Embedded core boundary",
+      "diagramAdded": false,
+      "evidence": [
+        {
+          "lineStart": 3,
+          "lineEnd": 14,
+          "summary": "The document states repository independence, the embedded calculation/import snapshot, and the one-rail continuous-DGND evaluation boundary."
+        }
+      ],
+      "urlCount": 2
+    },
+    {
+      "source": "docs/DECAP_DISTRIBUTION_RULES.md",
+      "sourceBlobSha": "7e4e32491d83f4dace4281bac050374258ac928c",
+      "sourceSha256": "58d424d70ec401ddc1b80f02a13308c29570288b820445916e31993f3b59f8a5",
+      "output": "docs/DECAP_DISTRIBUTION_RULES.companion.html",
+      "outputSha256": "b8c4d65b23f63cda2a40479b8b8b9b758ac1e386102087a7d3d7169c0f947c2f",
+      "headingCount": 31,
+      "visualClassification": "PROCESS_FLOW",
+      "visualTitle": "Distribution eligibility to applied result",
+      "diagramAdded": true,
+      "evidence": [
+        {
+          "lineStart": 15,
+          "lineEnd": 28,
+          "summary": "Basic rules require immutable source data, physical/topology validation, and fail-closed Preview/Apply with FULL/PARTIAL status."
+        },
+        {
+          "lineStart": 30,
+          "lineEnd": 46,
+          "summary": "Terminology defines Present, Assignable, Fixed, Target, Actual, movement, and isolation-gap entities."
+        },
+        {
+          "lineStart": 68,
+          "lineEnd": 78,
+          "summary": "Target cells are classified as DONOR, RECEIVER, UNCHANGED, or EXCHANGE."
+        }
+      ],
+      "urlCount": 50
+    },
+    {
+      "source": "docs/DECAP_DISTRIBUTION_VALIDATION_2026-08-05.md",
+      "sourceBlobSha": "a2f535df7890f4b95ba0d584fccd9048d1f50ec6",
+      "sourceSha256": "fe781737cbe9b67e36c5a939e442efb95a93eb8bc0847827d893ac6e492133fe",
+      "output": "docs/DECAP_DISTRIBUTION_VALIDATION_2026-08-05.companion.html",
+      "outputSha256": "f45a7e4bb989027f4f5e7287ebe2e2da3b789d3539a360cfbdc359b36c276093",
+      "headingCount": 4,
+      "visualClassification": "NONE",
+      "visualTitle": "De-cap Distribution v0.19 validation",
+      "diagramAdded": false,
+      "evidence": [
+        {
+          "lineStart": 3,
+          "lineEnd": 18,
+          "summary": "Scope and physical placement contract are stated."
+        },
+        {
+          "lineStart": 20,
+          "lineEnd": 53,
+          "summary": "Named raw-SPD/workbook replay and measured result tables are recorded."
+        },
+        {
+          "lineStart": 55,
+          "lineEnd": 63,
+          "summary": "Workflow/UI changes and immutability claims are logged."
+        }
+      ],
+      "urlCount": 5
+    },
+    {
+      "source": "docs/DECAP_DISTRIBUTION_VALIDATION_2026-08-06.md",
+      "sourceBlobSha": "71f8450a781225b32e83dbbed76362b0b61b6c9a",
+      "sourceSha256": "737ec23e5b1e522e44aa36998355ad87f165bc70c16645d16ba52d45d06d2b00",
+      "output": "docs/DECAP_DISTRIBUTION_VALIDATION_2026-08-06.companion.html",
+      "outputSha256": "bcb504e88211a1f243ce87e6b12f7b48840f70905ffcf99599b6b5eee00abbb3",
+      "headingCount": 6,
+      "visualClassification": "NONE",
+      "visualTitle": "De-cap Distribution v0.20 validation",
+      "diagramAdded": false,
+      "evidence": [
+        {
+          "lineStart": 3,
+          "lineEnd": 23,
+          "summary": "Physical contract and fail-closed conditions are listed."
+        },
+        {
+          "lineStart": 25,
+          "lineEnd": 56,
+          "summary": "Raw-SPD/workbook replay, proof counts, and round-trip warning are recorded."
+        },
+        {
+          "lineStart": 58,
+          "lineEnd": 77,
+          "summary": "Measured timing and independent proof methodology are tabulated."
+        }
+      ],
+      "urlCount": 7
+    },
+    {
+      "source": "docs/EVALUATION_ACCURACY.md",
+      "sourceBlobSha": "b782e7cee69d153656e76a6e1ba5e21746ad6cc6",
+      "sourceSha256": "591e0a957dc2d0f8994112388a194943e01714b0b8e13b350eeb26eb11e2b466",
+      "output": "docs/EVALUATION_ACCURACY.companion.html",
+      "outputSha256": "24aeec650d97fcb549ce3b9d6071cbfad00e9b65a98bd3cc53d07947f442d822",
+      "headingCount": 7,
+      "visualClassification": "ARCHITECTURE",
+      "visualTitle": "Evaluation modeling boundary",
+      "diagramAdded": true,
+      "evidence": [
+        {
+          "lineStart": 14,
+          "lineEnd": 44,
+          "summary": "Selected PWR/DGND pair feeds a rectangular shared-PWR equivalent; general multilayer cascade is inactive and LayerPairNetwork is disconnected."
+        },
+        {
+          "lineStart": 46,
+          "lineEnd": 58,
+          "summary": "Qualified MLO microvia evidence selects solid-copper versus conservative barrel modeling."
+        }
+      ],
+      "urlCount": 12
+    },
+    {
+      "source": "docs/EVALUATION_DISTRIBUTION_VALIDATION_2026-08-06.md",
+      "sourceBlobSha": "9226d8bfd419952625a134c8c5dfad0c24918541",
+      "sourceSha256": "c51cb34f673e7e3ebf8cd493ab4c4547cc9c9ddff6b12befc80d2c347a33d36b",
+      "output": "docs/EVALUATION_DISTRIBUTION_VALIDATION_2026-08-06.companion.html",
+      "outputSha256": "7d170981dd50b00d509926da382cdfdcfbac3c217a62bc63e7698cb6218dcbf7",
+      "headingCount": 10,
+      "visualClassification": "NONE",
+      "visualTitle": "Evaluation / Distribution validation record",
+      "diagramAdded": false,
+      "evidence": [
+        {
+          "lineStart": 8,
+          "lineEnd": 27,
+          "summary": "Status labels, source hashes, and Touchstone header rules are defined."
+        },
+        {
+          "lineStart": 29,
+          "lineEnd": 63,
+          "summary": "Blocker reproduction, exact fallback rules, and Original/Tuned preflight behavior are recorded."
+        },
+        {
+          "lineStart": 65,
+          "lineEnd": 80,
+          "summary": "Fresh replay stages and measured outcomes are tabulated."
+        }
+      ],
+      "urlCount": 11
+    },
+    {
+      "source": "docs/EVALUATION_SOLVER_DEEP_RESEARCH_2026-08-04.md",
+      "sourceBlobSha": "2e514bc822e8dca78c0825b7ad077f9579ec5905",
+      "sourceSha256": "7d803d1ead8c249a2f9b971d6d41ef514e6205397e15ba57e1a0bbb5547f15eb",
+      "output": "docs/EVALUATION_SOLVER_DEEP_RESEARCH_2026-08-04.companion.html",
+      "outputSha256": "5ae374cd2b50c890a97d0562a3beb4d6abc46442f2ecb1c97166ce1062b4805d",
+      "headingCount": 18,
+      "visualClassification": "ARCHITECTURE",
+      "visualTitle": "Research solver architecture",
+      "diagramAdded": true,
+      "evidence": [
+        {
+          "lineStart": 38,
+          "lineEnd": 69,
+          "summary": "The selected production direction and rejected alternatives are explicitly enumerated."
+        },
+        {
+          "lineStart": 71,
+          "lineEnd": 85,
+          "summary": "Existing Mermaid flowchart gives the exact source-backed architecture."
+        },
+        {
+          "lineStart": 87,
+          "lineEnd": 113,
+          "summary": "Evidence boundary states SPD/Touchstone roles and non-blind comparison limits."
+        }
+      ],
+      "urlCount": 46
+    },
+    {
+      "source": "docs/EVALUATION_SOLVER_IMPLEMENTATION_PLAN_2026-08-04.md",
+      "sourceBlobSha": "5cc809104ce849abec0b70c985794490ee00dd72",
+      "sourceSha256": "9b59c6bab96b12d6cc5867a39594d61e6893f08aacddfeb070553a8ab47a8c37",
+      "output": "docs/EVALUATION_SOLVER_IMPLEMENTATION_PLAN_2026-08-04.companion.html",
+      "outputSha256": "8dcc744c3135c30624a878058436f29fae32f5c4e181c1c085a80d90316a7b33",
+      "headingCount": 27,
+      "visualClassification": "PROCESS_FLOW",
+      "visualTitle": "Solver promotion path",
+      "diagramAdded": true,
+      "evidence": [
+        {
+          "lineStart": 26,
+          "lineEnd": 38,
+          "summary": "The plan explicitly orders comparison contract, topology certificate, layer kernel, sparse MNA, physics, validation, acceleration, and guarded rollout."
+        },
+        {
+          "lineStart": 123,
+          "lineEnd": 140,
+          "summary": "Phase plan and exit-gate structure is defined."
+        }
+      ],
+      "urlCount": 30
+    },
+    {
+      "source": "docs/EVALUATION_SOLVER_IMPLEMENTATION_STATUS_2026-08-04.md",
+      "sourceBlobSha": "0927d11cb673eb13bafd05fbe45c128bbfbbf79f",
+      "sourceSha256": "52cb36c607e194b4198e1a81d162657b2a1415eb7c4aa8f45770fb7b82b64ecf",
+      "output": "docs/EVALUATION_SOLVER_IMPLEMENTATION_STATUS_2026-08-04.companion.html",
+      "outputSha256": "6792d136d0a7f4b2b163ad42d5606e85cef345a63fb63d9ebaf09b2b7dde92a5",
+      "headingCount": 9,
+      "visualClassification": "NONE",
+      "visualTitle": "Evaluation solver implementation status",
+      "diagramAdded": false,
+      "evidence": [
+        {
+          "lineStart": 10,
+          "lineEnd": 24,
+          "summary": "Release/rollback backend and research profile identity are defined."
+        },
+        {
+          "lineStart": 27,
+          "lineEnd": 52,
+          "summary": "Guarded bridge scope and missing-certificate block are documented."
+        },
+        {
+          "lineStart": 54,
+          "lineEnd": 80,
+          "summary": "Loading hardening metrics and phase timings are reported."
+        }
+      ],
+      "urlCount": 10
+    },
+    {
+      "source": "docs/LAYER_PAIR_NETWORK.md",
+      "sourceBlobSha": "08cf1bfaf4a94efe5adfa115eef6bb3790f500fa",
+      "sourceSha256": "dd883842550e16bac288bb8f28ff36bbe9e289c9ec75a4254a62a0ff22a86b3b",
+      "output": "docs/LAYER_PAIR_NETWORK.companion.html",
+      "outputSha256": "b223a762a7feafae57ed50d2c54d9b26e3d7503859b8dcf3e3490c122de77fa5",
+      "headingCount": 3,
+      "visualClassification": "ARCHITECTURE",
+      "visualTitle": "Layer-pair Schur cascade",
+      "diagramAdded": true,
+      "evidence": [
+        {
+          "lineStart": 12,
+          "lineEnd": 30,
+          "summary": "Two adjacent sections share interface b; KCL and Schur/Kron equations reduce the interface."
+        },
+        {
+          "lineStart": 32,
+          "lineEnd": 49,
+          "summary": "Port alignment, fail-closed checks, and Y-domain cascade semantics are stated."
+        }
+      ],
+      "urlCount": 8
+    },
+    {
+      "source": "docs/superpowers/plans/2026-08-05-distribution-multilayer-ui.md",
+      "sourceBlobSha": "1de4a28cca01249090571eec939b2c48d5673ab1",
+      "sourceSha256": "58d3c0ac7ed3dd761433606a9b0bddbca176256bc66fe36ddf5d1239bda284b9",
+      "output": "docs/superpowers/plans/2026-08-05-distribution-multilayer-ui.companion.html",
+      "outputSha256": "be56428a1baf7dfbe6c938a930aaf9d9f68b1bf9de02c99aa443da1c13b74698",
+      "headingCount": 1,
+      "visualClassification": "PROCESS_FLOW",
+      "visualTitle": "Multilayer Distribution delivery",
+      "diagramAdded": true,
+      "evidence": [
+        {
+          "lineStart": 3,
+          "lineEnd": 15,
+          "summary": "Six numbered implementation steps run from Via-only audit through eligibility, replay, UI/XLSX, tests, and packaging/publish."
+        }
+      ],
+      "urlCount": 2
+    },
+    {
+      "source": "docs/superpowers/plans/2026-08-06-distribution-existing-plane-contract.md",
+      "sourceBlobSha": "9680a76e90fcddce656dcfd086ecf80b90a360c8",
+      "sourceSha256": "22755b2d14f0e43d2dbb9d8d0a5acf79239e923f772de56ff91ac0fb930b4fdc",
+      "output": "docs/superpowers/plans/2026-08-06-distribution-existing-plane-contract.companion.html",
+      "outputSha256": "17aad06d1034094e19cc0d59e0adcd280a51c97fb6b522b067c9ee11dba99b5a",
+      "headingCount": 8,
+      "visualClassification": "PROCESS_FLOW",
+      "visualTitle": "Existing-plane contract tasks",
+      "diagramAdded": true,
+      "evidence": [
+        {
+          "lineStart": 5,
+          "lineEnd": 19,
+          "summary": "Goal, architecture, and separated compact/narrative renderers are defined."
+        },
+        {
+          "lineStart": 23,
+          "lineEnd": 74,
+          "summary": "Task 1 locks projection eligibility and its test gates."
+        },
+        {
+          "lineStart": 76,
+          "lineEnd": 120,
+          "summary": "Task 2/2A immutability and Task 3 GUI status/log split follow."
+        }
+      ],
+      "urlCount": 9
+    },
+    {
+      "source": "docs/superpowers/specs/2026-08-05-distribution-multilayer-ui-design.md",
+      "sourceBlobSha": "9bf69e336df8373a6b7f18d7b40fba59503be96b",
+      "sourceSha256": "50bdf8d0e1b3ff112b015daa8e178416029f018632733b1695f6ff0e28a871b5",
+      "output": "docs/superpowers/specs/2026-08-05-distribution-multilayer-ui-design.companion.html",
+      "outputSha256": "02b658b9f22ab03a2cc3265f1ceddabf2808699c921f9ce9ad0d444ee7b0a7bd",
+      "headingCount": 5,
+      "visualClassification": "PROCESS_FLOW",
+      "visualTitle": "Distribution proof-to-apply flow",
+      "diagramAdded": true,
+      "evidence": [
+        {
+          "lineStart": 9,
+          "lineEnd": 24,
+          "summary": "Three source-backed eligibility facts and fail-closed rules are stated."
+        },
+        {
+          "lineStart": 26,
+          "lineEnd": 35,
+          "summary": "Detached table, strict workbook import, and Original/Distributed display behavior are explicit."
+        },
+        {
+          "lineStart": 37,
+          "lineEnd": 43,
+          "summary": "Replay, diagnostics, tests, and package acceptance are required."
+        }
+      ],
+      "urlCount": 6
+    },
+    {
+      "source": "docs/superpowers/specs/2026-08-06-distribution-existing-plane-contract-design.md",
+      "sourceBlobSha": "2786a1da96d2b9d696dee4bfaf9e43df0a0f1e4a",
+      "sourceSha256": "882c27f487dd0a17f36b963c74195624ac9ba530593a8a35407d83e2a083b6f3",
+      "output": "docs/superpowers/specs/2026-08-06-distribution-existing-plane-contract-design.companion.html",
+      "outputSha256": "9b4ddb77e3a72c8c7d585dc9b55b71014cb987edbb0e3d25eee5bc82ac26b607",
+      "headingCount": 6,
+      "visualClassification": "PROCESS_FLOW",
+      "visualTitle": "Existing-plane reassignment flow",
+      "diagramAdded": true,
+      "evidence": [
+        {
+          "lineStart": 11,
+          "lineEnd": 35,
+          "summary": "Eligibility requires immutable landing, retained destination copper, and deterministic proof-layer selection."
+        },
+        {
+          "lineStart": 41,
+          "lineEnd": 52,
+          "summary": "Vertical projection and apply limits are explicit."
+        },
+        {
+          "lineStart": 54,
+          "lineEnd": 80,
+          "summary": "Balance strip, narrative log, and worker lifecycle are separated."
+        }
+      ],
+      "urlCount": 7
+    }
+  ]
+}
