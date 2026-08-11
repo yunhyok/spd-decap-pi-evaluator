@@ -63,8 +63,9 @@ from spd_decap_pi._core.services import (
     WorkspaceState,
     cap_spice_subcircuit_names,
     import_cap_spice,
-    plane_cell_source_geometry,
+    plane_cell_source_geometry_with_size,
     scoped_blas_threads,
+    spd_plane_geometry_record_payload,
 )
 from spd_decap_pi._core.domain import PinKind, ProjectSpec
 from spd_decap_pi._core.solver.profiles import (
@@ -110,6 +111,12 @@ from .worker import FunctionWorker
 _DISTRIBUTION_FIELD_ROLE = int(Qt.ItemDataRole.UserRole) + 1
 _DISTRIBUTION_TARGET_FIELD = "target"
 _DISTRIBUTION_TOLERANCE_FIELD = "tolerance"
+_MAX_PHYSICAL_PWR_GEOMETRY_RECORDS = 4_096
+_MAX_PHYSICAL_PWR_GEOMETRY_RECORDS_PER_LAYER = 512
+_MAX_PHYSICAL_PWR_DECODED_BYTES_PER_LAYER = 256 * 1024 * 1024
+_MAX_PHYSICAL_PWR_PATH_ELEMENTS_PER_LAYER = 2_000_000
+_MAX_CACHED_PHYSICAL_PWR_PATH_ELEMENTS = 12_000_000
+_ESTIMATED_QT_ELLIPSE_PATH_ELEMENTS = 16
 
 
 class _DistributionNumericItem(QTableWidgetItem):
@@ -431,12 +438,16 @@ class _DistributionBalanceState:
 class _PreparedPlaneCell:
     """Reentrant Qt paths prepared off-thread; GUI only creates scene items."""
 
-    cell: Any
+    cell: Any | None
     net: str
     layer: str
     runs: tuple[tuple[str, QPainterPath], ...]
     primitive_kinds: frozenset[str]
     artwork_bounds: QRectF | None
+
+    @property
+    def path_element_count(self) -> int:
+        return sum(path.elementCount() for _operation, path in self.runs)
 
 
 @dataclass(frozen=True, slots=True)
@@ -567,12 +578,15 @@ def _prepare_source_board_decaps(scenario: ScenarioSpec) -> tuple[Any, ...]:
 
 def _prepared_plane_paths(
     geometry: dict[str, Any],
+    *,
+    is_cancelled: Callable[[], bool] | None = None,
 ) -> tuple[tuple[tuple[str, QPainterPath], ...], frozenset[str], QRectF | None]:
     """Build reentrant QPainterPath values without creating graphics items."""
 
     builder = _PlanePathBuilder(geometry, QColor())
     while not builder.step(builder.primitive_count, maximum_points=100_000):
-        pass
+        if is_cancelled is not None and is_cancelled():
+            raise RuntimeError("document opening cancelled")
     runs, primitive_kinds = builder.paths()
     if not runs:
         return (), primitive_kinds, None
@@ -581,6 +595,190 @@ def _prepared_plane_paths(
         path_bounds = path.boundingRect()
         bounds = path_bounds if bounds.isNull() else bounds.united(path_bounds)
     return runs, primitive_kinds, bounds.adjusted(-1.0, -1.0, 1.0, 1.0)
+
+
+def _estimated_plane_path_elements(geometry: Mapping[str, Any]) -> int:
+    """Conservatively bound Qt path storage before constructing it."""
+
+    polygon_elements = sum(
+        len(polygon) + 2
+        for field in ("positive_polygons_um", "negative_polygons_um")
+        for polygon in geometry[field]
+    )
+    circle_count = sum(
+        len(geometry[field])
+        for field in ("positive_circles_um", "negative_circles_um")
+    )
+    return (
+        polygon_elements
+        + circle_count * _ESTIMATED_QT_ELLIPSE_PATH_ELEMENTS
+    )
+
+
+def _prepare_plane_layer_cells(
+    project: ProjectSpec,
+    attachments: Mapping[str, bytes],
+    layer_name: str,
+    *,
+    progress: Callable[[int, str], None],
+    is_cancelled: Callable[[], bool],
+    progress_start: int = 0,
+    progress_end: int = 100,
+) -> tuple[_PreparedPlaneCell, ...]:
+    """Decode one physical PWR layer off-thread and return cached Qt paths."""
+
+    target_key = layer_name.casefold()
+    rail_by_domain = {item.domain: item for item in project.rails}
+    partition_cells: dict[tuple[str, str], list[tuple[Any, str]]] = {}
+    for partition in project.partitions:
+        if partition.layer.casefold() != target_key:
+            continue
+        domain_by_cell = {
+            cell_id: domain for domain, cell_id in partition.domain_to_cell.items()
+        }
+        for cell in partition.cells:
+            domain = domain_by_cell.get(cell.cell_id, cell.cell_id)
+            rail = rail_by_domain.get(domain)
+            net = str(rail.net if rail is not None else domain)
+            partition_cells.setdefault(
+                (partition.layer.casefold(), net.casefold()), []
+            ).append((cell, partition.layer))
+
+    geometry_records = tuple(
+        record
+        for record in _selected_power_plane_geometry_records(project)
+        if str(record["layer"]).casefold() == target_key
+    )
+    if len(geometry_records) > _MAX_PHYSICAL_PWR_GEOMETRY_RECORDS_PER_LAYER:
+        raise ValueError(
+            f"{layer_name} contains too many PWR artwork groups to preview safely"
+        )
+    decoded_bytes = sum(int(record["uncompressed_bytes"]) for record in geometry_records)
+    if decoded_bytes > _MAX_PHYSICAL_PWR_DECODED_BYTES_PER_LAYER:
+        raise ValueError(
+            f"{layer_name} PWR artwork exceeds the 256 MiB per-layer preview limit"
+        )
+    geometry_counts_by_key: dict[tuple[str, str], int] = {}
+    for record in geometry_records:
+        key = (str(record["layer"]).casefold(), str(record["net"]).casefold())
+        geometry_counts_by_key[key] = geometry_counts_by_key.get(key, 0) + 1
+    cell_count = len(geometry_records) + sum(
+        max(0, len(items) - geometry_counts_by_key.get(key, 0))
+        for key, items in partition_cells.items()
+    )
+    if cell_count > _MAX_PHYSICAL_PWR_GEOMETRY_RECORDS_PER_LAYER:
+        raise ValueError(
+            f"{layer_name} contains too many PWR artwork groups to preview safely"
+        )
+    prepared: list[_PreparedPlaneCell] = []
+    completed = 0
+    estimated_path_elements = 0
+    actual_path_elements = 0
+
+    def report_prepared() -> None:
+        nonlocal completed
+        completed += 1
+        if cell_count:
+            progress(
+                progress_start
+                + round((progress_end - progress_start - 2) * completed / cell_count),
+                f"Prepared {completed:,}/{cell_count:,} PWR artwork groups",
+            )
+
+    progress(progress_start, f"Preparing {layer_name} PWR artwork")
+    for record in geometry_records:
+        if is_cancelled():
+            raise RuntimeError("document opening cancelled")
+        layer = str(record["layer"])
+        net = str(record["net"])
+        geometry = spd_plane_geometry_record_payload(record, attachments)
+        estimated_path_elements += _estimated_plane_path_elements(geometry)
+        if estimated_path_elements > _MAX_PHYSICAL_PWR_PATH_ELEMENTS_PER_LAYER:
+            raise ValueError(
+                f"{layer_name} PWR artwork exceeds the per-layer preview path limit"
+            )
+        runs, primitive_kinds, artwork_bounds = _prepared_plane_paths(
+            dict(geometry), is_cancelled=is_cancelled
+        )
+        actual_path_elements += sum(path.elementCount() for _operation, path in runs)
+        if actual_path_elements > _MAX_PHYSICAL_PWR_PATH_ELEMENTS_PER_LAYER:
+            raise ValueError(
+                f"{layer_name} PWR artwork exceeds the per-layer preview path limit"
+            )
+        matching_cells = partition_cells.get((layer.casefold(), net.casefold()), [])
+        cell = None
+        for cell_index, (candidate, _partition_layer) in enumerate(matching_cells):
+            if (
+                candidate.source_geometry_asset == record.get("asset")
+                and str(candidate.source_geometry_sha256 or "").casefold()
+                == str(record.get("asset_sha256") or "").casefold()
+            ):
+                cell = matching_cells.pop(cell_index)[0]
+                break
+        prepared.append(
+            _PreparedPlaneCell(
+                cell,
+                net,
+                layer,
+                runs,
+                primitive_kinds,
+                artwork_bounds,
+            )
+        )
+        report_prepared()
+
+    spd_import = project.metadata.get("spd_import")
+    has_geometry_index = bool(
+        isinstance(spd_import, Mapping)
+        and isinstance(spd_import.get("plane_geometries"), list)
+    )
+    for matching_cells in partition_cells.values():
+        for cell, layer in matching_cells:
+            if is_cancelled():
+                raise RuntimeError("document opening cancelled")
+            net = str(cell.source_net or cell.cell_id)
+            if has_geometry_index:
+                raise ValueError(
+                    f"{layer} {net} solver cell does not bind retained artwork index"
+                )
+            geometry, legacy_decoded_bytes = plane_cell_source_geometry_with_size(
+                cell, attachments, expected_layer=layer
+            )
+            decoded_bytes += legacy_decoded_bytes
+            if decoded_bytes > _MAX_PHYSICAL_PWR_DECODED_BYTES_PER_LAYER:
+                raise ValueError(
+                    f"{layer_name} PWR artwork exceeds the 256 MiB per-layer preview limit"
+                )
+            estimated_path_elements += _estimated_plane_path_elements(geometry)
+            if estimated_path_elements > _MAX_PHYSICAL_PWR_PATH_ELEMENTS_PER_LAYER:
+                raise ValueError(
+                    f"{layer_name} PWR artwork exceeds the per-layer preview path limit"
+                )
+            runs, primitive_kinds, artwork_bounds = _prepared_plane_paths(
+                dict(geometry), is_cancelled=is_cancelled
+            )
+            actual_path_elements += sum(
+                path.elementCount() for _operation, path in runs
+            )
+            if actual_path_elements > _MAX_PHYSICAL_PWR_PATH_ELEMENTS_PER_LAYER:
+                raise ValueError(
+                    f"{layer_name} PWR artwork exceeds the per-layer preview path limit"
+                )
+            prepared.append(
+                _PreparedPlaneCell(
+                    cell,
+                    net,
+                    layer,
+                    runs,
+                    primitive_kinds,
+                    artwork_bounds,
+                )
+            )
+            report_prepared()
+    if is_cancelled():
+        raise RuntimeError("document opening cancelled")
+    progress(progress_end, f"Prepared {layer_name} PWR artwork")
+    return tuple(prepared)
 
 
 def _prepare_document_view(
@@ -592,47 +790,23 @@ def _prepare_document_view(
     progress_start: int = 65,
     progress_end: int = 96,
 ) -> _PreparedDocumentView:
-    """Decode source geometry and inventory in a worker; never create Qt items."""
+    """Prepare the first visible plane layer and non-graphics document inventory."""
 
     project = scenario.base_project
-    rail_by_domain = {item.domain: item for item in project.rails}
-    cell_count = sum(len(partition.cells) for partition in project.partitions)
-    prepared: list[_PreparedPlaneCell] = []
-    completed = 0
-    progress(progress_start, "Preparing source plane geometry")
-    for partition in project.partitions:
-        domain_by_cell = {
-            cell_id: domain for domain, cell_id in partition.domain_to_cell.items()
-        }
-        for cell in partition.cells:
-            if is_cancelled():
-                raise RuntimeError("document opening cancelled")
-            domain = domain_by_cell.get(cell.cell_id, cell.cell_id)
-            rail = rail_by_domain.get(domain)
-            net = rail.net if rail is not None else domain
-            geometry = plane_cell_source_geometry(
-                cell, attachments, expected_layer=partition.layer
-            )
-            runs, primitive_kinds, artwork_bounds = _prepared_plane_paths(
-                dict(geometry)
-            )
-            prepared.append(
-                _PreparedPlaneCell(
-                    cell,
-                    str(net),
-                    partition.layer,
-                    runs,
-                    primitive_kinds,
-                    artwork_bounds,
-                )
-            )
-            completed += 1
-            if cell_count:
-                progress(
-                    progress_start
-                    + round((progress_end - progress_start - 2) * completed / cell_count),
-                    f"Prepared {completed:,}/{cell_count:,} plane cells",
-                )
+    layer_labels = _physical_power_plane_layer_labels(project)
+    if layer_labels:
+        prepared = _prepare_plane_layer_cells(
+            project,
+            attachments,
+            layer_labels[0][0],
+            progress=progress,
+            is_cancelled=is_cancelled,
+            progress_start=progress_start,
+            progress_end=progress_end - 2,
+        )
+    else:
+        progress(progress_start, "No physical PWR plane artwork found")
+        prepared = ()
     if is_cancelled():
         raise RuntimeError("document opening cancelled")
     progress(progress_end - 1, "Preparing component distribution")
@@ -640,10 +814,8 @@ def _prepare_document_view(
     progress(progress_end, "Ready to render board")
     return _PreparedDocumentView(
         source_sha256=scenario.source.sha256,
-        plane_cells=tuple(prepared),
-        layer_labels=_short_plane_layer_labels(
-            project.stackup_layers, (partition.layer for partition in project.partitions)
-        ),
+        plane_cells=prepared,
+        layer_labels=layer_labels,
         distribution_counts=counts,
         distribution_assignable_counts=assignable_counts,
         # This can serialize thousands of decaps.  Compute it here so opening
@@ -661,6 +833,140 @@ def _prepare_document_view(
         model_keys=frozenset(item.model_id.casefold() for item in project.cap_models),
         connection_summary=_shared_pad_connection_summary(scenario),
         recovery_summary=_source_via_path_recovery_summary_from_project(project),
+    )
+
+
+def _selected_power_plane_geometry_records(
+    project: ProjectSpec,
+) -> tuple[Mapping[str, Any], ...]:
+    """Return every retained selected-PWR artwork group, independent of solver pairs."""
+
+    spd_import = project.metadata.get("spd_import")
+    if not isinstance(spd_import, Mapping):
+        return ()
+    if "plane_geometries" not in spd_import:
+        return ()
+    raw_records = spd_import.get("plane_geometries")
+    if raw_records is None:
+        return ()
+    if not isinstance(raw_records, list):
+        raise ValueError("PowerSI plane geometry index must be a list")
+    selected_power = spd_import.get("selected_power_nets")
+    selected_keys = (
+        {
+            str(item).casefold()
+            for item in selected_power
+            if str(item).strip()
+        }
+        if isinstance(selected_power, (list, tuple))
+        else set()
+    )
+    if not selected_keys:
+        selected_keys = {rail.net.casefold() for rail in project.rails}
+    eligible_layer_keys: set[str] = set()
+    for layer in project.stackup_layers:
+        occupancy = {
+            str(net).casefold() for net in layer.pwr_nets if str(net).strip()
+        }
+        if (
+            layer.is_conductor
+            and occupancy & selected_keys
+            and occupancy.issubset(selected_keys)
+        ):
+            eligible_layer_keys.add(layer.name.casefold())
+
+    records: list[Mapping[str, Any]] = []
+    seen_geometry_keys: set[tuple[str, str, str]] = set()
+    seen_assets: set[str] = set()
+    for raw in raw_records:
+        if not isinstance(raw, Mapping):
+            raise ValueError("PowerSI plane geometry index contains an invalid record")
+        layer = raw.get("layer")
+        net = raw.get("net")
+        if not isinstance(layer, str) or not layer:
+            raise ValueError("PowerSI plane geometry index contains an invalid layer")
+        if not isinstance(net, str) or not net:
+            raise ValueError("PowerSI plane geometry index contains an invalid NET")
+        if (
+            net.casefold() in selected_keys
+            and layer.casefold() in eligible_layer_keys
+        ):
+            asset = raw.get("asset")
+            digest = raw.get("asset_sha256")
+            decoded_bytes = raw.get("uncompressed_bytes")
+            if not isinstance(asset, str) or not asset:
+                raise ValueError(
+                    "PowerSI plane geometry index contains an invalid asset"
+                )
+            if not isinstance(digest, str) or len(digest) != 64 or any(
+                char not in "0123456789abcdefABCDEF" for char in digest
+            ):
+                raise ValueError(
+                    "PowerSI plane geometry index contains an invalid SHA-256"
+                )
+            if (
+                not isinstance(decoded_bytes, int)
+                or isinstance(decoded_bytes, bool)
+                or decoded_bytes <= 0
+            ):
+                raise ValueError(
+                    "PowerSI plane geometry index contains an invalid decoded-byte count"
+                )
+            geometry_key = (layer.casefold(), net.casefold(), digest.casefold())
+            if geometry_key in seen_geometry_keys:
+                raise ValueError(
+                    "PowerSI plane geometry index contains a duplicate layer/NET/asset record"
+                )
+            asset_key = asset.casefold()
+            if asset_key in seen_assets:
+                raise ValueError(
+                    "PowerSI plane geometry index reuses an artwork asset ambiguously"
+                )
+            seen_geometry_keys.add(geometry_key)
+            seen_assets.add(asset_key)
+            records.append(raw)
+            if len(records) > _MAX_PHYSICAL_PWR_GEOMETRY_RECORDS:
+                raise ValueError(
+                    "PowerSI plane geometry index contains too many PWR artwork groups"
+                )
+    return tuple(records)
+
+
+def _physical_power_plane_layer_labels(
+    project: ProjectSpec,
+) -> tuple[tuple[str, str], ...]:
+    """Return pure physical PWR layers, falling back to legacy partitions."""
+
+    records = _selected_power_plane_geometry_records(project)
+    spd_import = project.metadata.get("spd_import")
+    has_geometry_index = bool(
+        isinstance(spd_import, Mapping)
+        and isinstance(spd_import.get("plane_geometries"), list)
+    )
+    layers = (
+        (str(record["layer"]) for record in records)
+        if has_geometry_index
+        else (partition.layer for partition in project.partitions)
+    )
+    return _short_plane_layer_labels(project.stackup_layers, layers)
+
+
+def _job_prepare_plane_layer(
+    scenario: ScenarioSpec,
+    attachments: Mapping[str, bytes],
+    layer_name: str,
+    *,
+    progress: Callable[[int, str], None],
+    is_cancelled: Callable[[], bool],
+) -> tuple[_PreparedPlaneCell, ...]:
+    """Worker entry point for one lazily requested physical PWR layer."""
+
+    return _prepare_plane_layer_cells(
+        scenario.base_project,
+        attachments,
+        layer_name,
+        progress=progress,
+        is_cancelled=is_cancelled,
     )
 
 
@@ -1436,8 +1742,15 @@ class MainWindow(QMainWindow):
         self._plane_render_index = 0
         self._plane_render_builder: _PlanePathBuilder | None = None
         self._plane_layer_checks: dict[str, QCheckBox] = {}
+        self._plane_layer_names_by_key: dict[str, str] = {}
+        self._plane_loaded_layer_keys: set[str] = set()
+        self._plane_cached_path_elements = 0
+        self._active_plane_layer_key: str | None = None
         self._hidden_plane_layer_keys: set[str] = set()
         self._plane_layer_selection_initialized = False
+        self._load_all_plane_layers_requested = False
+        self._plane_fit_after_render = False
+        self._closing = False
         self._distribution_basis_fingerprint: str | None = None
         self._distribution_present_counts: dict[tuple[str, str], int] = {}
         self._distribution_assignable_counts: dict[tuple[str, str], int] = {}
@@ -4462,6 +4775,25 @@ class MainWindow(QMainWindow):
 
     def _worker_finished(self) -> None:
         cancelled = self._worker_cancel_requested
+        cancelled_plane_key = self._active_plane_layer_key
+        cancelled_all_plane_layers = self._load_all_plane_layers_requested
+        if cancelled:
+            self._load_all_plane_layers_requested = False
+            if cancelled_plane_key is not None:
+                cancelled_keys = {cancelled_plane_key}
+                if cancelled_all_plane_layers:
+                    cancelled_keys.update(
+                        key
+                        for key in self._plane_layer_checks
+                        if key not in self._plane_loaded_layer_keys
+                    )
+                for key in cancelled_keys - self._plane_loaded_layer_keys:
+                    self._hidden_plane_layer_keys.add(key)
+                    checkbox = self._plane_layer_checks.get(key)
+                    if checkbox is not None:
+                        previous = checkbox.blockSignals(True)
+                        checkbox.setChecked(False)
+                        checkbox.blockSignals(previous)
         auto_save = self._auto_save_after_worker and not cancelled
         pending_evaluation = (
             self._pending_evaluation_launch if not cancelled else None
@@ -4471,13 +4803,21 @@ class MainWindow(QMainWindow):
         self._worker = None
         self._worker_cancelable = False
         self._worker_cancel_requested = False
+        self._active_plane_layer_key = None
         self.progress_bar.hide()
         self.cancel_button.hide()
         self._set_busy(False)
         if cancelled:
             self.status_text.setText("Operation cancelled")
         elif self.status_text.text().startswith(
-            ("Opening", "Saving", "Evaluating", "Analyzing", "Calculating")
+            (
+                "Opening",
+                "Saving",
+                "Evaluating",
+                "Analyzing",
+                "Calculating",
+                "Loading",
+            )
         ):
             self.status_text.setText("Ready")
         if auto_save and self._scenario is not None and self._scenario_path is not None:
@@ -4490,6 +4830,12 @@ class MainWindow(QMainWindow):
             # state to the UI/test heartbeat and can make the two-stage
             # operation look complete before Evaluation has even started.
             self._launch_evaluation_after_preflight(request, manifest)
+        if (
+            self._load_all_plane_layers_requested
+            and self._worker is None
+            and self._scenario is not None
+        ):
+            QTimer.singleShot(0, self._load_next_missing_plane_layer)
 
     def _cancel_worker(self) -> None:
         if self._worker is not None and self._worker_cancelable:
@@ -4822,6 +5168,12 @@ class MainWindow(QMainWindow):
         self._plane_render_cells = ()
         self._plane_render_index = 0
         self._plane_render_builder = None
+        self._plane_layer_names_by_key.clear()
+        self._plane_loaded_layer_keys.clear()
+        self._plane_cached_path_elements = 0
+        self._active_plane_layer_key = None
+        self._load_all_plane_layers_requested = False
+        self._plane_fit_after_render = False
         self._reset_distribution_state()
         self.board.clear_plane_items()
         signals_were_blocked = self.rail_list.blockSignals(True)
@@ -5016,6 +5368,14 @@ class MainWindow(QMainWindow):
         self._plane_render_cells = prepared_view.plane_cells
         self._plane_render_index = 0
         self._plane_render_builder = None
+        self._plane_loaded_layer_keys = {
+            item.layer.casefold() for item in prepared_view.plane_cells
+        }
+        self._plane_cached_path_elements = sum(
+            item.path_element_count for item in prepared_view.plane_cells
+        )
+        self._load_all_plane_layers_requested = False
+        self._plane_fit_after_render = True
         self.board.clear_plane_items()
         self._plane_items_by_net = {}
         self._plane_items_by_layer = {}
@@ -5041,7 +5401,7 @@ class MainWindow(QMainWindow):
     def _render_plane_chunk(self, token: int) -> None:
         """Render about one event-loop frame of plane primitives, then yield."""
 
-        if token != self._plane_render_token or self._scenario is None:
+        if self._closing or token != self._plane_render_token or self._scenario is None:
             return
         started = perf_counter()
         added: list[QGraphicsItem] = []
@@ -5074,9 +5434,12 @@ class MainWindow(QMainWindow):
         if self._plane_render_index >= len(self._plane_render_cells):
             self._plane_render_cells = ()
             self._plane_render_builder = None
-            self.board.fit_board()
+            if self._plane_fit_after_render:
+                self.board.fit_board()
+            self._plane_fit_after_render = False
             if self.status_text.text().startswith("Rendering PWR artwork"):
                 self.status_text.setText("PWR artwork ready")
+            QTimer.singleShot(0, self._load_next_missing_plane_layer)
             return
         self.status_text.setText(
             f"Rendering PWR artwork {self._plane_render_index:,}/"
@@ -5098,6 +5461,8 @@ class MainWindow(QMainWindow):
             source_item.setData(1, prepared.net)
             source_item.setData(2, prepared.layer)
             result.append(source_item)
+        if cell is None:
+            return result
         fill = QColor(color)
         fill.setAlpha(24)
         rectangle = QGraphicsRectItem(
@@ -5136,6 +5501,9 @@ class MainWindow(QMainWindow):
         layer_labels: tuple[tuple[str, str], ...],
     ) -> None:
         self._clear_plane_layer_controls()
+        self._plane_layer_names_by_key = {
+            name.casefold(): name for name, _label in layer_labels
+        }
         available_keys = {name.casefold() for name, _label in layer_labels}
         if layer_labels and not self._plane_layer_selection_initialized:
             first_key = layer_labels[0][0].casefold()
@@ -5170,6 +5538,8 @@ class MainWindow(QMainWindow):
             self._hidden_plane_layer_keys.add(layer_key)
         for item in self._plane_items_by_layer.get(layer_key, ()):
             item.setVisible(visible)
+        if visible and layer_key not in self._plane_loaded_layer_keys:
+            self._start_plane_layer_load(layer_key)
 
     def _set_all_plane_layers_visible(self, visible: bool) -> None:
         for checkbox in self._plane_layer_checks.values():
@@ -5179,7 +5549,104 @@ class MainWindow(QMainWindow):
         self._hidden_plane_layer_keys = (
             set() if visible else set(self._plane_layer_checks)
         )
+        self._load_all_plane_layers_requested = visible
         self._apply_plane_layer_visibility()
+        if visible:
+            self._load_next_missing_plane_layer()
+
+    def _start_plane_layer_load(self, layer_key: str) -> bool:
+        if (
+            self._closing
+            or self._scenario is None
+            or self._worker is not None
+            or bool(self._plane_render_cells)
+            or layer_key in self._plane_loaded_layer_keys
+        ):
+            return False
+        layer_name = self._plane_layer_names_by_key.get(layer_key)
+        if layer_name is None:
+            return False
+        self._active_plane_layer_key = layer_key
+        worker = FunctionWorker(
+            _job_prepare_plane_layer,
+            self._scenario,
+            self._attachments,
+            layer_name,
+        )
+        self._run_worker(
+            worker,
+            lambda cells: self._accept_plane_layer_cells(layer_key, cells),
+            label=f"Loading {layer_name} PWR artwork...",
+            on_error=lambda details: self._plane_layer_load_failed(
+                layer_key, details
+            ),
+        )
+        return True
+
+    def _accept_plane_layer_cells(
+        self,
+        layer_key: str,
+        cells: tuple[_PreparedPlaneCell, ...],
+    ) -> None:
+        if self._scenario is None:
+            return
+        added_path_elements = sum(item.path_element_count for item in cells)
+        if (
+            self._plane_cached_path_elements + added_path_elements
+            > _MAX_CACHED_PHYSICAL_PWR_PATH_ELEMENTS
+        ):
+            self._plane_layer_load_failed(
+                layer_key,
+                "PWR artwork preview cache would exceed its safe path limit. "
+                "Hide unused layers and reopen the scenario to clear the cache.",
+            )
+            return
+        self._plane_cached_path_elements += added_path_elements
+        self._plane_loaded_layer_keys.add(layer_key)
+        if not cells:
+            self.status_text.setText("No PWR artwork found on the selected layer")
+            return
+        self._plane_render_token += 1
+        token = self._plane_render_token
+        self._plane_render_cells = cells
+        self._plane_render_index = 0
+        self._plane_render_builder = None
+        self._plane_fit_after_render = False
+        self.status_text.setText("Rendering PWR artwork...")
+        self._render_plane_chunk(token)
+
+    def _plane_layer_load_failed(self, layer_key: str, details: str) -> None:
+        failed_all_request = self._load_all_plane_layers_requested
+        self._load_all_plane_layers_requested = False
+        failed_keys = {layer_key}
+        if failed_all_request:
+            failed_keys.update(
+                key
+                for key in self._plane_layer_checks
+                if key not in self._plane_loaded_layer_keys
+            )
+        for failed_key in failed_keys:
+            self._hidden_plane_layer_keys.add(failed_key)
+            checkbox = self._plane_layer_checks.get(failed_key)
+            if checkbox is not None:
+                previous = checkbox.blockSignals(True)
+                checkbox.setChecked(False)
+                checkbox.blockSignals(previous)
+        self._worker_error(details)
+
+    def _load_next_missing_plane_layer(self) -> None:
+        if (
+            self._closing
+            or self._scenario is None
+            or self._worker is not None
+            or bool(self._plane_render_cells)
+        ):
+            return
+        for layer_key, checkbox in self._plane_layer_checks.items():
+            if checkbox.isChecked() and layer_key not in self._plane_loaded_layer_keys:
+                if self._start_plane_layer_load(layer_key):
+                    return
+        self._load_all_plane_layers_requested = False
 
     def _apply_plane_layer_visibility(self) -> None:
         for key, items in self._plane_items_by_layer.items():
@@ -6695,6 +7162,12 @@ class MainWindow(QMainWindow):
         if not self._can_replace_document():
             event.ignore()
             return
+        self._closing = True
+        self._load_all_plane_layers_requested = False
+        self._plane_render_token += 1
+        self._plane_render_cells = ()
+        self._plane_render_builder = None
+        self._plane_fit_after_render = False
         if self._results_window is not None:
             self._results_window.close()
         if self._distribution_window is not None:
