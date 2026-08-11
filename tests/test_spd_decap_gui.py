@@ -386,6 +386,76 @@ def test_short_plane_layer_labels_follow_physical_stack_order() -> None:
     )
 
 
+def test_physical_power_plane_labels_cover_all_21_real_stack_layers() -> None:
+    physical_names = (
+        "Signal$L09(MAIN_POWER1)",
+        "Signal$L11(MAIN_POWER2)",
+        "Signal$L12(MAIN_POWER3)",
+        "Signal$L14(MAIN_POWER4)",
+        "Signal$L15(MAIN_POWER5)",
+        "Signal$L22(MAIN_POWER2)",
+        "Signal$L23(MAIN_POWER3)",
+        "Signal$L25(MAIN_POWER4)",
+        "Signal$L26(MAIN_POWER5)",
+        "Signal$L30(OTHER_POWER1)",
+        "Signal$L31(OTHER_POWER2)",
+        "Signal$L33(OTHER_POWER3)",
+        "Signal$L34(OTHER_POWER4)",
+        "Signal$L36(OTHER_POWER5)",
+        "Signal$L37(OTHER_POWER6)",
+        "Signal$L39(OTHER_POWER7)",
+        "Signal$L40(OTHER_POWER8)",
+        "Signal$L42(OTHER_POWER9)",
+        "Signal$L43(OTHER_POWER10)",
+        "Signal$L45(OTHER_POWER11)",
+        "Signal$L46(OTHER_POWER12)",
+    )
+    top_name = "Signal$TOP"
+    layers = (
+        StackupLayer(
+            name=top_name,
+            thickness_um=20.0,
+            conductivity_s_m=5.8e7,
+            pwr_nets=["VDD_CORE/0", "DGND"],
+        ),
+        *(
+            StackupLayer(
+                name=name,
+                thickness_um=20.0,
+                conductivity_s_m=5.8e7,
+                pwr_nets=["VDD_CORE/0"],
+            )
+            for name in physical_names
+        ),
+    )
+    records = [
+        {
+            "layer": name,
+            "net": "VDD_CORE/0",
+            "asset": f"geometry/{index:02d}.spdgeom.zlib",
+            "asset_sha256": sha256(name.encode("utf-8")).hexdigest(),
+            "uncompressed_bytes": 1,
+        }
+        for index, name in enumerate((top_name, *physical_names))
+    ]
+    project = SimpleNamespace(
+        metadata={
+            "spd_import": {
+                "selected_power_nets": ["VDD_CORE/0"],
+                "plane_geometries": records,
+            }
+        },
+        rails=(),
+        stackup_layers=layers,
+        partitions=(),
+    )
+
+    assert _physical_power_plane_layer_labels(project) == tuple(
+        (name, f"P{index}")
+        for index, name in enumerate(physical_names, start=1)
+    )
+
+
 def test_loaded_spd_lists_every_physical_pwr_layer_not_only_solver_pair(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
