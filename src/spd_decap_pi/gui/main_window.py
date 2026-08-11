@@ -7,7 +7,7 @@ from collections.abc import Mapping
 from dataclasses import dataclass
 from decimal import Decimal, ROUND_FLOOR
 from hashlib import sha256
-from math import isfinite
+from math import hypot, isfinite
 from pathlib import Path
 from time import perf_counter
 from typing import Any, Callable
@@ -63,8 +63,9 @@ from spd_decap_pi._core.services import (
     WorkspaceState,
     cap_spice_subcircuit_names,
     import_cap_spice,
-    plane_cell_source_geometry,
+    plane_cell_source_geometry_with_size,
     scoped_blas_threads,
+    spd_plane_geometry_record_payload,
 )
 from spd_decap_pi._core.domain import PinKind, ProjectSpec
 from spd_decap_pi._core.solver.profiles import (
@@ -77,6 +78,7 @@ from spd_decap_pi._core.solver.research_uniform_profile import (
 )
 
 from ..scenario import DecapConnectionKind, DecapPadState, ScenarioDecap, ScenarioSpec
+from ..routing_obstacles import SignalTraceAvoidancePolicy
 from ..scenario_edits import (
     ProposedRailAssignmentAnalysis,
     ScenarioEditError,
@@ -109,6 +111,12 @@ from .worker import FunctionWorker
 _DISTRIBUTION_FIELD_ROLE = int(Qt.ItemDataRole.UserRole) + 1
 _DISTRIBUTION_TARGET_FIELD = "target"
 _DISTRIBUTION_TOLERANCE_FIELD = "tolerance"
+_MAX_PHYSICAL_PWR_GEOMETRY_RECORDS = 4_096
+_MAX_PHYSICAL_PWR_GEOMETRY_RECORDS_PER_LAYER = 512
+_MAX_PHYSICAL_PWR_DECODED_BYTES_PER_LAYER = 256 * 1024 * 1024
+_MAX_PHYSICAL_PWR_PATH_ELEMENTS_PER_LAYER = 2_000_000
+_MAX_CACHED_PHYSICAL_PWR_PATH_ELEMENTS = 12_000_000
+_ESTIMATED_QT_ELLIPSE_PATH_ELEMENTS = 16
 
 
 class _DistributionNumericItem(QTableWidgetItem):
@@ -382,6 +390,7 @@ class _PreparedDistributionPreview:
     preview_scenario: ScenarioSpec
     export_rows: tuple[Any, ...]
     power_projection: Any | None = None
+    candidate_audit_rows: tuple[Any, ...] = ()
 
 
 @dataclass(frozen=True, slots=True)
@@ -430,12 +439,16 @@ class _DistributionBalanceState:
 class _PreparedPlaneCell:
     """Reentrant Qt paths prepared off-thread; GUI only creates scene items."""
 
-    cell: Any
+    cell: Any | None
     net: str
     layer: str
     runs: tuple[tuple[str, QPainterPath], ...]
     primitive_kinds: frozenset[str]
     artwork_bounds: QRectF | None
+
+    @property
+    def path_element_count(self) -> int:
+        return sum(path.elementCount() for _operation, path in self.runs)
 
 
 @dataclass(frozen=True, slots=True)
@@ -566,12 +579,15 @@ def _prepare_source_board_decaps(scenario: ScenarioSpec) -> tuple[Any, ...]:
 
 def _prepared_plane_paths(
     geometry: dict[str, Any],
+    *,
+    is_cancelled: Callable[[], bool] | None = None,
 ) -> tuple[tuple[tuple[str, QPainterPath], ...], frozenset[str], QRectF | None]:
     """Build reentrant QPainterPath values without creating graphics items."""
 
     builder = _PlanePathBuilder(geometry, QColor())
     while not builder.step(builder.primitive_count, maximum_points=100_000):
-        pass
+        if is_cancelled is not None and is_cancelled():
+            raise RuntimeError("document opening cancelled")
     runs, primitive_kinds = builder.paths()
     if not runs:
         return (), primitive_kinds, None
@@ -580,6 +596,190 @@ def _prepared_plane_paths(
         path_bounds = path.boundingRect()
         bounds = path_bounds if bounds.isNull() else bounds.united(path_bounds)
     return runs, primitive_kinds, bounds.adjusted(-1.0, -1.0, 1.0, 1.0)
+
+
+def _estimated_plane_path_elements(geometry: Mapping[str, Any]) -> int:
+    """Conservatively bound Qt path storage before constructing it."""
+
+    polygon_elements = sum(
+        len(polygon) + 2
+        for field in ("positive_polygons_um", "negative_polygons_um")
+        for polygon in geometry[field]
+    )
+    circle_count = sum(
+        len(geometry[field])
+        for field in ("positive_circles_um", "negative_circles_um")
+    )
+    return (
+        polygon_elements
+        + circle_count * _ESTIMATED_QT_ELLIPSE_PATH_ELEMENTS
+    )
+
+
+def _prepare_plane_layer_cells(
+    project: ProjectSpec,
+    attachments: Mapping[str, bytes],
+    layer_name: str,
+    *,
+    progress: Callable[[int, str], None],
+    is_cancelled: Callable[[], bool],
+    progress_start: int = 0,
+    progress_end: int = 100,
+) -> tuple[_PreparedPlaneCell, ...]:
+    """Decode one physical PWR layer off-thread and return cached Qt paths."""
+
+    target_key = layer_name.casefold()
+    rail_by_domain = {item.domain: item for item in project.rails}
+    partition_cells: dict[tuple[str, str], list[tuple[Any, str]]] = {}
+    for partition in project.partitions:
+        if partition.layer.casefold() != target_key:
+            continue
+        domain_by_cell = {
+            cell_id: domain for domain, cell_id in partition.domain_to_cell.items()
+        }
+        for cell in partition.cells:
+            domain = domain_by_cell.get(cell.cell_id, cell.cell_id)
+            rail = rail_by_domain.get(domain)
+            net = str(rail.net if rail is not None else domain)
+            partition_cells.setdefault(
+                (partition.layer.casefold(), net.casefold()), []
+            ).append((cell, partition.layer))
+
+    geometry_records = tuple(
+        record
+        for record in _selected_power_plane_geometry_records(project)
+        if str(record["layer"]).casefold() == target_key
+    )
+    if len(geometry_records) > _MAX_PHYSICAL_PWR_GEOMETRY_RECORDS_PER_LAYER:
+        raise ValueError(
+            f"{layer_name} contains too many PWR artwork groups to preview safely"
+        )
+    decoded_bytes = sum(int(record["uncompressed_bytes"]) for record in geometry_records)
+    if decoded_bytes > _MAX_PHYSICAL_PWR_DECODED_BYTES_PER_LAYER:
+        raise ValueError(
+            f"{layer_name} PWR artwork exceeds the 256 MiB per-layer preview limit"
+        )
+    geometry_counts_by_key: dict[tuple[str, str], int] = {}
+    for record in geometry_records:
+        key = (str(record["layer"]).casefold(), str(record["net"]).casefold())
+        geometry_counts_by_key[key] = geometry_counts_by_key.get(key, 0) + 1
+    cell_count = len(geometry_records) + sum(
+        max(0, len(items) - geometry_counts_by_key.get(key, 0))
+        for key, items in partition_cells.items()
+    )
+    if cell_count > _MAX_PHYSICAL_PWR_GEOMETRY_RECORDS_PER_LAYER:
+        raise ValueError(
+            f"{layer_name} contains too many PWR artwork groups to preview safely"
+        )
+    prepared: list[_PreparedPlaneCell] = []
+    completed = 0
+    estimated_path_elements = 0
+    actual_path_elements = 0
+
+    def report_prepared() -> None:
+        nonlocal completed
+        completed += 1
+        if cell_count:
+            progress(
+                progress_start
+                + round((progress_end - progress_start - 2) * completed / cell_count),
+                f"Prepared {completed:,}/{cell_count:,} PWR artwork groups",
+            )
+
+    progress(progress_start, f"Preparing {layer_name} PWR artwork")
+    for record in geometry_records:
+        if is_cancelled():
+            raise RuntimeError("document opening cancelled")
+        layer = str(record["layer"])
+        net = str(record["net"])
+        geometry = spd_plane_geometry_record_payload(record, attachments)
+        estimated_path_elements += _estimated_plane_path_elements(geometry)
+        if estimated_path_elements > _MAX_PHYSICAL_PWR_PATH_ELEMENTS_PER_LAYER:
+            raise ValueError(
+                f"{layer_name} PWR artwork exceeds the per-layer preview path limit"
+            )
+        runs, primitive_kinds, artwork_bounds = _prepared_plane_paths(
+            dict(geometry), is_cancelled=is_cancelled
+        )
+        actual_path_elements += sum(path.elementCount() for _operation, path in runs)
+        if actual_path_elements > _MAX_PHYSICAL_PWR_PATH_ELEMENTS_PER_LAYER:
+            raise ValueError(
+                f"{layer_name} PWR artwork exceeds the per-layer preview path limit"
+            )
+        matching_cells = partition_cells.get((layer.casefold(), net.casefold()), [])
+        cell = None
+        for cell_index, (candidate, _partition_layer) in enumerate(matching_cells):
+            if (
+                candidate.source_geometry_asset == record.get("asset")
+                and str(candidate.source_geometry_sha256 or "").casefold()
+                == str(record.get("asset_sha256") or "").casefold()
+            ):
+                cell = matching_cells.pop(cell_index)[0]
+                break
+        prepared.append(
+            _PreparedPlaneCell(
+                cell,
+                net,
+                layer,
+                runs,
+                primitive_kinds,
+                artwork_bounds,
+            )
+        )
+        report_prepared()
+
+    spd_import = project.metadata.get("spd_import")
+    has_geometry_index = bool(
+        isinstance(spd_import, Mapping)
+        and isinstance(spd_import.get("plane_geometries"), list)
+    )
+    for matching_cells in partition_cells.values():
+        for cell, layer in matching_cells:
+            if is_cancelled():
+                raise RuntimeError("document opening cancelled")
+            net = str(cell.source_net or cell.cell_id)
+            if has_geometry_index:
+                raise ValueError(
+                    f"{layer} {net} solver cell does not bind retained artwork index"
+                )
+            geometry, legacy_decoded_bytes = plane_cell_source_geometry_with_size(
+                cell, attachments, expected_layer=layer
+            )
+            decoded_bytes += legacy_decoded_bytes
+            if decoded_bytes > _MAX_PHYSICAL_PWR_DECODED_BYTES_PER_LAYER:
+                raise ValueError(
+                    f"{layer_name} PWR artwork exceeds the 256 MiB per-layer preview limit"
+                )
+            estimated_path_elements += _estimated_plane_path_elements(geometry)
+            if estimated_path_elements > _MAX_PHYSICAL_PWR_PATH_ELEMENTS_PER_LAYER:
+                raise ValueError(
+                    f"{layer_name} PWR artwork exceeds the per-layer preview path limit"
+                )
+            runs, primitive_kinds, artwork_bounds = _prepared_plane_paths(
+                dict(geometry), is_cancelled=is_cancelled
+            )
+            actual_path_elements += sum(
+                path.elementCount() for _operation, path in runs
+            )
+            if actual_path_elements > _MAX_PHYSICAL_PWR_PATH_ELEMENTS_PER_LAYER:
+                raise ValueError(
+                    f"{layer_name} PWR artwork exceeds the per-layer preview path limit"
+                )
+            prepared.append(
+                _PreparedPlaneCell(
+                    cell,
+                    net,
+                    layer,
+                    runs,
+                    primitive_kinds,
+                    artwork_bounds,
+                )
+            )
+            report_prepared()
+    if is_cancelled():
+        raise RuntimeError("document opening cancelled")
+    progress(progress_end, f"Prepared {layer_name} PWR artwork")
+    return tuple(prepared)
 
 
 def _prepare_document_view(
@@ -591,47 +791,23 @@ def _prepare_document_view(
     progress_start: int = 65,
     progress_end: int = 96,
 ) -> _PreparedDocumentView:
-    """Decode source geometry and inventory in a worker; never create Qt items."""
+    """Prepare the first visible plane layer and non-graphics document inventory."""
 
     project = scenario.base_project
-    rail_by_domain = {item.domain: item for item in project.rails}
-    cell_count = sum(len(partition.cells) for partition in project.partitions)
-    prepared: list[_PreparedPlaneCell] = []
-    completed = 0
-    progress(progress_start, "Preparing source plane geometry")
-    for partition in project.partitions:
-        domain_by_cell = {
-            cell_id: domain for domain, cell_id in partition.domain_to_cell.items()
-        }
-        for cell in partition.cells:
-            if is_cancelled():
-                raise RuntimeError("document opening cancelled")
-            domain = domain_by_cell.get(cell.cell_id, cell.cell_id)
-            rail = rail_by_domain.get(domain)
-            net = rail.net if rail is not None else domain
-            geometry = plane_cell_source_geometry(
-                cell, attachments, expected_layer=partition.layer
-            )
-            runs, primitive_kinds, artwork_bounds = _prepared_plane_paths(
-                dict(geometry)
-            )
-            prepared.append(
-                _PreparedPlaneCell(
-                    cell,
-                    str(net),
-                    partition.layer,
-                    runs,
-                    primitive_kinds,
-                    artwork_bounds,
-                )
-            )
-            completed += 1
-            if cell_count:
-                progress(
-                    progress_start
-                    + round((progress_end - progress_start - 2) * completed / cell_count),
-                    f"Prepared {completed:,}/{cell_count:,} plane cells",
-                )
+    layer_labels = _physical_power_plane_layer_labels(project)
+    if layer_labels:
+        prepared = _prepare_plane_layer_cells(
+            project,
+            attachments,
+            layer_labels[0][0],
+            progress=progress,
+            is_cancelled=is_cancelled,
+            progress_start=progress_start,
+            progress_end=progress_end - 2,
+        )
+    else:
+        progress(progress_start, "No physical PWR plane artwork found")
+        prepared = ()
     if is_cancelled():
         raise RuntimeError("document opening cancelled")
     progress(progress_end - 1, "Preparing component distribution")
@@ -639,10 +815,8 @@ def _prepare_document_view(
     progress(progress_end, "Ready to render board")
     return _PreparedDocumentView(
         source_sha256=scenario.source.sha256,
-        plane_cells=tuple(prepared),
-        layer_labels=_short_plane_layer_labels(
-            project.stackup_layers, (partition.layer for partition in project.partitions)
-        ),
+        plane_cells=prepared,
+        layer_labels=layer_labels,
         distribution_counts=counts,
         distribution_assignable_counts=assignable_counts,
         # This can serialize thousands of decaps.  Compute it here so opening
@@ -660,6 +834,140 @@ def _prepare_document_view(
         model_keys=frozenset(item.model_id.casefold() for item in project.cap_models),
         connection_summary=_shared_pad_connection_summary(scenario),
         recovery_summary=_source_via_path_recovery_summary_from_project(project),
+    )
+
+
+def _selected_power_plane_geometry_records(
+    project: ProjectSpec,
+) -> tuple[Mapping[str, Any], ...]:
+    """Return every retained selected-PWR artwork group, independent of solver pairs."""
+
+    spd_import = project.metadata.get("spd_import")
+    if not isinstance(spd_import, Mapping):
+        return ()
+    if "plane_geometries" not in spd_import:
+        return ()
+    raw_records = spd_import.get("plane_geometries")
+    if raw_records is None:
+        return ()
+    if not isinstance(raw_records, list):
+        raise ValueError("PowerSI plane geometry index must be a list")
+    selected_power = spd_import.get("selected_power_nets")
+    selected_keys = (
+        {
+            str(item).casefold()
+            for item in selected_power
+            if str(item).strip()
+        }
+        if isinstance(selected_power, (list, tuple))
+        else set()
+    )
+    if not selected_keys:
+        selected_keys = {rail.net.casefold() for rail in project.rails}
+    eligible_layer_keys: set[str] = set()
+    for layer in project.stackup_layers:
+        occupancy = {
+            str(net).casefold() for net in layer.pwr_nets if str(net).strip()
+        }
+        if (
+            layer.is_conductor
+            and occupancy & selected_keys
+            and occupancy.issubset(selected_keys)
+        ):
+            eligible_layer_keys.add(layer.name.casefold())
+
+    records: list[Mapping[str, Any]] = []
+    seen_geometry_keys: set[tuple[str, str, str]] = set()
+    seen_assets: set[str] = set()
+    for raw in raw_records:
+        if not isinstance(raw, Mapping):
+            raise ValueError("PowerSI plane geometry index contains an invalid record")
+        layer = raw.get("layer")
+        net = raw.get("net")
+        if not isinstance(layer, str) or not layer:
+            raise ValueError("PowerSI plane geometry index contains an invalid layer")
+        if not isinstance(net, str) or not net:
+            raise ValueError("PowerSI plane geometry index contains an invalid NET")
+        if (
+            net.casefold() in selected_keys
+            and layer.casefold() in eligible_layer_keys
+        ):
+            asset = raw.get("asset")
+            digest = raw.get("asset_sha256")
+            decoded_bytes = raw.get("uncompressed_bytes")
+            if not isinstance(asset, str) or not asset:
+                raise ValueError(
+                    "PowerSI plane geometry index contains an invalid asset"
+                )
+            if not isinstance(digest, str) or len(digest) != 64 or any(
+                char not in "0123456789abcdefABCDEF" for char in digest
+            ):
+                raise ValueError(
+                    "PowerSI plane geometry index contains an invalid SHA-256"
+                )
+            if (
+                not isinstance(decoded_bytes, int)
+                or isinstance(decoded_bytes, bool)
+                or decoded_bytes <= 0
+            ):
+                raise ValueError(
+                    "PowerSI plane geometry index contains an invalid decoded-byte count"
+                )
+            geometry_key = (layer.casefold(), net.casefold(), digest.casefold())
+            if geometry_key in seen_geometry_keys:
+                raise ValueError(
+                    "PowerSI plane geometry index contains a duplicate layer/NET/asset record"
+                )
+            asset_key = asset.casefold()
+            if asset_key in seen_assets:
+                raise ValueError(
+                    "PowerSI plane geometry index reuses an artwork asset ambiguously"
+                )
+            seen_geometry_keys.add(geometry_key)
+            seen_assets.add(asset_key)
+            records.append(raw)
+            if len(records) > _MAX_PHYSICAL_PWR_GEOMETRY_RECORDS:
+                raise ValueError(
+                    "PowerSI plane geometry index contains too many PWR artwork groups"
+                )
+    return tuple(records)
+
+
+def _physical_power_plane_layer_labels(
+    project: ProjectSpec,
+) -> tuple[tuple[str, str], ...]:
+    """Return pure physical PWR layers, falling back to legacy partitions."""
+
+    records = _selected_power_plane_geometry_records(project)
+    spd_import = project.metadata.get("spd_import")
+    has_geometry_index = bool(
+        isinstance(spd_import, Mapping)
+        and isinstance(spd_import.get("plane_geometries"), list)
+    )
+    layers = (
+        (str(record["layer"]) for record in records)
+        if has_geometry_index
+        else (partition.layer for partition in project.partitions)
+    )
+    return _short_plane_layer_labels(project.stackup_layers, layers)
+
+
+def _job_prepare_plane_layer(
+    scenario: ScenarioSpec,
+    attachments: Mapping[str, bytes],
+    layer_name: str,
+    *,
+    progress: Callable[[int, str], None],
+    is_cancelled: Callable[[], bool],
+) -> tuple[_PreparedPlaneCell, ...]:
+    """Worker entry point for one lazily requested physical PWR layer."""
+
+    return _prepare_plane_layer_cells(
+        scenario.base_project,
+        attachments,
+        layer_name,
+        progress=progress,
+        is_cancelled=is_cancelled,
     )
 
 
@@ -1313,17 +1621,23 @@ def _job_compute_distribution(
     targets: dict[tuple[str, str], int],
     tolerances: dict[tuple[str, str], float],
     distance_mode: Any,
+    routing_policy: SignalTraceAvoidancePolicy = SignalTraceAvoidancePolicy(),
     *,
+    optimization_policy: Any = "BALANCED_AUTO",
+    gap_penalty_um: float | None = None,
     progress: Callable[[int, str], None],
     is_cancelled: Callable[[], bool],
 ) -> Any:
     """Run the CPU-bound distribution planner behind the shared GUI worker."""
 
     from ..distribution import (
+        DistributionPlan,
         build_distribution_power_projection,
         compute_distribution_plan,
         validate_distribution_targets,
     )
+    from ..distribution_audit import audit_distribution_candidates
+    from ..spreadsheet_export import CANDIDATE_AUDIT_HEADERS
 
     if is_cancelled():
         raise RuntimeError("distribution calculation cancelled")
@@ -1334,6 +1648,7 @@ def _job_compute_distribution(
             attachments,
             targets=targets,
             tolerances=tolerances,
+            routing_policy=routing_policy,
             progress=lambda value, message: progress(
                 3 + round(float(value) * 0.27), message
             ),
@@ -1352,8 +1667,11 @@ def _job_compute_distribution(
             scenario,
             targets,
             distance_mode,
+            optimization_policy=optimization_policy,
+            gap_penalty_um=gap_penalty_um,
             tolerances=tolerances,
             power_projection=power_projection,
+            routing_policy=routing_policy,
             progress=lambda value, message: progress(
                 32 + round(float(value) * 0.60), message
             ),
@@ -1377,6 +1695,93 @@ def _job_compute_distribution(
             and tuple(exported[0])[:2] == ("Component", "REFDES")
             else exported
         )
+        # Candidate explanations use the projected connectivity certificate,
+        # but preserve the pre-plan source assignments so every row remains
+        # auditable as a donor/exchange decision.
+        from ..distribution import _scenario_with_distribution_power_projection
+
+        candidate_audit_rows: list[tuple[object, ...]] = []
+        # Legacy/plugin callers may provide duck-typed placeholders while
+        # exercising the preview/export sequence.  Candidate explanations
+        # require the complete typed scenario and plan; leave the optional
+        # audit sheet empty for those compatibility calls.  For real typed
+        # inputs, errors remain visible rather than being silently swallowed.
+        if isinstance(scenario, ScenarioSpec) and isinstance(result, DistributionPlan):
+            progress(96, "Explaining atomic De-cap Distribution candidates")
+            audit_scenario = (
+                _scenario_with_distribution_power_projection(scenario, power_projection)
+                if hasattr(power_projection, "projected_analysis")
+                else scenario
+            )
+            moves = tuple(getattr(result, "moves", ()))
+            sacrifices = tuple(getattr(result, "sacrifices", ()))
+            bumps_by_rail: dict[str, tuple[object, ...]] = {}
+            for rail in audit_scenario.base_project.rails:
+                bumps_by_rail[rail.rail_id.casefold()] = tuple(
+                    pin
+                    for pin in audit_scenario.base_project.pins
+                    if (
+                        getattr(getattr(pin, "kind", None), "value", getattr(pin, "kind", None))
+                        == "DEVICE_BUMP"
+                    )
+                    and (
+                        getattr(
+                            getattr(pin, "terminal", None),
+                            "value",
+                            getattr(pin, "terminal", None),
+                        )
+                        == "PWR"
+                    )
+                    and pin.net.casefold() == rail.net.casefold()
+                )
+            distances_by_rail: dict[str, dict[str, float]] = {}
+            for rail_key, bumps in bumps_by_rail.items():
+                if not bumps:
+                    continue
+                per_refdes: dict[str, float] = {}
+                for decap in audit_scenario.decaps:
+                    per_refdes[decap.refdes.casefold()] = min(
+                        float(hypot(decap.x_um - pin.x_um, decap.y_um - pin.y_um))
+                        for pin in bumps
+                    )
+                distances_by_rail[rail_key] = per_refdes
+            for cell in tuple(getattr(result, "cells", ())):
+                role = str(getattr(getattr(cell, "role", ""), "value", getattr(cell, "role", ""))).upper()
+                requested = int(getattr(cell, "requested_count", 0) or 0)
+                if role != "RECEIVER" or requested <= 0:
+                    continue
+                rail_id = str(getattr(cell, "rail_id", ""))
+                model_id = str(getattr(cell, "model_id", ""))
+                selected_for_cell = tuple(
+                    move.refdes
+                    for move in moves
+                    if move.new_rail_id.casefold() == rail_id.casefold()
+                    and move.model_id.casefold() == model_id.casefold()
+                )
+                # A shared-pad atom may be only partially moved: one member is
+                # assigned to this receiver while another is sacrificed to isolate
+                # the unlike source region.  Selection is defined solely by the
+                # move output; gap members are passed separately so they annotate
+                # only an intersecting selected atom (and cannot select an
+                # unrelated same-model atom on another rail).
+                gap_for_cell = tuple(
+                    sacrifice.refdes
+                    for sacrifice in sacrifices
+                    if sacrifice.model_id.casefold() == model_id.casefold()
+                )
+                rows = audit_distribution_candidates(
+                    audit_scenario,
+                    rail_id,
+                    requested,
+                    model_id=model_id,
+                    selected_refdes=selected_for_cell,
+                    gap_refdes=gap_for_cell,
+                    distance_by_refdes=distances_by_rail.get(rail_id.casefold(), {}),
+                )
+                candidate_audit_rows.extend(
+                    tuple(row.as_row().get(header) for header in CANDIDATE_AUDIT_HEADERS)
+                    for row in rows
+                )
     if is_cancelled():
         raise RuntimeError("distribution calculation cancelled")
     progress(100, "De-cap Distribution preview complete")
@@ -1385,6 +1790,7 @@ def _job_compute_distribution(
         preview,
         export_rows,
         power_projection,
+        tuple(candidate_audit_rows),
     )
 
 
@@ -1432,8 +1838,15 @@ class MainWindow(QMainWindow):
         self._plane_render_index = 0
         self._plane_render_builder: _PlanePathBuilder | None = None
         self._plane_layer_checks: dict[str, QCheckBox] = {}
+        self._plane_layer_names_by_key: dict[str, str] = {}
+        self._plane_loaded_layer_keys: set[str] = set()
+        self._plane_cached_path_elements = 0
+        self._active_plane_layer_key: str | None = None
         self._hidden_plane_layer_keys: set[str] = set()
         self._plane_layer_selection_initialized = False
+        self._load_all_plane_layers_requested = False
+        self._plane_fit_after_render = False
+        self._closing = False
         self._distribution_basis_fingerprint: str | None = None
         self._distribution_present_counts: dict[tuple[str, str], int] = {}
         self._distribution_assignable_counts: dict[tuple[str, str], int] = {}
@@ -1447,6 +1860,7 @@ class MainWindow(QMainWindow):
         self._distribution_preview_scenario: ScenarioSpec | None = None
         self._distribution_power_projection: Any | None = None
         self._distribution_export_rows: tuple[Any, ...] = ()
+        self._distribution_candidate_audit_rows: tuple[Any, ...] = ()
         self._distribution_table_updating = False
         self._distribution_import_notice: str | None = None
         self._distribution_status_notice: str | None = None
@@ -2038,6 +2452,35 @@ class MainWindow(QMainWindow):
             self._distribution_option_changed
         )
         option_row.addWidget(self.distribution_distance_combo, 1)
+        option_row.addWidget(QLabel("Optimization policy"))
+        self.distribution_optimization_combo = QComboBox()
+        self.distribution_optimization_combo.setObjectName(
+            "distributionOptimizationPolicy"
+        )
+        self.distribution_optimization_combo.addItem(
+            "Balanced (AUTO board diagonal)", "BALANCED_AUTO"
+        )
+        self.distribution_optimization_combo.addItem(
+            "Balanced (custom gap penalty)", "BALANCED_CUSTOM"
+        )
+        self.distribution_optimization_combo.addItem(
+            "Minimum gaps (legacy)", "MIN_GAPS"
+        )
+        self.distribution_optimization_combo.currentIndexChanged.connect(
+            self._distribution_option_changed
+        )
+        option_row.addWidget(self.distribution_optimization_combo, 1)
+        option_row.addWidget(QLabel("Gap penalty (µm)"))
+        self.distribution_gap_penalty_edit = QLineEdit()
+        self.distribution_gap_penalty_edit.setObjectName(
+            "distributionGapPenaltyUm"
+        )
+        self.distribution_gap_penalty_edit.setPlaceholderText("AUTO")
+        self.distribution_gap_penalty_edit.setMaximumWidth(110)
+        self.distribution_gap_penalty_edit.textChanged.connect(
+            self._distribution_option_changed
+        )
+        option_row.addWidget(self.distribution_gap_penalty_edit)
         self.calculate_distribution_button = QPushButton("Calculate Preview")
         self.calculate_distribution_button.setObjectName(
             "calculateDistributionButton"
@@ -2046,6 +2489,49 @@ class MainWindow(QMainWindow):
             self._calculate_distribution
         )
         targets_layout.addLayout(option_row)
+        routing_row = QHBoxLayout()
+        self.distribution_protect_signal_routing_checkbox = QCheckBox(
+            "Experimental: protect immutable signal routing clearances"
+        )
+        self.distribution_protect_signal_routing_checkbox.setObjectName(
+            "distributionProtectSignalRouting"
+        )
+        self.distribution_protect_signal_routing_checkbox.setChecked(False)
+        self.distribution_protect_signal_routing_checkbox.setToolTip(
+            "When enabled, BLOCKED and UNKNOWN signal-Trace/via-column candidates "
+            "are removed before optimization. This is a provisional research "
+            "classifier; initial scope is SIGNAL Trace only."
+        )
+        self.distribution_protect_signal_routing_checkbox.toggled.connect(
+            self._distribution_routing_option_changed
+        )
+        routing_row.addWidget(self.distribution_protect_signal_routing_checkbox)
+        routing_row.addStretch(1)
+        routing_row.addWidget(QLabel("Trace-to-via clearance"))
+        self.distribution_trace_clearance_edit = QLineEdit()
+        self.distribution_trace_clearance_edit.setObjectName(
+            "distributionTraceClearanceUm"
+        )
+        self.distribution_trace_clearance_edit.setAccessibleName(
+            "Trace-to-via clearance in micrometres"
+        )
+        self.distribution_trace_clearance_edit.setPlaceholderText("enter value")
+        self.distribution_trace_clearance_edit.setMaximumWidth(110)
+        self.distribution_trace_clearance_edit.setEnabled(False)
+        self.distribution_trace_clearance_edit.textChanged.connect(
+            self._distribution_routing_clearance_changed
+        )
+        routing_row.addWidget(self.distribution_trace_clearance_edit)
+        routing_row.addWidget(QLabel("µm"))
+        targets_layout.addLayout(routing_row)
+        routing_scope_note = QLabel(
+            "Initial protection scope: width-resolved SIGNAL Trace objects. "
+            "Routed PWR/GND, signal vias, pins and fanout pads are not yet certified."
+        )
+        routing_scope_note.setObjectName("distributionSignalRoutingScopeNote")
+        routing_scope_note.setWordWrap(True)
+        routing_scope_note.setStyleSheet("color: #9aa4b2;")
+        targets_layout.addWidget(routing_scope_note)
         calculate_row = QHBoxLayout()
         self.import_distribution_targets_button = QPushButton("Import Targets...")
         self.import_distribution_targets_button.setObjectName(
@@ -2366,6 +2852,38 @@ class MainWindow(QMainWindow):
 
         return self._distribution_balance_state().legacy_tuple()
 
+    def _distribution_routing_policy(self) -> SignalTraceAvoidancePolicy:
+        if not self.distribution_protect_signal_routing_checkbox.isChecked():
+            return SignalTraceAvoidancePolicy.disabled()
+        raw = self.distribution_trace_clearance_edit.text().strip()
+        if not raw:
+            raise ValueError(
+                "Enter Trace-to-via clearance in µm when signal-routing "
+                "protection is enabled."
+            )
+        try:
+            clearance_um = float(raw)
+        except ValueError as exc:
+            raise ValueError("Trace-to-via clearance must be numeric.") from exc
+        return SignalTraceAvoidancePolicy.fixed(clearance_um)
+
+    def _distribution_routing_option_changed(self, checked: bool) -> None:
+        self.distribution_trace_clearance_edit.setEnabled(
+            checked and self._scenario is not None and self._worker is None
+        )
+        if self._distribution_plan is not None:
+            self._clear_distribution_preview(
+                "Signal-routing protection changed; calculate a new preview."
+            )
+        self._update_distribution_validation()
+
+    def _distribution_routing_clearance_changed(self, _text: str) -> None:
+        if self._distribution_plan is not None:
+            self._clear_distribution_preview(
+                "Trace-to-via clearance changed; calculate a new preview."
+            )
+        self._update_distribution_validation()
+
     def _update_distribution_validation(self) -> None:
         balance_state = self._distribution_balance_state()
         valid = balance_state.valid
@@ -2377,6 +2895,35 @@ class MainWindow(QMainWindow):
                 "Select Candidate order (Nearest or Farthest) before calculation.\n\n"
                 + narrative
             )
+        optimization_policy = self.distribution_optimization_combo.currentData()
+        if optimization_policy not in {"BALANCED_AUTO", "BALANCED_CUSTOM", "MIN_GAPS"}:
+            valid = False
+            narrative = "Select a valid optimization policy.\n\n" + narrative
+        elif optimization_policy == "BALANCED_CUSTOM":
+            try:
+                penalty = float(self.distribution_gap_penalty_edit.text().strip())
+            except ValueError:
+                penalty = -1.0
+            if not isfinite(penalty) or penalty < 0.0:
+                valid = False
+                narrative = "Enter a finite nonnegative custom gap penalty (µm).\n\n" + narrative
+        try:
+            routing_policy = self._distribution_routing_policy()
+        except ValueError as exc:
+            valid = False
+            narrative = f"{exc}\n\n" + narrative
+        else:
+            if (
+                routing_policy.enabled
+                and self._scenario is not None
+                and self._scenario.routing_obstacle_asset is None
+            ):
+                valid = False
+                narrative = (
+                    "This scenario has no immutable signal-routing asset. Reopen "
+                    "the verified source SPD with this version, or turn protection "
+                    "OFF.\n\n" + narrative
+                )
         if self._distribution_status_notice:
             narrative += f"\n\n{self._distribution_status_notice}"
         if self._distribution_import_notice:
@@ -2405,10 +2952,47 @@ class MainWindow(QMainWindow):
             "NEAREST",
             "FARTHEST",
         }
+        policy_ready = self.distribution_optimization_combo.currentData() in {
+            "BALANCED_AUTO", "BALANCED_CUSTOM", "MIN_GAPS"
+        }
+        if self.distribution_optimization_combo.currentData() == "BALANCED_CUSTOM":
+            try:
+                policy_ready = policy_ready and isfinite(float(self.distribution_gap_penalty_edit.text())) and float(self.distribution_gap_penalty_edit.text()) >= 0
+            except ValueError:
+                policy_ready = False
+        try:
+            routing_policy = self._distribution_routing_policy()
+            routing_ready = not (
+                routing_policy.enabled
+                and self._scenario is not None
+                and self._scenario.routing_obstacle_asset is None
+            )
+        except ValueError:
+            routing_ready = False
         self.calculate_distribution_button.setEnabled(
-            loaded and idle and numeric_valid and has_changes and distance_ready
+            loaded
+            and idle
+            and numeric_valid
+            and has_changes
+            and distance_ready
+            and policy_ready
+            and routing_ready
         )
         self.import_distribution_targets_button.setEnabled(loaded and idle)
+        self.distribution_protect_signal_routing_checkbox.setEnabled(
+            loaded and idle
+        )
+        self.distribution_trace_clearance_edit.setEnabled(
+            loaded
+            and idle
+            and self.distribution_protect_signal_routing_checkbox.isChecked()
+        )
+        self.distribution_gap_penalty_edit.setEnabled(
+            loaded
+            and idle
+            and self.distribution_optimization_combo.currentData()
+            == "BALANCED_CUSTOM"
+        )
 
         can_apply = False
         if loaded and idle and self._distribution_plan is not None:
@@ -2442,11 +3026,13 @@ class MainWindow(QMainWindow):
             or self._distribution_preview_scenario is not None
             or self._distribution_power_projection is not None
             or self._distribution_export_rows
+            or self._distribution_candidate_audit_rows
         )
         self._distribution_plan = None
         self._distribution_preview_scenario = None
         self._distribution_power_projection = None
         self._distribution_export_rows = ()
+        self._distribution_candidate_audit_rows = ()
         if had_result:
             self._reset_distribution_assignment_failures()
         if reason is not None:
@@ -2469,6 +3055,7 @@ class MainWindow(QMainWindow):
         self._distribution_preview_scenario = None
         self._distribution_power_projection = None
         self._distribution_export_rows = ()
+        self._distribution_candidate_audit_rows = ()
         self._distribution_import_notice = None
         self._distribution_status_notice = None
         if hasattr(self, "distribution_distance_combo"):
@@ -2477,6 +3064,31 @@ class MainWindow(QMainWindow):
                 self.distribution_distance_combo.setCurrentIndex(0)
             finally:
                 self.distribution_distance_combo.blockSignals(previous_block)
+        if hasattr(self, "distribution_optimization_combo"):
+            previous_block = self.distribution_optimization_combo.blockSignals(True)
+            try:
+                self.distribution_optimization_combo.setCurrentIndex(0)
+                self.distribution_gap_penalty_edit.clear()
+            finally:
+                self.distribution_optimization_combo.blockSignals(previous_block)
+        if hasattr(self, "distribution_protect_signal_routing_checkbox"):
+            previous_check_block = (
+                self.distribution_protect_signal_routing_checkbox.blockSignals(True)
+            )
+            previous_clearance_block = (
+                self.distribution_trace_clearance_edit.blockSignals(True)
+            )
+            try:
+                self.distribution_protect_signal_routing_checkbox.setChecked(False)
+                self.distribution_trace_clearance_edit.clear()
+                self.distribution_trace_clearance_edit.setEnabled(False)
+            finally:
+                self.distribution_protect_signal_routing_checkbox.blockSignals(
+                    previous_check_block
+                )
+                self.distribution_trace_clearance_edit.blockSignals(
+                    previous_clearance_block
+                )
         self._distribution_table_updating = True
         try:
             self.distribution_table.clear()
@@ -2609,6 +3221,7 @@ class MainWindow(QMainWindow):
             self._distribution_preview_scenario = None
             self._distribution_power_projection = None
             self._distribution_export_rows = ()
+            self._distribution_candidate_audit_rows = ()
             self.distribution_summary.setPlainText(
                 "Enter Target counts and calculate a preview. Numeric capacity is "
                 "checked before physical assignment."
@@ -3039,16 +3652,115 @@ class MainWindow(QMainWindow):
                 for (rail_id, model_id), value in self._distribution_tolerances.items()
             )
         )
-        payload = repr(
-            (
-                scenario.design_fingerprint,
-                scenario.revision,
-                target_items,
-                tolerance_items,
-                self.distribution_distance_combo.currentData(),
+        legacy_inputs: tuple[object, ...] = (
+            scenario.design_fingerprint,
+            scenario.revision,
+            target_items,
+            tolerance_items,
+            self.distribution_distance_combo.currentData(),
+            self.distribution_optimization_combo.currentData(),
+            self.distribution_gap_penalty_edit.text().strip(),
+        )
+        try:
+            routing_policy = self._distribution_routing_policy()
+        except ValueError:
+            request_inputs = (
+                *legacy_inputs,
+                (
+                    "INVALID",
+                    self.distribution_protect_signal_routing_checkbox.isChecked(),
+                    self.distribution_trace_clearance_edit.text().strip(),
+                ),
             )
-        ).encode("utf-8")
+        else:
+            if not routing_policy.enabled:
+                request_inputs = legacy_inputs
+            else:
+                reference = scenario.routing_obstacle_asset
+                asset_identity = (
+                    None
+                    if reference is None
+                    else (
+                        reference.attachment_name,
+                        reference.attachment_sha256,
+                        reference.content_sha256,
+                        reference.schema_version,
+                        reference.compiler_policy,
+                    )
+                )
+                request_inputs = (
+                    *legacy_inputs,
+                    routing_policy.fingerprint,
+                    asset_identity,
+                )
+        payload = repr(request_inputs).encode("utf-8")
         return sha256(payload).hexdigest()
+
+    def _distribution_routing_metadata(self, plan: Any | None = None) -> dict[str, object]:
+        summary = getattr(plan, "routing_summary", None) if plan is not None else None
+        if summary is not None:
+            policy = summary.policy
+            result: dict[str, object] = {
+                "Signal Routing Protection": "ON",
+                "Routing Protection Scope": policy.scope.value,
+                "Routing Policy Version": policy.policy_version,
+                "Routing Clearance Mode": policy.clearance_mode.value,
+                "Routing Asset SHA-256": summary.asset_attachment_sha256,
+                "Routing Asset Content SHA-256": summary.asset_content_sha256,
+                "Routing Checked Candidates": summary.checked_count,
+                "Routing Safe Candidates": summary.safe_count,
+                "Routing Blocked Candidates": summary.blocked_count,
+                "Routing Unknown Candidates": summary.unknown_count,
+                "Routing Compiler Policy": summary.compiler_policy,
+                "Routing Production Ready": summary.production_ready,
+            }
+            if policy.clearance_um is not None:
+                result["Trace-to-via Clearance (um)"] = policy.clearance_um
+            return result
+        policy = self._distribution_routing_policy()
+        if not policy.enabled:
+            return {}
+        result = {
+            "Signal Routing Protection": "ON",
+            "Routing Protection Scope": policy.scope.value,
+            "Routing Policy Version": policy.policy_version,
+            "Routing Clearance Mode": policy.clearance_mode.value,
+        }
+        if policy.clearance_um is not None:
+            result["Trace-to-via Clearance (um)"] = policy.clearance_um
+        scenario = self._scenario
+        reference = scenario.routing_obstacle_asset if scenario is not None else None
+        if reference is None:
+            raise ValueError(
+                "Signal-routing protection cannot be exported without a routing asset."
+            )
+        result.update(
+            {
+                "Routing Asset SHA-256": reference.attachment_sha256,
+                "Routing Asset Content SHA-256": reference.content_sha256,
+                "Routing Compiler Policy": reference.compiler_policy,
+                "Routing Production Ready": reference.production_ready,
+            }
+        )
+        return result
+
+    def _distribution_workbook_contract(
+        self, plan: Any | None = None
+    ) -> tuple[int, dict[str, object]]:
+        from ..distribution_workbook import (
+            DISTRIBUTION_LEGACY_OFF_WORKBOOK_FORMAT_VERSION,
+            DISTRIBUTION_WORKBOOK_FORMAT_VERSION,
+        )
+
+        routing_metadata = self._distribution_routing_metadata(plan)
+        return (
+            (
+                DISTRIBUTION_WORKBOOK_FORMAT_VERSION
+                if routing_metadata
+                else DISTRIBUTION_LEGACY_OFF_WORKBOOK_FORMAT_VERSION
+            ),
+            routing_metadata,
+        )
 
     def _sync_distribution_window(self) -> None:
         self._sync_board_assignment_controls()
@@ -3150,12 +3862,12 @@ class MainWindow(QMainWindow):
         path = Path(filename).with_suffix(".xlsx")
         headers, rows = self._distribution_matrix_values()
         try:
-            from ..distribution_workbook import DISTRIBUTION_WORKBOOK_FORMAT_VERSION
             from ..spreadsheet_export import write_distribution_workbook
 
             raw_distance_mode = self.distribution_distance_combo.currentData()
+            format_version, routing_metadata = self._distribution_workbook_contract()
             metadata: dict[str, object] = {
-                "Format Version": DISTRIBUTION_WORKBOOK_FORMAT_VERSION,
+                "Format Version": format_version,
                 "Application Version": __version__,
                 "Source SPD Name": scenario.source.name,
                 "Source SPD SHA-256": scenario.source.sha256,
@@ -3163,6 +3875,17 @@ class MainWindow(QMainWindow):
             }
             if raw_distance_mode in {"NEAREST", "FARTHEST"}:
                 metadata["Distance Mode"] = raw_distance_mode
+            metadata["Optimization Policy"] = str(
+                self.distribution_optimization_combo.currentData()
+            )
+            raw_penalty = self.distribution_gap_penalty_edit.text().strip()
+            if (
+                str(self.distribution_optimization_combo.currentData()).upper()
+                == "BALANCED_CUSTOM"
+                and raw_penalty
+            ):
+                metadata["Effective Gap Penalty (um)"] = float(raw_penalty)
+            metadata.update(routing_metadata)
             write_distribution_workbook(path, (), headers, rows, metadata=metadata)
         except (OSError, TypeError, ValueError) as exc:
             QMessageBox.critical(
@@ -3199,7 +3922,25 @@ class MainWindow(QMainWindow):
                 current_present=dict(self._distribution_present_counts),
                 current_source_sha256=scenario.source.sha256,
                 current_design_fingerprint=scenario.design_fingerprint,
+                current_routing_asset_sha256=(
+                    scenario.routing_obstacle_asset.attachment_sha256
+                    if scenario.routing_obstacle_asset is not None
+                    else None
+                ),
+                current_routing_asset_content_sha256=(
+                    scenario.routing_obstacle_asset.content_sha256
+                    if scenario.routing_obstacle_asset is not None
+                    else None
+                ),
             )
+            if (
+                imported.routing_protection_enabled
+                and scenario.routing_obstacle_asset is None
+            ):
+                raise DistributionWorkbookError(
+                    "protected target workbook requires a routing asset, but the "
+                    "loaded scenario has none"
+                )
         except (OSError, ValueError) as exc:
             # DistributionWorkbookError is a ValueError; keep this boundary broad
             # enough for filesystem and dependency-level workbook failures.
@@ -3264,6 +4005,49 @@ class MainWindow(QMainWindow):
         finally:
             self.distribution_distance_combo.blockSignals(previous_combo_block)
 
+        previous_policy_block = self.distribution_optimization_combo.blockSignals(True)
+        previous_penalty_block = self.distribution_gap_penalty_edit.blockSignals(True)
+        try:
+            policy_index = self.distribution_optimization_combo.findData(
+                imported.optimization_policy or "BALANCED_AUTO"
+            )
+            if policy_index < 0:
+                raise DistributionWorkbookError(
+                    f"unsupported Optimization Policy {imported.optimization_policy!r}"
+                )
+            self.distribution_optimization_combo.setCurrentIndex(policy_index)
+            self.distribution_gap_penalty_edit.setText(
+                ""
+                if imported.effective_gap_penalty_um is None
+                else f"{imported.effective_gap_penalty_um:g}"
+            )
+        finally:
+            self.distribution_optimization_combo.blockSignals(previous_policy_block)
+            self.distribution_gap_penalty_edit.blockSignals(previous_penalty_block)
+
+        previous_check_block = (
+            self.distribution_protect_signal_routing_checkbox.blockSignals(True)
+        )
+        previous_clearance_block = self.distribution_trace_clearance_edit.blockSignals(
+            True
+        )
+        try:
+            self.distribution_protect_signal_routing_checkbox.setChecked(
+                imported.routing_protection_enabled
+            )
+            self.distribution_trace_clearance_edit.setText(
+                ""
+                if imported.routing_clearance_um is None
+                else f"{imported.routing_clearance_um:g}"
+            )
+        finally:
+            self.distribution_protect_signal_routing_checkbox.blockSignals(
+                previous_check_block
+            )
+            self.distribution_trace_clearance_edit.blockSignals(
+                previous_clearance_block
+            )
+
         summary = imported.summary(Path(filename).name)
         self._distribution_import_notice = summary
         self.distribution_summary.setPlainText(
@@ -3279,6 +4063,21 @@ class MainWindow(QMainWindow):
         )
 
     def _distribution_option_changed(self, _index: int) -> None:
+        # A penalty is meaningful only for BALANCED_CUSTOM.  Clear stale text
+        # when the policy changes away from custom so it cannot leak into a
+        # template export or a later request fingerprint.
+        if (
+            hasattr(self, "distribution_optimization_combo")
+            and hasattr(self, "distribution_gap_penalty_edit")
+            and self.distribution_optimization_combo.currentData()
+            != "BALANCED_CUSTOM"
+            and self.distribution_gap_penalty_edit.text()
+        ):
+            blocked = self.distribution_gap_penalty_edit.blockSignals(True)
+            try:
+                self.distribution_gap_penalty_edit.clear()
+            finally:
+                self.distribution_gap_penalty_edit.blockSignals(blocked)
         if self._distribution_plan is not None:
             self._clear_distribution_preview(
                 "Candidate order changed; calculate a new preview."
@@ -3313,6 +4112,13 @@ class MainWindow(QMainWindow):
             distance_mode = distribution_module.DistributionDistanceMode(
                 str(self.distribution_distance_combo.currentData()).upper()
             )
+            optimization_policy = distribution_module.DistributionOptimizationPolicy(
+                str(self.distribution_optimization_combo.currentData()).upper()
+            )
+            gap_penalty_um = None
+            if optimization_policy.value == "BALANCED_CUSTOM":
+                gap_penalty_um = float(self.distribution_gap_penalty_edit.text().strip())
+            routing_policy = self._distribution_routing_policy()
         except (TypeError, ValueError) as exc:
             diagnostic_details = tuple(getattr(exc, "diagnostics", ()))
             detail_text = "; ".join(
@@ -3333,6 +4139,9 @@ class MainWindow(QMainWindow):
             dict(self._distribution_targets),
             dict(self._distribution_tolerances),
             distance_mode,
+            routing_policy,
+            optimization_policy=optimization_policy,
+            gap_penalty_um=gap_penalty_um,
         )
         self._run_worker(
             worker,
@@ -3386,7 +4195,41 @@ class MainWindow(QMainWindow):
             ),
             f"Selected PWR NET changes: {len(changes):,} decap(s)",
             f"Isolation-gap sacrifices: {len(sacrifices):,} decap cell(s)",
+            "Optimization policy: "
+            f"{getattr(getattr(plan, 'optimization_policy', ''), 'value', getattr(plan, 'optimization_policy', 'BALANCED_AUTO'))}; "
+            f"effective gap penalty {float(getattr(plan, 'effective_gap_penalty_um', 0.0)):g} µm",
+            f"Candidate Audit explanations: {len(self._distribution_candidate_audit_rows):,} row(s)",
         ]
+        routing_summary = getattr(plan, "routing_summary", None)
+        if routing_summary is None:
+            lines.append("Immutable signal-routing protection: OFF")
+        else:
+            clearance = routing_summary.policy.clearance_um
+            clearance_text = (
+                f"{clearance:g} µm"
+                if clearance is not None
+                else (
+                    f"{routing_summary.policy.trace_width_multiplier:g}× trace width"
+                )
+            )
+            lines.extend(
+                (
+                    "Immutable signal-routing protection: ON "
+                    f"({routing_summary.policy.scope.value}, clearance "
+                    f"{clearance_text})",
+                    "Routing candidates: "
+                    f"checked {routing_summary.checked_count:,}, "
+                    f"safe {routing_summary.safe_count:,}, "
+                    f"blocked {routing_summary.blocked_count:,}, "
+                    f"unknown {routing_summary.unknown_count:,}",
+                    (
+                        "Routing evidence: production-ready"
+                        if routing_summary.production_ready
+                        else "Routing evidence: provisional research proxy; "
+                        + routing_summary.scope_limitation
+                    ),
+                )
+            )
         cells = getattr(plan, "cells", ())
         if isinstance(cells, dict):
             cells = cells.values()
@@ -3571,6 +4414,7 @@ class MainWindow(QMainWindow):
                 preview = prepared.preview_scenario
                 export_rows = prepared.export_rows
                 power_projection = prepared.power_projection
+                candidate_audit_rows = prepared.candidate_audit_rows
             else:
                 # Direct callers (including legacy plugins/tests) remain supported;
                 # normal GUI runs prepare this CPU work in the worker.
@@ -3578,6 +4422,7 @@ class MainWindow(QMainWindow):
 
                 preview = apply_distribution_plan(scenario, plan)
                 power_projection = None
+                candidate_audit_rows = ()
                 exported = tuple(distribution_csv_rows(plan))
                 export_rows = (
                     exported[1:]
@@ -3599,6 +4444,7 @@ class MainWindow(QMainWindow):
         self._distribution_preview_scenario = preview
         self._distribution_power_projection = power_projection
         self._distribution_export_rows = export_rows
+        self._distribution_candidate_audit_rows = tuple(candidate_audit_rows)
         self._render_distribution_assignment_failures(plan)
         self.distribution_summary.setPlainText(
             self._distribution_plan_summary(plan)
@@ -3773,17 +4619,54 @@ class MainWindow(QMainWindow):
                     distribution_inventory_table,
                     distribution_target_table,
                 )
-                from ..spreadsheet_export import write_distribution_workbook
-                from ..distribution_workbook import (
-                    DISTRIBUTION_WORKBOOK_FORMAT_VERSION,
+                from ..spreadsheet_export import (
+                    CANDIDATE_AUDIT_HEADERS,
+                    write_distribution_workbook,
                 )
-
                 target_headers, target_rows = distribution_target_table(plan)
                 inventory_headers, inventory_rows = distribution_inventory_table(plan)
                 raw_distance_mode = getattr(plan, "distance_mode", "")
                 distance_mode = str(
                     getattr(raw_distance_mode, "value", raw_distance_mode)
                 ).upper()
+                format_version, routing_metadata = (
+                    self._distribution_workbook_contract(plan)
+                )
+                raw_policy = getattr(
+                    getattr(plan, "optimization_policy", "BALANCED_AUTO"),
+                    "value",
+                    getattr(plan, "optimization_policy", "BALANCED_AUTO"),
+                )
+                policy_value = str(raw_policy).upper()
+                result_metadata: dict[str, object] = {
+                    "Format Version": format_version,
+                    "Application Version": __version__,
+                    "Source SPD Name": self._scenario.source.name,
+                    "Source SPD SHA-256": self._scenario.source.sha256,
+                    "Input Design Fingerprint": str(
+                        getattr(plan, "input_design_fingerprint", "")
+                    ),
+                    "Input Revision": int(
+                        getattr(plan, "input_revision", self._scenario.revision)
+                    ),
+                    "Distance Mode": distance_mode,
+                    "Optimization Policy": policy_value,
+                    "Present Inventory Total": sum(
+                        int(getattr(cell, "present_count", 0))
+                        for cell in getattr(plan, "cells", ())
+                    ),
+                    **routing_metadata,
+                }
+                # Result workbooks record the effective penalty selected by
+                # the planner for both balanced policies (AUTO's board
+                # diagonal is important provenance).  MIN_GAPS has no gap
+                # penalty and intentionally omits this metadata.  The target
+                # template above remains input-oriented and writes a penalty
+                # only when the user selected BALANCED_CUSTOM.
+                if policy_value in {"BALANCED_AUTO", "BALANCED_CUSTOM"}:
+                    result_metadata["Effective Gap Penalty (um)"] = float(
+                        getattr(plan, "effective_gap_penalty_um", 0.0)
+                    )
                 write_distribution_workbook(
                     path,
                     decap_rows,
@@ -3791,23 +4674,13 @@ class MainWindow(QMainWindow):
                     target_rows,
                     inventory_headers=inventory_headers,
                     inventory_rows=inventory_rows,
-                    metadata={
-                        "Format Version": DISTRIBUTION_WORKBOOK_FORMAT_VERSION,
-                        "Application Version": __version__,
-                        "Source SPD Name": self._scenario.source.name,
-                        "Source SPD SHA-256": self._scenario.source.sha256,
-                        "Input Design Fingerprint": str(
-                            getattr(plan, "input_design_fingerprint", "")
-                        ),
-                        "Input Revision": int(
-                            getattr(plan, "input_revision", self._scenario.revision)
-                        ),
-                        "Distance Mode": distance_mode,
-                        "Present Inventory Total": sum(
-                            int(getattr(cell, "present_count", 0))
-                            for cell in getattr(plan, "cells", ())
-                        ),
-                    },
+                    candidate_audit_headers=(
+                        CANDIDATE_AUDIT_HEADERS
+                        if self._distribution_candidate_audit_rows
+                        else ()
+                    ),
+                    candidate_audit_rows=self._distribution_candidate_audit_rows,
+                    metadata=result_metadata,
                 )
         except (OSError, TypeError, ValueError) as exc:
             kind = "Excel workbook" if suffix == ".xlsx" else "CSV"
@@ -3818,7 +4691,11 @@ class MainWindow(QMainWindow):
             )
             self.status_text.setText(f"De-cap Distribution {kind} export failed")
             return
-        sheet_note = " with 2 sheets" if suffix == ".xlsx" else ""
+        sheet_note = (
+            " with 3 sheets"
+            if suffix == ".xlsx" and self._distribution_candidate_audit_rows
+            else (" with 2 sheets" if suffix == ".xlsx" else "")
+        )
         self.status_text.setText(
             f"Exported {len(decap_rows):,} Decap(s) to {path.name}{sheet_note}"
         )
@@ -3930,6 +4807,7 @@ class MainWindow(QMainWindow):
             self.save_as_action,
             self.distribution_table,
             self.distribution_distance_combo,
+            self.distribution_protect_signal_routing_checkbox,
         ):
             widget.setEnabled(loaded)
         self.ai_rail_combo.setEnabled(loaded and bool(self._tuned_evaluations_by_rail))
@@ -3965,6 +4843,8 @@ class MainWindow(QMainWindow):
             self.plane_layer_bar,
             self.distribution_table,
             self.distribution_distance_combo,
+            self.distribution_protect_signal_routing_checkbox,
+            self.distribution_trace_clearance_edit,
         ):
             widget.setEnabled(not busy and self._scenario is not None)
         self.ai_button.setEnabled(
@@ -4152,6 +5032,25 @@ class MainWindow(QMainWindow):
 
     def _worker_finished(self) -> None:
         cancelled = self._worker_cancel_requested
+        cancelled_plane_key = self._active_plane_layer_key
+        cancelled_all_plane_layers = self._load_all_plane_layers_requested
+        if cancelled:
+            self._load_all_plane_layers_requested = False
+            if cancelled_plane_key is not None:
+                cancelled_keys = {cancelled_plane_key}
+                if cancelled_all_plane_layers:
+                    cancelled_keys.update(
+                        key
+                        for key in self._plane_layer_checks
+                        if key not in self._plane_loaded_layer_keys
+                    )
+                for key in cancelled_keys - self._plane_loaded_layer_keys:
+                    self._hidden_plane_layer_keys.add(key)
+                    checkbox = self._plane_layer_checks.get(key)
+                    if checkbox is not None:
+                        previous = checkbox.blockSignals(True)
+                        checkbox.setChecked(False)
+                        checkbox.blockSignals(previous)
         auto_save = self._auto_save_after_worker and not cancelled
         pending_evaluation = (
             self._pending_evaluation_launch if not cancelled else None
@@ -4161,13 +5060,21 @@ class MainWindow(QMainWindow):
         self._worker = None
         self._worker_cancelable = False
         self._worker_cancel_requested = False
+        self._active_plane_layer_key = None
         self.progress_bar.hide()
         self.cancel_button.hide()
         self._set_busy(False)
         if cancelled:
             self.status_text.setText("Operation cancelled")
         elif self.status_text.text().startswith(
-            ("Opening", "Saving", "Evaluating", "Analyzing", "Calculating")
+            (
+                "Opening",
+                "Saving",
+                "Evaluating",
+                "Analyzing",
+                "Calculating",
+                "Loading",
+            )
         ):
             self.status_text.setText("Ready")
         if auto_save and self._scenario is not None and self._scenario_path is not None:
@@ -4180,6 +5087,12 @@ class MainWindow(QMainWindow):
             # state to the UI/test heartbeat and can make the two-stage
             # operation look complete before Evaluation has even started.
             self._launch_evaluation_after_preflight(request, manifest)
+        if (
+            self._load_all_plane_layers_requested
+            and self._worker is None
+            and self._scenario is not None
+        ):
+            QTimer.singleShot(0, self._load_next_missing_plane_layer)
 
     def _cancel_worker(self) -> None:
         if self._worker is not None and self._worker_cancelable:
@@ -4512,6 +5425,12 @@ class MainWindow(QMainWindow):
         self._plane_render_cells = ()
         self._plane_render_index = 0
         self._plane_render_builder = None
+        self._plane_layer_names_by_key.clear()
+        self._plane_loaded_layer_keys.clear()
+        self._plane_cached_path_elements = 0
+        self._active_plane_layer_key = None
+        self._load_all_plane_layers_requested = False
+        self._plane_fit_after_render = False
         self._reset_distribution_state()
         self.board.clear_plane_items()
         signals_were_blocked = self.rail_list.blockSignals(True)
@@ -4706,6 +5625,14 @@ class MainWindow(QMainWindow):
         self._plane_render_cells = prepared_view.plane_cells
         self._plane_render_index = 0
         self._plane_render_builder = None
+        self._plane_loaded_layer_keys = {
+            item.layer.casefold() for item in prepared_view.plane_cells
+        }
+        self._plane_cached_path_elements = sum(
+            item.path_element_count for item in prepared_view.plane_cells
+        )
+        self._load_all_plane_layers_requested = False
+        self._plane_fit_after_render = True
         self.board.clear_plane_items()
         self._plane_items_by_net = {}
         self._plane_items_by_layer = {}
@@ -4731,7 +5658,7 @@ class MainWindow(QMainWindow):
     def _render_plane_chunk(self, token: int) -> None:
         """Render about one event-loop frame of plane primitives, then yield."""
 
-        if token != self._plane_render_token or self._scenario is None:
+        if self._closing or token != self._plane_render_token or self._scenario is None:
             return
         started = perf_counter()
         added: list[QGraphicsItem] = []
@@ -4764,9 +5691,12 @@ class MainWindow(QMainWindow):
         if self._plane_render_index >= len(self._plane_render_cells):
             self._plane_render_cells = ()
             self._plane_render_builder = None
-            self.board.fit_board()
+            if self._plane_fit_after_render:
+                self.board.fit_board()
+            self._plane_fit_after_render = False
             if self.status_text.text().startswith("Rendering PWR artwork"):
                 self.status_text.setText("PWR artwork ready")
+            QTimer.singleShot(0, self._load_next_missing_plane_layer)
             return
         self.status_text.setText(
             f"Rendering PWR artwork {self._plane_render_index:,}/"
@@ -4788,6 +5718,8 @@ class MainWindow(QMainWindow):
             source_item.setData(1, prepared.net)
             source_item.setData(2, prepared.layer)
             result.append(source_item)
+        if cell is None:
+            return result
         fill = QColor(color)
         fill.setAlpha(24)
         rectangle = QGraphicsRectItem(
@@ -4826,6 +5758,9 @@ class MainWindow(QMainWindow):
         layer_labels: tuple[tuple[str, str], ...],
     ) -> None:
         self._clear_plane_layer_controls()
+        self._plane_layer_names_by_key = {
+            name.casefold(): name for name, _label in layer_labels
+        }
         available_keys = {name.casefold() for name, _label in layer_labels}
         if layer_labels and not self._plane_layer_selection_initialized:
             first_key = layer_labels[0][0].casefold()
@@ -4860,6 +5795,8 @@ class MainWindow(QMainWindow):
             self._hidden_plane_layer_keys.add(layer_key)
         for item in self._plane_items_by_layer.get(layer_key, ()):
             item.setVisible(visible)
+        if visible and layer_key not in self._plane_loaded_layer_keys:
+            self._start_plane_layer_load(layer_key)
 
     def _set_all_plane_layers_visible(self, visible: bool) -> None:
         for checkbox in self._plane_layer_checks.values():
@@ -4869,7 +5806,104 @@ class MainWindow(QMainWindow):
         self._hidden_plane_layer_keys = (
             set() if visible else set(self._plane_layer_checks)
         )
+        self._load_all_plane_layers_requested = visible
         self._apply_plane_layer_visibility()
+        if visible:
+            self._load_next_missing_plane_layer()
+
+    def _start_plane_layer_load(self, layer_key: str) -> bool:
+        if (
+            self._closing
+            or self._scenario is None
+            or self._worker is not None
+            or bool(self._plane_render_cells)
+            or layer_key in self._plane_loaded_layer_keys
+        ):
+            return False
+        layer_name = self._plane_layer_names_by_key.get(layer_key)
+        if layer_name is None:
+            return False
+        self._active_plane_layer_key = layer_key
+        worker = FunctionWorker(
+            _job_prepare_plane_layer,
+            self._scenario,
+            self._attachments,
+            layer_name,
+        )
+        self._run_worker(
+            worker,
+            lambda cells: self._accept_plane_layer_cells(layer_key, cells),
+            label=f"Loading {layer_name} PWR artwork...",
+            on_error=lambda details: self._plane_layer_load_failed(
+                layer_key, details
+            ),
+        )
+        return True
+
+    def _accept_plane_layer_cells(
+        self,
+        layer_key: str,
+        cells: tuple[_PreparedPlaneCell, ...],
+    ) -> None:
+        if self._scenario is None:
+            return
+        added_path_elements = sum(item.path_element_count for item in cells)
+        if (
+            self._plane_cached_path_elements + added_path_elements
+            > _MAX_CACHED_PHYSICAL_PWR_PATH_ELEMENTS
+        ):
+            self._plane_layer_load_failed(
+                layer_key,
+                "PWR artwork preview cache would exceed its safe path limit. "
+                "Hide unused layers and reopen the scenario to clear the cache.",
+            )
+            return
+        self._plane_cached_path_elements += added_path_elements
+        self._plane_loaded_layer_keys.add(layer_key)
+        if not cells:
+            self.status_text.setText("No PWR artwork found on the selected layer")
+            return
+        self._plane_render_token += 1
+        token = self._plane_render_token
+        self._plane_render_cells = cells
+        self._plane_render_index = 0
+        self._plane_render_builder = None
+        self._plane_fit_after_render = False
+        self.status_text.setText("Rendering PWR artwork...")
+        self._render_plane_chunk(token)
+
+    def _plane_layer_load_failed(self, layer_key: str, details: str) -> None:
+        failed_all_request = self._load_all_plane_layers_requested
+        self._load_all_plane_layers_requested = False
+        failed_keys = {layer_key}
+        if failed_all_request:
+            failed_keys.update(
+                key
+                for key in self._plane_layer_checks
+                if key not in self._plane_loaded_layer_keys
+            )
+        for failed_key in failed_keys:
+            self._hidden_plane_layer_keys.add(failed_key)
+            checkbox = self._plane_layer_checks.get(failed_key)
+            if checkbox is not None:
+                previous = checkbox.blockSignals(True)
+                checkbox.setChecked(False)
+                checkbox.blockSignals(previous)
+        self._worker_error(details)
+
+    def _load_next_missing_plane_layer(self) -> None:
+        if (
+            self._closing
+            or self._scenario is None
+            or self._worker is not None
+            or bool(self._plane_render_cells)
+        ):
+            return
+        for layer_key, checkbox in self._plane_layer_checks.items():
+            if checkbox.isChecked() and layer_key not in self._plane_loaded_layer_keys:
+                if self._start_plane_layer_load(layer_key):
+                    return
+        self._load_all_plane_layers_requested = False
 
     def _apply_plane_layer_visibility(self) -> None:
         for key, items in self._plane_items_by_layer.items():
@@ -6385,6 +7419,12 @@ class MainWindow(QMainWindow):
         if not self._can_replace_document():
             event.ignore()
             return
+        self._closing = True
+        self._load_all_plane_layers_requested = False
+        self._plane_render_token += 1
+        self._plane_render_cells = ()
+        self._plane_render_builder = None
+        self._plane_fit_after_render = False
         if self._results_window is not None:
             self._results_window.close()
         if self._distribution_window is not None:

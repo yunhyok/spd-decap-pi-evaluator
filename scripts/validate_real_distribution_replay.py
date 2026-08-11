@@ -2,10 +2,11 @@
 
 This is deliberately an integration verifier, not another planner.  It imports
 the raw source, uses the normal public Distribution APIs, then independently
-checks every applied move against a source-classified physical PWR Via landing
-and exact retained PWR artwork at the immutable landing coordinate.  It never
-uses ``path_evidence`` as destination permission and deliberately does not gate
-a destination on GND vias.
+checks every applied conventional/legacy replay move against a source-classified
+physical PWR Via landing and exact retained PWR artwork at its landing coordinate.
+The planner's MLO/unknown-legacy structural gate remains authoritative; this
+verifier does not turn missing transition evidence into permission.  It does not
+gate a destination on GND vias.
 """
 
 from __future__ import annotations
@@ -127,12 +128,14 @@ def _model_dump(value: object) -> object:
 
 
 def has_physical_pwr_landing(landing: object) -> bool:
-    """Validate the immutable, source-classified PWR-via projection origin.
+    """Validate a conventional replay's source-classified PWR-via origin.
 
-    The planner may retarget/rebuild a filled-Cu microvia stack vertically; it
-    therefore does not need a pre-existing column segment that spans the final
-    destination layer.  Trace/path evidence remains irrelevant to destination
-    permission and cannot move the XY point.
+    This helper checks geometry only after the planner has admitted the landing.
+    It is not a permission oracle: the Distribution structural gate separately
+    rejects MLO paths without a translated recipe and legacy landings without
+    transition evidence.  An admitted conventional path need not already end on
+    the requested target layer, and recovered path coordinates cannot move its
+    physical landing XY.
     """
 
     try:

@@ -19,6 +19,8 @@ from spd_decap_pi._core.domain import (
 from spd_decap_pi._core.io import spd as spd_io
 from spd_decap_pi._core.io.spd import (
     SpdImportError,
+    _length_um,
+    _lengths,
     _parse_netlist,
     analyze_spd,
     recover_spd_via_paths,
@@ -31,6 +33,19 @@ from spd_decap_pi._core.services import (
     create_workspace_state,
 )
 from spd_decap_pi._core.solver.evaluator import EvaluationError, _planes_from_project
+
+
+def test_bulk_length_parser_preserves_units_and_strict_validation() -> None:
+    """Bulk geometry parsing reuses matched tokens without relaxing validation."""
+
+    assert _lengths(b"-1mm 2.5mil 3u 4um 0.5m") == pytest.approx(
+        [-1000.0, 63.5, 3.0, 4.0, 500_000.0]
+    )
+    assert _length_um(b"+1.25mm") == pytest.approx(1250.0)
+    with pytest.raises(ValueError, match="invalid SPD length"):
+        _length_um(b"1mm trailing")
+    with pytest.raises(ValueError, match="SPD length is not finite"):
+        _length_um(b"1e309mm")
 
 
 MINI_SPD = """Title tiny SPD
@@ -1384,6 +1399,45 @@ def test_spd_import_honors_cancellation_without_loading_source(tmp_path: Path) -
         analyze_spd(source, is_cancelled=lambda: True)
 
 
+def test_spd_routing_asset_compile_does_not_swallow_one_shot_cancellation(
+    tmp_path: Path,
+) -> None:
+    source = tmp_path / "cancel-routing-asset.spd"
+    source.write_text(
+        MINI_SPD.replace(
+            "* Via description lines",
+            "* Trace description lines\n"
+            "Trace1::VDD_CORE/0 StartingNode = Node1!!101::VDD_CORE/0 "
+            "EndingNode = Node3!!1::VDD_CORE/0 Width = 0.02mm\n"
+            "* Via description lines",
+        ),
+        encoding="ascii",
+    )
+    compiling_routing = False
+    cancelled_once = False
+
+    def progress(_percent: int, message: str) -> None:
+        nonlocal compiling_routing
+        compiling_routing = message == "Compiling immutable signal-routing evidence"
+
+    def cancelled() -> bool:
+        nonlocal cancelled_once
+        if compiling_routing and not cancelled_once:
+            cancelled_once = True
+            return True
+        return False
+
+    with pytest.raises(SpdImportError, match="SPD import cancelled"):
+        analyze_spd(
+            source,
+            scope="decap_scenario",
+            progress=progress,
+            is_cancelled=cancelled,
+        )
+
+    assert cancelled_once
+
+
 def test_selected_unknown_plane_primitive_is_not_silently_ignored(
     tmp_path: Path,
 ) -> None:
@@ -1706,6 +1760,22 @@ def test_geometry_asset_compression_is_deterministic_roundtrips_and_keeps_limit(
         expected_net="VDD_CORE/0",
     )
     assert decoded["positive_polygons_um"] == list(kwargs["positive_polygons"])
+    geometry_record = {
+        "layer": "Signal$PWR",
+        "net": "VDD_CORE/0",
+        "asset": "geometry/test.spdgeom.zlib",
+        "asset_sha256": digest,
+        "uncompressed_bytes": first_size,
+    }
+    assert core_services.spd_plane_geometry_record_payload(
+        geometry_record,
+        {"geometry/test.spdgeom.zlib": first},
+    )["net"] == "VDD_CORE/0"
+    with pytest.raises(ValueError, match="decoded size does not match"):
+        core_services.spd_plane_geometry_record_payload(
+            {**geometry_record, "uncompressed_bytes": first_size + 1},
+            {"geometry/test.spdgeom.zlib": first},
+        )
     with pytest.raises(ValueError, match="SHA-256 mismatch"):
         core_services._decode_spd_geometry_asset(digest, first + b"\\x00")
 

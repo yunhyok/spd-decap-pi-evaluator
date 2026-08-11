@@ -6,6 +6,7 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from hashlib import sha256
 import json
+from math import hypot, isfinite
 from pathlib import Path
 from time import perf_counter
 from typing import Any
@@ -31,6 +32,7 @@ from .eligibility import EligibilityResult, PlaneEligibilityIndex
 from .scenario import (
     DecapConnectionKind,
     RailEligibility,
+    RoutingObstacleAssetRef,
     ScenarioDecap,
     ScenarioDecapConnection,
     ScenarioPad,
@@ -46,6 +48,16 @@ from .scenario import (
     SharedPadConnectionAnalysis,
     SourceIdentity,
     mixed_reference_ground_landing_identity,
+)
+from .routing_obstacles import (
+    MLO_TRANSITION_POLICY_VERSION,
+    PlannedViaProfile,
+    RoutingObstacleAsset,
+    decode_routing_obstacle_asset,
+    detect_mlo_transition_policy,
+    encode_routing_obstacle_asset,
+    routing_attachment_name,
+    stackup_fingerprint,
 )
 
 
@@ -92,6 +104,98 @@ def _top_conductor_name(project: ProjectSpec) -> str | None:
     return next(
         (layer.name for layer in project.stackup_layers if layer.is_conductor), None
     )
+
+
+def _routing_via_profiles(
+    project: ProjectSpec, padstacks: tuple[object, ...]
+) -> tuple[PlannedViaProfile, ...]:
+    """Build conservative research profiles from retained source padstacks.
+
+    Layer pads use their true regular-shape outer envelope.  A layer without a
+    PadDef uses the same explicit plated-barrel assumption already recorded by
+    the SPD electrical template builder; the provenance string keeps that
+    approximation visible and prevents it being mistaken for sign-off data.
+    """
+
+    padstack_by_key = {
+        str(getattr(item, "name")).casefold(): item for item in padstacks
+    }
+    raw_provenance = project.metadata.get("spd_via_template_provenance", {})
+    provenance = raw_provenance if isinstance(raw_provenance, dict) else {}
+    profiles: list[PlannedViaProfile] = []
+    for template in sorted(project.via_templates, key=lambda item: item.template_id.casefold()):
+        raw = provenance.get(template.template_id, {})
+        if not isinstance(raw, dict):
+            raw = {}
+        padstack_name = str(raw.get("padstack") or "")
+        padstack = padstack_by_key.get(padstack_name.casefold())
+        radius_by_layer: dict[str, tuple[str, float]] = {}
+        if padstack is not None:
+            for shape in getattr(padstack, "pad_shapes", ()):
+                width = getattr(shape, "width_um", None)
+                height = getattr(shape, "height_um", None)
+                kind = str(getattr(shape, "kind", ""))
+                if (
+                    width is None
+                    or height is None
+                    or not isfinite(float(width))
+                    or not isfinite(float(height))
+                    or float(width) <= 0
+                    or float(height) <= 0
+                ):
+                    continue
+                radius = (
+                    max(float(width), float(height)) / 2.0
+                    if kind == "CIRCLE"
+                    else hypot(float(width), float(height)) / 2.0
+                )
+                layer_name = str(getattr(shape, "layer"))
+                layer_key = layer_name.casefold()
+                previous = radius_by_layer.get(layer_key)
+                if previous is None or radius > previous[1]:
+                    radius_by_layer[layer_key] = (layer_name, radius)
+        drill = (
+            float(getattr(padstack, "drill_diameter_um"))
+            if padstack is not None
+            and getattr(padstack, "drill_diameter_um", None) is not None
+            else None
+        )
+        plating = raw.get("barrel_plating_assumption_um")
+        try:
+            plating_um = float(plating) if plating is not None else None
+        except (TypeError, ValueError):
+            plating_um = None
+        fallback = (
+            drill / 2.0 + plating_um
+            if drill is not None
+            and drill > 0
+            and plating_um is not None
+            and isfinite(plating_um)
+            and plating_um > 0
+            else None
+        )
+        complete = bool(radius_by_layer or fallback is not None)
+        profiles.append(
+            PlannedViaProfile(
+                profile_id=template.template_id,
+                radius_um_by_layer=tuple(
+                    sorted(radius_by_layer.values(), key=lambda item: item[0].casefold())
+                ),
+                fallback_barrel_radius_um=fallback,
+                complete=complete,
+                provenance=(
+                    "SOURCE_PADSTACK_REGULAR_SHAPES_WITH_ANALYTICAL_BARREL_V1"
+                    if complete
+                    else "NO_PLANNED_REBUILD_RECIPE"
+                ),
+                unresolved_reason=(
+                    None
+                    if complete
+                    else "no source pad envelope or plated-barrel radius is available"
+                ),
+            )
+        )
+    return tuple(profiles)
 
 
 def _instance_side(instance: SpdCapInstance, top_layer: str | None) -> ScenarioSide:
@@ -963,6 +1067,20 @@ def import_spd_scenario(
                 )
             )
     recovery_metadata = dict(base_project.metadata)
+    # This source-bound policy is a board-level positive MLO summary.  Path
+    # recovery can legitimately fall back for individual landings, so a false
+    # result is never a per-landing conventional-via certificate; Distribution
+    # requires each non-TOP candidate to retain explicit path evidence.
+    mlo_transition_policy = detect_mlo_transition_policy(
+        source_landings,
+        stackup_layers=base_project.stackup_layers,
+        evidence_by_via=path_recovery.evidence_by_via,
+    )
+    recovery_metadata["spd_mlo_transition_policy"] = {
+        **mlo_transition_policy.payload(),
+        "policy_version": MLO_TRANSITION_POLICY_VERSION,
+        "source_sha256": analysis.source.sha256,
+    }
     recovery_metadata["spd_via_path_recovery"] = {
         **dict(path_recovery.statistics),
         "algorithm": "unique_monotonic_same_net_via_chain_v1",
@@ -1216,6 +1334,54 @@ def import_spd_scenario(
         for index, net in enumerate(nets)
     }
     attachments = dict(plan.attachments)
+    routing_asset_ref: RoutingObstacleAssetRef | None = None
+    routing_asset_diagnostics: list[SpdDiagnostic] = []
+    if analysis.routing_extraction is not None:
+        try:
+            conductor_layers = tuple(
+                item.name for item in base_project.stackup_layers if item.is_conductor
+            )
+            routing_asset = RoutingObstacleAsset(
+                source_sha256=analysis.source.sha256,
+                stackup_fingerprint=stackup_fingerprint(base_project.stackup_layers),
+                conductor_layers=conductor_layers,
+                segments=analysis.routing_extraction.segments,
+                layer_completeness=analysis.routing_extraction.layer_completeness,
+                via_profiles=_routing_via_profiles(base_project, analysis.padstacks),
+                compiler_policy=analysis.routing_extraction.compiler_policy,
+                production_ready=analysis.routing_extraction.production_ready,
+            )
+            routing_payload = encode_routing_obstacle_asset(routing_asset)
+            routing_name = routing_attachment_name(routing_payload)
+            decoded_routing_asset = decode_routing_obstacle_asset(
+                routing_payload,
+                expected_source_sha256=analysis.source.sha256,
+                expected_stackup_fingerprint=routing_asset.stackup_fingerprint,
+            )
+            attachments[routing_name] = routing_payload
+            routing_asset_ref = RoutingObstacleAssetRef(
+                attachment_name=routing_name,
+                attachment_sha256=sha256(routing_payload).hexdigest(),
+                content_sha256=str(decoded_routing_asset.content_sha256),
+                schema_version=decoded_routing_asset.schema_version,
+                source_sha256=decoded_routing_asset.source_sha256,
+                stackup_fingerprint=decoded_routing_asset.stackup_fingerprint,
+                scope=decoded_routing_asset.scope.value,
+                compiler_policy=decoded_routing_asset.compiler_policy,
+                production_ready=decoded_routing_asset.production_ready,
+                scope_limitation=decoded_routing_asset.scope_limitation,
+                via_profile_ids=tuple(
+                    item.profile_id for item in decoded_routing_asset.via_profiles
+                ),
+            )
+        except (ValueError, OverflowError) as exc:
+            routing_asset_diagnostics.append(
+                SpdDiagnostic(
+                    "warning",
+                    "SPD_SIGNAL_ROUTING_RESEARCH_ASSET_UNAVAILABLE",
+                    f"Optional signal-routing attachment was not created: {exc}",
+                )
+            )
     attachment_hashes = {
         name: sha256(payload).hexdigest()
         for name, payload in attachments.items()
@@ -1260,6 +1426,7 @@ def import_spd_scenario(
         net_colors=net_colors,
         attachment_names=sorted(attachments, key=str.casefold),
         attachment_hashes=attachment_hashes,
+        routing_obstacle_asset=routing_asset_ref,
     )
     finalize_s = perf_counter() - finalize_started
     total_s = perf_counter() - total_started
@@ -1282,7 +1449,12 @@ def import_spd_scenario(
         scenario=scenario,
         attachments=attachments,
         diagnostics=tuple(
-            (*plan.diagnostics, *path_recovery.diagnostics, *mixed_ground_reachability_diagnostics)
+            (
+                *plan.diagnostics,
+                *path_recovery.diagnostics,
+                *mixed_ground_reachability_diagnostics,
+                *routing_asset_diagnostics,
+            )
         ),
         timings=timings,
     )

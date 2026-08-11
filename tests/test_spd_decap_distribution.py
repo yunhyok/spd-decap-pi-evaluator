@@ -4,6 +4,7 @@ from dataclasses import replace
 from hashlib import sha256
 import json
 from time import perf_counter
+from types import SimpleNamespace
 
 import numpy as np
 import pytest
@@ -25,6 +26,8 @@ from spd_decap_pi._core.domain import (
     RailSpec,
     StackupLayer,
     TerminalKind,
+    ViaLoopTemplate,
+    ViaPathKind,
 )
 from spd_decap_pi.distribution import (
     DistributionDistanceMode,
@@ -45,6 +48,7 @@ from spd_decap_pi.eligibility import PlaneEligibilityIndex
 from spd_decap_pi.scenario import (
     DecapConnectionKind,
     RailEligibility,
+    RoutingObstacleAssetRef,
     ScenarioDecap,
     ScenarioDecapConnection,
     ScenarioPad,
@@ -58,6 +62,22 @@ from spd_decap_pi.scenario import (
     SharedPadConnectionAnalysis,
     SHARED_PAD_ANALYSIS_VERSION,
     SourceIdentity,
+)
+from spd_decap_pi.routing_obstacles import (
+    PlannedViaProfile,
+    REIMPORT_SOURCE_FOR_TRANSITION_EVIDENCE_CODE,
+    REIMPORT_SOURCE_FOR_TRANSITION_EVIDENCE_MESSAGE,
+    RoutingLayerCompleteness,
+    RoutingNetRole,
+    RoutingObjectProvenance,
+    RoutingObstacleAsset,
+    RoutingTraceSegment,
+    SignalTraceAvoidancePolicy,
+    TraceWidthSource,
+    decode_routing_obstacle_asset,
+    encode_routing_obstacle_asset,
+    routing_attachment_name,
+    stackup_fingerprint,
 )
 
 
@@ -125,12 +145,18 @@ def _project(
     )
 
 
-def _eligibility(rail_id: str, *, allowed: bool = True) -> RailEligibility:
+def _eligibility(
+    rail_id: str,
+    *,
+    allowed: bool = True,
+    destination_layer: str | None = None,
+) -> RailEligibility:
     return RailEligibility(
         rail_id=rail_id,
         net=f"V{rail_id[-1]}",
         pwr_layer="PWR",
         gnd_layer="GND",
+        destination_pwr_layer=destination_layer,
         via_template_id=f"VT-{rail_id}",
         allowed=allowed,
         reason=None if allowed else "no target PWR plane at Via landing",
@@ -730,6 +756,676 @@ def test_direct_multi_via_component_rejects_target_without_any_intersection_root
     assert "R2" not in result
 
 
+def test_routing_protection_requires_all_retained_via_columns() -> None:
+    result = distribution_module._distribution_component_eligibility(
+        (
+            {"R2": _eligibility("R2")},
+            {"R1": _eligibility("R1")},
+        ),
+        require_all_vias=True,
+    )
+
+    assert set(result) == set()
+
+
+def test_routing_protection_rejects_disjoint_destination_layers() -> None:
+    result = distribution_module._distribution_component_eligibility(
+        (
+            {"R2": _eligibility("R2", destination_layer="PWR1")},
+            {"R2": _eligibility("R2", destination_layer="PWR3")},
+        ),
+        require_all_vias=True,
+    )
+
+    assert result == {}
+
+
+def test_routing_protection_selects_nearest_common_safe_layer() -> None:
+    first_pwr1 = _eligibility("R2", destination_layer="PWR1")
+    first_pwr3 = _eligibility("R2", destination_layer="PWR3")
+    second_pwr3 = _eligibility("R2", destination_layer="PWR3")
+    result = distribution_module._distribution_component_eligibility(
+        (
+            {"R2": first_pwr1},
+            {"R2": second_pwr3},
+        ),
+        require_all_vias=True,
+        per_via_layer_candidates=(
+            {("r2", "pwr1"): first_pwr1, ("r2", "pwr3"): first_pwr3},
+            {("r2", "pwr3"): second_pwr3},
+        ),
+    )
+
+    assert result["R2"].destination_pwr_layer == "PWR3"
+
+
+def _scenario_with_routing_asset(
+    *,
+    trace_y_um: float,
+    incomplete_layer: str | None = None,
+) -> tuple[ScenarioSpec, dict[str, bytes], SpdPlaneGeometry]:
+    scenario = _direct_scenario(
+        (("C1", 0.0, ("R1", "R2")),), rail_ids=("R1", "R2")
+    )
+    layers = [
+        StackupLayer(
+            name="TOP",
+            thickness_um=18.0,
+            conductivity_s_m=5.8e7,
+            pwr_nets=["V1", "V2"],
+        ),
+        StackupLayer(
+            name="SIG1",
+            thickness_um=18.0,
+            conductivity_s_m=5.8e7,
+            pwr_nets=[],
+        ),
+        StackupLayer(
+            name="PWR_ALT",
+            thickness_um=18.0,
+            conductivity_s_m=5.8e7,
+            pwr_nets=["V2"],
+        ),
+        StackupLayer(
+            name="GND",
+            thickness_um=18.0,
+            conductivity_s_m=5.8e7,
+            pwr_nets=["DGND"],
+        ),
+    ]
+    rails = [
+        rail.model_copy(update={"pwr_layer": "TOP", "gnd_layer": "GND"})
+        for rail in scenario.base_project.rails
+    ]
+    via_templates = [
+        ViaLoopTemplate(
+            template_id=f"VT-{rail.rail_id}",
+            pwr_reference_layer="TOP",
+            gnd_reference_layer="GND",
+            path_kind=ViaPathKind.STACKED,
+            finite_port_width_um=100.0,
+            finite_port_height_um=100.0,
+        )
+        for rail in rails
+    ]
+    project = scenario.base_project.model_copy(
+        update={
+            "stackup_layers": layers,
+            "rails": rails,
+            "via_templates": via_templates,
+        }
+    )
+    conductor_layers = tuple(item.name for item in layers)
+    asset = RoutingObstacleAsset(
+        source_sha256=scenario.source.sha256,
+        stackup_fingerprint=stackup_fingerprint(layers),
+        conductor_layers=conductor_layers,
+        segments=(
+            RoutingTraceSegment(
+                trace_id="Trace-SIG1",
+                net="SIG_A",
+                layer="SIG1",
+                x1_um=-100.0,
+                y1_um=trace_y_um,
+                x2_um=100.0,
+                y2_um=trace_y_um,
+                width_um=20.0,
+                width_source=TraceWidthSource.INLINE,
+                net_role=RoutingNetRole.SIGNAL,
+                provenance=RoutingObjectProvenance.PHYSICAL_ROUTING,
+            ),
+        ),
+        layer_completeness=tuple(
+            RoutingLayerCompleteness(
+                layer=layer,
+                unresolved_width_count=(1 if layer == incomplete_layer else 0),
+                unresolved_codes=(
+                    ("TRACE_WIDTH_UNRESOLVED",)
+                    if layer == incomplete_layer
+                    else ()
+                ),
+            )
+            for layer in conductor_layers
+        ),
+        via_profiles=tuple(
+            PlannedViaProfile(
+                profile_id=f"VT-R{index}",
+                radius_um_by_layer=tuple(
+                    (layer, 50.0) for layer in conductor_layers
+                ),
+            )
+            for index in (1, 2)
+        ),
+    )
+    payload = encode_routing_obstacle_asset(asset)
+    decoded = decode_routing_obstacle_asset(payload)
+    name = routing_attachment_name(payload)
+    digest = sha256(payload).hexdigest()
+    reference = RoutingObstacleAssetRef(
+        attachment_name=name,
+        attachment_sha256=digest,
+        content_sha256=str(decoded.content_sha256),
+        schema_version=decoded.schema_version,
+        source_sha256=decoded.source_sha256,
+        stackup_fingerprint=decoded.stackup_fingerprint,
+        scope=decoded.scope.value,
+        compiler_policy=decoded.compiler_policy,
+        production_ready=decoded.production_ready,
+        scope_limitation=decoded.scope_limitation,
+        via_profile_ids=tuple(item.profile_id for item in decoded.via_profiles),
+    )
+    scenario = ScenarioSpec.model_validate(
+        {
+            **scenario.model_dump(mode="python"),
+            "normalized_project": project.model_dump(mode="python"),
+            "attachment_names": [name],
+            "attachment_hashes": {name: digest},
+            "routing_obstacle_asset": reference.model_dump(mode="python"),
+        }
+    )
+    scenario = _with_power_via_path(scenario, "C1", "PWR_ALT")
+    plane = SpdPlaneGeometry(
+        layer="PWR_ALT",
+        net="V2",
+        positive_polygons_um=(
+            ((-200.0, -200.0), (200.0, -200.0), (200.0, 200.0), (-200.0, 200.0)),
+        ),
+        negative_polygons_um=(),
+        primitive_order=(("positive_polygon", 0),),
+    )
+    return scenario, {name: payload}, plane
+
+
+def test_distribution_routing_protection_off_preserves_baseline_and_on_blocks() -> None:
+    scenario, attachments, plane = _scenario_with_routing_asset(trace_y_um=0.0)
+    targets = {("R1", "M1"): 0, ("R2", "M1"): 1}
+
+    unprotected_projection = distribution_module.build_distribution_power_projection(
+        scenario,
+        attachments,
+        plane_geometries=(plane,),
+        targets=targets,
+    )
+    assert unprotected_projection is not None
+    unprotected = compute_distribution_plan(
+        scenario, targets, power_projection=unprotected_projection
+    )
+    assert unprotected.status == DistributionPlanStatus.FULL
+    assert unprotected.assignment_map == {"C1": "R2"}
+    assert unprotected.routing_summary is None
+
+    policy = SignalTraceAvoidancePolicy.fixed(0.0)
+    protected_projection = distribution_module.build_distribution_power_projection(
+        scenario,
+        attachments,
+        plane_geometries=(plane,),
+        targets=targets,
+        routing_policy=policy,
+    )
+    assert protected_projection is not None
+    protected = compute_distribution_plan(
+        scenario,
+        targets,
+        power_projection=protected_projection,
+        routing_policy=policy,
+    )
+    assert protected.status == DistributionPlanStatus.PARTIAL
+    assert protected.assignment_map == {}
+    assert protected.routing_summary is not None
+    assert protected.routing_summary.blocked_count >= 1
+    assert any(
+        item.code == "IMMUTABLE_SIGNAL_CLEARANCE_BLOCKED"
+        for item in protected.diagnostics
+    )
+
+
+def test_routing_protection_off_matches_v021_distribution_regression_matrix() -> None:
+    """Freeze the legacy v0.21.0 planner outcomes when protection is OFF."""
+
+    direct_trap = _direct_scenario(
+        (
+            ("FLEX", 0.0, ("R1", "R2", "R3")),
+            ("ONLY_R2", 100.0, ("R1", "R2")),
+        ),
+        bump_x={"R2": 0.0, "R3": 0.0},
+    )
+    distance = _direct_scenario(
+        (
+            ("NEAR", 0.0, ("R1", "R2")),
+            ("MID", 50.0, ("R1", "R2")),
+            ("FAR", 100.0, ("R1", "R2")),
+        ),
+        rail_ids=("R1", "R2"),
+        bump_x={"R2": 0.0},
+    )
+    shared = _shared_chain_scenario()
+    exchange = _shared_exchange_scenario()
+    count_neutral = _with_initial_rails(
+        _direct_scenario(
+            (
+                ("A0", 0.0, ("R1", "R2")),
+                ("A1", 10.0, ("R1", "R2")),
+                ("B0", 100.0, ("R2", "R3")),
+                ("B1", 110.0, ("R2", "R3")),
+            ),
+            bump_x={"R2": 100.0, "R3": 200.0},
+        ),
+        {"B0": "R2", "B1": "R2"},
+    )
+    cases = (
+        (
+            "direct_trap",
+            direct_trap,
+            {("R1", "M1"): 0, ("R2", "M1"): 1, ("R3", "M1"): 1},
+            {},
+            DistributionDistanceMode.NEAREST,
+            ("FULL", 2, {"FLEX": "R3", "ONLY_R2": "R2"}, (), ()),
+        ),
+        (
+            "direct_nearest",
+            distance,
+            {("R1", "M1"): 2, ("R2", "M1"): 1},
+            {},
+            DistributionDistanceMode.NEAREST,
+            ("FULL", 1, {"NEAR": "R2"}, (), ()),
+        ),
+        (
+            "direct_farthest",
+            distance,
+            {("R1", "M1"): 2, ("R2", "M1"): 1},
+            {},
+            DistributionDistanceMode.FARTHEST,
+            ("FULL", 1, {"FAR": "R2"}, (), ()),
+        ),
+        (
+            "shared_chain",
+            shared,
+            {("R1", "M1"): 1, ("R2", "M1"): 2},
+            {},
+            DistributionDistanceMode.NEAREST,
+            (
+                "PARTIAL",
+                1,
+                {"A0": "R2"},
+                ("D1",),
+                ("PHYSICAL_CAPACITY_SHORTAGE",),
+            ),
+        ),
+        (
+            "shared_exchange_partial",
+            exchange,
+            {("R1", "M1"): 0, ("R2", "M1"): 3, ("R3", "M1"): 2},
+            {("R2", "M1"): 67.0},
+            DistributionDistanceMode.NEAREST,
+            (
+                "PARTIAL",
+                1,
+                {"A0": "R3", "X0": "R2", "X1": "R2"},
+                ("D1",),
+                ("PHYSICAL_CAPACITY_SHORTAGE",),
+            ),
+        ),
+        (
+            "shared_exchange_full",
+            exchange,
+            {("R1", "M1"): 0, ("R2", "M1"): 3, ("R3", "M1"): 1},
+            {("R2", "M1"): 67.0},
+            DistributionDistanceMode.NEAREST,
+            (
+                "FULL",
+                1,
+                {"A0": "R3", "X0": "R2", "X1": "R2"},
+                ("D1",),
+                (),
+            ),
+        ),
+        (
+            "count_neutral_exchange",
+            count_neutral,
+            {("R1", "M1"): 1, ("R2", "M1"): 2, ("R3", "M1"): 1},
+            {("R2", "M1"): 50.0},
+            DistributionDistanceMode.NEAREST,
+            ("FULL", 1, {"A1": "R2", "B1": "R3"}, (), ()),
+        ),
+    )
+
+    for name, scenario, targets, tolerances, mode, expected in cases:
+        default_off = compute_distribution_plan(
+            scenario,
+            targets,
+            mode,
+            tolerances=tolerances,
+        )
+        explicit_off = compute_distribution_plan(
+            scenario,
+            targets,
+            mode,
+            tolerances=tolerances,
+            routing_policy=SignalTraceAvoidancePolicy.disabled(),
+        )
+        assert explicit_off == default_off, name
+        assert default_off.routing_summary is None, name
+        actual = (
+            default_off.status.value,
+            default_off.fulfilled_count,
+            default_off.assignment_map,
+            default_off.isolation_gap_refdes,
+            tuple(item.code for item in default_off.diagnostics),
+        )
+        assert actual == expected, name
+
+
+def test_distribution_routing_unknown_is_hard_blocked_before_milp() -> None:
+    scenario, attachments, plane = _scenario_with_routing_asset(
+        trace_y_um=1_000.0, incomplete_layer="SIG1"
+    )
+    targets = {("R1", "M1"): 0, ("R2", "M1"): 1}
+    policy = SignalTraceAvoidancePolicy.fixed(0.0)
+
+    projection = distribution_module.build_distribution_power_projection(
+        scenario,
+        attachments,
+        plane_geometries=(plane,),
+        targets=targets,
+        routing_policy=policy,
+    )
+    assert projection is not None
+    plan = compute_distribution_plan(
+        scenario,
+        targets,
+        power_projection=projection,
+        routing_policy=policy,
+    )
+
+    assert plan.status == DistributionPlanStatus.PARTIAL
+    assert plan.assignment_map == {}
+    assert plan.routing_summary is not None
+    assert plan.routing_summary.unknown_count >= 1
+    assert any(item.code == "TRACE_WIDTH_UNRESOLVED" for item in plan.diagnostics)
+
+
+def test_protected_plan_apply_requires_the_same_routing_projection() -> None:
+    scenario, attachments, plane = _scenario_with_routing_asset(trace_y_um=1_000.0)
+    targets = {("R1", "M1"): 0, ("R2", "M1"): 1}
+    policy = SignalTraceAvoidancePolicy.fixed(0.0)
+    protected_projection = distribution_module.build_distribution_power_projection(
+        scenario,
+        attachments,
+        plane_geometries=(plane,),
+        targets=targets,
+        routing_policy=policy,
+    )
+    assert protected_projection is not None
+    protected_plan = compute_distribution_plan(
+        scenario,
+        targets,
+        power_projection=protected_projection,
+        routing_policy=policy,
+    )
+
+    applied = apply_distribution_plan(
+        scenario,
+        protected_plan,
+        power_projection=protected_projection,
+    )
+    assert applied.decaps[0].current_rail_id == "R2"
+    with pytest.raises(DistributionError, match="modes do not match"):
+        apply_distribution_plan(scenario, protected_plan)
+
+    assert protected_projection.routing_summary is not None
+    stale_projection = replace(
+        protected_projection,
+        routing_summary=replace(
+            protected_projection.routing_summary,
+            asset_content_sha256="0" * 64,
+        ),
+    )
+    with pytest.raises(DistributionError, match="asset or clearance policy changed"):
+        apply_distribution_plan(
+            scenario,
+            protected_plan,
+            power_projection=stale_projection,
+        )
+
+    off_projection = distribution_module.build_distribution_power_projection(
+        scenario,
+        attachments,
+        plane_geometries=(plane,),
+        targets=targets,
+    )
+    assert off_projection is not None
+    off_plan = compute_distribution_plan(
+        scenario,
+        targets,
+        power_projection=off_projection,
+    )
+    with pytest.raises(DistributionError, match="modes do not match"):
+        apply_distribution_plan(
+            scenario,
+            off_plan,
+            power_projection=protected_projection,
+        )
+
+
+def test_protected_projection_is_bound_to_the_current_scenario_routing_asset() -> None:
+    safe_scenario, safe_attachments, plane = _scenario_with_routing_asset(
+        trace_y_um=1_000.0
+    )
+    blocked_scenario, _blocked_attachments, _blocked_plane = (
+        _scenario_with_routing_asset(trace_y_um=0.0)
+    )
+    assert blocked_scenario.design_fingerprint == safe_scenario.design_fingerprint
+    assert blocked_scenario.revision == safe_scenario.revision
+    assert (
+        blocked_scenario.routing_obstacle_asset
+        != safe_scenario.routing_obstacle_asset
+    )
+
+    targets = {("R1", "M1"): 0, ("R2", "M1"): 1}
+    policy = SignalTraceAvoidancePolicy.fixed(0.0)
+    safe_projection = distribution_module.build_distribution_power_projection(
+        safe_scenario,
+        safe_attachments,
+        plane_geometries=(plane,),
+        targets=targets,
+        routing_policy=policy,
+    )
+    assert safe_projection is not None
+    safe_plan = compute_distribution_plan(
+        safe_scenario,
+        targets,
+        power_projection=safe_projection,
+        routing_policy=policy,
+    )
+    assert safe_plan.assignment_map == {"C1": "R2"}
+
+    with pytest.raises(DistributionError) as compute_error:
+        compute_distribution_plan(
+            blocked_scenario,
+            targets,
+            power_projection=safe_projection,
+            routing_policy=policy,
+        )
+    assert compute_error.value.code == "ROUTING_PROJECTION_STALE"
+
+    with pytest.raises(DistributionError) as apply_error:
+        apply_distribution_plan(
+            blocked_scenario,
+            safe_plan,
+            power_projection=safe_projection,
+        )
+    assert apply_error.value.code == "ROUTING_PROJECTION_STALE"
+
+    # Routing evidence is intentionally outside the electrical fingerprint.
+    # OFF plans therefore remain reusable across evidence-only attachment drift.
+    off_projection = distribution_module.build_distribution_power_projection(
+        safe_scenario,
+        safe_attachments,
+        plane_geometries=(plane,),
+        targets=targets,
+    )
+    assert off_projection is not None
+    off_plan = compute_distribution_plan(
+        safe_scenario,
+        targets,
+        power_projection=off_projection,
+    )
+    off_applied = apply_distribution_plan(
+        blocked_scenario,
+        off_plan,
+        power_projection=off_projection,
+    )
+    assert off_applied.decaps[0].current_rail_id == "R2"
+
+
+def test_anchored_cluster_cannot_reuse_another_members_legacy_protected_rail() -> None:
+    base = _shared_chain_scenario()
+    first_plan = compute_distribution_plan(
+        base,
+        {("R1", "M1"): 1, ("R2", "M1"): 2},
+    )
+    existing = apply_distribution_plan(base, first_plan)
+    layers = [
+        StackupLayer(
+            name="TOP",
+            thickness_um=18.0,
+            conductivity_s_m=5.8e7,
+            pwr_nets=["V1", "V2"],
+        ),
+        StackupLayer(
+            name="PWR",
+            thickness_um=18.0,
+            conductivity_s_m=5.8e7,
+            pwr_nets=["V1", "V2"],
+        ),
+        StackupLayer(
+            name="SIG1",
+            thickness_um=18.0,
+            conductivity_s_m=5.8e7,
+            pwr_nets=[],
+        ),
+        StackupLayer(
+            name="PWR_ALT",
+            thickness_um=18.0,
+            conductivity_s_m=5.8e7,
+            pwr_nets=["V2"],
+        ),
+        StackupLayer(
+            name="GND",
+            thickness_um=18.0,
+            conductivity_s_m=5.8e7,
+            pwr_nets=["DGND"],
+        ),
+    ]
+    via_templates = [
+        ViaLoopTemplate(
+            template_id=f"VT-R{index}",
+            pwr_reference_layer="PWR",
+            gnd_reference_layer="GND",
+            path_kind=ViaPathKind.STACKED,
+            finite_port_width_um=2.0,
+            finite_port_height_um=2.0,
+        )
+        for index in (1, 2)
+    ]
+    project = existing.base_project.model_copy(
+        update={"stackup_layers": layers, "via_templates": via_templates}
+    )
+    conductor_layers = tuple(item.name for item in layers)
+    asset = RoutingObstacleAsset(
+        source_sha256=existing.source.sha256,
+        stackup_fingerprint=stackup_fingerprint(layers),
+        conductor_layers=conductor_layers,
+        segments=(
+            RoutingTraceSegment(
+                trace_id="Trace-SIG",
+                net="SIG_A",
+                layer="SIG1",
+                x1_um=9.5,
+                y1_um=0.0,
+                x2_um=10.5,
+                y2_um=0.0,
+                width_um=1.0,
+                width_source=TraceWidthSource.INLINE,
+                net_role=RoutingNetRole.SIGNAL,
+                provenance=RoutingObjectProvenance.PHYSICAL_ROUTING,
+            ),
+        ),
+        layer_completeness=tuple(
+            RoutingLayerCompleteness(layer=layer) for layer in conductor_layers
+        ),
+        via_profiles=tuple(
+            PlannedViaProfile(
+                profile_id=f"VT-R{index}",
+                radius_um_by_layer=tuple(
+                    (layer, 1.0) for layer in conductor_layers
+                ),
+            )
+            for index in (1, 2)
+        ),
+    )
+    payload = encode_routing_obstacle_asset(asset)
+    decoded = decode_routing_obstacle_asset(payload)
+    name = routing_attachment_name(payload)
+    digest = sha256(payload).hexdigest()
+    reference = RoutingObstacleAssetRef(
+        attachment_name=name,
+        attachment_sha256=digest,
+        content_sha256=str(decoded.content_sha256),
+        schema_version=decoded.schema_version,
+        source_sha256=decoded.source_sha256,
+        stackup_fingerprint=decoded.stackup_fingerprint,
+        scope=decoded.scope.value,
+        compiler_policy=decoded.compiler_policy,
+        production_ready=decoded.production_ready,
+        scope_limitation=decoded.scope_limitation,
+        via_profile_ids=tuple(item.profile_id for item in decoded.via_profiles),
+    )
+    scenario = ScenarioSpec.model_validate(
+        {
+            **existing.model_dump(mode="python"),
+            "normalized_project": project.model_dump(mode="python"),
+            "attachment_names": [name],
+            "attachment_hashes": {name: digest},
+            "routing_obstacle_asset": reference.model_dump(mode="python"),
+        }
+    )
+    for refdes in ("A0", "A2"):
+        scenario = _with_power_via_path(scenario, refdes, "PWR_ALT")
+    plane = SpdPlaneGeometry(
+        layer="PWR_ALT",
+        net="V2",
+        positive_polygons_um=(
+            ((-100.0, -100.0), (100.0, -100.0), (100.0, 100.0), (-100.0, 100.0)),
+        ),
+        negative_polygons_um=(),
+        primitive_order=(("positive_polygon", 0),),
+    )
+    targets = {("R1", "M1"): 0, ("R2", "M1"): 2}
+    policy = SignalTraceAvoidancePolicy.fixed(0.0)
+
+    projection = distribution_module.build_distribution_power_projection(
+        scenario,
+        {name: payload},
+        plane_geometries=(plane,),
+        targets=targets,
+        routing_policy=policy,
+    )
+    assert projection is not None
+    assert projection.routing_summary is not None
+    assert projection.routing_summary.safe_count == 1
+    assert projection.routing_summary.blocked_count == 1
+    plan = compute_distribution_plan(
+        scenario,
+        targets,
+        power_projection=projection,
+        routing_policy=policy,
+    )
+
+    assert plan.status == DistributionPlanStatus.PARTIAL
+    assert plan.assignment_map == {}
+
+
 def test_distribution_projects_physical_landing_without_existing_column_span() -> None:
     """A retained target plane may be reached by a rebuilt filled-Cu stack."""
 
@@ -987,6 +1683,429 @@ def test_batch_via_eligibility_uses_immutable_landing_not_bent_path_endpoint() -
     )
 
     assert result == {"V1": {}}
+
+
+def test_batch_mlo_transition_gate_blocks_only_non_top_candidates() -> None:
+    """An unresolved MLO recipe must not poison conventional landings."""
+
+    geometry = SpdPlaneGeometry(
+        layer="PWR_ALT",
+        net="V1",
+        positive_polygons_um=(
+            ((0.0, 0.0), (20.0, 0.0), (20.0, 20.0), (0.0, 20.0)),
+        ),
+        negative_polygons_um=(),
+        positive_circles_um=(),
+        negative_circles_um=(),
+        primitive_order=(("positive_polygon", 0),),
+    )
+    conventional = ScenarioViaLanding(
+        via_id="V-CONV",
+        net="V1",
+        endpoint_node_id="N1",
+        padstack="P",
+        x_um=5.0,
+        y_um=5.0,
+    )
+    mlo = ScenarioViaLanding(
+        via_id="V-MLO",
+        net="V1",
+        endpoint_node_id="N2",
+        padstack="P",
+        x_um=6.0,
+        y_um=6.0,
+    )
+    choices = {("v1", "pwr_alt", "gnd"): ((_rail("R1"), "VT1"),)}
+    evidence: list[object] = []
+    result = distribution_module._distribution_batch_via_eligibility(
+        (geometry,),
+        (conventional, mlo),
+        choices,
+        mlo_transition_required_via_ids=("V-MLO",),
+        mlo_transition_evidence=evidence,
+        top_layer="TOP",
+    )
+
+    assert set(result["V-CONV"]) == {"R1"}
+    assert result["V-MLO"] == {}
+    assert evidence and evidence[0].detail.code == "MLO_TRANSITION_RECIPE_REQUIRED"
+
+
+def test_batch_mlo_gate_survives_missing_optional_geometry_dependency(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    import builtins
+
+    landing = ScenarioViaLanding(
+        via_id="V-MLO",
+        net="V1",
+        endpoint_node_id="N1",
+        padstack="P",
+        x_um=5.0,
+        y_um=5.0,
+    )
+    choices = {("v1", "pwr_alt", "gnd"): ((_rail("R1"), "VT1"),)}
+    evidence: list[object] = []
+    blocked_vias: set[str] = set()
+    real_import = builtins.__import__
+
+    def fail_shapely(name: str, *args: object, **kwargs: object):
+        if name == "shapely":
+            raise ImportError("simulated missing Shapely")
+        return real_import(name, *args, **kwargs)
+
+    monkeypatch.setattr(builtins, "__import__", fail_shapely)
+    result = distribution_module._distribution_batch_via_eligibility(
+        (),
+        (landing,),
+        choices,
+        mlo_transition_required_via_ids=(landing.via_id,),
+        mlo_transition_evidence=evidence,
+        mlo_transition_blocked_via_ids=blocked_vias,
+        top_layer="TOP",
+    )
+
+    assert result == {"V-MLO": {}}
+    assert blocked_vias == {"V-MLO"}
+    assert evidence and evidence[0].detail.code == "MLO_TRANSITION_RECIPE_REQUIRED"
+
+
+def _non_top_direct_transition_scenario(
+    *,
+    path_kind: str | None,
+    real_import: bool = False,
+    fresh_policy: bool = False,
+) -> ScenarioSpec:
+    scenario = _direct_scenario(
+        (("C1", 5.0, ("R1", "R2")),),
+        rail_ids=("R1", "R2"),
+    )
+    layers = [
+        StackupLayer(
+            name="TOP",
+            thickness_um=18.0,
+            conductivity_s_m=5.8e7,
+            pwr_nets=["V1"],
+        ),
+        StackupLayer(name="D1", thickness_um=20.0, dk=4.0, df=0.01),
+        StackupLayer(
+            name="PWR_ALT",
+            thickness_um=18.0,
+            conductivity_s_m=5.8e7,
+            pwr_nets=["V2"],
+        ),
+        StackupLayer(
+            name="GND",
+            thickness_um=18.0,
+            conductivity_s_m=5.8e7,
+            pwr_nets=["DGND"],
+        ),
+    ]
+    metadata: dict[str, object] = {}
+    if real_import:
+        metadata["spd_import"] = {"source_sha256": scenario.source.sha256}
+    if fresh_policy:
+        metadata["spd_mlo_transition_policy"] = {
+            "policy_version": "MLO_TRANSITION_RECIPE_GATE_V1",
+            "transition_required": False,
+            "translated_recipe_validated": False,
+            "evidence_codes": [],
+            "source_sha256": scenario.source.sha256,
+        }
+    project = scenario.base_project.model_copy(
+        update={
+            "stackup_layers": layers,
+            "rails": [
+                rail.model_copy(
+                    update={
+                        "pwr_layer": "TOP" if rail.rail_id == "R1" else "PWR_ALT",
+                        "gnd_layer": "GND",
+                    }
+                )
+                for rail in scenario.base_project.rails
+            ],
+            "metadata": metadata,
+        }
+    )
+    decap = scenario.decaps[0].model_copy(
+        update={
+            "eligibility": {
+                rail_id: item.model_copy(
+                    update={
+                        "pwr_layer": "TOP" if rail_id == "R1" else "PWR_ALT",
+                        "gnd_layer": "GND",
+                    }
+                )
+                for rail_id, item in scenario.decaps[0].eligibility.items()
+            }
+        }
+    )
+    assert scenario.connection_analysis is not None
+    connection = scenario.connection_analysis.connections["C1"]
+    landing = connection.power_vias[0]
+    if path_kind is not None:
+        segment = ScenarioViaSegment(
+            via_id=landing.via_id,
+            padstack=landing.padstack,
+            drill_diameter_um=100.0 if path_kind == "microvia" else 300.0,
+            start_layer="TOP",
+            end_layer="PWR_ALT",
+            length_um=20.0,
+            end_x_um=landing.x_um,
+            end_y_um=landing.y_um,
+            padstack_material="COPPER",
+        )
+        landing = landing.model_copy(
+            update={
+                "path_evidence": (
+                    ScenarioViaPathEvidence(
+                        target_layer="PWR_ALT",
+                        target_node_id="TARGET-C1",
+                        target_padstack=landing.padstack,
+                        target_pad_kind="CIRCLE",
+                        target_pad_width_um=300.0,
+                        target_pad_height_um=300.0,
+                        x_um=landing.x_um,
+                        y_um=landing.y_um,
+                        segments=(segment,),
+                    ),
+                )
+            }
+        )
+    connections = dict(scenario.connection_analysis.connections)
+    connections["C1"] = connection.model_copy(update={"power_vias": (landing,)})
+    return ScenarioSpec.model_validate(
+        {
+            **scenario.model_dump(mode="python"),
+            "normalized_project": project.model_dump(mode="python"),
+            "decaps": [decap.model_dump(mode="python")],
+            "connection_analysis": scenario.connection_analysis.model_copy(
+                update={"connections": connections}
+            ).model_dump(mode="python"),
+        }
+    )
+
+
+def test_direct_planner_blocks_observed_microvia_without_projection() -> None:
+    scenario = _non_top_direct_transition_scenario(path_kind="microvia")
+    targets = {("R1", "M1"): 0, ("R2", "M1"): 1}
+
+    with pytest.raises(DistributionError) as caught:
+        compute_distribution_plan(scenario, targets)
+
+    assert caught.value.code == "POWER_PROJECTION_REQUIRED"
+    assert [item.code for item in caught.value.diagnostics] == [
+        "MLO_TRANSITION_RECIPE_REQUIRED"
+    ]
+    assert "build_distribution_power_projection" in str(caught.value)
+
+
+def test_legacy_missing_policy_and_path_requires_source_reimport() -> None:
+    """A pre-v0.22 landing cannot silently become an immutable via column."""
+
+    scenario = _non_top_direct_transition_scenario(
+        path_kind=None,
+        real_import=True,
+    )
+    assert "spd_mlo_transition_policy" not in scenario.base_project.metadata
+    assert scenario.connection_analysis is not None
+    legacy_landing = scenario.connection_analysis.connections["C1"].power_vias[0]
+    assert legacy_landing.path_evidence == ()
+    targets = {("R1", "M1"): 0, ("R2", "M1"): 1}
+
+    rejection = distribution_module._mlo_transition_rejection_for_landing(
+        scenario,
+        legacy_landing,
+        stackup_layers=scenario.base_project.stackup_layers,
+    )
+    assert rejection is not None
+    assert rejection[0] == REIMPORT_SOURCE_FOR_TRANSITION_EVIDENCE_CODE
+    with pytest.raises(DistributionError) as caught:
+        compute_distribution_plan(scenario, targets)
+    assert caught.value.code == "POWER_PROJECTION_REQUIRED"
+    assert [item.code for item in caught.value.diagnostics] == [
+        REIMPORT_SOURCE_FOR_TRANSITION_EVIDENCE_CODE
+    ]
+    plane = SpdPlaneGeometry(
+        layer="PWR_ALT",
+        net="V2",
+        positive_polygons_um=(
+            ((0.0, -5.0), (10.0, -5.0), (10.0, 5.0), (0.0, 5.0)),
+        ),
+        negative_polygons_um=(),
+        primitive_order=(("positive_polygon", 0),),
+    )
+    projection = distribution_module.build_distribution_power_projection(
+        scenario,
+        {},
+        plane_geometries=(plane,),
+        targets=targets,
+    )
+
+    assert projection is not None
+    assert [item.code for item in projection.mlo_transition_diagnostics] == [
+        REIMPORT_SOURCE_FOR_TRANSITION_EVIDENCE_CODE
+    ]
+    assert projection.mlo_transition_diagnostics[0].actual_count == 1
+    plan = compute_distribution_plan(
+        scenario,
+        targets,
+        power_projection=projection,
+    )
+    assert plan.status == DistributionPlanStatus.PARTIAL
+    assert plan.assignment_map == {}
+    assert any(
+        item.code == REIMPORT_SOURCE_FOR_TRANSITION_EVIDENCE_CODE
+        for item in plan.diagnostics
+    )
+
+
+def test_legacy_conventional_path_without_policy_remains_eligible() -> None:
+    """Explicit continuous evidence is sufficient without board-level policy."""
+
+    scenario = _non_top_direct_transition_scenario(
+        path_kind="conventional",
+        real_import=True,
+    )
+    assert "spd_mlo_transition_policy" not in scenario.base_project.metadata
+    assert scenario.connection_analysis is not None
+    landing = scenario.connection_analysis.connections["C1"].power_vias[0]
+    assert landing.path_evidence
+    assert (
+        distribution_module._mlo_transition_rejection_for_landing(
+            scenario,
+            landing,
+            stackup_layers=scenario.base_project.stackup_layers,
+        )
+        is None
+    )
+    targets = {("R1", "M1"): 0, ("R2", "M1"): 1}
+    direct_plan = compute_distribution_plan(scenario, targets)
+    assert direct_plan.status == DistributionPlanStatus.FULL
+    assert direct_plan.assignment_map == {"C1": "R2"}
+    plane = SpdPlaneGeometry(
+        layer="PWR_ALT",
+        net="V2",
+        positive_polygons_um=(
+            ((0.0, -5.0), (10.0, -5.0), (10.0, 5.0), (0.0, 5.0)),
+        ),
+        negative_polygons_um=(),
+        primitive_order=(("positive_polygon", 0),),
+    )
+    projection = distribution_module.build_distribution_power_projection(
+        scenario,
+        {},
+        plane_geometries=(plane,),
+        targets=targets,
+    )
+
+    assert projection is not None
+    assert projection.mlo_transition_diagnostics == ()
+    plan = compute_distribution_plan(
+        scenario,
+        targets,
+        power_projection=projection,
+    )
+    assert plan.status == DistributionPlanStatus.FULL
+    assert plan.assignment_map == {"C1": "R2"}
+
+
+def test_current_negative_policy_does_not_certify_pathless_landing() -> None:
+    """A fresh board-level negative cannot grant per-landing permission."""
+
+    scenario = _non_top_direct_transition_scenario(
+        path_kind=None,
+        real_import=True,
+        fresh_policy=True,
+    )
+    assert scenario.connection_analysis is not None
+    landing = scenario.connection_analysis.connections["C1"].power_vias[0]
+
+    assert (
+        distribution_module._mlo_transition_rejection_for_landing(
+            scenario,
+            landing,
+            stackup_layers=scenario.base_project.stackup_layers,
+        )
+        == (
+            REIMPORT_SOURCE_FOR_TRANSITION_EVIDENCE_CODE,
+            REIMPORT_SOURCE_FOR_TRANSITION_EVIDENCE_MESSAGE,
+        )
+    )
+    targets = {("R1", "M1"): 0, ("R2", "M1"): 1}
+    with pytest.raises(DistributionError) as caught:
+        compute_distribution_plan(scenario, targets)
+    assert caught.value.code == "POWER_PROJECTION_REQUIRED"
+    assert [item.code for item in caught.value.diagnostics] == [
+        REIMPORT_SOURCE_FOR_TRANSITION_EVIDENCE_CODE
+    ]
+
+    plane = SpdPlaneGeometry(
+        layer="PWR_ALT",
+        net="V2",
+        positive_polygons_um=(
+            ((0.0, -5.0), (10.0, -5.0), (10.0, 5.0), (0.0, 5.0)),
+        ),
+        negative_polygons_um=(),
+        primitive_order=(("positive_polygon", 0),),
+    )
+    projection = distribution_module.build_distribution_power_projection(
+        scenario,
+        {},
+        plane_geometries=(plane,),
+        targets=targets,
+    )
+    assert projection is not None
+    assert [item.code for item in projection.mlo_transition_diagnostics] == [
+        REIMPORT_SOURCE_FOR_TRANSITION_EVIDENCE_CODE
+    ]
+    plan = compute_distribution_plan(
+        scenario,
+        targets,
+        power_projection=projection,
+    )
+    assert plan.status == DistributionPlanStatus.PARTIAL
+    assert plan.assignment_map == {}
+
+
+@pytest.mark.parametrize(
+    "raw_policy",
+    (
+        "false",
+        {
+            "policy_version": "MLO_TRANSITION_RECIPE_GATE_V1",
+            "transition_required": "false",
+            "translated_recipe_validated": "true",
+        },
+        {
+            "policy_version": "MLO_TRANSITION_RECIPE_GATE_V999",
+            "transition_required": True,
+            "translated_recipe_validated": True,
+        },
+    ),
+)
+def test_mlo_policy_metadata_is_fail_closed_when_malformed(raw_policy: object) -> None:
+    project = _project(("R1",)).model_copy(
+        update={"metadata": {"spd_mlo_transition_policy": raw_policy}}
+    )
+    scenario = SimpleNamespace(
+        base_project=project,
+        source=SimpleNamespace(sha256=sha256(b"source").hexdigest()),
+    )
+    landing = ScenarioViaLanding(
+        via_id="V-MLO",
+        net="V1",
+        endpoint_node_id="N1",
+        padstack="P",
+        x_um=5.0,
+        y_um=5.0,
+    )
+
+    assert distribution_module._mlo_transition_required_for_landing(
+        scenario,
+        landing,
+        stackup_layers=project.stackup_layers,
+    )
 
 
 def test_batch_via_eligibility_accepts_target_copper_below_existing_via_span() -> None:
@@ -1288,8 +2407,8 @@ def test_batch_via_eligibility_keeps_all_ground_pairs_for_one_power_plane() -> N
     assert result["V1"]["R2"].gnd_layer == "GND2"
 
 
-def test_batch_via_eligibility_persists_first_stack_order_target_layer() -> None:
-    """Several valid target planes choose one repeatable, recorded layer."""
+def test_batch_via_eligibility_keeps_legacy_off_order_and_protected_mount_side() -> None:
+    """OFF keeps v0.21 ordering; ON selects the nearest layer from the mount side."""
 
     def geometry(layer: str) -> SpdPlaneGeometry:
         return SpdPlaneGeometry(
@@ -1329,6 +2448,47 @@ def test_batch_via_eligibility_persists_first_stack_order_target_layer() -> None
 
     assert result["V1"]["R1"].pwr_layer == "PWR"
     assert "TOP" in str(result["V1"]["R1"].reason)
+
+    bottom = distribution_module._distribution_batch_via_eligibility(
+        (geometry("PWR_ALT"), geometry("TOP")),
+        (landing,),
+        choices,
+        pwr_layer_order={"top": 0, "pwr_alt": 3},
+        mount_side_by_via={"v1": "BOTTOM"},
+    )
+
+    assert bottom["V1"]["R1"].destination_pwr_layer is None
+    assert "TOP" in str(bottom["V1"]["R1"].reason)
+
+    asset = RoutingObstacleAsset(
+        source_sha256="a" * 64,
+        stackup_fingerprint="b" * 64,
+        conductor_layers=("TOP", "PWR_ALT", "GND"),
+        segments=(),
+        layer_completeness=tuple(
+            RoutingLayerCompleteness(layer=name)
+            for name in ("TOP", "PWR_ALT", "GND")
+        ),
+        via_profiles=(
+            PlannedViaProfile(
+                profile_id="VT1",
+                radius_um_by_layer=(("TOP", 1.0), ("PWR_ALT", 1.0)),
+                fallback_barrel_radius_um=1.0,
+            ),
+        ),
+    )
+    protected_bottom = distribution_module._distribution_batch_via_eligibility(
+        (geometry("PWR_ALT"), geometry("TOP")),
+        (landing,),
+        choices,
+        pwr_layer_order={"top": 0, "pwr_alt": 3},
+        routing_asset=asset,
+        routing_policy=SignalTraceAvoidancePolicy.fixed(0.0),
+        mount_side_by_via={"v1": "BOTTOM"},
+    )
+
+    assert protected_bottom["V1"]["R1"].destination_pwr_layer == "PWR_ALT"
+    assert "PWR_ALT" in str(protected_bottom["V1"]["R1"].reason)
 
 
 def test_timeout_incumbent_requires_feasibility_and_full_receiver_demand() -> None:
@@ -1473,6 +2633,7 @@ def test_distribution_projection_uses_unselected_internal_power_plane_for_direct
     projected = projection.projected_decaps[0].eligibility["R2"]
     assert projected.pwr_layer == "TOP"
     assert projected.gnd_layer == "GND1"
+    assert projected.destination_pwr_layer is None
     assert "PWR_ALT" in str(projected.reason)
     plan = compute_distribution_plan(
         scenario,
@@ -2140,6 +3301,7 @@ def test_fixed_separator_distance_fallback_still_honors_mode(
         scenario,
         {("R1", "M1"): 1, ("R2", "M1"): 2},
         mode,
+        optimization_policy="MIN_GAPS",
     )
 
     assert distance_call_count == 2

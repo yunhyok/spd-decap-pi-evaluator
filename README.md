@@ -1,8 +1,8 @@
-# SPD Decap PI Evaluator v0.21.0
+# SPD Decap PI Evaluator v0.22.0
 
-> **v0.21.0 reconnects De-cap Distribution with Evaluation Analysis without weakening moved-assignment validation.** An unchanged DIRECT capacitor may use its parser-proven source rail template when an alternate-assignment eligibility record is absent; a moved capacitor still requires exact destination eligibility and remains fail-closed. Distribution results now report `Assignment Failed`, and the main board exposes a read-only Source SPD / Current comparison. The title bar identifies the application as **SPD Decap PI Evaluator v0.21.0**.
+> **v0.22.0 expands and hardens De-cap Distribution.** It retains all 21 physical PWR conductor layers, defaults to the disclosed `BALANCED_AUTO` gap-distance objective, exports Candidate Audit evidence, and blocks non-TOP MLO transitions that lack an engineered translated recipe. Optional immutable signal-Trace avoidance remains OFF by default; OFF preserves only the v0.21 signal-routing-filter behavior, not every v0.21 Distribution policy. The title bar identifies the application as **SPD Decap PI Evaluator v0.22.0**.
 
-> 프로그램: **SPD Decap PI Evaluator v0.21.0**
+> 프로그램: **SPD Decap PI Evaluator v0.22.0**
 > 저장소: 기존 PI Calculator와 분리된 독립 프로그램
 > 해석 경계: 선택한 PWR rail의 pre-design `Zii`; 최종 PowerSI/SIwave 검증을 대체하지 않음
 
@@ -10,6 +10,32 @@
 모델, enabled/disabled 상태를 바꾸면서 PI Evaluation 결과를 비교하는 Windows
 desktop 프로그램이다. Stackup, MLO 크기 또는 plane을 새로 작성하는 기능과
 Optimization Mode는 포함하지 않는다.
+
+## v0.22.0 Distribution policy and optional signal-routing protection
+
+- Distribution retains all 21 source-classified physical PWR layers for exact immutable-landing eligibility instead of restricting candidates to an Evaluation-selected subset.
+- The new default `BALANCED_AUTO` priority is maximum fulfillment, minimum active relabels, then signed total bump distance plus one board-diagonal penalty per gap. `BALANCED_CUSTOM` accepts an explicit bounded penalty; `MIN_GAPS` preserves the legacy strict gap-first ordering.
+- Result workbooks record the selected optimization policy and effective gap penalty. Candidate Audit explains atomic shared-component eligibility, bounded exact-count evidence, and globally eligible candidates that were not selected.
+- A structural MLO transition gate is independent of the experimental signal-routing checkbox: a non-TOP move needing a translated via/trace recipe remains blocked when protection is OFF unless that recipe is validated.
+
+- Raw SPD import now reads logical `Trace` records, including inline Width, `+ Width` continuations, `Thermal` records, diagonal/zero-length segments, endpoint coordinates and conductor layers.
+- A deterministic SHA-bound routing attachment is stored in `.spdpi`; saved scenarios can reproduce the same routing decision without reopening the raw SPD. Attachment content, source SHA, stack-up fingerprint, schema, scope and planned-via profiles are validated on save/load.
+- `Experimental: protect immutable signal routing clearances` is OFF by default. When ON, `Trace-to-via clearance` is a finite nonnegative user value in µm. The documented `C = 2w` rule remains an offline research mode and is not a GUI default.
+- Turning this checkbox OFF disables only the experimental signal-Trace collision filter. It does not disable the balanced objective, 21-layer eligibility, Candidate Audit, or the structural MLO transition gate.
+- The filter runs after exact destination-plane containment and before component eligibility/MILP label creation. Tangency is blocked, and evidence gaps produce `UNKNOWN`, which is also rejected.
+- The first implementation scope is `SIGNAL_NET_ONLY`. Width-resolved SIGNAL-role Trace objects use the disclosed `WIDTHED_SIGNAL_TRACE_PROXY_V1` research classifier; routed PWR/GND copper, signal vias, pins, pads and fanout pads are not yet certified. The UI, diagnostics and workbook metadata disclose this limitation.
+- For a terminal with multiple retained PWR via columns, protection ON requires all retained columns to be safe. Protection OFF retains the historical one-root component rule.
+- Distribution workbook format 4 round-trips the protection option, fixed clearance, policy version and routing asset hashes. Older workbooks reopen with protection OFF and an explicit warning.
+- The supplied `PC_2116_S5I5600X08_1P_260606_final_1.spd` is supported as an offline parser/collision research corpus. Its existing scenario import limitation remains separate; it is not claimed as a GUI Import→Distribution golden file.
+
+Offline research scan example:
+
+```powershell
+python scripts\analyze_signal_routing_avoidance.py `
+  D:\Downloads\PC_2116_S5I5600X08_1P_260606_final_1.spd
+```
+
+See [the research and implementation directive](docs/DECAP_DISTRIBUTION_SIGNAL_TRACE_AVOIDANCE_RESEARCH_2026-08-09.md) for formulas, evidence policy, real-SPD measurements and remaining sign-off work.
 
 ## v0.21.0 Evaluation / Distribution integration
 
@@ -88,15 +114,16 @@ Optimization Mode는 포함하지 않는다.
 - Evaluation PWR NET 선택 목록에 도면 색상과 동기화된 color box를 표시하고 우클릭으로 색상 변경
 - 비교 표에서 decap 수, 1 MHz/10 MHz/100 MHz 임피던스, target violation의 Original/Tuned 변화 표시
 - De-cap Distribution 표에서 PWR NET·Component별 현재 수량과 목표 수량을 지정하고, 수치 공급량을 사전 검수한 뒤 실제 PWR plane·bump·shared-pad 조건을 만족하는 최대 수량을 자동 재배정
-- Distribution은 Evaluation에 선택된 단일 pair와 무관하게 source SPD에 보존된 모든 target PWR layer의 ordered copper를 동일 PWR VIA landing XY에서 검사한다. GND layer는 destination gate가 아니며, 판정은 기존 VIA 깊이 증명이 아닌 filled-Cu microvia-stack retarget/rebuild 계획 가정임을 UI에 명시한다.
+- Distribution은 Evaluation에 선택된 단일 pair와 무관하게 source SPD에 보존된 모든 target PWR layer를 검사하되, source-proven 연속 수직 VIA만 동일 landing XY의 filled-Cu retarget/rebuild 대상으로 취급한다. MLO 전이 증거가 있으면 `MLO_TRANSITION_RECIPE_REQUIRED`로 차단하고, fresh/legacy 여부와 board-level policy 값에 관계없이 landing path 증거가 없으면 `REIMPORT_SOURCE_FOR_TRANSITION_EVIDENCE`로 non-TOP 후보를 차단한다. GND layer는 destination gate가 아니다.
 - 현재치와 목표치가 같은 PWR NET도 `Tolerance (%)`가 양수이면 최종 수량을 유지한 채 `floor(현재 수량 × tolerance / 100)`개까지 주고받는 교환 경로로 참여; 0%이면 기존처럼 연산에서 제외
 - Distribution의 Target/Tolerance 셀은 캐시된 수량으로 즉시 검증하며, `Ctrl`/`Shift`로 같은 종류의 셀을 여러 개 선택한 뒤 숫자를 한 번 입력해 동일 값으로 일괄 변경
 - Distribution 후보를 수신 PWR NET bump에서 가까운 순서 또는 먼 순서로 선택하고, 물리 제약으로 목표에 미달해도 가능한 변경과 `Assignment Failed`·`Isolation Gaps`·shortfall을 표시
+- Distribution 최적화는 기본 `BALANCED_AUTO`, 사용자 penalty의 `BALANCED_CUSTOM`, 기존 strict gap-first `MIN_GAPS`를 제공하며 선택 policy와 실제 penalty를 Preview와 Excel metadata에 기록
 - shared-pad 대형 문제에서 수량·이동 assignment를 먼저 고정한 뒤 separator pad를 재최적화하고, 원자적 topology 검증을 통과한 불필요 gap을 복원하여 서로 다른 NET 경계에 실제로 필요한 isolation gap만 남김
 - 이전 Distribution Excel의 절대 `Target`·`Tolerance (%)`를 `Import Targets...`로 재사용하며, `Present`는 현재 SPD에서 즉시 다시 계산하고 기록되지 않은 후보 순서는 사용자가 명시적으로 선택
 - Distribution 표를 더블클릭하면 비모달 분리창을 열고, 계산 전후 Target XLSX를 내보내거나 엄격히 검증해 다시 가져오며, 메인 도면과 분리창에서 `Current / distributed`와 `Source SPD (read-only)` assignment/isolation-gap 상태를 번갈아 확인
 - Distribution 결과의 전체 Decap을 `Component`, `REFDES`, `Before NET`, `After NET`, `X`, `Y` 열 CSV 또는 Excel로 내보내며, 희생 cell은 `UNUSED (ISOLATION GAP)`으로 기록하고 Excel의 두 번째 sheet에는 계산 당시 `PWR NET Distribution Targets` 표와 input inventory reconciliation을 보존
-- 새 Distribution Excel은 source SPD SHA-256, design fingerprint, revision, 후보 순서와 프로그램 버전을 두 번째 sheet에 함께 기록하며, 변경 대상 rail의 기존 unresolved connection은 해석 차단 경고로 별도 표시
+- 새 Distribution Excel은 source SPD SHA-256, design fingerprint, revision, 후보 순서, optimization policy/effective gap penalty와 프로그램 버전을 두 번째 sheet에 함께 기록하며, 변경 대상 rail의 기존 unresolved connection은 해석 차단 경고로 별도 표시
 - 원본 source TOP copper 경로가 없는 구형 V2 scenario에서는 Distribution을 fail-closed로 차단하고 원본 SPD 재열기를 안내하며, 변경된 배치는 별도 `.spdpi`로 저장
 - De-cap Distribution의 수량·PWR plane/VIA·shared-pad/dummy·isolation-gap·부분 충족·Apply·입출력 규칙은 [`docs/DECAP_DISTRIBUTION_RULES.md`](docs/DECAP_DISTRIBUTION_RULES.md)에 명시하고, 지정된 실파일 검증 결과는 [`docs/DECAP_DISTRIBUTION_VALIDATION_2026-08-06.md`](docs/DECAP_DISTRIBUTION_VALIDATION_2026-08-06.md)에 기록
 - Selection, Evaluation, AI Assist, De-cap Distribution의 내부 section 높이를 선명한 가로 splitter bar로 조절
@@ -138,7 +165,7 @@ powershell.exe -ExecutionPolicy Bypass -NoProfile -File .\scripts\build_spd_deca
 산출물:
 
 - `dist\SPDDecapPIEvaluator\SPDDecapPIEvaluator.exe`
-- `installer-output\SPDDecapPIEvaluatorSetup-0.21.0.exe`
-- `installer-output\SPDDecapPIEvaluatorSetup-0.21.0.exe.sha256`
+- `installer-output\SPDDecapPIEvaluatorSetup-0.22.0.exe`
+- `installer-output\SPDDecapPIEvaluatorSetup-0.22.0.exe.sha256`
 
 프로그램명과 버전은 title bar와 installer metadata에 함께 표시된다.

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import csv
+from hashlib import sha256
 import os
 from dataclasses import replace
 from pathlib import Path
@@ -19,9 +20,11 @@ from PySide6.QtWidgets import (
     QSplitter,
 )
 from openpyxl import load_workbook
+import pytest
 
 from test_spd_decap_distribution import (
     _direct_scenario,
+    _scenario_with_routing_asset,
     _shared_chain_scenario,
     _with_initial_rails,
 )
@@ -38,6 +41,7 @@ from spd_decap_pi.distribution_workbook import (
 )
 from spd_decap_pi.evaluation import preflight_evaluation_connectivity
 from spd_decap_pi.gui.main_window import MainWindow, _job_compute_distribution
+from spd_decap_pi.routing_obstacles import SignalTraceAvoidancePolicy
 from spd_decap_pi.scenario import (
     DecapConnectionKind,
     DecapPadState,
@@ -189,6 +193,11 @@ def test_distribution_tab_matches_the_target_matrix_and_resizable_sections() -> 
         assert "Unfulfilled receiver demand" in assignment_failed.toolTip()
         assert window.distribution_distance_combo.itemData(0) == "NEAREST"
         assert window.distribution_distance_combo.itemData(1) == "FARTHEST"
+        assert not window.distribution_protect_signal_routing_checkbox.isChecked()
+        assert not window.distribution_trace_clearance_edit.isEnabled()
+        scope_note = window.findChild(QLabel, "distributionSignalRoutingScopeNote")
+        assert scope_note is not None
+        assert "SIGNAL Trace" in scope_note.text()
         assert not window.calculate_distribution_button.isEnabled()
         assert window.distribution_validation_label.text() == (
             "M1: Donor 0 | Receiver 0 | Balance +0"
@@ -249,6 +258,28 @@ def test_distribution_table_double_click_opens_detached_window_and_exports_templ
             current_design_fingerprint=scenario.design_fingerprint,
         )
         assert imported.targets == window._distribution_targets
+
+        # Switching away from a custom policy clears stale input and the
+        # template must omit the penalty so it round-trips as MIN_GAPS.
+        custom_index = window.distribution_optimization_combo.findData(
+            "BALANCED_CUSTOM"
+        )
+        min_gaps_index = window.distribution_optimization_combo.findData("MIN_GAPS")
+        window.distribution_optimization_combo.setCurrentIndex(custom_index)
+        window.distribution_gap_penalty_edit.setText("1234.5")
+        window.distribution_optimization_combo.setCurrentIndex(min_gaps_index)
+        assert window.distribution_gap_penalty_edit.text() == ""
+        dialog.export_template_button.click()
+        imported_min_gaps = load_distribution_targets(
+            path,
+            rail_ids=("R1", "R2"),
+            model_ids=("M1",),
+            current_present=dict(window._distribution_present_counts),
+            current_source_sha256=scenario.source.sha256,
+            current_design_fingerprint=scenario.design_fingerprint,
+        )
+        assert imported_min_gaps.optimization_policy == "MIN_GAPS"
+        assert imported_min_gaps.effective_gap_penalty_um is None
     finally:
         window._dirty = False
         window.close()
@@ -413,6 +444,120 @@ def test_distribution_worker_result_is_discarded_when_targets_change(
 
         assert accepted == []
         assert "Discarded stale De-cap Distribution preview" == window.status_text.text()
+    finally:
+        window._dirty = False
+        window.close()
+        application.processEvents()
+
+
+def test_routing_option_and_clearance_are_request_inputs_and_fail_closed_without_asset(
+    monkeypatch,
+) -> None:
+    application = _application()
+    window = _window_with_scenario(
+        _direct_scenario(
+            (("C1", 0.0, ("R1", "R2")),), rail_ids=("R1", "R2")
+        )
+    )
+    try:
+        baseline = window._distribution_request_fingerprint()
+        legacy_payload = repr(
+            (
+                window._scenario.design_fingerprint,
+                window._scenario.revision,
+                tuple(
+                    sorted(
+                        (
+                            str(rail_id).casefold(),
+                            str(model_id).casefold(),
+                            int(value),
+                        )
+                        for (rail_id, model_id), value in (
+                            window._distribution_targets.items()
+                        )
+                    )
+                ),
+                tuple(
+                    sorted(
+                        (
+                            str(rail_id).casefold(),
+                            str(model_id).casefold(),
+                            float(value),
+                        )
+                        for (rail_id, model_id), value in (
+                            window._distribution_tolerances.items()
+                        )
+                    )
+                    ),
+                    window.distribution_distance_combo.currentData(),
+                    window.distribution_optimization_combo.currentData(),
+                    window.distribution_gap_penalty_edit.text().strip(),
+                )
+        ).encode("utf-8")
+        assert baseline == sha256(legacy_payload).hexdigest()
+        assert window._distribution_workbook_contract() == (3, {})
+        window.distribution_protect_signal_routing_checkbox.setChecked(True)
+        enabled_without_clearance = window._distribution_request_fingerprint()
+        assert enabled_without_clearance != baseline
+        assert window.distribution_trace_clearance_edit.isEnabled()
+        assert "Enter Trace-to-via clearance" in window.distribution_summary.toPlainText()
+
+        window.distribution_trace_clearance_edit.setText("12.5")
+        with_clearance = window._distribution_request_fingerprint()
+        assert with_clearance != enabled_without_clearance
+        original_policy = window._distribution_routing_policy
+        monkeypatch.setattr(
+            window,
+            "_distribution_routing_policy",
+            lambda: SignalTraceAvoidancePolicy(
+                enabled=True,
+                clearance_um=12.5,
+                policy_version="SIGNAL_NET_ONLY_V_NEXT",
+            ),
+        )
+        assert window._distribution_request_fingerprint() != with_clearance
+        monkeypatch.setattr(window, "_distribution_routing_policy", original_policy)
+        assert not window.calculate_distribution_button.isEnabled()
+        assert "no immutable signal-routing asset" in (
+            window.distribution_summary.toPlainText()
+        )
+
+        window.distribution_protect_signal_routing_checkbox.setChecked(False)
+        assert window._distribution_routing_policy().enabled is False
+        assert not window.distribution_trace_clearance_edit.isEnabled()
+    finally:
+        window._dirty = False
+        window.close()
+        application.processEvents()
+
+
+def test_routing_asset_identity_affects_requests_only_when_protection_is_on() -> None:
+    application = _application()
+    scenario, _attachments, _plane = _scenario_with_routing_asset(trace_y_um=0.0)
+    reference = scenario.routing_obstacle_asset
+    assert reference is not None
+    drifted = scenario.model_copy(
+        update={
+            "routing_obstacle_asset": reference.model_copy(
+                update={"content_sha256": "0" * 64}
+            )
+        }
+    )
+    assert drifted.design_fingerprint == scenario.design_fingerprint
+    window = _window_with_scenario(scenario)
+    try:
+        off_original = window._distribution_request_fingerprint()
+        window._scenario = drifted
+        off_drifted = window._distribution_request_fingerprint()
+        assert off_drifted == off_original
+
+        window._scenario = scenario
+        window.distribution_protect_signal_routing_checkbox.setChecked(True)
+        window.distribution_trace_clearance_edit.setText("0")
+        on_original = window._distribution_request_fingerprint()
+        window._scenario = drifted
+        on_drifted = window._distribution_request_fingerprint()
+        assert on_drifted != on_original
     finally:
         window._dirty = False
         window.close()
@@ -1457,9 +1602,14 @@ def test_full_preview_exports_saves_and_applies_one_atomic_revision(
                     break
                 metadata[str(key)] = targets.cell(row_index, 2).value
             assert metadata["Format Version"] == 3
+            assert "Signal Routing Protection" not in metadata
             assert metadata["Source SPD SHA-256"] == scenario.source.sha256
             assert metadata["Input Design Fingerprint"] == scenario.design_fingerprint
             assert metadata["Distance Mode"] == "NEAREST"
+            assert metadata["Optimization Policy"] == "BALANCED_AUTO"
+            assert metadata["Effective Gap Penalty (um)"] == pytest.approx(
+                plan.effective_gap_penalty_um
+            )
         finally:
             workbook.close()
 

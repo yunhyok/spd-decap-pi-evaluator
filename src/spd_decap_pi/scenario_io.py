@@ -19,7 +19,9 @@ from .scenario import (
     SCENARIO_SCHEMA_VERSION,
     ScenarioSpec,
     _ScenarioValidationMemo,
+    _without_absent_destination_pwr_layer,
 )
+from .routing_obstacles import decode_routing_obstacle_asset
 
 
 SCENARIO_FORMAT: Final = "spd-decap-pi-scenario"
@@ -179,6 +181,40 @@ def _write_member(archive: ZipFile, name: str, content: bytes) -> None:
     archive.writestr(_zip_info(name), content)
 
 
+def _validate_routing_attachment_binding(
+    scenario: ScenarioSpec, attachments: Mapping[str, bytes]
+) -> None:
+    reference = scenario.routing_obstacle_asset
+    if reference is None:
+        return
+    payload_by_key = {name.casefold(): payload for name, payload in attachments.items()}
+    payload = payload_by_key.get(reference.attachment_name.casefold())
+    if payload is None:
+        raise ScenarioFormatError("routing obstacle attachment is missing")
+    try:
+        asset = decode_routing_obstacle_asset(
+            payload,
+            expected_source_sha256=reference.source_sha256,
+            expected_stackup_fingerprint=reference.stackup_fingerprint,
+        )
+    except ValueError as exc:
+        raise ScenarioFormatError(f"routing obstacle attachment is invalid: {exc}") from exc
+    if asset.content_sha256 != reference.content_sha256:
+        raise ScenarioFormatError("routing obstacle content hash disagrees with scenario")
+    if asset.schema_version != reference.schema_version:
+        raise ScenarioFormatError("routing obstacle schema disagrees with scenario")
+    if asset.scope.value != reference.scope:
+        raise ScenarioFormatError("routing obstacle scope disagrees with scenario")
+    if asset.compiler_policy != reference.compiler_policy:
+        raise ScenarioFormatError("routing obstacle compiler policy disagrees with scenario")
+    if asset.production_ready != reference.production_ready:
+        raise ScenarioFormatError("routing obstacle readiness disagrees with scenario")
+    if asset.scope_limitation != reference.scope_limitation:
+        raise ScenarioFormatError("routing obstacle scope limitation disagrees with scenario")
+    if tuple(item.profile_id for item in asset.via_profiles) != reference.via_profile_ids:
+        raise ScenarioFormatError("routing obstacle via profiles disagree with scenario")
+
+
 def save_scenario(
     scenario: ScenarioSpec,
     path: str | os.PathLike[str],
@@ -231,6 +267,8 @@ def save_scenario(
     except ValidationError as exc:
         raise ScenarioFormatError(f"scenario data failed validation: {exc}") from exc
 
+    _validate_routing_attachment_binding(persisted, attachment_bytes)
+
     project_attachment_names = {
         str(name).casefold()
         for name in persisted.normalized_project.get("attachment_names", [])
@@ -244,7 +282,15 @@ def save_scenario(
             f"{sorted(missing_project_assets)}"
         )
 
-    scenario_bytes = _canonical_json(persisted.model_dump(mode="json"))
+    scenario_payload = _without_absent_destination_pwr_layer(
+        persisted.model_dump(mode="json")
+    )
+    # Schema 0.1 predates the optional routing evidence reference.  Omitting a
+    # null reference keeps a legacy bundle that was merely opened and saved
+    # readable by v0.21; a non-null research asset remains intentionally new.
+    if scenario_payload.get("routing_obstacle_asset") is None:
+        scenario_payload.pop("routing_obstacle_asset", None)
+    scenario_bytes = _canonical_json(scenario_payload)
     if len(scenario_bytes) > MAX_SCENARIO_MEMBER_BYTES:
         raise ScenarioFormatError("scenario.json exceeds size limit")
     entries = [
@@ -535,6 +581,7 @@ def load_scenario_bundle(path: str | os.PathLike[str]) -> ScenarioBundle:
                 raise ScenarioFormatError(
                     "scenario attachment hashes do not match manifest attachments"
                 )
+            _validate_routing_attachment_binding(scenario, attachments)
             expected_fingerprint = _manifest_hash(
                 manifest.get("design_fingerprint"), label="design fingerprint"
             )

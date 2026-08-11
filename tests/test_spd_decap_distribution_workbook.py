@@ -129,6 +129,38 @@ def test_current_export_keeps_two_sheets_a1_matrix_and_round_trips_metadata(
     assert imported.source_sha256 == source_sha
 
 
+def test_format3_without_source_keeps_both_legacy_warnings(tmp_path: Path) -> None:
+    path = tmp_path / "legacy-no-source.xlsx"
+    write_distribution_workbook(
+        path,
+        (),
+        ("PWR NET", "M1\nTarget"),
+        (("V1 (R1)", 1),),
+        metadata={"Format Version": 3},
+    )
+
+    imported = load_distribution_targets(
+        path,
+        rail_ids=("R1",),
+        model_ids=("M1",),
+        current_present={("R1", "M1"): 1},
+    )
+
+    assert any("restored OFF" in item for item in imported.warnings)
+    assert any("source identity was not recorded" in item for item in imported.warnings)
+
+
+def test_writer_rejects_format4_without_routing_mode_metadata(tmp_path: Path) -> None:
+    with pytest.raises(ValueError, match="Signal Routing Protection"):
+        write_distribution_workbook(
+            tmp_path / "invalid-v4.xlsx",
+            (),
+            ("PWR NET", "M1\nTarget"),
+            (("V1 (R1)", 1),),
+            metadata={"Format Version": 4},
+        )
+
+
 @pytest.mark.parametrize("result_header", ("Actual Changed", "Assignment Failed"))
 def test_import_ignores_legacy_and_current_assignment_result_columns(
     tmp_path: Path,
@@ -378,4 +410,104 @@ def test_metadata_source_mismatch_and_unknown_distance_fail_closed(
             model_ids=("M1",),
             current_present={("R1", "M1"): 3},
             current_source_sha256="b" * 64,
+        )
+
+
+def test_format4_round_trips_signal_routing_policy_and_asset(tmp_path: Path) -> None:
+    path = tmp_path / "protected.xlsx"
+    asset_sha = "a" * 64
+    content_sha = "b" * 64
+    write_distribution_workbook(
+        path,
+        (),
+        ("PWR NET", "M1\nPresent", "M1\nTarget", "M1\nTolerance (%)"),
+        (("V1 (R1)", 1, 0, 0.0), ("V2 (R2)", 0, 1, 0.0)),
+        metadata={
+            "Format Version": 4,
+            "Signal Routing Protection": "ON",
+            "Routing Protection Scope": "SIGNAL_NET_ONLY",
+            "Routing Policy Version": "SIGNAL_NET_ONLY_RESEARCH_V1",
+            "Routing Clearance Mode": "FIXED_UM",
+            "Trace-to-via Clearance (um)": 12.5,
+            "Routing Asset SHA-256": asset_sha,
+            "Routing Asset Content SHA-256": content_sha,
+        },
+    )
+
+    imported = load_distribution_targets(
+        path,
+        rail_ids=("R1", "R2"),
+        model_ids=("M1",),
+        current_present={("R1", "M1"): 1, ("R2", "M1"): 0},
+        current_routing_asset_sha256=asset_sha,
+        current_routing_asset_content_sha256=content_sha,
+    )
+
+    assert imported.format_version == 4
+    assert imported.routing_protection_enabled is True
+    assert imported.routing_scope == "SIGNAL_NET_ONLY"
+    assert imported.routing_clearance_um == 12.5
+    assert imported.routing_asset_sha256 == asset_sha
+    assert imported.routing_asset_content_sha256 == content_sha
+
+
+def test_format4_protected_workbook_fails_closed_on_asset_mismatch(
+    tmp_path: Path,
+) -> None:
+    path = tmp_path / "protected-mismatch.xlsx"
+    write_distribution_workbook(
+        path,
+        (),
+        ("PWR NET", "M1\nTarget"),
+        (("V1 (R1)", 1),),
+        metadata={
+            "Format Version": 4,
+            "Signal Routing Protection": "ON",
+            "Routing Protection Scope": "SIGNAL_NET_ONLY",
+            "Routing Policy Version": "SIGNAL_NET_ONLY_RESEARCH_V1",
+            "Routing Clearance Mode": "FIXED_UM",
+            "Trace-to-via Clearance (um)": 0.0,
+            "Routing Asset SHA-256": "a" * 64,
+            "Routing Asset Content SHA-256": "b" * 64,
+        },
+    )
+
+    with pytest.raises(DistributionWorkbookError, match="routing asset differs"):
+        load_distribution_targets(
+            path,
+            rail_ids=("R1",),
+            model_ids=("M1",),
+            current_present={("R1", "M1"): 1},
+            current_routing_asset_sha256="c" * 64,
+            current_routing_asset_content_sha256="b" * 64,
+        )
+
+
+def test_format4_protected_workbook_rejects_unknown_policy_version(
+    tmp_path: Path,
+) -> None:
+    path = tmp_path / "protected-policy-mismatch.xlsx"
+    write_distribution_workbook(
+        path,
+        (),
+        ("PWR NET", "M1\nTarget"),
+        (("V1 (R1)", 1),),
+        metadata={
+            "Format Version": 4,
+            "Signal Routing Protection": "ON",
+            "Routing Protection Scope": "SIGNAL_NET_ONLY",
+            "Routing Policy Version": "SIGNAL_NET_ONLY_V999",
+            "Routing Clearance Mode": "FIXED_UM",
+            "Trace-to-via Clearance (um)": 0.0,
+            "Routing Asset SHA-256": "a" * 64,
+            "Routing Asset Content SHA-256": "b" * 64,
+        },
+    )
+
+    with pytest.raises(DistributionWorkbookError, match="unsupported.*Policy Version"):
+        load_distribution_targets(
+            path,
+            rail_ids=("R1",),
+            model_ids=("M1",),
+            current_present={("R1", "M1"): 1},
         )

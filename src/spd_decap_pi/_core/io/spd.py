@@ -39,6 +39,12 @@ from .shared_pad import (
     ViaTopEndpoint,
     extract_shared_pad_connectivity,
 )
+from .spd_routing import (
+    SpdRoutingExtraction,
+    extract_spd_routing_obstacles,
+    merge_spd_routing_net_roles,
+    parse_spd_routing_net_roles,
+)
 
 
 class SpdImportError(ValueError):
@@ -308,6 +314,7 @@ class SpdAnalysis:
     plane_geometries: tuple[SpdPlaneGeometry, ...] = ()
     decap_connections: tuple[SpdDecapConnection, ...] = ()
     shared_pad_clusters: tuple[SpdSharedPadCluster, ...] = ()
+    routing_extraction: SpdRoutingExtraction | None = None
 
     @property
     def partial_models(self) -> dict[str, PassiveSubcircuitModel]:
@@ -430,6 +437,13 @@ _LENGTH_RE = re.compile(
     rb"\s*(mil|mm|um|u|m)(?![A-Za-z])",
     re.IGNORECASE,
 )
+_LENGTH_SCALE_BY_UNIT = {
+    b"m": 1.0e6,
+    b"mm": 1.0e3,
+    b"u": 1.0,
+    b"um": 1.0,
+    b"mil": 25.4,
+}
 _FLOAT_RE = re.compile(
     rb"[+-]?(?:(?:\d+(?:\.\d*)?)|(?:\.\d+))(?:[eE][+-]?\d+)?"
 )
@@ -574,9 +588,22 @@ def _length_um(token: bytes | str) -> float:
     match = _LENGTH_RE.fullmatch(raw.strip())
     if match is None:
         raise ValueError(f"invalid SPD length {_decode(raw)!r}")
+    return _length_match_um(match)
+
+
+def _length_match_um(match: re.Match[bytes]) -> float:
+    """Convert an already matched length token without a second regex pass.
+
+    Shape and padstack records contain millions of length tokens.  The old
+    ``_lengths`` implementation called ``_length_um`` for each regex match,
+    which immediately ran ``fullmatch`` again over the same bytes.  Keeping
+    this helper separate preserves the strict validation used by
+    ``_length_um`` while letting bulk parsing reuse the original match.
+    """
+
     value = float(match.group(1))
     unit = match.group(2).lower()
-    scale = {b"m": 1.0e6, b"mm": 1.0e3, b"u": 1.0, b"um": 1.0, b"mil": 25.4}[unit]
+    scale = _LENGTH_SCALE_BY_UNIT[unit]
     result = value * scale
     if not isfinite(result):
         raise ValueError("SPD length is not finite")
@@ -584,7 +611,7 @@ def _length_um(token: bytes | str) -> float:
 
 
 def _lengths(raw: bytes) -> list[float]:
-    return [_length_um(match.group(0)) for match in _LENGTH_RE.finditer(raw)]
+    return [_length_match_um(match) for match in _LENGTH_RE.finditer(raw)]
 
 
 def _attribute(raw: bytes, name: bytes) -> bytes | None:
@@ -3357,6 +3384,7 @@ def analyze_spd(
 
             layer_marker = data.find(b"* Layer description lines")
             node_marker = data.find(b"* Node description lines")
+            trace_marker = data.find(b"* Trace description lines")
             via_marker = data.find(b"* Via description lines")
             pad_marker = data.find(b"* PadStack collection description lines")
             material_marker = data.find(b"* Material description lines")
@@ -3608,9 +3636,87 @@ def analyze_spd(
                 include_unselected_caps=scope == "decap_scenario",
             )
 
+            routing_extraction: SpdRoutingExtraction | None = None
+            if (
+                scope == "decap_scenario"
+                and trace_marker >= 0
+                and via_marker > trace_marker
+            ):
+                reporter.report(54, "Compiling immutable signal-routing evidence")
+                routing_roles = merge_spd_routing_net_roles(
+                    parse_spd_routing_net_roles(data),
+                    power_nets=(
+                        *selected_power,
+                        *usable_power,
+                        *(candidate.power.net for candidate in cap_candidates),
+                    ),
+                    ground_nets=(
+                        *ground_aliases,
+                        *selected_ground,
+                        *usable_ground,
+                        *(candidate.ground.net for candidate in cap_candidates),
+                    ),
+                )
+                conductor_layers = tuple(
+                    item.name for item in layers if item.is_conductor
+                )
+                try:
+                    routing_extraction = extract_spd_routing_obstacles(
+                        data,
+                        trace_start=trace_marker,
+                        trace_end=via_marker,
+                        node_start=node_marker if node_marker >= 0 else 0,
+                        node_end=(
+                            trace_marker
+                            if trace_marker > node_marker
+                            else via_marker
+                        ),
+                        conductor_layers=conductor_layers,
+                        net_roles=routing_roles,
+                        check=reporter.check,
+                    )
+                except SpdImportError:
+                    # Cancellation and other import-control failures are not
+                    # optional research-asset compiler failures.
+                    raise
+                except (ValueError, OverflowError) as exc:
+                    # This research evidence is optional for the legacy OFF
+                    # workflow.  Isolate bounded-format/compiler rejection to
+                    # the asset; protection ON will fail closed because no
+                    # asset is attached to the imported scenario.
+                    routing_extraction = None
+                    diagnostics.append(
+                        SpdDiagnostic(
+                            "warning",
+                            "SPD_SIGNAL_ROUTING_RESEARCH_ASSET_UNAVAILABLE",
+                            f"Optional signal-routing evidence was not compiled: {exc}",
+                        )
+                    )
+                else:
+                    diagnostics.append(
+                        SpdDiagnostic(
+                            "info",
+                            "SPD_SIGNAL_ROUTING_RESEARCH_ASSET",
+                            (
+                                "Compiled width-resolved SIGNAL-role Trace evidence "
+                                "for optional Distribution protection. This initial "
+                                "scope is research/provisional and does not certify "
+                                "routed PWR/GND, signal vias, pins or fanout pads."
+                            ),
+                        )
+                    )
+
             reporter.report(57, "Resolving referenced Node coordinates")
             node_start = node_marker if node_marker >= 0 else 0
-            node_end = via_marker if via_marker > node_start else (pad_marker if pad_marker > node_start else len(data))
+            node_end = (
+                trace_marker
+                if trace_marker > node_start
+                else via_marker
+                if via_marker > node_start
+                else pad_marker
+                if pad_marker > node_start
+                else len(data)
+            )
             nodes = _parse_referenced_nodes(
                 data,
                 node_start,
@@ -3818,6 +3924,13 @@ def analyze_spd(
                     shared_pad.source_copper_member_count
                 ),
             }
+            if routing_extraction is not None:
+                counts.update(
+                    {
+                        f"routing_{key}": int(value)
+                        for key, value in routing_extraction.statistics.items()
+                    }
+                )
             reporter.report(100, "SPD analysis complete")
             return SpdAnalysis(
                 source=source,
@@ -3845,6 +3958,7 @@ def analyze_spd(
                 plane_geometries=persisted_plane_geometries,
                 decap_connections=shared_pad.connections,
                 shared_pad_clusters=shared_pad.clusters,
+                routing_extraction=routing_extraction,
             )
     except SpdImportError:
         raise

@@ -16,7 +16,7 @@ import json
 from math import isfinite
 from pathlib import Path, PurePosixPath
 import re
-from typing import Any, Mapping
+from typing import Any, Literal, Mapping
 
 from pydantic import (
     AliasChoices,
@@ -88,12 +88,27 @@ def _connection_analysis_fingerprint_payload(
                 if (key != "padstack_material" or item is not None)
                 and (key != "trace_hops" or item != 0)
                 and (key != "trace_alternate_exit" or item is not False)
+                and (key != "destination_pwr_layer" or item is not None)
             }
         if isinstance(value, list):
             return [without_unknown_material(item) for item in value]
         return value
 
     return without_unknown_material(analysis.model_dump(mode="json"))
+
+
+def _without_absent_destination_pwr_layer(value: Any) -> Any:
+    """Keep pre-destination-certificate scenario fingerprints readable."""
+
+    if isinstance(value, dict):
+        return {
+            key: _without_absent_destination_pwr_layer(item)
+            for key, item in value.items()
+            if key != "destination_pwr_layer" or item is not None
+        }
+    if isinstance(value, list):
+        return [_without_absent_destination_pwr_layer(item) for item in value]
+    return value
 
 
 def _normalized_project_fingerprint_payload(value: Any) -> Any:
@@ -212,6 +227,40 @@ class SourceIdentity(ScenarioModel):
         )
 
 
+class RoutingObstacleAssetRef(ScenarioModel):
+    """Typed binding to one self-contained routing obstacle attachment."""
+
+    attachment_name: str = Field(min_length=1)
+    attachment_sha256: str
+    content_sha256: str
+    schema_version: str = Field(min_length=1)
+    source_sha256: str
+    stackup_fingerprint: str
+    scope: Literal["SIGNAL_NET_ONLY"] = "SIGNAL_NET_ONLY"
+    compiler_policy: str = Field(min_length=1)
+    production_ready: bool = False
+    scope_limitation: str = Field(min_length=1)
+    via_profile_ids: tuple[str, ...] = ()
+
+    @field_validator(
+        "attachment_sha256",
+        "content_sha256",
+        "source_sha256",
+        "stackup_fingerprint",
+    )
+    @classmethod
+    def valid_hashes(cls, value: str) -> str:
+        return _validate_sha256(value, label="routing asset SHA-256")
+
+    @field_validator("via_profile_ids")
+    @classmethod
+    def unique_profile_ids(cls, value: tuple[str, ...]) -> tuple[str, ...]:
+        keys = [item.casefold() for item in value]
+        if any(not item for item in value) or len(keys) != len(set(keys)):
+            raise ValueError("routing via profile IDs must be nonblank and unique")
+        return tuple(sorted(value, key=str.casefold))
+
+
 class ScenarioPoint(ScenarioModel):
     x_um: float
     y_um: float
@@ -251,6 +300,7 @@ class RailEligibility(ScenarioModel):
     net: str = Field(min_length=1)
     pwr_layer: str = Field(min_length=1)
     gnd_layer: str = Field(min_length=1)
+    destination_pwr_layer: str | None = Field(default=None, min_length=1)
     via_template_id: str | None = None
     allowed: bool
     reason: str | None = None
@@ -259,6 +309,11 @@ class RailEligibility(ScenarioModel):
     def actionable_reason(self) -> "RailEligibility":
         if not self.allowed and not self.reason:
             raise ValueError("ineligible rails require a reason")
+        if (
+            self.destination_pwr_layer is not None
+            and self.destination_pwr_layer.casefold() == self.pwr_layer.casefold()
+        ):
+            self.destination_pwr_layer = self.pwr_layer
         return self
 
 
@@ -1659,6 +1714,7 @@ class ScenarioSpec(ScenarioModel):
     revision: int = Field(default=0, ge=0)
     attachment_names: list[str] = Field(default_factory=list)
     attachment_hashes: dict[str, str] = Field(default_factory=dict)
+    routing_obstacle_asset: RoutingObstacleAssetRef | None = None
     evaluation_cache: dict[str, CachedEvaluationMetadata] = Field(
         default_factory=dict,
         validation_alias=AliasChoices("evaluation_cache", "cached_evaluations"),
@@ -2109,6 +2165,20 @@ class ScenarioSpec(ScenarioModel):
             raise ValueError("scenario attachment hash names must be unique")
         if self.attachment_hashes and set(hash_by_key) != set(attachment_keys):
             raise ValueError("attachment names and attachment hashes must match")
+        if self.routing_obstacle_asset is not None:
+            routing = self.routing_obstacle_asset
+            attached_hash = hash_by_key.get(routing.attachment_name.casefold())
+            if attached_hash is None:
+                raise ValueError("routing obstacle attachment is missing")
+            if attached_hash != routing.attachment_sha256:
+                raise ValueError("routing obstacle attachment hash disagrees")
+            if routing.source_sha256 != self.source.sha256:
+                raise ValueError("routing obstacle asset belongs to a different source SPD")
+            from .routing_obstacles import stackup_fingerprint
+
+            observed_stackup = stackup_fingerprint(project.stackup_layers)
+            if routing.stackup_fingerprint != observed_stackup:
+                raise ValueError("routing obstacle asset belongs to a different stack-up")
 
         spd_import = project.metadata.get("spd_import")
         geometry_records = (
@@ -2386,13 +2456,19 @@ class ScenarioSpec(ScenarioModel):
             metadata.attachment_name.casefold()
             for metadata in self.evaluation_cache.values()
         }
+        routing_attachment_key = (
+            self.routing_obstacle_asset.attachment_name.casefold()
+            if self.routing_obstacle_asset is not None
+            else None
+        )
         electrical_attachment_hashes = {
             name: digest
             for name, digest in self.attachment_hashes.items()
             if name.casefold() not in cached_attachment_keys
+            and name.casefold() != routing_attachment_key
         }
         decaps = [
-            item.model_dump(mode="json")
+            _without_absent_destination_pwr_layer(item.model_dump(mode="json"))
             for item in self._sorted_decaps_for_validation(memo)
         ]
         payload = {
@@ -2459,7 +2535,9 @@ class ScenarioSpec(ScenarioModel):
                     "source_model_id": item.source_model_id,
                     "source_mounted": item.source_mounted,
                     "eligibility": {
-                        key: value.model_dump(mode="json")
+                        key: _without_absent_destination_pwr_layer(
+                            value.model_dump(mode="json")
+                        )
                         for key, value in sorted(
                             item.eligibility.items(), key=lambda pair: pair[0].casefold()
                         )
@@ -2735,6 +2813,7 @@ __all__ = [
     "DecapPadState",
     "EvaluationRole",
     "RailEligibility",
+    "RoutingObstacleAssetRef",
     "SCENARIO_APP_VERSION",
     "SCENARIO_SCHEMA_VERSION",
     "ScenarioDecap",

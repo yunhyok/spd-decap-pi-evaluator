@@ -10,10 +10,13 @@ from pathlib import Path
 from typing import Iterable, Mapping
 from zipfile import BadZipFile
 
+from .routing_obstacles import ROUTING_POLICY_VERSION
+
 
 DISTRIBUTION_TARGET_SHEET = "PWR NET Distribution Targets"
 DISTRIBUTION_METADATA_TITLE = "Distribution Run Metadata"
-DISTRIBUTION_WORKBOOK_FORMAT_VERSION = 3
+DISTRIBUTION_LEGACY_OFF_WORKBOOK_FORMAT_VERSION = 3
+DISTRIBUTION_WORKBOOK_FORMAT_VERSION = 4
 
 TargetKey = tuple[str, str]
 
@@ -37,6 +40,10 @@ _MAX_IMPORT_ROWS = 100_000
 _MAX_IMPORT_COLUMNS = 4_096
 _MAX_TARGET_ROWS = 50_000
 _MAX_TARGET_CELLS = 500_000
+# Keep replay validation aligned with
+# distribution.MAX_DISTRIBUTION_GAP_PENALTY_UM without importing the SciPy-heavy
+# optimizer from this lightweight workbook parser.
+_MAX_GAP_PENALTY_UM = 1_000_000_000.0
 
 
 class DistributionWorkbookError(ValueError):
@@ -51,9 +58,17 @@ class DistributionTargetImport:
     tolerances: dict[TargetKey, float]
     workbook_present: dict[TargetKey, int]
     distance_mode: str | None
+    optimization_policy: str | None
+    effective_gap_penalty_um: float | None
     format_version: int | None
     source_sha256: str | None
     input_design_fingerprint: str | None
+    routing_protection_enabled: bool
+    routing_scope: str | None
+    routing_clearance_um: float | None
+    routing_policy_version: str | None
+    routing_asset_sha256: str | None
+    routing_asset_content_sha256: str | None
     matched_target_cells: int
     defaulted_current_cells: int
     ignored_neutral_cells: int
@@ -85,6 +100,23 @@ class DistributionTargetImport:
             lines.append(
                 "Candidate order was not recorded in the workbook."
             )
+        if self.optimization_policy is not None:
+            penalty = (
+                f"{self.effective_gap_penalty_um:g} µm"
+                if self.effective_gap_penalty_um is not None
+                else "derived from board diagonal on calculation"
+            )
+            lines.append(
+                "Optimization policy restored: "
+                f"{self.optimization_policy}; effective gap penalty {penalty}."
+            )
+        if self.routing_protection_enabled:
+            lines.append(
+                "Immutable signal-routing protection restored: ON, "
+                f"clearance {self.routing_clearance_um:g} µm."
+            )
+        else:
+            lines.append("Immutable signal-routing protection restored: OFF.")
         return "\n".join(lines)
 
 
@@ -217,6 +249,8 @@ def load_distribution_targets(
     current_present: Mapping[TargetKey, int],
     current_source_sha256: str | None = None,
     current_design_fingerprint: str | None = None,
+    current_routing_asset_sha256: str | None = None,
+    current_routing_asset_content_sha256: str | None = None,
 ) -> DistributionTargetImport:
     """Read legacy/current target matrices and merge them onto current Present.
 
@@ -399,6 +433,49 @@ def load_distribution_targets(
                 f"unsupported workbook Distance Mode {raw_distance!r}"
             )
 
+    raw_policy = metadata.get("optimization policy")
+    optimization_policy = (
+        str(raw_policy).strip().upper() if raw_policy not in (None, "") else None
+    )
+    if optimization_policy is None:
+        optimization_policy = "BALANCED_AUTO"
+    if optimization_policy not in {"BALANCED_AUTO", "BALANCED_CUSTOM", "MIN_GAPS"}:
+        raise DistributionWorkbookError(
+            f"unsupported workbook Optimization Policy {raw_policy!r}"
+        )
+    raw_penalty = metadata.get("effective gap penalty (um)")
+    effective_gap_penalty_um: float | None = None
+    if raw_penalty not in (None, ""):
+        try:
+            effective_gap_penalty_um = float(raw_penalty)
+        except (TypeError, ValueError):
+            raise DistributionWorkbookError(
+                "metadata Effective Gap Penalty (um) is invalid"
+            ) from None
+        if (
+            not isfinite(effective_gap_penalty_um)
+            or effective_gap_penalty_um < 0
+            or effective_gap_penalty_um > _MAX_GAP_PENALTY_UM
+        ):
+            raise DistributionWorkbookError(
+                "metadata Effective Gap Penalty (um) must be finite and from 0 "
+                f"through {_MAX_GAP_PENALTY_UM:g}"
+            )
+    if (
+        optimization_policy == "BALANCED_CUSTOM"
+        and effective_gap_penalty_um is None
+    ):
+        raise DistributionWorkbookError(
+            "BALANCED_CUSTOM workbook is missing Effective Gap Penalty (um)"
+        )
+    if (
+        optimization_policy == "MIN_GAPS"
+        and effective_gap_penalty_um not in (None, 0.0)
+    ):
+        raise DistributionWorkbookError(
+            "MIN_GAPS workbook Effective Gap Penalty (um) must be 0 or omitted"
+        )
+
     raw_source_sha256 = metadata.get("source spd sha-256")
     source_sha256: str | None = None
     if raw_source_sha256 not in (None, ""):
@@ -424,6 +501,95 @@ def load_distribution_targets(
         and _SHA256_RE.fullmatch(input_design_fingerprint) is None
     ):
         raise DistributionWorkbookError("metadata Input Design Fingerprint is invalid")
+
+    raw_routing_enabled = metadata.get("signal routing protection")
+    routing_protection_enabled = False
+    routing_scope: str | None = None
+    routing_clearance_um: float | None = None
+    routing_policy_version: str | None = None
+    routing_asset_sha256: str | None = None
+    routing_asset_content_sha256: str | None = None
+    if raw_routing_enabled not in (None, ""):
+        enabled_text = str(raw_routing_enabled).strip().upper()
+        if enabled_text not in {"ON", "OFF"}:
+            raise DistributionWorkbookError(
+                "metadata Signal Routing Protection must be ON or OFF"
+            )
+        routing_protection_enabled = enabled_text == "ON"
+    elif format_version is not None and format_version >= 4:
+        raise DistributionWorkbookError(
+            "format 4 workbook is missing Signal Routing Protection metadata"
+        )
+    if routing_protection_enabled:
+        raw_scope = metadata.get("routing protection scope")
+        routing_scope = str(raw_scope).strip().upper() if raw_scope not in (None, "") else None
+        if routing_scope != "SIGNAL_NET_ONLY":
+            raise DistributionWorkbookError(
+                "protected workbook has unsupported or missing Routing Protection Scope"
+            )
+        raw_mode = metadata.get("routing clearance mode")
+        if str(raw_mode).strip().upper() != "FIXED_UM":
+            raise DistributionWorkbookError(
+                "protected workbook must use FIXED_UM Routing Clearance Mode"
+            )
+        raw_clearance = metadata.get("trace-to-via clearance (um)")
+        try:
+            routing_clearance_um = float(raw_clearance)
+        except (TypeError, ValueError):
+            raise DistributionWorkbookError(
+                "protected workbook has invalid Trace-to-via Clearance (um)"
+            ) from None
+        if not isfinite(routing_clearance_um) or routing_clearance_um < 0:
+            raise DistributionWorkbookError(
+                "Trace-to-via Clearance (um) must be finite and >= 0"
+            )
+        raw_policy_version = metadata.get("routing policy version")
+        routing_policy_version = (
+            str(raw_policy_version).strip()
+            if raw_policy_version not in (None, "")
+            else None
+        )
+        if not routing_policy_version:
+            raise DistributionWorkbookError(
+                "protected workbook is missing Routing Policy Version"
+            )
+        if routing_policy_version != ROUTING_POLICY_VERSION:
+            raise DistributionWorkbookError(
+                "protected workbook uses an unsupported Routing Policy Version"
+            )
+        for metadata_key, label in (
+            ("routing asset sha-256", "Routing Asset SHA-256"),
+            ("routing asset content sha-256", "Routing Asset Content SHA-256"),
+        ):
+            raw_digest = metadata.get(metadata_key)
+            digest = (
+                str(raw_digest).strip().lower()
+                if raw_digest not in (None, "")
+                else None
+            )
+            if digest is None or _SHA256_RE.fullmatch(digest) is None:
+                raise DistributionWorkbookError(
+                    f"protected workbook has invalid or missing {label}"
+                )
+            if metadata_key == "routing asset sha-256":
+                routing_asset_sha256 = digest
+            else:
+                routing_asset_content_sha256 = digest
+        if (
+            current_routing_asset_sha256 is not None
+            and routing_asset_sha256 != current_routing_asset_sha256.strip().lower()
+        ):
+            raise DistributionWorkbookError(
+                "target workbook routing asset differs from the loaded scenario"
+            )
+        if (
+            current_routing_asset_content_sha256 is not None
+            and routing_asset_content_sha256
+            != current_routing_asset_content_sha256.strip().lower()
+        ):
+            raise DistributionWorkbookError(
+                "target workbook routing content differs from the loaded scenario"
+            )
 
     rail_by_key = {rail_id.casefold(): rail_id for rail_id in rail_ids}
     model_by_key = {model_id.casefold(): model_id for model_id in model_ids}
@@ -475,7 +641,16 @@ def load_distribution_targets(
     warnings: list[str] = []
     if format_version is None:
         warnings.append("Legacy workbook: run metadata was not recorded.")
-    elif source_sha256 is None:
+    if raw_policy in (None, ""):
+        warnings.append(
+            "Optimization policy was not recorded; BALANCED_AUTO was restored."
+        )
+    if format_version is not None and format_version < 4:
+        warnings.append(
+            "Legacy workbook: immutable signal-routing protection was not recorded "
+            "and was restored OFF."
+        )
+    if source_sha256 is None:
         warnings.append(
             "Workbook source identity was not recorded; rail/component IDs were "
             "validated against the loaded SPD."
@@ -507,9 +682,17 @@ def load_distribution_targets(
         tolerances=tolerances,
         workbook_present=workbook_present,
         distance_mode=distance_mode,
+        optimization_policy=optimization_policy,
+        effective_gap_penalty_um=effective_gap_penalty_um,
         format_version=format_version,
         source_sha256=source_sha256,
         input_design_fingerprint=input_design_fingerprint,
+        routing_protection_enabled=routing_protection_enabled,
+        routing_scope=routing_scope,
+        routing_clearance_um=routing_clearance_um,
+        routing_policy_version=routing_policy_version,
+        routing_asset_sha256=routing_asset_sha256,
+        routing_asset_content_sha256=routing_asset_content_sha256,
         matched_target_cells=matched,
         defaulted_current_cells=len(canonical_present) - matched,
         ignored_neutral_cells=len(ignored_neutral),
@@ -521,6 +704,7 @@ def load_distribution_targets(
 
 
 __all__ = [
+    "DISTRIBUTION_LEGACY_OFF_WORKBOOK_FORMAT_VERSION",
     "DISTRIBUTION_METADATA_TITLE",
     "DISTRIBUTION_TARGET_SHEET",
     "DISTRIBUTION_WORKBOOK_FORMAT_VERSION",

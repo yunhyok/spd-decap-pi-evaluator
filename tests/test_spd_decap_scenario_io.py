@@ -30,6 +30,7 @@ from spd_decap_pi.scenario import (
     DecapConnectionKind,
     EvaluationRole,
     RailEligibility,
+    RoutingObstacleAssetRef,
     ScenarioDecapConnection,
     ScenarioDecap,
     ScenarioPad,
@@ -45,6 +46,14 @@ from spd_decap_pi.scenario import (
     SourceIdentity,
     mixed_reference_ground_landing_identity,
     mixed_reference_ground_witness_failures,
+)
+from spd_decap_pi.routing_obstacles import (
+    RoutingLayerCompleteness,
+    RoutingObstacleAsset,
+    decode_routing_obstacle_asset,
+    encode_routing_obstacle_asset,
+    routing_attachment_name,
+    stackup_fingerprint,
 )
 from spd_decap_pi.scenario_io import (
     MANIFEST_FILENAME,
@@ -270,6 +279,20 @@ def _rewrite_archive(path: Path, edits) -> None:
     with ZipFile(path, "w", compression=ZIP_DEFLATED) as archive:
         for name, content in rewritten:
             archive.writestr(name, content)
+
+
+def test_noop_save_omits_new_null_fields_for_v021_readability(
+    tmp_path: Path,
+) -> None:
+    scenario = _scenario()
+    path = save_scenario(scenario, tmp_path / "legacy-compatible.spdpi")
+
+    with ZipFile(path) as archive:
+        raw = json.loads(archive.read(SCENARIO_FILENAME))
+
+    assert "routing_obstacle_asset" not in raw
+    assert "destination_pwr_layer" not in json.dumps(raw, sort_keys=True)
+    assert load_scenario(path).design_fingerprint == scenario.design_fingerprint
 
 
 def _mixed_reference_shared_scenario(
@@ -879,6 +902,71 @@ def test_scenario_round_trip_is_independent_and_deterministic(tmp_path) -> None:
         }
         assert b"raw-spd-secret" not in scenario_bytes
         assert not any(name.casefold().endswith(".spd") for name in names)
+
+
+def test_routing_attachment_binding_round_trips_and_rejects_metadata_drift(
+    tmp_path: Path,
+) -> None:
+    base = _scenario()
+    layers = tuple(item.name for item in base.base_project.stackup_layers)
+    asset = RoutingObstacleAsset(
+        source_sha256=base.source.sha256,
+        stackup_fingerprint=stackup_fingerprint(base.base_project.stackup_layers),
+        conductor_layers=layers,
+        segments=(),
+        layer_completeness=tuple(
+            RoutingLayerCompleteness(layer=layer) for layer in layers
+        ),
+        via_profiles=(),
+    )
+    payload = encode_routing_obstacle_asset(asset)
+    decoded = decode_routing_obstacle_asset(payload)
+    name = routing_attachment_name(payload)
+    attachment_sha = sha256(payload).hexdigest()
+    reference = RoutingObstacleAssetRef(
+        attachment_name=name,
+        attachment_sha256=attachment_sha,
+        content_sha256=str(decoded.content_sha256),
+        schema_version=decoded.schema_version,
+        source_sha256=decoded.source_sha256,
+        stackup_fingerprint=decoded.stackup_fingerprint,
+        scope=decoded.scope.value,
+        compiler_policy=decoded.compiler_policy,
+        production_ready=decoded.production_ready,
+        scope_limitation=decoded.scope_limitation,
+        via_profile_ids=(),
+    )
+    persisted = ScenarioSpec.model_validate(
+        {
+            **base.model_dump(mode="python"),
+            "attachment_names": [name],
+            "attachment_hashes": {name: attachment_sha},
+            "routing_obstacle_asset": reference.model_dump(mode="python"),
+        }
+    )
+    assert persisted.design_fingerprint == base.design_fingerprint
+
+    path = save_scenario(
+        persisted,
+        tmp_path / "routing.spdpi",
+        attachments={name: payload},
+    )
+    loaded = load_scenario_bundle(path)
+    assert loaded.scenario.routing_obstacle_asset == reference
+    assert loaded.attachments[name] == payload
+
+    drifted_reference = reference.model_copy(
+        update={"scope_limitation": "different limitation"}
+    )
+    drifted = persisted.model_copy(
+        update={"routing_obstacle_asset": drifted_reference}
+    )
+    with pytest.raises(ScenarioFormatError, match="scope limitation disagrees"):
+        save_scenario(
+            drifted,
+            tmp_path / "routing-drift.spdpi",
+            attachments={name: payload},
+        )
 
 
 def test_design_fingerprint_excludes_ui_revision_cache_and_source_location() -> None:

@@ -2,6 +2,7 @@
 
 import csv
 from dataclasses import replace
+from hashlib import sha256
 import os
 from pathlib import Path
 import threading
@@ -12,9 +13,10 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 import pytest
 from PySide6.QtCore import QEventLoop, QPointF, QRectF, QSize, Qt, QThreadPool, QTimer
-from PySide6.QtGui import QBrush, QColor, QImage, QPainter, QPainterPath
+from PySide6.QtGui import QBrush, QCloseEvent, QColor, QImage, QPainter, QPainterPath
 from PySide6.QtWidgets import (
     QApplication,
+    QCheckBox,
     QColorDialog,
     QFileDialog,
     QGraphicsItem,
@@ -23,6 +25,7 @@ from PySide6.QtWidgets import (
     QLabel,
     QMenu,
     QMessageBox,
+    QPushButton,
     QSplitter,
     QTabWidget,
     QTableWidget,
@@ -35,13 +38,19 @@ from test_spd_decap_scenario_edits import (
     _scenario as _shared_pad_scenario,
 )
 from spd_decap_pi import evaluation as evaluation_module
+from spd_decap_pi._core import services as core_services
 from spd_decap_pi._core.domain import StackupLayer
 from spd_decap_pi._core.services import EvaluationView
 from spd_decap_pi._core.solver.profiles import (
     RESEARCH_UNIFORM_ADMITTANCE_PROFILE,
     solver_profile_static_identity_sha256,
 )
+from spd_decap_pi.distribution import (
+    _distribution_plane_geometries,
+    _distribution_rail_choices,
+)
 from spd_decap_pi.gui.worker import FunctionWorker
+from spd_decap_pi.gui import main_window as main_window_module
 from spd_decap_pi.gui.main_window import (
     MainWindow,
     _EvaluationRunManifest,
@@ -51,6 +60,8 @@ from spd_decap_pi.gui.main_window import (
     _excel_safe_csv_cell,
     _job_compute_distribution,
     _job_load_scenario,
+    _physical_power_plane_layer_labels,
+    _prepare_plane_layer_cells,
     _job_preflight_evaluation,
     _modal_convergence_text,
     _rejected_comparison_convergence,
@@ -282,7 +293,18 @@ def test_main_window_exposes_sibling_identity_and_evaluation_only_workflow() -> 
         assert "Plot Analyst only" in labels
         assert "fills are read-only PowerSI artwork" in labels
         assert "dashed rectangles mark the solver" in labels
-        assert "Optimization" not in labels
+        # Distribution exposes a legitimate optimization-policy control; the
+        # evaluation-only boundary is the explicit AI restriction and absence
+        # of an optimization action in the AI controls.
+        assert "Optimization policy" in labels
+        assert (
+            "AI receives solver-derived features and cannot change PWR assignments, "
+            "enable decaps, or run optimization."
+        ) in labels
+        assert not any(
+            "optimization" in item.text().casefold()
+            for item in window.findChildren(QPushButton)
+        )
         assert not window.evaluate_button.isEnabled()
     finally:
         window._dirty = False
@@ -374,6 +396,347 @@ def test_short_plane_layer_labels_follow_physical_stack_order() -> None:
         ("Signal$PWR_A", "P1"),
         ("Signal$PWR_B", "P2"),
     )
+
+
+def test_physical_power_plane_labels_cover_all_21_real_stack_layers() -> None:
+    physical_names = (
+        "Signal$L09(MAIN_POWER1)",
+        "Signal$L11(MAIN_POWER2)",
+        "Signal$L12(MAIN_POWER3)",
+        "Signal$L14(MAIN_POWER4)",
+        "Signal$L15(MAIN_POWER5)",
+        "Signal$L22(MAIN_POWER2)",
+        "Signal$L23(MAIN_POWER3)",
+        "Signal$L25(MAIN_POWER4)",
+        "Signal$L26(MAIN_POWER5)",
+        "Signal$L30(OTHER_POWER1)",
+        "Signal$L31(OTHER_POWER2)",
+        "Signal$L33(OTHER_POWER3)",
+        "Signal$L34(OTHER_POWER4)",
+        "Signal$L36(OTHER_POWER5)",
+        "Signal$L37(OTHER_POWER6)",
+        "Signal$L39(OTHER_POWER7)",
+        "Signal$L40(OTHER_POWER8)",
+        "Signal$L42(OTHER_POWER9)",
+        "Signal$L43(OTHER_POWER10)",
+        "Signal$L45(OTHER_POWER11)",
+        "Signal$L46(OTHER_POWER12)",
+    )
+    top_name = "Signal$TOP"
+    layers = (
+        StackupLayer(
+            name=top_name,
+            thickness_um=20.0,
+            conductivity_s_m=5.8e7,
+            pwr_nets=["VDD_CORE/0", "DGND"],
+        ),
+        *(
+            StackupLayer(
+                name=name,
+                thickness_um=20.0,
+                conductivity_s_m=5.8e7,
+                pwr_nets=["VDD_CORE/0"],
+            )
+            for name in physical_names
+        ),
+    )
+    records = [
+        {
+            "layer": name,
+            "net": "VDD_CORE/0",
+            "asset": f"geometry/{index:02d}.spdgeom.zlib",
+            "asset_sha256": sha256(name.encode("utf-8")).hexdigest(),
+            "uncompressed_bytes": 1,
+        }
+        for index, name in enumerate((top_name, *physical_names))
+    ]
+    project = SimpleNamespace(
+        metadata={
+            "spd_import": {
+                "selected_power_nets": ["VDD_CORE/0"],
+                "plane_geometries": records,
+            }
+        },
+        rails=(),
+        stackup_layers=layers,
+        partitions=(),
+    )
+
+    assert _physical_power_plane_layer_labels(project) == tuple(
+        (name, f"P{index}")
+        for index, name in enumerate(physical_names, start=1)
+    )
+
+
+def test_loaded_spd_lists_every_physical_pwr_layer_not_only_solver_pair(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    application = _application()
+    source = tmp_path / "three-power-layers.spd"
+    shape_block = """.Shape Signal$PWRpkgshape
+Polygon2::VDD_CORE/0+ -4mm -3mm 4mm -3mm
++ 4mm 3mm -4mm 3mm
+Polygon3::VDD_CORE/0- ViaHole_A Sub-element -0.2mm -0.2mm 0.2mm -0.2mm 0.2mm 0.2mm -0.2mm 0.2mm
+Circle4::VDD_CORE/0- ViaHole_A Sub-element 1mm 1mm 0.06mm
+Polygon5::VDD_CORE/0+ Sub-element 2mm 2mm 2.2mm 2mm 2.2mm 2.2mm 2mm 2.2mm
+.EndShape"""
+    physical_shapes = """.Shape Signal$L05(SIG2)pkgshape
+Polygon10::VDD_CORE/0+ -2mm -2mm 2mm -2mm 2mm 2mm -2mm 2mm
+Polygon11::SIG_DATA+ -1mm -1mm 1mm -1mm 1mm 1mm -1mm 1mm
+.EndShape
+.Shape Signal$L09(MAIN_POWER1)pkgshape
+Polygon20::VDD_CORE/0+ -4mm -3mm 4mm -3mm 4mm 3mm -4mm 3mm
+.EndShape
+.Shape Signal$L10(DGND)pkgshape
+Polygon30::VDD_CORE/0+ -2mm -2mm 2mm -2mm 2mm 2mm -2mm 2mm
+Polygon31::DGND+ -4mm -3mm 4mm -3mm 4mm 3mm -4mm 3mm
+.EndShape
+.Shape Signal$L11(MAIN_POWER2)pkgshape
+Polygon21::VDD_CORE/0+ -4mm -3mm 4mm -3mm 4mm 3mm -4mm 3mm
+.EndShape
+.Shape Signal$L12(MAIN_POWER3)pkgshape
+Polygon2::VDD_CORE/0+ -4mm -3mm 4mm -3mm
++ 4mm 3mm -4mm 3mm
+Polygon3::VDD_CORE/0- ViaHole_A Sub-element -0.2mm -0.2mm 0.2mm -0.2mm 0.2mm 0.2mm -0.2mm 0.2mm
+Circle4::VDD_CORE/0- ViaHole_A Sub-element 1mm 1mm 0.06mm
+Polygon5::VDD_CORE/0+ Sub-element 2mm 2mm 2.2mm 2mm 2.2mm 2.2mm 2mm 2.2mm
+.EndShape"""
+    layer_block = """Signal$PWR Thickness = 20u Material = COPPER
+Medium$D2 Thickness = 100um Material = ABF
+Signal$GND Thickness = 20u Material = COPPER"""
+    physical_layers = """Signal$L05(SIG2) Thickness = 20u Material = COPPER
+Medium$D1B Thickness = 100um Material = ABF
+Signal$L09(MAIN_POWER1) Thickness = 20u Material = COPPER
+Medium$D2 Thickness = 100um Material = ABF
+Signal$L10(DGND) Thickness = 20u Material = COPPER
+Medium$D2B Thickness = 100um Material = ABF
+Signal$L11(MAIN_POWER2) Thickness = 20u Material = COPPER
+Medium$D3 Thickness = 100um Material = ABF
+Signal$L12(MAIN_POWER3) Thickness = 20u Material = COPPER
+Medium$D4 Thickness = 100um Material = ABF
+Signal$GND Thickness = 20u Material = COPPER"""
+    source.write_text(
+        MINI_SPD.replace(shape_block, physical_shapes)
+        .replace(layer_block, physical_layers)
+        .replace(".PadDef Signal$PWR", ".PadDef Signal$L12(MAIN_POWER3)"),
+        encoding="ascii",
+    )
+    imported = import_spd_scenario(source)
+    project = imported.scenario.base_project
+
+    assert [partition.layer for partition in project.partitions] == [
+        "Signal$L12(MAIN_POWER3)"
+    ]
+
+    rail = project.rails[0]
+    distribution_choices, _distribution_pairs = _distribution_rail_choices(
+        imported.scenario,
+        {rail.rail_id.casefold()},
+    )
+    wanted_pairs = {
+        (net_key, pwr_layer_key)
+        for net_key, pwr_layer_key, _gnd_layer_key in distribution_choices
+    }
+    distribution_planes = _distribution_plane_geometries(
+        imported.scenario,
+        imported.attachments,
+        wanted_pairs=wanted_pairs,
+    )
+    distribution_layer_keys = {
+        item.layer.casefold()
+        for item in distribution_planes
+        if item.net.casefold() == rail.net.casefold()
+    }
+    expected_distribution_layer_keys = {
+        "signal$l05(sig2)",
+        "signal$l09(main_power1)",
+        "signal$l10(dgnd)",
+        "signal$l11(main_power2)",
+        "signal$l12(main_power3)",
+    }
+    assert {
+        pwr_layer_key
+        for net_key, pwr_layer_key, _gnd_layer_key in distribution_choices
+        if net_key == rail.net.casefold()
+    } == expected_distribution_layer_keys
+    assert distribution_layer_keys == expected_distribution_layer_keys
+
+    duplicate_project = project.model_copy(deep=True)
+    duplicate_records = duplicate_project.metadata["spd_import"]["plane_geometries"]
+    duplicate_records.append(
+        dict(
+            next(
+                record
+                for record in duplicate_records
+                if record["layer"] == "Signal$L09(MAIN_POWER1)"
+            )
+        )
+    )
+    with pytest.raises(ValueError, match="duplicate layer/NET"):
+        _physical_power_plane_layer_labels(duplicate_project)
+
+    mismatched_project = project.model_copy(deep=True)
+    mismatched_project.partitions[0].cells[0].source_geometry_sha256 = "0" * 64
+    with pytest.raises(ValueError, match="does not bind retained artwork index"):
+        _prepare_plane_layer_cells(
+            mismatched_project,
+            imported.attachments,
+            "Signal$L12(MAIN_POWER3)",
+            progress=lambda _value, _message: None,
+            is_cancelled=lambda: False,
+        )
+
+    multi_project = project.model_copy(deep=True)
+    multi_records = multi_project.metadata["spd_import"]["plane_geometries"]
+    base_record = next(
+        record
+        for record in multi_records
+        if record["layer"] == "Signal$L12(MAIN_POWER3)"
+    )
+    multi_attachments = dict(imported.attachments)
+    payload = core_services.spd_plane_geometry_record_payload(
+        base_record, multi_attachments
+    )
+    positive_polygons = [
+        [list(point) for point in polygon]
+        for polygon in payload["positive_polygons_um"]
+    ]
+    positive_polygons[0][0][0] += 0.001
+    compressed, decoded_bytes = core_services._compress_spd_geometry_payload(
+        layer=base_record["layer"],
+        net=base_record["net"],
+        positive_polygons=positive_polygons,
+        negative_polygons=payload["negative_polygons_um"],
+        positive_circles=payload["positive_circles_um"],
+        negative_circles=payload["negative_circles_um"],
+        primitive_order=payload["primitive_order"],
+        positive_subelement_count=payload["positive_subelement_count"],
+        negative_subelement_count=payload["negative_subelement_count"],
+        polygon_trace_count=payload["polygon_trace_count"],
+        box_count=payload["box_count"],
+    )
+    second_digest = sha256(compressed).hexdigest()
+    second_asset = f"geometry/multi-{second_digest[:16]}.spdgeom.zlib"
+    multi_attachments[second_asset] = compressed
+    multi_records.append(
+        {
+            **base_record,
+            "asset": second_asset,
+            "asset_sha256": second_digest,
+            "uncompressed_bytes": decoded_bytes,
+            "compressed_bytes": len(compressed),
+        }
+    )
+    multi_cells = _prepare_plane_layer_cells(
+        multi_project,
+        multi_attachments,
+        "Signal$L12(MAIN_POWER3)",
+        progress=lambda _value, _message: None,
+        is_cancelled=lambda: False,
+    )
+    assert len(multi_cells) == 2
+    assert sum(item.cell is not None for item in multi_cells) == 1
+
+    legacy_project = project.model_copy(deep=True)
+    legacy_project.metadata["spd_import"].pop("plane_geometries")
+    with monkeypatch.context() as patch:
+        patch.setattr(
+            main_window_module,
+            "_MAX_PHYSICAL_PWR_PATH_ELEMENTS_PER_LAYER",
+            1,
+        )
+        with pytest.raises(ValueError, match="per-layer preview path limit"):
+            _prepare_plane_layer_cells(
+                legacy_project,
+                imported.attachments,
+                "Signal$L12(MAIN_POWER3)",
+                progress=lambda _value, _message: None,
+                is_cancelled=lambda: False,
+            )
+
+    window = MainWindow()
+    try:
+        window._accept_spd_import(imported)
+        application.processEvents()
+
+        def wait_for_plane_idle() -> None:
+            timeout = QTimer(window)
+            timeout.setSingleShot(True)
+            loop = QEventLoop(window)
+            timeout.timeout.connect(loop.quit)
+
+            def finish_when_idle() -> None:
+                if (
+                    window._worker is None
+                    and not window._plane_render_cells
+                    and not window._load_all_plane_layers_requested
+                ):
+                    loop.quit()
+                else:
+                    QTimer.singleShot(5, finish_when_idle)
+
+            QTimer.singleShot(0, finish_when_idle)
+            timeout.start(5_000)
+            loop.exec()
+            assert window._worker is None
+            assert not window._plane_render_cells
+
+        assert tuple(window._plane_layer_checks) == (
+            "signal$l09(main_power1)",
+            "signal$l11(main_power2)",
+            "signal$l12(main_power3)",
+        )
+        assert tuple(
+            (checkbox.text(), checkbox.toolTip())
+            for checkbox in window._plane_layer_checks.values()
+        ) == (
+            ("P1", "P1: Signal$L09(MAIN_POWER1)"),
+            ("P2", "P2: Signal$L11(MAIN_POWER2)"),
+            ("P3", "P3: Signal$L12(MAIN_POWER3)"),
+        )
+        artwork_layers = {
+            str(item.data(2))
+            for item in window.board._plane_items
+            if isinstance(item, _PlaneArtworkItem)
+        }
+        assert artwork_layers == {"Signal$L09(MAIN_POWER1)"}
+        assert window._plane_loaded_layer_keys == {"signal$l09(main_power1)"}
+        assert "signal$l05(sig2)" not in window._plane_layer_checks
+        assert "signal$l10(dgnd)" not in window._plane_layer_checks
+
+        window._set_all_plane_layers_visible(True)
+        wait_for_plane_idle()
+        p2 = window._plane_layer_checks["signal$l11(main_power2)"]
+        artwork_layers = {
+            str(item.data(2))
+            for item in window.board._plane_items
+            if isinstance(item, _PlaneArtworkItem)
+        }
+        assert artwork_layers == {
+            "Signal$L09(MAIN_POWER1)",
+            "Signal$L11(MAIN_POWER2)",
+            "Signal$L12(MAIN_POWER3)",
+        }
+        solver_layers = {
+            str(item.data(2))
+            for item in window.board._plane_items
+            if item.data(0) == "solver_bounds"
+        }
+        assert solver_layers == {"Signal$L12(MAIN_POWER3)"}
+
+        cached_elements = window._plane_cached_path_elements
+        cached_items = len(window.board._plane_items)
+        p2.setChecked(False)
+        p2.setChecked(True)
+        application.processEvents()
+        assert window._worker is None
+        assert window._plane_cached_path_elements == cached_elements
+        assert len(window.board._plane_items) == cached_items
+    finally:
+        window._dirty = False
+        window.close()
+        application.processEvents()
 
 
 def test_shared_pad_load_summary_exposes_blocked_connectivity_counts() -> None:
@@ -1512,6 +1875,64 @@ def test_cancelled_worker_does_not_show_a_failure_or_leave_cancelling_status() -
         assert window._worker is None
     finally:
         window.close()
+        application.processEvents()
+
+
+def test_cancelled_all_plane_load_unchecks_every_missing_layer() -> None:
+    application = _application()
+    window = MainWindow()
+    try:
+        first = QCheckBox("P1")
+        second = QCheckBox("P2")
+        first.setChecked(True)
+        second.setChecked(True)
+        window._plane_layer_checks = {"p1": first, "p2": second}
+        window._active_plane_layer_key = "p1"
+        window._load_all_plane_layers_requested = True
+        window._worker = FunctionWorker(lambda **_kwargs: None)
+        window._worker_cancel_requested = True
+
+        window._worker_finished()
+
+        assert not first.isChecked()
+        assert not second.isChecked()
+        assert window._hidden_plane_layer_keys == {"p1", "p2"}
+        assert window._active_plane_layer_key is None
+        assert window.status_text.text() == "Operation cancelled"
+    finally:
+        window.close()
+        application.processEvents()
+
+
+def test_close_invalidates_pending_plane_render_and_lazy_load(
+    tmp_path: Path,
+) -> None:
+    application = _application()
+    source = tmp_path / "close-pending-plane.spd"
+    source.write_text(MINI_SPD, encoding="ascii")
+    window = MainWindow()
+    try:
+        window._accept_spd_import(import_spd_scenario(source))
+        window._plane_render_cells = (SimpleNamespace(),)  # type: ignore[assignment]
+        window._load_all_plane_layers_requested = True
+        window._plane_loaded_layer_keys.clear()
+        key = next(iter(window._plane_layer_checks))
+        window._plane_layer_checks[key].setChecked(True)
+        token = window._plane_render_token
+        event = QCloseEvent()
+
+        window.closeEvent(event)
+        window._load_next_missing_plane_layer()
+
+        assert event.isAccepted()
+        assert window._closing
+        assert window._plane_render_token == token + 1
+        assert not window._plane_render_cells
+        assert not window._load_all_plane_layers_requested
+        assert window._worker is None
+    finally:
+        window._dirty = False
+        window.deleteLater()
         application.processEvents()
 
 

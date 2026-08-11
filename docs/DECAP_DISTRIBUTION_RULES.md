@@ -1,6 +1,6 @@
 # De-cap Distribution 변동 규칙
 
-> 적용 프로그램: **SPD Decap PI Evaluator v0.21.0**
+> 적용 프로그램: **SPD Decap PI Evaluator v0.22.0**
 >
 > 문서 상태: 현재 구현 및 회귀 테스트에 대응하는 동작 규칙
 >
@@ -26,6 +26,21 @@
 7. Distribution의 `FULL/PARTIAL`은 수량/topology 상태이고 Evaluation의
    connectivity/modelability 상태와 동일하지 않다. Apply 후 Evaluation은 Original과
    Tuned/current 양쪽을 별도 preflight한다.
+
+## 1.1 Immutable signal routing 보호 옵션 (v0.22.0)
+
+- 기본값은 `OFF`이며 routing asset decode/collision filter를 완전히 우회하고 v0.21.0의 plane-containment/MILP 의미를 유지한다. v0.22.0은 보호 상태와 무관하게 선택된 exact 목적층 metadata를 기록한다.
+- `ON`이면 사용자가 `Trace-to-via clearance (µm)`를 직접 입력한다. 값은 finite, `>= 0`이어야 한다.
+- exact 목적 PWR-plane 판정 뒤, component/MILP 판정 전에 surface→실제 목적 PWR layer span의 routing obstacle을 검사한다.
+- 금지 반경은 `planned via radius + trace width / 2 + user clearance`이며 접선도 충돌로 처리한다.
+- 후보 상태는 `SAFE`, `BLOCKED`, `UNKNOWN`이다. `ON`에서는 `BLOCKED`와 `UNKNOWN`을 모두 hard-block한다.
+- 여러 PWR landing column을 유지하는 terminal은 `ON`에서 동일한 `(rail, exact destination layer)`에 대해 모든 column이 `SAFE`여야 한다.
+- 초기 scope는 `SIGNAL_NET_ONLY`이며 width-resolved SIGNAL-role `Trace`만 직접 충돌 검사한다. routed PWR/GND, signal via/pin/pad/fanout은 아직 scope 밖이다.
+- 현재 physical-routing 판정은 `WIDTHED_SIGNAL_TRACE_PROXY_V1` 연구 proxy이므로 PowerSI/DRC sign-off가 아니다. 이 상태와 scope limitation을 preview, diagnostics, workbook에 남긴다.
+- option, clearance, `SIGNAL_NET_ONLY_RESEARCH_V1` policy version, obstacle asset SHA는 request fingerprint와 workbook format 4에 포함된다. 옵션/값이 바뀌면 기존 preview는 stale 처리한다.
+
+상세 parser, asset, span, collision evidence 및 실제 SPD 연구 결과는
+[`DECAP_DISTRIBUTION_SIGNAL_TRACE_AVOIDANCE_RESEARCH_2026-08-09.md`](DECAP_DISTRIBUTION_SIGNAL_TRACE_AVOIDANCE_RESEARCH_2026-08-09.md)를 따른다.
 
 ## 2. 용어와 수량 정의
 
@@ -250,12 +265,32 @@ NET assignment와 isolation gap은 한 revision에서 함께 검증하고 commit
 
 ## 7. 후보 선정 및 최적화 우선순위
 
-물리적으로 가능한 후보에 대해 다음 우선순위를 순서대로 적용한다.
+기본 `BALANCED_AUTO` 정책은 물리적으로 가능한 후보에 대해 다음 우선순위를
+순서대로 적용한다.
 
 1. receiver 요구 충족 수량 최대화
-2. isolation-gap 희생 수량 최소화
-3. 활성 PWR NET relabel 수 최소화
-4. 선택한 bump 거리 순서 적용
+2. 활성 PWR NET relabel 수 최소화
+3. `signed total bump distance + effective gap penalty × gap count` 최소화
+4. 위 combined objective가 같은 경우 gap 수 최소화
+5. REFDES/rail canonical 순서 적용
+
+`NEAREST`에서는 signed distance가 양수이고 `FARTHEST`에서는 음수다. 따라서
+FARTHEST도 같은 최소화 모델을 사용하면서 더 먼 후보를 선호한다. combined
+objective는 0.001 um 정수 단위로 먼저 정확히 최적화하고, 그 최적값을 고정한 뒤
+gap/canonical 동률 단계를 별도로 푼다. 동률 계수가 combined objective의 1단위
+차이를 뒤집지 않는다.
+
+정책은 다음 세 가지다.
+
+| Optimization Policy | Gap penalty 계약 |
+| --- | --- |
+| `BALANCED_AUTO` | `hypot(board width, board height)`인 한 board diagonal을 gap 하나당 적용 |
+| `BALANCED_CUSTOM` | 사용자가 지정한 유한한 0 이상 penalty를 gap 하나당 적용 |
+| `MIN_GAPS` | 기존 호환 정책. fulfillment 다음 gap 수, relabel 수, distance 순서로 최소화 |
+
+custom penalty는 solver의 정수 scale을 보호하기 위해 최대 `1,000,000,000 um`으로
+제한한다. 전체 combined objective가 exact integer 범위를 벗어나는 입력도
+fail-closed로 거부한다.
 
 거리 option은 다음과 같다.
 
@@ -264,19 +299,23 @@ NET assignment와 isolation gap은 한 revision에서 함께 검증하고 commit
 | `NEAREST` | destination PWR NET bump와의 거리가 작은 후보를 우선 |
 | `FARTHEST` | destination PWR NET bump와의 거리가 큰 후보를 우선 |
 
-거리 option은 안전 규칙, receiver 최대 충족, gap 최소화 및 relabel 최소화보다
-우선하지 않는다. 즉 가까운 후보가 topology를 위반하거나 더 많은 gap을 요구하면
-거리만을 이유로 선택하지 않는다. 동률은 REFDES/rail의 canonical 순서로
-결정하여 결과를 재현 가능하게 한다.
+거리 option은 안전 규칙, receiver 최대 충족 및 relabel 최소화보다 우선하지 않는다.
+BALANCED 정책에서는 gap 수가 distance와 별도의 strict 선행 조건이 아니라 공개된
+penalty를 통해 함께 비교된다. 예를 들어 한 gap을 추가해도 절약되는 total distance가
+effective penalty보다 크면 gap 1개 후보가 gap 0개 후보보다 우선할 수 있다.
+`MIN_GAPS`에서만 gap 수가 distance보다 항상 먼저 적용된다.
 
 ### 시간 제한과 최적성 표시
 
 - receiver 최대 충족을 확립할 수 없으면 fail-closed로 종료한다.
-- gap 최소화가 시간 제한에 도달해도 topology-safe incumbent가 있으면 이를
+- `MIN_GAPS`의 gap 최소화가 시간 제한에 도달해도 topology-safe incumbent가 있으면 이를
   사용하고 `GAP_OPTIMIZATION_FALLBACK`을 표시한다. 이때 최소 gap임이 증명된 것은
   아니다.
 - shared-pad distance에서 유효 incumbent만 얻은 경우 선택 mode를 만족하는 최선의
   유효 incumbent를 사용하되 joint optimum 미증명을 진단으로 표시한다.
+- BALANCED combined objective가 증명된 뒤 gap/canonical 동률 단계가 시간 제한에
+  도달하면 combined optimum을 보존하는 최선의 유효 incumbent를 사용하고
+  `OBJECTIVE_TIEBREAK_FALLBACK`을 표시한다.
 - separator 위치를 고정한 뒤의 distance 최적값은 그 separator 위치에 조건부인
   결과다. 앞 단계의 joint assignment/separator 최적값까지 증명되지 않았다면
   전역 joint optimum으로 표현하지 않는다.
@@ -389,6 +428,10 @@ Target Workbook은 `PWR NET Distribution Targets` sheet를 사용하며 A1은
 - Workbook에 없는 현재 rail/Component cell은 `Target = 현재 Present`,
   `Tolerance = 0`으로 초기화한다.
 - 현재 format에 기록된 NEAREST/FARTHEST는 복원한다.
+- `Optimization Policy`와 `Effective Gap Penalty (um)`을 복원한다.
+- policy가 없는 legacy Workbook은 경고와 함께 새 기본값 `BALANCED_AUTO`로 연다.
+- `BALANCED_CUSTOM`에 effective penalty가 없거나 `MIN_GAPS`에 0이 아닌 penalty가
+  기록되어 있으면 재현 불가능한 metadata로 보고 fail-closed로 거부한다.
 - 구형 Workbook에 distance mode가 없으면 자동 추정하지 않고 사용자가 명시적으로
   선택할 때까지 계산을 비활성화한다.
 - source SPD SHA-256이 기록되어 있고 현재 SPD와 다르면 가져오기를 차단한다.
@@ -424,7 +467,8 @@ Excel은 정확히 두 sheet를 생성한다.
    - Actual Delta, Assignment Failed, Isolation Gaps
    - 전체 inventory reconciliation
    - application/format version, source SPD 이름 및 SHA-256
-   - 입력 fingerprint/revision과 distance mode
+   - 입력 fingerprint/revision, distance mode, Optimization Policy
+   - 계산에 실제 적용된 `Effective Gap Penalty (um)`
 
 Apply 후 GUI의 Present가 새 최종 수량으로 바뀌더라도 export의 두 번째 sheet는
 해당 Preview를 계산했을 당시의 입력 표를 보존한다. 식으로 해석될 수 있는 식별자는
