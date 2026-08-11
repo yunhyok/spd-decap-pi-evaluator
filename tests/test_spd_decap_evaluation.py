@@ -283,6 +283,13 @@ def _base_project() -> ProjectSpec:
         metadata={
             "plane_pair_confirmed": False,
             "spd_import": {"source_name": "fixture.spd"},
+            "spd_mlo_transition_policy": {
+                "policy_version": "MLO_TRANSITION_RECIPE_GATE_V1",
+                "transition_required": False,
+                "translated_recipe_validated": False,
+                "evidence_codes": [],
+                "source_sha256": "a" * 64,
+            },
         },
     )
 
@@ -2146,6 +2153,36 @@ def test_saved_distributed_scenario_reloads_and_blocks_outside_changed_rail(
                 },
             }
         )
+    # This fixture models a conventional TOP-to-PWR1 through-via explicitly.
+    # A board-level negative transition policy is only a positive-evidence
+    # summary and cannot grant non-TOP permission to a pathless landing.
+    for connection in payload["connection_analysis"]["connections"].values():
+        for landing in connection["power_vias"]:
+            landing["path_evidence"] = (
+                ScenarioViaPathEvidence(
+                    target_layer="PWR1",
+                    target_node_id=f"TARGET-{landing['via_id']}",
+                    target_padstack=landing["padstack"],
+                    target_pad_kind="CIRCLE",
+                    target_pad_width_um=300.0,
+                    target_pad_height_um=300.0,
+                    x_um=landing["x_um"],
+                    y_um=landing["y_um"],
+                    segments=(
+                        ScenarioViaSegment(
+                            via_id=landing["via_id"],
+                            padstack=landing["padstack"],
+                            drill_diameter_um=300.0,
+                            start_layer="TOP",
+                            end_layer="PWR1",
+                            length_um=153.0,
+                            end_x_um=landing["x_um"],
+                            end_y_um=landing["y_um"],
+                            padstack_material="COPPER",
+                        ),
+                    ),
+                ).model_dump(mode="python"),
+            )
     scenario = ScenarioSpec.model_validate(payload)
     plan = compute_distribution_plan(
         scenario,

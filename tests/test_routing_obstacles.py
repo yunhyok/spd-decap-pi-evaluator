@@ -4,6 +4,7 @@ from dataclasses import replace
 from hashlib import sha256
 import json
 import zlib
+from types import SimpleNamespace
 
 import pytest
 
@@ -19,8 +20,10 @@ from spd_decap_pi.routing_obstacles import (
     SignalTraceAvoidancePolicy,
     TraceWidthSource,
     decode_routing_obstacle_asset,
+    detect_mlo_transition_policy,
     encode_routing_obstacle_asset,
     evaluate_routing_candidate,
+    parse_mlo_transition_policy,
     point_segment_distance,
 )
 
@@ -303,4 +306,164 @@ def test_segment_coordinate_format_bound_rejects_index_bombs() -> None:
             width_source=TraceWidthSource.INLINE,
             net_role=RoutingNetRole.SIGNAL,
             provenance=RoutingObjectProvenance.PHYSICAL_ROUTING,
+        )
+
+
+def test_mlo_transition_policy_detects_qualified_copper_microvia() -> None:
+    layers = (
+        SimpleNamespace(name="TOP", is_conductor=True, thickness_um=20.0),
+        SimpleNamespace(name="D1", is_conductor=False, thickness_um=80.0),
+        SimpleNamespace(name="L2", is_conductor=True, thickness_um=20.0),
+    )
+    landing = SimpleNamespace(
+        via_id="V1",
+        x_um=100.0,
+        y_um=200.0,
+        path_evidence=(
+            SimpleNamespace(
+                trace_hops=0,
+                trace_alternate_exit=False,
+                segments=(
+                    SimpleNamespace(
+                        drill_diameter_um=100.0,
+                        padstack_material="COPPER",
+                        start_layer="TOP",
+                        end_layer="L2",
+                        end_x_um=100.0,
+                        end_y_um=200.0,
+                    ),
+                ),
+            ),
+        ),
+    )
+    policy = detect_mlo_transition_policy((landing,), stackup_layers=layers)
+    assert policy.transition_required is True
+    assert policy.translated_recipe_validated is False
+    assert policy.evidence_codes == ("QUALIFIED_COPPER_MICROVIA",)
+
+
+def test_mlo_transition_policy_detects_lateral_path_but_not_conventional_through_via() -> None:
+    layers = (
+        SimpleNamespace(name="TOP", is_conductor=True, thickness_um=20.0),
+        SimpleNamespace(name="D1", is_conductor=False, thickness_um=100.0),
+        SimpleNamespace(name="L2", is_conductor=True, thickness_um=20.0),
+        SimpleNamespace(name="D2", is_conductor=False, thickness_um=100.0),
+        SimpleNamespace(name="BOTTOM", is_conductor=True, thickness_um=20.0),
+    )
+    conventional = SimpleNamespace(
+        via_id="V-through",
+        x_um=0.0,
+        y_um=0.0,
+        path_evidence=(
+            SimpleNamespace(
+                trace_hops=0,
+                trace_alternate_exit=False,
+                segments=(
+                    SimpleNamespace(
+                        drill_diameter_um=300.0,
+                        padstack_material="COPPER",
+                        start_layer="TOP",
+                        end_layer="BOTTOM",
+                        end_x_um=0.0,
+                        end_y_um=0.0,
+                    ),
+                ),
+            ),
+        ),
+    )
+    direct = detect_mlo_transition_policy((conventional,), stackup_layers=layers)
+    assert direct.transition_required is False
+
+    lateral = SimpleNamespace(
+        via_id="V-mlo",
+        x_um=0.0,
+        y_um=0.0,
+        path_evidence=(
+            SimpleNamespace(
+                trace_hops=1,
+                trace_alternate_exit=False,
+                segments=(
+                    SimpleNamespace(
+                        drill_diameter_um=300.0,
+                        padstack_material="COPPER",
+                        start_layer="TOP",
+                        end_layer="BOTTOM",
+                        end_x_um=60.0,
+                        end_y_um=0.0,
+                    ),
+                ),
+            ),
+        ),
+    )
+    staggered = detect_mlo_transition_policy((lateral,), stackup_layers=layers)
+    assert staggered.transition_required is True
+    assert staggered.evidence_codes == (
+        "LATERAL_RECOVERED_PATH",
+        "STAGGERED_VIA_ENDPOINT",
+    )
+
+
+@pytest.mark.parametrize(
+    ("field", "value"),
+    (
+        ("transition_required", "false"),
+        ("translated_recipe_validated", "true"),
+    ),
+)
+def test_persisted_mlo_policy_rejects_string_booleans(
+    field: str, value: str
+) -> None:
+    payload: dict[str, object] = {
+        "policy_version": "MLO_TRANSITION_RECIPE_GATE_V1",
+        "transition_required": True,
+        "translated_recipe_validated": False,
+        "evidence_codes": ["QUALIFIED_COPPER_MICROVIA"],
+        "source_sha256": _SOURCE_SHA,
+    }
+    payload[field] = value
+    with pytest.raises(ValueError, match="JSON booleans"):
+        parse_mlo_transition_policy(
+            payload,
+            expected_source_sha256=_SOURCE_SHA,
+        )
+
+
+def test_persisted_mlo_policy_rejects_unknown_version_and_malformed_root() -> None:
+    with pytest.raises(ValueError, match="unsupported MLO transition policy"):
+        parse_mlo_transition_policy(
+            {
+                "policy_version": "MLO_TRANSITION_RECIPE_GATE_V999",
+                "transition_required": True,
+                "translated_recipe_validated": True,
+            }
+        )
+    with pytest.raises(ValueError, match="must be an object"):
+        parse_mlo_transition_policy("false")
+
+
+def test_persisted_mlo_policy_cannot_self_assert_a_validated_recipe() -> None:
+    with pytest.raises(ValueError, match="has no translated recipe schema"):
+        parse_mlo_transition_policy(
+            {
+                "policy_version": "MLO_TRANSITION_RECIPE_GATE_V1",
+                "transition_required": True,
+                "translated_recipe_validated": True,
+                "evidence_codes": ["QUALIFIED_COPPER_MICROVIA"],
+                "source_sha256": _SOURCE_SHA,
+            },
+            expected_source_sha256=_SOURCE_SHA,
+        )
+
+
+def test_persisted_mlo_policy_rejects_stale_source_binding() -> None:
+    with pytest.raises(ValueError, match="different source SPD"):
+        parse_mlo_transition_policy(
+            {
+                "policy_version": "MLO_TRANSITION_RECIPE_GATE_V1",
+                "transition_required": True,
+                "translated_recipe_validated": False,
+                "evidence_codes": ["QUALIFIED_COPPER_MICROVIA"],
+                "source_sha256": _SOURCE_SHA,
+            },
+            expected_source_sha256=sha256(b"other source").hexdigest(),
         )

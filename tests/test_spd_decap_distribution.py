@@ -4,6 +4,7 @@ from dataclasses import replace
 from hashlib import sha256
 import json
 from time import perf_counter
+from types import SimpleNamespace
 
 import numpy as np
 import pytest
@@ -64,6 +65,8 @@ from spd_decap_pi.scenario import (
 )
 from spd_decap_pi.routing_obstacles import (
     PlannedViaProfile,
+    REIMPORT_SOURCE_FOR_TRANSITION_EVIDENCE_CODE,
+    REIMPORT_SOURCE_FOR_TRANSITION_EVIDENCE_MESSAGE,
     RoutingLayerCompleteness,
     RoutingNetRole,
     RoutingObjectProvenance,
@@ -920,6 +923,7 @@ def _scenario_with_routing_asset(
             "routing_obstacle_asset": reference.model_dump(mode="python"),
         }
     )
+    scenario = _with_power_via_path(scenario, "C1", "PWR_ALT")
     plane = SpdPlaneGeometry(
         layer="PWR_ALT",
         net="V2",
@@ -1386,6 +1390,8 @@ def test_anchored_cluster_cannot_reuse_another_members_legacy_protected_rail() -
             "routing_obstacle_asset": reference.model_dump(mode="python"),
         }
     )
+    for refdes in ("A0", "A2"):
+        scenario = _with_power_via_path(scenario, refdes, "PWR_ALT")
     plane = SpdPlaneGeometry(
         layer="PWR_ALT",
         net="V2",
@@ -1677,6 +1683,429 @@ def test_batch_via_eligibility_uses_immutable_landing_not_bent_path_endpoint() -
     )
 
     assert result == {"V1": {}}
+
+
+def test_batch_mlo_transition_gate_blocks_only_non_top_candidates() -> None:
+    """An unresolved MLO recipe must not poison conventional landings."""
+
+    geometry = SpdPlaneGeometry(
+        layer="PWR_ALT",
+        net="V1",
+        positive_polygons_um=(
+            ((0.0, 0.0), (20.0, 0.0), (20.0, 20.0), (0.0, 20.0)),
+        ),
+        negative_polygons_um=(),
+        positive_circles_um=(),
+        negative_circles_um=(),
+        primitive_order=(("positive_polygon", 0),),
+    )
+    conventional = ScenarioViaLanding(
+        via_id="V-CONV",
+        net="V1",
+        endpoint_node_id="N1",
+        padstack="P",
+        x_um=5.0,
+        y_um=5.0,
+    )
+    mlo = ScenarioViaLanding(
+        via_id="V-MLO",
+        net="V1",
+        endpoint_node_id="N2",
+        padstack="P",
+        x_um=6.0,
+        y_um=6.0,
+    )
+    choices = {("v1", "pwr_alt", "gnd"): ((_rail("R1"), "VT1"),)}
+    evidence: list[object] = []
+    result = distribution_module._distribution_batch_via_eligibility(
+        (geometry,),
+        (conventional, mlo),
+        choices,
+        mlo_transition_required_via_ids=("V-MLO",),
+        mlo_transition_evidence=evidence,
+        top_layer="TOP",
+    )
+
+    assert set(result["V-CONV"]) == {"R1"}
+    assert result["V-MLO"] == {}
+    assert evidence and evidence[0].detail.code == "MLO_TRANSITION_RECIPE_REQUIRED"
+
+
+def test_batch_mlo_gate_survives_missing_optional_geometry_dependency(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    import builtins
+
+    landing = ScenarioViaLanding(
+        via_id="V-MLO",
+        net="V1",
+        endpoint_node_id="N1",
+        padstack="P",
+        x_um=5.0,
+        y_um=5.0,
+    )
+    choices = {("v1", "pwr_alt", "gnd"): ((_rail("R1"), "VT1"),)}
+    evidence: list[object] = []
+    blocked_vias: set[str] = set()
+    real_import = builtins.__import__
+
+    def fail_shapely(name: str, *args: object, **kwargs: object):
+        if name == "shapely":
+            raise ImportError("simulated missing Shapely")
+        return real_import(name, *args, **kwargs)
+
+    monkeypatch.setattr(builtins, "__import__", fail_shapely)
+    result = distribution_module._distribution_batch_via_eligibility(
+        (),
+        (landing,),
+        choices,
+        mlo_transition_required_via_ids=(landing.via_id,),
+        mlo_transition_evidence=evidence,
+        mlo_transition_blocked_via_ids=blocked_vias,
+        top_layer="TOP",
+    )
+
+    assert result == {"V-MLO": {}}
+    assert blocked_vias == {"V-MLO"}
+    assert evidence and evidence[0].detail.code == "MLO_TRANSITION_RECIPE_REQUIRED"
+
+
+def _non_top_direct_transition_scenario(
+    *,
+    path_kind: str | None,
+    real_import: bool = False,
+    fresh_policy: bool = False,
+) -> ScenarioSpec:
+    scenario = _direct_scenario(
+        (("C1", 5.0, ("R1", "R2")),),
+        rail_ids=("R1", "R2"),
+    )
+    layers = [
+        StackupLayer(
+            name="TOP",
+            thickness_um=18.0,
+            conductivity_s_m=5.8e7,
+            pwr_nets=["V1"],
+        ),
+        StackupLayer(name="D1", thickness_um=20.0, dk=4.0, df=0.01),
+        StackupLayer(
+            name="PWR_ALT",
+            thickness_um=18.0,
+            conductivity_s_m=5.8e7,
+            pwr_nets=["V2"],
+        ),
+        StackupLayer(
+            name="GND",
+            thickness_um=18.0,
+            conductivity_s_m=5.8e7,
+            pwr_nets=["DGND"],
+        ),
+    ]
+    metadata: dict[str, object] = {}
+    if real_import:
+        metadata["spd_import"] = {"source_sha256": scenario.source.sha256}
+    if fresh_policy:
+        metadata["spd_mlo_transition_policy"] = {
+            "policy_version": "MLO_TRANSITION_RECIPE_GATE_V1",
+            "transition_required": False,
+            "translated_recipe_validated": False,
+            "evidence_codes": [],
+            "source_sha256": scenario.source.sha256,
+        }
+    project = scenario.base_project.model_copy(
+        update={
+            "stackup_layers": layers,
+            "rails": [
+                rail.model_copy(
+                    update={
+                        "pwr_layer": "TOP" if rail.rail_id == "R1" else "PWR_ALT",
+                        "gnd_layer": "GND",
+                    }
+                )
+                for rail in scenario.base_project.rails
+            ],
+            "metadata": metadata,
+        }
+    )
+    decap = scenario.decaps[0].model_copy(
+        update={
+            "eligibility": {
+                rail_id: item.model_copy(
+                    update={
+                        "pwr_layer": "TOP" if rail_id == "R1" else "PWR_ALT",
+                        "gnd_layer": "GND",
+                    }
+                )
+                for rail_id, item in scenario.decaps[0].eligibility.items()
+            }
+        }
+    )
+    assert scenario.connection_analysis is not None
+    connection = scenario.connection_analysis.connections["C1"]
+    landing = connection.power_vias[0]
+    if path_kind is not None:
+        segment = ScenarioViaSegment(
+            via_id=landing.via_id,
+            padstack=landing.padstack,
+            drill_diameter_um=100.0 if path_kind == "microvia" else 300.0,
+            start_layer="TOP",
+            end_layer="PWR_ALT",
+            length_um=20.0,
+            end_x_um=landing.x_um,
+            end_y_um=landing.y_um,
+            padstack_material="COPPER",
+        )
+        landing = landing.model_copy(
+            update={
+                "path_evidence": (
+                    ScenarioViaPathEvidence(
+                        target_layer="PWR_ALT",
+                        target_node_id="TARGET-C1",
+                        target_padstack=landing.padstack,
+                        target_pad_kind="CIRCLE",
+                        target_pad_width_um=300.0,
+                        target_pad_height_um=300.0,
+                        x_um=landing.x_um,
+                        y_um=landing.y_um,
+                        segments=(segment,),
+                    ),
+                )
+            }
+        )
+    connections = dict(scenario.connection_analysis.connections)
+    connections["C1"] = connection.model_copy(update={"power_vias": (landing,)})
+    return ScenarioSpec.model_validate(
+        {
+            **scenario.model_dump(mode="python"),
+            "normalized_project": project.model_dump(mode="python"),
+            "decaps": [decap.model_dump(mode="python")],
+            "connection_analysis": scenario.connection_analysis.model_copy(
+                update={"connections": connections}
+            ).model_dump(mode="python"),
+        }
+    )
+
+
+def test_direct_planner_blocks_observed_microvia_without_projection() -> None:
+    scenario = _non_top_direct_transition_scenario(path_kind="microvia")
+    targets = {("R1", "M1"): 0, ("R2", "M1"): 1}
+
+    with pytest.raises(DistributionError) as caught:
+        compute_distribution_plan(scenario, targets)
+
+    assert caught.value.code == "POWER_PROJECTION_REQUIRED"
+    assert [item.code for item in caught.value.diagnostics] == [
+        "MLO_TRANSITION_RECIPE_REQUIRED"
+    ]
+    assert "build_distribution_power_projection" in str(caught.value)
+
+
+def test_legacy_missing_policy_and_path_requires_source_reimport() -> None:
+    """A pre-v0.22 landing cannot silently become an immutable via column."""
+
+    scenario = _non_top_direct_transition_scenario(
+        path_kind=None,
+        real_import=True,
+    )
+    assert "spd_mlo_transition_policy" not in scenario.base_project.metadata
+    assert scenario.connection_analysis is not None
+    legacy_landing = scenario.connection_analysis.connections["C1"].power_vias[0]
+    assert legacy_landing.path_evidence == ()
+    targets = {("R1", "M1"): 0, ("R2", "M1"): 1}
+
+    rejection = distribution_module._mlo_transition_rejection_for_landing(
+        scenario,
+        legacy_landing,
+        stackup_layers=scenario.base_project.stackup_layers,
+    )
+    assert rejection is not None
+    assert rejection[0] == REIMPORT_SOURCE_FOR_TRANSITION_EVIDENCE_CODE
+    with pytest.raises(DistributionError) as caught:
+        compute_distribution_plan(scenario, targets)
+    assert caught.value.code == "POWER_PROJECTION_REQUIRED"
+    assert [item.code for item in caught.value.diagnostics] == [
+        REIMPORT_SOURCE_FOR_TRANSITION_EVIDENCE_CODE
+    ]
+    plane = SpdPlaneGeometry(
+        layer="PWR_ALT",
+        net="V2",
+        positive_polygons_um=(
+            ((0.0, -5.0), (10.0, -5.0), (10.0, 5.0), (0.0, 5.0)),
+        ),
+        negative_polygons_um=(),
+        primitive_order=(("positive_polygon", 0),),
+    )
+    projection = distribution_module.build_distribution_power_projection(
+        scenario,
+        {},
+        plane_geometries=(plane,),
+        targets=targets,
+    )
+
+    assert projection is not None
+    assert [item.code for item in projection.mlo_transition_diagnostics] == [
+        REIMPORT_SOURCE_FOR_TRANSITION_EVIDENCE_CODE
+    ]
+    assert projection.mlo_transition_diagnostics[0].actual_count == 1
+    plan = compute_distribution_plan(
+        scenario,
+        targets,
+        power_projection=projection,
+    )
+    assert plan.status == DistributionPlanStatus.PARTIAL
+    assert plan.assignment_map == {}
+    assert any(
+        item.code == REIMPORT_SOURCE_FOR_TRANSITION_EVIDENCE_CODE
+        for item in plan.diagnostics
+    )
+
+
+def test_legacy_conventional_path_without_policy_remains_eligible() -> None:
+    """Explicit continuous evidence is sufficient without board-level policy."""
+
+    scenario = _non_top_direct_transition_scenario(
+        path_kind="conventional",
+        real_import=True,
+    )
+    assert "spd_mlo_transition_policy" not in scenario.base_project.metadata
+    assert scenario.connection_analysis is not None
+    landing = scenario.connection_analysis.connections["C1"].power_vias[0]
+    assert landing.path_evidence
+    assert (
+        distribution_module._mlo_transition_rejection_for_landing(
+            scenario,
+            landing,
+            stackup_layers=scenario.base_project.stackup_layers,
+        )
+        is None
+    )
+    targets = {("R1", "M1"): 0, ("R2", "M1"): 1}
+    direct_plan = compute_distribution_plan(scenario, targets)
+    assert direct_plan.status == DistributionPlanStatus.FULL
+    assert direct_plan.assignment_map == {"C1": "R2"}
+    plane = SpdPlaneGeometry(
+        layer="PWR_ALT",
+        net="V2",
+        positive_polygons_um=(
+            ((0.0, -5.0), (10.0, -5.0), (10.0, 5.0), (0.0, 5.0)),
+        ),
+        negative_polygons_um=(),
+        primitive_order=(("positive_polygon", 0),),
+    )
+    projection = distribution_module.build_distribution_power_projection(
+        scenario,
+        {},
+        plane_geometries=(plane,),
+        targets=targets,
+    )
+
+    assert projection is not None
+    assert projection.mlo_transition_diagnostics == ()
+    plan = compute_distribution_plan(
+        scenario,
+        targets,
+        power_projection=projection,
+    )
+    assert plan.status == DistributionPlanStatus.FULL
+    assert plan.assignment_map == {"C1": "R2"}
+
+
+def test_current_negative_policy_does_not_certify_pathless_landing() -> None:
+    """A fresh board-level negative cannot grant per-landing permission."""
+
+    scenario = _non_top_direct_transition_scenario(
+        path_kind=None,
+        real_import=True,
+        fresh_policy=True,
+    )
+    assert scenario.connection_analysis is not None
+    landing = scenario.connection_analysis.connections["C1"].power_vias[0]
+
+    assert (
+        distribution_module._mlo_transition_rejection_for_landing(
+            scenario,
+            landing,
+            stackup_layers=scenario.base_project.stackup_layers,
+        )
+        == (
+            REIMPORT_SOURCE_FOR_TRANSITION_EVIDENCE_CODE,
+            REIMPORT_SOURCE_FOR_TRANSITION_EVIDENCE_MESSAGE,
+        )
+    )
+    targets = {("R1", "M1"): 0, ("R2", "M1"): 1}
+    with pytest.raises(DistributionError) as caught:
+        compute_distribution_plan(scenario, targets)
+    assert caught.value.code == "POWER_PROJECTION_REQUIRED"
+    assert [item.code for item in caught.value.diagnostics] == [
+        REIMPORT_SOURCE_FOR_TRANSITION_EVIDENCE_CODE
+    ]
+
+    plane = SpdPlaneGeometry(
+        layer="PWR_ALT",
+        net="V2",
+        positive_polygons_um=(
+            ((0.0, -5.0), (10.0, -5.0), (10.0, 5.0), (0.0, 5.0)),
+        ),
+        negative_polygons_um=(),
+        primitive_order=(("positive_polygon", 0),),
+    )
+    projection = distribution_module.build_distribution_power_projection(
+        scenario,
+        {},
+        plane_geometries=(plane,),
+        targets=targets,
+    )
+    assert projection is not None
+    assert [item.code for item in projection.mlo_transition_diagnostics] == [
+        REIMPORT_SOURCE_FOR_TRANSITION_EVIDENCE_CODE
+    ]
+    plan = compute_distribution_plan(
+        scenario,
+        targets,
+        power_projection=projection,
+    )
+    assert plan.status == DistributionPlanStatus.PARTIAL
+    assert plan.assignment_map == {}
+
+
+@pytest.mark.parametrize(
+    "raw_policy",
+    (
+        "false",
+        {
+            "policy_version": "MLO_TRANSITION_RECIPE_GATE_V1",
+            "transition_required": "false",
+            "translated_recipe_validated": "true",
+        },
+        {
+            "policy_version": "MLO_TRANSITION_RECIPE_GATE_V999",
+            "transition_required": True,
+            "translated_recipe_validated": True,
+        },
+    ),
+)
+def test_mlo_policy_metadata_is_fail_closed_when_malformed(raw_policy: object) -> None:
+    project = _project(("R1",)).model_copy(
+        update={"metadata": {"spd_mlo_transition_policy": raw_policy}}
+    )
+    scenario = SimpleNamespace(
+        base_project=project,
+        source=SimpleNamespace(sha256=sha256(b"source").hexdigest()),
+    )
+    landing = ScenarioViaLanding(
+        via_id="V-MLO",
+        net="V1",
+        endpoint_node_id="N1",
+        padstack="P",
+        x_um=5.0,
+        y_um=5.0,
+    )
+
+    assert distribution_module._mlo_transition_required_for_landing(
+        scenario,
+        landing,
+        stackup_layers=project.stackup_layers,
+    )
 
 
 def test_batch_via_eligibility_accepts_target_copper_below_existing_via_span() -> None:
@@ -2872,6 +3301,7 @@ def test_fixed_separator_distance_fallback_still_honors_mode(
         scenario,
         {("R1", "M1"): 1, ("R2", "M1"): 2},
         mode,
+        optimization_policy="MIN_GAPS",
     )
 
     assert distance_call_count == 2

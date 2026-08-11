@@ -25,6 +25,7 @@ from PySide6.QtWidgets import (
     QLabel,
     QMenu,
     QMessageBox,
+    QPushButton,
     QSplitter,
     QTabWidget,
     QTableWidget,
@@ -292,7 +293,18 @@ def test_main_window_exposes_sibling_identity_and_evaluation_only_workflow() -> 
         assert "Plot Analyst only" in labels
         assert "fills are read-only PowerSI artwork" in labels
         assert "dashed rectangles mark the solver" in labels
-        assert "Optimization" not in labels
+        # Distribution exposes a legitimate optimization-policy control; the
+        # evaluation-only boundary is the explicit AI restriction and absence
+        # of an optimization action in the AI controls.
+        assert "Optimization policy" in labels
+        assert (
+            "AI receives solver-derived features and cannot change PWR assignments, "
+            "enable decaps, or run optimization."
+        ) in labels
+        assert not any(
+            "optimization" in item.text().casefold()
+            for item in window.findChildren(QPushButton)
+        )
         assert not window.evaluate_button.isEnabled()
     finally:
         window._dirty = False

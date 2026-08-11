@@ -50,9 +50,11 @@ from .scenario import (
     mixed_reference_ground_landing_identity,
 )
 from .routing_obstacles import (
+    MLO_TRANSITION_POLICY_VERSION,
     PlannedViaProfile,
     RoutingObstacleAsset,
     decode_routing_obstacle_asset,
+    detect_mlo_transition_policy,
     encode_routing_obstacle_asset,
     routing_attachment_name,
     stackup_fingerprint,
@@ -1065,6 +1067,20 @@ def import_spd_scenario(
                 )
             )
     recovery_metadata = dict(base_project.metadata)
+    # This source-bound policy is a board-level positive MLO summary.  Path
+    # recovery can legitimately fall back for individual landings, so a false
+    # result is never a per-landing conventional-via certificate; Distribution
+    # requires each non-TOP candidate to retain explicit path evidence.
+    mlo_transition_policy = detect_mlo_transition_policy(
+        source_landings,
+        stackup_layers=base_project.stackup_layers,
+        evidence_by_via=path_recovery.evidence_by_via,
+    )
+    recovery_metadata["spd_mlo_transition_policy"] = {
+        **mlo_transition_policy.payload(),
+        "policy_version": MLO_TRANSITION_POLICY_VERSION,
+        "source_sha256": analysis.source.sha256,
+    }
     recovery_metadata["spd_via_path_recovery"] = {
         **dict(path_recovery.statistics),
         "algorithm": "unique_monotonic_same_net_via_chain_v1",

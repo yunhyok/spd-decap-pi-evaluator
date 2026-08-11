@@ -19,6 +19,8 @@ from threading import RLock
 from typing import Any, Iterable, Mapping, Sequence
 import zlib
 
+from ._core.via_model import SOLID_COPPER_FILLED_MICROVIA, classify_via_conductor
+
 
 ROUTING_ASSET_SCHEMA = "SPD_SIGNAL_ROUTING_V1"
 ROUTING_POLICY_VERSION = "SIGNAL_NET_ONLY_RESEARCH_V1"
@@ -31,6 +33,27 @@ _MAX_ROUTING_ABS_COORD_UM = 1.0e12
 _MAX_ROUTING_WIDTH_UM = 1.0e9
 _MAX_TILES_PER_SEGMENT = 65_536
 _MAX_TILE_INDEX_ENTRIES_PER_LAYER = 2_000_000
+
+# This policy is deliberately separate from the signal-routing asset schema.
+# It is a structural Distribution gate: a source-proven MLO transition may
+# not be treated as an immutable vertical column until a translated rebuild
+# recipe is independently engineered and persisted.
+MLO_TRANSITION_POLICY_VERSION = "MLO_TRANSITION_RECIPE_GATE_V1"
+MLO_TRANSITION_RECIPE_REQUIRED_CODE = "MLO_TRANSITION_RECIPE_REQUIRED"
+MLO_TRANSITION_RECIPE_REQUIRED_MESSAGE = (
+    "source MLO via path has a lateral or qualified microvia transition but "
+    "no validated translated rebuild recipe; reimport the raw SPD after recipe "
+    "engineering before selecting a non-TOP destination"
+)
+REIMPORT_SOURCE_FOR_TRANSITION_EVIDENCE_CODE = (
+    "REIMPORT_SOURCE_FOR_TRANSITION_EVIDENCE"
+)
+REIMPORT_SOURCE_FOR_TRANSITION_EVIDENCE_MESSAGE = (
+    "scenario landing lacks explicit source-proven via path evidence; a "
+    "board-level transition policy cannot certify a pathless landing as a "
+    "continuous vertical via, so reimport the raw SPD before selecting a "
+    "non-TOP destination"
+)
 
 
 class RoutingNetRole(StrEnum):
@@ -62,6 +85,162 @@ class RoutingCandidateState(StrEnum):
 
 class RoutingProtectionScope(StrEnum):
     SIGNAL_NET_ONLY = "SIGNAL_NET_ONLY"
+
+
+@dataclass(frozen=True, slots=True)
+class MloTransitionPolicy:
+    """Persisted structural gate for source MLO via transitions.
+
+    ``translated_recipe_validated`` remains false until a future importer can
+    persist a source-proven, translated via/trace rebuild recipe.  Keeping the
+    state explicit lets Distribution reject unsafe non-TOP retargets while
+    preserving conventional vertical-via behavior and legacy bundles.
+    """
+
+    policy_version: str = MLO_TRANSITION_POLICY_VERSION
+    transition_required: bool = False
+    translated_recipe_validated: bool = False
+    evidence_codes: tuple[str, ...] = ()
+
+    def __post_init__(self) -> None:
+        if self.policy_version != MLO_TRANSITION_POLICY_VERSION:
+            raise ValueError(
+                f"unsupported MLO transition policy {self.policy_version!r}"
+            )
+        if type(self.transition_required) is not bool or type(
+            self.translated_recipe_validated
+        ) is not bool:
+            raise ValueError("MLO transition policy flags must be JSON booleans")
+        if self.translated_recipe_validated:
+            raise ValueError(
+                "MLO transition policy V1 has no translated recipe schema"
+            )
+        if any(not isinstance(item, str) or not item.strip() for item in self.evidence_codes):
+            raise ValueError("MLO transition evidence codes must be nonblank strings")
+        if len({item.casefold() for item in self.evidence_codes}) != len(
+            self.evidence_codes
+        ):
+            raise ValueError("MLO transition evidence codes must be unique")
+
+    def payload(self) -> dict[str, object]:
+        return {
+            "policy_version": self.policy_version,
+            "transition_required": self.transition_required,
+            "translated_recipe_validated": self.translated_recipe_validated,
+            "evidence_codes": list(self.evidence_codes),
+        }
+
+
+def parse_mlo_transition_policy(
+    value: object,
+    *,
+    expected_source_sha256: str | None = None,
+) -> MloTransitionPolicy:
+    """Strictly decode persisted MLO policy metadata.
+
+    This is security-sensitive eligibility input.  Python truthiness is never
+    accepted for JSON booleans, unknown policy versions are not interpreted,
+    and an optional source binding must match the active scenario exactly.
+    V1 cannot claim a validated translated recipe because it defines no recipe
+    attachment schema.
+    """
+
+    if not isinstance(value, Mapping):
+        raise ValueError("MLO transition policy metadata must be an object")
+    version = value.get("policy_version")
+    if not isinstance(version, str) or version != MLO_TRANSITION_POLICY_VERSION:
+        raise ValueError(f"unsupported MLO transition policy {version!r}")
+    transition_required = value.get("transition_required")
+    recipe_validated = value.get("translated_recipe_validated")
+    if type(transition_required) is not bool or type(recipe_validated) is not bool:
+        raise ValueError("MLO transition policy flags must be JSON booleans")
+    evidence_codes = value.get("evidence_codes", ())
+    if not isinstance(evidence_codes, (list, tuple)):
+        raise ValueError("MLO transition evidence codes must be an array")
+    if any(not isinstance(item, str) for item in evidence_codes):
+        raise ValueError("MLO transition evidence codes must be strings")
+    raw_source = value.get("source_sha256")
+    if raw_source is not None:
+        if not isinstance(raw_source, str):
+            raise ValueError("MLO transition source SHA-256 must be a string")
+        _validate_sha(raw_source, "MLO transition source SHA-256")
+        if (
+            expected_source_sha256 is not None
+            and raw_source.casefold() != expected_source_sha256.casefold()
+        ):
+            raise ValueError("MLO transition policy belongs to a different source SPD")
+    return MloTransitionPolicy(
+        policy_version=version,
+        transition_required=transition_required,
+        translated_recipe_validated=recipe_validated,
+        evidence_codes=tuple(evidence_codes),
+    )
+
+
+def detect_mlo_transition_policy(
+    landings: Iterable[object],
+    *,
+    stackup_layers: Sequence[object],
+    evidence_by_via: Mapping[str, Iterable[object]] | None = None,
+) -> MloTransitionPolicy:
+    """Classify source evidence that cannot justify an immutable vertical retarget.
+
+    The detector uses only retained source geometry.  A lateral trace hop or a
+    via endpoint that moves from its previous node is evidence of a staggered
+    path.  A segment is also treated as MLO when the existing qualified
+    source-COPPER microvia classifier proves the small adjacent-layer profile.
+    No recipe is synthesized; such evidence simply requires the future recipe
+    attachment and therefore fails closed for non-TOP Distribution targets.
+    This is a board-level *positive* detector only: ``transition_required=false``
+    means no retained MLO evidence was observed, not that every landing was
+    proven to be a conventional continuous vertical via.  Distribution must
+    still require explicit per-landing path evidence before a non-TOP retarget.
+    """
+
+    codes: set[str] = set()
+    evidence_lookup = {
+        str(key).casefold(): tuple(values)
+        for key, values in (evidence_by_via or {}).items()
+    }
+    for landing in landings:
+        via_id = str(getattr(landing, "via_id", "")).casefold()
+        path_evidence = tuple(getattr(landing, "path_evidence", ()) or ())
+        if not path_evidence and via_id:
+            path_evidence = evidence_lookup.get(via_id, ())
+        for evidence in path_evidence:
+            if int(getattr(evidence, "trace_hops", 0) or 0) > 0 or bool(
+                getattr(evidence, "trace_alternate_exit", False)
+            ):
+                codes.add("LATERAL_RECOVERED_PATH")
+            previous_x = float(getattr(landing, "x_um", 0.0))
+            previous_y = float(getattr(landing, "y_um", 0.0))
+            for segment in tuple(getattr(evidence, "segments", ()) or ()):
+                end_x = float(getattr(segment, "end_x_um"))
+                end_y = float(getattr(segment, "end_y_um"))
+                if abs(end_x - previous_x) > ROUTING_GEOMETRY_EPS_UM or abs(
+                    end_y - previous_y
+                ) > ROUTING_GEOMETRY_EPS_UM:
+                    codes.add("STAGGERED_VIA_ENDPOINT")
+                try:
+                    classification = classify_via_conductor(
+                        drill_diameter_um=getattr(segment, "drill_diameter_um"),
+                        padstack_material=getattr(segment, "padstack_material", None),
+                        start_layer=getattr(segment, "start_layer", None),
+                        end_layer=getattr(segment, "end_layer", None),
+                        stackup_layers=stackup_layers,
+                    )
+                except (TypeError, ValueError):
+                    classification = None
+                if (
+                    classification is not None
+                    and classification.conductor_model == SOLID_COPPER_FILLED_MICROVIA
+                ):
+                    codes.add("QUALIFIED_COPPER_MICROVIA")
+                previous_x, previous_y = end_x, end_y
+    return MloTransitionPolicy(
+        transition_required=bool(codes),
+        evidence_codes=tuple(sorted(codes)),
+    )
 
 
 class RoutingClearanceMode(StrEnum):
@@ -912,6 +1091,12 @@ def _validate_sha(value: str, label: str) -> None:
 
 __all__ = [
     "MAX_ROUTING_ASSET_EXPANDED_BYTES",
+    "MLO_TRANSITION_POLICY_VERSION",
+    "MLO_TRANSITION_RECIPE_REQUIRED_CODE",
+    "MLO_TRANSITION_RECIPE_REQUIRED_MESSAGE",
+    "REIMPORT_SOURCE_FOR_TRANSITION_EVIDENCE_CODE",
+    "REIMPORT_SOURCE_FOR_TRANSITION_EVIDENCE_MESSAGE",
+    "MloTransitionPolicy",
     "PlannedViaProfile",
     "ROUTING_ASSET_SCHEMA",
     "ROUTING_GEOMETRY_EPS_UM",
@@ -929,9 +1114,11 @@ __all__ = [
     "SignalTraceAvoidancePolicy",
     "TraceWidthSource",
     "decode_routing_obstacle_asset",
+    "detect_mlo_transition_policy",
     "encode_routing_obstacle_asset",
     "evaluate_routing_candidate",
     "point_segment_distance",
+    "parse_mlo_transition_policy",
     "routing_attachment_name",
     "stackup_fingerprint",
 ]

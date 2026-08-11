@@ -25,6 +25,25 @@ DECAP_CHANGE_HEADERS = (
     "Y (um)",
 )
 
+CANDIDATE_AUDIT_HEADERS = (
+    "RefDes",
+    "Component Members",
+    "Component Size",
+    "Source",
+    "Destination",
+    "Model",
+    "Distance (um)",
+    "Eligible",
+    "Selected",
+    "Decision Code",
+    "Decision Detail",
+)
+
+# Excel worksheets have 1,048,576 rows including the header row.  Keep the
+# audit export fail-closed instead of letting xlsxwriter silently ignore rows
+# after the worksheet boundary.
+EXCEL_MAX_DATA_ROWS = 1_048_575
+
 
 def _write_value(
     worksheet: Any,
@@ -60,6 +79,8 @@ def write_distribution_workbook(
     *,
     inventory_headers: Sequence[str] = (),
     inventory_rows: Sequence[Sequence[object]] = (),
+    candidate_audit_headers: Sequence[str] = (),
+    candidate_audit_rows: Sequence[Sequence[object]] = (),
     metadata: Mapping[str, object] | None = None,
 ) -> None:
     """Write Decap results and the source Distribution target matrix to XLSX."""
@@ -69,6 +90,8 @@ def write_distribution_workbook(
     normalized_targets = tuple(tuple(row) for row in target_rows)
     normalized_inventory_headers = tuple(str(value) for value in inventory_headers)
     normalized_inventory = tuple(tuple(row) for row in inventory_rows)
+    normalized_candidate_headers = tuple(str(value) for value in candidate_audit_headers)
+    normalized_candidate_rows = tuple(tuple(row) for row in candidate_audit_rows)
     normalized_metadata = tuple(
         (str(key).strip(), value) for key, value in (metadata or {}).items()
     )
@@ -87,6 +110,20 @@ def write_distribution_workbook(
         for row in normalized_inventory
     ):
         raise ValueError("Inventory reconciliation rows must match their headers")
+    if bool(normalized_candidate_headers) != bool(normalized_candidate_rows):
+        raise ValueError(
+            "Candidate audit headers and rows must be supplied together"
+        )
+    if len(normalized_candidate_rows) > EXCEL_MAX_DATA_ROWS:
+        raise ValueError(
+            "Candidate audit rows exceed the Excel worksheet limit "
+            f"({EXCEL_MAX_DATA_ROWS:,} data rows)"
+        )
+    if any(
+        len(row) != len(normalized_candidate_headers)
+        for row in normalized_candidate_rows
+    ):
+        raise ValueError("Candidate audit rows must match their headers")
     if any(not key for key, _value in normalized_metadata):
         raise ValueError("Distribution metadata keys cannot be empty")
     if len({key.casefold() for key, _value in normalized_metadata}) != len(
@@ -127,6 +164,8 @@ def write_distribution_workbook(
                 normalized_targets,
                 normalized_inventory_headers,
                 normalized_inventory,
+                normalized_candidate_headers,
+                normalized_candidate_rows,
                 normalized_metadata,
             )
     except XlsxWriterException as exc:
@@ -140,6 +179,8 @@ def _populate_distribution_workbook(
     normalized_targets: tuple[tuple[object, ...], ...],
     normalized_inventory_headers: tuple[str, ...],
     normalized_inventory: tuple[tuple[object, ...], ...],
+    normalized_candidate_headers: tuple[str, ...],
+    normalized_candidate_rows: tuple[tuple[object, ...], ...],
     normalized_metadata: tuple[tuple[str, object], ...],
 ) -> None:
         header = workbook.add_format(
@@ -379,5 +420,42 @@ def _populate_distribution_workbook(
             target_sheet.set_column(0, 0, 34)
             target_sheet.set_column(1, 1, 68)
 
+        if normalized_candidate_headers:
+            audit_sheet = workbook.add_worksheet("Candidate Audit")
+            audit_sheet.hide_gridlines(2)
+            audit_sheet.freeze_panes(1, 0)
+            audit_sheet.set_row(0, 42)
+            audit_sheet.write_row(0, 0, normalized_candidate_headers, header)
+            audit_sheet.set_column(0, 0, 18)
+            audit_sheet.set_column(1, 1, 34)
+            audit_sheet.set_column(2, 2, 14)
+            audit_sheet.set_column(3, 5, 18)
+            audit_sheet.set_column(6, 6, 16)
+            audit_sheet.set_column(7, 8, 12)
+            audit_sheet.set_column(9, 9, 42)
+            audit_sheet.set_column(10, 10, 88)
+            for row_index, row_values in enumerate(normalized_candidate_rows, start=1):
+                odd = row_index % 2 == 0
+                for column, value in enumerate(row_values):
+                    if isinstance(value, bool):
+                        cell_format = text_odd if odd else text_even
+                    elif column in {2}:
+                        cell_format = count_odd if odd else count_even
+                    elif column == 6:
+                        cell_format = number_odd if odd else number_even
+                    else:
+                        cell_format = text_odd if odd else text_even
+                    _write_value(audit_sheet, row_index, column, value, cell_format)
+            audit_sheet.autofilter(
+                0,
+                0,
+                max(0, len(normalized_candidate_rows)),
+                len(normalized_candidate_headers) - 1,
+            )
 
-__all__ = ["DECAP_CHANGE_HEADERS", "write_distribution_workbook"]
+
+__all__ = [
+    "CANDIDATE_AUDIT_HEADERS",
+    "DECAP_CHANGE_HEADERS",
+    "write_distribution_workbook",
+]

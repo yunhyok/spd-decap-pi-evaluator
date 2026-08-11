@@ -7,7 +7,7 @@ from collections.abc import Mapping
 from dataclasses import dataclass
 from decimal import Decimal, ROUND_FLOOR
 from hashlib import sha256
-from math import isfinite
+from math import hypot, isfinite
 from pathlib import Path
 from time import perf_counter
 from typing import Any, Callable
@@ -390,6 +390,7 @@ class _PreparedDistributionPreview:
     preview_scenario: ScenarioSpec
     export_rows: tuple[Any, ...]
     power_projection: Any | None = None
+    candidate_audit_rows: tuple[Any, ...] = ()
 
 
 @dataclass(frozen=True, slots=True)
@@ -1622,16 +1623,21 @@ def _job_compute_distribution(
     distance_mode: Any,
     routing_policy: SignalTraceAvoidancePolicy = SignalTraceAvoidancePolicy(),
     *,
+    optimization_policy: Any = "BALANCED_AUTO",
+    gap_penalty_um: float | None = None,
     progress: Callable[[int, str], None],
     is_cancelled: Callable[[], bool],
 ) -> Any:
     """Run the CPU-bound distribution planner behind the shared GUI worker."""
 
     from ..distribution import (
+        DistributionPlan,
         build_distribution_power_projection,
         compute_distribution_plan,
         validate_distribution_targets,
     )
+    from ..distribution_audit import audit_distribution_candidates
+    from ..spreadsheet_export import CANDIDATE_AUDIT_HEADERS
 
     if is_cancelled():
         raise RuntimeError("distribution calculation cancelled")
@@ -1661,6 +1667,8 @@ def _job_compute_distribution(
             scenario,
             targets,
             distance_mode,
+            optimization_policy=optimization_policy,
+            gap_penalty_um=gap_penalty_um,
             tolerances=tolerances,
             power_projection=power_projection,
             routing_policy=routing_policy,
@@ -1687,6 +1695,93 @@ def _job_compute_distribution(
             and tuple(exported[0])[:2] == ("Component", "REFDES")
             else exported
         )
+        # Candidate explanations use the projected connectivity certificate,
+        # but preserve the pre-plan source assignments so every row remains
+        # auditable as a donor/exchange decision.
+        from ..distribution import _scenario_with_distribution_power_projection
+
+        candidate_audit_rows: list[tuple[object, ...]] = []
+        # Legacy/plugin callers may provide duck-typed placeholders while
+        # exercising the preview/export sequence.  Candidate explanations
+        # require the complete typed scenario and plan; leave the optional
+        # audit sheet empty for those compatibility calls.  For real typed
+        # inputs, errors remain visible rather than being silently swallowed.
+        if isinstance(scenario, ScenarioSpec) and isinstance(result, DistributionPlan):
+            progress(96, "Explaining atomic De-cap Distribution candidates")
+            audit_scenario = (
+                _scenario_with_distribution_power_projection(scenario, power_projection)
+                if hasattr(power_projection, "projected_analysis")
+                else scenario
+            )
+            moves = tuple(getattr(result, "moves", ()))
+            sacrifices = tuple(getattr(result, "sacrifices", ()))
+            bumps_by_rail: dict[str, tuple[object, ...]] = {}
+            for rail in audit_scenario.base_project.rails:
+                bumps_by_rail[rail.rail_id.casefold()] = tuple(
+                    pin
+                    for pin in audit_scenario.base_project.pins
+                    if (
+                        getattr(getattr(pin, "kind", None), "value", getattr(pin, "kind", None))
+                        == "DEVICE_BUMP"
+                    )
+                    and (
+                        getattr(
+                            getattr(pin, "terminal", None),
+                            "value",
+                            getattr(pin, "terminal", None),
+                        )
+                        == "PWR"
+                    )
+                    and pin.net.casefold() == rail.net.casefold()
+                )
+            distances_by_rail: dict[str, dict[str, float]] = {}
+            for rail_key, bumps in bumps_by_rail.items():
+                if not bumps:
+                    continue
+                per_refdes: dict[str, float] = {}
+                for decap in audit_scenario.decaps:
+                    per_refdes[decap.refdes.casefold()] = min(
+                        float(hypot(decap.x_um - pin.x_um, decap.y_um - pin.y_um))
+                        for pin in bumps
+                    )
+                distances_by_rail[rail_key] = per_refdes
+            for cell in tuple(getattr(result, "cells", ())):
+                role = str(getattr(getattr(cell, "role", ""), "value", getattr(cell, "role", ""))).upper()
+                requested = int(getattr(cell, "requested_count", 0) or 0)
+                if role != "RECEIVER" or requested <= 0:
+                    continue
+                rail_id = str(getattr(cell, "rail_id", ""))
+                model_id = str(getattr(cell, "model_id", ""))
+                selected_for_cell = tuple(
+                    move.refdes
+                    for move in moves
+                    if move.new_rail_id.casefold() == rail_id.casefold()
+                    and move.model_id.casefold() == model_id.casefold()
+                )
+                # A shared-pad atom may be only partially moved: one member is
+                # assigned to this receiver while another is sacrificed to isolate
+                # the unlike source region.  Selection is defined solely by the
+                # move output; gap members are passed separately so they annotate
+                # only an intersecting selected atom (and cannot select an
+                # unrelated same-model atom on another rail).
+                gap_for_cell = tuple(
+                    sacrifice.refdes
+                    for sacrifice in sacrifices
+                    if sacrifice.model_id.casefold() == model_id.casefold()
+                )
+                rows = audit_distribution_candidates(
+                    audit_scenario,
+                    rail_id,
+                    requested,
+                    model_id=model_id,
+                    selected_refdes=selected_for_cell,
+                    gap_refdes=gap_for_cell,
+                    distance_by_refdes=distances_by_rail.get(rail_id.casefold(), {}),
+                )
+                candidate_audit_rows.extend(
+                    tuple(row.as_row().get(header) for header in CANDIDATE_AUDIT_HEADERS)
+                    for row in rows
+                )
     if is_cancelled():
         raise RuntimeError("distribution calculation cancelled")
     progress(100, "De-cap Distribution preview complete")
@@ -1695,6 +1790,7 @@ def _job_compute_distribution(
         preview,
         export_rows,
         power_projection,
+        tuple(candidate_audit_rows),
     )
 
 
@@ -1764,6 +1860,7 @@ class MainWindow(QMainWindow):
         self._distribution_preview_scenario: ScenarioSpec | None = None
         self._distribution_power_projection: Any | None = None
         self._distribution_export_rows: tuple[Any, ...] = ()
+        self._distribution_candidate_audit_rows: tuple[Any, ...] = ()
         self._distribution_table_updating = False
         self._distribution_import_notice: str | None = None
         self._distribution_status_notice: str | None = None
@@ -2355,6 +2452,35 @@ class MainWindow(QMainWindow):
             self._distribution_option_changed
         )
         option_row.addWidget(self.distribution_distance_combo, 1)
+        option_row.addWidget(QLabel("Optimization policy"))
+        self.distribution_optimization_combo = QComboBox()
+        self.distribution_optimization_combo.setObjectName(
+            "distributionOptimizationPolicy"
+        )
+        self.distribution_optimization_combo.addItem(
+            "Balanced (AUTO board diagonal)", "BALANCED_AUTO"
+        )
+        self.distribution_optimization_combo.addItem(
+            "Balanced (custom gap penalty)", "BALANCED_CUSTOM"
+        )
+        self.distribution_optimization_combo.addItem(
+            "Minimum gaps (legacy)", "MIN_GAPS"
+        )
+        self.distribution_optimization_combo.currentIndexChanged.connect(
+            self._distribution_option_changed
+        )
+        option_row.addWidget(self.distribution_optimization_combo, 1)
+        option_row.addWidget(QLabel("Gap penalty (µm)"))
+        self.distribution_gap_penalty_edit = QLineEdit()
+        self.distribution_gap_penalty_edit.setObjectName(
+            "distributionGapPenaltyUm"
+        )
+        self.distribution_gap_penalty_edit.setPlaceholderText("AUTO")
+        self.distribution_gap_penalty_edit.setMaximumWidth(110)
+        self.distribution_gap_penalty_edit.textChanged.connect(
+            self._distribution_option_changed
+        )
+        option_row.addWidget(self.distribution_gap_penalty_edit)
         self.calculate_distribution_button = QPushButton("Calculate Preview")
         self.calculate_distribution_button.setObjectName(
             "calculateDistributionButton"
@@ -2769,6 +2895,18 @@ class MainWindow(QMainWindow):
                 "Select Candidate order (Nearest or Farthest) before calculation.\n\n"
                 + narrative
             )
+        optimization_policy = self.distribution_optimization_combo.currentData()
+        if optimization_policy not in {"BALANCED_AUTO", "BALANCED_CUSTOM", "MIN_GAPS"}:
+            valid = False
+            narrative = "Select a valid optimization policy.\n\n" + narrative
+        elif optimization_policy == "BALANCED_CUSTOM":
+            try:
+                penalty = float(self.distribution_gap_penalty_edit.text().strip())
+            except ValueError:
+                penalty = -1.0
+            if not isfinite(penalty) or penalty < 0.0:
+                valid = False
+                narrative = "Enter a finite nonnegative custom gap penalty (µm).\n\n" + narrative
         try:
             routing_policy = self._distribution_routing_policy()
         except ValueError as exc:
@@ -2814,6 +2952,14 @@ class MainWindow(QMainWindow):
             "NEAREST",
             "FARTHEST",
         }
+        policy_ready = self.distribution_optimization_combo.currentData() in {
+            "BALANCED_AUTO", "BALANCED_CUSTOM", "MIN_GAPS"
+        }
+        if self.distribution_optimization_combo.currentData() == "BALANCED_CUSTOM":
+            try:
+                policy_ready = policy_ready and isfinite(float(self.distribution_gap_penalty_edit.text())) and float(self.distribution_gap_penalty_edit.text()) >= 0
+            except ValueError:
+                policy_ready = False
         try:
             routing_policy = self._distribution_routing_policy()
             routing_ready = not (
@@ -2829,6 +2975,7 @@ class MainWindow(QMainWindow):
             and numeric_valid
             and has_changes
             and distance_ready
+            and policy_ready
             and routing_ready
         )
         self.import_distribution_targets_button.setEnabled(loaded and idle)
@@ -2839,6 +2986,12 @@ class MainWindow(QMainWindow):
             loaded
             and idle
             and self.distribution_protect_signal_routing_checkbox.isChecked()
+        )
+        self.distribution_gap_penalty_edit.setEnabled(
+            loaded
+            and idle
+            and self.distribution_optimization_combo.currentData()
+            == "BALANCED_CUSTOM"
         )
 
         can_apply = False
@@ -2873,11 +3026,13 @@ class MainWindow(QMainWindow):
             or self._distribution_preview_scenario is not None
             or self._distribution_power_projection is not None
             or self._distribution_export_rows
+            or self._distribution_candidate_audit_rows
         )
         self._distribution_plan = None
         self._distribution_preview_scenario = None
         self._distribution_power_projection = None
         self._distribution_export_rows = ()
+        self._distribution_candidate_audit_rows = ()
         if had_result:
             self._reset_distribution_assignment_failures()
         if reason is not None:
@@ -2900,6 +3055,7 @@ class MainWindow(QMainWindow):
         self._distribution_preview_scenario = None
         self._distribution_power_projection = None
         self._distribution_export_rows = ()
+        self._distribution_candidate_audit_rows = ()
         self._distribution_import_notice = None
         self._distribution_status_notice = None
         if hasattr(self, "distribution_distance_combo"):
@@ -2908,6 +3064,13 @@ class MainWindow(QMainWindow):
                 self.distribution_distance_combo.setCurrentIndex(0)
             finally:
                 self.distribution_distance_combo.blockSignals(previous_block)
+        if hasattr(self, "distribution_optimization_combo"):
+            previous_block = self.distribution_optimization_combo.blockSignals(True)
+            try:
+                self.distribution_optimization_combo.setCurrentIndex(0)
+                self.distribution_gap_penalty_edit.clear()
+            finally:
+                self.distribution_optimization_combo.blockSignals(previous_block)
         if hasattr(self, "distribution_protect_signal_routing_checkbox"):
             previous_check_block = (
                 self.distribution_protect_signal_routing_checkbox.blockSignals(True)
@@ -3058,6 +3221,7 @@ class MainWindow(QMainWindow):
             self._distribution_preview_scenario = None
             self._distribution_power_projection = None
             self._distribution_export_rows = ()
+            self._distribution_candidate_audit_rows = ()
             self.distribution_summary.setPlainText(
                 "Enter Target counts and calculate a preview. Numeric capacity is "
                 "checked before physical assignment."
@@ -3494,6 +3658,8 @@ class MainWindow(QMainWindow):
             target_items,
             tolerance_items,
             self.distribution_distance_combo.currentData(),
+            self.distribution_optimization_combo.currentData(),
+            self.distribution_gap_penalty_edit.text().strip(),
         )
         try:
             routing_policy = self._distribution_routing_policy()
@@ -3709,6 +3875,16 @@ class MainWindow(QMainWindow):
             }
             if raw_distance_mode in {"NEAREST", "FARTHEST"}:
                 metadata["Distance Mode"] = raw_distance_mode
+            metadata["Optimization Policy"] = str(
+                self.distribution_optimization_combo.currentData()
+            )
+            raw_penalty = self.distribution_gap_penalty_edit.text().strip()
+            if (
+                str(self.distribution_optimization_combo.currentData()).upper()
+                == "BALANCED_CUSTOM"
+                and raw_penalty
+            ):
+                metadata["Effective Gap Penalty (um)"] = float(raw_penalty)
             metadata.update(routing_metadata)
             write_distribution_workbook(path, (), headers, rows, metadata=metadata)
         except (OSError, TypeError, ValueError) as exc:
@@ -3829,6 +4005,26 @@ class MainWindow(QMainWindow):
         finally:
             self.distribution_distance_combo.blockSignals(previous_combo_block)
 
+        previous_policy_block = self.distribution_optimization_combo.blockSignals(True)
+        previous_penalty_block = self.distribution_gap_penalty_edit.blockSignals(True)
+        try:
+            policy_index = self.distribution_optimization_combo.findData(
+                imported.optimization_policy or "BALANCED_AUTO"
+            )
+            if policy_index < 0:
+                raise DistributionWorkbookError(
+                    f"unsupported Optimization Policy {imported.optimization_policy!r}"
+                )
+            self.distribution_optimization_combo.setCurrentIndex(policy_index)
+            self.distribution_gap_penalty_edit.setText(
+                ""
+                if imported.effective_gap_penalty_um is None
+                else f"{imported.effective_gap_penalty_um:g}"
+            )
+        finally:
+            self.distribution_optimization_combo.blockSignals(previous_policy_block)
+            self.distribution_gap_penalty_edit.blockSignals(previous_penalty_block)
+
         previous_check_block = (
             self.distribution_protect_signal_routing_checkbox.blockSignals(True)
         )
@@ -3867,6 +4063,21 @@ class MainWindow(QMainWindow):
         )
 
     def _distribution_option_changed(self, _index: int) -> None:
+        # A penalty is meaningful only for BALANCED_CUSTOM.  Clear stale text
+        # when the policy changes away from custom so it cannot leak into a
+        # template export or a later request fingerprint.
+        if (
+            hasattr(self, "distribution_optimization_combo")
+            and hasattr(self, "distribution_gap_penalty_edit")
+            and self.distribution_optimization_combo.currentData()
+            != "BALANCED_CUSTOM"
+            and self.distribution_gap_penalty_edit.text()
+        ):
+            blocked = self.distribution_gap_penalty_edit.blockSignals(True)
+            try:
+                self.distribution_gap_penalty_edit.clear()
+            finally:
+                self.distribution_gap_penalty_edit.blockSignals(blocked)
         if self._distribution_plan is not None:
             self._clear_distribution_preview(
                 "Candidate order changed; calculate a new preview."
@@ -3901,6 +4112,12 @@ class MainWindow(QMainWindow):
             distance_mode = distribution_module.DistributionDistanceMode(
                 str(self.distribution_distance_combo.currentData()).upper()
             )
+            optimization_policy = distribution_module.DistributionOptimizationPolicy(
+                str(self.distribution_optimization_combo.currentData()).upper()
+            )
+            gap_penalty_um = None
+            if optimization_policy.value == "BALANCED_CUSTOM":
+                gap_penalty_um = float(self.distribution_gap_penalty_edit.text().strip())
             routing_policy = self._distribution_routing_policy()
         except (TypeError, ValueError) as exc:
             diagnostic_details = tuple(getattr(exc, "diagnostics", ()))
@@ -3923,6 +4140,8 @@ class MainWindow(QMainWindow):
             dict(self._distribution_tolerances),
             distance_mode,
             routing_policy,
+            optimization_policy=optimization_policy,
+            gap_penalty_um=gap_penalty_um,
         )
         self._run_worker(
             worker,
@@ -3976,6 +4195,10 @@ class MainWindow(QMainWindow):
             ),
             f"Selected PWR NET changes: {len(changes):,} decap(s)",
             f"Isolation-gap sacrifices: {len(sacrifices):,} decap cell(s)",
+            "Optimization policy: "
+            f"{getattr(getattr(plan, 'optimization_policy', ''), 'value', getattr(plan, 'optimization_policy', 'BALANCED_AUTO'))}; "
+            f"effective gap penalty {float(getattr(plan, 'effective_gap_penalty_um', 0.0)):g} µm",
+            f"Candidate Audit explanations: {len(self._distribution_candidate_audit_rows):,} row(s)",
         ]
         routing_summary = getattr(plan, "routing_summary", None)
         if routing_summary is None:
@@ -4191,6 +4414,7 @@ class MainWindow(QMainWindow):
                 preview = prepared.preview_scenario
                 export_rows = prepared.export_rows
                 power_projection = prepared.power_projection
+                candidate_audit_rows = prepared.candidate_audit_rows
             else:
                 # Direct callers (including legacy plugins/tests) remain supported;
                 # normal GUI runs prepare this CPU work in the worker.
@@ -4198,6 +4422,7 @@ class MainWindow(QMainWindow):
 
                 preview = apply_distribution_plan(scenario, plan)
                 power_projection = None
+                candidate_audit_rows = ()
                 exported = tuple(distribution_csv_rows(plan))
                 export_rows = (
                     exported[1:]
@@ -4219,6 +4444,7 @@ class MainWindow(QMainWindow):
         self._distribution_preview_scenario = preview
         self._distribution_power_projection = power_projection
         self._distribution_export_rows = export_rows
+        self._distribution_candidate_audit_rows = tuple(candidate_audit_rows)
         self._render_distribution_assignment_failures(plan)
         self.distribution_summary.setPlainText(
             self._distribution_plan_summary(plan)
@@ -4393,7 +4619,10 @@ class MainWindow(QMainWindow):
                     distribution_inventory_table,
                     distribution_target_table,
                 )
-                from ..spreadsheet_export import write_distribution_workbook
+                from ..spreadsheet_export import (
+                    CANDIDATE_AUDIT_HEADERS,
+                    write_distribution_workbook,
+                )
                 target_headers, target_rows = distribution_target_table(plan)
                 inventory_headers, inventory_rows = distribution_inventory_table(plan)
                 raw_distance_mode = getattr(plan, "distance_mode", "")
@@ -4403,6 +4632,41 @@ class MainWindow(QMainWindow):
                 format_version, routing_metadata = (
                     self._distribution_workbook_contract(plan)
                 )
+                raw_policy = getattr(
+                    getattr(plan, "optimization_policy", "BALANCED_AUTO"),
+                    "value",
+                    getattr(plan, "optimization_policy", "BALANCED_AUTO"),
+                )
+                policy_value = str(raw_policy).upper()
+                result_metadata: dict[str, object] = {
+                    "Format Version": format_version,
+                    "Application Version": __version__,
+                    "Source SPD Name": self._scenario.source.name,
+                    "Source SPD SHA-256": self._scenario.source.sha256,
+                    "Input Design Fingerprint": str(
+                        getattr(plan, "input_design_fingerprint", "")
+                    ),
+                    "Input Revision": int(
+                        getattr(plan, "input_revision", self._scenario.revision)
+                    ),
+                    "Distance Mode": distance_mode,
+                    "Optimization Policy": policy_value,
+                    "Present Inventory Total": sum(
+                        int(getattr(cell, "present_count", 0))
+                        for cell in getattr(plan, "cells", ())
+                    ),
+                    **routing_metadata,
+                }
+                # Result workbooks record the effective penalty selected by
+                # the planner for both balanced policies (AUTO's board
+                # diagonal is important provenance).  MIN_GAPS has no gap
+                # penalty and intentionally omits this metadata.  The target
+                # template above remains input-oriented and writes a penalty
+                # only when the user selected BALANCED_CUSTOM.
+                if policy_value in {"BALANCED_AUTO", "BALANCED_CUSTOM"}:
+                    result_metadata["Effective Gap Penalty (um)"] = float(
+                        getattr(plan, "effective_gap_penalty_um", 0.0)
+                    )
                 write_distribution_workbook(
                     path,
                     decap_rows,
@@ -4410,24 +4674,13 @@ class MainWindow(QMainWindow):
                     target_rows,
                     inventory_headers=inventory_headers,
                     inventory_rows=inventory_rows,
-                    metadata={
-                        "Format Version": format_version,
-                        "Application Version": __version__,
-                        "Source SPD Name": self._scenario.source.name,
-                        "Source SPD SHA-256": self._scenario.source.sha256,
-                        "Input Design Fingerprint": str(
-                            getattr(plan, "input_design_fingerprint", "")
-                        ),
-                        "Input Revision": int(
-                            getattr(plan, "input_revision", self._scenario.revision)
-                        ),
-                        "Distance Mode": distance_mode,
-                        "Present Inventory Total": sum(
-                            int(getattr(cell, "present_count", 0))
-                            for cell in getattr(plan, "cells", ())
-                        ),
-                        **routing_metadata,
-                    },
+                    candidate_audit_headers=(
+                        CANDIDATE_AUDIT_HEADERS
+                        if self._distribution_candidate_audit_rows
+                        else ()
+                    ),
+                    candidate_audit_rows=self._distribution_candidate_audit_rows,
+                    metadata=result_metadata,
                 )
         except (OSError, TypeError, ValueError) as exc:
             kind = "Excel workbook" if suffix == ".xlsx" else "CSV"
@@ -4438,7 +4691,11 @@ class MainWindow(QMainWindow):
             )
             self.status_text.setText(f"De-cap Distribution {kind} export failed")
             return
-        sheet_note = " with 2 sheets" if suffix == ".xlsx" else ""
+        sheet_note = (
+            " with 3 sheets"
+            if suffix == ".xlsx" and self._distribution_candidate_audit_rows
+            else (" with 2 sheets" if suffix == ".xlsx" else "")
+        )
         self.status_text.setText(
             f"Exported {len(decap_rows):,} Decap(s) to {path.name}{sheet_note}"
         )

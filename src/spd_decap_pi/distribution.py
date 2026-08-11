@@ -49,11 +49,17 @@ from .scenario_edits import (
     assign_rails_and_isolation_gaps_atomic,
 )
 from .routing_obstacles import (
+    MLO_TRANSITION_RECIPE_REQUIRED_CODE,
+    MLO_TRANSITION_RECIPE_REQUIRED_MESSAGE,
+    REIMPORT_SOURCE_FOR_TRANSITION_EVIDENCE_CODE,
+    REIMPORT_SOURCE_FOR_TRANSITION_EVIDENCE_MESSAGE,
     RoutingCandidateState,
     RoutingCollisionEvidence,
     SignalTraceAvoidancePolicy,
     decode_routing_obstacle_asset,
+    detect_mlo_transition_policy,
     evaluate_routing_candidate,
+    parse_mlo_transition_policy,
     stackup_fingerprint,
 )
 
@@ -63,11 +69,26 @@ ToleranceKey = TargetKey
 ProgressCallback = Callable[[int, str], None]
 CancelCallback = Callable[[], bool]
 _DISTRIBUTION_V4_ANALYSIS_VERSION = "DIRECT_TOP_COPPER_PATH_V4"
+# Keep custom soft costs inside a range that remains well behaved in HiGHS
+# after conversion to integer milli-micrometre units.  One billion micrometres
+# is already a 1 km per-gap preference and is intentionally far above a board
+# scale while rejecting values (for example 1e308) that cannot be represented
+# safely by the optimizer.
+MAX_DISTRIBUTION_GAP_PENALTY_UM = 1_000_000_000.0
+_MAX_EXACT_COMBINED_OBJECTIVE_UNITS = 1 << 52
 
 
 class DistributionDistanceMode(StrEnum):
     NEAREST = "NEAREST"
     FARTHEST = "FARTHEST"
+
+
+class DistributionOptimizationPolicy(StrEnum):
+    """Objective policy used after fulfillment and active relabel minimization."""
+
+    BALANCED_AUTO = "BALANCED_AUTO"
+    BALANCED_CUSTOM = "BALANCED_CUSTOM"
+    MIN_GAPS = "MIN_GAPS"
 
 
 class DistributionPlanStatus(StrEnum):
@@ -154,6 +175,7 @@ class _DistributionPowerProjection:
     source_analysis: SharedPadConnectionAnalysis
     projected_analysis: SharedPadConnectionAnalysis
     promoted_cluster_ids: tuple[str, ...]
+    mlo_transition_diagnostics: tuple[DistributionDiagnostic, ...] = ()
     routing_summary: DistributionRoutingSummary | None = None
 
 
@@ -961,6 +983,133 @@ def _distribution_routing_asset(
     return asset
 
 
+def _mlo_transition_rejection_for_landing(
+    scenario: ScenarioSpec,
+    landing: object,
+    *,
+    stackup_layers: Sequence[object],
+) -> tuple[str, str] | None:
+    """Return the structural non-TOP rejection for one source landing.
+
+    New imports persist a board-level positive policy in
+    ``ProjectSpec.metadata``, but a negative board result is not a per-landing
+    conventional-via certificate.  For every bundle, only explicit
+    source-proven conventional path evidence can justify immutable-XY behavior.
+    A landing without path evidence must be reimported instead of being silently
+    assumed to be a continuous through-via.
+    """
+
+    project = scenario.base_project
+    policy_present = "spd_mlo_transition_policy" in project.metadata
+    raw_policy = project.metadata.get("spd_mlo_transition_policy")
+    recipe_validated = False
+    if policy_present:
+        try:
+            parsed_policy = parse_mlo_transition_policy(
+                raw_policy,
+                expected_source_sha256=scenario.source.sha256,
+            )
+        except ValueError:
+            # Persisted eligibility metadata is untrusted input.  Invalid type,
+            # version, flag, or source binding can never grant permission.
+            pass
+        else:
+            recipe_validated = parsed_policy.translated_recipe_validated
+    path_evidence = tuple(getattr(landing, "path_evidence", ()) or ())
+    observed = detect_mlo_transition_policy(
+        (landing,),
+        stackup_layers=stackup_layers,
+    )
+    if observed.transition_required:
+        if recipe_validated:
+            return None
+        return (
+            MLO_TRANSITION_RECIPE_REQUIRED_CODE,
+            MLO_TRANSITION_RECIPE_REQUIRED_MESSAGE,
+        )
+    # A retained path that is explicitly conventional is stronger evidence
+    # than a board-level flag raised by a different MLO landing.  Conversely,
+    # neither a valid negative policy nor an invalid/missing policy can turn an
+    # evidence-free landing into a conventional column.
+    if path_evidence:
+        return None
+    return (
+        REIMPORT_SOURCE_FOR_TRANSITION_EVIDENCE_CODE,
+        REIMPORT_SOURCE_FOR_TRANSITION_EVIDENCE_MESSAGE,
+    )
+
+
+def _mlo_transition_required_for_landing(
+    scenario: ScenarioSpec,
+    landing: object,
+    *,
+    stackup_layers: Sequence[object],
+) -> bool:
+    """Return whether structural evidence blocks a non-TOP retarget."""
+
+    return (
+        _mlo_transition_rejection_for_landing(
+            scenario,
+            landing,
+            stackup_layers=stackup_layers,
+        )
+        is not None
+    )
+
+
+def _direct_planner_transition_diagnostics(
+    scenario: ScenarioSpec,
+) -> tuple[DistributionDiagnostic, ...]:
+    """Require a projection when direct planning cannot filter unsafe landings.
+
+    The direct planner consumes persisted eligibility maps as a compatibility
+    path and cannot remove only the unsafe non-TOP candidates from one landing.
+    Observed MLO evidence therefore always requires the exact power projection.
+    Missing-policy/no-path landings require it only for a real SPD import; the
+    lightweight synthetic scenarios used by API clients before this policy do
+    not carry ``spd_import`` metadata and retain their historical behavior.
+    """
+
+    analysis = scenario.connection_analysis
+    if analysis is None:
+        return ()
+    project = scenario.base_project
+    is_real_spd_import = "spd_import" in project.metadata
+    blocked_by_rejection: dict[tuple[str, str], set[str]] = defaultdict(set)
+    for connection in analysis.connections.values():
+        for landing in connection.power_vias:
+            rejection = _mlo_transition_rejection_for_landing(
+                scenario,
+                landing,
+                stackup_layers=project.stackup_layers,
+            )
+            if rejection is None:
+                continue
+            code, _message = rejection
+            if (
+                code == REIMPORT_SOURCE_FOR_TRANSITION_EVIDENCE_CODE
+                and not is_real_spd_import
+            ):
+                continue
+            blocked_by_rejection[rejection].add(str(landing.via_id))
+    return tuple(
+        DistributionDiagnostic(
+            code=code,
+            message=(
+                f"{message}; direct planning without an exact power projection "
+                f"is blocked for {len(via_ids):,} source landing(s) "
+                f"({', '.join(sorted(via_ids, key=str.casefold)[:8])}). Call "
+                "build_distribution_power_projection(...) and pass its result "
+                "to compute_distribution_plan(..., power_projection=...)."
+            ),
+            actual_count=len(via_ids),
+        )
+        for (code, message), via_ids in sorted(
+            blocked_by_rejection.items(), key=lambda item: item[0][0]
+        )
+    )
+
+
 def _distribution_replace_destination_eligibility(
     existing: Mapping[str, RailEligibility],
     exact: Mapping[str, RailEligibility],
@@ -1018,6 +1167,13 @@ def _distribution_batch_via_eligibility(
         str, dict[tuple[str, str], RailEligibility]
     ]
     | None = None,
+    mlo_transition_required_via_ids: Collection[str] = (),
+    mlo_transition_rejection_by_via_id: Mapping[
+        str, tuple[str, str]
+    ] | None = None,
+    mlo_transition_evidence: list[DistributionRoutingEvidence] | None = None,
+    mlo_transition_blocked_via_ids: set[str] | None = None,
+    top_layer: str | None = None,
     progress: ProgressCallback | None = None,
     is_cancelled: CancelCallback | None = None,
 ) -> dict[str, dict[str, RailEligibility]]:
@@ -1031,11 +1187,6 @@ def _distribution_batch_via_eligibility(
     move the physical component assignment location sideways.
     """
 
-    try:
-        import numpy as np
-        from shapely import contains_xy, dwithin, points
-    except ImportError:
-        return {}
     landing_by_key: dict[str, object] = {}
     for landing in landings:
         via_id = str(getattr(landing, "via_id", ""))
@@ -1046,13 +1197,6 @@ def _distribution_batch_via_eligibility(
         if previous is not None and previous != landing:
             return {}
         landing_by_key[key] = landing
-    ordered_landings = tuple(landing_by_key.values())
-    if not ordered_landings:
-        return {}
-
-    pairs_by_plane: dict[tuple[str, str], list[tuple[str, str, str]]] = defaultdict(list)
-    for pair_key in rail_choices_by_pair:
-        pairs_by_plane[(pair_key[0], pair_key[1])].append(pair_key)
     # A source-classified PWR landing is projected vertically at its immutable
     # XY to every retained destination PWR plane.  Existing Via-column reach is
     # intentionally not a gate: the Distribution operation plans a filled-Cu
@@ -1065,6 +1209,82 @@ def _distribution_batch_via_eligibility(
     ordered_landings = tuple(landing_by_key.values())
     if not ordered_landings:
         return {}
+    mlo_transition_rejection_by_key = {
+        str(via_id).casefold(): rejection
+        for via_id, rejection in (mlo_transition_rejection_by_via_id or {}).items()
+    }
+    mlo_transition_keys = {
+        str(item).casefold() for item in mlo_transition_required_via_ids
+    }
+    mlo_transition_keys.update(mlo_transition_rejection_by_key)
+    top_layer_key = str(top_layer or "TOP").casefold()
+    # Record the structural rejection before importing optional vector-geometry
+    # dependencies.  The metric is the number of unique blocked source
+    # landings, not the potentially much larger landing/rail/layer candidate
+    # count.  Evidence remains bounded independently of that exact set.
+    evidence_signatures = {
+        (
+            item.via_id.casefold(),
+            item.destination_rail_id.casefold(),
+            item.destination_layer.casefold(),
+        )
+        for item in (mlo_transition_evidence or ())
+    }
+    for via_key in sorted(mlo_transition_keys.intersection(landing_by_key)):
+        landing = landing_by_key[via_key]
+        rejection_code, rejection_message = mlo_transition_rejection_by_key.get(
+            via_key,
+            (
+                MLO_TRANSITION_RECIPE_REQUIRED_CODE,
+                MLO_TRANSITION_RECIPE_REQUIRED_MESSAGE,
+            ),
+        )
+        for pair_key, choices in rail_choices_by_pair.items():
+            destination_layer = str(pair_key[1])
+            if destination_layer.casefold() == top_layer_key:
+                continue
+            if mlo_transition_blocked_via_ids is not None:
+                mlo_transition_blocked_via_ids.add(
+                    str(getattr(landing, "via_id"))
+                )
+            for rail, _template_id in choices:
+                rail_id = str(getattr(rail, "rail_id"))
+                signature = (via_key, rail_id.casefold(), destination_layer.casefold())
+                if (
+                    mlo_transition_evidence is None
+                    or len(mlo_transition_evidence) >= 256
+                    or signature in evidence_signatures
+                ):
+                    continue
+                evidence_signatures.add(signature)
+                mlo_transition_evidence.append(
+                    DistributionRoutingEvidence(
+                        via_id=str(getattr(landing, "via_id")),
+                        x_um=float(getattr(landing, "x_um")),
+                        y_um=float(getattr(landing, "y_um")),
+                        destination_rail_id=rail_id,
+                        destination_layer=destination_layer,
+                        state=RoutingCandidateState.UNKNOWN,
+                        detail=RoutingCollisionEvidence(
+                            code=rejection_code,
+                            layer=destination_layer,
+                            message=rejection_message,
+                        ),
+                    )
+                )
+
+    try:
+        import numpy as np
+        from shapely import contains_xy, dwithin, points
+    except ImportError:
+        return {
+            str(getattr(landing_by_key[key], "via_id")): {}
+            for key in sorted(mlo_transition_keys.intersection(landing_by_key))
+        }
+
+    pairs_by_plane: dict[tuple[str, str], list[tuple[str, str, str]]] = defaultdict(list)
+    for pair_key in rail_choices_by_pair:
+        pairs_by_plane[(pair_key[0], pair_key[1])].append(pair_key)
     pwr_layer_name_by_key: dict[str, str] = {}
     for geometry in plane_geometries:
         key = geometry.layer.casefold()
@@ -1159,6 +1379,11 @@ def _distribution_batch_via_eligibility(
                 destination_layer = pwr_layer_name_by_key.get(
                     pair_key[1], pair_key[1]
                 )
+                if (
+                    via_key in mlo_transition_keys
+                    and destination_layer.casefold() != top_layer_key
+                ):
+                    continue
                 if routing_policy.enabled:
                     assert routing_asset is not None
                     proof = evaluate_routing_candidate(
@@ -1442,6 +1667,36 @@ def build_distribution_power_projection(
                 if previous_side is None or previous_side == side
                 else "UNKNOWN"
             )
+    # Structural transition gate: the current release has no translated
+    # via/trace recipe compiler.  Do not let routing protection OFF turn a
+    # source-proven MLO landing, or an evidence-free legacy landing, into an
+    # assumed immutable vertical retarget on a non-TOP plane.
+    top_layer_key = next(
+        (
+            layer.name.casefold()
+            for layer in scenario.base_project.stackup_layers
+            if layer.is_conductor
+        ),
+        "top",
+    )
+    non_top_destination_layers = tuple(
+        str(pair[1])
+        for pair in rail_choices
+        if str(pair[1]).casefold() != top_layer_key
+    )
+    transition_rejection_by_via_id: dict[str, tuple[str, str]] = {}
+    if non_top_destination_layers:
+        for landing in projection_landings.values():
+            rejection = _mlo_transition_rejection_for_landing(
+                scenario,
+                landing,
+                stackup_layers=scenario.base_project.stackup_layers,
+            )
+            if rejection is not None:
+                transition_rejection_by_via_id[str(landing.via_id)] = rejection
+    transition_required_via_ids = tuple(transition_rejection_by_via_id)
+    mlo_transition_evidence: list[DistributionRoutingEvidence] = []
+    mlo_transition_blocked_via_ids: set[str] = set()
     routing_counts: dict[str, int] = {}
     routing_evidence: list[DistributionRoutingEvidence] = []
     routing_layer_candidates: dict[
@@ -1461,6 +1716,11 @@ def build_distribution_power_projection(
         routing_counts=routing_counts,
         routing_evidence=routing_evidence,
         routing_layer_candidates=routing_layer_candidates,
+        mlo_transition_required_via_ids=transition_required_via_ids,
+        mlo_transition_rejection_by_via_id=transition_rejection_by_via_id,
+        mlo_transition_evidence=mlo_transition_evidence,
+        mlo_transition_blocked_via_ids=mlo_transition_blocked_via_ids,
+        top_layer=top_layer_key,
         progress=(
             (lambda value, message: progress(5 + round(value * 0.50), message))
             if progress is not None
@@ -1468,6 +1728,36 @@ def build_distribution_power_projection(
         ),
         is_cancelled=is_cancelled,
     )
+    mlo_transition_diagnostics: tuple[DistributionDiagnostic, ...] = ()
+    if mlo_transition_blocked_via_ids:
+        rejection_by_key = {
+            via_id.casefold(): rejection
+            for via_id, rejection in transition_rejection_by_via_id.items()
+        }
+        blocked_by_rejection: dict[tuple[str, str], set[str]] = defaultdict(set)
+        for via_id in mlo_transition_blocked_via_ids:
+            rejection = rejection_by_key.get(
+                via_id.casefold(),
+                (
+                    MLO_TRANSITION_RECIPE_REQUIRED_CODE,
+                    MLO_TRANSITION_RECIPE_REQUIRED_MESSAGE,
+                ),
+            )
+            blocked_by_rejection[rejection].add(via_id)
+        mlo_transition_diagnostics = tuple(
+            DistributionDiagnostic(
+                code=code,
+                message=(
+                    f"{message}; blocked {len(via_ids):,} source landing(s) "
+                    "for non-TOP destinations "
+                    f"({', '.join(sorted(via_ids, key=str.casefold)[:8])})"
+                ),
+                actual_count=len(via_ids),
+            )
+            for (code, message), via_ids in sorted(
+                blocked_by_rejection.items(), key=lambda item: item[0][0]
+            )
+        )
     batch_via_eligibility_by_key = {
         via_id.casefold(): values
         for via_id, values in batch_via_eligibility.items()
@@ -1802,6 +2092,7 @@ def build_distribution_power_projection(
         and not promoted
         and not expanded_direct
         and not expanded_clusters
+        and not mlo_transition_diagnostics
     ):
         return None
     projected_analysis = analysis.model_copy(
@@ -1840,6 +2131,7 @@ def build_distribution_power_projection(
         source_analysis=analysis,
         projected_analysis=projected_analysis,
         promoted_cluster_ids=tuple(sorted(promoted, key=str.casefold)),
+        mlo_transition_diagnostics=mlo_transition_diagnostics,
         routing_summary=routing_summary,
     )
 
@@ -2029,6 +2321,8 @@ class DistributionPlan:
     output_design_fingerprint: str
     output_revision: int
     distance_mode: DistributionDistanceMode
+    optimization_policy: DistributionOptimizationPolicy
+    effective_gap_penalty_um: float
     status: DistributionPlanStatus
     requested_count: int
     fulfilled_count: int
@@ -3295,11 +3589,63 @@ def _direct_exchange_selection(
     return selected, fulfilled_optimum, move_optimum, False
 
 
+def _resolve_distribution_optimization(
+    scenario: ScenarioSpec,
+    policy: DistributionOptimizationPolicy | str,
+    gap_penalty_um: float | str | None,
+) -> tuple[DistributionOptimizationPolicy, float]:
+    try:
+        resolved_policy = DistributionOptimizationPolicy(str(policy).upper())
+    except ValueError as exc:
+        raise DistributionError(
+            "OPTIMIZATION_POLICY_INVALID",
+            f"unknown Distribution optimization policy {policy!r}",
+        ) from exc
+    if resolved_policy == DistributionOptimizationPolicy.MIN_GAPS:
+        return resolved_policy, 0.0
+    if resolved_policy == DistributionOptimizationPolicy.BALANCED_AUTO:
+        effective = hypot(
+            float(scenario.base_project.outline.width_um),
+            float(scenario.base_project.outline.height_um),
+        )
+    else:
+        if gap_penalty_um is None or (
+            isinstance(gap_penalty_um, str)
+            and not gap_penalty_um.strip()
+        ):
+            raise DistributionError(
+                "GAP_PENALTY_INVALID",
+                "BALANCED_CUSTOM requires a finite nonnegative gap penalty in um",
+            )
+        try:
+            effective = float(gap_penalty_um)
+        except (TypeError, ValueError) as exc:
+            raise DistributionError(
+                "GAP_PENALTY_INVALID",
+                "gap penalty must be finite and nonnegative in um",
+            ) from exc
+    if (
+        not isfinite(effective)
+        or effective < 0.0
+        or effective > MAX_DISTRIBUTION_GAP_PENALTY_UM
+    ):
+        raise DistributionError(
+            "GAP_PENALTY_INVALID",
+            "gap penalty must be finite and between 0 and "
+            f"{MAX_DISTRIBUTION_GAP_PENALTY_UM:g} um",
+        )
+    return resolved_policy, effective
+
+
 def compute_distribution_plan(
     scenario: ScenarioSpec,
     targets: Mapping[TargetKey, int],
     distance_mode: DistributionDistanceMode | str = DistributionDistanceMode.NEAREST,
     *,
+    optimization_policy: DistributionOptimizationPolicy | str = (
+        DistributionOptimizationPolicy.BALANCED_AUTO
+    ),
+    gap_penalty_um: float | str | None = None,
     tolerances: Mapping[ToleranceKey, float] | None = None,
     power_projection: _DistributionPowerProjection | None = None,
     routing_policy: SignalTraceAvoidancePolicy = SignalTraceAvoidancePolicy(),
@@ -3311,8 +3657,11 @@ def compute_distribution_plan(
 
     Numeric donor shortage is a hard error.  Geometry/topology shortage is a
     valid PARTIAL plan whose first optimization stage maximizes fulfilled
-    receiver demand.  The second stage applies the selected bump-distance
-    ordering with a deterministic canonical-rank tie break.
+    receiver demand.  The default ``BALANCED_AUTO`` policy then minimizes the
+    signed total bump distance plus one board diagonal per selected gap;
+    ``BALANCED_CUSTOM`` supplies an explicit penalty and ``MIN_GAPS`` retains
+    the legacy gap-first ordering.  The selected policy and effective penalty
+    are retained on the returned plan for replay/export.
     """
 
     input_scenario = scenario
@@ -3347,6 +3696,9 @@ def compute_distribution_plan(
         raise DistributionError(
             "DISTANCE_MODE_INVALID", f"unknown distance mode {distance_mode!r}"
         ) from exc
+    optimization_policy, effective_gap_penalty_um = _resolve_distribution_optimization(
+        scenario, optimization_policy, gap_penalty_um
+    )
     if not isfinite(time_limit_s) or time_limit_s <= 0:
         raise DistributionError(
             "TIME_LIMIT_INVALID", "optimizer time limit must be positive"
@@ -3381,6 +3733,25 @@ def compute_distribution_plan(
         )
         for key, target in target_by_cell.items()
     }
+    requested_receiver_changes = any(
+        role == DistributionCellRole.RECEIVER
+        or (
+            role == DistributionCellRole.EXCHANGE
+            and tolerance_count_by_cell.get(key, 0) > 0
+        )
+        for key, role in role_by_cell.items()
+    )
+    if power_projection is None and requested_receiver_changes:
+        transition_diagnostics = _direct_planner_transition_diagnostics(scenario)
+        if transition_diagnostics:
+            raise DistributionError(
+                "POWER_PROJECTION_REQUIRED",
+                "direct Distribution planning cannot safely validate non-TOP "
+                "via transitions for this scenario; call "
+                "build_distribution_power_projection(...) and pass the result "
+                "as power_projection (reimport the raw SPD first when requested)",
+                diagnostics=transition_diagnostics,
+            )
 
     numeric_issues = _numeric_shortage_diagnostics(
         target_by_cell,
@@ -3411,6 +3782,8 @@ def compute_distribution_plan(
 
     bumps_by_rail: dict[str, tuple[object, ...]] = {}
     diagnostics: list[DistributionDiagnostic] = []
+    if power_projection is not None:
+        diagnostics.extend(power_projection.mlo_transition_diagnostics)
     if projection_routing is not None:
         diagnostics.append(
             DistributionDiagnostic(
@@ -4502,6 +4875,44 @@ def compute_distribution_plan(
             builder.constraint(coefficients, lower=optimum, upper=optimum)
         return row_indices
 
+    def constrain_group_objective(
+        objective: np.ndarray,
+        solution: np.ndarray,
+    ) -> set[int]:
+        """Fix one proven integer objective level inside each solver group."""
+
+        by_group: dict[int, dict[int, float]] = defaultdict(dict)
+        for variable, raw_coefficient in enumerate(objective):
+            if raw_coefficient == 0.0:
+                continue
+            coefficient = int(round(float(raw_coefficient)))
+            if float(coefficient) != float(raw_coefficient):
+                raise DistributionError(
+                    "INTERNAL_OBJECTIVE_SCALE",
+                    "Distribution combined objective is not integer-valued",
+                )
+            by_group[group_by_variable[variable]][variable] = float(coefficient)
+        row_indices: set[int] = set()
+        for coefficients in by_group.values():
+            optimum = sum(
+                int(round(coefficient))
+                for variable, coefficient in coefficients.items()
+                if solution[variable] > 0.5
+            )
+            if abs(optimum) > _MAX_EXACT_COMBINED_OBJECTIVE_UNITS:
+                raise DistributionError(
+                    "OBJECTIVE_SCALE_INVALID",
+                    "Distribution combined objective exceeds the exact solver "
+                    "scale; reduce the custom gap penalty",
+                )
+            row_indices.add(len(builder.rows))
+            builder.constraint(
+                coefficients,
+                lower=float(optimum),
+                upper=float(optimum),
+            )
+        return row_indices
+
     def solve_with_topology_cuts(
         objective: np.ndarray,
         *,
@@ -4599,8 +5010,9 @@ def compute_distribution_plan(
         for variable in receiver_move_variables:
             fulfillment_objective[variable] = -1.0
         gap_tiebreak = np.zeros(len(builder.variables), dtype=float)
-        for variable in selectable_gap_variables:
-            gap_tiebreak[variable] = 1.0
+        if optimization_policy == DistributionOptimizationPolicy.MIN_GAPS:
+            for variable in selectable_gap_variables:
+                gap_tiebreak[variable] = 1.0
         first_solution = solve_with_topology_cuts(
             fulfillment_objective,
             progress_percent=35,
@@ -4639,54 +5051,60 @@ def compute_distribution_plan(
                 )
             )
         )
-        _notify(
-            progress,
-            50,
-            "Minimizing isolation-gap sacrifices "
-            f"(provisional {provisional_gap_count:,})",
-        )
-        _check_cancelled(is_cancelled)
-        if selectable_gap_variables:
-            gap_objective = np.zeros(len(builder.variables), dtype=float)
-            for variable in selectable_gap_variables:
-                gap_objective[variable] = 1.0
-            first_solution = solve_with_topology_cuts(
-                gap_objective,
-                progress_percent=50,
-                stage="Minimizing isolation-gap sacrifices",
-                initial_solution=first_solution,
-                solver_time_limit_s=min(
-                    time_limit_s, 5.0 if large_shared_problem else 30.0
-                ),
-                feasible_fallback_stage="gap",
+        if optimization_policy == DistributionOptimizationPolicy.MIN_GAPS:
+            _notify(
+                progress,
+                50,
+                "Minimizing isolation-gap sacrifices "
+                f"(provisional {provisional_gap_count:,})",
             )
-            sacrifice_optimum = int(
-                round(
-                    sum(
-                        first_solution[variable]
-                        for variable in selectable_gap_variables
+            _check_cancelled(is_cancelled)
+            if selectable_gap_variables:
+                gap_objective = np.zeros(len(builder.variables), dtype=float)
+                for variable in selectable_gap_variables:
+                    gap_objective[variable] = 1.0
+                first_solution = solve_with_topology_cuts(
+                    gap_objective,
+                    progress_percent=50,
+                    stage="Minimizing isolation-gap sacrifices",
+                    initial_solution=first_solution,
+                    solver_time_limit_s=min(
+                        time_limit_s,
+                        5.0 if large_shared_problem else 30.0,
+                    ),
+                    feasible_fallback_stage="gap",
+                )
+                sacrifice_optimum = int(
+                    round(
+                        sum(
+                            first_solution[variable]
+                            for variable in selectable_gap_variables
+                        )
                     )
                 )
+            else:
+                sacrifice_optimum = 0
+            if "gap" in stage_fallback_flags:
+                diagnostics.append(
+                    DistributionDiagnostic(
+                        code="GAP_OPTIMIZATION_FALLBACK",
+                        message=(
+                            "maximum receiver fulfillment and all shared-pad "
+                            "safety rules were preserved, but minimum "
+                            "isolation-gap count was not proven within the "
+                            "optimization time limit; the best valid incumbent "
+                            "is shown"
+                        ),
+                        requested_count=provisional_gap_count,
+                        actual_count=sacrifice_optimum,
+                    )
+                )
+            gap_total_row_indices = constrain_group_totals(
+                selectable_gap_variables, first_solution
             )
         else:
-            sacrifice_optimum = 0
-        if "gap" in stage_fallback_flags:
-            diagnostics.append(
-                DistributionDiagnostic(
-                    code="GAP_OPTIMIZATION_FALLBACK",
-                    message=(
-                        "maximum receiver fulfillment and all shared-pad safety "
-                        "rules were preserved, but minimum isolation-gap count "
-                        "was not proven within the optimization time limit; the "
-                        "best valid incumbent is shown"
-                    ),
-                    requested_count=provisional_gap_count,
-                    actual_count=sacrifice_optimum,
-                )
-            )
-        gap_total_row_indices = constrain_group_totals(
-            selectable_gap_variables, first_solution
-        )
+            sacrifice_optimum = provisional_gap_count
+            gap_total_row_indices = set()
 
         _notify(progress, 62, "Minimizing active PWR NET relabels")
         _check_cancelled(is_cancelled)
@@ -4712,7 +5130,7 @@ def compute_distribution_plan(
         _notify(
             progress,
             75,
-            f"Applying {mode.value.lower()} bump-distance ordering",
+            f"Applying {mode.value.lower()} distance + gap-penalty objective",
         )
         _check_cancelled(is_cancelled)
         joint_distance_proven = False
@@ -4735,14 +5153,13 @@ def compute_distribution_plan(
             else:
                 # Integer micrometre-thousandths avoid tiny floating tie terms
                 # that can delay proof of a numerically marginal MIP optimum.
+                # Keep the physical tradeoff unscaled: multiplying it by an
+                # O(N^2) tie scale produced coefficients near 1e16 on the real
+                # board.  Once this exact objective is proven, fix its integer
+                # level and solve the gap/canonical ties separately.
                 secondary = np.zeros(len(builder.variables), dtype=float)
-                tie_variable_count = (
-                    len(move_variables) + len(selectable_gap_variables)
-                )
-                tie_scale = (
-                    tie_variable_count * (tie_variable_count + 1) // 2 + 1
-                )
-                canonical_rank = 1
+                penalty_units = round(effective_gap_penalty_um * 1000.0)
+                maximum_absolute_units = penalty_units * len(selectable_gap_variables)
                 for variable, (ref_key, rail_key) in sorted(
                     move_variables.items(),
                     key=lambda item: (item[1][0], item[1][1]),
@@ -4750,21 +5167,29 @@ def compute_distribution_plan(
                     distance_units = round(
                         distance_by_ref_rail[(ref_key, rail_key)] * 1000.0
                     )
-                    secondary[variable] = (
-                        float(distance_units * tie_scale + canonical_rank)
+                    secondary[variable] = float(
+                        distance_units
                         if mode == DistributionDistanceMode.NEAREST
-                        else float(-distance_units * tie_scale + canonical_rank)
+                        else -distance_units
                     )
-                    canonical_rank += 1
+                    maximum_absolute_units += abs(distance_units)
                 for variable, _ref_key in sorted(
                     selectable_gap_variables.items(), key=lambda item: item[1]
                 ):
-                    secondary[variable] = float(canonical_rank)
-                    canonical_rank += 1
+                    secondary[variable] = float(penalty_units)
+                if maximum_absolute_units > _MAX_EXACT_COMBINED_OBJECTIVE_UNITS:
+                    raise DistributionError(
+                        "OBJECTIVE_SCALE_INVALID",
+                        "Distribution combined objective exceeds the exact solver "
+                        "scale; reduce the custom gap penalty",
+                    )
                 final_solution = solve_with_topology_cuts(
                     secondary,
                     progress_percent=75,
-                    stage=f"Applying {mode.value.lower()} bump-distance ordering",
+                    stage=(
+                        f"Applying {mode.value.lower()} distance + gap-penalty "
+                        "objective"
+                    ),
                     initial_solution=first_solution,
                     solver_time_limit_s=min(
                         time_limit_s, 10.0 if large_shared_problem else 30.0
@@ -4779,6 +5204,144 @@ def compute_distribution_plan(
                     np.dot(secondary, final_solution)
                 ):
                     final_solution = first_solution
+                joint_distance_proven = "distance_joint" not in stage_fallback_flags
+                if joint_distance_proven:
+                    constrain_group_objective(secondary, final_solution)
+                    tie_solution = final_solution
+                    tie_stage_proven = True
+                    if (
+                        optimization_policy
+                        != DistributionOptimizationPolicy.MIN_GAPS
+                        and selectable_gap_variables
+                    ):
+                        gap_tie_objective = np.zeros(
+                            len(builder.variables), dtype=float
+                        )
+                        for variable in selectable_gap_variables:
+                            gap_tie_objective[variable] = 1.0
+                        gap_start = tie_solution
+                        try:
+                            gap_candidate = solve_with_topology_cuts(
+                                gap_tie_objective,
+                                progress_percent=80,
+                                stage=(
+                                    "Minimizing gaps at the proven combined "
+                                    "objective"
+                                ),
+                                initial_solution=tie_solution,
+                                feasible_fallback_stage="gap_tiebreak",
+                                solver_time_limit_s=min(time_limit_s, 15.0),
+                            )
+                        except DistributionError as exc:
+                            if exc.code not in {
+                                "OPTIMIZER_TIMEOUT",
+                                "OPTIMIZER_FAILED",
+                            }:
+                                raise
+                            tie_stage_proven = False
+                            diagnostics.append(
+                                DistributionDiagnostic(
+                                    code="OBJECTIVE_TIEBREAK_FALLBACK",
+                                    message=(
+                                        "the combined objective was proven, but "
+                                        "the minimum-gap tie-break returned no "
+                                        "incumbent; the proven combined solution "
+                                        "is retained"
+                                    ),
+                                )
+                            )
+                        else:
+                            tie_solution = (
+                                gap_start
+                                if float(np.dot(gap_tie_objective, gap_start))
+                                < float(np.dot(gap_tie_objective, gap_candidate))
+                                else gap_candidate
+                            )
+                            tie_stage_proven = (
+                                "gap_tiebreak" not in stage_fallback_flags
+                            )
+                        if tie_stage_proven:
+                            constrain_group_totals(
+                                selectable_gap_variables, tie_solution
+                            )
+                    if tie_stage_proven:
+                        canonical_objective = np.zeros(
+                            len(builder.variables), dtype=float
+                        )
+                        canonical_rank = 1
+                        for variable, _key in sorted(
+                            move_variables.items(),
+                            key=lambda item: (item[1][0], item[1][1]),
+                        ):
+                            canonical_objective[variable] = float(canonical_rank)
+                            canonical_rank += 1
+                        for variable, _ref_key in sorted(
+                            selectable_gap_variables.items(),
+                            key=lambda item: item[1],
+                        ):
+                            canonical_objective[variable] = float(canonical_rank)
+                            canonical_rank += 1
+                        try:
+                            canonical_start = tie_solution
+                            canonical_candidate = solve_with_topology_cuts(
+                                canonical_objective,
+                                progress_percent=83,
+                                stage=(
+                                    "Applying deterministic canonical tie-break"
+                                ),
+                                initial_solution=tie_solution,
+                                feasible_fallback_stage="canonical_tiebreak",
+                                solver_time_limit_s=min(time_limit_s, 15.0),
+                            )
+                            tie_solution = (
+                                canonical_start
+                                if float(
+                                    np.dot(
+                                        canonical_objective,
+                                        canonical_start,
+                                    )
+                                )
+                                < float(
+                                    np.dot(
+                                        canonical_objective,
+                                        canonical_candidate,
+                                    )
+                                )
+                                else canonical_candidate
+                            )
+                        except DistributionError as exc:
+                            if exc.code not in {
+                                "OPTIMIZER_TIMEOUT",
+                                "OPTIMIZER_FAILED",
+                            }:
+                                raise
+                            diagnostics.append(
+                                DistributionDiagnostic(
+                                    code="OBJECTIVE_TIEBREAK_FALLBACK",
+                                    message=(
+                                        "the combined objective was proven, but "
+                                        "the canonical tie-break returned no "
+                                        "incumbent; the proven combined/gap-tied "
+                                        "solution is retained"
+                                    ),
+                                )
+                            )
+                    if (
+                        "gap_tiebreak" in stage_fallback_flags
+                        or "canonical_tiebreak" in stage_fallback_flags
+                    ):
+                        diagnostics.append(
+                            DistributionDiagnostic(
+                                code="OBJECTIVE_TIEBREAK_FALLBACK",
+                                message=(
+                                    "the combined distance + gap objective was "
+                                    "preserved, but a later gap/canonical tie was "
+                                    "not proven; the best valid tied incumbent is "
+                                    "shown"
+                                ),
+                            )
+                        )
+                    final_solution = tie_solution
                 selected_move_variables = {
                     variable
                     for variable in move_variables
@@ -4789,9 +5352,6 @@ def compute_distribution_plan(
                     for variable in selectable_gap_variables
                     if final_solution[variable] > 0.5
                 }
-                joint_distance_proven = (
-                    "distance_joint" not in stage_fallback_flags
-                )
                 joint_distance_applied = True
                 if not joint_distance_proven:
                     diagnostics.append(
@@ -4801,7 +5361,7 @@ def compute_distribution_plan(
                                 "the joint assignment/separator distance "
                                 f"optimum was not proven; the best valid "
                                 f"{mode.value.lower()} distance incumbent is "
-                                "carried into fixed-separator refinement"
+                                "carried forward as the valid policy incumbent"
                             ),
                             requested_count=fulfilled_optimum,
                             actual_count=fulfilled_optimum,
@@ -4863,7 +5423,10 @@ def compute_distribution_plan(
         # separators while all inventory, shared-pad rooting, and shared-Via
         # constraints remain active.  A later atomic-validator-backed pass can
         # still restore pads that this conservative graph model retained.
-        if selectable_gap_variables:
+        if (
+            selectable_gap_variables
+            and optimization_policy == DistributionOptimizationPolicy.MIN_GAPS
+        ):
             _notify(
                 progress,
                 82,
@@ -5450,6 +6013,8 @@ def compute_distribution_plan(
         output_design_fingerprint=preview.design_fingerprint,
         output_revision=preview.revision,
         distance_mode=mode,
+        optimization_policy=optimization_policy,
+        effective_gap_penalty_um=effective_gap_penalty_um,
         status=status,
         requested_count=requested_total,
         fulfilled_count=fulfilled_total,
@@ -5531,10 +6096,12 @@ def apply_distribution_plan(
 __all__ = [
     "DISTRIBUTION_CSV_HEADER",
     "DISTRIBUTION_INVENTORY_HEADERS",
+    "MAX_DISTRIBUTION_GAP_PENALTY_UM",
     "DistributionCellResult",
     "DistributionCellRole",
     "DistributionDiagnostic",
     "DistributionDistanceMode",
+    "DistributionOptimizationPolicy",
     "DistributionError",
     "DistributionExportRow",
     "DistributionInventoryRow",

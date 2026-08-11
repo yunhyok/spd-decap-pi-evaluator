@@ -20,6 +20,7 @@ from PySide6.QtWidgets import (
     QSplitter,
 )
 from openpyxl import load_workbook
+import pytest
 
 from test_spd_decap_distribution import (
     _direct_scenario,
@@ -257,6 +258,28 @@ def test_distribution_table_double_click_opens_detached_window_and_exports_templ
             current_design_fingerprint=scenario.design_fingerprint,
         )
         assert imported.targets == window._distribution_targets
+
+        # Switching away from a custom policy clears stale input and the
+        # template must omit the penalty so it round-trips as MIN_GAPS.
+        custom_index = window.distribution_optimization_combo.findData(
+            "BALANCED_CUSTOM"
+        )
+        min_gaps_index = window.distribution_optimization_combo.findData("MIN_GAPS")
+        window.distribution_optimization_combo.setCurrentIndex(custom_index)
+        window.distribution_gap_penalty_edit.setText("1234.5")
+        window.distribution_optimization_combo.setCurrentIndex(min_gaps_index)
+        assert window.distribution_gap_penalty_edit.text() == ""
+        dialog.export_template_button.click()
+        imported_min_gaps = load_distribution_targets(
+            path,
+            rail_ids=("R1", "R2"),
+            model_ids=("M1",),
+            current_present=dict(window._distribution_present_counts),
+            current_source_sha256=scenario.source.sha256,
+            current_design_fingerprint=scenario.design_fingerprint,
+        )
+        assert imported_min_gaps.optimization_policy == "MIN_GAPS"
+        assert imported_min_gaps.effective_gap_penalty_um is None
     finally:
         window._dirty = False
         window.close()
@@ -465,9 +488,11 @@ def test_routing_option_and_clearance_are_request_inputs_and_fail_closed_without
                             window._distribution_tolerances.items()
                         )
                     )
-                ),
-                window.distribution_distance_combo.currentData(),
-            )
+                    ),
+                    window.distribution_distance_combo.currentData(),
+                    window.distribution_optimization_combo.currentData(),
+                    window.distribution_gap_penalty_edit.text().strip(),
+                )
         ).encode("utf-8")
         assert baseline == sha256(legacy_payload).hexdigest()
         assert window._distribution_workbook_contract() == (3, {})
@@ -1581,6 +1606,10 @@ def test_full_preview_exports_saves_and_applies_one_atomic_revision(
             assert metadata["Source SPD SHA-256"] == scenario.source.sha256
             assert metadata["Input Design Fingerprint"] == scenario.design_fingerprint
             assert metadata["Distance Mode"] == "NEAREST"
+            assert metadata["Optimization Policy"] == "BALANCED_AUTO"
+            assert metadata["Effective Gap Penalty (um)"] == pytest.approx(
+                plan.effective_gap_penalty_um
+            )
         finally:
             workbook.close()
 

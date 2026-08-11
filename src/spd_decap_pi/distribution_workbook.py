@@ -40,6 +40,10 @@ _MAX_IMPORT_ROWS = 100_000
 _MAX_IMPORT_COLUMNS = 4_096
 _MAX_TARGET_ROWS = 50_000
 _MAX_TARGET_CELLS = 500_000
+# Keep replay validation aligned with
+# distribution.MAX_DISTRIBUTION_GAP_PENALTY_UM without importing the SciPy-heavy
+# optimizer from this lightweight workbook parser.
+_MAX_GAP_PENALTY_UM = 1_000_000_000.0
 
 
 class DistributionWorkbookError(ValueError):
@@ -54,6 +58,8 @@ class DistributionTargetImport:
     tolerances: dict[TargetKey, float]
     workbook_present: dict[TargetKey, int]
     distance_mode: str | None
+    optimization_policy: str | None
+    effective_gap_penalty_um: float | None
     format_version: int | None
     source_sha256: str | None
     input_design_fingerprint: str | None
@@ -93,6 +99,16 @@ class DistributionTargetImport:
         if self.distance_mode is None:
             lines.append(
                 "Candidate order was not recorded in the workbook."
+            )
+        if self.optimization_policy is not None:
+            penalty = (
+                f"{self.effective_gap_penalty_um:g} µm"
+                if self.effective_gap_penalty_um is not None
+                else "derived from board diagonal on calculation"
+            )
+            lines.append(
+                "Optimization policy restored: "
+                f"{self.optimization_policy}; effective gap penalty {penalty}."
             )
         if self.routing_protection_enabled:
             lines.append(
@@ -417,6 +433,49 @@ def load_distribution_targets(
                 f"unsupported workbook Distance Mode {raw_distance!r}"
             )
 
+    raw_policy = metadata.get("optimization policy")
+    optimization_policy = (
+        str(raw_policy).strip().upper() if raw_policy not in (None, "") else None
+    )
+    if optimization_policy is None:
+        optimization_policy = "BALANCED_AUTO"
+    if optimization_policy not in {"BALANCED_AUTO", "BALANCED_CUSTOM", "MIN_GAPS"}:
+        raise DistributionWorkbookError(
+            f"unsupported workbook Optimization Policy {raw_policy!r}"
+        )
+    raw_penalty = metadata.get("effective gap penalty (um)")
+    effective_gap_penalty_um: float | None = None
+    if raw_penalty not in (None, ""):
+        try:
+            effective_gap_penalty_um = float(raw_penalty)
+        except (TypeError, ValueError):
+            raise DistributionWorkbookError(
+                "metadata Effective Gap Penalty (um) is invalid"
+            ) from None
+        if (
+            not isfinite(effective_gap_penalty_um)
+            or effective_gap_penalty_um < 0
+            or effective_gap_penalty_um > _MAX_GAP_PENALTY_UM
+        ):
+            raise DistributionWorkbookError(
+                "metadata Effective Gap Penalty (um) must be finite and from 0 "
+                f"through {_MAX_GAP_PENALTY_UM:g}"
+            )
+    if (
+        optimization_policy == "BALANCED_CUSTOM"
+        and effective_gap_penalty_um is None
+    ):
+        raise DistributionWorkbookError(
+            "BALANCED_CUSTOM workbook is missing Effective Gap Penalty (um)"
+        )
+    if (
+        optimization_policy == "MIN_GAPS"
+        and effective_gap_penalty_um not in (None, 0.0)
+    ):
+        raise DistributionWorkbookError(
+            "MIN_GAPS workbook Effective Gap Penalty (um) must be 0 or omitted"
+        )
+
     raw_source_sha256 = metadata.get("source spd sha-256")
     source_sha256: str | None = None
     if raw_source_sha256 not in (None, ""):
@@ -582,7 +641,11 @@ def load_distribution_targets(
     warnings: list[str] = []
     if format_version is None:
         warnings.append("Legacy workbook: run metadata was not recorded.")
-    elif format_version < 4:
+    if raw_policy in (None, ""):
+        warnings.append(
+            "Optimization policy was not recorded; BALANCED_AUTO was restored."
+        )
+    if format_version is not None and format_version < 4:
         warnings.append(
             "Legacy workbook: immutable signal-routing protection was not recorded "
             "and was restored OFF."
@@ -619,6 +682,8 @@ def load_distribution_targets(
         tolerances=tolerances,
         workbook_present=workbook_present,
         distance_mode=distance_mode,
+        optimization_policy=optimization_policy,
+        effective_gap_penalty_um=effective_gap_penalty_um,
         format_version=format_version,
         source_sha256=source_sha256,
         input_design_fingerprint=input_design_fingerprint,
