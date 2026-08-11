@@ -1,8 +1,8 @@
-# SPD Decap PI Evaluator v0.21.0
+# SPD Decap PI Evaluator v0.21.1
 
-> **v0.21.0 reconnects De-cap Distribution with Evaluation Analysis without weakening moved-assignment validation.** An unchanged DIRECT capacitor may use its parser-proven source rail template when an alternate-assignment eligibility record is absent; a moved capacitor still requires exact destination eligibility and remains fail-closed. Distribution results now report `Assignment Failed`, and the main board exposes a read-only Source SPD / Current comparison. The title bar identifies the application as **SPD Decap PI Evaluator v0.21.0**.
+> **v0.21.1 restores every retained physical PWR plane to the main-board layer selector.** Pure PWR conductors are numbered in physical stack order, starting with L09/L11/L12 as P1/P2/P3 in the reported board, while mixed PWR/DGND artwork remains available to De-cap Distribution's exact per-NET geometry proof. Plane artwork is decoded lazily per selected layer to keep the 1.19 GB regression design responsive. The title bar identifies the application as **SPD Decap PI Evaluator v0.21.1**.
 
-> 프로그램: **SPD Decap PI Evaluator v0.21.0**
+> 프로그램: **SPD Decap PI Evaluator v0.21.1**
 > 저장소: 기존 PI Calculator와 분리된 독립 프로그램
 > 해석 경계: 선택한 PWR rail의 pre-design `Zii`; 최종 PowerSI/SIwave 검증을 대체하지 않음
 
@@ -138,7 +138,7 @@ powershell.exe -ExecutionPolicy Bypass -NoProfile -File .\scripts\build_spd_deca
 산출물:
 
 - `dist\SPDDecapPIEvaluator\SPDDecapPIEvaluator.exe`
-- `installer-output\SPDDecapPIEvaluatorSetup-0.21.0.exe`
-- `installer-output\SPDDecapPIEvaluatorSetup-0.21.0.exe.sha256`
+- `installer-output\SPDDecapPIEvaluatorSetup-0.21.1.exe`
+- `installer-output\SPDDecapPIEvaluatorSetup-0.21.1.exe.sha256`
 
 프로그램명과 버전은 title bar와 installer metadata에 함께 표시된다.

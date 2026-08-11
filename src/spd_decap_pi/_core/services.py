@@ -419,9 +419,9 @@ def create_workspace_state() -> WorkspaceState:
         )
     )
 
-def _decode_spd_geometry_asset(
+def _decode_spd_geometry_asset_with_size(
     expected_sha256: str, compressed: bytes
-) -> dict[str, Any]:
+) -> tuple[dict[str, Any], int]:
     if sha256(compressed).hexdigest().casefold() != expected_sha256.casefold():
         raise ValueError("PowerSI geometry asset SHA-256 mismatch")
     limit = _SPD_GEOMETRY_MAX_UNCOMPRESSED_BYTES
@@ -442,6 +442,15 @@ def _decode_spd_geometry_asset(
         "powersi-spd-plane-primitives-v1"
     ):
         raise ValueError("unsupported PowerSI geometry asset format")
+    return payload, len(raw)
+
+
+def _decode_spd_geometry_asset(
+    expected_sha256: str, compressed: bytes
+) -> dict[str, Any]:
+    payload, _decoded_bytes = _decode_spd_geometry_asset_with_size(
+        expected_sha256, compressed
+    )
     return payload
 
 def _validate_spd_geometry_payload(
@@ -549,12 +558,12 @@ def _validate_spd_geometry_payload(
     if not payload["positive_polygons_um"] and not payload["positive_circles_um"]:
         raise ValueError("PowerSI geometry asset has no positive PWR boundary")
 
-def _cell_source_geometry(
+def _cell_source_geometry_with_size(
     attachments: Mapping[str, bytes],
     cell: PlaneCell,
     *,
     expected_layer: str | None = None,
-) -> Mapping[str, Any]:
+) -> tuple[Mapping[str, Any], int]:
     if cell.source_geometry_asset:
         compressed = attachments.get(cell.source_geometry_asset)
         if compressed is None:
@@ -562,7 +571,7 @@ def _cell_source_geometry(
                 f"PowerSI geometry asset is missing: {cell.source_geometry_asset}"
             )
         assert cell.source_geometry_sha256 is not None
-        payload = _decode_spd_geometry_asset(
+        payload, decoded_bytes = _decode_spd_geometry_asset_with_size(
             cell.source_geometry_sha256, bytes(compressed)
         )
         _validate_spd_geometry_payload(
@@ -570,14 +579,35 @@ def _cell_source_geometry(
             expected_layer=expected_layer,
             expected_net=cell.source_net,
         )
-        return payload
-    return {
+        return payload, decoded_bytes
+    payload = {
         "positive_polygons_um": cell.source_positive_polygons_um,
         "negative_polygons_um": cell.source_negative_polygons_um,
         "positive_circles_um": cell.source_positive_circles_um,
         "negative_circles_um": cell.source_negative_circles_um,
         "primitive_order": cell.source_primitive_order,
     }
+    decoded_bytes = len(
+        json.dumps(
+            payload,
+            ensure_ascii=False,
+            separators=(",", ":"),
+            allow_nan=False,
+        ).encode("utf-8")
+    )
+    return payload, decoded_bytes
+
+
+def _cell_source_geometry(
+    attachments: Mapping[str, bytes],
+    cell: PlaneCell,
+    *,
+    expected_layer: str | None = None,
+) -> Mapping[str, Any]:
+    payload, _decoded_bytes = _cell_source_geometry_with_size(
+        attachments, cell, expected_layer=expected_layer
+    )
+    return payload
 
 def plane_cell_source_geometry(
     cell: PlaneCell,
@@ -588,6 +618,65 @@ def plane_cell_source_geometry(
     """Return validated read-only PowerSI artwork for one normalized cell."""
 
     return _cell_source_geometry(attachments, cell, expected_layer=expected_layer)
+
+
+def plane_cell_source_geometry_with_size(
+    cell: PlaneCell,
+    attachments: Mapping[str, bytes],
+    *,
+    expected_layer: str | None = None,
+) -> tuple[Mapping[str, Any], int]:
+    """Return validated artwork and its decoded byte size for bounded preview."""
+
+    return _cell_source_geometry_with_size(
+        attachments, cell, expected_layer=expected_layer
+    )
+
+
+def spd_plane_geometry_record_payload(
+    record: Mapping[str, Any],
+    attachments: Mapping[str, bytes],
+) -> Mapping[str, Any]:
+    """Return one validated PowerSI artwork asset from the compact SPD index."""
+
+    layer = record.get("layer")
+    net = record.get("net")
+    asset = record.get("asset")
+    digest = record.get("asset_sha256")
+    declared_uncompressed_bytes = record.get("uncompressed_bytes")
+    if not isinstance(layer, str) or not layer:
+        raise ValueError("PowerSI geometry index record has no valid layer")
+    if not isinstance(net, str) or not net:
+        raise ValueError("PowerSI geometry index record has no valid NET")
+    if not isinstance(asset, str) or not asset:
+        raise ValueError("PowerSI geometry index record has no valid asset")
+    if not isinstance(digest, str) or not digest:
+        raise ValueError("PowerSI geometry index record has no valid SHA-256")
+    if (
+        not isinstance(declared_uncompressed_bytes, int)
+        or isinstance(declared_uncompressed_bytes, bool)
+        or declared_uncompressed_bytes <= 0
+    ):
+        raise ValueError(
+            "PowerSI geometry index record has no valid decoded-byte count"
+        )
+    compressed = attachments.get(asset)
+    if compressed is None:
+        raise ValueError(f"PowerSI geometry asset is missing: {asset}")
+    payload, decoded_bytes = _decode_spd_geometry_asset_with_size(
+        digest, bytes(compressed)
+    )
+    if decoded_bytes != declared_uncompressed_bytes:
+        raise ValueError(
+            "PowerSI geometry asset decoded size does not match its index"
+        )
+    _validate_spd_geometry_payload(
+        payload,
+        expected_layer=layer,
+        expected_net=net,
+    )
+    return payload
+
 
 def evaluate_workspace(
     state: WorkspaceState,
@@ -2972,4 +3061,6 @@ __all__ = [
     'evaluation_modal_preset',
     'import_cap_spice',
     'plane_cell_source_geometry',
+    'plane_cell_source_geometry_with_size',
+    'spd_plane_geometry_record_payload',
 ]

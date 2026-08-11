@@ -1706,6 +1706,22 @@ def test_geometry_asset_compression_is_deterministic_roundtrips_and_keeps_limit(
         expected_net="VDD_CORE/0",
     )
     assert decoded["positive_polygons_um"] == list(kwargs["positive_polygons"])
+    geometry_record = {
+        "layer": "Signal$PWR",
+        "net": "VDD_CORE/0",
+        "asset": "geometry/test.spdgeom.zlib",
+        "asset_sha256": digest,
+        "uncompressed_bytes": first_size,
+    }
+    assert core_services.spd_plane_geometry_record_payload(
+        geometry_record,
+        {"geometry/test.spdgeom.zlib": first},
+    )["net"] == "VDD_CORE/0"
+    with pytest.raises(ValueError, match="decoded size does not match"):
+        core_services.spd_plane_geometry_record_payload(
+            {**geometry_record, "uncompressed_bytes": first_size + 1},
+            {"geometry/test.spdgeom.zlib": first},
+        )
     with pytest.raises(ValueError, match="SHA-256 mismatch"):
         core_services._decode_spd_geometry_asset(digest, first + b"\\x00")
 
