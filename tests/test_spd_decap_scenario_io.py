@@ -746,6 +746,18 @@ def _without_padstack_material(value):
     return value
 
 
+def _without_empty_structural_evidence(value):
+    if isinstance(value, dict):
+        return {
+            key: _without_empty_structural_evidence(item)
+            for key, item in value.items()
+            if key != "structural_evidence" or item not in ([], None)
+        }
+    if isinstance(value, list):
+        return [_without_empty_structural_evidence(item) for item in value]
+    return value
+
+
 def _legacy_design_fingerprint(scenario: ScenarioSpec) -> str:
     payload = _without_padstack_material(scenario._design_payload())
     return sha256(
@@ -776,6 +788,7 @@ def test_legacy_via_payload_without_material_preserves_manifest_fingerprint(
             next(content for name, content in members if name == SCENARIO_FILENAME)
         )
         legacy_scenario = _without_padstack_material(raw_scenario)
+        legacy_scenario = _without_empty_structural_evidence(legacy_scenario)
         assert "padstack_material" not in json.dumps(legacy_scenario)
         legacy_bytes = (
             json.dumps(

@@ -42,6 +42,7 @@ from .scenario import (
     ScenarioViaLanding,
     ScenarioViaPathEvidence,
     ScenarioViaSegment,
+    ScenarioViaStructuralEvidence,
     SHARED_PAD_ANALYSIS_VERSION,
     SharedPadCluster,
     SharedPadClusterState,
@@ -50,6 +51,11 @@ from .scenario import (
     mixed_reference_ground_landing_identity,
 )
 from .routing_obstacles import (
+    MLO_LANDING_CERTIFICATE_METADATA_KEY,
+    MLO_LANDING_CERTIFICATE_VERSION,
+    MLO_LANDING_CLASS_CONVENTIONAL_THROUGH_VIA,
+    MLO_LANDING_CLASS_SHORT_SPAN_VIA,
+    mlo_landing_certificate_claims_sha256,
     MLO_TRANSITION_POLICY_VERSION,
     PlannedViaProfile,
     RoutingObstacleAsset,
@@ -403,6 +409,34 @@ def _scenario_via_landing(
         )
         for item in recovery.evidence_by_via.get(landing.via_id.casefold(), ())
     )
+    structural_evidence = tuple(
+        ScenarioViaStructuralEvidence(
+            target_layer=item.target_layer,
+            target_node_id=item.target_node_id,
+            x_um=item.target_x_um,
+            y_um=item.target_y_um,
+            segments=tuple(
+                ScenarioViaSegment(
+                    via_id=segment.via_id,
+                    padstack=segment.padstack,
+                    drill_diameter_um=segment.drill_diameter_um,
+                    start_layer=segment.start_layer,
+                    end_layer=segment.end_layer,
+                    length_um=segment.length_um,
+                    end_x_um=segment.end_x_um,
+                    end_y_um=segment.end_y_um,
+                    rotation_degrees=segment.rotation_degrees,
+                    padstack_material=segment.padstack_material,
+                )
+                for segment in item.segments
+            ),
+            trace_hops=item.trace_hops,
+            trace_alternate_exit=item.trace_alternate_exit,
+        )
+        for item in getattr(recovery, "structural_evidence_by_via", {}).get(
+            landing.via_id.casefold(), ()
+        )
+    )
     return ScenarioViaLanding(
         via_id=landing.via_id,
         net=landing.net,
@@ -412,11 +446,24 @@ def _scenario_via_landing(
         padstack=landing.padstack,
         rotation_degrees=landing.rotation_degrees,
         path_evidence=evidence,
+        structural_evidence=structural_evidence,
     )
 
 
-def _via_target_layers_by_net(project: ProjectSpec) -> dict[str, tuple[str, ...]]:
-    """Target layers requested from recovery for every selected terminal net."""
+def _via_target_layers_by_net(
+    project: ProjectSpec,
+    *,
+    plane_geometries: tuple[Any, ...] = (),
+) -> dict[str, tuple[str, ...]]:
+    """Target layers requested from recovery for every selected terminal net.
+
+    Include every retained same-NET PWR plane layer, not only the configured
+    rail layer.  The configured rail may be a logical alias (for example L12)
+    while the source terminal actually lands on L09/L11; omitting those layers
+    turns valid source paths into pathless legacy fallbacks. GND aliases are
+    resolved through rail/mixed-reference targets and are not expanded from
+    every retained geometry record.
+    """
 
     result: dict[str, set[str]] = {}
     aliases = {item.casefold() for item in project.gnd_aliases}
@@ -438,6 +485,15 @@ def _via_target_layers_by_net(project: ProjectSpec) -> dict[str, tuple[str, ...]
         ]
         if len(candidates) == 1:
             result.setdefault(candidates[0].casefold(), set()).add(rail.gnd_layer)
+    for geometry in plane_geometries:
+        net = str(getattr(geometry, "net", "")).strip().casefold()
+        layer = str(getattr(geometry, "layer", "")).strip()
+        # Ground plane records are intentionally excluded here. GND target
+        # layers are already derived from each rail/mixed-reference certificate;
+        # expanding every retained DGND geometry would multiply requests by all
+        # GND plane layers without adding PWR recovery targets.
+        if net and layer and net not in aliases:
+            result.setdefault(net, set()).add(layer)
     spd_import = project.metadata.get("spd_import", {})
     failures = (
         spd_import.get("mixed_reference_certificate_failures", ())
@@ -814,6 +870,112 @@ def _normalized_base_project(project: ProjectSpec) -> ProjectSpec:
     return ProjectSpec.model_validate(payload)
 
 
+def _build_mlo_landing_certificates(
+    source_landings: tuple[Any, ...],
+    *,
+    padstacks: tuple[Any, ...],
+    stackup_layers: tuple[Any, ...],
+    source_sha256: str,
+) -> dict[str, object]:
+    """Persist a conservative, source-bound classification for every landing.
+
+    A pathless landing is classified as conventional only when the raw
+    PadStack has a positive drill and explicit TOP and BOTTOM copper pads.  A
+    short-span padstack (for example DR-0102 TOP-to-L02) is unresolved and can
+    never bypass the MLO gate.  This does not infer a translated MLO recipe;
+    it merely preserves the narrow PTH evidence that survives import.
+    """
+
+    top = next((layer.name for layer in stackup_layers if layer.is_conductor), None)
+    conductors = [layer.name for layer in stackup_layers if layer.is_conductor]
+    bottom = conductors[-1] if conductors else None
+    padstack_by_key = {str(item.name).casefold(): item for item in padstacks}
+    rows: dict[str, dict[str, object]] = {}
+    seen: set[str] = set()
+    for landing in source_landings:
+        via_id = str(getattr(landing, "via_id", "")).strip()
+        key = via_id.casefold()
+        if not key or key in seen:
+            continue
+        seen.add(key)
+        padstack = padstack_by_key.get(str(getattr(landing, "padstack", "")).casefold())
+        layer_names = {
+            str(item).strip() for item in (getattr(padstack, "layers", ()) or ())
+            if str(item).strip()
+        }
+        layer_keys = {item.casefold() for item in layer_names}
+        drill = getattr(padstack, "drill_diameter_um", None)
+        material = getattr(padstack, "material", None)
+        normalized_material = material.strip() if isinstance(material, str) else None
+        material_is_copper = (
+            normalized_material is not None
+            and normalized_material.casefold() == "copper"
+        )
+        positive_drill = bool(
+            isinstance(drill, (int, float))
+            and isfinite(float(drill))
+            and float(drill) > 0.0
+        )
+        conventional = bool(
+            padstack is not None
+            and top
+            and bottom
+            and top.casefold() in layer_keys
+            and bottom.casefold() in layer_keys
+            and positive_drill
+            and material_is_copper
+        )
+        short_span = bool(
+            padstack is not None
+            and top
+            and top.casefold() in layer_keys
+            and any(
+                layer.casefold() in layer_keys
+                for layer in conductors[1:-1]
+            )
+            and not (bottom and bottom.casefold() in layer_keys)
+            and positive_drill
+            and material_is_copper
+        )
+        rows[via_id] = {
+            "classification": (
+                MLO_LANDING_CLASS_CONVENTIONAL_THROUGH_VIA
+                if conventional
+                else MLO_LANDING_CLASS_SHORT_SPAN_VIA
+                if short_span
+                else "UNRESOLVED"
+            ),
+            "padstack": str(getattr(landing, "padstack", "")),
+            "span_layers": sorted(layer_names, key=str.casefold),
+            "drill_diameter_um": (
+                float(drill) if isinstance(drill, (int, float)) else None
+            ),
+            "padstack_material": normalized_material,
+        }
+    canonical_ids = sorted(seen)
+    ids_hash = sha256(
+        (json.dumps(canonical_ids, separators=(",", ":")) + "\n").encode()
+    ).hexdigest()
+    conventional_count = sum(
+        item["classification"] == MLO_LANDING_CLASS_CONVENTIONAL_THROUGH_VIA
+        for item in rows.values()
+    )
+    short_span_count = sum(
+        item["classification"] == MLO_LANDING_CLASS_SHORT_SPAN_VIA
+        for item in rows.values()
+    )
+    return {
+        "certificate_version": MLO_LANDING_CERTIFICATE_VERSION,
+        "source_sha256": source_sha256,
+        "landing_count": len(canonical_ids),
+        "landing_ids_sha256": ids_hash,
+        "conventional_count": conventional_count,
+        "short_span_count": short_span_count,
+        "claims_sha256": mlo_landing_certificate_claims_sha256(rows),
+        "by_via_id": rows,
+    }
+
+
 def import_spd_scenario(
     path: str | Path,
     *,
@@ -947,7 +1109,10 @@ def import_spd_scenario(
     path_recovery = recover_spd_via_paths(
         source_path,
         landings=source_landings,
-        target_layers_by_net=_via_target_layers_by_net(base_project),
+        target_layers_by_net=_via_target_layers_by_net(
+            base_project,
+            plane_geometries=analysis.plane_geometries,
+        ),
         stackup_layers=base_project.stackup_layers,
         padstacks=analysis.padstacks,
         top_layer=top_layer,
@@ -1067,6 +1232,14 @@ def import_spd_scenario(
                 )
             )
     recovery_metadata = dict(base_project.metadata)
+    recovery_metadata[MLO_LANDING_CERTIFICATE_METADATA_KEY] = (
+        _build_mlo_landing_certificates(
+            source_landings,
+            padstacks=analysis.padstacks,
+            stackup_layers=base_project.stackup_layers,
+            source_sha256=analysis.source.sha256,
+        )
+    )
     # This source-bound policy is a board-level positive MLO summary.  Path
     # recovery can legitimately fall back for individual landings, so a false
     # result is never a per-landing conventional-via certificate; Distribution
@@ -1075,7 +1248,9 @@ def import_spd_scenario(
         source_landings,
         stackup_layers=base_project.stackup_layers,
         evidence_by_via=path_recovery.evidence_by_via,
+        structural_evidence_by_via=path_recovery.structural_evidence_by_via,
     )
+
     recovery_metadata["spd_mlo_transition_policy"] = {
         **mlo_transition_policy.payload(),
         "policy_version": MLO_TRANSITION_POLICY_VERSION,

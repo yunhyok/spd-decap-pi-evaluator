@@ -1,8 +1,8 @@
-# SPD Decap PI Evaluator v0.22.0
+# SPD Decap PI Evaluator v0.22.1
 
-> **v0.22.0 expands and hardens De-cap Distribution.** It retains all 21 physical PWR conductor layers, defaults to the disclosed `BALANCED_AUTO` gap-distance objective, exports Candidate Audit evidence, and blocks non-TOP MLO transitions that lack an engineered translated recipe. Optional immutable signal-Trace avoidance remains OFF by default; OFF preserves only the v0.21 signal-routing-filter behavior, not every v0.21 Distribution policy. The title bar identifies the application as **SPD Decap PI Evaluator v0.22.0**.
+> **v0.22.1 expands and hardens De-cap Distribution.** It retains all 21 physical PWR conductor layers, defaults to the disclosed `BALANCED_AUTO` gap-distance objective, exports Candidate Audit evidence, preserves source-proven MLO transition diagnostics, and blocks non-TOP MLO transitions that lack an engineered translated recipe. The real-board projection path also reuses one source-bound transition context instead of revalidating the full project per landing. Optional immutable signal-Trace avoidance remains OFF by default; OFF preserves only the v0.21 signal-routing-filter behavior, not every v0.21 Distribution policy. The title bar identifies the application as **SPD Decap PI Evaluator v0.22.1**.
 
-> 프로그램: **SPD Decap PI Evaluator v0.22.0**
+> 프로그램: **SPD Decap PI Evaluator v0.22.1**
 > 저장소: 기존 PI Calculator와 분리된 독립 프로그램
 > 해석 경계: 선택한 PWR rail의 pre-design `Zii`; 최종 PowerSI/SIwave 검증을 대체하지 않음
 
@@ -11,7 +11,7 @@
 desktop 프로그램이다. Stackup, MLO 크기 또는 plane을 새로 작성하는 기능과
 Optimization Mode는 포함하지 않는다.
 
-## v0.22.0 Distribution policy and optional signal-routing protection
+## v0.22.1 Distribution policy and optional signal-routing protection
 
 - Distribution retains all 21 source-classified physical PWR layers for exact immutable-landing eligibility instead of restricting candidates to an Evaluation-selected subset.
 - The new default `BALANCED_AUTO` priority is maximum fulfillment, minimum active relabels, then signed total bump distance plus one board-diagonal penalty per gap. `BALANCED_CUSTOM` accepts an explicit bounded penalty; `MIN_GAPS` preserves the legacy strict gap-first ordering.
@@ -165,7 +165,7 @@ powershell.exe -ExecutionPolicy Bypass -NoProfile -File .\scripts\build_spd_deca
 산출물:
 
 - `dist\SPDDecapPIEvaluator\SPDDecapPIEvaluator.exe`
-- `installer-output\SPDDecapPIEvaluatorSetup-0.22.0.exe`
-- `installer-output\SPDDecapPIEvaluatorSetup-0.22.0.exe.sha256`
+- `installer-output\SPDDecapPIEvaluatorSetup-0.22.1.exe`
+- `installer-output\SPDDecapPIEvaluatorSetup-0.22.1.exe.sha256`
 
 프로그램명과 버전은 title bar와 installer metadata에 함께 표시된다.

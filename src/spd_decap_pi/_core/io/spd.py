@@ -13,7 +13,7 @@ from array import array
 from bisect import bisect_right
 from collections import Counter
 from collections.abc import Callable, Iterable, Iterator, Mapping, Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 import hashlib
 from math import isfinite, log10
 import mmap
@@ -185,12 +185,35 @@ class SpdViaPathEvidence:
 
 
 @dataclass(frozen=True, slots=True)
+class SpdViaStructuralEvidence:
+    """Source-proven path topology retained when target pad geometry is unusable.
+
+    This is intentionally not an eligibility record: it carries only the
+    terminal layer/node/XY and traversed segments needed to classify lateral
+    or microvia transitions.  Missing target pad shape must never become
+    permission for a non-TOP retarget.
+    """
+
+    via_id: str
+    target_layer: str
+    target_node_id: str
+    target_x_um: float
+    target_y_um: float
+    segments: tuple[SpdViaPathSegment, ...]
+    trace_hops: int = 0
+    trace_alternate_exit: bool = False
+
+
+@dataclass(frozen=True, slots=True)
 class SpdViaPathRecovery:
     """Ephemeral recovery output; the selected raw graph is never persisted."""
 
     evidence_by_via: Mapping[str, tuple[SpdViaPathEvidence, ...]]
     diagnostics: tuple[SpdDiagnostic, ...]
     statistics: Mapping[str, int]
+    structural_evidence_by_via: Mapping[
+        str, tuple[SpdViaStructuralEvidence, ...]
+    ] = field(default_factory=dict)
 
     def evidence_for(
         self, via_id: str, target_layer: str
@@ -200,6 +223,21 @@ class SpdViaPathRecovery:
             (
                 item
                 for item in self.evidence_by_via.get(via_id.casefold(), ())
+                if item.target_layer.casefold() == target_key
+            ),
+            None,
+        )
+
+    def structural_evidence_for(
+        self, via_id: str, target_layer: str
+    ) -> SpdViaStructuralEvidence | None:
+        target_key = target_layer.casefold()
+        return next(
+            (
+                item
+                for item in self.structural_evidence_by_via.get(
+                    via_id.casefold(), ()
+                )
                 if item.target_layer.casefold() == target_key
             ),
             None,
@@ -2545,6 +2583,7 @@ def recover_spd_via_paths(
         return False
 
     evidence: dict[str, list[SpdViaPathEvidence]] = {}
+    structural_evidence: dict[str, list[SpdViaStructuralEvidence]] = {}
     failures: Counter[str] = Counter()
     try:
         with source_path.open("rb") as handle, mmap.mmap(
@@ -2630,6 +2669,27 @@ def recover_spd_via_paths(
                             None,
                         )
                         if not segments or shape is None or target_padstack_name is None:
+                            # Keep topology only when full target-pad evidence
+                            # cannot be formed. This is for MLO
+                            # classification/diagnostics only and never grants
+                            # Distribution eligibility by itself.
+                            if segments:
+                                structural_evidence.setdefault(
+                                    str(state["via_key"]), []
+                                ).append(
+                                    SpdViaStructuralEvidence(
+                                        via_id=str(state["via_id"]),
+                                        target_layer=str(state["target_layer"]),
+                                        target_node_id=current_node.node_id,
+                                        target_x_um=current_node.x_um,
+                                        target_y_um=current_node.y_um,
+                                        segments=segments,
+                                        trace_hops=int(state["trace_steps"]),
+                                        trace_alternate_exit=bool(
+                                            state.get("trace_alternate_exit", False)
+                                        ),
+                                    )
+                                )
                             state["status"] = "TARGET_PAD_UNSUPPORTED"
                             failures[str(state["status"])] += 1
                             continue
@@ -2934,6 +2994,7 @@ def recover_spd_via_paths(
         centre_depth_um[layer.name.casefold()] = depth_um + float(layer.thickness_um) / 2.0
         depth_um += float(layer.thickness_um)
     corrected: dict[str, list[SpdViaPathEvidence]] = {}
+    corrected_structural: dict[str, list[SpdViaStructuralEvidence]] = {}
     for via_key, items in evidence.items():
         corrected[via_key] = []
         for item in items:
@@ -2967,6 +3028,41 @@ def recover_spd_via_paths(
                     target_pad_kind=item.target_pad_kind,
                     target_pad_width_um=item.target_pad_width_um,
                     target_pad_height_um=item.target_pad_height_um,
+                    target_x_um=item.target_x_um,
+                    target_y_um=item.target_y_um,
+                    segments=segments,
+                    trace_hops=item.trace_hops,
+                    trace_alternate_exit=item.trace_alternate_exit,
+                )
+            )
+    for via_key, items in structural_evidence.items():
+        corrected_structural[via_key] = []
+        for item in items:
+            segments = tuple(
+                SpdViaPathSegment(
+                    via_id=segment.via_id,
+                    padstack=segment.padstack,
+                    drill_diameter_um=segment.drill_diameter_um,
+                    start_layer=segment.start_layer,
+                    end_layer=segment.end_layer,
+                    length_um=abs(
+                        centre_depth_um[segment.end_layer.casefold()]
+                        - centre_depth_um[segment.start_layer.casefold()]
+                    ),
+                    end_x_um=segment.end_x_um,
+                    end_y_um=segment.end_y_um,
+                    rotation_degrees=segment.rotation_degrees,
+                    padstack_material=segment.padstack_material,
+                )
+                for segment in item.segments
+            )
+            if any(segment.length_um <= 0 for segment in segments):
+                continue
+            corrected_structural[via_key].append(
+                SpdViaStructuralEvidence(
+                    via_id=item.via_id,
+                    target_layer=item.target_layer,
+                    target_node_id=item.target_node_id,
                     target_x_um=item.target_x_um,
                     target_y_um=item.target_y_um,
                     segments=segments,
@@ -3026,10 +3122,24 @@ def recover_spd_via_paths(
             if count
         }
     )
+    structural_recovered = sum(
+        len(items) for items in corrected_structural.values()
+    )
+    if structural_recovered:
+        # Keep the historical statistics shape byte-for-byte when no
+        # structural-only evidence exists; old callers compare this mapping.
+        statistics["structural_recovered"] = structural_recovered
     return finish(SpdViaPathRecovery(
         evidence_by_via={
             key: tuple(sorted(items, key=lambda item: item.target_layer.casefold()))
             for key, items in sorted(corrected.items())
+            if items
+        },
+        structural_evidence_by_via={
+            key: tuple(
+                sorted(items, key=lambda item: item.target_layer.casefold())
+            )
+            for key, items in sorted(corrected_structural.items())
             if items
         },
         diagnostics=tuple(diagnostics),
@@ -3980,6 +4090,7 @@ __all__ = [
     "SpdSourceInfo",
     "SpdSharedPadCluster",
     "SpdViaPathEvidence",
+    "SpdViaStructuralEvidence",
     "SpdViaPathRecovery",
     "SpdViaPathSegment",
     "SpdViaUsage",

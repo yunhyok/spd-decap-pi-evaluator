@@ -631,6 +631,8 @@ def test_distribution_power_projection_repairs_gnd_unresolved_cluster_for_atomic
         source_sha256=unresolved.source.sha256,
         input_design_fingerprint=unresolved.design_fingerprint,
         input_revision=unresolved.revision,
+        canonical_targets=(("r1", "m1", 0), ("r2", "m1", 3)),
+        canonical_tolerances=(("r1", "m1", 0.0), ("r2", "m1", 0.0)),
         source_decaps=tuple(unresolved.decaps),
         projected_decaps=tuple(unresolved.decaps),
         source_analysis=unresolved.connection_analysis,
@@ -660,6 +662,201 @@ def test_distribution_power_projection_repairs_gnd_unresolved_cluster_for_atomic
         DecapConnectionKind.SHARED_DUMMY,
     }
     assert result.connection_analysis.clusters[0].state == SharedPadClusterState.ANCHORED
+
+
+def test_power_projection_is_bound_to_canonical_targets_and_tolerances() -> None:
+    """A TOP proof cannot be replayed for an unproved non-TOP request."""
+
+    scenario = _direct_scenario(
+        (("C1", 5.0, ("R1", "R3")),),
+        rail_ids=("R1", "R2", "R3"),
+    )
+    layers = [
+        StackupLayer(
+            name="TOP",
+            thickness_um=18.0,
+            conductivity_s_m=5.8e7,
+            pwr_nets=["V1", "V2"],
+        ),
+        StackupLayer(name="D1", thickness_um=20.0, dk=4.0, df=0.01),
+        StackupLayer(
+            name="PWR_ALT",
+            thickness_um=18.0,
+            conductivity_s_m=5.8e7,
+            pwr_nets=["V3"],
+        ),
+        StackupLayer(
+            name="GND",
+            thickness_um=18.0,
+            conductivity_s_m=5.8e7,
+            pwr_nets=["DGND"],
+        ),
+    ]
+    project = scenario.base_project.model_copy(
+        update={
+            "stackup_layers": layers,
+            "rails": [
+                rail.model_copy(
+                    update={
+                        "pwr_layer": (
+                            "PWR_ALT" if rail.rail_id == "R3" else "TOP"
+                        ),
+                        "gnd_layer": "GND",
+                    }
+                )
+                for rail in scenario.base_project.rails
+            ],
+        }
+    )
+    decap = scenario.decaps[0].model_copy(
+        update={
+            "eligibility": {
+                rail_id: item.model_copy(
+                    update={
+                        "pwr_layer": "PWR_ALT" if rail_id == "R3" else "TOP",
+                        "gnd_layer": "GND",
+                    }
+                )
+                for rail_id, item in scenario.decaps[0].eligibility.items()
+            }
+        }
+    )
+    assert scenario.connection_analysis is not None
+    connection = scenario.connection_analysis.connections["C1"]
+    landing = connection.power_vias[0]
+    microvia = ScenarioViaSegment(
+        via_id=landing.via_id,
+        padstack=landing.padstack,
+        drill_diameter_um=100.0,
+        start_layer="TOP",
+        end_layer="PWR_ALT",
+        length_um=20.0,
+        end_x_um=landing.x_um,
+        end_y_um=landing.y_um,
+        padstack_material="COPPER",
+    )
+    landing = landing.model_copy(
+        update={
+            "path_evidence": (
+                ScenarioViaPathEvidence(
+                    target_layer="PWR_ALT",
+                    target_node_id="TARGET-C1",
+                    target_padstack=landing.padstack,
+                    target_pad_kind="CIRCLE",
+                    target_pad_width_um=300.0,
+                    target_pad_height_um=300.0,
+                    x_um=landing.x_um,
+                    y_um=landing.y_um,
+                    segments=(microvia,),
+                ),
+            )
+        }
+    )
+    scenario = ScenarioSpec.model_validate(
+        {
+            **scenario.model_dump(mode="python"),
+            "normalized_project": project.model_dump(mode="python"),
+            "decaps": [decap.model_dump(mode="python")],
+            "connection_analysis": scenario.connection_analysis.model_copy(
+                update={
+                    "connections": {
+                        "C1": connection.model_copy(update={"power_vias": (landing,)})
+                    }
+                }
+            ).model_dump(mode="python"),
+        }
+    )
+    top_plane = SpdPlaneGeometry(
+        layer="TOP",
+        net="V2",
+        positive_polygons_um=(
+            ((-10.0, -10.0), (20.0, -10.0), (20.0, 10.0), (-10.0, 10.0)),
+        ),
+        negative_polygons_um=(),
+        primitive_order=(("positive_polygon", 0),),
+    )
+    build_targets = {
+        (" r3 ", "m1"): 0,
+        ("r2", "M1"): 1,
+        ("R1", "m1"): 0,
+    }
+    projection = distribution_module.build_distribution_power_projection(
+        scenario,
+        {},
+        plane_geometries=(top_plane,),
+        targets=build_targets,
+        tolerances={("r2", "m1"): 0.0},
+    )
+
+    assert projection is not None
+    same_request = compute_distribution_plan(
+        scenario,
+        {
+            ("R1", "M1"): 0,
+            ("R2", "M1"): 1,
+            ("R3", "M1"): 0,
+        },
+        power_projection=projection,
+    )
+    assert same_request.status == DistributionPlanStatus.FULL
+    assert same_request.assignment_map == {"C1": "R2"}
+    validate_distribution_targets(
+        scenario,
+        {
+            ("R1", "M1"): 0,
+            ("R2", "M1"): 1,
+            ("R3", "M1"): 0,
+        },
+        power_projection=projection,
+    )
+
+    with pytest.raises(DistributionError) as changed_target:
+        compute_distribution_plan(
+            scenario,
+            {
+                ("R1", "M1"): 0,
+                ("R2", "M1"): 0,
+                ("R3", "M1"): 1,
+            },
+            power_projection=projection,
+        )
+    assert changed_target.value.code == "POWER_PROJECTION_STALE"
+    with pytest.raises(DistributionError) as validated_changed_target:
+        validate_distribution_targets(
+            scenario,
+            {
+                ("R1", "M1"): 0,
+                ("R2", "M1"): 0,
+                ("R3", "M1"): 1,
+            },
+            power_projection=projection,
+        )
+    assert validated_changed_target.value.code == "POWER_PROJECTION_STALE"
+
+    with pytest.raises(DistributionError) as changed_tolerance:
+        compute_distribution_plan(
+            scenario,
+            {
+                ("R1", "M1"): 0,
+                ("R2", "M1"): 1,
+                ("R3", "M1"): 0,
+            },
+            tolerances={("R2", "M1"): 1.0},
+            power_projection=projection,
+        )
+    assert changed_tolerance.value.code == "POWER_PROJECTION_STALE"
+    with pytest.raises(DistributionError) as validated_changed_tolerance:
+        validate_distribution_targets(
+            scenario,
+            {
+                ("R1", "M1"): 0,
+                ("R2", "M1"): 1,
+                ("R3", "M1"): 0,
+            },
+            {("R2", "M1"): 1.0},
+            power_projection=projection,
+        )
+    assert validated_changed_tolerance.value.code == "POWER_PROJECTION_STALE"
 
 
 def test_distribution_projection_via_eligibility_uses_source_physical_landing() -> None:
@@ -2008,6 +2205,456 @@ def test_legacy_conventional_path_without_policy_remains_eligible() -> None:
     )
     assert plan.status == DistributionPlanStatus.FULL
     assert plan.assignment_map == {"C1": "R2"}
+
+
+def _with_landing_certificate(
+    scenario: ScenarioSpec,
+    landing: ScenarioViaLanding,
+    row: dict[str, object],
+) -> ScenarioSpec:
+    ids = [landing.via_id.casefold()]
+    metadata = {
+        "certificate_version": "MLO_LANDING_CERTIFICATE_V1",
+        "source_sha256": scenario.source.sha256,
+        "landing_count": 1,
+        "landing_ids_sha256": sha256(
+            (json.dumps(ids, separators=(",", ":")) + "\n").encode()
+        ).hexdigest(),
+        "conventional_count": int(
+            row.get("classification") == "CONVENTIONAL_THROUGH_VIA"
+        ),
+        "short_span_count": int(row.get("classification") == "SHORT_SPAN_VIA"),
+        "by_via_id": {landing.via_id: row},
+    }
+    row.setdefault("padstack_material", "COPPER")
+    metadata["claims_sha256"] = distribution_module.mlo_landing_certificate_claims_sha256(
+        metadata["by_via_id"]
+    )
+    project = scenario.base_project.model_copy(
+        update={
+            "metadata": {
+                **scenario.base_project.metadata,
+                "spd_mlo_landing_certificates": metadata,
+            }
+        }
+    )
+    return scenario.model_copy(
+        update={"normalized_project": project.model_dump(mode="python")}
+    )
+
+
+def test_landing_certificate_requires_complete_and_known_claims() -> None:
+    scenario = _non_top_direct_transition_scenario(
+        path_kind=None,
+        real_import=True,
+        fresh_policy=True,
+    )
+    assert scenario.connection_analysis is not None
+    landing = scenario.connection_analysis.connections["C1"].power_vias[0]
+    # The row is deliberately crafted with only a classification.  Even with
+    # matching source/count metadata it cannot authorize a pathless landing.
+    incomplete = _with_landing_certificate(
+        scenario,
+        landing,
+        {"classification": "CONVENTIONAL_THROUGH_VIA"},
+    )
+    assert distribution_module._mlo_transition_rejection_for_landing(
+        incomplete,
+        incomplete.connection_analysis.connections["C1"].power_vias[0],
+        stackup_layers=incomplete.base_project.stackup_layers,
+    )[0] == REIMPORT_SOURCE_FOR_TRANSITION_EVIDENCE_CODE
+
+    # Unknown row claims must also fail closed, rather than being ignored by a
+    # permissive decoder.
+    unknown = _with_landing_certificate(
+        scenario,
+        landing,
+        {
+            "classification": "CONVENTIONAL_THROUGH_VIA",
+            "padstack": landing.padstack,
+            "span_layers": ["TOP", "GND"],
+            "drill_diameter_um": 300.0,
+            "unexpected": True,
+        },
+    )
+    assert distribution_module._mlo_transition_rejection_for_landing(
+        unknown,
+        unknown.connection_analysis.connections["C1"].power_vias[0],
+        stackup_layers=unknown.base_project.stackup_layers,
+    )[0] == REIMPORT_SOURCE_FOR_TRANSITION_EVIDENCE_CODE
+
+
+def test_landing_certificate_binds_padstack_and_conductor_span() -> None:
+    scenario = _non_top_direct_transition_scenario(
+        path_kind=None,
+        real_import=True,
+        fresh_policy=True,
+    )
+    assert scenario.connection_analysis is not None
+    landing = scenario.connection_analysis.connections["C1"].power_vias[0]
+    mismatch = _with_landing_certificate(
+        scenario,
+        landing,
+        {
+            "classification": "CONVENTIONAL_THROUGH_VIA",
+            "padstack": "DIFFERENT_PADSTACK",
+            "span_layers": ["TOP", "GND"],
+            "drill_diameter_um": 300.0,
+        },
+    )
+    assert distribution_module._mlo_transition_rejection_for_landing(
+        mismatch,
+        mismatch.connection_analysis.connections["C1"].power_vias[0],
+        stackup_layers=mismatch.base_project.stackup_layers,
+    )[0] == REIMPORT_SOURCE_FOR_TRANSITION_EVIDENCE_CODE
+
+    non_copper = _with_landing_certificate(
+        scenario,
+        landing,
+        {
+            "classification": "CONVENTIONAL_THROUGH_VIA",
+            "padstack": landing.padstack,
+            "span_layers": ["TOP", "GND"],
+            "drill_diameter_um": 300.0,
+            "padstack_material": "ALUMINUM",
+        },
+    )
+    assert distribution_module._mlo_transition_rejection_for_landing(
+        non_copper,
+        non_copper.connection_analysis.connections["C1"].power_vias[0],
+        stackup_layers=non_copper.base_project.stackup_layers,
+    )[0] == REIMPORT_SOURCE_FOR_TRANSITION_EVIDENCE_CODE
+
+    false_span = _with_landing_certificate(
+        scenario,
+        landing,
+        {
+            "classification": "CONVENTIONAL_THROUGH_VIA",
+            "padstack": landing.padstack,
+            "span_layers": ["TOP", "PWR_ALT"],
+            "drill_diameter_um": 300.0,
+        },
+    )
+    assert distribution_module._mlo_transition_rejection_for_landing(
+        false_span,
+        false_span.connection_analysis.connections["C1"].power_vias[0],
+        stackup_layers=false_span.base_project.stackup_layers,
+    )[0] == REIMPORT_SOURCE_FOR_TRANSITION_EVIDENCE_CODE
+
+
+def test_landing_certificate_claim_digest_and_count_are_strict() -> None:
+    scenario = _non_top_direct_transition_scenario(
+        path_kind=None,
+        real_import=True,
+        fresh_policy=True,
+    )
+    assert scenario.connection_analysis is not None
+    landing = scenario.connection_analysis.connections["C1"].power_vias[0]
+    valid_scenario = _with_landing_certificate(
+        scenario,
+        landing,
+        {
+            "classification": "CONVENTIONAL_THROUGH_VIA",
+            "padstack": landing.padstack,
+            "span_layers": ["TOP", "GND"],
+            "drill_diameter_um": 300.0,
+        },
+    )
+    raw = dict(
+        valid_scenario.base_project.metadata["spd_mlo_landing_certificates"]
+    )
+    with pytest.raises(ValueError):
+        distribution_module.parse_mlo_landing_certificates(
+            {**raw, "claims_sha256": "0" * 64},
+            expected_source_sha256=scenario.source.sha256,
+        )
+    with pytest.raises(ValueError):
+        distribution_module.parse_mlo_landing_certificates(
+            {**raw, "conventional_count": 0},
+            expected_source_sha256=scenario.source.sha256,
+        )
+
+
+def test_short_span_landing_is_recipe_required_not_eligible() -> None:
+    """DR-0102-like TOP-to-intermediate spans never grant a PWR retarget."""
+
+    scenario = _non_top_direct_transition_scenario(
+        path_kind=None,
+        real_import=True,
+        fresh_policy=True,
+    )
+    assert scenario.connection_analysis is not None
+    landing = scenario.connection_analysis.connections["C1"].power_vias[0]
+    short_span = _with_landing_certificate(
+        scenario,
+        landing,
+        {
+            "classification": "SHORT_SPAN_VIA",
+            "padstack": landing.padstack,
+            "span_layers": ["TOP", "PWR_ALT"],
+            "drill_diameter_um": 100.0,
+        },
+    )
+    rejection = distribution_module._mlo_transition_rejection_for_landing(
+        short_span,
+        short_span.connection_analysis.connections["C1"].power_vias[0],
+        stackup_layers=short_span.base_project.stackup_layers,
+    )
+    assert rejection is not None
+    assert rejection[0] == "MLO_TRANSITION_RECIPE_REQUIRED"
+    plane = SpdPlaneGeometry(
+        layer="PWR_ALT",
+        net="V2",
+        positive_polygons_um=(
+            ((0.0, -5.0), (10.0, -5.0), (10.0, 5.0), (0.0, 5.0)),
+        ),
+        negative_polygons_um=(),
+        primitive_order=(("positive_polygon", 0),),
+    )
+    targets = {("R1", "M1"): 0, ("R2", "M1"): 1}
+    projection = distribution_module.build_distribution_power_projection(
+        short_span,
+        {},
+        plane_geometries=(plane,),
+        targets=targets,
+    )
+    assert projection is not None
+    assert [item.code for item in projection.mlo_transition_diagnostics] == [
+        "MLO_TRANSITION_RECIPE_REQUIRED"
+    ]
+    assert projection.mlo_transition_diagnostics[0].actual_count == 1
+    plan = compute_distribution_plan(
+        short_span,
+        targets,
+        power_projection=projection,
+    )
+    assert plan.status == DistributionPlanStatus.PARTIAL
+    assert plan.assignment_map == {}
+
+
+def test_source_bound_conventional_landing_certificate_allows_pathless_pth() -> None:
+    """Importer PTH certificate permits one pathless landing, not the board."""
+
+    scenario = _non_top_direct_transition_scenario(
+        path_kind=None,
+        real_import=True,
+        fresh_policy=True,
+    )
+    assert scenario.connection_analysis is not None
+    landing = scenario.connection_analysis.connections["C1"].power_vias[0]
+    source_sha = scenario.source.sha256
+    import hashlib, json
+
+    ids = [landing.via_id.casefold()]
+    metadata = {
+        "certificate_version": "MLO_LANDING_CERTIFICATE_V1",
+        "source_sha256": source_sha,
+        "landing_count": 1,
+        "landing_ids_sha256": hashlib.sha256(
+            (json.dumps(ids, separators=(",", ":")) + "\n").encode()
+        ).hexdigest(),
+        "by_via_id": {
+            landing.via_id: {
+                "classification": "CONVENTIONAL_THROUGH_VIA",
+                "padstack": landing.padstack,
+                "span_layers": ["TOP", "GND"],
+                "drill_diameter_um": 300.0,
+                "padstack_material": "COPPER",
+            }
+        },
+        "conventional_count": 1,
+        "short_span_count": 0,
+    }
+    metadata["claims_sha256"] = distribution_module.mlo_landing_certificate_claims_sha256(
+        metadata["by_via_id"]
+    )
+    scenario = scenario.model_copy(
+        update={
+            "normalized_project": scenario.base_project.model_copy(
+                update={
+                    "metadata": {
+                        **scenario.base_project.metadata,
+                        "spd_mlo_landing_certificates": metadata,
+                    }
+                }
+            ).model_dump(mode="python")
+        }
+    )
+    landing = scenario.connection_analysis.connections["C1"].power_vias[0]
+    assert distribution_module._mlo_transition_rejection_for_landing(
+        scenario,
+        landing,
+        stackup_layers=scenario.base_project.stackup_layers,
+    ) is None
+
+    # The same certificate must not override explicit microvia evidence.
+    mlo_landing = _with_vertical_path(landing, "PWR_ALT")
+    mlo_evidence = mlo_landing.path_evidence[0].model_copy(
+        update={
+            "segments": (
+                mlo_landing.path_evidence[0].segments[0].model_copy(
+                    update={
+                        "drill_diameter_um": 100.0,
+                        "padstack_material": "COPPER",
+                    }
+                ),
+            )
+        }
+    )
+    mlo_landing = mlo_landing.model_copy(update={"path_evidence": (mlo_evidence,)})
+    mlo_connection = scenario.connection_analysis.connections["C1"].model_copy(
+        update={"power_vias": (mlo_landing,)}
+    )
+    scenario = scenario.model_copy(
+        update={
+            "connection_analysis": scenario.connection_analysis.model_copy(
+                update={"connections": {"C1": mlo_connection}}
+            )
+        }
+    )
+    assert distribution_module._mlo_transition_rejection_for_landing(
+        scenario,
+        mlo_landing,
+        stackup_layers=scenario.base_project.stackup_layers,
+    )[0] == "MLO_TRANSITION_RECIPE_REQUIRED"
+
+
+def test_power_projection_parses_transition_metadata_once_per_pass(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Many landings share one immutable, source-bound transition context."""
+
+    scenario = _non_top_direct_transition_scenario(
+        path_kind=None,
+        real_import=True,
+        fresh_policy=True,
+    )
+    assert scenario.connection_analysis is not None
+    connection = scenario.connection_analysis.connections["C1"]
+    source_landing = connection.power_vias[0]
+    landings = tuple(
+        source_landing.model_copy(update={"via_id": f"V-C1-{index}"})
+        for index in range(4)
+    )
+    landing_ids = sorted(item.via_id.casefold() for item in landings)
+    certificates = {
+        "certificate_version": "MLO_LANDING_CERTIFICATE_V1",
+        "source_sha256": scenario.source.sha256,
+        "landing_count": len(landing_ids),
+        "landing_ids_sha256": sha256(
+            (json.dumps(landing_ids, separators=(",", ":")) + "\n").encode()
+        ).hexdigest(),
+        "by_via_id": {
+            landing.via_id: {
+                "classification": "CONVENTIONAL_THROUGH_VIA",
+                "padstack": landing.padstack,
+                "span_layers": ["TOP", "GND"],
+                "drill_diameter_um": 300.0,
+                "padstack_material": "COPPER",
+            }
+            for landing in landings
+        },
+        "conventional_count": len(landing_ids),
+        "short_span_count": 0,
+    }
+    certificates["claims_sha256"] = distribution_module.mlo_landing_certificate_claims_sha256(
+        certificates["by_via_id"]
+    )
+    project = scenario.base_project.model_copy(
+        update={
+            "metadata": {
+                **scenario.base_project.metadata,
+                "spd_mlo_landing_certificates": certificates,
+            }
+        }
+    )
+    connections = dict(scenario.connection_analysis.connections)
+    connections["C1"] = connection.model_copy(update={"power_vias": landings})
+    scenario = scenario.model_copy(
+        update={
+            "normalized_project": project.model_dump(mode="python"),
+            "connection_analysis": scenario.connection_analysis.model_copy(
+                update={"connections": connections}
+            ),
+        }
+    )
+
+    calls = {"policy": 0, "certificates": 0}
+    parse_policy = distribution_module.parse_mlo_transition_policy
+    parse_certificates = distribution_module.parse_mlo_landing_certificates
+
+    def counted_policy(*args: object, **kwargs: object) -> object:
+        calls["policy"] += 1
+        return parse_policy(*args, **kwargs)
+
+    def counted_certificates(*args: object, **kwargs: object) -> object:
+        calls["certificates"] += 1
+        return parse_certificates(*args, **kwargs)
+
+    monkeypatch.setattr(
+        distribution_module, "parse_mlo_transition_policy", counted_policy
+    )
+    monkeypatch.setattr(
+        distribution_module,
+        "parse_mlo_landing_certificates",
+        counted_certificates,
+    )
+    plane = SpdPlaneGeometry(
+        layer="PWR_ALT",
+        net="V2",
+        positive_polygons_um=(
+            ((0.0, -5.0), (10.0, -5.0), (10.0, 5.0), (0.0, 5.0)),
+        ),
+        negative_polygons_um=(),
+        primitive_order=(("positive_polygon", 0),),
+    )
+
+    projection = distribution_module.build_distribution_power_projection(
+        scenario,
+        {},
+        plane_geometries=(plane,),
+        targets={("R1", "M1"): 0, ("R2", "M1"): 1},
+    )
+
+    assert projection is not None
+    assert projection.mlo_transition_diagnostics == ()
+    assert calls == {"policy": 1, "certificates": 1}
+
+
+def test_pathless_landing_certificate_source_mismatch_is_fail_closed() -> None:
+    scenario = _non_top_direct_transition_scenario(
+        path_kind=None,
+        real_import=True,
+        fresh_policy=True,
+    )
+    assert scenario.connection_analysis is not None
+    landing = scenario.connection_analysis.connections["C1"].power_vias[0]
+    metadata = {
+        "certificate_version": "MLO_LANDING_CERTIFICATE_V1",
+        "source_sha256": "0" * 64,
+        "landing_count": 0,
+        "landing_ids_sha256": sha256(b"[]\n").hexdigest(),
+        "conventional_count": 0,
+        "short_span_count": 0,
+        "claims_sha256": distribution_module.mlo_landing_certificate_claims_sha256({}),
+        "by_via_id": {},
+    }
+    project = scenario.base_project.model_copy(
+        update={
+            "metadata": {
+                **scenario.base_project.metadata,
+                "spd_mlo_landing_certificates": metadata,
+            }
+        }
+    )
+    scenario = scenario.model_copy(
+        update={"normalized_project": project.model_dump(mode="python")}
+    )
+    assert distribution_module._mlo_transition_rejection_for_landing(
+        scenario,
+        landing,
+        stackup_layers=scenario.base_project.stackup_layers,
+    )[0] == REIMPORT_SOURCE_FOR_TRANSITION_EVIDENCE_CODE
 
 
 def test_current_negative_policy_does_not_certify_pathless_landing() -> None:

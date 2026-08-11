@@ -17,16 +17,154 @@ from spd_decap_pi.scenario import (
 )
 from spd_decap_pi.scenario_io import ScenarioFormatError, save_scenario
 from spd_decap_pi.routing_obstacles import (
+    MLO_LANDING_CLASS_CONVENTIONAL_THROUGH_VIA,
+    MLO_LANDING_CLASS_SHORT_SPAN_VIA,
     RoutingCandidateState,
     SignalTraceAvoidancePolicy,
     decode_routing_obstacle_asset,
     evaluate_routing_candidate,
+    parse_mlo_landing_certificates,
 )
 from spd_decap_pi.spd_adapter import (
+    _build_mlo_landing_certificates,
     _raise_for_rejected_mixed_reference_landings,
+    _scenario_via_landing,
     _via_target_layers_by_net,
     import_spd_scenario,
 )
+
+
+def test_adapter_persists_structural_only_via_evidence() -> None:
+    landing = SimpleNamespace(
+        via_id="V1",
+        net="VDD",
+        endpoint_node_id="N1",
+        x_um=10.0,
+        y_um=20.0,
+        padstack="P1",
+        rotation_degrees=0.0,
+    )
+    recovery = SimpleNamespace(
+        evidence_by_via={},
+        structural_evidence_by_via={
+            "v1": (
+                SimpleNamespace(
+                    target_layer="L2",
+                    target_node_id="N2",
+                    target_x_um=11.0,
+                    target_y_um=21.0,
+                    segments=(
+                        SimpleNamespace(
+                            via_id="V1",
+                            padstack="P1",
+                            drill_diameter_um=100.0,
+                            start_layer="TOP",
+                            end_layer="L2",
+                            length_um=120.0,
+                            end_x_um=11.0,
+                            end_y_um=21.0,
+                            rotation_degrees=0.0,
+                            padstack_material="COPPER",
+                        ),
+                    ),
+                    trace_hops=1,
+                    trace_alternate_exit=False,
+                ),
+            )
+        },
+    )
+    converted = _scenario_via_landing(landing, recovery)
+    assert converted.path_evidence == ()
+    assert len(converted.structural_evidence) == 1
+    assert converted.structural_evidence[0].target_layer == "L2"
+    assert converted.structural_evidence[0].x_um == 11.0
+    assert converted.structural_evidence[0].trace_hops == 1
+
+
+def test_importer_persists_strict_conventional_landing_certificate() -> None:
+    metadata = _build_mlo_landing_certificates(
+        (
+            SimpleNamespace(
+                via_id="V-PTH",
+                padstack="PTH",
+            ),
+        ),
+        padstacks=(
+            SimpleNamespace(
+                name="PTH",
+                layers=("TOP", "GND"),
+                drill_diameter_um=250.0,
+                material="COPPER",
+            ),
+        ),
+        stackup_layers=(
+            SimpleNamespace(name="TOP", is_conductor=True),
+            SimpleNamespace(name="GND", is_conductor=True),
+        ),
+        source_sha256="a" * 64,
+    )
+    parsed = parse_mlo_landing_certificates(
+        metadata,
+        expected_source_sha256="a" * 64,
+    )
+    certificate = parsed["v-pth"]
+    assert certificate.classification == MLO_LANDING_CLASS_CONVENTIONAL_THROUGH_VIA
+    assert certificate.padstack == "PTH"
+    assert certificate.span_layers == ("GND", "TOP")
+    assert certificate.drill_diameter_um == 250.0
+    assert certificate.padstack_material == "COPPER"
+
+
+def test_importer_classifies_real_shaped_short_span_padstack() -> None:
+    metadata = _build_mlo_landing_certificates(
+        (SimpleNamespace(via_id="V-MLO", padstack="DR-0102"),),
+        padstacks=(
+            SimpleNamespace(
+                name="DR-0102",
+                layers=("TOP", "L02"),
+                drill_diameter_um=100.0,
+                material="COPPER",
+            ),
+        ),
+        stackup_layers=(
+            SimpleNamespace(name="TOP", is_conductor=True),
+            SimpleNamespace(name="L02", is_conductor=True),
+            SimpleNamespace(name="GND", is_conductor=True),
+        ),
+        source_sha256="b" * 64,
+    )
+    parsed = parse_mlo_landing_certificates(
+        metadata,
+        expected_source_sha256="b" * 64,
+    )
+    assert parsed["v-mlo"].classification == MLO_LANDING_CLASS_SHORT_SPAN_VIA
+    assert metadata["short_span_count"] == 1
+
+
+@pytest.mark.parametrize("material", [None, "ALUMINUM"])
+def test_importer_does_not_certify_unknown_or_non_copper_pth(material: str | None) -> None:
+    metadata = _build_mlo_landing_certificates(
+        (SimpleNamespace(via_id="V-NONCOPPER", padstack="PTH"),),
+        padstacks=(
+            SimpleNamespace(
+                name="PTH",
+                layers=("TOP", "GND"),
+                drill_diameter_um=250.0,
+                material=material,
+            ),
+        ),
+        stackup_layers=(
+            SimpleNamespace(name="TOP", is_conductor=True),
+            SimpleNamespace(name="GND", is_conductor=True),
+        ),
+        source_sha256="c" * 64,
+    )
+    parsed = parse_mlo_landing_certificates(
+        metadata,
+        expected_source_sha256="c" * 64,
+    )
+    assert parsed["v-noncopper"].classification == "UNRESOLVED"
+    assert metadata["conventional_count"] == 0
 
 
 def test_read_only_spd_import_builds_top_side_editable_scenario(tmp_path: Path):
@@ -655,6 +793,33 @@ def test_rejected_l11_pair_is_recovered_and_blocks_fallback_top_pair() -> None:
             (landing,),
             recovery,
         )
+
+
+def test_via_target_layers_include_all_retained_same_net_planes() -> None:
+    project = SimpleNamespace(
+        rails=(
+            SimpleNamespace(
+                net="VCPU",
+                pwr_layer="L12",
+                gnd_layer="L02",
+                mixed_reference_certificate=None,
+            ),
+        ),
+        stackup_layers=(SimpleNamespace(name="L02", pwr_nets=("DGND",)),),
+        gnd_aliases=("DGND",),
+        metadata={},
+    )
+    geometries = (
+        SimpleNamespace(net="VCPU", layer="L09"),
+        SimpleNamespace(net="VCPU", layer="L11"),
+        SimpleNamespace(net="OTHER", layer="L14"),
+        SimpleNamespace(net="DGND", layer="L03"),
+        SimpleNamespace(net="DGND", layer="L04"),
+    )
+    targets = _via_target_layers_by_net(project, plane_geometries=geometries)
+    assert targets["vcpu"] == ("L09", "L11", "L12")
+    assert targets["other"] == ("L14",)
+    assert targets["dgnd"] == ("L02",)
 
 
 def test_certified_ground_attachment_tamper_cannot_be_saved(

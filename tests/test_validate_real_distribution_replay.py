@@ -87,6 +87,8 @@ def test_plan_analysis_reports_nonzero_cells_and_diagnostic_shortfall() -> None:
         moves=(object(),),
         sacrifices=(),
         distance_mode=SimpleNamespace(value="NEAREST"),
+        optimization_policy=SimpleNamespace(value="BALANCED_AUTO"),
+        effective_gap_penalty_um=12_345.0,
         cells=(unchanged, populated),
         diagnostics=(
             SimpleNamespace(
@@ -120,6 +122,8 @@ def test_plan_analysis_reports_nonzero_cells_and_diagnostic_shortfall() -> None:
         }
     ]
     assert report["diagnostics"][0]["shortfall_count"] == 2
+    assert report["optimization_policy"] == "BALANCED_AUTO"
+    assert report["effective_gap_penalty_um"] == 12_345.0
     json.dumps(report)
 
 
@@ -139,6 +143,21 @@ def test_ordered_artwork_rejects_negative_primitive_before_positive_copper() -> 
         assert "begins with a negative primitive" in str(exc)
     else:  # pragma: no cover - protects the fail-closed contract
         raise AssertionError("negative-first artwork must fail closed")
+
+
+def test_independent_move_proof_skips_plane_decode_when_plan_has_no_moves() -> None:
+    replay = _replay_module()
+
+    class ScenarioWithoutReadableProject:
+        @property
+        def base_project(self):  # pragma: no cover - must not be evaluated
+            raise AssertionError("no-move proof must not decode retained planes")
+
+    assert replay._independently_validate_moves(
+        ScenarioWithoutReadableProject(),
+        SimpleNamespace(moves=()),
+        {},
+    ) == []
 
 
 def test_shared_anchor_proof_uses_every_pwr_root_in_its_final_component(

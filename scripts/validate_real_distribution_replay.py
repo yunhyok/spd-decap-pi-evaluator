@@ -47,6 +47,22 @@ _FINGERPRINT_WARNING = (
     "The source SPD matches, but the design fingerprint differs; targets were "
     "revalidated against the current scenario."
 )
+_LEGACY_OPTIMIZATION_WARNING = (
+    "Optimization policy was not recorded; BALANCED_AUTO was restored."
+)
+_LEGACY_ROUTING_OFF_WARNING = (
+    "Legacy workbook: immutable signal-routing protection was not recorded "
+    "and was restored OFF."
+)
+_EXPECTED_SOURCE_WORKBOOK_WARNINGS = {
+    _FINGERPRINT_WARNING,
+    _LEGACY_OPTIMIZATION_WARNING,
+    _LEGACY_ROUTING_OFF_WARNING,
+}
+_EXPECTED_REPLAY_WORKBOOK_WARNINGS = {
+    _FINGERPRINT_WARNING,
+    _LEGACY_ROUTING_OFF_WARNING,
+}
 _GEOMETRY_FORMAT = "powersi-spd-plane-primitives-v1"
 
 
@@ -117,6 +133,8 @@ def _plan_analysis(plan: DistributionPlan) -> dict[str, object]:
         "move_count": len(plan.moves),
         "isolation_gap_count": len(plan.sacrifices),
         "distance_mode": plan.distance_mode.value,
+        "optimization_policy": plan.optimization_policy.value,
+        "effective_gap_penalty_um": plan.effective_gap_penalty_um,
         "nonzero_cells": cells,
         "diagnostics": diagnostics,
     }
@@ -324,6 +342,11 @@ def _validate_existing_rules(scenario: ScenarioSpec) -> int:
 
 
 def _independently_validate_moves(scenario: ScenarioSpec, plan: DistributionPlan, attachments: Mapping[str, bytes]) -> list[dict[str, object]]:
+    # A safe PARTIAL plan can contain no moves when every candidate is blocked
+    # by the structural MLO gate.  In that case there is nothing to prove and
+    # decoding every retained plane asset would add minutes of unrelated work.
+    if not plan.moves:
+        return []
     project = scenario.base_project
     rails = {rail.rail_id.casefold(): rail for rail in project.rails}
     metadata = project.metadata if isinstance(project.metadata, dict) else {}
@@ -377,6 +400,15 @@ def _write_artifacts(directory: Path, scenario: ScenarioSpec, attachments: Mappi
     headers, target_rows = distribution_target_table(plan)
     inventory_headers, inventory_rows = distribution_inventory_table(plan)
     workbook_path = directory / "distribution-replay.xlsx"
+    metadata: dict[str, object] = {
+        "Format Version": 3,
+        "Source SPD SHA-256": scenario.source.sha256,
+        "Input Design Fingerprint": plan.input_design_fingerprint,
+        "Distance Mode": plan.distance_mode.value,
+        "Optimization Policy": plan.optimization_policy.value,
+    }
+    if plan.optimization_policy.value in {"BALANCED_AUTO", "BALANCED_CUSTOM"}:
+        metadata["Effective Gap Penalty (um)"] = plan.effective_gap_penalty_um
     write_distribution_workbook(
         workbook_path,
         distribution_csv_rows(plan)[1:],
@@ -384,12 +416,7 @@ def _write_artifacts(directory: Path, scenario: ScenarioSpec, attachments: Mappi
         target_rows,
         inventory_headers=inventory_headers,
         inventory_rows=inventory_rows,
-        metadata={
-            "Format Version": 2,
-            "Source SPD SHA-256": scenario.source.sha256,
-            "Input Design Fingerprint": plan.input_design_fingerprint,
-            "Distance Mode": plan.distance_mode.value,
-        },
+        metadata=metadata,
     )
     return scenario_path, workbook_path
 
@@ -416,7 +443,11 @@ def run_replay(args: argparse.Namespace) -> dict[str, object]:
         current_source_sha256=source.source.sha256,
         current_design_fingerprint=source.design_fingerprint,
     )
-    unexpected_warnings = [warning for warning in target_import.warnings if warning != _FINGERPRINT_WARNING]
+    unexpected_warnings = [
+        warning
+        for warning in target_import.warnings
+        if warning not in _EXPECTED_SOURCE_WORKBOOK_WARNINGS
+    ]
     if unexpected_warnings:
         raise ReplayValidationError("target workbook emitted unsupported warning(s): " + " | ".join(unexpected_warnings))
     mode = args.distance_mode or target_import.distance_mode or DistributionDistanceMode.NEAREST.value
@@ -437,6 +468,10 @@ def run_replay(args: argparse.Namespace) -> dict[str, object]:
         source,
         target_import.targets,
         mode,
+        optimization_policy=(
+            target_import.optimization_policy or "BALANCED_AUTO"
+        ),
+        gap_penalty_um=target_import.effective_gap_penalty_um,
         tolerances=target_import.tolerances,
         power_projection=projection,
         time_limit_s=args.time_limit_s,
@@ -476,7 +511,10 @@ def run_replay(args: argparse.Namespace) -> dict[str, object]:
         )
         if reimported.targets != target_import.targets or reimported.tolerances != target_import.tolerances:
             raise ReplayValidationError("exported target workbook did not round-trip Target/Tolerance values")
-        if any(warning != _FINGERPRINT_WARNING for warning in reimported.warnings):
+        if any(
+            warning not in _EXPECTED_REPLAY_WORKBOOK_WARNINGS
+            for warning in reimported.warnings
+        ):
             raise ReplayValidationError("export/reimport emitted a warning other than the known source-fingerprint warning")
         return scenario_path, workbook_path, reimported
 

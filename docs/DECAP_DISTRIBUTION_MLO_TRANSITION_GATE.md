@@ -21,6 +21,19 @@ destinations with `REIMPORT_SOURCE_FOR_TRANSITION_EVIDENCE`. Reimporting the raw
 SPD is required to recover transition evidence; no target-layer pre-existing
 path is required once a conventional continuous path is proven.
 
+The importer also persists `MLO_LANDING_CERTIFICATE_V1` as
+`spd_mlo_landing_certificates`. It is source-SHA-bound and complete over the
+unique Via IDs. Only a row classified `CONVENTIONAL_THROUGH_VIA` (positive
+drill with explicit TOP and BOTTOM padstack copper) can admit a pathless
+landing. A positive-drill `SHORT_SPAN_VIA` row (for example a DR-0102-like
+TOP-to-intermediate-conductor span) is retained as a source-bound diagnostic
+and returns `MLO_TRANSITION_RECIPE_REQUIRED`; it never grants non-TOP
+eligibility. Incomplete/digest-mismatched metadata and all unknown classes
+remain blocked; `UNRESOLVED` rows continue to require source reimport evidence.
+Recovery requests every retained
+same-NET PWR plane layer, so a logical rail layer cannot hide source paths
+that terminate on another retained plane.
+
 Policy metadata is parsed strictly: flags must be JSON booleans, the policy
 version must be recognized, and a supplied source SHA-256 must match the active
 scenario. V1 defines no translated-recipe asset/compiler, so
