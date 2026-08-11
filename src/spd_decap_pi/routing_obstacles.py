@@ -39,9 +39,14 @@ _MAX_TILE_INDEX_ENTRIES_PER_LAYER = 2_000_000
 # not be treated as an immutable vertical column until a translated rebuild
 # recipe is independently engineered and persisted.
 MLO_TRANSITION_POLICY_VERSION = "MLO_TRANSITION_RECIPE_GATE_V1"
+MLO_LANDING_CERTIFICATE_VERSION = "MLO_LANDING_CERTIFICATE_V1"
+MLO_LANDING_CERTIFICATE_METADATA_KEY = "spd_mlo_landing_certificates"
+MLO_LANDING_CLASS_CONVENTIONAL_THROUGH_VIA = "CONVENTIONAL_THROUGH_VIA"
+MLO_LANDING_CLASS_SHORT_SPAN_VIA = "SHORT_SPAN_VIA"
 MLO_TRANSITION_RECIPE_REQUIRED_CODE = "MLO_TRANSITION_RECIPE_REQUIRED"
 MLO_TRANSITION_RECIPE_REQUIRED_MESSAGE = (
-    "source MLO via path has a lateral or qualified microvia transition but "
+    "source landing/path has a short-span, lateral, or qualified microvia "
+    "transition but "
     "no validated translated rebuild recipe; reimport the raw SPD after recipe "
     "engineering before selecting a non-TOP destination"
 )
@@ -131,6 +136,195 @@ class MloTransitionPolicy:
         }
 
 
+@dataclass(frozen=True, slots=True)
+class MloLandingCertificate:
+    classification: str
+    padstack: str
+    span_layers: tuple[str, ...]
+    drill_diameter_um: float | None = None
+    padstack_material: str | None = None
+
+
+def mlo_landing_certificate_claims_sha256(
+    rows: Mapping[str, Mapping[str, object]],
+) -> str:
+    """Hash canonical per-landing claims, including physical span metadata."""
+
+    claims = []
+    for via_id, row in rows.items():
+        claims.append(
+            [
+                str(via_id).casefold(),
+                str(row.get("classification", "")),
+                str(row.get("padstack", "")),
+                [str(item) for item in row.get("span_layers", ())],
+                (
+                    None
+                    if row.get("drill_diameter_um") is None
+                    else float(row["drill_diameter_um"])
+                ),
+                (
+                    None
+                    if row.get("padstack_material") is None
+                    else str(row["padstack_material"]).strip()
+                ),
+            ]
+        )
+    return sha256(
+        (json.dumps(sorted(claims), separators=(",", ":")) + "\n").encode()
+    ).hexdigest()
+
+
+def parse_mlo_landing_certificates(
+    value: object,
+    *,
+    expected_source_sha256: str | None = None,
+) -> Mapping[str, MloLandingCertificate]:
+    """Decode source-bound per-landing conventional-via certificates.
+
+    This certificate is intentionally narrower than the board MLO summary:
+    only importer-produced ``CONVENTIONAL_THROUGH_VIA`` rows grant permission
+    for a pathless landing.  Unknown rows, versions, classes, and source
+    bindings fail closed.  The returned keys are case-folded Via IDs.
+    """
+
+    if not isinstance(value, Mapping):
+        raise ValueError("MLO landing certificates metadata must be an object")
+    version = value.get("certificate_version")
+    if version != MLO_LANDING_CERTIFICATE_VERSION:
+        raise ValueError(f"unsupported MLO landing certificate {version!r}")
+    raw_source = value.get("source_sha256")
+    if not isinstance(raw_source, str):
+        raise ValueError("MLO landing certificate source SHA-256 is required")
+    _validate_sha(raw_source, "MLO landing certificate source SHA-256")
+    if (
+        expected_source_sha256 is not None
+        and raw_source.casefold() != expected_source_sha256.casefold()
+    ):
+        raise ValueError("MLO landing certificates belong to a different source SPD")
+    rows = value.get("by_via_id")
+    if not isinstance(rows, Mapping):
+        raise ValueError("MLO landing certificate rows must be an object")
+    result: dict[str, MloLandingCertificate] = {}
+    raw_claim_rows: dict[str, dict[str, object]] = {}
+    normalized_ids: list[str] = []
+    for raw_key, raw_row in rows.items():
+        if not isinstance(raw_key, str) or not raw_key.strip():
+            raise ValueError("MLO landing certificate Via IDs must be strings")
+        if not isinstance(raw_row, Mapping):
+            raise ValueError("MLO landing certificate row must be an object")
+        unknown_fields = set(raw_row) - {
+            "classification",
+            "padstack",
+            "span_layers",
+            "drill_diameter_um",
+            "padstack_material",
+        }
+        if unknown_fields:
+            raise ValueError("unknown MLO landing certificate row fields")
+        normalized_ids.append(raw_key.casefold())
+        classification = raw_row.get("classification")
+        if not isinstance(classification, str) or classification not in {
+            MLO_LANDING_CLASS_CONVENTIONAL_THROUGH_VIA,
+            MLO_LANDING_CLASS_SHORT_SPAN_VIA,
+            "UNRESOLVED",
+        }:
+            raise ValueError("unknown MLO landing certificate classification")
+        padstack = raw_row.get("padstack")
+        if not isinstance(padstack, str) or not padstack.strip():
+            raise ValueError("MLO landing certificate padstack is required")
+        if "padstack_material" not in raw_row:
+            raise ValueError("MLO landing certificate padstack material is required")
+        raw_material = raw_row.get("padstack_material")
+        material = (
+            raw_material.strip()
+            if isinstance(raw_material, str) and raw_material.strip()
+            else None
+        )
+        raw_layers = raw_row.get("span_layers")
+        if not isinstance(raw_layers, (list, tuple)) or any(
+            not isinstance(item, str) or not item.strip() for item in raw_layers
+        ):
+            raise ValueError("MLO landing certificate span_layers must be strings")
+        layers = tuple(str(item) for item in raw_layers)
+        if len({item.casefold() for item in layers}) != len(layers):
+            raise ValueError("MLO landing certificate span_layers must be unique")
+        drill = raw_row.get("drill_diameter_um")
+        if drill is not None:
+            try:
+                drill = float(drill)
+            except (TypeError, ValueError):
+                raise ValueError("MLO landing certificate drill must be numeric")
+            if not isfinite(drill) or drill <= 0:
+                raise ValueError("MLO landing certificate drill must be positive")
+        if classification in {
+            MLO_LANDING_CLASS_CONVENTIONAL_THROUGH_VIA,
+            MLO_LANDING_CLASS_SHORT_SPAN_VIA,
+        }:
+            if drill is None:
+                raise ValueError("classified MLO landing certificate drill is required")
+            if len(layers) < 2:
+                raise ValueError(
+                    "classified MLO landing certificate must span layers"
+                )
+            if material is None or material.casefold() != "copper":
+                raise ValueError(
+                    "classified MLO landing certificate material must be COPPER"
+                )
+        result[raw_key.casefold()] = MloLandingCertificate(
+            classification=classification,
+            padstack=padstack,
+            span_layers=layers,
+            drill_diameter_um=drill,
+            padstack_material=material,
+        )
+        raw_claim_rows[raw_key.casefold()] = {
+            "classification": classification,
+            "padstack": padstack,
+            "span_layers": list(layers),
+            "drill_diameter_um": drill,
+            "padstack_material": material,
+        }
+    count = value.get("landing_count")
+    if (
+        type(count) is not int
+        or count < 0
+        or count != len(normalized_ids)
+        or count != len(set(normalized_ids))
+    ):
+        raise ValueError("MLO landing certificate count is incomplete")
+    digest = value.get("landing_ids_sha256")
+    if not isinstance(digest, str):
+        raise ValueError("MLO landing certificate ID digest is required")
+    _validate_sha(digest, "MLO landing certificate ID digest")
+    expected_digest = sha256(
+        (json.dumps(sorted(set(normalized_ids)), separators=(",", ":")) + "\n").encode()
+    ).hexdigest()
+    if digest.casefold() != expected_digest:
+        raise ValueError("MLO landing certificate ID digest mismatch")
+    claims_digest = value.get("claims_sha256")
+    if not isinstance(claims_digest, str):
+        raise ValueError("MLO landing certificate claims digest is required")
+    _validate_sha(claims_digest, "MLO landing certificate claims digest")
+    if claims_digest.casefold() != mlo_landing_certificate_claims_sha256(
+        raw_claim_rows
+    ):
+        raise ValueError("MLO landing certificate claims digest mismatch")
+    conventional_count = value.get("conventional_count")
+    if type(conventional_count) is not int or conventional_count != sum(
+        item.classification == MLO_LANDING_CLASS_CONVENTIONAL_THROUGH_VIA
+        for item in result.values()
+    ):
+        raise ValueError("MLO landing certificate conventional_count mismatch")
+    short_span_count = value.get("short_span_count")
+    if type(short_span_count) is not int or short_span_count != sum(
+        item.classification == MLO_LANDING_CLASS_SHORT_SPAN_VIA
+        for item in result.values()
+    ):
+        raise ValueError("MLO landing certificate short_span_count mismatch")
+    return result
+
+
 def parse_mlo_transition_policy(
     value: object,
     *,
@@ -182,6 +376,7 @@ def detect_mlo_transition_policy(
     *,
     stackup_layers: Sequence[object],
     evidence_by_via: Mapping[str, Iterable[object]] | None = None,
+    structural_evidence_by_via: Mapping[str, Iterable[object]] | None = None,
 ) -> MloTransitionPolicy:
     """Classify source evidence that cannot justify an immutable vertical retarget.
 
@@ -202,11 +397,45 @@ def detect_mlo_transition_policy(
         str(key).casefold(): tuple(values)
         for key, values in (evidence_by_via or {}).items()
     }
+    structural_lookup = {
+        str(key).casefold(): tuple(values)
+        for key, values in (structural_evidence_by_via or {}).items()
+    }
     for landing in landings:
         via_id = str(getattr(landing, "via_id", "")).casefold()
-        path_evidence = tuple(getattr(landing, "path_evidence", ()) or ())
-        if not path_evidence and via_id:
-            path_evidence = evidence_lookup.get(via_id, ())
+        # Union full pad evidence and structural-only evidence. A landing may
+        # have a valid pad on one target layer but an unsupported pad on another;
+        # the latter must still contribute MLO diagnostics.
+        path_evidence = (
+            tuple(getattr(landing, "path_evidence", ()) or ())
+            + (evidence_lookup.get(via_id, ()) if via_id else ())
+            + tuple(getattr(landing, "structural_evidence", ()) or ())
+            + (structural_lookup.get(via_id, ()) if via_id else ())
+        )
+        unique_evidence: list[object] = []
+        seen_evidence: set[tuple[object, ...]] = set()
+        for evidence in path_evidence:
+            key = (
+                str(getattr(evidence, "target_layer", "")).casefold(),
+                str(getattr(evidence, "target_node_id", "")).casefold(),
+                int(getattr(evidence, "trace_hops", 0) or 0),
+                bool(getattr(evidence, "trace_alternate_exit", False)),
+                tuple(
+                    (
+                        str(getattr(segment, "via_id", "")).casefold(),
+                        str(getattr(segment, "start_layer", "")).casefold(),
+                        str(getattr(segment, "end_layer", "")).casefold(),
+                        float(getattr(segment, "drill_diameter_um", 0.0) or 0.0),
+                        float(getattr(segment, "end_x_um", 0.0) or 0.0),
+                        float(getattr(segment, "end_y_um", 0.0) or 0.0),
+                    )
+                    for segment in tuple(getattr(evidence, "segments", ()) or ())
+                ),
+            )
+            if key not in seen_evidence:
+                seen_evidence.add(key)
+                unique_evidence.append(evidence)
+        path_evidence = tuple(unique_evidence)
         for evidence in path_evidence:
             if int(getattr(evidence, "trace_hops", 0) or 0) > 0 or bool(
                 getattr(evidence, "trace_alternate_exit", False)
@@ -1091,6 +1320,11 @@ def _validate_sha(value: str, label: str) -> None:
 
 __all__ = [
     "MAX_ROUTING_ASSET_EXPANDED_BYTES",
+    "MLO_LANDING_CERTIFICATE_METADATA_KEY",
+    "MLO_LANDING_CERTIFICATE_VERSION",
+    "MLO_LANDING_CLASS_CONVENTIONAL_THROUGH_VIA",
+    "MLO_LANDING_CLASS_SHORT_SPAN_VIA",
+    "MloLandingCertificate",
     "MLO_TRANSITION_POLICY_VERSION",
     "MLO_TRANSITION_RECIPE_REQUIRED_CODE",
     "MLO_TRANSITION_RECIPE_REQUIRED_MESSAGE",
@@ -1119,6 +1353,8 @@ __all__ = [
     "evaluate_routing_candidate",
     "point_segment_distance",
     "parse_mlo_transition_policy",
+    "parse_mlo_landing_certificates",
+    "mlo_landing_certificate_claims_sha256",
     "routing_attachment_name",
     "stackup_fingerprint",
 ]

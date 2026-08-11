@@ -403,6 +403,56 @@ def test_mlo_transition_policy_detects_lateral_path_but_not_conventional_through
     )
 
 
+def test_mlo_detector_unions_full_and_structural_target_evidence() -> None:
+    layers = (
+        SimpleNamespace(name="TOP", is_conductor=True, thickness_um=20.0),
+        SimpleNamespace(name="D1", is_conductor=False, thickness_um=80.0),
+        SimpleNamespace(name="L2", is_conductor=True, thickness_um=20.0),
+        SimpleNamespace(name="D2", is_conductor=False, thickness_um=80.0),
+        SimpleNamespace(name="BOTTOM", is_conductor=True, thickness_um=20.0),
+    )
+    landing = SimpleNamespace(
+        via_id="V-mixed",
+        x_um=0.0,
+        y_um=0.0,
+        path_evidence=(
+            SimpleNamespace(
+                trace_hops=0,
+                trace_alternate_exit=False,
+                segments=(
+                    SimpleNamespace(
+                        drill_diameter_um=300.0,
+                        padstack_material="COPPER",
+                        start_layer="TOP",
+                        end_layer="BOTTOM",
+                        end_x_um=0.0,
+                        end_y_um=0.0,
+                    ),
+                ),
+            ),
+        ),
+        structural_evidence=(
+            SimpleNamespace(
+                trace_hops=0,
+                trace_alternate_exit=False,
+                segments=(
+                    SimpleNamespace(
+                        drill_diameter_um=100.0,
+                        padstack_material="COPPER",
+                        start_layer="TOP",
+                        end_layer="L2",
+                        end_x_um=0.0,
+                        end_y_um=0.0,
+                    ),
+                ),
+            ),
+        ),
+    )
+    policy = detect_mlo_transition_policy((landing,), stackup_layers=layers)
+    assert policy.transition_required is True
+    assert "QUALIFIED_COPPER_MICROVIA" in policy.evidence_codes
+
+
 @pytest.mark.parametrize(
     ("field", "value"),
     (

@@ -602,6 +602,43 @@ def test_recover_spd_via_paths_indexes_more_than_legacy_250k_trace_budget(
     )
 
 
+def test_recover_spd_via_paths_retains_structural_evidence_when_target_pad_unsupported(
+    tmp_path: Path,
+) -> None:
+    source, analysis = _recoverable_via_source(
+        tmp_path,
+        node_lines=(
+            "Node10!!1::VDD_CORE/0 X = 1mm Y = 2mm Layer = "
+            "Signal$TOP PadStack = DR-0102_60\n"
+            "Node11!!1::VDD_CORE/0 X = 1.25mm Y = 2.5mm Layer = "
+            "Signal$PWR PadStack = DR-0102_60"
+        ),
+        via_lines=(
+            "ViaRoute::VDD_CORE/0 UpperNode = Node10::VDD_CORE/0 "
+            "LowerNode = Node11::VDD_CORE/0 PadStack = DR-UNSUPPORTED"
+        ),
+        padstack_defs=(
+            ".PadStackDef DR-UNSUPPORTED 0.02mm Material = COPPER\n"
+            ".PadDef Signal$PWR\n"
+            "Regular Oval 0.03mm\n"
+            ".EndPadDef\n"
+            ".EndPadStackDef"
+        ),
+    )
+
+    recovery = _recover_power_path(source, analysis)
+
+    assert recovery.evidence_for("ViaRoute", "Signal$PWR") is None
+    structural = recovery.structural_evidence_for("ViaRoute", "Signal$PWR")
+    assert structural is not None
+    assert structural.target_node_id == "Node11"
+    assert (structural.target_x_um, structural.target_y_um) == (1250.0, 2500.0)
+    assert [item.via_id for item in structural.segments] == ["ViaRoute"]
+    assert structural.segments[0].length_um == pytest.approx(120.0)
+    assert recovery.statistics["failure_target_pad_unsupported"] == 1
+    assert recovery.statistics["structural_recovered"] == 1
+
+
 def _alternate_exit_budget_source(tmp_path: Path) -> tuple[Path, object]:
     return _recoverable_via_source(
         tmp_path,

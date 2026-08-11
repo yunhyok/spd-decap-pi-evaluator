@@ -88,6 +88,7 @@ def _connection_analysis_fingerprint_payload(
                 if (key != "padstack_material" or item is not None)
                 and (key != "trace_hops" or item != 0)
                 and (key != "trace_alternate_exit" or item is not False)
+                and (key != "structural_evidence" or item not in ([], None))
                 and (key != "destination_pwr_layer" or item is not None)
             }
         if isinstance(value, list):
@@ -347,6 +348,7 @@ class ScenarioViaLanding(ScenarioPoint):
     padstack: str = Field(min_length=1)
     rotation_degrees: float = 0.0
     path_evidence: tuple["ScenarioViaPathEvidence", ...] = ()
+    structural_evidence: tuple["ScenarioViaStructuralEvidence", ...] = ()
 
     @field_validator("rotation_degrees")
     @classmethod
@@ -365,10 +367,35 @@ class ScenarioViaLanding(ScenarioPoint):
             raise ValueError("Via path evidence must have one result per target layer")
         return tuple(sorted(value, key=lambda item: item.target_layer.casefold()))
 
+    @field_validator("structural_evidence")
+    @classmethod
+    def unique_structural_targets(
+        cls, value: tuple["ScenarioViaStructuralEvidence", ...]
+    ) -> tuple["ScenarioViaStructuralEvidence", ...]:
+        keys = [item.target_layer.casefold() for item in value]
+        if len(keys) != len(set(keys)):
+            raise ValueError(
+                "Via structural evidence must have one result per target layer"
+            )
+        return tuple(sorted(value, key=lambda item: item.target_layer.casefold()))
+
     def evidence_for_layer(self, layer: str) -> "ScenarioViaPathEvidence | None":
         key = layer.casefold()
         return next(
             (item for item in self.path_evidence if item.target_layer.casefold() == key),
+            None,
+        )
+
+    def structural_evidence_for_layer(
+        self, layer: str
+    ) -> "ScenarioViaStructuralEvidence | None":
+        key = layer.casefold()
+        return next(
+            (
+                item
+                for item in self.structural_evidence
+                if item.target_layer.casefold() == key
+            ),
             None,
         )
 
@@ -418,6 +445,38 @@ class ScenarioViaPathEvidence(ScenarioPoint):
     def nonblank_provenance(cls, value: str) -> str:
         if not value.strip():
             raise ValueError("Via path provenance must not be blank")
+        return value
+
+
+class ScenarioViaStructuralEvidence(ScenarioPoint):
+    """Source-proven topology retained without target pad geometry.
+
+    Structural evidence is diagnostic input for MLO transition detection only;
+    it is never an eligibility certificate for a non-TOP Distribution target.
+    """
+
+    model_config = ConfigDict(frozen=True)
+
+    target_layer: str = Field(min_length=1)
+    target_node_id: str = Field(min_length=1)
+    # ``ScenarioPoint`` supplies the target XY as x_um/y_um.
+    segments: tuple[ScenarioViaSegment, ...] = Field(min_length=1)
+    trace_hops: int = Field(default=0, ge=0)
+    trace_alternate_exit: bool = False
+    provenance: str = "SOURCE_PROVEN_STRUCTURAL_PATH"
+
+    @field_validator("x_um", "y_um")
+    @classmethod
+    def finite_target_coordinates(cls, value: float) -> float:
+        if not isfinite(value):
+            raise ValueError("structural target coordinates must be finite")
+        return value
+
+    @field_validator("provenance")
+    @classmethod
+    def nonblank_structural_provenance(cls, value: str) -> str:
+        if not value.strip():
+            raise ValueError("Via structural provenance must not be blank")
         return value
 
 
@@ -2824,6 +2883,7 @@ __all__ = [
     "ScenarioSide",
     "ScenarioSpec",
     "ScenarioViaPathEvidence",
+    "ScenarioViaStructuralEvidence",
     "ScenarioViaSegment",
     "ScenarioViaLanding",
     "mixed_reference_ground_landing_identity",

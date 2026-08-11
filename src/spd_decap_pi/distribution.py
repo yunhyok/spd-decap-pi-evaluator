@@ -23,7 +23,7 @@ from scipy.optimize import Bounds, LinearConstraint, OptimizeResult, linprog, mi
 from scipy.sparse import coo_matrix, csr_matrix, vstack
 
 from ._core import services as core_services
-from ._core.domain import PinKind, PlanePairSuggestion, TerminalKind
+from ._core.domain import PinKind, PlanePairSuggestion, ProjectSpec, TerminalKind
 from ._core.io.shared_pad import (
     DecapPadEvidence,
     SpdTopCopperGeometry,
@@ -49,17 +49,23 @@ from .scenario_edits import (
     assign_rails_and_isolation_gaps_atomic,
 )
 from .routing_obstacles import (
+    MLO_LANDING_CERTIFICATE_METADATA_KEY,
+    MLO_LANDING_CLASS_CONVENTIONAL_THROUGH_VIA,
+    MLO_LANDING_CLASS_SHORT_SPAN_VIA,
     MLO_TRANSITION_RECIPE_REQUIRED_CODE,
     MLO_TRANSITION_RECIPE_REQUIRED_MESSAGE,
     REIMPORT_SOURCE_FOR_TRANSITION_EVIDENCE_CODE,
     REIMPORT_SOURCE_FOR_TRANSITION_EVIDENCE_MESSAGE,
+    MloLandingCertificate,
     RoutingCandidateState,
     RoutingCollisionEvidence,
     SignalTraceAvoidancePolicy,
     decode_routing_obstacle_asset,
     detect_mlo_transition_policy,
+    mlo_landing_certificate_claims_sha256,
     evaluate_routing_candidate,
     parse_mlo_transition_policy,
+    parse_mlo_landing_certificates,
     stackup_fingerprint,
 )
 
@@ -170,6 +176,8 @@ class _DistributionPowerProjection:
     source_sha256: str
     input_design_fingerprint: str
     input_revision: int
+    canonical_targets: tuple[tuple[str, str, int], ...]
+    canonical_tolerances: tuple[tuple[str, str, float], ...]
     source_decaps: tuple[ScenarioDecap, ...]
     projected_decaps: tuple[ScenarioDecap, ...]
     source_analysis: SharedPadConnectionAnalysis
@@ -983,27 +991,33 @@ def _distribution_routing_asset(
     return asset
 
 
-def _mlo_transition_rejection_for_landing(
-    scenario: ScenarioSpec,
-    landing: object,
-    *,
-    stackup_layers: Sequence[object],
-) -> tuple[str, str] | None:
-    """Return the structural non-TOP rejection for one source landing.
+@dataclass(frozen=True, slots=True)
+class _MloTransitionContext:
+    """Source-bound MLO permissions parsed once for one planning pass."""
 
-    New imports persist a board-level positive policy in
-    ``ProjectSpec.metadata``, but a negative board result is not a per-landing
-    conventional-via certificate.  For every bundle, only explicit
-    source-proven conventional path evidence can justify immutable-XY behavior.
-    A landing without path evidence must be reimported instead of being silently
-    assumed to be a continuous through-via.
+    recipe_validated: bool
+    conventional_landings: Mapping[str, MloLandingCertificate]
+    short_span_landings: Mapping[str, MloLandingCertificate]
+
+
+def _mlo_transition_context(
+    scenario: ScenarioSpec,
+    *,
+    project: ProjectSpec | None = None,
+) -> _MloTransitionContext:
+    """Validate immutable board/landing transition evidence once.
+
+    ``ScenarioSpec.base_project`` reconstructs and validates the normalized
+    project.  Calling it, or either metadata parser, once per Via landing makes
+    a projection quadratic in the size of a production scenario.  Keep this
+    context local to a single planning pass so no result can outlive or become
+    detached from its source-bound scenario.
     """
 
-    project = scenario.base_project
-    policy_present = "spd_mlo_transition_policy" in project.metadata
-    raw_policy = project.metadata.get("spd_mlo_transition_policy")
+    project = scenario.base_project if project is None else project
     recipe_validated = False
-    if policy_present:
+    raw_policy = project.metadata.get("spd_mlo_transition_policy")
+    if "spd_mlo_transition_policy" in project.metadata:
         try:
             parsed_policy = parse_mlo_transition_policy(
                 raw_policy,
@@ -1015,13 +1029,123 @@ def _mlo_transition_rejection_for_landing(
             pass
         else:
             recipe_validated = parsed_policy.translated_recipe_validated
+
+    certified: Mapping[str, MloLandingCertificate] = {}
+    raw_certificates = project.metadata.get(MLO_LANDING_CERTIFICATE_METADATA_KEY)
+    if raw_certificates is not None:
+        try:
+            certified = parse_mlo_landing_certificates(
+                raw_certificates,
+                expected_source_sha256=scenario.source.sha256,
+            )
+        except ValueError:
+            certified = {}
+    return _MloTransitionContext(
+        recipe_validated=recipe_validated,
+        conventional_landings={
+            via_id: certificate
+            for via_id, certificate in certified.items()
+            if certificate.classification == MLO_LANDING_CLASS_CONVENTIONAL_THROUGH_VIA
+        },
+        short_span_landings={
+            via_id: certificate
+            for via_id, certificate in certified.items()
+            if certificate.classification == MLO_LANDING_CLASS_SHORT_SPAN_VIA
+        },
+    )
+
+
+def _mlo_transition_rejection_for_landing(
+    scenario: ScenarioSpec,
+    landing: object,
+    *,
+    stackup_layers: Sequence[object],
+    transition_context: _MloTransitionContext | None = None,
+) -> tuple[str, str] | None:
+    """Return the structural non-TOP rejection for one source landing.
+
+    New imports persist a board-level positive policy in
+    ``ProjectSpec.metadata``, but a negative board result is not a per-landing
+    conventional-via certificate.  For every bundle, only explicit
+    source-proven conventional path evidence can justify immutable-XY behavior.
+    A landing without path evidence must be reimported instead of being silently
+    assumed to be a continuous through-via.
+    """
+
+    context = transition_context or _mlo_transition_context(scenario)
+    # A pathless landing may be admitted only by an importer-produced,
+    # source-bound conventional-through-via certificate.  This is deliberately
+    # per landing: a board-level negative MLO result, padstack name, or legacy
+    # eligibility map cannot certify another landing.  Unknown/malformed rows
+    # remain fail-closed.
+    via_key = str(getattr(landing, "via_id", "")).casefold()
+    certificate = context.conventional_landings.get(via_key)
+    short_span_certificate = context.short_span_landings.get(via_key)
+    conductor_names = tuple(
+        str(getattr(layer, "name", "")).casefold()
+        for layer in stackup_layers
+        if bool(getattr(layer, "is_conductor", False))
+    )
+
+    def certificate_span_matches(
+        item: MloLandingCertificate | None,
+        *,
+        require_last_conductor: bool,
+    ) -> bool:
+        if item is None:
+            return False
+        item_span = {span.casefold() for span in item.span_layers}
+        common = bool(
+            item.padstack.casefold()
+            == str(getattr(landing, "padstack", "")).casefold()
+            and item.drill_diameter_um is not None
+            and item.padstack_material is not None
+            and item.padstack_material.casefold() == "copper"
+            and len(conductor_names) >= 2
+            and item_span.issubset(set(conductor_names))
+            and conductor_names[0] in item_span
+        )
+        if not common:
+            return False
+        if require_last_conductor:
+            return conductor_names[-1] in item_span
+        return (
+            conductor_names[-1] not in item_span
+            and any(name in item_span for name in conductor_names[1:-1])
+        )
+
+    certificate_allows = bool(
+        certificate is not None
+        and certificate.classification == MLO_LANDING_CLASS_CONVENTIONAL_THROUGH_VIA
+        and certificate_span_matches(certificate, require_last_conductor=True)
+    )
+    short_span_matches = bool(
+        short_span_certificate is not None
+        and short_span_certificate.classification == MLO_LANDING_CLASS_SHORT_SPAN_VIA
+        and certificate_span_matches(
+            short_span_certificate,
+            require_last_conductor=False,
+        )
+    )
+    if short_span_matches:
+        # A source padstack that reaches an intermediate conductor but not the
+        # project's last conductor proves a physical layer transition. It is a
+        # diagnostic classification only and can never grant eligibility, even
+        # when an unrelated translated recipe is present.
+        return (
+            MLO_TRANSITION_RECIPE_REQUIRED_CODE,
+            MLO_TRANSITION_RECIPE_REQUIRED_MESSAGE,
+        )
     path_evidence = tuple(getattr(landing, "path_evidence", ()) or ())
     observed = detect_mlo_transition_policy(
         (landing,),
         stackup_layers=stackup_layers,
     )
     if observed.transition_required:
-        if recipe_validated:
+        # A PTH certificate cannot override explicit lateral/microvia evidence
+        # retained on this landing. Such a landing still requires a translated
+        # recipe; the certificate only covers pathless conventional rows.
+        if context.recipe_validated:
             return None
         return (
             MLO_TRANSITION_RECIPE_REQUIRED_CODE,
@@ -1032,6 +1156,8 @@ def _mlo_transition_rejection_for_landing(
     # neither a valid negative policy nor an invalid/missing policy can turn an
     # evidence-free landing into a conventional column.
     if path_evidence:
+        return None
+    if certificate_allows:
         return None
     return (
         REIMPORT_SOURCE_FOR_TRANSITION_EVIDENCE_CODE,
@@ -1075,6 +1201,7 @@ def _direct_planner_transition_diagnostics(
         return ()
     project = scenario.base_project
     is_real_spd_import = "spd_import" in project.metadata
+    transition_context = _mlo_transition_context(scenario, project=project)
     blocked_by_rejection: dict[tuple[str, str], set[str]] = defaultdict(set)
     for connection in analysis.connections.values():
         for landing in connection.power_vias:
@@ -1082,6 +1209,7 @@ def _direct_planner_transition_diagnostics(
                 scenario,
                 landing,
                 stackup_layers=project.stackup_layers,
+                transition_context=transition_context,
             )
             if rejection is None:
                 continue
@@ -1671,10 +1799,11 @@ def build_distribution_power_projection(
     # via/trace recipe compiler.  Do not let routing protection OFF turn a
     # source-proven MLO landing, or an evidence-free legacy landing, into an
     # assumed immutable vertical retarget on a non-TOP plane.
+    project = scenario.base_project
     top_layer_key = next(
         (
             layer.name.casefold()
-            for layer in scenario.base_project.stackup_layers
+            for layer in project.stackup_layers
             if layer.is_conductor
         ),
         "top",
@@ -1686,11 +1815,13 @@ def build_distribution_power_projection(
     )
     transition_rejection_by_via_id: dict[str, tuple[str, str]] = {}
     if non_top_destination_layers:
+        transition_context = _mlo_transition_context(scenario, project=project)
         for landing in projection_landings.values():
             rejection = _mlo_transition_rejection_for_landing(
                 scenario,
                 landing,
-                stackup_layers=scenario.base_project.stackup_layers,
+                stackup_layers=project.stackup_layers,
+                transition_context=transition_context,
             )
             if rejection is not None:
                 transition_rejection_by_via_id[str(landing.via_id)] = rejection
@@ -1708,7 +1839,7 @@ def build_distribution_power_projection(
         rail_choices,
         pwr_layer_order={
             layer.name.casefold(): index
-            for index, layer in enumerate(scenario.base_project.stackup_layers)
+            for index, layer in enumerate(project.stackup_layers)
         },
         routing_asset=routing_asset,
         routing_policy=routing_policy,
@@ -2126,6 +2257,10 @@ def build_distribution_power_projection(
         source_sha256=scenario.source.sha256,
         input_design_fingerprint=scenario.design_fingerprint,
         input_revision=scenario.revision,
+        canonical_targets=_distribution_projection_target_binding(target_by_cell),
+        canonical_tolerances=_distribution_projection_tolerance_binding(
+            tolerance_by_cell
+        ),
         source_decaps=tuple(scenario.decaps),
         projected_decaps=tuple(projected_decaps),
         source_analysis=analysis,
@@ -2712,6 +2847,60 @@ def _canonical_tolerances(
     return canonical
 
 
+def _distribution_projection_target_binding(
+    targets: Mapping[tuple[str, str], int],
+) -> tuple[tuple[str, str, int], ...]:
+    """Return a stable representation of one canonical target request."""
+
+    return tuple(
+        (str(rail_id).casefold(), str(model_id).casefold(), int(target))
+        for (rail_id, model_id), target in sorted(
+            targets.items(),
+            key=lambda item: (
+                str(item[0][0]).casefold(),
+                str(item[0][1]).casefold(),
+            ),
+        )
+    )
+
+
+def _distribution_projection_tolerance_binding(
+    tolerances: Mapping[tuple[str, str], float],
+) -> tuple[tuple[str, str, float], ...]:
+    """Return a stable representation of one canonical tolerance request."""
+
+    return tuple(
+        (str(rail_id).casefold(), str(model_id).casefold(), float(tolerance))
+        for (rail_id, model_id), tolerance in sorted(
+            tolerances.items(),
+            key=lambda item: (
+                str(item[0][0]).casefold(),
+                str(item[0][1]).casefold(),
+            ),
+        )
+    )
+
+
+def _require_distribution_projection_request(
+    projection: _DistributionPowerProjection | None,
+    targets: Mapping[tuple[str, str], int],
+    tolerances: Mapping[tuple[str, str], float],
+) -> None:
+    """Reject a proof prepared for any other canonical request."""
+
+    if projection is not None and (
+        projection.canonical_targets
+        != _distribution_projection_target_binding(targets)
+        or projection.canonical_tolerances
+        != _distribution_projection_tolerance_binding(tolerances)
+    ):
+        raise DistributionError(
+            "POWER_PROJECTION_STALE",
+            "Distribution PWR proof was prepared for different target counts or "
+            "tolerances; rebuild it for this exact request",
+        )
+
+
 def distribution_tolerance_count(present: int, tolerance_percent: float) -> int:
     """Return the conservative whole-decap exchange allowance for a cell."""
 
@@ -3063,7 +3252,12 @@ def validate_distribution_targets(
     target_by_cell, rail_by_key, model_by_key = _canonical_targets(
         scenario, targets, present
     )
-    _canonical_tolerances(tolerances, rail_by_key, model_by_key)
+    tolerance_by_cell = _canonical_tolerances(
+        tolerances, rail_by_key, model_by_key
+    )
+    _require_distribution_projection_request(
+        power_projection, target_by_cell, tolerance_by_cell
+    )
     issues = _numeric_shortage_diagnostics(
         target_by_cell,
         present,
@@ -3716,6 +3910,9 @@ def compute_distribution_plan(
     )
     tolerance_by_cell = _canonical_tolerances(
         tolerances, rail_by_key, model_by_key
+    )
+    _require_distribution_projection_request(
+        power_projection, target_by_cell, tolerance_by_cell
     )
     tolerance_count_by_cell = {
         key: (
