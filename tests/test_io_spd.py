@@ -19,6 +19,8 @@ from spd_decap_pi._core.domain import (
 from spd_decap_pi._core.io import spd as spd_io
 from spd_decap_pi._core.io.spd import (
     SpdImportError,
+    _length_um,
+    _lengths,
     _parse_netlist,
     analyze_spd,
     recover_spd_via_paths,
@@ -31,6 +33,19 @@ from spd_decap_pi._core.services import (
     create_workspace_state,
 )
 from spd_decap_pi._core.solver.evaluator import EvaluationError, _planes_from_project
+
+
+def test_bulk_length_parser_preserves_units_and_strict_validation() -> None:
+    """Bulk geometry parsing reuses matched tokens without relaxing validation."""
+
+    assert _lengths(b"-1mm 2.5mil 3u 4um 0.5m") == pytest.approx(
+        [-1000.0, 63.5, 3.0, 4.0, 500_000.0]
+    )
+    assert _length_um(b"+1.25mm") == pytest.approx(1250.0)
+    with pytest.raises(ValueError, match="invalid SPD length"):
+        _length_um(b"1mm trailing")
+    with pytest.raises(ValueError, match="SPD length is not finite"):
+        _length_um(b"1e309mm")
 
 
 MINI_SPD = """Title tiny SPD

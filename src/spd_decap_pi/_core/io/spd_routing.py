@@ -107,6 +107,7 @@ def parse_spd_routing_net_roles(data: mmap.mmap) -> dict[str, RoutingNetRole]:
     if end < 0:
         end = len(data)
     roles: dict[str, RoutingNetRole] = {}
+    role_names: dict[str, str] = {}
     active_role = RoutingNetRole.SIGNAL
     for _offset, raw in _iter_lines(data, start, end):
         stripped = raw.strip()
@@ -133,7 +134,7 @@ def parse_spd_routing_net_roles(data: mmap.mmap) -> dict[str, RoutingNetRole]:
         name = _decode(token.split(b"::", 1)[0])
         if not name:
             continue
-        _merge_role(roles, name, active_role)
+        _merge_role(roles, name, active_role, key_to_name=role_names)
     return roles
 
 
@@ -145,6 +146,9 @@ def merge_spd_routing_net_roles(
     signal_nets: Iterable[str] = (),
 ) -> dict[str, RoutingNetRole]:
     result = dict(base)
+    role_names: dict[str, str] = {}
+    for name in result:
+        role_names.setdefault(str(name).casefold(), str(name))
     for role, values in (
         (RoutingNetRole.POWER, power_nets),
         (RoutingNetRole.GROUND, ground_nets),
@@ -152,7 +156,7 @@ def merge_spd_routing_net_roles(
     ):
         for name in values:
             if str(name).strip():
-                _merge_role(result, str(name).strip(), role)
+                _merge_role(result, str(name).strip(), role, key_to_name=role_names)
     return result
 
 
@@ -181,8 +185,14 @@ def extract_spd_routing_obstacles(
     }
     interesting: list[tuple[_LogicalTrace, RoutingNetRole]] = []
     statistics: Counter[str] = Counter()
+    skipped_statistics: Counter[str] = Counter()
     for record in _iter_logical_trace_records(
-        data, trace_start, trace_end, check=check
+        data,
+        trace_start,
+        trace_end,
+        check=check,
+        role_by_key=role_by_key,
+        skipped_statistics=skipped_statistics,
     ):
         statistics["trace_records"] += 1
         if record.thermal:
@@ -205,6 +215,8 @@ def extract_spd_routing_obstacles(
             continue
         statistics["width_resolved_records"] += 1
         interesting.append((record, role))
+
+    statistics.update(skipped_statistics)
 
     references = tuple(
         reference
@@ -444,6 +456,8 @@ def _iter_logical_trace_records(
     end: int,
     *,
     check: CheckCallback,
+    role_by_key: Mapping[str, RoutingNetRole] | None = None,
+    skipped_statistics: Counter[str] | None = None,
 ):
     active: dict[str, object] | None = None
 
@@ -479,6 +493,20 @@ def _iter_logical_trace_records(
             unresolved.append("INVALID_TRACE_WIDTH")
             width = None
             source = TraceWidthSource.UNRESOLVED
+        if active.get("excluded"):
+            if skipped_statistics is not None:
+                skipped_statistics["trace_records"] += 1
+                if bool(active["thermal"]):
+                    skipped_statistics["thermal_records"] += 1
+                if source == TraceWidthSource.INLINE:
+                    skipped_statistics["raw_inline_width_records"] += 1
+                elif source == TraceWidthSource.CONTINUATION:
+                    skipped_statistics["raw_continuation_width_records"] += 1
+                else:
+                    skipped_statistics["raw_unresolved_width_records"] += 1
+                skipped_statistics["scope_excluded_power_ground"] += 1
+            active = None
+            return None
         result = _LogicalTrace(
             source_offset=int(active["source_offset"]),
             trace_id=str(active["trace_id"]),
@@ -515,19 +543,40 @@ def _iter_logical_trace_records(
                     unresolved.append("INVALID_TRACE_WIDTH")
             if len(inline_matches) > 1:
                 unresolved.append("CONFLICTING_TRACE_WIDTH")
-            unsupported_inline = _WIDTH_RE.sub(b"", inline_tail).strip()
+            # Power/ground traces are retained in statistics but never enter
+            # the routing evidence scope.  Avoid decoding their endpoint
+            # references; on large real boards this is the dominant parser
+            # allocation cost (most physical traces are PWR/GND).
+            net_role = (
+                role_by_key.get(net.casefold(), RoutingNetRole.UNKNOWN)
+                if role_by_key is not None
+                else RoutingNetRole.UNKNOWN
+            )
+            if net_role in {RoutingNetRole.POWER, RoutingNetRole.GROUND}:
+                starting_node = _EMPTY_NODE_REFERENCE
+                ending_node = _EMPTY_NODE_REFERENCE
+                trace_id = ""
+                unsupported_inline = b""
+            else:
+                starting_node = _parse_node_reference(match.group(4), net)
+                ending_node = _parse_node_reference(match.group(5), net)
+                trace_id = _decode(match.group(1))
+                unsupported_inline = _WIDTH_RE.sub(b"", inline_tail).strip()
             if unsupported_inline:
                 unresolved.append("TRACE_INLINE_GEOMETRY_UNSUPPORTED")
             active = {
                 "source_offset": offset,
-                "trace_id": _decode(match.group(1)),
+                "trace_id": trace_id,
                 "net": net,
-                "starting_node": _parse_node_reference(match.group(4), net),
-                "ending_node": _parse_node_reference(match.group(5), net),
+                "starting_node": starting_node,
+                "ending_node": ending_node,
                 "thermal": match.group(3) is not None,
                 "inline_width": inline_width,
                 "continuation_widths": [],
                 "unresolved_codes": unresolved,
+                "excluded": net_role
+                in {RoutingNetRole.POWER, RoutingNetRole.GROUND}
+                and skipped_statistics is not None,
             }
             continue
         if stripped.lower().startswith(b"trace"):
@@ -567,16 +616,17 @@ def _iter_logical_trace_records(
                 active["unresolved_codes"].append(  # type: ignore[union-attr]
                     "CONFLICTING_TRACE_WIDTH"
                 )
-            unsupported = re.sub(
-                rb"\bWidth\s*=\s*" + _LENGTH_TOKEN_RE.pattern,
-                b"",
-                stripped[1:],
-                flags=re.IGNORECASE,
-            ).strip()
-            if unsupported:
-                active["unresolved_codes"].append(  # type: ignore[union-attr]
-                    "TRACE_CONTINUATION_UNSUPPORTED"
-                )
+            if not active.get("excluded"):
+                unsupported = re.sub(
+                    rb"\bWidth\s*=\s*" + _LENGTH_TOKEN_RE.pattern,
+                    b"",
+                    stripped[1:],
+                    flags=re.IGNORECASE,
+                ).strip()
+                if unsupported:
+                    active["unresolved_codes"].append(  # type: ignore[union-attr]
+                        "TRACE_CONTINUATION_UNSUPPORTED"
+                    )
             continue
         if stripped.startswith(b"+"):
             unresolved_reference = _NodeReference("", "", None, None)
@@ -620,6 +670,7 @@ def _resolve_referenced_nodes(
     requested_base = {
         (item.node_id.casefold(), (item.net or "").casefold()) for item in references
     }
+    requested_nets = {net for _node, net in requested_exact | requested_base}
     exact: dict[tuple[str, str], _ResolvedNode] = {}
     ambiguous_exact: set[tuple[str, str]] = set()
     malformed_base: set[tuple[str, str]] = set()
@@ -630,6 +681,20 @@ def _resolve_referenced_nodes(
         if not raw.startswith(b"Node"):
             continue
         token = raw.split(None, 1)[0]
+        # Most node rows belong to unrelated power/ground nets.  Extract only
+        # their cheap ``::net`` token before constructing a decoded
+        # _NodeReference and running coordinate regexes.
+        if b"::" not in token:
+            continue
+        node_raw, net_raw = token.split(b"::", 1)
+        net = _decode(net_raw).casefold()
+        if net not in requested_nets:
+            continue
+        base_raw = node_raw.split(b"!!", 1)[0]
+        base_key_hint = (_decode(base_raw).casefold(), net)
+        exact_key_hint = (_decode(node_raw).casefold(), net)
+        if exact_key_hint not in requested_exact and base_key_hint not in requested_base:
+            continue
         reference = _parse_node_reference(token, None)
         net = reference.net
         if net is None:
@@ -720,6 +785,9 @@ def _parse_node_reference(raw: bytes, default_net: str | None) -> _NodeReference
     )
 
 
+_EMPTY_NODE_REFERENCE = _NodeReference("", "", None, None)
+
+
 def _role_for(
     roles: Mapping[str, RoutingNetRole], net: str
 ) -> RoutingNetRole:
@@ -748,12 +816,19 @@ def _canonical_roles(
 
 
 def _merge_role(
-    roles: dict[str, RoutingNetRole], name: str, role: RoutingNetRole
+    roles: dict[str, RoutingNetRole],
+    name: str,
+    role: RoutingNetRole,
+    *,
+    key_to_name: dict[str, str] | None = None,
 ) -> None:
     key = name.casefold()
-    existing_name = next((item for item in roles if item.casefold() == key), None)
+    if key_to_name is None:
+        key_to_name = {item.casefold(): item for item in roles}
+    existing_name = key_to_name.get(key)
     if existing_name is None:
         roles[name] = role
+        key_to_name[key] = name
     elif roles[existing_name] != role:
         roles[existing_name] = RoutingNetRole.UNKNOWN
 

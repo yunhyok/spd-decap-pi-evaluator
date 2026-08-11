@@ -130,6 +130,90 @@ def test_malformed_trace_header_marks_every_layer_incomplete(tmp_path: Path) -> 
     )
 
 
+def test_malformed_excluded_header_does_not_swallow_orphan_continuation(
+    tmp_path: Path,
+) -> None:
+    payload = (
+        ".NetList\nVDD -> PowerNets\n.EndNetList\n"
+        "* Node description lines\n"
+        "* Trace description lines\n"
+        "TraceBroken::VDD UnsupportedHeader = Node1::VDD\n"
+        "+ Width = 20um\n"
+        "* Via description lines\n"
+    ).encode()
+    path = tmp_path / "malformed-excluded-trace.spd"
+    path.write_bytes(payload)
+    with path.open("rb") as handle, mmap.mmap(
+        handle.fileno(), 0, access=mmap.ACCESS_READ
+    ) as data:
+        result = extract_spd_routing_obstacles(
+            data,
+            trace_start=data.find(b"* Trace description lines"),
+            trace_end=data.find(b"* Via description lines"),
+            node_start=data.find(b"* Node description lines"),
+            node_end=data.find(b"* Trace description lines"),
+            conductor_layers=("TOP", "SIG1", "BOTTOM"),
+            net_roles=parse_spd_routing_net_roles(data),
+        )
+
+    assert result.statistics["scope_excluded_power_ground"] == 1
+    assert result.statistics["malformed_trace_records"] == 1
+    assert all(not item.complete for item in result.layer_completeness)
+    assert all(
+        "TRACE_CONTINUATION_ORPHANED" in item.unresolved_codes
+        for item in result.layer_completeness
+    )
+
+
+def test_excluded_power_ground_records_preserve_width_and_thermal_statistics(
+    tmp_path: Path,
+) -> None:
+    payload = (
+        ".NetList\nVDD -> PowerNets\n.EndNetList\n"
+        "* Node description lines\n"
+        "* Trace description lines\n"
+        "TraceInline::VDD StartingNode = Node1::VDD EndingNode = Node2::VDD "
+        "Width = 20um BreakPoint = 1mm,1mm\n"
+        "TraceThermal::VDD Thermal StartingNode = Node1::VDD "
+        "EndingNode = Node2::VDD\n"
+        "+ Width = 20um UnsupportedTail = true\n"
+        "TraceConflicting::VDD StartingNode = Node1::VDD "
+        "EndingNode = Node2::VDD Width = 20um\n"
+        "+ Width = 30um\n"
+        "TraceBroken::VDD UnsupportedHeader = Node1::VDD\n"
+        "+ Width = 20um\n"
+        "* Via description lines\n"
+    ).encode()
+    path = tmp_path / "excluded-record-statistics.spd"
+    path.write_bytes(payload)
+    with path.open("rb") as handle, mmap.mmap(
+        handle.fileno(), 0, access=mmap.ACCESS_READ
+    ) as data:
+        result = extract_spd_routing_obstacles(
+            data,
+            trace_start=data.find(b"* Trace description lines"),
+            trace_end=data.find(b"* Via description lines"),
+            node_start=data.find(b"* Node description lines"),
+            node_end=data.find(b"* Trace description lines"),
+            conductor_layers=("TOP", "SIG1", "BOTTOM"),
+            net_roles=parse_spd_routing_net_roles(data),
+        )
+
+    assert result.segments == ()
+    assert result.statistics["trace_records"] == 5
+    assert result.statistics["scope_excluded_power_ground"] == 4
+    assert result.statistics["thermal_records"] == 1
+    assert result.statistics["raw_inline_width_records"] == 1
+    assert result.statistics["raw_continuation_width_records"] == 1
+    assert result.statistics["raw_unresolved_width_records"] == 3
+    assert result.statistics["malformed_trace_records"] == 1
+    assert all(not item.complete for item in result.layer_completeness)
+    assert all(
+        "TRACE_CONTINUATION_ORPHANED" in item.unresolved_codes
+        for item in result.layer_completeness
+    )
+
+
 def test_third_conflicting_qualified_node_cannot_restore_exact_authority(
     tmp_path: Path,
 ) -> None:

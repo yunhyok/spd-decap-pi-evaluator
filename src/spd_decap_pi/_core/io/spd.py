@@ -437,6 +437,13 @@ _LENGTH_RE = re.compile(
     rb"\s*(mil|mm|um|u|m)(?![A-Za-z])",
     re.IGNORECASE,
 )
+_LENGTH_SCALE_BY_UNIT = {
+    b"m": 1.0e6,
+    b"mm": 1.0e3,
+    b"u": 1.0,
+    b"um": 1.0,
+    b"mil": 25.4,
+}
 _FLOAT_RE = re.compile(
     rb"[+-]?(?:(?:\d+(?:\.\d*)?)|(?:\.\d+))(?:[eE][+-]?\d+)?"
 )
@@ -581,9 +588,22 @@ def _length_um(token: bytes | str) -> float:
     match = _LENGTH_RE.fullmatch(raw.strip())
     if match is None:
         raise ValueError(f"invalid SPD length {_decode(raw)!r}")
+    return _length_match_um(match)
+
+
+def _length_match_um(match: re.Match[bytes]) -> float:
+    """Convert an already matched length token without a second regex pass.
+
+    Shape and padstack records contain millions of length tokens.  The old
+    ``_lengths`` implementation called ``_length_um`` for each regex match,
+    which immediately ran ``fullmatch`` again over the same bytes.  Keeping
+    this helper separate preserves the strict validation used by
+    ``_length_um`` while letting bulk parsing reuse the original match.
+    """
+
     value = float(match.group(1))
     unit = match.group(2).lower()
-    scale = {b"m": 1.0e6, b"mm": 1.0e3, b"u": 1.0, b"um": 1.0, b"mil": 25.4}[unit]
+    scale = _LENGTH_SCALE_BY_UNIT[unit]
     result = value * scale
     if not isfinite(result):
         raise ValueError("SPD length is not finite")
@@ -591,7 +611,7 @@ def _length_um(token: bytes | str) -> float:
 
 
 def _lengths(raw: bytes) -> list[float]:
-    return [_length_um(match.group(0)) for match in _LENGTH_RE.finditer(raw)]
+    return [_length_match_um(match) for match in _LENGTH_RE.finditer(raw)]
 
 
 def _attribute(raw: bytes, name: bytes) -> bytes | None:
