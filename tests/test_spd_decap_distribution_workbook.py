@@ -9,6 +9,7 @@ from openpyxl.worksheet._read_only import ReadOnlyWorksheet
 import spd_decap_pi.distribution_workbook as distribution_workbook
 from spd_decap_pi.distribution_workbook import (
     DISTRIBUTION_METADATA_TITLE,
+    DISTRIBUTION_VIA_PROJECTION_POLICY,
     DistributionWorkbookError,
     load_distribution_targets,
 )
@@ -96,6 +97,7 @@ def test_current_export_keeps_two_sheets_a1_matrix_and_round_trips_metadata(
             "Source SPD SHA-256": source_sha,
             "Input Design Fingerprint": fingerprint,
             "Distance Mode": "FARTHEST",
+            "Via Projection Policy": DISTRIBUTION_VIA_PROJECTION_POLICY,
         },
     )
 
@@ -127,6 +129,7 @@ def test_current_export_keeps_two_sheets_a1_matrix_and_round_trips_metadata(
     assert imported.distance_mode == "FARTHEST"
     assert imported.format_version == 3
     assert imported.source_sha256 == source_sha
+    assert imported.via_projection_policy == DISTRIBUTION_VIA_PROJECTION_POLICY
 
 
 def test_format3_without_source_keeps_both_legacy_warnings(tmp_path: Path) -> None:
@@ -148,6 +151,29 @@ def test_format3_without_source_keeps_both_legacy_warnings(tmp_path: Path) -> No
 
     assert any("restored OFF" in item for item in imported.warnings)
     assert any("source identity was not recorded" in item for item in imported.warnings)
+    assert imported.via_projection_policy == DISTRIBUTION_VIA_PROJECTION_POLICY
+
+
+def test_unknown_via_projection_policy_fails_closed(tmp_path: Path) -> None:
+    path = tmp_path / "unknown-via-projection.xlsx"
+    write_distribution_workbook(
+        path,
+        (),
+        ("PWR NET", "M1\nTarget"),
+        (("V1 (R1)", 1),),
+        metadata={
+            "Format Version": 3,
+            "Via Projection Policy": "REQUIRE_EXISTING_MLO_PATH",
+        },
+    )
+
+    with pytest.raises(DistributionWorkbookError, match="Via Projection Policy"):
+        load_distribution_targets(
+            path,
+            rail_ids=("R1",),
+            model_ids=("M1",),
+            current_present={("R1", "M1"): 1},
+        )
 
 
 def test_writer_rejects_format4_without_routing_mode_metadata(tmp_path: Path) -> None:

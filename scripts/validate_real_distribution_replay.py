@@ -4,8 +4,9 @@ This is deliberately an integration verifier, not another planner.  It imports
 the raw source, uses the normal public Distribution APIs, then independently
 checks every applied conventional/legacy replay move against a source-classified
 physical PWR Via landing and exact retained PWR artwork at its landing coordinate.
-The planner's MLO/unknown-legacy structural gate remains authoritative; this
-verifier does not turn missing transition evidence into permission.  It does not
+Distribution's fixed vertical-XY policy remains authoritative: MLO transition
+evidence is retained as provenance but is not a candidate gate. This verifier
+does not move the query XY or bypass exact destination copper, and it does not
 gate a destination on GND vias.
 """
 
@@ -24,6 +25,7 @@ from typing import Any
 import zlib
 
 from spd_decap_pi.distribution import (
+    DISTRIBUTION_VIA_PROJECTION_POLICY,
     DistributionDistanceMode,
     DistributionPlan,
     DistributionPlanStatus,
@@ -149,11 +151,10 @@ def has_physical_pwr_landing(landing: object) -> bool:
     """Validate a conventional replay's source-classified PWR-via origin.
 
     This helper checks geometry only after the planner has admitted the landing.
-    It is not a permission oracle: the Distribution structural gate separately
-    rejects MLO paths without a translated recipe and legacy landings without
-    transition evidence.  An admitted conventional path need not already end on
-    the requested target layer, and recovered path coordinates cannot move its
-    physical landing XY.
+    It is not a permission oracle. Under the fixed vertical-XY planning policy,
+    an existing path need not already end on the requested target layer and MLO
+    transition evidence does not reject it; recovered path coordinates still
+    cannot move the physical landing XY.
     """
 
     try:
@@ -342,9 +343,9 @@ def _validate_existing_rules(scenario: ScenarioSpec) -> int:
 
 
 def _independently_validate_moves(scenario: ScenarioSpec, plan: DistributionPlan, attachments: Mapping[str, bytes]) -> list[dict[str, object]]:
-    # A safe PARTIAL plan can contain no moves when every candidate is blocked
-    # by the structural MLO gate.  In that case there is nothing to prove and
-    # decoding every retained plane asset would add minutes of unrelated work.
+    # A safe PARTIAL plan can contain no moves when exact artwork, routing, or
+    # topology rejects every candidate. In that case there is nothing to prove
+    # and decoding every retained plane asset would add unrelated work.
     if not plan.moves:
         return []
     project = scenario.base_project
@@ -406,6 +407,7 @@ def _write_artifacts(directory: Path, scenario: ScenarioSpec, attachments: Mappi
         "Input Design Fingerprint": plan.input_design_fingerprint,
         "Distance Mode": plan.distance_mode.value,
         "Optimization Policy": plan.optimization_policy.value,
+        "Via Projection Policy": DISTRIBUTION_VIA_PROJECTION_POLICY,
     }
     if plan.optimization_policy.value in {"BALANCED_AUTO", "BALANCED_CUSTOM"}:
         metadata["Effective Gap Penalty (um)"] = plan.effective_gap_penalty_um

@@ -17,6 +17,7 @@ DISTRIBUTION_TARGET_SHEET = "PWR NET Distribution Targets"
 DISTRIBUTION_METADATA_TITLE = "Distribution Run Metadata"
 DISTRIBUTION_LEGACY_OFF_WORKBOOK_FORMAT_VERSION = 3
 DISTRIBUTION_WORKBOOK_FORMAT_VERSION = 4
+DISTRIBUTION_VIA_PROJECTION_POLICY = "VERTICAL_XY_ASSUME_DESCENT_V1"
 
 TargetKey = tuple[str, str]
 
@@ -60,6 +61,7 @@ class DistributionTargetImport:
     distance_mode: str | None
     optimization_policy: str | None
     effective_gap_penalty_um: float | None
+    via_projection_policy: str
     format_version: int | None
     source_sha256: str | None
     input_design_fingerprint: str | None
@@ -110,6 +112,10 @@ class DistributionTargetImport:
                 "Optimization policy restored: "
                 f"{self.optimization_policy}; effective gap penalty {penalty}."
             )
+        lines.append(
+            "Via projection policy: straight vertical descent at immutable PWR "
+            "landing XY (MLO transition evidence is not a Distribution gate)."
+        )
         if self.routing_protection_enabled:
             lines.append(
                 "Immutable signal-routing protection restored: ON, "
@@ -476,6 +482,19 @@ def load_distribution_targets(
             "MIN_GAPS workbook Effective Gap Penalty (um) must be 0 or omitted"
         )
 
+    raw_via_projection_policy = metadata.get("via projection policy")
+    via_projection_policy = (
+        str(raw_via_projection_policy).strip().upper()
+        if raw_via_projection_policy not in (None, "")
+        else DISTRIBUTION_VIA_PROJECTION_POLICY
+    )
+    if via_projection_policy != DISTRIBUTION_VIA_PROJECTION_POLICY:
+        raise DistributionWorkbookError(
+            "unsupported workbook Via Projection Policy "
+            f"{raw_via_projection_policy!r}; this release requires "
+            f"{DISTRIBUTION_VIA_PROJECTION_POLICY}"
+        )
+
     raw_source_sha256 = metadata.get("source spd sha-256")
     source_sha256: str | None = None
     if raw_source_sha256 not in (None, ""):
@@ -684,6 +703,7 @@ def load_distribution_targets(
         distance_mode=distance_mode,
         optimization_policy=optimization_policy,
         effective_gap_penalty_um=effective_gap_penalty_um,
+        via_projection_policy=via_projection_policy,
         format_version=format_version,
         source_sha256=source_sha256,
         input_design_fingerprint=input_design_fingerprint,
@@ -708,6 +728,7 @@ __all__ = [
     "DISTRIBUTION_METADATA_TITLE",
     "DISTRIBUTION_TARGET_SHEET",
     "DISTRIBUTION_WORKBOOK_FORMAT_VERSION",
+    "DISTRIBUTION_VIA_PROJECTION_POLICY",
     "DistributionTargetImport",
     "DistributionWorkbookError",
     "load_distribution_targets",

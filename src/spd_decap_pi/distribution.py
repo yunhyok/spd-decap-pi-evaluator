@@ -32,6 +32,7 @@ from ._core.io.shared_pad import (
 )
 from ._core.io.spd import SpdPlaneGeometry
 from .eligibility import PlaneEligibilityIndex
+from .distribution_workbook import DISTRIBUTION_VIA_PROJECTION_POLICY
 from .scenario import (
     DecapConnectionKind,
     DecapPadState,
@@ -75,6 +76,11 @@ ToleranceKey = TargetKey
 ProgressCallback = Callable[[int, str], None]
 CancelCallback = Callable[[], bool]
 _DISTRIBUTION_V4_ANALYSIS_VERSION = "DIRECT_TOP_COPPER_PATH_V4"
+# Distribution is a planning operation: every source-classified physical PWR
+# landing is projected straight down at its immutable TOP-side XY.  Retained
+# MLO/microvia transition evidence remains source provenance, but it is not an
+# eligibility gate for this operation.  Exact destination-copper containment,
+# signal-routing protection, and shared-pad/isolation constraints still apply.
 # Keep custom soft costs inside a range that remains well behaved in HiGHS
 # after conversion to integer milli-micrometre units.  One billion micrometres
 # is already a 1 km per-gap preference and is intentionally far above a board
@@ -1295,13 +1301,6 @@ def _distribution_batch_via_eligibility(
         str, dict[tuple[str, str], RailEligibility]
     ]
     | None = None,
-    mlo_transition_required_via_ids: Collection[str] = (),
-    mlo_transition_rejection_by_via_id: Mapping[
-        str, tuple[str, str]
-    ] | None = None,
-    mlo_transition_evidence: list[DistributionRoutingEvidence] | None = None,
-    mlo_transition_blocked_via_ids: set[str] | None = None,
-    top_layer: str | None = None,
     progress: ProgressCallback | None = None,
     is_cancelled: CancelCallback | None = None,
 ) -> dict[str, dict[str, RailEligibility]]:
@@ -1311,8 +1310,10 @@ def _distribution_batch_via_eligibility(
     slow on production SPDs.  GEOS constructs each final PowerSI boolean shape
     once, then Shapely's vectorized predicates test all relevant landings in C.
     Boundary contact remains fail-closed.  Every test uses the immutable
-    decap PWR-via landing coordinate; a routed/bent path endpoint must never
-    move the physical component assignment location sideways.
+    decap PWR-via landing coordinate and projects it vertically to the target
+    conductor.  Existing lateral/microvia transitions never move the query XY
+    and do not gate Distribution eligibility under
+    ``VERTICAL_XY_ASSUME_DESCENT_V1``.
     """
 
     landing_by_key: dict[str, object] = {}
@@ -1337,78 +1338,11 @@ def _distribution_batch_via_eligibility(
     ordered_landings = tuple(landing_by_key.values())
     if not ordered_landings:
         return {}
-    mlo_transition_rejection_by_key = {
-        str(via_id).casefold(): rejection
-        for via_id, rejection in (mlo_transition_rejection_by_via_id or {}).items()
-    }
-    mlo_transition_keys = {
-        str(item).casefold() for item in mlo_transition_required_via_ids
-    }
-    mlo_transition_keys.update(mlo_transition_rejection_by_key)
-    top_layer_key = str(top_layer or "TOP").casefold()
-    # Record the structural rejection before importing optional vector-geometry
-    # dependencies.  The metric is the number of unique blocked source
-    # landings, not the potentially much larger landing/rail/layer candidate
-    # count.  Evidence remains bounded independently of that exact set.
-    evidence_signatures = {
-        (
-            item.via_id.casefold(),
-            item.destination_rail_id.casefold(),
-            item.destination_layer.casefold(),
-        )
-        for item in (mlo_transition_evidence or ())
-    }
-    for via_key in sorted(mlo_transition_keys.intersection(landing_by_key)):
-        landing = landing_by_key[via_key]
-        rejection_code, rejection_message = mlo_transition_rejection_by_key.get(
-            via_key,
-            (
-                MLO_TRANSITION_RECIPE_REQUIRED_CODE,
-                MLO_TRANSITION_RECIPE_REQUIRED_MESSAGE,
-            ),
-        )
-        for pair_key, choices in rail_choices_by_pair.items():
-            destination_layer = str(pair_key[1])
-            if destination_layer.casefold() == top_layer_key:
-                continue
-            if mlo_transition_blocked_via_ids is not None:
-                mlo_transition_blocked_via_ids.add(
-                    str(getattr(landing, "via_id"))
-                )
-            for rail, _template_id in choices:
-                rail_id = str(getattr(rail, "rail_id"))
-                signature = (via_key, rail_id.casefold(), destination_layer.casefold())
-                if (
-                    mlo_transition_evidence is None
-                    or len(mlo_transition_evidence) >= 256
-                    or signature in evidence_signatures
-                ):
-                    continue
-                evidence_signatures.add(signature)
-                mlo_transition_evidence.append(
-                    DistributionRoutingEvidence(
-                        via_id=str(getattr(landing, "via_id")),
-                        x_um=float(getattr(landing, "x_um")),
-                        y_um=float(getattr(landing, "y_um")),
-                        destination_rail_id=rail_id,
-                        destination_layer=destination_layer,
-                        state=RoutingCandidateState.UNKNOWN,
-                        detail=RoutingCollisionEvidence(
-                            code=rejection_code,
-                            layer=destination_layer,
-                            message=rejection_message,
-                        ),
-                    )
-                )
-
     try:
         import numpy as np
         from shapely import contains_xy, dwithin, points
     except ImportError:
-        return {
-            str(getattr(landing_by_key[key], "via_id")): {}
-            for key in sorted(mlo_transition_keys.intersection(landing_by_key))
-        }
+        return {}
 
     pairs_by_plane: dict[tuple[str, str], list[tuple[str, str, str]]] = defaultdict(list)
     for pair_key in rail_choices_by_pair:
@@ -1507,11 +1441,6 @@ def _distribution_batch_via_eligibility(
                 destination_layer = pwr_layer_name_by_key.get(
                     pair_key[1], pair_key[1]
                 )
-                if (
-                    via_key in mlo_transition_keys
-                    and destination_layer.casefold() != top_layer_key
-                ):
-                    continue
                 if routing_policy.enabled:
                     assert routing_asset is not None
                     proof = evaluate_routing_candidate(
@@ -1592,7 +1521,9 @@ def build_distribution_power_projection(
     Only GND-only V5 unresolved clusters are candidates.  PWR/GND TOP copper,
     physical Via anchors, exact destination plane eligibility, and separator
     topology must all be reconstructed successfully; each failure simply leaves
-    that cluster fixed and unresolved.
+    that cluster fixed and unresolved.  Source PWR landings are projected
+    vertically at immutable XY; retained MLO/microvia transition evidence is
+    provenance only and does not reject a Distribution candidate.
     """
 
     routing_asset = _distribution_routing_asset(
@@ -1795,39 +1726,7 @@ def build_distribution_power_projection(
                 if previous_side is None or previous_side == side
                 else "UNKNOWN"
             )
-    # Structural transition gate: the current release has no translated
-    # via/trace recipe compiler.  Do not let routing protection OFF turn a
-    # source-proven MLO landing, or an evidence-free legacy landing, into an
-    # assumed immutable vertical retarget on a non-TOP plane.
     project = scenario.base_project
-    top_layer_key = next(
-        (
-            layer.name.casefold()
-            for layer in project.stackup_layers
-            if layer.is_conductor
-        ),
-        "top",
-    )
-    non_top_destination_layers = tuple(
-        str(pair[1])
-        for pair in rail_choices
-        if str(pair[1]).casefold() != top_layer_key
-    )
-    transition_rejection_by_via_id: dict[str, tuple[str, str]] = {}
-    if non_top_destination_layers:
-        transition_context = _mlo_transition_context(scenario, project=project)
-        for landing in projection_landings.values():
-            rejection = _mlo_transition_rejection_for_landing(
-                scenario,
-                landing,
-                stackup_layers=project.stackup_layers,
-                transition_context=transition_context,
-            )
-            if rejection is not None:
-                transition_rejection_by_via_id[str(landing.via_id)] = rejection
-    transition_required_via_ids = tuple(transition_rejection_by_via_id)
-    mlo_transition_evidence: list[DistributionRoutingEvidence] = []
-    mlo_transition_blocked_via_ids: set[str] = set()
     routing_counts: dict[str, int] = {}
     routing_evidence: list[DistributionRoutingEvidence] = []
     routing_layer_candidates: dict[
@@ -1847,11 +1746,6 @@ def build_distribution_power_projection(
         routing_counts=routing_counts,
         routing_evidence=routing_evidence,
         routing_layer_candidates=routing_layer_candidates,
-        mlo_transition_required_via_ids=transition_required_via_ids,
-        mlo_transition_rejection_by_via_id=transition_rejection_by_via_id,
-        mlo_transition_evidence=mlo_transition_evidence,
-        mlo_transition_blocked_via_ids=mlo_transition_blocked_via_ids,
-        top_layer=top_layer_key,
         progress=(
             (lambda value, message: progress(5 + round(value * 0.50), message))
             if progress is not None
@@ -1860,35 +1754,6 @@ def build_distribution_power_projection(
         is_cancelled=is_cancelled,
     )
     mlo_transition_diagnostics: tuple[DistributionDiagnostic, ...] = ()
-    if mlo_transition_blocked_via_ids:
-        rejection_by_key = {
-            via_id.casefold(): rejection
-            for via_id, rejection in transition_rejection_by_via_id.items()
-        }
-        blocked_by_rejection: dict[tuple[str, str], set[str]] = defaultdict(set)
-        for via_id in mlo_transition_blocked_via_ids:
-            rejection = rejection_by_key.get(
-                via_id.casefold(),
-                (
-                    MLO_TRANSITION_RECIPE_REQUIRED_CODE,
-                    MLO_TRANSITION_RECIPE_REQUIRED_MESSAGE,
-                ),
-            )
-            blocked_by_rejection[rejection].add(via_id)
-        mlo_transition_diagnostics = tuple(
-            DistributionDiagnostic(
-                code=code,
-                message=(
-                    f"{message}; blocked {len(via_ids):,} source landing(s) "
-                    "for non-TOP destinations "
-                    f"({', '.join(sorted(via_ids, key=str.casefold)[:8])})"
-                ),
-                actual_count=len(via_ids),
-            )
-            for (code, message), via_ids in sorted(
-                blocked_by_rejection.items(), key=lambda item: item[0][0]
-            )
-        )
     batch_via_eligibility_by_key = {
         via_id.casefold(): values
         for via_id, values in batch_via_eligibility.items()
@@ -2458,6 +2323,7 @@ class DistributionPlan:
     distance_mode: DistributionDistanceMode
     optimization_policy: DistributionOptimizationPolicy
     effective_gap_penalty_um: float
+    via_projection_policy: str
     status: DistributionPlanStatus
     requested_count: int
     fulfilled_count: int
@@ -3930,26 +3796,6 @@ def compute_distribution_plan(
         )
         for key, target in target_by_cell.items()
     }
-    requested_receiver_changes = any(
-        role == DistributionCellRole.RECEIVER
-        or (
-            role == DistributionCellRole.EXCHANGE
-            and tolerance_count_by_cell.get(key, 0) > 0
-        )
-        for key, role in role_by_cell.items()
-    )
-    if power_projection is None and requested_receiver_changes:
-        transition_diagnostics = _direct_planner_transition_diagnostics(scenario)
-        if transition_diagnostics:
-            raise DistributionError(
-                "POWER_PROJECTION_REQUIRED",
-                "direct Distribution planning cannot safely validate non-TOP "
-                "via transitions for this scenario; call "
-                "build_distribution_power_projection(...) and pass the result "
-                "as power_projection (reimport the raw SPD first when requested)",
-                diagnostics=transition_diagnostics,
-            )
-
     numeric_issues = _numeric_shortage_diagnostics(
         target_by_cell,
         present,
@@ -6212,6 +6058,7 @@ def compute_distribution_plan(
         distance_mode=mode,
         optimization_policy=optimization_policy,
         effective_gap_penalty_um=effective_gap_penalty_um,
+        via_projection_policy=DISTRIBUTION_VIA_PROJECTION_POLICY,
         status=status,
         requested_count=requested_total,
         fulfilled_count=fulfilled_total,
@@ -6291,6 +6138,7 @@ def apply_distribution_plan(
 
 
 __all__ = [
+    "DISTRIBUTION_VIA_PROJECTION_POLICY",
     "DISTRIBUTION_CSV_HEADER",
     "DISTRIBUTION_INVENTORY_HEADERS",
     "MAX_DISTRIBUTION_GAP_PENALTY_UM",
