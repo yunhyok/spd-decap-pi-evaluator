@@ -2384,16 +2384,18 @@ class MainWindow(QMainWindow):
         intro.setStyleSheet("color: #9aa4b2;")
         targets_layout.addWidget(intro)
         alternate_plane_note = QLabel(
-            "Alternate PWR plane: VIA STACK CHANGE REQUIRED — exact target-plane "
-            "copper is assessed at the immutable PWR landing XY; plane artwork "
-            "remains unchanged."
+            "Vertical VIA projection (planning assumption): exact target-plane "
+            "copper is assessed directly below the immutable PWR landing XY. "
+            "MLO transition/short-span evidence does not block Distribution."
         )
         alternate_plane_note.setObjectName("alternatePwrPlaneRoutingNote")
         alternate_plane_note.setWordWrap(True)
         alternate_plane_note.setStyleSheet("color: #9aa4b2;")
         alternate_plane_note.setToolTip(
-            "This is a filled-Cu microvia-stack retarget/rebuild planning result, "
-            "and does not prove that the existing via barrel already reaches that layer."
+            "Distribution assumes straight vertical descent at the source PWR landing "
+            "XY. Exact destination copper, void/boundary, routing, shared-pad, and gap "
+            "rules still apply. This does not certify the fabricated via path, DRC, SI, "
+            "or manufacturing feasibility."
         )
         targets_layout.addWidget(alternate_plane_note)
 
@@ -3862,6 +3864,7 @@ class MainWindow(QMainWindow):
         path = Path(filename).with_suffix(".xlsx")
         headers, rows = self._distribution_matrix_values()
         try:
+            from ..distribution import DISTRIBUTION_VIA_PROJECTION_POLICY
             from ..spreadsheet_export import write_distribution_workbook
 
             raw_distance_mode = self.distribution_distance_combo.currentData()
@@ -3872,6 +3875,7 @@ class MainWindow(QMainWindow):
                 "Source SPD Name": scenario.source.name,
                 "Source SPD SHA-256": scenario.source.sha256,
                 "Input Design Fingerprint": scenario.design_fingerprint,
+                "Via Projection Policy": DISTRIBUTION_VIA_PROJECTION_POLICY,
             }
             if raw_distance_mode in {"NEAREST", "FARTHEST"}:
                 metadata["Distance Mode"] = raw_distance_mode
@@ -4184,8 +4188,12 @@ class MainWindow(QMainWindow):
         sacrifices = tuple(getattr(plan, "sacrifices", ()))
         lines = [
             f"Status: {status} (count/topology)",
-            "VIA STACK CHANGE REQUIRED — exact target plane exists at immutable "
-            "PWR landing XY; plane artwork unchanged",
+            "VIA projection: "
+            f"{getattr(plan, 'via_projection_policy', 'VERTICAL_XY_ASSUME_DESCENT_V1')} "
+            "— straight vertical descent at immutable PWR landing XY; MLO "
+            "transition evidence is ignored for Distribution eligibility",
+            "Planning only — exact target copper/void/boundary checks remain active; "
+            "this is not fabricated-path, DRC, SI, or manufacturing sign-off",
             (
                 "PDN evaluation (modified/touched rails): BLOCKED on inherited "
                 "unresolved/out-of-scope connections"
@@ -4616,6 +4624,7 @@ class MainWindow(QMainWindow):
                         )
             else:
                 from ..distribution import (
+                    DISTRIBUTION_VIA_PROJECTION_POLICY,
                     distribution_inventory_table,
                     distribution_target_table,
                 )
@@ -4651,6 +4660,13 @@ class MainWindow(QMainWindow):
                     ),
                     "Distance Mode": distance_mode,
                     "Optimization Policy": policy_value,
+                    "Via Projection Policy": str(
+                        getattr(
+                            plan,
+                            "via_projection_policy",
+                            DISTRIBUTION_VIA_PROJECTION_POLICY,
+                        )
+                    ),
                     "Present Inventory Total": sum(
                         int(getattr(cell, "present_count", 0))
                         for cell in getattr(plan, "cells", ())

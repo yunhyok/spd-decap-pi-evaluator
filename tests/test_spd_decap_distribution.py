@@ -1882,8 +1882,8 @@ def test_batch_via_eligibility_uses_immutable_landing_not_bent_path_endpoint() -
     assert result == {"V1": {}}
 
 
-def test_batch_mlo_transition_gate_blocks_only_non_top_candidates() -> None:
-    """An unresolved MLO recipe must not poison conventional landings."""
+def test_batch_vertical_projection_ignores_mlo_transition_evidence() -> None:
+    """MLO transition evidence does not block immutable-XY projection."""
 
     geometry = SpdPlaneGeometry(
         layer="PWR_ALT",
@@ -1913,22 +1913,17 @@ def test_batch_mlo_transition_gate_blocks_only_non_top_candidates() -> None:
         y_um=6.0,
     )
     choices = {("v1", "pwr_alt", "gnd"): ((_rail("R1"), "VT1"),)}
-    evidence: list[object] = []
     result = distribution_module._distribution_batch_via_eligibility(
         (geometry,),
         (conventional, mlo),
         choices,
-        mlo_transition_required_via_ids=("V-MLO",),
-        mlo_transition_evidence=evidence,
-        top_layer="TOP",
     )
 
     assert set(result["V-CONV"]) == {"R1"}
-    assert result["V-MLO"] == {}
-    assert evidence and evidence[0].detail.code == "MLO_TRANSITION_RECIPE_REQUIRED"
+    assert set(result["V-MLO"]) == {"R1"}
 
 
-def test_batch_mlo_gate_survives_missing_optional_geometry_dependency(
+def test_batch_vertical_projection_still_fails_closed_without_geometry_dependency(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     import builtins
@@ -1942,8 +1937,6 @@ def test_batch_mlo_gate_survives_missing_optional_geometry_dependency(
         y_um=5.0,
     )
     choices = {("v1", "pwr_alt", "gnd"): ((_rail("R1"), "VT1"),)}
-    evidence: list[object] = []
-    blocked_vias: set[str] = set()
     real_import = builtins.__import__
 
     def fail_shapely(name: str, *args: object, **kwargs: object):
@@ -1956,15 +1949,9 @@ def test_batch_mlo_gate_survives_missing_optional_geometry_dependency(
         (),
         (landing,),
         choices,
-        mlo_transition_required_via_ids=(landing.via_id,),
-        mlo_transition_evidence=evidence,
-        mlo_transition_blocked_via_ids=blocked_vias,
-        top_layer="TOP",
     )
 
-    assert result == {"V-MLO": {}}
-    assert blocked_vias == {"V-MLO"}
-    assert evidence and evidence[0].detail.code == "MLO_TRANSITION_RECIPE_REQUIRED"
+    assert result == {}
 
 
 def _non_top_direct_transition_scenario(
@@ -2083,22 +2070,22 @@ def _non_top_direct_transition_scenario(
     )
 
 
-def test_direct_planner_blocks_observed_microvia_without_projection() -> None:
+def test_direct_planner_ignores_observed_microvia_without_projection() -> None:
     scenario = _non_top_direct_transition_scenario(path_kind="microvia")
     targets = {("R1", "M1"): 0, ("R2", "M1"): 1}
 
-    with pytest.raises(DistributionError) as caught:
-        compute_distribution_plan(scenario, targets)
+    plan = compute_distribution_plan(scenario, targets)
 
-    assert caught.value.code == "POWER_PROJECTION_REQUIRED"
-    assert [item.code for item in caught.value.diagnostics] == [
-        "MLO_TRANSITION_RECIPE_REQUIRED"
-    ]
-    assert "build_distribution_power_projection" in str(caught.value)
+    assert plan.status == DistributionPlanStatus.FULL
+    assert plan.assignment_map == {"C1": "R2"}
+    assert (
+        plan.via_projection_policy
+        == distribution_module.DISTRIBUTION_VIA_PROJECTION_POLICY
+    )
 
 
-def test_legacy_missing_policy_and_path_requires_source_reimport() -> None:
-    """A pre-v0.22 landing cannot silently become an immutable via column."""
+def test_legacy_missing_policy_and_path_is_accepted_by_vertical_projection() -> None:
+    """Pathless legacy landings use the fixed vertical planning policy."""
 
     scenario = _non_top_direct_transition_scenario(
         path_kind=None,
@@ -2117,12 +2104,9 @@ def test_legacy_missing_policy_and_path_requires_source_reimport() -> None:
     )
     assert rejection is not None
     assert rejection[0] == REIMPORT_SOURCE_FOR_TRANSITION_EVIDENCE_CODE
-    with pytest.raises(DistributionError) as caught:
-        compute_distribution_plan(scenario, targets)
-    assert caught.value.code == "POWER_PROJECTION_REQUIRED"
-    assert [item.code for item in caught.value.diagnostics] == [
-        REIMPORT_SOURCE_FOR_TRANSITION_EVIDENCE_CODE
-    ]
+    direct_plan = compute_distribution_plan(scenario, targets)
+    assert direct_plan.status == DistributionPlanStatus.FULL
+    assert direct_plan.assignment_map == {"C1": "R2"}
     plane = SpdPlaneGeometry(
         layer="PWR_ALT",
         net="V2",
@@ -2140,21 +2124,14 @@ def test_legacy_missing_policy_and_path_requires_source_reimport() -> None:
     )
 
     assert projection is not None
-    assert [item.code for item in projection.mlo_transition_diagnostics] == [
-        REIMPORT_SOURCE_FOR_TRANSITION_EVIDENCE_CODE
-    ]
-    assert projection.mlo_transition_diagnostics[0].actual_count == 1
+    assert projection.mlo_transition_diagnostics == ()
     plan = compute_distribution_plan(
         scenario,
         targets,
         power_projection=projection,
     )
-    assert plan.status == DistributionPlanStatus.PARTIAL
-    assert plan.assignment_map == {}
-    assert any(
-        item.code == REIMPORT_SOURCE_FOR_TRANSITION_EVIDENCE_CODE
-        for item in plan.diagnostics
-    )
+    assert plan.status == DistributionPlanStatus.FULL
+    assert plan.assignment_map == {"C1": "R2"}
 
 
 def test_legacy_conventional_path_without_policy_remains_eligible() -> None:
@@ -2375,8 +2352,8 @@ def test_landing_certificate_claim_digest_and_count_are_strict() -> None:
         )
 
 
-def test_short_span_landing_is_recipe_required_not_eligible() -> None:
-    """DR-0102-like TOP-to-intermediate spans never grant a PWR retarget."""
+def test_short_span_landing_is_eligible_under_vertical_projection_policy() -> None:
+    """DR-0102-like spans do not block same-XY Distribution planning."""
 
     scenario = _non_top_direct_transition_scenario(
         path_kind=None,
@@ -2419,17 +2396,14 @@ def test_short_span_landing_is_recipe_required_not_eligible() -> None:
         targets=targets,
     )
     assert projection is not None
-    assert [item.code for item in projection.mlo_transition_diagnostics] == [
-        "MLO_TRANSITION_RECIPE_REQUIRED"
-    ]
-    assert projection.mlo_transition_diagnostics[0].actual_count == 1
+    assert projection.mlo_transition_diagnostics == ()
     plan = compute_distribution_plan(
         short_span,
         targets,
         power_projection=projection,
     )
-    assert plan.status == DistributionPlanStatus.PARTIAL
-    assert plan.assignment_map == {}
+    assert plan.status == DistributionPlanStatus.FULL
+    assert plan.assignment_map == {"C1": "R2"}
 
 
 def test_source_bound_conventional_landing_certificate_allows_pathless_pth() -> None:
@@ -2519,10 +2493,10 @@ def test_source_bound_conventional_landing_certificate_allows_pathless_pth() -> 
     )[0] == "MLO_TRANSITION_RECIPE_REQUIRED"
 
 
-def test_power_projection_parses_transition_metadata_once_per_pass(
+def test_power_projection_ignores_transition_metadata(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Many landings share one immutable, source-bound transition context."""
+    """MLO metadata is not consulted by the fixed vertical policy."""
 
     scenario = _non_top_direct_transition_scenario(
         path_kind=None,
@@ -2618,7 +2592,7 @@ def test_power_projection_parses_transition_metadata_once_per_pass(
 
     assert projection is not None
     assert projection.mlo_transition_diagnostics == ()
-    assert calls == {"policy": 1, "certificates": 1}
+    assert calls == {"policy": 0, "certificates": 0}
 
 
 def test_pathless_landing_certificate_source_mismatch_is_fail_closed() -> None:
@@ -2657,8 +2631,8 @@ def test_pathless_landing_certificate_source_mismatch_is_fail_closed() -> None:
     )[0] == REIMPORT_SOURCE_FOR_TRANSITION_EVIDENCE_CODE
 
 
-def test_current_negative_policy_does_not_certify_pathless_landing() -> None:
-    """A fresh board-level negative cannot grant per-landing permission."""
+def test_current_negative_policy_does_not_block_vertical_distribution() -> None:
+    """A negative MLO policy remains provenance, not a Distribution gate."""
 
     scenario = _non_top_direct_transition_scenario(
         path_kind=None,
@@ -2680,12 +2654,9 @@ def test_current_negative_policy_does_not_certify_pathless_landing() -> None:
         )
     )
     targets = {("R1", "M1"): 0, ("R2", "M1"): 1}
-    with pytest.raises(DistributionError) as caught:
-        compute_distribution_plan(scenario, targets)
-    assert caught.value.code == "POWER_PROJECTION_REQUIRED"
-    assert [item.code for item in caught.value.diagnostics] == [
-        REIMPORT_SOURCE_FOR_TRANSITION_EVIDENCE_CODE
-    ]
+    direct_plan = compute_distribution_plan(scenario, targets)
+    assert direct_plan.status == DistributionPlanStatus.FULL
+    assert direct_plan.assignment_map == {"C1": "R2"}
 
     plane = SpdPlaneGeometry(
         layer="PWR_ALT",
@@ -2703,16 +2674,14 @@ def test_current_negative_policy_does_not_certify_pathless_landing() -> None:
         targets=targets,
     )
     assert projection is not None
-    assert [item.code for item in projection.mlo_transition_diagnostics] == [
-        REIMPORT_SOURCE_FOR_TRANSITION_EVIDENCE_CODE
-    ]
+    assert projection.mlo_transition_diagnostics == ()
     plan = compute_distribution_plan(
         scenario,
         targets,
         power_projection=projection,
     )
-    assert plan.status == DistributionPlanStatus.PARTIAL
-    assert plan.assignment_map == {}
+    assert plan.status == DistributionPlanStatus.FULL
+    assert plan.assignment_map == {"C1": "R2"}
 
 
 @pytest.mark.parametrize(

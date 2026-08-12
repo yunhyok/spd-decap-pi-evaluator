@@ -1,54 +1,43 @@
-# Distribution MLO transition gate
+# Distribution MLO evidence and vertical-XY policy
 
-The import path records `MLO_TRANSITION_RECIPE_GATE_V1` in normalized-project
-metadata. A source-qualified COPPER microvia (drill <= 150 um, two adjacent
-conductors with one dielectric, dielectric/drill <= 1) or recovered lateral /
-staggered path sets `transition_required=true`. This release does not synthesize
-translated manufacturing recipes, so `translated_recipe_validated=false`. The
-policy is a source-bound board-level positive summary: `transition_required=false`
-means that no retained MLO evidence was observed, not that every source landing
-was proven to be a continuous vertical via.
+## v0.22.2 Distribution behavior
 
-Distribution raises `MLO_TRANSITION_RECIPE_REQUIRED` before non-TOP plane
-eligibility whenever that evidence is present. Signal-trace protection being
-OFF does not bypass this structural gate. Conventional continuous through-via
-evidence retains the existing immutable-column behavior. Every fresh or legacy
-bundle is inspected from retained per-landing path metadata. An explicit
-source-proven continuous vertical path remains eligible, but a landing with no
-path evidence is unknown rather than conventional even when a valid fresh
-board-level policy says `transition_required=false`. It is blocked for non-TOP
-destinations with `REIMPORT_SOURCE_FOR_TRANSITION_EVIDENCE`. Reimporting the raw
-SPD is required to recover transition evidence; no target-layer pre-existing
-path is required once a conventional continuous path is proven.
+De-cap Distribution uses the fixed policy
+`VERTICAL_XY_ASSUME_DESCENT_V1`. Every source-classified physical PWR landing
+is projected straight down at its immutable XY to every retained destination
+PWR plane. Existing MLO/microvia short spans, lateral or staggered transitions,
+missing per-landing paths, and translated-recipe status are retained as source
+provenance but do **not** block Distribution eligibility.
 
-The importer also persists `MLO_LANDING_CERTIFICATE_V1` as
-`spd_mlo_landing_certificates`. It is source-SHA-bound and complete over the
-unique Via IDs. Only a row classified `CONVENTIONAL_THROUGH_VIA` (positive
-drill with explicit TOP and BOTTOM padstack copper) can admit a pathless
-landing. A positive-drill `SHORT_SPAN_VIA` row (for example a DR-0102-like
-TOP-to-intermediate-conductor span) is retained as a source-bound diagnostic
-and returns `MLO_TRANSITION_RECIPE_REQUIRED`; it never grants non-TOP
-eligibility. Incomplete/digest-mismatched metadata and all unknown classes
-remain blocked; `UNRESOLVED` rows continue to require source reimport evidence.
-Recovery requests every retained
-same-NET PWR plane layer, so a logical rail layer cannot hide source paths
-that terminate on another retained plane.
+This policy does not bypass destination artwork proof. The final ordered copper
+must strictly contain the projected XY; voids, boundary contact, and missing or
+malformed artwork remain ineligible. Optional immutable signal-Trace
+protection, shared-pad topology, isolation gaps, numeric supply, and the chosen
+gap-distance objective also remain active.
 
-Policy metadata is parsed strictly: flags must be JSON booleans, the policy
-version must be recognized, and a supplied source SHA-256 must match the active
-scenario. V1 defines no translated-recipe asset/compiler, so
-`translated_recipe_validated=true` is rejected rather than treated as
-permission. The structural rejection is recorded before optional NumPy/Shapely
-geometry imports; its summary count is the exact number of unique blocked
-source landings, while detailed landing/rail/layer evidence remains bounded.
+The result is a placement-planning assumption. It is not fabricated-path, DRC,
+SI, or manufacturing sign-off. The GUI Preview log displays this boundary, and
+target/result workbooks record `Via Projection Policy`.
 
-The public planner does not treat a missing projection as permission. When a
-receiver or count-neutral exchange is requested, direct
-`compute_distribution_plan(..., power_projection=None)` raises
-`POWER_PROJECTION_REQUIRED` if it finds an observed MLO transition or a real
-`spd_import` landing that needs source reimport evidence. Call
-`build_distribution_power_projection(...)` first and pass its result so the
-unsafe landing can be omitted per candidate while conventional landings remain
-available for a partial plan. Only explicit conventional source paths retain
-compatible direct-planner behavior; a board-level negative policy alone never
-grants permission to a pathless landing.
+## Retained import provenance
+
+Raw SPD import continues to record source-bound MLO evidence:
+
+- `MLO_TRANSITION_RECIPE_GATE_V1` summarizes observed qualified microvia,
+  lateral, and staggered transition evidence.
+- `MLO_LANDING_CERTIFICATE_V1` records strict, digest-bound landing
+  classifications such as `CONVENTIONAL_THROUGH_VIA`, `SHORT_SPAN_VIA`, and
+  `UNRESOLVED`.
+- Per-landing recovered and structural path evidence remains persisted in the
+  scenario when available.
+
+v0.22.1 used this evidence to emit `MLO_TRANSITION_RECIPE_REQUIRED`,
+`REIMPORT_SOURCE_FOR_TRANSITION_EVIDENCE`, or `POWER_PROJECTION_REQUIRED` for
+non-TOP Distribution candidates. That gate is intentionally retired for
+Distribution in v0.22.2. The evidence remains available to other analysis
+paths and future manufacturing-aware recipe work; it is neither discarded nor
+rewritten as a fabricated continuous path.
+
+The normal GUI path still calls `build_distribution_power_projection(...)`.
+That exact projection proves the destination NET/layer copper at immutable XY
+and preserves all non-MLO physical and topology gates.

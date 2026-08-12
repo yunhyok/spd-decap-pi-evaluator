@@ -29,6 +29,7 @@ from test_spd_decap_distribution import (
     _with_initial_rails,
 )
 from spd_decap_pi.distribution import (
+    DISTRIBUTION_VIA_PROJECTION_POLICY,
     DistributionDiagnostic,
     DistributionDistanceMode,
     DistributionPlanStatus,
@@ -155,9 +156,10 @@ def test_distribution_tab_matches_the_target_matrix_and_resizable_sections() -> 
         assert window.distribution_table.rowCount() == 3
         plane_note = window.findChild(QLabel, "alternatePwrPlaneRoutingNote")
         assert plane_note is not None
-        assert "VIA STACK CHANGE REQUIRED" in plane_note.text()
-        assert "plane artwork remains unchanged" in plane_note.text()
-        assert "does not prove" in plane_note.toolTip()
+        assert "Vertical VIA projection" in plane_note.text()
+        assert "MLO transition/short-span evidence does not block" in plane_note.text()
+        assert "exact target-plane copper" in plane_note.text()
+        assert "does not certify" in plane_note.toolTip()
         assert window.distribution_table.selectionMode() == (
             window.distribution_table.SelectionMode.ExtendedSelection
         )
@@ -258,6 +260,7 @@ def test_distribution_table_double_click_opens_detached_window_and_exports_templ
             current_design_fingerprint=scenario.design_fingerprint,
         )
         assert imported.targets == window._distribution_targets
+        assert imported.via_projection_policy == DISTRIBUTION_VIA_PROJECTION_POLICY
 
         # Switching away from a custom policy clears stale input and the
         # template must omit the penalty so it round-trips as MIN_GAPS.
@@ -280,6 +283,7 @@ def test_distribution_table_double_click_opens_detached_window_and_exports_templ
         )
         assert imported_min_gaps.optimization_policy == "MIN_GAPS"
         assert imported_min_gaps.effective_gap_penalty_um is None
+        assert imported_min_gaps.via_projection_policy == DISTRIBUTION_VIA_PROJECTION_POLICY
     finally:
         window._dirty = False
         window.close()
@@ -343,8 +347,7 @@ def test_physical_landing_retarget_has_no_obsolete_column_warning() -> None:
         assert "reopen" not in compact.casefold()
         assert "Via-column" not in window.distribution_summary.toPlainText()
         assert (
-            "VIA STACK CHANGE REQUIRED — exact target plane exists at immutable "
-            "PWR landing XY; plane artwork unchanged"
+            f"VIA projection: {DISTRIBUTION_VIA_PROJECTION_POLICY}"
             in window.distribution_summary.toPlainText()
         )
     finally:
@@ -1607,6 +1610,7 @@ def test_full_preview_exports_saves_and_applies_one_atomic_revision(
             assert metadata["Input Design Fingerprint"] == scenario.design_fingerprint
             assert metadata["Distance Mode"] == "NEAREST"
             assert metadata["Optimization Policy"] == "BALANCED_AUTO"
+            assert metadata["Via Projection Policy"] == DISTRIBUTION_VIA_PROJECTION_POLICY
             assert metadata["Effective Gap Penalty (um)"] == pytest.approx(
                 plan.effective_gap_penalty_um
             )
