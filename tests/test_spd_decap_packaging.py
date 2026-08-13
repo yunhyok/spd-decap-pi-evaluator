@@ -106,10 +106,11 @@ def test_packaged_numerical_path_imports_threadpoolctl() -> None:
 def test_distribution_methodology_docs_are_current_offline_and_linked() -> None:
     markdown_path = REPO_ROOT / "docs" / "DECAP_DISTRIBUTION_RULES.md"
     html_path = REPO_ROOT / "docs" / "DECAP_DISTRIBUTION_RULES.companion.html"
-    markdown = markdown_path.read_text(encoding="utf-8")
+    markdown = markdown_path.read_bytes().decode("utf-8")
     html = html_path.read_text(encoding="utf-8")
     readme = (REPO_ROOT / "README.md").read_text(encoding="utf-8")
-    source_hash = sha256(markdown_path.read_bytes()).hexdigest()
+    canonical_markdown = markdown.replace("\r\n", "\n").replace("\r", "\n")
+    source_hash = sha256(canonical_markdown.encode("utf-8")).hexdigest()
 
     assert "SPD Decap PI Evaluator v0.22.3" in markdown
     assert "로컬 final component" in markdown
@@ -117,6 +118,10 @@ def test_distribution_methodology_docs_are_current_offline_and_linked() -> None:
     assert "exact 15 + 3 + gap 1" in markdown
     assert '<html lang="ko">' in html
     assert '<meta charset="utf-8">' in html
+    assert (
+        '<meta name="source-sha256-normalization" content="utf-8-lf">'
+        in html
+    )
     assert "SPD Decap PI Evaluator v0.22.3" in html
     assert f'content="{source_hash}"' in html
     assert html.count('<svg viewBox=') >= 3
