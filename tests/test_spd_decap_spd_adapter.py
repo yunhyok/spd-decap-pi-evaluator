@@ -1,5 +1,5 @@
 ﻿from pathlib import Path
-
+from dataclasses import replace
 import math
 from types import SimpleNamespace
 
@@ -9,7 +9,11 @@ from test_io_spd import MINI_SPD
 
 from spd_decap_pi import spd_adapter
 from spd_decap_pi._core import services as core_services
-from spd_decap_pi._core.io.spd import SpdImportError
+from spd_decap_pi._core.io.shared_pad import (
+    SpdDecapConnection,
+    SpdSharedPadCluster,
+)
+from spd_decap_pi._core.io.spd import SpdImportError, analyze_spd
 from spd_decap_pi._core.services import WorkspaceState, import_cap_spice
 from spd_decap_pi.scenario import (
     SHARED_PAD_ANALYSIS_VERSION,
@@ -190,6 +194,92 @@ def test_read_only_spd_import_builds_top_side_editable_scenario(tmp_path: Path):
     assert imported.scenario.base_project.placements == []
     assert imported.scenario.base_project.topology_maps == []
     assert all(item.confirmed for item in imported.scenario.base_project.partitions)
+
+
+def test_adapter_clears_gap_certificate_when_cluster_is_demoted(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    source = tmp_path / "demoted-shared-pad.spd"
+    source.write_text(MINI_SPD, encoding="ascii")
+    parsed = analyze_spd(source, scope="decap_scenario")
+    by_refdes = {item.refdes: item for item in parsed.decap_connections}
+    cluster_id = "SPDCL:SOURCE-CERTIFIED-GAP"
+    source_cluster = SpdSharedPadCluster(
+        cluster_id=cluster_id,
+        state="ANCHORED",
+        member_refdes=("C1", "C2"),
+        anchor_refdes=("C1",),
+        dummy_refdes=("C2",),
+        power_net="VDD_CORE/0",
+        ground_net="DGND",
+        layer="Signal$TOP",
+        power_edges=(("C1", "C2"),),
+        ground_edges=(("C1", "C2"),),
+        isolation_gap_refdes=("C1", "C2"),
+    )
+    source_connections = (
+        replace(
+            by_refdes["C1"],
+            kind="SHARED_ANCHOR",
+            cluster_id=cluster_id,
+        ),
+        SpdDecapConnection(
+            refdes="C2",
+            kind="SHARED_DUMMY",
+            cluster_id=cluster_id,
+        ),
+    )
+    source_analysis = replace(
+        parsed,
+        decap_connections=source_connections,
+        shared_pad_clusters=(source_cluster,),
+    )
+    monkeypatch.setattr(
+        spd_adapter,
+        "analyze_spd",
+        lambda *_args, **_kwargs: source_analysis,
+    )
+
+    imported = import_spd_scenario(source)
+
+    analysis = imported.scenario.connection_analysis
+    assert analysis is not None
+    assert len(analysis.clusters) == 1
+    cluster = analysis.clusters[0]
+    assert cluster.state.value == "UNRESOLVED"
+    assert cluster.reason == (
+        "shared-pad members resolve to different source rail identities"
+    )
+    assert cluster.isolation_gap_refdes == ()
+    assert cluster.eligibility == {}
+    assert cluster.via_eligibility == {}
+    assert {
+        connection.kind.value for connection in analysis.connections.values()
+    } == {"UNRESOLVED"}
+
+
+def test_source_unselected_physical_powernet_reaches_project_rails(
+    tmp_path: Path,
+) -> None:
+    source = tmp_path / "source-unselected-power.spd"
+    payload = MINI_SPD.replace(
+        "VDD_CORE/0 -> PowerNets Voltage = 0\n"
+        "VDD_DROP/0::Unselected||DropShape",
+        "VDD_MARKER/0 -> PowerNets Voltage = 0\n"
+        "VDD_CORE/0::Unselected||DropShape\n"
+        "VDD_DROP/0::Unselected||DropShape",
+    )
+    source.write_text(payload, encoding="ascii")
+
+    imported = import_spd_scenario(source)
+
+    assert [item.net for item in imported.scenario.base_project.rails] == [
+        "VDD_CORE/0"
+    ]
+    assert imported.scenario.base_project.metadata["spd_import"][
+        "selected_power_nets"
+    ] == ["VDD_CORE/0"]
 
 
 def test_optional_routing_asset_bounds_do_not_break_legacy_spd_import(

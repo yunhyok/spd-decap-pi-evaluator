@@ -18,6 +18,7 @@ from PySide6.QtWidgets import (
     QLineEdit,
     QMessageBox,
     QSplitter,
+    QTableWidget,
 )
 from openpyxl import load_workbook
 import pytest
@@ -206,6 +207,141 @@ def test_distribution_tab_matches_the_target_matrix_and_resizable_sections() -> 
         )
         assert "every Target equals Present" in window.distribution_summary.toPlainText()
     finally:
+        window._dirty = False
+        window.close()
+        application.processEvents()
+
+
+def test_detached_distribution_editor_routes_target_tolerance_and_invalid_state(
+) -> None:
+    application = _application()
+    window = _window_with_scenario(
+        _direct_scenario((("C1", 0.0, ("R1", "R2")),), rail_ids=("R1", "R2"))
+    )
+    try:
+        window._show_distribution_window()
+        dialog = window._distribution_window
+        assert dialog is not None
+        assert dialog.table.editTriggers() & QTableWidget.EditTrigger.DoubleClicked
+        assert dialog.table.editTriggers() & QTableWidget.EditTrigger.EditKeyPressed
+        target = dialog.table.item(0, 2)
+        key = tuple(target.data(Qt.ItemDataRole.UserRole))
+        main_row = _rail_row(window, key[0])
+        for column in (0, 1, 4):
+            assert not (
+                dialog.table.item(0, column).flags()
+                & Qt.ItemFlag.ItemIsEditable
+            )
+        for column in (2, 3):
+            detached_item = dialog.table.item(0, column)
+            main_item = window.distribution_table.item(main_row, column)
+            assert detached_item.flags() == main_item.flags()
+            assert detached_item.toolTip() == main_item.toolTip()
+            assert detached_item.textAlignment() == main_item.textAlignment()
+            assert detached_item.flags() & Qt.ItemFlag.ItemIsEditable
+        window._distribution_plan = object()
+        window._distribution_preview_scenario = object()
+        calls: list[int] = []
+        original = window._distribution_targets_edited
+
+        def record_edit() -> None:
+            calls.append(1)
+            original()
+
+        window._distribution_targets_edited = record_edit
+        dialog.table.editItem(target)
+        editor = dialog.table.findChild(QLineEdit)
+        assert editor is not None
+        editor.selectAll()
+        editor.setText("7")
+        QTest.keyClick(editor, Qt.Key.Key_Return)
+        application.processEvents()
+        assert calls == [1]
+        assert window._distribution_targets[key] == 7
+        assert window._distribution_plan is None
+        assert window._distribution_preview_scenario is None
+        assert (
+            window.distribution_table.item(_rail_row(window, key[0]), 2).text()
+            == "7"
+        )
+        target = dialog.table.item(0, 2)
+        assert target.data(Qt.ItemDataRole.UserRole) == key
+        tolerance = dialog.table.item(0, 3)
+        tolerance_key = tuple(tolerance.data(Qt.ItemDataRole.UserRole))
+        assert tolerance.data(Qt.ItemDataRole.UserRole + 1) == "tolerance"
+        assert tolerance.flags() & Qt.ItemFlag.ItemIsEditable
+        dialog.table.editItem(tolerance)
+        application.processEvents()
+        editor = QApplication.focusWidget()
+        assert editor is not None
+        assert isinstance(editor, QLineEdit)
+        assert editor.isVisible()
+        editor.selectAll()
+        editor.setText("1.5")
+        QTest.keyClick(editor, Qt.Key.Key_Return)
+        application.processEvents()
+        tolerance = dialog.table.item(0, 3)
+        assert tolerance.text() == "1.5"
+        assert window._distribution_tolerances[tolerance_key] == 1.5
+        assert calls == [1, 1]
+        assert (
+            window.distribution_table.item(
+                _rail_row(window, tolerance_key[0]), 3
+            ).text()
+            == "1.5"
+        )
+        target = dialog.table.item(0, 2)
+        target.setText("-1")
+        application.processEvents()
+        target = dialog.table.item(0, 2)
+        main_target = window.distribution_table.item(_rail_row(window, key[0]), 2)
+        assert target.text() == main_target.text() == "-1"
+        assert target.background() == main_target.background()
+        assert key in window._distribution_invalid_cells
+        target.setText("7")
+        application.processEvents()
+        tolerance = dialog.table.item(0, 3)
+        tolerance.setText("nan")
+        application.processEvents()
+        tolerance = dialog.table.item(0, 3)
+        main_tolerance = window.distribution_table.item(
+            _rail_row(window, tolerance_key[0]), 3
+        )
+        assert tolerance.text() == main_tolerance.text() == "nan"
+        assert tolerance.background() == main_tolerance.background()
+        assert tolerance_key in window._distribution_invalid_tolerance_cells
+        assert not window.calculate_distribution_button.isEnabled()
+    finally:
+        window._dirty = False
+        window.close()
+        application.processEvents()
+
+
+def test_detached_distribution_busy_edit_is_disabled() -> None:
+    application = _application()
+    window = _window_with_scenario(
+        _direct_scenario((("C1", 0.0, ("R1", "R2")),), rail_ids=("R1", "R2"))
+    )
+    try:
+        window._show_distribution_window()
+        dialog = window._distribution_window
+        assert dialog is not None
+        window._worker = object()
+        window._sync_distribution_window()
+        item = dialog.table.item(0, 2)
+        key = tuple(item.data(Qt.ItemDataRole.UserRole))
+        before = item.text()
+        value = window._distribution_targets[key]
+        assert not dialog.table.isEnabled()
+        dialog.table.setCurrentItem(item)
+        dialog.table.setFocus()
+        QTest.keyClick(dialog.table, Qt.Key.Key_9)
+        application.processEvents()
+        assert item.text() == before
+        assert window._distribution_targets[key] == value
+    finally:
+        window._worker = None
+        window._set_busy(False)
         window._dirty = False
         window.close()
         application.processEvents()

@@ -1285,6 +1285,143 @@ def test_source_copper_path_edges_follow_coordinates_not_refdes_order() -> None:
     assert cluster.isolation_gap_refdes == ("A", "M", "Z")
 
 
+def test_disjoint_single_box_components_each_authorize_local_isolation_gaps() -> None:
+    decaps = (
+        _decap("A0", 0.0),
+        _decap("A1", 450.0),
+        _decap("A2", 900.0),
+        _decap("B0", 2_000.0),
+        _decap("B1", 2_450.0),
+        _decap("B2", 2_900.0),
+    )
+    result = extract_shared_pad_connectivity(
+        decaps,
+        (
+            _via("VP-A", "VDD", 0.0, 0.0),
+            _via("VG-A", "DGND", 600.0, 0.0),
+            _via("VP-B", "VDD", 0.0, 2_000.0),
+            _via("VG-B", "DGND", 600.0, 2_000.0),
+        ),
+        PADSTACKS,
+        top_layer=TOP,
+        top_copper_geometries=(
+            _top_copper(
+                "VDD",
+                (
+                    _rectangle(-200.0, -200.0, 200.0, 1_100.0),
+                    _rectangle(-200.0, 1_800.0, 200.0, 3_100.0),
+                ),
+            ),
+            _top_copper(
+                "DGND",
+                (
+                    _rectangle(400.0, -200.0, 800.0, 1_100.0),
+                    _rectangle(400.0, 1_800.0, 800.0, 3_100.0),
+                ),
+            ),
+        ),
+    )
+
+    assert len(result.clusters) == 2
+    by_members = {cluster.member_refdes: cluster for cluster in result.clusters}
+    assert by_members[("A0", "A1", "A2")].isolation_gap_refdes == (
+        "A0",
+        "A1",
+        "A2",
+    )
+    assert by_members[("B0", "B1", "B2")].isolation_gap_refdes == (
+        "B0",
+        "B1",
+        "B2",
+    )
+
+
+def test_touching_rectangular_tiles_do_not_authorize_isolation_gaps() -> None:
+    result = extract_shared_pad_connectivity(
+        (_decap("A", 0.0), _decap("B", 450.0), _decap("C", 900.0)),
+        (
+            _via("VP", "VDD", 0.0, 0.0),
+            _via("VG", "DGND", 600.0, 0.0),
+        ),
+        PADSTACKS,
+        top_layer=TOP,
+        top_copper_geometries=(
+            _top_copper(
+                "VDD",
+                (
+                    _rectangle(-200.0, -200.0, 200.0, 450.0),
+                    _rectangle(-200.0, 450.0, 200.0, 1_100.0),
+                ),
+            ),
+            _top_copper("DGND", (_rectangle(400.0, -200.0, 800.0, 1_100.0),)),
+        ),
+    )
+
+    assert result.clusters[0].state == "ANCHORED"
+    assert result.clusters[0].member_refdes == ("A", "B", "C")
+    assert result.clusters[0].isolation_gap_refdes == ()
+
+
+def test_rectangular_component_with_local_void_does_not_authorize_gaps() -> None:
+    result = extract_shared_pad_connectivity(
+        (_decap("A", 0.0), _decap("B", 450.0), _decap("C", 900.0)),
+        (
+            _via("VP", "VDD", 0.0, 0.0),
+            _via("VG", "DGND", 600.0, 0.0),
+        ),
+        PADSTACKS,
+        top_layer=TOP,
+        top_copper_geometries=(
+            _top_copper(
+                "VDD",
+                (_rectangle(-200.0, -200.0, 200.0, 1_100.0),),
+                negative=(_rectangle(100.0, 300.0, 150.0, 350.0),),
+            ),
+            _top_copper("DGND", (_rectangle(400.0, -200.0, 800.0, 1_100.0),)),
+        ),
+    )
+
+    assert result.clusters[0].state == "ANCHORED"
+    assert result.clusters[0].member_refdes == ("A", "B", "C")
+    assert result.clusters[0].isolation_gap_refdes == ()
+
+
+def test_single_box_branched_component_does_not_authorize_isolation_gaps() -> None:
+    center = replace(_decap("CENTER", 0.0), ground_x_um=2_000.0)
+    left = replace(
+        _decap("LEFT", 0.0),
+        power_x_um=-450.0,
+        ground_x_um=1_550.0,
+    )
+    right = replace(
+        _decap("RIGHT", 0.0),
+        power_x_um=450.0,
+        ground_x_um=2_450.0,
+    )
+    upper = replace(_decap("UPPER", 450.0), ground_x_um=2_000.0)
+    result = extract_shared_pad_connectivity(
+        (center, left, right, upper),
+        (
+            _via("VP", "VDD", 0.0, 0.0),
+            _via("VG", "DGND", 2_000.0, 0.0),
+        ),
+        PADSTACKS,
+        top_layer=TOP,
+        top_copper_geometries=(
+            _top_copper("VDD", (_rectangle(-650.0, -200.0, 650.0, 650.0),)),
+            _top_copper(
+                "DGND",
+                (_rectangle(1_350.0, -200.0, 2_650.0, 650.0),),
+            ),
+        ),
+    )
+
+    cluster = result.clusters[0]
+    assert cluster.state == "ANCHORED"
+    assert set(cluster.member_refdes) == {"CENTER", "LEFT", "RIGHT", "UPPER"}
+    assert cluster.isolation_gap_refdes == ()
+
+
 def test_non_rectangular_copper_cluster_is_atomic_for_isolation_gaps() -> None:
     polygon = (
         (-200.0, -200.0),
@@ -1437,3 +1574,32 @@ def test_missing_terminal_padstack_fails_closed_without_crashing() -> None:
 
     assert result.connections[0].kind == "UNRESOLVED"
     assert "no source padstack" in str(result.connections[0].reason)
+
+
+def test_lower_left_box_strip_bridges_separated_pads_and_promotes_dummy() -> None:
+    small = {
+        "cap": (SpdPadShape(TOP, "RECTANGLE", 200.0, 200.0),),
+        "via": (SpdPadShape(TOP, "CIRCLE", 100.0, 100.0),),
+    }
+    evidence = tuple(
+        replace(
+            _decap(refdes, y),
+            power_padstack="CAP",
+            ground_padstack="CAP",
+        )
+        for refdes, y in (("C1", 0.0), ("C2", 230.0), ("C3", 460.0))
+    )
+    result = extract_shared_pad_connectivity(
+        evidence,
+        (_via("VP1", "VDD", 0.0, 0.0), _via("VP3", "VDD", 0.0, 460.0),
+         _via("VG1", "DGND", 600.0, 0.0), _via("VG3", "DGND", 600.0, 460.0)),
+        small,
+        top_layer=TOP,
+        top_copper_geometries=(
+            _top_copper("VDD", (_rectangle(-150.0, -150.0, 150.0, 610.0),)),
+            _top_copper("DGND", (_rectangle(450.0, -150.0, 750.0, 610.0),)),
+        ),
+    )
+    assert result.connections[1].kind == "SHARED_DUMMY"
+    assert result.connections[0].cluster_id == result.connections[1].cluster_id
+    assert result.connections[2].cluster_id == result.connections[1].cluster_id

@@ -1,8 +1,11 @@
-# SPD Decap PI Evaluator v0.22.2
+# SPD Decap PI Evaluator v0.22.3
 
-> **v0.22.2 makes De-cap Distribution use an explicit vertical-VIA planning assumption.** Every source-classified physical PWR landing is projected straight down at its immutable XY to every retained destination PWR plane. MLO lateral/short-span transition evidence is preserved as source provenance but no longer blocks Distribution. Exact destination copper/void/boundary checks, optional signal-Trace protection, shared-pad topology, isolation gaps, and the selected gap-distance objective still apply. This is placement planning, not fabricated-path, DRC, SI, or manufacturing sign-off. The title bar identifies the application as **SPD Decap PI Evaluator v0.22.2**.
+> **v0.22.3 is a PowerSI import and UI hotfix.** It retains the v0.22.2
+> vertical-VIA Distribution policy while correcting PowerNets inventory,
+> PowerSI Box geometry, and the Evaluation/Distribution editing UI. The title
+> bar identifies the application as **SPD Decap PI Evaluator v0.22.3**.
 
-> 프로그램: **SPD Decap PI Evaluator v0.22.2**
+> 프로그램: **SPD Decap PI Evaluator v0.22.3**
 > 저장소: 기존 PI Calculator와 분리된 독립 프로그램
 > 해석 경계: 선택한 PWR rail의 pre-design `Zii`; 최종 PowerSI/SIwave 검증을 대체하지 않음
 
@@ -10,6 +13,26 @@
 모델, enabled/disabled 상태를 바꾸면서 PI Evaluation 결과를 비교하는 Windows
 desktop 프로그램이다. Stackup, MLO 크기 또는 plane을 새로 작성하는 기능과
 Optimization Mode는 포함하지 않는다.
+
+## v0.22.3 hotfix
+
+- Evaluation imports the full physical PowerNets inventory, including
+  positive-plane rails marked unselected for the source PowerSI simulation;
+  `selected_pi` analysis and GroundNets selection remain unchanged.
+- The Evaluation PWR NET picker uses the available right-panel width while
+  keeping its visible label and vertical splitter behavior.
+- The detached De-cap Distribution matrix edits `Target` and `Tolerance (%)`
+  directly through the main window's canonical validation state; XLSX
+  import/export remains optional.
+- PowerSI `Box` primitives now use their start-corner plus width/height
+  coordinates, restoring shared-pad classification for separated pads bridged
+  by Box copper.
+- Isolation-gap authorization is now evaluated per exact local final-copper
+  component. Multiple remote Box islands on one NET no longer suppress a
+  clean collinear single-Box chain, while local voids, touching/tiled
+  primitives, branches, and ambiguous geometry remain fail-closed.
+- Distribution methodology: [Korean Markdown](docs/DECAP_DISTRIBUTION_RULES.md)
+  · [responsive offline HTML](docs/DECAP_DISTRIBUTION_RULES.companion.html)
 
 ## v0.22.2 vertical-VIA Distribution policy
 
@@ -132,7 +155,7 @@ See [the research and implementation directive](docs/DECAP_DISTRIBUTION_SIGNAL_T
 - Distribution 결과의 전체 Decap을 `Component`, `REFDES`, `Before NET`, `After NET`, `X`, `Y` 열 CSV 또는 Excel로 내보내며, 희생 cell은 `UNUSED (ISOLATION GAP)`으로 기록하고 Excel의 두 번째 sheet에는 계산 당시 `PWR NET Distribution Targets` 표와 input inventory reconciliation을 보존
 - 새 Distribution Excel은 source SPD SHA-256, design fingerprint, revision, 후보 순서, optimization policy/effective gap penalty, `Via Projection Policy`와 프로그램 버전을 두 번째 sheet에 함께 기록하며, 변경 대상 rail의 기존 unresolved connection은 해석 차단 경고로 별도 표시
 - 원본 source TOP copper 경로가 없는 구형 V2 scenario에서는 Distribution을 fail-closed로 차단하고 원본 SPD 재열기를 안내하며, 변경된 배치는 별도 `.spdpi`로 저장
-- De-cap Distribution의 수량·PWR plane/VIA·shared-pad/dummy·isolation-gap·부분 충족·Apply·입출력 규칙은 [`docs/DECAP_DISTRIBUTION_RULES.md`](docs/DECAP_DISTRIBUTION_RULES.md)에 명시하고, 지정된 실파일 검증 결과는 [`docs/DECAP_DISTRIBUTION_VALIDATION_2026-08-06.md`](docs/DECAP_DISTRIBUTION_VALIDATION_2026-08-06.md)에 기록
+- De-cap Distribution의 수량·PWR plane/VIA·shared-pad/dummy·isolation-gap·부분 충족·Apply·입출력 규칙은 [Markdown 방법론](docs/DECAP_DISTRIBUTION_RULES.md)과 [반응형 오프라인 HTML](docs/DECAP_DISTRIBUTION_RULES.companion.html)에 명시하고, 지정된 실파일 검증 결과는 [`docs/DECAP_DISTRIBUTION_VALIDATION_2026-08-06.md`](docs/DECAP_DISTRIBUTION_VALIDATION_2026-08-06.md)에 기록
 - Selection, Evaluation, AI Assist, De-cap Distribution의 내부 section 높이를 선명한 가로 splitter bar로 조절
 - 선택한 Tuned PWR NET 한 개를 명시적으로 분석하는 evidence-grounded Local AI Plot Analyst
 - 원본 SPD를 포함하지 않는 hash 검증 `.spdpi` scenario 저장/재열기
@@ -172,7 +195,7 @@ powershell.exe -ExecutionPolicy Bypass -NoProfile -File .\scripts\build_spd_deca
 산출물:
 
 - `dist\SPDDecapPIEvaluator\SPDDecapPIEvaluator.exe`
-- `installer-output\SPDDecapPIEvaluatorSetup-0.22.2.exe`
-- `installer-output\SPDDecapPIEvaluatorSetup-0.22.2.exe.sha256`
+- `installer-output\SPDDecapPIEvaluatorSetup-0.22.3.exe`
+- `installer-output\SPDDecapPIEvaluatorSetup-0.22.3.exe.sha256`
 
 프로그램명과 버전은 title bar와 installer metadata에 함께 표시된다.

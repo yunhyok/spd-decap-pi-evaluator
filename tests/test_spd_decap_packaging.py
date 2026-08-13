@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from hashlib import sha256
 from pathlib import Path
 import tomllib
 
@@ -18,10 +19,10 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 
 def test_spd_decap_release_identity_is_explicit_and_versioned() -> None:
     assert APP_NAME == "SPD Decap PI Evaluator"
-    assert __version__ == "0.22.2"
-    assert APP_DISPLAY_NAME == "SPD Decap PI Evaluator v0.22.2"
+    assert __version__ == "0.22.3"
+    assert APP_DISPLAY_NAME == "SPD Decap PI Evaluator v0.22.3"
     assert EXECUTABLE_BASENAME == "SPDDecapPIEvaluator"
-    assert INSTALLER_BASENAME == "SPDDecapPIEvaluatorSetup-0.22.2"
+    assert INSTALLER_BASENAME == "SPDDecapPIEvaluatorSetup-0.22.3"
 
 
 def test_spd_decap_console_and_packaging_metadata_are_consistent() -> None:
@@ -90,13 +91,36 @@ def test_windows_version_resource_matches_release_identity() -> None:
     version_info = (
         REPO_ROOT / "packaging" / "spd_decap_pi_version_info.txt"
     ).read_text(encoding="utf-8")
-    assert "filevers=(0, 22, 2, 0)" in version_info
-    assert "prodvers=(0, 22, 2, 0)" in version_info
-    assert "StringStruct('FileVersion', '0.22.2')" in version_info
-    assert "StringStruct('ProductVersion', '0.22.2')" in version_info
+    assert "filevers=(0, 22, 3, 0)" in version_info
+    assert "prodvers=(0, 22, 3, 0)" in version_info
+    assert "StringStruct('FileVersion', '0.22.3')" in version_info
+    assert "StringStruct('ProductVersion', '0.22.3')" in version_info
 
 
 def test_packaged_numerical_path_imports_threadpoolctl() -> None:
     """The declared BLAS limiter is available through the production service."""
 
     assert core_services.threadpool_limits is not None
+
+
+def test_distribution_methodology_docs_are_current_offline_and_linked() -> None:
+    markdown_path = REPO_ROOT / "docs" / "DECAP_DISTRIBUTION_RULES.md"
+    html_path = REPO_ROOT / "docs" / "DECAP_DISTRIBUTION_RULES.companion.html"
+    markdown = markdown_path.read_text(encoding="utf-8")
+    html = html_path.read_text(encoding="utf-8")
+    readme = (REPO_ROOT / "README.md").read_text(encoding="utf-8")
+    source_hash = sha256(markdown_path.read_bytes()).hexdigest()
+
+    assert "SPD Decap PI Evaluator v0.22.3" in markdown
+    assert "로컬 final component" in markdown
+    assert "NO_ZERO_GAP_EXACT_COUNT_COMBINATION" in markdown
+    assert "exact 15 + 3 + gap 1" in markdown
+    assert '<html lang="ko">' in html
+    assert '<meta charset="utf-8">' in html
+    assert "SPD Decap PI Evaluator v0.22.3" in html
+    assert f'content="{source_hash}"' in html
+    assert html.count('<svg viewBox=') >= 3
+    assert html.count('role="img"') >= 3
+    assert "http://" not in html and "https://" not in html
+    assert "docs/DECAP_DISTRIBUTION_RULES.md" in readme
+    assert "docs/DECAP_DISTRIBUTION_RULES.companion.html" in readme

@@ -47,6 +47,7 @@ from spd_decap_pi._core.io.spd import SpdPlaneGeometry
 from spd_decap_pi.eligibility import PlaneEligibilityIndex
 from spd_decap_pi.scenario import (
     DecapConnectionKind,
+    DecapPadState,
     RailEligibility,
     RoutingObstacleAssetRef,
     ScenarioDecap,
@@ -396,6 +397,96 @@ def _shared_chain_scenario() -> ScenarioSpec:
             clusters=(cluster,),
         ),
         revision=9,
+    )
+
+
+def _gap_fulfillment_competition_scenario() -> ScenarioSpec:
+    rail_ids = ("R1", "R2")
+    eligibility = {rail_id: _eligibility(rail_id) for rail_id in rail_ids}
+    decaps: list[ScenarioDecap] = []
+    connections: dict[str, ScenarioDecapConnection] = {}
+    clusters: list[SharedPadCluster] = []
+
+    def add_cluster(
+        cluster_id: str,
+        count: int,
+        start_x_um: float,
+        *,
+        authorize_gaps: bool,
+        anchors_at_both_ends: bool = False,
+    ) -> None:
+        refs = tuple(f"{cluster_id}_{index:02d}" for index in range(count))
+        anchor_refs = (
+            (refs[0], refs[-1]) if anchors_at_both_ends else (refs[0],)
+        )
+        for index, refdes in enumerate(refs):
+            decaps.append(_decap(refdes, start_x_um + index, rail_ids))
+            is_anchor = refdes in anchor_refs
+            connections[refdes] = ScenarioDecapConnection(
+                refdes=refdes,
+                kind=(
+                    DecapConnectionKind.SHARED_ANCHOR
+                    if is_anchor
+                    else DecapConnectionKind.SHARED_DUMMY
+                ),
+                cluster_id=cluster_id,
+                power_vias=(
+                    _via(f"VP-{refdes}", "V1", start_x_um + index),
+                )
+                if is_anchor
+                else (),
+                ground_vias=(
+                    _via(f"VG-{refdes}", "DGND", start_x_um + index),
+                )
+                if is_anchor
+                else (),
+            )
+        edges = tuple(zip(refs, refs[1:]))
+        clusters.append(
+            SharedPadCluster(
+                cluster_id=cluster_id,
+                state=SharedPadClusterState.ANCHORED,
+                member_refdes=refs,
+                anchor_refdes=anchor_refs,
+                dummy_refdes=tuple(ref for ref in refs if ref not in anchor_refs),
+                power_net="V1",
+                ground_net="DGND",
+                layer="TOP",
+                power_edges=edges,
+                ground_edges=edges,
+                isolation_gap_refdes=refs if authorize_gaps else (),
+                eligibility=eligibility,
+                via_eligibility={
+                    f"VP-{refdes}": dict(eligibility) for refdes in anchor_refs
+                },
+            )
+        )
+
+    add_cluster("ATOM15", 15, 100.0, authorize_gaps=False)
+    add_cluster("ATOM16", 16, 10_000.0, authorize_gaps=False)
+    add_cluster(
+        "CHAIN7",
+        7,
+        0.0,
+        authorize_gaps=True,
+        anchors_at_both_ends=True,
+    )
+    return ScenarioSpec(
+        source=SourceIdentity(
+            path="C:/fixture/gap-fulfillment.spd",
+            name="gap-fulfillment.spd",
+            size_bytes=400,
+            sha256="9" * 64,
+        ),
+        normalized_project=_project(rail_ids, bump_x={"R2": 0.0}),
+        decaps=decaps,
+        connection_analysis=SharedPadConnectionAnalysis(
+            version=SHARED_PAD_ANALYSIS_VERSION,
+            source_sha256="9" * 64,
+            connections=connections,
+            clusters=tuple(clusters),
+        ),
+        revision=11,
     )
 
 
@@ -3810,12 +3901,67 @@ def test_shared_pad_optimizer_avoids_dummy_residual_and_applies_once() -> None:
         "D1": "R1",
         "A2": "R1",
     }
-    assert next(item for item in changed.decaps if item.refdes == "D1").pad_state.value == "ISOLATION_GAP"
+    assert (
+        next(item for item in changed.decaps if item.refdes == "D1").pad_state.value
+        == "ISOLATION_GAP"
+    )
     assert not next(item for item in changed.decaps if item.refdes == "D1").enabled
     d1_export = next(item for item in plan.export_rows if item.refdes == "D1")
     assert d1_export.previous_net == "V1"
     assert d1_export.new_net == "UNUSED (ISOLATION GAP)"
     assert scenario.revision == 9
+
+
+def test_fulfillment_prefers_exact_15_plus_3_with_gap_over_zero_gap_16() -> None:
+    scenario = _gap_fulfillment_competition_scenario()
+    targets = {("R1", "M1"): 19, ("R2", "M1"): 18}
+    analysis = scenario.connection_analysis
+    assert analysis is not None
+    no_gap_clusters = tuple(
+        cluster.model_copy(update={"isolation_gap_refdes": ()})
+        for cluster in analysis.clusters
+    )
+    no_gap_scenario = scenario.model_copy(
+        update={
+            "connection_analysis": analysis.model_copy(
+                update={"clusters": no_gap_clusters}
+            )
+        }
+    )
+
+    zero_gap = compute_distribution_plan(no_gap_scenario, targets)
+    exact = compute_distribution_plan(scenario, targets)
+
+    assert zero_gap.status == DistributionPlanStatus.PARTIAL
+    assert zero_gap.fulfilled_count == 16
+    assert set(zero_gap.assignment_map) == {
+        f"ATOM16_{index:02d}" for index in range(16)
+    }
+    assert zero_gap.isolation_gap_refdes == ()
+    assert _cell(zero_gap, "R1").actual_count == 22
+
+    assert exact.status == DistributionPlanStatus.FULL
+    assert exact.fulfilled_count == 18
+    assert exact.assignment_map == {
+        **{f"ATOM15_{index:02d}": "R2" for index in range(15)},
+        **{f"CHAIN7_{index:02d}": "R2" for index in range(3)},
+    }
+    assert exact.isolation_gap_refdes == ("CHAIN7_03",)
+    assert scenario.connection_analysis.connections["CHAIN7_03"].power_vias == ()
+    assert _cell(exact, "R1").actual_count == 19
+    assert _cell(exact, "R1").sacrificed_count == 1
+    assert _cell(exact, "R2").actual_count == 18
+
+    changed = apply_distribution_plan(scenario, exact)
+    by_refdes = {item.refdes: item for item in changed.decaps}
+    assert not by_refdes["CHAIN7_03"].enabled
+    assert by_refdes["CHAIN7_03"].pad_state == DecapPadState.ISOLATION_GAP
+    assert {by_refdes[f"CHAIN7_{index:02d}"].current_rail_id for index in range(3)} == {
+        "R2"
+    }
+    assert {by_refdes[f"CHAIN7_{index:02d}"].current_rail_id for index in range(4, 7)} == {
+        "R1"
+    }
 
 
 def test_shared_component_needs_one_eligible_physical_power_via_root() -> None:

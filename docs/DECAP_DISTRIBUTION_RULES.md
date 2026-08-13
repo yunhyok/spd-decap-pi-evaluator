@@ -1,6 +1,6 @@
 # De-cap Distribution 변동 규칙
 
-> 적용 프로그램: **SPD Decap PI Evaluator v0.22.2**
+> 적용 프로그램: **SPD Decap PI Evaluator v0.22.3**
 >
 > 문서 상태: 현재 구현 및 회귀 테스트에 대응하는 동작 규칙
 >
@@ -27,7 +27,22 @@
    connectivity/modelability 상태와 동일하지 않다. Apply 후 Evaluation은 Original과
    Tuned/current 양쪽을 별도 preflight한다.
 
-## 1.1 Immutable signal routing 보호 옵션 (v0.22.0)
+## 1.1 v0.22.3 source/UI hotfix와 방법론 영향
+
+- PowerSI의 simulation selection은 Evaluation 대상 선택 metadata일 뿐 물리
+  PowerNets inventory가 아니다. `decap_scenario` import는 PowerNets group의 실제
+  positive-plane rail을 모두 보존하고, `selected_pi`와 GroundNets 선택 의미는
+  그대로 유지한다.
+- PowerSI `Box`는 중심점이 아니라 **시작 모서리 X/Y + width/height**이다. 이 좌표
+  해석으로 분리된 terminal pad 사이를 잇는 source TOP copper strip을 정확히
+  복원한다.
+- Evaluation의 PWR NET picker는 form 전체 폭을 사용한다. 분리된 Distribution
+  창에서도 `Target`과 `Tolerance (%)`를 직접 편집하지만, 값과 검증 상태의 단일
+  원본은 메인 표이다.
+- 위 UI 변경은 후보 물리 적격성이나 optimizer 우선순위를 바꾸지 않는다. Box
+  수정과 local separator certificate만 source-backed topology 증거를 바로잡는다.
+
+## 1.2 Immutable signal routing 보호 옵션 (v0.22.0)
 
 - 기본값은 `OFF`이며 routing asset decode/collision filter를 완전히 우회하고 v0.21.0의 plane-containment/MILP 의미를 유지한다. v0.22.0은 보호 상태와 무관하게 선택된 exact 목적층 metadata를 기록한다.
 - `ON`이면 사용자가 `Trace-to-via clearance (µm)`를 직접 입력한다. 값은 finite, `>= 0`이어야 한다.
@@ -191,6 +206,13 @@ Distribution은 현재 형식의 source TOP shared-pad 연결 분석과 source-c
 physical PWR VIA landing을 필요로 한다. 분석 버전이 오래되거나 PWR landing이 없는
 경우에는 추정 계산을 하지 않고 hash-matched 원본 SPD를 다시 열어 분석하도록 요구한다.
 
+### 5.4 Destination eligibility와 source cell 역할은 별도 조건
+
+Candidate Audit의 `Eligible = true`는 해당 cluster/De-cap이 목적 rail의 exact
+copper·VIA root 조건을 만족한다는 뜻이다. 이것만으로 이동 변수가 생기지는 않는다.
+현재 source cell이 `DONOR`이거나 실제 allowance가 있는 `EXCHANGE`여야 하며,
+`UNCHANGED` 또는 `RECEIVER` source cell에서는 목적지 적격성이 있어도 공여하지 않는다.
+
 ## 6. Shared-pad cluster 및 dummy 규칙
 
 ### 6.1 Cluster 연결 근거
@@ -230,10 +252,24 @@ pad가 필요하다.
 Isolation gap으로 사용할 수 있는 cell은 다음 조건을 모두 만족해야 한다.
 
 1. anchored shared-pad cluster의 member이다.
-2. source TOP copper가 해당 cell을 제거하면 collinear PWR path를 분리할 수 있다고
-   입증하여 cluster의 `isolation_gap_refdes`에 포함했다.
+2. source TOP copper의 **로컬 final component**가 하나의 untouched axis-aligned
+   positive rectangle임을 입증하고, 그 위 pad 중심이 collinear path를 이루어 해당
+   cell 제거로 PWR path를 분리할 수 있으므로 cluster의
+   `isolation_gap_refdes`에 포함했다.
 3. 해당 source cell의 역할이 DONOR 또는 허용량이 남은 EXCHANGE이다.
 4. 같은 cell에 NET assignment와 isolation gap을 동시에 적용하지 않는다.
+
+NET 전체에 서로 떨어진 positive `Box`가 여러 개 있어도 각 cluster가 놓인 local
+final component가 정확히 하나의 untouched Box이면 인증할 수 있다. 반대로 다음은
+연결 membership을 알 수 있더라도 separator 인증을 주지 않는다.
+
+- local component에 void/subtraction 또는 ordered re-add가 있음
+- 둘 이상의 positive rectangle이 겹치거나 edge로 맞닿아 한 component를 만듦
+- non-rectangular/circular/unsupported primitive 또는 boundary-only 접촉이 있음
+- pad 중심이 collinear가 아니거나 source PWR edge가 단순 path가 아닌 branch임
+
+즉 원격 disjoint Box는 로컬 증명을 방해하지 않지만, 로컬 ambiguity를 heuristic으로
+허용하지 않는다.
 
 Isolation gap을 적용한 cell은 `enabled = false`, `pad_state = ISOLATION_GAP`이 되고
 그 cell과 incident PWR edge를 topology에서 제거한다. 단순 disabled/DNP는 pad
@@ -308,6 +344,20 @@ BALANCED 정책에서는 gap 수가 distance와 별도의 strict 선행 조건�
 penalty를 통해 함께 비교된다. 예를 들어 한 gap을 추가해도 절약되는 total distance가
 effective penalty보다 크면 gap 1개 후보가 gap 0개 후보보다 우선할 수 있다.
 `MIN_GAPS`에서만 gap 수가 distance보다 항상 먼저 적용된다.
+
+따라서 모든 정책에서 **receiver 충족 수량**이 첫 단계다. gap이 0개인 16개 결과와
+source-proven gap 1개를 사용하는 18개 결과가 모두 유효하면 18개가 먼저 선택된다.
+그 뒤에만 정책별 gap/relabel/distance 순서를 적용한다. `MIN_GAPS`의 전체 순서는
+`fulfillment → gap 수 → active relabel 수 → distance → canonical`이며,
+BALANCED 정책의 전체 순서는 위 1~5항과 같다.
+
+### Candidate Audit의 범위
+
+Candidate Audit의 atom 크기와 `NO_ZERO_GAP_EXACT_COUNT_COMBINATION`은 source PWR
+edge를 끊지 않은 **zero-gap connected atom subset**만 설명한다. 이 코드는 해당
+atom이 zero-gap exact-count 조합에 들어갈 수 없다는 뜻이지, 인증된 separator를
+사용하는 최종 MILP까지 불가능하다는 뜻이 아니다. 최종 `Selected`, assignment,
+`Isolation Gaps`, `Actual Delta`가 전체 topology/role/target 제약을 푼 plan의 결과다.
 
 ### 시간 제한과 최적성 표시
 
@@ -536,6 +586,29 @@ PWR_B의 Present와 Target이 1,000개이고 Tolerance가 1%이면 최대 10개�
 `Sacrificed = 1`, `Received = 10`과 같이 구성해야 하며, 10개를 보내고 gap 1개를
 추가하는 11개 turnover는 허용하지 않는다.
 
+### Case E: zero-gap 16보다 exact 15 + 3 + gap 1 우선
+
+Receiver가 18개를 요구하고 다음 후보가 있다고 가정한다.
+
+- 변경 가능한 whole atom: 15개
+- 변경 가능한 zero-gap whole atom: 16개
+- 양 끝에 적격 anchor가 있는 7-cell collinear chain
+
+gap 인증이 없으면 whole atom 조합으로 만들 수 있는 최대값은 16이므로
+`PARTIAL 16/18`이다. 7-cell chain의 local single-Box separator가 source에서
+인증되면, 15개 atom 전체와 chain 앞 3개를 receiver로 이동하고 네 번째 via-less
+dummy cell 하나를 gap으로 만들 수 있다. 뒤 3개는 반대쪽 source anchor에 rooted된
+채 남는다.
+
+```text
+zero-gap:  [ atom 16 ]                           = 16 / 18
+exact-gap: [ atom 15 ] + [ move 3 ][ gap ][keep] = 18 / 18
+```
+
+Donor는 이동 18개와 희생 1개를 감당해도 Target lower bound를 만족해야 한다.
+이 조건과 양쪽 PWR/GND rooted-component 검증을 통과하면 fulfillment 1순위 때문에
+exact 18 결과가 선택되고, gap penalty는 그 18개 해들 사이에서만 비교된다.
+
 ## 14A. 수직 VIA projection 가정
 
 Distribution에서는 source SPD 연결 분석으로 확인된 물리적인 TOP-side PWR VIA
@@ -583,6 +656,9 @@ dummy는 독립 PWR root를 만들지 않고 기존 anchored shared-pad rule을 
 - [`tests/test_spd_decap_scenario_edits.py`](../tests/test_spd_decap_scenario_edits.py)
 - [`tests/test_shared_pad_cluster_core.py`](../tests/test_shared_pad_cluster_core.py)
 - [`tests/test_spd_shared_pad.py`](../tests/test_spd_shared_pad.py)
+- disjoint local Box separator와 15+3 exact fulfillment 회귀:
+  [`tests/test_spd_shared_pad.py`](../tests/test_spd_shared_pad.py),
+  [`tests/test_spd_decap_distribution.py`](../tests/test_spd_decap_distribution.py)
 - [`tests/test_spd_decap_spd_adapter.py`](../tests/test_spd_decap_spd_adapter.py)
 - [`tests/test_spd_decap_eligibility.py`](../tests/test_spd_decap_eligibility.py)
 - [`tests/test_spd_decap_evaluation.py`](../tests/test_spd_decap_evaluation.py)

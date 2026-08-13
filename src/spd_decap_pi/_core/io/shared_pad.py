@@ -1442,8 +1442,8 @@ def _rectangular_copper_memberships(
     rectangles: Sequence[
         tuple[CopperPrimitiveKind, tuple[float, float, float, float]]
     ],
-) -> tuple[tuple[set[int], ...], set[int]] | None:
-    """Return exact final-fill components for ordered rectangular booleans.
+) -> tuple[tuple[set[int], ...], set[int], tuple[set[int], ...]] | None:
+    """Return exact final-fill components and local separator certificates.
 
     Coordinate compression turns every source edge into a grid line.  Boolean
     fill is constant inside each open cell, so four-neighbour components are
@@ -1451,6 +1451,9 @@ def _rectangular_copper_memberships(
     intentionally not conductive, while adjacent tile edges join naturally.
     Potential positive-rectangle components are processed independently to
     keep thousands of short production clusters linear in practice.
+
+    Separator certification is deliberately stricter: a local component must
+    be one untouched positive rectangle with collinear terminal centers.
     """
 
     positive = [
@@ -1459,7 +1462,7 @@ def _rectangular_copper_memberships(
         if kind.startswith("positive_")
     ]
     if not positive:
-        return (), set()
+        return (), set(), ()
 
     parents = list(range(len(positive)))
 
@@ -1530,6 +1533,7 @@ def _rectangular_copper_memberships(
 
     shapes_by_owner = {shape.owner_index: shape for shape in shapes}
     groups: list[set[int]] = []
+    separator_groups: list[set[int]] = []
     # A terminal can meet more than one disjoint source-positive component.
     # Keep area membership and closure-only contact separate until every
     # component has been considered: positive overlap with one component must
@@ -1645,10 +1649,31 @@ def _rectangular_copper_memberships(
                     members_by_cell_component.setdefault(component, set()).add(owner)
             elif boundary_contact:
                 boundary_candidates.add(owner)
-        groups.extend(
-            members for members in members_by_cell_component.values() if len(members) >= 2
-        )
-    return tuple(groups), boundary_candidates - positive_owners
+        local_groups = [
+            members
+            for members in members_by_cell_component.values()
+            if len(members) >= 2
+        ]
+        groups.extend(local_groups)
+
+        # A separator certificate is stronger than a connectivity certificate.
+        # Other disjoint Box primitives on the same NET are irrelevant, but the
+        # local final component must come from exactly one untouched positive
+        # rectangle.  Any local subtraction, re-add, overlap, or edge-connected
+        # tile keeps the membership proof while withholding gap authorization.
+        if len(positive_indices) == 1 and len(local_groups) == 1:
+            source_primitive_index = positive[positive_indices[0]][0]
+            if (
+                relevant_indices == [source_primitive_index]
+                and rectangles[source_primitive_index][0] == "positive_polygon"
+                and _collinear_pad_centers(local_groups[0], shapes)
+            ):
+                separator_groups.append(local_groups[0])
+    return (
+        tuple(groups),
+        boundary_candidates - positive_owners,
+        tuple(separator_groups),
+    )
 
 
 def _segment_boundary_parameters(
@@ -1941,18 +1966,10 @@ def _copper_memberships(
                 rectangular,
             )
             if exact is not None:
-                exact_groups, exact_boundary = exact
+                exact_groups, exact_boundary, exact_separators = exact
                 groups.extend(exact_groups)
                 boundary_owners.update(exact_boundary)
-                if (
-                    len(rectangular) == 1
-                    and rectangular[0][0] == "positive_polygon"
-                ):
-                    separator_groups.extend(
-                        group
-                        for group in exact_groups
-                        if _collinear_pad_centers(group, shapes)
-                    )
+                separator_groups.extend(exact_separators)
                 continue
 
         primitive_bounds_by_index = tuple(
