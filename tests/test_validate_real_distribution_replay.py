@@ -127,6 +127,62 @@ def test_plan_analysis_reports_nonzero_cells_and_diagnostic_shortfall() -> None:
     json.dumps(report)
 
 
+def test_replay_artifact_workbook_uses_current_tolerance_metadata(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    replay = _replay_module()
+    captured: dict[str, object] = {}
+    scenario = SimpleNamespace(source=SimpleNamespace(sha256="a" * 64))
+    plan = SimpleNamespace(
+        input_design_fingerprint="design-fingerprint",
+        distance_mode=SimpleNamespace(value="NEAREST"),
+        optimization_policy=SimpleNamespace(value="BALANCED_AUTO"),
+        effective_gap_penalty_um=1_000.0,
+    )
+
+    monkeypatch.setattr(
+        replay,
+        "save_scenario",
+        lambda _scenario, path, *, attachments: path,
+    )
+    monkeypatch.setattr(
+        replay,
+        "distribution_target_table",
+        lambda _plan: (("PWR NET",), (("VDD",),)),
+    )
+    monkeypatch.setattr(
+        replay,
+        "distribution_inventory_table",
+        lambda _plan: (("RefDes",), (("C1",),)),
+    )
+    monkeypatch.setattr(
+        replay,
+        "distribution_csv_rows",
+        lambda _plan: (("header",), ("row",)),
+    )
+
+    def capture_workbook(_path: Path, *_args: object, **kwargs: object) -> None:
+        captured.update(kwargs)
+
+    monkeypatch.setattr(replay, "write_distribution_workbook", capture_workbook)
+
+    _, workbook_path = replay._write_artifacts(tmp_path, scenario, {}, plan)
+
+    assert workbook_path == tmp_path / "distribution-replay.xlsx"
+    assert captured["metadata"] == {
+        "Format Version": replay.DISTRIBUTION_WORKBOOK_FORMAT_VERSION,
+        "Signal Routing Protection": "OFF",
+        "Tolerance Semantics": replay.DISTRIBUTION_TOLERANCE_SEMANTICS,
+        "Source SPD SHA-256": "a" * 64,
+        "Input Design Fingerprint": "design-fingerprint",
+        "Distance Mode": "NEAREST",
+        "Optimization Policy": "BALANCED_AUTO",
+        "Via Projection Policy": replay.DISTRIBUTION_VIA_PROJECTION_POLICY,
+        "Effective Gap Penalty (um)": 1_000.0,
+    }
+
+
 def test_ordered_artwork_rejects_negative_primitive_before_positive_copper() -> None:
     replay = _replay_module()
     payload = {

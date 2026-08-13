@@ -38,7 +38,11 @@ from spd_decap_pi.distribution import (
     distribution_target_table,
     validate_distribution_targets,
 )
-from spd_decap_pi.distribution_workbook import load_distribution_targets
+from spd_decap_pi.distribution_workbook import (
+    DISTRIBUTION_TOLERANCE_SEMANTICS,
+    DISTRIBUTION_WORKBOOK_FORMAT_VERSION,
+    load_distribution_targets,
+)
 from spd_decap_pi.scenario import ScenarioSpec, derive_shared_pad_current_components
 from spd_decap_pi.scenario_io import load_scenario_bundle, save_scenario
 from spd_decap_pi.spd_adapter import import_spd_scenario, verify_scenario_source
@@ -402,7 +406,9 @@ def _write_artifacts(directory: Path, scenario: ScenarioSpec, attachments: Mappi
     inventory_headers, inventory_rows = distribution_inventory_table(plan)
     workbook_path = directory / "distribution-replay.xlsx"
     metadata: dict[str, object] = {
-        "Format Version": 3,
+        "Format Version": DISTRIBUTION_WORKBOOK_FORMAT_VERSION,
+        "Signal Routing Protection": "OFF",
+        "Tolerance Semantics": DISTRIBUTION_TOLERANCE_SEMANTICS,
         "Source SPD SHA-256": scenario.source.sha256,
         "Input Design Fingerprint": plan.input_design_fingerprint,
         "Distance Mode": plan.distance_mode.value,

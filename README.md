@@ -1,11 +1,11 @@
-# SPD Decap PI Evaluator v0.22.3
+# SPD Decap PI Evaluator v0.22.4
 
-> **v0.22.3 is a PowerSI import and UI hotfix.** It retains the v0.22.2
-> vertical-VIA Distribution policy while correcting PowerNets inventory,
-> PowerSI Box geometry, and the Evaluation/Distribution editing UI. The title
-> bar identifies the application as **SPD Decap PI Evaluator v0.22.3**.
+> **v0.22.4 adds tolerance-enabled directional turnover.** It retains the
+> v0.22.3 PowerSI import, Box geometry, and UI hotfixes while allowing bounded
+> replacement counterflow for donor and receiver cells. The title bar
+> identifies the application as **SPD Decap PI Evaluator v0.22.4**.
 
-> 프로그램: **SPD Decap PI Evaluator v0.22.3**
+> 프로그램: **SPD Decap PI Evaluator v0.22.4**
 > 저장소: 기존 PI Calculator와 분리된 독립 프로그램
 > 해석 경계: 선택한 PWR rail의 pre-design `Zii`; 최종 PowerSI/SIwave 검증을 대체하지 않음
 
@@ -13,6 +13,29 @@
 모델, enabled/disabled 상태를 바꾸면서 PI Evaluation 결과를 비교하는 Windows
 desktop 프로그램이다. Stackup, MLO 크기 또는 plane을 새로 작성하는 기능과
 Optimization Mode는 포함하지 않는다.
+
+## v0.22.4 tolerance-enabled directional turnover
+
+- `Tolerance (%)` is orthogonal to the Target relation. Donors may receive
+  bounded replacements, receivers may release bounded existing parts while
+  receiving their demand, equal-target cells remain count-neutral exchanges,
+  and 0% preserves the prior directional behavior.
+- Receiver fulfillment is measured as net final progress
+  (`Received - Sent - Isolation Gaps`), so send/receive cycling cannot inflate
+  the primary objective. Fulfillment still precedes gap count, move count, and
+  distance in the lexicographic optimizer.
+- Three-or-more-NET handoffs are supported when they improve net fulfillment;
+  two-NET churn with no net benefit is removed by the move-minimization stage.
+- The detached Distribution matrix supports same-field multi-selection bulk
+  edits for Target and decimal Tolerance, with one canonical validation and
+  preview invalidation per committed batch.
+- Distribution workbook format 5 records
+  `Tolerance Semantics = TARGET_RELATION_COUNTERFLOW_V1`, explicit routing
+  protection `ON`/`OFF`, and Sent/Received/Isolation Gaps/net result evidence.
+  Legacy formats 1-4 fail closed if a target-changing cell contains nonzero
+  tolerance, requiring a format-5 re-export and explicit re-entry.
+- Distribution methodology: [Korean Markdown](docs/DECAP_DISTRIBUTION_RULES.md)
+  · [responsive offline HTML](docs/DECAP_DISTRIBUTION_RULES.companion.html)
 
 ## v0.22.3 hotfix
 
@@ -195,7 +218,7 @@ powershell.exe -ExecutionPolicy Bypass -NoProfile -File .\scripts\build_spd_deca
 산출물:
 
 - `dist\SPDDecapPIEvaluator\SPDDecapPIEvaluator.exe`
-- `installer-output\SPDDecapPIEvaluatorSetup-0.22.3.exe`
-- `installer-output\SPDDecapPIEvaluatorSetup-0.22.3.exe.sha256`
+- `installer-output\SPDDecapPIEvaluatorSetup-0.22.4.exe`
+- `installer-output\SPDDecapPIEvaluatorSetup-0.22.4.exe.sha256`
 
 프로그램명과 버전은 title bar와 installer metadata에 함께 표시된다.

@@ -8,8 +8,8 @@
         content="default-src 'none'; img-src data:; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'">
   <meta name="source" content="DECAP_DISTRIBUTION_RULES.md">
   <meta name="source-sha256-normalization" content="utf-8-lf">
-  <meta name="source-sha256" content="1a09262cab20cec152851444d1826b370781f791005597dbcb2b47dcfc36c817">
-  <title>De-cap Distribution 변동 규칙 · SPD Decap PI Evaluator v0.22.3</title>
+  <meta name="source-sha256" content="2b66a560508efe52dd3a9b772fc11296ca7c224d98120f4ca344124ceafbd2e0">
+  <title>De-cap Distribution 변동 규칙 · SPD Decap PI Evaluator v0.22.4</title>
   <style>
     :root {
       color-scheme: light dark;
@@ -161,8 +161,22 @@
     th, td { padding: .65rem .75rem; border-bottom: 1px solid var(--border); text-align: left; vertical-align: top; }
     th { background: var(--surface-2); }
     tr:last-child td { border-bottom: 0; }
-    figure { margin: 1.2rem 0; padding: 1rem; overflow: hidden; }
-    figure svg { display: block; width: 100%; height: auto; }
+    figure {
+      margin: 1.2rem 0;
+      padding: 1rem;
+      overflow-x: auto;
+      overflow-y: hidden;
+    }
+    figure:focus-visible {
+      outline: 3px solid var(--brand);
+      outline-offset: 3px;
+    }
+    figure svg {
+      display: block;
+      width: 100%;
+      min-width: 56rem;
+      height: auto;
+    }
     figcaption { margin-top: .8rem; color: var(--muted); }
     .diagram-box { fill: var(--surface-2); stroke: var(--border); stroke-width: 2; }
     .diagram-good { fill: var(--good-soft); stroke: var(--good); stroke-width: 2; }
@@ -187,7 +201,10 @@
       header { padding-top: 1.5rem; }
       nav ul { display: block; }
       .desktop-note { display: none; }
-      figure { padding: .5rem; }
+      figure {
+        padding: .5rem;
+        overscroll-behavior-inline: contain;
+      }
     }
     @media (prefers-reduced-motion: reduce) {
       html { scroll-behavior: auto; }
@@ -200,6 +217,8 @@
       nav, .skip-link { display: none; }
       header, main, footer { width: 100%; }
       figure, .card, .callout { break-inside: avoid; }
+      figure { overflow: visible; }
+      figure svg { min-width: 0; }
     }
   </style>
 </head>
@@ -212,7 +231,7 @@
     PWR NET 재배정, shared-pad dummy, isolation gap, 부분 충족과 Apply를
     source-backed 물리 증거와 정수 최적화로 처리하는 현재 계약이다.
   </p>
-  <span class="version">v0.22.3 · 오프라인 방법론 문서</span>
+  <span class="version">v0.22.4 · 오프라인 방법론 문서</span>
 </header>
 
 <main id="main" tabindex="-1">
@@ -222,11 +241,12 @@
       <li><a href="#contract">핵심 계약</a></li>
       <li><a href="#pipeline">계산 파이프라인</a></li>
       <li><a href="#roles">Target 역할</a></li>
+      <li><a href="#handoff">A→B→C handoff</a></li>
       <li><a href="#separator">로컬 separator 증명</a></li>
       <li><a href="#objective">최적화 순서</a></li>
       <li><a href="#audit">Candidate Audit</a></li>
       <li><a href="#counts">수량과 결과</a></li>
-      <li><a href="#hotfix">v0.22.3 변경</a></li>
+      <li><a href="#hotfix">v0.22.3 hotfix</a></li>
       <li><a href="#boundary">해석 경계</a></li>
     </ul>
   </nav>
@@ -258,7 +278,7 @@
 
   <section id="pipeline" aria-labelledby="pipeline-title">
     <h2 id="pipeline-title">계산 파이프라인과 우선순위</h2>
-    <figure aria-labelledby="pipeline-caption">
+    <figure role="region" tabindex="0" aria-labelledby="pipeline-caption">
       <svg viewBox="0 0 1040 280" role="img" aria-labelledby="pipeline-svg-title pipeline-svg-desc">
         <title id="pipeline-svg-title">Distribution 계획 파이프라인</title>
         <desc id="pipeline-svg-desc">입력 검증, 물리 증명, 최대 충족, 정책별 후속 최적화, 원자 검증 및 Apply 순서</desc>
@@ -281,9 +301,9 @@
         <text class="small" x="310" y="101" text-anchor="middle">plane · VIA · routing</text>
         <text class="small" x="310" y="124" text-anchor="middle">shared-pad · gap</text>
         <rect class="diagram-good" x="440" y="35" width="160" height="110" rx="14"></rect>
-        <text x="520" y="72" text-anchor="middle" font-weight="700">3. 충족 최대화</text>
-        <text class="small" x="520" y="101" text-anchor="middle">18은 항상 16보다 우선</text>
-        <text class="small" x="520" y="124" text-anchor="middle">gap 개수와 무관</text>
+        <text x="520" y="72" text-anchor="middle" font-weight="700">3. 순수 충족 최대화</text>
+        <text class="small" x="520" y="101" text-anchor="middle">Σ(Received - Sent - Gap)</text>
+        <text class="small" x="520" y="124" text-anchor="middle">cycle로 부풀릴 수 없음</text>
         <rect class="diagram-box" x="650" y="35" width="160" height="110" rx="14"></rect>
         <text x="730" y="72" text-anchor="middle" font-weight="700">4. 정책별 최적화</text>
         <text class="small" x="730" y="101" text-anchor="middle">relabel · gap penalty</text>
@@ -297,7 +317,7 @@
         <text class="small" x="520" y="238" text-anchor="middle">fail-closed 또는 최대 유효 PARTIAL</text>
       </svg>
       <figcaption id="pipeline-caption">
-        공통 1순위는 receiver 충족 수량 최대화다. 그 최적값을 고정한 뒤
+        공통 1순위는 receiver 순수 충족 수량 최대화다. 그 최적값을 고정한 뒤
         optimization policy에 따른 gap/relabel/distance 단계를 수행한다.
       </figcaption>
     </figure>
@@ -307,22 +327,80 @@
     <h2 id="roles-title">Target cell 역할과 destination eligibility</h2>
     <div class="table-wrap" role="region" aria-label="Target cell 역할 표" tabindex="0">
       <table>
-        <thead><tr><th>조건</th><th>역할</th><th>최종 수량 제약</th><th>공여/수신 의미</th></tr></thead>
+        <thead><tr><th>Target 관계</th><th>Tolerance</th><th>역할</th><th>최종 수량 및 counterflow 제약</th></tr></thead>
         <tbody>
-          <tr><td><code>Target &lt; Present</code></td><td>DONOR</td><td>Actual ≥ Target</td><td>여유 범위에서 공여 가능</td></tr>
-          <tr><td><code>Target &gt; Present</code></td><td>RECEIVER</td><td>Actual ≤ Target</td><td>부족분만 수신 요청</td></tr>
-          <tr><td><code>Target = Present</code>, tolerance 0</td><td>UNCHANGED</td><td>Actual = Present</td><td>이동·교환 제외</td></tr>
-          <tr><td><code>Target = Present</code>, tolerance &gt; 0</td><td>EXCHANGE</td><td>Actual = Present</td><td>정해진 turnover 안에서 주고받음</td></tr>
+          <tr><td><code>T &lt; P</code></td><td>0%</td><td>DONOR</td><td><code>A ≥ T</code>, incoming 없음</td></tr>
+          <tr><td><code>T &lt; P</code></td><td>&gt; 0%</td><td>DONOR</td><td><code>I ≤ L</code>; 받은 교체품만큼 추가 공여 가능</td></tr>
+          <tr><td><code>T &gt; P</code></td><td>0%</td><td>RECEIVER</td><td><code>A ≤ T</code>, outgoing/gap 없음</td></tr>
+          <tr><td><code>T &gt; P</code></td><td>&gt; 0%</td><td>RECEIVER</td><td><code>O + S ≤ L</code>; 내보낸 만큼 gross 수신 가능</td></tr>
+          <tr><td><code>T = P</code></td><td>0%</td><td>UNCHANGED</td><td><code>A = P</code>, 이동·gap 제외</td></tr>
+          <tr><td><code>T = P</code></td><td>&gt; 0%</td><td>EXCHANGE</td><td><code>O + S = I ≤ L</code>, count-neutral</td></tr>
         </tbody>
       </table>
     </div>
-    <pre aria-label="수량 공식"><code>Tolerance Count = floor(Present × Tolerance (%) / 100)
-Actual = Present - Sent - Sacrificed + Received</code></pre>
+    <pre aria-label="수량 공식"><code>L = floor(Present × Tolerance (%) / 100)
+Actual = Present - Sent - Sacrificed + Received
+Receiver Net Progress = Received - Sent - Sacrificed</code></pre>
     <p class="callout">
       Candidate Audit의 <strong>Eligible</strong>은 destination의 exact copper·VIA
-      root가 유효하다는 뜻이다. 실제 이동에는 source cell이 DONOR 또는 allowance가
-      있는 EXCHANGE라는 별도 조건도 필요하다.
+      root가 유효하다는 뜻이다. 실제 이동에는 source cell이 DONOR이거나
+      <code>L &gt; 0</code>인 counterflow participant라는 별도 조건도 필요하다.
     </p>
+  </section>
+
+  <section id="handoff" aria-labelledby="handoff-title">
+    <h2 id="handoff-title">Tolerance-enabled A → B → C handoff</h2>
+    <p>
+      A의 부품은 B에만 적격이고 B의 기존 부품은 C에 더 적격할 수 있다.
+      B가 <code>P=2, T=1, L=1</code>인 DONOR라면 A에서 교체품 1개를 받은 뒤
+      기존 2개를 C로 보내도 최종 <code>A=1</code>을 지킨다.
+    </p>
+    <figure role="region" tabindex="0" aria-labelledby="handoff-caption">
+      <svg viewBox="0 0 1040 390" role="img" aria-labelledby="handoff-svg-title handoff-svg-desc">
+        <title id="handoff-svg-title">세 NET handoff와 무의미한 두 NET cycle 비교</title>
+        <desc id="handoff-svg-desc">위쪽은 A가 B를 한 개 보충하고 B가 C에 두 개를 보내 순수 fulfillment를 높인다. 아래쪽은 두 NET이 서로 한 개씩 교환하여 순수 증가가 0이므로 선택하지 않는다.</desc>
+        <defs>
+          <marker id="handoff-arrow" viewBox="0 0 10 10" refX="9" refY="5"
+                  markerWidth="7" markerHeight="7" orient="auto">
+            <path d="M 0 0 L 10 5 L 0 10 z" fill="currentColor"></path>
+          </marker>
+        </defs>
+        <text x="30" y="32" font-size="20" font-weight="750">순수 fulfillment를 높이는 3-NET 경로</text>
+        <rect class="diagram-box" x="55" y="70" width="210" height="115" rx="16"></rect>
+        <text x="160" y="105" text-anchor="middle" font-size="22" font-weight="750">A · DONOR</text>
+        <text class="small" x="160" y="135" text-anchor="middle">P=1, T=0, O=1</text>
+        <text class="small" x="160" y="160" text-anchor="middle">Final A=0</text>
+        <rect class="diagram-warn" x="415" y="70" width="210" height="115" rx="16"></rect>
+        <text x="520" y="105" text-anchor="middle" font-size="22" font-weight="750">B · DONOR</text>
+        <text class="small" x="520" y="135" text-anchor="middle">P=2, T=1, L=1</text>
+        <text class="small" x="520" y="160" text-anchor="middle">I=1, O=2 → A=1</text>
+        <rect class="diagram-good" x="775" y="70" width="210" height="115" rx="16"></rect>
+        <text x="880" y="105" text-anchor="middle" font-size="22" font-weight="750">C · RECEIVER</text>
+        <text class="small" x="880" y="135" text-anchor="middle">P=0, T=2, I=2</text>
+        <text class="small" x="880" y="160" text-anchor="middle">Net progress +2</text>
+        <path class="diagram-line" d="M265 125 H405" marker-end="url(#handoff-arrow)"></path>
+        <text class="small" x="335" y="112" text-anchor="middle">replacement 1</text>
+        <path class="diagram-line" d="M625 125 H765" marker-end="url(#handoff-arrow)"></path>
+        <text class="small" x="695" y="112" text-anchor="middle">eligible 2</text>
+
+        <text x="30" y="235" font-size="20" font-weight="750">순수 이득이 없는 2-NET cycle</text>
+        <rect class="diagram-box" x="215" y="265" width="210" height="90" rx="16"></rect>
+        <text x="320" y="303" text-anchor="middle" font-weight="750">A</text>
+        <text class="small" x="320" y="330" text-anchor="middle">send 1 · receive 1</text>
+        <rect class="diagram-box" x="615" y="265" width="210" height="90" rx="16"></rect>
+        <text x="720" y="303" text-anchor="middle" font-weight="750">B</text>
+        <text class="small" x="720" y="330" text-anchor="middle">send 1 · receive 1</text>
+        <path class="diagram-dash" d="M425 292 H605" marker-end="url(#handoff-arrow)"></path>
+        <path class="diagram-dash" d="M615 334 H435" marker-end="url(#handoff-arrow)"></path>
+        <text x="920" y="305" text-anchor="middle" font-weight="750">Net gain = 0</text>
+        <text class="small" x="920" y="332" text-anchor="middle">move 최소화에서 제거</text>
+      </svg>
+      <figcaption id="handoff-caption">
+        Stage 1은 raw inbound가 아니라 receiver의 <code>I - O - S</code>를
+        최대화한다. 따라서 위 handoff는 유용하지만 아래 cycle은 목적값을 높이지
+        못하고 후속 relabel/move 최소화에서 선택되지 않는다.
+      </figcaption>
+    </figure>
   </section>
 
   <section id="separator" aria-labelledby="separator-title">
@@ -333,7 +411,7 @@ Actual = Present - Sent - Sacrificed + Received</code></pre>
       separator를 인증한다. 로컬 void, re-add, 겹침·edge-tile, boundary-only,
       non-collinear branch는 인증하지 않는다.
     </p>
-    <figure aria-labelledby="chain-caption">
+    <figure role="region" tabindex="0" aria-labelledby="chain-caption">
       <svg viewBox="0 0 1040 350" role="img" aria-labelledby="chain-svg-title chain-svg-desc">
         <title id="chain-svg-title">하나의 gap으로 분리한 shared chain</title>
         <desc id="chain-svg-desc">왼쪽 세 cell은 목적 rail로 이동하고 가운데 via-less dummy는 gap으로 제거하며 오른쪽 세 cell은 source rail anchor에 연결된 채 유지한다</desc>
@@ -387,7 +465,7 @@ Actual = Present - Sent - Sacrificed + Received</code></pre>
       <article class="card">
         <h3>BALANCED_AUTO / CUSTOM</h3>
         <ol>
-          <li>receiver 충족 수량 최대화</li>
+          <li>receiver 순수 충족 <code>Σ(I - O - S)</code> 최대화</li>
           <li>active PWR NET relabel 수 최소화</li>
           <li>signed distance + gap penalty × gap 수 최소화</li>
           <li>combined objective 동률에서 gap 수 최소화</li>
@@ -398,7 +476,7 @@ Actual = Present - Sent - Sacrificed + Received</code></pre>
       <article class="card">
         <h3>MIN_GAPS</h3>
         <ol>
-          <li>receiver 충족 수량 최대화</li>
+          <li>receiver 순수 충족 <code>Σ(I - O - S)</code> 최대화</li>
           <li>gap 수 최소화</li>
           <li>active relabel 수 최소화</li>
           <li>NEAREST/FARTHEST distance</li>
@@ -408,7 +486,7 @@ Actual = Present - Sent - Sacrificed + Received</code></pre>
       </article>
     </div>
 
-    <figure aria-labelledby="comparison-caption">
+    <figure role="region" tabindex="0" aria-labelledby="comparison-caption">
       <svg viewBox="0 0 1040 330" role="img" aria-labelledby="comparison-svg-title comparison-svg-desc">
         <title id="comparison-svg-title">zero-gap 16과 exact-gap 18 비교</title>
         <desc id="comparison-svg-desc">gap이 없는 16개 부분 충족보다 15개 atom과 chain 3개 및 gap 하나로 만든 정확한 18개 충족이 우선한다</desc>
@@ -455,13 +533,19 @@ Actual = Present - Sent - Sacrificed + Received</code></pre>
       <table>
         <thead><tr><th>필드/코드</th><th>의미</th><th>주의점</th></tr></thead>
         <tbody>
-          <tr><td>Eligible</td><td>destination plane/VIA/shared root 증명</td><td>source 역할이 DONOR/EXCHANGE인지 별도 확인</td></tr>
+          <tr><td>Eligible</td><td>destination plane/VIA/shared root 증명</td><td>source가 DONOR 또는 L&gt;0 participant인지 별도 확인</td></tr>
           <tr><td>Component Size</td><td>zero-gap PWR connected atom 크기</td><td>gap split 후 이동 수와 다를 수 있음</td></tr>
           <tr><td>NO_ZERO_GAP…</td><td>zero-gap exact subset에 못 들어감</td><td>gap 허용 최종해의 불가능 증명 아님</td></tr>
           <tr><td>Selected</td><td>최종 plan에서 선택됨</td><td>moves와 Isolation Gaps를 함께 확인</td></tr>
         </tbody>
       </table>
     </div>
+    <p>
+      RECEIVER audit의 조건부 gross inbound 수요는
+      <code>Target - Present + Sent + Sacrificed</code>다. 실제 Received와
+      동일하다고 가정하지 않으며, 미충족 receiver도 전체 조건부 수요로 계속
+      설명한다. DONOR/EXCHANGE는 실제 inbound handoff가 있을 때 audit한다.
+    </p>
   </section>
 
   <section id="counts" aria-labelledby="counts-title">
@@ -469,7 +553,9 @@ Actual = Present - Sent - Sacrificed + Received</code></pre>
     <ul>
       <li>RECEIVER의 <code>Assignment Failed = max(Target - Actual, 0)</code>.</li>
       <li>DONOR는 Target 아래로 내려갈 수 없으며 이동과 희생 gap 모두 실제 감소다.</li>
-      <li>EXCHANGE는 최종 수량을 유지하고 tolerance count 안에서 sent·sacrificed·received를 제한한다.</li>
+      <li>Tolerance-enabled DONOR는 incoming이 L 이하이고, RECEIVER는 outgoing+gap이 L 이하이다.</li>
+      <li>EXCHANGE는 최종 수량을 유지하고 allowance 안에서 sent·sacrificed·received를 제한한다.</li>
+      <li>Workbook format 5는 Role, Allowance, Sent, Received, Isolation Gaps와 net Actual Delta를 함께 기록한다.</li>
       <li>Preview identity, scenario revision, target, distance mode, optimization policy가 바뀌면 stale이다.</li>
       <li>Apply는 plan을 재검증하고 assignment와 gap을 함께 commit한다.</li>
     </ul>
@@ -486,8 +572,23 @@ Actual = Present - Sent - Sacrificed + Received</code></pre>
   </section>
 
   <section id="hotfix" aria-labelledby="hotfix-title">
-    <h2 id="hotfix-title">v0.22.3에서 반영한 source/UI 변경</h2>
+    <h2 id="hotfix-title">v0.22.4 turnover와 v0.22.3 source/UI 변경</h2>
     <div class="card-grid">
+      <article class="card">
+        <h3>Directional tolerance</h3>
+        <p>DONOR/RECEIVER/EXCHANGE의 Target bound를 유지하면서 L 안의 counterflow를
+          허용하고, receiver 순수 증가를 fulfillment로 계산한다.</p>
+      </article>
+      <article class="card">
+        <h3>Workbook format 5</h3>
+        <p><code>TARGET_RELATION_COUNTERFLOW_V1</code>과 routing ON/OFF를 명시한다.
+          legacy target-changing tolerance는 재-export 없이 활성화하지 않는다.</p>
+      </article>
+      <article class="card">
+        <h3>분리창 bulk 편집</h3>
+        <p>같은 Target 또는 Tolerance cell을 여러 개 선택해 한 번에 채우며 canonical
+          validation과 preview 무효화를 batch당 한 번 수행한다.</p>
+      </article>
       <article class="card">
         <h3>PowerNets inventory</h3>
         <p><code>decap_scenario</code>는 PowerSI simulation 선택과 무관하게 모든
@@ -527,9 +628,9 @@ Actual = Present - Sent - Sacrificed + Received</code></pre>
 </main>
 
 <footer>
-  <p>SPD Decap PI Evaluator v0.22.3 · Source:
+  <p>SPD Decap PI Evaluator v0.22.4 · Source:
     <code>DECAP_DISTRIBUTION_RULES.md</code> · SHA-256:
-    <code>1a09262cab20cec152851444d1826b370781f791005597dbcb2b47dcfc36c817</code>
+    <code>2b66a560508efe52dd3a9b772fc11296ca7c224d98120f4ca344124ceafbd2e0</code>
   </p>
 </footer>
 </body>

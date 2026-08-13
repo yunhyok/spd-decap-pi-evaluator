@@ -4113,9 +4113,11 @@ def test_exchange_tolerance_counts_cluster_members_and_never_strands_dummy() -> 
     assert moved_cluster_members <= {"A0", "A2"}
     assert len(moved_cluster_members) == 1
     assert enough.isolation_gap_refdes == ("D1",)
-    _headers, target_rows = distribution_target_table(enough)
+    headers, target_rows = distribution_target_table(enough)
     r2_row = next(row for row in target_rows if row[0] == "V2 (R2)")
-    assert r2_row[4:] == (0, 0, 1)
+    assert r2_row[headers.index("M1\nActual Delta")] == 0
+    assert r2_row[headers.index("M1\nAssignment Failed")] == 0
+    assert r2_row[headers.index("M1\nIsolation Gaps")] == 1
 
 
 def test_exchange_can_be_full_when_donor_covers_move_and_separator_loss() -> None:
@@ -4237,13 +4239,17 @@ def test_plan_is_stale_safe_tamper_safe_and_exports_every_decap() -> None:
         "M1\nPresent",
         "M1\nTarget",
         "M1\nTolerance (%)",
+        "M1\nRole",
+        "M1\nTurnover Allowance",
+        "M1\nSent",
+        "M1\nReceived",
         "M1\nActual Delta",
         "M1\nAssignment Failed",
         "M1\nIsolation Gaps",
     )
     assert target_rows == (
-        ("V1 (R1)", 2, 1, 0.0, -1, 0, 0),
-        ("V2 (R2)", 0, 1, 0.0, 1, 0, 0),
+        ("V1 (R1)", 2, 1, 0.0, "DONOR", 0, 1, 0, -1, 0, 0),
+        ("V2 (R2)", 0, 1, 0.0, "RECEIVER", 0, 0, 1, 1, 0, 0),
     )
 
     stale = scenario.model_copy(update={"revision": scenario.revision + 1})
@@ -4416,6 +4422,54 @@ def test_projection_proves_existing_exchange_site_for_next_receiver() -> None:
     assert {item.new_rail_id for item in with_projection.moves} == {"R2", "R3"}
 
 
+def test_receiver_tolerance_floor_controls_projection_source_participation() -> None:
+    scenario = _with_initial_rails(
+        _direct_scenario(
+            (("B0", 0.0, ("R2", "R3")),),
+            rail_ids=("R1", "R2", "R3"),
+        ),
+        {"B0": "R2"},
+    )
+    r3_plane = SpdPlaneGeometry(
+        layer="PWR",
+        net="V3",
+        positive_polygons_um=(
+            ((-10.0, -5.0), (10.0, -5.0), (10.0, 5.0), (-10.0, 5.0)),
+        ),
+        negative_polygons_um=(),
+        positive_circles_um=(),
+        negative_circles_um=(),
+        primitive_order=(("positive_polygon", 0),),
+    )
+    targets = {
+        ("R1", "M1"): 0,
+        ("R2", "M1"): 2,
+        ("R3", "M1"): 1,
+    }
+
+    rounds_to_zero = distribution_module.build_distribution_power_projection(
+        scenario,
+        {},
+        plane_geometries=(r3_plane,),
+        targets=targets,
+        tolerances={("R2", "M1"): 49.9},
+    )
+    active = distribution_module.build_distribution_power_projection(
+        scenario,
+        {},
+        plane_geometries=(r3_plane,),
+        targets=targets,
+        tolerances={("R2", "M1"): 100.0},
+    )
+
+    assert rounds_to_zero is None
+    assert active is not None
+    projected = next(
+        item for item in active.projected_decaps if item.refdes == "B0"
+    )
+    assert projected.eligibility["R3"].allowed
+
+
 def test_tolerance_floor_and_turnover_cap_limit_physical_fulfillment() -> None:
     specs = (
         ("A0", 0.0, ("R1", "R2")),
@@ -4477,6 +4531,185 @@ def test_exchange_without_receiver_demand_never_creates_a_cycle() -> None:
     assert plan.status == DistributionPlanStatus.FULL
     assert plan.requested_count == 0
     assert plan.moves == ()
+
+
+def test_donor_tolerance_enables_directional_replacement_handoff() -> None:
+    scenario = _with_initial_rails(
+        _direct_scenario(
+            (
+                ("A0", 0.0, ("R1", "R2")),
+                ("B0", 100.0, ("R2", "R3")),
+                ("B1", 110.0, ("R2", "R3")),
+            ),
+            bump_x={"R2": 0.0, "R3": 100.0},
+        ),
+        {"B0": "R2", "B1": "R2"},
+    )
+    targets = {
+        ("R1", "M1"): 0,
+        ("R2", "M1"): 1,
+        ("R3", "M1"): 2,
+    }
+
+    blocked = compute_distribution_plan(
+        scenario, targets, tolerances={("R2", "M1"): 0.0}
+    )
+    handed_off = compute_distribution_plan(
+        scenario, targets, tolerances={("R2", "M1"): 50.0}
+    )
+
+    assert blocked.status == DistributionPlanStatus.PARTIAL
+    assert blocked.fulfilled_count == 1
+    assert handed_off.status == DistributionPlanStatus.FULL
+    assert handed_off.fulfilled_count == 2
+    assert {
+        (move.previous_rail_id, move.new_rail_id) for move in handed_off.moves
+    } == {("R1", "R2"), ("R2", "R3")}
+    donor = _cell(handed_off, "R2")
+    assert donor.actual_count == donor.target_count == 1
+    assert (donor.sent_count, donor.received_count) == (2, 1)
+    assert donor.tolerance_count == 1
+    assert any(
+        item.code == "TOLERANCE_COUNTERFLOW_ENABLED"
+        and "at or above Target" in item.message
+        for item in handed_off.diagnostics
+    )
+
+
+def test_receiver_tolerance_handoff_uses_net_fulfillment_and_minimum_moves() -> None:
+    scenario = _with_initial_rails(
+        _direct_scenario(
+            (
+                ("A0", 0.0, ("R1", "R2", "R3")),
+                ("A1", 10.0, ("R1", "R2")),
+                ("B0", 100.0, ("R2", "R3")),
+            ),
+            bump_x={"R2": 0.0, "R3": 100.0},
+        ),
+        {"B0": "R2"},
+    )
+    targets = {
+        ("R1", "M1"): 0,
+        ("R2", "M1"): 2,
+        ("R3", "M1"): 1,
+    }
+
+    handed_off = compute_distribution_plan(
+        scenario, targets, tolerances={("R2", "M1"): 100.0}
+    )
+
+    assert handed_off.status == DistributionPlanStatus.FULL
+    assert handed_off.fulfilled_count == 2
+    # A0 can go directly to R3, so the net-fulfillment objective followed by
+    # move minimization must not choose the equivalent three-move A->B->C churn.
+    assert len(handed_off.moves) == 2
+    assert {move.refdes for move in handed_off.moves} == {"A0", "A1"}
+    assert {move.new_rail_id for move in handed_off.moves} == {"R2", "R3"}
+    receiver = _cell(handed_off, "R2")
+    assert receiver.actual_count == receiver.target_count == 2
+    assert (receiver.sent_count, receiver.received_count) == (0, 1)
+    assert receiver.tolerance_count == 1
+
+
+def test_receiver_tolerance_can_release_and_replace_for_a_third_net() -> None:
+    scenario = _with_initial_rails(
+        _direct_scenario(
+            (
+                ("A0", 0.0, ("R1", "R2")),
+                ("A1", 10.0, ("R1", "R2")),
+                ("B0", 100.0, ("R2", "R3")),
+            ),
+            bump_x={"R2": 0.0, "R3": 100.0},
+        ),
+        {"B0": "R2"},
+    )
+    targets = {
+        ("R1", "M1"): 0,
+        ("R2", "M1"): 2,
+        ("R3", "M1"): 1,
+    }
+
+    blocked = compute_distribution_plan(
+        scenario, targets, tolerances={("R2", "M1"): 0.0}
+    )
+    plan = compute_distribution_plan(
+        scenario, targets, tolerances={("R2", "M1"): 100.0}
+    )
+
+    assert blocked.status == DistributionPlanStatus.PARTIAL
+    assert blocked.fulfilled_count == 1
+    assert plan.status == DistributionPlanStatus.FULL
+    assert plan.fulfilled_count == 2
+    assert len(plan.moves) == 3
+    receiver = _cell(plan, "R2")
+    assert receiver.actual_count == 2
+    assert (receiver.sent_count, receiver.received_count) == (1, 2)
+    assert {(move.previous_rail_id, move.new_rail_id) for move in plan.moves} == {
+        ("R1", "R2"),
+        ("R2", "R3"),
+    }
+    assert any(
+        item.code == "TOLERANCE_COUNTERFLOW_ENABLED"
+        and "at or below Target" in item.message
+        for item in plan.diagnostics
+    )
+
+
+def test_shared_donor_tolerance_counts_gap_in_directional_counterflow() -> None:
+    scenario = _shared_exchange_scenario()
+    targets = {
+        ("R1", "M1"): 0,
+        ("R2", "M1"): 2,
+        ("R3", "M1"): 2,
+    }
+
+    blocked = compute_distribution_plan(
+        scenario, targets, tolerances={("R2", "M1"): 0.0}
+    )
+    handed_off = compute_distribution_plan(
+        scenario, targets, tolerances={("R2", "M1"): 67.0}
+    )
+
+    assert blocked.fulfilled_count == 0
+    assert handed_off.status == DistributionPlanStatus.FULL
+    assert handed_off.fulfilled_count == 2
+    assert handed_off.isolation_gap_refdes == ("D1",)
+    donor = _cell(handed_off, "R2")
+    assert donor.actual_count == donor.target_count == 2
+    assert (donor.sent_count, donor.received_count, donor.sacrificed_count) == (
+        2,
+        2,
+        1,
+    )
+    assert donor.sent_count + donor.sacrificed_count == (
+        donor.present_count - donor.target_count + donor.received_count
+    )
+
+
+def test_receiver_gap_and_outgoing_do_not_inflate_net_fulfillment() -> None:
+    scenario = _shared_exchange_scenario()
+    targets = {
+        ("R1", "M1"): 0,
+        ("R2", "M1"): 4,
+        ("R3", "M1"): 1,
+    }
+
+    plan = compute_distribution_plan(
+        scenario, targets, tolerances={("R2", "M1"): 67.0}
+    )
+
+    # Receiving two at R2, sending one to R3, and sacrificing D1 has raw
+    # inbound three but net receiver progress only one (2 - 1 - 1 + 1).
+    # A single R1 -> R2 move has the same net progress and therefore wins the
+    # later gap/move minimization stages without manufacturing fulfillment.
+    assert plan.status == DistributionPlanStatus.PARTIAL
+    assert plan.fulfilled_count == 1
+    assert len(plan.moves) == 1
+    assert plan.moves[0].previous_rail_id == "R1"
+    assert plan.moves[0].new_rail_id == "R2"
+    assert plan.sacrifices == ()
+    assert _cell(plan, "R2").fulfilled_count == 1
+    assert _cell(plan, "R3").fulfilled_count == 0
 
 
 def test_distance_timeout_preserves_stage_one_maximum_feasible_plan(

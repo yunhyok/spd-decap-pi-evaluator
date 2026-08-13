@@ -12,6 +12,7 @@ from xlsxwriter.exceptions import XlsxWriterException
 
 from .distribution_workbook import (
     DISTRIBUTION_METADATA_TITLE,
+    DISTRIBUTION_TOLERANCE_SEMANTICS,
     DISTRIBUTION_WORKBOOK_FORMAT_VERSION,
 )
 
@@ -139,15 +140,27 @@ def write_distribution_workbook(
             numeric_format = float(raw_format)
         except (TypeError, ValueError):
             numeric_format = -1.0
-        if (
-            isfinite(numeric_format)
-            and numeric_format.is_integer()
-            and int(numeric_format) >= DISTRIBUTION_WORKBOOK_FORMAT_VERSION
-            and "signal routing protection" not in metadata_by_key
-        ):
-            raise ValueError(
-                "format 4 Distribution metadata must record Signal Routing Protection"
-            )
+        if isfinite(numeric_format) and numeric_format.is_integer():
+            format_version = int(numeric_format)
+            if (
+                format_version >= 4
+                and "signal routing protection" not in metadata_by_key
+            ):
+                raise ValueError(
+                    "format 4 or newer Distribution metadata must record Signal "
+                    "Routing Protection"
+                )
+            tolerance_semantics = str(
+                metadata_by_key.get("tolerance semantics", "")
+            ).strip().upper()
+            if (
+                format_version >= DISTRIBUTION_WORKBOOK_FORMAT_VERSION
+                and tolerance_semantics != DISTRIBUTION_TOLERANCE_SEMANTICS
+            ):
+                raise ValueError(
+                    "format 5 Distribution metadata must record Tolerance "
+                    f"Semantics {DISTRIBUTION_TOLERANCE_SEMANTICS}"
+                )
 
     options = {
         "constant_memory": True,
