@@ -30,6 +30,7 @@ from PySide6.QtWidgets import (
     QTabWidget,
     QTableWidget,
     QTextBrowser,
+    QWidget,
 )
 
 from test_io_spd import MINI_SPD
@@ -950,6 +951,15 @@ def test_evaluation_splitter_keeps_picker_and_result_tabs_usable_at_1200_by_700(
         assert controls_size >= 230
         assert results_size >= 180
         assert window.rail_list.height() >= 140
+        controls = window.findChild(QWidget, "evaluationControlsSection")
+        assert controls is not None
+        assert window.rail_list.width() >= int(controls.width() * 0.9)
+        rail_label = window.findChild(QLabel, "evaluationRailLabel")
+        assert rail_label is not None
+        assert rail_label.isVisible()
+        assert rail_label.text() == "PWR NETs"
+        assert rail_label.buddy() is window.rail_list
+        assert window.rail_list.accessibleName() == "PWR NETs"
         assert window.comparison_table.height() >= 60
         assert window.open_results_button.isVisible()
         assert (

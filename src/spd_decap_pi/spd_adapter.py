@@ -1579,7 +1579,12 @@ def import_spd_scenario(
             layer=cluster.layer,
             power_edges=cluster.power_edges,
             ground_edges=cluster.ground_edges,
-            isolation_gap_refdes=cluster.isolation_gap_refdes,
+            isolation_gap_refdes=(
+                cluster.isolation_gap_refdes
+                if cluster_state_by_key[cluster_key]
+                == SharedPadClusterState.ANCHORED
+                else ()
+            ),
             reason=cluster_reason_by_key[cluster_key],
             eligibility=cluster_eligibility_by_key[cluster_key],
             via_eligibility=cluster_via_eligibility_by_key[cluster_key],

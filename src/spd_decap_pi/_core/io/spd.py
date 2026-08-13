@@ -667,18 +667,29 @@ def _parse_netlist(
     data: mmap.mmap,
     gnd_keys: set[str],
     diagnostics: list[SpdDiagnostic],
+    *,
+    include_unselected_power: bool = False,
 ) -> tuple[tuple[str, ...], tuple[str, ...]]:
     start = _find_line(data, b".NetList")
     if start < 0:
         diagnostics.append(
-            SpdDiagnostic("info", "NETLIST_MISSING", "No .NetList selection was found; positive plane polygons will be used as the rail filter.")
+            SpdDiagnostic(
+                "info",
+                "NETLIST_MISSING",
+                "No .NetList selection was found; positive plane polygons will "
+                "be used as the rail filter.",
+            )
         )
         return (), ()
     end = _find_line(data, b".EndNetList", start)
     if end < 0:
         end = len(data)
         diagnostics.append(
-            SpdDiagnostic("warning", "NETLIST_UNTERMINATED", ".NetList has no .EndNetList; parsed selections through end of file.")
+            SpdDiagnostic(
+                "warning",
+                "NETLIST_UNTERMINATED",
+                ".NetList has no .EndNetList; parsed selections through end of file.",
+            )
         )
     # PowerSI writes .NetList as two ordered groups. Only the first row in a
     # group is guaranteed to contain ``-> GroundNets`` or ``-> PowerNets``;
@@ -688,6 +699,8 @@ def _parse_netlist(
     _ = gnd_keys  # Kept in the signature for compatibility with older callers.
     power: list[str] = []
     ground: list[str] = []
+    selected_power_rows: list[str] = []
+    selected_ground_rows: list[str] = []
     active_group: str | None = None
     for _, raw in _iter_lines(data, start, end):
         stripped = raw.strip()
@@ -709,20 +722,36 @@ def _parse_netlist(
             elif destination == b"powernets":
                 active_group = "power"
 
-        if active_group is None or b"::unselected" in token.lower():
+        if active_group is None:
             continue
 
-        name = _decode(token)
+        row_unselected = b"::unselected" in token.lower()
+        name = _decode(token.split(b"::", 1)[0])
         if active_group == "ground":
             ground.append(name)
+            if not row_unselected:
+                selected_ground_rows.append(name)
         else:
             power.append(name)
-    selected_power, selected_ground = _unique(power), _unique(ground)
-    if selected_power or selected_ground:
-        diagnostics.append(
-            SpdDiagnostic("info", "NETLIST_SELECTION_USED", f"Using {len(selected_power)} selected power net(s) and {len(selected_ground)} selected ground net(s) from .NetList.")
+            if not row_unselected:
+                selected_power_rows.append(name)
+    inventory_power = _unique(power)
+    selected_power = _unique(selected_power_rows)
+    selected_ground = _unique(selected_ground_rows)
+    result_power = inventory_power if include_unselected_power else selected_power
+    if result_power or selected_ground:
+        message = (
+            "Using full PowerNets inventory "
+            f"({len(result_power)} row(s)) and selected GroundNets "
+            f"({len(selected_ground)} rail(s)) from .NetList."
+            if include_unselected_power
+            else f"Using {len(result_power)} selected power net(s) and "
+            f"{len(selected_ground)} selected ground net(s) from .NetList."
         )
-    return selected_power, selected_ground
+        diagnostics.append(
+            SpdDiagnostic("info", "NETLIST_SELECTION_USED", message)
+        )
+    return result_power, selected_ground
 
 
 def _parse_shapes(
@@ -855,20 +884,18 @@ def _parse_shapes(
                 x_um, y_um, radius_um = values
         elif primitive_kind == b"Box":
             if len(values) != 4 or values[2] <= 0 or values[3] <= 0:
-                malformed_reason = "Box requires center X/Y and positive width/height"
+                malformed_reason = "Box requires start-corner X/Y and positive width/height"
             else:
                 x_um, y_um, width_um, height_um = values
-                half_width = width_um / 2.0
-                half_height = height_um / 2.0
                 values = [
-                    x_um - half_width,
-                    y_um - half_height,
-                    x_um + half_width,
-                    y_um - half_height,
-                    x_um + half_width,
-                    y_um + half_height,
-                    x_um - half_width,
-                    y_um + half_height,
+                    x_um,
+                    y_um,
+                    x_um + width_um,
+                    y_um,
+                    x_um + width_um,
+                    y_um + height_um,
+                    x_um,
+                    y_um + height_um,
                 ]
         elif len(values) < 6 or len(values) % 2:
             malformed_reason = (
@@ -1028,9 +1055,9 @@ def _parse_shapes(
         diagnostics.append(
             SpdDiagnostic(
                 "info",
-                "SPD_BOX_CENTER_SIZE_INTERPRETATION",
+                "SPD_BOX_START_CORNER_SIZE_INTERPRETATION",
                 f"Normalized {box_count:,} selected Box record(s) as rectangles, "
-                "interpreting the four lengths as center X/Y and width/height.",
+                "interpreting the four lengths as start-corner X/Y and width/height.",
             )
         )
     return outline, filtered, nets, plane_geometries
@@ -3472,7 +3499,12 @@ def analyze_spd(
             source = SpdSourceInfo(source_path.resolve(), source_path.name, stat.st_size, stat.st_mtime_ns, digest, title)
 
             reporter.report(9, "Reading selected power/ground nets")
-            selected_power, selected_ground = _parse_netlist(data, gnd_keys, diagnostics)
+            selected_power, selected_ground = _parse_netlist(
+                data,
+                gnd_keys,
+                diagnostics,
+                include_unselected_power=scope == "decap_scenario",
+            )
             if scope == "decap_scenario" and not selected_power:
                 diagnostics.append(
                     SpdDiagnostic(

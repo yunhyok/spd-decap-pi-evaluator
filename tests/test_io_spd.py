@@ -1529,10 +1529,10 @@ def test_polygon_trace_and_box_are_normalized_in_source_order(tmp_path: Path) ->
         (-1_000.0, 0.0),
     )
     assert geometry.positive_polygons_um[-1] == (
-        (2_800.0, 1_700.0),
-        (3_200.0, 1_700.0),
-        (3_200.0, 2_300.0),
-        (2_800.0, 2_300.0),
+        (3_000.0, 2_000.0),
+        (3_400.0, 2_000.0),
+        (3_400.0, 2_600.0),
+        (3_000.0, 2_600.0),
     )
     assert geometry.primitive_order[-2:] == (
         ("negative_polygon", 1),
@@ -1541,6 +1541,85 @@ def test_polygon_trace_and_box_are_normalized_in_source_order(tmp_path: Path) ->
     assert analysis.counts["selected_plane_polygon_traces"] == 1
     assert analysis.counts["selected_plane_boxes"] == 1
     assert not analysis.has_errors
+
+
+def test_box_start_corner_copper_bridges_three_separated_0402_pads(
+    tmp_path: Path,
+) -> None:
+    source = tmp_path / "box-bridged-shared-pad.spd"
+    payload = MINI_SPD.replace(
+        "* Shape description lines\n.Shape Signal$GNDpkgshape",
+        "* Shape description lines\n"
+        ".Shape Signal$TOPpkgshape\n"
+        "Box7::VDD_CORE/0+ Sub-element 0.9mm 1.9mm 0.66mm 0.2mm\n"
+        "Box8::DGND+ Sub-element 0.9mm 2.2mm 0.66mm 0.2mm\n"
+        ".EndShape\n"
+        ".Shape Signal$GNDpkgshape",
+    ).replace(
+        "Regular Square 0.10mm",
+        "Regular Square 0.20mm",
+    ).replace(
+        "Node4!!2::DGND X = 1.2mm Y = 2mm "
+        "Layer = Signal$TOP PadStack = CAP",
+        "Node4!!2::DGND X = 1mm Y = 2.3mm "
+        "Layer = Signal$TOP PadStack = CAP",
+    ).replace(
+        "Node5!!1::VDD_DROP/0 X = 3mm Y = 2mm "
+        "Layer = Signal$TOP PadStack = CAP",
+        "Node5!!1::VDD_CORE/0 X = 1.23mm Y = 2mm "
+        "Layer = Signal$TOP PadStack = CAP",
+    ).replace(
+        "Node6!!2::DGND X = 3.2mm Y = 2mm "
+        "Layer = Signal$TOP PadStack = CAP",
+        "Node6!!2::DGND X = 1.23mm Y = 2.3mm "
+        "Layer = Signal$TOP PadStack = CAP\n"
+        "Node7!!1::VDD_CORE/0 X = 1.46mm Y = 2mm "
+        "Layer = Signal$TOP PadStack = CAP\n"
+        "Node8!!2::DGND X = 1.46mm Y = 2.3mm "
+        "Layer = Signal$TOP PadStack = CAP",
+    ).replace(
+        "Via2::DGND UpperNode = Node2 LowerNode = Node4 "
+        "PadStack = DR-0102_60",
+        "Via2::DGND UpperNode = Node2 LowerNode = Node4 "
+        "PadStack = DR-0102_60\n"
+        "Via3::VDD_CORE/0 UpperNode = Node1 LowerNode = Node7 "
+        "PadStack = DR-0102_60\n"
+        "Via4::DGND UpperNode = Node2 LowerNode = Node8 "
+        "PadStack = DR-0102_60",
+    ).replace(
+        ".Connect C2 CAP_0402_100NF Checked = 1\n"
+        "1 $Package.Node5!!1::VDD_DROP/0\n"
+        "2 $Package.Node6!!2::DGND\n"
+        ".EndC",
+        ".Connect C2 CAP_0402_100NF Checked = 1\n"
+        "1 $Package.Node5!!1::VDD_CORE/0\n"
+        "2 $Package.Node6!!2::DGND\n"
+        ".EndC\n"
+        ".Connect C3 CAP_0402_100NF Checked = 1\n"
+        "1 $Package.Node7!!1::VDD_CORE/0\n"
+        "2 $Package.Node8!!2::DGND\n"
+        ".EndC",
+    ).replace(
+        ".Component C2 3.1mm 2mm StartLayer = Signal$TOP",
+        ".Component C2 1.23mm 2.15mm StartLayer = Signal$TOP\n"
+        ".Component C3 1.46mm 2.15mm StartLayer = Signal$TOP",
+    )
+    source.write_text(payload, encoding="ascii")
+
+    analysis = analyze_spd(source, scope="decap_scenario")
+
+    assert not analysis.has_errors
+    by_refdes = {item.refdes: item for item in analysis.decap_connections}
+    assert by_refdes["C1"].kind == "SHARED_ANCHOR"
+    assert by_refdes["C2"].kind == "SHARED_DUMMY"
+    assert by_refdes["C3"].kind == "SHARED_ANCHOR"
+    assert len({by_refdes[refdes].cluster_id for refdes in by_refdes}) == 1
+    cluster = analysis.shared_pad_clusters[0]
+    assert cluster.member_refdes == ("C1", "C2", "C3")
+    assert cluster.anchor_refdes == ("C1", "C3")
+    assert cluster.dummy_refdes == ("C2",)
+    assert cluster.power_edges == (("C1", "C2"), ("C2", "C3"))
+    assert cluster.ground_edges == (("C1", "C2"), ("C2", "C3"))
 
 
 def test_ordered_geometry_batches_polarity_runs_without_changing_semantics(
@@ -1860,12 +1939,11 @@ def test_decap_scenario_scope_includes_candidate_rails_dnp_and_pad_provenance(
 
     analysis = analyze_spd(source, scope="decap_scenario")
 
-    # Scenario assignment is fail-closed to explicit .NetList PowerNets.
-    # Unselected/DNP locations remain visible inventory but are not rail choices.
-    assert analysis.power_plane_nets == ("VDD_CORE/0",)
-    assert all(
-        item.net != "VDD_DROP/0" for item in analysis.plane_geometries
-    )
+    # Scenario import retains every explicit PowerNets row with positive plane
+    # geometry, even when PowerSI marks the row unselected for simulation. DNP
+    # component mounting remains an independent property.
+    assert analysis.power_plane_nets == ("VDD_CORE/0", "VDD_DROP/0")
+    assert any(item.net == "VDD_DROP/0" for item in analysis.plane_geometries)
     assert [item.refdes for item in analysis.cap_instances] == ["C1", "C2"]
     c2 = analysis.cap_instances[1]
     assert not c2.mounted
@@ -2168,7 +2246,9 @@ def test_decap_scenario_requires_a_ground_plane_classification(
     )
 
 
-def test_top_io_signal_shape_is_not_promoted_to_a_power_rail(tmp_path: Path) -> None:
+def test_source_unselected_powernet_with_positive_shape_is_materialized(
+    tmp_path: Path,
+) -> None:
     source = tmp_path / "top-io-signal.spd"
     payload = MINI_SPD.replace(
         ".EndShape\n* Layer description lines",
@@ -2193,9 +2273,8 @@ def test_top_io_signal_shape_is_not_promoted_to_a_power_rail(tmp_path: Path) -> 
 
     analysis = analyze_spd(source, scope="decap_scenario")
 
-    assert analysis.power_plane_nets == ("VDD_CORE/0",)
-    assert all(item.net != "SIG_DATA" for item in analysis.plane_geometries)
-    assert all(item.net != "SIG_DATA" for item in analysis.pins)
+    assert analysis.power_plane_nets == ("VDD_CORE/0", "SIG_DATA")
+    assert any(item.net == "SIG_DATA" for item in analysis.plane_geometries)
 
 
 def test_netlist_uses_explicit_group_markers_and_inherited_rows(tmp_path: Path) -> None:
@@ -2222,6 +2301,48 @@ def test_netlist_uses_explicit_group_markers_and_inherited_rows(tmp_path: Path) 
     assert ground == ("DGND", "AGND")
     assert power == ("VDD_CORE/0", "VDD_AUX/0")
     assert "SIG_BEFORE" not in power
+
+
+def test_netlist_full_power_inventory_preserves_other_selection_boundaries(
+    tmp_path: Path,
+) -> None:
+    source = tmp_path / "inventory-netlist.spd"
+    source.write_text(
+        ".NetList\n"
+        "SIG_BEFORE::Unselected||DropShape Color = YELLOW\n"
+        "DGND -> GroundNets Color = RED\n"
+        "SENSE_GND::Unselected||DropShape Color = GREEN\n"
+        "VDD_MAIN/0 -> PowerNets::Unselected||DropShape Color = BLUE\n"
+        "VDD_AUX/0 Color = CYAN\n"
+        "VDD_DROP/0::Unselected||DropShape Color = MAGENTA\n"
+        ".EndNetList\n",
+        encoding="ascii",
+    )
+
+    default_diagnostics = []
+    inventory_diagnostics = []
+    with source.open("rb") as handle, mmap.mmap(
+        handle.fileno(), 0, access=mmap.ACCESS_READ
+    ) as data:
+        selected_power, selected_ground = _parse_netlist(
+            data,
+            {"dgnd", "sense_gnd"},
+            default_diagnostics,
+        )
+        inventory_power, inventory_ground = _parse_netlist(
+            data,
+            {"dgnd", "sense_gnd"},
+            inventory_diagnostics,
+            include_unselected_power=True,
+        )
+
+    # Destination metadata starts the group; only source-token metadata marks
+    # that row unselected. GroundNets selection never expands with PowerNets.
+    assert selected_power == ("VDD_MAIN/0", "VDD_AUX/0")
+    assert inventory_power == ("VDD_MAIN/0", "VDD_AUX/0", "VDD_DROP/0")
+    assert selected_ground == inventory_ground == ("DGND",)
+    assert "SIG_BEFORE" not in inventory_power
+    assert "SENSE_GND" not in inventory_ground
 
 
 def test_netlist_truncated_arrow_keeps_the_inherited_group(tmp_path: Path) -> None:

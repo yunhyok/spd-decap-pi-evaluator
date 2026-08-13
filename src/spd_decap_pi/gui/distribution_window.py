@@ -22,14 +22,15 @@ from ..version import APP_DISPLAY_NAME
 class DistributionTargetsWindow(QWidget):
     """A retained non-modal view of the main target matrix.
 
-    The main window remains the single owner of target state and validation.
-    This window deliberately presents a read-only snapshot and delegates XLSX
-    import/export through signals so no second editable matrix can drift.
+    The main window owns canonical state and validation. Target and Tolerance
+    cells are editable here and route changes back to that owner; XLSX import
+    and export remain available as optional workflows.
     """
 
     importRequested = Signal()
     exportTemplateRequested = Signal()
     originalBoardToggled = Signal(bool)
+    detachedCellChanged = Signal(object)
 
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent, Qt.WindowType.Window)
@@ -39,9 +40,9 @@ class DistributionTargetsWindow(QWidget):
         self.resize(980, 620)
         layout = QVBoxLayout(self)
         instructions = QLabel(
-            "Double-click any Distribution table cell to open this window. Edit an "
-            "exported XLSX target matrix, then import it; targets are validated "
-            "against the currently loaded SPD."
+            "Double-click any Distribution table cell to open this window. Edit "
+            "Target or Tolerance (%) directly, or use the optional XLSX workflow; "
+            "targets are validated against the currently loaded SPD."
         )
         instructions.setWordWrap(True)
         layout.addWidget(instructions)
@@ -54,14 +55,21 @@ class DistributionTargetsWindow(QWidget):
         self.alternate_plane_note.setWordWrap(True)
         self.alternate_plane_note.setToolTip(
             "This is a filled-Cu microvia-stack retarget/rebuild planning result, "
-            "and does not prove that the existing via barrel already reaches that layer."
+            "and does not prove that the existing via barrel already reaches "
+            "that layer."
         )
         layout.addWidget(self.alternate_plane_note)
         self.table = QTableWidget(0, 1)
         self.table.setObjectName("detachedDistributionTargetTable")
         self.table.setAccessibleName("Distribution target matrix")
-        self.table.setToolTip("Current target matrix. Export to edit it in XLSX.")
-        self.table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
+        self.table.setToolTip(
+            "Edit Target or Tolerance (%) directly; XLSX remains optional."
+        )
+        self.table.setEditTriggers(
+            QTableWidget.EditTrigger.DoubleClicked
+            | QTableWidget.EditTrigger.EditKeyPressed
+        )
+        self.table.itemChanged.connect(self.detachedCellChanged.emit)
         self.table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectItems)
         layout.addWidget(self.table, 1)
         self.original_board_checkbox = QCheckBox(
@@ -82,7 +90,8 @@ class DistributionTargetsWindow(QWidget):
         self.import_targets_button.setObjectName("detachedImportDistributionTargetsButton")
         self.import_targets_button.setAccessibleName("Import distribution XLSX")
         self.import_targets_button.setToolTip(
-            "Import an edited Distribution XLSX and immediately update the main target matrix."
+            "Import an edited Distribution XLSX and immediately update the main "
+            "target matrix."
         )
         self.import_targets_button.clicked.connect(self.importRequested)
         self.export_template_button = QPushButton("Export XLSX Template...")
@@ -101,6 +110,7 @@ class DistributionTargetsWindow(QWidget):
         self, headers: Sequence[str], rows: Sequence[Sequence[object]]
     ) -> None:
         self.table.setUpdatesEnabled(False)
+        previous_block = self.table.blockSignals(True)
         try:
             self.table.clear()
             self.table.setColumnCount(len(headers))
@@ -111,6 +121,7 @@ class DistributionTargetsWindow(QWidget):
                     self.table.setItem(row, column, QTableWidgetItem(str(value)))
             self.table.resizeColumnsToContents()
         finally:
+            self.table.blockSignals(previous_block)
             self.table.setUpdatesEnabled(True)
 
     def set_original_board_checked(self, checked: bool) -> None:
@@ -149,3 +160,33 @@ class DistributionTargetsWindow(QWidget):
         self.original_board_checkbox.setEnabled(
             enabled and source_comparison_available
         )
+
+    def set_cell_metadata(
+        self,
+        metadata: Sequence[Sequence[tuple[object, ...]]],
+    ) -> None:
+        previous = self.table.blockSignals(True)
+        try:
+            for row, values in enumerate(metadata):
+                for column, payload in enumerate(values):
+                    item = self.table.item(row, column)
+                    if item is None:
+                        continue
+                    (
+                        key,
+                        field,
+                        flags,
+                        background,
+                        foreground,
+                        alignment,
+                        tooltip,
+                    ) = payload
+                    item.setData(Qt.ItemDataRole.UserRole, key)
+                    item.setData(Qt.ItemDataRole.UserRole + 1, field)
+                    item.setFlags(flags)
+                    item.setBackground(background)
+                    item.setForeground(foreground)
+                    item.setTextAlignment(Qt.AlignmentFlag(alignment))
+                    item.setToolTip(tooltip)
+        finally:
+            self.table.blockSignals(previous)

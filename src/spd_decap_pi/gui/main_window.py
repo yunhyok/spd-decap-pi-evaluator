@@ -2138,6 +2138,14 @@ class MainWindow(QMainWindow):
         controls_heading.setStyleSheet("font-weight: 700;")
         controls_layout.addWidget(controls_heading)
         form = QFormLayout()
+        form.setRowWrapPolicy(QFormLayout.RowWrapPolicy.WrapLongRows)
+        form.setFieldGrowthPolicy(
+            QFormLayout.FieldGrowthPolicy.AllNonFixedFieldsGrow
+        )
+        form.setLabelAlignment(
+            Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter
+        )
+        form.setHorizontalSpacing(12)
         self.rail_list = QListWidget()
         self.rail_list.setObjectName("evaluationRailList")
         self.rail_list.setMinimumHeight(140)
@@ -2161,10 +2169,17 @@ class MainWindow(QMainWindow):
         )
         rail_buttons.addWidget(self.select_all_rails_button)
         rail_buttons.addWidget(self.clear_rails_button)
+        rail_label = QLabel("PWR NETs")
+        rail_label.setObjectName("evaluationRailLabel")
+        rail_label.setAccessibleName("PWR NETs")
+        rail_label.setBuddy(self.rail_list)
+        self.rail_list.setAccessibleName("PWR NETs")
+        rail_buttons.insertWidget(0, rail_label)
         rail_buttons.addStretch(1)
         rail_picker = QWidget()
         rail_picker_layout = QVBoxLayout(rail_picker)
         rail_picker_layout.setContentsMargins(0, 0, 0, 0)
+        rail_picker_layout.setSpacing(0)
         rail_picker_layout.addWidget(self.rail_list)
         rail_picker_layout.addLayout(rail_buttons)
         self.target_edit = QLineEdit()
@@ -2225,7 +2240,7 @@ class MainWindow(QMainWindow):
         self.evaluation_modal_preset_combo.currentIndexChanged.connect(
             self._evaluation_modal_preset_changed
         )
-        form.addRow("PWR NETs", rail_picker)
+        form.addRow(rail_picker)
         form.addRow("Common target impedance (ohm)", self.target_edit)
         form.addRow("Physics model", profile_picker)
         form.addRow("Numerical convergence preset", self.evaluation_modal_preset_combo)
@@ -3775,6 +3790,24 @@ class MainWindow(QMainWindow):
         )
         headers, rows = self._distribution_matrix_values()
         self._distribution_window.set_matrix(headers, rows)
+        metadata = []
+        for row in range(self.distribution_table.rowCount()):
+            row_meta = []
+            for column in range(self.distribution_table.columnCount()):
+                source = self.distribution_table.item(row, column)
+                row_meta.append(
+                    (
+                        source.data(Qt.ItemDataRole.UserRole),
+                        source.data(_DISTRIBUTION_FIELD_ROLE),
+                        source.flags(),
+                        source.background(),
+                        source.foreground(),
+                        source.textAlignment(),
+                        source.toolTip(),
+                    )
+                )
+            metadata.append(row_meta)
+        self._distribution_window.set_cell_metadata(metadata)
         self._distribution_window.set_original_board_checked(
             self._distribution_show_original_board
         )
@@ -3843,10 +3876,35 @@ class MainWindow(QMainWindow):
             self._distribution_window.originalBoardToggled.connect(
                 self._show_original_distribution_board
             )
+            self._distribution_window.detachedCellChanged.connect(
+                self._distribution_detached_cell_changed
+            )
         self._sync_distribution_window()
         self._distribution_window.show()
         self._distribution_window.raise_()
         self._distribution_window.activateWindow()
+
+    def _distribution_detached_cell_changed(self, item: QTableWidgetItem) -> None:
+        key = item.data(Qt.ItemDataRole.UserRole)
+        field = item.data(_DISTRIBUTION_FIELD_ROLE)
+        if field not in {_DISTRIBUTION_TARGET_FIELD, _DISTRIBUTION_TOLERANCE_FIELD}:
+            return
+        for row in range(self.distribution_table.rowCount()):
+            for column in range(self.distribution_table.columnCount()):
+                candidate = self.distribution_table.item(row, column)
+                if (
+                    candidate is not None
+                    and candidate.data(Qt.ItemDataRole.UserRole) == key
+                    and candidate.data(_DISTRIBUTION_FIELD_ROLE) == field
+                ):
+                    previous = self.distribution_table.blockSignals(True)
+                    try:
+                        candidate.setText(item.text())
+                    finally:
+                        self.distribution_table.blockSignals(previous)
+                    self._apply_distribution_target_text(candidate, (candidate,))
+                    self._distribution_targets_edited()
+                    return
 
     def _export_distribution_template(self) -> None:
         scenario = self._scenario
