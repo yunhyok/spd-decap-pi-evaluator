@@ -80,8 +80,8 @@
       },
       "candidate": {
         "basename": "S4LB002-2Para_260729_1_injected_candidate.spdpi",
-        "size_bytes": 245102022,
-        "sha256": "956f9aa35f66083cc1c455639988f3268c5393d6167eabed4d562246fab7f79c"
+        "size_bytes": 738073948,
+        "sha256": "3e494bd8c80851095a8068e2d74a36c60b3e133600e0c4bf9b9a52984a77c16d"
       },
       "baseline_reports": [
         {
@@ -229,8 +229,8 @@
       },
       "candidate": {
         "basename": "S4LB002-2Para_260804_1_injected_candidate.spdpi",
-        "size_bytes": 170345432,
-        "sha256": "2fc0448b79ce28d074f251e3190b29a621aa66dd7afcf5dec452a8215521e1aa"
+        "size_bytes": 735444553,
+        "sha256": "838c3b8d98976e49796c02aacaa51c9b486111ee21b11c76956b89bbef0f623a"
       },
       "baseline_reports": [
         {
