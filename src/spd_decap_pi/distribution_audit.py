@@ -462,14 +462,16 @@ def audit_distribution_candidates(
     projected_eligibility: Mapping[str, object] | None = None,
     include_existing_destination: bool = False,
     gap_refdes: Iterable[str] = (),
+    source_rail_ids: Iterable[str] | None = None,
 ) -> tuple[DistributionCandidateAudit, ...]:
     """Build atomic candidates from a scenario's PWR connection analysis.
 
     This helper is intentionally read-only.  ``projected_eligibility`` may be
     supplied by the pre-MILP projection; otherwise the persisted per-decap
     eligibility is used.  A shared component is eligible only when all its
-    physical members are enabled, assignable donor/exchange decaps and have a
-    proven destination permission.
+    physical members are enabled, assignable source-role decaps and have a
+    proven destination permission. ``source_rail_ids`` distinguishes ordinary
+    DONOR cells and tolerance-enabled counterflow sources from fixed cells.
     """
 
     analysis = scenario.connection_analysis
@@ -479,6 +481,11 @@ def audit_distribution_candidates(
     connected = {item.casefold() for item in scenario.electrically_connected_refdes}
     selected = {item.casefold() for item in selected_refdes}
     gap_members = {item.casefold() for item in gap_refdes}
+    source_rail_keys = (
+        {item.casefold() for item in source_rail_ids}
+        if source_rail_ids is not None
+        else None
+    )
     distances = {key.casefold(): float(value) for key, value in (distance_by_refdes or {}).items()}
     model_key = model_id.casefold() if model_id is not None else None
     atoms: list[AtomicDistributionCandidate] = []
@@ -491,11 +498,37 @@ def audit_distribution_candidates(
         groups = _component_groups(members, cluster.power_edges)
         for group in groups:
             decaps = tuple(decap_by_key[item.casefold()] for item in group)
-            atoms.append(_scenario_atom(decaps, destination_rail, model_key, connected, selected, distances, projected_eligibility, cluster.eligibility, gap_members))
+            atoms.append(
+                _scenario_atom(
+                    decaps,
+                    destination_rail,
+                    model_key,
+                    connected,
+                    selected,
+                    distances,
+                    projected_eligibility,
+                    cluster.eligibility,
+                    gap_members,
+                    source_rail_keys,
+                )
+            )
     for decap in scenario.decaps:
         if decap.refdes.casefold() in clustered:
             continue
-        atoms.append(_scenario_atom((decap,), destination_rail, model_key, connected, selected, distances, projected_eligibility, None, gap_members))
+        atoms.append(
+            _scenario_atom(
+                (decap,),
+                destination_rail,
+                model_key,
+                connected,
+                selected,
+                distances,
+                projected_eligibility,
+                None,
+                gap_members,
+                source_rail_keys,
+            )
+        )
     filtered = tuple(
         item
         for item in atoms
@@ -514,6 +547,7 @@ def _scenario_atom(
     projected_eligibility: Mapping[str, object] | None,
     component_eligibility: Mapping[str, RailEligibility] | None,
     gap_members: set[str] | None = None,
+    source_rail_keys: set[str] | None = None,
 ) -> AtomicDistributionCandidate:
     first = decaps[0]
     assignable = all(
@@ -529,6 +563,14 @@ def _scenario_atom(
     elif len(model_keys) != 1:
         assignable = False
         detail = "atomic PWR component spans multiple component models"
+    elif source_rail_keys is not None and not source_keys.issubset(
+        source_rail_keys
+    ):
+        assignable = False
+        detail = (
+            "source cell is neither a DONOR nor tolerance-enabled for "
+            "directional counterflow"
+        )
     if model_key is not None and model.casefold() != model_key:
         assignable = False
     if assignable:

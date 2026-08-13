@@ -1745,10 +1745,31 @@ def _job_compute_distribution(
                         for pin in bumps
                     )
                 distances_by_rail[rail_key] = per_refdes
-            for cell in tuple(getattr(result, "cells", ())):
-                role = str(getattr(getattr(cell, "role", ""), "value", getattr(cell, "role", ""))).upper()
+            result_cells = tuple(getattr(result, "cells", ()))
+            source_rails_by_model: dict[str, set[str]] = {}
+            for cell in result_cells:
+                raw_role = getattr(cell, "role", "")
+                role = str(getattr(raw_role, "value", raw_role)).upper()
+                tolerance_count = int(
+                    getattr(cell, "tolerance_count", 0) or 0
+                )
+                if role != "DONOR" and tolerance_count <= 0:
+                    continue
+                source_rails_by_model.setdefault(
+                    str(getattr(cell, "model_id", "")).casefold(), set()
+                ).add(str(getattr(cell, "rail_id", "")))
+            for cell in result_cells:
+                raw_role = getattr(cell, "role", "")
+                role = str(getattr(raw_role, "value", raw_role)).upper()
                 requested = int(getattr(cell, "requested_count", 0) or 0)
-                if role != "RECEIVER" or requested <= 0:
+                received = int(getattr(cell, "received_count", 0) or 0)
+                sent = int(getattr(cell, "sent_count", 0) or 0)
+                sacrificed = int(getattr(cell, "sacrificed_count", 0) or 0)
+                if role == "RECEIVER" and requested > 0:
+                    audit_demand = requested + sent + sacrificed
+                elif role in {"DONOR", "EXCHANGE"} and received > 0:
+                    audit_demand = received
+                else:
                     continue
                 rail_id = str(getattr(cell, "rail_id", ""))
                 model_id = str(getattr(cell, "model_id", ""))
@@ -1772,11 +1793,14 @@ def _job_compute_distribution(
                 rows = audit_distribution_candidates(
                     audit_scenario,
                     rail_id,
-                    requested,
+                    audit_demand,
                     model_id=model_id,
                     selected_refdes=selected_for_cell,
                     gap_refdes=gap_for_cell,
                     distance_by_refdes=distances_by_rail.get(rail_id.casefold(), {}),
+                    source_rail_ids=source_rails_by_model.get(
+                        model_id.casefold(), set()
+                    ),
                 )
                 candidate_audit_rows.extend(
                     tuple(row.as_row().get(header) for header in CANDIDATE_AUDIT_HEADERS)
@@ -2388,10 +2412,12 @@ class MainWindow(QMainWindow):
             "fixed on its current PWR NET; the donor check reports only verified "
             "movable capacity. For a donor, "
             "Target is the minimum count to retain (maximum give capacity); for a "
-            "receiver it is the requested final count. Unused donor capacity stays "
-            "on its current PWR NET. When Target equals Present, Tolerance 0% "
-            "excludes the cell; a positive tolerance lets it give and receive the "
-            "same number of decaps up to floor(Present × Tolerance / 100). "
+            "receiver it is the maximum final count. Unused donor capacity stays "
+            "on its current PWR NET. Tolerance permits bounded counterflow for "
+            "every role: a donor may receive replacements, a receiver may release "
+            "parts while receiving its net demand, and Target = Present exchanges "
+            "count-neutrally. The allowance is floor(Present × Tolerance / 100); "
+            "0% preserves the directional-only behavior. "
             "Ctrl/Shift-select multiple cells of the same field and type once to "
             "fill them together."
         )
@@ -2577,7 +2603,7 @@ class MainWindow(QMainWindow):
         self.distribution_summary = QTextBrowser()
         self.distribution_summary.setObjectName("distributionPreviewSummary")
         self.distribution_summary.setPlainText(
-            "Enter Target counts and optional exchange tolerances, then calculate "
+            "Enter Target counts and optional counterflow tolerances, then calculate "
             "a preview. Numeric capacity is "
             "checked before the physical plane, Via, shared-pad, and bump-distance "
             "selection begins."
@@ -2772,7 +2798,7 @@ class MainWindow(QMainWindow):
                 elif target > present:
                     demand += target - present
                     model_changed = True
-                elif self._distribution_tolerances.get(key, 0.0) > 0.0:
+                if self._distribution_tolerances.get(key, 0.0) > 0.0:
                     exchange_cells += 1
                     exchange_capacity += _whole_decap_tolerance(
                         present, self._distribution_tolerances[key]
@@ -2805,8 +2831,8 @@ class MainWindow(QMainWindow):
                 detail += f", exact retained-artwork proof pending {pending_capacity:,}"
             if exchange_cells:
                 detail += (
-                    f", exchange {exchange_cells:,} cell(s) / "
-                    f"{exchange_capacity:,} decap(s)"
+                    f", tolerance counterflow {exchange_cells:,} cell(s) / "
+                    f"{exchange_capacity:,} decap(s) allowance"
                 )
             details.append(detail)
             if demand > capacity:
@@ -2834,7 +2860,7 @@ class MainWindow(QMainWindow):
                     False,
                     False,
                     tuple(balances),
-                    "Exchange participants are defined, but no donor/receiver "
+                    "Tolerance participants are defined, but no donor/receiver "
                     "demand exists; no redistribution is needed.",
                 )
             return _DistributionBalanceState(
@@ -3119,7 +3145,7 @@ class MainWindow(QMainWindow):
         )
         self.distribution_validation_label.setStyleSheet("color: #9aa4b2;")
         self.distribution_summary.setPlainText(
-            "Enter Target counts and optional exchange tolerances, then calculate "
+            "Enter Target counts and optional counterflow tolerances, then calculate "
             "a preview."
         )
         self._update_distribution_controls()
@@ -3303,7 +3329,8 @@ class MainWindow(QMainWindow):
                     )
                     target_item.setToolTip(
                         "Below Present = maximum give capacity; above Present = "
-                        "receive demand; equal uses Tolerance to include or exclude"
+                        "maximum final count; equal keeps the final count unchanged. "
+                        "Tolerance independently controls bounded counterflow."
                     )
                     tolerance = self._distribution_tolerances[key]
                     tolerance_item = _DistributionNumericItem(f"{tolerance:g}")
@@ -3316,9 +3343,10 @@ class MainWindow(QMainWindow):
                         Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter
                     )
                     tolerance_item.setToolTip(
-                        "Used only when Target equals Present. 0% = excluded; "
-                        "positive = equal give/receive turnover limited to "
-                        "floor(Present × Tolerance / 100)."
+                        "Counterflow allowance = floor(Present × Tolerance / 100). "
+                        "For donors it bounds incoming replacements; for receivers "
+                        "it bounds outgoing moves plus gaps; equal targets exchange "
+                        "count-neutrally. 0% disables counterflow."
                     )
                     failure_item = _DistributionNumericItem("0")
                     failure_item.setData(Qt.ItemDataRole.UserRole, key)
@@ -3330,7 +3358,8 @@ class MainWindow(QMainWindow):
                     )
                     failure_item.setToolTip(
                         "Unfulfilled receiver demand: Target minus Actual. Donor "
-                        "unused capacity and optional exchange turnover are not failures."
+                        "unused capacity and optional tolerance counterflow are not "
+                        "failures."
                     )
                     self.distribution_table.setItem(
                         row, present_column, present_item
@@ -3413,10 +3442,8 @@ class MainWindow(QMainWindow):
             if key in self._distribution_invalid_tolerance_cells:
                 item.setBackground(QColor("#FECACA"))
                 return
-            present = self._distribution_present_counts.get(key, 0)
-            target = self._distribution_targets.get(key, present)
             tolerance = self._distribution_tolerances.get(key, 0.0)
-            if target == present and tolerance > 0.0:
+            if tolerance > 0.0:
                 item.setBackground(QColor("#EDE9FE"))
             else:
                 item.setBackground(QColor("#E5E7EB"))
@@ -3736,7 +3763,7 @@ class MainWindow(QMainWindow):
             return result
         policy = self._distribution_routing_policy()
         if not policy.enabled:
-            return {}
+            return {"Signal Routing Protection": "OFF"}
         result = {
             "Signal Routing Protection": "ON",
             "Routing Protection Scope": policy.scope.value,
@@ -3765,19 +3792,15 @@ class MainWindow(QMainWindow):
         self, plan: Any | None = None
     ) -> tuple[int, dict[str, object]]:
         from ..distribution_workbook import (
-            DISTRIBUTION_LEGACY_OFF_WORKBOOK_FORMAT_VERSION,
+            DISTRIBUTION_TOLERANCE_SEMANTICS,
             DISTRIBUTION_WORKBOOK_FORMAT_VERSION,
         )
 
         routing_metadata = self._distribution_routing_metadata(plan)
-        return (
-            (
-                DISTRIBUTION_WORKBOOK_FORMAT_VERSION
-                if routing_metadata
-                else DISTRIBUTION_LEGACY_OFF_WORKBOOK_FORMAT_VERSION
-            ),
-            routing_metadata,
+        routing_metadata["Tolerance Semantics"] = (
+            DISTRIBUTION_TOLERANCE_SEMANTICS
         )
+        return DISTRIBUTION_WORKBOOK_FORMAT_VERSION, routing_metadata
 
     def _sync_distribution_window(self) -> None:
         self._sync_board_assignment_controls()
@@ -3876,35 +3899,68 @@ class MainWindow(QMainWindow):
             self._distribution_window.originalBoardToggled.connect(
                 self._show_original_distribution_board
             )
-            self._distribution_window.detachedCellChanged.connect(
-                self._distribution_detached_cell_changed
+            self._distribution_window.detachedBatchCommitted.connect(
+                self._distribution_detached_batch_committed
             )
         self._sync_distribution_window()
         self._distribution_window.show()
         self._distribution_window.raise_()
         self._distribution_window.activateWindow()
 
-    def _distribution_detached_cell_changed(self, item: QTableWidgetItem) -> None:
-        key = item.data(Qt.ItemDataRole.UserRole)
-        field = item.data(_DISTRIBUTION_FIELD_ROLE)
-        if field not in {_DISTRIBUTION_TARGET_FIELD, _DISTRIBUTION_TOLERANCE_FIELD}:
+    def _distribution_detached_batch_committed(self, payload: object) -> None:
+        window = self._distribution_window
+        if (
+            self._scenario is None
+            or self._worker is not None
+            or window is None
+            or not window.table.isEnabled()
+            or not isinstance(payload, tuple)
+            or len(payload) != 4
+        ):
             return
+        field, raw_text, raw_keys, revision = payload
+        if (
+            field
+            not in {
+                _DISTRIBUTION_TARGET_FIELD,
+                _DISTRIBUTION_TOLERANCE_FIELD,
+            }
+            or not isinstance(raw_keys, tuple)
+            or revision != window.matrix_revision
+        ):
+            return
+        keys = tuple(
+            (str(key[0]), str(key[1]))
+            for key in raw_keys
+            if isinstance(key, tuple) and len(key) == 2
+        )
+        if not keys:
+            return
+        items_by_key: dict[tuple[str, str], QTableWidgetItem] = {}
         for row in range(self.distribution_table.rowCount()):
             for column in range(self.distribution_table.columnCount()):
-                candidate = self.distribution_table.item(row, column)
+                item = self.distribution_table.item(row, column)
                 if (
-                    candidate is not None
-                    and candidate.data(Qt.ItemDataRole.UserRole) == key
-                    and candidate.data(_DISTRIBUTION_FIELD_ROLE) == field
+                    item is None
+                    or item.data(_DISTRIBUTION_FIELD_ROLE) != field
                 ):
-                    previous = self.distribution_table.blockSignals(True)
-                    try:
-                        candidate.setText(item.text())
-                    finally:
-                        self.distribution_table.blockSignals(previous)
-                    self._apply_distribution_target_text(candidate, (candidate,))
-                    self._distribution_targets_edited()
-                    return
+                    continue
+                raw_key = item.data(Qt.ItemDataRole.UserRole)
+                if isinstance(raw_key, tuple) and len(raw_key) == 2:
+                    items_by_key[(str(raw_key[0]), str(raw_key[1]))] = item
+        target_items = tuple(
+            items_by_key[key] for key in keys if key in items_by_key
+        )
+        if not target_items:
+            return
+        source = target_items[0]
+        previous = self.distribution_table.blockSignals(True)
+        try:
+            source.setText(str(raw_text))
+        finally:
+            self.distribution_table.blockSignals(previous)
+        self._apply_distribution_target_text(source, target_items)
+        self._distribution_targets_edited()
 
     def _export_distribution_template(self) -> None:
         scenario = self._scenario
@@ -4324,64 +4380,65 @@ class MainWindow(QMainWindow):
             rail_id = self._plan_cell_value(cell, "rail_id", default="?")
             raw_role = self._plan_cell_value(cell, "role", default="")
             role = str(getattr(raw_role, "value", raw_role)).upper()
+            tolerance = float(
+                self._plan_cell_value(cell, "tolerance_percent", default=0.0)
+                or 0.0
+            )
+            tolerance_count = int(
+                self._plan_cell_value(cell, "tolerance_count", default=0)
+                or 0
+            )
+            sent = int(
+                self._plan_cell_value(cell, "sent_count", default=0) or 0
+            )
+            received = int(
+                self._plan_cell_value(cell, "received_count", default=0) or 0
+            )
+            sacrificed = int(
+                self._plan_cell_value(cell, "sacrificed_count", default=0)
+                or 0
+            )
+            net_change = received - sent - sacrificed
+            tolerance_text = (
+                f"; tolerance {tolerance:g}% ({tolerance_count:,})"
+                if tolerance_count > 0
+                else ""
+            )
             if role == "EXCHANGE":
-                tolerance = float(
-                    self._plan_cell_value(
-                        cell, "tolerance_percent", default=0.0
-                    )
-                    or 0.0
-                )
-                tolerance_count = int(
-                    self._plan_cell_value(
-                        cell, "tolerance_count", default=requested
-                    )
-                    or 0
-                )
-                sent = int(
-                    self._plan_cell_value(cell, "sent_count", default=fulfilled)
-                    or 0
-                )
-                received = int(
-                    self._plan_cell_value(cell, "received_count", default=sent)
-                    or 0
-                )
-                sacrificed = int(
-                    self._plan_cell_value(
-                        cell, "sacrificed_count", default=0
-                    )
-                    or 0
-                )
                 lines.append(
                     f"{model_id} / {rail_id} exchange: tolerance "
                     f"{tolerance:g}% ({tolerance_count:,}), sent {sent:,}, "
                     f"received {received:,}, "
-                    f"net {received - sent - sacrificed:+,}; "
+                    f"net {net_change:+,}; "
                     f"sacrificed {sacrificed:,}"
                 )
                 continue
-            if not requested and not fulfilled and not shortfall:
+            if (
+                not requested
+                and not fulfilled
+                and not shortfall
+                and not sent
+                and not received
+                and not sacrificed
+                and not tolerance_count
+            ):
                 continue
             if role == "DONOR":
                 unused = max(requested - fulfilled, 0)
-                sacrificed = int(
-                    self._plan_cell_value(
-                        cell, "sacrificed_count", default=0
-                    )
-                    or 0
-                )
-                moved = int(
-                    self._plan_cell_value(cell, "sent_count", default=0) or 0
-                )
                 lines.append(
                     f"{model_id} / {rail_id} donor: give capacity "
                     f"{requested:,}, used {fulfilled:,}, unused {unused:,}; "
-                    f"moved {moved:,} + sacrificed {sacrificed:,}"
+                    f"sent {sent:,}, received {received:,}, sacrificed "
+                    f"{sacrificed:,}, net release {-net_change:+,}"
+                    f"{tolerance_text}"
                 )
             elif role == "RECEIVER":
                 lines.append(
                     f"{model_id} / {rail_id} receiver: requested "
                     f"{requested:,}, fulfilled {fulfilled:,}, "
-                    f"shortfall {shortfall:,}"
+                    f"shortfall {shortfall:,}; sent {sent:,}, received "
+                    f"{received:,}, sacrificed {sacrificed:,}, net gain "
+                    f"{net_change:+,}{tolerance_text}"
                 )
         if diagnostics:
             lines.append("Diagnostics:")

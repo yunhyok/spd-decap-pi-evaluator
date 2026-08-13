@@ -1552,39 +1552,44 @@ def build_distribution_power_projection(
     else:
         target_by_cell = {}
         tolerance_by_cell = {}
+    role_by_cell = {
+        key: _cell_role(
+            int(present_by_cell.get(key, 0)),
+            target,
+            float(tolerance_by_cell.get(key, 0.0)),
+        )
+        for key, target in target_by_cell.items()
+    }
+    turnover_cells = {
+        key
+        for key in target_by_cell
+        if distribution_tolerance_count(
+            int(present_by_cell.get(key, 0)),
+            float(tolerance_by_cell.get(key, 0.0)),
+        )
+        > 0
+    }
     donor_cells = {
         key
-        for key, present in present_by_cell.items()
-        if key in target_by_cell and target_by_cell[key] < present
+        for key, role in role_by_cell.items()
+        if role == DistributionCellRole.DONOR
     }
     explicit_rail_keys = {
         str(item).casefold() for item in (relevant_rail_ids or ())
     }
     receiver_cells = {
         key
-        for key, target in target_by_cell.items()
-        if target > int(present_by_cell.get(key, 0))
+        for key, role in role_by_cell.items()
+        if role == DistributionCellRole.RECEIVER
     }
-    exchange_cells = {
-        key
-        for key, target in target_by_cell.items()
-        if target == int(present_by_cell.get(key, 0))
-        and distribution_tolerance_count(
-            int(present_by_cell.get(key, 0)),
-            float(tolerance_by_cell.get(key, 0.0)),
-        )
-        > 0
-    }
-    # An exchange cell can receive a donor decap and then donate one of its
-    # own existing sites to a final receiver.  Its existing decaps therefore
-    # need the same fresh physical PWR-column proof as ordinary donors.  Do
-    # not limit the projection to the initial donor set: that would make a
-    # count-neutral R1 -> R2 -> R3 chain depend on stale eligibility cached
-    # before the target R3 artwork was examined.
-    participating_source_cells = donor_cells | exchange_cells
+    # Any positive-tolerance cell can participate in directional counterflow:
+    # a donor may receive a replacement before releasing extra supply, and a
+    # receiver may release an eligible existing site while still ending at or
+    # below Target. Every such source therefore needs fresh PWR-column proof.
+    participating_source_cells = donor_cells | turnover_cells
     destination_rail_keys = {
         rail_key
-        for rail_key, _model_key in receiver_cells | exchange_cells
+        for rail_key, _model_key in receiver_cells | turnover_cells
     }
 
     candidates = tuple(
@@ -1617,7 +1622,7 @@ def build_distribution_power_projection(
         )
         in donor_cells
     }
-    exchange_refdes_keys = {
+    turnover_refdes_keys = {
         decap.refdes.casefold()
         for decap in scenario.decaps
         if decap.enabled
@@ -1626,9 +1631,9 @@ def build_distribution_power_projection(
             decap.current_rail_id.casefold(),
             decap.model_id.casefold(),
         )
-        in exchange_cells
+        in turnover_cells
     }
-    projection_refdes_keys = donor_refdes_keys | exchange_refdes_keys
+    projection_refdes_keys = donor_refdes_keys | turnover_refdes_keys
     participating_cluster_keys = {
         cluster.cluster_id.casefold()
         for cluster in analysis.clusters
@@ -1666,7 +1671,7 @@ def build_distribution_power_projection(
         for cluster in candidates
         for refdes in cluster.member_refdes
     }
-    # Exchange cells can become an intermediate receiver before donating again,
+    # Turnover cells can become intermediate destinations before donating again,
     # so they require the same retained-plane enumeration as final receivers.
     alternate_rail_keys = destination_rail_keys | explicit_rail_keys
     projection_rail_keys = alternate_rail_keys | candidate_source_rail_keys
@@ -2384,9 +2389,9 @@ def distribution_target_table(
     """Return the immutable target/result matrix from a plan.
 
     ``Assignment Failed`` is receiver shortfall, not a count of candidate rows
-    that the optimizer attempted and rejected. Donor capacity is optional and
-    count-neutral exchange is bounded rather than required, so neither is a
-    failed assignment.
+    that the optimizer attempted and rejected. ``Actual Delta`` is the signed
+    net ``Received - Sent - Isolation Gaps``. Donor capacity and optional
+    tolerance turnover are not failed assignments.
     """
 
     rail_order: list[tuple[str, str]] = []
@@ -2417,6 +2422,10 @@ def distribution_target_table(
                 f"{model_id}\nPresent",
                 f"{model_id}\nTarget",
                 f"{model_id}\nTolerance (%)",
+                f"{model_id}\nRole",
+                f"{model_id}\nTurnover Allowance",
+                f"{model_id}\nSent",
+                f"{model_id}\nReceived",
                 f"{model_id}\nActual Delta",
                 f"{model_id}\nAssignment Failed",
                 f"{model_id}\nIsolation Gaps",
@@ -2438,6 +2447,10 @@ def distribution_target_table(
                     cell.present_count,
                     cell.target_count,
                     cell.tolerance_percent,
+                    cell.role.value,
+                    cell.tolerance_count,
+                    cell.sent_count,
+                    cell.received_count,
                     cell.actual_count - cell.present_count,
                     cell.shortfall_count,
                     cell.sacrificed_count,
@@ -2768,7 +2781,7 @@ def _require_distribution_projection_request(
 
 
 def distribution_tolerance_count(present: int, tolerance_percent: float) -> int:
-    """Return the conservative whole-decap exchange allowance for a cell."""
+    """Return the conservative whole-decap counterflow allowance for a cell."""
 
     if isinstance(present, bool) or not isinstance(present, (int, np.integer)):
         raise ValueError("Present count must be a whole number")
@@ -3102,7 +3115,7 @@ def validate_distribution_targets(
     *,
     power_projection: _DistributionPowerProjection | None = None,
 ) -> None:
-    """Validate targets, exchange tolerances, and hard numeric supply."""
+    """Validate targets, counterflow tolerances, and hard numeric supply."""
 
     scenario = _scenario_with_distribution_power_projection(
         scenario, power_projection
@@ -3467,11 +3480,12 @@ def _direct_exchange_selection(
     *,
     time_limit_s: float,
 ) -> tuple[set[int], int, int, bool]:
-    """Solve a direct-only exchange request as an integral network flow.
+    """Solve direct-only tolerance counterflow as an integral network flow.
 
     Conceptually each source cell feeds its own unit-capacity decap nodes, each
-    eligible move is an arc to a destination cell, exchange cells conserve
-    flow, and receiver cells drain it. Eliminating the source-to-decap arcs
+    eligible move is an arc to a destination cell, and every cell's final count
+    is its initial count minus outgoing plus incoming. Eliminating source-to-
+    decap arcs
     gives the sparse rows below while preserving the integral network-flow
     polytope. Fixing the two lexicographic optimum values selects faces of that
     same integral polytope, so HiGHS LP solutions remain whole assignments.
@@ -3487,7 +3501,7 @@ def _direct_exchange_selection(
     edges_by_refdes: dict[str, list[int]] = defaultdict(list)
     outgoing_by_cell: dict[tuple[str, str], list[int]] = defaultdict(list)
     incoming_by_cell: dict[tuple[str, str], list[int]] = defaultdict(list)
-    receiver_indices: list[int] = []
+    receiver_progress: dict[int, float] = {}
     for edge_index, (_variable, (ref_key, rail_key)) in enumerate(edges):
         decap = counted_by_key[ref_key]
         model_key = str(decap.model_id).casefold()
@@ -3497,39 +3511,71 @@ def _direct_exchange_selection(
         outgoing_by_cell[source_cell].append(edge_index)
         incoming_by_cell[destination_cell].append(edge_index)
         if role_by_cell[destination_cell] == DistributionCellRole.RECEIVER:
-            receiver_indices.append(edge_index)
+            receiver_progress[edge_index] = (
+                receiver_progress.get(edge_index, 0.0) + 1.0
+            )
+        if role_by_cell[source_cell] == DistributionCellRole.RECEIVER:
+            receiver_progress[edge_index] = (
+                receiver_progress.get(edge_index, 0.0) - 1.0
+            )
 
-    inequality_rows: list[tuple[list[int], float]] = [
-        (indices, 1.0) for indices in edges_by_refdes.values()
+    inequality_rows: list[tuple[dict[int, float], float]] = [
+        ({index: 1.0 for index in indices}, 1.0)
+        for indices in edges_by_refdes.values()
     ]
-    for cell, indices in outgoing_by_cell.items():
+    all_cells = set(outgoing_by_cell) | set(incoming_by_cell)
+    for cell in all_cells:
         role = role_by_cell[cell]
+        outgoing = outgoing_by_cell.get(cell, ())
+        incoming = incoming_by_cell.get(cell, ())
         if role == DistributionCellRole.DONOR:
-            capacity = int(present.get(cell, 0)) - int(target_by_cell[cell])
+            coefficients = {index: 1.0 for index in outgoing}
+            coefficients.update({index: -1.0 for index in incoming})
+            inequality_rows.append(
+                (
+                    coefficients,
+                    float(int(present.get(cell, 0)) - int(target_by_cell[cell])),
+                )
+            )
+            inequality_rows.append(
+                (
+                    {index: 1.0 for index in incoming},
+                    float(tolerance_count_by_cell[cell]),
+                )
+            )
+        elif role == DistributionCellRole.RECEIVER:
+            coefficients = {index: 1.0 for index in incoming}
+            coefficients.update({index: -1.0 for index in outgoing})
+            inequality_rows.append(
+                (
+                    coefficients,
+                    float(int(target_by_cell[cell]) - int(present.get(cell, 0))),
+                )
+            )
+            inequality_rows.append(
+                (
+                    {index: 1.0 for index in outgoing},
+                    float(tolerance_count_by_cell[cell]),
+                )
+            )
         elif role == DistributionCellRole.EXCHANGE:
-            capacity = int(tolerance_count_by_cell[cell])
-        else:  # Defensive: allowed-label construction excludes other sources.
-            capacity = 0
-        inequality_rows.append((indices, float(capacity)))
-    for cell, indices in incoming_by_cell.items():
-        role = role_by_cell[cell]
-        if role == DistributionCellRole.RECEIVER:
-            capacity = int(target_by_cell[cell]) - int(present.get(cell, 0))
-        elif role == DistributionCellRole.EXCHANGE:
-            capacity = int(tolerance_count_by_cell[cell])
-        else:  # Defensive: allowed-label construction excludes other targets.
-            capacity = 0
-        inequality_rows.append((indices, float(capacity)))
+            allowance = float(tolerance_count_by_cell[cell])
+            inequality_rows.append(
+                ({index: 1.0 for index in outgoing}, allowance)
+            )
+            inequality_rows.append(
+                ({index: 1.0 for index in incoming}, allowance)
+            )
 
     ub_row: list[int] = []
     ub_column: list[int] = []
     ub_value: list[float] = []
     ub_limit: list[float] = []
-    for row_index, (indices, limit) in enumerate(inequality_rows):
-        for edge_index in indices:
+    for row_index, (coefficients, limit) in enumerate(inequality_rows):
+        for edge_index, coefficient in coefficients.items():
             ub_row.append(row_index)
             ub_column.append(edge_index)
-            ub_value.append(1.0)
+            ub_value.append(coefficient)
         ub_limit.append(limit)
     a_ub = coo_matrix(
         (ub_value, (ub_row, ub_column)),
@@ -3604,14 +3650,22 @@ def _direct_exchange_selection(
 
     fulfillment_weight = len(counted_by_key) + 1
     primary = np.ones(edge_count, dtype=float)
-    primary[receiver_indices] -= float(fulfillment_weight)
+    for edge_index, contribution in receiver_progress.items():
+        primary[edge_index] -= float(fulfillment_weight) * contribution
     primary_solution = solve_lp(primary)
     if any(1.0e-7 < value < 1.0 - 1.0e-7 for value in primary_solution):
         raise DistributionError(
             "OPTIMIZER_FAILED",
             "direct exchange optimizer returned a non-integral primary flow",
         )
-    fulfilled_optimum = int(round(sum(primary_solution[i] for i in receiver_indices)))
+    fulfilled_optimum = int(
+        round(
+            sum(
+                primary_solution[index] * contribution
+                for index, contribution in receiver_progress.items()
+            )
+        )
+    )
     move_optimum = int(round(sum(primary_solution)))
     primary_selected = {
         edges[index][0]
@@ -3619,7 +3673,7 @@ def _direct_exchange_selection(
         if value > 0.5
     }
 
-    receiver_row = ({index: 1.0 for index in receiver_indices}, float(fulfilled_optimum))
+    receiver_row = (receiver_progress, float(fulfilled_optimum))
     move_row = ({index: 1.0 for index in range(edge_count)}, float(move_optimum))
     distance_objective = np.asarray(
         [
@@ -3781,12 +3835,8 @@ def compute_distribution_plan(
         power_projection, target_by_cell, tolerance_by_cell
     )
     tolerance_count_by_cell = {
-        key: (
-            distribution_tolerance_count(
-                int(present.get(key, 0)), tolerance_by_cell[key]
-            )
-            if target_by_cell[key] == int(present.get(key, 0))
-            else 0
+        key: distribution_tolerance_count(
+            int(present.get(key, 0)), tolerance_by_cell[key]
         )
         for key in target_by_cell
     }
@@ -3874,7 +3924,15 @@ def compute_distribution_plan(
     exchange_cells = {
         key for key, role in role_by_cell.items() if role == DistributionCellRole.EXCHANGE
     }
-    destination_cells = receiver_cells | exchange_cells
+    turnover_cells = {
+        key for key, allowance in tolerance_count_by_cell.items() if allowance > 0
+    }
+    source_cells = {
+        key
+        for key, role in role_by_cell.items()
+        if role == DistributionCellRole.DONOR
+    } | turnover_cells
+    destination_cells = receiver_cells | turnover_cells
     destination_rail_keys = {
         rail_key for rail_key, _model_key in destination_cells
     }
@@ -3900,21 +3958,51 @@ def compute_distribution_plan(
                     rail_id=rail.rail_id,
                 )
             )
-    for rail_key, model_key in sorted(exchange_cells):
-        if tolerance_count_by_cell[(rail_key, model_key)] == 0:
-            rail = rail_by_key[rail_key]
-            model = model_by_key[model_key]
+    for (rail_key, model_key), tolerance_percent in sorted(
+        tolerance_by_cell.items()
+    ):
+        if tolerance_percent <= 0.0:
+            continue
+        rail = rail_by_key[rail_key]
+        model = model_by_key[model_key]
+        allowance = tolerance_count_by_cell[(rail_key, model_key)]
+        role = role_by_cell[(rail_key, model_key)]
+        if allowance == 0:
             diagnostics.append(
                 DistributionDiagnostic(
                     code="TOLERANCE_ROUNDS_TO_ZERO",
                     message=(
                         f"{rail.rail_id}/{model.model_id}: tolerance "
-                        f"{tolerance_by_cell[(rail_key, model_key)]:g}% rounds "
-                        "down to 0 whole decaps, so this cell cannot exchange"
+                        f"{tolerance_percent:g}% rounds "
+                        "down to 0 whole decaps, so this cell cannot use counterflow"
                     ),
                     rail_id=rail.rail_id,
                     model_id=model.model_id,
                     requested_count=0,
+                    actual_count=0,
+                )
+            )
+        elif role in {
+            DistributionCellRole.DONOR,
+            DistributionCellRole.RECEIVER,
+        }:
+            direction = (
+                f"receive up to {allowance} replacement decap(s) while final "
+                "Actual remains at or above Target"
+                if role == DistributionCellRole.DONOR
+                else f"send or sacrifice up to {allowance} decap(s) while final "
+                "Actual remains at or below Target"
+            )
+            diagnostics.append(
+                DistributionDiagnostic(
+                    code="TOLERANCE_COUNTERFLOW_ENABLED",
+                    message=(
+                        f"{rail.rail_id}/{model.model_id}: tolerance-enabled "
+                        f"counterflow may {direction}"
+                    ),
+                    rail_id=rail.rail_id,
+                    model_id=model.model_id,
+                    requested_count=allowance,
                     actual_count=0,
                 )
             )
@@ -4020,10 +4108,7 @@ def compute_distribution_plan(
         if ref_key in assignable_keys:
             model_key = str(decap.model_id).casefold()
             current_cell = (current_rail_key, model_key)
-            if role_by_cell[current_cell] in {
-                DistributionCellRole.DONOR,
-                DistributionCellRole.EXCHANGE,
-            }:
+            if current_cell in source_cells:
                 connection = connection_by_refdes[ref_key]
                 for rail_key, destination_model_key in sorted(destination_cells):
                     if destination_model_key != model_key:
@@ -4063,8 +4148,7 @@ def compute_distribution_plan(
                 in {
                     item.casefold() for item in cluster.isolation_gap_refdes
                 }
-                and role_by_cell.get(current_cell)
-                in {DistributionCellRole.DONOR, DistributionCellRole.EXCHANGE}
+                and current_cell in source_cells
             ):
                 gap_upper = 1.0
         gap_variable = builder.variable(
@@ -4125,10 +4209,14 @@ def compute_distribution_plan(
             value = float(present.get((rail_key, model_key), 0))
             builder.constraint(coefficients, lower=value, upper=value)
 
-    # An equal Present/Target cell with non-zero tolerance is a count-neutral
-    # exchange node.  Its final equality above makes received == sent; this
-    # bound limits the gross turnover to the conservative whole-decap allowance.
-    for (rail_key, model_key) in exchange_cells:
+    # Tolerance is orthogonal to the target relation. Donors may receive at most
+    # L replacements; receivers may send/sacrifice at most L existing sites;
+    # equal-target exchange cells are bounded on both sides and remain neutral
+    # through the final-count equality above.
+    for (rail_key, model_key), role in role_by_cell.items():
+        allowance = float(tolerance_count_by_cell[(rail_key, model_key)])
+        if allowance <= 0.0:
+            continue
         outgoing = {
             x[(ref_key, destination_rail_key)]: 1.0
             for ref_key, decap in assignable_by_key.items()
@@ -4154,12 +4242,19 @@ def compute_distribution_plan(
             and decap.current_rail_id.casefold() == rail_key
             and isolation_gap[ref_key] in selectable_gap_variables
         }
-        allowance = float(tolerance_count_by_cell[(rail_key, model_key)])
-        builder.constraint(
-            {**outgoing, **sacrificed},
-            upper=allowance,
-        )
-        builder.constraint(incoming, upper=allowance)
+        if role in {
+            DistributionCellRole.RECEIVER,
+            DistributionCellRole.EXCHANGE,
+        }:
+            builder.constraint(
+                {**outgoing, **sacrificed},
+                upper=allowance,
+            )
+        if role in {
+            DistributionCellRole.DONOR,
+            DistributionCellRole.EXCHANGE,
+        }:
+            builder.constraint(incoming, upper=allowance)
 
     _notify(progress, 20, "Building shared-pad isolation constraints")
     _check_cancelled(is_cancelled)
@@ -4384,24 +4479,37 @@ def compute_distribution_plan(
         )
 
     move_variables: dict[int, tuple[str, str]] = {}
-    receiver_move_variables: set[int] = set()
+    receiver_progress_by_variable: dict[int, float] = {}
     for ref_key, decap in assignable_by_key.items():
         current_rail_key = decap.current_rail_id.casefold()
         for rail_key in allowed_labels[ref_key]:
             if rail_key == current_rail_key:
                 continue
-            destination_role = role_by_cell[
-                (rail_key, decap.model_id.casefold())
-            ]
-            if destination_role not in {
-                DistributionCellRole.RECEIVER,
-                DistributionCellRole.EXCHANGE,
-            }:
+            destination_cell = (rail_key, decap.model_id.casefold())
+            destination_role = role_by_cell[destination_cell]
+            if destination_cell not in destination_cells:
                 continue
             variable = x[(ref_key, rail_key)]
             move_variables[variable] = (ref_key, rail_key)
             if destination_role == DistributionCellRole.RECEIVER:
-                receiver_move_variables.add(variable)
+                receiver_progress_by_variable[variable] = (
+                    receiver_progress_by_variable.get(variable, 0.0) + 1.0
+                )
+            source_role = role_by_cell[
+                (current_rail_key, decap.model_id.casefold())
+            ]
+            if source_role == DistributionCellRole.RECEIVER:
+                receiver_progress_by_variable[variable] = (
+                    receiver_progress_by_variable.get(variable, 0.0) - 1.0
+                )
+    for variable, ref_key in selectable_gap_variables.items():
+        decap = assignable_by_key[ref_key]
+        source_cell = (
+            decap.current_rail_id.casefold(),
+            str(decap.model_id).casefold(),
+        )
+        if role_by_cell[source_cell] == DistributionCellRole.RECEIVER:
+            receiver_progress_by_variable[variable] = -1.0
 
     connectivity_cut_signatures: set[
         tuple[str, str, tuple[str, ...], str | None]
@@ -4653,11 +4761,12 @@ def compute_distribution_plan(
             _check_cancelled(is_cancelled)
             group_deadline = monotonic() + time_limit_s
             variable_indices = np.asarray(variables, dtype=np.int64)
-            local_receiver_indices = np.flatnonzero(
-                np.isin(
-                    variable_indices,
-                    np.fromiter(receiver_move_variables, dtype=np.int64),
-                )
+            local_receiver_progress = np.asarray(
+                [
+                    receiver_progress_by_variable.get(int(variable), 0.0)
+                    for variable in variable_indices
+                ],
+                dtype=float,
             )
             row_index_array = np.asarray(row_indices, dtype=np.int64)
             local_constraints: LinearConstraint | tuple[()] = ()
@@ -4693,7 +4802,9 @@ def compute_distribution_plan(
             )
 
             def local_fulfilled_count(candidate: np.ndarray) -> int:
-                return int(round(float(np.sum(candidate[local_receiver_indices]))))
+                return int(
+                    round(float(np.dot(candidate, local_receiver_progress)))
+                )
 
             def remaining_time() -> float:
                 return max(group_deadline - monotonic(), 0.0)
@@ -4998,7 +5109,7 @@ def compute_distribution_plan(
     selected_move_variables: set[int]
     selected_gap_variables: set[int]
     use_direct_flow = direct_only and (
-        bool(exchange_cells) or len(move_variables) >= 1_000
+        bool(turnover_cells) or len(move_variables) >= 1_000
     )
     if use_direct_flow:
         _notify(
@@ -5050,8 +5161,8 @@ def compute_distribution_plan(
         # population-squared coefficient range made large shared-pad models
         # numerically difficult before HiGHS could find even a primal point.
         fulfillment_objective = np.zeros(len(builder.variables), dtype=float)
-        for variable in receiver_move_variables:
-            fulfillment_objective[variable] = -1.0
+        for variable, contribution in receiver_progress_by_variable.items():
+            fulfillment_objective[variable] = -contribution
         gap_tiebreak = np.zeros(len(builder.variables), dtype=float)
         if optimization_policy == DistributionOptimizationPolicy.MIN_GAPS:
             for variable in selectable_gap_variables:
@@ -5066,8 +5177,10 @@ def compute_distribution_plan(
         fulfilled_optimum = int(
             round(
                 sum(
-                    first_solution[variable]
-                    for variable in receiver_move_variables
+                    first_solution[variable] * contribution
+                    for variable, contribution in (
+                        receiver_progress_by_variable.items()
+                    )
                 )
             )
         )
@@ -5084,7 +5197,7 @@ def compute_distribution_plan(
             # fills every requested cell is therefore a rigorous global optimum
             # even when HiGHS did not close its generic MIP bound in time.
             stage_fallback_flags.remove("fulfillment")
-        constrain_group_totals(receiver_move_variables, first_solution)
+        constrain_group_objective(fulfillment_objective, first_solution)
 
         provisional_gap_count = int(
             round(

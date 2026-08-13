@@ -6,6 +6,7 @@ from collections.abc import Sequence
 
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtWidgets import (
+    QAbstractItemView,
     QCheckBox,
     QHBoxLayout,
     QLabel,
@@ -30,7 +31,7 @@ class DistributionTargetsWindow(QWidget):
     importRequested = Signal()
     exportTemplateRequested = Signal()
     originalBoardToggled = Signal(bool)
-    detachedCellChanged = Signal(object)
+    detachedBatchCommitted = Signal(object)
 
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent, Qt.WindowType.Window)
@@ -38,11 +39,14 @@ class DistributionTargetsWindow(QWidget):
         self.setWindowTitle(f"{APP_DISPLAY_NAME} - Distribution Targets")
         self.setAccessibleName("Distribution target workbook window")
         self.resize(980, 620)
+        self._matrix_revision = 0
         layout = QVBoxLayout(self)
         instructions = QLabel(
             "Double-click any Distribution table cell to open this window. Edit "
-            "Target or Tolerance (%) directly, or use the optional XLSX workflow; "
-            "targets are validated against the currently loaded SPD."
+            "Target or Tolerance (%) directly. Ctrl/Shift-select editable cells "
+            "of the same field and type once to fill them together. The optional "
+            "XLSX workflow remains available, and all values are validated against "
+            "the currently loaded SPD."
         )
         instructions.setWordWrap(True)
         layout.addWidget(instructions)
@@ -63,14 +67,21 @@ class DistributionTargetsWindow(QWidget):
         self.table.setObjectName("detachedDistributionTargetTable")
         self.table.setAccessibleName("Distribution target matrix")
         self.table.setToolTip(
-            "Edit Target or Tolerance (%) directly; XLSX remains optional."
+            "Edit Target or Tolerance (%) directly. Same-field multi-selection "
+            "fills from one committed edit; XLSX remains optional."
         )
         self.table.setEditTriggers(
             QTableWidget.EditTrigger.DoubleClicked
             | QTableWidget.EditTrigger.EditKeyPressed
         )
-        self.table.itemChanged.connect(self.detachedCellChanged.emit)
+        self.table.itemChanged.connect(self._detached_item_changed)
+        self.table.itemDelegate().commitData.connect(
+            self._detached_editor_committed
+        )
         self.table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectItems)
+        self.table.setSelectionMode(
+            QAbstractItemView.SelectionMode.ExtendedSelection
+        )
         layout.addWidget(self.table, 1)
         self.original_board_checkbox = QCheckBox(
             "Show source SPD assignments on the board"
@@ -109,6 +120,7 @@ class DistributionTargetsWindow(QWidget):
     def set_matrix(
         self, headers: Sequence[str], rows: Sequence[Sequence[object]]
     ) -> None:
+        self._matrix_revision += 1
         self.table.setUpdatesEnabled(False)
         previous_block = self.table.blockSignals(True)
         try:
@@ -124,6 +136,78 @@ class DistributionTargetsWindow(QWidget):
             self.table.blockSignals(previous_block)
             self.table.setUpdatesEnabled(True)
 
+    @property
+    def matrix_revision(self) -> int:
+        """Return the identity of the currently displayed canonical matrix."""
+
+        return self._matrix_revision
+
+    @staticmethod
+    def _item_descriptor(
+        item: QTableWidgetItem,
+    ) -> tuple[tuple[str, str], str] | None:
+        raw_key = item.data(Qt.ItemDataRole.UserRole)
+        field = item.data(Qt.ItemDataRole.UserRole + 1)
+        if (
+            not item.flags() & Qt.ItemFlag.ItemIsEditable
+            or not isinstance(raw_key, tuple)
+            or len(raw_key) != 2
+            or field not in {"target", "tolerance"}
+        ):
+            return None
+        return (str(raw_key[0]), str(raw_key[1])), str(field)
+
+    def _selected_batch_keys(
+        self,
+        source: QTableWidgetItem,
+        source_key: tuple[str, str],
+        field: str,
+    ) -> tuple[tuple[str, str], ...]:
+        keys = [source_key]
+        if source.isSelected():
+            for candidate in self.table.selectedItems():
+                descriptor = self._item_descriptor(candidate)
+                if descriptor is None or descriptor[1] != field:
+                    continue
+                key = descriptor[0]
+                if key not in keys:
+                    keys.append(key)
+        return tuple(keys)
+
+    def _edit_payload(
+        self,
+        item: QTableWidgetItem,
+        *,
+        committed_text: str | None = None,
+    ) -> tuple[str, str, tuple[tuple[str, str], ...], int] | None:
+        descriptor = self._item_descriptor(item)
+        if descriptor is None or not self.table.isEnabled():
+            return None
+        source_key, field = descriptor
+        keys = self._selected_batch_keys(item, source_key, field)
+        text = item.text() if committed_text is None else committed_text
+        return field, text, keys, self._matrix_revision
+
+    def _detached_item_changed(self, item: QTableWidgetItem) -> None:
+        payload = self._edit_payload(item)
+        if payload is not None:
+            self.detachedBatchCommitted.emit(payload)
+
+    def _detached_editor_committed(self, editor: QWidget) -> None:
+        # commitData precedes model copying. Use the editor text and stable
+        # key/field descriptors so an unchanged source can still bulk-fill;
+        # the owner resynchronizes the same table/model before Qt copies an
+        # equivalent value into the current index.
+        item = self.table.currentItem()
+        payload = (
+            self._edit_payload(item, committed_text=str(editor.property("text")))
+            if item is not None
+            else None
+        )
+        if payload is None:
+            return
+        self.detachedBatchCommitted.emit(payload)
+
     def set_original_board_checked(self, checked: bool) -> None:
         previous = self.original_board_checkbox.blockSignals(True)
         try:
@@ -135,6 +219,7 @@ class DistributionTargetsWindow(QWidget):
         """Discard a detached snapshot when its parent changes documents."""
 
         self.table.clear()
+        self._matrix_revision += 1
         self.table.setRowCount(0)
         self.table.setColumnCount(0)
         self.table.setEnabled(False)

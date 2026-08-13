@@ -9,7 +9,7 @@ from types import SimpleNamespace
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
-from PySide6.QtCore import QItemSelectionModel, QPoint, Qt
+from PySide6.QtCore import QItemSelectionModel, QPoint, QTimer, Qt
 from PySide6.QtTest import QSignalSpy, QTest
 from PySide6.QtWidgets import (
     QApplication,
@@ -39,6 +39,7 @@ from spd_decap_pi.distribution import (
 )
 from spd_decap_pi.distribution_workbook import (
     DISTRIBUTION_METADATA_TITLE,
+    DISTRIBUTION_TOLERANCE_SEMANTICS,
     load_distribution_targets,
 )
 from spd_decap_pi.evaluation import preflight_evaluation_connectivity
@@ -224,6 +225,10 @@ def test_detached_distribution_editor_routes_target_tolerance_and_invalid_state(
         assert dialog is not None
         assert dialog.table.editTriggers() & QTableWidget.EditTrigger.DoubleClicked
         assert dialog.table.editTriggers() & QTableWidget.EditTrigger.EditKeyPressed
+        assert (
+            dialog.table.selectionMode()
+            == QTableWidget.SelectionMode.ExtendedSelection
+        )
         target = dialog.table.item(0, 2)
         key = tuple(target.data(Qt.ItemDataRole.UserRole))
         main_row = _rail_row(window, key[0])
@@ -317,6 +322,171 @@ def test_detached_distribution_editor_routes_target_tolerance_and_invalid_state(
         application.processEvents()
 
 
+def test_detached_distribution_same_field_bulk_edit_commits_once(
+    monkeypatch,
+) -> None:
+    application = _application()
+    window = _window_with_scenario(
+        _direct_scenario(
+            (
+                ("C1", 0.0, ("R1", "R2")),
+                ("C2", 10.0, ("R1", "R2")),
+            ),
+            rail_ids=("R1", "R2"),
+        )
+    )
+    try:
+        window._show_distribution_window()
+        dialog = window._distribution_window
+        assert dialog is not None
+        first = dialog.table.item(0, 2)
+        second = dialog.table.item(1, 2)
+        mixed_tolerance = dialog.table.item(1, 3)
+        first_key = tuple(first.data(Qt.ItemDataRole.UserRole))
+        second_key = tuple(second.data(Qt.ItemDataRole.UserRole))
+        for item in (first, second, mixed_tolerance):
+            item.setSelected(True)
+        dialog.table.setCurrentItem(first, QItemSelectionModel.SelectionFlag.NoUpdate)
+        window._distribution_plan = object()
+        window._distribution_preview_scenario = object()
+        calls = 0
+        original = window._distribution_targets_edited
+
+        def record_edit() -> None:
+            nonlocal calls
+            calls += 1
+            original()
+
+        monkeypatch.setattr(window, "_distribution_targets_edited", record_edit)
+        dialog.table.editItem(first)
+        editor = dialog.table.findChild(QLineEdit)
+        assert editor is not None
+        editor.selectAll()
+        editor.setText("4")
+        QTest.keyClick(editor, Qt.Key.Key_Return)
+        application.processEvents()
+
+        assert window._distribution_targets[first_key] == 4
+        assert window._distribution_targets[second_key] == 4
+        assert window._distribution_tolerances[second_key] == 0.0
+        assert calls == 1
+        assert window._distribution_plan is None
+        assert window._distribution_preview_scenario is None
+        assert dialog.table.item(0, 2).text() == "4"
+        assert dialog.table.item(1, 2).text() == "4"
+        assert dialog.table.item(1, 3).text() == "0"
+    finally:
+        window._dirty = False
+        window.close()
+        application.processEvents()
+
+
+def test_detached_unchanged_source_text_fills_selected_tolerance_once(
+    monkeypatch,
+) -> None:
+    application = _application()
+    window = _window_with_scenario(
+        _direct_scenario(
+            (
+                ("C1", 0.0, ("R1", "R2")),
+                ("C2", 10.0, ("R1", "R2")),
+            ),
+            rail_ids=("R1", "R2"),
+        )
+    )
+    try:
+        _set_tolerance(window, "R1", 1.5)
+        window._show_distribution_window()
+        dialog = window._distribution_window
+        assert dialog is not None
+        first = dialog.table.item(_rail_row(window, "R1"), 3)
+        second = dialog.table.item(_rail_row(window, "R2"), 3)
+        first.setSelected(True)
+        second.setSelected(True)
+        dialog.table.setCurrentItem(first, QItemSelectionModel.SelectionFlag.NoUpdate)
+        calls = 0
+        original = window._distribution_targets_edited
+
+        def record_edit() -> None:
+            nonlocal calls
+            calls += 1
+            original()
+
+        monkeypatch.setattr(window, "_distribution_targets_edited", record_edit)
+        dialog.table.editItem(first)
+        editor = dialog.table.findChild(QLineEdit)
+        assert editor is not None
+        assert editor.text() == "1.5"
+        QTest.keyClick(editor, Qt.Key.Key_Return)
+        application.processEvents()
+
+        assert window._distribution_tolerances[("R1", "M1")] == 1.5
+        assert window._distribution_tolerances[("R2", "M1")] == 1.5
+        assert calls == 1
+        assert dialog.table.item(_rail_row(window, "R2"), 3).text() == "1.5"
+    finally:
+        window._dirty = False
+        window.close()
+        application.processEvents()
+
+
+def test_detached_invalid_same_field_bulk_edit_marks_every_cell_once(
+    monkeypatch,
+) -> None:
+    application = _application()
+    window = _window_with_scenario(
+        _direct_scenario(
+            (
+                ("C1", 0.0, ("R1", "R2")),
+                ("C2", 10.0, ("R1", "R2")),
+            ),
+            rail_ids=("R1", "R2"),
+        )
+    )
+    try:
+        window._show_distribution_window()
+        dialog = window._distribution_window
+        assert dialog is not None
+        first = dialog.table.item(0, 2)
+        second = dialog.table.item(1, 2)
+        keys = (
+            tuple(first.data(Qt.ItemDataRole.UserRole)),
+            tuple(second.data(Qt.ItemDataRole.UserRole)),
+        )
+        first.setSelected(True)
+        second.setSelected(True)
+        dialog.table.setCurrentItem(first, QItemSelectionModel.SelectionFlag.NoUpdate)
+        calls = 0
+        original = window._distribution_targets_edited
+
+        def record_edit() -> None:
+            nonlocal calls
+            calls += 1
+            original()
+
+        monkeypatch.setattr(window, "_distribution_targets_edited", record_edit)
+        dialog.table.editItem(first)
+        editor = dialog.table.findChild(QLineEdit)
+        assert editor is not None
+        editor.selectAll()
+        editor.setText("-1")
+        QTest.keyClick(editor, Qt.Key.Key_Return)
+        application.processEvents()
+
+        assert calls == 1
+        assert set(keys).issubset(window._distribution_invalid_cells)
+        for row, key in enumerate(keys):
+            detached = dialog.table.item(row, 2)
+            main = window.distribution_table.item(_rail_row(window, key[0]), 2)
+            assert detached.text() == main.text() == "-1"
+            assert detached.background() == main.background()
+        assert not window.calculate_distribution_button.isEnabled()
+    finally:
+        window._dirty = False
+        window.close()
+        application.processEvents()
+
+
 def test_detached_distribution_busy_edit_is_disabled() -> None:
     application = _application()
     window = _window_with_scenario(
@@ -339,6 +509,38 @@ def test_detached_distribution_busy_edit_is_disabled() -> None:
         application.processEvents()
         assert item.text() == before
         assert window._distribution_targets[key] == value
+    finally:
+        window._worker = None
+        window._set_busy(False)
+        window._dirty = False
+        window.close()
+        application.processEvents()
+
+
+def test_queued_detached_commit_is_discarded_after_busy_transition() -> None:
+    application = _application()
+    window = _window_with_scenario(
+        _direct_scenario(
+            (("C1", 0.0, ("R1", "R2")),),
+            rail_ids=("R1", "R2"),
+        )
+    )
+    try:
+        window._show_distribution_window()
+        dialog = window._distribution_window
+        assert dialog is not None
+        item = dialog.table.item(0, 2)
+        key = tuple(item.data(Qt.ItemDataRole.UserRole))
+        before = window._distribution_targets[key]
+        payload = ("target", "9", (key,), dialog.matrix_revision)
+        QTimer.singleShot(0, lambda: dialog.detachedBatchCommitted.emit(payload))
+
+        window._worker = object()
+        window._sync_distribution_window()
+        application.processEvents()
+
+        assert not dialog.table.isEnabled()
+        assert window._distribution_targets[key] == before
     finally:
         window._worker = None
         window._set_busy(False)
@@ -634,7 +836,13 @@ def test_routing_option_and_clearance_are_request_inputs_and_fail_closed_without
                 )
         ).encode("utf-8")
         assert baseline == sha256(legacy_payload).hexdigest()
-        assert window._distribution_workbook_contract() == (3, {})
+        assert window._distribution_workbook_contract() == (
+            5,
+            {
+                "Signal Routing Protection": "OFF",
+                "Tolerance Semantics": DISTRIBUTION_TOLERANCE_SEMANTICS,
+            },
+        )
         window.distribution_protect_signal_routing_checkbox.setChecked(True)
         enabled_without_clearance = window._distribution_request_fingerprint()
         assert enabled_without_clearance != baseline
@@ -1573,6 +1781,96 @@ def test_distribution_worker_reuses_one_projection_for_validate_compute_and_appl
     assert result.preview_scenario is scenario
 
 
+def test_candidate_audit_uses_receiver_gross_inbound_counterflow_demand(
+    monkeypatch,
+) -> None:
+    import spd_decap_pi.distribution as distribution_module
+
+    scenario = _with_initial_rails(
+        _direct_scenario(
+            (
+                ("A0", 0.0, ("R1", "R2")),
+                ("A1", 10.0, ("R1", "R2")),
+                ("A2", 20.0, ("R1", "R2")),
+                ("B0", 100.0, ("R2", "R3")),
+            ),
+            bump_x={"R2": 0.0, "R3": 100.0},
+        ),
+        {"B0": "R2"},
+    )
+    monkeypatch.setattr(
+        distribution_module,
+        "build_distribution_power_projection",
+        lambda *_args, **_kwargs: None,
+    )
+
+    prepared = _job_compute_distribution(
+        scenario,
+        {},
+        {("R1", "M1"): 1, ("R2", "M1"): 2, ("R3", "M1"): 1},
+        {("R1", "M1"): 0.0, ("R2", "M1"): 100.0, ("R3", "M1"): 0.0},
+        DistributionDistanceMode.NEAREST,
+        progress=lambda _value, _message: None,
+        is_cancelled=lambda: False,
+    )
+
+    receiver = next(
+        cell for cell in prepared.plan.cells if cell.rail_id == "R2"
+    )
+    assert (receiver.requested_count, receiver.sent_count, receiver.received_count) == (
+        1,
+        1,
+        2,
+    )
+    unselected = next(
+        row
+        for row in prepared.candidate_audit_rows
+        if row[0] == "A2" and row[4] == "R2"
+    )
+    assert unselected[9] == "ELIGIBLE_NOT_SELECTED_BY_GLOBAL_OPTIMUM"
+    assert "(1x2=2)" in unselected[10]
+
+
+def test_candidate_audit_keeps_partial_receiver_full_demand(
+    monkeypatch,
+) -> None:
+    import spd_decap_pi.distribution_audit as audit_module
+
+    scenario = _direct_scenario(
+        (
+            ("C1", 0.0, ("R1", "R2")),
+            ("C2", 10.0, ("R1",)),
+            ("C3", 20.0, ("R1",)),
+        ),
+        rail_ids=("R1", "R2"),
+        bump_x={"R2": 0.0},
+    )
+    original = audit_module.audit_distribution_candidates
+    calls: list[tuple[str, int]] = []
+
+    def record_demand(*args, **kwargs):
+        calls.append((str(args[1]), int(args[2])))
+        return original(*args, **kwargs)
+
+    monkeypatch.setattr(audit_module, "audit_distribution_candidates", record_demand)
+    prepared = _job_compute_distribution(
+        scenario,
+        {},
+        {("R1", "M1"): 1, ("R2", "M1"): 2},
+        {("R1", "M1"): 0.0, ("R2", "M1"): 0.0},
+        DistributionDistanceMode.NEAREST,
+        progress=lambda _value, _message: None,
+        is_cancelled=lambda: False,
+    )
+
+    receiver = next(
+        cell for cell in prepared.plan.cells if cell.rail_id == "R2"
+    )
+    assert (receiver.requested_count, receiver.received_count) == (2, 0)
+    assert ("R2", 2) in calls
+    assert any(row[4] == "R2" for row in prepared.candidate_audit_rows)
+
+
 def test_one_invalid_component_blocks_an_otherwise_valid_component() -> None:
     application = _application()
     base = _direct_scenario(
@@ -1702,29 +2000,41 @@ def test_full_preview_exports_saves_and_applies_one_atomic_revision(
                 "PWR NET Distribution Targets",
             ]
             targets = workbook["PWR NET Distribution Targets"]
-            assert tuple(cell.value for cell in targets[1][:7]) == (
+            assert tuple(cell.value for cell in targets[1][:11]) == (
                 "PWR NET",
                 "M1\nPresent",
                 "M1\nTarget",
                 "M1\nTolerance (%)",
+                "M1\nRole",
+                "M1\nTurnover Allowance",
+                "M1\nSent",
+                "M1\nReceived",
                 "M1\nActual Delta",
                 "M1\nAssignment Failed",
                 "M1\nIsolation Gaps",
             )
-            assert tuple(cell.value for cell in targets[2][:7]) == (
+            assert tuple(cell.value for cell in targets[2][:11]) == (
                 "V1 (R1)",
                 3,
                 1,
+                0,
+                "DONOR",
+                0,
+                2,
                 0,
                 -2,
                 0,
                 0,
             )
-            assert tuple(cell.value for cell in targets[3][:7]) == (
+            assert tuple(cell.value for cell in targets[3][:11]) == (
                 "V2 (R2)",
                 0,
                 2,
                 0,
+                "RECEIVER",
+                0,
+                0,
+                2,
                 2,
                 0,
                 0,
@@ -1740,8 +2050,12 @@ def test_full_preview_exports_saves_and_applies_one_atomic_revision(
                 if key in (None, ""):
                     break
                 metadata[str(key)] = targets.cell(row_index, 2).value
-            assert metadata["Format Version"] == 3
-            assert "Signal Routing Protection" not in metadata
+            assert metadata["Format Version"] == 5
+            assert metadata["Signal Routing Protection"] == "OFF"
+            assert (
+                metadata["Tolerance Semantics"]
+                == DISTRIBUTION_TOLERANCE_SEMANTICS
+            )
             assert metadata["Source SPD SHA-256"] == scenario.source.sha256
             assert metadata["Input Design Fingerprint"] == scenario.design_fingerprint
             assert metadata["Distance Mode"] == "NEAREST"
@@ -1810,20 +2124,28 @@ def test_full_preview_exports_saves_and_applies_one_atomic_revision(
             targets = applied_workbook["PWR NET Distribution Targets"]
             # Apply refreshes the GUI inventory to final Present values, but
             # the exported target sheet remains the immutable plan input.
-            assert tuple(cell.value for cell in targets[2][:7]) == (
+            assert tuple(cell.value for cell in targets[2][:11]) == (
                 "V1 (R1)",
                 3,
                 1,
+                0,
+                "DONOR",
+                0,
+                2,
                 0,
                 -2,
                 0,
                 0,
             )
-            assert tuple(cell.value for cell in targets[3][:7]) == (
+            assert tuple(cell.value for cell in targets[3][:11]) == (
                 "V2 (R2)",
                 0,
                 2,
                 0,
+                "RECEIVER",
+                0,
+                0,
+                2,
                 2,
                 0,
                 0,
@@ -2251,7 +2573,7 @@ def test_exchange_preview_reports_turnover_and_apply_preserves_tolerance() -> No
         _set_target(window, "R3", 1)
         _set_tolerance(window, "R2", 50)
         assert window.calculate_distribution_button.isEnabled()
-        assert "exchange 1 cell(s) / 1 decap(s)" in (
+        assert "tolerance counterflow 1 cell(s) / 1 decap(s) allowance" in (
             window.distribution_summary.toPlainText()
         )
 

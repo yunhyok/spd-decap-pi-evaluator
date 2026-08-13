@@ -19,10 +19,10 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 
 def test_spd_decap_release_identity_is_explicit_and_versioned() -> None:
     assert APP_NAME == "SPD Decap PI Evaluator"
-    assert __version__ == "0.22.3"
-    assert APP_DISPLAY_NAME == "SPD Decap PI Evaluator v0.22.3"
+    assert __version__ == "0.22.4"
+    assert APP_DISPLAY_NAME == "SPD Decap PI Evaluator v0.22.4"
     assert EXECUTABLE_BASENAME == "SPDDecapPIEvaluator"
-    assert INSTALLER_BASENAME == "SPDDecapPIEvaluatorSetup-0.22.3"
+    assert INSTALLER_BASENAME == "SPDDecapPIEvaluatorSetup-0.22.4"
 
 
 def test_spd_decap_console_and_packaging_metadata_are_consistent() -> None:
@@ -91,10 +91,10 @@ def test_windows_version_resource_matches_release_identity() -> None:
     version_info = (
         REPO_ROOT / "packaging" / "spd_decap_pi_version_info.txt"
     ).read_text(encoding="utf-8")
-    assert "filevers=(0, 22, 3, 0)" in version_info
-    assert "prodvers=(0, 22, 3, 0)" in version_info
-    assert "StringStruct('FileVersion', '0.22.3')" in version_info
-    assert "StringStruct('ProductVersion', '0.22.3')" in version_info
+    assert "filevers=(0, 22, 4, 0)" in version_info
+    assert "prodvers=(0, 22, 4, 0)" in version_info
+    assert "StringStruct('FileVersion', '0.22.4')" in version_info
+    assert "StringStruct('ProductVersion', '0.22.4')" in version_info
 
 
 def test_packaged_numerical_path_imports_threadpoolctl() -> None:
@@ -112,20 +112,30 @@ def test_distribution_methodology_docs_are_current_offline_and_linked() -> None:
     canonical_markdown = markdown.replace("\r\n", "\n").replace("\r", "\n")
     source_hash = sha256(canonical_markdown.encode("utf-8")).hexdigest()
 
-    assert "SPD Decap PI Evaluator v0.22.3" in markdown
+    assert "SPD Decap PI Evaluator v0.22.4" in markdown
     assert "로컬 final component" in markdown
     assert "NO_ZERO_GAP_EXACT_COUNT_COMBINATION" in markdown
     assert "exact 15 + 3 + gap 1" in markdown
+    assert "TARGET_RELATION_COUNTERFLOW_V1" in markdown
+    assert "Receiver Net Progress = I - O - S" in markdown
+    assert "A → B → C" in markdown
     assert '<html lang="ko">' in html
     assert '<meta charset="utf-8">' in html
     assert (
         '<meta name="source-sha256-normalization" content="utf-8-lf">'
         in html
     )
-    assert "SPD Decap PI Evaluator v0.22.3" in html
+    assert "SPD Decap PI Evaluator v0.22.4" in html
     assert f'content="{source_hash}"' in html
-    assert html.count('<svg viewBox=') >= 3
-    assert html.count('role="img"') >= 3
+    assert "TARGET_RELATION_COUNTERFLOW_V1" in html
+    assert 'id="handoff"' in html
+    assert html.count('<svg viewBox=') >= 4
+    assert html.count('role="img"') >= 4
+    assert html.count('role="region" tabindex="0" aria-labelledby=') >= 4
+    assert "overflow-x: auto;" in html
+    assert "min-width: 56rem;" in html
+    assert "overscroll-behavior-inline: contain;" in html
+    assert "figure svg { min-width: 0; }" in html
     assert "http://" not in html and "https://" not in html
     assert "docs/DECAP_DISTRIBUTION_RULES.md" in readme
     assert "docs/DECAP_DISTRIBUTION_RULES.companion.html" in readme

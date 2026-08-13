@@ -16,8 +16,9 @@ from .routing_obstacles import ROUTING_POLICY_VERSION
 DISTRIBUTION_TARGET_SHEET = "PWR NET Distribution Targets"
 DISTRIBUTION_METADATA_TITLE = "Distribution Run Metadata"
 DISTRIBUTION_LEGACY_OFF_WORKBOOK_FORMAT_VERSION = 3
-DISTRIBUTION_WORKBOOK_FORMAT_VERSION = 4
+DISTRIBUTION_WORKBOOK_FORMAT_VERSION = 5
 DISTRIBUTION_VIA_PROJECTION_POLICY = "VERTICAL_XY_ASSUME_DESCENT_V1"
+DISTRIBUTION_TOLERANCE_SEMANTICS = "TARGET_RELATION_COUNTERFLOW_V1"
 
 TargetKey = tuple[str, str]
 
@@ -25,6 +26,11 @@ _KNOWN_FIELDS = {
     "present": "present",
     "target": "target",
     "tolerance (%)": "tolerance",
+    "role": "result",
+    "turnover allowance": "result",
+    "tolerance count": "result",
+    "sent": "result",
+    "received": "result",
     "actual delta": "result",
     "actual δ": "result",
     "actual changed": "result",
@@ -430,6 +436,20 @@ def load_distribution_targets(
             f"1 through {DISTRIBUTION_WORKBOOK_FORMAT_VERSION}"
         )
 
+    raw_tolerance_semantics = metadata.get("tolerance semantics")
+    tolerance_semantics = (
+        str(raw_tolerance_semantics).strip().upper()
+        if raw_tolerance_semantics not in (None, "")
+        else None
+    )
+    if format_version is not None and format_version >= 5:
+        if tolerance_semantics != DISTRIBUTION_TOLERANCE_SEMANTICS:
+            raise DistributionWorkbookError(
+                "format 5 workbook is missing or has unsupported Tolerance "
+                "Semantics metadata; expected "
+                f"{DISTRIBUTION_TOLERANCE_SEMANTICS}"
+            )
+
     raw_distance = metadata.get("distance mode")
     distance_mode: str | None = None
     if raw_distance not in (None, ""):
@@ -537,7 +557,8 @@ def load_distribution_targets(
         routing_protection_enabled = enabled_text == "ON"
     elif format_version is not None and format_version >= 4:
         raise DistributionWorkbookError(
-            "format 4 workbook is missing Signal Routing Protection metadata"
+            "format 4 or newer workbook is missing Signal Routing Protection "
+            "metadata"
         )
     if routing_protection_enabled:
         raw_scope = metadata.get("routing protection scope")
@@ -623,6 +644,7 @@ def load_distribution_targets(
     matched = 0
     ignored_neutral: list[str] = []
     unmatched_active: list[str] = []
+    legacy_directional_tolerance: list[str] = []
     for cell in raw_cells:
         rail_id = rail_by_key.get(cell.rail_id.casefold())
         model_id = model_by_key.get(cell.model_id.casefold())
@@ -639,6 +661,14 @@ def load_distribution_targets(
                 ignored_neutral.append(label)
             continue
         key = (rail_id, model_id)
+        if (
+            (format_version is None or format_version < 5)
+            and cell.tolerance > 0.0
+            and cell.target != canonical_present[key]
+        ):
+            legacy_directional_tolerance.append(
+                f"{cell.rail_id}/{cell.model_id}"
+            )
         targets[key] = cell.target
         tolerances[key] = cell.tolerance
         if cell.present is not None:
@@ -651,6 +681,19 @@ def load_distribution_targets(
             preview += f", and {len(unmatched_active) - 8} more"
         raise DistributionWorkbookError(
             "active workbook target cell(s) do not exist in the loaded SPD: " + preview
+        )
+    if legacy_directional_tolerance:
+        preview = ", ".join(legacy_directional_tolerance[:8])
+        if len(legacy_directional_tolerance) > 8:
+            preview += (
+                f", and {len(legacy_directional_tolerance) - 8} more"
+            )
+        raise DistributionWorkbookError(
+            "legacy workbook contains nonzero Tolerance on Target-changing "
+            "cell(s): "
+            + preview
+            + ". Formats 1-4 did not define directional counterflow; re-export "
+            "a format 5 template and explicitly re-enter these tolerances."
         )
     if matched == 0:
         raise DistributionWorkbookError(
@@ -727,6 +770,7 @@ __all__ = [
     "DISTRIBUTION_LEGACY_OFF_WORKBOOK_FORMAT_VERSION",
     "DISTRIBUTION_METADATA_TITLE",
     "DISTRIBUTION_TARGET_SHEET",
+    "DISTRIBUTION_TOLERANCE_SEMANTICS",
     "DISTRIBUTION_WORKBOOK_FORMAT_VERSION",
     "DISTRIBUTION_VIA_PROJECTION_POLICY",
     "DistributionTargetImport",

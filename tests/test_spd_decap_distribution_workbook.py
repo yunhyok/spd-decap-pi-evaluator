@@ -9,6 +9,7 @@ from openpyxl.worksheet._read_only import ReadOnlyWorksheet
 import spd_decap_pi.distribution_workbook as distribution_workbook
 from spd_decap_pi.distribution_workbook import (
     DISTRIBUTION_METADATA_TITLE,
+    DISTRIBUTION_TOLERANCE_SEMANTICS,
     DISTRIBUTION_VIA_PROJECTION_POLICY,
     DistributionWorkbookError,
     load_distribution_targets,
@@ -34,7 +35,7 @@ def test_legacy_targets_are_absolute_and_present_is_refreshed_from_current_scena
         (),
         LEGACY_HEADERS,
         (
-            ("V1 (R1)", 2, 1, 5.0, "=ignored-result"),
+            ("V1 (R1)", 2, 1, 0.0, "=ignored-result"),
             ("V2 (R2)", 1, 2, 0.0, 1),
         ),
     )
@@ -56,7 +57,7 @@ def test_legacy_targets_are_absolute_and_present_is_refreshed_from_current_scena
         ("R3", "M1"): 2,
     }
     assert imported.tolerances == {
-        ("R1", "M1"): 5.0,
+        ("R1", "M1"): 0.0,
         ("R2", "M1"): 0.0,
         ("R3", "M1"): 0.0,
     }
@@ -80,6 +81,10 @@ def test_current_export_keeps_two_sheets_a1_matrix_and_round_trips_metadata(
         "M1\nPresent",
         "M1\nTarget",
         "M1\nTolerance (%)",
+        "M1\nRole",
+        "M1\nTurnover Allowance",
+        "M1\nSent",
+        "M1\nReceived",
         "M1\nActual Delta",
         "M1\nAssignment Failed",
         "M1\nIsolation Gaps",
@@ -88,11 +93,13 @@ def test_current_export_keeps_two_sheets_a1_matrix_and_round_trips_metadata(
         path,
         (("M1", "C1", "V1", "V2", 1.0, 2.0),),
         headers,
-        (("V1 (R1)", 4, 3, 1.25, -1, 2, 1),),
+        (("V1 (R1)", 4, 3, 1.25, "DONOR", 0, 1, 0, -1, 2, 1),),
         inventory_headers=("Component", "Physical Present"),
         inventory_rows=(("M1", 4),),
         metadata={
-            "Format Version": 3,
+            "Format Version": 5,
+            "Signal Routing Protection": "OFF",
+            "Tolerance Semantics": DISTRIBUTION_TOLERANCE_SEMANTICS,
             "Application Version": "0.9.3",
             "Source SPD SHA-256": source_sha,
             "Input Design Fingerprint": fingerprint,
@@ -127,7 +134,7 @@ def test_current_export_keeps_two_sheets_a1_matrix_and_round_trips_metadata(
     assert imported.targets[("R1", "M1")] == 3
     assert imported.tolerances[("R1", "M1")] == 1.25
     assert imported.distance_mode == "FARTHEST"
-    assert imported.format_version == 3
+    assert imported.format_version == 5
     assert imported.source_sha256 == source_sha
     assert imported.via_projection_policy == DISTRIBUTION_VIA_PROJECTION_POLICY
 
@@ -184,6 +191,107 @@ def test_writer_rejects_format4_without_routing_mode_metadata(tmp_path: Path) ->
             ("PWR NET", "M1\nTarget"),
             (("V1 (R1)", 1),),
             metadata={"Format Version": 4},
+        )
+
+
+def test_format5_requires_explicit_tolerance_semantics(tmp_path: Path) -> None:
+    path = tmp_path / "missing-tolerance-semantics.xlsx"
+    workbook = Workbook()
+    sheet = workbook.active
+    sheet.title = "PWR NET Distribution Targets"
+    sheet.append(("PWR NET", "M1\nPresent", "M1\nTarget", "M1\nTolerance (%)"))
+    sheet.append(("V1 (R1)", 3, 2, 10.0))
+    sheet.append(())
+    sheet.append((DISTRIBUTION_METADATA_TITLE,))
+    sheet.append(("Format Version", 5))
+    sheet.append(("Signal Routing Protection", "OFF"))
+    workbook.save(path)
+    workbook.close()
+
+    with pytest.raises(DistributionWorkbookError, match="Tolerance Semantics"):
+        load_distribution_targets(
+            path,
+            rail_ids=("R1",),
+            model_ids=("M1",),
+            current_present={("R1", "M1"): 3},
+        )
+
+
+def test_legacy_target_changing_tolerance_requires_format5_reentry(
+    tmp_path: Path,
+) -> None:
+    path = tmp_path / "legacy-directional-tolerance.xlsx"
+    write_distribution_workbook(
+        path,
+        (),
+        ("PWR NET", "M1\nPresent", "M1\nTarget", "M1\nTolerance (%)"),
+        (("V1 (R1)", 3, 2, 10.0),),
+        metadata={
+            "Format Version": 4,
+            "Signal Routing Protection": "OFF",
+        },
+    )
+
+    with pytest.raises(
+        DistributionWorkbookError,
+        match="Formats 1-4.*re-export.*format 5",
+    ):
+        load_distribution_targets(
+            path,
+            rail_ids=("R1",),
+            model_ids=("M1",),
+            current_present={("R1", "M1"): 3},
+        )
+
+
+def test_legacy_safe_tolerance_cells_still_load(tmp_path: Path) -> None:
+    path = tmp_path / "legacy-safe-tolerance.xlsx"
+    write_distribution_workbook(
+        path,
+        (),
+        ("PWR NET", "M1\nPresent", "M1\nTarget", "M1\nTolerance (%)"),
+        (
+            ("V1 (R1)", 3, 3, 10.0),
+            ("V2 (R2)", 2, 1, 0.0),
+        ),
+        metadata={
+            "Format Version": 4,
+            "Signal Routing Protection": "OFF",
+        },
+    )
+
+    imported = load_distribution_targets(
+        path,
+        rail_ids=("R1", "R2"),
+        model_ids=("M1",),
+        current_present={("R1", "M1"): 3, ("R2", "M1"): 2},
+    )
+
+    assert imported.tolerances[("R1", "M1")] == 10.0
+    assert imported.targets[("R2", "M1")] == 1
+
+
+def test_legacy_migration_uses_current_present_not_stale_workbook_present(
+    tmp_path: Path,
+) -> None:
+    path = tmp_path / "legacy-stale-present.xlsx"
+    write_distribution_workbook(
+        path,
+        (),
+        ("PWR NET", "M1\nPresent", "M1\nTarget", "M1\nTolerance (%)"),
+        (("V1 (R1)", 3, 3, 10.0),),
+        metadata={
+            "Format Version": 4,
+            "Signal Routing Protection": "OFF",
+        },
+    )
+
+    with pytest.raises(DistributionWorkbookError, match="directional counterflow"):
+        load_distribution_targets(
+            path,
+            rail_ids=("R1",),
+            model_ids=("M1",),
+            current_present={("R1", "M1"): 4},
         )
 
 
