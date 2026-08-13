@@ -19,10 +19,10 @@ from pathlib import Path
 from typing import Any
 
 
-POLICY_SHA256 = "87c385f3090d973b5daed5eb5a478a060da8d76a8021017cafd633e681cd28b1"
+POLICY_SHA256 = "3f65d19f5477d0aab79bb999254c08282c82362aa671a19d478518d4227394c8"
 TRACKED_V5_SHA256 = "2fe022df2977cb72fe87b659883cc02abd040b9e760dd47be886dcad06ceec51"
 BENCHMARK_SOURCE_SHA256 = (
-    "5a777379eefdafee07d087f439489f93a80cba607497328966fadf36bcaad052"
+    "d43b868629464f408ea19362daa78fc369d2fd446cf3d458cfdc044ccbf57f08"
 )
 POLICY_SCHEMA = "known-case-nonregression-policy-v1"
 SIDECAR_SCHEMA = "known-case-nonregression-result-v1"

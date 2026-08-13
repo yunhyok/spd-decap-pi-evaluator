@@ -2,6 +2,7 @@ from copy import deepcopy
 from dataclasses import dataclass, replace
 import importlib.util
 import json
+import inspect
 from pathlib import Path
 from types import MappingProxyType, SimpleNamespace
 
@@ -490,6 +491,65 @@ def test_cli_accepts_explicit_adaptive_modal_ceiling():
     ])
     assert args.modal_max_index == [8]
     assert args.modal_ceiling_index == 12
+
+
+def test_cli_accepts_strict_terminal_complete_reuse_flag():
+    args = module.parse_args([
+        "--spd", "raw.spd", "--touchstone", "r.s92p", "--out-dir", "result",
+        "--reuse-candidate", "candidate.spdpi",
+        "--reuse-candidate-import-report", "import_save_validation_report.json",
+        "--require-terminal-complete-reuse",
+    ])
+    assert args.require_terminal_complete_reuse is True
+
+
+def test_strict_terminal_reuse_reraises_before_mode12_fallback(monkeypatch):
+    calls: list[int] = []
+    monkeypatch.setattr(
+        module,
+        "_run_one",
+        lambda *_args, modal_index, **_kwargs: calls.append(modal_index) or {"mode": modal_index},
+    )
+
+    def mismatch(*_args, **_kwargs):
+        raise module._TerminalCompleteReuseError("synthetic reuse mismatch")
+
+    monkeypatch.setattr(module, "_run_reused_terminal_complete_mode", mismatch)
+    with pytest.raises(module._TerminalCompleteReuseError, match="synthetic reuse mismatch"):
+        module._run_candidate_modes(
+            object(), object(), object(), {}, modes=(10, 12),
+            legacy_via_only=False, solver_profile=module.LAYERWISE_ADMITTANCE_PROFILE.key,
+            require_terminal_complete_reuse=True,
+        )
+    assert calls == [10]
+
+
+def test_default_terminal_reuse_mismatch_still_uses_mode12_fallback(monkeypatch):
+    calls: list[int] = []
+    monkeypatch.setattr(
+        module,
+        "_run_one",
+        lambda *_args, modal_index, **_kwargs: calls.append(modal_index) or {"mode": modal_index},
+    )
+    monkeypatch.setattr(
+        module,
+        "_run_reused_terminal_complete_mode",
+        lambda *_args, **_kwargs: (_ for _ in ()).throw(
+            module._TerminalCompleteReuseError("synthetic reuse mismatch")
+        ),
+    )
+    monkeypatch.setattr(module, "_validate_terminal_complete_run_parity", lambda *args, **kwargs: {"status": "passed"})
+    runs, execution = module._run_candidate_modes(
+        object(), object(), object(), {}, modes=(10, 12),
+        legacy_via_only=False, solver_profile=module.LAYERWISE_ADMITTANCE_PROFILE.key,
+    )
+    assert calls == [10, 12]
+    assert runs["12"]["mode"] == 12
+    assert execution["completed_modal_max_indices"] == [10, 12]
+
+
+def test_main_propagates_strict_reuse_control_plane_flag():
+    assert "require_terminal_complete_reuse=args.require_terminal_complete_reuse" in inspect.getsource(module.main)
 
 
 def test_legacy_via_only_skips_candidate_modes_with_explicit_report_status(monkeypatch):

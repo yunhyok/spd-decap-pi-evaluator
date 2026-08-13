@@ -675,6 +675,14 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
             "frequency/modal convergence"
         ),
     )
+    parser.add_argument(
+        "--require-terminal-complete-reuse",
+        action="store_true",
+        help=(
+            "fail closed if any requested higher modal run cannot reuse the "
+            "terminal-complete source result; never fall back to an independent solve"
+        ),
+    )
     bounded_mode = parser.add_mutually_exclusive_group()
     bounded_mode.add_argument(
         "--import-save-only",
@@ -719,6 +727,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         args.legacy_via_ablation
         or args.legacy_via_only
         or args.require_all_converged
+        or args.require_terminal_complete_reuse
         or args.modal_max_index is not None
         or args.modal_ceiling_index is not None
     ):
@@ -3032,6 +3041,7 @@ def _run_candidate_modes(
     legacy_via_only: bool,
     attachments: Mapping[str, bytes] | None = None,
     solver_profile: str = DEFAULT_SOLVER_PROFILE_KEY,
+    require_terminal_complete_reuse: bool = False,
 ) -> tuple[dict[str, Any], dict[str, Any]]:
     """Execute candidate modes unless the explicit ablation-only switch skips them."""
 
@@ -3086,6 +3096,8 @@ def _run_candidate_modes(
                     modal_ceiling_index=modal_ceiling_index,
                 )
             except _TerminalCompleteReuseError as exc:
+                if require_terminal_complete_reuse:
+                    raise
                 # Never turn identity uncertainty into a copied result.  A
                 # complete independent mode evaluation is the safe fallback.
                 fallback_modes[str(mode)] = str(exc)
@@ -3548,6 +3560,7 @@ def main(argv: list[str] | None = None) -> int:
             legacy_via_only=args.legacy_via_only,
             attachments=bundle.attachments,
             solver_profile=args.solver_profile,
+            require_terminal_complete_reuse=args.require_terminal_complete_reuse,
         )
 
     identity_fields = _validated_report_identity_fields(

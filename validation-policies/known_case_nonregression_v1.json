@@ -17,7 +17,7 @@
   "benchmark_source": {
     "path": "scripts/benchmark_raw_spd_powersi_correlation.py",
     "hash_semantics": "utf8_lf_normalized",
-    "sha256": "5a777379eefdafee07d087f439489f93a80cba607497328966fadf36bcaad052"
+    "sha256": "d43b868629464f408ea19362daa78fc369d2fd446cf3d458cfdc044ccbf57f08"
   },
   "trust_boundary": {
     "generator": "controlled_r4_benchmark_with_frozen_source",
