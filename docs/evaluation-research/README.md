@@ -28,6 +28,9 @@
 - Pair P2는 Touchstone reference 무결성은 양호하지만 bottom-side untagged PowerSI port가 현행 top-attached IO 계약 밖이라 import가 fail-closed 되었다. 현재는 작은 solver baseline이 아니라 external-port 의미 계약 case다.
 - Pair P3/P4는 response 변화가 VQPS에 집중되지만 SPD에 저장된 PowerSI/3DEM 설정도 다르다. solver-state confound를 닫기 전에는 clean controlled perturbation으로 부르지 않는다.
 - 새 물리 block은 board curve에 바로 맞추지 않고 canonical coupon에서 scaling, convergence, invariant와 exact-minus-core ownership을 먼저 통과해야 한다.
+- N0 exact route reduction은 independent scalar R/L coupon에서 machine-precision parity를 통과했다. 이 인증은 mutual/multiterminal block이나 topology replacement에 자동 전이되지 않는다.
+- S1/V1/V2/A1/C1의 기존 kernel은 유용한 부분 invariant를 통과했지만 global correction 승격에는 모두 차단됐다. 특히 A1의 마지막 mesh 변화는 4.73%로 사전 등록한 0.5%/1% gate를 넘는다.
+- source parameter는 `explicit`, `absent`, `parser_not_preserved`, `derived_node_link`로 구분한다. P3/P4 trace width 결손, 네 pair의 plating/fill/roughness 결손, P1/P2의 미보존 `NoAntiPadLayers`를 추정으로 숨기지 않는다.
 
 ## 세션 시작 절차
 
@@ -36,10 +39,14 @@
 1. 이 `README.md`: 목적, 우선순위, 금지사항 확인
 2. [`RESEARCH_STATE.md`](RESEARCH_STATE.md): 현재 단계, 결정, 미해결 질문, 다음 행동 확인
 3. [`REFERENCE_DATASET.md`](REFERENCE_DATASET.md): 기준 파일 identity, port/frequency 계약, holdout 정책 확인
-4. [`BASELINE_PROTOCOL.md`](BASELINE_PROTOCOL.md): 단계별 상태, pair P2 차단 조건, 자원/보고 gate 확인
-5. [`ALGORITHM_CANDIDATES.md`](ALGORITHM_CANDIDATES.md): 후보 순위와 논문 근거 확인
-6. [`LOCAL_ORACLE_PLAN.md`](LOCAL_ORACLE_PLAN.md): canonical 실험, exact-minus-core 계약, ablation 순서 확인
-7. [`SESSION_LOG.md`](SESSION_LOG.md)의 가장 최근 항목: 직전 세션의 증거와 중단 지점 확인
+4. [`SOURCE_PARAMETER_MANIFEST.md`](SOURCE_PARAMETER_MANIFEST.md): source-derived 값, 결손, parser preservation과 owner ID 확인
+5. [`P2_EXTERNAL_PORT_SPEC.md`](P2_EXTERNAL_PORT_SPEC.md): P2 exact terminal set와 operator unknown gate 확인
+6. [`BASELINE_PROTOCOL.md`](BASELINE_PROTOCOL.md): 단계별 상태, pair P2 차단 조건, 자원/보고 gate 확인
+7. [`ALGORITHM_CANDIDATES.md`](ALGORITHM_CANDIDATES.md): 후보 순위와 논문 근거 확인
+8. [`LOCAL_ORACLE_PLAN.md`](LOCAL_ORACLE_PLAN.md): canonical 실험, exact-minus-core 계약, ablation 순서 확인
+9. [`R2_ORACLE_RESULTS.md`](R2_ORACLE_RESULTS.md): 실제 coupon 판정과 수치 blocker 확인
+10. [`ORACLE_REPRODUCTION.md`](ORACLE_REPRODUCTION.md): custom numerical table의 exact 재현 명령 확인
+11. [`SESSION_LOG.md`](SESSION_LOG.md)의 가장 최근 항목: 직전 세션의 증거와 중단 지점 확인
 
 그 뒤 `git status`, 현재 branch/HEAD, 원본 파일의 존재와 hash를 확인한다. 이미 확정한 분석을 근거 없이 다시 수행하거나 목표를 재정의하지 않는다.
 

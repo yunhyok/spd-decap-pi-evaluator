@@ -36,6 +36,13 @@ Y_r(\omega)v=b,\qquad Z_{pp}=b^Tv
 | 5 | iterative/recycled/hierarchical field solve | 동일 물리 | 잠재적으로 높음 | resonance/nullspace convergence | subdomain 한정 연구 |
 | 6 | adaptive frequency sampling/passive fitting | 동일 물리 | 높음 | peak 누락, nonpassive fit | 마지막 가속 단계 |
 
+### 2026-08-14 oracle evidence update
+
+- exact route-graph reduction은 independent scalar two-terminal R/L 제조 예제에서 machine-precision parity와 complete owner ledger를 통과했다. 따라서 후보 3은 **검증된 제한 범위의 첫 가속 primitive**로 유지한다. production integration이나 mutual/multiterminal 적용 승인은 아니다.
+- 기존 S1/A1/C1 kernel은 부분 invariant를 통과했지만 strict physical correction gate에는 미달했다. 특히 A1은 마지막 mesh 변화가 4.73%다. 따라서 후보 1/2의 방향은 유지하되 현행 discretization을 그대로 production에 연결하지 않는다.
+- isolated via PEEC는 빠르고 수치적으로 안정적이지만 exact-minus-core ownership이 없어 additive global stamp로 사용할 수 없다. 후보 2는 explicit return/crop/core subtraction이 있는 replacement block으로만 진행한다.
+- source manifest가 P3/P4 missing trace width, 모든 pair의 plating/fill/roughness unknown, P1/P2 antipad preservation gap을 확인했다. 후보 비교에서 이 값을 fit parameter로 숨기는 경로는 기각한다.
+
 ## C1. Source-faithful hybrid domain decomposition
 
 실제 artwork를 adaptive triangular 또는 Delaunay–Voronoi mesh로 표현하되, port, via cluster, void, neck, boundary 주변을 세밀하게 하고 단순 영역은 크게 유지한다. 각 domain의 내부 DOF를 interface로 static condensation한다.
@@ -87,6 +94,8 @@ local cluster가 q conductor이면 dense 계산은 O(q²) storage/O(q³) work이
 cycle, branch, parallel path, all mutable decap attachment, measurement terminal은 보존한다. 단순 degree-2/tree rule은 서로 독립인 scalar two-terminal branch에만 허용하며 mutual R/L/C, multi-terminal block, controlled source, cross-boundary correction interface에 참여한 node에는 적용하지 않는다. Coupled operator는 전체 행렬의 exact Schur complement로만 제거한다.
 
 예상 graph-scan 복잡도는 O(V+E)지만 Schur fill은 별도 계측한다. unreduced network의 full-port response와 machine-precision parity를 gate로 두고, trace topology, V2 mutual coupling, pad/port correction 등 연산자가 바뀔 때마다 인증을 폐기하고 다시 검증한다. 이 exact reduction은 MOR와 구분되며 현재 물리를 바꾸지 않는 parity가 증명된 범위에서는 accuracy freeze 전 bounded resource 연구에도 사용할 수 있다.
+
+현재 frozen reproduction을 포함한 두 scalar coupon의 최대 relative Z error는 `5.34e-15`, 최대 absolute error는 `1.78e-14 Ω`다. module은 아직 production solve path에서 호출되지 않는다. 다음 결합 단계에서 trace topology replacement, mutual-via block, local correction interface가 추가될 때 full-port parity를 다시 통과하기 전에는 이 인증을 재사용하지 않는다.
 
 ## C4. Passive MOR and port compression
 

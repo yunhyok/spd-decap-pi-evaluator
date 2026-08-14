@@ -318,3 +318,120 @@ pytest tests/test_tri_fem_gap.py tests/test_tri_fem_pair.py tests/test_tri_fem_s
 5. repeatability와 mesh convergence가 있는 factor-isolated PowerSI coupon 요구사항을 작성한다.
 
 P2 raw solve는 external-port 계약과 memory preflight가 승인되기 전 다시 실행하지 않는다. P1 full numerical curve는 후보 동결 전 계속 reserved 상태로 유지한다.
+
+---
+
+## 2026-08-14 — R2 oracle execution, source parameter manifest, P2 physical port contract
+
+### Starting objective and preservation boundary
+
+사용자가 중지를 지시할 때까지 기준 문서를 갱신하며 연구를 계속하라는 지시를 active goal로 유지했다. 연구 worktree `C:\Users\User\Documents\SPD Decap PI Evaluator-evaluation-research`, branch `codex/evaluation-algorithm-research`, starting HEAD `3411c5a9d7766198a8a8bacd618fc0615798ab8d`가 clean임을 확인했다. 제품 code, parser, version, installer, release와 실제 제품 checkout은 수정하지 않았다.
+
+이번 cycle의 범위는 다음 세 가지였다.
+
+1. 사전 등록한 N0/S1/V1/V2/A1/C1 oracle을 기존 research module로 실제 실행
+2. 네 raw SPD의 source parameter와 결손을 bounded streaming manifest로 고정
+3. P2의 BOTTOM multi-terminal external PowerSI port를 raw source에 묶는 명세 작성
+
+### Agent allocation and root verification
+
+- Sol xhigh: N0/S1/V1/V2/A1/C1 독립 실행과 preregistered gate 감사
+- Luna high: P1–P4 trace/material/via/padstack/antipad/roughness streaming 조사
+- Terra high: P2 raw port block, package terminal/direct-via reconstruction과 fail-closed contract
+- Root: N0/V1/V2/A1 독립 계산, P2 6,435-node/direct-via 재검증, trace-width framing 재검증, source/test 검토와 문서 통합
+
+root는 P2 port block을 별도 parser로 다시 읽어 각 port의 positive 52개, 공통 GND 6,227개와 order 동일성을 확인했다. 두 번째 streaming pass에서 unique 6,435 Node가 모두 `Signal$BOTTOM`, `TH_0D3CR0D5_Mir`이고 source-incident Via가 정확히 하나씩임을 확인했다. trace continuation을 독립적으로 다시 묶어 P1/P2 missing 0, P3/P4 missing 239,135/239,070을 재현했다.
+
+### R2 oracle verdict
+
+상세 수치는 새 [`R2_ORACLE_RESULTS.md`](R2_ORACLE_RESULTS.md)에 고정했다.
+
+- **N0 pass, scalar-only:** frozen reproduction을 포함한 두 제조 예제에서 최대 relative Z error `5.34e-15`, 최대 absolute error `1.78e-14 Ω`, owner ledger 완전. production path에는 아직 미연결이며 mutual/multiterminal/topology change 때 재인증한다.
+- **S1 blocked:** rectangular finite-contact sheet는 level 6→7 변화 0.299%까지 수렴했지만 전체 h/h/2/h/4/crop/corpus/ownership이 없다. circular annulus refinement는 `MESH_CROSSES_VOID`로 fail-closed 됐다.
+- **V1 blocked:** solid-cylinder `Rdc`, internal/external L과 skin trend는 analytic limit를 통과했다. explicit coaxial return loop가 없다.
+- **V2 blocked:** five-via P/G array에서 exact 1/3, −1/2 current sharing, 2 GHz condition 2.89, 약 1e-16 invariant residual을 확인했다. `global_mna_composable=False`, 3-D/exact-minus-core가 없다.
+- **A1 blocked:** crop 300→600→1,200 µm는 약 1e-13 relative로 안정적이나 mesh 10→5, 5→2.5, 2.5→1.25 µm 변화는 11.97%, 10.52%, 4.734%다. current cell-centred formulation은 0.5%/1% gate에 미달했다.
+- **C1 blocked:** circular-disk BEM scalar C의 mesh 변화와 exact footprint area는 양호했지만 required backward residual은 미보고이며 기존 relative residual은 약 1.6–1.74e-8이다. circular launch spreading Z, crop, `ln(1/a)`, point-core replacement ownership도 없다.
+
+N0만 명시된 constitutive scope에서 통과했다. helper의 internal `production_eligible`나 test pass를 제품 accuracy promotion으로 확대하지 않았다.
+
+### Source parameter manifest
+
+새 [`SOURCE_PARAMETER_MANIFEST.md`](SOURCE_PARAMETER_MANIFEST.md)에 다음을 고정했다.
+
+- P1/P2 trace width complete; P3/P4 약 16.5% raw width absent
+- conductor thickness/material/conductivity와 trapezoid-angle coverage
+- P1/P2 single-frequency dielectric와 P3/P4 ABF/EL190T frequency tables의 범위 차이
+- 모든 Via의 node/padstack resolution, padstack drill/material 결손
+- P1/P2 all Via-start와 net-qualified Via의 32/136 record 차이; no-net row를 `net=absent` owner로 보존
+- P1/P2 raw anti geometry와 per-via `NoAntiPadLayers`; 현행 `_VIA_RE`가 후자를 보존하지 않는 parser gap
+- P3/P4 anti shape와 per-via antipad attribute 모두 absent
+- 네 pair 모두 plating/fill와 roughness data absent
+- owner ID와 `explicit/absent/parser_not_preserved/derived_node_link` 상태 enum
+
+결손 trace width, plating/fill, roughness와 antipad를 PowerSI curve fit 또는 인접 record default로 채우지 않기로 결정했다.
+
+### P2 ExternalPowerSiPort physical contract
+
+새 [`P2_EXTERNAL_PORT_SPEC.md`](P2_EXTERNAL_PORT_SPEC.md)에 S4P ordinal 1–4와 SPD Port31/38/45/52를 exact raw order로 묶었다.
+
+- 각 positive set: 52 ordered terminals
+- common GND set: 6,227 ordered terminals
+- physical mapping: BOTTOM layer, one direct Via, common padstack
+- full runtime record requirement와 ordered hash/bbox integrity checks
+- component `Tags="IC"`, `BottomAir`; 기존 `DEVICE_BUMP`/top decap으로 coercion 금지
+- file/header/terminal/direct-via mismatch의 fail-closed test specification
+
+physical terminal reconstruction은 `passed`로 진전됐지만 ordered runtime record를 등록한 loadable full manifest는 아직 없다. excitation weighting, reference mode/plane, de-embedding, renormalization과 actual export solver branch도 unknown이다. 따라서 `p2_loadable_full_port_manifest`, `p2_operator_semantics`와 numerical correlation은 계속 blocked다.
+
+### Failures and anomalies
+
+- 첫 annular S1 refinement는 circular void strict coverage 때문에 `MESH_CROSSES_VOID`로 종료됐다.
+- 첫 V1/V2 inline Python probe는 `PYTHONPATH`가 없어 `ModuleNotFoundError`가 발생했고 `PYTHONPATH=src`로 바로잡아 성공했다. source 변경은 없었다.
+- visualization preview의 첫 Playwright 실행은 bundled Chromium executable이 없어 실패했다. installed Edge를 explicit executable로 사용해 736 px/360 px layout과 A1 selection update를 검증했다.
+- 단순 `rg -c NoAntiPadLayers`는 continuation/반복 line count이므로 Via-record count가 아니다. manifest는 continuation을 parent Via에 귀속한 streaming record count를 사용한다.
+
+### Documents and visualization
+
+제품 code 변경 없음. 다음 research 기준 문서를 추가했다.
+
+- `docs/evaluation-research/R2_ORACLE_RESULTS.md`
+- `docs/evaluation-research/ORACLE_REPRODUCTION.md`
+- `docs/evaluation-research/SOURCE_PARAMETER_MANIFEST.md`
+- `docs/evaluation-research/P2_EXTERNAL_PORT_SPEC.md`
+
+README, RESEARCH_STATE, REFERENCE_DATASET, BASELINE_PROTOCOL, LOCAL_ORACLE_PLAN, ALGORITHM_CANDIDATES를 새 판정과 링크로 갱신했다. thread visualization directory에는 N0/S1/V1/V2/A1/C1 판정을 선택해 볼 수 있는 `oracle-gate-status.html`을 만들고 736 px/360 px에서 검증했다. visualization은 repository에 포함하지 않는다.
+
+### Independent final audit
+
+- Sol은 여섯 oracle 재현 block, residual 정의, scaled 1-norm estimate 해석, N0 scope와 V1/V2 다음 단계를 재실행·교차검증하고 `APPROVED`했다.
+- Terra는 P2 ordinal/status 분리와 추가된 N0 analytic-chain fixture를 독립 실행해 `APPROVED`했다.
+- Luna는 all/net-qualified Via count, `NoAntiPadLayers` parent aggregation과 trace framing timing을 다시 streaming evidence와 대조해 `APPROVED`했다.
+- 세 감사 모두 제품 코드나 연구 문서를 수정하지 않았다. 최종 판단과 문서 통합은 root가 수행했다.
+
+### Validation
+
+Windows 10.0.19045, Python 3.12.10, pytest 9.0.3에서 다음을 확인했다.
+
+```text
+oracle reproduction appendix: 6/6 custom blocks passed; first five batch 66.9 s
+focused FEM/MFDM/PEEC/MNA suite: 178 passed in 6.59 s
+finite-route + FFT-BEM suite: 22 passed in 1.86 s
+research Markdown files: 11; UTF-8/relative links/trailing whitespace docs_ok
+```
+
+두 pytest suite는 wall time을 줄이기 위해 병렬 실행했으므로 위 timing은 성능 benchmark가 아니라 회귀 상태 확인값이다.
+
+`git diff --check`와 final clean-scope 검사는 session commit 직전에 다시 수행한다.
+
+### Exact next starting point
+
+1. T1 finite trace R/L coupon을 source-derived width/thickness/conductivity와 explicit return geometry로 실행한다.
+2. V1/V2 explicit coax/ring-return 2-D/3-D reference와 same-crop exact/core owner·DtN matrix를 정의한다.
+3. S1 circular/void boundary-conforming refinement와 A1 body-fitted/higher-order axisymmetric 후보를 비교한다.
+4. C1 finite circular launch spreading Z, radius scaling, crop와 point-core replacement coupon을 정의한다.
+5. P2 PowerSI port current weighting/reference plane/de-embedding/export branch 증거 요구사항을 완성한다.
+6. P3/P4 component enabled state와 export solver-state confound를 계속 조사한다.
+7. factor-isolated PowerSI coupon과 repeatability/mesh-convergence reference를 정의한다.
+
+P1 full numerical curve는 계속 reserved 상태로 유지한다. 제품 구현과 P2 solve는 별도 승인 전까지 실행하지 않는다.

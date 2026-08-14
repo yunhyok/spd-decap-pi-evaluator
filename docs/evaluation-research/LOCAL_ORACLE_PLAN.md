@@ -81,6 +81,21 @@ Positive-frequency anchor는 100 kHz, 1/10/100/500 MHz, 1/2 GHz다. skin crossov
 
 따라서 새 커널을 먼저 발명하지 않는다. 기존 자산으로 canonical manifest, owner ledger, convergence certificate, SPD adapter를 구성한 뒤 실제 board에 연결한다.
 
+## 2026-08-14 1차 실행 판정
+
+상세 수치와 실패 기록은 [`R2_ORACLE_RESULTS.md`](R2_ORACLE_RESULTS.md)를 따른다.
+
+| ID | 판정 | 핵심 근거 |
+|---|---|---|
+| N0 | pass, scalar-only | frozen reproduction 포함 두 제조 예제 reduced/unreduced max relative Z error `5.34e-15`; owner ledger 완전 |
+| S1 | blocked | rectangle 최종 refinement 0.299%는 부분 통과했으나 annulus refinement fail, 전체 corpus/crop/ownership 없음 |
+| V1 | blocked | solid-cylinder R/L/skin law는 통과했으나 명시적 coax return loop 없음 |
+| V2 | blocked | PEEC current sharing/invariant는 통과했으나 `global_mna_composable=False`, 3-D/exact-minus-core 없음 |
+| A1 | blocked | crop과 invariant는 양호하지만 2.5→1.25 µm mesh RMS 변화 `4.734%` |
+| C1 | blocked | scalar circular-disk C와 footprint area는 양호하지만 spreading Z/crop/ownership 및 `1e-10` residual certificate 없음 |
+
+N0만 현재 constitutive scope에서 gate를 통과했다. 기존 helper가 반환하는 `production_eligible` 같은 내부 상태를 제품 accuracy promotion으로 해석하지 않는다. T1은 아직 실행하지 않았다.
+
 ## Source-derived parameter 정책
 
 - trace: endpoint/layer/width를 사용한다. Pair P3/P4에는 width evidence가 없는 Trace가 다수 있으므로 누락을 추정값으로 숨기지 않는다.
@@ -89,6 +104,8 @@ Positive-frequency anchor는 100 kHz, 1/10/100/500 MHz, 1/2 GHz다. skin crossov
 - via: drill, regular pad, layer endpoint, material을 사용한다. plating/fill thickness가 없으면 fitted value를 만들지 않는다.
 - antipad: raw row와 parser 보존 여부를 별도로 manifest한다. 부재를 nominal antipad로 대체하지 않는다.
 - surface roughness, port footprint, de-embedding, reference conductor가 없으면 unknown으로 유지하고 PowerSI curve에서 역추정하지 않는다.
+
+네 pair의 실제 parameter 범위와 결손 상태는 [`SOURCE_PARAMETER_MANIFEST.md`](SOURCE_PARAMETER_MANIFEST.md)를 따른다. P3/P4의 약 16.5% missing trace width, 네 pair의 plating/fill/roughness 부재, P1/P2의 raw-but-unpreserved `NoAntiPadLayers`는 canonical coupon 또는 board adapter의 명시적 blocker다.
 
 ## Ablation과 승격 규칙
 

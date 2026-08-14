@@ -9,7 +9,7 @@
 | 프로그램 기준 | SPD Decap PI Evaluator v0.22.0 |
 | 연구 branch | `codex/evaluation-algorithm-research` |
 | 기준 commit | `bb361687c0bf976d5d04faf26bc243bcf3d52006` |
-| 현재 단계 | R0 reference/provenance contract 진행 중, R2 local-oracle 계획 사전 등록 |
+| 현재 단계 | R0 source/external-port contract 진행 중, R2 local-oracle 1차 실행 완료 |
 | 제품 코드 변경 | 없음 |
 | GitHub 원격 변경 | 없음 |
 | 정확성 승격 | 미달성 |
@@ -51,6 +51,10 @@
 | D-011 | pair P2는 reference/explicit external-port operator contract case로 재분류한다. | 확정; bottom untagged LGA가 현행 범위 밖이며 label 외 signed operator/footprint/reference/de-embedding 필요 |
 | D-012 | board ablation 전에 canonical coupon과 exact-minus-core boundary/owner 계약을 통과한다. | 확정; 동일 DtN/Schur interface, cross-boundary coupling owner와 crop convergence 필요 |
 | D-013 | 기존 research FEM/MFDM/PEEC/MNA 모듈은 새 커널보다 먼저 oracle harness로 활용한다. | 확정; 12개 focused module의 178 tests 통과, production eligibility는 아직 차단 |
+| D-014 | N0 exact reduction은 independent scalar two-terminal R/L 범위에서 통과로 판정한다. | 확정; frozen reproduction 포함 두 제조 예제에서 최대 relative Z error 5.34e-15, owner ledger 완전. mutual/multiterminal/topology 변경 시 인증 무효화 |
+| D-015 | S1/V1/V2/A1/C1은 부분 invariant가 양호해도 global correction으로 승격하지 않는다. | 확정; corpus·mesh·3-D reference·exact-minus-core ownership 중 하나 이상 미달. A1 마지막 mesh RMS 4.73% |
+| D-016 | source parameter의 `absent`와 `parser_not_preserved`를 구분하고 어느 쪽도 fitted/default 값으로 숨기지 않는다. | 확정; P3/P4 width 약 16.5% 결손, plating/fill/roughness 부재, P1/P2 raw antipad suppression 미보존 |
+| D-017 | P2 external port는 52 positive + 공통 6,227 GND ordered terminal set로 고정하되 operator semantics가 null인 동안 correlation을 차단한다. | 확정; 6,435 node 모두 BOTTOM/direct-via proof 완료, current weighting/reference plane/de-embedding unknown |
 
 ## 현재 가설 순위
 
@@ -65,9 +69,9 @@
 
 | 단계 | 산출물 | 종료 조건 | 상태 |
 |---|---|---|---|
-| R0 Reference contract | 8개 파일 manifest, explicit port map, PowerSI 조건 | identity/hash/grid/state 및 reference quality 기록 | identity/grid 완료, port/provenance 진행 중 |
+| R0 Reference contract | 8개 파일 manifest, explicit port map, PowerSI 조건 | identity/hash/grid/state 및 reference quality 기록 | identity/grid/source parameter/P2 physical terminal 완료; export operator provenance 진행 중 |
 | R1 Frozen baseline | 현행 solver의 전체 timing/memory/error/numerical report | 대표 pair와 rail별 재현 가능한 baseline | 기존 92-port 결과만 동결; pair P2 import 차단 |
-| R2 Local oracle | via/trace/pad/plane canonical corpus | reciprocity/passivity/conservation/mesh convergence | 계획/threshold 사전 등록 완료, 실행 대기 |
+| R2 Local oracle | via/trace/pad/plane canonical corpus | reciprocity/passivity/conservation/mesh convergence | N0 scalar pass; S1/V1/V2/A1/C1 1차 실행은 부분 통과 후 global 승격 차단; T1 대기 |
 | R3 Model attribution | 물리 block별 ablation matrix | 예상 port/band 개선을 원인별로 구분 | R2 oracle 뒤 대기 |
 | R4 Hybrid global | condensed domains + passive MNA 후보 | 네 pair provisional accuracy gate | 대기 |
 | R5 Acceleration | exact reduction, MOR, adaptive sweep | 추가 오차 budget + 8 GB gate | 대기 |
@@ -116,15 +120,19 @@ PowerSI repeatability와 mesh/order convergence를 측정한 뒤 수치는 조�
 3. loaded error 중 trace, via return/mutual, pad/antipad, plane spreading 각각의 기여는 얼마인가?
 4. mutable decap attachment terminal 수를 passive ROM이 감당할 수 있도록 어떤 domain/port compression이 가능한가?
 5. cold compiler를 8 GB에서 실행할 수 있는 separator/interface-rank 구조가 가능한가, 아니면 reference compiler가 필수인가?
-6. Pair P2 bottom-side LGA의 terminals/contact/path뿐 아니라 signed excitation/projection, footprint/current weighting, reference mode/plane와 de-embedding을 어떤 explicit manifest로 증명할 것인가?
+6. Pair P2의 physical terminal/contact/path는 고정됐다. 남은 signed excitation/current weighting, reference mode/plane와 de-embedding을 어떤 PowerSI export evidence로 채울 것인가?
+7. A1의 4.73% mesh 변화가 cell-centre geometry quantization, singular edge field, interface placement 중 어디에서 지배되는가? body-fitted/higher-order formulation으로 0.5% gate를 달성할 수 있는가?
+8. C1의 scalar capacitance 수렴을 finite launch spreading/transfer Z와 exact point-core replacement로 확장할 최소 coupon은 무엇인가?
 
 ## 다음 세션의 우선 작업
 
-1. N0 exact reduction identity와 S1/V1/V2/A1/C1 canonical manifest를 작성하고 기존 research module로 oracle 결과를 생성한다.
-2. 네 SPD의 trace/material/via/antipad parameter 범위와 missing/owner ID를 streaming manifest로 동결한다.
-3. Pair P2 `ExternalPowerSiPort` manifest와 fail-closed test specification을 완성한다. 구현은 별도 승인 전까지 하지 않는다.
-4. Pair P3/P4의 component enabled state와 실제 export solver setting을 확보해 solver-state confound를 닫는다.
-5. PowerSI canonical coupon과 repeatability/mesh-convergence reference를 요청·정의한다.
+1. T1 source-derived finite trace R/L coupon과 return geometry를 정의·실행한다.
+2. S1 circular/void boundary-conforming refinement와 A1 body-fitted/higher-order 후보를 문헌·제조해로 비교한다.
+3. V1/V2 explicit coax/ring-return 2-D/3-D reference와 동일 crop의 exact/core owner·DtN matrix를 만든다.
+4. C1 circular launch spreading Z, radius scaling, crop와 point-core replacement coupon을 완성한다.
+5. P2 operator unknown field를 채울 PowerSI port setup/export evidence 요구사항을 작성한다. 구현은 별도 승인 전까지 하지 않는다.
+6. Pair P3/P4의 component enabled state와 실제 export solver setting을 확보해 solver-state confound를 닫는다.
+7. factor-isolated PowerSI coupon과 repeatability/mesh-convergence reference를 요청·정의한다.
 
 ## 변경 금지선
 

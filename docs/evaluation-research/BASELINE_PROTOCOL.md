@@ -19,13 +19,16 @@
 
 ## Pair P2 bounded baseline v1
 
-Pair P2는 외부 port가 네 개라 Touchstone 전체 행렬을 저비용으로 검사할 수 있지만, SPD 자체는 595 MB, 78 conductor layer, 1,193,766 raw Via를 포함한다. 또한 네 port 사이의 결합이 약하다. 100 kHz–100 MHz의 최대 정규화 transfer coupling은 0.283%, 전체 band 최대는 1.775 GHz에서 6.91%다. 따라서 pair P2는 첫 reference/port-contract case에는 적합하지만 via mutual, same-net spreading, finite-port 상호작용의 첫 물리 귀속 oracle로는 부족하다.
+Pair P2는 외부 port가 네 개라 Touchstone 전체 행렬을 저비용으로 검사할 수 있지만, SPD 자체는 595 MB, 78 conductor layer, 1,193,902 Via-start records를 포함한다. 이 중 1,193,766개가 현행 net-qualified parser grammar와 일치하고 136개는 `net=absent`다. 또한 네 port 사이의 결합이 약하다. 100 kHz–100 MHz의 최대 정규화 transfer coupling은 0.283%, 전체 band 최대는 1.775 GHz에서 6.91%다. 따라서 pair P2는 첫 reference/port-contract case에는 적합하지만 via mutual, same-net spreading, finite-port 상호작용의 첫 물리 귀속 oracle로는 부족하다.
 
 ### 현재 상태
 
 ```text
 schema_version: p2-bounded-baseline-v1
 reference_integrity: passed
+p2_physical_terminal_reconstruction: passed
+p2_loadable_full_port_manifest: blocked_full_ordered_records_not_registered
+p2_operator_semantics: blocked_missing_current_reference_deembedding
 p2_import: blocked_no_external_port_contract
 p2_frequency_solve: not_run
 p2_production_correlation: blocked_no_generic_p2_runner
@@ -67,9 +70,11 @@ P2의 PowerSI port component는 `L25P08085A7_LGA`, `StartLayer=Signal$BOTTOM`, `
 
 `BottomAir`만 허용하거나 dummy rail을 주입하는 방식은 금지한다. IO tag, bottom node retention, bottom contact/via path, port polarity, open-circuit multiport 의미가 해결되지 않기 때문이다.
 
+2026-08-14 raw port reconstruction으로 physical mapping 자체는 진전됐다. 각 port는 ordered positive terminal 52개와 공통 ordered GND terminal 6,227개를 가지며, 총 6,435 unique package node가 모두 BOTTOM layer에서 source-incident Via 하나에 연결됨을 증명했다. exact hashes, bbox, record schema와 raw line evidence는 [`P2_EXTERNAL_PORT_SPEC.md`](P2_EXTERNAL_PORT_SPEC.md)에 고정한다. 그러나 current weighting, reference mode/plane, de-embedding과 실제 export branch는 여전히 unknown이므로 import/solve/correlation 상태는 바뀌지 않는다.
+
 ## 향후 External PowerSI Port 계약
 
-구현 검토 전에 다음 manifest를 source hash와 함께 사전 등록해야 한다.
+physical terminal 계약은 [`P2_EXTERNAL_PORT_SPEC.md`](P2_EXTERNAL_PORT_SPEC.md)의 `external-powersi-port-manifest-v1`으로 사전 등록했다. 구현 검토 전에 full ordered records를 fixture로 고정하고 다음 operator field를 source evidence로 채워야 한다.
 
 ```text
 port_id
@@ -128,4 +133,4 @@ selection_origin: explicit manifest
 - parse/compile/assemble/factor/RHS/postprocess wall time, peak RSS 측정법, fill/iteration/pivot/forward-error surrogate
 - 단계별 상태와 차단 코드; 실행하지 않은 항목을 0 또는 pass로 쓰지 않음
 
-다음 P2 작업은 제품 코드 변경이 아니라 external-port manifest/test 설계와 memory preflight 사전 등록이다. 그 계약이 승인되기 전에는 P2 production solve를 다시 실행하지 않는다.
+다음 P2 작업은 제품 코드 변경이 아니라 PowerSI의 current weighting/reference plane/de-embedding/export branch 증거 확보와 memory preflight 사전 등록이다. operator unknown이 해소되고 구현이 별도 승인되기 전에는 P2 production solve를 다시 실행하지 않는다.

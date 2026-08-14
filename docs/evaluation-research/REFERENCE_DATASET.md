@@ -44,16 +44,29 @@
 
 ## Streaming SPD inventory
 
-아래 수치는 raw record count이며 solver가 보존한 node count가 아니다.
+아래 수치는 source record count이며 solver가 보존한 node count가 아니다. Via는 all `Via...` starts와 현행 net-qualified grammar가 다를 수 있어 둘을 함께 기록한다.
 
-| Pair | conductor shapes | total thickness rows | Node | Trace | Via | PadStackDef | PadDef | Part/PartialCkt | Component/Connect |
+| Pair | conductor shapes | total thickness rows | Node | Trace | Via all / net-qualified | PadStackDef | PadDef | Part/PartialCkt | Component/Connect |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| P1 | 24 | 47 | 143,406 | 12,544 | 109,203 | 10 | 129 | 8 | 3,137 |
-| P2 | 78 | 155 | 1,271,131 | 15,052 | 1,193,766 | 40 | 1,599 | 69 | 7,306 |
-| P3 | 48 | 95 | 2,934,889 | 1,451,285 | 1,956,937 | 98 | 187 | 10 | 10,727 |
-| P4 | 48 | 95 | 2,934,791 | 1,451,209 | 1,956,909 | 98 | 187 | 10 | 10,727 |
+| P1 | 24 | 47 | 143,406 | 12,544 | 109,235 / 109,203 | 10 | 129 | 8 | 3,137 |
+| P2 | 78 | 155 | 1,271,131 | 15,052 | 1,193,902 / 1,193,766 | 40 | 1,599 | 69 | 7,306 |
+| P3 | 48 | 95 | 2,934,889 | 1,451,285 | 1,956,937 / 1,956,937 | 98 | 187 | 10 | 10,727 |
+| P4 | 48 | 95 | 2,934,791 | 1,451,209 | 1,956,909 / 1,956,909 | 98 | 187 | 10 | 10,727 |
 
-P3와 P4는 layer name/order, shape/pad/component aggregate가 같고 P3가 Node 98, Trace 76, Via 28개 더 많다. 그러나 saved solver option도 다르므로 이 aggregate만으로 controlled perturbation이라고 판정하지 않는다.
+P3와 P4는 layer name/order, shape/pad/component aggregate가 같고 P3가 Node 98, Trace 76, Via 28개 더 많다. P1/P2의 all/net-qualified Via 차이 32/136은 `::<net>` 없는 source row이며 source-faithful manifest에서 `net=absent`로 보존한다. saved solver option도 다르므로 이 aggregate만으로 controlled perturbation이라고 판정하지 않는다.
+
+## Source parameter availability
+
+전체 trace/material/via/padstack/antipad/roughness streaming 결과와 owner 정책은 [`SOURCE_PARAMETER_MANIFEST.md`](SOURCE_PARAMETER_MANIFEST.md)에 고정한다. 핵심 결손은 다음과 같다.
+
+- P1/P2 Trace width는 100% explicit이다.
+- P3/P4는 각각 239,135/239,070 Trace, 약 16.5%에 width가 raw source부터 없다.
+- P1/P2에는 padstack anti geometry와 per-via `NoAntiPadLayers`가 있으나 현행 `_VIA_RE`가 후자를 보존하지 않는다.
+- P3/P4에는 anti shape와 `NoAntiPadLayers`가 모두 없다.
+- 네 파일 모두 plating/fill과 roughness data section은 비어 있다.
+- P3/P4 ABF-GL102는 multi-frequency material rows가 있지만 P1/P2 dielectric은 사실상 1 GHz single-point table이다.
+
+이 결손은 PowerSI curve fit이나 design median으로 채우지 않는다. 각 parameter는 `explicit`, `absent`, `parser_not_preserved`, `derived_node_link`로 분류한다.
 
 ## Recovered PowerSI provenance and confounds
 
@@ -106,6 +119,8 @@ Production Touchstone reader와 S→Z converter를 그대로 사용한 결과:
 P2는 port 수는 작지만 78 conductor layer와 약 119만 raw via를 갖는다. 100 kHz–100 MHz 최대 정규화 transfer coupling은 0.283%에 불과하므로 첫 물리 귀속 coupon으로는 약하지만, external-port 의미와 내부 topology 비용을 시험하는 후속 sanity case로 가치가 있다.
 
 현행 import는 `L25P08085A7_LGA`가 bottom-attached이고 IO tag가 없어 `DEVICE_BUMP`와 rail을 만들지 못해 `SPD_NO_RAILS`로 차단됐다. 상태는 `reference_integrity: passed`, `p2_import: blocked_no_external_port_contract`, `p2_frequency_solve: not_run`, `p2_production_correlation: blocked_no_generic_p2_runner`, `performance_promotion: unassessed`다. 세부 상태와 향후 port 계약은 [`BASELINE_PROTOCOL.md`](BASELINE_PROTOCOL.md)에 고정한다.
+
+raw port block의 physical terminal reconstruction은 [`P2_EXTERNAL_PORT_SPEC.md`](P2_EXTERNAL_PORT_SPEC.md)에 고정했다. 각 port는 ordered positive terminal 52개와 동일한 ordered GND terminal 6,227개를 갖는다. 합계 6,435 unique package node가 모두 `Signal$BOTTOM`, `TH_0D3CR0D5_Mir`이며 source-incident Via가 정확히 하나씩 있다는 것을 독립 streaming으로 재검증했다. physical mapping은 완료됐지만 terminal current weighting, reference mode/plane, de-embedding과 solver branch는 unknown이므로 numerical correlation은 계속 차단한다.
 
 ### Pair P3/P4: paired response evidence with solver-state confound
 
