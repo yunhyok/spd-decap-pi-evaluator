@@ -41,6 +41,11 @@ def test_bulk_length_parser_preserves_units_and_strict_validation() -> None:
     assert _lengths(b"-1mm 2.5mil 3u 4um 0.5m") == pytest.approx(
         [-1000.0, 63.5, 3.0, 4.0, 500_000.0]
     )
+    assert _lengths(b"1MM 2e-3mM 3E+2MIL 4uM") == pytest.approx(
+        [1_000.0, 2.0, 7_620.0, 4.0]
+    )
+    with pytest.raises(ValueError, match="SPD length is not finite"):
+        _lengths(b"1e309mm")
     assert _length_um(b"+1.25mm") == pytest.approx(1250.0)
     with pytest.raises(ValueError, match="invalid SPD length"):
         _length_um(b"1mm trailing")
@@ -165,27 +170,158 @@ def test_chunked_shape_headers_preserve_offsets_across_crlf_lf_boundaries(
                 data, 0, len(data), spd_io._Reporter(None, None)
             )
         ]
+        expected_events = [
+            (
+                match.start(),
+                match.group("shape_name"),
+                match.group("primitive_kind"),
+                match.group("net"),
+                match.group("polarity"),
+            )
+            for match in spd_io._SHAPE_EVENT_RE.finditer(data, 0, len(data))
+        ]
+        expected_primitives = [
+            (match.start(), match.group(1), match.group(2), match.group(3))
+            for match in spd_io._SHAPE_PRIMITIVE_RE.finditer(data, 0, len(data))
+        ]
+        expected_shape_projection = [
+            (match.start(), match.group(1))
+            for match in spd_io._SHAPE_RE.finditer(data, 0, len(data))
+        ]
+        actual_events = [
+            (
+                match.start(),
+                match.group("shape_name"),
+                match.group("primitive_kind"),
+                match.group("net"),
+                match.group("polarity"),
+            )
+            for match in spd_io._iter_shape_events(
+                data, 0, len(data), spd_io._Reporter(None, None)
+            )
+        ]
         chunks = list(spd_io._iter_line_bounded_chunks(data, 0, len(data)))
         raw = data[:]
 
     assert actual == expected
+    assert actual_events == expected_events
+    assert [
+        (start, kind, net, polarity)
+        for start, shape, kind, net, polarity in actual_events
+        if kind is not None
+    ] == expected_primitives
+    assert [
+        (start, shape)
+        for start, shape, kind, _net, _polarity in actual_events
+        if shape is not None
+    ] == expected_shape_projection
     assert len(chunks) > 1
     assert all(end == len(raw) or raw[end - 1 : end] == b"\n" for _start, end in chunks)
 
 
-def test_chunked_shape_headers_check_cancellation_between_chunks(
+def test_chunked_shape_events_check_cancellation_between_chunks(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     source = tmp_path / "cancel-chunked-shapes.spd"
     source.write_bytes(
         b".Shape Signal$TOPpkgshape\n"
-        + b"x" * 30
-        + b"\n.Shape Signal$L01pkgshape\n"
-        + b"y" * 30
-        + b"\n.Shape Signal$L02pkgshape\n"
+        b"Polygon1::VDD_A+ 0mm 0mm 1mm 0mm 1mm 1mm\n"
+        b".Shape Signal$L01pkgshape\n"
+        b"Polygon2::VDD_B+ 0mm 0mm 1mm 0mm 1mm 1mm\n"
+        b".Shape Signal$L02pkgshape\n"
     )
-    monkeypatch.setattr(spd_io, "_SHAPE_INDEX_CHUNK_BYTES", 24)
+    monkeypatch.setattr(spd_io, "_SHAPE_INDEX_CHUNK_BYTES", 48)
+    checks = 0
+
+    def cancelled() -> bool:
+        nonlocal checks
+        checks += 1
+        return checks >= 3
+
+    with source.open("rb") as handle, mmap.mmap(
+        handle.fileno(), 0, access=mmap.ACCESS_READ
+    ) as data:
+        with pytest.raises(SpdImportError, match="SPD import cancelled"):
+            events = []
+            iterator = spd_io._iter_shape_events(
+                data, 0, len(data), spd_io._Reporter(None, cancelled)
+            )
+            while True:
+                events.append(next(iterator))
+        primitive_kinds = [
+            event.group("primitive_kind")
+            for event in events
+            if event.group("primitive_kind") is not None
+        ]
+
+    assert checks == 3
+    assert primitive_kinds
+
+
+def test_shape_parser_streaming_preserves_geometry_order_and_diagnostics(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """One-pass Shape traversal keeps the legacy geometry contract intact."""
+
+    source = tmp_path / "streaming-shapes.spd"
+    source.write_bytes(
+        b".Shape Signal$PWRpkgshape\n"
+        b"Polygon1::VDD+ 0mm 0mm 2mm 0mm\n"
+        b"+ 2mm 2mm 0mm 2mm\n"
+        b"Spline2::VDD+ 0mm 0mm 1mm 1mm\n"
+        b"Circle3::VDD- Sub-element 1mm 1mm\n"
+        b"Polygon4::VDD- Sub-element 0mm 0mm 1mm 0mm 0mm 1mm\n"
+        b"Box5::VDD+ 3mm 3mm 1mm 1mm\n"
+        b".EndShape\n"
+    )
+    monkeypatch.setattr(spd_io, "_SHAPE_INDEX_CHUNK_BYTES", 48)
+    # The parser must not fall back to the removed header-index traversal.
+    monkeypatch.setattr(
+        spd_io,
+        "_iter_shape_headers",
+        lambda *_args, **_kwargs: (_ for _ in ()).throw(
+            AssertionError("Shape headers should be streamed by _parse_shapes")
+        ),
+    )
+
+    diagnostics: list[spd_io.SpdDiagnostic] = []
+    with source.open("rb") as handle, mmap.mmap(
+        handle.fileno(), 0, access=mmap.ACCESS_READ
+    ) as data:
+        outline, by_layer, nets, geometries = spd_io._parse_shapes(
+            data,
+            0,
+            len(data),
+            {"vdd"},
+            {"vdd"},
+            spd_io._Reporter(None, None),
+            diagnostics,
+        )
+
+    assert outline is not None
+    assert (outline.width_um, outline.height_um) == pytest.approx((2_000.0, 2_000.0))
+    assert by_layer == {"signal$pwr": ("VDD",)}
+    assert nets == ("VDD",)
+    assert len(geometries) == 1
+    geometry = geometries[0]
+    assert geometry.layer == "Signal$PWR"
+    assert geometry.net == "VDD"
+    assert geometry.primitive_order == (
+        ("positive_polygon", 0),
+        ("negative_polygon", 0),
+        ("positive_polygon", 1),
+    )
+    assert geometry.positive_subelement_count == 0
+    assert geometry.negative_subelement_count == 1
+    assert geometry.box_count == 1
+    assert [item.code for item in diagnostics] == [
+        "SPD_PLANE_PRIMITIVE_UNSUPPORTED",
+        "SPD_PLANE_PRIMITIVE_MALFORMED",
+        "SPD_BOX_START_CORNER_SIZE_INTERPRETATION",
+    ]
+
     checks = 0
 
     def cancelled() -> bool:
@@ -197,12 +333,15 @@ def test_chunked_shape_headers_check_cancellation_between_chunks(
         handle.fileno(), 0, access=mmap.ACCESS_READ
     ) as data:
         with pytest.raises(SpdImportError, match="SPD import cancelled"):
-            list(
-                spd_io._iter_shape_headers(
-                    data, 0, len(data), spd_io._Reporter(None, cancelled)
-                )
+            spd_io._parse_shapes(
+                data,
+                0,
+                len(data),
+                {"vdd"},
+                {"vdd"},
+                spd_io._Reporter(None, cancelled),
+                [],
             )
-
     assert checks == 2
 
 
