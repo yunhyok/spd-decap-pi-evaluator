@@ -686,6 +686,271 @@ print("P2_DC_saddle_residual", float(np.linalg.norm(saddle@solution-rhs)))
 
 frozen 핵심은 `δ2GHz=1.457746488493 µm`이다. 12개 M1 geometry 중 2 GHz `|kb|Deff<=0.3`을 통과하는 것은 8개이며, `(w/h,Wr/w)=(10,20),(20,20),(50,5),(50,20)`은 각각 `0.419169/0.838338/0.523961/2.095845`로 차단된다. P2 artificial two-return DC는 signal `33.557046980 mΩ`, bundled return `1.677852349 mΩ`, loop `35.234899329 mΩ`; vacuum 2 GHz extent는 `0.0503003`이다. equipotential saddle은 `Iabs=[1,-0.5,-0.5] A`, `Z'Bg·l=35.234899329 mΩ`, residual은 binary64 출력에서 exact zero를 재현한다. 이는 동일 단면·전도도의 두 return에 대한 DC 결과이며 75/104 µm gap의 AC equal split을 가정하지 않는다.
 
+## T1 circle DtN `C0-A0` failure와 `C0-A1` canonical gate
+
+아래 standalone block은 제품 module을 import하지 않고 [`T1_CIRCLE_DTN_RESULTS.md`](T1_CIRCLE_DTN_RESULTS.md)의 frozen A0 failure, A1 canonical spectral gate와 네 W1 full-dense spot을 재현한다. Python 3.12.10, NumPy 2.4.4, SciPy 1.18.0에서 실행했다. A1 kernel은 `hankel2e·exp(-jz)`를 사용하고, `C0=1` small self만 preregistered complex-log anchor를 사용한다. A0의 큰 `C0 J0` 항에는 그 asymptotic을 잘못 적용하지 않고 regularized integral을 그대로 계산한다.
+
+```powershell
+@'
+import numpy as np
+from math import pi
+from numpy.polynomial.legendre import leggauss
+from scipy.linalg import circulant, get_lapack_funcs, lu_factor, lu_solve
+from scipy.special import hankel2e, jv, jve, yv
+
+MU0 = 4e-7*pi
+EPS0 = 8.8541878128e-12
+SIGMA = 59.6e6
+EULER = 0.5772156649015329
+UROUND = 2.0**-53
+LOG_MATERIALIZE = np.log(np.finfo(float).tiny)+4.0
+DROP_RELATIVE_LIMIT = 1e-30
+DROP_CERTIFICATES_LOG10 = []
+DROP_SAMPLE_COUNT = 0
+
+def scaled_h2(order, z):
+    z = np.asarray(z, complex)
+    scaled = hankel2e(order, z)
+    if np.any(~np.isfinite(scaled)) or np.any(np.abs(scaled) == 0):
+        raise RuntimeError('BLOCKED_HANKEL_RANGE: scaled value unavailable')
+    logabs = np.log(np.abs(scaled))+np.imag(z)
+    materialize = logabs >= LOG_MATERIALIZE
+    value = np.zeros_like(z)
+    value[materialize] = (
+        np.exp(logabs[materialize])
+        * np.exp(1j*(np.angle(scaled[materialize])-np.real(z[materialize])))
+    )
+    return value, logabs, materialize
+
+def kernel(order, z, c0):
+    if c0 == 1.0:
+        return scaled_h2(order, z)[0]
+    # Frozen A0 point is within the safe unscaled range.
+    return c0*jv(order, z) - 1j*yv(order, z)
+
+def dropped_relative_log10(log_terms, retained_norm):
+    if not log_terms:
+        return -np.inf
+    log_bound = np.logaddexp.reduce(np.asarray(log_terms))
+    return float((log_bound-np.log(retained_norm))/np.log(10.0))
+
+def first_row(a, f, n, k, c0=1.0, q=20):
+    global DROP_SAMPLE_COUNT
+    omega = 2*pi*f
+    dtheta = 2*pi/n
+    half = a*np.sin(dtheta/2)
+    rho = a*np.cos(dtheta/2)
+    x, w = leggauss(q)
+    U = np.empty(n, complex)
+    P = np.empty(n, complex)
+    U[0] = 1.0
+    z = k*half
+    if c0 == 1.0 and abs(z) <= 1e-3:
+        P[0] = omega*MU0*half*(1-(2j/pi)*(np.log(z/2)+EULER-1))
+    else:
+        s = half*(x+1)/2
+        ww = half*w/2
+        if c0 == 1.0:
+            h0, _, materialize = scaled_h2(0, k*s)
+            if np.any(~materialize):
+                raise RuntimeError('BLOCKED_HANKEL_RANGE: self term not materializable')
+            regular = h0 + (2j/pi)*np.log(s/half)
+        else:
+            regular = kernel(0, k*s, c0) + (2j/pi)*np.log(s/half)
+        P[0] = omega*MU0*(np.sum(ww*regular)+2j*half/pi)
+    rm = np.array((rho, 0.0))
+    dropped_p = []
+    dropped_u = []
+    for idx in range(1, n):
+        theta = idx*dtheta
+        midpoint = rho*np.array((np.cos(theta), np.sin(theta)))
+        tangent = np.array((-np.sin(theta), np.cos(theta)))
+        normal = np.array((np.cos(theta), np.sin(theta)))
+        r = midpoint[:, None] + tangent[:, None]*(half*x)
+        dr = r-rm[:, None]
+        distance = np.sqrt(np.sum(dr*dr, axis=0))
+        z = k*distance
+        geometry = (dr.T@normal)/distance
+        if c0 == 1.0:
+            h0, log0, keep0 = scaled_h2(0, z)
+            h1, log1, keep1 = scaled_h2(1, z)
+            pcoef = np.abs(omega*MU0*half*w/2)
+            ucoef = np.abs(k*half*w*geometry/2)
+            dropped_p.extend((np.log(pcoef[~keep0])+log0[~keep0]).tolist())
+            valid_u = (~keep1) & (ucoef > 0)
+            dropped_u.extend((np.log(ucoef[valid_u])+log1[valid_u]).tolist())
+            DROP_SAMPLE_COUNT += int(np.count_nonzero(~keep0)+np.count_nonzero(~keep1))
+        else:
+            h0 = kernel(0, z, c0)
+            h1 = kernel(1, z, c0)
+        P[idx] = omega*MU0*half/2*np.sum(w*h0)
+        U[idx] = 1j*k*half/2*np.sum(w*geometry*h1)
+    for logs, retained_norm in ((dropped_p, np.sum(np.abs(P))), (dropped_u, np.sum(np.abs(U)))):
+        relative_log10 = dropped_relative_log10(logs, retained_norm)
+        if np.isfinite(relative_log10):
+            DROP_CERTIFICATES_LOG10.append(relative_log10)
+            if relative_log10 > np.log10(DROP_RELATIVE_LIMIT):
+                raise RuntimeError(('BLOCKED_HANKEL_RANGE', relative_log10))
+    return U, P
+
+def symbol(row, mode):
+    n = len(row)
+    return np.sum(row*np.exp(1j*2*pi*mode*np.arange(n)/n))
+
+def jratio(mode, z):
+    if mode == 0:
+        return -jve(1, z)/jve(0, z)
+    return mode/z-jve(mode+1, z)/jve(mode, z)
+
+def setup(a, f, n, c0=1.0, q=20):
+    omega = 2*pi*f
+    kp = np.sqrt(omega*MU0*(omega*EPS0-1j*SIGMA))
+    kb = omega*np.sqrt(MU0*EPS0)
+    up, pp = first_row(a, f, n, kp, c0, q)
+    ub, pb = first_row(a, f, n, kb, c0, q)
+    return omega, kp, kb, up, pp, ub, pb
+
+def values(a, f, n, modes, c0=1.0, q=20):
+    omega, kp, kb, up, pp, ub, pb = setup(a, f, n, c0, q)
+    out = []
+    for mode in modes:
+        m = abs(mode)
+        exact = (
+            kp/(1j*omega*MU0)*jratio(m, kp*a)
+            - kb/(1j*omega*MU0)*jratio(m, kb*a)
+        )
+        numeric = symbol(up, mode)/symbol(pp, mode) - symbol(ub, mode)/symbol(pb, mode)
+        out.append((exact, numeric))
+    return out
+
+def equilibrated_kappa1u(matrix):
+    row_scale = 1/np.max(np.abs(matrix), axis=1)
+    scaled = row_scale[:, None]*matrix
+    col_scale = 1/np.max(np.abs(scaled), axis=0)
+    equilibrated = scaled*col_scale[None, :]
+    lu, _ = lu_factor(equilibrated, check_finite=False)
+    gecon = get_lapack_funcs('gecon', (equilibrated,))
+    rcond, info = gecon(lu, np.linalg.norm(equilibrated, 1), norm='1')
+    if info != 0 or not np.isfinite(rcond) or rcond <= 0:
+        raise RuntimeError(('gecon', info, rcond))
+    return UROUND/rcond
+
+def exact_circulant_kappa1u(row):
+    eigenvalues = len(row)*np.fft.ifft(row)
+    inverse_row = np.fft.fft(1/eigenvalues)/len(row)
+    return float(np.sum(np.abs(row))*np.sum(np.abs(inverse_row))*UROUND)
+
+def dense_spot(a, f, n=512, modes=range(9)):
+    _, _, _, up, pp, ub, pb = setup(a, f, n, 1.0, 20)
+    modes = np.asarray(tuple(modes))
+    theta = 2*pi*np.arange(n)/n
+    E = np.exp(1j*np.outer(theta, modes))
+    backward = 0.0
+    kappa_u = 0.0
+    H = []
+    for urow, prow in ((up, pp), (ub, pb)):
+        U = circulant(urow).T
+        P = circulant(prow).T
+        rhs = U@E
+        lu, piv = lu_factor(P, check_finite=False)
+        h = lu_solve((lu, piv), rhs, check_finite=False)
+        residual = P@h-rhs
+        pnorm = np.linalg.norm(P, np.inf)
+        for column in range(h.shape[1]):
+            backward = max(
+                backward,
+                float(np.linalg.norm(residual[:, column], np.inf)/(
+                    pnorm*np.linalg.norm(h[:, column], np.inf)
+                    + np.linalg.norm(rhs[:, column], np.inf)
+                )),
+            )
+        kappa_u = max(kappa_u, equilibrated_kappa1u(P))
+        H.append(h)
+    Y_on_modes = H[0]-H[1]
+    modal = np.diag(E.conj().T@Y_on_modes)/np.diag(E.conj().T@E)
+    spectral = np.asarray([
+        symbol(up, int(m))/symbol(pp, int(m))
+        - symbol(ub, int(m))/symbol(pb, int(m))
+        for m in modes
+    ])
+    discrepancy = float(np.max(np.abs(modal-spectral)/np.abs(spectral)))
+    return backward, kappa_u, discrepancy
+
+# Immutable C0-A0 failure.
+a0_medium = values(17.5e-6, 1e5, 256, (2,), 1e6)[0]
+a0_fine = values(17.5e-6, 1e5, 512, (2,), 1e6)[0]
+print('A0 exact', a0_fine[0])
+print('A0 N512', a0_fine[1])
+print('A0 fine_error_pct', 100*abs(a0_fine[1]-a0_fine[0])/abs(a0_fine[0]))
+print('A0 mesh_pct', 100*abs(a0_fine[1]-a0_medium[1])/abs(a0_fine[1]))
+print('A0 phase_deg', abs(np.angle(a0_fine[1]/a0_fine[0], deg=True)))
+_, _, _, _, a0_p, _, a0_pb = setup(17.5e-6, 1e5, 512, 1e6, 20)
+print('A0 max_exact_circulant_kappa1u', max(
+    exact_circulant_kappa1u(a0_p), exact_circulant_kappa1u(a0_pb)
+))
+
+# C0-A1 canonical spectral gate.
+errors, changes, phases, qchanges, canonical_kappa = [], [], [], [], []
+for a in (17.5e-6, 500e-6):
+    for f in (1e5, 1e6, 1e7, 1e8, 5e8, 1e9, 2e9):
+        v256 = values(a, f, 256, range(5))
+        v512 = values(a, f, 512, range(5))
+        vq10 = values(a, f, 512, range(5), q=10)
+        _, _, _, _, pp, _, pb = setup(a, f, 512, 1.0, 20)
+        canonical_kappa.extend((exact_circulant_kappa1u(pp), exact_circulant_kappa1u(pb)))
+        for (_, z256), (exact, z512), (_, z10) in zip(v256, v512, vq10):
+            errors.append(abs(z512-exact)/abs(exact))
+            changes.append(abs(z512-z256)/abs(z512))
+            phases.append(abs(np.angle(z512/exact, deg=True)))
+            qchanges.append(abs(z512-z10)/abs(z512))
+print('A1 max_fine_error_pct', 100*max(errors))
+print('A1 max_mesh_pct', 100*max(changes))
+print('A1 max_phase_deg', max(phases))
+print('A1 max_q_relative', max(qchanges))
+print('A1 max_exact_circulant_kappa1u', max(canonical_kappa))
+
+canonical_dense = [
+    dense_spot(a, f, modes=range(5))
+    for a in (17.5e-6, 500e-6)
+    for f in (1e5, 1e6, 1e7, 1e8, 5e8, 1e9, 2e9)
+]
+print('A1 canonical max_dense_backward', max(item[0] for item in canonical_dense))
+
+# W1 full-dense spots; wall/memory remain host-dependent.
+spots = ((5e-6, 173e3), (1e-3, 173e6), (1e-3, 730e6), (1e-3, 1.73e9))
+dense = [dense_spot(a, f) for a, f in spots]
+print('W1 dense max_backward', max(item[0] for item in dense))
+print('W1 dense max_kappa1u', max(item[1] for item in dense))
+print('W1 dense max_symbol_discrepancy', max(item[2] for item in dense))
+
+# Independent W3 geometry, now replayed through the same range guard.
+w3_errors, w3_changes, w3_phases = [], [], []
+w3_cases = [
+    (a, f)
+    for a in np.asarray((25, 75, 250, 750))*1e-6
+    for f in np.asarray((0.2, 2, 20, 200, 800, 1400))*1e6
+]
+for a, f in w3_cases:
+    v256 = values(a, f, 256, range(5, 9))
+    v512 = values(a, f, 512, range(5, 9))
+    for (_, z256), (exact, z512) in zip(v256, v512):
+        w3_errors.append(abs(z512-exact)/abs(exact))
+        w3_changes.append(abs(z512-z256)/abs(z512))
+        w3_phases.append(abs(np.angle(z512/exact, deg=True)))
+w3_dense = [dense_spot(a, f, modes=range(5, 9)) for a, f in w3_cases]
+print('W3 max_fine_error_pct', 100*max(w3_errors))
+print('W3 max_mesh_pct', 100*max(w3_changes))
+print('W3 max_phase_deg', max(w3_phases))
+print('W3 dense max_backward', max(item[0] for item in w3_dense))
+print('W3 dense max_kappa1u', max(item[1] for item in w3_dense))
+print('W3 dense max_symbol_discrepancy', max(item[2] for item in w3_dense))
+print('range_guard_dropped_samples', DROP_SAMPLE_COUNT)
+print('range_guard_max_relative_log10', max(DROP_CERTIFICATES_LOG10, default=-np.inf))
+'@ | python -
+```
+
+핵심 재현값은 A0 exact `173.833308261-j0.052191983 S`, N512 `173.564355046+j5.364668010 S`, fine error `3.119961651%`, mesh change `9.323458492%`, phase `1.787583411°`, exact-circulant `κ1u=8.914401e-8`이다. A1 canonical의 max fine error `0.118541%`, mesh change `0.158276%`, phase `0.019939°`, q10→20 change `1.05602e-6`, exact-circulant `κ1u=9.753904e-13`, per-column normwise-infinity dense backward residual `1.2030e-15`도 재현된다. W1 range-guarded dense block은 residual `9.5414e-16`, `κ1u=1.014945e-12`; W3는 accuracy/mesh/phase `0.113044%/0.150516%/0.028220°`, dense residual `1.1541e-15`, `κ1u=9.164853e-13`을 출력한다. `LOG_MATERIALIZE=ln(tiny)+4` 아래의 H2 sample은 각 U/P first-row에 대해 dropped absolute quadrature bound를 log-sum하고 retained row 1-norm의 `1e-30` 이하일 때만 zero로 둔다. 최종 replay의 40,448 dropped order-sample contribution 중 worst relative log10 bound는 `-305.50`; 이를 넘으면 `BLOCKED_HANKEL_RANGE`다. BLAS별 반올림 차이를 허용하되 backward residual `<=1e-10`, `κ1u<=1e-8`과 dense/symbol discrepancy gate를 검사한다. archived checksums는 더 큰 case metadata serialization을 묶으므로 이 compact block의 stdout hash로 대체하지 않는다. `onenormest` warning은 prior inline run의 anomaly이며 이 exact block은 equilibrated LU의 LAPACK `gecon`을 사용해 explicit inverse 없이 condition certificate를 재현한다.
+
 ## Focused regression
 
 ```powershell

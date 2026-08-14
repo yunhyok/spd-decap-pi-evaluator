@@ -83,25 +83,26 @@ Positive-frequency anchor는 100 kHz, 1/10/100/500 MHz, 1/2 GHz다. skin crossov
 
 ## 2026-08-14 실행 판정
 
-상세 수치와 실패 기록은 [`R2_ORACLE_RESULTS.md`](R2_ORACLE_RESULTS.md)와 [`T1_TRACE_ORACLE_RESULTS.md`](T1_TRACE_ORACLE_RESULTS.md)를 따른다.
+상세 수치와 실패 기록은 [`R2_ORACLE_RESULTS.md`](R2_ORACLE_RESULTS.md), [`T1_TRACE_ORACLE_RESULTS.md`](T1_TRACE_ORACLE_RESULTS.md), [`T1_CIRCLE_DTN_RESULTS.md`](T1_CIRCLE_DTN_RESULTS.md)를 따른다.
 
 | ID | 판정 | 핵심 근거 |
 |---|---|---|
 | N0 | pass, scalar-only | frozen reproduction 포함 두 제조 예제 reduced/unreduced max relative Z error `5.34e-15`; owner ledger 완전 |
-| T1 | blocked, two manufactured subcases pass | Cohn body-fitted `C'`와 periodic plate smooth-copper `R/L` identity는 통과; finite-width SAO–CIM, finite end, source return polygon, absolute/exact-core operator 미실행 |
+| T1 | blocked, limited identities/interior pass | Cohn body-fitted `C'`, periodic plate smooth-copper `R/L` identity와 `C0-A1` circle interior는 통과; frozen A0는 실패, finite-width SAO–CIM/A–v, finite end, source return polygon, absolute/exact-core operator 미실행 |
 | S1 | blocked | rectangle 최종 refinement 0.299%는 부분 통과했으나 annulus refinement fail, 전체 corpus/crop/ownership 없음 |
 | V1 | blocked | solid-cylinder R/L/skin law는 통과했으나 명시적 coax return loop 없음 |
 | V2 | blocked | PEEC current sharing/invariant는 통과했으나 `global_mna_composable=False`, 3-D/exact-minus-core 없음 |
 | A1 | blocked | crop과 invariant는 양호하지만 2.5→1.25 µm mesh RMS 변화 `4.734%` |
 | C1 | blocked | scalar circular-disk C와 footprint area는 양호하지만 spreading Z/crop/ownership 및 `1e-10` residual certificate 없음 |
 
-N0만 현재 constitutive scope 전체에서 gate를 통과했다. T1-E0/M0의 `passed_canonical_*`은 T1 전체 또는 global composition 통과가 아니다. 기존 helper가 반환하는 `production_eligible` 같은 내부 상태를 제품 accuracy promotion으로 해석하지 않는다.
+N0만 현재 constitutive scope 전체에서 gate를 통과했다. T1-E0/M0의 `passed_canonical_*`과 `C0-A1 passed_circle_interior_only`는 T1 전체 또는 global composition 통과가 아니다. 기존 helper가 반환하는 `production_eligible` 같은 내부 상태를 제품 accuracy promotion으로 해석하지 않는다.
 
 ## T1 추가 gate
 
 - smooth copper 0–2 GHz T1에는 skin/proximity/edge current를 포함한다. DC-only series R/L은 `T1a` screening이며 broadband pass가 아니다.
 - Cohn E0는 body edge를 exact node로 갖는 mesh h/32,h/64,h/128과 strip-edge padding 2h/4h/8h를 사용한다.
 - finite-width M1은 homogeneous SAO–CIM perimeter panel `N,2N,4N`, singular self integral과 corner/opposing-projection grading을 사용한다. SAO의 unbounded log kernel에는 artificial crop을 두지 않고 independent A–v FEM만 outer crop `2/4/8 Deff`와 skin mesh `δ/2,δ/4,δ/8`를 사용한다. 두 방법을 같은 0.5%/1% budget과 terminal basis로 비교한다. 상세 식과 scope는 [`T1_M1_REFERENCE_SPEC.md`](T1_M1_REFERENCE_SPEC.md)를 따른다.
+- circle interior에서 frozen `C0-A0` 저주파 switch는 실패했고 `C0-A1` fixed `C0=1` direct/scaled `H^(2)`가 제한 통과했다. M0/M1도 이 정책으로 시작하며 실패 시 A0로 자동 복귀하거나 주파수별로 tune하지 않는다. 수치 범위는 operator-floor proof가 없으면 fail-closed다.
 - finite-length F는 동일 end fixture의 `Z(2l)−Z(l)` increment로 2-D p.u.l operator와 비교한다. raw finite 3-D Z의 exact length proportionality는 요구하지 않는다.
 - symmetric lumped π는 mandatory band 전체 `|γl|≤0.1`과 exact line matrix 0.5%/1% 비교를 모두 통과해야 한다. exact distributed stamp가 기본이다.
 - Trace ref 이름은 metadata screening일 뿐이다. actual return polygon, continuity, current split, terminal footprint와 same-crop field owner가 없으면 source-faithful 상태를 부여하지 않는다.
@@ -143,7 +144,7 @@ N0 high-precision canonical parity는 `||ΔZ||F/max(||Z||F,nZfloor) ≤1e-12` �
 ## 실행 순서
 
 1. N0과 exact-minus-core identity case를 동결한다.
-2. T1-M1 SAO–CIM/A–v FEM과 T1-F 3-D length-difference를 실행한다.
+2. `C0-A1` M0 SAO recovery 뒤 T1-M1 SAO–CIM/A–v FEM과 T1-F 3-D length-difference를 실행한다.
 3. P1/P2 explicit-ref trace의 actual return polygon/connectivity와 absolute/core DtN owner를 증명한다.
 4. S1, V1/V2, A1, C1의 남은 analytic/mesh/crop/invariant blocker를 해결한다.
 5. PowerSI에서 trace-only, plane-neck, via-pair, pad/antipad, finite-port coupon과 반복 해석을 확보한다.

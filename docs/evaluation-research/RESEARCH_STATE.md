@@ -9,7 +9,7 @@
 | 프로그램 기준 | SPD Decap PI Evaluator v0.22.0 |
 | 연구 branch | `codex/evaluation-algorithm-research` |
 | 기준 commit | `bb361687c0bf976d5d04faf26bc243bcf3d52006` |
-| 현재 단계 | R0 source/external-port/return-owner contract 진행 중, R2 T1 finite-width oracle 명세 진행 |
+| 현재 단계 | R0 source/external-port/return-owner contract 진행 중, R2 T1 circle interior 통과 후 M0 SAO recovery 진행 |
 | 제품 코드 변경 | 없음 |
 | GitHub 원격 변경 | 없음 |
 | 정확성 승격 | 미달성 |
@@ -63,6 +63,9 @@
 | D-023 | T1-M1의 1차 SAO–CIM은 homogeneous, nonmagnetic, lossless background와 simply connected copper에 한정하고 published complex `Z'` 식을 사용한다. | 확정; arXiv v1 식은 `Ys`와 `Re/Im` 누락. layered/lossy background와 semiconductor current는 별도 계약 전 차단 |
 | D-024 | SAO–CIM과 independent A–v FEM은 동일 balanced current/terminal basis에서만 비교한다. | 확정; SAO는 unbounded analytic log exterior, A–v는 `2/4/8 Deff` crop. reduced result를 현 GlobalMNA에 직접 stamp하지 않음 |
 | D-025 | quasi-TM 범위에 `|kb|Deff<=0.3`을 사전 등록한다. | 잠정 engineering gate; canonical vacuum M1의 12 geometry 중 4개는 2 GHz에서 차단되고 threshold 이하 frequency trend만 허용 |
+| D-026 | 사전 등록한 `C0-A0`의 저주파 `C0=10^6` switch는 immutable negative baseline으로 보존한다. | 확정; 작은 원 100 kHz, mode 2의 N512 analytic error 3.11996%, N256→512 9.32346%, phase 1.78758°, `κ1u=8.9144e-8`로 다중 gate 실패 |
+| D-027 | positive-frequency circle interior의 현재 후보는 `C0-A1 direct_scaled_H2_primary`다. | `passed_circle_interior_only`; canonical full-condition과 W1/W3 dense withheld 통과, W2 analytic-only corroboration. M0/M1/A–v/global/PowerSI에는 자동 승격하지 않음 |
+| D-028 | Hankel/Bessel dynamic range는 scaled representation과 operator-floor proof로 fail-closed 처리한다. | 확정; direct `hankel2`의 false zero, `J-jY` catastrophic cancellation과 estimator overflow를 물리적 zero/convergence로 해석하지 않음 |
 
 ## 현재 가설 순위
 
@@ -79,7 +82,7 @@
 |---|---|---|---|
 | R0 Reference contract | 8개 파일 manifest, explicit port map, PowerSI 조건 | identity/hash/grid/state 및 reference quality 기록 | identity/grid/source parameter/P2 physical terminal 완료; export operator provenance 진행 중 |
 | R1 Frozen baseline | 현행 solver의 전체 timing/memory/error/numerical report | 대표 pair와 rail별 재현 가능한 baseline | 기존 92-port 결과만 동결; pair P2 import 차단 |
-| R2 Local oracle | via/trace/pad/plane canonical corpus | reciprocity/passivity/conservation/mesh convergence | N0 scalar pass; T1 E0/M0 manufactured 부분 통과, M1 `specified_not_run`, T1 overall blocked; S1/V1/V2/A1/C1 global 승격 차단 |
+| R2 Local oracle | via/trace/pad/plane canonical corpus | reciprocity/passivity/conservation/mesh convergence | N0 scalar pass; T1 E0/M0 analytic identities와 `C0-A1` circle interior 제한 통과, M1 `specified_not_run`, T1 overall blocked; S1/V1/V2/A1/C1 global 승격 차단 |
 | R3 Model attribution | 물리 block별 ablation matrix | 예상 port/band 개선을 원인별로 구분 | R2 oracle 뒤 대기 |
 | R4 Hybrid global | condensed domains + passive MNA 후보 | 네 pair provisional accuracy gate | 대기 |
 | R5 Acceleration | exact reduction, MOR, adaptive sweep | 추가 오차 budget + 8 GB gate | 대기 |
@@ -134,18 +137,20 @@ PowerSI repeatability와 mesh/order convergence를 측정한 뒤 수치는 조�
 9. SAO–CIM의 finite-width trace/return partial operator를 현 absolute global MNA와 같은 gauge/DtN interface로 만들 최소 common-mode/reference field는 무엇인가?
 10. P3/P4의 약 1.45M Trace는 raw grammar상 routed trace와 plane/mesh topology가 섞였거나 미확정이다. 어떤 source semantic 또는 exporter contract로 이를 구분할 것인가?
 11. homogeneous SAO 이후 stratified/lossy background Green function, self term과 reciprocity-based total current를 어떤 independent layered coupon으로 인증할 것인가?
+12. circle에서 통과한 `C0-A1` direct/scaled Hankel과 singular self treatment가 M0 coextensive plate limit 및 corner가 있는 M1에서 같은 수렴률·operator floor를 유지하는가?
 
 ## 다음 세션의 우선 작업
 
-1. [`T1_M1_REFERENCE_SPEC.md`](T1_M1_REFERENCE_SPEC.md)의 two-radius circle Bessel/Fourier DtN gate를 먼저 실행한 뒤 M0 limit와 homogeneous M1 SAO–CIM을 independent A–v FEM과 비교하고 panel/self/conditioning 및 FEM mesh/crop gate를 판정한다.
-2. T1-F finite-length 3-D PEEC length-difference reference와 exact distributed-line stamp를 비교한다.
-3. P1/P2 selected crop의 확인된 return artwork/void/GND net graph에서 signal-to-return signed basis와 same-crop core/DtN owner를 정의한다. 가까운 via를 current return으로 강제하지 않는다.
-4. reduced differential T1 operator의 full partial/common-mode 또는 explicit current-constraint global adapter 계약을 제조해로 검증한다.
-5. S1 circular/void boundary-conforming refinement와 A1 body-fitted/higher-order 후보를 문헌·제조해로 비교한다.
-6. V1/V2 explicit coax/ring-return 2-D/3-D reference와 동일 crop의 exact/core owner·DtN matrix를 만든다.
-7. C1 circular launch spreading Z, radius scaling, crop와 point-core replacement coupon을 완성한다.
-8. P2 operator unknown field와 P3/P4 solver-state confound를 실제 PowerSI export evidence로 닫는다.
-9. factor-isolated PowerSI coupon과 repeatability/mesh-convergence reference를 요청·정의한다.
+1. `C0-A1`로 M0 wide coextensive plate의 analytic `coth` operator를 perimeter discretization에서 회복하고, panel/self/condition/power gate를 판정한다.
+2. eligible homogeneous M1을 SAO–CIM `N,2N,4N`으로 실행한 뒤 같은 basis의 independent A–v FEM `h,h/2,h/4`, crop `2/4/8 Deff`와 비교한다.
+3. T1-F finite-length 3-D PEEC length-difference reference와 exact distributed-line stamp를 비교한다.
+4. P1/P2 selected crop의 확인된 return artwork/void/GND net graph에서 signal-to-return signed basis와 same-crop core/DtN owner를 정의한다. 가까운 via를 current return으로 강제하지 않는다.
+5. reduced differential T1 operator의 full partial/common-mode 또는 explicit current-constraint global adapter 계약을 제조해로 검증한다.
+6. S1 circular/void boundary-conforming refinement와 A1 body-fitted/higher-order 후보를 문헌·제조해로 비교한다.
+7. V1/V2 explicit coax/ring-return 2-D/3-D reference와 동일 crop의 exact/core owner·DtN matrix를 만든다.
+8. C1 circular launch spreading Z, radius scaling, crop와 point-core replacement coupon을 완성한다.
+9. P2 operator unknown field와 P3/P4 solver-state confound를 실제 PowerSI export evidence로 닫는다.
+10. factor-isolated PowerSI coupon과 repeatability/mesh-convergence reference를 요청·정의한다.
 
 ## 변경 금지선
 

@@ -2,7 +2,7 @@
 
 최종 갱신: 2026-08-14 (Asia/Seoul)
 
-이 문서는 finite-width straight conductor와 explicit return의 smooth-copper broadband series operator를 검증할 T1-M1 실행 계약을 고정한다. 제품 parser/solver 코드는 변경하지 않았고, 아래 두 기준기는 아직 구현·실행되지 않았다. 따라서 현재 판정은 **`specified_not_run`** 이며 T1 전체와 global composition은 계속 `blocked`다.
+이 문서는 finite-width straight conductor와 explicit return의 smooth-copper broadband series operator를 검증할 T1-M1 실행 계약을 고정한다. 제품 parser/solver 코드는 변경하지 않았다. mandatory circle interior prototype은 [`T1_CIRCLE_DTN_RESULTS.md`](T1_CIRCLE_DTN_RESULTS.md)에서 `C0-A1 passed_circle_interior_only`로 판정됐지만 finite-width SAO–CIM과 independent A–v 기준기는 아직 실행되지 않았다. 따라서 T1-M1은 **`specified_not_run`**, T1 전체와 global composition은 계속 `blocked`다.
 
 ## 범위와 독립성
 
@@ -157,14 +157,16 @@ R'_dc,loop    = Tᵀ R'_dc,partial T
 
 를 사용한다. arbitrary-shape `Ldc`는 A–v magnetostatic energy가 소유한다. positive-frequency SAO 결과는 `R→Rdc`, finite `Im(Z)/ω→Ldc`로 수렴해야 한다.
 
-Patel–Triverio의 empirical conditioning switch는 conductor별 minimum transverse dimension `Δp`와 skin depth `δp=sqrt(2/(ωμpσp))`에 대해
+Patel–Triverio의 empirical conditioning switch를 frozen candidate `C0-A0`로 다음과 같이 사전 등록했다.
 
 ```text
 C0 = 1e6  if Δp/δp <= 0.5
 C0 = 1    otherwise
 ```
 
-다. 같은 conductor의 interior와 equivalent-background operator에 같은 `C0`를 쓴다. `Δ/δ={0.2,0.35,0.5}` 전환 영역에서는 두 값을 모두 계산해 `Z'` overlap을 검증한다.
+같은 conductor의 interior와 equivalent-background operator에 같은 `C0`를 쓰는 이 정책은 작은 원 100 kHz에서 정확도·mesh·phase·conditioning gate를 실패했다. 이 결과는 [`T1_CIRCLE_DTN_RESULTS.md`](T1_CIRCLE_DTN_RESULTS.md)의 immutable negative baseline이며 결과를 삭제하거나 선택 후보의 통과로 덮어쓰지 않는다.
+
+현재 positive-frequency research candidate `C0-A1`은 conductor와 filled-background operator 모두 `C0=1`을 사용하고, `Jν-jYν`를 따로 계산하지 않은 direct/scaled `Hν^(2)` kernel을 사용한다. DC는 위 analytic branch로 분리한다. A1 선택에는 downstream `Z'`, PowerSI 또는 board curve를 사용하지 않고 finite/branch, self/quadrature, residual, equilibrated condition과 mesh gate만 사용했다. A1이 M0/M1에서 실패하면 `BLOCKED_C0_A1`로 남기며 A0로 자동 복귀하거나 frequency별로 `C0`를 tune하지 않는다. high-`C0` 재시도는 별도 `C0-A2` preregistration과 dynamic-range certificate가 있을 때만 허용한다.
 
 homogeneous log exterior는 magnetoquasistatic/quasi-TM model이다. conductor union의 최대 transverse span을 `Deff`라 두고 각 frequency에서
 
@@ -311,7 +313,9 @@ Dm(k)  = k/(jωμ) · Jm'(ka)/Jm(ka)
 Ys,m   = Dm(kp) - Dm(kb)
 ```
 
-다. `Jm'/Jm`는 scaled Bessel 또는 continued ratio로 평가하고 numerator와 denominator를 따로 unscaled 계산해 overflow를 허용하지 않는다. numerical eigenvalue는 normalized sampled Fourier vector `em,n=exp(jmθn)`에 대한 Rayleigh quotient `emᴴ W Ys em / (emᴴ W em)`로 추출한다. `Ys,floor=max(1e-12 S,1e-10 max_m|Ys,m|)`를 쓰고, fine `N=512`의 normalized complex error `|ŷm-Ys,m|/max(|Ys,m|,Ys,floor)`는 각 mode/frequency에서 `<=0.5%`여야 한다. phase error는 analytic과 numerical magnitude가 모두 `>=10 Ys,floor`인 mode에만 적용하며 `<=0.25°`다. `N=256→512`도 아래 `0.5%/1%/0.25°` convergence gate를 통과해야 한다. 두 radius가 `C0` branch 양쪽과 crossover를 포함하는지 기록하며 branch continuity, `m↔-m` degeneracy와 raw residual을 함께 보존한다.
+다. `Jm'/Jm`는 같은 scale의 Bessel adjacent-order ratio 또는 continued ratio로 평가하고 numerator와 denominator를 따로 unscaled 계산해 overflow를 허용하지 않는다. numerical eigenvalue는 normalized sampled Fourier vector `em,n=exp(jmθn)`에 대한 Rayleigh quotient `emᴴ W Ys em / (emᴴ W em)`로 추출한다. `Ys,floor=max(1e-12 S,1e-10 max_m|Ys,m|)`를 쓰고, fine `N=512`의 normalized complex error `|ŷm-Ys,m|/max(|Ys,m|,Ys,floor)`는 각 mode/frequency에서 `<=0.5%`여야 한다. phase error는 analytic과 numerical magnitude가 모두 `>=10 Ys,floor`인 mode에만 적용하며 `<=0.25°`다. `N=256→512`도 아래 `0.5%/1%/0.25°` convergence gate를 통과해야 한다. branch continuity, `m↔-m` degeneracy와 raw residual을 함께 보존한다.
+
+실행 결과는 `C0-A0 failed_circle_low_frequency`, `C0-A1 passed_circle_interior_only`다. A1 canonical의 N512 worst analytic error `0.118541%`, N256→512 change `0.158276%`, phase `0.019939°`, per-column normwise-infinity dense backward residual `1.2030e-15`, exact-circulant equilibrated `κ1u=9.7539e-13`이다. W1/W3 range-guarded dense withheld가 full-condition 결과를 지지하고 W2는 analytic/convergence-only 보조 자료다. 이는 circle interior만 승인하며 M0/M1 exterior 또는 product를 승인하지 않는다.
 
 ## Numerical certificate와 promotion gate
 
@@ -325,13 +329,13 @@ matrix convergence에서 frequency별 `Z'floor=max(1e-9 Ω/m,1e-9 maxij|Z'fine,i
 |---|---|
 | interior `PD=U` backward residual | `<=1e-10` |
 | exterior/terminal or FEM saddle backward residual | `<=1e-10` |
-| equilibrated condition certificate | 위에서 정의한 각 `κ1(Aeq)u<=1e-8`; 아니면 higher precision/alternate `C0` 또는 blocked |
+| equilibrated condition certificate | 위에서 정의한 각 `κ1(Aeq)u<=1e-8`; 아니면 검증된 estimator/higher precision을 사용하거나 blocked |
 | integrated current and zero-sum residual | `<=1e-10` |
 | reciprocity before symmetrization | relative Frobenius `<=1e-8` |
 | passivity | 각 `Z'mode∈{Z'_loop,Z'_Bg}`에서 `λmin(Hermitian(Z'mode)) >= -max(1e-12 Ω/m,1e-9||Z'mode||2)` |
 | SAO boundary power identity | relative mismatch `<=1e-8` |
 | A–v loss/magnetic power identities | each `<=1e-8` |
-| `C0=1` vs `1e6` overlap | Frobenius `<=0.05%`, max `<=0.1%` |
+| `C0` policy | `C0-A1` fixed; 실패 시 `BLOCKED_C0_A1`. A0 자동 fallback 또는 사후 frequency tuning 금지 |
 | quadrature doubling | `<=0.1%` |
 | medium→fine panel/mesh | log-weight RMS `<=0.5%`, max meaningful element `<=1%`, phase `<=0.25°` |
 | A–v crop 4→8 `Deff` | same `0.5%/1%/0.25°` gate |
@@ -351,9 +355,9 @@ matrix convergence에서 frequency별 `Z'floor=max(1e-9 Ω/m,1e-9 maxij|Z'fine,i
 
 ## 실행 순서와 상태 전이
 
-1. 위 두 radius, 일곱 frequency, 다섯 Fourier mode의 analytic Bessel/Fourier DtN eigenvalue로 SAO interior를 검증한다.
-2. M0 wide coextensive limit에서 `coth` slab law, `Rdc`, `Ldc`, high-skin `sqrt(f)` slope를 회복한다.
-3. M1의 eligible frequency/case에서 `N,2N,4N`, quadrature와 `C0` overlap을 통과한다.
+1. 위 두 radius, 일곱 frequency, 다섯 Fourier mode의 analytic Bessel/Fourier DtN eigenvalue로 SAO interior를 검증한다. **완료:** A0 실패, A1 circle-only 통과.
+2. `C0-A1`로 M0 wide coextensive limit에서 `coth` slab law, `Rdc`, `Ldc`, high-skin `sqrt(f)` slope를 회복한다.
+3. M1의 eligible frequency/case에서 `N,2N,4N`, quadrature, Hankel dynamic-range와 operator-floor certificate를 통과한다.
 4. 같은 geometry/current basis의 A–v `h,h/2,h/4`와 crop `2/4/8 Deff`를 통과한다.
 5. symmetric two-return case에서 symmetry로만 equal split이 나오는지 검증한다.
 6. P2 artificial `Trace13305` coupon을 실행한다.

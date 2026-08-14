@@ -43,6 +43,7 @@ Y_r(\omega)v=b,\qquad Z_{pp}=b^Tv
 - isolated via PEEC는 빠르고 수치적으로 안정적이지만 exact-minus-core ownership이 없어 additive global stamp로 사용할 수 없다. 후보 2는 explicit return/crop/core subtraction이 있는 replacement block으로만 진행한다.
 - source manifest가 P3/P4 missing trace width, 모든 pair의 plating/fill/roughness unknown, P1/P2 antipad preservation gap을 확인했다. 후보 비교에서 이 값을 fit parameter로 숨기는 경로는 기각한다.
 - T1의 Cohn body-fitted lossless `C'`와 periodic two-plate smooth-copper `R/L` identity는 manufactured 범위에서 통과했다. finite-width 기준 2-D 후보는 homogeneous-first SAO–CIM이며 independent A–v FEM/finite-length 3-D PEEC로 교차검증한다.
+- SAO interior의 사전 등록 `C0-A0` 저주파 `10^6` switch는 작은 원에서 실패했다. `C0-A1` fixed `C0=1` direct/scaled Hankel은 canonical full-condition과 W1/W3 dense withheld를 통과했고 W2 analytic/convergence-only 자료가 이를 지지했다. 판정은 `passed_circle_interior_only`이며 M0/M1 또는 product 승격이 아니다.
 - reduced differential line의 4-terminal absolute lift는 gauge 외 common-mode null을 가져 현 global MNA에서 exact singular다. 후보 2의 trace block은 `blocked_balanced_projection_and_return_partition`이며 arbitrary conductance로 null을 숨기지 않는다.
 - streaming metadata screening은 P1/P2에 8/57개 profile과 6,816/2,976개 explicit-ref candidate를 찾았다. profile cache 잠재력은 있지만 actual return polygon/connectivity와 source-owner key가 없으므로 production cardinality/속도 주장은 보류한다.
 
@@ -92,6 +93,7 @@ straight invariant cross-section에서는 arbitrary conductor contour의 surface
 
 - Cohn lossless stripline과 periodic finite-thickness plate는 analytic anchor다.
 - SAO–CIM은 finite width, skin, proximity, corner current와 multiple return을 포함하는 normative 2-D oracle다.
+- 현재 interior kernel 후보는 `C0-A1`: positive frequency에서 conductor/background 모두 fixed `C0=1`, direct/scaled `H^(2)`, 별도 DC branch다. 실패하면 차단하며 frozen A0 fallback이나 board-curve 기반 tuning을 하지 않는다.
 - volume-current A–v FEM과 3-D PEEC/FastHenry length difference는 independent reference다.
 - nominal π는 mandatory band `max modal |γl|≤0.1`과 exact terminal-matrix gate를 통과할 때만 fallback으로 허용한다.
 - bend/profile change/T junction은 별도 3-D local block 없이 ideal join으로 만들지 않는다.

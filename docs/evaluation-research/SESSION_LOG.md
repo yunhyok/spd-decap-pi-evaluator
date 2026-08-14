@@ -694,3 +694,107 @@ thread visualization `oracle-gate-status.html`의 T1 tile은 `E0/M0 통과, M1 s
 5. finite-length T1-F 3-D length-difference와 balanced/global adapter는 2-D oracle 통과 뒤에 진행한다.
 6. actual return polygon의 signed operator와 same-crop core/DtN owner가 없으면 source-faithful/global status를 계속 차단한다.
 7. layered/lossy background와 roughness는 homogeneous smooth-copper gate 전에는 추가하지 않는다.
+
+## 2026-08-14 — T1 circular interior DtN gate와 `C0` 정책 판정
+
+### 시작 목적과 변경 경계
+
+직전 checkpoint에서 mandatory로 고정한 two-radius circular conductor DtN gate를 제품 코드 밖의 bounded prototype으로 실행했다. 목적은 M1 사각형·return exterior를 풀기 전에 다음을 분리 판정하는 것이었다.
+
+1. exact Bessel DtN과 pulse-panel `U/P` interior operator의 sign, branch, Fourier mode와 self term
+2. 사전 등록 `C0-A0` empirical switch와 새 후보 `C0-A1`의 정확도·수렴·conditioning
+3. Hankel/Bessel dynamic range, underflow와 fail-closed contract
+4. 8 GB 장비에서 작은 dense cross-section oracle을 순차 실행할 수 있는지의 resource preflight
+
+제품 parser/solver/UI/version/installer는 수정하지 않았다. board/PowerSI curve를 후보 선택에 사용하지 않았고 raw SPD/Touchstone도 이 cycle에서 solver 입력으로 읽지 않았다.
+
+### Agent 배치와 root 검증
+
+- Sol: Patel–Triverio 식, C0 항등식, W3 independent withheld와 canonical condition/residual 감사
+- Terra: W2 blind parameter set, promotion boundary와 상위 계약 일관성 감사
+- Luna: SciPy/Bessel/Hankel 환경, 22,599-point range stress, dense memory/condition preflight 감사
+- Root: A0/A1 canonical·W1/W2 실행, exact reproduction block 작성·재실행, 문서/visualization 통합
+
+### Exact circle와 pulse convention
+
+`e^{jωt}`, CCW contour, outward normal에서 analytic eigenvalue는 `Dm(k)=k/(jωμ)·Jm'(ka)/Jm(ka)`, `Ys,m=Dp,m−Db,m`로 고정했다. `kp`는 fourth quadrant, `kb`는 positive-real branch다. 같은 scale의 `jve` adjacent ratio는 direct `jvp/jv` safe points와 최대 `8.96e-16`, root-square residual `1.68e-16`으로 일치했다. 70 exact complex value serialization checksum은 `ed91cad8f9c481bcb0c7749ea05d75fd9d26ab33fde258b23c6a66c60bc623e0`이다.
+
+regular N-chord circle은 `U[i,j]=u[(j−i) mod N]`으로 고정하고 `em,n=exp(+j2πmn/N)`, `Ûm=N·ifft(u)[m]`를 사용한다. `fft(first_row)[m]`은 반대 mode를 선택한다. full dense Rayleigh 등가는 모든 chord 길이가 같아 `W=ℓI`인 이 circle에만 적용하며 corner/nonuniform M1에 일반화하지 않는다.
+
+### Frozen `C0-A0` 실패
+
+사전 등록한 `C0=10^6 if Δ/δ<=0.5 else 1`을 immutable negative baseline으로 실행했다. `a=17.5 µm`, 100 kHz, mode 2에서:
+
+- analytic `173.833308261−j0.052191983 S`
+- N512 `173.564355046+j5.364668010 S`
+- fine analytic error `3.11996%`
+- N256→512 change `9.32346%`
+- phase `1.78758°`
+- equilibrated max `κ1u=8.9144e-8`
+
+으로 정확도·mesh·phase·condition gate를 모두 실패했다. N128→4096 error sequence는 `49.36344/12.43344/3.11996/0.78145/0.19552/0.04891%`여서 linear solve 실패가 아니라 큰 `C0`가 straight-chord geometry error를 증폭한 2차 수렴 case다. 특히 `C0=10^6`에서 `|kℓ/2|<=1e-3`만 보고 leading complex-log self asymptotic을 쓰면 생략된 `C0 z²` 항이 작지 않다. frozen A0는 regularized self integral을 그대로 사용했다.
+
+### Selected `C0-A1` circle candidate
+
+positive frequency에서 conductor/background 모두 `C0=1`, direct/scaled `Hν^(2)`를 쓰고 DC를 분리하는 A1을 downstream Z/PowerSI 없이 선택했다. canonical `a={17.5,500} µm`, 7 frequencies, `m=0…4`, N128/256/512에서:
+
+- N512 worst analytic error `0.118541%`
+- N256→512 max change `0.158276%`
+- phase `0.019939°`
+- quadrature q10→20 `1.05602e-6` relative
+- exact-circulant max `κ1u=9.753904e-13`
+- per-column normwise-infinity dense backward residual `1.2030e-15`
+
+로 통과했다. result serialization checksum은 `a2d61666e01884eb8560dc6fb35789be88cbaea9fa52f99d70964fdc20387390`이다. 판정은 `C0-A1 passed_circle_interior_only`이며 M0/M1/A–v/exterior/PowerSI/global/product 승격이 아니다.
+
+### Withheld와 수치 범위
+
+- W1: 24 geometry/frequency, 216 modal points 모두 통과. worst analytic/mesh/phase `0.111661%/0.230599%/0.028207°`; range-guard replay 네 dense spot의 per-column residual `9.5414e-16`, `κ1u=1.014945e-12`; original checksum `94411e3db852684dfd0554f344490412ffbda6034b9fde9d69b2cb34f167f472`.
+- W2: 12 geometry/frequency, 72 signed modal points의 analytic/convergence-only corroboration. worst analytic/mesh/phase `0.152520%/0.383233%/0.012746°`; spectral `κ2u=6.116e-13`은 screening proxy다. full-dense P/Pout residual/`κ1u`가 없어 full-condition pass 근거에서 제외했다. `m↔−m=3.339e-10`은 정규화/단위가 보존되지 않아 gate evidence가 아니다.
+- W3: Sol independent geometry를 range guard로 replay한 96 modal points 전부 통과. worst analytic/mesh/phase `0.113044%/0.150516%/0.028220°`; 24 dense case residual `1.1541e-15`, `κ1u=9.164853e-13`, dense/Fourier discrepancy `1.470e-11`. original unguarded 수치는 range certificate로 사용하지 않는다.
+
+0.1 Hz–2 GHz, radius 1 µm–1 mm, order 0…8의 22,599 safe-overlap grid(`|Im z|<=685.99`)에서 direct/scaled reconstruction max relative difference는 `6.14e-14`였다. 별도 `z=y(1−j)` scan에서 SciPy/AMOS direct `hankel2`는 이 corpus의 `y≈693.9`부터 false exact zero를 반환했고 scaled path는 subnormal log limit 약 `−744.44`까지 유지됐다. 최종 W1/W3 replay는 `ln(tiny)+4` 아래 표본의 dropped contribution을 log-sum해 retained U/P row 1-norm의 `1e-30` 이하일 때만 zero로 뒀다. 40,448 dropped order-sample contribution의 worst bound는 `10^-305.50`이었다. 이 proof가 없으면 `BLOCKED_HANKEL_RANGE`다.
+
+### Resource와 anomaly
+
+N512 complex128 matrix 하나는 4.00 MiB다. 순차 U/P/LU/RHS prototype의 process-only peak working set은 W1 spot 약 `94.06 MiB`, W3 independent run 약 `137.83 MiB`; private bytes는 SciPy/BLAS reservation을 포함해 약 1.3 GiB였다. 이는 process-tree 또는 8 GB production 성능 승격이 아니다.
+
+W1 inline run에서 `onenormest`가 near-zero complex sign에 overflow warning을 낸 case가 있었다. exact reproduction은 row-max→column-max equilibration 뒤 LU의 LAPACK `gecon`을 사용하며 explicit inverse를 만들지 않는다. sparse M1에 zero-safe estimator가 없으면 차단한다. 감사 과정에서 canonical `κ1u`와 W3 `κ1u`, 서로 다른 residual normalization이 섞인 문구를 발견해 exact-circulant condition과 per-column normwise-infinity residual로 다시 분리했다.
+
+### 문서와 visualization
+
+제품 code 변경 없음. 새 기준 문서 [`T1_CIRCLE_DTN_RESULTS.md`](T1_CIRCLE_DTN_RESULTS.md)를 추가하고 다음을 갱신했다.
+
+- `README.md`
+- `RESEARCH_STATE.md`
+- `R2_ORACLE_RESULTS.md`
+- `LOCAL_ORACLE_PLAN.md`
+- `ALGORITHM_CANDIDATES.md`
+- `T1_TRACE_ORACLE_RESULTS.md`
+- `T1_M1_REFERENCE_SPEC.md`
+- `ORACLE_REPRODUCTION.md`
+- `SESSION_LOG.md`
+
+thread visualization의 T1 tile은 `E0/M0/A1 circle interior 제한 통과, M1 specified, overall blocked`와 frozen A0 failure를 표시하도록 갱신했다. repository에는 포함하지 않는다.
+
+### Validation과 독립 감사
+
+- `ORACLE_REPRODUCTION.md`의 circle block을 Markdown에서 그대로 추출·실행: A0 failure/condition, A1 canonical spectral, exact-circulant condition, 14 canonical dense, 네 W1 dense와 24 W3 dense case를 range guard와 함께 재현. dropped contribution 40,448개, worst retained-row-relative log10 bound `-305.5016`
+- Sol은 C0 항등식/W3를 독립 확인하고 canonical condition/residual 혼동과 Fourier orientation 표기 누락을 발견했다. exact `N·ifft` convention과 수치 provenance를 분리해 반영했다.
+- Terra는 A0/A1 상위 계약 충돌, W2 full-dense certificate 부재와 Hankel stress range 문구를 발견했다. reference spec을 amendment하고 W2를 analytic/convergence-only로 낮췄다.
+- Luna는 `hankel2e` sign, logabs, 22,599 stress 수치를 확인하고 `gecon` prior-run provenance와 process-only resource label을 요구해 반영했다.
+- physical owner/fail-closed focused regression: `7 passed in 0.97 s`
+- research Markdown 15개: strict UTF-8 error 0, trailing whitespace 0, odd fence 0, broken relative link 0
+- Sol 최종 재감사는 A0 sequence/condition, A1 Fourier orientation·dense residual, dropped-row certificate와 promotion boundary를 모두 `APPROVED`했다.
+- Terra 최종 재감사는 A0/A1 stdout, W1/W3 range proof, W2 analytic-only 범위와 A1-M0→M1→A–v 순서를 모두 `APPROVED`했다.
+- Luna 최종 재감사는 scaled-Hankel convention, `ln(tiny)+4` materialization, `1e-30` dropped-row 기준, 40,448개 drop과 `-305.5016` bound를 모두 `APPROVED`했다.
+- visualization은 Playwright의 실제 CSS viewport로 736×520과 360×640을 재렌더링했다. inner width/scroll width는 각각 `704/704`, `328/328`이고 두 화면 모두 7개 gate tile을 보존했다.
+- checkpoint 직전 재검증: focused regression `7 passed in 0.85 s`, research Markdown 15개 error 0, `git diff --check` error 0, 변경 범위 전부 `docs/evaluation-research/`.
+
+### Exact next starting point
+
+1. amended `C0-A1` policy로 M0 wide coextensive plate의 analytic `coth` operator를 pulse-panel SAO에서 회복한다.
+2. raw U/P, interior/exterior split, signed complex power, panel N/2N/4N, self q10/20, condition과 operator-floor를 모두 보고한다.
+3. M0가 통과한 뒤에만 eligible finite-width M1을 실행하고 same-basis independent A–v `h,h/2,h/4`, crop `2/4/8Deff`와 비교한다.
+4. A1이 M0/M1에서 실패하면 `BLOCKED_C0_A1`로 남기며 A0 fallback 또는 frequency tuning을 하지 않는다.
+5. source-faithful return, exact-minus-core/global adapter, PowerSI correlation과 8 GB production 승격은 계속 차단한다.
