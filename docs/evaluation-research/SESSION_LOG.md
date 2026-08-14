@@ -1284,3 +1284,33 @@ post-run lifecycle regression은 executable-stage가 pre-run `token missing`뿐 
 2. H4 mesh lineage/canonical assembly/resource upper bound, local gates, mandatory `h2→h4` RMS/max/phase, fine analytic/degeneracy와 result schema를 결과와 무관하게 별도 사전등록한다.
 3. H4 static audit와 clean commit, 별도 one-use token 전에는 H4 factorization/physics를 실행하지 않는다.
 4. H4가 통과해도 final circle, withheld radius와 EQ0는 각각의 후속 preregistration 전까지 차단한다.
+
+## 2026-08-15 — AV-BS1 H4-P0 assembly-only freeze
+
+H2 result/tombstone을 research commit `ad12df1`에 보존한 뒤, 별도 H4-P0 fixture가 frozen H2를 deterministic 1-to-4 refine했다. `V/E/T/B=32001/95488/63488/512`, interior/boundary `31489/512`, manifest SHA-256 `a91b4bf147628a34d1a29144ae353a83110b1756c699c71e2b57e9c36822835b`를 재현했다. H2 canonical tag 3,712개의 두 child를 모두 소유해 H4 tag는 7,424개이고 exclusion은 0이다.
+
+추가 midpoint arithmetic 때문에 H2 `128uκ`는 16 tags에서 실패했다. H4-P0는 topology-owned tag를 바꾸지 않고 H4-specific `256uκ`를 별도 승인했다. explicit determinant maximum/bound/margin은 `8.540375354048666e-13 / 1.1605646201662821e-12 / 1.358915237391882`다. raw/canonical `K.nnz=222977/208129`, `M/MΓ.nnz=222977/1536`; raw/canonical K SHA-256은 `8a020c809634a9794292f49198ff1bede84328b6e2c5ef988255cbff32cfe93b` / `a510df2ab39cb85640720f863341d1fe468562442ecb074bafcaf70d9846f2e7`다. support/partition/null/transpose/correction과 block counts도 독립 replay와 일치했다.
+
+resource contract는 all-dense factor diagnostic과 guarded sparse candidate를 분리했다. dense upper의 +25% total `40,448,792,335 B`는 4 GiB를 실패한다. 2 GiB one-factor hard cap candidate는 raw/margin `2,776,689,644 / 3,470,862,055 B`, WS slack `824,105,241 B`지만 실제 fit을 측정하지 않아 `factor_fit_unproven=true`, `primary_h4_authorized=false`다.
+
+current static evidence:
+
+```text
+fixture SHA-256: 331218882d2004d0d97e03378ae8af12b23cb4129a9c062e0592ee590a53e94b
+runner SHA-256: b45c907fb5300e46717f423c8512a3500c7db8b42b647101d64a8a11440116c9
+test SHA-256: 1539ef4151b8ea416c9ee2f2bf71c1baebd4e83bb2d3684e050437fcb1def40c
+prereg doc SHA-256: 419dfb85ff40a43f2a0c2b1143b8531b16c95402f0c0d454764cfd3f5c03e524
+manifest payload SHA-256: 71f8e902322016541bd9302231fa9965d7dfff67cdce1135e16ee1011a2aa990
+tests: 6 passed
+status: preregistered_H4_P0_assembly_only_no_solve
+authorization: not_authorized
+```
+
+Sol, Terra와 Luna는 topology/certificate/hash/resource/no-solve 경계를 독립 승인했다. 제품 source/parser/solver/UI/version/installer와 GitHub 원격은 바꾸지 않았고 H4 factorization/physics도 실행하지 않았다.
+
+### Exact next starting point
+
+1. H4-P0 fixture/manifest-only runner/tests/doc를 clean research commit에 고정한다.
+2. 별도 one-use H4-P0R factorization-only 계약을 만든다. `KII`와 `ApII` factor를 순차 측정하되 RHS, extensions, `Y`, modal response와 physics result를 만들지 않는다.
+3. P0R은 기존 4/5/5 GiB tree stops, 900 s wall cap, one-factor residency와 pre-spawn headroom을 유지하고 pass/fail 모두 token을 consume한다.
+4. P0R resource audit 뒤에만 H4-P1 result schema, `h2→h4` convergence와 fine analytic gates를 사전등록한다. 그 전에는 `primary-h4`를 열지 않는다.

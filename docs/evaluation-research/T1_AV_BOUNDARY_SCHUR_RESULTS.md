@@ -186,10 +186,31 @@ active token file은 SHA-256 `81574c1099bdd140004940b7cb768a20298b153445c1b16b9e
 
 실행 뒤 정적 회귀의 세 executable-stage case는 pre-run의 “token missing”과 post-run의 “consumed token schema mismatch”를 모두 fail-closed success로 인정하도록 lifecycle assertion만 갱신했다. post-run P1 test SHA-256은 `9d266ab5819b30bcae4d269f8c064d496b79290f509fbef7e4a95ab2f7f98654`, P0+P1 결과는 `37 passed`다. artifact가 결합한 preregistration test SHA-256 `01f0203009087a97f00b58461fb6fda339a2866700399be8d5453bdff47c3199`는 commit `defbd6d...`의 역사적 실행 입력으로 그대로 보존한다.
 
+## H4-P0 assembly-only preregistration
+
+H2 result와 consumed token을 바꾸지 않고 별도 H4-P0 fixture가 H2를 한 번 더 deterministic 1-to-4 refine했다. 이 stage는 factorization, RHS, harmonic extension, boundary operator 또는 physics를 실행하지 않으며 `authorization_state=not_authorized`, `primary_h4_authorized=false`다.
+
+| H4-P0 object | SHA-256 |
+|---|---|
+| fixture | `331218882d2004d0d97e03378ae8af12b23cb4129a9c062e0592ee590a53e94b` |
+| manifest-only runner | `b45c907fb5300e46717f423c8512a3500c7db8b42b647101d64a8a11440116c9` |
+| static tests | `1539ef4151b8ea416c9ee2f2bf71c1baebd4e83bb2d3684e050437fcb1def40c` |
+| preregistration document | `419dfb85ff40a43f2a0c2b1143b8531b16c95402f0c0d454764cfd3f5c03e524` |
+| manifest payload | `71f8e902322016541bd9302231fa9965d7dfff67cdce1135e16ee1011a2aa990` |
+
+manifest는 `V/E/T/B=32001/95488/63488/512`, interior/boundary `31489/512`, mesh SHA-256 `a91b4bf147628a34d1a29144ae353a83110b1756c699c71e2b57e9c36822835b`를 재현했다. H2 canonical zero edge 3,712개의 두 child를 모두 소유하므로 tag는 7,424개이고 exclusion은 0이다. candidate/tag SHA-256은 `3902a43ddd16f2cfce16b2892b908f45d02f4464c5157a5c42b5b3ac5cb9d98d`다.
+
+H2 `128uκ`를 복사하면 16 tags가 넘으므로 H4는 추가 midpoint arithmetic을 반영한 `256uκ`를 별도 고정했다. maximum/bound/margin은 `8.540375354048666e-13 / 1.1605646201662821e-12 / 1.358915237391882`다. raw/canonical K는 `222977/208129` nnz와 SHA-256 `8a020c809634a9794292f49198ff1bede84328b6e2c5ef988255cbff32cfe93b` / `a510df2ab39cb85640720f863341d1fe468562442ecb074bafcaf70d9846f2e7`를 재현했고 M/MΓ는 `222977/1536` nnz다. null/transpose/support/correction과 partition hashes도 독립 replay와 일치했다.
+
+resource는 두 의미를 분리한다. all-dense factor upper의 25% margin은 `40,448,792,335 B`로 4 GiB ceiling을 실패한다. one resident factor를 2 GiB hard cap으로 둔 prospective sparse envelope는 `3,470,862,055 B`, 4 GiB slack `824,105,241 B`지만 실제 factor fit을 측정하지 않았으므로 `factor_fit_unproven=true`다. 따라서 다음 단계는 별도 one-use H4-P0R factorization-only preregistration이며, `KII`와 `ApII` factor를 순차 측정하되 RHS/extensions/Y/modal physics를 금지한다.
+
+정적 결과는 `6 passed`; Python compile, PowerShell AST, UTF-8/LF/fence/link와 diff checks가 통과했다. 이 결과는 H4 physics, h2-to-h4 convergence, fine analytic, final circle 또는 withheld pass가 아니다.
+
 ## Exact next starting point
 
 1. H0 negative와 H1 h-stage artifact를 모두 immutable하게 보존한다.
 2. H2-P0 manifest-only fixture/runner/test/docs commit `4c1e3fce8aac659dd0aedb06c2b6d274fff73a12`를 보존한다.
-3. H2 result digest, 독립 audit와 consumed tombstone을 먼저 research commit에 고정한다.
-4. H4 mesh lineage, canonical assembly, resource bound, h2→h4/fine analytic gates와 별도 fixture/runner/result schema를 결과와 무관하게 사전등록한다.
-5. H4 clean preregistration commit, static audit와 별도 one-use token 전에는 h4 factorization/physics를 실행하지 않는다. h4가 통과해도 final circle/withheld radius/EQ0는 각각의 후속 계약 전까지 금지한다.
+3. H2 result digest, 독립 audit와 consumed tombstone commit `ad12df1`을 보존한다.
+4. H4-P0 mesh lineage, canonical assembly와 dual resource envelope를 clean commit으로 고정한다.
+5. 별도 H4-P0R factorization-only fixture/runner/token에서 `KII/ApII` factor fill과 process-tree resource만 측정한다. RHS/extensions/Y/modal physics는 금지한다.
+6. P0R audit 뒤에만 h2→h4/fine analytic gates와 H4 result schema를 별도 사전등록한다. clean H4-P1 audit와 one-use token 전에는 h4 physics를 실행하지 않으며, h4가 통과해도 withheld radius/EQ0는 각각의 후속 계약 전까지 금지한다.

@@ -4,7 +4,7 @@
 
 ## 판정과 범위
 
-현재 physics artifact 상태는 **`passed_AV_BS_h2_stage_only_pending_h4_preregistration`**이다. H1 17.5 µm/100 kHz coarse `h`와 H2 refined `h2`가 각각 stage-evaluable gate를 통과했다. H2 result는 `mandatory_stage_pass=true`, failure code 없음, factorization/physics `true`지만 `next_stage_authorized=false`, fine analytic/mesh convergence/final circle은 `null`이다. H2 one-use token은 consumed tombstone으로 교체돼 `uses_remaining=0`이다. 이 문서는 G2 실패를 보정하는 문서가 아니라 독립 volume-FEM reference candidate를 고정하며, 제품 parser, solver, UI, version과 installer는 수정하지 않는다.
+현재 physics artifact 상태는 **`passed_AV_BS_h2_stage_only_pending_h4_preregistration`**이다. H1 17.5 µm/100 kHz coarse `h`와 H2 refined `h2`가 각각 stage-evaluable gate를 통과했다. H2 result는 `mandatory_stage_pass=true`, failure code 없음, factorization/physics `true`지만 `next_stage_authorized=false`, fine analytic/mesh convergence/final circle은 `null`이다. H2 one-use token은 consumed tombstone으로 교체돼 `uses_remaining=0`이다. H4-P0는 topology/canonical assembly와 resource envelope만 manifest-only로 고정했으며 factor fit과 physics는 승인하지 않는다. 이 문서는 G2 실패를 보정하는 문서가 아니라 독립 volume-FEM reference candidate를 고정하며, 제품 parser, solver, UI, version과 installer는 수정하지 않는다.
 
 AV-BS1은 아직 oracle이 아니다. H2는 local one-mesh gate만 통과했고 `h→h2` RMS/max/phase `0.462796%/0.868015%/0.000166396°`는 trend-only다. 이후 별도 `h4` mesh convergence, fine analytic gate, final circle 판정과 withheld radius를 모두 통과해야 circle-interior reference로 제한 승격할 수 있다. 이 문서의 어떤 결과도 finite/open EQ0, full T1, GlobalMNA, PowerSI accuracy 또는 8 GB product performance를 승인하지 않는다.
 
@@ -186,16 +186,18 @@ edeg(m) = |Yhat_m-Yhat_-m| / max(|Yhat_m|,|Yhat_-m|,Ymode_floor), m=1…4
 1. **manifest only:** hash, count, quality와 analytic anchors를 재현한다. physics solve 없음.
 2. preregistration commit과 독립 static audit가 끝난 뒤에만 17.5 µm/100 kHz의 `h`를 one-mesh command로 실행한다. 이 stage에서 평가 가능한 residual/condition/assembly-symmetry/reciprocity/passivity/power/resource gate만 검토하고 analytic 값은 trend로 기록하되 fine pass로 판정하지 않는다.
 3. H2-P0 topology/assembly/resource manifest와 H2-P1 fixture/runner/result contract를 별도 clean commits와 static review에 고정한 뒤 one-use token으로 `h2`를 한 번 실행했다. 같은 stage-evaluable gate와 `h→h2` trend를 검토했지만 fine analytic 또는 final convergence pass는 선언하지 않았고 token은 consumed 상태다.
-4. H2 result와 consumed tombstone을 review/commit하고 별도 H4 mesh/assembly/resource/execution contract, clean commit, static audit와 one-use token을 고정한 뒤에만 `h4`를 별도 command로 실행한다. 이때 stage-evaluable gate, signed `M9` fine analytic/degeneracy와 mandatory `h2→h4` RMS/max/phase convergence를 처음 판정한다.
-5. `h4`와 final convergence가 모두 통과하면 상태는 **`passed_AV_BS_circle_17p5um_100k_only`**다. 이는 circle interior-only다.
-6. 그 뒤 같은 generator를 기하학적으로 scale한 `a=0.5 mm`, 100 kHz withheld radius의 mesh hash와 analytic anchor를 결과 전에 별도 고정하고, 동일한 `h` review → `h2` review → `h4` final-convergence chain을 반복한다.
-7. 두 radius가 모두 통과하면 상태는 **`passed_AV_BS_circle_two_radius_100k_only`**다. 그 뒤에만 EQ0 A–v contract의 review token을 검토한다.
+4. H2 result와 consumed tombstone을 review/commit하고 별도 H4-P0 mesh/assembly/dual-resource manifest를 고정했다. prospective 2 GiB factor cap은 fit이 미증명이므로 이 manifest만으로 `h4`를 승인하지 않는다.
+5. 별도 H4-P0R fixture/runner/token에서 `KII`와 `ApII` factor를 순차 생성해 fill과 process-tree resource만 측정한다. RHS, harmonic extension, boundary `Y`, modal response와 physics result는 만들지 않는다. pass/fail 모두 token을 consume한다.
+6. P0R audit 뒤 H4 physics/result contract, clean commit, static audit와 새 one-use token을 고정한 뒤에만 `h4`를 별도 command로 실행한다. 이때 stage-evaluable gate, signed `M9` fine analytic/degeneracy와 mandatory `h2→h4` RMS/max/phase convergence를 처음 판정한다.
+7. `h4`와 final convergence가 모두 통과하면 상태는 **`passed_AV_BS_circle_17p5um_100k_only`**다. 이는 circle interior-only다.
+8. 그 뒤 같은 generator를 기하학적으로 scale한 `a=0.5 mm`, 100 kHz withheld radius의 mesh hash와 analytic anchor를 결과 전에 별도 고정하고, 동일한 `h` review → `h2` review → `h4` final-convergence chain을 반복한다.
+9. 두 radius가 모두 통과하면 상태는 **`passed_AV_BS_circle_two_radius_100k_only`**다. 그 뒤에만 EQ0 A–v contract의 review token을 검토한다.
 
 어느 단계든 실패하면 이후 stage를 시작하지 않는다. failure code는 최소한 `BLOCKED_AV_BS_MESH_HASH`, `BLOCKED_AV_BS_SOLVE`, `BLOCKED_AV_BS_RECIPROCITY`, `BLOCKED_AV_BS_PASSIVITY`, `BLOCKED_AV_BS_POWER`, `BLOCKED_AV_BS_ANALYTIC`, `BLOCKED_AV_BS_RESOURCE`를 구분한다.
 
 ## Standalone `h` fixture freeze
 
-연구 전용 H1 구현은 [`../../tools/research/av_bs1_boundary_schur.py`](../../tools/research/av_bs1_boundary_schur.py)와 [`../../tools/research/run_av_bs1_stage.ps1`](../../tools/research/run_av_bs1_stage.ps1)에 고정했다. H0 `primary-h`는 sparse-pattern gate에서 factor 전에 차단됐고 H1은 같은 h를 다시 실행해 stage-evaluable gate를 통과했다. H2-P0에는 [`../../tools/research/av_bs1_boundary_schur_h2.py`](../../tools/research/av_bs1_boundary_schur_h2.py)와 manifest-only runner가 있다. H2-P1 [`../../tools/research/av_bs1_boundary_schur_h2_p1.py`](../../tools/research/av_bs1_boundary_schur_h2_p1.py)와 [`../../tools/research/run_av_bs1_h2_p1_stage.ps1`](../../tools/research/run_av_bs1_h2_p1_stage.ps1)은 clean preregistration와 one-use token 뒤 `primary-h2`를 실행했고 consumed tombstone으로 재실행을 막는다. `h4`, withheld radius와 EQ0 solve CLI는 여전히 없다.
+연구 전용 H1 구현은 [`../../tools/research/av_bs1_boundary_schur.py`](../../tools/research/av_bs1_boundary_schur.py)와 [`../../tools/research/run_av_bs1_stage.ps1`](../../tools/research/run_av_bs1_stage.ps1)에 고정했다. H0 `primary-h`는 sparse-pattern gate에서 factor 전에 차단됐고 H1은 같은 h를 다시 실행해 stage-evaluable gate를 통과했다. H2-P0에는 [`../../tools/research/av_bs1_boundary_schur_h2.py`](../../tools/research/av_bs1_boundary_schur_h2.py)와 manifest-only runner가 있다. H2-P1 [`../../tools/research/av_bs1_boundary_schur_h2_p1.py`](../../tools/research/av_bs1_boundary_schur_h2_p1.py)와 [`../../tools/research/run_av_bs1_h2_p1_stage.ps1`](../../tools/research/run_av_bs1_h2_p1_stage.ps1)은 clean preregistration와 one-use token 뒤 `primary-h2`를 실행했고 consumed tombstone으로 재실행을 막는다. H4-P0에는 [`../../tools/research/av_bs1_boundary_schur_h4_p0.py`](../../tools/research/av_bs1_boundary_schur_h4_p0.py)와 manifest-only runner만 있으며 factorization/physics/token 경로가 없다. `primary-h4`, withheld radius와 EQ0 solve CLI는 여전히 없다.
 
 - fixture는 `src/spd_decap_pi`를 import하지 않는 standalone NumPy/SciPy 연구 도구다.
 - `K`, consistent volume `M`, boundary trace `MΓ`를 raw CCW P1 element에서 조립하고 full dense interior matrix, `inverse`, `Sp-Sb`, `Dp-Db`, 사후 대칭화를 금지한다.
@@ -242,7 +244,7 @@ H0에서 runner가 redirected child handle을 retain하지 않아 failure proces
 
 H1 static freeze는 `16 passed`, fixture SHA-256 `e2a1c8efff67873b57dc7a658b013e3e76d0c921988011f4c8e70cd25f00f8a7`, runner SHA-256 `dd880de721b9a688ae953c7363dc4a8b482ec1b26f59871d4ca8f83397eb2b7c`다. authorized token은 H0 artifact, cyclic tag, canonical K와 세 독립 감사 증거를 검증했고 H1 artifact 생성 뒤 consume됐다. 실제 H1 수치와 범위는 [`T1_AV_BOUNDARY_SCHUR_RESULTS.md`](T1_AV_BOUNDARY_SCHUR_RESULTS.md)에 고정한다.
 
-H2-P0 refined lineage, 3,712-tag 선택, raw/canonical `K/M/MΓ` hash와 conservative resource arithmetic은 [`T1_AV_BOUNDARY_SCHUR_H2_PREREG.md`](T1_AV_BOUNDARY_SCHUR_H2_PREREG.md)에 고정한다. H2-P1의 token/claim/guard/result/tombstone contract, signed-M9 trend, 독립 modal PDE residual과 volume-power certificate는 실행 전 immutable snapshot인 [`T1_AV_BOUNDARY_SCHUR_H2_P1_PREREG.md`](T1_AV_BOUNDARY_SCHUR_H2_P1_PREREG.md)에 고정한다. 실제 H2 artifact/checksum/gates와 consumed token은 [`T1_AV_BOUNDARY_SCHUR_RESULTS.md`](T1_AV_BOUNDARY_SCHUR_RESULTS.md)에 기록한다. 어느 manifest 통과도 physics를 자동 승인하거나 후속 token을 발급하지 않는다.
+H2-P0 refined lineage, 3,712-tag 선택, raw/canonical `K/M/MΓ` hash와 conservative resource arithmetic은 [`T1_AV_BOUNDARY_SCHUR_H2_PREREG.md`](T1_AV_BOUNDARY_SCHUR_H2_PREREG.md)에 고정한다. H2-P1의 token/claim/guard/result/tombstone contract, signed-M9 trend, 독립 modal PDE residual과 volume-power certificate는 실행 전 immutable snapshot인 [`T1_AV_BOUNDARY_SCHUR_H2_P1_PREREG.md`](T1_AV_BOUNDARY_SCHUR_H2_P1_PREREG.md)에 고정한다. H4-P0의 7,424-tag topology, H4 전용 `256uκ`, canonical assembly와 dual resource envelope는 [`T1_AV_BOUNDARY_SCHUR_H4_P0_PREREG.md`](T1_AV_BOUNDARY_SCHUR_H4_P0_PREREG.md)에 고정한다. 실제 H2 artifact/checksum/gates와 consumed token은 [`T1_AV_BOUNDARY_SCHUR_RESULTS.md`](T1_AV_BOUNDARY_SCHUR_RESULTS.md)에 기록한다. 어느 manifest 통과도 physics를 자동 승인하거나 후속 token을 발급하지 않는다.
 
 ## Conditional EQ0 A–v contract
 

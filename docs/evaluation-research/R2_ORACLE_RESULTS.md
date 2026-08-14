@@ -171,7 +171,7 @@ python -m pytest tests/test_research_axisymmetric_electrostatics.py tests/test_s
 
 ## 다음 R2 연구
 
-1. failed M1-EQ0 collocation, G1 `passed_exterior_galerkin_only`, G2 `passed_pair_screen_only`와 100 kHz circle reciprocity/cancellation failure를 보존한다. 독립 A–v boundary-Schur H0 negative, H1 coarse-h와 H2 `passed_AV_BS_h2_stage_only_pending_h4_preregistration` artifacts 및 consumed tokens도 함께 보존한다. 다음은 H2 result/tombstone commit 뒤 별도 H4 preregistration/static audit/one-use token이다. 그 전에는 h4/withheld 또는 EQ0 mesh·crop, planned G2 N512/2 GHz circle/EQ0 seed로 직행하지 않는다.
+1. failed M1-EQ0 collocation, G1 `passed_exterior_galerkin_only`, G2 `passed_pair_screen_only`와 100 kHz circle reciprocity/cancellation failure를 보존한다. 독립 A–v boundary-Schur H0 negative, H1 coarse-h와 H2 `passed_AV_BS_h2_stage_only_pending_h4_preregistration` artifacts 및 consumed tokens도 함께 보존한다. H4-P0 assembly-only topology/canonical hashes는 통과했지만 factor fit은 미증명이다. 다음은 별도 H4-P0R factorization-only resource audit이며, 그 전에는 h4 physics/withheld 또는 EQ0 mesh·crop, planned G2 N512/2 GHz circle/EQ0 seed로 직행하지 않는다.
 2. S1은 circular/void boundary-conforming refinement와 h/h/2/h/4 추정 오차를 먼저 해결한다.
 3. V1/V2는 명시적 coax/ring return을 가진 2-D/3-D reference와 동일 crop의 exact-minus-core matrix를 만든다.
 4. A1은 current cell-centred solver를 승격하지 않고 body-fitted/higher-order 후보를 비교한다.

@@ -3075,6 +3075,28 @@ h2 analytic trend RMS / max / phase = 0.0015525356105053729 / 0.0029139683841210
 
 이 결과는 H2 local stage-only pass다. H4는 별도 preregistration/static audit/clean commit/one-use token 전에는 실행하지 않으며, final circle, withheld radius, EQ0, product accuracy와 8 GB status는 계속 미승인이다.
 
+## AV-BS1 H4-P0 assembly-only manifest
+
+H2 one-use result를 보존한 채 H4 topology/canonical assembly/resource envelope만 재현한다. 이 runner는 `manifest` 외 stage를 받지 않고 factorization/physics/token path를 노출하지 않는다.
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File tools/research/run_av_bs1_h4_p0_stage.ps1 -Stage manifest
+python -m pytest -q tests/test_research_av_bs1_boundary_schur_h4_p0.py
+```
+
+Frozen current bytes:
+
+```text
+fixture SHA-256: 331218882d2004d0d97e03378ae8af12b23cb4129a9c062e0592ee590a53e94b
+runner SHA-256: b45c907fb5300e46717f423c8512a3500c7db8b42b647101d64a8a11440116c9
+test SHA-256: 1539ef4151b8ea416c9ee2f2bf71c1baebd4e83bb2d3684e050437fcb1def40c
+prereg doc SHA-256: 419dfb85ff40a43f2a0c2b1143b8531b16c95402f0c0d454764cfd3f5c03e524
+manifest payload SHA-256: 71f8e902322016541bd9302231fa9965d7dfff67cdce1135e16ee1011a2aa990
+static result: 6 passed
+```
+
+Manifest authority는 `V/E/T/B=32001/95488/63488/512`, mesh `a91b4bf...`, 7,424 topology-owned tags, raw/canonical K `8a020c80.../a510df2a...`, `256uκ` maximum/bound `8.540375354048666e-13/1.1605646201662821e-12`를 모두 다시 계산해 단언한다. inherited dense upper는 4 GiB gate를 실패하고 prospective capped envelope는 `factor_fit_unproven=true`, `primary_h4_authorized=false`로 남는다. 다음 실행 후보는 별도 H4-P0R factorization-only preregistration이며 이 block은 어떤 H4 physics도 승인하지 않는다.
+
 ## Focused regression
 
 ```powershell
