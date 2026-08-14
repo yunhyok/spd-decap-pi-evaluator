@@ -1288,44 +1288,6 @@ def _parse_layers(
     return tuple(result)
 
 
-def _first_conductor_layer_name(
-    data: mmap.mmap,
-    start: int,
-    end: int,
-    metals: Mapping[str, float],
-) -> str | None:
-    """Read only the first conductor identity before the geometry pass.
-
-    The full stack-up is still built after shape NET indexing.  This lightweight
-    pre-read lets scenario imports retain configured GND geometry on TOP only,
-    avoiding both an all-layer GND import and a second shape scan.
-    """
-
-    for _, raw in _iter_lines(data, start, end):
-        stripped = raw.strip()
-        if (
-            not stripped
-            or stripped.startswith((b"*", b"+", b"."))
-            or b"Thickness" not in stripped
-        ):
-            continue
-        match = re.match(
-            rb"(\S+)\s+Thickness\s*=\s*(\S+)(.*)$",
-            stripped,
-            re.IGNORECASE,
-        )
-        if match is None:
-            continue
-        name = _decode(match.group(1))
-        material_raw = _attribute(stripped, b"Material")
-        material_key = _decode(material_raw).casefold() if material_raw else ""
-        if name.casefold().startswith(("signal$", "power$", "conductor$")) or (
-            material_key in metals
-        ):
-            return name
-    return None
-
-
 def _parse_padstacks(
     data: mmap.mmap, start: int, end: int, diagnostics: list[SpdDiagnostic]
 ) -> tuple[SpdPadStack, ...]:

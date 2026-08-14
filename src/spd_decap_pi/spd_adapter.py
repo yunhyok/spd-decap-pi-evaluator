@@ -258,19 +258,6 @@ def _rail_for_instance(project: ProjectSpec, instance: SpdCapInstance):
     return candidates[0] if candidates else None
 
 
-def _eligibility_by_rail(
-    eligibility_index: PlaneEligibilityIndex,
-    instance: SpdCapInstance,
-    rail_choices_by_pair: dict[tuple[str, str, str], tuple[tuple[Any, str], ...]],
-) -> dict[str, RailEligibility]:
-    return _eligibility_at_point(
-        eligibility_index,
-        instance.power_x_um,
-        instance.power_y_um,
-        rail_choices_by_pair,
-    )
-
-
 def _eligibility_at_point(
     eligibility_index: PlaneEligibilityIndex,
     x_um: float,
@@ -641,29 +628,6 @@ def _raise_for_rejected_mixed_reference_landings(
     raise SpdImportError(
         "SPD_MIXED_REFERENCE_CERTIFICATE_REQUIRED: source Via path evidence "
         f"lands on rejected mixed-reference pair(s): {details}"
-    )
-
-
-def _common_eligibility_at_points(
-    eligibility_index: PlaneEligibilityIndex,
-    points_um: tuple[tuple[float, float], ...],
-    rail_choices_by_pair: dict[tuple[str, str, str], tuple[tuple[Any, str], ...]],
-) -> dict[str, RailEligibility]:
-    """Return rails present under every unique physical PWR-via landing."""
-
-    unique_points = tuple(dict.fromkeys(points_um))
-    if not unique_points:
-        return {}
-    return _common_eligibility_maps(
-        tuple(
-            _eligibility_at_point(
-                eligibility_index,
-                x_um,
-                y_um,
-                rail_choices_by_pair,
-            )
-            for x_um, y_um in unique_points
-        )
     )
 
 

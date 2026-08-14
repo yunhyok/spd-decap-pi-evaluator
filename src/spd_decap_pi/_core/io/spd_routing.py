@@ -788,16 +788,6 @@ def _parse_node_reference(raw: bytes, default_net: str | None) -> _NodeReference
 _EMPTY_NODE_REFERENCE = _NodeReference("", "", None, None)
 
 
-def _role_for(
-    roles: Mapping[str, RoutingNetRole], net: str
-) -> RoutingNetRole:
-    key = net.casefold()
-    for name, role in roles.items():
-        if name.casefold() == key:
-            return RoutingNetRole(role)
-    return RoutingNetRole.UNKNOWN
-
-
 def _canonical_roles(
     roles: Mapping[str, RoutingNetRole],
 ) -> dict[str, RoutingNetRole]:

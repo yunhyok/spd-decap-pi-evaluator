@@ -1052,17 +1052,6 @@ def _target_from_rail(rail: Any, frequencies: NDArray[np.float64]) -> TargetMask
     return TargetMask(np.asarray(target_frequencies), np.asarray(target_values))
 
 
-def _plane_from_project(
-    project: Any, rail: Any
-) -> tuple[RectangularPlane, tuple[float, float], bool]:
-    """Compatibility view of the primary component of a project plane pair."""
-
-    plane, _parallel, origin, confirmed, _assumptions = _planes_from_project(
-        project, rail
-    )
-    return plane, origin, confirmed
-
-
 def _planes_from_project(
     project: Any, rail: Any
 ) -> tuple[
