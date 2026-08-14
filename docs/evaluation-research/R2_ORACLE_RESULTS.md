@@ -9,7 +9,7 @@
 | ID | 현재 판정 | 통과한 증거 | 남은 차단 조건 |
 |---|---|---|---|
 | N0 | **통과 — independent scalar branch 한정** | reduced/unreduced Z가 analytic 및 direct solve와 machine precision에서 일치 | mutual/multiterminal block, topology replacement 뒤 재인증, production 연결 |
-| T1 | **차단 — E0/M0/A1·G1 exterior·G2 pair만 제한 통과** | Cohn lossless `C'`, periodic plate 1-D FEM, `C0-A1` circle, G1 exterior와 G2 pair q/symmetry gate | immutable collocation power fail; G1 interior reciprocity/passivity fail 미해결. G2 circle/`Yw`/terminal, converged A–v, finite-length 3-D, 실제 return polygon/connectivity, balanced projection과 same-crop owner partition |
+| T1 | **차단 — G2 pair 제한 통과, 100 kHz circle 실패** | Cohn lossless `C'`, periodic plate 1-D FEM, `C0-A1` circle, G1 exterior와 G2 pair q/symmetry gate | immutable collocation power fail; G1 interior failure 미해결. G2 circle N256 raw reciprocity `1.41e-8`, cancellation `1.64e-7`; planned G2 2 GHz circle/N512/EQ0 seed, converged A–v, finite-length 3-D, 실제 return polygon/connectivity, balanced projection과 same-crop owner partition |
 | S1 | **차단 — rectangle refinement 부분 통과** | 유한 면적 contact, reciprocity/nullspace/passivity; 마지막 level 6→7 변화 0.299% | annulus refinement 오류, 전체 h/h/2/h/4·crop corpus, neck/void/L-shape, interface/owner certificate |
 | V1 | **차단 — constitutive law 통과** | solid-cylinder DC R, internal/external L limit, skin trend, numerical invariant | 명시적 coaxial return loop와 exact-minus-core block 없음 |
 | V2 | **차단 — isolated PEEC 통과** | mutual L, signed return, current sharing, reciprocity/passivity/KCL | 3-D coupon, pad/antipad/plane return, 실제 core subtraction; API가 global composition을 명시적으로 금지 |
@@ -171,7 +171,7 @@ python -m pytest tests/test_research_axisymmetric_electrostatics.py tests/test_s
 
 ## 다음 R2 연구
 
-1. failed M1-EQ0 collocation, G1 `passed_exterior_galerkin_only`와 G2 `passed_pair_screen_only`를 보존한다. 다음은 circle `N=128→256→512`, 그 뒤 EQ0 seed의 raw weighted reciprocity/passivity이며, 이후 independent A–v consistent-P1 mesh/crop convergence를 완성한다.
+1. failed M1-EQ0 collocation, G1 `passed_exterior_galerkin_only`, G2 `passed_pair_screen_only`와 100 kHz circle reciprocity/cancellation failure를 보존한다. 다음은 독립 A–v consistent-P1 boundary-Schur **100 kHz circle-only reference candidate**를 먼저 사전 등록하는 것이다. 이 단계의 별도 review token이 열릴 때만 EQ0 mesh·crop 계약으로 넘어가며, planned G2 N512/2 GHz circle/EQ0 seed로 직행하지 않는다.
 2. S1은 circular/void boundary-conforming refinement와 h/h/2/h/4 추정 오차를 먼저 해결한다.
 3. V1/V2는 명시적 coax/ring return을 가진 2-D/3-D reference와 동일 crop의 exact-minus-core matrix를 만든다.
 4. A1은 current cell-centred solver를 승격하지 않고 body-fitted/higher-order 후보를 비교한다.

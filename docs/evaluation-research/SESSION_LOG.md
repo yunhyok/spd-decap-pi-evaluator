@@ -1059,9 +1059,36 @@ process-only wall/peak working-set/private는 100 kHz `25.4061 s / 58.6055 MiB /
 
 판정은 **`passed_pair_screen_only`**, 전체 상태는 **`BLOCKED_INTERIOR_WEIGHTED_RECIPROCITY_PASSIVITY__G2_PAIR_SCREEN_PASSED_CIRCLE_NOT_RUN`**이다. 이는 singular pair classification/quadrature와 raw single-layer transpose만 승인한다. analytic circle DtN, `Yw` reciprocity/passivity, cancellation, terminal/power와 full G2는 미실행/미승인이다.
 
-### Exact next starting point
+### Exact next starting point (historical; superseded by the 100 kHz circle failure below)
 
 1. pair 결과를 기준 문서와 시각화에 고정하고 커밋한다.
 2. 새 shell이면 frozen definition을 재구성해 Stage 1을 다시 통과시킨 뒤 같은 PowerShell session에서 circle `N=128→256`, 100 kHz/2 GHz, q20/q40만 실행한다.
 3. circle의 q parity, q20 analytic/mesh, raw reciprocity/passivity/cancellation과 process resource를 검토하고 모두 통과한 뒤에만 `N=256→512`를 실행한다.
 4. circle 또는 후속 EQ0가 실패하면 raw 결과를 보존하고 full G2/T1/PowerSI/product 승격을 계속 차단한다.
+
+## 2026-08-15 — M1-EQ0-G2 100 kHz circle fail-closed result
+
+pair screen을 같은 PowerShell session에서 다시 통과시키고 외부 review window 뒤 Stage 2 medium circle을 실행했다. runner는 100 kHz의 `N={128,256}`, q20/q40 네 row를 계산한 뒤 `mandatory_stage_pass=false`로 nonzero exit했다. 따라서 planned G2 2 GHz circle row, G2 `N=512`, G2 EQ0 seed와 G2 full sweep은 실행되지 않았다.
+
+| N | q | analytic max/RMS | phase | raw `Yw` reciprocity | min `λ(H(Yw))` (`S·m`) | cancellation condition |
+|---:|---:|---:|---:|---:|---:|---:|
+| 128 | 20 | `0.390062% / 0.216023%` | `0.0170973°` | `2.40109e-9` | `+7.73614e-6` | `2.91315e-8` |
+| 128 | 40 | `0.390062% / 0.216023%` | `0.0170973°` | `2.50717e-9` | `+7.73614e-6` | `2.91315e-8` |
+| 256 | 20 | `0.0985103% / 0.0543947%` | `0.00424127°` | `1.41197e-8` | `+1.94722e-6` | `1.63755e-7` |
+| 256 | 40 | `0.0985103% / 0.0543947%` | `0.00424127°` | `1.41083e-8` | `+1.94722e-6` | `1.63755e-7` |
+
+analytic mode error, q20→q40 parity, `N=128→256` mesh convergence, raw Hermitian passivity, `P/Pout` transpose와 backward residual/condition은 통과했다. q worst relative change는 `2.81068e-12`, mesh worst relative/RMS/phase는 `0.290419%/0.161108%/0.0128560°`다. `N=128`은 cancellation condition `2.91315e-8>1e-8`만 실패했다. `N=256`은 raw reciprocity `1.411–1.412e-8>1e-8`과 cancellation `1.63755e-7>1e-8`이 함께 실패했다. refinement이 full-space defect를 줄이지 않고 키우므로 analytic low modes와 terminal/passivity pass로 대체하지 않는다.
+
+row별 process-only 최대 wall/peak working-set/private는 `210.401 s / 88.969 MiB / 1328.805 MiB`다. pair replay를 포함한 orchestration cell은 fail-closed exit까지 약 `458.6 s`였지만 이는 process-tree/8 GB product certificate가 아니다.
+
+저주파 ordinary-Bessel DtN에서 conductor/background가 공유하는 큰 `m/z` Laplace term을 별도 이산화해 뺄 때 finite difference가 cancellation에 노출된다는 가설을 동결했다. higher precision은 원인 분리 진단일 뿐 promotion evidence가 아니며, gate 완화·post-symmetrization·negative-eigenvalue clipping은 계속 금지한다.
+
+판정은 **`BLOCKED_INTERIOR_WEIGHTED_RECIPROCITY_PASSIVITY__G2_PAIR_PASSED_CIRCLE_100KHZ_RECIPROCITY_CANCELLATION_FAIL`**이다. G1 exterior-only와 G2 pair-only 증거는 유지하지만 full G2/M1/T1/global/PowerSI/product/8 GB는 blocked다.
+
+### Exact next starting point
+
+1. 이 실패와 미실행 범위를 기준 문서·시각화·커밋에 고정한다.
+2. two-DtN subtraction이 없는 independent A–v volume-FEM boundary-Schur reference candidate를 제품 코드 밖 research fixture로 `preregistered_not_run` 상태에 고정한다. 첫 run은 100 kHz circle, 한 crop, 한 coarse mesh, 한 balanced RHS로 제한한다.
+3. geometry/return/outer `a=0`, trace basis/current normalization, deterministic mesh hash, raw reciprocity/passivity/power/residual/condition과 process-tree stop rule을 결과 전에 고정한다.
+4. 첫 stage가 통과한 뒤에만 `h/h2/h4`, crop `2/4/8 Deff`로 확장한다. production SAO의 Hamiltonian Schur/four-operator Calderón 후보는 별도 사전 등록한다.
+5. 독립 reference candidate와 새 SAO가 모두 통과하기 전 planned G2 2 GHz circle, G2 `N=512`, G2 EQ0 seed, T1-F, board/PowerSI correlation으로 우회하지 않는다.

@@ -88,7 +88,7 @@ Positive-frequency anchor는 100 kHz, 1/10/100/500 MHz, 1/2 GHz다. skin crossov
 | ID | 판정 | 핵심 근거 |
 |---|---|---|
 | N0 | pass, scalar-only | frozen reproduction 포함 두 제조 예제 reduced/unreduced max relative Z error `5.34e-15`; owner ledger 완전 |
-| T1 | blocked, limited subcase pass | Cohn body-fitted `C'`, periodic plate 1-D volume과 `C0-A1` circle interior 통과; collocation power failure immutable, G1 `passed_exterior_galerkin_only`. G2 pair screen은 `passed_pair_screen_only`지만 circle 미실행이며 G1 interior `WYs` reciprocity `1.70%–7.12%` 및 100 kHz/1 MHz passivity fail은 미해결. A–v는 2 GHz smoke only이고 finite end, source return polygon, absolute/exact-core operator는 미실행 |
+| T1 | blocked, limited subcase pass | Cohn body-fitted `C'`, periodic plate 1-D volume과 `C0-A1` circle interior 통과; collocation power failure immutable, G1 `passed_exterior_galerkin_only`, G2 pair `passed_pair_screen_only`. G2 100 kHz circle은 q/analytic/mesh/passivity는 통과했으나 N256 raw `Yw` reciprocity `1.41e-8`과 cancellation `1.64e-7`로 fail-closed. G1 interior failure는 미해결이며 A–v는 2 GHz smoke only, finite end/source return/absolute owner는 미실행 |
 | S1 | blocked | rectangle 최종 refinement 0.299%는 부분 통과했으나 annulus refinement fail, 전체 corpus/crop/ownership 없음 |
 | V1 | blocked | solid-cylinder R/L/skin law는 통과했으나 명시적 coax return loop 없음 |
 | V2 | blocked | PEEC current sharing/invariant는 통과했으나 `global_mna_composable=False`, 3-D/exact-minus-core 없음 |
@@ -145,7 +145,7 @@ N0 high-precision canonical parity는 `||ΔZ||F/max(||Z||F,nZfloor) ≤1e-12` �
 ## 실행 순서
 
 1. N0과 exact-minus-core identity case를 동결한다.
-2. M0 periodic 1-D volume pass, failed collocation result, G1 exterior-only와 G2 pair-only certificate를 동결한다. circle `N=128→256→512`, EQ0 seed와 independent A–v mesh/crop convergence를 통과한 뒤에만 T1-F 3-D length-difference를 실행한다.
+2. M0 periodic 1-D volume pass, failed collocation result, G1 exterior-only, G2 pair-only와 100 kHz circle reciprocity/cancellation failure를 동결한다. 독립 A–v boundary-Schur reference candidate를 `preregistered_not_run`으로 고정해 circle부터 검증하고, 그 stage의 별도 review 뒤에만 EQ0 mesh/crop으로 확장한다. Hamiltonian Schur/four-operator Calderón SAO는 그 다음 후보로 비교한다.
 3. P1/P2 explicit-ref trace의 actual return polygon/connectivity와 absolute/core DtN owner를 증명한다.
 4. S1, V1/V2, A1, C1의 남은 analytic/mesh/crop/invariant blocker를 해결한다.
 5. PowerSI에서 trace-only, plane-neck, via-pair, pad/antipad, finite-port coupon과 반복 해석을 확보한다.

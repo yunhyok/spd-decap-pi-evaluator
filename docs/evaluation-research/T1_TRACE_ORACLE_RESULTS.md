@@ -11,7 +11,7 @@
 | T1-E0 Cohn stripline | `passed_canonical_lossless_only` | zero-thickness, homogeneous, lossless centered stripline의 `C'` | finite thickness, conductor/dielectric loss, real return polygon |
 | T1-M0 periodic plate pair | `passed_periodic_1d_volume_only` | exact identity와 independent normalized FEM의 periodic `m=0` smooth-copper `R(f), L(f)` | finite-width lateral edge/proximity, free-space exterior, C0-A1 periodic SAO |
 | T1-I0 circle interior DtN | `C0-A1 passed_circle_interior_only` | exact Bessel DtN, pulse mesh/self/quadrature, canonical + W1/W3 dense; W2 analytic-only | M1 exterior, corner, independent A–v, full `Z'` |
-| T1-M1 finite-width return | `BLOCKED_INTERIOR_WEIGHTED_RECIPROCITY_PASSIVITY__G2_PAIR_SCREEN_PASSED_CIRCLE_NOT_RUN` | immutable collocation record, G1 exterior-only, G2 pair q/symmetry, A–v 2 GHz smoke | G1 interior reciprocity/passivity fail 미해결; G2 circle/`Yw`/terminal 및 A–v convergence 미실행 |
+| T1-M1 finite-width return | `BLOCKED_INTERIOR_WEIGHTED_RECIPROCITY_PASSIVITY__G2_PAIR_PASSED_CIRCLE_100KHZ_RECIPROCITY_CANCELLATION_FAIL` | immutable collocation record, G1 exterior-only, G2 pair q/symmetry, G2 circle q/analytic/mesh/passivity, A–v 2 GHz smoke | 100 kHz G2 N256 reciprocity/cancellation fail; planned G2 2 GHz circle/N512/EQ0 seed/terminal 미실행, G1 passivity fail 미해결, A–v convergence 미실행 |
 | T1-F finite-length | `not_run` | 없음 | 3-D PEEC/FastHenry length-difference de-embedding |
 | T1 source candidates | `geometry_and_net_graph_evidence_ready` | width, endpoint, layer, selected stack/material, selected P1/P2 return artwork/void와 same-net graph | terminal-to-return signed current/field owner와 same-crop core partition |
 | T1 global composition | `blocked_balanced_projection_and_return_partition` | reduced differential operator를 곧바로 stamp할 수 없다는 것 | absolute partial operator 또는 explicit local current constraint, same-crop return/core partition |
@@ -67,7 +67,7 @@ finite thickness, skin effect, proximity, edge current crowding과 arbitrary rec
 
 Patel–Triverio의 arbitrary-shape formulation은 rectangular/trapezoidal/multiple-return 예제를 FEM과 비교하고 published host에서 frequency당 약 0.04–0.52 s를 보고했다. 이 문헌 timing은 현재 노트북 성능 증거가 아니다.
 
-독립 reference는 skin-depth 방향 graded mesh를 쓰는 2-D volume-current A–v FEM이다. finite end, bend와 launch는 3-D PEEC/FastHenry를 사용하되 product dependency가 아니라 reference로만 둔다. Hammerstad/Jensen류 식은 screening/asymptotic anchor이며 oracle이 아니다. 1차 dense SAO는 homogeneous, nonmagnetic, lossless background와 simply connected copper에 한정하며 exact 식과 fixture는 [`T1_M1_REFERENCE_SPEC.md`](T1_M1_REFERENCE_SPEC.md)에 고정한다.
+독립 reference candidate는 skin-depth 방향 graded mesh를 쓰는 2-D volume-current A–v FEM이다. circle boundary-Schur convergence 전에는 oracle이 아니다. finite end, bend와 launch는 3-D PEEC/FastHenry를 사용하되 product dependency가 아니라 reference candidate로만 둔다. Hammerstad/Jensen류 식은 screening/asymptotic anchor이며 oracle이 아니다. 1차 dense SAO는 homogeneous, nonmagnetic, lossless background와 simply connected copper에 한정하며 exact 식과 fixture는 [`T1_M1_REFERENCE_SPEC.md`](T1_M1_REFERENCE_SPEC.md)에 고정한다.
 
 ### 현행 helper의 제한
 
@@ -244,7 +244,7 @@ board crop에서는 signal copper, return copper, magnetic/electric field, termi
 ## 다음 실행 순서
 
 1. M0 periodic 1-D volume pass를 독립 slab anchor로 동결한다. finite/open contour를 periodic `coth`와 직접 비교하지 않는다.
-2. smallest equal-width M1-EQ0의 failed collocation, G1 exterior-only와 G2 pair-only table을 보존한다. 같은 endpoint의 G2 circle `N=128→256→512`, EQ0 seed 순서로 실행한다. independent A–v는 consistent P1 mass와 outer crop `{2,4,8}Deff`를 사용한다. 이 둘이 통과하기 전 더 큰 sweep으로 확장하지 않는다.
+2. smallest equal-width M1-EQ0의 failed collocation, G1 exterior-only, G2 pair-only과 100 kHz circle raw failure를 보존한다. planned G2 2 GHz circle/N512/EQ0 seed로 확장하지 않는다. independent A–v reference candidate를 consistent P1 mass, boundary Schur trace, outer crop `{2,4,8}Deff`로 사전 등록해 circle 100 kHz부터 검증한다.
 3. perimeter panel `N,2N,4N`, singular self integral, corner/opposing-projection grading과 volume skin mesh `δ/2,δ/4,δ/8`에서 raw `Z'`, loss, reciprocity, passivity, current conservation을 0.5%/1% gate로 검사한다.
 4. P2 `Trace13305`는 source-derived manufactured asymmetric stripline으로만 실행한다. 실제 board case는 exact finite-width polygon/void boolean tolerance, signed signal-to-return current/field owner와 same-crop core/DtN partition이 증명될 때까지 차단한다.
 5. P1/P2 selected crop의 actual return artwork/net graph 증거에서 terminal-to-return signed current basis와 same-crop core/DtN owner를 만든다. 가까운 via를 return으로 강제하지 않는다.

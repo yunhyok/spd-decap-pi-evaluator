@@ -13,6 +13,7 @@ M1-EQ0의 전체 판정은 계속 **blocked**다. 다만 두 이산화 결과를
 - 실패 뒤 C0를 바꾸거나 raw matrix를 대칭화하거나 gate를 완화하지 않았다. 따라서 이 결과를 finite/open M1 pass로 승격하지 않는다.
 - 사전 등록한 `M1-EQ0-G1` direct exterior Galerkin을 같은 contour에서 실행한 결과 exterior structure, quadrature, `r0`, terminal response와 boundary power는 통과했다. 이 부분만 `passed_exterior_galerkin_only`다.
 - 그러나 G1이 그대로 사용한 collocation interior `Yw=WYs`는 fine에서 weighted reciprocity `1.69946%–7.12361%`로 전 주파수 실패했고 100 kHz와 1 MHz에서 raw Hermitian passivity도 실패했다. 따라서 전체 M1은 `BLOCKED_INTERIOR_WEIGHTED_RECIPROCITY_PASSIVITY`로 차단한다.
+- G2 pair screen은 `passed_pair_screen_only`지만 100 kHz circle의 mandatory operator gate는 실패했다. `N=128` cancellation condition은 `2.91315e-8`, `N=256` raw `Yw` reciprocity/cancellation은 `1.41197e-8/1.63755e-7`로 각각 `1e-8` gate를 넘었다. runner는 fail-closed로 종료됐고 planned G2 2 GHz circle row, G2 `N=512`, G2 EQ0 seed는 실행하지 않았다.
 - independent body-fitted `A_z–v` 2 GHz smoke는 consistent P1 mass power에서 `1.377e-9`를 통과했지만, 한 crop·한 mesh뿐이므로 reference convergence pass가 아니다.
 
 `C0-A1`은 계속 `passed_circle_interior_only`, M0는 `passed_periodic_1d_volume_only`다. T1 전체, global composition, PowerSI accuracy와 product status는 모두 `blocked`다.
@@ -240,13 +241,37 @@ G2는 G1 exterior를 그대로 보존하고 `P/U/Pout/Uout` interior trace opera
 
 process-only wall/peak working-set/private bytes는 100 kHz `25.4061 s / 58.6055 MiB / 1295.2305 MiB`, 2 GHz `24.9042 s / 58.7656 MiB / 1295.3125 MiB`다. 외부 process-tree/system-headroom을 내장 측정한 값이 아니므로 8 GB 또는 production resource pass로 사용하지 않는다.
 
-pair 단계만 `passed_pair_screen_only`다. q20과 q40가 함께 잘못된 continuous sign/operator로 수렴할 수도 있으므로 analytic circle DtN, `Yw` reciprocity/passivity, cancellation, terminal power 또는 full G2를 승인하지 않는다. 전체 상태는 **`BLOCKED_INTERIOR_WEIGHTED_RECIPROCITY_PASSIVITY__G2_PAIR_SCREEN_PASSED_CIRCLE_NOT_RUN`**이다.
+pair 단계만 `passed_pair_screen_only`다. q20과 q40가 함께 잘못된 continuous sign/operator로 수렴할 수도 있으므로 analytic circle DtN, `Yw` reciprocity/passivity, cancellation, terminal power 또는 full G2를 승인하지 않는다.
+
+### G2 circle 100 kHz fail-closed 결과
+
+pair replay를 같은 PowerShell session에서 다시 통과시킨 뒤 frozen `N={128,256}`, q20 canonical/q40 parity, 100 kHz circle만 실행했다. planned G2 2 GHz circle row를 포함한 stage command였지만 첫 frequency의 mandatory gate가 실패하자 Python이 nonzero exit했고 G2 `N=512`와 G2 EQ0 seed도 실행되지 않았다.
+
+| N | q | analytic max/RMS | max phase | raw `Yw` reciprocity | raw min `λ(H(Yw))` (`S·m`) | cancellation condition | operator gate |
+|---:|---:|---:|---:|---:|---:|---:|---|
+| 128 | 20 | `0.390062% / 0.216023%` | `0.0170973°` | `2.40109e-9` | `+7.73614e-6` | `2.91315e-8` | fail |
+| 128 | 40 | `0.390062% / 0.216023%` | `0.0170973°` | `2.50717e-9` | `+7.73614e-6` | `2.91315e-8` | fail |
+| 256 | 20 | `0.0985103% / 0.0543947%` | `0.00424127°` | `1.41197e-8` | `+1.94722e-6` | `1.63755e-7` | fail |
+| 256 | 40 | `0.0985103% / 0.0543947%` | `0.00424127°` | `1.41083e-8` | `+1.94722e-6` | `1.63755e-7` | fail |
+
+analytic comparison, q20→q40 parity, `N=128→256` mesh change, `P/Pout` transpose와 backward residual/condition, 그리고 raw Hermitian passivity는 모두 통과했다. q parity의 worst relative change는 `2.81068e-12`, mesh worst relative/RMS/phase change는 `0.290419%/0.161108%/0.0128560°`다. `N=128`은 cancellation만 실패했고 `N=256`은 raw reciprocity와 cancellation이 함께 실패했다. 따라서 quadrature order나 검증한 analytic low modes를 원인이라고 볼 수 없으며 gate를 완화할 근거도 없다.
+
+process-only wall/peak working-set/private의 row maximum은 `210.401 s / 88.969 MiB / 1328.805 MiB`다. 이는 process-tree 또는 8 GB product proof가 아니다.
+
+저주파에서 `m>=1`인 원형 mode의
+
+`Jm'(z)/Jm(z)=m/z-z/[2(m+1)]+O(z^3)`
+
+때문에 conductor와 background DtN은 각각 큰 공통 Laplace 항을 가진다. G2는 두 큰 값을 별도로 이산화한 뒤 빼므로, 유한한 차이보다 cancellation amplification이 커지고 refinement에서 full-space reciprocity가 악화될 수 있다. 이는 frozen 결과에 대한 원인 가설이며, 사후 대칭화·higher precision·gate 완화로 pass를 만들지 않는다.
+
+현재 전체 상태는 **`BLOCKED_INTERIOR_WEIGHTED_RECIPROCITY_PASSIVITY__G2_PAIR_PASSED_CIRCLE_100KHZ_RECIPROCITY_CANCELLATION_FAIL`**이다.
 
 ## Exact next starting point
 
 1. **완료:** G1 direct exterior Galerkin을 `N={144,288,576}`, 7 frequencies, q10/q20, 세 `r0`에서 실행해 exterior-only pass와 interior blocker를 분리했다.
 2. **동결 완료:** G2 interior Galerkin의 약형, self/touching/non-touching singular quadrature, basis/order, raw reciprocity/passivity, q20/q40와 no-retuning rule을 exact reproduction block에 고정했다.
 3. **완료/제한 통과:** pair screen은 `passed_pair_screen_only`다.
-4. 같은 frozen definition을 다시 로드해 pair를 재확인한 같은 PowerShell session에서 circle `N=128→256`만 실행한다. 통과 뒤에만 `N=256→512`, 그 뒤에만 EQ0 seed를 시작한다.
-5. A–v는 consistent P1 mass form으로 `h/h2/h4`, crop `2/4/8Deff`, condition과 process-tree resource를 채운다.
-6. 두 방법이 모두 통과하기 전 T1-F, board source owner 또는 PowerSI correlation으로 우회하지 않는다.
+4. **실패 동결:** 100 kHz circle의 analytic/q/mesh/passivity는 통과했지만 raw reciprocity/cancellation은 실패했다. planned G2 2 GHz circle, G2 `N=512`, G2 EQ0 seed로 진행하지 않는다.
+5. 다음 독립 reference candidate는 two-DtN subtraction이 없는 A–v volume-FEM boundary-Schur이며 현재 `preregistered_not_run`이다. 제품 코드 밖 research fixture로 100 kHz circle, 한 crop·한 coarse mesh·한 balanced RHS부터 사전 등록하고, 통과 뒤에만 `h/h2/h4`, crop `2/4/8Deff`와 condition/process-tree resource를 확장한다.
+6. production SAO 후보는 Hamiltonian Schur 또는 four-operator symmetric Calderón/Steklov–Poincaré trace/flux formulation으로 별도 사전 등록한다. raw failure는 보존하며 post-symmetrization, clipping 또는 result-driven tuning을 금지한다.
+7. 독립 A–v와 새 SAO가 모두 통과하기 전 T1-F, board source owner 또는 PowerSI correlation으로 우회하지 않는다.

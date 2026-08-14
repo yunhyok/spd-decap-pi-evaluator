@@ -9,7 +9,7 @@
 | 프로그램 기준 | SPD Decap PI Evaluator v0.22.0 |
 | 연구 branch | `codex/evaluation-algorithm-research` |
 | 기준 commit | `bb361687c0bf976d5d04faf26bc243bcf3d52006` |
-| 현재 단계 | R0 source/external-port/return-owner contract 진행 중; M1 collocation negative/G1 exterior-only 결과 동결; G2 pair screen 제한 통과, circle `N=128→256` 대기 |
+| 현재 단계 | R0 source/external-port/return-owner contract 진행 중; M1 collocation negative/G1 exterior-only 결과 동결; G2 pair 제한 통과 후 100 kHz circle reciprocity/cancellation fail; independent A–v boundary-Schur preregistration 준비 |
 | 제품 코드 변경 | 없음 |
 | GitHub 원격 변경 | 없음 |
 | 정확성 승격 | 미달성 |
@@ -72,7 +72,8 @@
 | D-032 | frozen M1-EQ0 collocation SAO를 finite/open pass로 승격하지 않는다. | 확정; response/mesh/condition/current는 통과했지만 fine signed boundary-power mismatch `1.585e-4 > 1e-8`. 원인은 `WG0` skew energy defect로 귀속되며 사후 대칭화 금지 |
 | D-033 | G1 direct pulse-Galerkin double-panel log exterior `GE=W^-1 GG`는 collocation exterior의 energy defect를 대체하는 제한된 exterior certificate다. | `passed_exterior_galerkin_only`; frozen `N={144,288,576}`·7 frequencies에서 fine structure max q-natural `2.030e-15`, raw transpose `9.953e-17`, `r0` rank-one max `6.333e-16`, boundary power max `1.070e-14`, terminal gates 통과. 이는 interior 또는 full M1 pass가 아님 |
 | D-034 | independent A–v power는 centroid field가 아니라 consistent P1 mass form으로만 판정한다. | 확정; 2 GHz 4Deff smoke에서 mismatch `1.377e-9`, 그러나 단일 mesh/crop이므로 reference pass 아님 |
-| D-035 | G1 exterior 통과 뒤 남은 pulse-collocation interior `P/U/Pout/Uout`를 target-tested Galerkin trace space로 재이산화한다. | `BLOCKED_INTERIOR_WEIGHTED_RECIPROCITY_PASSIVITY__G2_PAIR_SCREEN_PASSED_CIRCLE_NOT_RUN`; pair q20/q40 최악 `7.52822e-6`, raw `P` transpose `1.88876e-16`, depth 2로 `passed_pair_screen_only`. G1 hidden-mode 실패는 미해결이며 symmetrization, clipping, C0 변경 또는 결과 기반 tuning 금지 |
+| D-035 | G1 exterior 통과 뒤 남은 pulse-collocation interior `P/U/Pout/Uout`를 target-tested Galerkin trace space로 재이산화한다. | `passed_pair_screen_only` 후 circle 100 kHz에서 N128 cancellation `2.91315e-8`, N256 raw reciprocity/cancellation `1.41197e-8/1.63755e-7`로 fail-closed. 상태는 `BLOCKED_INTERIOR_WEIGHTED_RECIPROCITY_PASSIVITY__G2_PAIR_PASSED_CIRCLE_100KHZ_RECIPROCITY_CANCELLATION_FAIL`; planned G2 2 GHz circle/N512/EQ0 seed 미실행, gate 완화·사후 대칭화·clipping 금지 |
+| D-036 | G2 실패 뒤 다음 독립 reference candidate는 two-DtN subtraction이 없는 A–v volume-FEM boundary Schur로 한다. production SAO는 별도 Hamiltonian Schur/four-operator Calderón 후보로 비교한다. | `preregistered_not_run` 준비 중. A–v는 circle 100 kHz부터 consistent P1 mass, boundary trace Schur, h/h2/h4·crop gate를 고정; SAO는 [Hamiltonian Schur DtN](https://doi.org/10.1016/j.wavemoti.2007.07.004)와 [four-operator transmission Galerkin](https://doi.org/10.1016/0022-247X(85)90118-0)을 규범 후보로 사용 |
 
 ## 현재 가설 순위
 
@@ -89,7 +90,7 @@
 |---|---|---|---|
 | R0 Reference contract | 8개 파일 manifest, explicit port map, PowerSI 조건 | identity/hash/grid/state 및 reference quality 기록 | identity/grid/source parameter/P2 physical terminal 완료; export operator provenance 진행 중 |
 | R1 Frozen baseline | 현행 solver의 전체 timing/memory/error/numerical report | 대표 pair와 rail별 재현 가능한 baseline | 기존 92-port 결과만 동결; pair P2 import 차단 |
-| R2 Local oracle | via/trace/pad/plane canonical corpus | reciprocity/passivity/conservation/mesh convergence | N0 scalar pass; T1 E0, M0 periodic 1-D volume과 `C0-A1` circle interior 제한 통과. M1-EQ0 response는 수렴했지만 `BLOCKED_SAO_BOUNDARY_POWER_IDENTITY`; A–v는 2 GHz smoke only. T1 overall blocked; S1/V1/V2/A1/C1 global 승격 차단 |
+| R2 Local oracle | via/trace/pad/plane canonical corpus | reciprocity/passivity/conservation/mesh convergence | N0 scalar pass; T1 E0, M0 periodic 1-D volume과 `C0-A1` circle interior 제한 통과. M1 collocation power fail, G1 exterior-only, G2 pair-only 후 circle reciprocity/cancellation fail. A–v는 2 GHz smoke only이며 boundary-Schur convergence 사전 등록 중. T1 overall blocked |
 | R3 Model attribution | 물리 block별 ablation matrix | 예상 port/band 개선을 원인별로 구분 | R2 oracle 뒤 대기 |
 | R4 Hybrid global | condensed domains + passive MNA 후보 | 네 pair provisional accuracy gate | 대기 |
 | R5 Acceleration | exact reduction, MOR, adaptive sweep | 추가 오차 budget + 8 GB gate | 대기 |
@@ -145,13 +146,14 @@ PowerSI repeatability와 mesh/order convergence를 측정한 뒤 수치는 조�
 10. P3/P4의 약 1.45M Trace는 raw grammar상 routed trace와 plane/mesh topology가 섞였거나 미확정이다. 어떤 source semantic 또는 exporter contract로 이를 구분할 것인가?
 11. homogeneous SAO 이후 stratified/lossy background Green function, self term과 reciprocity-based total current를 어떤 independent layered coupon으로 인증할 것인가?
 12. circle에서 통과한 `C0-A1` direct/scaled Hankel과 singular self treatment가 corner가 있는 finite/open M1에서 같은 수렴률·operator floor를 유지하는가? M0 periodic slab은 independent 1-D volume-only로 통과했으며 C0-A1 periodic SAO 증거가 아니다.
-13. G2 pair quadrature는 통과했지만 analytic circle DtN와 raw `Yw` gate는 미실행이다. circle `N=128→256→512`에서 target-tested Galerkin DtN의 정확성·reciprocity·passivity·cancellation이 동시에 수렴하는가?
+13. G2 pair quadrature는 통과했지만 100 kHz circle에서 low-order analytic/mesh/passivity pass와 달리 full-space reciprocity/cancellation이 refinement으로 악화됐다. high-precision 진단으로 roundoff와 space/operator 불일치를 어디까지 분리할 수 있는가?
+14. two-DtN subtraction이 없는 A–v boundary Schur circle reference candidate가 같은 balanced basis에서 analytic DtN, raw reciprocity/passivity, power, h/crop convergence를 동시에 만족해 oracle로 승격될 수 있는가?
 
 ## 다음 세션의 우선 작업
 
 1. immutable M1-EQ0 collocation negative result와 G1 `passed_exterior_galerkin_only` certificate를 보존한다. G1은 full M1/T1 승격 근거가 아니다.
-2. **pair 완료:** `passed_pair_screen_only`. 새 shell이면 pair를 재확인한 같은 session에서 circle `N=128→256`을 실행하고, 통과 뒤 `N=256→512`, 그 뒤 EQ0 seed 순으로만 진행한다.
-3. G2가 통과한 뒤 independent A–v FEM을 consistent P1 mass form으로 `h,h/2,h/4`, crop `2/4/8 Deff`, condition/resource certificate까지 완성한다.
+2. **G2 circle 실패 동결:** pair는 `passed_pair_screen_only`지만 100 kHz circle raw reciprocity/cancellation은 실패했다. planned G2 2 GHz circle, G2 N512, G2 EQ0 seed로 진행하지 않는다.
+3. independent A–v FEM boundary-Schur reference candidate를 consistent P1 mass form, circle 100 kHz first, `h,h/2,h/4`, crop `2/4/8 Deff`, condition/resource certificate로 `preregistered_not_run` 상태에 고정한다. 그 뒤에만 번호를 붙인 bounded run을 한다.
 4. 두 2-D 방법이 통과한 뒤에만 T1-F finite-length 3-D PEEC length-difference와 exact distributed-line stamp를 비교한다.
 5. P1/P2 selected crop의 확인된 return artwork/void/GND net graph에서 signal-to-return signed basis와 same-crop core/DtN owner를 정의한다. 가까운 via를 current return으로 강제하지 않는다.
 6. reduced differential T1 operator의 full partial/common-mode 또는 explicit current-constraint global adapter 계약을 제조해로 검증한다.
