@@ -17,10 +17,10 @@ Y_r(\omega)v=b,\qquad Z_{pp}=b^Tv
 동일 layer에서 연결된 artwork를 equipotential component로 축약하고, adjacent-layer overlap Maxwell capacitance와 via self-R/L, termination을 조립한다. 이 구조는 source topology를 보존하지만 다음의 분산 물리를 충분히 표현하지 않는다.
 
 1. plane/trace의 nonuniform lateral current와 spreading
-2. 긴/좁은 trace의 series R/L
+2. 긴/좁은 trace의 distributed RLGC와 smooth-copper skin/proximity
 3. via return path, mutual inductance, dense cluster interaction
 4. pad/antipad field와 port current crowding
-5. conductor skin/proximity/roughness와 causal material dispersion
+5. conductor roughness와 causal material dispersion
 6. full multiport transfer/eigenmode behavior
 
 현재 loaded rail의 15–17 dB 수준 오차는 numerical acceleration보다 이 model-form gap을 먼저 해결해야 함을 보여준다.
@@ -42,6 +42,9 @@ Y_r(\omega)v=b,\qquad Z_{pp}=b^Tv
 - 기존 S1/A1/C1 kernel은 부분 invariant를 통과했지만 strict physical correction gate에는 미달했다. 특히 A1은 마지막 mesh 변화가 4.73%다. 따라서 후보 1/2의 방향은 유지하되 현행 discretization을 그대로 production에 연결하지 않는다.
 - isolated via PEEC는 빠르고 수치적으로 안정적이지만 exact-minus-core ownership이 없어 additive global stamp로 사용할 수 없다. 후보 2는 explicit return/crop/core subtraction이 있는 replacement block으로만 진행한다.
 - source manifest가 P3/P4 missing trace width, 모든 pair의 plating/fill/roughness unknown, P1/P2 antipad preservation gap을 확인했다. 후보 비교에서 이 값을 fit parameter로 숨기는 경로는 기각한다.
+- T1의 Cohn body-fitted lossless `C'`와 periodic two-plate smooth-copper `R/L` identity는 manufactured 범위에서 통과했다. finite-width 기준 2-D 후보는 SAO–CIM이며 independent A-phi FEM/finite-length 3-D PEEC로 교차검증한다.
+- reduced differential line의 4-terminal absolute lift는 gauge 외 common-mode null을 가져 현 global MNA에서 exact singular다. 후보 2의 trace block은 `blocked_balanced_projection_and_return_partition`이며 arbitrary conductance로 null을 숨기지 않는다.
+- streaming metadata screening은 P1/P2에 8/57개 profile과 6,816/2,976개 explicit-ref candidate를 찾았다. profile cache 잠재력은 있지만 actual return polygon/connectivity와 source-owner key가 없으므로 production cardinality/속도 주장은 보류한다.
 
 ## C1. Source-faithful hybrid domain decomposition
 
@@ -82,6 +85,25 @@ local cluster가 q conductor이면 dense 계산은 O(q²) storage/O(q³) work이
 - Ruehli, [Foundational PEEC Formulation](https://doi.org/10.1109/TMTT.1974.1128204)
 - [Circular Ports in Parallel-Plate Waveguides](https://doi.org/10.1109/TEMC.2011.2170998)
 - [Physics-Based Via and Trace Models](https://doi.org/10.1109/TMTT.2009.2025470)
+
+### C2-T1. Trace SAO–CIM + exact line subpath
+
+straight invariant cross-section에서는 arbitrary conductor contour의 surface-admittance/DtN operator와 exterior contour integral로 full partial `Z'(f)`를 구한다. source-derived `Y'(f)`와 같은 conductor/reference basis를 공유할 때 scalar line은 hyperbolic exact terminal operator를, multiconductor line은 `exp(l[[0,-Z'],[-Y',0]])` block을 사용한다. 작은 dense cross-section은 profile별 cache하고 length는 exact runtime data로 유지한다.
+
+- Cohn lossless stripline과 periodic finite-thickness plate는 analytic anchor다.
+- SAO–CIM은 finite width, skin, proximity, corner current와 multiple return을 포함하는 normative 2-D oracle다.
+- volume-current A-phi FEM과 3-D PEEC/FastHenry length difference는 independent reference다.
+- nominal π는 mandatory band `max modal |γl|≤0.1`과 exact terminal-matrix gate를 통과할 때만 fallback으로 허용한다.
+- bend/profile change/T junction은 별도 3-D local block 없이 ideal join으로 만들지 않는다.
+- reduced relative-return operator는 현 absolute global MNA와 직접 호환되지 않는다. full partial/common-mode operator 또는 explicit balanced-projection primitive와 same-crop return partition이 필요하다.
+
+문헌 근거:
+
+- Cohn, [Exact Zero-Thickness Shielded Stripline](https://doi.org/10.1109/TMTT.1954.1124875)
+- Demeester and De Zutter, [Lossy Multiconductor Quasi-TM With DtN](https://doi.org/10.1109/TMTT.2008.925215)
+- Patel and Triverio, [Arbitrary-Shape Surface Admittance and CIM](https://doi.org/10.1109/TMTT.2016.2593721), [preprint](https://arxiv.org/abs/1509.08357)
+- Kamon, Tsuk, and White, [FastHenry](https://doi.org/10.1109/22.310584)
+- Higham, [Scaling and Squaring for the Matrix Exponential](https://doi.org/10.1137/04061101X)
 
 ## C3. Exact route-graph reduction
 
@@ -145,14 +167,14 @@ Board ablation 전에 [`LOCAL_ORACLE_PLAN.md`](LOCAL_ORACLE_PLAN.md)의 manufact
 
 1. current exact-capacitance core only
 2. exact route-graph reduction; unreduced parity 확인
-3. finite trace R/L
+3. finite smooth-copper trace distributed RLGC, including skin/proximity
 4. plane sheet resistance/internal impedance
 5. nonuniform plane spreading domain
 6. via return and mutual inductance
 7. pad/antipad capacitance와 local spreading
 8. complete local transition replacement
 9. dielectric dispersion/loss
-10. conductor skin/proximity/roughness
+10. conductor roughness after source evidence exists
 
 각 단계는 예상한 port class/frequency band에서 사전 등록한 physical signature를 보여야 한다. 단일 block의 board error가 단조 감소할 필요는 없다. 올바른 물리가 기존 model-error cancellation을 깨뜨릴 수 있으므로 canonical/invariant를 통과한 block은 제한 factorial과 integrated leave-one-out까지 평가한다. 최종 integrated model은 held-out accuracy와 unaffected-port regression을 통과해야 한다. parameter는 SPD stackup/geometry/material/component model에서 유도하고 PowerSI curve에 맞춘 design-specific tuning은 금지한다.
 

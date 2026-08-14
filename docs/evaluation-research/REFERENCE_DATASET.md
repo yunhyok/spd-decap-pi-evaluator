@@ -68,6 +68,23 @@ P3와 P4는 layer name/order, shape/pad/component aggregate가 같고 P3가 Node
 
 이 결손은 PowerSI curve fit이나 design median으로 채우지 않는다. 각 parameter는 `explicit`, `absent`, `parser_not_preserved`, `derived_node_link`로 분류한다.
 
+### T1 Trace/ref screening
+
+bounded two-pass streaming으로 `width explicit + same-layer endpoints + concrete UpperRef/LowerRef 하나 이상`을 metadata screening했다. 이는 return polygon/connectivity pass가 아니다.
+
+| pair | total | width explicit | concrete-ref screening | unique metadata profiles | source-faithful return status |
+|---|---:|---:|---:|---:|---|
+| P1 | 12,544 | 12,544 | 6,816 | 8 | explicit ref name, connectivity unproved |
+| P2 | 15,052 | 15,052 | 2,976 | 57 | explicit ref name, connectivity unproved |
+| P3 | 1,451,285 | 1,212,150 | 0 | 97 | ref absent; stackup-derived only |
+| P4 | 1,451,209 | 1,212,139 | 0 | 88 | ref absent; stackup-derived only |
+
+P1의 concrete refs는 TOP→`Plane$IN43_DGND` 5,600개와 BOTTOM→`Plane$IN64_DGND` 1,216개다. P2 largest eligible profile은 TOP 600 µm→`Signal$IN01_GND` 2,827개다. P2에는 length ≥2 mm Trace가 7,154개라 broadband lumped-short 가정을 전체에 적용할 수 없다.
+
+P3/P4의 모든 endpoint는 같은 Signal layer로 해석되지만 raw Trace grammar에 routed/plane-mesh semantic flag가 없다. 약 39%의 Trace net이 DGND 등 conductor-layer token과 일치하는 사실은 mixed topology 가능성을 보일 뿐, 모든 Trace가 plane mesh 또는 physical route라는 판정 근거가 아니다. T1 세부 owner와 candidate raw line은 [`T1_TRACE_ORACLE_RESULTS.md`](T1_TRACE_ORACLE_RESULTS.md)에 고정한다.
+
+layer row에 numeric conductivity token은 없지만 explicit `Material=COPPER/...`가 usable `.MetalModel`에 연결되면 `resolved_sigma=derived_material_table`로 분류한다. 이를 conductivity wholly absent 또는 fitted default로 부르지 않는다.
+
 ## Recovered PowerSI provenance and confounds
 
 Touchstone header와 SPD의 saved option에서 다음을 복구했다. `Layout Workbench` build와 host는 provenance 증거지만 실제 export에 어떤 internal solver block이 사용됐는지까지 증명하지 않는다.

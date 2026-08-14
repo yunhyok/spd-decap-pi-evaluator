@@ -1,0 +1,256 @@
+# SPD Decap PI Evaluator v0.22.0 — T1 Trace Oracle Results
+
+최종 갱신: 2026-08-14 (Asia/Seoul)
+
+이 문서는 직선 finite trace와 명시적 return의 broadband series/distributed physics를 검증하는 T1 연구 결과를 고정한다. 모든 계산은 research-only inline probe이며 제품 Evaluation 경로는 변경하지 않았다.
+
+## 판정 요약
+
+| subcase | 판정 | 허용되는 주장 | 남은 차단 조건 |
+|---|---|---|---|
+| T1-E0 Cohn stripline | `passed_canonical_lossless_only` | zero-thickness, homogeneous, lossless centered stripline의 `C'` | finite thickness, conductor/dielectric loss, real return polygon |
+| T1-M0 periodic plate pair | `passed_analytic_identity_only` | 1-D periodic two-plate smooth-copper `R(f), L(f)`과 DC/skin limit | finite-width lateral edge/proximity current crowding, open-boundary field, finite end |
+| T1-M1 finite-width return | `not_run` | 없음 | SAO–CIM panel/corner/crop convergence와 independent A-phi FEM |
+| T1-F finite-length | `not_run` | 없음 | 3-D PEEC/FastHenry length-difference de-embedding |
+| T1 source candidates | `parameter_evidence_ready` | width, endpoint, layer, selected stack/material provenance | actual return polygon/connectivity/current owner |
+| T1 global composition | `blocked_balanced_projection_and_return_partition` | reduced differential operator를 곧바로 stamp할 수 없다는 것 | absolute partial operator 또는 explicit local current constraint, same-crop return/core partition |
+| **T1 전체** | **`blocked`** | 두 manufactured subcase만 부분 통과 | M1/F/source-faithful/global gate 전부 통과 필요 |
+
+`passed_canonical_*`은 PowerSI 상관성, 제품 정확성 또는 8 GB production 성능 승격이 아니다.
+
+## Source-derived candidate와 return 증거 등급
+
+`UpperRef`/`LowerRef`가 Trace record에 있어도 해당 polygon의 연결성과 return-current operator까지 증명되지는 않는다. 다음 세 등급을 구분한다.
+
+1. `trace_record_explicit_connectivity_unproved`: Trace record가 return 이름을 명시하지만 polygon/connectivity/current ownership은 미확정
+2. `derived_stackup_only`: 인접 stackup으로 return 후보를 찾았지만 Trace record에는 ref가 없음
+3. `absent`: width 또는 필요한 physical field가 source에 없음
+
+| pair/case | raw trace evidence | geometry/material evidence | return evidence | 판정 |
+|---|---|---|---|---|
+| P1 TOP | `Trace4004/4005/4006`, lines 725146–725154; width 914.4/600/500 µm; length 889/800/640 µm | TOP 35 µm `COPPER_1`; 203.2 µm FR-4; `Plane$IN43_DGND` 30.48 µm | record `LowerRef=Plane$IN43_DGND` | `trace_record_explicit_connectivity_unproved` |
+| P2 TOP | `Trace9054/9055/9056`, lines 3577641–3577652; width 600 µm; length 900 µm | TOP 35 µm copper; 208 µm MEGTRON-6; `Signal$IN01_GND` 17.5 µm | record `LowerRef=Signal$IN01_GND` | `trace_record_explicit_connectivity_unproved` |
+| P2 inner manufactured | `Trace13305`, lines 3553874–3553875; `Node30557→30558`; width 120 µm; length 4.2 mm; IN24 | conductor 17.5 µm; upper/lower media 75/104 µm; `εr=3.49/3.31`, `tanδ=.002` at 1 GHz only; copper `σ20C=59.6 MS/m` | no Trace ref; neighboring IN23/IN25 are GND by stackup only | `derived_stackup_only`; manufactured coupon only |
+| P3 | `Trace109521/22/23`; width 25 µm; length 171.1/160/130 µm; L12 | 20 µm copper; 30 µm ABF-GL102 toward L13 DGND | no Trace ref | `derived_stackup_only`; source-faithful T1 blocked |
+| P4 | `Trace109520/21/22`; width 25 µm; length 180/130/130 µm; L11 | 20 µm copper; 30 µm ABF-GL102 toward L10 DGND | no Trace ref | `derived_stackup_only`; source-faithful T1 blocked |
+
+P3/P4에는 width가 source에 없는 Trace도 각각 239,135/239,070개 있다. 이 행들은 인접 record나 PowerSI curve로 채우지 않는다. P1/P2의 explicit ref도 실제 GND polygon crop, continuity와 terminal-to-return current path를 증명하기 전에는 product-admissible return으로 승격하지 않는다.
+
+### 전체 Trace streaming 분류
+
+strict screening은 `width explicit + 두 endpoint가 같은 layer + concrete UpperRef 또는 LowerRef가 하나 이상`으로 정의했다. `N/A`와 field absent는 concrete ref가 아니다. 이 screening은 계산 후보를 고르는 metadata gate일 뿐 return connectivity 통과가 아니다.
+
+| pair | total Trace | width explicit | same-layer endpoints | concrete-ref screening | blocked at screening | unique metadata profiles |
+|---|---:|---:|---:|---:|---:|---:|
+| P1 | 12,544 | 12,544 | 12,544 | 6,816 | 5,728 | 8 |
+| P2 | 15,052 | 15,052 | 15,052 | 2,976 | 12,076 | 57 |
+| P3 | 1,451,285 | 1,212,150 | 1,451,285 | 0 | 1,451,285 | 97 |
+| P4 | 1,451,209 | 1,212,139 | 1,451,209 | 0 | 1,451,209 | 88 |
+
+P1의 concrete-ref 6,816개는 TOP→IN43 5,600개와 BOTTOM→IN64 1,216개다. P2의 largest eligible profile은 TOP 600 µm→IN01 GND 2,827개다. source record에서 upper/lower ref가 둘 다 concrete인 경우는 네 pair 모두 0이지만, 한 개의 explicit return을 갖는 microstrip을 이유 없이 차단한다는 뜻은 아니다. 실제 polygon과 return path를 별도로 증명한다.
+
+P2 length 분포는 ≥2 mm 7,154개, 1–2 mm 1,651개, 0.5–1 mm 4,554개다. 따라서 전체를 short lumped trace로 가정할 수 없다. P3/P4는 약 1.45M개의 Trace 중 각각 약 39%가 DGND 등 conductor-layer token과 net 이름이 일치하고, raw grammar에는 routed trace와 plane/mesh topology를 구분하는 semantic flag가 없다. 이 자료를 전부 physical rectangular route로 해석하지 않고 `mixed_or_undetermined`로 차단한다.
+
+profile 수가 record 수보다 매우 작다는 점은 SAO cross-section cache의 잠재적 이점이다. 다만 profile key는 layer/width/ref/thickness/material link뿐 아니라 actual return contour/crop, nearby conductors, terminal semantics와 source hash를 포함해야 한다. P1/P2의 material conductivity는 stack layer의 material 이름과 material model을 통해 연결하며, layer row 자체에 숫자 conductivity가 없다는 사실을 보존한다.
+
+## 알고리즘 선택
+
+### Normative 2-D broadband oracle: SAO–CIM
+
+finite thickness, skin effect, proximity, edge current crowding과 arbitrary rectangular/trapezoidal return을 동시에 다루는 기준 후보는 **surface-admittance operator + contour-integral method (SAO–CIM)** 다.
+
+- conductor interior는 longitudinal electric field와 tangential magnetic field를 연결하는 Dirichlet-to-Neumann surface operator로 치환한다.
+- exterior field와 모든 signal/return contour를 함께 풀어 partial per-unit-length complex impedance matrix를 얻는다.
+- skin depth 방향의 volume mesh 대신 conductor perimeter만 이산화하므로 2 GHz의 약 1.46 µm copper skin depth에서도 bounded local coupon에 유리하다.
+- naive local dense work는 panel 수 `p`에 대해 O(p²) storage/O(p³) factor이지만, T1은 작은 cross-section과 반복 profile cache를 대상으로 한다. 실제 host wall/RSS는 prototype에서 별도 측정한다.
+
+Patel–Triverio의 arbitrary-shape formulation은 rectangular/trapezoidal/multiple-return 예제를 FEM과 비교하고 published host에서 frequency당 약 0.04–0.52 s를 보고했다. 이 문헌 timing은 현재 노트북 성능 증거가 아니다.
+
+독립 reference는 skin-depth 방향 graded mesh를 쓰는 2-D volume-current A-phi FEM이다. finite end, bend와 launch는 3-D PEEC/FastHenry를 사용하되 product dependency가 아니라 reference로만 둔다. Hammerstad/Jensen류 식은 screening/asymptotic anchor이며 oracle이 아니다.
+
+### 현행 helper의 제한
+
+`mfdm.copper_surface_impedance`와 two-face variant는 1-D finite-thickness slab의 `coth/csch` skin law와 DC limit를 정확히 제공한다. coextensive plate limit에는 유용하지만 finite trace width의 lateral edge crowding, arbitrary return contour와 proximity를 풀지 않으므로 T1 exact operator로 승격하지 않는다.
+
+현 production topology는 finite Trace를 ideal union으로 취급하고 `finite_trace_rl_link_count=0`, `source_trace_width_available=False`다. dormant `source_trace.py`는 exact rectangle geometry와 source identity만 제공하며 전기 `R/L/G/C` 소비자가 아니다.
+
+## T1-E0: body-fitted Cohn stripline
+
+ground plane은 `y=±h`, zero-thickness centered strip은 `y=0`, `|x|≤w/2`에 둔다. vacuum capacitance의 Cohn exact 식은 다음과 같다.
+
+\[
+k=\tanh\left(\frac{\pi w}{4h}\right),\qquad
+C'_0=4\epsilon_0\frac{K(k^2)}{K(1-k^2)}
+\]
+
+SciPy `ellipk`의 인수는 modulus가 아니라 parameter `m`이다. body-fitted finite-volume grid는 `x=±w/2`를 exact node로 포함하고 lateral padding을 strip edge부터 잰다. top/bottom ground는 0 V, strip은 1 V, lateral boundary는 homogeneous Neumann이다. 각 orthogonal edge conductance는 `g=ε·dual_width/distance`, capacitance는 `C'=Σg(ΔV)²`로 계산한다.
+
+독립 재현 조건은 `h=100 µm`, edge padding `8h`, mesh `h/64`, `h/128`이다.
+
+| width | Cohn `C'0` | h/64 | h/128 | `2C128−C64` | Richardson relative error |
+|---:|---:|---:|---:|---:|---:|
+| 120 µm | 36.8128510 pF/m | 37.0112662 | 36.9119306 | 36.8125951 | −6.951e-6 |
+| 500 µm | 104.1702700 pF/m | 104.3664877 | 104.2682374 | 104.1699871 | −2.716e-6 |
+| 914.4 µm | 177.5537791 pF/m | 177.7499747 | 177.6517423 | 177.5535098 | −1.516e-6 |
+
+모든 폭에서 `C64>C128>Cexact`이고, h/64→h/128 변화는 0.2684/0.0941/0.0553%다. raw h/128 exact error의 최대는 `0.2691442%`, 즉 보수적으로 `≤0.2692%`이고, first-order Richardson exact error의 최대는 0.00070%다. 별도의 h/128 crop sweep에서 측정한 padding 4h→8h 변화는 최대 `2.12459e-6` relative로 mesh error보다 작았다.
+
+검증 invariant:
+
+- sparse matrix symmetry: exact zero
+- energy와 independent strip charge relative mismatch: 최대 1.50e-12
+- induced Maxwell matrix `[[C,-C],[-C,C]]`: reciprocity와 row sum은 construction상 exact
+- exact appendix 재실행의 one-process peak working set: 약 1,856 MiB; 앞선 독립 run은 약 1,852 MiB
+- 별도 per-grid timing run의 h/64/h128 wall: 폭에 따라 1.23–1.85 s / 5.88–8.42 s
+
+RSS와 timing은 host-dependent reference다. 결과는 homogeneous lossless zero-thickness 2-D cross-section `C'`만 검증한다. finite copper 또는 product field solver를 검증하지 않는다.
+
+## T1-M0: periodic two-plate smooth-copper identity
+
+제조해 geometry는 length `l=10 mm`, signal/return width `w=5 mm`, 각 copper thickness `t=35 µm`, facing-surface gap `h=50 µm`, `σ=59.6 MS/m`, lateral periodic symmetry다. 두 conductor terminal current는 `+I/-I`다.
+
+\[
+\gamma_c=\sqrt{j\omega\mu\sigma},\qquad
+Z_s=\sqrt{\frac{j\omega\mu}{\sigma}}\coth(\gamma_c t)
+\]
+
+\[
+Z'_{loop}(\omega)=\frac{2Z_s}{w}+j\omega\mu\frac{h}{w},qquad
+Z_{loop}=lZ'_{loop}
+\]
+
+정확한 limit:
+
+\[
+R_{dc}=\frac{2l}{\sigma wt},\quad
+L_{dc}=\frac{\mu l}{w}\left(h+\frac{2t}{3}\right),\quad
+L_{HF}=\frac{\mu lh}{w},\quad
+R_{HF}\sim\frac{2l}{w}\sqrt{\frac{\pi f\mu}{\sigma}}
+\]
+
+| frequency | R | `Im(Z)/ω` |
+|---:|---:|---:|
+| DC | 1.917546 mΩ | limit 0.184307 nH |
+| 100 kHz | 1.917687 mΩ | 0.184306 nH |
+| 1 MHz | 1.931661 mΩ | 0.184183 nH |
+| 10 MHz | 2.999005 mΩ | 0.175031 nH |
+| 100 MHz | 10.294225 mΩ | 0.142049 nH |
+| 500 MHz | 23.019810 mΩ | 0.132991 nH |
+| 1 GHz | 32.554927 mΩ | 0.130845 nH |
+| 2 GHz | 46.039620 mΩ | 0.129327 nH |
+
+100 MHz→2 GHz의 successive log slope `d ln R/d ln f`는 0.500033에서 0.500000으로 접근한다. 이는 periodic 1-D identity이며 finite-width M1의 width-inverse 법칙이나 corner loss를 승인하지 않는다.
+
+## Finite length와 distributed ownership
+
+SAO–CIM이 `z'(f)=R'(f)+jωL'(f)`를 주더라도 2 GHz에서 trace를 항상 한 개의 lumped series branch로 바꿀 수는 없다. source-derived `y'(f)=G'(f)+jωC'(f)`와 같은 return/reference를 쓸 때 uniform scalar line은 다음 exact two-end differential operator를 갖는다.
+
+\[
+\gamma=\sqrt{z'y'},\qquad Y_0=\sqrt{y'/z'}
+\]
+
+\[
+Y_{line}=Y_0
+\begin{bmatrix}
+\coth(\gamma l)&-\operatorname{csch}(\gamma l)\\
+-\operatorname{csch}(\gamma l)&\coth(\gamma l)
+\end{bmatrix}
+\]
+
+small `|γl|`에서는 common/differential eigenvalue `Y0·tanh(γl/2)`와 `Y0·coth(γl/2)` 또는 series expansion을 사용해 cancellation을 피한다. multiconductor case는 full coupled state transition/Schur operator를 사용한다.
+
+scalar 구현은 다음 exact-π decomposition이 DC와 small `x=γl`에서 더 직접적이다.
+
+\[
+y_s=\frac{1}{z'l}\frac{x}{\sinh x},\qquad
+y_p=y'l\frac{\tanh(x/2)}{x},\qquad
+Y_{line}=\begin{bmatrix}y_s+y_p&-y_s\\-y_s&y_s+y_p\end{bmatrix}
+\]
+
+`|x|<1e-3`에서는 `x/sinh(x)=1−x²/6+7x⁴/360−…`, `tanh(x/2)/x=1/2−x²/24+x⁴/240−…`를 쓴다. DC의 `y'(0)=0`은 `ys=1/(R'dc·l)`, `yp=0`으로 별도 처리한다.
+
+일반 multiconductor `Z',Y'`는 commuting 또는 eigenvector continuity를 가정하지 않는다. `H=[[0,−Z'],[−Y',0]]`, `T=exp(lH)=[[A,B],[C,D]]`를 scaling-and-squaring Padé로 구한다. `T`가 `[v0;i0]→[vl;il]`를 매핑하고 두 terminal plane의 port current를 모두 line 안쪽으로 들어오는 방향으로 정의하면 terminal block은 다음과 같다.
+
+\[
+Y_{00}=-B^{-1}A,\quad Y_{01}=B^{-1},\quad
+Y_{10}=-C+DB^{-1}A,\quad Y_{11}=-DB^{-1}
+\]
+
+`B^{-1}`를 materialize하지 않고 모두 solve로 계산한다. `B` solve의 residual/condition과 최종 passivity를 보고하며 `sinh` pole 부근을 clipping하지 않는다. coupled-line screen의 `γk`는 passive branch를 택한 `eigenvalue(Z'Y')`의 square root로 정의한다. 다만 nonnormal coupled system에서는 이 eigenvalue screen은 necessary condition일 뿐이며 full-matrix exact-versus-lumped response gate가 최종 판정이다.
+
+M0의 homogeneous `εr=4` 예에서 2 GHz electrical length와 lossless terminal-admittance coefficient error는 다음과 같다. exact normalized diagonal/off-diagonal은 `θ cot θ`, `θ csc θ`이고, 표는 exact coefficient를 분모로 한 최대 상대오차다.
+
+| physical length | `|βl|` at 2 GHz | angle | nominal-π max error | series-only max error |
+|---:|---:|---:|---:|---:|
+| 0.889 mm | 0.07453 | 4.27° | 0.0927% | 0.1856% |
+| 0.900 mm | 0.07545 | 4.32° | 0.0950% | 0.1902% |
+| 4.2 mm | 0.35210 | 20.17° | 2.120% | 4.348% |
+| 10 mm | 0.83834 | 48.03° | 13.975% | 32.633% |
+
+따라서 exact line stamp를 기본으로 한다. nominal-π는 mandatory band 전체에서 `max modal |γl|≤0.1`이고 exact matrix 비교가 0.5%/1% gate를 통과할 때만 허용한다. exact terminal stamp가 아직 없을 때의 fallback section 수는 `ceil(θmax/0.1)` 이상이며 4.2/10 mm 예는 4/9 section이다. series-only R/L은 동일 trace의 source-proven shunt `C/G`가 core에 남고 topology/owner가 정확히 대응한다는 증거가 추가로 필요하다. core가 shunt를 소유하지 않으면 short trace에서도 series-only가 아니다.
+
+P2 dielectric은 각 material에 1 GHz 한 점만 있으므로 causal broadband `G'/C'` law를 만들 수 없다. 그 한 점은 1 GHz sensitivity 또는 lossless-static screening에만 사용하며 0–2 GHz dispersive law로 외삽하지 않는다.
+
+### Bend, profile change와 branch
+
+SAO p.u.l template은 translationally invariant straight interior에만 적용한다. bend, width/thickness/trapezoid/return/material change에서 segment를 분리하고, bend/step/taper에는 별도의 finite 3-D local block과 de-embedding plane을 둔다. 근거가 없으면 zero-length ideal join으로 숨기지 않고 `blocked_nonuniform_trace`로 남긴다.
+
+T junction은 explicit junction terminal을 보존한다. 세 line endpoint를 단순히 같은 node에 붙이면 junction crowding/fringe가 빠지므로 3+-port local block 또는 사전 등록한 negligible-correction proof가 필요하다. pad/via/decap, measurement/mutable terminal, crop `Γ`, degree≠2, return change, source anomaly를 가로질러 merge하지 않는다.
+
+### Laptop-oriented cache/merge architecture
+
+정확성 gate 뒤의 우선 구조는 다음과 같다.
+
+1. canonical cross-section key별 causal/passive `(Z',Y')`를 cache하고, length는 runtime exact data로 유지한다.
+2. 안전하게 압축된 straight chain마다 scalar exact line 또는 작은 multiconductor `expm` block을 평가한다.
+3. exact terminal adapter가 준비되지 않은 초기 단계만 `θsection≤0.1` passive π ladder를 fallback으로 사용한다.
+4. frequency-domain exact evaluation을 먼저 측정하고, rational shared-template ROM은 dense withheld-frequency positive-real 검증 뒤에만 추가한다.
+
+cache key는 solver/formula version, ordered conductor/return polygon과 role/reference basis, thickness/width/gap, material table와 temperature owner, roughness status, `Γ`/DtN, mesh certificate, frequency policy와 source hashes를 포함한다. length를 반올림해 cache hit를 만들지 않는다.
+
+동일 profile의 collinear degree-2 chain은 template/basis/orientation/return/owner 상태가 모두 같을 때만 합친다. `T(l1+l2)=T(l2)T(l1)` semigroup parity를 machine-precision gate로 두고 ordered source Trace owners와 exact summed length를 보존한다. P1/P2의 8/57개 metadata profile은 cache 가능성을 보여주지만, return polygon을 포함한 최종 key cardinality는 아직 측정하지 않았다. P3/P4는 Trace semantics와 ref가 미확정이므로 merge 후보 수를 아직 선언하지 않는다.
+
+## Global MNA composition failure와 요구 계약
+
+reduced differential two-port `Y2`를 네 absolute terminal `(S0,R0,S1,R1)`로 lift하는 incidence를 `D=[[1,−1,0,0],[0,0,1,−1]]`라 하면 `Y4=DᵀY2D`다. frozen 1 GHz probe처럼 `Y2`가 full rank이면 `Y4`는 rank 2이고 다음 두 null vector를 가진다.
+
+```text
+[1, 1, 1, 1]       global gauge
+[1, 1, -1, -1]      independent terminal-plane common mode
+```
+
+research probe에서 이 `Y4`를 현 `NodalAdmittanceBlock`으로 compile하는 단계는 통과했지만 solve는 정확히 다음으로 차단됐다.
+
+```text
+GlobalMnaError: saddle system is singular; topology has an unresolved island
+```
+
+이는 tolerance 문제가 아니다. 현 global MNA는 structural component마다 한 absolute gauge를 기대하며 reduced differential line의 추가 current constraint/common-mode semantics를 알지 못한다.
+
+DC에서 `y'(0)=0`인 pure series line은 `Y2`와 `Y4`가 rank 1이며 `[1,−1,1,−1]`도 추가 null이 된다. 따라서 rank 2는 broadband 보편 명제가 아니라 frozen finite-frequency case의 판정이고, 어느 경우든 단순 absolute lift의 singularity 결론은 변하지 않는다.
+
+허용되는 향후 경로는 둘뿐이다.
+
+1. outer/reference field를 포함한 full partial conductor operator를 만들어 absolute nodal/series block으로 조립한다.
+2. differential current constraint와 terminal projection을 물리적으로 명시하는 balanced-projection adapter를 만들고 global core의 common mode/return operator와 함께 증명한다.
+
+board crop에서는 signal copper, return copper, magnetic/electric field, terminal footprint, cross-boundary mutual term을 exact/core가 동일 `Γ`, terminal order, signed current, gauge와 DtN trace space로 공유해야 한다. ideal Trace union을 먼저 제거하고 topology를 교체한다. trace prism이 retained Polygon/plane asset과 disjoint임을 source hash로 증명하지 못하면 기존 adjacent-gap C를 spatial outside/inside owner로 분할하고 inside core를 제거해야 한다. aggregate core partial을 분할할 수 없으면 line C를 병렬 추가하지 않고 차단한다. 일반적으로 indefinite인 raw `ΔY=Yexact−Ycore`를 현 global MNA의 독립 passive block으로 stamp하지 않는다. retained core와 correction을 먼저 합친 하나의 passive absolute replacement operator를 검증한다.
+
+## 다음 실행 순서
+
+1. T1-M1 finite-width `w/h={5,10,20,50}`, return-width ratio `{1,5,20}`, outer crop `{2,4,8}`를 SAO–CIM과 independent A-phi FEM으로 비교한다.
+2. perimeter panel `p,p/2,p/4`와 geometric corner grading에서 raw `Z'`, loss, reciprocity, passivity, current conservation을 0.5%/1% gate로 검사한다.
+3. P2 `Trace13305`는 source-derived manufactured asymmetric stripline으로만 실행한다. 실제 board case는 IN23/IN25 GND polygon crop과 connectivity가 증명될 때까지 차단한다.
+4. P1/P2 explicit-ref candidate는 actual return polygon과 terminal-to-return continuity를 증명하고 same-crop core/DtN owner를 만든다.
+5. finite-length 3-D reference는 동일 end fixture의 `Z(2l)−Z(l)`로 p.u.l increment를 구해 2-D 결과와 비교한다.
+6. full partial/common-mode operator 또는 explicit differential-constraint adapter가 없으면 global MNA promotion을 차단한다.
+7. smooth-copper T1을 0–2 GHz에서 통과하기 전 roughness fitting을 시작하지 않는다. roughness source가 없는 네 pair에는 fitted roughness를 주입하지 않는다.
+
+## Primary literature
+
+- Cohn, [Characteristic Impedance of the Shielded-Strip Transmission Line](https://doi.org/10.1109/TMTT.1954.1124875)
+- Demeester and De Zutter, [Quasi-TM Transmission Line Parameters of Coupled Lossy Lines Based on the DtN Boundary Operator](https://doi.org/10.1109/TMTT.2008.925215), [author PDF](https://tdmeeste.github.io/files/pubs/QuasiTM_MTT_Demeester2008.pdf)
+- Patel and Triverio, [Skin Effect Modeling Through a Surface Admittance Operator and CIM](https://doi.org/10.1109/TMTT.2016.2593721), [author preprint](https://arxiv.org/abs/1509.08357)
+- Kamon, Tsuk, and White, [FastHenry: A Multipole-Accelerated 3-D Inductance Extraction Program](https://doi.org/10.1109/22.310584)
+- Ruehli, [Foundational PEEC Formulation](https://doi.org/10.1109/TMTT.1974.1128204)
+- Norgren and He, [Exact Field Representation for Centered Zero-Thickness Stripline](https://www.ursi.org/Publications/RadioScienceLetters/Volume3/RSL21-0052-final.pdf)

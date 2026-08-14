@@ -435,3 +435,154 @@ research Markdown files: 11; UTF-8/relative links/trailing whitespace docs_ok
 7. factor-isolated PowerSI coupon과 repeatability/mesh-convergence reference를 정의한다.
 
 P1 full numerical curve는 계속 reserved 상태로 유지한다. 제품 구현과 P2 solve는 별도 승인 전까지 실행하지 않는다.
+
+---
+
+## 2026-08-14 — T1 finite-trace canonical oracle와 distributed/global composition contract
+
+### Starting objective and inherited state
+
+사용자가 중지를 지시할 때까지 정확성 우선 연구와 기준 문서 갱신을 계속하라는 active goal을 유지했다. 연구 worktree는 `C:\Users\User\Documents\SPD Decap PI Evaluator-evaluation-research`, branch `codex/evaluation-algorithm-research`, starting HEAD `84d92331b0dc8dd246dc8df74afe7183584a0c7a`였다. 제품 code, parser, solver, UI, version, installer, release와 실제 제품 checkout은 수정하지 않았다.
+
+이번 cycle은 사전 등록한 T1 finite trace의 다음 항목을 분리해서 판정했다.
+
+1. lossless cross-section canonical identity
+2. smooth-copper finite-thickness periodic identity
+3. source Trace/return provenance와 계산 후보 screening
+4. finite-length distributed terminal operator
+5. current GlobalMNA의 absolute-node composition 가능성
+6. 8 GB 노트북을 위한 향후 cross-section cache/merge 구조
+
+### Agent allocation and root verification
+
+- Sol xhigh: T1 finite-width/broadband 알고리즘, analytic plate identity, exact distributed line, GlobalMNA composition과 exact-minus-core owner 감사
+- Luna high: 네 SPD의 Trace width/endpoints/ref/stack/material streaming 분류와 source-derived candidate 증거
+- Terra high: body-fitted Cohn stripline 독립 구현·재실행, sparse residual/RSS 감사
+- Root: M0 exact 수치와 finite-length coefficient error 독립 재계산, lifted differential operator의 GlobalMNA expected failure 재현, source/test 검토, 문서·visualization 통합
+
+### Source Trace와 return-evidence verdict
+
+strict metadata screen을 `width explicit + same-layer endpoints + at least one concrete UpperRef/LowerRef`로 정의했다. `N/A`와 field absent는 concrete ref가 아니다. 이 screen은 return connectivity pass가 아니다.
+
+| pair | total Trace | width explicit | concrete-ref screen | blocked | metadata profiles |
+|---|---:|---:|---:|---:|---:|
+| P1 | 12,544 | 12,544 | 6,816 | 5,728 | 8 |
+| P2 | 15,052 | 15,052 | 2,976 | 12,076 | 57 |
+| P3 | 1,451,285 | 1,212,150 | 0 | 1,451,285 | 97 |
+| P4 | 1,451,209 | 1,212,139 | 0 | 1,451,209 | 88 |
+
+P1/P2의 raw Trace ref는 `trace_record_explicit_connectivity_unproved`, P2 inner와 P3/P4의 인접 GND stack은 `derived_stackup_only`로 분리했다. P3/P4 raw Trace grammar에는 routed route와 plane/mesh topology를 구분하는 semantic flag가 없고 약 39%는 net 이름이 conductor-layer token과 일치하므로 `mixed_or_undetermined`로 차단했다. layer row의 numeric conductivity token은 absent지만 explicit Material link를 usable `.MetalModel`에 연결하는 경우 `resolved_sigma=derived_material_table`로 기록했다.
+
+### T1-E0 body-fitted Cohn oracle
+
+ground `y=±h`, zero-thickness strip `y=0, |x|≤w/2`, homogeneous Neumann lateral boundary를 사용했다. strip edge를 exact grid node로 포함하고 padding은 strip edge부터 `8h`로 정의했다. `h=100 µm`, `h/64`와 `h/128`, width `120/500/914.4 µm`를 Cohn exact 식과 비교했다.
+
+| width | exact `C'` | h/64 | h/128 | Richardson | Richardson relative error |
+|---:|---:|---:|---:|---:|---:|
+| 120 µm | 36.8128510 pF/m | 37.0112662 | 36.9119306 | 36.8125951 | `−6.951e-6` |
+| 500 µm | 104.1702700 pF/m | 104.3664877 | 104.2682374 | 104.1699871 | `−2.716e-6` |
+| 914.4 µm | 177.5537791 pF/m | 177.7499747 | 177.6517423 | 177.5535098 | `−1.516e-6` |
+
+raw h/128 exact error 최대는 `0.2691442%`(`≤0.2692%`), first-order Richardson 최대는 0.00070%였다. 별도 h/128 crop sweep의 padding 4h→8h 변화 최대는 `2.12459e-6`였다. sparse matrix symmetry는 exact zero, energy/charge mismatch 최대 `1.50e-12`, preregistered-form backward residual 최대 `4.13e-19`였다. exact appendix의 sequential solve를 한 process에서 측정한 peak working set은 약 `1,856 MiB`; 앞선 독립 run은 약 `1,852 MiB`였고 둘 다 개별 solve나 production benchmark가 아닌 allocator/high-water 참고값이다. 판정은 `T1-E0 passed_canonical_lossless_only`다.
+
+### T1-M0 periodic smooth-copper identity
+
+length 10 mm, width 5 mm, thickness 35 µm, face gap 50 µm, `σ=59.6 MS/m`의 periodic two-plate coupon을 exact slab `coth` law로 계산했다.
+
+- `Rdc=1.917545542 mΩ`
+- `Ldc=0.184306769 nH`
+- high-frequency external `L=0.125663706 nH`
+- 100 MHz: `R=10.294225474 mΩ`, `L=0.142048851 nH`
+- 2 GHz: `R=46.039619707 mΩ`, `L=0.129327423 nH`
+- 100 MHz→2 GHz successive resistance log slope: `0.500032982 → 0.500000000`
+
+판정은 `T1-M0 passed_analytic_identity_only`다. exact slab law는 through-thickness broadside redistribution/proximity를 포함하지만 finite-width lateral edge/proximity current crowding, arbitrary return contour, finite end 또는 board correlation을 승인하지 않는다. smooth-copper skin/proximity는 0–2 GHz T1 자체에 포함하고 source에 없는 roughness는 별도 blocker로 유지한다.
+
+### Selected oracle와 independent references
+
+finite-width 2-D broadband normative oracle 후보는 Patel–Triverio의 surface-admittance operator + contour-integral method(SAO–CIM)로 정했다. finite thickness, skin, proximity, edge current crowding과 coupled return contour를 한 번에 풀어 p.u.l. complex `Z'(f)` matrix를 만든다. independent small-case reference는 skin-depth graded 2-D volume-current A-phi FEM, finite end/bend reference는 3-D PEEC/FastHenry다. Hammerstad/Jensen류 식은 screening/asymptotic anchor로만 사용한다.
+
+2 GHz, 59.6 MS/m copper skin depth는 약 1.458 µm이므로 volume mesh보다 boundary method가 작은 반복 cross-section에 유리하다. 그러나 문헌 timing은 이 노트북 성능 증거가 아니며 실제 panel convergence와 peak RSS를 별도로 측정한다.
+
+### Finite-length exact line과 lumped screen
+
+scalar line은 `z'(f), y'(f)`에서 exact distributed terminal admittance를 만들고, DC/small argument에서는 exact-π 형태의 stable series를 사용한다. 일반 multiconductor는 `H=[[0,−Z'],[−Y',0]]`의 scaling-and-squaring matrix exponential과 block solve를 사용하며 `Z'Y'` eigenvector continuity를 가정하지 않는다. `[v0;i0]→[vl;il]`과 양 끝 inward current convention에서 `Y00=−B⁻¹A`, `Y01=B⁻¹`, `Y10=−C+DB⁻¹A`, `Y11=−DB⁻¹`이며 inverse를 만들지 않고 solve한다. coupled `γk=sqrt(eigenvalue(Z'Y'))` screen은 nonnormal system에서 necessary condition일 뿐 full-matrix gate가 authoritative하다.
+
+homogeneous `εr=4`, 2 GHz에서 0.889/0.900/4.2/10 mm의 `|βl|`은 `0.07453/0.07545/0.35210/0.83834`다. exact terminal coefficient 대비 nominal-π 최대 error는 `0.0927/0.0950/2.120/13.975%`, series-only는 `0.1856/0.1902/4.348/32.633%`다. 따라서 exact line을 기본으로 하고, lumped 후보는 `max modal |γl|≤0.1`을 necessary screen으로 만족한 뒤 exact terminal/full-port 0.5%/1%/0.25° gate도 통과해야 한다. exact adapter 전 fallback π section 수는 최소 `ceil(θmax/0.1)`이다.
+
+P2 dielectric table은 material별 1 GHz 한 점뿐이므로 causal 0–2 GHz `G'/C'` law로 외삽하지 않는다. 1 GHz point sensitivity 또는 lossless-static manufactured screen으로만 사용한다.
+
+### GlobalMNA expected failure와 owner contract
+
+incidence `D=[[1,−1,0,0],[0,0,1,−1]]`로 reduced differential `Y2`를 `(S0,R0,S1,R1)`에 `Y4=DᵀY2D`로 lift했다. root와 Sol이 full-rank `Y2`인 1 GHz M0 operator에서 rank 2, global gauge `[1,1,1,1]`와 terminal-plane common mode `[1,1,−1,−1]` null을 독립 재현했다. DC pure-series case는 rank 1과 추가 null을 가지므로 rank 2를 broadband 일반 명제로 쓰지 않는다. compile은 통과하지만 solve는 다음으로 fail-closed 됐다.
+
+```text
+GlobalMnaError: saddle system is singular; topology has an unresolved island
+```
+
+이를 임의의 common-mode conductance로 숨기지 않는다. full physical partial/common-mode operator 또는 explicit balanced-projection/current-constraint adapter와 core return operator가 필요하다. ideal Trace union을 먼저 제거하고, exact/core가 같은 signal/return copper, terminal basis, signed currents, crop `Γ`와 DtN trace space를 공유해야 한다. retained core와 correction을 먼저 합쳐 하나의 passive replacement를 검증하며 일반적으로 indefinite인 raw `ΔY`를 현 MNA에 독립 passive block으로 stamp하지 않는다.
+
+### Laptop-oriented architecture decision
+
+정확성 gate 뒤의 우선 구조는 다음이다.
+
+1. canonical cross-section key별 passive/causal `(Z',Y')` cache
+2. 안전한 collinear degree-2 chain만 exact length로 merge
+3. scalar exact line 또는 작은 coupled `expm` terminal block 평가
+4. exact adapter가 없을 때만 `θsection≤0.1` passive π ladder
+5. rational ROM은 dense withheld-frequency positive-real/causality 검증 뒤에만 추가
+
+cache key에는 conductor/return contour와 role/reference basis, nearby conductors, material rows와 temperature, roughness status, `Γ`/DtN, mesh certificate, owner/source hashes를 포함한다. length는 반올림하지 않는다. bend/profile/return/material change, branch, pad/via/decap, mutable/measurement node와 crop boundary를 가로질러 merge하지 않는다.
+
+### Failures and anomalies
+
+- 첫 uniform-x Cohn probe는 strip edge가 grid node와 일치하지 않아 mesh parity error가 섞였다. body-fitted piecewise grid로 폐기·교체했다.
+- 초기 crop 정의는 domain center 기준 폭과 strip-edge padding을 혼동했다. 최종 식은 strip edge부터 4h/8h를 재서 crop 변화를 다시 계산했다.
+- lifted differential operator는 compile됐지만 solve에서 singular island로 종료됐다. 이는 수치 실패를 보정한 것이 아니라 필요한 common-mode 계약이 없음을 보여주는 expected fail-closed 결과다.
+- Windows peak working set은 six table solves와 three h/128 crop solves를 한 process에서 순차 실행한 allocator high-water다. per-case memory 또는 제품 성능으로 해석하지 않는다.
+
+### Files changed
+
+제품 code 변경 없음. 새 기준 문서 [`T1_TRACE_ORACLE_RESULTS.md`](T1_TRACE_ORACLE_RESULTS.md)를 추가하고 다음 연구 문서를 갱신했다.
+
+- `README.md`
+- `RESEARCH_STATE.md`
+- `LOCAL_ORACLE_PLAN.md`
+- `ALGORITHM_CANDIDATES.md`
+- `REFERENCE_DATASET.md`
+- `SOURCE_PARAMETER_MANIFEST.md`
+- `R2_ORACLE_RESULTS.md`
+- `ORACLE_REPRODUCTION.md`
+- `SESSION_LOG.md`
+
+thread visualization `oracle-gate-status.html`에는 T1 tile과 E0/M0 partial-pass/global-blocked 설명을 추가했다. visualization은 repository에 포함하지 않는다.
+
+### Validation performed
+
+- MFDM surface-impedance, two-face owner, GlobalMNA fail-closed ownership/passivity, finite-route endpoint invariant focused suite: 최종 root 재실행 `7 passed in 0.77 s`
+- `ORACLE_REPRODUCTION.md` 자체에서 T1 세 PowerShell/Python block을 추출해 root가 순서대로 실행: E0/M0 table과 lifted-line expected failure 전부 재현
+- T1-M0 limits/frequency table/electrical-length coefficient error: root exact command 재현
+- lifted differential GlobalMNA expected failure: frozen 1 GHz에서 rank 2, 두 null residual exact zero와 singular-island error 재현; DC rank 1 범위 별도 명시
+- T1-E0 table six sparse solves: Terra 독립 run `wall≈29.9 s`; root의 최종 문서 추출 run은 같은 six table solves와 세 h/128 crop solves를 합쳐 `wall≈40.5 s`; one-process peak working set 약 `1,856 MiB`
+- visualization T1 selection: 736 px와 360 px에서 확인; 360 px document overflow `328/328`
+
+timing은 회귀·bounded feasibility 참고값이며 성능 benchmark가 아니다. 문서/link/diff와 독립 final audit은 이 entry의 후속 검증에서 완료한다.
+
+### Independent final audit
+
+- Luna는 P1–P4 count, candidate raw lines, return-evidence label, P3/P4 `mixed_or_undetermined`와 material-table conductivity 상태를 streaming evidence와 대조했다. `derived_material_table` 명칭 정정 뒤 `APPROVED`했다.
+- Terra는 E0 body-fitted command를 독립 재실행하고 Cohn table, energy/charge, backward residual, sparse symmetry와 RSS 범위를 감사했다. appendix가 six 8h table solves와 three h/128 4h crop solves를 정확히 기술하고 8 GB production gate와 분리한 뒤 `APPROVED`했다.
+- Sol은 M0 slab law 범위, exact distributed-line sign convention, nonnormal coupled screen, 1 GHz rank-2와 DC rank-1 nullspace 범위, crop/RSS 재현성을 감사했다. 모든 지적을 반영한 최종 문서를 `APPROVED`했다.
+- 세 감사 모두 제품 code와 연구 문서를 직접 수정하지 않았다. root가 결과를 재현하고 문서에 통합했다.
+
+최종 docs validation은 research Markdown 12개에서 strict UTF-8, trailing whitespace 0, broken relative link 0이었다. `git diff --check`와 scope 검사도 통과했고 변경 10개가 모두 `docs/evaluation-research/` 아래임을 확인했다.
+
+### Exact next starting point
+
+1. T1-M1의 finite-width one-return `w/h={5,10,20,50}`, return-width ratio `{1,5,20}`, crop `{2,4,8}`를 SAO–CIM과 A-phi FEM으로 비교할 실행 명세를 고정한다.
+2. perimeter panel/corner grading과 volume skin mesh의 h/h2/h4 convergence, reciprocity/passivity/current/power gate를 실행한다.
+3. P2 `Trace13305`는 source-derived manufactured asymmetric stripline으로만 실행하고 actual IN23/IN25 polygons/connectivity 전에는 source-faithful이라 부르지 않는다.
+4. P1/P2 explicit-ref candidate의 actual return polygon, terminal-to-return continuity와 same-crop core/DtN owner를 streaming crop으로 증명한다.
+5. finite-length 3-D reference는 동일 fixture의 `Z(2l)−Z(l)`로 end effect를 de-embed한다.
+6. full partial/common-mode operator 또는 balanced-projection adapter가 없으면 global composition을 계속 차단한다.
+7. T1 smooth-copper 0–2 GHz gate 전에는 roughness fitting이나 board-wide PowerSI correlation로 넘어가지 않는다.

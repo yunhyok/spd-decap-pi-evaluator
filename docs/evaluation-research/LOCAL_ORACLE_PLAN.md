@@ -23,7 +23,7 @@ Manufactured `Yexact=Ycore` case에서 원 baseline이 machine precision으로 �
 | ID | 물리와 oracle | 예상 signature | double-counting 차단 | 비용 목표 |
 |---|---|---|---|---|
 | N0 | reciprocal RLC graph의 analytic Z | reduced/unreduced port Z machine-precision parity | 물리 stamp 없음 | <1 s |
-| T1 | 직선 trace + 명시적 return; analytic wide-strip 및 converged 2-D quasi-TEM | Re(Z), `Im(Z)∝f`, 길이 비례·폭 역비례 | ideal short를 제거한 topology replacement | analytic <1 s, 2-D 수십 s |
+| T1 | 직선 trace + 명시적 return; Cohn/periodic-plate analytic anchor와 converged 2-D SAO–CIM | DC/skin/proximity, M0 width scaling, deembedded length increment, distributed `γl` | ideal short와 동일 crop의 trace/return electric·magnetic core를 교체 | analytic <1 s, local 2-D 수십 s 목표 |
 | S1 | annular spreading `ln(b/a)/(2πσt)`; rectangle/neck/void/L-shape triangular sheet | same-artwork `Zii/Zij`, neck/void 인접 port 변화 | equipotential artwork node를 distributed sheet로 교체 | 1–5 min/case |
 | C1 | circular finite launch의 parallel-plate/CIM 및 triangular/MFDM 수렴 | source-derived finite radius를 고정한 mesh/crop 수렴; 별도 radius sweep에서 예상 `ln(1/a)` spreading scaling | 기존 point launch와 동일 footprint/return 제거; zero-radius limit 금지 | 수초–수분 |
 | V1 | central via + coaxial return manufactured case | radius/length/conductivity/return-radius scaling | copper internal Z와 external return field를 한 loop가 소유 | <1 s |
@@ -81,24 +81,35 @@ Positive-frequency anchor는 100 kHz, 1/10/100/500 MHz, 1/2 GHz다. skin crossov
 
 따라서 새 커널을 먼저 발명하지 않는다. 기존 자산으로 canonical manifest, owner ledger, convergence certificate, SPD adapter를 구성한 뒤 실제 board에 연결한다.
 
-## 2026-08-14 1차 실행 판정
+## 2026-08-14 실행 판정
 
-상세 수치와 실패 기록은 [`R2_ORACLE_RESULTS.md`](R2_ORACLE_RESULTS.md)를 따른다.
+상세 수치와 실패 기록은 [`R2_ORACLE_RESULTS.md`](R2_ORACLE_RESULTS.md)와 [`T1_TRACE_ORACLE_RESULTS.md`](T1_TRACE_ORACLE_RESULTS.md)를 따른다.
 
 | ID | 판정 | 핵심 근거 |
 |---|---|---|
 | N0 | pass, scalar-only | frozen reproduction 포함 두 제조 예제 reduced/unreduced max relative Z error `5.34e-15`; owner ledger 완전 |
+| T1 | blocked, two manufactured subcases pass | Cohn body-fitted `C'`와 periodic plate smooth-copper `R/L` identity는 통과; finite-width SAO–CIM, finite end, source return polygon, absolute/exact-core operator 미실행 |
 | S1 | blocked | rectangle 최종 refinement 0.299%는 부분 통과했으나 annulus refinement fail, 전체 corpus/crop/ownership 없음 |
 | V1 | blocked | solid-cylinder R/L/skin law는 통과했으나 명시적 coax return loop 없음 |
 | V2 | blocked | PEEC current sharing/invariant는 통과했으나 `global_mna_composable=False`, 3-D/exact-minus-core 없음 |
 | A1 | blocked | crop과 invariant는 양호하지만 2.5→1.25 µm mesh RMS 변화 `4.734%` |
 | C1 | blocked | scalar circular-disk C와 footprint area는 양호하지만 spreading Z/crop/ownership 및 `1e-10` residual certificate 없음 |
 
-N0만 현재 constitutive scope에서 gate를 통과했다. 기존 helper가 반환하는 `production_eligible` 같은 내부 상태를 제품 accuracy promotion으로 해석하지 않는다. T1은 아직 실행하지 않았다.
+N0만 현재 constitutive scope 전체에서 gate를 통과했다. T1-E0/M0의 `passed_canonical_*`은 T1 전체 또는 global composition 통과가 아니다. 기존 helper가 반환하는 `production_eligible` 같은 내부 상태를 제품 accuracy promotion으로 해석하지 않는다.
+
+## T1 추가 gate
+
+- smooth copper 0–2 GHz T1에는 skin/proximity/edge current를 포함한다. DC-only series R/L은 `T1a` screening이며 broadband pass가 아니다.
+- Cohn E0는 body edge를 exact node로 갖는 mesh h/32,h/64,h/128과 strip-edge padding 2h/4h/8h를 사용한다.
+- finite-width M1은 SAO–CIM perimeter panel `p,p/2,p/4`, geometric corner grading, outer crop 2/4/8과 independent A-phi FEM을 같은 0.5%/1% budget으로 비교한다.
+- finite-length F는 동일 end fixture의 `Z(2l)−Z(l)` increment로 2-D p.u.l operator와 비교한다. raw finite 3-D Z의 exact length proportionality는 요구하지 않는다.
+- symmetric lumped π는 mandatory band 전체 `|γl|≤0.1`과 exact line matrix 0.5%/1% 비교를 모두 통과해야 한다. exact distributed stamp가 기본이다.
+- Trace ref 이름은 metadata screening일 뿐이다. actual return polygon, continuity, current split, terminal footprint와 same-crop field owner가 없으면 source-faithful 상태를 부여하지 않는다.
+- reduced differential operator를 absolute nodal block으로 lift했을 때 gauge 외 null mode가 남으면 global MNA 조립을 금지한다. full partial/common-mode operator 또는 explicit local current constraint가 필요하다.
 
 ## Source-derived parameter 정책
 
-- trace: endpoint/layer/width를 사용한다. Pair P3/P4에는 width evidence가 없는 Trace가 다수 있으므로 누락을 추정값으로 숨기지 않는다.
+- trace: endpoint/layer/width와 raw `UpperRef`/`LowerRef` 상태를 사용한다. Pair P3/P4에는 width evidence가 없는 Trace가 다수이고 explicit ref는 전혀 없으므로 누락을 추정값으로 숨기지 않는다.
 - conductor: layer thickness, conductivity, trapezoidal angle만 source evidence 범위에서 사용한다.
 - dielectric: 한 frequency point만 있는 material은 broadband causal dispersion을 유일하게 정하지 못한다. 추가 metadata 없이는 constant-property sensitivity만 허용한다.
 - via: drill, regular pad, layer endpoint, material을 사용한다. plating/fill thickness가 없으면 fitted value를 만들지 않는다.
@@ -131,10 +142,11 @@ N0 high-precision canonical parity는 `||ΔZ||F/max(||Z||F,nZfloor) ≤1e-12` �
 ## 실행 순서
 
 1. N0과 exact-minus-core identity case를 동결한다.
-2. S1, V1/V2, A1, C1을 기존 research module로 실행해 analytic/mesh/crop/invariant report를 만든다.
-3. 네 SPD의 source parameter 범위, 누락, owner ID를 streaming manifest로 만든다.
-4. PowerSI에서 trace-only, plane-neck, via-pair, pad/antipad, finite-port coupon과 반복 해석을 확보한다.
-5. T/S/C/V/A 통합 I1을 검증한다.
-6. explicit external-port 계약과 memory preflight 뒤 pair P2 anchor baseline으로 올라간다.
-7. solver-state confound를 닫은 뒤 pair P3/P4 full-matrix `ΔZ` attribution을 수행한다.
-8. 통합 operator에서 exact reduction parity를 다시 증명한다. passive MOR와 adaptive sampling만 physical accuracy 동결 뒤 성능 단계로 승격한다.
+2. T1-M1 SAO–CIM/A-phi FEM과 T1-F 3-D length-difference를 실행한다.
+3. P1/P2 explicit-ref trace의 actual return polygon/connectivity와 absolute/core DtN owner를 증명한다.
+4. S1, V1/V2, A1, C1의 남은 analytic/mesh/crop/invariant blocker를 해결한다.
+5. PowerSI에서 trace-only, plane-neck, via-pair, pad/antipad, finite-port coupon과 반복 해석을 확보한다.
+6. T/S/C/V/A 통합 I1을 검증한다.
+7. explicit external-port 계약과 memory preflight 뒤 pair P2 anchor baseline으로 올라간다.
+8. solver-state confound를 닫은 뒤 pair P3/P4 full-matrix `ΔZ` attribution을 수행한다.
+9. 통합 operator에서 exact reduction parity를 다시 증명한다. passive MOR와 adaptive sampling만 physical accuracy 동결 뒤 성능 단계로 승격한다.

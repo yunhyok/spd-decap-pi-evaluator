@@ -383,6 +383,253 @@ print("footprint", projection.port_areas_m2[0], expected,
 
 기존 FFT-BEM `relative_residuals`는 `||Ax-b||/max(||b||,1)`이다. preregistered backward residual과 정의가 다르므로 값만 변환해 재사용하지 않는다.
 
+## T1-E0 body-fitted Cohn stripline
+
+zero-thickness homogeneous centered stripline의 `C'`를 Cohn exact 식과 비교한다. strip edge `x=±w/2`를 node에 정확히 넣고, table의 padding은 strip edge부터 `8h`로 잰다. 이어지는 crop sweep은 h/128에서 `4h`를 추가 계산해 같은 `8h` 결과와 비교한다. sparse `A`를 dense로 만들지 않는다. 아래 peak working set은 six 8h table solves와 three h/128 4h crop solves를 한 Windows process에서 순차 실행한 high-water mark이며 개별 solve나 production memory benchmark가 아니다.
+
+```powershell
+@'
+import ctypes as ct
+from time import perf_counter
+import numpy as np
+from scipy import sparse
+from scipy.sparse.linalg import spsolve, norm as sparse_norm
+from scipy.special import ellipk
+
+EPS = 8.854_187_812_8e-12
+
+def cohn(width, height):
+    k = np.tanh(np.pi*width/(4*height))
+    return 4*EPS*ellipk(k*k)/ellipk(1-k*k)
+
+def peak_mib():
+    if not hasattr(ct, "WinDLL"):
+        return None
+    class PMC(ct.Structure):
+        _fields_ = [
+            ("cb",ct.c_ulong), ("pf",ct.c_ulong),
+            ("peak",ct.c_size_t), ("ws",ct.c_size_t),
+            ("qpp",ct.c_size_t), ("qp",ct.c_size_t),
+            ("qnp",ct.c_size_t), ("qn",ct.c_size_t),
+            ("page",ct.c_size_t), ("peakpage",ct.c_size_t),
+            ("private",ct.c_size_t),
+        ]
+    query = ct.WinDLL("Psapi.dll").GetProcessMemoryInfo
+    query.argtypes = (ct.c_void_p, ct.POINTER(PMC), ct.c_ulong)
+    query.restype = ct.c_int
+    counters = PMC(); counters.cb = ct.sizeof(counters)
+    query(
+        ct.WinDLL("Kernel32.dll").GetCurrentProcess(),
+        ct.byref(counters), counters.cb,
+    )
+    return counters.peak/2**20
+
+def solve(width, height, divisions, padding):
+    spacing = height/divisions
+    n_side = round(padding/spacing)
+    n_center = int(np.ceil(width/spacing))
+    x = np.r_[
+        np.linspace(-width/2-padding, -width/2, n_side+1),
+        np.linspace(-width/2, width/2, n_center+1)[1:],
+        np.linspace(width/2, width/2+padding, n_side+1)[1:],
+    ]
+    nx, ny = x.size, 2*divisions+1
+    dx, dy = np.diff(x), np.full(ny-1, spacing)
+    wx = np.r_[dx[0]/2, (dx[:-1]+dx[1:])/2, dx[-1]/2]
+    wy = np.r_[dy[0]/2, (dy[:-1]+dy[1:])/2, dy[-1]/2]
+    strip = np.abs(x) <= width/2+1e-18
+    conductor = np.zeros((ny,nx), bool)
+    conductor[0] = conductor[-1] = True
+    conductor[divisions,strip] = True
+    ids = -np.ones((ny,nx), int)
+    ids[~conductor] = np.arange((~conductor).sum())
+    unknowns = int(ids.max()+1)
+    rows, columns, data = [], [], []
+    rhs = np.zeros(unknowns)
+
+    def edge(first, second, conductance):
+        first_fixed, second_fixed = conductor.flat[first], conductor.flat[second]
+        first_v = float(first_fixed and first//nx == divisions)
+        second_v = float(second_fixed and second//nx == divisions)
+        if not first_fixed and not second_fixed:
+            a, b = ids.flat[first], ids.flat[second]
+            rows.extend((a,b,a,b)); columns.extend((a,b,b,a))
+            data.extend((conductance,conductance,-conductance,-conductance))
+        elif not first_fixed:
+            a = ids.flat[first]
+            rows.append(a); columns.append(a); data.append(conductance)
+            rhs[a] += conductance*second_v
+        elif not second_fixed:
+            b = ids.flat[second]
+            rows.append(b); columns.append(b); data.append(conductance)
+            rhs[b] += conductance*first_v
+
+    for j in range(ny):
+        for i in range(nx-1):
+            edge(j*nx+i, j*nx+i+1, EPS*wy[j]/dx[i])
+    for j in range(ny-1):
+        for i in range(nx):
+            edge(j*nx+i, (j+1)*nx+i, EPS*wx[i]/dy[j])
+
+    matrix = sparse.coo_matrix((data,(rows,columns)), shape=(unknowns,unknowns)).tocsc()
+    unknown_v = spsolve(matrix,rhs)
+    potential = np.zeros((ny,nx))
+    potential[divisions,strip] = 1.0
+    potential[~conductor] = unknown_v
+    energy = charge = 0.0
+    for j in range(ny):
+        for i in range(nx-1):
+            conductance = EPS*wy[j]/dx[i]
+            dv = potential[j,i]-potential[j,i+1]
+            energy += conductance*dv*dv
+            if j == divisions and strip[i]:
+                charge += conductance*(potential[j,i]-potential[j,i+1])
+            if j == divisions and strip[i+1]:
+                charge += conductance*(potential[j,i+1]-potential[j,i])
+    for j in range(ny-1):
+        for i in range(nx):
+            conductance = EPS*wx[i]/dy[j]
+            dv = potential[j,i]-potential[j+1,i]
+            energy += conductance*dv*dv
+            if j == divisions and strip[i]:
+                charge += conductance*(potential[j,i]-potential[j+1,i])
+            if j+1 == divisions and strip[i]:
+                charge += conductance*(potential[j+1,i]-potential[j,i])
+    backward = np.linalg.norm(matrix@unknown_v-rhs) / (
+        sparse_norm(matrix)*np.linalg.norm(unknown_v) + np.linalg.norm(rhs)
+    )
+    symmetry = float(np.max(np.abs((matrix-matrix.T).data), initial=0.0))
+    return energy, abs(energy-charge)/energy, backward, symmetry, (nx,ny,unknowns,matrix.nnz)
+
+height, results, started = 100e-6, [], perf_counter()
+for width_um in (120.,500.,914.4):
+    width = width_um*1e-6
+    exact = cohn(width,height)
+    runs = [solve(width,height,n,8*height) for n in (64,128)]
+    c64, c128 = runs[0][0], runs[1][0]
+    richardson = 2*c128-c64
+    results.append((width_um,exact,c64,c128,richardson,*runs))
+    print(
+        f"{width_um:6.1f} C0={exact*1e12:12.7f} "
+        f"C64={c64*1e12:12.7f} C128={c128*1e12:12.7f} "
+        f"Rich={richardson*1e12:12.7f} pF/m rel={(richardson-exact)/exact:+.3e}"
+    )
+print("all C64>C128>C0:", all(item[2]>item[3]>item[1] for item in results))
+print("max energy-charge rel:", max(max(item[5][1],item[6][1]) for item in results))
+print("max backward residual:", max(max(item[5][2],item[6][2]) for item in results))
+print("max A-A.T abs:", max(max(item[5][3],item[6][3]) for item in results))
+print("grids:", [(item[0],item[5][4],item[6][4]) for item in results])
+crop_changes = []
+for item in results:
+    width = item[0]*1e-6
+    c4 = solve(width,height,128,4*height)[0]
+    c8 = item[3]
+    crop_changes.append(abs(c8-c4)/abs(c8))
+print("h128 crop 4h->8h:", crop_changes, max(crop_changes))
+print("wall_s=", perf_counter()-started, "peak_working_set_MiB=", peak_mib())
+'@ | python -
+```
+
+frozen table의 `C0/C64/C128/Richardson` pF/m는 폭 120 µm에서 `36.8128510/37.0112662/36.9119306/36.8125951`, 500 µm에서 `104.1702700/104.3664877/104.2682374/104.1699871`, 914.4 µm에서 `177.5537791/177.7499747/177.6517423/177.5535098`이다. 최대 energy-charge mismatch `1.50e-12`, backward residual `4.13e-19`, matrix asymmetry exact `0`이다. h/128 crop 4h→8h 변화는 최대 `2.12459e-6`이다. 한 process peak working set은 약 `1,856 MiB`였으며 현 starting commit에는 이 body-fitted solver module이 없으므로 standalone canonical oracle로만 사용한다.
+
+## T1-M0 periodic plate-pair identity와 finite-length screen
+
+현행 1-D finite-thickness copper helper를 periodic two-plate analytic identity에만 사용한다. through-thickness broadside redistribution/proximity는 포함하지만 finite-width lateral edge/proximity current crowding은 검증하지 않는다.
+
+```powershell
+@'
+import math
+import numpy as np
+from spd_decap_pi._core.solver.mfdm import MU_0_H_PER_M, copper_surface_impedance
+
+EPS0 = 8.8541878128e-12
+sigma, width, thickness = 59.6e6, 5e-3, 35e-6
+gap, length = 50e-6, 10e-3
+frequencies = np.asarray((0., 1e5, 1e6, 1e7, 1e8, 5e8, 1e9, 2e9))
+surface = np.asarray(copper_surface_impedance(frequencies, sigma, thickness), complex)
+impedance = length * (
+    2 * surface / width
+    + 1j * 2 * np.pi * frequencies * MU_0_H_PER_M * gap / width
+)
+rdc = 2 * length / (sigma * width * thickness)
+ldc = MU_0_H_PER_M * length * (gap + 2 * thickness / 3) / width
+lhf = MU_0_H_PER_M * length * gap / width
+print("limits_Rdc_Ldc_Lhf", rdc, ldc, lhf)
+for frequency, value in zip(frequencies, impedance, strict=True):
+    inductance = ldc if frequency == 0 else value.imag / (2 * np.pi * frequency)
+    print("RL", frequency, value.real, inductance)
+for first, second, r_first, r_second in zip(
+    frequencies[4:-1], frequencies[5:], impedance.real[4:-1], impedance.real[5:], strict=True
+):
+    print("skin_slope", first, second, math.log(r_second/r_first)/math.log(second/first))
+
+for physical_length in (0.889e-3, 0.900e-3, 4.2e-3, 10e-3):
+    theta = 2 * np.pi * 2e9 * physical_length * math.sqrt(MU_0_H_PER_M * EPS0 * 4.0)
+    exact = np.asarray((theta/math.tan(theta), theta/math.sin(theta)))
+    nominal_pi = np.asarray((1-theta*theta/2, 1.0))
+    series_only = np.ones(2)
+    print(
+        "length_screen", physical_length, theta,
+        np.max(np.abs(nominal_pi-exact)/np.abs(exact)),
+        np.max(np.abs(series_only-exact)/np.abs(exact)),
+    )
+'@ | python -
+```
+
+2026-08-14 frozen output은 `Rdc=1.9175455417066e-3 Ω`, `Ldc=1.8430676901060e-10 H`, `Lhf=1.2566370614359e-10 H`다. 2 GHz는 `R=4.60396197072075e-2 Ω`, `L=1.29327422670828e-10 H`다. 100 MHz→500 MHz→1 GHz→2 GHz resistance slope는 `0.500032982/0.50000000005/0.50000000000`이다. 0.889/0.900/4.2/10 mm의 `|βl|`은 `0.074528249/0.075450421/0.352101964/0.838338009`; nominal-π 최대 coefficient error는 `0.0927/0.0950/2.120/13.975%`, series-only는 `0.1856/0.1902/4.348/32.633%`다.
+
+## T1 reduced differential lift의 expected failure
+
+exact reduced differential two-port를 네 absolute terminal로 lift하면 global gauge 외에 terminal-plane common-mode null이 남는다. 아래 명령의 solve failure가 예상 결과다. 임의의 conductance로 null을 숨기지 않는다.
+
+```powershell
+@'
+import numpy as np
+from math import pi
+from spd_decap_pi._core.solver.mfdm import MU_0_H_PER_M, copper_surface_impedance
+from spd_decap_pi._core.solver.global_mna import (
+    DifferentialPort, GlobalMnaError, NodalAdmittanceBlock, compile_global_mna,
+)
+
+EPS0 = 8.8541878128e-12
+frequency = 1e9
+sigma, width, thickness = 59.6e6, 5e-3, 35e-6
+gap, length, er = 50e-6, 10e-3, 4.0
+z = (
+    2*copper_surface_impedance(frequency, sigma, thickness)/width
+    + 1j*2*pi*frequency*MU_0_H_PER_M*gap/width
+)
+y = 1j*2*pi*frequency*EPS0*er*width/gap
+x = length*np.sqrt(z*y)
+yc = np.sqrt(y/z)
+y2 = yc*np.asarray(
+    ((1/np.tanh(x), -1/np.sinh(x)), (-1/np.sinh(x), 1/np.tanh(x))), complex,
+)
+incidence = np.asarray(((1., -1., 0., 0.), (0., 0., 1., -1.)))
+y4 = incidence.T @ y2 @ incidence
+print("rank", np.linalg.matrix_rank(y4, tol=1e-12))
+print("null_global", np.linalg.norm(y4 @ np.ones(4)))
+print("null_plane", np.linalg.norm(y4 @ np.asarray((1., 1., -1., -1.))))
+print("hermitian_eigs", np.linalg.eigvalsh((y4+y4.conj().T)/2))
+operator = compile_global_mna(
+    ("S0", "R0", "S1", "R1"),
+    nodal_admittances=(NodalAdmittanceBlock(
+        ("S0", "R0", "S1", "R1"), y4, "T1-lift",
+        owner_ids=("T1-reduced-differential",),
+    ),),
+    ports=(DifferentialPort("P0", "S0", "R0"), DifferentialPort("P1", "S1", "R1")),
+)
+try:
+    operator.solve(frequency)
+except GlobalMnaError as exc:
+    print(type(exc).__name__ + ":", exc)
+else:
+    raise SystemExit("ERROR: singular lifted operator unexpectedly solved")
+'@ | python -
+```
+
+frozen 핵심은 rank `2`, 두 null residual exact `0`, Hermitian eigenvalues 약 `[6.77e-21, 6.86e-18, 1.394e-4, 1.924e-1] S`, 그리고 `GlobalMnaError: saddle system is singular; topology has an unresolved island`다. 이는 expected fail-closed 증거이며 T1 global-composition pass가 아니다.
+
 ## Focused regression
 
 ```powershell

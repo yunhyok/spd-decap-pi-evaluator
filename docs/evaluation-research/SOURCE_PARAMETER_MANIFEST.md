@@ -23,6 +23,7 @@ parameter 상태는 다음 enum으로 기록한다.
 - `absent`: raw source에 값이 없음; 추정값으로 대체 금지
 - `parser_not_preserved`: raw에는 있으나 현행 parser/model이 보존하지 않음
 - `derived_node_link`: raw Via row 자체가 아니라 referenced Node에서 layer/coordinate를 유도함
+- `derived_material_table`: layer의 explicit material 이름을 같은 source의 usable material table에 연결해 값을 유도함
 
 ## Trace width
 
@@ -40,6 +41,21 @@ P3/P4 결손은 continuation parser 누락이 아니라 `Trace...` 다음에 새
 - width가 explicit인 trace만 source-faithful T1 R/L을 만들 수 있다.
 - P3/P4의 약 16.5% 결손을 인접 trace, net median, PowerSI curve fit으로 채우지 않는다.
 - width가 필요한 topology path에 결손 record가 참여하면 해당 path/coupon을 `blocked_missing_trace_width`로 보고하거나, width-independent topology-only 경로와 분리한다.
+
+### Trace ref와 semantic screening
+
+두 번째 bounded pass에서 endpoint layer, length와 raw `UpperRef`/`LowerRef`를 함께 분류했다.
+
+| Pair | same-layer endpoints | concrete ref ≥1 | no concrete ref | metadata profiles |
+|---|---:|---:|---:|---:|
+| P1 | 12,544 | 6,816 | 5,728 | 8 |
+| P2 | 15,052 | 2,976 | 12,076 | 57 |
+| P3 | 1,451,285 | 0 | 1,451,285 | 97 |
+| P4 | 1,451,209 | 0 | 1,451,209 | 88 |
+
+concrete ref는 `N/A`가 아닌 explicit `UpperRef` 또는 `LowerRef`다. P1/P2의 concrete ref도 return polygon/connectivity와 current operator를 증명하지 않으므로 상태는 `trace_record_explicit_connectivity_unproved`다. P3/P4의 인접 DGND는 stackup에서만 찾을 수 있어 `derived_stackup_only`이며 source-faithful explicit return으로 부르지 않는다.
+
+P3/P4 raw Trace grammar에는 routed trace와 plane/mesh topology를 구분하는 semantic flag가 없다. 약 39%의 net이 conductor-layer token과 일치하지만 이것만으로 모든 Trace를 route 또는 plane mesh라고 분류하지 않는다. strict T1 screening과 candidate line evidence는 [`T1_TRACE_ORACLE_RESULTS.md`](T1_TRACE_ORACLE_RESULTS.md)를 따른다.
 
 ## Stackup와 conductor
 
@@ -61,6 +77,8 @@ P3/P4 결손은 continuation parser 누락이 아니라 `Trace...` 다음에 새
 - P3/P4 `COPPER`: 20°C 한 point, `59,590,000 S/m`
 
 한 온도 point를 broadband skin/roughness law로 해석하지 않는다. temperature interpolation은 source point 범위 안에서만 별도 정책으로 정의한다.
+
+layer row에는 numeric conductivity token이 없지만 `Material=COPPER/COPPER_1`가 같은 file의 usable `.MetalModel`에 명시적으로 연결된다. 이 경우 `layer_conductivity_token=absent`, `material_link=explicit`, `resolved_sigma=derived_material_table`로 기록한다. 이를 fitted/default conductivity 또는 physical conductivity absent로 부르지 않는다.
 
 ## Dielectric model
 
