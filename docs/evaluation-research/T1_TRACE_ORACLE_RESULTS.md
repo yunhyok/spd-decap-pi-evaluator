@@ -11,7 +11,7 @@
 | T1-E0 Cohn stripline | `passed_canonical_lossless_only` | zero-thickness, homogeneous, lossless centered stripline의 `C'` | finite thickness, conductor/dielectric loss, real return polygon |
 | T1-M0 periodic plate pair | `passed_periodic_1d_volume_only` | exact identity와 independent normalized FEM의 periodic `m=0` smooth-copper `R(f), L(f)` | finite-width lateral edge/proximity, free-space exterior, C0-A1 periodic SAO |
 | T1-I0 circle interior DtN | `C0-A1 passed_circle_interior_only` | exact Bessel DtN, pulse mesh/self/quadrature, canonical + W1/W3 dense; W2 analytic-only | M1 exterior, corner, independent A–v, full `Z'` |
-| T1-M1 finite-width return | `BLOCKED_INTERIOR_WEIGHTED_RECIPROCITY_PASSIVITY__G2_PAIR_PASSED_CIRCLE_100KHZ_RECIPROCITY_CANCELLATION_FAIL` | immutable collocation record, G1 exterior-only, G2 pair q/symmetry, G2 circle q/analytic/mesh/passivity, A–v 2 GHz smoke, `AV-BS1-CIRCLE` manifest preregistration | 100 kHz G2 N256 reciprocity/cancellation fail; planned G2 2 GHz circle/N512/EQ0 seed/terminal 미실행, G1 passivity fail 미해결, AV-BS1 physics/convergence 미실행 |
+| T1-M1 finite-width return | `BLOCKED_INTERIOR_WEIGHTED_RECIPROCITY_PASSIVITY__G2_PAIR_PASSED_CIRCLE_100KHZ_RECIPROCITY_CANCELLATION_FAIL` | immutable collocation record, G1 exterior-only, G2 pair q/symmetry, G2 circle q/analytic/mesh/passivity, A–v 2 GHz smoke, `AV-BS1-CIRCLE` H1 coarse h stage-only pass | 100 kHz G2 N256 reciprocity/cancellation fail; G1 passivity fail 미해결; AV-BS1 h2/h4/final circle/withheld 미실행; planned G2 2 GHz/N512/EQ0 미실행 |
 | T1-F finite-length | `not_run` | 없음 | 3-D PEEC/FastHenry length-difference de-embedding |
 | T1 source candidates | `geometry_and_net_graph_evidence_ready` | width, endpoint, layer, selected stack/material, selected P1/P2 return artwork/void와 same-net graph | terminal-to-return signed current/field owner와 same-crop core partition |
 | T1 global composition | `blocked_balanced_projection_and_return_partition` | reduced differential operator를 곧바로 stamp할 수 없다는 것 | absolute partial operator 또는 explicit local current constraint, same-crop return/core partition |
@@ -67,7 +67,7 @@ finite thickness, skin effect, proximity, edge current crowding과 arbitrary rec
 
 Patel–Triverio의 arbitrary-shape formulation은 rectangular/trapezoidal/multiple-return 예제를 FEM과 비교하고 published host에서 frequency당 약 0.04–0.52 s를 보고했다. 이 문헌 timing은 현재 노트북 성능 증거가 아니다.
 
-독립 reference candidate는 skin-depth 방향 graded mesh를 쓰는 2-D volume-current A–v FEM이다. subtraction-free circle boundary-Schur의 exact 계약은 [`T1_AV_BOUNDARY_SCHUR_SPEC.md`](T1_AV_BOUNDARY_SCHUR_SPEC.md)에 고정했지만 physics/convergence 전에는 oracle이 아니다. finite end, bend와 launch는 3-D PEEC/FastHenry를 사용하되 product dependency가 아니라 reference candidate로만 둔다. Hammerstad/Jensen류 식은 screening/asymptotic anchor이며 oracle이 아니다. 1차 dense SAO는 homogeneous, nonmagnetic, lossless background와 simply connected copper에 한정하며 exact 식과 fixture는 [`T1_M1_REFERENCE_SPEC.md`](T1_M1_REFERENCE_SPEC.md)에 고정한다.
+독립 reference candidate는 skin-depth 방향 graded mesh를 쓰는 2-D volume-current A–v FEM이다. subtraction-free circle boundary-Schur의 exact 계약은 [`T1_AV_BOUNDARY_SCHUR_SPEC.md`](T1_AV_BOUNDARY_SCHUR_SPEC.md)에 고정했고 coarse h stage-evaluable gate는 통과했지만 fine analytic/mesh convergence 전에는 oracle이 아니다. finite end, bend와 launch는 3-D PEEC/FastHenry를 사용하되 product dependency가 아니라 reference candidate로만 둔다. Hammerstad/Jensen류 식은 screening/asymptotic anchor이며 oracle이 아니다. 1차 dense SAO는 homogeneous, nonmagnetic, lossless background와 simply connected copper에 한정하며 exact 식과 fixture는 [`T1_M1_REFERENCE_SPEC.md`](T1_M1_REFERENCE_SPEC.md)에 고정한다.
 
 ### 현행 helper의 제한
 
@@ -244,7 +244,7 @@ board crop에서는 signal copper, return copper, magnetic/electric field, termi
 ## 다음 실행 순서
 
 1. M0 periodic 1-D volume pass를 독립 slab anchor로 동결한다. finite/open contour를 periodic `coth`와 직접 비교하지 않는다.
-2. smallest equal-width M1-EQ0의 failed collocation, G1 exterior-only, G2 pair-only과 100 kHz circle raw failure를 보존한다. planned G2 2 GHz circle/N512/EQ0 seed로 확장하지 않는다. independent `AV-BS1-CIRCLE` H0는 pre-factor sparse-pattern gate에서 실패했고 H1 cyclic-diagonal correction은 preregistered-not-run이다. 새 fixture/token clean commit 뒤 동일 h만 재실행하며 circle 두 radius 통과 전 outer crop `{2,4,8}Deff` EQ0를 실행하지 않는다.
+2. smallest equal-width M1-EQ0의 failed collocation, G1 exterior-only, G2 pair-only과 100 kHz circle raw failure를 보존한다. planned G2 2 GHz circle/N512/EQ0 seed로 확장하지 않는다. independent `AV-BS1-CIRCLE` H0 negative와 H1 coarse h stage-only pass를 함께 보존하고, old token consume 뒤 별도 h2 preregistration/token을 고정한다. circle 두 radius 통과 전 outer crop `{2,4,8}Deff` EQ0를 실행하지 않는다.
 3. perimeter panel `N,2N,4N`, singular self integral, corner/opposing-projection grading과 volume skin mesh `δ/2,δ/4,δ/8`에서 raw `Z'`, loss, reciprocity, passivity, current conservation을 0.5%/1% gate로 검사한다.
 4. P2 `Trace13305`는 source-derived manufactured asymmetric stripline으로만 실행한다. 실제 board case는 exact finite-width polygon/void boolean tolerance, signed signal-to-return current/field owner와 same-crop core/DtN partition이 증명될 때까지 차단한다.
 5. P1/P2 selected crop의 actual return artwork/net graph 증거에서 terminal-to-return signed current basis와 same-crop core/DtN owner를 만든다. 가까운 via를 return으로 강제하지 않는다.

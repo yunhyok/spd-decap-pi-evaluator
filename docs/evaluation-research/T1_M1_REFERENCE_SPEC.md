@@ -520,7 +520,7 @@ Stage 1 pair screen은 사전등록 뒤 실행됐다. 두 frequency 모두 self/
 
 Stage 2 medium circle은 같은 session에서 pair replay/review 뒤 실행됐고 100 kHz의 첫 mandatory operator gate에서 fail-closed 종료됐다. `N=128` q20/q40의 raw `Yw` reciprocity는 `2.40109e-9/2.50717e-9`로 통과했지만 cancellation condition `2.91315e-8`이 실패했다. `N=256`은 raw reciprocity `1.41197e-8/1.41083e-8`과 cancellation `1.63755e-7`이 모두 실패했다. analytic max error는 각각 `0.390062%`와 `0.0985103%`, q parity worst `2.81068e-12`, mesh worst relative/RMS/phase `0.290419%/0.161108%/0.0128560°`였고 raw Hermitian minimum은 양수여서 analytic, q, mesh, residual/condition과 passivity gate는 통과했다. planned G2 2 GHz circle row, G2 `N=512`, G2 EQ0 seed는 실행하지 않았다. 현재 전체 상태는 **`BLOCKED_INTERIOR_WEIGHTED_RECIPROCITY_PASSIVITY__G2_PAIR_PASSED_CIRCLE_100KHZ_RECIPROCITY_CANCELLATION_FAIL`**다.
 
-다음 실행 후보는 G2 수치를 보정하는 continuation이 아니다. two-DtN subtraction이 없는 independent A–v volume-FEM boundary Schur reference candidate를 `preregistered_not_run` 상태로 먼저 고정한다. 첫 stage는 100 kHz circle, 한 crop, 한 coarse mesh, 한 balanced RHS만 허용하고 explicit return, outer `a=0`, trace basis, current normalization과 geometry/mesh hash를 동결한다. 통과 뒤에만 `h→h/2→h/4`, crop `2→4→8 Deff`를 순차 확장한다. production SAO 후보는 Hamiltonian Schur 또는 four-operator symmetric Calderón/Steklov–Poincaré discretization으로 별도 비교하며 post-symmetrization, negative-eigenvalue clipping, higher-precision promotion과 gate 완화를 금지한다.
+다음 실행 후보는 G2 수치를 보정하는 continuation이 아니다. two-DtN subtraction이 없는 independent A–v volume-FEM boundary Schur reference candidate는 H0 pre-factor negative를 보존한 뒤 H1 17.5 µm/100 kHz coarse `h`에서 `passed_AV_BS_h_stage_only_pending_h2_review`를 얻었다. 이 결과는 한 crop과 한 coarse mesh의 stage-evaluable gate만 승인하며 reference 승격은 아니다. 다음에는 refined `h2` topology/hash/resource/schema와 one-stage token을 별도 사전등록하고, 그 독립 review 뒤에만 `h2`, 이어서 별도 `h4`, final circle과 crop/withheld-radius 단계를 순차 확장한다. production SAO 후보는 Hamiltonian Schur 또는 four-operator symmetric Calderón/Steklov–Poincaré discretization으로 별도 비교하며 post-symmetrization, negative-eigenvalue clipping, higher-precision promotion과 gate 완화를 금지한다.
 
 ## Numerical certificate와 promotion gate
 
@@ -565,7 +565,7 @@ matrix convergence에서 frequency별 `Z'floor=max(1e-9 Ω/m,1e-9 maxij|Z'fine,i
 3. smallest eligible equal-width finite/open M1 collocation은 **완료/실패:** `BLOCKED_SAO_BOUNDARY_POWER_IDENTITY`로 immutable 보존한다.
 4. 같은 endpoint의 G1 direct exterior Galerkin은 **완료/제한 통과:** `passed_exterior_galerkin_only`. interior reciprocity와 저주파 passivity 때문에 overall blocked다.
 5. G2 target-tested interior Galerkin은 **pair 제한 통과 뒤 100 kHz circle 실패:** raw reciprocity/cancellation failure를 immutable 보존하고 planned G2 2 GHz circle, G2 `N=512`, G2 EQ0 seed로 확장하지 않는다.
-6. 같은 geometry/current basis의 A–v는 **2 GHz 4Deff smoke only:** consistent mass power 통과. 독립 reference candidate 상태는 `preregistered_not_run`이며 100 kHz circle boundary-Schur contract를 먼저 사전 등록하고, 통과한 뒤에만 `h,h/2,h/4`와 crop `2/4/8 Deff`, condition/resource를 실행한다.
+6. 같은 geometry/current basis의 A–v는 **2 GHz 4Deff smoke와 H1 coarse `h` stage-only:** consistent mass power smoke 뒤 17.5 µm/100 kHz boundary-Schur `h`가 `passed_AV_BS_h_stage_only_pending_h2_review`를 얻었다. `h2` refined topology/hash/resource/schema와 새 token은 아직 미사전등록이며, 이를 별도 freeze·review한 뒤에만 `h2`, `h4`, final circle과 crop `2/4/8 Deff`를 순차 실행한다.
 7. symmetric two-return case에서 symmetry로만 equal split이 나오는지 검증한다.
 8. P2 artificial `Trace13305` coupon을 실행한다.
 9. finite-length T1-F 3-D length-difference reference와 distributed line stamp를 연결한다.

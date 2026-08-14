@@ -1,30 +1,16 @@
 {
-  "authorized_stage": "primary-h",
+  "authorization_state": "consumed",
   "case_id": "AV-BS1-CIRCLE-PRIMARY",
+  "consumed_artifact_payload_sha256": "3cdef96c8de1585acfe4cc256d63e6815b93be9906df51d9b97ff5d4f51f330b",
+  "consumed_artifact_sha256": "af17bbcc49cebc7e9ddb88e821ec0338a435fb2bf8ce51b117cfb3019b78b44d",
+  "consumed_git_head": "057ed39f6a80dfe05aeab06c8bb8f6e6e3429a93",
+  "consumed_review_token_id": "7fc94704be50469bbcdd5233decea581",
+  "consumed_review_token_sha256": "5ad21ccec9cb81e8999441fc43338589ecb92cf0ae08e7bc2b8b4a8c411f8d4e",
+  "consumed_utc": "2026-08-14T19:15:49Z",
   "fixture_sha256": "e2a1c8efff67873b57dc7a658b013e3e76d0c921988011f4c8e70cd25f00f8a7",
-  "h1_cyclic_diagonal_sha256": "e80c75ed02030cb22b648b39d613abac42bf6a4c4dfb46704789eedcc17f5e91",
-  "independent_audits": [
-    "Sol mathematical and fail-closed contract review",
-    "Terra Windows runner and process-tree safety review",
-    "Luna schema, resource, and bounded-test review"
-  ],
-  "manifest_sha256": "cf5c7740449d40c74665543680c2c96d848e546a3e52d27b8254ce099f3335d0",
-  "next_stage_authorized": true,
-  "prereg_commit": "82b22eecbd61344ad5e4b4ad5dce8aad826adef9",
-  "prior_failed_artifact_sha256": "848a2c5a3683f492d84b59be42ea20b9ed5e2e745304cb9ded88131e8bca45f0",
+  "next_stage_authorized": false,
   "program": "SPD Decap PI Evaluator v0.22.0",
-  "review_disposition": "approved_static_h1_correction_only",
-  "review_evidence": {
-    "manifest_payload_sha256": "e79cd30b88fbf339399b3b059ce958138a5b16ed90bc52cde1ed0f87c2dd9a95",
-    "powershell_ast": "passed",
-    "static_test_command": "python -m pytest -q tests/test_research_av_bs1_boundary_schur.py",
-    "static_test_result": "16 passed",
-    "h0_failure_status": "BLOCKED_AV_BS_MESH_HASH_before_factor",
-    "h1_canonical_stiffness_sha256": "733c83aec575cb28807bebc7a10fb9e05a83ca35c4775677fd347165fb421548"
-  },
-  "review_scope": "authorize_h1_primary_h_rerun_only_after_committed_clean_checkout",
-  "review_token_id": "7fc94704be50469bbcdd5233decea581",
-  "reviewed_utc": "2026-08-14T19:05:41Z",
+  "review_disposition": "consumed_after_passed_AV_BS_h_stage_only_pending_h2_review",
   "runner_sha256": "dd880de721b9a688ae953c7363dc4a8b482ec1b26f59871d4ca8f83397eb2b7c",
-  "schema": "AV-BS1-review-token-v1"
+  "schema": "AV-BS1-review-token-consumed-v1"
 }

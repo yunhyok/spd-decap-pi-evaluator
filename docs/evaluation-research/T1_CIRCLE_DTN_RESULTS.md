@@ -11,7 +11,7 @@
 | `C0-A0 fixed_low_frequency_1e6` | **failed** | 사전 등록한 Patel–Triverio empirical switch를 그대로 사용하면 작은 원 100 kHz가 정확도·mesh·phase·conditioning gate를 모두 위반 |
 | `C0-A1 direct_scaled_H2_primary` | **passed_circle_interior_only** | `C0=1` direct/scaled Hankel이 canonical full-condition과 W1/W3 dense withheld를 통과; W2는 analytic/convergence-only 보조 |
 | finite-width M1 | G1 exterior-only, G2 pair-only; 100 kHz circle failed | q/analytic/mesh/passivity 통과와 별개로 N256 raw `Yw` reciprocity/cancellation fail; planned G2 2 GHz circle/N512/EQ0 seed 미실행 |
-| independent A–v | `2GHz_4Deff_smoke_only`; circle boundary-Schur `preregistered_not_run` | noncircular same-basis cross-method와 circle mesh/crop convergence 미실행 |
+| independent A–v | `2GHz_4Deff_smoke_only`; circle boundary-Schur `passed_AV_BS_h_stage_only_pending_h2_review` | H1 17.5 µm/100 kHz coarse `h` stage-evaluable gate만 통과; `h2`/`h4`, final circle, withheld radius와 noncircular same-basis cross-method 미실행 |
 | product/global | `blocked` | source owner, exact-minus-core와 balanced global adapter 미해결 |
 
 `C0-A1`의 통과는 원형 도체의 **interior surface-admittance operator**만 인증한다. M1, P2, PowerSI correlation, product 정확성 또는 8 GB production 성능을 승인하지 않는다.

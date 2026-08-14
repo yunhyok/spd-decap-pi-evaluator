@@ -2,7 +2,7 @@
 
 ## Current verdict
 
-현재 상태는 **`AV-BS1-H0_BLOCKED_SPARSE_PATTERN_CONTRACT_BEFORE_FACTOR__H1_CYCLIC_DIAGONAL_CORRECTION_PREREGISTERED_NOT_RUN`**이다.
+현재 AV-BS1 artifact 상태는 **`passed_AV_BS_h_stage_only_pending_h2_review`**다. `mandatory_stage_pass=true`지만 `next_stage_authorized=false`, `fine_analytic_pass=null`, `mesh_convergence_pass=null`, `final_circle_pass=null`이다. 따라서 이는 17.5 µm/100 kHz의 coarse `h` 단계 제한 통과이며 circle oracle 또는 h2 권한이 아니다.
 
 2026-08-15 clean commit `4fa5ec80a261c21c8489ecd8b708a62bba769a7a`에서 17.5 µm, 100 kHz, `h` 한 mesh의 guarded `primary-h`를 처음 실행했다. 실행은 **`BLOCKED_AV_BS_MESH_HASH`**로 fail-closed 됐다. factorization, harmonic extension, boundary-Schur `Y`, modal response와 physics pass/fail 값은 생성되지 않았다. 따라서 이 결과는 AV-BS1 physics negative가 아니라 **사전등록 sparse-pattern 계약의 negative**다.
 
@@ -72,13 +72,45 @@ Kjj <- Kjj + k
 | canonicalization relative Frobenius | `1.3572885e-16` |
 | maximum tagged raw magnitude | `4.2346073e-9` |
 
-manufactured rectangle의 두 diagonal은 모두 zero weight를 재현해야 하고, noncyclic control은 zero로 만들지 않는다. H1 fixture/static tests/result schema/runner/token이 새 hash로 독립 감사되고 clean commit되기 전에는 `primary-h`를 재실행하지 않는다.
+manufactured rectangle의 두 diagonal은 모두 zero weight를 재현해야 하고, noncyclic control은 zero로 만들지 않는다. 이 계약은 commit `057ed39f6a80dfe05aeab06c8bb8f6e6e3429a93`에 고정됐고, 아래 H1 `primary-h`가 같은 canonical certificate를 재현했다.
 
 H1 static candidate는 `16 passed`, fixture SHA-256 `e2a1c8efff67873b57dc7a658b013e3e76d0c921988011f4c8e70cd25f00f8a7`, runner SHA-256 `dd880de721b9a688ae953c7363dc4a8b482ec1b26f59871d4ca8f83397eb2b7c`를 재현했다. 새 token은 이 두 hash, H0 artifact, cyclic tag, canonical K hash와 세 독립 감사 증거를 검증한다. 이 값은 static approval이며 아직 H1 physics 실행 결과가 아니다.
 
+## H1 `primary-h` result
+
+clean commit `057ed39f6a80dfe05aeab06c8bb8f6e6e3429a93`에서 17.5 µm, 100 kHz, `h` 한 mesh를 external execution-tree guard 아래 한 번 실행했다. ignored artifact는 `validation-output/av-bs1/av-bs1-primary-h-20260814T190732Z.json`이다.
+
+| artifact | SHA-256 / value |
+|---|---|
+| file bytes / SHA-256 | `711,486` / `af17bbcc49cebc7e9ddb88e821ec0338a435fb2bf8ce51b117cfb3019b78b44d` |
+| final payload SHA-256 | `3cdef96c8de1585acfe4cc256d63e6815b93be9906df51d9b97ff5d4f51f330b` |
+| numerical payload SHA-256 | `a955393d69e22e87d759656b598e71fccee2492eff4c8d305db48623662f9fc4` |
+| resource report SHA-256 | `8387d19253279120a116cf0e8b48c67007394a86d140bfb0a1770ad4f8b87d72` |
+| review token SHA-256 | `5ad21ccec9cb81e8999441fc43338589ecb92cf0ae08e7bc2b8b4a8c411f8d4e` |
+| status / failure codes | `passed_AV_BS_h_stage_only_pending_h2_review` / `[]` |
+
+mesh와 H1 certificate는 preregistration 값을 그대로 재현했다: raw/canonical `K.nnz=14,075/10,241`, `M.nnz=14,081`, `MΓ.nnz=384`, tag `1,920`, maximum cancellation/bound `2.1676835831040652e-13 / 5.788860430596403e-13`, correction relative Frobenius `1.3572884739080543e-16`이다.
+
+| stage-evaluable gate | raw value | verdict |
+|---|---:|---|
+| max assembly transpose relative | `0` | pass |
+| max background/conductor backward residual | `4.181585185007905e-17` | pass |
+| max equilibrated `kappa1 u` estimate | `2.5342296831638465e-12` | pass |
+| reverse-order relative | `2.2332401790276927e-16` | pass |
+| raw full-space reciprocity relative | `1.072085475889738e-15` | pass |
+| minimum Hermitian eigenvalue / tolerance | `9.256477814190828e-6 / 4.478026532708378e-13 S·m` | pass |
+| max signed-mode power mismatch | `4.7212709501079303e-14` | pass |
+| `m↔-m` trend-only relative | `1.5004933643655415e-16` | diagnostic/trend only; not gated at `h` |
+
+background/conductor factor의 `L/U.nnz`는 각각 `54,630/54,682`, `58,747/60,956`이고 두 solve는 각 128 RHS를 batch `4`로 처리했다. coarse analytic trend는 max relative `0.011619408480801386` (`|m|=4`), nine-mode RMS `0.006192419097349362`, max phase `0.00022308014897348525°`다. max relative 값은 `1%`보다 크지만 `h`에서는 preregistration에 따라 trend로만 기록하고 fine analytic gate로 판정하지 않는다.
+
+resource monitor는 child exit `0`, successful tree samples `11`, wall `1.4714704 s`, stop reason `null`을 기록했다. execution-tree peak WS는 `194,289,664 B = 185.2890625 MiB`, private/committed는 `1,516,937,216 B = 1,446.6640625 MiB = 1.4127578735 GiB`다. minimum commit headroom은 `70.969673 GiB`, minimum available physical memory는 `46.753937 GiB`였다. 이는 이 host의 coarse h-stage evidence이며 8 GB laptop proof가 아니다.
+
+authorized primary-h token은 artifact에 SHA-256 `5ad21ccec9cb81e8999441fc43338589ecb92cf0ae08e7bc2b8b4a8c411f8d4e`로 결합돼 있다. 독립 review 뒤 active file은 SHA-256 `80ffd8b486dbdd8087eb205f71137663cef0497d8ba8df74253743b302fe6f35`의 consumed tombstone으로 바꿨다. 따라서 현재 validator는 primary-h를 solve 전에 거부하며 h2 권한은 별도 token에서만 만들 수 있다.
+
 ## Exact next starting point
 
-1. H0 artifact와 이 원인 분석을 immutable하게 보존한다.
-2. 완료된 topology/static/exit 감사와 증거 결합을 포함한 fixture, runner, tests, token, 기준 문서를 clean commit한다.
-3. 그 뒤에만 동일 17.5 µm/100 kHz `primary-h` 한 mesh를 다시 실행한다.
-4. H1도 어느 gate든 실패하면 결과를 동결한다. 통과하더라도 별도 h2 preregistration/token 전에는 h2를 구현하거나 실행하지 않는다.
+1. H0 negative와 H1 h-stage artifact를 모두 immutable하게 보존한다.
+2. H1 artifact의 수학·checksum·resource 독립 감사를 기준 문서와 session log에 고정한다.
+3. `h2` mesh/fixture/result schema/resource estimate와 one-stage review token을 결과값과 무관하게 별도 preregistration commit으로 고정한다.
+4. 그 clean commit과 새 token 전에는 `h2`를 구현하거나 실행하지 않는다. `h2`를 통과해도 h4는 또 다른 preregistration 전 금지한다.

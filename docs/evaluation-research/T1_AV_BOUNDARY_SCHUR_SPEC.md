@@ -4,9 +4,9 @@
 
 ## 판정과 범위
 
-현재 상태는 **`AV-BS1-H0_BLOCKED_SPARSE_PATTERN_CONTRACT_BEFORE_FACTOR__H1_CYCLIC_DIAGONAL_CORRECTION_PREREGISTERED_NOT_RUN`**이다. 이 문서는 G2의 100 kHz circle reciprocity/cancellation 실패를 보정하는 문서가 아니라, 그 결과를 보지 않고도 정의할 수 있는 독립 volume-FEM reference candidate를 고정한다. 제품 parser, solver, UI, version과 installer는 수정하지 않는다.
+현재 artifact 상태는 **`passed_AV_BS_h_stage_only_pending_h2_review`**다. H1 17.5 µm/100 kHz coarse `h`가 stage-evaluable gate를 통과했지만 `next_stage_authorized=false`, fine analytic/mesh convergence/final circle은 `null`이다. 이 문서는 G2 실패를 보정하는 문서가 아니라 독립 volume-FEM reference candidate를 고정하며, 제품 parser, solver, UI, version과 installer는 수정하지 않는다.
 
-AV-BS1은 아직 oracle이 아니다. 첫 circle solve, mesh convergence, 독립 감사와 withheld radius를 모두 통과해야 circle-interior reference로 제한 승격할 수 있다. 이 문서의 어떤 결과도 finite/open EQ0, full T1, GlobalMNA, PowerSI accuracy 또는 8 GB product performance를 승인하지 않는다.
+AV-BS1은 아직 oracle이 아니다. H1 coarse `h` solve와 독립 감사만 통과했으며, 별도 사전등록할 `h2`/`h4` mesh convergence, fine analytic gate, final circle 판정과 withheld radius를 모두 통과해야 circle-interior reference로 제한 승격할 수 있다. 이 문서의 어떤 결과도 finite/open EQ0, full T1, GlobalMNA, PowerSI accuracy 또는 8 GB product performance를 승인하지 않는다.
 
 금지사항은 다음과 같다.
 
@@ -195,7 +195,7 @@ edeg(m) = |Yhat_m-Yhat_-m| / max(|Yhat_m|,|Yhat_-m|,Ymode_floor), m=1…4
 
 ## Standalone `h` fixture freeze
 
-연구 전용 구현은 [`../../tools/research/av_bs1_boundary_schur.py`](../../tools/research/av_bs1_boundary_schur.py)와 [`../../tools/research/run_av_bs1_stage.ps1`](../../tools/research/run_av_bs1_stage.ps1)에 고정했다. H0 static checkpoint 뒤 `primary-h` command는 한 번 실행됐지만 sparse-pattern gate에서 factor 전에 차단됐고 physics response는 생성되지 않았다. `h2`, `h4`, withheld radius와 EQ0 CLI는 존재하지 않는다.
+연구 전용 구현은 [`../../tools/research/av_bs1_boundary_schur.py`](../../tools/research/av_bs1_boundary_schur.py)와 [`../../tools/research/run_av_bs1_stage.ps1`](../../tools/research/run_av_bs1_stage.ps1)에 고정했다. H0 `primary-h`는 sparse-pattern gate에서 factor 전에 차단됐고, H1은 같은 h를 다시 실행해 stage-evaluable gate를 통과했다. `h2`, `h4`, withheld radius와 EQ0 CLI는 아직 존재하지 않는다.
 
 - fixture는 `src/spd_decap_pi`를 import하지 않는 standalone NumPy/SciPy 연구 도구다.
 - `K`, consistent volume `M`, boundary trace `MΓ`를 raw CCW P1 element에서 조립하고 full dense interior matrix, `inverse`, `Sp-Sb`, `Dp-Db`, 사후 대칭화를 금지한다.
@@ -205,7 +205,7 @@ edeg(m) = |Yhat_m-Yhat_-m| / max(|Yhat_m|,|Yhat_-m|,Ymode_floor), m=1…4
 - numerical artifact는 `AV-BS1-h-numerical-v1`, final artifact는 `AV-BS1-h-result-v1` canonical JSON wrapper다. UTF-8 compact sorted payload의 SHA-256을 wrapper에 두며 `Y/Yrev`는 little-endian complex128 base64와 별도 hash로 보존한다.
 - child failure wrapper도 finalizer까지 원래 `BLOCKED_AV_BS_*` code를 보존한다. child stdout, fixture, runner, review token, guard와 resource report hash가 서로 결합되지 않으면 result-schema failure다.
 
-첫 실행 권한은 tracked artifact [`../../tools/research/av_bs1_primary_h_review_token.json`](../../tools/research/av_bs1_primary_h_review_token.json)에만 있다. token은 preregistration commit, h manifest, fixture/runner SHA-256, static test와 세 독립 감사에 결합된다. token과 fixture가 commit된 clean checkout이 아니면 실행은 차단된다. 이 token은 `primary-h`만 허용하며 `h2`를 열지 않는다.
+H1 실행 권한은 당시 tracked [`../../tools/research/av_bs1_primary_h_review_token.json`](../../tools/research/av_bs1_primary_h_review_token.json)에만 있었다. authorized token SHA-256 `5ad21ccec9cb81e8999441fc43338589ecb92cf0ae08e7bc2b8b4a8c411f8d4e`는 commit `057ed39`과 H1 artifact에 보존된다. 독립 review 뒤 active token 파일은 SHA-256 `80ffd8b486dbdd8087eb205f71137663cef0497d8ba8df74253743b302fe6f35`의 `AV-BS1-review-token-consumed-v1`, `next_stage_authorized=false` tombstone으로 교체하므로 이후 clean descendant commit에서도 `primary-h` 재실행은 fail-closed한다. h2는 별도 filename/schema/token/commit만 허용한다.
 
 외부 runner는 dedicated PowerShell runner와 Python child/descendant를 하나의 execution tree로 100 ms마다 합산한다. 성공 sample이 최소 한 번 없으면 resource gate는 실패한다. mandatory stop은 tree WS `>4 GiB`, tree private 또는 committed `>5 GiB`, system commit headroom `<2 GiB`, available physical `<1.5 GiB`다. `WorkingSet-PrivateWorkingSet`은 실제 mapped residency가 아니라 `nonprivate_working_set_proxy`로만 기록한다. h preflight는 raw `K/M/MΓ` 외에도 complex operators, block slices, raw/equilibrated solve copies와 RHS를 위한 `16×` sparse-copy allowance, dense-factor upper bound, 두 extension, boundary work, batch work와 추가 25% margin을 합산한다.
 
@@ -238,7 +238,7 @@ raw symmetric residue `k=Kij=Kji`의 edge Laplacian block만 제거해 `Kij=Kji=
 
 H0에서 runner가 redirected child handle을 retain하지 않아 failure process의 exit code를 0으로 기록한 provenance 오류도 H1에서 수정한다. child handle을 poll 전에 획득하고 missing exit code는 fail-closed한다. success wrapper는 exit 0, canonical failure wrapper는 exit 2만 허용하며 불일치는 original failure code와 `BLOCKED_AV_BS_RESULT_SCHEMA`를 함께 보존한다.
 
-H1 static freeze는 `16 passed`, fixture SHA-256 `e2a1c8efff67873b57dc7a658b013e3e76d0c921988011f4c8e70cd25f00f8a7`, runner SHA-256 `dd880de721b9a688ae953c7363dc4a8b482ec1b26f59871d4ca8f83397eb2b7c`다. review token은 H0 artifact SHA-256, cyclic tag hash, canonical K hash와 세 독립 감사 증거까지 검증한다. 이 checkpoint가 clean commit되기 전 H1 primary-h는 계속 차단된다.
+H1 static freeze는 `16 passed`, fixture SHA-256 `e2a1c8efff67873b57dc7a658b013e3e76d0c921988011f4c8e70cd25f00f8a7`, runner SHA-256 `dd880de721b9a688ae953c7363dc4a8b482ec1b26f59871d4ca8f83397eb2b7c`다. authorized token은 H0 artifact, cyclic tag, canonical K와 세 독립 감사 증거를 검증했고 H1 artifact 생성 뒤 consume됐다. 실제 H1 수치와 범위는 [`T1_AV_BOUNDARY_SCHUR_RESULTS.md`](T1_AV_BOUNDARY_SCHUR_RESULTS.md)에 고정한다.
 
 ## Conditional EQ0 A–v contract
 
@@ -271,10 +271,10 @@ H1 static freeze는 `16 passed`, fixture SHA-256 `e2a1c8efff67873b57dc7a658b013e
 
 ## Exact next starting point
 
-1. H0 artifact를 immutable하게 보존하고 H1 fixture, runner, 16개 bounded test, result schema와 새 tracked primary-h review token을 함께 commit한다. physics solve는 이 commit에 포함하지 않는다.
-2. clean committed checkout에서 외부 runner로 17.5 µm/100 kHz `h` 한 mesh만 재실행한다.
-3. cyclic canonicalization certificate와 stage-evaluable raw residual/condition/reciprocity/passivity/power, execution-tree resource artifact를 독립 검토해 실패면 즉시 동결한다.
-4. `h` 결과 review 뒤 별도 preregistration·token·fixture commit이 생기기 전에는 `h2`를 구현하거나 실행하지 않는다.
+1. H0 negative와 H1 h-stage artifact/checksum/resource 결과를 immutable하게 보존하고, H1 primary-h token을 consumed tombstone으로 고정한다.
+2. h2 refined mesh의 exact topology tags, canonical `K/M/MΓ` hashes, resource preflight, result schema와 executable one-stage fixture를 결과값과 무관하게 별도 preregister한다.
+3. 새 h2 token과 clean commit이 생기기 전에는 h2를 구현하거나 실행하지 않는다.
+4. h2가 stage-evaluable gate와 h→h2 trend를 통과해도 별도 h4 preregistration 전에는 h4를 실행하지 않는다.
 
 ## Primary literature
 

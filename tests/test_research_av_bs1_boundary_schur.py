@@ -227,7 +227,7 @@ def test_cross_operator_uses_bilinear_not_hermitian_transpose() -> None:
     assert not np.allclose(y, avbs.SIGMA_S_PER_M * (hb.conj().T @ full_m @ hp))
 
 
-def test_review_token_is_bound_to_current_fixture_and_runner(
+def test_consumed_tracked_token_and_synthetic_review_contract(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     tracked_token = json.loads(
@@ -235,8 +235,30 @@ def test_review_token_is_bound_to_current_fixture_and_runner(
             encoding="utf-8"
         )
     )
+    assert avbs._file_sha256(
+        ROOT / "tools" / "research" / "av_bs1_primary_h_review_token.json"
+    ) == "80ffd8b486dbdd8087eb205f71137663cef0497d8ba8df74253743b302fe6f35"
+    assert tracked_token["schema"] == "AV-BS1-review-token-consumed-v1"
+    assert tracked_token["authorization_state"] == "consumed"
+    assert tracked_token["next_stage_authorized"] is False
+    assert tracked_token["consumed_artifact_sha256"] == (
+        "af17bbcc49cebc7e9ddb88e821ec0338a435fb2bf8ce51b117cfb3019b78b44d"
+    )
+    assert tracked_token["consumed_artifact_payload_sha256"] == (
+        "3cdef96c8de1585acfe4cc256d63e6815b93be9906df51d9b97ff5d4f51f330b"
+    )
+    assert tracked_token["consumed_git_head"] == (
+        "057ed39f6a80dfe05aeab06c8bb8f6e6e3429a93"
+    )
+    assert tracked_token["consumed_review_token_sha256"] == (
+        "5ad21ccec9cb81e8999441fc43338589ecb92cf0ae08e7bc2b8b4a8c411f8d4e"
+    )
     assert tracked_token["fixture_sha256"] == avbs._file_sha256(FIXTURE)
     assert tracked_token["runner_sha256"] == avbs._file_sha256(RUNNER)
+    with pytest.raises(avbs.AvBsError, match="review token schema mismatch"):
+        avbs._validate_review_token(
+            ROOT / "tools" / "research" / "av_bs1_primary_h_review_token.json"
+        )
     monkeypatch.setattr(avbs, "_repo_root", lambda: tmp_path)
     monkeypatch.setattr(avbs.subprocess, "run", lambda *args, **kwargs: object())
     token_path = _review_token(tmp_path / "review.json")

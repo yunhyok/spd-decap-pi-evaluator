@@ -9,7 +9,7 @@
 | ID | 현재 판정 | 통과한 증거 | 남은 차단 조건 |
 |---|---|---|---|
 | N0 | **통과 — independent scalar branch 한정** | reduced/unreduced Z가 analytic 및 direct solve와 machine precision에서 일치 | mutual/multiterminal block, topology replacement 뒤 재인증, production 연결 |
-| T1 | **차단 — G2 pair 제한 통과, 100 kHz circle 실패** | Cohn lossless `C'`, periodic plate 1-D FEM, `C0-A1` circle, G1 exterior와 G2 pair q/symmetry gate; `AV-BS1-CIRCLE` manifest/metric preregistration | immutable collocation power fail; G1 interior failure 미해결. G2 circle N256 raw reciprocity `1.41e-8`, cancellation `1.64e-7`; planned G2 2 GHz circle/N512/EQ0 seed, AV-BS1 physics/convergence, finite-length 3-D, 실제 return polygon/connectivity, balanced projection과 same-crop owner partition |
+| T1 | **차단 — G2 circle 실패, AV-BS1 h 제한 통과** | Cohn lossless `C'`, periodic plate 1-D FEM, `C0-A1` circle, G1 exterior와 G2 pair q/symmetry gate; `AV-BS1-CIRCLE` H1 coarse h stage-evaluable gate | immutable collocation power fail; G1 interior failure, G2 circle N256 reciprocity/cancellation fail. AV-BS1 fine analytic/mesh convergence/final circle, h2/h4/withheld, finite-length 3-D, 실제 return polygon/connectivity, balanced projection과 same-crop owner partition |
 | S1 | **차단 — rectangle refinement 부분 통과** | 유한 면적 contact, reciprocity/nullspace/passivity; 마지막 level 6→7 변화 0.299% | annulus refinement 오류, 전체 h/h/2/h/4·crop corpus, neck/void/L-shape, interface/owner certificate |
 | V1 | **차단 — constitutive law 통과** | solid-cylinder DC R, internal/external L limit, skin trend, numerical invariant | 명시적 coaxial return loop와 exact-minus-core block 없음 |
 | V2 | **차단 — isolated PEEC 통과** | mutual L, signed return, current sharing, reciprocity/passivity/KCL | 3-D coupon, pad/antipad/plane return, 실제 core subtraction; API가 global composition을 명시적으로 금지 |
@@ -171,7 +171,7 @@ python -m pytest tests/test_research_axisymmetric_electrostatics.py tests/test_s
 
 ## 다음 R2 연구
 
-1. failed M1-EQ0 collocation, G1 `passed_exterior_galerkin_only`, G2 `passed_pair_screen_only`와 100 kHz circle reciprocity/cancellation failure를 보존한다. 독립 A–v consistent-P1 boundary-Schur **100 kHz circle-only reference candidate**의 첫 guarded primary-h는 factor 전에 sparse-pattern preregistration 오류로 `BLOCKED_AV_BS_MESH_HASH`가 됐다. [`T1_AV_BOUNDARY_SCHUR_RESULTS.md`](T1_AV_BOUNDARY_SCHUR_RESULTS.md)는 H0 artifact를 보존하고 1,920개 cyclic diagonal의 H1 topology correction을 preregistered-not-run으로 둔다. 다음은 새 fixture/token/static review의 clean commit이며, 그 전에는 primary-h를 재실행하거나 h2/h4/withheld 또는 EQ0 mesh·crop, planned G2 N512/2 GHz circle/EQ0 seed로 직행하지 않는다.
+1. failed M1-EQ0 collocation, G1 `passed_exterior_galerkin_only`, G2 `passed_pair_screen_only`와 100 kHz circle reciprocity/cancellation failure를 보존한다. 독립 A–v consistent-P1 boundary-Schur H0 negative와 H1 `passed_AV_BS_h_stage_only_pending_h2_review` artifact도 함께 보존한다. 다음은 old primary-h token consume와 H1 독립 review를 고정한 result commit, 이어서 별도 h2 fixture/hash/resource/token preregistration이다. 그 전에는 h2/h4/withheld 또는 EQ0 mesh·crop, planned G2 N512/2 GHz circle/EQ0 seed로 직행하지 않는다.
 2. S1은 circular/void boundary-conforming refinement와 h/h/2/h/4 추정 오차를 먼저 해결한다.
 3. V1/V2는 명시적 coax/ring return을 가진 2-D/3-D reference와 동일 crop의 exact-minus-core matrix를 만든다.
 4. A1은 current cell-centred solver를 승격하지 않고 body-fitted/higher-order 후보를 비교한다.

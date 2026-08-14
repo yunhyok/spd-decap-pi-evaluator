@@ -1128,9 +1128,9 @@ fine interior/all-node dense complex matrix는 각각 약 `14.78/15.26 GiB`라 �
 4. primary radius가 통과한 뒤에만 결과를 보지 않고 `a=0.5 mm` mesh hash/analytic anchor를 동결해 같은 h→h2→h4 chain을 반복한다.
 5. 두 circle radius가 모두 `passed_AV_BS_circle_two_radius_100k_only`가 되기 전 EQ0 A–v, Hamiltonian-Schur/four-operator SAO, planned G2 2 GHz/N512/EQ0, board 또는 PowerSI correlation으로 진행하지 않는다.
 
-## 2026-08-15 — AV-BS1 standalone primary-h fixture static freeze
+## 2026-08-15 — AV-BS1 standalone primary-h fixture static freeze (historical H0 checkpoint)
 
-manifest preregistration commit `82b22ee` 뒤 제품 module을 import하지 않는 연구 전용 fixture [`../../tools/research/av_bs1_boundary_schur.py`](../../tools/research/av_bs1_boundary_schur.py), 외부 runner [`../../tools/research/run_av_bs1_stage.ps1`](../../tools/research/run_av_bs1_stage.ps1), 13개 bounded test와 tracked [`../../tools/research/av_bs1_primary_h_review_token.json`](../../tools/research/av_bs1_primary_h_review_token.json)을 작성했다. **physics `primary-h`는 실행하지 않았다.** 현재 판정은 **`AV-BS1-H-fixture_static_passed_primary_h_not_run`**이다.
+manifest preregistration commit `82b22ee` 뒤 제품 module을 import하지 않는 연구 전용 fixture [`../../tools/research/av_bs1_boundary_schur.py`](../../tools/research/av_bs1_boundary_schur.py), 외부 runner [`../../tools/research/run_av_bs1_stage.ps1`](../../tools/research/run_av_bs1_stage.ps1), 13개 bounded test와 tracked [`../../tools/research/av_bs1_primary_h_review_token.json`](../../tools/research/av_bs1_primary_h_review_token.json)을 작성했다. **이 checkpoint 당시** physics `primary-h`는 실행하지 않았고 판정은 **`AV-BS1-H-fixture_static_passed_primary_h_not_run`**이었다.
 
 fixture는 frozen h mesh만 지원한다. CCW P1 `K/M`, consistent boundary `MΓ`, interior/boundary partition, row-max→column-max scaled sequential `Ab,II/Ap,II` LU, original unscaled RHS별 backward residual, 두 seed `onenormest`, interior-only `Xb/Xp`, raw bilinear `Y=σHb^T M Hp`/`Yrev=σHp^T M Hb`, signed M9 modal/passivity/power와 canonical JSON wrapper를 고정했다. `h2`, `h4`, withheld radius와 EQ0 stage는 parser에 없다. child failure code도 final wrapper까지 보존하고 numerical/resource/stdout/fixture/runner/token/guard checksum을 서로 결합한다.
 
@@ -1151,14 +1151,14 @@ review token은 위 hash, prereg commit, h manifest, static test와 Sol/Terra/Lu
 
 `core.autocrlf=true`가 fresh checkout의 raw fixture/runner bytes를 바꿔 token을 무효화할 수 있으므로 `.gitattributes`에서 `tools/research/*.py`, `*.ps1`, `*.json`과 해당 test를 `eol=lf`로 고정했다. token과 문서의 hash는 이 canonical LF payload 기준이다.
 
-### Exact next starting point
+### Exact next starting point (historical; superseded by H0/H1 results below)
 
 1. fixture, runner, tests, docs와 review token을 한 local research commit에 고정한다. physics solve는 commit에 포함하지 않는다.
 2. clean checkout과 token/hash를 다시 확인한 뒤 external runner로 17.5 µm/100 kHz `primary-h` 한 mesh만 실행한다.
 3. raw residual/condition/assembly/reverse/full reciprocity, passivity, signed M9 power와 execution-tree resource artifact를 독립 review한다. 어느 gate든 실패하면 결과를 동결하고 중지한다.
 4. h 결과가 통과해도 별도 h2 preregistration·fixture·review token commit 전에는 h2를 구현하거나 실행하지 않는다.
 
-## 2026-08-15 — AV-BS1 H0 pre-factor failure and H1 correction freeze
+## 2026-08-15 — AV-BS1 H0 pre-factor failure and H1 correction freeze (historical preregistration)
 
 static fixture commit `4fa5ec80a261c21c8489ecd8b708a62bba769a7a`의 clean checkout에서 17.5 µm/100 kHz `primary-h` 한 mesh를 처음 실행했다. 실행은 약 `1.0625909 s` 뒤 **`BLOCKED_AV_BS_MESH_HASH: h sparse nnz mismatch`**로 끝났다. resource gate는 8 samples, execution-tree peak WS `170.828125 MiB`, private/commit `1.355278 GiB`, stop reason `null`로 통과했다. 그러나 factorization과 FEM boundary response 전에 차단됐으므로 solve timing, physics negative 또는 8 GB laptop 증거가 아니다.
 
@@ -1170,10 +1170,28 @@ runtime 우연값 `14,075`를 physics contract로 쓰지 않는다. H1은 genera
 
 H0 resource의 `child_exit_code=0`은 redirected child handle을 retain하지 않아 `$null`을 0으로 cast한 runner provenance 오류였다. false pass는 없었지만 H1은 process handle을 poll 전에 획득하고 success/failure wrapper를 exit `0/2`와 결합한다. 새 H1 token까지 포함한 `16 passed`, fixture `e2a1c8efff67873b57dc7a658b013e3e76d0c921988011f4c8e70cd25f00f8a7`, runner `dd880de721b9a688ae953c7363dc4a8b482ec1b26f59871d4ca8f83397eb2b7c`와 PowerShell AST를 재현했으며 primary-h는 재실행하지 않았다.
 
-현재 상태는 **`AV-BS1-H0_BLOCKED_SPARSE_PATTERN_CONTRACT_BEFORE_FACTOR__H1_CYCLIC_DIAGONAL_CORRECTION_PREREGISTERED_NOT_RUN`**이다. 제품 코드는 변경하지 않았고 GitHub 원격도 건드리지 않았다.
+이 시점 상태는 **`AV-BS1-H0_BLOCKED_SPARSE_PATTERN_CONTRACT_BEFORE_FACTOR__H1_CYCLIC_DIAGONAL_CORRECTION_PREREGISTERED_NOT_RUN`**이었다. 제품 코드는 변경하지 않았고 GitHub 원격도 건드리지 않았다.
 
-### Exact next starting point
+### Exact next starting point (historical; superseded by H1 result below)
 
 1. 독립 감사와 증거 결합을 마친 fixture, runner, tests, token과 모든 기준 문서를 새 local research commit으로 고정한다. physics는 이 commit에 포함하지 않는다.
 2. clean checkout에서 동일 17.5 µm/100 kHz `primary-h` 한 mesh만 재실행한다.
 3. canonicalization/raw residual/condition/reciprocity/passivity/power/resource 중 어느 gate든 실패하면 동결한다. h2는 별도 preregistration 전 금지한다.
+
+## 2026-08-15 — AV-BS1 H1 coarse h-stage pass
+
+H1 fixture/runner/token과 16개 bounded test를 commit `057ed39f6a80dfe05aeab06c8bb8f6e6e3429a93`에 먼저 고정한 뒤, clean checkout에서 17.5 µm/100 kHz `primary-h` 한 mesh만 external execution-tree guard 아래 실행했다. 결과는 **`passed_AV_BS_h_stage_only_pending_h2_review`**, `mandatory_stage_pass=true`, `next_stage_authorized=false`다. `fine_analytic_pass`, `mesh_convergence_pass`, `final_circle_pass`는 모두 `null`이다.
+
+ignored artifact `validation-output/av-bs1/av-bs1-primary-h-20260814T190732Z.json`은 `711,486 B`, file SHA-256 `af17bbcc49cebc7e9ddb88e821ec0338a435fb2bf8ce51b117cfb3019b78b44d`다. final/numerical/resource payload SHA-256은 각각 `3cdef96c8de1585acfe4cc256d63e6815b93be9906df51d9b97ff5d4f51f330b`, `a955393d69e22e87d759656b598e71fccee2492eff4c8d305db48623662f9fc4`, `8387d19253279120a116cf0e8b48c67007394a86d140bfb0a1770ad4f8b87d72`다. H0 artifact도 삭제하지 않고 함께 보존한다.
+
+H1 canonicalization은 tags `1,920`, raw/canonical `K.nnz=14,075/10,241`, `M.nnz=14,081`, `MΓ.nnz=384`, cancellation max/bound `2.1676835831040652e-13 / 5.788860430596403e-13`을 그대로 재현했다. max backward residual `4.181585185007905e-17`, max `kappa1 u` estimate `2.5342296831638465e-12`, reverse-order `2.2332401790276927e-16`, raw reciprocity `1.072085475889738e-15`, min Hermitian eigenvalue/tolerance `9.256477814190828e-6 / 4.478026532708378e-13 S·m`, max power mismatch `4.7212709501079303e-14`로 stage-evaluable gate를 통과했다.
+
+coarse analytic trend max는 `1.161940848%` (`|m|=4`), nine-mode RMS는 약 `0.6192%`, phase max는 `0.00022308015°`다. h 단계에서는 trend-only이므로 fine pass/fail로 사용하지 않는다. resource는 child exit `0`, 11 samples, wall `1.4714704 s`, peak tree WS `185.2890625 MiB`, private/commit `1.4127578735 GiB`, stop reason `null`이었다. 이는 이 host의 h-stage 제한 결과이며 8 GB proof가 아니다.
+
+authorized primary-h token SHA-256 `5ad21ccec9cb81e8999441fc43338589ecb92cf0ae08e7bc2b8b4a8c411f8d4e`는 artifact에 보존된다. 독립 review 뒤 active token 파일은 SHA-256 `80ffd8b486dbdd8087eb205f71137663cef0497d8ba8df74253743b302fe6f35`의 `AV-BS1-review-token-consumed-v1`, `next_stage_authorized=false` tombstone으로 교체해 descendant clean commit에서 h 재실행을 fail-closed한다. h2는 별도 token/fixture/schema/commit만 허용한다. 제품 코드와 GitHub 원격은 변경하지 않았다.
+
+### Exact next starting point
+
+1. H0 negative, H1 h artifact, checksum/resource/independent review와 consumed token을 기준 문서 commit으로 고정한다.
+2. h2 refined topology/cyclic tags, canonical `K/M/MΓ` hashes, sparse factor/resource preflight, h→h2 trend schema와 새 one-stage token을 결과값과 무관하게 별도 preregister한다.
+3. 새 clean commit과 h2 token 전에는 h2를 실행하지 않는다. h2 통과 뒤에도 h4는 별도 preregistration 전 금지한다.

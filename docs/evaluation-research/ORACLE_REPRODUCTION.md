@@ -2631,7 +2631,7 @@ if ($LASTEXITCODE -ne 0) { throw "G2_EQ0_SEED_STAGE_FAILED_$LASTEXITCODE" }
 
 Stage 1 pair screen은 `ddec4fb` 사전등록 뒤 실행돼 `passed_pair_screen_only`로 판정됐다. 이후 pair를 같은 PowerShell session에서 재확인·검토하고 Stage 2 medium circle을 시작했지만 첫 100 kHz mandatory operator gate에서 nonzero exit했다. `N=128` cancellation condition은 `2.91315e-8`, `N=256` raw `Yw` reciprocity/cancellation은 `1.41197e-8/1.63755e-7`로 `1e-8` gate를 넘었다. 따라서 현재 전체 상태는 `BLOCKED_INTERIOR_WEIGHTED_RECIPROCITY_PASSIVITY__G2_PAIR_PASSED_CIRCLE_100KHZ_RECIPROCITY_CANCELLATION_FAIL`이다.
 
-위 Stage 2b와 Stage 3 명령은 preregistered historical continuation으로만 보존한다. Stage 2가 실패했으므로 review token을 열 수 없고 같은 runner guard가 G2 `N=256→512`와 G2 EQ0 seed 실행을 차단한다. planned G2 2 GHz circle row, G2 `N=512`, G2 EQ0 seed와 G2 `N=288/576` full sweep은 미실행이다. gate 완화, 사후 대칭화, clipping 또는 higher precision만으로 pass를 만들지 않는다. 다음 실행 후보는 two-DtN subtraction이 없는 independent A–v volume-FEM boundary Schur reference candidate이며 현재 `preregistered_not_run`이다. production SAO 후보는 four-operator symmetric Calderón/Steklov–Poincaré 또는 Hamiltonian Schur DtN으로 별도 사전 등록한다.
+위 Stage 2b와 Stage 3 명령은 preregistered historical continuation으로만 보존한다. Stage 2가 실패했으므로 review token을 열 수 없고 같은 runner guard가 G2 `N=256→512`와 G2 EQ0 seed 실행을 차단한다. planned G2 2 GHz circle row, G2 `N=512`, G2 EQ0 seed와 G2 `N=288/576` full sweep은 미실행이다. gate 완화, 사후 대칭화, clipping 또는 higher precision만으로 pass를 만들지 않는다. 당시 다음 후보로 `preregistered_not_run`이던 two-DtN subtraction 없는 independent A–v volume-FEM boundary Schur는 이후 H1 coarse `h` stage-only gate를 통과했지만 `h2` 이후 convergence는 여전히 미사전등록·미실행이다. production SAO 후보는 four-operator symmetric Calderón/Steklov–Poincaré 또는 Hamiltonian Schur DtN으로 별도 사전 등록한다.
 
 G1 exterior structural gate는 `smn=max(|GG10,mn|,|GG20,mn|,ℓmℓn/(2π))`의 pair-normalized max와 Frobenius q change를 각각 `<=1e-10`, independently reversed pair와 raw transpose defect를 `<=1e-12`, `r0` rank-one relative residual을 `<=1e-8`로 판정한다. G2는 q20을 canonical, q40을 parity로 두며 self/touching/routed-near와 balanced final `Z'loop`에 기존 `0.1%/0.25°` gate를 적용한다. `r0`는 partial common mode가 아니라 q20 balanced `Z'loop`에서 비교하고, 관련 `P/Pout/AE/K`의 최대 `κ1u`로 `τinv=max(1e-12,50 max κ1u)<=1e-8`을 계산해 변화량 `<=τinv`를 요구한다. prospective interior는 `Yw=WYs` `[S·m]`, `Yw,floor=max(1e-12 S·m,1e-10 max|Yw|)`, `||Yw−Yw^T||F/max(||Yw||F,N Yw,floor)<=1e-8`로 검사한다. passivity는 `H(Yw)=(Yw+Yw^H)/2`의 raw `λmin >= -max(Yw,floor,1e-9||Yw||2)`다. Hermitian part 평가는 진단이지 operator 대칭화가 아니다. G1은 exterior power 원인 격리용 diagnostic이며 이 interior metric이나 converged A–v가 실패하면 M1은 계속 blocked다.
 
@@ -2831,7 +2831,7 @@ print(json.dumps({'case':'AV-BS1-CIRCLE-manifest-v1','runtime':runtime,
 '@ | python -
 ```
 
-이 block의 실행은 manifest preflight이며 `AV-BS1-CIRCLE preregistered_not_run` 상태를 바꾸지 않는다. solver fixture는 이 manifest가 독립 감사·commit된 뒤 별도 cycle에서 고정한다.
+이 block은 H1 실행 전의 historical manifest preflight만 재현하며, 현재의 `passed_AV_BS_h_stage_only_pending_h2_review` 상태를 변경하거나 physics solve를 다시 수행하지 않는다. H1 fixture와 실제 artifact의 현재 provenance는 아래 절 및 [`T1_AV_BOUNDARY_SCHUR_RESULTS.md`](T1_AV_BOUNDARY_SCHUR_RESULTS.md)에 별도로 고정한다.
 
 ## AV-BS1 standalone primary-h fixture H0 historical freeze
 
@@ -2904,9 +2904,37 @@ print(json.dumps({
 '@ | python -
 ```
 
-필수 핵심은 tags `1920`, tag hash `e80c75ed...`, maximum cancellation `2.1676835831040652e-13 < 5.788860430596403e-13`, canonical `K.nnz=10241`, canonical K hash `733c83ae...`, correction relative Frobenius `1.3572884739080543e-16`다. 16개 static test와 새 fixture/runner/token hash가 clean commit되기 전에는 `primary-h`를 다시 실행하지 않는다.
+필수 핵심은 tags `1920`, tag hash `e80c75ed...`, maximum cancellation `2.1676835831040652e-13 < 5.788860430596403e-13`, canonical `K.nnz=10241`, canonical K hash `733c83ae...`, correction relative Frobenius `1.3572884739080543e-16`다. 이 값은 H1 commit `057ed39`과 아래 artifact에서 모두 재현됐다.
 
-H1 static 결과는 `16 passed`, fixture SHA-256 `e2a1c8efff67873b57dc7a658b013e3e76d0c921988011f4c8e70cd25f00f8a7`, runner SHA-256 `dd880de721b9a688ae953c7363dc4a8b482ec1b26f59871d4ca8f83397eb2b7c`다. 현재 H1 token은 fixture/runner, H0 artifact, cyclic tag, canonical K certificate와 세 독립 감사 증거를 모두 검증한다.
+H1 static 결과는 `16 passed`, fixture SHA-256 `e2a1c8efff67873b57dc7a658b013e3e76d0c921988011f4c8e70cd25f00f8a7`, runner SHA-256 `dd880de721b9a688ae953c7363dc4a8b482ec1b26f59871d4ca8f83397eb2b7c`다. authorized token은 fixture/runner, H0 artifact, cyclic tag, canonical K certificate와 세 독립 감사 증거를 모두 검증했고, 성공 artifact 독립 review 뒤 consumed tombstone으로 교체됐다.
+
+## AV-BS1 H1 guarded `primary-h` result
+
+commit `057ed39f6a80dfe05aeab06c8bb8f6e6e3429a93`의 clean checkout에서 기존 `primary-h` 명령을 H1으로 한 번 실행했다. ignored artifact는 `validation-output/av-bs1/av-bs1-primary-h-20260814T190732Z.json`, file SHA-256은 `af17bbcc49cebc7e9ddb88e821ec0338a435fb2bf8ce51b117cfb3019b78b44d`다.
+
+다음은 solve를 재실행하지 않고 저장된 outer checksum과 범위만 검증한다.
+
+```powershell
+@'
+from pathlib import Path
+from hashlib import sha256
+import json
+p=Path(r'validation-output\av-bs1\av-bs1-primary-h-20260814T190732Z.json')
+raw=p.read_bytes(); wrapper=json.loads(raw); payload=wrapper['payload']
+canonical=json.dumps(payload,sort_keys=True,separators=(',',':'),ensure_ascii=False,allow_nan=False).encode()
+assert sha256(raw).hexdigest() == 'af17bbcc49cebc7e9ddb88e821ec0338a435fb2bf8ce51b117cfb3019b78b44d'
+assert sha256(canonical).hexdigest() == wrapper['payload_sha256'] == '3cdef96c8de1585acfe4cc256d63e6815b93be9906df51d9b97ff5d4f51f330b'
+assert payload['status'] == 'passed_AV_BS_h_stage_only_pending_h2_review'
+assert payload['mandatory_stage_pass'] is True
+assert payload['next_stage_authorized'] is False
+assert payload['fine_analytic_pass'] is None
+assert payload['mesh_convergence_pass'] is None
+assert payload['final_circle_pass'] is None
+print(payload['status'], payload['resource']['wall_seconds'])
+'@ | python -
+```
+
+raw reciprocity `1.072085475889738e-15`, reverse order `2.2332401790276927e-16`, minimum Hermitian eigenvalue/tolerance `9.256477814190828e-6 / 4.478026532708378e-13 S·m`, max power mismatch `4.7212709501079303e-14`와 max backward residual `4.181585185007905e-17`이 h-stage gate를 통과했다. coarse analytic trend max는 `1.161940848%`이고 fine/convergence 판정은 아직 없다. resource는 wall `1.4714704 s`, 11 samples, peak tree WS `185.2890625 MiB`, private/commit `1.4127578735 GiB`다. 이 결과는 h2, final circle, 8 GB laptop 또는 PowerSI evidence가 아니다.
 
 ## Focused regression
 
