@@ -630,6 +630,62 @@ else:
 
 frozen 핵심은 rank `2`, 두 null residual exact `0`, Hermitian eigenvalues 약 `[6.77e-21, 6.86e-18, 1.394e-4, 1.924e-1] S`, 그리고 `GlobalMnaError: saddle system is singular; topology has an unresolved island`다. 이는 expected fail-closed 증거이며 T1 global-composition pass가 아니다.
 
+## T1-M1 preregistered analytic screen
+
+아래 명령은 [`T1_M1_REFERENCE_SPEC.md`](T1_M1_REFERENCE_SPEC.md)의 DC resistance, 2 GHz skin depth와 quasi-TM extent gate를 재현한다. SAO–CIM/A–v solve가 아니며 `eligible`은 실행 가능한 frequency 범위만 뜻한다.
+
+```powershell
+@'
+from math import pi, sqrt
+import numpy as np
+
+c0 = 299_792_458.0
+mu0 = 4e-7*pi
+sigma = 59.6e6
+h = 50e-6
+t = 35e-6
+f = 2e9
+delta = sqrt(2/(2*pi*f*mu0*sigma))
+print(f"delta_2GHz_um={delta*1e6:.12f}")
+print("w_h Wr_w w_um Wr_um Deff_um kbDeff_2GHz fmax_MHz Rdc_loop_mOhm_per_10mm")
+for wh in (5, 10, 20, 50):
+    w = wh*h
+    for ratio in (1, 5, 20):
+        wr = ratio*w
+        deff = max(wr, w, h+2*t)
+        eta = 2*pi*f*deff/c0
+        fmax = 0.3*c0/(2*pi*deff)
+        rprime = 1/(sigma*w*t) + 1/(sigma*wr*t)
+        print(
+            wh, ratio, f"{w*1e6:.1f}", f"{wr*1e6:.1f}", f"{deff*1e6:.1f}",
+            f"{eta:.9f}", f"{fmax/1e6:.6f}", f"{rprime*.01*1e3:.9f}",
+        )
+
+w, t, wr, length = 120e-6, 17.5e-6, 1.2e-3, 4.2e-3
+rs = length/(sigma*w*t)
+rr = length/(sigma*wr*t)
+eta = 2*pi*f*max(wr, 75e-6+t+104e-6+t)/c0
+print("P2_Rsignal_mOhm", rs*1e3)
+print("P2_Rreturn_each_mOhm", rr*1e3)
+print("P2_Rreturn_parallel_mOhm", rr*.5*1e3)
+print("P2_Rloop_mOhm", (rs+rr/2)*1e3)
+print("P2_kbDeff_2GHz_vacuum", eta)
+
+Zp = np.diag((rs, rr, rr))
+Hg = np.asarray(((1.,0.),(0.,1.),(0.,1.)))
+Bg = np.asarray(((1.,),(-1.,)))
+saddle = np.block([[Zp,-Hg],[Hg.T,np.zeros((2,2))]])
+rhs = np.concatenate((np.zeros(3), Bg[:,0]))
+solution = np.linalg.solve(saddle,rhs)
+Iabs,vg = solution[:3],solution[3:]
+print("P2_DC_saddle_Iabs_A", Iabs.tolist())
+print("P2_DC_saddle_ZBg_mOhm", float((Bg[:,0]@vg)*1e3))
+print("P2_DC_saddle_residual", float(np.linalg.norm(saddle@solution-rhs)))
+'@ | python -
+```
+
+frozen 핵심은 `δ2GHz=1.457746488493 µm`이다. 12개 M1 geometry 중 2 GHz `|kb|Deff<=0.3`을 통과하는 것은 8개이며, `(w/h,Wr/w)=(10,20),(20,20),(50,5),(50,20)`은 각각 `0.419169/0.838338/0.523961/2.095845`로 차단된다. P2 artificial two-return DC는 signal `33.557046980 mΩ`, bundled return `1.677852349 mΩ`, loop `35.234899329 mΩ`; vacuum 2 GHz extent는 `0.0503003`이다. equipotential saddle은 `Iabs=[1,-0.5,-0.5] A`, `Z'Bg·l=35.234899329 mΩ`, residual은 binary64 출력에서 exact zero를 재현한다. 이는 동일 단면·전도도의 두 return에 대한 DC 결과이며 75/104 µm gap의 AC equal split을 가정하지 않는다.
+
 ## Focused regression
 
 ```powershell

@@ -101,10 +101,11 @@ N0만 현재 constitutive scope 전체에서 gate를 통과했다. T1-E0/M0의 `
 
 - smooth copper 0–2 GHz T1에는 skin/proximity/edge current를 포함한다. DC-only series R/L은 `T1a` screening이며 broadband pass가 아니다.
 - Cohn E0는 body edge를 exact node로 갖는 mesh h/32,h/64,h/128과 strip-edge padding 2h/4h/8h를 사용한다.
-- finite-width M1은 SAO–CIM perimeter panel `p,p/2,p/4`, geometric corner grading, outer crop 2/4/8과 independent A-phi FEM을 같은 0.5%/1% budget으로 비교한다.
+- finite-width M1은 homogeneous SAO–CIM perimeter panel `N,2N,4N`, singular self integral과 corner/opposing-projection grading을 사용한다. SAO의 unbounded log kernel에는 artificial crop을 두지 않고 independent A–v FEM만 outer crop `2/4/8 Deff`와 skin mesh `δ/2,δ/4,δ/8`를 사용한다. 두 방법을 같은 0.5%/1% budget과 terminal basis로 비교한다. 상세 식과 scope는 [`T1_M1_REFERENCE_SPEC.md`](T1_M1_REFERENCE_SPEC.md)를 따른다.
 - finite-length F는 동일 end fixture의 `Z(2l)−Z(l)` increment로 2-D p.u.l operator와 비교한다. raw finite 3-D Z의 exact length proportionality는 요구하지 않는다.
 - symmetric lumped π는 mandatory band 전체 `|γl|≤0.1`과 exact line matrix 0.5%/1% 비교를 모두 통과해야 한다. exact distributed stamp가 기본이다.
 - Trace ref 이름은 metadata screening일 뿐이다. actual return polygon, continuity, current split, terminal footprint와 same-crop field owner가 없으면 source-faithful 상태를 부여하지 않는다.
+- positive return artwork나 nearby same-net GND via graph가 확인돼도 signal trace/pad와 return terminal을 묶는 signed basis와 field owner가 없으면 `signal_to_return_operator_unproved`다. endpoint가 return void에 있으면 그 launch/antipad field는 straight 2-D trace template에서 분리한다. selected evidence는 [`T1_RETURN_CROP_MANIFEST.md`](T1_RETURN_CROP_MANIFEST.md)를 따른다.
 - reduced differential operator를 absolute nodal block으로 lift했을 때 gauge 외 null mode가 남으면 global MNA 조립을 금지한다. full partial/common-mode operator 또는 explicit local current constraint가 필요하다.
 
 ## Source-derived parameter 정책
@@ -142,7 +143,7 @@ N0 high-precision canonical parity는 `||ΔZ||F/max(||Z||F,nZfloor) ≤1e-12` �
 ## 실행 순서
 
 1. N0과 exact-minus-core identity case를 동결한다.
-2. T1-M1 SAO–CIM/A-phi FEM과 T1-F 3-D length-difference를 실행한다.
+2. T1-M1 SAO–CIM/A–v FEM과 T1-F 3-D length-difference를 실행한다.
 3. P1/P2 explicit-ref trace의 actual return polygon/connectivity와 absolute/core DtN owner를 증명한다.
 4. S1, V1/V2, A1, C1의 남은 analytic/mesh/crop/invariant blocker를 해결한다.
 5. PowerSI에서 trace-only, plane-neck, via-pair, pad/antipad, finite-port coupon과 반복 해석을 확보한다.

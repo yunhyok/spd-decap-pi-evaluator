@@ -10,9 +10,9 @@
 |---|---|---|---|
 | T1-E0 Cohn stripline | `passed_canonical_lossless_only` | zero-thickness, homogeneous, lossless centered stripline의 `C'` | finite thickness, conductor/dielectric loss, real return polygon |
 | T1-M0 periodic plate pair | `passed_analytic_identity_only` | 1-D periodic two-plate smooth-copper `R(f), L(f)`과 DC/skin limit | finite-width lateral edge/proximity current crowding, open-boundary field, finite end |
-| T1-M1 finite-width return | `not_run` | 없음 | SAO–CIM panel/corner/crop convergence와 independent A-phi FEM |
+| T1-M1 finite-width return | `specified_not_run` | homogeneous SAO–CIM / A–v의 동일 terminal basis와 실행 gate가 고정됨 | SAO panel/self/conditioning과 independent A–v mesh/crop convergence 실행 |
 | T1-F finite-length | `not_run` | 없음 | 3-D PEEC/FastHenry length-difference de-embedding |
-| T1 source candidates | `parameter_evidence_ready` | width, endpoint, layer, selected stack/material provenance | actual return polygon/connectivity/current owner |
+| T1 source candidates | `geometry_and_net_graph_evidence_ready` | width, endpoint, layer, selected stack/material, selected P1/P2 return artwork/void와 same-net graph | terminal-to-return signed current/field owner와 same-crop core partition |
 | T1 global composition | `blocked_balanced_projection_and_return_partition` | reduced differential operator를 곧바로 stamp할 수 없다는 것 | absolute partial operator 또는 explicit local current constraint, same-crop return/core partition |
 | **T1 전체** | **`blocked`** | 두 manufactured subcase만 부분 통과 | M1/F/source-faithful/global gate 전부 통과 필요 |
 
@@ -30,11 +30,11 @@
 |---|---|---|---|---|
 | P1 TOP | `Trace4004/4005/4006`, lines 725146–725154; width 914.4/600/500 µm; length 889/800/640 µm | TOP 35 µm `COPPER_1`; 203.2 µm FR-4; `Plane$IN43_DGND` 30.48 µm | record `LowerRef=Plane$IN43_DGND` | `trace_record_explicit_connectivity_unproved` |
 | P2 TOP | `Trace9054/9055/9056`, lines 3577641–3577652; width 600 µm; length 900 µm | TOP 35 µm copper; 208 µm MEGTRON-6; `Signal$IN01_GND` 17.5 µm | record `LowerRef=Signal$IN01_GND` | `trace_record_explicit_connectivity_unproved` |
-| P2 inner manufactured | `Trace13305`, lines 3553874–3553875; `Node30557→30558`; width 120 µm; length 4.2 mm; IN24 | conductor 17.5 µm; upper/lower media 75/104 µm; `εr=3.49/3.31`, `tanδ=.002` at 1 GHz only; copper `σ20C=59.6 MS/m` | no Trace ref; neighboring IN23/IN25 are GND by stackup only | `derived_stackup_only`; manufactured coupon only |
+| P2 inner manufactured | `Trace13305`, lines 3553874–3553875; `Node30557→30558`; width 120 µm; length 4.2 mm; IN24 | conductor 17.5 µm; upper/lower media 75/104 µm; `εr=3.49/3.31`, `tanδ=.002` at 1 GHz only; copper `σ20C=59.6 MS/m` | Trace ref 없음; crop에서 IN23/IN25 positive GND artwork와 GND-via graph 확인, signed operator는 미증명 | `return_shape_geometry_present` / `return_net_graph_present`; manufactured coupon only, source-faithful blocked |
 | P3 | `Trace109521/22/23`; width 25 µm; length 171.1/160/130 µm; L12 | 20 µm copper; 30 µm ABF-GL102 toward L13 DGND | no Trace ref | `derived_stackup_only`; source-faithful T1 blocked |
 | P4 | `Trace109520/21/22`; width 25 µm; length 180/130/130 µm; L11 | 20 µm copper; 30 µm ABF-GL102 toward L10 DGND | no Trace ref | `derived_stackup_only`; source-faithful T1 blocked |
 
-P3/P4에는 width가 source에 없는 Trace도 각각 239,135/239,070개 있다. 이 행들은 인접 record나 PowerSI curve로 채우지 않는다. P1/P2의 explicit ref도 실제 GND polygon crop, continuity와 terminal-to-return current path를 증명하기 전에는 product-admissible return으로 승격하지 않는다.
+P3/P4에는 width가 source에 없는 Trace도 각각 239,135/239,070개 있다. 이 행들은 인접 record나 PowerSI curve로 채우지 않는다. P1/P2의 selected explicit-ref crop은 실제 GND artwork와 nearby GND Trace/Via-to-plane graph까지 확인했지만, signal Trace/pad를 return owners에 묶는 raw current/field record가 없다. P2 `Trace9054/55/56`의 free endpoint는 IN01 GND negative-circle void 중심과 일치한다. 따라서 net graph를 electromagnetic return operator로 승격하지 않으며 세부 owner는 [`T1_RETURN_CROP_MANIFEST.md`](T1_RETURN_CROP_MANIFEST.md)를 따른다.
 
 ### 전체 Trace streaming 분류
 
@@ -66,7 +66,7 @@ finite thickness, skin effect, proximity, edge current crowding과 arbitrary rec
 
 Patel–Triverio의 arbitrary-shape formulation은 rectangular/trapezoidal/multiple-return 예제를 FEM과 비교하고 published host에서 frequency당 약 0.04–0.52 s를 보고했다. 이 문헌 timing은 현재 노트북 성능 증거가 아니다.
 
-독립 reference는 skin-depth 방향 graded mesh를 쓰는 2-D volume-current A-phi FEM이다. finite end, bend와 launch는 3-D PEEC/FastHenry를 사용하되 product dependency가 아니라 reference로만 둔다. Hammerstad/Jensen류 식은 screening/asymptotic anchor이며 oracle이 아니다.
+독립 reference는 skin-depth 방향 graded mesh를 쓰는 2-D volume-current A–v FEM이다. finite end, bend와 launch는 3-D PEEC/FastHenry를 사용하되 product dependency가 아니라 reference로만 둔다. Hammerstad/Jensen류 식은 screening/asymptotic anchor이며 oracle이 아니다. 1차 dense SAO는 homogeneous, nonmagnetic, lossless background와 simply connected copper에 한정하며 exact 식과 fixture는 [`T1_M1_REFERENCE_SPEC.md`](T1_M1_REFERENCE_SPEC.md)에 고정한다.
 
 ### 현행 helper의 제한
 
@@ -238,10 +238,10 @@ board crop에서는 signal copper, return copper, magnetic/electric field, termi
 
 ## 다음 실행 순서
 
-1. T1-M1 finite-width `w/h={5,10,20,50}`, return-width ratio `{1,5,20}`, outer crop `{2,4,8}`를 SAO–CIM과 independent A-phi FEM으로 비교한다.
-2. perimeter panel `p,p/2,p/4`와 geometric corner grading에서 raw `Z'`, loss, reciprocity, passivity, current conservation을 0.5%/1% gate로 검사한다.
-3. P2 `Trace13305`는 source-derived manufactured asymmetric stripline으로만 실행한다. 실제 board case는 IN23/IN25 GND polygon crop과 connectivity가 증명될 때까지 차단한다.
-4. P1/P2 explicit-ref candidate는 actual return polygon과 terminal-to-return continuity를 증명하고 same-crop core/DtN owner를 만든다.
+1. two-radius circle Bessel/Fourier DtN gate로 SAO interior를 먼저 검증한 뒤 T1-M1 finite-width `w/h={5,10,20,50}`, return-width ratio `{1,5,20}`를 homogeneous SAO–CIM과 independent A–v FEM으로 비교한다. SAO는 unbounded log kernel, A–v만 outer crop `{2,4,8}Deff`를 사용한다.
+2. perimeter panel `N,2N,4N`, singular self integral, corner/opposing-projection grading과 volume skin mesh `δ/2,δ/4,δ/8`에서 raw `Z'`, loss, reciprocity, passivity, current conservation을 0.5%/1% gate로 검사한다.
+3. P2 `Trace13305`는 source-derived manufactured asymmetric stripline으로만 실행한다. 실제 board case는 exact finite-width polygon/void boolean tolerance, signed signal-to-return current/field owner와 same-crop core/DtN partition이 증명될 때까지 차단한다.
+4. P1/P2 selected crop의 actual return artwork/net graph 증거에서 terminal-to-return signed current basis와 same-crop core/DtN owner를 만든다. 가까운 via를 return으로 강제하지 않는다.
 5. finite-length 3-D reference는 동일 end fixture의 `Z(2l)−Z(l)`로 p.u.l increment를 구해 2-D 결과와 비교한다.
 6. full partial/common-mode operator 또는 explicit differential-constraint adapter가 없으면 global MNA promotion을 차단한다.
 7. smooth-copper T1을 0–2 GHz에서 통과하기 전 roughness fitting을 시작하지 않는다. roughness source가 없는 네 pair에는 fitted roughness를 주입하지 않는다.

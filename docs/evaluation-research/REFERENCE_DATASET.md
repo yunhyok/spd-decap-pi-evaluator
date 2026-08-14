@@ -83,6 +83,8 @@ P1의 concrete refs는 TOP→`Plane$IN43_DGND` 5,600개와 BOTTOM→`Plane$IN64_
 
 P3/P4의 모든 endpoint는 같은 Signal layer로 해석되지만 raw Trace grammar에 routed/plane-mesh semantic flag가 없다. 약 39%의 Trace net이 DGND 등 conductor-layer token과 일치하는 사실은 mixed topology 가능성을 보일 뿐, 모든 Trace가 plane mesh 또는 physical route라는 판정 근거가 아니다. T1 세부 owner와 candidate raw line은 [`T1_TRACE_ORACLE_RESULTS.md`](T1_TRACE_ORACLE_RESULTS.md)에 고정한다.
 
+P1/P2 selected explicit-ref crop에서는 named return artwork와 nearby same-net GND Trace/Via-to-plane graph가 source에 존재한다. 그러나 raw SPD에는 candidate signal Trace/pad와 그 return owners를 묶는 signed current/field owner가 없다. P2 `Trace9054/55/56` free endpoint는 IN01 GND negative-circle void 중심과 일치하므로 endpoint 아래 plane copper도 없다. 이 단계는 `return_shape_geometry_present`와 `return_net_graph_present`일 뿐 `signal_to_return_operator_unproved`; exact crop owner와 line/byte evidence는 [`T1_RETURN_CROP_MANIFEST.md`](T1_RETURN_CROP_MANIFEST.md)에 고정한다.
+
 layer row에 numeric conductivity token은 없지만 explicit `Material=COPPER/...`가 usable `.MetalModel`에 연결되면 `resolved_sigma=derived_material_table`로 분류한다. 이를 conductivity wholly absent 또는 fitted default로 부르지 않는다.
 
 ## Recovered PowerSI provenance and confounds

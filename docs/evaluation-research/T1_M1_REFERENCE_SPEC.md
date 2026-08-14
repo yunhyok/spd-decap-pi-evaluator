@@ -1,0 +1,370 @@
+# SPD Decap PI Evaluator v0.22.0 — T1-M1 SAO–CIM / A–v Reference Specification
+
+최종 갱신: 2026-08-14 (Asia/Seoul)
+
+이 문서는 finite-width straight conductor와 explicit return의 smooth-copper broadband series operator를 검증할 T1-M1 실행 계약을 고정한다. 제품 parser/solver 코드는 변경하지 않았고, 아래 두 기준기는 아직 구현·실행되지 않았다. 따라서 현재 판정은 **`specified_not_run`** 이며 T1 전체와 global composition은 계속 `blocked`다.
+
+## 범위와 독립성
+
+| 항목 | 1차 범위 | 현재 상태 |
+|---|---|---|
+| normative oracle | dense pulse SAO–CIM; homogeneous, nonmagnetic, lossless background; simply connected copper contours | `specified_not_run` |
+| independent reference | 2-D volume-current `A_z–v` magnetoquasistatic P1 FEM | `specified_not_run` |
+| authoritative output | 동일한 conductor order와 balanced current basis의 complex `Z'(f)` | 없음 |
+| 별도 electrostatic block | transverse `C'`; lossy dielectric이면 causal `G'/C'` | T1-E0 외 미실행 |
+| source-derived P2 | `Trace13305` 치수의 artificial continuous-return coupon | manufactured-only |
+| source-faithful board | actual return polygon, transition, same-crop core/DtN owner | blocked |
+| product/global stamp | absolute partial operator 또는 explicit balanced adapter | blocked |
+
+1차 SAO–CIM에 stratified Green function, lossy dielectric, semiconductor longitudinal current 또는 multiply connected conductor를 몰래 근사해서 넣지 않는다. 이들은 각각 `LAYERED_BACKGROUND_UNSUPPORTED`, `LOSSY_BACKGROUND_UNSUPPORTED`, `LONGITUDINAL_CURRENT_DEFINITION_UNSUPPORTED`, `CONTOUR_TOPOLOGY_UNSUPPORTED`로 차단한다.
+
+## 공통 convention과 terminal basis
+
+- peak phasor와 `e^{jωt}`를 사용한다.
+- conductor와 current의 양의 방향은 모두 `+z`다.
+- 모든 단순연결 contour는 counter-clockwise다. panel tangent가 `t=(tx,ty)`이면 outward normal은 `n=(ty,-tx)`다.
+- reciprocity에는 ordinary transpose `T`, power에는 conjugate transpose `H`를 사용한다.
+- raw conductor current는 반드시 balanced group basis `Bg` 또는 prescribed-current return incidence `T`로 구동한다. 각 열의 합이 0이 아니면 `UNRESOLVED_EXTERNAL_RETURN`이다.
+- 동일한 geometry라도 conductor order, contour orientation, terminal grouping과 current basis가 다르면 같은 oracle case가 아니다.
+
+## SAO–CIM interior operator
+
+conductor `p`의 내부와 동일 contour를 background로 채운 equivalent problem의 wavenumber는 각각
+
+```text
+kp = sqrt(ω μp (ω εp - j σp))
+kb = ω sqrt(μb εb)
+```
+
+다. `e^{jωt}`, `ω>0`에서 passive conductor의 `kp`는 `Re(kp)>0`, `Im(kp)<0`인 제곱근 branch를 쓴다. lossless positive-real background의 `kb`는 positive-real branch다. 뒤의 Bessel 함수와 `ln(kp a/2)`는 모두 이 `kp`와 같은 analytic continuation의 principal complex log를 사용한다. branch 조건을 만족하지 않거나 branch-cut 근처에서 연속성이 깨지면 `BESSEL_BRANCH_UNRESOLVED`로 차단한다.
+
+contour를 straight pulse panel로 나누고 panel midpoint의 longitudinal electric field `E`, tangential magnetic field `H`, equivalent surface current `J`를 coefficient로 둔다. Patel–Triverio convention은
+
+```text
+J = H - H_tilde = Ys E
+U E = P H
+```
+
+다. panel `n`의 길이는 `ℓn`, source point는 `r'`, collocation midpoint는 `rm`, `d=|r'-rm|`다. `m≠n`에서
+
+```text
+Umn = (j k / 2) ∫γn ((r'-rm)·n')/d
+      [C0 J1(kd) - j Y1(kd)] ds'
+
+Pmn = (ω μ / 2) ∫γn [C0 J0(kd) - j Y0(kd)] ds'
+```
+
+이고 straight pulse의 jump term은 `Umm=1`이다. off-diagonal integral은 최소 5-point Gauss로 시작하되 5→10 또는 10→20 parity를 보고한다.
+
+`Pmm`의 Neumann singularity를 일반 quadrature로 통과시키지 않는다. `a=ℓm/2`,
+
+```text
+g(s)     = C0 J0(ks) - j Y0(ks)
+g_reg(s) = g(s) + (2j/π) ln(s/a)
+
+Pmm = ω μ [ ∫0^a g_reg(s) ds + 2j a/π ]
+```
+
+로 singular subtraction하고, 작은 `|ka|`에서는
+
+```text
+Pmm ~ ω μ a [ C0 - (2j/π)(ln(ka/2) + γE - 1) ]
+```
+
+과 비교한다. inverse를 만들지 않고
+
+```text
+Din  = solve(P, U)
+Dout = solve(Pout, Uout)
+Ys_p = Din - Dout
+```
+
+를 계산한다. 전체 `Ys`는 conductor별 block diagonal이다.
+
+## Homogeneous unbounded exterior와 complex `Z'`
+
+전체 panel 수 `N`, conductor 수 `Pc`에 대해 `W=diag(ℓ1,…,ℓN)`이고 `Q[N,Pc]`는 해당 conductor panel row에 1을 둔다.
+
+```text
+Iabs = Qᵀ W J
+```
+
+homogeneous magnetoquasistatic exterior kernel은
+
+```text
+g0(r,r') = (1/2π) ln(|r-r'|/r0)
+G0mn     = ∫γn g0(rm,r') ds'
+```
+
+다. `r0=1 m`를 manifest에 고정한다. straight segment는 analytic log integral을 사용하고 self term은
+
+```text
+G0mm = ℓm/(2π) [ln(ℓm/(2r0)) - 1]
+```
+
+이다. 이 Green function은 무한공간 operator이므로 SAO–CIM에 인공 magnetic outer crop을 추가하지 않는다.
+
+arXiv v1의 식 (43)–(44)는 `Ys`와 `Re/Im`이 누락되어 `R`과 `L`이 같은 식처럼 보인다. 구현의 authoritative complex 식은 출판본과 동일 저자 선행 유도에 따라 다음으로 고정한다.
+
+```text
+A = I - jω μb Ys G0
+X = solve(A, Ys Q)
+Kc = Qᵀ W X
+Z'_partial = solve(Kc, I_Pc)
+
+R' = Re(Z'_partial)
+L' = Im(Z'_partial)/ω
+```
+
+복소 `Z'_partial`이 원본 결과이며 `R'`, `L'`는 reporting view다. 여기서 `X`는 panel response이고 current basis 기호와 공유하지 않는다. reference conductor `r`에 대한 prescribed loop-current incidence `T`의 각 열을 `es-er`로 두면
+
+```text
+Iabs    = T Iloop
+Vloop   = Tᵀ Vabs
+Z'_loop = Tᵀ Z'_partial T
+```
+
+이다. 이 식은 conductor별 current가 이미 지정된 one-reference mode에만 사용한다.
+
+여러 return conductor를 양 끝에서 묶는 manufactured fixture는 모든 conductor를 먼저 보존한다. `Hg[Pc,Ng]`를 conductor-to-equipotential-group map, `Bg[Ng,Nm]`를 zero-sum group-current basis라 두고 다음 saddle solve로 return current split을 구한다.
+
+```text
+[ Z'_partial  -Hg ] [Iabs] = [  0   ]
+[    Hgᵀ       0 ] [ vg ]   [ Bg q ]
+
+Z'_Bg = Bgᵀ vg
+```
+
+첫 행은 `Vabs=Z'_partial Iabs=Hg vg`, 둘째 행은 group별 total current constraint다. return current를 50:50으로 지정하지 않는다. `ω=0`에는 아래 `diag(1/(σA))`를 `Z'_partial`에 넣으며, 동일 단면·전도도를 가진 두 P2 artificial return의 DC parallel resistance를 재현해야 한다. 75/104 µm face gap이 다른 AC case의 equal split을 가정하지 않는다. `TᵀZ'_partial T`는 prescribed-current mode의 별도 결과이고 이 equipotential 축약을 대신하지 않는다.
+
+`r0` 변경은 partial common mode에는 영향을 줄 수 있지만 zero-sum `Z'_loop`와 `Z'_Bg`에서는 condition-aware roundoff 범위로 소거돼야 한다. conductor permutation, reference choice와 mirror transform도 같은 물리 basis로 되돌린 뒤 invariant여야 한다. 시험 집합은 `r0={0.1,1,10} m`이며 mode matrix dimension을 `nm`이라 할 때
+
+```text
+εinv = ||Z'(r0)-Z'(1 m)||F
+       / max(||Z'(1 m)||F, sqrt(nm) Z'floor)
+```
+
+로 정규화한다. `εinv<=τinv=max(1e-12,50 max(κ1 u))`여야 한다. 여기의 `κ1 u`는 아래 condition certificate의 관련 solve 전체 최댓값이고 `Z'floor`도 아래 frequency별 정의를 사용한다. `τinv>1e-8`이면 invariance pass를 주지 않고 conditioning blocker로 남긴다.
+
+## DC, `C0`와 quasi-TM 범위
+
+정확한 `ω=0`을 CIM 식에 대입하지 않는다. 별도 DC branch는
+
+```text
+R'_dc,partial = diag(1/(σp Ap))
+R'_dc,loop    = Tᵀ R'_dc,partial T
+```
+
+를 사용한다. arbitrary-shape `Ldc`는 A–v magnetostatic energy가 소유한다. positive-frequency SAO 결과는 `R→Rdc`, finite `Im(Z)/ω→Ldc`로 수렴해야 한다.
+
+Patel–Triverio의 empirical conditioning switch는 conductor별 minimum transverse dimension `Δp`와 skin depth `δp=sqrt(2/(ωμpσp))`에 대해
+
+```text
+C0 = 1e6  if Δp/δp <= 0.5
+C0 = 1    otherwise
+```
+
+다. 같은 conductor의 interior와 equivalent-background operator에 같은 `C0`를 쓴다. `Δ/δ={0.2,0.35,0.5}` 전환 영역에서는 두 값을 모두 계산해 `Z'` overlap을 검증한다.
+
+homogeneous log exterior는 magnetoquasistatic/quasi-TM model이다. conductor union의 최대 transverse span을 `Deff`라 두고 각 frequency에서
+
+```text
+|kb| Deff <= 0.3
+```
+
+을 engineering preregistration으로 사용한다. 이를 넘는 case는 결과를 clip하지 않고 `BLOCKED_QUASI_TM_EXTENT`로 남긴다. unbounded SAO exterior에는 별도의 current edge가 없으므로 edge-tail gate를 만들지 않는다. finite A–v reference에서는 `8Deff` solution의 magnetic energy로 `Wm(Ω8\Ω4)/Wm(Ω8)<0.1%`를 별도 검사한다. `ΩR`는 conductor union의 bounding box를 모든 방향으로 `R Deff` 확장한 영역이다.
+
+## 독립 2-D volume-current `A_z–v` FEM
+
+`a=A_z(x,y)`이고 group `g`의 longitudinal scalar-potential drop gradient를 `v_g=-∂φ_g/∂z` `[V/m]`라 둔다. conductor region `m`이 group `g(m)`에 속하면
+
+```text
+Ez = v_g(m) - jω a
+Jz = σm Ez
+∇t·(μ^-1 ∇t a) = -Jz
+```
+
+다. P1 basis `Ni`, conductor-region-to-group map `Hg`에 대해
+
+```text
+Kij = ∫Ω μ^-1 ∇Ni·∇Nj dA
+Mij = Σm ∫Ωm σm Ni Nj dA
+Fim = ∫Ωm σm Ni dA
+Gmm = ∫Ωm σm dA
+
+(K + jωM) a - F Hg v = 0
+i = Hgᵀ(G Hg v - jω Fᵀ a) = Bg q
+```
+
+를 푼다. 실제 block system은
+
+```text
+[ K+jωM          -F Hg ] [a] = [  0   ]
+[ jωHgᵀFᵀ  -HgᵀG Hg ] [v]   [-Bg q ]
+```
+
+다. outer boundary의 `a=0`은 `A_z` reference를 고정하는 동시에 artificial magnetic truncation boundary를 부과한다. 이 경계는 `{2,4,8} Deff` crop sequence가 수렴할 때만 허용한다. `Bg`의 모든 열은 zero-sum이어야 한다. unit modal excitation의 authoritative result는 `Z'_Bg=Bgᵀv`이고 conductor별 current share와 `Hg`, `Bg`, crop을 함께 보존한다.
+
+SAO와 A–v가 같은 conductor order/group/current basis가 아니면 cross-method error를 계산하지 않는다. A–v는 conductor `R'+jωL'`만 주며 `C'/G'`는 별도의 transverse electroquasistatic solve가 소유한다.
+
+DC에서는 `ω=0`을 직접 풀어 uniform-current analytic `Rdc`와 비교한다. magnetostatic unit-current solution `k,l`의 field로
+
+```text
+L'Bg[k,l] = ∫Ω μ Hk·Hl dA
+```
+
+를 계산한다. peak-phasor power certificate는
+
+```text
+Re(0.5 iᴴv) = 0.5 ∫Cu σ|E|² dA
+Im(0.5 iᴴv) = 2ω Wm,
+Wm = 0.25 ∫Ω μ|H|² dA
+```
+
+다.
+
+SAO의 peak-phasor dissipative power certificate는 independent current column마다
+
+```text
+Pterm = 0.5 Iabsᴴ Z'_partial Iabs
+Pbdry = 0.5 Eᴴ W J
+
+εP = |Re(Pterm)-Re(Pbdry)|
+     / max(|Re(Pterm)|, |Re(Pbdry)|, 1e-18 W/m)
+```
+
+로 고정한다. `εP<=1e-8`이어야 하며 complex power 전체나 크기만 비교해서 부호 오류를 숨기지 않는다.
+
+## Canonical M1 fixture
+
+background는 `εb=ε0`, `μb=μ0`, lossless다. return top face를 `y=0`, signal bottom face를 `y=h`에 둔다.
+
+```text
+h = 50 µm
+ts = tr = 35 µm
+σs = σr = 59.6 MS/m
+signal = [-w/2,w/2] × [h,h+ts]
+return = [-Wr/2,Wr/2] × [-tr,0]
+w/h = {5,10,20,50}
+Wr/w = {1,5,20}
+f = {DC anchor, 100 kHz, 1,10,100,500 MHz,1,2 GHz}
+```
+
+DC analytic loop resistance over 10 mm과 2 GHz `|kb|Deff` screening은 다음과 같다.
+
+| w/h | Wr/w | w / Wr (µm) | 10 mm Rdc (mΩ) | 2 GHz `|kb|Deff` | 2 GHz status |
+|---:|---:|---:|---:|---:|---|
+| 5 | 1 | 250 / 250 | 38.350911 | 0.010479 | eligible |
+| 5 | 5 | 250 / 1,250 | 23.010547 | 0.052396 | eligible |
+| 5 | 20 | 250 / 5,000 | 20.134228 | 0.209585 | eligible |
+| 10 | 1 | 500 / 500 | 19.175455 | 0.020958 | eligible |
+| 10 | 5 | 500 / 2,500 | 11.505273 | 0.104792 | eligible |
+| 10 | 20 | 500 / 10,000 | 10.067114 | 0.419169 | blocked at 2 GHz |
+| 20 | 1 | 1,000 / 1,000 | 9.587728 | 0.041917 | eligible |
+| 20 | 5 | 1,000 / 5,000 | 5.752637 | 0.209585 | eligible |
+| 20 | 20 | 1,000 / 20,000 | 5.033557 | 0.838338 | blocked at 2 GHz |
+| 50 | 1 | 2,500 / 2,500 | 3.835091 | 0.104792 | eligible |
+| 50 | 5 | 2,500 / 12,500 | 2.301055 | 0.523961 | blocked at 2 GHz |
+| 50 | 20 | 2,500 / 50,000 | 2.013423 | 2.095845 | blocked at 2 GHz |
+
+blocked geometry도 `f<=0.3c/(2πDeff)`의 저주파 trend에는 사용할 수 있다. threshold는 각각 1.4314 GHz, 715.70 MHz, 1.1451 GHz, 286.28 MHz다. 이 screening은 solver pass가 아니다.
+
+### SAO panel sequence
+
+- 모든 physical corner, opposing-conductor corner의 orthogonal projection, closest-gap point를 edge anchor로 넣는다. wide return의 중앙 interaction region을 corner-only grading의 큰 panel 하나로 덮지 않는다.
+- 각 anchor interval의 양 끝에서 midpoint 방향으로 growth `g=1.5` geometric panels를 배치한다.
+- half-interval `L/2`, panel count `M`이면 `Δi=(L/2)(g-1)g^i/(g^M-1)`다.
+- seed의 corner/interaction minimum panel은 2 GHz skin depth `δ=1.457746 µm`의 `δ/4` 이하이고, opposing projection 주변 최대 panel은 `h/8` 이하다.
+- seed panel 전체를 이등분한 `N,2N,4N` nested sequence를 사용한다. sharp corner의 uniform-only mesh는 canonical pass가 아니다.
+
+### A–v mesh/crop sequence
+
+- conductor normal-direction target는 `δ/2, δ/4, δ/8`; fine level은 2 GHz에서 skin depth당 8개 이상의 P1 layer다.
+- conductor interior와 exterior growth ratio는 `<=1.3`; corner와 closest-gap zone을 함께 refine한다.
+- inverted/poor-quality triangle은 차단한다.
+- outer Dirichlet boundary는 conductor union에서 `{2,4,8}Deff`만큼 확장한 nested box로 둔다. resource ceiling을 넘으면 `MESH_RESOURCE_BLOCKED`이며 crop이나 skin resolution을 몰래 줄이지 않는다.
+
+## P2 `Trace13305` manufactured fixture
+
+actual board return은 [`T1_RETURN_CROP_MANIFEST.md`](T1_RETURN_CROP_MANIFEST.md)의 near-tangent void/via evidence 때문에 차단돼 있다. 다음은 source 치수를 사용한 artificial continuous-return coupon이다.
+
+```text
+signal width/thickness/length = 120 µm / 17.5 µm / 4.2 mm
+top/bottom face gap           = 75 µm / 104 µm
+top/bottom return width       = 1.2 mm each, artificial
+return thickness              = 17.5 µm each
+σ20C                          = 59.6 MS/m
+return terminal contract      = both returns equipotential at both end planes;
+                                current split solved, not forced 50:50
+```
+
+analytic DC checks are signal `33.557046980 mΩ`, each return `3.355704698 mΩ`, bundled returns `1.677852349 mΩ`, loop `35.234899329 mΩ`. vacuum `|kb|Deff` at 2 GHz is `0.0503003`. A–v MQS R/L sensitivity는 가능하지만 actual two-dielectric `C'/G'`, layered full quasi-TM와 source-faithful return claim은 허용하지 않는다. P2 material의 1 GHz single-point `Dk/Df`를 0–2 GHz causal law로 늘리지 않는다.
+
+## Mandatory circle DtN validation
+
+M1 사각형을 풀기 전에 isolated solid circular copper contour로 interior `Ys` 자체를 검증한다. background는 vacuum `μb=μ0, εb=ε0`, conductor는 `μp=μ0, εp=ε0, σp=59.6 MS/m`, radius는 `a={17.5 µm,0.5 mm}`, frequency는 `{100 kHz,1,10,100,500 MHz,1,2 GHz}`다. CCW uniform angular pulse mesh `N={128,256,512}`와 Fourier modes `m={0,1,2,3,4}`를 사용한다.
+
+같은 complex branch에서 analytic DtN eigenvalue는
+
+```text
+Dm(k)  = k/(jωμ) · Jm'(ka)/Jm(ka)
+Ys,m   = Dm(kp) - Dm(kb)
+```
+
+다. `Jm'/Jm`는 scaled Bessel 또는 continued ratio로 평가하고 numerator와 denominator를 따로 unscaled 계산해 overflow를 허용하지 않는다. numerical eigenvalue는 normalized sampled Fourier vector `em,n=exp(jmθn)`에 대한 Rayleigh quotient `emᴴ W Ys em / (emᴴ W em)`로 추출한다. `Ys,floor=max(1e-12 S,1e-10 max_m|Ys,m|)`를 쓰고, fine `N=512`의 normalized complex error `|ŷm-Ys,m|/max(|Ys,m|,Ys,floor)`는 각 mode/frequency에서 `<=0.5%`여야 한다. phase error는 analytic과 numerical magnitude가 모두 `>=10 Ys,floor`인 mode에만 적용하며 `<=0.25°`다. `N=256→512`도 아래 `0.5%/1%/0.25°` convergence gate를 통과해야 한다. 두 radius가 `C0` branch 양쪽과 crossover를 포함하는지 기록하며 branch continuity, `m↔-m` degeneracy와 raw residual을 함께 보존한다.
+
+## Numerical certificate와 promotion gate
+
+각 frequency, mesh와 independent current column에서 raw 값을 보존하고 다음을 모두 검사한다.
+
+condition certificate의 machine unit은 binary64 `u=2^-53`이다. 각 `P`, `Pout`, exterior `A`, terminal `Kc`, equipotential saddle와 A–v saddle에 대해 먼저 row max-norm, 이어 column max-norm을 1로 만드는 deterministic diagonal scaling `Aeq=Dr A Dc`를 적용하고 `Dr,Dc`를 기록한다. `κ1=||Aeq||1 ||Aeq^-1||1`은 LU/sparse solve에 대한 1-norm inverse estimator로 구하며 explicit inverse는 만들지 않는다. 보고값은 `κu=κ1 u`이고 관련 solve 각각 `<=1e-8`이어야 한다.
+
+matrix convergence에서 frequency별 `Z'floor=max(1e-9 Ω/m,1e-9 maxij|Z'fine,ij|)`로 둔다. `max(|Z'medium,ij|,|Z'fine,ij|)>=Z'floor`인 entry만 `meaningful element`의 magnitude gate에 포함하고, 그보다 작은 entry는 absolute error와 floor-normalized error만 보고한다. phase gate는 비교 양쪽 magnitude가 모두 `>=10 Z'floor`인 entry에만 적용한다. log-weight RMS는 mandatory positive-frequency set에서 같은 meaningful magnitude mask의 complex relative error로 계산한다.
+
+| gate | threshold |
+|---|---|
+| interior `PD=U` backward residual | `<=1e-10` |
+| exterior/terminal or FEM saddle backward residual | `<=1e-10` |
+| equilibrated condition certificate | 위에서 정의한 각 `κ1(Aeq)u<=1e-8`; 아니면 higher precision/alternate `C0` 또는 blocked |
+| integrated current and zero-sum residual | `<=1e-10` |
+| reciprocity before symmetrization | relative Frobenius `<=1e-8` |
+| passivity | 각 `Z'mode∈{Z'_loop,Z'_Bg}`에서 `λmin(Hermitian(Z'mode)) >= -max(1e-12 Ω/m,1e-9||Z'mode||2)` |
+| SAO boundary power identity | relative mismatch `<=1e-8` |
+| A–v loss/magnetic power identities | each `<=1e-8` |
+| `C0=1` vs `1e6` overlap | Frobenius `<=0.05%`, max `<=0.1%` |
+| quadrature doubling | `<=0.1%` |
+| medium→fine panel/mesh | log-weight RMS `<=0.5%`, max meaningful element `<=1%`, phase `<=0.25°` |
+| A–v crop 4→8 `Deff` | same `0.5%/1%/0.25°` gate |
+| A–v far-field shell | `8Deff` solution에서 `Wm(Ω8\Ω4)/Wm(Ω8)<0.1%` |
+| converged SAO vs converged A–v | same basis에서 `0.5%/1%/0.25°` |
+| invariance | reference/permutation/mirror와 `r0={0.1,1,10} m`에서 `<=τinv`; `τinv=max(1e-12,50 max κ1u)<=1e-8` |
+
+사전 symmetrization, negative-eigenvalue clipping, pole 건너뛰기, unconverged result 보간은 금지한다.
+
+## Resource preflight와 cache
+
+- dense SAO 1차 ceiling은 total panel `N<=800`이다. 한 complex128 `800×800` matrix는 약 9.77 MiB이지만 실제 peak는 동시 matrix, factor workspace와 copies를 모두 예측·측정한다.
+- geometry/panel/Q/W/analytic `G0`는 profile cache, translated identical conductor의 interior DtN은 shape/material/frequency key로 재사용할 수 있다.
+- cache key는 solver/formula version, ordered panel endpoints/orientation, corner grading, conductor/background material, frequency, `C0`, Bessel branch, quadrature/self-integral version, `r0`, current incidence와 source hash를 포함한다.
+- A–v reference는 existing dormant FEM policy의 250,000 nodes / 500,000 triangles를 hard ceiling으로 재사용한다. preflight는 matrix nnz, factor/preconditioner/work arrays, parser/reference buffers, mapped-file residency와 25% safety margin을 합산한다. 실측은 전체 process tree의 peak working set, private bytes, committed bytes, mapped residency와 page faults뿐 아니라 실행 전 OS baseline, system commit limit/charge/headroom과 available physical memory를 시간축으로 기록한다. 목표 노트북에서는 peak working set 4.0 GiB 목표, private/committed bytes 5.0 GiB 절대 상한을 적용하며, system commit headroom `<2.0 GiB` 또는 available physical memory `<1.5 GiB`이면 새 단계를 시작하지 않고 현재 단계도 안전하게 취소한다.
+- ceiling 초과를 coarsening으로 숨기지 않는다. H-matrix/FMM, adaptive panels, MOR은 dense oracle과 withheld-frequency passivity가 동결된 뒤의 가속 단계다.
+
+## 실행 순서와 상태 전이
+
+1. 위 두 radius, 일곱 frequency, 다섯 Fourier mode의 analytic Bessel/Fourier DtN eigenvalue로 SAO interior를 검증한다.
+2. M0 wide coextensive limit에서 `coth` slab law, `Rdc`, `Ldc`, high-skin `sqrt(f)` slope를 회복한다.
+3. M1의 eligible frequency/case에서 `N,2N,4N`, quadrature와 `C0` overlap을 통과한다.
+4. 같은 geometry/current basis의 A–v `h,h/2,h/4`와 crop `2/4/8 Deff`를 통과한다.
+5. symmetric two-return case에서 symmetry로만 equal split이 나오는지 검증한다.
+6. P2 artificial `Trace13305` coupon을 실행한다.
+7. finite-length T1-F 3-D length-difference reference와 distributed line stamp를 연결한다.
+8. actual board crop와 core owner가 준비된 뒤에만 source-faithful/global adapter 연구로 넘어간다.
+
+`specified_not_run → oracle_pass`는 위 수치 gate와 independent reference가 모두 통과할 때만 가능하다. 그 전에는 PowerSI correlation, product accuracy 또는 8 GB production 성능을 주장하지 않는다.
+
+## Primary literature
+
+- U. R. Patel and P. Triverio, “Skin Effect Modeling in Conductors of Arbitrary Shape Through a Surface Admittance Operator and the Contour Integral Method,” [author preprint](https://arxiv.org/html/1509.08357), [IEEE T-MTT DOI](https://doi.org/10.1109/TMTT.2016.2593721).
+- U. R. Patel, B. Gustavsen, and P. Triverio, “An Equivalent Surface Current Approach for the Computation of the Series Impedance of Power Cables with Inclusion of Skin and Proximity Effects,” [author preprint with the complete complex `Z'` derivation](https://arxiv.org/html/1303.5452v2), [IEEE TPWRD DOI](https://doi.org/10.1109/TPWRD.2013.2267098).
+- A. Piwonski et al., “Finite Element Modeling of Power Cables using Coordinate Transformations,” [author preprint](https://arxiv.org/abs/2307.00814), [IEEE TMAG DOI](https://doi.org/10.1109/TMAG.2023.3318292). This supports the independent magnetic-vector-potential `A–v` family; the exact reduced fixture above remains this project’s preregistered formulation.
+- T. Demeester and D. De Zutter, “Quasi-TM Transmission Line Parameters of Coupled Lossy Lines Based on the Dirichlet to Neumann Boundary Operator,” [author PDF](https://tdmeeste.github.io/files/pubs/QuasiTM_MTT_Demeester2008.pdf). This motivates the current-definition and layered/lossy-background blockers.

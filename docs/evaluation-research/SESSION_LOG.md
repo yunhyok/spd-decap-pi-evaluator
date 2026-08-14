@@ -586,3 +586,111 @@ timing은 회귀·bounded feasibility 참고값이며 성능 benchmark가 아니
 5. finite-length 3-D reference는 동일 fixture의 `Z(2l)−Z(l)`로 end effect를 de-embed한다.
 6. full partial/common-mode operator 또는 balanced-projection adapter가 없으면 global composition을 계속 차단한다.
 7. T1 smooth-copper 0–2 GHz gate 전에는 roughness fitting이나 board-wide PowerSI correlation로 넘어가지 않는다.
+
+---
+
+## 2026-08-14 — T1-M1 실행 계약과 source return crop 고정
+
+### 시작 목적과 변경 경계
+
+사용자가 중지를 지시할 때까지 정확성 우선 연구와 기준 문서 갱신을 계속한다는 active goal을 유지했다. 연구 worktree는 `C:\Users\User\Documents\SPD Decap PI Evaluator-evaluation-research`, branch는 `codex/evaluation-algorithm-research`, 시작 HEAD는 `9a3027c`다. 이 cycle도 제품 parser/solver/UI/version/installer/release를 변경하지 않았고, raw reference 파일도 수정·복사하지 않았다.
+
+이번 목표는 T1-M1을 곧바로 구현하는 것이 아니라 다음을 재현 가능한 실행 계약으로 고정하는 것이었다.
+
+1. P1/P2 explicit Trace ref가 실제 return-current operator를 증명하는지 source crop으로 판정
+2. homogeneous dense-pulse SAO–CIM의 부호, branch, self integral과 terminal reduction 고정
+3. independent `A_z–v` volume-current FEM의 동일 current basis와 crop/energy gate 고정
+4. M1 및 P2 manufactured fixture의 치수, DC anchor, quasi-TM 적용 범위와 8 GB resource stop rule 고정
+
+### Agent 배치와 독립 감사
+
+- Sol: Patel–Triverio complex SAO–CIM, finite-return equipotential reduction, branch/conditioning/power/circle-DtN 계약 감사
+- Luna: 네 SPD의 bounded streaming parameter와 P1/P2 selected crop의 node/pad/shape/void/via line·byte provenance 감사
+- Terra: independent A–v weak form, artificial boundary 의미와 8 GB process-tree resource 계약 감사
+- Root: raw evidence 재확인, analytic screen 재실행, 문서·visualization 통합과 focused regression
+
+### P1/P2 return crop 판정
+
+새 [`T1_RETURN_CROP_MANIFEST.md`](T1_RETURN_CROP_MANIFEST.md)에 P1 `Trace4004/4005/4006`, P2 `Trace9054/9055/9056`와 inner `Trace13305`의 source owner를 고정했다.
+
+- P1의 큰 positive `Plane$IN43_DGNDpkgshape`는 세 route projection을 포함하고, 주변에 explicit GND Trace/Via-to-plane graph가 있다. 그러나 raw SPD에는 signal Trace와 그 return-current/field owner를 연결하는 record가 없다.
+- P2 `Trace9054/55/56`의 free endpoint는 각각 `Signal$IN01_GNDpkgshape` negative circle의 중심이다. 주변 GND pad/via graph는 존재하지만 signal return-current coupling을 증명하지 않는다.
+- P2 `Trace13305`는 line 3,553,874, byte 341,810,617의 IN24 4.2 mm route이며 width 120 µm는 다음 continuation line/byte가 소유한다. IN23/IN25 positive artwork는 route를 포함하지만 nearby void와 finite-width edge의 nominal clearance는 약 0.2 µm로 near-tangent다. exact polygon boolean tolerance와 signal-to-return operator는 미증명이다.
+
+따라서 공통 status는 `return_shape_geometry_present`, `return_net_graph_present`, `signal_to_return_operator_unproved`, `source_faithful_return_blocked`다. `UpperRef`/`LowerRef` 이름이나 가까운 GND via를 signed return-current owner로 승격하지 않는다.
+
+### T1-M1 SAO–CIM 계약
+
+새 [`T1_M1_REFERENCE_SPEC.md`](T1_M1_REFERENCE_SPEC.md)의 1차 범위는 homogeneous, nonmagnetic, lossless background와 simply connected copper contour다. stratified/lossy background, semiconductor longitudinal current와 multiply connected contour는 각각 explicit blocker로 남겼다.
+
+- `e^{jωt}`에서 passive copper의 `kp`는 `Re(kp)>0, Im(kp)<0` branch를 사용하고 Bessel 함수와 self-anchor의 complex log도 같은 analytic continuation을 쓴다.
+- straight-pulse `U/P`, `Umm=1`, singular-subtracted `Pmm`, analytic exterior log self term을 고정했다.
+- authoritative complex operator는 `X=solve(I-jωμb Ys G0,Ys Q)`, `Kc=QᵀWX`, `Z'_partial=solve(Kc,I)`다. arXiv v1에 누락된 `Ys`와 `Re/Im` 때문에 축약식을 그대로 구현하지 않는다.
+- prescribed one-reference current는 `TᵀZ'_partial T`를 쓴다. tied multi-return은 conductor-to-group `Hg`와 balanced group-current `Bg`의 saddle system으로 equipotential voltage와 current split을 함께 풀며 50:50 split을 강제하지 않는다.
+- `r0={0.1,1,10} m` invariance는 `τinv=max(1e-12,50 max κ1u)<=1e-8`로 측정한다.
+
+M1 전에 solid circular copper 두 radius `17.5 µm/0.5 mm`, 일곱 frequency, Fourier mode `m=0…4`, `N=128/256/512`의 exact Bessel DtN eigenvalue를 mandatory gate로 추가했다. fine complex error `<=0.5%`, meaningful phase `<=0.25°`와 mesh convergence를 모두 통과해야 한다.
+
+### Independent A–v와 measurable gate
+
+`A_z–v` P1 FEM은 SAO와 같은 conductor order, equipotential group `Hg`, balanced current `Bg`를 사용한다. `a=0` outer boundary는 gauge reference이면서 artificial magnetic truncation이므로 `{2,4,8}Deff` crop과 `Wm(Ω8\Ω4)/Wm(Ω8)<0.1%` far-field shell gate가 필요하다. A–v는 conductor `R'+jωL'`만 소유하고 `C'/G'`를 함께 주장하지 않는다.
+
+SAO dissipative power는 `Re(0.5 IᴴZI)`와 `Re(0.5 EᴴWJ)`의 normalized mismatch로 고정했다. condition certificate는 binary64 `u`, deterministic row/column max-norm equilibration과 1-norm inverse estimator를 사용해 `P/Pout/A/Kc/equipotential saddle/A–v saddle` 각각 `κ1u<=1e-8`을 요구한다. `Z'floor`를 Ω/m 단위로 정의해 meaningful element와 phase gate를 측정 가능하게 했다.
+
+### M1/P2 analytic screening
+
+canonical M1은 vacuum, `h=50 µm`, signal/return thickness 35 µm, copper 59.6 MS/m, `w/h={5,10,20,50}`, `Wr/w={1,5,20}`다. exact reproduction block을 다시 실행한 결과:
+
+- 2 GHz copper skin depth `1.457746488493 µm`
+- 12 geometry 중 8개가 `|kb|Deff<=0.3` 통과
+- `(w/h,Wr/w)=(10,20),(20,20),(50,5),(50,20)`은 2 GHz에서 각각 `0.419169004/0.838338009/0.523961255/2.095845022`로 차단
+- 각 low-frequency cutoff는 약 `1.4314 GHz/715.70 MHz/1.1451 GHz/286.28 MHz`
+
+P2 manufactured fixture는 signal `120×17.5 µm`, length 4.2 mm, artificial top/bottom return `1.2 mm×17.5 µm`, face gap 75/104 µm다. DC signal `33.557046980 mΩ`, bundled return `1.677852349 mΩ`, loop `35.234899329 mΩ`; vacuum 2 GHz extent `0.050300281`을 재현했다. 이는 source-derived manufactured input이며 actual board return 또는 PowerSI correlation pass가 아니다.
+
+### Resource와 상태
+
+dense SAO 1차 ceiling은 total panel `N<=800`, A–v는 250,000 nodes/500,000 triangles다. preflight와 측정은 전체 process tree의 working set/private/committed/mapped residency/page faults, OS commit headroom과 available RAM을 포함한다. peak working set 4.0 GiB 목표, private/committed 5.0 GiB 절대 상한, system commit headroom 2.0 GiB 또는 available RAM 1.5 GiB 미만이면 새 단계를 시작하지 않고 안전 취소한다.
+
+현재 status는 `T1-M1 specified_not_run`, `source_faithful_return_blocked`, `global_composition blocked_balanced_projection_and_return_partition`다. 정확성, PowerSI correlation 또는 8 GB production 성능 승격은 없다.
+
+### Files changed
+
+제품 code 변경 없음. 새 문서는 다음 둘이다.
+
+- `T1_RETURN_CROP_MANIFEST.md`
+- `T1_M1_REFERENCE_SPEC.md`
+
+다음 기준 문서를 함께 갱신했다.
+
+- `README.md`
+- `RESEARCH_STATE.md`
+- `LOCAL_ORACLE_PLAN.md`
+- `ALGORITHM_CANDIDATES.md`
+- `REFERENCE_DATASET.md`
+- `T1_TRACE_ORACLE_RESULTS.md`
+- `ORACLE_REPRODUCTION.md`
+- `SESSION_LOG.md`
+
+thread visualization `oracle-gate-status.html`의 T1 tile은 `E0/M0 통과, M1 specified, overall blocked`와 8/12 quasi-TM screen을 표시하도록 갱신했다. repository에는 포함하지 않는다.
+
+### Validation
+
+- `ORACLE_REPRODUCTION.md`의 T1-M1 analytic screen 및 equipotential saddle exact command 재실행: `np.block` tuple 예제 오류를 list-of-lists로 정정한 뒤 skin depth, 8/12 eligibility, P2 `Iabs=[1,-0.5,-0.5]`, `ZBg=35.234899328859 mΩ`, residual 0 재현
+- 기존 physical owner/fail-closed invariant focused suite: `7 passed in 0.89 s`
+- research Markdown 14개: strict UTF-8 error 0, trailing whitespace 0, broken relative link 0
+- `git diff --check`: error 0; 변경 scope 전부 `docs/evaluation-research/`
+- Luna source/crop audit: 최종 provenance와 geometry/semantic status `APPROVED`
+- Terra A–v/resource audit: boundary와 8 GB stop contract `APPROVED`
+- Sol 1차 수학 감사에서 multi-return reduction, branch, measurable gate와 circle exact 기준 누락을 발견했다. 이어 invariance 분모, `10×floor` phase eligibility와 P2 DC/AC equal-split 문구까지 정정했다. equipotential saddle의 `Iabs=[1,-0.5,-0.5]`, `ZBg=35.234899329 mΩ`, residual exact zero를 독립 재현한 뒤 최종 `APPROVED`했다.
+- Terra 최종 cross-document audit에서 `Trace13305`의 과거 `stackup_only` 문구와 불완전한 board blocker를 발견했다. positive artwork/GND-via graph evidence와 미증명 signed operator를 분리하고 exact boolean/current-field owner/core-DtN blocker로 고친 뒤 최종 `APPROVED`했다.
+
+### Exact next starting point
+
+1. 제품 code가 아닌 bounded research prototype으로 circle DtN two-radius/seven-frequency/five-mode gate를 먼저 실행한다.
+2. circle branch/self/conditioning이 통과한 뒤 M0 wide-plate `coth` limit를 회복한다.
+3. eligible M1 subset에서 `N,2N,4N`, quadrature, `C0` overlap과 same-basis A–v `h,h/2,h/4`, crop `2/4/8Deff`를 비교한다.
+4. symmetric two-return에서 equipotential saddle이 equal split을 결과로만 회복하고, P2 artificial asymmetric coupon에서는 split을 직접 푼다.
+5. finite-length T1-F 3-D length-difference와 balanced/global adapter는 2-D oracle 통과 뒤에 진행한다.
+6. actual return polygon의 signed operator와 same-crop core/DtN owner가 없으면 source-faithful/global status를 계속 차단한다.
+7. layered/lossy background와 roughness는 homogeneous smooth-copper gate 전에는 추가하지 않는다.
