@@ -3,3 +3,5 @@ tools/research/*.ps1 text eol=lf
 tools/research/*.json text eol=lf
 tests/test_research_av_bs1_boundary_schur.py text eol=lf
 tests/test_research_av_bs1_boundary_schur_h2.py text eol=lf
+tests/test_research_av_bs1_boundary_schur_h2_p1.py text eol=lf
+docs/evaluation-research/T1_AV_BOUNDARY_SCHUR_H2_P1_PREREG.md text eol=lf

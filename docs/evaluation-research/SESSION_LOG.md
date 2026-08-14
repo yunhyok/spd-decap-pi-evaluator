@@ -1228,3 +1228,34 @@ Sol은 현재 LF bytes에서 lineage/cancellation/assembly/resource와 no-solve 
 2. 별도 H2-P1 fixture/runner/result schema에서 H1 artifact file/payload/numerical/mode-view, consumed H1 tombstone, P0 commit/manifest/assembly/resource를 모두 결합한다.
 3. P1은 `primary-h2` 한 stage만 열고 900 s wall stop, tree WS `4 GiB`, private/commit `5 GiB`, one-factor residency, batch `4`, canonical child-exit/failure binding과 one-use token을 결과 전에 고정한다.
 4. P1 static tests와 독립 review가 끝난 clean commit 전에는 h2 factorization/physics를 실행하지 않는다. h2 stage pass 뒤에도 h4는 별도 preregistration 전 금지한다.
+
+## 2026-08-15 — AV-BS1 H2-P1 token-gated static candidate
+
+H2-P0 clean commit `4c1e3fce8aac659dd0aedb06c2b6d274fff73a12`를 immutable input으로 두고, 별도 research-only H2-P1 fixture, native PowerShell process-tree runner, result/failure finalizer와 bounded tests를 작성했다. 현재 상태는 **`candidate_H2_P1_token_gated_no_solve_pending_static_review_and_clean_commit`**다. review token 파일은 없고 manifest는 `authorization_state=not_authorized`, `available_solve_stages=[]`, `factorization_performed=false`, `physics_solve_performed=false`를 출력한다. h2 factorization/physics는 실행하지 않았다.
+
+P1은 H1 artifact file/result/numerical/resource/operator/mode-view와 consumed H1 tombstone, P0 commit/fixture/runner/test/doc/manifest/assembly/resource hash를 모두 검증한다. one-use token은 clean descendant commit과 exact P1 bytes를 요구하며 runner가 preflight 뒤 atomic `CreateNew` claim을 만든다. child launch 뒤에는 pass, child failure, resource stop, runner/finalizer failure 어느 경우에도 token을 canonical consumed tombstone으로 `fsync + os.replace`한다. 위조된 tentative pass도 token을 재사용 가능하게 남기지 않고 exit 2로 강등한다.
+
+수치 certificate는 signed M9 순서의 `7809×9` little-endian complex128 conductor interior field, raw byte 수 `1,124,496`, source extension hash와 per-mode certificate를 보존한다. finalizer는 frozen H2 canonical `K`, volume `M`, trace `MΓ`를 assembly-only로 재구성한다. 각 mode에서 `Ap,II u + Ap,IΓ v` raw backward residual의 finite-positive denominator와 `<=1e-10`을 독립 검증하고, consistent P1 mass volume integral, boundary power, normalized mismatch, reciprocity, passivity와 trend-only `h→h2`를 다시 계산한다. 따라서 child가 volume scalar와 field blob을 함께 다시 hash하는 것만으로 pass를 만들 수 없다.
+
+Sol final audit에서 두 provenance 경계도 추가로 닫았다. child/finalizer failure code는 `ANALYTIC`, `MESH_HASH`, `PASSIVITY`, `POWER`, `RECIPROCITY`, `RESOURCE`, `RESULT_SCHEMA`, `SOLVE`의 정확한 여덟 code만 허용한다. resource kill로 child payload가 없고 native exit가 2가 아니어도 finalizer와 token consumer가 같은 `schema_exit_mismatch`를 재구성해 ordered `RESULT_SCHEMA + RESOURCE`를 보존한다. prefixed fake code와 `exit=-9` no-child resource-stop regression을 추가했다.
+
+정적 고정값은 다음과 같다.
+
+```text
+P1 tests: 31 passed
+P0 + P1 tests: 37 passed
+manifest payload SHA-256: 05a21364deeb123432a0f52af9a6dbb818f9c9aa2814c34665dfc8da6b8463c4
+fixture SHA-256: 0600604cf7ab7b2a1d2b67c240ed1c659001a989482ce4f94c4b97c305ca3ca4
+runner SHA-256: f54d2645bb01dcd287a7836af8a99990055803c793f45ffd9f91e06426624dc6
+test SHA-256: 01f0203009087a97f00b58461fb6fda339a2866700399be8d5453bdff47c3199
+preregistration document SHA-256: adbd6756343eafa426b54a90aa2dfa56c053c56b145331f803a3e7ce4338b868
+```
+
+Python compile, PowerShell AST, manifest와 diff check를 통과했다. Sol은 exact failure allowlist와 no-child resource-stop을 포함한 수학/provenance/one-shot 계약을 `APPROVED`했고, Luna는 modal PDE residual/volume-power 재계산과 no-solve 범위를 독립 확인했다. 제품 parser/solver/UI/version/installer, GitHub 원격과 physics artifact는 변경하지 않았다.
+
+### Exact next starting point
+
+1. 현재 P1 exact bytes와 문서를 다시 UTF-8/fence/link/hash audit하고 clean research-only preregistration commit에 고정한다.
+2. 그 commit의 fixture/runner/test/doc/manifest와 H1/P0 lineage에 결합한 별도 tracked one-use token을 독립 review한다.
+3. token commit 전에는 `primary-h2`를 실행하지 않는다. token이 열려도 17.5 µm/100 kHz `h2` 한 mesh만 guarded attempt로 실행한다.
+4. pass든 fail이든 result/resource와 consumed tombstone을 독립 감사·commit한다. h2 stage-only pass 뒤에도 H4는 별도 preregistration/token 전 금지한다.

@@ -2,7 +2,7 @@
 
 ## Current verdict
 
-현재 AV-BS1 physics artifact 상태는 **`passed_AV_BS_h_stage_only_pending_h2_review`**다. `mandatory_stage_pass=true`지만 `next_stage_authorized=false`, `fine_analytic_pass=null`, `mesh_convergence_pass=null`, `final_circle_pass=null`이다. 따라서 이는 17.5 µm/100 kHz의 coarse `h` 단계 제한 통과이며 circle oracle 또는 h2 권한이 아니다. 후속 H2-P0 assembly manifest는 **`preregistered_H2_P0_assembly_only_no_solve`**지만 factorization/physics/result token을 포함하지 않는다.
+현재 AV-BS1 physics artifact 상태는 **`passed_AV_BS_h_stage_only_pending_h2_review`**다. `mandatory_stage_pass=true`지만 `next_stage_authorized=false`, `fine_analytic_pass=null`, `mesh_convergence_pass=null`, `final_circle_pass=null`이다. 따라서 이는 17.5 µm/100 kHz의 coarse `h` 단계 제한 통과이며 circle oracle 또는 h2 권한이 아니다. 후속 H2-P0 assembly manifest는 **`preregistered_H2_P0_assembly_only_no_solve`**다. H2-P1 executable contract는 **`candidate_H2_P1_token_gated_no_solve_pending_static_review_and_clean_commit`**이고 factorization/physics/result artifact와 실행 token은 없다.
 
 2026-08-15 clean commit `4fa5ec80a261c21c8489ecd8b708a62bba769a7a`에서 17.5 µm, 100 kHz, `h` 한 mesh의 guarded `primary-h`를 처음 실행했다. 실행은 **`BLOCKED_AV_BS_MESH_HASH`**로 fail-closed 됐다. factorization, harmonic extension, boundary-Schur `Y`, modal response와 physics pass/fail 값은 생성되지 않았다. 따라서 이 결과는 AV-BS1 physics negative가 아니라 **사전등록 sparse-pattern 계약의 negative**다.
 
@@ -126,9 +126,24 @@ H1 result와 실행 권한을 바꾸지 않고 H2 refined topology와 assembly�
 
 projected outer-boundary midpoint를 포함한 child 128개는 cyclic zero edge가 아니므로 제외한다. raw/canonical K, M, MΓ, support/partition exact hashes와 arithmetic details는 [`T1_AV_BOUNDARY_SCHUR_H2_PREREG.md`](T1_AV_BOUNDARY_SCHUR_H2_PREREG.md)에 고정한다. 이는 h2 result artifact가 아니고 coarse H1의 `next_stage_authorized=false`도 바꾸지 않는다.
 
+## H2-P1 token-gated static candidate
+
+H2-P0와 H1 artifact를 결합하는 별도 research-only P1 fixture, native process-tree runner, result/failure finalizer, atomic token-consumption path와 bounded regression suite를 작성했다. 현 manifest payload SHA-256은 `05a21364deeb123432a0f52af9a6dbb818f9c9aa2814c34665dfc8da6b8463c4`이고 P1 suite는 `31 passed`, P0+P1 정적 suite는 `37 passed`다. Python compile, PowerShell AST, manifest와 diff check도 통과했다.
+
+| P1 candidate object | SHA-256 |
+|---|---|
+| fixture | `0600604cf7ab7b2a1d2b67c240ed1c659001a989482ce4f94c4b97c305ca3ca4` |
+| runner | `f54d2645bb01dcd287a7836af8a99990055803c793f45ffd9f91e06426624dc6` |
+| tests | `01f0203009087a97f00b58461fb6fda339a2866700399be8d5453bdff47c3199` |
+| preregistration document | `adbd6756343eafa426b54a90aa2dfa56c053c56b145331f803a3e7ce4338b868` |
+
+P1은 signed M9 `h→h2`를 trend-only로 유지한다. 성공 결과도 fine analytic/mesh convergence/final circle을 `null`로 두고 `next_stage_authorized=false`여야 한다. Power certificate는 `7809×9` complex128 interior modal-field blob을 보존하고 finalizer가 frozen H2 `K/M`, conductor `Ap`와 trace mass를 assembly-only로 재구성해 각 field의 PDE backward residual, volume integral, boundary power와 mismatch를 독립 재계산한다. 위조된 pass/failure/resource/field 증거는 token을 재사용 가능하게 남기지 않고 consumed tombstone으로 fail-closed한다.
+
+이 candidate에는 review token이 없고 manifest도 `authorization_state=not_authorized`, `available_solve_stages=[]`, factorization/physics `false`다. 따라서 P1 bytes와 상세 계약을 고정한 [`T1_AV_BOUNDARY_SCHUR_H2_P1_PREREG.md`](T1_AV_BOUNDARY_SCHUR_H2_P1_PREREG.md)는 h2 result가 아니다.
+
 ## Exact next starting point
 
 1. H0 negative와 H1 h-stage artifact를 모두 immutable하게 보존한다.
-2. H2-P0 manifest-only fixture/runner/test/docs와 exact payload를 clean research commit으로 고정한다.
-3. 별도 H2-P1 executable fixture/result schema/process-tree 900 s guard와 one-use review token을 H1 artifact 및 H2-P0 commit에 결합해 독립 감사한다.
-4. 그 P1 clean commit과 새 token 전에는 h2 factorization/physics를 실행하지 않는다. `h2`를 통과해도 h4는 또 다른 preregistration 전 금지한다.
+2. H2-P0 manifest-only fixture/runner/test/docs commit `4c1e3fce8aac659dd0aedb06c2b6d274fff73a12`를 보존한다.
+3. candidate H2-P1 fixture/result schema/process-tree 900 s guard, independent modal residual/power certificate와 exact bytes를 독립 감사해 clean research commit에 고정한다.
+4. 그 P1 commit에 묶인 별도 one-use review token 전에는 h2 factorization/physics를 실행하지 않는다. `h2`를 통과해도 h4는 또 다른 preregistration 전 금지한다.

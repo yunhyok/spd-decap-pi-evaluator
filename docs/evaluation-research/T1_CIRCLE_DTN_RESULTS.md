@@ -11,7 +11,7 @@
 | `C0-A0 fixed_low_frequency_1e6` | **failed** | 사전 등록한 Patel–Triverio empirical switch를 그대로 사용하면 작은 원 100 kHz가 정확도·mesh·phase·conditioning gate를 모두 위반 |
 | `C0-A1 direct_scaled_H2_primary` | **passed_circle_interior_only** | `C0=1` direct/scaled Hankel이 canonical full-condition과 W1/W3 dense withheld를 통과; W2는 analytic/convergence-only 보조 |
 | finite-width M1 | G1 exterior-only, G2 pair-only; 100 kHz circle failed | q/analytic/mesh/passivity 통과와 별개로 N256 raw `Yw` reciprocity/cancellation fail; planned G2 2 GHz circle/N512/EQ0 seed 미실행 |
-| independent A–v | `2GHz_4Deff_smoke_only`; circle boundary-Schur `passed_AV_BS_h_stage_only_pending_h2_review`; H2-P0 `preregistered_H2_P0_assembly_only_no_solve` | H1 17.5 µm/100 kHz coarse `h` stage-evaluable gate와 H2 refined assembly manifest만 통과; `h2` physics/`h4`, final circle, withheld radius와 noncircular same-basis cross-method 미실행 |
+| independent A–v | `2GHz_4Deff_smoke_only`; circle boundary-Schur `passed_AV_BS_h_stage_only_pending_h2_review`; H2-P0 `preregistered_H2_P0_assembly_only_no_solve`; H2-P1 `candidate_H2_P1_token_gated_no_solve_pending_static_review_and_clean_commit` | H1 17.5 µm/100 kHz coarse `h` stage-evaluable gate와 H2 refined assembly manifest만 physics-relevant 범위에서 통과; P1은 static/no-token 계약뿐이며 `h2` physics/`h4`, final circle, withheld radius와 noncircular same-basis cross-method 미실행 |
 | product/global | `blocked` | source owner, exact-minus-core와 balanced global adapter 미해결 |
 
 `C0-A1`의 통과는 원형 도체의 **interior surface-admittance operator**만 인증한다. M1, P2, PowerSI correlation, product 정확성 또는 8 GB production 성능을 승인하지 않는다.

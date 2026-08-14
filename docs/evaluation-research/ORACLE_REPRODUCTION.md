@@ -2631,7 +2631,7 @@ if ($LASTEXITCODE -ne 0) { throw "G2_EQ0_SEED_STAGE_FAILED_$LASTEXITCODE" }
 
 Stage 1 pair screen은 `ddec4fb` 사전등록 뒤 실행돼 `passed_pair_screen_only`로 판정됐다. 이후 pair를 같은 PowerShell session에서 재확인·검토하고 Stage 2 medium circle을 시작했지만 첫 100 kHz mandatory operator gate에서 nonzero exit했다. `N=128` cancellation condition은 `2.91315e-8`, `N=256` raw `Yw` reciprocity/cancellation은 `1.41197e-8/1.63755e-7`로 `1e-8` gate를 넘었다. 따라서 현재 전체 상태는 `BLOCKED_INTERIOR_WEIGHTED_RECIPROCITY_PASSIVITY__G2_PAIR_PASSED_CIRCLE_100KHZ_RECIPROCITY_CANCELLATION_FAIL`이다.
 
-위 Stage 2b와 Stage 3 명령은 preregistered historical continuation으로만 보존한다. Stage 2가 실패했으므로 review token을 열 수 없고 같은 runner guard가 G2 `N=256→512`와 G2 EQ0 seed 실행을 차단한다. planned G2 2 GHz circle row, G2 `N=512`, G2 EQ0 seed와 G2 `N=288/576` full sweep은 미실행이다. gate 완화, 사후 대칭화, clipping 또는 higher precision만으로 pass를 만들지 않는다. 당시 다음 후보로 `preregistered_not_run`이던 two-DtN subtraction 없는 independent A–v volume-FEM boundary Schur는 이후 H1 coarse `h` stage-only gate를 통과했지만 `h2` 이후 convergence는 여전히 미사전등록·미실행이다. production SAO 후보는 four-operator symmetric Calderón/Steklov–Poincaré 또는 Hamiltonian Schur DtN으로 별도 사전 등록한다.
+위 Stage 2b와 Stage 3 명령은 preregistered historical continuation으로만 보존한다. Stage 2가 실패했으므로 review token을 열 수 없고 같은 runner guard가 G2 `N=256→512`와 G2 EQ0 seed 실행을 차단한다. planned G2 2 GHz circle row, G2 `N=512`, G2 EQ0 seed와 G2 `N=288/576` full sweep은 미실행이다. gate 완화, 사후 대칭화, clipping 또는 higher precision만으로 pass를 만들지 않는다. 당시 다음 후보로 `preregistered_not_run`이던 two-DtN subtraction 없는 independent A–v volume-FEM boundary Schur는 이후 H1 coarse `h` stage-only gate를 통과했고 H2-P0 assembly freeze와 H2-P1 token-gated static candidate까지 진행했다. 그러나 `h2` physics, `h4` convergence와 final circle은 여전히 미실행이다. production SAO 후보는 four-operator symmetric Calderón/Steklov–Poincaré 또는 Hamiltonian Schur DtN으로 별도 사전 등록한다.
 
 G1 exterior structural gate는 `smn=max(|GG10,mn|,|GG20,mn|,ℓmℓn/(2π))`의 pair-normalized max와 Frobenius q change를 각각 `<=1e-10`, independently reversed pair와 raw transpose defect를 `<=1e-12`, `r0` rank-one relative residual을 `<=1e-8`로 판정한다. G2는 q20을 canonical, q40을 parity로 두며 self/touching/routed-near와 balanced final `Z'loop`에 기존 `0.1%/0.25°` gate를 적용한다. `r0`는 partial common mode가 아니라 q20 balanced `Z'loop`에서 비교하고, 관련 `P/Pout/AE/K`의 최대 `κ1u`로 `τinv=max(1e-12,50 max κ1u)<=1e-8`을 계산해 변화량 `<=τinv`를 요구한다. prospective interior는 `Yw=WYs` `[S·m]`, `Yw,floor=max(1e-12 S·m,1e-10 max|Yw|)`, `||Yw−Yw^T||F/max(||Yw||F,N Yw,floor)<=1e-8`로 검사한다. passivity는 `H(Yw)=(Yw+Yw^H)/2`의 raw `λmin >= -max(Yw,floor,1e-9||Yw||2)`다. Hermitian part 평가는 진단이지 operator 대칭화가 아니다. G1은 exterior power 원인 격리용 diagnostic이며 이 interior metric이나 converged A–v가 실패하면 M1은 계속 blocked다.
 
@@ -2980,6 +2980,53 @@ sparse/raw/+25pct resource bytes = 1328172 / 2043070476 / 2553838095
 ```
 
 parser와 PowerShell `ValidateSet`은 `manifest`만 허용한다. `primary-h2`는 실행 path가 아니라 invalid choice다. 전체 lineage serialization, exact hashes와 non-claims는 [`T1_AV_BOUNDARY_SCHUR_H2_PREREG.md`](T1_AV_BOUNDARY_SCHUR_H2_PREREG.md)에 고정한다.
+
+## AV-BS1 H2-P1 token-gated static candidate
+
+H2-P1은 P0의 no-solve assembly manifest와 H1 artifact를 결합하는 별도 executable contract다. 이 checkout에는 review token이 없으므로 아래 검증은 manifest/static path만 실행한다. `primary-h2`, factorization, harmonic extension과 physics result는 실행하지 않는다.
+
+```powershell
+python -m pytest -q `
+  tests/test_research_av_bs1_boundary_schur_h2.py `
+  tests/test_research_av_bs1_boundary_schur_h2_p1.py
+# 37 passed; P1 alone 31 passed
+
+python -m py_compile tools/research/av_bs1_boundary_schur_h2_p1.py
+
+$errors=$null; $tokens=$null
+[System.Management.Automation.Language.Parser]::ParseFile(
+  (Resolve-Path tools/research/run_av_bs1_h2_p1_stage.ps1),
+  [ref]$tokens,
+  [ref]$errors
+) | Out-Null
+if ($errors.Count) { $errors | ForEach-Object Message; exit 1 }
+
+python tools/research/av_bs1_boundary_schur_h2_p1.py --stage manifest
+Get-FileHash tools/research/av_bs1_boundary_schur_h2_p1.py -Algorithm SHA256
+Get-FileHash tools/research/run_av_bs1_h2_p1_stage.ps1 -Algorithm SHA256
+Get-FileHash tests/test_research_av_bs1_boundary_schur_h2_p1.py -Algorithm SHA256
+Get-FileHash docs/evaluation-research/T1_AV_BOUNDARY_SCHUR_H2_P1_PREREG.md -Algorithm SHA256
+```
+
+현재 frozen candidate output은 다음을 요구한다.
+
+```text
+manifest_payload_sha256 = 05a21364deeb123432a0f52af9a6dbb818f9c9aa2814c34665dfc8da6b8463c4
+fixture_sha256 = 0600604cf7ab7b2a1d2b67c240ed1c659001a989482ce4f94c4b97c305ca3ca4
+runner_sha256 = f54d2645bb01dcd287a7836af8a99990055803c793f45ffd9f91e06426624dc6
+test_sha256 = 01f0203009087a97f00b58461fb6fda339a2866700399be8d5453bdff47c3199
+preregistration_doc_sha256 = adbd6756343eafa426b54a90aa2dfa56c053c56b145331f803a3e7ce4338b868
+status = preregistered_H2_P1_token_missing_no_solve
+authorization_state = not_authorized
+available_solve_stages = []
+factorization_performed = false
+physics_solve_performed = false
+wall_stop_seconds = 900
+M9_interior_field_shape = 7809 x 9 complex128
+M9_interior_field_raw_bytes = 1124496
+```
+
+fixture/finalizer는 frozen H2 `K/M/MΓ`를 assembly-only로 재구성한다. signed M9 interior field마다 `Ap,II u + Ap,IΓ v`의 raw backward residual을 독립 재계산하고 `1e-10` gate를 적용한 뒤, consistent mass volume integral과 boundary power/mismatch를 다시 계산한다. native runner는 process tree 전체를 감시하고, child launch 뒤 pass/failure/resource-stop/finalizer-failure 어느 경우에도 active token을 atomic consumed tombstone으로 교체해야 한다. failure code는 동결한 여덟 `BLOCKED_AV_BS_*` 값만 허용하며 no-child/non-2 resource stop은 `RESULT_SCHEMA`와 `RESOURCE`를 함께 보존한다. 상세 non-claims와 one-use 순서는 [`T1_AV_BOUNDARY_SCHUR_H2_P1_PREREG.md`](T1_AV_BOUNDARY_SCHUR_H2_P1_PREREG.md)에 고정한다.
 
 ## Focused regression
 
