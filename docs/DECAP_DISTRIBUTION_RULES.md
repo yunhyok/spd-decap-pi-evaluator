@@ -1,6 +1,6 @@
 # De-cap Distribution 변동 규칙
 
-> 적용 프로그램: **SPD Decap PI Evaluator v0.22.4**
+> 적용 프로그램: **SPD Decap PI Evaluator v0.22.5**
 >
 > 문서 상태: 현재 구현 및 회귀 테스트에 대응하는 동작 규칙
 >
@@ -26,6 +26,16 @@
 7. Distribution의 `FULL/PARTIAL`은 수량/topology 상태이고 Evaluation의
    connectivity/modelability 상태와 동일하지 않다. Apply 후 Evaluation은 Original과
    Tuned/current 양쪽을 별도 preflight한다.
+
+## 1.0 v0.22.5 release note
+
+- Exact PowerSI `Shape` parsing now streams Shape and primitive events in one
+  newline-bounded pass, reducing parser traversal and temporary indexing work
+  for large SPD files.
+- Unreachable internal models, helpers, and imports were removed without
+  changing Distribution, Evaluation, solver, or physical decision rules.
+- Methodology and physics are unchanged from v0.22.4; this release is a
+  parser-performance and internal-cleanup update only.
 
 ## 1.1 v0.22.4 tolerance counterflow와 방법론 영향
 

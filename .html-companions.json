@@ -15,29 +15,29 @@
   "documents": [
     {
       "source": "README.md",
-      "sourceBlobSha": "a6e7f7115e04894b83bad2376d88bd86f4caa5b3",
-      "sourceSha256": "9634ef07842e7f7af2c5f76203520a90552aa12acede6c3ab28345709f584065",
+      "sourceBlobSha": "ae317f93dc690b85978399032c8c98e91994651f",
+      "sourceSha256": "6374ce0782ba02a1daddebd2510d6410f867c4a4496496f5585daffbca5a579e",
       "output": "README.companion.html",
-      "outputSha256": "0e9bf12eeb47a32b48e9870139fe1f37f4df2eb7673b54e98dccb96300e66bdf",
-      "headingCount": 10,
+      "outputSha256": "f44cf2cd8da248578b10c154f3cdfb98f69bf0a89ea862570f894c7820c8e241",
+      "headingCount": 15,
       "visualClassification": "DOCUMENT_MAP",
       "visualTitle": "Evaluator documentation map",
       "diagramAdded": true,
       "evidence": [
         {
           "lineStart": 1,
-          "lineEnd": 25,
-          "summary": "Version heading and v0.21 Evaluation/Distribution integration sections define the release scope and linked contracts."
+          "lineEnd": 24,
+          "summary": "Version heading and v0.22.5 loader-performance note define the current release; the v0.22.4 tolerance history follows."
         },
         {
-          "lineStart": 27,
-          "lineEnd": 57,
-          "summary": "Correction, solver/loading, and raw-SPD provenance sections form the remaining release hierarchy."
+          "lineStart": 26,
+          "lineEnd": 100,
+          "summary": "v0.22.4 through v0.22.1 history records the distribution, routing, and tolerance contracts retained by the current release."
         },
         {
-          "lineStart": 59,
-          "lineEnd": 80,
-          "summary": "Feature and workflow sections define the user-facing branch under the release notes."
+          "lineStart": 102,
+          "lineEnd": 226,
+          "summary": "Historical evaluation/loading notes, feature boundaries, development commands, and Windows artifacts define the user-facing workflow."
         }
       ],
       "urlCount": 19
@@ -63,11 +63,11 @@
     },
     {
       "source": "docs/DECAP_DISTRIBUTION_RULES.md",
-      "sourceBlobSha": "7e4e32491d83f4dace4281bac050374258ac928c",
-      "sourceSha256": "58d424d70ec401ddc1b80f02a13308c29570288b820445916e31993f3b59f8a5",
+      "sourceBlobSha": "697c2873a8bd117aceb26ff8b329afc631584da2",
+      "sourceSha256": "33d7c81eb68e1c97483e8c9a5cfe4ae1d5dd8173c7920e3bbf5819de292ed53e",
       "output": "docs/DECAP_DISTRIBUTION_RULES.companion.html",
-      "outputSha256": "b8c4d65b23f63cda2a40479b8b8b9b758ac1e386102087a7d3d7169c0f947c2f",
-      "headingCount": 31,
+      "outputSha256": "58b7286de3bbb895815f7cdc864cf66b787fa94a3eb0b56f8c697c9dd0a5cbeb",
+      "headingCount": 32,
       "visualClassification": "PROCESS_FLOW",
       "visualTitle": "Distribution eligibility to applied result",
       "diagramAdded": true,
@@ -79,13 +79,18 @@
         },
         {
           "lineStart": 30,
-          "lineEnd": 46,
-          "summary": "Terminology defines Present, Assignable, Fixed, Target, Actual, movement, and isolation-gap entities."
+          "lineEnd": 38,
+          "summary": "The v0.22.5 release note records exact Shape-parser streaming and unreachable-code cleanup while preserving methodology and physics."
         },
         {
-          "lineStart": 68,
-          "lineEnd": 78,
-          "summary": "Target cells are classified as DONOR, RECEIVER, UNCHANGED, or EXCHANGE."
+          "lineStart": 89,
+          "lineEnd": 105,
+          "summary": "Terminology defines Present, Assignable, Fixed, Target, Actual, movement, and isolation-gap quantities."
+        },
+        {
+          "lineStart": 127,
+          "lineEnd": 149,
+          "summary": "Target cells are classified as DONOR, RECEIVER, UNCHANGED, or EXCHANGE with tolerance bounds."
         }
       ],
       "urlCount": 50

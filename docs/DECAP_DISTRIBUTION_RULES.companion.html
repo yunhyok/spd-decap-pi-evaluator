@@ -8,8 +8,8 @@
         content="default-src 'none'; img-src data:; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'">
   <meta name="source" content="DECAP_DISTRIBUTION_RULES.md">
   <meta name="source-sha256-normalization" content="utf-8-lf">
-  <meta name="source-sha256" content="2b66a560508efe52dd3a9b772fc11296ca7c224d98120f4ca344124ceafbd2e0">
-  <title>De-cap Distribution 변동 규칙 · SPD Decap PI Evaluator v0.22.4</title>
+  <meta name="source-sha256" content="33d7c81eb68e1c97483e8c9a5cfe4ae1d5dd8173c7920e3bbf5819de292ed53e">
+  <title>De-cap Distribution 변동 규칙 · SPD Decap PI Evaluator v0.22.5</title>
   <style>
     :root {
       color-scheme: light dark;
@@ -231,7 +231,7 @@
     PWR NET 재배정, shared-pad dummy, isolation gap, 부분 충족과 Apply를
     source-backed 물리 증거와 정수 최적화로 처리하는 현재 계약이다.
   </p>
-  <span class="version">v0.22.4 · 오프라인 방법론 문서</span>
+  <span class="version">v0.22.5 · 오프라인 방법론 문서</span>
 </header>
 
 <main id="main" tabindex="-1">
@@ -246,6 +246,7 @@
       <li><a href="#objective">최적화 순서</a></li>
       <li><a href="#audit">Candidate Audit</a></li>
       <li><a href="#counts">수량과 결과</a></li>
+      <li><a href="#release-v0225">v0.22.5 release note</a></li>
       <li><a href="#hotfix">v0.22.3 hotfix</a></li>
       <li><a href="#boundary">해석 경계</a></li>
     </ul>
@@ -571,6 +572,15 @@ Receiver Net Progress = Received - Sent - Sacrificed</code></pre>
     </details>
   </section>
 
+  <section id="release-v0225" aria-labelledby="release-v0225-title">
+    <h2 id="release-v0225-title">v0.22.5 release note</h2>
+    <p class="callout">
+      This release accelerates exact PowerSI <code>Shape</code> parsing with a
+      single streamed event pass and removes unreachable internal code.
+      Methodology and physics are unchanged from v0.22.4.
+    </p>
+  </section>
+
   <section id="hotfix" aria-labelledby="hotfix-title">
     <h2 id="hotfix-title">v0.22.4 turnover와 v0.22.3 source/UI 변경</h2>
     <div class="card-grid">
@@ -628,9 +638,9 @@ Receiver Net Progress = Received - Sent - Sacrificed</code></pre>
 </main>
 
 <footer>
-  <p>SPD Decap PI Evaluator v0.22.4 · Source:
+  <p>SPD Decap PI Evaluator v0.22.5 · Source:
     <code>DECAP_DISTRIBUTION_RULES.md</code> · SHA-256:
-    <code>2b66a560508efe52dd3a9b772fc11296ca7c224d98120f4ca344124ceafbd2e0</code>
+    <code>33d7c81eb68e1c97483e8c9a5cfe4ae1d5dd8173c7920e3bbf5819de292ed53e</code>
   </p>
 </footer>
 </body>
