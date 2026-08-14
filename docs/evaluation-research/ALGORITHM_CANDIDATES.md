@@ -1,0 +1,186 @@
+# Algorithm Candidates and Literature Map
+
+최종 갱신: 2026-08-14
+
+## 문제 정의
+
+현행 layerwise 경로는 개념적으로 다음 sparse nodal operator를 계산한다.
+
+\[
+Y(\omega)=\sum_k E_k^T Y_{gap,k}(\omega)E_k + Y_{via}(\omega)+Y_{term}(\omega)
+\]
+
+\[
+Y_r(\omega)v=b,\qquad Z_{pp}=b^Tv
+\]
+
+동일 layer에서 연결된 artwork를 equipotential component로 축약하고, adjacent-layer overlap Maxwell capacitance와 via self-R/L, termination을 조립한다. 이 구조는 source topology를 보존하지만 다음의 분산 물리를 충분히 표현하지 않는다.
+
+1. plane/trace의 nonuniform lateral current와 spreading
+2. 긴/좁은 trace의 series R/L
+3. via return path, mutual inductance, dense cluster interaction
+4. pad/antipad field와 port current crowding
+5. conductor skin/proximity/roughness와 causal material dispersion
+6. full multiport transfer/eigenmode behavior
+
+현재 loaded rail의 15–17 dB 수준 오차는 numerical acceleration보다 이 model-form gap을 먼저 해결해야 함을 보여준다.
+
+## 후보 순위
+
+| 순위 | 후보 | 정확성 잠재력 | laptop 잠재력 | 주된 위험 | 현재 판단 |
+|---:|---|---|---|---|---|
+| 1 | adaptive triangular/MFDM domain decomposition | 높음 | 높음 | interface rank, mesh ownership | 주 경로 |
+| 2 | local via/trace/pad/antipad replacement block | 매우 높음 | 높음 if bounded | double counting, template generality | 주 경로와 결합 |
+| 3 | exact route-graph reduction | 동일 물리 | 높음 | terminal/cycle 손실 | 즉시 검증 후보 |
+| 4 | passive projection MOR | physics가 맞을 때 높음 | 매우 높음 | mutable decap port explosion | P4 이후 |
+| 5 | iterative/recycled/hierarchical field solve | 동일 물리 | 잠재적으로 높음 | resonance/nullspace convergence | subdomain 한정 연구 |
+| 6 | adaptive frequency sampling/passive fitting | 동일 물리 | 높음 | peak 누락, nonpassive fit | 마지막 가속 단계 |
+
+## C1. Source-faithful hybrid domain decomposition
+
+실제 artwork를 adaptive triangular 또는 Delaunay–Voronoi mesh로 표현하되, port, via cluster, void, neck, boundary 주변을 세밀하게 하고 단순 영역은 크게 유지한다. 각 domain의 내부 DOF를 interface로 static condensation한다.
+
+\[
+Y_\Gamma(s)=Y_{\Gamma\Gamma}-Y_{\Gamma i}Y_{ii}^{-1}Y_{i\Gamma}
+\]
+
+condensed plane/trace domains, exact route graph, mounted components를 passive global MNA로 연결한다. bounded-stencil mesh의 assembly/storage는 대체로 O(n)이며, domain별 factor와 작은 interface는 full-board factor fill을 줄일 가능성이 있다. 달성 비율은 separator geometry와 interface rank로 실측한다.
+
+문헌 근거:
+
+- Choi, Kim, Swaminathan, [Triangular Elements for Power/Ground Plane Analysis](https://doi.org/10.1109/TCPMT.2013.2277659)
+- Choi et al., [Delaunay–Voronoi Method With Source-Port Correction](https://doi.org/10.1109/TADVP.2008.920326)
+- Swaminathan et al., [Multilayer Finite-Difference Method](https://doi.org/10.1109/TEMC.2007.893331)
+- Zhang et al., [Domain Decomposition for Efficient PDN Electromagnetic Analysis](https://doi.org/10.1109/TEMC.2010.2045380)
+
+Repository의 dormant `tri_fem_*`, `mfdm`, `surface_patch_plane`, `global_mna`는 재사용 가능성을 검토할 자산이지 검증된 production solver로 간주하지 않는다.
+
+## C2. Local transition replacement
+
+measurement/decap transition 주변에 trace series impedance, via self/return/mutual, pad/antipad capacitance, spreading/current crowding을 포함한 bounded local model을 만든다. core와 중복되는 에너지를 제거하는 exact-minus-core stamp를 사용한다.
+
+\[
+Y_{hybrid}=Y_{core}+P^T\left(Y_{local,EM}-Y_{local,core}\right)P
+\]
+
+local cluster가 q conductor이면 dense 계산은 O(q²) storage/O(q³) work이므로 radius, coupling threshold와 template reuse를 사전 정의한다. single via, via pair, dense cluster, finite contact, pad/antipad, shared pad마다 analytic 또는 converged FEM/CIM oracle를 둔다.
+
+문헌 근거:
+
+- Han et al., [Intrinsic Via Circuit Model](https://doi.org/10.1109/TMTT.2010.2052956)
+- Ruehli, [Foundational PEEC Formulation](https://doi.org/10.1109/TMTT.1974.1128204)
+- [Circular Ports in Parallel-Plate Waveguides](https://doi.org/10.1109/TEMC.2011.2170998)
+- [Physics-Based Via and Trace Models](https://doi.org/10.1109/TMTT.2009.2025470)
+
+## C3. Exact route-graph reduction
+
+근사 없이 다음을 제거/축약한다.
+
+- boundary/measurement/mutable terminal이 아닌 dangling tree
+- boundary가 아닌 degree-2 series chain
+- certified equipotential duplicate node
+
+cycle, branch, parallel path, all mutable decap attachment, measurement terminal은 보존한다. 예상 복잡도는 O(V+E)이며 unreduced network의 port response와 machine-precision parity를 gate로 둔다. 물리 후보와 독립적으로 가장 먼저 검증할 수 있다.
+
+## C4. Passive MOR and port compression
+
+물리 모델을 동결한 뒤 PRIMA/SPRIM 또는 rational Krylov projection으로 substrate를 축약한다.
+
+\[
+H(s)=B^T(sE-A)^{-1}B+D
+\]
+
+\[
+E_r=V^TEV,\quad A_r=V^TAV,\quad B_r=V^TB
+\]
+
+문제는 외부 4/92/160 ports보다 수천 개의 independently mutable decap terminal이다. block Krylov input dimension이 폭증하지 않도록 domain-level port compression, attachment clustering의 sensitivity proof, a posteriori error estimator가 필요하다.
+
+- Odabasioglu, Celik, Pileggi, [PRIMA](https://doi.org/10.1109/43.712097)
+- Freund, [SPRIM](https://doi.org/10.1109/ICCAD.2004.1382547)
+
+ROM은 workstation reference compiler가 생성하고 laptop evaluator가 immutable ROM + low-rank scenario update를 적용하는 2-tier 구조의 핵심 후보다. passivity와 source parameter lock이 필수다.
+
+## C5. Iterative/recycled and hierarchical solve
+
+shifted frequency systems의 subspace recycle, multigrid 또는 HIF/HSS 계열 factor는 잘 구조화된 field subdomain에서 검토한다. full indefinite mixed-RLC MNA의 첫 production oracle을 직접 대체하지 않는다. resonance, gauge/nullspace와 scale 차이에서 convergence가 불규칙할 수 있기 때문이다.
+
+- [Recycling Krylov Methods for Shifted Systems](https://doi.org/10.1016/j.apnum.2014.02.006)
+- Ho and Ying, [Hierarchical Interpolative Factorization](https://doi.org/10.1002/cpa.21582)
+
+## C6. Adaptive frequency sampling and passive fitting
+
+필수 anchor와 error-driven sample을 결합하고, withheld dense grid에서 peak/zero-crossing/phase를 검증한다. 이 기법은 expensive board solve 수 F를 m으로 줄일 수 있지만 누락된 물리를 고치지 못한다.
+
+- [Adaptive Bayesian Vector Fitting](https://doi.org/10.1049/el.2018.6668)
+- Nakatsukasa, Sete, Trefethen, [AAA Rational Approximation](https://doi.org/10.1137/16M1106122)
+
+## PowerSI reference와의 범위 차이
+
+Cadence는 PowerSI를 full-wave electrical analysis, autoadaptive numerical mesh, simultaneous signal/plane modeling 및 multiprocessing 도구로 설명한다. 3D EM option은 full-wave와 quasi-static solver, adaptive FEM, model reduction, low-frequency conditioning, dispersive material과 roughness modeling을 포함한다고 설명한다.
+
+- [Cadence Sigrity PowerSI datasheet](https://www.cadence.com/en_US/home/resources/datasheets/cadence-sigrity-powersi-ds.html)
+- [Cadence PowerSI 3D EM extraction option](https://www.cadence.com/en_US/home/resources/datasheets/sigrity-power-si-3d-em-extraction-option-ds.html)
+
+따라서 현행 quasi-static circuit/overlap 모델에서 PowerSI에 접근하려면 solver tolerance만 조정하는 것이 아니라 dominant distributed/local physics를 선택적으로 복원해야 한다. 제품 목표는 PowerSI의 모든 full-wave 기능을 복제하는 것이 아니라 selected PI Z-metric에 필요한 물리를 훨씬 적은 DOF로 포착하는 것이다.
+
+## 사전 등록할 ablation 순서
+
+1. current exact-capacitance core only
+2. exact route-graph reduction; unreduced parity 확인
+3. finite trace R/L
+4. plane sheet resistance/internal impedance
+5. nonuniform plane spreading domain
+6. via return and mutual inductance
+7. pad/antipad capacitance와 local spreading
+8. complete local transition replacement
+9. dielectric dispersion/loss
+10. conductor skin/proximity/roughness
+
+각 단계는 예상한 port class/frequency band를 개선하고 다른 design/rail을 실질적으로 악화시키지 않을 때만 다음 단계로 승격한다. parameter는 SPD stackup/geometry/material/component model에서 유도하고 PowerSI curve에 맞춘 design-specific tuning은 금지한다.
+
+## 평가 metric
+
+기본 complex error는 다음과 같다.
+
+\[
+e_Z(f)=\hat Z(f)-Z_{ref}(f),\qquad
+e_{rel}=\frac{|e_Z|}{\max(|Z_{ref}|,Z_{floor})}
+\]
+
+필수 보고:
+
+- complex absolute RMS/median/p95/max in µΩ
+- magnitude signed bias/RMS/p95/max in dB
+- wrapped phase RMS/p95/max
+- decade별 및 100 kHz–100 MHz critical band
+- resonance/antiresonance frequency, magnitude, prominence, Q와 assignment-based peak matching
+- imaginary-axis zero crossing, low-band effective C/loss, high-band inductive slope
+- diagonal Zii와 transfer Zij
+- matrix Frobenius/spectral error 및 dominant impedance eigenmode
+- reciprocity, passivity, causality 범위, KCL/charge conservation, mesh convergence
+- S→Z condition/residual과 비교 domain의 수치 적합성
+- parse/compile/assemble/factor/RHS/postprocess wall time, peak RSS, fill, iteration/factor stats
+
+## 주 경로로 기각하거나 후순위로 둔 방법
+
+- legacy modal order만 증가: 현행 model-form gap을 복구하지 못함
+- full-board dense PEEC/BEM: O(N²) memory와 O(N³) direct work 위험
+- uniform whole-board fine-grid FFT/BEM: 8 GB에서 workspace/geometry fidelity가 부적합
+- full-board 3D FEM/FDTD를 product solver로 사용: local oracle에는 유용하나 시간/메모리 목표와 충돌
+- 네 PowerSI file에 unconstrained material/RLC fit: overfit 및 새로운 설계 일반화 실패
+- sensitivity proof 없는 spatial decap grouping: mutable terminal 정확성 손실 가능
+- 현행 780k-node direct SuperLU graph를 laptop architecture로 유지: factor memory부터 목표 초과
+
+## 후보 선택 규칙
+
+최종 선택은 단일 평균 오차가 아니라 다음 Pareto 조건으로 한다.
+
+1. provisional accuracy gate와 물리 invariant를 모두 통과
+2. paired perturbation ΔZ를 재현
+3. reserved 및 future blind design에서 재학습 없이 통과
+4. acceleration 추가오차 budget 통과
+5. 8 GB laptop에서 실제 peak RSS/time 통과
+6. 실패 원인과 적용 범위를 사용자가 이해할 수 있게 보고 가능
+
+이 문서는 연구 결과가 바뀔 때 후보 순위와 기각 사유를 갱신하며, 성공한 결과만 남기지 않는다.
