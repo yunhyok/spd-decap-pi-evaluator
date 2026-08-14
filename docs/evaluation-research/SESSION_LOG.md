@@ -1127,3 +1127,33 @@ fine interior/all-node dense complex matrix는 각각 약 `14.78/15.26 GiB`라 �
 3. 그 뒤에만 17.5 µm/100 kHz `h` 한 mesh를 실행하고 stage-evaluable gate/resource를 review한다. token이 열릴 때만 별도 `h2`, 그 뒤 별도 `h4`를 실행해 fine analytic과 `h2→h4`를 판정한다.
 4. primary radius가 통과한 뒤에만 결과를 보지 않고 `a=0.5 mm` mesh hash/analytic anchor를 동결해 같은 h→h2→h4 chain을 반복한다.
 5. 두 circle radius가 모두 `passed_AV_BS_circle_two_radius_100k_only`가 되기 전 EQ0 A–v, Hamiltonian-Schur/four-operator SAO, planned G2 2 GHz/N512/EQ0, board 또는 PowerSI correlation으로 진행하지 않는다.
+
+## 2026-08-15 — AV-BS1 standalone primary-h fixture static freeze
+
+manifest preregistration commit `82b22ee` 뒤 제품 module을 import하지 않는 연구 전용 fixture [`../../tools/research/av_bs1_boundary_schur.py`](../../tools/research/av_bs1_boundary_schur.py), 외부 runner [`../../tools/research/run_av_bs1_stage.ps1`](../../tools/research/run_av_bs1_stage.ps1), 13개 bounded test와 tracked [`../../tools/research/av_bs1_primary_h_review_token.json`](../../tools/research/av_bs1_primary_h_review_token.json)을 작성했다. **physics `primary-h`는 실행하지 않았다.** 현재 판정은 **`AV-BS1-H-fixture_static_passed_primary_h_not_run`**이다.
+
+fixture는 frozen h mesh만 지원한다. CCW P1 `K/M`, consistent boundary `MΓ`, interior/boundary partition, row-max→column-max scaled sequential `Ab,II/Ap,II` LU, original unscaled RHS별 backward residual, 두 seed `onenormest`, interior-only `Xb/Xp`, raw bilinear `Y=σHb^T M Hp`/`Yrev=σHp^T M Hb`, signed M9 modal/passivity/power와 canonical JSON wrapper를 고정했다. `h2`, `h4`, withheld radius와 EQ0 stage는 parser에 없다. child failure code도 final wrapper까지 보존하고 numerical/resource/stdout/fixture/runner/token/guard checksum을 서로 결합한다.
+
+Sol 감사에서 수학 경로는 승인됐고, sparse preflight가 complex operator/block/solve copy를 빠뜨리던 점과 CSC를 CSR로 표기한 점을 수정했다. preflight는 base sparse payload 외 `16×` sparse-copy allowance, dense-factor upper bound, 두 extension, boundary/RHS work와 25% margin을 보고한다. Terra 감사에서 runner를 제외한 child-only 계측, zero-sample pass 가능성, nonprivate WS를 mapped residency로 부르던 문제와 process-tree 종료/temp guard를 수정했다. runner PID와 Python child/descendant 전체를 100 ms로 합산하고 `successful_tree_sample_count>=1`을 요구하며, nonprivate 값은 proxy로만 기록한다. Luna 감사에서 result/token/checksum, malformed integer fail-closed와 bounded tests를 재검증했다.
+
+정적 재현 결과:
+
+```text
+pytest tests/test_research_av_bs1_boundary_schur.py: 13 passed
+PowerShell AST: passed
+manifest physics_solve_performed: false
+manifest payload SHA-256: e79cd30b88fbf339399b3b059ce958138a5b16ed90bc52cde1ed0f87c2dd9a95
+fixture SHA-256: 94cce6454dd632e83db83a621f5192823cd113348970f2e4894c23733de1c066
+runner SHA-256: 31da5df7e17456d3b82754b0c581ec704521f6d21a8875961e4b6d0fde6555f7
+```
+
+review token은 위 hash, prereg commit, h manifest, static test와 Sol/Terra/Luna review에 결합되고 반드시 tracked artifact여야 한다. fixture는 clean checkout도 요구하므로 이 checkpoint를 commit하기 전에는 `primary-h`가 구조적으로 열리지 않는다. 성공하더라도 h-stage-only이고 h2 권한은 `false`다. 제품 parser/solver/UI/version/installer와 GitHub 원격은 변경하지 않았다.
+
+`core.autocrlf=true`가 fresh checkout의 raw fixture/runner bytes를 바꿔 token을 무효화할 수 있으므로 `.gitattributes`에서 `tools/research/*.py`, `*.ps1`, `*.json`과 해당 test를 `eol=lf`로 고정했다. token과 문서의 hash는 이 canonical LF payload 기준이다.
+
+### Exact next starting point
+
+1. fixture, runner, tests, docs와 review token을 한 local research commit에 고정한다. physics solve는 commit에 포함하지 않는다.
+2. clean checkout과 token/hash를 다시 확인한 뒤 external runner로 17.5 µm/100 kHz `primary-h` 한 mesh만 실행한다.
+3. raw residual/condition/assembly/reverse/full reciprocity, passivity, signed M9 power와 execution-tree resource artifact를 독립 review한다. 어느 gate든 실패하면 결과를 동결하고 중지한다.
+4. h 결과가 통과해도 별도 h2 preregistration·fixture·review token commit 전에는 h2를 구현하거나 실행하지 않는다.

@@ -2833,6 +2833,40 @@ print(json.dumps({'case':'AV-BS1-CIRCLE-manifest-v1','runtime':runtime,
 
 이 block의 실행은 manifest preflight이며 `AV-BS1-CIRCLE preregistered_not_run` 상태를 바꾸지 않는다. solver fixture는 이 manifest가 독립 감사·commit된 뒤 별도 cycle에서 고정한다.
 
+## AV-BS1 standalone primary-h fixture static freeze
+
+다음은 physics solve를 수행하지 않는 정적 재현 명령이다.
+
+```powershell
+python -m pytest -q tests/test_research_av_bs1_boundary_schur.py
+
+$errors=$null; $tokens=$null
+[System.Management.Automation.Language.Parser]::ParseFile(
+  (Resolve-Path tools/research/run_av_bs1_stage.ps1),
+  [ref]$tokens,
+  [ref]$errors
+) | Out-Null
+if ($errors.Count) { $errors | ForEach-Object Message; exit 1 }
+
+powershell.exe -NoProfile -ExecutionPolicy Bypass `
+  -File tools/research/run_av_bs1_stage.ps1 -Stage manifest
+
+Get-FileHash tools/research/av_bs1_boundary_schur.py -Algorithm SHA256
+Get-FileHash tools/research/run_av_bs1_stage.ps1 -Algorithm SHA256
+```
+
+고정 결과는 `13 passed`, manifest payload SHA-256 `e79cd30b88fbf339399b3b059ce958138a5b16ed90bc52cde1ed0f87c2dd9a95`, fixture SHA-256 `94cce6454dd632e83db83a621f5192823cd113348970f2e4894c23733de1c066`, runner SHA-256 `31da5df7e17456d3b82754b0c581ec704521f6d21a8875961e4b6d0fde6555f7`다. manifest의 `physics_solve_performed=false`를 확인한다.
+
+tracked review token은 [`../../tools/research/av_bs1_primary_h_review_token.json`](../../tools/research/av_bs1_primary_h_review_token.json)이다. token, fixture, runner와 문서가 한 commit에 있고 checkout이 clean일 때만 다음 명령이 처음으로 허용된다.
+
+```powershell
+# 이 static-freeze checkpoint에서는 실행하지 않았다.
+powershell.exe -NoProfile -ExecutionPolicy Bypass `
+  -File tools/research/run_av_bs1_stage.ps1 -Stage primary-h
+```
+
+runner는 PowerShell runner와 Python child/descendant를 포함한 execution tree를 100 ms로 감시하고 성공 sample이 없으면 fail-closed한다. final `AV-BS1-h-result-v1` wrapper는 numerical child stdout과 resource report checksum을 결합한다. 성공하더라도 status는 `passed_AV_BS_h_stage_only_pending_h2_review`, `next_stage_authorized=false`, fine analytic/mesh/final circle pass는 `null`이다. 이 명령은 `h2`, `h4`, withheld radius 또는 EQ0를 열지 않는다.
+
 ## Focused regression
 
 ```powershell

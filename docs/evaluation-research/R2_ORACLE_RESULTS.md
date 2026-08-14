@@ -171,7 +171,7 @@ python -m pytest tests/test_research_axisymmetric_electrostatics.py tests/test_s
 
 ## 다음 R2 연구
 
-1. failed M1-EQ0 collocation, G1 `passed_exterior_galerkin_only`, G2 `passed_pair_screen_only`와 100 kHz circle reciprocity/cancellation failure를 보존한다. 독립 A–v consistent-P1 boundary-Schur **100 kHz circle-only reference candidate**는 [`T1_AV_BOUNDARY_SCHUR_SPEC.md`](T1_AV_BOUNDARY_SCHUR_SPEC.md)에 `AV-BS1-CIRCLE preregistered_not_run`으로 동결했다. 다음은 standalone solver fixture의 별도 static audit·commit이며, h/h2/h4와 withheld radius review token 전에는 EQ0 mesh·crop 또는 planned G2 N512/2 GHz circle/EQ0 seed로 직행하지 않는다.
+1. failed M1-EQ0 collocation, G1 `passed_exterior_galerkin_only`, G2 `passed_pair_screen_only`와 100 kHz circle reciprocity/cancellation failure를 보존한다. 독립 A–v consistent-P1 boundary-Schur **100 kHz circle-only reference candidate**는 [`T1_AV_BOUNDARY_SCHUR_SPEC.md`](T1_AV_BOUNDARY_SCHUR_SPEC.md)에 고정했고 standalone primary-h fixture/result/resource/token의 static gate까지 `AV-BS1-H-fixture_static_passed_primary_h_not_run`으로 통과했다. 다음은 이 checkpoint를 clean commit한 뒤 h 한 mesh만 실행하는 것이며, 별도 review token 전에는 h2/h4/withheld 또는 EQ0 mesh·crop, planned G2 N512/2 GHz circle/EQ0 seed로 직행하지 않는다.
 2. S1은 circular/void boundary-conforming refinement와 h/h/2/h/4 추정 오차를 먼저 해결한다.
 3. V1/V2는 명시적 coax/ring return을 가진 2-D/3-D reference와 동일 crop의 exact-minus-core matrix를 만든다.
 4. A1은 current cell-centred solver를 승격하지 않고 body-fitted/higher-order 후보를 비교한다.

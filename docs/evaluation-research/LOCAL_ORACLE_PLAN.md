@@ -88,7 +88,7 @@ Positive-frequency anchor는 100 kHz, 1/10/100/500 MHz, 1/2 GHz다. skin crossov
 | ID | 판정 | 핵심 근거 |
 |---|---|---|
 | N0 | pass, scalar-only | frozen reproduction 포함 두 제조 예제 reduced/unreduced max relative Z error `5.34e-15`; owner ledger 완전 |
-| T1 | blocked, limited subcase pass | Cohn body-fitted `C'`, periodic plate 1-D volume과 `C0-A1` circle interior 통과; collocation power failure immutable, G1 `passed_exterior_galerkin_only`, G2 pair `passed_pair_screen_only`. G2 100 kHz circle은 q/analytic/mesh/passivity는 통과했으나 N256 raw `Yw` reciprocity `1.41e-8`과 cancellation `1.64e-7`로 fail-closed. `AV-BS1-CIRCLE`은 manifest/metric contract만 `preregistered_not_run`; A–v physics/convergence, finite end/source return/absolute owner는 미실행 |
+| T1 | blocked, limited subcase pass | Cohn body-fitted `C'`, periodic plate 1-D volume과 `C0-A1` circle interior 통과; collocation power failure immutable, G1 `passed_exterior_galerkin_only`, G2 pair `passed_pair_screen_only`. G2 100 kHz circle은 q/analytic/mesh/passivity는 통과했으나 N256 raw `Yw` reciprocity `1.41e-8`과 cancellation `1.64e-7`로 fail-closed. `AV-BS1-CIRCLE`은 manifest와 standalone primary-h fixture의 정적 gate만 통과; A–v physics/convergence, finite end/source return/absolute owner는 미실행 |
 | S1 | blocked | rectangle 최종 refinement 0.299%는 부분 통과했으나 annulus refinement fail, 전체 corpus/crop/ownership 없음 |
 | V1 | blocked | solid-cylinder R/L/skin law는 통과했으나 명시적 coax return loop 없음 |
 | V2 | blocked | PEEC current sharing/invariant는 통과했으나 `global_mna_composable=False`, 3-D/exact-minus-core 없음 |
@@ -145,7 +145,7 @@ N0 high-precision canonical parity는 `||ΔZ||F/max(||Z||F,nZfloor) ≤1e-12` �
 ## 실행 순서
 
 1. N0과 exact-minus-core identity case를 동결한다.
-2. M0 periodic 1-D volume pass, failed collocation result, G1 exterior-only, G2 pair-only와 100 kHz circle reciprocity/cancellation failure를 동결한다. 독립 `AV-BS1-CIRCLE` boundary-Schur의 manifest/metric/resource contract는 `preregistered_not_run`으로 고정됐다. 다음은 별도 standalone solver fixture의 static audit·commit이며, 그 뒤에도 h→h2→h4와 withheld radius review token을 순차 통과해야 EQ0 mesh/crop으로 확장한다. Hamiltonian Schur/four-operator Calderón SAO는 그 다음 후보로 비교한다.
+2. M0 periodic 1-D volume pass, failed collocation result, G1 exterior-only, G2 pair-only와 100 kHz circle reciprocity/cancellation failure를 동결한다. 독립 `AV-BS1-CIRCLE` boundary-Schur는 manifest와 primary-h standalone fixture/result/resource/token contract까지 `AV-BS1-H-fixture_static_passed_primary_h_not_run`으로 고정됐다. 다음은 clean commit 뒤 h 한 mesh 실행이며, 그 뒤에도 h→h2→h4와 withheld radius review token을 순차 통과해야 EQ0 mesh/crop으로 확장한다. Hamiltonian Schur/four-operator Calderón SAO는 그 다음 후보로 비교한다.
 3. P1/P2 explicit-ref trace의 actual return polygon/connectivity와 absolute/core DtN owner를 증명한다.
 4. S1, V1/V2, A1, C1의 남은 analytic/mesh/crop/invariant blocker를 해결한다.
 5. PowerSI에서 trace-only, plane-neck, via-pair, pad/antipad, finite-port coupon과 반복 해석을 확보한다.

@@ -193,6 +193,35 @@ edeg(m) = |Yhat_m-Yhat_-m| / max(|Yhat_m|,|Yhat_-m|,Ymode_floor), m=1…4
 
 어느 단계든 실패하면 이후 stage를 시작하지 않는다. failure code는 최소한 `BLOCKED_AV_BS_MESH_HASH`, `BLOCKED_AV_BS_SOLVE`, `BLOCKED_AV_BS_RECIPROCITY`, `BLOCKED_AV_BS_PASSIVITY`, `BLOCKED_AV_BS_POWER`, `BLOCKED_AV_BS_ANALYTIC`, `BLOCKED_AV_BS_RESOURCE`를 구분한다.
 
+## Standalone `h` fixture freeze
+
+연구 전용 구현은 [`../../tools/research/av_bs1_boundary_schur.py`](../../tools/research/av_bs1_boundary_schur.py)와 [`../../tools/research/run_av_bs1_stage.ps1`](../../tools/research/run_av_bs1_stage.ps1)에 고정했다. 현재 상태는 **`AV-BS1-H-fixture_static_passed_primary_h_not_run`**이다. 이 checkpoint에서 physics response는 실행하지 않았고 `h2`, `h4`, withheld radius와 EQ0 CLI는 존재하지 않는다.
+
+- fixture는 `src/spd_decap_pi`를 import하지 않는 standalone NumPy/SciPy 연구 도구다.
+- `K`, consistent volume `M`, boundary trace `MΓ`를 raw CCW P1 element에서 조립하고 full dense interior matrix, `inverse`, `Sp-Sb`, `Dp-Db`, 사후 대칭화를 금지한다.
+- `Ab,II`와 `Ap,II`를 row-max 뒤 column-max로 equilibrate하고 `COLAMD`, `diag_pivot_thresh=1`, SuperLU `Equil=False`로 순차 factor한다. 동시에 하나의 factor만 resident이고 boundary RHS batch는 `4`다.
+- 각 original unscaled system의 RHS별 backward residual과 두 frozen-seed `onenormest(t=4,itmax=10)` condition surrogate를 기록한다. 이 estimate는 rigorous upper bound가 아니다.
+- full harmonic extension 대신 interior `Xb`, `Xp`와 implicit boundary identity를 사용해 raw `Y=σ Hb^T M Hp`, `Yrev=σ Hp^T M Hb`를 독립 조립한다.
+- numerical artifact는 `AV-BS1-h-numerical-v1`, final artifact는 `AV-BS1-h-result-v1` canonical JSON wrapper다. UTF-8 compact sorted payload의 SHA-256을 wrapper에 두며 `Y/Yrev`는 little-endian complex128 base64와 별도 hash로 보존한다.
+- child failure wrapper도 finalizer까지 원래 `BLOCKED_AV_BS_*` code를 보존한다. child stdout, fixture, runner, review token, guard와 resource report hash가 서로 결합되지 않으면 result-schema failure다.
+
+첫 실행 권한은 tracked artifact [`../../tools/research/av_bs1_primary_h_review_token.json`](../../tools/research/av_bs1_primary_h_review_token.json)에만 있다. token은 preregistration commit, h manifest, fixture/runner SHA-256, static test와 세 독립 감사에 결합된다. token과 fixture가 commit된 clean checkout이 아니면 실행은 차단된다. 이 token은 `primary-h`만 허용하며 `h2`를 열지 않는다.
+
+외부 runner는 dedicated PowerShell runner와 Python child/descendant를 하나의 execution tree로 100 ms마다 합산한다. 성공 sample이 최소 한 번 없으면 resource gate는 실패한다. mandatory stop은 tree WS `>4 GiB`, tree private 또는 committed `>5 GiB`, system commit headroom `<2 GiB`, available physical `<1.5 GiB`다. `WorkingSet-PrivateWorkingSet`은 실제 mapped residency가 아니라 `nonprivate_working_set_proxy`로만 기록한다. h preflight는 raw `K/M/MΓ` 외에도 complex operators, block slices, raw/equilibrated solve copies와 RHS를 위한 `16×` sparse-copy allowance, dense-factor upper bound, 두 extension, boundary work, batch work와 추가 25% margin을 합산한다.
+
+정적 gate는 다음으로 고정했다.
+
+```text
+python -m pytest -q tests/test_research_av_bs1_boundary_schur.py
+# 13 passed; physics solve 없음
+
+powershell.exe -NoProfile -ExecutionPolicy Bypass `
+  -File tools/research/run_av_bs1_stage.ps1 -Stage manifest
+# manifest payload SHA-256 e79cd30b88fbf339399b3b059ce958138a5b16ed90bc52cde1ed0f87c2dd9a95
+```
+
+fixture SHA-256은 `94cce6454dd632e83db83a621f5192823cd113348970f2e4894c23733de1c066`, runner SHA-256은 `31da5df7e17456d3b82754b0c581ec704521f6d21a8875961e4b6d0fde6555f7`다. `.gitattributes`는 `tools/research`의 Python/PowerShell/JSON과 해당 test를 `eol=lf`로 고정해 `core.autocrlf`가 raw token hash를 바꾸지 못하게 한다. 파일 또는 line-ending policy가 바뀌면 token이 무효가 되며 재감사·새 commit 전에는 실행할 수 없다.
+
 ## Conditional EQ0 A–v contract
 
 현재 상태는 **`AV-BS1-EQ0 conditional_not_preregistered_circle_pending`**이다. circle 두 radius가 통과하기 전에는 EQ0 solve를 허용하지 않는다. 아래 항목은 후속 freeze의 경계를 정하며, exact EQ0 mesh hash와 executable fixture가 별도 commit에서 고정돼야 `preregistered_not_run`으로 바뀐다.
@@ -224,10 +253,10 @@ edeg(m) = |Yhat_m-Yhat_-m| / max(|Yhat_m|,|Yhat_-m|,Ymode_floor), m=1…4
 
 ## Exact next starting point
 
-1. [`ORACLE_REPRODUCTION.md`](ORACLE_REPRODUCTION.md)에 manifest/analytic-anchor generator를 고정해 위 hash를 독립 재현한다.
-2. mesh lineage, subtraction-free identity, units, power와 gate를 Sol/Terra/Luna 독립 감사로 닫는다.
-3. manifest-only block과 문서를 commit한다. physics solve는 하지 않는다.
-4. 별도 cycle에서 standalone AV-BS1 solver fixture를 작성하고 static audit·commit한 뒤에만 17.5 µm/100 kHz의 `h` 한 mesh를 먼저 실행한다. 그 `h` review token이 열린 뒤에만 별도 `h2` command를 허용한다.
+1. standalone fixture, runner, 13개 bounded test, result schema와 tracked primary-h review token을 함께 commit한다. physics solve는 이 commit에 포함하지 않는다.
+2. clean committed checkout에서 외부 runner로 17.5 µm/100 kHz `h` 한 mesh만 실행한다.
+3. stage-evaluable raw residual/condition/reciprocity/passivity/power와 execution-tree resource artifact를 독립 검토해 실패면 즉시 동결한다.
+4. `h` 결과 review 뒤 별도 preregistration·token·fixture commit이 생기기 전에는 `h2`를 구현하거나 실행하지 않는다.
 
 ## Primary literature
 

@@ -1,0 +1,4 @@
+tools/research/*.py text eol=lf
+tools/research/*.ps1 text eol=lf
+tools/research/*.json text eol=lf
+tests/test_research_av_bs1_boundary_schur.py text eol=lf
