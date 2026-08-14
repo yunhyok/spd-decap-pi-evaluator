@@ -9,7 +9,7 @@
 | ID | 현재 판정 | 통과한 증거 | 남은 차단 조건 |
 |---|---|---|---|
 | N0 | **통과 — independent scalar branch 한정** | reduced/unreduced Z가 analytic 및 direct solve와 machine precision에서 일치 | mutual/multiterminal block, topology replacement 뒤 재인증, production 연결 |
-| T1 | **차단 — E0, M0 periodic volume과 A1 circle interior 제한 통과** | Cohn lossless stripline `C'`, periodic plate-pair independent 1-D FEM과 `C0-A1` circular interior DtN gate를 재현 | finite/open M1 SAO–CIM/A–v, finite-length 3-D, 실제 return polygon/connectivity, balanced projection과 same-crop owner partition |
+| T1 | **차단 — E0, M0 periodic volume과 A1 circle interior 제한 통과** | Cohn lossless stripline `C'`, periodic plate-pair independent 1-D FEM과 `C0-A1` circular interior DtN gate를 재현; M1-EQ0 `N={144,288,576}` preregistered | finite/open M1 SAO–CIM/A–v 실행, finite-length 3-D, 실제 return polygon/connectivity, balanced projection과 same-crop owner partition |
 | S1 | **차단 — rectangle refinement 부분 통과** | 유한 면적 contact, reciprocity/nullspace/passivity; 마지막 level 6→7 변화 0.299% | annulus refinement 오류, 전체 h/h/2/h/4·crop corpus, neck/void/L-shape, interface/owner certificate |
 | V1 | **차단 — constitutive law 통과** | solid-cylinder DC R, internal/external L limit, skin trend, numerical invariant | 명시적 coaxial return loop와 exact-minus-core block 없음 |
 | V2 | **차단 — isolated PEEC 통과** | mutual L, signed return, current sharing, reciprocity/passivity/KCL | 3-D coupon, pad/antipad/plane return, 실제 core subtraction; API가 global composition을 명시적으로 금지 |

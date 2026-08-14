@@ -9,7 +9,7 @@
 | 프로그램 기준 | SPD Decap PI Evaluator v0.22.0 |
 | 연구 branch | `codex/evaluation-algorithm-research` |
 | 기준 commit | `bb361687c0bf976d5d04faf26bc243bcf3d52006` |
-| 현재 단계 | R0 source/external-port/return-owner contract 진행 중, R2 T1 M0 periodic slab volume pass 후 finite/open M1 SAO–CIM/A–v 준비 |
+| 현재 단계 | R0 source/external-port/return-owner contract 진행 중, R2 T1 M1-EQ0 geometry/panel/crop preregistration 완료 후 SAO–CIM 실행 직전 |
 | 제품 코드 변경 | 없음 |
 | GitHub 원격 변경 | 없음 |
 | 정확성 승격 | 미달성 |
@@ -68,6 +68,7 @@
 | D-028 | Hankel/Bessel dynamic range는 scaled representation과 operator-floor proof로 fail-closed 처리한다. | 확정; direct `hankel2`의 false zero, `J-jY` catastrophic cancellation과 estimator overflow를 물리적 zero/convergence로 해석하지 않음 |
 | D-029 | M0 lateral-periodic slab과 finite/open rectangular SAO를 같은 경계값 문제로 취급하지 않는다. | 확정; free-space finite contour에는 side-face current와 edge field가 있어 periodic `coth`의 normative 비교 대상이 아님 |
 | D-030 | M0-V1 independent normalized 1-D slab FEM을 periodic volume-only pass로 동결하고, M0 전용 periodic Green kernel은 finite/open M1보다 우선 구현하지 않는다. | 확정; canonical max raw error/mesh/phase `0.0733%/0.2199%/0.0420°`, W0 withheld `0.1268%/0.3804%/0.0727°`; C0-A1은 circle-only 상태 유지 |
+| D-031 | 첫 finite/open fixture는 M1-EQ0 full contour `N={144,288,576}`로 사전 동결하고 물리 panel-size gate는 fine `4N`에서 판정한다. | 확정; exact Fraction endpoint/hash, global adjacent growth `<=1.5`, fine corner `<=δ/4`, facing `<=h/8`; symmetry reduction 없이 실행 |
 
 ## 현재 가설 순위
 
@@ -84,7 +85,7 @@
 |---|---|---|---|
 | R0 Reference contract | 8개 파일 manifest, explicit port map, PowerSI 조건 | identity/hash/grid/state 및 reference quality 기록 | identity/grid/source parameter/P2 physical terminal 완료; export operator provenance 진행 중 |
 | R1 Frozen baseline | 현행 solver의 전체 timing/memory/error/numerical report | 대표 pair와 rail별 재현 가능한 baseline | 기존 92-port 결과만 동결; pair P2 import 차단 |
-| R2 Local oracle | via/trace/pad/plane canonical corpus | reciprocity/passivity/conservation/mesh convergence | N0 scalar pass; T1 E0, M0 periodic 1-D volume과 `C0-A1` circle interior 제한 통과, M1 `specified_not_run`, T1 overall blocked; S1/V1/V2/A1/C1 global 승격 차단 |
+| R2 Local oracle | via/trace/pad/plane canonical corpus | reciprocity/passivity/conservation/mesh convergence | N0 scalar pass; T1 E0, M0 periodic 1-D volume과 `C0-A1` circle interior 제한 통과, M1-EQ0 `preregistered_not_run`, T1 overall blocked; S1/V1/V2/A1/C1 global 승격 차단 |
 | R3 Model attribution | 물리 block별 ablation matrix | 예상 port/band 개선을 원인별로 구분 | R2 oracle 뒤 대기 |
 | R4 Hybrid global | condensed domains + passive MNA 후보 | 네 pair provisional accuracy gate | 대기 |
 | R5 Acceleration | exact reduction, MOR, adaptive sweep | 추가 오차 budget + 8 GB gate | 대기 |
@@ -143,7 +144,7 @@ PowerSI repeatability와 mesh/order convergence를 측정한 뒤 수치는 조�
 
 ## 다음 세션의 우선 작업
 
-1. smallest eligible equal-width finite/open M1에서 C0-A1 SAO–CIM panel/self/exterior/condition/power gate를 실행한다. periodic `coth`를 finite-width exact target으로 사용하지 않는다.
+1. preregistered M1-EQ0 full `N={144,288,576}`에서 C0-A1 SAO–CIM panel/self/exterior/condition/power gate를 실행한다. periodic `coth`를 finite-width exact target으로 사용하지 않는다.
 2. 같은 M1 geometry와 current basis의 independent A–v FEM `h,h/2,h/4`, crop `2/4/8 Deff`와 비교한다.
 3. T1-F finite-length 3-D PEEC length-difference reference와 exact distributed-line stamp를 비교한다.
 4. P1/P2 selected crop의 확인된 return artwork/void/GND net graph에서 signal-to-return signed basis와 same-crop core/DtN owner를 정의한다. 가까운 via를 current return으로 강제하지 않는다.

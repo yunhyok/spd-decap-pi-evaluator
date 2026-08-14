@@ -873,3 +873,53 @@ canonical sequential run은 이 host에서 약 `1.38 s`, process-only peak worki
 3. 동일 geometry/current basis의 independent 2-D A–v를 skin mesh와 crop `2/4/8 Deff`에서 실행한다.
 4. finite rectangle 결과는 periodic `coth`에 대한 exact error가 아니라 SAO-vs-A–v와 width-asymptotic 보조 trend로 판정한다.
 5. M1 통과 전 source return/global/PowerSI 또는 acceleration 단계로 승격하지 않는다.
+
+## 2026-08-14 — T1-M1-EQ0 preregistration
+
+### 시작점과 목적
+
+M0 volume-only 연구를 local checkpoint `55ee9be`로 동결한 뒤, 첫 finite/open result를 보기 전에 geometry, panel endpoint/hash, terminal basis, owner, A–v crop와 8 GB stop rule을 고정했다. 제품 code는 변경하지 않았다.
+
+### Fixture와 terminal scope
+
+M1-EQ0는 vacuum에서 signal `[-125,+125]×[50,85] µm`, return `[-125,+125]×[-35,0] µm`, `t=35 µm`, `σ=59.6 MS/m`, `b=(+1,-1)ᵀ`, peak `Iloop=1 A`다. positive solve는 `100 kHz,1/10/100/500 MHz,1/2 GHz`, DC는 analytic anchor다.
+
+- `Deff=250 µm`, 2 GHz `|kb|Deff=0.010479225107`: quasi-TM screen eligible
+- `δ2GHz=1.457746488493 µm`
+- `R'dc=3.83509108341 Ω/m`, 10 mm `38.3509108341 mΩ`
+- authoritative output은 one-dimensional balanced `Z'loop`; non-zero-sum/common-mode/인공 rank-one lift는 physical partial/global 증거가 아님
+
+### Panel count dispute와 exact manifest
+
+초기 planning count `168/336/672`와 `176/352/704`는 anchor transition과 seed/fine gate가 불명확했다. Sol/Luna와 exact Fraction integer search로 다음을 확인했다.
+
+1. 기존 literal seed `δ/4,h/8` 요구는 `g=1.5` half-interval formula와 과도한 nested refinement를 만든다.
+2. 실제 물리 resolution은 authoritative fine `4N`에서 판정하도록 result 전에 정정했다.
+3. facing을 `[-125,0]`, `[0,125] µm` 두 interval로 나누고 각각 `M=8/half`, outer는 `M=10/half`, 두 vertical은 각각 `M=5/half`로 고정했다.
+4. 한 contour `72`, 두 full contour의 `N={144,288,576}`이며 symmetry reduction을 사용하지 않는다.
+
+fine의 모든 anchor-start panel 최대는 `0.331753555 µm <= δ/4=0.364436622 µm`, max facing은 `5.419805710 µm <= h/8=6.25 µm`, physical corner를 포함한 adjacent ratio는 exact rational에서 `<=3/2`다. endpoint payload hash는:
+
+- seed: `f65cddcf5d45187006ffc5e9eaf1c5624fa14e3849ce435c2601825da579743c`
+- medium: `35d1f81c87cb97372c543db98e2063102b8823d5af0e70b8e5c4432966b77b02`
+- fine: `5b964069b3bae0965ff3bfcc95348b98656fca9a48da3a998a0510892cd17d0e`
+
+[`ORACLE_REPRODUCTION.md`](ORACLE_REPRODUCTION.md)의 standalone exact-Fraction block을 문서에서 그대로 실행해 closure, CCW area, growth, fine gates와 세 hash를 재현했다.
+
+### Owner, A–v와 resource
+
+- SAO `Din-Dout`은 conductor skin/proximity, unbounded `G0`는 exterior magnetic field의 단독 owner다.
+- M0 periodic gap term, `C'/G'`, finite end, roughness, pad/via, layered material와 board return은 EQ0에 포함하지 않는다.
+- A–v crop box는 `2/4/8Deff`: x `±625/±1125/±2125 µm`, y `[-535,585]/[-1035,1085]/[-2035,2085] µm`다.
+- A–v normal mesh target는 `δ/2,δ/4,δ/8`; hard ceiling `250k nodes/500k triangles`다.
+- one case만 순차 실행하고 process-tree WS target `4 GiB`, private/commit `5 GiB` 중단, system commit headroom `2 GiB`와 available RAM `1.5 GiB` 시작 floor를 유지한다.
+
+현재 상태는 `M1-EQ0 preregistered_not_run`, T1/global/PowerSI/product는 blocked다.
+
+### Exact next starting point
+
+1. frozen full-contour endpoint를 그대로 사용해 q20 authoritative/q10 parity의 C0-A1 interior `P/U/Din-Dout`을 실행한다.
+2. unbounded analytic-log `G0`, terminal saddle와 `r0={0.1,1,10} m` invariance를 연결한다.
+3. raw `Z'loop`, `N→2N→4N`, residual/condition/current/reciprocity/passivity/dissipative-power를 gate한다.
+4. SAO가 통과한 뒤 동일 geometry/basis의 independent A–v mesh×crop를 순차 실행한다.
+5. 어느 gate든 실패하면 원인을 그대로 기록하고 A0 fallback, symmetrization, clipping 또는 결과 기반 panel tuning을 하지 않는다.

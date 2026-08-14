@@ -2,14 +2,14 @@
 
 최종 갱신: 2026-08-14 (Asia/Seoul)
 
-이 문서는 finite-width straight conductor와 explicit return의 smooth-copper broadband series operator를 검증할 T1-M1 실행 계약을 고정한다. 제품 parser/solver 코드는 변경하지 않았다. mandatory circle interior prototype은 [`T1_CIRCLE_DTN_RESULTS.md`](T1_CIRCLE_DTN_RESULTS.md)에서 `C0-A1 passed_circle_interior_only`, lateral-periodic slab은 [`T1_M0_SLAB_RESULTS.md`](T1_M0_SLAB_RESULTS.md)에서 `passed_periodic_1d_volume_only`로 판정됐다. 그러나 finite-width SAO–CIM과 independent 2-D A–v 기준기는 아직 실행되지 않았다. 따라서 T1-M1은 **`specified_not_run`**, T1 전체와 global composition은 계속 `blocked`다.
+이 문서는 finite-width straight conductor와 explicit return의 smooth-copper broadband series operator를 검증할 T1-M1 실행 계약을 고정한다. 제품 parser/solver 코드는 변경하지 않았다. mandatory circle interior prototype은 [`T1_CIRCLE_DTN_RESULTS.md`](T1_CIRCLE_DTN_RESULTS.md)에서 `C0-A1 passed_circle_interior_only`, lateral-periodic slab은 [`T1_M0_SLAB_RESULTS.md`](T1_M0_SLAB_RESULTS.md)에서 `passed_periodic_1d_volume_only`로 판정됐다. M1-EQ0 geometry, exact full-contour panel hash와 A–v crop/resource 계약은 결과를 보기 전에 동결했지만 finite-width SAO–CIM과 independent 2-D A–v 기준기는 아직 실행되지 않았다. 따라서 T1-M1은 **`preregistered_not_run`**, T1 전체와 global composition은 계속 `blocked`다.
 
 ## 범위와 독립성
 
 | 항목 | 1차 범위 | 현재 상태 |
 |---|---|---|
-| normative oracle | dense pulse SAO–CIM; homogeneous, nonmagnetic, lossless background; simply connected copper contours | `specified_not_run` |
-| independent reference | 2-D volume-current `A_z–v` magnetoquasistatic P1 FEM | `specified_not_run` |
+| normative oracle | dense pulse SAO–CIM; homogeneous, nonmagnetic, lossless background; simply connected copper contours | `preregistered_not_run` |
+| independent reference | 2-D volume-current `A_z–v` magnetoquasistatic P1 FEM | `preregistered_not_run` |
 | authoritative output | 동일한 conductor order와 balanced current basis의 complex `Z'(f)` | 없음 |
 | 별도 electrostatic block | transverse `C'`; lossy dielectric이면 causal `G'/C'` | T1-E0 외 미실행 |
 | source-derived P2 | `Trace13305` 치수의 artificial continuous-return coupon | manufactured-only |
@@ -279,13 +279,80 @@ DC analytic loop resistance over 10 mm과 2 GHz `|kb|Deff` screening은 다음�
 
 blocked geometry도 `f<=0.3c/(2πDeff)`의 저주파 trend에는 사용할 수 있다. threshold는 각각 1.4314 GHz, 715.70 MHz, 1.1451 GHz, 286.28 MHz다. 이 screening은 solver pass가 아니다.
 
+### M1-EQ0 first-run freeze
+
+첫 finite/open 실행은 결과를 보기 전에 다음 단일 geometry로 고정한다.
+
+```text
+id         = M1-EQ0
+background = vacuum, homogeneous, lossless, nonmagnetic
+signal     = [-125,+125] µm × [50,85] µm
+return     = [-125,+125] µm × [-35,0] µm
+ts = tr    = 35 µm
+σs = σr    = 59.6 MS/m
+order      = (signal,return)
+b          = (+1,-1)ᵀ, Iloop=1 A peak, +z signal current
+frequency  = DC analytic anchor; positive solve at
+             {100 kHz,1,10,100,500 MHz,1,2 GHz}
+Deff       = 250 µm
+```
+
+2 GHz에서 `|kb|Deff=0.010479225107`, `δ=1.457746488493 µm`이고 10 mm DC loop resistance는 `38.3509108341 mΩ`다. authoritative electrical output은 `Z'loop=bᵀVabs/Iloop`인 **one-dimensional balanced scalar**다. 여기서 `Vabs`는 A–v 절의 conductor longitudinal voltage-gradient vector `v`와 같은 `[V/m]` terminal quantity다. 외부 return이 없는 `(1,0)` 또는 `(0,1)` current column, r0-dependent common mode와 rank-one artificial lift는 `UNRESOLVED_EXTERNAL_RETURN`이며 physical `2×2` partial operator나 GlobalMNA evidence로 보고하지 않는다.
+
+EQ0 owner는 다음처럼 고정한다.
+
+- conductor interior/background subtraction, skin과 proximity: `C0-A1` SAO `Din-Dout` 단독 owner
+- exterior magnetic field: SAO는 unbounded `G0`, independent A–v는 crop-converged full exterior의 단독 owner
+- dielectric `C'/G'`, finite end, pad/via/bend, roughness, layered dielectric, board return polygon과 exact-minus-core: out of scope
+- M0 periodic analytic gap term `jωμh/w`: EQ0에 추가하지 않음
+
+#### EQ0 exact panel manifest
+
+기존 문구의 물리 panel-size gate는 **두 번 이등분한 fine `4N` level**에 적용하도록 사전 정정한다. seed는 pre-refinement geometry이며 seed 자체가 `δ/4` 또는 `h/8`을 만족한다고 주장하지 않는다. fine에서 corner/interaction start panel `<=δ2GHz/4`, facing/projection maximum `<=h/8`을 만족해야 한다.
+
+각 anchor interval은 아래 geometric half-interval 식을 쓰고, 모든 seed panel을 그대로 이등분해 medium/fine을 만든다.
+
+```text
+g = 3/2
+Δi = (L/2)(g-1)g^i/(g^M-1), i=0..M-1
+
+facing: anchors x={-125,0,+125} µm,
+        each L=125 µm interval uses M=8 per half
+outer:  one L=250 µm interval uses M=10 per half
+right/left vertical: each L=35 µm interval uses M=5 per half
+```
+
+각 conductor는 facing `32`, outer `20`, vertical `10+10`, 합계 `72` panel이다. 두 full CCW contour의 nested sequence는 **`N={144,288,576}`**이고 symmetry/half-domain reduction을 사용하지 않는다. signal은 facing `(-125,50)→(125,50)`, right, outer, left 순서이고 return은 outer `(-125,-35)→(125,-35)`, right, facing, left 순서다.
+
+| level | N | min panel (µm) | max anchor-start (µm) | max panel (µm) | max facing (µm) | SHA-256 |
+|---|---:|---:|---:|---:|---:|---|
+| seed | 144 | `1.102972857` | `1.327014218` | `42.401981904` | `21.679222839` | `f65cddcf5d45187006ffc5e9eaf1c5624fa14e3849ce435c2601825da579743c` |
+| medium | 288 | `0.551486428` | `0.663507109` | `21.200990952` | `10.839611420` | `35d1f81c87cb97372c543db98e2063102b8823d5af0e70b8e5c4432966b77b02` |
+| fine | 576 | `0.275743214` | `0.331753555` | `10.600495476` | `5.419805710` | `5b964069b3bae0965ff3bfcc95348b98656fca9a48da3a998a0510892cd17d0e` |
+
+fine의 모든 anchor-start panel 최대는 `0.331753555 µm = 0.910319(δ/4)`, fine facing maximum은 `0.867169(h/8)`이다. global minimum 하나로 다른 corner를 숨기지 않고 모든 physical corner와 interaction anchor 양쪽을 검사한다. interval 내부와 physical corner를 포함한 인접 panel ratio는 모두 `<=1.5`다. 이 count는 full contour에서 해당 fine gates와 global growth를 만족하는 현재 geometric formula의 최소 정수 조합이며, 기존 planning count `168/176`을 결과 선택에 사용하지 않는다.
+
+hash serialization은 UTF-8/LF/no trailing newline, rational µm endpoint를 `numerator/denominator`로 쓴다. header는 `M1-EQ0|manifest=v1|level=<seed|medium|fine>|g=3/2|units=um|subdivide=<1|2|4>|loops=signal,return|ordering=ccw`; panel row는 `index|loop|edge|anchor_index|ordinal|x0|y0|x1|y1`, 마지막에 각 loop의 exact closure row를 둔다. 재현 코드는 [`ORACLE_REPRODUCTION.md`](ORACLE_REPRODUCTION.md)에 고정한다.
+
+#### EQ0 A–v crop/resource freeze
+
+`ΩR=bbox(Cu)⊕R Deff`이므로 crop box는 다음과 같다.
+
+| crop | x range (µm) | y range (µm) |
+|---|---:|---:|
+| `2Deff` | `[-625,+625]` | `[-535,+585]` |
+| `4Deff` | `[-1125,+1125]` | `[-1035,+1085]` |
+| `8Deff` | `[-2125,+2125]` | `[-2035,+2085]` |
+
+A–v conductor-normal target는 coarse/medium/fine `δ/2,δ/4,δ/8 = 0.728873/0.364437/0.182218 µm`다. 한 frequency/crop/mesh만 순차 실행하고 hard ceiling은 `250,000 nodes`, `500,000 triangles`다. process-tree target working set `<=4.0 GiB`, private/committed `>5.0 GiB`이면 현재 stage를 중단하며 system commit headroom `<2.0 GiB` 또는 available physical memory `<1.5 GiB`이면 시작하지 않는다.
+
 ### SAO panel sequence
 
 - 모든 physical corner, opposing-conductor corner의 orthogonal projection, closest-gap point를 edge anchor로 넣는다. wide return의 중앙 interaction region을 corner-only grading의 큰 panel 하나로 덮지 않는다.
 - 각 anchor interval의 양 끝에서 midpoint 방향으로 growth `g=1.5` geometric panels를 배치한다.
 - half-interval `L/2`, panel count `M`이면 `Δi=(L/2)(g-1)g^i/(g^M-1)`다.
-- seed의 corner/interaction minimum panel은 2 GHz skin depth `δ=1.457746 µm`의 `δ/4` 이하이고, opposing projection 주변 최대 panel은 `h/8` 이하다.
-- seed panel 전체를 이등분한 `N,2N,4N` nested sequence를 사용한다. sharp corner의 uniform-only mesh는 canonical pass가 아니다.
+- `N,2N,4N`의 **fine `4N`**에서 corner/interaction start panel은 2 GHz skin depth `δ=1.457746 µm`의 `δ/4` 이하이고, opposing projection 주변 최대 panel은 `h/8` 이하다. seed가 이 fine threshold를 만족한다고 주장하지 않는다.
+- seed panel 전체를 이등분한 nested sequence를 사용한다. sharp corner의 uniform-only mesh는 canonical pass가 아니다.
 
 ### A–v mesh/crop sequence
 
@@ -372,7 +439,7 @@ matrix convergence에서 frequency별 `Z'floor=max(1e-9 Ω/m,1e-9 maxij|Z'fine,i
 7. finite-length T1-F 3-D length-difference reference와 distributed line stamp를 연결한다.
 8. actual board crop와 core owner가 준비된 뒤에만 source-faithful/global adapter 연구로 넘어간다.
 
-`specified_not_run → oracle_pass`는 위 수치 gate와 independent reference가 모두 통과할 때만 가능하다. 그 전에는 PowerSI correlation, product accuracy 또는 8 GB production 성능을 주장하지 않는다.
+`preregistered_not_run → oracle_pass`는 위 수치 gate와 independent reference가 모두 통과할 때만 가능하다. 그 전에는 PowerSI correlation, product accuracy 또는 8 GB production 성능을 주장하지 않는다.
 
 ## Primary literature
 

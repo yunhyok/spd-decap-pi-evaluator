@@ -826,6 +826,140 @@ print("P2_DC_saddle_residual", float(np.linalg.norm(saddle@solution-rhs)))
 
 frozen 핵심은 `δ2GHz=1.457746488493 µm`이다. 12개 M1 geometry 중 2 GHz `|kb|Deff<=0.3`을 통과하는 것은 8개이며, `(w/h,Wr/w)=(10,20),(20,20),(50,5),(50,20)`은 각각 `0.419169/0.838338/0.523961/2.095845`로 차단된다. P2 artificial two-return DC는 signal `33.557046980 mΩ`, bundled return `1.677852349 mΩ`, loop `35.234899329 mΩ`; vacuum 2 GHz extent는 `0.0503003`이다. equipotential saddle은 `Iabs=[1,-0.5,-0.5] A`, `Z'Bg·l=35.234899329 mΩ`, residual은 binary64 출력에서 exact zero를 재현한다. 이는 동일 단면·전도도의 두 return에 대한 DC 결과이며 75/104 µm gap의 AC equal split을 가정하지 않는다.
 
+## T1-M1-EQ0 exact panel manifest
+
+아래 block은 result solve 전에 고정한 EQ0 full-contour `N={144,288,576}` endpoint와 SHA-256을 exact rational arithmetic으로 재현한다. hash payload는 UTF-8/LF/no trailing newline이고 좌표 단위는 µm다. fine `4N`에서만 `δ/4`와 `h/8` 물리 panel-size gate를 판정한다.
+
+```powershell
+@'
+from fractions import Fraction as F
+from math import pi, sqrt
+import hashlib, json
+
+G = F(3,2)
+
+def interval(a,b,m):
+    a,b = F(a),F(b)
+    sign = 1 if b > a else -1
+    half = abs(b-a)/2
+    widths = [half*(G-1)*G**i/(G**m-1) for i in range(m)]
+    left = [a]
+    for width in widths:
+        left.append(left[-1]+sign*width)
+    right = [b]
+    for width in widths:
+        right.append(right[-1]-sign*width)
+    points = left+list(reversed(right[:-1]))
+    assert points[m] == (a+b)/2 and len(points) == 2*m+1
+    return points
+
+def add(panels,loop,edge,axis,fixed,anchors,m):
+    for anchor,(a,b) in enumerate(zip(anchors,anchors[1:])):
+        points = interval(a,b,m)
+        for ordinal,(u,v) in enumerate(zip(points,points[1:])):
+            if axis == 'x':
+                p0,p1 = (u,F(fixed)),(v,F(fixed))
+            else:
+                p0,p1 = (F(fixed),u),(F(fixed),v)
+            panels.append((loop,edge,anchor,ordinal,p0,p1))
+
+def seed_panels():
+    panels = []
+    add(panels,'signal','facing','x',50,[-125,0,125],8)
+    add(panels,'signal','right','y',125,[50,85],5)
+    add(panels,'signal','outer','x',85,[125,-125],10)
+    add(panels,'signal','left','y',-125,[85,50],5)
+    add(panels,'return','outer','x',-35,[-125,125],10)
+    add(panels,'return','right','y',125,[-35,0],5)
+    add(panels,'return','facing','x',0,[125,0,-125],8)
+    add(panels,'return','left','y',-125,[0,-35],5)
+    return panels
+
+def refine(panels):
+    result = []
+    for loop,edge,anchor,ordinal,p0,p1 in panels:
+        midpoint = ((p0[0]+p1[0])/2,(p0[1]+p1[1])/2)
+        result.append((loop,edge,anchor,2*ordinal,p0,midpoint))
+        result.append((loop,edge,anchor,2*ordinal+1,midpoint,p1))
+    return result
+
+def length(panel):
+    p0,p1 = panel[4],panel[5]
+    return abs(p1[0]-p0[0])+abs(p1[1]-p0[1])
+
+def fraction_text(value):
+    return f'{value.numerator}/{value.denominator}'
+
+def payload(level,subdivide,panels):
+    lines = [
+        f'M1-EQ0|manifest=v1|level={level}|g=3/2|units=um|'
+        f'subdivide={subdivide}|loops=signal,return|ordering=ccw'
+    ]
+    for index,(loop,edge,anchor,ordinal,p0,p1) in enumerate(panels):
+        fields = (
+            index,loop,edge,anchor,ordinal,
+            fraction_text(p0[0]),fraction_text(p0[1]),
+            fraction_text(p1[0]),fraction_text(p1[1]),
+        )
+        lines.append('|'.join(map(str,fields)))
+    for loop in ('signal','return'):
+        selected = [panel for panel in panels if panel[0] == loop]
+        assert selected[-1][5] == selected[0][4]
+        start = selected[0][4]
+        lines.append(
+            f'closure|{loop}|1|{fraction_text(start[0])}|{fraction_text(start[1])}'
+        )
+    data = '\n'.join(lines).encode('utf-8')
+    return hashlib.sha256(data).hexdigest()
+
+panels = seed_panels()
+levels = []
+for level,subdivide in (('seed',1),('medium',2),('fine',4)):
+    for loop in ('signal','return'):
+        selected = [panel for panel in panels if panel[0] == loop]
+        lengths = [length(panel) for panel in selected]
+        ratios = [
+            max(a/b,b/a) for a,b in zip(lengths,lengths[1:]+lengths[:1])
+        ]
+        assert max(ratios) <= G
+        twice_area = sum(
+            panel[4][0]*panel[5][1]-panel[5][0]*panel[4][1]
+            for panel in selected
+        )
+        assert twice_area/2 == F(8750)
+    lengths = [length(panel) for panel in panels]
+    facing = [length(panel) for panel in panels if panel[1] == 'facing']
+    anchor_incident = []
+    keys = sorted({(panel[0],panel[1],panel[2]) for panel in panels})
+    for key in keys:
+        selected = sorted(
+            (panel for panel in panels if panel[:3] == key),
+            key=lambda panel:panel[3],
+        )
+        anchor_incident.extend((length(selected[0]),length(selected[-1])))
+    levels.append({
+        'level':level,'N':len(panels),
+        'min_um':float(min(lengths)),
+        'max_um':float(max(lengths)),
+        'max_anchor_start_um':float(max(anchor_incident)),
+        'max_facing_um':float(max(facing)),
+        'sha256':payload(level,subdivide,panels),
+    })
+    panels = refine(panels)
+
+delta_um = sqrt(2/(2*pi*2e9*(4e-7*pi)*59.6e6))*1e6
+assert levels[-1]['max_anchor_start_um'] <= delta_um/4
+assert levels[-1]['max_facing_um'] <= 50/8
+print(json.dumps({
+    'delta_over_4_um':delta_um/4,
+    'h_over_8_um':50/8,
+    'levels':levels,
+},indent=2))
+'@ | python -
+```
+
+frozen hash는 seed `f65cddcf5d45187006ffc5e9eaf1c5624fa14e3849ce435c2601825da579743c`, medium `35d1f81c87cb97372c543db98e2063102b8823d5af0e70b8e5c4432966b77b02`, fine `5b964069b3bae0965ff3bfcc95348b98656fca9a48da3a998a0510892cd17d0e`다. fine의 모든 anchor-incident panel 중 최대는 `0.331753555 µm <= δ/4=0.364436622 µm`, max facing은 `5.419805710 µm <= h/8=6.25 µm`이고 full-contour adjacent growth는 exact Fraction에서 `<=3/2`다.
+
 ## T1 circle DtN `C0-A0` failure와 `C0-A1` canonical gate
 
 아래 standalone block은 제품 module을 import하지 않고 [`T1_CIRCLE_DTN_RESULTS.md`](T1_CIRCLE_DTN_RESULTS.md)의 frozen A0 failure, A1 canonical spectral gate와 네 W1 full-dense spot을 재현한다. Python 3.12.10, NumPy 2.4.4, SciPy 1.18.0에서 실행했다. A1 kernel은 `hankel2e·exp(-jz)`를 사용하고, `C0=1` small self만 preregistered complex-log anchor를 사용한다. A0의 큰 `C0 J0` 항에는 그 asymptotic을 잘못 적용하지 않고 regularized integral을 그대로 계산한다.
