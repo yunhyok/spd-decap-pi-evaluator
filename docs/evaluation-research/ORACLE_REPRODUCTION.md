@@ -2657,6 +2657,182 @@ G1 exterior structural gate는 `smn=max(|GG10,mn|,|GG20,mn|,ℓmℓn/(2π))`의 
 
 q20→q40 worst relative/RMS/phase는 `2.81068e-12/1.58074e-12/1.58097e-10°`, `N=128→256` q20 mesh relative/RMS/phase는 `2.90418614e-3/1.61107728e-3/0.0128560°`다. `P/Pout` transpose, backward residual, condition과 raw passivity는 통과했다. analytic, q와 mesh가 통과해도 full-space reciprocity/cancellation failure를 가릴 수 없으므로 `mandatory_stage_pass=false`다. row별 process-only 최대 wall/peak-WS/private는 `210.401 s / 88.969 MiB / 1328.805 MiB`다.
 
+## AV-BS1 circle manifest와 analytic anchors
+
+아래 block은 [`T1_AV_BOUNDARY_SCHUR_SPEC.md`](T1_AV_BOUNDARY_SCHUR_SPEC.md)의 `AV-BS1-CIRCLE manifest=v1`만 재현한다. mesh/hash/analytic anchor를 만들지만 FEM matrix나 physics response를 solve하지 않는다. runtime 또는 hash가 다르면 후속 solve를 시작하지 않는다.
+
+```powershell
+@'
+import hashlib, json, math, platform, sys
+import numpy as np
+import scipy
+from scipy.special import jve
+
+A=17.5e-6
+NTHETA=128
+NRING=16                 # 16 non-center rings; r_j=j*A/16, j=1..16
+EXPECTED_RUNTIME=('3.12.10','2.4.4','1.18.0','win32','AMD64')
+EXPECTED={
+  'h': (2049,3968,128,'cf5c7740449d40c74665543680c2c96d848e546a3e52d27b8254ce099f3335d0'),
+  'h2':(8065,15872,256,'34eb4f9cadcefd0b20cff3ae6c483dbee4e412ca11d0ff1a8c2c6f49ec7896a9'),
+  'h4':(32001,63488,512,'a91b4bf147628a34d1a29144ae353a83110b1756c699c71e2b57e9c36822835b'),
+}
+EXPECTED_ANCHORS=np.asarray([
+  (521.497743503955718,-0.939450347510578),
+  (260.749858968259883,-0.156575853973095),
+  (173.833308261007582,-0.0521919833172933),
+  (130.374992948407203,-0.0234863960617439),
+  (104.299997421131625,-0.0125260785577377),
+],dtype=np.float64)
+ANCHOR_RTOL=16*np.finfo(float).eps  # 32u, u=2^-53
+
+runtime=(platform.python_version(),np.__version__,scipy.__version__,sys.platform,platform.machine())
+if runtime!=EXPECTED_RUNTIME:
+    raise RuntimeError(('AV_BS_RUNTIME_MISMATCH',runtime,EXPECTED_RUNTIME))
+
+def ccw(nodes,triangle):
+    i,j,k=triangle
+    x0,y0=nodes[i]; x1,y1=nodes[j]; x2,y2=nodes[k]
+    cross=(x1-x0)*(y2-y0)-(y1-y0)*(x2-x0)
+    if cross==0.0: raise RuntimeError(('AV_BS_ZERO_AREA',triangle))
+    return triangle if cross>0.0 else (i,k,j)
+
+def seed_mesh():
+    nodes=[(0.0,0.0)]
+    def node_id(ring,ray):
+        return 1+(ring-1)*NTHETA+(ray%NTHETA)
+    # theta_0=0; node order is ring-major then increasing ray.
+    for ring in range(1,NRING+1):
+        radius=A*ring/NRING
+        for ray in range(NTHETA):
+            theta=2.0*math.pi*ray/NTHETA
+            nodes.append((radius*math.cos(theta),radius*math.sin(theta)))
+    triangles=[]
+    for ray in range(NTHETA):
+        triangles.append(ccw(nodes,(0,node_id(1,ray),node_id(1,ray+1))))
+    # Diagonal direction alternates by radial band only, not by ray.  This
+    # preserves the 128-fold rotational symmetry of the circle fixture.
+    for ring in range(1,NRING):
+        for ray in range(NTHETA):
+            a=node_id(ring,ray); b=node_id(ring,ray+1)
+            c=node_id(ring+1,ray); d=node_id(ring+1,ray+1)
+            raw=((a,c,d),(a,d,b)) if ring%2 else ((a,c,b),(b,c,d))
+            triangles.extend(ccw(nodes,t) for t in raw)
+    return nodes,triangles
+
+def edge_data(triangles):
+    counts={}
+    for triangle in triangles:
+        for i,j in ((triangle[0],triangle[1]),(triangle[1],triangle[2]),(triangle[2],triangle[0])):
+            edge=(i,j) if i<j else (j,i)
+            counts[edge]=counts.get(edge,0)+1
+    boundary=sorted(edge for edge,count in counts.items() if count==1)
+    if any(count not in (1,2) for count in counts.values()):
+        raise RuntimeError('AV_BS_NONMANIFOLD_EDGE')
+    return counts,boundary
+
+def refine(nodes,triangles):
+    counts,boundary=edge_data(triangles)
+    boundary=set(boundary)
+    out=list(nodes); midpoint={}
+    for edge in sorted(counts):
+        x=(nodes[edge[0]][0]+nodes[edge[1]][0])/2.0
+        y=(nodes[edge[0]][1]+nodes[edge[1]][1])/2.0
+        if edge in boundary:
+            scale=A/math.hypot(x,y)
+            x*=scale; y*=scale
+        midpoint[edge]=len(out); out.append((x,y))
+    refined=[]
+    def mid(i,j): return midpoint[(i,j) if i<j else (j,i)]
+    for i,j,k in triangles:
+        ij=mid(i,j); jk=mid(j,k); ki=mid(k,i)
+        for triangle in ((i,ij,ki),(j,jk,ij),(k,ki,jk),(ij,jk,ki)):
+            refined.append(ccw(out,triangle))
+    return out,refined
+
+def manifest(level,subdivide,nodes,triangles):
+    edges,boundary=edge_data(triangles)
+    boundary_nodes={node for edge in boundary for node in edge}
+    header=(
+      f'AV-BS1-CIRCLE|manifest=v1|generator=radial-p1-v1|level={level}'
+      f'|a_m={A.hex()}|n_theta={NTHETA}|n_radial={NRING}'
+      f'|subdivide={subdivide}|diag=alternate_by_radial_band'
+      '|coordinates=float.hex|triangles=ccw'
+    )
+    lines=[header]
+    for index,(x,y) in enumerate(nodes):
+        tag='center' if index==0 else ('boundary' if index in boundary_nodes else 'interior')
+        lines.append(f'n|{index}|{x.hex()}|{y.hex()}|{tag}')
+    for index,triangle in enumerate(triangles):
+        lines.append(f't|{index}|{triangle[0]}|{triangle[1]}|{triangle[2]}')
+    for index,edge in enumerate(boundary):
+        lines.append(f'b|{index}|{edge[0]}|{edge[1]}')
+    payload='\n'.join(lines).encode('utf-8')
+    condition=[]; area=[]
+    for i,j,k in triangles:
+        origin=np.asarray(nodes[i])
+        transform=np.column_stack((np.asarray(nodes[j])-origin,np.asarray(nodes[k])-origin))
+        area.append(abs(float(np.linalg.det(transform)))/2.0)
+        condition.append(float(np.linalg.cond(transform)))
+    result={
+      'level':level,'nodes':len(nodes),'edges':len(edges),'triangles':len(triangles),
+      'boundary_edges':len(boundary),'euler':len(nodes)-len(edges)+len(triangles),
+      'min_area_m2':min(area),'max_area_m2':max(area),
+      'max_element_kappa2':max(condition),
+      'quality_16u_kappa':8*np.finfo(float).eps*max(condition), # 16u, u=2^-53
+      'sha256':hashlib.sha256(payload).hexdigest(),
+    }
+    expected=EXPECTED[level]
+    observed=(result['nodes'],result['triangles'],result['boundary_edges'],result['sha256'])
+    if observed!=expected or result['euler']!=1 or result['quality_16u_kappa']>2e-10:
+        raise RuntimeError(('AV_BS_MANIFEST_MISMATCH',level,observed,expected,result))
+    return result
+
+levels=[]
+nodes,triangles=seed_mesh(); levels.append(manifest('h',1,nodes,triangles))
+nodes,triangles=refine(nodes,triangles); levels.append(manifest('h2',2,nodes,triangles))
+nodes,triangles=refine(nodes,triangles); levels.append(manifest('h4',4,nodes,triangles))
+
+mu0=4e-7*math.pi; eps0=8.8541878128e-12
+sigma=59.6e6; frequency=1e5; omega=2*math.pi*frequency
+kp=np.sqrt(-1j*omega*mu0*sigma)
+if kp.real<0.0 or kp.imag>0.0: kp=-kp
+z=kp*A
+kp_full=np.sqrt(omega*omega*mu0*eps0-1j*omega*mu0*sigma)
+if kp_full.real<0.0 or kp_full.imag>0.0: kp_full=-kp_full
+kb=omega*math.sqrt(mu0*eps0)
+anchors=[]
+for mode in range(5):
+    ratio=jve(mode+1,z)/jve(mode,z)
+    target=-kp/(1j*omega*mu0)*ratio
+    expected=complex(*EXPECTED_ANCHORS[mode])
+    anchor_relative=abs(target-expected)/abs(expected)
+    if not np.isfinite(anchor_relative) or anchor_relative>ANCHOR_RTOL:
+        raise RuntimeError(('AV_BS_FROZEN_ANCHOR_MISMATCH',mode,target,expected,anchor_relative,ANCHOR_RTOL))
+    # Independent full-wave safe-point diagnostic only.  Canonical AV-BS1 is
+    # MQS (kb=0) and never forms these two large DtN values then subtracts.
+    zp=kp_full*A; zb=kb*A
+    rp=jve(mode+1,zp)/jve(mode,zp); rb=jve(mode+1,zb)/jve(mode,zb)
+    dp=kp_full/(1j*omega*mu0)*(mode/zp-rp)
+    db=kb/(1j*omega*mu0)*(mode/zb-rb)
+    direct=dp-db
+    relative=abs(target-direct)/abs(target)
+    if not np.isfinite(relative) or relative>1e-12:
+        raise RuntimeError(('AV_BS_ANALYTIC_DIAGNOSTIC',mode,relative))
+    anchors.append({'m':mode,'Ys_S':[float(target.real),float(target.imag)],
+                    'frozen_anchor_relative':float(anchor_relative),
+                    'full_wave_Dp_minus_Db_relative_diagnostic':float(relative)})
+
+print(json.dumps({'case':'AV-BS1-CIRCLE-manifest-v1','runtime':runtime,
+                  'radius_m':A,'frequency_hz':frequency,
+                  'kp_per_m':[float(kp.real),float(kp.imag)],
+                  'mesh_levels':levels,'analytic_anchors':anchors},
+                 indent=2,allow_nan=False))
+'@ | python -
+```
+
+이 block의 실행은 manifest preflight이며 `AV-BS1-CIRCLE preregistered_not_run` 상태를 바꾸지 않는다. solver fixture는 이 manifest가 독립 감사·commit된 뒤 별도 cycle에서 고정한다.
+
 ## Focused regression
 
 ```powershell

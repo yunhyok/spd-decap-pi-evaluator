@@ -272,6 +272,6 @@ process-only wall/peak working-set/private의 row maximum은 `210.401 s / 88.969
 2. **동결 완료:** G2 interior Galerkin의 약형, self/touching/non-touching singular quadrature, basis/order, raw reciprocity/passivity, q20/q40와 no-retuning rule을 exact reproduction block에 고정했다.
 3. **완료/제한 통과:** pair screen은 `passed_pair_screen_only`다.
 4. **실패 동결:** 100 kHz circle의 analytic/q/mesh/passivity는 통과했지만 raw reciprocity/cancellation은 실패했다. planned G2 2 GHz circle, G2 `N=512`, G2 EQ0 seed로 진행하지 않는다.
-5. 다음 독립 reference candidate는 two-DtN subtraction이 없는 A–v volume-FEM boundary-Schur이며 현재 `preregistered_not_run`이다. 제품 코드 밖 research fixture로 100 kHz circle, 한 crop·한 coarse mesh·한 balanced RHS부터 사전 등록하고, 통과 뒤에만 `h/h2/h4`, crop `2/4/8Deff`와 condition/process-tree resource를 확장한다.
+5. 다음 독립 reference candidate는 two-DtN subtraction이 없는 A–v volume-FEM boundary-Schur다. [`T1_AV_BOUNDARY_SCHUR_SPEC.md`](T1_AV_BOUNDARY_SCHUR_SPEC.md)에 `AV-BS1-CIRCLE preregistered_not_run`으로 h/h2/h4 mesh lineage, signed 9-mode gate, condition/process-tree resource를 고정했다. manifest만 통과했으며 physics solve는 없다. 다음은 standalone solver fixture static audit·commit이고, circle 두 radius가 통과한 뒤에만 EQ0 crop `2/4/8Deff`를 사전 등록한다.
 6. production SAO 후보는 Hamiltonian Schur 또는 four-operator symmetric Calderón/Steklov–Poincaré trace/flux formulation으로 별도 사전 등록한다. raw failure는 보존하며 post-symmetrization, clipping 또는 result-driven tuning을 금지한다.
 7. 독립 A–v와 새 SAO가 모두 통과하기 전 T1-F, board source owner 또는 PowerSI correlation으로 우회하지 않는다.

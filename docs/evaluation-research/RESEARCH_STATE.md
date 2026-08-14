@@ -9,7 +9,7 @@
 | 프로그램 기준 | SPD Decap PI Evaluator v0.22.0 |
 | 연구 branch | `codex/evaluation-algorithm-research` |
 | 기준 commit | `bb361687c0bf976d5d04faf26bc243bcf3d52006` |
-| 현재 단계 | R0 source/external-port/return-owner contract 진행 중; M1 collocation negative/G1 exterior-only 결과 동결; G2 pair 제한 통과 후 100 kHz circle reciprocity/cancellation fail; independent A–v boundary-Schur preregistration 준비 |
+| 현재 단계 | R0 source/external-port/return-owner contract 진행 중; M1 collocation negative/G1 exterior-only 결과 동결; G2 pair 제한 통과 후 100 kHz circle reciprocity/cancellation fail; independent `AV-BS1-CIRCLE` boundary-Schur는 manifest/metric/resource contract까지 `preregistered_not_run`으로 동결, physics solve 미실행 |
 | 제품 코드 변경 | 없음 |
 | GitHub 원격 변경 | 없음 |
 | 정확성 승격 | 미달성 |
@@ -73,7 +73,8 @@
 | D-033 | G1 direct pulse-Galerkin double-panel log exterior `GE=W^-1 GG`는 collocation exterior의 energy defect를 대체하는 제한된 exterior certificate다. | `passed_exterior_galerkin_only`; frozen `N={144,288,576}`·7 frequencies에서 fine structure max q-natural `2.030e-15`, raw transpose `9.953e-17`, `r0` rank-one max `6.333e-16`, boundary power max `1.070e-14`, terminal gates 통과. 이는 interior 또는 full M1 pass가 아님 |
 | D-034 | independent A–v power는 centroid field가 아니라 consistent P1 mass form으로만 판정한다. | 확정; 2 GHz 4Deff smoke에서 mismatch `1.377e-9`, 그러나 단일 mesh/crop이므로 reference pass 아님 |
 | D-035 | G1 exterior 통과 뒤 남은 pulse-collocation interior `P/U/Pout/Uout`를 target-tested Galerkin trace space로 재이산화한다. | `passed_pair_screen_only` 후 circle 100 kHz에서 N128 cancellation `2.91315e-8`, N256 raw reciprocity/cancellation `1.41197e-8/1.63755e-7`로 fail-closed. 상태는 `BLOCKED_INTERIOR_WEIGHTED_RECIPROCITY_PASSIVITY__G2_PAIR_PASSED_CIRCLE_100KHZ_RECIPROCITY_CANCELLATION_FAIL`; planned G2 2 GHz circle/N512/EQ0 seed 미실행, gate 완화·사후 대칭화·clipping 금지 |
-| D-036 | G2 실패 뒤 다음 독립 reference candidate는 two-DtN subtraction이 없는 A–v volume-FEM boundary Schur로 한다. production SAO는 별도 Hamiltonian Schur/four-operator Calderón 후보로 비교한다. | `preregistered_not_run` 준비 중. A–v는 circle 100 kHz부터 consistent P1 mass, boundary trace Schur, h/h2/h4·crop gate를 고정; SAO는 [Hamiltonian Schur DtN](https://doi.org/10.1016/j.wavemoti.2007.07.004)와 [four-operator transmission Galerkin](https://doi.org/10.1016/0022-247X(85)90118-0)을 규범 후보로 사용 |
+| D-036 | G2 실패 뒤 다음 독립 reference candidate는 two-DtN subtraction이 없는 A–v volume-FEM boundary Schur로 한다. production SAO는 별도 Hamiltonian Schur/four-operator Calderón 후보로 비교한다. | `AV-BS1-CIRCLE preregistered_not_run`; subtraction-free `sigma Hb^T M Hp`, signed 9-mode raw gate, consistent trace/volume mass, deterministic h/h2/h4와 process-tree stop contract를 [`T1_AV_BOUNDARY_SCHUR_SPEC.md`](T1_AV_BOUNDARY_SCHUR_SPEC.md)에 고정. SAO 후보는 아직 미사전등록 |
+| D-037 | AV-BS1 manifest 통과와 physics/reference 승격을 분리한다. | manifest-only replay에서 h/h2/h4 `V/T/B=2049/3968/128`, `8065/15872/256`, `32001/63488/512`와 SHA-256 3개, frozen analytic anchors가 재현됐지만 FEM response는 미실행. 다음은 별도 solver fixture의 static audit·commit이며 circle `h` solve보다 먼저다 |
 
 ## 현재 가설 순위
 
@@ -90,7 +91,7 @@
 |---|---|---|---|
 | R0 Reference contract | 8개 파일 manifest, explicit port map, PowerSI 조건 | identity/hash/grid/state 및 reference quality 기록 | identity/grid/source parameter/P2 physical terminal 완료; export operator provenance 진행 중 |
 | R1 Frozen baseline | 현행 solver의 전체 timing/memory/error/numerical report | 대표 pair와 rail별 재현 가능한 baseline | 기존 92-port 결과만 동결; pair P2 import 차단 |
-| R2 Local oracle | via/trace/pad/plane canonical corpus | reciprocity/passivity/conservation/mesh convergence | N0 scalar pass; T1 E0, M0 periodic 1-D volume과 `C0-A1` circle interior 제한 통과. M1 collocation power fail, G1 exterior-only, G2 pair-only 후 circle reciprocity/cancellation fail. A–v는 2 GHz smoke only이며 boundary-Schur convergence 사전 등록 중. T1 overall blocked |
+| R2 Local oracle | via/trace/pad/plane canonical corpus | reciprocity/passivity/conservation/mesh convergence | N0 scalar pass; T1 E0, M0 periodic 1-D volume과 `C0-A1` circle interior 제한 통과. M1 collocation power fail, G1 exterior-only, G2 pair-only 후 circle reciprocity/cancellation fail. `AV-BS1-CIRCLE`은 manifest/metric contract만 `preregistered_not_run`, physics solve 미실행. T1 overall blocked |
 | R3 Model attribution | 물리 block별 ablation matrix | 예상 port/band 개선을 원인별로 구분 | R2 oracle 뒤 대기 |
 | R4 Hybrid global | condensed domains + passive MNA 후보 | 네 pair provisional accuracy gate | 대기 |
 | R5 Acceleration | exact reduction, MOR, adaptive sweep | 추가 오차 budget + 8 GB gate | 대기 |

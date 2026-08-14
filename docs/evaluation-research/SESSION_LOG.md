@@ -1085,10 +1085,45 @@ row별 process-only 최대 wall/peak working-set/private는 `210.401 s / 88.969 
 
 판정은 **`BLOCKED_INTERIOR_WEIGHTED_RECIPROCITY_PASSIVITY__G2_PAIR_PASSED_CIRCLE_100KHZ_RECIPROCITY_CANCELLATION_FAIL`**이다. G1 exterior-only와 G2 pair-only 증거는 유지하지만 full G2/M1/T1/global/PowerSI/product/8 GB는 blocked다.
 
-### Exact next starting point
+### Exact next starting point (historical; superseded by the AV-BS1 preregistration below)
 
 1. 이 실패와 미실행 범위를 기준 문서·시각화·커밋에 고정한다.
 2. two-DtN subtraction이 없는 independent A–v volume-FEM boundary-Schur reference candidate를 제품 코드 밖 research fixture로 `preregistered_not_run` 상태에 고정한다. 첫 run은 100 kHz circle, 한 crop, 한 coarse mesh, 한 balanced RHS로 제한한다.
 3. geometry/return/outer `a=0`, trace basis/current normalization, deterministic mesh hash, raw reciprocity/passivity/power/residual/condition과 process-tree stop rule을 결과 전에 고정한다.
 4. 첫 stage가 통과한 뒤에만 `h/h2/h4`, crop `2/4/8 Deff`로 확장한다. production SAO의 Hamiltonian Schur/four-operator Calderón 후보는 별도 사전 등록한다.
 5. 독립 reference candidate와 새 SAO가 모두 통과하기 전 planned G2 2 GHz circle, G2 `N=512`, G2 EQ0 seed, T1-F, board/PowerSI correlation으로 우회하지 않는다.
+
+## 2026-08-15 — AV-BS1 subtraction-free boundary-Schur preregistration freeze
+
+G2의 frozen failure vector나 matrix를 입력·보정·mesh tuning에 사용하지 않는 independent A–v volume-FEM reference candidate를 [`T1_AV_BOUNDARY_SCHUR_SPEC.md`](T1_AV_BOUNDARY_SCHUR_SPEC.md)에 고정했다. 현재 상태는 **`AV-BS1-CIRCLE preregistered_not_run`**이며 FEM physics response는 한 건도 실행하지 않았다. EQ0는 **`AV-BS1-EQ0 conditional_not_preregistered_circle_pending`**으로 분리했다.
+
+canonical circle operator는 bit-identical P1 disk mesh에서 `Ab=K`, `Ap=K+jωσM`을 조립하고, 두 Schur matrix나 analytic `Dp/Db`를 따로 빼지 않는 exact discrete identity
+
+```text
+YΓ,w = σ Hb^T M Hp
+YΓ,w,rev = σ Hp^T M Hb
+```
+
+를 사용한다. transpose/bilinear reciprocity와 conjugate-transpose power/passivity를 분리하고, consistent boundary mass `ell/6[[2,1],[1,2]]`, coordinate `atan2` mode, signed `M9={-4…4}`, consistent P1 volume loss를 동결했다. raw backward residual, row/column equilibrated condition, assembly/reverse/full reciprocity, passivity, signed-mode power, analytic/mesh/phase/degeneracy의 norm과 denominator를 결과 전에 명시했다. `Ab,II`와 `Ap,II`는 두 번 순차 factor하고 동시에 한 sparse factor만 resident로 둔다.
+
+manifest-only reproduction은 frozen CPython `3.12.10` / NumPy `2.4.4` / SciPy `1.18.0` / `win32/AMD64`에서 통과했다.
+
+| level | V / E / T / boundary | `16u κ2` | SHA-256 |
+|---|---:|---:|---|
+| h | `2049 / 6016 / 3968 / 128` | `7.23608e-14` | `cf5c7740449d40c74665543680c2c96d848e546a3e52d27b8254ce099f3335d0` |
+| h2 | `8065 / 23936 / 15872 / 256` | `7.25353e-14` | `34eb4f9cadcefd0b20cff3ae6c483dbee4e412ca11d0ff1a8c2c6f49ec7896a9` |
+| h4 | `32001 / 95488 / 63488 / 512` | `7.25353e-14` | `a91b4bf147628a34d1a29144ae353a83110b1756c699c71e2b57e9c36822835b` |
+
+다섯 MQS Bessel anchor의 frozen-value relative maximum은 `8.95e-16`, independent full-wave `Dp-Db` safe-point diagnostic maximum은 `5.65825e-13`으로 각각 `32u`와 `1e-12` gate 안이다. 이는 manifest/branch/sign preflight일 뿐 A–v accuracy, reciprocity, passivity, power, convergence 또는 resource pass가 아니다.
+
+Sol/Luna/Terra의 최종 read-only static audit는 subtraction-free identity, signed M9 norm/denominator, boundary `atan2`/consistent `MΓ`, 두 순차 factor, fail-closed h→h2→h4/two-radius 순서, EQ0 conditional scope와 no-physics/no-product 표현을 `APPROVED`했다. 18개 research Markdown의 strict UTF-8, fence parity, relative link와 `git diff --check`도 통과했다.
+
+fine interior/all-node dense complex matrix는 각각 약 `14.78/15.26 GiB`라 금지했다. sparse assembly/factor만 허용하고 process-tree peak WS 목표 `4 GiB`, private/commit stop `5 GiB`, system commit/physical headroom `2/1.5 GiB`를 유지한다. product parser/solver/UI/version/installer와 GitHub 원격은 변경하지 않았다.
+
+### Exact next starting point
+
+1. 이 manifest/metric/resource preregistration을 독립 static audit와 함께 local research commit으로 동결한다. physics solve는 포함하지 않는다.
+2. 별도 cycle에서 standalone AV-BS1 solver fixture를 작성해 mesh assembly, boundary map, two-factor sequencing, raw metric serialization과 resource guard를 static audit·commit한다.
+3. 그 뒤에만 17.5 µm/100 kHz `h` 한 mesh를 실행하고 stage-evaluable gate/resource를 review한다. token이 열릴 때만 별도 `h2`, 그 뒤 별도 `h4`를 실행해 fine analytic과 `h2→h4`를 판정한다.
+4. primary radius가 통과한 뒤에만 결과를 보지 않고 `a=0.5 mm` mesh hash/analytic anchor를 동결해 같은 h→h2→h4 chain을 반복한다.
+5. 두 circle radius가 모두 `passed_AV_BS_circle_two_radius_100k_only`가 되기 전 EQ0 A–v, Hamiltonian-Schur/four-operator SAO, planned G2 2 GHz/N512/EQ0, board 또는 PowerSI correlation으로 진행하지 않는다.
