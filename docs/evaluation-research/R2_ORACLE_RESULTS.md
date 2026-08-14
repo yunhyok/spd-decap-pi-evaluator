@@ -9,7 +9,7 @@
 | ID | 현재 판정 | 통과한 증거 | 남은 차단 조건 |
 |---|---|---|---|
 | N0 | **통과 — independent scalar branch 한정** | reduced/unreduced Z가 analytic 및 direct solve와 machine precision에서 일치 | mutual/multiterminal block, topology replacement 뒤 재인증, production 연결 |
-| T1 | **차단 — E0, M0 periodic volume과 A1 circle interior 제한 통과** | Cohn lossless stripline `C'`, periodic plate-pair independent 1-D FEM과 `C0-A1` circular interior DtN gate를 재현; M1-EQ0 response/mesh/condition/current 수렴 | M1-EQ0 SAO boundary power `1.585e-4 > 1e-8`; direct Galerkin exterior와 converged A–v, finite-length 3-D, 실제 return polygon/connectivity, balanced projection과 same-crop owner partition |
+| T1 | **차단 — E0/M0/A1 제한 통과, G1 exterior-only 통과** | Cohn lossless stripline `C'`, periodic plate-pair independent 1-D FEM, `C0-A1` circular interior DtN 및 G1 exterior Galerkin의 structural/q/`r0`/power/terminal gate | immutable collocation power fail `1.585e-4 > 1e-8`; G1 interior `WYs` reciprocity `1.70%–7.12% > 1e-8` 및 100 kHz/1 MHz passivity fail; G2 interior Galerkin, converged A–v, finite-length 3-D, 실제 return polygon/connectivity, balanced projection과 same-crop owner partition |
 | S1 | **차단 — rectangle refinement 부분 통과** | 유한 면적 contact, reciprocity/nullspace/passivity; 마지막 level 6→7 변화 0.299% | annulus refinement 오류, 전체 h/h/2/h/4·crop corpus, neck/void/L-shape, interface/owner certificate |
 | V1 | **차단 — constitutive law 통과** | solid-cylinder DC R, internal/external L limit, skin trend, numerical invariant | 명시적 coaxial return loop와 exact-minus-core block 없음 |
 | V2 | **차단 — isolated PEEC 통과** | mutual L, signed return, current sharing, reciprocity/passivity/KCL | 3-D coupon, pad/antipad/plane return, 실제 core subtraction; API가 global composition을 명시적으로 금지 |
@@ -171,7 +171,7 @@ python -m pytest tests/test_research_axisymmetric_electrostatics.py tests/test_s
 
 ## 다음 R2 연구
 
-1. failed M1-EQ0 collocation result를 보존하고 같은 endpoint의 direct double-panel Galerkin exterior를 사전 등록해 raw power와 hidden-mode reciprocity를 재실행한다. 같은 geometry/current basis의 independent A–v는 consistent P1 mass로 mesh/crop convergence를 완성한다.
+1. failed M1-EQ0 collocation result와 G1 `passed_exterior_galerkin_only` certificate를 보존한다. 다음 G2는 같은 endpoint/current basis의 target-tested interior `P/U/Pout/Uout` Galerkin으로 raw weighted reciprocity와 passivity를 재검사한다. 그 뒤 independent A–v가 consistent P1 mass mesh/crop convergence를 완성한다.
 2. S1은 circular/void boundary-conforming refinement와 h/h/2/h/4 추정 오차를 먼저 해결한다.
 3. V1/V2는 명시적 coax/ring return을 가진 2-D/3-D reference와 동일 crop의 exact-minus-core matrix를 만든다.
 4. A1은 current cell-centred solver를 승격하지 않고 body-fitted/higher-order 후보를 비교한다.

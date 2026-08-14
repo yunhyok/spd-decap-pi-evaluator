@@ -88,7 +88,7 @@ Positive-frequency anchor는 100 kHz, 1/10/100/500 MHz, 1/2 GHz다. skin crossov
 | ID | 판정 | 핵심 근거 |
 |---|---|---|
 | N0 | pass, scalar-only | frozen reproduction 포함 두 제조 예제 reduced/unreduced max relative Z error `5.34e-15`; owner ledger 완전 |
-| T1 | blocked, limited subcase pass | Cohn body-fitted `C'`, periodic plate independent 1-D volume과 `C0-A1` circle interior는 통과; frozen A0는 실패. M1-EQ0 full `N={144,288,576}` response는 수렴했지만 SAO boundary power `1.585e-4 > 1e-8`로 `blocked_sao_discrete_power_collocation`; A–v 2 GHz smoke only. finite end, source return polygon, absolute/exact-core operator 미실행 |
+| T1 | blocked, limited subcase pass | Cohn body-fitted `C'`, periodic plate independent 1-D volume과 `C0-A1` circle interior는 통과; frozen A0는 실패. collocation M1-EQ0 power failure `1.585e-4 > 1e-8`은 immutable이고, G1 exterior Galerkin은 `N={144,288,576}`·7 frequencies에서 `passed_exterior_galerkin_only`; interior `WYs` reciprocity `1.70%–7.12%` 및 100 kHz/1 MHz passivity fail 때문에 G2가 필요하다. A–v는 2 GHz smoke only이고 finite end, source return polygon, absolute/exact-core operator는 미실행 |
 | S1 | blocked | rectangle 최종 refinement 0.299%는 부분 통과했으나 annulus refinement fail, 전체 corpus/crop/ownership 없음 |
 | V1 | blocked | solid-cylinder R/L/skin law는 통과했으나 명시적 coax return loop 없음 |
 | V2 | blocked | PEEC current sharing/invariant는 통과했으나 `global_mna_composable=False`, 3-D/exact-minus-core 없음 |
@@ -145,7 +145,7 @@ N0 high-precision canonical parity는 `||ΔZ||F/max(||Z||F,nZfloor) ≤1e-12` �
 ## 실행 순서
 
 1. N0과 exact-minus-core identity case를 동결한다.
-2. M0 periodic 1-D volume pass를 동결하고, smallest eligible finite/open T1-M1의 failed collocation result를 보존한다. 같은 endpoint의 direct Galerkin exterior와 independent A–v mesh/crop convergence를 통과한 뒤에만 T1-F 3-D length-difference를 실행한다.
+2. M0 periodic 1-D volume pass, failed collocation result 및 G1 exterior-only certificate를 동결한다. same endpoint의 G2 target-tested interior `P/U/Pout/Uout` Galerkin과 independent A–v mesh/crop convergence를 통과한 뒤에만 T1-F 3-D length-difference를 실행한다.
 3. P1/P2 explicit-ref trace의 actual return polygon/connectivity와 absolute/core DtN owner를 증명한다.
 4. S1, V1/V2, A1, C1의 남은 analytic/mesh/crop/invariant blocker를 해결한다.
 5. PowerSI에서 trace-only, plane-neck, via-pair, pad/antipad, finite-port coupon과 반복 해석을 확보한다.

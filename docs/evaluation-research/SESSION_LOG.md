@@ -957,13 +957,13 @@ SAO와 독립적으로 body-fitted `4Deff`, 2 GHz P1 `A_z–v`를 실행했다. 
 
 `Z'loop=67.0262639174+j2321.0767997 Ω/m`
 
-를 얻었다. saddle/current residual은 `8.238e-25/8.062e-13`이다. centroid field power의 잘못된 `6.728e-2`는 폐기하고 consistent P1 mass form을 사용해 dissipative/reactive mismatch `1.377e-9/9.694e-13`를 재현했다. fine SAO와의 complex difference는 `0.8796%`, magnitude/phase `0.8730%/0.06163°`지만 A–v condition, mesh와 crop convergence가 없어 cross-method pass로 사용하지 않는다.
+를 얻었다. saddle/current residual은 `8.238e-25/8.062e-13`이다. centroid field power의 잘못된 `6.728e-2`는 폐기하고 consistent P1 mass form을 사용해 dissipative/reactive mismatch `1.377e-9/9.694e-13`를 재현했다. fine SAO와의 complex difference는 A–v를 분모로 한 `|ZAv−ZSAO|/|ZAv|=0.8796186%`, `|||ZAv|−|ZSAO|||/|ZAv|=0.8729601%`, phase `0.0616254°`지만 A–v condition, mesh와 crop convergence가 없어 cross-method pass로 사용하지 않는다.
 
 ### Resource
 
 full 3-level/7-frequency run은 `110.842 s`, fine 2 GHz q20+q10+`r0` replay는 `11.895 s`였다. largest-level replay process peak working set `334.219 MiB`, peak pagefile/commit counter `1590.961 MiB`, measured private bytes `1453.297 MiB`다. 현재 host process-only 수치이며 8 GB laptop process-tree/parser coexistence 증거가 아니다.
 
-### Next candidate preregistration
+### Next candidate preregistration (historical; superseded by G1 result below)
 
 같은 endpoint와 current basis를 보존하는 `M1-EQ0-G1 exterior_Galerkin_diagnostic`을 선택했다.
 
@@ -971,10 +971,80 @@ full 3-level/7-frequency run은 `110.842 s`, fine 2 GHz q20+q10+`r0` replay는 `
 
 weak equation은 `WE=jωµ0 GGJ+WQV`, `J=YsE`; `AE=W−jωµ0 GG Ys`를 푼다. non-touching tensor Gauss와 shared-endpoint analytic-radial Duffy를 사용하고 첫 oracle에서 pair orientation을 독립 계산한다. transpose copy와 사후 matrix 평균은 금지한다. exact radius shift `−ln(r0'/r0)/(2π)ℓℓ^T`, pair parity, weighted symmetry, q10/q20, raw power와 terminal gate를 결과 전에 고정한다.
 
-### Exact next starting point
+### Exact next starting point (historical; superseded by G1 result below)
 
 1. **동결 완료:** G1 self/non-touching/analytic-radial Duffy, independent pair, weak assembly, pair-scale normalization과 prospective interior `Yw` gate를 exact reproduction block에 추가했다.
 2. frozen `N={144,288,576}`에서 pair parity, `GG` weighted symmetry, q10/q20와 `r0` identity를 실행한다.
 3. 같은 3×7 response/power를 재실행한다. exterior power가 복원돼도 interior hidden-mode reciprocity가 실패하면 `P/U/Pout/Uout` Galerkin화를 별도 사전 등록한다.
 4. A–v는 consistent P1 mass로 `h/h2/h4`, crop `2/4/8Deff`, condition과 process-tree resource를 완성한다.
 5. 두 2-D 방법이 통과하기 전 T1-F, source/global/PowerSI correlation 또는 acceleration으로 우회하지 않는다.
+
+## 2026-08-15 — T1-M1-EQ0-G1 direct exterior Galerkin result
+
+### Scope and immutable predecessor
+
+G1은 M1-EQ0의 frozen full-contour endpoint/order, balanced current basis, `N={144,288,576}`와 7 positive frequencies를 바꾸지 않고, collocation exterior만 direct double-panel Galerkin `GE=W^-1GG`로 교체했다. 이전 collocation result의 `BLOCKED_SAO_BOUNDARY_POWER_IDENTITY` (`1.58517e-4 > 1e-8`)는 immutable negative result로 남는다. G1은 그 raw operator를 대칭화하거나 C0를 바꾸거나 결과 기반 panel tuning을 하지 않았다.
+
+### Exterior-Galerkin certificate
+
+fine q20, `r0=1 m`의 `Z'loop [Ω/m]`는 100 kHz부터 2 GHz 순서로 다음과 같다.
+
+```text
+3.835212680631+j0.158744120667
+3.854888639403+j1.585725839089
+4.969778690848+j15.078631400726
+14.618992113881+j128.314925437738
+32.540867638474+j601.572164611766
+46.008833807283+j1184.154376140652
+65.088435397829+j2341.392170234187
+```
+
+- fine structure max q-natural scale: `2.030e-15`; raw weighted transpose defect: `9.953e-17`; `r0` rank-one identity max: `6.333e-16`
+- fine boundary-power mismatch max: `1.070e-14`
+- `N=288→576` maximum relative/RMS/phase change: `0.019143% / 0.010418% / 0.004177°`
+- fine q10→q20 maximum relative/phase change: `9.756e-9 / 5.588e-7°`
+
+따라서 G1의 structural, quadrature, reference-radius, exterior power와 terminal gate는 통과했고 판정은 **`passed_exterior_galerkin_only`**다. 이것은 exterior owner에 한정된 certificate이지 full M1/T1, global composition, PowerSI correlation, product accuracy 또는 8 GB production pass가 아니다.
+
+### Interior blocker and G2
+
+fine pulse-collocation interior `WYs` weighted-reciprocity는 100 kHz→2 GHz에서 `7.12361%, 4.08228%, 3.07258%, 2.91663%, 2.47707%, 2.10899%, 1.69946%`로 모두 frozen `1e-8` gate를 실패했다. raw Hermitian minimum/tolerance는 100 kHz에서 `-2.96377e-5 / 7.22576e-12 S·m`, 1 MHz에서 `-1.79591e-6 / 7.22230e-12 S·m`로 passivity도 실패했고, 10 MHz 이상만 해당 gate를 통과했다. terminal reduction이 이 hidden-mode failure를 상쇄할 수 있으므로 terminal pass로 대체하지 않는다.
+
+다음 상태는 **`M1-EQ0-G2 preregistered_not_run`**이다. G2는 frozen geometry/current basis/frequency/panel levels를 보존하고 interior `P/U/Pout/Uout`를 target-tested Galerkin trace space로 재이산화한다. raw weighted reciprocity, raw Hermitian passivity, terminal, signed power, residual/condition, q/refinement gate를 모두 통과하기 전에는 G2도 M1/T1 승격 근거가 아니다. matrix symmetrization, negative-eigenvalue clipping, C0 변경과 result-driven tuning은 금지한다.
+
+### Independent reference and resource scope
+
+A–v는 G1 선택/보정에 사용하지 않은 independent method이며 기존 2 GHz `4Deff` consistent-P1-mass smoke만 있다. G2가 통과한 뒤에도 A–v `h/h2/h4`, crop `2/4/8Deff`, condition 및 full resource certificate가 별도로 필요하다.
+
+G1 observed resource는 현재 host의 **process-only** level-2 full run wall `405.2 s`, q-parity `558.7 s`, peak working set `120.906 MiB`, private bytes `1348.285 MiB`다. process-tree, parser/reference coexistence, OS headroom 또는 8 GB laptop product performance를 측정하거나 주장한 값이 아니다. 제품 code와 GitHub 상태는 변경하지 않았다.
+
+### Exact next starting point
+
+1. G1 exterior-only certificate와 collocation negative result를 함께 보존한다.
+2. **동결 완료:** G2 interior `P/U/Pout/Uout` Galerkin contract, singular pair classes, q20/q40, raw gates와 deterministic scaling record를 exact reproduction fixture로 고정했다.
+3. pair screen → circle `N=128→256` → circle `N=256→512` → EQ0 seed를 별도 명령으로 실행하고, 각 단계의 mandatory gate를 검토한 뒤에만 다음 단계와 frozen `N={144,288,576}`·7 frequencies로 확장한다.
+4. G2 raw interior reciprocity/passivity와 모든 terminal/power/numerical gate가 통과한 뒤 independent A–v mesh×crop/condition/resource convergence를 완성한다.
+5. 두 방법이 모두 통과하기 전 T1-F, board return owner, global adapter, PowerSI correlation, acceleration 또는 8 GB production 승격으로 진행하지 않는다.
+
+## 2026-08-15 — M1-EQ0-G2 target-tested interior Galerkin preregistration freeze
+
+### Scope and no-result boundary
+
+G1의 exterior-only pass와 `BLOCKED_INTERIOR_WEIGHTED_RECIPROCITY_PASSIVITY`를 변경하지 않고, G2의 weak `P/U/Pout/Uout`, singular quadrature와 실행 gate를 결과 확인 전에 동결했다. 이 절에서는 G2 matrix나 응답을 한 건도 실행하지 않았다. 제품 parser/solver/UI도 수정하지 않았다.
+
+### Independent static audit and corrections
+
+- pulse test/basis mass `W`, `+W` jump, CCW contour의 outward normal, self `3jℓ²/(2π)`, touching Duffy의 `lnρ`/`Ks`, `Yw=W(Dp−Db)`와 `AE=W−jωµ0 GG W^-1Yw`의 부호·단위·배치는 독립 수식 감사와 일치했다.
+- 기존 초안이 circle와 EQ0를 연속 실행하던 경로를 폐기하고 `pair → circle 128/256 → circle 256/512 → EQ0 seed`를 서로 다른 명령으로 분리했다. 각 명령은 mandatory gate failure에서 nonzero exit하고 다음 단계는 수동 검토 뒤에만 허용한다.
+- self/touching/routed-near/tensor directed-pair count, maximum recursion depth, q20/q40 변화, `Pᴳ` raw transpose, `Yw` reciprocity/passivity/cancellation, terminal/current/power, `r0`와 actual row/column equilibration vector 및 SHA-256을 결과 schema에 고정했다.
+- circle normalization은 `Ys,floor=max(1e-12 S,1e-10 maxm|Ys,m|)`를 사용하고 phase mask와 `m↔−m` discrepancy를 보존한다. G2 final parity는 q20/q40이며 G1 q10/q20 구조 결과와 분리했다.
+- frozen environment는 mandatory frequencies, q `{20,40}`, circle `N={128,256,512}`, EQ0 level `{0,1,2}`, `r0={0.1,1,10}`만 허용한다. process-local 4 GiB working-set/5 GiB private stop을 두되 이것은 외부 process-tree/system-headroom monitor를 대체하지 않는다.
+
+Python AST, fresh-PowerShell G1-source extraction, UTF-8, Markdown fence, relative link와 `git diff --check`를 통과했다. 상태는 계속 **`M1-EQ0-G2 preregistered_not_run`**이며 full M1/T1/global/PowerSI/product/8 GB는 blocked다.
+
+### Exact next starting point
+
+1. 이 preregistration을 커밋으로 고정한다.
+2. `M1_G2_STAGE=pair`, 100 kHz와 2 GHz, q20/q40만 외부 resource guard 아래 실행한다.
+3. 두 pair JSON의 class coverage, recursion, quadrature와 range gate가 모두 통과한 뒤에만 circle `N=128→256`을 시작한다.
+4. 실패하면 raw 결과를 보존하고 후속 수식/이산화 후보를 별도 사전 등록하며, gate 완화·대칭화·clipping으로 우회하지 않는다.

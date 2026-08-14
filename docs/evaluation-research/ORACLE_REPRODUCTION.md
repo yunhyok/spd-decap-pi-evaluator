@@ -1491,7 +1491,7 @@ $probe | python -
 
 첫 실행은 3×7 raw q20 table을 출력한다. frozen run의 medium→fine log-RMS/max/phase는 `0.00703814%/0.0130658%/0.00159923°`, standalone fine q10→q20 max는 `9.719097658e-9`, `κ1u=9.213551638e-13`, `r0` invariance `9.59635e-16`으로 재현된다. standalone의 auxiliary max backward/terminal reciprocity와 fine 2 GHz current residual은 각각 `5.897094807e-16`, `7.661105753e-16`, `2.674969819e-15`; 최초 frozen gate table의 다른 집계 정의값은 [`T1_M1_EQ0_RESULTS.md`](T1_M1_EQ0_RESULTS.md)에 그대로 보존한다. 판정에 결정적인 raw `Z'`와 fine dissipative-power mismatch `3.719e-8`에서 `1.585e-4`는 일치하며 mandatory `1e-8` gate를 실패한다. 이 stdout은 negative evidence이며 matrix 대칭화나 C0 tuning을 적용하지 않는다.
 
-## T1-M1-EQ0-G1 direct Galerkin exterior preregistration
+## T1-M1-EQ0-G1 direct Galerkin exterior preregistration (historical frozen block)
 
 아래 standalone block은 collocation negative result를 보존한 뒤, **G1 결과를 보기 전에** direct double-panel exterior의 exact self, independently evaluated pair, analytic-radial Duffy, q10/q20 normalization, `r0` rank-one identity, weak equation과 prospective interior metric을 실행 가능한 형태로 고정한 것이다. 제품 module을 import하지 않으며 `GG`나 `Yw`를 사후 평균하지 않는다. 첫 full run은 process-tree 4 GiB 목표, private/commit 5 GiB stop과 system headroom floor를 외부 monitor로 함께 적용한다.
 
@@ -1906,7 +1906,693 @@ $env:M1_G1_R0S='1'
 $g1 | python -
 ```
 
-structural gate는 `smn=max(|GG10,mn|,|GG20,mn|,ℓmℓn/(2π))`의 pair-normalized max와 Frobenius q change를 각각 `<=1e-10`, independently reversed pair와 raw transpose defect를 `<=1e-12`, `r0` rank-one relative residual을 `<=1e-8`로 판정한다. fine q10/q20의 final `Z'`도 기존 `0.1%/0.25°` gate를 별도로 통과해야 한다. prospective interior는 `Yw=WYs` `[S·m]`, `Yw,floor=max(1e-12 S·m,1e-10 max|Yw|)`, `||Yw−Yw^T||F/max(||Yw||F,N Yw,floor)<=1e-8`로 검사한다. passivity는 `H(Yw)=(Yw+Yw^H)/2`의 raw `λmin >= -max(Yw,floor,1e-9||Yw||2)`다. Hermitian part 평가는 진단이지 operator 대칭화가 아니다. G1은 exterior power 원인 격리용 diagnostic이며 이 interior metric이나 converged A–v가 실패하면 M1은 계속 blocked다.
+## M1-EQ0-G2 target-tested interior Galerkin preregistration
+
+아래 block은 위 G1의 frozen geometry, branch, scaled Hankel, solve certificate와 direct exterior `GG`를 그대로 재사용하고 interior `P/U/Pout/Uout`만 pulse Galerkin weak trace/flux로 교체한다. 결과 matrix 평균, eigenvalue clipping과 C0 retuning은 없다. `Pᴳ`는 symmetric single-layer이지만 `Uᴳ` 자체의 algebraic symmetry는 요구하지 않는다. first bounded run은 100 kHz/2 GHz self·touching pair, circle analytic DtN, EQ0 seed만 실행하고 hidden-mode gate가 실패하면 fine으로 확장하지 않는다.
+
+```powershell
+# Reconstruct the frozen G1 definition from this document so the G2 block can
+# be executed in a fresh PowerShell session without first running the G1 sweep.
+$oraclePath = Resolve-Path 'docs/evaluation-research/ORACLE_REPRODUCTION.md'
+$oracleLines = Get-Content -LiteralPath $oraclePath -Encoding utf8
+$g1Start = [Array]::IndexOf($oracleLines, '$g1 = @''')
+if ($g1Start -lt 0) { throw 'G2_G1_START_NOT_FOUND' }
+$g1End = -1
+for ($i = $g1Start + 1; $i -lt $oracleLines.Count; $i++) {
+    if ($oracleLines[$i] -eq "'@") { $g1End = $i; break }
+}
+if ($g1End -le $g1Start + 1) { throw 'G2_G1_END_NOT_FOUND' }
+$g1 = $oracleLines[($g1Start + 1)..($g1End - 1)] -join "`n"
+$g2 = $g1.Substring(0,$g1.IndexOf('g1_levels=')) + @'
+from scipy.special import jve
+
+G2_NEAR_RATIO=1.0
+G2_NEAR_MAX_DEPTH=8
+
+def g2_endpoints(mid,tangent,length):
+    return mid-.5*length[:,None]*tangent,mid+.5*length[:,None]*tangent
+
+def g2_point_segment_distance(p,a,b):
+    d=b-a
+    t=float(np.clip(np.dot(p-a,d)/np.dot(d,d),0.0,1.0))
+    return float(np.linalg.norm(p-(a+t*d)))
+
+def g2_segment_distance(a0,a1,b0,b1):
+    return min(
+      g2_point_segment_distance(a0,b0,b1),
+      g2_point_segment_distance(a1,b0,b1),
+      g2_point_segment_distance(b0,a0,a1),
+      g2_point_segment_distance(b1,a0,a1),
+    )
+
+def g2_cross2(a,b):
+    return float(a[0]*b[1]-a[1]*b[0])
+
+def g2_proper_intersection(a0,a1,b0,b1):
+    da=a1-a0; db=b1-b0
+    scale=max(float(np.linalg.norm(da)),float(np.linalg.norm(db)),1e-300)
+    tol=1e-14*scale*scale
+    o0=g2_cross2(da,b0-a0); o1=g2_cross2(da,b1-a0)
+    o2=g2_cross2(db,a0-b0); o3=g2_cross2(db,a1-b0)
+    return o0*o1 < -tol*tol and o2*o3 < -tol*tol
+
+def g2_shared_endpoint(a0,a1,b0,b1):
+    for a in (a0,a1):
+        for b in (b0,b1):
+            if np.linalg.norm(a-b)<=1e-18:
+                return a
+    return None
+
+def g2_self_integrals(length,omega,k,mu,qorder):
+    x,w=leggauss(qorder)
+    u=length*(x+1)/2
+    ww=length*w/2
+    regular=scaled_h2(0,k*u)+(2j/math.pi)*np.log(u/length)
+    P=omega*mu*(np.sum(ww*(length-u)*regular)+3j*length*length/(2*math.pi))
+    U=complex(length)
+    small=(omega*mu*length*length/2)*(
+      1-(2j/math.pi)*(np.log(k*length/2)+EULER-1.5)
+    )
+    small_error=(
+      float(abs(P-small)/max(abs(P),1e-300))
+      if abs(k*length)<=1e-3 else None
+    )
+    return P,U,small_error
+
+def g2_duffy_map(a,b,source_normal,omega,k,mu,qorder,which):
+    x,w=leggauss(qorder)
+    rho=(x+1)/2; wr=w/2
+    eta=(x+1)/2; we=w/2
+    if which==0:
+        D=eta[:,None]*b[None,:]-a[None,:]
+    else:
+        D=b[None,:]-eta[:,None]*a[None,:]
+    dnorm=np.linalg.norm(D,axis=1)
+    if np.any(dnorm<=0):
+        raise RuntimeError(('G2_DUFFY_DEGENERATE',which))
+    R=rho[:,None]
+    distance=R*dnorm[None,:]
+    h0=scaled_h2(0,k*distance)
+    preg=h0+(2j/math.pi)*np.log(R)
+    pint=float(np.linalg.norm(a))*float(np.linalg.norm(b))*(
+      np.sum(wr[:,None]*we[None,:]*R*preg)+1j/(2*math.pi)
+    )
+    d_dot_n=D@source_normal
+    geometry=d_dot_n/dnorm
+    h1=scaled_h2(1,k*distance)
+    ku=(1j*k/2)*geometry[None,:]*h1
+    ks=-d_dot_n[None,:]/(math.pi*R*(dnorm[None,:]**2))
+    ks_radial=-d_dot_n/(math.pi*dnorm**2)
+    uint=float(np.linalg.norm(a))*float(np.linalg.norm(b))*(
+      np.sum(wr[:,None]*we[None,:]*R*(ku-ks))
+      +np.sum(we*ks_radial)
+    )
+    return (omega*mu/2)*pint,uint
+
+def g2_duffy_pair(a0,a1,b0,b1,source_normal,omega,k,mu,qorder,shared):
+    ao=a1 if np.linalg.norm(a0-shared)<=1e-18 else a0
+    bo=b1 if np.linalg.norm(b0-shared)<=1e-18 else b0
+    a=ao-shared; b=bo-shared
+    p0,u0=g2_duffy_map(a,b,source_normal,omega,k,mu,qorder,0)
+    p1,u1=g2_duffy_map(a,b,source_normal,omega,k,mu,qorder,1)
+    return p0+p1,u0+u1
+
+def g2_tensor_pair(a0,a1,b0,b1,source_normal,omega,k,mu,qorder):
+    x,w=leggauss(qorder)
+    ua=(x+1)/2; ub=(x+1)/2
+    wa=w/2; wb=w/2
+    da=a1-a0; db=b1-b0
+    la=float(np.linalg.norm(da)); lb=float(np.linalg.norm(db))
+    ra=a0[None,:]+ua[:,None]*da[None,:]
+    rb=b0[None,:]+ub[:,None]*db[None,:]
+    d=rb[None,:,:]-ra[:,None,:]
+    distance=np.linalg.norm(d,axis=2)
+    if np.any(distance<=0):
+        raise RuntimeError('G2_NONTOUCHING_ZERO_DISTANCE')
+    weights=wa[:,None]*wb[None,:]
+    P=(omega*mu/2)*la*lb*np.sum(weights*scaled_h2(0,k*distance))
+    geometry=np.einsum('abk,k->ab',d,source_normal)/distance
+    U=(1j*k/2)*la*lb*np.sum(weights*geometry*scaled_h2(1,k*distance))
+    return P,U
+
+def g2_pair_integrals(a0,a1,b0,b1,source_normal,omega,k,mu,qorder,stats=None,depth=0):
+    if stats is not None:
+        stats['max_recursion_depth']=max(stats['max_recursion_depth'],depth)
+    shared=g2_shared_endpoint(a0,a1,b0,b1)
+    if shared is not None:
+        if stats is not None and depth==0: stats['touching_directed_pairs']+=1
+        return g2_duffy_pair(a0,a1,b0,b1,source_normal,omega,k,mu,qorder,shared)
+    if g2_proper_intersection(a0,a1,b0,b1):
+        raise RuntimeError('G2_NONSHARED_SEGMENT_INTERSECTION')
+    la=float(np.linalg.norm(a1-a0)); lb=float(np.linalg.norm(b1-b0))
+    distance=g2_segment_distance(a0,a1,b0,b1)
+    if distance/max(la,lb)<G2_NEAR_RATIO:
+        if stats is not None and depth==0: stats['routed_near_directed_pairs']+=1
+        if depth>=G2_NEAR_MAX_DEPTH:
+            raise RuntimeError(('G2_NEAR_DEPTH',depth,distance,la,lb))
+        if la>=lb:
+            am=(a0+a1)/2
+            p0,u0=g2_pair_integrals(a0,am,b0,b1,source_normal,omega,k,mu,qorder,stats,depth+1)
+            p1,u1=g2_pair_integrals(am,a1,b0,b1,source_normal,omega,k,mu,qorder,stats,depth+1)
+        else:
+            bm=(b0+b1)/2
+            p0,u0=g2_pair_integrals(a0,a1,b0,bm,source_normal,omega,k,mu,qorder,stats,depth+1)
+            p1,u1=g2_pair_integrals(a0,a1,bm,b1,source_normal,omega,k,mu,qorder,stats,depth+1)
+        return p0+p1,u0+u1
+    if stats is not None and depth==0: stats['tensor_directed_pairs']+=1
+    return g2_tensor_pair(a0,a1,b0,b1,source_normal,omega,k,mu,qorder)
+
+def assemble_pu_galerkin(mid,tangent,normal,length,omega,k,mu,qorder):
+    count=len(length)
+    p0,p1=g2_endpoints(mid,tangent,length)
+    P=np.empty((count,count),complex)
+    U=np.empty((count,count),complex)
+    self_anchor=[]
+    stats={
+      'self_panels':count,'touching_directed_pairs':0,
+      'routed_near_directed_pairs':0,'tensor_directed_pairs':0,
+      'max_recursion_depth':0,
+    }
+    for m in range(count):
+        for n in range(count):
+            if m==n:
+                P[m,n],U[m,n],small_error=g2_self_integrals(length[m],omega,k,mu,qorder)
+                if small_error is not None:
+                    self_anchor.append(small_error)
+            else:
+                P[m,n],U[m,n]=g2_pair_integrals(
+                  p0[m],p1[m],p0[n],p1[n],normal[n],omega,k,mu,qorder,stats
+                )
+    psym=float(np.linalg.norm(P-P.T)/max(np.linalg.norm(P),1e-300))
+    return P,U,{
+      'P_raw_transpose':psym,
+      'self_small_argument_max':max(self_anchor) if self_anchor else None,
+      'pair_classes':stats,
+    }
+
+def g2_solve_cert(A,B):
+    A=np.asarray(A,complex); B=np.asarray(B,complex)
+    vector=B.ndim==1
+    if vector: B=B[:,None]
+    row_max=np.max(np.abs(A),axis=1)
+    if np.any(~np.isfinite(row_max)) or np.any(row_max<=0):
+        raise RuntimeError('G2_ZERO_OR_NONFINITE_ROW_SCALE')
+    row=1/row_max
+    scaled=row[:,None]*A
+    column_max=np.max(np.abs(scaled),axis=0)
+    if np.any(~np.isfinite(column_max)) or np.any(column_max<=0):
+        raise RuntimeError('G2_ZERO_OR_NONFINITE_COLUMN_SCALE')
+    column=1/column_max
+    equilibrated=scaled*column[None,:]
+    lu,piv=lu_factor(equilibrated,check_finite=False)
+    y=lu_solve((lu,piv),row[:,None]*B,check_finite=False)
+    x=column[:,None]*y
+    residual=A@x-B
+    denominator=np.linalg.norm(A,np.inf)*np.linalg.norm(x,np.inf)+np.linalg.norm(B,np.inf)
+    backward=float(np.linalg.norm(residual,np.inf)/denominator)
+    gecon=get_lapack_funcs('gecon',(equilibrated,))
+    rcond,info=gecon(lu,np.linalg.norm(equilibrated,1),norm='1')
+    if info or not np.isfinite(rcond) or rcond<=0:
+        raise RuntimeError(('G2_GECON',info,rcond))
+    scaling_bytes=(
+      np.ascontiguousarray(row,dtype='<f8').tobytes()
+      +np.ascontiguousarray(column,dtype='<f8').tobytes()
+    )
+    certificate={
+      'backward':backward,'kappa_u':float(UROUND/rcond),
+      'row_scale':row.tolist(),'column_scale':column.tolist(),
+      'scaling_sha256':hashlib.sha256(scaling_bytes).hexdigest(),
+    }
+    return (x[:,0] if vector else x),certificate
+
+def g2_interior_gate(certificate):
+    return bool(
+      certificate['P_raw_transpose']<=1e-12
+      and certificate['Pout_raw_transpose']<=1e-12
+      and certificate['P_solve']['backward']<=1e-10
+      and certificate['Pout_solve']['backward']<=1e-10
+      and certificate['P_solve']['kappa_u']<=1e-8
+      and certificate['Pout_solve']['kappa_u']<=1e-8
+      and certificate['Yw_reciprocity']<=1e-8
+      and certificate['Yw_min_hermitian_eigenvalue_S_m']
+          >=-certificate['Yw_passivity_tolerance_S_m']
+      and certificate['cancellation_condition']<=1e-8
+    )
+
+def g2_weak_interior(mid,tangent,normal,length,omega,kp,kb,qorder):
+    pp,up,cp=assemble_pu_galerkin(mid,tangent,normal,length,omega,kp,MU0,qorder)
+    pb,ub,cb=assemble_pu_galerkin(mid,tangent,normal,length,omega,kb,MU0,qorder)
+    dp,spp=g2_solve_cert(pp,up)
+    db,spb=g2_solve_cert(pb,ub)
+    Dwp=length[:,None]*dp
+    Dwb=length[:,None]*db
+    Yw=Dwp-Dwb
+    floor=max(1e-12,1e-10*float(np.max(np.abs(Yw))))
+    reciprocity=float(np.linalg.norm(Yw-Yw.T)/max(np.linalg.norm(Yw),len(length)*floor))
+    hermitian=(Yw+Yw.conj().T)/2
+    mineig=float(np.linalg.eigvalsh(hermitian)[0])
+    ptol=max(floor,1e-9*float(np.linalg.norm(Yw,2)))
+    cancel=(np.linalg.norm(Dwp)+np.linalg.norm(Dwb))/max(np.linalg.norm(Yw),len(length)*floor)
+    cancel_condition=float(cancel*max(spp['kappa_u'],spb['kappa_u']))
+    self_anchors=[
+      x for x in (cp['self_small_argument_max'],cb['self_small_argument_max'])
+      if x is not None
+    ]
+    certificate={
+      'P_raw_transpose':cp['P_raw_transpose'],
+      'Pout_raw_transpose':cb['P_raw_transpose'],
+      'P_solve':spp,'Pout_solve':spb,
+      'P_pair_classes':cp['pair_classes'],
+      'Pout_pair_classes':cb['pair_classes'],
+      'Yw_reciprocity':reciprocity,
+      'Yw_floor_S_m':floor,
+      'Yw_min_hermitian_eigenvalue_S_m':mineig,
+      'Yw_passivity_tolerance_S_m':ptol,
+      'cancellation_amplification':float(cancel),
+      'cancellation_condition':cancel_condition,
+      'self_small_argument_max':max(self_anchors,default=None),
+    }
+    certificate['mandatory_gate_pass']=g2_interior_gate(certificate)
+    return Yw,certificate
+
+def g2_circle_arrays(radius,count):
+    theta=2*math.pi*np.arange(count+1)/count
+    endpoints=radius*np.column_stack((np.cos(theta),np.sin(theta)))
+    p0=endpoints[:-1]; p1=endpoints[1:]
+    delta=p1-p0
+    length=np.linalg.norm(delta,axis=1)
+    tangent=delta/length[:,None]
+    normal=np.column_stack((tangent[:,1],-tangent[:,0]))
+    mid=(p0+p1)/2
+    angle=(theta[:-1]+theta[1:])/2
+    return mid,tangent,normal,length,angle
+
+def g2_jratio(mode,z):
+    if mode==0:
+        return -jve(1,z)/jve(0,z)
+    return mode/z-jve(mode+1,z)/jve(mode,z)
+
+def run_g2_circle(radius,count,frequency,qorder):
+    start=time.perf_counter()
+    mid,tangent,normal,length,angle=g2_circle_arrays(radius,count)
+    omega=2*math.pi*frequency
+    kp=np.sqrt(omega*MU0*(omega*EPS0-1j*SIGMA))
+    kb=omega*math.sqrt(MU0*EPS0)
+    Yw,cert=g2_weak_interior(mid,tangent,normal,length,omega,kp,kb,qorder)
+    exact_values=[
+      kp/(1j*omega*MU0)*g2_jratio(mode,kp*radius)
+      -kb/(1j*omega*MU0)*g2_jratio(mode,kb*radius)
+      for mode in range(5)
+    ]
+    ys_floor=max(1e-12,1e-10*max(abs(x) for x in exact_values))
+    modes=[]
+    for mode,exact in enumerate(exact_values):
+        e=np.exp(1j*mode*angle)
+        em=np.exp(-1j*mode*angle)
+        numeric=np.vdot(e,Yw@e)/np.vdot(e,length*e)
+        numeric_minus=np.vdot(em,Yw@em)/np.vdot(em,length*em)
+        phase_eligible=bool(abs(numeric)>=10*ys_floor and abs(exact)>=10*ys_floor)
+        phase_error=(
+          float(abs(np.angle(numeric/exact,deg=True)))
+          if phase_eligible else None
+        )
+        modes.append({
+          'mode':mode,'exact_S':[exact.real,exact.imag],
+          'numeric_S':[numeric.real,numeric.imag],
+          'numeric_minus_S':[numeric_minus.real,numeric_minus.imag],
+          'relative_error':float(abs(numeric-exact)/max(abs(exact),ys_floor)),
+          'phase_eligible':phase_eligible,'phase_error_deg':phase_error,
+          'plus_minus_discrepancy':float(
+            abs(numeric-numeric_minus)/max(abs(numeric),abs(numeric_minus),ys_floor)
+          ),
+        })
+    analytic_gate=bool(
+      max(x['relative_error'] for x in modes)<=5e-3
+      and max((x['phase_error_deg'] for x in modes if x['phase_eligible']),default=0.0)<=0.25
+    )
+    return {
+      'case':'M1-EQ0-G2-circle','radius_m':radius,'N':count,
+      'frequency_hz':frequency,'q':qorder,'Ys_floor_S':ys_floor,
+      'modes':modes,'interior':cert,
+      'analytic_gate_pass_at_this_N':analytic_gate,
+      'mandatory_operator_gate_pass':cert['mandatory_gate_pass'],
+      'seconds':time.perf_counter()-start,'memory_mib':memory_mib(),
+    }
+
+def run_g2_eq0(level,frequency,qorder,r0s):
+    start=time.perf_counter()
+    _,mid,tangent,normal,length,conductor,_,_=g1_geometry(level)
+    omega=2*math.pi*frequency
+    kp=np.sqrt(omega*MU0*(omega*EPS0-1j*SIGMA))
+    kb=omega*math.sqrt(MU0*EPS0)
+    blocks=[]; certificates=[]
+    for c in (0,1):
+        ix=np.flatnonzero(conductor==c)
+        Yw,cert=g2_weak_interior(mid[ix],tangent[ix],normal[ix],length[ix],omega,kp,kb,qorder)
+        blocks.append(Yw); certificates.append(cert)
+    Yw=block_diag(*blocks)
+    Q=np.column_stack((conductor==0,conductor==1)).astype(float)
+    b=np.asarray((1.,-1.))
+    WQ=length[:,None]*Q
+    results={}
+    for r0 in r0s:
+        GG,_=assemble_gg(level,20,r0)
+        AE=np.diag(length)-1j*omega*MU0*(GG@(Yw/length[:,None]))
+        Eresponse,AEcert=g2_solve_cert(AE,WQ)
+        jresponse=Yw@Eresponse
+        K=Q.T@jresponse
+        Z,Kcert=g2_solve_cert(K,np.eye(2))
+        V=Z@b
+        E=Eresponse@V
+        j=jresponse@V
+        integrated=Q.T@j
+        terminal=.5*np.vdot(b,V)
+        boundary=.5*np.vdot(E,j)
+        loop=complex(b@Z@b)
+        terminal_reciprocity=float(np.linalg.norm(Z-Z.T)/max(np.linalg.norm(Z),1e-300))
+        current_residual=float(np.linalg.norm(integrated-b)/np.linalg.norm(b))
+        zero_sum_residual=float(abs(np.sum(integrated))/np.linalg.norm(b))
+        power_residual=float(
+          abs(terminal.real-boundary.real)
+          /max(abs(terminal.real),abs(boundary.real),1e-18)
+        )
+        terminal_passivity_tolerance=max(1e-12,1e-9*abs(loop))
+        terminal_gate=bool(
+          terminal_reciprocity<=1e-8
+          and current_residual<=1e-10
+          and zero_sum_residual<=1e-10
+          and power_residual<=1e-8
+          and AEcert['backward']<=1e-10 and AEcert['kappa_u']<=1e-8
+          and Kcert['backward']<=1e-10 and Kcert['kappa_u']<=1e-8
+          and loop.real>=-terminal_passivity_tolerance
+        )
+        results[str(r0)]={
+          'Zloop_ohm_per_m':[loop.real,loop.imag],
+          'terminal_reciprocity':terminal_reciprocity,
+          'current_residual':current_residual,
+          'zero_sum_residual':zero_sum_residual,
+          'dissipative_power_residual':power_residual,
+          'terminal_power':[terminal.real,terminal.imag],
+          'boundary_power':[boundary.real,boundary.imag],
+          'AE_solve':AEcert,'K_solve':Kcert,
+          'passivity_margin':loop.real,
+          'passivity_tolerance':terminal_passivity_tolerance,
+          'mandatory_terminal_gate_pass':terminal_gate,
+        }
+    mandatory=bool(
+      all(x['mandatory_gate_pass'] for x in certificates)
+      and all(x['mandatory_terminal_gate_pass'] for x in results.values())
+    )
+    return {
+      'case':'M1-EQ0-G2','level':level,'N':len(length),
+      'frequency_hz':frequency,'q':qorder,'interior':certificates,'r0':results,
+      'mandatory_raw_gate_pass':mandatory,
+      'seconds':time.perf_counter()-start,'memory_mib':memory_mib(),
+    }
+
+def g2_process_guard():
+    usage=memory_mib()
+    if usage:
+        if usage['working_set']>4096 or usage['peak_working_set']>4096 or usage['private']>5120:
+            raise RuntimeError(('G2_PROCESS_MEMORY_STOP',usage))
+    return usage
+
+def g2_pair_category(a0,a1,b0,b1,same):
+    if same: return 'self'
+    if g2_shared_endpoint(a0,a1,b0,b1) is not None: return 'touching'
+    if g2_proper_intersection(a0,a1,b0,b1):
+        raise RuntimeError('G2_NONSHARED_SEGMENT_INTERSECTION')
+    la=float(np.linalg.norm(a1-a0)); lb=float(np.linalg.norm(b1-b0))
+    return (
+      'routed_near'
+      if g2_segment_distance(a0,a1,b0,b1)/max(la,lb)<G2_NEAR_RATIO
+      else 'tensor'
+    )
+
+def run_g2_pair_screen(frequency,qlo,qhi):
+    start=time.perf_counter()
+    _,mid,tangent,normal,length,conductor,_,_=g1_geometry(0)
+    ix=np.flatnonzero(conductor==0)
+    mid=mid[ix]; tangent=tangent[ix]; normal=normal[ix]; length=length[ix]
+    p0,p1=g2_endpoints(mid,tangent,length)
+    categories=np.empty((len(length),len(length)),object)
+    for m in range(len(length)):
+        for n in range(len(length)):
+            categories[m,n]=g2_pair_category(p0[m],p1[m],p0[n],p1[n],m==n)
+    omega=2*math.pi*frequency
+    kp=np.sqrt(omega*MU0*(omega*EPS0-1j*SIGMA))
+    kb=omega*math.sqrt(MU0*EPS0)
+    materials={}
+    passed=True
+    for name,k in (('conductor',kp),('background',kb)):
+        plo,ulo,clo=assemble_pu_galerkin(mid,tangent,normal,length,omega,k,MU0,qlo)
+        phi,uhi,chi=assemble_pu_galerkin(mid,tangent,normal,length,omega,k,MU0,qhi)
+        pscale=np.maximum.reduce((
+          np.abs(plo),np.abs(phi),omega*MU0*np.outer(length,length)/(2*math.pi)
+        ))
+        uscale=np.maximum.reduce((
+          np.abs(ulo),np.abs(uhi),np.sqrt(np.outer(length,length))
+        ))
+        class_metrics={}
+        for category in ('self','touching','routed_near','tensor'):
+            mask=categories==category
+            pair_count=int(np.count_nonzero(mask))
+            class_metrics[category]={
+              'directed_pair_count':pair_count,
+              'P_q_relative_max':(
+                float(np.max(np.abs(phi-plo)[mask]/pscale[mask])) if pair_count else None
+              ),
+              'U_q_relative_max':(
+                float(np.max(np.abs(uhi-ulo)[mask]/uscale[mask])) if pair_count else None
+              ),
+            }
+        covered=all(class_metrics[x]['directed_pair_count']>0 for x in ('self','touching','routed_near'))
+        pchanges=[x['P_q_relative_max'] for x in class_metrics.values() if x['P_q_relative_max'] is not None]
+        uchanges=[x['U_q_relative_max'] for x in class_metrics.values() if x['U_q_relative_max'] is not None]
+        material_pass=bool(
+          covered and max(pchanges)<=1e-3 and max(uchanges)<=1e-3
+          and clo['P_raw_transpose']<=1e-12
+          and chi['P_raw_transpose']<=1e-12
+          and chi['pair_classes']['max_recursion_depth']<=G2_NEAR_MAX_DEPTH
+        )
+        passed=passed and material_pass
+        materials[name]={
+          'qlo':qlo,'qhi':qhi,'pair_class_metrics':class_metrics,
+          'qlo_assembly':clo,'qhi_assembly':chi,
+          'mandatory_pair_gate_pass':material_pass,
+        }
+    return {
+      'case':'M1-EQ0-G2-pair-screen','frequency_hz':frequency,
+      'N_one_conductor':len(length),'materials':materials,
+      'mandatory_stage_pass':bool(passed),
+      'seconds':time.perf_counter()-start,'memory_mib':g2_process_guard(),
+    }
+
+def g2_complex_value(value):
+    return complex(value[0],value[1])
+
+def g2_circle_q_summary(lo,hi):
+    floor=max(lo['Ys_floor_S'],hi['Ys_floor_S'])
+    relative=[]; phases=[]
+    for a,b in zip(lo['modes'],hi['modes']):
+        za=complex(*a['numeric_S']); zb=complex(*b['numeric_S'])
+        relative.append(float(abs(zb-za)/max(abs(za),abs(zb),floor)))
+        if abs(za)>=10*floor and abs(zb)>=10*floor:
+            phases.append(float(abs(np.angle(zb/za,deg=True))))
+    return {
+      'relative_max':max(relative),'phase_max_deg':max(phases,default=0.0),
+      'mandatory_gate_pass':bool(max(relative)<=1e-3 and max(phases,default=0.0)<=0.25),
+    }
+
+def run_g2_circle_stage(radius,counts,frequency,qlo,qhi):
+    rows=[]
+    for count in counts:
+        lo=run_g2_circle(radius,count,frequency,qlo)
+        hi=run_g2_circle(radius,count,frequency,qhi)
+        rows.append({'N':count,'qlo':lo,'qhi':hi,'quadrature':g2_circle_q_summary(lo,hi)})
+    coarse=rows[-2]['qlo']; fine=rows[-1]['qlo']
+    floor=max(coarse['Ys_floor_S'],fine['Ys_floor_S'])
+    changes=[]; phases=[]
+    for a,b in zip(coarse['modes'],fine['modes']):
+        za=complex(*a['numeric_S']); zb=complex(*b['numeric_S'])
+        changes.append(float(abs(zb-za)/max(abs(za),abs(zb),floor)))
+        if abs(za)>=10*floor and abs(zb)>=10*floor:
+            phases.append(float(abs(np.angle(zb/za,deg=True))))
+    mesh={
+      'coarse_N':counts[-2],'fine_N':counts[-1],
+      'relative_rms':float(np.sqrt(np.mean(np.asarray(changes)**2))),
+      'relative_max':max(changes),'phase_max_deg':max(phases,default=0.0),
+    }
+    mesh['mandatory_gate_pass']=bool(
+      mesh['relative_rms']<=5e-3 and mesh['relative_max']<=1e-2
+      and mesh['phase_max_deg']<=0.25
+    )
+    mandatory=bool(
+      all(x['quadrature']['mandatory_gate_pass'] for x in rows)
+      and all(x['qlo']['mandatory_operator_gate_pass'] for x in rows)
+      and all(x['qhi']['mandatory_operator_gate_pass'] for x in rows)
+      and fine['analytic_gate_pass_at_this_N']
+      and mesh['mandatory_gate_pass']
+    )
+    return {
+      'case':'M1-EQ0-G2-circle-stage','frequency_hz':frequency,
+      'counts':counts,'qlo':qlo,'qhi':qhi,'rows':rows,'mesh':mesh,
+      'mandatory_stage_pass':mandatory,'memory_mib':g2_process_guard(),
+    }
+
+def run_g2_eq0_stage(level,frequency,qlo,qhi,r0s):
+    lo=run_g2_eq0(level,frequency,qlo,r0s)
+    hi=run_g2_eq0(level,frequency,qhi,r0s)
+    comparisons={}
+    qpass=True
+    for r0 in r0s:
+        key=str(r0)
+        za=g2_complex_value(lo['r0'][key]['Zloop_ohm_per_m'])
+        zb=g2_complex_value(hi['r0'][key]['Zloop_ohm_per_m'])
+        floor=max(1e-9,1e-9*abs(zb))
+        relative=float(abs(zb-za)/max(abs(za),abs(zb),floor))
+        phase=(
+          float(abs(np.angle(zb/za,deg=True)))
+          if abs(za)>=10*floor and abs(zb)>=10*floor else 0.0
+        )
+        gate=bool(relative<=1e-3 and phase<=0.25)
+        qpass=qpass and gate
+        comparisons[key]={
+          'relative_max':relative,'phase_max_deg':phase,
+          'mandatory_gate_pass':gate,
+        }
+    base_key=min((str(x) for x in r0s),key=lambda x:abs(float(x)-1.0))
+    base=g2_complex_value(lo['r0'][base_key]['Zloop_ohm_per_m'])
+    r0_relative={}
+    for r0 in r0s:
+        key=str(r0); z=g2_complex_value(lo['r0'][key]['Zloop_ohm_per_m'])
+        r0_relative[key]=float(abs(z-base)/max(abs(base),1e-9))
+    condition_values=[]
+    for certificate in lo['interior']:
+        condition_values += [
+          certificate['P_solve']['kappa_u'],certificate['Pout_solve']['kappa_u']
+        ]
+    for result in lo['r0'].values():
+        condition_values += [result['AE_solve']['kappa_u'],result['K_solve']['kappa_u']]
+    tau_invariance=max(1e-12,50*max(condition_values))
+    r0_pass=bool(
+      tau_invariance<=1e-8
+      and max(r0_relative.values(),default=0.0)<=tau_invariance
+    )
+    mandatory=bool(
+      lo['mandatory_raw_gate_pass'] and hi['mandatory_raw_gate_pass']
+      and qpass and r0_pass
+    )
+    return {
+      'case':'M1-EQ0-G2-EQ0-stage','level':level,'frequency_hz':frequency,
+      'qlo_result':lo,'qhi_result':hi,'quadrature':comparisons,
+      'r0_balanced_loop_relative':r0_relative,
+      'r0_tau_invariance':tau_invariance,'r0_gate_pass':r0_pass,
+      'mandatory_stage_pass':mandatory,'memory_mib':g2_process_guard(),
+    }
+
+def g2_parse_list(name,default,cast):
+    values=[cast(x) for x in os.environ.get(name,default).split(',') if x]
+    if (
+      not values or any(not np.isfinite(float(x)) for x in values)
+      or len(values)!=len(set(values))
+    ):
+        raise RuntimeError(('G2_INVALID_ENV',name,values))
+    return values
+
+g2_stage=os.environ.get('M1_G2_STAGE','pair')
+g2_freqs=g2_parse_list('M1_G2_FREQS','1e5,2e9',float)
+g2_qs=g2_parse_list('M1_G2_QS','20,40',int)
+g2_circle_ns=g2_parse_list('M1_G2_CIRCLE_NS','128,256',int)
+g2_levels=g2_parse_list('M1_G2_LEVELS','0',int)
+g2_r0s=g2_parse_list('M1_G2_R0S','1',float)
+mandatory_frequencies={1e5,1e6,1e7,1e8,5e8,1e9,2e9}
+if any(x not in mandatory_frequencies for x in g2_freqs):
+    raise RuntimeError(('G2_FREQUENCY_NOT_FROZEN',g2_freqs))
+if g2_qs!=[20,40]: raise RuntimeError(('G2_Q_NOT_FROZEN',g2_qs))
+if any(x not in (128,256,512) for x in g2_circle_ns):
+    raise RuntimeError(('G2_CIRCLE_N_NOT_FROZEN',g2_circle_ns))
+if any(x not in (0,1,2) for x in g2_levels):
+    raise RuntimeError(('G2_LEVEL_NOT_FROZEN',g2_levels))
+if any(x not in (0.1,1.0,10.0) for x in g2_r0s):
+    raise RuntimeError(('G2_R0_NOT_FROZEN',g2_r0s))
+extreme_frequencies=[1e5,2e9]
+full_frequencies=[1e5,1e6,1e7,1e8,5e8,1e9,2e9]
+if g2_stage in ('pair','circle') and g2_freqs!=extreme_frequencies:
+    raise RuntimeError(('G2_EXTREME_SEQUENCE_NOT_FROZEN',g2_stage,g2_freqs))
+if g2_stage=='eq0':
+    if g2_freqs not in (extreme_frequencies,full_frequencies):
+        raise RuntimeError(('G2_EQ0_FREQUENCY_SEQUENCE_NOT_FROZEN',g2_freqs))
+    if tuple(g2_levels) not in ((0,),(1,2)):
+        raise RuntimeError(('G2_EQ0_LEVEL_SEQUENCE_NOT_FROZEN',g2_levels))
+    if tuple(g2_r0s) not in ((1.0,),(0.1,1.0,10.0)):
+        raise RuntimeError(('G2_EQ0_R0_SEQUENCE_NOT_FROZEN',g2_r0s))
+g2_process_guard()
+for frequency in g2_freqs:
+    if g2_stage=='pair':
+        result=run_g2_pair_screen(frequency,*g2_qs)
+        print(json.dumps(result,separators=(',',':'),allow_nan=False),flush=True)
+        if not result['mandatory_stage_pass']: raise SystemExit(2)
+    elif g2_stage=='circle':
+        if tuple(g2_circle_ns) not in ((128,256),(256,512)):
+            raise RuntimeError(('G2_CIRCLE_SEQUENCE_NOT_FROZEN',g2_circle_ns))
+        result=run_g2_circle_stage(17.5e-6,g2_circle_ns,frequency,*g2_qs)
+        print(json.dumps(result,separators=(',',':'),allow_nan=False),flush=True)
+        if not result['mandatory_stage_pass']: raise SystemExit(2)
+    elif g2_stage=='eq0':
+        for level in g2_levels:
+            result=run_g2_eq0_stage(level,frequency,g2_qs[0],g2_qs[1],g2_r0s)
+            print(json.dumps(result,separators=(',',':'),allow_nan=False),flush=True)
+            if not result['mandatory_stage_pass']: raise SystemExit(2)
+    else:
+        raise RuntimeError(('G2_STAGE_NOT_FROZEN',g2_stage))
+'@
+
+# Stage 1 only. Inspect both JSON rows and the process-tree guard before stage 2.
+$env:M1_G2_STAGE='pair'
+$env:M1_G2_FREQS='1e5,2e9'
+$env:M1_G2_QS='20,40'
+$env:M1_G2_CIRCLE_NS='128,256'
+$env:M1_G2_LEVELS='0'
+$env:M1_G2_R0S='1'
+$g2 | python -u -
+if ($LASTEXITCODE -ne 0) { throw "G2_PAIR_STAGE_FAILED_$LASTEXITCODE" }
+```
+
+pair JSON과 외부 process-tree resource를 검토해 `mandatory_stage_pass=true`를 확인한 같은 PowerShell session에서만 Stage 2를 별도로 실행한다.
+
+```powershell
+# Stage 2 is authorized only if stage 1 passed and was reviewed.
+$env:M1_G2_STAGE='circle'
+$env:M1_G2_CIRCLE_NS='128,256'
+$g2 | python -u -
+if ($LASTEXITCODE -ne 0) { throw "G2_CIRCLE_MEDIUM_STAGE_FAILED_$LASTEXITCODE" }
+```
+
+`N=128→256`의 analytic, mesh, q20/q40와 raw operator gate를 검토한 뒤에만 Stage 2b를 별도로 실행한다.
+
+```powershell
+# Stage 2b is authorized only if the N=128→256 stage passed and was reviewed.
+$env:M1_G2_CIRCLE_NS='256,512'
+$g2 | python -u -
+if ($LASTEXITCODE -ne 0) { throw "G2_CIRCLE_FINE_STAGE_FAILED_$LASTEXITCODE" }
+```
+
+두 circle stage를 모두 검토·통과한 뒤에만 Stage 3을 별도로 실행한다.
+
+```powershell
+# Stage 3 is authorized only after both circle stages passed and were reviewed.
+$env:M1_G2_STAGE='eq0'
+$env:M1_G2_CIRCLE_NS='128,256'
+$env:M1_G2_LEVELS='0'
+$env:M1_G2_R0S='1'
+$g2 | python -u -
+if ($LASTEXITCODE -ne 0) { throw "G2_EQ0_SEED_STAGE_FAILED_$LASTEXITCODE" }
+```
+
+G2의 첫 상태는 `M1-EQ0-G2 preregistered_not_run`이다. 위 네 명령은 한 번에 실행하는 묶음이 아니다. pair screen, circle `N=128→256`, circle `N=256→512`, EQ0 seed 사이마다 JSON의 `mandatory_stage_pass`와 외부 process-tree guard를 검토하고 통과한 다음 단계만 별도로 시작한다. EQ0 seed extreme의 raw `Yw` reciprocity/passivity, cancellation certificate 또는 power가 실패하면 즉시 중단하고 `N=288/576` 전체 sweep을 시작하지 않는다. target-tested G2도 hidden-mode gate를 놓치면 four-operator symmetric Calderón/Steklov–Poincaré 또는 volume-FEM boundary Schur complement를 별도 사전 등록한다.
+
+G1 exterior structural gate는 `smn=max(|GG10,mn|,|GG20,mn|,ℓmℓn/(2π))`의 pair-normalized max와 Frobenius q change를 각각 `<=1e-10`, independently reversed pair와 raw transpose defect를 `<=1e-12`, `r0` rank-one relative residual을 `<=1e-8`로 판정한다. G2는 q20을 canonical, q40을 parity로 두며 self/touching/routed-near와 balanced final `Z'loop`에 기존 `0.1%/0.25°` gate를 적용한다. `r0`는 partial common mode가 아니라 q20 balanced `Z'loop`에서 비교하고, 관련 `P/Pout/AE/K`의 최대 `κ1u`로 `τinv=max(1e-12,50 max κ1u)<=1e-8`을 계산해 변화량 `<=τinv`를 요구한다. prospective interior는 `Yw=WYs` `[S·m]`, `Yw,floor=max(1e-12 S·m,1e-10 max|Yw|)`, `||Yw−Yw^T||F/max(||Yw||F,N Yw,floor)<=1e-8`로 검사한다. passivity는 `H(Yw)=(Yw+Yw^H)/2`의 raw `λmin >= -max(Yw,floor,1e-9||Yw||2)`다. Hermitian part 평가는 진단이지 operator 대칭화가 아니다. G1은 exterior power 원인 격리용 diagnostic이며 이 interior metric이나 converged A–v가 실패하면 M1은 계속 blocked다.
 
 ## Focused regression
 

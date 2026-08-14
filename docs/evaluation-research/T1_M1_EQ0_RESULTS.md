@@ -6,11 +6,13 @@
 
 ## 판정
 
-M1-EQ0의 현재 판정은 **`BLOCKED_SAO_BOUNDARY_POWER_IDENTITY`** 다.
+M1-EQ0의 전체 판정은 계속 **blocked**다. 다만 두 이산화 결과를 분리해 보존한다.
 
-- `N={144,288,576}`, 7개 mandatory frequency, q10/q20, `r0={0.1,1,10} m`에서 complex response, panel convergence, quadrature, residual, condition, integrated current, terminal reciprocity와 scalar passivity는 통과했다.
+- `N={144,288,576}`, 7개 mandatory frequency, q10/q20, `r0={0.1,1,10} m`에서 complex response, panel convergence, quadrature, residual, condition, integrated current, terminal reciprocity와 terminal scalar `Z'loop` passivity는 통과했다.
 - 그러나 사전 등록한 SAO signed dissipative-power identity `<=1e-8`은 fine mesh의 7/7 frequency에서 실패했다. worst mismatch는 2 GHz의 `1.58517e-4`다.
 - 실패 뒤 C0를 바꾸거나 raw matrix를 대칭화하거나 gate를 완화하지 않았다. 따라서 이 결과를 finite/open M1 pass로 승격하지 않는다.
+- 사전 등록한 `M1-EQ0-G1` direct exterior Galerkin을 같은 contour에서 실행한 결과 exterior structure, quadrature, `r0`, terminal response와 boundary power는 통과했다. 이 부분만 `passed_exterior_galerkin_only`다.
+- 그러나 G1이 그대로 사용한 collocation interior `Yw=WYs`는 fine에서 weighted reciprocity `1.69946%–7.12361%`로 전 주파수 실패했고 100 kHz와 1 MHz에서 raw Hermitian passivity도 실패했다. 따라서 전체 M1은 `BLOCKED_INTERIOR_WEIGHTED_RECIPROCITY_PASSIVITY`로 차단한다.
 - independent body-fitted `A_z–v` 2 GHz smoke는 consistent P1 mass power에서 `1.377e-9`를 통과했지만, 한 crop·한 mesh뿐이므로 reference convergence pass가 아니다.
 
 `C0-A1`은 계속 `passed_circle_interior_only`, M0는 `passed_periodic_1d_volume_only`다. T1 전체, global composition, PowerSI accuracy와 product status는 모두 `blocked`다.
@@ -60,7 +62,7 @@ Panel hashes는 seed `f65cddcf5d45187006ffc5e9eaf1c5624fa14e3849ce435c2601825da5
 | integrated-current residual | `6.66257e-16` | `<=1e-10` | pass |
 | zero-sum residual | `5.55121e-16` | `<=1e-10` | pass |
 | `r0` invariance | `9.59635e-16` | `τinv=4.60678e-11` | pass |
-| scalar passivity | min `Re Z'=3.83405346 Ω/m` | nonnegative floor | pass |
+| terminal scalar `Z'loop` passivity | min `Re Z'=3.83405346 Ω/m` | nonnegative floor | pass |
 | SAO boundary dissipative power | max `1.58517e-4` | `<=1e-8` | **fail** |
 
 Fine dissipative-power mismatch는 frequency 순서대로 다음과 같다.
@@ -125,9 +127,9 @@ Fine SAO와 이 unconverged A–v smoke의 2 GHz 차이는 A–v를 denominator�
 
 이는 현재 host의 process-only evidence다. target i9-12900H/8 GB의 process-tree, parser/reference coexistence와 system headroom을 검증하지 않았으므로 8 GB production pass가 아니다.
 
-## 다음 후보: M1-EQ0-G1 direct Galerkin exterior
+## M1-EQ0-G1 direct Galerkin exterior
 
-다음 실행은 같은 geometry, endpoint hashes, frequency, `N={144,288,576}`, current basis와 gate를 그대로 유지하고 exterior owner만 energy-consistent pulse-Galerkin operator로 교체한다.
+G1은 결과를 보기 전에 같은 geometry, endpoint hashes, frequency, `N={144,288,576}`, current basis와 gate를 그대로 유지하고 exterior owner만 energy-consistent pulse-Galerkin operator로 교체하도록 동결했다.
 
 `GG[m,n] = ∫γm ∫γn g0(r,r') ds' ds`, `GE=W^-1 GG`.
 
@@ -158,12 +160,75 @@ non-touching pair는 deterministic tensor Gauss를 사용한다. shared endpoint
 - prospective `Yw=WYs` `[S·m]`, `Yw,floor=max(1e-12 S·m,1e-10 max|Yw,mn|)`, `||Yw−Yw^T||F/max(||Yw||F,N Yw,floor) <=1e-8`
 - prospective `H(Yw)=(Yw+Yw^H)/2`의 raw `λmin >= -max(Yw,floor,1e-9||Yw||2)`; Hermitian part 평가는 operator 수정이 아님. 어느 쪽이든 실패하면 `P/U/Pout/Uout`도 target-tested Galerkin화하기 전 production promotion 차단
 
-G1을 실행하기 전 상태는 `preregistered_G0_galerkin_pending`이다. G1은 먼저 exterior power 원인을 격리하는 diagnostic이며, 모든 mandatory gate, prospective interior weak reciprocity와 converged A–v가 통과하기 전에는 `oracle_pass`로 바꾸지 않는다. dense ceiling `N<=576`과 순차 frequency/level 해제, process-tree 4 GiB 목표·private/commit 5 GiB stop policy는 유지한다.
+### G1 raw q20 response
+
+단위는 `Ω/m`이고 canonical `r0=1 m`다. G1은 기존 collocation negative result를 덮어쓰지 않는다.
+
+| frequency | N=144 | N=288 | N=576 |
+|---:|---:|---:|---:|
+| 100 kHz | `3.834060065211 + j0.157989290887` | `3.834976808358 + j0.158589912102` | `3.835212680631 + j0.158744120667` |
+| 1 MHz | `3.852103911757 + j1.582979660193` | `3.854321842237 + j1.585164193881` | `3.854888639403 + j1.585725839089` |
+| 10 MHz | `4.961883304978 + j15.071586796513` | `4.968178270343 + j15.077131202310` | `4.969778690848 + j15.078631400726` |
+| 100 MHz | `14.596668814106 + j128.274769816497` | `14.614647832186 + j128.306020625090` | `14.618992113881 + j128.314925437738` |
+| 500 MHz | `32.500570096067 + j601.434337262636` | `32.534301360113 + j601.539698341439` | `32.540867638474 + j601.572164611766` |
+| 1 GHz | `45.956857766409 + j1183.892300997648` | `46.003607212496 + j1184.090917910282` | `46.008833807283 + j1184.154376140652` |
+| 2 GHz | `65.004812495836 + j2340.881053914836` | `65.087568409877 + j2341.262625651998` | `65.088435397829 + j2341.392170234187` |
+
+### G1 exterior gate audit
+
+| gate | result | threshold | status |
+|---|---:|---:|---|
+| fine `GG` q10→q20 pair-normalized max | `2.02993e-15` | `<=1e-10` | pass |
+| fine `GG` q10→q20 Frobenius | `2.10724e-16` | `<=1e-10` | pass |
+| independent reversed-pair max | `6.31236e-16` | `<=1e-12` | pass |
+| fine raw `GG` transpose defect | `9.95287e-17` | `<=1e-12` | pass |
+| fine `r0` rank-one identity max | `6.33326e-16` | `<=1e-8` | pass |
+| medium→fine complex relative RMS | `0.0104184%` | `<=0.5%` | pass |
+| medium→fine complex relative max | `0.0191430%` | `<=1%` | pass |
+| medium→fine max phase | `0.00417655°` | `<=0.25°` | pass |
+| fine final `Z'` q10→q20 relative max | `9.75625e-9` | `<=0.1%` | pass |
+| fine final `Z'` q10→q20 max phase | `5.58821e-7°` | `<=0.25°` | pass |
+| fine boundary dissipative-power mismatch | max `1.06982e-14` | `<=1e-8` | pass |
+| fine terminal raw reciprocity | max `8.60120e-16` | `<=1e-8` | pass |
+| fine integrated-current residual | max `3.27623e-15` | `<=1e-10` | pass |
+| fine exterior `AE κ1u` | max `1.03733e-12` | `<=1e-8` | pass |
+| fine terminal scalar `Z'loop` passivity | min `Re Z'=3.83521 Ω/m` | nonnegative floor | pass |
+
+Fine `GG_q20` checksum은 `f85a15e7325fc0bc33b040261b5c03455f7f2e1f881d8283695e78efeb654121`이다. G1과 collocation fine response의 complex relative 차이는 RMS `2.06108e-5`, max `3.86006e-5`이고 phase max `0.00145710°`다. 작은 response 변화가 collocation의 전력 결함을 정당화하지 않으며, G1은 energy-consistent exterior owner를 독립적으로 확정한 결과다.
+
+### G1 interior prospective gate
+
+Exterior를 교체해도 interior는 frozen collocation `Ys`를 사용했다. `Yw=WYs`의 단위는 `S·m`이고 아래 수치는 어떤 대칭화나 eigenvalue clipping 전 raw 값이다.
+
+| frequency | weighted reciprocity | raw min `λ(H(Yw))` (`S·m`) | tolerance (`S·m`) | reciprocity | passivity |
+|---:|---:|---:|---:|---|---|
+| 100 kHz | `7.12361e-2` | `-2.96377e-5` | `7.22576e-12` | fail | fail |
+| 1 MHz | `4.08228e-2` | `-1.79591e-6` | `7.22230e-12` | fail | fail |
+| 10 MHz | `3.07258e-2` | `+3.85126e-7` | `6.45942e-12` | fail | pass |
+| 100 MHz | `2.91663e-2` | `+5.63067e-7` | `2.58488e-12` | fail | pass |
+| 500 MHz | `2.47707e-2` | `+5.86124e-7` | `1.22951e-12` | fail | pass |
+| 1 GHz | `2.10899e-2` | `+5.88976e-7` | `1.00000e-12` | fail | pass |
+| 2 GHz | `1.69946e-2` | `+5.89977e-7` | `1.00000e-12` | fail | pass |
+
+이 결함은 N=144/288/576에서 0으로 단조 수렴하지 않는다. 예를 들어 2 GHz weighted reciprocity는 `1.06919e-2 → 1.38727e-2 → 1.69946e-2`다. reduced terminal `2×2`가 reciprocal/passive라는 사실로 hidden interior mode를 승인하지 않는다. G1 판정은 **`passed_exterior_galerkin_only`**, 전체 상태는 **`BLOCKED_INTERIOR_WEIGHTED_RECIPROCITY_PASSIVITY`** 다.
+
+### G1 resource/provenance
+
+- fine 7-frequency q20/세 `r0` 단독 run wall: `405.2 s`
+- fine 7-frequency q10/q20 canonical `r0` parity run wall: `558.7 s`
+- observed process-only peak working set/private: `120.906/1348.285 MiB`
+- full frequency/mesh/reference matrices는 케이스 사이에 보존하지 않았다.
+
+이는 현재 host의 process-only bounded oracle evidence이며 process-tree, parser/reference coexistence, 8 GB laptop 또는 production 성능 증거가 아니다.
+
+## 다음 후보: M1-EQ0-G2 interior Galerkin
+
+G2는 G1 exterior를 그대로 보존하고 `P/U/Pout/Uout` interior trace operator를 target-tested Galerkin 약형으로 다시 이산화한다. collocation matrix를 사후 평균하거나 negative eigenvalue를 clipping하는 방식은 허용하지 않는다. exact 식, singular quadrature, 독립 pair 방향, raw weighted reciprocity/passivity와 A–v 교차 gate는 [`T1_M1_REFERENCE_SPEC.md`](T1_M1_REFERENCE_SPEC.md)와 [`ORACLE_REPRODUCTION.md`](ORACLE_REPRODUCTION.md)에 결과를 보기 전에 동결한다. 현재 상태는 `M1-EQ0-G2 preregistered_not_run`이다.
 
 ## Exact next starting point
 
-1. **완료:** M1-EQ0-G1 independent-pair Galerkin log operator의 self/non-touching/analytic-radial Duffy, weak assembly, normalization과 prospective `Yw` gate를 [`ORACLE_REPRODUCTION.md`](ORACLE_REPRODUCTION.md)에 결과 전에 고정했다.
-2. 기존 full contour에서 q10/q20 pair-integral parity, weighted symmetry와 `r0` invariance를 실행한다.
-3. 같은 3×7 SAO sweep을 재실행하고 raw power와 hidden-mode interior reciprocity를 함께 판정한다.
+1. **완료:** G1 direct exterior Galerkin을 `N={144,288,576}`, 7 frequencies, q10/q20, 세 `r0`에서 실행해 exterior-only pass와 interior blocker를 분리했다.
+2. **동결 완료:** G2 interior Galerkin의 약형, self/touching/non-touching singular quadrature, basis/order, raw reciprocity/passivity, q20/q40와 no-retuning rule을 exact reproduction block에 고정했다.
+3. pair screen → circle `N=128→256` → circle `N=256→512` → EQ0 seed를 별도 명령으로 실행하고 각 단계의 mandatory gate를 검토한다. seed extreme이 모두 통과한 뒤에만 같은 3×7 contour로 확장한다.
 4. A–v는 consistent P1 mass form으로 `h/h2/h4`, crop `2/4/8Deff`, condition과 process-tree resource를 채운다.
 5. 두 방법이 모두 통과하기 전 T1-F, board source owner 또는 PowerSI correlation으로 우회하지 않는다.

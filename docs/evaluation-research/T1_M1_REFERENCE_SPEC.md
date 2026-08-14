@@ -2,13 +2,13 @@
 
 최종 갱신: 2026-08-15 (Asia/Seoul)
 
-이 문서는 finite-width straight conductor와 explicit return의 smooth-copper broadband series operator를 검증할 T1-M1 실행 계약을 고정한다. 제품 parser/solver 코드는 변경하지 않았다. mandatory circle interior prototype은 [`T1_CIRCLE_DTN_RESULTS.md`](T1_CIRCLE_DTN_RESULTS.md)에서 `C0-A1 passed_circle_interior_only`, lateral-periodic slab은 [`T1_M0_SLAB_RESULTS.md`](T1_M0_SLAB_RESULTS.md)에서 `passed_periodic_1d_volume_only`로 판정됐다. M1-EQ0 geometry, exact full-contour panel hash와 A–v crop/resource 계약은 결과를 보기 전에 동결했다. 실행 결과 response/mesh/condition/current gate는 통과했지만 mandatory SAO boundary-power identity가 fine에서 최대 `1.585e-4 > 1e-8`로 실패했다. 따라서 현재 T1-M1은 **`BLOCKED_SAO_BOUNDARY_POWER_IDENTITY`**, T1 전체와 global composition은 계속 `blocked`다. raw 결과는 [`T1_M1_EQ0_RESULTS.md`](T1_M1_EQ0_RESULTS.md)에 보존한다.
+이 문서는 finite-width straight conductor와 explicit return의 smooth-copper broadband series operator를 검증할 T1-M1 실행 계약을 고정한다. 제품 parser/solver 코드는 변경하지 않았다. mandatory circle interior prototype은 [`T1_CIRCLE_DTN_RESULTS.md`](T1_CIRCLE_DTN_RESULTS.md)에서 `C0-A1 passed_circle_interior_only`, lateral-periodic slab은 [`T1_M0_SLAB_RESULTS.md`](T1_M0_SLAB_RESULTS.md)에서 `passed_periodic_1d_volume_only`로 판정됐다. M1-EQ0 geometry, exact full-contour panel hash와 A–v crop/resource 계약은 결과를 보기 전에 동결했다. 첫 collocation 실행은 mandatory SAO boundary-power identity가 fine에서 최대 `1.585e-4 > 1e-8`로 실패했다. 후속 G1 direct exterior Galerkin은 같은 contour에서 exterior energy gate를 통과했지만 collocation interior `WYs`가 전 주파수 weighted reciprocity와 100 kHz/1 MHz passivity를 실패했다. 따라서 G1은 `passed_exterior_galerkin_only`, 현재 전체 T1-M1은 **`BLOCKED_INTERIOR_WEIGHTED_RECIPROCITY_PASSIVITY`**, T1 전체와 global composition은 계속 `blocked`다. raw 결과는 [`T1_M1_EQ0_RESULTS.md`](T1_M1_EQ0_RESULTS.md)에 보존한다.
 
 ## 범위와 독립성
 
 | 항목 | 1차 범위 | 현재 상태 |
 |---|---|---|
-| normative oracle | dense pulse SAO–CIM; homogeneous, nonmagnetic, lossless background; simply connected copper contours | `BLOCKED_SAO_BOUNDARY_POWER_IDENTITY` |
+| normative oracle | dense pulse SAO–CIM; homogeneous, nonmagnetic, lossless background; simply connected copper contours | G1 exterior-only pass, interior Galerkin G2 pending; overall blocked |
 | independent reference | 2-D volume-current `A_z–v` magnetoquasistatic P1 FEM | `2GHz_4Deff_smoke_only`; consistent mass power pass, mesh/crop/condition 미실행 |
 | authoritative output | 동일한 conductor order와 balanced current basis의 complex `Z'(f)` | 없음; collocation raw table은 negative evidence only |
 | 별도 electrostatic block | transverse `C'`; lossy dielectric이면 causal `G'/C'` | T1-E0 외 미실행 |
@@ -400,7 +400,7 @@ Ys,m   = Dm(kp) - Dm(kb)
 
 는 response convergence를 통과했지만 `W=diag(ℓ)`에 대해 fine `||WGc−(WGc)^T||F/||WGc||F=2.29761e-4`였고, mandatory signed dissipative-power mismatch가 2 GHz `1.58517e-4`로 실패했다. 원인과 raw 표는 [`T1_M1_EQ0_RESULTS.md`](T1_M1_EQ0_RESULTS.md)에 고정한다. 사후 weighted symmetrization은 attribution control에만 썼으며 production/research pass operator로 사용하지 않는다.
 
-다음 후보 `M1-EQ0-G1`은 같은 panel endpoint, order, `N`, frequency, branch, current basis와 threshold를 보존하고 exterior만 direct pulse-Galerkin으로 바꾼다.
+후속으로 실행한 `M1-EQ0-G1`은 같은 panel endpoint, order, `N`, frequency, branch, current basis와 threshold를 보존하고 exterior만 direct pulse-Galerkin으로 바꿨다.
 
 ```text
 GG[m,n] = ∫γm∫γn g0(r,r') ds' ds
@@ -422,6 +422,99 @@ GGij = ℓiℓj/(4π) ∫0^1 [
 를 q10/q20로 계산한다. 첫 oracle에서는 두 orientation을 독립 계산해 parity `<=1e-12`를 검사하며 transpose 복사나 matrix 평균을 금지한다. raw weighted symmetry `<=1e-12`를 요구한다. quadrature normalization은 `smn=max(|GG10,mn|,|GG20,mn|,ℓmℓn/(2π))`로 고정하고 `maxmn |GG20−GG10|/smn <=1e-10`와 `||GG20−GG10||F/||GG20||F<=1e-10`을 둘 다 검사한다. `GG(r0')−GG(r0)=−ln(r0'/r0)/(2π)ℓℓ^T`, 기존 terminal/power/`r0` gate도 모두 유지한다.
 
 현재 pulse-collocation interior `Ys`의 weighted ordinary-reciprocity diagnostic은 fine에서 최대 `7.12361e-2`다. frozen mandatory gate는 terminal `Z'` reciprocity였으므로 이를 과거 실행의 추가 mandatory failure로 소급하지 않는다. G1 prospective metric은 `Yw=WYs` `[S·m]`, `Yw,floor=max(1e-12 S·m,1e-10 maxmn|Yw,mn|)`, `||Yw−Yw^T||F/max(||Yw||F,N Yw,floor)<=1e-8`로 동결한다. prospective passivity는 `H(Yw)=(Yw+Yw^H)/2`의 raw `λmin >= -max(Yw,floor,1e-9||Yw||2)`다. Hermitian part의 eigenvalue를 평가하는 것은 matrix를 대칭화해 solver에 넣는 행위가 아니다. G1 exterior가 power identity를 복원해도 이 hidden-mode reciprocity/passivity가 prospective 기준을 넘으면 interior `P/U/Pout/Uout`를 target-tested Galerkin trace space로 다시 이산화하기 전 production promotion을 차단한다.
+
+### G1 실행 판정
+
+G1은 `N={144,288,576}`, 7 frequencies, q10/q20와 `r0={0.1,1,10} m`에서 실행됐다. fine pair-normalized q change `2.02993e-15`, raw `GG` transpose defect `9.95287e-17`, `r0` rank-one residual `6.33326e-16`, boundary dissipative-power mismatch 최대 `1.06982e-14`로 exterior gate를 통과했다. 그러나 fine `Yw` weighted reciprocity는 주파수 순서대로 `7.12361e-2, 4.08228e-2, 3.07258e-2, 2.91663e-2, 2.47707e-2, 2.10899e-2, 1.69946e-2`로 모두 실패했다. raw `λmin H(Yw)`도 100 kHz `-2.96377e-5 S·m`, 1 MHz `-1.79591e-6 S·m`로 tolerance보다 각각 약 `4.10e6`, `2.49e5`배 큰 음수다. 이는 conditioning noise가 아니다. G1을 `passed_exterior_galerkin_only`, active blocker를 `BLOCKED_INTERIOR_WEIGHTED_RECIPROCITY_PASSIVITY`로 고정한다.
+
+## M1-EQ0-G2 target-tested interior Galerkin amendment
+
+Patel–Triverio의 published implementation은 pulse expansion과 point matching을 사용한다. G2는 그 결과 matrix를 평균하는 절차가 아니라, 같은 continuous contour equation을 target-tested pulse Galerkin 약형으로 별도 이산화하는 연구 후보다. `Pᴳ`는 symmetric Green single-layer지만 double-layer `Uᴳ`나 discrete DtN이 자동으로 algebraic symmetric라고 가정하지 않는다.
+
+각 conductor contour의 pulse basis/test `φn`과 mass matrix를
+
+```text
+Wmn = ∫Γ φm φn ds = ℓm δmn
+```
+
+로 둔다. frozen `C0-A1`, `hν(z)=Hν^(2)(z)`에서 conductor 또는 replaced-background material마다
+
+```text
+Pᴳmn(k,µ) = (ωµ/2) ∫γm∫γn h0(k|r-r'|) ds' ds
+
+Uᴳmn(k)   = Wmn
+            + (jk/2) PV ∫γm∫γn
+              ((r'-r)·n')/|r-r'| h1(k|r-r'|) ds' ds
+```
+
+를 직접 조립한다. jump term은 collocation의 scalar `1`이 아니라 `W`다. explicit inverse 없이
+
+```text
+Dp  = solve(Pᴳp, Uᴳp)
+Db  = solve(Pᴳb, Uᴳb)
+Dwp = W Dp
+Dwb = W Db
+Yw  = Dwp - Dwb                       [S·m]
+```
+
+를 계산하고 `Dwp`, `Dwb`, 차이 `Yw`를 모두 보존한다. 이는 physical owner `H−Htilde`를 유지한다. G1 exterior와의 결합은 panel-integrated flux `j=YwE`를 사용해
+
+```text
+AE      = W - jωµb GG W^-1 Yw
+Eresp   = solve(AE, WQ)
+jresp   = Yw Eresp
+Kc      = Q^T jresp
+Z'      = solve(Kc, I)
+I       = Q^T j
+Pbound  = 1/2 E^H j
+```
+
+순서로 고정한다. `Yw`를 과거 coefficient-space 연산자 순서에 넣지 않는다. G2는 conductor/background interior DtN subtraction, skin과 proximity만 소유하고 G1 `GG`는 homogeneous exterior magnetic field의 단독 owner다. dielectric `C'/G'`, roughness, finite ends/bends/vias, exact-minus-core와 GlobalMNA ownership은 계속 범위 밖이다.
+
+### G2 singular quadrature
+
+동일 straight panel에서는 double-layer geometric kernel이 0이므로 `Uᴳmm=ℓm`을 exact로 둔다. single-layer self는
+
+```text
+Pᴳmm = ωµ ∫0^ℓ (ℓ-u) h0(ku) du
+```
+
+이고 다음 singular subtraction으로 계산한다.
+
+```text
+Pᴳmm = ωµ [
+  ∫0^ℓ (ℓ-u){h0(ku)+(2j/π)ln(u/ℓ)}du
+  + 3jℓ²/(2π)
+]
+```
+
+small-argument anchor는 같은 branch에서
+
+```text
+Pᴳmm ~ (ωµℓ²/2)[1-(2j/π){ln(kℓ/2)+γE-3/2}]
+```
+
+다. shared endpoint `c`는 outward parameter `r=c+u a`, `r'=c+v b`, `a=ℓm tm`, `b=ℓn tn`와 두 Duffy map `(u,v)=(ρ,ρη),(ρη,ρ)`를 사용한다. `Pᴳ`는 `lnρ`를 analytic 제거한다. `Uᴳ`는
+
+```text
+KU(d) = jk/2 · (d·n')/|d| · h1(k|d|)
+Ks(d) = -(d·n')/(π|d|²)
+```
+
+로 분리해 `KU−Ks`만 수치 적분하고 Duffy-transformed `Ks`의 radial part를 analytic 적분한다. non-touching pair는 deterministic tensor Gauss다. near-but-not-touching pair는 결과가 아니라 geometry만으로 긴 segment를 재귀 이분해 `dmin/max(ℓm,ℓn)>=1`이 될 때까지 적분하며, 사전 고정한 depth ceiling을 넘으면 fail closed한다.
+
+### G2 preregistered gates와 bounded sequence
+
+- q20 canonical/q40 parity를 self, touching, routed-near pair와 final balanced `Z'loop`에 적용한다. pair normalization은 `Pscale=max(|P20|,|P40|,ωµℓmℓn/(2π))`, `Uscale=max(|U20|,|U40|,sqrt(ℓmℓn))`이고 두 relative change 모두 `<=0.1%`다. frozen seed pair screen은 self/touching/routed-near class가 실제로 각각 하나 이상 존재해야 하며 directed-pair count와 maximum recursion depth를 보존한다. final magnitude change `<=0.1%`, phase `<=0.25°`다.
+- 첫 oracle은 `(m,n)`/`(n,m)`을 독립 조립한다. `||Pᴳ−Pᴳ^T||F/||Pᴳ||F<=1e-12`; transpose 복사와 사후 평균 금지다. `Uᴳ=Uᴳ^T`는 요구하지 않는다.
+- 각 `Pᴳp/Pᴳb/AE/Kc` backward residual `<=1e-10`, `κ1u<=1e-8`을 요구한다.
+- circle `a=17.5 µm`, modes `0…4`에서 `Dhat_m=e_m^H(WD)e_m/(e_m^H W e_m)`을 analytic Bessel DtN과 비교한다.
+- 기존 `Yw` reciprocity와 passivity gate를 mandatory로 적용한다.
+- cancellation amplification `Acancel=(||Dwp||F+||Dwb||F)/max(||Yw||F,N Yw,floor)`과 `Acancel·max(κ1u(Pp),κ1u(Pb))<=1e-8`을 요구한다. 실패하면 higher precision 또는 blocked이며 clipping하지 않는다.
+- boundary/terminal power, current, terminal reciprocity/passivity, `r0`, panel convergence와 resource gate는 그대로 유지한다.
+- `0.5(Yw+Yw^T)`, eigenvalue clipping, C0 retuning은 금지한다.
+
+실행 순서는 (1) 100 kHz/2 GHz self와 Duffy q20/q40, (2) circle `N={128,256}` analytic modes, medium gate 통과 때만 `N=512`, (3) EQ0 seed `N=144` 두 extreme q20/q40와 G1 exterior, (4) `Yw` raw gate 실패 시 즉시 중단, (5) 두 extreme 통과 뒤에만 `N=288/576`, 7 frequencies와 세 `r0`로 확장한다. 각 단계는 별도 명령으로 실행하고 이전 JSON의 mandatory gate와 외부 process-tree resource를 검토하기 전 다음 명령을 시작하지 않는다. G2가 여전히 `1e-8` hidden-mode gate를 놓치면 matrix를 대칭화하지 않고 four-operator symmetric Calderón/Steklov–Poincaré discretization 또는 volume-FEM boundary Schur complement를 다음 후보로 둔다. 현재 G2 상태는 `M1-EQ0-G2 preregistered_not_run`이다.
 
 ## Numerical certificate와 promotion gate
 
@@ -463,18 +556,22 @@ matrix convergence에서 frequency별 `Z'floor=max(1e-9 Ω/m,1e-9 maxij|Z'fine,i
 
 1. 위 두 radius, 일곱 frequency, 다섯 Fourier mode의 analytic Bessel/Fourier DtN eigenvalue로 SAO interior를 검증한다. **완료:** A0 실패, A1 circle-only 통과.
 2. M0 periodic slab의 analytic + independent 1-D volume 결과를 동결한다. **완료:** `passed_periodic_1d_volume_only`; C0-A1 periodic SAO는 미승격.
-3. smallest eligible equal-width finite/open M1의 collocation 실행은 **완료/실패:** response는 수렴했지만 `BLOCKED_SAO_BOUNDARY_POWER_IDENTITY`. 같은 endpoint의 `M1-EQ0-G1` direct Galerkin exterior diagnostic을 실행한다.
-4. 같은 geometry/current basis의 A–v는 **2 GHz 4Deff smoke only:** consistent mass power 통과. `h,h/2,h/4`와 crop `2/4/8 Deff`, condition/resource는 미실행이다.
-5. symmetric two-return case에서 symmetry로만 equal split이 나오는지 검증한다.
-6. P2 artificial `Trace13305` coupon을 실행한다.
-7. finite-length T1-F 3-D length-difference reference와 distributed line stamp를 연결한다.
-8. actual board crop와 core owner가 준비된 뒤에만 source-faithful/global adapter 연구로 넘어간다.
+3. smallest eligible equal-width finite/open M1 collocation은 **완료/실패:** `BLOCKED_SAO_BOUNDARY_POWER_IDENTITY`로 immutable 보존한다.
+4. 같은 endpoint의 G1 direct exterior Galerkin은 **완료/제한 통과:** `passed_exterior_galerkin_only`. interior reciprocity와 저주파 passivity 때문에 overall blocked다.
+5. G2 target-tested interior Galerkin을 위 bounded sequence로 실행한다.
+6. 같은 geometry/current basis의 A–v는 **2 GHz 4Deff smoke only:** consistent mass power 통과. `h,h/2,h/4`와 crop `2/4/8 Deff`, condition/resource는 미실행이다.
+7. symmetric two-return case에서 symmetry로만 equal split이 나오는지 검증한다.
+8. P2 artificial `Trace13305` coupon을 실행한다.
+9. finite-length T1-F 3-D length-difference reference와 distributed line stamp를 연결한다.
+10. actual board crop와 core owner가 준비된 뒤에만 source-faithful/global adapter 연구로 넘어간다.
 
-`blocked_sao_discrete_power_collocation → oracle_pass`는 G1 또는 후속 full Galerkin SAO의 위 수치 gate와 converged independent reference가 모두 통과할 때만 가능하다. 그 전에는 PowerSI correlation, product accuracy 또는 8 GB production 성능을 주장하지 않는다.
+immutable collocation failure와 G1 `passed_exterior_galerkin_only`는 어느 쪽도 full-M1 `oracle_pass`로 전이하지 않는다. G2 또는 후속 full Galerkin SAO의 raw hidden-mode 수치 gate와 converged independent reference가 모두 통과할 때만 승격을 검토한다. 그 전에는 PowerSI correlation, product accuracy 또는 8 GB production 성능을 주장하지 않는다.
 
 ## Primary literature
 
 - U. R. Patel and P. Triverio, “Skin Effect Modeling in Conductors of Arbitrary Shape Through a Surface Admittance Operator and the Contour Integral Method,” [author preprint](https://arxiv.org/html/1509.08357), [IEEE T-MTT DOI](https://doi.org/10.1109/TMTT.2016.2593721).
+- A. Cagliero and L. Rahmouni, “Symmetric Galerkin Boundary Element Method for Computing the Quantum States of the Electron in a Piecewise-Uniform Mesoscopic System,” [author preprint](https://arxiv.org/abs/1909.06596). 이 논문의 four Helmholtz boundary-operator symmetric discretization과 singular-integral 처리는 G2 실패 뒤 후보의 수학적 근거이며, 현재 SAO 구현을 자동 승인하지 않는다.
+- T. Betcke, E. Burman, and M. W. Scroggs, “Boundary Element Methods for Helmholtz Problems with Weakly Imposed Boundary Conditions,” [author preprint](https://arxiv.org/abs/2004.13424), [SIAM SISC DOI](https://doi.org/10.1137/20M1334802). primal trace와 flux를 함께 근사하는 Calderón weak formulation을 후속 four-operator 후보 근거로 사용한다.
 - U. R. Patel, B. Gustavsen, and P. Triverio, “An Equivalent Surface Current Approach for the Computation of the Series Impedance of Power Cables with Inclusion of Skin and Proximity Effects,” [author preprint with the complete complex `Z'` derivation](https://arxiv.org/html/1303.5452v2), [IEEE TPWRD DOI](https://doi.org/10.1109/TPWRD.2013.2267098).
 - A. Piwonski et al., “Finite Element Modeling of Power Cables using Coordinate Transformations,” [author preprint](https://arxiv.org/abs/2307.00814), [IEEE TMAG DOI](https://doi.org/10.1109/TMAG.2023.3318292). This supports the independent magnetic-vector-potential `A–v` family; the exact reduced fixture above remains this project’s preregistered formulation.
 - A. M. Dienstfrey, F. Hang, and J. Huang, “Lattice Sums and the Two-dimensional, Periodic Green's Function for the Helmholtz Equation,” [NIST primary publication](https://www.nist.gov/publications/lattice-sums-and-two-dimensional-periodic-green-s-function-helmholtz-equation). This supports treating the periodic Green kernel as a separate numerical formulation, not as the free-space `H2` kernel with renamed boundaries.
