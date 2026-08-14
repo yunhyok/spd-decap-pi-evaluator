@@ -1,11 +1,10 @@
-# SPD Decap PI Evaluator v0.22.4
+# SPD Decap PI Evaluator v0.22.5
 
-> **v0.22.4 adds tolerance-enabled directional turnover.** It retains the
-> v0.22.3 PowerSI import, Box geometry, and UI hotfixes while allowing bounded
-> replacement counterflow for donor and receiver cells. The title bar
-> identifies the application as **SPD Decap PI Evaluator v0.22.4**.
+> **v0.22.5 accelerates exact PowerSI Shape parsing and removes unreachable
+> internal code.** Methodology and physics are unchanged from v0.22.4. The
+> title bar identifies the application as **SPD Decap PI Evaluator v0.22.5**.
 
-> 프로그램: **SPD Decap PI Evaluator v0.22.4**
+> 프로그램: **SPD Decap PI Evaluator v0.22.5**
 > 저장소: 기존 PI Calculator와 분리된 독립 프로그램
 > 해석 경계: 선택한 PWR rail의 pre-design `Zii`; 최종 PowerSI/SIwave 검증을 대체하지 않음
 
@@ -13,6 +12,16 @@
 모델, enabled/disabled 상태를 바꾸면서 PI Evaluation 결과를 비교하는 Windows
 desktop 프로그램이다. Stackup, MLO 크기 또는 plane을 새로 작성하는 기능과
 Optimization Mode는 포함하지 않는다.
+
+## v0.22.5 loader-performance release note
+
+- Exact PowerSI `Shape` parsing now streams Shape and primitive events in one
+  newline-bounded pass, reducing parser traversal and temporary indexing work
+  for large SPD files.
+- Unreachable internal models, helpers, and imports were removed without
+  changing Distribution, Evaluation, solver, or physical decision rules.
+- Methodology and physics are unchanged from v0.22.4; this release is a
+  performance and internal-cleanup update only.
 
 ## v0.22.4 tolerance-enabled directional turnover
 
@@ -218,7 +227,7 @@ powershell.exe -ExecutionPolicy Bypass -NoProfile -File .\scripts\build_spd_deca
 산출물:
 
 - `dist\SPDDecapPIEvaluator\SPDDecapPIEvaluator.exe`
-- `installer-output\SPDDecapPIEvaluatorSetup-0.22.4.exe`
-- `installer-output\SPDDecapPIEvaluatorSetup-0.22.4.exe.sha256`
+- `installer-output\SPDDecapPIEvaluatorSetup-0.22.5.exe`
+- `installer-output\SPDDecapPIEvaluatorSetup-0.22.5.exe.sha256`
 
 프로그램명과 버전은 title bar와 installer metadata에 함께 표시된다.

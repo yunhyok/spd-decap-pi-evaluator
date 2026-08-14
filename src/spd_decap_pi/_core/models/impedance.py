@@ -192,27 +192,6 @@ class SampledImpedanceModel:
 
 
 @dataclass(frozen=True, slots=True)
-class SeriesCombinationModel:
-    """A deterministic series combination of two-terminal models."""
-
-    model_id: str
-    parts: tuple[ImpedanceModel, ...]
-
-    def __post_init__(self) -> None:
-        if not self.model_id.strip():
-            raise ImpedanceModelError("model_id must not be empty")
-        if not self.parts:
-            raise ImpedanceModelError("a series combination requires at least one part")
-
-    def impedance(self, frequencies_hz: ArrayLike) -> NDArray[np.complex128]:
-        frequencies = frequency_array(frequencies_hz)
-        result = np.zeros(frequencies.shape, dtype=np.complex128)
-        for part in self.parts:
-            result += np.asarray(part.impedance(frequencies), dtype=np.complex128)
-        return result
-
-
-@dataclass(frozen=True, slots=True)
 class ScaledImpedanceModel:
     """A scalar multiple of another model (for split differential paths)."""
 

@@ -711,64 +711,6 @@ def _distribution_rail_choices(
     )
 
 
-def _positive_geometry_bounds(
-    geometry: SpdPlaneGeometry,
-) -> tuple[float, float, float, float] | None:
-    bounds: list[tuple[float, float, float, float]] = []
-    for polygon in geometry.positive_polygons_um:
-        if polygon:
-            x_values = [item[0] for item in polygon]
-            y_values = [item[1] for item in polygon]
-            bounds.append(
-                (min(x_values), max(x_values), min(y_values), max(y_values))
-            )
-    for x_um, y_um, radius_um in geometry.positive_circles_um:
-        bounds.append(
-            (
-                x_um - radius_um,
-                x_um + radius_um,
-                y_um - radius_um,
-                y_um + radius_um,
-            )
-        )
-    if not bounds:
-        return None
-    return (
-        min(item[0] for item in bounds),
-        max(item[1] for item in bounds),
-        min(item[2] for item in bounds),
-        max(item[3] for item in bounds),
-    )
-
-
-def _distribution_geometry_choices(
-    plane_geometries: Sequence[SpdPlaneGeometry],
-    rail_choices: Mapping[tuple[str, str, str], Sequence[tuple[object, str]]],
-) -> tuple[
-    tuple[
-        SpdPlaneGeometry,
-        tuple[float, float, float, float],
-        tuple[tuple[object, str], ...],
-    ],
-    ...,
-]:
-    result = []
-    for geometry in plane_geometries:
-        bounds = _positive_geometry_bounds(geometry)
-        if bounds is None:
-            continue
-        choices = tuple(
-            choice
-            for (net_key, pwr_key, _gnd_key), values in rail_choices.items()
-            if net_key == geometry.net.casefold()
-            and pwr_key == geometry.layer.casefold()
-            for choice in values
-        )
-        if choices:
-            result.append((geometry, bounds, choices))
-    return tuple(result)
-
-
 def _distribution_via_eligibility(
     eligibility_index: PlaneEligibilityIndex,
     landing: object,

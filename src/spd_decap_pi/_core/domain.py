@@ -92,18 +92,6 @@ class ConfidenceCategory(StrEnum):
     MODEL_COVERAGE = "Model Coverage"
 
 
-class Point2D(DomainModel):
-    x_um: float
-    y_um: float
-
-    @field_validator("x_um", "y_um")
-    @classmethod
-    def finite_coordinates(cls, value: float) -> float:
-        if not isfinite(value):
-            raise ValueError("coordinates must be finite")
-        return value
-
-
 class MLOOutline(DomainModel):
     width_um: float = Field(gt=0)
     height_um: float = Field(gt=0)
@@ -1576,7 +1564,6 @@ __all__ = [
     "PlaneCell",
     "PlanePairSuggestion",
     "PlanePartitionSpec",
-    "Point2D",
     "ProjectSpec",
     "RailSpec",
     "RailState",

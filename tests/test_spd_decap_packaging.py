@@ -1,7 +1,9 @@
 from __future__ import annotations
 
-from hashlib import sha256
+from hashlib import sha1, sha256
+import json
 from pathlib import Path
+import re
 import tomllib
 
 from spd_decap_pi._core import services as core_services
@@ -19,10 +21,10 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 
 def test_spd_decap_release_identity_is_explicit_and_versioned() -> None:
     assert APP_NAME == "SPD Decap PI Evaluator"
-    assert __version__ == "0.22.4"
-    assert APP_DISPLAY_NAME == "SPD Decap PI Evaluator v0.22.4"
+    assert __version__ == "0.22.5"
+    assert APP_DISPLAY_NAME == "SPD Decap PI Evaluator v0.22.5"
     assert EXECUTABLE_BASENAME == "SPDDecapPIEvaluator"
-    assert INSTALLER_BASENAME == "SPDDecapPIEvaluatorSetup-0.22.4"
+    assert INSTALLER_BASENAME == "SPDDecapPIEvaluatorSetup-0.22.5"
 
 
 def test_spd_decap_console_and_packaging_metadata_are_consistent() -> None:
@@ -91,10 +93,10 @@ def test_windows_version_resource_matches_release_identity() -> None:
     version_info = (
         REPO_ROOT / "packaging" / "spd_decap_pi_version_info.txt"
     ).read_text(encoding="utf-8")
-    assert "filevers=(0, 22, 4, 0)" in version_info
-    assert "prodvers=(0, 22, 4, 0)" in version_info
-    assert "StringStruct('FileVersion', '0.22.4')" in version_info
-    assert "StringStruct('ProductVersion', '0.22.4')" in version_info
+    assert "filevers=(0, 22, 5, 0)" in version_info
+    assert "prodvers=(0, 22, 5, 0)" in version_info
+    assert "StringStruct('FileVersion', '0.22.5')" in version_info
+    assert "StringStruct('ProductVersion', '0.22.5')" in version_info
 
 
 def test_packaged_numerical_path_imports_threadpoolctl() -> None:
@@ -112,7 +114,8 @@ def test_distribution_methodology_docs_are_current_offline_and_linked() -> None:
     canonical_markdown = markdown.replace("\r\n", "\n").replace("\r", "\n")
     source_hash = sha256(canonical_markdown.encode("utf-8")).hexdigest()
 
-    assert "SPD Decap PI Evaluator v0.22.4" in markdown
+    assert "SPD Decap PI Evaluator v0.22.5" in markdown
+    assert "v0.22.5 release note" in markdown
     assert "로컬 final component" in markdown
     assert "NO_ZERO_GAP_EXACT_COUNT_COMBINATION" in markdown
     assert "exact 15 + 3 + gap 1" in markdown
@@ -125,7 +128,8 @@ def test_distribution_methodology_docs_are_current_offline_and_linked() -> None:
         '<meta name="source-sha256-normalization" content="utf-8-lf">'
         in html
     )
-    assert "SPD Decap PI Evaluator v0.22.4" in html
+    assert "SPD Decap PI Evaluator v0.22.5" in html
+    assert "v0.22.5 release note" in html
     assert f'content="{source_hash}"' in html
     assert "TARGET_RELATION_COUNTERFLOW_V1" in html
     assert 'id="handoff"' in html
@@ -139,3 +143,86 @@ def test_distribution_methodology_docs_are_current_offline_and_linked() -> None:
     assert "http://" not in html and "https://" not in html
     assert "docs/DECAP_DISTRIBUTION_RULES.md" in readme
     assert "docs/DECAP_DISTRIBUTION_RULES.companion.html" in readme
+
+
+def test_readme_companion_and_manifest_are_current_and_hash_bound() -> None:
+    readme_path = REPO_ROOT / "README.md"
+    readme_companion_path = REPO_ROOT / "README.companion.html"
+    methodology_path = REPO_ROOT / "docs" / "DECAP_DISTRIBUTION_RULES.md"
+    methodology_companion_path = (
+        REPO_ROOT / "docs" / "DECAP_DISTRIBUTION_RULES.companion.html"
+    )
+    manifest = json.loads(
+        (REPO_ROOT / ".html-companions.json").read_text(encoding="utf-8")
+    )
+    documents = {entry["source"]: entry for entry in manifest["documents"]}
+
+    def canonical_bytes(path: Path) -> bytes:
+        return path.read_bytes().decode("utf-8").replace("\r\n", "\n").replace(
+            "\r", "\n"
+        ).encode("utf-8")
+
+    def canonical_blob_sha(path: Path) -> str:
+        source = canonical_bytes(path)
+        return sha1(b"blob " + str(len(source)).encode("ascii") + b"\0" + source).hexdigest()
+
+    pairs = [
+        ("README.md", readme_companion_path),
+        ("docs/DECAP_DISTRIBUTION_RULES.md", methodology_companion_path),
+    ]
+    for source_name, output_path in pairs:
+        source_path = REPO_ROOT / source_name
+        source = canonical_bytes(source_path)
+        output = canonical_bytes(output_path)
+        entry = documents[source_name]
+        assert entry["sourceBlobSha"] == canonical_blob_sha(source_path)
+        assert entry["sourceSha256"] == sha256(source).hexdigest()
+        assert entry["outputSha256"] == sha256(output).hexdigest()
+        assert entry["output"] == output_path.relative_to(REPO_ROOT).as_posix()
+
+    readme_companion = readme_companion_path.read_text(encoding="utf-8")
+    assert "SPD Decap PI Evaluator v0.22.5" in readme_companion
+    assert "v0.22.5 loader-performance release note" in readme_companion
+    assert "#v0225-loader-performance-release-note" in readme_companion
+    source_headings = re.findall(
+        r"(?m)^#{1,6} (.+)$", readme_path.read_text(encoding="utf-8")
+    )
+    assert len(source_headings) == 15
+    assert 'viewBox="0 0 760 852"' in readme_companion
+    assert readme_companion.count('<g><circle') == len(source_headings)
+
+    def heading_slug(label: str) -> str:
+        slug = re.sub(r"[^\w\s-]", "", label.casefold(), flags=re.UNICODE)
+        return re.sub(r"[-\s]+", "-", slug).strip("-")
+
+    for label in source_headings:
+        slug = heading_slug(label)
+        assert f'id="{slug}"' in readme_companion
+        assert f'href="#{slug}"' in readme_companion
+        assert f">{label}</" in readme_companion
+    readme_hash = sha256(canonical_bytes(readme_path)).hexdigest()
+    assert f'<meta name="source-sha256" content="{readme_hash}">' in readme_companion
+    assert f"Source SHA-256: <code>{readme_hash}</code>" in readme_companion
+    assert "SPDDecapPIEvaluatorSetup-0.22.5.exe" in readme_companion
+
+    methodology_evidence = documents[
+        "docs/DECAP_DISTRIBUTION_RULES.md"
+    ]["evidence"]
+    assert any(
+        item["lineStart"] == 30
+        and item["lineEnd"] == 38
+        and "v0.22.5 release note" in item["summary"]
+        for item in methodology_evidence
+    )
+    assert any(
+        item["lineStart"] == 89
+        and item["lineEnd"] == 105
+        and "Terminology" in item["summary"]
+        for item in methodology_evidence
+    )
+    assert any(
+        item["lineStart"] == 127
+        and item["lineEnd"] == 149
+        and "DONOR" in item["summary"]
+        for item in methodology_evidence
+    )

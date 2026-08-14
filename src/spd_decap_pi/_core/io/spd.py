@@ -10,7 +10,6 @@ device/capacitor connections.
 from __future__ import annotations
 
 from array import array
-from bisect import bisect_right
 from collections import Counter
 from collections.abc import Callable, Iterable, Iterator, Mapping, Sequence
 from dataclasses import dataclass, field
@@ -492,6 +491,11 @@ _SHAPE_PRIMITIVE_RE = re.compile(
     rb"(?m)^([A-Za-z_]+)[^\r\n\s]*::(\S+?)([+-])(?:\s+|$)"
 )
 _SHAPE_RE = re.compile(rb"(?m)^\.Shape[ \t]+(\S+)")
+_SHAPE_EVENT_RE = re.compile(
+    rb"(?m)^(?:\.Shape[ \t]+(?P<shape_name>\S+)"
+    rb"|(?P<primitive_kind>[A-Za-z_]+)[^\r\n\s]*::"
+    rb"(?P<net>\S+?)(?P<polarity>[+-])(?:\s+|$))"
+)
 _SHAPE_INDEX_CHUNK_BYTES = 8 * 1024 * 1024
 _VIA_RE = re.compile(
     rb"(?m)^(Via[^\r\n:]*)::([^\s]+)\s+"
@@ -581,6 +585,19 @@ def _iter_shape_headers(
         yield from _SHAPE_RE.finditer(data, chunk_start, chunk_end)
 
 
+def _iter_shape_events(
+    data: mmap.mmap,
+    start: int,
+    end: int,
+    reporter: _Reporter,
+):
+    """Yield Shape headers and primitive headers in mmap byte order."""
+
+    for chunk_start, chunk_end in _iter_line_bounded_chunks(data, start, end):
+        reporter.check()
+        yield from _SHAPE_EVENT_RE.finditer(data, chunk_start, chunk_end)
+
+
 def _find_line(data: mmap.mmap, prefix: bytes, start: int = 0, end: int | None = None) -> int:
     stop = len(data) if end is None else end
     candidate = max(0, start)
@@ -649,7 +666,18 @@ def _length_match_um(match: re.Match[bytes]) -> float:
 
 
 def _lengths(raw: bytes) -> list[float]:
-    return [_length_match_um(match) for match in _LENGTH_RE.finditer(raw)]
+    scale_by_unit = _LENGTH_SCALE_BY_UNIT
+    values: list[float] = []
+    append = values.append
+    finite = isfinite
+    for match in _LENGTH_RE.finditer(raw):
+        value = float(match.group(1))
+        unit = match.group(2).lower()
+        result = value * scale_by_unit[unit]
+        if not finite(result):
+            raise ValueError("SPD length is not finite")
+        append(result)
+    return values
 
 
 def _attribute(raw: bytes, name: bytes) -> bytes | None:
@@ -768,9 +796,6 @@ def _parse_shapes(
     tuple[str, ...],
     tuple[SpdPlaneGeometry, ...],
 ]:
-    shape_matches = list(_iter_shape_headers(data, start, end, reporter))
-    shape_offsets = [item.start() for item in shape_matches]
-    shape_names = [_decode(item.group(1)) for item in shape_matches]
     by_layer: dict[str, list[str]] = {}
     all_nets: list[str] = []
     best_bbox: tuple[float, float, float, float] | None = None
@@ -783,24 +808,35 @@ def _parse_shapes(
     malformed_seen: set[tuple[str, str, str]] = set()
     polygon_kinds = {b"Polygon", b"PolygonTrace"}
     supported_kinds = {*polygon_kinds, b"Circle", b"Box"}
-    for index, match in enumerate(_SHAPE_PRIMITIVE_RE.finditer(data, start, end)):
-        if index % 128 == 0:
-            reporter.report(
-                _span_percent(match.start(), start, end, 15, 29),
-                "Scanning selected plane geometry",
-            )
-        line_end = _line_end(data, match.start(), end)
-        first_line = data[match.start():line_end]
-        primitive_kind = match.group(1)
-        net = _decode(match.group(2))
-        polarity = match.group(3)
-        is_sub_element = b"Sub-element" in first_line
-        shape_index = bisect_right(shape_offsets, match.start()) - 1
-        layer: str | None = None
-        if shape_index >= 0:
-            layer = shape_names[shape_index]
+    # Stream Shape headers and primitive headers once in byte order.  The
+    # event iterator scans each newline-bounded mmap chunk in C, avoiding the
+    # old header materialization plus second full-section traversal.
+    primitive_index = 0
+    layer: str | None = None
+    for event in _iter_shape_events(data, start, end, reporter):
+        shape_name = event.group("shape_name")
+        if shape_name is not None:
+            layer = _decode(shape_name)
             if layer.casefold().endswith("pkgshape"):
                 layer = layer[: -len("pkgshape")]
+            continue
+
+        primitive_kind = event.group("primitive_kind")
+        net_raw = event.group("net")
+        polarity = event.group("polarity")
+        assert primitive_kind is not None
+        assert net_raw is not None
+        assert polarity is not None
+        if primitive_index % 128 == 0:
+            reporter.report(
+                _span_percent(event.start(), start, end, 15, 29),
+                "Scanning selected plane geometry",
+            )
+        primitive_index += 1
+        line_end = _line_end(data, event.start(), end)
+        first_line = data[event.start():line_end]
+        net = _decode(net_raw)
+        is_sub_element = b"Sub-element" in first_line
         if polarity == b"+" and not is_sub_element:
             all_nets.append(net)
             if layer is not None:
@@ -1250,44 +1286,6 @@ def _parse_layers(
     if not result:
         diagnostics.append(SpdDiagnostic("error", "STACKUP_NOT_FOUND", "No valid Thickness layer rows were found in the SPD layer section."))
     return tuple(result)
-
-
-def _first_conductor_layer_name(
-    data: mmap.mmap,
-    start: int,
-    end: int,
-    metals: Mapping[str, float],
-) -> str | None:
-    """Read only the first conductor identity before the geometry pass.
-
-    The full stack-up is still built after shape NET indexing.  This lightweight
-    pre-read lets scenario imports retain configured GND geometry on TOP only,
-    avoiding both an all-layer GND import and a second shape scan.
-    """
-
-    for _, raw in _iter_lines(data, start, end):
-        stripped = raw.strip()
-        if (
-            not stripped
-            or stripped.startswith((b"*", b"+", b"."))
-            or b"Thickness" not in stripped
-        ):
-            continue
-        match = re.match(
-            rb"(\S+)\s+Thickness\s*=\s*(\S+)(.*)$",
-            stripped,
-            re.IGNORECASE,
-        )
-        if match is None:
-            continue
-        name = _decode(match.group(1))
-        material_raw = _attribute(stripped, b"Material")
-        material_key = _decode(material_raw).casefold() if material_raw else ""
-        if name.casefold().startswith(("signal$", "power$", "conductor$")) or (
-            material_key in metals
-        ):
-            return name
-    return None
 
 
 def _parse_padstacks(
