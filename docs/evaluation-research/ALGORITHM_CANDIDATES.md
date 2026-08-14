@@ -32,7 +32,7 @@ Y_r(\omega)v=b,\qquad Z_{pp}=b^Tv
 | 1 | adaptive triangular/MFDM domain decomposition | 높음 | 높음 | interface rank, mesh ownership | 주 경로 |
 | 2 | local via/trace/pad/antipad replacement block | 매우 높음 | 높음 if bounded | double counting, template generality | 주 경로와 결합 |
 | 3 | exact route-graph reduction | 동일 물리 | 높음 | terminal/cycle 손실 | 즉시 검증 후보 |
-| 4 | passive projection MOR | physics가 맞을 때 높음 | 매우 높음 | mutable decap port explosion | P4 이후 |
+| 4 | passive projection MOR | physics가 맞을 때 높음 | 매우 높음 | mutable decap port explosion | R4 이후 |
 | 5 | iterative/recycled/hierarchical field solve | 동일 물리 | 잠재적으로 높음 | resonance/nullspace convergence | subdomain 한정 연구 |
 | 6 | adaptive frequency sampling/passive fitting | 동일 물리 | 높음 | peak 누락, nonpassive fit | 마지막 가속 단계 |
 
@@ -55,6 +55,8 @@ condensed plane/trace domains, exact route graph, mounted components를 passive 
 
 Repository의 dormant `tri_fem_*`, `mfdm`, `surface_patch_plane`, `global_mna`는 재사용 가능성을 검토할 자산이지 검증된 production solver로 간주하지 않는다.
 
+이 자산들은 production에 바로 연결하지 않고 [`LOCAL_ORACLE_PLAN.md`](LOCAL_ORACLE_PLAN.md)의 N0/T1/S1/C1/V1/V2/A1 coupon과 owner ledger를 먼저 수행한다. 2026-08-14 관련 12개 focused module의 178 tests는 내부 analytic/passivity/reciprocity/KCL 회귀를 확인했지만 global topology, real-SPD adapter와 PowerSI correlation을 증명하지 않는다.
+
 ## C2. Local transition replacement
 
 measurement/decap transition 주변에 trace series impedance, via self/return/mutual, pad/antipad capacitance, spreading/current crowding을 포함한 bounded local model을 만든다. core와 중복되는 에너지를 제거하는 exact-minus-core stamp를 사용한다.
@@ -64,6 +66,8 @@ Y_{hybrid}=Y_{core}+P^T\left(Y_{local,EM}-Y_{local,core}\right)P
 \]
 
 local cluster가 q conductor이면 dense 계산은 O(q²) storage/O(q³) work이므로 radius, coupling threshold와 template reuse를 사전 정의한다. single via, via pair, dense cluster, finite contact, pad/antipad, shared pad마다 analytic 또는 converged FEM/CIM oracle를 둔다.
+
+`Ylocal,core`는 유사한 lumped 식이 아니라 실제 global core가 같은 crop에 부여한 연산자여야 한다. exact/core의 crop, interface trace space, DtN/Schur boundary operator, terminal order, current orientation, return conductor, gauge와 source hash가 하나라도 다르면 조립을 금지한다. crop 경계를 가로지르는 mutual electric/magnetic term도 단일 owner를 가져야 하며 `ΔYΓ`와 interface complex power가 crop 확장에 수렴해야 한다. 수렴하지 않는 field는 local correction이 아니라 global domain이 소유한다. equipotential artwork와 ideal Trace는 additive stamp가 아니라 topology replacement가 필요하다.
 
 문헌 근거:
 
@@ -80,7 +84,9 @@ local cluster가 q conductor이면 dense 계산은 O(q²) storage/O(q³) work이
 - boundary가 아닌 degree-2 series chain
 - certified equipotential duplicate node
 
-cycle, branch, parallel path, all mutable decap attachment, measurement terminal은 보존한다. 예상 복잡도는 O(V+E)이며 unreduced network의 port response와 machine-precision parity를 gate로 둔다. 물리 후보와 독립적으로 가장 먼저 검증할 수 있다.
+cycle, branch, parallel path, all mutable decap attachment, measurement terminal은 보존한다. 단순 degree-2/tree rule은 서로 독립인 scalar two-terminal branch에만 허용하며 mutual R/L/C, multi-terminal block, controlled source, cross-boundary correction interface에 참여한 node에는 적용하지 않는다. Coupled operator는 전체 행렬의 exact Schur complement로만 제거한다.
+
+예상 graph-scan 복잡도는 O(V+E)지만 Schur fill은 별도 계측한다. unreduced network의 full-port response와 machine-precision parity를 gate로 두고, trace topology, V2 mutual coupling, pad/port correction 등 연산자가 바뀔 때마다 인증을 폐기하고 다시 검증한다. 이 exact reduction은 MOR와 구분되며 현재 물리를 바꾸지 않는 parity가 증명된 범위에서는 accuracy freeze 전 bounded resource 연구에도 사용할 수 있다.
 
 ## C4. Passive MOR and port compression
 
@@ -126,6 +132,8 @@ Cadence는 PowerSI를 full-wave electrical analysis, autoadaptive numerical mesh
 
 ## 사전 등록할 ablation 순서
 
+Board ablation 전에 [`LOCAL_ORACLE_PLAN.md`](LOCAL_ORACLE_PLAN.md)의 manufactured identity, mesh/crop convergence와 ownership gate를 통과한다.
+
 1. current exact-capacitance core only
 2. exact route-graph reduction; unreduced parity 확인
 3. finite trace R/L
@@ -137,7 +145,7 @@ Cadence는 PowerSI를 full-wave electrical analysis, autoadaptive numerical mesh
 9. dielectric dispersion/loss
 10. conductor skin/proximity/roughness
 
-각 단계는 예상한 port class/frequency band를 개선하고 다른 design/rail을 실질적으로 악화시키지 않을 때만 다음 단계로 승격한다. parameter는 SPD stackup/geometry/material/component model에서 유도하고 PowerSI curve에 맞춘 design-specific tuning은 금지한다.
+각 단계는 예상한 port class/frequency band에서 사전 등록한 physical signature를 보여야 한다. 단일 block의 board error가 단조 감소할 필요는 없다. 올바른 물리가 기존 model-error cancellation을 깨뜨릴 수 있으므로 canonical/invariant를 통과한 block은 제한 factorial과 integrated leave-one-out까지 평가한다. 최종 integrated model은 held-out accuracy와 unaffected-port regression을 통과해야 한다. parameter는 SPD stackup/geometry/material/component model에서 유도하고 PowerSI curve에 맞춘 design-specific tuning은 금지한다.
 
 ## 평가 metric
 

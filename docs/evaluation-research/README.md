@@ -14,15 +14,20 @@
 
 정확성 우선순위는 바뀌지 않는다. 속도 향상이 기준 PowerSI 상관성, 수동성, 상호성, 보존 법칙 또는 수치 신뢰성을 훼손하면 채택하지 않는다.
 
+표기 규칙은 고정한다. `P1`–`P4`는 네 개의 **dataset pair**, `R0`–`R7`은 **research phase**다. 새 문서에서 phase에 `P` prefix를 사용하지 않는다.
+
 ## 현재의 핵심 판단
 
 - 현행 결과의 가장 큰 문제는 modal order나 주파수 점 수가 아니라 **물리 모델 형식 오차(model-form error)** 이다.
 - 현재의 `passed` 보고서는 runner/구조적 완료를 뜻하며 정확성 승격을 뜻하지 않는다. 보존된 실제 결과에서 loaded rail의 100 kHz–100 MHz 평균 크기 RMS 오차는 16.743 dB, 위상 RMS는 44.28°이다.
 - 우선 후보는 실제 artwork를 보존하는 적응형 2.5D 평면 영역 분할과, port/via/pad/antipad/trace/spreading의 국부 교체 보정을 결합한 passive global MNA이다.
-- exact graph reduction은 물리 근사 전에 적용할 수 있는 안전한 1차 축소 후보이다.
+- exact graph reduction은 admissible scalar branch에서 물리 근사 전에 적용할 수 있는 1차 축소 후보다. mutual/topology block이 바뀔 때마다 reduced/unreduced parity를 다시 인증한다.
 - PRIMA 계열 passive MOR과 adaptive frequency sampling은 물리 모델이 정확성 gate를 통과한 뒤에만 적용한다.
 - 현재 full-board SuperLU 경로는 factor 하나만으로 약 10 GiB를 가정하므로 8 GB 장비의 해법이 될 수 없다.
 - workstation에서 검증된 substrate ROM을 만들고 laptop에서 scenario update를 수행하는 2-tier 구조가 현재의 현실적 첫 경로다. 다만 이는 사용자의 laptop end-to-end 목표를 폐기하는 것이 아니며, cold compile의 local 실행 가능성도 별도 연구 항목으로 유지한다.
+- Pair P2는 Touchstone reference 무결성은 양호하지만 bottom-side untagged PowerSI port가 현행 top-attached IO 계약 밖이라 import가 fail-closed 되었다. 현재는 작은 solver baseline이 아니라 external-port 의미 계약 case다.
+- Pair P3/P4는 response 변화가 VQPS에 집중되지만 SPD에 저장된 PowerSI/3DEM 설정도 다르다. solver-state confound를 닫기 전에는 clean controlled perturbation으로 부르지 않는다.
+- 새 물리 block은 board curve에 바로 맞추지 않고 canonical coupon에서 scaling, convergence, invariant와 exact-minus-core ownership을 먼저 통과해야 한다.
 
 ## 세션 시작 절차
 
@@ -31,8 +36,10 @@
 1. 이 `README.md`: 목적, 우선순위, 금지사항 확인
 2. [`RESEARCH_STATE.md`](RESEARCH_STATE.md): 현재 단계, 결정, 미해결 질문, 다음 행동 확인
 3. [`REFERENCE_DATASET.md`](REFERENCE_DATASET.md): 기준 파일 identity, port/frequency 계약, holdout 정책 확인
-4. [`ALGORITHM_CANDIDATES.md`](ALGORITHM_CANDIDATES.md): 후보 순위, 논문 근거, 실험 순서 확인
-5. [`SESSION_LOG.md`](SESSION_LOG.md)의 가장 최근 항목: 직전 세션의 증거와 중단 지점 확인
+4. [`BASELINE_PROTOCOL.md`](BASELINE_PROTOCOL.md): 단계별 상태, pair P2 차단 조건, 자원/보고 gate 확인
+5. [`ALGORITHM_CANDIDATES.md`](ALGORITHM_CANDIDATES.md): 후보 순위와 논문 근거 확인
+6. [`LOCAL_ORACLE_PLAN.md`](LOCAL_ORACLE_PLAN.md): canonical 실험, exact-minus-core 계약, ablation 순서 확인
+7. [`SESSION_LOG.md`](SESSION_LOG.md)의 가장 최근 항목: 직전 세션의 증거와 중단 지점 확인
 
 그 뒤 `git status`, 현재 branch/HEAD, 원본 파일의 존재와 hash를 확인한다. 이미 확정한 분석을 근거 없이 다시 수행하거나 목표를 재정의하지 않는다.
 
@@ -44,23 +51,24 @@
 2. `SESSION_LOG.md`에 수행한 명령/실험, 입력 identity, 결과, 실패, 해석, 다음 중단 지점을 append한다.
 3. 새 데이터 또는 mapping이 생기면 `REFERENCE_DATASET.md`를 갱신한다.
 4. 후보의 순위나 채택/기각 사유가 바뀌면 `ALGORITHM_CANDIDATES.md`를 갱신한다.
-5. 구조적 pass, 정확성 승격, 성능 승격을 서로 다른 상태로 기록한다.
-6. raw SPD/Touchstone, 생성된 대용량 행렬, 민감한 경로는 Git에 추가하지 않는다.
+5. baseline 상태/자원 gate가 바뀌면 `BASELINE_PROTOCOL.md`, oracle/ownership gate가 바뀌면 `LOCAL_ORACLE_PLAN.md`를 갱신한다.
+6. 구조적 pass, reference integrity, 정확성 승격, 성능 승격을 서로 다른 상태로 기록한다.
+7. raw SPD/Touchstone, 생성된 대용량 행렬, 민감한 경로는 Git에 추가하지 않는다.
 
 ## 연구 흐름
 
 ```mermaid
 flowchart LR
-    A["P0 기준자료 계약<br/>hash·port·주파수·상태"] --> B["P1 현행 baseline 동결<br/>오차·시간·메모리·conditioning"]
-    B --> C["P2 물리 오차 귀속<br/>trace·plane·via·pad/antipad"]
-    C --> D["P3 국부 oracle 검증<br/>해석해·수렴 FEM/CIM"]
-    D --> E["P4 hybrid global 조립<br/>domain condensation + MNA"]
+    A["R0 기준자료 계약<br/>hash·port·주파수·상태"] --> B["R1 현행 baseline 동결<br/>오차·시간·메모리·conditioning"]
+    B --> C["R2 국부 oracle 검증<br/>해석해·수렴 FEM/CIM"]
+    C --> D["R3 물리 오차 귀속<br/>trace·plane·via·pad/antipad"]
+    D --> E["R4 hybrid global 조립<br/>domain condensation + MNA"]
     E --> F{"정확성·수동성·수치 gate"}
     F -->|fail| C
-    F -->|pass| G["P5 가속<br/>exact reduction·MOR·adaptive sweep"]
+    F -->|pass| G["R5 가속<br/>exact reduction·MOR·adaptive sweep"]
     G --> H{"8 GB·시간·추가오차 gate"}
     H -->|fail| G
-    H -->|pass| I["P6 동결 후 새 설계 blind 검증"]
+    H -->|pass| I["R6 동결 후 새 설계 blind 검증"]
     I --> J["최종 보고서·GitHub 반영"]
 ```
 
