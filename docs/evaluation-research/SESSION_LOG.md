@@ -1308,9 +1308,41 @@ authorization: not_authorized
 
 Sol, Terra와 Luna는 topology/certificate/hash/resource/no-solve 경계를 독립 승인했다. 제품 source/parser/solver/UI/version/installer와 GitHub 원격은 바꾸지 않았고 H4 factorization/physics도 실행하지 않았다.
 
-### Exact next starting point
+### 당시 exact next starting point (아래 H4-P0R freeze로 superseded)
 
 1. H4-P0 fixture/manifest-only runner/tests/doc를 clean research commit에 고정한다.
 2. 별도 one-use H4-P0R factorization-only 계약을 만든다. `KII`와 `ApII` factor를 순차 측정하되 RHS, extensions, `Y`, modal response와 physics result를 만들지 않는다.
 3. P0R은 기존 4/5/5 GiB tree stops, 900 s wall cap, one-factor residency와 pre-spawn headroom을 유지하고 pass/fail 모두 token을 consume한다.
 4. P0R resource audit 뒤에만 H4-P1 result schema, `h2→h4` convergence와 fine analytic gates를 사전등록한다. 그 전에는 `primary-h4`를 열지 않는다.
+
+## 2026-08-15 — AV-BS1 H4-P0R manifest-only contract freeze
+
+H4-P0 clean commit `8f40fe5696496edb2cb73086927f833ded5e0d5e`를 immutable parent로 두고, factor resource pilot의 입력·순서·resource/lifecycle만 고정하는 별도 manifest-only H4-P0R contract를 작성했다. 현재 status는 **`preregistered_H4_P0R_contract_only_no_factor`**, `authorization_state=not_authorized`다. fixture와 PowerShell runner는 `manifest`만 노출하며 review token, claim 또는 executable factor stage는 없다. 이번 cycle에서는 factorization, RHS/solve, extension, `Y`/Schur, modal/PDE/power와 physics를 실행하지 않았다.
+
+contract는 H4 interior `31489×31489` real `KII/MII`와 complex `AbII/ApII`, manual `Dr*A*Dc` equilibration을 재구성한다. matrix contract SHA-256은 `89fadbf8f7f93118f6cccda65cc635bd37eeecfd70652e40baa6014c722e2f46`다. 미래 pilot의 고정 순서는 `AbII` factor를 기록·삭제·GC한 뒤 `ApII` factor를 만드는 것이며 `COLAMD`, `diag_pivot_thresh=1.0`, `Equil=false`를 사용한다. portable storage 식 `24*(L_nnz+U_nnz)+8*(4*n+2)`와 per-factor 2 GiB cap, 기존 4/5/5 GiB process-tree stops, 900 s wall cap과 combined pre-spawn headroom을 유지한다. resource policy SHA-256은 `13df68af8b9008824c09653bdb32a56c618107858cdb71b987bf6f4375915680`이다.
+
+current static evidence:
+
+```text
+fixture SHA-256: f6c4149e425021a9133d7ac98fbea403ba048e48f9c70d6e88171e3436374461
+runner SHA-256: ff6623280a728b2dfe6ad219e965d4c21d2392020b6d0490dcc7e63f43a9e50f
+test SHA-256: d071584cf6843ca9d2b75cac348ddfa343ac6f173646fe4c2575af68d6d73129
+prereg doc SHA-256: 5db1b047ca72c72be338b6003507e04598c0b0b89b992302d3aea108a8d2e1f4
+manifest payload SHA-256: eaab10df7fb1557490cc75db7e7ff9fca2881013b6a6fb13f02faea43ddf7023
+matrix contract SHA-256: 89fadbf8f7f93118f6cccda65cc635bd37eeecfd70652e40baa6014c722e2f46
+resource policy SHA-256: 13df68af8b9008824c09653bdb32a56c618107858cdb71b987bf6f4375915680
+tests: 23 passed
+factorization_performed: false
+physics_solve_performed: false
+next_stage_authorized: false
+```
+
+Sol의 최신 static/math audit는 direct Python과 manifest-only PowerShell runner가 같은 payload를 내고 exact four-code normalization, canonical nested resource field names, factor sequencing과 no-factor boundary가 일치함을 확인했다. 제품 source/parser/solver/UI/version/installer와 GitHub 원격은 변경하지 않았다.
+
+### Exact next starting point
+
+1. 현재 manifest-only fixture/runner/tests/doc와 exact payload를 clean research commit에 고정하고 독립 audit한다.
+2. 별도 H4-P0R executable fixture/runner/test/result/finalizer를 만들되 두 factor의 순차 one-resident 측정 외 RHS, solve, extension, `Y`, modal/PDE/power와 physics path를 금지한다.
+3. executable bytes와 clean commit을 검토한 뒤에만 `uses_remaining=1`, `next_stage_authorized=false`의 별도 tracked one-use token을 발급한다.
+4. audited token 뒤 factor-only run을 정확히 한 번 실행하고 pass/fail/resource stop 모두 token을 consumed tombstone으로 교체한다.
+5. 그 result/resource/consumption을 독립 감사한 뒤에만 H4-P1 physics 계약을 별도로 사전등록한다.

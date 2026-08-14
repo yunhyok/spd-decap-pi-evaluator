@@ -2,7 +2,7 @@
 
 ## Current verdict
 
-현재 AV-BS1 physics artifact 상태는 **`passed_AV_BS_h2_stage_only_pending_h4_preregistration`**이다. 17.5 µm/100 kHz의 guarded `primary-h2` 한 번이 local mandatory gate를 통과했고 `mandatory_stage_pass=true`, `failure_codes=[]`, factorization/physics `true`다. 그러나 `next_stage_authorized=false`, `fine_analytic_pass=null`, `mesh_convergence_pass=null`, `final_circle_pass=null`이므로 이는 h2 한 mesh의 단계 제한 통과일 뿐 circle oracle 또는 h4 권한이 아니다. H0 negative, H1 coarse-h pass와 H2-P0 assembly manifest는 그대로 보존한다.
+현재 AV-BS1 physics artifact 상태는 **`passed_AV_BS_h2_stage_only_pending_h4_preregistration`**이다. 17.5 µm/100 kHz의 guarded `primary-h2` 한 번이 local mandatory gate를 통과했고 `mandatory_stage_pass=true`, `failure_codes=[]`, factorization/physics `true`다. 그러나 `next_stage_authorized=false`, `fine_analytic_pass=null`, `mesh_convergence_pass=null`, `final_circle_pass=null`이므로 이는 h2 한 mesh의 단계 제한 통과일 뿐 circle oracle 또는 h4 권한이 아니다. H0 negative, H1 coarse-h pass, H2-P0 assembly manifest, H4-P0 assembly certificate와 H4-P0R contract-only manifest를 그대로 보존한다. H4-P0R은 factorization result가 아니며 현재도 `factor_fit_unproven=true`다.
 
 2026-08-15 clean commit `4fa5ec80a261c21c8489ecd8b708a62bba769a7a`에서 17.5 µm, 100 kHz, `h` 한 mesh의 guarded `primary-h`를 처음 실행했다. 실행은 **`BLOCKED_AV_BS_MESH_HASH`**로 fail-closed 됐다. factorization, harmonic extension, boundary-Schur `Y`, modal response와 physics pass/fail 값은 생성되지 않았다. 따라서 이 결과는 AV-BS1 physics negative가 아니라 **사전등록 sparse-pattern 계약의 negative**다.
 
@@ -202,15 +202,36 @@ manifest는 `V/E/T/B=32001/95488/63488/512`, interior/boundary `31489/512`, mesh
 
 H2 `128uκ`를 복사하면 16 tags가 넘으므로 H4는 추가 midpoint arithmetic을 반영한 `256uκ`를 별도 고정했다. maximum/bound/margin은 `8.540375354048666e-13 / 1.1605646201662821e-12 / 1.358915237391882`다. raw/canonical K는 `222977/208129` nnz와 SHA-256 `8a020c809634a9794292f49198ff1bede84328b6e2c5ef988255cbff32cfe93b` / `a510df2ab39cb85640720f863341d1fe468562442ecb074bafcaf70d9846f2e7`를 재현했고 M/MΓ는 `222977/1536` nnz다. null/transpose/support/correction과 partition hashes도 독립 replay와 일치했다.
 
-resource는 두 의미를 분리한다. all-dense factor upper의 25% margin은 `40,448,792,335 B`로 4 GiB ceiling을 실패한다. one resident factor를 2 GiB hard cap으로 둔 prospective sparse envelope는 `3,470,862,055 B`, 4 GiB slack `824,105,241 B`지만 실제 factor fit을 측정하지 않았으므로 `factor_fit_unproven=true`다. 따라서 다음 단계는 별도 one-use H4-P0R factorization-only preregistration이며, `KII`와 `ApII` factor를 순차 측정하되 RHS/extensions/Y/modal physics를 금지한다.
+resource는 두 의미를 분리한다. all-dense factor upper의 25% margin은 `40,448,792,335 B`로 4 GiB ceiling을 실패한다. one resident factor를 2 GiB hard cap으로 둔 prospective sparse envelope는 `3,470,862,055 B`, 4 GiB slack `824,105,241 B`지만 실제 factor fit을 측정하지 않았으므로 `factor_fit_unproven=true`다. 이 때문에 factorization보다 먼저 별도 H4-P0R contract-only manifest를 고정했다.
 
 정적 결과는 `6 passed`; Python compile, PowerShell AST, UTF-8/LF/fence/link와 diff checks가 통과했다. 이 결과는 H4 physics, h2-to-h4 convergence, fine analytic, final circle 또는 withheld pass가 아니다.
+
+## H4-P0R factor-pilot contract-only preregistration
+
+H4-P0R은 H4 physics 전 실제 sparse factor fit을 측정하기 위한 별도 pilot의 **계약만** 고정한다. 현재 status는 `preregistered_H4_P0R_contract_only_no_factor`, `authorization_state=not_authorized`, `available_solve_stages=[]`, `factorization_performed=false`, `physics_solve_performed=false`, `next_stage_authorized=false`다. manifest runner는 `manifest`만 노출하며 token, claim, guard child, finalizer 또는 factorization 경로가 없다.
+
+| H4-P0R object | SHA-256 |
+|---|---|
+| contract-only fixture | `f6c4149e425021a9133d7ac98fbea403ba048e48f9c70d6e88171e3436374461` |
+| manifest-only runner | `ff6623280a728b2dfe6ad219e965d4c21d2392020b6d0490dcc7e63f43a9e50f` |
+| static tests | `d071584cf6843ca9d2b75cac348ddfa343ac6f173646fe4c2575af68d6d73129` |
+| preregistration document | `5db1b047ca72c72be338b6003507e04598c0b0b89b992302d3aea108a8d2e1f4` |
+| manifest payload | `eaab10df7fb1557490cc75db7e7ff9fca2881013b6a6fb13f02faea43ddf7023` |
+| matrix/equilibration contract | `89fadbf8f7f93118f6cccda65cc635bd37eeecfd70652e40baa6014c722e2f46` |
+| resource policy | `13df68af8b9008824c09653bdb32a56c618107858cdb71b987bf6f4375915680` |
+
+manifest는 H4-P0 commit `8f40fe5696496edb2cb73086927f833ded5e0d5e`과 그 exact fixture/runner/test/doc/payload, H2-P0 및 H2-P1 artifact/consumed tombstone provenance를 재검증한다. frozen interior matrices는 `I=31489`, `KII.nnz=204545`, `MII.nnz=219393`, `AbII.nnz=204545`, `ApII.nnz=219393`다. SHA-256은 차례로 `dddee397ee96ff0bd7acc321cd5755dd611f1e3d1f6bfcf9664c388d27184361`, `4dccc26f1a12bbab4a4ee863e509d317cb518075661867da4e0b6980f7dcc6c4`, `8c099d2cb5947d1b72bd74f64329879c221b86c569b4100baa47dfea9aeff641`, `5ead3bbdc2fc1b4f7a1a94bb7c9ebf9401c6a7d96ee63335045d64e3b082225f`다. manual row/column equilibration과 fixed SuperLU options도 factor 결과를 보기 전에 동결했다.
+
+향후 executable은 `AbII` factor를 먼저 만들고 완전히 해제한 뒤 `ApII` factor만 만들며 동시에 factor 하나만 resident로 둔다. `factor.solve`, RHS, harmonic extension, boundary operator `Y`, signed modes, power와 physics result는 모두 금지한다. process-tree ceiling은 wall `900 s`, WS `4 GiB`, private/commit `5 GiB`이고 pre-spawn physical/commit-headroom floor도 H4-P0 baseline보다 약화하지 않는다. pass/fail 모두 one-use token을 consume하며 pass도 H4-P1을 자동 승인하지 않는다.
+
+정적 결과는 `23 passed`; direct/Powershell manifest가 같은 payload를 재현했고 세 독립 read-only 감사가 승인했다. 이는 factor fit 또는 8 GB proof가 아니다. 다음은 이 frozen 계약과 분리한 executable/runner/claim/finalizer/token family의 static audit 및 clean commit이며, 그 뒤에만 factorization-only pilot 한 번을 실행할 수 있다.
 
 ## Exact next starting point
 
 1. H0 negative와 H1 h-stage artifact를 모두 immutable하게 보존한다.
 2. H2-P0 manifest-only fixture/runner/test/docs commit `4c1e3fce8aac659dd0aedb06c2b6d274fff73a12`를 보존한다.
 3. H2 result digest, 독립 audit와 consumed tombstone commit `ad12df1`을 보존한다.
-4. H4-P0 mesh lineage, canonical assembly와 dual resource envelope를 clean commit으로 고정한다.
-5. 별도 H4-P0R factorization-only fixture/runner/token에서 `KII/ApII` factor fill과 process-tree resource만 측정한다. RHS/extensions/Y/modal physics는 금지한다.
-6. P0R audit 뒤에만 h2→h4/fine analytic gates와 H4 result schema를 별도 사전등록한다. clean H4-P1 audit와 one-use token 전에는 h4 physics를 실행하지 않으며, h4가 통과해도 withheld radius/EQ0는 각각의 후속 계약 전까지 금지한다.
+4. H4-P0 mesh lineage, canonical assembly와 dual resource envelope commit `8f40fe5696496edb2cb73086927f833ded5e0d5e`를 보존한다.
+5. 완료한 H4-P0R contract-only manifest를 clean research commit에 고정한다.
+6. 별도 H4-P0R executable/runner/claim/finalizer/token family를 구현·static audit한 뒤 `KII/ApII` factor fill과 process-tree resource만 한 번 측정한다. RHS/extensions/Y/modal physics는 금지한다.
+7. P0R result audit 뒤에만 h2→h4/fine analytic gates와 H4 result schema를 별도 사전등록한다. clean H4-P1 audit와 one-use token 전에는 h4 physics를 실행하지 않으며, h4가 통과해도 withheld radius/EQ0는 각각의 후속 계약 전까지 금지한다.

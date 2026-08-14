@@ -3095,7 +3095,39 @@ manifest payload SHA-256: 71f8e902322016541bd9302231fa9965d7dfff67cdce1135e16ee1
 static result: 6 passed
 ```
 
-Manifest authority는 `V/E/T/B=32001/95488/63488/512`, mesh `a91b4bf...`, 7,424 topology-owned tags, raw/canonical K `8a020c80.../a510df2a...`, `256uκ` maximum/bound `8.540375354048666e-13/1.1605646201662821e-12`를 모두 다시 계산해 단언한다. inherited dense upper는 4 GiB gate를 실패하고 prospective capped envelope는 `factor_fit_unproven=true`, `primary_h4_authorized=false`로 남는다. 다음 실행 후보는 별도 H4-P0R factorization-only preregistration이며 이 block은 어떤 H4 physics도 승인하지 않는다.
+Manifest authority는 `V/E/T/B=32001/95488/63488/512`, mesh `a91b4bf...`, 7,424 topology-owned tags, raw/canonical K `8a020c80.../a510df2a...`, `256uκ` maximum/bound `8.540375354048666e-13/1.1605646201662821e-12`를 모두 다시 계산해 단언한다. inherited dense upper는 4 GiB gate를 실패하고 prospective capped envelope는 `factor_fit_unproven=true`, `primary_h4_authorized=false`로 남는다. 이 H4-P0 snapshot 당시 다음 후보였던 H4-P0R preregistration은 바로 아래 contract-only block으로 완료됐지만, 어느 block도 factorization 또는 H4 physics를 승인하지 않는다.
+
+## AV-BS1 H4-P0R factor-pilot manifest-only contract
+
+H4-P0R의 현재 상태는 **`preregistered_H4_P0R_contract_only_no_factor`**다. 이 contract-only fixture와 runner는 `manifest`만 노출하고 frozen H4 `KII/MII/AbII/ApII`, manual row/column equilibration, factor 순서와 resource/lifecycle schema를 재구성한다. review token과 executable factor path는 없으며 factorization, RHS/solve, extension, `Y`/Schur, modal/PDE/power와 physics를 실행하거나 승인하지 않는다.
+
+```powershell
+python tools/research/av_bs1_boundary_schur_h4_p0r.py --stage manifest
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File `
+  tools/research/run_av_bs1_h4_p0r_stage.ps1 -Stage manifest
+python -m pytest -q tests/test_research_av_bs1_boundary_schur_h4_p0r.py
+```
+
+Frozen current contract evidence:
+
+```text
+fixture SHA-256: f6c4149e425021a9133d7ac98fbea403ba048e48f9c70d6e88171e3436374461
+runner SHA-256: ff6623280a728b2dfe6ad219e965d4c21d2392020b6d0490dcc7e63f43a9e50f
+test SHA-256: d071584cf6843ca9d2b75cac348ddfa343ac6f173646fe4c2575af68d6d73129
+prereg doc SHA-256: 5db1b047ca72c72be338b6003507e04598c0b0b89b992302d3aea108a8d2e1f4
+manifest payload SHA-256: eaab10df7fb1557490cc75db7e7ff9fca2881013b6a6fb13f02faea43ddf7023
+matrix contract SHA-256: 89fadbf8f7f93118f6cccda65cc635bd37eeecfd70652e40baa6014c722e2f46
+resource policy SHA-256: 13df68af8b9008824c09653bdb32a56c618107858cdb71b987bf6f4375915680
+static result: 23 passed
+authorization_state: not_authorized
+factorization_performed: false
+physics_solve_performed: false
+next_stage_authorized: false
+```
+
+Matrix contract는 `31489×31489` real `KII/MII`의 nnz를 `204545/219393`, complex `AbII/ApII` nnz를 같은 `204545/219393`으로 고정한다. factor 후보는 `AbII` 뒤 `ApII`를 한 번씩 순차 처리하고 두 factor를 동시에 보존하지 않으며 `COLAMD`, `diag_pivot_thresh=1.0`, manual `Dr*A*Dc`, SuperLU internal equilibration off를 사용한다. portable factor bytes는 `24*(L_nnz+U_nnz)+8*(4*n+2)`이고 per-factor cap은 2 GiB다. 기존 4/5/5 GiB tree stops와 900 s wall cap, pre-spawn available physical/commit headroom `5,081,474,791/5,618,345,703 B`도 유지한다. 이 값들은 미래 pilot의 사전등록 gate일 뿐 아직 측정 결과가 아니다.
+
+Exact next는 현재 manifest-only contract를 clean commit과 독립 audit에 고정한 뒤, 별도 H4-P0R executable fixture/runner/test/result/finalizer와 one-use token을 사전등록하는 것이다. 그 audited token 뒤에만 `AbII`, `ApII`를 순차 factor하는 factor-only run 한 번을 허용하고 pass/fail 모두 token을 consume한다. 그 결과를 독립 감사하기 전에는 H4-P1, `primary-h4` 또는 어떤 H4 physics도 열지 않는다.
 
 ## Focused regression
 

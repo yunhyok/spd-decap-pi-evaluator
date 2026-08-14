@@ -9,7 +9,7 @@
 | 프로그램 기준 | SPD Decap PI Evaluator v0.22.0 |
 | 연구 branch | `codex/evaluation-algorithm-research` |
 | 기준 commit | `9f3d36b106cbad033ae35a716e21d47b2e178aa1` (H2 execution git head) |
-| 현재 단계 | R0 source/external-port/return-owner contract 진행 중; M1 collocation negative/G1 exterior-only 결과 동결; G2 pair 제한 통과 후 100 kHz circle reciprocity/cancellation fail; independent `AV-BS1-CIRCLE` H0는 pre-factor sparse gate fail, H1 coarse `h`와 H2 refined `h2`는 각각 stage-only gate 통과. 최신 physics 상태 `passed_AV_BS_h2_stage_only_pending_h4_preregistration`; H2 token consumed. H4-P0 topology/assembly certificate는 no-solve로 고정했지만 resource factor fit과 H4 execution은 미승인이고 fine analytic/mesh convergence/final circle은 `null` |
+| 현재 단계 | R0 source/external-port/return-owner contract 진행 중; M1 collocation negative/G1 exterior-only 결과 동결; G2 pair 제한 통과 후 100 kHz circle reciprocity/cancellation fail; independent `AV-BS1-CIRCLE` H0는 pre-factor sparse gate fail, H1 coarse `h`와 H2 refined `h2`는 각각 stage-only gate 통과. 최신 physics 상태 `passed_AV_BS_h2_stage_only_pending_h4_preregistration`; H2 token consumed. H4-P0 topology/assembly와 H4-P0R factor-pilot manifest 계약은 no-solve로 고정했지만 P0R executable/token/factor와 H4 physics는 미승인이고 fine analytic/mesh convergence/final circle은 `null` |
 | 제품 코드 변경 | 없음 |
 | GitHub 원격 변경 | 없음 |
 | 정확성 승격 | 미달성 |
@@ -80,6 +80,7 @@
 | D-040 | H2 refinement는 H1 parent tag를 기계적으로 두 배로 보지 않고 projected outer-boundary child를 topology로 제외하며, 실행 계약보다 assembly certificate를 먼저 고정한다. | H2-P0는 candidate `3840` 중 projected outer child `128`을 제외한 `3712` canonical tag, raw/canonical `K.nnz=55937/48513`, exact hashes와 `2,553,838,095 B` conservative preflight를 manifest-only로 사전등록했다. H2 result가 같은 mesh/assembly hashes를 재현했다 |
 | D-041 | H2-P1은 H1/P0 lineage와 one-use token 소비뿐 아니라 signed-M9 modal field의 PDE residual 및 volume power를 finalizer가 assembly-only로 독립 재계산해야 한다. | `primary-h2`는 one-use guard 아래 통과했다. max field residual `4.42149e-16`, reciprocity `1.88318e-15`, power mismatch `1.11340e-13`; artifact SHA `b890e4af...`, consumed tombstone SHA `81574c10...`, uses `0`, H4 authorization `false` |
 | D-042 | H4 cyclic ownership은 H2 canonical tag의 두 child 7,424개로 topology에서 고정하고, 추가 midpoint arithmetic 때문에 cancellation certificate를 `256uκ`로 별도 승인한다. | H4-P0 assembly-only replay가 mesh `a91b4bf...`, canonical K `a510df2a...`, max/bound `8.54038e-13/1.16056e-12`를 재현했다. dense upper는 4 GiB를 초과하며 2 GiB factor-cap envelope는 `factor_fit_unproven`; `primary_h4_authorized=false` |
+| D-043 | H4 factor fit은 physics 실행과 분리한 P0R one-factor pilot에서만 측정하며, 그보다 먼저 exact matrix/equilibration/resource/lifecycle 계약을 manifest-only로 동결한다. | `preregistered_H4_P0R_contract_only_no_factor`; 23개 정적 test와 세 독립 감사가 `KII/AbII/MII/ApII` hash, sequential one-factor, 900 s·4/5/5 GiB guard와 금지 연산 계약을 통과했다. executable/token/claim/finalizer/factorization은 아직 없고 H4 physics 권한도 없음 |
 
 ## 현재 가설 순위
 
@@ -96,7 +97,7 @@
 |---|---|---|---|
 | R0 Reference contract | 8개 파일 manifest, explicit port map, PowerSI 조건 | identity/hash/grid/state 및 reference quality 기록 | identity/grid/source parameter/P2 physical terminal 완료; export operator provenance 진행 중 |
 | R1 Frozen baseline | 현행 solver의 전체 timing/memory/error/numerical report | 대표 pair와 rail별 재현 가능한 baseline | 기존 92-port 결과만 동결; pair P2 import 차단 |
-| R2 Local oracle | via/trace/pad/plane canonical corpus | reciprocity/passivity/conservation/mesh convergence | N0 scalar pass; T1 E0, M0 periodic 1-D volume과 `C0-A1` circle interior 제한 통과. M1 collocation power fail, G1 exterior-only, G2 pair-only 후 circle reciprocity/cancellation fail. `AV-BS1-CIRCLE` H1 coarse h와 H2 refined h2는 stage-only pass; H4-P0 assembly-only 통과, factor fit/physics/fine analytic/final circle 미실행. T1 overall blocked |
+| R2 Local oracle | via/trace/pad/plane canonical corpus | reciprocity/passivity/conservation/mesh convergence | N0 scalar pass; T1 E0, M0 periodic 1-D volume과 `C0-A1` circle interior 제한 통과. M1 collocation power fail, G1 exterior-only, G2 pair-only 후 circle reciprocity/cancellation fail. `AV-BS1-CIRCLE` H1 coarse h와 H2 refined h2는 stage-only pass; H4-P0 assembly-only와 H4-P0R contract-only manifest 통과, factor fit/physics/fine analytic/final circle 미실행. T1 overall blocked |
 | R3 Model attribution | 물리 block별 ablation matrix | 예상 port/band 개선을 원인별로 구분 | R2 oracle 뒤 대기 |
 | R4 Hybrid global | condensed domains + passive MNA 후보 | 네 pair provisional accuracy gate | 대기 |
 | R5 Acceleration | exact reduction, MOR, adaptive sweep | 추가 오차 budget + 8 GB gate | 대기 |
@@ -159,7 +160,7 @@ PowerSI repeatability와 mesh/order convergence를 측정한 뒤 수치는 조�
 
 1. immutable M1-EQ0 collocation negative result와 G1 `passed_exterior_galerkin_only` certificate를 보존한다. G1은 full M1/T1 승격 근거가 아니다.
 2. **G2 circle 실패 동결:** pair는 `passed_pair_screen_only`지만 100 kHz circle raw reciprocity/cancellation은 실패했다. planned G2 2 GHz circle, G2 N512, G2 EQ0 seed로 진행하지 않는다.
-3. independent A–v FEM boundary-Schur의 H0 pre-factor negative, H1 coarse-h와 H2 `passed_AV_BS_h2_stage_only_pending_h4_preregistration` artifacts, consumed tokens와 P0/P1 commits를 보존한다. H4-P0 assembly-only fixture의 exact topology/canonical hashes와 dual resource envelope를 clean commit·독립 audit한다. 이어 별도 one-use H4-P0R에서 `KII/ApII` factor fill과 process-tree resource만 측정하며 RHS/extensions/Y/modal physics는 금지한다. 그 audit 전에는 h4 physics를 실행하지 않는다.
+3. independent A–v FEM boundary-Schur의 H0 pre-factor negative, H1 coarse-h와 H2 `passed_AV_BS_h2_stage_only_pending_h4_preregistration` artifacts, consumed tokens와 P0/P1 commits를 보존한다. 완료한 H4-P0 assembly-only certificate와 H4-P0R contract-only manifest를 clean research commit에 고정한다. 다음 별도 cycle에서 P0R executable/runner/claim/finalizer와 one-use token을 static audit한 뒤에만 `KII/ApII` factor fill과 process-tree resource를 한 번 측정한다. RHS/extensions/Y/modal physics는 계속 금지하며, 그 결과 audit와 별도 H4-P1 전에는 h4 physics를 실행하지 않는다.
 4. 두 2-D 방법이 통과한 뒤에만 T1-F finite-length 3-D PEEC length-difference와 exact distributed-line stamp를 비교한다.
 5. P1/P2 selected crop의 확인된 return artwork/void/GND net graph에서 signal-to-return signed basis와 same-crop core/DtN owner를 정의한다. 가까운 via를 current return으로 강제하지 않는다.
 6. reduced differential T1 operator의 full partial/common-mode 또는 explicit current-constraint global adapter 계약을 제조해로 검증한다.
