@@ -1225,6 +1225,689 @@ print('range_guard_max_relative_log10', max(DROP_CERTIFICATES_LOG10, default=-np
 
 핵심 재현값은 A0 exact `173.833308261-j0.052191983 S`, N512 `173.564355046+j5.364668010 S`, fine error `3.119961651%`, mesh change `9.323458492%`, phase `1.787583411°`, exact-circulant `κ1u=8.914401e-8`이다. A1 canonical의 max fine error `0.118541%`, mesh change `0.158276%`, phase `0.019939°`, q10→20 change `1.05602e-6`, exact-circulant `κ1u=9.753904e-13`, per-column normwise-infinity dense backward residual `1.2030e-15`도 재현된다. W1 range-guarded dense block은 residual `9.5414e-16`, `κ1u=1.014945e-12`; W3는 accuracy/mesh/phase `0.113044%/0.150516%/0.028220°`, dense residual `1.1541e-15`, `κ1u=9.164853e-13`을 출력한다. `LOG_MATERIALIZE=ln(tiny)+4` 아래의 H2 sample은 각 U/P first-row에 대해 dropped absolute quadrature bound를 log-sum하고 retained row 1-norm의 `1e-30` 이하일 때만 zero로 둔다. 최종 replay의 40,448 dropped order-sample contribution 중 worst relative log10 bound는 `-305.50`; 이를 넘으면 `BLOCKED_HANKEL_RANGE`다. BLAS별 반올림 차이를 허용하되 backward residual `<=1e-10`, `κ1u<=1e-8`과 dense/symbol discrepancy gate를 검사한다. archived checksums는 더 큰 case metadata serialization을 묶으므로 이 compact block의 stdout hash로 대체하지 않는다. `onenormest` warning은 prior inline run의 anomaly이며 이 exact block은 equilibrated LU의 LAPACK `gecon`을 사용해 explicit inverse 없이 condition certificate를 재현한다.
 
+## T1-M1-EQ0 collocation SAO negative-result replay
+
+먼저 위 exact panel manifest block에서 세 SHA-256을 확인한 뒤 아래 block을 실행한다. 이 block은 제품 module을 import하지 않으며 frozen collocation operator의 raw `Z'`, power failure, q10/q20과 `r0` invariance를 독립 재현한다. standalone block은 모든 solve를 deterministic equilibration 뒤 수행하고 matrix-wide residual을 보고하므로 최초 frozen 실행의 per-column/원 solve auxiliary metric과 숫자가 완전히 같지는 않다. archived gate 값과 standalone replay 값을 아래에서 분리한다. process counter는 host-dependent 참고값이며 결과 판정은 [`T1_M1_EQ0_RESULTS.md`](T1_M1_EQ0_RESULTS.md)를 따른다.
+
+```powershell
+$probe = @'
+import ctypes as ct, hashlib, json, math, os, time
+from fractions import Fraction as F
+import numpy as np
+from numpy.polynomial.legendre import leggauss
+from scipy.linalg import block_diag, get_lapack_funcs, lu_factor, lu_solve
+from scipy.special import hankel2e
+
+MU0=4e-7*math.pi
+EPS0=8.8541878128e-12
+SIGMA=59.6e6
+UROUND=2.0**-53
+EULER=0.5772156649015329
+LOGMAT=np.log(np.finfo(float).tiny)+4.0
+GROWTH=F(3,2)
+
+def memory_mib():
+    if not hasattr(ct,'WinDLL'):
+        return {}
+    class PMC(ct.Structure):
+        _fields_=[
+          ('cb',ct.c_ulong),('pf',ct.c_ulong),('peak_ws',ct.c_size_t),
+          ('ws',ct.c_size_t),('qpp',ct.c_size_t),('qp',ct.c_size_t),
+          ('qnp',ct.c_size_t),('qn',ct.c_size_t),('page',ct.c_size_t),
+          ('peak_page',ct.c_size_t),('private',ct.c_size_t),
+        ]
+    c=PMC(); c.cb=ct.sizeof(c)
+    ps=ct.WinDLL('Psapi.dll'); k=ct.WinDLL('Kernel32.dll')
+    k.GetCurrentProcess.restype=ct.c_void_p
+    ps.GetProcessMemoryInfo.argtypes=(ct.c_void_p,ct.POINTER(PMC),ct.c_ulong)
+    ps.GetProcessMemoryInfo.restype=ct.c_int
+    ok=ps.GetProcessMemoryInfo(k.GetCurrentProcess(),ct.byref(c),c.cb)
+    if not ok: return {}
+    return {'working_set':c.ws/2**20,'peak_working_set':c.peak_ws/2**20,'private':c.private/2**20}
+
+def interval(a,b,m):
+    a,b=F(a),F(b); sign=1 if b>a else -1; half=abs(b-a)/2
+    widths=[half*(GROWTH-1)*GROWTH**i/(GROWTH**m-1) for i in range(m)]
+    left=[a]
+    for width in widths: left.append(left[-1]+sign*width)
+    right=[b]
+    for width in widths: right.append(right[-1]-sign*width)
+    points=left+list(reversed(right[:-1]))
+    assert points[m]==(a+b)/2 and len(points)==2*m+1
+    return points
+
+def add(panels,conductor,edge,axis,fixed,anchors,m):
+    for anchor,(a,b) in enumerate(zip(anchors,anchors[1:])):
+        points=interval(a,b,m)
+        for ordinal,(u,v) in enumerate(zip(points,points[1:])):
+            p0,p1=((u,F(fixed)),(v,F(fixed))) if axis=='x' else ((F(fixed),u),(F(fixed),v))
+            panels.append((conductor,edge,anchor,ordinal,p0,p1))
+
+def seed_panels():
+    p=[]
+    add(p,0,'facing','x',50,[-125,0,125],8)
+    add(p,0,'right','y',125,[50,85],5)
+    add(p,0,'outer','x',85,[125,-125],10)
+    add(p,0,'left','y',-125,[85,50],5)
+    add(p,1,'outer','x',-35,[-125,125],10)
+    add(p,1,'right','y',125,[-35,0],5)
+    add(p,1,'facing','x',0,[125,0,-125],8)
+    add(p,1,'left','y',-125,[0,-35],5)
+    return p
+
+def refine(p):
+    out=[]
+    for conductor,edge,anchor,ordinal,p0,p1 in p:
+        mid=((p0[0]+p1[0])/2,(p0[1]+p1[1])/2)
+        out += [(conductor,edge,anchor,2*ordinal,p0,mid),(conductor,edge,anchor,2*ordinal+1,mid,p1)]
+    return out
+
+def level_panels(level):
+    p=seed_panels()
+    for _ in range(level): p=refine(p)
+    return p
+
+def panel_arrays(p):
+    endpoints=np.asarray([[[float(z)*1e-6 for z in x[4]],[float(z)*1e-6 for z in x[5]]] for x in p])
+    delta=endpoints[:,1]-endpoints[:,0]
+    lengths=np.linalg.norm(delta,axis=1)
+    tangents=delta/lengths[:,None]
+    normals=np.column_stack((tangents[:,1],-tangents[:,0]))
+    midpoints=(endpoints[:,0]+endpoints[:,1])/2
+    conductors=np.asarray([x[0] for x in p])
+    return midpoints,tangents,normals,lengths,conductors
+
+def scaled_h2(order,z):
+    z=np.asarray(z,complex)
+    scaled=hankel2e(order,z)
+    if np.any(~np.isfinite(scaled)) or np.any(np.abs(scaled)==0):
+        raise RuntimeError(('BLOCKED_HANKEL_RANGE',order))
+    logabs=np.log(np.abs(scaled))+np.imag(z)
+    if np.any(logabs<LOGMAT):
+        raise RuntimeError(('BLOCKED_HANKEL_RANGE_NO_FLOOR',order,float(np.min(logabs))))
+    return np.exp(logabs)*np.exp(1j*(np.angle(scaled)-np.real(z)))
+
+def assemble_pu(mid,tangent,normal,length,omega,k,qorder):
+    count=len(length)
+    gx,gw=leggauss(qorder)
+    P=np.empty((count,count),complex)
+    U=np.empty((count,count),complex)
+    for source in range(count):
+        half=length[source]/2
+        points=mid[source]+(half*gx)[:,None]*tangent[source]
+        dr=points[None,:,:]-mid[:,None,:]
+        distance=np.linalg.norm(dr,axis=2)
+        rows=np.arange(count)!=source
+        z=k*distance[rows]
+        geometry=np.einsum('mqk,k->mq',dr[rows],normal[source])/distance[rows]
+        P[rows,source]=omega*MU0*half/2*(scaled_h2(0,z)@gw)
+        U[rows,source]=1j*k*half/2*((geometry*scaled_h2(1,z))@gw)
+        ka=k*half
+        if abs(ka)<=1e-3:
+            P[source,source]=omega*MU0*half*(1-(2j/math.pi)*(np.log(ka/2)+EULER-1))
+        else:
+            s=half*(gx+1)/2
+            weights=half*gw/2
+            regular=scaled_h2(0,k*s)+(2j/math.pi)*np.log(s/half)
+            P[source,source]=omega*MU0*(weights@regular+2j*half/math.pi)
+        U[source,source]=1.0
+    return P,U
+
+def solve_cert(A,B):
+    A=np.asarray(A,complex); B=np.asarray(B,complex)
+    vector=B.ndim==1
+    if vector: B=B[:,None]
+    row=1/np.max(np.abs(A),axis=1)
+    scaled=row[:,None]*A
+    column=1/np.max(np.abs(scaled),axis=0)
+    equilibrated=scaled*column[None,:]
+    lu,piv=lu_factor(equilibrated,check_finite=False)
+    y=lu_solve((lu,piv),row[:,None]*B,check_finite=False)
+    x=column[:,None]*y
+    residual=A@x-B
+    denominator=np.linalg.norm(A,np.inf)*np.linalg.norm(x,np.inf)+np.linalg.norm(B,np.inf)
+    backward=float(np.linalg.norm(residual,np.inf)/denominator)
+    gecon=get_lapack_funcs('gecon',(equilibrated,))
+    rcond,info=gecon(lu,np.linalg.norm(equilibrated,1),norm='1')
+    if info or not np.isfinite(rcond) or rcond<=0: raise RuntimeError(('GECON',info,rcond))
+    return (x[:,0] if vector else x),backward,float(UROUND/rcond)
+
+def phi_log(u,c,log_r0):
+    value=np.empty_like(u)
+    mask=c>1e-18
+    value[mask]=u[mask]*(.5*np.log(u[mask]**2+c[mask]**2)-log_r0)-u[mask]+c[mask]*np.arctan(u[mask]/c[mask])
+    us=u[~mask]
+    value[~mask]=np.where(np.abs(us)>0,us*(np.log(np.abs(us))-log_r0-1),0)
+    return value
+
+def assemble_g0(mid,tangent,length,r0):
+    count=len(length)
+    G0=np.empty((count,count),float)
+    log_r0=math.log(r0)
+    for source in range(count):
+        d=mid-mid[source]
+        projection=d@tangent[source]
+        perpendicular=d-projection[:,None]*tangent[source]
+        distance=np.linalg.norm(perpendicular,axis=1)
+        half=length[source]/2
+        u0=-half-projection
+        u1=half-projection
+        G0[:,source]=(phi_log(u1,distance,log_r0)-phi_log(u0,distance,log_r0))/(2*math.pi)
+        G0[source,source]=length[source]/(2*math.pi)*(math.log(length[source]/(2*r0))-1)
+    return G0
+
+def weighted_symmetry(matrix,length):
+    weighted=length[:,None]*matrix
+    return float(np.linalg.norm(weighted-weighted.T)/max(np.linalg.norm(weighted),1e-300))
+
+def interior_operator(mid,tangent,normal,length,omega,kp,kb,qorder):
+    pp,up=assemble_pu(mid,tangent,normal,length,omega,kp,qorder)
+    pb,ub=assemble_pu(mid,tangent,normal,length,omega,kb,qorder)
+    dp,rpp,kpp=solve_cert(pp,up)
+    db,rpb,kpb=solve_cert(pb,ub)
+    ys=dp-db
+    return ys,{
+      'P_backward':rpp,'Pout_backward':rpb,
+      'P_kappa_u':kpp,'Pout_kappa_u':kpb,
+      'Ys_weighted_reciprocity':weighted_symmetry(ys,length),
+    }
+
+def run_case(level,frequency,qorder,r0s):
+    start=time.perf_counter()
+    p=level_panels(level)
+    mid,tangent,normal,length,conductor=panel_arrays(p)
+    omega=2*math.pi*frequency
+    kp=np.sqrt(omega*MU0*(omega*EPS0-1j*SIGMA))
+    kb=omega*math.sqrt(MU0*EPS0)
+    blocks=[]; certificates=[]
+    for c in (0,1):
+        ix=np.flatnonzero(conductor==c)
+        ys,cert=interior_operator(mid[ix],tangent[ix],normal[ix],length[ix],omega,kp,kb,qorder)
+        blocks.append(ys); certificates.append(cert)
+    Ys=block_diag(*blocks)
+    Q=np.column_stack((conductor==0,conductor==1)).astype(float)
+    b=np.asarray((1.,-1.))
+    results={}
+    for r0 in r0s:
+        G0=assemble_g0(mid,tangent,length,r0)
+        exterior_weighted_reciprocity=weighted_symmetry(G0,length)
+        A=np.eye(len(length))-1j*omega*MU0*(Ys@G0)
+        X,Aback,Akappa=solve_cert(A,Ys@Q)
+        K=Q.T@(length[:,None]*X)
+        Z,Kback,Kkappa=solve_cert(K,np.eye(2))
+        V=Z@b
+        J=X@V
+        E=Q@V+1j*omega*MU0*(G0@J)
+        integrated=Q.T@(length*J)
+        terminal=.5*np.vdot(b,V)
+        boundary=.5*np.vdot(E,length*J)
+        loop=complex(b@Z@b)
+        results[str(r0)]={
+          'Zloop_ohm_per_m':[loop.real,loop.imag],
+          'R_ohm_per_m':loop.real,
+          'L_h_per_m':loop.imag/omega,
+          'terminal_reciprocity':float(np.linalg.norm(Z-Z.T)/max(np.linalg.norm(Z),1e-300)),
+          'current_residual':float(np.linalg.norm(integrated-b)/np.linalg.norm(b)),
+          'zero_sum_residual':float(abs(np.sum(integrated))/np.linalg.norm(b)),
+          'dissipative_power_residual':float(abs(terminal.real-boundary.real)/max(abs(terminal.real),abs(boundary.real),1e-18)),
+          'terminal_power':[terminal.real,terminal.imag],
+          'boundary_power':[boundary.real,boundary.imag],
+          'A_backward':Aback,'A_kappa_u':Akappa,
+          'K_backward':Kback,'K_kappa_u':Kkappa,
+          'G0_weighted_reciprocity':exterior_weighted_reciprocity,
+          'passivity_margin':loop.real,
+        }
+    allcert=[v for c in certificates for k,v in c.items() if k.endswith(('backward','kappa_u'))]
+    return {
+      'level':level,'N':len(length),'frequency_hz':frequency,'q':qorder,
+      'kp':[kp.real,kp.imag],'kb':kb,
+      'interior':certificates,'r0':results,
+      'max_linear_certificate':max(allcert),
+      'seconds':time.perf_counter()-start,'memory_mib':memory_mib(),
+    }
+
+levels=[int(x) for x in os.environ.get('M1_LEVELS','0').split(',') if x]
+frequencies=[float(x) for x in os.environ.get('M1_FREQS','1e8').split(',') if x]
+qorders=[int(x) for x in os.environ.get('M1_QS','20').split(',') if x]
+r0s=[float(x) for x in os.environ.get('M1_R0S','0.1,1,10').split(',') if x]
+for level in levels:
+    for frequency in frequencies:
+        for qorder in qorders:
+            print(json.dumps(run_case(level,frequency,qorder,r0s),separators=(',',':'),allow_nan=False))
+'@
+
+$env:M1_LEVELS='0,1,2'
+$env:M1_FREQS='1e5,1e6,1e7,1e8,5e8,1e9,2e9'
+$env:M1_QS='20'
+$env:M1_R0S='1'
+$probe | python -
+
+# Fine q10 parity and q20 reference-radius invariance.
+$env:M1_LEVELS='2'
+$env:M1_QS='10,20'
+$env:M1_R0S='0.1,1,10'
+$probe | python -
+```
+
+첫 실행은 3×7 raw q20 table을 출력한다. frozen run의 medium→fine log-RMS/max/phase는 `0.00703814%/0.0130658%/0.00159923°`, standalone fine q10→q20 max는 `9.719097658e-9`, `κ1u=9.213551638e-13`, `r0` invariance `9.59635e-16`으로 재현된다. standalone의 auxiliary max backward/terminal reciprocity와 fine 2 GHz current residual은 각각 `5.897094807e-16`, `7.661105753e-16`, `2.674969819e-15`; 최초 frozen gate table의 다른 집계 정의값은 [`T1_M1_EQ0_RESULTS.md`](T1_M1_EQ0_RESULTS.md)에 그대로 보존한다. 판정에 결정적인 raw `Z'`와 fine dissipative-power mismatch `3.719e-8`에서 `1.585e-4`는 일치하며 mandatory `1e-8` gate를 실패한다. 이 stdout은 negative evidence이며 matrix 대칭화나 C0 tuning을 적용하지 않는다.
+
+## T1-M1-EQ0-G1 direct Galerkin exterior preregistration
+
+아래 standalone block은 collocation negative result를 보존한 뒤, **G1 결과를 보기 전에** direct double-panel exterior의 exact self, independently evaluated pair, analytic-radial Duffy, q10/q20 normalization, `r0` rank-one identity, weak equation과 prospective interior metric을 실행 가능한 형태로 고정한 것이다. 제품 module을 import하지 않으며 `GG`나 `Yw`를 사후 평균하지 않는다. 첫 full run은 process-tree 4 GiB 목표, private/commit 5 GiB stop과 system headroom floor를 외부 monitor로 함께 적용한다.
+
+```powershell
+$g1 = @'
+import ctypes as ct, hashlib, json, math, os, time
+from fractions import Fraction as F
+import numpy as np
+from numpy.polynomial.legendre import leggauss
+from scipy.linalg import block_diag, get_lapack_funcs, lu_factor, lu_solve
+from scipy.special import hankel2e
+
+MU0=4e-7*math.pi
+EPS0=8.8541878128e-12
+SIGMA=59.6e6
+UROUND=2.0**-53
+EULER=0.5772156649015329
+LOGMAT=np.log(np.finfo(float).tiny)+4.0
+GROWTH=F(3,2)
+
+def memory_mib():
+    if not hasattr(ct,'WinDLL'):
+        return {}
+    class PMC(ct.Structure):
+        _fields_=[
+          ('cb',ct.c_ulong),('pf',ct.c_ulong),('peak_ws',ct.c_size_t),
+          ('ws',ct.c_size_t),('qpp',ct.c_size_t),('qp',ct.c_size_t),
+          ('qnp',ct.c_size_t),('qn',ct.c_size_t),('page',ct.c_size_t),
+          ('peak_page',ct.c_size_t),('private',ct.c_size_t),
+        ]
+    c=PMC(); c.cb=ct.sizeof(c)
+    ps=ct.WinDLL('Psapi.dll'); k=ct.WinDLL('Kernel32.dll')
+    k.GetCurrentProcess.restype=ct.c_void_p
+    ps.GetProcessMemoryInfo.argtypes=(ct.c_void_p,ct.POINTER(PMC),ct.c_ulong)
+    ps.GetProcessMemoryInfo.restype=ct.c_int
+    ok=ps.GetProcessMemoryInfo(k.GetCurrentProcess(),ct.byref(c),c.cb)
+    if not ok: return {}
+    return {'working_set':c.ws/2**20,'peak_working_set':c.peak_ws/2**20,'private':c.private/2**20}
+
+def interval(a,b,m):
+    a,b=F(a),F(b); sign=1 if b>a else -1; half=abs(b-a)/2
+    widths=[half*(GROWTH-1)*GROWTH**i/(GROWTH**m-1) for i in range(m)]
+    left=[a]
+    for width in widths: left.append(left[-1]+sign*width)
+    right=[b]
+    for width in widths: right.append(right[-1]-sign*width)
+    points=left+list(reversed(right[:-1]))
+    assert points[m]==(a+b)/2 and len(points)==2*m+1
+    return points
+
+def add(panels,conductor,edge,axis,fixed,anchors,m):
+    for anchor,(a,b) in enumerate(zip(anchors,anchors[1:])):
+        points=interval(a,b,m)
+        for ordinal,(u,v) in enumerate(zip(points,points[1:])):
+            p0,p1=((u,F(fixed)),(v,F(fixed))) if axis=='x' else ((F(fixed),u),(F(fixed),v))
+            panels.append((conductor,edge,anchor,ordinal,p0,p1))
+
+def seed_panels():
+    p=[]
+    add(p,0,'facing','x',50,[-125,0,125],8)
+    add(p,0,'right','y',125,[50,85],5)
+    add(p,0,'outer','x',85,[125,-125],10)
+    add(p,0,'left','y',-125,[85,50],5)
+    add(p,1,'outer','x',-35,[-125,125],10)
+    add(p,1,'right','y',125,[-35,0],5)
+    add(p,1,'facing','x',0,[125,0,-125],8)
+    add(p,1,'left','y',-125,[0,-35],5)
+    return p
+
+def refine(p):
+    out=[]
+    for conductor,edge,anchor,ordinal,p0,p1 in p:
+        mid=((p0[0]+p1[0])/2,(p0[1]+p1[1])/2)
+        out += [(conductor,edge,anchor,2*ordinal,p0,mid),(conductor,edge,anchor,2*ordinal+1,mid,p1)]
+    return out
+
+def level_panels(level):
+    p=seed_panels()
+    for _ in range(level): p=refine(p)
+    return p
+
+def panel_arrays(p):
+    endpoints=np.asarray([[[float(z)*1e-6 for z in x[4]],[float(z)*1e-6 for z in x[5]]] for x in p])
+    delta=endpoints[:,1]-endpoints[:,0]
+    lengths=np.linalg.norm(delta,axis=1)
+    tangents=delta/lengths[:,None]
+    normals=np.column_stack((tangents[:,1],-tangents[:,0]))
+    midpoints=(endpoints[:,0]+endpoints[:,1])/2
+    conductors=np.asarray([x[0] for x in p])
+    return midpoints,tangents,normals,lengths,conductors
+
+def scaled_h2(order,z):
+    z=np.asarray(z,complex)
+    scaled=hankel2e(order,z)
+    if np.any(~np.isfinite(scaled)) or np.any(np.abs(scaled)==0):
+        raise RuntimeError(('BLOCKED_HANKEL_RANGE',order))
+    logabs=np.log(np.abs(scaled))+np.imag(z)
+    if np.any(logabs<LOGMAT):
+        raise RuntimeError(('BLOCKED_HANKEL_RANGE_NO_FLOOR',order,float(np.min(logabs))))
+    return np.exp(logabs)*np.exp(1j*(np.angle(scaled)-np.real(z)))
+
+def assemble_pu(mid,tangent,normal,length,omega,k,qorder):
+    count=len(length)
+    gx,gw=leggauss(qorder)
+    P=np.empty((count,count),complex)
+    U=np.empty((count,count),complex)
+    for source in range(count):
+        half=length[source]/2
+        points=mid[source]+(half*gx)[:,None]*tangent[source]
+        dr=points[None,:,:]-mid[:,None,:]
+        distance=np.linalg.norm(dr,axis=2)
+        rows=np.arange(count)!=source
+        z=k*distance[rows]
+        geometry=np.einsum('mqk,k->mq',dr[rows],normal[source])/distance[rows]
+        P[rows,source]=omega*MU0*half/2*(scaled_h2(0,z)@gw)
+        U[rows,source]=1j*k*half/2*((geometry*scaled_h2(1,z))@gw)
+        ka=k*half
+        if abs(ka)<=1e-3:
+            P[source,source]=omega*MU0*half*(1-(2j/math.pi)*(np.log(ka/2)+EULER-1))
+        else:
+            s=half*(gx+1)/2
+            weights=half*gw/2
+            regular=scaled_h2(0,k*s)+(2j/math.pi)*np.log(s/half)
+            P[source,source]=omega*MU0*(weights@regular+2j*half/math.pi)
+        U[source,source]=1.0
+    return P,U
+
+def solve_cert(A,B):
+    A=np.asarray(A,complex); B=np.asarray(B,complex)
+    vector=B.ndim==1
+    if vector: B=B[:,None]
+    row=1/np.max(np.abs(A),axis=1)
+    scaled=row[:,None]*A
+    column=1/np.max(np.abs(scaled),axis=0)
+    equilibrated=scaled*column[None,:]
+    lu,piv=lu_factor(equilibrated,check_finite=False)
+    y=lu_solve((lu,piv),row[:,None]*B,check_finite=False)
+    x=column[:,None]*y
+    residual=A@x-B
+    denominator=np.linalg.norm(A,np.inf)*np.linalg.norm(x,np.inf)+np.linalg.norm(B,np.inf)
+    backward=float(np.linalg.norm(residual,np.inf)/denominator)
+    gecon=get_lapack_funcs('gecon',(equilibrated,))
+    rcond,info=gecon(lu,np.linalg.norm(equilibrated,1),norm='1')
+    if info or not np.isfinite(rcond) or rcond<=0: raise RuntimeError(('GECON',info,rcond))
+    return (x[:,0] if vector else x),backward,float(UROUND/rcond)
+
+def phi_log(u,c,log_r0):
+    value=np.empty_like(u)
+    mask=c>1e-18
+    value[mask]=u[mask]*(.5*np.log(u[mask]**2+c[mask]**2)-log_r0)-u[mask]+c[mask]*np.arctan(u[mask]/c[mask])
+    us=u[~mask]
+    value[~mask]=np.where(np.abs(us)>0,us*(np.log(np.abs(us))-log_r0-1),0)
+    return value
+
+def assemble_g0(mid,tangent,length,r0):
+    count=len(length)
+    G0=np.empty((count,count),float)
+    log_r0=math.log(r0)
+    for source in range(count):
+        d=mid-mid[source]
+        projection=d@tangent[source]
+        perpendicular=d-projection[:,None]*tangent[source]
+        distance=np.linalg.norm(perpendicular,axis=1)
+        half=length[source]/2
+        u0=-half-projection
+        u1=half-projection
+        G0[:,source]=(phi_log(u1,distance,log_r0)-phi_log(u0,distance,log_r0))/(2*math.pi)
+        G0[source,source]=length[source]/(2*math.pi)*(math.log(length[source]/(2*r0))-1)
+    return G0
+
+def weighted_symmetry(matrix,length):
+    weighted=length[:,None]*matrix
+    return float(np.linalg.norm(weighted-weighted.T)/max(np.linalg.norm(weighted),1e-300))
+
+def interior_operator(mid,tangent,normal,length,omega,kp,kb,qorder):
+    pp,up=assemble_pu(mid,tangent,normal,length,omega,kp,qorder)
+    pb,ub=assemble_pu(mid,tangent,normal,length,omega,kb,qorder)
+    dp,rpp,kpp=solve_cert(pp,up)
+    db,rpb,kpb=solve_cert(pb,ub)
+    ys=dp-db
+    return ys,{
+      'P_backward':rpp,'Pout_backward':rpb,
+      'P_kappa_u':kpp,'Pout_kappa_u':kpb,
+      'Ys_weighted_reciprocity':weighted_symmetry(ys,length),
+    }
+
+def run_case(level,frequency,qorder,r0s):
+    start=time.perf_counter()
+    p=level_panels(level)
+    mid,tangent,normal,length,conductor=panel_arrays(p)
+    omega=2*math.pi*frequency
+    kp=np.sqrt(omega*MU0*(omega*EPS0-1j*SIGMA))
+    kb=omega*math.sqrt(MU0*EPS0)
+    blocks=[]; certificates=[]
+    for c in (0,1):
+        ix=np.flatnonzero(conductor==c)
+        ys,cert=interior_operator(mid[ix],tangent[ix],normal[ix],length[ix],omega,kp,kb,qorder)
+        blocks.append(ys); certificates.append(cert)
+    Ys=block_diag(*blocks)
+    Q=np.column_stack((conductor==0,conductor==1)).astype(float)
+    b=np.asarray((1.,-1.))
+    results={}
+    for r0 in r0s:
+        G0=assemble_g0(mid,tangent,length,r0)
+        exterior_weighted_reciprocity=weighted_symmetry(G0,length)
+        A=np.eye(len(length))-1j*omega*MU0*(Ys@G0)
+        X,Aback,Akappa=solve_cert(A,Ys@Q)
+        K=Q.T@(length[:,None]*X)
+        Z,Kback,Kkappa=solve_cert(K,np.eye(2))
+        V=Z@b
+        J=X@V
+        E=Q@V+1j*omega*MU0*(G0@J)
+        integrated=Q.T@(length*J)
+        terminal=.5*np.vdot(b,V)
+        boundary=.5*np.vdot(E,length*J)
+        loop=complex(b@Z@b)
+        results[str(r0)]={
+          'Zloop_ohm_per_m':[loop.real,loop.imag],
+          'R_ohm_per_m':loop.real,
+          'L_h_per_m':loop.imag/omega,
+          'terminal_reciprocity':float(np.linalg.norm(Z-Z.T)/max(np.linalg.norm(Z),1e-300)),
+          'current_residual':float(np.linalg.norm(integrated-b)/np.linalg.norm(b)),
+          'zero_sum_residual':float(abs(np.sum(integrated))/np.linalg.norm(b)),
+          'dissipative_power_residual':float(abs(terminal.real-boundary.real)/max(abs(terminal.real),abs(boundary.real),1e-18)),
+          'terminal_power':[terminal.real,terminal.imag],
+          'boundary_power':[boundary.real,boundary.imag],
+          'A_backward':Aback,'A_kappa_u':Akappa,
+          'K_backward':Kback,'K_kappa_u':Kkappa,
+          'G0_weighted_reciprocity':exterior_weighted_reciprocity,
+          'passivity_margin':loop.real,
+        }
+    allcert=[v for c in certificates for k,v in c.items() if k.endswith(('backward','kappa_u'))]
+    return {
+      'level':level,'N':len(length),'frequency_hz':frequency,'q':qorder,
+      'kp':[kp.real,kp.imag],'kb':kb,
+      'interior':certificates,'r0':results,
+      'max_linear_certificate':max(allcert),
+      'seconds':time.perf_counter()-start,'memory_mib':memory_mib(),
+    }
+_GG_CACHE={}
+
+def g1_geometry(level):
+    panels=level_panels(level)
+    mid,tangent,normal,length,conductor=panel_arrays(panels)
+    p0=mid-.5*length[:,None]*tangent
+    p1=mid+.5*length[:,None]*tangent
+    return panels,mid,tangent,normal,length,conductor,p0,p1
+
+def g1_pair_integral(i,j,p0,p1,length,qorder,r0):
+    li,lj=length[i],length[j]
+    if i==j:
+        return li*li/(2*math.pi)*(math.log(li/r0)-1.5)
+    shared=None
+    for a in (p0[i],p1[i]):
+        for b in (p0[j],p1[j]):
+            if np.linalg.norm(a-b)<=1e-18:
+                shared=(a,b)
+                break
+        if shared is not None:
+            break
+    x,w=leggauss(qorder)
+    u=(x+1)/2
+    ww=w/2
+    if shared is not None:
+        c=shared[0]
+        oi=p1[i] if np.linalg.norm(p0[i]-c)<=1e-18 else p0[i]
+        oj=p1[j] if np.linalg.norm(p0[j]-c)<=1e-18 else p0[j]
+        ti=(oi-c)/li
+        tj=(oj-c)/lj
+        A=np.linalg.norm(li*ti[None,:]-u[:,None]*lj*tj[None,:],axis=1)
+        B=np.linalg.norm(u[:,None]*li*ti[None,:]-lj*tj[None,:],axis=1)
+        if np.any(A<=0) or np.any(B<=0):
+            raise RuntimeError(('G1_DUFFY_DEGENERATE',i,j))
+        return li*lj/(4*math.pi)*np.sum(ww*(np.log(A/r0)+np.log(B/r0)-1))
+    ri=p0[i][None,:]+u[:,None]*(p1[i]-p0[i])[None,:]
+    rj=p0[j][None,:]+u[:,None]*(p1[j]-p0[j])[None,:]
+    distance=np.linalg.norm(ri[:,None,:]-rj[None,:,:],axis=2)
+    if np.any(distance<=0):
+        raise RuntimeError(('G1_NONTOUCHING_ZERO_DISTANCE',i,j))
+    return li*lj/(2*math.pi)*np.sum(ww[:,None]*ww[None,:]*np.log(distance/r0))
+
+def assemble_gg(level,qorder,r0):
+    key=(level,qorder,float(r0))
+    if key in _GG_CACHE:
+        return _GG_CACHE[key]
+    _,mid,tangent,normal,length,conductor,p0,p1=g1_geometry(level)
+    GG=np.empty((len(length),len(length)),float)
+    for i in range(len(length)):
+        for j in range(len(length)):
+            GG[i,j]=g1_pair_integral(i,j,p0,p1,length,qorder,r0)
+    _GG_CACHE[key]=(GG,length)
+    return GG,length
+
+def g1_structural_certificate(level):
+    G10,length=assemble_gg(level,10,1.0)
+    G20,_=assemble_gg(level,20,1.0)
+    natural=length[:,None]*length[None,:]/(2*math.pi)
+    denominator=np.maximum.reduce((np.abs(G10),np.abs(G20),natural))
+    qmax=float(np.max(np.abs(G20-G10)/denominator))
+    qfro=float(np.linalg.norm(G20-G10)/max(np.linalg.norm(G20),1e-300))
+    pair=float(np.max(np.abs(G20-G20.T)/np.maximum.reduce((np.abs(G20),np.abs(G20.T),natural))))
+    symmetry=float(np.linalg.norm(G20-G20.T)/max(np.linalg.norm(G20),1e-300))
+    radius={}
+    ell=length[:,None]
+    for r0 in (.1,10.):
+        Gr,_=assemble_gg(level,20,r0)
+        exact=-math.log(r0)/(2*math.pi)*(ell@ell.T)
+        radius[str(r0)]=float(np.linalg.norm((Gr-G20)-exact)/max(np.linalg.norm(exact),1e-300))
+    return {
+      'level':level,'N':len(length),
+      'q10_q20_max_natural':qmax,'q10_q20_frobenius':qfro,
+      'independent_pair_transpose_max':pair,'raw_transpose_frobenius':symmetry,
+      'r0_rank_one_relative':radius,
+      'GG_q20_sha256':hashlib.sha256(np.ascontiguousarray(G20).tobytes()).hexdigest(),
+    }
+
+def g1_interior_operator(mid,tangent,normal,length,omega,kp,kb,qorder):
+    ys,cert=interior_operator(mid,tangent,normal,length,omega,kp,kb,qorder)
+    Yw=length[:,None]*ys
+    floor=max(1e-12,1e-10*float(np.max(np.abs(Yw))))
+    metric=float(np.linalg.norm(Yw-Yw.T)/max(np.linalg.norm(Yw),len(length)*floor))
+    hermitian=(Yw+Yw.conj().T)/2
+    min_eigenvalue=float(np.linalg.eigvalsh(hermitian)[0])
+    passivity_tolerance=max(floor,1e-9*float(np.linalg.norm(Yw,2)))
+    cert=dict(cert)
+    cert.update({
+      'weak_admittance_floor_S_m':floor,
+      'prospective_weighted_reciprocity':metric,
+      'prospective_weighted_reciprocity_status':'pass' if metric<=1e-8 else 'diagnostic_fail',
+      'prospective_min_hermitian_eigenvalue_S_m':min_eigenvalue,
+      'prospective_passivity_tolerance_S_m':passivity_tolerance,
+      'prospective_passivity_status':'pass' if min_eigenvalue>=-passivity_tolerance else 'diagnostic_fail',
+    })
+    return ys,cert
+
+def run_g1_case(level,frequency,qorder,r0s):
+    start=time.perf_counter()
+    _,mid,tangent,normal,length,conductor,p0,p1=g1_geometry(level)
+    omega=2*math.pi*frequency
+    kp=np.sqrt(omega*MU0*(omega*EPS0-1j*SIGMA))
+    kb=omega*math.sqrt(MU0*EPS0)
+    blocks=[]; certificates=[]
+    for c in (0,1):
+        ix=np.flatnonzero(conductor==c)
+        ys,cert=g1_interior_operator(
+            mid[ix],tangent[ix],normal[ix],length[ix],omega,kp,kb,qorder
+        )
+        blocks.append(ys); certificates.append(cert)
+    Ys=block_diag(*blocks)
+    Q=np.column_stack((conductor==0,conductor==1)).astype(float)
+    WQ=length[:,None]*Q
+    b=np.asarray((1.,-1.))
+    results={}
+    for r0 in r0s:
+        GG,_=assemble_gg(level,qorder,r0)
+        AE=np.diag(length)-1j*omega*MU0*(GG@Ys)
+        Eresponse,AEback,AEkappa=solve_cert(AE,WQ)
+        Jresponse=Ys@Eresponse
+        K=Q.T@(length[:,None]*Jresponse)
+        Z,Kback,Kkappa=solve_cert(K,np.eye(2))
+        V=Z@b
+        E=Eresponse@V
+        J=Jresponse@V
+        integrated=Q.T@(length*J)
+        terminal=.5*np.vdot(b,V)
+        boundary=.5*np.vdot(E,length*J)
+        loop=complex(b@Z@b)
+        results[str(r0)]={
+          'Zloop_ohm_per_m':[loop.real,loop.imag],
+          'R_ohm_per_m':loop.real,
+          'L_h_per_m':loop.imag/omega,
+          'terminal_reciprocity':float(np.linalg.norm(Z-Z.T)/max(np.linalg.norm(Z),1e-300)),
+          'current_residual':float(np.linalg.norm(integrated-b)/np.linalg.norm(b)),
+          'zero_sum_residual':float(abs(np.sum(integrated))/np.linalg.norm(b)),
+          'dissipative_power_residual':float(abs(terminal.real-boundary.real)/max(abs(terminal.real),abs(boundary.real),1e-18)),
+          'terminal_power':[terminal.real,terminal.imag],
+          'boundary_power':[boundary.real,boundary.imag],
+          'AE_backward':AEback,'AE_kappa_u':AEkappa,
+          'K_backward':Kback,'K_kappa_u':Kkappa,
+          'GG_raw_transpose':float(np.linalg.norm(GG-GG.T)/max(np.linalg.norm(GG),1e-300)),
+          'passivity_margin':loop.real,
+        }
+    return {
+      'case':'M1-EQ0-G1','level':level,'N':len(length),
+      'frequency_hz':frequency,'q':qorder,
+      'kp':[kp.real,kp.imag],'kb':kb,
+      'interior':certificates,'r0':results,
+      'seconds':time.perf_counter()-start,'memory_mib':memory_mib(),
+    }
+
+g1_levels=[int(x) for x in os.environ.get('M1_G1_LEVELS','0').split(',') if x]
+g1_frequencies=[float(x) for x in os.environ.get('M1_G1_FREQS','2e9').split(',') if x]
+g1_qorders=[int(x) for x in os.environ.get('M1_G1_QS','20').split(',') if x]
+g1_r0s=[float(x) for x in os.environ.get('M1_G1_R0S','1').split(',') if x]
+for level in g1_levels:
+    print(json.dumps({'case':'M1-EQ0-G1-structure',**g1_structural_certificate(level)},separators=(',',':'),allow_nan=False))
+    for frequency in g1_frequencies:
+        for qorder in g1_qorders:
+            print(json.dumps(run_g1_case(level,frequency,qorder,g1_r0s),separators=(',',':'),allow_nan=False))
+'@
+
+$env:M1_G1_LEVELS='0,1,2'
+$env:M1_G1_FREQS='1e5,1e6,1e7,1e8,5e8,1e9,2e9'
+$env:M1_G1_QS='20'
+$env:M1_G1_R0S='0.1,1,10'
+$g1 | python -
+
+# Mandatory final-response quadrature parity on the fine contour.
+$env:M1_G1_LEVELS='2'
+$env:M1_G1_QS='10,20'
+$env:M1_G1_R0S='1'
+$g1 | python -
+```
+
+structural gate는 `smn=max(|GG10,mn|,|GG20,mn|,ℓmℓn/(2π))`의 pair-normalized max와 Frobenius q change를 각각 `<=1e-10`, independently reversed pair와 raw transpose defect를 `<=1e-12`, `r0` rank-one relative residual을 `<=1e-8`로 판정한다. fine q10/q20의 final `Z'`도 기존 `0.1%/0.25°` gate를 별도로 통과해야 한다. prospective interior는 `Yw=WYs` `[S·m]`, `Yw,floor=max(1e-12 S·m,1e-10 max|Yw|)`, `||Yw−Yw^T||F/max(||Yw||F,N Yw,floor)<=1e-8`로 검사한다. passivity는 `H(Yw)=(Yw+Yw^H)/2`의 raw `λmin >= -max(Yw,floor,1e-9||Yw||2)`다. Hermitian part 평가는 진단이지 operator 대칭화가 아니다. G1은 exterior power 원인 격리용 diagnostic이며 이 interior metric이나 converged A–v가 실패하면 M1은 계속 blocked다.
+
 ## Focused regression
 
 ```powershell

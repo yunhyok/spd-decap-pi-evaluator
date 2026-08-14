@@ -1,6 +1,6 @@
 # Evaluation Algorithm Research State
 
-최종 갱신: 2026-08-14 (Asia/Seoul)
+최종 갱신: 2026-08-15 (Asia/Seoul)
 
 ## 상태 요약
 
@@ -9,7 +9,7 @@
 | 프로그램 기준 | SPD Decap PI Evaluator v0.22.0 |
 | 연구 branch | `codex/evaluation-algorithm-research` |
 | 기준 commit | `bb361687c0bf976d5d04faf26bc243bcf3d52006` |
-| 현재 단계 | R0 source/external-port/return-owner contract 진행 중, R2 T1 M1-EQ0 geometry/panel/crop preregistration 완료 후 SAO–CIM 실행 직전 |
+| 현재 단계 | R0 source/external-port/return-owner contract 진행 중, R2 T1 M1-EQ0 collocation SAO negative result 동결; energy-consistent G1 exterior exact preregistration 완료, 실행 대기 |
 | 제품 코드 변경 | 없음 |
 | GitHub 원격 변경 | 없음 |
 | 정확성 승격 | 미달성 |
@@ -69,6 +69,9 @@
 | D-029 | M0 lateral-periodic slab과 finite/open rectangular SAO를 같은 경계값 문제로 취급하지 않는다. | 확정; free-space finite contour에는 side-face current와 edge field가 있어 periodic `coth`의 normative 비교 대상이 아님 |
 | D-030 | M0-V1 independent normalized 1-D slab FEM을 periodic volume-only pass로 동결하고, M0 전용 periodic Green kernel은 finite/open M1보다 우선 구현하지 않는다. | 확정; canonical max raw error/mesh/phase `0.0733%/0.2199%/0.0420°`, W0 withheld `0.1268%/0.3804%/0.0727°`; C0-A1은 circle-only 상태 유지 |
 | D-031 | 첫 finite/open fixture는 M1-EQ0 full contour `N={144,288,576}`로 사전 동결하고 물리 panel-size gate는 fine `4N`에서 판정한다. | 확정; exact Fraction endpoint/hash, global adjacent growth `<=1.5`, fine corner `<=δ/4`, facing `<=h/8`; symmetry reduction 없이 실행 |
+| D-032 | frozen M1-EQ0 collocation SAO를 finite/open pass로 승격하지 않는다. | 확정; response/mesh/condition/current는 통과했지만 fine signed boundary-power mismatch `1.585e-4 > 1e-8`. 원인은 `WG0` skew energy defect로 귀속되며 사후 대칭화 금지 |
+| D-033 | 다음 exterior 후보는 같은 endpoint와 gate의 direct pulse-Galerkin double-panel log operator `GE=W^-1 GG`다. | `preregistered_G0_galerkin_pending`; self exact, non-touching tensor Gauss, shared-endpoint analytic-radial Duffy, independent pair orientation과 weak assembly exact block 동결. interior `WYs` hidden-mode reciprocity도 prospective gate로 재검사 |
+| D-034 | independent A–v power는 centroid field가 아니라 consistent P1 mass form으로만 판정한다. | 확정; 2 GHz 4Deff smoke에서 mismatch `1.377e-9`, 그러나 단일 mesh/crop이므로 reference pass 아님 |
 
 ## 현재 가설 순위
 
@@ -85,7 +88,7 @@
 |---|---|---|---|
 | R0 Reference contract | 8개 파일 manifest, explicit port map, PowerSI 조건 | identity/hash/grid/state 및 reference quality 기록 | identity/grid/source parameter/P2 physical terminal 완료; export operator provenance 진행 중 |
 | R1 Frozen baseline | 현행 solver의 전체 timing/memory/error/numerical report | 대표 pair와 rail별 재현 가능한 baseline | 기존 92-port 결과만 동결; pair P2 import 차단 |
-| R2 Local oracle | via/trace/pad/plane canonical corpus | reciprocity/passivity/conservation/mesh convergence | N0 scalar pass; T1 E0, M0 periodic 1-D volume과 `C0-A1` circle interior 제한 통과, M1-EQ0 `preregistered_not_run`, T1 overall blocked; S1/V1/V2/A1/C1 global 승격 차단 |
+| R2 Local oracle | via/trace/pad/plane canonical corpus | reciprocity/passivity/conservation/mesh convergence | N0 scalar pass; T1 E0, M0 periodic 1-D volume과 `C0-A1` circle interior 제한 통과. M1-EQ0 response는 수렴했지만 `BLOCKED_SAO_BOUNDARY_POWER_IDENTITY`; A–v는 2 GHz smoke only. T1 overall blocked; S1/V1/V2/A1/C1 global 승격 차단 |
 | R3 Model attribution | 물리 block별 ablation matrix | 예상 port/band 개선을 원인별로 구분 | R2 oracle 뒤 대기 |
 | R4 Hybrid global | condensed domains + passive MNA 후보 | 네 pair provisional accuracy gate | 대기 |
 | R5 Acceleration | exact reduction, MOR, adaptive sweep | 추가 오차 budget + 8 GB gate | 대기 |
@@ -141,19 +144,20 @@ PowerSI repeatability와 mesh/order convergence를 측정한 뒤 수치는 조�
 10. P3/P4의 약 1.45M Trace는 raw grammar상 routed trace와 plane/mesh topology가 섞였거나 미확정이다. 어떤 source semantic 또는 exporter contract로 이를 구분할 것인가?
 11. homogeneous SAO 이후 stratified/lossy background Green function, self term과 reciprocity-based total current를 어떤 independent layered coupon으로 인증할 것인가?
 12. circle에서 통과한 `C0-A1` direct/scaled Hankel과 singular self treatment가 corner가 있는 finite/open M1에서 같은 수렴률·operator floor를 유지하는가? M0 periodic slab은 independent 1-D volume-only로 통과했으며 C0-A1 periodic SAO 증거가 아니다.
+13. direct Galerkin exterior가 raw power를 복원한 뒤에도 pulse-collocation interior `WYs`의 최대 `7.12e-2` weighted reciprocity defect가 남는가? 남으면 `P/U/Pout/Uout`까지 어떤 symmetric Galerkin trace space로 교체할 것인가?
 
 ## 다음 세션의 우선 작업
 
-1. preregistered M1-EQ0 full `N={144,288,576}`에서 C0-A1 SAO–CIM panel/self/exterior/condition/power gate를 실행한다. periodic `coth`를 finite-width exact target으로 사용하지 않는다.
-2. 같은 M1 geometry와 current basis의 independent A–v FEM `h,h/2,h/4`, crop `2/4/8 Deff`와 비교한다.
-3. T1-F finite-length 3-D PEEC length-difference reference와 exact distributed-line stamp를 비교한다.
-4. P1/P2 selected crop의 확인된 return artwork/void/GND net graph에서 signal-to-return signed basis와 same-crop core/DtN owner를 정의한다. 가까운 via를 current return으로 강제하지 않는다.
-5. reduced differential T1 operator의 full partial/common-mode 또는 explicit current-constraint global adapter 계약을 제조해로 검증한다.
-6. S1 circular/void boundary-conforming refinement와 A1 body-fitted/higher-order 후보를 문헌·제조해로 비교한다.
-7. V1/V2 explicit coax/ring-return 2-D/3-D reference와 동일 crop의 exact/core owner·DtN matrix를 만든다.
-8. C1 circular launch spreading Z, radius scaling, crop와 point-core replacement coupon을 완성한다.
-9. P2 operator unknown field와 P3/P4 solver-state confound를 실제 PowerSI export evidence로 닫는다.
-10. factor-isolated PowerSI coupon과 repeatability/mesh-convergence reference를 요청·정의한다.
+1. preregistered M1-EQ0-G1 exact block으로 같은 frozen `N={144,288,576}`와 7 frequencies의 pair parity, weighted symmetry, `r0`, q10/q20, raw power를 실행한다.
+2. prospective hidden-mode interior `Yw` reciprocity를 함께 판정하고 실패하면 exterior diagnostic과 production-interior blocker를 분리한다.
+3. independent A–v FEM을 consistent P1 mass form으로 `h,h/2,h/4`, crop `2/4/8 Deff`, condition/resource certificate까지 완성한다.
+4. 두 2-D 방법이 통과한 뒤에만 T1-F finite-length 3-D PEEC length-difference와 exact distributed-line stamp를 비교한다.
+5. P1/P2 selected crop의 확인된 return artwork/void/GND net graph에서 signal-to-return signed basis와 same-crop core/DtN owner를 정의한다. 가까운 via를 current return으로 강제하지 않는다.
+6. reduced differential T1 operator의 full partial/common-mode 또는 explicit current-constraint global adapter 계약을 제조해로 검증한다.
+7. S1 circular/void boundary-conforming refinement와 A1 body-fitted/higher-order 후보를 문헌·제조해로 비교한다.
+8. V1/V2 explicit coax/ring-return 2-D/3-D reference와 동일 crop의 exact/core owner·DtN matrix를 만든다.
+9. C1 circular launch spreading Z, radius scaling, crop와 point-core replacement coupon을 완성한다.
+10. P2 operator unknown field, P3/P4 solver-state confound와 factor-isolated PowerSI repeatability evidence를 닫는다.
 
 ## 변경 금지선
 

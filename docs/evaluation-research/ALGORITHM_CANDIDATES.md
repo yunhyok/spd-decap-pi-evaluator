@@ -1,6 +1,6 @@
 # Algorithm Candidates and Literature Map
 
-최종 갱신: 2026-08-14
+최종 갱신: 2026-08-15
 
 ## 문제 정의
 
@@ -42,7 +42,7 @@ Y_r(\omega)v=b,\qquad Z_{pp}=b^Tv
 - 기존 S1/A1/C1 kernel은 부분 invariant를 통과했지만 strict physical correction gate에는 미달했다. 특히 A1은 마지막 mesh 변화가 4.73%다. 따라서 후보 1/2의 방향은 유지하되 현행 discretization을 그대로 production에 연결하지 않는다.
 - isolated via PEEC는 빠르고 수치적으로 안정적이지만 exact-minus-core ownership이 없어 additive global stamp로 사용할 수 없다. 후보 2는 explicit return/crop/core subtraction이 있는 replacement block으로만 진행한다.
 - source manifest가 P3/P4 missing trace width, 모든 pair의 plating/fill/roughness unknown, P1/P2 antipad preservation gap을 확인했다. 후보 비교에서 이 값을 fit parameter로 숨기는 경로는 기각한다.
-- T1의 Cohn body-fitted lossless `C'`와 periodic two-plate smooth-copper `R/L`은 independent normalized 1-D FEM까지 manufactured 범위에서 통과했다. lateral-periodic slab과 finite/open rectangle은 다른 경계값 문제이므로 free-space contour를 `coth`와 직접 gate하지 않는다. finite-width 기준 2-D 후보는 homogeneous-first SAO–CIM이며 independent A–v FEM/finite-length 3-D PEEC로 교차검증한다.
+- T1의 Cohn body-fitted lossless `C'`와 periodic two-plate smooth-copper `R/L`은 independent normalized 1-D FEM까지 manufactured 범위에서 통과했다. lateral-periodic slab과 finite/open rectangle은 다른 경계값 문제이므로 free-space contour를 `coth`와 직접 gate하지 않는다. finite-width 기준 2-D 후보는 homogeneous-first SAO–CIM이며 independent A–v FEM/finite-length 3-D PEEC로 교차검증한다. 첫 M1-EQ0 collocation SAO는 response는 수렴했지만 boundary power `1.585e-4 > 1e-8`로 실패했으므로, 다음 후보는 direct double-panel Galerkin exterior와 prospective interior weak reciprocity gate다.
 - SAO interior의 사전 등록 `C0-A0` 저주파 `10^6` switch는 작은 원에서 실패했다. `C0-A1` fixed `C0=1` direct/scaled Hankel은 canonical full-condition과 W1/W3 dense withheld를 통과했고 W2 analytic/convergence-only 자료가 이를 지지했다. 판정은 `passed_circle_interior_only`이며 M0/M1 또는 product 승격이 아니다.
 - reduced differential line의 4-terminal absolute lift는 gauge 외 common-mode null을 가져 현 global MNA에서 exact singular다. 후보 2의 trace block은 `blocked_balanced_projection_and_return_partition`이며 arbitrary conductance로 null을 숨기지 않는다.
 - streaming metadata screening은 P1/P2에 8/57개 profile과 6,816/2,976개 explicit-ref candidate를 찾았다. profile cache 잠재력은 있지만 actual return polygon/connectivity와 source-owner key가 없으므로 production cardinality/속도 주장은 보류한다.

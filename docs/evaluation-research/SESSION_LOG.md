@@ -923,3 +923,58 @@ fine의 모든 anchor-start panel 최대는 `0.331753555 µm <= δ/4=0.364436622
 3. raw `Z'loop`, `N→2N→4N`, residual/condition/current/reciprocity/passivity/dissipative-power를 gate한다.
 4. SAO가 통과한 뒤 동일 geometry/basis의 independent A–v mesh×crop를 순차 실행한다.
 5. 어느 gate든 실패하면 원인을 그대로 기록하고 A0 fallback, symmetrization, clipping 또는 결과 기반 panel tuning을 하지 않는다.
+
+## 2026-08-15 — T1-M1-EQ0 collocation negative result
+
+### 실행 범위
+
+전날 동결한 세 endpoint hash와 full `N={144,288,576}`를 그대로 사용했다. Python 3.12.10, NumPy 2.4.4, SciPy 1.18.0에서 7 positive frequencies를 q20으로 실행하고 fine q10 parity, `r0={0.1,1,10} m` invariance를 별도로 재생했다. 제품 code와 기준 fixture는 수정하지 않았다.
+
+Sol은 root 구현과 독립적으로 같은 raw table과 실패를 재현했다. Luna의 첫 high-frequency smoke가 달랐던 원인은 preregistered regularized C0-A1 `Pmm` 대신 asymptotic self term을 전 frequency에 사용한 것이었다. regularized self로 다시 실행하자 root/Sol과 일치했으므로 차이는 geometry나 exterior가 아니라 self implementation으로 격리됐다.
+
+### SAO response와 mandatory failure
+
+fine q20 `Z'loop`는 100 kHz `3.835212652654+j0.158756770726 Ω/m`에서 2 GHz `65.093071185382+j2341.410241041615 Ω/m`까지다. 전체 raw 3×7 table은 [`T1_M1_EQ0_RESULTS.md`](T1_M1_EQ0_RESULTS.md)에 보존했다.
+
+- medium→fine log-RMS/max/phase: `0.00703814% / 0.0130658% / 0.00159923°`
+- fine q10→q20 max/phase: `9.71910e-9 / 5.56704e-7°`
+- max backward residual / equilibrated `κ1u`: `5.91481e-16 / 9.21355e-13`
+- terminal reciprocity / integrated-current / zero-sum: `7.86166e-16 / 6.66257e-16 / 5.55121e-16`
+- `r0` invariance: `9.59635e-16`, tolerance `4.60678e-11`
+- minimum real part: `3.83405346 Ω/m`
+
+그러나 mandatory SAO signed dissipative-power mismatch는 fine 7 frequencies에서 `3.719e-8, 3.596e-6, 8.461e-5, 9.414e-5, 1.241e-4, 1.384e-4, 1.585e-4`였다. 모두 `1e-8` gate를 넘었고 2 GHz는 `N=144:2.26760e-3 → N=288:6.180e-4 → N=576:1.585e-4`로 수렴 중이지만 fine pass는 아니다. 상태를 `M1-EQ0 blocked_sao_discrete_power_collocation`, mandatory code를 `BLOCKED_SAO_BOUNDARY_POWER_IDENTITY`로 고정했다.
+
+### 원인 귀속
+
+collocation exterior `Gc[m,n]=∫γn g0(rm,r')ds'`의 fine weighted transpose defect `||WGc−(WGc)^T||/||WGc||`는 `2.29761e-4`다. `B=WGc=S+K`에서 terminal/boundary real-power 차이는 `ωµ0 Im(J^H KJ)`로 정확히 귀속된다. 독립 seed attribution control에서 weighted-symmetric projection은 mismatch를 100 kHz `5.20e-7→3.5e-16`, 100 MHz `2.0525e-3→1.1e-15`, 2 GHz `2.0099e-2→3.1e-15`로 줄였다. 이 projection은 원인 확인에만 사용했으며 pass operator로 채택하거나 결과 matrix를 대칭화하지 않았다.
+
+interior `WYs` weighted ordinary-reciprocity diagnostic은 최대 `7.12361e-2`다. frozen mandatory reciprocity는 authoritative terminal `Z'`에 적용됐으므로 추가 historical gate failure로 소급하지 않고 `diagnostic_fail_non_gated`로 보존한다. 다만 symmetric EQ0 terminal에서 hidden asymmetry가 상쇄될 수 있으므로 prospective weak-operator gate 없이 production promotion하지 않는다.
+
+### Independent A–v smoke
+
+SAO와 독립적으로 body-fitted `4Deff`, 2 GHz P1 `A_z–v`를 실행했다. `18,564` free `Az` nodes, `37,720` triangles, copper normal `δ/2`, central tangential `5 µm` smoke mesh에서
+
+`Z'loop=67.0262639174+j2321.0767997 Ω/m`
+
+를 얻었다. saddle/current residual은 `8.238e-25/8.062e-13`이다. centroid field power의 잘못된 `6.728e-2`는 폐기하고 consistent P1 mass form을 사용해 dissipative/reactive mismatch `1.377e-9/9.694e-13`를 재현했다. fine SAO와의 complex difference는 `0.8796%`, magnitude/phase `0.8730%/0.06163°`지만 A–v condition, mesh와 crop convergence가 없어 cross-method pass로 사용하지 않는다.
+
+### Resource
+
+full 3-level/7-frequency run은 `110.842 s`, fine 2 GHz q20+q10+`r0` replay는 `11.895 s`였다. largest-level replay process peak working set `334.219 MiB`, peak pagefile/commit counter `1590.961 MiB`, measured private bytes `1453.297 MiB`다. 현재 host process-only 수치이며 8 GB laptop process-tree/parser coexistence 증거가 아니다.
+
+### Next candidate preregistration
+
+같은 endpoint와 current basis를 보존하는 `M1-EQ0-G1 exterior_Galerkin_diagnostic`을 선택했다.
+
+`GG[m,n]=∫γm∫γn g0(r,r')ds'ds`, `GE=W^-1 GG`, self `ℓ²/(2π)[ln(ℓ/r0)−3/2]`.
+
+weak equation은 `WE=jωµ0 GGJ+WQV`, `J=YsE`; `AE=W−jωµ0 GG Ys`를 푼다. non-touching tensor Gauss와 shared-endpoint analytic-radial Duffy를 사용하고 첫 oracle에서 pair orientation을 독립 계산한다. transpose copy와 사후 matrix 평균은 금지한다. exact radius shift `−ln(r0'/r0)/(2π)ℓℓ^T`, pair parity, weighted symmetry, q10/q20, raw power와 terminal gate를 결과 전에 고정한다.
+
+### Exact next starting point
+
+1. **동결 완료:** G1 self/non-touching/analytic-radial Duffy, independent pair, weak assembly, pair-scale normalization과 prospective interior `Yw` gate를 exact reproduction block에 추가했다.
+2. frozen `N={144,288,576}`에서 pair parity, `GG` weighted symmetry, q10/q20와 `r0` identity를 실행한다.
+3. 같은 3×7 response/power를 재실행한다. exterior power가 복원돼도 interior hidden-mode reciprocity가 실패하면 `P/U/Pout/Uout` Galerkin화를 별도 사전 등록한다.
+4. A–v는 consistent P1 mass로 `h/h2/h4`, crop `2/4/8Deff`, condition과 process-tree resource를 완성한다.
+5. 두 2-D 방법이 통과하기 전 T1-F, source/global/PowerSI correlation 또는 acceleration으로 우회하지 않는다.

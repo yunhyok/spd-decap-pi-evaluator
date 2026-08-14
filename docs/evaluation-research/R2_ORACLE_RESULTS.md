@@ -1,6 +1,6 @@
 # SPD Decap PI Evaluator v0.22.0 — R2 Local Oracle Results
 
-최종 갱신: 2026-08-14 (Asia/Seoul)
+최종 갱신: 2026-08-15 (Asia/Seoul)
 
 이 문서는 [`LOCAL_ORACLE_PLAN.md`](LOCAL_ORACLE_PLAN.md)에 사전 등록한 국부 물리 oracle을 기존 research kernel로 실행한 결과다. 제품 solver, parser, UI, version, installer는 수정하지 않았다. `pass`는 아래에 명시한 coupon과 constitutive scope에서만 유효하며 PowerSI 정확성 승격이나 global-MNA 조립 승인을 뜻하지 않는다.
 
@@ -9,14 +9,14 @@
 | ID | 현재 판정 | 통과한 증거 | 남은 차단 조건 |
 |---|---|---|---|
 | N0 | **통과 — independent scalar branch 한정** | reduced/unreduced Z가 analytic 및 direct solve와 machine precision에서 일치 | mutual/multiterminal block, topology replacement 뒤 재인증, production 연결 |
-| T1 | **차단 — E0, M0 periodic volume과 A1 circle interior 제한 통과** | Cohn lossless stripline `C'`, periodic plate-pair independent 1-D FEM과 `C0-A1` circular interior DtN gate를 재현; M1-EQ0 `N={144,288,576}` preregistered | finite/open M1 SAO–CIM/A–v 실행, finite-length 3-D, 실제 return polygon/connectivity, balanced projection과 same-crop owner partition |
+| T1 | **차단 — E0, M0 periodic volume과 A1 circle interior 제한 통과** | Cohn lossless stripline `C'`, periodic plate-pair independent 1-D FEM과 `C0-A1` circular interior DtN gate를 재현; M1-EQ0 response/mesh/condition/current 수렴 | M1-EQ0 SAO boundary power `1.585e-4 > 1e-8`; direct Galerkin exterior와 converged A–v, finite-length 3-D, 실제 return polygon/connectivity, balanced projection과 same-crop owner partition |
 | S1 | **차단 — rectangle refinement 부분 통과** | 유한 면적 contact, reciprocity/nullspace/passivity; 마지막 level 6→7 변화 0.299% | annulus refinement 오류, 전체 h/h/2/h/4·crop corpus, neck/void/L-shape, interface/owner certificate |
 | V1 | **차단 — constitutive law 통과** | solid-cylinder DC R, internal/external L limit, skin trend, numerical invariant | 명시적 coaxial return loop와 exact-minus-core block 없음 |
 | V2 | **차단 — isolated PEEC 통과** | mutual L, signed return, current sharing, reciprocity/passivity/KCL | 3-D coupon, pad/antipad/plane return, 실제 core subtraction; API가 global composition을 명시적으로 금지 |
 | A1 | **차단 — crop/invariant만 통과** | full-rz-minus-column identity, crop 안정성, Maxwell-C invariant | mesh 변화 4.73% 이상으로 0.5%/1% gate 실패, rectangular 3-D·owner/interface-power 없음 |
 | C1 | **차단 — scalar circular-disk C 부분 통과** | BEM mesh 변화와 footprint 면적은 수치상 양호 | circular launch spreading Z, crop, `ln(1/a)`, triangular/MFDM 교차 검증, point-core replacement, residual gate 없음 |
 
-따라서 현재 R2에서 global 조립과 연결해 승격 가능한 것은 N0의 **독립 scalar two-terminal R/L graph identity**뿐이다. T1-E0, M0 periodic volume과 `C0-A1` circle interior는 명시된 manufactured scope에서만 통과했으며, 물리 correction block은 하나도 global 조립 승인을 받지 않았다. T1의 전체 수치와 소유권 판정은 [`T1_TRACE_ORACLE_RESULTS.md`](T1_TRACE_ORACLE_RESULTS.md), M0 경계 정정과 volume 결과는 [`T1_M0_SLAB_RESULTS.md`](T1_M0_SLAB_RESULTS.md), frozen A0 실패와 A1 circle-only 결과는 [`T1_CIRCLE_DTN_RESULTS.md`](T1_CIRCLE_DTN_RESULTS.md)에 고정한다.
+따라서 현재 R2에서 global 조립과 연결해 승격 가능한 것은 N0의 **독립 scalar two-terminal R/L graph identity**뿐이다. T1-E0, M0 periodic volume과 `C0-A1` circle interior는 명시된 manufactured scope에서만 통과했으며, 물리 correction block은 하나도 global 조립 승인을 받지 않았다. T1의 전체 수치와 소유권 판정은 [`T1_TRACE_ORACLE_RESULTS.md`](T1_TRACE_ORACLE_RESULTS.md), M0 경계 정정과 volume 결과는 [`T1_M0_SLAB_RESULTS.md`](T1_M0_SLAB_RESULTS.md), frozen A0 실패와 A1 circle-only 결과는 [`T1_CIRCLE_DTN_RESULTS.md`](T1_CIRCLE_DTN_RESULTS.md), finite/open negative result는 [`T1_M1_EQ0_RESULTS.md`](T1_M1_EQ0_RESULTS.md)에 고정한다.
 
 ## N0 — exact finite-route reduction
 
@@ -171,7 +171,7 @@ python -m pytest tests/test_research_axisymmetric_electrostatics.py tests/test_s
 
 ## 다음 R2 연구
 
-1. smallest eligible equal-width finite/open T1-M1에서 `C0-A1` SAO–CIM을 실행하고 같은 geometry/current basis의 independent A–v와 비교한다. periodic `coth`를 finite-width exact target으로 사용하지 않는다.
+1. failed M1-EQ0 collocation result를 보존하고 같은 endpoint의 direct double-panel Galerkin exterior를 사전 등록해 raw power와 hidden-mode reciprocity를 재실행한다. 같은 geometry/current basis의 independent A–v는 consistent P1 mass로 mesh/crop convergence를 완성한다.
 2. S1은 circular/void boundary-conforming refinement와 h/h/2/h/4 추정 오차를 먼저 해결한다.
 3. V1/V2는 명시적 coax/ring return을 가진 2-D/3-D reference와 동일 crop의 exact-minus-core matrix를 만든다.
 4. A1은 current cell-centred solver를 승격하지 않고 body-fitted/higher-order 후보를 비교한다.

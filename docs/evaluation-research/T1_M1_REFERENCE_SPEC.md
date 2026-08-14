@@ -1,16 +1,16 @@
 # SPD Decap PI Evaluator v0.22.0 — T1-M1 SAO–CIM / A–v Reference Specification
 
-최종 갱신: 2026-08-14 (Asia/Seoul)
+최종 갱신: 2026-08-15 (Asia/Seoul)
 
-이 문서는 finite-width straight conductor와 explicit return의 smooth-copper broadband series operator를 검증할 T1-M1 실행 계약을 고정한다. 제품 parser/solver 코드는 변경하지 않았다. mandatory circle interior prototype은 [`T1_CIRCLE_DTN_RESULTS.md`](T1_CIRCLE_DTN_RESULTS.md)에서 `C0-A1 passed_circle_interior_only`, lateral-periodic slab은 [`T1_M0_SLAB_RESULTS.md`](T1_M0_SLAB_RESULTS.md)에서 `passed_periodic_1d_volume_only`로 판정됐다. M1-EQ0 geometry, exact full-contour panel hash와 A–v crop/resource 계약은 결과를 보기 전에 동결했지만 finite-width SAO–CIM과 independent 2-D A–v 기준기는 아직 실행되지 않았다. 따라서 T1-M1은 **`preregistered_not_run`**, T1 전체와 global composition은 계속 `blocked`다.
+이 문서는 finite-width straight conductor와 explicit return의 smooth-copper broadband series operator를 검증할 T1-M1 실행 계약을 고정한다. 제품 parser/solver 코드는 변경하지 않았다. mandatory circle interior prototype은 [`T1_CIRCLE_DTN_RESULTS.md`](T1_CIRCLE_DTN_RESULTS.md)에서 `C0-A1 passed_circle_interior_only`, lateral-periodic slab은 [`T1_M0_SLAB_RESULTS.md`](T1_M0_SLAB_RESULTS.md)에서 `passed_periodic_1d_volume_only`로 판정됐다. M1-EQ0 geometry, exact full-contour panel hash와 A–v crop/resource 계약은 결과를 보기 전에 동결했다. 실행 결과 response/mesh/condition/current gate는 통과했지만 mandatory SAO boundary-power identity가 fine에서 최대 `1.585e-4 > 1e-8`로 실패했다. 따라서 현재 T1-M1은 **`BLOCKED_SAO_BOUNDARY_POWER_IDENTITY`**, T1 전체와 global composition은 계속 `blocked`다. raw 결과는 [`T1_M1_EQ0_RESULTS.md`](T1_M1_EQ0_RESULTS.md)에 보존한다.
 
 ## 범위와 독립성
 
 | 항목 | 1차 범위 | 현재 상태 |
 |---|---|---|
-| normative oracle | dense pulse SAO–CIM; homogeneous, nonmagnetic, lossless background; simply connected copper contours | `preregistered_not_run` |
-| independent reference | 2-D volume-current `A_z–v` magnetoquasistatic P1 FEM | `preregistered_not_run` |
-| authoritative output | 동일한 conductor order와 balanced current basis의 complex `Z'(f)` | 없음 |
+| normative oracle | dense pulse SAO–CIM; homogeneous, nonmagnetic, lossless background; simply connected copper contours | `BLOCKED_SAO_BOUNDARY_POWER_IDENTITY` |
+| independent reference | 2-D volume-current `A_z–v` magnetoquasistatic P1 FEM | `2GHz_4Deff_smoke_only`; consistent mass power pass, mesh/crop/condition 미실행 |
+| authoritative output | 동일한 conductor order와 balanced current basis의 complex `Z'(f)` | 없음; collocation raw table은 negative evidence only |
 | 별도 electrostatic block | transverse `C'`; lossy dielectric이면 causal `G'/C'` | T1-E0 외 미실행 |
 | source-derived P2 | `Trace13305` 치수의 artificial continuous-return coupon | manufactured-only |
 | source-faithful board | actual return polygon, transition, same-crop core/DtN owner | blocked |
@@ -392,6 +392,37 @@ Ys,m   = Dm(kp) - Dm(kb)
 
 실행 결과는 `C0-A0 failed_circle_low_frequency`, `C0-A1 passed_circle_interior_only`다. A1 canonical의 N512 worst analytic error `0.118541%`, N256→512 change `0.158276%`, phase `0.019939°`, per-column normwise-infinity dense backward residual `1.2030e-15`, exact-circulant equilibrated `κ1u=9.7539e-13`이다. W1/W3 range-guarded dense withheld가 full-condition 결과를 지지하고 W2는 analytic/convergence-only 보조 자료다. 이는 circle interior만 승인하며 M0/M1 exterior 또는 product를 승인하지 않는다.
 
+## M1-EQ0 실행 후 G1 amendment
+
+동결한 collocation exterior
+
+`Gc[m,n]=∫γn g0(rm,r')ds'`
+
+는 response convergence를 통과했지만 `W=diag(ℓ)`에 대해 fine `||WGc−(WGc)^T||F/||WGc||F=2.29761e-4`였고, mandatory signed dissipative-power mismatch가 2 GHz `1.58517e-4`로 실패했다. 원인과 raw 표는 [`T1_M1_EQ0_RESULTS.md`](T1_M1_EQ0_RESULTS.md)에 고정한다. 사후 weighted symmetrization은 attribution control에만 썼으며 production/research pass operator로 사용하지 않는다.
+
+다음 후보 `M1-EQ0-G1`은 같은 panel endpoint, order, `N`, frequency, branch, current basis와 threshold를 보존하고 exterior만 direct pulse-Galerkin으로 바꾼다.
+
+```text
+GG[m,n] = ∫γm∫γn g0(r,r') ds' ds
+GE      = W^-1 GG
+GG[m,m] = ℓm²/(2π) [ln(ℓm/r0) − 3/2]
+```
+
+weak exterior equation은 `W E=jωµ0 GG J+WQV`, `J=YsE`로 두고 `AE=W−jωµ0 GG Ys`, `Eresp=solve(AE,WQ)`, `Jresp=YsEresp`, `Kc=Q^T WJresp` 순서로 조립한다. `GG`를 기존 collocation 식의 `I−jωµ0 Ys GG`에 그대로 넣지 않는다.
+
+non-touching pair는 deterministic q×q tensor Gauss로 계산한다. shared endpoint `c`에서 `ri(u)=c+uℓi ti`, `rj(v)=c+vℓj tj`로 두고 radial coordinate를 analytic 적분한
+
+```text
+GGij = ℓiℓj/(4π) ∫0^1 [
+          ln(|ℓi ti−ηℓj tj|/r0)
+        + ln(|ηℓi ti−ℓj tj|/r0) − 1
+       ] dη
+```
+
+를 q10/q20로 계산한다. 첫 oracle에서는 두 orientation을 독립 계산해 parity `<=1e-12`를 검사하며 transpose 복사나 matrix 평균을 금지한다. raw weighted symmetry `<=1e-12`를 요구한다. quadrature normalization은 `smn=max(|GG10,mn|,|GG20,mn|,ℓmℓn/(2π))`로 고정하고 `maxmn |GG20−GG10|/smn <=1e-10`와 `||GG20−GG10||F/||GG20||F<=1e-10`을 둘 다 검사한다. `GG(r0')−GG(r0)=−ln(r0'/r0)/(2π)ℓℓ^T`, 기존 terminal/power/`r0` gate도 모두 유지한다.
+
+현재 pulse-collocation interior `Ys`의 weighted ordinary-reciprocity diagnostic은 fine에서 최대 `7.12361e-2`다. frozen mandatory gate는 terminal `Z'` reciprocity였으므로 이를 과거 실행의 추가 mandatory failure로 소급하지 않는다. G1 prospective metric은 `Yw=WYs` `[S·m]`, `Yw,floor=max(1e-12 S·m,1e-10 maxmn|Yw,mn|)`, `||Yw−Yw^T||F/max(||Yw||F,N Yw,floor)<=1e-8`로 동결한다. prospective passivity는 `H(Yw)=(Yw+Yw^H)/2`의 raw `λmin >= -max(Yw,floor,1e-9||Yw||2)`다. Hermitian part의 eigenvalue를 평가하는 것은 matrix를 대칭화해 solver에 넣는 행위가 아니다. G1 exterior가 power identity를 복원해도 이 hidden-mode reciprocity/passivity가 prospective 기준을 넘으면 interior `P/U/Pout/Uout`를 target-tested Galerkin trace space로 다시 이산화하기 전 production promotion을 차단한다.
+
 ## Numerical certificate와 promotion gate
 
 각 frequency, mesh와 independent current column에서 raw 값을 보존하고 다음을 모두 검사한다.
@@ -432,14 +463,14 @@ matrix convergence에서 frequency별 `Z'floor=max(1e-9 Ω/m,1e-9 maxij|Z'fine,i
 
 1. 위 두 radius, 일곱 frequency, 다섯 Fourier mode의 analytic Bessel/Fourier DtN eigenvalue로 SAO interior를 검증한다. **완료:** A0 실패, A1 circle-only 통과.
 2. M0 periodic slab의 analytic + independent 1-D volume 결과를 동결한다. **완료:** `passed_periodic_1d_volume_only`; C0-A1 periodic SAO는 미승격.
-3. smallest eligible equal-width finite/open M1부터 `N,2N,4N`, quadrature, Hankel dynamic-range와 operator-floor certificate를 통과한다.
-4. 같은 geometry/current basis의 A–v `h,h/2,h/4`와 crop `2/4/8 Deff`를 통과한다.
+3. smallest eligible equal-width finite/open M1의 collocation 실행은 **완료/실패:** response는 수렴했지만 `BLOCKED_SAO_BOUNDARY_POWER_IDENTITY`. 같은 endpoint의 `M1-EQ0-G1` direct Galerkin exterior diagnostic을 실행한다.
+4. 같은 geometry/current basis의 A–v는 **2 GHz 4Deff smoke only:** consistent mass power 통과. `h,h/2,h/4`와 crop `2/4/8 Deff`, condition/resource는 미실행이다.
 5. symmetric two-return case에서 symmetry로만 equal split이 나오는지 검증한다.
 6. P2 artificial `Trace13305` coupon을 실행한다.
 7. finite-length T1-F 3-D length-difference reference와 distributed line stamp를 연결한다.
 8. actual board crop와 core owner가 준비된 뒤에만 source-faithful/global adapter 연구로 넘어간다.
 
-`preregistered_not_run → oracle_pass`는 위 수치 gate와 independent reference가 모두 통과할 때만 가능하다. 그 전에는 PowerSI correlation, product accuracy 또는 8 GB production 성능을 주장하지 않는다.
+`blocked_sao_discrete_power_collocation → oracle_pass`는 G1 또는 후속 full Galerkin SAO의 위 수치 gate와 converged independent reference가 모두 통과할 때만 가능하다. 그 전에는 PowerSI correlation, product accuracy 또는 8 GB production 성능을 주장하지 않는다.
 
 ## Primary literature
 

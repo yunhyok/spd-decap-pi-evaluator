@@ -1,6 +1,6 @@
 # SPD Decap PI Evaluator v0.22.0 — T1 Trace Oracle Results
 
-최종 갱신: 2026-08-14 (Asia/Seoul)
+최종 갱신: 2026-08-15 (Asia/Seoul)
 
 이 문서는 직선 finite trace와 명시적 return의 broadband series/distributed physics를 검증하는 T1 연구 결과를 고정한다. 모든 계산은 research-only inline probe이며 제품 Evaluation 경로는 변경하지 않았다.
 
@@ -11,7 +11,7 @@
 | T1-E0 Cohn stripline | `passed_canonical_lossless_only` | zero-thickness, homogeneous, lossless centered stripline의 `C'` | finite thickness, conductor/dielectric loss, real return polygon |
 | T1-M0 periodic plate pair | `passed_periodic_1d_volume_only` | exact identity와 independent normalized FEM의 periodic `m=0` smooth-copper `R(f), L(f)` | finite-width lateral edge/proximity, free-space exterior, C0-A1 periodic SAO |
 | T1-I0 circle interior DtN | `C0-A1 passed_circle_interior_only` | exact Bessel DtN, pulse mesh/self/quadrature, canonical + W1/W3 dense; W2 analytic-only | M1 exterior, corner, independent A–v, full `Z'` |
-| T1-M1 finite-width return | `preregistered_not_run` | M1-EQ0 full-contour `N={144,288,576}` hash, homogeneous SAO–CIM / A–v 동일 terminal basis와 crop/resource gate 동결 | SAO panel/self/conditioning과 independent A–v mesh/crop convergence 실행 |
+| T1-M1 finite-width return | `blocked_sao_discrete_power_collocation` | M1-EQ0 full-contour response/mesh/quadrature/condition/current 수렴과 A–v 2 GHz consistent-mass smoke | SAO boundary power `1.585e-4 > 1e-8`; direct Galerkin exterior, raw interior reciprocity와 A–v mesh/crop convergence |
 | T1-F finite-length | `not_run` | 없음 | 3-D PEEC/FastHenry length-difference de-embedding |
 | T1 source candidates | `geometry_and_net_graph_evidence_ready` | width, endpoint, layer, selected stack/material, selected P1/P2 return artwork/void와 same-net graph | terminal-to-return signed current/field owner와 same-crop core partition |
 | T1 global composition | `blocked_balanced_projection_and_return_partition` | reduced differential operator를 곧바로 stamp할 수 없다는 것 | absolute partial operator 또는 explicit local current constraint, same-crop return/core partition |
@@ -244,7 +244,7 @@ board crop에서는 signal copper, return copper, magnetic/electric field, termi
 ## 다음 실행 순서
 
 1. M0 periodic 1-D volume pass를 독립 slab anchor로 동결한다. finite/open contour를 periodic `coth`와 직접 비교하지 않는다.
-2. smallest eligible equal-width T1-M1부터 finite-width `w/h={5,10,20,50}`, return-width ratio `{1,5,20}`를 homogeneous SAO–CIM과 independent A–v FEM으로 비교한다. SAO는 unbounded log kernel, A–v만 outer crop `{2,4,8}Deff`를 사용한다.
+2. smallest equal-width M1-EQ0의 failed collocation table을 보존하고, 같은 endpoint의 direct double-panel Galerkin unbounded log exterior를 먼저 실행한다. independent A–v는 consistent P1 mass와 outer crop `{2,4,8}Deff`를 사용한다. 이 둘이 통과하기 전 더 큰 `w/h`, return-width sweep으로 확장하지 않는다.
 3. perimeter panel `N,2N,4N`, singular self integral, corner/opposing-projection grading과 volume skin mesh `δ/2,δ/4,δ/8`에서 raw `Z'`, loss, reciprocity, passivity, current conservation을 0.5%/1% gate로 검사한다.
 4. P2 `Trace13305`는 source-derived manufactured asymmetric stripline으로만 실행한다. 실제 board case는 exact finite-width polygon/void boolean tolerance, signed signal-to-return current/field owner와 same-crop core/DtN partition이 증명될 때까지 차단한다.
 5. P1/P2 selected crop의 actual return artwork/net graph 증거에서 terminal-to-return signed current basis와 same-crop core/DtN owner를 만든다. 가까운 via를 return으로 강제하지 않는다.

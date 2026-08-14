@@ -1,6 +1,6 @@
 # SPD Decap PI Evaluator v0.22.0 — Local Physics Oracle Plan
 
-최종 갱신: 2026-08-14 (Asia/Seoul)
+최종 갱신: 2026-08-15 (Asia/Seoul)
 
 이 문서는 PowerSI board curve에 맞추기 전에 각 누락 물리의 부호, 크기, scaling law, energy ownership을 작은 canonical coupon에서 반증 가능하게 검증하는 계획이다. 구현 승인이 있기 전에는 제품 solver에 stamp하지 않는다.
 
@@ -88,7 +88,7 @@ Positive-frequency anchor는 100 kHz, 1/10/100/500 MHz, 1/2 GHz다. skin crossov
 | ID | 판정 | 핵심 근거 |
 |---|---|---|
 | N0 | pass, scalar-only | frozen reproduction 포함 두 제조 예제 reduced/unreduced max relative Z error `5.34e-15`; owner ledger 완전 |
-| T1 | blocked, limited subcase pass | Cohn body-fitted `C'`, periodic plate independent 1-D volume과 `C0-A1` circle interior는 통과; frozen A0는 실패. M1-EQ0 full `N={144,288,576}`는 preregistered_not_run; finite/open SAO–CIM/A–v, finite end, source return polygon, absolute/exact-core operator 미실행 |
+| T1 | blocked, limited subcase pass | Cohn body-fitted `C'`, periodic plate independent 1-D volume과 `C0-A1` circle interior는 통과; frozen A0는 실패. M1-EQ0 full `N={144,288,576}` response는 수렴했지만 SAO boundary power `1.585e-4 > 1e-8`로 `blocked_sao_discrete_power_collocation`; A–v 2 GHz smoke only. finite end, source return polygon, absolute/exact-core operator 미실행 |
 | S1 | blocked | rectangle 최종 refinement 0.299%는 부분 통과했으나 annulus refinement fail, 전체 corpus/crop/ownership 없음 |
 | V1 | blocked | solid-cylinder R/L/skin law는 통과했으나 명시적 coax return loop 없음 |
 | V2 | blocked | PEEC current sharing/invariant는 통과했으나 `global_mna_composable=False`, 3-D/exact-minus-core 없음 |
@@ -145,7 +145,7 @@ N0 high-precision canonical parity는 `||ΔZ||F/max(||Z||F,nZfloor) ≤1e-12` �
 ## 실행 순서
 
 1. N0과 exact-minus-core identity case를 동결한다.
-2. M0 periodic 1-D volume pass를 동결하고, smallest eligible finite/open T1-M1의 C0-A1 SAO–CIM/A–v FEM과 T1-F 3-D length-difference를 실행한다.
+2. M0 periodic 1-D volume pass를 동결하고, smallest eligible finite/open T1-M1의 failed collocation result를 보존한다. 같은 endpoint의 direct Galerkin exterior와 independent A–v mesh/crop convergence를 통과한 뒤에만 T1-F 3-D length-difference를 실행한다.
 3. P1/P2 explicit-ref trace의 actual return polygon/connectivity와 absolute/core DtN owner를 증명한다.
 4. S1, V1/V2, A1, C1의 남은 analytic/mesh/crop/invariant blocker를 해결한다.
 5. PowerSI에서 trace-only, plane-neck, via-pair, pad/antipad, finite-port coupon과 반복 해석을 확보한다.
