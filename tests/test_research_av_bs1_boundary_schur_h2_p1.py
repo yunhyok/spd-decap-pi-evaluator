@@ -516,7 +516,12 @@ def test_executable_stages_are_token_blocked_before_physics(stage: str) -> None:
     payload = json.loads(completed.stdout)["payload"]
     assert payload["schema"] == p1.FAILURE_SCHEMA
     assert payload["status"] == "BLOCKED_AV_BS_RESULT_SCHEMA"
-    assert "token is missing" in payload["detail"]
+    if p1.REVIEW_TOKEN_PATH.is_file():
+        token = json.loads(p1.REVIEW_TOKEN_PATH.read_text(encoding="utf-8"))
+        assert token["schema"] == p1.TOMBSTONE_SCHEMA
+        assert payload["detail"] == "review token schema mismatch"
+    else:
+        assert "token is missing" in payload["detail"]
     if stage == "finalize-primary-h2":
         assert payload["authorization_state"] == "claimed_attempt_failed"
         assert payload["factorization_attempted"] is None

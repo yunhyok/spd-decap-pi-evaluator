@@ -2,11 +2,11 @@
 
 ## Current verdict
 
-현재 AV-BS1 physics artifact 상태는 **`passed_AV_BS_h_stage_only_pending_h2_review`**다. `mandatory_stage_pass=true`지만 `next_stage_authorized=false`, `fine_analytic_pass=null`, `mesh_convergence_pass=null`, `final_circle_pass=null`이다. 따라서 이는 17.5 µm/100 kHz의 coarse `h` 단계 제한 통과이며 circle oracle 또는 h2 권한이 아니다. 후속 H2-P0 assembly manifest는 **`preregistered_H2_P0_assembly_only_no_solve`**다. H2-P1 executable contract는 **`candidate_H2_P1_token_gated_no_solve_pending_static_review_and_clean_commit`**이고 factorization/physics/result artifact와 실행 token은 없다.
+현재 AV-BS1 physics artifact 상태는 **`passed_AV_BS_h2_stage_only_pending_h4_preregistration`**이다. 17.5 µm/100 kHz의 guarded `primary-h2` 한 번이 local mandatory gate를 통과했고 `mandatory_stage_pass=true`, `failure_codes=[]`, factorization/physics `true`다. 그러나 `next_stage_authorized=false`, `fine_analytic_pass=null`, `mesh_convergence_pass=null`, `final_circle_pass=null`이므로 이는 h2 한 mesh의 단계 제한 통과일 뿐 circle oracle 또는 h4 권한이 아니다. H0 negative, H1 coarse-h pass와 H2-P0 assembly manifest는 그대로 보존한다.
 
 2026-08-15 clean commit `4fa5ec80a261c21c8489ecd8b708a62bba769a7a`에서 17.5 µm, 100 kHz, `h` 한 mesh의 guarded `primary-h`를 처음 실행했다. 실행은 **`BLOCKED_AV_BS_MESH_HASH`**로 fail-closed 됐다. factorization, harmonic extension, boundary-Schur `Y`, modal response와 physics pass/fail 값은 생성되지 않았다. 따라서 이 결과는 AV-BS1 physics negative가 아니라 **사전등록 sparse-pattern 계약의 negative**다.
 
-제품 parser/solver/UI/version/installer, PowerSI reference와 GitHub 원격은 변경하지 않았다. `h2`, `h4`, withheld radius와 EQ0도 실행하지 않았다.
+제품 parser/solver/UI/version/installer, PowerSI reference와 GitHub 원격은 변경하지 않았다. `h2`만 preregistered one-use path로 한 번 실행했으며 `h4`, withheld radius와 EQ0는 실행하지 않았다.
 
 ## Immutable H0 artifact
 
@@ -126,7 +126,7 @@ H1 result와 실행 권한을 바꾸지 않고 H2 refined topology와 assembly�
 
 projected outer-boundary midpoint를 포함한 child 128개는 cyclic zero edge가 아니므로 제외한다. raw/canonical K, M, MΓ, support/partition exact hashes와 arithmetic details는 [`T1_AV_BOUNDARY_SCHUR_H2_PREREG.md`](T1_AV_BOUNDARY_SCHUR_H2_PREREG.md)에 고정한다. 이는 h2 result artifact가 아니고 coarse H1의 `next_stage_authorized=false`도 바꾸지 않는다.
 
-## H2-P1 token-gated static candidate
+## H2-P1 frozen execution contract
 
 H2-P0와 H1 artifact를 결합하는 별도 research-only P1 fixture, native process-tree runner, result/failure finalizer, atomic token-consumption path와 bounded regression suite를 작성했다. 현 manifest payload SHA-256은 `05a21364deeb123432a0f52af9a6dbb818f9c9aa2814c34665dfc8da6b8463c4`이고 P1 suite는 `31 passed`, P0+P1 정적 suite는 `37 passed`다. Python compile, PowerShell AST, manifest와 diff check도 통과했다.
 
@@ -139,11 +139,57 @@ H2-P0와 H1 artifact를 결합하는 별도 research-only P1 fixture, native pro
 
 P1은 signed M9 `h→h2`를 trend-only로 유지한다. 성공 결과도 fine analytic/mesh convergence/final circle을 `null`로 두고 `next_stage_authorized=false`여야 한다. Power certificate는 `7809×9` complex128 interior modal-field blob을 보존하고 finalizer가 frozen H2 `K/M`, conductor `Ap`와 trace mass를 assembly-only로 재구성해 각 field의 PDE backward residual, volume integral, boundary power와 mismatch를 독립 재계산한다. 위조된 pass/failure/resource/field 증거는 token을 재사용 가능하게 남기지 않고 consumed tombstone으로 fail-closed한다.
 
-이 candidate에는 review token이 없고 manifest도 `authorization_state=not_authorized`, `available_solve_stages=[]`, factorization/physics `false`다. 따라서 P1 bytes와 상세 계약을 고정한 [`T1_AV_BOUNDARY_SCHUR_H2_P1_PREREG.md`](T1_AV_BOUNDARY_SCHUR_H2_P1_PREREG.md)는 h2 result가 아니다.
+이 절과 [`T1_AV_BOUNDARY_SCHUR_H2_P1_PREREG.md`](T1_AV_BOUNDARY_SCHUR_H2_P1_PREREG.md)는 실행 전 계약의 immutable snapshot이다. preregistration commit `defbd6dda2e62637f41c1a8fc8f8f422aaba0e8b`와 token-only child commit `9f3d36b106cbad033ae35a716e21d47b2e178aa1` 뒤 아래 one-use result가 생성됐다. preregistration 문서 자체는 token binding SHA-256을 보존하기 위해 사후 수정하지 않는다.
+
+## H2 `primary-h2` result
+
+ignored artifact [`../../validation-output/av-bs1/av-bs1-primary-h2-20260814T222208Z.json`](../../validation-output/av-bs1/av-bs1-primary-h2-20260814T222208Z.json)은 17.5 µm, 100 kHz, `h2` 한 mesh의 guarded result다. wrapper, numerical payload, claim, guard, raw resource report와 one-use token consumption을 세 독립 감사가 read-only로 확인했다.
+
+| artifact / lineage | SHA-256 / value |
+|---|---|
+| file bytes / SHA-256 | `4,319,474` / `b890e4af13d97591b3134788984b3657f6f6b046e3043ce0a6f6792fe1ad7f55` |
+| result payload SHA-256 | `5704f3feb5bb90b6e38f8ed3ec67fc690339e9b7f0c1722d40a977295e82593e` |
+| numerical payload SHA-256 | `bd2f6542a93e3a7adc62f4435540752651ddf1cff84226319b4aa5e8dbdc0be5` |
+| raw resource report SHA-256 | `b17468d7383ed5021a783ade4c3b7c1c5e21628580d5f6c298ef1b7b97b26bd2` |
+| preflight / claim / guard SHA-256 | `6eafea2fe291a7d013c02ee560570fa0afc4acecff78b1145ac89250d9387452` / `f6837c2957704e836fedd5db2e64a0bb4a276c4e5cfc98c4f6a5f0c07101b051` / `57b70d0f96c558d6650fdf2e9c0a9d29e89d5ff45464ce64ff3a5b648c40af14` |
+| original authorized token SHA-256 / id | `f8a1aa5804b0edfd58f485faf83f7c6f73c284bc04b1a4abffbd8d0260aca4df` / `f4a717b50a854973b1ddcfe2776eb021` |
+| consumed tombstone SHA-256 | `81574c1099bdd140004940b7cb768a20298b153445c1b16b9e21de95011c48c2` |
+| execution git head / preregistration parent | `9f3d36b106cbad033ae35a716e21d47b2e178aa1` / `defbd6dda2e62637f41c1a8fc8f8f422aaba0e8b` |
+| status / failure codes | `passed_AV_BS_h2_stage_only_pending_h4_preregistration` / `[]` |
+
+mesh는 preregistration 값을 그대로 재현했다: `V/E/T/B=8065/23936/15872/256`, interior/boundary `7809/256`, raw/canonical `K.nnz=55937/48513`, `M.nnz=55937`, `MΓ.nnz=768`, mesh SHA-256 `34eb4f9cadcefd0b20cff3ae6c483dbee4e412ca11d0ff1a8c2c6f49ec7896a9`다. signed-M9 conductor interior field certificate는 little-endian complex128 `7809×9`, raw `1,124,496 B`이고 finalizer가 frozen `K/M/MΓ`에서 conductor PDE residual과 volume power를 다시 계산했다.
+
+| h2 stage-evaluable gate | raw value | verdict |
+|---|---:|---|
+| full assembly transpose relative | `0` | pass |
+| background / conductor solve residual | `5.981236336103848e-17 / 5.383112747661412e-17` | pass |
+| background / conductor `κ1u` | `1.0244351010046593e-11 / 1.0244323279051323e-11` | pass |
+| signed-M9 PDE residual max | `4.421492019510585e-16` | pass |
+| reverse-order relative | `2.465264212368452e-16` | pass |
+| raw full-space reciprocity relative | `1.8831838353064343e-15` | pass |
+| minimum Hermitian eigenvalue / tolerance | `2.3635694288740116e-6 / 2.2396879199202253e-13 S·m` | pass |
+| max signed-mode power mismatch | `1.1134002810265329e-13` | pass |
+| `m↔-m` relative | `1.6448277478488274e-16` | diagnostic/trend only; not a final gate at `h2` |
+
+독립 감사의 다른 assembly evaluation order는 power mismatch `1.29614e-13`을 재현했다. artifact 값과의 차이는 binary64 roundoff 범위이며 둘 다 `1e-8` gate보다 충분히 작다.
+
+| trend-only comparison | RMS relative | max relative | max eligible phase |
+|---|---:|---:|---:|
+| `h→h2` signed M9 | `0.00462796342945947` (`0.462796%`) | `0.008680146425905828` (`0.868015%`) | `0.00016639608723203282°` |
+| h2 analytic | `0.0015525356105053729` (`0.155254%`) | `0.0029139683841210083` (`0.291397%`) | `0.00005682250879185882°` |
+
+두 행은 모두 `gate_applied=false`, `gate_pass=null`인 진단값이다. mandatory mesh convergence와 fine analytic 판정은 별도 h4에서 처음 수행한다.
+
+resource runner는 child exit `0`, successful tree sample `71`, wall `8.6075797 s`, stop reason `null`과 mandatory resource gate `true`를 기록했다. runner-inclusive execution-tree peak WS는 `348,827,648 B = 332.667969 MiB`, private/commit은 `1,704,058,880 B = 1.587029 GiB`, minimum available physical memory는 `45.138222 GiB`, minimum system commit headroom은 `69.289360 GiB`였다. 이는 이 host의 h2-stage evidence이며 8 GB product proof가 아니다.
+
+active token file은 SHA-256 `81574c1099bdd140004940b7cb768a20298b153445c1b16b9e21de95011c48c2`의 `AV-BS1-h2-p1-consumed-review-token-v1`로 교체됐다. `uses_remaining=0`, `consumption_validated_pass=true`, result/resource/guard evidence `true`, `next_stage_authorized=false`이므로 같은 one-use token은 재사용할 수 없다.
+
+실행 뒤 정적 회귀의 세 executable-stage case는 pre-run의 “token missing”과 post-run의 “consumed token schema mismatch”를 모두 fail-closed success로 인정하도록 lifecycle assertion만 갱신했다. post-run P1 test SHA-256은 `9d266ab5819b30bcae4d269f8c064d496b79290f509fbef7e4a95ab2f7f98654`, P0+P1 결과는 `37 passed`다. artifact가 결합한 preregistration test SHA-256 `01f0203009087a97f00b58461fb6fda339a2866700399be8d5453bdff47c3199`는 commit `defbd6d...`의 역사적 실행 입력으로 그대로 보존한다.
 
 ## Exact next starting point
 
 1. H0 negative와 H1 h-stage artifact를 모두 immutable하게 보존한다.
 2. H2-P0 manifest-only fixture/runner/test/docs commit `4c1e3fce8aac659dd0aedb06c2b6d274fff73a12`를 보존한다.
-3. candidate H2-P1 fixture/result schema/process-tree 900 s guard, independent modal residual/power certificate와 exact bytes를 독립 감사해 clean research commit에 고정한다.
-4. 그 P1 commit에 묶인 별도 one-use review token 전에는 h2 factorization/physics를 실행하지 않는다. `h2`를 통과해도 h4는 또 다른 preregistration 전 금지한다.
+3. H2 result digest, 독립 audit와 consumed tombstone을 먼저 research commit에 고정한다.
+4. H4 mesh lineage, canonical assembly, resource bound, h2→h4/fine analytic gates와 별도 fixture/runner/result schema를 결과와 무관하게 사전등록한다.
+5. H4 clean preregistration commit, static audit와 별도 one-use token 전에는 h4 factorization/physics를 실행하지 않는다. h4가 통과해도 final circle/withheld radius/EQ0는 각각의 후속 계약 전까지 금지한다.

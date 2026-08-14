@@ -1231,7 +1231,7 @@ Sol은 현재 LF bytes에서 lineage/cancellation/assembly/resource와 no-solve 
 
 ## 2026-08-15 — AV-BS1 H2-P1 token-gated static candidate
 
-H2-P0 clean commit `4c1e3fce8aac659dd0aedb06c2b6d274fff73a12`를 immutable input으로 두고, 별도 research-only H2-P1 fixture, native PowerShell process-tree runner, result/failure finalizer와 bounded tests를 작성했다. 현재 상태는 **`candidate_H2_P1_token_gated_no_solve_pending_static_review_and_clean_commit`**다. review token 파일은 없고 manifest는 `authorization_state=not_authorized`, `available_solve_stages=[]`, `factorization_performed=false`, `physics_solve_performed=false`를 출력한다. h2 factorization/physics는 실행하지 않았다.
+H2-P0 clean commit `4c1e3fce8aac659dd0aedb06c2b6d274fff73a12`를 immutable input으로 두고, 별도 research-only H2-P1 fixture, native PowerShell process-tree runner, result/failure finalizer와 bounded tests를 작성했다. 이 preregistration 시점 상태는 **`candidate_H2_P1_token_gated_no_solve_pending_static_review_and_clean_commit`**였다. review token 파일은 없고 manifest는 `authorization_state=not_authorized`, `available_solve_stages=[]`, `factorization_performed=false`, `physics_solve_performed=false`를 출력했다. 이 절의 static audit 동안 h2 factorization/physics는 실행하지 않았다.
 
 P1은 H1 artifact file/result/numerical/resource/operator/mode-view와 consumed H1 tombstone, P0 commit/fixture/runner/test/doc/manifest/assembly/resource hash를 모두 검증한다. one-use token은 clean descendant commit과 exact P1 bytes를 요구하며 runner가 preflight 뒤 atomic `CreateNew` claim을 만든다. child launch 뒤에는 pass, child failure, resource stop, runner/finalizer failure 어느 경우에도 token을 canonical consumed tombstone으로 `fsync + os.replace`한다. 위조된 tentative pass도 token을 재사용 가능하게 남기지 않고 exit 2로 강등한다.
 
@@ -1259,3 +1259,28 @@ Python compile, PowerShell AST, manifest와 diff check를 통과했다. Sol은 e
 2. 그 commit의 fixture/runner/test/doc/manifest와 H1/P0 lineage에 결합한 별도 tracked one-use token을 독립 review한다.
 3. token commit 전에는 `primary-h2`를 실행하지 않는다. token이 열려도 17.5 µm/100 kHz `h2` 한 mesh만 guarded attempt로 실행한다.
 4. pass든 fail이든 result/resource와 consumed tombstone을 독립 감사·commit한다. h2 stage-only pass 뒤에도 H4는 별도 preregistration/token 전 금지한다.
+
+## 2026-08-15 — AV-BS1 H2 one-use stage result
+
+H2-P1 exact bytes를 commit `defbd6dda2e62637f41c1a8fc8f8f422aaba0e8b`에 사전등록하고, authorized token SHA-256 `f8a1aa5804b0edfd58f485faf83f7c6f73c284bc04b1a4abffbd8d0260aca4df`만 immediate child commit `9f3d36b106cbad033ae35a716e21d47b2e178aa1`에 추가했다. full preflight payload SHA-256 `6eafea2fe291a7d013c02ee560570fa0afc4acecff78b1145ac89250d9387452`가 clean checkout, H1/P0/P1 lineage와 one-use metadata를 모두 검증한 뒤 17.5 µm/100 kHz `primary-h2`를 한 번 실행했다.
+
+ignored result [`../../validation-output/av-bs1/av-bs1-primary-h2-20260814T222208Z.json`](../../validation-output/av-bs1/av-bs1-primary-h2-20260814T222208Z.json)은 `4,319,474 B`, SHA-256 `b890e4af13d97591b3134788984b3657f6f6b046e3043ce0a6f6792fe1ad7f55`다. result/numerical/resource payload SHA-256은 각각 `5704f3feb5bb90b6e38f8ed3ec67fc690339e9b7f0c1722d40a977295e82593e`, `bd2f6542a93e3a7adc62f4435540752651ddf1cff84226319b4aa5e8dbdc0be5`, `b17468d7383ed5021a783ade4c3b7c1c5e21628580d5f6c298ef1b7b97b26bd2`다. claim/guard SHA-256은 `f6837c2957704e836fedd5db2e64a0bb4a276c4e5cfc98c4f6a5f0c07101b051` / `57b70d0f96c558d6650fdf2e9c0a9d29e89d5ff45464ce64ff3a5b648c40af14`다.
+
+result status는 **`passed_AV_BS_h2_stage_only_pending_h4_preregistration`**이다. `mandatory_stage_pass=true`, `failure_codes=[]`, factorization/physics `true`이고 `fine_analytic_pass`, `mesh_convergence_pass`, `final_circle_pass`는 `null`, `next_stage_authorized=false`다. H2 mesh/assembly는 P0 exact hashes와 `V/E/T/B=8065/23936/15872/256`, raw/canonical `K.nnz=55937/48513`, `M/MΓ.nnz=55937/768`을 재현했다.
+
+stage-evaluable gate는 background/conductor solve residual `5.9812363361e-17 / 5.3831127477e-17`, `κ1u=1.0244351010e-11 / 1.0244323279e-11`, signed-M9 PDE residual max `4.4214920195e-16`, reverse/raw reciprocity `2.4652642124e-16 / 1.8831838353e-15`, Hermitian minimum/tolerance `2.3635694289e-6 / 2.2396879199e-13 S·m`, max power mismatch `1.1134002810e-13`으로 통과했다. Sol의 독립 operation-order power 재계산 `1.29614e-13`도 roundoff 범위에서 같은 gate를 통과했다.
+
+`h→h2` trend-only RMS/max/phase는 `0.462796% / 0.868015% / 0.000166396°`, h2 analytic trend-only RMS/max/phase는 `0.155254% / 0.291397% / 0.0000568225°`다. 이는 H4 mesh/fine analytic/final circle gate가 아니다.
+
+resource report는 child exit `0`, successful tree samples `71`, wall `8.6075797 s`, stop `null`, peak tree WS `348,827,648 B`, peak private/commit `1,704,058,880 B`, mandatory resource gate `true`를 기록했다. 이 수치는 현재 host의 h2 evidence이며 8 GB product proof가 아니다.
+
+runner는 active token을 SHA-256 `81574c1099bdd140004940b7cb768a20298b153445c1b16b9e21de95011c48c2`의 `AV-BS1-h2-p1-consumed-review-token-v1`로 교체했다. `uses_remaining=0`, `consumption_validated_pass=true`, result/resource/guard evidence `true`, evidence errors/failure codes 없음, `next_stage_authorized=false`를 독립 확인했다. Sol은 수학/gate와 독립 K/M/Ap 재구성을, Terra는 native process-tree/resource/claim/guard/consumption을, Luna는 checksum/schema/문서 전사를 각각 승인했다. solve 재실행은 없고 제품 코드와 GitHub 원격도 변경하지 않았다.
+
+post-run lifecycle regression은 executable-stage가 pre-run `token missing`뿐 아니라 post-run `consumed token schema mismatch`에서도 solve 전에 차단되는지 검사하도록 갱신했다. P1 post-run test SHA-256 `9d266ab5819b30bcae4d269f8c064d496b79290f509fbef7e4a95ab2f7f98654`, P0+P1 `37 passed`를 재현했다. preregistration artifact에 결합된 원래 test SHA-256 `01f0203009087a97f00b58461fb6fda339a2866700399be8d5453bdff47c3199`는 commit `defbd6d...`에 immutable하게 남는다.
+
+### Exact next starting point
+
+1. H2 artifact digest, 세 독립 audit와 consumed tombstone을 research-only commit에 고정한다.
+2. H4 mesh lineage/canonical assembly/resource upper bound, local gates, mandatory `h2→h4` RMS/max/phase, fine analytic/degeneracy와 result schema를 결과와 무관하게 별도 사전등록한다.
+3. H4 static audit와 clean commit, 별도 one-use token 전에는 H4 factorization/physics를 실행하지 않는다.
+4. H4가 통과해도 final circle, withheld radius와 EQ0는 각각의 후속 preregistration 전까지 차단한다.
