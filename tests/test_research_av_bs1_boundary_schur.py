@@ -30,11 +30,28 @@ def _review_token(path: Path) -> Path:
         "authorized_stage": "primary-h",
         "prereg_commit": avbs.PREREG_COMMIT,
         "manifest_sha256": avbs.EXPECTED_MESH["h"][4],
+        "prior_failed_artifact_sha256": avbs.H0_ARTIFACT_SHA256,
+        "h1_cyclic_diagonal_sha256": avbs.EXPECTED_H_ASSEMBLY["cyclic_diagonal_sha256"],
         "fixture_sha256": avbs._file_sha256(FIXTURE),
         "runner_sha256": avbs._file_sha256(RUNNER),
         "next_stage_authorized": True,
-        "review_disposition": "approved_static_fixture_only",
-        "review_scope": "authorize_primary_h_only_after_committed_clean_checkout",
+        "review_disposition": "approved_static_h1_correction_only",
+        "review_scope": "authorize_h1_primary_h_rerun_only_after_committed_clean_checkout",
+        "independent_audits": [
+            "Sol mathematical and fail-closed contract review",
+            "Terra Windows runner and process-tree safety review",
+            "Luna schema, resource, and bounded-test review",
+        ],
+        "review_evidence": {
+            "manifest_payload_sha256": "e79cd30b88fbf339399b3b059ce958138a5b16ed90bc52cde1ed0f87c2dd9a95",
+            "powershell_ast": "passed",
+            "static_test_command": "python -m pytest -q tests/test_research_av_bs1_boundary_schur.py",
+            "static_test_result": "16 passed",
+            "h0_failure_status": "BLOCKED_AV_BS_MESH_HASH_before_factor",
+            "h1_canonical_stiffness_sha256": avbs.EXPECTED_H_ASSEMBLY[
+                "canonical_stiffness_sha256"
+            ],
+        },
         "reviewed_utc": "2026-08-15T00:00:00Z",
         "review_token_id": "0123456789abcdef0123456789abcdef",
     }
@@ -95,6 +112,69 @@ def test_exact_p1_triangle_stiffness_and_mass() -> None:
     expected_m = np.asarray(((2.0, 1.0, 1.0), (1.0, 2.0, 1.0), (1.0, 1.0, 2.0))) / 24.0
     np.testing.assert_allclose(stiffness.toarray(), expected_k, rtol=0.0, atol=1.0e-10)
     np.testing.assert_allclose(mass.toarray(), expected_m, rtol=0.0, atol=0.0)
+
+
+def test_h_cyclic_diagonal_canonicalization_is_topology_frozen() -> None:
+    nodes, triangles = avbs.seed_mesh()
+    manifest = avbs.mesh_manifest(nodes, triangles)
+    raw, mass = avbs._assemble_volume(nodes, triangles)
+    canonical, certificate = avbs._canonicalize_cyclic_diagonals(
+        raw,
+        nodes,
+        triangles,
+        mesh_condition=manifest["max_element_kappa2"],
+    )
+    _, boundary = avbs.edge_data(triangles)
+    _, _, mapping = avbs._boundary_partition(len(nodes), boundary)
+    trace = avbs._assemble_trace_mass(nodes, boundary, mapping)
+
+    assert certificate["tag_count"] == 1920
+    assert certificate["tag_sha256"] == avbs.EXPECTED_H_ASSEMBLY["cyclic_diagonal_sha256"]
+    assert certificate["two_triangle_incidence_pass"] is True
+    assert certificate["cancellation_bound"] == pytest.approx(
+        5.788860430596403e-13, rel=1.0e-15
+    )
+    assert certificate["maximum_cancellation_ratio"] == pytest.approx(
+        2.1676835831040652e-13, rel=1.0e-15
+    )
+    assert certificate["cancellation_margin"] == pytest.approx(2.670528335278025, rel=1.0e-15)
+    assert certificate["nonzero_tagged_binary64_values"] == 1917
+    assert certificate["maximum_tagged_binary64_abs"] == pytest.approx(
+        4.234607331454754e-09, rel=1.0e-15
+    )
+    assert certificate["raw_constant_null_relative"] == pytest.approx(
+        1.2640750576031277e-16, rel=1.0e-15
+    )
+    assert certificate["canonical_constant_null_relative"] == pytest.approx(
+        1.2084098802490622e-16, rel=1.0e-15
+    )
+    assert certificate["raw_transpose_relative"] == 0.0
+    assert certificate["canonical_transpose_relative"] == 0.0
+    assert certificate["correction_relative_frobenius"] == pytest.approx(
+        1.3572884739080543e-16, rel=1.0e-15
+    )
+    assert raw.nnz == avbs.EXPECTED_H_ASSEMBLY["raw_stiffness_nnz"]
+    assert canonical.nnz == avbs.EXPECTED_H_ASSEMBLY["canonical_stiffness_nnz"]
+    assert mass.nnz == avbs.EXPECTED_H_ASSEMBLY["mass_nnz"]
+    assert trace.nnz == avbs.EXPECTED_H_ASSEMBLY["trace_mass_nnz"]
+    assert avbs._sparse_sha256(canonical) == avbs.EXPECTED_H_ASSEMBLY[
+        "canonical_stiffness_sha256"
+    ]
+    assert avbs._sparse_sha256(raw) == avbs.EXPECTED_H_ASSEMBLY["raw_stiffness_sha256"]
+    assert avbs._sparse_sha256(mass) == avbs.EXPECTED_H_ASSEMBLY["mass_sha256"]
+    assert avbs._sparse_sha256(trace) == avbs.EXPECTED_H_ASSEMBLY["trace_mass_sha256"]
+
+
+def test_cyclic_quadrilateral_diagonals_cancel_but_noncyclic_does_not() -> None:
+    rectangle = [(0.0, 0.0), (2.0, 0.0), (2.0, 1.0), (0.0, 1.0)]
+    first, _ = avbs._assemble_volume(rectangle, [(0, 1, 2), (0, 2, 3)])
+    second, _ = avbs._assemble_volume(rectangle, [(0, 1, 3), (1, 2, 3)])
+    assert float(first[0, 2]) == 0.0
+    assert float(second[1, 3]) == 0.0
+
+    noncyclic = [(0.0, 0.0), (2.0, 0.0), (1.25, 1.0), (0.0, 1.0)]
+    control, _ = avbs._assemble_volume(noncyclic, [(0, 1, 2), (0, 2, 3)])
+    assert abs(float(control[0, 2])) > 1.0
 
 
 def test_consistent_boundary_trace_mass() -> None:
@@ -166,6 +246,12 @@ def test_review_token_is_bound_to_current_fixture_and_runner(
     token_path.write_bytes(avbs.canonical_bytes(tampered))
     with pytest.raises(avbs.AvBsError, match="fixture hash mismatch"):
         avbs._validate_review_token(token_path)
+    token_path = _review_token(tmp_path / "review.json")
+    tampered = json.loads(token_path.read_text(encoding="utf-8"))
+    tampered["review_evidence"]["h1_canonical_stiffness_sha256"] = "0" * 64
+    token_path.write_bytes(avbs.canonical_bytes(tampered))
+    with pytest.raises(avbs.AvBsError, match="canonical_stiffness_sha256 mismatch"):
+        avbs._validate_review_token(token_path)
 
 
 def test_finalizer_preserves_child_failure_code(
@@ -193,6 +279,15 @@ def test_finalizer_preserves_child_failure_code(
     assert wrapper["payload"]["status"] == "BLOCKED_AV_BS_POWER"
     assert wrapper["payload"]["failure_codes"] == ["BLOCKED_AV_BS_POWER"]
     assert wrapper["payload"]["mandatory_stage_pass"] is False
+
+    resource["child_exit_code"] = 0
+    resource_path.write_bytes(avbs.canonical_bytes(resource))
+    mismatched = avbs.finalize_primary_h(numerical_path, resource_path, review_path)
+    assert mismatched["payload"]["failure_codes"] == [
+        "BLOCKED_AV_BS_POWER",
+        "BLOCKED_AV_BS_RESULT_SCHEMA",
+    ]
+    assert mismatched["payload"]["mandatory_stage_pass"] is False
 
 
 def test_fixture_ast_forbids_product_imports_and_dense_inverse() -> None:
@@ -236,3 +331,27 @@ def test_runner_is_parseable_and_h_only() -> None:
     assert "-WindowStyle Hidden" in source
     assert "TREE_WS_STOP" in source
     assert "MONITOR_QUERY_FAILED" in source
+    assert "$childProcessHandle = $process.Handle" in source
+    assert "child exit code was not retained" in source
+
+
+@pytest.mark.skipif(sys.platform != "win32", reason="Windows runner contract")
+def test_powershell_redirected_child_handle_retains_exit_code(tmp_path: Path) -> None:
+    stdout_path = str(tmp_path / "stdout.txt").replace("'", "''")
+    stderr_path = str(tmp_path / "stderr.txt").replace("'", "''")
+    python_path = str(Path(sys.executable)).replace("'", "''")
+    command = (
+        f"$p=Start-Process -FilePath '{python_path}' "
+        "-ArgumentList '-c \"raise SystemExit(2)\"' -PassThru -WindowStyle Hidden "
+        f"-RedirectStandardOutput '{stdout_path}' -RedirectStandardError '{stderr_path}';"
+        "$h=$p.Handle;$p.WaitForExit();$p.Refresh();"
+        "if($null -eq $p.ExitCode){exit 3};Write-Output $p.ExitCode"
+    )
+    completed = subprocess.run(
+        ["powershell.exe", "-NoProfile", "-Command", command],
+        cwd=ROOT,
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    assert completed.stdout.strip() == "2"

@@ -4,7 +4,7 @@
 
 ## 판정과 범위
 
-현재 상태는 **`AV-BS1-CIRCLE preregistered_not_run`**이다. 이 문서는 G2의 100 kHz circle reciprocity/cancellation 실패를 보정하는 문서가 아니라, 그 결과를 보지 않고도 정의할 수 있는 독립 volume-FEM reference candidate를 고정한다. 제품 parser, solver, UI, version과 installer는 수정하지 않는다.
+현재 상태는 **`AV-BS1-H0_BLOCKED_SPARSE_PATTERN_CONTRACT_BEFORE_FACTOR__H1_CYCLIC_DIAGONAL_CORRECTION_PREREGISTERED_NOT_RUN`**이다. 이 문서는 G2의 100 kHz circle reciprocity/cancellation 실패를 보정하는 문서가 아니라, 그 결과를 보지 않고도 정의할 수 있는 독립 volume-FEM reference candidate를 고정한다. 제품 parser, solver, UI, version과 installer는 수정하지 않는다.
 
 AV-BS1은 아직 oracle이 아니다. 첫 circle solve, mesh convergence, 독립 감사와 withheld radius를 모두 통과해야 circle-interior reference로 제한 승격할 수 있다. 이 문서의 어떤 결과도 finite/open EQ0, full T1, GlobalMNA, PowerSI accuracy 또는 8 GB product performance를 승인하지 않는다.
 
@@ -195,7 +195,7 @@ edeg(m) = |Yhat_m-Yhat_-m| / max(|Yhat_m|,|Yhat_-m|,Ymode_floor), m=1…4
 
 ## Standalone `h` fixture freeze
 
-연구 전용 구현은 [`../../tools/research/av_bs1_boundary_schur.py`](../../tools/research/av_bs1_boundary_schur.py)와 [`../../tools/research/run_av_bs1_stage.ps1`](../../tools/research/run_av_bs1_stage.ps1)에 고정했다. 현재 상태는 **`AV-BS1-H-fixture_static_passed_primary_h_not_run`**이다. 이 checkpoint에서 physics response는 실행하지 않았고 `h2`, `h4`, withheld radius와 EQ0 CLI는 존재하지 않는다.
+연구 전용 구현은 [`../../tools/research/av_bs1_boundary_schur.py`](../../tools/research/av_bs1_boundary_schur.py)와 [`../../tools/research/run_av_bs1_stage.ps1`](../../tools/research/run_av_bs1_stage.ps1)에 고정했다. H0 static checkpoint 뒤 `primary-h` command는 한 번 실행됐지만 sparse-pattern gate에서 factor 전에 차단됐고 physics response는 생성되지 않았다. `h2`, `h4`, withheld radius와 EQ0 CLI는 존재하지 않는다.
 
 - fixture는 `src/spd_decap_pi`를 import하지 않는 standalone NumPy/SciPy 연구 도구다.
 - `K`, consistent volume `M`, boundary trace `MΓ`를 raw CCW P1 element에서 조립하고 full dense interior matrix, `inverse`, `Sp-Sb`, `Dp-Db`, 사후 대칭화를 금지한다.
@@ -220,7 +220,25 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass `
 # manifest payload SHA-256 e79cd30b88fbf339399b3b059ce958138a5b16ed90bc52cde1ed0f87c2dd9a95
 ```
 
-fixture SHA-256은 `94cce6454dd632e83db83a621f5192823cd113348970f2e4894c23733de1c066`, runner SHA-256은 `31da5df7e17456d3b82754b0c581ec704521f6d21a8875961e4b6d0fde6555f7`다. `.gitattributes`는 `tools/research`의 Python/PowerShell/JSON과 해당 test를 `eol=lf`로 고정해 `core.autocrlf`가 raw token hash를 바꾸지 못하게 한다. 파일 또는 line-ending policy가 바뀌면 token이 무효가 되며 재감사·새 commit 전에는 실행할 수 없다.
+위 `13 passed`, fixture `94cce645...`, runner `31da5df...`는 **H0 historical static checkpoint**다. H0 결과와 H1 correction은 [`T1_AV_BOUNDARY_SCHUR_RESULTS.md`](T1_AV_BOUNDARY_SCHUR_RESULTS.md)에 분리했다. `.gitattributes`는 `tools/research`의 Python/PowerShell/JSON과 해당 test를 `eol=lf`로 고정해 `core.autocrlf`가 raw token hash를 바꾸지 못하게 한다. 파일 또는 line-ending policy가 바뀌면 token이 무효가 되며 재감사·새 commit 전에는 실행할 수 없다.
+
+## H1 cyclic-diagonal correction contract
+
+H0의 `V+2E=14,081`은 raw nodal adjacency와 consistent mass pattern이지 post-zero-elimination stiffness nnz가 아니다. 15 annular bands × 128 sectors의 triangulation diagonal 1,920개는 cyclic isosceles trapezoid를 가르므로 exact P1 stiffness weight가 0이다.
+
+H1은 generator lineage로 만든 undirected tag 1,920개와 SHA-256 `e80c75ed02030cb22b648b39d613abac42bf6a4c4dfb46704789eedcc17f5e91`을 요구한다. 각 tag는 incident triangle이 정확히 둘이어야 하고 두 unassembled local off-diagonal contribution의 상대 상쇄는
+
+```text
+abs(k1+k2)/(abs(k1)+abs(k2)) <= 128*u*kappa2,max
+```
+
+를 통과해야 한다. h에서 우변은 `5.788860430596403e-13`, 관측 최대는 `2.1676835831040652e-13`다. tag는 magnitude로 발견하지 않는다.
+
+raw symmetric residue `k=Kij=Kji`의 edge Laplacian block만 제거해 `Kij=Kji=0`, `Kii+=k`, `Kjj+=k`로 행합을 보존한다. 사후 평균 대칭화가 아니다. untagged off-diagonal은 바꾸지 않으며 canonical support는 `K.nnz=10,241`, `M.nnz=14,081`, `MΓ.nnz=384`여야 한다. raw/canonical K, M, MΓ value+pattern hash, constant-null residual, correction Frobenius, tag incidence와 manufactured cyclic/noncyclic control을 16개 static test에 고정한다.
+
+H0에서 runner가 redirected child handle을 retain하지 않아 failure process의 exit code를 0으로 기록한 provenance 오류도 H1에서 수정한다. child handle을 poll 전에 획득하고 missing exit code는 fail-closed한다. success wrapper는 exit 0, canonical failure wrapper는 exit 2만 허용하며 불일치는 original failure code와 `BLOCKED_AV_BS_RESULT_SCHEMA`를 함께 보존한다.
+
+H1 static freeze는 `16 passed`, fixture SHA-256 `e2a1c8efff67873b57dc7a658b013e3e76d0c921988011f4c8e70cd25f00f8a7`, runner SHA-256 `dd880de721b9a688ae953c7363dc4a8b482ec1b26f59871d4ca8f83397eb2b7c`다. review token은 H0 artifact SHA-256, cyclic tag hash, canonical K hash와 세 독립 감사 증거까지 검증한다. 이 checkpoint가 clean commit되기 전 H1 primary-h는 계속 차단된다.
 
 ## Conditional EQ0 A–v contract
 
@@ -253,9 +271,9 @@ fixture SHA-256은 `94cce6454dd632e83db83a621f5192823cd113348970f2e4894c23733de1
 
 ## Exact next starting point
 
-1. standalone fixture, runner, 13개 bounded test, result schema와 tracked primary-h review token을 함께 commit한다. physics solve는 이 commit에 포함하지 않는다.
-2. clean committed checkout에서 외부 runner로 17.5 µm/100 kHz `h` 한 mesh만 실행한다.
-3. stage-evaluable raw residual/condition/reciprocity/passivity/power와 execution-tree resource artifact를 독립 검토해 실패면 즉시 동결한다.
+1. H0 artifact를 immutable하게 보존하고 H1 fixture, runner, 16개 bounded test, result schema와 새 tracked primary-h review token을 함께 commit한다. physics solve는 이 commit에 포함하지 않는다.
+2. clean committed checkout에서 외부 runner로 17.5 µm/100 kHz `h` 한 mesh만 재실행한다.
+3. cyclic canonicalization certificate와 stage-evaluable raw residual/condition/reciprocity/passivity/power, execution-tree resource artifact를 독립 검토해 실패면 즉시 동결한다.
 4. `h` 결과 review 뒤 별도 preregistration·token·fixture commit이 생기기 전에는 `h2`를 구현하거나 실행하지 않는다.
 
 ## Primary literature

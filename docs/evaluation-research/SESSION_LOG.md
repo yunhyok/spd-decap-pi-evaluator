@@ -1157,3 +1157,23 @@ review token은 위 hash, prereg commit, h manifest, static test와 Sol/Terra/Lu
 2. clean checkout과 token/hash를 다시 확인한 뒤 external runner로 17.5 µm/100 kHz `primary-h` 한 mesh만 실행한다.
 3. raw residual/condition/assembly/reverse/full reciprocity, passivity, signed M9 power와 execution-tree resource artifact를 독립 review한다. 어느 gate든 실패하면 결과를 동결하고 중지한다.
 4. h 결과가 통과해도 별도 h2 preregistration·fixture·review token commit 전에는 h2를 구현하거나 실행하지 않는다.
+
+## 2026-08-15 — AV-BS1 H0 pre-factor failure and H1 correction freeze
+
+static fixture commit `4fa5ec80a261c21c8489ecd8b708a62bba769a7a`의 clean checkout에서 17.5 µm/100 kHz `primary-h` 한 mesh를 처음 실행했다. 실행은 약 `1.0625909 s` 뒤 **`BLOCKED_AV_BS_MESH_HASH: h sparse nnz mismatch`**로 끝났다. resource gate는 8 samples, execution-tree peak WS `170.828125 MiB`, private/commit `1.355278 GiB`, stop reason `null`로 통과했다. 그러나 factorization과 FEM boundary response 전에 차단됐으므로 solve timing, physics negative 또는 8 GB laptop 증거가 아니다.
+
+ignored artifact `validation-output/av-bs1/av-bs1-primary-h-20260814T183617Z.json`의 file SHA-256은 `848a2c5a3683f492d84b59be42ea20b9ed5e2e745304cb9ded88131e8bca45f0`, final payload는 `5f0b185809cfe3fd8cb033c86ff74abfee5b3c7ccf75536227affc1e0b588a46`, numerical payload는 `448a7c2140eed42be0e4541a2786ad99471437bbaa1dc3fa224ee351fc7c606b`, resource report는 `cccc33bd2f63585e059830801bf79db1af91aa4011fbc5a158f5860b4b974a74`다. 상세 결과는 [`T1_AV_BOUNDARY_SCHUR_RESULTS.md`](T1_AV_BOUNDARY_SCHUR_RESULTS.md)에 고정했다.
+
+원인은 mesh drift가 아니라 H0 prereg bug다. `V+2E=14,081`은 unique directed adjacency와 consistent `M.nnz`지만 post-zero-elimination `K.nnz`가 아니다. frozen binary64 raw assembly는 `K=14,075`, `M=14,081`, `MΓ=384`다. annular cell은 cyclic isosceles trapezoid이고 15×128=1,920 triangulation diagonal의 exact cotangent weight는 0이다. 세 diagonal만 bitwise cancel돼 raw K에서 여섯 directed entry가 빠졌고 나머지 1,917개에는 roundoff residue가 남았다.
+
+runtime 우연값 `14,075`를 physics contract로 쓰지 않는다. H1은 generator topology에서 1,920 tags와 hash `e80c75ed02030cb22b648b39d613abac42bf6a4c4dfb46704789eedcc17f5e91`을 만들고 two-triangle local contribution 상쇄를 `128u·κ2,max`로 검사한다. max/bound는 `2.1676835831040652e-13 / 5.788860430596403e-13`다. raw residue edge block을 row-sum 보존 방식으로 제거해 canonical `K.nnz=10,241`, hash `733c83aec575cb28807bebc7a10fb9e05a83ca35c4775677fd347165fb421548`을 요구한다. correction relative Frobenius는 `1.3572884739080543e-16`이다.
+
+H0 resource의 `child_exit_code=0`은 redirected child handle을 retain하지 않아 `$null`을 0으로 cast한 runner provenance 오류였다. false pass는 없었지만 H1은 process handle을 poll 전에 획득하고 success/failure wrapper를 exit `0/2`와 결합한다. 새 H1 token까지 포함한 `16 passed`, fixture `e2a1c8efff67873b57dc7a658b013e3e76d0c921988011f4c8e70cd25f00f8a7`, runner `dd880de721b9a688ae953c7363dc4a8b482ec1b26f59871d4ca8f83397eb2b7c`와 PowerShell AST를 재현했으며 primary-h는 재실행하지 않았다.
+
+현재 상태는 **`AV-BS1-H0_BLOCKED_SPARSE_PATTERN_CONTRACT_BEFORE_FACTOR__H1_CYCLIC_DIAGONAL_CORRECTION_PREREGISTERED_NOT_RUN`**이다. 제품 코드는 변경하지 않았고 GitHub 원격도 건드리지 않았다.
+
+### Exact next starting point
+
+1. 독립 감사와 증거 결합을 마친 fixture, runner, tests, token과 모든 기준 문서를 새 local research commit으로 고정한다. physics는 이 commit에 포함하지 않는다.
+2. clean checkout에서 동일 17.5 µm/100 kHz `primary-h` 한 mesh만 재실행한다.
+3. canonicalization/raw residual/condition/reciprocity/passivity/power/resource 중 어느 gate든 실패하면 동결한다. h2는 별도 preregistration 전 금지한다.

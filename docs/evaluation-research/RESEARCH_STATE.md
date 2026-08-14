@@ -9,7 +9,7 @@
 | 프로그램 기준 | SPD Decap PI Evaluator v0.22.0 |
 | 연구 branch | `codex/evaluation-algorithm-research` |
 | 기준 commit | `bb361687c0bf976d5d04faf26bc243bcf3d52006` |
-| 현재 단계 | R0 source/external-port/return-owner contract 진행 중; M1 collocation negative/G1 exterior-only 결과 동결; G2 pair 제한 통과 후 100 kHz circle reciprocity/cancellation fail; independent `AV-BS1-CIRCLE`은 manifest와 standalone h fixture/result/resource/token contract까지 정적 통과, `AV-BS1-H-fixture_static_passed_primary_h_not_run`, physics solve 미실행 |
+| 현재 단계 | R0 source/external-port/return-owner contract 진행 중; M1 collocation negative/G1 exterior-only 결과 동결; G2 pair 제한 통과 후 100 kHz circle reciprocity/cancellation fail; independent `AV-BS1-CIRCLE` H0 primary-h는 factor 전 sparse-pattern prereg gate에서 실패, H1 cyclic-diagonal correction은 `preregistered_not_run`, physics response 미생성 |
 | 제품 코드 변경 | 없음 |
 | GitHub 원격 변경 | 없음 |
 | 정확성 승격 | 미달성 |
@@ -75,7 +75,8 @@
 | D-035 | G1 exterior 통과 뒤 남은 pulse-collocation interior `P/U/Pout/Uout`를 target-tested Galerkin trace space로 재이산화한다. | `passed_pair_screen_only` 후 circle 100 kHz에서 N128 cancellation `2.91315e-8`, N256 raw reciprocity/cancellation `1.41197e-8/1.63755e-7`로 fail-closed. 상태는 `BLOCKED_INTERIOR_WEIGHTED_RECIPROCITY_PASSIVITY__G2_PAIR_PASSED_CIRCLE_100KHZ_RECIPROCITY_CANCELLATION_FAIL`; planned G2 2 GHz circle/N512/EQ0 seed 미실행, gate 완화·사후 대칭화·clipping 금지 |
 | D-036 | G2 실패 뒤 다음 독립 reference candidate는 two-DtN subtraction이 없는 A–v volume-FEM boundary Schur로 한다. production SAO는 별도 Hamiltonian Schur/four-operator Calderón 후보로 비교한다. | `AV-BS1-CIRCLE preregistered_not_run`; subtraction-free `sigma Hb^T M Hp`, signed 9-mode raw gate, consistent trace/volume mass, deterministic h/h2/h4와 process-tree stop contract를 [`T1_AV_BOUNDARY_SCHUR_SPEC.md`](T1_AV_BOUNDARY_SCHUR_SPEC.md)에 고정. SAO 후보는 아직 미사전등록 |
 | D-037 | AV-BS1 manifest 통과와 physics/reference 승격을 분리한다. | manifest-only replay에서 h/h2/h4 `V/T/B=2049/3968/128`, `8065/15872/256`, `32001/63488/512`와 SHA-256 3개, frozen analytic anchors가 재현됐지만 FEM response는 미실행. 다음은 별도 solver fixture의 static audit·commit이며 circle `h` solve보다 먼저다 |
-| D-038 | AV-BS1 첫 executable은 product import가 없는 standalone `primary-h` fixture로 제한하고, tracked review token과 external runner 없이는 열지 않는다. | `AV-BS1-H-fixture_static_passed_primary_h_not_run`; 13 bounded tests, raw P1 K/M/MΓ, sequential scaled LU, original residual, raw Y/Yrev, signed M9/power, canonical result/failure schema와 runner+child execution-tree guard가 통과. h2/h4/withheld/EQ0 CLI 없음 |
+| D-038 | AV-BS1 첫 executable은 product import가 없는 standalone `primary-h` fixture로 제한하고, tracked review token과 external runner 없이는 열지 않는다. | H0 historical static checkpoint `AV-BS1-H-fixture_static_passed_primary_h_not_run`; 13 bounded tests와 execution-tree guard 통과 뒤 실제 H0는 sparse-pattern gate에서 pre-factor fail. D-039가 현재 correction을 소유하며 h2/h4/withheld/EQ0 CLI 없음 |
+| D-039 | H0 sparse-pattern failure는 immutable하게 보존하고 runtime `K.nnz=14075`를 physics contract로 승격하지 않는다. | annular cyclic trapezoid의 1,920개 triangulation diagonal은 exact P1 zero weight다. topology tag·two-triangle contribution bound를 통과한 뒤 row-sum-preserving edge block을 제거해 canonical `K.nnz=10241`; `M.nnz=14081`, `MΓ.nnz=384`. H1 `16 passed`, fixture `e2a1c8ef...`, runner `dd880de7...`; 새 clean commit 전 rerun 금지 |
 
 ## 현재 가설 순위
 
@@ -92,7 +93,7 @@
 |---|---|---|---|
 | R0 Reference contract | 8개 파일 manifest, explicit port map, PowerSI 조건 | identity/hash/grid/state 및 reference quality 기록 | identity/grid/source parameter/P2 physical terminal 완료; export operator provenance 진행 중 |
 | R1 Frozen baseline | 현행 solver의 전체 timing/memory/error/numerical report | 대표 pair와 rail별 재현 가능한 baseline | 기존 92-port 결과만 동결; pair P2 import 차단 |
-| R2 Local oracle | via/trace/pad/plane canonical corpus | reciprocity/passivity/conservation/mesh convergence | N0 scalar pass; T1 E0, M0 periodic 1-D volume과 `C0-A1` circle interior 제한 통과. M1 collocation power fail, G1 exterior-only, G2 pair-only 후 circle reciprocity/cancellation fail. `AV-BS1-CIRCLE`은 manifest와 primary-h fixture 정적 gate까지만 통과했고 physics solve는 미실행. T1 overall blocked |
+| R2 Local oracle | via/trace/pad/plane canonical corpus | reciprocity/passivity/conservation/mesh convergence | N0 scalar pass; T1 E0, M0 periodic 1-D volume과 `C0-A1` circle interior 제한 통과. M1 collocation power fail, G1 exterior-only, G2 pair-only 후 circle reciprocity/cancellation fail. `AV-BS1-CIRCLE` H0는 pre-factor sparse gate fail, H1 correction preregistered-not-run; physics response 없음. T1 overall blocked |
 | R3 Model attribution | 물리 block별 ablation matrix | 예상 port/band 개선을 원인별로 구분 | R2 oracle 뒤 대기 |
 | R4 Hybrid global | condensed domains + passive MNA 후보 | 네 pair provisional accuracy gate | 대기 |
 | R5 Acceleration | exact reduction, MOR, adaptive sweep | 추가 오차 budget + 8 GB gate | 대기 |
@@ -155,7 +156,7 @@ PowerSI repeatability와 mesh/order convergence를 측정한 뒤 수치는 조�
 
 1. immutable M1-EQ0 collocation negative result와 G1 `passed_exterior_galerkin_only` certificate를 보존한다. G1은 full M1/T1 승격 근거가 아니다.
 2. **G2 circle 실패 동결:** pair는 `passed_pair_screen_only`지만 100 kHz circle raw reciprocity/cancellation은 실패했다. planned G2 2 GHz circle, G2 N512, G2 EQ0 seed로 진행하지 않는다.
-3. independent A–v FEM boundary-Schur의 standalone primary-h fixture와 tracked review token을 clean commit으로 고정한다. 그 뒤 외부 runner로 circle 17.5 µm/100 kHz `h` 한 mesh만 실행하고 raw stage/resource gate를 검토한다. h2는 별도 결과 review·preregistration 전 구현하지 않는다.
+3. independent A–v FEM boundary-Schur H0의 pre-factor `BLOCKED_AV_BS_MESH_HASH` artifact를 보존한다. H1 topology-tagged cyclic-diagonal correction, child exit capture, 16 bounded tests와 새 tracked review token을 clean commit으로 고정한 뒤 동일 circle 17.5 µm/100 kHz `h` 한 mesh만 재실행한다. h2는 별도 결과 review·preregistration 전 구현하지 않는다.
 4. 두 2-D 방법이 통과한 뒤에만 T1-F finite-length 3-D PEEC length-difference와 exact distributed-line stamp를 비교한다.
 5. P1/P2 selected crop의 확인된 return artwork/void/GND net graph에서 signal-to-return signed basis와 same-crop core/DtN owner를 정의한다. 가까운 via를 current return으로 강제하지 않는다.
 6. reduced differential T1 operator의 full partial/common-mode 또는 explicit current-constraint global adapter 계약을 제조해로 검증한다.

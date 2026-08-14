@@ -1,7 +1,8 @@
 {
   "authorized_stage": "primary-h",
   "case_id": "AV-BS1-CIRCLE-PRIMARY",
-  "fixture_sha256": "94cce6454dd632e83db83a621f5192823cd113348970f2e4894c23733de1c066",
+  "fixture_sha256": "e2a1c8efff67873b57dc7a658b013e3e76d0c921988011f4c8e70cd25f00f8a7",
+  "h1_cyclic_diagonal_sha256": "e80c75ed02030cb22b648b39d613abac42bf6a4c4dfb46704789eedcc17f5e91",
   "independent_audits": [
     "Sol mathematical and fail-closed contract review",
     "Terra Windows runner and process-tree safety review",
@@ -10,17 +11,20 @@
   "manifest_sha256": "cf5c7740449d40c74665543680c2c96d848e546a3e52d27b8254ce099f3335d0",
   "next_stage_authorized": true,
   "prereg_commit": "82b22eecbd61344ad5e4b4ad5dce8aad826adef9",
+  "prior_failed_artifact_sha256": "848a2c5a3683f492d84b59be42ea20b9ed5e2e745304cb9ded88131e8bca45f0",
   "program": "SPD Decap PI Evaluator v0.22.0",
-  "review_disposition": "approved_static_fixture_only",
+  "review_disposition": "approved_static_h1_correction_only",
   "review_evidence": {
     "manifest_payload_sha256": "e79cd30b88fbf339399b3b059ce958138a5b16ed90bc52cde1ed0f87c2dd9a95",
     "powershell_ast": "passed",
     "static_test_command": "python -m pytest -q tests/test_research_av_bs1_boundary_schur.py",
-    "static_test_result": "13 passed"
+    "static_test_result": "16 passed",
+    "h0_failure_status": "BLOCKED_AV_BS_MESH_HASH_before_factor",
+    "h1_canonical_stiffness_sha256": "733c83aec575cb28807bebc7a10fb9e05a83ca35c4775677fd347165fb421548"
   },
-  "review_scope": "authorize_primary_h_only_after_committed_clean_checkout",
-  "review_token_id": "6ef765551084464495d6cbfb76f9da04",
-  "reviewed_utc": "2026-08-14T18:35:08Z",
-  "runner_sha256": "31da5df7e17456d3b82754b0c581ec704521f6d21a8875961e4b6d0fde6555f7",
+  "review_scope": "authorize_h1_primary_h_rerun_only_after_committed_clean_checkout",
+  "review_token_id": "7fc94704be50469bbcdd5233decea581",
+  "reviewed_utc": "2026-08-14T19:05:41Z",
+  "runner_sha256": "dd880de721b9a688ae953c7363dc4a8b482ec1b26f59871d4ca8f83397eb2b7c",
   "schema": "AV-BS1-review-token-v1"
 }

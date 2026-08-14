@@ -38,6 +38,7 @@ GUARD_SCHEMA = "AV-BS1-resource-guard-v1"
 RESOURCE_SCHEMA = "AV-BS1-resource-report-v1"
 REVIEW_SCHEMA = "AV-BS1-review-token-v1"
 PREREG_COMMIT = "82b22eecbd61344ad5e4b4ad5dce8aad826adef9"
+H0_ARTIFACT_SHA256 = "848a2c5a3683f492d84b59be42ea20b9ed5e2e745304cb9ded88131e8bca45f0"
 
 EXPECTED_RUNTIME = ("3.12.10", "2.4.4", "1.18.0", "win32", "AMD64")
 EXPECTED_MESH = {
@@ -48,6 +49,18 @@ EXPECTED_MESH = {
         128,
         "cf5c7740449d40c74665543680c2c96d848e546a3e52d27b8254ce099f3335d0",
     ),
+}
+EXPECTED_H_ASSEMBLY = {
+    "cyclic_diagonal_count": 1920,
+    "cyclic_diagonal_sha256": "e80c75ed02030cb22b648b39d613abac42bf6a4c4dfb46704789eedcc17f5e91",
+    "raw_stiffness_nnz": 14075,
+    "canonical_stiffness_nnz": 10241,
+    "mass_nnz": 14081,
+    "trace_mass_nnz": 384,
+    "raw_stiffness_sha256": "9c199514e0c1863744d40babe3b218f576f74ebbc909780dbd87046de40e1e71",
+    "canonical_stiffness_sha256": "733c83aec575cb28807bebc7a10fb9e05a83ca35c4775677fd347165fb421548",
+    "mass_sha256": "2900e4f481fc9d40ce1282e2532f4ce29b0b858a939fbd3644556e60ba0f8bfe",
+    "trace_mass_sha256": "4bca013ca53c8ce9473329d85d0d8d6691bdd18ccffa232abac89337e5c58d08",
 }
 EXPECTED_ANCHORS = np.asarray(
     [
@@ -216,12 +229,25 @@ def _ccw(nodes: list[tuple[float, float]], triangle: tuple[int, int, int]) -> tu
     return triangle if cross > 0.0 else (i, k, j)
 
 
+def _node_id(ring: int, ray: int) -> int:
+    return 1 + (ring - 1) * N_THETA + (ray % N_THETA)
+
+
+def _cyclic_diagonal_edges() -> list[tuple[int, int]]:
+    edges: list[tuple[int, int]] = []
+    for ring in range(1, N_RING):
+        for ray in range(N_THETA):
+            a = _node_id(ring, ray)
+            b = _node_id(ring, ray + 1)
+            c = _node_id(ring + 1, ray)
+            d = _node_id(ring + 1, ray + 1)
+            edge = (a, d) if ring % 2 else (b, c)
+            edges.append(tuple(sorted(edge)))
+    return sorted(edges)
+
+
 def seed_mesh() -> tuple[list[tuple[float, float]], list[tuple[int, int, int]]]:
     nodes: list[tuple[float, float]] = [(0.0, 0.0)]
-
-    def node_id(ring: int, ray: int) -> int:
-        return 1 + (ring - 1) * N_THETA + (ray % N_THETA)
-
     for ring in range(1, N_RING + 1):
         radius = RADIUS_M * ring / N_RING
         for ray in range(N_THETA):
@@ -229,13 +255,13 @@ def seed_mesh() -> tuple[list[tuple[float, float]], list[tuple[int, int, int]]]:
             nodes.append((radius * math.cos(theta), radius * math.sin(theta)))
     triangles: list[tuple[int, int, int]] = []
     for ray in range(N_THETA):
-        triangles.append(_ccw(nodes, (0, node_id(1, ray), node_id(1, ray + 1))))
+        triangles.append(_ccw(nodes, (0, _node_id(1, ray), _node_id(1, ray + 1))))
     for ring in range(1, N_RING):
         for ray in range(N_THETA):
-            a = node_id(ring, ray)
-            b = node_id(ring, ray + 1)
-            c = node_id(ring + 1, ray)
-            d = node_id(ring + 1, ray + 1)
+            a = _node_id(ring, ray)
+            b = _node_id(ring, ray + 1)
+            c = _node_id(ring + 1, ray)
+            d = _node_id(ring + 1, ray + 1)
             raw = ((a, c, d), (a, d, b)) if ring % 2 else ((a, c, b), (b, c, d))
             triangles.extend(_ccw(nodes, item) for item in raw)
     return nodes, triangles
@@ -363,6 +389,160 @@ def _assemble_volume(
         if np.any(~np.isfinite(matrix.data)):
             raise AvBsError("BLOCKED_AV_BS_SOLVE", "non-finite P1 assembly")
     return stiffness, mass
+
+
+def _constant_null_relative(matrix: csc_matrix) -> float:
+    numerator = float(np.max(np.abs(matrix @ np.ones(matrix.shape[1], dtype=np.float64))))
+    denominator = float(np.max(np.asarray(abs(matrix).sum(axis=1)).ravel()))
+    if not math.isfinite(denominator) or denominator <= 0.0:
+        raise AvBsError("BLOCKED_AV_BS_MESH_HASH", "constant-null denominator is invalid")
+    return numerator / denominator
+
+
+def _canonicalize_cyclic_diagonals(
+    stiffness: csc_matrix,
+    nodes: list[tuple[float, float]],
+    triangles: list[tuple[int, int, int]],
+    *,
+    mesh_condition: float,
+) -> tuple[csc_matrix, Mapping[str, object]]:
+    tags = _cyclic_diagonal_edges()
+    tag_digest = sha256(canonical_bytes([list(edge) for edge in tags])).hexdigest()
+    if len(tags) != EXPECTED_H_ASSEMBLY["cyclic_diagonal_count"] or len(set(tags)) != len(tags):
+        raise AvBsError("BLOCKED_AV_BS_MESH_HASH", "cyclic diagonal count mismatch")
+    if tag_digest != EXPECTED_H_ASSEMBLY["cyclic_diagonal_sha256"]:
+        raise AvBsError("BLOCKED_AV_BS_MESH_HASH", "cyclic diagonal lineage mismatch")
+
+    tag_set = set(tags)
+    incidence = {edge: 0 for edge in tags}
+    contributions: dict[tuple[int, int], list[float]] = {edge: [] for edge in tags}
+    xy = np.asarray(nodes, dtype=np.float64)
+    full_support: set[tuple[int, int]] = set()
+    for triangle in triangles:
+        points = xy[np.asarray(triangle)]
+        determinant = float(
+            (points[1, 0] - points[0, 0]) * (points[2, 1] - points[0, 1])
+            - (points[1, 1] - points[0, 1]) * (points[2, 0] - points[0, 0])
+        )
+        if not math.isfinite(determinant) or determinant <= 0.0:
+            raise AvBsError("BLOCKED_AV_BS_MESH_HASH", "non-positive cyclic triangle")
+        area = determinant / 2.0
+        b = np.asarray(
+            (
+                points[1, 1] - points[2, 1],
+                points[2, 1] - points[0, 1],
+                points[0, 1] - points[1, 1],
+            )
+        )
+        c = np.asarray(
+            (
+                points[2, 0] - points[1, 0],
+                points[0, 0] - points[2, 0],
+                points[1, 0] - points[0, 0],
+            )
+        )
+        local_k = (np.outer(b, b) + np.outer(c, c)) / (4.0 * area * MU0_H_PER_M)
+        for local_row, global_row in enumerate(triangle):
+            for local_column, global_column in enumerate(triangle):
+                full_support.add((global_row, global_column))
+                if local_row >= local_column:
+                    continue
+                edge = tuple(sorted((global_row, global_column)))
+                if edge in tag_set:
+                    incidence[edge] += 1
+                    contributions[edge].append(float(local_k[local_row, local_column]))
+    if any(value != 2 for value in incidence.values()):
+        raise AvBsError("BLOCKED_AV_BS_MESH_HASH", "cyclic diagonal incidence mismatch")
+
+    cancellation_bound = 128.0 * UROUND * mesh_condition
+    cancellation_ratios: list[float] = []
+    for edge in tags:
+        values = contributions[edge]
+        scale = sum(abs(value) for value in values)
+        if len(values) != 2 or not math.isfinite(scale) or scale <= 0.0:
+            raise AvBsError("BLOCKED_AV_BS_MESH_HASH", "cyclic contribution scale mismatch")
+        cancellation_ratios.append(abs(sum(values)) / scale)
+    maximum_cancellation = max(cancellation_ratios)
+    if not math.isfinite(maximum_cancellation) or maximum_cancellation > cancellation_bound:
+        raise AvBsError(
+            "BLOCKED_AV_BS_MESH_HASH",
+            f"cyclic cancellation {maximum_cancellation:.6e} exceeds {cancellation_bound:.6e}",
+        )
+
+    raw = csc_matrix(stiffness, copy=True)
+    raw.sum_duplicates()
+    raw.sort_indices()
+    raw.eliminate_zeros()
+    raw_hash = _sparse_sha256(raw)
+    if raw.nnz != EXPECTED_H_ASSEMBLY["raw_stiffness_nnz"] or raw_hash != EXPECTED_H_ASSEMBLY["raw_stiffness_sha256"]:
+        raise AvBsError(
+            "BLOCKED_AV_BS_MESH_HASH",
+            f"raw stiffness gate mismatch nnz={raw.nnz} sha256={raw_hash}",
+        )
+
+    canonical = raw.tolil(copy=True)
+    tagged_values: list[float] = []
+    for first, second in tags:
+        value = float(raw[first, second])
+        reverse = float(raw[second, first])
+        if value != reverse:
+            raise AvBsError("BLOCKED_AV_BS_RECIPROCITY", "raw cyclic edge is not symmetric")
+        tagged_values.append(value)
+        canonical[first, first] = float(canonical[first, first]) + value
+        canonical[second, second] = float(canonical[second, second]) + value
+        canonical[first, second] = 0.0
+        canonical[second, first] = 0.0
+    canonical = canonical.tocsc()
+    canonical.sum_duplicates()
+    canonical.sort_indices()
+    canonical.eliminate_zeros()
+
+    expected_support = set(full_support)
+    for first, second in tags:
+        expected_support.discard((first, second))
+        expected_support.discard((second, first))
+    observed_support = set(zip(*canonical.nonzero()))
+    if observed_support != expected_support:
+        raise AvBsError("BLOCKED_AV_BS_MESH_HASH", "canonical stiffness support mismatch")
+    canonical_hash = _sparse_sha256(canonical)
+    if (
+        canonical.nnz != EXPECTED_H_ASSEMBLY["canonical_stiffness_nnz"]
+        or canonical_hash != EXPECTED_H_ASSEMBLY["canonical_stiffness_sha256"]
+    ):
+        raise AvBsError(
+            "BLOCKED_AV_BS_MESH_HASH",
+            f"canonical stiffness gate mismatch nnz={canonical.nnz} sha256={canonical_hash}",
+        )
+
+    raw_null = _constant_null_relative(raw)
+    canonical_null = _constant_null_relative(canonical)
+    if max(raw_null, canonical_null) > MAX_ASSEMBLY_TRANSPOSE:
+        raise AvBsError("BLOCKED_AV_BS_MESH_HASH", "constant-null stiffness gate failed")
+    correction = csc_matrix(canonical - raw)
+    correction_relative = _sparse_frobenius(correction) / _sparse_frobenius(raw)
+    return canonical, {
+        "method": "topology_tagged_cyclic_trapezoid_cotangent_zero_v1",
+        "tag_count": len(tags),
+        "tag_sha256": tag_digest,
+        "two_triangle_incidence_pass": True,
+        "cancellation_bound_kind": "128_u_times_global_max_element_kappa2",
+        "cancellation_bound": cancellation_bound,
+        "maximum_cancellation_ratio": maximum_cancellation,
+        "cancellation_margin": (
+            None if maximum_cancellation == 0.0 else cancellation_bound / maximum_cancellation
+        ),
+        "raw_stiffness_nnz": int(raw.nnz),
+        "canonical_stiffness_nnz": int(canonical.nnz),
+        "raw_stiffness_sha256": raw_hash,
+        "canonical_stiffness_sha256": canonical_hash,
+        "raw_constant_null_relative": raw_null,
+        "canonical_constant_null_relative": canonical_null,
+        "raw_transpose_relative": _sparse_transpose_relative(raw),
+        "canonical_transpose_relative": _sparse_transpose_relative(canonical),
+        "nonzero_tagged_binary64_values": sum(value != 0.0 for value in tagged_values),
+        "maximum_tagged_binary64_abs": max(abs(value) for value in tagged_values),
+        "correction_relative_frobenius": correction_relative,
+    }
 
 
 def _boundary_partition(
@@ -752,13 +932,38 @@ def _validate_review_token(path: Path) -> Mapping[str, object]:
         "authorized_stage": "primary-h",
         "prereg_commit": PREREG_COMMIT,
         "manifest_sha256": EXPECTED_MESH["h"][4],
+        "prior_failed_artifact_sha256": H0_ARTIFACT_SHA256,
+        "h1_cyclic_diagonal_sha256": EXPECTED_H_ASSEMBLY["cyclic_diagonal_sha256"],
         "next_stage_authorized": True,
-        "review_disposition": "approved_static_fixture_only",
-        "review_scope": "authorize_primary_h_only_after_committed_clean_checkout",
+        "review_disposition": "approved_static_h1_correction_only",
+        "review_scope": "authorize_h1_primary_h_rerun_only_after_committed_clean_checkout",
     }
     for key, expected in required.items():
         if token.get(key) != expected:
             raise AvBsError("BLOCKED_AV_BS_RESULT_SCHEMA", f"review token {key} mismatch")
+    required_audits = [
+        "Sol mathematical and fail-closed contract review",
+        "Terra Windows runner and process-tree safety review",
+        "Luna schema, resource, and bounded-test review",
+    ]
+    if token.get("independent_audits") != required_audits:
+        raise AvBsError("BLOCKED_AV_BS_RESULT_SCHEMA", "review token audit evidence mismatch")
+    evidence = token.get("review_evidence")
+    if not isinstance(evidence, dict):
+        raise AvBsError("BLOCKED_AV_BS_RESULT_SCHEMA", "review token evidence is missing")
+    required_evidence = {
+        "manifest_payload_sha256": "e79cd30b88fbf339399b3b059ce958138a5b16ed90bc52cde1ed0f87c2dd9a95",
+        "powershell_ast": "passed",
+        "static_test_command": "python -m pytest -q tests/test_research_av_bs1_boundary_schur.py",
+        "static_test_result": "16 passed",
+        "h0_failure_status": "BLOCKED_AV_BS_MESH_HASH_before_factor",
+        "h1_canonical_stiffness_sha256": EXPECTED_H_ASSEMBLY["canonical_stiffness_sha256"],
+    }
+    for key, expected in required_evidence.items():
+        if evidence.get(key) != expected:
+            raise AvBsError(
+                "BLOCKED_AV_BS_RESULT_SCHEMA", f"review token evidence {key} mismatch"
+            )
     fixture_hash = _file_sha256(Path(__file__).resolve())
     if token.get("fixture_sha256") != fixture_hash:
         raise AvBsError("BLOCKED_AV_BS_RESULT_SCHEMA", "review token fixture hash mismatch")
@@ -913,11 +1118,28 @@ def run_primary_h(guard_path: Path, guard_nonce: str, review_path: Path) -> Mapp
     manifest = mesh_manifest(nodes, triangles)
     edges, boundary_edges = edge_data(triangles)
     interior, gamma, gamma_map = _boundary_partition(len(nodes), boundary_edges)
-    stiffness, mass = _assemble_volume(nodes, triangles)
+    raw_stiffness, mass = _assemble_volume(nodes, triangles)
+    stiffness, cyclic_certificate = _canonicalize_cyclic_diagonals(
+        raw_stiffness,
+        nodes,
+        triangles,
+        mesh_condition=float(manifest["max_element_kappa2"]),
+    )
     trace_mass = _assemble_trace_mass(nodes, boundary_edges, gamma_map)
-    expected_nnz = 14081
-    if stiffness.nnz != expected_nnz or mass.nnz != expected_nnz:
-        raise AvBsError("BLOCKED_AV_BS_MESH_HASH", "h sparse nnz mismatch")
+    mass_hash = _sparse_sha256(mass)
+    trace_hash = _sparse_sha256(trace_mass)
+    if (
+        mass.nnz != EXPECTED_H_ASSEMBLY["mass_nnz"]
+        or trace_mass.nnz != EXPECTED_H_ASSEMBLY["trace_mass_nnz"]
+        or mass_hash != EXPECTED_H_ASSEMBLY["mass_sha256"]
+        or trace_hash != EXPECTED_H_ASSEMBLY["trace_mass_sha256"]
+    ):
+        raise AvBsError(
+            "BLOCKED_AV_BS_MESH_HASH",
+            "h mass/trace gate mismatch "
+            f"M.nnz={mass.nnz} M.sha256={mass_hash} "
+            f"WG.nnz={trace_mass.nnz} WG.sha256={trace_hash}",
+        )
     sparse_bytes = sum(
         int(matrix.data.nbytes + matrix.indices.nbytes + matrix.indptr.nbytes)
         for matrix in (stiffness, mass, trace_mass)
@@ -1008,9 +1230,11 @@ def run_primary_h(guard_path: Path, guard_nonce: str, review_path: Path) -> Mapp
             "interior_nodes": len(interior),
             "boundary_nodes": len(gamma),
             "stiffness_nnz": int(stiffness.nnz),
+            "raw_stiffness_nnz": int(raw_stiffness.nnz),
             "mass_nnz": int(mass.nnz),
             "trace_mass_nnz": int(trace_mass.nnz),
             "stiffness_sha256": _sparse_sha256(stiffness),
+            "raw_stiffness_sha256": _sparse_sha256(raw_stiffness),
             "mass_sha256": _sparse_sha256(mass),
             "trace_mass_sha256": _sparse_sha256(trace_mass),
             "csc_index_dtype": str(stiffness.indices.dtype),
@@ -1018,6 +1242,7 @@ def run_primary_h(guard_path: Path, guard_nonce: str, review_path: Path) -> Mapp
         },
         "assembly": {
             "operator_order": ["background", "conductor"],
+            "cyclic_diagonal_canonicalization": cyclic_certificate,
             "one_factor_resident": True,
             "extension_storage": "interior_only_boundary_identity_implicit",
             "extension_shapes": [list(x_background.shape), list(x_conductor.shape)],
@@ -1078,9 +1303,11 @@ def finalize_primary_h(
         raise AvBsError("BLOCKED_AV_BS_RESULT_SCHEMA", "resource stage mismatch")
     if resource.get("runner_sha256") != token["runner_sha256"]:
         raise AvBsError("BLOCKED_AV_BS_RESULT_SCHEMA", "resource runner hash mismatch")
+    child_exit_code = _json_int(resource.get("child_exit_code"), label="resource child_exit_code")
     numerical_wrapper = None
     numerical_payload = None
     child_failure_codes: list[str] = []
+    schema_exit_mismatch = False
     if numerical_path is not None and numerical_path.exists():
         expected_stdout_hash = resource.get("child_stdout_sha256")
         if not isinstance(expected_stdout_hash, str) or _file_sha256(numerical_path) != expected_stdout_hash:
@@ -1095,6 +1322,7 @@ def finalize_primary_h(
             ):
                 raise AvBsError("BLOCKED_AV_BS_RESULT_SCHEMA", "child failure-code schema mismatch")
             child_failure_codes = list(dict.fromkeys(raw_codes))
+            schema_exit_mismatch = child_exit_code != 2
         elif numerical_schema != NUMERICAL_SCHEMA:
             raise AvBsError("BLOCKED_AV_BS_RESULT_SCHEMA", "numerical schema mismatch")
         else:
@@ -1116,19 +1344,22 @@ def finalize_primary_h(
                     raise AvBsError(
                         "BLOCKED_AV_BS_RESULT_SCHEMA", f"numerical success field {key} mismatch"
                     )
+            schema_exit_mismatch = child_exit_code != 0
     resource_pass = bool(resource.get("mandatory_resource_gate_pass") is True)
     numerical_pass = bool(
         numerical_payload is not None and numerical_payload.get("numerical_stage_pass") is True
     )
-    child_exit_code = _json_int(resource.get("child_exit_code"), label="resource child_exit_code")
     mandatory = bool(resource_pass and numerical_pass and child_exit_code == 0)
     failure_codes: list[str] = []
     failure_codes.extend(child_failure_codes)
+    if schema_exit_mismatch and "BLOCKED_AV_BS_RESULT_SCHEMA" not in failure_codes:
+        failure_codes.append("BLOCKED_AV_BS_RESULT_SCHEMA")
     if not resource_pass and "BLOCKED_AV_BS_RESOURCE" not in failure_codes:
         failure_codes.append("BLOCKED_AV_BS_RESOURCE")
     if (
         (not numerical_pass or child_exit_code != 0)
         and not child_failure_codes
+        and not schema_exit_mismatch
         and "BLOCKED_AV_BS_SOLVE" not in failure_codes
     ):
         failure_codes.append("BLOCKED_AV_BS_SOLVE")

@@ -244,7 +244,7 @@ board crop에서는 signal copper, return copper, magnetic/electric field, termi
 ## 다음 실행 순서
 
 1. M0 periodic 1-D volume pass를 독립 slab anchor로 동결한다. finite/open contour를 periodic `coth`와 직접 비교하지 않는다.
-2. smallest equal-width M1-EQ0의 failed collocation, G1 exterior-only, G2 pair-only과 100 kHz circle raw failure를 보존한다. planned G2 2 GHz circle/N512/EQ0 seed로 확장하지 않는다. independent `AV-BS1-CIRCLE`은 consistent P1 mass, boundary Schur trace, deterministic h/h2/h4와 raw signed-mode gate까지 `preregistered_not_run`으로 고정됐다. 다음은 solver fixture static audit이며 circle 두 radius 통과 전 outer crop `{2,4,8}Deff` EQ0를 실행하지 않는다.
+2. smallest equal-width M1-EQ0의 failed collocation, G1 exterior-only, G2 pair-only과 100 kHz circle raw failure를 보존한다. planned G2 2 GHz circle/N512/EQ0 seed로 확장하지 않는다. independent `AV-BS1-CIRCLE` H0는 pre-factor sparse-pattern gate에서 실패했고 H1 cyclic-diagonal correction은 preregistered-not-run이다. 새 fixture/token clean commit 뒤 동일 h만 재실행하며 circle 두 radius 통과 전 outer crop `{2,4,8}Deff` EQ0를 실행하지 않는다.
 3. perimeter panel `N,2N,4N`, singular self integral, corner/opposing-projection grading과 volume skin mesh `δ/2,δ/4,δ/8`에서 raw `Z'`, loss, reciprocity, passivity, current conservation을 0.5%/1% gate로 검사한다.
 4. P2 `Trace13305`는 source-derived manufactured asymmetric stripline으로만 실행한다. 실제 board case는 exact finite-width polygon/void boolean tolerance, signed signal-to-return current/field owner와 same-crop core/DtN partition이 증명될 때까지 차단한다.
 5. P1/P2 selected crop의 actual return artwork/net graph 증거에서 terminal-to-return signed current basis와 same-crop core/DtN owner를 만든다. 가까운 via를 return으로 강제하지 않는다.

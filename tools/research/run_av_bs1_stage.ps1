@@ -343,6 +343,13 @@ try {
         "--review-token", (Quote-Argument $reviewTokenPath)
     ) -join " "
     $process = Start-Process -FilePath $pythonPath -ArgumentList $argumentList -PassThru -WindowStyle Hidden -RedirectStandardOutput $stdoutPath -RedirectStandardError $stderrPath
+    # Start-Process on Windows PowerShell can lose ExitCode after a manually
+    # monitored redirected child exits unless its native handle is acquired
+    # while it is still alive.  Retain the handle before entering the poll loop.
+    $childProcessHandle = $process.Handle
+    if ($childProcessHandle -eq [IntPtr]::Zero) {
+        throw "BLOCKED_AV_BS_RESULT_SCHEMA: child process handle was not acquired"
+    }
     [void]$observedChildProcessIds.Add($process.Id)
     while (-not $process.HasExited) {
         $terminationRequired = $false
@@ -415,7 +422,11 @@ try {
             throw
         }
     }
-    $childExitCode = [int]$process.ExitCode
+    $rawChildExitCode = $process.ExitCode
+    if ($null -eq $rawChildExitCode) {
+        throw "BLOCKED_AV_BS_RESULT_SCHEMA: child exit code was not retained"
+    }
+    $childExitCode = [int]$rawChildExitCode
     $endedUtc = [DateTime]::UtcNow
     $resourceGate = (-not $stopReason) -and (-not $monitorError) -and ($successfulTreeSampleCount -ge 1)
     $resource = [ordered]@{
@@ -428,6 +439,7 @@ try {
         execution_tree_root_pid = $PID
         execution_tree_includes_runner = $true
         child_process_id = $process.Id
+        child_process_handle_acquired = $true
         observed_child_process_ids = @($observedChildProcessIds | Sort-Object)
         monitor_ok = (-not $monitorError)
         monitor_error = $monitorError
