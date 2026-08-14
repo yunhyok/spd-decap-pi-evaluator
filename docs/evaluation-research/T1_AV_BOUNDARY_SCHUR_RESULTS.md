@@ -2,7 +2,7 @@
 
 ## Current verdict
 
-현재 AV-BS1 artifact 상태는 **`passed_AV_BS_h_stage_only_pending_h2_review`**다. `mandatory_stage_pass=true`지만 `next_stage_authorized=false`, `fine_analytic_pass=null`, `mesh_convergence_pass=null`, `final_circle_pass=null`이다. 따라서 이는 17.5 µm/100 kHz의 coarse `h` 단계 제한 통과이며 circle oracle 또는 h2 권한이 아니다.
+현재 AV-BS1 physics artifact 상태는 **`passed_AV_BS_h_stage_only_pending_h2_review`**다. `mandatory_stage_pass=true`지만 `next_stage_authorized=false`, `fine_analytic_pass=null`, `mesh_convergence_pass=null`, `final_circle_pass=null`이다. 따라서 이는 17.5 µm/100 kHz의 coarse `h` 단계 제한 통과이며 circle oracle 또는 h2 권한이 아니다. 후속 H2-P0 assembly manifest는 **`preregistered_H2_P0_assembly_only_no_solve`**지만 factorization/physics/result token을 포함하지 않는다.
 
 2026-08-15 clean commit `4fa5ec80a261c21c8489ecd8b708a62bba769a7a`에서 17.5 µm, 100 kHz, `h` 한 mesh의 guarded `primary-h`를 처음 실행했다. 실행은 **`BLOCKED_AV_BS_MESH_HASH`**로 fail-closed 됐다. factorization, harmonic extension, boundary-Schur `Y`, modal response와 physics pass/fail 값은 생성되지 않았다. 따라서 이 결과는 AV-BS1 physics negative가 아니라 **사전등록 sparse-pattern 계약의 negative**다.
 
@@ -108,9 +108,27 @@ resource monitor는 child exit `0`, successful tree samples `11`, wall `1.471470
 
 authorized primary-h token은 artifact에 SHA-256 `5ad21ccec9cb81e8999441fc43338589ecb92cf0ae08e7bc2b8b4a8c411f8d4e`로 결합돼 있다. 독립 review 뒤 active file은 SHA-256 `80ffd8b486dbdd8087eb205f71137663cef0497d8ba8df74253743b302fe6f35`의 consumed tombstone으로 바꿨다. 따라서 현재 validator는 primary-h를 solve 전에 거부하며 h2 권한은 별도 token에서만 만들 수 있다.
 
+## H2-P0 assembly-only preregistration
+
+H1 result와 실행 권한을 바꾸지 않고 H2 refined topology와 assembly를 별도 manifest-only fixture로 고정했다. canonical payload SHA-256은 `68d2e20a471e0e9475dd8e575ffd1e246f4098bb6c0e2b688d0f6f702fb511ba`이고 static test는 `6 passed`다.
+
+| P0 field | frozen value |
+|---|---|
+| mesh `V/E/T/B`, interior/boundary | `8065/23936/15872/256`, `7809/256` |
+| candidate / excluded / canonical tags | `3840 / 128 / 3712` |
+| tag SHA-256 | `287feee5d6fb4299895455b870de0eda484e07617cbc6db43bddd0d11b5b5968` |
+| raw / canonical `K.nnz` | `55937 / 48513` |
+| `M / MΓ.nnz` | `55937 / 768` |
+| cancellation maximum / bound | `3.6286352763558246e-13 / 5.802823100831367e-13` |
+| minimum untagged two-triangle ratio | `0.19705186275542091` |
+| sparse base / raw preflight / +25% | `1,328,172 / 2,043,070,476 / 2,553,838,095 B` |
+| factorization / physics / authorization | `false / false / not_authorized` |
+
+projected outer-boundary midpoint를 포함한 child 128개는 cyclic zero edge가 아니므로 제외한다. raw/canonical K, M, MΓ, support/partition exact hashes와 arithmetic details는 [`T1_AV_BOUNDARY_SCHUR_H2_PREREG.md`](T1_AV_BOUNDARY_SCHUR_H2_PREREG.md)에 고정한다. 이는 h2 result artifact가 아니고 coarse H1의 `next_stage_authorized=false`도 바꾸지 않는다.
+
 ## Exact next starting point
 
 1. H0 negative와 H1 h-stage artifact를 모두 immutable하게 보존한다.
-2. H1 artifact의 수학·checksum·resource 독립 감사를 기준 문서와 session log에 고정한다.
-3. `h2` mesh/fixture/result schema/resource estimate와 one-stage review token을 결과값과 무관하게 별도 preregistration commit으로 고정한다.
-4. 그 clean commit과 새 token 전에는 `h2`를 구현하거나 실행하지 않는다. `h2`를 통과해도 h4는 또 다른 preregistration 전 금지한다.
+2. H2-P0 manifest-only fixture/runner/test/docs와 exact payload를 clean research commit으로 고정한다.
+3. 별도 H2-P1 executable fixture/result schema/process-tree 900 s guard와 one-use review token을 H1 artifact 및 H2-P0 commit에 결합해 독립 감사한다.
+4. 그 P1 clean commit과 새 token 전에는 h2 factorization/physics를 실행하지 않는다. `h2`를 통과해도 h4는 또 다른 preregistration 전 금지한다.

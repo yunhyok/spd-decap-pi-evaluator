@@ -1195,3 +1195,36 @@ authorized primary-h token SHA-256 `5ad21ccec9cb81e8999441fc43338589ecb92cf0ae08
 1. H0 negative, H1 h artifact, checksum/resource/independent review와 consumed token을 기준 문서 commit으로 고정한다.
 2. h2 refined topology/cyclic tags, canonical `K/M/MΓ` hashes, sparse factor/resource preflight, h→h2 trend schema와 새 one-stage token을 결과값과 무관하게 별도 preregister한다.
 3. 새 clean commit과 h2 token 전에는 h2를 실행하지 않는다. h2 통과 뒤에도 h4는 별도 preregistration 전 금지한다.
+
+## 2026-08-15 — AV-BS1 H2-P0 assembly-only preregistration
+
+H1 result를 보존한 채 H2 연구를 두 단계로 분리했다. 이번 P0는 refined mesh/topology lineage, raw/canonical P1 assembly, partition/support hash와 conservative resource arithmetic만 고정한다. P1은 이후 별도 executable fixture/result schema/guard/token을 고정하는 단계다. P0에는 factorization, harmonic extension, boundary-Schur response, physics artifact 또는 review token이 없다.
+
+새 research-only fixture [`../../tools/research/av_bs1_boundary_schur_h2.py`](../../tools/research/av_bs1_boundary_schur_h2.py), manifest-only PowerShell runner와 bounded test를 만들었다. program identity는 `SPD Decap PI Evaluator v0.22.0`이고 H1 fixture/runner/consumed-tombstone SHA-256 `e2a1c8... / dd880d... / 80ffd8...`을 exact dependency로 검사한다. H2 parser와 runner는 `manifest`만 허용하고 `primary-h2`는 invalid choice다.
+
+H2 mesh는 H1의 sorted-edge midpoint lineage와 projected boundary midpoint를 사용한 one-to-four refinement다. `V/E/T/B=8065/23936/15872/256`, interior/boundary `7809/256`, manifest SHA-256 `34eb4f9cadcefd0b20cff3ae6c483dbee4e412ca11d0ff1a8c2c6f49ec7896a9`를 재현했다. H1 parent diagonal에서 child candidate `3840`을 만들되 outer band의 projected boundary child `128`은 noncyclic이므로 topology로 제외해 canonical tag `3712`, tag SHA-256 `287feee5d6fb4299895455b870de0eda484e07617cbc6db43bddd0d11b5b5968`을 고정했다.
+
+explicit 2×2 determinant evaluation order의 maximum cancellation/bound/margin은 `3.6286352763558246e-13 / 5.802823100831367e-13 / 1.5991750779260026`이고 minimum untagged two-triangle ratio는 `0.19705186275542091`이다. raw/canonical `K.nnz=55937/48513`, `M/MΓ.nnz=55937/768`; raw/canonical constant-null은 `1.5137986906722262e-16 / 1.616955055742965e-16`, correction relative Frobenius는 `1.8326181103987503e-16`이다. exact K/M/MΓ/support/partition hashes는 [`T1_AV_BOUNDARY_SCHUR_H2_PREREG.md`](T1_AV_BOUNDARY_SCHUR_H2_PREREG.md)에 전부 기록했다.
+
+resource arithmetic은 sparse base `1,328,172 B`, one-factor dense upper `1,951,375,392 B`, raw total `2,043,070,476 B`, 25% margin total `2,553,838,095 B`다. 이는 H2 factor fill이나 measured process-tree peak가 아니라 P1 전 conservative screen이다. output은 `authorization_state=not_authorized`, `factorization_performed=false`, `physics_solve_performed=false`, `available_solve_stages=[]`를 명시한다.
+
+정적 재현:
+
+```text
+H2 bounded tests: 6 passed
+PowerShell AST: passed
+manifest payload SHA-256: 68d2e20a471e0e9475dd8e575ffd1e246f4098bb6c0e2b688d0f6f702fb511ba
+fixture SHA-256: 032100623fca51ab22a48493b46f23bc8ce5fd1250203d527062671d47599384
+runner SHA-256: 6ce0002e9d3790542008d9e1e608168f1e40f51d56c9a8ff1d37003a15f8feb7
+test SHA-256: 039b84ea05ee31c9f9d025d85dd1ec8d4741adc18e6db8883073d93e4d828c69
+status: preregistered_H2_P0_assembly_only_no_solve
+```
+
+Sol은 현재 LF bytes에서 lineage/cancellation/assembly/resource와 no-solve boundary를 독립 재실행해 `APPROVED_STATIC_H2_P0`를 냈다. Terra는 잘못 상속된 H1 resource method label을 발견했고 `h2_p0_dense_factor_upper_plus_sparse_and_rectangular_25pct`로 수정한 뒤 승인했다. Luna는 20개 research Markdown의 UTF-8/fence/link와 수치 전사를 확인했다. 제품 parser/solver/UI/version/installer, GitHub 원격과 physics result는 변경하지 않았다.
+
+### Exact next starting point
+
+1. 이 P0 clean commit과 exact payload를 H2 실행 계약의 immutable input으로 보존한다.
+2. 별도 H2-P1 fixture/runner/result schema에서 H1 artifact file/payload/numerical/mode-view, consumed H1 tombstone, P0 commit/manifest/assembly/resource를 모두 결합한다.
+3. P1은 `primary-h2` 한 stage만 열고 900 s wall stop, tree WS `4 GiB`, private/commit `5 GiB`, one-factor residency, batch `4`, canonical child-exit/failure binding과 one-use token을 결과 전에 고정한다.
+4. P1 static tests와 독립 review가 끝난 clean commit 전에는 h2 factorization/physics를 실행하지 않는다. h2 stage pass 뒤에도 h4는 별도 preregistration 전 금지한다.

@@ -2936,6 +2936,51 @@ print(payload['status'], payload['resource']['wall_seconds'])
 
 raw reciprocity `1.072085475889738e-15`, reverse order `2.2332401790276927e-16`, minimum Hermitian eigenvalue/tolerance `9.256477814190828e-6 / 4.478026532708378e-13 S·m`, max power mismatch `4.7212709501079303e-14`와 max backward residual `4.181585185007905e-17`이 h-stage gate를 통과했다. coarse analytic trend max는 `1.161940848%`이고 fine/convergence 판정은 아직 없다. resource는 wall `1.4714704 s`, 11 samples, peak tree WS `185.2890625 MiB`, private/commit `1.4127578735 GiB`다. 이 결과는 h2, final circle, 8 GB laptop 또는 PowerSI evidence가 아니다.
 
+## AV-BS1 H2-P0 assembly-only manifest
+
+H2-P0는 H1 `h`의 deterministic one-to-four refinement, 3,712개 canonical cyclic tag, raw/canonical `K/M/MΓ`, partition/support hash와 conservative resource arithmetic만 재현한다. 아래 명령은 factorization, physics solve, token, finalizer 또는 result artifact를 만들지 않는다.
+
+```powershell
+python -m pytest -q tests/test_research_av_bs1_boundary_schur_h2.py
+# 6 passed
+
+$errors=$null; $tokens=$null
+[System.Management.Automation.Language.Parser]::ParseFile(
+  (Resolve-Path tools/research/run_av_bs1_h2_stage.ps1),
+  [ref]$tokens,
+  [ref]$errors
+) | Out-Null
+if ($errors.Count) { $errors | ForEach-Object Message; exit 1 }
+
+powershell.exe -NoProfile -ExecutionPolicy Bypass `
+  -File tools/research/run_av_bs1_h2_stage.ps1 -Stage manifest
+
+Get-FileHash tools/research/av_bs1_boundary_schur_h2.py -Algorithm SHA256
+Get-FileHash tools/research/run_av_bs1_h2_stage.ps1 -Algorithm SHA256
+Get-FileHash tests/test_research_av_bs1_boundary_schur_h2.py -Algorithm SHA256
+```
+
+frozen output은 다음을 요구한다.
+
+```text
+payload_sha256 = 68d2e20a471e0e9475dd8e575ffd1e246f4098bb6c0e2b688d0f6f702fb511ba
+fixture_sha256 = 032100623fca51ab22a48493b46f23bc8ce5fd1250203d527062671d47599384
+runner_sha256 = 6ce0002e9d3790542008d9e1e608168f1e40f51d56c9a8ff1d37003a15f8feb7
+test_sha256 = 039b84ea05ee31c9f9d025d85dd1ec8d4741adc18e6db8883073d93e4d828c69
+status = preregistered_H2_P0_assembly_only_no_solve
+authorization_state = not_authorized
+factorization_performed = false
+physics_solve_performed = false
+mesh V/E/T/B = 8065/23936/15872/256
+candidate/excluded/tag count = 3840/128/3712
+raw/canonical K.nnz = 55937/48513
+M/MGamma.nnz = 55937/768
+maximum cancellation/bound = 3.6286352763558246e-13 / 5.802823100831367e-13
+sparse/raw/+25pct resource bytes = 1328172 / 2043070476 / 2553838095
+```
+
+parser와 PowerShell `ValidateSet`은 `manifest`만 허용한다. `primary-h2`는 실행 path가 아니라 invalid choice다. 전체 lineage serialization, exact hashes와 non-claims는 [`T1_AV_BOUNDARY_SCHUR_H2_PREREG.md`](T1_AV_BOUNDARY_SCHUR_H2_PREREG.md)에 고정한다.
+
 ## Focused regression
 
 ```powershell

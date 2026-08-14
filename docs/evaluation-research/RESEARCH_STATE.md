@@ -9,7 +9,7 @@
 | 프로그램 기준 | SPD Decap PI Evaluator v0.22.0 |
 | 연구 branch | `codex/evaluation-algorithm-research` |
 | 기준 commit | `bb361687c0bf976d5d04faf26bc243bcf3d52006` |
-| 현재 단계 | R0 source/external-port/return-owner contract 진행 중; M1 collocation negative/G1 exterior-only 결과 동결; G2 pair 제한 통과 후 100 kHz circle reciprocity/cancellation fail; independent `AV-BS1-CIRCLE` H0는 pre-factor sparse gate fail, H1 17.5 µm/100 kHz coarse `h`는 `passed_AV_BS_h_stage_only_pending_h2_review`; fine analytic/mesh convergence/final circle은 `null`, h2 미사전등록 |
+| 현재 단계 | R0 source/external-port/return-owner contract 진행 중; M1 collocation negative/G1 exterior-only 결과 동결; G2 pair 제한 통과 후 100 kHz circle reciprocity/cancellation fail; independent `AV-BS1-CIRCLE` H0는 pre-factor sparse gate fail, H1 17.5 µm/100 kHz coarse `h`는 `passed_AV_BS_h_stage_only_pending_h2_review`; H2-P0 topology/assembly/resource manifest는 `preregistered_H2_P0_assembly_only_no_solve`, primary-h2 factor/physics/token은 미사전등록·미실행; fine analytic/mesh convergence/final circle은 `null` |
 | 제품 코드 변경 | 없음 |
 | GitHub 원격 변경 | 없음 |
 | 정확성 승격 | 미달성 |
@@ -73,10 +73,11 @@
 | D-033 | G1 direct pulse-Galerkin double-panel log exterior `GE=W^-1 GG`는 collocation exterior의 energy defect를 대체하는 제한된 exterior certificate다. | `passed_exterior_galerkin_only`; frozen `N={144,288,576}`·7 frequencies에서 fine structure max q-natural `2.030e-15`, raw transpose `9.953e-17`, `r0` rank-one max `6.333e-16`, boundary power max `1.070e-14`, terminal gates 통과. 이는 interior 또는 full M1 pass가 아님 |
 | D-034 | independent A–v power는 centroid field가 아니라 consistent P1 mass form으로만 판정한다. | 확정; 2 GHz 4Deff smoke에서 mismatch `1.377e-9`, 그러나 단일 mesh/crop이므로 reference pass 아님 |
 | D-035 | G1 exterior 통과 뒤 남은 pulse-collocation interior `P/U/Pout/Uout`를 target-tested Galerkin trace space로 재이산화한다. | `passed_pair_screen_only` 후 circle 100 kHz에서 N128 cancellation `2.91315e-8`, N256 raw reciprocity/cancellation `1.41197e-8/1.63755e-7`로 fail-closed. 상태는 `BLOCKED_INTERIOR_WEIGHTED_RECIPROCITY_PASSIVITY__G2_PAIR_PASSED_CIRCLE_100KHZ_RECIPROCITY_CANCELLATION_FAIL`; planned G2 2 GHz circle/N512/EQ0 seed 미실행, gate 완화·사후 대칭화·clipping 금지 |
-| D-036 | G2 실패 뒤 다음 독립 reference candidate는 two-DtN subtraction이 없는 A–v volume-FEM boundary Schur로 한다. production SAO는 별도 Hamiltonian Schur/four-operator Calderón 후보로 비교한다. | H1 17.5 µm/100 kHz coarse `h`는 `passed_AV_BS_h_stage_only_pending_h2_review`; subtraction-free `sigma Hb^T M Hp`, signed 9-mode raw gate, consistent trace/volume mass와 process-tree stop contract를 통과했다. `h2`/`h4`, final circle, withheld radius는 미사전등록·미실행이고 SAO 후보도 아직 미사전등록 |
-| D-037 | AV-BS1 manifest, one-mesh stage 통과와 physics/reference 승격을 분리한다. | manifest-only replay에서 h/h2/h4 `V/T/B=2049/3968/128`, `8065/15872/256`, `32001/63488/512`와 SHA-256 3개, frozen analytic anchors를 고정. H1 h artifact는 stage-evaluable gate만 통과했고 h2/h4 convergence 전에는 reference 승격 불가 |
-| D-038 | AV-BS1 첫 executable은 product import가 없는 standalone `primary-h` fixture로 제한하고, tracked review token과 external runner 없이는 열지 않는다. | H0 historical static checkpoint `AV-BS1-H-fixture_static_passed_primary_h_not_run`; 13 bounded tests와 execution-tree guard 통과 뒤 실제 H0는 sparse-pattern gate에서 pre-factor fail. D-039가 현재 correction을 소유하며 h2/h4/withheld/EQ0 CLI 없음 |
+| D-036 | G2 실패 뒤 다음 독립 reference candidate는 two-DtN subtraction이 없는 A–v volume-FEM boundary Schur로 한다. production SAO는 별도 Hamiltonian Schur/four-operator Calderón 후보로 비교한다. | H1 17.5 µm/100 kHz coarse `h`는 `passed_AV_BS_h_stage_only_pending_h2_review`; subtraction-free `sigma Hb^T M Hp`, signed 9-mode raw gate, consistent trace/volume mass와 process-tree stop contract를 통과했다. H2-P0 assembly manifest만 사전등록됐고 `primary-h2`, `h4`, final circle, withheld radius는 미사전등록·미실행이며 SAO 후보도 아직 미사전등록 |
+| D-037 | AV-BS1 manifest, one-mesh stage 통과와 physics/reference 승격을 분리한다. | manifest-only replay에서 h/h2/h4 `V/T/B=2049/3968/128`, `8065/15872/256`, `32001/63488/512`와 SHA-256 3개, frozen analytic anchors를 고정. H1 h artifact는 stage-evaluable gate만 통과했고 H2-P0도 assembly-only이므로 h2/h4 physics convergence 전에는 reference 승격 불가 |
+| D-038 | AV-BS1 첫 executable은 product import가 없는 standalone `primary-h` fixture로 제한하고, tracked review token과 external runner 없이는 열지 않는다. | H0 historical static checkpoint `AV-BS1-H-fixture_static_passed_primary_h_not_run`; 13 bounded tests와 execution-tree guard 통과 뒤 실제 H0는 sparse-pattern gate에서 pre-factor fail. D-039가 현재 correction을 소유하며 H2-P0 manifest 외 `primary-h2`/h4/withheld/EQ0 solve CLI 없음 |
 | D-039 | H0 sparse-pattern failure는 immutable하게 보존하고 runtime `K.nnz=14075`를 physics contract로 승격하지 않는다. | 1,920개 exact-zero cyclic diagonal을 topology-tagged 정규화해 canonical `K.nnz=10241`; H1 h artifact가 같은 certificate, raw reciprocity `1.07e-15`, power `4.72e-14`와 resource gate를 통과. artifact status는 h-stage-only이며 old primary-h token은 consumed tombstone으로 고정 |
+| D-040 | H2 refinement는 H1 parent tag를 기계적으로 두 배로 보지 않고 projected outer-boundary child를 topology로 제외하며, 실행 계약보다 assembly certificate를 먼저 고정한다. | H2-P0는 candidate `3840` 중 projected outer child `128`을 제외한 `3712` canonical tag, raw/canonical `K.nnz=55937/48513`, exact hashes와 `2,553,838,095 B` conservative preflight를 manifest-only로 사전등록했다. factorization/physics/token/result stage는 없으며 H2-P1 clean preregistration 전 실행 금지 |
 
 ## 현재 가설 순위
 
@@ -93,7 +94,7 @@
 |---|---|---|---|
 | R0 Reference contract | 8개 파일 manifest, explicit port map, PowerSI 조건 | identity/hash/grid/state 및 reference quality 기록 | identity/grid/source parameter/P2 physical terminal 완료; export operator provenance 진행 중 |
 | R1 Frozen baseline | 현행 solver의 전체 timing/memory/error/numerical report | 대표 pair와 rail별 재현 가능한 baseline | 기존 92-port 결과만 동결; pair P2 import 차단 |
-| R2 Local oracle | via/trace/pad/plane canonical corpus | reciprocity/passivity/conservation/mesh convergence | N0 scalar pass; T1 E0, M0 periodic 1-D volume과 `C0-A1` circle interior 제한 통과. M1 collocation power fail, G1 exterior-only, G2 pair-only 후 circle reciprocity/cancellation fail. `AV-BS1-CIRCLE` H1 coarse h는 stage-only pass, h2/h4/final circle 미실행. T1 overall blocked |
+| R2 Local oracle | via/trace/pad/plane canonical corpus | reciprocity/passivity/conservation/mesh convergence | N0 scalar pass; T1 E0, M0 periodic 1-D volume과 `C0-A1` circle interior 제한 통과. M1 collocation power fail, G1 exterior-only, G2 pair-only 후 circle reciprocity/cancellation fail. `AV-BS1-CIRCLE` H1 coarse h는 stage-only pass, H2-P0 assembly-only preregistration 완료, h2 physics/h4/final circle 미실행. T1 overall blocked |
 | R3 Model attribution | 물리 block별 ablation matrix | 예상 port/band 개선을 원인별로 구분 | R2 oracle 뒤 대기 |
 | R4 Hybrid global | condensed domains + passive MNA 후보 | 네 pair provisional accuracy gate | 대기 |
 | R5 Acceleration | exact reduction, MOR, adaptive sweep | 추가 오차 budget + 8 GB gate | 대기 |
@@ -156,7 +157,7 @@ PowerSI repeatability와 mesh/order convergence를 측정한 뒤 수치는 조�
 
 1. immutable M1-EQ0 collocation negative result와 G1 `passed_exterior_galerkin_only` certificate를 보존한다. G1은 full M1/T1 승격 근거가 아니다.
 2. **G2 circle 실패 동결:** pair는 `passed_pair_screen_only`지만 100 kHz circle raw reciprocity/cancellation은 실패했다. planned G2 2 GHz circle, G2 N512, G2 EQ0 seed로 진행하지 않는다.
-3. independent A–v FEM boundary-Schur의 H0 pre-factor negative와 H1 `passed_AV_BS_h_stage_only_pending_h2_review` artifact를 보존한다. old primary-h token을 consume하고 H1 artifact review를 고정한 뒤, refined mesh topology/hash/resource/schema와 새 one-stage token을 별도 preregister한다. 그 전에는 h2를 구현하거나 실행하지 않는다.
+3. independent A–v FEM boundary-Schur의 H0 pre-factor negative와 H1 `passed_AV_BS_h_stage_only_pending_h2_review` artifact를 보존한다. consumed H1 token과 H2-P0 refined lineage/assembly/resource manifest를 고정한 뒤, 별도 H2-P1 executable fixture/result schema/900 s guard/one-stage token을 사전등록한다. 그 전에는 h2 factorization이나 physics solve를 실행하지 않는다.
 4. 두 2-D 방법이 통과한 뒤에만 T1-F finite-length 3-D PEEC length-difference와 exact distributed-line stamp를 비교한다.
 5. P1/P2 selected crop의 확인된 return artwork/void/GND net graph에서 signal-to-return signed basis와 same-crop core/DtN owner를 정의한다. 가까운 via를 current return으로 강제하지 않는다.
 6. reduced differential T1 operator의 full partial/common-mode 또는 explicit current-constraint global adapter 계약을 제조해로 검증한다.
