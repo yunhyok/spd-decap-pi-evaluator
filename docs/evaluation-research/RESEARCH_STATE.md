@@ -9,7 +9,7 @@
 | 프로그램 기준 | SPD Decap PI Evaluator v0.22.0 |
 | 연구 branch | `codex/evaluation-algorithm-research` |
 | 기준 commit | `bb361687c0bf976d5d04faf26bc243bcf3d52006` |
-| 현재 단계 | R0 source/external-port/return-owner contract 진행 중, R2 T1 M1-EQ0 collocation negative result 동결; G1 exterior Galerkin은 제한 통과, G2 interior Galerkin preregistration 실행 대기 |
+| 현재 단계 | R0 source/external-port/return-owner contract 진행 중; M1 collocation negative/G1 exterior-only 결과 동결; G2 pair screen 제한 통과, circle `N=128→256` 대기 |
 | 제품 코드 변경 | 없음 |
 | GitHub 원격 변경 | 없음 |
 | 정확성 승격 | 미달성 |
@@ -72,7 +72,7 @@
 | D-032 | frozen M1-EQ0 collocation SAO를 finite/open pass로 승격하지 않는다. | 확정; response/mesh/condition/current는 통과했지만 fine signed boundary-power mismatch `1.585e-4 > 1e-8`. 원인은 `WG0` skew energy defect로 귀속되며 사후 대칭화 금지 |
 | D-033 | G1 direct pulse-Galerkin double-panel log exterior `GE=W^-1 GG`는 collocation exterior의 energy defect를 대체하는 제한된 exterior certificate다. | `passed_exterior_galerkin_only`; frozen `N={144,288,576}`·7 frequencies에서 fine structure max q-natural `2.030e-15`, raw transpose `9.953e-17`, `r0` rank-one max `6.333e-16`, boundary power max `1.070e-14`, terminal gates 통과. 이는 interior 또는 full M1 pass가 아님 |
 | D-034 | independent A–v power는 centroid field가 아니라 consistent P1 mass form으로만 판정한다. | 확정; 2 GHz 4Deff smoke에서 mismatch `1.377e-9`, 그러나 단일 mesh/crop이므로 reference pass 아님 |
-| D-035 | G1 exterior 통과 뒤 남은 pulse-collocation interior `P/U/Pout/Uout`를 target-tested Galerkin trace space로 재이산화한다. | `M1-EQ0-G2 preregistered_not_run`; G1 fine `WYs` weighted-reciprocity는 100 kHz→2 GHz에서 `7.12361%, 4.08228%, 3.07258%, 2.91663%, 2.47707%, 2.10899%, 1.69946%`로 모두 `1e-8` fail, raw Hermitian passivity는 100 kHz/1 MHz fail. symmetrization, clipping, C0 변경 또는 결과 기반 tuning 금지 |
+| D-035 | G1 exterior 통과 뒤 남은 pulse-collocation interior `P/U/Pout/Uout`를 target-tested Galerkin trace space로 재이산화한다. | `BLOCKED_INTERIOR_WEIGHTED_RECIPROCITY_PASSIVITY__G2_PAIR_SCREEN_PASSED_CIRCLE_NOT_RUN`; pair q20/q40 최악 `7.52822e-6`, raw `P` transpose `1.88876e-16`, depth 2로 `passed_pair_screen_only`. G1 hidden-mode 실패는 미해결이며 symmetrization, clipping, C0 변경 또는 결과 기반 tuning 금지 |
 
 ## 현재 가설 순위
 
@@ -145,12 +145,12 @@ PowerSI repeatability와 mesh/order convergence를 측정한 뒤 수치는 조�
 10. P3/P4의 약 1.45M Trace는 raw grammar상 routed trace와 plane/mesh topology가 섞였거나 미확정이다. 어떤 source semantic 또는 exporter contract로 이를 구분할 것인가?
 11. homogeneous SAO 이후 stratified/lossy background Green function, self term과 reciprocity-based total current를 어떤 independent layered coupon으로 인증할 것인가?
 12. circle에서 통과한 `C0-A1` direct/scaled Hankel과 singular self treatment가 corner가 있는 finite/open M1에서 같은 수렴률·operator floor를 유지하는가? M0 periodic slab은 independent 1-D volume-only로 통과했으며 C0-A1 periodic SAO 증거가 아니다.
-13. G1 exterior가 raw power를 복원했지만 pulse-collocation interior `WYs`의 weighted reciprocity는 `1.70%–7.12%`이고 저주파 raw Hermitian passivity도 실패했다. G2에서 `P/U/Pout/Uout`를 어떤 target-tested Galerkin trace space와 singular/quadrature contract로 교체할 것인가?
+13. G2 pair quadrature는 통과했지만 analytic circle DtN와 raw `Yw` gate는 미실행이다. circle `N=128→256→512`에서 target-tested Galerkin DtN의 정확성·reciprocity·passivity·cancellation이 동시에 수렴하는가?
 
 ## 다음 세션의 우선 작업
 
 1. immutable M1-EQ0 collocation negative result와 G1 `passed_exterior_galerkin_only` certificate를 보존한다. G1은 full M1/T1 승격 근거가 아니다.
-2. G2 target-tested interior `P/U/Pout/Uout` Galerkin exact block을 preregister하고 같은 frozen `N={144,288,576}`·7 frequencies에서 raw weighted reciprocity, raw Hermitian passivity, terminal/power/condition gate를 실행한다.
+2. **pair 완료:** `passed_pair_screen_only`. 새 shell이면 pair를 재확인한 같은 session에서 circle `N=128→256`을 실행하고, 통과 뒤 `N=256→512`, 그 뒤 EQ0 seed 순으로만 진행한다.
 3. G2가 통과한 뒤 independent A–v FEM을 consistent P1 mass form으로 `h,h/2,h/4`, crop `2/4/8 Deff`, condition/resource certificate까지 완성한다.
 4. 두 2-D 방법이 통과한 뒤에만 T1-F finite-length 3-D PEEC length-difference와 exact distributed-line stamp를 비교한다.
 5. P1/P2 selected crop의 확인된 return artwork/void/GND net graph에서 signal-to-return signed basis와 same-crop core/DtN owner를 정의한다. 가까운 via를 current return으로 강제하지 않는다.

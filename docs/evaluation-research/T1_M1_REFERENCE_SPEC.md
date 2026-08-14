@@ -2,13 +2,13 @@
 
 최종 갱신: 2026-08-15 (Asia/Seoul)
 
-이 문서는 finite-width straight conductor와 explicit return의 smooth-copper broadband series operator를 검증할 T1-M1 실행 계약을 고정한다. 제품 parser/solver 코드는 변경하지 않았다. mandatory circle interior prototype은 [`T1_CIRCLE_DTN_RESULTS.md`](T1_CIRCLE_DTN_RESULTS.md)에서 `C0-A1 passed_circle_interior_only`, lateral-periodic slab은 [`T1_M0_SLAB_RESULTS.md`](T1_M0_SLAB_RESULTS.md)에서 `passed_periodic_1d_volume_only`로 판정됐다. M1-EQ0 geometry, exact full-contour panel hash와 A–v crop/resource 계약은 결과를 보기 전에 동결했다. 첫 collocation 실행은 mandatory SAO boundary-power identity가 fine에서 최대 `1.585e-4 > 1e-8`로 실패했다. 후속 G1 direct exterior Galerkin은 같은 contour에서 exterior energy gate를 통과했지만 collocation interior `WYs`가 전 주파수 weighted reciprocity와 100 kHz/1 MHz passivity를 실패했다. 따라서 G1은 `passed_exterior_galerkin_only`, 현재 전체 T1-M1은 **`BLOCKED_INTERIOR_WEIGHTED_RECIPROCITY_PASSIVITY`**, T1 전체와 global composition은 계속 `blocked`다. raw 결과는 [`T1_M1_EQ0_RESULTS.md`](T1_M1_EQ0_RESULTS.md)에 보존한다.
+이 문서는 finite-width straight conductor와 explicit return의 smooth-copper broadband series operator를 검증할 T1-M1 실행 계약을 고정한다. 제품 parser/solver 코드는 변경하지 않았다. mandatory circle interior prototype은 [`T1_CIRCLE_DTN_RESULTS.md`](T1_CIRCLE_DTN_RESULTS.md)에서 `C0-A1 passed_circle_interior_only`, lateral-periodic slab은 [`T1_M0_SLAB_RESULTS.md`](T1_M0_SLAB_RESULTS.md)에서 `passed_periodic_1d_volume_only`로 판정됐다. 첫 M1 collocation power failure는 immutable이고 G1은 `passed_exterior_galerkin_only`다. G2 pair screen은 `passed_pair_screen_only`지만 analytic circle과 `Yw`/terminal operator가 미실행이므로 현재 전체 T1-M1은 **`BLOCKED_INTERIOR_WEIGHTED_RECIPROCITY_PASSIVITY__G2_PAIR_SCREEN_PASSED_CIRCLE_NOT_RUN`**, T1 전체와 global composition은 계속 `blocked`다. raw 결과는 [`T1_M1_EQ0_RESULTS.md`](T1_M1_EQ0_RESULTS.md)에 보존한다.
 
 ## 범위와 독립성
 
 | 항목 | 1차 범위 | 현재 상태 |
 |---|---|---|
-| normative oracle | dense pulse SAO–CIM; homogeneous, nonmagnetic, lossless background; simply connected copper contours | G1 exterior-only pass, interior Galerkin G2 pending; overall blocked |
+| normative oracle | dense pulse SAO–CIM; homogeneous, nonmagnetic, lossless background; simply connected copper contours | G1 exterior-only pass; G2 pair screen only pass, circle not run; overall blocked |
 | independent reference | 2-D volume-current `A_z–v` magnetoquasistatic P1 FEM | `2GHz_4Deff_smoke_only`; consistent mass power pass, mesh/crop/condition 미실행 |
 | authoritative output | 동일한 conductor order와 balanced current basis의 complex `Z'(f)` | 없음; collocation raw table은 negative evidence only |
 | 별도 electrostatic block | transverse `C'`; lossy dielectric이면 causal `G'/C'` | T1-E0 외 미실행 |
@@ -514,7 +514,9 @@ Ks(d) = -(d·n')/(π|d|²)
 - boundary/terminal power, current, terminal reciprocity/passivity, `r0`, panel convergence와 resource gate는 그대로 유지한다.
 - `0.5(Yw+Yw^T)`, eigenvalue clipping, C0 retuning은 금지한다.
 
-실행 순서는 (1) 100 kHz/2 GHz self와 Duffy q20/q40, (2) circle `N={128,256}` analytic modes, medium gate 통과 때만 `N=512`, (3) EQ0 seed `N=144` 두 extreme q20/q40와 G1 exterior, (4) `Yw` raw gate 실패 시 즉시 중단, (5) 두 extreme 통과 뒤에만 `N=288/576`, 7 frequencies와 세 `r0`로 확장한다. 각 단계는 별도 명령으로 실행하고 이전 JSON의 mandatory gate와 외부 process-tree resource를 검토하기 전 다음 명령을 시작하지 않는다. G2가 여전히 `1e-8` hidden-mode gate를 놓치면 matrix를 대칭화하지 않고 four-operator symmetric Calderón/Steklov–Poincaré discretization 또는 volume-FEM boundary Schur complement를 다음 후보로 둔다. 현재 G2 상태는 `M1-EQ0-G2 preregistered_not_run`이다.
+실행 순서는 (1) 100 kHz/2 GHz self와 Duffy q20/q40, (2) circle `N={128,256}` analytic modes, medium gate 통과 때만 `N=512`, (3) EQ0 seed `N=144` 두 extreme q20/q40와 G1 exterior, (4) `Yw` raw gate 실패 시 즉시 중단, (5) 두 extreme 통과 뒤에만 `N=288/576`, 7 frequencies와 세 `r0`로 확장한다. 각 단계는 별도 명령으로 실행하고 이전 JSON의 mandatory gate와 외부 process-tree resource를 검토하기 전 다음 명령을 시작하지 않는다. G2가 여전히 `1e-8` hidden-mode gate를 놓치면 matrix를 대칭화하지 않고 four-operator symmetric Calderón/Steklov–Poincaré discretization 또는 volume-FEM boundary Schur complement를 다음 후보로 둔다.
+
+Stage 1 pair screen은 사전등록 뒤 실행됐다. 두 frequency 모두 self/touching/routed-near class coverage와 q20/q40, raw `P` transpose, recursion gate를 통과했다. 최악 q change는 2 GHz conductor self-`P` `7.52822e-6`, raw transpose 최대 `1.88876e-16`, depth 최대 `2`다. 이 단계만 `passed_pair_screen_only`이며 circle과 `Yw`/terminal operator는 미실행이다. 현재 전체 상태는 **`BLOCKED_INTERIOR_WEIGHTED_RECIPROCITY_PASSIVITY__G2_PAIR_SCREEN_PASSED_CIRCLE_NOT_RUN`**다.
 
 ## Numerical certificate와 promotion gate
 

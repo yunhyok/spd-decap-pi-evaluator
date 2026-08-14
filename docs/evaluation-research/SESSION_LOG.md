@@ -1042,9 +1042,26 @@ G1의 exterior-only pass와 `BLOCKED_INTERIOR_WEIGHTED_RECIPROCITY_PASSIVITY`를
 
 Python AST, fresh-PowerShell G1-source extraction, UTF-8, Markdown fence, relative link와 `git diff --check`를 통과했다. 상태는 계속 **`M1-EQ0-G2 preregistered_not_run`**이며 full M1/T1/global/PowerSI/product/8 GB는 blocked다.
 
-### Exact next starting point
+### Exact next starting point (historical; superseded by pair result below)
 
 1. 이 preregistration을 커밋으로 고정한다.
 2. `M1_G2_STAGE=pair`, 100 kHz와 2 GHz, q20/q40만 외부 resource guard 아래 실행한다.
 3. 두 pair JSON의 class coverage, recursion, quadrature와 range gate가 모두 통과한 뒤에만 circle `N=128→256`을 시작한다.
 4. 실패하면 raw 결과를 보존하고 후속 수식/이산화 후보를 별도 사전 등록하며, gate 완화·대칭화·clipping으로 우회하지 않는다.
+
+## 2026-08-15 — M1-EQ0-G2 pair screen result
+
+사전등록 커밋 `ddec4fb` 뒤 Stage 1만 실행했다. frozen seed의 한 conductor는 `N=72`이고 각 material/frequency의 directed pair가 self `72`, touching `144`, routed-near `196`, tensor `4,772`, 합계 `5,184=72²`로 완전 분류됐다. maximum recursion depth는 `2`였다.
+
+100 kHz conductor/background의 max q20→q40 `P/U` relative change는 각각 `6.36567e-11/8.55154e-14`, `5.31830e-16/3.67183e-16`이다. 2 GHz는 conductor `7.52822e-6/1.71021e-9`, background `7.40339e-16/3.50067e-16`이다. 최악 2 GHz conductor self-`P`도 `0.1%` gate보다 `132.834×` 작다. q20/q40 raw `P` transpose 최대 `1.88876e-16`, gate margin `5,294×`; 두 JSON 모두 `mandatory_stage_pass=true`였다.
+
+process-only wall/peak working-set/private는 100 kHz `25.4061 s / 58.6055 MiB / 1295.2305 MiB`, 2 GHz `24.9042 s / 58.7656 MiB / 1295.3125 MiB`다. 외부 process-tree/system-headroom monitor가 내장된 실행이 아니므로 8 GB 또는 production resource evidence로 승격하지 않는다.
+
+판정은 **`passed_pair_screen_only`**, 전체 상태는 **`BLOCKED_INTERIOR_WEIGHTED_RECIPROCITY_PASSIVITY__G2_PAIR_SCREEN_PASSED_CIRCLE_NOT_RUN`**이다. 이는 singular pair classification/quadrature와 raw single-layer transpose만 승인한다. analytic circle DtN, `Yw` reciprocity/passivity, cancellation, terminal/power와 full G2는 미실행/미승인이다.
+
+### Exact next starting point
+
+1. pair 결과를 기준 문서와 시각화에 고정하고 커밋한다.
+2. 새 shell이면 frozen definition을 재구성해 Stage 1을 다시 통과시킨 뒤 같은 PowerShell session에서 circle `N=128→256`, 100 kHz/2 GHz, q20/q40만 실행한다.
+3. circle의 q parity, q20 analytic/mesh, raw reciprocity/passivity/cancellation과 process resource를 검토하고 모두 통과한 뒤에만 `N=256→512`를 실행한다.
+4. circle 또는 후속 EQ0가 실패하면 raw 결과를 보존하고 full G2/T1/PowerSI/product 승격을 계속 차단한다.

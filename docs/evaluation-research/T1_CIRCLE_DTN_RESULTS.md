@@ -10,7 +10,7 @@
 |---|---|---|
 | `C0-A0 fixed_low_frequency_1e6` | **failed** | 사전 등록한 Patel–Triverio empirical switch를 그대로 사용하면 작은 원 100 kHz가 정확도·mesh·phase·conditioning gate를 모두 위반 |
 | `C0-A1 direct_scaled_H2_primary` | **passed_circle_interior_only** | `C0=1` direct/scaled Hankel이 canonical full-condition과 W1/W3 dense withheld를 통과; W2는 analytic/convergence-only 보조 |
-| finite-width M1 | `specified_not_run` | corner/one-return geometry와 exterior `Z'` 미실행 |
+| finite-width M1 | G1 exterior-only, G2 `passed_pair_screen_only`; overall blocked | circle `N=128→256`와 interior `Yw`/terminal 미실행 |
 | independent A–v | `specified_not_run` | noncircular same-basis cross-method 미실행 |
 | product/global | `blocked` | source owner, exact-minus-core와 balanced global adapter 미해결 |
 

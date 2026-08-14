@@ -12,7 +12,7 @@
 | M0-V1 normalized 1-D FEM | **`passed_periodic_1d_volume_only`** | 동일 periodic `m=0` slab interior의 canonical + withheld numerical recovery | finite-width edge/proximity, free-space exterior |
 | M0 gap exterior | `analytic_m0_only` | balanced `+I/-I`에서 uniform gap field `jωμh/w` | general exterior CIM 또는 open-return field |
 | C0-A1 periodic SAO | `blocked_periodic_green_not_implemented` | 없음 | free-space `H2`를 periodic kernel로 간주하는 것 |
-| finite-width M1 | `specified_not_run` | 실행 계약만 고정 | SAO–CIM/A–v 정확도 |
+| finite-width M1 | G1 exterior-only, G2 pair-only; overall blocked | circle/`Yw`/terminal 미실행 | SAO–CIM/A–v 정확도 |
 | product/global/PowerSI | `blocked` | 없음 | source-faithful 또는 제품 정확도 승격 |
 
 이번 cycle의 정확한 승격은 **M0-V1 periodic 1-D volume-only pass**다. [`T1_CIRCLE_DTN_RESULTS.md`](T1_CIRCLE_DTN_RESULTS.md)의 `C0-A1 passed_circle_interior_only`를 M0 SAO pass로 확대하지 않는다.

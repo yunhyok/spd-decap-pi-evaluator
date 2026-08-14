@@ -2548,6 +2548,15 @@ for frequency in g2_freqs:
         raise RuntimeError(('G2_STAGE_NOT_FROZEN',g2_stage))
 '@
 
+# These session-local tokens make the documented stage order executable rather
+# than advisory.  Every new reconstruction starts with every promotion closed.
+$g2PairStagePassed=$false
+$g2PairStageReviewed=$false
+$g2CircleMediumStagePassed=$false
+$g2CircleMediumStageReviewed=$false
+$g2CircleFineStagePassed=$false
+$g2CircleFineStageReviewed=$false
+
 # Stage 1 only. Inspect both JSON rows and the process-tree guard before stage 2.
 $env:M1_G2_STAGE='pair'
 $env:M1_G2_FREQS='1e5,2e9'
@@ -2557,31 +2566,61 @@ $env:M1_G2_LEVELS='0'
 $env:M1_G2_R0S='1'
 $g2 | python -u -
 if ($LASTEXITCODE -ne 0) { throw "G2_PAIR_STAGE_FAILED_$LASTEXITCODE" }
+$g2PairStagePassed=$true
 ```
 
-pair JSON과 외부 process-tree resource를 검토해 `mandatory_stage_pass=true`를 확인한 같은 PowerShell session에서만 Stage 2를 별도로 실행한다.
+pair JSON과 외부 process-tree resource를 검토해 `mandatory_stage_pass=true`를 확인한 같은 PowerShell session에서만 아래 review token을 열고 Stage 2를 별도로 실행한다. 이 두 줄은 JSON과 외부 resource guard를 사람이 검토하기 전에 자동 실행하지 않는다.
+
+```powershell
+if ($g2PairStagePassed -ne $true) { throw 'G2_PAIR_STAGE_NOT_PASSED' }
+$g2PairStageReviewed=$true
+```
 
 ```powershell
 # Stage 2 is authorized only if stage 1 passed and was reviewed.
+if ([string]::IsNullOrWhiteSpace([string]$g2)) { throw 'G2_DEFINITION_NOT_RECONSTRUCTED' }
+if ($g2PairStagePassed -ne $true -or $g2PairStageReviewed -ne $true) {
+    throw 'G2_PAIR_STAGE_NOT_PASSED_AND_REVIEWED_IN_THIS_SESSION'
+}
 $env:M1_G2_STAGE='circle'
 $env:M1_G2_CIRCLE_NS='128,256'
 $g2 | python -u -
 if ($LASTEXITCODE -ne 0) { throw "G2_CIRCLE_MEDIUM_STAGE_FAILED_$LASTEXITCODE" }
+$g2CircleMediumStagePassed=$true
 ```
 
-`N=128→256`의 analytic, mesh, q20/q40와 raw operator gate를 검토한 뒤에만 Stage 2b를 별도로 실행한다.
+`N=128→256`의 analytic, mesh, q20/q40와 raw operator gate 및 외부 resource guard를 검토한 뒤에만 같은 session에서 review token을 열고 Stage 2b를 별도로 실행한다.
+
+```powershell
+if ($g2CircleMediumStagePassed -ne $true) { throw 'G2_CIRCLE_MEDIUM_STAGE_NOT_PASSED' }
+$g2CircleMediumStageReviewed=$true
+```
 
 ```powershell
 # Stage 2b is authorized only if the N=128→256 stage passed and was reviewed.
+if ([string]::IsNullOrWhiteSpace([string]$g2)) { throw 'G2_DEFINITION_NOT_RECONSTRUCTED' }
+if ($g2CircleMediumStagePassed -ne $true -or $g2CircleMediumStageReviewed -ne $true) {
+    throw 'G2_CIRCLE_MEDIUM_STAGE_NOT_PASSED_AND_REVIEWED_IN_THIS_SESSION'
+}
 $env:M1_G2_CIRCLE_NS='256,512'
 $g2 | python -u -
 if ($LASTEXITCODE -ne 0) { throw "G2_CIRCLE_FINE_STAGE_FAILED_$LASTEXITCODE" }
+$g2CircleFineStagePassed=$true
 ```
 
-두 circle stage를 모두 검토·통과한 뒤에만 Stage 3을 별도로 실행한다.
+두 circle stage를 모두 검토·통과하고 fine stage의 외부 resource guard까지 확인한 뒤에만 같은 session에서 review token을 열고 Stage 3을 별도로 실행한다.
+
+```powershell
+if ($g2CircleFineStagePassed -ne $true) { throw 'G2_CIRCLE_FINE_STAGE_NOT_PASSED' }
+$g2CircleFineStageReviewed=$true
+```
 
 ```powershell
 # Stage 3 is authorized only after both circle stages passed and were reviewed.
+if ([string]::IsNullOrWhiteSpace([string]$g2)) { throw 'G2_DEFINITION_NOT_RECONSTRUCTED' }
+if ($g2CircleFineStagePassed -ne $true -or $g2CircleFineStageReviewed -ne $true) {
+    throw 'G2_CIRCLE_FINE_STAGE_NOT_PASSED_AND_REVIEWED_IN_THIS_SESSION'
+}
 $env:M1_G2_STAGE='eq0'
 $env:M1_G2_CIRCLE_NS='128,256'
 $env:M1_G2_LEVELS='0'
@@ -2590,9 +2629,20 @@ $g2 | python -u -
 if ($LASTEXITCODE -ne 0) { throw "G2_EQ0_SEED_STAGE_FAILED_$LASTEXITCODE" }
 ```
 
-G2의 첫 상태는 `M1-EQ0-G2 preregistered_not_run`이다. 위 네 명령은 한 번에 실행하는 묶음이 아니다. pair screen, circle `N=128→256`, circle `N=256→512`, EQ0 seed 사이마다 JSON의 `mandatory_stage_pass`와 외부 process-tree guard를 검토하고 통과한 다음 단계만 별도로 시작한다. EQ0 seed extreme의 raw `Yw` reciprocity/passivity, cancellation certificate 또는 power가 실패하면 즉시 중단하고 `N=288/576` 전체 sweep을 시작하지 않는다. target-tested G2도 hidden-mode gate를 놓치면 four-operator symmetric Calderón/Steklov–Poincaré 또는 volume-FEM boundary Schur complement를 별도 사전 등록한다.
+Stage 1 pair screen은 `ddec4fb` 사전등록 뒤 실행돼 `passed_pair_screen_only`로 판정됐다. 현재 전체 상태는 `BLOCKED_INTERIOR_WEIGHTED_RECIPROCITY_PASSIVITY__G2_PAIR_SCREEN_PASSED_CIRCLE_NOT_RUN`이다. 위 후속 명령은 한 번에 실행하는 묶음이 아니다. pair를 재확인한 같은 PowerShell session의 circle `N=128→256`, circle `N=256→512`, EQ0 seed 사이마다 JSON의 `mandatory_stage_pass`와 외부 process-tree guard를 검토하고 통과한 다음 단계만 별도로 시작한다. EQ0 seed extreme의 raw `Yw` reciprocity/passivity, cancellation certificate 또는 power가 실패하면 즉시 중단하고 `N=288/576` 전체 sweep을 시작하지 않는다. target-tested G2도 hidden-mode gate를 놓치면 four-operator symmetric Calderón/Steklov–Poincaré 또는 volume-FEM boundary Schur complement를 별도 사전 등록한다.
 
 G1 exterior structural gate는 `smn=max(|GG10,mn|,|GG20,mn|,ℓmℓn/(2π))`의 pair-normalized max와 Frobenius q change를 각각 `<=1e-10`, independently reversed pair와 raw transpose defect를 `<=1e-12`, `r0` rank-one relative residual을 `<=1e-8`로 판정한다. G2는 q20을 canonical, q40을 parity로 두며 self/touching/routed-near와 balanced final `Z'loop`에 기존 `0.1%/0.25°` gate를 적용한다. `r0`는 partial common mode가 아니라 q20 balanced `Z'loop`에서 비교하고, 관련 `P/Pout/AE/K`의 최대 `κ1u`로 `τinv=max(1e-12,50 max κ1u)<=1e-8`을 계산해 변화량 `<=τinv`를 요구한다. prospective interior는 `Yw=WYs` `[S·m]`, `Yw,floor=max(1e-12 S·m,1e-10 max|Yw|)`, `||Yw−Yw^T||F/max(||Yw||F,N Yw,floor)<=1e-8`로 검사한다. passivity는 `H(Yw)=(Yw+Yw^H)/2`의 raw `λmin >= -max(Yw,floor,1e-9||Yw||2)`다. Hermitian part 평가는 진단이지 operator 대칭화가 아니다. G1은 exterior power 원인 격리용 diagnostic이며 이 interior metric이나 converged A–v가 실패하면 M1은 계속 blocked다.
+
+### G2 pair-screen captured result
+
+| frequency | material | self/touching/routed/tensor | max `P` q-change | max `U` q-change | max depth | mandatory |
+|---:|---|---|---:|---:|---:|---|
+| 100 kHz | conductor | `72/144/196/4772` | `6.365673979e-11` | `8.551538175e-14` | 2 | pass |
+| 100 kHz | background | `72/144/196/4772` | `5.318295400e-16` | `3.671831656e-16` | 2 | pass |
+| 2 GHz | conductor | `72/144/196/4772` | `7.528215673e-6` | `1.710208992e-9` | 2 | pass |
+| 2 GHz | background | `72/144/196/4772` | `7.403393159e-16` | `3.500670156e-16` | 2 | pass |
+
+각 행의 pair 합은 `5184=72²`다. q20/q40 양쪽 raw `P` transpose의 전체 최대는 `1.888760303e-16`. process-only wall/peak-WS/private는 100 kHz `25.4061208 s / 58.60546875 MiB / 1295.23046875 MiB`, 2 GHz `24.9042113 s / 58.765625 MiB / 1295.3125 MiB`다. 외부 process-tree 또는 8 GB proof가 아니다. 이 결과는 pair quadrature/classification만 승인하며 analytic DtN, `Yw`, cancellation, terminal/power나 full G2를 승인하지 않는다.
 
 ## Focused regression
 

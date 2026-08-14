@@ -223,12 +223,30 @@ Exterior를 교체해도 interior는 frozen collocation `Ys`를 사용했다. `Y
 
 ## 다음 후보: M1-EQ0-G2 interior Galerkin
 
-G2는 G1 exterior를 그대로 보존하고 `P/U/Pout/Uout` interior trace operator를 target-tested Galerkin 약형으로 다시 이산화한다. collocation matrix를 사후 평균하거나 negative eigenvalue를 clipping하는 방식은 허용하지 않는다. exact 식, singular quadrature, 독립 pair 방향, raw weighted reciprocity/passivity와 A–v 교차 gate는 [`T1_M1_REFERENCE_SPEC.md`](T1_M1_REFERENCE_SPEC.md)와 [`ORACLE_REPRODUCTION.md`](ORACLE_REPRODUCTION.md)에 결과를 보기 전에 동결한다. 현재 상태는 `M1-EQ0-G2 preregistered_not_run`이다.
+G2는 G1 exterior를 그대로 보존하고 `P/U/Pout/Uout` interior trace operator를 target-tested Galerkin 약형으로 다시 이산화한다. collocation matrix를 사후 평균하거나 negative eigenvalue를 clipping하는 방식은 허용하지 않는다. exact 식, singular quadrature, 독립 pair 방향, raw weighted reciprocity/passivity와 A–v 교차 gate는 [`T1_M1_REFERENCE_SPEC.md`](T1_M1_REFERENCE_SPEC.md)와 [`ORACLE_REPRODUCTION.md`](ORACLE_REPRODUCTION.md)에 결과를 보기 전에 동결했다.
+
+### G2 pair screen 결과
+
+사전등록 커밋 `ddec4fb` 뒤 100 kHz와 2 GHz에서 q20 canonical/q40 parity pair screen만 실행했다. 한 conductor의 frozen seed `N=72`에서 각 material/frequency마다 self `72`, touching `144`, routed-near `196`, regular tensor `4,772` directed pair가 집계돼 합계 `5,184=72²`였고 maximum recursion depth는 `2<=8`이었다.
+
+| frequency | material | max `P` q-change | max `U` q-change | q gate margin |
+|---:|---|---:|---:|---:|
+| 100 kHz | conductor | `6.36567e-11` | `8.55154e-14` | `1.5709e7×` |
+| 100 kHz | background | `5.31830e-16` | `3.67183e-16` | `1.8803e12×` |
+| 2 GHz | conductor | `7.52822e-6` | `1.71021e-9` | `132.834×` |
+| 2 GHz | background | `7.40339e-16` | `3.50067e-16` | `1.3507e12×` |
+
+최악값은 2 GHz conductor self-`P`의 `7.52822e-6=0.000752822%`로 `0.1%` gate의 `0.753%`만 사용했다. raw `P` transpose defect의 전체 최대는 `1.88876e-16`, gate margin은 `5,294×`였다. 두 frequency 모두 `mandatory_stage_pass=true`다.
+
+process-only wall/peak working-set/private bytes는 100 kHz `25.4061 s / 58.6055 MiB / 1295.2305 MiB`, 2 GHz `24.9042 s / 58.7656 MiB / 1295.3125 MiB`다. 외부 process-tree/system-headroom을 내장 측정한 값이 아니므로 8 GB 또는 production resource pass로 사용하지 않는다.
+
+pair 단계만 `passed_pair_screen_only`다. q20과 q40가 함께 잘못된 continuous sign/operator로 수렴할 수도 있으므로 analytic circle DtN, `Yw` reciprocity/passivity, cancellation, terminal power 또는 full G2를 승인하지 않는다. 전체 상태는 **`BLOCKED_INTERIOR_WEIGHTED_RECIPROCITY_PASSIVITY__G2_PAIR_SCREEN_PASSED_CIRCLE_NOT_RUN`**이다.
 
 ## Exact next starting point
 
 1. **완료:** G1 direct exterior Galerkin을 `N={144,288,576}`, 7 frequencies, q10/q20, 세 `r0`에서 실행해 exterior-only pass와 interior blocker를 분리했다.
 2. **동결 완료:** G2 interior Galerkin의 약형, self/touching/non-touching singular quadrature, basis/order, raw reciprocity/passivity, q20/q40와 no-retuning rule을 exact reproduction block에 고정했다.
-3. pair screen → circle `N=128→256` → circle `N=256→512` → EQ0 seed를 별도 명령으로 실행하고 각 단계의 mandatory gate를 검토한다. seed extreme이 모두 통과한 뒤에만 같은 3×7 contour로 확장한다.
-4. A–v는 consistent P1 mass form으로 `h/h2/h4`, crop `2/4/8Deff`, condition과 process-tree resource를 채운다.
-5. 두 방법이 모두 통과하기 전 T1-F, board source owner 또는 PowerSI correlation으로 우회하지 않는다.
+3. **완료/제한 통과:** pair screen은 `passed_pair_screen_only`다.
+4. 같은 frozen definition을 다시 로드해 pair를 재확인한 같은 PowerShell session에서 circle `N=128→256`만 실행한다. 통과 뒤에만 `N=256→512`, 그 뒤에만 EQ0 seed를 시작한다.
+5. A–v는 consistent P1 mass form으로 `h/h2/h4`, crop `2/4/8Deff`, condition과 process-tree resource를 채운다.
+6. 두 방법이 모두 통과하기 전 T1-F, board source owner 또는 PowerSI correlation으로 우회하지 않는다.
