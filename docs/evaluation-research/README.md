@@ -30,7 +30,7 @@
 - 새 물리 block은 board curve에 바로 맞추지 않고 canonical coupon에서 scaling, convergence, invariant와 exact-minus-core ownership을 먼저 통과해야 한다.
 - N0 exact route reduction은 independent scalar R/L coupon에서 machine-precision parity를 통과했다. 이 인증은 mutual/multiterminal block이나 topology replacement에 자동 전이되지 않는다.
 - S1/V1/V2/A1/C1의 기존 kernel은 유용한 부분 invariant를 통과했지만 global correction 승격에는 모두 차단됐다. 특히 A1의 마지막 mesh 변화는 4.73%로 사전 등록한 0.5%/1% gate를 넘는다.
-- T1의 lossless Cohn body-fitted `C'`, periodic two-plate smooth-copper `R/L` manufactured identity와 `C0-A1` 원형 interior DtN gate는 제한 범위에서 통과했다. 사전 등록했던 `C0-A0` 저주파 `10^6` switch는 작은 원 100 kHz에서 실패했으며, finite-width SAO–CIM, independent A–v, 3-D end audit, 실제 return polygon과 absolute/exact-core global operator는 아직 차단 상태다.
+- T1의 lossless Cohn body-fitted `C'`, periodic two-plate smooth-copper identity, 독립 1-D slab FEM과 `C0-A1` 원형 interior DtN gate는 제한 범위에서 통과했다. M0의 lateral-periodic slab과 finite/open rectangle은 다른 경계값 문제이므로 free-space `H2` contour를 periodic `coth`와 직접 비교하지 않는다. 사전 등록했던 `C0-A0` 저주파 `10^6` switch는 작은 원 100 kHz에서 실패했으며, finite-width SAO–CIM/A–v, 3-D end audit, 실제 return polygon과 absolute/exact-core global operator는 아직 차단 상태다.
 - P1/P2 explicit-ref crop에서 referenced return artwork와 nearby same-net GND via graph는 확인했지만 signal trace와 return conductor를 묶는 signed current/field owner는 없다. 특히 P2 세 TOP trace endpoint는 IN01 GND negative-circle void 중심에 놓이므로, ref 이름이나 가까운 via만으로 source-faithful return을 선언하지 않는다.
 - source parameter는 `explicit`, `absent`, `parser_not_preserved`, `derived_node_link`로 구분한다. P3/P4 trace width 결손, 네 pair의 plating/fill/roughness 결손, P1/P2의 미보존 `NoAntiPadLayers`를 추정으로 숨기지 않는다.
 
@@ -51,8 +51,9 @@
 11. [`T1_RETURN_CROP_MANIFEST.md`](T1_RETURN_CROP_MANIFEST.md): P1/P2 explicit-ref crop의 실제 artwork, void, nearby return graph와 source-faithful blocker 확인
 12. [`T1_M1_REFERENCE_SPEC.md`](T1_M1_REFERENCE_SPEC.md): homogeneous SAO–CIM과 independent A–v FEM의 식, fixture, 수렴·자원 gate 확인
 13. [`T1_CIRCLE_DTN_RESULTS.md`](T1_CIRCLE_DTN_RESULTS.md): frozen `C0-A0` 실패, selected `C0-A1` circle-only 통과와 withheld/수치 범위 확인
-14. [`ORACLE_REPRODUCTION.md`](ORACLE_REPRODUCTION.md): custom numerical table의 exact 재현 명령 확인
-15. [`SESSION_LOG.md`](SESSION_LOG.md)의 가장 최근 항목: 직전 세션의 증거와 중단 지점 확인
+14. [`T1_M0_SLAB_RESULTS.md`](T1_M0_SLAB_RESULTS.md): periodic slab의 independent 1-D FEM pass, withheld 결과와 free-space/periodic boundary mismatch 확인
+15. [`ORACLE_REPRODUCTION.md`](ORACLE_REPRODUCTION.md): custom numerical table의 exact 재현 명령 확인
+16. [`SESSION_LOG.md`](SESSION_LOG.md)의 가장 최근 항목: 직전 세션의 증거와 중단 지점 확인
 
 그 뒤 `git status`, 현재 branch/HEAD, 원본 파일의 존재와 hash를 확인한다. 이미 확정한 분석을 근거 없이 다시 수행하거나 목표를 재정의하지 않는다.
 

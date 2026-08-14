@@ -201,12 +201,12 @@ Hν^(2)(z)     = hankel2e(ν,z) exp(z.imag) exp(-j z.real)
 
 현재 승인되는 문장은 “`C0-A1`이 canonical full-condition gate와 W1/W3 dense withheld를 통과했고 W2 analytic/convergence-only withheld가 이를 지지했다”까지다.
 
-이 checkpoint에서 [`T1_M1_REFERENCE_SPEC.md`](T1_M1_REFERENCE_SPEC.md)를 amendment해 A0 실패를 보존하고 A1을 **M0/M1에 적용할 primary research candidate**로 사전 등록했다. 이는 M1 통과가 아니며 A1 실패 시 A0 fallback이나 사후 tuning을 허용하지 않는다.
+이 checkpoint에서 [`T1_M1_REFERENCE_SPEC.md`](T1_M1_REFERENCE_SPEC.md)를 amendment해 A0 실패를 보존하고 A1을 후속 contour 연구의 primary candidate로 사전 등록했다. 이후 [`T1_M0_SLAB_RESULTS.md`](T1_M0_SLAB_RESULTS.md)에서 M0 lateral-periodic slab과 finite/open contour가 서로 다른 경계값 문제임을 확인했으므로, 현재 A1의 다음 적용 대상은 finite/open M1이다. 이는 M1 통과가 아니며 A1 실패 시 A0 fallback이나 사후 tuning을 허용하지 않는다.
 
 다음 단계는 순서대로:
 
-1. `C0-A1`로 M0 wide coextensive slab `coth` limit를 회복한다.
-2. corner가 있는 M1의 `N,2N,4N`과 underflow/operator-floor certificate를 실행한다.
+1. M0 periodic slab의 independent 1-D volume-only pass를 유지한다.
+2. corner가 있는 finite/open M1의 `N,2N,4N`과 underflow/operator-floor certificate를 실행한다.
 3. 같은 conductor/group/current basis의 A–v reference를 실행한다.
 4. exterior `Z'_partial`, equipotential return reduction과 power/passivity gate를 연결한다.
 5. noncircular blind fixture와 A–v가 통과하기 전 제품 또는 PowerSI correlation으로 승격하지 않는다.

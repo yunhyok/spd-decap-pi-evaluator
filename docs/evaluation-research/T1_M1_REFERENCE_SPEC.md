@@ -2,7 +2,7 @@
 
 최종 갱신: 2026-08-14 (Asia/Seoul)
 
-이 문서는 finite-width straight conductor와 explicit return의 smooth-copper broadband series operator를 검증할 T1-M1 실행 계약을 고정한다. 제품 parser/solver 코드는 변경하지 않았다. mandatory circle interior prototype은 [`T1_CIRCLE_DTN_RESULTS.md`](T1_CIRCLE_DTN_RESULTS.md)에서 `C0-A1 passed_circle_interior_only`로 판정됐지만 finite-width SAO–CIM과 independent A–v 기준기는 아직 실행되지 않았다. 따라서 T1-M1은 **`specified_not_run`**, T1 전체와 global composition은 계속 `blocked`다.
+이 문서는 finite-width straight conductor와 explicit return의 smooth-copper broadband series operator를 검증할 T1-M1 실행 계약을 고정한다. 제품 parser/solver 코드는 변경하지 않았다. mandatory circle interior prototype은 [`T1_CIRCLE_DTN_RESULTS.md`](T1_CIRCLE_DTN_RESULTS.md)에서 `C0-A1 passed_circle_interior_only`, lateral-periodic slab은 [`T1_M0_SLAB_RESULTS.md`](T1_M0_SLAB_RESULTS.md)에서 `passed_periodic_1d_volume_only`로 판정됐다. 그러나 finite-width SAO–CIM과 independent 2-D A–v 기준기는 아직 실행되지 않았다. 따라서 T1-M1은 **`specified_not_run`**, T1 전체와 global composition은 계속 `blocked`다.
 
 ## 범위와 독립성
 
@@ -166,7 +166,7 @@ C0 = 1    otherwise
 
 같은 conductor의 interior와 equivalent-background operator에 같은 `C0`를 쓰는 이 정책은 작은 원 100 kHz에서 정확도·mesh·phase·conditioning gate를 실패했다. 이 결과는 [`T1_CIRCLE_DTN_RESULTS.md`](T1_CIRCLE_DTN_RESULTS.md)의 immutable negative baseline이며 결과를 삭제하거나 선택 후보의 통과로 덮어쓰지 않는다.
 
-현재 positive-frequency research candidate `C0-A1`은 conductor와 filled-background operator 모두 `C0=1`을 사용하고, `Jν-jYν`를 따로 계산하지 않은 direct/scaled `Hν^(2)` kernel을 사용한다. DC는 위 analytic branch로 분리한다. A1 선택에는 downstream `Z'`, PowerSI 또는 board curve를 사용하지 않고 finite/branch, self/quadrature, residual, equilibrated condition과 mesh gate만 사용했다. A1이 M0/M1에서 실패하면 `BLOCKED_C0_A1`로 남기며 A0로 자동 복귀하거나 frequency별로 `C0`를 tune하지 않는다. high-`C0` 재시도는 별도 `C0-A2` preregistration과 dynamic-range certificate가 있을 때만 허용한다.
+현재 positive-frequency research candidate `C0-A1`은 conductor와 filled-background operator 모두 `C0=1`을 사용하고, `Jν-jYν`를 따로 계산하지 않은 direct/scaled `Hν^(2)` kernel을 사용한다. DC는 위 analytic branch로 분리한다. A1 선택에는 downstream `Z'`, PowerSI 또는 board curve를 사용하지 않고 finite/branch, self/quadrature, residual, equilibrated condition과 mesh gate만 사용했다. A1이 finite/open M1에서 실패하면 `BLOCKED_C0_A1`로 남기며 A0로 자동 복귀하거나 frequency별로 `C0`를 tune하지 않는다. high-`C0` 재시도는 별도 `C0-A2` preregistration과 dynamic-range certificate가 있을 때만 허용한다.
 
 homogeneous log exterior는 magnetoquasistatic/quasi-TM model이다. conductor union의 최대 transverse span을 `Deff`라 두고 각 frequency에서
 
@@ -175,6 +175,14 @@ homogeneous log exterior는 magnetoquasistatic/quasi-TM model이다. conductor u
 ```
 
 을 engineering preregistration으로 사용한다. 이를 넘는 case는 결과를 clip하지 않고 `BLOCKED_QUASI_TM_EXTENT`로 남긴다. unbounded SAO exterior에는 별도의 current edge가 없으므로 edge-tail gate를 만들지 않는다. finite A–v reference에서는 `8Deff` solution의 magnetic energy로 `Wm(Ω8\Ω4)/Wm(Ω8)<0.1%`를 별도 검사한다. `ΩR`는 conductor union의 bounding box를 모든 방향으로 `R Deff` 확장한 영역이다.
+
+## M0 boundary amendment와 independent result
+
+M0의 `w=5 mm`는 finite conductor width가 아니라 lateral period다. seam은 translationally identified되고 physical side face/corner가 없다. 반면 이 문서의 M1 SAO는 simply connected finite rectangle과 unbounded exterior를 푼다. 따라서 finite rectangle의 free-space `H2`/log operator를 periodic `coth` target과 직접 비교하지 않는다.
+
+제품 helper를 import하지 않는 normalized 1-D volume FEM은 periodic slab의 `m=0` exact target을 통과했다. canonical 12 frequencies의 max fine error/mesh/phase는 `0.073301%/0.219901%/0.041998°`, W0 material/thickness withheld 12 cases는 `0.126811%/0.380419%/0.072657°`다. 상태는 `passed_periodic_1d_volume_only`다. gap exterior `jωμh/w`는 analytic M0 term이며 general exterior CIM pass가 아니다.
+
+C0-A1 periodized pulse SAO를 만들려면 free-space kernel과 별개의 periodic Helmholtz/diffusion Green function, seam identification과 spectral/image-tail certificate가 필요하다. 이 M0-only kernel은 finite/open M1 code path를 직접 검증하지 않으므로 우선 구현하지 않는다. M1 실패가 interior face-coupling/sign으로 격리되면 그때 별도 time-boxed diagnostic으로 preregister할 수 있지만, 사후 promotion evidence로 소급 사용하지 않는다.
 
 ## 독립 2-D volume-current `A_z–v` FEM
 
@@ -356,8 +364,8 @@ matrix convergence에서 frequency별 `Z'floor=max(1e-9 Ω/m,1e-9 maxij|Z'fine,i
 ## 실행 순서와 상태 전이
 
 1. 위 두 radius, 일곱 frequency, 다섯 Fourier mode의 analytic Bessel/Fourier DtN eigenvalue로 SAO interior를 검증한다. **완료:** A0 실패, A1 circle-only 통과.
-2. `C0-A1`로 M0 wide coextensive limit에서 `coth` slab law, `Rdc`, `Ldc`, high-skin `sqrt(f)` slope를 회복한다.
-3. M1의 eligible frequency/case에서 `N,2N,4N`, quadrature, Hankel dynamic-range와 operator-floor certificate를 통과한다.
+2. M0 periodic slab의 analytic + independent 1-D volume 결과를 동결한다. **완료:** `passed_periodic_1d_volume_only`; C0-A1 periodic SAO는 미승격.
+3. smallest eligible equal-width finite/open M1부터 `N,2N,4N`, quadrature, Hankel dynamic-range와 operator-floor certificate를 통과한다.
 4. 같은 geometry/current basis의 A–v `h,h/2,h/4`와 crop `2/4/8 Deff`를 통과한다.
 5. symmetric two-return case에서 symmetry로만 equal split이 나오는지 검증한다.
 6. P2 artificial `Trace13305` coupon을 실행한다.
@@ -371,4 +379,5 @@ matrix convergence에서 frequency별 `Z'floor=max(1e-9 Ω/m,1e-9 maxij|Z'fine,i
 - U. R. Patel and P. Triverio, “Skin Effect Modeling in Conductors of Arbitrary Shape Through a Surface Admittance Operator and the Contour Integral Method,” [author preprint](https://arxiv.org/html/1509.08357), [IEEE T-MTT DOI](https://doi.org/10.1109/TMTT.2016.2593721).
 - U. R. Patel, B. Gustavsen, and P. Triverio, “An Equivalent Surface Current Approach for the Computation of the Series Impedance of Power Cables with Inclusion of Skin and Proximity Effects,” [author preprint with the complete complex `Z'` derivation](https://arxiv.org/html/1303.5452v2), [IEEE TPWRD DOI](https://doi.org/10.1109/TPWRD.2013.2267098).
 - A. Piwonski et al., “Finite Element Modeling of Power Cables using Coordinate Transformations,” [author preprint](https://arxiv.org/abs/2307.00814), [IEEE TMAG DOI](https://doi.org/10.1109/TMAG.2023.3318292). This supports the independent magnetic-vector-potential `A–v` family; the exact reduced fixture above remains this project’s preregistered formulation.
+- A. M. Dienstfrey, F. Hang, and J. Huang, “Lattice Sums and the Two-dimensional, Periodic Green's Function for the Helmholtz Equation,” [NIST primary publication](https://www.nist.gov/publications/lattice-sums-and-two-dimensional-periodic-green-s-function-helmholtz-equation). This supports treating the periodic Green kernel as a separate numerical formulation, not as the free-space `H2` kernel with renamed boundaries.
 - T. Demeester and D. De Zutter, “Quasi-TM Transmission Line Parameters of Coupled Lossy Lines Based on the Dirichlet to Neumann Boundary Operator,” [author PDF](https://tdmeeste.github.io/files/pubs/QuasiTM_MTT_Demeester2008.pdf). This motivates the current-definition and layered/lossy-background blockers.

@@ -791,10 +791,85 @@ thread visualization의 T1 tile은 `E0/M0/A1 circle interior 제한 통과, M1 s
 - visualization은 Playwright의 실제 CSS viewport로 736×520과 360×640을 재렌더링했다. inner width/scroll width는 각각 `704/704`, `328/328`이고 두 화면 모두 7개 gate tile을 보존했다.
 - checkpoint 직전 재검증: focused regression `7 passed in 0.85 s`, research Markdown 15개 error 0, `git diff --check` error 0, 변경 범위 전부 `docs/evaluation-research/`.
 
-### Exact next starting point
+### Exact next starting point (superseded by the M0 boundary amendment below)
 
 1. amended `C0-A1` policy로 M0 wide coextensive plate의 analytic `coth` operator를 pulse-panel SAO에서 회복한다.
 2. raw U/P, interior/exterior split, signed complex power, panel N/2N/4N, self q10/20, condition과 operator-floor를 모두 보고한다.
 3. M0가 통과한 뒤에만 eligible finite-width M1을 실행하고 same-basis independent A–v `h,h/2,h/4`, crop `2/4/8Deff`와 비교한다.
 4. A1이 M0/M1에서 실패하면 `BLOCKED_C0_A1`로 남기며 A0 fallback 또는 frequency tuning을 하지 않는다.
 5. source-faithful return, exact-minus-core/global adapter, PowerSI correlation과 8 GB production 승격은 계속 차단한다.
+
+## 2026-08-14 — T1-M0 periodic slab independent volume gate
+
+### 시작점과 목적
+
+직전 circle checkpoint를 local commit `6248e0b`로 동결한 뒤, T1-M0 wide coextensive plate의 `coth` law를 독립 numerical method로 회복하고 C0-A1 SAO의 다음 승격 경계를 판정했다. 제품 parser/solver/UI/version은 수정하지 않았다.
+
+### 경계값 문제 정정
+
+M0의 `w=5 mm`는 finite conductor width가 아니라 lateral period다. seam이 translationally identified되므로 physical side face와 corner가 없다. finite rectangle + free-space/unbounded `H2` contour에는 side current crowding과 edge magnetic energy가 생긴다. 따라서 이를 periodic `coth` target과 직접 비교하면 다른 boundary-value problem을 같은 것으로 취급하게 된다.
+
+Root, Sol, Terra의 독립 검토는 다음 결론에 일치했다.
+
+- M0-only periodized Helmholtz/diffusion Green kernel을 만들려면 seam identification과 spectral/image-tail convergence가 별도로 필요하다.
+- 이 kernel은 finite/open M1 production candidate의 free-space contour/exterior/corner 경로와 달라 M1 위험을 거의 줄이지 않는다.
+- M0는 analytic + independent 1-D volume-only로 동결하고 C0-A1은 circle-only 상태로 유지한다.
+- M1 실패가 interior face-coupling/sign으로 격리될 때만 periodic diagnostic을 별도 preregister하며 사후 promotion evidence로 소급하지 않는다.
+
+### M0-V1 normalized 1-D FEM
+
+`ξ=y/t`, `x²=jωμσt²`, `u=σtE/H(0)`로 정규화해
+
+```text
+u''-x²u=0,  u'(0)=-x²,  u'(1)=0
+(K+x²M)u=x²e0
+Zs,FEM=u0/(σt)
+```
+
+를 linear FEM으로 풀었다. 제품 `copper_surface_impedance`를 import하지 않았다. row-max→column-max equilibration, LU와 LAPACK `gecon`, consistent mass current/power identity를 사용했다.
+
+canonical은 mandatory 7 anchors와 `δ/t={4,2,1,0.5,0.25}` crossover를 합친 12 frequencies, mesh `N={64,128,256}`이다. 2 GHz fine resolution은 skin depth당 `10.66` elements다.
+
+- fine raw `Zs` log-RMS/max error: `0.017973%/0.073301%`
+- medium→fine log-RMS/max: `0.053917%/0.219901%`
+- max phase: `0.041998°`
+- max full-loop error: `0.002936%`; conductor error를 가리는 보조 지표로만 사용
+- max backward residual: `2.220e-16`
+- max equilibrated `κ1u`: `6.336e-10`
+- max current/power residual: `1.005e-11/7.574e-15`
+- FEM high-skin slope: `0.500124/0.500264/0.500528`
+- canonical checksum: `d59a770e999fc53c90ca7043cc772badd13220e16ce84912590360fa7e5da5e6`
+
+### W0 withheld
+
+canonical 뒤 수치를 조정하지 않도록 실행 전에 `t={17.5,70} µm`, `σ={29.8,119.2} MS/m`, `f={173 kHz,17.3 MHz,1.73 GHz}`와 adaptive power-of-two mesh rule을 고정했다. 12 combinations의 worst error/mesh/phase는 `0.126811%/0.380419%/0.072657°`, backward `2.220e-16`, `κ1u=1.852e-10`, current/power `7.304e-12/2.147e-15`로 같은 gate를 통과했다.
+
+### Resource와 상태
+
+canonical sequential run은 이 host에서 약 `1.38 s`, process-only peak working set `57.86 MiB`, private bytes 약 `1320.22 MiB`였다. 최대 fine matrix는 `257×257 complex128`이고 case 사이에 보존하지 않았다. process-tree/8 GB product 성능 승격은 아니다.
+
+판정은 `passed_periodic_1d_volume_only`다. analytic gap `jωμh/w`는 M0 전용이며 general exterior pass가 아니다. C0-A1은 `passed_circle_interior_only`, finite/open M1은 `specified_not_run`, T1/global/PowerSI/product는 계속 blocked다.
+
+### 문서 변경
+
+새 [`T1_M0_SLAB_RESULTS.md`](T1_M0_SLAB_RESULTS.md)를 추가하고 README, research state, R2 results, local plan, algorithm candidates, T1 results, M1 spec와 reproduction appendix를 동기화했다. 제품 code는 변경하지 않았다.
+
+### Operator scope와 최종 검증
+
+- positive-frequency branch `Re γ>0, Im γ>0`, CCW contour/outward-normal sign과 full `coth/csch` two-face map을 고정했다.
+- independent FEM은 `Ho=0, Hi=1`인 `Zs` 열만 검증했다. `Zx` 또는 임의 two-face excitation을 numerical recovery했다고 주장하지 않는다.
+- `b=(1,-1)ᵀ` zero-sum scalar만 유한하며 `(Z'loop/4)bbᵀ` 인공 lift를 physical partial operator나 GlobalMNA stamp로 금지했다.
+- terminal peak complex power, two-conductor copper loss, conductor/gap stored-energy identity를 고정하고 FEM mass invariant는 dissipative real-part check임을 분리했다.
+- 문서의 standalone reproduction block을 다시 실행해 canonical/W0 전 수치와 checksum이 일치했다.
+- physical owner/fail-closed focused regression: `7 passed in 0.79 s`.
+- research Markdown 16개: strict UTF-8 error 0, trailing whitespace 0, odd fence 0, broken relative link 0; `git diff --check` error 0.
+- visualization은 T1 evidence를 periodic M0 volume-only와 finite/open M1 `specified_not_run`으로 갱신했다. Playwright actual CSS viewport `736×520`과 `360×640`에서 inner/scroll width `704/704`, `328/328`, gate tile 7개를 확인했다.
+- Sol은 수학·operator scope·상태를, Terra는 경계/승격과 current next path를, Luna는 reproduction/checksum/resource/문서/시각화를 최종 `APPROVED`했다.
+
+### Exact next starting point
+
+1. smallest eligible equal-width finite/open M1의 perimeter geometry와 nested panel manifest를 먼저 고정한다.
+2. C0-A1 interior + unbounded log exterior의 raw partial `Z'`를 `N,2N,4N`, quadrature, residual, condition, current, power와 함께 실행한다.
+3. 동일 geometry/current basis의 independent 2-D A–v를 skin mesh와 crop `2/4/8 Deff`에서 실행한다.
+4. finite rectangle 결과는 periodic `coth`에 대한 exact error가 아니라 SAO-vs-A–v와 width-asymptotic 보조 trend로 판정한다.
+5. M1 통과 전 source return/global/PowerSI 또는 acceleration 단계로 승격하지 않는다.

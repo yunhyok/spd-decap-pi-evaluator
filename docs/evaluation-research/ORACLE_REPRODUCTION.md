@@ -578,6 +578,146 @@ for physical_length in (0.889e-3, 0.900e-3, 4.2e-3, 10e-3):
 
 2026-08-14 frozen output은 `Rdc=1.9175455417066e-3 Ω`, `Ldc=1.8430676901060e-10 H`, `Lhf=1.2566370614359e-10 H`다. 2 GHz는 `R=4.60396197072075e-2 Ω`, `L=1.29327422670828e-10 H`다. 100 MHz→500 MHz→1 GHz→2 GHz resistance slope는 `0.500032982/0.50000000005/0.50000000000`이다. 0.889/0.900/4.2/10 mm의 `|βl|`은 `0.074528249/0.075450421/0.352101964/0.838338009`; nominal-π 최대 coefficient error는 `0.0927/0.0950/2.120/13.975%`, series-only는 `0.1856/0.1902/4.348/32.633%`다.
 
+## T1-M0 independent normalized slab FEM
+
+아래 block은 제품 helper를 import하지 않고 periodic `m=0` conductor slab을 1-D linear FEM으로 재구성한다. canonical 12 frequencies와 실행 전에 고정한 W0 material/thickness withheld를 모두 재현한다. exact two-face map의 `Ho=0, Hi=1`인 `Zs` 열만 검증하며 `Zx=Zc csch(γt)` 또는 임의 two-face excitation을 회복하지 않는다. 결과의 balanced scalar를 인공 absolute-node operator나 GlobalMNA stamp로 승격하지 않는다. finite/open rectangular SAO 또는 general exterior solve도 아니다.
+
+```powershell
+@'
+import hashlib, json, math
+import numpy as np
+from scipy.linalg import get_lapack_funcs, lu_factor, lu_solve
+
+MU0 = 4e-7*math.pi
+UROUND = 2.0**-53
+SIGMA = 59.6e6
+THICKNESS = 35e-6
+WIDTH = 5e-3
+GAP = 50e-6
+LENGTH = 10e-3
+
+def exact_surface(frequency, sigma, thickness):
+    x = thickness*np.sqrt(1j*2*math.pi*frequency*MU0*sigma)
+    return complex(x/np.tanh(x)/(sigma*thickness))
+
+def fem_surface(frequency, sigma, thickness, elements):
+    x2 = 1j*2*math.pi*frequency*MU0*sigma*thickness**2
+    step = 1/elements
+    size = elements+1
+    stiffness = np.zeros((size,size), complex)
+    mass = np.zeros_like(stiffness)
+    ke = np.asarray(((1,-1),(-1,1)), complex)/step
+    me = step*np.asarray(((2,1),(1,2)), complex)/6
+    for index in range(elements):
+        stiffness[index:index+2,index:index+2] += ke
+        mass[index:index+2,index:index+2] += me
+    matrix = stiffness+x2*mass
+    rhs = np.zeros(size, complex)
+    rhs[0] = x2
+    row = np.max(np.abs(matrix), axis=1)
+    row_scaled = matrix/row[:,None]
+    column = np.max(np.abs(row_scaled), axis=0)
+    equilibrated = row_scaled/column[None,:]
+    lu, piv = lu_factor(equilibrated, check_finite=True)
+    solution = lu_solve((lu,piv), rhs/row, check_finite=True)/column
+    backward = np.linalg.norm(matrix@solution-rhs,np.inf)/max(
+        np.linalg.norm(matrix,np.inf)*np.linalg.norm(solution,np.inf)
+        +np.linalg.norm(rhs,np.inf), np.finfo(float).tiny,
+    )
+    gecon = get_lapack_funcs('gecon',(equilibrated,))
+    rcond, info = gecon(lu,float(np.linalg.norm(equilibrated,1)),norm='1')
+    if info or not np.isfinite(rcond) or rcond <= 0:
+        raise RuntimeError(('gecon',info,rcond))
+    impedance = complex(solution[0]/(sigma*thickness))
+    current = abs(np.ones(size)@mass@solution-1)
+    loss = np.vdot(solution,mass@solution).real/(sigma*thickness)
+    power = abs(loss-impedance.real)/max(abs(impedance.real),np.finfo(float).tiny)
+    return impedance, {
+        'backward':float(backward), 'kappa1u':float(UROUND/rcond),
+        'current':float(current), 'power':float(power),
+    }
+
+def log_rms(frequencies, values):
+    x = np.log(np.asarray(frequencies,float))
+    weights = np.empty_like(x)
+    weights[0] = (x[1]-x[0])/2
+    weights[-1] = (x[-1]-x[-2])/2
+    weights[1:-1] = (x[2:]-x[:-2])/2
+    return float(np.sqrt(np.sum(weights*np.asarray(values)**2)/np.sum(weights)))
+
+anchors = (1e5,1e6,1e7,1e8,5e8,1e9,2e9)
+delta_ratios = (4.0,2.0,1.0,0.5,0.25)
+crossovers = tuple(
+    1/(math.pi*MU0*SIGMA*(ratio*THICKNESS)**2)
+    for ratio in delta_ratios
+)
+frequencies = tuple(sorted(set(anchors+crossovers)))
+canonical = []
+for frequency in frequencies:
+    exact = exact_surface(frequency,SIGMA,THICKNESS)
+    solved = [fem_surface(frequency,SIGMA,THICKNESS,n) for n in (64,128,256)]
+    medium, fine = solved[-2][0], solved[-1][0]
+    exact_loop = LENGTH*(2*exact/WIDTH+1j*2*math.pi*frequency*MU0*GAP/WIDTH)
+    fine_loop = LENGTH*(2*fine/WIDTH+1j*2*math.pi*frequency*MU0*GAP/WIDTH)
+    canonical.append({
+        'frequency':frequency, 'fine':fine,
+        'error':abs(fine-exact)/abs(exact),
+        'mesh':abs(fine-medium)/abs(fine),
+        'phase':abs(float(np.angle(fine/exact,deg=True))),
+        'loop_error':abs(fine_loop-exact_loop)/abs(exact_loop),
+        'loop_R':fine_loop.real,
+        **solved[-1][1],
+    })
+
+summary = {
+    'fine_log_rms':log_rms(frequencies,[row['error'] for row in canonical]),
+    'mesh_log_rms':log_rms(frequencies,[row['mesh'] for row in canonical]),
+}
+for key in ('error','mesh','phase','loop_error','backward','kappa1u','current','power'):
+    summary['max_'+key] = max(row[key] for row in canonical)
+slopes = []
+for first, second in zip(anchors[3:-1],anchors[4:]):
+    r0 = next(row['loop_R'] for row in canonical if row['frequency']==first)
+    r1 = next(row['loop_R'] for row in canonical if row['frequency']==second)
+    slopes.append(math.log(r1/r0)/math.log(second/first))
+summary['skin_slopes'] = slopes
+serial = '\n'.join(','.join(
+    f'{row[key]:.17e}' if not isinstance(row[key],complex)
+    else f'{row[key].real:.17e},{row[key].imag:.17e}'
+    for key in ('frequency','fine','error','mesh','phase','backward','kappa1u','current','power')
+) for row in canonical)
+summary['sha256'] = hashlib.sha256(serial.encode()).hexdigest()
+print('canonical',json.dumps(summary,indent=2))
+
+def next_power_of_two(value):
+    return 1 if value <= 1 else 2**math.ceil(math.log2(value))
+
+withheld = []
+for thickness in (17.5e-6,70e-6):
+    for sigma in (29.8e6,119.2e6):
+        for frequency in (173e3,17.3e6,1.73e9):
+            delta = math.sqrt(1/(math.pi*frequency*MU0*sigma))
+            fine_n = min(512,next_power_of_two(max(64,math.ceil(8*thickness/delta))))
+            sequence = (fine_n//4,fine_n//2,fine_n)
+            solved = [fem_surface(frequency,sigma,thickness,n) for n in sequence]
+            exact = exact_surface(frequency,sigma,thickness)
+            medium, fine = solved[-2][0], solved[-1][0]
+            withheld.append({
+                'error':abs(fine-exact)/abs(exact),
+                'mesh':abs(fine-medium)/abs(fine),
+                'phase':abs(float(np.angle(fine/exact,deg=True))),
+                **solved[-1][1],
+            })
+print('withheld',json.dumps({
+    'case_count':len(withheld),
+    **{'max_'+key:max(row[key] for row in withheld)
+       for key in ('error','mesh','phase','backward','kappa1u','current','power')},
+},indent=2))
+'@ | python -
+```
+
+canonical 핵심 재현값은 fine log-RMS/max error `0.017973%/0.073301%`, mesh log-RMS/max `0.053917%/0.219901%`, phase `0.041998°`, backward residual `2.220e-16`, `κ1u=6.336e-10`, current `1.005e-11`, power `7.574e-15`다. FEM resistance slope는 `0.500124/0.500264/0.500528`, canonical checksum은 `d59a770e999fc53c90ca7043cc772badd13220e16ce84912590360fa7e5da5e6`이다. W0 12 cases는 max error/mesh/phase `0.126811%/0.380419%/0.072657°`, backward `2.220e-16`, `κ1u=1.852e-10`, current `7.304e-12`, power `2.147e-15`를 출력한다. timing/RSS는 host-dependent이며 [`T1_M0_SLAB_RESULTS.md`](T1_M0_SLAB_RESULTS.md)에 process-only 참고값으로 기록한다.
+
 ## T1 reduced differential lift의 expected failure
 
 exact reduced differential two-port를 네 absolute terminal로 lift하면 global gauge 외에 terminal-plane common-mode null이 남는다. 아래 명령의 solve failure가 예상 결과다. 임의의 conductance로 null을 숨기지 않는다.

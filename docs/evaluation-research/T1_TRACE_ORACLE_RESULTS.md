@@ -9,13 +9,13 @@
 | subcase | 판정 | 허용되는 주장 | 남은 차단 조건 |
 |---|---|---|---|
 | T1-E0 Cohn stripline | `passed_canonical_lossless_only` | zero-thickness, homogeneous, lossless centered stripline의 `C'` | finite thickness, conductor/dielectric loss, real return polygon |
-| T1-M0 periodic plate pair | `passed_analytic_identity_only` | 1-D periodic two-plate smooth-copper `R(f), L(f)`과 DC/skin limit | finite-width lateral edge/proximity current crowding, open-boundary field, finite end |
-| T1-I0 circle interior DtN | `C0-A1 passed_circle_interior_only` | exact Bessel DtN, pulse mesh/self/quadrature, canonical + W1/W3 dense; W2 analytic-only | M0/M1 exterior, corner, independent A–v, full `Z'` |
+| T1-M0 periodic plate pair | `passed_periodic_1d_volume_only` | exact identity와 independent normalized FEM의 periodic `m=0` smooth-copper `R(f), L(f)` | finite-width lateral edge/proximity, free-space exterior, C0-A1 periodic SAO |
+| T1-I0 circle interior DtN | `C0-A1 passed_circle_interior_only` | exact Bessel DtN, pulse mesh/self/quadrature, canonical + W1/W3 dense; W2 analytic-only | M1 exterior, corner, independent A–v, full `Z'` |
 | T1-M1 finite-width return | `specified_not_run` | homogeneous SAO–CIM / A–v의 동일 terminal basis와 실행 gate가 고정됨 | SAO panel/self/conditioning과 independent A–v mesh/crop convergence 실행 |
 | T1-F finite-length | `not_run` | 없음 | 3-D PEEC/FastHenry length-difference de-embedding |
 | T1 source candidates | `geometry_and_net_graph_evidence_ready` | width, endpoint, layer, selected stack/material, selected P1/P2 return artwork/void와 same-net graph | terminal-to-return signed current/field owner와 same-crop core partition |
 | T1 global composition | `blocked_balanced_projection_and_return_partition` | reduced differential operator를 곧바로 stamp할 수 없다는 것 | absolute partial operator 또는 explicit local current constraint, same-crop return/core partition |
-| **T1 전체** | **`blocked`** | E0/M0 identity와 circle interior만 제한 통과 | M1/F/source-faithful/global gate 전부 통과 필요 |
+| **T1 전체** | **`blocked`** | E0, M0 periodic volume과 circle interior만 제한 통과 | M1/F/source-faithful/global gate 전부 통과 필요 |
 
 `passed_canonical_*`은 PowerSI 상관성, 제품 정확성 또는 8 GB production 성능 승격이 아니다.
 
@@ -142,6 +142,10 @@ R_{HF}\sim\frac{2l}{w}\sqrt{\frac{\pi f\mu}{\sigma}}
 
 100 MHz→2 GHz의 successive log slope `d ln R/d ln f`는 0.500033에서 0.500000으로 접근한다. 이는 periodic 1-D identity이며 finite-width M1의 width-inverse 법칙이나 corner loss를 승인하지 않는다.
 
+제품 helper를 import하지 않는 normalized 1-D linear FEM으로 이 identity를 독립 재현했다. canonical 12 frequencies, uniform `N={64,128,256}`의 fine raw `Zs` max error/mesh/phase는 `0.073301%/0.219901%/0.041998°`, log-weight RMS error/mesh는 `0.017973%/0.053917%`였다. backward residual `2.220e-16`, equilibrated `κ1u=6.336e-10`, current residual `1.005e-11`, dissipative-power residual `7.574e-15`도 통과했다. 두께·전도도·주파수를 바꾼 W0 withheld 12 cases의 worst error/mesh/phase는 `0.126811%/0.380419%/0.072657°`다. 상세 식과 resource는 [`T1_M0_SLAB_RESULTS.md`](T1_M0_SLAB_RESULTS.md)를 따른다.
+
+M0는 lateral-periodic seam을 가진 slab이고 physical side face가 없다. finite rectangle + unbounded `H2` contour에는 side current와 edge magnetic energy가 있으므로 periodic `coth`를 exact target으로 직접 사용할 수 없다. C0-A1 periodized SAO는 별도 periodic Green/lattice-sum kernel이 없어 `blocked_periodic_green_not_implemented`다. 이 M0-only kernel은 finite/open M1 위험을 거의 줄이지 않으므로 우선 구현하지 않고, C0-A1은 circle-only 상태로 M1에서 검증한다.
+
 ## Finite length와 distributed ownership
 
 SAO–CIM이 `z'(f)=R'(f)+jωL'(f)`를 주더라도 2 GHz에서 trace를 항상 한 개의 lumped series branch로 바꿀 수는 없다. source-derived `y'(f)=G'(f)+jωC'(f)`와 같은 return/reference를 쓸 때 uniform scalar line은 다음 exact two-end differential operator를 갖는다.
@@ -239,8 +243,8 @@ board crop에서는 signal copper, return copper, magnetic/electric field, termi
 
 ## 다음 실행 순서
 
-1. circle에서 선택된 `C0-A1` direct/scaled Hankel policy로 M0 coextensive plate의 analytic `coth` operator를 perimeter discretization에서 회복한다.
-2. T1-M1 finite-width `w/h={5,10,20,50}`, return-width ratio `{1,5,20}`를 homogeneous SAO–CIM과 independent A–v FEM으로 비교한다. SAO는 unbounded log kernel, A–v만 outer crop `{2,4,8}Deff`를 사용한다.
+1. M0 periodic 1-D volume pass를 독립 slab anchor로 동결한다. finite/open contour를 periodic `coth`와 직접 비교하지 않는다.
+2. smallest eligible equal-width T1-M1부터 finite-width `w/h={5,10,20,50}`, return-width ratio `{1,5,20}`를 homogeneous SAO–CIM과 independent A–v FEM으로 비교한다. SAO는 unbounded log kernel, A–v만 outer crop `{2,4,8}Deff`를 사용한다.
 3. perimeter panel `N,2N,4N`, singular self integral, corner/opposing-projection grading과 volume skin mesh `δ/2,δ/4,δ/8`에서 raw `Z'`, loss, reciprocity, passivity, current conservation을 0.5%/1% gate로 검사한다.
 4. P2 `Trace13305`는 source-derived manufactured asymmetric stripline으로만 실행한다. 실제 board case는 exact finite-width polygon/void boolean tolerance, signed signal-to-return current/field owner와 same-crop core/DtN partition이 증명될 때까지 차단한다.
 5. P1/P2 selected crop의 actual return artwork/net graph 증거에서 terminal-to-return signed current basis와 same-crop core/DtN owner를 만든다. 가까운 via를 return으로 강제하지 않는다.
@@ -253,6 +257,7 @@ board crop에서는 signal copper, return copper, magnetic/electric field, termi
 - Cohn, [Characteristic Impedance of the Shielded-Strip Transmission Line](https://doi.org/10.1109/TMTT.1954.1124875)
 - Demeester and De Zutter, [Quasi-TM Transmission Line Parameters of Coupled Lossy Lines Based on the DtN Boundary Operator](https://doi.org/10.1109/TMTT.2008.925215), [author PDF](https://tdmeeste.github.io/files/pubs/QuasiTM_MTT_Demeester2008.pdf)
 - Patel and Triverio, [Skin Effect Modeling Through a Surface Admittance Operator and CIM](https://doi.org/10.1109/TMTT.2016.2593721), [author preprint](https://arxiv.org/abs/1509.08357)
+- Dienstfrey, Hang, and Huang, [Lattice Sums and the Two-dimensional, Periodic Green's Function for the Helmholtz Equation](https://www.nist.gov/publications/lattice-sums-and-two-dimensional-periodic-green-s-function-helmholtz-equation)
 - Kamon, Tsuk, and White, [FastHenry: A Multipole-Accelerated 3-D Inductance Extraction Program](https://doi.org/10.1109/22.310584)
 - Ruehli, [Foundational PEEC Formulation](https://doi.org/10.1109/TMTT.1974.1128204)
 - Norgren and He, [Exact Field Representation for Centered Zero-Thickness Stripline](https://www.ursi.org/Publications/RadioScienceLetters/Volume3/RSL21-0052-final.pdf)
