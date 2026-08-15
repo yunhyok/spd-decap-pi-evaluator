@@ -211,6 +211,8 @@ def _synthetic_manifest() -> dict[str, object]:
                 "excluded_tail": [
                     "terminal_seal_materialization_readback_and_outer_process_exit"
                 ],
+                "tree_sample_max_attempts": 3,
+                "tree_sample_retry_event_limit": 16,
             }
         },
         "one_use_lifecycle": {},
@@ -1524,6 +1526,8 @@ def _install_synthetic_outer_terminal_bundle(
         "excluded_tail": [
             "terminal_seal_materialization_readback_and_outer_process_exit"
         ],
+        "tree_sample_max_attempts": 3,
+        "tree_sample_retry_event_limit": 16,
     }
 
     attempt_relative = (
@@ -2291,6 +2295,11 @@ def _install_synthetic_outer_terminal_bundle(
         "inner_complete_sha256": p1._sha(complete_path),
         "inner_exit_release_relative_path": exit_path.relative_to(root).as_posix(),
         "inner_exit_release_sha256": p1._sha(exit_path),
+        "inner_parent_identity_verified": True,
+        "inner_parent_process_birth_utc_ticks": observer[
+            "outer_process_birth_utc_ticks"
+        ],
+        "inner_parent_process_id": observer["outer_process_id"],
         "inner_process_birth_utc_ticks": observer[
             "inner_process_birth_utc_ticks"
         ],
@@ -2306,12 +2315,14 @@ def _install_synthetic_outer_terminal_bundle(
         "inner_visible_sample_count": 2,
         "mandatory_outer_resource_gate_pass": True,
         "monitor_error_present": False,
+        "monitor_failure": None,
         "observed_lifecycle_scope": (
             "post_dispatch_stopwatch_start_before_candidate_token_capture_through_"
             "inner_actual_exit_verified_cleanup_terminal_stream_hash_and_system_tree_sample"
         ),
         "observer_nonce": observer["nonce"],
         "observer_session_relative_path": observer["session_relative_path"],
+        "original_review_token_sha256": bundle["original_token_sha256"],
         "outer_observer_contract_sha256": manifest_value[
             "outer_observer_contract_sha256"
         ],
@@ -2329,6 +2340,9 @@ def _install_synthetic_outer_terminal_bundle(
             "bound_descendants_between_samples_not_claimed"
         ),
         "raw_bytes_are_canonical_json": True,
+        "review_token_id": identifier,
+        "reviewed_contract_git_commit": claim["p0r_preregistration_commit"],
+        "runner_sha256": manifest_value["bindings"]["runner_sha256"],
         "sample_count": 2,
         "sampled_process_identities": [
             {
@@ -2375,6 +2389,10 @@ def _install_synthetic_outer_terminal_bundle(
             ],
             "wall_stop_seconds": p1.WALL_STOP_SECONDS,
         },
+        "tree_sample_confirmed_disappearance_count": 0,
+        "tree_sample_max_attempts": 3,
+        "tree_sample_retry_events": [],
+        "tree_sample_retry_events_truncated": False,
         "wall_elapsed_nanoseconds": 1,
         "wall_stop_seconds": p1.WALL_STOP_SECONDS,
     }
@@ -3383,8 +3401,8 @@ def test_manifest_is_token_missing_factor_free_and_parent_bound() -> None:
 def test_manifest_freezes_outer_observer_preregistration_contract() -> None:
     payload = manifest()["payload"]
     expected = {
-        "schema": "AV-BS1-h4-p0r-outer-observer-contract-v1",
-        "contract_revision": "P1_outer_observer_v1",
+        "schema": "AV-BS1-h4-p0r-outer-observer-contract-v2",
+        "contract_revision": "P1_outer_observer_v2",
         "public_stage": "primary-h4-p0r",
         "hidden_internal_mode": "primary-h4-p0r-inner-v1",
         "observer_session_root_relative_path": (
@@ -3421,7 +3439,7 @@ def test_manifest_freezes_outer_observer_preregistration_contract() -> None:
         ],
         "terminal_seal_schema": "AV-BS1-h4-p0r-outer-terminal-seal-v2",
         "outer_resource_envelope_close_schema": (
-            "AV-BS1-h4-p0r-outer-resource-envelope-close-v1"
+            "AV-BS1-h4-p0r-outer-resource-envelope-close-v2"
         ),
         "outer_resource_envelope_close_file_name": (
             "outer-resource-envelope-close.json"
@@ -3449,6 +3467,21 @@ def test_manifest_freezes_outer_observer_preregistration_contract() -> None:
             "process_membership_semantics": (
                 "sampled_not_Job_Object_descendants_created_and_exited_between_"
                 "polls_not_claimed"
+            ),
+            "tree_sample_max_attempts": 3,
+            "tree_sample_retry_event_limit": 16,
+            "tree_sample_retry_policy": (
+                "whole_sample_retry_only_after_identity_bound_nonroot_exit_or_"
+                "win32_error_87_and_complete_toolhelp_snapshot_absence_with_"
+                "stable_root_identity"
+            ),
+            "tree_sample_failure_policy": (
+                "root_loss_pid_reuse_live_query_failure_access_denial_incomplete_"
+                "snapshot_and_retry_exhaustion_remain_fatal"
+            ),
+            "tree_sample_failure_evidence": (
+                "fixed_ascii_message_codes_operations_numeric_identity_and_"
+                "win32_status_only_no_localized_exception_text"
             ),
             "excluded_head": [
                 "public_PowerShell_process_startup_and_script_parse",
@@ -3539,7 +3572,7 @@ def test_manifest_freezes_current_execution_schema_map() -> None:
         "execution_resource_scope": (
             "AV-BS1-h4-p0r-execution-resource-scope-v1"
         ),
-        "outer_observer_contract": "AV-BS1-h4-p0r-outer-observer-contract-v1",
+        "outer_observer_contract": "AV-BS1-h4-p0r-outer-observer-contract-v2",
         "review_token": "AV-BS1-h4-p0r-review-token-v1",
         "claim": "AV-BS1-h4-p0r-token-claim-v1",
         "guard": "AV-BS1-h4-p0r-resource-guard-v1",
@@ -3593,7 +3626,7 @@ def test_manifest_freezes_current_execution_schema_map() -> None:
         "outer_inner_complete": "AV-BS1-h4-p0r-outer-inner-complete-v1",
         "outer_exit_release": "AV-BS1-h4-p0r-outer-exit-release-v1",
         "outer_resource_envelope_close": (
-            "AV-BS1-h4-p0r-outer-resource-envelope-close-v1"
+            "AV-BS1-h4-p0r-outer-resource-envelope-close-v2"
         ),
         "outer_terminal_seal": "AV-BS1-h4-p0r-outer-terminal-seal-v2",
         "manifest_terminal_evidence_classification": (
@@ -4115,6 +4148,181 @@ def test_filesystem_terminal_failure_chain_is_authoritative_but_never_advances(
     assert classification["authoritative_stage_pass"] is False
 
 
+def test_outer_close_v2_accepts_only_typed_complete_retry_evidence(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    bundle = _install_synthetic_outer_terminal_bundle(
+        monkeypatch, tmp_path, passed=False
+    )
+    tombstone_context = p1._validate_consumed_tombstone(
+        bundle["tombstone"], bundle["tombstone_sha256"], bundle["manifest"]
+    )
+    complete = p1._validate_terminal_complete(
+        tombstone_context, bundle["manifest"]
+    )
+    exit_release = p1._validate_terminal_exit_release(
+        complete, tombstone_context, bundle["manifest"]
+    )
+    retry_event = {
+        "attempt": 1,
+        "confirmation": "limited_query_not_found_and_complete_snapshot_absent",
+        "context": "outer_tree_sample",
+        "expected_birth_utc_ticks": None,
+        "message_code": "CONFIRMED_NONROOT_DISAPPEARANCE",
+        "observed_birth_utc_ticks": None,
+        "operation": "open_process",
+        "process_id": 999,
+        "process_role": "descendant",
+        "win32_error_code": 87,
+    }
+    valid = deepcopy(bundle["outer_close"])
+    valid["tree_sample_confirmed_disappearance_count"] = 1
+    valid["tree_sample_retry_events"] = [retry_event]
+    _write_json(bundle["outer_close_path"], valid)
+
+    context = p1._validate_outer_resource_envelope_close(
+        exit_release, complete, tombstone_context, bundle["manifest"]
+    )
+    assert context["value"]["tree_sample_retry_events"] == [retry_event]
+
+    for mutate, expected in (
+        (
+            lambda value: value["tree_sample_retry_events"][0].__setitem__(
+                "process_id", True
+            ),
+            "outer tree sample process id",
+        ),
+        (
+            lambda value: value.__setitem__(
+                "tree_sample_confirmed_disappearance_count", 2
+            ),
+            "outer tree retry count mismatch",
+        ),
+        (
+            lambda value: value["tree_sample_retry_events"][0].__setitem__(
+                "unreviewed", False
+            ),
+            "outer tree sample diagnostic field set mismatch",
+        ),
+    ):
+        tampered = deepcopy(valid)
+        mutate(tampered)
+        _write_json(bundle["outer_close_path"], tampered)
+        with pytest.raises(p1.AvBsError, match=expected):
+            p1._validate_outer_resource_envelope_close(
+                exit_release, complete, tombstone_context, bundle["manifest"]
+            )
+
+
+def test_outer_close_v2_reconciles_retry_births_by_process_id(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    bundle = _install_synthetic_outer_terminal_bundle(
+        monkeypatch, tmp_path, passed=False
+    )
+    tombstone_context = p1._validate_consumed_tombstone(
+        bundle["tombstone"], bundle["tombstone_sha256"], bundle["manifest"]
+    )
+    complete = p1._validate_terminal_complete(
+        tombstone_context, bundle["manifest"]
+    )
+    exit_release = p1._validate_terminal_exit_release(
+        complete, tombstone_context, bundle["manifest"]
+    )
+    exited_event = {
+        "attempt": 1,
+        "confirmation": "signaled_handle_and_complete_snapshot_absent",
+        "context": "outer_tree_sample",
+        "expected_birth_utc_ticks": 3000,
+        "message_code": "CONFIRMED_NONROOT_DISAPPEARANCE",
+        "observed_birth_utc_ticks": 3000,
+        "operation": "get_process_times",
+        "process_id": 999,
+        "process_role": "descendant",
+        "win32_error_code": None,
+    }
+    valid = deepcopy(bundle["outer_close"])
+    valid["tree_sample_confirmed_disappearance_count"] = 1
+    valid["tree_sample_retry_events"] = [exited_event]
+    valid["sampled_process_identities"].append(
+        {"process_id": 999, "birth_utc_ticks": 3000}
+    )
+    valid["sampled_process_identities"].sort(
+        key=lambda row: (row["process_id"], row["birth_utc_ticks"])
+    )
+    _write_json(bundle["outer_close_path"], valid)
+    p1._validate_outer_resource_envelope_close(
+        exit_release, complete, tombstone_context, bundle["manifest"]
+    )
+
+    conflicting = deepcopy(valid)
+    next(
+        row
+        for row in conflicting["sampled_process_identities"]
+        if row["process_id"] == 999
+    )["birth_utc_ticks"] = 4000
+    _write_json(bundle["outer_close_path"], conflicting)
+    with pytest.raises(p1.AvBsError, match="retry identity conflicts"):
+        p1._validate_outer_resource_envelope_close(
+            exit_release, complete, tombstone_context, bundle["manifest"]
+        )
+
+    duplicate_pid = deepcopy(valid)
+    duplicate_pid["sampled_process_identities"].append(
+        {"process_id": 999, "birth_utc_ticks": 4000}
+    )
+    duplicate_pid["sampled_process_identities"].sort(
+        key=lambda row: (row["process_id"], row["birth_utc_ticks"])
+    )
+    _write_json(bundle["outer_close_path"], duplicate_pid)
+    with pytest.raises(p1.AvBsError, match="not unique by process id"):
+        p1._validate_outer_resource_envelope_close(
+            exit_release, complete, tombstone_context, bundle["manifest"]
+        )
+
+
+def test_outer_monitor_failure_allowlist_covers_every_runner_phase() -> None:
+    source = RUNNER.read_text(encoding="utf-8")
+    phases = set(re.findall(r'\$currentOuterOperation = "([^"]+)"', source))
+    assert phases == {
+        "outer_initial_identity",
+        "outer_initial_system_sample",
+        "outer_initial_tree_sample",
+        "outer_pre_spawn_system_sample",
+        "outer_pre_spawn_tree_sample",
+        "outer_inner_spawn",
+        "outer_tree_sample",
+        "inner_tree_sample",
+        "outer_system_sample",
+        "outer_ready_handshake",
+        "outer_complete_handshake",
+        "outer_retained_inner_exit",
+        "outer_cleanup",
+        "outer_final_tree_sample",
+        "outer_final_system_sample",
+        "outer_post_cleanup_classification",
+    }
+    for phase in phases:
+        diagnostic = {
+            "attempt": 1,
+            "confirmation": None,
+            "context": phase,
+            "expected_birth_utc_ticks": None,
+            "message_code": "OUTER_MONITOR_FAILURE",
+            "observed_birth_utc_ticks": None,
+            "operation": phase,
+            "process_id": None,
+            "process_role": None,
+            "win32_error_code": None,
+        }
+        assert (
+            p1._validate_outer_tree_sample_diagnostic(
+                diagnostic, retry_event=False
+            )
+            == diagnostic
+        )
+
+
 def test_filesystem_terminal_pass_chain_is_authoritative_but_never_advances(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
@@ -4382,6 +4590,8 @@ def test_token_absence_blocks_all_primary_preflight() -> None:
         ],
         cwd=ROOT,
         text=True,
+        encoding="utf-8",
+        errors="replace",
         capture_output=True,
     )
     assert completed.returncode == 2
@@ -5554,10 +5764,8 @@ def test_runner_is_literal_native_h2_p1_derivative_with_primary_gated() -> None:
     assert "Write-AtomicUtf8NoBom" in source
     assert "$claimCreated" in source
     assert "RUNNER_EXCEPTION" in source
-    assert (
-        "$ids = @(Get-VerifiedRootDescendantIds $RootProcessId $RootBirthTicks)"
-        in source
-    )
+    assert "$ids = @($ids | Sort-Object -Unique)" in source
+    assert ":treeSampleAttempt for ($attempt = 1;" in source
     assert "$consumeWrapper.payload.failure_codes.Count" not in source
     assert source.count(
         "Write-Error $_.Exception.Message -ErrorAction Continue"
@@ -5580,6 +5788,8 @@ def test_runner_is_literal_native_h2_p1_derivative_with_primary_gated() -> None:
         ],
         cwd=ROOT,
         text=True,
+        encoding="utf-8",
+        errors="replace",
         capture_output=True,
         check=False,
     )
@@ -5604,6 +5814,529 @@ def test_runner_is_literal_native_h2_p1_derivative_with_primary_gated() -> None:
     )
     assert exit_code_probe.returncode == 2
     assert "EXPECTED_FAILURE" in exit_code_probe.stderr
+
+
+def _run_tree_sample_slice(
+    tmp_path: Path, case_script: str
+) -> dict[str, object]:
+    source = RUNNER.read_text(encoding="utf-8")
+    begin_marker = "# AV_BS_TREE_SAMPLE_TEST_SLICE_BEGIN"
+    end_marker = "# AV_BS_TREE_SAMPLE_TEST_SLICE_END"
+    assert source.count(begin_marker) == 1
+    assert source.count(end_marker) == 1
+    function_slice = source[
+        source.index(begin_marker) : source.index(end_marker)
+    ]
+    for forbidden in (
+        "Start-Process",
+        "Add-Type",
+        "AvBsH4P0RNativeV1",
+        "review_token",
+        "primary-h4-p0r",
+        "splu",
+        "consume-primary",
+    ):
+        assert forbidden not in function_slice
+    assert function_slice.count("function Get-TreeSample(") == 1
+    script = (
+        "$ErrorActionPreference='Stop'; Set-StrictMode -Version Latest;\n"
+        + function_slice
+        + "\n"
+        + case_script
+    )
+    script_path = tmp_path / "tree-sample-harness.ps1"
+    script_path.write_text(script, encoding="ascii", newline="\n")
+    completed = subprocess.run(
+        [
+            "powershell.exe",
+            "-NoProfile",
+            "-NonInteractive",
+            "-ExecutionPolicy",
+            "Bypass",
+            "-File",
+            str(script_path),
+        ],
+        cwd=ROOT,
+        text=True,
+        encoding="utf-8",
+        errors="replace",
+        capture_output=True,
+        check=False,
+    )
+    assert completed.returncode == 0, completed.stderr
+    lines = [line for line in completed.stdout.splitlines() if line.strip()]
+    assert len(lines) == 1, completed.stdout
+    return json.loads(lines[0])
+
+
+def test_tree_sample_restarts_whole_sample_after_confirmed_nonroot_exit(
+    tmp_path: Path,
+) -> None:
+    result = _run_tree_sample_slice(
+        tmp_path,
+        r"""
+$script:enumerations=0
+$script:metricAttempt=0
+$script:childIdentityQueries=0
+$script:childMetricCalls=0
+$script:snapshotQueries=0
+$providers=[ordered]@{
+    Enumerate={param([int]$RootProcessId)
+        $script:enumerations+=1; $script:metricAttempt=$script:enumerations
+        if($script:enumerations -eq 1){return @([int]100,[int]200,[int]300)}
+        return @([int]100,[int]200)
+    }
+    Identity={param([int]$ProcessId)
+        if($ProcessId -eq 100){return [ordered]@{status='live';operation='get_process_times';win32_error_code=$null;birth_utc_ticks=[int64]1000}}
+        if($ProcessId -eq 200){return [ordered]@{status='live';operation='get_process_times';win32_error_code=$null;birth_utc_ticks=[int64]2000}}
+        $script:childIdentityQueries+=1
+        if($script:childIdentityQueries -eq 1){return [ordered]@{status='live';operation='get_process_times';win32_error_code=$null;birth_utc_ticks=[int64]3000}}
+        return [ordered]@{status='not_found';operation='open_process';win32_error_code=[int]87;birth_utc_ticks=$null}
+    }
+    Metrics={param([int]$ProcessId)
+        if($ProcessId -eq 300){$script:childMetricCalls+=1;return [ordered]@{status='not_found';operation='open_process';win32_error_code=[int]87;birth_utc_ticks=$null;values=$null}}
+        $value=if($script:metricAttempt -eq 1){[int64]$ProcessId}else{[int64]($ProcessId/100)}
+        $birth=if($ProcessId -eq 100){[int64]1000}else{[int64]2000}
+        return [ordered]@{status='ok';operation='get_process_memory_info';win32_error_code=$null;birth_utc_ticks=$birth;values=[int64[]]@($value,$value,$value,$value,$value,$value,$value,$value)}
+    }
+    SnapshotContains={param([int]$ProcessId) $script:snapshotQueries+=1; return $false}
+}
+$ids=New-Object 'System.Collections.Generic.HashSet[int]'
+$births=New-Object 'System.Collections.Generic.Dictionary[int, Int64]'
+$births.Add(100,[int64]1000); [void]$ids.Add(100)
+$diagnostics=New-TreeSampleDiagnostics 16
+$sample=Get-TreeSample 100 1000 $ids $births 'outer_tree_sample' $diagnostics $providers 3
+[ordered]@{sample=$sample;enumerations=$script:enumerations;child_identity_queries=$script:childIdentityQueries;child_metric_calls=$script:childMetricCalls;snapshot_queries=$script:snapshotQueries;retry_count=$diagnostics.confirmed_disappearance_count;events=@($diagnostics.retry_events)} | ConvertTo-Json -Depth 12 -Compress
+"""
+    )
+    assert result["enumerations"] == 2
+    assert result["child_identity_queries"] == 2
+    assert result["child_metric_calls"] == 1
+    assert result["snapshot_queries"] == 1
+    assert result["retry_count"] == 1
+    assert result["sample"]["process_ids"] == [100, 200]
+    for key in (
+        "working_set_bytes",
+        "summed_process_peak_working_set_bytes",
+        "committed_pagefile_bytes",
+        "summed_process_peak_commit_bytes",
+        "private_commit_bytes",
+        "private_working_set_bytes",
+        "shared_commit_bytes",
+        "page_fault_count",
+    ):
+        assert result["sample"][key] == 3
+    assert result["events"] == [
+        {
+            "attempt": 1,
+            "confirmation": (
+                "limited_query_not_found_and_complete_snapshot_absent"
+            ),
+            "context": "outer_tree_sample",
+            "expected_birth_utc_ticks": 3000,
+            "message_code": "CONFIRMED_NONROOT_DISAPPEARANCE",
+            "observed_birth_utc_ticks": None,
+            "operation": "open_process",
+            "process_id": 300,
+            "process_role": "descendant",
+            "win32_error_code": 87,
+        }
+    ]
+
+
+def test_tree_sample_live_metric_failure_is_fatal_without_retry(
+    tmp_path: Path,
+) -> None:
+    result = _run_tree_sample_slice(
+        tmp_path,
+        r"""
+$script:enumerations=0
+$providers=[ordered]@{
+    Enumerate={param([int]$RootProcessId) $script:enumerations+=1; return @([int]100,[int]200)}
+    Identity={param([int]$ProcessId)
+        $birth=if($ProcessId -eq 100){[int64]1000}else{[int64]2000}
+        return [ordered]@{status='live';operation='get_process_times';win32_error_code=$null;birth_utc_ticks=$birth}
+    }
+    Metrics={param([int]$ProcessId)
+        if($ProcessId -eq 200){return [ordered]@{status='query_failed';operation='get_process_memory_info';win32_error_code=[int]5;birth_utc_ticks=[int64]2000;values=$null}}
+        return [ordered]@{status='ok';operation='get_process_memory_info';win32_error_code=$null;birth_utc_ticks=[int64]1000;values=[int64[]]@(1,1,1,1,1,1,1,1)}
+    }
+    SnapshotContains={param([int]$ProcessId) return $true}
+}
+$ids=New-Object 'System.Collections.Generic.HashSet[int]'
+$births=New-Object 'System.Collections.Generic.Dictionary[int, Int64]'
+$births.Add(100,[int64]1000); [void]$ids.Add(100)
+$diagnostics=New-TreeSampleDiagnostics 16
+try { [void](Get-TreeSample 100 1000 $ids $births 'outer_tree_sample' $diagnostics $providers 3); exit 91 }
+catch {
+    [ordered]@{message=$_.Exception.Message;message_code=$_.Exception.Data['message_code'];operation=$_.Exception.Data['operation'];process_id=$_.Exception.Data['process_id'];win32_error_code=$_.Exception.Data['win32_error_code'];enumerations=$script:enumerations;observed=@($ids|Sort-Object)} | ConvertTo-Json -Depth 8 -Compress
+}
+"""
+    )
+    assert result == {
+        "message": (
+            "BLOCKED_AV_BS_RESOURCE: tree sample failure "
+            "PROCESS_METRIC_QUERY_FAILED_WHILE_LIVE"
+        ),
+        "message_code": "PROCESS_METRIC_QUERY_FAILED_WHILE_LIVE",
+        "operation": "get_process_memory_info",
+        "process_id": 200,
+        "win32_error_code": 5,
+        "enumerations": 1,
+        "observed": [100, 200],
+    }
+
+
+def test_tree_sample_query_failure_remains_fatal_if_child_then_disappears(
+    tmp_path: Path,
+) -> None:
+    result = _run_tree_sample_slice(
+        tmp_path,
+        r"""
+$script:enumerations=0; $script:childIdentityQueries=0; $script:snapshotQueries=0
+$providers=[ordered]@{
+    Enumerate={param([int]$RootProcessId) $script:enumerations+=1; return @([int]100,[int]200)}
+    Identity={param([int]$ProcessId)
+        if($ProcessId -eq 100){return [ordered]@{status='live';operation='get_process_times';win32_error_code=$null;birth_utc_ticks=[int64]1000}}
+        $script:childIdentityQueries+=1
+        if($script:childIdentityQueries -eq 1){return [ordered]@{status='live';operation='get_process_times';win32_error_code=$null;birth_utc_ticks=[int64]2000}}
+        return [ordered]@{status='not_found';operation='open_process';win32_error_code=[int]87;birth_utc_ticks=$null}
+    }
+    Metrics={param([int]$ProcessId)
+        if($ProcessId -eq 200){return [ordered]@{status='query_failed';operation='get_process_memory_info';win32_error_code=[int]5;birth_utc_ticks=[int64]2000;values=$null}}
+        return [ordered]@{status='ok';operation='get_process_memory_info';win32_error_code=$null;birth_utc_ticks=[int64]1000;values=[int64[]]@(1,1,1,1,1,1,1,1)}
+    }
+    SnapshotContains={param([int]$ProcessId) $script:snapshotQueries+=1; return $false}
+}
+$ids=New-Object 'System.Collections.Generic.HashSet[int]'
+$births=New-Object 'System.Collections.Generic.Dictionary[int, Int64]'
+$births.Add(100,[int64]1000); [void]$ids.Add(100)
+$diagnostics=New-TreeSampleDiagnostics 16
+try { [void](Get-TreeSample 100 1000 $ids $births 'outer_tree_sample' $diagnostics $providers 3); exit 91 }
+catch { [ordered]@{message_code=$_.Exception.Data['message_code'];operation=$_.Exception.Data['operation'];process_id=$_.Exception.Data['process_id'];enumerations=$script:enumerations;child_identity_queries=$script:childIdentityQueries;snapshot_queries=$script:snapshotQueries;retry_count=$diagnostics.confirmed_disappearance_count} | ConvertTo-Json -Compress }
+""",
+    )
+    assert result == {
+        "message_code": "PROCESS_METRIC_QUERY_FAILED_WHILE_LIVE",
+        "operation": "get_process_memory_info",
+        "process_id": 200,
+        "enumerations": 1,
+        "child_identity_queries": 1,
+        "snapshot_queries": 0,
+        "retry_count": 0,
+    }
+
+
+@pytest.mark.parametrize(
+    ("root_status", "root_birth", "message_code"),
+    [
+        ("not_found", None, "ROOT_DISAPPEARED_AFTER_ENUMERATION"),
+        ("live", 1001, "ROOT_PID_REUSE_AFTER_ENUMERATION"),
+    ],
+)
+def test_tree_sample_root_failure_after_enumeration_is_never_retried(
+    tmp_path: Path,
+    root_status: str,
+    root_birth: int | None,
+    message_code: str,
+) -> None:
+    birth_literal = "$null" if root_birth is None else f"[int64]{root_birth}"
+    result = _run_tree_sample_slice(
+        tmp_path,
+        rf"""
+$script:enumerations=0; $script:rootQueries=0
+$providers=[ordered]@{{
+    Enumerate={{param([int]$RootProcessId) $script:enumerations+=1; return @([int]100)}}
+    Identity={{param([int]$ProcessId)
+        $script:rootQueries+=1
+        if($script:rootQueries -eq 1){{return [ordered]@{{status='live';operation='get_process_times';win32_error_code=$null;birth_utc_ticks=[int64]1000}}}}
+        return [ordered]@{{status='{root_status}';operation='get_process_times';win32_error_code=$null;birth_utc_ticks={birth_literal}}}
+    }}
+    Metrics={{param([int]$ProcessId) throw 'metrics must not run'}}
+    SnapshotContains={{param([int]$ProcessId) throw 'snapshot confirmation must not run'}}
+}}
+$ids=New-Object 'System.Collections.Generic.HashSet[int]'
+$births=New-Object 'System.Collections.Generic.Dictionary[int, Int64]'
+$births.Add(100,[int64]1000); [void]$ids.Add(100)
+$diagnostics=New-TreeSampleDiagnostics 16
+try {{ [void](Get-TreeSample 100 1000 $ids $births 'outer_tree_sample' $diagnostics $providers 3); exit 91 }}
+catch {{ [ordered]@{{message_code=$_.Exception.Data['message_code'];enumerations=$script:enumerations;root_queries=$script:rootQueries}} | ConvertTo-Json -Compress }}
+"""
+    )
+    assert result == {
+        "message_code": message_code,
+        "enumerations": 1,
+        "root_queries": 2,
+    }
+
+
+def test_tree_sample_exited_identity_is_retained_and_pid_reuse_is_fatal(
+    tmp_path: Path,
+) -> None:
+    result = _run_tree_sample_slice(
+        tmp_path,
+        r"""
+$script:enumerations=0; $script:childIdentityQueries=0; $script:childMetrics=0
+$providers=[ordered]@{
+    Enumerate={param([int]$RootProcessId) $script:enumerations+=1; return @([int]100,[int]300)}
+    Identity={param([int]$ProcessId)
+        if($ProcessId -eq 100){return [ordered]@{status='live';operation='get_process_times';win32_error_code=$null;birth_utc_ticks=[int64]1000}}
+        $script:childIdentityQueries+=1
+        if($script:childIdentityQueries -eq 1){return [ordered]@{status='exited';operation='get_process_times';win32_error_code=$null;birth_utc_ticks=[int64]3000}}
+        return [ordered]@{status='live';operation='get_process_times';win32_error_code=$null;birth_utc_ticks=[int64]4000}
+    }
+    Metrics={param([int]$ProcessId)
+        if($ProcessId -eq 300){$script:childMetrics+=1;throw 'reused child metrics must not run'}
+        return [ordered]@{status='ok';operation='get_process_memory_info';win32_error_code=$null;birth_utc_ticks=[int64]1000;values=[int64[]]@(1,1,1,1,1,1,1,1)}
+    }
+    SnapshotContains={param([int]$ProcessId) return $false}
+}
+$ids=New-Object 'System.Collections.Generic.HashSet[int]'
+$births=New-Object 'System.Collections.Generic.Dictionary[int, Int64]'
+$births.Add(100,[int64]1000); [void]$ids.Add(100)
+$diagnostics=New-TreeSampleDiagnostics 16
+try { [void](Get-TreeSample 100 1000 $ids $births 'outer_tree_sample' $diagnostics $providers 3); exit 91 }
+catch { [ordered]@{message_code=$_.Exception.Data['message_code'];expected_birth=$_.Exception.Data['expected_birth_utc_ticks'];observed_birth=$_.Exception.Data['observed_birth_utc_ticks'];enumerations=$script:enumerations;child_identity_queries=$script:childIdentityQueries;child_metrics=$script:childMetrics;recorded_birth=$births[300];retry_count=$diagnostics.confirmed_disappearance_count;event=@($diagnostics.retry_events)[0]} | ConvertTo-Json -Depth 10 -Compress }
+""",
+    )
+    assert result["message_code"] == "NONROOT_PID_REUSE"
+    assert result["expected_birth"] == 3000
+    assert result["observed_birth"] == 4000
+    assert result["enumerations"] == 2
+    assert result["child_identity_queries"] == 2
+    assert result["child_metrics"] == 0
+    assert result["recorded_birth"] == 3000
+    assert result["retry_count"] == 1
+    assert result["event"]["process_id"] == 300
+    assert result["event"]["observed_birth_utc_ticks"] == 3000
+
+
+def test_tree_sample_first_seen_stale_exited_identity_is_fatal(
+    tmp_path: Path,
+) -> None:
+    result = _run_tree_sample_slice(
+        tmp_path,
+        r"""
+$script:enumerations=0; $script:snapshotQueries=0
+$providers=[ordered]@{
+    Enumerate={param([int]$RootProcessId) $script:enumerations+=1; return @([int]100,[int]300)}
+    Identity={param([int]$ProcessId)
+        if($ProcessId -eq 100){return [ordered]@{status='live';operation='get_process_times';win32_error_code=$null;birth_utc_ticks=[int64]1000}}
+        return [ordered]@{status='exited';operation='get_process_times';win32_error_code=$null;birth_utc_ticks=[int64]999}
+    }
+    Metrics={param([int]$ProcessId)
+        if($ProcessId -eq 300){throw 'stale child metrics must not run'}
+        return [ordered]@{status='ok';operation='get_process_memory_info';win32_error_code=$null;birth_utc_ticks=[int64]1000;values=[int64[]]@(1,1,1,1,1,1,1,1)}
+    }
+    SnapshotContains={param([int]$ProcessId) $script:snapshotQueries+=1; return $false}
+}
+$ids=New-Object 'System.Collections.Generic.HashSet[int]'
+$births=New-Object 'System.Collections.Generic.Dictionary[int, Int64]'
+$births.Add(100,[int64]1000); [void]$ids.Add(100)
+$diagnostics=New-TreeSampleDiagnostics 16
+try { [void](Get-TreeSample 100 1000 $ids $births 'outer_tree_sample' $diagnostics $providers 3); exit 91 }
+catch { [ordered]@{message_code=$_.Exception.Data['message_code'];observed_birth=$_.Exception.Data['observed_birth_utc_ticks'];enumerations=$script:enumerations;snapshot_queries=$script:snapshotQueries;retry_count=$diagnostics.confirmed_disappearance_count} | ConvertTo-Json -Compress }
+""",
+    )
+    assert result == {
+        "message_code": "NONROOT_IDENTITY_INVALID_OR_STALE",
+        "observed_birth": 999,
+        "enumerations": 1,
+        "snapshot_queries": 0,
+        "retry_count": 0,
+    }
+
+
+def test_inner_cleanup_tree_sample_failure_remains_fatal_after_later_sample() -> None:
+    source = RUNNER.read_text(encoding="utf-8")
+    cleanup_start = source.index('$currentOuterOperation = "outer_cleanup"')
+    cleanup_end = source.index("$highPrePostFloorsPass =", cleanup_start)
+    cleanup = source[cleanup_start:cleanup_end]
+    sample_call = cleanup.index('"inner_cleanup_tree_sample"')
+    sample_guard = cleanup.rfind("if (-not $process.HasExited)", 0, sample_call)
+    live_probe = cleanup.index("$liveOwnedBeforeCleanup = @(", sample_call)
+    sample_failure_branch = cleanup[sample_guard:live_probe]
+
+    assert "if (-not $process.HasExited)" in sample_failure_branch
+    assert "catch { }" not in sample_failure_branch
+    assert "Get-NormalizedOuterMonitorFailure" in sample_failure_branch
+    assert '$_.Exception "inner_cleanup_tree_sample"' in sample_failure_branch
+    assert "$monitorErrorPresent = $true" in sample_failure_branch
+    assert '$stopReason = "OUTER_INNER_CLEANUP_FAILED"' in sample_failure_branch
+
+    gate_start = source.index("$mandatoryOuterGate =", cleanup_end)
+    gate_end = source.index("$identityEvidence =", gate_start)
+    preservation = source[cleanup_start + sample_call : gate_start]
+    mandatory_gate = source[gate_start:gate_end]
+    assert "$monitorFailure = $null" not in preservation
+    assert "$monitorErrorPresent = $false" not in preservation
+    assert "$stopReason = $null" not in preservation
+    assert "-not $monitorErrorPresent" in mandatory_gate
+    assert "$null -eq $monitorFailure" in mandatory_gate
+    assert "-not $stopReason" in mandatory_gate
+
+
+def test_tree_sample_retry_exhaustion_is_bounded_and_fatal(
+    tmp_path: Path,
+) -> None:
+    result = _run_tree_sample_slice(
+        tmp_path,
+        r"""
+$script:enumerations=0; $script:childMetrics=0
+$providers=[ordered]@{
+    Enumerate={param([int]$RootProcessId) $script:enumerations+=1; return @([int]100,[int]300)}
+    Identity={param([int]$ProcessId)
+        if($ProcessId -eq 100){return [ordered]@{status='live';operation='get_process_times';win32_error_code=$null;birth_utc_ticks=[int64]1000}}
+        return [ordered]@{status='not_found';operation='open_process';win32_error_code=[int]87;birth_utc_ticks=$null}
+    }
+    Metrics={param([int]$ProcessId)
+        if($ProcessId -eq 300){$script:childMetrics+=1;return [ordered]@{status='not_found';operation='open_process';win32_error_code=[int]87;birth_utc_ticks=$null;values=$null}}
+        return [ordered]@{status='ok';operation='get_process_memory_info';win32_error_code=$null;birth_utc_ticks=[int64]1000;values=[int64[]]@(1,1,1,1,1,1,1,1)}
+    }
+    SnapshotContains={param([int]$ProcessId) return $false}
+}
+$ids=New-Object 'System.Collections.Generic.HashSet[int]'
+$births=New-Object 'System.Collections.Generic.Dictionary[int, Int64]'
+$births.Add(100,[int64]1000); [void]$ids.Add(100)
+$diagnostics=New-TreeSampleDiagnostics 16
+try { [void](Get-TreeSample 100 1000 $ids $births 'outer_tree_sample' $diagnostics $providers 3); exit 91 }
+catch { [ordered]@{message_code=$_.Exception.Data['message_code'];attempt=$_.Exception.Data['attempt'];enumerations=$script:enumerations;child_metrics=$script:childMetrics;retry_count=$diagnostics.confirmed_disappearance_count} | ConvertTo-Json -Compress }
+"""
+    )
+    assert result == {
+        "message_code": "TRANSIENT_DESCENDANT_DISAPPEARANCE_RETRY_EXHAUSTED",
+        "attempt": 3,
+        "enumerations": 3,
+        "child_metrics": 0,
+        "retry_count": 3,
+    }
+
+
+def test_tree_sample_error87_with_pid_in_fresh_snapshot_is_fatal(
+    tmp_path: Path,
+) -> None:
+    result = _run_tree_sample_slice(
+        tmp_path,
+        r"""
+$script:enumerations=0; $script:snapshotQueries=0
+$providers=[ordered]@{
+    Enumerate={param([int]$RootProcessId) $script:enumerations+=1; return @([int]100,[int]300)}
+    Identity={param([int]$ProcessId)
+        if($ProcessId -eq 100){return [ordered]@{status='live';operation='get_process_times';win32_error_code=$null;birth_utc_ticks=[int64]1000}}
+        return [ordered]@{status='not_found';operation='open_process';win32_error_code=[int]87;birth_utc_ticks=$null}
+    }
+    Metrics={param([int]$ProcessId)
+        if($ProcessId -ne 100){throw 'child identity failure must precede child metrics'}
+        return [ordered]@{status='ok';operation='get_process_memory_info';win32_error_code=$null;birth_utc_ticks=[int64]1000;values=[int64[]]@(1,1,1,1,1,1,1,1)}
+    }
+    SnapshotContains={param([int]$ProcessId) $script:snapshotQueries+=1; return $true}
+}
+$ids=New-Object 'System.Collections.Generic.HashSet[int]'
+$births=New-Object 'System.Collections.Generic.Dictionary[int, Int64]'
+$births.Add(100,[int64]1000); [void]$ids.Add(100)
+$diagnostics=New-TreeSampleDiagnostics 16
+try { [void](Get-TreeSample 100 1000 $ids $births 'outer_tree_sample' $diagnostics $providers 3); exit 91 }
+catch { [ordered]@{message_code=$_.Exception.Data['message_code'];enumerations=$script:enumerations;snapshot_queries=$script:snapshotQueries;retry_count=$diagnostics.confirmed_disappearance_count} | ConvertTo-Json -Compress }
+""",
+    )
+    assert result == {
+        "message_code": "NONROOT_DISAPPEARANCE_NOT_CONFIRMED",
+        "enumerations": 1,
+        "snapshot_queries": 1,
+        "retry_count": 0,
+    }
+
+
+def test_tree_sample_incomplete_confirmation_snapshot_is_fatal(
+    tmp_path: Path,
+) -> None:
+    result = _run_tree_sample_slice(
+        tmp_path,
+        r"""
+$script:enumerations=0; $script:snapshotQueries=0
+$providers=[ordered]@{
+    Enumerate={param([int]$RootProcessId) $script:enumerations+=1; return @([int]100,[int]300)}
+    Identity={param([int]$ProcessId)
+        if($ProcessId -eq 100){return [ordered]@{status='live';operation='get_process_times';win32_error_code=$null;birth_utc_ticks=[int64]1000}}
+        return [ordered]@{status='not_found';operation='open_process';win32_error_code=[int]87;birth_utc_ticks=$null}
+    }
+    Metrics={param([int]$ProcessId)
+        if($ProcessId -ne 100){throw 'child identity failure must precede child metrics'}
+        return [ordered]@{status='ok';operation='get_process_memory_info';win32_error_code=$null;birth_utc_ticks=[int64]1000;values=[int64[]]@(1,1,1,1,1,1,1,1)}
+    }
+    SnapshotContains={param([int]$ProcessId) $script:snapshotQueries+=1; throw 'incomplete snapshot'}
+}
+$ids=New-Object 'System.Collections.Generic.HashSet[int]'
+$births=New-Object 'System.Collections.Generic.Dictionary[int, Int64]'
+$births.Add(100,[int64]1000); [void]$ids.Add(100)
+$diagnostics=New-TreeSampleDiagnostics 16
+try { [void](Get-TreeSample 100 1000 $ids $births 'outer_tree_sample' $diagnostics $providers 3); exit 91 }
+catch { [ordered]@{message_code=$_.Exception.Data['message_code'];operation=$_.Exception.Data['operation'];enumerations=$script:enumerations;snapshot_queries=$script:snapshotQueries;retry_count=$diagnostics.confirmed_disappearance_count} | ConvertTo-Json -Compress }
+""",
+    )
+    assert result == {
+        "message_code": "COMPLETE_PROCESS_SNAPSHOT_QUERY_FAILED",
+        "operation": "toolhelp_process_snapshot",
+        "enumerations": 1,
+        "snapshot_queries": 1,
+        "retry_count": 0,
+    }
+
+
+def test_tree_sample_incomplete_initial_enumeration_is_fatal(
+    tmp_path: Path,
+) -> None:
+    result = _run_tree_sample_slice(
+        tmp_path,
+        r"""
+$script:enumerations=0
+$providers=[ordered]@{
+    Enumerate={param([int]$RootProcessId) $script:enumerations+=1; throw 'incomplete enumeration'}
+    Identity={param([int]$ProcessId) return [ordered]@{status='live';operation='get_process_times';win32_error_code=$null;birth_utc_ticks=[int64]1000}}
+    Metrics={param([int]$ProcessId) throw 'metrics must not run'}
+    SnapshotContains={param([int]$ProcessId) throw 'snapshot confirmation must not run'}
+}
+$ids=New-Object 'System.Collections.Generic.HashSet[int]'
+$births=New-Object 'System.Collections.Generic.Dictionary[int, Int64]'
+$births.Add(100,[int64]1000); [void]$ids.Add(100)
+$diagnostics=New-TreeSampleDiagnostics 16
+try { [void](Get-TreeSample 100 1000 $ids $births 'outer_tree_sample' $diagnostics $providers 3); exit 91 }
+catch { [ordered]@{message_code=$_.Exception.Data['message_code'];operation=$_.Exception.Data['operation'];enumerations=$script:enumerations;retry_count=$diagnostics.confirmed_disappearance_count} | ConvertTo-Json -Compress }
+""",
+    )
+    assert result == {
+        "message_code": "TREE_ENUMERATION_FAILED",
+        "operation": "toolhelp_process_snapshot",
+        "enumerations": 1,
+        "retry_count": 0,
+    }
+
+
+def test_runner_native_process_snapshot_and_metric_probes_are_fail_closed() -> None:
+    source = RUNNER.read_text(encoding="utf-8")
+    assert "[ValidateRange(1, 3)][int]$MaximumAttempts = 1" in source
+    assert source.count(
+        "$treeSampleDiagnostics $null $treeSampleMaximumAttempts"
+    ) == 6
+    native = source[
+        source.index("public static class AvBsH4P0RNativeV1") : source.index(
+            "function Get-NativeProcessParents"
+        )
+    ]
+    assert "const int ERROR_NO_MORE_FILES = 18;" in native
+    assert "const int ERROR_INVALID_PARAMETER = 87;" in native
+    assert "if (error != ERROR_NO_MORE_FILES)" in native
+    metric_probe = native[
+        native.index("public static long[] ProcessMetricProbe") : native.index(
+            "public static long[] ProcessIdentityProbe"
+        )
+    ]
+    assert metric_probe.index("GetProcessTimes") < metric_probe.index(
+        "GetProcessMemoryInfo"
+    )
+    assert "FILETIME creationAfter, exitAfter, kernelAfter, userAfter;" in metric_probe
+    assert "!IsZero(exitAfter)" in metric_probe
+    assert "error == ERROR_INVALID_PARAMETER ? 0 : -1" in metric_probe
 
 
 def test_runner_gates_inner_and_outer_token_mutation_on_verified_cleanup() -> None:

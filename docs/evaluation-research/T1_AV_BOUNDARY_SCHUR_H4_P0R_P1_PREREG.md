@@ -2,9 +2,11 @@
 
 ## 1. Current status and authority
 
-This document preregisters a static executable-contract candidate. It is
-pending final document audit and a clean contract commit. It does not itself
-authorize a pilot.
+This document preregisters the second corrective static executable-contract
+candidate after two public invocations stopped before claim and factor work.
+It is pending final document audit and a new clean token-absent contract
+commit. It does not itself authorize a pilot, and neither prior token may be
+reused.
 
 The current safe manifest classification is:
 
@@ -45,9 +47,9 @@ order, numerical ceilings, or forbidden-operation boundary.
 
 | Artifact | SHA-256 |
 | --- | --- |
-| [Python fixture](../../tools/research/av_bs1_boundary_schur_h4_p0r_p1.py) | `0289698a95fb64b68a7d18af1b2167e4445d60a7c3127e2e2937f4768cf6ab65` |
-| [PowerShell runner](../../tools/research/run_av_bs1_h4_p0r_p1_stage.ps1) | `442c72914e6a99ed0d404b0219449929bf424beff92d36cb8b31bc68c03d7bcd` |
-| [Static P1 tests](../../tests/test_research_av_bs1_boundary_schur_h4_p0r_p1.py) | `bb6f9d0f7805fccd235d27018d8222e75c13cb782c37e287db74b1a99ddddc46` |
+| [Python fixture](../../tools/research/av_bs1_boundary_schur_h4_p0r_p1.py) | `8c497cb1d0926600b2ddd974df6fd8d40b09471c617869294a01c0e018ce5acf` |
+| [PowerShell runner](../../tools/research/run_av_bs1_h4_p0r_p1_stage.ps1) | `4272d6725cb0e16b7ce39b083985965f792da5893f222ba07cf91695fba8f30c` |
+| [Static P1 tests](../../tests/test_research_av_bs1_boundary_schur_h4_p0r_p1.py) | `b44366596690d6d55d18a89d8df2370faca767fca722affd5e07268da3195235` |
 
 The final SHA-256 of this document and the live P1 wrapper manifest payload are
 intentionally not embedded here. The fixture binds
@@ -193,6 +195,31 @@ zero survivors.
 
 The envelopes use sampled Toolhelp32/PSAPI membership, not a Windows Job
 Object. Descendants created and exited entirely between polls are not claimed.
+Each tree sample is nevertheless transactional and bounded. It has at most
+three total attempts and returns only one complete attempt. If a non-root PID
+vanishes between a complete Toolhelp snapshot and its metric probe, the runner
+restarts the entire sample only after the native probe reports a retained
+handle exit or exact not-found state, a fresh complete Toolhelp snapshot proves
+the PID absent, and the root PID/birth identity remains unchanged before and
+after confirmation. Every partial numeric accumulator and returned membership
+set is discarded; already identity-bound PIDs remain retained for cleanup and
+evidence.
+
+Root disappearance or reuse, incomplete Toolhelp enumeration, a live
+same-birth process with a failed counter query, access denial or any other
+native error, target reappearance, malformed metrics, and retry exhaustion are
+fatal. The outer-close-v2 ABI records the maximum-attempt count, a bounded list
+of fixed-schema confirmed-disappearance events, a truncation flag, and nullable
+typed `monitor_failure`. Those objects contain allowlisted operation/context
+codes, PID/birth/error integers, and fixed ASCII message codes; they never
+serialize localized exception text or paths. A successful outer resource gate
+requires no monitor failure and no truncated retry evidence.
+
+An exception during the initial pre-token outer sample can still precede
+observer-session directory creation, so it cannot create an outer close. That
+early boundary remains fail-closed through the public nonzero exit, unchanged
+token bytes, and absence of session/claim/factor evidence; it is not represented
+as a durable sampled close.
 The evidence is therefore a precise sampled contract, not a race-free proof of
 every process that ever existed.
 
@@ -354,7 +381,7 @@ The exact disclosures remain
 
 ## 15. Static evidence for this candidate
 
-The static P1 suite passed **171 tests** with an autouse tripwire that raises on
+The static P1 suite passed **187 tests** with an autouse tripwire that raises on
 any real `scipy.sparse.linalg.splu` call. It includes direct filesystem tests
 for a valid no-seal normal tombstone, both inner and outer emergency semantic
 branches with intent/postvalidation/recovery journals, normal pre-replace token
@@ -365,6 +392,19 @@ chains through the complete, exit-release, outer-close, terminal-seal, and
 manifest terminal-evidence validators, plus strict type, source-hash, marker,
 nullable-prefix, and seven-case terminal tamper checks. Those tests call no
 primary stage, factor child, or real SuperLU factorization.
+
+The new monitor regressions execute the exact marker-delimited
+`Get-TreeSample` function body with internal deterministic providers, without
+dot-sourcing or dispatching the runner. They prove whole-attempt accumulator
+discard after a confirmed non-root disappearance, fatal live-process metric
+failure, fatal root disappearance/reuse, exact three-attempt exhaustion,
+rejection when an error-87 PID remains in the fresh snapshot, strict native
+Toolhelp completion, and typed close-v2 tamper rejection. The extracted slice
+contains no process spawn, token, primary-stage, consumer, or factor operation.
+The suite also freezes that an already-exited retained inner is not sampled as
+a live cleanup root, while any cleanup-tree sampling failure for a still-live
+inner is preserved as typed monitor failure and prevents the mandatory outer
+gate even if a later terminal sample succeeds.
 
 The suite also freezes the public-dispatcher strict-mode regression: every
 root/descendant enumeration is array-captured before `.Count`, zero/one/many
@@ -390,14 +430,45 @@ retried and was retired by deletion-only commit
 that enumeration and preserves the intended fail-closed exit code; no factor or
 physics solve occurred in the failed dispatcher attempt.
 
+A second fresh token-only child
+`d9e064fee6822d8f39318a55646860e24b502f35` bound contract commit
+`2b7e302aa4ef5abedcd22cda0003380cb8765a42`. Its one public invocation created
+observer session `e017a79e5ce345959d8e77f46b8d90b2` from
+`2026-08-15T09:16:22.8172642Z` through `2026-08-15T09:16:24.0712914Z`.
+The only durable session evidence is empty inner stdout/stderr plus
+`outer-resource-envelope-close.json`, SHA-256
+`3de68a75e4e1fa23876b63f1843ad217f7ba0290f8a86b491bac09124f5ea39c`.
+That close recorded `OUTER_RESOURCE_EXCEPTION`, two completed samples, two
+inner-visible samples, `inner_actual_exit_code=-1`, verified cleanup, a failed
+outer gate, and `no_claim_no_recovery_required`.
+
+No ready/start-release/complete/exit-release marker, control-plane report,
+claim, guard, result, prefix, quarantine, journal, tombstone, or terminal seal
+exists for that token. The required ready/start-release handshake is earlier
+than preflight, claim, and factor-child spawn, so no factorization, RHS, solve,
+or physics operation could have started. The exact native operation and PID are
+not recoverable because the v1 close did not persist the caught exception.
+Timing makes a short-lived inner `Add-Type` compiler/bootstrap descendant
+disappearing between enumeration and metrics the high-confidence explanation,
+but this is an inference rather than a proved PID/API cause.
+
+The token ID `7a26f8ea4f89493a95fa78bc62b2d431` remained byte-identical with
+`uses_remaining=1`; it was not retried and was removed by deletion-only
+retirement commit `7dd1db501b505d1a6a36f0d1f99df23fca655a93`. The current checkout is
+token-absent. The present whole-sample retry and typed outer-close-v2 evidence
+are the corrective contract for that second pre-factor interruption, not a
+factor-fit result.
+
 ## 16. Exact next sequence
 
 The only permitted next sequence is:
 
-The control-plane and outer-observer readiness transition has been applied to
-this candidate. It does not create or authorize a token.
+The control-plane and outer-observer readiness transition plus the bounded
+tree-sample correction have been applied to this candidate. They do not create
+or authorize a token. The retired token-only commits `b6c8615...` and
+`d9e064f...` must never be invoked again.
 
-1. Freeze these readiness-complete bytes, complete an independent final
+1. Freeze these readiness-complete corrective bytes, complete an independent final
    document/contract audit, and compute the final document SHA-256 and resulting
    live P1 wrapper payload externally.
 2. Only after that audit, create one clean executable-contract commit

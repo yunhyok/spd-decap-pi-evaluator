@@ -28,10 +28,12 @@ $outerStartReleaseSchema = "AV-BS1-h4-p0r-outer-start-release-v1"
 $outerInnerCompleteSchema = "AV-BS1-h4-p0r-outer-inner-complete-v1"
 $outerExitReleaseSchema = "AV-BS1-h4-p0r-outer-exit-release-v1"
 $outerTerminalSealSchema = "AV-BS1-h4-p0r-outer-terminal-seal-v2"
-$outerObserverEnvelopeCloseSchema = "AV-BS1-h4-p0r-outer-resource-envelope-close-v1"
+$outerObserverEnvelopeCloseSchema = "AV-BS1-h4-p0r-outer-resource-envelope-close-v2"
 $outerHandshakePrefixSchema = "AV-BS1-h4-p0r-outer-observer-handshake-prefix-v1"
 $outerInternalModeName = "primary-h4-p0r-inner-v1"
 $pollMilliseconds = 100
+$treeSampleMaximumAttempts = 3
+$treeSampleRetryEventLimit = 16
 $wallStopSeconds = 900
 $controlPlaneWallStopSeconds = 180
 $treeWorkingSetStop = [int64](4GB)
@@ -1987,6 +1989,8 @@ public static class AvBsH4P0RNativeV1 {
     const uint TH32CS_SNAPPROCESS = 0x00000002;
     const uint PROCESS_QUERY_LIMITED_INFORMATION = 0x1000;
     const uint PROCESS_VM_READ = 0x0010;
+    const int ERROR_NO_MORE_FILES = 18;
+    const int ERROR_INVALID_PARAMETER = 87;
     static readonly IntPtr INVALID_HANDLE_VALUE = new IntPtr(-1);
 
     [StructLayout(LayoutKind.Sequential, CharSet=CharSet.Unicode)]
@@ -2067,6 +2071,9 @@ public static class AvBsH4P0RNativeV1 {
         long fileTime = unchecked(((long)value.dwHighDateTime << 32) | value.dwLowDateTime);
         return checked(fileTime + 504911232000000000L);
     }
+    static bool IsZero(FILETIME value) {
+        return value.dwLowDateTime == 0 && value.dwHighDateTime == 0;
+    }
 
     public static Dictionary<int,int> ProcessParents() {
         var result = new Dictionary<int,int>();
@@ -2076,30 +2083,76 @@ public static class AvBsH4P0RNativeV1 {
             var entry = new PROCESSENTRY32();
             entry.dwSize = (uint)Marshal.SizeOf(typeof(PROCESSENTRY32));
             if (!Process32FirstW(snapshot, ref entry)) throw new InvalidOperationException("Process32First failed");
-            do {
+            while (true) {
                 result[(int)entry.th32ProcessID] = (int)entry.th32ParentProcessID;
                 entry.dwSize = (uint)Marshal.SizeOf(typeof(PROCESSENTRY32));
-            } while (Process32NextW(snapshot, ref entry));
+                if (Process32NextW(snapshot, ref entry)) continue;
+                int error = Marshal.GetLastWin32Error();
+                if (error != ERROR_NO_MORE_FILES) {
+                    throw new InvalidOperationException("Process32Next failed with Win32 error " + error);
+                }
+                break;
+            }
         } finally { CloseHandle(snapshot); }
         return result;
     }
 
-    public static long[] ProcessMetrics(int processId) {
+    // Status: 1=complete sample, 2=identity-bound exited process,
+    // 0=OpenProcess reported ERROR_INVALID_PARAMETER, -1=other native failure.
+    // Operation: 1=OpenProcess, 2=GetProcessTimes, 3=GetProcessMemoryInfo.
+    public static long[] ProcessMetricProbe(int processId) {
         IntPtr process = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION | PROCESS_VM_READ, false, (uint)processId);
-        if (process == IntPtr.Zero) return new long[0];
+        if (process == IntPtr.Zero) {
+            int error = Marshal.GetLastWin32Error();
+            return new long[] { error == ERROR_INVALID_PARAMETER ? 0 : -1, 1, error, 0, 0 };
+        }
         try {
+            FILETIME creation, exit, kernel, user;
+            if (!GetProcessTimes(process, out creation, out exit, out kernel, out user)) {
+                return new long[] { -1, 2, Marshal.GetLastWin32Error(), 0, 0 };
+            }
+            long birth = DateTimeTicks(creation);
+            if (!IsZero(exit)) return new long[] { 2, 2, 0, birth, 1 };
             var counters = new PROCESS_MEMORY_COUNTERS_EX2();
             counters.cb = (uint)Marshal.SizeOf(typeof(PROCESS_MEMORY_COUNTERS_EX2));
-            if (!GetProcessMemoryInfo(process, ref counters, counters.cb)) return new long[0];
-            FILETIME creation, exit, kernel, user;
-            if (!GetProcessTimes(process, out creation, out exit, out kernel, out user)) return new long[0];
+            if (!GetProcessMemoryInfo(process, ref counters, counters.cb)) {
+                int memoryError = Marshal.GetLastWin32Error();
+                FILETIME creationAfter, exitAfter, kernelAfter, userAfter;
+                if (
+                    GetProcessTimes(
+                        process, out creationAfter, out exitAfter,
+                        out kernelAfter, out userAfter
+                    ) &&
+                    !IsZero(exitAfter)
+                ) {
+                    return new long[] { 2, 3, memoryError, birth, 1 };
+                }
+                return new long[] { -1, 3, memoryError, birth, 0 };
+            }
             return new long[] {
+                1, 3, 0, birth, 0,
                 U(counters.WorkingSetSize), U(counters.PeakWorkingSetSize),
                 U(counters.PagefileUsage), U(counters.PeakPagefileUsage),
                 U(counters.PrivateUsage), U(counters.PrivateWorkingSetSize),
-                U(counters.SharedCommitUsage), counters.PageFaultCount,
-                DateTimeTicks(creation)
+                U(counters.SharedCommitUsage), counters.PageFaultCount
             };
+        } finally { CloseHandle(process); }
+    }
+
+    // Status: 1=live, 2=exited but still identity-queryable,
+    // 0=OpenProcess reported ERROR_INVALID_PARAMETER, -1=other native failure.
+    public static long[] ProcessIdentityProbe(int processId) {
+        IntPtr process = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, false, (uint)processId);
+        if (process == IntPtr.Zero) {
+            int error = Marshal.GetLastWin32Error();
+            return new long[] { error == ERROR_INVALID_PARAMETER ? 0 : -1, 1, error, 0 };
+        }
+        try {
+            FILETIME creation, exit, kernel, user;
+            if (!GetProcessTimes(process, out creation, out exit, out kernel, out user)) {
+                return new long[] { -1, 2, Marshal.GetLastWin32Error(), 0 };
+            }
+            return new long[] { IsZero(exit) ? 1 : 2, 2, 0, DateTimeTicks(creation) };
         } finally { CloseHandle(process); }
     }
 
@@ -2118,8 +2171,87 @@ public static class AvBsH4P0RNativeV1 {
 }
 '@
 
+function Get-NativeProcessParents {
+    return ,([AvBsH4P0RNativeV1]::ProcessParents())
+}
+
+function Get-ProcessIdentityState([int]$ProcessId) {
+    $raw = @([AvBsH4P0RNativeV1]::ProcessIdentityProbe($ProcessId))
+    if ($raw.Count -ne 4) {
+        return [ordered]@{
+            status = "malformed"
+            operation = "process_identity_probe"
+            win32_error_code = $null
+            birth_utc_ticks = $null
+        }
+    }
+    $operation = switch ([int]$raw[1]) {
+        1 { "open_process" }
+        2 { "get_process_times" }
+        default { "process_identity_probe" }
+    }
+    $status = switch ([int]$raw[0]) {
+        0 { "not_found" }
+        1 { "live" }
+        2 { "exited" }
+        default { "query_failed" }
+    }
+    return [ordered]@{
+        status = $status
+        operation = $operation
+        win32_error_code = if ([int]$raw[2] -gt 0) { [int]$raw[2] } else { $null }
+        birth_utc_ticks = if ([int64]$raw[3] -gt 0) { [int64]$raw[3] } else { $null }
+    }
+}
+
+function Get-ProcessMetricState([int]$ProcessId) {
+    $raw = @([AvBsH4P0RNativeV1]::ProcessMetricProbe($ProcessId))
+    if ($raw.Count -lt 5) {
+        return [ordered]@{
+            status = "malformed"
+            operation = "process_metric_probe"
+            win32_error_code = $null
+            birth_utc_ticks = $null
+            values = $null
+        }
+    }
+    $operation = switch ([int]$raw[1]) {
+        1 { "open_process" }
+        2 { "get_process_times" }
+        3 { "get_process_memory_info" }
+        default { "process_metric_probe" }
+    }
+    $status = switch ([int]$raw[0]) {
+        0 { "not_found" }
+        1 { if ($raw.Count -eq 13) { "ok" } else { "malformed" } }
+        2 { "exited" }
+        default { "query_failed" }
+    }
+    return [ordered]@{
+        status = $status
+        operation = $operation
+        win32_error_code = if ([int]$raw[2] -gt 0) { [int]$raw[2] } else { $null }
+        birth_utc_ticks = if ([int64]$raw[3] -gt 0) { [int64]$raw[3] } else { $null }
+        values = if ($status -eq "ok") { @($raw[5..12] | ForEach-Object { [int64]$_ }) } else { $null }
+    }
+}
+
+function Test-CompleteProcessSnapshotContainsId([int]$ProcessId) {
+    $parents = Get-NativeProcessParents
+    return [bool]$parents.ContainsKey($ProcessId)
+}
+
+function New-ProductionTreeSampleProviders {
+    return [ordered]@{
+        Enumerate = { param([int]$RootProcessId) return @(Get-DescendantIds $RootProcessId) }
+        Identity = { param([int]$ProcessId) return (Get-ProcessIdentityState $ProcessId) }
+        Metrics = { param([int]$ProcessId) return (Get-ProcessMetricState $ProcessId) }
+        SnapshotContains = { param([int]$ProcessId) return (Test-CompleteProcessSnapshotContainsId $ProcessId) }
+    }
+}
+
 function Get-DescendantIds([int]$RootProcessId) {
-    $parents = [AvBsH4P0RNativeV1]::ProcessParents()
+    $parents = Get-NativeProcessParents
     $selected = New-Object 'System.Collections.Generic.HashSet[int]'
     [void]$selected.Add($RootProcessId)
     $changed = $true
@@ -2147,62 +2279,520 @@ function Get-SystemSample() {
     }
 }
 
+# AV_BS_TREE_SAMPLE_TEST_SLICE_BEGIN
+function New-TreeSampleDiagnostics([int]$EventLimit = 16) {
+    return [ordered]@{
+        confirmed_disappearance_count = 0
+        event_limit = [int]$EventLimit
+        last_failure = $null
+        retry_events = New-Object System.Collections.ArrayList
+        retry_events_truncated = $false
+    }
+}
+
+function New-TreeSampleEvidence(
+    [int]$Attempt,
+    [object]$Confirmation,
+    [string]$Context,
+    [object]$ExpectedBirthUtcTicks,
+    [string]$MessageCode,
+    [object]$ObservedBirthUtcTicks,
+    [string]$Operation,
+    [object]$ProcessId,
+    [object]$ProcessRole,
+    [object]$Win32ErrorCode
+) {
+    return [ordered]@{
+        attempt = [int]$Attempt
+        confirmation = if ($null -eq $Confirmation) { $null } else { [string]$Confirmation }
+        context = [string]$Context
+        expected_birth_utc_ticks = if ($null -eq $ExpectedBirthUtcTicks) { $null } else { [int64]$ExpectedBirthUtcTicks }
+        message_code = [string]$MessageCode
+        observed_birth_utc_ticks = if ($null -eq $ObservedBirthUtcTicks) { $null } else { [int64]$ObservedBirthUtcTicks }
+        operation = [string]$Operation
+        process_id = if ($null -eq $ProcessId) { $null } else { [int]$ProcessId }
+        process_role = if ($null -eq $ProcessRole) { $null } else { [string]$ProcessRole }
+        win32_error_code = if ($null -eq $Win32ErrorCode) { $null } else { [int]$Win32ErrorCode }
+    }
+}
+
+function New-TreeSampleFailureException(
+    [System.Collections.IDictionary]$Evidence
+) {
+    $exception = New-Object System.InvalidOperationException(
+        "BLOCKED_AV_BS_RESOURCE: tree sample failure " + [string]$Evidence.message_code
+    )
+    foreach ($key in @(
+        "attempt", "confirmation", "context", "expected_birth_utc_ticks",
+        "message_code", "observed_birth_utc_ticks", "operation", "process_id",
+        "process_role", "win32_error_code"
+    )) {
+        $exception.Data[$key] = $Evidence[$key]
+    }
+    return $exception
+}
+
+function Set-TreeSampleFailureAndThrow(
+    [System.Collections.IDictionary]$Diagnostics,
+    [System.Collections.IDictionary]$Evidence
+) {
+    if ($null -ne $Diagnostics) { $Diagnostics.last_failure = $Evidence }
+    throw (New-TreeSampleFailureException $Evidence)
+}
+
+function Add-TreeSampleRetryEvidence(
+    [System.Collections.IDictionary]$Diagnostics,
+    [System.Collections.IDictionary]$Evidence
+) {
+    if ($null -eq $Diagnostics) { return }
+    $Diagnostics.confirmed_disappearance_count = [int]$Diagnostics.confirmed_disappearance_count + 1
+    if ($Diagnostics.retry_events.Count -lt [int]$Diagnostics.event_limit) {
+        [void]$Diagnostics.retry_events.Add($Evidence)
+    }
+    else {
+        $Diagnostics.retry_events_truncated = $true
+    }
+}
+
+function Assert-TreeSampleRootLive(
+    [System.Collections.IDictionary]$Probe,
+    [int]$RootProcessId,
+    [int64]$RootBirthTicks,
+    [string]$Context,
+    [int]$Attempt,
+    [string]$MessagePhase,
+    [System.Collections.IDictionary]$Diagnostics
+) {
+    $operation = if ($null -ne $Probe -and $Probe.operation -is [string]) {
+        [string]$Probe.operation
+    } else {
+        "process_identity_probe"
+    }
+    $observedBirth = if ($null -ne $Probe) { $Probe.birth_utc_ticks } else { $null }
+    $win32Error = if ($null -ne $Probe) { $Probe.win32_error_code } else { $null }
+    if (
+        $null -ne $Probe -and
+        $Probe.status -eq "live" -and
+        $Probe.birth_utc_ticks -is [long] -and
+        [int64]$Probe.birth_utc_ticks -eq $RootBirthTicks
+    ) {
+        return
+    }
+    $messageCode = if ($null -ne $Probe -and $Probe.status -eq "live") {
+        "ROOT_PID_REUSE_" + $MessagePhase
+    } elseif ($null -ne $Probe -and $Probe.status -in @("not_found", "exited")) {
+        "ROOT_DISAPPEARED_" + $MessagePhase
+    } else {
+        "ROOT_IDENTITY_QUERY_FAILED_" + $MessagePhase
+    }
+    $evidence = New-TreeSampleEvidence `
+        $Attempt $null $Context $RootBirthTicks $messageCode $observedBirth `
+        $operation $RootProcessId "root" $win32Error
+    Set-TreeSampleFailureAndThrow $Diagnostics $evidence
+}
+
+function Get-ConfirmedTreeSampleDisappearance(
+    [System.Collections.IDictionary]$Probe,
+    [scriptblock]$IdentityProvider,
+    [scriptblock]$SnapshotContainsProvider,
+    [int]$RootProcessId,
+    [int64]$RootBirthTicks,
+    [int]$ProcessId,
+    [object]$ExpectedBirthUtcTicks,
+    [string]$Context,
+    [int]$Attempt,
+    [string]$FailureOperation,
+    [object]$FailureWin32ErrorCode,
+    [System.Collections.IDictionary]$Diagnostics
+) {
+    if ($null -eq $Probe -or $Probe.status -notin @("not_found", "exited")) {
+        return $null
+    }
+    if (
+        $Probe.status -eq "not_found" -and
+        ($Probe.win32_error_code -isnot [int] -or [int]$Probe.win32_error_code -ne 87)
+    ) {
+        $evidence = New-TreeSampleEvidence `
+            $Attempt $null $Context $ExpectedBirthUtcTicks `
+            "NONROOT_ABSENCE_NATIVE_CODE_INVALID" $Probe.birth_utc_ticks `
+            ([string]$Probe.operation) $ProcessId "descendant" $Probe.win32_error_code
+        Set-TreeSampleFailureAndThrow $Diagnostics $evidence
+    }
+    if (
+        $Probe.status -eq "exited" -and
+        ($Probe.birth_utc_ticks -isnot [long] -or [int64]$Probe.birth_utc_ticks -le 0)
+    ) {
+        $evidence = New-TreeSampleEvidence `
+            $Attempt $null $Context $ExpectedBirthUtcTicks `
+            "NONROOT_EXIT_IDENTITY_INVALID" $Probe.birth_utc_ticks `
+            ([string]$Probe.operation) $ProcessId "descendant" $Probe.win32_error_code
+        Set-TreeSampleFailureAndThrow $Diagnostics $evidence
+    }
+    if (
+        $null -ne $ExpectedBirthUtcTicks -and
+        $null -ne $Probe.birth_utc_ticks -and
+        [int64]$Probe.birth_utc_ticks -ne [int64]$ExpectedBirthUtcTicks
+    ) {
+        $evidence = New-TreeSampleEvidence `
+            $Attempt $null $Context $ExpectedBirthUtcTicks "NONROOT_PID_REUSE" `
+            $Probe.birth_utc_ticks ([string]$Probe.operation) $ProcessId `
+            "descendant" $Probe.win32_error_code
+        Set-TreeSampleFailureAndThrow $Diagnostics $evidence
+    }
+    $rootBefore = & $IdentityProvider $RootProcessId
+    Assert-TreeSampleRootLive `
+        $rootBefore $RootProcessId $RootBirthTicks $Context $Attempt `
+        "BEFORE_DISAPPEARANCE_CONFIRMATION" $Diagnostics
+    try {
+        $snapshotContains = & $SnapshotContainsProvider $ProcessId
+    }
+    catch {
+        $evidence = New-TreeSampleEvidence `
+            $Attempt $null $Context $ExpectedBirthUtcTicks `
+            "COMPLETE_PROCESS_SNAPSHOT_QUERY_FAILED" $Probe.birth_utc_ticks `
+            "toolhelp_process_snapshot" $ProcessId "descendant" $null
+        Set-TreeSampleFailureAndThrow $Diagnostics $evidence
+    }
+    if ($snapshotContains -isnot [bool]) {
+        $evidence = New-TreeSampleEvidence `
+            $Attempt $null $Context $ExpectedBirthUtcTicks `
+            "COMPLETE_PROCESS_SNAPSHOT_RESULT_INVALID" $Probe.birth_utc_ticks `
+            "toolhelp_process_snapshot" $ProcessId "descendant" $null
+        Set-TreeSampleFailureAndThrow $Diagnostics $evidence
+    }
+    $rootAfter = & $IdentityProvider $RootProcessId
+    Assert-TreeSampleRootLive `
+        $rootAfter $RootProcessId $RootBirthTicks $Context $Attempt `
+        "AFTER_DISAPPEARANCE_CONFIRMATION" $Diagnostics
+    if ($snapshotContains) {
+        $evidence = New-TreeSampleEvidence `
+            $Attempt $null $Context $ExpectedBirthUtcTicks `
+            "NONROOT_DISAPPEARANCE_NOT_CONFIRMED" $Probe.birth_utc_ticks `
+            "toolhelp_process_snapshot" $ProcessId "descendant" $FailureWin32ErrorCode
+        Set-TreeSampleFailureAndThrow $Diagnostics $evidence
+    }
+    $confirmation = if ($Probe.status -eq "exited") {
+        "signaled_handle_and_complete_snapshot_absent"
+    } else {
+        "limited_query_not_found_and_complete_snapshot_absent"
+    }
+    return (New-TreeSampleEvidence `
+        $Attempt $confirmation $Context $ExpectedBirthUtcTicks `
+        "CONFIRMED_NONROOT_DISAPPEARANCE" $Probe.birth_utc_ticks `
+        $FailureOperation $ProcessId "descendant" $FailureWin32ErrorCode)
+}
+
 function Get-TreeSample(
     [int]$RootProcessId,
     [int64]$RootBirthTicks,
     [System.Collections.Generic.HashSet[int]]$ObservedProcessIds,
-    [System.Collections.Generic.Dictionary[int, Int64]]$ObservedBirthTicks
+    [System.Collections.Generic.Dictionary[int, Int64]]$ObservedBirthTicks,
+    [string]$Context = "unclassified_tree_sample",
+    [System.Collections.IDictionary]$Diagnostics = $null,
+    [System.Collections.IDictionary]$Providers = $null,
+    [ValidateRange(1, 3)][int]$MaximumAttempts = 1
 ) {
-    $ids = @(Get-VerifiedRootDescendantIds $RootProcessId $RootBirthTicks)
-    if ($ids.Count -lt 1) { throw "BLOCKED_AV_BS_RESOURCE: child process tree disappeared" }
-    foreach ($id in $ids) {
-        if ([int]$id -eq $RootProcessId) {
-            if ((Get-ProcessBirthTicks $RootProcessId) -ne $RootBirthTicks) {
-                throw "BLOCKED_AV_BS_RESOURCE: runner PID reuse detected for $RootProcessId"
+    if ([string]::IsNullOrEmpty($Context) -or $Context.Length -gt 96) {
+        throw "BLOCKED_AV_BS_RESULT_SCHEMA: tree sample context is invalid"
+    }
+    if ($null -eq $Providers) { $Providers = New-ProductionTreeSampleProviders }
+    foreach ($providerName in @("Enumerate", "Identity", "Metrics", "SnapshotContains")) {
+        if (-not $Providers.Contains($providerName) -or $Providers[$providerName] -isnot [scriptblock]) {
+            throw "BLOCKED_AV_BS_RESULT_SCHEMA: tree sample provider set is incomplete"
+        }
+    }
+    $enumerateProvider = [scriptblock]$Providers["Enumerate"]
+    $identityProvider = [scriptblock]$Providers["Identity"]
+    $metricsProvider = [scriptblock]$Providers["Metrics"]
+    $snapshotContainsProvider = [scriptblock]$Providers["SnapshotContains"]
+    if ($null -ne $Diagnostics) { $Diagnostics.last_failure = $null }
+
+    :treeSampleAttempt for ($attempt = 1; $attempt -le $MaximumAttempts; $attempt += 1) {
+        $rootBefore = & $identityProvider $RootProcessId
+        Assert-TreeSampleRootLive `
+            $rootBefore $RootProcessId $RootBirthTicks $Context $attempt `
+            "BEFORE_ENUMERATION" $Diagnostics
+        try {
+            $rawIds = @(& $enumerateProvider $RootProcessId)
+        }
+        catch {
+            $evidence = New-TreeSampleEvidence `
+                $attempt $null $Context $RootBirthTicks "TREE_ENUMERATION_FAILED" `
+                $null "toolhelp_process_snapshot" $RootProcessId "root" $null
+            Set-TreeSampleFailureAndThrow $Diagnostics $evidence
+        }
+        $ids = @()
+        foreach ($candidateId in $rawIds) {
+            if ($candidateId -isnot [int] -or [int]$candidateId -le 0) {
+                $evidence = New-TreeSampleEvidence `
+                    $attempt $null $Context $RootBirthTicks "TREE_ENUMERATION_ID_INVALID" `
+                    $null "toolhelp_process_snapshot" $RootProcessId "root" $null
+                Set-TreeSampleFailureAndThrow $Diagnostics $evidence
             }
+            $ids += [int]$candidateId
         }
-        else {
-            Register-ObservedProcess ([int]$id) $ObservedBirthTicks $RootBirthTicks
-            [void]$ObservedProcessIds.Add([int]$id)
+        $ids = @($ids | Sort-Object -Unique)
+        if ($ids.Count -lt 1 -or $ids -notcontains $RootProcessId) {
+            $evidence = New-TreeSampleEvidence `
+                $attempt $null $Context $RootBirthTicks "ROOT_MISSING_FROM_TREE_ENUMERATION" `
+                $null "toolhelp_process_snapshot" $RootProcessId "root" $null
+            Set-TreeSampleFailureAndThrow $Diagnostics $evidence
+        }
+        $rootAfterEnumeration = & $identityProvider $RootProcessId
+        Assert-TreeSampleRootLive `
+            $rootAfterEnumeration $RootProcessId $RootBirthTicks $Context $attempt `
+            "AFTER_ENUMERATION" $Diagnostics
+
+        [int64]$working = 0
+        [int64]$peakWorking = 0
+        [int64]$commit = 0
+        [int64]$peakCommit = 0
+        [int64]$private = 0
+        [int64]$privateWorking = 0
+        [int64]$sharedCommit = 0
+        [int64]$pageFaults = 0
+        $retryEvidence = $null
+
+        foreach ($id in $ids) {
+            $expectedBirth = $null
+            if ([int]$id -eq $RootProcessId) {
+                $expectedBirth = [int64]$RootBirthTicks
+            }
+            else {
+                $identity = & $identityProvider ([int]$id)
+                if ($null -eq $identity -or $identity.status -notin @("live", "exited", "not_found", "query_failed", "malformed")) {
+                    $identity = [ordered]@{
+                        status = "malformed"; operation = "process_identity_probe"
+                        win32_error_code = $null; birth_utc_ticks = $null
+                    }
+                }
+                if ($identity.status -eq "live") {
+                    if ($identity.birth_utc_ticks -isnot [long] -or [int64]$identity.birth_utc_ticks -lt $RootBirthTicks) {
+                        $evidence = New-TreeSampleEvidence `
+                            $attempt $null $Context $null "NONROOT_IDENTITY_INVALID_OR_STALE" `
+                            $identity.birth_utc_ticks ([string]$identity.operation) `
+                            ([int]$id) "descendant" $identity.win32_error_code
+                        Set-TreeSampleFailureAndThrow $Diagnostics $evidence
+                    }
+                    $expectedBirth = [int64]$identity.birth_utc_ticks
+                    if ($ObservedBirthTicks.ContainsKey([int]$id)) {
+                        if ([int64]$ObservedBirthTicks[[int]$id] -ne $expectedBirth) {
+                            $evidence = New-TreeSampleEvidence `
+                                $attempt $null $Context $ObservedBirthTicks[[int]$id] `
+                                "NONROOT_PID_REUSE" $expectedBirth ([string]$identity.operation) `
+                                ([int]$id) "descendant" $identity.win32_error_code
+                            Set-TreeSampleFailureAndThrow $Diagnostics $evidence
+                        }
+                    }
+                    else {
+                        $ObservedBirthTicks.Add([int]$id, $expectedBirth)
+                    }
+                    [void]$ObservedProcessIds.Add([int]$id)
+                }
+                elseif ($identity.status -in @("exited", "not_found")) {
+                    if ($identity.status -eq "exited") {
+                        if (
+                            $identity.birth_utc_ticks -isnot [long] -or
+                            [int64]$identity.birth_utc_ticks -lt $RootBirthTicks
+                        ) {
+                            $evidence = New-TreeSampleEvidence `
+                                $attempt $null $Context $null `
+                                "NONROOT_IDENTITY_INVALID_OR_STALE" `
+                                $identity.birth_utc_ticks ([string]$identity.operation) `
+                                ([int]$id) "descendant" $identity.win32_error_code
+                            Set-TreeSampleFailureAndThrow $Diagnostics $evidence
+                        }
+                        $expectedBirth = [int64]$identity.birth_utc_ticks
+                    }
+                    elseif ($ObservedBirthTicks.ContainsKey([int]$id)) {
+                        $expectedBirth = [int64]$ObservedBirthTicks[[int]$id]
+                    }
+                    $retryEvidence = Get-ConfirmedTreeSampleDisappearance `
+                        $identity $identityProvider $snapshotContainsProvider `
+                        $RootProcessId $RootBirthTicks ([int]$id) $expectedBirth `
+                        $Context $attempt ([string]$identity.operation) `
+                        $identity.win32_error_code $Diagnostics
+                    if ($identity.status -eq "exited") {
+                        if ($ObservedBirthTicks.ContainsKey([int]$id)) {
+                            if ([int64]$ObservedBirthTicks[[int]$id] -ne $expectedBirth) {
+                                $evidence = New-TreeSampleEvidence `
+                                    $attempt $null $Context $ObservedBirthTicks[[int]$id] `
+                                    "NONROOT_PID_REUSE" $expectedBirth `
+                                    ([string]$identity.operation) ([int]$id) `
+                                    "descendant" $identity.win32_error_code
+                                Set-TreeSampleFailureAndThrow $Diagnostics $evidence
+                            }
+                        }
+                        else {
+                            $ObservedBirthTicks.Add([int]$id, $expectedBirth)
+                        }
+                        [void]$ObservedProcessIds.Add([int]$id)
+                    }
+                    break
+                }
+                else {
+                    $evidence = New-TreeSampleEvidence `
+                        $attempt $null $Context $null "NONROOT_IDENTITY_QUERY_FAILED" `
+                        $identity.birth_utc_ticks ([string]$identity.operation) `
+                        ([int]$id) "descendant" $identity.win32_error_code
+                    Set-TreeSampleFailureAndThrow $Diagnostics $evidence
+                }
+            }
+
+            $metric = & $metricsProvider ([int]$id)
+            if ($null -eq $metric -or $metric.status -notin @("ok", "exited", "not_found", "query_failed", "malformed")) {
+                $metric = [ordered]@{
+                    status = "malformed"; operation = "process_metric_probe"
+                    win32_error_code = $null; birth_utc_ticks = $null; values = $null
+                }
+            }
+            if ($metric.status -ne "ok") {
+                if ([int]$id -eq $RootProcessId) {
+                    $evidence = New-TreeSampleEvidence `
+                        $attempt $null $Context $RootBirthTicks "ROOT_METRIC_QUERY_FAILED" `
+                        $metric.birth_utc_ticks ([string]$metric.operation) `
+                        $RootProcessId "root" $metric.win32_error_code
+                    Set-TreeSampleFailureAndThrow $Diagnostics $evidence
+                }
+                if ($metric.status -eq "malformed") {
+                    $evidence = New-TreeSampleEvidence `
+                        $attempt $null $Context $expectedBirth "PROCESS_METRIC_RESULT_MALFORMED" `
+                        $metric.birth_utc_ticks ([string]$metric.operation) `
+                        ([int]$id) "descendant" $metric.win32_error_code
+                    Set-TreeSampleFailureAndThrow $Diagnostics $evidence
+                }
+                if ($metric.status -notin @("not_found", "exited")) {
+                    $evidence = New-TreeSampleEvidence `
+                        $attempt $null $Context $expectedBirth `
+                        "PROCESS_METRIC_QUERY_FAILED_WHILE_LIVE" `
+                        $metric.birth_utc_ticks ([string]$metric.operation) `
+                        ([int]$id) "descendant" $metric.win32_error_code
+                    Set-TreeSampleFailureAndThrow $Diagnostics $evidence
+                }
+                $confirmationProbe = & $identityProvider ([int]$id)
+                $retryEvidence = Get-ConfirmedTreeSampleDisappearance `
+                    $confirmationProbe $identityProvider $snapshotContainsProvider `
+                    $RootProcessId $RootBirthTicks ([int]$id) $expectedBirth `
+                    $Context $attempt ([string]$metric.operation) `
+                    $metric.win32_error_code $Diagnostics
+                if ($null -eq $retryEvidence) {
+                    $evidence = New-TreeSampleEvidence `
+                        $attempt $null $Context $expectedBirth `
+                        "PROCESS_METRIC_QUERY_FAILED_WHILE_LIVE" `
+                        $confirmationProbe.birth_utc_ticks ([string]$metric.operation) `
+                        ([int]$id) "descendant" $metric.win32_error_code
+                    Set-TreeSampleFailureAndThrow $Diagnostics $evidence
+                }
+                break
+            }
+            $metricValues = @($metric.values)
+            if (
+                $metricValues.Count -ne 8 -or
+                $metric.birth_utc_ticks -isnot [long] -or
+                [int64]$metric.birth_utc_ticks -ne [int64]$expectedBirth -or
+                @($metricValues | Where-Object { $_ -isnot [long] -or [int64]$_ -lt 0 }).Count -gt 0
+            ) {
+                $evidence = New-TreeSampleEvidence `
+                    $attempt $null $Context $expectedBirth "PROCESS_METRIC_IDENTITY_OR_VALUE_INVALID" `
+                    $metric.birth_utc_ticks ([string]$metric.operation) ([int]$id) `
+                    $(if ([int]$id -eq $RootProcessId) { "root" } else { "descendant" }) `
+                    $metric.win32_error_code
+                Set-TreeSampleFailureAndThrow $Diagnostics $evidence
+            }
+            $working += [int64]$metricValues[0]
+            $peakWorking += [int64]$metricValues[1]
+            $commit += [int64]$metricValues[2]
+            $peakCommit += [int64]$metricValues[3]
+            $private += [int64]$metricValues[4]
+            $privateWorking += [int64]$metricValues[5]
+            $sharedCommit += [int64]$metricValues[6]
+            $pageFaults += [int64]$metricValues[7]
+        }
+
+        if ($null -ne $retryEvidence) {
+            Add-TreeSampleRetryEvidence $Diagnostics $retryEvidence
+            if ($attempt -ge $MaximumAttempts) {
+                $exhausted = New-TreeSampleEvidence `
+                    $attempt $retryEvidence.confirmation $Context `
+                    $retryEvidence.expected_birth_utc_ticks `
+                    "TRANSIENT_DESCENDANT_DISAPPEARANCE_RETRY_EXHAUSTED" `
+                    $retryEvidence.observed_birth_utc_ticks $retryEvidence.operation `
+                    $retryEvidence.process_id $retryEvidence.process_role `
+                    $retryEvidence.win32_error_code
+                Set-TreeSampleFailureAndThrow $Diagnostics $exhausted
+            }
+            continue treeSampleAttempt
+        }
+
+        $rootBeforeReturn = & $identityProvider $RootProcessId
+        Assert-TreeSampleRootLive `
+            $rootBeforeReturn $RootProcessId $RootBirthTicks $Context $attempt `
+            "BEFORE_SAMPLE_RETURN" $Diagnostics
+        if ($null -ne $Diagnostics) { $Diagnostics.last_failure = $null }
+        return [ordered]@{
+            process_ids = @($ids)
+            process_count = $ids.Count
+            working_set_bytes = $working
+            summed_process_peak_working_set_bytes = $peakWorking
+            committed_pagefile_bytes = $commit
+            summed_process_peak_commit_bytes = $peakCommit
+            private_commit_bytes = $private
+            private_working_set_bytes = $privateWorking
+            nonprivate_working_set_proxy_bytes = [math]::Max([int64]0, $working - $privateWorking)
+            shared_commit_bytes = $sharedCommit
+            page_fault_count = $pageFaults
         }
     }
-    [int64]$working = 0
-    [int64]$peakWorking = 0
-    [int64]$commit = 0
-    [int64]$peakCommit = 0
-    [int64]$private = 0
-    [int64]$privateWorking = 0
-    [int64]$sharedCommit = 0
-    [int64]$pageFaults = 0
-    foreach ($id in $ids) {
-        $metric = [AvBsH4P0RNativeV1]::ProcessMetrics([int]$id)
-        if ($metric.Length -ne 9) { throw "BLOCKED_AV_BS_RESOURCE: process counter query failed for PID $id" }
-        $expectedBirth = if ([int]$id -eq $RootProcessId) { $RootBirthTicks } else { $ObservedBirthTicks[[int]$id] }
-        if ([int64]$metric[8] -ne [int64]$expectedBirth) {
-            throw "BLOCKED_AV_BS_RESOURCE: process counter PID identity mismatch for $id"
-        }
-        $working += $metric[0]
-        $peakWorking += $metric[1]
-        $commit += $metric[2]
-        $peakCommit += $metric[3]
-        $private += $metric[4]
-        $privateWorking += $metric[5]
-        $sharedCommit += $metric[6]
-        $pageFaults += $metric[7]
+    throw "BLOCKED_AV_BS_RESOURCE: tree sample attempt loop terminated unexpectedly"
+}
+# AV_BS_TREE_SAMPLE_TEST_SLICE_END
+
+function Get-NormalizedOuterMonitorFailure(
+    [System.Exception]$Exception,
+    [string]$FallbackOperation
+) {
+    $required = @(
+        "attempt", "confirmation", "context", "expected_birth_utc_ticks",
+        "message_code", "observed_birth_utc_ticks", "operation", "process_id",
+        "process_role", "win32_error_code"
+    )
+    $data = if ($null -ne $Exception) { $Exception.Data } else { $null }
+    $structured = $null -ne $data
+    foreach ($key in $required) {
+        if (-not $structured -or -not $data.Contains($key)) { $structured = $false; break }
     }
-    return [ordered]@{
-        process_ids = @($ids)
-        process_count = $ids.Count
-        working_set_bytes = $working
-        summed_process_peak_working_set_bytes = $peakWorking
-        committed_pagefile_bytes = $commit
-        summed_process_peak_commit_bytes = $peakCommit
-        private_commit_bytes = $private
-        private_working_set_bytes = $privateWorking
-        nonprivate_working_set_proxy_bytes = [math]::Max([int64]0, $working - $privateWorking)
-        shared_commit_bytes = $sharedCommit
-        page_fault_count = $pageFaults
+    if ($structured) {
+        $structured = (
+            $data["attempt"] -is [int] -and [int]$data["attempt"] -ge 1 -and
+            ($null -eq $data["confirmation"] -or $data["confirmation"] -is [string]) -and
+            $data["context"] -is [string] -and
+            ($null -eq $data["expected_birth_utc_ticks"] -or $data["expected_birth_utc_ticks"] -is [long]) -and
+            $data["message_code"] -is [string] -and
+            ($null -eq $data["observed_birth_utc_ticks"] -or $data["observed_birth_utc_ticks"] -is [long]) -and
+            $data["operation"] -is [string] -and
+            ($null -eq $data["process_id"] -or $data["process_id"] -is [int]) -and
+            ($null -eq $data["process_role"] -or $data["process_role"] -is [string]) -and
+            ($null -eq $data["win32_error_code"] -or $data["win32_error_code"] -is [int])
+        )
     }
+    if ($structured) {
+        return (New-TreeSampleEvidence `
+            ([int]$data["attempt"]) $data["confirmation"] ([string]$data["context"]) `
+            $data["expected_birth_utc_ticks"] ([string]$data["message_code"]) `
+            $data["observed_birth_utc_ticks"] ([string]$data["operation"]) `
+            $data["process_id"] $data["process_role"] $data["win32_error_code"])
+    }
+    $messageCode = if (
+        $null -ne $Exception -and
+        [string]$Exception.Message -like "BLOCKED_AV_BS_RESOURCE:*"
+    ) {
+        "OUTER_RESOURCE_EXCEPTION"
+    } else {
+        "OUTER_OBSERVER_EXCEPTION"
+    }
+    return (New-TreeSampleEvidence `
+        1 $null ([string]$FallbackOperation) $null $messageCode $null `
+        ([string]$FallbackOperation) $null $null $null)
 }
 
 function Get-ProcessBirthTicks([int]$ProcessId) {
@@ -4502,6 +5092,9 @@ function Invoke-OuterObserverPrimary {
     $startedUtc = [DateTimeOffset]::UtcNow
     $stopwatch = [Diagnostics.Stopwatch]::StartNew()
     $stopReason = $null
+    $currentOuterOperation = "outer_initial_identity"
+    $monitorFailure = $null
+    $treeSampleDiagnostics = New-TreeSampleDiagnostics $treeSampleRetryEventLimit
     $outerBirthTicks = Get-ProcessBirthTicks $PID
     $outerObservedIds = New-Object 'System.Collections.Generic.HashSet[int]'
     $outerObservedBirthTicks = New-Object 'System.Collections.Generic.Dictionary[int, Int64]'
@@ -4519,8 +5112,12 @@ function Invoke-OuterObserverPrimary {
         system_commit_headroom_min_bytes = [int64]::MaxValue
         available_physical_min_bytes = [int64]::MaxValue
     }
+    $currentOuterOperation = "outer_initial_system_sample"
     $preSystem = Get-SystemSample
-    $preTree = Get-TreeSample $PID $outerBirthTicks $outerObservedIds $outerObservedBirthTicks
+    $currentOuterOperation = "outer_initial_tree_sample"
+    $preTree = Get-TreeSample `
+        $PID $outerBirthTicks $outerObservedIds $outerObservedBirthTicks `
+        "outer_initial_tree_sample" $treeSampleDiagnostics $null $treeSampleMaximumAttempts
     Update-ControlPlanePeak $peak $preTree $preSystem
     if ($preSystem.commit_headroom_bytes -lt $minimumCommitHeadroomBeforeSpawn) {
         throw "BLOCKED_AV_BS_RESOURCE: outer initial commit headroom is below the high floor"
@@ -4587,6 +5184,7 @@ function Invoke-OuterObserverPrimary {
     $processLaunched = $false
     $innerProcessId = $null
     $innerBirthTicks = $null
+    $innerParentIdentityVerified = $false
     $retainedHandle = [IntPtr]::Zero
     $retainedHandleAcquired = $false
     $readyObserved = $false
@@ -4623,8 +5221,12 @@ function Invoke-OuterObserverPrimary {
     $finalSystem = $null
     $finalTree = $null
     try {
+        $currentOuterOperation = "outer_pre_spawn_system_sample"
         $preSpawnSystem = Get-SystemSample
-        $preSpawnTree = Get-TreeSample $PID $outerBirthTicks $outerObservedIds $outerObservedBirthTicks
+        $currentOuterOperation = "outer_pre_spawn_tree_sample"
+        $preSpawnTree = Get-TreeSample `
+            $PID $outerBirthTicks $outerObservedIds $outerObservedBirthTicks `
+            "outer_pre_spawn_tree_sample" $treeSampleDiagnostics $null $treeSampleMaximumAttempts
         Update-ControlPlanePeak $peak $preSpawnTree $preSpawnSystem
         if ($preSpawnSystem.commit_headroom_bytes -lt $minimumCommitHeadroomBeforeSpawn) { $stopReason = "OUTER_PRESPAWN_COMMIT_HEADROOM_STOP" }
         elseif ($preSpawnSystem.available_physical_bytes -lt $minimumAvailablePhysicalBeforeSpawn) { $stopReason = "OUTER_PRESPAWN_AVAILABLE_PHYSICAL_STOP" }
@@ -4648,6 +5250,7 @@ function Invoke-OuterObserverPrimary {
             "-OuterObserverRunnerSha256", $runnerSha256,
             "-OuterObserverReviewTokenSha256", $originalTokenSha256
         )
+        $currentOuterOperation = "outer_inner_spawn"
         $process = Start-Process -FilePath $hostExecutable `
             -ArgumentList ($arguments -join " ") -PassThru -WindowStyle Hidden `
             -RedirectStandardOutput $paths.stdout -RedirectStandardError $paths.stderr
@@ -4670,12 +5273,20 @@ function Invoke-OuterObserverPrimary {
         if (-not $parents.ContainsKey($innerProcessId) -or [int]$parents[$innerProcessId] -ne [int]$PID) {
             throw "BLOCKED_AV_BS_RESULT_SCHEMA: spawned inner process is not a real outer child"
         }
+        $innerParentIdentityVerified = $true
 
         while ($true) {
             $process.Refresh()
             if ($process.HasExited) { break }
-            $outerTree = Get-TreeSample $PID $outerBirthTicks $outerObservedIds $outerObservedBirthTicks
-            [void](Get-TreeSample $innerProcessId $innerBirthTicks $innerOwnedIds $innerOwnedBirthTicks)
+            $currentOuterOperation = "outer_tree_sample"
+            $outerTree = Get-TreeSample `
+                $PID $outerBirthTicks $outerObservedIds $outerObservedBirthTicks `
+                "outer_tree_sample" $treeSampleDiagnostics $null $treeSampleMaximumAttempts
+            $currentOuterOperation = "inner_tree_sample"
+            [void](Get-TreeSample `
+                $innerProcessId $innerBirthTicks $innerOwnedIds $innerOwnedBirthTicks `
+                "inner_tree_sample" $treeSampleDiagnostics $null $treeSampleMaximumAttempts)
+            $currentOuterOperation = "outer_system_sample"
             $system = Get-SystemSample
             Update-ControlPlanePeak $peak $outerTree $system
             $sampleCount += 1
@@ -4694,6 +5305,7 @@ function Invoke-OuterObserverPrimary {
             }
 
             if (-not $readyObserved -and (Test-Path -LiteralPath $paths.ready -PathType Leaf)) {
+                $currentOuterOperation = "outer_ready_handshake"
                 if (
                     (Get-Sha256 $runnerScriptPath) -ne $runnerSha256 -or
                     (Get-Sha256 $reviewTokenPath) -ne $originalTokenSha256 -or
@@ -4744,6 +5356,7 @@ function Invoke-OuterObserverPrimary {
             }
 
             if (-not $completeObserved -and (Test-Path -LiteralPath $paths.complete -PathType Leaf)) {
+                $currentOuterOperation = "outer_complete_handshake"
                 if (-not $startReleased) {
                     throw "BLOCKED_AV_BS_RESULT_SCHEMA: inner completion appeared before start release"
                 }
@@ -4789,6 +5402,7 @@ function Invoke-OuterObserverPrimary {
             }
             Start-Sleep -Milliseconds $pollMilliseconds
         }
+        $currentOuterOperation = "outer_retained_inner_exit"
         $process.WaitForExit()
         $actualExitCode = [int]$process.ExitCode
         if (-not $completeObserved -or -not $exitReleased) {
@@ -4802,6 +5416,8 @@ function Invoke-OuterObserverPrimary {
     }
     catch {
         $outerFailureMessage = $_.Exception.Message
+        $monitorFailure = Get-NormalizedOuterMonitorFailure `
+            $_.Exception ([string]$currentOuterOperation)
         $monitorErrorPresent = $true
         if (-not $stopReason) {
             $stopReason = if ($outerFailureMessage -like "BLOCKED_AV_BS_RESOURCE:*") {
@@ -4812,14 +5428,29 @@ function Invoke-OuterObserverPrimary {
         }
     }
     finally {
+        $currentOuterOperation = "outer_cleanup"
         if ($processLaunched -and $null -ne $process) {
             try {
                 $process.Refresh()
                 $liveOwnedBeforeCleanup = @()
                 if ($null -ne $innerBirthTicks -and $innerOwnedBirthTicks.ContainsKey([int]$innerProcessId)) {
-                    try {
-                        [void](Get-TreeSample $innerProcessId $innerBirthTicks $innerOwnedIds $innerOwnedBirthTicks)
-                    } catch { }
+                    if (-not $process.HasExited) {
+                        try {
+                            [void](Get-TreeSample `
+                                $innerProcessId $innerBirthTicks $innerOwnedIds $innerOwnedBirthTicks `
+                                "inner_cleanup_tree_sample" $treeSampleDiagnostics $null $treeSampleMaximumAttempts)
+                        }
+                        catch {
+                            if ($null -eq $monitorFailure) {
+                                $monitorFailure = Get-NormalizedOuterMonitorFailure `
+                                    $_.Exception "inner_cleanup_tree_sample"
+                            }
+                            $monitorErrorPresent = $true
+                            if (-not $stopReason) {
+                                $stopReason = "OUTER_INNER_CLEANUP_FAILED"
+                            }
+                        }
+                    }
                     $liveOwnedBeforeCleanup = @(Get-LiveObservedProcessIds $innerOwnedIds $innerOwnedBirthTicks)
                 }
                 if ((-not $process.HasExited) -or $liveOwnedBeforeCleanup.Count -gt 0) {
@@ -4888,7 +5519,11 @@ function Invoke-OuterObserverPrimary {
                 $finalStderrSha256 = Get-Sha256 $paths.stderr
                 if ($finalStdoutBytes -gt 16MB) { $stopReason = "OUTER_STDOUT_SIZE_STOP" }
                 elseif ($finalStderrBytes -gt 16MB) { $stopReason = "OUTER_STDERR_SIZE_STOP" }
-                $finalTree = Get-TreeSample $PID $outerBirthTicks $outerObservedIds $outerObservedBirthTicks
+                $currentOuterOperation = "outer_final_tree_sample"
+                $finalTree = Get-TreeSample `
+                    $PID $outerBirthTicks $outerObservedIds $outerObservedBirthTicks `
+                    "outer_final_tree_sample" $treeSampleDiagnostics $null $treeSampleMaximumAttempts
+                $currentOuterOperation = "outer_final_system_sample"
                 $finalSystem = Get-SystemSample
                 Update-ControlPlanePeak $peak $finalTree $finalSystem
                 if ($finalTree.working_set_bytes -gt $treeWorkingSetStop) { $stopReason = "OUTER_TREE_WS_STOP" }
@@ -4900,6 +5535,10 @@ function Invoke-OuterObserverPrimary {
                 elseif ($finalSystem.available_physical_bytes -lt $minimumAvailablePhysicalBeforeSpawn) { $stopReason = "OUTER_POSTEXIT_AVAILABLE_PHYSICAL_STOP" }
             }
             catch {
+                if ($null -eq $monitorFailure) {
+                    $monitorFailure = Get-NormalizedOuterMonitorFailure `
+                        $_.Exception ([string]$currentOuterOperation)
+                }
                 $monitorErrorPresent = $true
                 if (-not $stopReason) { $stopReason = "OUTER_TERMINAL_SAMPLE_FAILED" }
             }
@@ -4937,6 +5576,7 @@ function Invoke-OuterObserverPrimary {
     )
     $expectedClaimRelativePath = "validation-output/av-bs1/claims/" + [string]$candidateToken.review_token_id + ".json"
     $expectedClaimPath = [IO.Path]::GetFullPath((Join-Path $repositoryRoot ($expectedClaimRelativePath.Replace('/', '\'))))
+    $currentOuterOperation = "outer_post_cleanup_classification"
     try {
         if (Test-Path -LiteralPath $expectedClaimPath -PathType Leaf) {
             $postCleanupClaimRelativePath = $expectedClaimRelativePath
@@ -5006,8 +5646,11 @@ function Invoke-OuterObserverPrimary {
                         (Test-ByteArrayEqual $currentTokenBytes $originalTokenBytes) -and
                         $outerRecoveryMutationGate
                     ) {
-                        $recoveryFailureMessage = if (-not [string]::IsNullOrEmpty($outerFailureMessage)) {
-                            $outerFailureMessage
+                        $recoveryFailureMessage = if (
+                            $null -ne $monitorFailure -and
+                            -not [string]::IsNullOrEmpty([string]$monitorFailure.message_code)
+                        ) {
+                            "controlled outer observer failure: " + [string]$monitorFailure.message_code
                         } elseif (-not [string]::IsNullOrEmpty($stopReason)) {
                             "controlled outer observer failure: " + $stopReason
                         } else {
@@ -5075,6 +5718,10 @@ function Invoke-OuterObserverPrimary {
         }
     }
     catch {
+        if ($null -eq $monitorFailure) {
+            $monitorFailure = Get-NormalizedOuterMonitorFailure `
+                $_.Exception ([string]$currentOuterOperation)
+        }
         $monitorErrorPresent = $true
         if (-not $stopReason) { $stopReason = "OUTER_POSTCLEANUP_TOKEN_CLASSIFICATION_FAILED" }
         $postCleanupClaimRelativePath = $null
@@ -5092,7 +5739,8 @@ function Invoke-OuterObserverPrimary {
         $finalSystem.available_physical_bytes -ge $minimumAvailablePhysicalBeforeSpawn
     )
     $mandatoryOuterGate = (
-        -not $monitorErrorPresent -and -not $stopReason -and
+        -not $monitorErrorPresent -and $null -eq $monitorFailure -and -not $stopReason -and
+        -not [bool]$treeSampleDiagnostics.retry_events_truncated -and
         $processLaunched -and $retainedHandleAcquired -and
         $readyObserved -and $startReleased -and $completeObserved -and $exitReleased -and
         $actualExitCode -in @(0, 2) -and $actualExitCode -eq $reportedExitCode -and
@@ -5142,6 +5790,14 @@ function Invoke-OuterObserverPrimary {
         tree_working_set_stop_bytes = [int64]$treeWorkingSetStop
         wall_stop_seconds = [int]$wallStopSeconds
     }
+    $canonicalTreeSampleRetryEvents = @()
+    foreach ($event in @($treeSampleDiagnostics.retry_events)) {
+        $canonicalTreeSampleRetryEvents += (New-TreeSampleEvidence `
+            ([int]$event.attempt) $event.confirmation ([string]$event.context) `
+            $event.expected_birth_utc_ticks ([string]$event.message_code) `
+            $event.observed_birth_utc_ticks ([string]$event.operation) `
+            $event.process_id $event.process_role $event.win32_error_code)
+    }
     # Every key, nested key, string, Boolean, and number is emitted in Python
     # canonical order/form. Thus this UTF-8 raw file hash is also its canonical
     # JSON hash without launching an unbounded post-exit hash helper.
@@ -5178,6 +5834,9 @@ function Invoke-OuterObserverPrimary {
         inner_complete_sha256 = $completeSha256
         inner_exit_release_relative_path = if ($exitReleased) { Get-RepositoryRelativePath $paths.exit_release } else { $null }
         inner_exit_release_sha256 = $exitReleaseSha256
+        inner_parent_identity_verified = [bool]$innerParentIdentityVerified
+        inner_parent_process_birth_utc_ticks = if ($processLaunched) { [int64]$outerBirthTicks } else { $null }
+        inner_parent_process_id = if ($processLaunched) { [int]$PID } else { $null }
         inner_process_birth_utc_ticks = $innerBirthTicks
         inner_process_id = $innerProcessId
         inner_ready_relative_path = if ($readyObserved) { Get-RepositoryRelativePath $paths.ready } else { $null }
@@ -5189,9 +5848,11 @@ function Invoke-OuterObserverPrimary {
         inner_visible_sample_count = [int]$innerVisibleSampleCount
         mandatory_outer_resource_gate_pass = [bool]$mandatoryOuterGate
         monitor_error_present = [bool]$monitorErrorPresent
+        monitor_failure = $monitorFailure
         observed_lifecycle_scope = "post_dispatch_stopwatch_start_before_candidate_token_capture_through_inner_actual_exit_verified_cleanup_terminal_stream_hash_and_system_tree_sample"
         observer_nonce = $observerNonce
         observer_session_relative_path = $paths.session_relative_path
+        original_review_token_sha256 = $originalTokenSha256
         outer_observer_contract_sha256 = [string]$candidateToken.outer_observer_contract_sha256
         peak = $canonicalPeak
         post_cleanup_claim_relative_path = $postCleanupClaimRelativePath
@@ -5203,6 +5864,9 @@ function Invoke-OuterObserverPrimary {
         process_membership_semantics = "sampled_not_Job_Object_outer_observer_plus_inner_runner_plus_identity_bound_descendants_between_samples_not_claimed"
         program = $program
         raw_bytes_are_canonical_json = $true
+        review_token_id = [string]$candidateToken.review_token_id
+        reviewed_contract_git_commit = [string]$candidateToken.p0r_preregistration_commit
+        runner_sha256 = $runnerSha256
         sample_count = [int]$sampleCount
         sampled_process_identities = @($identityEvidence)
         schema = $outerObserverEnvelopeCloseSchema
@@ -5212,6 +5876,10 @@ function Invoke-OuterObserverPrimary {
         summed_os_lifetime_peak_semantics = "conservative_stop_gate_includes_outer_inner_preflight_control_and_factor_work_not_factor_only_peak"
         terminal_sample_after_inner_actual_exit_and_verified_cleanup = ($null -ne $finalTree -and $null -ne $finalSystem -and $cleanupVerified)
         thresholds = $canonicalThresholds
+        tree_sample_confirmed_disappearance_count = [int]$treeSampleDiagnostics.confirmed_disappearance_count
+        tree_sample_max_attempts = [int]$treeSampleMaximumAttempts
+        tree_sample_retry_events = @($canonicalTreeSampleRetryEvents)
+        tree_sample_retry_events_truncated = [bool]$treeSampleDiagnostics.retry_events_truncated
         wall_elapsed_nanoseconds = $wallElapsedNanoseconds
         wall_stop_seconds = [int]$wallStopSeconds
     }

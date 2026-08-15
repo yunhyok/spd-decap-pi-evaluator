@@ -66,7 +66,7 @@ EMERGENCY_REPLACEMENT_INTENT_SCHEMA = (
 EMERGENCY_REPLACEMENT_POSTVALIDATION_SCHEMA = (
     "AV-BS1-h4-p0r-emergency-replacement-postvalidation-v1"
 )
-OUTER_OBSERVER_CONTRACT_SCHEMA = "AV-BS1-h4-p0r-outer-observer-contract-v1"
+OUTER_OBSERVER_CONTRACT_SCHEMA = "AV-BS1-h4-p0r-outer-observer-contract-v2"
 OUTER_INNER_READY_SCHEMA = "AV-BS1-h4-p0r-outer-inner-ready-v1"
 OUTER_START_RELEASE_SCHEMA = "AV-BS1-h4-p0r-outer-start-release-v1"
 OUTER_HANDSHAKE_PREFIX_SCHEMA = (
@@ -75,7 +75,7 @@ OUTER_HANDSHAKE_PREFIX_SCHEMA = (
 OUTER_INNER_COMPLETE_SCHEMA = "AV-BS1-h4-p0r-outer-inner-complete-v1"
 OUTER_EXIT_RELEASE_SCHEMA = "AV-BS1-h4-p0r-outer-exit-release-v1"
 OUTER_RESOURCE_ENVELOPE_CLOSE_SCHEMA = (
-    "AV-BS1-h4-p0r-outer-resource-envelope-close-v1"
+    "AV-BS1-h4-p0r-outer-resource-envelope-close-v2"
 )
 OUTER_TERMINAL_SEAL_SCHEMA = "AV-BS1-h4-p0r-outer-terminal-seal-v2"
 OUTER_TERMINAL_CLASSIFICATION_SCHEMA = (
@@ -174,20 +174,33 @@ OUTER_RESOURCE_ENVELOPE_CLOSE_FIELDS = frozenset(
     high_pre_spawn_commit_headroom_bytes inner_actual_exit_code
     inner_complete_relative_path inner_complete_sha256
     inner_exit_release_relative_path inner_exit_release_sha256
+    inner_parent_identity_verified inner_parent_process_birth_utc_ticks
+    inner_parent_process_id
     inner_process_birth_utc_ticks inner_process_id inner_ready_relative_path
     inner_ready_sha256 inner_stderr_bytes inner_stderr_sha256 inner_stdout_bytes
     inner_stdout_sha256 inner_visible_sample_count
-    mandatory_outer_resource_gate_pass monitor_error_present
+    mandatory_outer_resource_gate_pass monitor_error_present monitor_failure
     observed_lifecycle_scope observer_nonce observer_session_relative_path
-    outer_observer_contract_sha256 peak post_cleanup_claim_relative_path
+    original_review_token_sha256 outer_observer_contract_sha256 peak
+    post_cleanup_claim_relative_path
     post_cleanup_claim_sha256 post_cleanup_emergency_replacement_performed
     post_cleanup_recovery_state post_cleanup_terminal_seal_pending
     post_cleanup_token_sha256 process_membership_semantics program
-    raw_bytes_are_canonical_json sample_count sampled_process_identities schema
+    raw_bytes_are_canonical_json review_token_id reviewed_contract_git_commit
+    runner_sha256 sample_count sampled_process_identities schema
     simultaneous_current_factor_interval_semantics started_utc stop_reason
     summed_os_lifetime_peak_semantics
     terminal_sample_after_inner_actual_exit_and_verified_cleanup thresholds
+    tree_sample_confirmed_disappearance_count tree_sample_max_attempts
+    tree_sample_retry_events tree_sample_retry_events_truncated
     wall_elapsed_nanoseconds wall_stop_seconds
+    """.split()
+)
+TREE_SAMPLE_DIAGNOSTIC_FIELDS = frozenset(
+    """
+    attempt confirmation context expected_birth_utc_ticks message_code
+    observed_birth_utc_ticks operation process_id process_role
+    win32_error_code
     """.split()
 )
 OUTER_TERMINAL_SEAL_FIELDS = frozenset(
@@ -609,7 +622,7 @@ def _execution_resource_scope() -> Mapping[str, object]:
 def _outer_observer_contract() -> Mapping[str, object]:
     return {
         "schema": OUTER_OBSERVER_CONTRACT_SCHEMA,
-        "contract_revision": "P1_outer_observer_v1",
+        "contract_revision": "P1_outer_observer_v2",
         "public_stage": AUTHORIZED_STAGE,
         "hidden_internal_mode": "primary-h4-p0r-inner-v1",
         "observer_session_root_relative_path": (
@@ -662,6 +675,21 @@ def _outer_observer_contract() -> Mapping[str, object]:
             "execution_tree_root": "outer_observer_pid_and_birth",
             "included_processes": "outer_observer_plus_identity_bound_sampled_inner_tree",
             "process_membership_semantics": "sampled_not_Job_Object_descendants_created_and_exited_between_polls_not_claimed",
+            "tree_sample_max_attempts": 3,
+            "tree_sample_retry_event_limit": 16,
+            "tree_sample_retry_policy": (
+                "whole_sample_retry_only_after_identity_bound_nonroot_exit_or_"
+                "win32_error_87_and_complete_toolhelp_snapshot_absence_with_"
+                "stable_root_identity"
+            ),
+            "tree_sample_failure_policy": (
+                "root_loss_pid_reuse_live_query_failure_access_denial_incomplete_"
+                "snapshot_and_retry_exhaustion_remain_fatal"
+            ),
+            "tree_sample_failure_evidence": (
+                "fixed_ascii_message_codes_operations_numeric_identity_and_"
+                "win32_status_only_no_localized_exception_text"
+            ),
             "excluded_head": [
                 "public_PowerShell_process_startup_and_script_parse",
                 "function_and_native_monitor_type_initialization",
@@ -7028,6 +7056,172 @@ def _validate_terminal_exit_release(
     }
 
 
+def _validate_outer_tree_sample_diagnostic(
+    value: object, *, retry_event: bool
+) -> Mapping[str, object]:
+    if not isinstance(value, Mapping):
+        raise AvBsError(
+            "BLOCKED_AV_BS_RESULT_SCHEMA", "outer tree sample diagnostic is invalid"
+        )
+    _require_exact_fields(
+        value, TREE_SAMPLE_DIAGNOSTIC_FIELDS, "outer tree sample diagnostic"
+    )
+    attempt = _json_int(value.get("attempt"), "outer tree sample attempt")
+    if attempt < 1 or attempt > 3:
+        raise AvBsError(
+            "BLOCKED_AV_BS_RESULT_SCHEMA", "outer tree sample attempt is invalid"
+        )
+    context = value.get("context")
+    if context not in {
+        "outer_initial_identity",
+        "outer_initial_system_sample",
+        "outer_initial_tree_sample",
+        "outer_pre_spawn_system_sample",
+        "outer_pre_spawn_tree_sample",
+        "outer_inner_spawn",
+        "outer_tree_sample",
+        "inner_tree_sample",
+        "inner_cleanup_tree_sample",
+        "outer_system_sample",
+        "outer_ready_handshake",
+        "outer_complete_handshake",
+        "outer_retained_inner_exit",
+        "outer_cleanup",
+        "outer_final_tree_sample",
+        "outer_final_system_sample",
+        "outer_post_cleanup_classification",
+    }:
+        raise AvBsError(
+            "BLOCKED_AV_BS_RESULT_SCHEMA", "outer tree sample context is invalid"
+        )
+    operation = value.get("operation")
+    if operation not in {
+        "open_process",
+        "get_process_times",
+        "get_process_memory_info",
+        "process_identity_probe",
+        "process_metric_probe",
+        "toolhelp_process_snapshot",
+        "outer_initial_identity",
+        "outer_initial_system_sample",
+        "outer_initial_tree_sample",
+        "outer_pre_spawn_system_sample",
+        "outer_pre_spawn_tree_sample",
+        "outer_inner_spawn",
+        "outer_tree_sample",
+        "inner_tree_sample",
+        "inner_cleanup_tree_sample",
+        "outer_system_sample",
+        "outer_ready_handshake",
+        "outer_complete_handshake",
+        "outer_retained_inner_exit",
+        "outer_cleanup",
+        "outer_final_tree_sample",
+        "outer_final_system_sample",
+        "outer_post_cleanup_classification",
+    }:
+        raise AvBsError(
+            "BLOCKED_AV_BS_RESULT_SCHEMA", "outer tree sample operation is invalid"
+        )
+    process_id = value.get("process_id")
+    if process_id is not None and _json_int(
+        process_id, "outer tree sample process id"
+    ) <= 0:
+        raise AvBsError(
+            "BLOCKED_AV_BS_RESULT_SCHEMA", "outer tree sample process id is invalid"
+        )
+    process_role = value.get("process_role")
+    if process_role not in {None, "root", "descendant"}:
+        raise AvBsError(
+            "BLOCKED_AV_BS_RESULT_SCHEMA", "outer tree sample process role is invalid"
+        )
+    for key in ("expected_birth_utc_ticks", "observed_birth_utc_ticks"):
+        item = value.get(key)
+        if item is not None and _json_int(item, f"outer tree sample {key}") <= 0:
+            raise AvBsError(
+                "BLOCKED_AV_BS_RESULT_SCHEMA",
+                f"outer tree sample {key} is invalid",
+            )
+    win32_error = value.get("win32_error_code")
+    if win32_error is not None and _json_int(
+        win32_error, "outer tree sample Win32 error"
+    ) <= 0:
+        raise AvBsError(
+            "BLOCKED_AV_BS_RESULT_SCHEMA", "outer tree sample Win32 error is invalid"
+        )
+    confirmation = value.get("confirmation")
+    if confirmation not in {
+        None,
+        "signaled_handle_and_complete_snapshot_absent",
+        "limited_query_not_found_and_complete_snapshot_absent",
+    }:
+        raise AvBsError(
+            "BLOCKED_AV_BS_RESULT_SCHEMA", "outer tree sample confirmation is invalid"
+        )
+    message_code = value.get("message_code")
+    if not isinstance(message_code, str) or not re.fullmatch(
+        r"[A-Z][A-Z0-9_]{2,95}", message_code
+    ):
+        raise AvBsError(
+            "BLOCKED_AV_BS_RESULT_SCHEMA", "outer tree sample message code is invalid"
+        )
+    if retry_event and (
+        confirmation is None
+        or message_code != "CONFIRMED_NONROOT_DISAPPEARANCE"
+        or process_role != "descendant"
+        or process_id is None
+    ):
+        raise AvBsError(
+            "BLOCKED_AV_BS_RESULT_SCHEMA", "outer tree sample retry event is invalid"
+        )
+    return value
+
+
+def _validate_outer_tree_sample_diagnostics(
+    value: Mapping[str, object], manifest: Mapping[str, object]
+) -> None:
+    envelope = manifest["outer_observer_contract"]["outer_resource_envelope"]
+    maximum_attempts = _json_int(
+        value.get("tree_sample_max_attempts"), "outer tree sample maximum attempts"
+    )
+    if maximum_attempts != envelope["tree_sample_max_attempts"]:
+        raise AvBsError(
+            "BLOCKED_AV_BS_RESULT_SCHEMA", "outer tree sample retry limit mismatch"
+        )
+    retry_events = value.get("tree_sample_retry_events")
+    if not isinstance(retry_events, list):
+        raise AvBsError(
+            "BLOCKED_AV_BS_RESULT_SCHEMA", "outer tree sample retry events invalid"
+        )
+    if len(retry_events) > envelope["tree_sample_retry_event_limit"]:
+        raise AvBsError(
+            "BLOCKED_AV_BS_RESULT_SCHEMA", "outer tree sample retry events exceed cap"
+        )
+    for event in retry_events:
+        parsed = _validate_outer_tree_sample_diagnostic(event, retry_event=True)
+        if _json_int(parsed["attempt"], "outer tree retry attempt") >= maximum_attempts:
+            raise AvBsError(
+                "BLOCKED_AV_BS_RESULT_SCHEMA",
+                "successful outer close contains an exhausted retry event",
+            )
+    count = _json_int(
+        value.get("tree_sample_confirmed_disappearance_count"),
+        "outer confirmed disappearance count",
+    )
+    truncated = value.get("tree_sample_retry_events_truncated")
+    if not isinstance(truncated, bool) or truncated:
+        raise AvBsError(
+            "BLOCKED_AV_BS_RESULT_SCHEMA", "outer tree retry evidence is truncated"
+        )
+    if count != len(retry_events):
+        raise AvBsError(
+            "BLOCKED_AV_BS_RESULT_SCHEMA", "outer tree retry count mismatch"
+        )
+    monitor_failure = value.get("monitor_failure")
+    if monitor_failure is not None:
+        _validate_outer_tree_sample_diagnostic(monitor_failure, retry_event=False)
+
+
 def _validate_outer_resource_envelope_close(
     exit_context: Mapping[str, object],
     complete_context: Mapping[str, object],
@@ -7075,6 +7269,11 @@ def _validate_outer_resource_envelope_close(
         .relative_to(ROOT)
         .as_posix(),
         "inner_exit_release_sha256": exit_context["sha256"],
+        "inner_parent_identity_verified": True,
+        "inner_parent_process_birth_utc_ticks": observer[
+            "outer_process_birth_utc_ticks"
+        ],
+        "inner_parent_process_id": observer["outer_process_id"],
         "inner_process_id": observer["inner_process_id"],
         "inner_process_birth_utc_ticks": observer["inner_process_birth_utc_ticks"],
         "inner_ready_relative_path": observer["ready_path"]
@@ -7083,12 +7282,16 @@ def _validate_outer_resource_envelope_close(
         "inner_ready_sha256": observer["ready_sha256"],
         "mandatory_outer_resource_gate_pass": True,
         "monitor_error_present": False,
+        "monitor_failure": None,
         "observed_lifecycle_scope": (
             "post_dispatch_stopwatch_start_before_candidate_token_capture_through_"
             "inner_actual_exit_verified_cleanup_terminal_stream_hash_and_system_tree_sample"
         ),
         "observer_nonce": observer["nonce"],
         "observer_session_relative_path": observer["session_relative_path"],
+        "original_review_token_sha256": tombstone[
+            "consumed_review_token_sha256"
+        ],
         "outer_observer_contract_sha256": manifest["outer_observer_contract_sha256"],
         "post_cleanup_claim_relative_path": claim["relative_path"],
         "post_cleanup_claim_sha256": claim["sha256"],
@@ -7103,6 +7306,9 @@ def _validate_outer_resource_envelope_close(
             "bound_descendants_between_samples_not_claimed"
         ),
         "raw_bytes_are_canonical_json": True,
+        "review_token_id": tombstone["consumed_review_token_id"],
+        "reviewed_contract_git_commit": tombstone["p0r_preregistration_commit"],
+        "runner_sha256": manifest["bindings"]["runner_sha256"],
         "simultaneous_current_factor_interval_semantics": (
             "inner_factor_resource_reports_measure_sampled_current_outer_plus_inner_"
             "plus_primary_helper_tree"
@@ -7113,6 +7319,10 @@ def _validate_outer_resource_envelope_close(
             "work_not_factor_only_peak"
         ),
         "terminal_sample_after_inner_actual_exit_and_verified_cleanup": True,
+        "tree_sample_max_attempts": manifest["outer_observer_contract"][
+            "outer_resource_envelope"
+        ]["tree_sample_max_attempts"],
+        "tree_sample_retry_events_truncated": False,
         "wall_stop_seconds": WALL_STOP_SECONDS,
         "excluded_head": manifest["outer_observer_contract"][
             "outer_resource_envelope"
@@ -7126,6 +7336,7 @@ def _validate_outer_resource_envelope_close(
             raise AvBsError(
                 "BLOCKED_AV_BS_RESULT_SCHEMA", f"outer resource close {key} mismatch"
             )
+    _validate_outer_tree_sample_diagnostics(value, manifest)
     elapsed_ns = _json_int(
         value.get("wall_elapsed_nanoseconds"), "outer resource wall nanoseconds"
     )
@@ -7221,10 +7432,36 @@ def _validate_outer_resource_envelope_close(
                 "BLOCKED_AV_BS_RESULT_SCHEMA", "outer sampled identity value invalid"
             )
         parsed_identities.append((pid, birth))
-    if parsed_identities != sorted(set(parsed_identities)):
+    parsed_identity_pids = [pid for pid, _ in parsed_identities]
+    if (
+        parsed_identities != sorted(parsed_identities)
+        or len(parsed_identity_pids) != len(set(parsed_identity_pids))
+    ):
         raise AvBsError(
-            "BLOCKED_AV_BS_RESULT_SCHEMA", "outer sampled identities are not unique/sorted"
+            "BLOCKED_AV_BS_RESULT_SCHEMA",
+            "outer sampled identities are not unique by process id and sorted",
         )
+    identity_birth_by_pid = dict(parsed_identities)
+    for retry_event in value["tree_sample_retry_events"]:
+        retry_pid = _json_int(
+            retry_event.get("process_id"), "outer tree retry process id"
+        )
+        retry_births = {
+            _json_int(item, "outer tree retry process birth")
+            for item in (
+                retry_event.get("expected_birth_utc_ticks"),
+                retry_event.get("observed_birth_utc_ticks"),
+            )
+            if item is not None
+        }
+        if len(retry_births) > 1 or (
+            retry_births
+            and identity_birth_by_pid.get(retry_pid) not in retry_births
+        ):
+            raise AvBsError(
+                "BLOCKED_AV_BS_RESULT_SCHEMA",
+                "outer tree retry identity conflicts with sampled identities",
+            )
     required_identities = {
         (observer["outer_process_id"], observer["outer_process_birth_utc_ticks"]),
         (observer["inner_process_id"], observer["inner_process_birth_utc_ticks"]),

@@ -1346,3 +1346,54 @@ Sol의 최신 static/math audit는 direct Python과 manifest-only PowerShell run
 3. executable bytes와 clean commit을 검토한 뒤에만 `uses_remaining=1`, `next_stage_authorized=false`의 별도 tracked one-use token을 발급한다.
 4. audited token 뒤 factor-only run을 정확히 한 번 실행하고 pass/fail/resource stop 모두 token을 consumed tombstone으로 교체한다.
 5. 그 result/resource/consumption을 독립 감사한 뒤에만 H4-P1 physics 계약을 별도로 사전등록한다.
+
+## 2026-08-15 — AV-BS1 H4-P0R-P1 two pre-factor interruptions and retry-v2 static freeze
+
+H4-P0R manifest parent 뒤 factor-only P1 executable, bounded control-plane, outer observer, one-use claim/guard/result/tombstone와 terminal seal-v2 계약을 구현·정적 감사했다. public stage는 `KII/ApII` 두 factor의 fill/resource만 측정하고 RHS, `factor.solve`, extension, `Y`/Schur, modal/PDE/power와 모든 H4 physics를 금지한다. 이 cycle까지 두 fresh token-only public invocation이 있었으나 둘 다 claim/factor보다 먼저 fail-closed 됐다.
+
+첫 시도는 contract `558dfb822827de2626b4e3681c0654f344d44842`의 token-only child `b6c8615639a8fb283909bd6613ab5bf5b0e09cb2`, token ID `92e6edd1bf01428199c5a492e64858ea`였다. `2026-08-15T08:49:35Z`에 시작해 0.83 s 뒤 첫 outer root-only enumeration에서 종료됐다. PowerShell function output이 단일 `Int32`로 pipeline-unroll되어 strict-mode `$ids.Count`가 `The property 'Count' cannot be found on this object`를 냈다. 이는 token read, observer session, inner spawn, claim과 factor 전이다. untouched token은 retry하지 않았고 deletion-only retirement commit `412e88049ec1461dd15ae324b583c114fb890393`에서 제거했다. runner는 `@(...)` capture, non-terminating diagnostic와 exact exit 2, defensive JSON array count로 교정됐다.
+
+두 번째 contract `2b7e302aa4ef5abedcd22cda0003380cb8765a42`의 token-only child는 `d9e064fee6822d8f39318a55646860e24b502f35`, token ID `7a26f8ea4f89493a95fa78bc62b2d431`, raw SHA-256 `a1ddbc0bac11e24d095094d3e3779a562e3ad94f2c5fb0085593ee6e3959f81e`였다. 한 번의 public invocation이 다음 evidence를 남겼다.
+
+```text
+observer session: e017a79e5ce345959d8e77f46b8d90b2
+started/ended UTC: 2026-08-15T09:16:22.8172642Z / 2026-08-15T09:16:24.0712914Z
+wall elapsed: 1.2522612 s
+outer close SHA-256: 3de68a75e4e1fa23876b63f1843ad217f7ba0290f8a86b491bac09124f5ea39c
+stop/gate: OUTER_RESOURCE_EXCEPTION / false
+samples: outer 2; inner visible 2
+inner actual exit: -1
+cleanup: verified
+streams: stdout 0 B; stderr 0 B
+recovery: no_claim_no_recovery_required
+```
+
+이 session에는 empty stdout/stderr와 v1 outer close만 있다. ready/start-release/complete/exit-release, control report/index, claim, guard, result, prefix, temp/quarantine, journal, tombstone와 seal은 모두 없다. inner는 ready를 durable write하고 outer start-release를 받아야 preflight/claim/factor child로 진행하므로 factorization, RHS, solve와 physics는 시작할 수 없었다. threshold는 모두 여유가 있었고 cleanup은 zero-survivor로 끝났다. v1 close는 `$outerFailureMessage`, exact PID와 native operation을 저장하지 않아 exact root cause는 회복 불가능하다. PID/event timing상 short-lived inner `Add-Type` compiler/bootstrap descendant가 Toolhelp enumeration 뒤 PSAPI metric 전에 사라진 것이 high-confidence inference지만 proved cause로 선언하지 않는다.
+
+두 번째 token도 byte-identical `uses_remaining=1`이었지만 재사용하지 않았고 deletion-only commit `7dd1db501b505d1a6a36f0d1f99df23fca655a93`에서 제거했다. 현재 canonical P1 token, expected claim/seal과 live runner/fixture process는 없다. validation-output은 삭제·이동하지 않고 보존한다.
+
+retry-v2 correction은 native Toolhelp/PSAPI failure를 typed state로 분리하고 `Process32NextW`가 exact `ERROR_NO_MORE_FILES=18`로 끝난 complete snapshot만 허용한다. outer observer의 instrumented `Get-TreeSample`만 maximum 3 total attempts를 명시한다. retained handle의 `exited` 또는 exact `ERROR_INVALID_PARAMETER=87` not-found, fresh complete snapshot의 target 부재, 전후 root PID/birth 일치를 모두 증명한 non-root disappearance만 whole sample을 재시작한다. failed attempt의 모든 sum/membership을 버리고 identity-bound PID만 cleanup/evidence에 유지한다. root disappearance/reuse, live/access/query failure, target reappearance, incomplete snapshot, malformed metric과 exhaustion은 fatal이다. control/factor 등 uninstrumented call은 default 1 attempt다. close schema와 outer contract는 v2로 올리고 bounded retry events, truncation, nullable fixed-code `monitor_failure`, runner/token/parent identity를 결합했다. localized exception message/path는 close나 emergency tombstone에 저장하지 않는다.
+
+정적 evidence candidate는 다음과 같다.
+
+```text
+fixture SHA-256: 8c497cb1d0926600b2ddd974df6fd8d40b09471c617869294a01c0e018ce5acf
+runner SHA-256: 4272d6725cb0e16b7ce39b083985965f792da5893f222ba07cf91695fba8f30c
+test SHA-256: b44366596690d6d55d18a89d8df2370faca767fca722affd5e07268da3195235
+tests: 187 passed
+token_state: absent
+factorization_performed: false
+physics_solve_performed: false
+factor_fit_unproven: true
+next_stage_authorized: false
+```
+
+실제 `Get-TreeSample` marker slice를 fake provider로 실행해 original metric-race retry, partial-sum discard, query-failed-then-disappears fatal, root loss/reuse, exact three-attempt exhaustion, incomplete confirmation/initial snapshot과 typed evidence를 검증했다. 이미 exit된 retained inner는 cleanup root로 다시 sample하지 않고, 아직 live인 inner cleanup-tree sample 실패는 typed monitor failure로 보존돼 이후 terminal sample이 성공해도 mandatory outer gate를 차단한다. slice에는 `Start-Process`, `Add-Type`, native type, token, primary, consumer 또는 `splu`가 없다. 전체 static suite의 autouse tripwire는 real `scipy.sparse.linalg.splu` 진입을 차단한다. Python compile, PowerShell AST, diff check와 safe token-absent manifests만 허용했고 primary/token consumer/factor는 실행하지 않았다. 제품 source/parser/solver/UI/version/installer와 GitHub 원격도 변경하지 않았다.
+
+### Exact next starting point
+
+1. 현재 retry-v2 fixture/runner/tests/docs의 exact hashes, UTF-8/LF, links, Python compile, PowerShell AST, 187 static tests와 direct/runner safe manifest parity를 독립 감사한다.
+2. audit가 승인한 bytes만 token-absent clean contract commit에 고정한다. 이전 token commits `b6c8615...`와 `d9e064f...`는 영구 재실행 금지다.
+3. exact committed manifest를 다시 읽고 token absent/not authorized/no factor/no physics/no terminal/no next를 확인한다.
+4. 그 commit만 부모로 하는 child에 fresh one-use token 파일 하나만 추가하고 token/checkout binding을 독립 감사한다.
+5. 그 뒤에만 public `primary-h4-p0r` factor-only pilot을 정확히 한 번 실행한다. pass/fail과 무관하게 terminal v2 chain을 보존하고 H4-P1/physics를 승인하지 않는다.

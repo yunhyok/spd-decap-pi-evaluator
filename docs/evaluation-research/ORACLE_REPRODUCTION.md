@@ -3129,6 +3129,46 @@ Matrix contract는 `31489×31489` real `KII/MII`의 nnz를 `204545/219393`, comp
 
 Exact next는 현재 manifest-only contract를 clean commit과 독립 audit에 고정한 뒤, 별도 H4-P0R executable fixture/runner/test/result/finalizer와 one-use token을 사전등록하는 것이다. 그 audited token 뒤에만 `AbII`, `ApII`를 순차 factor하는 factor-only run 한 번을 허용하고 pass/fail 모두 token을 consume한다. 그 결과를 독립 감사하기 전에는 H4-P1, `primary-h4` 또는 어떤 H4 physics도 열지 않는다.
 
+## AV-BS1 H4-P0R-P1 safe replay and interruption evidence
+
+위 문단은 immutable manifest-only parent의 당시 next step이다. 후속 P1 executable/lifecycle은 구현됐지만 두 public invocation이 모두 claim/factor 전 fail-closed 됐고 두 one-use token은 재실행 없이 삭제됐다. 현재 checkout에는 P1 token이 없다. 아래 명령만 safe static replay로 허용하며 `-Stage primary-h4-p0r`, hidden inner mode, finalizer 또는 consumer를 직접 호출하지 않는다.
+
+```powershell
+python tools/research/av_bs1_boundary_schur_h4_p0r_p1.py --stage manifest
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File `
+  tools/research/run_av_bs1_h4_p0r_p1_stage.ps1 -Stage manifest
+$env:PYTHONDONTWRITEBYTECODE='1'
+$env:PYTEST_ADDOPTS='-p no:cacheprovider'
+python -m pytest -q tests/test_research_av_bs1_boundary_schur_h4_p0r_p1.py
+```
+
+현재 retry-v2 static candidate binding은 다음과 같다. P1 preregistration document와 live wrapper payload는 문서 동결 뒤 외부에서 계산한다.
+
+```text
+fixture SHA-256: 8c497cb1d0926600b2ddd974df6fd8d40b09471c617869294a01c0e018ce5acf
+runner SHA-256: 4272d6725cb0e16b7ce39b083985965f792da5893f222ba07cf91695fba8f30c
+test SHA-256: b44366596690d6d55d18a89d8df2370faca767fca722affd5e07268da3195235
+static result: 187 passed
+token_state: absent
+factor_fit_unproven: true
+factorization_performed: false
+physics_solve_performed: false
+next_stage_authorized: false
+```
+
+두 번째 시도의 immutable v1 close만 읽으려면 다음처럼 exact file/hash와 non-sensitive summary를 확인한다. 이 evidence를 수정·이동·삭제하지 않는다.
+
+```powershell
+$p = 'validation-output/av-bs1/outer-observer/session-e017a79e5ce345959d8e77f46b8d90b2/outer-resource-envelope-close.json'
+Get-FileHash -Algorithm SHA256 -LiteralPath $p
+$j = Get-Content -Raw -Encoding UTF8 -LiteralPath $p | ConvertFrom-Json
+$j | Select-Object schema,started_utc,ended_utc,wall_elapsed_nanoseconds,stop_reason,monitor_error_present,sample_count,inner_visible_sample_count,inner_actual_exit_code,cleanup_verified,mandatory_outer_resource_gate_pass,post_cleanup_recovery_state
+```
+
+Expected SHA-256은 `3de68a75e4e1fa23876b63f1843ad217f7ba0290f8a86b491bac09124f5ea39c`다. `OUTER_RESOURCE_EXCEPTION`, samples `2/2`, inner exit `-1`, cleanup true, gate false, no claim/no recovery를 보존한다. ready/start-release/complete/exit-release, claim, result, factor prefix, tombstone와 seal은 없다. 따라서 factor/RHS/solve/physics는 시작할 수 없었다. v1 close에는 exact caught PID/API/message가 없으므로 short-lived `Add-Type` descendant race는 high-confidence inference로만 재현 문서에 남긴다.
+
+close-v2 correction은 instrumented outer tree에서만 maximum 3 whole attempts를 허용한다. native exited 또는 exact not-found, fresh complete snapshot absence와 stable root를 모두 확인한 non-root만 retry한다. 모든 partial sum을 버리고 root/reuse/live/access/incomplete-snapshot/exhaustion은 fatal이다. 이전 token commits `b6c8615...`와 `d9e064f...`는 mechanically checkout 가능해도 영구 재사용 금지다. 다음 public run은 새로운 token-absent contract audit와 fresh token-only child 뒤에만 별도 승인된다.
+
 ## Focused regression
 
 ```powershell
