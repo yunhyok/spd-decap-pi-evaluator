@@ -3337,6 +3337,79 @@ physics_solve_performed: false
 next_stage_authorized: false
 ```
 
+### Fifth public invocation evidence
+
+The fifth public `primary-h4-p0r` invocation is an immutable failed attempt, not
+a command to replay. Clean retry-v4 contract
+`099db849564207b636f7431ee2fb52a540a7cb4e` was the sole parent of token-only
+commit `5ba4b69398f526a0fcf640cf1dc4e7197cc7e660`. The invocation ran once from
+`2026-08-15T14:33:12.122Z` through `2026-08-15T14:34:23.345Z` and returned exit
+`2`. Token ID `96d4f060ffa94d4888ffe3e59f550225` had original raw/canonical
+SHA-256 `a9cbd954b27685892bf720c777ef57f49830da7970eee9a267d6d87eb5665d00` /
+`a17271e2e3d4621a04b002edc7ada972a462f60552958282b3d07f99d441852b`.
+
+The attempt created claim raw/canonical SHA-256
+`0301eeccbf092799b97a914b4678bf8856aa8bb73296a07144435eddabf78103` /
+`d9b7a41503dc32c591da9b2a06b512df5675f3a46eb78eaa24d3fe2b7e4b596e`
+and guard raw/canonical SHA-256
+`78c66a1b45e19c04a30a37ac433d0437994798408cce46afb2c327a8f2b80c65` /
+`9dd8bd575628ef86b75569baf40a4d56cf1e850e9bd16676de4e3d45a723a17c`.
+Factor-only child PID `55552`, birth `639224012129440335`, was visible in all
+`108` successful samples. Resource SHA-256
+`d9b9a858c8f4aaebc1ca6ebb34f90235bcb84dd6288c04ecc95b3d7e5abc1da6`
+records `MONITOR_QUERY_FAILED` /
+`NONROOT_DISAPPEARANCE_NOT_CONFIRMED`. The four active factor calls had not
+opted into maximum `3`, so they used the function default `1`.
+
+No factor-prefix-1/2, factor-complete, or monitor-release file exists;
+`numerical.json` is zero bytes. Result file SHA-256
+`cf0d59c36e3f8275eeee56f30ccc7a2db74c986052714c6e31c6e26bc9de08e9`
+is a schema-failure wrapper because the zero-byte stdout was hashed in the
+resource but omitted from finalizer arguments. That overlay is secondary and
+deferred; the primary disposition is resource monitor stop. Completed factors
+and certificates are empty, factor attempt/performance are `null`, and RHS,
+solve, physics, PowerSI, and accuracy output are absent.
+
+Outer session
+`validation-output/av-bs1/outer-observer/session-1c765eb54ec54d5a801c87c960970c50`
+has close SHA-256
+`9d0c0aab58e78eb5d91d36be2aef46bf89968df87d4abcc044089805acce9af2`.
+It verified cleanup and inner exit `2` with no monitor failure/stop reason, but
+counted `27` confirmed disappearances, stored the bounded `16`, and marked
+truncation. Therefore the mandatory outer gate was false and the expected seal
+is absent. The consumed tombstone SHA-256 is
+`3caed852fd51fd908cbfa750becd2c63cbd6f768abff91eba23221bd0f418c2b`;
+commit `46c08d405f530cce0cfbba9d908f8c266a26a002` preserves it and deletion-only
+commit `71d3dab442cbdfa6361e4e91de57d8f5b4d1a990` retires the token.
+
+### Current retry-v5 replay boundary
+
+Retry-v5 makes exactly two run-enabling changes. The four active factor tree
+samples pass explicit `MaximumAttempts=3`; the caught-final cleanup sample keeps
+default `1`. The shared bounded outer/control retry-event cap rises from `16`
+to `64`, which retains the observed `27` without weakening the existing
+truncation/no-seal gate beyond `64`. Retry eligibility, two 25 ms waits, three
+complete snapshots, and every fatal root/reuse/query/access/not-found/
+incomplete-snapshot rule are unchanged. Empty-stdout normalization is not part
+of retry-v5.
+
+```text
+Python fixture SHA-256: 54aa7da9daa013cec41585ae07757e6c54e8e9d15da7f4f16d4f6546b6fb35aa
+PowerShell runner SHA-256: 3888524877f7a90966fb932f7f9fc4c9a48480134eb6295712eaa0ef548416a3
+static tests SHA-256: b51498ebe27a0210a09b3a12b26e0146d39c1249906469bcb1add1d2f2443f08
+focused retry-v5 tests: 29/29 passed in 15.91 s
+full no-cache P1 suite: 324/324 passed in 82.91 s
+PowerShell AST: 47,631 tokens / 0 errors
+Python syntax: clean
+token_state: absent
+factor_fit_unproven: true
+next_stage_authorized: false
+```
+
+Only manifest/static replay is safe before a new clean contract and external
+authorization cycle. Do not invoke the five spent token commits or any hidden
+inner/finalizer/consumer stage directly.
+
 ## Focused regression
 
 ```powershell

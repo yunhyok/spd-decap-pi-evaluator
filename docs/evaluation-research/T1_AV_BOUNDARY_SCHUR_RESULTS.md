@@ -2,11 +2,11 @@
 
 ## Current verdict
 
-현재 AV-BS1 physics artifact 상태는 **`passed_AV_BS_h2_stage_only_pending_h4_preregistration`**이다. 17.5 µm/100 kHz의 guarded `primary-h2` 한 번이 local mandatory gate를 통과했고 `mandatory_stage_pass=true`, `failure_codes=[]`, factorization/physics `true`다. 그러나 `next_stage_authorized=false`, `fine_analytic_pass=null`, `mesh_convergence_pass=null`, `final_circle_pass=null`이므로 이는 h2 한 mesh의 단계 제한 통과일 뿐 circle oracle 또는 h4 권한이 아니다. H0 negative, H1 coarse-h pass, H2-P0 assembly manifest, H4-P0 assembly certificate와 H4-P0R manifest parent를 그대로 보존한다. 후속 P1 factor-only executable의 세 공개 시도는 모두 claim/factor 전에 중단됐으므로 H4-P0R factorization result가 없고 현재도 `factor_fit_unproven=true`, `next_stage_authorized=false`다.
+현재 AV-BS1 physics artifact 상태는 **`passed_AV_BS_h2_stage_only_pending_h4_preregistration`**이다. 17.5 µm/100 kHz의 guarded `primary-h2` 한 번이 local mandatory gate를 통과했고 `mandatory_stage_pass=true`, `failure_codes=[]`, factorization/physics `true`다. 그러나 `next_stage_authorized=false`, `fine_analytic_pass=null`, `mesh_convergence_pass=null`, `final_circle_pass=null`이므로 이는 h2 한 mesh의 단계 제한 통과일 뿐 circle oracle 또는 h4 권한이 아니다. H0 negative, H1 coarse-h pass, H2-P0 assembly manifest, H4-P0 assembly certificate와 H4-P0R manifest parent를 그대로 보존한다. 후속 P1 factor-only executable의 다섯 번째 공개 시도는 처음 claim/factor-child까지 도달했지만 monitor stop으로 0 factors만 인증했고 attempted/performed는 `null`이다. 따라서 H4-P0R factor result와 factor-fit proof는 여전히 없고 `factor_fit_unproven=true`, `next_stage_authorized=false`다.
 
 2026-08-15 clean commit `4fa5ec80a261c21c8489ecd8b708a62bba769a7a`에서 17.5 µm, 100 kHz, `h` 한 mesh의 guarded `primary-h`를 처음 실행했다. 실행은 **`BLOCKED_AV_BS_MESH_HASH`**로 fail-closed 됐다. factorization, harmonic extension, boundary-Schur `Y`, modal response와 physics pass/fail 값은 생성되지 않았다. 따라서 이 결과는 AV-BS1 physics negative가 아니라 **사전등록 sparse-pattern 계약의 negative**다.
 
-제품 parser/solver/UI/version/installer, PowerSI reference와 GitHub 원격은 변경하지 않았다. `h2`만 physics-bearing preregistered one-use path로 실행했다. 세 H4-P0R-P1 public invocation은 resource/lifecycle dispatcher만 시작했으며 factor, RHS/solve, `h4` physics, withheld radius와 EQ0는 실행하지 않았다. 따라서 P1 시도에서 PowerSI 정확성 또는 8 GiB 적합성 주장을 만들 수 없다.
+제품 parser/solver/UI/version/installer, PowerSI reference와 GitHub 원격은 변경하지 않았다. `h2`만 physics-bearing preregistered one-use path로 실행했다. 다섯 H4-P0R-P1 public invocation 중 첫 네 번은 factor 전, 다섯 번째는 factor-child monitor 중 중단됐다. 다섯 번째에서도 factor prefix/certificate, RHS/solve, `h4` physics, withheld radius와 EQ0는 생성되지 않았다. 따라서 P1 시도에서 PowerSI 정확성 또는 8 GiB 적합성 주장을 만들 수 없다.
 
 ## Immutable H0 artifact
 
@@ -405,12 +405,57 @@ Focused `11/11`, full no-cache `322/322` in `82.01 s`, PowerShell AST
 `47,623/0`, and Python AST passed. This is static evidence only: token absent,
 `factor_fit_unproven=true`, `next_stage_authorized=false`.
 
+## Fifth public attempt and retry-v5 corrective candidate
+
+Clean retry-v4 contract `099db849564207b636f7431ee2fb52a540a7cb4e` was the sole
+parent of token-only commit `5ba4b69398f526a0fcf640cf1dc4e7197cc7e660`.
+Token ID/raw SHA-256 was `96d4f060ffa94d4888ffe3e59f550225` /
+`a9cbd954b27685892bf720c777ef57f49830da7970eee9a267d6d87eb5665d00`.
+The invocation ran once from `2026-08-15T14:33:12.122Z` through
+`2026-08-15T14:34:23.345Z` and returned exit `2`.
+
+This attempt created a valid claim and reached factor-only child PID `55552`.
+Resource report SHA-256
+`d9b9a858c8f4aaebc1ca6ebb34f90235bcb84dd6288c04ecc95b3d7e5abc1da6`
+contains `108/108` successful/child-visible samples, safe memory margins, and
+stop `MONITOR_QUERY_FAILED` with
+`NONROOT_DISAPPEARANCE_NOT_CONFIRMED`. The four active factor tree-sample calls
+still used default maximum `1`. No factor prefix, completion marker, release,
+or certificate exists. Thus completed factor count is zero, actual `splu`
+entry is indeterminate, and the tombstone correctly records attempted/performed
+as `null`. No RHS, factor solve, H4 physics, or PowerSI result exists.
+
+The zero-byte numerical stdout was hashed by the resource report but omitted
+from the finalizer arguments, producing a secondary result-schema failure
+`resource references missing child stdout`; normalization is deferred and is
+not a retry-v5 change. The primary disposition remains resource monitor stop.
+Consumed tombstone SHA-256
+`3caed852fd51fd908cbfa750becd2c63cbd6f768abff91eba23221bd0f418c2b`
+is frozen in `46c08d405f530cce0cfbba9d908f8c266a26a002`; deletion-only
+retirement `71d3dab442cbdfa6361e4e91de57d8f5b4d1a990` leaves no token.
+
+Outer close SHA-256
+`9d0c0aab58e78eb5d91d36be2aef46bf89968df87d4abcc044089805acce9af2`
+verified exit `2`, cleanup, terminal sample, and null monitor failure/stop
+reason, but counted `27` confirmed disappearances while retaining cap `16`.
+Truncation made the mandatory outer gate false and prevented the seal.
+
+Retry-v5 changes only the four active factor calls to explicit maximum `3` and
+the shared bounded outer/control retry-event cap to `64`. Frozen SHA-256
+bindings are Python
+`54aa7da9daa013cec41585ae07757e6c54e8e9d15da7f4f16d4f6546b6fb35aa`, runner
+`3888524877f7a90966fb932f7f9fc4c9a48480134eb6295712eaa0ef548416a3`, tests
+`b51498ebe27a0210a09b3a12b26e0146d39c1249906469bcb1add1d2f2443f08`.
+Focused `29/29` passed in `15.91 s`; full no-cache `324/324` passed in
+`82.91 s`; PowerShell AST `47,631/0` and Python/test syntax passed. This is
+static evidence only: token absent, factor fit unproven, next false.
+
 ## Exact next starting point
 
 1. H0 negative와 H1 h-stage artifact를 모두 immutable하게 보존한다.
 2. H2-P0 manifest-only fixture/runner/test/docs commit `4c1e3fce8aac659dd0aedb06c2b6d274fff73a12`를 보존한다.
 3. H2 result digest, 독립 audit와 consumed tombstone commit `ad12df1`을 보존한다.
 4. H4-P0 mesh lineage, canonical assembly와 dual resource envelope commit `8f40fe5696496edb2cb73086927f833ded5e0d5e`를 보존한다.
-5. 완료한 H4-P0R parent와 세 P1 pre-factor 실패, validation-output 및 세 deletion-only token retirement를 보존한다. `b6c8615...`, `d9e064f...`, `6328174...`를 재실행하지 않는다.
-6. retry-v3 fixture/runner/tests/docs를 token-absent clean contract와 독립 audit에 고정하고 committed safe manifest를 다시 읽은 뒤, 그 commit만 부모로 하는 fresh token-only child를 만든다.
+5. 완료한 H4-P0R parent와 다섯 P1 interruption, validation-output 및 다섯 deletion-only token retirement를 보존한다. `b6c8615...`, `d9e064f...`, `6328174...`, `9b4854d...`, `5ba4b69...`를 재실행하지 않는다.
+6. retry-v5 fixture/runner/tests/docs를 token-absent clean contract와 독립 audit에 고정하고 committed safe manifest를 다시 읽은 뒤, 그 commit만 부모로 하는 fresh token-only child를 만든다.
 7. 새 token에서 `KII/ApII` factor fill과 process-tree resource만 한 번 측정한다. RHS/extensions/Y/modal physics는 금지한다. P0R terminal result를 독립 audit한 뒤에만 h2→h4/fine analytic gates와 H4 result schema를 별도 사전등록한다. clean H4-P1 audit와 fresh one-use token 전에는 h4 physics를 실행하지 않으며, h4가 통과해도 withheld radius/EQ0는 각각의 후속 계약 전까지 금지한다.

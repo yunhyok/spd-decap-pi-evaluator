@@ -283,12 +283,33 @@ tests `18aabcdf7b32c6b013aec65497d31f4d908f3085f53f64cb3791f38a2e79381d`;
 focused `11/11`, no-cache `322/322`. Token absent and
 `next_stage_authorized=false`.
 
+## H4-P0R retry-v5 non-result
+
+The fifth P1 attempt (`5ba4b693...`) reached claim/factor child PID `55552` and
+recorded `108/108` child-visible samples, then resource-stopped on
+`NONROOT_DISAPPEARANCE_NOT_CONFIRMED` at an active tree sample still using
+default maximum `1`. It produced no factor prefix/certificate; completed
+factors are zero and attempted/performed are `null`. It produced no RHS, solve,
+H4 physics, or EQ0 input. The zero-byte stdout schema overlay is secondary and
+deferred.
+
+Outer close `9d0c0aab...` recorded `27/16` confirmed/stored retry events and
+truncation, so no seal was written. Consumed commit `46c08d405...` and
+retirement `71d3dab...` leave token absent. Retry-v5 only sets the four active
+factor calls to max `3` and raises shared outer/control event cap to `64`.
+Frozen Python/runner/tests hashes are
+`54aa7da9daa013cec41585ae07757e6c54e8e9d15da7f4f16d4f6546b6fb35aa` /
+`3888524877f7a90966fb932f7f9fc4c9a48480134eb6295712eaa0ef548416a3` /
+`b51498ebe27a0210a09b3a12b26e0146d39c1249906469bcb1add1d2f2443f08`;
+focused/full `29/29` and `324/324` passed. Immutable M1/G1/G2 results and
+`next_stage_authorized=false` are unchanged.
+
 ## Exact next starting point
 
 1. **완료:** G1 direct exterior Galerkin을 `N={144,288,576}`, 7 frequencies, q10/q20, 세 `r0`에서 실행해 exterior-only pass와 interior blocker를 분리했다.
 2. **동결 완료:** G2 interior Galerkin의 약형, self/touching/non-touching singular quadrature, basis/order, raw reciprocity/passivity, q20/q40와 no-retuning rule을 exact reproduction block에 고정했다.
 3. **완료/제한 통과:** pair screen은 `passed_pair_screen_only`다.
 4. **실패 동결:** 100 kHz circle의 analytic/q/mesh/passivity는 통과했지만 raw reciprocity/cancellation은 실패했다. planned G2 2 GHz circle, G2 `N=512`, G2 EQ0 seed로 진행하지 않는다.
-5. 다음 독립 reference candidate는 two-DtN subtraction이 없는 A–v volume-FEM boundary-Schur다. [`T1_AV_BOUNDARY_SCHUR_RESULTS.md`](T1_AV_BOUNDARY_SCHUR_RESULTS.md)의 H0는 pre-factor sparse gate에서 실패했지만 H1 coarse `h`와 H2 refined `h2`는 stage-only pass다. H4-P0, H4-P0R parent와 P1 executable static review는 통과했지만 세 public P1 시도는 pre-factor 중단/token 폐기됐고 factor fit은 미증명이다. retry-v3 clean no-token contract reread/fresh token/result audit 전에는 H4 physics를 금지한다. H4 physics와 두 circle radius가 모두 통과한 뒤에만 EQ0 crop `2/4/8Deff`를 사전 등록한다.
+5. 다음 독립 reference candidate는 two-DtN subtraction이 없는 A–v volume-FEM boundary-Schur다. [`T1_AV_BOUNDARY_SCHUR_RESULTS.md`](T1_AV_BOUNDARY_SCHUR_RESULTS.md)의 H0는 pre-factor sparse gate에서 실패했지만 H1 coarse `h`와 H2 refined `h2`는 stage-only pass다. H4-P0, H4-P0R parent와 P1 executable static review는 통과했다. 다섯 번째 public P1은 factor-child에 도달했지만 0 certified factors와 indeterminate factor outcome만 남겨 factor fit은 여전히 미증명이다. retry-v5 clean no-token contract reread/fresh token/result audit 전에는 H4 physics를 금지한다. H4 physics와 두 circle radius가 모두 통과한 뒤에만 EQ0 crop `2/4/8Deff`를 사전 등록한다.
 6. production SAO 후보는 Hamiltonian Schur 또는 four-operator symmetric Calderón/Steklov–Poincaré trace/flux formulation으로 별도 사전 등록한다. raw failure는 보존하며 post-symmetrization, clipping 또는 result-driven tuning을 금지한다.
 7. 독립 A–v와 새 SAO가 모두 통과하기 전 T1-F, board source owner 또는 PowerSI correlation으로 우회하지 않는다.

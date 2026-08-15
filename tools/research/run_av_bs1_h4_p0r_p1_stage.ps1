@@ -33,7 +33,7 @@ $outerHandshakePrefixSchema = "AV-BS1-h4-p0r-outer-observer-handshake-prefix-v1"
 $outerInternalModeName = "primary-h4-p0r-inner-v1"
 $pollMilliseconds = 100
 $treeSampleMaximumAttempts = 3
-$treeSampleRetryEventLimit = 16
+$treeSampleRetryEventLimit = 64
 $wallStopSeconds = 900
 $controlPlaneWallStopSeconds = 180
 $treeWorkingSetStop = [int64](4GB)
@@ -7082,8 +7082,8 @@ try {
     while (-not $process.HasExited) {
         $terminationRequired = $false
         try {
-            $tree = Get-TreeSample $executionTreeRootProcessId $executionTreeRootBirthUtcTicks $factorEvidenceProcessIds $factorEvidenceBirthTicks
-            $cleanupTree = Get-TreeSample $process.Id $childBirthTicks $observedChildProcessIds $observedChildBirthTicks
+            $tree = Get-TreeSample $executionTreeRootProcessId $executionTreeRootBirthUtcTicks $factorEvidenceProcessIds $factorEvidenceBirthTicks -MaximumAttempts $treeSampleMaximumAttempts
+            $cleanupTree = Get-TreeSample $process.Id $childBirthTicks $observedChildProcessIds $observedChildBirthTicks -MaximumAttempts $treeSampleMaximumAttempts
             $system = Get-SystemSample
             $successfulTreeSampleCount += 1
             if (
@@ -7123,8 +7123,8 @@ try {
                 # certificates have been finalized. Take one additional real
                 # tree sample after observing it, then release the child.
                 if ((Test-Path -LiteralPath $factorCompletePath -PathType Leaf) -and -not (Test-Path -LiteralPath $monitorReleasePath)) {
-                    $postFactorTree = Get-TreeSample $executionTreeRootProcessId $executionTreeRootBirthUtcTicks $factorEvidenceProcessIds $factorEvidenceBirthTicks
-                    $postFactorCleanupTree = Get-TreeSample $process.Id $childBirthTicks $observedChildProcessIds $observedChildBirthTicks
+                    $postFactorTree = Get-TreeSample $executionTreeRootProcessId $executionTreeRootBirthUtcTicks $factorEvidenceProcessIds $factorEvidenceBirthTicks -MaximumAttempts $treeSampleMaximumAttempts
+                    $postFactorCleanupTree = Get-TreeSample $process.Id $childBirthTicks $observedChildProcessIds $observedChildBirthTicks -MaximumAttempts $treeSampleMaximumAttempts
                     $postFactorSystem = Get-SystemSample
                     $successfulTreeSampleCount += 1
                     if (

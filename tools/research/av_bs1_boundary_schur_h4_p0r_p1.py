@@ -204,7 +204,7 @@ TREE_SAMPLE_DIAGNOSTIC_FIELDS = frozenset(
     """.split()
 )
 CONTROL_TREE_SAMPLE_MAX_ATTEMPTS = 3
-CONTROL_TREE_SAMPLE_RETRY_EVENT_LIMIT = 16
+CONTROL_TREE_SAMPLE_RETRY_EVENT_LIMIT = 64
 CONTROL_TREE_SAMPLE_CONTEXTS = frozenset(
     {
         "control_pre_helper_tree_sample",
@@ -749,7 +749,7 @@ def _outer_observer_contract() -> Mapping[str, object]:
             "included_processes": "outer_observer_plus_identity_bound_sampled_inner_tree",
             "process_membership_semantics": "sampled_not_Job_Object_descendants_created_and_exited_between_polls_not_claimed",
             "tree_sample_max_attempts": 3,
-            "tree_sample_retry_event_limit": 16,
+            "tree_sample_retry_event_limit": 64,
             "tree_sample_retry_policy": (
                 "whole_sample_retry_only_after_identity_bound_nonroot_exit_or_"
                 "win32_error_87_and_complete_toolhelp_snapshot_absence_with_"

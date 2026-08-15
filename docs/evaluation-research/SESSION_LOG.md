@@ -1665,3 +1665,175 @@ public token commits `b6c8615...`, `d9e064f...`, `6328174...`, and
    tombstone/seal/index/close chain. Regardless of outcome, keep
    `next_stage_authorized=false`; do not run H4 physics, PowerSI, withheld, or
    EQ0 work without a separate clean preregistration and fresh authorization.
+
+## 2026-08-16 — AV-BS1 H4-P0R-P1 fifth interruption and retry-v5 freeze
+
+The visible program identity remains **SPD Decap PI Evaluator v0.22.0**. This
+entry was appended to the exact 145,432-byte prior `SESSION_LOG.md` prefix with
+SHA-256
+`b004162bbe1ccc5152fcbaa1d86dea326d69dd0755f9b9c4c0c693266e12ff7a`;
+all earlier attempt records remain immutable.
+
+### Fifth public attempt
+
+The fifth public P1 invocation used token-only commit
+`5ba4b69398f526a0fcf640cf1dc4e7197cc7e660`, whose sole parent was clean
+retry-v4 contract `099db849564207b636f7431ee2fb52a540a7cb4e`. It started at
+`2026-08-15T14:33:12.122Z`, ended at `2026-08-15T14:34:23.345Z`, and returned
+exit `2`. The canonical token ID was `96d4f060ffa94d4888ffe3e59f550225`;
+original raw/canonical SHA-256 values were
+`a9cbd954b27685892bf720c777ef57f49830da7970eee9a267d6d87eb5665d00` /
+`a17271e2e3d4621a04b002edc7ada972a462f60552958282b3d07f99d441852b`.
+
+Unlike the first four public interruptions, this attempt created an exclusive
+claim and launched the factor-only child. Claim raw/canonical SHA-256 values
+were `0301eeccbf092799b97a914b4678bf8856aa8bb73296a07144435eddabf78103` /
+`d9b7a41503dc32c591da9b2a06b512df5675f3a46eb78eaa24d3fe2b7e4b596e`.
+Guard raw/canonical SHA-256 values were
+`78c66a1b45e19c04a30a37ac433d0437994798408cce46afb2c327a8f2b80c65` /
+`9dd8bd575628ef86b75569baf40a4d56cf1e850e9bd16676de4e3d45a723a17c`.
+Monitor-ready SHA-256 was
+`d6d76b6dc7c700f7681a0bd52593222a5fc6fa97420a6e066fd939df7dda95ac`.
+
+Factor child PID `55552`, birth `639224012129440335`, was present in every one
+of `108` successful/child-visible samples from ready at
+`2026-08-15T14:33:32.9763425Z` through the last child-visible sample at
+`2026-08-15T14:33:47.1210603Z`. Resource report SHA-256
+`d9b9a858c8f4aaebc1ca6ebb34f90235bcb84dd6288c04ecc95b3d7e5abc1da6`
+records stop `MONITOR_QUERY_FAILED` and monitor error
+`BLOCKED_AV_BS_RESOURCE: tree sample failure
+NONROOT_DISAPPEARANCE_NOT_CONFIRMED`. The four active factor-monitor
+`Get-TreeSample` calls had retained the function default
+`MaximumAttempts=1`, so the bounded same-birth disappearance retry already
+used by explicit outer/control callers was not active there.
+
+No factor-prefix-1, factor-prefix-2, factor-complete, or monitor-release file
+exists. `numerical.json` and child stderr are zero bytes. No completed factor,
+factor order, or factor certificate is durable. The Python child was externally
+terminated before it could serialize its in-memory phase, so actual `splu`
+entry cannot be proved or disproved; the consumed record correctly preserves
+`factorization_attempted=null` and `factorization_performed=null`. This is
+exactly zero certified/completed factors, not proof that factorization did or
+did not begin. The factor-only stage contains no RHS or factor solve path, and
+no RHS, extension, boundary response, H4 physics, PowerSI correlation, or
+accuracy result ran.
+
+Resource ceilings did not cause the stop. Peak simultaneous tree working set
+was `485,740,544 B`; tree private/committed bytes were `1,737,990,144 B`;
+summed process-lifetime peak commit was `2,043,666,432 B`; minimum system
+commit headroom was `73,232,097,280 B`; and minimum available physical memory
+was `47,231,963,136 B`. These values remain factor-interval monitor evidence,
+not a completed factor-fit or 8 GiB pass.
+
+### Result, token, control, and outer evidence
+
+The zero-byte numerical stdout was hashed as the empty SHA-256 in the resource
+report but omitted from finalizer arguments because its length was zero.
+Finalizer therefore returned the secondary schema detail `resource references
+missing child stdout`; consumer added `child stdout evidence missing`. Result
+file SHA-256 is
+`cf0d59c36e3f8275eeee56f30ccc7a2db74c986052714c6e31c6e26bc9de08e9`
+and payload SHA-256 is
+`9c676c81bd5d85b094659b65ea2b3e1486ba9988b5fe9c727fbbf67b841cd9b4`.
+This overlay does not replace the primary resource-monitor stop. Empty-stdout
+normalization is deliberately deferred outside the minimal retry-v5 scope.
+
+The consumed tombstone has SHA-256
+`3caed852fd51fd908cbfa750becd2c63cbd6f768abff91eba23221bd0f418c2b`,
+`authorization_state=consumed`, `uses_remaining=0`, effective status
+`resource_stop`, `consumption_validated_pass=false`,
+`mandatory_stage_pass=false`, `next_stage_authorized=false`, and terminal seal
+state `pending_outer_observed_inner_exit`. Commit
+`46c08d405f530cce0cfbba9d908f8c266a26a002` preserves that exact consumed
+attempt. Deletion-only retirement commit
+`71d3dab442cbdfa6361e4e91de57d8f5b4d1a990` removes the token; current token
+state is absent and the fifth token must never be reused.
+
+Control-plane session
+`validation-output/av-bs1/control-plane/session-53f78f7ad5de4473b644c44e9571de43`
+completed all six bounded invocations with true final gates. Preflight report/
+close SHA-256 values were `43a8563e6806a26515a2762432bbe1f3a1e557ee2c50d3f0c2837675c618d72b` /
+`55116d2bdf6a4cede41f3b71e2d5564d598e1df20a6d66f3460eb196b19f907a`.
+The three canonical helper pairs were
+`5deb17e314dabee034799ce26f276368f740446e07be591b0e5a0e8e9498b39a` /
+`1fd601f69cd246b5558f2245b67cee88c2a746e31822ffa5ac59bde9d9ad10c7`,
+`4b89f1563e62bd42edaa9de545faaf4d3b44b560307b4070da811c0dbce357e9` /
+`6d486bb53e828176ade993dfe949e0e71de7976165bd0a9cfa7eb7318d4dd49a`,
+and `d4b4c97f67e7c5b34ff1a0e7e6043f1578a071cb76f96890b76d820866a9068d` /
+`bb372493f81e4a5532b9df4a1c6133fc1313c5449245b5044976cd47a74aac87`.
+Finalizer and consumer report/close pairs were
+`408620e1a37ddfabe1756002631f9efe5f8f4b53d119d5f9cb0cb52b49e2d31d` /
+`d7fb75d9a378e7b90e2a349ec4d046833a3a4dd13fa7ef58faca28de5f86b065`
+and `4865c63574bdc7b3d93fc8621ca72310af15183491fcaa349e97c027ea3eeb2a` /
+`aa52f5f0e4014bbdfdea39c890c8db06b177b977d0268f1e3411c60dadcb20bd`.
+Final session-index-0012 SHA-256 was
+`bc1a4a46d04e95d677577556da66f5aa0e669315530e1a6699b8c7990ec7f78f`.
+
+Outer session
+`validation-output/av-bs1/outer-observer/session-1c765eb54ec54d5a801c87c960970c50`
+measured `2026-08-15T14:33:12.9173204Z` through
+`2026-08-15T14:34:23.1635084Z`. Ready/start/complete/exit-release SHA-256 values
+were `2480626ba65f421edddac2167c0493b788b66e0a4aa5ba6b83223a5d4e73d763`,
+`431fe18fc919cc900e79e27c4d5d226bccfb86211b47bacbaa68703a1aab6b2c`,
+`d2070d0a17253d2418ded332625887d5b6bde4473c7dce354f0c0bcd1e84ac86`,
+and `e8b44474a841d61370be17b0cb28fa34c91584c1a4a8a613a3a65dc04f508cb2`.
+Outer close SHA-256 was
+`9d0c0aab58e78eb5d91d36be2aef46bf89968df87d4abcc044089805acce9af2`.
+
+The close verified inner exit `2`, cleanup, a terminal post-cleanup sample,
+`512` successful outer samples, and `512` inner-visible samples. Its monitor
+failure and stop reason are both null. It counted `27` confirmed descendant
+disappearances but retained only the bounded `16`, so
+`tree_sample_retry_events_truncated=true`. That was the actual remaining outer
+mandatory-gate blocker; no terminal seal was written. All sampled attempt
+identities are absent and no `av-bs1-*` temporary directory remains.
+
+### Frozen retry-v5 correction
+
+Retry-v5 makes exactly two run-enabling corrections:
+
+1. the four active factor-monitor tree samples pass explicit maximum `3`; the
+   caught-final cleanup sample and function default remain `1`; and
+2. the one shared bounded outer/control retry-event cap rises from `16` to
+   `64`, enough to preserve the observed `27`; evidence above `64` still marks
+   truncation and withholds the seal.
+
+The retry eligibility predicate is unchanged: only an `exited`, positive,
+same-birth descendant that remains in the initial complete snapshot can use
+the existing two 25 ms settling rechecks, at most three complete snapshots and
+whole-sample retry. `not_found`/87 plus presence, live/reuse/root/query/access/
+malformed/incomplete-snapshot failure, final presence, and exhaustion remain
+fatal. No result/resource schema, matrix, factor, RHS, or physics logic changes.
+The empty-stdout overlay remains explicitly deferred.
+
+Frozen retry-v5 bindings and validation are:
+
+- runner SHA-256:
+  `3888524877f7a90966fb932f7f9fc4c9a48480134eb6295712eaa0ef548416a3`;
+- Python SHA-256:
+  `54aa7da9daa013cec41585ae07757e6c54e8e9d15da7f4f16d4f6546b6fb35aa`;
+- tests SHA-256:
+  `b51498ebe27a0210a09b3a12b26e0146d39c1249906469bcb1add1d2f2443f08`;
+- focused retry-v5 regression: `29/29` passed in `15.91 s`;
+- full no-cache P1 regression: `324/324` passed in `82.91 s`;
+- PowerShell AST: `47,631` tokens, `0` errors; and
+- Python/test syntax: clean.
+
+Safe manifest parity returned exit `0`, raw outputs matched, status remained
+`candidate_token_missing_no_factor`, and no authorization was created.
+
+### Exact next starting point
+
+1. Freeze the approved retry-v5 Python, runner, tests, these exact 15 research
+   documents, final preregistration-document SHA, and token-absent manifest
+   bindings in one clean contract commit.
+2. Re-read that exact committed no-token manifest and stop on any drift or
+   missing prerequisite.
+3. Only then create a fresh child with exactly one parent that adds only one
+   canonical one-use P1 token file.
+4. Invoke public `primary-h4-p0r` exactly once from that fresh token-only child;
+   never invoke any of the five spent token commits.
+5. Preserve and independently audit the complete factor-prefix/resource/result/
+   claim/tombstone/seal/control/outer chain. Regardless of outcome, keep
+   `next_stage_authorized=false`; do not run H4 physics, PowerSI, withheld, or
+   EQ0 work without a separate clean preregistration and fresh authorization.

@@ -42,7 +42,7 @@ Y_r(\omega)v=b,\qquad Z_{pp}=b^Tv
 - 기존 S1/A1/C1 kernel은 부분 invariant를 통과했지만 strict physical correction gate에는 미달했다. 특히 A1은 마지막 mesh 변화가 4.73%다. 따라서 후보 1/2의 방향은 유지하되 현행 discretization을 그대로 production에 연결하지 않는다.
 - isolated via PEEC는 빠르고 수치적으로 안정적이지만 exact-minus-core ownership이 없어 additive global stamp로 사용할 수 없다. 후보 2는 explicit return/crop/core subtraction이 있는 replacement block으로만 진행한다.
 - source manifest가 P3/P4 missing trace width, 모든 pair의 plating/fill/roughness unknown, P1/P2 antipad preservation gap을 확인했다. 후보 비교에서 이 값을 fit parameter로 숨기는 경로는 기각한다.
-- T1의 Cohn lossless `C'`와 periodic plate `R/L`은 independent 1-D FEM까지 manufactured 범위에서 통과했다. finite/open 2-D 후보는 SAO–CIM이며 A–v/3-D PEEC로 교차검증한다. M1 collocation power failure는 immutable이고 G1은 `passed_exterior_galerkin_only`다. G2 pair screen은 `passed_pair_screen_only`지만 circle 100 kHz에서 N128 cancellation `2.91315e-8`, N256 raw `Yw` reciprocity/cancellation `1.41197e-8/1.63755e-7`로 fail-closed 됐다. two-DtN subtraction이 없는 독립 A–v volume-FEM boundary-Schur reference candidate는 [`T1_AV_BOUNDARY_SCHUR_SPEC.md`](T1_AV_BOUNDARY_SCHUR_SPEC.md)에 고정했다. H0 primary-h는 prereg sparse-pattern 오류로 factor 전에 실패했지만 topology-tagged H1 coarse `h`와 H2 refined `h2`는 각각 stage-only gate를 통과했다. 최신 physics 상태는 `passed_AV_BS_h2_stage_only_pending_h4_preregistration`; h→h2 max trend `0.868015%`, PDE residual `4.42149e-16`, power mismatch `1.11340e-13`이다. H2 token은 consumed/uses 0이고 fine analytic/mesh convergence/final-circle은 `null`이다. H4-P0 assembly-only와 [`H4-P0R manifest parent`](T1_AV_BOUNDARY_SCHUR_H4_P0R_PREREG.md), 후속 [`P1 executable/lifecycle`](T1_AV_BOUNDARY_SCHUR_H4_P0R_P1_PREREG.md)을 고정했지만 세 public P1 시도는 claim/factor 전에 중단됐고 token은 폐기됐다. 세 번째는 ready/start 뒤 default-one control tree-sample retry exhaustion이었다. 현재 retry-v3 static candidate만 있고 token absent, `factor_fit_unproven=true`, `next_stage_authorized=false`이며 H4 physics는 계속 금지한다.
+- T1의 Cohn lossless `C'`와 periodic plate `R/L`은 independent 1-D FEM까지 manufactured 범위에서 통과했다. finite/open 2-D 후보는 SAO–CIM이며 A–v/3-D PEEC로 교차검증한다. M1 collocation power failure는 immutable이고 G1은 `passed_exterior_galerkin_only`다. G2 pair screen은 `passed_pair_screen_only`지만 circle 100 kHz에서 N128 cancellation `2.91315e-8`, N256 raw `Yw` reciprocity/cancellation `1.41197e-8/1.63755e-7`로 fail-closed 됐다. two-DtN subtraction이 없는 독립 A–v volume-FEM boundary-Schur reference candidate는 [`T1_AV_BOUNDARY_SCHUR_SPEC.md`](T1_AV_BOUNDARY_SCHUR_SPEC.md)에 고정했다. H0 primary-h는 prereg sparse-pattern 오류로 factor 전에 실패했지만 topology-tagged H1 coarse `h`와 H2 refined `h2`는 각각 stage-only gate를 통과했다. 최신 physics 상태는 `passed_AV_BS_h2_stage_only_pending_h4_preregistration`; h→h2 max trend `0.868015%`, PDE residual `4.42149e-16`, power mismatch `1.11340e-13`이다. H2 token은 consumed/uses 0이고 fine analytic/mesh convergence/final-circle은 `null`이다. H4-P0 assembly-only와 [`H4-P0R manifest parent`](T1_AV_BOUNDARY_SCHUR_H4_P0R_PREREG.md), 후속 [`P1 executable/lifecycle`](T1_AV_BOUNDARY_SCHUR_H4_P0R_P1_PREREG.md)을 고정했다. 다섯 번째 public P1은 claim/factor child까지 도달했지만 0 certified factors와 indeterminate factor outcome, outer truncation/no seal만 남겼다. 현재 retry-v5 static candidate만 있고 token absent, `factor_fit_unproven=true`, `next_stage_authorized=false`이며 H4 physics는 계속 금지한다.
 - production SAO 후보는 같은 pulse 공간의 `P^-1U` 두 개를 독립 구성해 빼는 G2로 복귀하지 않는다. Knockaert–De Zutter–Lippens–Rogier의 [Hamiltonian Schur DtN](https://doi.org/10.1016/j.wavemoti.2007.07.004)과 Costabel–Stephan의 [strongly elliptic four-operator transmission system](https://doi.org/10.1016/0022-247X(85)90118-0)을 규범 후보로 두고 trace/flux dual space, Gram map, weak hypersingular operator과 discrete inf-sup를 결과 전에 고정한다.
 - SAO interior의 사전 등록 `C0-A0` 저주파 `10^6` switch는 작은 원에서 실패했다. `C0-A1` fixed `C0=1` direct/scaled Hankel은 canonical full-condition과 W1/W3 dense withheld를 통과했고 W2 analytic/convergence-only 자료가 이를 지지했다. 판정은 `passed_circle_interior_only`이며 M0/M1 또는 product 승격이 아니다.
 - reduced differential line의 4-terminal absolute lift는 gauge 외 common-mode null을 가져 현 global MNA에서 exact singular다. 후보 2의 trace block은 `blocked_balanced_projection_and_return_partition`이며 arbitrary conductance로 null을 숨기지 않는다.
@@ -234,6 +234,31 @@ runner `7893cd57fd4b1686addd434fa0103d9f3b0e0087f4783f2c82e459661abfb645`,
 and tests `18aabcdf7b32c6b013aec65497d31f4d908f3085f53f64cb3791f38a2e79381d`;
 focused `11/11` and full no-cache `322/322` passed. Factor fit and H4 physics
 remain unproven, with `next_stage_authorized=false`.
+
+## H4-P0R retry-v5 lifecycle boundary
+
+The fifth public P1 invocation is likewise not an algorithm or accuracy score.
+Token-only commit `5ba4b693...`, child of retry-v4 contract `099db849...`,
+created a claim and reached factor-only child PID `55552`. The resource monitor
+kept the child visible for `108/108` successful samples, then stopped on
+`NONROOT_DISAPPEARANCE_NOT_CONFIRMED` because the four active factor tree
+samples still used default `MaximumAttempts=1`. There are zero completed
+factors, prefixes, and certificates. Actual factor entry is indeterminate
+(`factorization_attempted=null`, `factorization_performed=null`); RHS, solve,
+H4 physics, PowerSI correlation, and 8 GiB fit evidence are absent.
+
+The same attempt exposed an independent lifecycle blocker: outer close
+`9d0c0aab...` counted `27` confirmed disappearances, retained the bounded `16`,
+marked retry evidence truncated, and therefore withheld the seal. The consumed
+attempt was committed as `46c08d405...`; deletion-only retirement `71d3dab...`
+left the token absent. Retry-v5 changes only the active four factor calls to
+maximum `3` and the shared outer/control event cap to `64`. The observed
+zero-byte-stdout schema overlay is a deferred forensic item, not a retry-v5
+change. Frozen Python/runner/tests hashes are `54aa7da9daa013cec41585ae07757e6c54e8e9d15da7f4f16d4f6546b6fb35aa` /
+`3888524877f7a90966fb932f7f9fc4c9a48480134eb6295712eaa0ef548416a3` /
+`b51498ebe27a0210a09b3a12b26e0146d39c1249906469bcb1add1d2f2443f08`;
+focused `29/29` and full no-cache `324/324` passed. Candidate ranking, physics
+gates, and `next_stage_authorized=false` are unchanged.
 
 ## 후보 선택 규칙
 

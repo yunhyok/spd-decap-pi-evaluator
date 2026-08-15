@@ -11,7 +11,7 @@
 | `C0-A0 fixed_low_frequency_1e6` | **failed** | 사전 등록한 Patel–Triverio empirical switch를 그대로 사용하면 작은 원 100 kHz가 정확도·mesh·phase·conditioning gate를 모두 위반 |
 | `C0-A1 direct_scaled_H2_primary` | **passed_circle_interior_only** | `C0=1` direct/scaled Hankel이 canonical full-condition과 W1/W3 dense withheld를 통과; W2는 analytic/convergence-only 보조 |
 | finite-width M1 | G1 exterior-only, G2 pair-only; 100 kHz circle failed | q/analytic/mesh/passivity 통과와 별개로 N256 raw `Yw` reciprocity/cancellation fail; planned G2 2 GHz circle/N512/EQ0 seed 미실행 |
-| independent A–v | `2GHz_4Deff_smoke_only`; circle boundary-Schur `passed_AV_BS_h2_stage_only_pending_h4_preregistration` | H1 17.5 µm/100 kHz coarse `h`와 H2 refined `h2` stage-evaluable gates 통과; H4-P0, [`H4-P0R parent`](T1_AV_BOUNDARY_SCHUR_H4_P0R_PREREG.md), [`P1 executable/lifecycle`](T1_AV_BOUNDARY_SCHUR_H4_P0R_P1_PREREG.md) static review 통과. 세 public P1 시도는 pre-factor 중단/token 폐기; 세 번째는 ready/start 뒤 control default-one retry exhaustion. 현재 retry-v3 static candidate, token absent/factor fit unproven/next=false. h→h2는 trend-only이고 H2 token consumed/next=false. `h4` physics, fine analytic/convergence, final circle, withheld radius와 noncircular same-basis cross-method 미실행 |
+| independent A–v | `2GHz_4Deff_smoke_only`; circle boundary-Schur `passed_AV_BS_h2_stage_only_pending_h4_preregistration` | H1 17.5 µm/100 kHz coarse `h`와 H2 refined `h2` stage-evaluable gates 통과; H4-P0, [`H4-P0R parent`](T1_AV_BOUNDARY_SCHUR_H4_P0R_PREREG.md), [`P1 executable/lifecycle`](T1_AV_BOUNDARY_SCHUR_H4_P0R_P1_PREREG.md) static review 통과. 다섯 public P1 attempt 중 다섯 번째가 처음 claim/factor-child와 108 samples까지 도달했지만 monitor stop, 0 certified factors, attempted/performed null, outer 27/16 truncation/no seal. 현재 retry-v5 static candidate, token absent/factor fit unproven/next=false. h→h2는 trend-only이고 H2 token consumed/next=false. `h4` physics, fine analytic/convergence, final circle, withheld radius와 noncircular same-basis cross-method 미실행 |
 | product/global | `blocked` | source owner, exact-minus-core와 balanced global adapter 미해결 |
 
 `C0-A1`의 통과는 원형 도체의 **interior surface-admittance operator**만 인증한다. M1, P2, PowerSI correlation, product 정확성 또는 8 GB production 성능을 승인하지 않는다.
@@ -213,6 +213,26 @@ bindings are Python `95c9f5c08282105f7934fbea194694fff3ab850daac6336195340447216
 runner `7893cd57fd4b1686addd434fa0103d9f3b0e0087f4783f2c82e459661abfb645`,
 tests `18aabcdf7b32c6b013aec65497d31f4d908f3085f53f64cb3791f38a2e79381d`;
 focused `11/11`, full no-cache `322/322`. `next_stage_authorized=false`.
+
+## H4-P0R retry-v5 non-result
+
+The fifth public attempt reached the factor child for the first time but did
+not create a circle result. PID `55552` was child-visible in `108/108` resource
+samples before an active default-one tree sample stopped on
+`NONROOT_DISAPPEARANCE_NOT_CONFIRMED`. No factor prefix or certificate exists;
+attempted/performed are `null`, completed factors are zero, and RHS/solve/H4
+physics are absent. The consumed/retired chain is `46c08d405...` /
+`71d3dab...`; current token state is absent.
+
+Outer close `9d0c0aab...` counted `27` confirmed disappearances but stored `16`,
+so truncation prevented its seal. Retry-v5 changes only the four active factor
+calls to max `3` and shared outer/control event cap to `64`; the zero-byte
+stdout schema overlay is deferred. Frozen Python/runner/tests hashes are
+`54aa7da9daa013cec41585ae07757e6c54e8e9d15da7f4f16d4f6546b6fb35aa` /
+`3888524877f7a90966fb932f7f9fc4c9a48480134eb6295712eaa0ef548416a3` /
+`b51498ebe27a0210a09b3a12b26e0146d39c1249906469bcb1add1d2f2443f08`;
+focused/full `29/29` and `324/324` passed. Circle gates and next=false do not
+change.
 
 ## Promotion boundary와 다음 단계
 

@@ -2,10 +2,11 @@
 
 ## 1. Current status and authority
 
-This document preregisters the fourth corrective static executable-contract
-candidate after four public invocations stopped before claim and factor work.
-It remains token-absent and does not itself authorize a pilot. None of the four
-prior tokens may be reused.
+This document preregisters the fifth corrective static executable-contract
+candidate after five public invocations. The first four stopped before claim
+and factor work; the fifth created the claim and factor child but certified no
+factor. It remains token-absent and does not itself authorize a pilot. None of
+the five prior tokens may be reused.
 
 The current safe manifest classification is:
 
@@ -14,10 +15,12 @@ The current safe manifest classification is:
 - `authorization_state=not_authorized`;
 - `terminal_evidence_complete=false`;
 - `authoritative_stage_pass=false`;
-- no H4-P0R-P1 factorization or physics solve has run; and
+- no H4-P0R-P1 factor has completed or been certified, attempted/performed are
+  indeterminate for the externally terminated fifth child, and no physics
+  solve has run; and
 - no later H4-P1 stage is authorized.
 
-The retry-v4 candidate retains retry-v3 execution resource scope v2,
+The retry-v5 candidate retains execution resource scope v2,
 `control_plane.independently_bounded=true`,
 `tree_thresholds_equal_factor_envelope=true`,
 `system_floor_recheck_before_and_after_each=true`, and
@@ -25,8 +28,9 @@ The retry-v4 candidate retains retry-v3 execution resource scope v2,
 control-plane supervisor and outer observer, with the readiness-specific
 `authorization_blocker=false`. Exactly six explicitly instrumented
 outer-observer sampling contexts plus six explicitly instrumented control-plane
-sampling contexts (12 total) opt into `MaximumAttempts=3`; factor sampling
-retains the default `MaximumAttempts=1`. These facts make the exact candidate eligible for a
+sampling contexts (12 total), plus the four active factor sampling calls, opt
+into `MaximumAttempts=3`; the caught-final factor cleanup call and function
+default remain `1`. Outer/control retry evidence has bounded cap `64`. These facts make the exact candidate eligible for a
 later token review; they do not authorize a pilot while the token is absent and
 do not change any terminal or next-stage authorization blocker.
 
@@ -677,16 +681,90 @@ physics_solve_performed: false
 next_stage_authorized: false
 ```
 
+### 15.6 Fifth public attempt and current retry-v5 static evidence
+
+Retry-v4 contract `099db849564207b636f7431ee2fb52a540a7cb4e` was the sole
+parent of token-only commit `5ba4b69398f526a0fcf640cf1dc4e7197cc7e660`.
+Token ID `96d4f060ffa94d4888ffe3e59f550225`, raw/canonical SHA-256
+`a9cbd954b27685892bf720c777ef57f49830da7970eee9a267d6d87eb5665d00` /
+`a17271e2e3d4621a04b002edc7ada972a462f60552958282b3d07f99d441852b`,
+was invoked exactly once from `2026-08-15T14:33:12.122Z` through
+`2026-08-15T14:34:23.345Z`; public exit was `2`.
+
+The claim exists at
+`validation-output/av-bs1/claims/96d4f060ffa94d4888ffe3e59f550225.json`,
+raw/canonical SHA-256
+`0301eeccbf092799b97a914b4678bf8856aa8bb73296a07144435eddabf78103` /
+`d9b7a41503dc32c591da9b2a06b512df5675f3a46eb78eaa24d3fe2b7e4b596e`.
+Guard and monitor-ready SHA-256 are
+`78c66a1b45e19c04a30a37ac433d0437994798408cce46afb2c327a8f2b80c65`
+and `d6d76b6dc7c700f7681a0bd52593222a5fc6fa97420a6e066fd939df7dda95ac`.
+Factor child PID/birth `55552/639224012129440335` was visible in all
+`108/108` successful resource samples. Resource SHA-256
+`d9b9a858c8f4aaebc1ca6ebb34f90235bcb84dd6288c04ecc95b3d7e5abc1da6`
+records `MONITOR_QUERY_FAILED` and
+`NONROOT_DISAPPEARANCE_NOT_CONFIRMED`; the active factor calls still used the
+function default maximum `1`.
+
+No factor prefix, factor-complete, or monitor-release artifact exists;
+`numerical.json` and child stderr are zero bytes. Result SHA-256
+`cf0d59c36e3f8275eeee56f30ccc7a2db74c986052714c6e31c6e26bc9de08e9`
+contains the secondary `resource references missing child stdout` schema
+overlay. Empty-stdout normalization is deferred outside retry-v5. Durable
+completed factors, factor order, and certificates are empty; attempted and
+performed are `null`; RHS/solve/physics are absent.
+
+Outer session
+`validation-output/av-bs1/outer-observer/session-1c765eb54ec54d5a801c87c960970c50`
+has ready/start/complete/release/close SHA-256
+`2480626ba65f421edddac2167c0493b788b66e0a4aa5ba6b83223a5d4e73d763`,
+`431fe18fc919cc900e79e27c4d5d226bccfb86211b47bacbaa68703a1aab6b2c`,
+`d2070d0a17253d2418ded332625887d5b6bde4473c7dce354f0c0bcd1e84ac86`,
+`e8b44474a841d61370be17b0cb28fa34c91584c1a4a8a613a3a65dc04f508cb2`,
+and `9d0c0aab58e78eb5d91d36be2aef46bf89968df87d4abcc044089805acce9af2`.
+It verified cleanup/exit `2` with null monitor failure/stop reason but counted
+`27` confirmed disappearances, stored `16`, and marked truncation. The
+mandatory outer gate is false and terminal seal absent.
+
+All six control invocations closed with true final gates. Preflight,
+three canonical helpers, finalizer, and consumer report/close pairs are
+`43a8563e.../55116d2b...`, `5deb17e3.../1fd601f6...`,
+`4b89f156.../6d486bb5...`, `d4b4c97f.../bb372493...`,
+`408620e1.../d7fb75d9...`, and `4865c635.../aa52f5f0...`; final session index
+`0012` SHA-256 is `bc1a4a46d04e95d677577556da66f5aa0e669315530e1a6699b8c7990ec7f78f`.
+The consumed tombstone SHA-256
+`3caed852fd51fd908cbfa750becd2c63cbd6f768abff91eba23221bd0f418c2b`
+is preserved by `46c08d405f530cce0cfbba9d908f8c266a26a002`; deletion-only
+retirement `71d3dab442cbdfa6361e4e91de57d8f5b4d1a990` leaves token absent.
+
+Retry-v5 changes only the four active factor calls to explicit maximum `3` and
+the shared outer/control event cap `16` to `64`. Retry predicates and failure
+policy are unchanged. Frozen static evidence is:
+
+```text
+Python fixture SHA-256: 54aa7da9daa013cec41585ae07757e6c54e8e9d15da7f4f16d4f6546b6fb35aa
+PowerShell runner SHA-256: 3888524877f7a90966fb932f7f9fc4c9a48480134eb6295712eaa0ef548416a3
+static tests SHA-256: b51498ebe27a0210a09b3a12b26e0146d39c1249906469bcb1add1d2f2443f08
+focused retry-v5 tests: 29/29 passed in 15.91 s
+full no-cache P1 suite: 324/324 passed in 82.91 s
+PowerShell AST: 47,631 tokens / 0 errors
+Python/test syntax: clean
+token_state: absent
+factor_fit_unproven: true
+physics_solve_performed: false
+next_stage_authorized: false
+```
+
 ## 16. Exact next sequence
 
 The only permitted next sequence is:
 
-The control-plane and outer-observer readiness transition plus retry-v4 bounded
-snapshot settling have been applied to this candidate. They do not create or
-authorize a token. The retired token-only commits `b6c8615...`, `d9e064f...`,
-`6328174...`, and `9b4854d0...` must never be invoked again.
+The retry-v5 active-factor sampling and bounded evidence-cap corrections have
+been applied to this candidate. They do not create or authorize a token. The
+retired token-only commits `b6c8615...`, `d9e064f...`, `6328174...`,
+`9b4854d0...`, and `5ba4b693...` must never be invoked again.
 
-1. Freeze the retry-v4 fixture, runner, tests, documentation, schema bindings,
+1. Freeze the retry-v5 fixture, runner, tests, documentation, schema bindings,
    and safe no-token manifest; complete independent code/document/contract
    audits and compute the final document SHA-256 externally.
 2. Create one clean executable-contract commit containing exactly those
@@ -700,7 +778,7 @@ authorize a token. The retired token-only commits `b6c8615...`, `d9e064f...`,
    the final contract commit and every frozen hash.
 5. From that fresh clean token-only child, invoke the public
    `primary-h4-p0r` runner exactly once for the two-factor, zero-RHS,
-   zero-solve pilot. Never invoke any of the four prior token commits.
+   zero-solve pilot. Never invoke any of the five prior token commits.
 6. Classify the outcome only from the v2 tombstone, outer terminal seal, and
    the complete current-byte-bound claim, guard, resource, result, child,
    marker, prefix, report, index, close, and applicable recovery-journal chain.

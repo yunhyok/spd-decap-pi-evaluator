@@ -206,7 +206,7 @@ def _synthetic_manifest() -> dict[str, object]:
             "contract_revision": "P1_versioned_scope_correction_v2",
             "control_plane": {
                 "tree_sample_max_attempts": 3,
-                "tree_sample_retry_event_limit": 16,
+                "tree_sample_retry_event_limit": 64,
             },
         },
         "outer_observer_contract_sha256": SHA_D,
@@ -219,7 +219,7 @@ def _synthetic_manifest() -> dict[str, object]:
                     "terminal_seal_materialization_readback_and_outer_process_exit"
                 ],
                 "tree_sample_max_attempts": 3,
-                "tree_sample_retry_event_limit": 16,
+                "tree_sample_retry_event_limit": 64,
             }
         },
         "one_use_lifecycle": {},
@@ -1683,7 +1683,7 @@ def _install_synthetic_outer_terminal_bundle(
             "terminal_seal_materialization_readback_and_outer_process_exit"
         ],
         "tree_sample_max_attempts": 3,
-        "tree_sample_retry_event_limit": 16,
+        "tree_sample_retry_event_limit": 64,
     }
 
     attempt_relative = (
@@ -2892,8 +2892,8 @@ def test_preflight_control_tree_diagnostics_reject_tamper_matrix(
         elif tamper == "count":
             value["tree_sample_confirmed_disappearance_count"] = 2
         elif tamper == "cap":
-            value["tree_sample_retry_events"] = [deepcopy(event) for _ in range(17)]
-            value["tree_sample_confirmed_disappearance_count"] = 17
+            value["tree_sample_retry_events"] = [deepcopy(event) for _ in range(65)]
+            value["tree_sample_confirmed_disappearance_count"] = 65
             value["tree_sample_retry_events_truncated"] = True
         elif tamper == "truncation":
             value["tree_sample_retry_events_truncated"] = True
@@ -3196,9 +3196,9 @@ def test_control_incomplete_retry_evidence_requires_exact_failed_provenance(
                 process_id=900 + index,
                 birth_utc_ticks=9_000 + index,
             )
-            for index in range(14)
+            for index in range(62)
         ]
-        report["tree_sample_confirmed_disappearance_count"] = 14
+        report["tree_sample_confirmed_disappearance_count"] = 62
         report["tree_sample_retry_events"] = deepcopy(report_events)
         close_events = report_events + [
             _control_tree_diagnostic(
@@ -3214,7 +3214,7 @@ def test_control_incomplete_retry_evidence_requires_exact_failed_provenance(
                 attempt=2,
             ),
         ]
-        confirmed_count = 17
+        confirmed_count = 65
         truncated = True
     close = {
         "tree_sample_max_attempts": 3,
@@ -3914,7 +3914,7 @@ def test_control_sticky_first_fatal_accepts_secondary_truncated_evidence() -> No
     stop_reason = "CONTROL_OBSERVED_PROCESS_TERMINATION_FAILED"
     report_events = [
         _control_retry_event(process_id=909, expected_birth=9_090, observed_birth=9_090)
-        for _ in range(14)
+        for _ in range(62)
     ]
     report = _control_diagnostic_snapshot(
         report_events,
@@ -3934,7 +3934,7 @@ def test_control_sticky_first_fatal_accepts_secondary_truncated_evidence() -> No
     ]
     close = _control_diagnostic_snapshot(
         close_events,
-        confirmed_count=17,
+        confirmed_count=65,
         truncated=True,
         monitor_failure=first_failure,
         monitor_error="cleanup failed; retry evidence incomplete",
@@ -4040,7 +4040,7 @@ def test_control_report_exhaustion_can_bind_an_event_omitted_after_cap() -> None
             expected_birth=9_090,
             observed_birth=9_090,
         )
-        for _ in range(16)
+        for _ in range(64)
     ]
     omitted_attempt_3 = _control_retry_event(
         attempt=3,
@@ -4052,7 +4052,7 @@ def test_control_report_exhaustion_can_bind_an_event_omitted_after_cap() -> None
     stop_reason = "CONTROL_PLANE_SUPERVISOR_EXCEPTION"
     report = _control_diagnostic_snapshot(
         stored,
-        confirmed_count=19,
+        confirmed_count=67,
         truncated=True,
         monitor_failure=failure,
         monitor_error="report retry exhausted after stored-event cap",
@@ -4088,7 +4088,7 @@ def test_control_close_exhaustion_can_bind_one_call_omitted_after_report_cap() -
             expected_birth=9_090,
             observed_birth=9_090,
         )
-        for _ in range(16)
+        for _ in range(64)
     ]
     report = _control_diagnostic_snapshot(stored)
     omitted_attempt_3 = _control_retry_event(
@@ -4100,7 +4100,7 @@ def test_control_close_exhaustion_can_bind_one_call_omitted_after_report_cap() -
     )
     close = _control_diagnostic_snapshot(
         stored,
-        confirmed_count=19,
+        confirmed_count=67,
         truncated=True,
         monitor_failure=_control_exhaustion_failure(omitted_attempt_3),
         monitor_error="envelope close exhausted after stored-event cap",
@@ -4152,7 +4152,7 @@ def test_control_close_first_fatal_remains_sticky_over_secondary_failure(
             expected_birth=9_090,
             observed_birth=9_090,
         )
-        for _ in range(16 if secondary == "truncated" else 0)
+        for _ in range(64 if secondary == "truncated" else 0)
     ]
     report = _control_diagnostic_snapshot(report_events)
     failure = _control_retry_event(
@@ -4179,7 +4179,7 @@ def test_control_close_first_fatal_remains_sticky_over_secondary_failure(
         truncated = False
     else:
         close_events = report_events
-        confirmed_count = 17
+        confirmed_count = 65
         truncated = True
     close = _control_diagnostic_snapshot(
         close_events,
@@ -4238,7 +4238,7 @@ def test_control_prior_report_stop_is_preserved_by_manual_secondary_provenance(
             expected_birth=9_090,
             observed_birth=9_090,
         )
-        for _ in range(16 if secondary == "truncated" else 0)
+        for _ in range(64 if secondary == "truncated" else 0)
     ]
     prior_stop = "CONTROL_TREE_WS_STOP"
     report = _control_diagnostic_snapshot(report_events, stop_reason=prior_stop)
@@ -4256,7 +4256,7 @@ def test_control_prior_report_stop_is_preserved_by_manual_secondary_provenance(
         message_code = "CONTROL_ENVELOPE_CLOSE_RETRY_IDENTITY_UNCOVERED"
     else:
         close_events = report_events
-        confirmed_count = 17
+        confirmed_count = 65
         truncated = True
         message_code = "CONTROL_TREE_SAMPLE_RETRY_EVIDENCE_INCOMPLETE"
     close = _control_diagnostic_snapshot(
@@ -5305,7 +5305,7 @@ def test_manifest_freezes_outer_observer_preregistration_contract() -> None:
                 "polls_not_claimed"
             ),
             "tree_sample_max_attempts": 3,
-            "tree_sample_retry_event_limit": 16,
+            "tree_sample_retry_event_limit": 64,
             "tree_sample_retry_policy": (
                 "whole_sample_retry_only_after_identity_bound_nonroot_exit_or_"
                 "win32_error_87_and_complete_toolhelp_snapshot_absence_with_"
@@ -6234,6 +6234,68 @@ def test_outer_close_v2_accepts_exact_runner_retry_shapes_and_cross_races(
         exit_release, complete, tombstone_context, bundle["manifest"]
     )
     assert validated["value"]["tree_sample_retry_events"] == [event]
+
+
+def test_outer_close_v2_accepts_retry_v4_27_event_nontruncated_evidence(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    bundle = _install_synthetic_outer_terminal_bundle(
+        monkeypatch, tmp_path, passed=False
+    )
+    tombstone_context = p1._validate_consumed_tombstone(
+        bundle["tombstone"], bundle["tombstone_sha256"], bundle["manifest"]
+    )
+    complete = p1._validate_terminal_complete(
+        tombstone_context, bundle["manifest"]
+    )
+    exit_release = p1._validate_terminal_exit_release(
+        complete, tombstone_context, bundle["manifest"]
+    )
+    event = _control_retry_event(
+        context="outer_tree_sample",
+        expected_birth=3_000,
+        observed_birth=3_000,
+        process_id=999,
+    )
+    events = [deepcopy(event) for _ in range(27)]
+    value = deepcopy(bundle["outer_close"])
+    value["tree_sample_confirmed_disappearance_count"] = 27
+    value["tree_sample_retry_events"] = events
+    value["tree_sample_retry_events_truncated"] = False
+    value["sampled_process_identities"].append(
+        {"process_id": 999, "birth_utc_ticks": 3_000}
+    )
+    value["sampled_process_identities"].sort(
+        key=lambda row: (row["process_id"], row["birth_utc_ticks"])
+    )
+    _write_json(bundle["outer_close_path"], value)
+
+    validated = p1._validate_outer_resource_envelope_close(
+        exit_release, complete, tombstone_context, bundle["manifest"]
+    )
+    assert len(validated["value"]["tree_sample_retry_events"]) == 27
+    assert validated["value"]["tree_sample_retry_events_truncated"] is False
+
+
+def test_outer_tree_sample_retry_event_limit_accepts_64_and_rejects_65() -> None:
+    manifest = _synthetic_manifest()
+    events = [
+        _control_retry_event(context="outer_tree_sample") for _ in range(64)
+    ]
+    diagnostics = {
+        "tree_sample_max_attempts": 3,
+        "tree_sample_confirmed_disappearance_count": 64,
+        "tree_sample_retry_events": events,
+        "tree_sample_retry_events_truncated": False,
+        "monitor_failure": None,
+    }
+    p1._validate_outer_tree_sample_diagnostics(diagnostics, manifest)
+
+    over_cap = deepcopy(diagnostics)
+    over_cap["tree_sample_confirmed_disappearance_count"] = 65
+    over_cap["tree_sample_retry_events"].append(deepcopy(events[0]))
+    with pytest.raises(p1.AvBsError, match="retry events exceed cap"):
+        p1._validate_outer_tree_sample_diagnostics(over_cap, manifest)
 
 
 def test_outer_close_v2_accepts_one_call_attempt_prefix() -> None:
@@ -8083,7 +8145,7 @@ $providers=[ordered]@{
 $ids=New-Object 'System.Collections.Generic.HashSet[int]'
 $births=New-Object 'System.Collections.Generic.Dictionary[int, Int64]'
 $births.Add(100,[int64]1000); [void]$ids.Add(100)
-$diagnostics=New-TreeSampleDiagnostics 16
+$diagnostics=New-TreeSampleDiagnostics 64
 try {
     $sample=Get-TreeSample 100 1000 $ids $births 'outer_tree_sample' $diagnostics $providers __MAXIMUM_ATTEMPTS__
     [ordered]@{
@@ -8172,7 +8234,7 @@ $providers=[ordered]@{
 $ids=New-Object 'System.Collections.Generic.HashSet[int]'
 $births=New-Object 'System.Collections.Generic.Dictionary[int, Int64]'
 $births.Add(100,[int64]1000); [void]$ids.Add(100)
-$diagnostics=New-TreeSampleDiagnostics 16
+$diagnostics=New-TreeSampleDiagnostics 64
 $sample=Get-TreeSample 100 1000 $ids $births '__TEST_CONTEXT__' $diagnostics $providers 3
 [ordered]@{sample=$sample;enumerations=$script:enumerations;child_identity_queries=$script:childIdentityQueries;child_metric_calls=$script:childMetricCalls;snapshot_queries=$script:snapshotQueries;retry_count=$diagnostics.confirmed_disappearance_count;events=@($diagnostics.retry_events)} | ConvertTo-Json -Depth 12 -Compress
 """.replace("__TEST_CONTEXT__", context)
@@ -8234,7 +8296,7 @@ $providers=[ordered]@{
 $ids=New-Object 'System.Collections.Generic.HashSet[int]'
 $births=New-Object 'System.Collections.Generic.Dictionary[int, Int64]'
 $births.Add(100,[int64]1000); [void]$ids.Add(100)
-$diagnostics=New-TreeSampleDiagnostics 16
+$diagnostics=New-TreeSampleDiagnostics 64
 try { [void](Get-TreeSample 100 1000 $ids $births 'outer_tree_sample' $diagnostics $providers 3); exit 91 }
 catch {
     [ordered]@{message=$_.Exception.Message;message_code=$_.Exception.Data['message_code'];operation=$_.Exception.Data['operation'];process_id=$_.Exception.Data['process_id'];win32_error_code=$_.Exception.Data['win32_error_code'];enumerations=$script:enumerations;observed=@($ids|Sort-Object)} | ConvertTo-Json -Depth 8 -Compress
@@ -8279,7 +8341,7 @@ $providers=[ordered]@{
 $ids=New-Object 'System.Collections.Generic.HashSet[int]'
 $births=New-Object 'System.Collections.Generic.Dictionary[int, Int64]'
 $births.Add(100,[int64]1000); [void]$ids.Add(100)
-$diagnostics=New-TreeSampleDiagnostics 16
+$diagnostics=New-TreeSampleDiagnostics 64
 try { [void](Get-TreeSample 100 1000 $ids $births 'outer_tree_sample' $diagnostics $providers 3); exit 91 }
 catch { [ordered]@{message_code=$_.Exception.Data['message_code'];operation=$_.Exception.Data['operation'];process_id=$_.Exception.Data['process_id'];enumerations=$script:enumerations;child_identity_queries=$script:childIdentityQueries;snapshot_queries=$script:snapshotQueries;retry_count=$diagnostics.confirmed_disappearance_count} | ConvertTo-Json -Compress }
 """,
@@ -8321,7 +8383,7 @@ $providers=[ordered]@{
 $ids=New-Object 'System.Collections.Generic.HashSet[int]'
 $births=New-Object 'System.Collections.Generic.Dictionary[int, Int64]'
 $births.Add(100,[int64]1000); [void]$ids.Add(100)
-$diagnostics=New-TreeSampleDiagnostics 16
+$diagnostics=New-TreeSampleDiagnostics 64
 try { [void](Get-TreeSample 100 1000 $ids $births 'outer_tree_sample' $diagnostics $providers 3); exit 91 }
 catch {
     [ordered]@{
@@ -8392,7 +8454,7 @@ $providers=[ordered]@{{
 $ids=New-Object 'System.Collections.Generic.HashSet[int]'
 $births=New-Object 'System.Collections.Generic.Dictionary[int, Int64]'
 $births.Add(100,[int64]1000); [void]$ids.Add(100)
-$diagnostics=New-TreeSampleDiagnostics 16
+$diagnostics=New-TreeSampleDiagnostics 64
 try {{ [void](Get-TreeSample 100 1000 $ids $births 'outer_tree_sample' $diagnostics $providers 3); exit 91 }}
 catch {{ [ordered]@{{message_code=$_.Exception.Data['message_code'];enumerations=$script:enumerations;root_queries=$script:rootQueries}} | ConvertTo-Json -Compress }}
 """
@@ -8428,7 +8490,7 @@ $providers=[ordered]@{
 $ids=New-Object 'System.Collections.Generic.HashSet[int]'
 $births=New-Object 'System.Collections.Generic.Dictionary[int, Int64]'
 $births.Add(100,[int64]1000); [void]$ids.Add(100)
-$diagnostics=New-TreeSampleDiagnostics 16
+$diagnostics=New-TreeSampleDiagnostics 64
 try { [void](Get-TreeSample 100 1000 $ids $births 'outer_tree_sample' $diagnostics $providers 3); exit 91 }
 catch { [ordered]@{message_code=$_.Exception.Data['message_code'];expected_birth=$_.Exception.Data['expected_birth_utc_ticks'];observed_birth=$_.Exception.Data['observed_birth_utc_ticks'];enumerations=$script:enumerations;child_identity_queries=$script:childIdentityQueries;child_metrics=$script:childMetrics;recorded_birth=$births[300];retry_count=$diagnostics.confirmed_disappearance_count;event=@($diagnostics.retry_events)[0]} | ConvertTo-Json -Depth 10 -Compress }
 """,
@@ -8467,7 +8529,7 @@ $providers=[ordered]@{
 $ids=New-Object 'System.Collections.Generic.HashSet[int]'
 $births=New-Object 'System.Collections.Generic.Dictionary[int, Int64]'
 $births.Add(100,[int64]1000); [void]$ids.Add(100)
-$diagnostics=New-TreeSampleDiagnostics 16
+$diagnostics=New-TreeSampleDiagnostics 64
 try { [void](Get-TreeSample 100 1000 $ids $births 'outer_tree_sample' $diagnostics $providers 3); exit 91 }
 catch { [ordered]@{message_code=$_.Exception.Data['message_code'];observed_birth=$_.Exception.Data['observed_birth_utc_ticks'];enumerations=$script:enumerations;snapshot_queries=$script:snapshotQueries;retry_count=$diagnostics.confirmed_disappearance_count} | ConvertTo-Json -Compress }
 """,
@@ -8532,7 +8594,7 @@ $providers=[ordered]@{
 $ids=New-Object 'System.Collections.Generic.HashSet[int]'
 $births=New-Object 'System.Collections.Generic.Dictionary[int, Int64]'
 $births.Add(100,[int64]1000); [void]$ids.Add(100)
-$diagnostics=New-TreeSampleDiagnostics 16
+$diagnostics=New-TreeSampleDiagnostics 64
 try { [void](Get-TreeSample 100 1000 $ids $births 'outer_tree_sample' $diagnostics $providers 3); exit 91 }
 catch { [ordered]@{message_code=$_.Exception.Data['message_code'];attempt=$_.Exception.Data['attempt'];enumerations=$script:enumerations;child_metrics=$script:childMetrics;retry_count=$diagnostics.confirmed_disappearance_count} | ConvertTo-Json -Compress }
 """
@@ -8568,7 +8630,7 @@ $providers=[ordered]@{
 $ids=New-Object 'System.Collections.Generic.HashSet[int]'
 $births=New-Object 'System.Collections.Generic.Dictionary[int, Int64]'
 $births.Add(100,[int64]1000); [void]$ids.Add(100)
-$diagnostics=New-TreeSampleDiagnostics 16
+$diagnostics=New-TreeSampleDiagnostics 64
 try { [void](Get-TreeSample 100 1000 $ids $births 'outer_tree_sample' $diagnostics $providers 3); exit 91 }
 catch { [ordered]@{message_code=$_.Exception.Data['message_code'];enumerations=$script:enumerations;snapshot_queries=$script:snapshotQueries;retry_count=$diagnostics.confirmed_disappearance_count} | ConvertTo-Json -Compress }
 """,
@@ -8906,7 +8968,7 @@ $providers=[ordered]@{
 $ids=New-Object 'System.Collections.Generic.HashSet[int]'
 $births=New-Object 'System.Collections.Generic.Dictionary[int, Int64]'
 $births.Add(100,[int64]1000); [void]$ids.Add(100)
-$diagnostics=New-TreeSampleDiagnostics 16
+$diagnostics=New-TreeSampleDiagnostics 64
 try { [void](Get-TreeSample 100 1000 $ids $births 'outer_tree_sample' $diagnostics $providers 3); exit 91 }
 catch { [ordered]@{message_code=$_.Exception.Data['message_code'];operation=$_.Exception.Data['operation'];enumerations=$script:enumerations;snapshot_queries=$script:snapshotQueries;retry_count=$diagnostics.confirmed_disappearance_count} | ConvertTo-Json -Compress }
 """,
@@ -8936,7 +8998,7 @@ $providers=[ordered]@{
 $ids=New-Object 'System.Collections.Generic.HashSet[int]'
 $births=New-Object 'System.Collections.Generic.Dictionary[int, Int64]'
 $births.Add(100,[int64]1000); [void]$ids.Add(100)
-$diagnostics=New-TreeSampleDiagnostics 16
+$diagnostics=New-TreeSampleDiagnostics 64
 try { [void](Get-TreeSample 100 1000 $ids $births 'outer_tree_sample' $diagnostics $providers 3); exit 91 }
 catch { [ordered]@{message_code=$_.Exception.Data['message_code'];operation=$_.Exception.Data['operation'];enumerations=$script:enumerations;retry_count=$diagnostics.confirmed_disappearance_count} | ConvertTo-Json -Compress }
 """,
@@ -8960,7 +9022,7 @@ $innerIds=New-Object 'System.Collections.Generic.HashSet[int]'
 $sharedBirths=New-Object 'System.Collections.Generic.Dictionary[int, Int64]'
 $sharedBirths.Add(100,[int64]1000); [void]$outerIds.Add(100)
 $sharedBirths.Add(150,[int64]1500); [void]$outerIds.Add(150); [void]$innerIds.Add(150)
-$diagnostics=New-TreeSampleDiagnostics 16
+$diagnostics=New-TreeSampleDiagnostics 64
 $outerProviders=[ordered]@{
     Enumerate={param([int]$RootProcessId) return @([int]100,[int]150,[int]200)}
     Identity={param([int]$ProcessId)
@@ -9033,7 +9095,7 @@ catch {
 def test_runner_exited_snapshot_stabilization_policy_is_exactly_pinned() -> None:
     source = RUNNER.read_text(encoding="utf-8")
     assert hashlib.sha256(RUNNER.read_bytes()).hexdigest() == (
-        "7893cd57fd4b1686addd434fa0103d9f3b0e0087f4783f2c82e459661abfb645"
+        "3888524877f7a90966fb932f7f9fc4c9a48480134eb6295712eaa0ef548416a3"
     )
     begin = source.index("# AV_BS_TREE_SAMPLE_TEST_SLICE_BEGIN")
     end = source.index("# AV_BS_TREE_SAMPLE_TEST_SLICE_END")
@@ -9084,10 +9146,10 @@ def test_runner_native_process_snapshot_and_metric_probes_are_fail_closed() -> N
     assert "error == ERROR_INVALID_PARAMETER ? 0 : -1" in metric_probe
 
 
-def test_runner_control_tree_samples_use_bounded_diagnostics_but_factor_calls_do_not() -> None:
+def test_runner_control_and_active_factor_tree_samples_use_bounded_retries() -> None:
     source = RUNNER.read_text(encoding="utf-8")
     assert "$treeSampleMaximumAttempts = 3" in source
-    assert "$treeSampleRetryEventLimit = 16" in source
+    assert "$treeSampleRetryEventLimit = 64" in source
     control = source[
         source.index("function Invoke-ControlPlanePython") : source.index(
             "function Get-OuterObserverSessionPaths"
@@ -9125,7 +9187,12 @@ def test_runner_control_tree_samples_use_bounded_diagnostics_but_factor_calls_do
         if "Get-TreeSample " in line
     ]
     assert len(factor_calls) == 5
-    assert all("$treeSampleMaximumAttempts" not in call for call in factor_calls)
+    assert all(
+        "-MaximumAttempts $treeSampleMaximumAttempts" in call
+        for call in factor_calls[:4]
+    )
+    assert "$caughtFinalTree = Get-TreeSample" in factor_calls[4]
+    assert "-MaximumAttempts" not in factor_calls[4]
     assert all("$controlTreeSampleDiagnostics" not in call for call in factor_calls)
 
 

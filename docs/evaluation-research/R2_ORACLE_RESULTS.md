@@ -190,9 +190,31 @@ runner `7893cd57fd4b1686addd434fa0103d9f3b0e0087f4783f2c82e459661abfb645`,
 tests `18aabcdf7b32c6b013aec65497d31f4d908f3085f53f64cb3791f38a2e79381d`;
 focused `11/11` and no-cache `322/322` passed. `next_stage_authorized=false`.
 
+## Retry-v5 non-result record
+
+The fifth H4-P0R-P1 invocation also changes no R2 oracle result. Token-only
+commit `5ba4b693...` reached the claim and factor child for the first time and
+recorded `108` child-visible samples, but the factor monitor stopped on
+`NONROOT_DISAPPEARANCE_NOT_CONFIRMED` at an active default-one sample call.
+There are zero prefixes/certificates/completed factors; actual factor entry is
+indeterminate. RHS, solve, H4 physics, PowerSI, and 8 GiB feasibility remain
+unmeasured. The resource stop was primary; the zero-byte stdout result-schema
+overlay is preserved as a deferred secondary issue.
+
+Outer close `9d0c0aab...` was otherwise clean but counted/stored `27/16` retry
+events, set truncation, and wrote no seal. The consumed state is frozen by
+`46c08d405...`; token retirement `71d3dab...` leaves no token. Retry-v5 only
+opts the four active factor samples into maximum `3` and raises the bounded
+shared outer/control event cap to `64`. Frozen Python/runner/tests hashes are
+`54aa7da9daa013cec41585ae07757e6c54e8e9d15da7f4f16d4f6546b6fb35aa` /
+`3888524877f7a90966fb932f7f9fc4c9a48480134eb6295712eaa0ef548416a3` /
+`b51498ebe27a0210a09b3a12b26e0146d39c1249906469bcb1add1d2f2443f08`;
+focused/full tests passed `29/29` and `324/324`. Token absent, factor fit
+unproven, and `next_stage_authorized=false` remain unchanged.
+
 ## 다음 R2 연구
 
-1. failed M1-EQ0 collocation, G1 `passed_exterior_galerkin_only`, G2 `passed_pair_screen_only`와 100 kHz circle reciprocity/cancellation failure를 보존한다. 독립 A–v boundary-Schur H0 negative, H1 coarse-h와 H2 `passed_AV_BS_h2_stage_only_pending_h4_preregistration` artifacts 및 consumed tokens도 함께 보존한다. H4-P0, [`H4-P0R parent`](T1_AV_BOUNDARY_SCHUR_H4_P0R_PREREG.md), [`P1 executable/lifecycle`](T1_AV_BOUNDARY_SCHUR_H4_P0R_P1_PREREG.md)과 세 pre-factor interruption/retirement를 보존한다. 현재 token absent/factor fit unproven이며 retry-v3 clean no-token contract reread/fresh token 전에는 factor를, result audit 전에는 h4 physics/withheld 또는 EQ0 mesh·crop, planned G2 N512/2 GHz circle/EQ0 seed를 실행하지 않는다. `next_stage_authorized=false`다.
+1. failed M1-EQ0 collocation, G1 `passed_exterior_galerkin_only`, G2 `passed_pair_screen_only`와 100 kHz circle reciprocity/cancellation failure를 보존한다. 독립 A–v boundary-Schur H0 negative, H1 coarse-h와 H2 `passed_AV_BS_h2_stage_only_pending_h4_preregistration` artifacts 및 consumed tokens도 함께 보존한다. H4-P0, [`H4-P0R parent`](T1_AV_BOUNDARY_SCHUR_H4_P0R_PREREG.md), [`P1 executable/lifecycle`](T1_AV_BOUNDARY_SCHUR_H4_P0R_P1_PREREG.md)과 다섯 public attempt/retirement를 보존한다. 다섯 번째는 claim/factor-child reach 뒤에도 0 certified factors와 indeterminate factor outcome만 남겼다. 현재 token absent/factor fit unproven이며 retry-v5 clean no-token contract reread/fresh token 전에는 factor pilot을, result audit 전에는 h4 physics/withheld 또는 EQ0 mesh·crop, planned G2 N512/2 GHz circle/EQ0 seed를 실행하지 않는다. `next_stage_authorized=false`다.
 2. S1은 circular/void boundary-conforming refinement와 h/h/2/h/4 추정 오차를 먼저 해결한다.
 3. V1/V2는 명시적 coax/ring return을 가진 2-D/3-D reference와 동일 crop의 exact-minus-core matrix를 만든다.
 4. A1은 current cell-centred solver를 승격하지 않고 body-fitted/higher-order 후보를 비교한다.

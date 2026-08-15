@@ -4,7 +4,7 @@
 
 ## 판정과 범위
 
-현재 physics artifact 상태는 **`passed_AV_BS_h2_stage_only_pending_h4_preregistration`**이다. H1 17.5 µm/100 kHz coarse `h`와 H2 refined `h2`가 각각 stage-evaluable gate를 통과했다. H2 result는 `mandatory_stage_pass=true`, failure code 없음, factorization/physics `true`지만 `next_stage_authorized=false`, fine analytic/mesh convergence/final circle은 `null`이다. H2 one-use token은 consumed tombstone으로 교체돼 `uses_remaining=0`이다. H4-P0는 topology/canonical assembly와 resource envelope를 manifest-only로 고정했고, H4-P0R은 factor-pilot의 exact matrix/equilibration/resource/lifecycle parent와 후속 P1 executable 계약을 고정했다. 세 P1 공개 시도는 모두 claim/factor 전에 fail-closed 됐고 token은 재사용 없이 폐기됐다. 세 번째는 outer/control ready/start release까지 진행한 뒤 control preflight의 default `MaximumAttempts=1` retry exhaustion으로 중단됐다. 현재 P1 token은 없고 control-plane retry-v3 static candidate만 있으며 `factor_fit_unproven=true`, `next_stage_authorized=false`; H4 physics도 승인하지 않는다. 이 문서는 G2 실패를 보정하는 문서가 아니라 독립 volume-FEM reference candidate를 고정하며, 제품 parser, solver, UI, version과 installer는 수정하지 않는다.
+현재 physics artifact 상태는 **`passed_AV_BS_h2_stage_only_pending_h4_preregistration`**이다. H1 17.5 µm/100 kHz coarse `h`와 H2 refined `h2`가 각각 stage-evaluable gate를 통과했다. H2 result는 `mandatory_stage_pass=true`, failure code 없음, factorization/physics `true`지만 `next_stage_authorized=false`, fine analytic/mesh convergence/final circle은 `null`이다. H2 one-use token은 consumed tombstone으로 교체돼 `uses_remaining=0`이다. H4-P0는 topology/canonical assembly와 resource envelope를 manifest-only로 고정했고, H4-P0R은 factor-pilot의 exact matrix/equilibration/resource/lifecycle parent와 후속 P1 executable 계약을 고정했다. 다섯 P1 공개 시도 중 첫 네 번은 factor 전 중단됐고 다섯 번째는 claim/factor-child와 108 resource samples까지 진행했지만 0 factors만 인증했다. factor attempted/performed는 `null`, RHS/solve/H4 physics는 미실행이다. 현재 P1 token은 없고 retry-v5 static candidate만 있으며 `factor_fit_unproven=true`, `next_stage_authorized=false`; H4 physics도 승인하지 않는다. 이 문서는 G2 실패를 보정하는 문서가 아니라 독립 volume-FEM reference candidate를 고정하며, 제품 parser, solver, UI, version과 installer는 수정하지 않는다.
 
 AV-BS1은 아직 oracle이 아니다. H2는 local one-mesh gate만 통과했고 `h→h2` RMS/max/phase `0.462796%/0.868015%/0.000166396°`는 trend-only다. 이후 별도 `h4` mesh convergence, fine analytic gate, final circle 판정과 withheld radius를 모두 통과해야 circle-interior reference로 제한 승격할 수 있다. 이 문서의 어떤 결과도 finite/open EQ0, full T1, GlobalMNA, PowerSI accuracy 또는 8 GB product performance를 승인하지 않는다.
 
@@ -188,7 +188,7 @@ edeg(m) = |Yhat_m-Yhat_-m| / max(|Yhat_m|,|Yhat_-m|,Ymode_floor), m=1…4
 3. H2-P0 topology/assembly/resource manifest와 H2-P1 fixture/runner/result contract를 별도 clean commits와 static review에 고정한 뒤 one-use token으로 `h2`를 한 번 실행했다. 같은 stage-evaluable gate와 `h→h2` trend를 검토했지만 fine analytic 또는 final convergence pass는 선언하지 않았고 token은 consumed 상태다.
 4. H2 result와 consumed tombstone을 review/commit하고 별도 H4-P0 mesh/assembly/dual-resource manifest를 고정했다. prospective 2 GiB factor cap은 fit이 미증명이므로 이 manifest만으로 `h4`를 승인하지 않는다.
 5. 별도 H4-P0R manifest-only fixture/runner/test/doc가 `KII/AbII/MII/ApII`, equilibration, factor-only result/resource/lifecycle schema와 forbidden operation을 고정했고 23개 정적 test 및 세 독립 감사를 통과했다. 이 parent 단계에는 token, claim, finalizer, factorization 또는 physics 경로가 없다.
-6. 후속 P1 executable/runner/claim/finalizer/outer observer와 one-use lifecycle을 정적 감사했다. 첫 fresh-token 공개 시도는 token read 전 root-only collection strict-mode 오류, 두 번째는 ready 전 outer tree-sampling 예외로 claim/factor 전에 중단됐다. 역사적 retry-v2로 실행한 세 번째 시도는 outer/control ready/start release 뒤 control preflight tree sample의 default `MaximumAttempts=1`에서 `TRANSIENT_DESCENDANT_DISAPPEARANCE_RETRY_EXHAUSTED`로 중단됐으며 target completion, claim과 factor에 도달하지 않았다. 세 token은 재사용 없이 삭제-only retirement했고 현재 token은 없다. retry-v3는 instrumented outer observer와 여섯 control context만 confirmed non-root disappearance에 최대 3회 전체 sample 재시작과 16-event typed evidence를 허용하며 partial 합계를 폐기한다. factor sampling call sites와 함수 default는 `MaximumAttempts=1` 그대로다. root/reuse/live/access/incomplete-snapshot/identity-coverage failure와 exhaustion은 fatal이다. 새 token-absent contract를 다시 읽고 fresh token-only child를 만든 뒤에만 `KII`와 `ApII` factor fill/resource를 한 번 측정한다. RHS, harmonic extension, boundary `Y`, modal response와 physics result는 만들지 않는다.
+6. 후속 P1 executable/runner/claim/finalizer/outer observer와 one-use lifecycle을 정적 감사했다. 첫 fresh-token 공개 시도는 token read 전 root-only collection strict-mode 오류, 두 번째는 ready 전 outer tree-sampling 예외로 claim/factor 전에 중단됐다. 세 번째와 네 번째 역사 기록도 보존한다. 다섯 번째는 claim과 factor child까지 도달했지만 active factor default-one disappearance failure로 0 factors만 인증했고 outer 27/16 truncation 때문에 seal이 없었다. 다섯 token은 재사용 없이 삭제-only retirement했고 현재 token은 없다. retry-v5는 네 active factor sample까지 최대 3회 whole-sample retry를 적용하고 outer/control typed-event cap을 64로 둔다. function default와 caught cleanup은 1이고 root/reuse/live/access/incomplete-snapshot/identity-coverage failure와 exhaustion은 fatal이다. 새 token-absent contract를 다시 읽고 fresh token-only child를 만든 뒤에만 `KII`와 `ApII` factor fill/resource를 한 번 측정한다. RHS, harmonic extension, boundary `Y`, modal response와 physics result는 만들지 않는다.
 7. P0R result audit 뒤 H4 physics/result contract, clean commit, static audit와 새 one-use token을 고정한 뒤에만 `h4`를 별도 command로 실행한다. 이때 stage-evaluable gate, signed `M9` fine analytic/degeneracy와 mandatory `h2→h4` RMS/max/phase convergence를 처음 판정한다.
 8. `h4`와 final convergence가 모두 통과하면 상태는 **`passed_AV_BS_circle_17p5um_100k_only`**다. 이는 circle interior-only다.
 9. 그 뒤 같은 generator를 기하학적으로 scale한 `a=0.5 mm`, 100 kHz withheld radius의 mesh hash와 analytic anchor를 결과 전에 별도 고정하고, 동일한 `h` review → `h2` review → `h4` final-convergence chain을 반복한다.
@@ -245,7 +245,7 @@ H0에서 runner가 redirected child handle을 retain하지 않아 failure proces
 
 H1 static freeze는 `16 passed`, fixture SHA-256 `e2a1c8efff67873b57dc7a658b013e3e76d0c921988011f4c8e70cd25f00f8a7`, runner SHA-256 `dd880de721b9a688ae953c7363dc4a8b482ec1b26f59871d4ca8f83397eb2b7c`다. authorized token은 H0 artifact, cyclic tag, canonical K와 세 독립 감사 증거를 검증했고 H1 artifact 생성 뒤 consume됐다. 실제 H1 수치와 범위는 [`T1_AV_BOUNDARY_SCHUR_RESULTS.md`](T1_AV_BOUNDARY_SCHUR_RESULTS.md)에 고정한다.
 
-H2-P0 refined lineage, 3,712-tag 선택, raw/canonical `K/M/MΓ` hash와 conservative resource arithmetic은 [`T1_AV_BOUNDARY_SCHUR_H2_PREREG.md`](T1_AV_BOUNDARY_SCHUR_H2_PREREG.md)에 고정한다. H2-P1의 token/claim/guard/result/tombstone contract, signed-M9 trend, 독립 modal PDE residual과 volume-power certificate는 실행 전 immutable snapshot인 [`T1_AV_BOUNDARY_SCHUR_H2_P1_PREREG.md`](T1_AV_BOUNDARY_SCHUR_H2_P1_PREREG.md)에 고정한다. H4-P0의 7,424-tag topology, H4 전용 `256uκ`, canonical assembly와 dual resource envelope는 [`T1_AV_BOUNDARY_SCHUR_H4_P0_PREREG.md`](T1_AV_BOUNDARY_SCHUR_H4_P0_PREREG.md)에 고정한다. H4-P0R parent의 factor-only matrix/equilibration, 900 s·4/5/5 GiB resource policy, one-use schema와 금지 연산은 [`T1_AV_BOUNDARY_SCHUR_H4_P0R_PREREG.md`](T1_AV_BOUNDARY_SCHUR_H4_P0R_PREREG.md)에, P1 executable/outer-observer/seal-v2와 세 pre-factor interruption, 역사적 retry-v2 및 현재 control-plane retry-v3 계약은 [`T1_AV_BOUNDARY_SCHUR_H4_P0R_P1_PREREG.md`](T1_AV_BOUNDARY_SCHUR_H4_P0R_P1_PREREG.md)에 고정한다. 실제 H2 artifact/checksum/gates와 consumed token은 [`T1_AV_BOUNDARY_SCHUR_RESULTS.md`](T1_AV_BOUNDARY_SCHUR_RESULTS.md)에 기록한다. 어느 manifest 통과도 physics를 자동 승인하거나 후속 token을 발급하지 않는다.
+H2-P0 refined lineage, 3,712-tag 선택, raw/canonical `K/M/MΓ` hash와 conservative resource arithmetic은 [`T1_AV_BOUNDARY_SCHUR_H2_PREREG.md`](T1_AV_BOUNDARY_SCHUR_H2_PREREG.md)에 고정한다. H2-P1의 token/claim/guard/result/tombstone contract, signed-M9 trend, 독립 modal PDE residual과 volume-power certificate는 실행 전 immutable snapshot인 [`T1_AV_BOUNDARY_SCHUR_H2_P1_PREREG.md`](T1_AV_BOUNDARY_SCHUR_H2_P1_PREREG.md)에 고정한다. H4-P0의 7,424-tag topology, H4 전용 `256uκ`, canonical assembly와 dual resource envelope는 [`T1_AV_BOUNDARY_SCHUR_H4_P0_PREREG.md`](T1_AV_BOUNDARY_SCHUR_H4_P0_PREREG.md)에 고정한다. H4-P0R parent의 factor-only matrix/equilibration, 900 s·4/5/5 GiB resource policy, one-use schema와 금지 연산은 [`T1_AV_BOUNDARY_SCHUR_H4_P0R_PREREG.md`](T1_AV_BOUNDARY_SCHUR_H4_P0R_PREREG.md)에, P1 executable/outer-observer/seal-v2와 다섯 interruption 및 현재 retry-v5 계약은 [`T1_AV_BOUNDARY_SCHUR_H4_P0R_P1_PREREG.md`](T1_AV_BOUNDARY_SCHUR_H4_P0R_P1_PREREG.md)에 고정한다. 실제 H2 artifact/checksum/gates와 consumed token은 [`T1_AV_BOUNDARY_SCHUR_RESULTS.md`](T1_AV_BOUNDARY_SCHUR_RESULTS.md)에 기록한다. 어느 manifest 통과도 physics를 자동 승인하거나 후속 token을 발급하지 않는다.
 
 ## Conditional EQ0 A–v contract
 
@@ -299,13 +299,35 @@ unchanged. Frozen static SHA-256 bindings are Python
 `18aabcdf7b32c6b013aec65497d31f4d908f3085f53f64cb3791f38a2e79381d`;
 focused `11/11` and full no-cache `322/322` passed. `next_stage_authorized=false`.
 
+## Retry-v5 execution-only amendment
+
+The fifth public attempt (`5ba4b693...`, exit `2`) created the claim and reached
+factor child PID `55552`, which was visible for `108/108` successful samples.
+The monitor then stopped on `NONROOT_DISAPPEARANCE_NOT_CONFIRMED` because the
+four active factor samples still used default maximum `1`. There is no prefix,
+certificate, completion marker, or release, so actual factor entry is
+indeterminate and completed factor count is zero. The mathematical operator,
+RHS, extension, boundary response, modal physics, and accuracy gates did not run.
+
+Outer close `9d0c0aab...` counted/stored `27/16` retry events, marked
+truncation, and withheld the seal. The attempt is consumed in `46c08d405...`
+and its token retired by `71d3dab...`. Retry-v5 only opts the active four
+factor samples into maximum `3` and changes the shared bounded outer/control
+event cap to `64`; retry predicates and all other fatal/default-one paths are
+unchanged. Empty-stdout normalization is deferred. Frozen Python/runner/tests
+SHA-256 are `54aa7da9daa013cec41585ae07757e6c54e8e9d15da7f4f16d4f6546b6fb35aa` /
+`3888524877f7a90966fb932f7f9fc4c9a48480134eb6295712eaa0ef548416a3` /
+`b51498ebe27a0210a09b3a12b26e0146d39c1249906469bcb1add1d2f2443f08`;
+focused/full `29/29` and `324/324` passed. This execution amendment does not
+change any equation or physics gate; token absent and next false.
+
 ## Exact next starting point
 
 1. H0 negative와 H1 h-stage artifact/checksum/resource 결과를 immutable하게 보존하고, H1 primary-h token을 consumed tombstone으로 유지한다.
 2. 완료된 H2-P0 refined lineage/assembly/resource manifest와 exact fixture/runner/test bytes의 commit `4c1e3fce8aac659dd0aedb06c2b6d274fff73a12`를 보존한다.
 3. 완료된 H2 artifact, 독립 audit와 consumed tombstone을 research commit에 고정한다.
 4. 완료한 H4-P0 assembly manifest와 H4-P0R contract-only manifest를 clean research commit에 고정한다.
-5. H4-P0R-P1의 세 pre-factor interruption, token retirement와 validation-output를 보존한다. 현재 retry-v3 fixture/runner/tests/docs를 token-absent clean contract와 독립 audit에 고정하고 그 exact committed manifest를 다시 읽은 뒤 fresh token-only child를 만든다. retired token commits `b6c8615...`, `d9e064f...`, `6328174...`는 재실행하지 않는다.
+5. H4-P0R-P1의 다섯 interruption, token retirement와 validation-output를 보존한다. 현재 retry-v5 fixture/runner/tests/docs를 token-absent clean contract와 독립 audit에 고정하고 그 exact committed manifest를 다시 읽은 뒤 fresh token-only child를 만든다. retired token commits `b6c8615...`, `d9e064f...`, `6328174...`, `9b4854d...`, `5ba4b69...`는 재실행하지 않는다.
 6. fresh token에서 factorization-only pilot 한 번으로 실제 fill/resource fit만 측정한다. RHS/solve/extension/Y/modal/physics는 금지하고, P0R 결과를 독립 감사한 뒤 H4 result schema와 h2→h4/fine analytic 판정을 별도 사전등록·clean commit·fresh one-use token으로 완료하기 전에는 h4 physics solve를 실행하지 않는다. 모든 경우 `next_stage_authorized=false`다.
 
 ## Primary literature
