@@ -1,23 +1,38 @@
 # SPD Decap PI Evaluator v0.22.0 — Local Physics Oracle Plan
 
-> **SPD Decap PI Evaluator v0.22.0 — retry-v7 current boundary:** Seven public
-> `primary-h4-p0r` invocations are immutable. In the seventh, native `splu`
-> returned for `A_background_II`; attempted/performed are `true/true` and the
-> completed-name list contains it, but the obsolete native/exported nnz equality
-> gate failed before any certificate or prefix. `A_conductor_II` was not
-> attempted and the exact native/exported factor counts were not persisted.
-> Inner/outer monitoring retained `174/573` samples and all `31` outer retry
-> events without truncation; both resource gates passed, but this is neither
-> accuracy evidence nor an 8 GiB-fit claim. Commits `51e5069...` and
-> `17414cf...` record consumption and deletion-only retirement; token state is
-> absent. Retry-v7 requires `0 < exported <= native`, validates distinct
-> native/exported portable-byte formulas and caps both, without schema, retry,
-> or factor-order changes. Frozen Python/runner/tests SHA-256 are `7a1dba5e...` /
-> `852ce8a0...` / `bd2e3e2c...`; focused `25/25` and full no-cache `341/341`
-> passed, the latter in `88.40 s`. No RHS, solve, H4 physics, or PowerSI work
-> ran; `next_stage_authorized=false`. Earlier retry-v6 sections are immutable
-> history. Exact evidence is in [results](T1_AV_BOUNDARY_SCHUR_RESULTS.md) and
-> the [reproduction appendix](ORACLE_REPRODUCTION.md).
+> **SPD Decap PI Evaluator v0.22.0 — retry-v8 current static boundary:** Eight
+> public `primary-h4-p0r` invocations are immutable. In the eighth, run from
+> retry-v7 token-only commit `66211ef...`, native `splu` returned for
+> `A_background_II`; attempted/performed are `true/true` and its completed name
+> is durable, but combined non-canonical factor storage stopped the certificate
+> path with zero certificates and prefixes. `A_conductor_II`, RHS, solve, and
+> physics never started. The resource artifact passed, while independent
+> outer/control monitoring falsely exhausted retries across distinct
+> confirmed-dead helpers; no terminal seal or published result exists. Seven
+> temporary evidence files were copied byte-identically into ignored quarantine.
+> Valid provisional emergency consumption commit `8fce704...` and D-only
+> retirement `7964464...` leave the token absent. Retry-v8 records raw L/U hashes,
+> raw composite canonical flags (false when unsorted), and zero scans. The pre-sort
+> `has_sorted_indices` value is a local sort predicate, not a certificate field;
+> chunked column spans and row bounds are validated, nonfinite values and explicit
+> zeros fail, and every unsorted L/U is sorted in place. Sorted/canonical format is
+> then rechecked, which rejects duplicates; the canonical hash helper enforces that
+> format, and finite/zero data is re-scanned. It makes no schema or field bump, L/U
+> or whole-factor matrix copy, coalescing, or pruning. Attempts group only within
+> one `Get-TreeSample` producer call and state resets per invocation. Cumulative
+> report history may therefore contain adjacent same-identity attempt `1/1` entries
+> separated by a successful return; only the known one-call close suffix enforces
+> adjacency. Within a call, stored event 64 fails before retry continuation; reused
+> diagnostics can advance beyond 64 only as failed/truncated evidence, never a
+> passing sample. Max3/cap64 fields and schemas remain unchanged, and cleanup-race
+> hardening is deferred. Frozen Python/runner/tests SHA-256 are `c26112b0...` /
+> `7e675cc3...` / `426f8388...`. Collection is `387`; focused root `23`
+> passed / `363` deselected and independent `27` passed / `360` deselected;
+> the full exact-document suite passed `387/387` in `94.11 s`.
+> `factor_fit_unproven=true`; `next_stage_authorized=false`. Earlier retry-v7
+> sections are immutable history. Exact evidence is in
+> [results](T1_AV_BOUNDARY_SCHUR_RESULTS.md) and the
+> [reproduction appendix](ORACLE_REPRODUCTION.md).
 
 
 최종 갱신: 2026-08-16 (Asia/Seoul)
@@ -108,7 +123,7 @@ Positive-frequency anchor는 100 kHz, 1/10/100/500 MHz, 1/2 GHz다. skin crossov
 | ID | 판정 | 핵심 근거 |
 |---|---|---|
 | N0 | pass, scalar-only | frozen reproduction 포함 두 제조 예제 reduced/unreduced max relative Z error `5.34e-15`; owner ledger 완전 |
-| T1 | blocked, limited subcase pass | Cohn/periodic manufactured passes와 M1/G1/G2 frozen limits를 보존한다. `AV-BS1-CIRCLE` H1/H2는 stage-only pass다. 일곱 번째 P1은 `A_background_II` native return 뒤 certificate/prefix 전에 차단됐고 `A_conductor_II`는 미시도다. 현재 retry-v7 candidate, token absent, `factor_fit_unproven=true`, `next_stage_authorized=false`; fine analytic/convergence/final circle, H4 physics/PowerSI는 미실행 |
+| T1 | blocked, limited subcase pass | Cohn/periodic manufactured passes와 M1/G1/G2 frozen limits를 보존한다. `AV-BS1-CIRCLE` H1/H2는 stage-only pass다. 여덟 번째 P1은 `A_background_II` native return 뒤 combined non-canonical storage로 certificate/prefix 0에서 멈췄고 `A_conductor_II`는 미시도다. Resource artifact는 pass지만 distinct-helper outer/control false exhaustion으로 seal/published result는 없다. 현재 retry-v8 candidate, token absent, `factor_fit_unproven=true`, `next_stage_authorized=false`; fine analytic/convergence/final circle, H4 physics/PowerSI는 미실행 |
 | S1 | blocked | rectangle 최종 refinement 0.299%는 부분 통과했으나 annulus refinement fail, 전체 corpus/crop/ownership 없음 |
 | V1 | blocked | solid-cylinder R/L/skin law는 통과했으나 명시적 coax return loop 없음 |
 | V2 | blocked | PEEC current sharing/invariant는 통과했으나 `global_mna_composable=False`, 3-D/exact-minus-core 없음 |
@@ -122,7 +137,7 @@ N0만 현재 constitutive scope 전체에서 gate를 통과했다. T1-E0, `M0 pa
 - smooth copper 0–2 GHz T1에는 skin/proximity/edge current를 포함한다. DC-only series R/L은 `T1a` screening이며 broadband pass가 아니다.
 - Cohn E0는 body edge를 exact node로 갖는 mesh h/32,h/64,h/128과 strip-edge padding 2h/4h/8h를 사용한다.
 - M0의 lateral-periodic slab과 finite/open rectangle을 같은 exact target으로 비교하지 않는다. M0 independent normalized 1-D FEM은 canonical과 material/thickness withheld를 통과했지만 `volume_only`다. free-space finite contour에는 side face/corner가 있으므로 periodic `coth`는 exact gate가 아니라 width-asymptotic 보조 지표뿐이다.
-- finite-width M1의 기존 panel/crop 계약과 independent A–v H1/H2 stage-only evidence를 보존한다. 일곱 번째 P1은 `A_background_II` native return만 남겼고 certified two-factor result는 없다. retry-v7 no-token contract와 full no-cache `341/341` pass를 독립 감사한 뒤 별도 승인 전에는 factor pilot을, P1 result audit와 별도 H4-P1 전에는 physics를 열지 않는다. 두 radius circle 통과 뒤에만 EQ0 crop/skin-mesh 계약을 연다.
+- finite-width M1의 기존 panel/crop 계약과 independent A–v H1/H2 stage-only evidence를 보존한다. 여덟 번째 P1은 `A_background_II` native return만 남겼고 certified two-factor result, seal, published result는 없다. retry-v8 no-token contract와 full exact-document 387-test suite의 `387/387` in `94.11 s` 통과 상태를 독립 감사한 뒤 별도 승인 전에는 factor pilot을, P1 result audit와 별도 H4-P1 전에는 physics를 열지 않는다. 두 radius circle 통과 뒤에만 EQ0 crop/skin-mesh 계약을 연다.
 - circle interior에서 frozen `C0-A0` 저주파 switch는 실패했고 `C0-A1` fixed `C0=1` direct/scaled `H^(2)`가 제한 통과했다. finite/open M1도 이 정책으로 시작하며 실패 시 A0로 자동 복귀하거나 주파수별로 tune하지 않는다. M0-only periodized kernel은 M1 실패가 interior sign/coupling으로 격리될 때 별도 time-boxed diagnostic으로만 사전 등록할 수 있다. 수치 범위는 operator-floor proof가 없으면 fail-closed다.
 - finite-length F는 동일 end fixture의 `Z(2l)−Z(l)` increment로 2-D p.u.l operator와 비교한다. raw finite 3-D Z의 exact length proportionality는 요구하지 않는다.
 - symmetric lumped π는 mandatory band 전체 `|γl|≤0.1`과 exact line matrix 0.5%/1% 비교를 모두 통과해야 한다. exact distributed stamp가 기본이다.
@@ -226,7 +241,7 @@ binding key. Frozen Python/runner/tests hashes are `2373a13f...` / `852ce8a0...`
 / `f1d0b044...`; focused `8/8` passed and full no-cache `330/330` passed in
 `81.83 s`. Retry policy/cap and every physics gate remain unchanged.
 
-## H4-P0R retry-v7 current non-result
+## H4-P0R retry-v7 historical non-result
 
 The seventh public P1 invocation at `4f60bd5...` changes no physics or oracle
 ranking. Native `splu` returned for `A_background_II`, so attempted/performed
@@ -247,10 +262,59 @@ are `7a1dba5e...` / `852ce8a0...` / `bd2e3e2c...`; focused `25/25` and full
 no-cache `341/341` passed, the latter in `88.40 s`. Detailed evidence is in
 [`T1_AV_BOUNDARY_SCHUR_RESULTS.md`](T1_AV_BOUNDARY_SCHUR_RESULTS.md) and
 [`ORACLE_REPRODUCTION.md`](ORACLE_REPRODUCTION.md).
+## H4-P0R retry-v8 current static candidate
+
+The eighth public `primary-h4-p0r` invocation ran once from retry-v7 token-only
+commit `66211ef...`. Native `splu` returned for `A_background_II`, making
+attempted/performed `true/true` with one completed name, but combined
+non-canonical L/U storage left zero certificates and prefixes. `A_conductor_II`,
+RHS, solve, and physics never started. The resource artifact passed; independent
+outer/control monitoring falsely exhausted across distinct confirmed-dead
+helpers, leaving no seal or published result. Seven temporary evidence files are
+byte-identical ignored-quarantine copies. Valid provisional emergency consumption
+`8fce704...` and D-only retirement `7964464...` leave the token absent.
+
+Retry-v8 records raw L/U storage hashes, raw composite canonical flags (false
+when unsorted), and explicit-zero scans before mutation. The pre-sort
+`has_sorted_indices` value is a local sort predicate, not a certificate field;
+chunked CSC column spans and row-index bounds are validated, nonfinite values
+and explicit zeros fail, and every unsorted L/U is sorted in place. Sorted and
+canonical format are then rechecked, which rejects duplicates; the canonical
+hash helper enforces that format, and finite/zero data is re-scanned without
+repeating the span or row-bound scan. There is no schema/field bump, L/U or
+whole-factor matrix copy, coalescing, or pruning.
+
+Attempt grouping is local to one `Get-TreeSample` producer call and state resets
+per invocation. Within one call, `A,B,A => 1,1,1`; `A,B,B,B => 1,1,2,3`,
+with same-identity attempt 3 fatal. Cumulative report history may legitimately
+contain adjacent same-identity attempt `1/1` entries separated by a successful
+return; report history therefore cannot enforce cross-call adjacency. Only the
+close-only suffix, known to come from one call, enforces the exact adjacent-
+strong transition.
+
+The cumulative/local cap remains hard at 64 even when diagnostics are null.
+Within a call, event 64 is stored and increments the total to 64; that same
+64th confirmed retry fails generically with
+`TREE_SAMPLE_TOTAL_RETRY_CAP_REACHED` unless simultaneous same-identity attempt
+3 takes precedence, and the failing call does not return to its retry loop.
+Reused diagnostics in a later cleanup or close call may advance
+`confirmed_count` beyond 64 and truncate the stored list, but that evidence is
+failed/truncated and can never support a passing sample. Existing max3/cap64
+fields and schemas remain unchanged; cleanup-race hardening is deferred.
+
+Frozen current Python/runner/tests SHA-256 are
+`c26112b0738224eed4f1401553adf6fc9a3512b37c475f5b52152cab98e6ecff` /
+`7e675cc31ab229485719200af8b508dae20bd234bff29428e84628029df2763e` /
+`426f83888587dc57b7874a4e8dd47f0965212a0c1d7fabde33e6f3ab2801a2e7`.
+Collection is `387`; focused root `23` passed / `363` deselected and
+independent `27` passed / `360` deselected. The full exact-document suite passed `387/387` in `94.11 s`. A future
+authorized public run would be ninth. Token state is absent, next-stage
+authority is false, and factor fit and H4 physics remain unproven.
+
 ## 실행 순서
 
 1. N0과 exact-minus-core identity case를 동결한다.
-2. 기존 M0/M1/G1/G2와 AV-BS1 H0/H1/H2 artifacts, H4 parents 및 일곱 public interruption/retirement를 보존한다. retry-v7 token-absent contract와 `341/341` pass를 독립 감사하고 별도 승인하기 전에는 factor pilot을 만들지 않는다. P0R result audit와 별도 H4-P1 전에는 h4 physics를 실행하지 않으며 withheld-radius review 전에는 EQ0 mesh/crop으로 확장하지 않는다.
+2. 기존 M0/M1/G1/G2와 AV-BS1 H0/H1/H2 artifacts, H4 parents 및 여덟 public interruption/retirement를 보존한다. retry-v8 token-absent contract와 full exact-document 387-test suite의 `387/387` in `94.11 s` 통과 상태를 독립 감사하고 별도 승인하기 전에는 factor pilot을 만들지 않는다. 이전 token commits를 재사용하지 않으며 미래 fresh-token run은 아홉 번째다. P0R result audit와 별도 H4-P1 전에는 h4 physics를 실행하지 않고, withheld-radius review 전에는 EQ0 mesh/crop으로 확장하지 않는다.
 3. P1/P2 explicit-ref trace의 actual return polygon/connectivity와 absolute/core DtN owner를 증명한다.
 4. S1, V1/V2, A1, C1의 남은 analytic/mesh/crop/invariant blocker를 해결한다.
 5. PowerSI에서 trace-only, plane-neck, via-pair, pad/antipad, finite-port coupon과 반복 해석을 확보한다.

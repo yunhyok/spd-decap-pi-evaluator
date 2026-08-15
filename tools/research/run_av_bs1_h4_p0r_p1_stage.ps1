@@ -2641,6 +2641,21 @@ function Get-TreeSample(
     $metricsProvider = [scriptblock]$Providers["Metrics"]
     $snapshotContainsProvider = [scriptblock]$Providers["SnapshotContains"]
     if ($null -ne $Diagnostics) { $Diagnostics.last_failure = $null }
+    $previousStrongRetryProcessId = $null
+    $previousStrongRetryBirthUtcTicks = $null
+    $totalRetryEventCount = if ($null -ne $Diagnostics) {
+        [int]$Diagnostics.confirmed_disappearance_count
+    } else {
+        [int]0
+    }
+    $totalRetryEventLimit = if ($null -ne $Diagnostics) {
+        [int]$Diagnostics.event_limit
+    } else {
+        [int]$treeSampleRetryEventLimit
+    }
+    if ($totalRetryEventCount -lt 0 -or $totalRetryEventLimit -lt 1) {
+        throw "BLOCKED_AV_BS_RESULT_SCHEMA: tree sample total retry bound is invalid"
+    }
 
     :treeSampleAttempt for ($attempt = 1; $attempt -le $MaximumAttempts; $attempt += 1) {
         $rootBefore = & $identityProvider $RootProcessId
@@ -2867,7 +2882,35 @@ function Get-TreeSample(
         }
 
         if ($null -ne $retryEvidence) {
+            $hasStrongRetryIdentity = (
+                $retryEvidence.confirmation -eq "signaled_handle_and_complete_snapshot_absent" -and
+                $retryEvidence.process_id -is [int] -and
+                [int]$retryEvidence.process_id -gt 0 -and
+                $retryEvidence.expected_birth_utc_ticks -is [long] -and
+                [int64]$retryEvidence.expected_birth_utc_ticks -gt 0 -and
+                $retryEvidence.observed_birth_utc_ticks -is [long] -and
+                [int64]$retryEvidence.observed_birth_utc_ticks -eq [int64]$retryEvidence.expected_birth_utc_ticks
+            )
+            $hasPreviousStrongRetryIdentity = (
+                $previousStrongRetryProcessId -is [int] -and
+                [int]$previousStrongRetryProcessId -gt 0 -and
+                $previousStrongRetryBirthUtcTicks -is [long] -and
+                [int64]$previousStrongRetryBirthUtcTicks -gt 0
+            )
+            $distinctStrongRetryIdentity = (
+                $hasStrongRetryIdentity -and
+                $hasPreviousStrongRetryIdentity -and
+                (
+                    [int]$retryEvidence.process_id -ne [int]$previousStrongRetryProcessId -or
+                    [int64]$retryEvidence.expected_birth_utc_ticks -ne [int64]$previousStrongRetryBirthUtcTicks
+                )
+            )
+            if ($distinctStrongRetryIdentity) {
+                $attempt = 1
+                $retryEvidence.attempt = [int]1
+            }
             Add-TreeSampleRetryEvidence $Diagnostics $retryEvidence
+            $totalRetryEventCount = [int]$totalRetryEventCount + 1
             if ($attempt -ge $MaximumAttempts) {
                 $exhausted = New-TreeSampleEvidence `
                     $attempt $retryEvidence.confirmation $Context `
@@ -2877,6 +2920,21 @@ function Get-TreeSample(
                     $retryEvidence.process_id $retryEvidence.process_role `
                     $retryEvidence.win32_error_code
                 Set-TreeSampleFailureAndThrow $Diagnostics $exhausted
+            }
+            if ($totalRetryEventCount -ge $totalRetryEventLimit) {
+                $totalRetryCapReached = New-TreeSampleEvidence `
+                    ([int]$attempt) $null $Context $null `
+                    "TREE_SAMPLE_TOTAL_RETRY_CAP_REACHED" $null `
+                    ([string]$retryEvidence.operation) $null $null $null
+                Set-TreeSampleFailureAndThrow $Diagnostics $totalRetryCapReached
+            }
+            if ($hasStrongRetryIdentity) {
+                $previousStrongRetryProcessId = [int]$retryEvidence.process_id
+                $previousStrongRetryBirthUtcTicks = [int64]$retryEvidence.expected_birth_utc_ticks
+            }
+            else {
+                $previousStrongRetryProcessId = $null
+                $previousStrongRetryBirthUtcTicks = $null
             }
             continue treeSampleAttempt
         }

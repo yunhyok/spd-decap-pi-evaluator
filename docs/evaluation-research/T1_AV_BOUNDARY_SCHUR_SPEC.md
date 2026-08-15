@@ -1,30 +1,45 @@
 # SPD Decap PI Evaluator v0.22.0 — AV-BS1 Boundary-Schur Preregistration
 
-> **SPD Decap PI Evaluator v0.22.0 — retry-v7 current boundary:** Seven public
-> `primary-h4-p0r` invocations are immutable. In the seventh, native `splu`
-> returned for `A_background_II`; attempted/performed are `true/true` and the
-> completed-name list contains it, but the obsolete native/exported nnz equality
-> gate failed before any certificate or prefix. `A_conductor_II` was not
-> attempted and the exact native/exported factor counts were not persisted.
-> Inner/outer monitoring retained `174/573` samples and all `31` outer retry
-> events without truncation; both resource gates passed, but this is neither
-> accuracy evidence nor an 8 GiB-fit claim. Commits `51e5069...` and
-> `17414cf...` record consumption and deletion-only retirement; token state is
-> absent. Retry-v7 requires `0 < exported <= native`, validates distinct
-> native/exported portable-byte formulas and caps both, without schema, retry,
-> or factor-order changes. Frozen Python/runner/tests SHA-256 are `7a1dba5e...` /
-> `852ce8a0...` / `bd2e3e2c...`; focused `25/25` and full no-cache `341/341`
-> passed, the latter in `88.40 s`. No RHS, solve, H4 physics, or PowerSI work
-> ran; `next_stage_authorized=false`. Earlier retry-v6 sections are immutable
-> history. Exact evidence is in [results](T1_AV_BOUNDARY_SCHUR_RESULTS.md) and
-> the [reproduction appendix](ORACLE_REPRODUCTION.md).
+> **SPD Decap PI Evaluator v0.22.0 — retry-v8 current static boundary:** Eight
+> public `primary-h4-p0r` invocations are immutable. In the eighth, run from
+> retry-v7 token-only commit `66211ef...`, native `splu` returned for
+> `A_background_II`; attempted/performed are `true/true` and its completed name
+> is durable, but combined non-canonical factor storage stopped the certificate
+> path with zero certificates and prefixes. `A_conductor_II`, RHS, solve, and
+> physics never started. The resource artifact passed, while independent
+> outer/control monitoring falsely exhausted retries across distinct
+> confirmed-dead helpers; no terminal seal or published result exists. Seven
+> temporary evidence files were copied byte-identically into ignored quarantine.
+> Valid provisional emergency consumption commit `8fce704...` and D-only
+> retirement `7964464...` leave the token absent. Retry-v8 records raw L/U hashes,
+> raw composite canonical flags (false when unsorted), and zero scans. The pre-sort
+> `has_sorted_indices` value is a local sort predicate, not a certificate field;
+> chunked column spans and row bounds are validated, nonfinite values and explicit
+> zeros fail, and every unsorted L/U is sorted in place. Sorted/canonical format is
+> then rechecked, which rejects duplicates; the canonical hash helper enforces that
+> format, and finite/zero data is re-scanned. It makes no schema or field bump, L/U
+> or whole-factor matrix copy, coalescing, or pruning. Attempts group only within
+> one `Get-TreeSample` producer call and state resets per invocation. Cumulative
+> report history may therefore contain adjacent same-identity attempt `1/1` entries
+> separated by a successful return; only the known one-call close suffix enforces
+> adjacency. Within a call, stored event 64 fails before retry continuation; reused
+> diagnostics can advance beyond 64 only as failed/truncated evidence, never a
+> passing sample. Max3/cap64 fields and schemas remain unchanged, and cleanup-race
+> hardening is deferred. Frozen Python/runner/tests SHA-256 are `c26112b0...` /
+> `7e675cc3...` / `426f8388...`. Collection is `387`; focused root `23`
+> passed / `363` deselected and independent `27` passed / `360` deselected;
+> the full exact-document suite passed `387/387` in `94.11 s`.
+> `factor_fit_unproven=true`; `next_stage_authorized=false`. Earlier retry-v7
+> sections are immutable history. Exact evidence is in
+> [results](T1_AV_BOUNDARY_SCHUR_RESULTS.md) and the
+> [reproduction appendix](ORACLE_REPRODUCTION.md).
 
 
 최종 갱신: 2026-08-16 (Asia/Seoul)
 
 ## 판정과 범위
 
-현재 physics artifact 상태는 **`passed_AV_BS_h2_stage_only_pending_h4_preregistration`**이다. H1 17.5 µm/100 kHz coarse `h`와 H2 refined `h2`가 각각 stage-evaluable gate를 통과했지만 fine analytic/mesh convergence/final circle은 `null`이고 `next_stage_authorized=false`다. H4-P0와 H4-P0R parent를 보존한다. 일곱 번째 P1에서 `A_background_II` native `splu`가 반환돼 attempted/performed `true/true`와 completed name 하나를 남겼지만 obsolete native/exported equality gate가 certificate/prefix 전에 실패했다. `A_conductor_II`는 미시도이고 exact native/exported factor count는 미보존이다. 현재 P1 token은 없고 retry-v7 static candidate만 있으며 `factor_fit_unproven=true`; RHS/solve/H4 physics/PowerSI도 승인하지 않는다. 이 문서는 독립 volume-FEM reference candidate를 고정하며 제품 parser, solver, UI, version과 installer는 수정하지 않는다.
+현재 physics artifact 상태는 **`passed_AV_BS_h2_stage_only_pending_h4_preregistration`**이다. H1 17.5 µm/100 kHz coarse `h`와 H2 refined `h2`가 각각 stage-evaluable gate를 통과했지만 fine analytic/mesh convergence/final circle은 `null`이고 `next_stage_authorized=false`다. H4-P0와 H4-P0R parent를 보존한다. 여덟 번째 P1에서 `A_background_II` native `splu`가 반환돼 attempted/performed `true/true`와 completed name 하나를 남겼지만 combined non-canonical L/U storage로 certificate/prefix는 0이다. `A_conductor_II`, RHS, solve, H4 physics는 미시도다. Resource artifact는 pass지만 distinct-helper outer/control false exhaustion 때문에 seal/published result는 없다. 현재 P1 token은 없고 retry-v8 static candidate만 있으며 `factor_fit_unproven=true`; PowerSI도 승인하지 않는다. 이 문서는 독립 volume-FEM reference candidate를 고정하며 제품 parser, solver, UI, version과 installer는 수정하지 않는다.
 
 AV-BS1은 아직 oracle이 아니다. H2는 local one-mesh gate만 통과했고 `h→h2` RMS/max/phase `0.462796%/0.868015%/0.000166396°`는 trend-only다. 이후 별도 `h4` mesh convergence, fine analytic gate, final circle 판정과 withheld radius를 모두 통과해야 circle-interior reference로 제한 승격할 수 있다. 이 문서의 어떤 결과도 finite/open EQ0, full T1, GlobalMNA, PowerSI accuracy 또는 8 GB product performance를 승인하지 않는다.
 
@@ -208,7 +223,7 @@ edeg(m) = |Yhat_m-Yhat_-m| / max(|Yhat_m|,|Yhat_-m|,Ymode_floor), m=1…4
 3. H2-P0 topology/assembly/resource manifest와 H2-P1 fixture/runner/result contract를 별도 clean commits와 static review에 고정한 뒤 one-use token으로 `h2`를 한 번 실행했다. 같은 stage-evaluable gate와 `h→h2` trend를 검토했지만 fine analytic 또는 final convergence pass는 선언하지 않았고 token은 consumed 상태다.
 4. H2 result와 consumed tombstone을 review/commit하고 별도 H4-P0 mesh/assembly/dual-resource manifest를 고정했다. prospective 2 GiB factor cap은 fit이 미증명이므로 이 manifest만으로 `h4`를 승인하지 않는다.
 5. 별도 H4-P0R manifest-only fixture/runner/test/doc가 `KII/AbII/MII/ApII`, equilibration, factor-only result/resource/lifecycle schema와 forbidden operation을 고정했고 23개 정적 test 및 세 독립 감사를 통과했다. 이 parent 단계에는 token, claim, finalizer, factorization 또는 physics 경로가 없다.
-6. 후속 P1 executable/runner/claim/finalizer/outer observer와 one-use lifecycle을 정적 감사했다. 첫 네 fresh-token 공개 시도는 claim/factor 전에, 다섯 번째는 factor monitor에서, 여섯 번째는 claim/factor child 뒤 `_factor_one`/`splu` 전에 중단됐다. 일곱 번째에는 `A_background_II` native `splu`가 반환되어 attempted/performed `true/true`가 내구화됐지만, 잘못된 native/exported nnz equality gate가 certificate/prefix 전에 차단했고 `A_conductor_II`는 미시도였다. inner/outer resource gate와 terminal seal은 정상 완료됐으나 certified factor는 0개다. 일곱 token은 재사용 없이 폐기했고 현재 token은 없다. retry-v7은 retry-v6의 네 active factor sample 최대 3회 whole-sample retry와 outer/control typed-event cap64를 그대로 유지하며, native/exported 계약만 `0 < exported <= native`로 교정하고 두 portable-byte 공식을 분리 검증한다. function default와 caught cleanup은 1이고 root/reuse/live/access/incomplete-snapshot/identity-coverage failure와 exhaustion은 fatal이다. full no-cache `341/341` pass와 새 token-absent contract audit를 보존하고 fresh token-only child를 만든 경우에만 두 factor의 certificate/fill/resource를 한 번 측정한다. RHS, harmonic extension, boundary `Y`, modal response와 physics result는 만들지 않는다.
+6. 후속 P1 executable/runner/claim/finalizer/outer observer와 one-use lifecycle을 정적 감사했다. 첫 네 fresh-token 공개 시도는 claim/factor 전에, 다섯 번째는 factor monitor에서, 여섯 번째는 claim/factor child 뒤 `_factor_one`/`splu` 전에 중단됐다. 일곱 번째에는 `A_background_II` native `splu`가 반환된 뒤 historical nnz equality gate가 certificate/prefix 전에 차단했다. 여덟 번째에도 `A_background_II` native `splu`가 반환되어 attempted/performed `true/true`와 completed name 하나를 남겼지만 combined non-canonical storage로 certificate/prefix 0에서 멈췄고 `A_conductor_II`는 미시도였다. Resource artifact는 pass지만 distinct confirmed-dead helper를 한 attempt group으로 묶은 independent outer/control false exhaustion 때문에 seal/published result는 없다. 여덟 token은 재사용 없이 폐기했고 현재 token은 없다. retry-v8은 raw L/U hash와 composite canonical flag evidence, any-unsorted in-place sort 뒤 canonical duplicate rejection, per-`Get-TreeSample`-call contiguous same-strong-identity grouping with per-invocation reset을 추가한다. Maximum3/cap64 fields와 schemas는 유지하고 hard cap64는 diagnostics null에도 적용한다. RHS, harmonic extension, boundary `Y`, modal response와 physics result는 만들지 않는다. full exact-document 387-test suite는 `387/387` in `94.11 s`로 통과했고 cleanup-race hardening은 deferred다.
 7. P0R result audit 뒤 H4 physics/result contract, clean commit, static audit와 새 one-use token을 고정한 뒤에만 `h4`를 별도 command로 실행한다. 이때 stage-evaluable gate, signed `M9` fine analytic/degeneracy와 mandatory `h2→h4` RMS/max/phase convergence를 처음 판정한다.
 8. `h4`와 final convergence가 모두 통과하면 상태는 **`passed_AV_BS_circle_17p5um_100k_only`**다. 이는 circle interior-only다.
 9. 그 뒤 같은 generator를 기하학적으로 scale한 `a=0.5 mm`, 100 kHz withheld radius의 mesh hash와 analytic anchor를 결과 전에 별도 고정하고, 동일한 `h` review → `h2` review → `h4` final-convergence chain을 반복한다.
@@ -218,7 +233,7 @@ edeg(m) = |Yhat_m-Yhat_-m| / max(|Yhat_m|,|Yhat_-m|,Ymode_floor), m=1…4
 
 ## Standalone `h` fixture freeze
 
-연구 전용 H1 구현은 [`../../tools/research/av_bs1_boundary_schur.py`](../../tools/research/av_bs1_boundary_schur.py)와 [`../../tools/research/run_av_bs1_stage.ps1`](../../tools/research/run_av_bs1_stage.ps1)에 고정했다. H0 `primary-h`는 sparse-pattern gate에서 factor 전에 차단됐고 H1은 같은 h를 다시 실행해 stage-evaluable gate를 통과했다. H2-P0에는 [`../../tools/research/av_bs1_boundary_schur_h2.py`](../../tools/research/av_bs1_boundary_schur_h2.py)와 manifest-only runner가 있다. H2-P1 [`../../tools/research/av_bs1_boundary_schur_h2_p1.py`](../../tools/research/av_bs1_boundary_schur_h2_p1.py)와 [`../../tools/research/run_av_bs1_h2_p1_stage.ps1`](../../tools/research/run_av_bs1_h2_p1_stage.ps1)은 clean preregistration와 one-use token 뒤 `primary-h2`를 실행했고 consumed tombstone으로 재실행을 막는다. H4-P0에는 [`../../tools/research/av_bs1_boundary_schur_h4_p0.py`](../../tools/research/av_bs1_boundary_schur_h4_p0.py)와 manifest-only runner만 있다. H4-P0R parent에는 [`../../tools/research/av_bs1_boundary_schur_h4_p0r.py`](../../tools/research/av_bs1_boundary_schur_h4_p0r.py)와 manifest-only runner가 있다. 후속 P1 [`../../tools/research/av_bs1_boundary_schur_h4_p0r_p1.py`](../../tools/research/av_bs1_boundary_schur_h4_p0r_p1.py)와 [`../../tools/research/run_av_bs1_h4_p0r_p1_stage.ps1`](../../tools/research/run_av_bs1_h4_p0r_p1_stage.ps1)은 token-gated `primary-h4-p0r` factor-only path와 outer observer를 구현했지만 현재 token이 없고 일곱 prior token commit은 폐기됐다. `primary-h4`, withheld radius와 EQ0 solve CLI는 여전히 없다.
+연구 전용 H1 구현은 [`../../tools/research/av_bs1_boundary_schur.py`](../../tools/research/av_bs1_boundary_schur.py)와 [`../../tools/research/run_av_bs1_stage.ps1`](../../tools/research/run_av_bs1_stage.ps1)에 고정했다. H0 `primary-h`는 sparse-pattern gate에서 factor 전에 차단됐고 H1은 같은 h를 다시 실행해 stage-evaluable gate를 통과했다. H2-P0에는 [`../../tools/research/av_bs1_boundary_schur_h2.py`](../../tools/research/av_bs1_boundary_schur_h2.py)와 manifest-only runner가 있다. H2-P1 [`../../tools/research/av_bs1_boundary_schur_h2_p1.py`](../../tools/research/av_bs1_boundary_schur_h2_p1.py)와 [`../../tools/research/run_av_bs1_h2_p1_stage.ps1`](../../tools/research/run_av_bs1_h2_p1_stage.ps1)은 clean preregistration와 one-use token 뒤 `primary-h2`를 실행했고 consumed tombstone으로 재실행을 막는다. H4-P0에는 [`../../tools/research/av_bs1_boundary_schur_h4_p0.py`](../../tools/research/av_bs1_boundary_schur_h4_p0.py)와 manifest-only runner만 있다. H4-P0R parent에는 [`../../tools/research/av_bs1_boundary_schur_h4_p0r.py`](../../tools/research/av_bs1_boundary_schur_h4_p0r.py)와 manifest-only runner가 있다. 후속 P1 [`../../tools/research/av_bs1_boundary_schur_h4_p0r_p1.py`](../../tools/research/av_bs1_boundary_schur_h4_p0r_p1.py)와 [`../../tools/research/run_av_bs1_h4_p0r_p1_stage.ps1`](../../tools/research/run_av_bs1_h4_p0r_p1_stage.ps1)은 token-gated `primary-h4-p0r` factor-only path와 outer observer를 구현했지만 현재 token이 없고 여덟 prior token commit은 폐기됐다. `primary-h4`, withheld radius와 EQ0 solve CLI는 여전히 없다.
 
 - fixture는 `src/spd_decap_pi`를 import하지 않는 standalone NumPy/SciPy 연구 도구다.
 - `K`, consistent volume `M`, boundary trace `MΓ`를 raw CCW P1 element에서 조립하고 full dense interior matrix, `inverse`, `Sp-Sb`, `Dp-Db`, 사후 대칭화를 금지한다.
@@ -265,7 +280,7 @@ H0에서 runner가 redirected child handle을 retain하지 않아 failure proces
 
 H1 static freeze는 `16 passed`, fixture SHA-256 `e2a1c8efff67873b57dc7a658b013e3e76d0c921988011f4c8e70cd25f00f8a7`, runner SHA-256 `dd880de721b9a688ae953c7363dc4a8b482ec1b26f59871d4ca8f83397eb2b7c`다. authorized token은 H0 artifact, cyclic tag, canonical K와 세 독립 감사 증거를 검증했고 H1 artifact 생성 뒤 consume됐다. 실제 H1 수치와 범위는 [`T1_AV_BOUNDARY_SCHUR_RESULTS.md`](T1_AV_BOUNDARY_SCHUR_RESULTS.md)에 고정한다.
 
-H2-P0 refined lineage, 3,712-tag 선택, raw/canonical `K/M/MΓ` hash와 conservative resource arithmetic은 [`T1_AV_BOUNDARY_SCHUR_H2_PREREG.md`](T1_AV_BOUNDARY_SCHUR_H2_PREREG.md)에 고정한다. H2-P1의 token/claim/guard/result/tombstone contract와 독립 modal certificate는 [`T1_AV_BOUNDARY_SCHUR_H2_P1_PREREG.md`](T1_AV_BOUNDARY_SCHUR_H2_P1_PREREG.md)에 고정한다. H4-P0 topology/assembly는 [`T1_AV_BOUNDARY_SCHUR_H4_P0_PREREG.md`](T1_AV_BOUNDARY_SCHUR_H4_P0_PREREG.md)에, H4-P0R factor-only parent는 [`T1_AV_BOUNDARY_SCHUR_H4_P0R_PREREG.md`](T1_AV_BOUNDARY_SCHUR_H4_P0R_PREREG.md)에, P1 lifecycle과 일곱 interruption 및 현재 retry-v7 계약은 [`T1_AV_BOUNDARY_SCHUR_H4_P0R_P1_PREREG.md`](T1_AV_BOUNDARY_SCHUR_H4_P0R_P1_PREREG.md)에 고정한다. 실제 artifacts/gates는 [`T1_AV_BOUNDARY_SCHUR_RESULTS.md`](T1_AV_BOUNDARY_SCHUR_RESULTS.md)에 기록한다. 어느 manifest 통과도 physics를 자동 승인하거나 후속 token을 발급하지 않는다.
+H2-P0 refined lineage, 3,712-tag 선택, raw/canonical `K/M/MΓ` hash와 conservative resource arithmetic은 [`T1_AV_BOUNDARY_SCHUR_H2_PREREG.md`](T1_AV_BOUNDARY_SCHUR_H2_PREREG.md)에 고정한다. H2-P1의 token/claim/guard/result/tombstone contract와 독립 modal certificate는 [`T1_AV_BOUNDARY_SCHUR_H2_P1_PREREG.md`](T1_AV_BOUNDARY_SCHUR_H2_P1_PREREG.md)에 고정한다. H4-P0 topology/assembly는 [`T1_AV_BOUNDARY_SCHUR_H4_P0_PREREG.md`](T1_AV_BOUNDARY_SCHUR_H4_P0_PREREG.md)에, H4-P0R factor-only parent는 [`T1_AV_BOUNDARY_SCHUR_H4_P0R_PREREG.md`](T1_AV_BOUNDARY_SCHUR_H4_P0R_PREREG.md)에, P1 lifecycle과 여덟 interruption, immutable retry-v7 history 및 현재 retry-v8 계약은 [`T1_AV_BOUNDARY_SCHUR_H4_P0R_P1_PREREG.md`](T1_AV_BOUNDARY_SCHUR_H4_P0R_P1_PREREG.md)에 고정한다. 실제 artifacts/gates는 [`T1_AV_BOUNDARY_SCHUR_RESULTS.md`](T1_AV_BOUNDARY_SCHUR_RESULTS.md)에 기록한다. 어느 manifest 통과도 physics를 자동 승인하거나 후속 token을 발급하지 않는다.
 
 ## Conditional EQ0 A–v contract
 
@@ -380,14 +395,63 @@ Frozen Python/runner/tests SHA-256 are `7a1dba5e...` / `852ce8a0...` /
 `88.40 s`. Commits `51e5069...` / `17414cf...` leave the token absent. No RHS,
 solve, H4 physics, or PowerSI work ran.
 
+## Retry-v8 storage and contiguous-identity amendment
+
+The eighth public attempt at retry-v7 token-only commit `66211ef...` completed
+native `splu` for `A_background_II`, so attempted/performed are `true/true` and
+the completed-name count is one. Combined non-canonical L/U storage left zero
+certificates/prefixes. `A_conductor_II`, RHS, solve, and physics did not start.
+The resource artifact passed, while independent outer/control false exhaustion
+across distinct confirmed-dead helpers left no terminal seal or published
+result. Seven temporary evidence files are byte-identical ignored-quarantine
+copies. Valid provisional emergency consumption `8fce704...` and D-only
+retirement `7964464...` leave no token.
+
+Retry-v8 records raw L/U storage hashes, raw composite canonical flags (false
+when unsorted), and explicit-zero scans before mutation. The pre-sort
+`has_sorted_indices` value is a local sort predicate, not a certificate field;
+chunked CSC column spans and row-index bounds are validated, nonfinite values
+and explicit zeros fail, and every unsorted L/U is sorted in place. Sorted and
+canonical format are then rechecked, which rejects duplicates; the canonical
+hash helper enforces that format, and finite/zero data is re-scanned without
+repeating the span or row-bound scan. There is no schema/field bump, L/U or
+whole-factor matrix copy, coalescing, or pruning.
+
+Attempt grouping is local to one `Get-TreeSample` producer call and state resets
+per invocation. Within one call, `A,B,A => 1,1,1`; `A,B,B,B => 1,1,2,3`,
+with same-identity attempt 3 fatal. Cumulative report history may legitimately
+contain adjacent same-identity attempt `1/1` entries separated by a successful
+return; report history therefore cannot enforce cross-call adjacency. Only the
+close-only suffix, known to come from one call, enforces the exact adjacent-
+strong transition.
+
+The cumulative/local cap remains hard at 64 even when diagnostics are null.
+Within a call, event 64 is stored and increments the total to 64; that same
+64th confirmed retry fails generically with
+`TREE_SAMPLE_TOTAL_RETRY_CAP_REACHED` unless simultaneous same-identity attempt
+3 takes precedence, and the failing call does not return to its retry loop.
+Reused diagnostics in a later cleanup or close call may advance
+`confirmed_count` beyond 64 and truncate the stored list, but that evidence is
+failed/truncated and can never support a passing sample. Existing max3/cap64
+fields and schemas remain unchanged; cleanup-race hardening is deferred.
+
+Frozen current Python/runner/tests SHA-256 are
+`c26112b0738224eed4f1401553adf6fc9a3512b37c475f5b52152cab98e6ecff` /
+`7e675cc31ab229485719200af8b508dae20bd234bff29428e84628029df2763e` /
+`426f83888587dc57b7874a4e8dd47f0965212a0c1d7fabde33e6f3ab2801a2e7`.
+Collection is `387`; focused root `23` passed / `363` deselected and
+independent `27` passed / `360` deselected. The full exact-document suite passed `387/387` in `94.11 s`. A future
+authorized public run would be ninth. Token state is absent, next-stage
+authority is false, and factor fit and H4 physics remain unproven.
+
 ## Exact next starting point
 
 1. H0 negative와 H1 h-stage artifact/checksum/resource 결과를 immutable하게 보존하고, H1 primary-h token을 consumed tombstone으로 유지한다.
 2. 완료된 H2-P0 refined lineage/assembly/resource manifest와 exact fixture/runner/test bytes의 commit `4c1e3fce8aac659dd0aedb06c2b6d274fff73a12`를 보존한다.
 3. 완료된 H2 artifact, 독립 audit와 consumed tombstone을 research commit에 고정한다.
 4. 완료한 H4-P0 assembly manifest와 H4-P0R contract-only manifest를 clean research commit에 고정한다.
-5. H4-P0R-P1의 일곱 interruption, token retirement와 validation-output를 보존한다. retry-v7 fixture/runner/tests/docs와 full no-cache `341/341` pass를 token-absent clean contract와 독립 audit에 고정한다. retired token commits `b6c8615...`, `d9e064f...`, `6328174...`, `9b4854d...`, `5ba4b69...`, `8277532...`, `4f60bd5...`는 재실행하지 않는다.
-6. committed safe manifest reread와 별도 승인 뒤 fresh token이 생긴 경우에만 factorization-only pilot 한 번으로 실제 two-factor fill/resource fit을 측정한다. RHS/solve/extension/Y/modal/physics는 금지하고, P0R 결과 독립 감사와 별도 H4-P1 사전등록·clean commit·fresh one-use token 전에는 h4 physics solve를 실행하지 않는다. 모든 경우 `next_stage_authorized=false`다.
+5. H4-P0R-P1의 여덟 interruption, token retirement, validation-output와 ignored quarantine을 보존한다. retry-v8 fixture/runner/tests/docs와 full exact-document 387-test suite의 `387/387` in `94.11 s` 통과 상태를 token-absent clean contract와 독립 audit에 고정한다. Exact final bytes confirmation rerun도 pass해야 하지만 두 번째 runtime은 다시 기록하지 않는다. retired token commits `b6c8615...`, `d9e064f...`, `6328174...`, `9b4854d...`, `5ba4b69...`, `8277532...`, `4f60bd5...`, `66211ef...`는 재실행하지 않는다.
+6. committed safe manifest reread와 별도 승인 뒤 fresh token이 생긴 경우에만 아홉 번째 factorization-only pilot 한 번으로 실제 two-factor fill/resource fit을 측정한다. Cleanup-race hardening은 별도 deferred contract다. RHS/solve/extension/Y/modal/physics는 금지하고, P0R 결과 독립 감사와 별도 H4-P1 사전등록·clean commit·fresh one-use token 전에는 h4 physics solve를 실행하지 않는다. 모든 경우 `next_stage_authorized=false`다.
 
 ## Primary literature
 

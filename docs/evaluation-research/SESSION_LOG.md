@@ -2090,3 +2090,149 @@ next_stage_authorized: false
 4. A later authorized pilot remains factor-only. Preserve and audit its complete
    terminal chain; do not run RHS, solve, H4 physics, PowerSI, withheld-radius,
    or EQ0 work without a separate clean preregistration and fresh authorization.
+
+## 2026-08-16 — SPD Decap PI Evaluator v0.22.0 retry-v7 eighth failure and retry-v8 static correction
+
+### Scope and immutable SESSION_LOG prefix
+
+This entry is append-only. The exact prior `SESSION_LOG.md` prefix is 168,066
+bytes with SHA-256
+`53a5df1eb63f6d660e2d4cd4015f47118f091d48215184262673b363e87df70d`.
+All preceding retry-v7 and earlier blocks remain immutable history. The visible
+program identity remains **SPD Decap PI Evaluator v0.22.0**. Product parser,
+solver, UI, version, installer, PowerSI reference, and GitHub remote are outside
+this retry-v8 static research correction.
+
+### Eighth public invocation under retry-v7
+
+The eighth public `primary-h4-p0r` invocation ran exactly once from retry-v7
+token-only commit `66211efbbdb7e0881e6bc051a2c68e25e5f1040e`, token ID
+`6b7c81431c49432a9b6b7da816424ff7`. None of the earlier seven public token
+commits was reused.
+
+Native `splu` returned for `A_background_II`. Direct child state truthfully
+records factorization attempted/performed `true/true` and
+`completed_factors=["A_background_II"]`. Combined non-canonical L/U storage
+then stopped the certificate path. The certificate list and both factor prefixes
+are empty. `A_conductor_II` was not attempted. RHS, `factor.solve`, harmonic
+extension, boundary response, modal response, H4 physics, PowerSI, withheld
+radius, and EQ0 work did not start. A native completed name is not a certified
+factor, two-factor fit, numerical result, accuracy claim, or 8 GiB-fit result.
+
+### Independent resource, control, and quarantine evidence
+
+The resource artifact passed its mandatory resource gate. Independently, the
+outer/control path observed confirmed-dead helper identities but accumulated
+distinct identities into one retry-exhaustion sequence and raised
+`TRANSIENT_DESCENDANT_DISAPPEARANCE_RETRY_EXHAUSTED`. This was a false
+control-plane exhaustion, not a resource stop. It prevented the terminal seal
+and published result. `terminal_evidence_complete=false`,
+`authoritative_stage_pass=false`, and `next_stage_authorized=false`.
+
+Seven temporary evidence files were copied byte-identically into token-scoped
+ignored quarantine:
+
+1. `child.stderr.txt`
+2. `factor-complete.json`
+3. `guard.json`
+4. `monitor-ready.json`
+5. `monitor-release.json`
+6. `numerical.json`
+7. `resource.json`
+
+The ignored copies preserve exact forensic bytes only. They are not a published
+result, terminal seal, or authorization artifact.
+
+### Token retirement
+
+M-only commit `8fce704a878a39497408c42e1e63bdfa683b9413` records a valid but
+provisional emergency consumed tombstone. It truthfully preserves the spent
+one-use authorization and outer/control failure without claiming complete
+terminal evidence. D-only retirement
+`7964464018ae898928f151d707fdc52a850cd935` removes the token. Current token
+state is absent. Neither commit seals or publishes the ignored evidence, and the
+retired token must never be recreated or invoked.
+
+### Retry-v8 factor-storage correction
+
+The latest factor failure is not the historical retry-v7 native/exported nnz
+equality failure. Retry-v7 reached a valid native return but its combined L/U
+export storage was non-canonical before certificate publication. Retry-v8
+freezes this fail-closed order for each L/U matrix:
+
+1. record raw storage hashes, raw composite `L_storage_canonical` and
+   `U_storage_canonical` flags (false when the respective storage is unsorted),
+   and explicit-zero scans;
+2. use the pre-sort `has_sorted_indices` value as a local sort predicate, not a
+   certificate field, and validate chunked CSC column spans and row bounds;
+3. reject nonfinite values or explicit stored zeros;
+4. call in-place `sort_indices()` for every unsorted L/U storage object;
+5. recheck sorted/canonical format to reject duplicates, record the canonical hash
+   through a helper that enforces that format, and re-scan finite/zero data
+   without repeating the span or row-bound scan.
+
+There is no schema or field bump, L/U or whole-factor matrix copy, coalescing,
+zero pruning, factor-order change, RHS, solve, or physics widening. Raw and
+canonical storage identities remain separately auditable.
+
+### Retry-v8 contiguous-identity monitor correction
+
+Attempt numbering is local to one `Get-TreeSample` producer call and state resets
+per invocation. Within one call, `A,B,A => 1,1,1`; `A,B,B,B => 1,1,2,3`,
+with same-identity attempt `3` fatal. Cumulative report history may legitimately
+contain adjacent same-identity attempt `1/1` entries separated by a successful
+return and therefore cannot enforce cross-call adjacency. Only the close-only
+suffix, known to come from one call, enforces the exact adjacent-strong
+transition and rejects orphan attempt `2`/`3`, mismatched identity, or count drift.
+
+The cumulative and local total retry cap remains exactly `64`, including when
+diagnostics are null. Within a call, event `64` is stored and increments the total
+to `64`; that same 64th confirmed retry fails generically with
+`TREE_SAMPLE_TOTAL_RETRY_CAP_REACHED` unless simultaneous same-identity attempt 3
+takes precedence, and the failing call does not return to its retry loop. Reused
+diagnostics in a later cleanup or close call may advance `confirmed_count` beyond
+64 and truncate the stored list, but that evidence is failed/truncated and can
+never support a passing sample. Existing max3/cap64 fields, schemas, resource
+limits, and factor call order are unchanged.
+
+The separately observed cleanup race remains deferred. Retry-v8 does not claim
+cleanup-race hardening, and that work must not be silently added to a future
+authorization.
+
+### Frozen retry-v8 candidate bindings and full-suite result
+
+```text
+Python fixture SHA-256: c26112b0738224eed4f1401553adf6fc9a3512b37c475f5b52152cab98e6ecff
+PowerShell runner SHA-256: 7e675cc31ab229485719200af8b508dae20bd234bff29428e84628029df2763e
+static tests SHA-256: 426f83888587dc57b7874a4e8dd47f0965212a0c1d7fabde33e6f3ab2801a2e7
+collection: 387
+focused root selection: 23 passed, 363 deselected
+independent selection: 27 passed, 360 deselected
+full exact-document suite: 387/387 passed in 94.11 s
+token_state: absent
+status: candidate_token_missing_no_factor
+factor_fit_unproven: true
+physics_solve_performed: false
+next_stage_authorized: false
+```
+
+Collection is `387`; the full exact-document suite on the corrected
+15-document candidate passed `387/387` in `94.11 s`.
+
+### Exact next starting point
+
+1. Preserve all eight public attempts, consumed records, deletion-only
+   retirements, validation-output, and ignored quarantine without rewriting any
+   historical retry-v7 block.
+2. Freeze and audit the retry-v8 Python, runner, tests, and exact 15-document
+   bytes. Verify the original 168,066-byte SESSION_LOG prefix hash remains
+   unchanged.
+3. Record the full exact-document pass `387/387` in `94.11 s`, then refreeze
+   the resulting document bytes and run closure again; any failure or
+   collection drift stops the sequence.
+4. Commit only the reviewed no-token contract and re-read every exact binding.
+5. Only after separate authorization may a fresh token-only child be created.
+   Any resulting public factor-only run would be the ninth. Never invoke any of
+   the eight retired token commits.
+6. Preserve the zero-RHS, zero-solve, zero-physics boundary. Do not authorize
+   H4-P1, H4 physics, PowerSI, withheld-radius, or EQ0 work from this candidate.

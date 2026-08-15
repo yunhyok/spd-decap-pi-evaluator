@@ -1512,6 +1512,7 @@ def _validate_control_tree_sample_diagnostics_snapshot(
         for event in retry_events
     ]
     previous_attempt = None
+    previous_event = None
     group_context = None
     for event in parsed_events:
         attempt = event["attempt"]
@@ -1535,6 +1536,19 @@ def _validate_control_tree_sample_diagnostics_snapshot(
                 "BLOCKED_AV_BS_RESULT_SCHEMA",
                 f"{label} retry attempt sequence is invalid",
             )
+        if attempt > 1 and previous_event is not None:
+            previous_identity = _control_strong_retry_identity(previous_event)
+            current_identity = _control_strong_retry_identity(event)
+            if (
+                previous_identity is not None
+                and current_identity is not None
+                and current_identity != previous_identity
+            ):
+                raise AvBsError(
+                    "BLOCKED_AV_BS_RESULT_SCHEMA",
+                    f"{label} retry strong identity sequence is invalid",
+                )
+        previous_event = event
     confirmed_count = _json_int(
         value.get("tree_sample_confirmed_disappearance_count"),
         f"{label} confirmed disappearance count",
@@ -1578,6 +1592,41 @@ def _validate_control_tree_sample_diagnostics_snapshot(
             "BLOCKED_AV_BS_RESULT_SCHEMA",
             f"{label} monitor pass contradicts fatal evidence",
         )
+    total_retry_cap_failure = bool(
+        parsed_failure is not None
+        and parsed_failure.get("message_code")
+        == "TREE_SAMPLE_TOTAL_RETRY_CAP_REACHED"
+    )
+    if total_retry_cap_failure:
+        cap_shape_valid = bool(
+            parsed_failure.get("attempt") < maximum_attempts
+            and parsed_failure.get("confirmation") is None
+            and parsed_failure.get("expected_birth_utc_ticks") is None
+            and parsed_failure.get("observed_birth_utc_ticks") is None
+            and parsed_failure.get("process_id") is None
+            and parsed_failure.get("process_role") is None
+            and parsed_failure.get("win32_error_code") is None
+        )
+        stored_cap_binding = bool(
+            truncated
+            or (
+                confirmed_count == event_limit
+                and parsed_events
+                and parsed_failure.get("attempt") == parsed_events[-1].get("attempt")
+                and parsed_failure.get("context") == parsed_events[-1].get("context")
+                and parsed_failure.get("operation")
+                == parsed_events[-1].get("operation")
+            )
+        )
+        if (
+            not cap_shape_valid
+            or confirmed_count < event_limit
+            or not stored_cap_binding
+        ):
+            raise AvBsError(
+                "BLOCKED_AV_BS_RESULT_SCHEMA",
+                f"{label} total retry cap failure is invalid",
+            )
     exhaustion_failure = bool(
         parsed_failure is not None
         and parsed_failure.get("message_code")
@@ -1610,6 +1659,7 @@ def _validate_control_tree_sample_diagnostics_snapshot(
         "truncated": truncated,
         "evidence_complete": evidence_complete,
         "monitor_failure": parsed_failure,
+        "total_retry_cap_failure": total_retry_cap_failure,
         "exhaustion_failure": exhaustion_failure,
         "exhausted_retry_present": exhausted_retry_present,
         "stop_reason": value.get("stop_reason"),
@@ -1687,6 +1737,25 @@ def _control_close_truncated_exhaustion_is_one_omitted_call(
     )
 
 
+def _control_strong_retry_identity(
+    event: Mapping[str, object],
+) -> tuple[int, int] | None:
+    process_id = event.get("process_id")
+    expected_birth = event.get("expected_birth_utc_ticks")
+    observed_birth = event.get("observed_birth_utc_ticks")
+    if (
+        event.get("confirmation")
+        != "signaled_handle_and_complete_snapshot_absent"
+        or type(process_id) is not int
+        or process_id <= 0
+        or type(expected_birth) is not int
+        or expected_birth <= 0
+        or observed_birth != expected_birth
+    ):
+        return None
+    return process_id, expected_birth
+
+
 def _validate_control_tree_sample_diagnostics_pair(
     report: Mapping[str, object],
     close: Mapping[str, object],
@@ -1746,14 +1815,33 @@ def _validate_control_tree_sample_diagnostics_pair(
             "BLOCKED_AV_BS_RESULT_SCHEMA", f"{label} close-only fatal is invalid"
         )
     close_only_events = close_events[len(report_events) :]
-    if close_only_events and (
-        close_only_events[0].get("attempt") != 1
-        or sum(event.get("attempt") == 1 for event in close_only_events) != 1
-    ):
-        raise AvBsError(
-            "BLOCKED_AV_BS_RESULT_SCHEMA",
-            f"{label} close-only retry sequence is not one call starting at attempt 1",
-        )
+    if close_only_events:
+        invalid_close_sequence = close_only_events[0].get("attempt") != 1
+        for previous, current in zip(
+            close_only_events, close_only_events[1:], strict=False
+        ):
+            previous_identity = _control_strong_retry_identity(previous)
+            current_identity = _control_strong_retry_identity(current)
+            if current.get("attempt") == 1:
+                invalid_transition = (
+                    previous_identity is None
+                    or current_identity is None
+                    or current_identity == previous_identity
+                )
+            else:
+                invalid_transition = (
+                    previous_identity is not None
+                    and current_identity is not None
+                    and current_identity != previous_identity
+                )
+            if invalid_transition:
+                invalid_close_sequence = True
+                break
+        if invalid_close_sequence:
+            raise AvBsError(
+                "BLOCKED_AV_BS_RESULT_SCHEMA",
+                f"{label} close-only retry sequence is not one producer call",
+            )
     report_exhausted_events = [
         event
         for event in report_events
@@ -8304,6 +8392,7 @@ def _validate_outer_tree_sample_diagnostics(
         for event in retry_events
     ]
     previous_attempt = None
+    previous_event = None
     group_context = None
     for parsed in parsed_events:
         attempt = _json_int(parsed["attempt"], "outer tree retry attempt")
@@ -8327,6 +8416,19 @@ def _validate_outer_tree_sample_diagnostics(
                 "BLOCKED_AV_BS_RESULT_SCHEMA",
                 "outer tree retry attempt sequence is invalid",
             )
+        if attempt > 1 and previous_event is not None:
+            previous_identity = _control_strong_retry_identity(previous_event)
+            current_identity = _control_strong_retry_identity(parsed)
+            if (
+                previous_identity is not None
+                and current_identity is not None
+                and current_identity != previous_identity
+            ):
+                raise AvBsError(
+                    "BLOCKED_AV_BS_RESULT_SCHEMA",
+                    "outer tree retry strong identity sequence is invalid",
+                )
+        previous_event = parsed
         if attempt >= maximum_attempts:
             raise AvBsError(
                 "BLOCKED_AV_BS_RESULT_SCHEMA",
@@ -10000,6 +10102,36 @@ def _scan_factor_data(values: np.ndarray) -> tuple[bool, int]:
     return finite, zero_count
 
 
+def _csc_column_spans_valid(matrix: csc_matrix | csc_array) -> bool:
+    """Bound every raw CSC column before calling SciPy's in-place sorter."""
+    rows, columns = (int(value) for value in matrix.shape)
+    indptr = matrix.indptr
+    indices = matrix.indices
+    if (
+        indptr.ndim != 1
+        or indices.ndim != 1
+        or int(indptr.size) != columns + 1
+        or int(matrix.data.size) != int(matrix.nnz)
+        or int(indices.size) != int(matrix.nnz)
+        or int(indptr[0]) != 0
+        or int(indptr[-1]) != int(matrix.nnz)
+    ):
+        return False
+    previous = 0
+    for column in range(columns):
+        current = int(indptr[column + 1])
+        span = current - previous
+        if span < 0 or span > rows:
+            return False
+        previous = current
+    for start in range(0, int(indices.size), _HASH_CHUNK_ITEMS):
+        stop = min(start + _HASH_CHUNK_ITEMS, int(indices.size))
+        chunk = indices[start:stop]
+        if bool(np.any(chunk < 0)) or bool(np.any(chunk >= rows)):
+            return False
+    return True
+
+
 def _csc_triangular(matrix: csc_matrix, *, lower: bool) -> bool:
     """Check triangular support directly from CSC column slices."""
     indices = matrix.indices
@@ -10238,15 +10370,13 @@ def _certificate(
                 f"{name} native factor exceeds pre-materialization cap",
             )
 
-        # Do not silently normalize SuperLU output.  The certificate binds the
-        # arrays actually returned by the frozen runtime, and fails if they
-        # would require duplicate/zero/index-order cleanup.
+        # Preserve hashes and storage-quality evidence for the exact arrays
+        # exported by SuperLU before the sole permitted in-place change.  Do
+        # not copy, coalesce, or prune L/U: duplicates and explicit zeros stay
+        # fail-closed.  Every unsorted export is sorted in place; the post-sort
+        # canonical-format gate rejects duplicate storage.
         raw_l = factor.L
         raw_u = factor.U
-        perm_r_storage = np.array(factor.perm_r, copy=True, order="C")
-        perm_c_storage = np.array(factor.perm_c, copy=True, order="C")
-        factor = None
-        gc.collect()
         if (
             not isinstance(raw_l, (csc_matrix, csc_array))
             or not isinstance(raw_u, (csc_matrix, csc_array))
@@ -10262,20 +10392,57 @@ def _certificate(
             raise AvBsError("BLOCKED_AV_BS_FACTOR", f"{name} factor shape mismatch")
         if int(l.nnz + u.nnz) > native_factor_nnz:
             raise AvBsError("BLOCKED_AV_BS_FACTOR", f"{name} native/exported nnz mismatch")
+
+        l_storage_sha256 = _csc_storage_sha256(l)
+        u_storage_sha256 = _csc_storage_sha256(u)
+        l_storage_sorted = bool(l.has_sorted_indices)
+        u_storage_sorted = bool(u.has_sorted_indices)
+        # Do not ask an unsorted matrix for has_canonical_format: SciPy may
+        # cache a false value caused only by ordering before sort_indices().
+        l_storage_canonical = bool(l.has_canonical_format) if l_storage_sorted else False
+        u_storage_canonical = bool(u.has_canonical_format) if u_storage_sorted else False
         l_finite, l_explicit_zero_count = _scan_factor_data(l.data)
         u_finite, u_explicit_zero_count = _scan_factor_data(u.data)
         if not l_finite or not u_finite:
             raise AvBsError("BLOCKED_AV_BS_FACTOR", f"{name} non-finite factor data")
-        l_storage_canonical = bool(l.has_canonical_format and l.has_sorted_indices)
-        u_storage_canonical = bool(u.has_canonical_format and u.has_sorted_indices)
+        if l_explicit_zero_count != 0 or u_explicit_zero_count != 0:
+            raise AvBsError(
+                "BLOCKED_AV_BS_FACTOR", f"{name} explicit-zero factor storage"
+            )
+        if not _csc_column_spans_valid(l) or not _csc_column_spans_valid(u):
+            raise AvBsError(
+                "BLOCKED_AV_BS_FACTOR", f"{name} factor column span invalid"
+            )
+
+        perm_r_storage = np.array(factor.perm_r, copy=True, order="C")
+        perm_c_storage = np.array(factor.perm_c, copy=True, order="C")
+        factor = None
+        gc.collect()
+        if not l_storage_sorted:
+            l.sort_indices()
+        if not u_storage_sorted:
+            u.sort_indices()
         if (
-            not l_storage_canonical
-            or not u_storage_canonical
-            or l_explicit_zero_count != 0
-            or u_explicit_zero_count != 0
+            not l.has_sorted_indices
+            or not u.has_sorted_indices
+            or not l.has_canonical_format
+            or not u.has_canonical_format
         ):
             raise AvBsError(
                 "BLOCKED_AV_BS_FACTOR", f"{name} non-canonical factor storage"
+            )
+        l_normalized_finite, l_normalized_zero_count = _scan_factor_data(l.data)
+        u_normalized_finite, u_normalized_zero_count = _scan_factor_data(u.data)
+        if (
+            not l_normalized_finite
+            or not u_normalized_finite
+            or l_normalized_zero_count != l_explicit_zero_count
+            or u_normalized_zero_count != u_explicit_zero_count
+            or l_normalized_zero_count != 0
+            or u_normalized_zero_count != 0
+        ):
+            raise AvBsError(
+                "BLOCKED_AV_BS_FACTOR", f"{name} factor data changed during sorting"
             )
 
         l_diagonal = np.asarray(l.diagonal(), dtype="<c16")
@@ -10351,7 +10518,7 @@ def _certificate(
             "L_dtype": np.dtype(l.dtype).name,
             "L_nnz": int(l.nnz),
             "L_sha256": _streaming_sparse_sha256(l),
-            "L_storage_sha256": _csc_storage_sha256(l),
+            "L_storage_sha256": l_storage_sha256,
             "L_indices_dtype": np.dtype(l.indices.dtype).str,
             "L_indptr_dtype": np.dtype(l.indptr.dtype).str,
             "L_storage_canonical": l_storage_canonical,
@@ -10362,7 +10529,7 @@ def _certificate(
             "U_dtype": np.dtype(u.dtype).name,
             "U_nnz": int(u.nnz),
             "U_sha256": _streaming_sparse_sha256(u),
-            "U_storage_sha256": _csc_storage_sha256(u),
+            "U_storage_sha256": u_storage_sha256,
             "U_indices_dtype": np.dtype(u.indices.dtype).str,
             "U_indptr_dtype": np.dtype(u.indptr.dtype).str,
             "U_storage_canonical": u_storage_canonical,
@@ -11328,13 +11495,11 @@ def _validate_factor_report(
             "rhs_count": 0,
             "L_shape": expected_matrix["shape"],
             "L_dtype": "complex128",
-            "L_storage_canonical": True,
             "L_explicit_zero_count": 0,
             "L_lower_triangular": True,
             "L_unit_diagonal": True,
             "U_shape": expected_matrix["shape"],
             "U_dtype": "complex128",
-            "U_storage_canonical": True,
             "U_explicit_zero_count": 0,
             "U_upper_triangular": True,
             "U_diagonal_dtype": "complex128",
@@ -11359,6 +11524,14 @@ def _validate_factor_report(
                     "BLOCKED_AV_BS_RESULT_SCHEMA",
                     f"factor {expected_name} {key} mismatch",
                 )
+        if (
+            type(cert.get("L_storage_canonical")) is not bool
+            or type(cert.get("U_storage_canonical")) is not bool
+        ):
+            raise AvBsError(
+                "BLOCKED_AV_BS_RESULT_SCHEMA",
+                f"factor {expected_name} raw storage canonical type invalid",
+            )
         for key in ("input_sparse_sha256", "raw_input_sparse_sha256",
                     "row_scale_sha256", "column_scale_sha256",
                     "equilibrated_sparse_sha256", "L_sha256", "U_sha256",

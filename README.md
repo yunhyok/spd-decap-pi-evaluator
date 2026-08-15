@@ -2,7 +2,49 @@
 
 > **Ongoing Evaluation algorithm research:** start every research session from the [accuracy-first research restart document](docs/evaluation-research/README.md). Isolated research-only fixtures, runners, tests, and evidence may exist on the research branch, but the product parser, solver, UI, version, and installer remain unchanged unless implementation is explicitly authorized.
 
-> **Current AV-BS1 H4-P0R-P1 retry-v7 boundary:** seven public P1 invocations are immutable and all seven one-use tokens were retired without reuse. The seventh ran once at token-only commit `4f60bd5e5fe4e166e72ba00e9bb019a70504e7df` with token ID `a7a3942cb0cf421e9fc52fd43176bb35`. Native `splu` returned for `A_background_II`, so durable state truthfully records attempted/performed `true/true` and `completed_factors=["A_background_II"]`; the obsolete native/exported nnz equality guard then failed before any certificate or factor prefix, and `A_conductor_II` was not attempted. Exact native/exported factor counts were not persisted. Inner/outer monitoring retained `174/573` samples and all `31` outer retry events without truncation; both resource gates passed, but this is neither an accuracy result nor an 8 GiB-fit claim. Consumed-record commit `51e50699546fe5b594dfdc669fb1628de0c3adb7` and deletion-only retirement `17414cf0be147d0d5d9d75046354e199f707e7a6` leave the token absent. Retry-v7 only permits `0 < exported L/U nnz <= native factor nnz`, validates distinct native/exported portable-byte formulas, and applies the cap to both; schema, retry policy, and factor order are unchanged. Frozen SHA-256 bindings are Python `7a1dba5eafcbf601fd532a9a3d2bc10de2218c74bccdacd04bdba5f1038df348`, runner `852ce8a03b25e33b9eb26ec6f5ce295381dab493b1b26762ddea14be7196000d`, and tests `bd2e3e2ca4d668d3cd8c92b55737a74f6bff743a823bae024713d59d393c8ba7`; focused `25/25` and full no-cache `341/341` passed, the latter in `88.40 s`. No RHS, solve, H4 physics, or PowerSI work ran; `next_stage_authorized=false`. Earlier retry-v6 text is immutable history. See the [results](docs/evaluation-research/T1_AV_BOUNDARY_SCHUR_RESULTS.md) and [reproduction appendix](docs/evaluation-research/ORACLE_REPRODUCTION.md).
+> **Current AV-BS1 H4-P0R-P1 retry-v8 static boundary:** eight public P1
+> invocations are immutable and all eight one-use tokens were retired without
+> reuse. The eighth ran once from retry-v7 token-only commit
+> `66211efbbdb7e0881e6bc051a2c68e25e5f1040e`. Native `splu` returned for
+> `A_background_II`, so attempted/performed are `true/true` and
+> `completed_factors=["A_background_II"]`, but combined non-canonical factor
+> storage stopped the certificate path with zero certificates and zero prefixes;
+> `A_conductor_II`, RHS, solve, and physics never started. The resource artifact
+> passed, while independent outer/control monitoring falsely exhausted retries
+> across distinct confirmed-dead helpers; no terminal seal or published result
+> exists. Seven temporary evidence files were copied byte-identically into
+> ignored quarantine. Valid provisional emergency consumption was recorded by
+> M-only commit `8fce704a878a39497408c42e1e63bdfa683b9413`, followed by D-only
+> retirement `7964464018ae898928f151d707fdc52a850cd935`; the token is absent.
+> Retry-v8 records raw L/U storage hashes, raw composite canonical flags (false
+> when unsorted), and zero scans. The pre-sort `has_sorted_indices` value is a
+> local sort predicate, not a certificate field. Chunked column spans and
+> row-index bounds are validated, nonfinite values and explicit zeros fail, and
+> every unsorted L/U is sorted in place. Sorted/canonical format is then
+> rechecked, which rejects duplicates; the canonical hash helper enforces that
+> format, and finite/zero data is re-scanned. It makes no schema or field bump,
+> L/U or whole-factor matrix copy, coalescing, or pruning. Attempts group only
+> within one `Get-TreeSample` producer call and state resets per invocation;
+> cumulative report history may therefore contain adjacent same-identity attempt
+> `1/1` entries separated by a successful return. Only the known one-call close
+> suffix enforces adjacency. Within a call, event `64` is stored and increments
+> the total to `64`; that same 64th confirmed retry fails generically with
+> `TREE_SAMPLE_TOTAL_RETRY_CAP_REACHED` unless simultaneous same-identity attempt
+> `3` takes precedence, so the call does not return to its retry loop. Reused
+> diagnostics may later advance beyond `64` only as failed/truncated evidence,
+> never as a passing sample. Existing max3/cap64 fields and schemas remain
+> unchanged; cleanup-race hardening is deferred. Frozen code SHA-256 bindings are
+> Python `c26112b0738224eed4f1401553adf6fc9a3512b37c475f5b52152cab98e6ecff`,
+> runner `7e675cc31ab229485719200af8b508dae20bd234bff29428e84628029df2763e`,
+> and tests `426f83888587dc57b7874a4e8dd47f0965212a0c1d7fabde33e6f3ab2801a2e7`.
+> Collection is `387`; focused root `23` passed with `363` deselected and
+> independent `27` passed with `360` deselected. The full exact-document suite
+> passed `387/387` in `94.11 s`.
+> Any separately authorized future public invocation would be ninth.
+> `factor_fit_unproven=true`;
+> `next_stage_authorized=false`. See the
+> [results](docs/evaluation-research/T1_AV_BOUNDARY_SCHUR_RESULTS.md) and
+> [reproduction appendix](docs/evaluation-research/ORACLE_REPRODUCTION.md).
 
 > **v0.22.0 implements the source-derived multilayer layer-surface network and binds its release decision to both named SPD/PowerSI cases.** Exact adjacent-gap artwork Maxwell-Y blocks share physical `(layer, NET)` surface nodes, exact same-NET Trace/Via components provide only source-observed connectivity, and all internal interfaces are eliminated by one global sparse Schur/Kron solve. Touchstone remains comparison-only. Distribution reports `Assignment Failed`, and the main board can switch between Source SPD and Current cap assignments at their fixed physical XY. The title bar identifies the application as **SPD Decap PI Evaluator v0.22.0**.
 

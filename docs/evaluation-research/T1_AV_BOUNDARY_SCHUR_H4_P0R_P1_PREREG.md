@@ -2,33 +2,41 @@
 
 ## 1. Current status and authority
 
-This document now preregisters the retry-v7 corrective static
-executable-contract candidate after seven public invocations. The first four
+This document now preregisters the retry-v8 corrective static
+executable-contract candidate after eight public invocations. The first four
 stopped before claim and factor work; the fifth reached the factor child but
 left factor entry indeterminate; the sixth created claim and factor child but
-failed before `_factor_one`/`splu`; the seventh reached `_factor_one`, and native
-`splu` returned for `A_background_II` before the certificate path rejected an
-invalid native/exported nnz equality assumption. It remains token-absent and
-does not itself authorize a pilot. None of the seven prior tokens may be reused.
+failed before `_factor_one`/`splu`; the seventh reached `_factor_one` and then
+failed the historical native/exported equality gate. In the eighth, native
+`splu` returned for `A_background_II`, but combined non-canonical factor storage
+stopped the certificate path and independent outer/control monitoring falsely
+exhausted across distinct confirmed-dead helpers. It remains token-absent and
+does not itself authorize a pilot. None of the eight prior tokens may be reused.
 
 The current safe manifest classification is:
 
 - `token_state=absent`;
 - `status=candidate_token_missing_no_factor`;
 - `authorization_state=not_authorized`;
-- `terminal_evidence_complete=false` for the current token-absent candidate;
-  the seventh attempt's complete outer terminal seal remains immutable
-  historical failure evidence;
+- `terminal_evidence_complete=false` for the current token-absent candidate and
+  for the eighth attempt's no-seal/no-published-result terminal boundary; the
+  seventh attempt's complete outer terminal seal remains immutable historical
+  failure evidence;
 - `authoritative_stage_pass=false`;
-- the seventh child records attempted/performed `true/true` and
+- the eighth child records attempted/performed `true/true` and
   `completed_factors=["A_background_II"]`, meaning that native `splu` returned;
   no factor certificate or prefix was completed, and `A_conductor_II` was not
   attempted;
-- exact native/exported factor nnz counts were not persisted, and no RHS,
-  solve, H4 physics, or PowerSI work has run; and
+- combined non-canonical L/U storage stopped before certificate/prefix
+  publication; the resource artifact passed, but distinct-helper outer/control
+  false exhaustion left no seal or published result;
+- seven temporary evidence files were copied byte-identically into ignored
+  quarantine; valid provisional emergency consumption commit `8fce704...` and
+  D-only retirement `7964464...` leave the token absent;
+- no RHS, solve, H4 physics, or PowerSI work has run; and
 - no later H4-P1 stage is authorized.
 
-The retry-v7 candidate retains execution resource scope v2,
+The retry-v8 candidate retains execution resource scope v2,
 `control_plane.independently_bounded=true`,
 `tree_thresholds_equal_factor_envelope=true`,
 `system_floor_recheck_before_and_after_each=true`, and
@@ -38,13 +46,26 @@ control-plane supervisor and outer observer, with the readiness-specific
 outer-observer sampling contexts plus six explicitly instrumented control-plane
 sampling contexts (12 total), plus the four active factor sampling calls, opt
 into `MaximumAttempts=3`; the caught-final factor cleanup call and function
-default remain `1`. Outer/control retry evidence has bounded cap `64`. Retry-v7
-does not alter any of those retry semantics, schemas, or factor order. It only
-replaces the invalid native/exported equality with the fail-closed requirement
-`0 < exported <= native`, checks distinct native/exported portable-byte
-formulas, and includes both in the existing cap. These facts make the exact
-candidate eligible for later token review; they do not authorize a pilot while
-the token is absent and do not change any terminal or next-stage blocker.
+default remain `1`. Outer/control retry evidence has bounded cap `64`. Retry-v8
+keeps those max3/cap64 fields, schemas, factor order, resource ceilings, and
+forbidden operations. For each L/U export it records raw storage hashes, raw
+composite canonical flags (false when unsorted), and zero scans. The pre-sort
+`has_sorted_indices` value is a local sort predicate, not a certificate field;
+chunked column spans and row bounds are validated, nonfinite values and explicit
+zeros fail, and every unsorted L/U is sorted in place. Sorted/canonical format is
+then rechecked, which rejects duplicates; the canonical hash helper enforces that
+format, and finite/zero data is re-scanned without repeating span/bound checks.
+It makes no schema/field bump, L/U or whole-factor matrix copy, coalescing, or
+pruning. Attempts group only within one `Get-TreeSample` producer call and state
+resets per invocation. Cumulative report history may contain adjacent same-
+identity attempt `1/1` entries across a successful return; only the known one-
+call close suffix enforces adjacency. Within a call, stored event 64 fails before
+retry continuation unless simultaneous same-identity attempt 3 takes precedence.
+Reused diagnostics can advance beyond 64 only as failed/truncated evidence,
+never a passing sample. Cleanup-race hardening is explicitly deferred. These
+facts make the
+exact candidate eligible for later token review; they do not authorize a pilot
+while the token is absent and do not change any terminal or next-stage blocker.
 
 ## 2. Frozen program identity and ancestry
 
@@ -905,19 +926,96 @@ physics_solve_performed: false
 next_stage_authorized: false
 ```
 
+### 15.9 Eighth public attempt and retry-v8 corrective evidence
+
+The eighth public `primary-h4-p0r` invocation ran exactly once from retry-v7
+token-only commit `66211efbbdb7e0881e6bc051a2c68e25e5f1040e`, token ID
+`6b7c81431c49432a9b6b7da816424ff7`. Native `splu` returned for
+`A_background_II`, so the direct child truth is factorization attempted/performed
+`true/true` with `completed_factors=["A_background_II"]`. Combined
+non-canonical L/U storage stopped the certificate path. No factor certificate or
+prefix was completed, `A_conductor_II` was not attempted, and no RHS,
+`factor.solve`, extension, boundary response, modal solve, H4 physics, or
+PowerSI work ran.
+
+The resource artifact passed. Independently, outer/control monitoring grouped
+confirmed disappearance of distinct helper identities into one attempt sequence
+and raised `TRANSIENT_DESCENDANT_DISAPPEARANCE_RETRY_EXHAUSTED`. That false
+exhaustion prevented the terminal seal and published result. Seven temporary
+evidence files were copied byte-identically into token-scoped ignored quarantine;
+the copies are forensic only. M-only commit
+`8fce704a878a39497408c42e1e63bdfa683b9413` records a valid but provisional
+emergency consumed tombstone, and D-only retirement
+`7964464018ae898928f151d707fdc52a850cd935` removes the token. Terminal evidence
+is incomplete, authoritative pass is false, and next authorization is false.
+
+Retry-v8 keeps all schemas and existing result fields. It freezes this factor
+storage sequence:
+
+1. record raw L/U storage hashes, raw composite canonical flags (false when the
+   respective storage is unsorted), and explicit-zero scans;
+2. use the pre-sort `has_sorted_indices` value as a local sort predicate, not a
+   certificate field, and validate every chunked CSC column span and row bound;
+3. reject nonfinite values or explicit stored zeros;
+4. call in-place `sort_indices()` for every unsorted L/U storage object; and
+5. recheck sorted/canonical format to reject duplicates, record canonical hashes
+   through a helper that enforces that format, and re-scan finite/zero data
+   without repeating the span or row-bound scan.
+
+No L/U or whole-factor matrix copy, coalescing, zero pruning, schema/field bump,
+factor-order change, RHS, solve, or physics widening is allowed.
+
+Attempt numbering is local to one `Get-TreeSample` producer call and state resets
+per invocation. Within one call, `A,B,A => 1,1,1`; `A,B,B,B => 1,1,2,3`,
+with same-identity attempt `3` fatal. Cumulative report history may legitimately
+contain adjacent same-identity attempt `1/1` entries separated by a successful
+return and therefore cannot enforce cross-call adjacency. Only the close-only
+suffix, known to come from one call, enforces the exact adjacent-strong
+transition.
+
+The cumulative/local event cap remains exactly `64`, including when diagnostics
+are null. Within a call, event `64` is stored and increments the total to `64`;
+that same 64th confirmed retry fails with
+`TREE_SAMPLE_TOTAL_RETRY_CAP_REACHED` unless simultaneous same-identity attempt 3
+takes precedence, and the failing call does not return to its retry loop. Reused
+diagnostics in a later cleanup or close call may advance `confirmed_count` beyond
+64 and truncate the stored list, but that evidence is failed/truncated and can
+never support a passing sample. Existing max3/cap64 fields and schemas are
+unchanged. The observed cleanup race remains a deferred forensic item and is not
+claimed fixed by retry-v8.
+
+```text
+Python fixture SHA-256: c26112b0738224eed4f1401553adf6fc9a3512b37c475f5b52152cab98e6ecff
+PowerShell runner SHA-256: 7e675cc31ab229485719200af8b508dae20bd234bff29428e84628029df2763e
+static tests SHA-256: 426f83888587dc57b7874a4e8dd47f0965212a0c1d7fabde33e6f3ab2801a2e7
+collection: 387
+focused root selection: 23 passed, 363 deselected
+independent selection: 27 passed, 360 deselected
+full exact-document suite: 387/387 passed in 94.11 s
+token_state: absent
+factor_fit_unproven: true
+physics_solve_performed: false
+next_stage_authorized: false
+```
+
+Collection is `387`; the full exact-document suite passed `387/387` in `94.11 s`. A future
+authorized public invocation would be the ninth.
+
 ## 16. Exact next sequence
 
 The only permitted next sequence is:
 
-The retry-v7 nnz-semantic correction does not create or authorize a token and
-does not widen the factor-only boundary. The retired token-only commits
+The retry-v8 storage and monitor corrections do not create or authorize a token
+and do not widen the factor-only boundary. The retired token-only commits
 `b6c8615...`, `d9e064f...`, `6328174...`, `9b4854d0...`, `5ba4b693...`,
-`82775327...`, and `4f60bd5...` must never be invoked again.
+`82775327...`, `4f60bd5...`, and `66211ef...` must never be invoked again.
 
-1. Freeze the retry-v7 fixture, unchanged runner, tests, documentation,
-   unchanged schema bindings, safe no-token manifest, and completed full
-   no-cache `341/341` pass in `88.40 s`. Complete independent code,
-   documentation, and contract audits.
+1. Freeze the retry-v8 fixture, runner, tests, documentation, unchanged schemas,
+   and safe no-token manifest at the exact reviewed bytes. Record collection
+   `387` and the full exact-document pass `387/387` in `94.11 s`. Complete
+   independent code, documentation, and contract audits, then require the
+   exact-byte confirmation suite to pass before commit; any later byte change
+   requires closure again.
 2. Create one clean executable-contract commit containing exactly those
    reviewed bytes and bindings. The contract commit contains no P1 review
    token.
@@ -929,12 +1027,16 @@ does not widen the factor-only boundary. The retired token-only commits
    the final contract commit and every frozen hash.
 5. Only with separate authorization, invoke the public `primary-h4-p0r` runner
    exactly once for the two-factor, zero-RHS, zero-solve pilot. Never invoke any
-   of the seven prior token commits.
+   of the eight prior token commits. This would be the ninth public invocation.
 6. Classify the outcome only from the v2 tombstone, outer terminal seal, and
    the complete current-byte-bound claim, guard, resource, result, child,
    marker, prefix, report, index, close, and applicable recovery-journal chain.
    Preserve the quarantine and journals. Regardless of pass or failure, do
    not authorize H4-P1 or any physics stage.
+
+Cleanup-race hardening remains outside retry-v8 and requires a separate frozen
+contract before it can be claimed. It must not be silently folded into a ninth
+authorization.
 
 Any hash drift, dirty checkout, missing prerequisite, failed final audit,
 unexpected token-commit content, missing cleanup proof, or absent/invalid seal

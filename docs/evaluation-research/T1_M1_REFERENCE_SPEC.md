@@ -1,23 +1,38 @@
 # SPD Decap PI Evaluator v0.22.0 — T1-M1 SAO–CIM / A–v Reference Specification
 
-> **SPD Decap PI Evaluator v0.22.0 — retry-v7 current boundary:** Seven public
-> `primary-h4-p0r` invocations are immutable. In the seventh, native `splu`
-> returned for `A_background_II`; attempted/performed are `true/true` and the
-> completed-name list contains it, but the obsolete native/exported nnz equality
-> gate failed before any certificate or prefix. `A_conductor_II` was not
-> attempted and the exact native/exported factor counts were not persisted.
-> Inner/outer monitoring retained `174/573` samples and all `31` outer retry
-> events without truncation; both resource gates passed, but this is neither
-> accuracy evidence nor an 8 GiB-fit claim. Commits `51e5069...` and
-> `17414cf...` record consumption and deletion-only retirement; token state is
-> absent. Retry-v7 requires `0 < exported <= native`, validates distinct
-> native/exported portable-byte formulas and caps both, without schema, retry,
-> or factor-order changes. Frozen Python/runner/tests SHA-256 are `7a1dba5e...` /
-> `852ce8a0...` / `bd2e3e2c...`; focused `25/25` and full no-cache `341/341`
-> passed, the latter in `88.40 s`. No RHS, solve, H4 physics, or PowerSI work
-> ran; `next_stage_authorized=false`. Earlier retry-v6 sections are immutable
-> history. Exact evidence is in [results](T1_AV_BOUNDARY_SCHUR_RESULTS.md) and
-> the [reproduction appendix](ORACLE_REPRODUCTION.md).
+> **SPD Decap PI Evaluator v0.22.0 — retry-v8 current static boundary:** Eight
+> public `primary-h4-p0r` invocations are immutable. In the eighth, run from
+> retry-v7 token-only commit `66211ef...`, native `splu` returned for
+> `A_background_II`; attempted/performed are `true/true` and its completed name
+> is durable, but combined non-canonical factor storage stopped the certificate
+> path with zero certificates and prefixes. `A_conductor_II`, RHS, solve, and
+> physics never started. The resource artifact passed, while independent
+> outer/control monitoring falsely exhausted retries across distinct
+> confirmed-dead helpers; no terminal seal or published result exists. Seven
+> temporary evidence files were copied byte-identically into ignored quarantine.
+> Valid provisional emergency consumption commit `8fce704...` and D-only
+> retirement `7964464...` leave the token absent. Retry-v8 records raw L/U hashes,
+> raw composite canonical flags (false when unsorted), and zero scans. The pre-sort
+> `has_sorted_indices` value is a local sort predicate, not a certificate field;
+> chunked column spans and row bounds are validated, nonfinite values and explicit
+> zeros fail, and every unsorted L/U is sorted in place. Sorted/canonical format is
+> then rechecked, which rejects duplicates; the canonical hash helper enforces that
+> format, and finite/zero data is re-scanned. It makes no schema or field bump, L/U
+> or whole-factor matrix copy, coalescing, or pruning. Attempts group only within
+> one `Get-TreeSample` producer call and state resets per invocation. Cumulative
+> report history may therefore contain adjacent same-identity attempt `1/1` entries
+> separated by a successful return; only the known one-call close suffix enforces
+> adjacency. Within a call, stored event 64 fails before retry continuation; reused
+> diagnostics can advance beyond 64 only as failed/truncated evidence, never a
+> passing sample. Max3/cap64 fields and schemas remain unchanged, and cleanup-race
+> hardening is deferred. Frozen Python/runner/tests SHA-256 are `c26112b0...` /
+> `7e675cc3...` / `426f8388...`. Collection is `387`; focused root `23`
+> passed / `363` deselected and independent `27` passed / `360` deselected;
+> the full exact-document suite passed `387/387` in `94.11 s`.
+> `factor_fit_unproven=true`; `next_stage_authorized=false`. Earlier retry-v7
+> sections are immutable history. Exact evidence is in
+> [results](T1_AV_BOUNDARY_SCHUR_RESULTS.md) and the
+> [reproduction appendix](ORACLE_REPRODUCTION.md).
 
 
 최종 갱신: 2026-08-16 (Asia/Seoul)
@@ -540,7 +555,7 @@ Stage 1 pair screen은 사전등록 뒤 실행됐다. 두 frequency 모두 self/
 
 Stage 2 medium circle은 같은 session에서 pair replay/review 뒤 실행됐고 100 kHz의 첫 mandatory operator gate에서 fail-closed 종료됐다. `N=128` q20/q40의 raw `Yw` reciprocity는 `2.40109e-9/2.50717e-9`로 통과했지만 cancellation condition `2.91315e-8`이 실패했다. `N=256`은 raw reciprocity `1.41197e-8/1.41083e-8`과 cancellation `1.63755e-7`이 모두 실패했다. analytic max error는 각각 `0.390062%`와 `0.0985103%`, q parity worst `2.81068e-12`, mesh worst relative/RMS/phase `0.290419%/0.161108%/0.0128560°`였고 raw Hermitian minimum은 양수여서 analytic, q, mesh, residual/condition과 passivity gate는 통과했다. planned G2 2 GHz circle row, G2 `N=512`, G2 EQ0 seed는 실행하지 않았다. 현재 전체 상태는 **`BLOCKED_INTERIOR_WEIGHTED_RECIPROCITY_PASSIVITY__G2_PAIR_PASSED_CIRCLE_100KHZ_RECIPROCITY_CANCELLATION_FAIL`**다.
 
-다음 실행 후보는 G2 보정 continuation이 아니라 independent A–v volume-FEM boundary Schur다. H1/H2 stage-only pass와 H4 parents를 보존한다. 일곱 번째 P1은 `A_background_II` native return만 완료했고 certificate/prefix 0, `A_conductor_II` 미시도라 factor fit은 미증명이다. 현재 retry-v7 candidate/token absent/next=false이며 fine analytic/convergence/final circle은 `null`이다. retry-v7 no-token audit와 별도 승인/result audit 전에는 H4 physics를 금지한다.
+다음 실행 후보는 G2 보정 continuation이 아니라 independent A–v volume-FEM boundary Schur다. H1/H2 stage-only pass와 H4 parents를 보존한다. 여덟 번째 P1은 `A_background_II` native return만 완료했고 combined non-canonical storage로 certificate/prefix 0, `A_conductor_II` 미시도다. Resource artifact는 pass지만 distinct-helper outer/control false exhaustion으로 seal/published result가 없어 factor fit은 미증명이다. 현재 retry-v8 candidate/token absent/next=false이며 fine analytic/convergence/final circle은 `null`이다. retry-v8 no-token audit와 full exact-document 387-test suite의 `387/387` in `94.11 s` 통과 상태, 별도 승인/result audit 전에는 H4 physics를 금지한다.
 
 ## Numerical certificate와 promotion gate
 
@@ -627,7 +642,7 @@ frozen Python/runner/tests SHA는 `2373a13f...` / `852ce8a0...` /
 `81.83 s`였다. retry/schema/ABI/validator/factor/physics 계약과 next false는
 그대로다.
 
-## H4-P0R retry-v7 current non-result
+## H4-P0R retry-v7 historical non-result
 
 The seventh public P1 invocation at `4f60bd5...` changes no physics or oracle
 ranking. Native `splu` returned for `A_background_II`, so attempted/performed
@@ -648,6 +663,55 @@ are `7a1dba5e...` / `852ce8a0...` / `bd2e3e2c...`; focused `25/25` and full
 no-cache `341/341` passed, the latter in `88.40 s`. Detailed evidence is in
 [`T1_AV_BOUNDARY_SCHUR_RESULTS.md`](T1_AV_BOUNDARY_SCHUR_RESULTS.md) and
 [`ORACLE_REPRODUCTION.md`](ORACLE_REPRODUCTION.md).
+## H4-P0R retry-v8 current static candidate
+
+The eighth public P1 invocation ran once from retry-v7 token-only commit
+`66211ef...`. Native `splu` returned for `A_background_II`, making
+attempted/performed `true/true` with one completed name. Combined non-canonical
+L/U storage stopped certificates and prefixes at zero; `A_conductor_II`, RHS,
+solve, and physics never started. The resource artifact passed, while independent
+outer/control monitoring falsely exhausted across distinct confirmed-dead
+helpers. No seal or published result exists. Seven temporary evidence files were
+copied byte-identically into ignored quarantine. Valid provisional consumption
+`8fce704...` and D-only retirement `7964464...` leave the token absent.
+
+Retry-v8 records raw L/U storage hashes, raw composite canonical flags (false
+when unsorted), and explicit-zero scans before mutation. The pre-sort
+`has_sorted_indices` value is a local sort predicate, not a certificate field;
+chunked CSC column spans and row-index bounds are validated, nonfinite values
+and explicit zeros fail, and every unsorted L/U is sorted in place. Sorted and
+canonical format are then rechecked, which rejects duplicates; the canonical
+hash helper enforces that format, and finite/zero data is re-scanned without
+repeating the span or row-bound scan. There is no schema/field bump, L/U or
+whole-factor matrix copy, coalescing, or pruning.
+
+Attempt grouping is local to one `Get-TreeSample` producer call and state resets
+per invocation. Within one call, `A,B,A => 1,1,1`; `A,B,B,B => 1,1,2,3`,
+with same-identity attempt 3 fatal. Cumulative report history may legitimately
+contain adjacent same-identity attempt `1/1` entries separated by a successful
+return; report history therefore cannot enforce cross-call adjacency. Only the
+close-only suffix, known to come from one call, enforces the exact adjacent-
+strong transition.
+
+The cumulative/local cap remains hard at 64 even when diagnostics are null.
+Within a call, event 64 is stored and increments the total to 64; that same
+64th confirmed retry fails generically with
+`TREE_SAMPLE_TOTAL_RETRY_CAP_REACHED` unless simultaneous same-identity attempt
+3 takes precedence, and the failing call does not return to its retry loop.
+Reused diagnostics in a later cleanup or close call may advance
+`confirmed_count` beyond 64 and truncate the stored list, but that evidence is
+failed/truncated and can never support a passing sample. Existing max3/cap64
+fields and schemas remain unchanged; cleanup-race hardening is deferred.
+
+Frozen current Python/runner/tests SHA-256 are
+`c26112b0738224eed4f1401553adf6fc9a3512b37c475f5b52152cab98e6ecff` /
+`7e675cc31ab229485719200af8b508dae20bd234bff29428e84628029df2763e` /
+`426f83888587dc57b7874a4e8dd47f0965212a0c1d7fabde33e6f3ab2801a2e7`.
+Collection is `387`; focused root `23` passed / `363` deselected and
+independent `27` passed / `360` deselected. The full exact-document suite passed `387/387` in `94.11 s`. A future
+authorized public run would be ninth. Token state is absent, next-stage
+authority is false, and factor fit and H4 physics remain unproven.
+
 ## 실행 순서와 상태 전이
 
 1. 위 두 radius, 일곱 frequency, 다섯 Fourier mode의 analytic Bessel/Fourier DtN eigenvalue로 SAO interior를 검증한다. **완료:** A0 실패, A1 circle-only 통과.
@@ -655,7 +719,7 @@ no-cache `341/341` passed, the latter in `88.40 s`. Detailed evidence is in
 3. smallest eligible equal-width finite/open M1 collocation은 **완료/실패:** `BLOCKED_SAO_BOUNDARY_POWER_IDENTITY`로 immutable 보존한다.
 4. 같은 endpoint의 G1 direct exterior Galerkin은 **완료/제한 통과:** `passed_exterior_galerkin_only`. interior reciprocity와 저주파 passivity 때문에 overall blocked다.
 5. G2 target-tested interior Galerkin은 **pair 제한 통과 뒤 100 kHz circle 실패:** raw reciprocity/cancellation failure를 immutable 보존하고 planned G2 2 GHz circle, G2 `N=512`, G2 EQ0 seed로 확장하지 않는다.
-6. 같은 geometry/current basis의 A–v는 **2 GHz 4Deff smoke와 H1/H2 stage-only:** H2 certificate/token을 보존한다. 일곱 public attempt 뒤 native-completed name은 하나지만 certified factor는 0이고 factor fit/H4 physics는 미증명·금지 상태다. retry-v7 no-token contract와 `341/341` pass의 audit/reread 및 별도 승인 뒤 fresh token이 생긴 경우에만 factor-only run을 한 번 수행하고 terminal chain을 독립 감사한다. 별도 H4-P1 계약/clean audit/fresh token 전에는 h4를 실행하지 않는다.
+6. 같은 geometry/current basis의 A–v는 **2 GHz 4Deff smoke와 H1/H2 stage-only:** H2 certificate/token을 보존한다. 여덟 public attempt 뒤 latest native-completed name은 하나지만 certified factor는 0이고 factor fit/H4 physics는 미증명·금지 상태다. retry-v8 no-token contract와 full exact-document 387-test suite의 `387/387` in `94.11 s` 통과 상태의 audit/reread 및 별도 승인 뒤 fresh token이 생긴 경우에만 아홉 번째 factor-only run을 한 번 수행하고 terminal chain을 독립 감사한다. 별도 H4-P1 계약/clean audit/fresh token 전에는 h4를 실행하지 않는다.
 7. symmetric two-return case에서 symmetry로만 equal split이 나오는지 검증한다.
 8. P2 artificial `Trace13305` coupon을 실행한다.
 9. finite-length T1-F 3-D length-difference reference와 distributed line stamp를 연결한다.

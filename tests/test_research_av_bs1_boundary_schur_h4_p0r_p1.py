@@ -3233,12 +3233,12 @@ def test_control_incomplete_retry_evidence_requires_exact_failed_provenance(
                 birth_utc_ticks=9_014,
                 attempt=1,
             ),
-            _control_tree_diagnostic(
-                context="control_envelope_close_tree_sample",
-                process_id=915,
-                birth_utc_ticks=9_015,
-                attempt=2,
-            ),
+                _control_tree_diagnostic(
+                    context="control_envelope_close_tree_sample",
+                    process_id=914,
+                    birth_utc_ticks=9_014,
+                    attempt=2,
+                ),
         ]
         confirmed_count = 65
         truncated = True
@@ -3722,24 +3722,172 @@ def test_control_retry_attempt_sequence_rejects_orphans_and_context_drift(
         )
 
 
-def test_control_close_extension_must_be_one_fresh_attempt_sequence() -> None:
+@pytest.mark.parametrize("close_process_ids", [[303, 303], [303, 304, 304]])
+def test_control_close_extension_must_be_one_fresh_attempt_sequence(
+    close_process_ids: list[int],
+) -> None:
     scope = _synthetic_manifest()["execution_resource_scope"]["control_plane"]
     report_event = _control_retry_event()
     report = _control_diagnostic_snapshot([report_event])
     close = _control_diagnostic_snapshot(
         [
             report_event,
-            _control_retry_event(
-                attempt=1, context="control_envelope_close_tree_sample"
-            ),
-            _control_retry_event(
-                attempt=1, context="control_envelope_close_tree_sample"
-            ),
+            *[
+                _control_retry_event(
+                    attempt=1,
+                    context="control_envelope_close_tree_sample",
+                    process_id=process_id,
+                    expected_birth=process_id * 10,
+                    observed_birth=process_id * 10,
+                )
+                for process_id in close_process_ids
+            ],
         ]
     )
     with pytest.raises(p1.AvBsError, match="close-only retry sequence"):
         p1._validate_control_tree_sample_diagnostics_pair(
             report, close, scope, require_pass=False, label="test control"
+        )
+
+
+@pytest.mark.parametrize(
+    "attempt_process_ids,require_pass",
+    [
+        ([(1, 303), (2, 304)], True),
+        ([(1, 303), (2, 303), (3, 304)], False),
+    ],
+)
+def test_control_close_extension_rejects_strong_identity_change_without_reset(
+    attempt_process_ids: list[tuple[int, int]], require_pass: bool
+) -> None:
+    scope = _synthetic_manifest()["execution_resource_scope"]["control_plane"]
+    report = _control_diagnostic_snapshot(
+        [], gate=require_pass, monitor_ok=require_pass
+    )
+    close = _control_diagnostic_snapshot(
+        [
+            _control_retry_event(
+                attempt=attempt,
+                context="control_envelope_close_tree_sample",
+                process_id=process_id,
+                expected_birth=process_id * 10,
+                observed_birth=process_id * 10,
+            )
+            for attempt, process_id in attempt_process_ids
+        ],
+        gate=require_pass,
+        monitor_ok=require_pass,
+    )
+    with pytest.raises(p1.AvBsError, match="retry strong identity sequence"):
+        p1._validate_control_tree_sample_diagnostics_pair(
+            report, close, scope, require_pass=require_pass, label="test control"
+        )
+
+
+def test_control_close_extension_accepts_same_or_unbound_progression() -> None:
+    scope = _synthetic_manifest()["execution_resource_scope"]["control_plane"]
+    report = _control_diagnostic_snapshot([])
+    same_identity = [
+        _control_retry_event(
+            attempt=attempt,
+            context="control_envelope_close_tree_sample",
+            process_id=303,
+            expected_birth=3_030,
+            observed_birth=3_030,
+        )
+        for attempt in (1, 2)
+    ]
+    unbound_then_strong = [
+        _control_retry_event(
+            attempt=1,
+            confirmation="limited_query_not_found_and_complete_snapshot_absent",
+            context="control_envelope_close_tree_sample",
+            expected_birth=None,
+            observed_birth=None,
+            operation="open_process",
+            process_id=303,
+            win32_error_code=87,
+        ),
+        _control_retry_event(
+            attempt=2,
+            context="control_envelope_close_tree_sample",
+            process_id=304,
+            expected_birth=3_040,
+            observed_birth=3_040,
+        ),
+    ]
+    for events in (same_identity, unbound_then_strong):
+        p1._validate_control_tree_sample_diagnostics_pair(
+            report,
+            _control_diagnostic_snapshot(events),
+            scope,
+            require_pass=False,
+            label="test control",
+        )
+
+
+@pytest.mark.parametrize(
+    "attempt_process_ids",
+    [
+        [(1, 303), (2, 304)],
+        [(1, 303), (2, 303), (3, 304)],
+    ],
+)
+def test_control_report_rejects_strong_identity_change_without_reset(
+    attempt_process_ids: list[tuple[int, int]],
+) -> None:
+    scope = _synthetic_manifest()["execution_resource_scope"]["control_plane"]
+    report = _control_diagnostic_snapshot(
+        [
+            _control_retry_event(
+                attempt=attempt,
+                process_id=process_id,
+                expected_birth=process_id * 10,
+                observed_birth=process_id * 10,
+            )
+            for attempt, process_id in attempt_process_ids
+        ],
+        gate=True,
+        monitor_ok=True,
+    )
+    with pytest.raises(p1.AvBsError, match="retry strong identity sequence"):
+        p1._validate_control_tree_sample_diagnostics_pair(
+            report, deepcopy(report), scope, require_pass=True, label="test control"
+        )
+
+
+def test_control_report_accepts_same_or_unbound_progression() -> None:
+    scope = _synthetic_manifest()["execution_resource_scope"]["control_plane"]
+    same_identity = [
+        _control_retry_event(
+            attempt=attempt,
+            process_id=303,
+            expected_birth=3_030,
+            observed_birth=3_030,
+        )
+        for attempt in (1, 2)
+    ]
+    unbound_then_strong = [
+        _control_retry_event(
+            attempt=1,
+            confirmation="limited_query_not_found_and_complete_snapshot_absent",
+            expected_birth=None,
+            observed_birth=None,
+            operation="open_process",
+            process_id=303,
+            win32_error_code=87,
+        ),
+        _control_retry_event(
+            attempt=2,
+            process_id=304,
+            expected_birth=3_040,
+            observed_birth=3_040,
+        ),
+    ]
+    for events in (same_identity, unbound_then_strong):
+        report = _control_diagnostic_snapshot(events, gate=True, monitor_ok=True)
+        p1._validate_control_tree_sample_diagnostics_pair(
+            report, deepcopy(report), scope, require_pass=True, label="test control"
         )
 
 
@@ -3865,6 +4013,284 @@ def test_control_report_exhaustion_binds_report_group_before_fresh_close_retry()
         )
 
 
+def test_control_total_retry_cap_fatal_is_complete_and_sticky_in_report() -> None:
+    scope = _synthetic_manifest()["execution_resource_scope"]["control_plane"]
+    events = [
+        _control_retry_event(
+            process_id=1_000 + index,
+            expected_birth=10_000 + index,
+            observed_birth=10_000 + index,
+        )
+        for index in range(64)
+    ]
+    failure = _control_monitor_failure(
+        context="control_active_outer_tree_sample",
+        operation="get_process_times",
+        message_code="TREE_SAMPLE_TOTAL_RETRY_CAP_REACHED",
+    )
+    stop_reason = "CONTROL_PLANE_SUPERVISOR_EXCEPTION"
+    report = _control_diagnostic_snapshot(
+        events,
+        monitor_failure=failure,
+        monitor_error="tree sample total retry cap reached",
+        stop_reason=stop_reason,
+    )
+    close = deepcopy(report)
+
+    report_diagnostics, close_diagnostics = (
+        p1._validate_control_tree_sample_diagnostics_pair(
+            report, close, scope, require_pass=False, label="test control"
+        )
+    )
+    assert report_diagnostics["evidence_complete"] is True
+    assert close_diagnostics["evidence_complete"] is True
+    assert (
+        p1._validate_control_failed_tree_sample_diagnostic_disposition(
+            report_diagnostics,
+            close,
+            close_diagnostics,
+            label="test control",
+        )
+        == "sticky_prior_monitor_failure"
+    )
+    with pytest.raises(p1.AvBsError):
+        p1._validate_control_tree_sample_diagnostics_pair(
+            report, close, scope, require_pass=True, label="test control"
+        )
+
+
+def test_control_total_retry_cap_fatal_is_complete_in_close_extension() -> None:
+    scope = _synthetic_manifest()["execution_resource_scope"]["control_plane"]
+    report_events = [
+        _control_retry_event(
+            process_id=1_000 + index,
+            expected_birth=10_000 + index,
+            observed_birth=10_000 + index,
+        )
+        for index in range(63)
+    ]
+    report = _control_diagnostic_snapshot(report_events)
+    close_event = _control_retry_event(
+        context="control_envelope_close_tree_sample",
+        process_id=2_000,
+        expected_birth=20_000,
+        observed_birth=20_000,
+    )
+    failure = _control_monitor_failure(
+        context="control_envelope_close_tree_sample",
+        operation="get_process_times",
+        message_code="TREE_SAMPLE_TOTAL_RETRY_CAP_REACHED",
+    )
+    close = _control_diagnostic_snapshot(
+        report_events + [close_event],
+        monitor_failure=failure,
+        monitor_error="tree sample total retry cap reached",
+        stop_reason="CONTROL_FINAL_SYSTEM_SAMPLE_FAILED",
+    )
+
+    report_diagnostics, close_diagnostics = (
+        p1._validate_control_tree_sample_diagnostics_pair(
+            report, close, scope, require_pass=False, label="test control"
+        )
+    )
+    assert close_diagnostics["evidence_complete"] is True
+    assert (
+        p1._validate_control_failed_tree_sample_diagnostic_disposition(
+            report_diagnostics,
+            close,
+            close_diagnostics,
+            label="test control",
+        )
+        == "sticky_close_monitor_failure"
+    )
+    with pytest.raises(p1.AvBsError):
+        p1._validate_control_tree_sample_diagnostics_pair(
+            report, close, scope, require_pass=True, label="test control"
+        )
+
+
+@pytest.mark.parametrize(
+    "events,confirmed_count,truncated,failure_attempt,failure_context,failure_operation",
+    [
+        (
+            [_control_retry_event()],
+            1,
+            False,
+            1,
+            "control_active_outer_tree_sample",
+            "get_process_times",
+        ),
+        (
+            [
+                *[
+                    _control_retry_event(
+                        process_id=1_000 + index,
+                        expected_birth=10_000 + index,
+                        observed_birth=10_000 + index,
+                    )
+                    for index in range(61)
+                ],
+                *[
+                    _control_retry_event(
+                        attempt=attempt,
+                        process_id=2_000,
+                        expected_birth=20_000,
+                        observed_birth=20_000,
+                    )
+                    for attempt in (1, 2, 3)
+                ],
+            ],
+            64,
+            False,
+            3,
+            "control_active_outer_tree_sample",
+            "get_process_times",
+        ),
+        (
+            [
+                _control_retry_event(
+                    process_id=1_000 + index,
+                    expected_birth=10_000 + index,
+                    observed_birth=10_000 + index,
+                )
+                for index in range(64)
+            ],
+            64,
+            False,
+            2,
+            "control_active_outer_tree_sample",
+            "get_process_times",
+        ),
+        (
+            [
+                _control_retry_event(
+                    process_id=1_000 + index,
+                    expected_birth=10_000 + index,
+                    observed_birth=10_000 + index,
+                )
+                for index in range(64)
+            ],
+            64,
+            False,
+            1,
+            "control_active_cleanup_root_tree_sample",
+            "get_process_times",
+        ),
+        (
+            [
+                _control_retry_event(
+                    process_id=1_000 + index,
+                    expected_birth=10_000 + index,
+                    observed_birth=10_000 + index,
+                )
+                for index in range(64)
+            ],
+            64,
+            False,
+            1,
+            "control_active_outer_tree_sample",
+            "open_process",
+        ),
+    ],
+    ids=[
+        "below_cap",
+        "attempt3_precedence",
+        "attempt_mismatch",
+        "context_mismatch",
+        "operation_mismatch",
+    ],
+)
+def test_control_total_retry_cap_failure_requires_exact_complete_binding(
+    events: list[dict[str, object]],
+    confirmed_count: int,
+    truncated: bool,
+    failure_attempt: int,
+    failure_context: str,
+    failure_operation: str,
+) -> None:
+    scope = _synthetic_manifest()["execution_resource_scope"]["control_plane"]
+    failure = _control_monitor_failure(
+        context=failure_context,
+        operation=failure_operation,
+        message_code="TREE_SAMPLE_TOTAL_RETRY_CAP_REACHED",
+    )
+    failure["attempt"] = failure_attempt
+    snapshot = _control_diagnostic_snapshot(
+        events,
+        confirmed_count=confirmed_count,
+        truncated=truncated,
+        monitor_failure=failure,
+        monitor_error="tree sample total retry cap reached",
+        stop_reason="CONTROL_PLANE_SUPERVISOR_EXCEPTION",
+    )
+    with pytest.raises(p1.AvBsError, match="total retry cap failure"):
+        p1._validate_control_tree_sample_diagnostics_snapshot(
+            snapshot, scope, require_pass=False, label="test control"
+        )
+
+
+def test_control_total_retry_cap_failure_allows_truncated_reused_diagnostics() -> None:
+    scope = _synthetic_manifest()["execution_resource_scope"]["control_plane"]
+    events = [
+        _control_retry_event(
+            process_id=1_000 + index,
+            expected_birth=10_000 + index,
+            observed_birth=10_000 + index,
+        )
+        for index in range(64)
+    ]
+    failure = _control_monitor_failure(
+        context="control_envelope_close_tree_sample",
+        operation="get_process_times",
+        message_code="TREE_SAMPLE_TOTAL_RETRY_CAP_REACHED",
+    )
+    diagnostics = p1._validate_control_tree_sample_diagnostics_snapshot(
+        _control_diagnostic_snapshot(
+            events,
+            confirmed_count=65,
+            truncated=True,
+            monitor_failure=failure,
+            monitor_error="tree sample total retry cap reached",
+            stop_reason="CONTROL_FINAL_SYSTEM_SAMPLE_FAILED",
+        ),
+        scope,
+        require_pass=False,
+        label="test control",
+    )
+    assert diagnostics["total_retry_cap_failure"] is True
+    assert diagnostics["evidence_complete"] is False
+
+
+def test_control_close_one_call_accepts_multiple_contiguous_identity_groups() -> None:
+    scope = _synthetic_manifest()["execution_resource_scope"]["control_plane"]
+    report = _control_diagnostic_snapshot([])
+    close_events = [
+        _control_retry_event(
+            attempt=1,
+            context="control_envelope_close_tree_sample",
+            process_id=process_id,
+            expected_birth=birth,
+            observed_birth=birth,
+        )
+        for process_id, birth in ((301, 3_010), (302, 3_020), (301, 3_010))
+    ]
+    close = _control_diagnostic_snapshot(
+        close_events,
+        gate=True,
+        monitor_ok=True,
+    )
+
+    report_diagnostics, close_diagnostics = (
+        p1._validate_control_tree_sample_diagnostics_pair(
+            report, close, scope, require_pass=True, label="test control"
+        )
+    )
+    assert report_diagnostics["retry_events"] == []
+    assert [
+        event["attempt"] for event in close_diagnostics["retry_events"]
+    ] == [1, 1, 1]
+
+
 def test_control_sticky_first_fatal_accepts_secondary_close_exhaustion() -> None:
     scope = _synthetic_manifest()["execution_resource_scope"]["control_plane"]
     first_failure = _control_monitor_failure(
@@ -3927,6 +4353,53 @@ def test_control_sticky_first_fatal_accepts_secondary_close_exhaustion() -> None
     with pytest.raises(p1.AvBsError):
         p1._validate_control_tree_sample_diagnostics_pair(
             report, close, scope, require_pass=True, label="test control"
+        )
+
+
+def test_control_sticky_first_fatal_accepts_later_report_cleanup_exhaustion() -> None:
+    scope = _synthetic_manifest()["execution_resource_scope"]["control_plane"]
+    first_failure = _control_monitor_failure(
+        context="control_supervisor_exception",
+        operation="control_supervisor_exception",
+        message_code="OUTER_OBSERVER_EXCEPTION",
+    )
+    stop_reason = "CONTROL_PLANE_SUPERVISOR_EXCEPTION"
+    cleanup_events = [
+        _control_retry_event(
+            attempt=attempt,
+            context="control_active_cleanup_root_tree_sample",
+            process_id=909,
+            expected_birth=9_090,
+            observed_birth=9_090,
+        )
+        for attempt in (1, 2, 3)
+    ]
+    report = _control_diagnostic_snapshot(
+        cleanup_events,
+        monitor_failure=first_failure,
+        monitor_error="first fatal; later cleanup retry exhausted",
+        stop_reason=stop_reason,
+    )
+    report_diagnostics, close_diagnostics = (
+        p1._validate_control_tree_sample_diagnostics_pair(
+            report, deepcopy(report), scope, require_pass=False, label="test control"
+        )
+    )
+    close = {"mandatory_control_plane_gate_pass": False, "monitor_ok": False}
+    close.update(deepcopy(report))
+    close["stop_reason"] = stop_reason
+    assert (
+        p1._validate_control_failed_tree_sample_diagnostic_disposition(
+            report_diagnostics,
+            close,
+            close_diagnostics,
+            label="test control",
+        )
+        == "sticky_prior_monitor_failure"
+    )
+    with pytest.raises(p1.AvBsError):
+        p1._validate_control_tree_sample_diagnostics_pair(
+            report, deepcopy(report), scope, require_pass=True, label="test control"
         )
 
 
@@ -6502,6 +6975,34 @@ def test_outer_close_v2_accepts_one_call_attempt_prefix() -> None:
     p1._validate_outer_tree_sample_diagnostics(diagnostics, manifest)
 
 
+def test_outer_close_rejects_strong_identity_change_without_reset() -> None:
+    manifest = _synthetic_manifest()
+    diagnostics = {
+        "tree_sample_max_attempts": 3,
+        "tree_sample_confirmed_disappearance_count": 2,
+        "tree_sample_retry_events": [
+            _control_retry_event(
+                attempt=1,
+                context="outer_tree_sample",
+                process_id=303,
+                expected_birth=3_030,
+                observed_birth=3_030,
+            ),
+            _control_retry_event(
+                attempt=2,
+                context="outer_tree_sample",
+                process_id=304,
+                expected_birth=3_040,
+                observed_birth=3_040,
+            ),
+        ],
+        "tree_sample_retry_events_truncated": False,
+        "monitor_failure": None,
+    }
+    with pytest.raises(p1.AvBsError, match="strong identity sequence"):
+        p1._validate_outer_tree_sample_diagnostics(diagnostics, manifest)
+
+
 @pytest.mark.parametrize(
     "tamper",
     [
@@ -7097,6 +7598,31 @@ def test_native_exported_factor_contract_source_is_narrowly_pinned() -> None:
         'max(cert["exported_factor_bytes"], portable) > cap'
         not in validator_source
     )
+    assert "l_storage_sha256 = _csc_storage_sha256(l)" in certificate_source
+    assert "u_storage_sha256 = _csc_storage_sha256(u)" in certificate_source
+    assert '"L_storage_sha256": l_storage_sha256' in certificate_source
+    assert '"U_storage_sha256": u_storage_sha256' in certificate_source
+    assert certificate_source.count(".sort_indices()") == 2
+    for forbidden in (
+        ".sum_duplicates()",
+        ".eliminate_zeros()",
+        ".sorted_indices()",
+        "_canonical_csc(",
+        "raw_l.copy(",
+        "raw_u.copy(",
+        "l.copy(",
+        "u.copy(",
+    ):
+        assert forbidden not in certificate_source
+    assert (
+        certificate_source.index("l_storage_sha256 = _csc_storage_sha256(l)")
+        < certificate_source.index("l_storage_sorted = bool(l.has_sorted_indices)")
+        < certificate_source.index("l_finite, l_explicit_zero_count")
+        < certificate_source.index("_csc_column_spans_valid(l)")
+        < certificate_source.index("l.sort_indices()")
+        < certificate_source.index("l_normalized_finite, l_normalized_zero_count")
+        < certificate_source.index('"L_sha256": _streaming_sparse_sha256(l)')
+    )
 
 
 def test_streaming_sparse_hashes_match_frozen_reference_without_whole_bytes_copy(
@@ -7250,6 +7776,324 @@ def test_fake_splu_certificate_accepts_frozen_runtime_csc_array_outputs(
 
     assert certificate["L_nnz"] == 3
     assert certificate["U_nnz"] == 3
+
+
+def test_fake_splu_sorts_duplicate_free_exports_in_place_and_preserves_raw_storage(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    lower = csc_matrix(
+        (
+            np.array([2.0, 1.0, 3.0, 4.0, 1.0, 1.0], dtype=np.complex128),
+            np.array([2, 0, 1, 2, 1, 2], dtype=np.int32),
+            np.array([0, 3, 5, 6], dtype=np.int32),
+        ),
+        shape=(3, 3),
+    )
+    upper = csc_matrix(
+        (
+            np.array([3.0, 5.0, 4.0, 7.0, 6.0, 8.0], dtype=np.complex128),
+            np.array([0, 1, 0, 2, 0, 1], dtype=np.int32),
+            np.array([0, 1, 3, 6], dtype=np.int32),
+        ),
+        shape=(3, 3),
+    )
+    factor = _FakeFactor(
+        lower=lower,
+        upper=upper,
+        perm_r=np.arange(3, dtype=np.int32),
+        perm_c=np.arange(3, dtype=np.int32),
+    )
+    raw_l_storage_sha256 = p1._csc_storage_sha256(lower)
+    raw_u_storage_sha256 = p1._csc_storage_sha256(upper)
+    lower_identity = id(lower)
+    upper_identity = id(upper)
+    assert lower.has_sorted_indices is False
+    assert upper.has_sorted_indices is False
+    _install_fake_splu(monkeypatch, factor)
+    _clock(monkeypatch, [30, 40, 50, 60])
+    matrix = csc_matrix(np.eye(3, dtype=np.complex128))
+
+    certificate = p1._certificate(
+        "A_background_II", matrix, _metadata(), 1_000_000
+    )
+
+    assert id(factor.L) == lower_identity
+    assert id(factor.U) == upper_identity
+    assert lower.has_sorted_indices is True
+    assert upper.has_sorted_indices is True
+    assert lower.has_canonical_format is True
+    assert upper.has_canonical_format is True
+    assert certificate["L_storage_sha256"] == raw_l_storage_sha256
+    assert certificate["U_storage_sha256"] == raw_u_storage_sha256
+    assert certificate["L_storage_sha256"] != p1._csc_storage_sha256(lower)
+    assert certificate["U_storage_sha256"] != p1._csc_storage_sha256(upper)
+    assert certificate["L_storage_canonical"] is False
+    assert certificate["U_storage_canonical"] is False
+    assert certificate["L_explicit_zero_count"] == 0
+    assert certificate["U_explicit_zero_count"] == 0
+    assert certificate["L_sha256"] == p1._streaming_sparse_sha256(lower)
+    assert certificate["U_sha256"] == p1._streaming_sparse_sha256(upper)
+    expected_array_bytes = {
+        "L_data": lower.data.nbytes,
+        "L_indices": lower.indices.nbytes,
+        "L_indptr": lower.indptr.nbytes,
+        "U_data": upper.data.nbytes,
+        "U_indices": upper.indices.nbytes,
+        "U_indptr": upper.indptr.nbytes,
+        "perm_r": factor.perm_r.nbytes,
+        "perm_c": factor.perm_c.nbytes,
+    }
+    assert certificate["factor_array_bytes"] == expected_array_bytes
+    assert certificate["exported_factor_bytes"] == sum(expected_array_bytes.values())
+    assert certificate["portable_factor_bytes"] == 400
+    assert certificate["native_portable_factor_bytes"] == 400
+    assert certificate["stored_fill_ratio"] == 4.0
+    assert certificate["fill_ratio"] == 4.0
+    assert certificate["factor_solve_called"] is False
+
+
+@pytest.mark.parametrize("duplicate_values", [(2.0, 3.0), (2.0, -2.0)])
+def test_fake_splu_duplicate_or_cancelling_export_remains_fail_closed(
+    monkeypatch: pytest.MonkeyPatch,
+    duplicate_values: tuple[float, float],
+) -> None:
+    lower = csc_matrix(
+        (
+            np.array(
+                [1.0, duplicate_values[0], duplicate_values[1], 1.0, 2.0, 1.0],
+                dtype=np.complex128,
+            ),
+            np.array([0, 1, 1, 1, 2, 2], dtype=np.int32),
+            np.array([0, 3, 5, 6], dtype=np.int32),
+        ),
+        shape=(3, 3),
+    )
+    upper = csc_matrix(np.diag([3.0, 4.0, 5.0]).astype(np.complex128))
+    assert lower.has_sorted_indices is True
+    assert lower.has_canonical_format is False
+    _install_fake_splu(
+        monkeypatch,
+        _FakeFactor(
+            lower=lower,
+            upper=upper,
+            perm_r=np.arange(3, dtype=np.int32),
+            perm_c=np.arange(3, dtype=np.int32),
+        ),
+    )
+    _clock(monkeypatch, [30, 40, 50, 60])
+
+    with pytest.raises(p1.AvBsError, match="non-canonical factor storage") as caught:
+        p1._certificate(
+            "A_background_II",
+            csc_matrix(np.eye(3, dtype=np.complex128)),
+            _metadata(),
+            1_000_000,
+        )
+
+    assert caught.value.code == "BLOCKED_AV_BS_FACTOR"
+    assert int(lower.nnz) == 6
+    assert p1._EXECUTION_PHASE["factor_certificates"] == []
+
+
+def test_fake_splu_unsorted_duplicate_export_remains_fail_closed(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    lower = csc_matrix(
+        (
+            np.array([2.0, 1.0, 3.0, 1.0, 1.0], dtype=np.complex128),
+            np.array([2, 0, 2, 1, 2], dtype=np.int32),
+            np.array([0, 3, 4, 5], dtype=np.int32),
+        ),
+        shape=(3, 3),
+    )
+    assert lower.has_sorted_indices is False
+    _install_fake_splu(
+        monkeypatch,
+        _FakeFactor(
+            lower=lower,
+            upper=csc_matrix(np.diag([3.0, 4.0, 5.0]).astype(np.complex128)),
+            perm_r=np.arange(3, dtype=np.int32),
+            perm_c=np.arange(3, dtype=np.int32),
+        ),
+    )
+    _clock(monkeypatch, [30, 40, 50, 60])
+
+    with pytest.raises(p1.AvBsError, match="non-canonical factor storage") as caught:
+        p1._certificate(
+            "A_background_II",
+            csc_matrix(np.eye(3, dtype=np.complex128)),
+            _metadata(),
+            1_000_000,
+        )
+
+    assert caught.value.code == "BLOCKED_AV_BS_FACTOR"
+    assert lower.has_sorted_indices is True
+    assert lower.has_canonical_format is False
+    assert p1._EXECUTION_PHASE["factor_certificates"] == []
+
+
+def test_fake_splu_explicit_zero_export_remains_fail_closed(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    lower = csc_matrix(
+        (
+            np.array([1.0, 0.0, 1.0, 1.0], dtype=np.complex128),
+            np.array([0, 1, 1, 2], dtype=np.int32),
+            np.array([0, 2, 3, 4], dtype=np.int32),
+        ),
+        shape=(3, 3),
+    )
+    upper = csc_matrix(np.diag([3.0, 4.0, 5.0]).astype(np.complex128))
+    _install_fake_splu(
+        monkeypatch,
+        _FakeFactor(
+            lower=lower,
+            upper=upper,
+            perm_r=np.arange(3, dtype=np.int32),
+            perm_c=np.arange(3, dtype=np.int32),
+        ),
+    )
+    _clock(monkeypatch, [30, 40, 50, 60])
+
+    with pytest.raises(p1.AvBsError, match="explicit-zero factor storage") as caught:
+        p1._certificate(
+            "A_background_II",
+            csc_matrix(np.eye(3, dtype=np.complex128)),
+            _metadata(),
+            1_000_000,
+        )
+
+    assert caught.value.code == "BLOCKED_AV_BS_FACTOR"
+    assert np.count_nonzero(lower.data == 0.0) == 1
+    assert p1._EXECUTION_PHASE["factor_certificates"] == []
+
+
+@pytest.mark.parametrize("nonfinite", [np.nan, np.inf])
+def test_fake_splu_nonfinite_raw_export_remains_fail_closed(
+    monkeypatch: pytest.MonkeyPatch, nonfinite: float
+) -> None:
+    lower = csc_matrix(
+        (
+            np.array([1.0, nonfinite, 1.0, 1.0], dtype=np.complex128),
+            np.array([0, 1, 1, 2], dtype=np.int32),
+            np.array([0, 2, 3, 4], dtype=np.int32),
+        ),
+        shape=(3, 3),
+    )
+    _install_fake_splu(
+        monkeypatch,
+        _FakeFactor(
+            lower=lower,
+            upper=csc_matrix(np.diag([3.0, 4.0, 5.0]).astype(np.complex128)),
+            perm_r=np.arange(3, dtype=np.int32),
+            perm_c=np.arange(3, dtype=np.int32),
+        ),
+    )
+    _clock(monkeypatch, [30, 40, 50, 60])
+
+    with pytest.raises(p1.AvBsError, match="non-finite factor data") as caught:
+        p1._certificate(
+            "A_background_II",
+            csc_matrix(np.eye(3, dtype=np.complex128)),
+            _metadata(),
+            1_000_000,
+        )
+
+    assert caught.value.code == "BLOCKED_AV_BS_FACTOR"
+
+
+@pytest.mark.parametrize("post_sort_value", [0.0, np.inf])
+def test_fake_splu_post_sort_data_change_remains_fail_closed(
+    monkeypatch: pytest.MonkeyPatch, post_sort_value: float
+) -> None:
+    lower = csc_matrix(
+        (
+            np.array([2.0, 1.0, 1.0], dtype=np.complex128),
+            np.array([1, 0, 1], dtype=np.int32),
+            np.array([0, 2, 3], dtype=np.int32),
+        ),
+        shape=(2, 2),
+    )
+    original_sort = lower.sort_indices
+
+    def corrupt_after_sort() -> None:
+        original_sort()
+        lower.data[0] = post_sort_value
+
+    lower.sort_indices = corrupt_after_sort  # type: ignore[method-assign]
+    _install_fake_splu(monkeypatch, _FakeFactor(lower=lower))
+    _clock(monkeypatch, [30, 40, 50, 60])
+
+    with pytest.raises(p1.AvBsError, match="factor data changed during sorting") as caught:
+        p1._certificate(
+            "A_background_II",
+            csc_matrix(np.eye(2, dtype=np.complex128)),
+            _metadata(),
+            1_000_000,
+        )
+
+    assert caught.value.code == "BLOCKED_AV_BS_FACTOR"
+
+
+def test_fake_splu_rejects_oversized_raw_column_before_sorting(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    lower = csc_matrix(
+        (
+            np.array([2.0, 1.0, 3.0, 1.0], dtype=np.complex128),
+            np.array([1, 0, 1, 1], dtype=np.int32),
+            np.array([0, 3, 4], dtype=np.int32),
+        ),
+        shape=(2, 2),
+    )
+    sort_calls: list[bool] = []
+    original_sort = lower.sort_indices
+
+    def record_sort() -> None:
+        sort_calls.append(True)
+        original_sort()
+
+    lower.sort_indices = record_sort  # type: ignore[method-assign]
+    _install_fake_splu(monkeypatch, _FakeFactor(lower=lower))
+    _clock(monkeypatch, [30, 40, 50, 60])
+
+    with pytest.raises(p1.AvBsError, match="factor column span invalid") as caught:
+        p1._certificate(
+            "A_background_II",
+            csc_matrix(np.eye(2, dtype=np.complex128)),
+            _metadata(),
+            1_000_000,
+        )
+
+    assert caught.value.code == "BLOCKED_AV_BS_FACTOR"
+    assert sort_calls == []
+
+
+@pytest.mark.parametrize("invalid_row", [-1, 99])
+def test_fake_splu_rejects_out_of_range_raw_row_index_before_certificate(
+    monkeypatch: pytest.MonkeyPatch, invalid_row: int,
+) -> None:
+    lower = csc_matrix(
+        (
+            np.array([1.0, 2.0, 1.0], dtype=np.complex128),
+            np.array([0, invalid_row, 1], dtype=np.int32),
+            np.array([0, 2, 3], dtype=np.int32),
+        ),
+        shape=(2, 2),
+    )
+    _install_fake_splu(monkeypatch, _FakeFactor(lower=lower))
+    _clock(monkeypatch, [30, 40, 50, 60])
+
+    with pytest.raises(p1.AvBsError, match="factor column span invalid") as caught:
+        p1._certificate(
+            "A_background_II",
+            csc_matrix(np.eye(2, dtype=np.complex128)),
+            _metadata(),
+            1_000_000,
+        )
+
+    assert caught.value.code == "BLOCKED_AV_BS_FACTOR"
+    assert p1._EXECUTION_PHASE["factor_certificates"] == []
 
 
 @pytest.mark.parametrize("tamper", ["upper_L", "zero_U_diagonal", "bad_permutation"])
@@ -7442,6 +8286,35 @@ def test_factor_report_accepts_native_storage_superset(
     )
 
 
+def test_factor_report_accepts_noncanonical_raw_storage_evidence(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    manifest_value = _synthetic_manifest()
+    token = _synthetic_token()
+    claim = _synthetic_claim()
+    report = _synthetic_factor_report(manifest_value, token)
+    for certificate in report["factor_certificates"]:
+        certificate["L_storage_canonical"] = False
+        certificate["U_storage_canonical"] = False
+        certificate["L_explicit_zero_count"] = 0
+        certificate["U_explicit_zero_count"] = 0
+    monkeypatch.setattr(p1, "_sha", lambda _path: SHA_F)
+    monkeypatch.setattr(p1, "_canonical_sha", lambda _value: SHA_E)
+    monkeypatch.setattr(p1, "_git_head", lambda: "2" * 40)
+    monkeypatch.setattr(p1, "_validate_monitor_handshake", lambda *_args: None)
+
+    p1._validate_factor_report(
+        report,
+        token,
+        manifest_value,
+        claim,
+        tmp_path / "claim",
+        {"guard": "synthetic"},
+        tmp_path / "guard",
+        validate_prefix_sidecars=False,
+    )
+
+
 @pytest.mark.parametrize(
     ("tamper", "expected_code"),
     [
@@ -7455,6 +8328,12 @@ def test_factor_report_accepts_native_storage_superset(
         ("native_nnz_float", "BLOCKED_AV_BS_FACTOR"),
         ("native_portable_bool", "BLOCKED_AV_BS_FACTOR"),
         ("native_portable_float", "BLOCKED_AV_BS_FACTOR"),
+        ("raw_storage_canonical_int", "BLOCKED_AV_BS_RESULT_SCHEMA"),
+        ("raw_storage_canonical_none", "BLOCKED_AV_BS_RESULT_SCHEMA"),
+        ("raw_explicit_zero_nonzero", "BLOCKED_AV_BS_RESULT_SCHEMA"),
+        ("raw_explicit_zero_bool", "BLOCKED_AV_BS_RESULT_SCHEMA"),
+        ("raw_explicit_zero_float", "BLOCKED_AV_BS_RESULT_SCHEMA"),
+        ("raw_storage_hash_type", "BLOCKED_AV_BS_RESULT_SCHEMA"),
         ("wall_seconds", "BLOCKED_AV_BS_FACTOR"),
         ("factor_overlap", "BLOCKED_AV_BS_FACTOR"),
         ("physics_truth", "BLOCKED_AV_BS_RESULT_SCHEMA"),
@@ -7495,6 +8374,18 @@ def test_factor_report_tamper_is_fail_closed(
         first["native_portable_factor_bytes"] = True
     elif tamper == "native_portable_float":
         first["native_portable_factor_bytes"] = 176.0
+    elif tamper == "raw_storage_canonical_int":
+        first["L_storage_canonical"] = 1
+    elif tamper == "raw_storage_canonical_none":
+        first["U_storage_canonical"] = None
+    elif tamper == "raw_explicit_zero_nonzero":
+        first["L_explicit_zero_count"] = 1
+    elif tamper == "raw_explicit_zero_bool":
+        first["U_explicit_zero_count"] = False
+    elif tamper == "raw_explicit_zero_float":
+        first["L_explicit_zero_count"] = 0.0
+    elif tamper == "raw_storage_hash_type":
+        first["L_storage_sha256"] = None
     elif tamper == "wall_seconds":
         first["factor_wall_seconds"] = 0.5
     elif tamper == "factor_overlap":
@@ -8328,6 +9219,36 @@ def test_runner_is_literal_native_h2_p1_derivative_with_primary_gated() -> None:
     assert "RUNNER_EXCEPTION" in source
     assert "$ids = @($ids | Sort-Object -Unique)" in source
     assert ":treeSampleAttempt for ($attempt = 1;" in source
+    tree_sample_slice = source[
+        source.index("# AV_BS_TREE_SAMPLE_TEST_SLICE_BEGIN") : source.index(
+            "# AV_BS_TREE_SAMPLE_TEST_SLICE_END"
+        )
+    ]
+    assert "$previousStrongRetryProcessId = $null" in tree_sample_slice
+    assert "$previousStrongRetryBirthUtcTicks = $null" in tree_sample_slice
+    assert (
+        '$retryEvidence.confirmation -eq '
+        '"signaled_handle_and_complete_snapshot_absent"'
+    ) in tree_sample_slice
+    assert (
+        "$retryEvidence.expected_birth_utc_ticks -is [long]"
+    ) in tree_sample_slice
+    assert (
+        "[int64]$retryEvidence.expected_birth_utc_ticks -gt 0"
+    ) in tree_sample_slice
+    assert (
+        "[int64]$retryEvidence.observed_birth_utc_ticks -eq "
+        "[int64]$retryEvidence.expected_birth_utc_ticks"
+    ) in tree_sample_slice
+    assert "$retryEvidence.attempt = [int]1" in tree_sample_slice
+    assert "if ($distinctStrongRetryIdentity) { $attempt = 0 }" not in tree_sample_slice
+    assert "$totalRetryEventCount = if ($null -ne $Diagnostics)" in tree_sample_slice
+    assert "$totalRetryEventLimit = if ($null -ne $Diagnostics)" in tree_sample_slice
+    assert '"TREE_SAMPLE_TOTAL_RETRY_CAP_REACHED"' in tree_sample_slice
+    assert (
+        tree_sample_slice.index("if ($attempt -ge $MaximumAttempts)")
+        < tree_sample_slice.index("if ($totalRetryEventCount -ge $totalRetryEventLimit)")
+    )
     assert "$consumeWrapper.payload.failure_codes.Count" not in source
     assert source.count(
         "Write-Error $_.Exception.Message -ErrorAction Continue"
@@ -8401,7 +9322,8 @@ def _run_tree_sample_slice(
         assert forbidden not in function_slice
     assert function_slice.count("function Get-TreeSample(") == 1
     script = (
-        "$ErrorActionPreference='Stop'; Set-StrictMode -Version Latest;\n"
+        "$ErrorActionPreference='Stop'; Set-StrictMode -Version Latest; "
+        "$treeSampleRetryEventLimit=[int]64;\n"
         + function_slice
         + "\n"
         + case_script
@@ -8902,6 +9824,332 @@ def test_inner_cleanup_tree_sample_failure_remains_fatal_after_later_sample() ->
     assert "-not $monitorErrorPresent" in mandatory_gate
     assert "$null -eq $monitorFailure" in mandatory_gate
     assert "-not $stopReason" in mandatory_gate
+
+
+@pytest.mark.parametrize(
+    "context",
+    ["outer_tree_sample", "control_active_outer_tree_sample"],
+)
+def test_tree_sample_distinct_strong_disappearances_restart_retry_ordinal(
+    tmp_path: Path, context: str,
+) -> None:
+    result = _run_tree_sample_slice(
+        tmp_path,
+        r"""
+$script:enumerations=0; $script:childMetrics=0; $script:snapshotQueries=0
+$providers=[ordered]@{
+    Enumerate={param([int]$RootProcessId)
+        $script:enumerations+=1
+        if($script:enumerations -eq 1){return @([int]100,[int]300)}
+        if($script:enumerations -eq 2){return @([int]100,[int]400)}
+        if($script:enumerations -eq 3){return @([int]100,[int]500)}
+        return @([int]100)
+    }
+    Identity={param([int]$ProcessId)
+        if($ProcessId -eq 100){return [ordered]@{status='live';operation='get_process_times';win32_error_code=$null;birth_utc_ticks=[int64]1000}}
+        return [ordered]@{status='exited';operation='get_process_times';win32_error_code=$null;birth_utc_ticks=[int64]($ProcessId*10)}
+    }
+    Metrics={param([int]$ProcessId)
+        if($ProcessId -ne 100){$script:childMetrics+=1; throw 'confirmed exit must precede child metrics'}
+        return [ordered]@{status='ok';operation='get_process_memory_info';win32_error_code=$null;birth_utc_ticks=[int64]1000;values=[int64[]]@(1,1,1,1,1,1,1,1)}
+    }
+    SnapshotContains={param([int]$ProcessId) $script:snapshotQueries+=1; return $false}
+}
+$ids=New-Object 'System.Collections.Generic.HashSet[int]'
+$births=New-Object 'System.Collections.Generic.Dictionary[int, Int64]'
+$births.Add(100,[int64]1000); [void]$ids.Add(100)
+$diagnostics=New-TreeSampleDiagnostics 64
+$sample=Get-TreeSample 100 1000 $ids $births '__TEST_CONTEXT__' $diagnostics $providers 3
+[ordered]@{sample=$sample;enumerations=$script:enumerations;child_metrics=$script:childMetrics;snapshot_queries=$script:snapshotQueries;retry_count=$diagnostics.confirmed_disappearance_count;retry_events_truncated=$diagnostics.retry_events_truncated;events=@($diagnostics.retry_events)} | ConvertTo-Json -Depth 12 -Compress
+""".replace("__TEST_CONTEXT__", context),
+    )
+    assert result["enumerations"] == 4
+    assert result["child_metrics"] == 0
+    assert result["snapshot_queries"] == 3
+    assert result["retry_count"] == 3
+    assert result["retry_events_truncated"] is False
+    assert result["sample"]["process_ids"] == [100]
+    for metric_name in (
+        "working_set_bytes",
+        "summed_process_peak_working_set_bytes",
+        "committed_pagefile_bytes",
+        "summed_process_peak_commit_bytes",
+        "private_commit_bytes",
+        "private_working_set_bytes",
+        "shared_commit_bytes",
+        "page_fault_count",
+    ):
+        assert result["sample"][metric_name] == 1
+    assert [event["attempt"] for event in result["events"]] == [1, 1, 1]
+    assert [event["process_id"] for event in result["events"]] == [300, 400, 500]
+    assert [
+        event["expected_birth_utc_ticks"] for event in result["events"]
+    ] == [3000, 4000, 5000]
+    assert [
+        event["observed_birth_utc_ticks"] for event in result["events"]
+    ] == [3000, 4000, 5000]
+    assert {
+        event["confirmation"] for event in result["events"]
+    } == {"signaled_handle_and_complete_snapshot_absent"}
+
+
+def test_tree_sample_interleaved_strong_identity_starts_fresh_contiguous_group(
+    tmp_path: Path,
+) -> None:
+    result = _run_tree_sample_slice(
+        tmp_path,
+        r"""
+$script:enumerations=0
+$providers=[ordered]@{
+    Enumerate={param([int]$RootProcessId)
+        $script:enumerations+=1
+        if($script:enumerations -eq 1){return @([int]100,[int]300)}
+        if($script:enumerations -eq 2){return @([int]100,[int]400)}
+        if($script:enumerations -eq 3){return @([int]100,[int]300)}
+        return @([int]100)
+    }
+    Identity={param([int]$ProcessId)
+        if($ProcessId -eq 100){return [ordered]@{status='live';operation='get_process_times';win32_error_code=$null;birth_utc_ticks=[int64]1000}}
+        return [ordered]@{status='exited';operation='get_process_times';win32_error_code=$null;birth_utc_ticks=[int64]($ProcessId*10)}
+    }
+    Metrics={param([int]$ProcessId)
+        return [ordered]@{status='ok';operation='get_process_memory_info';win32_error_code=$null;birth_utc_ticks=[int64]1000;values=[int64[]]@(1,1,1,1,1,1,1,1)}
+    }
+    SnapshotContains={param([int]$ProcessId) return $false}
+}
+$ids=New-Object 'System.Collections.Generic.HashSet[int]'
+$births=New-Object 'System.Collections.Generic.Dictionary[int, Int64]'
+$births.Add(100,[int64]1000); [void]$ids.Add(100)
+$diagnostics=New-TreeSampleDiagnostics 64
+$sample=Get-TreeSample 100 1000 $ids $births 'outer_tree_sample' $diagnostics $providers 3
+[ordered]@{enumerations=$script:enumerations;process_ids=@($sample.process_ids);events=@($diagnostics.retry_events)} | ConvertTo-Json -Depth 12 -Compress
+""",
+    )
+
+    assert result["enumerations"] == 4
+    assert result["process_ids"] == [100]
+    assert [event["attempt"] for event in result["events"]] == [1, 1, 1]
+    assert [event["process_id"] for event in result["events"]] == [300, 400, 300]
+
+
+def test_tree_sample_identity_switch_then_repeat_exhausts_new_group(
+    tmp_path: Path,
+) -> None:
+    result = _run_tree_sample_slice(
+        tmp_path,
+        r"""
+$script:enumerations=0
+$providers=[ordered]@{
+    Enumerate={param([int]$RootProcessId)
+        $script:enumerations+=1
+        if($script:enumerations -eq 1){return @([int]100,[int]300)}
+        return @([int]100,[int]400)
+    }
+    Identity={param([int]$ProcessId)
+        if($ProcessId -eq 100){return [ordered]@{status='live';operation='get_process_times';win32_error_code=$null;birth_utc_ticks=[int64]1000}}
+        return [ordered]@{status='exited';operation='get_process_times';win32_error_code=$null;birth_utc_ticks=[int64]($ProcessId*10)}
+    }
+    Metrics={param([int]$ProcessId)
+        return [ordered]@{status='ok';operation='get_process_memory_info';win32_error_code=$null;birth_utc_ticks=[int64]1000;values=[int64[]]@(1,1,1,1,1,1,1,1)}
+    }
+    SnapshotContains={param([int]$ProcessId) return $false}
+}
+$ids=New-Object 'System.Collections.Generic.HashSet[int]'
+$births=New-Object 'System.Collections.Generic.Dictionary[int, Int64]'
+$births.Add(100,[int64]1000); [void]$ids.Add(100)
+$diagnostics=New-TreeSampleDiagnostics 64
+try { [void](Get-TreeSample 100 1000 $ids $births 'outer_tree_sample' $diagnostics $providers 3); exit 91 }
+catch { [ordered]@{message_code=$_.Exception.Data['message_code'];attempt=$_.Exception.Data['attempt'];enumerations=$script:enumerations;events=@($diagnostics.retry_events)} | ConvertTo-Json -Depth 12 -Compress }
+""",
+    )
+
+    assert result["message_code"] == (
+        "TRANSIENT_DESCENDANT_DISAPPEARANCE_RETRY_EXHAUSTED"
+    )
+    assert result["attempt"] == 3
+    assert result["enumerations"] == 4
+    assert [event["attempt"] for event in result["events"]] == [1, 1, 2, 3]
+    assert [event["process_id"] for event in result["events"]] == [300, 400, 400, 400]
+
+
+@pytest.mark.parametrize("with_diagnostics", [False, True])
+def test_tree_sample_total_retry_cap_is_hard_even_without_diagnostics(
+    tmp_path: Path, with_diagnostics: bool,
+) -> None:
+    diagnostics_expression = (
+        "(New-TreeSampleDiagnostics 64)" if with_diagnostics else "$null"
+    )
+    result = _run_tree_sample_slice(
+        tmp_path,
+        r"""
+$script:enumerations=0
+$providers=[ordered]@{
+    Enumerate={param([int]$RootProcessId)
+        $script:enumerations+=1
+        if($script:enumerations -gt 64){throw 'UNEXPECTED_65TH_ENUMERATION'}
+        return @([int]100,[int](1000+$script:enumerations))
+    }
+    Identity={param([int]$ProcessId)
+        if($ProcessId -eq 100){return [ordered]@{status='live';operation='get_process_times';win32_error_code=$null;birth_utc_ticks=[int64]1000}}
+        return [ordered]@{status='exited';operation='get_process_times';win32_error_code=$null;birth_utc_ticks=[int64]($ProcessId*10)}
+    }
+    Metrics={param([int]$ProcessId)
+        return [ordered]@{status='ok';operation='get_process_memory_info';win32_error_code=$null;birth_utc_ticks=[int64]1000;values=[int64[]]@(1,1,1,1,1,1,1,1)}
+    }
+    SnapshotContains={param([int]$ProcessId) return $false}
+}
+$ids=New-Object 'System.Collections.Generic.HashSet[int]'
+$births=New-Object 'System.Collections.Generic.Dictionary[int, Int64]'
+$births.Add(100,[int64]1000); [void]$ids.Add(100)
+$diagnostics=__DIAGNOSTICS__
+try { [void](Get-TreeSample 100 1000 $ids $births 'outer_tree_sample' $diagnostics $providers 3); exit 91 }
+catch {
+    [ordered]@{
+        message_code=$_.Exception.Data['message_code']
+        enumerations=$script:enumerations
+        retry_count=$(if($null -eq $diagnostics){$null}else{[int]$diagnostics.confirmed_disappearance_count})
+        stored_events=$(if($null -eq $diagnostics){$null}else{[int]$diagnostics.retry_events.Count})
+        truncated=$(if($null -eq $diagnostics){$null}else{[bool]$diagnostics.retry_events_truncated})
+    } | ConvertTo-Json -Compress
+}
+""".replace("__DIAGNOSTICS__", diagnostics_expression),
+    )
+
+    assert result["message_code"] == "TREE_SAMPLE_TOTAL_RETRY_CAP_REACHED"
+    assert result["enumerations"] == 64
+    if with_diagnostics:
+        assert result["retry_count"] == 64
+        assert result["stored_events"] == 64
+        assert result["truncated"] is False
+    else:
+        assert result["retry_count"] is None
+        assert result["stored_events"] is None
+        assert result["truncated"] is None
+
+
+def test_tree_sample_allows_sixty_three_distinct_retries_then_stable_sample(
+    tmp_path: Path,
+) -> None:
+    result = _run_tree_sample_slice(
+        tmp_path,
+        r"""
+$script:enumerations=0
+$providers=[ordered]@{
+    Enumerate={param([int]$RootProcessId)
+        $script:enumerations+=1
+        if($script:enumerations -le 63){return @([int]100,[int](1000+$script:enumerations))}
+        return @([int]100)
+    }
+    Identity={param([int]$ProcessId)
+        if($ProcessId -eq 100){return [ordered]@{status='live';operation='get_process_times';win32_error_code=$null;birth_utc_ticks=[int64]1000}}
+        return [ordered]@{status='exited';operation='get_process_times';win32_error_code=$null;birth_utc_ticks=[int64]($ProcessId*10)}
+    }
+    Metrics={param([int]$ProcessId)
+        return [ordered]@{status='ok';operation='get_process_memory_info';win32_error_code=$null;birth_utc_ticks=[int64]1000;values=[int64[]]@(1,1,1,1,1,1,1,1)}
+    }
+    SnapshotContains={param([int]$ProcessId) return $false}
+}
+$ids=New-Object 'System.Collections.Generic.HashSet[int]'
+$births=New-Object 'System.Collections.Generic.Dictionary[int, Int64]'
+$births.Add(100,[int64]1000); [void]$ids.Add(100)
+$diagnostics=New-TreeSampleDiagnostics 64
+$sample=Get-TreeSample 100 1000 $ids $births 'outer_tree_sample' $diagnostics $providers 3
+[ordered]@{enumerations=$script:enumerations;process_ids=@($sample.process_ids);retry_count=$diagnostics.confirmed_disappearance_count;stored_events=$diagnostics.retry_events.Count;truncated=$diagnostics.retry_events_truncated} | ConvertTo-Json -Compress
+""",
+    )
+
+    assert result == {
+        "enumerations": 64,
+        "process_ids": [100],
+        "retry_count": 63,
+        "stored_events": 63,
+        "truncated": False,
+    }
+
+
+def test_tree_sample_same_strong_identity_exhausts_attempts_one_two_three(
+    tmp_path: Path,
+) -> None:
+    result = _run_tree_sample_slice(
+        tmp_path,
+        r"""
+$script:enumerations=0; $script:childMetrics=0; $script:snapshotQueries=0
+$providers=[ordered]@{
+    Enumerate={param([int]$RootProcessId) $script:enumerations+=1; return @([int]100,[int]300)}
+    Identity={param([int]$ProcessId)
+        if($ProcessId -eq 100){return [ordered]@{status='live';operation='get_process_times';win32_error_code=$null;birth_utc_ticks=[int64]1000}}
+        return [ordered]@{status='exited';operation='get_process_times';win32_error_code=$null;birth_utc_ticks=[int64]3000}
+    }
+    Metrics={param([int]$ProcessId)
+        if($ProcessId -ne 100){$script:childMetrics+=1; throw 'confirmed exit must precede child metrics'}
+        return [ordered]@{status='ok';operation='get_process_memory_info';win32_error_code=$null;birth_utc_ticks=[int64]1000;values=[int64[]]@(1,1,1,1,1,1,1,1)}
+    }
+    SnapshotContains={param([int]$ProcessId) $script:snapshotQueries+=1; return $false}
+}
+$ids=New-Object 'System.Collections.Generic.HashSet[int]'
+$births=New-Object 'System.Collections.Generic.Dictionary[int, Int64]'
+$births.Add(100,[int64]1000); [void]$ids.Add(100)
+$diagnostics=New-TreeSampleDiagnostics 64
+try { [void](Get-TreeSample 100 1000 $ids $births 'outer_tree_sample' $diagnostics $providers 3); exit 91 }
+catch { [ordered]@{message_code=$_.Exception.Data['message_code'];attempt=$_.Exception.Data['attempt'];enumerations=$script:enumerations;child_metrics=$script:childMetrics;snapshot_queries=$script:snapshotQueries;retry_count=$diagnostics.confirmed_disappearance_count;events=@($diagnostics.retry_events)} | ConvertTo-Json -Depth 12 -Compress }
+""",
+    )
+    assert result["message_code"] == (
+        "TRANSIENT_DESCENDANT_DISAPPEARANCE_RETRY_EXHAUSTED"
+    )
+    assert result["attempt"] == 3
+    assert result["enumerations"] == 3
+    assert result["child_metrics"] == 0
+    assert result["snapshot_queries"] == 3
+    assert result["retry_count"] == 3
+    assert [event["attempt"] for event in result["events"]] == [1, 2, 3]
+    assert {event["process_id"] for event in result["events"]} == {300}
+    assert {
+        event["expected_birth_utc_ticks"] for event in result["events"]
+    } == {3000}
+    assert {
+        event["observed_birth_utc_ticks"] for event in result["events"]
+    } == {3000}
+    assert {
+        event["confirmation"] for event in result["events"]
+    } == {"signaled_handle_and_complete_snapshot_absent"}
+
+
+def test_tree_sample_same_identity_exhaustion_precedes_total_retry_cap(
+    tmp_path: Path,
+) -> None:
+    result = _run_tree_sample_slice(
+        tmp_path,
+        r"""
+$script:enumerations=0
+$providers=[ordered]@{
+    Enumerate={param([int]$RootProcessId) $script:enumerations+=1; return @([int]100,[int]300)}
+    Identity={param([int]$ProcessId)
+        if($ProcessId -eq 100){return [ordered]@{status='live';operation='get_process_times';win32_error_code=$null;birth_utc_ticks=[int64]1000}}
+        return [ordered]@{status='exited';operation='get_process_times';win32_error_code=$null;birth_utc_ticks=[int64]3000}
+    }
+    Metrics={param([int]$ProcessId)
+        return [ordered]@{status='ok';operation='get_process_memory_info';win32_error_code=$null;birth_utc_ticks=[int64]1000;values=[int64[]]@(1,1,1,1,1,1,1,1)}
+    }
+    SnapshotContains={param([int]$ProcessId) return $false}
+}
+$ids=New-Object 'System.Collections.Generic.HashSet[int]'
+$births=New-Object 'System.Collections.Generic.Dictionary[int, Int64]'
+$births.Add(100,[int64]1000); [void]$ids.Add(100)
+$diagnostics=New-TreeSampleDiagnostics 64
+$diagnostics.confirmed_disappearance_count=[int]61
+try { [void](Get-TreeSample 100 1000 $ids $births 'outer_tree_sample' $diagnostics $providers 3); exit 91 }
+catch { [ordered]@{message_code=$_.Exception.Data['message_code'];attempt=$_.Exception.Data['attempt'];enumerations=$script:enumerations;retry_count=$diagnostics.confirmed_disappearance_count;stored_events=$diagnostics.retry_events.Count} | ConvertTo-Json -Compress }
+""",
+    )
+
+    assert result == {
+        "message_code": "TRANSIENT_DESCENDANT_DISAPPEARANCE_RETRY_EXHAUSTED",
+        "attempt": 3,
+        "enumerations": 3,
+        "retry_count": 64,
+        "stored_events": 3,
+    }
 
 
 def test_tree_sample_retry_exhaustion_is_bounded_and_fatal(
@@ -9427,7 +10675,7 @@ catch {
 def test_runner_exited_snapshot_stabilization_policy_is_exactly_pinned() -> None:
     source = RUNNER.read_text(encoding="utf-8")
     assert hashlib.sha256(RUNNER.read_bytes()).hexdigest() == (
-        "852ce8a03b25e33b9eb26ec6f5ce295381dab493b1b26762ddea14be7196000d"
+        "7e675cc31ab229485719200af8b508dae20bd234bff29428e84628029df2763e"
     )
     begin = source.index("# AV_BS_TREE_SAMPLE_TEST_SLICE_BEGIN")
     end = source.index("# AV_BS_TREE_SAMPLE_TEST_SLICE_END")
@@ -9446,7 +10694,7 @@ def test_runner_exited_snapshot_stabilization_policy_is_exactly_pinned() -> None
     ) == 1
     assert tree_slice.count(
         '"signaled_handle_and_complete_snapshot_absent"'
-    ) == 1
+    ) == 2
     assert "snapshot_check_count" not in tree_slice
     assert "snapshot_stabilization" not in p1.TREE_SAMPLE_DIAGNOSTIC_FIELDS
 

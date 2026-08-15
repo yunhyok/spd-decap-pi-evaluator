@@ -1,23 +1,38 @@
 # SPD Decap PI Evaluator v0.22.0 — Oracle Reproduction Appendix
 
-> **SPD Decap PI Evaluator v0.22.0 — retry-v7 current boundary:** Seven public
-> `primary-h4-p0r` invocations are immutable. In the seventh, native `splu`
-> returned for `A_background_II`; attempted/performed are `true/true` and the
-> completed-name list contains it, but the obsolete native/exported nnz equality
-> gate failed before any certificate or prefix. `A_conductor_II` was not
-> attempted and the exact native/exported factor counts were not persisted.
-> Inner/outer monitoring retained `174/573` samples and all `31` outer retry
-> events without truncation; both resource gates passed, but this is neither
-> accuracy evidence nor an 8 GiB-fit claim. Commits `51e5069...` and
-> `17414cf...` record consumption and deletion-only retirement; token state is
-> absent. Retry-v7 requires `0 < exported <= native`, validates distinct
-> native/exported portable-byte formulas and caps both, without schema, retry,
-> or factor-order changes. Frozen Python/runner/tests SHA-256 are `7a1dba5e...` /
-> `852ce8a0...` / `bd2e3e2c...`; focused `25/25` and full no-cache `341/341`
-> passed, the latter in `88.40 s`. No RHS, solve, H4 physics, or PowerSI work
-> ran; `next_stage_authorized=false`. Earlier retry-v6 sections are immutable
-> history. Exact evidence is in [results](T1_AV_BOUNDARY_SCHUR_RESULTS.md) and
-> the [reproduction appendix](ORACLE_REPRODUCTION.md).
+> **SPD Decap PI Evaluator v0.22.0 — retry-v8 current static boundary:** Eight
+> public `primary-h4-p0r` invocations are immutable. In the eighth, run from
+> retry-v7 token-only commit `66211ef...`, native `splu` returned for
+> `A_background_II`; attempted/performed are `true/true` and its completed name
+> is durable, but combined non-canonical factor storage stopped the certificate
+> path with zero certificates and prefixes. `A_conductor_II`, RHS, solve, and
+> physics never started. The resource artifact passed, while independent
+> outer/control monitoring falsely exhausted retries across distinct
+> confirmed-dead helpers; no terminal seal or published result exists. Seven
+> temporary evidence files were copied byte-identically into ignored quarantine.
+> Valid provisional emergency consumption commit `8fce704...` and D-only
+> retirement `7964464...` leave the token absent. Retry-v8 records raw L/U hashes,
+> raw composite canonical flags (false when unsorted), and zero scans. The pre-sort
+> `has_sorted_indices` value is a local sort predicate, not a certificate field;
+> chunked column spans and row bounds are validated, nonfinite values and explicit
+> zeros fail, and every unsorted L/U is sorted in place. Sorted/canonical format is
+> then rechecked, which rejects duplicates; the canonical hash helper enforces that
+> format, and finite/zero data is re-scanned. It makes no schema or field bump, L/U
+> or whole-factor matrix copy, coalescing, or pruning. Attempts group only within
+> one `Get-TreeSample` producer call and state resets per invocation. Cumulative
+> report history may therefore contain adjacent same-identity attempt `1/1` entries
+> separated by a successful return; only the known one-call close suffix enforces
+> adjacency. Within a call, stored event 64 fails before retry continuation; reused
+> diagnostics can advance beyond 64 only as failed/truncated evidence, never a
+> passing sample. Max3/cap64 fields and schemas remain unchanged, and cleanup-race
+> hardening is deferred. Frozen Python/runner/tests SHA-256 are `c26112b0...` /
+> `7e675cc3...` / `426f8388...`. Collection is `387`; focused root `23`
+> passed / `363` deselected and independent `27` passed / `360` deselected;
+> the full exact-document suite passed `387/387` in `94.11 s`.
+> `factor_fit_unproven=true`; `next_stage_authorized=false`. Earlier retry-v7
+> sections are immutable history. Exact evidence is in
+> [results](T1_AV_BOUNDARY_SCHUR_RESULTS.md) and the
+> [reproduction appendix](ORACLE_REPRODUCTION.md).
 
 
 최종 갱신: 2026-08-16 (Asia/Seoul)
@@ -3151,7 +3166,7 @@ Exact next는 현재 manifest-only contract를 clean commit과 독립 audit에 �
 
 ## AV-BS1 H4-P0R-P1 safe replay and interruption evidence
 
-위 문단은 immutable manifest-only parent의 당시 next step이다. 후속 P1 executable/lifecycle은 구현됐고 일곱 public invocation은 모두 certified factor result 없이 fail-closed 됐다. 일곱 번째는 `A_background_II` native `splu` 반환만 완료했으며 certificate/prefix는 없고 `A_conductor_II`는 미시도다. 일곱 one-use token은 재실행 없이 소비·삭제됐으며 현재 checkout에는 P1 token이 없다. 아래 명령만 safe static replay로 허용하며 `-Stage primary-h4-p0r`, hidden inner mode, finalizer 또는 consumer를 직접 호출하지 않는다.
+위 문단은 immutable manifest-only parent의 당시 next step이다. 후속 P1 executable/lifecycle은 구현됐고 여덟 public invocation은 모두 certified two-factor result 없이 fail-closed 됐다. 여덟 번째는 `A_background_II` native `splu` 반환만 완료했으며 combined non-canonical storage로 certificate/prefix는 0이고 `A_conductor_II`는 미시도다. Resource artifact는 pass지만 independent outer/control false exhaustion으로 seal/published result는 없다. 여덟 one-use token은 재실행 없이 소비·삭제됐으며 현재 checkout에는 P1 token이 없다. 아래 명령만 safe static replay로 허용하며 `-Stage primary-h4-p0r`, hidden inner mode, finalizer 또는 consumer를 직접 호출하지 않는다.
 
 ```powershell
 python tools/research/av_bs1_boundary_schur_h4_p0r_p1.py --stage manifest
@@ -3514,7 +3529,7 @@ next_stage_authorized: false
 Only manifest/static replay was safe at this frozen retry-v6 boundary. None of
 the six then-spent token commits was reusable.
 
-### Seventh public invocation and current retry-v7 boundary
+### Seventh public invocation and historical retry-v7 boundary
 
 The seventh public invocation is immutable evidence, not a command to replay.
 It ran once at token-only commit
@@ -3567,6 +3582,92 @@ next_stage_authorized: false
 Only manifest/static replay is safe before a new clean no-token contract and
 independent authorization lifecycle complete. Do not invoke any of the seven
 spent token commits or any hidden inner/finalizer/consumer stage directly.
+
+### Eighth public invocation under retry-v7 and current retry-v8 boundary
+
+The eighth public invocation is immutable evidence, not a command to replay. It
+ran once from retry-v7 token-only commit
+`66211efbbdb7e0881e6bc051a2c68e25e5f1040e` with token ID
+`6b7c81431c49432a9b6b7da816424ff7`. Native `splu` returned for
+`A_background_II`. The direct child state therefore records factorization
+attempted/performed `true/true` and
+`completed_factors=["A_background_II"]`. Combined non-canonical L/U storage
+then blocked certificate creation and prefix publication. The certificate list
+and both prefixes are empty, `A_conductor_II` was not attempted, and RHS,
+`factor.solve`, extension, boundary response, modal solve, H4 physics, and
+PowerSI work did not start.
+
+The resource artifact passed its mandatory resource gate. Independently, the
+outer/control path treated confirmed disappearance of distinct helper identities
+as attempts in one exhaustion sequence and raised
+`TRANSIENT_DESCENDANT_DISAPPEARANCE_RETRY_EXHAUSTED`. That is a control-plane
+false exhaustion, not a memory stop or a factor certificate. It prevented a
+terminal seal and published result. The seven temporary evidence files
+`child.stderr.txt`, `factor-complete.json`, `guard.json`, `monitor-ready.json`,
+`monitor-release.json`, `numerical.json`, and `resource.json` were copied
+byte-identically into the token-scoped ignored quarantine. Those copies are
+forensic preservation only and do not become a published or authoritative
+result.
+
+M-only commit `8fce704a878a39497408c42e1e63bdfa683b9413` preserves a valid but
+provisional emergency consumed tombstone. It records the control failure and
+spent one-use authorization without claiming complete terminal evidence.
+D-only retirement `7964464018ae898928f151d707fdc52a850cd935` removes the token.
+Current token state is absent, terminal evidence is incomplete, authoritative
+stage pass is false, and next-stage authorization is false.
+
+Retry-v8 corrects two independently bounded producer paths. The factor path:
+
+1. records raw L/U storage hashes, raw composite `L_storage_canonical` and
+   `U_storage_canonical` flags (false when the respective storage is unsorted),
+   and explicit-zero scans before mutation;
+2. uses the pre-sort `has_sorted_indices` value as a local sort predicate, not a
+   certificate field, and validates chunked CSC column spans and row bounds;
+3. rejects nonfinite values or explicit stored zeros;
+4. calls in-place `sort_indices()` for every unsorted L/U storage object; and
+5. rechecks sorted/canonical format to reject duplicates, records canonical hashes
+   through a helper that enforces that format, and re-scans finite/zero data
+   without repeating the span or row-bound scan.
+
+There is no schema or field bump, L/U or whole-factor matrix copy, coalescing,
+or zero pruning. Raw and canonical identities remain separately auditable.
+
+Attempt grouping is local to one `Get-TreeSample` producer call and state resets
+per invocation. Within one call, `A,B,A` records `1,1,1`, while `A,B,B,B`
+records `1,1,2,3` and fails on same-identity attempt 3. Cumulative report history
+may legitimately contain adjacent same-identity attempt `1/1` entries separated
+by a successful return and therefore cannot enforce cross-call adjacency. Only
+the close-only suffix, known to come from one call, enforces the exact adjacent-
+strong transition.
+
+The cumulative/local cap remains exactly `64`, even when diagnostics are null.
+Within a call, event `64` is stored and increments the total to `64`; that same
+64th confirmed retry fails generically with
+`TREE_SAMPLE_TOTAL_RETRY_CAP_REACHED` unless simultaneous same-identity attempt 3
+takes precedence, and the failing call does not return to its retry loop. Reused
+diagnostics in a later cleanup or close call may advance `confirmed_count` beyond
+64 and truncate the stored list, but that evidence is failed/truncated and can
+never support a passing sample. Existing max3/cap64 fields, event schemas, factor
+order, resource ceilings, and forbidden-operation boundary are unchanged.
+Cleanup-race hardening is a deferred forensic item and is not part of retry-v8.
+
+```text
+Python fixture SHA-256: c26112b0738224eed4f1401553adf6fc9a3512b37c475f5b52152cab98e6ecff
+PowerShell runner SHA-256: 7e675cc31ab229485719200af8b508dae20bd234bff29428e84628029df2763e
+static tests SHA-256: 426f83888587dc57b7874a4e8dd47f0965212a0c1d7fabde33e6f3ab2801a2e7
+collection: 387
+focused root selection: 23 passed, 363 deselected
+independent selection: 27 passed, 360 deselected
+full exact-document suite: 387/387 passed in 94.11 s
+token_state: absent
+factor_fit_unproven: true
+next_stage_authorized: false
+```
+
+Collection is `387`; the full exact-document suite passed `387/387` in `94.11 s`. Only
+manifest/static replay is safe. None of the eight spent token commits may be
+invoked again, and hidden inner/finalizer/consumer stages remain prohibited.
+Any separately authorized future public invocation would be the ninth.
 
 ## Focused regression
 
