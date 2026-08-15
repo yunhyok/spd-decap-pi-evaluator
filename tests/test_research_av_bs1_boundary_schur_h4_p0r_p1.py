@@ -421,6 +421,76 @@ def _synthetic_factor_report(
     }
 
 
+def _write_monitor_handshake_bundle(
+    guard_path: Path,
+    claim_path: Path,
+    certificates: list[dict[str, object]],
+    *,
+    marker_process_ids: tuple[int, int, int],
+) -> dict[str, object]:
+    """Materialize one exact ready/complete/release marker chain."""
+    ready_pid, completion_pid, release_pid = marker_process_ids
+    ready_path = guard_path.with_name("monitor-ready.json")
+    completion_path = guard_path.with_name("factor-complete.json")
+    release_path = guard_path.with_name("monitor-release.json")
+    ready = {
+        "schema": "AV-BS1-h4-p0r-monitor-ready-v1",
+        "claim_sha256": p1._sha(claim_path),
+        "child_process_id": ready_pid,
+        "sample_perf_counter_ns": 1,
+        "sample_utc": UTC,
+    }
+    _write_json(ready_path, ready)
+    completion = {
+        "schema": "AV-BS1-h4-p0r-factor-complete-v1",
+        "claim_sha256": p1._sha(claim_path),
+        "child_process_id": completion_pid,
+        "completed_factors": [
+            certificate["name"] for certificate in certificates
+        ],
+        "factor_certificates_sha256": p1._canonical_sha(certificates),
+        "completed_perf_counter_ns": 35,
+        "completed_utc": UTC,
+    }
+    _write_json(completion_path, completion)
+    release = {
+        "schema": "AV-BS1-h4-p0r-monitor-release-v1",
+        "claim_sha256": p1._sha(claim_path),
+        "completion_marker_sha256": p1._sha(completion_path),
+        "child_process_id": release_pid,
+        "sample_perf_counter_ns": 40,
+        "sample_utc": UTC,
+    }
+    _write_json(release_path, release)
+    return {
+        "schema": "AV-BS1-h4-p0r-factor-monitor-handshake-v1",
+        "ready_marker_sha256": p1._sha(ready_path),
+        "ready_sample_perf_counter_ns": 1,
+        "ready_sample_utc": UTC,
+        "completion_marker_sha256": p1._sha(completion_path),
+        "completion_perf_counter_ns": 35,
+        "completion_utc": UTC,
+        "release_marker_sha256": p1._sha(release_path),
+        "release_sample_perf_counter_ns": 40,
+        "release_sample_utc": UTC,
+        "factor_interval_bracketed_by_actual_samples": True,
+    }
+
+
+def _monitor_certificates(count: int = 2) -> list[dict[str, object]]:
+    names = ["A_background_II", "A_conductor_II"]
+    return [
+        {
+            "name": name,
+            "factor_started_perf_counter_ns": 10 + 20 * index,
+            "factor_returned_perf_counter_ns": 11 + 20 * index,
+            "factor_started_utc": UTC,
+            "factor_returned_utc": UTC,
+        }
+        for index, name in enumerate(names[:count])
+    ]
+
+
 def _synthetic_resource(
     manifest_value: dict[str, object], token: dict[str, object], claim: dict[str, object]
 ) -> dict[str, object]:
@@ -5755,9 +5825,56 @@ def test_preflight_control_marker_order_and_release_utc_are_bounded(
         monkeypatch, tmp_path, mutations={marker_name: tamper_marker}
     )
 
-    _assert_preflight_control_bundle_rejected(
-        bundle, expected_message, expected_code=expected_code
+    with pytest.raises(p1.AvBsError) as caught:
+        p1._validate_preflight_control_plane_evidence(
+            bundle["claim"], bundle["manifest"], bundle["observer"]
+        )
+
+    assert caught.value.code == expected_code
+    assert caught.value.detail == expected_message
+
+
+def test_terminal_control_rejects_completion_before_start_release_exactly(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    def complete_before_start(marker: dict[str, object]) -> None:
+        marker["monotonic_ns"] = 10
+
+    bundle = _build_preflight_control_plane_bundle(
+        monkeypatch,
+        tmp_path,
+        mutations={"completion": complete_before_start},
     )
+    report = bundle["report"]
+    report_path = bundle["report_path"]
+    close = bundle["close"]
+    close_path = bundle["close_path"]
+    session_dir = report_path.parent.parent
+
+    with pytest.raises(p1.AvBsError) as caught:
+        p1._validate_terminal_control_invocation(
+            report=report,
+            report_path=report_path,
+            report_sha256=p1._sha(report_path),
+            close=close,
+            close_path=close_path,
+            close_sha256=p1._sha(close_path),
+            reference=bundle["final_index"]["report_references"][0],
+            operation="preflight",
+            invocation_id=report["invocation_id"],
+            invocation_position=0,
+            session_dir=session_dir,
+            bootstrap=Path(report["bootstrap_path"]),
+            canonical_helper=session_dir / "canonical-json-sha256.py",
+            observer=bundle["observer"],
+            manifest=bundle["manifest"],
+            claim=bundle["claim"],
+            require_pass_gate=True,
+        )
+
+    assert caught.value.code == "BLOCKED_AV_BS_RESULT_SCHEMA"
+    assert caught.value.detail == "terminal control marker chronology invalid"
 
 
 @pytest.mark.parametrize(
@@ -8242,10 +8359,22 @@ def test_factor_report_accepts_exact_synthetic_certificate_contract(
     token = _synthetic_token()
     claim = _synthetic_claim()
     report = _synthetic_factor_report(manifest_value, token)
+    producer_pid = p1.os.getpid() + 100_000
+    observed_process_ids: list[int | None] = []
+
+    def validate_monitor_handshake(
+        _value: object,
+        _guard_path: Path,
+        _claim_path: Path,
+        _certificates: list[object],
+        expected_child_process_id: int | None = None,
+    ) -> None:
+        observed_process_ids.append(expected_child_process_id)
+
     monkeypatch.setattr(p1, "_sha", lambda _path: SHA_F)
     monkeypatch.setattr(p1, "_canonical_sha", lambda _value: SHA_E)
     monkeypatch.setattr(p1, "_git_head", lambda: "2" * 40)
-    monkeypatch.setattr(p1, "_validate_monitor_handshake", lambda *_args: None)
+    monkeypatch.setattr(p1, "_validate_monitor_handshake", validate_monitor_handshake)
 
     p1._validate_factor_report(
         report,
@@ -8255,8 +8384,10 @@ def test_factor_report_accepts_exact_synthetic_certificate_contract(
         tmp_path / "claim",
         {"guard": "synthetic"},
         tmp_path / "guard",
+        expected_child_process_id=producer_pid,
         validate_prefix_sidecars=False,
     )
+    assert observed_process_ids == [producer_pid]
 
 
 def test_factor_report_accepts_native_storage_superset(
@@ -8526,6 +8657,192 @@ def test_control_stage_failure_preserves_a_validated_claim() -> None:
     ) == ["BLOCKED_AV_BS_RESULT_SCHEMA"]
 
 
+def test_live_ready_marker_requires_explicit_current_process_id(
+    tmp_path: Path,
+) -> None:
+    claim_path = tmp_path / "claim.json"
+    _write_json(claim_path, {"synthetic": True})
+    current_pid = p1.os.getpid()
+    marker = {
+        "schema": "AV-BS1-h4-p0r-monitor-ready-v1",
+        "claim_sha256": p1._sha(claim_path),
+        "child_process_id": current_pid,
+        "sample_perf_counter_ns": 1,
+        "sample_utc": UTC,
+    }
+
+    with pytest.raises(TypeError, match="expected_child_process_id"):
+        p1._validate_ready_marker(marker, claim_path)  # type: ignore[call-arg]
+    p1._validate_ready_marker(
+        marker,
+        claim_path,
+        expected_child_process_id=current_pid,
+    )
+    with pytest.raises(p1.AvBsError) as caught:
+        p1._validate_ready_marker(
+            marker,
+            claim_path,
+            expected_child_process_id=current_pid + 1,
+        )
+
+    assert caught.value.code == "BLOCKED_AV_BS_RESULT_SCHEMA"
+    assert caught.value.detail == "monitor-ready child_process_id mismatch"
+
+
+@pytest.mark.parametrize(
+    ("mismatch", "expected_detail"),
+    [
+        ("resource", "monitor-ready child_process_id mismatch"),
+        ("ready", "monitor-ready child_process_id mismatch"),
+        ("completion", "factor-complete child_process_id mismatch"),
+        ("release", "monitor-release child_process_id mismatch"),
+    ],
+)
+def test_offline_monitor_pid_mismatch_is_exact_schema_failure(
+    tmp_path: Path,
+    mismatch: str,
+    expected_detail: str,
+) -> None:
+    claim_path = tmp_path / "claim.json"
+    guard_path = tmp_path / "guard.json"
+    _write_json(claim_path, {"synthetic": True})
+    _write_json(guard_path, {"synthetic": True})
+    producer_pid = p1.os.getpid() + 100_000
+    expected_pid = producer_pid + 1 if mismatch == "resource" else producer_pid
+    marker_pids = tuple(
+        producer_pid + 1 if mismatch == marker else producer_pid
+        for marker in ("ready", "completion", "release")
+    )
+    certificates = _monitor_certificates()
+    handshake = _write_monitor_handshake_bundle(
+        guard_path,
+        claim_path,
+        certificates,
+        marker_process_ids=marker_pids,
+    )
+
+    with pytest.raises(p1.AvBsError) as caught:
+        p1._validate_monitor_handshake(
+            handshake,
+            guard_path,
+            claim_path,
+            certificates,
+            expected_pid,
+        )
+
+    assert caught.value.code == "BLOCKED_AV_BS_RESULT_SCHEMA"
+    assert caught.value.detail == expected_detail
+
+
+def test_partial_factor_failure_propagates_resource_child_pid(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    manifest_value = _synthetic_manifest()
+    token = _synthetic_token()
+    claim = _synthetic_claim()
+    guard = _synthetic_guard(manifest_value)
+    claim_path = tmp_path / "claim.json"
+    guard_path = tmp_path / "guard.json"
+    _write_json(claim_path, claim)
+    _write_json(guard_path, guard)
+    producer_pid = p1.os.getpid() + 100_000
+    certificates = _monitor_certificates(1)
+    handshake = _write_monitor_handshake_bundle(
+        guard_path,
+        claim_path,
+        certificates,
+        marker_process_ids=(producer_pid, producer_pid, producer_pid),
+    )
+    failure = {
+        "schema": p1.FAILURE_SCHEMA,
+        "factorization_attempted": True,
+        "factorization_performed": True,
+        "active_factor": None,
+        "completed_factors": ["A_background_II"],
+        "factor_certificates": certificates,
+        "monitor_handshake": handshake,
+    }
+    validate_monitor_handshake = p1._validate_monitor_handshake
+    observed_process_ids: list[int | None] = []
+
+    def validate_partial_report(
+        numerical: dict[str, object],
+        *_args: object,
+        expected_child_process_id: int | None = None,
+        **kwargs: object,
+    ) -> None:
+        observed_process_ids.append(expected_child_process_id)
+        assert kwargs["expected_count"] == 1
+        validate_monitor_handshake(
+            numerical["monitor_handshake"],
+            guard_path,
+            claim_path,
+            numerical["factor_certificates"],
+            expected_child_process_id,
+        )
+
+    monkeypatch.setattr(p1, "_validate_factor_report", validate_partial_report)
+    terminal_bindings = _synthetic_terminal_bindings(claim)
+    terminal_bindings["git_head"] = "2" * 40
+
+    p1._validate_partial_factor_certificates(
+        failure,
+        token,
+        manifest_value,
+        claim,
+        claim_path,
+        guard,
+        guard_path,
+        expected_child_process_id=producer_pid,
+        terminal_bindings=terminal_bindings,
+    )
+
+    assert producer_pid != p1.os.getpid()
+    assert observed_process_ids == [producer_pid]
+
+    child_hop_process_ids: list[int | None] = []
+
+    def validate_child_partial(
+        *_args: object,
+        expected_child_process_id: int | None = None,
+        **_kwargs: object,
+    ) -> None:
+        child_hop_process_ids.append(expected_child_process_id)
+
+    monkeypatch.setattr(
+        p1,
+        "_validate_failure_payload",
+        lambda *_args, **_kwargs: ["BLOCKED_AV_BS_FACTOR"],
+    )
+    monkeypatch.setattr(
+        p1,
+        "_validate_partial_factor_certificates",
+        validate_child_partial,
+    )
+
+    outcome = p1._child_outcome(
+        failure,
+        2,
+        token,
+        manifest_value,
+        claim,
+        claim_path,
+        guard,
+        guard_path,
+        expected_child_process_id=producer_pid,
+    )
+
+    assert child_hop_process_ids == [producer_pid]
+    assert outcome[:5] == (
+        False,
+        ["BLOCKED_AV_BS_FACTOR"],
+        True,
+        True,
+        ["A_background_II"],
+    )
+
+
 def test_partial_factor_certificate_is_preserved_and_revalidated(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
@@ -8769,6 +9086,123 @@ def _patch_finalizer_dependencies(
     monkeypatch.setattr(p1, "_git_head", lambda: "2" * 40)
 
 
+def test_offline_finalizer_result_and_consumer_use_resource_child_pid(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    manifest_value = _synthetic_manifest()
+    token = _synthetic_token()
+    claim = _synthetic_claim()
+    guard = _synthetic_guard(manifest_value)
+    _patch_finalizer_dependencies(
+        monkeypatch,
+        manifest_value,
+        token,
+        claim,
+        guard,
+        (True, []),
+    )
+    monkeypatch.setattr(p1, "_now_utc", lambda: UTC)
+    monkeypatch.setattr(p1, "_factor_prefix_evidence", lambda *_args: [])
+    monkeypatch.setattr(
+        p1,
+        "_validate_factor_monitor_interval",
+        lambda *_args, **_kwargs: None,
+    )
+    token_path = tmp_path / "token.json"
+    claim_path = tmp_path / "claim.json"
+    guard_path = tmp_path / "guard.json"
+    resource_path = tmp_path / "resource.json"
+    stdout_path = tmp_path / "child.json"
+    result_path = tmp_path / "result.json"
+    for path in (token_path, claim_path, guard_path):
+        _write_json(path, {})
+    monkeypatch.setattr(p1, "TOKEN_PATH", token_path)
+
+    producer_pid = p1.os.getpid() + 100_000
+    certificates = _monitor_certificates()
+    handshake = _write_monitor_handshake_bundle(
+        guard_path,
+        claim_path,
+        certificates,
+        marker_process_ids=(producer_pid, producer_pid, producer_pid),
+    )
+    numerical = {
+        "schema": p1.NUMERICAL_SCHEMA,
+        "factor_order": ["A_background_II", "A_conductor_II"],
+        "factor_certificates": certificates,
+        "monitor_handshake": handshake,
+    }
+    _write_json(stdout_path, p1._wrap(numerical))
+    resource = {
+        "child_process_id": producer_pid,
+        "child_exit_code": 0,
+        "child_stdout_sha256": p1._sha(stdout_path),
+    }
+    _write_json(resource_path, resource)
+
+    validate_monitor_handshake = p1._validate_monitor_handshake
+    observed_process_ids: list[int | None] = []
+
+    def validate_factor_report(
+        numerical_value: dict[str, object],
+        *_args: object,
+        expected_child_process_id: int | None = None,
+        **_kwargs: object,
+    ) -> None:
+        observed_process_ids.append(expected_child_process_id)
+        validate_monitor_handshake(
+            numerical_value["monitor_handshake"],
+            guard_path,
+            claim_path,
+            numerical_value["factor_certificates"],
+            expected_child_process_id,
+        )
+
+    monkeypatch.setattr(p1, "_validate_factor_report", validate_factor_report)
+
+    result = p1.finalize(
+        resource_path,
+        token_path,
+        guard_path,
+        "nonce",
+        claim_path,
+        stdout_path,
+    )
+    assert result["mandatory_stage_pass"] is True
+    assert observed_process_ids == [producer_pid]
+
+    p1._validate_result_payload(
+        result,
+        token,
+        manifest_value,
+        claim,
+        claim_path,
+        guard,
+        guard_path,
+        resource,
+        resource_path,
+    )
+    assert observed_process_ids == [producer_pid, producer_pid]
+
+    _write_json(result_path, p1._wrap(result))
+    tombstone = p1.consume(
+        token_path,
+        claim_path,
+        guard_path,
+        "nonce",
+        "completed_pass",
+        result_path,
+        resource_path,
+        stdout_path,
+    )
+
+    assert producer_pid != p1.os.getpid()
+    assert observed_process_ids == [producer_pid] * 4
+    assert tombstone["consumption_validated_pass"] is True
+    assert tombstone["child_process_id"] == producer_pid
+
+
 def test_finalizer_embeds_resource_failure_and_unknown_factor_provenance(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
@@ -8785,7 +9219,11 @@ def test_finalizer_embeds_resource_failure_and_unknown_factor_provenance(
     resource_path = tmp_path / "resource.json"
     for path in (token_path, claim_path, guard_path):
         _write_json(path, {})
-    resource = {"child_exit_code": 2, "child_stdout_sha256": None}
+    resource = {
+        "child_process_id": None,
+        "child_exit_code": 2,
+        "child_stdout_sha256": None,
+    }
     _write_json(resource_path, resource)
 
     result = p1.finalize(
@@ -8835,7 +9273,9 @@ def test_finalizer_preserves_partial_factor_failure_truth(
         "execution_resource_scope_sha256"
     ]
     _write_json(stdout_path, p1._wrap(failure))
+    producer_pid = p1.os.getpid() + 100_000
     resource = {
+        "child_process_id": producer_pid,
         "child_exit_code": 2,
         "child_stdout_sha256": p1._sha(stdout_path),
     }
@@ -9196,6 +9636,201 @@ def test_factor_prefix_must_match_later_child_certificate_prefix() -> None:
             numerical,
             [first, second, {"name": "impossible"}],
             ["A_background_II", "A_conductor_II", "impossible"],
+        )
+
+
+def test_embedded_bootstrap_uses_shared_perf_counter_clock_and_frozen_hash() -> None:
+    bootstrap = _runner_single_quoted_here_string("controlPlaneBootstrapSource")
+    source = bootstrap.decode("utf-8")
+
+    assert source.count("time.perf_counter_ns()") == 2
+    assert source.count("time.monotonic_ns()") == 0
+    assert source.count("time.monotonic()") == 2
+    assert hashlib.sha256(bootstrap).hexdigest() == (
+        "0c92a0ec8fe67868e222647782cb5eedabffcad77319348f55beaeb0dd745404"
+    )
+    assert p1.CONTROL_PLANE_BOOTSTRAP_SHA256 == hashlib.sha256(
+        bootstrap
+    ).hexdigest()
+    assert hashlib.sha256(FIXTURE.read_bytes()).hexdigest() == (
+        "46082123fbf98102f3e5995c32bf65d8d04bb835b9c1305de0150349e75e48c7"
+    )
+
+
+def test_embedded_bootstrap_three_fast_powershell_python_handshakes_are_ordered(
+    tmp_path: Path,
+) -> None:
+    bootstrap_path = tmp_path / "bounded-bootstrap.py"
+    target_path = tmp_path / "target.py"
+    harness_path = tmp_path / "handshake-harness.ps1"
+    run_root = tmp_path / "runs"
+    bootstrap_path.write_bytes(
+        _runner_single_quoted_here_string("controlPlaneBootstrapSource")
+    )
+    target_path.write_text("raise SystemExit(0)\n", encoding="ascii", newline="\n")
+    harness_path.write_text(
+        r'''param(
+    [Parameter(Mandatory=$true)][string]$Python,
+    [Parameter(Mandatory=$true)][string]$Bootstrap,
+    [Parameter(Mandatory=$true)][string]$Target,
+    [Parameter(Mandatory=$true)][string]$RunRoot
+)
+$ErrorActionPreference = "Stop"
+Set-StrictMode -Version Latest
+$env:PYTHONDONTWRITEBYTECODE = "1"
+
+function Get-MonotonicNanoseconds {
+    $ticks = [Diagnostics.Stopwatch]::GetTimestamp()
+    return [int64][Math]::Floor(
+        [double]$ticks * 1000000000.0 / [double][Diagnostics.Stopwatch]::Frequency
+    )
+}
+
+function Quote-Argument([string]$Value) {
+    return '"' + $Value.Replace('"', '\"') + '"'
+}
+
+function Write-NewJson([string]$Path, [object]$Value) {
+    $encoding = New-Object Text.UTF8Encoding($false)
+    $bytes = $encoding.GetBytes(($Value | ConvertTo-Json -Compress))
+    $stream = New-Object IO.FileStream(
+        $Path,
+        [IO.FileMode]::CreateNew,
+        [IO.FileAccess]::Write,
+        [IO.FileShare]::Read
+    )
+    try {
+        $stream.Write($bytes, 0, $bytes.Length)
+        $stream.Flush($true)
+    }
+    finally {
+        $stream.Dispose()
+    }
+}
+
+function Read-JsonEventually([string]$Path) {
+    $wait = [Diagnostics.Stopwatch]::StartNew()
+    while ($wait.Elapsed.TotalSeconds -lt 10.0) {
+        if (Test-Path -LiteralPath $Path -PathType Leaf) {
+            try {
+                return Get-Content -Raw -LiteralPath $Path -Encoding UTF8 |
+                    ConvertFrom-Json -ErrorAction Stop
+            }
+            catch {
+                # The create-new producer may still be flushing visible bytes.
+            }
+        }
+        Start-Sleep -Milliseconds 5
+    }
+    throw "marker read timed out: $Path"
+}
+
+[IO.Directory]::CreateDirectory($RunRoot) | Out-Null
+$records = New-Object System.Collections.ArrayList
+for ($iteration = 0; $iteration -lt 3; $iteration += 1) {
+    $runPath = Join-Path $RunRoot "run-$iteration"
+    [IO.Directory]::CreateDirectory($runPath) | Out-Null
+    $readyPath = Join-Path $runPath "bootstrap-ready.json"
+    $startPath = Join-Path $runPath "start-release.json"
+    $completePath = Join-Path $runPath "target-complete.json"
+    $exitPath = Join-Path $runPath "exit-release.json"
+    $arguments = @(
+        $Bootstrap, $readyPath, $startPath, $completePath, $exitPath, $Target
+    ) | ForEach-Object { Quote-Argument ([string]$_) }
+    $process = $null
+    try {
+        $process = Start-Process `
+            -FilePath $Python `
+            -ArgumentList ($arguments -join " ") `
+            -PassThru `
+            -WindowStyle Hidden
+        $ready = Read-JsonEventually $readyPath
+        $start = [ordered]@{
+            schema = "AV-BS1-h4-p0r-control-plane-start-release-v1"
+            invocation_id = "test-$iteration"
+            process_id = [int]$process.Id
+            sample_perf_counter_ns = Get-MonotonicNanoseconds
+            sample_utc = [DateTime]::UtcNow.ToString("o")
+        }
+        Write-NewJson $startPath $start
+        $complete = Read-JsonEventually $completePath
+        $exit = [ordered]@{
+            schema = "AV-BS1-h4-p0r-control-plane-exit-release-v1"
+            invocation_id = "test-$iteration"
+            process_id = [int]$process.Id
+            sample_perf_counter_ns = Get-MonotonicNanoseconds
+            sample_utc = [DateTime]::UtcNow.ToString("o")
+        }
+        Write-NewJson $exitPath $exit
+        if (-not $process.WaitForExit(5000)) {
+            throw "bootstrap process exit timed out"
+        }
+        if ($process.ExitCode -ne 0) {
+            throw "bootstrap process failed: $($process.ExitCode)"
+        }
+        [void]$records.Add([ordered]@{
+            ready = [int64]$ready.monotonic_ns
+            start = [int64]$start.sample_perf_counter_ns
+            complete = [int64]$complete.monotonic_ns
+            exit = [int64]$exit.sample_perf_counter_ns
+            ready_pid = [int]$ready.process_id
+            complete_pid = [int]$complete.process_id
+            process_id = [int]$process.Id
+        })
+    }
+    finally {
+        if ($null -ne $process -and -not $process.HasExited) {
+            Stop-Process -Id $process.Id -Force -ErrorAction SilentlyContinue
+        }
+        if ($null -ne $process) {
+            $process.Dispose()
+        }
+    }
+}
+ConvertTo-Json -InputObject @($records) -Depth 4 -Compress
+''',
+        encoding="ascii",
+        newline="\n",
+    )
+
+    completed = subprocess.run(
+        [
+            "powershell.exe",
+            "-NoProfile",
+            "-NonInteractive",
+            "-ExecutionPolicy",
+            "Bypass",
+            "-File",
+            str(harness_path),
+            "-Python",
+            sys.executable,
+            "-Bootstrap",
+            str(bootstrap_path),
+            "-Target",
+            str(target_path),
+            "-RunRoot",
+            str(run_root),
+        ],
+        cwd=ROOT,
+        text=True,
+        encoding="utf-8",
+        errors="replace",
+        capture_output=True,
+        check=False,
+        timeout=30,
+    )
+
+    assert completed.returncode == 0, completed.stderr
+    records = json.loads(completed.stdout)
+    assert len(records) == 3
+    for record in records:
+        assert record["ready_pid"] == record["process_id"]
+        assert record["complete_pid"] == record["process_id"]
+        assert (
+            record["ready"]
+            <= record["start"]
+            <= record["complete"]
+            <= record["exit"]
         )
 
 
@@ -10675,7 +11310,7 @@ catch {
 def test_runner_exited_snapshot_stabilization_policy_is_exactly_pinned() -> None:
     source = RUNNER.read_text(encoding="utf-8")
     assert hashlib.sha256(RUNNER.read_bytes()).hexdigest() == (
-        "7e675cc31ab229485719200af8b508dae20bd234bff29428e84628029df2763e"
+        "229aa91b04bd89e4af03f9a75c52a0a4819381ec5dfa32a272fe35ac7f1d94f9"
     )
     begin = source.index("# AV_BS_TREE_SAMPLE_TEST_SLICE_BEGIN")
     end = source.index("# AV_BS_TREE_SAMPLE_TEST_SLICE_END")

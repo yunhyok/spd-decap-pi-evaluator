@@ -340,7 +340,7 @@ CONTROL_PLANE_PRE_EXIT_EVIDENCE_FIELDS = frozenset(
     """.split()
 )
 CONTROL_PLANE_BOOTSTRAP_SHA256 = (
-    "3b8d2230e316b541c0d59d6334c13eaa1cf1c0e56ab7f02b1753dbefaeddec0f"
+    "0c92a0ec8fe67868e222647782cb5eedabffcad77319348f55beaeb0dd745404"
 )
 CONTROL_PLANE_CANONICAL_HASH_HELPER_SHA256 = (
     "7d80a4c230409aa0462a59f5cb9de167101ddd53b9f31119d0679f08a853d45c"
@@ -9952,12 +9952,19 @@ def _create_marker(path: Path, payload: Mapping[str, object], label: str) -> Non
 
 
 def _validate_ready_marker(
-    marker: Mapping[str, object], claim_path: Path
+    marker: Mapping[str, object],
+    claim_path: Path,
+    *,
+    expected_child_process_id: int,
 ) -> None:
+    if type(expected_child_process_id) is not int or expected_child_process_id <= 0:
+        raise AvBsError(
+            "BLOCKED_AV_BS_RESULT_SCHEMA", "monitor-ready child_process_id mismatch"
+        )
     expected = {
         "schema": "AV-BS1-h4-p0r-monitor-ready-v1",
         "claim_sha256": _sha(claim_path),
-        "child_process_id": os.getpid(),
+        "child_process_id": expected_child_process_id,
     }
     if set(marker) != set(expected) | {"sample_perf_counter_ns", "sample_utc"}:
         raise AvBsError("BLOCKED_AV_BS_RESULT_SCHEMA", "monitor-ready field set mismatch")
@@ -10753,7 +10760,9 @@ def primary(
     _EXECUTION_PHASE["claim_validated"] = True
     guard = _validate_guard(guard_path, nonce, token, manifest, claim_path)
     ready = _wait_for_marker(ready_path, "monitor-ready marker")
-    _validate_ready_marker(ready, claim_path)
+    _validate_ready_marker(
+        ready, claim_path, expected_child_process_id=os.getpid()
+    )
     matrix_inputs = manifest["p0r_parent"]["matrix_inputs"]
     cap = int(manifest["resource_policy"]["one_factor_hard_cap_bytes"])
     try:
@@ -11388,6 +11397,7 @@ def _validate_factor_report(
     guard: Mapping[str, object],
     guard_path: Path,
     *,
+    expected_child_process_id: int | None = None,
     expected_count: int = 2,
     expected_status: str = "factor_certificates_complete",
     require_handshake: bool = True,
@@ -11677,7 +11687,11 @@ def _validate_factor_report(
     if require_handshake:
         if terminal_bindings is None:
             _validate_monitor_handshake(
-                numerical.get("monitor_handshake"), guard_path, claim_path, certs
+                numerical.get("monitor_handshake"),
+                guard_path,
+                claim_path,
+                certs,
+                expected_child_process_id,
             )
         else:
             _validate_terminal_monitor_handshake_payload(
@@ -11712,6 +11726,7 @@ def _validate_monitor_handshake(
     guard_path: Path,
     claim_path: Path,
     certificates: list[object],
+    expected_child_process_id: int | None = None,
 ) -> None:
     if not isinstance(value, Mapping):
         raise AvBsError("BLOCKED_AV_BS_RESULT_SCHEMA", "factor monitor handshake missing")
@@ -11738,13 +11753,17 @@ def _validate_monitor_handshake(
         if not path.is_file() or value.get(key) != _sha(path):
             raise AvBsError("BLOCKED_AV_BS_RESULT_SCHEMA", f"factor monitor {key} mismatch")
     ready = _read(ready_path, "monitor-ready marker")
-    _validate_ready_marker(ready, claim_path)
+    _validate_ready_marker(
+        ready,
+        claim_path,
+        expected_child_process_id=expected_child_process_id,
+    )
     completion = _read(completion_path, "factor-complete marker")
     release = _read(release_path, "monitor-release marker")
     expected_completion = {
         "schema": "AV-BS1-h4-p0r-factor-complete-v1",
         "claim_sha256": _sha(claim_path),
-        "child_process_id": ready["child_process_id"],
+        "child_process_id": expected_child_process_id,
         "factor_certificates_sha256": _canonical_sha(certificates),
     }
     if set(completion) != set(expected_completion) | {
@@ -11771,7 +11790,7 @@ def _validate_monitor_handshake(
         "schema": "AV-BS1-h4-p0r-monitor-release-v1",
         "claim_sha256": _sha(claim_path),
         "completion_marker_sha256": _sha(completion_path),
-        "child_process_id": ready["child_process_id"],
+        "child_process_id": expected_child_process_id,
     }
     if set(release) != set(expected_release) | {"sample_perf_counter_ns", "sample_utc"}:
         raise AvBsError("BLOCKED_AV_BS_RESULT_SCHEMA", "monitor-release field set mismatch")
@@ -11835,6 +11854,7 @@ def _validate_partial_factor_certificates(
     guard: Mapping[str, object],
     guard_path: Path,
     *,
+    expected_child_process_id: int | None = None,
     terminal_bindings: Mapping[str, object] | None = None,
 ) -> None:
     certs = failure.get("factor_certificates")
@@ -11912,6 +11932,7 @@ def _validate_partial_factor_certificates(
         claim_path,
         guard,
         guard_path,
+        expected_child_process_id=expected_child_process_id,
         expected_count=len(certs),
         validate_prefix_sidecars=terminal_bindings is None,
         terminal_bindings=terminal_bindings,
@@ -11926,13 +11947,22 @@ def _child_outcome(
     claim_path: Path,
     guard: Mapping[str, object],
     guard_path: Path,
+    *,
+    expected_child_process_id: int | None = None,
 ) -> tuple[bool, list[str], bool | None, bool | None, list[str], object]:
     if numerical is None:
         return False, ([] if child_exit == 2 else ["BLOCKED_AV_BS_RESULT_SCHEMA"]), None, None, [], None
     schema = numerical.get("schema")
     if schema == NUMERICAL_SCHEMA:
         _validate_factor_report(
-            numerical, token, manifest, claim, claim_path, guard, guard_path
+            numerical,
+            token,
+            manifest,
+            claim,
+            claim_path,
+            guard,
+            guard_path,
+            expected_child_process_id=expected_child_process_id,
         )
         codes = [] if child_exit == 0 else ["BLOCKED_AV_BS_RESULT_SCHEMA"]
         return True, codes, True, True, ["A_background_II", "A_conductor_II"], None
@@ -11943,7 +11973,14 @@ def _child_outcome(
             expected_scope_sha256=manifest["execution_resource_scope_sha256"],
         )
         _validate_partial_factor_certificates(
-            numerical, token, manifest, claim, claim_path, guard, guard_path
+            numerical,
+            token,
+            manifest,
+            claim,
+            claim_path,
+            guard,
+            guard_path,
+            expected_child_process_id=expected_child_process_id,
         )
         if child_exit != 2 and "BLOCKED_AV_BS_RESULT_SCHEMA" not in codes:
             codes.append("BLOCKED_AV_BS_RESULT_SCHEMA")
@@ -12181,7 +12218,15 @@ def finalize(
         raise AvBsError("BLOCKED_AV_BS_RESULT_SCHEMA", "resource references missing child stdout")
 
     numerical_pass, child_codes, attempted, performed, completed, active = _child_outcome(
-        numerical, child_exit, token, manifest, claim, claim_path, guard, guard_path
+        numerical,
+        child_exit,
+        token,
+        manifest,
+        claim,
+        claim_path,
+        guard,
+        guard_path,
+        expected_child_process_id=resource["child_process_id"],
     )
     prefix_evidence = _factor_prefix_evidence(
         token, manifest, claim, claim_path, guard, guard_path
@@ -12469,7 +12514,15 @@ def _validate_result_payload(
     if payload.get("numerical_payload_sha256") != numerical_sha:
         raise AvBsError("BLOCKED_AV_BS_RESULT_SCHEMA", "result numerical checksum mismatch")
     numerical_pass, child_codes, attempted, performed, completed, active = _child_outcome(
-        numerical, child_exit, token, manifest, claim, claim_path, guard, guard_path
+        numerical,
+        child_exit,
+        token,
+        manifest,
+        claim,
+        claim_path,
+        guard,
+        guard_path,
+        expected_child_process_id=resource["child_process_id"],
     )
     prefix_evidence = _factor_prefix_evidence(
         token, manifest, claim, claim_path, guard, guard_path
@@ -12652,7 +12705,14 @@ def consume(
                 if child_exit_value is None
                 else _json_int(child_exit_value, "resource child exit code")
             )
-            if not claim_valid or not guard_valid or claim_value is None or guard_value is None:
+            if (
+                not resource_valid
+                or resource_value is None
+                or not claim_valid
+                or not guard_valid
+                or claim_value is None
+                or guard_value is None
+            ):
                 raise AvBsError(
                     "BLOCKED_AV_BS_RESULT_SCHEMA",
                     "child stdout cannot validate without claim and guard evidence",
@@ -12669,6 +12729,7 @@ def consume(
                 claim,
                 guard_value,
                 guard,
+                expected_child_process_id=resource_value["child_process_id"],
             )
             codes.extend(child_codes)
             child_evidence_valid = True

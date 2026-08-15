@@ -2236,3 +2236,137 @@ Collection is `387`; the full exact-document suite on the corrected
    the eight retired token commits.
 6. Preserve the zero-RHS, zero-solve, zero-physics boundary. Do not authorize
    H4-P1, H4 physics, PowerSI, withheld-radius, or EQ0 work from this candidate.
+
+## 2026-08-16 — ninth public invocation and retry-v9 final documentation freeze
+
+### Immutable append boundary
+
+This entry is append-only. Before the append, the complete prior
+`SESSION_LOG.md` was exactly `175420` bytes and `2238` lines/newlines with
+SHA-256
+`677e8ba8588d59275235af42ea9acb03e0578c50b94f22646348658d97a45f60`.
+Those bytes are the immutable prefix. The earlier retry-v8 entry, including its
+historical future-ninth wording, is unchanged.
+
+### Ninth public invocation
+
+The ninth public `primary-h4-p0r` invocation ran exactly once from retry-v8
+token-only commit `0597872eeaedd359ce5a3d429748dee2b70ec9a7`, token ID
+`0ec78f5300cc4a63923e735e81b7e713`. The public invocation exited `1`.
+Factor producer PID `51184` exited `0` and emitted
+`factor_certificates_complete`. Exactly two factor certificates and exactly two
+prefix checkpoints were produced, in frozen order `A_background_II`,
+`A_conductor_II`; both factor cap gates passed. No RHS, `factor.solve`,
+extension, boundary `Y`, modal response, H4 physics, or PowerSI work ran.
+
+Inner and outer resource gates passed. Outer evidence records `641` samples,
+`41` non-truncated retry events, mandatory and cleanup sampling both true,
+peak working set `512487424` bytes, peak private bytes `1995182080`, peak
+lifetime commit `2360246272`, and wall time `88.4360361 s`. Terminal cleanup
+found all `182/182` recorded process identities dead. These are factor-only
+host measurements, not H4 physics or 8 GiB laptop-fit evidence.
+
+### Published finalizer failure and non-authoritative raw seal
+
+The published artifact is a finalizer failure wrapper with raw SHA-256
+`5195020580719c4984c97be1f279d8d48275fa3cdfa9502a2ef6657702da5215`:
+
+```text
+status: BLOCKED_AV_BS_RESULT_SCHEMA
+detail: monitor-ready child_process_id mismatch
+offline verifier PID: 37248
+required resource-bound producer PID: 51184
+```
+
+The factor-complete raw SHA-256 is
+`4f6741f47fb4a0138e29ecb3afa2cb100ba86f0e62e3bb97fd31467ad8bf1960`;
+the resource raw SHA-256 is
+`85b89d02aa81ebffcc2eb5c1d98a89e3f56232f475de9eb1c675e4eca2348273`.
+The finalizer used the offline verifier child identity instead of the explicit
+resource-bound producer identity.
+
+A raw terminal seal exists, SHA-256
+`7abfd573a7c7c6a9ddde0d5a8b54173215df10da6abc6e230aa2d2d606bd9a49`,
+but strict `_validate_outer_terminal_evidence` rejects it with `terminal control
+marker chronology invalid`. Three `canonical_json_hash-*` helper bootstraps
+mixed Python `time.monotonic_ns()`/GetTickCount64 ready/complete timestamps with
+PowerShell Stopwatch/QPC start timestamps:
+
+| helper | ready | start | complete | defect |
+|---|---:|---:|---:|---|
+| `canonical_json_hash-4a8...` | `144354828000000` | `144354926794600` | `144354906000000` | complete before start |
+| `canonical_json_hash-19a5...` | `144355437000000` | `144355524490400` | `144355515000000` | complete before start |
+| `canonical_json_hash-dcaba...` | `144356015000000` | `144356109883500` | `144356093000000` | complete before start |
+
+The raw seal is therefore not authoritative. Retained tombstone raw SHA-256 is
+`314ab4e3500c7b16e4272b61214b1d18479da0cb6afa0c79cd017c1bf9cf4855`,
+and the exact tombstone-plus-seal classification is
+`consumed_v2_provisional_invalid_terminal_evidence`. M-only consumption commit
+`b9c1964e8a445b2d45487894485dc8453bd002d4` and D-only retirement commit
+`c14f6309e6b84effbc5139ed8dcdcf05d5ea61f1` leave the token absent.
+
+Additional frozen raw evidence SHA-256 values are:
+
+```text
+claim: 7c5aab09186a8ae80a7d4ff85da88e31a014f2718c92ef711da7299328be29be
+numerical: 122391659ae361410cd677c7651aa712c1e8b6623b592cf0a3ec50833aafbdb5
+numerical payload: c1fa4c2f8c92d8a60ffcb7422894d59f2c9051128f235b3d937cca3f0c8862e8
+prefix A_background_II: 86710c9424bf2d499f3ae0eaf93430f63130cb738b6eb087b7b9fa882b35a468
+prefix A_conductor_II: f07a0686934f969544a4553ee98cdfea83a892e2f874eb43e42cf7d0262421b6
+outer close: 9d95e2f9e37007e8dd59092a7b1bc072364b124bd9d04e9dadfd042296838b01
+pre-exit: 39d17fc1872609835a12048fd04c29b30d1146fa2bd1905125137a7e1df8082c
+```
+
+### Retry-v9 correction and unchanged boundaries
+
+Retry-v9 changes only two implementation details:
+
+1. thread the explicit resource child PID through offline validators; and
+2. use `time.perf_counter_ns()`/QPC for embedded bootstrap ready/complete marker
+   timestamps.
+
+Embedded bootstrap SHA-256 is
+`0c92a0ec8fe67868e222647782cb5eedabffcad77319348f55beaeb0dd745404`.
+Schemas, strict terminal validation, retry/max3/cap64 behavior, factor order and
+caps, resource ceilings, and the RHS/solve/physics boundary are unchanged.
+
+### Frozen bindings and final documentation test evidence
+
+```text
+Python fixture SHA-256: 46082123fbf98102f3e5995c32bf65d8d04bb835b9c1305de0150349e75e48c7
+Python fixture bytes: 579582
+PowerShell runner SHA-256: 229aa91b04bd89e4af03f9a75c52a0a4819381ec5dfa32a272fe35ac7f1d94f9
+PowerShell runner bytes: 443675
+static tests SHA-256: 2106e5338158d2f61a63d572b6f452bd54b752f38500a566f573759096f2c36d
+static tests bytes: 458913
+collection: 397
+focused exact selection: 20 passed, 377 deselected in 2.33 s
+independent same-byte selection: 20 passed, 377 deselected in 2.37 s
+compatibility selection: 7 passed, 390 deselected in 0.95 s
+first full exact-document suite: 397/397 passed in 92.95 s; exit 0; no failure
+token_state: absent
+factor_fit_unproven: true
+next_stage_authorized: false
+```
+
+This is the **FINAL DOC FREEZE**. The first full exact-document suite passed
+`397/397` in `92.95 s` with exit `0` and no failure. It does not authorize a
+token or a stage.
+
+### Exact next starting point
+
+1. Preserve all nine public attempts, consumed records, D-only retirements, and
+   retry-v8 historical bodies without rewriting them.
+2. Verify the immutable `175420`-byte / `2238`-line SESSION_LOG prefix and all
+   retry-v9 file bindings after this append.
+3. Preserve the first full exact-document result: `397/397` passed in `92.95 s`
+   with exit `0` and no failure. Any collection or byte drift stops the sequence.
+4. Freeze the resulting 15-document bytes and repeat exact-byte, link,
+   formatting, code-binding, and independent contract audits.
+5. Retry-v9 itself creates no token. Only after the preceding gates and separate
+   authorization may a fresh one-use token-only child be created. Any resulting
+   public factor-only run would be tenth; none of the nine retired token lineages
+   may be invoked again.
+6. Preserve the no-RHS, no-solve, no-extension, no-boundary-`Y`, no-modal,
+   no-physics boundary. Do not infer H4, PowerSI, or 8 GiB fitness from the ninth
+   factor-only evidence.

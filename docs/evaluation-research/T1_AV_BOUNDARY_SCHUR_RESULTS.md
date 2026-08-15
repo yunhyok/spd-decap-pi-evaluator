@@ -1,47 +1,49 @@
 # SPD Decap PI Evaluator v0.22.0 — T1 AV-BS1 boundary-Schur results
 
-> **SPD Decap PI Evaluator v0.22.0 — retry-v8 current static boundary:** Eight
-> public `primary-h4-p0r` invocations are immutable. In the eighth, run from
-> retry-v7 token-only commit `66211ef...`, native `splu` returned for
-> `A_background_II`; attempted/performed are `true/true` and its completed name
-> is durable, but combined non-canonical factor storage stopped the certificate
-> path with zero certificates and prefixes. `A_conductor_II`, RHS, solve, and
-> physics never started. The resource artifact passed, while independent
-> outer/control monitoring falsely exhausted retries across distinct
-> confirmed-dead helpers; no terminal seal or published result exists. Seven
-> temporary evidence files were copied byte-identically into ignored quarantine.
-> Valid provisional emergency consumption commit `8fce704...` and D-only
-> retirement `7964464...` leave the token absent. Retry-v8 records raw L/U hashes,
-> raw composite canonical flags (false when unsorted), and zero scans. The pre-sort
-> `has_sorted_indices` value is a local sort predicate, not a certificate field;
-> chunked column spans and row bounds are validated, nonfinite values and explicit
-> zeros fail, and every unsorted L/U is sorted in place. Sorted/canonical format is
-> then rechecked, which rejects duplicates; the canonical hash helper enforces that
-> format, and finite/zero data is re-scanned. It makes no schema or field bump, L/U
-> or whole-factor matrix copy, coalescing, or pruning. Attempts group only within
-> one `Get-TreeSample` producer call and state resets per invocation. Cumulative
-> report history may therefore contain adjacent same-identity attempt `1/1` entries
-> separated by a successful return; only the known one-call close suffix enforces
-> adjacency. Within a call, stored event 64 fails before retry continuation; reused
-> diagnostics can advance beyond 64 only as failed/truncated evidence, never a
-> passing sample. Max3/cap64 fields and schemas remain unchanged, and cleanup-race
-> hardening is deferred. Frozen Python/runner/tests SHA-256 are `c26112b0...` /
-> `7e675cc3...` / `426f8388...`. Collection is `387`; focused root `23`
-> passed / `363` deselected and independent `27` passed / `360` deselected;
-> the full exact-document suite passed `387/387` in `94.11 s`.
-> `factor_fit_unproven=true`; `next_stage_authorized=false`. Earlier retry-v7
-> sections are immutable history. Exact evidence is in
+> **SPD Decap PI Evaluator v0.22.0 — retry-v9 final documentation
+> freeze:** Nine public `primary-h4-p0r` invocations are immutable. The ninth ran
+> once from retry-v8 token-only commit `0597872...`, token ID `0ec78f53...`; the
+> public invocation exited `1`. Factor child PID `51184` exited `0` and produced
+> `factor_certificates_complete` with exactly two certificates and two prefix
+> checkpoints in order `A_background_II`, `A_conductor_II`; both factor cap gates
+> passed. No RHS, solve, extension, boundary `Y`, modal response, or physics ran.
+> Inner and outer resource gates passed, and the terminal cleanup audit found all
+> `182/182` process identities dead. This factor-only resource evidence is not an
+> 8 GB fit claim. The published artifact is a finalizer failure
+> wrapper, `BLOCKED_AV_BS_RESULT_SCHEMA` / `monitor-ready child_process_id
+> mismatch`: offline verifier PID `37248` was incorrectly used instead of the
+> resource-bound producer PID `51184`. A raw terminal seal exists, but strict
+> `_validate_outer_terminal_evidence` rejects `terminal control marker chronology
+> invalid`; three canonical-JSON helper bootstraps mixed Python
+> `time.monotonic_ns()`/GetTickCount64 with PowerShell Stopwatch/QPC. The retained
+> tombstone-plus-seal classification is therefore
+> `consumed_v2_provisional_invalid_terminal_evidence`, not authoritative. M-only
+> consumption `b9c1964...` and D-only retirement `c14f630...` leave the token
+> absent. Retry-v9 only threads the explicit resource child PID through offline
+> validators and changes embedded bootstrap marker timestamps to
+> `time.perf_counter_ns()`/QPC; bootstrap SHA-256 is `0c92a0ec...`. Frozen
+> Python/runner/tests SHA-256 are `46082123...` / `229aa91b...` / `2106e533...`.
+> Collection is `397`; focused exact selection passed `20` with `377` deselected
+> in `2.33 s`, independent same-byte selection passed `20` with `377` deselected
+> in `2.37 s`, and compatibility selection passed `7` with `390` deselected in
+> `0.95 s`. The first full exact-document suite passed `397/397` in `92.95 s`
+> with exit `0` and no failure. This is the **FINAL DOC FREEZE**. Schemas,
+> strictness,
+> retry/max3/cap64, factor order/caps, resource ceilings, and the RHS/solve/physics
+> boundary are unchanged. `factor_fit_unproven=true`;
+> `next_stage_authorized=false`. Earlier retry-v8 sections are immutable history;
+> any separately authorized future public invocation would be tenth. Evidence is in
 > [results](T1_AV_BOUNDARY_SCHUR_RESULTS.md) and the
 > [reproduction appendix](ORACLE_REPRODUCTION.md).
 
 
 ## Current verdict
 
-현재 AV-BS1 physics artifact 상태는 **`passed_AV_BS_h2_stage_only_pending_h4_preregistration`**이다. 17.5 µm/100 kHz의 guarded `primary-h2` 한 번이 local mandatory gate를 통과했지만 이는 h2 한 mesh의 단계 제한 통과일 뿐 circle oracle 또는 h4 권한이 아니다. H0 negative, H1 coarse-h pass, H2-P0 assembly manifest, H4-P0 assembly certificate와 H4-P0R manifest parent를 그대로 보존한다. 여덟 번째 P1 factor-only 시도에서는 `A_background_II` native `splu`가 반환돼 attempted/performed `true/true`와 completed name 하나를 남겼지만 combined non-canonical L/U storage로 certificate/prefix는 0이다. `A_conductor_II`, RHS, solve, physics는 미시도다. Resource artifact는 pass지만 distinct confirmed-dead helper를 한 attempt sequence로 묶은 independent outer/control false exhaustion 때문에 seal/published result는 없다. 따라서 certified H4-P0R factor result와 factor-fit proof는 여전히 없고 `factor_fit_unproven=true`, `next_stage_authorized=false`다.
+현재 AV-BS1 physics artifact 상태는 **`passed_AV_BS_h2_stage_only_pending_h4_preregistration`**이다. 17.5 µm/100 kHz의 guarded `primary-h2` 한 번이 local mandatory gate를 통과했지만 이는 h2 한 mesh의 단계 제한 통과일 뿐 circle oracle 또는 h4 권한이 아니다. H0 negative, H1 coarse-h pass, H2-P0 assembly manifest, H4-P0 assembly certificate와 H4-P0R manifest parent를 그대로 보존한다. 아홉 번째 P1 factor-only 시도는 producer PID `51184`에서 exactly two factor certificates/prefixes와 factor/resource gates를 통과했지만 published finalizer PID mismatch와 strict chronology-invalid raw seal 때문에 authoritative H4-P0R result가 아니다. RHS, solve, physics는 미실행이다. 따라서 factor-fit proof는 여전히 없고 `factor_fit_unproven=true`, `next_stage_authorized=false`; first full exact-document suite는 `397/397` in `92.95 s`, exit `0`, no failure로 통과했고 문서는 FINAL DOC FREEZE다.
 
 2026-08-15 clean commit `4fa5ec80a261c21c8489ecd8b708a62bba769a7a`에서 17.5 µm, 100 kHz, `h` 한 mesh의 guarded `primary-h`를 처음 실행했다. 실행은 **`BLOCKED_AV_BS_MESH_HASH`**로 fail-closed 됐다. factorization, harmonic extension, boundary-Schur `Y`, modal response와 physics pass/fail 값은 생성되지 않았다. 따라서 이 결과는 AV-BS1 physics negative가 아니라 **사전등록 sparse-pattern 계약의 negative**다.
 
-제품 parser/solver/UI/version/installer, PowerSI reference와 GitHub 원격은 변경하지 않았다. `h2`만 physics-bearing preregistered one-use path로 실행했다. 여덟 H4-P0R-P1 public invocation 모두 certified two-factor result 없이 중단됐다. 여덟 번째에서도 certificate/prefix, RHS/solve, `h4` physics, withheld radius와 EQ0는 생성되지 않았다. Resource artifact pass와 ignored-quarantine evidence는 seal/published result, PowerSI 정확성 또는 8 GiB 적합성 주장이 아니다.
+제품 parser/solver/UI/version/installer, PowerSI reference와 GitHub 원격은 변경하지 않았다. `h2`만 physics-bearing preregistered one-use path로 실행했다. 아홉 H4-P0R-P1 public invocation은 모두 immutable하다. 아홉 번째 factor path의 two-certificate/two-prefix 및 resource pass는 비권위 terminal evidence를 보정하지 않으며, RHS/solve, `h4` physics, withheld radius와 EQ0는 생성되지 않았다. Resource pass는 PowerSI 정확성 또는 8 GiB 적합성 주장이 아니다.
 
 ## Immutable H0 artifact
 
@@ -564,7 +566,7 @@ SHA-256 are `7a1dba5eafcbf601fd532a9a3d2bc10de2218c74bccdacd04bdba5f1038df348`,
 `bd2e3e2ca4d668d3cd8c92b55737a74f6bff743a823bae024713d59d393c8ba7`.
 Focused `25/25` and full no-cache `341/341` passed; the latter took `88.40 s`.
 
-## Eighth public attempt under retry-v7 and retry-v8 corrective candidate
+## Eighth public attempt under retry-v7 and retry-v8 historical candidate
 
 The eighth public attempt ran once from retry-v7 token-only commit
 `66211efbbdb7e0881e6bc051a2c68e25e5f1040e`, token ID
@@ -619,9 +621,53 @@ independent `27` passed / `360` deselected. The full exact-document suite passed
 authorized public run would be ninth. Token state is absent, next-stage
 authority is false, and factor fit and H4 physics remain unproven.
 
+## Ninth public attempt under retry-v8 and retry-v9 provisional candidate
+
+The ninth public attempt ran exactly once from retry-v8 token-only commit
+`0597872eeaedd359ce5a3d429748dee2b70ec9a7`, token ID
+`0ec78f5300cc4a63923e735e81b7e713`, and exited `1`. Factor producer PID
+`51184` exited `0` with `factor_certificates_complete`. It published exactly two
+certificates and two prefix checkpoints, in order `A_background_II` then
+`A_conductor_II`; both factor cap gates passed. Inner and outer resource gates
+passed, and the terminal audit found all `182/182` process identities dead. No
+RHS, solve, extension, boundary `Y`, modal response, or physics ran.
+
+The published artifact is a finalizer failure wrapper:
+`BLOCKED_AV_BS_RESULT_SCHEMA` / `monitor-ready child_process_id mismatch`.
+Offline verifier PID `37248` was expected where strict validation required the
+resource-bound producer PID `51184`. A raw seal exists, but strict
+`_validate_outer_terminal_evidence` rejects `terminal control marker chronology
+invalid`; it is not authoritative. Three `canonical_json_hash-*` helper
+bootstraps mixed Python `time.monotonic_ns()`/GetTickCount64 with PowerShell
+Stopwatch/QPC. The retained tombstone-plus-seal classification is
+`consumed_v2_provisional_invalid_terminal_evidence`.
+
+M-only consumption `b9c1964e8a445b2d45487894485dc8453bd002d4` and D-only
+retirement `c14f6309e6b84effbc5139ed8dcdcf05d5ea61f1` leave the token
+absent. Retry-v9 only threads the explicit resource child PID through offline
+validators and changes bootstrap marker timestamps to
+`time.perf_counter_ns()`/QPC; bootstrap SHA-256 is
+`0c92a0ec8fe67868e222647782cb5eedabffcad77319348f55beaeb0dd745404`.
+Schemas, strictness, retry/max3/cap64, factor order/caps, resource ceilings, and
+the RHS/solve/physics boundary are unchanged.
+
+Frozen Python/runner/tests bindings are
+`46082123fbf98102f3e5995c32bf65d8d04bb835b9c1305de0150349e75e48c7`
+(`579582` bytes),
+`229aa91b04bd89e4af03f9a75c52a0a4819381ec5dfa32a272fe35ac7f1d94f9`
+(`443675` bytes), and
+`2106e5338158d2f61a63d572b6f452bd54b752f38500a566f573759096f2c36d`
+(`458913` bytes). Collection is `397`; focused exact selection was `20`
+passed / `377` deselected in `2.33 s`, independent same-byte selection was
+`20/377` in `2.37 s`, and compatibility selection was `7/390` in `0.95 s`.
+The first full exact-document suite passed `397/397` in `92.95 s` with exit
+`0` and no failure. This is the **FINAL DOC FREEZE**. `factor_fit_unproven=true`,
+`next_stage_authorized=false`; retry-v9 creates no token and any separately
+authorized future invocation would be tenth.
+
 ## Exact next starting point
 
 1. H0 negative, H1 h-stage, H2 result, H4-P0와 H4-P0R parent artifacts를 immutable하게 보존한다.
-2. 여덟 P1 interruption과 validation-output, ignored quarantine, consumed records 및 deletion-only retirement를 보존한다. `b6c8615...`, `d9e064f...`, `6328174...`, `9b4854d...`, `5ba4b69...`, `8277532...`, `4f60bd5...`, `66211ef...`를 재실행하지 않는다.
-3. retry-v8 Python/runner/tests/docs와 full exact-document 387-test suite의 `387/387` in `94.11 s` 통과 상태를 token-absent clean contract와 독립 audit에 고정하고 committed safe manifest reread를 통과한 뒤에만 별도 승인 lifecycle을 연다. Exact final bytes의 confirmation rerun도 pass해야 하지만 두 번째 runtime은 문서에 다시 기록하지 않는다.
-4. 새 token이 별도로 승인된 경우에만 아홉 번째 public invocation으로 `KII/ApII` factor fill과 process-tree resource를 한 번 측정한다. RHS/extensions/Y/modal physics는 금지한다. Cleanup-race hardening은 별도 deferred contract다. P0R terminal result 독립 audit와 별도 H4-P1 preregistration/clean audit/fresh token 전에는 h4 physics를 실행하지 않으며, withheld radius/EQ0도 각각의 후속 계약 전까지 금지한다.
+2. 아홉 P1 interruption과 validation-output, retained evidence, consumed records 및 D-only retirement를 보존한다. `b6c8615...`, `d9e064f...`, `6328174...`, `9b4854d...`, `5ba4b69...`, `8277532...`, `4f60bd5...`, `66211ef...`, `0597872...`를 재실행하지 않는다.
+3. retry-v9 Python/runner/tests/docs를 token-absent provisional runtime contract와 FINAL DOC FREEZE에 고정한다. First full exact-document suite는 `397/397` in `92.95 s`, exit `0`, no failure로 통과했다.
+4. Exact final-byte reread, full suite, independent audit와 별도 승인 뒤 새 token이 생긴 경우에만 열 번째 public invocation을 검토한다. RHS/extensions/Y/modal physics는 금지한다. P0R authoritative terminal result 독립 audit와 별도 H4-P1 preregistration/clean audit/fresh token 전에는 h4 physics를 실행하지 않으며, withheld radius/EQ0도 각각의 후속 계약 전까지 금지한다.

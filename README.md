@@ -2,47 +2,46 @@
 
 > **Ongoing Evaluation algorithm research:** start every research session from the [accuracy-first research restart document](docs/evaluation-research/README.md). Isolated research-only fixtures, runners, tests, and evidence may exist on the research branch, but the product parser, solver, UI, version, and installer remain unchanged unless implementation is explicitly authorized.
 
-> **Current AV-BS1 H4-P0R-P1 retry-v8 static boundary:** eight public P1
-> invocations are immutable and all eight one-use tokens were retired without
-> reuse. The eighth ran once from retry-v7 token-only commit
-> `66211efbbdb7e0881e6bc051a2c68e25e5f1040e`. Native `splu` returned for
-> `A_background_II`, so attempted/performed are `true/true` and
-> `completed_factors=["A_background_II"]`, but combined non-canonical factor
-> storage stopped the certificate path with zero certificates and zero prefixes;
-> `A_conductor_II`, RHS, solve, and physics never started. The resource artifact
-> passed, while independent outer/control monitoring falsely exhausted retries
-> across distinct confirmed-dead helpers; no terminal seal or published result
-> exists. Seven temporary evidence files were copied byte-identically into
-> ignored quarantine. Valid provisional emergency consumption was recorded by
-> M-only commit `8fce704a878a39497408c42e1e63bdfa683b9413`, followed by D-only
-> retirement `7964464018ae898928f151d707fdc52a850cd935`; the token is absent.
-> Retry-v8 records raw L/U storage hashes, raw composite canonical flags (false
-> when unsorted), and zero scans. The pre-sort `has_sorted_indices` value is a
-> local sort predicate, not a certificate field. Chunked column spans and
-> row-index bounds are validated, nonfinite values and explicit zeros fail, and
-> every unsorted L/U is sorted in place. Sorted/canonical format is then
-> rechecked, which rejects duplicates; the canonical hash helper enforces that
-> format, and finite/zero data is re-scanned. It makes no schema or field bump,
-> L/U or whole-factor matrix copy, coalescing, or pruning. Attempts group only
-> within one `Get-TreeSample` producer call and state resets per invocation;
-> cumulative report history may therefore contain adjacent same-identity attempt
-> `1/1` entries separated by a successful return. Only the known one-call close
-> suffix enforces adjacency. Within a call, event `64` is stored and increments
-> the total to `64`; that same 64th confirmed retry fails generically with
-> `TREE_SAMPLE_TOTAL_RETRY_CAP_REACHED` unless simultaneous same-identity attempt
-> `3` takes precedence, so the call does not return to its retry loop. Reused
-> diagnostics may later advance beyond `64` only as failed/truncated evidence,
-> never as a passing sample. Existing max3/cap64 fields and schemas remain
-> unchanged; cleanup-race hardening is deferred. Frozen code SHA-256 bindings are
-> Python `c26112b0738224eed4f1401553adf6fc9a3512b37c475f5b52152cab98e6ecff`,
-> runner `7e675cc31ab229485719200af8b508dae20bd234bff29428e84628029df2763e`,
-> and tests `426f83888587dc57b7874a4e8dd47f0965212a0c1d7fabde33e6f3ab2801a2e7`.
-> Collection is `387`; focused root `23` passed with `363` deselected and
-> independent `27` passed with `360` deselected. The full exact-document suite
-> passed `387/387` in `94.11 s`.
-> Any separately authorized future public invocation would be ninth.
-> `factor_fit_unproven=true`;
-> `next_stage_authorized=false`. See the
+> **Current AV-BS1 H4-P0R-P1 retry-v9 final documentation freeze:** Nine
+> public P1 invocations and tokens are immutable. The ninth ran once from
+> retry-v8 token-only commit `0597872eeaedd359ce5a3d429748dee2b70ec9a7`, token
+> ID `0ec78f5300cc4a63923e735e81b7e713`, and exited `1`. Factor producer PID
+> `51184` exited `0` with `factor_certificates_complete`, exactly two
+> certificates and two prefix checkpoints in order `A_background_II`,
+> `A_conductor_II`; both factor cap gates and the inner/outer resource gates
+> passed. All `182/182` recorded process identities were dead at terminal
+> cleanup. This factor-only resource evidence is not an H4 result or an 8 GB fit
+> claim. No RHS, solve, extension, boundary `Y`, modal response, or physics ran.
+> The published artifact is the finalizer failure
+> `BLOCKED_AV_BS_RESULT_SCHEMA` / `monitor-ready child_process_id mismatch`:
+> offline verifier PID `37248` was used instead of resource-bound producer PID
+> `51184`. A raw terminal seal exists but strict
+> `_validate_outer_terminal_evidence` rejects `terminal control marker chronology
+> invalid`. Three canonical-JSON helper bootstraps mixed Python
+> `time.monotonic_ns()`/GetTickCount64 with PowerShell Stopwatch/QPC, so the raw
+> seal is not authoritative and the retained tombstone-plus-seal classification
+> is `consumed_v2_provisional_invalid_terminal_evidence`. M-only consumption
+> `b9c1964e8a445b2d45487894485dc8453bd002d4` and D-only retirement
+> `c14f6309e6b84effbc5139ed8dcdcf05d5ea61f1` leave the token absent.
+> Retry-v9 only threads the explicit resource child PID through offline
+> validators and uses `time.perf_counter_ns()`/QPC for embedded bootstrap marker
+> timestamps; bootstrap SHA-256 is
+> `0c92a0ec8fe67868e222647782cb5eedabffcad77319348f55beaeb0dd745404`.
+> Schemas, strict gates, retry/max3/cap64, factor order/caps, resource ceilings,
+> and the RHS/solve/physics boundary are unchanged. Frozen code SHA-256 bindings
+> are Python
+> `46082123fbf98102f3e5995c32bf65d8d04bb835b9c1305de0150349e75e48c7`
+> (`579582` bytes), runner
+> `229aa91b04bd89e4af03f9a75c52a0a4819381ec5dfa32a272fe35ac7f1d94f9`
+> (`443675` bytes), and tests
+> `2106e5338158d2f61a63d572b6f452bd54b752f38500a566f573759096f2c36d`
+> (`458913` bytes). Collection is `397`; focused exact selection passed `20`
+> with `377` deselected in `2.33 s`, independent same-byte selection passed `20`
+> with `377` deselected in `2.37 s`, and compatibility selection passed `7`
+> with `390` deselected in `0.95 s`. The first full exact-document suite passed
+> `397/397` in `92.95 s` with exit `0` and no failure. This is the **FINAL DOC FREEZE**.
+> Any separately authorized future public invocation would be tenth.
+> `factor_fit_unproven=true`; `next_stage_authorized=false`. See the
 > [results](docs/evaluation-research/T1_AV_BOUNDARY_SCHUR_RESULTS.md) and
 > [reproduction appendix](docs/evaluation-research/ORACLE_REPRODUCTION.md).
 

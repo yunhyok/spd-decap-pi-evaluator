@@ -2,6 +2,59 @@
 
 ## 1. Current status and authority
 
+This document now preregisters the retry-v9 provisional corrective candidate
+after nine immutable public invocations. The ninth ran exactly once from
+retry-v8 token-only commit `0597872eeaedd359ce5a3d429748dee2b70ec9a7`, token
+ID `0ec78f5300cc4a63923e735e81b7e713`, and exited `1`. Factor producer PID
+`51184` exited `0` with `factor_certificates_complete`, exactly two factor
+certificates and two prefix checkpoints in frozen order `A_background_II`,
+`A_conductor_II`, and both factor cap gates passed. Inner/outer resource gates
+passed and all `182/182` process identities were dead at terminal cleanup. No
+RHS, solve, extension, boundary `Y`, modal response, H4 physics, or PowerSI work
+ran. This factor-only resource evidence is not an H4 result or an 8 GB fit claim.
+
+The current authority classification is:
+
+- `token_state=absent` after M-only consumption
+  `b9c1964e8a445b2d45487894485dc8453bd002d4` and D-only retirement
+  `c14f6309e6b84effbc5139ed8dcdcf05d5ea61f1`;
+- published status `BLOCKED_AV_BS_RESULT_SCHEMA`, detail
+  `monitor-ready child_process_id mismatch`, because offline verifier PID
+  `37248` was used instead of resource-bound producer PID `51184`;
+- a raw terminal seal exists, but strict `_validate_outer_terminal_evidence`
+  rejects `terminal control marker chronology invalid`, so
+  `terminal_evidence_complete=false` for authority purposes;
+- retained classification
+  `consumed_v2_provisional_invalid_terminal_evidence`, not authoritative;
+- `authoritative_stage_pass=false`, `factor_fit_unproven=true`, and
+  `next_stage_authorized=false`;
+- retry-v9 creates no token; any separately authorized future public invocation
+  would be tenth; and
+- the first full exact-document suite passed `397/397` in `92.95 s` with exit
+  `0` and no failure, so this is the **FINAL DOC FREEZE**.
+
+Retry-v9 changes only two defects: offline validators receive the explicit
+resource child PID, and embedded helper bootstrap ready/complete timestamps use
+`time.perf_counter_ns()`/QPC rather than mixing
+`time.monotonic_ns()`/GetTickCount64 with PowerShell Stopwatch/QPC. Embedded
+bootstrap SHA-256 is
+`0c92a0ec8fe67868e222647782cb5eedabffcad77319348f55beaeb0dd745404`.
+Schemas, strict validation, retry/max3/cap64 behavior, factor order/caps,
+resource ceilings, and the RHS/solve/physics boundary are unchanged.
+
+Frozen Python/runner/tests SHA-256 and sizes are
+`46082123fbf98102f3e5995c32bf65d8d04bb835b9c1305de0150349e75e48c7`
+/ `579582` bytes,
+`229aa91b04bd89e4af03f9a75c52a0a4819381ec5dfa32a272fe35ac7f1d94f9`
+/ `443675` bytes, and
+`2106e5338158d2f61a63d572b6f452bd54b752f38500a566f573759096f2c36d`
+/ `458913` bytes. Collection is `397`; focused exact selection passed `20`
+with `377` deselected in `2.33 s`, independent same-byte selection passed `20`
+with `377` deselected in `2.37 s`, and compatibility selection passed `7` with
+`390` deselected in `0.95 s`.
+
+### 1.1 Historical retry-v8 authority snapshot
+
 This document now preregisters the retry-v8 corrective static
 executable-contract candidate after eight public invocations. The first four
 stopped before claim and factor work; the fifth reached the factor child but
@@ -926,7 +979,7 @@ physics_solve_performed: false
 next_stage_authorized: false
 ```
 
-### 15.9 Eighth public attempt and retry-v8 corrective evidence
+### 15.9 Eighth public attempt and historical retry-v8 corrective evidence
 
 The eighth public `primary-h4-p0r` invocation ran exactly once from retry-v7
 token-only commit `66211efbbdb7e0881e6bc051a2c68e25e5f1040e`, token ID
@@ -1001,42 +1054,66 @@ next_stage_authorized: false
 Collection is `387`; the full exact-document suite passed `387/387` in `94.11 s`. A future
 authorized public invocation would be the ninth.
 
+### 15.10 Ninth public attempt and retry-v9 corrective evidence
+
+The ninth attempt used retry-v8 commit
+`0597872eeaedd359ce5a3d429748dee2b70ec9a7` and token ID
+`0ec78f5300cc4a63923e735e81b7e713`. Public exit was `1`. Producer PID
+`51184` exited `0`, emitted `factor_certificates_complete`, exactly two
+certificates, and two prefixes in required order `A_background_II`,
+`A_conductor_II`; both factor cap gates passed. Inner and outer resource gates
+passed, and cleanup proved `182/182` identities dead. No RHS, solve, extension,
+boundary `Y`, modal response, or physics ran.
+
+The published finalizer failure is `BLOCKED_AV_BS_RESULT_SCHEMA` /
+`monitor-ready child_process_id mismatch`: offline verifier PID `37248` was
+checked where producer PID `51184` was required. Raw terminal seal SHA-256
+`7abfd573a7c7c6a9ddde0d5a8b54173215df10da6abc6e230aa2d2d606bd9a49`
+exists but is non-authoritative because strict terminal validation rejects
+`terminal control marker chronology invalid`. Three `canonical_json_hash-*`
+helpers mixed `time.monotonic_ns()`/GetTickCount64 with Stopwatch/QPC. Retained
+classification is `consumed_v2_provisional_invalid_terminal_evidence`.
+
+Retry-v9 passes the explicit resource child PID through offline validators and
+uses `time.perf_counter_ns()`/QPC for bootstrap markers. Its bootstrap SHA-256
+is `0c92a0ec8fe67868e222647782cb5eedabffcad77319348f55beaeb0dd745404`.
+No schema, strict gate, retry/max3/cap64, factor order/cap, resource ceiling, or
+forbidden-operation boundary changes. Frozen Python/runner/tests bindings are
+`46082123fbf98102f3e5995c32bf65d8d04bb835b9c1305de0150349e75e48c7`
+(`579582` bytes),
+`229aa91b04bd89e4af03f9a75c52a0a4819381ec5dfa32a272fe35ac7f1d94f9`
+(`443675` bytes), and
+`2106e5338158d2f61a63d572b6f452bd54b752f38500a566f573759096f2c36d`
+(`458913` bytes). Collection `397`; focused exact `20/377` in `2.33 s`,
+independent same-byte `20/377` in `2.37 s`, compatibility `7/390` in `0.95 s`.
+The first full exact-document suite passed `397/397` in `92.95 s` with exit `0`
+and no failure. This is the **FINAL DOC FREEZE**. Token is absent, factor fit is unproven, next authority is false, and
+any separately authorized future invocation would be tenth.
+
 ## 16. Exact next sequence
 
 The only permitted next sequence is:
 
-The retry-v8 storage and monitor corrections do not create or authorize a token
-and do not widen the factor-only boundary. The retired token-only commits
-`b6c8615...`, `d9e064f...`, `6328174...`, `9b4854d0...`, `5ba4b693...`,
-`82775327...`, `4f60bd5...`, and `66211ef...` must never be invoked again.
+Retry-v9 creates or authorizes no token and does not widen the factor-only
+boundary. All nine retired token lineages must never be invoked again.
 
-1. Freeze the retry-v8 fixture, runner, tests, documentation, unchanged schemas,
-   and safe no-token manifest at the exact reviewed bytes. Record collection
-   `387` and the full exact-document pass `387/387` in `94.11 s`. Complete
-   independent code, documentation, and contract audits, then require the
-   exact-byte confirmation suite to pass before commit; any later byte change
-   requires closure again.
-2. Create one clean executable-contract commit containing exactly those
-   reviewed bytes and bindings. The contract commit contains no P1 review
-   token.
-3. Re-read the exact committed no-token manifest. Proceed only if every frozen
-   binding and authorization prerequisite validates; otherwise stop with no
-   token.
-4. Create one child commit with exactly one parent (the clean contract commit)
-   that adds only the canonical one-use P1 review-token file. The token binds
-   the final contract commit and every frozen hash.
-5. Only with separate authorization, invoke the public `primary-h4-p0r` runner
-   exactly once for the two-factor, zero-RHS, zero-solve pilot. Never invoke any
-   of the eight prior token commits. This would be the ninth public invocation.
-6. Classify the outcome only from the v2 tombstone, outer terminal seal, and
-   the complete current-byte-bound claim, guard, resource, result, child,
-   marker, prefix, report, index, close, and applicable recovery-journal chain.
-   Preserve the quarantine and journals. Regardless of pass or failure, do
-   not authorize H4-P1 or any physics stage.
-
-Cleanup-race hardening remains outside retry-v8 and requires a separate frozen
-contract before it can be claimed. It must not be silently folded into a ninth
-authorization.
+1. Preserve all nine public invocations, consumed records, retirements, and the
+   retry-v8 historical sections unchanged.
+2. Freeze the retry-v9 Python/runner/tests/documentation bindings above as the
+   current token-absent provisional runtime contract and FINAL DOC FREEZE. The
+   first full exact-document suite passed `397/397` in `92.95 s`, exit `0`, with
+   no failure.
+3. Repeat exact-byte/hash and independent contract audits on the result-only
+   documentation update. Any byte drift or failure returns to no-token status.
+4. Only after those gates and separate authorization may a new clean contract
+   and canonical one-use child token be created. Retry-v9 itself creates none.
+5. A separately authorized public `primary-h4-p0r` invocation would be tenth.
+   It remains factor-only; RHS, solve, extension, boundary `Y`, modal response,
+   H4 physics, and PowerSI work stay forbidden.
+6. Classify any future outcome only from strict current-byte-bound claim, guard,
+   factor, prefix, resource, marker, report, index, close, tombstone, seal, and
+   recovery evidence. A raw seal that strict validation rejects is never
+   authoritative.
 
 Any hash drift, dirty checkout, missing prerequisite, failed final audit,
 unexpected token-commit content, missing cleanup proof, or absent/invalid seal

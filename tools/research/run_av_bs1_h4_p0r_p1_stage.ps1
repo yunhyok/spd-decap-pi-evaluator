@@ -6686,7 +6686,7 @@ write_new(
     {
         "schema": "AV-BS1-h4-p0r-control-plane-bootstrap-ready-v1",
         "process_id": os.getpid(),
-        "monotonic_ns": time.monotonic_ns(),
+        "monotonic_ns": time.perf_counter_ns(),
     },
 )
 wait_for(start_release_path)
@@ -6716,7 +6716,7 @@ write_new(
         "schema": "AV-BS1-h4-p0r-control-plane-target-complete-v1",
         "process_id": os.getpid(),
         "exit_code": exit_code,
-        "monotonic_ns": time.monotonic_ns(),
+        "monotonic_ns": time.perf_counter_ns(),
     },
 )
 wait_for(exit_release_path)
