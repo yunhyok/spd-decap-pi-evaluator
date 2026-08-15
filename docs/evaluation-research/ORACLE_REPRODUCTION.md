@@ -3131,7 +3131,7 @@ Exact next는 현재 manifest-only contract를 clean commit과 독립 audit에 �
 
 ## AV-BS1 H4-P0R-P1 safe replay and interruption evidence
 
-위 문단은 immutable manifest-only parent의 당시 next step이다. 후속 P1 executable/lifecycle은 구현됐지만 두 public invocation이 모두 claim/factor 전 fail-closed 됐고 두 one-use token은 재실행 없이 삭제됐다. 현재 checkout에는 P1 token이 없다. 아래 명령만 safe static replay로 허용하며 `-Stage primary-h4-p0r`, hidden inner mode, finalizer 또는 consumer를 직접 호출하지 않는다.
+위 문단은 immutable manifest-only parent의 당시 next step이다. 후속 P1 executable/lifecycle은 구현됐지만 세 public invocation이 모두 claim/factor 전 fail-closed 됐고 세 one-use token은 재실행 없이 삭제됐다. 현재 checkout에는 P1 token이 없다. 아래 명령만 safe static replay로 허용하며 `-Stage primary-h4-p0r`, hidden inner mode, finalizer 또는 consumer를 직접 호출하지 않는다.
 
 ```powershell
 python tools/research/av_bs1_boundary_schur_h4_p0r_p1.py --stage manifest
@@ -3142,7 +3142,7 @@ $env:PYTEST_ADDOPTS='-p no:cacheprovider'
 python -m pytest -q tests/test_research_av_bs1_boundary_schur_h4_p0r_p1.py
 ```
 
-현재 retry-v2 static candidate binding은 다음과 같다. P1 preregistration document와 live wrapper payload는 문서 동결 뒤 외부에서 계산한다.
+다음은 세 번째 public invocation 전의 **역사적 retry-v2** static candidate binding이다. P1 preregistration document와 live wrapper payload는 당시 문서 동결 뒤 외부에서 계산했다.
 
 ```text
 fixture SHA-256: 8c497cb1d0926600b2ddd974df6fd8d40b09471c617869294a01c0e018ce5acf
@@ -3168,6 +3168,89 @@ $j | Select-Object schema,started_utc,ended_utc,wall_elapsed_nanoseconds,stop_re
 Expected SHA-256은 `3de68a75e4e1fa23876b63f1843ad217f7ba0290f8a86b491bac09124f5ea39c`다. `OUTER_RESOURCE_EXCEPTION`, samples `2/2`, inner exit `-1`, cleanup true, gate false, no claim/no recovery를 보존한다. ready/start-release/complete/exit-release, claim, result, factor prefix, tombstone와 seal은 없다. 따라서 factor/RHS/solve/physics는 시작할 수 없었다. v1 close에는 exact caught PID/API/message가 없으므로 short-lived `Add-Type` descendant race는 high-confidence inference로만 재현 문서에 남긴다.
 
 close-v2 correction은 instrumented outer tree에서만 maximum 3 whole attempts를 허용한다. native exited 또는 exact not-found, fresh complete snapshot absence와 stable root를 모두 확인한 non-root만 retry한다. 모든 partial sum을 버리고 root/reuse/live/access/incomplete-snapshot/exhaustion은 fatal이다. 이전 token commits `b6c8615...`와 `d9e064f...`는 mechanically checkout 가능해도 영구 재사용 금지다. 다음 public run은 새로운 token-absent contract audit와 fresh token-only child 뒤에만 별도 승인된다.
+
+### Third public invocation evidence
+
+역사적 retry-v2 contract `29aeed318abb1cefb189917d707066987e5ea3b3`의
+fresh token-only child는 `6328174b8315f71b407f79584f134359b9f48685`, token
+ID는 `7af97159e9224924832085a293c65c27`이다. public invocation은
+`2026-08-15T10:58:35.7129115Z`부터 `2026-08-15T10:58:39.7341700Z`까지
+한 번 실행되고 exit `2`로 끝났다. 다음 read-only 명령은 보존된 evidence의
+경로와 hash만 확인하며 어느 파일도 수정·이동·삭제하지 않는다.
+
+```powershell
+$outer = 'validation-output/av-bs1/outer-observer/session-399b2ac2a1754822bd7da61aae88acaf/outer-resource-envelope-close.json'
+$control = 'validation-output/av-bs1/control-plane/session-401d8ddafdbe42628541ebe2bdc367cf'
+Get-FileHash -Algorithm SHA256 -LiteralPath $outer
+Get-FileHash -Algorithm SHA256 -LiteralPath "$control/preflight-6cb7af1c254d49309bb8e5866c6501fc/control-plane-report.json"
+Get-FileHash -Algorithm SHA256 -LiteralPath "$control/session-index-0001.json"
+Get-FileHash -Algorithm SHA256 -LiteralPath "$control/session-index-0002.json"
+```
+
+Expected SHA-256은 outer close
+`a675b5f829e343717d66c1c1d4d40335aed7015c09ad5c3385d2d90aa97e20cd`,
+control report
+`da6069826cf46335bb8b86655abfaad8eb3fb61c87d076ebf916849f998c5f7b`,
+pre-close/final indexes
+`c693ad457906f54047427e7b9d831d9b1cd764d0457d3557a872c6a5f8fe5018`와
+`f4824fba0f58c71b85acd1fc286aa29e0d323ef704e828649119c6e39f78d579`다.
+outer inner-ready/start-release와 control bootstrap-ready/start-release는 있지만
+control target-complete/exit-release, claim, factor prefix, tombstone와 seal은 없다.
+control report는 default `MaximumAttempts=1` sampling에서
+`TRANSIENT_DESCENDANT_DISAPPEARANCE_RETRY_EXHAUSTED`, cleanup true, gate false를
+증명한다. 따라서 이는 control preflight monitor failure이고 factor/RHS/solve/H4
+physics/PowerSI/8 GiB 결과가 아니다. token은 byte-identical 상태로 재사용되지 않았고
+deletion-only commit `ba97dd8b274659a649d9a4020193c3ef72572665`에서 폐기됐다.
+
+### Current control-plane retry-v3 replay boundary
+
+retry-v3는 `Get-TreeSample` default와 factor call sites의
+`MaximumAttempts=1`을 유지한다. explicit maximum `3`/event limit `16`은
+`control_pre_helper_tree_sample`, `control_active_outer_tree_sample`,
+`control_active_cleanup_root_tree_sample`,
+`control_post_completion_outer_tree_sample`,
+`control_post_completion_cleanup_root_tree_sample`,
+`control_envelope_close_tree_sample`의 여섯 control context와 기존 instrumented
+outer context에만 적용한다. control report/close와 execution resource scope는 v2다.
+
+report event는 close event의 exact prefix이고, close-only event의 PID/birth는 frozen
+report identity map과 일치해야 한다. truncation 또는 confirmed-count/event-count
+불일치는 `CONTROL_TREE_SAMPLE_RETRY_EVIDENCE_INCOMPLETE`, uncovered close-only
+identity는 `CONTROL_ENVELOPE_CLOSE_RETRY_IDENTITY_UNCOVERED`로 gate를 false로 둔다.
+첫 fatal `monitor_failure`는 이후 sample 성공에도 유지되며 attempt-3 exhaustion은
+pass할 수 없다. no-claim cleanup은 token을 변경하거나 seal하지 않고 exact original,
+present drift, absent를 각각 versioned recovery-state로 분류한다. 세 prior token commits
+`b6c8615...`, `d9e064f...`, `6328174...`는 영구 재사용 금지다. 현재 token absent,
+factorization/physics false, `next_stage_authorized=false`다.
+
+outer/inner sampler는 하나의 PID→birth evidence registry를 공유하지만 cleanup ID set은
+분리한다. 따라서 inner-only identity도 final close에 직렬화되고 cross-context PID reuse는
+exact sample에서 fatal이며 cleanup ownership은 넓어지지 않는다. metric `exited` birth는
+confirmation 전에 positive `Int64`와 expected-birth equality를 만족해야 하고 invalid/mismatch는
+retry 없이 fatal이다. report freeze 뒤 close threshold/system check도 기존 stop reason이 없을
+때만 새 reason을 설정해 첫 failed disposition을 보존한다.
+
+현재 frozen retry-v3 binding은 다음과 같다. final preregistration document SHA와
+그 값을 포함하는 live wrapper payload는 이 문서군의 byte freeze 뒤 별도 계산한다.
+
+```text
+fixture SHA-256: 95c9f5c08282105f7934fbea194694fff3ab850daac633619534044721639234
+runner SHA-256: cee65497b414a5c9da2b572dc2f026a496b304889c7ddf86a0a2856ebb842d9c
+test SHA-256: 0f118612aefa9dc80526abf6604a2234f14c50454000f76ef172a534398042fd
+full no-cache: 312 passed
+implementer focused: 45 passed
+independent focused: 74 passed, 238 deselected
+token_state: absent
+factorization_performed: false
+physics_solve_performed: false
+next_stage_authorized: false
+```
+
+독립 audit의 두 deferred observation은 failed-only hardening이다. capped attempt-3
+virtual identity omission은 별도 binding이 없지만 exhaustion 자체가 non-null failure와
+gate false를 강제한다. preserved failed stop reason은 final close에서 nonempty만 요구하고
+exact allowlist로 다시 제한하지 않지만 sticky failure가 이미 authorization을 차단한다.
+둘 다 failed evidence를 pass로 바꾸지 못한다.
 
 ## Focused regression
 

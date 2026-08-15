@@ -49,13 +49,13 @@ EMERGENCY_TOMBSTONE_SCHEMA = (
     "AV-BS1-h4-p0r-emergency-consumed-review-token-v2"
 )
 CONTROL_PLANE_REPORT_SCHEMA = (
-    "AV-BS1-h4-p0r-control-plane-process-report-v1"
+    "AV-BS1-h4-p0r-control-plane-process-report-v2"
 )
 CONTROL_PLANE_INDEX_SCHEMA = (
     "AV-BS1-h4-p0r-control-plane-session-index-v1"
 )
 CONTROL_PLANE_ENVELOPE_CLOSE_SCHEMA = (
-    "AV-BS1-h4-p0r-control-plane-envelope-close-v1"
+    "AV-BS1-h4-p0r-control-plane-envelope-close-v2"
 )
 CONTROL_PLANE_PRE_EXIT_EVIDENCE_SCHEMA = (
     "AV-BS1-h4-p0r-control-plane-pre-exit-intent-evidence-v1"
@@ -202,6 +202,64 @@ TREE_SAMPLE_DIAGNOSTIC_FIELDS = frozenset(
     observed_birth_utc_ticks operation process_id process_role
     win32_error_code
     """.split()
+)
+CONTROL_TREE_SAMPLE_MAX_ATTEMPTS = 3
+CONTROL_TREE_SAMPLE_RETRY_EVENT_LIMIT = 16
+CONTROL_TREE_SAMPLE_CONTEXTS = frozenset(
+    {
+        "control_pre_helper_tree_sample",
+        "control_active_outer_tree_sample",
+        "control_active_cleanup_root_tree_sample",
+        "control_post_completion_outer_tree_sample",
+        "control_post_completion_cleanup_root_tree_sample",
+        "control_envelope_close_tree_sample",
+    }
+)
+CONTROL_MONITOR_FALLBACK_CONTEXTS = frozenset(
+    {
+        "control_supervisor_exception",
+        "control_cleanup_exception",
+        "control_provenance_exception",
+    }
+)
+CONTROL_MONITOR_CONTEXTS = CONTROL_TREE_SAMPLE_CONTEXTS | CONTROL_MONITOR_FALLBACK_CONTEXTS
+CONTROL_TREE_SAMPLE_OPERATIONS = frozenset(
+    {
+        "open_process",
+        "get_process_times",
+        "get_process_memory_info",
+        "process_identity_probe",
+        "process_metric_probe",
+        "toolhelp_process_snapshot",
+    }
+)
+CONTROL_CONFIRMED_DISAPPEARANCE_OPERATIONS = frozenset(
+    {"open_process", "get_process_times", "get_process_memory_info"}
+)
+CONTROL_MONITOR_OPERATIONS = CONTROL_MONITOR_CONTEXTS | CONTROL_TREE_SAMPLE_OPERATIONS
+CONTROL_CLEANUP_TREE_SAMPLE_CONTEXTS = frozenset(
+    {
+        "control_active_cleanup_root_tree_sample",
+        "control_post_completion_cleanup_root_tree_sample",
+    }
+)
+CONTROL_PROVENANCE_DIAGNOSTIC_FAILURE_CODES = frozenset(
+    {
+        "CONTROL_ENVELOPE_CLOSE_RETRY_IDENTITY_UNCOVERED",
+        "CONTROL_TREE_SAMPLE_RETRY_EVIDENCE_INCOMPLETE",
+    }
+)
+OUTER_TREE_SAMPLE_RETRY_CONTEXTS = frozenset(
+    {
+        "outer_initial_tree_sample",
+        "outer_pre_spawn_tree_sample",
+        "outer_tree_sample",
+        "inner_tree_sample",
+        "outer_final_tree_sample",
+    }
+)
+OUTER_INNER_ROOT_TREE_SAMPLE_CONTEXTS = frozenset(
+    {"inner_tree_sample"}
 )
 OUTER_TERMINAL_SEAL_FIELDS = frozenset(
     """
@@ -584,8 +642,8 @@ def _policy(parent: Mapping[str, object]) -> Mapping[str, object]:
 def _execution_resource_scope() -> Mapping[str, object]:
     """Versioned P1 correction to the broader manifest-only P0R wording."""
     return {
-        "schema": "AV-BS1-h4-p0r-execution-resource-scope-v1",
-        "contract_revision": "P1_versioned_scope_correction_v1",
+        "schema": "AV-BS1-h4-p0r-execution-resource-scope-v2",
+        "contract_revision": "P1_versioned_scope_correction_v2",
         "supersedes_parent_claims": [
             "runner_plus_every_descendant_without_interval_qualification",
             "race_free_process_membership_or_exact_lifetime_peak_preservation",
@@ -611,6 +669,21 @@ def _execution_resource_scope() -> Mapping[str, object]:
             "wall_stop_seconds_each": CONTROL_PLANE_WALL_STOP_SECONDS,
             "tree_thresholds_equal_factor_envelope": True,
             "system_floor_recheck_before_and_after_each": True,
+            "tree_sample_max_attempts": CONTROL_TREE_SAMPLE_MAX_ATTEMPTS,
+            "tree_sample_retry_event_limit": CONTROL_TREE_SAMPLE_RETRY_EVENT_LIMIT,
+            "tree_sample_retry_policy": (
+                "whole_sample_retry_only_after_identity_bound_nonroot_exit_or_"
+                "win32_error_87_and_complete_toolhelp_snapshot_absence_with_"
+                "stable_root_identity"
+            ),
+            "tree_sample_failure_policy": (
+                "root_loss_pid_reuse_live_query_failure_access_denial_incomplete_"
+                "snapshot_and_retry_exhaustion_remain_fatal"
+            ),
+            "tree_sample_failure_evidence": (
+                "fixed_ascii_message_codes_operations_numeric_identity_and_"
+                "win32_status_only_no_localized_exception_text"
+            ),
             "implementation_status": "implemented_and_static_audited",
             "authorization_blocker": False,
             "also_included_in_outer_lifecycle_envelope": True,
@@ -723,7 +796,7 @@ def _outer_observer_contract() -> Mapping[str, object]:
 def _current_execution_schemas() -> Mapping[str, str]:
     return {
         "execution_fixture": SCHEMA,
-        "execution_resource_scope": "AV-BS1-h4-p0r-execution-resource-scope-v1",
+        "execution_resource_scope": "AV-BS1-h4-p0r-execution-resource-scope-v2",
         "outer_observer_contract": OUTER_OBSERVER_CONTRACT_SCHEMA,
         "review_token": TOKEN_SCHEMA,
         "claim": CLAIM_SCHEMA,
@@ -778,11 +851,21 @@ def _authorization_prerequisites_ready(
     outer_envelope = outer_observer.get("outer_resource_envelope")
     return bool(
         isinstance(control, Mapping)
+        and execution_scope.get("schema")
+        == "AV-BS1-h4-p0r-execution-resource-scope-v2"
+        and execution_scope.get("contract_revision")
+        == "P1_versioned_scope_correction_v2"
         and control.get("independently_bounded") is True
         and type(control.get("wall_stop_seconds_each")) is int
         and control.get("wall_stop_seconds_each") == CONTROL_PLANE_WALL_STOP_SECONDS
         and control.get("tree_thresholds_equal_factor_envelope") is True
         and control.get("system_floor_recheck_before_and_after_each") is True
+        and type(control.get("tree_sample_max_attempts")) is int
+        and control.get("tree_sample_max_attempts")
+        == CONTROL_TREE_SAMPLE_MAX_ATTEMPTS
+        and type(control.get("tree_sample_retry_event_limit")) is int
+        and control.get("tree_sample_retry_event_limit")
+        == CONTROL_TREE_SAMPLE_RETRY_EVENT_LIMIT
         and control.get("implementation_status") == "implemented_and_static_audited"
         and control.get("authorization_blocker") is False
         and outer_observer.get("implementation_status")
@@ -802,6 +885,16 @@ def _authorization_prerequisites_ready(
         and outer_envelope.get("system_floor_recheck_before_and_after") is True
         and outer_envelope.get("execution_tree_root")
         == "outer_observer_pid_and_birth"
+        and control.get("tree_sample_max_attempts")
+        == outer_envelope.get("tree_sample_max_attempts")
+        and control.get("tree_sample_retry_event_limit")
+        == outer_envelope.get("tree_sample_retry_event_limit")
+        and control.get("tree_sample_retry_policy")
+        == outer_envelope.get("tree_sample_retry_policy")
+        and control.get("tree_sample_failure_policy")
+        == outer_envelope.get("tree_sample_failure_policy")
+        and control.get("tree_sample_failure_evidence")
+        == outer_envelope.get("tree_sample_failure_evidence")
     )
 
 def run_manifest() -> Mapping[str, object]:
@@ -1156,7 +1249,10 @@ def _validate_control_plane_identity_list(
 ) -> None:
     if (
         not isinstance(ids, list)
-        or any(type(value) is not int or value <= 0 for value in ids)
+        or any(
+            type(value) is not int or value <= 0 or value > 2_147_483_647
+            for value in ids
+        )
         or ids != sorted(set(ids))
         or not isinstance(identities, list)
         or len(identities) != len(ids)
@@ -1175,7 +1271,12 @@ def _validate_control_plane_identity_list(
             )
         process_id = _json_int(row.get("process_id"), f"{label} process id")
         birth = _json_int(row.get("birth_utc_ticks"), f"{label} birth ticks")
-        if process_id <= 0 or birth <= 0:
+        if (
+            process_id <= 0
+            or process_id > 2_147_483_647
+            or birth <= 0
+            or birth > 9_223_372_036_854_775_807
+        ):
             raise AvBsError(
                 "BLOCKED_AV_BS_RESULT_SCHEMA", f"{label} identity value invalid"
             )
@@ -1183,6 +1284,844 @@ def _validate_control_plane_identity_list(
     if observed != ids:
         raise AvBsError(
             "BLOCKED_AV_BS_RESULT_SCHEMA", f"{label} identity/id mismatch"
+        )
+
+
+def _validate_control_tree_sample_diagnostic(
+    value: object,
+    *,
+    retry_event: bool,
+    maximum_attempts: int,
+    label: str,
+) -> Mapping[str, object]:
+    if not isinstance(value, Mapping):
+        raise AvBsError(
+            "BLOCKED_AV_BS_RESULT_SCHEMA", f"{label} diagnostic is invalid"
+        )
+    _require_exact_fields(value, TREE_SAMPLE_DIAGNOSTIC_FIELDS, f"{label} diagnostic")
+    attempt = _json_int(value.get("attempt"), f"{label} attempt")
+    if attempt < 1 or attempt > maximum_attempts:
+        raise AvBsError(
+            "BLOCKED_AV_BS_RESULT_SCHEMA", f"{label} attempt is invalid"
+        )
+    context = value.get("context")
+    allowed_contexts = (
+        CONTROL_TREE_SAMPLE_CONTEXTS if retry_event else CONTROL_MONITOR_CONTEXTS
+    )
+    if context not in allowed_contexts:
+        raise AvBsError(
+            "BLOCKED_AV_BS_RESULT_SCHEMA", f"{label} context is invalid"
+        )
+    operation = value.get("operation")
+    if operation not in CONTROL_MONITOR_OPERATIONS:
+        raise AvBsError(
+            "BLOCKED_AV_BS_RESULT_SCHEMA", f"{label} operation is invalid"
+        )
+    if context in CONTROL_MONITOR_FALLBACK_CONTEXTS:
+        if operation != context:
+            raise AvBsError(
+                "BLOCKED_AV_BS_RESULT_SCHEMA",
+                f"{label} fallback context/operation mismatch",
+            )
+    elif operation not in CONTROL_TREE_SAMPLE_OPERATIONS:
+        raise AvBsError(
+            "BLOCKED_AV_BS_RESULT_SCHEMA",
+            f"{label} tree context has a non-tree operation",
+        )
+    process_id = value.get("process_id")
+    if process_id is not None:
+        parsed_process_id = _json_int(process_id, f"{label} process id")
+        if parsed_process_id <= 0 or parsed_process_id > 2_147_483_647:
+            raise AvBsError(
+                "BLOCKED_AV_BS_RESULT_SCHEMA", f"{label} process id is invalid"
+            )
+    process_role = value.get("process_role")
+    if process_role not in {None, "root", "descendant"}:
+        raise AvBsError(
+            "BLOCKED_AV_BS_RESULT_SCHEMA", f"{label} process role is invalid"
+        )
+    births: list[int] = []
+    for key in ("expected_birth_utc_ticks", "observed_birth_utc_ticks"):
+        item = value.get(key)
+        if item is not None:
+            parsed = _json_int(item, f"{label} {key}")
+            if parsed <= 0 or parsed > 9_223_372_036_854_775_807:
+                raise AvBsError(
+                    "BLOCKED_AV_BS_RESULT_SCHEMA", f"{label} {key} is invalid"
+                )
+            births.append(parsed)
+    if retry_event and len(set(births)) > 1:
+        raise AvBsError(
+            "BLOCKED_AV_BS_RESULT_SCHEMA", f"{label} birth identity conflicts"
+        )
+    win32_error = value.get("win32_error_code")
+    if win32_error is not None:
+        parsed_win32_error = _json_int(win32_error, f"{label} Win32 error")
+        if parsed_win32_error <= 0 or parsed_win32_error > 2_147_483_647:
+            raise AvBsError(
+                "BLOCKED_AV_BS_RESULT_SCHEMA", f"{label} Win32 error is invalid"
+            )
+    confirmation = value.get("confirmation")
+    if confirmation not in {
+        None,
+        "signaled_handle_and_complete_snapshot_absent",
+        "limited_query_not_found_and_complete_snapshot_absent",
+    }:
+        raise AvBsError(
+            "BLOCKED_AV_BS_RESULT_SCHEMA", f"{label} confirmation is invalid"
+        )
+    expected_birth = value.get("expected_birth_utc_ticks")
+    observed_birth = value.get("observed_birth_utc_ticks")
+    if confirmation is not None:
+        if operation not in CONTROL_CONFIRMED_DISAPPEARANCE_OPERATIONS:
+            raise AvBsError(
+                "BLOCKED_AV_BS_RESULT_SCHEMA",
+                f"{label} confirmation original operation is invalid",
+            )
+        if operation == "open_process" and win32_error != 87:
+            raise AvBsError(
+                "BLOCKED_AV_BS_RESULT_SCHEMA",
+                f"{label} open-process confirmation error is invalid",
+            )
+        if operation == "get_process_times" and win32_error is not None:
+            raise AvBsError(
+                "BLOCKED_AV_BS_RESULT_SCHEMA",
+                f"{label} process-times confirmation error is invalid",
+            )
+    if confirmation == "signaled_handle_and_complete_snapshot_absent" and (
+        type(expected_birth) is not int
+        or type(observed_birth) is not int
+        or expected_birth != observed_birth
+    ):
+        raise AvBsError(
+            "BLOCKED_AV_BS_RESULT_SCHEMA",
+            f"{label} signaled confirmation birth binding is invalid",
+        )
+    if (
+        confirmation == "limited_query_not_found_and_complete_snapshot_absent"
+        and observed_birth is not None
+    ):
+        raise AvBsError(
+            "BLOCKED_AV_BS_RESULT_SCHEMA",
+            f"{label} limited-query confirmation observed birth is invalid",
+        )
+    if (
+        confirmation == "limited_query_not_found_and_complete_snapshot_absent"
+        and operation != "open_process"
+        and expected_birth is None
+    ):
+        raise AvBsError(
+            "BLOCKED_AV_BS_RESULT_SCHEMA",
+            f"{label} metric-branch limited confirmation lacks expected birth",
+        )
+    message_code = value.get("message_code")
+    if not isinstance(message_code, str) or not re.fullmatch(
+        r"[A-Z][A-Z0-9_]{2,95}", message_code
+    ):
+        raise AvBsError(
+            "BLOCKED_AV_BS_RESULT_SCHEMA", f"{label} message code is invalid"
+        )
+    if context in CONTROL_MONITOR_FALLBACK_CONTEXTS:
+        allowed_fallback_codes = {
+            "OUTER_RESOURCE_EXCEPTION",
+            "OUTER_OBSERVER_EXCEPTION",
+        }
+        if context == "control_provenance_exception":
+            allowed_fallback_codes |= set(
+                CONTROL_PROVENANCE_DIAGNOSTIC_FAILURE_CODES
+            )
+        if message_code not in allowed_fallback_codes:
+            raise AvBsError(
+                "BLOCKED_AV_BS_RESULT_SCHEMA",
+                f"{label} normalized fallback message code is invalid",
+            )
+    if retry_event and (
+        confirmation is None
+        or message_code != "CONFIRMED_NONROOT_DISAPPEARANCE"
+        or process_role != "descendant"
+        or process_id is None
+    ):
+        raise AvBsError(
+            "BLOCKED_AV_BS_RESULT_SCHEMA", f"{label} retry event is invalid"
+        )
+    if (
+        not retry_event
+        and confirmation is not None
+        and message_code
+        != "TRANSIENT_DESCENDANT_DISAPPEARANCE_RETRY_EXHAUSTED"
+    ):
+        raise AvBsError(
+            "BLOCKED_AV_BS_RESULT_SCHEMA",
+            f"{label} confirmed monitor failure is not retry exhaustion",
+        )
+    if confirmation is not None and (
+        process_role != "descendant" or process_id is None
+    ):
+        raise AvBsError(
+            "BLOCKED_AV_BS_RESULT_SCHEMA", f"{label} confirmation identity is invalid"
+        )
+    if context in CONTROL_MONITOR_FALLBACK_CONTEXTS and (
+        attempt != 1
+        or confirmation is not None
+        or process_id is not None
+        or process_role is not None
+        or births
+        or win32_error is not None
+    ):
+        raise AvBsError(
+            "BLOCKED_AV_BS_RESULT_SCHEMA",
+            f"{label} normalized fallback evidence is invalid",
+        )
+    return value
+
+
+def _validate_control_tree_sample_diagnostics_snapshot(
+    value: Mapping[str, object],
+    control_scope: Mapping[str, object],
+    *,
+    require_pass: bool,
+    label: str,
+) -> Mapping[str, object]:
+    maximum_attempts = _json_int(
+        value.get("tree_sample_max_attempts"), f"{label} maximum attempts"
+    )
+    event_limit = _json_int(
+        control_scope.get("tree_sample_retry_event_limit"),
+        f"{label} retry event limit",
+    )
+    if (
+        maximum_attempts != CONTROL_TREE_SAMPLE_MAX_ATTEMPTS
+        or maximum_attempts != control_scope.get("tree_sample_max_attempts")
+        or event_limit != CONTROL_TREE_SAMPLE_RETRY_EVENT_LIMIT
+    ):
+        raise AvBsError(
+            "BLOCKED_AV_BS_RESULT_SCHEMA", f"{label} retry contract mismatch"
+        )
+    retry_events = value.get("tree_sample_retry_events")
+    if not isinstance(retry_events, list) or len(retry_events) > event_limit:
+        raise AvBsError(
+            "BLOCKED_AV_BS_RESULT_SCHEMA", f"{label} retry events are invalid"
+        )
+    parsed_events = [
+        _validate_control_tree_sample_diagnostic(
+            event,
+            retry_event=True,
+            maximum_attempts=maximum_attempts,
+            label=f"{label} retry event",
+        )
+        for event in retry_events
+    ]
+    previous_attempt = None
+    group_context = None
+    for event in parsed_events:
+        attempt = event["attempt"]
+        if attempt == 1:
+            previous_attempt = 1
+            group_context = event["context"]
+        elif (
+            attempt == 2
+            and previous_attempt == 1
+            and event["context"] == group_context
+        ):
+            previous_attempt = 2
+        elif (
+            attempt == 3
+            and previous_attempt == 2
+            and event["context"] == group_context
+        ):
+            previous_attempt = 3
+        else:
+            raise AvBsError(
+                "BLOCKED_AV_BS_RESULT_SCHEMA",
+                f"{label} retry attempt sequence is invalid",
+            )
+    confirmed_count = _json_int(
+        value.get("tree_sample_confirmed_disappearance_count"),
+        f"{label} confirmed disappearance count",
+    )
+    truncated = value.get("tree_sample_retry_events_truncated")
+    if type(truncated) is not bool or confirmed_count < 0:
+        raise AvBsError(
+            "BLOCKED_AV_BS_RESULT_SCHEMA", f"{label} retry count is invalid"
+        )
+    evidence_complete = not truncated and confirmed_count == len(parsed_events)
+    if truncated:
+        if len(parsed_events) != event_limit or confirmed_count <= len(parsed_events):
+            raise AvBsError(
+                "BLOCKED_AV_BS_RESULT_SCHEMA",
+                f"{label} truncated retry evidence is inconsistent",
+            )
+    elif confirmed_count != len(parsed_events):
+        raise AvBsError(
+            "BLOCKED_AV_BS_RESULT_SCHEMA", f"{label} retry count mismatch"
+        )
+    monitor_failure = value.get("monitor_failure")
+    parsed_failure = None
+    if monitor_failure is not None:
+        parsed_failure = _validate_control_tree_sample_diagnostic(
+            monitor_failure,
+            retry_event=False,
+            maximum_attempts=maximum_attempts,
+            label=f"{label} monitor failure",
+        )
+    monitor_error = value.get("monitor_error")
+    if (parsed_failure is None) != (monitor_error is None) or (
+        monitor_error is not None
+        and (not isinstance(monitor_error, str) or not monitor_error)
+    ):
+        raise AvBsError(
+            "BLOCKED_AV_BS_RESULT_SCHEMA",
+            f"{label} monitor failure/error pairing is invalid",
+        )
+    if parsed_failure is not None and value.get("monitor_ok") is True:
+        raise AvBsError(
+            "BLOCKED_AV_BS_RESULT_SCHEMA",
+            f"{label} monitor pass contradicts fatal evidence",
+        )
+    exhaustion_failure = bool(
+        parsed_failure is not None
+        and parsed_failure.get("message_code")
+        == "TRANSIENT_DESCENDANT_DISAPPEARANCE_RETRY_EXHAUSTED"
+    )
+    exhausted_retry_present = any(
+        event["attempt"] >= maximum_attempts for event in parsed_events
+    )
+    if exhaustion_failure and (
+        parsed_failure.get("attempt") != maximum_attempts
+        or parsed_failure.get("confirmation") is None
+    ):
+        raise AvBsError(
+            "BLOCKED_AV_BS_RESULT_SCHEMA",
+            f"{label} retry exhaustion evidence is invalid",
+        )
+    if require_pass and (
+        parsed_failure is not None
+        or not evidence_complete
+        or exhausted_retry_present
+    ):
+        raise AvBsError(
+            "BLOCKED_AV_BS_RESOURCE", f"{label} cannot authorize a pass"
+        )
+    return {
+        "maximum_attempts": maximum_attempts,
+        "event_limit": event_limit,
+        "confirmed_count": confirmed_count,
+        "retry_events": parsed_events,
+        "truncated": truncated,
+        "evidence_complete": evidence_complete,
+        "monitor_failure": parsed_failure,
+        "exhaustion_failure": exhaustion_failure,
+        "exhausted_retry_present": exhausted_retry_present,
+        "stop_reason": value.get("stop_reason"),
+    }
+
+
+def _control_exhaustion_failure_binds_retry(
+    failure: object,
+    retry_event: object,
+    *,
+    maximum_attempts: int,
+) -> bool:
+    if not isinstance(failure, Mapping) or not isinstance(retry_event, Mapping):
+        return False
+    if (
+        failure.get("message_code")
+        != "TRANSIENT_DESCENDANT_DISAPPEARANCE_RETRY_EXHAUSTED"
+        or failure.get("attempt") != maximum_attempts
+        or retry_event.get("attempt") != maximum_attempts
+    ):
+        return False
+    return all(
+        _strict_json_equal(failure.get(key), retry_event.get(key))
+        for key in TREE_SAMPLE_DIAGNOSTIC_FIELDS - {"message_code"}
+    )
+
+
+def _control_truncated_exhaustion_can_follow_stored_prefix(
+    diagnostics: Mapping[str, object],
+) -> bool:
+    failure = diagnostics.get("monitor_failure")
+    events = diagnostics.get("retry_events")
+    if (
+        diagnostics.get("truncated") is not True
+        or diagnostics.get("exhaustion_failure") is not True
+        or not isinstance(failure, Mapping)
+        or not isinstance(events, list)
+    ):
+        return False
+    omitted_count = diagnostics["confirmed_count"] - len(events)
+    if omitted_count <= 0:
+        return False
+    if omitted_count >= diagnostics["maximum_attempts"]:
+        return True
+    required_stored_attempt = diagnostics["maximum_attempts"] - omitted_count
+    return bool(
+        events
+        and events[-1].get("attempt") == required_stored_attempt
+        and events[-1].get("context") == failure.get("context")
+    )
+
+
+def _control_close_truncated_exhaustion_is_one_omitted_call(
+    report_diagnostics: Mapping[str, object],
+    close_diagnostics: Mapping[str, object],
+    close_only_events: list[Mapping[str, object]],
+) -> bool:
+    failure = close_diagnostics.get("monitor_failure")
+    confirmed_delta = (
+        close_diagnostics["confirmed_count"]
+        - report_diagnostics["confirmed_count"]
+    )
+    if (
+        close_diagnostics.get("truncated") is not True
+        or close_diagnostics.get("exhaustion_failure") is not True
+        or not isinstance(failure, Mapping)
+        or confirmed_delta != close_diagnostics["maximum_attempts"]
+        or len(close_only_events) >= close_diagnostics["maximum_attempts"]
+    ):
+        return False
+    return all(
+        event.get("attempt") == index
+        and event.get("context") == failure.get("context")
+        for index, event in enumerate(close_only_events, start=1)
+    )
+
+
+def _validate_control_tree_sample_diagnostics_pair(
+    report: Mapping[str, object],
+    close: Mapping[str, object],
+    control_scope: Mapping[str, object],
+    *,
+    require_pass: bool,
+    label: str,
+) -> tuple[Mapping[str, object], Mapping[str, object]]:
+    report_diagnostics = _validate_control_tree_sample_diagnostics_snapshot(
+        report,
+        control_scope,
+        require_pass=require_pass,
+        label=f"{label} report",
+    )
+    close_diagnostics = _validate_control_tree_sample_diagnostics_snapshot(
+        close,
+        control_scope,
+        require_pass=require_pass,
+        label=f"{label} close",
+    )
+    report_events = report_diagnostics["retry_events"]
+    close_events = close_diagnostics["retry_events"]
+    if (
+        len(close_events) < len(report_events)
+        or not _strict_json_equal(close_events[: len(report_events)], report_events)
+        or close_diagnostics["confirmed_count"]
+        < report_diagnostics["confirmed_count"]
+        or (report_diagnostics["truncated"] and not close_diagnostics["truncated"])
+        or any(
+            event.get("context") == "control_envelope_close_tree_sample"
+            for event in report_events
+        )
+        or any(
+            event.get("context") != "control_envelope_close_tree_sample"
+            for event in close_events[len(report_events) :]
+        )
+    ):
+        raise AvBsError(
+            "BLOCKED_AV_BS_RESULT_SCHEMA", f"{label} diagnostic progression invalid"
+        )
+    report_failure = report_diagnostics["monitor_failure"]
+    close_failure = close_diagnostics["monitor_failure"]
+    if report_failure is not None and not _strict_json_equal(
+        close_failure, report_failure
+    ):
+        raise AvBsError(
+            "BLOCKED_AV_BS_RESULT_SCHEMA", f"{label} fatal evidence changed"
+        )
+    if report_failure is None and close_failure is not None and close_failure.get(
+        "context"
+    ) not in {
+        "control_envelope_close_tree_sample",
+        "control_supervisor_exception",
+        "control_provenance_exception",
+    }:
+        raise AvBsError(
+            "BLOCKED_AV_BS_RESULT_SCHEMA", f"{label} close-only fatal is invalid"
+        )
+    close_only_events = close_events[len(report_events) :]
+    if close_only_events and (
+        close_only_events[0].get("attempt") != 1
+        or sum(event.get("attempt") == 1 for event in close_only_events) != 1
+    ):
+        raise AvBsError(
+            "BLOCKED_AV_BS_RESULT_SCHEMA",
+            f"{label} close-only retry sequence is not one call starting at attempt 1",
+        )
+    report_exhausted_events = [
+        event
+        for event in report_events
+        if event.get("attempt") == report_diagnostics["maximum_attempts"]
+    ]
+    report_exhausted = bool(report_exhausted_events)
+    close_only_exhausted_events = [
+        event
+        for event in close_only_events
+        if event.get("attempt") == close_diagnostics["maximum_attempts"]
+    ]
+    if close_only_exhausted_events and (
+        len(close_only_exhausted_events) != 1
+        or close_only_events[-1].get("attempt")
+        != close_diagnostics["maximum_attempts"]
+    ):
+        raise AvBsError(
+            "BLOCKED_AV_BS_RESULT_SCHEMA",
+            f"{label} close continues after retry exhaustion",
+        )
+    close_only_exhausted = bool(close_only_exhausted_events)
+    if report_diagnostics["exhaustion_failure"]:
+        stored_exhaustion_binding = any(
+            _control_exhaustion_failure_binds_retry(
+                report_failure,
+                event,
+                maximum_attempts=report_diagnostics["maximum_attempts"],
+            )
+            for event in report_exhausted_events
+        )
+        if (
+            not stored_exhaustion_binding
+            and not _control_truncated_exhaustion_can_follow_stored_prefix(
+                report_diagnostics
+            )
+        ):
+            raise AvBsError(
+                "BLOCKED_AV_BS_RESULT_SCHEMA",
+                f"{label} report retry exhaustion lacks its first fatal",
+            )
+    elif report_exhausted and report_failure is None:
+        raise AvBsError(
+            "BLOCKED_AV_BS_RESULT_SCHEMA",
+            f"{label} report retry exhaustion lacks its first fatal",
+        )
+    if report_failure is None:
+        if close_only_exhausted:
+            if not _control_exhaustion_failure_binds_retry(
+                close_failure,
+                close_only_events[-1],
+                maximum_attempts=close_diagnostics["maximum_attempts"],
+            ):
+                raise AvBsError(
+                    "BLOCKED_AV_BS_RESULT_SCHEMA",
+                    f"{label} close retry exhaustion lacks its first fatal",
+                )
+        elif close_diagnostics["exhaustion_failure"]:
+            if not _control_close_truncated_exhaustion_is_one_omitted_call(
+                report_diagnostics,
+                close_diagnostics,
+                close_only_events,
+            ):
+                raise AvBsError(
+                    "BLOCKED_AV_BS_RESULT_SCHEMA",
+                    f"{label} close exhaustion failure lacks an attempt-3 retry",
+                )
+    if require_pass and (
+        close_diagnostics["confirmed_count"]
+        - report_diagnostics["confirmed_count"]
+        != len(close_events) - len(report_events)
+    ):
+        raise AvBsError(
+            "BLOCKED_AV_BS_RESOURCE", f"{label} close-only retry evidence is incomplete"
+        )
+    return report_diagnostics, close_diagnostics
+
+
+def _control_report_identity_births(
+    report: Mapping[str, object], *, label: str
+) -> tuple[dict[int, int], dict[int, int]]:
+    _validate_control_plane_identity_list(
+        report.get("observed_process_identities"),
+        report.get("observed_process_ids"),
+        label=f"{label} observed",
+    )
+    _validate_control_plane_identity_list(
+        report.get("cleanup_observed_process_identities"),
+        report.get("cleanup_observed_process_ids"),
+        label=f"{label} cleanup",
+    )
+    observed = {
+        row["process_id"]: row["birth_utc_ticks"]
+        for row in report["observed_process_identities"]
+    }
+    cleanup = {
+        row["process_id"]: row["birth_utc_ticks"]
+        for row in report["cleanup_observed_process_identities"]
+    }
+    execution_root_pid = report.get("execution_tree_root_pid")
+    inner_runner_pid = report.get("inner_runner_pid")
+    helper_pid = report.get("process_id")
+    helper_birth = report.get("process_birth_utc_ticks")
+    if execution_root_pid in cleanup or inner_runner_pid in cleanup:
+        raise AvBsError(
+            "BLOCKED_AV_BS_RESULT_SCHEMA",
+            f"{label} cleanup identities contain a control ancestor",
+        )
+    if type(helper_pid) is int and type(helper_birth) is int:
+        if cleanup.get(helper_pid) != helper_birth or any(
+            birth < helper_birth for birth in cleanup.values()
+        ):
+            raise AvBsError(
+                "BLOCKED_AV_BS_RESULT_SCHEMA",
+                f"{label} cleanup identities do not bind helper ancestry",
+            )
+    for row in report["cleanup_observed_process_identities"]:
+        process_id = row["process_id"]
+        birth = row["birth_utc_ticks"]
+        if process_id in observed and observed[process_id] != birth:
+            raise AvBsError(
+                "BLOCKED_AV_BS_RESULT_SCHEMA",
+                f"{label} observed identity PID/birth conflict",
+            )
+    return observed, cleanup
+
+
+def _control_retry_identity_conflicts(
+    events: object,
+    observed_identities: Mapping[int, int],
+    cleanup_identities: Mapping[int, int],
+    *,
+    require_birth: bool,
+) -> list[str]:
+    conflicts: list[str] = []
+    for index, event in enumerate(events):
+        process_id = event.get("process_id")
+        births = {
+            item
+            for item in (
+                event.get("expected_birth_utc_ticks"),
+                event.get("observed_birth_utc_ticks"),
+            )
+            if item is not None
+        }
+        if process_id is None or (require_birth and not births):
+            conflicts.append(f"event[{index}] lacks a bindable identity")
+            continue
+        identities = (
+            cleanup_identities
+            if event.get("context") in CONTROL_CLEANUP_TREE_SAMPLE_CONTEXTS
+            else observed_identities
+        )
+        if births and identities.get(process_id) not in births:
+            conflicts.append(
+                f"event[{index}] PID/birth conflicts with context identities"
+            )
+    return conflicts
+
+
+def _is_exact_control_provenance_diagnostic_failure(
+    report_diagnostics: Mapping[str, object],
+    close: Mapping[str, object],
+    close_diagnostics: Mapping[str, object],
+    message_code: str,
+) -> bool:
+    expected_failure = {
+        "attempt": 1,
+        "confirmation": None,
+        "context": "control_provenance_exception",
+        "expected_birth_utc_ticks": None,
+        "message_code": message_code,
+        "observed_birth_utc_ticks": None,
+        "operation": "control_provenance_exception",
+        "process_id": None,
+        "process_role": None,
+        "win32_error_code": None,
+    }
+    report_stop_reason = report_diagnostics.get("stop_reason")
+    prior_report_disposition = bool(
+        isinstance(report_stop_reason, str) and report_stop_reason
+    )
+    expected_stop_reason = (
+        report_stop_reason if prior_report_disposition else message_code
+    )
+    return bool(
+        message_code in CONTROL_PROVENANCE_DIAGNOSTIC_FAILURE_CODES
+        and report_diagnostics["monitor_failure"] is None
+        and _strict_json_equal(
+            close_diagnostics["monitor_failure"], expected_failure
+        )
+        and close.get("mandatory_control_plane_gate_pass") is False
+        and close.get("monitor_ok") is False
+        and close.get("stop_reason") == expected_stop_reason
+    )
+
+
+def _validate_control_failed_tree_sample_diagnostic_disposition(
+    report_diagnostics: Mapping[str, object],
+    close: Mapping[str, object],
+    close_diagnostics: Mapping[str, object],
+    *,
+    label: str,
+) -> str | None:
+    evidence_incomplete = bool(
+        not report_diagnostics["evidence_complete"]
+        or not close_diagnostics["evidence_complete"]
+    )
+    failed_gate_shape = bool(
+        close.get("mandatory_control_plane_gate_pass") is False
+        and close.get("monitor_ok") is False
+    )
+    if report_diagnostics["monitor_failure"] is not None:
+        # The runner freezes the first fatal. A later envelope-close retry can
+        # exhaust or exceed the stored-event cap, but may not replace that
+        # already-published report failure.
+        report_stop_reason = report_diagnostics["stop_reason"]
+        if (
+            not isinstance(report_stop_reason, str)
+            or not report_stop_reason
+            or close.get("stop_reason") != report_stop_reason
+            or not failed_gate_shape
+        ):
+            raise AvBsError(
+                "BLOCKED_AV_BS_RESULT_SCHEMA",
+                f"{label} sticky first-fatal disposition changed",
+            )
+        return "sticky_prior_monitor_failure"
+    close_failure = close_diagnostics["monitor_failure"]
+    provenance_code = (
+        close_failure.get("message_code")
+        if isinstance(close_failure, Mapping)
+        and close_failure.get("context") == "control_provenance_exception"
+        else None
+    )
+    if provenance_code is not None:
+        if not _is_exact_control_provenance_diagnostic_failure(
+            report_diagnostics,
+            close,
+            close_diagnostics,
+            provenance_code,
+        ):
+            raise AvBsError(
+                "BLOCKED_AV_BS_RESULT_SCHEMA",
+                f"{label} provenance diagnostic failure shape is invalid",
+            )
+        if (
+            provenance_code == "CONTROL_TREE_SAMPLE_RETRY_EVIDENCE_INCOMPLETE"
+        ) is not evidence_incomplete:
+            raise AvBsError(
+                "BLOCKED_AV_BS_RESULT_SCHEMA",
+                f"{label} provenance diagnostic failure reason is false",
+            )
+        return provenance_code
+    if close_failure is not None:
+        report_stop_reason = report_diagnostics.get("stop_reason")
+        prior_report_disposition = bool(
+            isinstance(report_stop_reason, str) and report_stop_reason
+        )
+        close_stop_reason = close.get("stop_reason")
+        if (
+            not failed_gate_shape
+            or (
+                prior_report_disposition
+                and close_stop_reason != report_stop_reason
+            )
+            or (
+                not prior_report_disposition
+                and (
+                    not isinstance(close_stop_reason, str)
+                    or not close_stop_reason
+                )
+            )
+        ):
+            raise AvBsError(
+                "BLOCKED_AV_BS_RESULT_SCHEMA",
+                f"{label} close first-fatal disposition is invalid",
+            )
+        return "sticky_close_monitor_failure"
+    if evidence_incomplete:
+        raise AvBsError(
+            "BLOCKED_AV_BS_RESULT_SCHEMA",
+            f"{label} incomplete retry evidence lacks exact failed disposition",
+        )
+    return None
+
+
+def _validate_control_tree_sample_identity_bindings(
+    report: Mapping[str, object],
+    report_diagnostics: Mapping[str, object],
+    close_diagnostics: Mapping[str, object],
+    *,
+    allow_close_only_uncovered: bool,
+    require_close_only_uncovered: bool = True,
+    require_pass: bool = False,
+    label: str,
+) -> None:
+    observed, cleanup = _control_report_identity_births(report, label=label)
+    report_events = report_diagnostics["retry_events"]
+    close_only_events = close_diagnostics["retry_events"][len(report_events) :]
+    execution_root_pid = report.get("execution_tree_root_pid")
+    inner_runner_pid = report.get("inner_runner_pid")
+    helper_pid = report.get("process_id")
+    for event in [*report_events, *close_only_events]:
+        if event.get("process_id") in {execution_root_pid, inner_runner_pid}:
+            raise AvBsError(
+                "BLOCKED_AV_BS_RESULT_SCHEMA",
+                f"{label} retry event targets a control ancestor",
+            )
+        if (
+            event.get("context") in CONTROL_CLEANUP_TREE_SAMPLE_CONTEXTS
+            and event.get("process_id") == helper_pid
+        ):
+            raise AvBsError(
+                "BLOCKED_AV_BS_RESULT_SCHEMA",
+                f"{label} cleanup retry event targets its helper root",
+            )
+    if require_pass:
+        for event in report_events:
+            if event.get("process_id") != helper_pid:
+                continue
+            pre_helper_unbound_pid_reuse = bool(
+                event.get("context") == "control_pre_helper_tree_sample"
+                and event.get("confirmation")
+                == "limited_query_not_found_and_complete_snapshot_absent"
+                and event.get("operation") == "open_process"
+                and event.get("expected_birth_utc_ticks") is None
+                and event.get("observed_birth_utc_ticks") is None
+            )
+            if not pre_helper_unbound_pid_reuse:
+                raise AvBsError(
+                    "BLOCKED_AV_BS_RESULT_SCHEMA",
+                    f"{label} passed report retry event targets retained helper",
+                )
+    report_conflicts = _control_retry_identity_conflicts(
+        report_events,
+        observed,
+        cleanup,
+        require_birth=False,
+    )
+    close_only_conflicts = _control_retry_identity_conflicts(
+        close_only_events,
+        observed,
+        cleanup,
+        require_birth=True,
+    )
+    if (
+        close_diagnostics["confirmed_count"]
+        - report_diagnostics["confirmed_count"]
+        != len(close_only_events)
+    ):
+        close_only_conflicts.append(
+            "close-only retry count includes unavailable stored identities"
+        )
+    if report_conflicts or (
+        close_only_conflicts and not allow_close_only_uncovered
+    ):
+        raise AvBsError(
+            "BLOCKED_AV_BS_RESULT_SCHEMA",
+            f"{label} retry identity binding failed",
+        )
+    if (
+        allow_close_only_uncovered
+        and require_close_only_uncovered
+        and not close_only_conflicts
+    ):
+        raise AvBsError(
+            "BLOCKED_AV_BS_RESULT_SCHEMA",
+            f"{label} identity-uncovered failed disposition is false",
         )
 
 
@@ -1778,7 +2717,9 @@ def _validate_preflight_control_plane_evidence(
         inner_runner_pid inner_runner_birth_utc_ticks
         observed_process_ids observed_process_identities cleanup_observed_process_ids
         cleanup_observed_process_identities successful_tree_sample_count
-        target_visible_tree_sample_count peak bootstrap_ready_sha256
+        target_visible_tree_sample_count tree_sample_max_attempts
+        tree_sample_confirmed_disappearance_count tree_sample_retry_events
+        tree_sample_retry_events_truncated monitor_failure peak bootstrap_ready_sha256
         start_release_sha256 target_complete_sha256 target_exit_evidence_path
         target_exit_evidence_sha256 exit_release_sha256 handshake_complete
         reported_exit_code actual_exit_code allowed_exit_codes exit_code_allowed
@@ -1916,6 +2857,18 @@ def _validate_preflight_control_plane_evidence(
             "BLOCKED_AV_BS_RESULT_SCHEMA",
             "preflight control cleanup_attempted type mismatch",
         )
+    control_scope = manifest.get("execution_resource_scope", {}).get("control_plane")
+    if not isinstance(control_scope, Mapping):
+        raise AvBsError(
+            "BLOCKED_AV_BS_RESULT_SCHEMA",
+            "preflight control retry scope is missing",
+        )
+    _validate_control_tree_sample_diagnostics_snapshot(
+        report,
+        control_scope,
+        require_pass=True,
+        label="preflight control report",
+    )
 
     python_path = _owned_control_file(report.get("python_path"), label="control python")
     if python_path != Path(sys.executable).resolve():
@@ -2543,7 +3496,10 @@ def _validate_preflight_control_plane_evidence(
         pre_spawn_system pre_helper_after_provenance_system
         high_system_floor_recheck_before_and_after
         terminal_system_sample_after_verified_termination_or_no_spawn
-        envelope_close_runner_tree_sample final_system peak monitor_ok monitor_error
+        envelope_close_runner_tree_sample final_system peak
+        tree_sample_max_attempts tree_sample_confirmed_disappearance_count
+        tree_sample_retry_events tree_sample_retry_events_truncated monitor_failure
+        monitor_ok monitor_error
         stop_reason cleanup_verified started_utc ended_utc wall_seconds wall_clock_kind
         wall_stop_seconds mandatory_control_plane_gate_pass authorization_effect
         consume_after_every_owned_claim_outcome
@@ -2630,6 +3586,23 @@ def _validate_preflight_control_plane_evidence(
                 "BLOCKED_AV_BS_RESULT_SCHEMA",
                 f"preflight control envelope-close {key} mismatch",
             )
+    report_diagnostics, close_diagnostics = (
+        _validate_control_tree_sample_diagnostics_pair(
+            report,
+            close,
+            control_scope,
+            require_pass=True,
+            label="preflight control",
+        )
+    )
+    _validate_control_tree_sample_identity_bindings(
+        report,
+        report_diagnostics,
+        close_diagnostics,
+        allow_close_only_uncovered=False,
+        require_pass=True,
+        label="preflight control",
+    )
     final_system = close.get("final_system")
     if not isinstance(final_system, Mapping):
         raise AvBsError(
@@ -4130,6 +5103,14 @@ def _validate_terminal_control_failed_invocation(
     recomputed_success_gate = bool(
         close.get("monitor_ok") is True
         and close.get("monitor_error") is None
+        and report.get("monitor_failure") is None
+        and close.get("monitor_failure") is None
+        and report.get("tree_sample_retry_events_truncated") is False
+        and close.get("tree_sample_retry_events_truncated") is False
+        and report.get("tree_sample_confirmed_disappearance_count")
+        == len(report.get("tree_sample_retry_events", []))
+        and close.get("tree_sample_confirmed_disappearance_count")
+        == len(close.get("tree_sample_retry_events", []))
         and close.get("stop_reason") is None
         and close.get("cleanup_verified") is True
         and close.get("high_system_floor_recheck_before_and_after") is True
@@ -4604,6 +5585,51 @@ def _validate_terminal_control_invocation(
         raise AvBsError(
             "BLOCKED_AV_BS_RESOURCE", "terminal control report gate evidence invalid"
         )
+    control_scope = manifest.get("execution_resource_scope", {}).get("control_plane")
+    if not isinstance(control_scope, Mapping):
+        raise AvBsError(
+            "BLOCKED_AV_BS_RESULT_SCHEMA",
+            "terminal control retry scope is missing",
+        )
+    report_diagnostics, close_diagnostics = (
+        _validate_control_tree_sample_diagnostics_pair(
+            report,
+            close,
+            control_scope,
+            require_pass=gate,
+            label="terminal control",
+        )
+    )
+    failed_diagnostic_disposition = None
+    if gate is False:
+        failed_diagnostic_disposition = (
+            _validate_control_failed_tree_sample_diagnostic_disposition(
+                report_diagnostics,
+                close,
+                close_diagnostics,
+                label="terminal control",
+            )
+        )
+    _validate_control_tree_sample_identity_bindings(
+        report,
+        report_diagnostics,
+        close_diagnostics,
+        allow_close_only_uncovered=(
+            failed_diagnostic_disposition
+            in {
+                "CONTROL_ENVELOPE_CLOSE_RETRY_IDENTITY_UNCOVERED",
+                "CONTROL_TREE_SAMPLE_RETRY_EVIDENCE_INCOMPLETE",
+                "sticky_prior_monitor_failure",
+                "sticky_close_monitor_failure",
+            }
+        ),
+        require_close_only_uncovered=(
+            failed_diagnostic_disposition
+            == "CONTROL_ENVELOPE_CLOSE_RETRY_IDENTITY_UNCOVERED"
+        ),
+        require_pass=gate,
+        label="terminal control",
+    )
     if gate is False:
         if require_pass_gate:
             raise AvBsError(
@@ -4925,6 +5951,10 @@ def _validate_terminal_control_invocation(
     recomputed_gate = bool(
         close.get("monitor_ok") is True
         and close.get("monitor_error") is None
+        and report_diagnostics["monitor_failure"] is None
+        and close_diagnostics["monitor_failure"] is None
+        and report_diagnostics["evidence_complete"]
+        and close_diagnostics["evidence_complete"]
         and close.get("stop_reason") is None
         and close.get("cleanup_verified") is True
         and close.get("high_system_floor_recheck_before_and_after") is True
@@ -5077,7 +6107,9 @@ def _validate_terminal_control_index(
         inner_runner_pid inner_runner_birth_utc_ticks observed_process_ids
         observed_process_identities cleanup_observed_process_ids
         cleanup_observed_process_identities successful_tree_sample_count
-        target_visible_tree_sample_count peak bootstrap_ready_sha256
+        target_visible_tree_sample_count tree_sample_max_attempts
+        tree_sample_confirmed_disappearance_count tree_sample_retry_events
+        tree_sample_retry_events_truncated monitor_failure peak bootstrap_ready_sha256
         start_release_sha256 target_complete_sha256 target_exit_evidence_path
         target_exit_evidence_sha256 exit_release_sha256 handshake_complete
         reported_exit_code actual_exit_code allowed_exit_codes exit_code_allowed
@@ -5104,7 +6136,10 @@ def _validate_terminal_control_index(
         thresholds pre_spawn_system pre_helper_after_provenance_system
         high_system_floor_recheck_before_and_after
         terminal_system_sample_after_verified_termination_or_no_spawn
-        envelope_close_runner_tree_sample final_system peak monitor_ok monitor_error
+        envelope_close_runner_tree_sample final_system peak
+        tree_sample_max_attempts tree_sample_confirmed_disappearance_count
+        tree_sample_retry_events tree_sample_retry_events_truncated monitor_failure
+        monitor_ok monitor_error
         stop_reason cleanup_verified started_utc ended_utc wall_seconds
         wall_clock_kind wall_stop_seconds mandatory_control_plane_gate_pass
         authorization_effect consume_after_every_owned_claim_outcome
@@ -7124,12 +8159,15 @@ def _validate_outer_tree_sample_diagnostic(
             "BLOCKED_AV_BS_RESULT_SCHEMA", "outer tree sample operation is invalid"
         )
     process_id = value.get("process_id")
-    if process_id is not None and _json_int(
-        process_id, "outer tree sample process id"
-    ) <= 0:
-        raise AvBsError(
-            "BLOCKED_AV_BS_RESULT_SCHEMA", "outer tree sample process id is invalid"
+    if process_id is not None:
+        parsed_process_id = _json_int(
+            process_id, "outer tree sample process id"
         )
+        if parsed_process_id <= 0 or parsed_process_id > 2_147_483_647:
+            raise AvBsError(
+                "BLOCKED_AV_BS_RESULT_SCHEMA",
+                "outer tree sample process id is invalid",
+            )
     process_role = value.get("process_role")
     if process_role not in {None, "root", "descendant"}:
         raise AvBsError(
@@ -7137,18 +8175,23 @@ def _validate_outer_tree_sample_diagnostic(
         )
     for key in ("expected_birth_utc_ticks", "observed_birth_utc_ticks"):
         item = value.get(key)
-        if item is not None and _json_int(item, f"outer tree sample {key}") <= 0:
+        if item is not None:
+            parsed_birth = _json_int(item, f"outer tree sample {key}")
+            if parsed_birth <= 0 or parsed_birth > 9_223_372_036_854_775_807:
+                raise AvBsError(
+                    "BLOCKED_AV_BS_RESULT_SCHEMA",
+                    f"outer tree sample {key} is invalid",
+                )
+    win32_error = value.get("win32_error_code")
+    if win32_error is not None:
+        parsed_win32_error = _json_int(
+            win32_error, "outer tree sample Win32 error"
+        )
+        if parsed_win32_error <= 0 or parsed_win32_error > 2_147_483_647:
             raise AvBsError(
                 "BLOCKED_AV_BS_RESULT_SCHEMA",
-                f"outer tree sample {key} is invalid",
+                "outer tree sample Win32 error is invalid",
             )
-    win32_error = value.get("win32_error_code")
-    if win32_error is not None and _json_int(
-        win32_error, "outer tree sample Win32 error"
-    ) <= 0:
-        raise AvBsError(
-            "BLOCKED_AV_BS_RESULT_SCHEMA", "outer tree sample Win32 error is invalid"
-        )
     confirmation = value.get("confirmation")
     if confirmation not in {
         None,
@@ -7165,15 +8208,66 @@ def _validate_outer_tree_sample_diagnostic(
         raise AvBsError(
             "BLOCKED_AV_BS_RESULT_SCHEMA", "outer tree sample message code is invalid"
         )
-    if retry_event and (
-        confirmation is None
-        or message_code != "CONFIRMED_NONROOT_DISAPPEARANCE"
-        or process_role != "descendant"
-        or process_id is None
+    expected_birth = value.get("expected_birth_utc_ticks")
+    observed_birth = value.get("observed_birth_utc_ticks")
+    if confirmation is not None:
+        if operation not in CONTROL_CONFIRMED_DISAPPEARANCE_OPERATIONS:
+            raise AvBsError(
+                "BLOCKED_AV_BS_RESULT_SCHEMA",
+                "outer tree sample confirmation original operation is invalid",
+            )
+        if operation == "open_process" and win32_error != 87:
+            raise AvBsError(
+                "BLOCKED_AV_BS_RESULT_SCHEMA",
+                "outer tree sample open-process confirmation error is invalid",
+            )
+        if operation == "get_process_times" and win32_error is not None:
+            raise AvBsError(
+                "BLOCKED_AV_BS_RESULT_SCHEMA",
+                "outer tree sample process-times confirmation error is invalid",
+            )
+    if confirmation == "signaled_handle_and_complete_snapshot_absent" and (
+        type(expected_birth) is not int
+        or type(observed_birth) is not int
+        or expected_birth != observed_birth
     ):
         raise AvBsError(
-            "BLOCKED_AV_BS_RESULT_SCHEMA", "outer tree sample retry event is invalid"
+            "BLOCKED_AV_BS_RESULT_SCHEMA",
+            "outer tree sample signaled confirmation birth binding is invalid",
         )
+    if (
+        confirmation == "limited_query_not_found_and_complete_snapshot_absent"
+        and observed_birth is not None
+    ):
+        raise AvBsError(
+            "BLOCKED_AV_BS_RESULT_SCHEMA",
+            "outer tree sample limited-query confirmation observed birth is invalid",
+        )
+    if (
+        confirmation == "limited_query_not_found_and_complete_snapshot_absent"
+        and operation != "open_process"
+        and expected_birth is None
+    ):
+        raise AvBsError(
+            "BLOCKED_AV_BS_RESULT_SCHEMA",
+            "outer tree sample metric-branch limited confirmation lacks expected birth",
+        )
+    if retry_event:
+        if context not in OUTER_TREE_SAMPLE_RETRY_CONTEXTS:
+            raise AvBsError(
+                "BLOCKED_AV_BS_RESULT_SCHEMA",
+                "outer tree sample retry context is invalid",
+            )
+        if (
+            confirmation is None
+            or message_code != "CONFIRMED_NONROOT_DISAPPEARANCE"
+            or process_role != "descendant"
+            or process_id is None
+        ):
+            raise AvBsError(
+                "BLOCKED_AV_BS_RESULT_SCHEMA",
+                "outer tree sample retry event is invalid",
+            )
     return value
 
 
@@ -7184,22 +8278,56 @@ def _validate_outer_tree_sample_diagnostics(
     maximum_attempts = _json_int(
         value.get("tree_sample_max_attempts"), "outer tree sample maximum attempts"
     )
-    if maximum_attempts != envelope["tree_sample_max_attempts"]:
+    event_limit = _json_int(
+        envelope.get("tree_sample_retry_event_limit"),
+        "outer tree sample retry event limit",
+    )
+    if (
+        maximum_attempts != CONTROL_TREE_SAMPLE_MAX_ATTEMPTS
+        or maximum_attempts != envelope["tree_sample_max_attempts"]
+        or event_limit != CONTROL_TREE_SAMPLE_RETRY_EVENT_LIMIT
+    ):
         raise AvBsError(
-            "BLOCKED_AV_BS_RESULT_SCHEMA", "outer tree sample retry limit mismatch"
+            "BLOCKED_AV_BS_RESULT_SCHEMA", "outer tree sample retry contract mismatch"
         )
     retry_events = value.get("tree_sample_retry_events")
     if not isinstance(retry_events, list):
         raise AvBsError(
             "BLOCKED_AV_BS_RESULT_SCHEMA", "outer tree sample retry events invalid"
         )
-    if len(retry_events) > envelope["tree_sample_retry_event_limit"]:
+    if len(retry_events) > event_limit:
         raise AvBsError(
             "BLOCKED_AV_BS_RESULT_SCHEMA", "outer tree sample retry events exceed cap"
         )
-    for event in retry_events:
-        parsed = _validate_outer_tree_sample_diagnostic(event, retry_event=True)
-        if _json_int(parsed["attempt"], "outer tree retry attempt") >= maximum_attempts:
+    parsed_events = [
+        _validate_outer_tree_sample_diagnostic(event, retry_event=True)
+        for event in retry_events
+    ]
+    previous_attempt = None
+    group_context = None
+    for parsed in parsed_events:
+        attempt = _json_int(parsed["attempt"], "outer tree retry attempt")
+        if attempt == 1:
+            previous_attempt = 1
+            group_context = parsed["context"]
+        elif (
+            attempt == 2
+            and previous_attempt == 1
+            and parsed["context"] == group_context
+        ):
+            previous_attempt = 2
+        elif (
+            attempt == 3
+            and previous_attempt == 2
+            and parsed["context"] == group_context
+        ):
+            previous_attempt = 3
+        else:
+            raise AvBsError(
+                "BLOCKED_AV_BS_RESULT_SCHEMA",
+                "outer tree retry attempt sequence is invalid",
+            )
+        if attempt >= maximum_attempts:
             raise AvBsError(
                 "BLOCKED_AV_BS_RESULT_SCHEMA",
                 "successful outer close contains an exhausted retry event",
@@ -7220,6 +8348,10 @@ def _validate_outer_tree_sample_diagnostics(
     monitor_failure = value.get("monitor_failure")
     if monitor_failure is not None:
         _validate_outer_tree_sample_diagnostic(monitor_failure, retry_event=False)
+        raise AvBsError(
+            "BLOCKED_AV_BS_RESULT_SCHEMA",
+            "successful outer close contains a monitor failure",
+        )
 
 
 def _validate_outer_resource_envelope_close(
@@ -7427,7 +8559,12 @@ def _validate_outer_resource_envelope_close(
         )
         pid = _json_int(row.get("process_id"), "outer sampled process id")
         birth = _json_int(row.get("birth_utc_ticks"), "outer sampled process birth")
-        if pid <= 0 or birth <= 0:
+        if (
+            pid <= 0
+            or pid > 2_147_483_647
+            or birth <= 0
+            or birth > 9_223_372_036_854_775_807
+        ):
             raise AvBsError(
                 "BLOCKED_AV_BS_RESULT_SCHEMA", "outer sampled identity value invalid"
             )
@@ -7446,6 +8583,7 @@ def _validate_outer_resource_envelope_close(
         retry_pid = _json_int(
             retry_event.get("process_id"), "outer tree retry process id"
         )
+        retry_context = retry_event.get("context")
         retry_births = {
             _json_int(item, "outer tree retry process birth")
             for item in (
@@ -7454,6 +8592,50 @@ def _validate_outer_resource_envelope_close(
             )
             if item is not None
         }
+        if retry_pid == observer["outer_process_id"]:
+            raise AvBsError(
+                "BLOCKED_AV_BS_RESULT_SCHEMA",
+                "outer tree retry cannot identify the outer sample root",
+            )
+        if retry_context in OUTER_INNER_ROOT_TREE_SAMPLE_CONTEXTS and (
+            retry_pid == observer["inner_process_id"]
+        ):
+            raise AvBsError(
+                "BLOCKED_AV_BS_RESULT_SCHEMA",
+                "outer tree retry cannot identify the inner sample root",
+            )
+        if retry_context == "inner_tree_sample" and any(
+            birth < observer["inner_process_birth_utc_ticks"]
+            for birth in retry_births
+        ):
+            raise AvBsError(
+                "BLOCKED_AV_BS_RESULT_SCHEMA",
+                "inner tree retry identity predates the inner sample root",
+            )
+        if retry_pid == observer["inner_process_id"]:
+            before_inner_spawn = retry_context in {
+                "outer_initial_tree_sample",
+                "outer_pre_spawn_tree_sample",
+            }
+            future_pid_reuse = bool(
+                before_inner_spawn
+                and retry_event.get("confirmation")
+                == "limited_query_not_found_and_complete_snapshot_absent"
+                and retry_event.get("operation") == "open_process"
+                and not retry_births
+            )
+            if retry_context == "outer_tree_sample" or (
+                before_inner_spawn and not future_pid_reuse
+            ):
+                raise AvBsError(
+                    "BLOCKED_AV_BS_RESULT_SCHEMA",
+                    "outer tree retry conflicts with retained inner identity",
+                )
+            if retry_context == "outer_final_tree_sample" and not retry_births:
+                raise AvBsError(
+                    "BLOCKED_AV_BS_RESULT_SCHEMA",
+                    "final outer tree retry lacks retained inner birth binding",
+                )
         if len(retry_births) > 1 or (
             retry_births
             and identity_birth_by_pid.get(retry_pid) not in retry_births

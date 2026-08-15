@@ -20,8 +20,8 @@ $tombstoneSchema = "AV-BS1-h4-p0r-consumed-review-token-v2"
 $emergencyTombstoneSchema = "AV-BS1-h4-p0r-emergency-consumed-review-token-v2"
 $emergencyReplacementIntentSchema = "AV-BS1-h4-p0r-emergency-replacement-intent-v1"
 $emergencyReplacementPostvalidationSchema = "AV-BS1-h4-p0r-emergency-replacement-postvalidation-v1"
-$controlPlaneSchema = "AV-BS1-h4-p0r-control-plane-process-report-v1"
-$controlPlaneEnvelopeCloseSchema = "AV-BS1-h4-p0r-control-plane-envelope-close-v1"
+$controlPlaneSchema = "AV-BS1-h4-p0r-control-plane-process-report-v2"
+$controlPlaneEnvelopeCloseSchema = "AV-BS1-h4-p0r-control-plane-envelope-close-v2"
 $preExitControlPlaneEvidenceSchema = "AV-BS1-h4-p0r-control-plane-pre-exit-intent-evidence-v1"
 $outerInnerReadySchema = "AV-BS1-h4-p0r-outer-inner-ready-v1"
 $outerStartReleaseSchema = "AV-BS1-h4-p0r-outer-start-release-v1"
@@ -2669,6 +2669,26 @@ function Get-TreeSample(
                         ([int]$id) "descendant" $metric.win32_error_code
                     Set-TreeSampleFailureAndThrow $Diagnostics $evidence
                 }
+                if ($metric.status -eq "exited") {
+                    if (
+                        $metric.birth_utc_ticks -isnot [long] -or
+                        [int64]$metric.birth_utc_ticks -le 0
+                    ) {
+                        $evidence = New-TreeSampleEvidence `
+                            $attempt $null $Context $expectedBirth `
+                            "PROCESS_METRIC_IDENTITY_OR_VALUE_INVALID" `
+                            $metric.birth_utc_ticks ([string]$metric.operation) `
+                            ([int]$id) "descendant" $metric.win32_error_code
+                        Set-TreeSampleFailureAndThrow $Diagnostics $evidence
+                    }
+                    if ([int64]$metric.birth_utc_ticks -ne [int64]$expectedBirth) {
+                        $evidence = New-TreeSampleEvidence `
+                            $attempt $null $Context $expectedBirth "NONROOT_PID_REUSE" `
+                            $metric.birth_utc_ticks ([string]$metric.operation) `
+                            ([int]$id) "descendant" $metric.win32_error_code
+                        Set-TreeSampleFailureAndThrow $Diagnostics $evidence
+                    }
+                }
                 $confirmationProbe = & $identityProvider ([int]$id)
                 $retryEvidence = Get-ConfirmedTreeSampleDisappearance `
                     $confirmationProbe $identityProvider $snapshotContainsProvider `
@@ -3060,6 +3080,10 @@ function Invoke-ControlPlanePython {
     $actualExitCode = $null
     $stopReason = $null
     $monitorError = $null
+    $monitorFailure = $null
+    $currentControlOperation = "control_supervisor_exception"
+    $currentControlTreeSampleContext = "control_pre_helper_tree_sample"
+    $controlTreeSampleDiagnostics = New-TreeSampleDiagnostics $treeSampleRetryEventLimit
     $cleanupAttempted = $false
     $cleanupVerified = $false
     $fallbackProcessObjectCleanupAttempted = $false
@@ -3097,7 +3121,12 @@ function Invoke-ControlPlanePython {
         $attemptProvenanceBefore = Get-AttemptArtifactProvenance $AttemptArtifactPaths
         $attemptProvenanceBeforeJson = ConvertTo-Json -InputObject $attemptProvenanceBefore -Depth 6 -Compress
         $attemptProvenanceBeforeHash = Get-Utf8TextSha256 $attemptProvenanceBeforeJson
-        $preHelperTreeAfterProvenance = Get-TreeSample $monitorRootProcessId $monitorRootBirthTicks $monitorObservedIds $monitorObservedBirthTicks
+        $currentControlTreeSampleContext = "control_pre_helper_tree_sample"
+        $preHelperTreeAfterProvenance = Get-TreeSample `
+            $monitorRootProcessId $monitorRootBirthTicks `
+            $monitorObservedIds $monitorObservedBirthTicks `
+            $currentControlTreeSampleContext $controlTreeSampleDiagnostics `
+            $null $treeSampleMaximumAttempts
         $preHelperSystemAfterProvenance = Get-SystemSample
         Update-ControlPlanePeak $peak $preHelperTreeAfterProvenance $preHelperSystemAfterProvenance
         if ($preHelperTreeAfterProvenance.working_set_bytes -gt $treeWorkingSetStop) { $stopReason = "CONTROL_TREE_WS_STOP" }
@@ -3150,8 +3179,17 @@ function Invoke-ControlPlanePython {
         while ($true) {
             $process.Refresh()
             if ($process.HasExited) { break }
-            $tree = Get-TreeSample $monitorRootProcessId $monitorRootBirthTicks $monitorObservedIds $monitorObservedBirthTicks
-            $cleanupTree = Get-TreeSample $process.Id $processBirthTicks $observedIds $observedBirthTicks
+            $currentControlTreeSampleContext = "control_active_outer_tree_sample"
+            $tree = Get-TreeSample `
+                $monitorRootProcessId $monitorRootBirthTicks `
+                $monitorObservedIds $monitorObservedBirthTicks `
+                $currentControlTreeSampleContext $controlTreeSampleDiagnostics `
+                $null $treeSampleMaximumAttempts
+            $currentControlTreeSampleContext = "control_active_cleanup_root_tree_sample"
+            $cleanupTree = Get-TreeSample `
+                $process.Id $processBirthTicks $observedIds $observedBirthTicks `
+                $currentControlTreeSampleContext $controlTreeSampleDiagnostics `
+                $null $treeSampleMaximumAttempts
             $system = Get-SystemSample
             $successfulSamples += 1
             if (
@@ -3198,8 +3236,17 @@ function Invoke-ControlPlanePython {
                     $reportedExitCode = [int]$completionValue.exit_code
                     # The bootstrap is still alive. This second sample is after
                     # target completion and therefore captures its OS lifetime peaks.
-                    $postTree = Get-TreeSample $monitorRootProcessId $monitorRootBirthTicks $monitorObservedIds $monitorObservedBirthTicks
-                    $postCleanupTree = Get-TreeSample $process.Id $processBirthTicks $observedIds $observedBirthTicks
+                    $currentControlTreeSampleContext = "control_post_completion_outer_tree_sample"
+                    $postTree = Get-TreeSample `
+                        $monitorRootProcessId $monitorRootBirthTicks `
+                        $monitorObservedIds $monitorObservedBirthTicks `
+                        $currentControlTreeSampleContext $controlTreeSampleDiagnostics `
+                        $null $treeSampleMaximumAttempts
+                    $currentControlTreeSampleContext = "control_post_completion_cleanup_root_tree_sample"
+                    $postCleanupTree = Get-TreeSample `
+                        $process.Id $processBirthTicks $observedIds $observedBirthTicks `
+                        $currentControlTreeSampleContext $controlTreeSampleDiagnostics `
+                        $null $treeSampleMaximumAttempts
                     $postSystem = Get-SystemSample
                     $successfulSamples += 1
                     if (
@@ -3261,12 +3308,17 @@ function Invoke-ControlPlanePython {
         $cleanupVerified = ($survivorsAfterCleanup.Count -eq 0 -and $process.HasExited)
     }
     catch {
+        if ($null -eq $monitorFailure) {
+            $monitorFailure = Get-NormalizedOuterMonitorFailure `
+                $_.Exception ([string]$currentControlOperation)
+        }
         $monitorError = $_.Exception.Message
         if (-not $stopReason) { $stopReason = "CONTROL_PLANE_SUPERVISOR_EXCEPTION" }
     }
     finally {
         if ($processLaunched -and -not $cleanupVerified) {
             $cleanupAttempted = $true
+            $currentControlOperation = "control_cleanup_exception"
             try {
                 if ($cleanupIdentityComplete) {
                     $process.Refresh()
@@ -3307,6 +3359,10 @@ function Invoke-ControlPlanePython {
             catch {
                 $cleanupVerified = $false
                 $cleanupMessage = $_.Exception.Message
+                if ($null -eq $monitorFailure) {
+                    $monitorFailure = Get-NormalizedOuterMonitorFailure `
+                        $_.Exception ([string]$currentControlOperation)
+                }
                 $monitorError = if ($monitorError) { $monitorError + "; cleanup failed: " + $cleanupMessage } else { "cleanup failed: " + $cleanupMessage }
                 $stopReason = "CONTROL_OBSERVED_PROCESS_TERMINATION_FAILED"
             }
@@ -3327,6 +3383,7 @@ function Invoke-ControlPlanePython {
         $completionHash = $null
         $exitReleaseHash = $null
         if ($terminalSnapshotEligible) {
+            $currentControlOperation = "control_provenance_exception"
             try {
                 $stdoutExists = Test-Path -LiteralPath $stdout -PathType Leaf
                 $stderrExists = Test-Path -LiteralPath $stderr -PathType Leaf
@@ -3344,23 +3401,50 @@ function Invoke-ControlPlanePython {
             }
             catch {
                 $provenanceMessage = $_.Exception.Message
+                if ($null -eq $monitorFailure) {
+                    $monitorFailure = Get-NormalizedOuterMonitorFailure `
+                        $_.Exception ([string]$currentControlOperation)
+                }
                 $monitorError = if ($monitorError) { $monitorError + "; terminal artifact/provenance snapshot failed: " + $provenanceMessage } else { "terminal artifact/provenance snapshot failed: " + $provenanceMessage }
                 if (-not $stopReason) { $stopReason = "CONTROL_ATTEMPT_PROVENANCE_FAILED" }
             }
         }
         else {
             if (-not $stopReason) { $stopReason = "CONTROL_OBSERVED_PROCESS_TERMINATION_FAILED" }
+            if ($null -eq $monitorFailure) {
+                $terminalSnapshotException = New-Object System.InvalidOperationException(
+                    "terminal snapshot refused before verified termination"
+                )
+                $monitorFailure = Get-NormalizedOuterMonitorFailure `
+                    $terminalSnapshotException "control_provenance_exception"
+            }
             $monitorError = if ($monitorError) { $monitorError + "; terminal snapshot refused before verified termination" } else { "terminal snapshot refused before verified termination" }
         }
 
         $exitAllowed = ($null -ne $actualExitCode -and $allowed -contains [int]$actualExitCode)
         $reportedExitMatches = ($null -ne $reportedExitCode -and $null -ne $actualExitCode -and [int]$reportedExitCode -eq [int]$actualExitCode)
         $monitorOkBeforeEnvelopeClose = (
-            -not $stopReason -and -not $monitorError -and $processHandleAcquired -and
+            -not $stopReason -and -not $monitorError -and $null -eq $monitorFailure -and
+            $processHandleAcquired -and
             $successfulSamples -ge 2 -and $targetVisibleSamples -ge 2 -and
             $readyObserved -and $startReleased -and $completionObserved -and $exitReleased -and
             $cleanupVerified -and $terminalSnapshotEligible
         )
+        $canonicalControlTreeSampleRetryEventsBeforeEnvelopeClose = @()
+        foreach ($event in @($controlTreeSampleDiagnostics.retry_events)) {
+            $canonicalControlTreeSampleRetryEventsBeforeEnvelopeClose += (New-TreeSampleEvidence `
+                ([int]$event.attempt) $event.confirmation ([string]$event.context) `
+                $event.expected_birth_utc_ticks ([string]$event.message_code) `
+                $event.observed_birth_utc_ticks ([string]$event.operation) `
+                $event.process_id $event.process_role $event.win32_error_code)
+        }
+        $reportObservedProcessIdentities = @(Get-ObservedProcessIdentities $monitorObservedBirthTicks)
+        $reportObservedBirthByProcessId = @{}
+        foreach ($identity in $reportObservedProcessIdentities) {
+            $reportObservedBirthByProcessId[[int]$identity.process_id] = [int64]$identity.birth_utc_ticks
+        }
+        $reportTreeSampleConfirmedDisappearanceCount = [int]$controlTreeSampleDiagnostics.confirmed_disappearance_count
+        $reportTreeSampleRetryEventCount = [int]$canonicalControlTreeSampleRetryEventsBeforeEnvelopeClose.Count
         $report = [ordered]@{
             schema = $controlPlaneSchema
             program = $program
@@ -3454,11 +3538,15 @@ function Invoke-ControlPlanePython {
             inner_runner_pid = [int]$PID
             inner_runner_birth_utc_ticks = [int64]$supervisorBirthTicks
             observed_process_ids = @($monitorObservedIds | Sort-Object)
-            observed_process_identities = @(Get-ObservedProcessIdentities $monitorObservedBirthTicks)
+            observed_process_identities = @($reportObservedProcessIdentities)
             cleanup_observed_process_ids = @($observedIds | Sort-Object)
             cleanup_observed_process_identities = @(Get-ObservedProcessIdentities $observedBirthTicks)
             successful_tree_sample_count = $successfulSamples
             target_visible_tree_sample_count = $targetVisibleSamples
+            tree_sample_max_attempts = [int]$treeSampleMaximumAttempts
+            tree_sample_confirmed_disappearance_count = $reportTreeSampleConfirmedDisappearanceCount
+            tree_sample_retry_events = @($canonicalControlTreeSampleRetryEventsBeforeEnvelopeClose)
+            tree_sample_retry_events_truncated = [bool]$controlTreeSampleDiagnostics.retry_events_truncated
             peak = $peak
             bootstrap_ready_sha256 = $readyHash
             start_release_sha256 = $startReleaseHash
@@ -3481,6 +3569,7 @@ function Invoke-ControlPlanePython {
             monitor_ok = $false
             monitor_ok_before_envelope_close = $monitorOkBeforeEnvelopeClose
             monitor_error = $monitorError
+            monitor_failure = $monitorFailure
             stop_reason = $stopReason
             cleanup_attempted = $cleanupAttempted
             cleanup_verified = $cleanupVerified
@@ -3538,22 +3627,34 @@ function Invoke-ControlPlanePython {
         }
 
         try {
+            $currentControlOperation = "control_supervisor_exception"
+            $currentControlTreeSampleContext = "control_envelope_close_tree_sample"
             if (-not $terminalSnapshotEligible) {
                 throw "verified termination or no-spawn state is required before envelope close"
             }
-            $closeTree = Get-TreeSample $monitorRootProcessId $monitorRootBirthTicks $monitorObservedIds $monitorObservedBirthTicks
+            $closeTree = Get-TreeSample `
+                $monitorRootProcessId $monitorRootBirthTicks `
+                $monitorObservedIds $monitorObservedBirthTicks `
+                $currentControlTreeSampleContext $controlTreeSampleDiagnostics `
+                $null $treeSampleMaximumAttempts
             $finalSystem = Get-SystemSample
             Update-ControlPlanePeak $peak $closeTree $finalSystem
             $terminalSystemSampleAfterVerifiedTerminationOrNoSpawn = $true
-            if ($closeTree.working_set_bytes -gt $treeWorkingSetStop) { $stopReason = "CONTROL_TREE_WS_STOP" }
-            elseif ($closeTree.summed_process_peak_working_set_bytes -gt $treeWorkingSetStop) { $stopReason = "CONTROL_TREE_LIFETIME_PEAK_WS_STOP" }
-            elseif ($closeTree.private_commit_bytes -gt $treePrivateStop) { $stopReason = "CONTROL_TREE_PRIVATE_STOP" }
-            elseif ($closeTree.committed_pagefile_bytes -gt $treeCommitStop) { $stopReason = "CONTROL_TREE_COMMIT_STOP" }
-            elseif ($closeTree.summed_process_peak_commit_bytes -gt $treeCommitStop) { $stopReason = "CONTROL_TREE_LIFETIME_PEAK_COMMIT_STOP" }
-            elseif ($finalSystem.commit_headroom_bytes -lt $minimumCommitHeadroomBeforeSpawn) { $stopReason = "CONTROL_POSTEVIDENCE_COMMIT_HEADROOM_STOP" }
-            elseif ($finalSystem.available_physical_bytes -lt $minimumAvailablePhysicalBeforeSpawn) { $stopReason = "CONTROL_POSTEVIDENCE_AVAILABLE_PHYSICAL_STOP" }
+            if (-not $stopReason) {
+                if ($closeTree.working_set_bytes -gt $treeWorkingSetStop) { $stopReason = "CONTROL_TREE_WS_STOP" }
+                elseif ($closeTree.summed_process_peak_working_set_bytes -gt $treeWorkingSetStop) { $stopReason = "CONTROL_TREE_LIFETIME_PEAK_WS_STOP" }
+                elseif ($closeTree.private_commit_bytes -gt $treePrivateStop) { $stopReason = "CONTROL_TREE_PRIVATE_STOP" }
+                elseif ($closeTree.committed_pagefile_bytes -gt $treeCommitStop) { $stopReason = "CONTROL_TREE_COMMIT_STOP" }
+                elseif ($closeTree.summed_process_peak_commit_bytes -gt $treeCommitStop) { $stopReason = "CONTROL_TREE_LIFETIME_PEAK_COMMIT_STOP" }
+                elseif ($finalSystem.commit_headroom_bytes -lt $minimumCommitHeadroomBeforeSpawn) { $stopReason = "CONTROL_POSTEVIDENCE_COMMIT_HEADROOM_STOP" }
+                elseif ($finalSystem.available_physical_bytes -lt $minimumAvailablePhysicalBeforeSpawn) { $stopReason = "CONTROL_POSTEVIDENCE_AVAILABLE_PHYSICAL_STOP" }
+            }
         }
         catch {
+            if ($null -eq $monitorFailure) {
+                $monitorFailure = Get-NormalizedOuterMonitorFailure `
+                    $_.Exception ([string]$currentControlOperation)
+            }
             $finalMessage = $_.Exception.Message
             $monitorError = if ($monitorError) { $monitorError + "; envelope-close sample failed: " + $finalMessage } else { "envelope-close sample failed: " + $finalMessage }
             if (-not $stopReason) { $stopReason = "CONTROL_FINAL_SYSTEM_SAMPLE_FAILED" }
@@ -3576,8 +3677,86 @@ function Invoke-ControlPlanePython {
             $preHelperSystemAfterProvenance.available_physical_bytes -ge $minimumAvailablePhysicalBeforeSpawn -and
             $postHighFloorsPass
         )
+        $canonicalControlTreeSampleRetryEvents = @()
+        foreach ($event in @($controlTreeSampleDiagnostics.retry_events)) {
+            $canonicalControlTreeSampleRetryEvents += (New-TreeSampleEvidence `
+                ([int]$event.attempt) $event.confirmation ([string]$event.context) `
+                $event.expected_birth_utc_ticks ([string]$event.message_code) `
+                $event.observed_birth_utc_ticks ([string]$event.operation) `
+                $event.process_id $event.process_role $event.win32_error_code)
+        }
+        $closeOnlyRetryIdentityCoveragePass = $true
+        $finalTreeSampleConfirmedDisappearanceCount = [int]$controlTreeSampleDiagnostics.confirmed_disappearance_count
+        $finalTreeSampleRetryEventCount = [int]$canonicalControlTreeSampleRetryEvents.Count
+        $controlTreeSampleRetryEvidenceComplete = (
+            -not [bool]$controlTreeSampleDiagnostics.retry_events_truncated -and
+            $finalTreeSampleConfirmedDisappearanceCount -eq $finalTreeSampleRetryEventCount
+        )
+        if (-not $controlTreeSampleRetryEvidenceComplete) {
+            $retryEvidenceMessage = "BLOCKED_AV_BS_RESOURCE: control tree-sample retry evidence is incomplete"
+            if ($null -eq $monitorFailure) {
+                $monitorFailure = New-TreeSampleEvidence `
+                    1 $null "control_provenance_exception" $null `
+                    "CONTROL_TREE_SAMPLE_RETRY_EVIDENCE_INCOMPLETE" $null `
+                    "control_provenance_exception" $null $null $null
+            }
+            $monitorError = if ($monitorError) { $monitorError + "; " + $retryEvidenceMessage } else { $retryEvidenceMessage }
+            if (-not $stopReason) { $stopReason = "CONTROL_TREE_SAMPLE_RETRY_EVIDENCE_INCOMPLETE" }
+        }
+        $closeOnlyConfirmedDisappearanceCount = $finalTreeSampleConfirmedDisappearanceCount - $reportTreeSampleConfirmedDisappearanceCount
+        $closeOnlyStoredRetryEventCount = $finalTreeSampleRetryEventCount - $reportTreeSampleRetryEventCount
+        if (
+            $closeOnlyConfirmedDisappearanceCount -lt 0 -or
+            $closeOnlyStoredRetryEventCount -lt 0 -or
+            $closeOnlyConfirmedDisappearanceCount -ne $closeOnlyStoredRetryEventCount
+        ) {
+            $closeOnlyRetryIdentityCoveragePass = $false
+        }
+        if ($closeOnlyRetryIdentityCoveragePass) {
+            for ($eventIndex = 0; $eventIndex -lt $reportTreeSampleRetryEventCount; $eventIndex += 1) {
+                if (-not (Test-StrictJsonValueEqual `
+                    $canonicalControlTreeSampleRetryEventsBeforeEnvelopeClose[$eventIndex] `
+                    $canonicalControlTreeSampleRetryEvents[$eventIndex])) {
+                    $closeOnlyRetryIdentityCoveragePass = $false
+                    break
+                }
+            }
+        }
+        if ($closeOnlyRetryIdentityCoveragePass) {
+            for ($eventIndex = $reportTreeSampleRetryEventCount; $eventIndex -lt $finalTreeSampleRetryEventCount; $eventIndex += 1) {
+                $closeEvent = $canonicalControlTreeSampleRetryEvents[$eventIndex]
+                $closeEventProcessId = $closeEvent.process_id
+                $closeEventExpectedBirth = $closeEvent.expected_birth_utc_ticks
+                $closeEventObservedBirth = $closeEvent.observed_birth_utc_ticks
+                if (
+                    $closeEvent.context -ne "control_envelope_close_tree_sample" -or
+                    $closeEvent.message_code -ne "CONFIRMED_NONROOT_DISAPPEARANCE" -or
+                    $closeEventProcessId -isnot [int] -or
+                    -not $reportObservedBirthByProcessId.ContainsKey([int]$closeEventProcessId) -or
+                    ($null -eq $closeEventExpectedBirth -and $null -eq $closeEventObservedBirth) -or
+                    ($null -ne $closeEventExpectedBirth -and [int64]$closeEventExpectedBirth -ne [int64]$reportObservedBirthByProcessId[[int]$closeEventProcessId]) -or
+                    ($null -ne $closeEventObservedBirth -and [int64]$closeEventObservedBirth -ne [int64]$reportObservedBirthByProcessId[[int]$closeEventProcessId])
+                ) {
+                    $closeOnlyRetryIdentityCoveragePass = $false
+                    break
+                }
+            }
+        }
+        if (-not $closeOnlyRetryIdentityCoveragePass) {
+            $coverageMessage = "BLOCKED_AV_BS_RESOURCE: envelope-close retry identity is not covered by frozen report identities"
+            if ($null -eq $monitorFailure) {
+                $monitorFailure = New-TreeSampleEvidence `
+                    1 $null "control_provenance_exception" $null `
+                    "CONTROL_ENVELOPE_CLOSE_RETRY_IDENTITY_UNCOVERED" $null `
+                    "control_provenance_exception" $null $null $null
+            }
+            $monitorError = if ($monitorError) { $monitorError + "; " + $coverageMessage } else { $coverageMessage }
+            if (-not $stopReason) { $stopReason = "CONTROL_ENVELOPE_CLOSE_RETRY_IDENTITY_UNCOVERED" }
+        }
         $monitorOk = (
             $monitorOkBeforeEnvelopeClose -and -not $stopReason -and -not $monitorError -and
+            $null -eq $monitorFailure -and $controlTreeSampleRetryEvidenceComplete -and
+            $closeOnlyRetryIdentityCoveragePass -and
             $terminalSystemSampleAfterVerifiedTerminationOrNoSpawn
         )
         $mandatoryGate = (
@@ -3641,8 +3820,13 @@ function Invoke-ControlPlanePython {
             envelope_close_runner_tree_sample = $closeTree
             final_system = $finalSystem
             peak = $peak
+            tree_sample_max_attempts = [int]$treeSampleMaximumAttempts
+            tree_sample_confirmed_disappearance_count = [int]$controlTreeSampleDiagnostics.confirmed_disappearance_count
+            tree_sample_retry_events = @($canonicalControlTreeSampleRetryEvents)
+            tree_sample_retry_events_truncated = [bool]$controlTreeSampleDiagnostics.retry_events_truncated
             monitor_ok = $monitorOk
             monitor_error = $monitorError
+            monitor_failure = $monitorFailure
             stop_reason = $stopReason
             cleanup_verified = $cleanupVerified
             started_utc = $startedUtc.ToString("o")
@@ -5216,7 +5400,9 @@ function Invoke-OuterObserverPrimary {
     $finalStderrBytes = $null
     $finalStderrSha256 = $null
     $innerOwnedIds = New-Object 'System.Collections.Generic.HashSet[int]'
-    $innerOwnedBirthTicks = New-Object 'System.Collections.Generic.Dictionary[int, Int64]'
+    # Share identity evidence across outer and inner sampling contexts while
+    # retaining separate ID sets as the sole cleanup-ownership boundaries.
+    $innerOwnedBirthTicks = $outerObservedBirthTicks
     $preSpawnSystem = $null
     $finalSystem = $null
     $finalTree = $null
@@ -5262,7 +5448,6 @@ function Invoke-OuterObserverPrimary {
         }
         $innerOwnedBirthTicks.Add($innerProcessId, $innerBirthTicks)
         [void]$innerOwnedIds.Add($innerProcessId)
-        $outerObservedBirthTicks.Add($innerProcessId, $innerBirthTicks)
         [void]$outerObservedIds.Add($innerProcessId)
         $retainedHandle = $process.Handle
         if ($retainedHandle -eq [IntPtr]::Zero) {
@@ -5714,6 +5899,32 @@ function Invoke-OuterObserverPrimary {
                 }
                 $postCleanupTokenSha256 = Get-Sha256 $reviewTokenPath
                 $postCleanupRecoveryState = "claim_present_same_attempt_tombstone_validated_by_inner_complete"
+            }
+        }
+        else {
+            if (Test-Path -LiteralPath $reviewTokenPath -PathType Leaf) {
+                $currentTokenItem = Get-Item -LiteralPath $reviewTokenPath
+                if ($currentTokenItem.Length -gt 0 -and $currentTokenItem.Length -le 16MB) {
+                    $currentTokenSha256BeforeByteCapture = Get-Sha256 $reviewTokenPath
+                    $currentTokenBytes = [IO.File]::ReadAllBytes($reviewTokenPath)
+                    $postCleanupTokenSha256 = Get-Sha256 $reviewTokenPath
+                    if (
+                        $currentTokenSha256BeforeByteCapture -eq $postCleanupTokenSha256 -and
+                        $postCleanupTokenSha256 -eq $originalTokenSha256 -and
+                        (Test-ByteArrayEqual $currentTokenBytes $originalTokenBytes)
+                    ) {
+                        $postCleanupRecoveryState = "no_claim_exact_original_authorized_token_retained_public_attempt_spent_no_recovery_performed"
+                    }
+                    else {
+                        $postCleanupRecoveryState = "no_claim_token_present_but_drifted_no_recovery_no_terminal_seal"
+                    }
+                }
+                else {
+                    $postCleanupRecoveryState = "no_claim_token_present_but_drifted_no_recovery_no_terminal_seal"
+                }
+            }
+            else {
+                $postCleanupRecoveryState = "no_claim_token_absent_no_recovery_no_terminal_seal"
             }
         }
     }

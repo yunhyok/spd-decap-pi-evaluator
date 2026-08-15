@@ -2,11 +2,11 @@
 
 ## Current verdict
 
-현재 AV-BS1 physics artifact 상태는 **`passed_AV_BS_h2_stage_only_pending_h4_preregistration`**이다. 17.5 µm/100 kHz의 guarded `primary-h2` 한 번이 local mandatory gate를 통과했고 `mandatory_stage_pass=true`, `failure_codes=[]`, factorization/physics `true`다. 그러나 `next_stage_authorized=false`, `fine_analytic_pass=null`, `mesh_convergence_pass=null`, `final_circle_pass=null`이므로 이는 h2 한 mesh의 단계 제한 통과일 뿐 circle oracle 또는 h4 권한이 아니다. H0 negative, H1 coarse-h pass, H2-P0 assembly manifest, H4-P0 assembly certificate와 H4-P0R manifest parent를 그대로 보존한다. 후속 P1 factor-only executable의 두 공개 시도는 모두 claim/factor 전에 중단됐으므로 H4-P0R factorization result가 없고 현재도 `factor_fit_unproven=true`다.
+현재 AV-BS1 physics artifact 상태는 **`passed_AV_BS_h2_stage_only_pending_h4_preregistration`**이다. 17.5 µm/100 kHz의 guarded `primary-h2` 한 번이 local mandatory gate를 통과했고 `mandatory_stage_pass=true`, `failure_codes=[]`, factorization/physics `true`다. 그러나 `next_stage_authorized=false`, `fine_analytic_pass=null`, `mesh_convergence_pass=null`, `final_circle_pass=null`이므로 이는 h2 한 mesh의 단계 제한 통과일 뿐 circle oracle 또는 h4 권한이 아니다. H0 negative, H1 coarse-h pass, H2-P0 assembly manifest, H4-P0 assembly certificate와 H4-P0R manifest parent를 그대로 보존한다. 후속 P1 factor-only executable의 세 공개 시도는 모두 claim/factor 전에 중단됐으므로 H4-P0R factorization result가 없고 현재도 `factor_fit_unproven=true`, `next_stage_authorized=false`다.
 
 2026-08-15 clean commit `4fa5ec80a261c21c8489ecd8b708a62bba769a7a`에서 17.5 µm, 100 kHz, `h` 한 mesh의 guarded `primary-h`를 처음 실행했다. 실행은 **`BLOCKED_AV_BS_MESH_HASH`**로 fail-closed 됐다. factorization, harmonic extension, boundary-Schur `Y`, modal response와 physics pass/fail 값은 생성되지 않았다. 따라서 이 결과는 AV-BS1 physics negative가 아니라 **사전등록 sparse-pattern 계약의 negative**다.
 
-제품 parser/solver/UI/version/installer, PowerSI reference와 GitHub 원격은 변경하지 않았다. `h2`만 physics-bearing preregistered one-use path로 실행했다. 두 H4-P0R-P1 public invocation은 resource/lifecycle dispatcher만 시작했으며 factor, RHS/solve, `h4` physics, withheld radius와 EQ0는 실행하지 않았다.
+제품 parser/solver/UI/version/installer, PowerSI reference와 GitHub 원격은 변경하지 않았다. `h2`만 physics-bearing preregistered one-use path로 실행했다. 세 H4-P0R-P1 public invocation은 resource/lifecycle dispatcher만 시작했으며 factor, RHS/solve, `h4` physics, withheld radius와 EQ0는 실행하지 않았다. 따라서 P1 시도에서 PowerSI 정확성 또는 8 GiB 적합성 주장을 만들 수 없다.
 
 ## Immutable H0 artifact
 
@@ -228,6 +228,11 @@ manifest는 H4-P0 commit `8f40fe5696496edb2cb73086927f833ded5e0d5e`과 그 exact
 
 ## H4-P0R-P1 public attempts and retry-v2 corrective candidate
 
+> Historical snapshot: this subsection preserves the first and second public
+> interruption record and the retry-v2 candidate frozen before the third public
+> invocation. Its uses of "current" describe that historical freeze, not the
+> retry-v3 candidate below.
+
 H4-P0R-P1은 parent matrix/equilibration/factor 순서를 바꾸지 않고 public outer observer, bounded control-plane, one-use claim/guard/result/tombstone/seal-v2와 factor-only child를 구현했다. 두 fresh token-only commit을 각각 정확히 한 번 호출했지만 둘 다 factor child에 도달하지 않았다.
 
 첫 시도는 token-only commit `b6c8615639a8fb283909bd6613ab5bf5b0e09cb2`에서 `2026-08-15T08:49:35Z`에 시작해 0.83 s 뒤 종료됐다. public dispatcher의 첫 root-only process enumeration이 PowerShell pipeline에서 scalar `Int32`로 축약되어 strict-mode `$ids.Count`가 실패했다. 이는 token read, observer session, inner spawn, claim과 factor보다 앞이었다. token ID `92e6edd1bf01428199c5a492e64858ea`는 untouched `uses_remaining=1`이었지만 재시도하지 않았고 deletion-only commit `412e88049ec1461dd15ae324b583c114fb890393`에서 제거했다.
@@ -249,12 +254,115 @@ Inner는 `inner-ready.json`을 쓰고 outer start-release를 받아야 preflight
 
 현재 static corrective evidence는 Python SHA-256 `8c497cb1d0926600b2ddd974df6fd8d40b09471c617869294a01c0e018ce5acf`, runner `4272d6725cb0e16b7ce39b083985965f792da5893f222ba07cf91695fba8f30c`, tests `b44366596690d6d55d18a89d8df2370faca767fca722affd5e07268da3195235`다. 187-test suite는 real `splu` tripwire 아래 exact function-slice race, partial-sum discard, live failure, root/reuse failure, bounded exhaustion, incomplete snapshot, cleanup-sample failure preservation, operation allowlist와 retry-event/sampled-identity close-v2 tamper를 검사한다. 이는 static approval candidate일 뿐 실제 factor fit, PowerSI 정확성 또는 8 GB proof가 아니다.
 
+## Third public attempt and control-plane retry-v3 corrective candidate
+
+Historical retry-v2 contract commit
+`29aeed318abb1cefb189917d707066987e5ea3b3` was the sole parent of fresh
+token-only child `6328174b8315f71b407f79584f134359b9f48685`. Its token ID was
+`7af97159e9224924832085a293c65c27`. The public runner was invoked exactly once,
+from `2026-08-15T10:58:35.7129115Z` through
+`2026-08-15T10:58:39.7341700Z`, and returned exit `2`.
+
+The run created outer session
+`validation-output/av-bs1/outer-observer/session-399b2ac2a1754822bd7da61aae88acaf`
+and control session
+`validation-output/av-bs1/control-plane/session-401d8ddafdbe42628541ebe2bdc367cf`.
+The immutable outer close SHA-256 is
+`a675b5f829e343717d66c1c1d4d40335aed7015c09ad5c3385d2d90aa97e20cd`.
+The preflight control report SHA-256 is
+`da6069826cf46335bb8b86655abfaad8eb3fb61c87d076ebf916849f998c5f7b`,
+and the pre-close/final session-index SHA-256 values are
+`c693ad457906f54047427e7b9d831d9b1cd764d0457d3557a872c6a5f8fe5018`
+and `f4824fba0f58c71b85acd1fc286aa29e0d323ef704e828649119c6e39f78d579`.
+Outer inner-ready/start-release and control bootstrap-ready/start-release are
+present. Control target-complete/exit-release, outer inner-complete/exit-release,
+claim, guard, factor prefix, result, tombstone, and terminal seal are absent.
+
+The v1 control report proves the stop at bounded `preflight` with
+`monitor_error=BLOCKED_AV_BS_RESOURCE: tree sample failure
+TRANSIENT_DESCENDANT_DISAPPEARANCE_RETRY_EXHAUSTED`,
+`stop_reason=CONTROL_PLANE_SUPERVISOR_EXCEPTION`, actual exit `-1`, cleanup
+verified, and gate false. The retry-v2 runner passed explicit three-attempt
+diagnostics only at outer-observer call sites; its control sampling call sites
+still inherited `Get-TreeSample`'s default `MaximumAttempts=1`. A confirmed
+short-lived non-root disappearance therefore exhausted the only control
+attempt. This exact default-one control path, not a factor or physics failure,
+is the proven cause. Ready/start release precedes target completion, claim, and
+factor-child spawn, so no factorization, RHS, solve, H4 physics, PowerSI result,
+or 8 GiB proof was possible.
+
+The authorized token remained byte-identical and no claim existed. It was not
+reused, recovered, sealed, or mutated by the failed invocation; deletion-only
+retirement commit `ba97dd8b274659a649d9a4020193c3ef72572665` removed it after
+the forensic audit. Current token state is absent.
+
+The current retry-v3 candidate retains `Get-TreeSample`'s default
+`MaximumAttempts=1` and leaves all factor call sites unchanged. Exactly these
+six control contexts opt into `MaximumAttempts=3` with retry-event limit `16`:
+
+1. `control_pre_helper_tree_sample`;
+2. `control_active_outer_tree_sample`;
+3. `control_active_cleanup_root_tree_sample`;
+4. `control_post_completion_outer_tree_sample`;
+5. `control_post_completion_cleanup_root_tree_sample`; and
+6. `control_envelope_close_tree_sample`.
+
+The control process report and envelope close are respectively
+`AV-BS1-h4-p0r-control-plane-process-report-v2` and
+`AV-BS1-h4-p0r-control-plane-envelope-close-v2`; execution resource scope is
+`AV-BS1-h4-p0r-execution-resource-scope-v2`. Report and close both carry
+`tree_sample_max_attempts`, `tree_sample_confirmed_disappearance_count`,
+`tree_sample_retry_events`, `tree_sample_retry_events_truncated`, and
+`monitor_failure`. Typed events remain in arrival order and report events must
+be an exact prefix of close events. The report is the pre-close snapshot; the
+close is final. The first fatal monitor failure is sticky and a passing gate
+requires null failure, no truncation, count equal to emitted events, no
+attempt-three exhaustion, and frozen report PID→birth coverage for every
+close-only event. Incomplete retry evidence fails with
+`CONTROL_TREE_SAMPLE_RETRY_EVIDENCE_INCOMPLETE`; uncovered close-only identity
+fails with `CONTROL_ENVELOPE_CLOSE_RETRY_IDENTITY_UNCOVERED`.
+
+Outer and inner contexts now write births into one evidence registry while
+keeping separate cleanup ownership ID sets. Final sampled identities therefore
+include honest inner-only PIDs, and cross-context PID reuse fails at the exact
+sample without widening cleanup scope. An `exited` metric result must carry a
+positive `Int64` birth equal to the bound birth before disappearance
+confirmation; invalid or mismatched birth is fatal and never retries. A prior
+failed stop reason and first monitor failure also remain sticky through later
+successful close sampling and threshold checks.
+
+In the no-claim post-cleanup branch the canonical token is classified without
+mutation or sealing. Exact original bytes use
+`no_claim_exact_original_authorized_token_retained_public_attempt_spent_no_recovery_performed`;
+bounded present drift uses
+`no_claim_token_present_but_drifted_no_recovery_no_terminal_seal`; absence uses
+`no_claim_token_absent_no_recovery_no_terminal_seal`. A present bounded token
+records its current raw SHA-256. No classification makes a spent public token
+retryable or creates terminal authority.
+
+The frozen retry-v3 source bindings are Python
+`95c9f5c08282105f7934fbea194694fff3ab850daac633619534044721639234`,
+runner `cee65497b414a5c9da2b572dc2f026a496b304889c7ddf86a0a2856ebb842d9c`,
+and tests `0f118612aefa9dc80526abf6604a2234f14c50454000f76ef172a534398042fd`.
+The full no-cache suite passed `312/312`; focused implementer and independent
+audits passed `45/45` and `74` with `238 deselected`. Compile, PowerShell AST,
+exact-byte binding, diff, token-absent, and safe manifest parity checks were
+green. These are static/lifecycle-contract results only: factorization and H4
+physics remain unperformed and `next_stage_authorized=false`.
+
+Two failed-only hardening observations are deferred transparently. An omitted
+capped attempt-three virtual identity is not separately bound, but exhaustion
+already forces non-null failure and gate false. A preserved failed stop reason
+is required to be nonempty rather than exact-allowlisted at final close, but
+the sticky failure already prevents authorization. Neither observation can
+turn failed evidence into pass evidence.
+
 ## Exact next starting point
 
 1. H0 negative와 H1 h-stage artifact를 모두 immutable하게 보존한다.
 2. H2-P0 manifest-only fixture/runner/test/docs commit `4c1e3fce8aac659dd0aedb06c2b6d274fff73a12`를 보존한다.
 3. H2 result digest, 독립 audit와 consumed tombstone commit `ad12df1`을 보존한다.
 4. H4-P0 mesh lineage, canonical assembly와 dual resource envelope commit `8f40fe5696496edb2cb73086927f833ded5e0d5e`를 보존한다.
-5. 완료한 H4-P0R parent와 두 P1 pre-factor 실패, validation-output 및 두 deletion-only token retirement를 보존한다. `b6c8615...`와 `d9e064f...`를 재실행하지 않는다.
-6. retry-v2 fixture/runner/tests/docs를 token-absent clean contract와 독립 audit에 고정하고 committed safe manifest를 재검증한 뒤, 그 commit만 부모로 하는 fresh token-only child를 만든다.
+5. 완료한 H4-P0R parent와 세 P1 pre-factor 실패, validation-output 및 세 deletion-only token retirement를 보존한다. `b6c8615...`, `d9e064f...`, `6328174...`를 재실행하지 않는다.
+6. retry-v3 fixture/runner/tests/docs를 token-absent clean contract와 독립 audit에 고정하고 committed safe manifest를 다시 읽은 뒤, 그 commit만 부모로 하는 fresh token-only child를 만든다.
 7. 새 token에서 `KII/ApII` factor fill과 process-tree resource만 한 번 측정한다. RHS/extensions/Y/modal physics는 금지한다. P0R terminal result를 독립 audit한 뒤에만 h2→h4/fine analytic gates와 H4 result schema를 별도 사전등록한다. clean H4-P1 audit와 fresh one-use token 전에는 h4 physics를 실행하지 않으며, h4가 통과해도 withheld radius/EQ0는 각각의 후속 계약 전까지 금지한다.

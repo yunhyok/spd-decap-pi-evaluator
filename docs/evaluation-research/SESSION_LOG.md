@@ -1397,3 +1397,153 @@ next_stage_authorized: false
 3. exact committed manifest를 다시 읽고 token absent/not authorized/no factor/no physics/no terminal/no next를 확인한다.
 4. 그 commit만 부모로 하는 child에 fresh one-use token 파일 하나만 추가하고 token/checkout binding을 독립 감사한다.
 5. 그 뒤에만 public `primary-h4-p0r` factor-only pilot을 정확히 한 번 실행한다. pass/fail과 무관하게 terminal v2 chain을 보존하고 H4-P1/physics를 승인하지 않는다.
+
+## 2026-08-15 — AV-BS1 H4-P0R-P1 third pre-factor interruption and control-plane retry-v3 freeze
+
+Visible program identity remains **SPD Decap PI Evaluator v0.22.0**. The preceding
+retry-v2 entry is immutable historical state: before this append,
+`SESSION_LOG.md` was exactly 130,694 bytes with SHA-256
+`45a7f604d0cad3e7c507b1b43ef9dc7e36446232ccc9f9cc90698a56b2d820f1`.
+This entry records the third spent public attempt and the separately audited
+retry-v3 static correction. It does not report a factor or physics result.
+
+### Third public invocation under retry-v2
+
+Retry-v2 contract `29aeed318abb1cefb189917d707066987e5ea3b3` was the sole
+parent of fresh token-only child
+`6328174b8315f71b407f79584f134359b9f48685`. The canonical token ID was
+`7af97159e9224924832085a293c65c27`. The public runner was invoked exactly once
+from `2026-08-15T10:58:35.7129115Z` through
+`2026-08-15T10:58:39.7341700Z` and returned exit `2`.
+
+```text
+outer session: validation-output/av-bs1/outer-observer/session-399b2ac2a1754822bd7da61aae88acaf
+control session: validation-output/av-bs1/control-plane/session-401d8ddafdbe42628541ebe2bdc367cf
+outer close SHA-256: a675b5f829e343717d66c1c1d4d40335aed7015c09ad5c3385d2d90aa97e20cd
+control report SHA-256: da6069826cf46335bb8b86655abfaad8eb3fb61c87d076ebf916849f998c5f7b
+pre-close index SHA-256: c693ad457906f54047427e7b9d831d9b1cd764d0457d3557a872c6a5f8fe5018
+final index SHA-256: f4824fba0f58c71b85acd1fc286aa29e0d323ef704e828649119c6e39f78d579
+public exit: 2
+control operation: preflight
+control stop: CONTROL_PLANE_SUPERVISOR_EXCEPTION
+monitor error: TRANSIENT_DESCENDANT_DISAPPEARANCE_RETRY_EXHAUSTED
+cleanup: verified
+claim/factor/result/tombstone/seal: absent
+```
+
+Outer `inner-ready.json` and `outer-start-release.json` exist, with SHA-256
+`c50696ef76d5d31cedbc4bb3c0f0c77bdb76961b966e1e65c3208ddda751b9c4`
+and `b370f205f4b17220b49f3c0de88ce945f49c23e32db90a63c5a38eb5aac7d7e8`.
+Control `bootstrap-ready.json` and `start-release.json` exist, with SHA-256
+`91ebdfe45e6d37ce9515efd19cd914ac017e69582dec1d8069edbb001d6b50fa`
+and `fb5fe2e44e617826aa623ecb6235a4b713ed7f13b8b3ab5031c3c42902823614`.
+No control target-complete/exit-release or outer inner-complete/exit-release was
+written.
+
+The control process report proves the causal boundary. Retry-v2 passed explicit
+three-attempt diagnostics to instrumented outer-observer tree samples, but the
+control sampling call sites still inherited `Get-TreeSample`'s default
+`MaximumAttempts=1`. During bounded preflight a confirmed short-lived non-root
+disappearance exhausted that one attempt, producing
+`TRANSIENT_DESCENDANT_DISAPPEARANCE_RETRY_EXHAUSTED`. Ready/start release is
+earlier than target completion, exclusive claim, and factor-child spawn.
+Therefore factorization, RHS, solve, H4 physics, PowerSI evidence, and any 8 GiB
+fit claim were impossible in this invocation.
+
+The authorized token remained byte-identical and no claim existed. The failed
+public attempt was nevertheless spent. The token was never reused, recovered,
+mutated, or terminal-sealed and was removed by deletion-only retirement commit
+`ba97dd8b274659a649d9a4020193c3ef72572665`. Current token state is absent;
+no attempt process remains live, and all validation-output is preserved.
+
+### Frozen control-plane retry-v3 contract
+
+The independently approved source bindings are:
+
+```text
+Python fixture SHA-256: 95c9f5c08282105f7934fbea194694fff3ab850daac633619534044721639234
+PowerShell runner SHA-256: cee65497b414a5c9da2b572dc2f026a496b304889c7ddf86a0a2856ebb842d9c
+static tests SHA-256: 0f118612aefa9dc80526abf6604a2234f14c50454000f76ef172a534398042fd
+full no-cache suite: 312/312 passed in 77.99 s
+implementer-focused suite: 45/45 passed
+independent focused audit: 74 passed, 238 deselected
+PowerShell AST: clean, 47,009 tokens
+Python compile / exact-byte binding / diff checks: clean
+token_state: absent
+factorization_performed: false
+physics_solve_performed: false
+next_stage_authorized: false
+```
+
+The control process report is
+`AV-BS1-h4-p0r-control-plane-process-report-v2`, the control envelope close is
+`AV-BS1-h4-p0r-control-plane-envelope-close-v2`, and execution resource scope is
+`AV-BS1-h4-p0r-execution-resource-scope-v2` with revision
+`P1_versioned_scope_correction_v2`. Both report and close add exactly
+`tree_sample_max_attempts`, `tree_sample_confirmed_disappearance_count`,
+`tree_sample_retry_events`, `tree_sample_retry_events_truncated`, and
+`monitor_failure`.
+
+`Get-TreeSample` retains default `MaximumAttempts=1`, and factor call sites are
+unchanged at that default. The already instrumented outer observer and exactly
+six control contexts use explicit maximum `3` and retry-event limit `16`:
+
+1. `control_pre_helper_tree_sample`;
+2. `control_active_outer_tree_sample`;
+3. `control_active_cleanup_root_tree_sample`;
+4. `control_post_completion_outer_tree_sample`;
+5. `control_post_completion_cleanup_root_tree_sample`; and
+6. `control_envelope_close_tree_sample`.
+
+Typed retry events remain in arrival order. The report is the pre-close
+snapshot and its event list is an exact prefix of the final close list.
+Confirmed count is count-all, stored events are bounded, and truncation is
+explicit. A pass requires null `monitor_failure`, no truncation, confirmed count
+equal to emitted events, no attempt-three exhaustion, and valid close-only
+PID/birth coverage against the frozen report identity map. Incomplete evidence
+fails `CONTROL_TREE_SAMPLE_RETRY_EVIDENCE_INCOMPLETE`; uncovered close-only
+identity fails `CONTROL_ENVELOPE_CLOSE_RETRY_IDENTITY_UNCOVERED`. The first fatal
+monitor failure and first nonempty failed stop reason remain sticky through
+later cleanup/close success and threshold checks.
+
+Outer and inner samples share one PID→birth evidence registry, while their ID
+sets remain separate cleanup-ownership boundaries. Honest inner-only identities
+therefore appear in final `sampled_process_identities`; cross-context PID reuse
+fails at the exact sample without expanding cleanup scope. Before any
+disappearance confirmation, a metric `exited` result must carry a positive
+`Int64` birth exactly equal to the bound birth. Missing/invalid birth fails
+`PROCESS_METRIC_IDENTITY_OR_VALUE_INVALID`; mismatch fails `NONROOT_PID_REUSE`;
+neither path retries.
+
+The no-claim post-cleanup branch is always read-only. Exact original bytes use
+`no_claim_exact_original_authorized_token_retained_public_attempt_spent_no_recovery_performed`;
+bounded present drift uses
+`no_claim_token_present_but_drifted_no_recovery_no_terminal_seal`; absence uses
+`no_claim_token_absent_no_recovery_no_terminal_seal`. A present bounded token
+records its current raw SHA-256. None of these classifications mutates, recovers,
+deletes, or seals the token, and none makes a spent public attempt retryable.
+
+Two independent-audit observations are deferred failed-only hardening. A
+capped failed attempt-three virtual identity omitted from stored retry events is
+not separately bound, but exhaustion already forces non-null failure and gate
+false. A preserved failed stop reason is required to be nonempty rather than
+revalidated against an exact final-close allowlist, but the sticky failure
+already prevents authorization. Neither observation can convert failed evidence
+to pass evidence.
+
+### Exact next starting point
+
+1. Freeze the approved retry-v3 fixture, runner, tests, documentation, final
+   preregistration document SHA, and resulting token-absent manifest bindings in
+   one clean no-token contract commit.
+2. Re-read that exact committed no-token manifest. Stop if any binding or
+   prerequisite differs.
+3. Only then create a fresh child with exactly one parent that adds only one
+   canonical one-use P1 token file.
+4. Invoke public `primary-h4-p0r` exactly once from that fresh token-only child.
+   Never invoke prior token commits `b6c8615...`, `d9e064f...`, or
+   `6328174...`.
+5. Preserve and independently audit the complete v2 result/resource/claim/
+   tombstone/seal/index/close chain. Regardless of outcome, keep
+   `next_stage_authorized=false`; do not run H4 physics, PowerSI, withheld, or
+   EQ0 work without a separate clean preregistration and fresh authorization.

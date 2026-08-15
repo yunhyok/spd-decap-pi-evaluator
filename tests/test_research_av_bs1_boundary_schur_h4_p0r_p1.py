@@ -201,7 +201,14 @@ def _synthetic_manifest() -> dict[str, object]:
         "resource_policy": policy,
         "resource_policy_sha256": SHA_E,
         "execution_resource_scope_sha256": SHA_F,
-        "execution_resource_scope": {"control_plane": {}},
+        "execution_resource_scope": {
+            "schema": "AV-BS1-h4-p0r-execution-resource-scope-v2",
+            "contract_revision": "P1_versioned_scope_correction_v2",
+            "control_plane": {
+                "tree_sample_max_attempts": 3,
+                "tree_sample_retry_event_limit": 16,
+            },
+        },
         "outer_observer_contract_sha256": SHA_D,
         "outer_observer_contract": {
             "outer_resource_envelope": {
@@ -591,6 +598,145 @@ def _control_tree_sample(process_ids: list[int]) -> dict[str, object]:
         "shared_commit_bytes": 3,
         "page_fault_count": 1,
     }
+
+
+def _control_tree_diagnostic(
+    *,
+    context: str = "control_active_outer_tree_sample",
+    process_id: int = 303,
+    birth_utc_ticks: int = 2_500,
+    attempt: int = 1,
+    message_code: str = "CONFIRMED_NONROOT_DISAPPEARANCE",
+) -> dict[str, object]:
+    return {
+        "attempt": attempt,
+        "confirmation": "signaled_handle_and_complete_snapshot_absent",
+        "context": context,
+        "expected_birth_utc_ticks": birth_utc_ticks,
+        "message_code": message_code,
+        "observed_birth_utc_ticks": birth_utc_ticks,
+        "operation": "get_process_times",
+        "process_id": process_id,
+        "process_role": "descendant",
+        "win32_error_code": None,
+    }
+
+
+def _control_retry_event(
+    *,
+    attempt: int = 1,
+    confirmation: str = "signaled_handle_and_complete_snapshot_absent",
+    context: str = "control_active_outer_tree_sample",
+    expected_birth: int | None = 2_500,
+    observed_birth: int | None = 2_500,
+    operation: str = "get_process_times",
+    process_id: int = 303,
+    win32_error_code: int | None = None,
+) -> dict[str, object]:
+    return {
+        "attempt": attempt,
+        "confirmation": confirmation,
+        "context": context,
+        "expected_birth_utc_ticks": expected_birth,
+        "message_code": "CONFIRMED_NONROOT_DISAPPEARANCE",
+        "observed_birth_utc_ticks": observed_birth,
+        "operation": operation,
+        "process_id": process_id,
+        "process_role": "descendant",
+        "win32_error_code": win32_error_code,
+    }
+
+
+def _control_monitor_failure(
+    *,
+    context: str = "control_provenance_exception",
+    operation: str = "control_provenance_exception",
+    message_code: str = "CONTROL_ENVELOPE_CLOSE_RETRY_IDENTITY_UNCOVERED",
+) -> dict[str, object]:
+    return {
+        "attempt": 1,
+        "confirmation": None,
+        "context": context,
+        "expected_birth_utc_ticks": None,
+        "message_code": message_code,
+        "observed_birth_utc_ticks": None,
+        "operation": operation,
+        "process_id": None,
+        "process_role": None,
+        "win32_error_code": None,
+    }
+
+
+def _control_exhaustion_failure(event: dict[str, object]) -> dict[str, object]:
+    failure = deepcopy(event)
+    failure["message_code"] = (
+        "TRANSIENT_DESCENDANT_DISAPPEARANCE_RETRY_EXHAUSTED"
+    )
+    return failure
+
+
+def _control_diagnostic_snapshot(
+    events: list[dict[str, object]],
+    *,
+    confirmed_count: int | None = None,
+    truncated: bool = False,
+    monitor_failure: dict[str, object] | None = None,
+    monitor_error: str | None = None,
+    stop_reason: str | None = None,
+    gate: bool = False,
+    monitor_ok: bool = False,
+) -> dict[str, object]:
+    return {
+        "tree_sample_max_attempts": 3,
+        "tree_sample_confirmed_disappearance_count": (
+            len(events) if confirmed_count is None else confirmed_count
+        ),
+        "tree_sample_retry_events": deepcopy(events),
+        "tree_sample_retry_events_truncated": truncated,
+        "monitor_failure": deepcopy(monitor_failure),
+        "monitor_error": monitor_error,
+        "stop_reason": stop_reason,
+        "mandatory_control_plane_gate_pass": gate,
+        "monitor_ok": monitor_ok,
+    }
+
+
+def _add_control_diagnostic_identities(
+    report: dict[str, object], diagnostics: list[dict[str, object]]
+) -> None:
+    rows = {
+        int(row["process_id"]): int(row["birth_utc_ticks"])
+        for row in report["observed_process_identities"]
+    }
+    for diagnostic in diagnostics:
+        process_id = diagnostic.get("process_id")
+        birth = diagnostic.get("observed_birth_utc_ticks")
+        if type(process_id) is int and type(birth) is int:
+            rows[process_id] = birth
+    report["observed_process_ids"] = sorted(rows)
+    report["observed_process_identities"] = [
+        {"process_id": process_id, "birth_utc_ticks": rows[process_id]}
+        for process_id in sorted(rows)
+    ]
+
+
+def _add_control_cleanup_diagnostic_identities(
+    report: dict[str, object], diagnostics: list[dict[str, object]]
+) -> None:
+    rows = {
+        int(row["process_id"]): int(row["birth_utc_ticks"])
+        for row in report["cleanup_observed_process_identities"]
+    }
+    for diagnostic in diagnostics:
+        process_id = diagnostic.get("process_id")
+        birth = diagnostic.get("observed_birth_utc_ticks")
+        if type(process_id) is int and type(birth) is int:
+            rows[process_id] = birth
+    report["cleanup_observed_process_ids"] = sorted(rows)
+    report["cleanup_observed_process_identities"] = [
+        {"process_id": process_id, "birth_utc_ticks": rows[process_id]}
+        for process_id in sorted(rows)
+    ]
 
 
 def _control_peak() -> dict[str, int]:
@@ -1098,6 +1244,11 @@ def _build_preflight_control_plane_bundle(
         ],
         "successful_tree_sample_count": 2,
         "target_visible_tree_sample_count": 2,
+        "tree_sample_max_attempts": 3,
+        "tree_sample_confirmed_disappearance_count": 0,
+        "tree_sample_retry_events": [],
+        "tree_sample_retry_events_truncated": False,
+        "monitor_failure": None,
         "peak": _control_peak(),
         "bootstrap_ready_sha256": p1._sha(ready_path),
         "start_release_sha256": p1._sha(start_release_path),
@@ -1241,6 +1392,11 @@ def _build_preflight_control_plane_bundle(
         ),
         "final_system": _control_system_sample(),
         "peak": _control_peak(),
+        "tree_sample_max_attempts": 3,
+        "tree_sample_confirmed_disappearance_count": 0,
+        "tree_sample_retry_events": [],
+        "tree_sample_retry_events_truncated": False,
+        "monitor_failure": None,
         "monitor_ok": True,
         "monitor_error": None,
         "stop_reason": None,
@@ -2668,6 +2824,1674 @@ def _assert_preflight_control_bundle_rejected(
     assert expected_message in str(caught.value)
 
 
+def test_preflight_control_tree_diagnostics_accept_report_prefix_and_close_extension(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    report_event = _control_tree_diagnostic()
+    close_event = _control_tree_diagnostic(
+        context="control_envelope_close_tree_sample",
+        process_id=304,
+        birth_utc_ticks=2_600,
+    )
+
+    def add_report_diagnostics(report: dict[str, object]) -> None:
+        report["tree_sample_confirmed_disappearance_count"] = 1
+        report["tree_sample_retry_events"] = [deepcopy(report_event)]
+        _add_control_diagnostic_identities(report, [report_event, close_event])
+
+    def add_close_diagnostics(close: dict[str, object]) -> None:
+        close["tree_sample_confirmed_disappearance_count"] = 2
+        close["tree_sample_retry_events"] = [
+            deepcopy(report_event),
+            deepcopy(close_event),
+        ]
+
+    bundle = _build_preflight_control_plane_bundle(
+        monkeypatch,
+        tmp_path,
+        mutations={"report": add_report_diagnostics, "close": add_close_diagnostics},
+    )
+
+    p1._validate_preflight_control_plane_evidence(
+        bundle["claim"], bundle["manifest"], bundle["observer"]
+    )
+
+
+@pytest.mark.parametrize("artifact", ["report", "close"])
+@pytest.mark.parametrize(
+    "tamper",
+    ["extra", "missing", "type", "context", "count", "cap", "truncation", "failure"],
+)
+def test_preflight_control_tree_diagnostics_reject_tamper_matrix(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    artifact: str,
+    tamper: str,
+) -> None:
+    context = (
+        "control_active_outer_tree_sample"
+        if artifact == "report"
+        else "control_envelope_close_tree_sample"
+    )
+    event = _control_tree_diagnostic(context=context)
+    report_identity_events = [event]
+
+    def install_and_tamper(value: dict[str, object]) -> None:
+        value["tree_sample_confirmed_disappearance_count"] = 1
+        value["tree_sample_retry_events"] = [deepcopy(event)]
+        value["tree_sample_retry_events_truncated"] = False
+        diagnostic = value["tree_sample_retry_events"][0]
+        if tamper == "extra":
+            diagnostic["extra"] = None
+        elif tamper == "missing":
+            diagnostic.pop("operation")
+        elif tamper == "type":
+            diagnostic["attempt"] = True
+        elif tamper == "context":
+            diagnostic["context"] = "outer_tree_sample"
+        elif tamper == "count":
+            value["tree_sample_confirmed_disappearance_count"] = 2
+        elif tamper == "cap":
+            value["tree_sample_retry_events"] = [deepcopy(event) for _ in range(17)]
+            value["tree_sample_confirmed_disappearance_count"] = 17
+            value["tree_sample_retry_events_truncated"] = True
+        elif tamper == "truncation":
+            value["tree_sample_retry_events_truncated"] = True
+        else:
+            failure = deepcopy(event)
+            failure["confirmation"] = None
+            failure["message_code"] = "PROCESS_METRIC_QUERY_FAILED_WHILE_LIVE"
+            value["monitor_failure"] = failure
+
+    def mutate_report(report: dict[str, object]) -> None:
+        _add_control_diagnostic_identities(report, report_identity_events)
+        if artifact == "report":
+            install_and_tamper(report)
+
+    def mutate_close(close: dict[str, object]) -> None:
+        if artifact == "close":
+            install_and_tamper(close)
+        elif tamper == "failure":
+            failure = deepcopy(event)
+            failure["confirmation"] = None
+            failure["message_code"] = "PROCESS_METRIC_QUERY_FAILED_WHILE_LIVE"
+            close["monitor_failure"] = failure
+        else:
+            close["tree_sample_confirmed_disappearance_count"] = 1
+            close["tree_sample_retry_events"] = [deepcopy(event)]
+
+    bundle = _build_preflight_control_plane_bundle(
+        monkeypatch,
+        tmp_path,
+        mutations={"report": mutate_report, "close": mutate_close},
+    )
+
+    with pytest.raises(p1.AvBsError) as caught:
+        p1._validate_preflight_control_plane_evidence(
+            bundle["claim"], bundle["manifest"], bundle["observer"]
+        )
+    assert caught.value.code == "BLOCKED_AV_BS_RESULT_SCHEMA"
+
+
+def test_preflight_control_tree_diagnostics_require_report_prefix_of_close(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    report_event = _control_tree_diagnostic()
+    close_event = _control_tree_diagnostic(
+        context="control_post_completion_outer_tree_sample"
+    )
+
+    def mutate_report(report: dict[str, object]) -> None:
+        report["tree_sample_confirmed_disappearance_count"] = 1
+        report["tree_sample_retry_events"] = [deepcopy(report_event)]
+        _add_control_diagnostic_identities(report, [report_event])
+
+    def mutate_close(close: dict[str, object]) -> None:
+        close["tree_sample_confirmed_disappearance_count"] = 1
+        close["tree_sample_retry_events"] = [deepcopy(close_event)]
+
+    bundle = _build_preflight_control_plane_bundle(
+        monkeypatch,
+        tmp_path,
+        mutations={"report": mutate_report, "close": mutate_close},
+    )
+
+    with pytest.raises(p1.AvBsError) as caught:
+        p1._validate_preflight_control_plane_evidence(
+            bundle["claim"], bundle["manifest"], bundle["observer"]
+        )
+    assert caught.value.code == "BLOCKED_AV_BS_RESULT_SCHEMA"
+
+
+def test_control_tree_diagnostics_pair_preserves_first_fatal_after_close_sample() -> None:
+    scope = _synthetic_manifest()["execution_resource_scope"]["control_plane"]
+    failure = _control_tree_diagnostic(
+        message_code="PROCESS_METRIC_QUERY_FAILED_WHILE_LIVE"
+    )
+    failure["confirmation"] = None
+    report = {
+        "tree_sample_max_attempts": 3,
+        "tree_sample_confirmed_disappearance_count": 0,
+        "tree_sample_retry_events": [],
+        "tree_sample_retry_events_truncated": False,
+        "monitor_failure": deepcopy(failure),
+        "monitor_error": "first fatal control tree sample",
+    }
+    close = deepcopy(report)
+
+    report_diagnostics, close_diagnostics = (
+        p1._validate_control_tree_sample_diagnostics_pair(
+            report,
+            close,
+            scope,
+            require_pass=False,
+            label="test control",
+        )
+    )
+    assert report_diagnostics["monitor_failure"] == failure
+    assert close_diagnostics["monitor_failure"] == failure
+
+    close["monitor_failure"] = None
+    close["monitor_error"] = None
+    with pytest.raises(p1.AvBsError) as caught:
+        p1._validate_control_tree_sample_diagnostics_pair(
+            report,
+            close,
+            scope,
+            require_pass=False,
+            label="test control",
+        )
+    assert caught.value.code == "BLOCKED_AV_BS_RESULT_SCHEMA"
+
+
+def test_control_tree_diagnostics_pair_accepts_close_only_provenance_failure() -> None:
+    scope = _synthetic_manifest()["execution_resource_scope"]["control_plane"]
+    report = {
+        "tree_sample_max_attempts": 3,
+        "tree_sample_confirmed_disappearance_count": 0,
+        "tree_sample_retry_events": [],
+        "tree_sample_retry_events_truncated": False,
+        "monitor_failure": None,
+        "monitor_error": None,
+    }
+    close = deepcopy(report)
+    close["monitor_failure"] = _control_monitor_failure()
+    close["monitor_error"] = (
+        "BLOCKED_AV_BS_RESOURCE: envelope-close retry identity is not covered "
+        "by frozen report identities"
+    )
+
+    report_diagnostics, close_diagnostics = (
+        p1._validate_control_tree_sample_diagnostics_pair(
+            report,
+            close,
+            scope,
+            require_pass=False,
+            label="test control",
+        )
+    )
+    assert report_diagnostics["monitor_failure"] is None
+    assert close_diagnostics["monitor_failure"] == close["monitor_failure"]
+
+
+def test_control_tree_diagnostics_reject_non_tree_failure_mislabeled_as_tree_context() -> None:
+    scope = _synthetic_manifest()["execution_resource_scope"]["control_plane"]
+    value = {
+        "tree_sample_max_attempts": 3,
+        "tree_sample_confirmed_disappearance_count": 0,
+        "tree_sample_retry_events": [],
+        "tree_sample_retry_events_truncated": False,
+        "monitor_failure": _control_monitor_failure(
+            context="control_active_outer_tree_sample"
+        ),
+        "monitor_error": "non-tree failure with tree context",
+    }
+
+    with pytest.raises(p1.AvBsError) as caught:
+        p1._validate_control_tree_sample_diagnostics_snapshot(
+            value,
+            scope,
+            require_pass=False,
+            label="test control",
+        )
+    assert caught.value.code == "BLOCKED_AV_BS_RESULT_SCHEMA"
+
+
+def test_control_failed_close_only_identity_disposition_accepts_only_exact_shape() -> None:
+    scope = _synthetic_manifest()["execution_resource_scope"]["control_plane"]
+    message_code = "CONTROL_ENVELOPE_CLOSE_RETRY_IDENTITY_UNCOVERED"
+    close_event = _control_tree_diagnostic(
+        context="control_envelope_close_tree_sample",
+        process_id=909,
+        birth_utc_ticks=9_090,
+    )
+    report = {
+        "tree_sample_max_attempts": 3,
+        "tree_sample_confirmed_disappearance_count": 0,
+        "tree_sample_retry_events": [],
+        "tree_sample_retry_events_truncated": False,
+        "monitor_failure": None,
+        "monitor_error": None,
+        "observed_process_ids": [101],
+        "observed_process_identities": [
+            {"process_id": 101, "birth_utc_ticks": 1_000}
+        ],
+        "cleanup_observed_process_ids": [],
+        "cleanup_observed_process_identities": [],
+    }
+    close = {
+        "tree_sample_max_attempts": 3,
+        "tree_sample_confirmed_disappearance_count": 1,
+        "tree_sample_retry_events": [deepcopy(close_event)],
+        "tree_sample_retry_events_truncated": False,
+        "monitor_failure": _control_monitor_failure(message_code=message_code),
+        "monitor_error": "close-only retry identity is uncovered",
+        "mandatory_control_plane_gate_pass": False,
+        "monitor_ok": False,
+        "stop_reason": message_code,
+    }
+
+    report_diagnostics, close_diagnostics = (
+        p1._validate_control_tree_sample_diagnostics_pair(
+            report,
+            close,
+            scope,
+            require_pass=False,
+            label="test control",
+        )
+    )
+    disposition = p1._validate_control_failed_tree_sample_diagnostic_disposition(
+        report_diagnostics,
+        close,
+        close_diagnostics,
+        label="test control",
+    )
+    assert disposition == message_code
+    p1._validate_control_tree_sample_identity_bindings(
+        report,
+        report_diagnostics,
+        close_diagnostics,
+        allow_close_only_uncovered=True,
+        label="test control",
+    )
+
+    with pytest.raises(p1.AvBsError):
+        p1._validate_control_tree_sample_diagnostics_pair(
+            report,
+            close,
+            scope,
+            require_pass=True,
+            label="test control",
+        )
+
+    for tamper in ("gate", "stop", "failure", "reason"):
+        tampered = deepcopy(close)
+        if tamper == "gate":
+            tampered["mandatory_control_plane_gate_pass"] = True
+        elif tamper == "stop":
+            tampered["stop_reason"] = "OTHER_CONTROL_FAILURE"
+        elif tamper == "failure":
+            tampered["monitor_failure"] = _control_monitor_failure(
+                context="control_supervisor_exception",
+                operation="control_supervisor_exception",
+                message_code="OUTER_OBSERVER_EXCEPTION",
+            )
+        else:
+            tampered["monitor_failure"] = _control_monitor_failure(
+                message_code="CONTROL_TREE_SAMPLE_RETRY_EVIDENCE_INCOMPLETE"
+            )
+            tampered["stop_reason"] = (
+                "CONTROL_TREE_SAMPLE_RETRY_EVIDENCE_INCOMPLETE"
+            )
+        parsed_report, parsed_close = (
+            p1._validate_control_tree_sample_diagnostics_pair(
+                report,
+                tampered,
+                scope,
+                require_pass=False,
+                label="test control",
+            )
+        )
+        with pytest.raises(p1.AvBsError) as caught:
+            parsed_disposition = (
+                p1._validate_control_failed_tree_sample_diagnostic_disposition(
+                    parsed_report,
+                    tampered,
+                    parsed_close,
+                    label="test control",
+                )
+            )
+            p1._validate_control_tree_sample_identity_bindings(
+                report,
+                parsed_report,
+                parsed_close,
+                allow_close_only_uncovered=(parsed_disposition == message_code),
+                label="test control",
+            )
+        assert caught.value.code == "BLOCKED_AV_BS_RESULT_SCHEMA"
+
+
+@pytest.mark.parametrize("incomplete_kind", ["truncated"])
+def test_control_incomplete_retry_evidence_requires_exact_failed_provenance(
+    incomplete_kind: str,
+) -> None:
+    scope = _synthetic_manifest()["execution_resource_scope"]["control_plane"]
+    message_code = "CONTROL_TREE_SAMPLE_RETRY_EVIDENCE_INCOMPLETE"
+    report = {
+        "tree_sample_max_attempts": 3,
+        "tree_sample_confirmed_disappearance_count": 0,
+        "tree_sample_retry_events": [],
+        "tree_sample_retry_events_truncated": False,
+        "monitor_failure": None,
+        "monitor_error": None,
+    }
+    if incomplete_kind == "count_mismatch":
+        close_events: list[dict[str, object]] = []
+        confirmed_count = 1
+        truncated = False
+    else:
+        report_events = [
+            _control_tree_diagnostic(
+                context="control_active_outer_tree_sample",
+                process_id=900 + index,
+                birth_utc_ticks=9_000 + index,
+            )
+            for index in range(14)
+        ]
+        report["tree_sample_confirmed_disappearance_count"] = 14
+        report["tree_sample_retry_events"] = deepcopy(report_events)
+        close_events = report_events + [
+            _control_tree_diagnostic(
+                context="control_envelope_close_tree_sample",
+                process_id=914,
+                birth_utc_ticks=9_014,
+                attempt=1,
+            ),
+            _control_tree_diagnostic(
+                context="control_envelope_close_tree_sample",
+                process_id=915,
+                birth_utc_ticks=9_015,
+                attempt=2,
+            ),
+        ]
+        confirmed_count = 17
+        truncated = True
+    close = {
+        "tree_sample_max_attempts": 3,
+        "tree_sample_confirmed_disappearance_count": confirmed_count,
+        "tree_sample_retry_events": close_events,
+        "tree_sample_retry_events_truncated": truncated,
+        "monitor_failure": _control_monitor_failure(message_code=message_code),
+        "monitor_error": "control tree-sample retry evidence is incomplete",
+        "mandatory_control_plane_gate_pass": False,
+        "monitor_ok": False,
+        "stop_reason": message_code,
+    }
+
+    report_diagnostics, close_diagnostics = (
+        p1._validate_control_tree_sample_diagnostics_pair(
+            report,
+            close,
+            scope,
+            require_pass=False,
+            label="test control",
+        )
+    )
+    assert (
+        p1._validate_control_failed_tree_sample_diagnostic_disposition(
+            report_diagnostics,
+            close,
+            close_diagnostics,
+            label="test control",
+        )
+        == message_code
+    )
+    with pytest.raises(p1.AvBsError):
+        p1._validate_control_tree_sample_diagnostics_pair(
+            report,
+            close,
+            scope,
+            require_pass=True,
+            label="test control",
+        )
+
+    for tamper in ("gate", "stop", "failure"):
+        tampered = deepcopy(close)
+        if tamper == "gate":
+            tampered["mandatory_control_plane_gate_pass"] = True
+        elif tamper == "stop":
+            tampered["stop_reason"] = "OTHER_CONTROL_FAILURE"
+        else:
+            tampered["monitor_failure"] = _control_monitor_failure(
+                message_code="CONTROL_ENVELOPE_CLOSE_RETRY_IDENTITY_UNCOVERED"
+            )
+            tampered["stop_reason"] = (
+                "CONTROL_ENVELOPE_CLOSE_RETRY_IDENTITY_UNCOVERED"
+            )
+        parsed_report, parsed_close = (
+            p1._validate_control_tree_sample_diagnostics_pair(
+                report,
+                tampered,
+                scope,
+                require_pass=False,
+                label="test control",
+            )
+        )
+        with pytest.raises(p1.AvBsError) as caught:
+            p1._validate_control_failed_tree_sample_diagnostic_disposition(
+                parsed_report,
+                tampered,
+                parsed_close,
+                label="test control",
+            )
+        assert caught.value.code == "BLOCKED_AV_BS_RESULT_SCHEMA"
+
+
+@pytest.mark.parametrize("frozen_birth", [None, 9_091])
+def test_preflight_control_close_only_retry_identity_requires_frozen_report_identity(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    frozen_birth: int | None,
+) -> None:
+    close_event = _control_tree_diagnostic(
+        context="control_envelope_close_tree_sample",
+        process_id=909,
+        birth_utc_ticks=9_090,
+    )
+
+    def mutate_close(close: dict[str, object]) -> None:
+        close["tree_sample_confirmed_disappearance_count"] = 1
+        close["tree_sample_retry_events"] = [close_event]
+
+    mutations: dict[str, object] = {"close": mutate_close}
+    if frozen_birth is not None:
+
+        def mutate_report(report: dict[str, object]) -> None:
+            mismatched = _control_tree_diagnostic(
+                context="control_envelope_close_tree_sample",
+                process_id=909,
+                birth_utc_ticks=frozen_birth,
+            )
+            _add_control_diagnostic_identities(report, [mismatched])
+
+        mutations["report"] = mutate_report
+
+    bundle = _build_preflight_control_plane_bundle(
+        monkeypatch, tmp_path, mutations=mutations
+    )
+
+    with pytest.raises(p1.AvBsError) as caught:
+        p1._validate_preflight_control_plane_evidence(
+            bundle["claim"], bundle["manifest"], bundle["observer"]
+        )
+    assert caught.value.code == "BLOCKED_AV_BS_RESULT_SCHEMA"
+
+
+def test_preflight_control_cleanup_retry_identity_may_be_cleanup_observed_only(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    event = _control_tree_diagnostic(
+        context="control_active_cleanup_root_tree_sample",
+        process_id=909,
+        birth_utc_ticks=9_090,
+    )
+
+    def mutate_report(report: dict[str, object]) -> None:
+        report["tree_sample_confirmed_disappearance_count"] = 1
+        report["tree_sample_retry_events"] = [deepcopy(event)]
+        _add_control_cleanup_diagnostic_identities(report, [event])
+
+    def mutate_close(close: dict[str, object]) -> None:
+        close["tree_sample_confirmed_disappearance_count"] = 1
+        close["tree_sample_retry_events"] = [deepcopy(event)]
+
+    bundle = _build_preflight_control_plane_bundle(
+        monkeypatch,
+        tmp_path,
+        mutations={"report": mutate_report, "close": mutate_close},
+    )
+
+    p1._validate_preflight_control_plane_evidence(
+        bundle["claim"], bundle["manifest"], bundle["observer"]
+    )
+
+
+def test_preflight_control_outer_retry_identity_cannot_be_cleanup_observed_only(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    event = _control_tree_diagnostic(
+        context="control_active_outer_tree_sample",
+        process_id=909,
+        birth_utc_ticks=9_090,
+    )
+
+    def mutate_report(report: dict[str, object]) -> None:
+        report["tree_sample_confirmed_disappearance_count"] = 1
+        report["tree_sample_retry_events"] = [deepcopy(event)]
+        _add_control_cleanup_diagnostic_identities(report, [event])
+
+    def mutate_close(close: dict[str, object]) -> None:
+        close["tree_sample_confirmed_disappearance_count"] = 1
+        close["tree_sample_retry_events"] = [deepcopy(event)]
+
+    bundle = _build_preflight_control_plane_bundle(
+        monkeypatch,
+        tmp_path,
+        mutations={"report": mutate_report, "close": mutate_close},
+    )
+
+    with pytest.raises(p1.AvBsError) as caught:
+        p1._validate_preflight_control_plane_evidence(
+            bundle["claim"], bundle["manifest"], bundle["observer"]
+        )
+    assert caught.value.code == "BLOCKED_AV_BS_RESULT_SCHEMA"
+
+
+def test_preflight_control_retry_identity_rejects_cross_map_birth_conflict(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    event = _control_tree_diagnostic(process_id=909, birth_utc_ticks=9_090)
+    conflicting = _control_tree_diagnostic(
+        context="control_active_cleanup_root_tree_sample",
+        process_id=909,
+        birth_utc_ticks=9_091,
+    )
+
+    def mutate_report(report: dict[str, object]) -> None:
+        report["tree_sample_confirmed_disappearance_count"] = 1
+        report["tree_sample_retry_events"] = [deepcopy(event)]
+        _add_control_diagnostic_identities(report, [event])
+        _add_control_cleanup_diagnostic_identities(report, [conflicting])
+
+    def mutate_close(close: dict[str, object]) -> None:
+        close["tree_sample_confirmed_disappearance_count"] = 1
+        close["tree_sample_retry_events"] = [deepcopy(event)]
+
+    bundle = _build_preflight_control_plane_bundle(
+        monkeypatch,
+        tmp_path,
+        mutations={"report": mutate_report, "close": mutate_close},
+    )
+
+    with pytest.raises(p1.AvBsError) as caught:
+        p1._validate_preflight_control_plane_evidence(
+            bundle["claim"], bundle["manifest"], bundle["observer"]
+        )
+    assert caught.value.code == "BLOCKED_AV_BS_RESULT_SCHEMA"
+
+
+@pytest.mark.parametrize(
+    (
+        "confirmation",
+        "expected_birth",
+        "observed_birth",
+        "operation",
+        "win32_error_code",
+    ),
+    [
+        (
+            "signaled_handle_and_complete_snapshot_absent",
+            2_500,
+            2_500,
+            "get_process_times",
+            None,
+        ),
+        (
+            "signaled_handle_and_complete_snapshot_absent",
+            2_500,
+            2_500,
+            "get_process_memory_info",
+            5,
+        ),
+        (
+            "signaled_handle_and_complete_snapshot_absent",
+            2_500,
+            2_500,
+            "open_process",
+            87,
+        ),
+        (
+            "limited_query_not_found_and_complete_snapshot_absent",
+            None,
+            None,
+            "open_process",
+            87,
+        ),
+        (
+            "limited_query_not_found_and_complete_snapshot_absent",
+            2_500,
+            None,
+            "get_process_times",
+            None,
+        ),
+        (
+            "limited_query_not_found_and_complete_snapshot_absent",
+            2_500,
+            None,
+            "get_process_memory_info",
+            5,
+        ),
+        (
+            "limited_query_not_found_and_complete_snapshot_absent",
+            2_500,
+            None,
+            "get_process_memory_info",
+            None,
+        ),
+    ],
+)
+def test_control_retry_confirmation_accepts_exact_frozen_runner_shapes(
+    confirmation: str,
+    expected_birth: int | None,
+    observed_birth: int | None,
+    operation: str,
+    win32_error_code: int | None,
+) -> None:
+    event = _control_retry_event(
+        confirmation=confirmation,
+        expected_birth=expected_birth,
+        observed_birth=observed_birth,
+        operation=operation,
+        win32_error_code=win32_error_code,
+    )
+
+    assert (
+        p1._validate_control_tree_sample_diagnostic(
+            event,
+            retry_event=True,
+            maximum_attempts=3,
+            label="test control",
+        )
+        == event
+    )
+
+
+@pytest.mark.parametrize(
+    "event",
+    [
+        _control_retry_event(expected_birth=None, observed_birth=None),
+        _control_retry_event(observed_birth=None),
+        _control_retry_event(observed_birth=2_501),
+        _control_retry_event(operation="process_identity_probe"),
+        _control_retry_event(operation="open_process", win32_error_code=None),
+        _control_retry_event(win32_error_code=5),
+        _control_retry_event(
+            confirmation="limited_query_not_found_and_complete_snapshot_absent",
+            observed_birth=2_500,
+            operation="open_process",
+            win32_error_code=87,
+        ),
+        _control_retry_event(
+            confirmation="limited_query_not_found_and_complete_snapshot_absent",
+            expected_birth=2_500,
+            observed_birth=None,
+            operation="process_identity_probe",
+            win32_error_code=None,
+        ),
+        _control_retry_event(
+            confirmation="limited_query_not_found_and_complete_snapshot_absent",
+            expected_birth=2_500,
+            observed_birth=None,
+            operation="open_process",
+            win32_error_code=None,
+        ),
+        _control_retry_event(
+            confirmation="limited_query_not_found_and_complete_snapshot_absent",
+            expected_birth=2_500,
+            observed_birth=None,
+            operation="get_process_times",
+            win32_error_code=87,
+        ),
+        _control_retry_event(
+            confirmation="limited_query_not_found_and_complete_snapshot_absent",
+            expected_birth=None,
+            observed_birth=None,
+            operation="get_process_times",
+            win32_error_code=None,
+        ),
+        _control_retry_event(process_id=2_147_483_648),
+        _control_retry_event(
+            expected_birth=9_223_372_036_854_775_808,
+            observed_birth=9_223_372_036_854_775_808,
+        ),
+        _control_retry_event(
+            operation="get_process_memory_info",
+            win32_error_code=2_147_483_648,
+        ),
+    ],
+    ids=lambda event: (
+        f"{event['confirmation']}-{event['operation']}-"
+        f"{event['expected_birth_utc_ticks']}-"
+        f"{event['observed_birth_utc_ticks']}-"
+        f"{event['win32_error_code']}"
+    ),
+)
+def test_control_retry_confirmation_rejects_non_runner_shapes(
+    event: dict[str, object],
+) -> None:
+    with pytest.raises(p1.AvBsError) as caught:
+        p1._validate_control_tree_sample_diagnostic(
+            event,
+            retry_event=True,
+            maximum_attempts=3,
+            label="test control",
+        )
+    assert caught.value.code == "BLOCKED_AV_BS_RESULT_SCHEMA"
+
+
+@pytest.mark.parametrize(
+    "rows,ids",
+    [
+        (
+            [{"process_id": 2_147_483_648, "birth_utc_ticks": 1}],
+            [2_147_483_648],
+        ),
+        (
+            [
+                {
+                    "process_id": 1,
+                    "birth_utc_ticks": 9_223_372_036_854_775_808,
+                }
+            ],
+            [1],
+        ),
+    ],
+)
+def test_control_identity_rows_reject_clr_scalar_overflow(
+    rows: list[dict[str, int]], ids: list[int]
+) -> None:
+    with pytest.raises(p1.AvBsError):
+        p1._validate_control_plane_identity_list(rows, ids, label="test control")
+
+
+@pytest.mark.parametrize(
+    "context,message_code",
+    [
+        ("control_supervisor_exception", "ARBITRARY_FAILURE"),
+        (
+            "control_cleanup_exception",
+            "CONTROL_TREE_SAMPLE_RETRY_EVIDENCE_INCOMPLETE",
+        ),
+        ("control_provenance_exception", "ARBITRARY_FAILURE"),
+    ],
+)
+def test_control_normalized_fallback_rejects_unemittable_message_codes(
+    context: str, message_code: str
+) -> None:
+    failure = _control_monitor_failure(
+        context=context,
+        operation=context,
+        message_code=message_code,
+    )
+    with pytest.raises(p1.AvBsError):
+        p1._validate_control_tree_sample_diagnostic(
+            failure,
+            retry_event=False,
+            maximum_attempts=3,
+            label="test control",
+        )
+
+
+@pytest.mark.parametrize(
+    "attempt_contexts",
+    [
+        [(1, "control_active_outer_tree_sample")],
+        [
+            (1, "control_active_outer_tree_sample"),
+            (2, "control_active_outer_tree_sample"),
+        ],
+        [
+            (1, "control_active_outer_tree_sample"),
+            (1, "control_active_cleanup_root_tree_sample"),
+            (2, "control_active_cleanup_root_tree_sample"),
+        ],
+    ],
+)
+def test_control_retry_attempt_sequence_accepts_per_call_prefixes(
+    attempt_contexts: list[tuple[int, str]],
+) -> None:
+    scope = _synthetic_manifest()["execution_resource_scope"]["control_plane"]
+    events = [
+        _control_retry_event(attempt=attempt, context=context)
+        for attempt, context in attempt_contexts
+    ]
+    p1._validate_control_tree_sample_diagnostics_snapshot(
+        _control_diagnostic_snapshot(events),
+        scope,
+        require_pass=False,
+        label="test control",
+    )
+
+
+@pytest.mark.parametrize(
+    "attempt_contexts",
+    [
+        [(2, "control_active_outer_tree_sample")],
+        [(3, "control_active_outer_tree_sample")],
+        [
+            (1, "control_active_outer_tree_sample"),
+            (2, "control_active_cleanup_root_tree_sample"),
+        ],
+        [
+            (1, "control_active_outer_tree_sample"),
+            (2, "control_active_outer_tree_sample"),
+            (2, "control_active_outer_tree_sample"),
+        ],
+    ],
+)
+def test_control_retry_attempt_sequence_rejects_orphans_and_context_drift(
+    attempt_contexts: list[tuple[int, str]],
+) -> None:
+    scope = _synthetic_manifest()["execution_resource_scope"]["control_plane"]
+    events = [
+        _control_retry_event(attempt=attempt, context=context)
+        for attempt, context in attempt_contexts
+    ]
+    with pytest.raises(p1.AvBsError, match="retry attempt sequence"):
+        p1._validate_control_tree_sample_diagnostics_snapshot(
+            _control_diagnostic_snapshot(events),
+            scope,
+            require_pass=False,
+            label="test control",
+        )
+
+
+def test_control_close_extension_must_be_one_fresh_attempt_sequence() -> None:
+    scope = _synthetic_manifest()["execution_resource_scope"]["control_plane"]
+    report_event = _control_retry_event()
+    report = _control_diagnostic_snapshot([report_event])
+    close = _control_diagnostic_snapshot(
+        [
+            report_event,
+            _control_retry_event(
+                attempt=1, context="control_envelope_close_tree_sample"
+            ),
+            _control_retry_event(
+                attempt=1, context="control_envelope_close_tree_sample"
+            ),
+        ]
+    )
+    with pytest.raises(p1.AvBsError, match="close-only retry sequence"):
+        p1._validate_control_tree_sample_diagnostics_pair(
+            report, close, scope, require_pass=False, label="test control"
+        )
+
+
+def test_control_null_birth_limited_retry_remains_unbound_after_later_pid_reuse() -> None:
+    scope = _synthetic_manifest()["execution_resource_scope"]["control_plane"]
+    event = _control_retry_event(
+        confirmation="limited_query_not_found_and_complete_snapshot_absent",
+        expected_birth=None,
+        observed_birth=None,
+        operation="open_process",
+        win32_error_code=87,
+        process_id=909,
+    )
+    report = _control_diagnostic_snapshot([event])
+    close = _control_diagnostic_snapshot([event])
+    report_diagnostics, close_diagnostics = (
+        p1._validate_control_tree_sample_diagnostics_pair(
+            report, close, scope, require_pass=False, label="test control"
+        )
+    )
+    absent_report = {
+        "observed_process_ids": [],
+        "observed_process_identities": [],
+        "cleanup_observed_process_ids": [],
+        "cleanup_observed_process_identities": [],
+    }
+    p1._validate_control_tree_sample_identity_bindings(
+        absent_report,
+        report_diagnostics,
+        close_diagnostics,
+        allow_close_only_uncovered=False,
+        label="test control",
+    )
+    mapped_report = deepcopy(absent_report)
+    mapped_report["observed_process_ids"] = [909]
+    mapped_report["observed_process_identities"] = [
+        {"process_id": 909, "birth_utc_ticks": 9_090}
+    ]
+    p1._validate_control_tree_sample_identity_bindings(
+        mapped_report,
+        report_diagnostics,
+        close_diagnostics,
+        allow_close_only_uncovered=False,
+        label="test control",
+    )
+
+
+def test_control_close_exhaustion_requires_exact_failure_without_prior_fatal() -> None:
+    scope = _synthetic_manifest()["execution_resource_scope"]["control_plane"]
+    events = [
+        _control_retry_event(
+            attempt=attempt,
+            context="control_envelope_close_tree_sample",
+        )
+        for attempt in (1, 2, 3)
+    ]
+    report = _control_diagnostic_snapshot([])
+    close = _control_diagnostic_snapshot(
+        events,
+        monitor_failure=_control_exhaustion_failure(events[-1]),
+        monitor_error="close retry exhausted",
+        stop_reason="CONTROL_FINAL_SYSTEM_SAMPLE_FAILED",
+    )
+    p1._validate_control_tree_sample_diagnostics_pair(
+        report, close, scope, require_pass=False, label="test control"
+    )
+
+    tampered = deepcopy(close)
+    tampered["monitor_failure"] = _control_monitor_failure(
+        context="control_supervisor_exception",
+        operation="control_supervisor_exception",
+        message_code="OUTER_OBSERVER_EXCEPTION",
+    )
+    with pytest.raises(p1.AvBsError, match="close retry exhaustion"):
+        p1._validate_control_tree_sample_diagnostics_pair(
+            report, tampered, scope, require_pass=False, label="test control"
+        )
+
+
+def test_control_report_exhaustion_binds_report_group_before_fresh_close_retry() -> None:
+    scope = _synthetic_manifest()["execution_resource_scope"]["control_plane"]
+    report_events = [
+        _control_retry_event(attempt=attempt) for attempt in (1, 2, 3)
+    ]
+    first_failure = _control_exhaustion_failure(report_events[-1])
+    stop_reason = "CONTROL_PLANE_SUPERVISOR_EXCEPTION"
+    report = _control_diagnostic_snapshot(
+        report_events,
+        monitor_failure=first_failure,
+        monitor_error="report retry exhausted",
+        stop_reason=stop_reason,
+    )
+    close_events = report_events + [
+        _control_retry_event(
+            attempt=1,
+            context="control_envelope_close_tree_sample",
+        )
+    ]
+    close = _control_diagnostic_snapshot(
+        close_events,
+        monitor_failure=first_failure,
+        monitor_error="report retry exhausted",
+        stop_reason=stop_reason,
+    )
+
+    report_diagnostics, close_diagnostics = (
+        p1._validate_control_tree_sample_diagnostics_pair(
+            report, close, scope, require_pass=False, label="test control"
+        )
+    )
+    assert (
+        p1._validate_control_failed_tree_sample_diagnostic_disposition(
+            report_diagnostics,
+            close,
+            close_diagnostics,
+            label="test control",
+        )
+        == "sticky_prior_monitor_failure"
+    )
+    with pytest.raises(p1.AvBsError):
+        p1._validate_control_tree_sample_diagnostics_pair(
+            report, close, scope, require_pass=True, label="test control"
+        )
+
+
+def test_control_sticky_first_fatal_accepts_secondary_close_exhaustion() -> None:
+    scope = _synthetic_manifest()["execution_resource_scope"]["control_plane"]
+    first_failure = _control_monitor_failure(
+        context="control_supervisor_exception",
+        operation="control_supervisor_exception",
+        message_code="OUTER_OBSERVER_EXCEPTION",
+    )
+    stop_reason = "CONTROL_PLANE_SUPERVISOR_EXCEPTION"
+    report = _control_diagnostic_snapshot(
+        [],
+        monitor_failure=first_failure,
+        monitor_error="first fatal",
+        stop_reason=stop_reason,
+    )
+    close_events = [
+        _control_retry_event(
+            attempt=attempt,
+            context="control_envelope_close_tree_sample",
+            process_id=909,
+            expected_birth=9_090,
+            observed_birth=9_090,
+        )
+        for attempt in (1, 2, 3)
+    ]
+    close = _control_diagnostic_snapshot(
+        close_events,
+        monitor_failure=first_failure,
+        monitor_error="first fatal; close retry exhausted",
+        stop_reason=stop_reason,
+    )
+    report_diagnostics, close_diagnostics = (
+        p1._validate_control_tree_sample_diagnostics_pair(
+            report, close, scope, require_pass=False, label="test control"
+        )
+    )
+    disposition = p1._validate_control_failed_tree_sample_diagnostic_disposition(
+        report_diagnostics,
+        close,
+        close_diagnostics,
+        label="test control",
+    )
+    assert disposition == "sticky_prior_monitor_failure"
+
+    identity_report = {
+        "observed_process_ids": [909],
+        "observed_process_identities": [
+            {"process_id": 909, "birth_utc_ticks": 9_090}
+        ],
+        "cleanup_observed_process_ids": [],
+        "cleanup_observed_process_identities": [],
+    }
+    p1._validate_control_tree_sample_identity_bindings(
+        identity_report,
+        report_diagnostics,
+        close_diagnostics,
+        allow_close_only_uncovered=True,
+        require_close_only_uncovered=False,
+        label="test control",
+    )
+    with pytest.raises(p1.AvBsError):
+        p1._validate_control_tree_sample_diagnostics_pair(
+            report, close, scope, require_pass=True, label="test control"
+        )
+
+
+def test_control_sticky_first_fatal_accepts_secondary_truncated_evidence() -> None:
+    scope = _synthetic_manifest()["execution_resource_scope"]["control_plane"]
+    first_failure = _control_monitor_failure(
+        context="control_cleanup_exception",
+        operation="control_cleanup_exception",
+        message_code="OUTER_RESOURCE_EXCEPTION",
+    )
+    stop_reason = "CONTROL_OBSERVED_PROCESS_TERMINATION_FAILED"
+    report_events = [
+        _control_retry_event(process_id=909, expected_birth=9_090, observed_birth=9_090)
+        for _ in range(14)
+    ]
+    report = _control_diagnostic_snapshot(
+        report_events,
+        monitor_failure=first_failure,
+        monitor_error="cleanup failed",
+        stop_reason=stop_reason,
+    )
+    close_events = report_events + [
+        _control_retry_event(
+            attempt=attempt,
+            context="control_envelope_close_tree_sample",
+            process_id=909,
+            expected_birth=9_090,
+            observed_birth=9_090,
+        )
+        for attempt in (1, 2)
+    ]
+    close = _control_diagnostic_snapshot(
+        close_events,
+        confirmed_count=17,
+        truncated=True,
+        monitor_failure=first_failure,
+        monitor_error="cleanup failed; retry evidence incomplete",
+        stop_reason=stop_reason,
+    )
+    report_diagnostics, close_diagnostics = (
+        p1._validate_control_tree_sample_diagnostics_pair(
+            report, close, scope, require_pass=False, label="test control"
+        )
+    )
+    assert (
+        p1._validate_control_failed_tree_sample_diagnostic_disposition(
+            report_diagnostics,
+            close,
+            close_diagnostics,
+            label="test control",
+        )
+        == "sticky_prior_monitor_failure"
+    )
+    with pytest.raises(p1.AvBsError):
+        p1._validate_control_tree_sample_diagnostics_pair(
+            report, close, scope, require_pass=True, label="test control"
+        )
+
+
+def test_control_sticky_first_fatal_accepts_secondary_identity_uncovered_only_failed() -> None:
+    scope = _synthetic_manifest()["execution_resource_scope"]["control_plane"]
+    first_failure = _control_monitor_failure(
+        context="control_supervisor_exception",
+        operation="control_supervisor_exception",
+        message_code="OUTER_RESOURCE_EXCEPTION",
+    )
+    stop_reason = "CONTROL_PLANE_SUPERVISOR_EXCEPTION"
+    report = _control_diagnostic_snapshot(
+        [],
+        monitor_failure=first_failure,
+        monitor_error="first fatal",
+        stop_reason=stop_reason,
+    )
+    close_event = _control_retry_event(
+        context="control_envelope_close_tree_sample",
+        process_id=909,
+        expected_birth=9_090,
+        observed_birth=9_090,
+    )
+    close = _control_diagnostic_snapshot(
+        [close_event],
+        monitor_failure=first_failure,
+        monitor_error="first fatal; close identity uncovered",
+        stop_reason=stop_reason,
+    )
+    report_diagnostics, close_diagnostics = (
+        p1._validate_control_tree_sample_diagnostics_pair(
+            report, close, scope, require_pass=False, label="test control"
+        )
+    )
+    disposition = p1._validate_control_failed_tree_sample_diagnostic_disposition(
+        report_diagnostics,
+        close,
+        close_diagnostics,
+        label="test control",
+    )
+    assert disposition == "sticky_prior_monitor_failure"
+    identity_report = {
+        "observed_process_ids": [101],
+        "observed_process_identities": [
+            {"process_id": 101, "birth_utc_ticks": 1_010}
+        ],
+        "cleanup_observed_process_ids": [],
+        "cleanup_observed_process_identities": [],
+    }
+    p1._validate_control_tree_sample_identity_bindings(
+        identity_report,
+        report_diagnostics,
+        close_diagnostics,
+        allow_close_only_uncovered=True,
+        require_close_only_uncovered=False,
+        label="test control",
+    )
+    with pytest.raises(p1.AvBsError):
+        p1._validate_control_tree_sample_diagnostics_pair(
+            report, close, scope, require_pass=True, label="test control"
+        )
+
+
+def test_control_failed_snapshot_rejects_nontruncated_retry_count_gap() -> None:
+    scope = _synthetic_manifest()["execution_resource_scope"]["control_plane"]
+    value = _control_diagnostic_snapshot([], confirmed_count=1)
+    with pytest.raises(p1.AvBsError, match="retry count mismatch"):
+        p1._validate_control_tree_sample_diagnostics_snapshot(
+            value,
+            scope,
+            require_pass=False,
+            label="test control",
+        )
+
+
+def test_control_report_exhaustion_can_bind_an_event_omitted_after_cap() -> None:
+    scope = _synthetic_manifest()["execution_resource_scope"]["control_plane"]
+    stored = [
+        _control_retry_event(
+            process_id=909,
+            expected_birth=9_090,
+            observed_birth=9_090,
+        )
+        for _ in range(16)
+    ]
+    omitted_attempt_3 = _control_retry_event(
+        attempt=3,
+        process_id=909,
+        expected_birth=9_090,
+        observed_birth=9_090,
+    )
+    failure = _control_exhaustion_failure(omitted_attempt_3)
+    stop_reason = "CONTROL_PLANE_SUPERVISOR_EXCEPTION"
+    report = _control_diagnostic_snapshot(
+        stored,
+        confirmed_count=19,
+        truncated=True,
+        monitor_failure=failure,
+        monitor_error="report retry exhausted after stored-event cap",
+        stop_reason=stop_reason,
+    )
+    close = deepcopy(report)
+
+    report_diagnostics, close_diagnostics = (
+        p1._validate_control_tree_sample_diagnostics_pair(
+            report, close, scope, require_pass=False, label="test control"
+        )
+    )
+    assert (
+        p1._validate_control_failed_tree_sample_diagnostic_disposition(
+            report_diagnostics,
+            close,
+            close_diagnostics,
+            label="test control",
+        )
+        == "sticky_prior_monitor_failure"
+    )
+    with pytest.raises(p1.AvBsError):
+        p1._validate_control_tree_sample_diagnostics_pair(
+            report, close, scope, require_pass=True, label="test control"
+        )
+
+
+def test_control_close_exhaustion_can_bind_one_call_omitted_after_report_cap() -> None:
+    scope = _synthetic_manifest()["execution_resource_scope"]["control_plane"]
+    stored = [
+        _control_retry_event(
+            process_id=909,
+            expected_birth=9_090,
+            observed_birth=9_090,
+        )
+        for _ in range(16)
+    ]
+    report = _control_diagnostic_snapshot(stored)
+    omitted_attempt_3 = _control_retry_event(
+        attempt=3,
+        context="control_envelope_close_tree_sample",
+        process_id=909,
+        expected_birth=9_090,
+        observed_birth=9_090,
+    )
+    close = _control_diagnostic_snapshot(
+        stored,
+        confirmed_count=19,
+        truncated=True,
+        monitor_failure=_control_exhaustion_failure(omitted_attempt_3),
+        monitor_error="envelope close exhausted after stored-event cap",
+        stop_reason="CONTROL_FINAL_SYSTEM_SAMPLE_FAILED",
+    )
+
+    report_diagnostics, close_diagnostics = (
+        p1._validate_control_tree_sample_diagnostics_pair(
+            report, close, scope, require_pass=False, label="test control"
+        )
+    )
+    disposition = p1._validate_control_failed_tree_sample_diagnostic_disposition(
+        report_diagnostics,
+        close,
+        close_diagnostics,
+        label="test control",
+    )
+    assert disposition == "sticky_close_monitor_failure"
+    identity_report = {
+        "observed_process_ids": [909],
+        "observed_process_identities": [
+            {"process_id": 909, "birth_utc_ticks": 9_090}
+        ],
+        "cleanup_observed_process_ids": [],
+        "cleanup_observed_process_identities": [],
+    }
+    p1._validate_control_tree_sample_identity_bindings(
+        identity_report,
+        report_diagnostics,
+        close_diagnostics,
+        allow_close_only_uncovered=True,
+        require_close_only_uncovered=False,
+        label="test control",
+    )
+    with pytest.raises(p1.AvBsError):
+        p1._validate_control_tree_sample_diagnostics_pair(
+            report, close, scope, require_pass=True, label="test control"
+        )
+
+
+@pytest.mark.parametrize("secondary", ["identity_uncovered", "truncated"])
+def test_control_close_first_fatal_remains_sticky_over_secondary_failure(
+    secondary: str,
+) -> None:
+    scope = _synthetic_manifest()["execution_resource_scope"]["control_plane"]
+    report_events = [
+        _control_retry_event(
+            process_id=909,
+            expected_birth=9_090,
+            observed_birth=9_090,
+        )
+        for _ in range(16 if secondary == "truncated" else 0)
+    ]
+    report = _control_diagnostic_snapshot(report_events)
+    failure = _control_retry_event(
+        attempt=2,
+        context="control_envelope_close_tree_sample",
+        process_id=909,
+        expected_birth=9_090,
+        observed_birth=9_090,
+    )
+    failure["confirmation"] = None
+    failure["message_code"] = "PROCESS_METRIC_QUERY_FAILED_WHILE_LIVE"
+    failure["operation"] = "get_process_memory_info"
+    failure["win32_error_code"] = 5
+    if secondary == "identity_uncovered":
+        close_events = [
+            _control_retry_event(
+                context="control_envelope_close_tree_sample",
+                process_id=909,
+                expected_birth=9_090,
+                observed_birth=9_090,
+            )
+        ]
+        confirmed_count = 1
+        truncated = False
+    else:
+        close_events = report_events
+        confirmed_count = 17
+        truncated = True
+    close = _control_diagnostic_snapshot(
+        close_events,
+        confirmed_count=confirmed_count,
+        truncated=truncated,
+        monitor_failure=failure,
+        monitor_error=f"close first fatal; secondary {secondary}",
+        stop_reason="CONTROL_FINAL_SYSTEM_SAMPLE_FAILED",
+    )
+    report_diagnostics, close_diagnostics = (
+        p1._validate_control_tree_sample_diagnostics_pair(
+            report, close, scope, require_pass=False, label="test control"
+        )
+    )
+    assert (
+        p1._validate_control_failed_tree_sample_diagnostic_disposition(
+            report_diagnostics,
+            close,
+            close_diagnostics,
+            label="test control",
+        )
+        == "sticky_close_monitor_failure"
+    )
+    identity_report = {
+        "observed_process_ids": [909] if report_events else [101],
+        "observed_process_identities": (
+            [{"process_id": 909, "birth_utc_ticks": 9_090}]
+            if report_events
+            else [{"process_id": 101, "birth_utc_ticks": 1_010}]
+        ),
+        "cleanup_observed_process_ids": [],
+        "cleanup_observed_process_identities": [],
+    }
+    p1._validate_control_tree_sample_identity_bindings(
+        identity_report,
+        report_diagnostics,
+        close_diagnostics,
+        allow_close_only_uncovered=True,
+        require_close_only_uncovered=False,
+        label="test control",
+    )
+    with pytest.raises(p1.AvBsError):
+        p1._validate_control_tree_sample_diagnostics_pair(
+            report, close, scope, require_pass=True, label="test control"
+        )
+
+
+@pytest.mark.parametrize("secondary", ["identity_uncovered", "truncated"])
+def test_control_prior_report_stop_is_preserved_by_manual_secondary_provenance(
+    secondary: str,
+) -> None:
+    scope = _synthetic_manifest()["execution_resource_scope"]["control_plane"]
+    report_events = [
+        _control_retry_event(
+            process_id=909,
+            expected_birth=9_090,
+            observed_birth=9_090,
+        )
+        for _ in range(16 if secondary == "truncated" else 0)
+    ]
+    prior_stop = "CONTROL_TREE_WS_STOP"
+    report = _control_diagnostic_snapshot(report_events, stop_reason=prior_stop)
+    if secondary == "identity_uncovered":
+        close_events = [
+            _control_retry_event(
+                context="control_envelope_close_tree_sample",
+                process_id=909,
+                expected_birth=9_090,
+                observed_birth=9_090,
+            )
+        ]
+        confirmed_count = 1
+        truncated = False
+        message_code = "CONTROL_ENVELOPE_CLOSE_RETRY_IDENTITY_UNCOVERED"
+    else:
+        close_events = report_events
+        confirmed_count = 17
+        truncated = True
+        message_code = "CONTROL_TREE_SAMPLE_RETRY_EVIDENCE_INCOMPLETE"
+    close = _control_diagnostic_snapshot(
+        close_events,
+        confirmed_count=confirmed_count,
+        truncated=truncated,
+        monitor_failure=_control_monitor_failure(message_code=message_code),
+        monitor_error=f"prior stop; secondary {secondary}",
+        stop_reason=prior_stop,
+    )
+    report_diagnostics, close_diagnostics = (
+        p1._validate_control_tree_sample_diagnostics_pair(
+            report, close, scope, require_pass=False, label="test control"
+        )
+    )
+    assert (
+        p1._validate_control_failed_tree_sample_diagnostic_disposition(
+            report_diagnostics,
+            close,
+            close_diagnostics,
+            label="test control",
+        )
+        == message_code
+    )
+    identity_report = {
+        "observed_process_ids": [909] if report_events else [101],
+        "observed_process_identities": (
+            [{"process_id": 909, "birth_utc_ticks": 9_090}]
+            if report_events
+            else [{"process_id": 101, "birth_utc_ticks": 1_010}]
+        ),
+        "cleanup_observed_process_ids": [],
+        "cleanup_observed_process_identities": [],
+    }
+    p1._validate_control_tree_sample_identity_bindings(
+        identity_report,
+        report_diagnostics,
+        close_diagnostics,
+        allow_close_only_uncovered=True,
+        require_close_only_uncovered=(secondary == "identity_uncovered"),
+        label="test control",
+    )
+
+
+def _control_identity_binding_report() -> dict[str, object]:
+    return {
+        "execution_tree_root_pid": 101,
+        "inner_runner_pid": 202,
+        "process_id": 303,
+        "process_birth_utc_ticks": 2_000,
+        "observed_process_ids": [101, 202, 303],
+        "observed_process_identities": [
+            {"process_id": 101, "birth_utc_ticks": 1_000},
+            {"process_id": 202, "birth_utc_ticks": 1_500},
+            {"process_id": 303, "birth_utc_ticks": 2_000},
+        ],
+        "cleanup_observed_process_ids": [303],
+        "cleanup_observed_process_identities": [
+            {"process_id": 303, "birth_utc_ticks": 2_000}
+        ],
+    }
+
+
+@pytest.mark.parametrize(
+    "cleanup_rows",
+    [
+        [{"process_id": 404, "birth_utc_ticks": 2_100}],
+        [
+            {"process_id": 303, "birth_utc_ticks": 2_000},
+            {"process_id": 404, "birth_utc_ticks": 1_999},
+        ],
+        [
+            {"process_id": 101, "birth_utc_ticks": 1_000},
+            {"process_id": 303, "birth_utc_ticks": 2_000},
+        ],
+        [
+            {"process_id": 202, "birth_utc_ticks": 1_500},
+            {"process_id": 303, "birth_utc_ticks": 2_000},
+        ],
+    ],
+)
+def test_control_cleanup_identities_reject_missing_helper_old_or_ancestor_rows(
+    cleanup_rows: list[dict[str, int]],
+) -> None:
+    report = _control_identity_binding_report()
+    report["cleanup_observed_process_identities"] = cleanup_rows
+    report["cleanup_observed_process_ids"] = [
+        row["process_id"] for row in cleanup_rows
+    ]
+    with pytest.raises(p1.AvBsError):
+        p1._control_report_identity_births(report, label="test control")
+
+
+@pytest.mark.parametrize("forged_pid,forged_birth", [(101, 1_000), (202, 1_500)])
+def test_control_retry_identity_rejects_outer_and_inner_ancestor_pids(
+    forged_pid: int, forged_birth: int
+) -> None:
+    scope = _synthetic_manifest()["execution_resource_scope"]["control_plane"]
+    event = _control_retry_event(
+        process_id=forged_pid,
+        expected_birth=forged_birth,
+        observed_birth=forged_birth,
+    )
+    report = _control_diagnostic_snapshot([event])
+    close = _control_diagnostic_snapshot([event])
+    report_diagnostics, close_diagnostics = (
+        p1._validate_control_tree_sample_diagnostics_pair(
+            report, close, scope, require_pass=False, label="test control"
+        )
+    )
+    with pytest.raises(p1.AvBsError, match="targets a control ancestor"):
+        p1._validate_control_tree_sample_identity_bindings(
+            _control_identity_binding_report(),
+            report_diagnostics,
+            close_diagnostics,
+            allow_close_only_uncovered=False,
+            label="test control",
+        )
+
+
+def test_control_cleanup_retry_rejects_helper_root_pid_even_when_failed() -> None:
+    scope = _synthetic_manifest()["execution_resource_scope"]["control_plane"]
+    event = _control_retry_event(
+        context="control_active_cleanup_root_tree_sample",
+        process_id=303,
+        expected_birth=2_000,
+        observed_birth=2_000,
+    )
+    report = _control_diagnostic_snapshot([event])
+    close = _control_diagnostic_snapshot([event])
+    report_diagnostics, close_diagnostics = (
+        p1._validate_control_tree_sample_diagnostics_pair(
+            report, close, scope, require_pass=False, label="test control"
+        )
+    )
+    with pytest.raises(p1.AvBsError, match="targets its helper root"):
+        p1._validate_control_tree_sample_identity_bindings(
+            _control_identity_binding_report(),
+            report_diagnostics,
+            close_diagnostics,
+            allow_close_only_uncovered=False,
+            label="test control",
+        )
+
+
+def test_control_helper_retry_pid_distinguishes_pass_prefix_from_failed_evidence() -> None:
+    scope = _synthetic_manifest()["execution_resource_scope"]["control_plane"]
+    event = _control_retry_event(
+        context="control_active_outer_tree_sample",
+        process_id=303,
+        expected_birth=2_000,
+        observed_birth=2_000,
+    )
+    report = _control_diagnostic_snapshot([event])
+    close = _control_diagnostic_snapshot([event])
+    report_diagnostics, close_diagnostics = (
+        p1._validate_control_tree_sample_diagnostics_pair(
+            report, close, scope, require_pass=False, label="test control"
+        )
+    )
+    identity_report = _control_identity_binding_report()
+    p1._validate_control_tree_sample_identity_bindings(
+        identity_report,
+        report_diagnostics,
+        close_diagnostics,
+        allow_close_only_uncovered=False,
+        require_pass=False,
+        label="test control",
+    )
+    with pytest.raises(p1.AvBsError, match="targets retained helper"):
+        p1._validate_control_tree_sample_identity_bindings(
+            identity_report,
+            report_diagnostics,
+            close_diagnostics,
+            allow_close_only_uncovered=False,
+            require_pass=True,
+            label="test control",
+        )
+
+
+def test_control_pass_allows_prehelper_unbound_pid_reuse_and_close_helper_exit() -> None:
+    scope = _synthetic_manifest()["execution_resource_scope"]["control_plane"]
+    identity_report = _control_identity_binding_report()
+    prehelper = _control_retry_event(
+        confirmation="limited_query_not_found_and_complete_snapshot_absent",
+        context="control_pre_helper_tree_sample",
+        expected_birth=None,
+        observed_birth=None,
+        operation="open_process",
+        process_id=303,
+        win32_error_code=87,
+    )
+    report = _control_diagnostic_snapshot([prehelper])
+    close = _control_diagnostic_snapshot([prehelper])
+    report_diagnostics, close_diagnostics = (
+        p1._validate_control_tree_sample_diagnostics_pair(
+            report, close, scope, require_pass=True, label="test control"
+        )
+    )
+    p1._validate_control_tree_sample_identity_bindings(
+        identity_report,
+        report_diagnostics,
+        close_diagnostics,
+        allow_close_only_uncovered=False,
+        require_pass=True,
+        label="test control",
+    )
+
+    close_helper = _control_retry_event(
+        context="control_envelope_close_tree_sample",
+        process_id=303,
+        expected_birth=2_000,
+        observed_birth=2_000,
+    )
+    empty_report = _control_diagnostic_snapshot([])
+    helper_close = _control_diagnostic_snapshot([close_helper])
+    empty_diagnostics, helper_close_diagnostics = (
+        p1._validate_control_tree_sample_diagnostics_pair(
+            empty_report,
+            helper_close,
+            scope,
+            require_pass=True,
+            label="test control",
+        )
+    )
+    p1._validate_control_tree_sample_identity_bindings(
+        identity_report,
+        empty_diagnostics,
+        helper_close_diagnostics,
+        allow_close_only_uncovered=False,
+        require_pass=True,
+        label="test control",
+    )
+
+
 def test_preflight_control_chain_accepts_final_index_0002_and_rejects_0001(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
@@ -3384,12 +5208,24 @@ def test_manifest_is_token_missing_factor_free_and_parent_bound() -> None:
         "A_background_II",
         "A_conductor_II",
     ]
-    control_plane = payload["execution_resource_scope"]["control_plane"]
+    execution_scope = payload["execution_resource_scope"]
+    assert execution_scope["schema"] == "AV-BS1-h4-p0r-execution-resource-scope-v2"
+    assert execution_scope["contract_revision"] == "P1_versioned_scope_correction_v2"
+    control_plane = execution_scope["control_plane"]
     assert control_plane["independently_bounded"] is True
     assert control_plane["tree_thresholds_equal_factor_envelope"] is True
     assert control_plane["system_floor_recheck_before_and_after_each"] is True
     assert control_plane["implementation_status"] == "implemented_and_static_audited"
     assert control_plane["authorization_blocker"] is False
+    outer_envelope = payload["outer_observer_contract"]["outer_resource_envelope"]
+    for key in (
+        "tree_sample_max_attempts",
+        "tree_sample_retry_event_limit",
+        "tree_sample_retry_policy",
+        "tree_sample_failure_policy",
+        "tree_sample_failure_evidence",
+    ):
+        assert control_plane[key] == outer_envelope[key]
     assert p1._authorization_prerequisites_ready(
         payload["execution_resource_scope"], payload["outer_observer_contract"]
     ) is True
@@ -3570,7 +5406,7 @@ def test_manifest_freezes_current_execution_schema_map() -> None:
     expected = {
         "execution_fixture": "AV-BS1-h4-p0r-execution-fixture-v1",
         "execution_resource_scope": (
-            "AV-BS1-h4-p0r-execution-resource-scope-v1"
+            "AV-BS1-h4-p0r-execution-resource-scope-v2"
         ),
         "outer_observer_contract": "AV-BS1-h4-p0r-outer-observer-contract-v2",
         "review_token": "AV-BS1-h4-p0r-review-token-v1",
@@ -3591,13 +5427,13 @@ def test_manifest_freezes_current_execution_schema_map() -> None:
             "AV-BS1-h4-p0r-emergency-replacement-postvalidation-v1"
         ),
         "control_plane_process_report": (
-            "AV-BS1-h4-p0r-control-plane-process-report-v1"
+            "AV-BS1-h4-p0r-control-plane-process-report-v2"
         ),
         "control_plane_session_index": (
             "AV-BS1-h4-p0r-control-plane-session-index-v1"
         ),
         "control_plane_envelope_close": (
-            "AV-BS1-h4-p0r-control-plane-envelope-close-v1"
+            "AV-BS1-h4-p0r-control-plane-envelope-close-v2"
         ),
         "control_plane_pre_exit_intent": (
             "AV-BS1-h4-p0r-control-plane-pre-exit-intent-evidence-v1"
@@ -4276,6 +6112,338 @@ def test_outer_close_v2_reconciles_retry_births_by_process_id(
     )
     _write_json(bundle["outer_close_path"], duplicate_pid)
     with pytest.raises(p1.AvBsError, match="not unique by process id"):
+        p1._validate_outer_resource_envelope_close(
+            exit_release, complete, tombstone_context, bundle["manifest"]
+        )
+
+
+@pytest.mark.parametrize(
+    (
+        "confirmation",
+        "context",
+        "operation",
+        "win32_error",
+        "birth_kind",
+    ),
+    [
+        (
+            "signaled_handle_and_complete_snapshot_absent",
+            "outer_tree_sample",
+            "open_process",
+            87,
+            "descendant",
+        ),
+        (
+            "signaled_handle_and_complete_snapshot_absent",
+            "outer_tree_sample",
+            "get_process_memory_info",
+            5,
+            "descendant",
+        ),
+        (
+            "limited_query_not_found_and_complete_snapshot_absent",
+            "outer_tree_sample",
+            "get_process_times",
+            None,
+            "descendant",
+        ),
+        (
+            "limited_query_not_found_and_complete_snapshot_absent",
+            "outer_tree_sample",
+            "get_process_memory_info",
+            5,
+            "descendant",
+        ),
+        (
+            "limited_query_not_found_and_complete_snapshot_absent",
+            "outer_pre_spawn_tree_sample",
+            "open_process",
+            87,
+            "future_inner_pid_reuse",
+        ),
+        (
+            "signaled_handle_and_complete_snapshot_absent",
+            "outer_final_tree_sample",
+            "get_process_times",
+            None,
+            "retained_inner_exit",
+        ),
+    ],
+)
+def test_outer_close_v2_accepts_exact_runner_retry_shapes_and_cross_races(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    confirmation: str,
+    context: str,
+    operation: str,
+    win32_error: int | None,
+    birth_kind: str,
+) -> None:
+    bundle = _install_synthetic_outer_terminal_bundle(
+        monkeypatch, tmp_path, passed=False
+    )
+    tombstone_context = p1._validate_consumed_tombstone(
+        bundle["tombstone"], bundle["tombstone_sha256"], bundle["manifest"]
+    )
+    complete = p1._validate_terminal_complete(
+        tombstone_context, bundle["manifest"]
+    )
+    exit_release = p1._validate_terminal_exit_release(
+        complete, tombstone_context, bundle["manifest"]
+    )
+    inner_pid = bundle["outer_close"]["inner_process_id"]
+    inner_birth = bundle["outer_close"]["inner_process_birth_utc_ticks"]
+    if birth_kind == "descendant":
+        process_id = 999
+        expected_birth = 3_000
+        observed_birth = (
+            3_000
+            if confirmation == "signaled_handle_and_complete_snapshot_absent"
+            else None
+        )
+    elif birth_kind == "future_inner_pid_reuse":
+        process_id = inner_pid
+        expected_birth = None
+        observed_birth = None
+    else:
+        process_id = inner_pid
+        expected_birth = inner_birth
+        observed_birth = inner_birth
+    event = _control_retry_event(
+        confirmation=confirmation,
+        context=context,
+        expected_birth=expected_birth,
+        observed_birth=observed_birth,
+        operation=operation,
+        process_id=process_id,
+        win32_error_code=win32_error,
+    )
+    value = deepcopy(bundle["outer_close"])
+    value["tree_sample_confirmed_disappearance_count"] = 1
+    value["tree_sample_retry_events"] = [event]
+    if birth_kind == "descendant":
+        value["sampled_process_identities"].append(
+            {"process_id": process_id, "birth_utc_ticks": expected_birth}
+        )
+        value["sampled_process_identities"].sort(
+            key=lambda row: (row["process_id"], row["birth_utc_ticks"])
+        )
+    _write_json(bundle["outer_close_path"], value)
+
+    validated = p1._validate_outer_resource_envelope_close(
+        exit_release, complete, tombstone_context, bundle["manifest"]
+    )
+    assert validated["value"]["tree_sample_retry_events"] == [event]
+
+
+def test_outer_close_v2_accepts_one_call_attempt_prefix() -> None:
+    manifest = _synthetic_manifest()
+    diagnostics = {
+        "tree_sample_max_attempts": 3,
+        "tree_sample_confirmed_disappearance_count": 2,
+        "tree_sample_retry_events": [
+            _control_retry_event(attempt=1, context="outer_tree_sample"),
+            _control_retry_event(attempt=2, context="outer_tree_sample"),
+        ],
+        "tree_sample_retry_events_truncated": False,
+        "monitor_failure": None,
+    }
+    p1._validate_outer_tree_sample_diagnostics(diagnostics, manifest)
+
+
+@pytest.mark.parametrize(
+    "tamper",
+    [
+        "signaled_null_births",
+        "signaled_birth_mismatch",
+        "fallback_only_operation",
+        "open_process_wrong_error",
+        "process_times_with_error",
+        "limited_observed_birth",
+        "limited_metric_without_expected_birth",
+        "process_id_overflow",
+        "birth_overflow",
+        "win32_overflow",
+        "orphan_attempt_2",
+        "orphan_attempt_3",
+        "context_drift",
+        "successful_attempt_3",
+        "inner_cleanup_context",
+        "outer_root_pid",
+        "inner_root_pid",
+        "retained_inner_during_outer_sample",
+        "bound_future_inner_before_spawn",
+        "unbound_final_inner_exit",
+        "inner_retry_predates_inner_root",
+        "positive_birth_not_in_shared_identity_map",
+    ],
+)
+def test_outer_close_v2_rejects_unemittable_retry_tamper_matrix(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    tamper: str,
+) -> None:
+    bundle = _install_synthetic_outer_terminal_bundle(
+        monkeypatch, tmp_path, passed=False
+    )
+    tombstone_context = p1._validate_consumed_tombstone(
+        bundle["tombstone"], bundle["tombstone_sha256"], bundle["manifest"]
+    )
+    complete = p1._validate_terminal_complete(
+        tombstone_context, bundle["manifest"]
+    )
+    exit_release = p1._validate_terminal_exit_release(
+        complete, tombstone_context, bundle["manifest"]
+    )
+    outer_pid = bundle["outer_close"]["execution_tree_root_pid"]
+    outer_birth = bundle["outer_close"]["execution_tree_root_birth_utc_ticks"]
+    inner_pid = bundle["outer_close"]["inner_process_id"]
+    inner_birth = bundle["outer_close"]["inner_process_birth_utc_ticks"]
+    event = _control_retry_event(
+        context="outer_tree_sample",
+        process_id=999,
+        expected_birth=3_000,
+        observed_birth=3_000,
+    )
+    value = deepcopy(bundle["outer_close"])
+    value["sampled_process_identities"].append(
+        {"process_id": 999, "birth_utc_ticks": 3_000}
+    )
+    value["sampled_process_identities"].sort(
+        key=lambda row: (row["process_id"], row["birth_utc_ticks"])
+    )
+    events = [event]
+    if tamper == "signaled_null_births":
+        event["expected_birth_utc_ticks"] = None
+        event["observed_birth_utc_ticks"] = None
+    elif tamper == "signaled_birth_mismatch":
+        event["observed_birth_utc_ticks"] = 3_001
+    elif tamper == "fallback_only_operation":
+        event["operation"] = "process_identity_probe"
+    elif tamper == "open_process_wrong_error":
+        event["operation"] = "open_process"
+        event["win32_error_code"] = None
+    elif tamper == "process_times_with_error":
+        event["win32_error_code"] = 5
+    elif tamper == "limited_observed_birth":
+        event["confirmation"] = (
+            "limited_query_not_found_and_complete_snapshot_absent"
+        )
+    elif tamper == "limited_metric_without_expected_birth":
+        event["confirmation"] = (
+            "limited_query_not_found_and_complete_snapshot_absent"
+        )
+        event["expected_birth_utc_ticks"] = None
+        event["observed_birth_utc_ticks"] = None
+    elif tamper == "process_id_overflow":
+        event["process_id"] = 2_147_483_648
+    elif tamper == "birth_overflow":
+        event["expected_birth_utc_ticks"] = 9_223_372_036_854_775_808
+        event["observed_birth_utc_ticks"] = 9_223_372_036_854_775_808
+    elif tamper == "win32_overflow":
+        event["operation"] = "get_process_memory_info"
+        event["win32_error_code"] = 2_147_483_648
+    elif tamper == "orphan_attempt_2":
+        event["attempt"] = 2
+    elif tamper == "orphan_attempt_3":
+        event["attempt"] = 3
+    elif tamper == "context_drift":
+        events.append(
+            _control_retry_event(attempt=2, context="inner_tree_sample")
+        )
+    elif tamper == "successful_attempt_3":
+        events = [
+            _control_retry_event(attempt=attempt, context="outer_tree_sample")
+            for attempt in (1, 2, 3)
+        ]
+    elif tamper == "inner_cleanup_context":
+        event["context"] = "inner_cleanup_tree_sample"
+    elif tamper == "outer_root_pid":
+        event["process_id"] = outer_pid
+        event["expected_birth_utc_ticks"] = outer_birth
+        event["observed_birth_utc_ticks"] = outer_birth
+    elif tamper == "inner_root_pid":
+        event["context"] = "inner_tree_sample"
+        event["process_id"] = inner_pid
+        event["expected_birth_utc_ticks"] = inner_birth
+        event["observed_birth_utc_ticks"] = inner_birth
+    elif tamper == "retained_inner_during_outer_sample":
+        event["process_id"] = inner_pid
+        event["expected_birth_utc_ticks"] = inner_birth
+        event["observed_birth_utc_ticks"] = inner_birth
+    elif tamper == "bound_future_inner_before_spawn":
+        event["context"] = "outer_pre_spawn_tree_sample"
+        event["process_id"] = inner_pid
+        event["expected_birth_utc_ticks"] = inner_birth
+        event["observed_birth_utc_ticks"] = inner_birth
+    elif tamper == "unbound_final_inner_exit":
+        event.update(
+            _control_retry_event(
+                confirmation=(
+                    "limited_query_not_found_and_complete_snapshot_absent"
+                ),
+                context="outer_final_tree_sample",
+                expected_birth=None,
+                observed_birth=None,
+                operation="open_process",
+                process_id=inner_pid,
+                win32_error_code=87,
+            )
+        )
+    elif tamper == "inner_retry_predates_inner_root":
+        event["context"] = "inner_tree_sample"
+        event["expected_birth_utc_ticks"] = inner_birth - 1
+        event["observed_birth_utc_ticks"] = inner_birth - 1
+        next(
+            row
+            for row in value["sampled_process_identities"]
+            if row["process_id"] == 999
+        )["birth_utc_ticks"] = inner_birth - 1
+    else:
+        event["process_id"] = 998
+    value["tree_sample_confirmed_disappearance_count"] = len(events)
+    value["tree_sample_retry_events"] = events
+    _write_json(bundle["outer_close_path"], value)
+
+    with pytest.raises(p1.AvBsError) as caught:
+        p1._validate_outer_resource_envelope_close(
+            exit_release, complete, tombstone_context, bundle["manifest"]
+        )
+    assert caught.value.code == "BLOCKED_AV_BS_RESULT_SCHEMA"
+
+
+@pytest.mark.parametrize(
+    "row",
+    [
+        {"process_id": 2_147_483_648, "birth_utc_ticks": 3_000},
+        {"process_id": 999, "birth_utc_ticks": 9_223_372_036_854_775_808},
+    ],
+)
+def test_outer_close_v2_rejects_sampled_identity_scalar_overflow(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    row: dict[str, int],
+) -> None:
+    bundle = _install_synthetic_outer_terminal_bundle(
+        monkeypatch, tmp_path, passed=False
+    )
+    tombstone_context = p1._validate_consumed_tombstone(
+        bundle["tombstone"], bundle["tombstone_sha256"], bundle["manifest"]
+    )
+    complete = p1._validate_terminal_complete(
+        tombstone_context, bundle["manifest"]
+    )
+    exit_release = p1._validate_terminal_exit_release(
+        complete, tombstone_context, bundle["manifest"]
+    )
+    value = deepcopy(bundle["outer_close"])
+    value["sampled_process_identities"].append(row)
+    value["sampled_process_identities"].sort(
+        key=lambda item: (item["process_id"], item["birth_utc_ticks"])
+    )
+    _write_json(bundle["outer_close_path"], value)
+
+    with pytest.raises(p1.AvBsError, match="outer sampled identity value invalid"):
         p1._validate_outer_resource_envelope_close(
             exit_release, complete, tombstone_context, bundle["manifest"]
         )
@@ -5869,8 +8037,12 @@ def _run_tree_sample_slice(
     return json.loads(lines[0])
 
 
+@pytest.mark.parametrize(
+    "context",
+    ["outer_tree_sample", "control_active_outer_tree_sample"],
+)
 def test_tree_sample_restarts_whole_sample_after_confirmed_nonroot_exit(
-    tmp_path: Path,
+    tmp_path: Path, context: str,
 ) -> None:
     result = _run_tree_sample_slice(
         tmp_path,
@@ -5905,9 +8077,9 @@ $ids=New-Object 'System.Collections.Generic.HashSet[int]'
 $births=New-Object 'System.Collections.Generic.Dictionary[int, Int64]'
 $births.Add(100,[int64]1000); [void]$ids.Add(100)
 $diagnostics=New-TreeSampleDiagnostics 16
-$sample=Get-TreeSample 100 1000 $ids $births 'outer_tree_sample' $diagnostics $providers 3
+$sample=Get-TreeSample 100 1000 $ids $births '__TEST_CONTEXT__' $diagnostics $providers 3
 [ordered]@{sample=$sample;enumerations=$script:enumerations;child_identity_queries=$script:childIdentityQueries;child_metric_calls=$script:childMetricCalls;snapshot_queries=$script:snapshotQueries;retry_count=$diagnostics.confirmed_disappearance_count;events=@($diagnostics.retry_events)} | ConvertTo-Json -Depth 12 -Compress
-"""
+""".replace("__TEST_CONTEXT__", context)
     )
     assert result["enumerations"] == 2
     assert result["child_identity_queries"] == 2
@@ -5932,7 +8104,7 @@ $sample=Get-TreeSample 100 1000 $ids $births 'outer_tree_sample' $diagnostics $p
             "confirmation": (
                 "limited_query_not_found_and_complete_snapshot_absent"
             ),
-            "context": "outer_tree_sample",
+            "context": context,
             "expected_birth_utc_ticks": 3000,
             "message_code": "CONFIRMED_NONROOT_DISAPPEARANCE",
             "observed_birth_utc_ticks": None,
@@ -6024,6 +8196,72 @@ catch { [ordered]@{message_code=$_.Exception.Data['message_code'];operation=$_.E
         "child_identity_queries": 1,
         "snapshot_queries": 0,
         "retry_count": 0,
+    }
+
+
+def test_tree_sample_exited_metric_birth_mismatch_is_fatal_before_confirmation(
+    tmp_path: Path,
+) -> None:
+    result = _run_tree_sample_slice(
+        tmp_path,
+        r"""
+$script:enumerations=0; $script:childIdentityQueries=0; $script:snapshotQueries=0
+$providers=[ordered]@{
+    Enumerate={param([int]$RootProcessId)
+        $script:enumerations+=1; return @([int]100,[int]200)
+    }
+    Identity={param([int]$ProcessId)
+        if($ProcessId -eq 100){return [ordered]@{status='live';operation='get_process_times';win32_error_code=$null;birth_utc_ticks=[int64]1000}}
+        $script:childIdentityQueries+=1
+        if($script:childIdentityQueries -eq 1){return [ordered]@{status='live';operation='get_process_times';win32_error_code=$null;birth_utc_ticks=[int64]2000}}
+        return [ordered]@{status='not_found';operation='open_process';win32_error_code=[int]87;birth_utc_ticks=$null}
+    }
+    Metrics={param([int]$ProcessId)
+        if($ProcessId -eq 200){return [ordered]@{status='exited';operation='get_process_times';win32_error_code=$null;birth_utc_ticks=[int64]3000;values=$null}}
+        return [ordered]@{status='ok';operation='get_process_memory_info';win32_error_code=$null;birth_utc_ticks=[int64]1000;values=[int64[]]@(1,1,1,1,1,1,1,1)}
+    }
+    SnapshotContains={param([int]$ProcessId) $script:snapshotQueries+=1; return $false}
+}
+$ids=New-Object 'System.Collections.Generic.HashSet[int]'
+$births=New-Object 'System.Collections.Generic.Dictionary[int, Int64]'
+$births.Add(100,[int64]1000); [void]$ids.Add(100)
+$diagnostics=New-TreeSampleDiagnostics 16
+try { [void](Get-TreeSample 100 1000 $ids $births 'outer_tree_sample' $diagnostics $providers 3); exit 91 }
+catch {
+    [ordered]@{
+        message_code=$_.Exception.Data['message_code']
+        attempt=$_.Exception.Data['attempt']
+        confirmation=$_.Exception.Data['confirmation']
+        expected_birth=$_.Exception.Data['expected_birth_utc_ticks']
+        observed_birth=$_.Exception.Data['observed_birth_utc_ticks']
+        operation=$_.Exception.Data['operation']
+        process_id=$_.Exception.Data['process_id']
+        process_role=$_.Exception.Data['process_role']
+        win32_error_code=$_.Exception.Data['win32_error_code']
+        enumerations=$script:enumerations
+        child_identity_queries=$script:childIdentityQueries
+        snapshot_queries=$script:snapshotQueries
+        retry_count=$diagnostics.confirmed_disappearance_count
+        stored_retry_events=@($diagnostics.retry_events).Count
+    } | ConvertTo-Json -Compress
+}
+""",
+    )
+    assert result == {
+        "message_code": "NONROOT_PID_REUSE",
+        "attempt": 1,
+        "confirmation": None,
+        "expected_birth": 2000,
+        "observed_birth": 3000,
+        "operation": "get_process_times",
+        "process_id": 200,
+        "process_role": "descendant",
+        "win32_error_code": None,
+        "enumerations": 1,
+        "child_identity_queries": 1,
+        "snapshot_queries": 0,
+        "retry_count": 0,
+        "stored_retry_events": 0,
     }
 
 
@@ -6312,6 +8550,87 @@ catch { [ordered]@{message_code=$_.Exception.Data['message_code'];operation=$_.E
     }
 
 
+def test_tree_sample_shared_birth_registry_reconciles_outer_and_inner_ownership(
+    tmp_path: Path,
+) -> None:
+    result = _run_tree_sample_slice(
+        tmp_path,
+        r"""
+$outerIds=New-Object 'System.Collections.Generic.HashSet[int]'
+$innerIds=New-Object 'System.Collections.Generic.HashSet[int]'
+$sharedBirths=New-Object 'System.Collections.Generic.Dictionary[int, Int64]'
+$sharedBirths.Add(100,[int64]1000); [void]$outerIds.Add(100)
+$sharedBirths.Add(150,[int64]1500); [void]$outerIds.Add(150); [void]$innerIds.Add(150)
+$diagnostics=New-TreeSampleDiagnostics 16
+$outerProviders=[ordered]@{
+    Enumerate={param([int]$RootProcessId) return @([int]100,[int]150,[int]200)}
+    Identity={param([int]$ProcessId)
+        $birth=switch($ProcessId){100{[int64]1000}150{[int64]1500}200{[int64]2000}}
+        return [ordered]@{status='live';operation='get_process_times';win32_error_code=$null;birth_utc_ticks=$birth}
+    }
+    Metrics={param([int]$ProcessId)
+        $birth=switch($ProcessId){100{[int64]1000}150{[int64]1500}200{[int64]2000}}
+        return [ordered]@{status='ok';operation='get_process_memory_info';win32_error_code=$null;birth_utc_ticks=$birth;values=[int64[]]@(1,1,1,1,1,1,1,1)}
+    }
+    SnapshotContains={param([int]$ProcessId) throw 'snapshot must not run'}
+}
+[void](Get-TreeSample 100 1000 $outerIds $sharedBirths 'outer_tree_sample' $diagnostics $outerProviders 3)
+$innerProviders=[ordered]@{
+    Enumerate={param([int]$RootProcessId) return @([int]150,[int]250)}
+    Identity={param([int]$ProcessId)
+        $birth=if($ProcessId -eq 150){[int64]1500}else{[int64]2500}
+        return [ordered]@{status='live';operation='get_process_times';win32_error_code=$null;birth_utc_ticks=$birth}
+    }
+    Metrics={param([int]$ProcessId)
+        $birth=if($ProcessId -eq 150){[int64]1500}else{[int64]2500}
+        return [ordered]@{status='ok';operation='get_process_memory_info';win32_error_code=$null;birth_utc_ticks=$birth;values=[int64[]]@(1,1,1,1,1,1,1,1)}
+    }
+    SnapshotContains={param([int]$ProcessId) throw 'snapshot must not run'}
+}
+[void](Get-TreeSample 150 1500 $innerIds $sharedBirths 'inner_tree_sample' $diagnostics $innerProviders 3)
+$reuseProviders=[ordered]@{
+    Enumerate={param([int]$RootProcessId) return @([int]150,[int]200)}
+    Identity={param([int]$ProcessId)
+        $birth=if($ProcessId -eq 150){[int64]1500}else{[int64]3000}
+        return [ordered]@{status='live';operation='get_process_times';win32_error_code=$null;birth_utc_ticks=$birth}
+    }
+    Metrics={param([int]$ProcessId)
+        if($ProcessId -ne 150){throw 'metric must not run for reused PID'}
+        return [ordered]@{status='ok';operation='get_process_memory_info';win32_error_code=$null;birth_utc_ticks=[int64]1500;values=[int64[]]@(1,1,1,1,1,1,1,1)}
+    }
+    SnapshotContains={param([int]$ProcessId) throw 'snapshot must not run'}
+}
+try { [void](Get-TreeSample 150 1500 $innerIds $sharedBirths 'inner_cleanup_tree_sample' $diagnostics $reuseProviders 3); exit 91 }
+catch {
+    $registry=@($sharedBirths.Keys | Sort-Object | ForEach-Object {[ordered]@{process_id=[int]$_;birth_utc_ticks=[int64]$sharedBirths[[int]$_]}})
+    [ordered]@{
+        message_code=$_.Exception.Data['message_code']
+        expected_birth=$_.Exception.Data['expected_birth_utc_ticks']
+        observed_birth=$_.Exception.Data['observed_birth_utc_ticks']
+        outer_ids=@($outerIds | Sort-Object)
+        inner_ids=@($innerIds | Sort-Object)
+        shared_registry=$registry
+        retry_count=$diagnostics.confirmed_disappearance_count
+    } | ConvertTo-Json -Depth 8 -Compress
+}
+""",
+    )
+    assert result == {
+        "message_code": "NONROOT_PID_REUSE",
+        "expected_birth": 2_000,
+        "observed_birth": 3_000,
+        "outer_ids": [100, 150, 200],
+        "inner_ids": [150, 250],
+        "shared_registry": [
+            {"process_id": 100, "birth_utc_ticks": 1_000},
+            {"process_id": 150, "birth_utc_ticks": 1_500},
+            {"process_id": 200, "birth_utc_ticks": 2_000},
+            {"process_id": 250, "birth_utc_ticks": 2_500},
+        ],
+        "retry_count": 0,
+    }
+
+
 def test_runner_native_process_snapshot_and_metric_probes_are_fail_closed() -> None:
     source = RUNNER.read_text(encoding="utf-8")
     assert "[ValidateRange(1, 3)][int]$MaximumAttempts = 1" in source
@@ -6337,6 +8656,219 @@ def test_runner_native_process_snapshot_and_metric_probes_are_fail_closed() -> N
     assert "FILETIME creationAfter, exitAfter, kernelAfter, userAfter;" in metric_probe
     assert "!IsZero(exitAfter)" in metric_probe
     assert "error == ERROR_INVALID_PARAMETER ? 0 : -1" in metric_probe
+
+
+def test_runner_control_tree_samples_use_bounded_diagnostics_but_factor_calls_do_not() -> None:
+    source = RUNNER.read_text(encoding="utf-8")
+    assert "$treeSampleMaximumAttempts = 3" in source
+    assert "$treeSampleRetryEventLimit = 16" in source
+    control = source[
+        source.index("function Invoke-ControlPlanePython") : source.index(
+            "function Get-OuterObserverSessionPaths"
+        )
+    ]
+    contexts = [
+        "control_pre_helper_tree_sample",
+        "control_active_outer_tree_sample",
+        "control_active_cleanup_root_tree_sample",
+        "control_post_completion_outer_tree_sample",
+        "control_post_completion_cleanup_root_tree_sample",
+        "control_envelope_close_tree_sample",
+    ]
+    assert control.count(
+        "$currentControlTreeSampleContext $controlTreeSampleDiagnostics `"
+    ) == 6
+    assert control.count("$null $treeSampleMaximumAttempts") == 6
+    assert (
+        "$controlTreeSampleDiagnostics = New-TreeSampleDiagnostics "
+        "$treeSampleRetryEventLimit"
+    ) in control
+    for context in contexts:
+        assignment = f'$currentControlTreeSampleContext = "{context}"'
+        assert assignment in control
+        call_start = control.index("Get-TreeSample", control.index(assignment))
+        call = control[call_start : call_start + 500]
+        assert "$currentControlTreeSampleContext $controlTreeSampleDiagnostics `" in call
+        assert "$null $treeSampleMaximumAttempts" in call
+
+    factor_start = source.rindex("$claimPayload = [ordered]@{")
+    factor_end = source.index("if ($null -eq $runnerExitCode)", factor_start)
+    factor_calls = [
+        line.strip()
+        for line in source[factor_start:factor_end].splitlines()
+        if "Get-TreeSample " in line
+    ]
+    assert len(factor_calls) == 5
+    assert all("$treeSampleMaximumAttempts" not in call for call in factor_calls)
+    assert all("$controlTreeSampleDiagnostics" not in call for call in factor_calls)
+
+
+def test_runner_control_monitor_failure_is_first_fatal_sticky_through_close() -> None:
+    source = RUNNER.read_text(encoding="utf-8")
+    control = source[
+        source.index("function Invoke-ControlPlanePython") : source.index(
+            "function Get-OuterObserverSessionPaths"
+        )
+    ]
+    assert control.count("$monitorFailure = $null") == 1
+    assert control.count("if ($null -eq $monitorFailure)") >= 5
+    assert control.count("$monitorFailure = Get-NormalizedOuterMonitorFailure") >= 4
+    for fallback in (
+        "control_supervisor_exception",
+        "control_cleanup_exception",
+        "control_provenance_exception",
+    ):
+        assert f'"{fallback}"' in control
+
+    report_start = control.index("$report = [ordered]@{")
+    close_sample = control.index(
+        '$currentControlTreeSampleContext = "control_envelope_close_tree_sample"'
+    )
+    close_start = control.index("$envelopeClose = [ordered]@{")
+    assert report_start < close_sample < close_start
+    assert "monitor_failure = $monitorFailure" in control[report_start:close_sample]
+    assert "monitor_failure = $monitorFailure" in control[close_start:]
+    assert "$monitorFailure = $null" not in control[report_start:]
+
+
+def test_runner_close_only_retry_events_are_bound_to_frozen_report_identities() -> None:
+    source = RUNNER.read_text(encoding="utf-8")
+    control = source[
+        source.index("$closeOnlyRetryIdentityCoveragePass = $true") : source.index(
+            "$monitorOk = (", source.index("$closeOnlyRetryIdentityCoveragePass = $true")
+        )
+    ]
+    for required in (
+        "$closeOnlyConfirmedDisappearanceCount -ne $closeOnlyStoredRetryEventCount",
+        "$canonicalControlTreeSampleRetryEventsBeforeEnvelopeClose[$eventIndex]",
+        'Test-StrictJsonValueEqual',
+        '$closeEvent.context -ne "control_envelope_close_tree_sample"',
+        '$closeEvent.message_code -ne "CONFIRMED_NONROOT_DISAPPEARANCE"',
+        "-not $reportObservedBirthByProcessId.ContainsKey",
+        "$closeEventExpectedBirth",
+        "$closeEventObservedBirth",
+        '"CONTROL_ENVELOPE_CLOSE_RETRY_IDENTITY_UNCOVERED"',
+        '"control_provenance_exception"',
+    ):
+        assert required in control
+
+
+def test_runner_outer_identity_registry_is_shared_without_expanding_cleanup_ids() -> None:
+    source = RUNNER.read_text(encoding="utf-8")
+    outer = source[source.index("function Invoke-OuterObserverPrimary") :]
+    assert outer.count("$innerOwnedBirthTicks = $outerObservedBirthTicks") == 1
+    assert outer.count(
+        "$innerOwnedIds = New-Object 'System.Collections.Generic.HashSet[int]'"
+    ) == 1
+    assert "$innerOwnedIds = $outerObservedIds" not in outer
+    assert "$innerOwnedBirthTicks.Add($innerProcessId, $innerBirthTicks)" in outer
+    assert "$outerObservedBirthTicks.Add($innerProcessId, $innerBirthTicks)" not in outer
+    for context in ("inner_tree_sample", "inner_cleanup_tree_sample"):
+        context_index = outer.index(f'"{context}"')
+        call = outer[outer.rfind("Get-TreeSample", 0, context_index) : context_index + 180]
+        assert "$innerOwnedIds $innerOwnedBirthTicks" in call
+    cleanup = outer[
+        outer.index("$liveOwnedBeforeCleanup = @()") : outer.index(
+            "$cleanupVerified = ("
+        )
+    ]
+    assert "Get-LiveObservedProcessIds $innerOwnedIds $innerOwnedBirthTicks" in cleanup
+    assert "Stop-ProcessTree $innerProcessId $innerOwnedIds $innerOwnedBirthTicks" in cleanup
+    assert "$outerObservedIds" not in cleanup
+    identity_serialization = outer[
+        outer.index("$identityEvidence = @()") : outer.index(
+            "$canonicalPeak = [ordered]@{"
+        )
+    ]
+    assert "$outerObservedBirthTicks.Keys" in identity_serialization
+    assert "$innerOwnedIds" not in identity_serialization
+
+
+def test_runner_envelope_close_thresholds_cannot_replace_an_earlier_stop_reason() -> None:
+    source = RUNNER.read_text(encoding="utf-8")
+    control = source[
+        source.index("function Invoke-ControlPlanePython") : source.index(
+            "function Get-OuterObserverSessionPaths"
+        )
+    ]
+    close_context = control.index(
+        '$currentControlTreeSampleContext = "control_envelope_close_tree_sample"'
+    )
+    update_peak = control.index(
+        "Update-ControlPlanePeak $peak $closeTree $finalSystem", close_context
+    )
+    catch_start = control.index("\n        catch {", update_peak)
+    threshold_region = control[update_peak:catch_start]
+    guard_start = threshold_region.index("if (-not $stopReason) {")
+    assignments = list(
+        re.finditer(
+            r'\$stopReason = "CONTROL_(?:TREE|POSTEVIDENCE)_[A-Z0-9_]+"',
+            threshold_region,
+        )
+    )
+    assert len(assignments) == 7
+    assert all(match.start() > guard_start for match in assignments)
+    assert threshold_region.rstrip().endswith("}")
+
+
+def test_runner_incomplete_retry_evidence_is_a_provenance_failure_and_never_passes() -> None:
+    source = RUNNER.read_text(encoding="utf-8")
+    start = source.index("$controlTreeSampleRetryEvidenceComplete = (")
+    end = source.index("$closeOnlyConfirmedDisappearanceCount", start)
+    branch = source[start:end]
+    for required in (
+        "-not [bool]$controlTreeSampleDiagnostics.retry_events_truncated",
+        "$finalTreeSampleConfirmedDisappearanceCount -eq "
+        "$finalTreeSampleRetryEventCount",
+        "if (-not $controlTreeSampleRetryEvidenceComplete)",
+        '"CONTROL_TREE_SAMPLE_RETRY_EVIDENCE_INCOMPLETE"',
+        '"control_provenance_exception"',
+    ):
+        assert required in branch
+
+    gate = source[
+        source.index("$monitorOk = (", end) : source.index(
+            "$mandatoryGate = (", source.index("$monitorOk = (", end)
+        )
+    ]
+    assert "$controlTreeSampleRetryEvidenceComplete" in gate
+
+
+def test_runner_no_claim_classification_records_token_state_without_mutation_or_seal() -> None:
+    source = RUNNER.read_text(encoding="utf-8")
+    exact_state = (
+        "no_claim_exact_original_authorized_token_retained_public_attempt_spent_"
+        "no_recovery_performed"
+    )
+    exact_index = source.index(exact_state)
+    branch_start = source.rfind("        else {", 0, exact_index)
+    branch_end = source.index("\n    }\n    catch {", exact_index)
+    branch = source[branch_start:branch_end]
+
+    for required in (
+        "Test-Path -LiteralPath $reviewTokenPath -PathType Leaf",
+        "$currentTokenItem.Length -gt 0",
+        "$currentTokenItem.Length -le 16MB",
+        "$currentTokenSha256BeforeByteCapture = Get-Sha256 $reviewTokenPath",
+        "$postCleanupTokenSha256 = Get-Sha256 $reviewTokenPath",
+        "$currentTokenBytes = [IO.File]::ReadAllBytes($reviewTokenPath)",
+        "$currentTokenSha256BeforeByteCapture -eq $postCleanupTokenSha256",
+        "$postCleanupTokenSha256 -eq $originalTokenSha256",
+        "Test-ByteArrayEqual $currentTokenBytes $originalTokenBytes",
+        exact_state,
+        "no_claim_token_present_but_drifted_no_recovery_no_terminal_seal",
+        "no_claim_token_absent_no_recovery_no_terminal_seal",
+    ):
+        assert required in branch
+    for forbidden in (
+        "Set-OuterObserverEmergencyConsumedTombstone",
+        "Set-EmergencyConsumedTombstone",
+        "Write-AtomicUtf8NoBom",
+        "[IO.File]::Move",
+        "$terminalSealAccepted",
+        "$mandatoryOuterGate",
+    ):
+        assert forbidden not in branch
 
 
 def test_runner_gates_inner_and_outer_token_mutation_on_verified_cleanup() -> None:

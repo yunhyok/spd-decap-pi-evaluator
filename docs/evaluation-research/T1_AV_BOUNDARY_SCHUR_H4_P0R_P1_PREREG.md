@@ -2,10 +2,10 @@
 
 ## 1. Current status and authority
 
-This document preregisters the second corrective static executable-contract
-candidate after two public invocations stopped before claim and factor work.
+This document preregisters the third corrective static executable-contract
+candidate after three public invocations stopped before claim and factor work.
 It is pending final document audit and a new clean token-absent contract
-commit. It does not itself authorize a pilot, and neither prior token may be
+commit. It does not itself authorize a pilot, and none of the three prior tokens may be
 reused.
 
 The current safe manifest classification is:
@@ -18,15 +18,18 @@ The current safe manifest classification is:
 - no H4-P0R-P1 factorization or physics solve has run; and
 - no later H4-P1 stage is authorized.
 
-The current live manifest now records
+The retry-v3 live manifest records execution resource scope v2,
 `control_plane.independently_bounded=true`,
 `tree_thresholds_equal_factor_envelope=true`,
 `system_floor_recheck_before_and_after_each=true`, and
 `implementation_status=implemented_and_static_audited` for both the bounded
-control-plane supervisor and outer observer, with their readiness-specific
-`authorization_blocker=false`. These facts make the exact candidate eligible
-for later token review; they do not authorize a pilot while the token is absent
-and do not change any terminal or next-stage authorization blocker.
+control-plane supervisor and outer observer, with the readiness-specific
+`authorization_blocker=false`. Exactly six explicitly instrumented
+outer-observer sampling contexts plus six explicitly instrumented control-plane
+sampling contexts (12 total) opt into `MaximumAttempts=3`; factor sampling
+retains the default `MaximumAttempts=1`. These facts make the exact candidate eligible for a
+later token review; they do not authorize a pilot while the token is absent and
+do not change any terminal or next-stage authorization blocker.
 
 ## 2. Frozen program identity and ancestry
 
@@ -47,9 +50,9 @@ order, numerical ceilings, or forbidden-operation boundary.
 
 | Artifact | SHA-256 |
 | --- | --- |
-| [Python fixture](../../tools/research/av_bs1_boundary_schur_h4_p0r_p1.py) | `8c497cb1d0926600b2ddd974df6fd8d40b09471c617869294a01c0e018ce5acf` |
-| [PowerShell runner](../../tools/research/run_av_bs1_h4_p0r_p1_stage.ps1) | `4272d6725cb0e16b7ce39b083985965f792da5893f222ba07cf91695fba8f30c` |
-| [Static P1 tests](../../tests/test_research_av_bs1_boundary_schur_h4_p0r_p1.py) | `b44366596690d6d55d18a89d8df2370faca767fca722affd5e07268da3195235` |
+| [Python fixture](../../tools/research/av_bs1_boundary_schur_h4_p0r_p1.py) | `95c9f5c08282105f7934fbea194694fff3ab850daac633619534044721639234` |
+| [PowerShell runner](../../tools/research/run_av_bs1_h4_p0r_p1_stage.ps1) | `cee65497b414a5c9da2b572dc2f026a496b304889c7ddf86a0a2856ebb842d9c` |
+| [Static P1 tests](../../tests/test_research_av_bs1_boundary_schur_h4_p0r_p1.py) | `0f118612aefa9dc80526abf6604a2234f14c50454000f76ef172a534398042fd` |
 
 The final SHA-256 of this document and the live P1 wrapper manifest payload are
 intentionally not embedded here. The fixture binds
@@ -149,6 +152,14 @@ implementation and independent static audit support the live
 implementation-readiness statement, not a claim that an authorized pilot has
 already run.
 
+Retry-v3 versions the report and close as
+`AV-BS1-h4-p0r-control-plane-process-report-v2` and
+`AV-BS1-h4-p0r-control-plane-envelope-close-v2`; execution resource scope is
+`AV-BS1-h4-p0r-execution-resource-scope-v2`. Both report and close carry exactly
+`tree_sample_max_attempts`, `tree_sample_confirmed_disappearance_count`,
+`tree_sample_retry_events`, `tree_sample_retry_events_truncated`, and
+`monitor_failure` as the new control retry fields.
+
 ## 7. Resource ceilings and failure classification
 
 The inherited factor and outer ceilings are 900 s wall time, 4 GiB sampled
@@ -193,6 +204,8 @@ terminal sample is accepted only after the relevant retained root has actually
 exited, or after a verified no-spawn outcome, and the observed owned tree has
 zero survivors.
 
+### 8.1 Historical retry-v2 outer-observer sampler
+
 The envelopes use sampled Toolhelp32/PSAPI membership, not a Windows Job
 Object. Descendants created and exited entirely between polls are not claimed.
 Each tree sample is nevertheless transactional and bounded. It has at most
@@ -222,6 +235,52 @@ token bytes, and absence of session/claim/factor evidence; it is not represented
 as a durable sampled close.
 The evidence is therefore a precise sampled contract, not a race-free proof of
 every process that ever existed.
+
+### 8.2 Current retry-v3 outer and control sampling contract
+
+`Get-TreeSample` retains its default `MaximumAttempts=1`, and every factor call
+site remains unchanged at that default. Explicit `MaximumAttempts=3` and retry
+event limit `16` apply only to the already instrumented outer-observer contexts
+and these six control contexts:
+
+1. `control_pre_helper_tree_sample`;
+2. `control_active_outer_tree_sample`;
+3. `control_active_cleanup_root_tree_sample`;
+4. `control_post_completion_outer_tree_sample`;
+5. `control_post_completion_cleanup_root_tree_sample`; and
+6. `control_envelope_close_tree_sample`.
+
+Control typed events use the same fixed schema and arrival order as outer
+events. The process-report event list is the exact prefix frozen before
+envelope-close sampling; the close list is final. Confirmed count is count-all,
+while the stored list is bounded to 16 and exposes truncation explicitly. The
+first fatal `monitor_failure` is sticky even if later cleanup or close sampling
+succeeds. A passing control gate requires null failure, no truncation,
+confirmed count equal to emitted events, and no attempt-three exhaustion.
+
+Every close-only event that carries a non-null expected or observed birth must
+match the frozen report PID→birth map. It must identify the envelope-close
+context, a PID, at least one non-null birth, and matching non-null birth values;
+null/null evidence cannot confer pass. Incomplete or truncated evidence fails
+with `CONTROL_TREE_SAMPLE_RETRY_EVIDENCE_INCOMPLETE`. An uncovered close-only
+identity fails with `CONTROL_ENVELOPE_CLOSE_RETRY_IDENTITY_UNCOVERED`. Both use
+the typed `control_provenance_exception` fallback and cannot overwrite an
+earlier sticky fatal. Generic non-tree supervisor and cleanup catches use only
+`control_supervisor_exception` and `control_cleanup_exception`; structured tree
+exceptions retain their exact context and native operation.
+
+Outer and inner sampling share one PID→birth evidence dictionary, so every
+successful inner-only observation is serialized in final
+`sampled_process_identities` and a cross-context PID/birth conflict fails as
+`NONROOT_PID_REUSE` at the exact sample attempt. Their ownership ID sets remain
+separate and are the only sets iterated by live-check and termination helpers;
+the evidence union therefore cannot expand cleanup ownership. Before any
+disappearance confirmation, an `exited` metric probe must carry an actual
+positive `Int64` birth equal to the already bound birth. Missing/invalid birth
+fails `PROCESS_METRIC_IDENTITY_OR_VALUE_INVALID`; mismatch fails
+`NONROOT_PID_REUSE`; neither path retries. After report freeze, close-phase
+threshold/system checks assign a stop reason only when none exists, preserving
+the first failed disposition together with the sticky first monitor failure.
 
 ## 9. One-use token and claim lifecycle
 
@@ -352,6 +411,16 @@ causes no token mutation and no seal. Interruption after replacement begins
 may leave a pending, non-authoritative tombstone plus recovery/journal state;
 it never creates a valid seal or terminal authority by itself.
 
+When no claim exists after cleanup, the runner always classifies the canonical
+token read-only and never replaces, deletes, recovers, or seals it. Exact
+original bytes record their raw SHA-256 and
+`no_claim_exact_original_authorized_token_retained_public_attempt_spent_no_recovery_performed`.
+Bounded present drift records the current raw SHA-256 and
+`no_claim_token_present_but_drifted_no_recovery_no_terminal_seal`. Absence uses
+null SHA-256 and `no_claim_token_absent_no_recovery_no_terminal_seal`; an
+unbounded present token is also drifted with null SHA-256. Exact classification
+requires hash-before/read/hash-after stability plus byte equality.
+
 ## 14. Mandatory no-seal and external boundaries
 
 A missing token-consumer control report or envelope-close reference is a valid
@@ -369,17 +438,20 @@ The lifecycle guarantees apply to controlled paths while the responsible
 runner/observer is executing. An external runner kill, machine kill, or
 adversarial local caller that kills processes or mutates owned evidence is
 explicitly not guaranteed to produce a tombstone or terminal seal. Before
-exclusive claim creation, an untouched authorized token may remain retryable;
-after a non-adversarial interruption with a surviving owned claim, local replay
-remains blocked. No uncontrolled interruption by itself creates terminal
-authority, and protection against self-consistent adversarial rewrites is not
-claimed.
+exclusive claim creation, authorized token bytes may remain unchanged, but a
+public attempt is spent: that token is never reused and must be retired without
+mutation or terminal sealing. After a non-adversarial interruption with a
+surviving owned claim, local replay remains blocked. No uncontrolled
+interruption by itself creates terminal authority, and protection against
+self-consistent adversarial rewrites is not claimed.
 
 The exact disclosures remain
 `external_runner_or_machine_kill_terminal_state_guaranteed=false` and
 `adversarial_local_caller_exclusion_claimed=false`.
 
 ## 15. Static evidence for this candidate
+
+### 15.1 Historical retry-v2 evidence and the first two attempts
 
 The static P1 suite passed **187 tests** with an autouse tripwire that raises on
 any real `scipy.sparse.linalg.splu` call. It includes direct filesystem tests
@@ -459,29 +531,90 @@ token-absent. The present whole-sample retry and typed outer-close-v2 evidence
 are the corrective contract for that second pre-factor interruption, not a
 factor-fit result.
 
+### 15.2 Third public attempt under retry-v2
+
+Retry-v2 contract commit `29aeed318abb1cefb189917d707066987e5ea3b3`
+was the sole parent of fresh token-only child
+`6328174b8315f71b407f79584f134359b9f48685`. Token ID
+`7af97159e9224924832085a293c65c27` was invoked exactly once from
+`2026-08-15T10:58:35.7129115Z` through
+`2026-08-15T10:58:39.7341700Z`; the public runner returned exit `2`.
+
+The outer session is
+`validation-output/av-bs1/outer-observer/session-399b2ac2a1754822bd7da61aae88acaf`
+and its close SHA-256 is
+`a675b5f829e343717d66c1c1d4d40335aed7015c09ad5c3385d2d90aa97e20cd`.
+The control session is
+`validation-output/av-bs1/control-plane/session-401d8ddafdbe42628541ebe2bdc367cf`.
+Its preflight process report SHA-256 is
+`da6069826cf46335bb8b86655abfaad8eb3fb61c87d076ebf916849f998c5f7b`;
+its pre-close and final session-index SHA-256 values are
+`c693ad457906f54047427e7b9d831d9b1cd764d0457d3557a872c6a5f8fe5018`
+and `f4824fba0f58c71b85acd1fc286aa29e0d323ef704e828649119c6e39f78d579`.
+
+Outer inner-ready/start-release and control bootstrap-ready/start-release were
+durable before the failure. The preflight report then recorded
+`TRANSIENT_DESCENDANT_DISAPPEARANCE_RETRY_EXHAUSTED` and
+`CONTROL_PLANE_SUPERVISOR_EXCEPTION`, cleanup verified, and gate false. The
+retry-v2 control sampling call sites inherited the function default
+`MaximumAttempts=1`; only outer sampling had the explicit three-attempt
+diagnostics. Thus a confirmed non-root disappearance exhausted the sole
+control attempt. Control target completion, claim creation, and factor-child
+spawn occur later and are absent. No factor, RHS, solve, H4 physics, PowerSI
+result, 8 GiB proof, tombstone, or terminal seal was produced.
+
+The exact original authorized token bytes remained present but the public
+attempt was spent. The token was never reused and was removed by deletion-only
+retirement commit `ba97dd8b274659a649d9a4020193c3ef72572665`. Current token
+state is absent.
+
+### 15.3 Current control-plane retry-v3 static evidence
+
+Retry-v3 adds report/close-v2 and scope-v2 control retry evidence described in
+Sections 6 and 8, including exact report-prefix-close ordering, count-all and
+bounded-storage semantics, sticky first-fatal preservation, completeness and
+close-only PID/birth coverage gates, and strict null/pass semantics. Factor
+sampling remains uninstrumented at the one-attempt default. The exact frozen
+source hashes are in Section 3. The full no-cache suite passed **312/312** in
+77.99 s; the implementer-focused set passed **45/45**, and an independent
+focused audit passed **74** with **238 deselected**. Python compilation,
+PowerShell AST parsing, exact-byte binding checks, and diff checks are clean.
+No static test calls a primary stage, creates a review token, or performs a real
+factor or physics operation.
+
+Two independent-audit observations remain explicitly deferred hardening, not
+authorization gaps. A capped failed attempt-three virtual identity omitted
+from stored retry events is not separately bound, but attempt-three exhaustion
+already makes `monitor_failure` non-null and the gate false. A preserved failed
+`stop_reason` is required to be nonempty rather than revalidated against an
+exact allowlist at the final close, but it is coupled to an already sticky
+failure and cannot authorize pass. Both observations are failed-only; neither
+can produce terminal authority, and `next_stage_authorized` remains false.
+
 ## 16. Exact next sequence
 
 The only permitted next sequence is:
 
-The control-plane and outer-observer readiness transition plus the bounded
-tree-sample correction have been applied to this candidate. They do not create
-or authorize a token. The retired token-only commits `b6c8615...` and
-`d9e064f...` must never be invoked again.
+The control-plane and outer-observer readiness transition plus retry-v3 bounded
+tree-sample evidence have been applied to this candidate. They do not create or
+authorize a token. The retired token-only commits `b6c8615...`, `d9e064f...`,
+and `6328174...` must never be invoked again.
 
-1. Freeze these readiness-complete corrective bytes, complete an independent final
-   document/contract audit, and compute the final document SHA-256 and resulting
-   live P1 wrapper payload externally.
-2. Only after that audit, create one clean executable-contract commit
-   containing the reviewed fixture, runner, tests, document, and manifest
-   bindings. The contract commit contains no P1 review token.
-3. Re-read the exact committed manifest. Proceed only if its authorization
-   prerequisites validate; otherwise stop with no token.
-4. Create one child commit with exactly one parent (the contract commit) that
-   adds only the canonical one-use P1 review-token file. The token binds the
-   final contract commit and every frozen hash.
-5. From that clean token-only commit, invoke the public
+1. Freeze the retry-v3 fixture, runner, tests, documentation, schema bindings,
+   and safe no-token manifest; complete independent code/document/contract
+   audits and compute the final document SHA-256 externally.
+2. Create one clean executable-contract commit containing exactly those
+   reviewed bytes and bindings. The contract commit contains no P1 review
+   token.
+3. Re-read the exact committed no-token manifest. Proceed only if every frozen
+   binding and authorization prerequisite validates; otherwise stop with no
+   token.
+4. Create one child commit with exactly one parent (the clean contract commit)
+   that adds only the canonical one-use P1 review-token file. The token binds
+   the final contract commit and every frozen hash.
+5. From that fresh clean token-only child, invoke the public
    `primary-h4-p0r` runner exactly once for the two-factor, zero-RHS,
-   zero-solve pilot.
+   zero-solve pilot. Never invoke any of the three prior token commits.
 6. Classify the outcome only from the v2 tombstone, outer terminal seal, and
    the complete current-byte-bound claim, guard, resource, result, child,
    marker, prefix, report, index, close, and applicable recovery-journal chain.
