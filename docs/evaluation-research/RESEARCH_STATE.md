@@ -1,6 +1,6 @@
 # Evaluation Algorithm Research State
 
-최종 갱신: 2026-08-15 (Asia/Seoul)
+최종 갱신: 2026-08-16 (Asia/Seoul)
 
 ## 상태 요약
 
@@ -8,19 +8,21 @@
 |---|---|
 | 프로그램 기준 | SPD Decap PI Evaluator v0.22.0 |
 | 연구 branch | `codex/evaluation-algorithm-research` |
-| 기준 commit | `71d3dab442cbdfa6361e4e91de57d8f5b4d1a990` (다섯 번째 public P1 attempt의 consumed record `46c08d405...` 뒤 deletion-only token retirement; 앞선 네 attempt와 모든 validation-output은 immutable) |
-| 현재 단계 | R0 source/external-port/return-owner contract 진행 중; M1 collocation negative/G1 exterior-only 결과 동결; G2 pair 제한 통과 후 100 kHz circle reciprocity/cancellation fail; independent `AV-BS1-CIRCLE` H0는 pre-factor sparse gate fail, H1 coarse `h`와 H2 refined `h2`는 각각 stage-only gate 통과. 최신 physics 상태 `passed_AV_BS_h2_stage_only_pending_h4_preregistration`; H2 token consumed. H4-P0 topology/assembly와 H4-P0R factor-only executable/lifecycle 계약은 구현됐다. 다섯 public P1 attempt 중 첫 네 번은 claim/factor 전 중단됐고, 다섯 번째는 claim과 factor child PID `55552`까지 도달해 108 samples를 남긴 뒤 factor-monitor default-one disappearance failure로 중단됐다. completed/certified factors는 0이고 factor attempted/performed는 `null`; RHS/solve/H4 physics는 미실행이다. outer 27 confirmed/16 stored truncation 때문에 seal도 없다. 현재 token은 없고 retry-v5 static candidate만 있으며 `factor_fit_unproven=true`; H4 physics와 fine analytic/mesh convergence/final circle은 계속 `null`, `next_stage_authorized=false` |
+| 기준 commit | `c001b4498fc750b5955f5118844945c499fce119` (여섯 번째 public P1의 invalid-but-honest provisional consumed record `06061a234ad7b1b911d7425b7765482bda58a87a` 뒤 deletion-only token retirement; 앞선 다섯 attempt와 모든 validation-output은 immutable) |
+| 현재 단계 | R0 source/external-port/return-owner contract 진행 중; M1 collocation negative/G1 exterior-only 결과 동결; G2 pair 제한 통과 후 100 kHz circle reciprocity/cancellation fail; independent `AV-BS1-CIRCLE` H0는 pre-factor sparse gate fail, H1 coarse `h`와 H2 refined `h2`는 각각 stage-only gate 통과. 최신 physics 상태 `passed_AV_BS_h2_stage_only_pending_h4_preregistration`; H2 token consumed. H4-P0 topology/assembly와 H4-P0R factor-only executable/lifecycle 계약은 구현됐다. 여섯 public P1 attempt 중 여섯 번째는 claim과 factor child PID `55380`에 도달했지만 child가 `_factor_one`/`splu` 전 `claimed preflight payload mismatch`로 차단되어 attempted/performed `false/false`, completed/certified factors 0을 남겼다. 독립 outer monitor는 attempt 3의 descendant disappearance exhaustion으로 중단됐고 retry 30/30을 truncation 없이 보존했지만 seal은 없다. 긴급 record는 nested `bindings.resource_policy_sha256` 누락 때문에 strict-validator-invalid이며 c001에서 삭제 retirement됐다. 현재 token은 없고 최소 retry-v6 candidate만 있으며 `factor_fit_unproven=true`; RHS/solve/H4 physics/PowerSI와 fine analytic/mesh convergence/final circle은 계속 미실행, `next_stage_authorized=false` |
 | 제품 코드 변경 | 없음 |
 | GitHub 원격 변경 | 없음 |
 | 정확성 승격 | 미달성 |
 | 8 GB 성능 승격 | 미달성 |
 
-> **Retry-v5 superseding state:** current no-token baseline is deletion-only
-> retirement commit `71d3dab442cbdfa6361e4e91de57d8f5b4d1a990`. The fifth
-> public attempt reached claim/factor-child but certified no factor; actual
-> factor entry is indeterminate. Retry-v5 is limited to active-four max3 plus
-> shared event cap64. No RHS/solve/H4 physics, PowerSI, accuracy, or 8 GiB pass
-> exists; `next_stage_authorized=false`.
+> **Retry-v6 superseding state:** current no-token baseline is deletion-only
+> retirement commit `c001b4498fc750b5955f5118844945c499fce119`. The sixth
+> child failed before `_factor_one`/`splu` and directly proves attempted/performed
+> `false/false`; the independent outer max3 exhaustion retained `30/30` events
+> without truncation and produced no seal. The 06061 record is honest but not a
+> valid tombstone because one nested binding is absent. Retry-v6 changes only
+> three Python lines and one runner binding key. No factor/RHS/solve/H4 physics,
+> PowerSI, accuracy, or 8 GiB pass exists; `next_stage_authorized=false`.
 
 ## 동결된 현행 baseline 해석
 
@@ -93,6 +95,7 @@
 
 | D-046 | Retry-v4 permits settling only for an `exited`, positive, same-birth descendant that remains in the initial complete snapshot, and only in explicit outer/control `MaximumAttempts>1` contexts. | At most two 25 ms rechecks produce three complete snapshots total. Final absence emits the existing confirmed-disappearance event; final presence remains fatal. `not_found`/87 plus presence, default-one factor sampling, live/reuse/root/query/access/incomplete-snapshot failures remain fatal. Python/schema unchanged. Frozen SHA-256 bindings: Python `95c9f5c08282105f7934fbea194694fff3ab850daac633619534044721639234`, runner `7893cd57fd4b1686addd434fa0103d9f3b0e0087f4783f2c82e459661abfb645`, tests `18aabcdf7b32c6b013aec65497d31f4d908f3085f53f64cb3791f38a2e79381d`; focused `11/11`, full no-cache `322/322` in `82.01 s`, PowerShell AST `47,623/0`, Python AST clean. Token absent; no factor/physics; next false. |
 | D-047 | Retry-v5 extends the already-frozen bounded disappearance retry only to the four active factor tree-sample calls and increases the shared outer/control evidence cap from `16` to `64`. | Fifth attempt `5ba4b693...` created claim and factor child, recorded `108/108` child-visible samples, then resource-stopped on the active factor default-one race; 0 prefixes/certificates/completed factors, attempted/performed `null`, no RHS/solve/physics. Outer close `9d0c0aab...` had 27 confirmed/16 stored and truncation, so no seal. Consumed `46c08d405...`, retired `71d3dab...`. Default-one caught cleanup, retry predicate, two 25 ms waits/three snapshots, and all fatal cases are unchanged; zero-byte stdout normalization is deferred. Frozen Python/runner/tests SHA `54aa7da9daa013cec41585ae07757e6c54e8e9d15da7f4f16d4f6546b6fb35aa`/`3888524877f7a90966fb932f7f9fc4c9a48480134eb6295712eaa0ef548416a3`/`b51498ebe27a0210a09b3a12b26e0146d39c1249906469bcb1add1d2f2443f08`; focused `29/29` in `15.91 s`, full no-cache `324/324` in `82.91 s`, PS AST `47,631/0`, Python syntax clean. Token absent; factor fit unproven; next false. |
+| D-048 | Retry-v6 removes only the redundant post-claim preflight wrapper comparison and restores the already-required `resource_policy_sha256` inside emergency tombstone `bindings`; retry policy, cap64, schemas, ABI, validator strictness, factor and physics logic are unchanged. | Sixth token-only child `82775327...` created claim/factor child PID `55380`, then direct numerical evidence failed before `_factor_one`/`splu` with `claimed preflight payload mismatch` and attempted/performed `false/false`. Independent outer close `d2777207...` exhausted attempt 3 for PID `53404`, retained 30/30 events without truncation, verified cleanup, and wrote no seal; resource ceilings were not approached. Raw emergency record `43bb34b2...` is exact and honest but strict-validator-invalid because its nested bindings omit `resource_policy_sha256`; provisional commit `06061a2...` and deletion retirement `c001b44...` leave token absent. Frozen Python/runner/tests SHA `2373a13f51e2833e416e1ce6326587b9e1c782b5165d99f7002e7dbc4658ebc4`/`852ce8a03b25e33b9eb26ec6f5ce295381dab493b1b26762ddea14be7196000d`/`f1d0b044cbf53e90dba128ec398ccd8b7a81da8c5137bea202b2852eb3f288af`; focused `8/8` and full no-cache `330/330` passed, the latter in `81.83 s`. No factor/RHS/solve/physics/PowerSI or 8 GiB result; next false. |
 
 ## 현재 가설 순위
 
@@ -167,13 +170,13 @@ PowerSI repeatability와 mesh/order convergence를 측정한 뒤 수치는 조�
 12. circle에서 통과한 `C0-A1` direct/scaled Hankel과 singular self treatment가 corner가 있는 finite/open M1에서 같은 수렴률·operator floor를 유지하는가? M0 periodic slab은 independent 1-D volume-only로 통과했으며 C0-A1 periodic SAO 증거가 아니다.
 13. G2 pair quadrature는 통과했지만 100 kHz circle에서 low-order analytic/mesh/passivity pass와 달리 full-space reciprocity/cancellation이 refinement으로 악화됐다. high-precision 진단으로 roundoff와 space/operator 불일치를 어디까지 분리할 수 있는가?
 14. two-DtN subtraction이 없는 A–v boundary Schur circle reference candidate가 같은 balanced basis에서 analytic DtN, raw reciprocity/passivity, power, h/crop convergence를 동시에 만족해 oracle로 승격될 수 있는가?
-15. retry-v5의 active-factor max3가 실제 transient same-birth disappearance를 안전하게 통과시키고 outer/control cap64가 complete evidence를 보존하면서도 root/identity/access/evidence-completeness failure를 계속 fail-closed하는가, 그리고 별도 승인된 한 번의 factor-only run에서 H4 factor fill이 2 GiB one-factor 및 4/5/5 GiB tree gate에 실제로 들어오는가?
+15. retry-v6의 post-claim preflight 제거와 full 8-key emergency binding이 strict claim/tombstone 검증을 통과하면서도 retry-v5의 active-factor max3, outer/control cap64, root/identity/access/evidence-completeness fail-closed 경계를 그대로 유지하는가, 그리고 별도 승인된 한 번의 factor-only run에서 H4 factor fill이 2 GiB one-factor 및 4/5/5 GiB tree gate에 실제로 들어오는가?
 
 ## 다음 세션의 우선 작업
 
 1. immutable M1-EQ0 collocation negative result와 G1 `passed_exterior_galerkin_only` certificate를 보존한다. G1은 full M1/T1 승격 근거가 아니다.
 2. **G2 circle 실패 동결:** pair는 `passed_pair_screen_only`지만 100 kHz circle raw reciprocity/cancellation은 실패했다. planned G2 2 GHz circle, G2 N512, G2 EQ0 seed로 진행하지 않는다.
-3. independent A–v FEM boundary-Schur의 H0 pre-factor negative, H1 coarse-h와 H2 `passed_AV_BS_h2_stage_only_pending_h4_preregistration` artifacts, consumed tokens와 P0/P1 commits를 보존한다. H4-P0 assembly-only와 H4-P0R manifest parent, 다섯 public attempt와 token retirement를 그대로 보존한다. retry-v5 fixture·runner·tests·docs를 token-absent clean contract로 독립 감사·커밋하고 그 exact manifest를 다시 읽은 뒤에만 fresh token-only child를 만든다. 이전 `b6c8615...`/`d9e064f...`/`6328174...`/`9b4854d...`/`5ba4b69...`는 절대 재실행하지 않는다. 새 public pilot도 `KII/ApII` factor fill과 process-tree resource만 한 번 측정하며 RHS/extensions/Y/modal physics를 금지한다. 결과 audit와 별도 H4-P1 전에는 h4 physics를 실행하지 않는다.
+3. independent A–v FEM boundary-Schur의 H0 pre-factor negative, H1 coarse-h와 H2 `passed_AV_BS_h2_stage_only_pending_h4_preregistration` artifacts, consumed tokens와 P0/P1 commits를 보존한다. H4-P0 assembly-only와 H4-P0R manifest parent, 여섯 public attempt와 token retirement를 그대로 보존한다. 최소 retry-v6 Python·runner·tests·docs와 full no-cache `330/330` pass를 token-absent clean contract로 독립 감사·커밋하고 exact manifest reread를 통과한 뒤에만 fresh token-only child를 만든다. 이전 `b6c8615...`/`d9e064f...`/`6328174...`/`9b4854d...`/`5ba4b69...`/`8277532...`는 절대 재실행하지 않는다. 새 public pilot도 `KII/ApII` factor fill과 process-tree resource만 한 번 측정하며 RHS/extensions/Y/modal physics를 금지한다. 결과 audit와 별도 H4-P1 전에는 h4 physics를 실행하지 않는다.
 4. 두 2-D 방법이 통과한 뒤에만 T1-F finite-length 3-D PEEC length-difference와 exact distributed-line stamp를 비교한다.
 5. P1/P2 selected crop의 확인된 return artwork/void/GND net graph에서 signal-to-return signed basis와 same-crop core/DtN owner를 정의한다. 가까운 via를 current return으로 강제하지 않는다.
 6. reduced differential T1 operator의 full partial/common-mode 또는 explicit current-constraint global adapter 계약을 제조해로 검증한다.

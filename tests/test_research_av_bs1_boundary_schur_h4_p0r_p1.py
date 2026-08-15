@@ -1,7 +1,8 @@
 """Static/fake-only checks for the H4-P0R-P1 executable contract.
 
-The one-use token, ``primary()``, and a real SuperLU factorization are outside
-this suite by design.  Tiny fake factor objects exercise the certificate gates.
+The one-use token and a real SuperLU factorization are outside this suite by
+design.  ``primary()`` is exercised only with exact synthetic lifecycle
+evidence and a factor-boundary stub; tiny fake factors test certificate gates.
 """
 from __future__ import annotations
 
@@ -49,6 +50,16 @@ PENDING_TERMINAL_BINDING_FIELDS = {
 }
 PENDING_TERMINAL_FIELDS = (
     PENDING_TERMINAL_BINDING_FIELDS | set(PENDING_TERMINAL_VALUES)
+)
+P1_BINDING_FIELDS = (
+    "fixture_sha256",
+    "runner_sha256",
+    "static_test_sha256",
+    "preregistration_doc_sha256",
+    "manifest_payload_sha256",
+    "matrix_contract_sha256",
+    "resource_policy_sha256",
+    "parent_bindings",
 )
 OUTER_RESOURCE_STOP_REASONS = (
     "OUTER_PRESPAWN_COMMIT_HEADROOM_STOP",
@@ -778,6 +789,7 @@ def _build_preflight_control_plane_bundle(
     mutations: dict[str, object] | None = None,
     corrupt_stdout_checksum: bool = False,
     terminal_outer_utc: bool = False,
+    manifest_bindings: dict[str, object] | None = None,
 ) -> dict[str, object]:
     """Build an exact, tiny report -> index-1 -> close -> index-2 chain."""
     mutations = {} if mutations is None else mutations
@@ -901,6 +913,11 @@ def _build_preflight_control_plane_bundle(
     stderr_path.write_text("", encoding="utf-8")
 
     manifest_value = _synthetic_manifest()
+    if manifest_bindings is not None:
+        manifest_value["bindings"] = deepcopy(manifest_bindings)
+        manifest_value["resource_policy_sha256"] = manifest_value["bindings"][
+            "resource_policy_sha256"
+        ]
     manifest_value["bindings"]["fixture_sha256"] = p1._sha(fixture)
     manifest_value["bindings"]["runner_sha256"] = p1._sha(runner)
     policy = manifest_value["resource_policy"]
@@ -1481,10 +1498,14 @@ def _install_terminal_tombstone_bundle(
     tmp_path: Path,
     *,
     emergency_branch: str | None = None,
+    manifest_bindings: dict[str, object] | None = None,
 ) -> dict[str, object]:
     """Install an exact claim plus a normal/inner/outer provisional v2 tombstone."""
     bundle = _build_preflight_control_plane_bundle(
-        monkeypatch, tmp_path, terminal_outer_utc=True
+        monkeypatch,
+        tmp_path,
+        terminal_outer_utc=True,
+        manifest_bindings=manifest_bindings,
     )
     root = bundle["root"]
     manifest_value = bundle["manifest"]
@@ -4675,6 +4696,133 @@ def test_preflight_control_stdout_wrapper_checksum_is_mandatory(
     )
 
 
+def test_primary_uses_historical_claim_evidence_without_reinvoking_preflight(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    bundle = _build_preflight_control_plane_bundle(monkeypatch, tmp_path)
+    claim = bundle["claim"]
+    claim_path = bundle["root"] / claim["claim_relative_path"]
+    claim_path.parent.mkdir(parents=True)
+    _write_json(claim_path, claim)
+
+    attempt_dir = tmp_path / "attempt"
+    attempt_dir.mkdir()
+    guard_path = attempt_dir / "guard.json"
+    ready_path = attempt_dir / "monitor-ready.json"
+    completion_path = attempt_dir / "factor-complete.json"
+    release_path = attempt_dir / "monitor-release.json"
+    ready = {
+        "schema": "AV-BS1-h4-p0r-monitor-ready-v1",
+        "claim_sha256": p1._sha(claim_path),
+        "child_process_id": p1.os.getpid(),
+        "sample_perf_counter_ns": 1,
+        "sample_utc": UTC,
+    }
+    validated_preflight_hashes: list[str] = []
+    factor_calls: list[str] = []
+    real_validate_claim = p1._validate_claim
+
+    def validate_exact_claim(*args: object, **kwargs: object) -> dict[str, object]:
+        value = dict(real_validate_claim(*args, **kwargs))
+        validated_preflight_hashes.append(value["preflight_payload_sha256"])
+        return value
+
+    def forbidden_postclaim_preflight(*_args: object, **_kwargs: object) -> object:
+        raise AssertionError("primary must not recompute preflight after claim")
+
+    class FactorBoundaryReached(Exception):
+        pass
+
+    def factor_boundary(
+        name: str, _matrix_inputs: object, _cap: int
+    ) -> object:
+        factor_calls.append(name)
+        raise FactorBoundaryReached
+
+    monkeypatch.setattr(p1, "run_manifest", lambda: deepcopy(bundle["manifest"]))
+    monkeypatch.setattr(
+        p1,
+        "_validate_token",
+        lambda *_args, **_kwargs: deepcopy(bundle["claim_token"]),
+    )
+    monkeypatch.setattr(p1, "_git_head", lambda: claim["git_head"])
+    monkeypatch.setattr(p1, "_validate_claim", validate_exact_claim)
+    monkeypatch.setattr(p1, "_validate_guard", lambda *_args, **_kwargs: {})
+    monkeypatch.setattr(p1, "preflight", forbidden_postclaim_preflight)
+    monkeypatch.setattr(p1, "_wait_for_marker", lambda *_args: ready)
+    monkeypatch.setattr(p1, "_factor_one", factor_boundary)
+
+    with pytest.raises(FactorBoundaryReached):
+        p1.primary(
+            guard_path,
+            claim["guard_nonce"],
+            bundle["token_path"],
+            claim_path,
+            ready_path,
+            completion_path,
+            release_path,
+        )
+
+    assert validated_preflight_hashes == [claim["preflight_payload_sha256"]]
+    assert factor_calls == ["A_background_II"]
+    assert p1._EXECUTION_PHASE["claim_validated"] is True
+    assert p1._EXECUTION_PHASE["factorization_attempted"] is False
+
+
+def test_primary_rejects_tampered_historical_preflight_hash_before_factor(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    bundle = _build_preflight_control_plane_bundle(monkeypatch, tmp_path)
+    claim = deepcopy(bundle["claim"])
+    claim["preflight_payload_sha256"] = SHA_F
+    claim_path = bundle["root"] / claim["claim_relative_path"]
+    claim_path.parent.mkdir(parents=True)
+    _write_json(claim_path, claim)
+
+    attempt_dir = tmp_path / "attempt"
+    attempt_dir.mkdir()
+    guard_path = attempt_dir / "guard.json"
+    ready_path = attempt_dir / "monitor-ready.json"
+    completion_path = attempt_dir / "factor-complete.json"
+    release_path = attempt_dir / "monitor-release.json"
+    downstream_calls: list[str] = []
+
+    def forbidden_downstream(name: str):
+        def fail(*_args: object, **_kwargs: object) -> object:
+            downstream_calls.append(name)
+            raise AssertionError(f"{name} must remain unreachable")
+
+        return fail
+
+    monkeypatch.setattr(p1, "run_manifest", lambda: deepcopy(bundle["manifest"]))
+    monkeypatch.setattr(
+        p1,
+        "_validate_token",
+        lambda *_args, **_kwargs: deepcopy(bundle["claim_token"]),
+    )
+    monkeypatch.setattr(p1, "_git_head", lambda: claim["git_head"])
+    monkeypatch.setattr(p1, "_validate_guard", forbidden_downstream("guard"))
+    monkeypatch.setattr(p1, "preflight", forbidden_downstream("preflight"))
+    monkeypatch.setattr(p1, "_factor_one", forbidden_downstream("factor"))
+
+    with pytest.raises(
+        p1.AvBsError, match="preflight control stdout payload mismatch"
+    ) as caught:
+        p1.primary(
+            guard_path,
+            claim["guard_nonce"],
+            bundle["token_path"],
+            claim_path,
+            ready_path,
+            completion_path,
+            release_path,
+        )
+
+    assert caught.value.code == "BLOCKED_AV_BS_RESULT_SCHEMA"
+    assert downstream_calls == []
+    assert p1._EXECUTION_PHASE["claim_validated"] is False
+
+
 @pytest.mark.parametrize(
     ("field", "tampered_value"),
     [
@@ -5886,6 +6034,42 @@ def test_emergency_v2_semantic_branches_require_postvalidated_journals(
     assert terminal["authoritative_stage_pass"] is False
 
 
+@pytest.mark.parametrize("mutation", ["missing", "extra", "tampered"])
+def test_outer_emergency_tombstone_requires_exact_full_manifest_bindings(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    mutation: str,
+) -> None:
+    full_bindings = deepcopy(manifest()["payload"]["bindings"])
+    assert set(full_bindings) == set(P1_BINDING_FIELDS)
+    bundle = _install_terminal_tombstone_bundle(
+        monkeypatch,
+        tmp_path,
+        emergency_branch="outer",
+        manifest_bindings=full_bindings,
+    )
+    assert bundle["tombstone"]["bindings"] == bundle["manifest"]["bindings"]
+    context = p1._validate_consumed_tombstone(
+        bundle["tombstone"], bundle["tombstone_sha256"], bundle["manifest"]
+    )
+    assert context["outer_emergency"] is True
+
+    malformed = deepcopy(bundle["tombstone"])
+    if mutation == "missing":
+        del malformed["bindings"]["resource_policy_sha256"]
+    elif mutation == "extra":
+        malformed["bindings"]["unexpected_binding"] = SHA_A
+    else:
+        malformed["bindings"]["resource_policy_sha256"] = SHA_F
+    with pytest.raises(
+        p1.AvBsError, match="consumed tombstone bindings mismatch"
+    ) as caught:
+        p1._validate_consumed_tombstone(
+            malformed, bundle["tombstone_sha256"], bundle["manifest"]
+        )
+    assert caught.value.code == "BLOCKED_AV_BS_RESULT_SCHEMA"
+
+
 def test_marker_bytes_are_retained_raw_but_deep_parsed_only_for_valid_resource(
     tmp_path: Path,
 ) -> None:
@@ -6906,13 +7090,17 @@ def test_streaming_sparse_hashes_match_frozen_reference_without_whole_bytes_copy
     assert p1._csc_storage_sha256(matrix) == digest.hexdigest()
 
 
-def test_this_suite_never_calls_primary() -> None:
-    tree = ast.parse(Path(__file__).read_text(encoding="utf-8"))
-    assert not any(
-        isinstance(node, ast.Call)
-        and isinstance(node.func, ast.Attribute)
-        and node.func.attr == "primary"
-        for node in ast.walk(tree)
+def test_primary_source_has_no_postclaim_preflight_reinvocation() -> None:
+    source = FIXTURE.read_text(encoding="utf-8")
+    primary_source = source[
+        source.index("def primary(") : source.index("def _validate_system_sample(")
+    ]
+    assert "preflight(" not in primary_source
+    assert (
+        primary_source.index("_validate_claim(")
+        < primary_source.index("_validate_guard(")
+        < primary_source.index("_wait_for_marker(")
+        < primary_source.index("_factor_one(")
     )
 
 
@@ -9095,7 +9283,7 @@ catch {
 def test_runner_exited_snapshot_stabilization_policy_is_exactly_pinned() -> None:
     source = RUNNER.read_text(encoding="utf-8")
     assert hashlib.sha256(RUNNER.read_bytes()).hexdigest() == (
-        "3888524877f7a90966fb932f7f9fc4c9a48480134eb6295712eaa0ef548416a3"
+        "852ce8a03b25e33b9eb26ec6f5ce295381dab493b1b26762ddea14be7196000d"
     )
     begin = source.index("# AV_BS_TREE_SAMPLE_TEST_SLICE_BEGIN")
     end = source.index("# AV_BS_TREE_SAMPLE_TEST_SLICE_END")
@@ -9410,6 +9598,42 @@ def test_runner_gates_inner_and_outer_token_mutation_on_verified_cleanup() -> No
     ) in source
 
 
+def test_outer_emergency_builder_copies_exact_full_manifest_bindings() -> None:
+    payload_bindings = manifest()["payload"]["bindings"]
+    assert set(payload_bindings) == set(P1_BINDING_FIELDS)
+    source = RUNNER.read_text(encoding="utf-8")
+    outer_emergency = source[
+        source.index("function Set-OuterObserverEmergencyConsumedTombstone(") :
+        source.index("function Write-PreExitControlPlaneEvidence(")
+    ]
+    match = re.search(
+        r"(?ms)^    \$bindings = \[ordered\]@\{\n"
+        r"(?P<body>.*?)"
+        r"^    \}\n"
+        r"^    \$emergency = \[ordered\]@\{",
+        outer_emergency,
+    )
+    assert match is not None
+    produced = tuple(
+        re.findall(r"(?m)^        ([a-z][a-z0-9_]*) = ", match.group("body"))
+    )
+    assert produced == P1_BINDING_FIELDS
+    expected_rhs = {
+        field: f"[string]$CandidateToken.{field}"
+        for field in P1_BINDING_FIELDS
+        if field != "parent_bindings"
+    }
+    expected_rhs["parent_bindings"] = "$CandidateToken.parent_bindings"
+    actual_rhs = dict(
+        re.findall(
+            r"(?m)^        ([a-z][a-z0-9_]*) = ([^\r\n]+)$",
+            match.group("body"),
+        )
+    )
+    assert actual_rhs == expected_rhs
+    assert "bindings = $bindings" in outer_emergency
+
+
 def test_runner_preserves_hashed_markers_in_canonical_quarantine() -> None:
     source = RUNNER.read_text(encoding="utf-8")
     terminal_hash_block = source[
@@ -9604,7 +9828,10 @@ def test_doc_declares_token_absent_no_factor_and_no_physics() -> None:
         "terminal_evidence_complete": "false",
         "authoritative_stage_pass": "false",
     }
-    assert "no H4-P0R-P1 factorization or physics solve has run" in normalized
+    assert (
+        "no certified or completed H4-P0R-P1 factor exists, and no RHS, "
+        "solve, H4 physics, or PowerSI work has run"
+    ) in normalized
     assert "no later H4-P1 stage is authorized" in normalized
     assert "`control_plane.independently_bounded=true`" in text
     assert "`tree_thresholds_equal_factor_envelope=true`" in text

@@ -1,6 +1,6 @@
 # SPD Decap PI Evaluator v0.22.0 — T1 Circle DtN Results
 
-최종 갱신: 2026-08-14 (Asia/Seoul)
+최종 갱신: 2026-08-16 (Asia/Seoul)
 
 이 문서는 [`T1_M1_REFERENCE_SPEC.md`](T1_M1_REFERENCE_SPEC.md)의 mandatory circular-conductor interior DtN gate를 제품 코드 밖의 bounded prototype으로 실행한 결과다. 제품 parser/solver/UI는 수정하지 않았다.
 
@@ -11,7 +11,7 @@
 | `C0-A0 fixed_low_frequency_1e6` | **failed** | 사전 등록한 Patel–Triverio empirical switch를 그대로 사용하면 작은 원 100 kHz가 정확도·mesh·phase·conditioning gate를 모두 위반 |
 | `C0-A1 direct_scaled_H2_primary` | **passed_circle_interior_only** | `C0=1` direct/scaled Hankel이 canonical full-condition과 W1/W3 dense withheld를 통과; W2는 analytic/convergence-only 보조 |
 | finite-width M1 | G1 exterior-only, G2 pair-only; 100 kHz circle failed | q/analytic/mesh/passivity 통과와 별개로 N256 raw `Yw` reciprocity/cancellation fail; planned G2 2 GHz circle/N512/EQ0 seed 미실행 |
-| independent A–v | `2GHz_4Deff_smoke_only`; circle boundary-Schur `passed_AV_BS_h2_stage_only_pending_h4_preregistration` | H1 17.5 µm/100 kHz coarse `h`와 H2 refined `h2` stage-evaluable gates 통과; H4-P0, [`H4-P0R parent`](T1_AV_BOUNDARY_SCHUR_H4_P0R_PREREG.md), [`P1 executable/lifecycle`](T1_AV_BOUNDARY_SCHUR_H4_P0R_P1_PREREG.md) static review 통과. 다섯 public P1 attempt 중 다섯 번째가 처음 claim/factor-child와 108 samples까지 도달했지만 monitor stop, 0 certified factors, attempted/performed null, outer 27/16 truncation/no seal. 현재 retry-v5 static candidate, token absent/factor fit unproven/next=false. h→h2는 trend-only이고 H2 token consumed/next=false. `h4` physics, fine analytic/convergence, final circle, withheld radius와 noncircular same-basis cross-method 미실행 |
+| independent A–v | `2GHz_4Deff_smoke_only`; circle boundary-Schur `passed_AV_BS_h2_stage_only_pending_h4_preregistration` | H1 17.5 µm/100 kHz coarse `h`와 H2 refined `h2` stage-evaluable gates 통과; H4-P0, [`H4-P0R parent`](T1_AV_BOUNDARY_SCHUR_H4_P0R_PREREG.md), [`P1 executable/lifecycle`](T1_AV_BOUNDARY_SCHUR_H4_P0R_P1_PREREG.md) static review 통과. 여섯 번째 public P1은 claim/factor child 뒤 `_factor_one`/`splu` 전 차단되어 0 certified factors, attempted/performed false를 남겼고 독립 outer max3 exhaustion은 30/30 no-truncation/no-seal로 끝남. 현재 retry-v6 static candidate, token absent/factor fit unproven/next=false. h→h2는 trend-only이고 H2 token consumed/next=false. `h4` physics, fine analytic/convergence, final circle, withheld radius와 noncircular same-basis cross-method 미실행 |
 | product/global | `blocked` | source owner, exact-minus-core와 balanced global adapter 미해결 |
 
 `C0-A1`의 통과는 원형 도체의 **interior surface-admittance operator**만 인증한다. M1, P2, PowerSI correlation, product 정확성 또는 8 GB production 성능을 승인하지 않는다.
@@ -233,6 +233,24 @@ stdout schema overlay is deferred. Frozen Python/runner/tests hashes are
 `b51498ebe27a0210a09b3a12b26e0146d39c1249906469bcb1add1d2f2443f08`;
 focused/full `29/29` and `324/324` passed. Circle gates and next=false do not
 change.
+
+## H4-P0R retry-v6 non-result
+
+The sixth public attempt created claim and factor child PID `55380` but did not
+create a circle result. Direct child evidence stopped before `_factor_one` or
+`splu` on `claimed preflight payload mismatch`, so attempted/performed are
+`false/false` and completed/certified factors remain zero. Independent outer
+close `d2777207...` exhausted max3 for PID `53404`, retained `30/30` events
+without truncation, verified cleanup, and wrote no seal. Resource ceilings were
+not approached; no RHS, solve, H4 physics, final circle, or PowerSI work ran.
+
+Emergency record `43bb34b2...`, preserved provisionally by `06061a2...`, is
+strict-validator-invalid because nested `bindings.resource_policy_sha256` is
+absent; `c001b44...` delete-retires the token. Retry-v6 changes only three
+redundant Python lines and that runner binding key. Frozen Python/runner/tests
+hashes are `2373a13f...` / `852ce8a0...` / `f1d0b044...`; focused `8/8` passed
+and full no-cache `330/330` passed in `81.83 s`. Circle gates and next=false do
+not change.
 
 ## Promotion boundary와 다음 단계
 

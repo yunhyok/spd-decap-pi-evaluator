@@ -1837,3 +1837,172 @@ Safe manifest parity returned exit `0`, raw outputs matched, status remained
    claim/tombstone/seal/control/outer chain. Regardless of outcome, keep
    `next_stage_authorized=false`; do not run H4 physics, PowerSI, withheld, or
    EQ0 work without a separate clean preregistration and fresh authorization.
+
+## 2026-08-16 — AV-BS1 H4-P0R-P1 sixth pre-factor child failure and retry-v6 correction
+
+### Scope and immutable prefix
+
+This entry appends to, and does not revise, the first `154866` bytes of this
+session log. That prior prefix is `1839` LF-terminated lines with SHA-256
+`228073891186df2cccfc8d1437b23f92db8d4be1bf2d91ad939c711347369f42`.
+All retry-v2 through retry-v5 records and their frozen historical hashes/test
+counts remain immutable.
+
+The sixth public H4-P0R-P1 attempt was still factor-only in scope. It did not
+authorize or execute any RHS, solve, harmonic extension, boundary response,
+H4 physics, PowerSI correlation, withheld-radius, EQ0, product, or release work.
+No factor-fit, accuracy, PowerSI, or 8 GiB conclusion follows from it.
+
+### Sixth public invocation and authorization lineage
+
+Clean retry-v5 contract `bddbf9cb3547ae0385c6e6bbc47424f630cca87e` was the sole
+parent of token-only child `82775327d79742b6c3111ad33a87fd1a4953ee79`.
+The canonical token ID was `a3f49b44dd164da3a0ca1a6dc4c976c3`; original
+raw/canonical SHA-256 were
+`69b7e93720d8044d60f4ca95ccc5440670904d27f75ee77730e2947a01d58ed4` /
+`68444b687e63750bdd0c7056a45b29d53d825c3572c2db03245cb032d63037a8`.
+It was invoked exactly once. Outer observation started
+`2026-08-15T15:39:01.9701124Z`, ended `2026-08-15T15:39:55.3757836Z`, and the
+public runner returned exit `2`.
+
+The attempt created exact claim
+`validation-output/av-bs1/claims/a3f49b44dd164da3a0ca1a6dc4c976c3.json`,
+raw SHA-256
+`f15962f38e5141420a15536eda96653c76fa2ff26be6ec1e7c3fb69fe50ab955`.
+Guard and monitor-ready raw SHA-256 were
+`1acdc9f1d7eaa04a4e2800dbec81710b88580e1718aee073e2b49d0618602b09` and
+`9d65ff505fea0eb6c50351f3f0dc22b6a1afb4641d24f4e51380badba471dcaf`.
+Outer, inner, and factor-child PIDs were `34428`, `37316`, and `55380`.
+
+### Direct child no-factor evidence
+
+The provisional child numerical artifact has raw SHA-256
+`ab5adac793f9acda882bfa0c66c5ce20319e1cb06fe5cb88c9968803acf8822e`
+and canonical payload SHA-256
+`55d4436ab55c77be6d7fb37549fc8e4e5b94871cf05518e7dfc97fb93c5bcd25`.
+It records status/failure `BLOCKED_AV_BS_RESULT_SCHEMA`, detail
+`claimed preflight payload mismatch`, authorization state
+`claimed_attempt_failed`, attempted/performed `false/false`, empty completed
+factors and certificates, null monitor handshake, and physics/next false.
+
+Code-path review proves this mismatch occurred before `_factor_one` and before
+the `splu` call. No factor-prefix, factor-complete, monitor-release, resource,
+or final child artifact exists, and child stderr is empty. The direct child
+wrapper is the authoritative evidence for false/false at that layer. No
+certified or completed H4-P0R-P1 factor exists.
+
+The surviving ignored source directory is
+`C:\Users\User\AppData\Local\Temp\av-bs1-241bd96890c24f6b8117fca08e2d5aa3`.
+Its bytes remain forensic source evidence only. The temporary path is not a
+tracked, immutable reproduction path and must not be moved, modified, or
+promoted into a canonical result contract.
+
+### Independent outer close, resource, and cleanup evidence
+
+Outer session is
+`validation-output/av-bs1/outer-observer/session-21f46fec2e314e248cf051e4273b97f0`.
+Its ready/start-release/close SHA-256 are
+`b91d5b80d73efc02bd0ca55a48692d2db744fd033de1fff63ef301e20a88dd17`,
+`118addd5e9740ab3ddd0e8dfd48279d933f9c874db6f073305096417b56ef3bd`,
+and `d2777207e4000cbde8e4bf2332eeba96dd54ec3b8918a0d107049531d15cd8f8`.
+No inner-complete, exit-release, or terminal-seal artifact exists.
+
+The outer observer recorded `368/368` samples/inner-visible samples and `107`
+bound process identities. It stopped independently with
+`OUTER_RESOURCE_EXCEPTION` after attempt `3`, context `outer_tree_sample`,
+operation `get_process_times`, PID `53404`, equal expected/observed birth
+`639224051920616566`, confirmation
+`signaled_handle_and_complete_snapshot_absent`, and code
+`TRANSIENT_DESCENDANT_DISAPPEARANCE_RETRY_EXHAUSTED`. The complete retry ledger
+is `30/30` retained with `tree_sample_retry_events_truncated=false`; cap64
+worked as designed. This was no longer the retry-v5 cap16 truncation defect.
+
+Cleanup and the terminal post-cleanup sample were verified. All `107` recorded
+identities and the outer/inner/factor PIDs were absent at forensic review. Peak
+tree working set, private commit, and summed lifetime peak commit were
+`513355776`, `1790554112`, and `2135834624` bytes. Minimum available physical
+memory and system commit headroom were `46603452416` and `72951267328` bytes.
+The stop was not a resource ceiling. The mandatory outer gate remained false
+and no seal was written. The outer emergency layer conservatively records
+attempted/performed null/null because it does not claim trusted inner phase
+knowledge; this does not contradict the direct child false/false wrapper.
+
+### Emergency record, validation defect, and retirement
+
+After verified cleanup, emergency replacement wrote raw/canonical record
+SHA-256
+`43bb34b225b6b1d376715615a90b7b6202e10da5a10679484a644b1911c4d1fb` /
+`53276bfe09fb427dc664a1e2ee1b37264f391a455b549183cb23c373f5cd4a0a`.
+It truthfully records token consumption, outer failure, conservative null inner
+phase fields, and no terminal authority. It is nevertheless not a valid v2
+tombstone or seal. Its nested `bindings` map contains seven keys and omits
+`resource_policy_sha256`, while the historical preflight manifest has the
+required full eight-key map. The stored review binding recomputes only from
+that full historical map, not from the tombstone's own incomplete map. The
+strict Python validator therefore correctly returns `consumed tombstone
+bindings mismatch`; it must not be relaxed.
+
+Emergency intent and postvalidation journal raw SHA-256 are
+`14472fd53ef0c58e21bd8310532209e2c8b73379eed52c70eb2dd33128eb6b8e`
+and `fa5aefab311d305278d606e6fabd68d363c4eb7dacfb90f9e9d65f5442034ee7`.
+Commit `06061a234ad7b1b911d7425b7765482bda58a87a`, sole child of
+`82775327d79742b6c3111ad33a87fd1a4953ee79`, preserves the exact invalid-but-
+honest provisional consumed record. Deletion-only retirement
+`c001b4498fc750b5955f5118844945c499fce119`, sole child of `06061a2...`, removes
+only that token. The c001 tree equals the token-absent retry-v5 contract tree.
+Current token state is absent; the sixth token is spent and must never be
+reused.
+
+### Exact retry-v6 root causes and minimal corrections
+
+The child mismatch came from three redundant Python lines that called
+`preflight()` after the claim existed and compared that current claimed
+manifest wrapper with the historical pre-claim payload hash. The existing
+historical helper and claim validator already validate the frozen pre-claim
+payload correctly. Retry-v6 deletes only that redundant call and comparison.
+
+The emergency validation defect came from the runner's manually constructed
+seven-key `$bindings` object. Retry-v6 adds only
+`resource_policy_sha256 = [string]$CandidateToken.resource_policy_sha256` to
+that nested object. The already-correct top-level
+`resource_guard_policy_sha256` remains separate. No schema, ABI, field meaning,
+validator strictness, retry predicate, max3 behavior, cap64, matrix,
+factorization, RHS, solve, or physics logic changes.
+
+### Frozen retry-v6 candidate bindings
+
+```text
+Python fixture SHA-256: 2373a13f51e2833e416e1ce6326587b9e1c782b5165d99f7002e7dbc4658ebc4
+PowerShell runner SHA-256: 852ce8a03b25e33b9eb26ec6f5ce295381dab493b1b26762ddea14be7196000d
+static tests SHA-256: f1d0b044cbf53e90dba128ec398ccd8b7a81da8c5137bea202b2852eb3f288af
+focused retry-v6 regressions: 8/8 passed
+full no-cache P1 suite: 330/330 passed in 81.83 s
+token_state: absent
+factor_fit_unproven: true
+physics_solve_performed: false
+next_stage_authorized: false
+```
+
+The root full no-cache rerun passed the exact frozen retry-v6 candidate
+`330/330` in `81.83 s`. Existing retry-v5 `29/29` and `324/324` records remain
+historical and are not reused as retry-v6 proof.
+
+### Exact next starting point
+
+1. Freeze the exact retry-v6 Python, runner, tests, and these 15 documentation
+   files; verify the session prefix, hashes, UTF-8, links, fences, and scope.
+2. Preserve the completed full no-cache `330/330` pass in `81.83 s`. Stop on
+   any later regression and do not create a token.
+3. Complete independent code/document/contract audits, commit one clean
+   token-absent contract, and re-read its exact safe manifest.
+4. Only after all prerequisites pass may a separate authorization lifecycle
+   create one child with exactly one parent that adds only one fresh canonical
+   P1 token.
+5. That future token may authorize exactly one public factor-only pilot. Never
+   invoke `b6c8615...`, `d9e064f...`, `6328174...`, `9b4854d...`, `5ba4b69...`,
+   or `8277532...` again.
+6. Preserve and independently audit the complete factor-prefix/resource/result/
+   claim/tombstone/seal/control/outer chain. Regardless of outcome, keep
+   `next_stage_authorized=false`; do not run RHS, solve, H4 physics, PowerSI,
+   withheld-radius, or EQ0 work without a separate clean preregistration and
+   fresh authorization.

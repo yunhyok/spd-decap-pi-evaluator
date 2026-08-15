@@ -1,6 +1,6 @@
 # SPD Decap PI Evaluator v0.22.0 — T1-M1-EQ0 Finite/Open Results
 
-최종 갱신: 2026-08-15 (Asia/Seoul)
+최종 갱신: 2026-08-16 (Asia/Seoul)
 
 이 문서는 결과를 보기 전에 동결한 M1-EQ0 full-contour 계약을 실제로 실행한 결과와 독립 `A_z–v` smoke를 보존한다. 제품 parser, solver, UI, 버전과 installer는 수정하지 않았다. 이 실행은 PowerSI board correlation이 아니며, 8 GB 노트북 production 성능 증거도 아니다.
 
@@ -304,12 +304,31 @@ Frozen Python/runner/tests hashes are
 focused/full `29/29` and `324/324` passed. Immutable M1/G1/G2 results and
 `next_stage_authorized=false` are unchanged.
 
+## H4-P0R retry-v6 non-result
+
+The sixth P1 attempt (`82775327...`) reached claim/factor child PID `55380`, but
+direct child evidence stopped before `_factor_one`/`splu` on
+`claimed preflight payload mismatch`. It records attempted/performed
+`false/false`, zero completed/certified factors, and no RHS, solve, H4 physics,
+or EQ0 input. Independent outer close `d2777207...` exhausted max3 for PID
+`53404`, retained `30/30` retry events without truncation, verified cleanup,
+and wrote no seal. Resource ceilings were not approached.
+
+Emergency record `43bb34b2...` is honest but strict-validator-invalid because
+its nested bindings omit `resource_policy_sha256`; commits `06061a2...` and
+`c001b44...` preserve then delete-retire the token. Retry-v6 only removes a
+redundant three-line Python comparison and adds the missing runner binding key.
+Frozen Python/runner/tests hashes are `2373a13f...` / `852ce8a0...` /
+`f1d0b044...`; focused `8/8` passed and full no-cache `330/330` passed in
+`81.83 s`. Immutable M1/G1/G2 results and `next_stage_authorized=false` are
+unchanged.
+
 ## Exact next starting point
 
 1. **완료:** G1 direct exterior Galerkin을 `N={144,288,576}`, 7 frequencies, q10/q20, 세 `r0`에서 실행해 exterior-only pass와 interior blocker를 분리했다.
 2. **동결 완료:** G2 interior Galerkin의 약형, self/touching/non-touching singular quadrature, basis/order, raw reciprocity/passivity, q20/q40와 no-retuning rule을 exact reproduction block에 고정했다.
 3. **완료/제한 통과:** pair screen은 `passed_pair_screen_only`다.
 4. **실패 동결:** 100 kHz circle의 analytic/q/mesh/passivity는 통과했지만 raw reciprocity/cancellation은 실패했다. planned G2 2 GHz circle, G2 `N=512`, G2 EQ0 seed로 진행하지 않는다.
-5. 다음 독립 reference candidate는 two-DtN subtraction이 없는 A–v volume-FEM boundary-Schur다. [`T1_AV_BOUNDARY_SCHUR_RESULTS.md`](T1_AV_BOUNDARY_SCHUR_RESULTS.md)의 H0는 pre-factor sparse gate에서 실패했지만 H1 coarse `h`와 H2 refined `h2`는 stage-only pass다. H4-P0, H4-P0R parent와 P1 executable static review는 통과했다. 다섯 번째 public P1은 factor-child에 도달했지만 0 certified factors와 indeterminate factor outcome만 남겨 factor fit은 여전히 미증명이다. retry-v5 clean no-token contract reread/fresh token/result audit 전에는 H4 physics를 금지한다. H4 physics와 두 circle radius가 모두 통과한 뒤에만 EQ0 crop `2/4/8Deff`를 사전 등록한다.
+5. 다음 독립 reference candidate는 two-DtN subtraction이 없는 A–v volume-FEM boundary-Schur다. [`T1_AV_BOUNDARY_SCHUR_RESULTS.md`](T1_AV_BOUNDARY_SCHUR_RESULTS.md)의 H0는 pre-factor sparse gate에서 실패했지만 H1 coarse `h`와 H2 refined `h2`는 stage-only pass다. H4-P0, H4-P0R parent와 P1 executable static review는 통과했다. 여섯 번째 public P1도 `_factor_one`/`splu` 전에 차단되어 0 certified factors만 남겼고 factor fit은 여전히 미증명이다. retry-v6 clean no-token contract의 full no-cache `330/330` pass와 audit를 보존하고 fresh token/result audit 전에는 H4 physics를 금지한다. H4 physics와 두 circle radius가 모두 통과한 뒤에만 EQ0 crop `2/4/8Deff`를 사전 등록한다.
 6. production SAO 후보는 Hamiltonian Schur 또는 four-operator symmetric Calderón/Steklov–Poincaré trace/flux formulation으로 별도 사전 등록한다. raw failure는 보존하며 post-symmetrization, clipping 또는 result-driven tuning을 금지한다.
 7. 독립 A–v와 새 SAO가 모두 통과하기 전 T1-F, board source owner 또는 PowerSI correlation으로 우회하지 않는다.

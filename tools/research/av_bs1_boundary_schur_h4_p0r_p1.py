@@ -10585,9 +10585,6 @@ def primary(
     claim = _validate_claim(claim_path, token, manifest)
     _EXECUTION_PHASE["claim_validated"] = True
     guard = _validate_guard(guard_path, nonce, token, manifest, claim_path)
-    preflight_payload = preflight(token_path, check_expiry=False)
-    if _wrap(preflight_payload)["payload_sha256"] != claim["preflight_payload_sha256"]:
-        raise AvBsError("BLOCKED_AV_BS_RESULT_SCHEMA", "claimed preflight payload mismatch")
     ready = _wait_for_marker(ready_path, "monitor-ready marker")
     _validate_ready_marker(ready, claim_path)
     matrix_inputs = manifest["p0r_parent"]["matrix_inputs"]

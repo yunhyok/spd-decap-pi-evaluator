@@ -1,6 +1,6 @@
 # SPD Decap PI Evaluator v0.22.0 — R2 Local Oracle Results
 
-최종 갱신: 2026-08-15 (Asia/Seoul)
+최종 갱신: 2026-08-16 (Asia/Seoul)
 
 이 문서는 [`LOCAL_ORACLE_PLAN.md`](LOCAL_ORACLE_PLAN.md)에 사전 등록한 국부 물리 oracle을 기존 research kernel로 실행한 결과다. 제품 solver, parser, UI, version, installer는 수정하지 않았다. `pass`는 아래에 명시한 coupon과 constitutive scope에서만 유효하며 PowerSI 정확성 승격이나 global-MNA 조립 승인을 뜻하지 않는다.
 
@@ -212,9 +212,28 @@ shared outer/control event cap to `64`. Frozen Python/runner/tests hashes are
 focused/full tests passed `29/29` and `324/324`. Token absent, factor fit
 unproven, and `next_stage_authorized=false` remain unchanged.
 
+## Retry-v6 non-result record
+
+The sixth H4-P0R-P1 invocation also changes no R2 oracle result. Token commit
+`82775327...` created claim and factor child PID `55380`, but direct numerical
+evidence stopped before `_factor_one`/`splu` on
+`claimed preflight payload mismatch`; attempted/performed are `false/false` and
+completed factors remain zero. Independent outer close `d2777207...` exhausted
+max3 for PID `53404`, retained all `30/30` retry events without truncation,
+verified cleanup, and wrote no seal. Resource ceilings were not approached.
+
+Emergency record `43bb34b2...`, preserved by `06061a2...`, is honest but not a
+valid terminal tombstone because its nested bindings omit
+`resource_policy_sha256`; `c001b44...` delete-retires the token. Retry-v6 only
+deletes a redundant three-line post-claim comparison and adds the missing
+runner binding key. Frozen Python/runner/tests hashes are `2373a13f...` /
+`852ce8a0...` / `f1d0b044...`; focused `8/8` passed and full no-cache `330/330`
+passed in `81.83 s`. No factor/RHS/solve/H4 physics/PowerSI/8 GiB result exists,
+and `next_stage_authorized=false`.
+
 ## 다음 R2 연구
 
-1. failed M1-EQ0 collocation, G1 `passed_exterior_galerkin_only`, G2 `passed_pair_screen_only`와 100 kHz circle reciprocity/cancellation failure를 보존한다. 독립 A–v boundary-Schur H0 negative, H1 coarse-h와 H2 `passed_AV_BS_h2_stage_only_pending_h4_preregistration` artifacts 및 consumed tokens도 함께 보존한다. H4-P0, [`H4-P0R parent`](T1_AV_BOUNDARY_SCHUR_H4_P0R_PREREG.md), [`P1 executable/lifecycle`](T1_AV_BOUNDARY_SCHUR_H4_P0R_P1_PREREG.md)과 다섯 public attempt/retirement를 보존한다. 다섯 번째는 claim/factor-child reach 뒤에도 0 certified factors와 indeterminate factor outcome만 남겼다. 현재 token absent/factor fit unproven이며 retry-v5 clean no-token contract reread/fresh token 전에는 factor pilot을, result audit 전에는 h4 physics/withheld 또는 EQ0 mesh·crop, planned G2 N512/2 GHz circle/EQ0 seed를 실행하지 않는다. `next_stage_authorized=false`다.
+1. failed M1-EQ0 collocation, G1 `passed_exterior_galerkin_only`, G2 `passed_pair_screen_only`와 100 kHz circle reciprocity/cancellation failure를 보존한다. 독립 A–v boundary-Schur H0 negative, H1 coarse-h와 H2 `passed_AV_BS_h2_stage_only_pending_h4_preregistration` artifacts 및 consumed tokens도 함께 보존한다. H4-P0, [`H4-P0R parent`](T1_AV_BOUNDARY_SCHUR_H4_P0R_PREREG.md), [`P1 executable/lifecycle`](T1_AV_BOUNDARY_SCHUR_H4_P0R_P1_PREREG.md)과 여섯 public attempt/retirement를 보존한다. 여섯 번째도 pre-factor 차단으로 0 certified factors만 남겼다. 현재 token absent/factor fit unproven이며 retry-v6 clean no-token contract의 full no-cache `330/330` pass와 audit를 보존하고 fresh token 전에는 factor pilot을, result audit 전에는 h4 physics/withheld 또는 EQ0 mesh·crop, planned G2 N512/2 GHz circle/EQ0 seed를 실행하지 않는다. `next_stage_authorized=false`다.
 2. S1은 circular/void boundary-conforming refinement와 h/h/2/h/4 추정 오차를 먼저 해결한다.
 3. V1/V2는 명시적 coax/ring return을 가진 2-D/3-D reference와 동일 crop의 exact-minus-core matrix를 만든다.
 4. A1은 current cell-centred solver를 승격하지 않고 body-fitted/higher-order 후보를 비교한다.

@@ -1,6 +1,6 @@
 # SPD Decap PI Evaluator v0.22.0 — Oracle Reproduction Appendix
 
-최종 갱신: 2026-08-14 (Asia/Seoul)
+최종 갱신: 2026-08-16 (Asia/Seoul)
 
 이 문서는 [`R2_ORACLE_RESULTS.md`](R2_ORACLE_RESULTS.md)의 custom numerical table을 같은 research commit에서 재생성하는 exact commands를 보존한다. 모두 repository root `C:\Users\User\Documents\SPD Decap PI Evaluator-evaluation-research`에서 실행한다. 제품 file과 raw SPD를 수정하지 않는다.
 
@@ -3131,7 +3131,7 @@ Exact next는 현재 manifest-only contract를 clean commit과 독립 audit에 �
 
 ## AV-BS1 H4-P0R-P1 safe replay and interruption evidence
 
-위 문단은 immutable manifest-only parent의 당시 next step이다. 후속 P1 executable/lifecycle은 구현됐지만 세 public invocation이 모두 claim/factor 전 fail-closed 됐고 세 one-use token은 재실행 없이 삭제됐다. 현재 checkout에는 P1 token이 없다. 아래 명령만 safe static replay로 허용하며 `-Stage primary-h4-p0r`, hidden inner mode, finalizer 또는 consumer를 직접 호출하지 않는다.
+위 문단은 immutable manifest-only parent의 당시 next step이다. 후속 P1 executable/lifecycle은 구현됐고 여섯 public invocation은 모두 factor 결과 없이 fail-closed 됐다. 여섯 one-use token은 재실행 없이 소비·삭제됐으며 현재 checkout에는 P1 token이 없다. 아래 명령만 safe static replay로 허용하며 `-Stage primary-h4-p0r`, hidden inner mode, finalizer 또는 consumer를 직접 호출하지 않는다.
 
 ```powershell
 python tools/research/av_bs1_boundary_schur_h4_p0r_p1.py --stage manifest
@@ -3382,7 +3382,7 @@ is absent. The consumed tombstone SHA-256 is
 commit `46c08d405f530cce0cfbba9d908f8c266a26a002` preserves it and deletion-only
 commit `71d3dab442cbdfa6361e4e91de57d8f5b4d1a990` retires the token.
 
-### Current retry-v5 replay boundary
+### Frozen retry-v5 replay boundary
 
 Retry-v5 makes exactly two run-enabling changes. The four active factor tree
 samples pass explicit `MaximumAttempts=3`; the caught-final cleanup sample keeps
@@ -3406,9 +3406,95 @@ factor_fit_unproven: true
 next_stage_authorized: false
 ```
 
-Only manifest/static replay is safe before a new clean contract and external
-authorization cycle. Do not invoke the five spent token commits or any hidden
-inner/finalizer/consumer stage directly.
+At that frozen retry-v5 point, only manifest/static replay was safe before a new
+clean contract and external authorization cycle. The five then-spent token
+commits were not reusable.
+
+### Sixth public invocation evidence
+
+The sixth public `primary-h4-p0r` invocation is also immutable evidence, never a
+command to replay. Clean retry-v5 contract
+`bddbf9cb3547ae0385c6e6bbc47424f630cca87e` was the sole parent of token-only
+commit `82775327d79742b6c3111ad33a87fd1a4953ee79`. Token ID
+`a3f49b44dd164da3a0ca1a6dc4c976c3` had original raw/canonical SHA-256
+`69b7e93720d8044d60f4ca95ccc5440670904d27f75ee77730e2947a01d58ed4` /
+`68444b687e63750bdd0c7056a45b29d53d825c3572c2db03245cb032d63037a8`.
+Outer observation ran from `2026-08-15T15:39:01.9701124Z` through
+`2026-08-15T15:39:55.3757836Z`; the public invocation returned exit `2`.
+
+Claim raw SHA-256 is
+`f15962f38e5141420a15536eda96653c76fa2ff26be6ec1e7c3fb69fe50ab955`;
+guard and monitor-ready raw SHA-256 are
+`1acdc9f1d7eaa04a4e2800dbec81710b88580e1718aee073e2b49d0618602b09` and
+`9d65ff505fea0eb6c50351f3f0dc22b6a1afb4641d24f4e51380badba471dcaf`.
+Factor child PID `55380` was launched. Provisional numerical artifact SHA-256
+`ab5adac793f9acda882bfa0c66c5ce20319e1cb06fe5cb88c9968803acf8822e`
+contains payload SHA-256
+`55d4436ab55c77be6d7fb37549fc8e4e5b94871cf05518e7dfc97fb93c5bcd25`,
+failure `BLOCKED_AV_BS_RESULT_SCHEMA`, detail
+`claimed preflight payload mismatch`, and attempted/performed `false/false`.
+The redundant post-claim preflight comparison failed before `_factor_one` and
+the `splu` call. No factor-complete, monitor-release, prefix, completed factor,
+certificate, RHS, solve, H4 physics, PowerSI, or 8 GiB result exists.
+
+Outer session
+`validation-output/av-bs1/outer-observer/session-21f46fec2e314e248cf051e4273b97f0`
+has ready/start/close SHA-256
+`b91d5b80d73efc02bd0ca55a48692d2db744fd033de1fff63ef301e20a88dd17`,
+`118addd5e9740ab3ddd0e8dfd48279d933f9c874db6f073305096417b56ef3bd`,
+and `d2777207e4000cbde8e4bf2332eeba96dd54ec3b8918a0d107049531d15cd8f8`.
+It independently stopped on attempt `3`, context `outer_tree_sample`, operation
+`get_process_times`, PID `53404`, expected/observed birth
+`639224051920616566`, code
+`TRANSIENT_DESCENDANT_DISAPPEARANCE_RETRY_EXHAUSTED`, confirmation
+`signaled_handle_and_complete_snapshot_absent`. It retained all `30/30` retry
+events, set `tree_sample_retry_events_truncated=false`, verified cleanup, and
+wrote no seal. All `107` recorded identities were absent at forensic review.
+Peak working set/private commit/lifetime peak commit were
+`513355776/1790554112/2135834624` bytes; minimum available physical and commit
+headroom were `46603452416/72951267328` bytes. This was not a resource ceiling.
+
+The outer emergency layer lacked trusted inner completion evidence and
+therefore conservatively recorded attempted/performed null/null. That does not
+contradict the direct child wrapper's false/false. Emergency raw record SHA-256
+`43bb34b225b6b1d376715615a90b7b6202e10da5a10679484a644b1911c4d1fb`
+is exact and honest about consumption and lack of authority, but its nested
+`bindings` has seven keys and omits `resource_policy_sha256`. Its stored review
+binding was computed from the historical full eight-key preflight bindings, so
+the strict validator correctly rejects it. Commit
+`06061a234ad7b1b911d7425b7765482bda58a87a` preserves this provisional record;
+deletion-only retirement `c001b4498fc750b5955f5118844945c499fce119`
+removes the token. It is not a validated terminal tombstone or seal.
+
+The surviving ignored `%TEMP%` directory
+`av-bs1-241bd96890c24f6b8117fca08e2d5aa3` is forensic source evidence, not a
+tracked immutable reproduction input. Do not move, modify, or promote its path
+to a canonical result contract. The claim, tracked validation-output, commit
+objects, and recorded hashes are the durable evidence.
+
+### Current retry-v6 replay boundary
+
+Retry-v6 makes only two corrections: remove the redundant three-line
+post-claim preflight call/comparison in Python, and add nested
+`bindings.resource_policy_sha256` to the emergency runner producer. The strict
+validator, schema, ABI, retry-v5 max3/cap64 behavior, matrix/factor path, RHS,
+solve, and physics logic do not change.
+
+```text
+Python fixture SHA-256: 2373a13f51e2833e416e1ce6326587b9e1c782b5165d99f7002e7dbc4658ebc4
+PowerShell runner SHA-256: 852ce8a03b25e33b9eb26ec6f5ce295381dab493b1b26762ddea14be7196000d
+static tests SHA-256: f1d0b044cbf53e90dba128ec398ccd8b7a81da8c5137bea202b2852eb3f288af
+focused retry-v6 tests: 8/8 passed
+full no-cache P1 suite: 330/330 passed in 81.83 s
+token_state: absent
+factor_fit_unproven: true
+next_stage_authorized: false
+```
+
+Only manifest/static replay is safe before the corrected no-token contract,
+full final rerun, and independent authorization cycle are complete. Do not
+invoke any of the six spent token commits or any hidden inner/finalizer/consumer
+stage directly.
 
 ## Focused regression
 

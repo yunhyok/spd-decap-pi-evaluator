@@ -1,6 +1,6 @@
 # SPD Decap PI Evaluator v0.22.0 — T1-M1 SAO–CIM / A–v Reference Specification
 
-최종 갱신: 2026-08-15 (Asia/Seoul)
+최종 갱신: 2026-08-16 (Asia/Seoul)
 
 이 문서는 finite-width straight conductor와 explicit return의 smooth-copper broadband series operator를 검증할 T1-M1 실행 계약을 고정한다. 제품 parser/solver 코드는 변경하지 않았다. mandatory circle interior prototype은 [`T1_CIRCLE_DTN_RESULTS.md`](T1_CIRCLE_DTN_RESULTS.md)에서 `C0-A1 passed_circle_interior_only`, lateral-periodic slab은 [`T1_M0_SLAB_RESULTS.md`](T1_M0_SLAB_RESULTS.md)에서 `passed_periodic_1d_volume_only`로 판정됐다. 첫 M1 collocation power failure는 immutable이고 G1은 `passed_exterior_galerkin_only`다. G2 pair screen은 `passed_pair_screen_only`지만 100 kHz circle에서 raw reciprocity/cancellation gate를 실패해 현재 전체 T1-M1은 **`BLOCKED_INTERIOR_WEIGHTED_RECIPROCITY_PASSIVITY__G2_PAIR_PASSED_CIRCLE_100KHZ_RECIPROCITY_CANCELLATION_FAIL`**, T1 전체와 global composition은 계속 `blocked`다. planned G2 2 GHz circle row, G2 `N=512`, G2 EQ0 seed는 fail-closed로 미실행이며 raw 결과는 [`T1_M1_EQ0_RESULTS.md`](T1_M1_EQ0_RESULTS.md)에 보존한다.
 
@@ -520,7 +520,7 @@ Stage 1 pair screen은 사전등록 뒤 실행됐다. 두 frequency 모두 self/
 
 Stage 2 medium circle은 같은 session에서 pair replay/review 뒤 실행됐고 100 kHz의 첫 mandatory operator gate에서 fail-closed 종료됐다. `N=128` q20/q40의 raw `Yw` reciprocity는 `2.40109e-9/2.50717e-9`로 통과했지만 cancellation condition `2.91315e-8`이 실패했다. `N=256`은 raw reciprocity `1.41197e-8/1.41083e-8`과 cancellation `1.63755e-7`이 모두 실패했다. analytic max error는 각각 `0.390062%`와 `0.0985103%`, q parity worst `2.81068e-12`, mesh worst relative/RMS/phase `0.290419%/0.161108%/0.0128560°`였고 raw Hermitian minimum은 양수여서 analytic, q, mesh, residual/condition과 passivity gate는 통과했다. planned G2 2 GHz circle row, G2 `N=512`, G2 EQ0 seed는 실행하지 않았다. 현재 전체 상태는 **`BLOCKED_INTERIOR_WEIGHTED_RECIPROCITY_PASSIVITY__G2_PAIR_PASSED_CIRCLE_100KHZ_RECIPROCITY_CANCELLATION_FAIL`**다.
 
-다음 실행 후보는 G2 수치를 보정하는 continuation이 아니다. two-DtN subtraction이 없는 independent A–v volume-FEM boundary Schur reference candidate는 H0 pre-factor negative를 보존한 뒤 H1 17.5 µm/100 kHz coarse `h`와 H2 refined `h2`에서 각각 stage-only gate를 통과했다. 최신 physics 상태는 `passed_AV_BS_h2_stage_only_pending_h4_preregistration`이고 h→h2 RMS/max `0.462796%/0.868015%`는 trend-only다. H4-P0/H4-P0R parent와 P1 executable static review도 통과했다. 다섯 public P1 attempt 중 다섯 번째가 claim/factor-child와 108 samples까지 도달했지만 monitor stop, 0 certified factors, attempted/performed null, outer 27/16 truncation/no seal을 남겼다. 현재 retry-v5 static candidate만 있고 token absent/factor fit unproven이며 fine analytic/mesh convergence/final circle은 `null`, H2 token은 consumed/next=false다. retry-v5 clean no-token contract reread/fresh token/result audit 전에는 H4 physics를 금지하고, 그 뒤에만 `h4`, final circle과 crop/withheld-radius 단계를 순차 확장한다. production SAO 후보는 Hamiltonian Schur 또는 four-operator symmetric Calderón/Steklov–Poincaré discretization으로 별도 비교하며 post-symmetrization, negative-eigenvalue clipping, higher-precision promotion과 gate 완화를 금지한다.
+다음 실행 후보는 G2 수치를 보정하는 continuation이 아니다. two-DtN subtraction이 없는 independent A–v volume-FEM boundary Schur reference candidate는 H0 pre-factor negative를 보존한 뒤 H1 17.5 µm/100 kHz coarse `h`와 H2 refined `h2`에서 각각 stage-only gate를 통과했다. 최신 physics 상태는 `passed_AV_BS_h2_stage_only_pending_h4_preregistration`이고 h→h2 RMS/max `0.462796%/0.868015%`는 trend-only다. H4-P0/H4-P0R parent와 P1 executable static review도 통과했다. 여섯 번째 public P1은 claim/factor child 뒤 `_factor_one`/`splu` 전 차단되어 0 certified factors와 attempted/performed false를 남겼고 독립 outer max3 exhaustion은 30/30 no-truncation/no-seal로 끝났다. 현재 retry-v6 static candidate만 있고 token absent/factor fit unproven이며 fine analytic/mesh convergence/final circle은 `null`, H2 token은 consumed/next=false다. retry-v6 clean no-token contract의 full no-cache `330/330` pass와 audit를 보존하고 fresh token/result audit 전에는 H4 physics를 금지하며, 그 뒤에만 `h4`, final circle과 crop/withheld-radius 단계를 순차 확장한다. production SAO 후보는 Hamiltonian Schur 또는 four-operator symmetric Calderón/Steklov–Poincaré discretization으로 별도 비교하며 post-symmetrization, negative-eigenvalue clipping, higher-precision promotion과 gate 완화를 금지한다.
 
 ## Numerical certificate와 promotion gate
 
@@ -568,7 +568,7 @@ retry-v4는 caller가 이미 `MaximumAttempts>1`을 전달한 outer/control samp
 
 현재 static binding은 runner `7893cd57fd4b1686addd434fa0103d9f3b0e0087f4783f2c82e459661abfb645`, Python `95c9f5c08282105f7934fbea194694fff3ab850daac633619534044721639234`, tests `18aabcdf7b32c6b013aec65497d31f4d908f3085f53f64cb3791f38a2e79381d`다. focused retry-v4 11/11, full no-cache P1 322/322 in 82.01 s, PowerShell AST 47,623 tokens/0 errors, Python AST clean이다. 이 static 증거는 새 public authorization이나 physics 결과가 아니다.
 
-## Retry-v5 current execution boundary
+## Frozen retry-v5 execution boundary
 
 다섯 번째 public P1은 token-only `5ba4b693...`에서 claim과 factor child PID
 `55552`까지 도달했고 `108/108` child-visible samples 뒤 active factor
@@ -588,6 +588,25 @@ condition은 그대로다. frozen runner/Python/tests SHA는
 `b51498ebe27a0210a09b3a12b26e0146d39c1249906469bcb1add1d2f2443f08`;
 focused/full `29/29`/`324/324`, token absent, factor fit unproven, next false다.
 
+## Retry-v6 current execution boundary
+
+여섯 번째 public P1 token-only commit `82775327...`은 claim과 factor child PID
+`55380`까지 도달했지만 child가 `_factor_one`/`splu` 전
+`claimed preflight payload mismatch`로 차단됐다. direct child의
+attempted/performed는 `false/false`, completed/certified factors는 0이다.
+독립 outer close `d2777207...`는 PID `53404`의 max3 exhaustion으로 30/30
+events를 truncation 없이 보존하고 cleanup을 검증했지만 seal은 쓰지
+않았다. resource ceiling, RHS/solve/H4 physics/PowerSI/EQ0 결과는 없다.
+
+emergency record `43bb34b2...`는 정직하지만 nested
+`bindings.resource_policy_sha256` 누락으로 strict-validator-invalid다.
+`06061a2...` provisional record와 `c001b44...` deletion retirement 뒤 token은
+없다. retry-v6는 redundant Python 3줄 삭제와 runner binding 1키 추가뿐이다.
+frozen Python/runner/tests SHA는 `2373a13f...` / `852ce8a0...` /
+`f1d0b044...`; focused `8/8`과 full no-cache `330/330`이 통과했고 후자는
+`81.83 s`였다. retry/schema/ABI/validator/factor/physics 계약과 next false는
+그대로다.
+
 ## 실행 순서와 상태 전이
 
 1. 위 두 radius, 일곱 frequency, 다섯 Fourier mode의 analytic Bessel/Fourier DtN eigenvalue로 SAO interior를 검증한다. **완료:** A0 실패, A1 circle-only 통과.
@@ -595,7 +614,7 @@ focused/full `29/29`/`324/324`, token absent, factor fit unproven, next false다
 3. smallest eligible equal-width finite/open M1 collocation은 **완료/실패:** `BLOCKED_SAO_BOUNDARY_POWER_IDENTITY`로 immutable 보존한다.
 4. 같은 endpoint의 G1 direct exterior Galerkin은 **완료/제한 통과:** `passed_exterior_galerkin_only`. interior reciprocity와 저주파 passivity 때문에 overall blocked다.
 5. G2 target-tested interior Galerkin은 **pair 제한 통과 뒤 100 kHz circle 실패:** raw reciprocity/cancellation failure를 immutable 보존하고 planned G2 2 GHz circle, G2 `N=512`, G2 EQ0 seed로 확장하지 않는다.
-6. 같은 geometry/current basis의 A–v는 **2 GHz 4Deff smoke와 H1 coarse `h`, H2 refined `h2` stage-only:** consistent mass power smoke 뒤 17.5 µm/100 kHz boundary-Schur `h`와 `h2`가 각각 local gate를 통과했다. H2 artifact는 signed-M9 PDE/power certificate와 consumed one-use token을 보존한다. H4-P0R parent와 P1 executable/static review는 통과했지만 다섯 public attempt 뒤에도 completed/certified H4 factor는 0이고 factor fit/H4 physics는 미증명·금지 상태다. retry-v5 clean no-token contract를 감사·reread하고 fresh one-use token을 만든 뒤 factor-only run을 한 번 수행하고, 그 result/resource/tombstone/seal을 독립 감사한다. 이어 별도 H4-P1 physics/result 계약, clean static audit와 새 one-use token을 모두 고정한 뒤에만 `h4`를 실행해 mandatory h2→h4/fine analytic을 처음 판정하며, 그 뒤에만 final circle과 crop `2/4/8 Deff`를 순차 실행한다.
+6. 같은 geometry/current basis의 A–v는 **2 GHz 4Deff smoke와 H1 coarse `h`, H2 refined `h2` stage-only:** consistent mass power smoke 뒤 17.5 µm/100 kHz boundary-Schur `h`와 `h2`가 각각 local gate를 통과했다. H2 artifact는 signed-M9 PDE/power certificate와 consumed one-use token을 보존한다. H4-P0R parent와 P1 executable/static review는 통과했지만 여섯 public attempt 뒤에도 completed/certified H4 factor는 0이고 factor fit/H4 physics는 미증명·금지 상태다. retry-v6 clean no-token contract의 full no-cache `330/330` pass와 audit/reread 뒤 fresh one-use token을 만든 경우에만 factor-only run을 한 번 수행하고, 그 result/resource/tombstone/seal을 독립 감사한다. 이어 별도 H4-P1 physics/result 계약, clean static audit와 새 one-use token을 모두 고정한 뒤에만 `h4`를 실행해 mandatory h2→h4/fine analytic을 처음 판정하며, 그 뒤에만 final circle과 crop `2/4/8 Deff`를 순차 실행한다.
 7. symmetric two-return case에서 symmetry로만 equal split이 나오는지 검증한다.
 8. P2 artificial `Trace13305` coupon을 실행한다.
 9. finite-length T1-F 3-D length-difference reference와 distributed line stamp를 연결한다.

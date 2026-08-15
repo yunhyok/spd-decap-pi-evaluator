@@ -1122,6 +1122,7 @@ function Set-OuterObserverEmergencyConsumedTombstone(
         preregistration_doc_sha256 = [string]$CandidateToken.preregistration_doc_sha256
         manifest_payload_sha256 = [string]$CandidateToken.manifest_payload_sha256
         matrix_contract_sha256 = [string]$CandidateToken.matrix_contract_sha256
+        resource_policy_sha256 = [string]$CandidateToken.resource_policy_sha256
         parent_bindings = $CandidateToken.parent_bindings
     }
     $emergency = [ordered]@{

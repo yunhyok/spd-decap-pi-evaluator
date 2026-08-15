@@ -2,11 +2,12 @@
 
 ## 1. Current status and authority
 
-This document preregisters the fifth corrective static executable-contract
-candidate after five public invocations. The first four stopped before claim
-and factor work; the fifth created the claim and factor child but certified no
-factor. It remains token-absent and does not itself authorize a pilot. None of
-the five prior tokens may be reused.
+This document now preregisters the retry-v6 corrective static
+executable-contract candidate after six public invocations. The first four
+stopped before claim and factor work; the fifth reached the factor child but
+left factor entry indeterminate; the sixth created claim and factor child but
+failed before `_factor_one`/`splu`. It remains token-absent and does not itself
+authorize a pilot. None of the six prior tokens may be reused.
 
 The current safe manifest classification is:
 
@@ -15,12 +16,13 @@ The current safe manifest classification is:
 - `authorization_state=not_authorized`;
 - `terminal_evidence_complete=false`;
 - `authoritative_stage_pass=false`;
-- no H4-P0R-P1 factor has completed or been certified, attempted/performed are
-  indeterminate for the externally terminated fifth child, and no physics
-  solve has run; and
+- no certified or completed H4-P0R-P1 factor exists, and no RHS, solve, H4 physics, or PowerSI work has run;
+- direct sixth-child evidence records attempted/performed `false/false`, while
+  the independent emergency outer record conservatively records null/null
+  because it does not claim trusted inner phase knowledge; and
 - no later H4-P1 stage is authorized.
 
-The retry-v5 candidate retains execution resource scope v2,
+The retry-v6 candidate retains execution resource scope v2,
 `control_plane.independently_bounded=true`,
 `tree_thresholds_equal_factor_envelope=true`,
 `system_floor_recheck_before_and_after_each=true`, and
@@ -30,9 +32,12 @@ control-plane supervisor and outer observer, with the readiness-specific
 outer-observer sampling contexts plus six explicitly instrumented control-plane
 sampling contexts (12 total), plus the four active factor sampling calls, opt
 into `MaximumAttempts=3`; the caught-final factor cleanup call and function
-default remain `1`. Outer/control retry evidence has bounded cap `64`. These facts make the exact candidate eligible for a
-later token review; they do not authorize a pilot while the token is absent and
-do not change any terminal or next-stage authorization blocker.
+default remain `1`. Outer/control retry evidence has bounded cap `64`. Retry-v6
+does not alter any of those retry semantics. It removes only the redundant
+post-claim preflight comparison and adds one required emergency binding key.
+These facts make the exact candidate eligible for later token review; they do
+not authorize a pilot while the token is absent and do not change any terminal
+or next-stage authorization blocker.
 
 ## 2. Frozen program identity and ancestry
 
@@ -396,6 +401,16 @@ controlled post-claim failure only when all of these facts still hold:
 - the inner process is no longer live; and
 - zero owned descendant survivors remain.
 
+The replacement tombstone's nested `bindings` map must exactly equal the
+current validated manifest bindings. It therefore contains all eight frozen
+keys, including `resource_policy_sha256`; the top-level
+`resource_guard_policy_sha256` is independent and cannot substitute for that
+nested key. Review-binding recomputation uses the same complete eight-key
+manifest map, which the tombstone's own nested map must exactly equal. Missing,
+extra, or drifted binding data remains a strict validation failure. The
+emergency producer must satisfy this existing contract; the Python validator is
+not relaxed.
+
 That branch uses review disposition
 `emergency_consumed_after_outer_observer_post_claim_failure` and attempt/effect
 status `outer_observer_post_claim_failure`. It does not claim inner factor
@@ -681,7 +696,7 @@ physics_solve_performed: false
 next_stage_authorized: false
 ```
 
-### 15.6 Fifth public attempt and current retry-v5 static evidence
+### 15.6 Fifth public attempt and frozen retry-v5 static evidence
 
 Retry-v4 contract `099db849564207b636f7431ee2fb52a540a7cb4e` was the sole
 parent of token-only commit `5ba4b69398f526a0fcf640cf1dc4e7197cc7e660`.
@@ -755,18 +770,88 @@ physics_solve_performed: false
 next_stage_authorized: false
 ```
 
+### 15.7 Sixth public attempt and retry-v6 corrective evidence
+
+Clean retry-v5 contract `bddbf9cb3547ae0385c6e6bbc47424f630cca87e` was the sole
+parent of token-only commit `82775327d79742b6c3111ad33a87fd1a4953ee79`.
+Token ID `a3f49b44dd164da3a0ca1a6dc4c976c3`, raw/canonical SHA-256
+`69b7e93720d8044d60f4ca95ccc5440670904d27f75ee77730e2947a01d58ed4` /
+`68444b687e63750bdd0c7056a45b29d53d825c3572c2db03245cb032d63037a8`,
+was invoked exactly once. Outer observation ran from
+`2026-08-15T15:39:01.9701124Z` through `2026-08-15T15:39:55.3757836Z`;
+the public invocation returned exit `2`.
+
+The exact claim is
+`validation-output/av-bs1/claims/a3f49b44dd164da3a0ca1a6dc4c976c3.json`,
+raw SHA-256
+`f15962f38e5141420a15536eda96653c76fa2ff26be6ec1e7c3fb69fe50ab955`.
+Factor child PID `55380` was launched. Provisional numerical artifact SHA-256
+`ab5adac793f9acda882bfa0c66c5ce20319e1cb06fe5cb88c9968803acf8822e`
+records `BLOCKED_AV_BS_RESULT_SCHEMA`, detail
+`claimed preflight payload mismatch`, and attempted/performed `false/false`.
+The failure occurred before `_factor_one` and before the `splu` call. No
+factor-prefix, factor-complete, monitor-release, completed factor, or
+certificate exists; RHS, solve, H4 physics, and PowerSI remain unexecuted.
+
+Outer session
+`validation-output/av-bs1/outer-observer/session-21f46fec2e314e248cf051e4273b97f0`
+has ready/start/close SHA-256
+`b91d5b80d73efc02bd0ca55a48692d2db744fd033de1fff63ef301e20a88dd17`,
+`118addd5e9740ab3ddd0e8dfd48279d933f9c874db6f073305096417b56ef3bd`,
+and `d2777207e4000cbde8e4bf2332eeba96dd54ec3b8918a0d107049531d15cd8f8`.
+It stopped independently on attempt-3
+`TRANSIENT_DESCENDANT_DISAPPEARANCE_RETRY_EXHAUSTED`, context
+`outer_tree_sample`, operation `get_process_times`, PID `53404`, with equal
+positive expected/observed birth `639224051920616566`. All `30/30` retry events
+were retained, `tree_sample_retry_events_truncated=false`, cleanup was verified,
+and no terminal seal exists. Resource ceilings were not approached. This
+failure does not invalidate the direct child false/false evidence, and the
+child mismatch does not convert the outer exhaustion into a factor result.
+
+Emergency replacement wrote exact raw record SHA-256
+`43bb34b225b6b1d376715615a90b7b6202e10da5a10679484a644b1911c4d1fb`.
+It truthfully records consumption and no terminal authority, and conservatively
+keeps factor fields null because the outer layer lacks trusted inner phase
+evidence. It is nevertheless strict-validator-invalid: nested `bindings`
+omits `resource_policy_sha256`, although the top-level resource policy binding
+is present. Commit `06061a234ad7b1b911d7425b7765482bda58a87a` preserves this
+provisional record; deletion-only retirement
+`c001b4498fc750b5955f5118844945c499fce119` removes the token. It is not a
+validated tombstone or seal, and the sixth token may never be reused.
+
+Retry-v6 makes exactly two minimal corrections. Python deletes the redundant
+three-line post-claim call/comparison whose current manifest could not equal the
+historical pre-claim payload. The runner adds
+`bindings.resource_policy_sha256` to the emergency producer. Schema, ABI,
+validator strictness, retry policy and cap64, matrix/factor operations, RHS,
+solve, and physics remain unchanged. Frozen candidate evidence is:
+
+```text
+Python fixture SHA-256: 2373a13f51e2833e416e1ce6326587b9e1c782b5165d99f7002e7dbc4658ebc4
+PowerShell runner SHA-256: 852ce8a03b25e33b9eb26ec6f5ce295381dab493b1b26762ddea14be7196000d
+static tests SHA-256: f1d0b044cbf53e90dba128ec398ccd8b7a81da8c5137bea202b2852eb3f288af
+focused retry-v6 tests: 8/8 passed
+full no-cache P1 suite: 330/330 passed in 81.83 s
+token_state: absent
+factor_fit_unproven: true
+physics_solve_performed: false
+next_stage_authorized: false
+```
+
 ## 16. Exact next sequence
 
 The only permitted next sequence is:
 
-The retry-v5 active-factor sampling and bounded evidence-cap corrections have
-been applied to this candidate. They do not create or authorize a token. The
-retired token-only commits `b6c8615...`, `d9e064f...`, `6328174...`,
-`9b4854d0...`, and `5ba4b693...` must never be invoked again.
+The retry-v6 post-claim and emergency-binding corrections have been applied to
+this candidate. They do not create or authorize a token and do not widen the
+retry-v5 factor-only boundary. The retired token-only commits `b6c8615...`,
+`d9e064f...`, `6328174...`, `9b4854d0...`, `5ba4b693...`, and `82775327...`
+must never be invoked again.
 
-1. Freeze the retry-v5 fixture, runner, tests, documentation, schema bindings,
-   and safe no-token manifest; complete independent code/document/contract
-   audits and compute the final document SHA-256 externally.
+1. Freeze the retry-v6 fixture, runner, tests, documentation, unchanged schema
+   bindings, safe no-token manifest, and completed full no-cache `330/330` pass
+   in `81.83 s`. Complete independent code/document/contract audits and compute
+   final document SHA-256 externally.
 2. Create one clean executable-contract commit containing exactly those
    reviewed bytes and bindings. The contract commit contains no P1 review
    token.
@@ -778,7 +863,7 @@ retired token-only commits `b6c8615...`, `d9e064f...`, `6328174...`,
    the final contract commit and every frozen hash.
 5. From that fresh clean token-only child, invoke the public
    `primary-h4-p0r` runner exactly once for the two-factor, zero-RHS,
-   zero-solve pilot. Never invoke any of the five prior token commits.
+   zero-solve pilot. Never invoke any of the six prior token commits.
 6. Classify the outcome only from the v2 tombstone, outer terminal seal, and
    the complete current-byte-bound claim, guard, resource, result, child,
    marker, prefix, report, index, close, and applicable recovery-journal chain.

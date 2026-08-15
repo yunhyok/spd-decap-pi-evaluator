@@ -70,7 +70,7 @@ Focused tests passed `11/11`; the full no-cache P1 suite passed `322/322` in
 clean. This static pass does not authorize a token or factor run:
 `next_stage_authorized=false`.
 
-## Retry-v5 current boundary
+## Frozen retry-v5 boundary
 
 Earlier retry-v2/retry-v3/retry-v4 sections remain immutable history. Five
 public H4-P0R-P1 invocations are now preserved. The fifth used token-only commit
@@ -118,6 +118,49 @@ Focused tests passed `29/29` in `15.91 s`; the full no-cache P1 suite passed
 Python syntax checks were clean. This static pass authorizes neither a token nor
 a physics run: `factor_fit_unproven=true`, `next_stage_authorized=false`.
 
+## Retry-v6 current boundary
+
+Earlier retry sections remain immutable history. The sixth public
+`primary-h4-p0r` invocation used token-only commit
+`82775327d79742b6c3111ad33a87fd1a4953ee79`, whose sole parent was clean
+retry-v5 contract `bddbf9cb3547ae0385c6e6bbc47424f630cca87e`. It created claim
+`a3f49b44dd164da3a0ca1a6dc4c976c3` and launched factor child PID `55380`.
+The provisional numerical artifact then failed on
+`claimed preflight payload mismatch` before `_factor_one` or `splu`; its direct
+child evidence fixes `factorization_attempted=false` and
+`factorization_performed=false`. No factor prefix, completed/certified factor,
+RHS, solve, H4 physics, or PowerSI work exists.
+
+The outer observer failed independently. Session
+`validation-output/av-bs1/outer-observer/session-21f46fec2e314e248cf051e4273b97f0`
+closed on attempt-3 `TRANSIENT_DESCENDANT_DISAPPEARANCE_RETRY_EXHAUSTED` for
+PID `53404`, stored all `30/30` retry events with
+`tree_sample_retry_events_truncated=false`, verified cleanup, and wrote no
+terminal seal. The cap-64 correction worked; this was neither truncation nor a
+resource ceiling. The emergency outer record conservatively retained null
+factor fields because the outer layer lacked trusted inner evidence.
+
+Emergency replacement produced raw record SHA-256
+`43bb34b225b6b1d376715615a90b7b6202e10da5a10679484a644b1911c4d1fb`.
+It is exact and honest about consumption and lack of authority, but it is not a
+strictly valid terminal tombstone: its nested `bindings` omitted
+`resource_policy_sha256`. Commit
+`06061a234ad7b1b911d7425b7765482bda58a87a` preserves that provisional record;
+deletion-only retirement `c001b4498fc750b5955f5118844945c499fce119`
+leaves the token absent. The sixth token must never be reused.
+
+Retry-v6 is limited to two corrections: delete the redundant three-line
+post-claim preflight comparison in Python, and add the missing nested emergency
+`resource_policy_sha256` binding in the runner. It does not change schema, ABI,
+the strict validator, retry predicates or limits, factor operations, RHS,
+solve, or physics. Frozen candidate SHA-256 bindings are Python
+`2373a13f51e2833e416e1ce6326587b9e1c782b5165d99f7002e7dbc4658ebc4`, runner
+`852ce8a03b25e33b9eb26ec6f5ce295381dab493b1b26762ddea14be7196000d`, and tests
+`f1d0b044cbf53e90dba128ec398ccd8b7a81da8c5137bea202b2852eb3f288af`.
+Focused regressions passed `8/8`; the full no-cache `330/330` passed in
+`81.83 s`. This candidate authorizes neither a token nor a public run:
+`factor_fit_unproven=true`, `next_stage_authorized=false`.
+
 ## 세션 시작 절차
 
 새 세션의 첫 작업은 아래 순서로 문서를 읽는 것이다.
@@ -140,7 +183,7 @@ a physics run: `factor_fit_unproven=true`, `next_stage_authorized=false`.
 16. [`T1_AV_BOUNDARY_SCHUR_H2_P1_PREREG.md`](T1_AV_BOUNDARY_SCHUR_H2_P1_PREREG.md): H2-P1 실행 전 immutable token-gated single-mesh 계약과 독립 M9 residual/power 증거 확인
 17. [`T1_AV_BOUNDARY_SCHUR_H4_P0_PREREG.md`](T1_AV_BOUNDARY_SCHUR_H4_P0_PREREG.md): H4 topology/cyclic lineage/canonical assembly와 dual resource envelope의 no-solve 경계 확인
 18. [`T1_AV_BOUNDARY_SCHUR_H4_P0R_PREREG.md`](T1_AV_BOUNDARY_SCHUR_H4_P0R_PREREG.md): factorization-only pilot의 frozen matrix/equilibration/resource/lifecycle 계약과 현재 no-factor 경계 확인
-19. [`T1_AV_BOUNDARY_SCHUR_H4_P0R_P1_PREREG.md`](T1_AV_BOUNDARY_SCHUR_H4_P0R_P1_PREREG.md): executable/outer-observer/one-use/seal-v2 계약, 다섯 public attempt와 token retirement, 다섯 번째 attempt의 claim/factor-child reach·108 samples·factor outcome `null`·0 certified factors·outer 27/16 truncation/no seal, frozen/static-audited retry-v5 active-four max3/event-cap64 Python/runner/tests, token absent 및 no RHS/solve/physics 경계, prior token 재사용 없이 clean no-token contract -> reread -> fresh token-only child -> 단 한 번의 factor-only pilot 순서 확인
+19. [`T1_AV_BOUNDARY_SCHUR_H4_P0R_P1_PREREG.md`](T1_AV_BOUNDARY_SCHUR_H4_P0R_P1_PREREG.md): executable/outer-observer/one-use/seal-v2 계약, 여섯 public attempt와 token retirement, 여섯 번째 child의 pre-factor `claimed preflight payload mismatch`와 attempted/performed `false/false`, 독립 outer max3 exhaustion·30/30 no-truncation/no-seal, strict-validator-invalid 06061 provisional record와 c001 deletion retirement, frozen retry-v6 Python/runner/tests 및 full no-cache 330/330 pass 경계, prior token 재사용 없이 corrected no-token contract -> audit -> fresh token-only child -> 단 한 번의 factor-only pilot 순서 확인
 20. [`T1_M1_EQ0_RESULTS.md`](T1_M1_EQ0_RESULTS.md): immutable collocation failure, G1 exterior-only, G2 pair-only pass와 100 kHz circle reciprocity/cancellation failure 확인
 21. [`T1_CIRCLE_DTN_RESULTS.md`](T1_CIRCLE_DTN_RESULTS.md): frozen `C0-A0` 실패, selected `C0-A1` circle-only 통과와 withheld/수치 범위 확인
 22. [`T1_M0_SLAB_RESULTS.md`](T1_M0_SLAB_RESULTS.md): periodic slab의 independent 1-D FEM pass, withheld 결과와 free-space/periodic boundary mismatch 확인
