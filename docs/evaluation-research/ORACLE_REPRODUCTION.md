@@ -1,5 +1,25 @@
 # SPD Decap PI Evaluator v0.22.0 — Oracle Reproduction Appendix
 
+> **SPD Decap PI Evaluator v0.22.0 — retry-v7 current boundary:** Seven public
+> `primary-h4-p0r` invocations are immutable. In the seventh, native `splu`
+> returned for `A_background_II`; attempted/performed are `true/true` and the
+> completed-name list contains it, but the obsolete native/exported nnz equality
+> gate failed before any certificate or prefix. `A_conductor_II` was not
+> attempted and the exact native/exported factor counts were not persisted.
+> Inner/outer monitoring retained `174/573` samples and all `31` outer retry
+> events without truncation; both resource gates passed, but this is neither
+> accuracy evidence nor an 8 GiB-fit claim. Commits `51e5069...` and
+> `17414cf...` record consumption and deletion-only retirement; token state is
+> absent. Retry-v7 requires `0 < exported <= native`, validates distinct
+> native/exported portable-byte formulas and caps both, without schema, retry,
+> or factor-order changes. Frozen Python/runner/tests SHA-256 are `7a1dba5e...` /
+> `852ce8a0...` / `bd2e3e2c...`; focused `25/25` and full no-cache `341/341`
+> passed, the latter in `88.40 s`. No RHS, solve, H4 physics, or PowerSI work
+> ran; `next_stage_authorized=false`. Earlier retry-v6 sections are immutable
+> history. Exact evidence is in [results](T1_AV_BOUNDARY_SCHUR_RESULTS.md) and
+> the [reproduction appendix](ORACLE_REPRODUCTION.md).
+
+
 최종 갱신: 2026-08-16 (Asia/Seoul)
 
 이 문서는 [`R2_ORACLE_RESULTS.md`](R2_ORACLE_RESULTS.md)의 custom numerical table을 같은 research commit에서 재생성하는 exact commands를 보존한다. 모두 repository root `C:\Users\User\Documents\SPD Decap PI Evaluator-evaluation-research`에서 실행한다. 제품 file과 raw SPD를 수정하지 않는다.
@@ -3131,7 +3151,7 @@ Exact next는 현재 manifest-only contract를 clean commit과 독립 audit에 �
 
 ## AV-BS1 H4-P0R-P1 safe replay and interruption evidence
 
-위 문단은 immutable manifest-only parent의 당시 next step이다. 후속 P1 executable/lifecycle은 구현됐고 여섯 public invocation은 모두 factor 결과 없이 fail-closed 됐다. 여섯 one-use token은 재실행 없이 소비·삭제됐으며 현재 checkout에는 P1 token이 없다. 아래 명령만 safe static replay로 허용하며 `-Stage primary-h4-p0r`, hidden inner mode, finalizer 또는 consumer를 직접 호출하지 않는다.
+위 문단은 immutable manifest-only parent의 당시 next step이다. 후속 P1 executable/lifecycle은 구현됐고 일곱 public invocation은 모두 certified factor result 없이 fail-closed 됐다. 일곱 번째는 `A_background_II` native `splu` 반환만 완료했으며 certificate/prefix는 없고 `A_conductor_II`는 미시도다. 일곱 one-use token은 재실행 없이 소비·삭제됐으며 현재 checkout에는 P1 token이 없다. 아래 명령만 safe static replay로 허용하며 `-Stage primary-h4-p0r`, hidden inner mode, finalizer 또는 consumer를 직접 호출하지 않는다.
 
 ```powershell
 python tools/research/av_bs1_boundary_schur_h4_p0r_p1.py --stage manifest
@@ -3202,7 +3222,7 @@ control report는 default `MaximumAttempts=1` sampling에서
 physics/PowerSI/8 GiB 결과가 아니다. token은 byte-identical 상태로 재사용되지 않았고
 deletion-only commit `ba97dd8b274659a649d9a4020193c3ef72572665`에서 폐기됐다.
 
-### Current control-plane retry-v3 replay boundary
+### Frozen control-plane retry-v3 replay boundary
 
 retry-v3는 `Get-TreeSample` default와 factor call sites의
 `MaximumAttempts=1`을 유지한다. explicit maximum `3`/event limit `16`은
@@ -3310,7 +3330,7 @@ commit `f1aeeac018a96cbd82341db36efbf5e5a9a55431` removed it. Current
 token state is absent. Factorization, RHS, solve, H4 physics, PowerSI evidence,
 and 8 GiB fit evidence were never started.
 
-### Current retry-v4 replay boundary
+### Historical retry-v4 replay boundary
 
 Retry-v4 leaves Python, all schemas, the three-attempt whole-sample retry, the
 16-event cap, and factor sampling unchanged. Only when a caller already uses
@@ -3472,7 +3492,7 @@ tracked immutable reproduction input. Do not move, modify, or promote its path
 to a canonical result contract. The claim, tracked validation-output, commit
 objects, and recorded hashes are the durable evidence.
 
-### Current retry-v6 replay boundary
+### Historical retry-v6 replay boundary
 
 Retry-v6 makes only two corrections: remove the redundant three-line
 post-claim preflight call/comparison in Python, and add nested
@@ -3491,10 +3511,62 @@ factor_fit_unproven: true
 next_stage_authorized: false
 ```
 
-Only manifest/static replay is safe before the corrected no-token contract,
-full final rerun, and independent authorization cycle are complete. Do not
-invoke any of the six spent token commits or any hidden inner/finalizer/consumer
-stage directly.
+Only manifest/static replay was safe at this frozen retry-v6 boundary. None of
+the six then-spent token commits was reusable.
+
+### Seventh public invocation and current retry-v7 boundary
+
+The seventh public invocation is immutable evidence, not a command to replay.
+It ran once at token-only commit
+`4f60bd5e5fe4e166e72ba00e9bb019a70504e7df` with token ID/raw SHA-256
+`a7a3942cb0cf421e9fc52fd43176bb35` /
+`3b6cd6557832358e6235824d680b8fe01eaf29899b89c2dea1850e9109e4511b`.
+Result and quarantined final bytes share SHA-256
+`e2be4dd5fa0467012c194239c8b8ac833723b4355a371c42a8aafc089efeb932`.
+Numerical raw/payload SHA-256 are
+`5bf26072794a4030ec311d3c60bcf3efd8c8d112319587d0a48d65490fd56e72` /
+`173e22362525cb34e3d1812731779b5ad454e6d5ea16245ad891904814df19ee`.
+
+Native `splu` returned for `A_background_II`. The child therefore records
+attempted/performed `true/true` and `completed_factors=["A_background_II"]`.
+The next check failed on `A_background_II native/exported nnz mismatch` before
+certificate construction: `factor_certificates=[]`, both prefix hashes are
+null, and `A_conductor_II` was not attempted. Neither native `factor.nnz` nor
+exported `L.nnz`/`U.nnz` survived into durable evidence, so their exact counts
+or delta must not be inferred.
+
+Resource report SHA-256
+`0f738eb5f098944618d80b1cb2c18b161068a991ef8a4e98ed8a055ba6af324b`
+contains `174` inner samples. Outer close SHA-256
+`0e88d08f60f56c95678dd8f6c7ae850b681fd60ba8ed6fc9d3868dcb8080ec01`
+contains `573` samples and all `31` retry events with no truncation. Both
+mandatory resource gates pass. Terminal seal SHA-256
+`0b2f56231315bb260921f2b3fe220fea33315cce4679964c6b86711a4f8b51a1`
+is complete and fail-closed: authoritative pass and next-stage authorization
+are false. These counts prove monitoring coverage, not numerical accuracy or an
+8 GiB factor fit. No RHS, solve, H4 physics, or PowerSI work ran.
+
+Consumed-record commit `51e50699546fe5b594dfdc669fb1628de0c3adb7` and
+deletion-only retirement `17414cf0be147d0d5d9d75046354e199f707e7a6` leave
+the token absent. Retry-v7 changes no schema, retry/cap policy, or factor order.
+It accepts only `0 < exported L/U nnz <= native factor nnz`, validates the
+native and exported portable-byte formulas separately, and applies the existing
+cap to both representations.
+
+```text
+Python fixture SHA-256: 7a1dba5eafcbf601fd532a9a3d2bc10de2218c74bccdacd04bdba5f1038df348
+PowerShell runner SHA-256: 852ce8a03b25e33b9eb26ec6f5ce295381dab493b1b26762ddea14be7196000d
+static tests SHA-256: bd2e3e2ca4d668d3cd8c92b55737a74f6bff743a823bae024713d59d393c8ba7
+focused retry-v7 tests: 25/25 passed
+full no-cache P1 suite: 341/341 passed in 88.40 s
+token_state: absent
+factor_fit_unproven: true
+next_stage_authorized: false
+```
+
+Only manifest/static replay is safe before a new clean no-token contract and
+independent authorization lifecycle complete. Do not invoke any of the seven
+spent token commits or any hidden inner/finalizer/consumer stage directly.
 
 ## Focused regression
 

@@ -2,27 +2,33 @@
 
 ## 1. Current status and authority
 
-This document now preregisters the retry-v6 corrective static
-executable-contract candidate after six public invocations. The first four
+This document now preregisters the retry-v7 corrective static
+executable-contract candidate after seven public invocations. The first four
 stopped before claim and factor work; the fifth reached the factor child but
 left factor entry indeterminate; the sixth created claim and factor child but
-failed before `_factor_one`/`splu`. It remains token-absent and does not itself
-authorize a pilot. None of the six prior tokens may be reused.
+failed before `_factor_one`/`splu`; the seventh reached `_factor_one`, and native
+`splu` returned for `A_background_II` before the certificate path rejected an
+invalid native/exported nnz equality assumption. It remains token-absent and
+does not itself authorize a pilot. None of the seven prior tokens may be reused.
 
 The current safe manifest classification is:
 
 - `token_state=absent`;
 - `status=candidate_token_missing_no_factor`;
 - `authorization_state=not_authorized`;
-- `terminal_evidence_complete=false`;
+- `terminal_evidence_complete=false` for the current token-absent candidate;
+  the seventh attempt's complete outer terminal seal remains immutable
+  historical failure evidence;
 - `authoritative_stage_pass=false`;
-- no certified or completed H4-P0R-P1 factor exists, and no RHS, solve, H4 physics, or PowerSI work has run;
-- direct sixth-child evidence records attempted/performed `false/false`, while
-  the independent emergency outer record conservatively records null/null
-  because it does not claim trusted inner phase knowledge; and
+- the seventh child records attempted/performed `true/true` and
+  `completed_factors=["A_background_II"]`, meaning that native `splu` returned;
+  no factor certificate or prefix was completed, and `A_conductor_II` was not
+  attempted;
+- exact native/exported factor nnz counts were not persisted, and no RHS,
+  solve, H4 physics, or PowerSI work has run; and
 - no later H4-P1 stage is authorized.
 
-The retry-v6 candidate retains execution resource scope v2,
+The retry-v7 candidate retains execution resource scope v2,
 `control_plane.independently_bounded=true`,
 `tree_thresholds_equal_factor_envelope=true`,
 `system_floor_recheck_before_and_after_each=true`, and
@@ -32,12 +38,13 @@ control-plane supervisor and outer observer, with the readiness-specific
 outer-observer sampling contexts plus six explicitly instrumented control-plane
 sampling contexts (12 total), plus the four active factor sampling calls, opt
 into `MaximumAttempts=3`; the caught-final factor cleanup call and function
-default remain `1`. Outer/control retry evidence has bounded cap `64`. Retry-v6
-does not alter any of those retry semantics. It removes only the redundant
-post-claim preflight comparison and adds one required emergency binding key.
-These facts make the exact candidate eligible for later token review; they do
-not authorize a pilot while the token is absent and do not change any terminal
-or next-stage authorization blocker.
+default remain `1`. Outer/control retry evidence has bounded cap `64`. Retry-v7
+does not alter any of those retry semantics, schemas, or factor order. It only
+replaces the invalid native/exported equality with the fail-closed requirement
+`0 < exported <= native`, checks distinct native/exported portable-byte
+formulas, and includes both in the existing cap. These facts make the exact
+candidate eligible for later token review; they do not authorize a pilot while
+the token is absent and do not change any terminal or next-stage blocker.
 
 ## 2. Frozen program identity and ancestry
 
@@ -244,7 +251,7 @@ as a durable sampled close.
 The evidence is therefore a precise sampled contract, not a race-free proof of
 every process that ever existed.
 
-### 8.2 Current retry-v3 outer and control sampling contract
+### 8.2 Retained retry-v3 outer and control sampling contract
 
 `Get-TreeSample` retains its default `MaximumAttempts=1`, and every factor call
 site remains unchanged at that default. Explicit `MaximumAttempts=3` and retry
@@ -586,7 +593,7 @@ attempt was spent. The token was never reused and was removed by deletion-only
 retirement commit `ba97dd8b274659a649d9a4020193c3ef72572665`. Current token
 state is absent.
 
-### 15.3 Current control-plane retry-v3 static evidence
+### 15.3 Frozen control-plane retry-v3 static evidence
 
 Retry-v3 adds report/close-v2 and scope-v2 control retry evidence described in
 Sections 6 and 8, including exact report-prefix-close ordering, count-all and
@@ -662,7 +669,7 @@ rule. The token was never reused or sealed and was removed by deletion-only
 retirement commit `f1aeeac018a96cbd82341db36efbf5e5a9a55431`. Current
 token state is absent; no owned attempt process remains live.
 
-### 15.5 Current retry-v4 static evidence
+### 15.5 Historical retry-v4 static evidence
 
 Retry-v4 changes only exited-descendant snapshot settling inside
 `Get-ConfirmedTreeSampleDisappearance`. The additional path is enabled only
@@ -838,20 +845,79 @@ physics_solve_performed: false
 next_stage_authorized: false
 ```
 
+### 15.8 Seventh public attempt and retry-v7 corrective evidence
+
+The seventh public `primary-h4-p0r` invocation ran exactly once from token-only
+commit `4f60bd5e5fe4e166e72ba00e9bb019a70504e7df`. Token ID
+`a7a3942cb0cf421e9fc52fd43176bb35` had original raw SHA-256
+`3b6cd6557832358e6235824d680b8fe01eaf29899b89c2dea1850e9109e4511b`.
+Result and quarantined final bytes are identical at SHA-256
+`e2be4dd5fa0467012c194239c8b8ac833723b4355a371c42a8aafc089efeb932`.
+Numerical stdout SHA-256 is
+`5bf26072794a4030ec311d3c60bcf3efd8c8d112319587d0a48d65490fd56e72`;
+its canonical payload SHA-256 is
+`173e22362525cb34e3d1812731779b5ad454e6d5ea16245ad891904814df19ee`.
+
+The child entered `_factor_one("A_background_II")`, and native `splu` returned.
+Durable phase state therefore records attempted/performed `true/true` and
+`completed_factors=["A_background_II"]`. Factor-complete marker SHA-256
+`e62d3964dcab03c16e88be9e69c78aca0583bf96e2188ac24058bbbc67b5cea5`
+binds that completed-name list and the canonical empty certificate list. The
+obsolete check required `factor.L.nnz + factor.U.nnz` to equal native
+`factor.nnz`; SciPy's exported CSC factors may have fewer stored entries than
+the internal SuperLU representation. The check failed with
+`A_background_II native/exported nnz mismatch` before certificate construction
+or either prefix write. Consequently `factor_certificates=[]`, both prefix
+hashes are null, `A_conductor_II` was not attempted, and exact native/exported
+factor nnz counts are absent from durable evidence. A native return is not a
+certified or reusable factor result.
+
+Resource SHA-256
+`0f738eb5f098944618d80b1cb2c18b161068a991ef8a4e98ed8a055ba6af324b`
+retains `174` inner samples and passes its mandatory resource gate. Outer close
+SHA-256
+`0e88d08f60f56c95678dd8f6c7ae850b681fd60ba8ed6fc9d3868dcb8080ec01`
+retains `573` samples and all `31` retry events without truncation, verifies
+cleanup, and passes its mandatory resource gate. Terminal seal SHA-256
+`0b2f56231315bb260921f2b3fe220fea33315cce4679964c6b86711a4f8b51a1`
+sets `terminal_evidence_complete=true`, `authoritative_stage_pass=false`, and
+`next_stage_authorized=false`. These observations make no accuracy claim and
+do not prove an 8 GiB factor fit. No RHS, solve, H4 physics, or PowerSI work ran.
+
+Commit `51e50699546fe5b594dfdc669fb1628de0c3adb7` records the consumed
+attempt; deletion-only retirement `17414cf0be147d0d5d9d75046354e199f707e7a6`
+removes the token. Retry-v7 changes only the producer and downstream validator
+interpretation of existing fields: require `0 < exported L/U nnz <= native
+factor nnz`; compute native and exported portable-byte formulas separately;
+and apply the existing cap to `exported_factor_bytes`, exported portable bytes,
+and conservative native portable bytes. Schema, messages, retry/cap policy,
+factor order, forbidden operations, and later-stage authority remain unchanged.
+
+```text
+Python fixture SHA-256: 7a1dba5eafcbf601fd532a9a3d2bc10de2218c74bccdacd04bdba5f1038df348
+PowerShell runner SHA-256: 852ce8a03b25e33b9eb26ec6f5ce295381dab493b1b26762ddea14be7196000d
+static tests SHA-256: bd2e3e2ca4d668d3cd8c92b55737a74f6bff743a823bae024713d59d393c8ba7
+focused retry-v7 tests: 25/25 passed
+full no-cache P1 suite: 341/341 passed in 88.40 s
+token_state: absent
+factor_fit_unproven: true
+physics_solve_performed: false
+next_stage_authorized: false
+```
+
 ## 16. Exact next sequence
 
 The only permitted next sequence is:
 
-The retry-v6 post-claim and emergency-binding corrections have been applied to
-this candidate. They do not create or authorize a token and do not widen the
-retry-v5 factor-only boundary. The retired token-only commits `b6c8615...`,
-`d9e064f...`, `6328174...`, `9b4854d0...`, `5ba4b693...`, and `82775327...`
-must never be invoked again.
+The retry-v7 nnz-semantic correction does not create or authorize a token and
+does not widen the factor-only boundary. The retired token-only commits
+`b6c8615...`, `d9e064f...`, `6328174...`, `9b4854d0...`, `5ba4b693...`,
+`82775327...`, and `4f60bd5...` must never be invoked again.
 
-1. Freeze the retry-v6 fixture, runner, tests, documentation, unchanged schema
-   bindings, safe no-token manifest, and completed full no-cache `330/330` pass
-   in `81.83 s`. Complete independent code/document/contract audits and compute
-   final document SHA-256 externally.
+1. Freeze the retry-v7 fixture, unchanged runner, tests, documentation,
+   unchanged schema bindings, safe no-token manifest, and completed full
+   no-cache `341/341` pass in `88.40 s`. Complete independent code,
+   documentation, and contract audits.
 2. Create one clean executable-contract commit containing exactly those
    reviewed bytes and bindings. The contract commit contains no P1 review
    token.
@@ -861,9 +927,9 @@ must never be invoked again.
 4. Create one child commit with exactly one parent (the clean contract commit)
    that adds only the canonical one-use P1 review-token file. The token binds
    the final contract commit and every frozen hash.
-5. From that fresh clean token-only child, invoke the public
-   `primary-h4-p0r` runner exactly once for the two-factor, zero-RHS,
-   zero-solve pilot. Never invoke any of the six prior token commits.
+5. Only with separate authorization, invoke the public `primary-h4-p0r` runner
+   exactly once for the two-factor, zero-RHS, zero-solve pilot. Never invoke any
+   of the seven prior token commits.
 6. Classify the outcome only from the v2 tombstone, outer terminal seal, and
    the complete current-byte-bound claim, guard, resource, result, child,
    marker, prefix, report, index, close, and applicable recovery-journal chain.

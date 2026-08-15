@@ -140,6 +140,7 @@ class _FakeFactor:
         upper: csc_matrix | None = None,
         perm_r: np.ndarray | None = None,
         perm_c: np.ndarray | None = None,
+        native_nnz: int | None = None,
     ) -> None:
         self.L = lower if lower is not None else csc_matrix(
             np.array([[1.0, 0.0], [2.0, 1.0]], dtype=np.complex128)
@@ -153,7 +154,11 @@ class _FakeFactor:
         self.perm_c = (
             perm_c if perm_c is not None else np.array([1, 0], dtype=np.int32)
         )
-        self.nnz = int(self.L.nnz + self.U.nnz)
+        self.nnz = (
+            int(self.L.nnz + self.U.nnz)
+            if native_nnz is None
+            else int(native_nnz)
+        )
 
 
 def _install_fake_splu(
@@ -7062,6 +7067,38 @@ def test_factor_only_source_has_no_solve_or_physics_calls() -> None:
     assert "h1._sparse_sha256(u)" not in certificate_source
 
 
+def test_native_exported_factor_contract_source_is_narrowly_pinned() -> None:
+    source = FIXTURE.read_text(encoding="utf-8")
+    certificate_source = source[
+        source.index("def _certificate(") : source.index("def _factor_one(")
+    ]
+    validator_source = source[
+        source.index("def _validate_factor_report(") : source.index(
+            "def _validate_monitor_handshake("
+        )
+    ]
+
+    assert "if int(l.nnz + u.nnz) > native_factor_nnz:" in certificate_source
+    assert "if int(l.nnz + u.nnz) != native_factor_nnz:" not in certificate_source
+    assert (
+        "24 * native_factor_nnz + 8 * (4 * n + 2)" in certificate_source
+    )
+    assert "native_nnz < l_nnz + u_nnz" in validator_source
+    assert (
+        'cert["native_portable_factor_bytes"] != native_portable'
+        in validator_source
+    )
+    assert (
+        'max(cert["exported_factor_bytes"], portable, native_portable) > cap'
+        in validator_source
+    )
+    assert 'cert["native_factor_nnz"] != l_nnz + u_nnz' not in validator_source
+    assert (
+        'max(cert["exported_factor_bytes"], portable) > cap'
+        not in validator_source
+    )
+
+
 def test_streaming_sparse_hashes_match_frozen_reference_without_whole_bytes_copy(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -7134,6 +7171,63 @@ def test_fake_splu_certificate_has_exact_options_bytes_and_timing(
     assert certificate["factor_wall_seconds"] == 1.0e-8
     assert certificate["factor_objects_cleanup_completed_perf_counter_ns"] == 60
     assert p1._EXECUTION_PHASE["completed_factors"] == ["A_background_II"]
+    assert p1._EXECUTION_PHASE["active_factor"] is None
+
+
+def test_fake_splu_certificate_accepts_native_storage_superset(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    calls = _install_fake_splu(monkeypatch, _FakeFactor(native_nnz=7))
+    _clock(monkeypatch, [30, 40, 50, 60])
+
+    certificate = p1._certificate(
+        "A_background_II",
+        csc_matrix(np.eye(2, dtype=np.complex128)),
+        _metadata(),
+        1_000_000,
+    )
+
+    assert len(calls) == 1
+    assert certificate["native_factor_nnz"] == 7
+    assert certificate["L_nnz"] + certificate["U_nnz"] == 6
+    assert certificate["native_factor_nnz"] != (
+        certificate["L_nnz"] + certificate["U_nnz"]
+    )
+    assert certificate["native_portable_factor_bytes"] == 248
+    assert certificate["portable_factor_bytes"] == 224
+    assert certificate["native_portable_factor_bytes"] != certificate[
+        "portable_factor_bytes"
+    ]
+    assert certificate["factorization_attempted"] is True
+    assert certificate["factorization_performed"] is True
+    assert certificate["factor_solve_called"] is False
+    assert p1._EXECUTION_PHASE["factorization_attempted"] is True
+    assert p1._EXECUTION_PHASE["factorization_performed"] is True
+    assert p1._EXECUTION_PHASE["completed_factors"] == ["A_background_II"]
+    assert p1._EXECUTION_PHASE["factor_certificates"] == []
+    assert p1._EXECUTION_PHASE["active_factor"] is None
+
+
+def test_fake_splu_certificate_rejects_exported_nnz_above_native(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    calls = _install_fake_splu(monkeypatch, _FakeFactor(native_nnz=5))
+    _clock(monkeypatch, [30, 40, 50, 60])
+
+    with pytest.raises(p1.AvBsError, match="native/exported nnz mismatch") as caught:
+        p1._certificate(
+            "A_background_II",
+            csc_matrix(np.eye(2, dtype=np.complex128)),
+            _metadata(),
+            1_000_000,
+        )
+
+    assert len(calls) == 1
+    assert caught.value.code == "BLOCKED_AV_BS_FACTOR"
+    assert p1._EXECUTION_PHASE["factorization_attempted"] is True
+    assert p1._EXECUTION_PHASE["factorization_performed"] is True
+    assert p1._EXECUTION_PHASE["completed_factors"] == ["A_background_II"]
+    assert p1._EXECUTION_PHASE["factor_certificates"] == []
     assert p1._EXECUTION_PHASE["active_factor"] is None
 
 
@@ -7321,12 +7415,46 @@ def test_factor_report_accepts_exact_synthetic_certificate_contract(
     )
 
 
+def test_factor_report_accepts_native_storage_superset(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    manifest_value = _synthetic_manifest()
+    token = _synthetic_token()
+    claim = _synthetic_claim()
+    report = _synthetic_factor_report(manifest_value, token)
+    for certificate in report["factor_certificates"]:
+        certificate["native_factor_nnz"] = 5
+        certificate["native_portable_factor_bytes"] = 200
+    monkeypatch.setattr(p1, "_sha", lambda _path: SHA_F)
+    monkeypatch.setattr(p1, "_canonical_sha", lambda _value: SHA_E)
+    monkeypatch.setattr(p1, "_git_head", lambda: "2" * 40)
+    monkeypatch.setattr(p1, "_validate_monitor_handshake", lambda *_args: None)
+
+    p1._validate_factor_report(
+        report,
+        token,
+        manifest_value,
+        claim,
+        tmp_path / "claim",
+        {"guard": "synthetic"},
+        tmp_path / "guard",
+        validate_prefix_sidecars=False,
+    )
+
+
 @pytest.mark.parametrize(
     ("tamper", "expected_code"),
     [
         ("factor_array_extra", "BLOCKED_AV_BS_FACTOR"),
         ("exported_bytes", "BLOCKED_AV_BS_FACTOR"),
         ("portable_bytes", "BLOCKED_AV_BS_FACTOR"),
+        ("native_below_exported", "BLOCKED_AV_BS_FACTOR"),
+        ("native_portable_bytes", "BLOCKED_AV_BS_FACTOR"),
+        ("native_cap", "BLOCKED_AV_BS_FACTOR"),
+        ("native_nnz_bool", "BLOCKED_AV_BS_FACTOR"),
+        ("native_nnz_float", "BLOCKED_AV_BS_FACTOR"),
+        ("native_portable_bool", "BLOCKED_AV_BS_FACTOR"),
+        ("native_portable_float", "BLOCKED_AV_BS_FACTOR"),
         ("wall_seconds", "BLOCKED_AV_BS_FACTOR"),
         ("factor_overlap", "BLOCKED_AV_BS_FACTOR"),
         ("physics_truth", "BLOCKED_AV_BS_RESULT_SCHEMA"),
@@ -7351,6 +7479,22 @@ def test_factor_report_tamper_is_fail_closed(
         first["exported_factor_bytes"] += 1
     elif tamper == "portable_bytes":
         first["portable_factor_bytes"] += 1
+    elif tamper == "native_below_exported":
+        first["native_factor_nnz"] = 3
+        first["native_portable_factor_bytes"] = 152
+    elif tamper == "native_portable_bytes":
+        first["native_factor_nnz"] = 5
+    elif tamper == "native_cap":
+        first["native_factor_nnz"] = 500
+        first["native_portable_factor_bytes"] = 12_080
+    elif tamper == "native_nnz_bool":
+        first["native_factor_nnz"] = True
+    elif tamper == "native_nnz_float":
+        first["native_factor_nnz"] = 4.0
+    elif tamper == "native_portable_bool":
+        first["native_portable_factor_bytes"] = True
+    elif tamper == "native_portable_float":
+        first["native_portable_factor_bytes"] = 176.0
     elif tamper == "wall_seconds":
         first["factor_wall_seconds"] = 0.5
     elif tamper == "factor_overlap":
@@ -9814,11 +9958,16 @@ def test_parser_has_distinct_result_artifact_for_consumption() -> None:
 def test_doc_declares_token_absent_no_factor_and_no_physics() -> None:
     text = DOC.read_text(encoding="utf-8")
     normalized = " ".join(text.split())
+    current_status = text[
+        text.index("## 1. Current status and authority") : text.index(
+            "## 2. Frozen program identity and ancestry"
+        )
+    ]
     status_fields = dict(
         re.findall(
             r"`(token_state|status|authorization_state|"
             r"terminal_evidence_complete|authoritative_stage_pass)=([^`]+)`",
-            text,
+            current_status,
         )
     )
     assert status_fields == {
@@ -9828,10 +9977,9 @@ def test_doc_declares_token_absent_no_factor_and_no_physics() -> None:
         "terminal_evidence_complete": "false",
         "authoritative_stage_pass": "false",
     }
-    assert (
-        "no certified or completed H4-P0R-P1 factor exists, and no RHS, "
-        "solve, H4 physics, or PowerSI work has run"
-    ) in normalized
+    assert "no factor certificate or prefix was completed" in normalized
+    assert "`A_conductor_II` was not attempted" in text
+    assert "native `splu` returned" in normalized
     assert "no later H4-P1 stage is authorized" in normalized
     assert "`control_plane.independently_bounded=true`" in text
     assert "`tree_thresholds_equal_factor_envelope=true`" in text

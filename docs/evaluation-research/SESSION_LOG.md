@@ -2006,3 +2006,87 @@ historical and are not reused as retry-v6 proof.
    `next_stage_authorized=false`; do not run RHS, solve, H4 physics, PowerSI,
    withheld-radius, or EQ0 work without a separate clean preregistration and
    fresh authorization.
+
+## 2026-08-16 — SPD Decap PI Evaluator v0.22.0 retry-v7 nnz correction
+
+This entry appends to, and does not alter, the exact `163869`-byte retry-v6
+session prefix whose SHA-256 is
+`cd94500e9bdc741530102782d4f64ee7ebba13ca9afe5681eeddce17958810fc`.
+All earlier retry-v6 evidence and `330/330` test record remain immutable history.
+
+### Seventh public attempt
+
+The seventh public `primary-h4-p0r` invocation ran exactly once at token-only
+commit `4f60bd5e5fe4e166e72ba00e9bb019a70504e7df`. Token ID
+`a7a3942cb0cf421e9fc52fd43176bb35` had original raw SHA-256
+`3b6cd6557832358e6235824d680b8fe01eaf29899b89c2dea1850e9109e4511b`.
+Result and quarantined final bytes share SHA-256
+`e2be4dd5fa0467012c194239c8b8ac833723b4355a371c42a8aafc089efeb932`.
+Numerical raw/payload SHA-256 are
+`5bf26072794a4030ec311d3c60bcf3efd8c8d112319587d0a48d65490fd56e72` /
+`173e22362525cb34e3d1812731779b5ad454e6d5ea16245ad891904814df19ee`.
+
+Native `splu` returned for `A_background_II`. Durable state therefore records
+`factorization_attempted=true`, `factorization_performed=true`, and
+`completed_factors=["A_background_II"]`. The next equality check raised
+`A_background_II native/exported nnz mismatch` before certificate construction
+or prefix writing. `factor_certificates=[]`, both prefix hashes are null,
+`A_conductor_II` was not attempted, and exact native/exported factor nnz counts
+were not persisted. Native return does not imply a certified or reusable factor.
+
+Resource report SHA-256
+`0f738eb5f098944618d80b1cb2c18b161068a991ef8a4e98ed8a055ba6af324b`
+retains `174` inner samples and passes its mandatory gate. Outer close SHA-256
+`0e88d08f60f56c95678dd8f6c7ae850b681fd60ba8ed6fc9d3868dcb8080ec01`
+retains `573` samples and all `31` retry events without truncation, verifies
+cleanup, and passes its mandatory gate. Terminal seal SHA-256
+`0b2f56231315bb260921f2b3fe220fea33315cce4679964c6b86711a4f8b51a1`
+sets terminal evidence complete, authoritative pass false, and next false.
+These are lifecycle/resource facts, not numerical accuracy or 8 GiB-fit proof.
+No RHS, solve, H4 physics, or PowerSI work ran.
+
+Consumed-record commit `51e50699546fe5b594dfdc669fb1628de0c3adb7` and
+deletion-only retirement `17414cf0be147d0d5d9d75046354e199f707e7a6` leave
+the token absent. None of the seven token commits may be reused.
+
+### Root cause and retry-v7 correction
+
+SciPy `SuperLU.nnz` describes internal native factor storage, while exported CSC
+`L` and `U` can contain fewer stored entries. Equality is not a valid invariant.
+Retry-v7 changes only this existing-field interpretation:
+
+1. the producer fails only when exported `L.nnz + U.nnz` exceeds native
+   `factor.nnz`;
+2. the downstream validator requires `0 < exported <= native`;
+3. native portable bytes are `24 * native_nnz + 8 * (4 * n + 2)` and exported
+   portable bytes use exported nnz; and
+4. the existing cap covers exported array bytes, exported portable bytes, and
+   conservative native portable bytes.
+
+Schema, messages, retry predicates/counts/cap64, factor order, resource policy,
+RHS, solve, and physics boundaries are unchanged.
+
+### Frozen retry-v7 candidate bindings
+
+```text
+Python fixture SHA-256: 7a1dba5eafcbf601fd532a9a3d2bc10de2218c74bccdacd04bdba5f1038df348
+PowerShell runner SHA-256: 852ce8a03b25e33b9eb26ec6f5ce295381dab493b1b26762ddea14be7196000d
+static tests SHA-256: bd2e3e2ca4d668d3cd8c92b55737a74f6bff743a823bae024713d59d393c8ba7
+focused retry-v7 tests: 25/25 passed
+full no-cache P1 suite: 341/341 passed in 88.40 s
+token_state: absent
+factor_fit_unproven: true
+physics_solve_performed: false
+next_stage_authorized: false
+```
+
+### Exact next starting point
+
+1. Freeze and independently audit these retry-v7 code, test, and 15-document
+   bytes with the safe token-absent manifest.
+2. Commit only the reviewed no-token contract and re-read its exact bindings.
+3. Open a fresh token lifecycle only after separate authorization. Never invoke
+   any of the seven retired token commits.
+4. A later authorized pilot remains factor-only. Preserve and audit its complete
+   terminal chain; do not run RHS, solve, H4 physics, PowerSI, withheld-radius,
+   or EQ0 work without a separate clean preregistration and fresh authorization.

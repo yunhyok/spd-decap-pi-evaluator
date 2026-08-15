@@ -10260,7 +10260,7 @@ def _certificate(
         u = raw_u
         if l.shape != matrix.shape or u.shape != matrix.shape:
             raise AvBsError("BLOCKED_AV_BS_FACTOR", f"{name} factor shape mismatch")
-        if int(l.nnz + u.nnz) != native_factor_nnz:
+        if int(l.nnz + u.nnz) > native_factor_nnz:
             raise AvBsError("BLOCKED_AV_BS_FACTOR", f"{name} native/exported nnz mismatch")
         l_finite, l_explicit_zero_count = _scan_factor_data(l.data)
         u_finite, u_explicit_zero_count = _scan_factor_data(u.data)
@@ -11381,7 +11381,9 @@ def _validate_factor_report(
         n = int(expected_matrix["shape"][0])
         l_nnz = int(cert["L_nnz"])
         u_nnz = int(cert["U_nnz"])
+        native_nnz = int(cert["native_factor_nnz"])
         portable = 24 * (l_nnz + u_nnz) + 8 * (4 * n + 2)
+        native_portable = 24 * native_nnz + 8 * (4 * n + 2)
         array_bytes = cert.get("factor_array_bytes")
         required_arrays = {
             "L_data", "L_indices", "L_indptr", "U_data", "U_indices",
@@ -11446,11 +11448,11 @@ def _validate_factor_report(
         if (
             l_nnz <= 0
             or u_nnz <= 0
-            or cert["native_factor_nnz"] != l_nnz + u_nnz
-            or cert["native_portable_factor_bytes"] != portable
+            or native_nnz < l_nnz + u_nnz
+            or cert["native_portable_factor_bytes"] != native_portable
             or cert["portable_factor_bytes"] != portable
             or cert["exported_factor_bytes"] <= 0
-            or max(cert["exported_factor_bytes"], portable) > cap
+            or max(cert["exported_factor_bytes"], portable, native_portable) > cap
             or type(cert.get("stored_fill_ratio")) is not float
             or type(cert.get("fill_ratio")) is not float
             or cert.get("stored_fill_ratio") != (l_nnz + u_nnz) / cert["input_nnz"]

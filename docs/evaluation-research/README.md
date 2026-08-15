@@ -1,5 +1,25 @@
 # SPD Decap PI Evaluator v0.22.0 — Evaluation Algorithm Research
 
+> **SPD Decap PI Evaluator v0.22.0 — retry-v7 current boundary:** Seven public
+> `primary-h4-p0r` invocations are immutable. In the seventh, native `splu`
+> returned for `A_background_II`; attempted/performed are `true/true` and the
+> completed-name list contains it, but the obsolete native/exported nnz equality
+> gate failed before any certificate or prefix. `A_conductor_II` was not
+> attempted and the exact native/exported factor counts were not persisted.
+> Inner/outer monitoring retained `174/573` samples and all `31` outer retry
+> events without truncation; both resource gates passed, but this is neither
+> accuracy evidence nor an 8 GiB-fit claim. Commits `51e5069...` and
+> `17414cf...` record consumption and deletion-only retirement; token state is
+> absent. Retry-v7 requires `0 < exported <= native`, validates distinct
+> native/exported portable-byte formulas and caps both, without schema, retry,
+> or factor-order changes. Frozen Python/runner/tests SHA-256 are `7a1dba5e...` /
+> `852ce8a0...` / `bd2e3e2c...`; focused `25/25` and full no-cache `341/341`
+> passed, the latter in `88.40 s`. No RHS, solve, H4 physics, or PowerSI work
+> ran; `next_stage_authorized=false`. Earlier retry-v6 sections are immutable
+> history. Exact evidence is in [results](T1_AV_BOUNDARY_SCHUR_RESULTS.md) and
+> the [reproduction appendix](ORACLE_REPRODUCTION.md).
+
+
 이 디렉터리는 Evaluation PI 계산 알고리즘의 장기 연구를 위한 **단일 재시작 지점(single restart point)** 이다. 연구 세션이 바뀌거나 대화 문맥이 압축되어도 이 문서에서 다시 시작한다.
 
 기준 소스는 `bb361687c0bf976d5d04faf26bc243bcf3d52006`이며, 연구 문서는 `codex/evaluation-algorithm-research` 브랜치의 별도 worktree에 둔다. 원본 프로그램의 표시 버전은 **SPD Decap PI Evaluator v0.22.0**이다. 사용자가 명시적으로 구현을 승인하기 전까지 제품 코드는 수정하지 않는다.
@@ -35,7 +55,7 @@
 - P1/P2 explicit-ref crop에서 referenced return artwork와 nearby same-net GND via graph는 확인했지만 signal trace와 return conductor를 묶는 signed current/field owner는 없다. 특히 P2 세 TOP trace endpoint는 IN01 GND negative-circle void 중심에 놓이므로, ref 이름이나 가까운 via만으로 source-faithful return을 선언하지 않는다.
 - source parameter는 `explicit`, `absent`, `parser_not_preserved`, `derived_node_link`로 구분한다. P3/P4 trace width 결손, 네 pair의 plating/fill/roughness 결손, P1/P2의 미보존 `NoAntiPadLayers`를 추정으로 숨기지 않는다.
 
-## Retry-v4 current boundary
+## Retry-v4 historical boundary
 
 Earlier retry-v2/retry-v3 sections remain immutable history. Four public
 H4-P0R-P1 invocations have now stopped before claim and factor work. The fourth
@@ -118,7 +138,7 @@ Focused tests passed `29/29` in `15.91 s`; the full no-cache P1 suite passed
 Python syntax checks were clean. This static pass authorizes neither a token nor
 a physics run: `factor_fit_unproven=true`, `next_stage_authorized=false`.
 
-## Retry-v6 current boundary
+## Retry-v6 historical boundary
 
 Earlier retry sections remain immutable history. The sixth public
 `primary-h4-p0r` invocation used token-only commit
@@ -161,6 +181,27 @@ Focused regressions passed `8/8`; the full no-cache `330/330` passed in
 `81.83 s`. This candidate authorizes neither a token nor a public run:
 `factor_fit_unproven=true`, `next_stage_authorized=false`.
 
+## Retry-v7 current boundary
+
+The seventh public invocation ran once at token-only commit `4f60bd5...`.
+Native `splu` returned for `A_background_II`, yielding attempted/performed
+`true/true` and one completed name, but the native/exported equality guard
+failed before any certificate or prefix. `A_conductor_II` was not attempted and
+the exact native/exported counts were not persisted. Resource/outer/seal
+`0f738eb5...` / `0e88d08f...` / `0b2f5623...` bind `174/573` samples, `31`
+nontruncated retry events, passing resource gates, complete terminal evidence,
+authoritative pass false, and next false. This is not accuracy or 8 GiB proof.
+
+Retry-v7 requires `0 < exported <= native`, checks distinct native/exported
+portable-byte formulas and caps both, without changing schema, retry policy,
+factor order, or forbidden operations. Consumed/retirement commits
+`51e5069...` / `17414cf...` leave the token absent. Frozen
+Python/runner/tests SHA-256 are `7a1dba5e...` / `852ce8a0...` / `bd2e3e2c...`;
+focused `25/25` and full no-cache `341/341` passed, the latter in `88.40 s`.
+No RHS, solve, H4 physics, or PowerSI work ran. See the
+[results](T1_AV_BOUNDARY_SCHUR_RESULTS.md) and
+[reproduction appendix](ORACLE_REPRODUCTION.md).
+
 ## 세션 시작 절차
 
 새 세션의 첫 작업은 아래 순서로 문서를 읽는 것이다.
@@ -183,7 +224,7 @@ Focused regressions passed `8/8`; the full no-cache `330/330` passed in
 16. [`T1_AV_BOUNDARY_SCHUR_H2_P1_PREREG.md`](T1_AV_BOUNDARY_SCHUR_H2_P1_PREREG.md): H2-P1 실행 전 immutable token-gated single-mesh 계약과 독립 M9 residual/power 증거 확인
 17. [`T1_AV_BOUNDARY_SCHUR_H4_P0_PREREG.md`](T1_AV_BOUNDARY_SCHUR_H4_P0_PREREG.md): H4 topology/cyclic lineage/canonical assembly와 dual resource envelope의 no-solve 경계 확인
 18. [`T1_AV_BOUNDARY_SCHUR_H4_P0R_PREREG.md`](T1_AV_BOUNDARY_SCHUR_H4_P0R_PREREG.md): factorization-only pilot의 frozen matrix/equilibration/resource/lifecycle 계약과 현재 no-factor 경계 확인
-19. [`T1_AV_BOUNDARY_SCHUR_H4_P0R_P1_PREREG.md`](T1_AV_BOUNDARY_SCHUR_H4_P0R_P1_PREREG.md): executable/outer-observer/one-use/seal-v2 계약, 여섯 public attempt와 token retirement, 여섯 번째 child의 pre-factor `claimed preflight payload mismatch`와 attempted/performed `false/false`, 독립 outer max3 exhaustion·30/30 no-truncation/no-seal, strict-validator-invalid 06061 provisional record와 c001 deletion retirement, frozen retry-v6 Python/runner/tests 및 full no-cache 330/330 pass 경계, prior token 재사용 없이 corrected no-token contract -> audit -> fresh token-only child -> 단 한 번의 factor-only pilot 순서 확인
+19. [`T1_AV_BOUNDARY_SCHUR_H4_P0R_P1_PREREG.md`](T1_AV_BOUNDARY_SCHUR_H4_P0R_P1_PREREG.md): executable/outer-observer/one-use/seal-v2 계약, 일곱 public attempt와 token retirement, retry-v6 역사와 일곱 번째 `A_background_II` native completion/certificate-zero 경계, `174/573` samples·31 nontruncated retries·complete fail-closed seal, frozen retry-v7 Python/runner/tests 및 full no-cache 341/341 pass, prior token 재사용 없이 corrected no-token contract -> audit -> 별도 승인 -> fresh token-only child -> 단 한 번의 factor-only pilot 순서 확인
 20. [`T1_M1_EQ0_RESULTS.md`](T1_M1_EQ0_RESULTS.md): immutable collocation failure, G1 exterior-only, G2 pair-only pass와 100 kHz circle reciprocity/cancellation failure 확인
 21. [`T1_CIRCLE_DTN_RESULTS.md`](T1_CIRCLE_DTN_RESULTS.md): frozen `C0-A0` 실패, selected `C0-A1` circle-only 통과와 withheld/수치 범위 확인
 22. [`T1_M0_SLAB_RESULTS.md`](T1_M0_SLAB_RESULTS.md): periodic slab의 independent 1-D FEM pass, withheld 결과와 free-space/periodic boundary mismatch 확인

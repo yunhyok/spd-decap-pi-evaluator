@@ -1,5 +1,25 @@
 # SPD Decap PI Evaluator v0.22.0 — R2 Local Oracle Results
 
+> **SPD Decap PI Evaluator v0.22.0 — retry-v7 current boundary:** Seven public
+> `primary-h4-p0r` invocations are immutable. In the seventh, native `splu`
+> returned for `A_background_II`; attempted/performed are `true/true` and the
+> completed-name list contains it, but the obsolete native/exported nnz equality
+> gate failed before any certificate or prefix. `A_conductor_II` was not
+> attempted and the exact native/exported factor counts were not persisted.
+> Inner/outer monitoring retained `174/573` samples and all `31` outer retry
+> events without truncation; both resource gates passed, but this is neither
+> accuracy evidence nor an 8 GiB-fit claim. Commits `51e5069...` and
+> `17414cf...` record consumption and deletion-only retirement; token state is
+> absent. Retry-v7 requires `0 < exported <= native`, validates distinct
+> native/exported portable-byte formulas and caps both, without schema, retry,
+> or factor-order changes. Frozen Python/runner/tests SHA-256 are `7a1dba5e...` /
+> `852ce8a0...` / `bd2e3e2c...`; focused `25/25` and full no-cache `341/341`
+> passed, the latter in `88.40 s`. No RHS, solve, H4 physics, or PowerSI work
+> ran; `next_stage_authorized=false`. Earlier retry-v6 sections are immutable
+> history. Exact evidence is in [results](T1_AV_BOUNDARY_SCHUR_RESULTS.md) and
+> the [reproduction appendix](ORACLE_REPRODUCTION.md).
+
+
 최종 갱신: 2026-08-16 (Asia/Seoul)
 
 이 문서는 [`LOCAL_ORACLE_PLAN.md`](LOCAL_ORACLE_PLAN.md)에 사전 등록한 국부 물리 oracle을 기존 research kernel로 실행한 결과다. 제품 solver, parser, UI, version, installer는 수정하지 않았다. `pass`는 아래에 명시한 coupon과 constitutive scope에서만 유효하며 PowerSI 정확성 승격이나 global-MNA 조립 승인을 뜻하지 않는다.
@@ -231,9 +251,30 @@ runner binding key. Frozen Python/runner/tests hashes are `2373a13f...` /
 passed in `81.83 s`. No factor/RHS/solve/H4 physics/PowerSI/8 GiB result exists,
 and `next_stage_authorized=false`.
 
+## H4-P0R retry-v7 current non-result
+
+The seventh public P1 invocation at `4f60bd5...` changes no physics or oracle
+ranking. Native `splu` returned for `A_background_II`, so attempted/performed
+are `true/true` and its completed name is durable; the obsolete
+native/exported equality gate then failed before certificate/prefix creation.
+`A_conductor_II` was not attempted and exact native/exported counts were not
+persisted. Inner/outer monitoring retained `174/573` samples and all `31`
+outer retry events without truncation. Both resource gates passed and the seal
+is complete, but authoritative pass/next remain false; this proves neither
+accuracy nor 8 GiB fit. No RHS, solve, H4 physics, PowerSI, or downstream oracle
+work ran.
+
+Consumed/retirement commits `51e5069...` / `17414cf...` leave the token
+absent. Retry-v7 requires `0 < exported <= native`, validates distinct
+native/exported portable-byte formulas and caps both, without changing schema,
+retry policy, factor order, or physics gates. Frozen Python/runner/tests SHA-256
+are `7a1dba5e...` / `852ce8a0...` / `bd2e3e2c...`; focused `25/25` and full
+no-cache `341/341` passed, the latter in `88.40 s`. Detailed evidence is in
+[`T1_AV_BOUNDARY_SCHUR_RESULTS.md`](T1_AV_BOUNDARY_SCHUR_RESULTS.md) and
+[`ORACLE_REPRODUCTION.md`](ORACLE_REPRODUCTION.md).
 ## 다음 R2 연구
 
-1. failed M1-EQ0 collocation, G1 `passed_exterior_galerkin_only`, G2 `passed_pair_screen_only`와 100 kHz circle reciprocity/cancellation failure를 보존한다. 독립 A–v boundary-Schur H0 negative, H1 coarse-h와 H2 `passed_AV_BS_h2_stage_only_pending_h4_preregistration` artifacts 및 consumed tokens도 함께 보존한다. H4-P0, [`H4-P0R parent`](T1_AV_BOUNDARY_SCHUR_H4_P0R_PREREG.md), [`P1 executable/lifecycle`](T1_AV_BOUNDARY_SCHUR_H4_P0R_P1_PREREG.md)과 여섯 public attempt/retirement를 보존한다. 여섯 번째도 pre-factor 차단으로 0 certified factors만 남겼다. 현재 token absent/factor fit unproven이며 retry-v6 clean no-token contract의 full no-cache `330/330` pass와 audit를 보존하고 fresh token 전에는 factor pilot을, result audit 전에는 h4 physics/withheld 또는 EQ0 mesh·crop, planned G2 N512/2 GHz circle/EQ0 seed를 실행하지 않는다. `next_stage_authorized=false`다.
+1. M1/G1/G2 failures와 AV-BS1 H0/H1/H2 artifacts, H4 parents 및 일곱 public attempts/retirements를 보존한다. 일곱 번째는 `A_background_II` native return만 완료하고 certificate/prefix 0, `A_conductor_II` 미시도로 끝났다. retry-v7 no-token contract와 `341/341` pass의 독립 audit/별도 승인 전에는 factor pilot을, result audit 전에는 H4 physics/withheld/EQ0/G2 확장을 실행하지 않는다. `next_stage_authorized=false`다.
 2. S1은 circular/void boundary-conforming refinement와 h/h/2/h/4 추정 오차를 먼저 해결한다.
 3. V1/V2는 명시적 coax/ring return을 가진 2-D/3-D reference와 동일 crop의 exact-minus-core matrix를 만든다.
 4. A1은 current cell-centred solver를 승격하지 않고 body-fitted/higher-order 후보를 비교한다.

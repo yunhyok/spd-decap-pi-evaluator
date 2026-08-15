@@ -1,5 +1,25 @@
 # Algorithm Candidates and Literature Map
 
+> **SPD Decap PI Evaluator v0.22.0 — retry-v7 current boundary:** Seven public
+> `primary-h4-p0r` invocations are immutable. In the seventh, native `splu`
+> returned for `A_background_II`; attempted/performed are `true/true` and the
+> completed-name list contains it, but the obsolete native/exported nnz equality
+> gate failed before any certificate or prefix. `A_conductor_II` was not
+> attempted and the exact native/exported factor counts were not persisted.
+> Inner/outer monitoring retained `174/573` samples and all `31` outer retry
+> events without truncation; both resource gates passed, but this is neither
+> accuracy evidence nor an 8 GiB-fit claim. Commits `51e5069...` and
+> `17414cf...` record consumption and deletion-only retirement; token state is
+> absent. Retry-v7 requires `0 < exported <= native`, validates distinct
+> native/exported portable-byte formulas and caps both, without schema, retry,
+> or factor-order changes. Frozen Python/runner/tests SHA-256 are `7a1dba5e...` /
+> `852ce8a0...` / `bd2e3e2c...`; focused `25/25` and full no-cache `341/341`
+> passed, the latter in `88.40 s`. No RHS, solve, H4 physics, or PowerSI work
+> ran; `next_stage_authorized=false`. Earlier retry-v6 sections are immutable
+> history. Exact evidence is in [results](T1_AV_BOUNDARY_SCHUR_RESULTS.md) and
+> the [reproduction appendix](ORACLE_REPRODUCTION.md).
+
+
 최종 갱신: 2026-08-16
 
 ## 문제 정의
@@ -42,7 +62,7 @@ Y_r(\omega)v=b,\qquad Z_{pp}=b^Tv
 - 기존 S1/A1/C1 kernel은 부분 invariant를 통과했지만 strict physical correction gate에는 미달했다. 특히 A1은 마지막 mesh 변화가 4.73%다. 따라서 후보 1/2의 방향은 유지하되 현행 discretization을 그대로 production에 연결하지 않는다.
 - isolated via PEEC는 빠르고 수치적으로 안정적이지만 exact-minus-core ownership이 없어 additive global stamp로 사용할 수 없다. 후보 2는 explicit return/crop/core subtraction이 있는 replacement block으로만 진행한다.
 - source manifest가 P3/P4 missing trace width, 모든 pair의 plating/fill/roughness unknown, P1/P2 antipad preservation gap을 확인했다. 후보 비교에서 이 값을 fit parameter로 숨기는 경로는 기각한다.
-- T1의 Cohn lossless `C'`와 periodic plate `R/L`은 independent 1-D FEM까지 manufactured 범위에서 통과했다. finite/open 2-D 후보는 SAO–CIM이며 A–v/3-D PEEC로 교차검증한다. M1 collocation power failure는 immutable이고 G1은 `passed_exterior_galerkin_only`다. G2 pair screen은 `passed_pair_screen_only`지만 circle 100 kHz에서 N128 cancellation `2.91315e-8`, N256 raw `Yw` reciprocity/cancellation `1.41197e-8/1.63755e-7`로 fail-closed 됐다. two-DtN subtraction이 없는 독립 A–v volume-FEM boundary-Schur reference candidate는 [`T1_AV_BOUNDARY_SCHUR_SPEC.md`](T1_AV_BOUNDARY_SCHUR_SPEC.md)에 고정했다. H0 primary-h는 prereg sparse-pattern 오류로 factor 전에 실패했지만 topology-tagged H1 coarse `h`와 H2 refined `h2`는 각각 stage-only gate를 통과했다. 최신 physics 상태는 `passed_AV_BS_h2_stage_only_pending_h4_preregistration`; h→h2 max trend `0.868015%`, PDE residual `4.42149e-16`, power mismatch `1.11340e-13`이다. H2 token은 consumed/uses 0이고 fine analytic/mesh convergence/final-circle은 `null`이다. H4-P0 assembly-only와 [`H4-P0R manifest parent`](T1_AV_BOUNDARY_SCHUR_H4_P0R_PREREG.md), 후속 [`P1 executable/lifecycle`](T1_AV_BOUNDARY_SCHUR_H4_P0R_P1_PREREG.md)을 고정했다. 여섯 번째 public P1은 claim/factor child에 도달했지만 `_factor_one`/`splu` 전 preflight payload mismatch로 attempted/performed `false/false`, 0 certified factors를 남겼고 독립 outer max3 exhaustion은 30/30 events, no truncation, no seal로 닫혔다. 현재 최소 retry-v6 static candidate만 있고 token absent, `factor_fit_unproven=true`, `next_stage_authorized=false`이며 H4 physics는 계속 금지한다.
+- T1의 Cohn lossless `C'`와 periodic plate `R/L`은 independent 1-D FEM까지 manufactured 범위에서 통과했다. M1 collocation failure/G1 exterior-only/G2 pair-only와 circle failure는 immutable하다. 독립 A–v H1/H2는 stage-only pass지만 fine analytic/convergence/final circle은 `null`이다. 일곱 번째 public P1에서 `A_background_II` native `splu`만 반환했고 certificate/prefix는 0, `A_conductor_II`는 미시도였다. 현재 retry-v7 static candidate, token absent, `factor_fit_unproven=true`, `next_stage_authorized=false`이며 H4 physics는 계속 금지한다.
 - production SAO 후보는 같은 pulse 공간의 `P^-1U` 두 개를 독립 구성해 빼는 G2로 복귀하지 않는다. Knockaert–De Zutter–Lippens–Rogier의 [Hamiltonian Schur DtN](https://doi.org/10.1016/j.wavemoti.2007.07.004)과 Costabel–Stephan의 [strongly elliptic four-operator transmission system](https://doi.org/10.1016/0022-247X(85)90118-0)을 규범 후보로 두고 trace/flux dual space, Gram map, weak hypersingular operator과 discrete inf-sup를 결과 전에 고정한다.
 - SAO interior의 사전 등록 `C0-A0` 저주파 `10^6` switch는 작은 원에서 실패했다. `C0-A1` fixed `C0=1` direct/scaled Hankel은 canonical full-condition과 W1/W3 dense withheld를 통과했고 W2 analytic/convergence-only 자료가 이를 지지했다. 판정은 `passed_circle_interior_only`이며 M0/M1 또는 product 승격이 아니다.
 - reduced differential line의 4-terminal absolute lift는 gauge 외 common-mode null을 가져 현 global MNA에서 exact singular다. 후보 2의 trace block은 `blocked_balanced_projection_and_return_partition`이며 arbitrary conductance로 null을 숨기지 않는다.
@@ -280,6 +300,27 @@ runner binding key. Frozen Python/runner/tests SHA-256 are `2373a13f...` /
 `330/330` passed in `81.83 s`. Factor/RHS/solve/physics logic and
 `next_stage_authorized=false` are unchanged.
 
+## H4-P0R retry-v7 current non-result
+
+The seventh public P1 invocation at `4f60bd5...` changes no physics or oracle
+ranking. Native `splu` returned for `A_background_II`, so attempted/performed
+are `true/true` and its completed name is durable; the obsolete
+native/exported equality gate then failed before certificate/prefix creation.
+`A_conductor_II` was not attempted and exact native/exported counts were not
+persisted. Inner/outer monitoring retained `174/573` samples and all `31`
+outer retry events without truncation. Both resource gates passed and the seal
+is complete, but authoritative pass/next remain false; this proves neither
+accuracy nor 8 GiB fit. No RHS, solve, H4 physics, PowerSI, or downstream oracle
+work ran.
+
+Consumed/retirement commits `51e5069...` / `17414cf...` leave the token
+absent. Retry-v7 requires `0 < exported <= native`, validates distinct
+native/exported portable-byte formulas and caps both, without changing schema,
+retry policy, factor order, or physics gates. Frozen Python/runner/tests SHA-256
+are `7a1dba5e...` / `852ce8a0...` / `bd2e3e2c...`; focused `25/25` and full
+no-cache `341/341` passed, the latter in `88.40 s`. Detailed evidence is in
+[`T1_AV_BOUNDARY_SCHUR_RESULTS.md`](T1_AV_BOUNDARY_SCHUR_RESULTS.md) and
+[`ORACLE_REPRODUCTION.md`](ORACLE_REPRODUCTION.md).
 ## 후보 선택 규칙
 
 최종 선택은 단일 평균 오차가 아니라 다음 Pareto 조건으로 한다.

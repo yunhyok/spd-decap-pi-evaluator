@@ -1,5 +1,25 @@
 # SPD Decap PI Evaluator v0.22.0 — T1 Trace Oracle Results
 
+> **SPD Decap PI Evaluator v0.22.0 — retry-v7 current boundary:** Seven public
+> `primary-h4-p0r` invocations are immutable. In the seventh, native `splu`
+> returned for `A_background_II`; attempted/performed are `true/true` and the
+> completed-name list contains it, but the obsolete native/exported nnz equality
+> gate failed before any certificate or prefix. `A_conductor_II` was not
+> attempted and the exact native/exported factor counts were not persisted.
+> Inner/outer monitoring retained `174/573` samples and all `31` outer retry
+> events without truncation; both resource gates passed, but this is neither
+> accuracy evidence nor an 8 GiB-fit claim. Commits `51e5069...` and
+> `17414cf...` record consumption and deletion-only retirement; token state is
+> absent. Retry-v7 requires `0 < exported <= native`, validates distinct
+> native/exported portable-byte formulas and caps both, without schema, retry,
+> or factor-order changes. Frozen Python/runner/tests SHA-256 are `7a1dba5e...` /
+> `852ce8a0...` / `bd2e3e2c...`; focused `25/25` and full no-cache `341/341`
+> passed, the latter in `88.40 s`. No RHS, solve, H4 physics, or PowerSI work
+> ran; `next_stage_authorized=false`. Earlier retry-v6 sections are immutable
+> history. Exact evidence is in [results](T1_AV_BOUNDARY_SCHUR_RESULTS.md) and
+> the [reproduction appendix](ORACLE_REPRODUCTION.md).
+
+
 최종 갱신: 2026-08-16 (Asia/Seoul)
 
 이 문서는 직선 finite trace와 명시적 return의 broadband series/distributed physics를 검증하는 T1 연구 결과를 고정한다. 모든 계산은 research-only inline probe이며 제품 Evaluation 경로는 변경하지 않았다.
@@ -11,7 +31,7 @@
 | T1-E0 Cohn stripline | `passed_canonical_lossless_only` | zero-thickness, homogeneous, lossless centered stripline의 `C'` | finite thickness, conductor/dielectric loss, real return polygon |
 | T1-M0 periodic plate pair | `passed_periodic_1d_volume_only` | exact identity와 independent normalized FEM의 periodic `m=0` smooth-copper `R(f), L(f)` | finite-width lateral edge/proximity, free-space exterior, C0-A1 periodic SAO |
 | T1-I0 circle interior DtN | `C0-A1 passed_circle_interior_only` | exact Bessel DtN, pulse mesh/self/quadrature, canonical + W1/W3 dense; W2 analytic-only | M1 exterior, corner, independent A–v, full `Z'` |
-| T1-M1 finite-width return | `BLOCKED_INTERIOR_WEIGHTED_RECIPROCITY_PASSIVITY__G2_PAIR_PASSED_CIRCLE_100KHZ_RECIPROCITY_CANCELLATION_FAIL` | immutable collocation record, G1 exterior-only, G2 pair q/symmetry, G2 circle q/analytic/mesh/passivity, A–v 2 GHz smoke, `AV-BS1-CIRCLE` H1 coarse h와 H2 refined h2 stage-only passes, H4-P0/H4-P0R parent와 P1 executable static review | 100 kHz G2 N256 reciprocity/cancellation fail; G1 passivity fail 미해결; AV-BS1 H4 P1 여섯 attempt/token 폐기, 여섯 번째 pre-factor payload mismatch·0 certified factors·attempted/performed false, 독립 outer max3 exhaustion·30/30 no-truncation/no-seal; retry-v6 static only, factor fit/physics/fine analytic/final circle/withheld 미실행; planned G2 2 GHz/N512/EQ0 미실행 |
+| T1-M1 finite-width return | `BLOCKED_INTERIOR_WEIGHTED_RECIPROCITY_PASSIVITY__G2_PAIR_PASSED_CIRCLE_100KHZ_RECIPROCITY_CANCELLATION_FAIL` | immutable collocation record, G1 exterior-only, G2 pair q/symmetry, G2 circle q/analytic/mesh/passivity, A–v 2 GHz smoke, `AV-BS1-CIRCLE` H1 coarse h와 H2 refined h2 stage-only passes, H4-P0/H4-P0R parent와 P1 executable static review | 100 kHz G2 N256 reciprocity/cancellation fail; G1 passivity fail 미해결; AV-BS1 H4 P1 일곱 attempt/token 폐기, 일곱 번째 `A_background_II` native `splu` 반환·attempted/performed true/true이지만 0 certified factors/prefix, `A_conductor_II` 미시도; inner/outer resource gate 통과·terminal seal authoritative failure; retry-v7 static only, factor fit/physics/fine analytic/final circle/withheld 미실행; planned G2 2 GHz/N512/EQ0 미실행 |
 | T1-F finite-length | `not_run` | 없음 | 3-D PEEC/FastHenry length-difference de-embedding |
 | T1 source candidates | `geometry_and_net_graph_evidence_ready` | width, endpoint, layer, selected stack/material, selected P1/P2 return artwork/void와 same-net graph | terminal-to-return signed current/field owner와 same-crop core partition |
 | T1 global composition | `blocked_balanced_projection_and_return_partition` | reduced differential operator를 곧바로 stamp할 수 없다는 것 | absolute partial operator 또는 explicit local current constraint, same-crop return/core partition |
@@ -67,7 +87,7 @@ finite thickness, skin effect, proximity, edge current crowding과 arbitrary rec
 
 Patel–Triverio의 arbitrary-shape formulation은 rectangular/trapezoidal/multiple-return 예제를 FEM과 비교하고 published host에서 frequency당 약 0.04–0.52 s를 보고했다. 이 문헌 timing은 현재 노트북 성능 증거가 아니다.
 
-독립 reference candidate는 skin-depth 방향 graded mesh를 쓰는 2-D volume-current A–v FEM이다. subtraction-free circle boundary-Schur의 exact 계약은 [`T1_AV_BOUNDARY_SCHUR_SPEC.md`](T1_AV_BOUNDARY_SCHUR_SPEC.md)에 고정했고 coarse h와 refined h2 stage-evaluable gate는 통과했다. H4-P0/H4-P0R parent와 P1 executable static review도 통과했다. 여섯 번째 public P1은 claim/factor child 뒤 `_factor_one`/`splu` 전에 차단되어 0 certified factors와 attempted/performed false를 남겼고 독립 outer max3 exhaustion은 30/30 no-truncation/no-seal로 닫혔다. 따라서 factor fit/fine analytic/mesh convergence 전에는 oracle이 아니다. retry-v6 clean no-token contract의 full no-cache `330/330` pass와 audit를 보존하고 fresh token/result audit 전에는 H4 physics를 열지 않는다. H2-P1 실행 전 contract와 independent modal-field residual/power 증거는 [`T1_AV_BOUNDARY_SCHUR_H2_P1_PREREG.md`](T1_AV_BOUNDARY_SCHUR_H2_P1_PREREG.md)에 immutable하게 고정했고 result는 [`T1_AV_BOUNDARY_SCHUR_RESULTS.md`](T1_AV_BOUNDARY_SCHUR_RESULTS.md)에 기록한다. finite end, bend와 launch는 3-D PEEC/FastHenry를 사용하되 product dependency가 아니라 reference candidate로만 둔다. Hammerstad/Jensen류 식은 screening/asymptotic anchor이며 oracle이 아니다. 1차 dense SAO는 homogeneous, nonmagnetic, lossless background와 simply connected copper에 한정하며 exact 식과 fixture는 [`T1_M1_REFERENCE_SPEC.md`](T1_M1_REFERENCE_SPEC.md)에 고정한다.
+독립 reference candidate는 skin-depth graded 2-D volume-current A–v FEM이다. H1/H2 stage-only gates와 H4 parents를 보존한다. 일곱 번째 P1은 `A_background_II` native return만 완료했고 certificate/prefix 0, `A_conductor_II` 미시도라 factor fit/fine analytic/convergence 전에는 oracle이 아니다. retry-v7 no-token contract와 `341/341` pass를 audit하고 별도 승인/result audit하기 전에는 H4 physics를 열지 않는다. finite end/bend/launch 3-D PEEC와 SAO 후보는 별도 reference로 유지한다.
 
 ### 현행 helper의 제한
 
@@ -241,7 +261,7 @@ DC에서 `y'(0)=0`인 pure series line은 `Y2`와 `Y4`가 rank 1이며 `[1,−1,
 
 board crop에서는 signal copper, return copper, magnetic/electric field, terminal footprint, cross-boundary mutual term을 exact/core가 동일 `Γ`, terminal order, signed current, gauge와 DtN trace space로 공유해야 한다. ideal Trace union을 먼저 제거하고 topology를 교체한다. trace prism이 retained Polygon/plane asset과 disjoint임을 source hash로 증명하지 못하면 기존 adjacent-gap C를 spatial outside/inside owner로 분할하고 inside core를 제거해야 한다. aggregate core partial을 분할할 수 없으면 line C를 병렬 추가하지 않고 차단한다. 일반적으로 indefinite인 raw `ΔY=Yexact−Ycore`를 현 global MNA의 독립 passive block으로 stamp하지 않는다. retained core와 correction을 먼저 합친 하나의 passive absolute replacement operator를 검증한다.
 
-## Retry-v4 current non-result record
+## Retry-v4 historical non-result record
 
 네 번째 public P1 invocation은 token-only commit `9b4854d0cc7ae21e5e9eafc394a9474cb53ea689` (clean contract parent `4d39eab9c464f67e8684e2d539ac3a2b092142a2`)에서 `2026-08-15T13:37:16.0468244Z`부터 `2026-08-15T13:37:20.5004777Z`까지 실행되고 exit 2로 끝났다. token ID `4c209c8a4dac49b89c59dd69bf68c4c2`, raw SHA-256 `d3bb3a42c83848678f0b99c0c669fffb5ab02e594cfba31ee9251c8216d05d64`는 semantic하게 spent됐으며 deletion-only retirement `f1aeeac018a96cbd82341db36efbf5e5a9a55431` 뒤 현재 token은 없다.
 
@@ -267,7 +287,7 @@ zero-byte stdout schema overlay is deferred. Frozen runner/Python/tests are
 `b51498ebe27a0210a09b3a12b26e0146d39c1249906469bcb1add1d2f2443f08`;
 focused/full tests passed `29/29`/`324/324`. Trace gates and next false remain.
 
-## Retry-v6 current non-result record
+## Historical retry-v6 non-result record
 
 The sixth P1 invocation (`82775327...`) created claim and factor child PID
 `55380`, but direct child evidence stopped before `_factor_one`/`splu` on
@@ -286,10 +306,31 @@ Frozen runner/Python/tests hashes are `852ce8a0...` / `2373a13f...` /
 `f1d0b044...`; focused `8/8` passed and full no-cache `330/330` passed in
 `81.83 s`. Trace gates and next false remain.
 
+## H4-P0R retry-v7 current non-result
+
+The seventh public P1 invocation at `4f60bd5...` changes no physics or oracle
+ranking. Native `splu` returned for `A_background_II`, so attempted/performed
+are `true/true` and its completed name is durable; the obsolete
+native/exported equality gate then failed before certificate/prefix creation.
+`A_conductor_II` was not attempted and exact native/exported counts were not
+persisted. Inner/outer monitoring retained `174/573` samples and all `31`
+outer retry events without truncation. Both resource gates passed and the seal
+is complete, but authoritative pass/next remain false; this proves neither
+accuracy nor 8 GiB fit. No RHS, solve, H4 physics, PowerSI, or downstream oracle
+work ran.
+
+Consumed/retirement commits `51e5069...` / `17414cf...` leave the token
+absent. Retry-v7 requires `0 < exported <= native`, validates distinct
+native/exported portable-byte formulas and caps both, without changing schema,
+retry policy, factor order, or physics gates. Frozen Python/runner/tests SHA-256
+are `7a1dba5e...` / `852ce8a0...` / `bd2e3e2c...`; focused `25/25` and full
+no-cache `341/341` passed, the latter in `88.40 s`. Detailed evidence is in
+[`T1_AV_BOUNDARY_SCHUR_RESULTS.md`](T1_AV_BOUNDARY_SCHUR_RESULTS.md) and
+[`ORACLE_REPRODUCTION.md`](ORACLE_REPRODUCTION.md).
 ## 다음 실행 순서
 
 1. M0 periodic 1-D volume pass를 독립 slab anchor로 동결한다. finite/open contour를 periodic `coth`와 직접 비교하지 않는다.
-2. smallest equal-width M1-EQ0의 failed collocation, G1 exterior-only, G2 pair-only과 100 kHz circle raw failure를 보존한다. planned G2 2 GHz circle/N512/EQ0 seed로 확장하지 않는다. independent `AV-BS1-CIRCLE` H0 negative, H1 coarse-h와 H2 refined-h2 stage-only passes, consumed tokens, H4-P0/H4-P0R parent와 여섯 P1 interruption/retirement를 함께 보존한다. 현재 token absent/factor fit unproven이며 retry-v6 clean no-token contract의 full no-cache `330/330` pass와 audit를 보존하고 fresh token/result audit 전에는 H4 physics를 실행하지 않는다. circle 두 radius 통과 전 outer crop `{2,4,8}Deff` EQ0를 실행하지 않는다.
+2. M1-EQ0/G1/G2 failures, AV-BS1 H0/H1/H2 artifacts, H4 parents와 일곱 P1 interruption/retirement를 보존한다. 현재 token absent/factor fit unproven이며 retry-v7 no-token contract와 `341/341` pass의 audit/별도 승인/result audit 전에는 H4 physics를 실행하지 않는다. circle 두 radius 통과 전 outer crop `{2,4,8}Deff` EQ0를 실행하지 않는다.
 3. perimeter panel `N,2N,4N`, singular self integral, corner/opposing-projection grading과 volume skin mesh `δ/2,δ/4,δ/8`에서 raw `Z'`, loss, reciprocity, passivity, current conservation을 0.5%/1% gate로 검사한다.
 4. P2 `Trace13305`는 source-derived manufactured asymmetric stripline으로만 실행한다. 실제 board case는 exact finite-width polygon/void boolean tolerance, signed signal-to-return current/field owner와 same-crop core/DtN partition이 증명될 때까지 차단한다.
 5. P1/P2 selected crop의 actual return artwork/net graph 증거에서 terminal-to-return signed current basis와 same-crop core/DtN owner를 만든다. 가까운 via를 return으로 강제하지 않는다.
