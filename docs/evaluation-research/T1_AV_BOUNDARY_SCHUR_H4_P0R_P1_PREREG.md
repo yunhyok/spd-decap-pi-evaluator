@@ -46,8 +46,8 @@ order, numerical ceilings, or forbidden-operation boundary.
 | Artifact | SHA-256 |
 | --- | --- |
 | [Python fixture](../../tools/research/av_bs1_boundary_schur_h4_p0r_p1.py) | `0289698a95fb64b68a7d18af1b2167e4445d60a7c3127e2e2937f4768cf6ab65` |
-| [PowerShell runner](../../tools/research/run_av_bs1_h4_p0r_p1_stage.ps1) | `08124a3ba85de933351d75f77c36ab8f9499e37b65c5f12c939ed3aec8898bef` |
-| [Static P1 tests](../../tests/test_research_av_bs1_boundary_schur_h4_p0r_p1.py) | `31c02c393d187b3c0b475286493e975e2793ede595e001a8215288f16142cc21` |
+| [PowerShell runner](../../tools/research/run_av_bs1_h4_p0r_p1_stage.ps1) | `442c72914e6a99ed0d404b0219449929bf424beff92d36cb8b31bc68c03d7bcd` |
+| [Static P1 tests](../../tests/test_research_av_bs1_boundary_schur_h4_p0r_p1.py) | `bb6f9d0f7805fccd235d27018d8222e75c13cb782c37e287db74b1a99ddddc46` |
 
 The final SHA-256 of this document and the live P1 wrapper manifest payload are
 intentionally not embedded here. The fixture binds
@@ -364,13 +364,31 @@ It also constructs fake filesystem-backed sealed failure-v1 and result-v2 pass
 chains through the complete, exit-release, outer-close, terminal-seal, and
 manifest terminal-evidence validators, plus strict type, source-hash, marker,
 nullable-prefix, and seven-case terminal tamper checks. Those tests call no
-primary stage, subprocess executor, or real SuperLU factorization.
+primary stage, factor child, or real SuperLU factorization.
+
+The suite also freezes the public-dispatcher strict-mode regression: every
+root/descendant enumeration is array-captured before `.Count`, zero/one/many
+cardinalities are exercised under `Set-StrictMode -Version Latest`, JSON
+failure-code counts are defensively array-wrapped, and both public and inner
+top-level catches emit diagnostics non-terminatingly before returning exit 2.
 
 Python compilation passed, and PowerShell AST parsing reported no syntax
 errors. Safe Python and PowerShell manifest diagnostics observed token absent,
 not authorized, no factorization, no physics solve, no terminal authority, and
-no next-stage authorization. No token, primary, or factor stage was invoked to
-produce this evidence.
+no next-stage authorization.
+
+One earlier public-dispatcher invocation from token-only commit
+`b6c8615639a8fb283909bd6613ab5bf5b0e09cb2` began at
+`2026-08-15T08:49:35Z` and stopped in 0.83 s before token read, observer-session
+creation, inner spawn, claim, or factor work. A root-only process enumeration
+was pipeline-unrolled to scalar `Int32`; strict-mode `$ids.Count` therefore
+raised `The property 'Count' cannot be found on this object`. The untouched
+token `92e6edd1bf01428199c5a492e64858ea` retained `uses_remaining=1`, while its
+claim, seal, session, output, and live-process sets were all absent. It was not
+retried and was retired by deletion-only commit
+`412e88049ec1461dd15ae324b583c114fb890393`. The current runner array-captures
+that enumeration and preserves the intended fail-closed exit code; no factor or
+physics solve occurred in the failed dispatcher attempt.
 
 ## 16. Exact next sequence
 

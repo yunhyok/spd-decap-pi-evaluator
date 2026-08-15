@@ -2153,7 +2153,7 @@ function Get-TreeSample(
     [System.Collections.Generic.HashSet[int]]$ObservedProcessIds,
     [System.Collections.Generic.Dictionary[int, Int64]]$ObservedBirthTicks
 ) {
-    $ids = Get-VerifiedRootDescendantIds $RootProcessId $RootBirthTicks
+    $ids = @(Get-VerifiedRootDescendantIds $RootProcessId $RootBirthTicks)
     if ($ids.Count -lt 1) { throw "BLOCKED_AV_BS_RESOURCE: child process tree disappeared" }
     foreach ($id in $ids) {
         if ([int]$id -eq $RootProcessId) {
@@ -5541,7 +5541,7 @@ function Invoke-OuterObserverPrimary {
 if ([string]::IsNullOrEmpty($InternalMode)) {
     try { $outerObservedExitCode = Invoke-OuterObserverPrimary }
     catch {
-        Write-Error $_.Exception.Message
+        Write-Error $_.Exception.Message -ErrorAction Continue
         exit 2
     }
     exit ([int]$outerObservedExitCode)
@@ -6636,7 +6636,7 @@ finally {
                     $runnerExitCode -eq 0 -and (
                         $consumeWrapper.payload.consumption_validated_pass -ne $true -or
                         $consumeWrapper.payload.mandatory_stage_pass -ne $true -or
-                        $consumeWrapper.payload.failure_codes.Count -ne 0
+                        @($consumeWrapper.payload.failure_codes).Count -ne 0
                     )
                 ) {
                     $runnerExitCode = 2
@@ -6833,7 +6833,7 @@ if ($script:outerObserverInnerActive) {
         Complete-OuterObservedInner ([int]$runnerExitCode)
     }
     catch {
-        Write-Error $_.Exception.Message
+        Write-Error $_.Exception.Message -ErrorAction Continue
         exit 2
     }
 }

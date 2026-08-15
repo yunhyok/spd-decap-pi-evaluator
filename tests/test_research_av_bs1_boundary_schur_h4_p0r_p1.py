@@ -5554,6 +5554,56 @@ def test_runner_is_literal_native_h2_p1_derivative_with_primary_gated() -> None:
     assert "Write-AtomicUtf8NoBom" in source
     assert "$claimCreated" in source
     assert "RUNNER_EXCEPTION" in source
+    assert (
+        "$ids = @(Get-VerifiedRootDescendantIds $RootProcessId $RootBirthTicks)"
+        in source
+    )
+    assert "$consumeWrapper.payload.failure_codes.Count" not in source
+    assert source.count(
+        "Write-Error $_.Exception.Message -ErrorAction Continue"
+    ) == 2
+
+    strict_mode_probe = subprocess.run(
+        [
+            "powershell.exe",
+            "-NoProfile",
+            "-Command",
+            (
+                "Set-StrictMode -Version Latest; "
+                "function Emit-Ids([int]$Count) { "
+                "for ($i = 0; $i -lt $Count; $i += 1) { Write-Output $i } }; "
+                "foreach ($expected in @(0, 1, 3)) { "
+                "$ids = @(Emit-Ids $expected); "
+                "if ($ids.Count -ne $expected) { exit 9 } }; "
+                "Write-Output 'STRICT_ARRAY_CAPTURE_OK'"
+            ),
+        ],
+        cwd=ROOT,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    assert strict_mode_probe.returncode == 0, strict_mode_probe.stderr
+    assert strict_mode_probe.stdout.strip() == "STRICT_ARRAY_CAPTURE_OK"
+
+    exit_code_probe = subprocess.run(
+        [
+            "powershell.exe",
+            "-NoProfile",
+            "-Command",
+            (
+                "$ErrorActionPreference = 'Stop'; "
+                "try { throw 'EXPECTED_FAILURE' } "
+                "catch { Write-Error $_.Exception.Message -ErrorAction Continue; exit 2 }"
+            ),
+        ],
+        cwd=ROOT,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    assert exit_code_probe.returncode == 2
+    assert "EXPECTED_FAILURE" in exit_code_probe.stderr
 
 
 def test_runner_gates_inner_and_outer_token_mutation_on_verified_cleanup() -> None:
