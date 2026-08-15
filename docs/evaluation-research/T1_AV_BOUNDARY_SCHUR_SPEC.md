@@ -276,6 +276,29 @@ H2-P0 refined lineage, 3,712-tag 선택, raw/canonical `K/M/MΓ` hash와 conserv
 
 [Hamiltonian Schur DtN](https://doi.org/10.1016/j.wavemoti.2007.07.004)은 AV-BS1의 내부 알고리즘이나 truth source가 아니다. A–v가 독립 reference로 승격된 뒤 이를 상대로 검증할 future production candidate `T1-M1-HS1_production_candidate_not_preregistered`다. four-operator symmetric transmission formulation도 같은 후속 범위이며 AV-BS1 결과를 보고 operator space나 sign을 조정하지 않는다.
 
+## Retry-v4 execution-only amendment
+
+The fourth public P1 attempt is preserved as a pre-claim/pre-factor interruption.
+Token-only commit `9b4854d0...` ran exactly once and failed in control preflight
+because an exited PID with the exact bound birth remained in the initial complete
+snapshot. Its outer close SHA-256 is
+`73073432faa0525f560b6536ea2a5fd54329ba3a30f04ab05ab8cef59460e758`.
+The token was semantically spent and removed by `f1aeeac...`; current token is
+absent. No matrix factor, RHS, solve, extension, boundary operator, modal response,
+H4 physics, PowerSI, or 8 GiB result was created.
+
+Retry-v4 does not change this mathematical specification, the Python fixture, or
+any schema. It adds only two 25 ms complete-snapshot rechecks for the exact
+`exited + positive same birth + initial snapshot present` transition, and only
+in existing explicit outer/control `MaximumAttempts>1` contexts. The maximum is
+three snapshots total. Final absence uses the existing confirmed-disappearance
+event; all default-one factor calls and every other fail-closed identity path are
+unchanged. Frozen static SHA-256 bindings are Python
+`95c9f5c08282105f7934fbea194694fff3ab850daac633619534044721639234`, runner
+`7893cd57fd4b1686addd434fa0103d9f3b0e0087f4783f2c82e459661abfb645`, tests
+`18aabcdf7b32c6b013aec65497d31f4d908f3085f53f64cb3791f38a2e79381d`;
+focused `11/11` and full no-cache `322/322` passed. `next_stage_authorized=false`.
+
 ## Exact next starting point
 
 1. H0 negative와 H1 h-stage artifact/checksum/resource 결과를 immutable하게 보존하고, H1 primary-h token을 consumed tombstone으로 유지한다.

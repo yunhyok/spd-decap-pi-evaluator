@@ -215,6 +215,26 @@ e_{rel}=\frac{|e_Z|}{\max(|Z_{ref}|,Z_{floor})}
 - sensitivity proof 없는 spatial decap grouping: mutable terminal 정확성 손실 가능
 - 현행 780k-node direct SuperLU graph를 laptop architecture로 유지: factor memory부터 목표 초과
 
+## H4-P0R retry-v4 lifecycle boundary
+
+The fourth public P1 invocation is an immutable pre-factor interruption, not a
+new algorithm score. Token-only commit `9b4854d0...` ran once, failed during
+control preflight when an exited same-birth descendant remained in the first
+complete process snapshot, and produced no claim, factor, RHS, solve, H4
+physics, PowerSI correlation, or 8 GiB factor-fit evidence. The spent token was
+retired by `f1aeeac018a96cbd82341db36efbf5e5a9a55431`; token state is absent.
+
+Retry-v4 is limited to two 25 ms snapshot-settling rechecks after that exact
+`exited + positive same birth + initial snapshot present` condition, and only in
+explicit outer/control `MaximumAttempts>1` contexts. It does not change the
+Python fixture, matrix, factorization, schema, accuracy gates, or candidate
+ranking. `not_found`/87 plus presence and all default-one factor samples remain
+fatal. Frozen bindings are Python `95c9f5c08282105f7934fbea194694fff3ab850daac633619534044721639234`,
+runner `7893cd57fd4b1686addd434fa0103d9f3b0e0087f4783f2c82e459661abfb645`,
+and tests `18aabcdf7b32c6b013aec65497d31f4d908f3085f53f64cb3791f38a2e79381d`;
+focused `11/11` and full no-cache `322/322` passed. Factor fit and H4 physics
+remain unproven, with `next_stage_authorized=false`.
+
 ## 후보 선택 규칙
 
 최종 선택은 단일 평균 오차가 아니라 다음 Pareto 조건으로 한다.

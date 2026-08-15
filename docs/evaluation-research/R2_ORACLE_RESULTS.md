@@ -169,6 +169,27 @@ python -m pytest tests/test_research_axisymmetric_electrostatics.py tests/test_s
 
 최종 root 병렬 재실행에서 focused 12-module suite는 `178 passed in 6.59 s`, finite-route/FFT-BEM suite는 `22 passed in 1.86 s`였다. 이 wall time은 회귀 상태 확인용이며 성능 benchmark가 아니다. custom table을 재생성하는 exact 명령은 [`ORACLE_REPRODUCTION.md`](ORACLE_REPRODUCTION.md)에 고정한다.
 
+## Retry-v4 non-result record
+
+The fourth H4-P0R-P1 public invocation did not change any R2 oracle result. It
+used token-only commit `9b4854d0...`, exited `2` before claim/factor, and its
+outer close SHA-256 is
+`73073432faa0525f560b6536ea2a5fd54329ba3a30f04ab05ab8cef59460e758`.
+The cause was an exited same-birth descendant still
+present in the initial complete Toolhelp snapshot during control preflight. The
+token was semantically spent and deleted by `f1aeeac...`; current token state is
+absent. Factor/RHS/solve/H4 physics, PowerSI correlation, and 8 GiB feasibility
+remain unmeasured.
+
+Retry-v4 only adds two bounded 25 ms snapshot rechecks for that exact exited
+transition in explicit outer/control `MaximumAttempts>1` contexts. Python and
+schemas are unchanged; default-one factor sampling and every other fatal
+identity/resource condition remain unchanged. Frozen SHA-256 bindings are
+Python `95c9f5c08282105f7934fbea194694fff3ab850daac633619534044721639234`,
+runner `7893cd57fd4b1686addd434fa0103d9f3b0e0087f4783f2c82e459661abfb645`,
+tests `18aabcdf7b32c6b013aec65497d31f4d908f3085f53f64cb3791f38a2e79381d`;
+focused `11/11` and no-cache `322/322` passed. `next_stage_authorized=false`.
+
 ## 다음 R2 연구
 
 1. failed M1-EQ0 collocation, G1 `passed_exterior_galerkin_only`, G2 `passed_pair_screen_only`와 100 kHz circle reciprocity/cancellation failure를 보존한다. 독립 A–v boundary-Schur H0 negative, H1 coarse-h와 H2 `passed_AV_BS_h2_stage_only_pending_h4_preregistration` artifacts 및 consumed tokens도 함께 보존한다. H4-P0, [`H4-P0R parent`](T1_AV_BOUNDARY_SCHUR_H4_P0R_PREREG.md), [`P1 executable/lifecycle`](T1_AV_BOUNDARY_SCHUR_H4_P0R_P1_PREREG.md)과 세 pre-factor interruption/retirement를 보존한다. 현재 token absent/factor fit unproven이며 retry-v3 clean no-token contract reread/fresh token 전에는 factor를, result audit 전에는 h4 physics/withheld 또는 EQ0 mesh·crop, planned G2 N512/2 GHz circle/EQ0 seed를 실행하지 않는다. `next_stage_authorized=false`다.

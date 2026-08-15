@@ -15,6 +15,14 @@
 | 정확성 승격 | 미달성 |
 | 8 GB 성능 승격 | 미달성 |
 
+> **Retry-v4 superseding state:** current no-token baseline is deletion-only
+> retirement commit `f1aeeac018a96cbd82341db36efbf5e5a9a55431`, after the
+> fourth public P1 invocation stopped before claim/factor. Token-only commit
+> `9b4854d0...` ran once, exit `2`; PID `40224` was exited with the exact bound
+> birth but remained in the initial complete snapshot. No factor/RHS/solve/H4
+> physics, PowerSI, or 8 GiB result exists. Retry-v4 is static-only and
+> token-absent; `next_stage_authorized=false`.
+
 ## 동결된 현행 baseline 해석
 
 보존된 `v0.22.0-final-correlation-260804-mode10-12-r4` 결과는 구조적/runner 완료 증거이지 PowerSI 정확성 승격 증거가 아니다.
@@ -83,6 +91,8 @@
 | D-043 | H4 factor fit은 physics 실행과 분리한 P0R one-factor pilot에서만 측정하며, 그보다 먼저 exact matrix/equilibration/resource/lifecycle 계약을 manifest-only로 동결한다. | immutable parent 상태 `preregistered_H4_P0R_contract_only_no_factor`; 23개 정적 test와 세 독립 감사가 `KII/AbII/MII/ApII` hash, sequential one-factor, 900 s·4/5/5 GiB guard와 금지 연산 계약을 통과했다. 후속 P1 executable이 만들어졌지만 아직 factor가 실행되지 않았고 H4 physics 권한도 없음 |
 | D-044 | sampled process tree에서 non-root descendant가 enumeration과 metric probe 사이에 사라진 경우에만 최대 3회 전체 sample을 transactionally 재시작한다. | 첫 시도는 root-only scalar `.Count`, 두 번째는 pre-ready `OUTER_RESOURCE_EXCEPTION`으로 모두 claim/factor 전에 fail-closed. 새 close-v2는 complete Toolhelp snapshot, native exited/not-found, stable root를 모두 요구하고 partial 합계를 폐기한다. root loss/reuse, live/access failure, target reappearance, incomplete snapshot과 exhaustion은 계속 fatal이며 raw localized exception은 증거로 저장하지 않음 |
 | D-045 | retry-v3는 outer observer와 여섯 control-plane sampling context만 `MaximumAttempts=3`, event limit `16`으로 instrument하고 factor call sites와 함수 default는 `1`로 유지한다. | 세 번째 public attempt는 outer/control ready/start 뒤 control preflight의 default-one-attempt exhaustion으로 claim/factor 전에 중단됨을 exact v1 report/close/index chain으로 증명했다. retry-v3 report/close와 execution resource scope는 v2이며 typed events, report-prefix-close, frozen PID→birth identity union/coverage, complete count/no-truncation, sticky first fatal과 strict null/pass를 fail-closed로 검증한다. Python/runner/tests SHA `95c9f5c08282105f7934fbea194694fff3ab850daac633619534044721639234`/`cee65497b414a5c9da2b572dc2f026a496b304889c7ddf86a0a2856ebb842d9c`/`0f118612aefa9dc80526abf6604a2234f14c50454000f76ef172a534398042fd`, 312 tests; token absent, factor/physics 미실행, `next_stage_authorized=false` |
+
+| D-046 | Retry-v4 permits settling only for an `exited`, positive, same-birth descendant that remains in the initial complete snapshot, and only in explicit outer/control `MaximumAttempts>1` contexts. | At most two 25 ms rechecks produce three complete snapshots total. Final absence emits the existing confirmed-disappearance event; final presence remains fatal. `not_found`/87 plus presence, default-one factor sampling, live/reuse/root/query/access/incomplete-snapshot failures remain fatal. Python/schema unchanged. Frozen SHA-256 bindings: Python `95c9f5c08282105f7934fbea194694fff3ab850daac633619534044721639234`, runner `7893cd57fd4b1686addd434fa0103d9f3b0e0087f4783f2c82e459661abfb645`, tests `18aabcdf7b32c6b013aec65497d31f4d908f3085f53f64cb3791f38a2e79381d`; focused `11/11`, full no-cache `322/322` in `82.01 s`, PowerShell AST `47,623/0`, Python AST clean. Token absent; no factor/physics; next false. |
 
 ## 현재 가설 순위
 

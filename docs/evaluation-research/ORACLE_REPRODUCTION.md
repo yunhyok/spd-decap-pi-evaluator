@@ -3252,6 +3252,91 @@ gate false를 강제한다. preserved failed stop reason은 final close에서 no
 exact allowlist로 다시 제한하지 않지만 sticky failure가 이미 authorization을 차단한다.
 둘 다 failed evidence를 pass로 바꾸지 못한다.
 
+### Fourth public invocation evidence
+
+Clean contract `4d39eab9c464f67e8684e2d539ac3a2b092142a2` was the sole parent
+of token-only commit `9b4854d0cc7ae21e5e9eafc394a9474cb53ea689`. Token ID
+`4c209c8a4dac49b89c59dd69bf68c4c2`, raw SHA-256
+`d3bb3a42c83848678f0b99c0c669fffb5ab02e594cfba31ee9251c8216d05d64`,
+was exposed to exactly one public invocation from
+`2026-08-15T13:37:16.0468244Z` through
+`2026-08-15T13:37:20.5004777Z`; the command returned exit `2`.
+
+The following read-only checks address only the immutable fourth-attempt
+evidence. They do not invoke manifest, preflight, primary, factor, finalizer, or
+consumer stages.
+
+```powershell
+$outer = 'validation-output/av-bs1/outer-observer/session-2085628c53894c8eade7a735ec60f36c'
+$control = 'validation-output/av-bs1/control-plane/session-b2db30095a1042f4b4d5bbdc56550727'
+Get-FileHash -Algorithm SHA256 -LiteralPath "$outer/inner-ready.json"
+Get-FileHash -Algorithm SHA256 -LiteralPath "$outer/outer-start-release.json"
+Get-FileHash -Algorithm SHA256 -LiteralPath "$outer/outer-resource-envelope-close.json"
+Get-FileHash -Algorithm SHA256 -LiteralPath "$control/bounded-bootstrap.py"
+Get-FileHash -Algorithm SHA256 -LiteralPath "$control/canonical-json-sha256.py"
+Get-FileHash -Algorithm SHA256 -LiteralPath "$control/preflight-2b050acbc608406fbf0308823618358f/bootstrap-ready.json"
+Get-FileHash -Algorithm SHA256 -LiteralPath "$control/preflight-2b050acbc608406fbf0308823618358f/start-release.json"
+```
+
+Expected SHA-256 values are:
+
+```text
+outer inner-ready: 485beb7c468c5f849554a099bf8fa4f456dc4748782968cbc4d2a3729bf7c5fc
+outer start-release: 296353a46cccd301adfdbeeef7d7538a79a724a73225c219c988608e20060c51
+outer close: 73073432faa0525f560b6536ea2a5fd54329ba3a30f04ab05ab8cef59460e758
+control bootstrap: 3b8d2230e316b541c0d59d6334c13eaa1cf1c0e56ab7f02b1753dbefaeddec0f
+control canonical helper: 7d80a4c230409aa0462a59f5cb9de167101ddd53b9f31119d0679f08a853d45c
+control bootstrap-ready: 3d123e0ca997949cc24d7a80ac775d0f129d803632e64e59a19d8bde80d05416
+control start-release: d0c6b2f8fbfcf39ea8bfdc8d9d28398007a7d75347224d3f6150616769406ede
+outer/control stdout and stderr: e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+```
+
+No control target-complete, control report, control close, control session index,
+outer inner-complete, outer exit-release, claim, factor prefix, numerical result,
+tombstone, quarantine, or terminal seal exists for this token. The outer close
+records `OUTER_RESOURCE_EXCEPTION`, `mandatory_outer_resource_gate_pass=false`,
+cleanup verified, and monitor failure
+`NONROOT_DISAPPEARANCE_NOT_CONFIRMED` at `outer_tree_sample` attempt `1` for PID
+`40224`. Expected and observed birth are both `639223978396874096`, and the
+failure has no Win32 error. This proves an identity-queryable exited process was
+still present in the first complete snapshot. It is not a memory limit result:
+peak tree working set was `464506880 B`, peak tree commit `1718468608 B`,
+lifetime peak commit `1806934016 B`, minimum commit headroom `73405591552 B`,
+and minimum available physical memory `47205404672 B`.
+
+The exact original token remained on disk because no claim existed, but the
+public attempt was semantically spent. It was never reused and deletion-only
+commit `f1aeeac018a96cbd82341db36efbf5e5a9a55431` removed it. Current
+token state is absent. Factorization, RHS, solve, H4 physics, PowerSI evidence,
+and 8 GiB fit evidence were never started.
+
+### Current retry-v4 replay boundary
+
+Retry-v4 leaves Python, all schemas, the three-attempt whole-sample retry, the
+16-event cap, and factor sampling unchanged. Only when a caller already uses
+`MaximumAttempts>1` and the initial non-root probe is `exited` with a positive
+birth equal to the bound birth may an initial snapshot-present result receive
+two 25 ms rechecks, for three complete snapshots total. Root identity is checked
+around every recheck. A final absent snapshot returns the existing
+`CONFIRMED_NONROOT_DISAPPEARANCE` event; presence after all three remains
+`NONROOT_DISAPPEARANCE_NOT_CONFIRMED`. `not_found`/87 plus presence, default-one
+factor sampling, live reappearance, PID reuse, malformed/query/access failures,
+root loss/reuse, and incomplete snapshots remain fatal.
+
+```text
+Python fixture SHA-256: 95c9f5c08282105f7934fbea194694fff3ab850daac633619534044721639234
+PowerShell runner SHA-256: 7893cd57fd4b1686addd434fa0103d9f3b0e0087f4783f2c82e459661abfb645
+static tests SHA-256: 18aabcdf7b32c6b013aec65497d31f4d908f3085f53f64cb3791f38a2e79381d
+focused retry-v4 tests: 11/11 passed
+full no-cache P1 suite: 322/322 passed in 82.01 s
+PowerShell AST: 47,623 tokens / 0 errors
+Python AST: clean
+token_state: absent
+factorization_performed: false
+physics_solve_performed: false
+next_stage_authorized: false
+```
+
 ## Focused regression
 
 ```powershell

@@ -142,6 +142,28 @@ N0 high-precision canonical parity는 `||ΔZ||F/max(||Z||F,nZfloor) ≤1e-12` �
 
 이 exact reduction은 MOR/vector fitting과 구분한다. 현재 물리를 바꾸지 않는 parity가 증명된 버전은 R2/R3의 bounded resource 실험에 사용할 수 있지만, 결합 구조가 바뀔 때마다 인증은 무효화되고 재검증한다.
 
+## Retry-v4 gate amendment
+
+Preserve all four public H4-P0R-P1 attempts as pre-claim/pre-factor failures.
+The fourth attempt (`9b4854d0...`, once from
+`2026-08-15T13:37:16.0468244Z` through
+`2026-08-15T13:37:20.5004777Z`, exit `2`) reached outer/control ready and start
+release but stopped in control preflight on
+`NONROOT_DISAPPEARANCE_NOT_CONFIRMED` for exited same-birth PID `40224`. Its
+token was semantically spent, never reused, and removed by `f1aeeac...`; there
+was no claim, factor, RHS, solve, physics, PowerSI, or 8 GiB result.
+
+Retry-v4 permits only this identity-bound exited/snapshot-present transition to
+settle through at most three complete snapshots, with two 25 ms waits, and only
+where outer/control callers already pass `MaximumAttempts>1`. All default-one
+factor call sites and fail-closed root/reuse/query/access/not-found rules remain
+unchanged. Python/schema are unchanged. Static bindings are Python
+`95c9f5c08282105f7934fbea194694fff3ab850daac633619534044721639234`, runner
+`7893cd57fd4b1686addd434fa0103d9f3b0e0087f4783f2c82e459661abfb645`, tests
+`18aabcdf7b32c6b013aec65497d31f4d908f3085f53f64cb3791f38a2e79381d`;
+focused `11/11` and full no-cache `322/322` passed. No fresh token or public run
+is authorized by this documentation cycle; `next_stage_authorized=false`.
+
 ## 실행 순서
 
 1. N0과 exact-minus-core identity case를 동결한다.

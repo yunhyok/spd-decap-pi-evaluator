@@ -266,6 +266,23 @@ process-only wall/peak working-set/private의 row maximum은 `210.401 s / 88.969
 
 현재 전체 상태는 **`BLOCKED_INTERIOR_WEIGHTED_RECIPROCITY_PASSIVITY__G2_PAIR_PASSED_CIRCLE_100KHZ_RECIPROCITY_CANCELLATION_FAIL`**이다.
 
+## H4-P0R retry-v4 non-result
+
+The fourth H4-P0R-P1 public attempt (`9b4854d0...`) stopped in control preflight
+before claim/factor because an exited same-birth descendant remained in the
+initial complete snapshot. It returned exit `2`; the token was semantically
+spent and deleted by `f1aeeac...`. No factor/RHS/solve/H4 physics or EQ0 input
+was produced, so all immutable M1-EQ0/G1/G2 results above remain unchanged.
+
+Retry-v4 adds only two 25 ms snapshot-settling rechecks for this exact exited
+condition in explicit outer/control `MaximumAttempts>1` contexts. Python,
+schemas, factor defaults, and physics gates do not change. Static SHA-256
+bindings are Python `95c9f5c08282105f7934fbea194694fff3ab850daac633619534044721639234`,
+runner `7893cd57fd4b1686addd434fa0103d9f3b0e0087f4783f2c82e459661abfb645`,
+tests `18aabcdf7b32c6b013aec65497d31f4d908f3085f53f64cb3791f38a2e79381d`;
+focused `11/11`, no-cache `322/322`. Token absent and
+`next_stage_authorized=false`.
+
 ## Exact next starting point
 
 1. **완료:** G1 direct exterior Galerkin을 `N={144,288,576}`, 7 frequencies, q10/q20, 세 `r0`에서 실행해 exterior-only pass와 interior blocker를 분리했다.

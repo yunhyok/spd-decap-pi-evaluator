@@ -357,6 +357,54 @@ is required to be nonempty rather than exact-allowlisted at final close, but
 the sticky failure already prevents authorization. Neither observation can
 turn failed evidence into pass evidence.
 
+## Fourth public attempt and retry-v4 corrective candidate
+
+Retry-v3 clean contract `4d39eab9c464f67e8684e2d539ac3a2b092142a2` was
+the sole parent of token-only commit
+`9b4854d0cc7ae21e5e9eafc394a9474cb53ea689`. The exact token ID/SHA-256 was
+`4c209c8a4dac49b89c59dd69bf68c4c2` /
+`d3bb3a42c83848678f0b99c0c669fffb5ab02e594cfba31ee9251c8216d05d64`.
+The public invocation ran once from `2026-08-15T13:37:16.0468244Z` to
+`2026-08-15T13:37:20.5004777Z` and returned exit `2`.
+
+The outer session was
+`validation-output/av-bs1/outer-observer/session-2085628c53894c8eade7a735ec60f36c`.
+Ready/start/close SHA-256 values are respectively
+`485beb7c468c5f849554a099bf8fa4f456dc4748782968cbc4d2a3729bf7c5fc`,
+`296353a46cccd301adfdbeeef7d7538a79a724a73225c219c988608e20060c51`, and
+`73073432faa0525f560b6536ea2a5fd54329ba3a30f04ab05ab8cef59460e758`.
+The control session was
+`validation-output/av-bs1/control-plane/session-b2db30095a1042f4b4d5bbdc56550727`;
+bootstrap/canonical-helper/ready/release hashes are
+`3b8d2230e316b541c0d59d6334c13eaa1cf1c0e56ab7f02b1753dbefaeddec0f`,
+`7d80a4c230409aa0462a59f5cb9de167101ddd53b9f31119d0679f08a853d45c`,
+`3d123e0ca997949cc24d7a80ac775d0f129d803632e64e59a19d8bde80d05416`, and
+`d0c6b2f8fbfcf39ea8bfdc8d9d28398007a7d75347224d3f6150616769406ede`.
+No control complete/report/close/index was produced.
+
+The exact cause was `NONROOT_DISAPPEARANCE_NOT_CONFIRMED` in
+`outer_tree_sample` attempt `1`: PID `40224` was exited with expected and
+observed birth `639223978396874096`, but remained in the first complete
+Toolhelp snapshot. Cleanup was verified. No claim, factor child, factor prefix,
+result, tombstone, or seal existed, so factorization/RHS/solve/H4 physics did
+not start. The exact token bytes remained but were semantically spent and were
+removed without reuse by `f1aeeac018a96cbd82341db36efbf5e5a9a55431`.
+
+Retry-v4 allows only an exited, positive, same-birth descendant in this initial
+snapshot-present state to receive two 25 ms rechecks, three complete snapshots
+total, and only for existing explicit outer/control `MaximumAttempts>1`
+contexts. Final absence emits the existing confirmed event. `not_found`/87 plus
+presence, default-one factor sampling, reuse/root/query/access/incomplete
+snapshot failures remain fatal. Python and schemas are unchanged.
+
+Frozen retry-v4 SHA-256 bindings are Python
+`95c9f5c08282105f7934fbea194694fff3ab850daac633619534044721639234`, runner
+`7893cd57fd4b1686addd434fa0103d9f3b0e0087f4783f2c82e459661abfb645`, and tests
+`18aabcdf7b32c6b013aec65497d31f4d908f3085f53f64cb3791f38a2e79381d`.
+Focused `11/11`, full no-cache `322/322` in `82.01 s`, PowerShell AST
+`47,623/0`, and Python AST passed. This is static evidence only: token absent,
+`factor_fit_unproven=true`, `next_stage_authorized=false`.
+
 ## Exact next starting point
 
 1. H0 negative와 H1 h-stage artifact를 모두 immutable하게 보존한다.

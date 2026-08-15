@@ -2,11 +2,10 @@
 
 ## 1. Current status and authority
 
-This document preregisters the third corrective static executable-contract
-candidate after three public invocations stopped before claim and factor work.
-It is pending final document audit and a new clean token-absent contract
-commit. It does not itself authorize a pilot, and none of the three prior tokens may be
-reused.
+This document preregisters the fourth corrective static executable-contract
+candidate after four public invocations stopped before claim and factor work.
+It remains token-absent and does not itself authorize a pilot. None of the four
+prior tokens may be reused.
 
 The current safe manifest classification is:
 
@@ -18,7 +17,7 @@ The current safe manifest classification is:
 - no H4-P0R-P1 factorization or physics solve has run; and
 - no later H4-P1 stage is authorized.
 
-The retry-v3 live manifest records execution resource scope v2,
+The retry-v4 candidate retains retry-v3 execution resource scope v2,
 `control_plane.independently_bounded=true`,
 `tree_thresholds_equal_factor_envelope=true`,
 `system_floor_recheck_before_and_after_each=true`, and
@@ -591,16 +590,103 @@ exact allowlist at the final close, but it is coupled to an already sticky
 failure and cannot authorize pass. Both observations are failed-only; neither
 can produce terminal authority, and `next_stage_authorized` remains false.
 
+### 15.4 Fourth public attempt under retry-v3
+
+Clean retry-v3 contract `4d39eab9c464f67e8684e2d539ac3a2b092142a2` was
+the sole parent of token-only commit
+`9b4854d0cc7ae21e5e9eafc394a9474cb53ea689`. The canonical token ID was
+`4c209c8a4dac49b89c59dd69bf68c4c2`, raw SHA-256
+`d3bb3a42c83848678f0b99c0c669fffb5ab02e594cfba31ee9251c8216d05d64`.
+The public runner was invoked exactly once from
+`2026-08-15T13:37:16.0468244Z` through
+`2026-08-15T13:37:20.5004777Z` and returned exit `2`.
+
+```text
+outer session: validation-output/av-bs1/outer-observer/session-2085628c53894c8eade7a735ec60f36c
+control session: validation-output/av-bs1/control-plane/session-b2db30095a1042f4b4d5bbdc56550727
+control invocation: preflight-2b050acbc608406fbf0308823618358f
+outer inner-ready SHA-256: 485beb7c468c5f849554a099bf8fa4f456dc4748782968cbc4d2a3729bf7c5fc
+outer start-release SHA-256: 296353a46cccd301adfdbeeef7d7538a79a724a73225c219c988608e20060c51
+outer close SHA-256: 73073432faa0525f560b6536ea2a5fd54329ba3a30f04ab05ab8cef59460e758
+control bootstrap SHA-256: 3b8d2230e316b541c0d59d6334c13eaa1cf1c0e56ab7f02b1753dbefaeddec0f
+control canonical helper SHA-256: 7d80a4c230409aa0462a59f5cb9de167101ddd53b9f31119d0679f08a853d45c
+control bootstrap-ready SHA-256: 3d123e0ca997949cc24d7a80ac775d0f129d803632e64e59a19d8bde80d05416
+control start-release SHA-256: d0c6b2f8fbfcf39ea8bfdc8d9d28398007a7d75347224d3f6150616769406ede
+public exit: 2
+outer stop: OUTER_RESOURCE_EXCEPTION
+monitor failure: NONROOT_DISAPPEARANCE_NOT_CONFIRMED
+monitor context / attempt / PID: outer_tree_sample / 1 / 40224
+expected / observed birth: 639223978396874096 / 639223978396874096
+cleanup: verified
+claim/factor/RHS/solve/physics/tombstone/seal: absent
+```
+
+The control bootstrap wrote ready and received start release, but did not write
+target-complete. Consequently it never returned to the runner, which requires a
+complete bounded preflight report/index/close before exclusive claim creation.
+The outer monitor independently observed PID `40224` as identity-queryable and
+exited with the exact expected positive birth, while a fresh complete Toolhelp
+snapshot still contained that PID. Retry-v3 treated this exact transitional
+combination as immediately fatal before its three-attempt whole-sample retry.
+
+The close records 17 successful outer samples, one earlier confirmed
+disappearance retry, cleanup verified, and a terminal post-cleanup sample. The
+resource thresholds were not close to failing: peak tree working set
+`464506880 B`, peak commit `1718468608 B`, lifetime peak commit `1806934016 B`,
+minimum system commit headroom `73405591552 B`, and minimum available physical
+memory `47205404672 B`. This is neither a factor result nor an 8 GiB feasibility
+result.
+
+No claim existed, so the exact authorized token bytes remained on disk. The
+public attempt was nevertheless semantically spent under the frozen one-use
+rule. The token was never reused or sealed and was removed by deletion-only
+retirement commit `f1aeeac018a96cbd82341db36efbf5e5a9a55431`. Current
+token state is absent; no owned attempt process remains live.
+
+### 15.5 Current retry-v4 static evidence
+
+Retry-v4 changes only exited-descendant snapshot settling inside
+`Get-ConfirmedTreeSampleDisappearance`. The additional path is enabled only
+when the caller already passes `MaximumAttempts>1`, and only when the initial
+probe is `exited`, carries a positive birth equal to the expected bound birth,
+and the first complete snapshot still contains the PID. It then performs at
+most two 25 ms rechecks, for at most three complete snapshots total, with root
+identity checks around every recheck.
+
+If a complete snapshot becomes absent, the function returns the existing
+`CONFIRMED_NONROOT_DISAPPEARANCE` event and the existing whole-sample retry
+logic applies. If the PID remains present after all three snapshots, the
+existing `NONROOT_DISAPPEARANCE_NOT_CONFIRMED` failure remains fatal.
+`not_found`/87 plus snapshot presence is still immediately fatal. So are live
+reappearance, PID reuse, invalid or mismatched birth, root loss/reuse,
+query/access/malformed results, incomplete snapshots, and retry exhaustion.
+The function default and every factor call site remain `MaximumAttempts=1`.
+There is no Python, schema, matrix, factor, or physics change.
+
+```text
+Python fixture SHA-256: 95c9f5c08282105f7934fbea194694fff3ab850daac633619534044721639234
+PowerShell runner SHA-256: 7893cd57fd4b1686addd434fa0103d9f3b0e0087f4783f2c82e459661abfb645
+static tests SHA-256: 18aabcdf7b32c6b013aec65497d31f4d908f3085f53f64cb3791f38a2e79381d
+focused retry-v4 tests: 11/11 passed
+full no-cache P1 suite: 322/322 passed in 82.01 s
+PowerShell AST: 47,623 tokens / 0 errors
+Python AST: clean
+token_state: absent
+factorization_performed: false
+physics_solve_performed: false
+next_stage_authorized: false
+```
+
 ## 16. Exact next sequence
 
 The only permitted next sequence is:
 
-The control-plane and outer-observer readiness transition plus retry-v3 bounded
-tree-sample evidence have been applied to this candidate. They do not create or
+The control-plane and outer-observer readiness transition plus retry-v4 bounded
+snapshot settling have been applied to this candidate. They do not create or
 authorize a token. The retired token-only commits `b6c8615...`, `d9e064f...`,
-and `6328174...` must never be invoked again.
+`6328174...`, and `9b4854d0...` must never be invoked again.
 
-1. Freeze the retry-v3 fixture, runner, tests, documentation, schema bindings,
+1. Freeze the retry-v4 fixture, runner, tests, documentation, schema bindings,
    and safe no-token manifest; complete independent code/document/contract
    audits and compute the final document SHA-256 externally.
 2. Create one clean executable-contract commit containing exactly those
@@ -614,7 +700,7 @@ and `6328174...` must never be invoked again.
    the final contract commit and every frozen hash.
 5. From that fresh clean token-only child, invoke the public
    `primary-h4-p0r` runner exactly once for the two-factor, zero-RHS,
-   zero-solve pilot. Never invoke any of the three prior token commits.
+   zero-solve pilot. Never invoke any of the four prior token commits.
 6. Classify the outcome only from the v2 tombstone, outer terminal seal, and
    the complete current-byte-bound claim, guard, resource, result, child,
    marker, prefix, report, index, close, and applicable recovery-journal chain.

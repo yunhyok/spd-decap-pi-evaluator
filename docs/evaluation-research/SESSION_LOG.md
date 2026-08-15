@@ -1547,3 +1547,121 @@ to pass evidence.
    tombstone/seal/index/close chain. Regardless of outcome, keep
    `next_stage_authorized=false`; do not run H4 physics, PowerSI, withheld, or
    EQ0 work without a separate clean preregistration and fresh authorization.
+
+## 2026-08-15 — AV-BS1 H4-P0R-P1 fourth pre-factor interruption and retry-v4 freeze
+
+The visible program identity remains **SPD Decap PI Evaluator v0.22.0**. This
+entry was appended to the exact 138,856-byte prior `SESSION_LOG.md` prefix with
+SHA-256
+`7060556ed0e09a75a6592f18e45df3426efaeda6c172de4e88dc285a35d08f7a`;
+all earlier attempt records remain immutable.
+
+The fourth public P1 invocation used token-only commit
+`9b4854d0cc7ae21e5e9eafc394a9474cb53ea689`, whose sole parent was clean
+contract `4d39eab9c464f67e8684e2d539ac3a2b092142a2`. It started at
+`2026-08-15T13:37:16.0468244Z`, ended at
+`2026-08-15T13:37:20.5004777Z`, and exited `2`. The canonical token ID was
+`4c209c8a4dac49b89c59dd69bf68c4c2`; its raw SHA-256 was
+`d3bb3a42c83848678f0b99c0c669fffb5ab02e594cfba31ee9251c8216d05d64`.
+The exact token bytes remained after the failed public invocation, but the
+authorization was semantically spent and was never reused. Deletion-only
+retirement commit `f1aeeac018a96cbd82341db36efbf5e5a9a55431` removed it; the
+current token state is absent.
+
+The outer observer session is
+`validation-output/av-bs1/outer-observer/session-2085628c53894c8eade7a735ec60f36c`.
+Its inner-ready SHA-256 is
+`485beb7c468c5f849554a099bf8fa4f456dc4748782968cbc4d2a3729bf7c5fc`,
+start-release SHA-256 is
+`296353a46cccd301adfdbeeef7d7538a79a724a73225c219c988608e20060c51`,
+and outer-resource-envelope-close SHA-256 is
+`73073432faa0525f560b6536ea2a5fd54329ba3a30f04ab05ab8cef59460e758`.
+The close preserves stop reason `OUTER_RESOURCE_EXCEPTION` and monitor failure
+`NONROOT_DISAPPEARANCE_NOT_CONFIRMED` at context `outer_tree_sample`, attempt
+`1`, PID `40224`. The metric returned `exited`; expected and observed birth
+were both positive `639223978396874096`; the initial complete Toolhelp snapshot
+still contained the PID; and there was no Win32 error. This exact path did not
+perform a settle recheck under the then-current default-one sample behavior.
+An earlier PID `42288` disappearance was confirmed through the already-existing
+whole-sample retry, proving that retry path was reachable but not applicable to
+the PID 40224 initial-snapshot case.
+
+The control-plane session is
+`validation-output/av-bs1/control-plane/session-b2db30095a1042f4b4d5bbdc56550727`
+with invocation ID `preflight-2b050acbc608406fbf0308823618358f`.
+Its bootstrap SHA-256 is
+`3b8d2230e316b541c0d59d6334c13eaa1cf1c0e56ab7f02b1753dbefaeddec0f`,
+canonical-helper SHA-256 is
+`7d80a4c230409aa0462a59f5cb9de167101ddd53b9f31119d0679f08a853d45c`,
+bootstrap-ready SHA-256 is
+`3d123e0ca997949cc24d7a80ac775d0f129d803632e64e59a19d8bde80d05416`,
+and start-release SHA-256 is
+`d0c6b2f8fbfcf39ea8bfdc8d9d28398007a7d75347224d3f6150616769406ede`.
+Control stdout and stderr were both empty, with SHA-256
+`e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855`.
+No control target-complete, report, close, or index was emitted; no outer
+complete or exit-release was emitted.
+
+No claim, factor child, factor prefix, RHS, solve, H4 physics, numerical result,
+tombstone, quarantine, or seal was created. The factor-only Python process and
+matrix construction never started. The fourth public invocation is therefore
+not evidence for factor fit, 8 GB feasibility, PowerSI correlation, or H4
+accuracy. Cleanup did complete and is covered by a terminal post-cleanup sample:
+all observed, failure, and control PIDs are absent; live matching process count
+is zero; no `av-bs1-*` temporary directory remains. The envelope recorded 17
+successful outer samples. Resource margin was not the cause: working set was
+464,506,880 bytes, peak tree committed bytes were 1,718,468,608, lifetime peak
+committed bytes were 1,806,934,016, minimum commit headroom was 73,405,591,552,
+and minimum available physical memory was 47,205,404,672 bytes.
+
+Retry-v4 is a narrow lifecycle-only change. It activates only when an existing
+outer/control caller explicitly passes `MaximumAttempts>1`, the initial metric
+state is `exited`, the metric birth is positive and exactly equals the bound
+birth, and the initial complete snapshot still contains that PID. Only then may
+the sample take at most two additional complete snapshots, each after 25 ms,
+for at most three complete snapshots total, with root identity checked around
+every recheck. If a recheck shows the PID absent, the existing
+`CONFIRMED_NONROOT_DISAPPEARANCE` event is returned and the existing whole-sample
+retry remains authoritative. If all three complete snapshots contain the PID,
+the existing `NONROOT_DISAPPEARANCE_NOT_CONFIRMED` failure remains fatal.
+
+`not_found`/87 plus snapshot-present remains fatal. The default
+`MaximumAttempts=1` factor sampling path has no settle behavior and remains
+fatal. Live reappearance, PID reuse, invalid or mismatched birth, root loss or
+reuse, query/access failure, malformed or incomplete snapshot, and retry
+exhaustion all remain fatal. The change does not alter schemas, Python,
+matrix/factor logic, or physics.
+
+The frozen retry-v4 static bindings and validation supplied by the completed
+code/test cycle are:
+
+- runner SHA-256:
+  `7893cd57fd4b1686addd434fa0103d9f3b0e0087f4783f2c82e459661abfb645`;
+- Python SHA-256:
+  `95c9f5c08282105f7934fbea194694fff3ab850daac633619534044721639234`;
+- tests SHA-256:
+  `18aabcdf7b32c6b013aec65497d31f4d908f3085f53f64cb3791f38a2e79381d`;
+- focused retry-v4 regression: `11/11` passed;
+- full no-cache P1 regression: `322/322` passed in `82.01 s`;
+- PowerShell AST: `47,623` tokens, `0` errors; and
+- Python AST: clean.
+
+These are static retry-v4 lifecycle bindings, not a public-run result. All four
+public token commits `b6c8615...`, `d9e064f...`, `6328174...`, and
+`9b4854d...` are spent and must never be invoked again.
+
+### Exact next starting point
+
+1. Freeze the approved retry-v4 runner, tests, these 15 research documents,
+   final preregistration document SHA, and resulting token-absent manifest
+   bindings in one clean no-token contract commit.
+2. Re-read that exact committed no-token manifest and stop if any binding or
+   prerequisite differs.
+3. Only then create a fresh child with exactly one parent that adds only one
+   canonical one-use P1 token file.
+4. Invoke public `primary-h4-p0r` exactly once from that fresh token-only child;
+   never invoke any of the four spent token commits.
+5. Preserve and independently audit the complete result/resource/claim/
+   tombstone/seal/index/close chain. Regardless of outcome, keep
+   `next_stage_authorized=false`; do not run H4 physics, PowerSI, withheld, or
+   EQ0 work without a separate clean preregistration and fresh authorization.

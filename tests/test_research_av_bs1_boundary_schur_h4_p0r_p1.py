@@ -8037,6 +8037,102 @@ def _run_tree_sample_slice(
     return json.loads(lines[0])
 
 
+def _run_exited_snapshot_stabilization_case(
+    tmp_path: Path,
+    *,
+    child_identity_body: str,
+    child_metric_body: str,
+    snapshot_body: str,
+    maximum_attempts: int = 3,
+    root_identity_body: str = (
+        "return [ordered]@{status='live';operation='get_process_times';"
+        "win32_error_code=$null;birth_utc_ticks=[int64]1000}"
+    ),
+) -> dict[str, object]:
+    case_script = r"""
+$script:enumerations=0
+$script:rootIdentityQueries=0
+$script:childIdentityQueries=0
+$script:childMetricCalls=0
+$script:snapshotQueries=0
+$providers=[ordered]@{
+    Enumerate={param([int]$RootProcessId)
+        $script:enumerations+=1
+        if($script:enumerations -eq 1){return @([int]100,[int]300)}
+        return @([int]100)
+    }
+    Identity={param([int]$ProcessId)
+        if($ProcessId -eq 100){
+            $script:rootIdentityQueries+=1
+            __ROOT_IDENTITY_BODY__
+        }
+        $script:childIdentityQueries+=1
+        __CHILD_IDENTITY_BODY__
+    }
+    Metrics={param([int]$ProcessId)
+        if($ProcessId -eq 300){
+            __CHILD_METRIC_BODY__
+        }
+        return [ordered]@{status='ok';operation='get_process_memory_info';win32_error_code=$null;birth_utc_ticks=[int64]1000;values=[int64[]]@(1,1,1,1,1,1,1,1)}
+    }
+    SnapshotContains={param([int]$ProcessId)
+        $script:snapshotQueries+=1
+        __SNAPSHOT_BODY__
+    }
+}
+$ids=New-Object 'System.Collections.Generic.HashSet[int]'
+$births=New-Object 'System.Collections.Generic.Dictionary[int, Int64]'
+$births.Add(100,[int64]1000); [void]$ids.Add(100)
+$diagnostics=New-TreeSampleDiagnostics 16
+try {
+    $sample=Get-TreeSample 100 1000 $ids $births 'outer_tree_sample' $diagnostics $providers __MAXIMUM_ATTEMPTS__
+    [ordered]@{
+        outcome='success'
+        process_ids=@($sample.process_ids)
+        enumerations=$script:enumerations
+        root_identity_queries=$script:rootIdentityQueries
+        child_identity_queries=$script:childIdentityQueries
+        child_metric_calls=$script:childMetricCalls
+        snapshot_queries=$script:snapshotQueries
+        retry_count=$diagnostics.confirmed_disappearance_count
+        events=@($diagnostics.retry_events)
+    } | ConvertTo-Json -Depth 12 -Compress
+}
+catch {
+    [ordered]@{
+        outcome='failure'
+        message_code=$_.Exception.Data['message_code']
+        attempt=$_.Exception.Data['attempt']
+        confirmation=$_.Exception.Data['confirmation']
+        expected_birth=$_.Exception.Data['expected_birth_utc_ticks']
+        observed_birth=$_.Exception.Data['observed_birth_utc_ticks']
+        operation=$_.Exception.Data['operation']
+        process_id=$_.Exception.Data['process_id']
+        process_role=$_.Exception.Data['process_role']
+        win32_error_code=$_.Exception.Data['win32_error_code']
+        enumerations=$script:enumerations
+        root_identity_queries=$script:rootIdentityQueries
+        child_identity_queries=$script:childIdentityQueries
+        child_metric_calls=$script:childMetricCalls
+        snapshot_queries=$script:snapshotQueries
+        retry_count=$diagnostics.confirmed_disappearance_count
+        stored_retry_events=@($diagnostics.retry_events).Count
+    } | ConvertTo-Json -Depth 12 -Compress
+}
+"""
+    replacements = {
+        "__ROOT_IDENTITY_BODY__": root_identity_body,
+        "__CHILD_IDENTITY_BODY__": child_identity_body,
+        "__CHILD_METRIC_BODY__": child_metric_body,
+        "__SNAPSHOT_BODY__": snapshot_body,
+        "__MAXIMUM_ATTEMPTS__": str(maximum_attempts),
+    }
+    for marker, replacement in replacements.items():
+        assert marker in case_script
+        case_script = case_script.replace(marker, replacement)
+    return _run_tree_sample_slice(tmp_path, case_script)
+
+
 @pytest.mark.parametrize(
     "context",
     ["outer_tree_sample", "control_active_outer_tree_sample"],
@@ -8485,6 +8581,309 @@ catch { [ordered]@{message_code=$_.Exception.Data['message_code'];enumerations=$
     }
 
 
+def test_tree_sample_same_birth_exited_snapshot_stabilizes_before_retry(
+    tmp_path: Path,
+) -> None:
+    result = _run_exited_snapshot_stabilization_case(
+        tmp_path,
+        child_identity_body=(
+            "return [ordered]@{status='exited';operation='get_process_times';"
+            "win32_error_code=$null;birth_utc_ticks=[int64]3000}"
+        ),
+        child_metric_body=(
+            "$script:childMetricCalls+=1; throw 'exited child metrics must not run'"
+        ),
+        snapshot_body=(
+            "if($script:snapshotQueries -eq 1){return $true}; return $false"
+        ),
+    )
+
+    assert result == {
+        "outcome": "success",
+        "process_ids": [100],
+        "enumerations": 2,
+        "root_identity_queries": 9,
+        "child_identity_queries": 2,
+        "child_metric_calls": 0,
+        "snapshot_queries": 2,
+        "retry_count": 1,
+        "events": [
+            _control_retry_event(
+                context="outer_tree_sample",
+                process_id=300,
+                expected_birth=3_000,
+                observed_birth=3_000,
+            )
+        ],
+    }
+
+
+def test_tree_sample_metric_exit_uses_same_snapshot_stabilization_gate(
+    tmp_path: Path,
+) -> None:
+    result = _run_exited_snapshot_stabilization_case(
+        tmp_path,
+        child_identity_body=(
+            "if($script:childIdentityQueries -eq 1){"
+            "return [ordered]@{status='live';operation='get_process_times';"
+            "win32_error_code=$null;birth_utc_ticks=[int64]3000}}; "
+            "return [ordered]@{status='exited';operation='get_process_times';"
+            "win32_error_code=$null;birth_utc_ticks=[int64]3000}"
+        ),
+        child_metric_body=(
+            "$script:childMetricCalls+=1; "
+            "return [ordered]@{status='exited';operation='get_process_times';"
+            "win32_error_code=$null;birth_utc_ticks=[int64]3000;values=$null}"
+        ),
+        snapshot_body=(
+            "if($script:snapshotQueries -eq 1){return $true}; return $false"
+        ),
+    )
+
+    assert result == {
+        "outcome": "success",
+        "process_ids": [100],
+        "enumerations": 2,
+        "root_identity_queries": 9,
+        "child_identity_queries": 3,
+        "child_metric_calls": 1,
+        "snapshot_queries": 2,
+        "retry_count": 1,
+        "events": [
+            _control_retry_event(
+                context="outer_tree_sample",
+                process_id=300,
+                expected_birth=3_000,
+                observed_birth=3_000,
+            )
+        ],
+    }
+
+
+def test_tree_sample_metric_not_found_cannot_borrow_later_exited_stabilization(
+    tmp_path: Path,
+) -> None:
+    result = _run_exited_snapshot_stabilization_case(
+        tmp_path,
+        child_identity_body=(
+            "if($script:childIdentityQueries -eq 1){"
+            "return [ordered]@{status='live';operation='get_process_times';"
+            "win32_error_code=$null;birth_utc_ticks=[int64]3000}}; "
+            "return [ordered]@{status='exited';operation='get_process_times';"
+            "win32_error_code=$null;birth_utc_ticks=[int64]3000}"
+        ),
+        child_metric_body=(
+            "$script:childMetricCalls+=1; "
+            "return [ordered]@{status='not_found';operation='open_process';"
+            "win32_error_code=[int]87;birth_utc_ticks=$null;values=$null}"
+        ),
+        snapshot_body=(
+            "if($script:snapshotQueries -eq 1){return $true}; return $false"
+        ),
+    )
+
+    assert result["outcome"] == "failure"
+    assert result["message_code"] == "NONROOT_DISAPPEARANCE_NOT_CONFIRMED"
+    assert result["attempt"] == 1
+    assert result["confirmation"] is None
+    assert result["expected_birth"] == 3_000
+    assert result["observed_birth"] == 3_000
+    assert result["operation"] == "toolhelp_process_snapshot"
+    assert result["child_identity_queries"] == 2
+    assert result["child_metric_calls"] == 1
+    assert result["snapshot_queries"] == 1
+    assert result["retry_count"] == 0
+    assert result["stored_retry_events"] == 0
+
+
+def test_tree_sample_exited_snapshot_stabilization_is_exactly_bounded(
+    tmp_path: Path,
+) -> None:
+    result = _run_exited_snapshot_stabilization_case(
+        tmp_path,
+        child_identity_body=(
+            "return [ordered]@{status='exited';operation='get_process_times';"
+            "win32_error_code=$null;birth_utc_ticks=[int64]3000}"
+        ),
+        child_metric_body=(
+            "$script:childMetricCalls+=1; throw 'exited child metrics must not run'"
+        ),
+        snapshot_body="return $true",
+    )
+
+    assert result == {
+        "outcome": "failure",
+        "message_code": "NONROOT_DISAPPEARANCE_NOT_CONFIRMED",
+        "attempt": 1,
+        "confirmation": None,
+        "expected_birth": 3_000,
+        "observed_birth": 3_000,
+        "operation": "toolhelp_process_snapshot",
+        "process_id": 300,
+        "process_role": "descendant",
+        "win32_error_code": None,
+        "enumerations": 1,
+        "root_identity_queries": 8,
+        "child_identity_queries": 3,
+        "child_metric_calls": 0,
+        "snapshot_queries": 3,
+        "retry_count": 0,
+        "stored_retry_events": 0,
+    }
+
+
+def test_tree_sample_follow_up_not_found_with_present_snapshot_is_fatal(
+    tmp_path: Path,
+) -> None:
+    result = _run_exited_snapshot_stabilization_case(
+        tmp_path,
+        child_identity_body=(
+            "if($script:childIdentityQueries -eq 1){"
+            "return [ordered]@{status='exited';operation='get_process_times';"
+            "win32_error_code=$null;birth_utc_ticks=[int64]3000}}; "
+            "return [ordered]@{status='not_found';operation='open_process';"
+            "win32_error_code=[int]87;birth_utc_ticks=$null}"
+        ),
+        child_metric_body=(
+            "$script:childMetricCalls+=1; throw 'exited child metrics must not run'"
+        ),
+        snapshot_body="return $true",
+    )
+
+    assert result["outcome"] == "failure"
+    assert result["message_code"] == "NONROOT_DISAPPEARANCE_NOT_CONFIRMED"
+    assert result["confirmation"] is None
+    assert result["expected_birth"] == 3_000
+    assert result["observed_birth"] is None
+    assert result["operation"] == "toolhelp_process_snapshot"
+    assert result["win32_error_code"] == 87
+    assert result["child_identity_queries"] == 2
+    assert result["snapshot_queries"] == 2
+    assert result["retry_count"] == 0
+    assert result["stored_retry_events"] == 0
+
+
+def test_tree_sample_snapshot_stabilization_rejects_pid_reuse_before_resample(
+    tmp_path: Path,
+) -> None:
+    result = _run_exited_snapshot_stabilization_case(
+        tmp_path,
+        child_identity_body=(
+            "if($script:childIdentityQueries -eq 1){"
+            "return [ordered]@{status='exited';operation='get_process_times';"
+            "win32_error_code=$null;birth_utc_ticks=[int64]3000}}; "
+            "return [ordered]@{status='live';operation='get_process_times';"
+            "win32_error_code=$null;birth_utc_ticks=[int64]4000}"
+        ),
+        child_metric_body=(
+            "$script:childMetricCalls+=1; throw 'exited child metrics must not run'"
+        ),
+        snapshot_body="return $true",
+    )
+
+    assert result["outcome"] == "failure"
+    assert result["message_code"] == "NONROOT_PID_REUSE"
+    assert result["confirmation"] is None
+    assert result["expected_birth"] == 3_000
+    assert result["observed_birth"] == 4_000
+    assert result["operation"] == "get_process_times"
+    assert result["child_identity_queries"] == 2
+    assert result["snapshot_queries"] == 1
+    assert result["retry_count"] == 0
+
+
+def test_tree_sample_snapshot_stabilization_rechecks_root_before_follow_up(
+    tmp_path: Path,
+) -> None:
+    result = _run_exited_snapshot_stabilization_case(
+        tmp_path,
+        child_identity_body=(
+            "return [ordered]@{status='exited';operation='get_process_times';"
+            "win32_error_code=$null;birth_utc_ticks=[int64]3000}"
+        ),
+        child_metric_body=(
+            "$script:childMetricCalls+=1; throw 'exited child metrics must not run'"
+        ),
+        snapshot_body="return $true",
+        root_identity_body=(
+            "if($script:rootIdentityQueries -ge 5){"
+            "return [ordered]@{status='not_found';operation='open_process';"
+            "win32_error_code=[int]87;birth_utc_ticks=$null}}; "
+            "return [ordered]@{status='live';operation='get_process_times';"
+            "win32_error_code=$null;birth_utc_ticks=[int64]1000}"
+        ),
+    )
+
+    assert result["outcome"] == "failure"
+    assert result["message_code"] == (
+        "ROOT_DISAPPEARED_BEFORE_DISAPPEARANCE_CONFIRMATION"
+    )
+    assert result["expected_birth"] == 1_000
+    assert result["observed_birth"] is None
+    assert result["process_id"] == 100
+    assert result["process_role"] == "root"
+    assert result["root_identity_queries"] == 5
+    assert result["child_identity_queries"] == 1
+    assert result["snapshot_queries"] == 1
+    assert result["retry_count"] == 0
+
+
+def test_tree_sample_follow_up_snapshot_query_failure_is_fatal(
+    tmp_path: Path,
+) -> None:
+    result = _run_exited_snapshot_stabilization_case(
+        tmp_path,
+        child_identity_body=(
+            "return [ordered]@{status='exited';operation='get_process_times';"
+            "win32_error_code=$null;birth_utc_ticks=[int64]3000}"
+        ),
+        child_metric_body=(
+            "$script:childMetricCalls+=1; throw 'exited child metrics must not run'"
+        ),
+        snapshot_body=(
+            "if($script:snapshotQueries -eq 1){return $true}; "
+            "throw 'incomplete follow-up snapshot'"
+        ),
+    )
+
+    assert result["outcome"] == "failure"
+    assert result["message_code"] == "COMPLETE_PROCESS_SNAPSHOT_QUERY_FAILED"
+    assert result["confirmation"] is None
+    assert result["expected_birth"] == 3_000
+    assert result["observed_birth"] == 3_000
+    assert result["operation"] == "toolhelp_process_snapshot"
+    assert result["child_identity_queries"] == 2
+    assert result["snapshot_queries"] == 2
+    assert result["retry_count"] == 0
+    assert result["stored_retry_events"] == 0
+
+
+def test_tree_sample_default_one_attempt_does_not_stabilize_exited_snapshot(
+    tmp_path: Path,
+) -> None:
+    result = _run_exited_snapshot_stabilization_case(
+        tmp_path,
+        child_identity_body=(
+            "return [ordered]@{status='exited';operation='get_process_times';"
+            "win32_error_code=$null;birth_utc_ticks=[int64]3000}"
+        ),
+        child_metric_body=(
+            "$script:childMetricCalls+=1; throw 'exited child metrics must not run'"
+        ),
+        snapshot_body="return $true",
+        maximum_attempts=1,
+    )
+
+    assert result["outcome"] == "failure"
+    assert result["message_code"] == "NONROOT_DISAPPEARANCE_NOT_CONFIRMED"
+    assert result["attempt"] == 1
+    assert result["confirmation"] is None
+    assert result["child_identity_queries"] == 1
+    assert result["snapshot_queries"] == 1
+    assert result["retry_count"] == 0
+    assert result["stored_retry_events"] == 0
+
+
 def test_tree_sample_incomplete_confirmation_snapshot_is_fatal(
     tmp_path: Path,
 ) -> None:
@@ -8629,6 +9028,33 @@ catch {
         ],
         "retry_count": 0,
     }
+
+
+def test_runner_exited_snapshot_stabilization_policy_is_exactly_pinned() -> None:
+    source = RUNNER.read_text(encoding="utf-8")
+    assert hashlib.sha256(RUNNER.read_bytes()).hexdigest() == (
+        "7893cd57fd4b1686addd434fa0103d9f3b0e0087f4783f2c82e459661abfb645"
+    )
+    begin = source.index("# AV_BS_TREE_SAMPLE_TEST_SLICE_BEGIN")
+    end = source.index("# AV_BS_TREE_SAMPLE_TEST_SLICE_END")
+    tree_slice = source[begin:end]
+    assert tree_slice.count("[bool]$AllowExitedSnapshotStabilization") == 1
+    assert tree_slice.count("[int]$maximumSnapshotChecks = 3") == 1
+    assert tree_slice.count("[int]$snapshotRetryDelayMilliseconds = 25") == 1
+    assert tree_slice.count(
+        "Start-Sleep -Milliseconds $snapshotRetryDelayMilliseconds"
+    ) == 1
+    assert tree_slice.count(
+        '($MaximumAttempts -gt 1 -and $identity.status -eq "exited")'
+    ) == 1
+    assert tree_slice.count(
+        '($MaximumAttempts -gt 1 -and $metric.status -eq "exited")'
+    ) == 1
+    assert tree_slice.count(
+        '"signaled_handle_and_complete_snapshot_absent"'
+    ) == 1
+    assert "snapshot_check_count" not in tree_slice
+    assert "snapshot_stabilization" not in p1.TREE_SAMPLE_DIAGNOSTIC_FIELDS
 
 
 def test_runner_native_process_snapshot_and_metric_probes_are_fail_closed() -> None:

@@ -31,9 +31,44 @@
 - N0 exact route reduction은 independent scalar R/L coupon에서 machine-precision parity를 통과했다. 이 인증은 mutual/multiterminal block이나 topology replacement에 자동 전이되지 않는다.
 - S1/V1/V2/A1/C1의 기존 kernel은 유용한 부분 invariant를 통과했지만 global correction 승격에는 모두 차단됐다. 특히 A1의 마지막 mesh 변화는 4.73%로 사전 등록한 0.5%/1% gate를 넘는다.
 - T1의 lossless Cohn body-fitted `C'`, periodic two-plate smooth-copper identity, 독립 1-D slab FEM과 `C0-A1` 원형 interior DtN gate는 제한 범위에서 통과했다. M0의 lateral-periodic slab과 finite/open rectangle은 다른 경계값 문제이므로 free-space `H2` contour를 periodic `coth`와 직접 비교하지 않는다. 사전 등록했던 `C0-A0` 저주파 `10^6` switch는 작은 원 100 kHz에서 실패했다. 첫 finite/open M1-EQ0 collocation의 power failure `1.585e-4 > 1e-8`은 immutable이다. G1 exterior Galerkin은 structural/q/`r0`/power/terminal gate를 통과했지만 interior `WYs` weighted-reciprocity `1.70%–7.12%`와 100 kHz/1 MHz passivity가 실패해 `passed_exterior_galerkin_only`다. G2 pair screen은 `passed_pair_screen_only`지만, 같은 session의 circle `N=128→256` stage는 100 kHz에서 fail-closed 됐다. q/analytic/mesh와 해당 circle operator의 raw passivity는 통과했지만 N128 cancellation condition `2.91315e-8`, N256 raw `Yw` reciprocity `1.41197e-8`과 cancellation `1.63755e-7`이 모두 `1e-8` gate를 넘었다. 이 circle passivity는 G1의 저주파 passivity failure를 해결한 것이 아니다. 현재 G2 상태는 `BLOCKED_INTERIOR_WEIGHTED_RECIPROCITY_PASSIVITY__G2_PAIR_PASSED_CIRCLE_100KHZ_RECIPROCITY_CANCELLATION_FAIL`; planned G2 2 GHz circle row, G2 N512, G2 EQ0 seed와 G2 terminal/power는 미실행이다. 독립 A–v volume-FEM boundary-Schur의 H0는 pre-factor sparse-pattern preregistration 오류로 차단됐지만 topology-tagged H1 coarse `h`와 H2 refined `h2`가 각각 stage-only gate를 통과했다. 최신 상태는 `passed_AV_BS_h2_stage_only_pending_h4_preregistration`이며 [`T1_AV_BOUNDARY_SCHUR_RESULTS.md`](T1_AV_BOUNDARY_SCHUR_RESULTS.md)가 H0/H1/H2 artifact를 함께 보존한다. h→h2 RMS/max trend는 `0.462796%/0.868015%`지만 trend-only다. fine/convergence/final-circle 값은 `null`, `next_stage_authorized=false`이므로 아직 oracle이 아니다. production SAO의 Hamiltonian Schur/four-operator Calderón은 별도 후속 후보다. h4/withheld, 3-D end audit, 실제 return polygon, absolute/exact-core global operator, PowerSI correlation과 8 GB product status는 계속 차단 상태다.
-- H2-P1은 H1/P0 lineage, token/claim/guard/finalizer/atomic tombstone, native process-tree 900 s guard, signed-M9 trend-only와 독립 modal PDE residual/volume-power certificate를 고정한 뒤 one-use `primary-h2`를 실행했다. artifact SHA-256은 `b890e4af13d97591b3134788984b3657f6f6b046e3043ce0a6f6792fe1ad7f55`이고 local gate가 통과했다. active token은 consumed tombstone SHA-256 `81574c1099bdd140004940b7cb768a20298b153445c1b16b9e21de95011c48c2`, `uses_remaining=0`, `next_stage_authorized=false`다. 별도 H4-P0는 32,001-node topology, 7,424 topology-owned cyclic tags, canonical `K/M/MΓ`와 H4 전용 `256uκ` certificate를 assembly-only로 고정했다. 이어 H4-P0R manifest parent와 factor-only P1 executable/lifecycle 계약을 동결했다. 그러나 세 public fresh-token 시도는 모두 claim/factor 전에 fail-closed됐다. 첫 번째는 root-only strict-mode collection 오류, 두 번째는 pre-ready outer tree-sampling 예외였고, 세 번째는 outer/control ready/start release까지 도달한 뒤 bounded control preflight tree sampling이 default `MaximumAttempts=1`에서 confirmed non-root disappearance를 만나 `TRANSIENT_DESCENDANT_DISAPPEARANCE_RETRY_EXHAUSTED`로 중단됐다. 세 token은 모두 재사용 없이 삭제-only retirement됐으며 세 번째 token retirement commit은 `ba97dd8b274659a649d9a4020193c3ef72572665`다. 현재 frozen/static-audited retry-v3 scope-v2는 six outer-observer contexts와 six control-plane contexts(12 total)에만 `MaximumAttempts=3`을 적용하고 factor sampling은 default `MaximumAttempts=1`을 유지한다. 현재 token은 absent이고 `factor_fit_unproven=true`, `next_stage_authorized=false`이며 factor/RHS/solve/H4 physics는 실행되지 않았다. prior token은 절대 재사용하지 않으며 허용된 다음 순서는 clean no-token contract -> exact committed manifest reread -> fresh token-only child -> 단 한 번의 factor-only pilot이다. P0R 결과 audit과 별도 H4-P1 전에는 `h4` physics를 실행하지 않는다.
+- **retry-v3까지의 immutable history:** H2-P1은 H1/P0 lineage, token/claim/guard/finalizer/atomic tombstone, native process-tree 900 s guard, signed-M9 trend-only와 독립 modal PDE residual/volume-power certificate를 고정한 뒤 one-use `primary-h2`를 실행했다. artifact SHA-256은 `b890e4af13d97591b3134788984b3657f6f6b046e3043ce0a6f6792fe1ad7f55`이고 local gate가 통과했다. active token은 consumed tombstone SHA-256 `81574c1099bdd140004940b7cb768a20298b153445c1b16b9e21de95011c48c2`, `uses_remaining=0`, `next_stage_authorized=false`다. 별도 H4-P0는 32,001-node topology, 7,424 topology-owned cyclic tags, canonical `K/M/MΓ`와 H4 전용 `256uκ` certificate를 assembly-only로 고정했다. 이어 H4-P0R manifest parent와 factor-only P1 executable/lifecycle 계약을 동결했다. 그러나 세 public fresh-token 시도는 모두 claim/factor 전에 fail-closed됐다. 첫 번째는 root-only strict-mode collection 오류, 두 번째는 pre-ready outer tree-sampling 예외였고, 세 번째는 outer/control ready/start release까지 도달한 뒤 bounded control preflight tree sampling이 default `MaximumAttempts=1`에서 confirmed non-root disappearance를 만나 `TRANSIENT_DESCENDANT_DISAPPEARANCE_RETRY_EXHAUSTED`로 중단됐다. 세 token은 모두 재사용 없이 삭제-only retirement됐으며 세 번째 token retirement commit은 `ba97dd8b274659a649d9a4020193c3ef72572665`다. 당시 frozen/static-audited retry-v3 scope-v2는 six outer-observer contexts와 six control-plane contexts(12 total)에만 `MaximumAttempts=3`을 적용하고 factor sampling은 default `MaximumAttempts=1`을 유지했다. retry-v3 retirement 시점 token은 absent였고 `factor_fit_unproven=true`, `next_stage_authorized=false`이며 factor/RHS/solve/H4 physics는 실행되지 않았다. 이 이력의 prior token은 절대 재사용하지 않는다.
 - P1/P2 explicit-ref crop에서 referenced return artwork와 nearby same-net GND via graph는 확인했지만 signal trace와 return conductor를 묶는 signed current/field owner는 없다. 특히 P2 세 TOP trace endpoint는 IN01 GND negative-circle void 중심에 놓이므로, ref 이름이나 가까운 via만으로 source-faithful return을 선언하지 않는다.
 - source parameter는 `explicit`, `absent`, `parser_not_preserved`, `derived_node_link`로 구분한다. P3/P4 trace width 결손, 네 pair의 plating/fill/roughness 결손, P1/P2의 미보존 `NoAntiPadLayers`를 추정으로 숨기지 않는다.
+
+## Retry-v4 current boundary
+
+Earlier retry-v2/retry-v3 sections remain immutable history. Four public
+H4-P0R-P1 invocations have now stopped before claim and factor work. The fourth
+used token-only commit `9b4854d0cc7ae21e5e9eafc394a9474cb53ea689`, whose sole
+parent was clean contract `4d39eab9c464f67e8684e2d539ac3a2b092142a2`.
+It ran once from `2026-08-15T13:37:16.0468244Z` to
+`2026-08-15T13:37:20.5004777Z`, returned exit `2`, and failed closed during
+bounded control preflight. PID `40224` had an exited identity with the expected
+positive birth, while the first complete Toolhelp snapshot still contained the
+same PID. No claim, factor, RHS, solve, H4 physics, PowerSI result, or 8 GiB fit
+result was created. Token ID `4c209c8a4dac49b89c59dd69bf68c4c2`, raw SHA-256
+`d3bb3a42c83848678f0b99c0c669fffb5ab02e594cfba31ee9251c8216d05d64`,
+was semantically spent and then removed by deletion-only retirement commit
+`f1aeeac018a96cbd82341db36efbf5e5a9a55431`. Current token state is absent.
+
+Retry-v4 changes only the PowerShell observer for explicit outer/control
+`MaximumAttempts>1` contexts. An `exited` descendant with a positive birth equal
+to the bound birth that is still present in the initial complete snapshot may
+receive two 25 ms rechecks, for at most three complete snapshots total. If it
+becomes absent, the existing confirmed-disappearance event is emitted and the
+existing whole-sample retry rules apply. `not_found`/87 plus snapshot presence,
+default `MaximumAttempts=1` factor sampling, PID reuse, root loss/reuse, and
+identity/query/access/incomplete-snapshot failures remain immediately fatal.
+There is no schema or Python change.
+
+Frozen retry-v4 static bindings are Python
+`95c9f5c08282105f7934fbea194694fff3ab850daac633619534044721639234`, runner
+`7893cd57fd4b1686addd434fa0103d9f3b0e0087f4783f2c82e459661abfb645`, and tests
+`18aabcdf7b32c6b013aec65497d31f4d908f3085f53f64cb3791f38a2e79381d`.
+Focused tests passed `11/11`; the full no-cache P1 suite passed `322/322` in
+`82.01 s`; PowerShell AST was `47,623` tokens with zero errors and Python AST was
+clean. This static pass does not authorize a token or factor run:
+`next_stage_authorized=false`.
 
 ## 세션 시작 절차
 
@@ -57,7 +92,7 @@
 16. [`T1_AV_BOUNDARY_SCHUR_H2_P1_PREREG.md`](T1_AV_BOUNDARY_SCHUR_H2_P1_PREREG.md): H2-P1 실행 전 immutable token-gated single-mesh 계약과 독립 M9 residual/power 증거 확인
 17. [`T1_AV_BOUNDARY_SCHUR_H4_P0_PREREG.md`](T1_AV_BOUNDARY_SCHUR_H4_P0_PREREG.md): H4 topology/cyclic lineage/canonical assembly와 dual resource envelope의 no-solve 경계 확인
 18. [`T1_AV_BOUNDARY_SCHUR_H4_P0R_PREREG.md`](T1_AV_BOUNDARY_SCHUR_H4_P0R_PREREG.md): factorization-only pilot의 frozen matrix/equilibration/resource/lifecycle 계약과 현재 no-factor 경계 확인
-19. [`T1_AV_BOUNDARY_SCHUR_H4_P0R_P1_PREREG.md`](T1_AV_BOUNDARY_SCHUR_H4_P0R_P1_PREREG.md): executable/outer-observer/one-use/seal-v2 계약, 세 public attempt가 모두 claim/factor 전에 중단되고 각 token이 재사용 없이 폐기된 사실, 세 번째 attempt가 outer/control ready/start release 뒤 control preflight의 default `MaximumAttempts=1` tree sampling에서 fail-closed된 사실, frozen/static-audited retry-v3 Python/runner/tests, token absent 및 no factor/RHS/solve/physics 경계, prior token 재사용 없이 clean no-token contract -> reread -> fresh token-only child -> 단 한 번의 factor-only pilot 순서 확인
+19. [`T1_AV_BOUNDARY_SCHUR_H4_P0R_P1_PREREG.md`](T1_AV_BOUNDARY_SCHUR_H4_P0R_P1_PREREG.md): executable/outer-observer/one-use/seal-v2 계약, 네 public attempt가 모두 claim/factor 전에 중단되고 각 token이 재사용 없이 폐기된 사실, 네 번째 attempt의 same-birth exited/initial-snapshot-present failure와 cleanup, frozen/static-audited retry-v4 Python/runner/tests, token absent 및 no factor/RHS/solve/physics 경계, prior token 재사용 없이 clean no-token contract -> reread -> fresh token-only child -> 단 한 번의 factor-only pilot 순서 확인
 20. [`T1_M1_EQ0_RESULTS.md`](T1_M1_EQ0_RESULTS.md): immutable collocation failure, G1 exterior-only, G2 pair-only pass와 100 kHz circle reciprocity/cancellation failure 확인
 21. [`T1_CIRCLE_DTN_RESULTS.md`](T1_CIRCLE_DTN_RESULTS.md): frozen `C0-A0` 실패, selected `C0-A1` circle-only 통과와 withheld/수치 범위 확인
 22. [`T1_M0_SLAB_RESULTS.md`](T1_M0_SLAB_RESULTS.md): periodic slab의 independent 1-D FEM pass, withheld 결과와 free-space/periodic boundary mismatch 확인

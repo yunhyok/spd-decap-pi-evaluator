@@ -197,6 +197,23 @@ Hν^(2)(z)     = hankel2e(ν,z) exp(z.imag) exp(-j z.real)
 
 최종 replay는 `log|H2|<ln(tiny)+4`인 sample을 바로 0으로 만들지 않고, 각 U/P first-row에서 버릴 absolute quadrature contribution의 log-sum bound를 구했다. retained row 1-norm 대비 `1e-30` 이하일 때만 zero를 허용했으며 W1/W3를 포함한 전체 exact block에서 40,448 order-sample contribution이 이 경로를 사용했고 worst bound는 `10^-305.50`이었다. 이 수치는 dropped-row certificate이며 일반 forward-error bound로 과장하지 않는다.
 
+## H4-P0R retry-v4 non-result
+
+Four public H4-P0R-P1 attempts are now immutable pre-claim/pre-factor failures.
+The fourth (`9b4854d0...`, exit `2`) failed during control preflight on an exited
+same-birth PID that remained in the first complete snapshot. Its token was
+semantically spent and retired by `f1aeeac...`; token state is absent. This did
+not generate a circle DtN result, factor, RHS, solve, H4 physics, PowerSI
+correlation, or 8 GiB conclusion.
+
+Retry-v4 only adds two 25 ms rechecks for that exact exited transition in
+explicit outer/control `MaximumAttempts>1` contexts. Python/schema and all
+circle gates are unchanged; default-one factor sampling remains fatal. Frozen
+bindings are Python `95c9f5c08282105f7934fbea194694fff3ab850daac633619534044721639234`,
+runner `7893cd57fd4b1686addd434fa0103d9f3b0e0087f4783f2c82e459661abfb645`,
+tests `18aabcdf7b32c6b013aec65497d31f4d908f3085f53f64cb3791f38a2e79381d`;
+focused `11/11`, full no-cache `322/322`. `next_stage_authorized=false`.
+
 ## Promotion boundary와 다음 단계
 
 현재 승인되는 문장은 “`C0-A1`이 canonical full-condition gate와 W1/W3 dense withheld를 통과했고 W2 analytic/convergence-only withheld가 이를 지지했다”까지다.

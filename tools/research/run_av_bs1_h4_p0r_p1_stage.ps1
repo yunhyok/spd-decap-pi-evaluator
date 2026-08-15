@@ -2403,14 +2403,19 @@ function Get-ConfirmedTreeSampleDisappearance(
     [int]$Attempt,
     [string]$FailureOperation,
     [object]$FailureWin32ErrorCode,
-    [System.Collections.IDictionary]$Diagnostics
+    [System.Collections.IDictionary]$Diagnostics,
+    [bool]$AllowExitedSnapshotStabilization
 ) {
     if ($null -eq $Probe -or $Probe.status -notin @("not_found", "exited")) {
         return $null
     }
     if (
         $Probe.status -eq "not_found" -and
-        ($Probe.win32_error_code -isnot [int] -or [int]$Probe.win32_error_code -ne 87)
+        (
+            $Probe.win32_error_code -isnot [int] -or
+            [int]$Probe.win32_error_code -ne 87 -or
+            $null -ne $Probe.birth_utc_ticks
+        )
     ) {
         $evidence = New-TreeSampleEvidence `
             $Attempt $null $Context $ExpectedBirthUtcTicks `
@@ -2464,6 +2469,135 @@ function Get-ConfirmedTreeSampleDisappearance(
     Assert-TreeSampleRootLive `
         $rootAfter $RootProcessId $RootBirthTicks $Context $Attempt `
         "AFTER_DISAPPEARANCE_CONFIRMATION" $Diagnostics
+    if (
+        $snapshotContains -and
+        $Probe.status -eq "exited" -and
+        $AllowExitedSnapshotStabilization
+    ) {
+        [int]$maximumSnapshotChecks = 3
+        [int]$snapshotCheckCount = 1
+        [int]$snapshotRetryDelayMilliseconds = 25
+        [int64]$stabilizationExpectedBirth = if ($null -eq $ExpectedBirthUtcTicks) {
+            [int64]$Probe.birth_utc_ticks
+        } else {
+            [int64]$ExpectedBirthUtcTicks
+        }
+        while (
+            $snapshotContains -and
+            $snapshotCheckCount -lt $maximumSnapshotChecks
+        ) {
+            Start-Sleep -Milliseconds $snapshotRetryDelayMilliseconds
+
+            $retryRootBefore = & $IdentityProvider $RootProcessId
+            Assert-TreeSampleRootLive `
+                $retryRootBefore $RootProcessId $RootBirthTicks $Context $Attempt `
+                "BEFORE_DISAPPEARANCE_CONFIRMATION" $Diagnostics
+
+            $retryProbe = & $IdentityProvider $ProcessId
+            $retryOperation = if (
+                $null -ne $retryProbe -and $retryProbe.operation -is [string]
+            ) {
+                [string]$retryProbe.operation
+            } else {
+                "process_identity_probe"
+            }
+            $retryObservedBirth = if ($null -ne $retryProbe) {
+                $retryProbe.birth_utc_ticks
+            } else {
+                $null
+            }
+            $retryWin32Error = if ($null -ne $retryProbe) {
+                $retryProbe.win32_error_code
+            } else {
+                $null
+            }
+            if (
+                $null -eq $retryProbe -or
+                $retryProbe.status -notin @("live", "exited", "not_found")
+            ) {
+                $evidence = New-TreeSampleEvidence `
+                    $Attempt $null $Context $stabilizationExpectedBirth `
+                    "NONROOT_IDENTITY_QUERY_FAILED" $retryObservedBirth `
+                    $retryOperation $ProcessId "descendant" $retryWin32Error
+                Set-TreeSampleFailureAndThrow $Diagnostics $evidence
+            }
+            if (
+                $retryProbe.status -eq "not_found" -and
+                (
+                    $retryProbe.win32_error_code -isnot [int] -or
+                    [int]$retryProbe.win32_error_code -ne 87 -or
+                    $null -ne $retryProbe.birth_utc_ticks
+                )
+            ) {
+                $evidence = New-TreeSampleEvidence `
+                    $Attempt $null $Context $stabilizationExpectedBirth `
+                    "NONROOT_ABSENCE_NATIVE_CODE_INVALID" $retryObservedBirth `
+                    $retryOperation $ProcessId "descendant" $retryWin32Error
+                Set-TreeSampleFailureAndThrow $Diagnostics $evidence
+            }
+            if (
+                $retryProbe.status -in @("live", "exited") -and
+                ($retryProbe.birth_utc_ticks -isnot [long] -or [int64]$retryProbe.birth_utc_ticks -le 0)
+            ) {
+                $evidence = New-TreeSampleEvidence `
+                    $Attempt $null $Context $stabilizationExpectedBirth `
+                    "NONROOT_IDENTITY_QUERY_FAILED" $retryObservedBirth `
+                    $retryOperation $ProcessId "descendant" $retryWin32Error
+                Set-TreeSampleFailureAndThrow $Diagnostics $evidence
+            }
+            if (
+                $null -ne $retryProbe.birth_utc_ticks -and
+                [int64]$retryProbe.birth_utc_ticks -ne $stabilizationExpectedBirth
+            ) {
+                $evidence = New-TreeSampleEvidence `
+                    $Attempt $null $Context $stabilizationExpectedBirth `
+                    "NONROOT_PID_REUSE" $retryObservedBirth $retryOperation `
+                    $ProcessId "descendant" $retryWin32Error
+                Set-TreeSampleFailureAndThrow $Diagnostics $evidence
+            }
+            if ($retryProbe.status -eq "live") {
+                $evidence = New-TreeSampleEvidence `
+                    $Attempt $null $Context $stabilizationExpectedBirth `
+                    "NONROOT_DISAPPEARANCE_NOT_CONFIRMED" $retryObservedBirth `
+                    $retryOperation $ProcessId "descendant" $retryWin32Error
+                Set-TreeSampleFailureAndThrow $Diagnostics $evidence
+            }
+
+            try {
+                $snapshotContains = & $SnapshotContainsProvider $ProcessId
+            }
+            catch {
+                $evidence = New-TreeSampleEvidence `
+                    $Attempt $null $Context $stabilizationExpectedBirth `
+                    "COMPLETE_PROCESS_SNAPSHOT_QUERY_FAILED" $retryObservedBirth `
+                    "toolhelp_process_snapshot" $ProcessId "descendant" $null
+                Set-TreeSampleFailureAndThrow $Diagnostics $evidence
+            }
+            if ($snapshotContains -isnot [bool]) {
+                $evidence = New-TreeSampleEvidence `
+                    $Attempt $null $Context $stabilizationExpectedBirth `
+                    "COMPLETE_PROCESS_SNAPSHOT_RESULT_INVALID" $retryObservedBirth `
+                    "toolhelp_process_snapshot" $ProcessId "descendant" $null
+                Set-TreeSampleFailureAndThrow $Diagnostics $evidence
+            }
+            $snapshotCheckCount += 1
+
+            $retryRootAfter = & $IdentityProvider $RootProcessId
+            Assert-TreeSampleRootLive `
+                $retryRootAfter $RootProcessId $RootBirthTicks $Context $Attempt `
+                "AFTER_DISAPPEARANCE_CONFIRMATION" $Diagnostics
+            if (
+                $snapshotContains -and
+                $retryProbe.status -eq "not_found"
+            ) {
+                $evidence = New-TreeSampleEvidence `
+                    $Attempt $null $Context $stabilizationExpectedBirth `
+                    "NONROOT_DISAPPEARANCE_NOT_CONFIRMED" $retryObservedBirth `
+                    "toolhelp_process_snapshot" $ProcessId "descendant" $retryWin32Error
+                Set-TreeSampleFailureAndThrow $Diagnostics $evidence
+            }
+        }
+    }
     if ($snapshotContains) {
         $evidence = New-TreeSampleEvidence `
             $Attempt $null $Context $ExpectedBirthUtcTicks `
@@ -2611,7 +2745,8 @@ function Get-TreeSample(
                         $identity $identityProvider $snapshotContainsProvider `
                         $RootProcessId $RootBirthTicks ([int]$id) $expectedBirth `
                         $Context $attempt ([string]$identity.operation) `
-                        $identity.win32_error_code $Diagnostics
+                        $identity.win32_error_code $Diagnostics `
+                        ($MaximumAttempts -gt 1 -and $identity.status -eq "exited")
                     if ($identity.status -eq "exited") {
                         if ($ObservedBirthTicks.ContainsKey([int]$id)) {
                             if ([int64]$ObservedBirthTicks[[int]$id] -ne $expectedBirth) {
@@ -2694,7 +2829,8 @@ function Get-TreeSample(
                     $confirmationProbe $identityProvider $snapshotContainsProvider `
                     $RootProcessId $RootBirthTicks ([int]$id) $expectedBirth `
                     $Context $attempt ([string]$metric.operation) `
-                    $metric.win32_error_code $Diagnostics
+                    $metric.win32_error_code $Diagnostics `
+                    ($MaximumAttempts -gt 1 -and $metric.status -eq "exited")
                 if ($null -eq $retryEvidence) {
                     $evidence = New-TreeSampleEvidence `
                         $attempt $null $Context $expectedBirth `
