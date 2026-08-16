@@ -2,6 +2,68 @@
 
 ## 1. Current status and authority
 
+Ten public `primary-h4-p0r` invocations and their token lineages are immutable.
+The tenth ran exactly once from token-only commit
+`13bfe70d6f203822a3a07d0613bdc64fe9f223df`, token ID
+`2cd3597ab0b9483ea78c3cfa3b75f5e8`, and exited public stage `2` without a
+rerun. Factor producer PID `54044`, finalizer PID `25200`, and consumer PID
+`41812` all exited `0`. Exactly two factor certificates and two prefix
+checkpoints were retained in required order `A_background_II`,
+`A_conductor_II`; both factor-cap gates and inner/outer resource gates passed.
+All `205/205` recorded PID/birth identities were absent after cleanup.
+
+Inner monitoring recorded `245` samples in `34.1760023 s`, peak working set
+`511868928` bytes, peak private bytes `1994665984`, and peak lifetime commit
+`2322489344`. Outer monitoring recorded `664` samples and `39` nontruncated
+retries in `91.722828 s`, peak working set `495939584`, peak private bytes
+`1993838592`, and peak lifetime commit `2335375360`. Host physical availability
+was about 45 GB. These factor-only measurements do not prove an 8 GB fit. No
+RHS, factor solve, extension, boundary `Y`, modal response, H4 physics, or
+PowerSI comparison ran.
+
+The public exit `2` came from three order-only false mismatches while
+reconciling claim, guard, and resource JSON. The raw seal exists but cannot be
+used as strict authority. Current classification is:
+
+- `token_state=absent` after M-only consumption
+  `785f5e9c0a38ad1851c4ba620f520db9087aaf74` and D-only retirement
+  `a139d867bbc727b58f9a7a4cdbad604fc03070cf`;
+- `consumed_v2_provisional_invalid_terminal_evidence`;
+- `authoritative_terminal_evidence=false`;
+- authoritative inner disposition `null`;
+- exact terminal detail `BLOCKED_AV_BS_RESULT_SCHEMA: terminal pre-exit
+  normal_pass_outer_evidence_reconciliation_pass mismatch`;
+- `factor_fit_unproven=true`; and
+- `next_stage_authorized=false`.
+
+Retry-v10 changes only the runner's fail-closed JSON reader/comparator boundary.
+The Python fixture, JSON schemas, factor math, retry/max3/cap64 policy, factor
+order/caps, resource ceilings, and forbidden-operation boundary do not change.
+Frozen exact bindings are:
+
+```text
+Python fixture SHA-256: 46082123fbf98102f3e5995c32bf65d8d04bb835b9c1305de0150349e75e48c7
+Python fixture bytes: 579582
+PowerShell runner SHA-256: f0159061dbd4d1b34881911edfdfb72146a3a23e5cdc75ca8fa4069c08aadb86
+PowerShell runner bytes: 484795
+static tests SHA-256: e5496ceb24c33c835b88ce20a3f67f941c8279e0471708a01022238fc211b109
+static tests bytes: 488591
+collection: 400
+current-byte focused selection: 5/5 passed in 2.73 s
+current-byte independent same-byte selection: 5/5 passed in 2.71 s
+provisional full exact-document attempt: 398 passed, 2 failed in 94.17 s
+first successful full exact-document suite: 400/400 passed in 93.89 s; exit 0; no failure
+token_state: absent
+factor_fit_unproven: true
+next_stage_authorized: false
+```
+
+This is the **FINAL DOC FREEZE**. It is not a factor pass, H4 result,
+PowerSI comparison, 8 GB fit, token, or next-stage authorization. Any separately
+authorized future public invocation would be eleventh.
+
+### 1.1 Historical retry-v9 status and authority
+
 This document now preregisters the retry-v9 provisional corrective candidate
 after nine immutable public invocations. The ninth ran exactly once from
 retry-v8 token-only commit `0597872eeaedd359ce5a3d429748dee2b70ec9a7`, token
@@ -13,7 +75,7 @@ passed and all `182/182` process identities were dead at terminal cleanup. No
 RHS, solve, extension, boundary `Y`, modal response, H4 physics, or PowerSI work
 ran. This factor-only resource evidence is not an H4 result or an 8 GB fit claim.
 
-The current authority classification is:
+The retry-v9 authority classification was:
 
 - `token_state=absent` after M-only consumption
   `b9c1964e8a445b2d45487894485dc8453bd002d4` and D-only retirement
@@ -53,7 +115,7 @@ with `377` deselected in `2.33 s`, independent same-byte selection passed `20`
 with `377` deselected in `2.37 s`, and compatibility selection passed `7` with
 `390` deselected in `0.95 s`.
 
-### 1.1 Historical retry-v8 authority snapshot
+### 1.2 Historical retry-v8 authority snapshot
 
 This document now preregisters the retry-v8 corrective static
 executable-contract candidate after eight public invocations. The first four
@@ -1090,7 +1152,64 @@ The first full exact-document suite passed `397/397` in `92.95 s` with exit `0`
 and no failure. This is the **FINAL DOC FREEZE**. Token is absent, factor fit is unproven, next authority is false, and
 any separately authorized future invocation would be tenth.
 
-## 16. Exact next sequence
+### 15.11 Tenth public attempt and retry-v10 strict-JSON amendment
+
+The tenth attempt used reviewed contract commit
+`32929a1d5a5374ef92482df68a06d4aeec1eea57`, token-only child
+`13bfe70d6f203822a3a07d0613bdc64fe9f223df`, and token ID
+`2cd3597ab0b9483ea78c3cfa3b75f5e8`. It was invoked exactly once. Public exit
+was `2`; factor producer PID `54044`, finalizer PID `25200`, and consumer PID
+`41812` exited `0`. The factor path retained exactly two certificates and two
+prefixes in order `A_background_II`, `A_conductor_II`, with both factor caps and
+both resource gates passing. Inner and outer measurements and the `205/205`
+absent identity proof are frozen in Section 1. No RHS, solve, extension,
+boundary `Y`, modal response, H4 physics, or PowerSI work ran.
+
+The terminal pre-exit recorded exactly three false claim/guard/resource
+equalities even though their semantic trees and raw-hash bindings matched. The
+PowerShell comparator had serialized each parsed object with `ConvertTo-Json`
+and compared strings, making object member order authoritative by mistake. The
+published result therefore remains strict-invalid. A self-declared raw-seal
+failure does not override that classification.
+
+Retry-v10 freezes this parser/comparator contract:
+
+1. `Read-BoundedJsonObject` accepts only an existing, nonempty file whose stable
+   byte length is at most `16 MiB`. It reads the exact bytes once under file
+   sharing limited to read, rejects growth/short reads, decodes with strict
+   UTF-8, and requires a JSON object root.
+2. Before `ConvertFrom-Json`, a bounded streaming JSON reader walks every object,
+   including objects nested in objects and arrays. Each object owns an ordinal
+   `HashSet<string>` and duplicate names fail closed. Escaped-equivalent names
+   therefore collide; case, normalization, soft hyphens, NULs, and other
+   Unicode distinctions remain exact ordinal distinctions. Reader quotas and
+   the post-parse walk enforce JSON depth `32`.
+3. After conversion, only null, string, Boolean, supported finite numeric CLR
+   values, arrays, and string-keyed objects are accepted. `NaN`, positive or
+   negative infinity, overflow such as `1e309`, unsupported CLR values, and
+   over-depth trees fail closed.
+4. Recursive JSON equality is type-sensitive and order-insensitive only for
+   object members. It uses an ordinal `Dictionary<string,object>` plus ordinal
+   `HashSet<string>`, so object comparison is O(n), rejects duplicate property
+   names, compares arrays in order, compares strings with
+   `StringComparer.Ordinal`, and refuses nonfinite numbers.
+5. Exact field sets use ordinal sets, not culture-sensitive sorting. Evidence
+   bindings use ordinal key lookup and ordinal string equality. Required token,
+   factor, preflight, and terminal-authority IDs/hashes use exact lowercase hex
+   length guards.
+
+The amendment does not change artifact schemas, canonical hash definitions,
+factor order, factor values, retry policy, resource ceilings, cleanup proof,
+terminal authority rules, or physics scope. Provisional bindings and the
+current-byte focused result are in Section 1. Collection is `400`; the
+provisional full attempt reached `398 passed, 2 failed in 94.17 s` because of an
+outdated source pin and the formerly missing exact Section 1 heading. Both
+static defects are corrected; independent same-byte focus passed `5/5` in
+`2.71 s`. The first successful full exact-document suite then passed `400/400`
+in `93.89 s`, exit `0`, with no failure. This records documentation closure
+only; it does not preregister a factor, H4, PowerSI, or 8 GB pass.
+
+## 16. Historical retry-v9 exact next sequence
 
 The only permitted next sequence is:
 
@@ -1118,3 +1237,33 @@ boundary. All nine retired token lineages must never be invoked again.
 Any hash drift, dirty checkout, missing prerequisite, failed final audit,
 unexpected token-commit content, missing cleanup proof, or absent/invalid seal
 stops this sequence fail-closed.
+
+## 17. Current retry-v10 exact next sequence
+
+The only permitted current sequence is:
+
+1. Preserve the complete history of all ten public invocations, consumed
+   records, D-only retirements, and retry-v8/retry-v9 sections. No retired token
+   lineage may ever be invoked again.
+2. Preserve the frozen Python/runner/tests bindings in Section 1 together with exactly 15
+   baseline Markdown documents. Preserve the existing `SESSION_LOG.md` prefix
+   of `181982` bytes, `2372` LF lines, SHA-256
+   `949e14684965e8789ee6d743505b136c5916d0c0207b059af88ac218d9fc4822`
+   byte-for-byte and append only after that prefix.
+3. Preserve the first successful full exact-document result: `400/400` passed
+   in `93.89 s`, exit `0`, with no failure. The earlier provisional `398/400`
+   failure remains immutable transparency evidence and is not reinterpreted.
+4. Freeze these final 15-document bytes. Repeat exact-byte closure and
+   independent static/document audits without recording or rewriting any later
+   closure runtime.
+5. Retry-v10 creates no token. Only after clean exact-byte closure, an
+   independent approval gate, and a separate authorization may a new one-use
+   token-only child be considered. Any such public invocation would be the
+   eleventh and remains factor-only.
+6. Preserve `rhs_count=0`, no factor solve, no extension, no boundary `Y`, no
+   modal response, no H4 physics, and no PowerSI claim. The tenth measurements
+   are not an 8 GB proof.
+
+Any missing prerequisite, dirty unexpected path, failed audit, token presence,
+or attempt to reinterpret the tenth raw seal as authoritative stops this
+sequence fail-closed.

@@ -167,7 +167,7 @@ function Get-CanonicalJsonSha256(
         -AllowedExitCodes @(0) `
         -AttemptArtifactPaths $artifactPaths
     $canonicalHashLines = @($invocation.stdout_text -split "`r?`n" | Where-Object { $_ -ne "" })
-    if ($canonicalHashLines.Count -ne 1 -or [string]$canonicalHashLines[0] -notmatch '^[0-9a-f]{64}$') {
+    if ($canonicalHashLines.Count -ne 1 -or [string]$canonicalHashLines[0] -cnotmatch '^[0-9a-f]{64}$') {
         throw "BLOCKED_AV_BS_RESULT_SCHEMA: canonical JSON SHA-256 failed"
     }
     return [string]$canonicalHashLines[0]
@@ -202,22 +202,317 @@ function Write-AtomicUtf8NoBom([string]$Path, [string]$Text) {
     }
 }
 
+# AV_BS_STRICT_JSON_READER_TEST_SLICE_BEGIN
+function Test-OrdinalStringEqual([object]$Actual, [object]$Expected) {
+    if ($Actual -isnot [string] -or $Expected -isnot [string]) { return $false }
+    return [System.StringComparer]::Ordinal.Equals(
+        [string]$Actual,
+        [string]$Expected
+    )
+}
+
+function Test-OrdinalNullableStringEqual([object]$Actual, [object]$Expected) {
+    if ($null -eq $Actual -or $null -eq $Expected) {
+        return ($null -eq $Actual -and $null -eq $Expected)
+    }
+    return (Test-OrdinalStringEqual $Actual $Expected)
+}
+
+function Test-LowercaseHexString([object]$Value, [int]$Length) {
+    if ($Value -isnot [string] -or $Length -le 0) { return $false }
+    return ([string]$Value -cmatch ("^[0-9a-f]{" + $Length + "}$"))
+}
+
+function Test-ExactObjectStringBindings(
+    [object]$Value,
+    [System.Collections.IDictionary]$ExpectedBindings
+) {
+    if ($null -eq $Value -or $null -eq $ExpectedBindings) { return $false }
+    foreach ($expectedEntry in $ExpectedBindings.GetEnumerator()) {
+        if ($expectedEntry.Key -isnot [string] -or $expectedEntry.Value -isnot [string]) {
+            return $false
+        }
+        $actualFound = $false
+        $actualValue = $null
+        if ($Value -is [System.Collections.IDictionary]) {
+            foreach ($actualEntry in $Value.GetEnumerator()) {
+                if (
+                    $actualEntry.Key -is [string] -and
+                    [System.StringComparer]::Ordinal.Equals(
+                        [string]$actualEntry.Key,
+                        [string]$expectedEntry.Key
+                    )
+                ) {
+                    if ($actualFound) { return $false }
+                    $actualFound = $true
+                    $actualValue = $actualEntry.Value
+                }
+            }
+        }
+        elseif ($Value -is [System.Management.Automation.PSCustomObject]) {
+            foreach ($actualProperty in $Value.PSObject.Properties) {
+                if (
+                    [System.StringComparer]::Ordinal.Equals(
+                        [string]$actualProperty.Name,
+                        [string]$expectedEntry.Key
+                    )
+                ) {
+                    if ($actualFound) { return $false }
+                    $actualFound = $true
+                    $actualValue = $actualProperty.Value
+                }
+            }
+        }
+        else {
+            return $false
+        }
+        if (
+            -not $actualFound -or
+            -not (Test-OrdinalStringEqual $actualValue $expectedEntry.Value)
+        ) {
+            return $false
+        }
+    }
+    return $true
+}
+
+function Test-StrictJsonConvertedTree(
+    [object]$Value,
+    [int]$Depth,
+    [int]$MaxDepth
+) {
+    if ($Depth -gt $MaxDepth) { return $false }
+    if ($null -eq $Value -or $Value -is [string] -or $Value -is [bool]) {
+        return $true
+    }
+    if ($Value -is [double]) {
+        return (-not [double]::IsNaN($Value) -and -not [double]::IsInfinity($Value))
+    }
+    if ($Value -is [single]) {
+        return (-not [single]::IsNaN($Value) -and -not [single]::IsInfinity($Value))
+    }
+    if (
+        $Value -is [byte] -or $Value -is [sbyte] -or
+        $Value -is [int16] -or $Value -is [uint16] -or
+        $Value -is [int32] -or $Value -is [uint32] -or
+        $Value -is [int64] -or $Value -is [uint64] -or
+        $Value -is [decimal]
+    ) {
+        return $true
+    }
+    if ($Value -is [System.Collections.IDictionary]) {
+        foreach ($entry in $Value.GetEnumerator()) {
+            if (
+                $entry.Key -isnot [string] -or
+                -not (Test-StrictJsonConvertedTree $entry.Value ($Depth + 1) $MaxDepth)
+            ) {
+                return $false
+            }
+        }
+        return $true
+    }
+    if ($Value -is [System.Management.Automation.PSCustomObject]) {
+        foreach ($property in $Value.PSObject.Properties) {
+            if (-not (Test-StrictJsonConvertedTree $property.Value ($Depth + 1) $MaxDepth)) {
+                return $false
+            }
+        }
+        return $true
+    }
+    if ($Value -is [System.Collections.IList]) {
+        foreach ($item in $Value) {
+            if (-not (Test-StrictJsonConvertedTree $item ($Depth + 1) $MaxDepth)) {
+                return $false
+            }
+        }
+        return $true
+    }
+    return $false
+}
+
+function Test-StrictJsonRawObjectKeys([byte[]]$Bytes, [Text.Encoding]$Encoding) {
+    $reader = $null
+    try {
+        $null = Add-Type -AssemblyName System.Runtime.Serialization -ErrorAction Stop
+        $quotas = New-Object System.Xml.XmlDictionaryReaderQuotas
+        $quotas.MaxDepth = 33
+        $quotas.MaxStringContentLength = 16MB
+        $quotas.MaxArrayLength = 16MB
+        $quotas.MaxBytesPerRead = 4096
+        $quotas.MaxNameTableCharCount = 16MB
+        $reader = [System.Runtime.Serialization.Json.JsonReaderWriterFactory]::CreateJsonReader(
+            $Bytes,
+            0,
+            $Bytes.Length,
+            $Encoding,
+            $quotas,
+            $null
+        )
+        $contexts = New-Object System.Collections.ArrayList
+        while ($reader.Read()) {
+            if ($reader.NodeType -eq [System.Xml.XmlNodeType]::Element) {
+                if ($contexts.Count -gt 0) {
+                    $parent = $contexts[$contexts.Count - 1]
+                    if (
+                        [int]$reader.Depth -eq ([int]$parent.depth + 1) -and
+                        [System.StringComparer]::Ordinal.Equals([string]$parent.kind, "object")
+                    ) {
+                        if (
+                            [System.StringComparer]::Ordinal.Equals($reader.LocalName, "item") -and
+                            [System.StringComparer]::Ordinal.Equals($reader.NamespaceURI, "item")
+                        ) {
+                            $fieldName = $reader.GetAttribute("item")
+                            if ($null -eq $fieldName) { return $false }
+                        }
+                        else {
+                            $fieldName = $reader.LocalName
+                        }
+                        if (-not $parent.seen.Add([string]$fieldName)) {
+                            return $false
+                        }
+                    }
+                }
+
+                $jsonType = $reader.GetAttribute("type")
+                if (
+                    -not $reader.IsEmptyElement -and
+                    (
+                        [System.StringComparer]::Ordinal.Equals($jsonType, "object") -or
+                        [System.StringComparer]::Ordinal.Equals($jsonType, "array")
+                    )
+                ) {
+                    $context = [pscustomobject][ordered]@{
+                        depth = [int]$reader.Depth
+                        kind = [string]$jsonType
+                        seen = [System.Collections.Generic.HashSet[string]]::new(
+                            [System.StringComparer]::Ordinal
+                        )
+                    }
+                    $null = $contexts.Add($context)
+                }
+            }
+            elseif ($reader.NodeType -eq [System.Xml.XmlNodeType]::EndElement) {
+                if (
+                    $contexts.Count -gt 0 -and
+                    [int]$contexts[$contexts.Count - 1].depth -eq [int]$reader.Depth
+                ) {
+                    $contexts.RemoveAt($contexts.Count - 1)
+                }
+            }
+        }
+        return ($contexts.Count -eq 0)
+    }
+    catch {
+        return $false
+    }
+    finally {
+        if ($null -ne $reader) { $reader.Dispose() }
+    }
+}
+
+function ConvertFrom-StrictJsonObjectBytes([byte[]]$Bytes) {
+    if ($null -eq $Bytes -or $Bytes.Length -le 0 -or $Bytes.Length -gt 16MB) {
+        return $null
+    }
+    try {
+        $strictUtf8 = New-Object System.Text.UTF8Encoding($false, $true)
+        $jsonText = $strictUtf8.GetString($Bytes)
+        if (-not (Test-StrictJsonRawObjectKeys $Bytes $strictUtf8)) { return $null }
+        $value = $jsonText | ConvertFrom-Json
+        if (
+            $value -isnot [System.Collections.IDictionary] -and
+            $value -isnot [System.Management.Automation.PSCustomObject]
+        ) {
+            return $null
+        }
+        if (-not (Test-StrictJsonConvertedTree $value 0 32)) { return $null }
+        return $value
+    }
+    catch {
+        return $null
+    }
+}
+
+function ConvertFrom-BoundedStrictJsonObjectText([string]$Text) {
+    if ([string]::IsNullOrEmpty($Text) -or $Text.Length -gt 16MB) { return $null }
+    try {
+        $strictUtf8 = New-Object System.Text.UTF8Encoding($false, $true)
+        $byteCount = $strictUtf8.GetByteCount($Text)
+        if ($byteCount -le 0 -or $byteCount -gt 16MB) { return $null }
+        $bytes = $strictUtf8.GetBytes($Text)
+        return (ConvertFrom-StrictJsonObjectBytes $bytes)
+    }
+    catch {
+        return $null
+    }
+}
+
 function Read-BoundedJsonObject([string]$Path) {
     if (-not (Test-Path -LiteralPath $Path -PathType Leaf)) { return $null }
-    $item = Get-Item -LiteralPath $Path
-    if ($item.Length -le 0 -or $item.Length -gt 16MB) { return $null }
-    try { return (Get-Content -LiteralPath $Path -Raw -Encoding utf8 | ConvertFrom-Json) }
-    catch { return $null }
+    $stream = $null
+    try {
+        $stream = [IO.File]::Open(
+            $Path,
+            [IO.FileMode]::Open,
+            [IO.FileAccess]::Read,
+            [IO.FileShare]::Read
+        )
+        $length = [long]$stream.Length
+        if ($length -le 0 -or $length -gt 16MB) { return $null }
+        $bytes = New-Object byte[] ([int]$length)
+        $offset = 0
+        while ($offset -lt $bytes.Length) {
+            $readCount = $stream.Read($bytes, $offset, $bytes.Length - $offset)
+            if ($readCount -le 0) { return $null }
+            $offset += $readCount
+        }
+        if ($stream.ReadByte() -ne -1 -or [long]$stream.Length -ne $length) { return $null }
+    }
+    catch {
+        return $null
+    }
+    finally {
+        if ($null -ne $stream) { $stream.Dispose() }
+    }
+
+    return (ConvertFrom-StrictJsonObjectBytes $bytes)
 }
 
 function Test-ExactJsonFieldSet([object]$Value, [string[]]$ExpectedFields) {
     if ($null -eq $Value) { return $false }
-    $actualFields = @($Value.PSObject.Properties.Name | Sort-Object)
-    $expectedSorted = @($ExpectedFields | Sort-Object)
-    if ($actualFields.Count -ne $expectedSorted.Count) { return $false }
-    $difference = @(Compare-Object -ReferenceObject $expectedSorted -DifferenceObject $actualFields)
-    return ($difference.Count -eq 0)
+    $actualNames = @()
+    if ($Value -is [System.Collections.IDictionary]) {
+        foreach ($entry in $Value.GetEnumerator()) {
+            if ($entry.Key -isnot [string]) { return $false }
+            $actualNames += [string]$entry.Key
+        }
+    }
+    elseif ($Value -is [System.Management.Automation.PSCustomObject]) {
+        $actualNames = @($Value.PSObject.Properties.Name)
+    }
+    else {
+        return $false
+    }
+
+    $actualSet = [System.Collections.Generic.HashSet[string]]::new(
+        [System.StringComparer]::Ordinal
+    )
+    foreach ($field in $actualNames) {
+        if (-not $actualSet.Add([string]$field)) { return $false }
+    }
+    $expectedSet = [System.Collections.Generic.HashSet[string]]::new(
+        [System.StringComparer]::Ordinal
+    )
+    foreach ($field in @($ExpectedFields)) {
+        if ($null -eq $field -or -not $expectedSet.Add([string]$field)) { return $false }
+    }
+    if ($actualSet.Count -ne $expectedSet.Count) { return $false }
+    foreach ($field in $expectedSet) {
+        if (-not $actualSet.Contains($field)) { return $false }
+    }
+    return $true
 }
+# AV_BS_STRICT_JSON_READER_TEST_SLICE_END
 
 function Assert-StrictJsonClrFieldTypes(
     [object]$Value,
@@ -346,7 +641,42 @@ function Get-MatchingNormalConsumedTombstone([string]$Path) {
                 $null -eq $value.guard_canonical_sha256
             )
         )
+        $normalTombstoneStringBindings = [ordered]@{
+            schema = $tombstoneSchema
+            program = $program
+            case_id = "AV-BS1-CIRCLE-PRIMARY"
+            authorized_stage = "primary-h4-p0r"
+            authorization_state = "consumed"
+            review_disposition = "consumed_after_primary_h4_p0r_claim"
+            consumed_review_token_id = [string]$token.review_token_id
+            consumed_review_token_sha256 = $reviewTokenHash
+            consumed_review_token_canonical_sha256 = $reviewTokenCanonicalHash
+            p0r_preregistration_commit = [string]$token.p0r_preregistration_commit
+            consumed_git_head = [string]$preflightWrapper.payload.git_head
+            review_binding_sha256 = [string]$preflightWrapper.payload.review_binding_sha256
+            claim_relative_path = $claimRelativePath
+            claim_sha256 = $claimHash
+            resource_guard_policy_sha256 = [string]$token.resource_policy_sha256
+            execution_resource_scope_sha256 = $executionResourceScopeSha256
+            outer_observer_contract_sha256 = $script:outerObserverContractSha256
+            outer_observer_handshake_prefix_sha256 = $script:outerObserverHandshakePrefixSha256
+            expected_terminal_seal_relative_path = $script:outerObserverExpectedTerminalSealRelativePath
+            terminal_seal_state = "pending_outer_observed_inner_exit"
+            attempt_status = $attemptStatus
+        }
         if (
+            -not (Test-ExactObjectStringBindings $value $normalTombstoneStringBindings) -or
+            -not (Test-LowercaseHexString $value.consumed_review_token_id 32) -or
+            -not (Test-LowercaseHexString $value.consumed_review_token_sha256 64) -or
+            -not (Test-LowercaseHexString $value.consumed_review_token_canonical_sha256 64) -or
+            -not (Test-LowercaseHexString $value.p0r_preregistration_commit 40) -or
+            -not (Test-LowercaseHexString $value.consumed_git_head 40) -or
+            -not (Test-LowercaseHexString $value.review_binding_sha256 64) -or
+            -not (Test-LowercaseHexString $value.claim_sha256 64) -or
+            -not (Test-LowercaseHexString $value.resource_guard_policy_sha256 64) -or
+            -not (Test-LowercaseHexString $value.execution_resource_scope_sha256 64) -or
+            -not (Test-LowercaseHexString $value.outer_observer_contract_sha256 64) -or
+            -not (Test-LowercaseHexString $value.outer_observer_handshake_prefix_sha256 64) -or
             $value.schema -ne $tombstoneSchema -or
             $value.program -ne $program -or
             $value.case_id -ne "AV-BS1-CIRCLE-PRIMARY" -or
@@ -505,7 +835,7 @@ function Write-OrReadExactJsonArtifact(
         $Value[$TimestampField] = $requestedTimestamp
         if (
             -not (Test-ExactJsonFieldSet $existing @($Value.Keys)) -or
-            $actualJson -cne $expectedJson
+            -not [System.StringComparer]::Ordinal.Equals($actualJson, $expectedJson)
         ) {
             throw "BLOCKED_AV_BS_RESULT_SCHEMA: durable JSON artifact collision or mismatch"
         }
@@ -518,7 +848,7 @@ function Write-OrReadExactJsonArtifact(
     if (
         $null -eq $readback -or
         -not (Test-ExactJsonFieldSet $readback @($Value.Keys)) -or
-        $readbackJson -cne $json
+        -not [System.StringComparer]::Ordinal.Equals($readbackJson, $json)
     ) {
         throw "BLOCKED_AV_BS_RESULT_SCHEMA: durable JSON artifact readback mismatch"
     }
@@ -529,7 +859,7 @@ function Get-EmergencyReplacementJournalPaths {
     $journalRoot = [IO.Path]::GetFullPath((Join-Path $validationRoot "emergency-replacement-journals"))
     [IO.Directory]::CreateDirectory($journalRoot) | Out-Null
     $leafBase = [string]$token.review_token_id + "-" + [string]$nonce
-    if ($leafBase -notmatch '^[0-9a-f]{32}-[0-9a-f]{32}$') {
+    if ($leafBase -cnotmatch '^[0-9a-f]{32}-[0-9a-f]{32}$') {
         throw "BLOCKED_AV_BS_RESULT_SCHEMA: emergency replacement journal identity is invalid"
     }
     $intentPath = [IO.Path]::GetFullPath((Join-Path $journalRoot ($leafBase + ".intent.json")))
@@ -1028,7 +1358,7 @@ function Get-OuterEmergencyReplacementJournalPaths(
     $journalRoot = [IO.Path]::GetFullPath((Join-Path $validationRoot "emergency-replacement-journals"))
     [IO.Directory]::CreateDirectory($journalRoot) | Out-Null
     $leafBase = $ReviewTokenId + "-" + $ObserverNonce
-    if ($leafBase -notmatch '^[0-9a-f]{32}-[0-9a-f]{32}$') {
+    if ($leafBase -cnotmatch '^[0-9a-f]{32}-[0-9a-f]{32}$') {
         throw "BLOCKED_AV_BS_RESULT_SCHEMA: outer emergency journal identity is invalid"
     }
     $intentPath = [IO.Path]::GetFullPath((Join-Path $journalRoot ($leafBase + ".intent.json")))
@@ -1355,7 +1685,7 @@ function Write-PreExitControlPlaneEvidence(
     }
     foreach ($artifactHashKey in $requiredArtifactHashKeys) {
         $artifactHashValue = $ArtifactHashes[$artifactHashKey]
-        if ($null -ne $artifactHashValue -and [string]$artifactHashValue -notmatch '^[0-9a-f]{64}$') {
+        if ($null -ne $artifactHashValue -and [string]$artifactHashValue -cnotmatch '^[0-9a-f]{64}$') {
             throw "BLOCKED_AV_BS_RESULT_SCHEMA: pre-exit evidence artifact hash is invalid"
         }
     }
@@ -1391,7 +1721,7 @@ function Write-PreExitControlPlaneEvidence(
     $tombstoneSchemaValue = [string]$currentTombstone.schema
     $validatedTombstoneJson = $ValidatedTombstone | ConvertTo-Json -Depth 16 -Compress
     $currentTombstoneJson = $currentTombstone | ConvertTo-Json -Depth 16 -Compress
-    if ($validatedTombstoneJson -cne $currentTombstoneJson) {
+    if (-not [System.StringComparer]::Ordinal.Equals($validatedTombstoneJson, $currentTombstoneJson)) {
         throw "BLOCKED_AV_BS_RESULT_SCHEMA: pre-exit evidence validated tombstone differs from current readback"
     }
     $emergencyReplacementPostvalidated = $false
@@ -1590,7 +1920,7 @@ function Write-PreExitControlPlaneEvidence(
         if (
             $null -eq $existing -or
             -not (Test-ExactJsonFieldSet $existing @($evidence.Keys)) -or
-            $actualExistingJson -cne $expectedExistingJson -or
+            -not [System.StringComparer]::Ordinal.Equals($actualExistingJson, $expectedExistingJson) -or
             $existing.schema -ne $preExitControlPlaneEvidenceSchema -or
             $existing.review_token_id -ne $token.review_token_id -or
             $existing.original_review_token_sha256 -ne $reviewTokenHash -or
@@ -1634,7 +1964,7 @@ function Write-PreExitControlPlaneEvidence(
     if (
         $null -eq $readback -or
         -not (Test-ExactJsonFieldSet $readback @($evidence.Keys)) -or
-        $readbackJson -cne $evidenceJson -or
+        -not [System.StringComparer]::Ordinal.Equals($readbackJson, $evidenceJson) -or
         $readback.schema -ne $preExitControlPlaneEvidenceSchema -or
         $readback.monitor_ready_marker_sha256 -ne $ArtifactHashes["monitor_ready_marker_sha256"] -or
         $readback.factor_complete_marker_sha256 -ne $ArtifactHashes["factor_complete_marker_sha256"] -or
@@ -1685,14 +2015,186 @@ function Get-CurrentTerminalArtifactHashes {
     return $currentHashes
 }
 
+# AV_BS_STRICT_JSON_EQUAL_TEST_SLICE_BEGIN
+function Get-StrictJsonValueKind([object]$Value) {
+    if ($null -eq $Value) {
+        return "null"
+    }
+    if (
+        $Value -is [System.Collections.IDictionary] -or
+        $Value -is [System.Management.Automation.PSCustomObject]
+    ) {
+        return "object"
+    }
+    if ($Value -is [System.Collections.IList]) {
+        return "array"
+    }
+    if ($Value -is [bool]) {
+        return "boolean"
+    }
+    if (
+        $Value -is [byte] -or $Value -is [sbyte] -or
+        $Value -is [int16] -or $Value -is [uint16] -or
+        $Value -is [int32] -or $Value -is [uint32] -or
+        $Value -is [int64] -or $Value -is [uint64] -or
+        $Value -is [single] -or $Value -is [double] -or
+        $Value -is [decimal]
+    ) {
+        return "number"
+    }
+    if ($Value -is [string]) {
+        return "string"
+    }
+    throw "unsupported strict JSON value type: $($Value.GetType().FullName)"
+}
+
+function Get-StrictJsonObjectEntries([object]$Value) {
+    if ($Value -is [System.Collections.IDictionary]) {
+        foreach ($entry in $Value.GetEnumerator()) {
+            if (-not ($entry.Key -is [string])) {
+                throw "strict JSON object key is not a string"
+            }
+            [pscustomobject][ordered]@{
+                name = [string]$entry.Key
+                value = $entry.Value
+            }
+        }
+        return
+    }
+    if ($Value -is [System.Management.Automation.PSCustomObject]) {
+        foreach ($property in $Value.PSObject.Properties) {
+            [pscustomobject][ordered]@{
+                name = [string]$property.Name
+                value = $property.Value
+            }
+        }
+        return
+    }
+    throw "value is not a strict JSON object"
+}
+
+function Test-StrictJsonFiniteNumber([object]$Value) {
+    if ($Value -is [double]) {
+        return (-not [double]::IsNaN($Value) -and -not [double]::IsInfinity($Value))
+    }
+    if ($Value -is [single]) {
+        return (-not [single]::IsNaN($Value) -and -not [single]::IsInfinity($Value))
+    }
+    return $true
+}
+
+function Test-StrictJsonValueEqualCore(
+    [object]$Left,
+    [object]$Right,
+    [int]$Depth,
+    [int]$MaxDepth
+) {
+    if ($Depth -gt $MaxDepth) {
+        return $false
+    }
+
+    $leftKind = Get-StrictJsonValueKind $Left
+    $rightKind = Get-StrictJsonValueKind $Right
+    if ($leftKind -cne $rightKind) {
+        return $false
+    }
+
+    switch ($leftKind) {
+        "null" {
+            return $true
+        }
+        "object" {
+            $leftEntries = @(Get-StrictJsonObjectEntries $Left)
+            $rightEntries = @(Get-StrictJsonObjectEntries $Right)
+            if ($leftEntries.Count -ne $rightEntries.Count) {
+                return $false
+            }
+            $rightByName = [System.Collections.Generic.Dictionary[string,object]]::new(
+                [System.StringComparer]::Ordinal
+            )
+            foreach ($rightEntry in $rightEntries) {
+                if ($rightByName.ContainsKey($rightEntry.name)) {
+                    return $false
+                }
+                $rightByName.Add($rightEntry.name, $rightEntry.value)
+            }
+            $leftNames = [System.Collections.Generic.HashSet[string]]::new(
+                [System.StringComparer]::Ordinal
+            )
+            foreach ($leftEntry in $leftEntries) {
+                if (
+                    -not $leftNames.Add($leftEntry.name) -or
+                    -not $rightByName.ContainsKey($leftEntry.name)
+                ) {
+                    return $false
+                }
+                if (-not (Test-StrictJsonValueEqualCore `
+                    -Left $leftEntry.value `
+                    -Right $rightByName[$leftEntry.name] `
+                    -Depth ($Depth + 1) `
+                    -MaxDepth $MaxDepth)) {
+                    return $false
+                }
+            }
+            return $true
+        }
+        "array" {
+            if ($Left.Count -ne $Right.Count) {
+                return $false
+            }
+            for ($index = 0; $index -lt $Left.Count; $index++) {
+                if (-not (Test-StrictJsonValueEqualCore `
+                    -Left $Left[$index] `
+                    -Right $Right[$index] `
+                    -Depth ($Depth + 1) `
+                    -MaxDepth $MaxDepth)) {
+                    return $false
+                }
+            }
+            return $true
+        }
+        "boolean" {
+            return ($Left -eq $Right)
+        }
+        "number" {
+            if (
+                -not (Test-StrictJsonFiniteNumber $Left) -or
+                -not (Test-StrictJsonFiniteNumber $Right)
+            ) {
+                return $false
+            }
+            $leftJson = ConvertTo-Json -InputObject $Left -Depth 1 -Compress
+            $rightJson = ConvertTo-Json -InputObject $Right -Depth 1 -Compress
+            if ($leftJson.StartsWith('"') -or $rightJson.StartsWith('"')) {
+                return $false
+            }
+            return [System.StringComparer]::Ordinal.Equals($leftJson, $rightJson)
+        }
+        "string" {
+            return [System.StringComparer]::Ordinal.Equals(
+                [string]$Left,
+                [string]$Right
+            )
+        }
+        default {
+            return $false
+        }
+    }
+}
+
 function Test-StrictJsonValueEqual([object]$Left, [object]$Right) {
     try {
-        $leftJson = $Left | ConvertTo-Json -Depth 32 -Compress
-        $rightJson = $Right | ConvertTo-Json -Depth 32 -Compress
-        return ($leftJson -ceq $rightJson)
+        return [bool](Test-StrictJsonValueEqualCore `
+            -Left $Left `
+            -Right $Right `
+            -Depth 0 `
+            -MaxDepth 32)
     }
-    catch { return $false }
+    catch {
+        return $false
+    }
 }
+# AV_BS_STRICT_JSON_EQUAL_TEST_SLICE_END
 
 function Get-NormalPassEvidenceAudit(
     [object]$Tombstone,
@@ -1709,7 +2211,7 @@ function Get-NormalPassEvidenceAudit(
     )
     if (
         $null -eq $Tombstone -or
-        $Tombstone.schema -ne $tombstoneSchema
+        -not (Test-OrdinalStringEqual $Tombstone.schema $tombstoneSchema)
     ) {
         & $addError "normal tombstone schema is required"
     }
@@ -1723,13 +2225,46 @@ function Get-NormalPassEvidenceAudit(
 
     try {
     if ($errors.Count -eq 0) {
+        $normalAuditStringBindings = [ordered]@{
+            schema = $tombstoneSchema
+            program = $program
+            case_id = "AV-BS1-CIRCLE-PRIMARY"
+            authorized_stage = "primary-h4-p0r"
+            authorization_state = "consumed"
+            review_disposition = "consumed_after_primary_h4_p0r_claim"
+            consumed_review_token_id = [string]$token.review_token_id
+            consumed_review_token_sha256 = $reviewTokenHash
+            consumed_review_token_canonical_sha256 = $reviewTokenCanonicalHash
+            p0r_preregistration_commit = [string]$token.p0r_preregistration_commit
+            consumed_git_head = [string]$preflightWrapper.payload.git_head
+            review_binding_sha256 = [string]$preflightWrapper.payload.review_binding_sha256
+            outer_observer_contract_sha256 = $script:outerObserverContractSha256
+            outer_observer_handshake_prefix_sha256 = $script:outerObserverHandshakePrefixSha256
+            expected_terminal_seal_relative_path = $script:outerObserverExpectedTerminalSealRelativePath
+            terminal_seal_state = "pending_outer_observed_inner_exit"
+            attempt_status = "completed_pass"
+            effective_attempt_status = "completed_pass"
+        }
         if (
-            $Tombstone.outer_observer_contract_sha256 -ne $script:outerObserverContractSha256 -or
-            $Tombstone.outer_observer_handshake_prefix_sha256 -ne $script:outerObserverHandshakePrefixSha256 -or
-            $Tombstone.expected_terminal_seal_relative_path -ne $script:outerObserverExpectedTerminalSealRelativePath -or
+            -not (Test-ExactObjectStringBindings $Tombstone $normalAuditStringBindings) -or
+            -not (Test-LowercaseHexString $Tombstone.consumed_review_token_id 32) -or
+            -not (Test-LowercaseHexString $Tombstone.consumed_review_token_sha256 64) -or
+            -not (Test-LowercaseHexString $Tombstone.consumed_review_token_canonical_sha256 64) -or
+            -not (Test-LowercaseHexString $Tombstone.p0r_preregistration_commit 40) -or
+            -not (Test-LowercaseHexString $Tombstone.consumed_git_head 40) -or
+            -not (Test-LowercaseHexString $Tombstone.review_binding_sha256 64) -or
+            -not (Test-LowercaseHexString $Tombstone.outer_observer_contract_sha256 64) -or
+            -not (Test-LowercaseHexString $Tombstone.outer_observer_handshake_prefix_sha256 64)
+        ) {
+            & $addError "normal tombstone exact string bindings mismatch"
+        }
+        if (
+            -not (Test-OrdinalStringEqual $Tombstone.outer_observer_contract_sha256 $script:outerObserverContractSha256) -or
+            -not (Test-OrdinalStringEqual $Tombstone.outer_observer_handshake_prefix_sha256 $script:outerObserverHandshakePrefixSha256) -or
+            -not (Test-OrdinalStringEqual $Tombstone.expected_terminal_seal_relative_path $script:outerObserverExpectedTerminalSealRelativePath) -or
             $Tombstone.terminal_seal_required_for_authoritative_disposition -isnot [bool] -or
             $Tombstone.terminal_seal_required_for_authoritative_disposition -ne $true -or
-            $Tombstone.terminal_seal_state -ne "pending_outer_observed_inner_exit" -or
+            -not (Test-OrdinalStringEqual $Tombstone.terminal_seal_state "pending_outer_observed_inner_exit") -or
             $Tombstone.terminal_evidence_complete -isnot [bool] -or
             $Tombstone.terminal_evidence_complete -ne $false -or
             $Tombstone.authoritative_stage_pass -isnot [bool] -or
@@ -1749,7 +2284,10 @@ function Get-NormalPassEvidenceAudit(
                 & $addError ("normal pass requires true " + $field)
             }
         }
-        if ($Tombstone.attempt_status -ne "completed_pass" -or $Tombstone.effective_attempt_status -ne "completed_pass") {
+        if (
+            -not (Test-OrdinalStringEqual $Tombstone.attempt_status "completed_pass") -or
+            -not (Test-OrdinalStringEqual $Tombstone.effective_attempt_status "completed_pass")
+        ) {
             & $addError "normal pass attempt status mismatch"
         }
         if ($Tombstone.child_launched -isnot [bool] -or $Tombstone.child_launched -ne $true) {
@@ -1777,10 +2315,10 @@ function Get-NormalPassEvidenceAudit(
         $currentGuard = Read-BoundedJsonObject $guardPath
         if (
             $null -eq $currentClaim -or
-            (Get-Sha256 $claimPath) -ne $claimHash -or
-            $Tombstone.claim_sha256 -ne $claimHash -or
-            $Tombstone.claim_canonical_sha256 -ne $claimCanonicalHash -or
-            $Tombstone.preflight_payload_sha256 -ne $preflightWrapper.payload_sha256 -or
+            -not (Test-OrdinalStringEqual (Get-Sha256 $claimPath) $claimHash) -or
+            -not (Test-OrdinalStringEqual $Tombstone.claim_sha256 $claimHash) -or
+            -not (Test-OrdinalStringEqual $Tombstone.claim_canonical_sha256 $claimCanonicalHash) -or
+            -not (Test-OrdinalStringEqual $Tombstone.preflight_payload_sha256 $preflightWrapper.payload_sha256) -or
             $null -eq $Tombstone.claim_evidence -or
             -not (Test-StrictJsonValueEqual $currentClaim $Tombstone.claim_evidence)
         ) {
@@ -1788,9 +2326,9 @@ function Get-NormalPassEvidenceAudit(
         }
         if (
             $null -eq $currentGuard -or
-            (Get-Sha256 $guardPath) -ne $guardHash -or
-            $Tombstone.guard_contract_sha256 -ne $guardHash -or
-            $Tombstone.guard_canonical_sha256 -ne $guardCanonicalHash -or
+            -not (Test-OrdinalStringEqual (Get-Sha256 $guardPath) $guardHash) -or
+            -not (Test-OrdinalStringEqual $Tombstone.guard_contract_sha256 $guardHash) -or
+            -not (Test-OrdinalStringEqual $Tombstone.guard_canonical_sha256 $guardCanonicalHash) -or
             $null -eq $Tombstone.guard_evidence -or
             -not (Test-StrictJsonValueEqual $currentGuard $Tombstone.guard_evidence)
         ) {
@@ -1802,29 +2340,29 @@ function Get-NormalPassEvidenceAudit(
             $expectedHash = $ExpectedArtifactHashes[$key]
             $currentHash = $currentBefore[$key]
             if (
-                $null -eq $expectedHash -or [string]$expectedHash -notmatch '^[0-9a-f]{64}$' -or
-                $null -eq $currentHash -or [string]$currentHash -notmatch '^[0-9a-f]{64}$' -or
-                $expectedHash -ne $currentHash
+                -not (Test-LowercaseHexString $expectedHash 64) -or
+                -not (Test-LowercaseHexString $currentHash 64) -or
+                -not (Test-OrdinalStringEqual $expectedHash $currentHash)
             ) {
                 & $addError ("outer artifact changed or is missing: " + $key)
             }
         }
-        if ($Tombstone.consumed_resource_report_sha256 -ne $currentBefore.resource_report_sha256) {
+        if (-not (Test-OrdinalStringEqual $Tombstone.consumed_resource_report_sha256 $currentBefore.resource_report_sha256)) {
             & $addError "resource file hash differs from tombstone binding"
         }
-        if ($Tombstone.consumed_result_file_sha256 -ne $currentBefore.result_file_sha256) {
+        if (-not (Test-OrdinalStringEqual $Tombstone.consumed_result_file_sha256 $currentBefore.result_file_sha256)) {
             & $addError "result file hash differs from tombstone binding"
         }
-        if ($Tombstone.consumed_child_stdout_file_sha256 -ne $currentBefore.child_stdout_sha256) {
+        if (-not (Test-OrdinalStringEqual $Tombstone.consumed_child_stdout_file_sha256 $currentBefore.child_stdout_sha256)) {
             & $addError "child stdout hash differs from tombstone binding"
         }
         if (
             $null -eq $Tombstone.resource_evidence -or
-            $Tombstone.resource_evidence.child_stdout_sha256 -ne $currentBefore.child_stdout_sha256 -or
-            $Tombstone.resource_evidence.child_stderr_sha256 -ne $currentBefore.child_stderr_sha256 -or
-            $Tombstone.resource_evidence.monitor_ready_marker_sha256 -ne $currentBefore.monitor_ready_marker_sha256 -or
-            $Tombstone.resource_evidence.factor_complete_marker_sha256 -ne $currentBefore.factor_complete_marker_sha256 -or
-            $Tombstone.resource_evidence.monitor_release_marker_sha256 -ne $currentBefore.monitor_release_marker_sha256 -or
+            -not (Test-OrdinalStringEqual $Tombstone.resource_evidence.child_stdout_sha256 $currentBefore.child_stdout_sha256) -or
+            -not (Test-OrdinalStringEqual $Tombstone.resource_evidence.child_stderr_sha256 $currentBefore.child_stderr_sha256) -or
+            -not (Test-OrdinalStringEqual $Tombstone.resource_evidence.monitor_ready_marker_sha256 $currentBefore.monitor_ready_marker_sha256) -or
+            -not (Test-OrdinalStringEqual $Tombstone.resource_evidence.factor_complete_marker_sha256 $currentBefore.factor_complete_marker_sha256) -or
+            -not (Test-OrdinalStringEqual $Tombstone.resource_evidence.monitor_release_marker_sha256 $currentBefore.monitor_release_marker_sha256) -or
             $Tombstone.resource_evidence.factor_monitor_handshake_complete -isnot [bool] -or
             $Tombstone.resource_evidence.factor_monitor_handshake_complete -ne $true -or
             $Tombstone.resource_evidence.child_process_id -ne $Tombstone.child_process_id -or
@@ -1842,27 +2380,27 @@ function Get-NormalPassEvidenceAudit(
         }
         if (
             $null -eq $currentResultWrapper -or
-            $currentResultWrapper.payload_sha256 -ne $Tombstone.consumed_result_payload_sha256 -or
+            -not (Test-OrdinalStringEqual $currentResultWrapper.payload_sha256 $Tombstone.consumed_result_payload_sha256) -or
             -not (Test-StrictJsonValueEqual $currentResultWrapper.payload $Tombstone.result_evidence)
         ) {
             & $addError "current result wrapper differs from tombstone evidence"
         }
         if (
             $null -eq $currentChildWrapper -or
-            $currentChildWrapper.payload_sha256 -ne $Tombstone.consumed_child_payload_sha256 -or
+            -not (Test-OrdinalStringEqual $currentChildWrapper.payload_sha256 $Tombstone.consumed_child_payload_sha256) -or
             -not (Test-StrictJsonValueEqual $currentChildWrapper.payload $Tombstone.child_stdout_evidence)
         ) {
             & $addError "current child wrapper differs from tombstone evidence"
         }
         if (
             $null -eq $Tombstone.result_evidence -or
-            $Tombstone.result_evidence.schema -ne "AV-BS1-h4-p0r-result-v2" -or
-            $Tombstone.result_evidence.outer_observer_contract_sha256 -ne $script:outerObserverContractSha256 -or
-            $Tombstone.result_evidence.outer_observer_handshake_prefix_sha256 -ne $script:outerObserverHandshakePrefixSha256 -or
-            $Tombstone.result_evidence.expected_terminal_seal_relative_path -ne $script:outerObserverExpectedTerminalSealRelativePath -or
+            -not (Test-OrdinalStringEqual $Tombstone.result_evidence.schema "AV-BS1-h4-p0r-result-v2") -or
+            -not (Test-OrdinalStringEqual $Tombstone.result_evidence.outer_observer_contract_sha256 $script:outerObserverContractSha256) -or
+            -not (Test-OrdinalStringEqual $Tombstone.result_evidence.outer_observer_handshake_prefix_sha256 $script:outerObserverHandshakePrefixSha256) -or
+            -not (Test-OrdinalStringEqual $Tombstone.result_evidence.expected_terminal_seal_relative_path $script:outerObserverExpectedTerminalSealRelativePath) -or
             $Tombstone.result_evidence.terminal_seal_required_for_authoritative_disposition -isnot [bool] -or
             $Tombstone.result_evidence.terminal_seal_required_for_authoritative_disposition -ne $true -or
-            $Tombstone.result_evidence.terminal_seal_state -ne "pending_outer_observed_inner_exit" -or
+            -not (Test-OrdinalStringEqual $Tombstone.result_evidence.terminal_seal_state "pending_outer_observed_inner_exit") -or
             $Tombstone.result_evidence.terminal_evidence_complete -isnot [bool] -or
             $Tombstone.result_evidence.terminal_evidence_complete -ne $false -or
             $Tombstone.result_evidence.authoritative_stage_pass -isnot [bool] -or
@@ -1870,8 +2408,8 @@ function Get-NormalPassEvidenceAudit(
             $Tombstone.result_evidence.mandatory_stage_pass -ne $true -or
             $Tombstone.result_evidence.factorization_attempted -ne $true -or
             $Tombstone.result_evidence.factorization_performed -ne $true -or
-            $Tombstone.result_evidence.resource_report_sha256 -ne $currentBefore.resource_report_sha256 -or
-            $Tombstone.result_evidence.child_stdout_sha256 -ne $currentBefore.child_stdout_sha256 -or
+            -not (Test-OrdinalStringEqual $Tombstone.result_evidence.resource_report_sha256 $currentBefore.resource_report_sha256) -or
+            -not (Test-OrdinalStringEqual $Tombstone.result_evidence.child_stdout_sha256 $currentBefore.child_stdout_sha256) -or
             -not (Test-StrictJsonValueEqual $Tombstone.result_evidence.resource $Tombstone.resource_evidence) -or
             -not (Test-StrictJsonValueEqual @($Tombstone.result_evidence.factor_prefix_evidence) @($Tombstone.factor_prefix_evidence)) -or
             -not (Test-StrictJsonValueEqual @($Tombstone.result_evidence.factor_order) $expectedFactorOrder) -or
@@ -1898,9 +2436,9 @@ function Get-NormalPassEvidenceAudit(
                 $prefixWrapper = Read-BoundedJsonObject $prefixPaths[$prefixIndex]
                 if (
                     $prefixItem.count -isnot [int] -or $prefixItem.count -ne ($prefixIndex + 1) -or
-                    $prefixItem.file_sha256 -ne $prefixHashes[$prefixIndex] -or
+                    -not (Test-OrdinalStringEqual $prefixItem.file_sha256 $prefixHashes[$prefixIndex]) -or
                     $null -eq $prefixWrapper -or
-                    $prefixWrapper.payload_sha256 -ne $prefixItem.payload_sha256 -or
+                    -not (Test-OrdinalStringEqual $prefixWrapper.payload_sha256 $prefixItem.payload_sha256) -or
                     -not (Test-StrictJsonValueEqual $prefixWrapper.payload $prefixItem.payload)
                 ) {
                     & $addError ("factor prefix checkpoint mismatch at count " + ($prefixIndex + 1))
@@ -3419,7 +3957,7 @@ function Invoke-ControlPlanePython {
 
             if ((Test-Path -LiteralPath $completion -PathType Leaf) -and -not $completionObserved -and -not $stopReason) {
                 $completionObserved = $true
-                $completionValue = Get-Content -LiteralPath $completion -Raw -Encoding utf8 | ConvertFrom-Json
+                $completionValue = Read-BoundedJsonObject $completion
                 if (
                     $completionValue.schema -ne "AV-BS1-h4-p0r-control-plane-target-complete-v1" -or
                     $completionValue.process_id -ne $process.Id -or
@@ -4110,18 +4648,18 @@ function Get-OuterObserverSessionPaths([string]$SessionPath, [string]$ExpectedNo
     $leaf = [IO.Path]::GetFileName($session)
     $expectedRelativePath = "validation-output/av-bs1/outer-observer/session-" + $ExpectedNonce
     if (
-        $session -cne $SessionPath -or
+        -not (Test-OrdinalStringEqual $session $SessionPath) -or
         -not $session.StartsWith(($root.TrimEnd('\') + '\'), [StringComparison]::Ordinal) -or
-        [IO.Path]::GetDirectoryName($session).TrimEnd('\') -cne $root.TrimEnd('\') -or
-        $ExpectedNonce -notmatch '^[0-9a-f]{32}$' -or
-        $leaf -cne ("session-" + $ExpectedNonce) -or
-        (Get-RepositoryRelativePath $session) -cne $expectedRelativePath
+        -not (Test-OrdinalStringEqual ([IO.Path]::GetDirectoryName($session).TrimEnd('\')) ($root.TrimEnd('\'))) -or
+        $ExpectedNonce -cnotmatch '^[0-9a-f]{32}$' -or
+        -not (Test-OrdinalStringEqual $leaf ("session-" + $ExpectedNonce)) -or
+        -not (Test-OrdinalStringEqual (Get-RepositoryRelativePath $session) $expectedRelativePath)
     ) {
         throw "BLOCKED_AV_BS_RESULT_SCHEMA: outer observer session path is not canonical"
     }
     if (
         -not (Test-Path -LiteralPath $session -PathType Container) -or
-        [IO.Path]::GetFullPath((Resolve-Path -LiteralPath $session).ProviderPath) -cne $session
+        -not (Test-OrdinalStringEqual ([IO.Path]::GetFullPath((Resolve-Path -LiteralPath $session).ProviderPath)) $session)
     ) {
         throw "BLOCKED_AV_BS_RESULT_SCHEMA: outer observer session on-disk path is not canonical"
     }
@@ -4159,14 +4697,14 @@ function Resolve-RepositoryRelativePath([string]$RelativePath) {
     if (-not $full.StartsWith($rootPrefix, [StringComparison]::OrdinalIgnoreCase)) {
         throw "BLOCKED_AV_BS_RESULT_SCHEMA: repository-relative evidence path escaped the checkout"
     }
-    if ((Get-RepositoryRelativePath $full) -cne $RelativePath) {
+    if (-not (Test-OrdinalStringEqual (Get-RepositoryRelativePath $full) $RelativePath)) {
         throw "BLOCKED_AV_BS_RESULT_SCHEMA: repository-relative evidence path case or round-trip mismatch"
     }
     if (Test-Path -LiteralPath $full) {
         $resolvedExisting = [IO.Path]::GetFullPath((Resolve-Path -LiteralPath $full).ProviderPath)
         if (
             -not $resolvedExisting.StartsWith($rootPrefix, [StringComparison]::OrdinalIgnoreCase) -or
-            (Get-RepositoryRelativePath $resolvedExisting) -cne $RelativePath
+            -not (Test-OrdinalStringEqual (Get-RepositoryRelativePath $resolvedExisting) $RelativePath)
         ) {
             throw "BLOCKED_AV_BS_RESULT_SCHEMA: repository-relative evidence path target or on-disk case mismatch"
         }
@@ -4179,20 +4717,20 @@ function Get-OuterObserverTerminalSealPath(
     [string]$ReviewTokenId,
     [string]$ExpectedRelativePath
 ) {
-    if ($ReviewTokenId -notmatch '^[0-9a-f]{32}$') {
+    if ($ReviewTokenId -cnotmatch '^[0-9a-f]{32}$') {
         throw "BLOCKED_AV_BS_RESULT_SCHEMA: outer observer review token id is invalid"
     }
     $expected = "validation-output/av-bs1/outer-observer-terminal-seals/" + $ReviewTokenId + ".json"
-    if ($ExpectedRelativePath -cne $expected) {
+    if (-not (Test-OrdinalStringEqual $ExpectedRelativePath $expected)) {
         throw "BLOCKED_AV_BS_RESULT_SCHEMA: outer observer terminal seal relative path mismatch"
     }
     $root = [IO.Path]::GetFullPath((Join-Path $validationRoot "outer-observer-terminal-seals"))
     $path = [IO.Path]::GetFullPath((Join-Path $repositoryRoot ($ExpectedRelativePath.Replace('/', '\'))))
     if (
         -not $path.StartsWith(($root.TrimEnd('\') + '\'), [StringComparison]::Ordinal) -or
-        [IO.Path]::GetDirectoryName($path).TrimEnd('\') -cne $root.TrimEnd('\') -or
-        [IO.Path]::GetFileName($path) -cne ($ReviewTokenId + ".json") -or
-        (Get-RepositoryRelativePath $path) -cne $ExpectedRelativePath
+        -not (Test-OrdinalStringEqual ([IO.Path]::GetDirectoryName($path).TrimEnd('\')) ($root.TrimEnd('\'))) -or
+        -not (Test-OrdinalStringEqual ([IO.Path]::GetFileName($path)) ($ReviewTokenId + ".json")) -or
+        -not (Test-OrdinalStringEqual (Get-RepositoryRelativePath $path) $ExpectedRelativePath)
     ) {
         throw "BLOCKED_AV_BS_RESULT_SCHEMA: outer observer terminal seal path escaped its root"
     }
@@ -4206,7 +4744,7 @@ function New-OuterObserverHandshakePrefix(
     [string]$StartReleaseSha256
 ) {
     foreach ($hash in @($ReadySha256, $StartReleaseSha256)) {
-        if ($hash -notmatch '^[0-9a-f]{64}$') {
+        if ($hash -cnotmatch '^[0-9a-f]{64}$') {
             throw "BLOCKED_AV_BS_RESULT_SCHEMA: outer observer handshake prefix hash is invalid"
         }
     }
@@ -4269,11 +4807,11 @@ function Wait-ForOuterObserverMarker([string]$Path, [int]$TimeoutSeconds, [strin
 function Initialize-OuterObservedInner {
     if (
         [string]::IsNullOrWhiteSpace($OuterObserverSessionPath) -or
-        $OuterObserverNonce -notmatch '^[0-9a-f]{32}$' -or
+        $OuterObserverNonce -cnotmatch '^[0-9a-f]{32}$' -or
         $OuterObserverParentProcessId -le 0 -or
         $OuterObserverParentBirthUtcTicks -le 0 -or
-        $OuterObserverRunnerSha256 -notmatch '^[0-9a-f]{64}$' -or
-        $OuterObserverReviewTokenSha256 -notmatch '^[0-9a-f]{64}$'
+        $OuterObserverRunnerSha256 -cnotmatch '^[0-9a-f]{64}$' -or
+        $OuterObserverReviewTokenSha256 -cnotmatch '^[0-9a-f]{64}$'
     ) {
         throw "BLOCKED_AV_BS_RESULT_SCHEMA: hidden inner observer inputs are incomplete"
     }
@@ -4293,14 +4831,32 @@ function Initialize-OuterObservedInner {
         throw "BLOCKED_AV_BS_RESULT_SCHEMA: hidden inner runner or token bytes differ from dispatcher"
     }
     $candidateToken = Read-BoundedJsonObject $reviewTokenPath
+    $expectedCandidateSealRelativePath = (
+        "validation-output/av-bs1/outer-observer-terminal-seals/" +
+        [string]$candidateToken.review_token_id + ".json"
+    )
+    $candidateTokenStringBindings = [ordered]@{
+        schema = "AV-BS1-h4-p0r-review-token-v1"
+        program = $program
+        case_id = "AV-BS1-CIRCLE-PRIMARY"
+        authorized_stage = "primary-h4-p0r"
+        authorization_state = "authorized"
+        review_disposition = "approved_h4_p0r_factor_only"
+        runner_sha256 = $runnerSha256
+        expected_terminal_seal_relative_path = $expectedCandidateSealRelativePath
+    }
     if (
         $null -eq $candidateToken -or
+        -not (Test-ExactObjectStringBindings $candidateToken $candidateTokenStringBindings) -or
+        -not (Test-LowercaseHexString $candidateToken.review_token_id 32) -or
+        -not (Test-LowercaseHexString $candidateToken.runner_sha256 64) -or
+        -not (Test-LowercaseHexString $candidateToken.outer_observer_contract_sha256 64) -or
         $candidateToken.schema -ne "AV-BS1-h4-p0r-review-token-v1" -or
         $candidateToken.uses_remaining -isnot [int] -or
         $candidateToken.uses_remaining -ne 1 -or
-        [string]$candidateToken.review_token_id -notmatch '^[0-9a-f]{32}$' -or
+        [string]$candidateToken.review_token_id -cnotmatch '^[0-9a-f]{32}$' -or
         $candidateToken.runner_sha256 -ne $runnerSha256 -or
-        [string]$candidateToken.outer_observer_contract_sha256 -notmatch '^[0-9a-f]{64}$' -or
+        [string]$candidateToken.outer_observer_contract_sha256 -cnotmatch '^[0-9a-f]{64}$' -or
         $candidateToken.terminal_seal_required_for_authoritative_disposition -isnot [bool] -or
         $candidateToken.terminal_seal_required_for_authoritative_disposition -ne $true
     ) {
@@ -4368,9 +4924,32 @@ function Initialize-OuterObservedInner {
         "external_runner_or_machine_kill_terminal_state_guaranteed",
         "monotonic_ns", "released_utc"
     )
+    $startReleaseStringBindings = [ordered]@{
+        schema = $outerStartReleaseSchema
+        program = $program
+        case_id = "AV-BS1-CIRCLE-PRIMARY"
+        stage = "primary-h4-p0r"
+        observer_session_relative_path = [string]$paths.session_relative_path
+        observer_nonce = $OuterObserverNonce
+        runner_sha256 = $runnerSha256
+        review_token_sha256 = $tokenSha256
+        review_token_id = [string]$candidateToken.review_token_id
+        outer_observer_contract_sha256 = [string]$candidateToken.outer_observer_contract_sha256
+        expected_terminal_seal_relative_path = [string]$candidateToken.expected_terminal_seal_relative_path
+        inner_ready_relative_path = Get-RepositoryRelativePath $paths.ready
+        inner_ready_sha256 = $readySha256
+        release_scope = "permit_inner_preflight_and_claim_only"
+    }
     if (
         $null -eq $startRelease -or
         -not (Test-ExactJsonFieldSet $startRelease $startFields) -or
+        -not (Test-ExactObjectStringBindings $startRelease $startReleaseStringBindings) -or
+        -not (Test-LowercaseHexString $startRelease.observer_nonce 32) -or
+        -not (Test-LowercaseHexString $startRelease.runner_sha256 64) -or
+        -not (Test-LowercaseHexString $startRelease.review_token_sha256 64) -or
+        -not (Test-LowercaseHexString $startRelease.review_token_id 32) -or
+        -not (Test-LowercaseHexString $startRelease.outer_observer_contract_sha256 64) -or
+        -not (Test-LowercaseHexString $startRelease.inner_ready_sha256 64) -or
         $startRelease.schema -ne $outerStartReleaseSchema -or
         $startRelease.program -ne $program -or
         $startRelease.case_id -ne "AV-BS1-CIRCLE-PRIMARY" -or
@@ -4479,9 +5058,31 @@ function Assert-OuterInnerReadyMarker(
         "external_runner_or_machine_kill_terminal_state_guaranteed",
         "monotonic_ns", "created_utc"
     )
+    $readyStringBindings = [ordered]@{
+        schema = $outerInnerReadySchema
+        program = $program
+        case_id = "AV-BS1-CIRCLE-PRIMARY"
+        stage = "primary-h4-p0r"
+        internal_mode = $outerInternalModeName
+        observer_session_relative_path = [string]$Paths.session_relative_path
+        observer_nonce = $ObserverNonce
+        runner_relative_path = Get-RepositoryRelativePath $runnerScriptPath
+        runner_sha256 = $RunnerSha256
+        review_token_relative_path = Get-RepositoryRelativePath $reviewTokenPath
+        review_token_sha256 = $OriginalTokenSha256
+        review_token_id = [string]$CandidateToken.review_token_id
+        outer_observer_contract_sha256 = [string]$CandidateToken.outer_observer_contract_sha256
+        expected_terminal_seal_relative_path = [string]$CandidateToken.expected_terminal_seal_relative_path
+    }
     if (
         $null -eq $Ready -or
         -not (Test-ExactJsonFieldSet $Ready $fields) -or
+        -not (Test-ExactObjectStringBindings $Ready $readyStringBindings) -or
+        -not (Test-LowercaseHexString $Ready.observer_nonce 32) -or
+        -not (Test-LowercaseHexString $Ready.runner_sha256 64) -or
+        -not (Test-LowercaseHexString $Ready.review_token_sha256 64) -or
+        -not (Test-LowercaseHexString $Ready.review_token_id 32) -or
+        -not (Test-LowercaseHexString $Ready.outer_observer_contract_sha256 64) -or
         $Ready.schema -ne $outerInnerReadySchema -or
         $Ready.program -ne $program -or
         $Ready.case_id -ne "AV-BS1-CIRCLE-PRIMARY" -or
@@ -4547,16 +5148,16 @@ function Assert-QuarantinedFactorMonitorMarkerBindings(
     }
 
     $anyMarkerPresent = $monitorReadyPresent -or $factorCompletePresent -or $monitorReleasePresent
-    if ($Complete.temporary_attempt_cleanup_disposition -eq "removed") {
+    if (Test-OrdinalStringEqual $Complete.temporary_attempt_cleanup_disposition "removed") {
         if ($anyMarkerPresent) {
             throw ("BLOCKED_AV_BS_RESULT_SCHEMA: removed attempt evidence retains a factor-monitor marker hash: " + $ContextLabel)
         }
         return
     }
     if (
-        $Complete.temporary_attempt_cleanup_disposition -ne "quarantined" -or
+        -not (Test-OrdinalStringEqual $Complete.temporary_attempt_cleanup_disposition "quarantined") -or
         [string]::IsNullOrWhiteSpace([string]$Complete.attempt_evidence_relative_path) -or
-        [string]$Complete.attempt_evidence_relative_path -notmatch '^validation-output/av-bs1/quarantine/[0-9a-f]{32}-[0-9a-f]{32}$'
+        [string]$Complete.attempt_evidence_relative_path -cnotmatch '^validation-output/av-bs1/quarantine/[0-9a-f]{32}-[0-9a-f]{32}$'
     ) {
         throw ("BLOCKED_AV_BS_RESULT_SCHEMA: factor-monitor marker hashes lack canonical quarantined attempt evidence: " + $ContextLabel)
     }
@@ -4573,7 +5174,7 @@ function Assert-QuarantinedFactorMonitorMarkerBindings(
         $markerPath = [IO.Path]::GetFullPath((Join-Path $attemptPath ([string]$binding.leaf)))
         if (
             [IO.Path]::GetDirectoryName($markerPath).TrimEnd('\') -ne $attemptPath.TrimEnd('\') -or
-            [IO.Path]::GetFileName($markerPath) -cne [string]$binding.leaf
+            -not (Test-OrdinalStringEqual ([IO.Path]::GetFileName($markerPath)) $binding.leaf)
         ) {
             throw ("BLOCKED_AV_BS_RESULT_SCHEMA: factor-monitor marker path is not canonical: " + [string]$binding.field)
         }
@@ -4585,14 +5186,17 @@ function Assert-QuarantinedFactorMonitorMarkerBindings(
             continue
         }
         if (
-            [string]$expectedSha256 -notmatch '^[0-9a-f]{64}$' -or
+            -not (Test-LowercaseHexString $expectedSha256 64) -or
             -not (Test-Path -LiteralPath $markerPath -PathType Leaf)
         ) {
             throw ("BLOCKED_AV_BS_RESULT_SCHEMA: factor-monitor marker file/hash binding is invalid: " + [string]$binding.field)
         }
         $markerSha256Before = Get-Sha256 $markerPath
         $markerSha256After = Get-Sha256 $markerPath
-        if ($markerSha256Before -ne $expectedSha256 -or $markerSha256After -ne $expectedSha256) {
+        if (
+            -not (Test-OrdinalStringEqual $markerSha256Before $expectedSha256) -or
+            -not (Test-OrdinalStringEqual $markerSha256After $expectedSha256)
+        ) {
             throw ("BLOCKED_AV_BS_RESULT_SCHEMA: factor-monitor marker bytes changed: " + [string]$binding.field)
         }
     }
@@ -4647,9 +5251,37 @@ function Assert-OuterInnerCompleteMarker(
         "external_runner_or_machine_kill_terminal_state_guaranteed",
         "monotonic_ns", "completed_utc"
     )
+    $completeStringBindings = [ordered]@{
+        schema = $outerInnerCompleteSchema
+        program = $program
+        case_id = "AV-BS1-CIRCLE-PRIMARY"
+        stage = "primary-h4-p0r"
+        internal_mode = $outerInternalModeName
+        observer_session_relative_path = [string]$Paths.session_relative_path
+        observer_nonce = $ObserverNonce
+        runner_sha256 = $RunnerSha256
+        review_token_id = [string]$CandidateToken.review_token_id
+        original_review_token_sha256 = $OriginalTokenSha256
+        outer_observer_contract_sha256 = [string]$CandidateToken.outer_observer_contract_sha256
+        expected_terminal_seal_relative_path = [string]$CandidateToken.expected_terminal_seal_relative_path
+        inner_ready_relative_path = Get-RepositoryRelativePath $Paths.ready
+        inner_ready_sha256 = $ReadySha256
+        outer_start_release_relative_path = Get-RepositoryRelativePath $Paths.start_release
+        outer_start_release_sha256 = $StartReleaseSha256
+        outer_observer_handshake_prefix_sha256 = $HandshakePrefixSha256
+    }
     if (
         $null -eq $Complete -or
         -not (Test-ExactJsonFieldSet $Complete $fields) -or
+        -not (Test-ExactObjectStringBindings $Complete $completeStringBindings) -or
+        -not (Test-LowercaseHexString $Complete.observer_nonce 32) -or
+        -not (Test-LowercaseHexString $Complete.runner_sha256 64) -or
+        -not (Test-LowercaseHexString $Complete.review_token_id 32) -or
+        -not (Test-LowercaseHexString $Complete.original_review_token_sha256 64) -or
+        -not (Test-LowercaseHexString $Complete.outer_observer_contract_sha256 64) -or
+        -not (Test-LowercaseHexString $Complete.inner_ready_sha256 64) -or
+        -not (Test-LowercaseHexString $Complete.outer_start_release_sha256 64) -or
+        -not (Test-LowercaseHexString $Complete.outer_observer_handshake_prefix_sha256 64) -or
         $Complete.schema -ne $outerInnerCompleteSchema -or
         $Complete.program -ne $program -or
         $Complete.case_id -ne "AV-BS1-CIRCLE-PRIMARY" -or
@@ -4677,6 +5309,10 @@ function Assert-OuterInnerCompleteMarker(
         $Complete.intended_inner_exit_code -notin @(0, 2) -or
         $Complete.inner_exit_observed -isnot [bool] -or
         $Complete.inner_exit_observed -ne $false -or
+        -not (
+            (Test-OrdinalStringEqual $Complete.temporary_attempt_cleanup_disposition "removed") -or
+            (Test-OrdinalStringEqual $Complete.temporary_attempt_cleanup_disposition "quarantined")
+        ) -or
         $Complete.temporary_attempt_cleanup_disposition -notin @("removed", "quarantined") -or
         $Complete.terminal_evidence_complete -isnot [bool] -or
         $Complete.terminal_evidence_complete -ne $false -or
@@ -4747,7 +5383,7 @@ function Assert-OuterInnerCompleteMarker(
         "guard_canonical_sha256", "pre_exit_evidence_sha256",
         "final_control_plane_session_index_sha256", "tombstone_sha256"
     )) {
-        if ([string]$Complete.$field -notmatch '^[0-9a-f]{64}$') {
+        if (-not (Test-LowercaseHexString $Complete.$field 64)) {
             throw ("BLOCKED_AV_BS_RESULT_SCHEMA: inner completion hash is invalid: " + $field)
         }
     }
@@ -4758,7 +5394,7 @@ function Assert-OuterInnerCompleteMarker(
         "factor_prefix_one_sha256",
         "factor_prefix_two_sha256", "published_result_sha256"
     )) {
-        if ($null -ne $Complete.$field -and [string]$Complete.$field -notmatch '^[0-9a-f]{64}$') {
+        if ($null -ne $Complete.$field -and -not (Test-LowercaseHexString $Complete.$field 64)) {
             throw ("BLOCKED_AV_BS_RESULT_SCHEMA: optional inner completion hash is invalid: " + $field)
         }
     }
@@ -4766,9 +5402,9 @@ function Assert-OuterInnerCompleteMarker(
     $expectedClaimRelativePath = "validation-output/av-bs1/claims/" + [string]$CandidateToken.review_token_id + ".json"
     $expectedPreExitRelativePath = "validation-output/av-bs1/control-plane-pre-exit-evidence/" + [string]$CandidateToken.review_token_id + ".json"
     if (
-        [string]$Complete.claim_relative_path -cne $expectedClaimRelativePath -or
-        [string]$Complete.pre_exit_evidence_relative_path -cne $expectedPreExitRelativePath -or
-        [string]$Complete.final_control_plane_session_index_relative_path -notmatch '^validation-output/av-bs1/control-plane/session-[0-9a-f]{32}/session-index-[0-9]{4}\.json$'
+        -not (Test-OrdinalStringEqual $Complete.claim_relative_path $expectedClaimRelativePath) -or
+        -not (Test-OrdinalStringEqual $Complete.pre_exit_evidence_relative_path $expectedPreExitRelativePath) -or
+        [string]$Complete.final_control_plane_session_index_relative_path -cnotmatch '^validation-output/av-bs1/control-plane/session-[0-9a-f]{32}/session-index-[0-9]{4}\.json$'
     ) {
         throw "BLOCKED_AV_BS_RESULT_SCHEMA: inner completion canonical durable path mismatch"
     }
@@ -4786,8 +5422,18 @@ function Assert-OuterInnerCompleteMarker(
         throw "BLOCKED_AV_BS_RESULT_SCHEMA: inner completion durable provenance hash mismatch"
     }
     $claim = Read-BoundedJsonObject $claimPathCurrent
+    $claimStringBindings = [ordered]@{
+        review_token_id = [string]$CandidateToken.review_token_id
+        outer_observer_contract_sha256 = [string]$CandidateToken.outer_observer_contract_sha256
+        expected_terminal_seal_relative_path = [string]$CandidateToken.expected_terminal_seal_relative_path
+        outer_observer_handshake_prefix_sha256 = $HandshakePrefixSha256
+    }
     if (
         $null -eq $claim -or
+        -not (Test-ExactObjectStringBindings $claim $claimStringBindings) -or
+        -not (Test-LowercaseHexString $claim.review_token_id 32) -or
+        -not (Test-LowercaseHexString $claim.outer_observer_contract_sha256 64) -or
+        -not (Test-LowercaseHexString $claim.outer_observer_handshake_prefix_sha256 64) -or
         $claim.review_token_id -ne $CandidateToken.review_token_id -or
         $claim.outer_observer_contract_sha256 -ne $CandidateToken.outer_observer_contract_sha256 -or
         $claim.expected_terminal_seal_relative_path -ne $CandidateToken.expected_terminal_seal_relative_path -or
@@ -4801,8 +5447,40 @@ function Assert-OuterInnerCompleteMarker(
     $preExit = Read-BoundedJsonObject $preExitPathCurrent
     $currentTombstoneSha256 = Get-Sha256 $reviewTokenPath
     $currentTombstone = Read-BoundedJsonObject $reviewTokenPath
+    $preExitStringBindings = [ordered]@{
+        schema = $preExitControlPlaneEvidenceSchema
+        review_token_id = [string]$CandidateToken.review_token_id
+        original_review_token_sha256 = $OriginalTokenSha256
+        outer_observer_contract_sha256 = [string]$CandidateToken.outer_observer_contract_sha256
+        expected_terminal_seal_relative_path = [string]$CandidateToken.expected_terminal_seal_relative_path
+        outer_observer_handshake_prefix_sha256 = $HandshakePrefixSha256
+        claim_sha256 = [string]$Complete.claim_sha256
+        claim_canonical_sha256 = [string]$Complete.claim_canonical_sha256
+        guard_sha256 = [string]$Complete.guard_sha256
+        guard_canonical_sha256 = [string]$Complete.guard_canonical_sha256
+        tombstone_sha256 = [string]$Complete.tombstone_sha256
+    }
+    $currentTombstoneStringBindings = [ordered]@{
+        schema = [string]$Complete.tombstone_schema
+        authorization_state = "consumed"
+        outer_observer_contract_sha256 = [string]$CandidateToken.outer_observer_contract_sha256
+        outer_observer_handshake_prefix_sha256 = $HandshakePrefixSha256
+        expected_terminal_seal_relative_path = [string]$CandidateToken.expected_terminal_seal_relative_path
+        terminal_seal_state = "pending_outer_observed_inner_exit"
+    }
     if (
         $null -eq $preExit -or
+        -not (Test-ExactObjectStringBindings $preExit $preExitStringBindings) -or
+        -not (Test-ExactObjectStringBindings $currentTombstone $currentTombstoneStringBindings) -or
+        -not (Test-OrdinalStringEqual $Complete.pre_exit_evidence_schema $preExitControlPlaneEvidenceSchema) -or
+        -not (Test-OrdinalStringEqual $Complete.tombstone_relative_path (Get-RepositoryRelativePath $reviewTokenPath)) -or
+        -not (Test-LowercaseHexString $preExit.review_token_id 32) -or
+        -not (Test-LowercaseHexString $preExit.original_review_token_sha256 64) -or
+        -not (Test-LowercaseHexString $preExit.outer_observer_contract_sha256 64) -or
+        -not (Test-LowercaseHexString $preExit.outer_observer_handshake_prefix_sha256 64) -or
+        -not (Test-LowercaseHexString $preExit.tombstone_sha256 64) -or
+        -not (Test-LowercaseHexString $currentTombstone.outer_observer_contract_sha256 64) -or
+        -not (Test-LowercaseHexString $currentTombstone.outer_observer_handshake_prefix_sha256 64) -or
         $preExit.schema -ne $preExitControlPlaneEvidenceSchema -or
         $Complete.pre_exit_evidence_schema -ne $preExitControlPlaneEvidenceSchema -or
         $preExit.review_token_id -ne $CandidateToken.review_token_id -or
@@ -4850,14 +5528,14 @@ function Assert-OuterInnerCompleteMarker(
         @("factor_prefix_one_sha256", "factor_prefix_one_sha256"),
         @("factor_prefix_two_sha256", "factor_prefix_two_sha256")
     )) {
-        if ($Complete.($mapping[0]) -ne $preExit.($mapping[1])) {
+        if (-not (Test-OrdinalNullableStringEqual $Complete.($mapping[0]) $preExit.($mapping[1]))) {
             throw ("BLOCKED_AV_BS_RESULT_SCHEMA: inner completion artifact differs from pre-exit evidence: " + $mapping[0])
         }
     }
     if (
         $Complete.intended_inner_exit_code -eq 0 -and (
-            $Complete.provisional_inner_disposition -ne "provisional_pass_pending_outer_observed_exit" -or
-            $Complete.tombstone_schema -ne $tombstoneSchema -or
+            -not (Test-OrdinalStringEqual $Complete.provisional_inner_disposition "provisional_pass_pending_outer_observed_exit") -or
+            -not (Test-OrdinalStringEqual $Complete.tombstone_schema $tombstoneSchema) -or
             $preExit.normal_pass_outer_evidence_reconciliation_pass -ne $true -or
             $null -eq $Complete.resource_report_sha256 -or
             $null -eq $Complete.result_file_sha256 -or
@@ -4887,8 +5565,8 @@ function Assert-OuterInnerCompleteMarker(
             }
         }
         if (
-            $currentTombstone.attempt_status -ne "completed_pass" -or
-            $currentTombstone.effective_attempt_status -ne "completed_pass" -or
+            -not (Test-OrdinalStringEqual $currentTombstone.attempt_status "completed_pass") -or
+            -not (Test-OrdinalStringEqual $currentTombstone.effective_attempt_status "completed_pass") -or
             @($currentTombstone.failure_codes).Count -ne 0 -or
             @($currentTombstone.resource_gate_recheck_failures).Count -ne 0 -or
             @($currentTombstone.evidence_validation_errors).Count -ne 0 -or
@@ -4904,19 +5582,22 @@ function Assert-OuterInnerCompleteMarker(
     }
     if (
         $Complete.intended_inner_exit_code -eq 2 -and
-        $Complete.provisional_inner_disposition -ne "provisional_failure_pending_outer_observed_exit"
+        -not (Test-OrdinalStringEqual $Complete.provisional_inner_disposition "provisional_failure_pending_outer_observed_exit")
     ) {
         throw "BLOCKED_AV_BS_RESULT_SCHEMA: inner completion failure disposition mismatch"
     }
-    if ($Complete.temporary_attempt_cleanup_disposition -eq "removed" -and $null -ne $Complete.attempt_evidence_relative_path) {
+    if (
+        (Test-OrdinalStringEqual $Complete.temporary_attempt_cleanup_disposition "removed") -and
+        $null -ne $Complete.attempt_evidence_relative_path
+    ) {
         throw "BLOCKED_AV_BS_RESULT_SCHEMA: removed attempt evidence unexpectedly has a path"
     }
     if (($null -eq $Complete.published_result_relative_path) -ne ($null -eq $Complete.published_result_sha256)) {
         throw "BLOCKED_AV_BS_RESULT_SCHEMA: published result path/hash null-pair mismatch"
     }
-    if ($Complete.temporary_attempt_cleanup_disposition -eq "quarantined") {
+    if (Test-OrdinalStringEqual $Complete.temporary_attempt_cleanup_disposition "quarantined") {
         $expectedAttemptRelativePath = "validation-output/av-bs1/quarantine/" + [string]$CandidateToken.review_token_id + "-" + [string]$claim.guard_nonce
-        if ([string]$Complete.attempt_evidence_relative_path -cne $expectedAttemptRelativePath) {
+        if (-not (Test-OrdinalStringEqual $Complete.attempt_evidence_relative_path $expectedAttemptRelativePath)) {
             throw "BLOCKED_AV_BS_RESULT_SCHEMA: quarantined attempt evidence path mismatch"
         }
         $attemptPath = Resolve-RepositoryRelativePath ([string]$Complete.attempt_evidence_relative_path)
@@ -4926,15 +5607,15 @@ function Assert-OuterInnerCompleteMarker(
     }
     Assert-QuarantinedFactorMonitorMarkerBindings $Complete "outer inner-complete"
     if ($null -ne $Complete.published_result_relative_path) {
-        if ([string]$Complete.published_result_relative_path -notmatch '^validation-output/av-bs1/av-bs1-primary-h4-p0r-[0-9]{8}T[0-9]{6}Z\.json$') {
+        if ([string]$Complete.published_result_relative_path -cnotmatch '^validation-output/av-bs1/av-bs1-primary-h4-p0r-[0-9]{8}T[0-9]{6}Z\.json$') {
             throw "BLOCKED_AV_BS_RESULT_SCHEMA: published result path is not canonical"
         }
         $publishedPath = Resolve-RepositoryRelativePath ([string]$Complete.published_result_relative_path)
         if (
             -not (Test-Path -LiteralPath $publishedPath -PathType Leaf) -or
-            (Get-Sha256 $publishedPath) -ne $Complete.published_result_sha256 -or
+            -not (Test-OrdinalStringEqual (Get-Sha256 $publishedPath) $Complete.published_result_sha256) -or
             $null -eq $Complete.result_file_sha256 -or
-            $Complete.published_result_sha256 -ne $Complete.result_file_sha256
+            -not (Test-OrdinalStringEqual $Complete.published_result_sha256 $Complete.result_file_sha256)
         ) {
             throw "BLOCKED_AV_BS_RESULT_SCHEMA: published result binding mismatch"
         }
@@ -4945,14 +5626,14 @@ function Assert-OuterInnerCompleteMarker(
         ) {
             throw "BLOCKED_AV_BS_RESULT_SCHEMA: published result wrapper is invalid"
         }
-        if ($publishedWrapper.payload.schema -eq "AV-BS1-h4-p0r-result-v2") {
+        if (Test-OrdinalStringEqual $publishedWrapper.payload.schema "AV-BS1-h4-p0r-result-v2") {
             if (
-                $publishedWrapper.payload.outer_observer_contract_sha256 -ne $CandidateToken.outer_observer_contract_sha256 -or
-                $publishedWrapper.payload.outer_observer_handshake_prefix_sha256 -ne $HandshakePrefixSha256 -or
-                $publishedWrapper.payload.expected_terminal_seal_relative_path -ne $CandidateToken.expected_terminal_seal_relative_path -or
+                -not (Test-OrdinalStringEqual $publishedWrapper.payload.outer_observer_contract_sha256 $CandidateToken.outer_observer_contract_sha256) -or
+                -not (Test-OrdinalStringEqual $publishedWrapper.payload.outer_observer_handshake_prefix_sha256 $HandshakePrefixSha256) -or
+                -not (Test-OrdinalStringEqual $publishedWrapper.payload.expected_terminal_seal_relative_path $CandidateToken.expected_terminal_seal_relative_path) -or
                 $publishedWrapper.payload.terminal_seal_required_for_authoritative_disposition -isnot [bool] -or
                 $publishedWrapper.payload.terminal_seal_required_for_authoritative_disposition -ne $true -or
-                $publishedWrapper.payload.terminal_seal_state -ne "pending_outer_observed_inner_exit" -or
+                -not (Test-OrdinalStringEqual $publishedWrapper.payload.terminal_seal_state "pending_outer_observed_inner_exit") -or
                 $publishedWrapper.payload.terminal_evidence_complete -isnot [bool] -or
                 $publishedWrapper.payload.terminal_evidence_complete -ne $false -or
                 $publishedWrapper.payload.authoritative_stage_pass -isnot [bool] -or
@@ -4961,15 +5642,15 @@ function Assert-OuterInnerCompleteMarker(
                 throw "BLOCKED_AV_BS_RESULT_SCHEMA: published result-v2 terminal bindings are invalid"
             }
         }
-        elseif ($publishedWrapper.payload.schema -ne "AV-BS1-h4-p0r-failure-v1") {
+        elseif (-not (Test-OrdinalStringEqual $publishedWrapper.payload.schema "AV-BS1-h4-p0r-failure-v1")) {
             throw "BLOCKED_AV_BS_RESULT_SCHEMA: published result schema is invalid"
         }
         if (
             $Complete.intended_inner_exit_code -eq 0 -and (
-                $publishedWrapper.payload.schema -ne "AV-BS1-h4-p0r-result-v2" -or
+                -not (Test-OrdinalStringEqual $publishedWrapper.payload.schema "AV-BS1-h4-p0r-result-v2") -or
                 $publishedWrapper.payload.mandatory_stage_pass -isnot [bool] -or
                 $publishedWrapper.payload.mandatory_stage_pass -ne $true -or
-                $publishedWrapper.payload_sha256 -ne $currentTombstone.consumed_result_payload_sha256 -or
+                -not (Test-OrdinalStringEqual $publishedWrapper.payload_sha256 $currentTombstone.consumed_result_payload_sha256) -or
                 -not (Test-StrictJsonValueEqual $publishedWrapper.payload $currentTombstone.result_evidence)
             )
         ) {
@@ -5237,7 +5918,16 @@ function Assert-OuterTerminalSealSourcesCurrent(
     [int64]$StderrBytes,
     [string]$StderrSha256
 ) {
-    if ((Get-Sha256 $runnerScriptPath) -ne $RunnerSha256) {
+    foreach ($requiredSealSourceHash in @(
+        $RunnerSha256, $ReadySha256, $StartReleaseSha256, $CompleteSha256,
+        $ExitReleaseSha256, $EnvelopeCloseRawSha256,
+        $EnvelopeCloseCanonicalSha256, $StdoutSha256, $StderrSha256
+    )) {
+        if (-not (Test-LowercaseHexString $requiredSealSourceHash 64)) {
+            throw "BLOCKED_AV_BS_RESULT_SCHEMA: terminal seal source hash is not lowercase canonical SHA-256"
+        }
+    }
+    if (-not (Test-OrdinalStringEqual (Get-Sha256 $runnerScriptPath) $RunnerSha256)) {
         throw "BLOCKED_AV_BS_RESULT_SCHEMA: runner bytes changed before terminal seal"
     }
     Assert-QuarantinedFactorMonitorMarkerBindings $ExpectedComplete "outer terminal seal source current-byte recheck"
@@ -5254,8 +5944,8 @@ function Assert-OuterTerminalSealSourcesCurrent(
         $currentValue = Read-BoundedJsonObject $resolvedPath
         $afterSha256 = Get-Sha256 $resolvedPath
         if (
-            $beforeSha256 -ne [string]$binding.sha256 -or
-            $afterSha256 -ne [string]$binding.sha256 -or
+            -not (Test-OrdinalStringEqual $beforeSha256 $binding.sha256) -or
+            -not (Test-OrdinalStringEqual $afterSha256 $binding.sha256) -or
             $null -eq $currentValue -or
             -not (Test-StrictJsonValueEqual $currentValue $binding.value)
         ) {
@@ -5269,8 +5959,8 @@ function Assert-OuterTerminalSealSourcesCurrent(
     $finalIndexSha256After = Get-Sha256 $finalIndexPath
     if (
         $null -eq $finalIndexValue -or
-        $finalIndexSha256Before -ne [string]$ExpectedComplete.final_control_plane_session_index_sha256 -or
-        $finalIndexSha256After -ne [string]$ExpectedComplete.final_control_plane_session_index_sha256
+        -not (Test-OrdinalStringEqual $finalIndexSha256Before $ExpectedComplete.final_control_plane_session_index_sha256) -or
+        -not (Test-OrdinalStringEqual $finalIndexSha256After $ExpectedComplete.final_control_plane_session_index_sha256)
     ) {
         throw "BLOCKED_AV_BS_RESULT_SCHEMA: final control-plane index changed before terminal seal"
     }
@@ -5281,6 +5971,14 @@ function Assert-OuterTerminalSealSourcesCurrent(
     $currentPreExit = Read-BoundedJsonObject $preExitPathCurrent
     $preExitSha256After = Get-Sha256 $preExitPathCurrent
     $currentTombstone = Read-BoundedJsonObject $reviewTokenPath
+    $terminalTombstoneStringBindings = [ordered]@{
+        schema = [string]$ExpectedComplete.tombstone_schema
+        consumed_review_token_id = [string]$ExpectedComplete.review_token_id
+        outer_observer_contract_sha256 = [string]$ExpectedComplete.outer_observer_contract_sha256
+        outer_observer_handshake_prefix_sha256 = [string]$ExpectedComplete.outer_observer_handshake_prefix_sha256
+        expected_terminal_seal_relative_path = [string]$ExpectedComplete.expected_terminal_seal_relative_path
+        terminal_seal_state = "pending_outer_observed_inner_exit"
+    }
     if (
         -not (Test-Path -LiteralPath $claimPathCurrent -PathType Leaf) -or
         (Get-Sha256 $claimPathCurrent) -ne [string]$ExpectedComplete.claim_sha256 -or
@@ -5291,6 +5989,10 @@ function Assert-OuterTerminalSealSourcesCurrent(
         $currentPreExit.terminal_evidence_complete -isnot [bool] -or
         $currentPreExit.terminal_evidence_complete -ne $false -or
         $null -eq $currentTombstone -or
+        -not (Test-ExactObjectStringBindings $currentTombstone $terminalTombstoneStringBindings) -or
+        -not (Test-LowercaseHexString $currentTombstone.consumed_review_token_id 32) -or
+        -not (Test-LowercaseHexString $currentTombstone.outer_observer_contract_sha256 64) -or
+        -not (Test-LowercaseHexString $currentTombstone.outer_observer_handshake_prefix_sha256 64) -or
         (Get-Sha256 $reviewTokenPath) -ne [string]$ExpectedComplete.tombstone_sha256 -or
         $currentTombstone.schema -ne $ExpectedComplete.tombstone_schema -or
         $currentTombstone.consumed_review_token_id -ne $ExpectedComplete.review_token_id -or
@@ -5312,7 +6014,7 @@ function Assert-OuterTerminalSealSourcesCurrent(
         "factor_complete_marker_sha256",
         "monitor_release_marker_sha256"
     )) {
-        if ($currentPreExit.$markerHashField -ne $ExpectedComplete.$markerHashField) {
+        if (-not (Test-OrdinalNullableStringEqual $currentPreExit.$markerHashField $ExpectedComplete.$markerHashField)) {
             throw ("BLOCKED_AV_BS_RESULT_SCHEMA: outer terminal pre-exit/complete marker binding changed: " + $markerHashField)
         }
     }
@@ -5321,10 +6023,10 @@ function Assert-OuterTerminalSealSourcesCurrent(
         $currentPreExit.consumer_control_gate_pass -is [bool] -and
         $currentPreExit.consumer_report_relative_path -is [string] -and
         -not [string]::IsNullOrWhiteSpace([string]$currentPreExit.consumer_report_relative_path) -and
-        [string]$currentPreExit.consumer_report_sha256 -match '^[0-9a-f]{64}$' -and
+        (Test-LowercaseHexString $currentPreExit.consumer_report_sha256 64) -and
         $currentPreExit.consumer_envelope_close_relative_path -is [string] -and
         -not [string]::IsNullOrWhiteSpace([string]$currentPreExit.consumer_envelope_close_relative_path) -and
-        [string]$currentPreExit.consumer_envelope_close_sha256 -match '^[0-9a-f]{64}$'
+        (Test-LowercaseHexString $currentPreExit.consumer_envelope_close_sha256 64)
     )
     if (-not $consumerTerminalReferenceComplete) {
         throw "BLOCKED_AV_BS_RESULT_SCHEMA: token-consumer control report/close reference is missing; terminal seal withheld"
@@ -5342,12 +6044,26 @@ function Assert-OuterTerminalSealSourcesCurrent(
     $consumerEnvelopeCloseCurrent = Read-BoundedJsonObject $consumerEnvelopeClosePathCurrent
     $consumerReportSha256After = Get-Sha256 $consumerReportPathCurrent
     $consumerEnvelopeCloseSha256After = Get-Sha256 $consumerEnvelopeClosePathCurrent
+    $consumerEnvelopeStringBindings = [ordered]@{
+        schema = $controlPlaneEnvelopeCloseSchema
+        operation = "token_consumer"
+        report_path = $consumerReportPathCurrent
+        report_sha256 = [string]$currentPreExit.consumer_report_sha256
+    }
+    $finalIndexStringBindings = [ordered]@{
+        schema = "AV-BS1-h4-p0r-control-plane-session-index-v1"
+        index_role = "final_binds_resource_envelope_close"
+        envelope_close_path = $consumerEnvelopeClosePathCurrent
+        envelope_close_sha256 = [string]$currentPreExit.consumer_envelope_close_sha256
+    }
     if (
-        $consumerReportSha256Before -ne [string]$currentPreExit.consumer_report_sha256 -or
-        $consumerReportSha256After -ne [string]$currentPreExit.consumer_report_sha256 -or
-        $consumerEnvelopeCloseSha256Before -ne [string]$currentPreExit.consumer_envelope_close_sha256 -or
-        $consumerEnvelopeCloseSha256After -ne [string]$currentPreExit.consumer_envelope_close_sha256 -or
+        -not (Test-OrdinalStringEqual $consumerReportSha256Before $currentPreExit.consumer_report_sha256) -or
+        -not (Test-OrdinalStringEqual $consumerReportSha256After $currentPreExit.consumer_report_sha256) -or
+        -not (Test-OrdinalStringEqual $consumerEnvelopeCloseSha256Before $currentPreExit.consumer_envelope_close_sha256) -or
+        -not (Test-OrdinalStringEqual $consumerEnvelopeCloseSha256After $currentPreExit.consumer_envelope_close_sha256) -or
         $null -eq $consumerEnvelopeCloseCurrent -or
+        -not (Test-ExactObjectStringBindings $consumerEnvelopeCloseCurrent $consumerEnvelopeStringBindings) -or
+        -not (Test-ExactObjectStringBindings $finalIndexValue $finalIndexStringBindings) -or
         $consumerEnvelopeCloseCurrent.schema -ne $controlPlaneEnvelopeCloseSchema -or
         $consumerEnvelopeCloseCurrent.operation -ne "token_consumer" -or
         $consumerEnvelopeCloseCurrent.report_path -ne $consumerReportPathCurrent -or
@@ -5371,9 +6087,9 @@ function Assert-OuterTerminalSealSourcesCurrent(
         $publishedPath = Resolve-RepositoryRelativePath ([string]$ExpectedComplete.published_result_relative_path)
         if (
             -not (Test-Path -LiteralPath $publishedPath -PathType Leaf) -or
-            (Get-Sha256 $publishedPath) -ne [string]$ExpectedComplete.published_result_sha256 -or
+            -not (Test-OrdinalStringEqual (Get-Sha256 $publishedPath) $ExpectedComplete.published_result_sha256) -or
             $null -eq $ExpectedComplete.result_file_sha256 -or
-            $ExpectedComplete.published_result_sha256 -ne $ExpectedComplete.result_file_sha256
+            -not (Test-OrdinalStringEqual $ExpectedComplete.published_result_sha256 $ExpectedComplete.result_file_sha256)
         ) {
             throw "BLOCKED_AV_BS_RESULT_SCHEMA: outer terminal published result source changed"
         }
@@ -5381,20 +6097,21 @@ function Assert-OuterTerminalSealSourcesCurrent(
         if (
             $null -eq $publishedWrapper -or
             -not (Test-ExactJsonFieldSet $publishedWrapper @("payload", "payload_sha256")) -or
-            $publishedWrapper.payload.schema -notin @(
-                "AV-BS1-h4-p0r-result-v2", "AV-BS1-h4-p0r-failure-v1"
+            -not (
+                (Test-OrdinalStringEqual $publishedWrapper.payload.schema "AV-BS1-h4-p0r-result-v2") -or
+                (Test-OrdinalStringEqual $publishedWrapper.payload.schema "AV-BS1-h4-p0r-failure-v1")
             )
         ) {
             throw "BLOCKED_AV_BS_RESULT_SCHEMA: outer terminal published result wrapper changed"
         }
-        if ($publishedWrapper.payload.schema -eq "AV-BS1-h4-p0r-result-v2") {
+        if (Test-OrdinalStringEqual $publishedWrapper.payload.schema "AV-BS1-h4-p0r-result-v2") {
             if (
-                $publishedWrapper.payload.outer_observer_contract_sha256 -ne $ExpectedComplete.outer_observer_contract_sha256 -or
-                $publishedWrapper.payload.outer_observer_handshake_prefix_sha256 -ne $ExpectedComplete.outer_observer_handshake_prefix_sha256 -or
-                $publishedWrapper.payload.expected_terminal_seal_relative_path -ne $ExpectedComplete.expected_terminal_seal_relative_path -or
+                -not (Test-OrdinalStringEqual $publishedWrapper.payload.outer_observer_contract_sha256 $ExpectedComplete.outer_observer_contract_sha256) -or
+                -not (Test-OrdinalStringEqual $publishedWrapper.payload.outer_observer_handshake_prefix_sha256 $ExpectedComplete.outer_observer_handshake_prefix_sha256) -or
+                -not (Test-OrdinalStringEqual $publishedWrapper.payload.expected_terminal_seal_relative_path $ExpectedComplete.expected_terminal_seal_relative_path) -or
                 $publishedWrapper.payload.terminal_seal_required_for_authoritative_disposition -isnot [bool] -or
                 $publishedWrapper.payload.terminal_seal_required_for_authoritative_disposition -ne $true -or
-                $publishedWrapper.payload.terminal_seal_state -ne "pending_outer_observed_inner_exit" -or
+                -not (Test-OrdinalStringEqual $publishedWrapper.payload.terminal_seal_state "pending_outer_observed_inner_exit") -or
                 $publishedWrapper.payload.terminal_evidence_complete -isnot [bool] -or
                 $publishedWrapper.payload.terminal_evidence_complete -ne $false -or
                 $publishedWrapper.payload.authoritative_stage_pass -isnot [bool] -or
@@ -5405,10 +6122,10 @@ function Assert-OuterTerminalSealSourcesCurrent(
         }
         if (
             $ExpectedComplete.intended_inner_exit_code -eq 0 -and (
-                $publishedWrapper.payload.schema -ne "AV-BS1-h4-p0r-result-v2" -or
+                -not (Test-OrdinalStringEqual $publishedWrapper.payload.schema "AV-BS1-h4-p0r-result-v2") -or
                 $publishedWrapper.payload.mandatory_stage_pass -isnot [bool] -or
                 $publishedWrapper.payload.mandatory_stage_pass -ne $true -or
-                $publishedWrapper.payload_sha256 -ne $currentTombstone.consumed_result_payload_sha256 -or
+                -not (Test-OrdinalStringEqual $publishedWrapper.payload_sha256 $currentTombstone.consumed_result_payload_sha256) -or
                 -not (Test-StrictJsonValueEqual $publishedWrapper.payload $currentTombstone.result_evidence)
             )
         ) {
@@ -5429,10 +6146,10 @@ function Assert-OuterTerminalSealSourcesCurrent(
     if (
         $null -eq $envelopeCurrent -or
         -not (Test-StrictJsonValueEqual $envelopeCurrent $ExpectedEnvelopeClose) -or
-        $envelopeRawSha256Before -ne $EnvelopeCloseRawSha256 -or
-        $envelopeRawSha256After -ne $EnvelopeCloseRawSha256 -or
-        (Get-Utf8TextSha256 $envelopeText) -ne $EnvelopeCloseCanonicalSha256 -or
-        $envelopeCurrent.schema -ne $outerObserverEnvelopeCloseSchema -or
+        -not (Test-OrdinalStringEqual $envelopeRawSha256Before $EnvelopeCloseRawSha256) -or
+        -not (Test-OrdinalStringEqual $envelopeRawSha256After $EnvelopeCloseRawSha256) -or
+        -not (Test-OrdinalStringEqual (Get-Utf8TextSha256 $envelopeText) $EnvelopeCloseCanonicalSha256) -or
+        -not (Test-OrdinalStringEqual $envelopeCurrent.schema $outerObserverEnvelopeCloseSchema) -or
         $envelopeCurrent.raw_bytes_are_canonical_json -isnot [bool] -or
         $envelopeCurrent.raw_bytes_are_canonical_json -ne $true -or
         $envelopeCurrent.mandatory_outer_resource_gate_pass -isnot [bool] -or
@@ -5456,8 +6173,8 @@ function Assert-OuterTerminalSealSourcesCurrent(
             $sizeBefore -ne [int64]$stream.bytes -or
             $sizeAfter -ne [int64]$stream.bytes -or
             $sizeAfter -gt 16MB -or
-            $sha256Before -ne [string]$stream.sha256 -or
-            $sha256After -ne [string]$stream.sha256
+            -not (Test-OrdinalStringEqual $sha256Before $stream.sha256) -or
+            -not (Test-OrdinalStringEqual $sha256After $stream.sha256)
         ) {
             throw ("BLOCKED_AV_BS_RESULT_SCHEMA: outer inner stream changed: " + [string]$stream.label)
         }
@@ -5521,15 +6238,33 @@ function Invoke-OuterObserverPrimary {
         throw "BLOCKED_AV_BS_RESULT_SCHEMA: public dispatcher token changed during capture"
     }
     $candidateToken = Read-BoundedJsonObject $reviewTokenPath
+    $expectedCandidateSealRelativePath = (
+        "validation-output/av-bs1/outer-observer-terminal-seals/" +
+        [string]$candidateToken.review_token_id + ".json"
+    )
+    $candidateTokenStringBindings = [ordered]@{
+        schema = "AV-BS1-h4-p0r-review-token-v1"
+        program = $program
+        case_id = "AV-BS1-CIRCLE-PRIMARY"
+        authorized_stage = "primary-h4-p0r"
+        authorization_state = "authorized"
+        review_disposition = "approved_h4_p0r_factor_only"
+        runner_sha256 = $runnerSha256
+        expected_terminal_seal_relative_path = $expectedCandidateSealRelativePath
+    }
     if (
         $null -eq $candidateToken -or
+        -not (Test-ExactObjectStringBindings $candidateToken $candidateTokenStringBindings) -or
+        -not (Test-LowercaseHexString $candidateToken.review_token_id 32) -or
+        -not (Test-LowercaseHexString $candidateToken.runner_sha256 64) -or
+        -not (Test-LowercaseHexString $candidateToken.outer_observer_contract_sha256 64) -or
         $candidateToken.schema -ne "AV-BS1-h4-p0r-review-token-v1" -or
         $candidateToken.authorization_state -ne "authorized" -or
         $candidateToken.uses_remaining -isnot [int] -or
         $candidateToken.uses_remaining -ne 1 -or
-        [string]$candidateToken.review_token_id -notmatch '^[0-9a-f]{32}$' -or
+        [string]$candidateToken.review_token_id -cnotmatch '^[0-9a-f]{32}$' -or
         $candidateToken.runner_sha256 -ne $runnerSha256 -or
-        [string]$candidateToken.outer_observer_contract_sha256 -notmatch '^[0-9a-f]{64}$' -or
+        [string]$candidateToken.outer_observer_contract_sha256 -cnotmatch '^[0-9a-f]{64}$' -or
         $candidateToken.terminal_seal_required_for_authoritative_disposition -isnot [bool] -or
         $candidateToken.terminal_seal_required_for_authoritative_disposition -ne $true
     ) {
@@ -5991,13 +6726,13 @@ function Invoke-OuterObserverPrimary {
                 $claimCandidate.claim_relative_path -eq $expectedClaimRelativePath -and
                 $claimCandidate.review_token_id -eq $candidateToken.review_token_id -and
                 $claimCandidate.review_token_sha256 -eq $originalTokenSha256 -and
-                [string]$claimCandidate.review_token_canonical_sha256 -match '^[0-9a-f]{64}$' -and
-                [string]$claimCandidate.review_binding_sha256 -match '^[0-9a-f]{64}$' -and
+                [string]$claimCandidate.review_token_canonical_sha256 -cmatch '^[0-9a-f]{64}$' -and
+                [string]$claimCandidate.review_binding_sha256 -cmatch '^[0-9a-f]{64}$' -and
                 $claimCandidate.fixture_sha256 -eq $candidateToken.fixture_sha256 -and
                 $claimCandidate.runner_sha256 -eq $runnerSha256 -and
                 $claimCandidate.p0r_preregistration_commit -eq $candidateToken.p0r_preregistration_commit -and
-                [string]$claimCandidate.git_head -match '^[0-9a-f]{40}$' -and
-                [string]$claimCandidate.preflight_payload_sha256 -match '^[0-9a-f]{64}$' -and
+                [string]$claimCandidate.git_head -cmatch '^[0-9a-f]{40}$' -and
+                [string]$claimCandidate.preflight_payload_sha256 -cmatch '^[0-9a-f]{64}$' -and
                 $claimCandidate.manifest_payload_sha256 -eq $candidateToken.manifest_payload_sha256 -and
                 $claimCandidate.matrix_contract_sha256 -eq $candidateToken.matrix_contract_sha256 -and
                 $claimCandidate.resource_policy_sha256 -eq $candidateToken.resource_policy_sha256 -and
@@ -6013,7 +6748,7 @@ function Invoke-OuterObserverPrimary {
                 $claimCandidate.parent_pid -is [int] -and
                 $claimCandidate.parent_pid -eq $innerProcessId -and
                 $claimCandidate.parent_pid_birth_utc_ticks -eq $innerBirthTicks -and
-                [string]$claimCandidate.guard_nonce -match '^[0-9a-f]{32}$'
+                [string]$claimCandidate.guard_nonce -cmatch '^[0-9a-f]{32}$'
             )
             if (Test-Path -LiteralPath $reviewTokenPath -PathType Leaf) {
                 $currentTokenItem = Get-Item -LiteralPath $reviewTokenPath
@@ -6155,8 +6890,8 @@ function Invoke-OuterObserverPrimary {
         $cleanupVerified -and $sampleCount -ge 2 -and $innerVisibleSampleCount -ge 2 -and
         $null -ne $finalStdoutBytes -and $null -ne $finalStderrBytes -and
         $finalStdoutBytes -le 16MB -and $finalStderrBytes -le 16MB -and
-        [string]$finalStdoutSha256 -match '^[0-9a-f]{64}$' -and
-        [string]$finalStderrSha256 -match '^[0-9a-f]{64}$' -and
+        [string]$finalStdoutSha256 -cmatch '^[0-9a-f]{64}$' -and
+        [string]$finalStderrSha256 -cmatch '^[0-9a-f]{64}$' -and
         $highPrePostFloorsPass -and
         $wallElapsedNanoseconds -le ([int64]$wallStopSeconds * 1000000000L) -and
         $peak.tree_working_set_bytes -le $treeWorkingSetStop -and
@@ -6327,14 +7062,36 @@ function Invoke-OuterObserverPrimary {
     $preExitSha256 = Get-Sha256 $preExitPath
     if (
         $null -eq $currentTombstone -or
-        $currentTombstoneSha256 -ne $currentComplete.tombstone_sha256 -or
-        $currentTombstone.schema -ne $currentComplete.tombstone_schema -or
-        $preExitSha256 -ne $currentComplete.pre_exit_evidence_sha256
+        -not (Test-OrdinalStringEqual $currentTombstoneSha256 $currentComplete.tombstone_sha256) -or
+        -not (Test-OrdinalStringEqual $currentTombstone.schema $currentComplete.tombstone_schema) -or
+        -not (Test-OrdinalStringEqual $preExitSha256 $currentComplete.pre_exit_evidence_sha256)
     ) {
         throw "BLOCKED_AV_BS_RESULT_SCHEMA: terminal seal source evidence changed after close"
     }
     $currentPreExit = Read-BoundedJsonObject $preExitPath
+    $provisionalTombstoneStringBindings = [ordered]@{
+        schema = $tombstoneSchema
+        attempt_status = "completed_pass"
+        effective_attempt_status = "completed_pass"
+        outer_observer_contract_sha256 = [string]$candidateToken.outer_observer_contract_sha256
+        outer_observer_handshake_prefix_sha256 = $handshakePrefixSha256
+        expected_terminal_seal_relative_path = $sealPathInfo.relative_path
+        terminal_seal_state = "pending_outer_observed_inner_exit"
+    }
+    $provisionalResultStringBindings = [ordered]@{
+        schema = "AV-BS1-h4-p0r-result-v2"
+        outer_observer_contract_sha256 = [string]$candidateToken.outer_observer_contract_sha256
+        outer_observer_handshake_prefix_sha256 = $handshakePrefixSha256
+        expected_terminal_seal_relative_path = $sealPathInfo.relative_path
+        terminal_seal_state = "pending_outer_observed_inner_exit"
+    }
     $tombstoneProvisionalSuccess = (
+        (Test-ExactObjectStringBindings $currentTombstone $provisionalTombstoneStringBindings) -and
+        (Test-ExactObjectStringBindings $currentTombstone.result_evidence $provisionalResultStringBindings) -and
+        (Test-LowercaseHexString $currentTombstone.outer_observer_contract_sha256 64) -and
+        (Test-LowercaseHexString $currentTombstone.outer_observer_handshake_prefix_sha256 64) -and
+        (Test-LowercaseHexString $currentTombstone.result_evidence.outer_observer_contract_sha256 64) -and
+        (Test-LowercaseHexString $currentTombstone.result_evidence.outer_observer_handshake_prefix_sha256 64) -and
         $currentTombstone.schema -eq $tombstoneSchema -and
         $currentTombstone.attempt_status -eq "completed_pass" -and
         $currentTombstone.effective_attempt_status -eq "completed_pass" -and
@@ -6380,7 +7137,7 @@ function Invoke-OuterObserverPrimary {
         $currentTombstone.result_evidence.authoritative_stage_pass -eq $false -and
         $currentComplete.published_result_relative_path -is [string] -and
         $currentComplete.published_result_sha256 -is [string] -and
-        $currentComplete.result_file_sha256 -eq $currentComplete.published_result_sha256
+        (Test-OrdinalStringEqual $currentComplete.result_file_sha256 $currentComplete.published_result_sha256)
     )
     $authoritativeStagePass = (
         $mandatoryOuterGate -and
@@ -6479,10 +7236,19 @@ function Invoke-OuterObserverPrimary {
         $sealReadback = Read-BoundedJsonObject $sealPathInfo.path
         $sealJson = $seal | ConvertTo-Json -Depth 16 -Compress
         $sealReadbackJson = if ($null -ne $sealReadback) { $sealReadback | ConvertTo-Json -Depth 16 -Compress } else { $null }
-        if (
+        $sealStringBindings = [ordered]@{}
+        foreach ($sealEntry in $seal.GetEnumerator()) {
+            if ($sealEntry.Value -is [string]) {
+                $sealStringBindings[[string]$sealEntry.Key] = [string]$sealEntry.Value
+            }
+        }
+    if (
         $null -eq $sealReadback -or
         -not (Test-ExactJsonFieldSet $sealReadback @($seal.Keys)) -or
-        $sealReadbackJson -cne $sealJson -or
+        -not (Test-ExactObjectStringBindings $sealReadback $sealStringBindings) -or
+        -not (Test-LowercaseHexString $sealReadback.review_token_id 32) -or
+        -not (Test-LowercaseHexString $sealReadback.observer_nonce 32) -or
+        -not [System.StringComparer]::Ordinal.Equals($sealReadbackJson, $sealJson) -or
         $sealReadback.schema -ne $outerTerminalSealSchema -or
         $sealReadback.inner_exit_observed -isnot [bool] -or
         $sealReadback.inner_exit_observed -ne $true -or
@@ -6519,9 +7285,9 @@ function Invoke-OuterObserverPrimary {
             if (
                 ($null -ne $sealReadback.$markerSealHashField -and (
                     $sealReadback.$markerSealHashField -isnot [string] -or
-                    [string]$sealReadback.$markerSealHashField -notmatch '^[0-9a-f]{64}$'
+                    -not (Test-LowercaseHexString $sealReadback.$markerSealHashField 64)
                 )) -or
-                $sealReadback.$markerSealHashField -ne $currentComplete.$markerSealHashField
+                -not (Test-OrdinalNullableStringEqual $sealReadback.$markerSealHashField $currentComplete.$markerSealHashField)
             ) {
                 throw ("BLOCKED_AV_BS_RESULT_SCHEMA: outer terminal seal factor-monitor marker binding mismatch: " + $markerSealHashField)
             }
@@ -6544,7 +7310,7 @@ function Invoke-OuterObserverPrimary {
             )) {
                 if (
                     $sealReadback.$requiredPassSealHash -isnot [string] -or
-                    $sealReadback.$requiredPassSealHash -notmatch '^[0-9a-f]{64}$'
+                    -not (Test-LowercaseHexString $sealReadback.$requiredPassSealHash 64)
                 ) {
                     throw ("BLOCKED_AV_BS_RESULT_SCHEMA: outer pass seal lacks mandatory artifact hash: " + $requiredPassSealHash)
                 }
@@ -6750,8 +7516,10 @@ Write-AtomicUtf8NoBom $controlPlaneCanonicalHashPath $controlPlaneCanonicalHashS
 $candidateScopeToken = Read-BoundedJsonObject $reviewTokenPath
 if (
     $null -eq $candidateScopeToken -or
+    -not (Test-OrdinalStringEqual $candidateScopeToken.schema "AV-BS1-h4-p0r-review-token-v1") -or
+    -not (Test-LowercaseHexString $candidateScopeToken.execution_resource_scope_sha256 64) -or
     $candidateScopeToken.schema -ne "AV-BS1-h4-p0r-review-token-v1" -or
-    [string]$candidateScopeToken.execution_resource_scope_sha256 -notmatch '^[0-9a-f]{64}$'
+    [string]$candidateScopeToken.execution_resource_scope_sha256 -cnotmatch '^[0-9a-f]{64}$'
 ) {
     throw "BLOCKED_AV_BS_RESULT_SCHEMA: candidate review token lacks a reportable execution scope"
 }
@@ -6767,11 +7535,11 @@ $preflightInvocation = Invoke-ControlPlanePython `
     -AttemptArtifactPaths ([ordered]@{ review_token = $reviewTokenPath })
 if (
     [string]::IsNullOrWhiteSpace([string]$preflightInvocation.report_path) -or
-    [string]$preflightInvocation.report_sha256 -notmatch '^[0-9a-f]{64}$' -or
+    -not (Test-LowercaseHexString $preflightInvocation.report_sha256 64) -or
     [string]::IsNullOrWhiteSpace([string]$preflightInvocation.session_index_path) -or
-    [string]$preflightInvocation.session_index_sha256 -notmatch '^[0-9a-f]{64}$' -or
+    -not (Test-LowercaseHexString $preflightInvocation.session_index_sha256 64) -or
     [string]::IsNullOrWhiteSpace([string]$preflightInvocation.envelope_close_path) -or
-    [string]$preflightInvocation.envelope_close_sha256 -notmatch '^[0-9a-f]{64}$' -or
+    -not (Test-LowercaseHexString $preflightInvocation.envelope_close_sha256 64) -or
     -not (Test-Path -LiteralPath $preflightInvocation.report_path -PathType Leaf) -or
     -not (Test-Path -LiteralPath $preflightInvocation.session_index_path -PathType Leaf) -or
     -not (Test-Path -LiteralPath $preflightInvocation.envelope_close_path -PathType Leaf) -or
@@ -6782,8 +7550,14 @@ if (
     throw "BLOCKED_AV_BS_RESULT_SCHEMA: bounded preflight report/index/envelope-close bindings are incomplete"
 }
 $preflightFinalIndex = Read-BoundedJsonObject $preflightInvocation.session_index_path
+$preflightFinalIndexBindings = [ordered]@{
+    index_role = "final_binds_resource_envelope_close"
+    envelope_close_path = [IO.Path]::GetFullPath([string]$preflightInvocation.envelope_close_path)
+    envelope_close_sha256 = [string]$preflightInvocation.envelope_close_sha256
+}
 if (
     $null -eq $preflightFinalIndex -or
+    -not (Test-ExactObjectStringBindings $preflightFinalIndex $preflightFinalIndexBindings) -or
     $preflightFinalIndex.index_role -ne "final_binds_resource_envelope_close" -or
     $preflightFinalIndex.envelope_close_path -ne [IO.Path]::GetFullPath([string]$preflightInvocation.envelope_close_path) -or
     $preflightFinalIndex.envelope_close_sha256 -ne [string]$preflightInvocation.envelope_close_sha256
@@ -6795,8 +7569,22 @@ $preflightControlPlaneReportSha256 = [string]$preflightInvocation.report_sha256
 $preflightControlPlaneSessionIndexRelativePath = Get-RepositoryRelativePath $preflightInvocation.session_index_path
 $preflightControlPlaneSessionIndexSha256 = [string]$preflightInvocation.session_index_sha256
 $preflightText = ([string]$preflightInvocation.stdout_text).Trim()
-$preflightWrapper = $preflightText | ConvertFrom-Json
+$preflightWrapper = ConvertFrom-BoundedStrictJsonObjectText $preflightText
+$preflightPayloadStringBindings = [ordered]@{
+    schema = "AV-BS1-h4-p0r-execution-fixture-v1"
+    program = $program
+    case_id = "AV-BS1-CIRCLE-PRIMARY"
+    stage = "preflight-primary-h4-p0r"
+    status = "preflight_pass_token_gated_no_factor"
+    authorization_state = "authorized"
+    outer_observer_contract_sha256 = $script:outerObserverContractSha256
+    expected_terminal_seal_relative_path = $script:outerObserverExpectedTerminalSealRelativePath
+}
 if (
+    $null -eq $preflightWrapper -or
+    -not (Test-ExactObjectStringBindings $preflightWrapper.payload $preflightPayloadStringBindings) -or
+    -not (Test-LowercaseHexString $preflightWrapper.payload.outer_observer_contract_sha256 64) -or
+    -not (Test-LowercaseHexString $preflightWrapper.payload_sha256 64) -or
     $preflightWrapper.payload.schema -ne "AV-BS1-h4-p0r-execution-fixture-v1" -or
     $preflightWrapper.payload.program -ne $program -or
     $preflightWrapper.payload.case_id -ne "AV-BS1-CIRCLE-PRIMARY" -or
@@ -6807,30 +7595,71 @@ if (
     $preflightWrapper.payload.factorization_performed -ne $false -or
     $preflightWrapper.payload.physics_solve_performed -ne $false -or
     $preflightWrapper.payload.next_stage_authorized -ne $false -or
-    [string]$preflightWrapper.payload.outer_observer_contract_sha256 -notmatch '^[0-9a-f]{64}$' -or
+    [string]$preflightWrapper.payload.outer_observer_contract_sha256 -cnotmatch '^[0-9a-f]{64}$' -or
     $preflightWrapper.payload.outer_observer_contract_sha256 -ne $script:outerObserverContractSha256 -or
     $preflightWrapper.payload.expected_terminal_seal_relative_path -ne $script:outerObserverExpectedTerminalSealRelativePath -or
     $preflightWrapper.payload.terminal_seal_required_for_authoritative_disposition -isnot [bool] -or
     $preflightWrapper.payload.terminal_seal_required_for_authoritative_disposition -ne $true -or
-    [string]$preflightWrapper.payload_sha256 -notmatch '^[0-9a-f]{64}$'
+    [string]$preflightWrapper.payload_sha256 -cnotmatch '^[0-9a-f]{64}$'
 ) {
     throw "BLOCKED_AV_BS_RESULT_SCHEMA: primary-h4-p0r preflight wrapper mismatch"
 }
-$token = Get-Content -LiteralPath $reviewTokenPath -Raw -Encoding utf8 | ConvertFrom-Json
+$token = Read-BoundedJsonObject $reviewTokenPath
+$tokenStringBindings = [ordered]@{
+    schema = "AV-BS1-h4-p0r-review-token-v1"
+    program = $program
+    case_id = "AV-BS1-CIRCLE-PRIMARY"
+    authorized_stage = "primary-h4-p0r"
+    authorization_state = "authorized"
+    review_disposition = "approved_h4_p0r_factor_only"
+    outer_observer_contract_sha256 = $script:outerObserverContractSha256
+    expected_terminal_seal_relative_path = $script:outerObserverExpectedTerminalSealRelativePath
+}
+$preflightTokenStringBindings = [ordered]@{
+    review_token_id = [string]$token.review_token_id
+    review_token_sha256 = Get-Sha256 $reviewTokenPath
+    p0r_preregistration_commit = [string]$token.p0r_preregistration_commit
+    resource_policy_sha256 = [string]$token.resource_policy_sha256
+    execution_resource_scope_sha256 = $executionResourceScopeSha256
+    outer_observer_contract_sha256 = [string]$token.outer_observer_contract_sha256
+    expected_terminal_seal_relative_path = [string]$token.expected_terminal_seal_relative_path
+}
+$preflightManifestBindings = [ordered]@{
+    manifest_payload_sha256 = [string]$token.manifest_payload_sha256
+    fixture_sha256 = [string]$token.fixture_sha256
+    runner_sha256 = [string]$token.runner_sha256
+    matrix_contract_sha256 = [string]$token.matrix_contract_sha256
+}
 if (
-    [string]$token.review_token_id -notmatch '^[0-9a-f]{32}$' -or
+    $null -eq $token -or
+    -not (Test-ExactObjectStringBindings $token $tokenStringBindings) -or
+    -not (Test-ExactObjectStringBindings $preflightWrapper.payload $preflightTokenStringBindings) -or
+    -not (Test-ExactObjectStringBindings $preflightWrapper.payload.manifest_bindings $preflightManifestBindings) -or
+    -not (Test-LowercaseHexString $token.review_token_id 32) -or
+    -not (Test-LowercaseHexString $token.p0r_preregistration_commit 40) -or
+    -not (Test-LowercaseHexString $token.manifest_payload_sha256 64) -or
+    -not (Test-LowercaseHexString $token.fixture_sha256 64) -or
+    -not (Test-LowercaseHexString $token.runner_sha256 64) -or
+    -not (Test-LowercaseHexString $token.matrix_contract_sha256 64) -or
+    -not (Test-LowercaseHexString $token.resource_policy_sha256 64) -or
+    -not (Test-LowercaseHexString $token.execution_resource_scope_sha256 64) -or
+    -not (Test-LowercaseHexString $token.outer_observer_contract_sha256 64) -or
+    -not (Test-LowercaseHexString $preflightWrapper.payload.review_token_sha256 64) -or
+    -not (Test-LowercaseHexString $preflightWrapper.payload.manifest_payload_sha256 64) -or
+    -not (Test-LowercaseHexString $preflightWrapper.payload.execution_resource_scope_sha256 64) -or
+    [string]$token.review_token_id -cnotmatch '^[0-9a-f]{32}$' -or
     $token.uses_remaining -isnot [int] -or
     $token.uses_remaining -ne 1 -or
     $preflightWrapper.payload.review_token_id -ne $token.review_token_id -or
     $preflightWrapper.payload.review_token_sha256 -ne (Get-Sha256 $reviewTokenPath) -or
     $preflightWrapper.payload.p0r_preregistration_commit -ne $token.p0r_preregistration_commit -or
-    [string]$preflightWrapper.payload.manifest_payload_sha256 -notmatch '^[0-9a-f]{64}$' -or
+    [string]$preflightWrapper.payload.manifest_payload_sha256 -cnotmatch '^[0-9a-f]{64}$' -or
     $preflightWrapper.payload.manifest_bindings.manifest_payload_sha256 -ne $token.manifest_payload_sha256 -or
     $preflightWrapper.payload.manifest_bindings.fixture_sha256 -ne $token.fixture_sha256 -or
     $preflightWrapper.payload.manifest_bindings.runner_sha256 -ne $token.runner_sha256 -or
     $preflightWrapper.payload.manifest_bindings.matrix_contract_sha256 -ne $token.matrix_contract_sha256 -or
     $preflightWrapper.payload.resource_policy_sha256 -ne $token.resource_policy_sha256 -or
-    [string]$preflightWrapper.payload.execution_resource_scope_sha256 -notmatch '^[0-9a-f]{64}$' -or
+    [string]$preflightWrapper.payload.execution_resource_scope_sha256 -cnotmatch '^[0-9a-f]{64}$' -or
     $preflightWrapper.payload.execution_resource_scope_sha256 -ne $executionResourceScopeSha256 -or
     $preflightWrapper.payload.execution_resource_scope_sha256 -ne $token.execution_resource_scope_sha256 -or
     $token.outer_observer_contract_sha256 -ne $script:outerObserverContractSha256 -or
@@ -7408,7 +8237,10 @@ try {
     $finalExitCode = [int]$finalInvocation.exit_code
     Write-Utf8NoBom $finalPath ([string]$finalInvocation.stdout_text).Trim()
     if ($finalExitCode -notin @(0, 2)) { throw "BLOCKED_AV_BS_RESULT_SCHEMA: finalizer exit code is invalid" }
-    $result = Get-Content -LiteralPath $finalPath -Raw -Encoding utf8 | ConvertFrom-Json
+    $result = Read-BoundedJsonObject $finalPath
+    if ($null -eq $result) {
+        throw "BLOCKED_AV_BS_RESULT_SCHEMA: finalizer result is not a strict bounded JSON object"
+    }
     if ($result.payload.schema -eq "AV-BS1-h4-p0r-result-v2") {
         if (
             $result.payload.outer_observer_contract_sha256 -ne $script:outerObserverContractSha256 -or
@@ -7697,7 +8529,8 @@ finally {
                     throw "BLOCKED_AV_BS_RESULT_SCHEMA: consumer control report reference mismatch"
                 }
                 $consumerControlGatePassed = $true
-                $consumeWrapper = ([string]$consumeInvocation.stdout_text).Trim() | ConvertFrom-Json
+                $consumeWrapper = ConvertFrom-BoundedStrictJsonObjectText `
+                    ([string]$consumeInvocation.stdout_text).Trim()
                 if (
                     $consumeWrapper.payload.schema -ne $tombstoneSchema -or
                     $consumeWrapper.payload.authorization_state -ne "consumed" -or
@@ -7752,10 +8585,10 @@ finally {
                 $consumerReportReference.operation -eq "token_consumer" -and
                 $consumerReportReference.report_path -is [string] -and
                 -not [string]::IsNullOrWhiteSpace([string]$consumerReportReference.report_path) -and
-                [string]$consumerReportReference.report_sha256 -match '^[0-9a-f]{64}$' -and
+                [string]$consumerReportReference.report_sha256 -cmatch '^[0-9a-f]{64}$' -and
                 $consumerReportReference.envelope_close_path -is [string] -and
                 -not [string]::IsNullOrWhiteSpace([string]$consumerReportReference.envelope_close_path) -and
-                [string]$consumerReportReference.envelope_close_sha256 -match '^[0-9a-f]{64}$'
+                [string]$consumerReportReference.envelope_close_sha256 -cmatch '^[0-9a-f]{64}$'
             )
             if (-not $consumerReportReferenceComplete) {
                 $consumerReportReference = $null
@@ -7846,7 +8679,7 @@ finally {
                     "monitor_release_marker_sha256",
                     "factor_prefix_one_sha256", "factor_prefix_two_sha256"
                 )) {
-                    if ([string]$pendingTerminalArtifactHashes[$artifactHashField] -match '^[0-9a-f]{64}$') {
+                    if ([string]$pendingTerminalArtifactHashes[$artifactHashField] -cmatch '^[0-9a-f]{64}$') {
                         $terminalArtifactHashPresent = $true
                     }
                 }

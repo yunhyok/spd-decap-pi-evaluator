@@ -2370,3 +2370,169 @@ token or a stage.
 6. Preserve the no-RHS, no-solve, no-extension, no-boundary-`Y`, no-modal,
    no-physics boundary. Do not infer H4, PowerSI, or 8 GiB fitness from the ninth
    factor-only evidence.
+
+## 2026-08-16 — tenth public invocation retirement and retry-v10 final documentation freeze
+
+The entire pre-existing session log is an immutable prefix: `181982` bytes,
+`2372` LF lines, zero CR bytes, SHA-256
+`949e14684965e8789ee6d743505b136c5916d0c0207b059af88ac218d9fc4822`.
+This section is appended after that prefix. It does not rewrite the retry-v9
+history or reinterpret its then-current future-tenth wording.
+
+### Tenth one-use public lifecycle
+
+1. Reviewed contract commit was
+   `32929a1d5a5374ef92482df68a06d4aeec1eea57`. Fresh token-only child was
+   `13bfe70d6f203822a3a07d0613bdc64fe9f223df`, token ID
+   `2cd3597ab0b9483ea78c3cfa3b75f5e8`, raw token SHA-256
+   `e6bffbaab21095a7cef5fb5f866844eedaef24251b251121bb22da0826f71cdd`
+   and canonical token SHA-256
+   `bf6e3b25a3364a7b47c32f8dc31879e4612823ed5ae65efd3f1a70f8fc8bda6f`.
+   The token was reviewed at `2026-08-15T23:28:54Z` with a four-hour expiry.
+2. Exactly one direct preflight passed, followed by exactly one public command:
+   `powershell.exe -NoProfile -ExecutionPolicy Bypass -File
+   tools\research\run_av_bs1_h4_p0r_p1_stage.ps1 -Stage primary-h4-p0r`.
+   Public exit was `2`. The command was not rerun and the consumed token must
+   never be reused.
+3. Factor producer PID `54044`, finalizer PID `25200`, and consumer PID `41812`
+   all exited `0`. Exactly two factor certificates and two prefix checkpoints
+   were retained in required order `A_background_II`, `A_conductor_II`.
+4. Background factor input nnz was `204545`, L/U nnz
+   `1570627`/`1615176`, native nnz `3342108`, fill ratio
+   `15.57507150015889`, portable/export/native-portable estimates
+   `77466936`/`64219892`/`81218256` bytes, wall `1.5589642 s`.
+   Conductor factor input nnz was `219393`, L/U nnz
+   `1702688`/`1716333`, native nnz `3543771`, fill ratio
+   `15.584002224318917`, portable/export/native-portable estimates
+   `83064168`/`68884252`/`86058168` bytes, wall `1.2315241 s`.
+5. Both factor records have attempted/performed `true/true`, `rhs_count=0`,
+   `factor_solve_called=false`, every forbidden-operation flag false, and both
+   2 GiB factor-cap gates passing. Numerical certificate raw SHA-256 was
+   `ca620d85ef97baeca723a17a5d0b5a0e77d0e6ed736a6da62fd5f465e318603d`;
+   payload SHA-256 was
+   `309003b0ace5d4396eb2ef53e562890403cac5aeba020e4af594875339ba88a1`.
+   Prefix raw SHA-256 values in factor order were
+   `27cda76443d14ebfc955239fd8fc90725c6b8156795ee083945534c32682697a`
+   and `c1743ba81624072827bcb74c6aa3f523adf3553869026be0e92c8d762e11ba78`.
+6. Inner resource monitoring passed with `245` samples, wall
+   `34.1760023 s`, peak working set `511868928`, peak private bytes
+   `1994665984`, and peak lifetime commit `2322489344`. Outer monitoring passed
+   with `664` samples, `39` nontruncated retries, wall `91.722828 s`, peak
+   working set `495939584`, peak private bytes `1993838592`, and peak lifetime
+   commit `2335375360`. Gate and cleanup checks passed; all `205/205` PID/birth
+   identities were absent with live/reused/unreadable counts all zero.
+7. The host had about 45 GB physically available. Therefore neither the factor
+   estimates nor the resource samples prove operation on an 8 GB notebook.
+   They are not an H4 result or PowerSI comparison. No RHS, factor solve,
+   extension, boundary `Y`, modal response, or physics ran.
+
+### Strict terminal classification
+
+1. Claim, guard, and resource evidence were semantically identical to their
+   current objects with logical diff count zero and retained matching raw
+   bindings. Canonical member order differed, but no value or key differed.
+2. The PowerShell equality helper compared `ConvertTo-Json` strings. Python's
+   canonical tombstone had sorted nested object keys, so member order alone
+   made all three equal semantic trees compare false. Pre-exit recorded exactly
+   three false mismatches and changed the intended terminal exit to `2`.
+3. Exact raw evidence hashes are claim
+   `c8f7e7e5b289873d8888938227ea27bd4770b2c8344444e5cfc9fa08c7739b72`,
+   guard `404d900a7d1c44233b8c42b95650119002747f56f95e48d58b3b1a4340550896`,
+   resource `0754f75fba9a9765a0486d08c3e22cc12118b0c30e94c4dc1eab6a6b5ecd225e`,
+   result `4c0792f39b15e75c47bdefce8d56ee0bfe2d5a3424f5347f3f25280a79c0b8d4`,
+   pre-exit `1fe0ba4d7ec8b0ac3a75de07971c14fa4784e615f8449a3c5174eb90dd4398da`,
+   outer close `aa959bded40768a54319a96ed419885bc9e32fececffc7430ddf6f7eda9c30c1`,
+   and raw seal
+   `d28e63d082679fa4816a6593734dc39b3187816048e6d1d1506f1188afab687f`.
+4. Strict current classification is
+   `consumed_v2_provisional_invalid_terminal_evidence`,
+   `authoritative_terminal_evidence=false`, authoritative inner disposition
+   `null`, exact terminal detail `BLOCKED_AV_BS_RESULT_SCHEMA: terminal pre-exit
+   normal_pass_outer_evidence_reconciliation_pass mismatch`. The raw seal's
+   self-declared failure is not strict-authoritative.
+5. Consumed normal tombstone raw SHA-256 was
+   `e176fbc433534c01cd1ae46efde67b975d8d19b03c75e80d0ea8cc77661cc51e`
+   (`110292` bytes). M-only consumed-record commit
+   `785f5e9c0a38ad1851c4ba620f520db9087aaf74` followed by D-only retirement
+   `a139d867bbc727b58f9a7a4cdbad604fc03070cf`. The exact chain is
+   `a139d867` -> `785f5e9c` -> `13bfe70d`; token is absent, ignored evidence is
+   preserved, and `next_stage_authorized=false`.
+
+### Retry-v10 fail-closed JSON amendment
+
+The audit found four generic authorization/readback defects even though raw
+hashes prevented them from changing the tenth-run evidence:
+
+1. PowerShell `-ceq` string equality is culture-aware and on Windows PowerShell
+   5.1 can collapse ordinally distinct Unicode such as composed/decomposed
+   accents, `ß`/`ss`, soft-hyphen/empty, NUL/empty, and Angstrom variants.
+2. Direct `ConvertFrom-Json` accepts last-wins duplicate keys, including nested
+   or escaped-equivalent duplicates, and accepts `NaN`, infinities, and numeric
+   overflow such as `1e309`.
+3. `Sort-Object`/`Compare-Object` field-set checks are case-insensitive.
+4. Nested object scans made the prior comparator O(n squared) for large objects.
+
+Retry-v10 changes only the PowerShell runner boundary:
+
+- strict UTF-8 and exact stable input length, nonempty object root, `16 MiB`
+  maximum, JSON depth `32`;
+- streaming duplicate-key inspection before conversion using per-object ordinal
+  `HashSet<string>`, including nested objects, arrays, and escaped names;
+- recursive post-conversion rejection of nonfinite or unsupported values;
+- ordinal exact strings, keys, field sets, and evidence bindings;
+- O(n) object comparison with ordinal dictionary/set while preserving array
+  order and numeric JSON-type sensitivity; and
+- exact lowercase-hex guards on factor, preflight, and terminal-authority hash
+  paths.
+
+Schemas, Python fixture, factor math, retry/max3/cap64 behavior, factor order and
+caps, resource ceilings, terminal authority rules, and the no-RHS/no-solve/
+no-physics boundary are unchanged.
+
+### Frozen retry-v10 bindings and checks
+
+```text
+Python fixture SHA-256: 46082123fbf98102f3e5995c32bf65d8d04bb835b9c1305de0150349e75e48c7
+Python fixture bytes: 579582
+PowerShell runner SHA-256: f0159061dbd4d1b34881911edfdfb72146a3a23e5cdc75ca8fa4069c08aadb86
+PowerShell runner bytes: 484795
+static tests SHA-256: e5496ceb24c33c835b88ce20a3f67f941c8279e0471708a01022238fc211b109
+static tests bytes: 488591
+collection: 400
+current-byte focused selection: 5/5 passed in 2.73 s
+current-byte independent same-byte selection: 5/5 passed in 2.71 s
+first provisional full exact-document attempt: 398 passed, 2 failed in 94.17 s
+provisional full failures: outdated old `-match` source pin; missing exact prereg heading
+first successful full exact-document suite: 400/400 passed in 93.89 s; exit 0; no failure
+token_state: absent
+factor_fit_unproven: true
+next_stage_authorized: false
+```
+
+The provisional full run completed
+`398 passed, 2 failed in 94.17 s`. Both failures were static contract drift: an
+outdated old `-match` source pin in the tests and the missing exact preregistration
+heading `## 1. Current status and authority`. Neither failure was a production,
+factor-runtime, resource, or physics failure. After both static defects were
+corrected and exact bindings were refreshed, the first successful full
+exact-document suite passed `400/400` in `93.89 s`, exit `0`, with no failure.
+This is the **FINAL DOC FREEZE**. It closes the documentation contract only and
+does not create factor, H4, PowerSI, 8 GB, token, or next-stage authority.
+
+### Exact next starting point
+
+1. Preserve all ten public attempts and token retirements. Never invoke any
+   retired or consumed token.
+2. Validate exactly 15 baseline Markdown files, including this append-only log,
+   for UTF-8, LF-only endings, balanced fences, valid local links, exact scope,
+   and current retry-v10 wording. The immutable log prefix above must remain
+   byte-identical.
+3. Preserve both full-suite outcomes exactly: the provisional `398/400` static
+   failure and the first successful `400/400` in `93.89 s`, exit `0`, with no
+   failure. Do not reinterpret the first outcome or record any later closure
+   runtime.
+4. Retry-v10 itself creates no token. Only after clean exact-byte and
+   independent audits plus separate authorization may an eleventh one-use
+   factor-only run be considered.
+5. Preserve `rhs_count=0`, no solve/extensions/`Y`/modal/physics, factor fit
+   unproven, terminal evidence non-authoritative, and no 8 GB or PowerSI claim.

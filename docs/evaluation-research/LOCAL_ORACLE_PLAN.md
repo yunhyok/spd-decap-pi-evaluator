@@ -1,6 +1,39 @@
 # SPD Decap PI Evaluator v0.22.0 — Local Physics Oracle Plan
 
-> **SPD Decap PI Evaluator v0.22.0 — retry-v9 final documentation
+> **SPD Decap PI Evaluator v0.22.0 — retry-v10 final documentation
+> freeze:** Ten public attempts are immutable. The tenth ran once and exited
+> public stage `2`; producer/finalizer/consumer PIDs `54044`/`25200`/`41812`
+> exited `0`, exactly two factor certificates/prefixes were retained in order
+> `A_background_II`, `A_conductor_II`, factor/resource gates passed, and all
+> `205/205` identities were absent after cleanup. Inner/outer monitoring used
+> `245`/`664` samples over `34.1760023`/`91.722828 s`; peak working set was
+> `511868928`/`495939584`, private bytes `1994665984`/`1993838592`, lifetime
+> commit `2322489344`/`2335375360`, with `39` nontruncated outer retries. Host
+> availability was about 45 GB, so no 8 GB claim follows. No RHS, solve,
+> extension, `Y`, modal response, H4 physics, or PowerSI ran. Three order-only
+> claim/guard/resource JSON mismatches made the raw seal non-authoritative.
+> Strict classification is `consumed_v2_provisional_invalid_terminal_evidence`,
+> `authoritative_terminal_evidence=false`, disposition `null`, exact terminal
+> detail `BLOCKED_AV_BS_RESULT_SCHEMA: terminal pre-exit
+> normal_pass_outer_evidence_reconciliation_pass mismatch`. M-only
+> `785f5e9c0a38ad1851c4ba620f520db9087aaf74` then D-only
+> `a139d867bbc727b58f9a7a4cdbad604fc03070cf` leave token absent/next false.
+> Retry-v10 changes only strict JSON: strict UTF-8, duplicate/nonfinite reject,
+> object root/depth32/16 MiB bounds, ordinal O(n) key/string/field/evidence
+> equality, and lowercase SHA-256 hex guards. Schemas, factor math,
+> retry/resource policy, and physics boundary are unchanged. Bindings: Python
+> `46082123fbf98102f3e5995c32bf65d8d04bb835b9c1305de0150349e75e48c7`,
+> runner `f0159061dbd4d1b34881911edfdfb72146a3a23e5cdc75ca8fa4069c08aadb86`
+> (`484795` bytes), tests
+> `e5496ceb24c33c835b88ce20a3f67f941c8279e0471708a01022238fc211b109`
+> (`488591` bytes). Collection `400`; current-byte focused `5/5` in `2.73 s`;
+> independent same-byte `5/5` in `2.71 s`. A provisional full attempt reached
+> `398 passed, 2 failed in 94.17 s` from two corrected static contract drifts;
+> the first successful full exact-document suite then passed `400/400` in
+> `93.89 s`, exit `0`, with no failure. This is the **FINAL DOC FREEZE**; any
+> separately authorized run would be eleventh.
+>
+> **Historical retry-v9 final documentation
 > freeze:** Nine public `primary-h4-p0r` invocations are immutable. The ninth ran
 > once from retry-v8 token-only commit `0597872...`, token ID `0ec78f53...`; the
 > public invocation exited `1`. Factor child PID `51184` exited `0` and produced
@@ -35,6 +68,10 @@
 > any separately authorized future public invocation would be tenth. Evidence is in
 > [results](T1_AV_BOUNDARY_SCHUR_RESULTS.md) and the
 > [reproduction appendix](ORACLE_REPRODUCTION.md).
+>
+> Every pre-existing retry-v9, ninth-attempt, future-tenth, `397/397`, or
+> **FINAL DOC FREEZE** statement later in this file is an immutable historical
+> snapshot. Only the retry-v10 block above states current authority.
 
 
 최종 갱신: 2026-08-16 (Asia/Seoul)

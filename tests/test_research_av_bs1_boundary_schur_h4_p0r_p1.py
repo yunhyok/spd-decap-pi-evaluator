@@ -11310,7 +11310,7 @@ catch {
 def test_runner_exited_snapshot_stabilization_policy_is_exactly_pinned() -> None:
     source = RUNNER.read_text(encoding="utf-8")
     assert hashlib.sha256(RUNNER.read_bytes()).hexdigest() == (
-        "229aa91b04bd89e4af03f9a75c52a0a4819381ec5dfa32a272fe35ac7f1d94f9"
+        "f0159061dbd4d1b34881911edfdfb72146a3a23e5cdc75ca8fa4069c08aadb86"
     )
     begin = source.index("# AV_BS_TREE_SAMPLE_TEST_SLICE_BEGIN")
     end = source.index("# AV_BS_TREE_SAMPLE_TEST_SLICE_END")
@@ -11736,9 +11736,9 @@ def test_runner_withholds_terminal_seal_without_consumer_report_and_close() -> N
     for required in (
         "$consumerTerminalReferenceComplete = (",
         "$currentPreExit.consumer_report_relative_path -is [string]",
-        "$currentPreExit.consumer_report_sha256 -match '^[0-9a-f]{64}$'",
+        "(Test-LowercaseHexString $currentPreExit.consumer_report_sha256 64)",
         "$currentPreExit.consumer_envelope_close_relative_path -is [string]",
-        "$currentPreExit.consumer_envelope_close_sha256 -match '^[0-9a-f]{64}$'",
+        "(Test-LowercaseHexString $currentPreExit.consumer_envelope_close_sha256 64)",
         "token-consumer control report/close reference is missing; terminal seal withheld",
         "token-consumer control report/close source is missing; terminal seal withheld",
         "token-consumer control report/close source changed; terminal seal withheld",
@@ -11924,3 +11924,756 @@ def test_failure_normalization_is_four_code_closed() -> None:
     assert value["status"] == "BLOCKED_AV_BS_RESULT_SCHEMA"
     assert value["failure_codes"] == ["BLOCKED_AV_BS_RESULT_SCHEMA"]
     assert value["factorization_performed"] is False
+
+
+def _reverse_json_object_key_order(value: object) -> object:
+    if isinstance(value, dict):
+        return {
+            key: _reverse_json_object_key_order(value[key])
+            for key in reversed(tuple(value))
+        }
+    if isinstance(value, list):
+        return [_reverse_json_object_key_order(item) for item in value]
+    return value
+
+
+def _run_strict_json_comparator_slice(
+    tmp_path: Path, cases: list[dict[str, object]]
+) -> dict[str, bool]:
+    source = RUNNER.read_text(encoding="utf-8")
+    begin_marker = "# AV_BS_STRICT_JSON_EQUAL_TEST_SLICE_BEGIN"
+    end_marker = "# AV_BS_STRICT_JSON_EQUAL_TEST_SLICE_END"
+    assert source.count(begin_marker) == 1
+    assert source.count(end_marker) == 1
+    begin = source.index(begin_marker)
+    end = source.index(end_marker)
+    assert begin < end
+    function_slice = source[begin:end]
+    for required in (
+        "function Get-StrictJsonValueKind(",
+        "function Get-StrictJsonObjectEntries(",
+        "function Test-StrictJsonFiniteNumber(",
+        "function Test-StrictJsonValueEqualCore(",
+        "function Test-StrictJsonValueEqual(",
+    ):
+        assert function_slice.count(required) == 1
+    for forbidden in (
+        "Start-Process",
+        "Add-Type",
+        "review_token",
+        "primary-h4-p0r",
+        "splu",
+        "consume-primary",
+        "ConvertFrom-Json",
+    ):
+        assert forbidden not in function_slice
+    assert function_slice.count("ConvertTo-Json") == 2
+    assert "ConvertTo-Json -InputObject $Left -Depth 1 -Compress" in function_slice
+    assert "ConvertTo-Json -InputObject $Right -Depth 1 -Compress" in function_slice
+    assert "| ConvertTo-Json" not in function_slice
+    assert "Dictionary[string,object]" in function_slice
+    assert "HashSet[string]" in function_slice
+    assert "[System.StringComparer]::Ordinal" in function_slice
+    assert "$matchedRightEntries" not in function_slice
+    assert "-lt $rightEntries.Count" not in function_slice
+
+    case_json = json.dumps(cases, ensure_ascii=True, separators=(",", ":"))
+    case_literal = case_json.replace("'", "''")
+    script = (
+        "$ErrorActionPreference='Stop'; Set-StrictMode -Version Latest; "
+        "[Console]::OutputEncoding=New-Object System.Text.UTF8Encoding($false);\n"
+        + function_slice
+        + "\n"
+        + f"$cases = '{case_literal}' | ConvertFrom-Json -ErrorAction Stop\n"
+        + r"""
+$results = New-Object System.Collections.ArrayList
+foreach ($case in @($cases)) {
+    $actual = Test-StrictJsonValueEqual -Left $case.left -Right $case.right
+    [void]$results.Add([ordered]@{
+        name = [string]$case.name
+        actual = [bool]$actual
+    })
+}
+
+$psCustom = [pscustomobject][ordered]@{
+    schema = 'AV-BS1-h4-p0r-resource-report-v1'
+    nested = [pscustomobject][ordered]@{
+        pass = $true
+        values = [object[]]@([int]1, '1', $null)
+    }
+}
+$orderedDictionary = [ordered]@{
+    nested = [ordered]@{
+        values = [object[]]@([int]1, '1', $null)
+        pass = $true
+    }
+    schema = 'AV-BS1-h4-p0r-resource-report-v1'
+}
+[void]$results.Add([ordered]@{
+    name = 'pscustomobject_vs_ordered_hashtable'
+    actual = [bool](Test-StrictJsonValueEqual $psCustom $orderedDictionary)
+})
+
+$deepLeft = 'leaf'
+$deepRight = 'leaf'
+foreach ($level in 1..40) {
+    $deepLeft = [ordered]@{ layer = $deepLeft }
+    $deepRight = [pscustomobject][ordered]@{ layer = $deepRight }
+}
+[void]$results.Add([ordered]@{
+    name = 'over_maximum_depth'
+    actual = [bool](Test-StrictJsonValueEqual $deepLeft $deepRight)
+})
+
+$cycleLeft = [ordered]@{}
+$cycleRight = [ordered]@{}
+$cycleLeft['self'] = $cycleLeft
+$cycleRight['self'] = $cycleRight
+[void]$results.Add([ordered]@{
+    name = 'cyclic_objects_are_bounded'
+    actual = [bool](Test-StrictJsonValueEqual $cycleLeft $cycleRight)
+})
+
+[void]$results.Add([ordered]@{
+    name = 'unsupported_type_fails_closed'
+    actual = [bool](Test-StrictJsonValueEqual ([datetime]'2026-08-16') ([datetime]'2026-08-16'))
+})
+
+$largeLeft = [ordered]@{}
+$largeRight = [ordered]@{}
+foreach ($index in 0..999) {
+    $largeLeft[("key-{0:d4}" -f $index)] = [int]$index
+}
+foreach ($index in 999..0) {
+    $largeRight[("key-{0:d4}" -f $index)] = [int]$index
+}
+[void]$results.Add([ordered]@{
+    name = 'large_reordered_object_1000_keys'
+    actual = [bool](Test-StrictJsonValueEqual $largeLeft $largeRight)
+})
+
+foreach ($nonfiniteCase in @(
+    [ordered]@{ name = 'double_nan'; value = [double]::NaN },
+    [ordered]@{ name = 'double_positive_infinity'; value = [double]::PositiveInfinity },
+    [ordered]@{ name = 'double_negative_infinity'; value = [double]::NegativeInfinity },
+    [ordered]@{ name = 'single_nan'; value = [single]::NaN },
+    [ordered]@{ name = 'single_positive_infinity'; value = [single]::PositiveInfinity },
+    [ordered]@{ name = 'single_negative_infinity'; value = [single]::NegativeInfinity }
+)) {
+    [void]$results.Add([ordered]@{
+        name = [string]$nonfiniteCase.name
+        actual = [bool](Test-StrictJsonValueEqual $nonfiniteCase.value $nonfiniteCase.value)
+    })
+}
+[void]$results.Add([ordered]@{
+    name = 'finite_double_1e308'
+    actual = [bool](Test-StrictJsonValueEqual ([double]1.0e308) ([double]1.0e308))
+})
+
+[ordered]@{results = @($results)} | ConvertTo-Json -Depth 5 -Compress
+"""
+    )
+    script_path = tmp_path / "strict-json-comparator-harness.ps1"
+    script_path.write_text(script, encoding="ascii", newline="\n")
+    completed = subprocess.run(
+        [
+            "powershell.exe",
+            "-NoProfile",
+            "-NonInteractive",
+            "-ExecutionPolicy",
+            "Bypass",
+            "-File",
+            str(script_path),
+        ],
+        cwd=ROOT,
+        encoding="utf-8",
+        capture_output=True,
+        check=False,
+        timeout=30,
+    )
+    assert completed.returncode == 0, completed.stderr
+    output_lines = [line for line in completed.stdout.splitlines() if line.strip()]
+    assert output_lines, completed.stderr
+    payload = json.loads(output_lines[-1])
+    return {
+        str(item["name"]): bool(item["actual"])
+        for item in payload["results"]
+    }
+
+
+def test_runner_strict_json_comparator_is_structural_typed_and_bounded(
+    tmp_path: Path,
+) -> None:
+    claim = {
+        "schema": "AV-BS1-h4-p0r-token-claim-v1",
+        "program": "SPD Decap PI Evaluator v0.22.0",
+        "case_id": "AV-BS1-CIRCLE-PRIMARY",
+        "stage": "primary-h4-p0r",
+        "terminal_seal_required_for_authoritative_disposition": True,
+        "outer_observer_handshake_prefix": {
+            "inner_ready_relative_path": "outer-observer/inner-ready.json",
+            "inner_ready_sha256": SHA_A,
+            "outer_start_release_relative_path": "outer-observer/start-release.json",
+            "outer_start_release_sha256": SHA_B,
+            "schema": "AV-BS1-h4-p0r-outer-observer-handshake-prefix-v1",
+        },
+        "parent_pid": 43_832,
+        "parent_pid_birth_utc_ticks": 639_224_344_975_001_875,
+    }
+    guard = {
+        "schema": "AV-BS1-h4-p0r-resource-guard-v1",
+        "case_id": "AV-BS1-CIRCLE-PRIMARY",
+        "monitor_ok": True,
+        "poll_interval_ms": 100,
+        "wall_stop_seconds": 900,
+        "tree_ws_stop_bytes": 4_294_967_296,
+        "tree_private_stop_bytes": 5_368_709_120,
+        "baseline_commit_headroom_bytes": 73_219_305_472,
+        "pre_spawn_resource_gate_pass": True,
+        "runner_sha256": SHA_C,
+    }
+    resource = {
+        "schema": "AV-BS1-h4-p0r-resource-report-v1",
+        "case_id": "AV-BS1-CIRCLE-PRIMARY",
+        "execution_tree_root_pid": 3_888,
+        "child_process_id": 54_044,
+        "observed_child_process_ids": [3_888, 43_832, 54_044],
+        "observed_process_identities": [
+            {"process_id": 3_888, "birth_utc_ticks": 639_224_344_963_374_583},
+            {"process_id": 54_044, "birth_utc_ticks": 639_224_345_175_340_990},
+        ],
+        "baseline": {
+            "commit_total_bytes": 24_146_276_352,
+            "commit_limit_bytes": 97_365_581_824,
+            "available_physical_bytes": 45_710_843_904,
+        },
+        "peak": {
+            "tree_working_set_bytes": 511_868_928,
+            "tree_private_commit_bytes": 1_994_665_984,
+        },
+        "monitor_error": None,
+        "mandatory_resource_gate_pass": True,
+    }
+    cases: list[dict[str, object]] = [
+        {
+            "name": "reordered_nested_objects",
+            "left": {
+                "outer": {
+                    "alpha": 1,
+                    "nested": {"pass": True, "reason": None},
+                },
+                "factor_order": ["A_background_II", "A_conductor_II"],
+            },
+            "right": {
+                "factor_order": ["A_background_II", "A_conductor_II"],
+                "outer": {
+                    "nested": {"reason": None, "pass": True},
+                    "alpha": 1,
+                },
+            },
+        },
+        {
+            "name": "real_claim_semantic_pair",
+            "left": claim,
+            "right": _reverse_json_object_key_order(claim),
+        },
+        {
+            "name": "real_guard_semantic_pair",
+            "left": guard,
+            "right": _reverse_json_object_key_order(guard),
+        },
+        {
+            "name": "real_resource_semantic_pair",
+            "left": resource,
+            "right": _reverse_json_object_key_order(resource),
+        },
+        {"name": "missing_key", "left": {"a": 1, "b": 2}, "right": {"a": 1}},
+        {"name": "extra_key", "left": {"a": 1}, "right": {"a": 1, "b": 2}},
+        {
+            "name": "case_different_key",
+            "left": {"case_id": "AV-BS1-CIRCLE-PRIMARY"},
+            "right": {"Case_Id": "AV-BS1-CIRCLE-PRIMARY"},
+        },
+        {
+            "name": "array_reordered",
+            "left": {"factor_order": ["A_background_II", "A_conductor_II"]},
+            "right": {"factor_order": ["A_conductor_II", "A_background_II"]},
+        },
+        {"name": "bool_vs_zero", "left": {"pass": False}, "right": {"pass": 0}},
+        {"name": "bool_vs_one", "left": {"pass": True}, "right": {"pass": 1}},
+        {"name": "number_vs_string", "left": {"pid": 54_044}, "right": {"pid": "54044"}},
+        {"name": "number_vs_null", "left": {"pid": 54_044}, "right": {"pid": None}},
+        {
+            "name": "precomposed_vs_combining_e_acute",
+            "left": {"value": "\u00e9"},
+            "right": {"value": "e\u0301"},
+        },
+        {"name": "sharp_s_vs_ss", "left": {"value": "\u00df"}, "right": {"value": "ss"}},
+        {
+            "name": "soft_hyphen_vs_empty",
+            "left": {"value": "\u00ad"},
+            "right": {"value": ""},
+        },
+        {
+            "name": "nul_vs_empty",
+            "left": {"value": "\u0000"},
+            "right": {"value": ""},
+        },
+        {
+            "name": "angstrom_sign_vs_a_ring",
+            "left": {"value": "\u212b"},
+            "right": {"value": "\u00c5"},
+        },
+        {"name": "empty_objects", "left": {"value": {}}, "right": {"value": {}}},
+        {"name": "empty_arrays", "left": {"value": []}, "right": {"value": []}},
+        {"name": "object_vs_array", "left": {"value": {}}, "right": {"value": []}},
+    ]
+    observed = _run_strict_json_comparator_slice(tmp_path, cases)
+    assert observed == {
+        "reordered_nested_objects": True,
+        "real_claim_semantic_pair": True,
+        "real_guard_semantic_pair": True,
+        "real_resource_semantic_pair": True,
+        "missing_key": False,
+        "extra_key": False,
+        "case_different_key": False,
+        "array_reordered": False,
+        "bool_vs_zero": False,
+        "bool_vs_one": False,
+        "number_vs_string": False,
+        "number_vs_null": False,
+        "precomposed_vs_combining_e_acute": False,
+        "sharp_s_vs_ss": False,
+        "soft_hyphen_vs_empty": False,
+        "nul_vs_empty": False,
+        "angstrom_sign_vs_a_ring": False,
+        "empty_objects": True,
+        "empty_arrays": True,
+        "object_vs_array": False,
+        "pscustomobject_vs_ordered_hashtable": True,
+        "over_maximum_depth": False,
+        "cyclic_objects_are_bounded": False,
+        "unsupported_type_fails_closed": False,
+        "large_reordered_object_1000_keys": True,
+        "double_nan": False,
+        "double_positive_infinity": False,
+        "double_negative_infinity": False,
+        "single_nan": False,
+        "single_positive_infinity": False,
+        "single_negative_infinity": False,
+        "finite_double_1e308": True,
+    }
+
+
+def _nested_json_object(depth: int) -> str:
+    value: object = 0
+    for _ in range(depth):
+        value = {"layer": value}
+    return json.dumps(value, ensure_ascii=True, separators=(",", ":"))
+
+
+def _run_strict_json_reader_slice(tmp_path: Path) -> dict[str, object]:
+    source = RUNNER.read_text(encoding="utf-8")
+    begin_marker = "# AV_BS_STRICT_JSON_READER_TEST_SLICE_BEGIN"
+    end_marker = "# AV_BS_STRICT_JSON_READER_TEST_SLICE_END"
+    assert source.count(begin_marker) == 1
+    assert source.count(end_marker) == 1
+    begin = source.index(begin_marker)
+    end = source.index(end_marker)
+    assert begin < end
+    function_slice = source[begin:end]
+    for required in (
+        "function Test-OrdinalStringEqual(",
+        "function Test-OrdinalNullableStringEqual(",
+        "function Test-LowercaseHexString(",
+        "function Test-ExactObjectStringBindings(",
+        "function Test-StrictJsonConvertedTree(",
+        "function Test-StrictJsonRawObjectKeys(",
+        "function ConvertFrom-StrictJsonObjectBytes(",
+        "function ConvertFrom-BoundedStrictJsonObjectText(",
+        "function Read-BoundedJsonObject(",
+        "function Test-ExactJsonFieldSet(",
+    ):
+        assert function_slice.count(required) == 1
+    for forbidden in (
+        "Start-Process",
+        "review_token",
+        "primary-h4-p0r",
+        "splu",
+        "consume-primary",
+        "Sort-Object",
+        "Compare-Object",
+    ):
+        assert forbidden not in function_slice
+    assert function_slice.count("ConvertFrom-Json") == 1
+    assert source.count("ConvertFrom-Json") == 1
+    assert "HashSet[string]" in function_slice
+    assert "[System.StringComparer]::Ordinal" in function_slice
+    assert "-cmatch (\"^[0-9a-f]{\"" in function_slice
+    assert "$quotas.MaxDepth = 33" in function_slice
+    assert "Test-StrictJsonConvertedTree $value 0 32" in function_slice
+    assert "$Bytes.Length -gt 16MB" in function_slice
+    assert "$Text.Length -gt 16MB" in function_slice
+    assert "$length -le 0 -or $length -gt 16MB" in function_slice
+
+    unicode_distinct_raw = (
+        '{"\\u00e9":1,"e\\u0301":2,"\\u00df":3,"ss":4,'
+        '"a":5,"a\\u00ad":6,"a\\u0000":7}'
+    )
+    raw_cases: list[tuple[str, bytes, bool]] = [
+        (
+            "valid_nested_finite",
+            b'{"outer":{"values":[0,1e308,-1e-308],"nil":null}}',
+            True,
+        ),
+        ("duplicate_top", b'{"schema":"x","schema":"y"}', False),
+        ("duplicate_nested", b'{"outer":{"x":1,"x":2}}', False),
+        ("duplicate_inside_array", b'{"a":[{"x":1,"x":2}]}', False),
+        ("duplicate_escaped_equivalent", b'{"a":1,"\\u0061":2}', False),
+        (
+            "duplicate_surrogate_escape_and_literal",
+            '{"\\ud83d\\ude00":1,"\U0001f600":2}'.encode("utf-8"),
+            False,
+        ),
+        ("nonfinite_nan_token", b'{"value":NaN}', False),
+        ("nonfinite_positive_infinity_token", b'{"value":Infinity}', False),
+        ("nonfinite_negative_infinity_token", b'{"value":-Infinity}', False),
+        ("nonfinite_overflow_1e309", b'{"value":1e309}', False),
+        ("invalid_utf8_byte", b'{"value":"\xff"}', False),
+        ("scalar_number_root", b"1", False),
+        ("scalar_string_root", b'"value"', False),
+        ("array_root", b"[]", False),
+        ("depth_32", _nested_json_object(32).encode("ascii"), True),
+        ("depth_33", _nested_json_object(33).encode("ascii"), False),
+        ("unicode_distinct_keys", unicode_distinct_raw.encode("ascii"), True),
+        ("case_alias_root", b'{"a":1,"A":2}', False),
+        ("case_alias_nested", b'{"outer":{"a":1,"A":2}}', False),
+        ("case_alias_inside_array", b'{"outer":[{"a":1,"A":2}]}', False),
+    ]
+    maximum_bytes = 16 * 1024 * 1024
+    boundary_prefix = b'{"value":"'
+    boundary_suffix = b'"}'
+    boundary_json = (
+        boundary_prefix
+        + (b"a" * (maximum_bytes - len(boundary_prefix) - len(boundary_suffix)))
+        + boundary_suffix
+    )
+    assert len(boundary_json) == maximum_bytes
+    raw_cases.extend(
+        [
+            ("exact_16mib_object", boundary_json, True),
+            (
+                "over_16mib_object",
+                boundary_json[:-len(boundary_suffix)] + b"a" + boundary_suffix,
+                False,
+            ),
+        ]
+    )
+
+    case_payload: list[dict[str, object]] = []
+    for name, raw, expected in raw_cases:
+        path = tmp_path / f"{name}.json"
+        path.write_bytes(raw)
+        case_payload.append(
+            {"name": name, "path": str(path), "expected": expected}
+        )
+    config = {
+        "cases": case_payload,
+        "unicode_expected": [
+            "\u00e9",
+            "e\u0301",
+            "\u00df",
+            "ss",
+            "a",
+            "a\u00ad",
+            "a\u0000",
+        ],
+    }
+    config_json = json.dumps(config, ensure_ascii=True, separators=(",", ":"))
+    config_literal = config_json.replace("'", "''")
+    script = (
+        "$ErrorActionPreference='Stop'; Set-StrictMode -Version Latest; "
+        "[Console]::OutputEncoding=New-Object System.Text.UTF8Encoding($false);\n"
+        + function_slice
+        + "\n"
+        + f"$config = '{config_literal}' | ConvertFrom-Json -ErrorAction Stop\n"
+        + r"""
+$strictUtf8 = New-Object System.Text.UTF8Encoding($false, $true)
+$readResults = New-Object System.Collections.ArrayList
+$unicodeFileFieldsPreserved = $false
+$unicodeTextFieldsPreserved = $false
+foreach ($case in @($config.cases)) {
+    $path = [string]$case.path
+    $fileValue = Read-BoundedJsonObject $path
+    $textValue = $null
+    try {
+        $text = [IO.File]::ReadAllText($path, $strictUtf8)
+        $textValue = ConvertFrom-BoundedStrictJsonObjectText $text
+    }
+    catch {
+        $textValue = $null
+    }
+    [void]$readResults.Add([ordered]@{
+        name = [string]$case.name
+        file_accept = [bool]($null -ne $fileValue)
+        text_accept = [bool]($null -ne $textValue)
+    })
+    if ([System.StringComparer]::Ordinal.Equals([string]$case.name, 'unicode_distinct_keys')) {
+        $unicodeFileFieldsPreserved = [bool](
+            Test-ExactJsonFieldSet $fileValue @($config.unicode_expected)
+        )
+        $unicodeTextFieldsPreserved = [bool](
+            Test-ExactJsonFieldSet $textValue @($config.unicode_expected)
+        )
+    }
+}
+
+$canonicalFields = [pscustomobject][ordered]@{ schema = 'x'; case_id = 'y' }
+$wrongCaseFields = [pscustomobject][ordered]@{ Schema = 'x'; case_id = 'y' }
+$missingFields = [pscustomobject][ordered]@{ schema = 'x' }
+$extraFields = [pscustomobject][ordered]@{ schema = 'x'; case_id = 'y'; extra = 'z' }
+$softHyphenField = [ordered]@{}
+$softHyphenField[[string][char]0x00ad] = 'x'
+$nulField = [ordered]@{}
+$nulField[[string][char]0x0000] = 'x'
+$fieldResults = [ordered]@{
+    order_insensitive_exact = [bool](Test-ExactJsonFieldSet $canonicalFields @('case_id', 'schema'))
+    wrong_case_rejected = [bool](-not (Test-ExactJsonFieldSet $wrongCaseFields @('schema', 'case_id')))
+    missing_rejected = [bool](-not (Test-ExactJsonFieldSet $missingFields @('schema', 'case_id')))
+    extra_rejected = [bool](-not (Test-ExactJsonFieldSet $extraFields @('schema', 'case_id')))
+    soft_hyphen_vs_empty_rejected = [bool](-not (Test-ExactJsonFieldSet $softHyphenField @('')))
+    nul_vs_empty_rejected = [bool](-not (Test-ExactJsonFieldSet $nulField @('')))
+}
+
+$expectedBindings = [ordered]@{
+    schema = 'AV-BS1-h4-p0r-outer-terminal-seal-v2'
+    status = 'completed_pass'
+    sha256 = ('a' * 64)
+}
+$validBindings = [pscustomobject][ordered]@{
+    schema = 'AV-BS1-h4-p0r-outer-terminal-seal-v2'
+    status = 'completed_pass'
+    sha256 = ('a' * 64)
+}
+$caseChangedSchema = [pscustomobject][ordered]@{
+    schema = 'av-bs1-h4-p0r-outer-terminal-seal-v2'
+    status = 'completed_pass'
+    sha256 = ('a' * 64)
+}
+$softHyphenStatus = [pscustomobject][ordered]@{
+    schema = 'AV-BS1-h4-p0r-outer-terminal-seal-v2'
+    status = ('completed_pass' + [string][char]0x00ad)
+    sha256 = ('a' * 64)
+}
+$uppercaseHash = [pscustomobject][ordered]@{
+    schema = 'AV-BS1-h4-p0r-outer-terminal-seal-v2'
+    status = 'completed_pass'
+    sha256 = ('A' * 64)
+}
+$bindingResults = [ordered]@{
+    exact_bindings_accept = [bool](Test-ExactObjectStringBindings $validBindings $expectedBindings)
+    case_changed_schema_rejected = [bool](-not (Test-ExactObjectStringBindings $caseChangedSchema $expectedBindings))
+    soft_hyphen_binding_rejected = [bool](-not (Test-ExactObjectStringBindings $softHyphenStatus $expectedBindings))
+    uppercase_hash_binding_rejected = [bool](-not (Test-ExactObjectStringBindings $uppercaseHash $expectedBindings))
+    lowercase_sha_accept = [bool](Test-LowercaseHexString ('a' * 64) 64)
+    uppercase_sha_reject = [bool](-not (Test-LowercaseHexString ('A' * 64) 64))
+    lowercase_id_accept = [bool](Test-LowercaseHexString ('b' * 32) 32)
+    uppercase_id_reject = [bool](-not (Test-LowercaseHexString ('B' * 32) 32))
+    ordinal_soft_hyphen_reject = [bool](-not (Test-OrdinalStringEqual ([string][char]0x00ad) ''))
+    ordinal_nul_reject = [bool](-not (Test-OrdinalStringEqual ([string][char]0x0000) ''))
+    nullable_null_accept = [bool](Test-OrdinalNullableStringEqual $null $null)
+    nullable_null_vs_string_reject = [bool](-not (Test-OrdinalNullableStringEqual $null ''))
+}
+
+[ordered]@{
+    read_results = @($readResults)
+    unicode_file_fields_preserved = $unicodeFileFieldsPreserved
+    unicode_text_fields_preserved = $unicodeTextFieldsPreserved
+    field_results = $fieldResults
+    binding_results = $bindingResults
+} | ConvertTo-Json -Depth 6 -Compress
+"""
+    )
+    script_path = tmp_path / "strict-json-reader-harness.ps1"
+    script_path.write_text(script, encoding="ascii", newline="\n")
+    completed = subprocess.run(
+        [
+            "powershell.exe",
+            "-NoProfile",
+            "-NonInteractive",
+            "-ExecutionPolicy",
+            "Bypass",
+            "-File",
+            str(script_path),
+        ],
+        cwd=ROOT,
+        encoding="utf-8",
+        capture_output=True,
+        check=False,
+        timeout=120,
+    )
+    assert completed.returncode == 0, completed.stderr
+    output_lines = [line for line in completed.stdout.splitlines() if line.strip()]
+    assert output_lines, completed.stderr
+    return json.loads(output_lines[-1])
+
+
+def test_runner_strict_json_file_text_field_and_binding_boundaries(
+    tmp_path: Path,
+) -> None:
+    observed = _run_strict_json_reader_slice(tmp_path)
+    expected_acceptance = {
+        "valid_nested_finite": True,
+        "duplicate_top": False,
+        "duplicate_nested": False,
+        "duplicate_inside_array": False,
+        "duplicate_escaped_equivalent": False,
+        "duplicate_surrogate_escape_and_literal": False,
+        "nonfinite_nan_token": False,
+        "nonfinite_positive_infinity_token": False,
+        "nonfinite_negative_infinity_token": False,
+        "nonfinite_overflow_1e309": False,
+        "invalid_utf8_byte": False,
+        "scalar_number_root": False,
+        "scalar_string_root": False,
+        "array_root": False,
+        "depth_32": True,
+        "depth_33": False,
+        "unicode_distinct_keys": True,
+        "case_alias_root": False,
+        "case_alias_nested": False,
+        "case_alias_inside_array": False,
+        "exact_16mib_object": True,
+        "over_16mib_object": False,
+    }
+    assert {
+        str(item["name"]): bool(item["file_accept"])
+        for item in observed["read_results"]
+    } == expected_acceptance
+    assert {
+        str(item["name"]): bool(item["text_accept"])
+        for item in observed["read_results"]
+    } == expected_acceptance
+    assert observed["unicode_file_fields_preserved"] is True
+    assert observed["unicode_text_fields_preserved"] is True
+    assert observed["field_results"] == {
+        "order_insensitive_exact": True,
+        "wrong_case_rejected": True,
+        "missing_rejected": True,
+        "extra_rejected": True,
+        "soft_hyphen_vs_empty_rejected": True,
+        "nul_vs_empty_rejected": True,
+    }
+    assert observed["binding_results"] == {
+        "exact_bindings_accept": True,
+        "case_changed_schema_rejected": True,
+        "soft_hyphen_binding_rejected": True,
+        "uppercase_hash_binding_rejected": True,
+        "lowercase_sha_accept": True,
+        "uppercase_sha_reject": True,
+        "lowercase_id_accept": True,
+        "uppercase_id_reject": True,
+        "ordinal_soft_hyphen_reject": True,
+        "ordinal_nul_reject": True,
+        "nullable_null_accept": True,
+        "nullable_null_vs_string_reject": True,
+    }
+
+
+def test_runner_strict_json_ingress_readback_and_terminal_callsites_are_pinned() -> None:
+    source = RUNNER.read_text(encoding="utf-8")
+    assert source.count("ConvertFrom-Json") == 1
+    for strict_ingress in (
+        "$completionValue = Read-BoundedJsonObject $completion",
+        "$preflightWrapper = ConvertFrom-BoundedStrictJsonObjectText $preflightText",
+        "$token = Read-BoundedJsonObject $reviewTokenPath",
+        "$result = Read-BoundedJsonObject $finalPath",
+        "$consumeWrapper = ConvertFrom-BoundedStrictJsonObjectText",
+    ):
+        assert strict_ingress in source
+    for ordinal_readback in (
+        "Ordinal.Equals($actualJson, $expectedJson)",
+        "Ordinal.Equals($readbackJson, $json)",
+        "Ordinal.Equals($validatedTombstoneJson, $currentTombstoneJson)",
+        "Ordinal.Equals($actualExistingJson, $expectedExistingJson)",
+        "Ordinal.Equals($readbackJson, $evidenceJson)",
+        "Ordinal.Equals($sealReadbackJson, $sealJson)",
+    ):
+        assert source.count(ordinal_readback) == 1
+    for terminal_binding_gate in (
+        "Test-ExactObjectStringBindings $currentTombstone $terminalTombstoneStringBindings",
+        "Test-ExactObjectStringBindings $consumerEnvelopeCloseCurrent $consumerEnvelopeStringBindings",
+        "Test-ExactObjectStringBindings $finalIndexValue $finalIndexStringBindings",
+        "Test-ExactObjectStringBindings $currentTombstone $provisionalTombstoneStringBindings",
+        "Test-ExactObjectStringBindings $currentTombstone.result_evidence $provisionalResultStringBindings",
+        "Test-ExactObjectStringBindings $sealReadback $sealStringBindings",
+    ):
+        assert terminal_binding_gate in source
+    candidate_gate = (
+        "-not (Test-ExactObjectStringBindings $candidateToken "
+        "$candidateTokenStringBindings)"
+    )
+    candidate_gate_positions = [
+        match.start() for match in re.finditer(re.escape(candidate_gate), source)
+    ]
+    assert len(candidate_gate_positions) == 2
+    for gate_position in candidate_gate_positions:
+        legacy_position = source.index(
+            '$candidateToken.schema -ne "AV-BS1-h4-p0r-review-token-v1"',
+            gate_position,
+        )
+        assert gate_position < legacy_position
+
+    ordered_authorization_gates = (
+        (
+            "-not (Test-ExactObjectStringBindings $startRelease "
+            "$startReleaseStringBindings)",
+            "$startRelease.schema -ne $outerStartReleaseSchema",
+        ),
+        (
+            "-not (Test-ExactObjectStringBindings $preflightWrapper.payload "
+            "$preflightPayloadStringBindings)",
+            '$preflightWrapper.payload.schema -ne "AV-BS1-h4-p0r-execution-fixture-v1"',
+        ),
+        (
+            "-not (Test-ExactObjectStringBindings $token $tokenStringBindings)",
+            "$preflightWrapper.payload.review_token_id -ne $token.review_token_id",
+        ),
+        (
+            "-not (Test-ExactObjectStringBindings $preflightWrapper.payload "
+            "$preflightTokenStringBindings)",
+            "$preflightWrapper.payload.review_token_id -ne $token.review_token_id",
+        ),
+        (
+            "-not (Test-ExactObjectStringBindings "
+            "$preflightWrapper.payload.manifest_bindings $preflightManifestBindings)",
+            "$preflightWrapper.payload.manifest_bindings.manifest_payload_sha256 "
+            "-ne $token.manifest_payload_sha256",
+        ),
+    )
+    authorization_gate_positions: list[int] = []
+    for exact_gate, legacy_clause in ordered_authorization_gates:
+        exact_position = source.index(exact_gate)
+        legacy_position = source.index(legacy_clause, exact_position)
+        assert exact_position < legacy_position
+        authorization_gate_positions.append(exact_position)
+
+    hidden_candidate_gate, public_candidate_gate = candidate_gate_positions
+    start_release_gate = authorization_gate_positions[0]
+    public_inner_launch = source.index(
+        "$process = Start-Process -FilePath $hostExecutable", public_candidate_gate
+    )
+    claim_create = source.index(
+        "[IO.File]::Open($claimPath, [IO.FileMode]::CreateNew",
+        authorization_gate_positions[-1],
+    )
+    factor_launch = source.index(
+        "$process = Start-Process -FilePath $pythonPath",
+        claim_create,
+    )
+    assert hidden_candidate_gate < start_release_gate < public_candidate_gate
+    assert public_candidate_gate < public_inner_launch
+    assert max(authorization_gate_positions[1:]) < claim_create < factor_launch
+    assert re.search(
+        r"(?<!c)-(?:not)?match\s+['\"]\^\[0-9a-f\]", source
+    ) is None

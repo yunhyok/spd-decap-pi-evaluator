@@ -1,8 +1,63 @@
 # SPD Decap PI Evaluator v0.22.0
 
+> **Current AV-BS1 H4-P0R-P1 retry-v10 final documentation freeze:** Ten
+> public P1 invocations and their token lineages are immutable. The tenth ran
+> exactly once from token-only commit
+> `13bfe70d6f203822a3a07d0613bdc64fe9f223df`, token ID
+> `2cd3597ab0b9483ea78c3cfa3b75f5e8`, and the public stage exited `2` without a
+> rerun. Factor producer PID `54044`, finalizer PID `25200`, and consumer PID
+> `41812` all exited `0`. Exactly two factor certificates and two prefix
+> checkpoints were retained in frozen order `A_background_II`,
+> `A_conductor_II`; both factor-cap gates and the inner/outer resource gates
+> passed. Inner monitoring recorded `245` samples in `34.1760023 s`, peak
+> working set `511868928` bytes, peak private bytes `1994665984`, and peak
+> lifetime commit `2322489344`. Outer monitoring recorded `664` samples plus
+> `39` nontruncated retries in `91.722828 s`, peak working set `495939584`, peak
+> private bytes `1993838592`, and peak lifetime commit `2335375360`. All
+> `205/205` recorded PID/birth identities were absent after cleanup. The host had
+> about 45 GB physically available, so this is not an 8 GB fit result. No RHS,
+> factor solve, extension, boundary `Y`, modal response, H4 physics, or PowerSI
+> comparison ran.
+>
+> The public exit `2` was caused by three order-only false mismatches while
+> reconciling claim, guard, and resource JSON. The raw seal exists but is not
+> strict-authoritative. The retained classification is
+> `consumed_v2_provisional_invalid_terminal_evidence`, with
+> `authoritative_terminal_evidence=false`, authoritative inner disposition
+> `null`, and terminal detail
+> `BLOCKED_AV_BS_RESULT_SCHEMA: terminal pre-exit normal_pass_outer_evidence_reconciliation_pass mismatch`.
+> M-only consumption `785f5e9c0a38ad1851c4ba620f520db9087aaf74` followed by
+> D-only retirement `a139d867bbc727b58f9a7a4cdbad604fc03070cf`; the token is
+> absent and `next_stage_authorized=false`.
+>
+> Retry-v10 changes only the runner's strict JSON boundary: a strict-UTF-8,
+> duplicate-key-preserving streaming pre-read enforces a 16 MiB byte cap,
+> object root, depth 32, exact ordinal keys, and finite JSON numbers before the
+> normal parse; recursive equality uses ordinal string/key comparison and O(n)
+> ordinal maps/sets; exact field sets and evidence bindings are ordinal; and
+> factor/preflight/terminal-authority SHA-256 fields require lowercase hex.
+> Schemas, Python fixture, factor mathematics, retry/max3/cap64 policy, factor
+> order/caps, resource ceilings, and the no-RHS/no-solve/no-physics boundary are
+> unchanged. Frozen exact bindings are Python
+> `46082123fbf98102f3e5995c32bf65d8d04bb835b9c1305de0150349e75e48c7`,
+> runner `f0159061dbd4d1b34881911edfdfb72146a3a23e5cdc75ca8fa4069c08aadb86`
+> (`484795` bytes), and tests
+> `e5496ceb24c33c835b88ce20a3f67f941c8279e0471708a01022238fc211b109`
+> (`488591` bytes). Collection is `400`; current-byte focused selection passed
+> `5/5` in `2.73 s`, and independent same-byte selection passed `5/5` in
+> `2.71 s`. The
+> provisional full attempt reached `398 passed, 2 failed in 94.17 s` only from
+> an outdated test source pin and a missing exact preregistration heading; both
+> static defects are corrected and recorded in `SESSION_LOG.md`. The first
+> successful full exact-document suite then passed `400/400` in `93.89 s`, exit
+> `0`, with no failure. This is the **FINAL DOC FREEZE**, not a factor, H4,
+> PowerSI, 8 GB, token, or next-stage
+> authorization. Any separately authorized future public invocation would be
+> eleventh.
+
 > **Ongoing Evaluation algorithm research:** start every research session from the [accuracy-first research restart document](docs/evaluation-research/README.md). Isolated research-only fixtures, runners, tests, and evidence may exist on the research branch, but the product parser, solver, UI, version, and installer remain unchanged unless implementation is explicitly authorized.
 
-> **Current AV-BS1 H4-P0R-P1 retry-v9 final documentation freeze:** Nine
+> **Historical AV-BS1 H4-P0R-P1 retry-v9 final documentation freeze:** Nine
 > public P1 invocations and tokens are immutable. The ninth ran once from
 > retry-v8 token-only commit `0597872eeaedd359ce5a3d429748dee2b70ec9a7`, token
 > ID `0ec78f5300cc4a63923e735e81b7e713`, and exited `1`. Factor producer PID
@@ -44,6 +99,10 @@
 > `factor_fit_unproven=true`; `next_stage_authorized=false`. See the
 > [results](docs/evaluation-research/T1_AV_BOUNDARY_SCHUR_RESULTS.md) and
 > [reproduction appendix](docs/evaluation-research/ORACLE_REPRODUCTION.md).
+>
+> Every pre-existing retry-v9, ninth-attempt, future-tenth, `397/397`, or
+> **FINAL DOC FREEZE** statement later in this file is an immutable historical
+> snapshot. Only the retry-v10 block above states current authority.
 
 > **v0.22.0 implements the source-derived multilayer layer-surface network and binds its release decision to both named SPD/PowerSI cases.** Exact adjacent-gap artwork Maxwell-Y blocks share physical `(layer, NET)` surface nodes, exact same-NET Trace/Via components provide only source-observed connectivity, and all internal interfaces are eliminated by one global sparse Schur/Kron solve. Touchstone remains comparison-only. Distribution reports `Assignment Failed`, and the main board can switch between Source SPD and Current cap assignments at their fixed physical XY. The title bar identifies the application as **SPD Decap PI Evaluator v0.22.0**.
 
