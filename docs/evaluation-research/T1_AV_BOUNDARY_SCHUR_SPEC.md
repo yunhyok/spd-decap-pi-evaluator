@@ -1,6 +1,52 @@
 # SPD Decap PI Evaluator v0.22.0 — AV-BS1 Boundary-Schur Preregistration
 
-> **SPD Decap PI Evaluator v0.22.0 — retry-v10 final documentation
+> **SPD Decap PI Evaluator v0.22.0 — retry-v10 eleventh-result final
+> documentation freeze:** Eleven public `primary-h4-p0r` invocations and token
+> lineages are immutable. The eleventh ran exactly once from token-only commit
+> `e35ef01214f4bf9ec75e7b428e72b21d38c9161b`, token ID
+> `2435fa59edc64efca2fb4665b0854d43`, and exited public stage `0` with
+> empty stderr; it was not rerun. Factor producer PID `63268`, finalizer PID
+> `39580`, and consumer PID `60012` exited `0`. Exactly two certificates
+> and two prefixes were retained in order `A_background_II`,
+> `A_conductor_II`; both factor-cap gates and both resource gates passed.
+> Strict retained classifications are `consumed_v2_authoritative_sealed_pass`
+> and `consumed_v2_authoritative_sealed_pass_no_next_stage_authorization`,
+> with `authoritative_terminal_evidence=true`,
+> `authoritative_stage_pass=true`, authoritative inner disposition
+> `authoritative_inner_pass_observed`, `validation_error=null`, and
+> `next_stage_authorized=false`. M-only consumption
+> `bf94e1890c489e690801b3d90bcbf50ff61ca233` followed by D-only retirement
+> `389ec1e51b87f3eff928278c76bbbf60241af972`; the token is absent.
+>
+> Inner monitoring retained `243/243` samples in `34.0036179 s`, peak
+> working set `510849024` bytes, private bytes `1954021376`, and lifetime
+> commit `2358079488`. Outer monitoring retained `677/677` samples and
+> `47` nontruncated retries in `94.5411269 s`, peak working set
+> `513384448`, private bytes `1958121472`, and lifetime commit
+> `2358079488`. All `164/164` outer identities and the broader `207/207`
+> identity set were absent after cleanup. Minimum host available physical memory
+> was `43885748224` bytes, so this is an authoritative factor-only pass on
+> this host, not an 8 GB fit proof. Both certificates have `rhs_count=0`,
+> `factor_solve_called=false`, and all forbidden-operation flags false. No
+> RHS, solve, extension, boundary `Y`, modal response, H4 physics, or PowerSI
+> comparison ran.
+>
+> Frozen Python/runner/tests SHA-256 remain `46082123fbf98102f3e5995c32bf65d8d04bb835b9c1305de0150349e75e48c7`,
+> `f0159061dbd4d1b34881911edfdfb72146a3a23e5cdc75ca8fa4069c08aadb86`,
+> and `e5496ceb24c33c835b88ce20a3f67f941c8279e0471708a01022238fc211b109`;
+> collection remains `400`. Evidence anchors are numerical raw SHA-256
+> `0af448eeea2eb302f6aeebbb04fd01992067ccc55a017eb780507aa34924728f`,
+> resource raw SHA-256
+> `d6358608dd97c0f245bb781d0bfc63e929a1a74733907a7fa2a1fbdb9dca97de`,
+> and terminal-seal raw SHA-256
+> `070c86e25aeb982d5ef1c9c99c9c15d9ed3a6d08ce4e521e55262e4586a516a4`.
+> The first full exact-document suite on the post-eleventh document bytes
+> passed `400/400` in `95.65 s`, exit `0`, with no failure. This is the
+> **FINAL DOC FREEZE**. Do not record any later closure runtime. Any H4-P1,
+> RHS, or solve work still requires a separate preregistration and
+> authorization; this result creates neither a token nor further authority.
+>
+> **Historical SPD Decap PI Evaluator v0.22.0 — retry-v10 tenth-result final documentation
 > freeze:** Ten public attempts are immutable. The tenth ran once and exited
 > public stage `2`; producer/finalizer/consumer PIDs `54044`/`25200`/`41812`
 > exited `0`, exactly two factor certificates/prefixes were retained in order
@@ -69,9 +115,10 @@
 > [results](T1_AV_BOUNDARY_SCHUR_RESULTS.md) and the
 > [reproduction appendix](ORACLE_REPRODUCTION.md).
 >
-> Every pre-existing retry-v9, ninth-attempt, future-tenth, `397/397`, or
-> **FINAL DOC FREEZE** statement later in this file is an immutable historical
-> snapshot. Only the retry-v10 block above states current authority.
+> Every pre-existing retry-v10 tenth-result, future-eleventh, `400/400`,
+> retry-v9, ninth-attempt, future-tenth, `397/397`, or **FINAL DOC FREEZE**
+> statement later in this file is an immutable historical
+> snapshot. Only the retry-v10 eleventh-result block at the top states current authority.
 
 
 최종 갱신: 2026-08-16 (Asia/Seoul)
@@ -534,6 +581,29 @@ tenth.
 4. 완료한 H4-P0 assembly manifest와 H4-P0R contract-only manifest를 clean research commit에 고정한다.
 5. H4-P0R-P1의 아홉 interruption, token retirement, validation-output와 retained evidence를 보존한다. retry-v9 fixture/runner/tests/docs, first full exact-document `397/397` in `92.95 s`, exit `0`, no failure 및 FINAL DOC FREEZE를 token-absent provisional runtime contract와 독립 audit에 고정한다. retired token commits를 재실행하지 않는다.
 6. Exact final-byte reread, 독립 audit와 별도 승인 뒤 fresh token이 생긴 경우에만 열 번째 factorization-only pilot을 검토한다. RHS/solve/extension/Y/modal/physics는 금지하고, authoritative P0R 결과 독립 감사와 별도 H4-P1 사전등록·clean commit·fresh one-use token 전에는 h4 physics solve를 실행하지 않는다. 모든 경우 `next_stage_authorized=false`다.
+
+## Current retry-v10 eleventh-result exact next contract
+
+The exact next artifact is a **non-executable H4-P1 manifest-only
+preregistration**. Existing H4-P0R Python, runner, and tests remain frozen. It
+creates no token and authorizes no RHS, solve, or physics.
+
+Before a later executable can even be considered, the manifest must require:
+
+- one same-process factor lifetime, all `512` RHS in batches `<=4`, full H4
+  `Y`/`Yrev`/`M9` plus all gates;
+- no L/U persistence or rehydration and no standalone synthetic result;
+- a fixed-layout little-endian complex128 binary sidecar for
+  `Y`/`Yrev`/`M9`, because `12923024` raw bytes would become about
+  `17230700` base64 bytes and exceed the 16 MiB JSON cap by `453484` bytes;
+- an exact descriptor for offsets, shapes, dtype, order, size, and SHA-256,
+  together with atomic publish/hash binding/quarantine/seal and
+  tamper/nonfinite/path validation; and
+- a prospective resource envelope of `3470862055` bytes with `824105241`
+  bytes of 4 GiB slack, without treating that estimate as an 8 GB proof.
+
+These are preregistration requirements only. They are not implemented behavior,
+an executable contract, authorization, or a PowerSI/H4 result.
 
 ## Primary literature
 

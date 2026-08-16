@@ -1,6 +1,52 @@
 # SPD Decap PI Evaluator v0.22.0 — T1 AV-BS1 boundary-Schur results
 
-> **SPD Decap PI Evaluator v0.22.0 — retry-v10 final documentation
+> **SPD Decap PI Evaluator v0.22.0 — retry-v10 eleventh-result final
+> documentation freeze:** Eleven public `primary-h4-p0r` invocations and token
+> lineages are immutable. The eleventh ran exactly once from token-only commit
+> `e35ef01214f4bf9ec75e7b428e72b21d38c9161b`, token ID
+> `2435fa59edc64efca2fb4665b0854d43`, and exited public stage `0` with
+> empty stderr; it was not rerun. Factor producer PID `63268`, finalizer PID
+> `39580`, and consumer PID `60012` exited `0`. Exactly two certificates
+> and two prefixes were retained in order `A_background_II`,
+> `A_conductor_II`; both factor-cap gates and both resource gates passed.
+> Strict retained classifications are `consumed_v2_authoritative_sealed_pass`
+> and `consumed_v2_authoritative_sealed_pass_no_next_stage_authorization`,
+> with `authoritative_terminal_evidence=true`,
+> `authoritative_stage_pass=true`, authoritative inner disposition
+> `authoritative_inner_pass_observed`, `validation_error=null`, and
+> `next_stage_authorized=false`. M-only consumption
+> `bf94e1890c489e690801b3d90bcbf50ff61ca233` followed by D-only retirement
+> `389ec1e51b87f3eff928278c76bbbf60241af972`; the token is absent.
+>
+> Inner monitoring retained `243/243` samples in `34.0036179 s`, peak
+> working set `510849024` bytes, private bytes `1954021376`, and lifetime
+> commit `2358079488`. Outer monitoring retained `677/677` samples and
+> `47` nontruncated retries in `94.5411269 s`, peak working set
+> `513384448`, private bytes `1958121472`, and lifetime commit
+> `2358079488`. All `164/164` outer identities and the broader `207/207`
+> identity set were absent after cleanup. Minimum host available physical memory
+> was `43885748224` bytes, so this is an authoritative factor-only pass on
+> this host, not an 8 GB fit proof. Both certificates have `rhs_count=0`,
+> `factor_solve_called=false`, and all forbidden-operation flags false. No
+> RHS, solve, extension, boundary `Y`, modal response, H4 physics, or PowerSI
+> comparison ran.
+>
+> Frozen Python/runner/tests SHA-256 remain `46082123fbf98102f3e5995c32bf65d8d04bb835b9c1305de0150349e75e48c7`,
+> `f0159061dbd4d1b34881911edfdfb72146a3a23e5cdc75ca8fa4069c08aadb86`,
+> and `e5496ceb24c33c835b88ce20a3f67f941c8279e0471708a01022238fc211b109`;
+> collection remains `400`. Evidence anchors are numerical raw SHA-256
+> `0af448eeea2eb302f6aeebbb04fd01992067ccc55a017eb780507aa34924728f`,
+> resource raw SHA-256
+> `d6358608dd97c0f245bb781d0bfc63e929a1a74733907a7fa2a1fbdb9dca97de`,
+> and terminal-seal raw SHA-256
+> `070c86e25aeb982d5ef1c9c99c9c15d9ed3a6d08ce4e521e55262e4586a516a4`.
+> The first full exact-document suite on the post-eleventh document bytes
+> passed `400/400` in `95.65 s`, exit `0`, with no failure. This is the
+> **FINAL DOC FREEZE**. Do not record any later closure runtime. Any H4-P1,
+> RHS, or solve work still requires a separate preregistration and
+> authorization; this result creates neither a token nor further authority.
+>
+> **Historical SPD Decap PI Evaluator v0.22.0 — retry-v10 tenth-result final documentation
 > freeze:** Ten public attempts are immutable. The tenth ran once and exited
 > public stage `2`; producer/finalizer/consumer PIDs `54044`/`25200`/`41812`
 > exited `0`, exactly two factor certificates/prefixes were retained in order
@@ -69,9 +115,10 @@
 > [results](T1_AV_BOUNDARY_SCHUR_RESULTS.md) and the
 > [reproduction appendix](ORACLE_REPRODUCTION.md).
 >
-> Every pre-existing retry-v9, ninth-attempt, future-tenth, `397/397`, or
-> **FINAL DOC FREEZE** statement later in this file is an immutable historical
-> snapshot. Only the retry-v10 block above states current authority.
+> Every pre-existing retry-v10 tenth-result, future-eleventh, `400/400`,
+> retry-v9, ninth-attempt, future-tenth, `397/397`, or **FINAL DOC FREEZE**
+> statement later in this file is an immutable historical
+> snapshot. Only the retry-v10 eleventh-result block at the top states current authority.
 
 
 ## Current verdict
@@ -708,3 +755,87 @@ authorized future invocation would be tenth.
 2. 아홉 P1 interruption과 validation-output, retained evidence, consumed records 및 D-only retirement를 보존한다. `b6c8615...`, `d9e064f...`, `6328174...`, `9b4854d...`, `5ba4b69...`, `8277532...`, `4f60bd5...`, `66211ef...`, `0597872...`를 재실행하지 않는다.
 3. retry-v9 Python/runner/tests/docs를 token-absent provisional runtime contract와 FINAL DOC FREEZE에 고정한다. First full exact-document suite는 `397/397` in `92.95 s`, exit `0`, no failure로 통과했다.
 4. Exact final-byte reread, full suite, independent audit와 별도 승인 뒤 새 token이 생긴 경우에만 열 번째 public invocation을 검토한다. RHS/extensions/Y/modal physics는 금지한다. P0R authoritative terminal result 독립 audit와 별도 H4-P1 preregistration/clean audit/fresh token 전에는 h4 physics를 실행하지 않으며, withheld radius/EQ0도 각각의 후속 계약 전까지 금지한다.
+
+## Current retry-v10 eleventh authoritative factor-only result
+
+All preceding tenth/retry-v9 next-action text is immutable history. Eleven
+public `primary-h4-p0r` invocations are now immutable. The eleventh ran once
+from token-only commit `e35ef01214f4bf9ec75e7b428e72b21d38c9161b`, token ID
+`2435fa59edc64efca2fb4665b0854d43`. Public exit/stderr were `0`/empty and
+there was no retry. Producer/finalizer/consumer PIDs
+`63268`/`39580`/`60012` exited `0`.
+
+Exactly two factor certificates and two prefix checkpoints were retained in
+order `A_background_II`, `A_conductor_II`:
+
+| factor | input nnz | L/U nnz | native nnz | fill ratio | portable/export/native-portable bytes | factor wall |
+|---|---:|---:|---:|---:|---:|---:|
+| `A_background_II` | `204545` | `1570627` / `1615176` | `3342108` | `15.57507150015889` | `77466936` / `64219892` / `81218256` | `1.3330735 s` |
+| `A_conductor_II` | `219393` | `1702688` / `1716333` | `3543771` | `15.584002224318917` | `83064168` / `68884252` / `86058168` | `1.4459152 s` |
+
+Both cap gates passed; `rhs_count=0`, `factor_solve_called=false`, and every
+forbidden-operation flag is false for both certificates. Inner resource
+monitoring retained `243/243` samples in `34.0036179 s` with peak working
+set/private/lifetime commit
+`510849024`/`1954021376`/`2358079488` bytes. Outer monitoring retained
+`677/677` samples plus `47` nontruncated retries in `94.5411269 s` with
+`513384448`/`1958121472`/`2358079488` bytes. All `164/164` outer identities
+and the broader `207/207` set were absent after cleanup. The minimum host
+available physical memory was `43885748224` bytes.
+
+Strict classification is `consumed_v2_authoritative_sealed_pass` /
+`consumed_v2_authoritative_sealed_pass_no_next_stage_authorization`.
+`terminal_evidence_complete=true`, `authoritative_terminal_evidence=true`,
+`authoritative_stage_pass=true`, authoritative inner disposition is
+`authoritative_inner_pass_observed`, `validation_error=null`, and
+`next_stage_authorized=false`. M-only consumption
+`bf94e1890c489e690801b3d90bcbf50ff61ca233` followed by D-only retirement
+`389ec1e51b87f3eff928278c76bbbf60241af972`; the token is absent.
+
+### Exact evidence hashes
+
+| evidence | raw SHA-256 | canonical/payload SHA-256 |
+|---|---|---|
+| original token | `63ceea36ce8fc3a0e97942c7bbdf3487e3478d1f048de2c9a5343118e63b53ca` | `f4e61b9e05557f0d2705119670e1f760e52325da8f2767aa82a2080d3aa7a555` |
+| claim | `7ee75af33cdba5ee9cb4f92ff4acc601a7939717eda24ffd35536f7275c646b9` | `00611c2a7425d0100f0c49abe881b43978645355e73946af23d5424254907b68` |
+| guard | `f8454d99b28195070a8b22ee870df6a0a95d9dc3f35b83aa7ea107ad55f7e7c6` | `f99f1f20362eb7d7cae04f38cc20c01e4c56bf5500dd437914642699f439f755` |
+| numerical | `0af448eeea2eb302f6aeebbb04fd01992067ccc55a017eb780507aa34924728f` | `b236e160b41150b856fbd69f98ab682edb3c61d6f3a53f02c5960c553f1a5c78` |
+| prefix 1 | `d37940d04ede5820c020d5b352c418592f344db89a4db6430762339b115b50e5` | `7e9b6c9d719c8c782f7727a49ea53945867b76721e79b67d143205699b4e49cb` |
+| prefix 2 | `174f6cca5f808094a306c681a9502b9551c7d741657d1d0db62b9510ca74a3e8` | `45e1a18105128778ffae2d0e53aeb2621fd080d077d4a775020f3c52cd0d5ab7` |
+| resource | `d6358608dd97c0f245bb781d0bfc63e929a1a74733907a7fa2a1fbdb9dca97de` | `537350ed7b9b9d14206624ed8fd46014de6cb0d417c0611b7753170bae9abf84` |
+| result | `ad007d6ac4c053981f6ab9da72505848956019cd4b5cdb1e1ecfa7b5e0d02121` | `0d33860805d50e887fe8a43c9adea3da81df99df73a812ca7559c92419bdb6b0` |
+| pre-exit | `5ff55a34ac6687cd2a86c1c890b50b7ae43b2917e862d9a6c6a001d70e10cadb` | `b5cb10f9a8b8eb5fc40f04b4ff11984d497d0ddf178e34963db1aec1e3b61207` |
+| outer close | `184302a02026e1ab9aa84d4a94a2f9605c8254849920379d6b30fb0ce765f3c5` | same |
+| terminal seal | `070c86e25aeb982d5ef1c9c99c9c15d9ed3a6d08ce4e521e55262e4586a516a4` | `8c9de1f93bccac285d81ca60d7b9bc827cb1e66ffc2fe036825a008a491513b6` |
+| consumed tombstone | `3ce2bc00bdb4ee2d2da1a706e7c2211eba2a0579e179990aa34d2e2855cd615f` | same |
+
+Python/runner/tests remain bound to
+`46082123fbf98102f3e5995c32bf65d8d04bb835b9c1305de0150349e75e48c7` /
+`f0159061dbd4d1b34881911edfdfb72146a3a23e5cdc75ca8fa4069c08aadb86` /
+`e5496ceb24c33c835b88ce20a3f67f941c8279e0471708a01022238fc211b109`,
+collection `400`. The first full exact-document suite on these post-eleventh
+bytes passed `400/400` in `95.65 s`, exit `0`, with no failure. This is the
+**FINAL DOC FREEZE**; no later closure runtime is recorded. This is an
+authoritative factor-only pass on this host, not an 8 GB proof and not an H4
+or PowerSI physics result.
+
+## Current exact next action
+
+1. Validate exactly the 15 baseline Markdown files for scope, UTF-8, LF-only
+   endings, fences, links, current wording, and immutable `SESSION_LOG.md`
+   prefix.
+2. Preserve the first full exact-document result: `400/400` passed in
+   `95.65 s`, exit `0`, with no failure. Freeze these exact bytes and do not
+   record any later closure runtime.
+3. Keep the token absent and `next_stage_authorized=false`. H4-P1, RHS, or
+   solve requires a separate preregistration and explicit authorization.
+4. The exact next artifact is a non-executable H4-P1 manifest-only prereg:
+   frozen P0R code; one same-process factor lifetime; `512` RHS in batches
+   `<=4`; full `Y`/`Yrev`/`M9` and gates; no L/U persistence/rehydration or
+   standalone synthetic result. Raw `12923024` bytes would become about
+   `17230700` base64 bytes and exceed 16 MiB by `453484`, so a fixed-layout
+   little-endian complex128 sidecar must bind exact offset/shape/dtype/order/
+   size/SHA with atomic publish, quarantine, seal, and tamper/nonfinite/path
+   checks. Prospective envelope `3470862055` bytes leaves `824105241` bytes
+   below 4 GiB; 8 GB remains unproven. This is neither implementation nor
+   authorization.

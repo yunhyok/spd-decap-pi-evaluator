@@ -2,6 +2,99 @@
 
 ## 1. Current status and authority
 
+Eleven public `primary-h4-p0r` invocations and their token lineages are
+immutable. The eleventh ran exactly once from token-only commit
+`e35ef01214f4bf9ec75e7b428e72b21d38c9161b`, token ID
+`2435fa59edc64efca2fb4665b0854d43`. The public shell exited `0` with empty
+stderr, and no retry occurred. Factor producer PID `63268`, finalizer PID
+`39580`, and consumer PID `60012` all exited `0`. Exactly two factor
+certificates and two prefix checkpoints were retained in required order
+`A_background_II`, `A_conductor_II`.
+
+The strict final classification is:
+
+- `consumed_v2_authoritative_sealed_pass`;
+- `consumed_v2_authoritative_sealed_pass_no_next_stage_authorization`;
+- `terminal_evidence_complete=true` and
+  `authoritative_terminal_evidence=true`;
+- `authoritative_stage_pass=true`;
+- authoritative inner disposition `authoritative_inner_pass_observed`;
+- `validation_error=null`; and
+- `next_stage_authorized=false`.
+
+M-only consumption commit
+`bf94e1890c489e690801b3d90bcbf50ff61ca233` was followed by D-only retirement
+`389ec1e51b87f3eff928278c76bbbf60241af972`. The token is absent and cannot be
+reused. This authoritative result closes only the H4-P0R factor-cap/resource
+pilot on the measured host. It is not H4-P1, an RHS or factor solve, an H4
+physics result, a PowerSI comparison, or an 8 GB fit proof.
+
+### Current eleventh factor-only result
+
+| factor | input nnz | L/U nnz | native factor nnz | fill ratio | portable/export/native-portable bytes | wall |
+|---|---:|---:|---:|---:|---:|---:|
+| `A_background_II` | `204545` | `1570627` / `1615176` | `3342108` | `15.57507150015889` | `77466936` / `64219892` / `81218256` | `1.3330735 s` |
+| `A_conductor_II` | `219393` | `1702688` / `1716333` | `3543771` | `15.584002224318917` | `83064168` / `68884252` / `86058168` | `1.4459152 s` |
+
+Both factor-cap gates passed. Both certificates record
+`factorization_attempted=true`, `factorization_performed=true`,
+`rhs_count=0`, `factor_solve_called=false`, and every forbidden-operation flag
+false. No RHS, linear solve, extension, boundary `Y`, modal response, H4
+physics, or PowerSI comparison ran.
+
+| envelope | samples | retries | wall | peak working set | peak private bytes | lifetime commit |
+|---|---:|---:|---:|---:|---:|---:|
+| inner | `243/243` | n/a | `34.0036179 s` | `510849024` | `1954021376` | `2358079488` |
+| outer | `677/677` | `47` nontruncated | `94.5411269 s` | `513384448` | `1958121472` | `2358079488` |
+
+All `164/164` outer-observer identities and the broader `207/207` identity set
+were absent after cleanup. Minimum available physical memory on the host was
+`43885748224` bytes. Therefore the factor-only pass is authoritative for this
+host and these exact artifacts, but it does not establish execution on an 8 GB
+laptop.
+
+### Current exact eleventh evidence bindings
+
+| evidence | raw SHA-256 | canonical/payload SHA-256 |
+|---|---|---|
+| original token | `63ceea36ce8fc3a0e97942c7bbdf3487e3478d1f048de2c9a5343118e63b53ca` | `f4e61b9e05557f0d2705119670e1f760e52325da8f2767aa82a2080d3aa7a555` |
+| claim | `7ee75af33cdba5ee9cb4f92ff4acc601a7939717eda24ffd35536f7275c646b9` | `00611c2a7425d0100f0c49abe881b43978645355e73946af23d5424254907b68` |
+| guard | `f8454d99b28195070a8b22ee870df6a0a95d9dc3f35b83aa7ea107ad55f7e7c6` | `f99f1f20362eb7d7cae04f38cc20c01e4c56bf5500dd437914642699f439f755` |
+| numerical | `0af448eeea2eb302f6aeebbb04fd01992067ccc55a017eb780507aa34924728f` | `b236e160b41150b856fbd69f98ab682edb3c61d6f3a53f02c5960c553f1a5c78` |
+| prefix 1 | `d37940d04ede5820c020d5b352c418592f344db89a4db6430762339b115b50e5` | `7e9b6c9d719c8c782f7727a49ea53945867b76721e79b67d143205699b4e49cb` |
+| prefix 2 | `174f6cca5f808094a306c681a9502b9551c7d741657d1d0db62b9510ca74a3e8` | `45e1a18105128778ffae2d0e53aeb2621fd080d077d4a775020f3c52cd0d5ab7` |
+| resource | `d6358608dd97c0f245bb781d0bfc63e929a1a74733907a7fa2a1fbdb9dca97de` | `537350ed7b9b9d14206624ed8fd46014de6cb0d417c0611b7753170bae9abf84` |
+| result | `ad007d6ac4c053981f6ab9da72505848956019cd4b5cdb1e1ecfa7b5e0d02121` | `0d33860805d50e887fe8a43c9adea3da81df99df73a812ca7559c92419bdb6b0` |
+| pre-exit | `5ff55a34ac6687cd2a86c1c890b50b7ae43b2917e862d9a6c6a001d70e10cadb` | `b5cb10f9a8b8eb5fc40f04b4ff11984d497d0ddf178e34963db1aec1e3b61207` |
+| outer close | `184302a02026e1ab9aa84d4a94a2f9605c8254849920379d6b30fb0ce765f3c5` | same |
+| terminal seal | `070c86e25aeb982d5ef1c9c99c9c15d9ed3a6d08ce4e521e55262e4586a516a4` | `8c9de1f93bccac285d81ca60d7b9bc827cb1e66ffc2fe036825a008a491513b6` |
+| consumed tombstone | `3ce2bc00bdb4ee2d2da1a706e7c2211eba2a0579e179990aa34d2e2855cd615f` | same |
+
+Frozen implementation bindings remain:
+
+```text
+Python fixture SHA-256: 46082123fbf98102f3e5995c32bf65d8d04bb835b9c1305de0150349e75e48c7
+Python fixture bytes: 579582
+PowerShell runner SHA-256: f0159061dbd4d1b34881911edfdfb72146a3a23e5cdc75ca8fa4069c08aadb86
+PowerShell runner bytes: 484795
+static tests SHA-256: e5496ceb24c33c835b88ce20a3f67f941c8279e0471708a01022238fc211b109
+static tests bytes: 488591
+collection: 400
+token_state: absent
+authoritative_terminal_evidence: true
+authoritative_stage_pass: true
+next_stage_authorized: false
+```
+
+The first full exact-document suite on the post-eleventh bytes passed
+`400/400` in `95.65 s`, exit `0`, with no failure. This is the **FINAL DOC
+FREEZE**; do not record any later closure runtime. Preserve exact-scope/UTF-8/
+LF/fence/link/static integrity for exactly 15 baseline Markdown documents.
+Do not create an authorization token. Any H4-P1, RHS, or solve work requires
+a separate preregistration, independent approval, and explicit authorization.
+
+### Historical retry-v10 tenth-result final documentation freeze
+
 Ten public `primary-h4-p0r` invocations and their token lineages are immutable.
 The tenth ran exactly once from token-only commit
 `13bfe70d6f203822a3a07d0613bdc64fe9f223df`, token ID
@@ -1238,7 +1331,49 @@ Any hash drift, dirty checkout, missing prerequisite, failed final audit,
 unexpected token-commit content, missing cleanup proof, or absent/invalid seal
 stops this sequence fail-closed.
 
-## 17. Current retry-v10 exact next sequence
+## 17. Current retry-v10 eleventh-result exact next sequence
+
+The only permitted current sequence is:
+
+1. Preserve the complete history of all eleven public invocations, consumed
+   records, D-only retirements, and all retry-v8/retry-v9/retry-v10 historical
+   sections. Never invoke any retired or consumed token.
+2. Preserve the frozen Python/runner/tests bindings in Section 1 together with
+   exactly 15 baseline Markdown documents. Preserve the pre-edit
+   `SESSION_LOG.md` prefix of `191429` bytes, `2538` LF lines, SHA-256
+   `210e9913b12e87da441f3d7bd09a455a80f556c75610a418d0bd5e2475e7ba36`
+   byte-for-byte and append only after it.
+3. Preserve the authoritative sealed eleventh factor-only result, both ordered
+   certificates/prefixes, factor/resource gates, identity cleanup, exact
+   evidence hashes, and zero-RHS/no-solve/no-physics boundary. Do not widen the
+   result into an 8 GB, H4 physics, or PowerSI claim.
+4. Preserve the first full exact-document result on the post-eleventh bytes:
+   `400/400` passed in `95.65 s`, exit `0`, with no failure.
+5. Freeze these exact 15-document bytes. Perform only exact-byte closure and
+   independent static/document review; do not record any later closure runtime.
+6. The current checkout has no token and `next_stage_authorized=false`. Do not
+   create a token or invoke H4-P1/RHS/solve work from this result. Any such work
+   requires a separate preregistration, independent approval, and explicit
+   authorization.
+7. The exact next research artifact is a **non-executable H4-P1 manifest-only
+   preregistration**; existing P0R Python/runner/tests stay frozen. Before any
+   executable authorization, it must require one same-process factor lifetime,
+   all `512` RHS in batches `<=4`, full H4 `Y`/`Yrev`/`M9` and gates, no L/U
+   persistence or rehydration, and no standalone synthetic result. The
+   `Y`/`Yrev`/`M9` raw payload is `12923024` bytes; base64 would be about
+   `17230700` bytes, exceeding 16 MiB by `453484` bytes. Therefore it must
+   preregister a fixed-layout little-endian complex128 sidecar whose descriptor
+   binds exact offsets, shapes, dtype, order, size, and SHA-256, with atomic
+   publish/hash bind/quarantine/seal plus tamper, nonfinite, and path checks.
+   The prospective envelope is `3470862055` bytes with `824105241` bytes of
+   4 GiB slack, but 8 GB remains unproven. None of this is implemented,
+   executable, or authorized here.
+
+Any missing prerequisite, unexpected dirty path, failed audit, token presence,
+or attempt to reuse the eleventh factor-only authority for H4-P1/physics stops
+the sequence fail-closed.
+
+## Historical retry-v10 pre-eleventh exact next sequence
 
 The only permitted current sequence is:
 

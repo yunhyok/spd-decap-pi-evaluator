@@ -1,6 +1,52 @@
 # Evaluation Algorithm Research State
 
-> **SPD Decap PI Evaluator v0.22.0 — retry-v10 final documentation
+> **SPD Decap PI Evaluator v0.22.0 — retry-v10 eleventh-result final
+> documentation freeze:** Eleven public `primary-h4-p0r` invocations and token
+> lineages are immutable. The eleventh ran exactly once from token-only commit
+> `e35ef01214f4bf9ec75e7b428e72b21d38c9161b`, token ID
+> `2435fa59edc64efca2fb4665b0854d43`, and exited public stage `0` with
+> empty stderr; it was not rerun. Factor producer PID `63268`, finalizer PID
+> `39580`, and consumer PID `60012` exited `0`. Exactly two certificates
+> and two prefixes were retained in order `A_background_II`,
+> `A_conductor_II`; both factor-cap gates and both resource gates passed.
+> Strict retained classifications are `consumed_v2_authoritative_sealed_pass`
+> and `consumed_v2_authoritative_sealed_pass_no_next_stage_authorization`,
+> with `authoritative_terminal_evidence=true`,
+> `authoritative_stage_pass=true`, authoritative inner disposition
+> `authoritative_inner_pass_observed`, `validation_error=null`, and
+> `next_stage_authorized=false`. M-only consumption
+> `bf94e1890c489e690801b3d90bcbf50ff61ca233` followed by D-only retirement
+> `389ec1e51b87f3eff928278c76bbbf60241af972`; the token is absent.
+>
+> Inner monitoring retained `243/243` samples in `34.0036179 s`, peak
+> working set `510849024` bytes, private bytes `1954021376`, and lifetime
+> commit `2358079488`. Outer monitoring retained `677/677` samples and
+> `47` nontruncated retries in `94.5411269 s`, peak working set
+> `513384448`, private bytes `1958121472`, and lifetime commit
+> `2358079488`. All `164/164` outer identities and the broader `207/207`
+> identity set were absent after cleanup. Minimum host available physical memory
+> was `43885748224` bytes, so this is an authoritative factor-only pass on
+> this host, not an 8 GB fit proof. Both certificates have `rhs_count=0`,
+> `factor_solve_called=false`, and all forbidden-operation flags false. No
+> RHS, solve, extension, boundary `Y`, modal response, H4 physics, or PowerSI
+> comparison ran.
+>
+> Frozen Python/runner/tests SHA-256 remain `46082123fbf98102f3e5995c32bf65d8d04bb835b9c1305de0150349e75e48c7`,
+> `f0159061dbd4d1b34881911edfdfb72146a3a23e5cdc75ca8fa4069c08aadb86`,
+> and `e5496ceb24c33c835b88ce20a3f67f941c8279e0471708a01022238fc211b109`;
+> collection remains `400`. Evidence anchors are numerical raw SHA-256
+> `0af448eeea2eb302f6aeebbb04fd01992067ccc55a017eb780507aa34924728f`,
+> resource raw SHA-256
+> `d6358608dd97c0f245bb781d0bfc63e929a1a74733907a7fa2a1fbdb9dca97de`,
+> and terminal-seal raw SHA-256
+> `070c86e25aeb982d5ef1c9c99c9c15d9ed3a6d08ce4e521e55262e4586a516a4`.
+> The first full exact-document suite on the post-eleventh document bytes
+> passed `400/400` in `95.65 s`, exit `0`, with no failure. This is the
+> **FINAL DOC FREEZE**. Do not record any later closure runtime. Any H4-P1,
+> RHS, or solve work still requires a separate preregistration and
+> authorization; this result creates neither a token nor further authority.
+>
+> **Historical SPD Decap PI Evaluator v0.22.0 — retry-v10 tenth-result final documentation
 > freeze:** Ten public attempts are immutable. The tenth ran once and exited
 > public stage `2`; producer/finalizer/consumer PIDs `54044`/`25200`/`41812`
 > exited `0`, exactly two factor certificates/prefixes were retained in order
@@ -69,14 +115,20 @@
 > [results](T1_AV_BOUNDARY_SCHUR_RESULTS.md) and the
 > [reproduction appendix](ORACLE_REPRODUCTION.md).
 >
-> Every pre-existing retry-v9, ninth-attempt, future-tenth, `397/397`, or
-> **FINAL DOC FREEZE** statement later in this file is an immutable historical
-> snapshot. Only the retry-v10 block above states current authority.
+> Every pre-existing retry-v10 tenth-result, future-eleventh, `400/400`,
+> retry-v9, ninth-attempt, future-tenth, `397/397`, or **FINAL DOC FREEZE**
+> statement later in this file is an immutable historical
+> snapshot. Only the retry-v10 eleventh-result block at the top states current authority.
 
 
 최종 갱신: 2026-08-16 (Asia/Seoul)
 
 ## 상태 요약
+
+> **Current authority override:** the retry-v10 eleventh-result banner at the
+> top and decision `D-054` are current. Any tenth-result, future-eleventh,
+> `factor_fit_unproven=true`, or FINAL DOC FREEZE wording in the legacy table
+> below is an immutable historical snapshot.
 
 | 항목 | 현재 상태 |
 |---|---|
@@ -174,6 +226,8 @@
 | D-050 | Retry-v8 sorts every unsorted L/U export in place and then rechecks sorted/canonical format, while retry attempt state is local to one `Get-TreeSample` producer call. Raw L/U storage hashes, raw composite canonical flags (false when unsorted), zero scans, and chunked CSC column/row bounds precede mutation; pre-sort `has_sorted_indices` is a local sort predicate rather than a certificate field; nonfinite values or explicit zeros fail before sorting; the post-sort canonical check rejects duplicates; canonical hashes and a finite/zero-only re-scan follow. No schema/field bump, L/U or whole-factor matrix copy, coalescing, pruning, factor-order, RHS, solve, or physics change. Within one call, sequences are `A,B,A => 1,1,1` and `A,B,B,B => 1,1,2,3` fatal; state resets per invocation, so cumulative report history may contain adjacent same-identity attempt `1/1` entries across a successful return and cannot enforce cross-call adjacency. Only the known one-call close suffix enforces adjacency. Cap64 is hard even with null diagnostics: within a call, stored event64 itself fails generically unless simultaneous same-identity attempt3 takes precedence, and the call does not resume its retry loop. Reused diagnostics may advance `confirmed_count` beyond64 only as failed/truncated evidence, never a passing sample. Cleanup-race hardening is deferred. | Eighth retry-v7 token-only child `66211ef...` completed native `splu` for `A_background_II`, so attempted/performed are `true/true` with one completed name, but combined non-canonical storage left zero certificates/prefixes; `A_conductor_II`, RHS, solve, and physics did not start. Resource artifact pass is preserved. Independent outer/control false exhaustion across distinct confirmed-dead helpers left no seal or published result. Seven temp evidence files are byte-identical ignored-quarantine copies. Valid provisional emergency tombstone M-only `8fce704...` and D-only retirement `7964464...` leave token absent. Frozen Python/runner/tests SHA `c26112b0738224eed4f1401553adf6fc9a3512b37c475f5b52152cab98e6ecff`/`7e675cc31ab229485719200af8b508dae20bd234bff29428e84628029df2763e`/`426f83888587dc57b7874a4e8dd47f0965212a0c1d7fabde33e6f3ab2801a2e7`; collection `387`, final full exact-document suite `387/387` in `94.11 s` pass. Future public run would be ninth; no token or next authority. |
 | D-051 | Retry-v9 threads the explicit resource child PID through offline validators and changes embedded helper ready/complete marker timestamps to `time.perf_counter_ns()`/QPC. It does not relax strict terminal evidence or change schemas, retry/max3/cap64, factor order/caps, resource ceilings, RHS, solve, or physics boundaries. | Ninth retry-v8 token-only child `0597872eeaedd359ce5a3d429748dee2b70ec9a7`/token `0ec78f5300cc4a63923e735e81b7e713` exited public `1`; producer PID `51184` exited `0` with `factor_certificates_complete`, exactly two certificates/prefixes in background/conductor order, factor caps and inner/outer resource gates passed, 182/182 identities dead, and no RHS/solve/physics. Published finalizer failed `BLOCKED_AV_BS_RESULT_SCHEMA` / `monitor-ready child_process_id mismatch` because verifier PID `37248` replaced producer PID `51184`. Raw seal exists but strict chronology-invalid; retained classification is `consumed_v2_provisional_invalid_terminal_evidence`, non-authoritative. M-only `b9c1964...` and D-only `c14f630...` leave token absent. Frozen Python/runner/tests SHA `46082123fbf98102f3e5995c32bf65d8d04bb835b9c1305de0150349e75e48c7`/`229aa91b04bd89e4af03f9a75c52a0a4819381ec5dfa32a272fe35ac7f1d94f9`/`2106e5338158d2f61a63d572b6f452bd54b752f38500a566f573759096f2c36d`; bootstrap `0c92a0ec8fe67868e222647782cb5eedabffcad77319348f55beaeb0dd745404`, collection `397`, focused `20/377` in `2.33 s`, independent `20/377` in `2.37 s`, compatibility `7/390` in `0.95 s`; first full exact-document suite `397/397` in `92.95 s`, exit `0`, no failure. FINAL DOC FREEZE; future public run would be tenth; no token or next authority. |
 | D-052 | Retry-v10 hardens only the PowerShell strict-JSON trust boundary: strict UTF-8, duplicate-key streaming rejection, finite JSON tree, object/depth32/16 MiB bounds, ordinal O(n) object/string/field/evidence comparison, and lowercase hash guards. Schemas, Python, factor math, retry/resource policy, and physics scope do not change. | Tenth token-only child `13bfe70d...` exited public `2` after exactly three order-only claim/guard/resource false mismatches. Producer/finalizer/consumer `54044`/`25200`/`41812` exited `0`; exactly two ordered certificates/prefixes, factor caps, inner/outer resource gates, and `205/205` absent cleanup passed. Strict terminal authority remains false with null disposition; M-only `785f5e9...` then D-only `a139d86...` leave token absent. Frozen Python/runner/tests SHA `46082123fbf98102f3e5995c32bf65d8d04bb835b9c1305de0150349e75e48c7`/`f0159061dbd4d1b34881911edfdfb72146a3a23e5cdc75ca8fa4069c08aadb86`/`e5496ceb24c33c835b88ce20a3f67f941c8279e0471708a01022238fc211b109`; collection `400`, current-byte focused `5/5` in `2.73 s`, independent same-byte `5/5` in `2.71 s`. The provisional full reached `398 passed, 2 failed in 94.17 s` from the corrected old source pin and exact heading drift; the first successful full then passed `400/400` in `93.89 s`, exit `0`, with no failure. FINAL DOC FREEZE; no token, no H4/PowerSI/8 GB claim, future public run would be eleventh. |
+| D-053 | The eleventh retry-v10 run tests the already-frozen strict-JSON runner and only the H4-P0R factor-cap/resource contract. It does not widen the physics scope. | Token-only child `e35ef012...` / `2435fa59...` ran exactly once, public exit/stderr `0`/empty, no retry. PIDs `63268`/`39580`/`60012` exited `0`; exactly two ordered certificates/prefixes, both cap/resource gates, `164/164` outer and `207/207` broader absent cleanup passed. Strict classifications are `consumed_v2_authoritative_sealed_pass` / `consumed_v2_authoritative_sealed_pass_no_next_stage_authorization` with terminal/stage authority true, disposition pass, validation error null, and next false. M-only `bf94e189...` then D-only `389ec1e...` leave token absent. Host minimum physical availability was `43885748224` bytes: authoritative factor-only pass on this host, not 8 GB/H4/PowerSI. Full exact-document `400` is pending after provisional docs. |
+| D-054 | The first post-eleventh full exact-document result is the only runtime recorded for the final document freeze. Later closure checks do not rewrite this runtime. | Exactly `400/400` passed in `95.65 s`, exit `0`, with no failure. Exact15 scope, immutable session prefix, no-token/no-next authority, and factor-only/H4/PowerSI/8 GB boundaries remain unchanged. **FINAL DOC FREEZE**. |
 
 ## 현재 가설 순위
 
@@ -250,7 +304,34 @@ PowerSI repeatability와 mesh/order convergence를 측정한 뒤 수치는 조�
 14. two-DtN subtraction이 없는 A–v boundary Schur circle reference candidate가 같은 balanced basis에서 analytic DtN, raw reciprocity/passivity, power, h/crop convergence를 동시에 만족해 oracle로 승격될 수 있는가?
 15. retry-v9의 explicit resource child PID threading과 `time.perf_counter_ns()`/QPC bootstrap markers가 동일 frozen schemas와 strict validator에서 producer identity와 terminal chronology를 정확히 닫는가? First full exact-document suite `397/397` in `92.95 s`, exit `0`, no failure와 FINAL DOC FREEZE 뒤에도 exact-byte reread/independent audit에서 factor-only boundary를 유지하며, 별도 승인된 열 번째 run 전에는 token/H4 physics가 생성되지 않는가?
 
-## 다음 세션의 우선 작업
+## 현재 retry-v10 eleventh-result 우선 작업
+
+1. 열한 public invocation, token lineage, consumption, retirement와 exact
+   evidence를 immutable하게 보존한다. 소비·폐기 token은 절대 재실행하지
+   않는다.
+2. 정확히 15개 baseline Markdown의 UTF-8, LF-only, balanced fences, local
+   links, current wording, prereg parser와 `SESSION_LOG.md` immutable prefix
+   integrity를 보존한다.
+3. post-eleventh bytes의 first full exact-document 결과 `400/400`,
+   `95.65 s`, exit `0`, no failure를 보존하고 **FINAL DOC FREEZE**로
+   동결한다. 이후 closure runtime은 기록하지 않는다.
+4. 현재 token은 없고 `next_stage_authorized=false`다. H4-P1, RHS, solve는
+   별도 preregistration, independent approval, explicit authorization 없이는
+   실행하지 않는다.
+5. 이번 pass는 약 43.9 GB 이상의 host 가용 메모리에서 얻은 factor-only
+   결과다. 8 GB laptop, H4 physics, PowerSI 정확성으로 승격하지 않는다.
+6. exact next는 **non-executable H4-P1 manifest-only preregistration**이다.
+   기존 P0R Python/runner/tests는 동결한다. 향후 별도 승인 전 계약은 같은
+   process/factor lifetime에서 `512` RHS를 batch `<=4`로 풀고 full H4
+   `Y`/`Yrev`/`M9`와 gates를 생성하되, L/U persistence/rehydration과
+   standalone synthetic result를 금지해야 한다. raw `12923024` B는 base64
+   약 `17230700` B로 16 MiB를 `453484` B 초과하므로 fixed-layout
+   little-endian complex128 sidecar와 exact offset/shape/dtype/order/size/SHA
+   descriptor, atomic publish/hash-bind/quarantine/seal, tamper/nonfinite/path
+   checks를 먼저 고정한다. prospective envelope `3470862055` B, 4 GiB slack
+   `824105241` B지만 8 GB는 미증명이다. 구현·실행·승인이 아니다.
+
+## Historical 다음 세션의 우선 작업
 
 1. immutable M1-EQ0 collocation negative result와 G1 `passed_exterior_galerkin_only` certificate를 보존한다. G1은 full M1/T1 승격 근거가 아니다.
 2. **G2 circle 실패 동결:** pair는 `passed_pair_screen_only`지만 100 kHz circle raw reciprocity/cancellation은 실패했다. planned G2 2 GHz circle, G2 N512, G2 EQ0 seed로 진행하지 않는다.

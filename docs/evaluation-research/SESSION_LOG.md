@@ -2536,3 +2536,172 @@ does not create factor, H4, PowerSI, 8 GB, token, or next-stage authority.
    factor-only run be considered.
 5. Preserve `rhs_count=0`, no solve/extensions/`Y`/modal/physics, factor fit
    unproven, terminal evidence non-authoritative, and no 8 GB or PowerSI claim.
+
+## 2026-08-16 — retry-v10 eleventh authoritative sealed factor-only result
+
+### Immutable append boundary
+
+Before this entry was appended, the complete `SESSION_LOG.md` was preserved as
+an immutable prefix:
+
+```text
+bytes: 191429
+LF lines: 2538
+SHA-256: 210e9913b12e87da441f3d7bd09a455a80f556c75610a418d0bd5e2475e7ba36
+```
+
+All preceding retry-v10 candidate, tenth-result, provisional/full-suite, and
+retry-v9 bodies remain immutable historical evidence. This entry appends the
+current eleventh-result authority only.
+
+### One-shot invocation and lifecycle
+
+Eleven public `primary-h4-p0r` invocations and token lineages are immutable.
+The eleventh ran exactly once from token-only commit
+`e35ef01214f4bf9ec75e7b428e72b21d38c9161b`, token ID
+`2435fa59edc64efca2fb4665b0854d43`. Public shell exit/stderr were `0`/empty,
+and no retry occurred. Factor producer PID `63268`, finalizer PID `39580`, and
+consumer PID `60012` all exited `0`.
+
+M-only consumption commit
+`bf94e1890c489e690801b3d90bcbf50ff61ca233` was followed by D-only retirement
+`389ec1e51b87f3eff928278c76bbbf60241af972`. The token is absent, no spent or
+retired token may be reused, and `next_stage_authorized=false`.
+
+### Ordered factor certificates
+
+Exactly two factor certificates and two prefix checkpoints were retained in
+the required order `A_background_II` then `A_conductor_II`.
+
+| factor | input nnz | L/U nnz | native nnz | fill ratio | portable/export/native-portable bytes | factor wall |
+|---|---:|---:|---:|---:|---:|---:|
+| `A_background_II` | `204545` | `1570627` / `1615176` | `3342108` | `15.57507150015889` | `77466936` / `64219892` / `81218256` | `1.3330735 s` |
+| `A_conductor_II` | `219393` | `1702688` / `1716333` | `3543771` | `15.584002224318917` | `83064168` / `68884252` / `86058168` | `1.4459152 s` |
+
+Both factor-cap gates passed. Both certificates record
+`factorization_attempted=true`, `factorization_performed=true`,
+`rhs_count=0`, `factor_solve_called=false`, and every forbidden-operation flag
+false. No RHS, linear solve, extension, boundary `Y`, modal response, H4
+physics, or PowerSI comparison ran.
+
+### Resource and cleanup evidence
+
+Inner monitoring retained `243/243` samples in `34.0036179 s` with peak
+working set `510849024` bytes, peak private bytes `1954021376`, and peak
+lifetime commit `2358079488`. Outer monitoring retained `677/677` samples and
+`47` nontruncated retries in `94.5411269 s` with peak working set
+`513384448`, peak private bytes `1958121472`, and peak lifetime commit
+`2358079488`. All `164/164` outer-observer identities and the broader
+`207/207` identity set were absent after cleanup.
+
+Minimum available physical memory on the host was `43885748224` bytes.
+Therefore this is an authoritative factor-only pass for this host and these
+exact artifacts. It is not evidence that the run fits an 8 GB laptop.
+
+### Exact evidence hashes
+
+| evidence | raw SHA-256 | canonical/payload SHA-256 |
+|---|---|---|
+| original token | `63ceea36ce8fc3a0e97942c7bbdf3487e3478d1f048de2c9a5343118e63b53ca` | `f4e61b9e05557f0d2705119670e1f760e52325da8f2767aa82a2080d3aa7a555` |
+| claim | `7ee75af33cdba5ee9cb4f92ff4acc601a7939717eda24ffd35536f7275c646b9` | `00611c2a7425d0100f0c49abe881b43978645355e73946af23d5424254907b68` |
+| guard | `f8454d99b28195070a8b22ee870df6a0a95d9dc3f35b83aa7ea107ad55f7e7c6` | `f99f1f20362eb7d7cae04f38cc20c01e4c56bf5500dd437914642699f439f755` |
+| numerical | `0af448eeea2eb302f6aeebbb04fd01992067ccc55a017eb780507aa34924728f` | `b236e160b41150b856fbd69f98ab682edb3c61d6f3a53f02c5960c553f1a5c78` |
+| prefix 1 | `d37940d04ede5820c020d5b352c418592f344db89a4db6430762339b115b50e5` | `7e9b6c9d719c8c782f7727a49ea53945867b76721e79b67d143205699b4e49cb` |
+| prefix 2 | `174f6cca5f808094a306c681a9502b9551c7d741657d1d0db62b9510ca74a3e8` | `45e1a18105128778ffae2d0e53aeb2621fd080d077d4a775020f3c52cd0d5ab7` |
+| resource | `d6358608dd97c0f245bb781d0bfc63e929a1a74733907a7fa2a1fbdb9dca97de` | `537350ed7b9b9d14206624ed8fd46014de6cb0d417c0611b7753170bae9abf84` |
+| result | `ad007d6ac4c053981f6ab9da72505848956019cd4b5cdb1e1ecfa7b5e0d02121` | `0d33860805d50e887fe8a43c9adea3da81df99df73a812ca7559c92419bdb6b0` |
+| pre-exit | `5ff55a34ac6687cd2a86c1c890b50b7ae43b2917e862d9a6c6a001d70e10cadb` | `b5cb10f9a8b8eb5fc40f04b4ff11984d497d0ddf178e34963db1aec1e3b61207` |
+| outer close | `184302a02026e1ab9aa84d4a94a2f9605c8254849920379d6b30fb0ce765f3c5` | same |
+| terminal seal | `070c86e25aeb982d5ef1c9c99c9c15d9ed3a6d08ce4e521e55262e4586a516a4` | `8c9de1f93bccac285d81ca60d7b9bc827cb1e66ffc2fe036825a008a491513b6` |
+| consumed tombstone | `3ce2bc00bdb4ee2d2da1a706e7c2211eba2a0579e179990aa34d2e2855cd615f` | same |
+
+### Strict disposition and frozen implementation
+
+The retained classifications are
+`consumed_v2_authoritative_sealed_pass` and
+`consumed_v2_authoritative_sealed_pass_no_next_stage_authorization`.
+`terminal_evidence_complete=true`, `authoritative_terminal_evidence=true`,
+`authoritative_stage_pass=true`, authoritative inner disposition is
+`authoritative_inner_pass_observed`, and `validation_error=null`. The terminal
+seal is strict-authoritative and supersedes the successful tombstone's
+provisional pre-seal disposition.
+
+Frozen implementation bindings remain:
+
+```text
+Python fixture SHA-256: 46082123fbf98102f3e5995c32bf65d8d04bb835b9c1305de0150349e75e48c7
+Python fixture bytes: 579582
+PowerShell runner SHA-256: f0159061dbd4d1b34881911edfdfb72146a3a23e5cdc75ca8fa4069c08aadb86
+PowerShell runner bytes: 484795
+static tests SHA-256: e5496ceb24c33c835b88ce20a3f67f941c8279e0471708a01022238fc211b109
+static tests bytes: 488591
+collection: 400
+token_state: absent
+authoritative_terminal_evidence: true
+authoritative_stage_pass: true
+next_stage_authorized: false
+```
+
+### Provisional documentation state and exact next action
+
+This entry and the other 14 baseline documents are a **provisional
+result-documentation freeze**. The full exact-document `400` suite is pending
+after these edits, so no full-suite pass is claimed yet.
+
+1. Validate exactly 15 baseline Markdown documents for exact scope, UTF-8,
+   LF-only endings, balanced fences, valid local links, current eleventh-result
+   wording, and this immutable prefix.
+2. Run the full exact-document `400` suite on these provisional bytes and
+   record its first result before final document freeze and exact-byte closure.
+3. Keep the token absent. Do not invoke H4-P1, RHS, or solve work from the
+   H4-P0R factor-only authority.
+4. The exact next artifact is a **non-executable H4-P1 manifest-only
+   preregistration**. Existing P0R Python/runner/tests remain frozen. Before any
+   later executable authorization, the contract must keep one same-process
+   factor lifetime, solve all `512` RHS in batches `<=4`, produce full H4
+   `Y`/`Yrev`/`M9` and gates, and forbid L/U persistence, rehydration, or a
+   standalone synthetic result.
+5. The `Y`/`Yrev`/`M9` raw payload is `12923024` bytes. Base64 would be about
+   `17230700` bytes and exceed the 16 MiB JSON cap by `453484` bytes. The
+   manifest must therefore preregister a fixed-layout little-endian complex128
+   binary sidecar and descriptor with exact offsets, shapes, dtype, order,
+   size, and SHA-256, plus atomic publish/hash-bind/quarantine/seal and
+   tamper/nonfinite/path checks. The prospective envelope is `3470862055` bytes
+   with `824105241` bytes of 4 GiB slack; 8 GB remains unproven. This is not
+   implemented behavior, an executable, a token, or authorization.
+
+## 2026-08-16 — post-eleventh full-suite result and final documentation freeze
+
+The provisional post-eleventh entry immediately above is now an immutable
+historical snapshot. The original append boundary remains byte-identical:
+
+```text
+immutable prefix bytes: 191429
+immutable prefix LF lines: 2538
+immutable prefix SHA-256: 210e9913b12e87da441f3d7bd09a455a80f556c75610a418d0bd5e2475e7ba36
+```
+
+The first full exact-document suite on the provisional post-eleventh document
+bytes completed:
+
+```text
+collection: 400
+result: 400/400 passed
+wall: 95.65 s
+exit: 0
+failure: none
+```
+
+This first result is the only full-suite runtime recorded for these bytes.
+The exact 15 baseline Markdown documents are now the **FINAL DOC FREEZE**.
+Later exact-byte, integrity, stale-wording, hash, static, or independent
+closure checks must not add or rewrite another closure runtime.
+
+The result changes no execution authority. The eleventh factor-only
+classification remains `consumed_v2_authoritative_sealed_pass` /
+`consumed_v2_authoritative_sealed_pass_no_next_stage_authorization`.
+The token remains absent, `next_stage_authorized=false`, and no RHS, solve,
+extension, boundary `Y`, modal response, H4 physics, PowerSI comparison, or
+8 GB proof is created. The exact next artifact remains the non-executable
+H4-P1 manifest-only preregistration recorded above; it is neither implemented
+nor authorized.

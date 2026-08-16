@@ -1,6 +1,52 @@
 # SPD Decap PI Evaluator v0.22.0 — T1-M1-EQ0 Finite/Open Results
 
-> **SPD Decap PI Evaluator v0.22.0 — retry-v10 final documentation
+> **SPD Decap PI Evaluator v0.22.0 — retry-v10 eleventh-result final
+> documentation freeze:** Eleven public `primary-h4-p0r` invocations and token
+> lineages are immutable. The eleventh ran exactly once from token-only commit
+> `e35ef01214f4bf9ec75e7b428e72b21d38c9161b`, token ID
+> `2435fa59edc64efca2fb4665b0854d43`, and exited public stage `0` with
+> empty stderr; it was not rerun. Factor producer PID `63268`, finalizer PID
+> `39580`, and consumer PID `60012` exited `0`. Exactly two certificates
+> and two prefixes were retained in order `A_background_II`,
+> `A_conductor_II`; both factor-cap gates and both resource gates passed.
+> Strict retained classifications are `consumed_v2_authoritative_sealed_pass`
+> and `consumed_v2_authoritative_sealed_pass_no_next_stage_authorization`,
+> with `authoritative_terminal_evidence=true`,
+> `authoritative_stage_pass=true`, authoritative inner disposition
+> `authoritative_inner_pass_observed`, `validation_error=null`, and
+> `next_stage_authorized=false`. M-only consumption
+> `bf94e1890c489e690801b3d90bcbf50ff61ca233` followed by D-only retirement
+> `389ec1e51b87f3eff928278c76bbbf60241af972`; the token is absent.
+>
+> Inner monitoring retained `243/243` samples in `34.0036179 s`, peak
+> working set `510849024` bytes, private bytes `1954021376`, and lifetime
+> commit `2358079488`. Outer monitoring retained `677/677` samples and
+> `47` nontruncated retries in `94.5411269 s`, peak working set
+> `513384448`, private bytes `1958121472`, and lifetime commit
+> `2358079488`. All `164/164` outer identities and the broader `207/207`
+> identity set were absent after cleanup. Minimum host available physical memory
+> was `43885748224` bytes, so this is an authoritative factor-only pass on
+> this host, not an 8 GB fit proof. Both certificates have `rhs_count=0`,
+> `factor_solve_called=false`, and all forbidden-operation flags false. No
+> RHS, solve, extension, boundary `Y`, modal response, H4 physics, or PowerSI
+> comparison ran.
+>
+> Frozen Python/runner/tests SHA-256 remain `46082123fbf98102f3e5995c32bf65d8d04bb835b9c1305de0150349e75e48c7`,
+> `f0159061dbd4d1b34881911edfdfb72146a3a23e5cdc75ca8fa4069c08aadb86`,
+> and `e5496ceb24c33c835b88ce20a3f67f941c8279e0471708a01022238fc211b109`;
+> collection remains `400`. Evidence anchors are numerical raw SHA-256
+> `0af448eeea2eb302f6aeebbb04fd01992067ccc55a017eb780507aa34924728f`,
+> resource raw SHA-256
+> `d6358608dd97c0f245bb781d0bfc63e929a1a74733907a7fa2a1fbdb9dca97de`,
+> and terminal-seal raw SHA-256
+> `070c86e25aeb982d5ef1c9c99c9c15d9ed3a6d08ce4e521e55262e4586a516a4`.
+> The first full exact-document suite on the post-eleventh document bytes
+> passed `400/400` in `95.65 s`, exit `0`, with no failure. This is the
+> **FINAL DOC FREEZE**. Do not record any later closure runtime. Any H4-P1,
+> RHS, or solve work still requires a separate preregistration and
+> authorization; this result creates neither a token nor further authority.
+>
+> **Historical SPD Decap PI Evaluator v0.22.0 — retry-v10 tenth-result final documentation
 > freeze:** Ten public attempts are immutable. The tenth ran once and exited
 > public stage `2`; producer/finalizer/consumer PIDs `54044`/`25200`/`41812`
 > exited `0`, exactly two factor certificates/prefixes were retained in order
@@ -69,9 +115,10 @@
 > [results](T1_AV_BOUNDARY_SCHUR_RESULTS.md) and the
 > [reproduction appendix](ORACLE_REPRODUCTION.md).
 >
-> Every pre-existing retry-v9, ninth-attempt, future-tenth, `397/397`, or
-> **FINAL DOC FREEZE** statement later in this file is an immutable historical
-> snapshot. Only the retry-v10 block above states current authority.
+> Every pre-existing retry-v10 tenth-result, future-eleventh, `400/400`,
+> retry-v9, ninth-attempt, future-tenth, `397/397`, or **FINAL DOC FREEZE**
+> statement later in this file is an immutable historical
+> snapshot. Only the retry-v10 eleventh-result block at the top states current authority.
 
 
 최종 갱신: 2026-08-16 (Asia/Seoul)
