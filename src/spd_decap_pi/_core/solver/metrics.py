@@ -116,6 +116,9 @@ class ConfidenceInputs:
     model_validity_known: bool = False
     modal_converged: bool | None = None
     mixed_reference_rectangular_approximation: bool = False
+    source_graph_connectivity: bool = False
+    graph_target_contact_reduction: bool = False
+    legacy_vertical_template: bool = False
     cavity_cutoff_safety_factor: float = 0.1
 
     def __post_init__(self) -> None:
@@ -305,12 +308,24 @@ def assess_confidence(
             "mixed-reference coverage is geometry-certified, but the solver uses a "
             "continuous rectangular return approximation"
         )
+    if inputs.graph_target_contact_reduction:
+        geometry_level = ConfidenceLevel.LOW
+        geometry_reason = (
+            "source graph connectivity is exact, but finite-port localization uses "
+            "a deterministic retained-target contact reduction"
+        )
     template_level = ConfidenceLevel.HIGH if inputs.templates_calibrated else ConfidenceLevel.MEDIUM
     template_reason = (
         "via and local topology templates are calibrated"
         if inputs.templates_calibrated
         else "via/local topology templates are analytical or uncalibrated"
     )
+    if inputs.legacy_vertical_template:
+        template_level = ConfidenceLevel.LOW
+        template_reason = (
+            "branched source graph connectivity is proven, but vertical impedance "
+            "uses a conservative legacy template rather than a source scalar path"
+        )
     coupling_level = ConfidenceLevel.HIGH if inputs.coupling_modeled else ConfidenceLevel.LOW
     coupling_reason = (
         "requested coupling terms are included"

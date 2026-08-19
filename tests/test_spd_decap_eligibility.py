@@ -8,10 +8,46 @@ from spd_decap_pi._core.plane_pairs import suggest_effective_plane_pairs
 from spd_decap_pi.eligibility import (
     EligiblePlane,
     EligibilityResult,
+    IndexedPlaneGeometry,
     PlaneEligibilityIndex,
     eligible_power_planes,
     point_in_plane_geometry,
 )
+
+
+def _indexed_large_ordered_geometry() -> IndexedPlaneGeometry:
+    """Large indexed artwork with a narrow slit and ordered re-add."""
+    tiny = tuple(
+        (
+            (1.0 + (index % 20) * 0.4, 80.0 + (index // 20) * 0.02),
+            (1.1 + (index % 20) * 0.4, 80.0 + (index // 20) * 0.02),
+            (1.1 + (index % 20) * 0.4, 80.01 + (index // 20) * 0.02),
+            (1.0 + (index % 20) * 0.4, 80.01 + (index // 20) * 0.02),
+        )
+        for index in range(1000)
+    )
+    positive = (
+        ((0.0, 0.0), (100.0, 0.0), (100.0, 100.0), (0.0, 100.0)),
+        *tiny,
+        ((61.9, 40.0), (62.1, 40.0), (62.1, 60.0), (61.9, 60.0)),
+    )
+    geometry = SpdPlaneGeometry(
+        layer="PWR1",
+        net="VDD",
+        positive_polygons_um=positive,
+        negative_polygons_um=(
+            ((61.0, 0.0), (63.0, 0.0), (63.0, 100.0), (61.0, 100.0)),
+        ),
+        primitive_order=(
+            ("positive_polygon", 0),
+            *(("positive_polygon", index) for index in range(1, 1001)),
+            ("negative_polygon", 0),
+            ("positive_polygon", 1001),
+        ),
+    )
+    indexed = IndexedPlaneGeometry.build(geometry)
+    assert indexed is not None
+    return indexed
 
 
 def _geometry(*, order=None):
@@ -192,6 +228,38 @@ def test_boolean_primitive_order_can_add_copper_back_after_void():
     assert point_in_plane_geometry(10.0, 10.0, geometry) == "inside"
     assert point_in_plane_geometry(30.0, 30.0, geometry) == "outside"
     assert point_in_plane_geometry(50.0, 50.0, geometry) == "inside"
+
+
+def test_indexed_finite_footprint_rejects_large_slit_and_tangent_but_accepts_readd():
+    indexed = _indexed_large_ordered_geometry()
+
+    assert len(indexed.primitives) > 1000
+    assert not indexed.covers_footprint(50.0, 50.0, 40.0, 40.0)
+    assert indexed.covers_footprint(62.0, 50.0, 0.1, 0.1)
+    # Touching the outer artwork edge is not strict containment.
+    assert not indexed.covers_footprint(0.0, 50.0, 0.1, 0.1)
+
+
+def test_indexed_point_readd_and_adjacent_positive_seams_are_exact():
+    indexed = _indexed_large_ordered_geometry()
+    assert indexed.contains(50.0, 50.0) == "inside"
+
+    geometry = SpdPlaneGeometry(
+        layer="PWR1",
+        net="VDD",
+        positive_polygons_um=(
+            ((0.0, 0.0), (50.0, 0.0), (50.0, 10.0), (0.0, 10.0)),
+            ((50.0, 0.0), (100.0, 0.0), (100.0, 10.0), (50.0, 10.0)),
+        ),
+        negative_polygons_um=(),
+        primitive_order=(
+            ("positive_polygon", 0),
+            ("positive_polygon", 1),
+        ),
+    )
+    adjacent = IndexedPlaneGeometry.build(geometry)
+    assert adjacent is not None
+    assert adjacent.contains(50.0, 5.0) == "inside"
 
 
 def test_primitive_boundary_is_fail_closed():

@@ -34,6 +34,7 @@ from PySide6.QtWidgets import (
 )
 
 from test_io_spd import MINI_SPD
+from test_spd_decap_evaluation import _scenario as _evaluation_scenario
 from test_spd_decap_scenario_edits import (
     _diagram_scenario,
     _scenario as _shared_pad_scenario,
@@ -85,6 +86,51 @@ from spd_decap_pi.version import APP_DISPLAY_NAME
 
 def _application() -> QApplication:
     return QApplication.instance() or QApplication([])
+
+
+def test_preflight_worker_surfaces_raw_spd_refresh_guidance_for_old_bundle(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    scenario = _evaluation_scenario()
+    project = scenario.base_project
+    cell = project.partitions[0].cells[0].model_copy(
+        update={"x_max_um": 100.0, "y_max_um": 100.0}
+    )
+    project = project.model_copy(
+        update={
+            "app_version": "0.22.6",
+            "partitions": [project.partitions[0].model_copy(update={"cells": [cell]})],
+            "metadata": {
+                **project.metadata,
+                "spd_import": {
+                    **project.metadata["spd_import"],
+                    "source_sha256": scenario.source.sha256,
+                },
+            },
+        }
+    )
+    scenario = scenario.model_copy(
+        update={"normalized_project": project.model_dump(mode="python")}
+    )
+    preflight = evaluation_module.preflight_evaluation_connectivity(
+        scenario, ("RAIL_VDD",)
+    )
+    monkeypatch.setattr(
+        evaluation_module,
+        "preflight_evaluation_comparison",
+        lambda *_args, **_kwargs: (_ for _ in ()).throw(
+            evaluation_module.ScenarioEvaluationPreflightError(preflight)
+        ),
+    )
+    with pytest.raises(evaluation_module.ScenarioEvaluationPreflightError) as captured:
+        _job_preflight_evaluation(
+            scenario,
+            ("RAIL_VDD",),
+            progress=lambda _value, _message: None,
+            is_cancelled=lambda: False,
+        )
+    assert "SOURCE_GRAPH_PROVENANCE_REFRESH_REQUIRED" in str(captured.value)
+    assert "Re-import the matching raw SPD in v0.22.7" in str(captured.value)
 
 
 def _research_provenance() -> dict[str, object]:
@@ -2749,6 +2795,39 @@ def test_combined_convergence_text_and_gate_reject_frequency_only_failure() -> N
         "VCPU0 / Original: combined convergence failed; frequency RMS N/A, "
         "max 0.420 dB; modal RMS N/A, max 0.010 dB.",
     )
+
+
+def test_adaptive_modal_order_is_visible_and_ceiling_rejection_is_actionable() -> None:
+    failed_view = SimpleNamespace(
+        convergence={
+            "converged": False,
+            "frequency_converged": True,
+            "frequency_max_delta_db": 0.01,
+            "modal_converged": False,
+            "modal_max_delta_db": 0.61,
+            "start_mode_x": 8,
+            "lower_mode_x": 12,
+            "final_mode_x": 14,
+            "ceiling_mode_x": 14,
+            "modal_budget_exhausted": True,
+        }
+    )
+    assert _modal_convergence_text(failed_view) == (
+        "Not converged (frequency converged, Δmax 0.010 dB; "
+        "modal failed, Δmax 0.610 dB; modal order 12→14 "
+        "(start 8, ceiling 14; ceiling exhausted))"
+    )
+    comparison = SimpleNamespace(
+        rail_id="VINT/1",
+        baseline=SimpleNamespace(view=failed_view),
+        tuned=SimpleNamespace(view=SimpleNamespace(convergence={
+            "converged": True,
+            "frequency_converged": True,
+            "modal_converged": True,
+        })),
+    )
+    message = _rejected_comparison_convergence((comparison,))[0]
+    assert "Adaptive modal order 12→14 (start 8, ceiling 14) exhausted" in message
 
 
 def test_restore_source_state_uses_the_frozen_fallback_baseline_model(

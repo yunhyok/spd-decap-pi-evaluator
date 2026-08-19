@@ -23,6 +23,7 @@ from spd_decap_pi._core.domain import (
     ProjectSpec,
     RailSpec,
     StackupLayer,
+    TargetPoint,
     TerminalKind,
     TopologyKind,
     ViaLoopTemplate,
@@ -32,6 +33,7 @@ from spd_decap_pi._core import services as core_services
 from spd_decap_pi._core.services import EvaluationView
 from spd_decap_pi._core.solver.evaluator import build_project_evaluation_request
 from spd_decap_pi._core.solver.evaluator import compile_project_evaluation_template
+from spd_decap_pi._core.solver.evaluator import EvaluationError
 from spd_decap_pi import evaluation as evaluation_module
 from spd_decap_pi.distribution import (
     DistributionDistanceMode,
@@ -124,6 +126,108 @@ def test_retained_alternate_artwork_is_hash_bound_and_rejects_internal_voids() -
     assert tampered._entries == ()
 
 
+def test_retained_artwork_index_uses_exact_indexed_path_for_large_ordered_assets() -> None:
+    tiny = [
+        [
+            [1.0 + (index % 20) * 0.4, 80.0 + (index // 20) * 0.02],
+            [1.1 + (index % 20) * 0.4, 80.0 + (index // 20) * 0.02],
+            [1.1 + (index % 20) * 0.4, 80.01 + (index // 20) * 0.02],
+            [1.0 + (index % 20) * 0.4, 80.01 + (index // 20) * 0.02],
+        ]
+        for index in range(1000)
+    ]
+    positive = [
+        [[0.0, 0.0], [100.0, 0.0], [100.0, 100.0], [0.0, 100.0]],
+        *tiny,
+        [[61.9, 40.0], [62.1, 40.0], [62.1, 60.0], [61.9, 60.0]],
+    ]
+    primitive_order = (
+        [["positive_polygon", 0]]
+        + [["positive_polygon", index] for index in range(1, 1001)]
+        + [["negative_polygon", 0], ["positive_polygon", 1001]]
+    )
+    compressed, _ = core_services._compress_spd_geometry_payload(
+        layer="L09",
+        net="VDD",
+        positive_polygons=positive,
+        negative_polygons=[[[61.0, 0.0], [63.0, 0.0], [63.0, 100.0], [61.0, 100.0]]],
+        positive_circles=[],
+        negative_circles=[],
+        primitive_order=primitive_order,
+        positive_subelement_count=len(positive),
+        negative_subelement_count=1,
+        polygon_trace_count=0,
+        box_count=0,
+    )
+    digest = sha256(compressed).hexdigest()
+    record = {
+        "layer": "L09",
+        "net": "VDD",
+        "asset": "geometry/l09-large.spdgeom.zlib",
+        "asset_sha256": digest,
+        "bbox_um": [0.0, 100.0, 0.0, 100.0],
+    }
+    index = evaluation_module._RetainedArtworkIndex(
+        [record], {record["asset"]: compressed}
+    )
+    assert len(index._entries) == 1
+    assert len(index._entries[0].indexed.primitives) > 1000
+    assert index.covers_footprint(
+        layer="L09", net="VDD", asset=record["asset"], digest=digest,
+        x_um=50.0, y_um=50.0, width_um=40.0, height_um=40.0,
+    ) is False
+    assert index.covers_footprint(
+        layer="L09", net="VDD", asset=record["asset"], digest=digest,
+        x_um=62.0, y_um=50.0, width_um=0.1, height_um=0.1,
+    ) is True
+    assert index.covers_footprint(
+        layer="L09", net="VDD", asset=record["asset"], digest=digest,
+        x_um=0.0, y_um=50.0, width_um=0.1, height_um=0.1,
+    ) is False
+
+
+def test_graph_target_node_strict_interior_allows_analytical_port_crossing_detail() -> None:
+    compressed, _ = core_services._compress_spd_geometry_payload(
+        layer="L09",
+        net="VDD",
+        positive_polygons=[[
+            [0.0, 0.0], [100.0, 0.0], [100.0, 100.0], [0.0, 100.0]
+        ]],
+        negative_polygons=[[
+            [48.0, 40.0], [52.0, 40.0], [52.0, 60.0], [48.0, 60.0]
+        ]],
+        positive_circles=[],
+        negative_circles=[],
+        primitive_order=[("positive_polygon", 0), ("negative_polygon", 0)],
+        positive_subelement_count=1,
+        negative_subelement_count=1,
+        polygon_trace_count=0,
+        box_count=0,
+    )
+    digest = sha256(compressed).hexdigest()
+    record = {
+        "layer": "L09",
+        "net": "VDD",
+        "asset": "geometry/l09-graph-contact.spdgeom.zlib",
+        "asset_sha256": digest,
+        "bbox_um": [0.0, 100.0, 0.0, 100.0],
+    }
+    index = evaluation_module._RetainedArtworkIndex(
+        [record], {record["asset"]: compressed}
+    )
+    # The graph-selected node itself is exact strict-interior copper.
+    assert index.contains(layer="L09", net="VDD", x_um=10.0, y_um=20.0) == "inside"
+    assert index.contains(layer="L09", net="VDD", x_um=50.0, y_um=50.0) == "outside"
+    assert index.contains(layer="L09", net="VDD", x_um=0.0, y_um=20.0) == "boundary"
+    assert index.contains(layer="L09", net="VDD", x_um=110.0, y_um=20.0) == "outside"
+    # A 60um analytical port centered on the valid graph node crosses the
+    # detailed edge/slit and is therefore not an exact-artwork assertion.
+    assert index.covers_footprint(
+        layer="L09", net="VDD", asset=record["asset"], digest=digest,
+        x_um=10.0, y_um=20.0, width_um=60.0, height_um=20.0,
+    ) is False
+
+
 def test_evaluation_policy_is_strict_by_default_and_part_of_cache_identity() -> None:
     strict = evaluation_module._evaluation_settings(0.02, 8)
     alternate = evaluation_module._evaluation_settings(
@@ -137,6 +241,227 @@ def test_evaluation_policy_is_strict_by_default_and_part_of_cache_identity() -> 
     before = scenario.model_dump(mode="json")
     build_evaluation_project(scenario)
     assert scenario.model_dump(mode="json") == before
+
+
+def test_old_bundle_geometry_blocker_requests_raw_spd_provenance_refresh() -> None:
+    scenario = _scenario()
+    project = scenario.base_project
+    tiny_cell = project.partitions[0].cells[0].model_copy(
+        update={"x_max_um": 100.0, "y_max_um": 100.0}
+    )
+    tiny_partition = project.partitions[0].model_copy(update={"cells": [tiny_cell]})
+    metadata = dict(project.metadata)
+    metadata["spd_import"] = {
+        **dict(metadata.get("spd_import", {})),
+        "source_name": scenario.source.name,
+        "source_sha256": scenario.source.sha256,
+    }
+    old_project = project.model_copy(
+        update={
+            "app_version": "0.22.6",
+            "metadata": metadata,
+            "partitions": [tiny_partition],
+        }
+    )
+    legacy = scenario.model_copy(
+        update={"normalized_project": old_project.model_dump(mode="python")}
+    )
+    preflight = preflight_evaluation_connectivity(legacy, ("RAIL_VDD",))
+    message = preflight.message()
+    assert "SOURCE_GRAPH_PROVENANCE_REFRESH_REQUIRED" in message
+    assert "Re-import the matching raw SPD in v0.22.7" in message
+    assert scenario.source.path in message
+
+
+def test_unresolved_source_plane_pair_blocks_selected_rail_under_both_policies() -> None:
+    scenario = _scenario()
+    project = scenario.base_project
+    metadata = dict(project.metadata)
+    metadata["spd_import"] = {
+        **metadata["spd_import"],
+        "selected_plane_pair_provenance": {
+            "VDD": {
+                "source_graph_pair_unresolved": True,
+                "selection_mode": "LEGACY_PREEXISTING_PAIR_UNRESOLVED",
+            }
+        },
+    }
+    blocked_project = project.model_copy(update={"metadata": metadata})
+    blocked = scenario
+    for policy in (
+        evaluation_module.EVALUATION_POLICY_STRICT,
+        evaluation_module.EVALUATION_POLICY_EMBEDDED_ALTERNATE,
+    ):
+        preflight = preflight_evaluation_connectivity(
+            blocked, ("RAIL_VDD",), _project=blocked_project, evaluation_policy=policy
+        )
+        assert any(
+            item.reason.startswith("SOURCE_GRAPH_PLANE_PAIR_UNRESOLVED:")
+            for item in preflight.blockers
+        )
+    duplicate_metadata = dict(project.metadata)
+    duplicate_metadata["spd_import"] = {
+        **metadata["spd_import"],
+        "selected_plane_pair_provenance": {
+            "VDD": {"source_graph_pair_unresolved": True},
+            "vdd": {"source_graph_pair_unresolved": True},
+        },
+    }
+    duplicate_project = project.model_copy(update={"metadata": duplicate_metadata})
+    duplicate_preflight = preflight_evaluation_connectivity(
+        blocked,
+        ("RAIL_VDD",),
+        _project=duplicate_project,
+    )
+    assert any(
+        item.reason.startswith("SOURCE_GRAPH_PROVENANCE_DUPLICATE_KEY:")
+        for item in duplicate_preflight.blockers
+    )
+
+
+def test_graph_device_target_contact_is_used_for_compile_and_low_confidence() -> None:
+    scenario = _scenario()
+    project = scenario.base_project
+    pins = [
+        pin.model_copy(
+            update={
+                "source_node_id": "NODE_PWR" if pin.terminal == TerminalKind.PWR else "NODE_GND",
+                "source_padstack": "VIA",
+            }
+        )
+        for pin in project.pins
+    ]
+    # An unrelated GND bump is present in the board but intentionally has no
+    # witness for this selected cavity; graph-mode compilation must exclude it
+    # without mutating the source pin record.
+    pins.append(
+        pins[-1].model_copy(
+            update={
+                "pin_id": "U1:G_UNRELATED",
+                "source_node_id": "NODE_GND_OTHER",
+            }
+        )
+    )
+    proof = {
+        "pwr_layer": "PWR1",
+        "gnd_layer": "GND1",
+        "source_sha256": scenario.source.sha256,
+        "source_graph_capability": "TRACE_VIA_COMPONENTS_AVAILABLE",
+        "vertical_impedance_model": "SOURCE_PROVEN_GRAPH_CONNECTIVITY_LEGACY_TEMPLATE",
+        "route_witnesses": [],
+        "device_route_witnesses": [
+            {
+                "pin_id": "U1:P1",
+                "terminal": "PWR",
+                "source_node_id": "NODE_PWR",
+                "target_layer": "PWR1",
+                "reachable": True,
+                "target_contact_count": 1,
+                "target_contacts_sha256": "b" * 64,
+                "target_contacts": [{"node_id": "PWR_TARGET", "x_um": 7000.0, "y_um": 7000.0}],
+            },
+            {
+                "pin_id": "U1:G1",
+                "terminal": "GND",
+                "source_node_id": "NODE_GND",
+                "target_layer": "GND1",
+                "reachable": True,
+                "target_contact_count": 1,
+                "target_contacts_sha256": "c" * 64,
+                "target_contacts": [{"node_id": "GND_TARGET", "x_um": 7000.0, "y_um": 7000.0}],
+            },
+        ],
+    }
+    metadata = dict(project.metadata)
+    metadata["spd_import"] = {
+        **metadata["spd_import"],
+        "source_sha256": scenario.source.sha256,
+        "selected_plane_pair_provenance": {"VDD": proof},
+    }
+    rail = project.rails[0].model_copy(
+        update={
+            "target_mask": [
+                TargetPoint(frequency_hz=1.0e3, impedance_ohm=0.02),
+                TargetPoint(frequency_hz=1.0e9, impedance_ohm=0.02),
+            ]
+        }
+    )
+    project = project.model_copy(update={"pins": pins, "rails": [rail], "metadata": metadata})
+    template = compile_project_evaluation_template(project, "RAIL_VDD")
+    assert template.device.branches
+    assert template.device.branches[0].port.x_m == pytest.approx(7000.0e-6)
+    request = build_project_evaluation_request(project, "RAIL_VDD")
+    assert request.confidence_inputs.graph_target_contact_reduction is True
+    assert request.confidence_inputs.legacy_vertical_template is True
+
+    # Every graph-modeled Device terminal must fit the selected solver port;
+    # validating only the anchor PWR would allow a stale non-anchor witness to
+    # escape the rectangular-domain gate.
+    outside_ground = {
+        **proof["device_route_witnesses"][1],
+        "target_contacts": [{"node_id": "GND_OUT", "x_um": 20_000.0, "y_um": 20_000.0}],
+    }
+    outside_proof = {
+        **proof,
+        "device_route_witnesses": [
+            proof["device_route_witnesses"][0],
+            outside_ground,
+        ],
+    }
+    outside_metadata = dict(metadata)
+    outside_metadata["spd_import"] = {
+        **metadata["spd_import"],
+        "selected_plane_pair_provenance": {"VDD": outside_proof},
+    }
+    with pytest.raises(ValueError):
+        compile_project_evaluation_template(
+            project.model_copy(update={"metadata": outside_metadata}),
+            "RAIL_VDD",
+        )
+
+    for bad_witnesses in (
+        [proof["device_route_witnesses"][0]],
+        [*proof["device_route_witnesses"], proof["device_route_witnesses"][0]],
+    ):
+        bad_proof = {**proof, "device_route_witnesses": bad_witnesses}
+        bad_metadata = dict(metadata)
+        bad_metadata["spd_import"] = {
+            **metadata["spd_import"],
+            "selected_plane_pair_provenance": {"VDD": bad_proof},
+        }
+        bad_project = project.model_copy(update={"metadata": bad_metadata})
+        with pytest.raises(EvaluationError):
+            compile_project_evaluation_template(bad_project, "RAIL_VDD")
+    malformed_pins = [
+        pin.model_copy(
+            update={"source_node_id": None}
+            if pin.terminal == TerminalKind.GND
+            else {}
+        )
+        for pin in project.pins
+    ]
+    malformed_metadata = dict(metadata)
+    malformed_metadata["spd_import"] = {
+        **metadata["spd_import"],
+        "selected_plane_pair_provenance": {
+            "VDD": {**proof, "device_route_witnesses": [proof["device_route_witnesses"][0]]}
+        },
+    }
+    malformed_project = project.model_copy(
+        update={"pins": malformed_pins, "metadata": malformed_metadata}
+    )
+    with pytest.raises(EvaluationError):
+        compile_project_evaluation_template(malformed_project, "RAIL_VDD")
+    missing_rail_metadata = dict(metadata)
+    missing_rail_metadata["spd_import"] = {
+        **metadata["spd_import"],
+        "selected_plane_pair_provenance": {"OTHER_NET": proof},
+    }
+    with pytest.raises(EvaluationError):
+        compile_project_evaluation_template(
+            project.model_copy(update={"metadata": missing_rail_metadata}),
+            "RAIL_VDD",
+        )
 
 
 def test_alternate_fixture_runs_strict_blocker_then_real_l09_l08_build() -> None:

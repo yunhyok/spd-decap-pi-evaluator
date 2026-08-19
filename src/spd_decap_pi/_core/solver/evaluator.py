@@ -4,8 +4,10 @@ from __future__ import annotations
 
 from collections import defaultdict
 from collections.abc import Callable
-from dataclasses import dataclass, field, replace
-from typing import TYPE_CHECKING, Any
+from dataclasses import asdict, dataclass, field, replace
+from hashlib import sha256
+from math import isfinite
+from typing import TYPE_CHECKING, Any, Mapping
 
 import numpy as np
 from numpy.typing import NDArray
@@ -61,6 +63,13 @@ if TYPE_CHECKING:
 # transfer function in v0.14.0.
 SOLVER_VERSION = "modal-mvp-0.7.0"
 COUPLING_ASSUMPTION = "inter-rail/site coupling not modeled"
+# Modal convergence is adaptive: the selected preset is the starting order,
+# then adjacent square bases are admitted in +2 steps until the documented
+# gates pass or this explicit ceiling is reached.  Keep this identity in
+# result/cache settings so changing the escalation contract cannot reuse an
+# older fixed-order result.
+CONVERGENCE_ALGORITHM_VERSION = "adaptive-modal-convergence-v1"
+DEFAULT_MODAL_CEILING_INDEX = 14
 
 
 class EvaluationError(ValueError):
@@ -248,6 +257,8 @@ class ShuntSensitivityOutcome:
 
 @dataclass(frozen=True, slots=True)
 class ConvergenceReport:
+    start_mode_x: int
+    start_mode_y: int
     initial_frequency_points: int
     final_frequency_points: int
     refinement_iterations: int
@@ -267,6 +278,10 @@ class ConvergenceReport:
     modal_max_delta_db: float
     modal_peak_shift_percent: float
     modal_converged: bool
+    ceiling_mode_x: int
+    ceiling_mode_y: int
+    modal_budget_exhausted: bool
+    algorithm_version: str
     converged: bool
 
 
@@ -493,8 +508,8 @@ def evaluate_rail_converged(
     *,
     max_refinement_iterations: int = 2,
     max_new_frequency_points: int = 64,
-    max_mode_x: int = 10,
-    max_mode_y: int = 10,
+    max_mode_x: int = DEFAULT_MODAL_CEILING_INDEX,
+    max_mode_y: int = DEFAULT_MODAL_CEILING_INDEX,
     rms_tolerance_db: float = 0.2,
     max_tolerance_db: float = 0.5,
     peak_shift_tolerance_percent: float = 2.0,
@@ -510,8 +525,10 @@ def evaluate_rail_converged(
 
     initial_count = int(request.frequencies_hz.size)
     working = request
-    high_x = min(request.max_mode_x, max_mode_x)
-    high_y = min(request.max_mode_y, max_mode_y)
+    start_mode_x = min(request.max_mode_x, max_mode_x)
+    start_mode_y = min(request.max_mode_y, max_mode_y)
+    high_x = start_mode_x
+    high_y = start_mode_y
     frequency_result = _refine_frequency_for_modes(
         working,
         mode_x=high_x,
@@ -573,6 +590,8 @@ def evaluate_rail_converged(
     combined_peak_shift = max(frequency_result.peak_shift_percent, modal_peak_shift)
     converged = frequency_converged and modal_converged
     report = ConvergenceReport(
+        start_mode_x=int(start_mode_x),
+        start_mode_y=int(start_mode_y),
         initial_frequency_points=initial_count,
         final_frequency_points=int(working.frequencies_hz.size),
         refinement_iterations=refinements,
@@ -592,6 +611,10 @@ def evaluate_rail_converged(
         modal_max_delta_db=modal_max,
         modal_peak_shift_percent=modal_peak_shift,
         modal_converged=modal_converged,
+        ceiling_mode_x=int(max_mode_x),
+        ceiling_mode_y=int(max_mode_y),
+        modal_budget_exhausted=not modal_converged and high_x >= max_mode_x and high_y >= max_mode_y,
+        algorithm_version=CONVERGENCE_ALGORITHM_VERSION,
         converged=converged,
     )
     final_request = replace(
@@ -606,9 +629,13 @@ def evaluate_rail_converged(
                 f"{working.frequencies_hz.size} points; converged={frequency_converged}"
             ),
             (
-                f"modal convergence: {lower_x}x{lower_y} -> {high_x}x{high_y}, "
+                f"modal convergence {CONVERGENCE_ALGORITHM_VERSION}: "
+                f"start {start_mode_x}x{start_mode_y}; "
+                f"adjacent {lower_x}x{lower_y} -> {high_x}x{high_y}; "
+                f"ceiling {max_mode_x}x{max_mode_y}; "
                 f"RMS {modal_rms:.3f} dB, max {modal_max:.3f} dB, "
-                f"peak shift {modal_peak_shift:.3f}%"
+                f"peak shift {modal_peak_shift:.3f}%; "
+                f"ceiling_exhausted={not modal_converged and high_x >= max_mode_x and high_y >= max_mode_y}"
             ),
         ),
     )
@@ -924,11 +951,82 @@ def build_project_evaluation_request(
         if geometry_confirmed is None
         else geometry_confirmed
     )
+    selected_provenance = (
+        getattr(project, "metadata", {}).get("spd_import", {}).get(
+            "selected_plane_pair_provenance", {}
+        )
+    )
+    rail_proof = None
+    if isinstance(selected_provenance, Mapping):
+        provenance_keys = [str(key).casefold() for key in selected_provenance]
+        if len(provenance_keys) != len(set(provenance_keys)):
+            raise EvaluationError(
+                "SOURCE_GRAPH_PROVENANCE_DUPLICATE_KEY: persisted plane-pair "
+                "provenance contains duplicate case-insensitive rail keys"
+            )
+        rail_proof = selected_provenance.get(rail.net)
+        if rail_proof is None:
+            rail_proof = next(
+                (
+                    value
+                    for key, value in selected_provenance.items()
+                    if str(key).casefold() == str(rail.net).casefold()
+                ),
+                None,
+            )
+        if selected_provenance and not isinstance(rail_proof, Mapping):
+            raise EvaluationError(
+                f"source graph plane-pair provenance is missing for rail "
+                f"{rail.rail_id!r}"
+            )
+    if isinstance(rail_proof, Mapping) and bool(
+        rail_proof.get("source_graph_pair_unresolved")
+    ):
+        raise EvaluationError(
+            f"SOURCE_GRAPH_PLANE_PAIR_UNRESOLVED: rail {rail.rail_id!r} "
+            "has no source-proven PWR/GND plane pair; re-import matching raw SPD"
+        )
+    graph_model = (
+        str(rail_proof.get("vertical_impedance_model", ""))
+        if isinstance(rail_proof, Mapping)
+        else ""
+    )
+    graph_capability = (
+        str(rail_proof.get("source_graph_capability", ""))
+        if isinstance(rail_proof, Mapping)
+        else ""
+    )
+    graph_target_reduction = bool(
+        isinstance(rail_proof, Mapping)
+        and (
+            bool(rail_proof.get("device_route_witnesses"))
+            or any(
+                isinstance(item, Mapping)
+                and bool(item.get("connectivity_only"))
+                for item in rail_proof.get("route_witnesses", ())
+            )
+        )
+    )
     assumptions = (
         tuple(getattr(project, "assumptions", ()))
         + compiled.plane_assumptions
         + compiled.pairing_assumptions
     )
+    if graph_model in {
+        "SOURCE_PROVEN_GRAPH_CONNECTIVITY_LEGACY_TEMPLATE",
+        "LEGACY_SOURCE_GRAPH_UNAVAILABLE",
+    } or graph_capability == "LEGACY_SOURCE_GRAPH_UNAVAILABLE":
+        # Source graph connectivity is exact evidence, but the rectangular
+        # solver still uses a conservative legacy loop/template reduction.
+        # Keep the result fail-closed for sign-off and make the LOW disclosure
+        # part of the numerical request rather than a UI-only annotation.
+        confirmed = False
+        templates_calibrated = False
+        assumptions = assumptions + (
+            "Source Via/Trace graph target-contact reduction is retained for connectivity; "
+            "vertical impedance and rectangular finite-port localization remain LOW confidence.",
+            "This Evaluation is not exact PowerSI sign-off; source coordinates remain immutable.",
+        )
     return EvaluationRequest(
         rail_id=rail_id,
         frequencies_hz=frequencies,
@@ -955,6 +1053,22 @@ def build_project_evaluation_request(
             modal_converged=None,
             mixed_reference_rectangular_approximation=(
                 getattr(rail, "mixed_reference_certificate", None) is not None
+            ),
+            source_graph_connectivity=graph_capability
+            in {
+                "TRACE_VIA_COMPONENTS_AVAILABLE",
+                "VIA_COMPONENTS_AVAILABLE",
+            },
+            graph_target_contact_reduction=(
+                graph_target_reduction
+            ),
+            legacy_vertical_template=(
+                graph_target_reduction
+                or graph_model
+                in {
+                    "SOURCE_PROVEN_GRAPH_CONNECTIVITY_LEGACY_TEMPLATE",
+                    "LEGACY_SOURCE_GRAPH_UNAVAILABLE",
+                }
             ),
         ),
         assumptions=assumptions,
@@ -1022,6 +1136,7 @@ def to_domain_evaluation_result(outcome: EvaluationOutcome) -> Any:
             )
             for item in outcome.confidence
         ],
+        convergence=asdict(outcome.convergence) if outcome.convergence else None,
     )
 
 
@@ -1399,6 +1514,193 @@ def _device_connection(
 ) -> tuple[DeviceConnection, tuple[str, ...], bool]:
     from spd_decap_pi._core.geometry.pairing import BumpPairingError, pair_device_bumps
 
+    # Raw-SPD graph selection keeps immutable PinRecord source coordinates and
+    # publishes a transient target-contact witness in import provenance.  The
+    # rectangular modal port must use that target contact; falling back to the
+    # original TOP coordinate would silently place a valid internal-plane route
+    # outside the selected cavity.  Hand-authored/legacy projects have no such
+    # witness map and retain their established coordinate behavior.
+    import_metadata = getattr(project, "metadata", {}).get("spd_import", {}) or {}
+    selected_provenance = import_metadata.get("selected_plane_pair_provenance", {})
+    rail_proof = None
+    if isinstance(selected_provenance, Mapping):
+        provenance_keys = [str(key).casefold() for key in selected_provenance]
+        if len(provenance_keys) != len(set(provenance_keys)):
+            raise EvaluationError(
+                "SOURCE_GRAPH_PROVENANCE_DUPLICATE_KEY: persisted plane-pair "
+                "provenance contains duplicate case-insensitive rail keys"
+            )
+        rail_proof = selected_provenance.get(rail.net)
+        if rail_proof is None:
+            rail_proof = next(
+                (
+                    value
+                    for key, value in selected_provenance.items()
+                    if str(key).casefold() == str(rail.net).casefold()
+                ),
+                None,
+            )
+        if selected_provenance and not isinstance(rail_proof, Mapping):
+            raise EvaluationError(
+                f"source graph plane-pair provenance is missing for rail "
+                f"{rail.rail_id!r}"
+            )
+    witness_by_pin: dict[str, Mapping[str, Any]] = {}
+    duplicate_witness_pin_ids: set[str] = set()
+    if isinstance(rail_proof, Mapping):
+        for witness in rail_proof.get("device_route_witnesses", ()):
+            if isinstance(witness, Mapping) and witness.get("pin_id"):
+                pin_id = str(witness["pin_id"])
+                if pin_id in witness_by_pin:
+                    duplicate_witness_pin_ids.add(pin_id)
+                else:
+                    witness_by_pin[pin_id] = witness
+    graph_witness_required = bool(
+        witness_by_pin
+        or (
+            isinstance(rail_proof, Mapping)
+            and str(rail_proof.get("source_graph_capability", "")).upper()
+            in {"TRACE_VIA_COMPONENTS_AVAILABLE", "VIA_COMPONENTS_AVAILABLE"}
+        )
+        or (
+            isinstance(rail_proof, Mapping)
+            and str(rail_proof.get("vertical_impedance_model", "")).upper()
+            == "SOURCE_PROVEN_GRAPH_CONNECTIVITY_LEGACY_TEMPLATE"
+        )
+    )
+    if duplicate_witness_pin_ids:
+        raise EvaluationError(
+            "source graph Device witness is ambiguous for pin(s): "
+            + ", ".join(sorted(duplicate_witness_pin_ids, key=str.casefold))
+        )
+    if graph_witness_required and isinstance(rail_proof, Mapping):
+        participating_gnd_ids = sorted(
+            str(pin_id)
+            for pin_id, witness in witness_by_pin.items()
+            if str(witness.get("terminal", "")).upper() == "GND"
+            and bool(witness.get("reachable"))
+        )
+        excluded_gnd_ids = sorted(
+            str(pin_id)
+            for pin_id in rail_proof.get("excluded_device_gnd_ids", ())
+        )
+        if set(participating_gnd_ids) & set(excluded_gnd_ids):
+            raise EvaluationError(
+                "source graph GND witness is both participating and excluded"
+            )
+        persisted_count = rail_proof.get("excluded_device_gnd_count")
+        if persisted_count is not None:
+            try:
+                count_matches = int(persisted_count) == len(excluded_gnd_ids)
+            except (TypeError, ValueError):
+                count_matches = False
+            if not count_matches:
+                raise EvaluationError(
+                    "source graph excluded GND count does not match persisted IDs"
+                )
+        persisted_hash = str(
+            rail_proof.get("excluded_device_gnd_ids_sha256", "")
+        ).casefold()
+        if persisted_hash and persisted_hash != sha256(
+            "|".join(excluded_gnd_ids).encode("utf-8")
+        ).hexdigest():
+            raise EvaluationError(
+                "source graph excluded GND ID hash does not match persisted IDs"
+            )
+
+    def graph_target(pin: Any, terminal: str) -> tuple[float, float] | None:
+        witness = witness_by_pin.get(str(pin.pin_id))
+        if witness is None:
+            if graph_witness_required:
+                raise EvaluationError(
+                    f"source graph witness missing for Device {terminal} pin "
+                    f"{pin.pin_id!r} on rail {rail.rail_id!r}"
+                )
+            return None
+        if str(witness.get("terminal", "")).upper() != terminal:
+            raise EvaluationError(
+                f"source graph witness terminal mismatch for Device {terminal} pin "
+                f"{pin.pin_id!r}"
+            )
+        expected_layer = rail.pwr_layer if terminal == "PWR" else rail.gnd_layer
+        if str(witness.get("target_layer", "")).casefold() != str(
+            expected_layer
+        ).casefold():
+            raise EvaluationError(
+                f"source graph witness layer mismatch for Device {terminal} pin "
+                f"{pin.pin_id!r}"
+            )
+        if str(witness.get("source_node_id", "")) != str(
+            getattr(pin, "source_node_id", "")
+        ):
+            raise EvaluationError(
+                f"source graph witness node mismatch for Device {terminal} pin "
+                f"{pin.pin_id!r}"
+            )
+        bound_source = str(import_metadata.get("source_sha256", "")).casefold()
+        proof_source = str(rail_proof.get("source_sha256", "")).casefold()
+        if graph_witness_required and (
+            len(bound_source) != 64
+            or any(char not in "0123456789abcdef" for char in bound_source)
+            or len(proof_source) != 64
+            or any(char not in "0123456789abcdef" for char in proof_source)
+            or bound_source != proof_source
+        ):
+            raise EvaluationError(
+                f"source graph witness SHA mismatch for rail {rail.rail_id!r}"
+            )
+        if not bool(witness.get("reachable")):
+            raise EvaluationError(
+                f"source graph route for Device {terminal} pin {pin.pin_id!r} "
+                "did not reach the selected plane pair"
+            )
+        contacts = witness.get("target_contacts")
+        if not isinstance(contacts, (list, tuple)) or not contacts:
+            raise EvaluationError(
+                f"source graph target-contact reduction unavailable for Device "
+                f"{terminal} pin {pin.pin_id!r}"
+            )
+        try:
+            expected_count = int(witness.get("target_contact_count", len(contacts)))
+        except (TypeError, ValueError) as exc:
+            raise EvaluationError(
+                f"source graph target-contact reduction unavailable for Device "
+                f"{terminal} pin {pin.pin_id!r}"
+            ) from exc
+        # The adapter intentionally persists only the deterministic selected
+        # contact; candidate_count/hash describe the complete source component
+        # and are retained as opaque provenance rather than duplicated per
+        # landing.
+        if expected_count < 1 or len(contacts) != 1:
+            raise EvaluationError(
+                f"source graph target-contact count mismatch for Device "
+                f"{terminal} pin {pin.pin_id!r}"
+            )
+        expected_hash = str(witness.get("target_contacts_sha256", "")).casefold()
+        if expected_hash and (
+            len(expected_hash) != 64
+            or any(char not in "0123456789abcdef" for char in expected_hash)
+        ):
+                raise EvaluationError(
+                    f"source graph target-contact hash is invalid for Device "
+                    f"{terminal} pin {pin.pin_id!r}"
+                )
+        selected = contacts[0]
+        try:
+            x_um = float(selected["x_um"])
+            y_um = float(selected["y_um"])
+        except (KeyError, TypeError, ValueError) as exc:
+            raise EvaluationError(
+                f"source graph target-contact reduction unavailable for Device "
+                f"{terminal} pin {pin.pin_id!r}"
+            ) from exc
+        if not (isfinite(x_um) and isfinite(y_um)):
+            raise EvaluationError(
+                f"source graph target-contact reduction unavailable for Device "
+                f"{terminal} pin {pin.pin_id!r}"
+            )
+        return x_um, y_um
+
     power_pins = [
         pin
         for pin in project.pins
@@ -1435,6 +1737,27 @@ def _device_connection(
             ):
                 continue
         ground_pins.append(pin)
+    if graph_witness_required:
+        participating_ground_ids = {
+            str(pin_id)
+            for pin_id, witness in witness_by_pin.items()
+            if str(witness.get("terminal", "")).upper() == "GND"
+            and bool(witness.get("reachable"))
+        }
+        excluded_ground_ids = {
+            str(pin_id)
+            for pin_id in (
+                rail_proof.get("excluded_device_gnd_ids", ())
+                if isinstance(rail_proof, Mapping)
+                else ()
+            )
+        }
+        ground_pins = [
+            pin
+            for pin in ground_pins
+            if str(pin.pin_id) in participating_ground_ids
+            and str(pin.pin_id) not in excluded_ground_ids
+        ]
     if not ground_pins:
         raise EvaluationError(
             f"rail {rail.rail_id!r} has no Device DGND bump for its return path"
@@ -1517,6 +1840,30 @@ def _device_connection(
                 f"Device cluster {cluster.cluster_id!r} must have exactly one "
                 "coordinate-pairing anchor"
             )
+        # Validate every graph-modeled terminal.  Only the anchor PWR contact
+        # determines the single modal excitation coordinate; all other PWR
+        # and GND contacts still require source-node/layer/reachability and
+        # target-contact provenance before this cluster can compile.
+        for pin in cluster_power:
+            target = graph_target(pin, "PWR")
+            if target is not None:
+                _finite_port(
+                    target[0],
+                    target[1],
+                    origin_um,
+                    template,
+                    f"{cluster.cluster_id}:PWR:{pin.pin_id}",
+                ).validate_inside(plane)
+        for pin in cluster_ground:
+            target = graph_target(pin, "GND")
+            if target is not None:
+                _finite_port(
+                    target[0],
+                    target[1],
+                    origin_um,
+                    template,
+                    f"{cluster.cluster_id}:GND:{pin.pin_id}",
+                ).validate_inside(plane)
         anchor_power = power_lookup[anchor_pairs[0].power_pin_id]
         # The modal cavity is the selected PWR artwork with a continuous DGND
         # reference.  Locate the excitation at the original paired PWR terminal,
@@ -1524,9 +1871,10 @@ def _device_connection(
         # can legitimately fall outside a narrow PWR polygon when the return bump
         # is beside it.  A full PWR centroid can likewise be displaced by surplus
         # terminals attached to this conservative shared cluster.
+        target_xy = graph_target(anchor_power, "PWR")
         port = _finite_port(
-            float(anchor_power.x_um),
-            float(anchor_power.y_um),
+            float(anchor_power.x_um) if target_xy is None else target_xy[0],
+            float(anchor_power.y_um) if target_xy is None else target_xy[1],
             origin_um,
             template,
             cluster.cluster_id,

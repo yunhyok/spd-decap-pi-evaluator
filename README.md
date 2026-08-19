@@ -1,24 +1,36 @@
-# SPD Decap PI Evaluator v0.22.6
+# SPD Decap PI Evaluator v0.22.7
 
-> **v0.22.6 adds a guarded Evaluation fallback for retained-plane geometry gaps.**
-> Strict exact retained-plane coverage remains the default. The title bar identifies
-> the application as **SPD Decap PI Evaluator v0.22.6**.
+> **v0.22.7 selects source-graph-proven plane pairs before strict Evaluation.**
+> The title bar identifies the application as **SPD Decap PI Evaluator v0.22.7**.
 
-**v0.22.6 Evaluation fallback release note:**
+**v0.22.7 source-graph and convergence release note:**
 
-- Strict Evaluation remains fail-closed. An explicit UI opt-in may fall back only
-  for `TERMINAL_OUTSIDE_SELECTED_PLANE` blockers, using hash/source-bound retained
-  same-net adjacent PWR and pure-GND assets with exact finite-footprint coverage.
-- The fallback is transient and does not mutate or save the source scenario. Its
-  analytical vertical-path approximation is marked LOW confidence and is not
-  PowerSI sign-off. Missing assets, hash mismatches, other blocker types, and
-  incomplete coverage remain blocked.
+- Raw SPD import recovers source-graph connectivity before choosing a plane pair;
+  the validated VINT rails select the internal `L09 (MAIN_POWER1) / L08 (DGND)`
+  pair rather than the closest geometric pair. Selection is source-SHA-bound and
+  fail-closed when a route, target contact, or retained artwork proof is absent.
+- Graph contacts require a strict-interior target node in retained ordered artwork;
+  the solver then uses the `RECTANGULAR_CAVITY_FINITE_PORT_V1` finite-port basis
+  under `FINAL_TEMPLATE_ARTWORK_CONTAINMENT_V2`. Source-graph connectivity is
+  source-proven; nearest-contact reduction, legacy vertical/contact impedance,
+  and rectangular geometry are **LOW confidence** and are not PowerSI/SIwave
+  sign-off or a source-exact electrical model.
+- An unrelated rail with no proven pair may remain in an imported project for
+  inspection, but Evaluation of that selected rail blocks with an actionable
+  unresolved-plane diagnostic. Selected rails never silently drop terminals or
+  mutate source scenario data; the source scenario remains immutable. Existing
+  v0.22.6 bundles require re-import of the
+  matching raw SPD for strict source-graph repair; the bundle is left unchanged.
+- Modal evaluation uses m8 as the starting high basis and first compares m6↔m8,
+  then escalates the high basis through m10, m12, and a bounded m14 ceiling.
+  RMS 0.2 dB, maximum 0.5 dB, and peak-shift 2% remain unchanged; exhaustion is
+  reported as a fail-closed result.
 
-> **v0.22.5 accelerates exact PowerSI Shape parsing and removes unreachable
-> internal code.** Methodology and physics are unchanged from v0.22.4. The
-> title bar identifies the application as **SPD Decap PI Evaluator v0.22.5**.
+> **v0.22.5 loader-performance release note (historical):** exact PowerSI Shape
+> parsing was accelerated and unreachable internal code removed. It is not the
+> current release identity.
 
-> 프로그램: **SPD Decap PI Evaluator v0.22.6**
+> 프로그램: **SPD Decap PI Evaluator v0.22.7**
 > 저장소: 기존 PI Calculator와 분리된 독립 프로그램
 > 해석 경계: 선택한 PWR rail의 pre-design `Zii`; 최종 PowerSI/SIwave 검증을 대체하지 않음
 
@@ -145,7 +157,11 @@ See [the research and implementation directive](docs/DECAP_DISTRIBUTION_SIGNAL_T
 - Research Original/Tuned curves are transient: Original is recomputed for every run and is neither persisted to nor reused from the scenario baseline cache. Legacy retains its existing `Saved now`/cache-reuse behavior.
 - The named source SPD with SHA-256 prefix `40cb44b2376f` currently lacks the required topology certificate. Consequently the research option is intentionally blocked for that source and no accuracy-improvement claim is made for it.
 - The source-only uniform `C00` scaffold above is the only shipped research profile. Separate global MNA, MFDM, PEEC, and associated artwork/via prototypes were investigated but excluded from the v0.18.1 prerelease. PowerSI Touchstone remains comparison-only and is never used for parameter fitting. v0.18.1 remains a prerelease until the documented accuracy-promotion gates, including end-to-end and blinded holdout evidence, are passed.
-- The default remains **Balanced** (max index 8, 81 modes). **Experimental m12 check** keeps the existing max index 12 / 169-mode API for a comparison-only m10-to-m12 check. In the 2026-07-29 loaded benchmark, VTRIP1 changed by up to 1.346 dB in maximum magnitude from m10 to m12, 3 of 6 loaded configurations still did not converge, and solver runtime was 4,139 s. More modes worsened external correlation in that case, but this does not justify selecting a lower order; PowerSI remains comparison-only.
+- The dated 2026-07-29 fixed-order m6/m8/m12 benchmark is historical comparison
+  evidence only; it is not the current modal preset or acceptance gate. The
+  current **Balanced** preset starts at m8, compares m6↔m8, then adaptively
+  escalates through m10, m12, and bounded m14 under the unchanged RMS/max/peak
+  thresholds. PowerSI remains comparison-only.
 - The evaluator can combine only the immediately adjacent, opposite-side conductor when it contains configured GND aliases and valid dielectric rows. It uses the disclosed shared-PWR ideal-common-reference equivalent; it does not enable a general layer cascade. A true layer cascade is a full complex multiport Y-matrix Schur/Kron reduction, not scalar-Z or scalar-admittance merging. See [Evaluation accuracy](docs/EVALUATION_ACCURACY.md).
 - A mixed PWR/DGND return layer is accepted only through a versioned certificate tied to SHA-256-verified exact plane artwork. The certificate requires at least 90% PWR-area overlap with the configured DGND artwork and a 99% dominant overlap component; it is fail-closed if geometry verification is unavailable. Result confidence remains **LOW** and displays the overlap evidence plus the continuous rectangular-return approximation.
 - When a source terminal reaches the selected plane through a same-net Trace, or an alternate Trace-to-Via exit exists, evaluation uses the complete legacy terminal template instead of adding an incomplete source-Via R/L contribution. Compact node indexing avoids repeated full-SPD Node scans during this recovery.
@@ -241,7 +257,7 @@ powershell.exe -ExecutionPolicy Bypass -NoProfile -File .\scripts\build_spd_deca
 산출물:
 
 - `dist\SPDDecapPIEvaluator\SPDDecapPIEvaluator.exe`
-- `installer-output\SPDDecapPIEvaluatorSetup-0.22.6.exe`
-- `installer-output\SPDDecapPIEvaluatorSetup-0.22.6.exe.sha256`
+- `installer-output\SPDDecapPIEvaluatorSetup-0.22.7.exe`
+- `installer-output\SPDDecapPIEvaluatorSetup-0.22.7.exe.sha256`
 
 프로그램명과 버전은 title bar와 installer metadata에 함께 표시된다.

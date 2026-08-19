@@ -2,6 +2,8 @@
 
 from .evaluator import (
     COUPLING_ASSUMPTION,
+    CONVERGENCE_ALGORITHM_VERSION,
+    DEFAULT_MODAL_CEILING_INDEX,
     SOLVER_VERSION,
     ConvergenceReport,
     EvaluationError,
@@ -66,6 +68,8 @@ from .research_uniform_profile import (
 
 __all__ = [
     "COUPLING_ASSUMPTION",
+    "CONVERGENCE_ALGORITHM_VERSION",
+    "DEFAULT_MODAL_CEILING_INDEX",
     "DEFAULT_SOLVER_PROFILE_KEY",
     "LEGACY_MODAL_PROFILE",
     "RESEARCH_UNIFORM_ADMITTANCE_PROFILE",

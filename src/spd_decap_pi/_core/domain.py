@@ -347,6 +347,10 @@ class PinRecord(DomainModel):
     site: str | None = None
     bump_group: str | None = None
     via_template_id: str | None = None
+    # Raw SPD identity retained for source-exact route witnesses.  Existing
+    # hand-authored scenarios leave these unset; raw imports populate them.
+    source_node_id: str | None = None
+    source_padstack: str | None = None
 
     @field_validator("x_um", "y_um")
     @classmethod
@@ -1083,6 +1087,9 @@ class EvaluationResult(DomainModel):
     peaks: list[PeakMetric] = Field(default_factory=list)
     assumptions: list[str] = Field(default_factory=list)
     confidence: list[ConfidenceBand] = Field(default_factory=list)
+    # JSON-safe adaptive frequency/modal convergence evidence.  Older result
+    # files omit this optional field and remain readable.
+    convergence: dict[str, Any] | None = None
 
     @model_validator(mode="after")
     def aligned_samples(self) -> "EvaluationResult":

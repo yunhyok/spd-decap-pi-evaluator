@@ -1,14 +1,24 @@
 ﻿from pathlib import Path
 from dataclasses import replace
+from hashlib import sha256
 import math
 from types import SimpleNamespace
 
 import pytest
 
 from test_io_spd import MINI_SPD
+from test_spd_decap_evaluation import _scenario
 
 from spd_decap_pi import spd_adapter
 from spd_decap_pi._core import services as core_services
+from spd_decap_pi._core.domain import (
+    MixedReferenceCertificate,
+    PinKind,
+    PinRecord,
+    StackupLayer,
+    TerminalKind,
+)
+from spd_decap_pi._core.plane_pairs import suggest_effective_plane_pairs
 from spd_decap_pi._core.io.shared_pad import (
     SpdDecapConnection,
     SpdSharedPadCluster,
@@ -30,12 +40,82 @@ from spd_decap_pi.routing_obstacles import (
     parse_mlo_landing_certificates,
 )
 from spd_decap_pi.spd_adapter import (
+    FINAL_TEMPLATE_ARTWORK_CONTRACT_VERSION,
+    _prepare_post_plan_selection,
     _build_mlo_landing_certificates,
+    _finite_port_inside_solver_bounds,
     _raise_for_rejected_mixed_reference_landings,
     _scenario_via_landing,
     _via_target_layers_by_net,
     import_spd_scenario,
 )
+
+
+def test_third_plan_selection_drops_orphan_failed_net_and_restores_known_pair() -> None:
+    suggestion = SimpleNamespace(pwr_layer="PWR1", gnd_layer="GND1")
+    selected = {"good": suggestion, "orphan": suggestion}
+    provenance = {"good": {}, "orphan": {}}
+    restored = _prepare_post_plan_selection(
+        selected,
+        provenance,
+        {"good": suggestion},
+        {"good", "orphan"},
+        {"good"},
+    )
+    assert set(restored) == {"good"}
+    assert set(provenance) == {"good", "orphan"}
+    assert provenance["orphan"]["source_graph_pair_unresolved"] is True
+    assert provenance["orphan"]["selection_mode"] == "LEGACY_PREEXISTING_PAIR_UNRESOLVED"
+    with pytest.raises(SpdImportError):
+        _prepare_post_plan_selection(
+            {"known": suggestion},
+            {"known": {}},
+            {},
+            {"known"},
+            {"known"},
+        )
+
+
+def test_preselection_pair_suggestion_retains_mixed_reference_certificate() -> None:
+    layers = (
+        StackupLayer(name="PWR", thickness_um=20.0, conductivity_s_m=5.8e7, pwr_nets=["VDD"]),
+        StackupLayer(name="D1", thickness_um=100.0, dk=4.0, df=0.01),
+        StackupLayer(name="MIX", thickness_um=20.0, conductivity_s_m=5.8e7, pwr_nets=["DGND", "SIG"]),
+    )
+    certificate = MixedReferenceCertificate(
+        rail_net="VDD",
+        gnd_net="DGND",
+        pwr_layer="PWR",
+        gnd_layer="MIX",
+        pwr_asset_sha256="a" * 64,
+        gnd_asset_sha256="b" * 64,
+        overlap_fraction=0.5,
+        dominant_overlap_component_fraction=0.5,
+    )
+    suggestions = suggest_effective_plane_pairs(
+        layers,
+        rail_net="VDD",
+        gnd_aliases=("DGND",),
+        mixed_reference_certificates=(certificate,),
+    )
+    assert any(
+        item.pwr_layer == "PWR"
+        and item.gnd_layer == "MIX"
+        and item.mixed_reference_certificate == certificate
+        for item in suggestions
+    )
+from spd_decap_pi.evaluation import _terminal_footprint
+
+
+def test_graph_target_node_contract_separates_exact_artwork_from_solver_port() -> None:
+    bounds = (0.0, 100.0, 0.0, 100.0)
+    # Graph-only target nodes are exact point evidence.  The analytical
+    # finite port may cross detailed artwork, but must remain inside the
+    # rectangular solver cavity and is disclosed LOW confidence.
+    assert _finite_port_inside_solver_bounds(10.0, 50.0, 60.0, 20.0, bounds) is False
+    assert _finite_port_inside_solver_bounds(50.0, 50.0, 60.0, 20.0, bounds) is True
+    assert _finite_port_inside_solver_bounds(0.0, 50.0, 1.0, 1.0, bounds) is False
+    assert _finite_port_inside_solver_bounds(50.0, 50.0, 100.0, 20.0, bounds) is False
 
 
 def test_adapter_persists_structural_only_via_evidence() -> None:
@@ -83,6 +163,111 @@ def test_adapter_persists_structural_only_via_evidence() -> None:
     assert converted.structural_evidence[0].target_layer == "L2"
     assert converted.structural_evidence[0].x_um == 11.0
     assert converted.structural_evidence[0].trace_hops == 1
+
+
+def test_graph_contact_remap_preserves_source_landing_and_localizes_solver_port() -> None:
+    landing = SimpleNamespace(
+        via_id="V_GRAPH",
+        net="VDD",
+        endpoint_node_id="NODE_SOURCE",
+        x_um=10.0,
+        y_um=20.0,
+        padstack="P1",
+        rotation_degrees=0.0,
+    )
+    contacts = (("NODE_TARGET", 110.0, 220.0),)
+    contact_hash = sha256(repr(contacts).encode("utf-8")).hexdigest()
+    recovery = SimpleNamespace(evidence_by_via={}, structural_evidence_by_via={})
+    graph = SimpleNamespace(
+        target_contacts_by_key={("v_graph", "node_source", "l09"): contacts},
+        target_contact_count_by_key={("v_graph", "node_source", "l09"): 1},
+        target_contact_hash_by_key={("v_graph", "node_source", "l09"): contact_hash},
+    )
+    converted = _scenario_via_landing(landing, recovery, graph, "a" * 64)
+    assert (converted.x_um, converted.y_um) == (10.0, 20.0)
+    evidence = converted.graph_contact_for_layer("L09")
+    assert evidence is not None
+    assert (evidence.x_um, evidence.y_um) == (110.0, 220.0)
+    footprint = _terminal_footprint(
+        converted,
+        "L09",
+        SimpleNamespace(finite_port_width_um=20.0, finite_port_height_um=20.0),
+    )
+    assert (footprint.x_um, footprint.y_um) == (110.0, 220.0)
+
+
+def test_graph_contact_lookup_preserves_multiple_target_layers_without_global_scan() -> None:
+    landing = SimpleNamespace(
+        via_id="V_LOOKUP",
+        net="VDD",
+        endpoint_node_id="NODE_SOURCE",
+        x_um=10.0,
+        y_um=20.0,
+        padstack="P1",
+        rotation_degrees=0.0,
+    )
+    recovery = SimpleNamespace(evidence_by_via={}, structural_evidence_by_via={})
+    contacts = {
+        ("v_lookup", "node_source", "L09"): (("N09", 110.0, 220.0),),
+        ("v_lookup", "node_source", "L08"): (("N08", 111.0, 221.0),),
+    }
+    graph = SimpleNamespace(
+        target_contacts_by_key=contacts,
+        target_contact_count_by_key={key: 1 for key in contacts},
+        target_contact_hash_by_key={key: sha256(repr(value).encode()).hexdigest() for key, value in contacts.items()},
+    )
+    lookup = (
+        ("L09", contacts[("v_lookup", "node_source", "L09")]),
+        ("L08", contacts[("v_lookup", "node_source", "L08")]),
+    )
+    converted = _scenario_via_landing(
+        landing, recovery, graph, "b" * 64,
+        contact_lookup={("v_lookup", "node_source"): lookup},
+    )
+    assert {
+        item.target_layer: (item.target_node_id, item.x_um, item.y_um)
+        for item in converted.graph_contact_evidence
+    } == {
+        "L09": ("N09", 110.0, 220.0),
+        "L08": ("N08", 111.0, 221.0),
+    }
+
+
+def test_raw_pin_source_identity_is_retained_for_graph_witnesses(tmp_path: Path) -> None:
+    source = tmp_path / "pin-source.spd"
+    source.write_text(MINI_SPD, encoding="ascii")
+    analysis = analyze_spd(source, scope="decap_scenario")
+    device_pins = [item for item in analysis.pins if item.kind == PinKind.DEVICE_BUMP]
+    assert device_pins
+    assert all(item.source_node_id for item in device_pins)
+
+
+def test_explicit_source_pair_map_missing_rail_fails_closed() -> None:
+    project = SimpleNamespace(
+        stackup_layers=(
+            StackupLayer(name="TOP", thickness_um=20.0, conductivity_s_m=5.8e7, pwr_nets=["VDD"]),
+            StackupLayer(name="D1", thickness_um=100.0, dk=4.0, df=0.01),
+            StackupLayer(name="PWR", thickness_um=20.0, conductivity_s_m=5.8e7, pwr_nets=["DGND"]),
+        ),
+        gnd_aliases=("DGND",),
+        rails=(),
+        pins=(
+            PinRecord(
+                refdes="SITE0",
+                pin="1",
+                net="VDD",
+                x_um=1.0,
+                y_um=1.0,
+                kind=PinKind.DEVICE_BUMP,
+                terminal=TerminalKind.PWR,
+            ),
+        ),
+    )
+    with pytest.raises(ValueError, match="source-proven plane-pair selection is missing"):
+        core_services._derive_rails(
+            project,
+            selected_pairs={"OTHER": SimpleNamespace(pwr_layer="TOP", gnd_layer="PWR")},
+        )
 
 
 def test_importer_persists_strict_conventional_landing_certificate() -> None:
@@ -194,6 +379,19 @@ def test_read_only_spd_import_builds_top_side_editable_scenario(tmp_path: Path):
     assert imported.scenario.base_project.placements == []
     assert imported.scenario.base_project.topology_maps == []
     assert all(item.confirmed for item in imported.scenario.base_project.partitions)
+    spd_import = imported.scenario.base_project.metadata["spd_import"]
+    assert spd_import["final_template_footprint_validation"]["version"] == (
+        FINAL_TEMPLATE_ARTWORK_CONTRACT_VERSION
+    )
+    assert spd_import["selected_plane_pair_provenance"]["VDD_CORE/0"][
+        "final_template_footprint"
+    ]
+    assert (
+        spd_import["selected_plane_pair_provenance"]["VDD_CORE/0"][
+            "final_template_footprint"
+        ]["contract_version"]
+        == FINAL_TEMPLATE_ARTWORK_CONTRACT_VERSION
+    )
 
 
 def test_adapter_clears_gap_certificate_when_cluster_is_demoted(
@@ -452,6 +650,14 @@ def test_adapter_preserves_many_to_many_cluster_via_evidence(
     assert len(analysis.clusters) == 1
     cluster = analysis.clusters[0]
     assert cluster.anchor_refdes == ("C1", "C2", "C3")
+    selected_provenance = (
+        imported.scenario.normalized_project.get("metadata", {})
+        .get("spd_import", {})
+        .get("selected_plane_pair_provenance", {})
+    )
+    assert selected_provenance["VDD_CORE/0"]["pwr_layer"] == "Signal$PWR"
+    assert selected_provenance["VDD_CORE/0"]["gnd_layer"] == "Signal$GND"
+    assert selected_provenance["VDD_CORE/0"]["route_witnesses"]
     assert set(cluster.via_eligibility) == {"ViaP_AB", "ViaP_C"}
     assert all(
         set(item) == {"VDD_CORE/0"}
@@ -883,6 +1089,30 @@ def test_rejected_l11_pair_is_recovered_and_blocks_fallback_top_pair() -> None:
             (landing,),
             recovery,
         )
+
+
+def test_nonblocking_mixed_reference_failure_does_not_abort_legacy_path() -> None:
+    project = SimpleNamespace(
+        metadata={
+            "spd_import": {
+                "mixed_reference_certificate_failures": [
+                    {
+                        "rail_net": "VCPU",
+                        "pwr_layer": "L11",
+                        "gnd_layer": "L10",
+                        "blocking": False,
+                    }
+                ]
+            }
+        }
+    )
+    landing = SimpleNamespace(via_id="VP-VCPU", net="VCPU")
+    recovery = SimpleNamespace(
+        evidence_by_via={
+            "vp-vcpu": (SimpleNamespace(target_layer="L11"),),
+        }
+    )
+    _raise_for_rejected_mixed_reference_landings(project, (landing,), recovery)
 
 
 def test_via_target_layers_include_all_retained_same_net_planes() -> None:

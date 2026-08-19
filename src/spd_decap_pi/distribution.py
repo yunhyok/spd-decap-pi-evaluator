@@ -736,7 +736,12 @@ def _distribution_via_eligibility(
         return {}
     model_copy = getattr(landing, "model_copy", None)
     if callable(model_copy):
-        landing = model_copy(update={"path_evidence": ()})
+        # Distribution is a source-XY projection/rebuild plan.  Graph target
+        # contacts are Evaluation-only remapping evidence and must not move a
+        # Distribution landing laterally onto another plane location.
+        landing = model_copy(
+            update={"path_evidence": (), "graph_contact_evidence": ()}
+        )
     return _eligibility_for_via_landing(
         eligibility_index,
         landing,  # type: ignore[arg-type]

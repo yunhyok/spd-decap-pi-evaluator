@@ -22,11 +22,11 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 
 def test_spd_decap_release_identity_is_explicit_and_versioned() -> None:
     assert APP_NAME == "SPD Decap PI Evaluator"
-    assert __version__ == "0.22.6"
-    assert CORE_VERSION == "0.22.6"
-    assert APP_DISPLAY_NAME == "SPD Decap PI Evaluator v0.22.6"
+    assert __version__ == "0.22.7"
+    assert CORE_VERSION == "0.22.7"
+    assert APP_DISPLAY_NAME == "SPD Decap PI Evaluator v0.22.7"
     assert EXECUTABLE_BASENAME == "SPDDecapPIEvaluator"
-    assert INSTALLER_BASENAME == "SPDDecapPIEvaluatorSetup-0.22.6"
+    assert INSTALLER_BASENAME == "SPDDecapPIEvaluatorSetup-0.22.7"
 
 
 def test_spd_decap_console_and_packaging_metadata_are_consistent() -> None:
@@ -95,10 +95,10 @@ def test_windows_version_resource_matches_release_identity() -> None:
     version_info = (
         REPO_ROOT / "packaging" / "spd_decap_pi_version_info.txt"
     ).read_text(encoding="utf-8")
-    assert "filevers=(0, 22, 6, 0)" in version_info
-    assert "prodvers=(0, 22, 6, 0)" in version_info
-    assert "StringStruct('FileVersion', '0.22.6')" in version_info
-    assert "StringStruct('ProductVersion', '0.22.6')" in version_info
+    assert "filevers=(0, 22, 7, 0)" in version_info
+    assert "prodvers=(0, 22, 7, 0)" in version_info
+    assert "StringStruct('FileVersion', '0.22.7')" in version_info
+    assert "StringStruct('ProductVersion', '0.22.7')" in version_info
 
 
 def test_packaged_numerical_path_imports_threadpoolctl() -> None:
@@ -183,10 +183,16 @@ def test_readme_companion_and_manifest_are_current_and_hash_bound() -> None:
         assert entry["output"] == output_path.relative_to(REPO_ROOT).as_posix()
 
     readme_companion = readme_companion_path.read_text(encoding="utf-8")
-    assert "SPD Decap PI Evaluator v0.22.6" in readme_companion
-    assert "v0.22.6 Evaluation fallback" in readme_companion
+    assert "SPD Decap PI Evaluator v0.22.7" in readme_companion
+    assert "v0.22.7 source-graph and convergence release note" in readme_companion
+    assert "L09 (MAIN_POWER1) / L08 (DGND)" in readme_companion
+    assert "FINAL_TEMPLATE_ARTWORK_CONTAINMENT_V2" in readme_companion
+    assert "PowerSI/SIwave" in readme_companion
+    assert "sign-off" in readme_companion
+    assert "re-import of the" in readme_companion
+    assert "matching raw SPD" in readme_companion
     assert "LOW confidence" in readme_companion
-    assert "source scenario immutable" in readme_companion
+    assert "source scenario remains immutable" in readme_companion
     assert "v0.22.5 loader-performance release note" in readme_companion
     assert "#v0225-loader-performance-release-note" in readme_companion
     source_headings = re.findall(
@@ -207,7 +213,7 @@ def test_readme_companion_and_manifest_are_current_and_hash_bound() -> None:
     readme_hash = sha256(canonical_bytes(readme_path)).hexdigest()
     assert f'<meta name="source-sha256" content="{readme_hash}">' in readme_companion
     assert f"Source SHA-256: <code>{readme_hash}</code>" in readme_companion
-    assert "SPDDecapPIEvaluatorSetup-0.22.6.exe" in readme_companion
+    assert "SPDDecapPIEvaluatorSetup-0.22.7.exe" in readme_companion
 
     methodology_evidence = documents[
         "docs/DECAP_DISTRIBUTION_RULES.md"
@@ -237,10 +243,15 @@ def test_evaluation_accuracy_companion_hash_is_consistent_everywhere() -> None:
     companion = (REPO_ROOT / "docs" / "EVALUATION_ACCURACY.companion.html").read_text(encoding="utf-8")
     source = source_path.read_bytes().decode("utf-8").replace("\r\n", "\n").replace("\r", "\n").encode("utf-8")
     digest = sha256(source).hexdigest()
-    assert "v0.22.6 strict Evaluation policy" in companion
-    assert "LOW-confidence" in companion
+    assert "v0.22.7, strict Evaluation" in companion
+    assert "L09 (MAIN_POWER1) / L08 (DGND)" in companion
+    assert "SOURCE_GRAPH_PLANE_PAIR_UNRESOLVED" in companion
+    assert "FINAL_TEMPLATE_ARTWORK_CONTAINMENT_V2" in companion
+    assert "m8 (81 modes)" in companion
+    assert "bounded m14" in companion
+    assert "LOW confidence" in companion
     assert "immutable" in companion
-    assert "fail closed" in companion
+    assert "fail-closed" in companion
     assert f"source-sha256={digest}" in companion
     assert f'<meta name="source-sha256" content="{digest}">' in companion
     assert f"Source SHA-256: <code>{digest}</code>" in companion

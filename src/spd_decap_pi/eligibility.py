@@ -11,7 +11,7 @@ from __future__ import annotations
 
 from array import array
 from collections.abc import Iterable, Iterator, Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from math import ceil, floor, hypot, isfinite, sqrt
 from typing import Literal
 
@@ -235,6 +235,28 @@ class _SpatialGrid:
         local_indices = self.cells.get((x_cell, y_cell), ())
         yield from _iter_merged_ordered_indices(self.broad_indices, local_indices)
 
+    def candidates_bounds(
+        self, x_min_um: float, x_max_um: float, y_min_um: float, y_max_um: float
+    ) -> tuple[int, ...]:
+        """Return a conservative union for a finite rectangle query."""
+        if x_min_um > x_max_um or y_min_um > y_max_um:
+            return ()
+        indices: set[int] = set(self.broad_indices)
+        if self.x_bins == 1:
+            x_start = x_stop = 0
+        else:
+            x_start = max(0, min(self.x_bins - 1, floor((x_min_um - self.domain[0]) / self.cell_width)))
+            x_stop = max(0, min(self.x_bins - 1, floor((x_max_um - self.domain[0]) / self.cell_width)))
+        if self.y_bins == 1:
+            y_start = y_stop = 0
+        else:
+            y_start = max(0, min(self.y_bins - 1, floor((y_min_um - self.domain[2]) / self.cell_height)))
+            y_stop = max(0, min(self.y_bins - 1, floor((y_max_um - self.domain[2]) / self.cell_height)))
+        for x_cell in range(x_start, x_stop + 1):
+            for y_cell in range(y_start, y_stop + 1):
+                indices.update(self.cells.get((x_cell, y_cell), ()))
+        return tuple(sorted(indices))
+
 
 @dataclass(frozen=True, slots=True)
 class _PolygonYIndex:
@@ -342,6 +364,7 @@ class IndexedPlaneGeometry:
     primitives: tuple[_IndexedPrimitive, ...]
     positive_bounds: tuple[float, float, float, float]
     primitive_grid: _SpatialGrid
+    _shape_cache: dict[int, object] = field(default_factory=dict, compare=False, repr=False)
 
     @classmethod
     def build(
@@ -375,7 +398,7 @@ class IndexedPlaneGeometry:
             raise ValueError("plane query coordinates must be finite")
         if not _bounds_contains(self.positive_bounds, x_um, y_um, tolerance_um):
             return "outside"
-        filled = False
+        status: Containment = "outside"
         for primitive_index in self.primitive_grid.candidates(x_um, y_um):
             item = self.primitives[primitive_index]
             if not _bounds_contains(item.bounds, x_um, y_um, tolerance_um):
@@ -395,10 +418,129 @@ class IndexedPlaneGeometry:
                     x_um, y_um, item.primitive, tolerance_um
                 )
             if containment == "boundary":
-                return "boundary"
+                # Boundary is provisional: a later ordered primitive may
+                # cover the edge (positive re-add) or remove it (negative
+                # cut).  Preserve an already-established interior/exterior
+                # state when the same-polarity boundary cannot change it.
+                if item.kind.startswith("positive_"):
+                    if status == "outside":
+                        status = "boundary"
+                elif status == "inside":
+                    status = "boundary"
+                continue
             if containment == "inside":
-                filled = item.kind.startswith("positive_")
-        return "inside" if filled else "outside"
+                status = "inside" if item.kind.startswith("positive_") else "outside"
+        if status == "boundary":
+            # Adjacent positive polygons can both report their shared edge as
+            # boundary even though their ordered union contains the point.
+            # Resolve only this rare seam case with a tiny local ordered
+            # Shapely replay; normal point queries stay on the indexed path.
+            try:
+                from shapely.geometry import Point, Polygon, box
+
+                epsilon = max(float(tolerance_um) * 4.0, 1.0e-5)
+                guard = box(
+                    float(x_um) - epsilon,
+                    float(y_um) - epsilon,
+                    float(x_um) + epsilon,
+                    float(y_um) + epsilon,
+                )
+                ids = set(
+                    self.primitive_grid.candidates_bounds(
+                        guard.bounds[0], guard.bounds[2],
+                        guard.bounds[1], guard.bounds[3],
+                    )
+                )
+                filled = None
+                for index in sorted(ids):
+                    item = self.primitives[index]
+                    if (
+                        item.bounds[1] < guard.bounds[0]
+                        or item.bounds[0] > guard.bounds[2]
+                        or item.bounds[3] < guard.bounds[1]
+                        or item.bounds[2] > guard.bounds[3]
+                    ):
+                        continue
+                    cached = self._shape_cache.get(index)
+                    if cached is None:
+                        primitive = item.primitive
+                        raw_shape = (
+                            Point(float(primitive[0]), float(primitive[1])).buffer(
+                                float(primitive[2]), quad_segs=64
+                            )
+                            if item.kind.endswith("circle")
+                            else Polygon(primitive)
+                        )
+                        from shapely.prepared import prep
+                        cached = (raw_shape, prep(raw_shape))
+                        self._shape_cache[index] = cached
+                    raw_shape, prepared_shape = cached
+                    if prepared_shape.disjoint(guard):
+                        continue
+                    shape = guard if prepared_shape.contains(guard) else raw_shape.intersection(guard)
+                    if item.kind.startswith("positive_"):
+                        filled = shape if filled is None else filled.union(shape)
+                    elif filled is not None:
+                        filled = filled.difference(shape)
+                point = Point(float(x_um), float(y_um))
+                if filled is None or filled.is_empty:
+                    return "outside"
+                if filled.boundary.distance(point) <= float(tolerance_um):
+                    return "boundary"
+                return "inside" if filled.contains(point) else "outside"
+            except Exception:
+                return "boundary"
+        return status
+
+    def covers_footprint(self, x_um: float, y_um: float, width_um: float, height_um: float) -> bool:
+        """Replay only primitives intersecting the finite footprint."""
+        from shapely.geometry import Point, Polygon, box
+        from shapely.prepared import prep
+        if width_um == 0.0 and height_um == 0.0:
+            return self.contains(x_um, y_um) == "inside"
+        half_x, half_y = float(width_um) / 2.0, float(height_um) / 2.0
+        footprint = box(x_um - half_x, y_um - half_y, x_um + half_x, y_um + half_y)
+        window = footprint.buffer(max(1.0e-6, max(half_x, half_y) * 1.0e-6))
+        wx0, wy0, wx1, wy1 = window.bounds
+        ids = set(self.primitive_grid.candidates_bounds(wx0, wx1, wy0, wy1))
+        ids = {
+            index for index in ids
+            if not (
+                self.primitives[index].bounds[1] < wx0
+                or self.primitives[index].bounds[0] > wx1
+                or self.primitives[index].bounds[3] < wy0
+                or self.primitives[index].bounds[2] > wy1
+            )
+        }
+        shape_cache = self._shape_cache
+        filled = None
+        try:
+            for index in sorted(ids):
+                item = self.primitives[index]
+                cached = shape_cache.get(index)
+                if cached is None:
+                    primitive = item.primitive
+                    raw_shape = (
+                        Polygon(primitive)
+                        if item.kind.endswith("polygon")
+                        else Point(float(primitive[0]), float(primitive[1])).buffer(float(primitive[2]), quad_segs=64)
+                    )
+                    cached = (raw_shape, prep(raw_shape))
+                    shape_cache[index] = cached
+                raw_shape, prepared_shape = cached
+                if prepared_shape.disjoint(window):
+                    continue
+                shape = window if prepared_shape.contains(window) else raw_shape.intersection(window)
+                if item.kind.startswith("positive_"):
+                    filled = shape if filled is None else filled.union(shape)
+                elif filled is not None:
+                    filled = filled.difference(shape)
+        except Exception:
+            return False
+        if filled is None or filled.is_empty:
+            return False
+        proper = getattr(filled, "contains_properly", None)
+        return bool(proper(footprint) if callable(proper) else filled.contains(footprint) and filled.boundary.disjoint(footprint))
 
 
 def _point_on_segment(
