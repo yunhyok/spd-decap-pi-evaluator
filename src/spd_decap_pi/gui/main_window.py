@@ -995,10 +995,30 @@ def _modal_convergence_text(view: Any) -> str:
         convergence.get("frequency_max_delta_db")
     )
     modal_max = _convergence_delta_text(convergence.get("modal_max_delta_db"))
+    order_text = _modal_order_text(convergence)
     return (
         f"{state} ({frequency_state}, Δmax {frequency_max}; "
-        f"{modal_state}, Δmax {modal_max})"
+        f"{modal_state}, Δmax {modal_max}{order_text})"
     )
+
+
+def _modal_order_text(convergence: Any) -> str:
+    """Render adaptive modal order evidence when a modern report supplies it."""
+
+    if not isinstance(convergence, dict):
+        return ""
+    values = (
+        convergence.get("start_mode_x"),
+        convergence.get("lower_mode_x"),
+        convergence.get("final_mode_x"),
+        convergence.get("ceiling_mode_x"),
+    )
+    if not all(isinstance(value, int) and not isinstance(value, bool) for value in values):
+        return ""
+    start, lower, final, ceiling = values
+    exhausted = convergence.get("modal_budget_exhausted") is True
+    suffix = "; ceiling exhausted" if exhausted else ""
+    return f"; modal order {lower}→{final} (start {start}, ceiling {ceiling}{suffix})"
 
 
 def _convergence_delta_text(value: Any) -> str:
@@ -1042,8 +1062,26 @@ def _rejected_comparison_convergence(
                 "modal RMS "
                 f"{_convergence_delta_text(values.get('modal_rms_delta_db'))}, "
                 f"max {_convergence_delta_text(values.get('modal_max_delta_db'))}."
+                f"{_modal_rejection_order_text(values)}"
             )
     return tuple(rejected)
+
+
+def _modal_rejection_order_text(convergence: dict[str, Any]) -> str:
+    """Explain the adaptive order/ceiling that rejected a comparison."""
+
+    values = (
+        convergence.get("start_mode_x"),
+        convergence.get("lower_mode_x"),
+        convergence.get("final_mode_x"),
+        convergence.get("ceiling_mode_x"),
+    )
+    if not all(isinstance(value, int) and not isinstance(value, bool) for value in values):
+        return ""
+    start, lower, final, ceiling = values
+    if convergence.get("modal_budget_exhausted") is True:
+        return f" Adaptive modal order {lower}→{final} (start {start}, ceiling {ceiling}) exhausted; increase the ceiling only with an explicit solver-policy change."
+    return f" Adaptive modal order {lower}→{final} (start {start}, ceiling {ceiling}) did not pass the documented gates."
 
 
 def _whole_decap_tolerance(present: int, tolerance_percent: float) -> int:
@@ -2261,10 +2299,14 @@ class MainWindow(QMainWindow):
         if default_index >= 0:
             self.evaluation_modal_preset_combo.setCurrentIndex(default_index)
         self.evaluation_modal_preset_combo.setToolTip(
-            "Changes only the internal rectangular modal convergence/runtime. "
-            "Experimental m12 check uses PowerSI evidence for comparison only; the "
-            "2026-07-29 benchmark took 4,139 s and more modes worsened external "
-            "correlation in that case, which does not justify selecting a lower order."
+            "The selected preset (default start m8 / 81 modes) is the starting "
+            "rectangular modal basis. Evaluation adaptively checks adjacent +2 orders "
+            "and may refine up to the m14 / 225-mode "
+            "ceiling; it stops at the first adjacent pass and rejects a failed ceiling. "
+            "The experimental m12 (169-mode) comparison is below the adaptive m14 "
+            "(225-mode) ceiling; neither is a 121-mode m12 basis. The 2026-07-29 "
+            "benchmark took 4,139 s and more modes worsened external correlation in "
+            "that case, which does not justify selecting a lower order."
         )
         self.evaluation_modal_preset_combo.currentIndexChanged.connect(
             self._evaluation_modal_preset_changed
@@ -6364,9 +6406,10 @@ class MainWindow(QMainWindow):
             "approximation. Incomplete topology or source/reference evidence blocks "
             "research evaluation without falling back to Legacy modal. PowerSI data "
             "is comparison-only and is never used to fit R, L, C, or solver parameters. "
-            "Numerical convergence preset changes only internal rectangular modal "
-            "convergence/runtime; Experimental m12 check is an opt-in m10-to-m12 "
-            "check, not a PowerSI or absolute-accuracy setting. A batch is accepted "
+            "Numerical convergence preset selects the starting internal rectangular "
+            "modal basis; adaptive +2 checks may refine it to m14/225 modes and stop "
+            "at the first adjacent pass. A failed m14 ceiling remains rejected. This "
+            "is not a PowerSI or absolute-accuracy setting. A batch is accepted "
             "only when every Original and Tuned result reports combined convergence. "
             "Results are single-rail Zii without inter-rail coupling.\n\n"
             + _EXPLORATORY_FIDELITY_WARNING

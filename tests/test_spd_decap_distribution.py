@@ -56,6 +56,7 @@ from spd_decap_pi.scenario import (
     ScenarioPoint,
     ScenarioSpec,
     ScenarioViaLanding,
+    ScenarioViaGraphContactEvidence,
     ScenarioViaPathEvidence,
     ScenarioViaSegment,
     SharedPadCluster,
@@ -1021,6 +1022,41 @@ def test_distribution_projection_via_eligibility_uses_source_physical_landing() 
     )
     assert set(source_result) == {"R1"}
     assert source_result["R1"].via_template_id == "VT1"
+
+
+def test_distribution_source_xy_does_not_use_remote_graph_contact() -> None:
+    rail = _rail("R1")
+    geometry = SpdPlaneGeometry(
+        layer="PWR",
+        net="V1",
+        positive_polygons_um=(((0.0, 0.0), (10.0, 0.0), (10.0, 10.0), (0.0, 10.0)),),
+        negative_polygons_um=(),
+        positive_circles_um=(),
+        negative_circles_um=(),
+        primitive_order=(("positive_polygon", 0),),
+    )
+    index = PlaneEligibilityIndex(
+        (geometry,),
+        _project(("R1",)).stackup_layers,
+        selected_pairs=(
+            PlanePairSuggestion(
+                rail_net="V1", pwr_layer="PWR", gnd_layer="GND",
+                pwr_index=0, gnd_index=1, separation_um=1.0,
+            ),
+        ),
+    )
+    landing = ScenarioViaLanding(
+        via_id="V-REMOTE", net="V1", endpoint_node_id="N1", padstack="P1",
+        x_um=20.0, y_um=20.0,
+        graph_contact_evidence=(ScenarioViaGraphContactEvidence(
+            target_layer="PWR", target_node_id="N2", x_um=5.0, y_um=5.0,
+            candidate_count=1, candidate_contacts_sha256="a" * 64,
+            selection_basis="NEAREST_COMPONENT_TARGET", source_sha256="b" * 64,
+            selected_distance_um=21.2,
+        ),),
+    )
+    choices = {("v1", "pwr", "gnd"): ((rail, "VT1"),)}
+    assert distribution_module._distribution_via_eligibility(index, landing, choices) == {}
 
 
 def test_direct_multi_via_component_accepts_one_target_intersection_root() -> None:

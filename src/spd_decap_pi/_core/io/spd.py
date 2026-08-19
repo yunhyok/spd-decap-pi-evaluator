@@ -181,6 +181,7 @@ class SpdViaPathEvidence:
     segments: tuple[SpdViaPathSegment, ...]
     trace_hops: int = 0
     trace_alternate_exit: bool = False
+    source_node_id: str | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -256,6 +257,15 @@ class SpdGroundReachability:
     reachable_keys: frozenset[tuple[str, str, str]]
     unreachable_keys: frozenset[tuple[str, str, str]]
     statistics: Mapping[str, int]
+    target_contacts_by_key: Mapping[
+        tuple[str, str, str], tuple[tuple[str, float, float], ...]
+    ] = field(default_factory=dict)
+    target_contact_count_by_key: Mapping[tuple[str, str, str], int] = field(
+        default_factory=dict
+    )
+    target_contact_hash_by_key: Mapping[tuple[str, str, str], str] = field(
+        default_factory=dict
+    )
 
     def reaches(self, landing: object, target_layer: str) -> bool:
         return (
@@ -1785,6 +1795,8 @@ def _materialize_geometry(
             # A raw SPD padstack is physical provenance, not a calibrated
             # solver ViaLoopTemplate identifier.
             via_template_id=None,
+            source_node_id=candidate.node_id,
+            source_padstack=node.padstack,
         )
 
     for candidate in device:
@@ -2145,6 +2157,7 @@ def recover_spd_via_paths(
                 "target_layer": target_layer,
                 "target_key": target_layer.casefold(),
                 "node_id": endpoint_node_id,
+                "source_node_id": endpoint_node_id,
                 "node_key": endpoint_key,
                 "layer": top_layer,
                 "segments": [],
@@ -2744,6 +2757,7 @@ def recover_spd_via_paths(
                             trace_alternate_exit=bool(
                                 state.get("trace_alternate_exit", False)
                             ),
+                            source_node_id=str(state["source_node_id"]),
                         )
                         evidence.setdefault(str(state["via_key"]), []).append(item)
                         state["status"] = "RECOVERED"
@@ -3206,6 +3220,7 @@ def recover_spd_ground_reachability(
         if str(net).strip() and any(str(layer).strip() for layer in layers)
     }
     requested_by_key: dict[tuple[str, str, str], str] = {}
+    requested_coordinates: dict[tuple[str, str, str], tuple[float, float]] = {}
     for landing in landings:
         try:
             net_key = str(getattr(landing, "net")).casefold()
@@ -3214,7 +3229,12 @@ def recover_spd_ground_reachability(
         except AttributeError as exc:
             raise ValueError("GND landing lacks source graph identity") from exc
         for target_layer in target_layers.get(net_key, ()):
-            requested_by_key[(via_key, node_key, target_layer)] = net_key
+            request_key = (via_key, node_key, target_layer)
+            requested_by_key[request_key] = net_key
+            requested_coordinates[request_key] = (
+                float(getattr(landing, "x_um", 0.0)),
+                float(getattr(landing, "y_um", 0.0)),
+            )
     requested = sorted(requested_by_key)
     if not requested:
         return SpdGroundReachability(frozenset(), frozenset(), {
@@ -3277,6 +3297,9 @@ def recover_spd_ground_reachability(
     target_nodes_by_net: dict[str, dict[str, int]] = {
         net: {} for net in target_layers
     }
+    target_coordinates_by_net: dict[str, dict[str, tuple[str, float, float]]] = {
+        net: {} for net in target_layers
+    }
     node_index_by_net: dict[str, dict[str, int]] = {
         net: {} for net in target_layers
     }
@@ -3284,6 +3307,8 @@ def recover_spd_ground_reachability(
     ranks = bytearray()
     components = 0
     graph_edges = 0
+    trace_edges = 0
+    via_edges = 0
 
     def index_for(net_key: str, node_key: str) -> int:
         nonlocal components
@@ -3379,15 +3404,15 @@ def recover_spd_ground_reachability(
                     continue
                 layer_key = _decode(layer_raw).casefold()
                 if layer_key in target_layers[net_key]:
+                    attributes = _NODE_ATTR_RE.search(raw)
+                    if attributes is None:
+                        continue
+                    try:
+                        x_um = _length_um(attributes.group(1))
+                        y_um = _length_um(attributes.group(2))
+                    except ValueError:
+                        continue
                     if target_node_predicate is not None:
-                        attributes = _NODE_ATTR_RE.search(raw)
-                        if attributes is None:
-                            continue
-                        try:
-                            x_um = _length_um(attributes.group(1))
-                            y_um = _length_um(attributes.group(2))
-                        except ValueError:
-                            continue
                         if not target_node_predicate(
                             net, _decode(layer_raw), node_id, x_um, y_um
                         ):
@@ -3397,6 +3422,11 @@ def recover_spd_ground_reachability(
                     target_nodes[node_key] = (
                         target_nodes.get(node_key, 0)
                         | target_bit_by_key[(net_key, layer_key)]
+                    )
+                    target_coordinates_by_net[net_key][node_key] = (
+                        node_id,
+                        float(x_um),
+                        float(y_um),
                     )
             if include_traces and trace_start >= 0 and trace_end > trace_start:
                 reporter.report(40, "Indexing same-NET GND Trace connectivity")
@@ -3409,6 +3439,7 @@ def recover_spd_ground_reachability(
                     first, second = _decode(match.group(3)).casefold(), _decode(match.group(4)).casefold()
                     union(net_key, first, second)
                     graph_edges += 1
+                    trace_edges += 1
             reporter.report(65, "Indexing same-NET GND Via connectivity")
             for index, match in enumerate(_VIA_RE.finditer(data, via_start, via_end)):
                 if index % 8192 == 0:
@@ -3419,6 +3450,7 @@ def recover_spd_ground_reachability(
                 first, second = _decode(match.group(3)).casefold(), _decode(match.group(4)).casefold()
                 union(net_key, first, second)
                 graph_edges += 1
+                via_edges += 1
     except OSError as exc:
         raise SpdImportError(
             f"cannot recover mixed-reference GND graph from {source_path}: {exc}"
@@ -3426,18 +3458,73 @@ def recover_spd_ground_reachability(
 
     reporter.report(85, "Reducing mixed-reference GND graph components")
     component_target_masks: dict[int, int] = {}
+    component_contacts: dict[tuple[str, int], list[tuple[str, float, float, int]]] = {}
     for net_key, targets in target_nodes_by_net.items():
         for node_key, target_mask in targets.items():
             root = find(index_for(net_key, node_key))
             component_target_masks[root] = (
                 component_target_masks.get(root, 0) | target_mask
             )
+            contact = target_coordinates_by_net[net_key].get(node_key)
+            if contact is not None:
+                component_contacts.setdefault((net_key, root), []).append(
+                    (contact[0], contact[1], contact[2], target_mask)
+                )
     reachable: set[tuple[str, str, str]] = set()
+    target_contacts_by_key: dict[tuple[str, str, str], tuple[tuple[str, float, float], ...]] = {}
+    target_contact_count_by_key: dict[tuple[str, str, str], int] = {}
+    target_contact_hash_by_key: dict[tuple[str, str, str], str] = {}
+    component_contacts_cache: dict[
+        tuple[str, int, int], tuple[tuple[tuple[str, float, float], ...], int, str]
+    ] = {}
     for via, node, target_layer in requested:
         net_key = requested_by_key[(via, node, target_layer)]
         root = find(index_for(net_key, node))
-        if component_target_masks.get(root, 0) & target_bit_by_key[(net_key, target_layer)]:
-            reachable.add((via, node, target_layer))
+        target_bit = target_bit_by_key[(net_key, target_layer)]
+        if component_target_masks.get(root, 0) & target_bit:
+            key = (via, node, target_layer)
+            cache_key = (net_key, root, target_bit)
+            cached_contacts = component_contacts_cache.get(cache_key)
+            if cached_contacts is None:
+                contacts = tuple(
+                    (node_id, float(x_um), float(y_um))
+                    for node_id, x_um, y_um, mask in component_contacts.get((net_key, root), ())
+                    if mask & target_bit
+                )
+                ordered_contacts = tuple(
+                    sorted(
+                        set(contacts),
+                        key=lambda item: (item[0].casefold(), item[0], item[1], item[2]),
+                    )
+                )
+                cached_contacts = (
+                    ordered_contacts,
+                    len(ordered_contacts),
+                    hashlib.sha256(repr(ordered_contacts).encode("utf-8")).hexdigest(),
+                )
+                component_contacts_cache[cache_key] = cached_contacts
+            ordered_contacts, contact_count, contact_hash = cached_contacts
+            source_xy = requested_coordinates.get((via, node, target_layer))
+            if (
+                source_xy is None
+                or not all(isfinite(float(value)) for value in source_xy)
+                or not ordered_contacts
+            ):
+                # A graph component without a finite source origin cannot be
+                # reduced to a deterministic target contact.  Keep the
+                # request fail-closed instead of selecting the first contact.
+                continue
+            reachable.add(key)
+            target_contact_count_by_key[key] = contact_count
+            target_contact_hash_by_key[key] = contact_hash
+            selected_contact = min(
+                ordered_contacts,
+                key=lambda item: (
+                    (item[1] - source_xy[0]) ** 2 + (item[2] - source_xy[1]) ** 2,
+                    item[0].casefold(), item[0], item[1], item[2],
+                ),
+            )
+            target_contacts_by_key[key] = (selected_contact,) if selected_contact else ()
     unreachable = set(requested) - reachable
     reporter.report(100, "Checked mixed-reference GND landing reachability")
     return finish(SpdGroundReachability(
@@ -3448,8 +3535,12 @@ def recover_spd_ground_reachability(
                 include_traces and trace_start >= 0 and trace_end > trace_start
             ),
             "via_section_passes": 1, "components": components,
-            "graph_nodes": len(parents), "graph_edges": graph_edges,
-        }
+        "graph_nodes": len(parents), "graph_edges": graph_edges,
+        "trace_edges": trace_edges, "via_edges": via_edges,
+        },
+        target_contacts_by_key=target_contacts_by_key,
+        target_contact_count_by_key=target_contact_count_by_key,
+        target_contact_hash_by_key=target_contact_hash_by_key,
     ))
 
 
@@ -3495,6 +3586,19 @@ def analyze_spd(
             first_end = _line_end(data, 0, min(len(data), 16_384))
             title = _decode(data[0:first_end]).strip()
             source = SpdSourceInfo(source_path.resolve(), source_path.name, stat.st_size, stat.st_mtime_ns, digest, title)
+            # Test and migration fixtures may explicitly declare that the
+            # retained source does not provide a usable Trace/Via graph.  This
+            # capability marker is source-authored; it is intentionally not
+            # inferred from file size or an empty recovery result.
+            capability_match = re.search(
+                rb"(?im)^\s*\*\s*SourceGraphCapability\s*=\s*([A-Z0-9_]+)\s*$",
+                data,
+            )
+            explicit_source_graph_capability = (
+                capability_match.group(1).decode("ascii", "ignore").upper()
+                if capability_match is not None
+                else None
+            )
 
             reporter.report(9, "Reading selected power/ground nets")
             selected_power, selected_ground = _parse_netlist(
@@ -4063,6 +4167,7 @@ def analyze_spd(
                 "shared_pad_source_copper_members": (
                     shared_pad.source_copper_member_count
                 ),
+                "source_graph_capability": explicit_source_graph_capability,
             }
             if routing_extraction is not None:
                 counts.update(

@@ -40,7 +40,11 @@ from spd_decap_pi._core.services import (
     WorkspaceState,
     scoped_blas_threads,
 )
-from spd_decap_pi._core.solver import SOLVER_VERSION
+from spd_decap_pi._core.solver import (
+    CONVERGENCE_ALGORITHM_VERSION,
+    DEFAULT_MODAL_CEILING_INDEX,
+    SOLVER_VERSION,
+)
 from spd_decap_pi._core.solver.profiles import (
     DEFAULT_SOLVER_PROFILE_KEY,
     LEGACY_MODAL_PROFILE,
@@ -463,6 +467,8 @@ def _evaluation_settings(
     settings: dict[str, Any] = {
         "target_ohm": target_ohm,
         "modal_max_index": modal_max_index,
+        "modal_convergence_algorithm": CONVERGENCE_ALGORITHM_VERSION,
+        "modal_ceiling_max_index": DEFAULT_MODAL_CEILING_INDEX,
         "solver_profile": profile.key,
         "evaluation_policy": evaluation_policy,
     }
@@ -714,6 +720,21 @@ def _terminal_footprint(
             width_um=float(evidence.target_pad_width_um),
             height_um=float(evidence.target_pad_height_um),
         )
+    graph_contact = getattr(landing, "graph_contact_for_layer", lambda _layer: None)(
+        target_layer
+    )
+    if graph_contact is not None:
+        # Graph connectivity identifies an exact retained target node, but it
+        # does not provide a serial impedance path or pad aperture.  Keep the
+        # source template's finite-port dimensions while localizing the port
+        # at the proven target contact; the post-remap domain gate remains
+        # authoritative.
+        return _TerminalFootprint(
+            x_um=float(graph_contact.x_um),
+            y_um=float(graph_contact.y_um),
+            width_um=float(via.finite_port_width_um),
+            height_um=float(via.finite_port_height_um),
+        )
     return _TerminalFootprint(
         x_um=float(landing.x_um),
         y_um=float(landing.y_um),
@@ -722,6 +743,33 @@ def _terminal_footprint(
     )
 
 
+def _source_graph_provenance_refresh_required(
+    scenario: ScenarioSpec,
+    project: ProjectSpec,
+) -> bool:
+    """Identify old bundles that cannot prove the v0.22.7 source plane pair.
+
+    This is deliberately metadata-only and fail-closed: a bundle is never
+    rewritten or repaired in memory.  Only a retained source binding that
+    predates graph-pair provenance is diagnosed; newly-created synthetic
+    scenarios without SPD import metadata continue through normal tests.
+    """
+
+    metadata = project.metadata.get("spd_import")
+    if not isinstance(metadata, Mapping):
+        return False
+    source_sha = str(metadata.get("source_sha256", "")).casefold()
+    if source_sha != str(scenario.source.sha256).casefold() or len(source_sha) != 64:
+        return False
+    provenance = metadata.get("selected_plane_pair_provenance")
+    if isinstance(provenance, Mapping) and provenance:
+        return False
+    version = str(getattr(project, "app_version", ""))
+    try:
+        major, minor, patch = (int(item) for item in version.split(".")[:3])
+    except (TypeError, ValueError):
+        return False
+    return (major, minor, patch) < (0, 22, 7)
 def _outside_terminal_blocker(
     *,
     rail: RailSpec,
@@ -1008,6 +1056,12 @@ def _evaluation_geometry_blockers(
         ) or any(
             item.evidence_for_layer(rail.gnd_layer) is not None
             for item in unique_ground.values()
+        ) or any(
+            item.graph_contact_for_layer(rail.pwr_layer) is not None
+            for item in unique_power.values()
+        ) or any(
+            item.graph_contact_for_layer(rail.gnd_layer) is not None
+            for item in unique_ground.values()
         )
         coupled = len(unique_power) > 1 or len(unique_ground) > 1 or has_recovered_path
         power_landings = tuple(unique_power[key] for key in sorted(unique_power))
@@ -1207,52 +1261,18 @@ class _RetainedArtworkIndex:
         if entry is None:
             return False
         try:
-            if len(entry.indexed.primitives) > 1000:
-                x_min = x_um - width_um / 2.0
-                x_max = x_um + width_um / 2.0
-                y_min = y_um - height_um / 2.0
-                y_max = y_um + height_um / 2.0
-                candidate_indices: set[int] = set()
-                for qx, qy in (
-                    (x_um, y_um),
-                    (x_min, y_min), (x_min, y_max),
-                    (x_max, y_min), (x_max, y_max),
-                ):
-                    candidate_indices.update(
-                        entry.indexed.primitive_grid.candidates(qx, qy)
-                    )
-                return not any(
-                    entry.indexed.primitives[index].kind.startswith("negative_")
-                    and entry.indexed.primitives[index].bounds[1] >= x_min
-                    and entry.indexed.primitives[index].bounds[0] <= x_max
-                    and entry.indexed.primitives[index].bounds[3] >= y_min
-                    and entry.indexed.primitives[index].bounds[2] <= y_max
-                    for index in candidate_indices
+            # Use the same indexed ordered-boolean validator as strict import.
+            # This is intentionally the only artwork containment path here:
+            # center/corner and negative-bbox shortcuts are unsound for narrow
+            # voids, re-add ordering, and tangent footprints.
+            return bool(
+                entry.indexed.covers_footprint(
+                    float(x_um),
+                    float(y_um),
+                    float(width_um),
+                    float(height_um),
                 )
-            from shapely.geometry import box
-            geometry = entry.indexed.geometry
-            shape_key = (entry.asset.casefold(), entry.digest)
-            shape = self._shapes.get(shape_key)
-            if shape is None and shape_key not in self._shapes:
-                shape = evaluation_services._ordered_spd_geometry(
-                    {
-                        "positive_polygons_um": [list(item) for item in geometry.positive_polygons_um],
-                        "negative_polygons_um": [list(item) for item in geometry.negative_polygons_um],
-                        "positive_circles_um": [list(item) for item in geometry.positive_circles_um],
-                        "negative_circles_um": [list(item) for item in geometry.negative_circles_um],
-                        "primitive_order": [list(item) for item in geometry.primitive_order],
-                    }
-                )
-                self._shapes[shape_key] = shape
-            if shape is None:
-                return False
-            footprint = box(
-                x_um - width_um / 2.0,
-                y_um - height_um / 2.0,
-                x_um + width_um / 2.0,
-                y_um + height_um / 2.0,
             )
-            return bool(shape.contains(footprint))
         except (ImportError, TypeError, ValueError, ArithmeticError):
             return False
 
@@ -1262,43 +1282,14 @@ class _RetainedArtworkIndex:
         saw_inside = False
         for entry in entries:
             try:
-                if len(entry.indexed.primitives) > 1000:
-                    result = entry.indexed.contains(x_um, y_um)
-                    if result == "boundary":
-                        saw_boundary = True
-                    elif result == "inside":
-                        saw_inside = True
-                    continue
-                from shapely.geometry import Point
-                from shapely.prepared import prep
-                shape_key = (entry.asset.casefold(), entry.digest)
-                shape = self._shapes.get(shape_key)
-                if shape is None and shape_key not in self._shapes:
-                    geometry = entry.indexed.geometry
-                    shape = evaluation_services._ordered_spd_geometry(
-                        {
-                            "positive_polygons_um": [list(item) for item in geometry.positive_polygons_um],
-                            "negative_polygons_um": [list(item) for item in geometry.negative_polygons_um],
-                            "positive_circles_um": [list(item) for item in geometry.positive_circles_um],
-                            "negative_circles_um": [list(item) for item in geometry.negative_circles_um],
-                            "primitive_order": [list(item) for item in geometry.primitive_order],
-                        }
-                    )
-                    self._shapes[shape_key] = shape
-                prepared = self._prepared_shapes.get(shape_key)
-                if prepared is None and shape_key not in self._prepared_shapes and shape is not None:
-                    prepared = prep(shape)
-                    self._prepared_shapes[shape_key] = prepared
-                if prepared is not None and prepared.contains(Point(x_um, y_um)):
+                result = entry.indexed.contains(x_um, y_um)
+                if result == "boundary":
+                    saw_boundary = True
+                elif result == "inside":
                     saw_inside = True
-                    continue
+                continue
             except (ImportError, TypeError, ValueError, ArithmeticError):
                 pass
-            result = entry.indexed.contains(x_um, y_um)
-            if result == "boundary":
-                saw_boundary = True
-            elif result == "inside":
-                saw_inside = True
         if saw_boundary:
             return "boundary"
         return "inside" if saw_inside else "outside"
@@ -1336,8 +1327,23 @@ def _alternate_terminal_points(
         ):
             for landing in landings:
                 evidence = landing.evidence_for_layer(layer)
-                x_um = float(evidence.x_um) if evidence is not None else float(landing.x_um)
-                y_um = float(evidence.y_um) if evidence is not None else float(landing.y_um)
+                graph_contact = getattr(
+                    landing, "graph_contact_for_layer", lambda _layer: None
+                )(layer)
+                x_um = (
+                    float(evidence.x_um)
+                    if evidence is not None
+                    else float(graph_contact.x_um)
+                    if graph_contact is not None
+                    else float(landing.x_um)
+                )
+                y_um = (
+                    float(evidence.y_um)
+                    if evidence is not None
+                    else float(graph_contact.y_um)
+                    if graph_contact is not None
+                    else float(landing.y_um)
+                )
                 width = float(evidence.target_pad_width_um) if evidence is not None else float(via.finite_port_width_um)
                 height = float(evidence.target_pad_height_um) if evidence is not None else float(via.finite_port_height_um)
                 if not all(isfinite(value) for value in (x_um, y_um)) or not all(
@@ -1724,6 +1730,9 @@ def preflight_evaluation_connectivity(
                 continue
             if any(
                 not item.reason.startswith("TERMINAL_OUTSIDE_SELECTED_PLANE:")
+                and not item.reason.startswith(
+                    "SOURCE_GRAPH_PROVENANCE_REFRESH_REQUIRED:"
+                )
                 for item in strict.blockers
             ):
                 blockers.extend(strict.blockers)
@@ -1767,6 +1776,60 @@ def preflight_evaluation_connectivity(
         scenario, _project=project
     )
     blockers: list[EvaluationConnectivityBlocker] = []
+    selected_provenance = (
+        project.metadata.get("spd_import", {}).get(
+            "selected_plane_pair_provenance", {}
+        )
+        if isinstance(project.metadata.get("spd_import", {}), Mapping)
+        else {}
+    )
+    if isinstance(selected_provenance, Mapping):
+        provenance_key_counts: dict[str, int] = {}
+        for raw_key in selected_provenance:
+            folded_key = str(raw_key).casefold()
+            provenance_key_counts[folded_key] = provenance_key_counts.get(folded_key, 0) + 1
+        duplicate_provenance_keys = sorted(
+            key for key, count in provenance_key_counts.items() if count > 1
+        )
+        if duplicate_provenance_keys:
+            for rail_id in canonical_rails:
+                blockers.append(
+                    EvaluationConnectivityBlocker(
+                        rail_id=rail_id,
+                        refdes="<source graph provenance>",
+                        kind=DecapConnectionKind.UNRESOLVED,
+                        reason=(
+                            "SOURCE_GRAPH_PROVENANCE_DUPLICATE_KEY: persisted "
+                            "plane-pair provenance contains duplicate case-insensitive "
+                            f"rail key(s): {', '.join(duplicate_provenance_keys)}"
+                        ),
+                    )
+                )
+        for rail_id in canonical_rails:
+            selected_rail = rail_by_key.get(rail_id.casefold())
+            proof_keys = {rail_id.casefold()}
+            if selected_rail is not None:
+                proof_keys.add(str(selected_rail.net).casefold())
+            proof = next(
+                (
+                    value
+                    for key, value in selected_provenance.items()
+                    if str(key).casefold() in proof_keys
+                ),
+                None,
+            )
+            if isinstance(proof, Mapping) and proof.get("source_graph_pair_unresolved"):
+                blockers.append(
+                    EvaluationConnectivityBlocker(
+                        rail_id=rail_id,
+                        refdes="<source graph plane pair>",
+                        kind=DecapConnectionKind.UNRESOLVED,
+                        reason=(
+                            "SOURCE_GRAPH_PLANE_PAIR_UNRESOLVED: selected rail has "
+                            "no source-proven PWR/GND pair; re-import matching raw SPD"
+                        ),
+                    )
+                )
     for rail_id, reason in mixed_witness_failures.items():
         if rail_id.casefold() not in canonical_by_key:
             continue
@@ -1867,11 +1930,31 @@ def preflight_evaluation_connectivity(
                 )
             )
     if not _skip_geometry:
-        blockers.extend(
-            _evaluation_geometry_blockers(
-                scenario, canonical_rails, _project=project
-            )
+        geometry_blockers = _evaluation_geometry_blockers(
+            scenario, canonical_rails, _project=project
         )
+        blockers.extend(geometry_blockers)
+        if geometry_blockers and _source_graph_provenance_refresh_required(
+            scenario, project
+        ):
+            source_path = str(scenario.source.path)
+            source_sha = str(scenario.source.sha256)
+            blockers.insert(
+                0,
+                EvaluationConnectivityBlocker(
+                    rail_id=canonical_rails[0] if canonical_rails else "<scenario>",
+                    refdes="<scenario migration>",
+                    kind=DecapConnectionKind.UNRESOLVED,
+                    reason=(
+                        "SOURCE_GRAPH_PROVENANCE_REFRESH_REQUIRED: requested "
+                        f"Evaluation policy={evaluation_policy}; retained bundle "
+                        f"source={source_path} sha256={source_sha} lacks v0.22.7 "
+                        "source-exact plane-pair graph provenance. Re-import the "
+                        "matching raw SPD in v0.22.7; the loaded bundle remains "
+                        "unchanged."
+                    ),
+                ),
+            )
     return EvaluationConnectivityPreflight(
         canonical_rails,
         tuple(
@@ -2292,10 +2375,16 @@ def preflight_evaluation_comparison(
 
 
 def _solver_project_fingerprint(project: ProjectSpec) -> str:
-    """Hash numerical rail inputs while excluding provenance-only metadata."""
+    """Hash numerical inputs plus source-pair/model provenance identity."""
 
     payload = project.model_dump(mode="json")
-    payload.pop("metadata", None)
+    metadata = payload.pop("metadata", {})
+    if isinstance(metadata, dict):
+        spd_import = metadata.get("spd_import")
+        if isinstance(spd_import, dict):
+            provenance = spd_import.get("selected_plane_pair_provenance")
+            if provenance:
+                payload["selected_plane_pair_provenance"] = provenance
     return sha256(_canonical_json(payload)).hexdigest()
 
 
@@ -3041,6 +3130,9 @@ def _shared_pad_path_from_landing(
     """Materialize compact source evidence or name the rail-template fallback."""
 
     evidence = landing.evidence_for_layer(target_layer)
+    graph_contact = getattr(landing, "graph_contact_for_layer", lambda _layer: None)(
+        target_layer
+    )
     fields: dict[str, Any] = {
         "path_id": path_id,
         "terminal": terminal,
@@ -3051,6 +3143,18 @@ def _shared_pad_path_from_landing(
         "terminal_provenance": "LEGACY_RAIL_TEMPLATE",
     }
     if evidence is None:
+        if graph_contact is not None:
+            fields.update(
+                {
+                    "x_um": graph_contact.x_um,
+                    "y_um": graph_contact.y_um,
+                    "landing_layer": graph_contact.target_layer,
+                    "terminal_provenance": (
+                        "SOURCE_PROVEN_GRAPH_CONNECTIVITY_NEAREST_TARGET_"
+                        "LEGACY_TEMPLATE"
+                    ),
+                }
+            )
         return SharedPadViaPath(**fields)
     fields.update(
         {
@@ -3196,6 +3300,9 @@ def build_evaluation_project(
             effective_policy = EVALUATION_POLICY_STRICT
         elif any(
             not item.reason.startswith("TERMINAL_OUTSIDE_SELECTED_PLANE:")
+            and not item.reason.startswith(
+                "SOURCE_GRAPH_PROVENANCE_REFRESH_REQUIRED:"
+            )
             for item in strict_pf.blockers
         ):
             raise ScenarioEvaluationPreflightError(strict_pf)
@@ -3755,6 +3862,12 @@ def build_evaluation_project(
             for landing in unique_power.values()
         ) or any(
             landing.evidence_for_layer(rail.gnd_layer) is not None
+            for landing in unique_ground.values()
+        ) or any(
+            landing.graph_contact_for_layer(rail.pwr_layer) is not None
+            for landing in unique_power.values()
+        ) or any(
+            landing.graph_contact_for_layer(rail.gnd_layer) is not None
             for landing in unique_ground.values()
         )
         if (

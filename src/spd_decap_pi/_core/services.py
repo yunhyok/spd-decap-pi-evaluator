@@ -17,10 +17,11 @@ from typing import Any, Callable, Iterable, Mapping, Sequence
 import zlib
 import numpy as np
 from .ai import AssistantSource, EvidenceKind, FeatureEvidence, LocalLLMClient, LocalLLMConfig, PlotFeatures, local_llm_endpoint_requires_remote_access
-from .domain import CapModel, CoordinateTransform, CoordinateUnit, FrequencySettings, ImpedanceSample, MLOOutline, MIXED_REFERENCE_MIN_COVERAGE, MIXED_REFERENCE_MIN_DOMINANT_COMPONENT, MixedReferenceCertificate, PinKind, PlaneCell, PlacementAssignment as DomainPlacement, PlanePartitionSpec, ProjectSpec, RailSpec, RailState, StackupLayer, TargetPoint, TerminalKind, TopologyKind, TopologyMap, ViaLoopTemplate, ViaPathKind
+from .domain import CapModel, CoordinateTransform, CoordinateUnit, FrequencySettings, ImpedanceSample, MLOOutline, MIXED_REFERENCE_MIN_COVERAGE, MIXED_REFERENCE_MIN_DOMINANT_COMPONENT, MixedReferenceCertificate, PinKind, PlaneCell, PlanePairSuggestion, PlacementAssignment as DomainPlacement, PlanePartitionSpec, ProjectSpec, RailSpec, RailState, StackupLayer, TargetPoint, TerminalKind, TopologyKind, TopologyMap, ViaLoopTemplate, ViaPathKind
 from .models import PassiveSubcircuitModel, parse_passive_subcircuit, passive_subcircuit_names
 from .plane_pairs import suggest_effective_plane_pairs
 from .solver.evaluator import (
+    DEFAULT_MODAL_CEILING_INDEX,
     EvaluationOutcome,
     compile_project_evaluation_template,
     evaluate_project_rail_converged,
@@ -139,8 +140,9 @@ EVALUATION_MODAL_PRESETS: tuple[EvaluationModalPreset, ...] = (
         max_index=6,
         mode_count=49,
         description=(
-            "49 rectangular-cavity modes for quicker exploratory evaluation; "
-            "compares against the 25-mode maximum-index (4,4) basis."
+            "Starts at 49 rectangular-cavity modes and adaptively escalates by "
+            "two-index steps through the m14 ceiling until adjacent-order "
+            "convergence passes."
         ),
     ),
     EvaluationModalPreset(
@@ -149,8 +151,8 @@ EVALUATION_MODAL_PRESETS: tuple[EvaluationModalPreset, ...] = (
         max_index=8,
         mode_count=81,
         description=(
-            "81 rectangular-cavity modes for the default internal-convergence/"
-            "runtime balance; compares against the 49-mode (6,6) basis."
+            "Starts at 81 rectangular-cavity modes and adaptively escalates by "
+            "two-index steps through the m14 ceiling."
         ),
     ),
     EvaluationModalPreset(
@@ -159,8 +161,8 @@ EVALUATION_MODAL_PRESETS: tuple[EvaluationModalPreset, ...] = (
         max_index=10,
         mode_count=121,
         description=(
-            "121 rectangular-cavity modes for a stricter internal truncation "
-            "check; compares against the 81-mode (8,8) basis. More modes do not "
+            "Starts at 121 rectangular-cavity modes for a stricter truncation "
+            "check and adaptively escalates through the m14 ceiling. More modes do not "
             "correct polygon, shared-DGND, or via-model approximations and can "
             "take several minutes on a large SPD."
         ),
@@ -171,8 +173,8 @@ EVALUATION_MODAL_PRESETS: tuple[EvaluationModalPreset, ...] = (
         max_index=12,
         mode_count=169,
         description=(
-            "169 rectangular-cavity modes for an experimental m10-to-m12 "
-            "truncation check; compares against the 121-mode (10,10) basis. "
+            "Starts at 169 rectangular-cavity modes after the m10(121)↔m12(169) "
+            "comparison and may perform the final m12(169)↔m14(225) check. "
             "PowerSI evidence is comparison-only; it can take more than an hour "
             "on the 2026-07-29 benchmark, and must never be used to choose a "
             "lower modal order."
@@ -738,16 +740,16 @@ def evaluate_workspace(
         progress(22, "Source-only uniform C00 evidence gate passed; compiling replacement…")
     progress(
         25,
-        f"Solving {profile.label} [{profile.badge}] · {modal_preset.label} · max "
-        f"index ({modal_preset.max_index},{modal_preset.max_index}) · "
-        f"{modal_preset.mode_count} modes…",
+        f"Solving {profile.label} [{profile.badge}] · {modal_preset.label} "
+        f"start index ({modal_preset.max_index},{modal_preset.max_index}) · "
+        f"adaptive ceiling ({DEFAULT_MODAL_CEILING_INDEX},{DEFAULT_MODAL_CEILING_INDEX})…",
     )
     outcome = evaluate_project_rail_converged(
         project,
         rail_id,
         request_options=request_options,
-        max_mode_x=modal_preset.max_index,
-        max_mode_y=modal_preset.max_index,
+        max_mode_x=DEFAULT_MODAL_CEILING_INDEX,
+        max_mode_y=DEFAULT_MODAL_CEILING_INDEX,
         max_refinement_iterations=1,
         max_new_frequency_points=32,
     )
@@ -1293,6 +1295,34 @@ def _mixed_reference_certificates(
                     gnd_net=gnd_net, reason="ground artwork asset is missing or ambiguous",
                 )
                 continue
+            # Mixed-reference certification computes whole-plane overlap
+            # fractions.  Replaying a retained asset with tens of thousands
+            # of primitives through a global unary_union is unbounded in
+            # memory/time and can stall raw import.  Keep the certificate
+            # fail-closed when either asset exceeds the bounded exact
+            # certificate budget; strict plane-pair artwork validation uses
+            # the indexed local predicate elsewhere.
+            max_certificate_primitives = 2048
+            if (
+                len(pwr_payload.get("primitive_order", ())) > max_certificate_primitives
+                or len(gnd_payload.get("primitive_order", ())) > max_certificate_primitives
+            ):
+                record_failure(
+                    rail_net=net,
+                    pwr_layer=pwr_layer,
+                    gnd_layer=gnd_layer,
+                    gnd_net=gnd_record_net,
+                    reason=(
+                        "retained mixed-reference artwork exceeds bounded "
+                        "certificate geometry budget"
+                    ),
+                    code="SPD_MIXED_REFERENCE_GEOMETRY_UNAVAILABLE",
+                    # This certificate candidate is ineligible, but an
+                    # unrelated rail must not make the whole raw import fail.
+                    # Rail selection/evaluation remains fail-closed.
+                    blocking=False,
+                )
+                continue
             # Most retained PWR artwork never has a structurally eligible mixed
             # DGND candidate.  Do the inexpensive stackup/identity gates first,
             # then construct the costly ordered Boolean shape only when this
@@ -1537,6 +1567,9 @@ def build_spd_import_plan(
     current: ProjectSpec,
     analysis: Any,
     source_path: Path,
+    *,
+    selected_pairs: Mapping[str, PlanePairSuggestion] | None = None,
+    selected_pair_provenance: Mapping[str, Mapping[str, Any]] | None = None,
 ) -> SpdImportPlan:
     diagnostics: list[Any] = list(analysis.diagnostics)
     ground_nets = _unique_strings([*current.gnd_aliases, *analysis.ground_nets])
@@ -1640,6 +1673,26 @@ def build_spd_import_plan(
         ),
         "PowerSI plane-pair and solver geometry require user confirmation",
     ]
+    normalized_pair_provenance: dict[str, Mapping[str, Any]] = {}
+    for raw_key, raw_value in (selected_pair_provenance or {}).items():
+        folded_key = str(raw_key).casefold()
+        if folded_key in normalized_pair_provenance:
+            raise ValueError(
+                "selected plane-pair provenance contains duplicate "
+                f"case-insensitive rail key {raw_key!r}"
+            )
+        normalized_pair_provenance[folded_key] = raw_value
+    display_net_by_key = {
+        str(item.net).casefold(): str(item.net)
+        for item in current.rails
+    }
+    display_net_by_key.update(
+        {
+            str(item).casefold(): str(item)
+            for item in selected_power_nets
+            if str(item).casefold() not in display_net_by_key
+        }
+    )
     metadata: dict[str, Any] = {
         "plane_pair_confirmed": False,
         "device_pairing_confirmed": False,
@@ -1671,6 +1724,17 @@ def build_spd_import_plan(
             ],
             "ground_reference_geometry": "exact_artwork_retained_for_mixed_reference_certification",
             "ground_source_primitives_retained": True,
+            "selected_plane_pair_provenance": {
+                display_net_by_key.get(
+                    str(key).casefold(),
+                    str(value.get("rail_net", key))
+                    if isinstance(value, Mapping)
+                    else str(key),
+                )
+                if isinstance(value, Mapping)
+                else display_net_by_key.get(str(key).casefold(), str(key)): dict(value)
+                for key, value in normalized_pair_provenance.items()
+            },
         },
     }
     project_name = (
@@ -1711,7 +1775,12 @@ def build_spd_import_plan(
         metadata=metadata,
     )
     rails = _preserve_spd_rail_preferences(
-        _derive_rails(base, mixed_reference_certificates), current.rails
+        _derive_rails(
+            base,
+            mixed_reference_certificates,
+            selected_pairs=selected_pairs,
+        ),
+        current.rails,
     )
     project = _validated_project_copy(base, rails=rails)
 
@@ -2961,6 +3030,8 @@ def _evaluation_view(project: ProjectSpec, outcome: EvaluationOutcome) -> Evalua
 def _derive_rails(
     project: ProjectSpec,
     mixed_reference_certificates: Sequence[MixedReferenceCertificate] = (),
+    *,
+    selected_pairs: Mapping[str, PlanePairSuggestion] | None = None,
 ) -> list[RailSpec]:
     if not project.stackup_layers or not project.pins:
         return project.rails
@@ -2991,7 +3062,30 @@ def _derive_rails(
         matching = [item for item in power_pins if item.net.casefold() == net.casefold()]
         domain = next((item.domain for item in matching if item.domain), net)
         site = next((item.site for item in matching if item.site), "SITE0")
-        suggestion = suggestions[0]
+        requested = (
+            selected_pairs.get(net.casefold())
+            if selected_pairs is not None
+            else None
+        )
+        if selected_pairs and requested is None:
+            raise ValueError(
+                f"source-proven plane-pair selection is missing for rail {net!r}"
+            )
+        if requested is None:
+            suggestion = suggestions[0]
+        else:
+            matching_suggestions = [
+                item
+                for item in suggestions
+                if item.pwr_layer.casefold() == requested.pwr_layer.casefold()
+                and item.gnd_layer.casefold() == requested.gnd_layer.casefold()
+            ]
+            if not matching_suggestions:
+                raise ValueError(
+                    f"source-proven plane pair {requested.pwr_layer}/{requested.gnd_layer} "
+                    f"is not a valid adjacent pure-GND pair for rail {net!r}"
+                )
+            suggestion = matching_suggestions[0]
         rails.append(
             RailSpec(
                 rail_id=existing.rail_id if existing else str(domain),

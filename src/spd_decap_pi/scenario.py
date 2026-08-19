@@ -86,9 +86,11 @@ def _connection_analysis_fingerprint_payload(
                 key: without_unknown_material(item)
                 for key, item in value.items()
                 if (key != "padstack_material" or item is not None)
+                and (key not in {"source_node_id", "source_padstack"} or item is not None)
                 and (key != "trace_hops" or item != 0)
                 and (key != "trace_alternate_exit" or item is not False)
                 and (key != "structural_evidence" or item not in ([], None))
+                and (key != "graph_contact_evidence" or item not in ([], None))
                 and (key != "destination_pwr_layer" or item is not None)
             }
         if isinstance(value, list):
@@ -121,6 +123,11 @@ def _normalized_project_fingerprint_payload(value: Any) -> Any:
             for key, item in value.items()
             if key not in {"mixed_reference_certificate", "mixed_reference_ground_witness"}
             or item is not None
+            if not (
+                key in {"source_node_id", "source_padstack"}
+                and item is None
+            )
+            and not (key == "graph_contact_evidence" and item in ([], None))
         }
     if isinstance(value, list):
         return [_normalized_project_fingerprint_payload(item) for item in value]
@@ -348,6 +355,7 @@ class ScenarioViaLanding(ScenarioPoint):
     padstack: str = Field(min_length=1)
     rotation_degrees: float = 0.0
     path_evidence: tuple["ScenarioViaPathEvidence", ...] = ()
+    graph_contact_evidence: tuple["ScenarioViaGraphContactEvidence", ...] = ()
     structural_evidence: tuple["ScenarioViaStructuralEvidence", ...] = ()
 
     @field_validator("rotation_degrees")
@@ -379,6 +387,18 @@ class ScenarioViaLanding(ScenarioPoint):
             )
         return tuple(sorted(value, key=lambda item: item.target_layer.casefold()))
 
+    @field_validator("graph_contact_evidence")
+    @classmethod
+    def unique_graph_contact_targets(
+        cls, value: tuple["ScenarioViaGraphContactEvidence", ...]
+    ) -> tuple["ScenarioViaGraphContactEvidence", ...]:
+        keys = [item.target_layer.casefold() for item in value]
+        if len(keys) != len(set(keys)):
+            raise ValueError(
+                "Via graph contact evidence must have one result per target layer"
+            )
+        return tuple(sorted(value, key=lambda item: item.target_layer.casefold()))
+
     def evidence_for_layer(self, layer: str) -> "ScenarioViaPathEvidence | None":
         key = layer.casefold()
         return next(
@@ -394,6 +414,19 @@ class ScenarioViaLanding(ScenarioPoint):
             (
                 item
                 for item in self.structural_evidence
+                if item.target_layer.casefold() == key
+            ),
+            None,
+        )
+
+    def graph_contact_for_layer(
+        self, layer: str
+    ) -> "ScenarioViaGraphContactEvidence | None":
+        key = layer.casefold()
+        return next(
+            (
+                item
+                for item in self.graph_contact_evidence
                 if item.target_layer.casefold() == key
             ),
             None,
@@ -445,6 +478,40 @@ class ScenarioViaPathEvidence(ScenarioPoint):
     def nonblank_provenance(cls, value: str) -> str:
         if not value.strip():
             raise ValueError("Via path provenance must not be blank")
+        return value
+
+
+class ScenarioViaGraphContactEvidence(ScenarioPoint):
+    """Source-graph target contact used for transient solver localization.
+
+    This is deliberately separate from :class:`ScenarioViaPathEvidence`:
+    union-find connectivity proves a component can reach the retained target,
+    but it does not invent a serial via/trace impedance path.  Coordinates are
+    target artwork contacts, while the immutable source landing remains on the
+    parent ``ScenarioViaLanding``.
+    """
+
+    model_config = ConfigDict(frozen=True)
+
+    target_layer: str = Field(min_length=1)
+    target_node_id: str = Field(min_length=1)
+    candidate_count: int = Field(ge=1)
+    candidate_contacts_sha256: str = Field(min_length=64, max_length=64)
+    selection_basis: str = Field(min_length=1)
+    source_sha256: str = Field(min_length=64, max_length=64)
+    selected_distance_um: float = Field(ge=0)
+    connectivity_only: bool = True
+
+    @field_validator("candidate_contacts_sha256", "source_sha256")
+    @classmethod
+    def valid_graph_hash(cls, value: str) -> str:
+        return _validate_sha256(value, label="graph contact SHA-256")
+
+    @field_validator("selected_distance_um")
+    @classmethod
+    def finite_graph_distance(cls, value: float) -> float:
+        if not isfinite(value):
+            raise ValueError("graph contact distance must be finite")
         return value
 
 
@@ -2883,6 +2950,7 @@ __all__ = [
     "ScenarioSide",
     "ScenarioSpec",
     "ScenarioViaPathEvidence",
+    "ScenarioViaGraphContactEvidence",
     "ScenarioViaStructuralEvidence",
     "ScenarioViaSegment",
     "ScenarioViaLanding",

@@ -2,14 +2,25 @@
 
 ## Scope
 
-In v0.22.6, strict exact retained-plane coverage remains the default Evaluation
-policy. The UI opt-in fallback is considered only when every blocker is
-`TERMINAL_OUTSIDE_SELECTED_PLANE`; it requires hash/source-bound retained
-same-net adjacent PWR and pure-GND artwork and exact finite-footprint coverage.
-The alternate pair and analytical vertical-path approximation are transient,
-LOW-confidence evidence and are not PowerSI sign-off. Source scenarios remain
-immutable; unresolved connectivity, missing assets, hash failures, and all
-other blocker types remain fail-closed.
+In v0.22.7, strict Evaluation remains the default and source scenarios remain
+immutable. Raw SPD import first recovers source-graph connectivity and selects a
+deterministic source-proven plane pair; the validated VINT rails use
+`L09 (MAIN_POWER1) / L08 (DGND)`, not merely the closest geometric pair. A graph
+target must be strictly interior to its retained ordered artwork. The numerical
+solver uses the bounded `RECTANGULAR_CAVITY_FINITE_PORT_V1` finite-port basis and
+persists `FINAL_TEMPLATE_ARTWORK_CONTAINMENT_V2` provenance. This proves graph
+connectivity, not a source-exact electrical model: source-graph connectivity is
+source-proven, while nearest-contact reduction, legacy vertical/contact
+impedance, and rectangular geometry are LOW confidence and are not
+PowerSI/SIwave sign-off.
+
+An unrelated rail with no proven source-graph pair can remain in an imported
+project, but Evaluation of that selected rail blocks with
+`SOURCE_GRAPH_PLANE_PAIR_UNRESOLVED`; no terminals are silently dropped and no
+other rail is degraded. Existing v0.22.6 bundles lack the new source-graph
+provenance and require re-import of the matching raw SPD for strict repair. The
+old bundle is never silently mutated. Missing assets, hash failures, target
+voids/boundaries, and all other blockers remain fail-closed.
 
 SPD Decap PI Evaluator is a pre-design, single-rail `Zii` evaluator. It uses
 the imported SPD drawing and does not write a stack-up, plane, or optimization
@@ -76,13 +87,13 @@ not by a local user path. SPD: `S4LB002-2Para_260724_1_injected.spd`, SHA-256
 
 ## Numerical convergence and validation
 
-Balanced is the default: max index 8 (81 modes). **Experimental m12 check**
-retains max index 12 (169 modes) as an opt-in m10-to-m12 check. The 2026-07-29
-loaded benchmark changed VTRIP1 maximum magnitude by up to 1.346 dB from m10
-to m12, left 3 of 6 loaded configurations nonconverged, and used 4,139 s of
-solver runtime. More modes worsened external correlation in that benchmark,
-but this does not justify selecting a lower modal order. PowerSI is
-comparison-only, never a calibration input.
+Balanced uses m8 (81 modes) as the starting high basis and first compares
+`m6↔m8`, then escalates the high basis through `m10`, `m12`, and a bounded m14
+ceiling. The evaluator accepts only an adjacent-order convergence pair; RMS
+0.2 dB, maximum 0.5 dB, and peak-shift 2% thresholds are unchanged. If m14 is
+exhausted, the result remains rejected and reports the compared orders and
+actionable ceiling guidance. PowerSI is comparison-only, never a calibration
+input.
 
 Adaptive evaluation reports frequency-grid and modal deltas, including RMS,
 maximum dB difference, and dominant-peak shift. For the validation comparison,
@@ -95,13 +106,14 @@ from `5.65/11.03 deg` to `4.93/9.89 deg`. VINT1 phase RMS improved from
 `5.19 deg` to `3.72 deg`, while its maximum phase error worsened from
 `7.92 deg` to `8.88 deg`. The one-sided VCPU result remains exactly unchanged.
 
-The 2026-07-29 loaded six-configuration benchmark is the release-relevant
-evidence for this preset. Its mode 6/8/12 loaded PowerSI RMS values were
+The 2026-07-29 loaded six-configuration benchmark is historical fixed-order
+evidence, not the current adaptive contract. Its mode 6/8/12 loaded PowerSI RMS values were
 `3.1874/3.5387/4.0106 dB`; all six loaded configurations were nonconverged at
 m6 and m8, and VTRIP0, VTRIP1, and VCPU0 remained nonconverged at m12.
-Consequently, this preset is only an experimental check: acceptance requires
-combined frequency and modal convergence for every Original and Tuned rail,
-and a failed m12 check must not silently fall back to a lower order.
+It documents why a fixed m12 result was not accepted as a release gate. Current
+acceptance requires combined frequency and adaptive modal convergence for every
+Original and Tuned rail through the bounded m14 ceiling; it must not silently
+fall back to a lower order.
 
 The comparison contract is `Z = Z0(I+S)(I-S)^-1`; all non-driven currents are
 zero (open), and the selected result is row-major `Zpp`. The tracked,

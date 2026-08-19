@@ -54,6 +54,7 @@ def test_bulk_length_parser_preserves_units_and_strict_validation() -> None:
 
 
 MINI_SPD = """Title tiny SPD
+* SourceGraphCapability = LEGACY_SOURCE_GRAPH_UNAVAILABLE
 .Package $Package
 * Shape description lines
 .Shape Signal$GNDpkgshape
@@ -1983,6 +1984,71 @@ def test_mixed_reference_decodes_only_candidates_and_caches_shared_ground(
     ]
     assert str(unrelated["asset_sha256"]) not in decoded_digests
     assert ordered_nets == ["VDD_A", "DGND", "VDD_B"]
+
+
+def test_mixed_reference_large_assets_fail_closed_without_global_union(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    def large_asset(layer: str, net: str) -> tuple[dict[str, object], bytes]:
+        polygons = tuple(
+            (
+                (float(index), 0.0),
+                (float(index) + 1.0, 0.0),
+                (float(index), 1.0),
+            )
+            for index in range(2050)
+        )
+        order = tuple(("positive_polygon", index) for index in range(2050))
+        compressed, _ = core_services._compress_spd_geometry_payload(
+            layer=layer,
+            net=net,
+            positive_polygons=polygons,
+            negative_polygons=(),
+            positive_circles=(),
+            negative_circles=(),
+            primitive_order=order,
+            positive_subelement_count=len(polygons),
+            negative_subelement_count=0,
+            polygon_trace_count=0,
+            box_count=0,
+        )
+        digest = sha256(compressed).hexdigest()
+        return (
+            {
+                "layer": layer,
+                "net": net,
+                "asset": f"geometry/{net}.spdgeom.zlib",
+                "asset_sha256": digest,
+            },
+            compressed,
+        )
+
+    pwr, pwr_bytes = large_asset("PWR0", "VDD")
+    gnd, gnd_bytes = large_asset("DGND_MIX", "DGND")
+    failures: list[dict[str, object]] = []
+    monkeypatch.setattr(
+        core_services,
+        "_ordered_spd_geometry",
+        lambda _payload: (_ for _ in ()).throw(AssertionError("global union called")),
+    )
+    certificates = core_services._mixed_reference_certificates(
+        [pwr, gnd],
+        {str(pwr["asset"]): pwr_bytes, str(gnd["asset"]): gnd_bytes},
+        [
+            StackupLayer(name="PWR0", thickness_um=20.0, conductivity_s_m=5.8e7, pwr_nets=("VDD",)),
+            StackupLayer(name="D1", thickness_um=80.0, dk=4.0, df=0.01),
+            StackupLayer(name="DGND_MIX", thickness_um=20.0, conductivity_s_m=5.8e7, pwr_nets=("DGND", "SIG_RETURN")),
+        ],
+        power_keys={"vdd"},
+        ground_keys={"dgnd"},
+        failures=failures,
+    )
+    assert certificates == ()
+    assert any(
+        item["code"] == "SPD_MIXED_REFERENCE_GEOMETRY_UNAVAILABLE"
+        and not item["blocking"]
+        for item in failures
+    )
 
 
 def test_geometry_asset_compression_is_deterministic_roundtrips_and_keeps_limit(
