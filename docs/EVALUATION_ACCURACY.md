@@ -2,6 +2,15 @@
 
 ## Scope
 
+In v0.22.6, strict exact retained-plane coverage remains the default Evaluation
+policy. The UI opt-in fallback is considered only when every blocker is
+`TERMINAL_OUTSIDE_SELECTED_PLANE`; it requires hash/source-bound retained
+same-net adjacent PWR and pure-GND artwork and exact finite-footprint coverage.
+The alternate pair and analytical vertical-path approximation are transient,
+LOW-confidence evidence and are not PowerSI sign-off. Source scenarios remain
+immutable; unresolved connectivity, missing assets, hash failures, and all
+other blocker types remain fail-closed.
+
 SPD Decap PI Evaluator is a pre-design, single-rail `Zii` evaluator. It uses
 the imported SPD drawing and does not write a stack-up, plane, or optimization
 model. It is not a PowerSI/SIwave replacement, and it has no reference-plane

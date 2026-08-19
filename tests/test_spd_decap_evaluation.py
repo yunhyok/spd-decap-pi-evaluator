@@ -31,6 +31,7 @@ from spd_decap_pi._core.domain import (
 from spd_decap_pi._core import services as core_services
 from spd_decap_pi._core.services import EvaluationView
 from spd_decap_pi._core.solver.evaluator import build_project_evaluation_request
+from spd_decap_pi._core.solver.evaluator import compile_project_evaluation_template
 from spd_decap_pi import evaluation as evaluation_module
 from spd_decap_pi.distribution import (
     DistributionDistanceMode,
@@ -77,6 +78,117 @@ def test_default_scoped_blas_limit_is_one_without_user_backend_configuration(
     monkeypatch.delenv("SPD_DECAP_PI_BLAS_THREADS", raising=False)
 
     assert core_services._requested_blas_thread_limit() == 1
+
+
+def test_retained_alternate_artwork_is_hash_bound_and_rejects_internal_voids() -> None:
+    """Exact finite-port checks cannot be reduced to center/corner samples."""
+    compressed, _ = core_services._compress_spd_geometry_payload(
+        layer="L09",
+        net="VDD",
+        positive_polygons=[[(0.0, 0.0), (1000.0, 0.0), (1000.0, 1000.0), (0.0, 1000.0)]],
+        negative_polygons=[],
+        positive_circles=[],
+        negative_circles=[(530.0, 500.0, 20.0)],
+        primitive_order=[("positive_polygon", 0), ("negative_circle", 0)],
+        positive_subelement_count=1,
+        negative_subelement_count=1,
+        polygon_trace_count=0,
+        box_count=0,
+    )
+    digest = sha256(compressed).hexdigest()
+    record = {
+        "layer": "L09",
+        "net": "VDD",
+        "asset": "geometry/l09.spdgeom.zlib",
+        "asset_sha256": digest,
+        "bbox_um": [0.0, 1000.0, 0.0, 1000.0],
+    }
+    index = evaluation_module._RetainedArtworkIndex(
+        [record], {record["asset"]: compressed}
+    )
+    assert index.contains(layer="L09", net="VDD", x_um=500.0, y_um=500.0) == "inside"
+    assert index.contains(layer="L09", net="VDD", x_um=0.0, y_um=500.0) == "boundary"
+    assert index.covers_footprint(
+        layer="L09",
+        net="VDD",
+        asset=record["asset"],
+        digest=digest,
+        x_um=500.0,
+        y_um=500.0,
+        width_um=100.0,
+        height_um=100.0,
+    ) is False
+    tampered = evaluation_module._RetainedArtworkIndex(
+        [record], {record["asset"]: compressed + b"tampered"}
+    )
+    assert tampered._entries == ()
+
+
+def test_evaluation_policy_is_strict_by_default_and_part_of_cache_identity() -> None:
+    strict = evaluation_module._evaluation_settings(0.02, 8)
+    alternate = evaluation_module._evaluation_settings(
+        0.02,
+        8,
+        evaluation_policy=evaluation_module.EVALUATION_POLICY_EMBEDDED_ALTERNATE,
+    )
+    assert strict["evaluation_policy"] == evaluation_module.EVALUATION_POLICY_STRICT
+    assert strict != alternate
+    scenario = _scenario()
+    before = scenario.model_dump(mode="json")
+    build_evaluation_project(scenario)
+    assert scenario.model_dump(mode="json") == before
+
+
+def test_alternate_fixture_runs_strict_blocker_then_real_l09_l08_build() -> None:
+    scenario, attachments = _alternate_fixture()
+    before = scenario.model_dump(mode="json")
+    strict = preflight_evaluation_connectivity(scenario, ["RAIL_VDD"], attachments=attachments)
+    assert strict.blockers
+    alternate = preflight_evaluation_connectivity(
+        scenario,
+        ["RAIL_VDD"],
+        attachments=attachments,
+        evaluation_policy=evaluation_module.EVALUATION_POLICY_EMBEDDED_ALTERNATE,
+    )
+    assert alternate.is_clear
+    project = build_evaluation_project(
+        scenario,
+        evaluation_rail_id="RAIL_VDD",
+        evaluation_policy=evaluation_module.EVALUATION_POLICY_EMBEDDED_ALTERNATE,
+        attachments=attachments,
+    )
+    provenance = project.metadata["evaluation_alternate_pair_provenance"]
+    assert provenance["candidate_pwr_layer"] == "PWR2"
+    assert provenance["candidate_gnd_layer"] == "GND2"
+    assert provenance["template_rl_recomputed"] is True
+    assert project.via_templates[-1].loop_resistance_ohm != scenario.base_project.via_templates[0].loop_resistance_ohm
+    compile_project_evaluation_template(project, "RAIL_VDD")
+    assert scenario.model_dump(mode="json") == before
+
+
+def test_exact_clear_rail_stays_strict_and_tampered_or_missing_assets_fail_closed() -> None:
+    scenario = _scenario()
+    clear = preflight_evaluation_connectivity(
+        scenario,
+        ["RAIL_VDD"],
+        evaluation_policy=evaluation_module.EVALUATION_POLICY_EMBEDDED_ALTERNATE,
+    )
+    assert clear.is_clear
+    project = build_evaluation_project(
+        scenario,
+        evaluation_rail_id="RAIL_VDD",
+        evaluation_policy=evaluation_module.EVALUATION_POLICY_EMBEDDED_ALTERNATE,
+    )
+    assert "evaluation_alternate_pair_provenance" not in project.metadata
+    alternate, attachments = _alternate_fixture()
+    missing = dict(attachments)
+    missing.pop(next(iter(missing)))
+    assert not preflight_evaluation_connectivity(
+        alternate,
+        ["RAIL_VDD"],
+        attachments=missing,
+        evaluation_policy=evaluation_module.EVALUATION_POLICY_EMBEDDED_ALTERNATE,
+    ).is_clear
 
 
 def test_spd_blas_override_controls_default_and_explicit_opt_out(monkeypatch) -> None:
@@ -387,6 +499,42 @@ def _scenario() -> ScenarioSpec:
         ),
         revision=4,
     )
+
+
+def _alternate_fixture() -> tuple[ScenarioSpec, dict[str, bytes]]:
+    """Small retained-artwork fixture exercising the real alternate builder."""
+    scenario = _scenario()
+    project = scenario.base_project
+    layers = [
+        *project.stackup_layers,
+        StackupLayer(name="PWR2", thickness_um=18.0, conductivity_s_m=5.8e7, pwr_nets=["VDD"]),
+        StackupLayer(name="D3", thickness_um=80.0, dk=4.0),
+        StackupLayer(name="GND2", thickness_um=18.0, conductivity_s_m=5.8e7, pwr_nets=["DGND"]),
+    ]
+    cell = project.partitions[0].cells[0].model_copy(update={"x_max_um": 100.0, "y_max_um": 100.0})
+    partition = project.partitions[0].model_copy(update={"cells": [cell]})
+    def asset(layer: str, net: str) -> tuple[bytes, dict[str, object]]:
+        compressed, _ = core_services._compress_spd_geometry_payload(
+            layer=layer,
+            net=net,
+            positive_polygons=[[(0.0, 0.0), (5000.0, 0.0), (5000.0, 5000.0), (0.0, 5000.0)]],
+            negative_polygons=[], positive_circles=[], negative_circles=[],
+            primitive_order=[("positive_polygon", 0)],
+            positive_subelement_count=1, negative_subelement_count=0,
+            polygon_trace_count=0, box_count=0,
+        )
+        name = f"geometry/{layer}.zlib"
+        return compressed, {"layer": layer, "net": net, "asset": name, "asset_sha256": sha256(compressed).hexdigest(), "bbox_um": [0.0, 5000.0, 0.0, 5000.0]}
+    pwr, pwr_record = asset("PWR2", "VDD")
+    gnd, gnd_record = asset("GND2", "DGND")
+    metadata = dict(project.metadata)
+    metadata["spd_import"] = {
+        **metadata["spd_import"],
+        "source_sha256": scenario.source.sha256,
+        "plane_geometries": [pwr_record, gnd_record],
+    }
+    project = project.model_copy(update={"stackup_layers": layers, "partitions": [partition], "metadata": metadata})
+    return scenario.model_copy(update={"normalized_project": project.model_dump(mode="python")}), {pwr_record["asset"]: pwr, gnd_record["asset"]: gnd}
 
 
 def _scenario_with_connection(

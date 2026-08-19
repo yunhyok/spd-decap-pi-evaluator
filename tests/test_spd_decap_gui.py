@@ -327,6 +327,9 @@ def test_evaluation_layout_uses_an_expanding_rail_list_and_detached_plot_button(
         assert not window.open_results_button.isEnabled()
         assert window.export_tuned_csv_button.text() == "Export Tuned CSV..."
         assert not window.export_tuned_csv_button.isEnabled()
+        assert not window.evaluation_alternate_pair_checkbox.isChecked()
+        assert "fallback" in window.evaluation_alternate_pair_checkbox.text().casefold()
+        assert "strict exact" in window.evaluation_alternate_pair_checkbox.toolTip().casefold()
         assert window.evaluation_modal_preset_combo.currentData() == 8
         assert window.evaluation_modal_preset_combo.currentText() == "Balanced (81 modes)"
         maximum_index = window.evaluation_modal_preset_combo.findData(12)

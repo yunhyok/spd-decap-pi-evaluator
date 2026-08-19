@@ -1,10 +1,24 @@
-# SPD Decap PI Evaluator v0.22.5
+# SPD Decap PI Evaluator v0.22.6
+
+> **v0.22.6 adds a guarded Evaluation fallback for retained-plane geometry gaps.**
+> Strict exact retained-plane coverage remains the default. The title bar identifies
+> the application as **SPD Decap PI Evaluator v0.22.6**.
+
+**v0.22.6 Evaluation fallback release note:**
+
+- Strict Evaluation remains fail-closed. An explicit UI opt-in may fall back only
+  for `TERMINAL_OUTSIDE_SELECTED_PLANE` blockers, using hash/source-bound retained
+  same-net adjacent PWR and pure-GND assets with exact finite-footprint coverage.
+- The fallback is transient and does not mutate or save the source scenario. Its
+  analytical vertical-path approximation is marked LOW confidence and is not
+  PowerSI sign-off. Missing assets, hash mismatches, other blocker types, and
+  incomplete coverage remain blocked.
 
 > **v0.22.5 accelerates exact PowerSI Shape parsing and removes unreachable
 > internal code.** Methodology and physics are unchanged from v0.22.4. The
 > title bar identifies the application as **SPD Decap PI Evaluator v0.22.5**.
 
-> 프로그램: **SPD Decap PI Evaluator v0.22.5**
+> 프로그램: **SPD Decap PI Evaluator v0.22.6**
 > 저장소: 기존 PI Calculator와 분리된 독립 프로그램
 > 해석 경계: 선택한 PWR rail의 pre-design `Zii`; 최종 PowerSI/SIwave 검증을 대체하지 않음
 
@@ -227,7 +241,7 @@ powershell.exe -ExecutionPolicy Bypass -NoProfile -File .\scripts\build_spd_deca
 산출물:
 
 - `dist\SPDDecapPIEvaluator\SPDDecapPIEvaluator.exe`
-- `installer-output\SPDDecapPIEvaluatorSetup-0.22.5.exe`
-- `installer-output\SPDDecapPIEvaluatorSetup-0.22.5.exe.sha256`
+- `installer-output\SPDDecapPIEvaluatorSetup-0.22.6.exe`
+- `installer-output\SPDDecapPIEvaluatorSetup-0.22.6.exe.sha256`
 
 프로그램명과 버전은 title bar와 installer metadata에 함께 표시된다.

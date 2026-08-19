@@ -329,6 +329,78 @@ class _IndexedPlane:
     pair: PlanePairSuggestion
 
 
+@dataclass(frozen=True, slots=True)
+class IndexedPlaneGeometry:
+    """Reusable exact ordered-boolean index for one arbitrary plane asset.
+
+    Unlike :class:`PlaneEligibilityIndex`, this deliberately has no electrical
+    pair semantics.  It is used when a retained GND asset must be checked as
+    exact copper for an explicitly selected PWR/GND pair.
+    """
+
+    geometry: SpdPlaneGeometry
+    primitives: tuple[_IndexedPrimitive, ...]
+    positive_bounds: tuple[float, float, float, float]
+    primitive_grid: _SpatialGrid
+
+    @classmethod
+    def build(
+        cls, geometry: SpdPlaneGeometry, *, tolerance_um: float = 1.0e-6
+    ) -> "IndexedPlaneGeometry | None":
+        primitives = _ordered_primitives(geometry, tolerance_um=tolerance_um)
+        positive = [
+            item.bounds
+            for item in primitives
+            if item.kind.startswith("positive_")
+        ]
+        if not positive:
+            return None
+        positive_bounds = (
+            min(item[0] for item in positive),
+            max(item[1] for item in positive),
+            min(item[2] for item in positive),
+            max(item[3] for item in positive),
+        )
+        primitive_grid = _SpatialGrid.build(
+            tuple(item.bounds for item in primitives),
+            tolerance_um=tolerance_um,
+            domain=positive_bounds,
+        )
+        if primitive_grid is None:
+            return None
+        return cls(geometry, primitives, positive_bounds, primitive_grid)
+
+    def contains(self, x_um: float, y_um: float, *, tolerance_um: float = 1.0e-6) -> Containment:
+        if not isfinite(x_um) or not isfinite(y_um):
+            raise ValueError("plane query coordinates must be finite")
+        if not _bounds_contains(self.positive_bounds, x_um, y_um, tolerance_um):
+            return "outside"
+        filled = False
+        for primitive_index in self.primitive_grid.candidates(x_um, y_um):
+            item = self.primitives[primitive_index]
+            if not _bounds_contains(item.bounds, x_um, y_um, tolerance_um):
+                continue
+            if item.kind.endswith("polygon"):
+                if item.polygon_y_index is None:
+                    containment = point_in_polygon(
+                        x_um, y_um, item.primitive, tolerance_um=tolerance_um
+                    )
+                else:
+                    containment = _point_in_indexed_polygon(
+                        x_um, y_um, item.primitive, item.polygon_y_index,
+                        tolerance_um=tolerance_um,
+                    )
+            else:
+                containment = _point_in_circle(
+                    x_um, y_um, item.primitive, tolerance_um
+                )
+            if containment == "boundary":
+                return "boundary"
+            if containment == "inside":
+                filled = item.kind.startswith("positive_")
+        return "inside" if filled else "outside"
+
+
 def _point_on_segment(
     x: float,
     y: float,
@@ -783,6 +855,7 @@ __all__ = [
     "Containment",
     "EligibilityResult",
     "EligiblePlane",
+    "IndexedPlaneGeometry",
     "PlaneEligibilityIndex",
     "eligible_power_planes",
     "point_in_plane_geometry",

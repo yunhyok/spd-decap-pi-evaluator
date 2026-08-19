@@ -13,6 +13,7 @@ from hashlib import sha256
 import json
 from math import isfinite
 from typing import Any, Callable, Mapping, Sequence
+import re
 
 from spd_decap_pi._core import services as evaluation_services
 from spd_decap_pi._core.domain import (
@@ -46,6 +47,8 @@ from spd_decap_pi._core.solver.profiles import (
     solver_profile as resolve_solver_profile,
 )
 from spd_decap_pi._core.via_model import ViaModelError, estimate_via_segment_rl
+from spd_decap_pi._core.io.spd import SpdPlaneGeometry
+from .eligibility import IndexedPlaneGeometry
 
 from .scenario import (
     CachedEvaluationMetadata,
@@ -68,6 +71,12 @@ from .scenario import (
 ProgressCallback = Callable[[int, str], None]
 CancelCallback = Callable[[], bool]
 PLOT_ANALYST_MODE = "Plot Analyst"
+EVALUATION_POLICY_STRICT = "STRICT_EXACT"
+EVALUATION_POLICY_EMBEDDED_ALTERNATE = "EMBEDDED_ALTERNATE_PAIR_APPROXIMATION_V1"
+_EVALUATION_POLICIES = {
+    EVALUATION_POLICY_STRICT,
+    EVALUATION_POLICY_EMBEDDED_ALTERNATE,
+}
 EVALUATION_ATTACHMENT_FORMAT = "spd-decap-evaluation-0.1"
 MAX_EVALUATION_ATTACHMENT_BYTES = 16 * 1024 * 1024
 # General shared-pad networks materialize one dense F x N x N terminal
@@ -434,6 +443,7 @@ def _evaluation_settings(
     solver_profile: str = DEFAULT_SOLVER_PROFILE_KEY,
     *,
     solver_provenance: Mapping[str, Any] | None = None,
+    evaluation_policy: str = EVALUATION_POLICY_STRICT,
 ) -> dict[str, Any]:
     """Return cache/result settings without ever guessing research evidence.
 
@@ -444,11 +454,17 @@ def _evaluation_settings(
     a prior experimental calculation.
     """
 
+    if evaluation_policy not in _EVALUATION_POLICIES:
+        raise ScenarioEvaluationBuildError(
+            "EVALUATION_POLICY_UNKNOWN",
+            f"unknown Evaluation geometry policy {evaluation_policy!r}",
+        )
     profile = resolve_solver_profile(solver_profile)
     settings: dict[str, Any] = {
         "target_ohm": target_ohm,
         "modal_max_index": modal_max_index,
         "solver_profile": profile.key,
+        "evaluation_policy": evaluation_policy,
     }
     if not profile.experimental:
         return settings
@@ -496,6 +512,7 @@ def _expected_result_key(
     modal_max_index: int,
     solver_profile: str = DEFAULT_SOLVER_PROFILE_KEY,
     solver_provenance: Mapping[str, Any] | None = None,
+    evaluation_policy: str = EVALUATION_POLICY_STRICT,
 ) -> ScenarioResultKey:
     profile = resolve_solver_profile(solver_profile)
     if profile.experimental and solver_provenance is None:
@@ -510,6 +527,7 @@ def _expected_result_key(
             modal_max_index,
             solver_profile,
             solver_provenance=solver_provenance,
+            evaluation_policy=evaluation_policy,
         ),
         solver_version=SOLVER_VERSION,
     )
@@ -533,6 +551,7 @@ def _result_key_from_view(
             modal_max_index,
             view.solver_profile_key,
             solver_provenance=view.solver_provenance,
+            evaluation_policy=getattr(view, "evaluation_policy", EVALUATION_POLICY_STRICT),
         ),
         solver_version=view.solver_version,
     )
@@ -1023,11 +1042,662 @@ def _evaluation_geometry_blockers(
     return tuple(blockers)
 
 
+@dataclass(frozen=True, slots=True)
+class _AlternateEvaluationContext:
+    scenario: ScenarioSpec
+    project: ProjectSpec
+    rail_id: str
+    candidate_layer: str
+    ground_layer: str
+    provenance: dict[str, Any]
+
+
+def _geometry_records(project: ProjectSpec) -> list[Mapping[str, Any]]:
+    raw = project.metadata.get("spd_import")
+    records = raw.get("plane_geometries") if isinstance(raw, Mapping) else None
+    return [item for item in records if isinstance(item, Mapping)] if isinstance(records, list) else []
+
+
+def _record_bounds(record: Mapping[str, Any]) -> tuple[float, float, float, float] | None:
+    values = record.get("solver_bounds_um") or record.get("bounds_um") or record.get("bbox_um")
+    if isinstance(values, (list, tuple)) and len(values) == 4:
+        try:
+            result = tuple(float(item) for item in values)
+        except (TypeError, ValueError):
+            result = None
+        if result is not None and all(isfinite(item) for item in result) and result[1] > result[0] and result[3] > result[2]:
+            return result  # type: ignore[return-value]
+    xs: list[float] = []
+    ys: list[float] = []
+    for poly in record.get("positive_polygons_um", []):
+        if isinstance(poly, (list, tuple)):
+            for point in poly:
+                if isinstance(point, (list, tuple)) and len(point) == 2:
+                    xs.append(float(point[0])); ys.append(float(point[1]))
+    for circle in record.get("positive_circles_um", []):
+        if isinstance(circle, (list, tuple)) and len(circle) == 3:
+            x, y, radius = (float(item) for item in circle)
+            xs.extend((x - radius, x + radius)); ys.extend((y - radius, y + radius))
+    if not xs or not ys:
+        return None
+    result = (min(xs), max(xs), min(ys), max(ys))
+    return result if result[1] > result[0] and result[3] > result[2] else None
+
+
+@dataclass(frozen=True, slots=True)
+class _RetainedArtworkEntry:
+    asset: str
+    digest: str
+    layer: str
+    net: str
+    indexed: IndexedPlaneGeometry
+    shape: Any | None = None
+
+
+class _RetainedArtworkIndex:
+    """Decode each retained plane asset once and index its exact copper once."""
+
+    def __init__(
+        self,
+        records: Sequence[Mapping[str, Any]],
+        attachments: Mapping[str, bytes],
+    ) -> None:
+        entries: list[_RetainedArtworkEntry] = []
+        decoded: dict[tuple[str, str], _RetainedArtworkEntry | None] = {}
+        for record in records:
+            asset = str(record.get("asset", "")).strip()
+            digest = str(record.get("asset_sha256", "")).strip().lower()
+            layer = str(record.get("layer", "")).strip()
+            net = str(record.get("net", "")).strip()
+            if not asset or not re.fullmatch(r"[0-9a-f]{64}", digest):
+                continue
+            key = (asset.casefold(), digest)
+            if key in decoded:
+                continue
+            payload_bytes = attachments.get(asset)
+            entry: _RetainedArtworkEntry | None = None
+            if payload_bytes is not None:
+                try:
+                    payload = evaluation_services._decode_spd_geometry_asset(
+                        digest, payload_bytes
+                    )
+                    evaluation_services._validate_spd_geometry_payload(
+                        payload, expected_layer=layer, expected_net=net
+                    )
+                    geometry = SpdPlaneGeometry(
+                        layer=str(payload["layer"]),
+                        net=str(payload["net"]),
+                        positive_polygons_um=tuple(
+                            tuple((float(point[0]), float(point[1])) for point in polygon)
+                            for polygon in payload["positive_polygons_um"]
+                        ),
+                        negative_polygons_um=tuple(
+                            tuple((float(point[0]), float(point[1])) for point in polygon)
+                            for polygon in payload["negative_polygons_um"]
+                        ),
+                        positive_circles_um=tuple(
+                            tuple(float(value) for value in circle)
+                            for circle in payload["positive_circles_um"]
+                        ),
+                        negative_circles_um=tuple(
+                            tuple(float(value) for value in circle)
+                            for circle in payload["negative_circles_um"]
+                        ),
+                        primitive_order=tuple(
+                            (str(step[0]), int(step[1]))
+                            for step in payload["primitive_order"]
+                        ),
+                    )
+                    indexed = IndexedPlaneGeometry.build(geometry)
+                    if indexed is not None:
+                        entry = _RetainedArtworkEntry(
+                            asset=asset,
+                            digest=digest,
+                            layer=layer,
+                            net=net,
+                            indexed=indexed,
+                        )
+                except (TypeError, ValueError, IndexError, ArithmeticError):
+                    entry = None
+            decoded[key] = entry
+            if entry is not None:
+                entries.append(entry)
+        self._entries = tuple(entries)
+        self._shapes: dict[tuple[str, str], Any | None] = {}
+        self._prepared_shapes: dict[tuple[str, str], Any | None] = {}
+        self._by_layer_net = {}
+        for entry in self._entries:
+            self._by_layer_net.setdefault(
+                (entry.layer.casefold(), entry.net.casefold()), []
+            ).append(entry)
+
+    def has(self, *, layer: str, net: str, asset: str, digest: str) -> bool:
+        return any(
+            item.asset.casefold() == asset.casefold()
+            and item.digest == digest.casefold()
+            and item.layer.casefold() == layer.casefold()
+            and item.net.casefold() == net.casefold()
+            for item in self._entries
+        )
+
+    def covers_footprint(
+        self,
+        *,
+        layer: str,
+        net: str,
+        asset: str,
+        digest: str,
+        x_um: float,
+        y_um: float,
+        width_um: float,
+        height_um: float,
+    ) -> bool:
+        """Require the complete finite rectangle to be strict-interior copper."""
+        entry = next(
+            (
+                item
+                for item in self._entries
+                if item.asset.casefold() == asset.casefold()
+                and item.digest == digest.casefold()
+                and item.layer.casefold() == layer.casefold()
+                and item.net.casefold() == net.casefold()
+            ),
+            None,
+        )
+        if entry is None:
+            return False
+        try:
+            if len(entry.indexed.primitives) > 1000:
+                x_min = x_um - width_um / 2.0
+                x_max = x_um + width_um / 2.0
+                y_min = y_um - height_um / 2.0
+                y_max = y_um + height_um / 2.0
+                candidate_indices: set[int] = set()
+                for qx, qy in (
+                    (x_um, y_um),
+                    (x_min, y_min), (x_min, y_max),
+                    (x_max, y_min), (x_max, y_max),
+                ):
+                    candidate_indices.update(
+                        entry.indexed.primitive_grid.candidates(qx, qy)
+                    )
+                return not any(
+                    entry.indexed.primitives[index].kind.startswith("negative_")
+                    and entry.indexed.primitives[index].bounds[1] >= x_min
+                    and entry.indexed.primitives[index].bounds[0] <= x_max
+                    and entry.indexed.primitives[index].bounds[3] >= y_min
+                    and entry.indexed.primitives[index].bounds[2] <= y_max
+                    for index in candidate_indices
+                )
+            from shapely.geometry import box
+            geometry = entry.indexed.geometry
+            shape_key = (entry.asset.casefold(), entry.digest)
+            shape = self._shapes.get(shape_key)
+            if shape is None and shape_key not in self._shapes:
+                shape = evaluation_services._ordered_spd_geometry(
+                    {
+                        "positive_polygons_um": [list(item) for item in geometry.positive_polygons_um],
+                        "negative_polygons_um": [list(item) for item in geometry.negative_polygons_um],
+                        "positive_circles_um": [list(item) for item in geometry.positive_circles_um],
+                        "negative_circles_um": [list(item) for item in geometry.negative_circles_um],
+                        "primitive_order": [list(item) for item in geometry.primitive_order],
+                    }
+                )
+                self._shapes[shape_key] = shape
+            if shape is None:
+                return False
+            footprint = box(
+                x_um - width_um / 2.0,
+                y_um - height_um / 2.0,
+                x_um + width_um / 2.0,
+                y_um + height_um / 2.0,
+            )
+            return bool(shape.contains(footprint))
+        except (ImportError, TypeError, ValueError, ArithmeticError):
+            return False
+
+    def contains(self, *, layer: str, net: str, x_um: float, y_um: float) -> str:
+        entries = self._by_layer_net.get((layer.casefold(), net.casefold()), ())
+        saw_boundary = False
+        saw_inside = False
+        for entry in entries:
+            try:
+                if len(entry.indexed.primitives) > 1000:
+                    result = entry.indexed.contains(x_um, y_um)
+                    if result == "boundary":
+                        saw_boundary = True
+                    elif result == "inside":
+                        saw_inside = True
+                    continue
+                from shapely.geometry import Point
+                from shapely.prepared import prep
+                shape_key = (entry.asset.casefold(), entry.digest)
+                shape = self._shapes.get(shape_key)
+                if shape is None and shape_key not in self._shapes:
+                    geometry = entry.indexed.geometry
+                    shape = evaluation_services._ordered_spd_geometry(
+                        {
+                            "positive_polygons_um": [list(item) for item in geometry.positive_polygons_um],
+                            "negative_polygons_um": [list(item) for item in geometry.negative_polygons_um],
+                            "positive_circles_um": [list(item) for item in geometry.positive_circles_um],
+                            "negative_circles_um": [list(item) for item in geometry.negative_circles_um],
+                            "primitive_order": [list(item) for item in geometry.primitive_order],
+                        }
+                    )
+                    self._shapes[shape_key] = shape
+                prepared = self._prepared_shapes.get(shape_key)
+                if prepared is None and shape_key not in self._prepared_shapes and shape is not None:
+                    prepared = prep(shape)
+                    self._prepared_shapes[shape_key] = prepared
+                if prepared is not None and prepared.contains(Point(x_um, y_um)):
+                    saw_inside = True
+                    continue
+            except (ImportError, TypeError, ValueError, ArithmeticError):
+                pass
+            result = entry.indexed.contains(x_um, y_um)
+            if result == "boundary":
+                saw_boundary = True
+            elif result == "inside":
+                saw_inside = True
+        if saw_boundary:
+            return "boundary"
+        return "inside" if saw_inside else "outside"
+
+
+def _alternate_terminal_points(
+    scenario: ScenarioSpec,
+    project: ProjectSpec,
+    rail_id: str,
+    *,
+    pwr_layer: str,
+    gnd_layer: str,
+    via: ViaLoopTemplate,
+) -> tuple[tuple[str, str, float, float, float, float], ...]:
+    """Return center + four corners for every finite direct terminal landing."""
+    analysis = scenario.connection_analysis
+    if analysis is None:
+        return ()
+    rail_keys = {rail_id.casefold()}
+    decaps = {item.refdes.casefold(): item for item in scenario.decaps}
+    points: list[tuple[str, str, float, float, float, float]] = []
+    for connection in analysis.connections.values():
+        decap = decaps.get(connection.refdes.casefold())
+        if decap is None or decap.current_rail_id.casefold() not in rail_keys:
+            continue
+        if (
+            not decap.enabled
+            and len(connection.power_vias) == 1
+            and len(connection.ground_vias) == 1
+        ):
+            continue
+        for terminal, landings, layer in (
+            (TerminalKind.PWR, connection.power_vias, pwr_layer),
+            (TerminalKind.GND, connection.ground_vias, gnd_layer),
+        ):
+            for landing in landings:
+                evidence = landing.evidence_for_layer(layer)
+                x_um = float(evidence.x_um) if evidence is not None else float(landing.x_um)
+                y_um = float(evidence.y_um) if evidence is not None else float(landing.y_um)
+                width = float(evidence.target_pad_width_um) if evidence is not None else float(via.finite_port_width_um)
+                height = float(evidence.target_pad_height_um) if evidence is not None else float(via.finite_port_height_um)
+                if not all(isfinite(value) for value in (x_um, y_um)) or not all(
+                    isfinite(value) and value > 0.0 for value in (width, height)
+                ):
+                    return ()
+                for x_value, y_value in (
+                    (x_um, y_um),
+                    (x_um - width / 2.0, y_um - height / 2.0),
+                    (x_um - width / 2.0, y_um + height / 2.0),
+                    (x_um + width / 2.0, y_um - height / 2.0),
+                    (x_um + width / 2.0, y_um + height / 2.0),
+                ):
+                    points.append((terminal.value, layer, x_value, y_value, width, height))
+    return tuple(points)
+
+
+def _alternate_context_for_rail(
+    scenario: ScenarioSpec,
+    rail_id: str,
+    *,
+    attachments: Mapping[str, bytes] | None = None,
+    _cache: dict[tuple[str, str, str, str], _AlternateEvaluationContext] | None = None,
+) -> _AlternateEvaluationContext | None:
+    """Derive a transient, evidence-bound alternate pair for one rail.
+
+    This intentionally uses only retained plane records and immutable board
+    bounds.  Missing source vertical-path proof is disclosed as an assumption;
+    no scenario/project object is modified in place.
+    """
+    base = scenario.base_project
+    rail = next((item for item in base.rails if item.rail_id.casefold() == rail_id.casefold()), None)
+    if rail is None:
+        return None
+    records = _geometry_records(base)
+    if not records:
+        return None
+    source_hash = str(base.metadata.get("spd_import", {}).get("source_sha256", "")) if isinstance(base.metadata.get("spd_import"), Mapping) else ""
+    if attachments is None or source_hash.casefold() != str(scenario.source.sha256).casefold() or len(source_hash) != 64 or not re.fullmatch(r"[0-9a-fA-F]{64}", source_hash):
+        return None
+    attachment_fingerprint = sha256(
+        b"".join(
+            name.encode("utf-8") + sha256(payload).digest()
+            for name, payload in sorted(attachments.items(), key=lambda item: item[0].casefold())
+        )
+    ).hexdigest()
+    cache_key = (
+        scenario.design_fingerprint,
+        rail.rail_id.casefold(),
+        source_hash.casefold(),
+        attachment_fingerprint,
+    )
+    cache = _cache if _cache is not None else {}
+    cached_context = cache.get(cache_key)
+    if cached_context is not None:
+        return cached_context
+    stack = {layer.name.casefold(): index for index, layer in enumerate(base.stackup_layers)}
+    from spd_decap_pi._core.plane_pairs import suggest_effective_plane_pairs
+    allowed_pair_separation = {
+        (item.pwr_layer.casefold(), item.gnd_layer.casefold()): float(item.separation_um)
+        for item in suggest_effective_plane_pairs(
+            base.stackup_layers, rail_net=rail.net, gnd_aliases=base.gnd_aliases
+        )
+    }
+    gnd_keys = {item.casefold() for item in base.gnd_aliases}
+    artwork: _RetainedArtworkIndex | None = None
+    outline_bounds = (
+        float(base.outline.origin_x_um),
+        float(base.outline.origin_x_um + base.outline.width_um),
+        float(base.outline.origin_y_um),
+        float(base.outline.origin_y_um + base.outline.height_um),
+    )
+    candidates: list[tuple[tuple[Any, ...], Mapping[str, Any], Mapping[str, Any], tuple[float, float, float, float], tuple[float, float, float, float]]] = []
+    for pwr in records:
+        pwr_layer = str(pwr.get("layer", "")).strip()
+        pwr_net = str(pwr.get("net", "")).strip()
+        if not pwr_layer or not pwr_net or pwr_net.casefold() != rail.net.casefold() or pwr_layer.casefold() == rail.pwr_layer.casefold():
+            continue
+        pwr_bounds = _record_bounds(pwr)
+        if pwr_bounds is None or any(not isfinite(item) for item in pwr_bounds):
+            continue
+        if pwr_bounds[0] < outline_bounds[0] or pwr_bounds[1] > outline_bounds[1] or pwr_bounds[2] < outline_bounds[2] or pwr_bounds[3] > outline_bounds[3]:
+            continue
+        asset = str(pwr.get("asset", "")).strip()
+        asset_sha = str(pwr.get("asset_sha256", "")).strip().lower()
+        if not asset or not re.fullmatch(r"[0-9a-f]{64}", asset_sha):
+            continue
+        payload = attachments.get(asset)
+        if payload is None or sha256(payload).hexdigest().casefold() != asset_sha:
+            continue
+        pwr_index = stack.get(pwr_layer.casefold())
+        if pwr_index is None:
+            continue
+        for gnd in records:
+            gnd_layer = str(gnd.get("layer", "")).strip()
+            gnd_net = str(gnd.get("net", "")).strip()
+            if not gnd_layer or gnd_net.casefold() not in gnd_keys or (pwr_layer.casefold(), gnd_layer.casefold()) not in allowed_pair_separation:
+                continue
+            gnd_bounds = _record_bounds(gnd)
+            if gnd_bounds is None or gnd_bounds[0] < outline_bounds[0] or gnd_bounds[1] > outline_bounds[1] or gnd_bounds[2] < outline_bounds[2] or gnd_bounds[3] > outline_bounds[3]:
+                continue
+            # The GND record must also be retained and hash-bound.
+            gnd_asset = str(gnd.get("asset", "")).strip(); gnd_sha = str(gnd.get("asset_sha256", "")).strip().lower()
+            if not gnd_asset or not re.fullmatch(r"[0-9a-f]{64}", gnd_sha):
+                continue
+            payload = attachments.get(gnd_asset)
+            if payload is None or sha256(payload).hexdigest().casefold() != gnd_sha:
+                continue
+            key = (allowed_pair_separation[(pwr_layer.casefold(), gnd_layer.casefold())], pwr_layer.casefold(), gnd_layer.casefold(), pwr_net.casefold())
+            candidates.append((key, pwr, gnd, pwr_bounds, gnd_bounds))
+    if not candidates:
+        return None
+    template_ids = _via_template_ids_by_rail(base)
+    old_template_id = template_ids.get(rail.rail_id.casefold())
+    template = next((item for item in base.via_templates if item.template_id.casefold() == (old_template_id or "").casefold()), None)
+    if template is None:
+        template = next((item for item in base.via_templates if item.pwr_reference_layer.casefold() == rail.pwr_layer.casefold() and item.gnd_reference_layer.casefold() == rail.gnd_layer.casefold()), None)
+    if template is None:
+        return None
+    # Candidate order is a preference, not proof.  Reject a nearer pair that
+    # has a void/boundary/insufficient finite-port coverage and continue to a
+    # farther retained same-net pair that passes the exact test.
+    selected: tuple[Mapping[str, Any], Mapping[str, Any], tuple[float, float, float, float]] | None = None
+    for _key, candidate_pwr, candidate_gnd, candidate_bounds, candidate_gnd_bounds in sorted(candidates, key=lambda item: item[0]):
+        pair_artwork = _RetainedArtworkIndex(
+            [candidate_pwr, candidate_gnd], attachments
+        )
+        if not pair_artwork._entries:
+            continue
+        artwork = pair_artwork
+        probe_template = template.model_copy(
+            update={
+                "pwr_reference_layer": str(candidate_pwr["layer"]),
+                "gnd_reference_layer": str(candidate_gnd["layer"]),
+            }
+        )
+        points = _alternate_terminal_points(
+            scenario,
+            base,
+            rail.rail_id,
+            pwr_layer=str(candidate_pwr["layer"]),
+            gnd_layer=str(candidate_gnd["layer"]),
+            via=probe_template,
+        )
+        if not points:
+            continue
+        valid = True
+        for point_index, (_terminal, layer, x_um, y_um, width_um, height_um) in enumerate(points):
+            record = candidate_pwr if layer.casefold() == str(candidate_pwr["layer"]).casefold() else candidate_gnd
+            net = str(record.get("net", ""))
+            bounds = candidate_bounds if record is candidate_pwr else candidate_gnd_bounds
+            if point_index % 5 == 0 and (
+                x_um - width_um / 2.0 < bounds[0]
+                or x_um + width_um / 2.0 > bounds[1]
+                or y_um - height_um / 2.0 < bounds[2]
+                or y_um + height_um / 2.0 > bounds[3]
+            ):
+                valid = False
+                break
+            if artwork.contains(net=net, layer=layer, x_um=x_um, y_um=y_um) != "inside":
+                valid = False
+                break
+            if point_index % 5 == 0 and not artwork.covers_footprint(
+                layer=layer,
+                net=net,
+                asset=str(record.get("asset", "")),
+                digest=str(record.get("asset_sha256", "")),
+                x_um=x_um,
+                y_um=y_um,
+                width_um=width_um,
+                height_um=height_um,
+            ):
+                valid = False
+                break
+        if valid:
+            selected = (candidate_pwr, candidate_gnd, candidate_bounds)
+            break
+    if selected is None:
+        return None
+    pwr_record, gnd_record, pwr_bounds = selected
+    # Preserve the imported template identity so shared-pad eligibility and
+    # source fallback bindings remain coherent; only its transient reference
+    # layers are replaced for this opt-in project.
+    alt_template_id = (
+        f"{template.template_id}__ALT_{str(pwr_record['layer']).replace(' ', '_')}__"
+        f"{str(gnd_record['layer']).replace(' ', '_')}"
+    )
+    alt_template = template.model_copy(update={"template_id": alt_template_id, "pwr_reference_layer": str(pwr_record["layer"]), "gnd_reference_layer": str(gnd_record["layer"])})
+    rl_recomputed = False
+    pwr_depth = gnd_depth = None
+    try:
+        depths = evaluation_services._spd_layer_center_depths(base.stackup_layers)
+        pwr_depth = depths[str(pwr_record["layer"])]
+        gnd_depth = depths[str(gnd_record["layer"])]
+        template_details = base.metadata.get("spd_via_template_provenance", {}).get(template.template_id, {})
+        drill = template_details.get("drill_diameter_um") if isinstance(template_details, Mapping) else None
+        resistance, inductance = evaluation_services._spd_uncalibrated_loop_estimate(
+            pwr_depth_um=pwr_depth,
+            gnd_depth_um=gnd_depth,
+            drill_diameter_um=float(drill) if drill is not None else None,
+        )
+        alt_template = alt_template.model_copy(update={"loop_resistance_ohm": resistance, "loop_inductance_h": inductance})
+        rl_recomputed = True
+    except (KeyError, TypeError, ValueError):
+        resistance, inductance = template.loop_resistance_ohm, template.loop_inductance_h
+    alt_rail = rail.model_copy(update={"pwr_layer": str(pwr_record["layer"]), "gnd_layer": str(gnd_record["layer"]), "mixed_reference_certificate": None, "mixed_reference_ground_witness": None})
+    rails = [alt_rail if item.rail_id.casefold() == rail.rail_id.casefold() else item for item in base.rails]
+    records_out = [dict(item) for item in records]
+    metadata = dict(base.metadata); spd_import = dict(metadata.get("spd_import", {}))
+    spd_import["plane_geometries"] = records_out
+    spd_import["evaluation_alternate_pair"] = {"policy": EVALUATION_POLICY_EMBEDDED_ALTERNATE, "rail_id": rail.rail_id, "pwr_layer": alt_rail.pwr_layer, "gnd_layer": alt_rail.gnd_layer, "pwr_source_net": str(pwr_record.get("net", "")), "gnd_source_net": str(gnd_record.get("net", ""))}
+    metadata["spd_import"] = spd_import
+    provenance = dict(metadata.get("spd_via_template_provenance", {}))
+    if old_template_id and old_template_id in provenance:
+        source_details = dict(provenance[old_template_id])
+        details = dict(source_details)
+        details.update({"rail_id": rail.rail_id, "pwr_reference_layer": alt_rail.pwr_layer, "gnd_reference_layer": alt_rail.gnd_layer, "calibration": "embedded_alternate_analytical_approximation", "source_vertical_path_proven": False, "derived_loop_resistance_ohm": resistance, "derived_loop_inductance_h": inductance, "derived_pwr_depth_um": pwr_depth, "derived_gnd_depth_um": gnd_depth})
+        details["source_template_id"] = old_template_id
+        details["source_template_provenance"] = source_details
+        provenance[alt_template_id] = details
+        provenance.pop(old_template_id, None)
+    metadata["spd_via_template_provenance"] = provenance
+    # Existing partitions refer to the old rail/domain map.  Rebuild from the
+    # transient rail/template/geometry payload before validating the final
+    # project so stale cell mappings cannot leak into this approximation.
+    provisional = base.model_copy(update={"rails": rails, "via_templates": [*base.via_templates, alt_template], "metadata": metadata, "partitions": []})
+    from spd_decap_pi._core.services import _spd_plane_partitions
+    candidate_project = provisional.model_copy(update={"partitions": _spd_plane_partitions(provisional)})
+    decaps = []
+    for decap in scenario.decaps:
+        if decap.current_rail_id.casefold() != rail.rail_id.casefold():
+            decaps.append(decap); continue
+        elig = dict(decap.eligibility)
+        elig[rail.rail_id] = RailEligibility(rail_id=rail.rail_id, net=rail.net, pwr_layer=alt_rail.pwr_layer, gnd_layer=alt_rail.gnd_layer, via_template_id=alt_template_id, allowed=True)
+        decaps.append(decap.model_copy(update={"eligibility": elig}))
+    clusters = []
+    source_clusters = (
+        scenario.connection_analysis.clusters
+        if scenario.connection_analysis is not None
+        else ()
+    )
+    for cluster in source_clusters:
+        if not any(
+            decap.current_rail_id.casefold() == rail.rail_id.casefold()
+            for decap in scenario.decaps
+            if decap.refdes.casefold() in {item.casefold() for item in cluster.member_refdes}
+        ):
+            clusters.append(cluster)
+            continue
+        via_eligibility = {}
+        selected_via_ids = {
+            landing.via_id.casefold()
+            for connection in (
+                scenario.connection_analysis.connections.values()
+                if scenario.connection_analysis is not None
+                else ()
+            )
+            if connection.refdes.casefold() in {item.casefold() for item in cluster.member_refdes}
+            for landing in connection.power_vias
+        }
+        for via_id, by_rail in cluster.via_eligibility.items():
+            updated = dict(by_rail)
+            selected_key = next(
+                (key for key in updated if key.casefold() == rail.rail_id.casefold()),
+                None,
+            )
+            if selected_key is not None or via_id.casefold() in selected_via_ids:
+                selected_key = selected_key or rail.rail_id
+                updated[selected_key] = RailEligibility(
+                    rail_id=rail.rail_id,
+                    net=rail.net,
+                    pwr_layer=alt_rail.pwr_layer,
+                    gnd_layer=alt_rail.gnd_layer,
+                    via_template_id=alt_template_id,
+                    allowed=True,
+                )
+            via_eligibility[via_id] = updated
+        updated_cluster_eligibility = dict(cluster.eligibility)
+        selected_key = next(
+            (key for key in updated_cluster_eligibility if key.casefold() == rail.rail_id.casefold()),
+            None,
+        )
+        if selected_key is not None:
+            updated_cluster_eligibility[selected_key] = RailEligibility(
+                rail_id=rail.rail_id,
+                net=rail.net,
+                pwr_layer=alt_rail.pwr_layer,
+                gnd_layer=alt_rail.gnd_layer,
+                via_template_id=alt_template_id,
+                allowed=True,
+            )
+        clusters.append(
+            cluster.model_copy(
+                update={
+                    "via_eligibility": via_eligibility,
+                    "eligibility": updated_cluster_eligibility,
+                }
+            )
+        )
+    candidate_analysis = (
+        scenario.connection_analysis.model_copy(update={"clusters": tuple(clusters)})
+        if scenario.connection_analysis is not None
+        else None
+    )
+    candidate_scenario = scenario.model_copy(
+        update={"decaps": tuple(decaps), "connection_analysis": candidate_analysis}
+    )
+    provenance_result = {"policy": EVALUATION_POLICY_EMBEDDED_ALTERNATE, "candidate_pwr_layer": alt_rail.pwr_layer, "candidate_gnd_layer": alt_rail.gnd_layer, "candidate_pwr_source_net": str(pwr_record.get("net", "")), "candidate_gnd_source_net": str(gnd_record.get("net", "")), "candidate_pwr_asset": str(pwr_record.get("asset", "")), "candidate_gnd_asset": str(gnd_record.get("asset", "")), "candidate_pwr_asset_sha256": str(pwr_record.get("asset_sha256", "")), "candidate_gnd_asset_sha256": str(gnd_record.get("asset_sha256", "")), "source_template_id": template.template_id, "alternate_template_id": alt_template_id, "missing_source_vertical_path_approximation": True, "template_rl_recomputed": rl_recomputed, "loop_resistance_ohm": resistance, "loop_inductance_h": inductance}
+    # Full finite-terminal coverage is mandatory; check the actual retained
+    # ordered boolean artwork at each center and all four footprint corners.
+    terminal_points = _alternate_terminal_points(
+        scenario, candidate_project, rail.rail_id,
+        pwr_layer=alt_rail.pwr_layer,
+        gnd_layer=alt_rail.gnd_layer,
+        via=alt_template,
+    )
+    if not terminal_points:
+        return None
+    for point_index, (_terminal, layer, x_um, y_um, width_um, height_um) in enumerate(terminal_points):
+        record = pwr_record if layer.casefold() == alt_rail.pwr_layer.casefold() else gnd_record
+        result = artwork.contains(
+            net=str(record.get("net", "")),
+            layer=layer,
+            x_um=x_um,
+            y_um=y_um,
+        )
+        if result != "inside":
+            return None
+        if point_index % 5 == 0 and not artwork.covers_footprint(
+            layer=layer,
+            net=str(record.get("net", "")),
+            asset=str(record.get("asset", "")),
+            digest=str(record.get("asset_sha256", "")),
+            x_um=x_um,
+            y_um=y_um,
+            width_um=width_um,
+            height_um=height_um,
+        ):
+            return None
+    context = _AlternateEvaluationContext(
+        candidate_scenario,
+        candidate_project,
+        rail.rail_id,
+        alt_rail.pwr_layer,
+        alt_rail.gnd_layer,
+        provenance_result,
+    )
+    cache[cache_key] = context
+    return context
+
+
 def preflight_evaluation_connectivity(
     scenario: ScenarioSpec,
     rail_ids: Sequence[str],
     *,
     _project: ProjectSpec | None = None,
+    evaluation_policy: str = EVALUATION_POLICY_STRICT,
+    attachments: Mapping[str, bytes] | None = None,
+    _skip_geometry: bool = False,
+    _alternate_cache: dict[tuple[str, str, str, str], _AlternateEvaluationContext] | None = None,
 ) -> EvaluationConnectivityPreflight:
     """Aggregate fail-closed source-connectivity blockers for selected rails.
 
@@ -1038,8 +1708,33 @@ def preflight_evaluation_connectivity(
     is retained for callers that need more than the compact UI text.
     """
 
+    if evaluation_policy not in _EVALUATION_POLICIES:
+        raise ScenarioEvaluationBuildError("EVALUATION_POLICY_UNKNOWN", f"unknown Evaluation geometry policy {evaluation_policy!r}")
     project = _project if _project is not None else scenario.base_project
     canonical_rails = _canonical_rail_ids(scenario, rail_ids, _project=project)
+    if evaluation_policy == EVALUATION_POLICY_EMBEDDED_ALTERNATE:
+        blockers: list[EvaluationConnectivityBlocker] = []
+        for rail_id in canonical_rails:
+            strict = preflight_evaluation_connectivity(
+                scenario, (rail_id,), _project=project,
+                evaluation_policy=EVALUATION_POLICY_STRICT,
+                attachments=attachments,
+            )
+            if strict.is_clear:
+                continue
+            if any(
+                not item.reason.startswith("TERMINAL_OUTSIDE_SELECTED_PLANE:")
+                for item in strict.blockers
+            ):
+                blockers.extend(strict.blockers)
+                continue
+            context = _alternate_context_for_rail(scenario, rail_id, attachments=attachments, _cache=_alternate_cache)
+            if context is None:
+                blockers.extend(strict.blockers)
+                continue
+            alternate = preflight_evaluation_connectivity(context.scenario, (rail_id,), _project=context.project, evaluation_policy=EVALUATION_POLICY_STRICT, attachments=attachments, _skip_geometry=True, _alternate_cache=_alternate_cache)
+            blockers.extend(alternate.blockers)
+        return EvaluationConnectivityPreflight(canonical_rails, tuple(blockers))
     _require_current_shared_pad_analysis(scenario)
     analysis = scenario.connection_analysis
     if analysis is None:
@@ -1171,11 +1866,12 @@ def preflight_evaluation_connectivity(
                     reason=reason,
                 )
             )
-    blockers.extend(
-        _evaluation_geometry_blockers(
-            scenario, canonical_rails, _project=project
+    if not _skip_geometry:
+        blockers.extend(
+            _evaluation_geometry_blockers(
+                scenario, canonical_rails, _project=project
+            )
         )
-    )
     return EvaluationConnectivityPreflight(
         canonical_rails,
         tuple(
@@ -1318,6 +2014,9 @@ def _builder_preflight_blockers(
     stage_offset: int = 0,
     stage_count: int = 1,
     skip_rail_ids: frozenset[str] = frozenset(),
+    evaluation_policy: str = EVALUATION_POLICY_STRICT,
+    attachments: Mapping[str, bytes] | None = None,
+    _alternate_cache: dict[tuple[str, str, str, str], _AlternateEvaluationContext] | None = None,
 ) -> tuple[EvaluationConnectivityBlocker, ...]:
     """Dry-build structurally clear rails and convert every build failure."""
 
@@ -1364,6 +2063,9 @@ def _builder_preflight_blockers(
                 evaluation_rail_id=rail_id,
                 _project=project,
                 _design_fingerprint=design_fingerprint,
+                evaluation_policy=evaluation_policy,
+                attachments=attachments,
+                _alternate_cache=_alternate_cache,
             )
         except ScenarioEvaluationPreflightError as exc:
             result.extend(exc.preflight.blockers)
@@ -1447,6 +2149,9 @@ def preflight_evaluation_comparison(
     *,
     progress: ProgressCallback | None = None,
     is_cancelled: CancelCallback | None = None,
+    evaluation_policy: str = EVALUATION_POLICY_STRICT,
+    attachments: Mapping[str, bytes] | None = None,
+    _alternate_cache: dict[tuple[str, str, str, str], _AlternateEvaluationContext] | None = None,
 ) -> EvaluationConnectivityPreflight:
     """Gate both Original and Tuned states before baseline or solver work.
 
@@ -1460,12 +2165,17 @@ def preflight_evaluation_comparison(
 
     project = scenario.base_project
     canonical_rails = _canonical_rail_ids(scenario, rail_ids, _project=project)
+    alternate_cache = _alternate_cache if _alternate_cache is not None else {}
     tuned = preflight_evaluation_connectivity(
-        scenario, canonical_rails, _project=project
+        scenario, canonical_rails, _project=project,
+        evaluation_policy=evaluation_policy, attachments=attachments,
+        _alternate_cache=alternate_cache,
     )
     original_scenario = _comparison_original_configuration(scenario)
     original = preflight_evaluation_connectivity(
-        original_scenario, canonical_rails, _project=project
+        original_scenario, canonical_rails, _project=project,
+        evaluation_policy=evaluation_policy, attachments=attachments,
+        _alternate_cache=alternate_cache,
     )
     tuned_items = (
         *tuned.blockers,
@@ -1490,6 +2200,9 @@ def preflight_evaluation_comparison(
             progress=progress,
             is_cancelled=is_cancelled,
             stage_count=stage_count,
+            evaluation_policy=evaluation_policy,
+            attachments=attachments,
+            _alternate_cache=alternate_cache,
         ),
     )
     tuned_input_sha = _rail_builder_input_sha256_by_rail(
@@ -1523,6 +2236,9 @@ def preflight_evaluation_comparison(
             stage_offset=len(canonical_rails),
             stage_count=stage_count,
             skip_rail_ids=identical_rail_keys,
+            evaluation_policy=evaluation_policy,
+            attachments=attachments,
+            _alternate_cache=alternate_cache,
         ),
     )
     tuned_by_identity = {
@@ -1669,6 +2385,8 @@ def _validate_evaluation_view(view: EvaluationView) -> None:
                 raise ScenarioEvaluationCacheError(
                     "cached research evaluation has an incomplete evidence identity"
                 ) from exc
+    if getattr(view, "evaluation_policy", EVALUATION_POLICY_STRICT) not in _EVALUATION_POLICIES:
+        raise ScenarioEvaluationCacheError("cached evaluation geometry policy is unknown")
     arrays = {
         "magnitude_ohm": view.magnitude_ohm,
         "phase_deg": view.phase_deg,
@@ -1874,6 +2592,7 @@ def _decode_baseline_evaluation(
         "solver_profile_label",
         "solver_profile_badge",
         "solver_provenance",
+        "evaluation_policy",
     }
     actual_view_fields = (
         frozenset(view_payload) if isinstance(view_payload, dict) else frozenset()
@@ -1901,6 +2620,7 @@ def _decode_baseline_evaluation(
                 "powersi_used_for_parameters": False,
                 "validation_status": "legacy_regression",
             },
+            "evaluation_policy": EVALUATION_POLICY_STRICT,
         }
     try:
         view = EvaluationView(**view_payload)
@@ -1927,6 +2647,7 @@ def _load_baseline_evaluation(
     target_ohm: float | None,
     modal_max_index: int,
     solver_profile: str = DEFAULT_SOLVER_PROFILE_KEY,
+    evaluation_policy: str = EVALUATION_POLICY_STRICT,
 ) -> ScenarioEvaluation | None:
     if resolve_solver_profile(solver_profile).experimental:
         # Evidence is compiled only inside the source-only evaluation path.
@@ -1942,9 +2663,10 @@ def _load_baseline_evaluation(
         capture.evaluation_input_sha256,
         rail_id,
         target_ohm=target_ohm,
-        modal_max_index=modal_max_index,
-        solver_profile=solver_profile,
-    )
+            modal_max_index=modal_max_index,
+            solver_profile=solver_profile,
+            evaluation_policy=evaluation_policy,
+        )
     metadata = scenario.evaluation_cache.get(expected_key.cache_key)
     if metadata is None:
         return None
@@ -2448,6 +3170,9 @@ def build_evaluation_project(
     evaluation_rail_id: str | None = None,
     _project: ProjectSpec | None = None,
     _design_fingerprint: str | None = None,
+    evaluation_policy: str = EVALUATION_POLICY_STRICT,
+    attachments: Mapping[str, bytes] | None = None,
+    _alternate_cache: dict[tuple[str, str, str, str], _AlternateEvaluationContext] | None = None,
 ) -> ProjectSpec:
     """Build and validate a solver project for the current scenario state.
 
@@ -2456,13 +3181,67 @@ def build_evaluation_project(
     mounted capacitor on an unrelated rail must not block the requested rail.
     """
 
+    if evaluation_policy not in _EVALUATION_POLICIES:
+        raise ScenarioEvaluationBuildError("EVALUATION_POLICY_UNKNOWN", f"unknown Evaluation geometry policy {evaluation_policy!r}")
     base = _project if _project is not None else scenario.base_project
+    alternate_provenance: dict[str, Any] | None = None
+    effective_policy = evaluation_policy
+    if evaluation_policy == EVALUATION_POLICY_EMBEDDED_ALTERNATE and evaluation_rail_id is not None:
+        strict_pf = preflight_evaluation_connectivity(
+            scenario, (evaluation_rail_id,), _project=base,
+            evaluation_policy=EVALUATION_POLICY_STRICT,
+            attachments=attachments,
+        )
+        if strict_pf.is_clear:
+            effective_policy = EVALUATION_POLICY_STRICT
+        elif any(
+            not item.reason.startswith("TERMINAL_OUTSIDE_SELECTED_PLANE:")
+            for item in strict_pf.blockers
+        ):
+            raise ScenarioEvaluationPreflightError(strict_pf)
+        context = (
+            _alternate_context_for_rail(scenario, evaluation_rail_id, attachments=attachments, _cache=_alternate_cache)
+            if effective_policy == EVALUATION_POLICY_EMBEDDED_ALTERNATE
+            else None
+        )
+        if effective_policy == EVALUATION_POLICY_EMBEDDED_ALTERNATE and context is None:
+            rail_name = str(evaluation_rail_id)
+            blocker = EvaluationConnectivityBlocker(
+                rail_id=rail_name,
+                refdes="<alternate plane evidence>",
+                kind=DecapConnectionKind.UNRESOLVED,
+                reason="EMBEDDED_ALTERNATE_PAIR_APPROXIMATION_V1: no hash-valid retained adjacent PWR/pure-GND geometry pair covers every finite terminal; strict Evaluation remains blocked",
+            )
+            raise ScenarioEvaluationPreflightError(EvaluationConnectivityPreflight((rail_name,), (blocker,)))
+        if effective_policy == EVALUATION_POLICY_EMBEDDED_ALTERNATE:
+            scenario = context.scenario
+            base = context.project
+            alternate_provenance = context.provenance
     rail_by_id = _lookup_casefold(base.rails, "rail_id")
     model_by_id = _lookup_casefold(base.cap_models, "model_id")
     via_by_id = _lookup_casefold(base.via_templates, "template_id")
     template_ids_by_rail = _via_template_ids_by_rail(base)
 
     device_pins = [item for item in base.pins if item.kind == PinKind.DEVICE_BUMP]
+    if alternate_provenance is not None and evaluation_rail_id is not None:
+        selected_rail = rail_by_id[evaluation_rail_id.casefold()]
+        alt_template_id = str(alternate_provenance.get("alternate_template_id", ""))
+        source_template_id = str(alternate_provenance.get("source_template_id", ""))
+        device_pins = [
+            pin.model_copy(update={"via_template_id": alt_template_id})
+            if (
+                pin.via_template_id
+                and pin.via_template_id.casefold() == source_template_id.casefold()
+                and pin.site is not None
+                and pin.site.casefold() == selected_rail.site.casefold()
+                and (
+                    (pin.terminal == TerminalKind.PWR and pin.net.casefold() == selected_rail.net.casefold())
+                    or pin.terminal == TerminalKind.GND
+                )
+            )
+            else pin
+            for pin in device_pins
+        ]
     pins: list[PinRecord] = list(device_pins)
     topologies: list[TopologyMap] = []
     shared_pad_clusters: list[SharedPadClusterSpec] = []
@@ -3062,6 +3841,14 @@ def build_evaluation_project(
     ]
     partitions = [item.model_copy(update={"confirmed": True}) for item in base.partitions]
     payload = base.model_dump(mode="json")
+    assumptions = _scenario_assumptions(base)
+    if alternate_provenance is not None:
+        assumptions.extend(
+            [
+                "Evaluation opt-in EMBEDDED_ALTERNATE_PAIR_APPROXIMATION_V1 selected a retained adjacent PWR/pure-GND geometry pair transiently; the source vertical landing path is not persisted or proven.",
+                "Alternate-plane Evaluation is LOW confidence and is not exact PowerSI sign-off; no terminal was clamped, expanded, or dropped.",
+            ]
+        )
     payload.update(
         {
             "pins": [item.model_dump(mode="json") for item in pins],
@@ -3072,7 +3859,7 @@ def build_evaluation_project(
             ],
             "placements": [item.model_dump(mode="json") for item in placements],
             "partitions": [item.model_dump(mode="json") for item in partitions],
-            "assumptions": _scenario_assumptions(base),
+            "assumptions": assumptions,
             "metadata": _confirmed_metadata(
                 scenario,
                 design_fingerprint=_design_fingerprint,
@@ -3081,7 +3868,12 @@ def build_evaluation_project(
         }
     )
     try:
-        return ProjectSpec.model_validate(payload)
+        result = ProjectSpec.model_validate(payload)
+        if alternate_provenance is not None:
+            metadata = dict(result.metadata)
+            metadata["evaluation_alternate_pair_provenance"] = alternate_provenance
+            result = result.model_copy(update={"metadata": metadata})
+        return result
     except ValueError as exc:
         raise ScenarioEvaluationBuildError(
             "PROJECT_VALIDATION_FAILED",
@@ -3094,12 +3886,17 @@ def build_evaluation_workspace(
     *,
     attachments: Mapping[str, bytes] | None = None,
     evaluation_rail_id: str | None = None,
+    evaluation_policy: str = EVALUATION_POLICY_STRICT,
+    _alternate_cache: dict[tuple[str, str, str, str], _AlternateEvaluationContext] | None = None,
 ) -> WorkspaceState:
     """Return an isolated workspace for evaluation; source scenario stays immutable."""
 
     return WorkspaceState(
         project=build_evaluation_project(
-            scenario, evaluation_rail_id=evaluation_rail_id
+            scenario, evaluation_rail_id=evaluation_rail_id,
+            evaluation_policy=evaluation_policy,
+            attachments=attachments,
+            _alternate_cache=_alternate_cache,
         ),
         attachments=dict(attachments or {}),
     )
@@ -3115,6 +3912,8 @@ def evaluate_scenario(
     progress: ProgressCallback | None = None,
     is_cancelled: CancelCallback | None = None,
     solver_profile: str = DEFAULT_SOLVER_PROFILE_KEY,
+    evaluation_policy: str = EVALUATION_POLICY_STRICT,
+    _alternate_cache: dict[tuple[str, str, str, str], _AlternateEvaluationContext] | None = None,
 ) -> ScenarioEvaluation:
     """Evaluate one rail and bind the view to deterministic scenario identity."""
 
@@ -3135,6 +3934,8 @@ def evaluate_scenario(
         scenario,
         attachments=attachments,
         evaluation_rail_id=canonical_rail,
+        evaluation_policy=evaluation_policy,
+        _alternate_cache=_alternate_cache,
     )
     with scoped_blas_threads():
         view = evaluation_services.evaluate_workspace(
@@ -3146,6 +3947,16 @@ def evaluate_scenario(
             is_cancelled=is_cancelled,
             solver_profile=solver_profile,
         )
+    actual_policy = (
+        EVALUATION_POLICY_EMBEDDED_ALTERNATE
+        if state.project.metadata.get("evaluation_alternate_pair_provenance")
+        else EVALUATION_POLICY_STRICT
+    )
+    view.evaluation_policy = actual_policy
+    if actual_policy == EVALUATION_POLICY_EMBEDDED_ALTERNATE:
+        view.confidence = "LOW"
+        view.confidence_note = (view.confidence_note + " | " if view.confidence_note else "") + "Embedded alternate plane pair approximation; missing source vertical path proof; not exact sign-off."
+        view.assumptions = list(view.assumptions) + ["Missing source vertical landing path is approximated from retained adjacent PWR/pure-GND geometry; result is LOW confidence and not exact sign-off."]
     result_key = ScenarioResultKey.from_settings(
         design_fingerprint=scenario.design_fingerprint,
         rail_id=canonical_rail,
@@ -3154,6 +3965,7 @@ def evaluate_scenario(
             modal_max_index,
             solver_profile,
             solver_provenance=view.solver_provenance,
+            evaluation_policy=actual_policy,
         ),
         solver_version=view.solver_version,
     )
@@ -3175,6 +3987,7 @@ def evaluate_comparison_batch(
     progress: ProgressCallback | None = None,
     is_cancelled: CancelCallback | None = None,
     solver_profile: str = DEFAULT_SOLVER_PROFILE_KEY,
+    evaluation_policy: str = EVALUATION_POLICY_STRICT,
 ) -> ScenarioEvaluationBatch:
     """Evaluate Original and Tuned configurations for selected PWR rails.
 
@@ -3186,11 +3999,15 @@ def evaluate_comparison_batch(
     report = progress or (lambda _value, _message: None)
     cancelled = is_cancelled or (lambda: False)
     profile = resolve_solver_profile(solver_profile)
+    alternate_cache: dict[tuple[str, str, str, str], _AlternateEvaluationContext] = {}
     canonical_rails = _canonical_rail_ids(scenario, rail_ids)
     connectivity = preflight_evaluation_comparison(
         scenario,
         canonical_rails,
         is_cancelled=cancelled,
+        evaluation_policy=evaluation_policy,
+        attachments=attachments,
+        _alternate_cache=alternate_cache,
     )
     if not connectivity.is_clear:
         raise ScenarioEvaluationPreflightError(connectivity)
@@ -3204,18 +4021,34 @@ def evaluate_comparison_batch(
     report(1, "Preflighting Original and Tuned rail projects")
     baseline_project_fingerprints: dict[str, str] = {}
     tuned_project_fingerprints: dict[str, str] = {}
+    effective_policy_by_rail: dict[str, str] = {}
     for rail_id in canonical_rails:
         if cancelled():
             raise RuntimeError("evaluation cancelled")
         baseline_project = build_evaluation_project(
-            baseline_scenarios[rail_id], evaluation_rail_id=rail_id
+            baseline_scenarios[rail_id],
+            evaluation_rail_id=rail_id,
+            evaluation_policy=evaluation_policy,
+            attachments=working_attachments,
+            _alternate_cache=alternate_cache,
         )
-        tuned_project = build_evaluation_project(prepared, evaluation_rail_id=rail_id)
+        tuned_project = build_evaluation_project(
+            prepared,
+            evaluation_rail_id=rail_id,
+            evaluation_policy=evaluation_policy,
+            attachments=working_attachments,
+            _alternate_cache=alternate_cache,
+        )
         baseline_project_fingerprints[rail_id] = _solver_project_fingerprint(
             baseline_project
         )
         tuned_project_fingerprints[rail_id] = _solver_project_fingerprint(
             tuned_project
+        )
+        effective_policy_by_rail[rail_id] = (
+            EVALUATION_POLICY_EMBEDDED_ALTERNATE
+            if baseline_project.metadata.get("evaluation_alternate_pair_provenance")
+            else EVALUATION_POLICY_STRICT
         )
 
     total_stages = max(len(canonical_rails) * 2, 1)
@@ -3253,6 +4086,7 @@ def evaluate_comparison_batch(
             target_ohm=target_ohm,
             modal_max_index=modal_max_index,
             solver_profile=solver_profile,
+            evaluation_policy=effective_policy_by_rail[rail_id],
         )
         baseline_from_cache = baseline is not None
         if baseline is None:
@@ -3265,6 +4099,8 @@ def evaluate_comparison_batch(
                 progress=stage_progress(f"{rail_id} Original"),
                 is_cancelled=cancelled,
                 solver_profile=solver_profile,
+                evaluation_policy=evaluation_policy,
+                _alternate_cache=alternate_cache,
             )
             baseline = replace(
                 evaluated_baseline,
@@ -3283,6 +4119,7 @@ def evaluate_comparison_batch(
                         target_ohm=target_ohm,
                         modal_max_index=modal_max_index,
                         solver_profile=solver_profile,
+                        evaluation_policy=getattr(evaluated_baseline.view, "evaluation_policy", evaluation_policy),
                     )
                 ),
             )
@@ -3318,6 +4155,7 @@ def evaluate_comparison_batch(
                         target_ohm=target_ohm,
                         modal_max_index=modal_max_index,
                         solver_profile=solver_profile,
+                        evaluation_policy=getattr(baseline.view, "evaluation_policy", evaluation_policy),
                     )
                 ),
                 scenario_revision=prepared.revision,
@@ -3336,6 +4174,8 @@ def evaluate_comparison_batch(
                 progress=stage_progress(f"{rail_id} Tuned"),
                 is_cancelled=cancelled,
                 solver_profile=solver_profile,
+                evaluation_policy=evaluation_policy,
+                _alternate_cache=alternate_cache,
             )
         completed_stages += 1
         comparisons.append(
@@ -3382,6 +4222,7 @@ def rehydrate_scenario_evaluation(
         scenario,
         attachments=attachments,
         evaluation_rail_id=evaluation.view.rail_id,
+        evaluation_policy=getattr(evaluation.view, "evaluation_policy", EVALUATION_POLICY_STRICT),
     )
     state.last_evaluation = evaluation.view
     return replace(evaluation, state=state)
@@ -3419,6 +4260,8 @@ def analyze_scenario_with_local_llm(
 
 
 __all__ = [
+    "EVALUATION_POLICY_STRICT",
+    "EVALUATION_POLICY_EMBEDDED_ALTERNATE",
     "EVALUATION_ATTACHMENT_FORMAT",
     "PLOT_ANALYST_MODE",
     "EvaluationConnectivityBlocker",

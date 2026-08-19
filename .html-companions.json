@@ -15,10 +15,10 @@
   "documents": [
     {
       "source": "README.md",
-      "sourceBlobSha": "ae317f93dc690b85978399032c8c98e91994651f",
-      "sourceSha256": "6374ce0782ba02a1daddebd2510d6410f867c4a4496496f5585daffbca5a579e",
+      "sourceBlobSha": "54658dc0059c6fc074a69a292092b872058d3cbc",
+      "sourceSha256": "9895de14bbb81c545c30331ceda6ef0da0c44625d419604a1468596294046029",
       "output": "README.companion.html",
-      "outputSha256": "f44cf2cd8da248578b10c154f3cdfb98f69bf0a89ea862570f894c7820c8e241",
+      "outputSha256": "a3cadd72dc806c607f7e6bcec50c6efb137f9d32ed65aba0b88e8416533049de",
       "headingCount": 15,
       "visualClassification": "DOCUMENT_MAP",
       "visualTitle": "Evaluator documentation map",
@@ -27,7 +27,7 @@
         {
           "lineStart": 1,
           "lineEnd": 24,
-          "summary": "Version heading and v0.22.5 loader-performance note define the current release; the v0.22.4 tolerance history follows."
+          "summary": "Version heading and the v0.22.6 strict-default Evaluation fallback note define the current release; v0.22.5 loader-performance and v0.22.4 tolerance history remain historical."
         },
         {
           "lineStart": 26,
@@ -156,9 +156,9 @@
     {
       "source": "docs/EVALUATION_ACCURACY.md",
       "sourceBlobSha": "b782e7cee69d153656e76a6e1ba5e21746ad6cc6",
-      "sourceSha256": "591e0a957dc2d0f8994112388a194943e01714b0b8e13b350eeb26eb11e2b466",
+      "sourceSha256": "1a39bde0752082ef410246cf742a4873e134f52e5b5a771f8598b422cb956c78",
       "output": "docs/EVALUATION_ACCURACY.companion.html",
-      "outputSha256": "24aeec650d97fcb549ce3b9d6071cbfad00e9b65a98bd3cc53d07947f442d822",
+      "outputSha256": "6f1c0e64877a385e8e978d38d416cd9f284004d270380b17a6517dd736dc6226",
       "headingCount": 7,
       "visualClassification": "ARCHITECTURE",
       "visualTitle": "Evaluation modeling boundary",
@@ -167,7 +167,7 @@
         {
           "lineStart": 14,
           "lineEnd": 44,
-          "summary": "Selected PWR/DGND pair feeds a rectangular shared-PWR equivalent; general multilayer cascade is inactive and LayerPairNetwork is disconnected."
+          "summary": "Strict exact selected PWR/DGND modeling remains the default; the v0.22.6 opt-in fallback is limited to terminal-outside-plane blockers and uses hash-bound same-net artwork with LOW-confidence analytical vertical-path approximation."
         },
         {
           "lineStart": 46,
