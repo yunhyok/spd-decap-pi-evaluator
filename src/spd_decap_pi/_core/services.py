@@ -231,6 +231,9 @@ class EvaluationView:
     solver_profile_label: str = "Legacy modal"
     solver_profile_badge: str = "LEGACY"
     solver_provenance: dict[str, Any] = field(default_factory=dict)
+    # Evaluation geometry policy is carried with every result so an
+    # approximation can never be confused with the strict default.
+    evaluation_policy: str = "STRICT_EXACT"
 
     def as_dict(self) -> dict[str, Any]:
         return asdict(self)

@@ -491,6 +491,7 @@ class _EvaluationRunRequest:
     target_ohm: float | None
     modal_max_index: int
     solver_profile: str
+    evaluation_policy: str
     attachments: dict[str, bytes]
 
 
@@ -1591,6 +1592,8 @@ def _job_preflight_evaluation(
     scenario: ScenarioSpec,
     rail_ids: tuple[str, ...],
     *,
+    evaluation_policy: str = "STRICT_EXACT",
+    attachments: dict[str, bytes] | None = None,
     progress: Callable[[int, str], None],
     is_cancelled: Callable[[], bool],
 ) -> Any:
@@ -1608,6 +1611,8 @@ def _job_preflight_evaluation(
             5 + round(min(max(value, 0), 100) * 0.9), message
         ),
         is_cancelled=is_cancelled,
+        evaluation_policy=evaluation_policy,
+        attachments=attachments,
     )
     if is_cancelled():
         raise RuntimeError("evaluation preflight cancelled")
@@ -2264,10 +2269,29 @@ class MainWindow(QMainWindow):
         self.evaluation_modal_preset_combo.currentIndexChanged.connect(
             self._evaluation_modal_preset_changed
         )
+        self.evaluation_alternate_pair_checkbox = QCheckBox(
+            "Allow embedded alternate plane fallback (LOW confidence)"
+        )
+        self.evaluation_alternate_pair_checkbox.setObjectName(
+            "evaluationAlternatePairApproximationCheckBox"
+        )
+        self.evaluation_alternate_pair_checkbox.setChecked(False)
+        self.evaluation_alternate_pair_checkbox.setToolTip(
+            "Strict exact retained-plane coverage is the default. When enabled, "
+            "Evaluation may transiently derive a deterministic adjacent retained "
+            "PWR/pure-GND pair only when every finite terminal is covered. The "
+            "source vertical landing path is approximated, results are LOW "
+            "confidence, and this option is not PowerSI sign-off."
+        )
         form.addRow(rail_picker)
         form.addRow("Common target impedance (ohm)", self.target_edit)
         form.addRow("Physics model", profile_picker)
-        form.addRow("Numerical convergence preset", self.evaluation_modal_preset_combo)
+        modal_picker = QWidget()
+        modal_picker_layout = QHBoxLayout(modal_picker)
+        modal_picker_layout.setContentsMargins(0, 0, 0, 0)
+        modal_picker_layout.addWidget(self.evaluation_modal_preset_combo, 1)
+        modal_picker_layout.addWidget(self.evaluation_alternate_pair_checkbox)
+        form.addRow("Numerical convergence preset", modal_picker)
         controls_layout.addLayout(form)
         self._update_evaluation_solver_profile_help()
         self.evaluate_button = QPushButton("Run Original + Tuned evaluation")
@@ -4933,6 +4957,7 @@ class MainWindow(QMainWindow):
             self.target_edit,
             self.evaluation_solver_profile_combo,
             self.evaluation_modal_preset_combo,
+            self.evaluation_alternate_pair_checkbox,
             self.add_model_action,
             self.save_action,
             self.save_as_action,
@@ -4971,6 +4996,7 @@ class MainWindow(QMainWindow):
             self.target_edit,
             self.evaluation_solver_profile_combo,
             self.evaluation_modal_preset_combo,
+            self.evaluation_alternate_pair_checkbox,
             self.plane_layer_bar,
             self.distribution_table,
             self.distribution_distance_combo,
@@ -6846,12 +6872,18 @@ class MainWindow(QMainWindow):
             return
         modal_max_index = self._selected_evaluation_modal_max_index()
         solver_profile = self._selected_evaluation_solver_profile()
+        evaluation_policy = (
+            "EMBEDDED_ALTERNATE_PAIR_APPROXIMATION_V1"
+            if self.evaluation_alternate_pair_checkbox.isChecked()
+            else "STRICT_EXACT"
+        )
         request = _EvaluationRunRequest(
             scenario=self._scenario,
             rail_ids=tuple(rail_ids),
             target_ohm=target,
             modal_max_index=modal_max_index,
             solver_profile=solver_profile,
+            evaluation_policy=evaluation_policy,
             attachments=dict(self._attachments),
         )
         self._pending_evaluation_launch = None
@@ -6859,6 +6891,8 @@ class MainWindow(QMainWindow):
             _job_preflight_evaluation,
             request.scenario,
             request.rail_ids,
+            evaluation_policy=request.evaluation_policy,
+            attachments=dict(request.attachments),
         )
         self._run_worker(
             worker,
@@ -7022,6 +7056,7 @@ class MainWindow(QMainWindow):
             target_ohm=request.target_ohm,
             modal_max_index=request.modal_max_index,
             solver_profile=request.solver_profile,
+            evaluation_policy=request.evaluation_policy,
             attachments=dict(request.attachments),
         )
         profile_prefix = (

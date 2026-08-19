@@ -7,6 +7,7 @@ import re
 import tomllib
 
 from spd_decap_pi._core import services as core_services
+from spd_decap_pi._core.version import __version__ as CORE_VERSION
 from spd_decap_pi.version import (
     APP_DISPLAY_NAME,
     APP_NAME,
@@ -21,10 +22,11 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 
 def test_spd_decap_release_identity_is_explicit_and_versioned() -> None:
     assert APP_NAME == "SPD Decap PI Evaluator"
-    assert __version__ == "0.22.5"
-    assert APP_DISPLAY_NAME == "SPD Decap PI Evaluator v0.22.5"
+    assert __version__ == "0.22.6"
+    assert CORE_VERSION == "0.22.6"
+    assert APP_DISPLAY_NAME == "SPD Decap PI Evaluator v0.22.6"
     assert EXECUTABLE_BASENAME == "SPDDecapPIEvaluator"
-    assert INSTALLER_BASENAME == "SPDDecapPIEvaluatorSetup-0.22.5"
+    assert INSTALLER_BASENAME == "SPDDecapPIEvaluatorSetup-0.22.6"
 
 
 def test_spd_decap_console_and_packaging_metadata_are_consistent() -> None:
@@ -93,10 +95,10 @@ def test_windows_version_resource_matches_release_identity() -> None:
     version_info = (
         REPO_ROOT / "packaging" / "spd_decap_pi_version_info.txt"
     ).read_text(encoding="utf-8")
-    assert "filevers=(0, 22, 5, 0)" in version_info
-    assert "prodvers=(0, 22, 5, 0)" in version_info
-    assert "StringStruct('FileVersion', '0.22.5')" in version_info
-    assert "StringStruct('ProductVersion', '0.22.5')" in version_info
+    assert "filevers=(0, 22, 6, 0)" in version_info
+    assert "prodvers=(0, 22, 6, 0)" in version_info
+    assert "StringStruct('FileVersion', '0.22.6')" in version_info
+    assert "StringStruct('ProductVersion', '0.22.6')" in version_info
 
 
 def test_packaged_numerical_path_imports_threadpoolctl() -> None:
@@ -181,15 +183,17 @@ def test_readme_companion_and_manifest_are_current_and_hash_bound() -> None:
         assert entry["output"] == output_path.relative_to(REPO_ROOT).as_posix()
 
     readme_companion = readme_companion_path.read_text(encoding="utf-8")
-    assert "SPD Decap PI Evaluator v0.22.5" in readme_companion
+    assert "SPD Decap PI Evaluator v0.22.6" in readme_companion
+    assert "v0.22.6 Evaluation fallback" in readme_companion
+    assert "LOW confidence" in readme_companion
+    assert "source scenario immutable" in readme_companion
     assert "v0.22.5 loader-performance release note" in readme_companion
     assert "#v0225-loader-performance-release-note" in readme_companion
     source_headings = re.findall(
         r"(?m)^#{1,6} (.+)$", readme_path.read_text(encoding="utf-8")
     )
     assert len(source_headings) == 15
-    assert 'viewBox="0 0 760 852"' in readme_companion
-    assert readme_companion.count('<g><circle') == len(source_headings)
+    assert readme_companion.count('<h2 id=') == len(source_headings) - 1
 
     def heading_slug(label: str) -> str:
         slug = re.sub(r"[^\w\s-]", "", label.casefold(), flags=re.UNICODE)
@@ -203,7 +207,7 @@ def test_readme_companion_and_manifest_are_current_and_hash_bound() -> None:
     readme_hash = sha256(canonical_bytes(readme_path)).hexdigest()
     assert f'<meta name="source-sha256" content="{readme_hash}">' in readme_companion
     assert f"Source SHA-256: <code>{readme_hash}</code>" in readme_companion
-    assert "SPDDecapPIEvaluatorSetup-0.22.5.exe" in readme_companion
+    assert "SPDDecapPIEvaluatorSetup-0.22.6.exe" in readme_companion
 
     methodology_evidence = documents[
         "docs/DECAP_DISTRIBUTION_RULES.md"
@@ -226,3 +230,20 @@ def test_readme_companion_and_manifest_are_current_and_hash_bound() -> None:
         and "DONOR" in item["summary"]
         for item in methodology_evidence
     )
+
+
+def test_evaluation_accuracy_companion_hash_is_consistent_everywhere() -> None:
+    source_path = REPO_ROOT / "docs" / "EVALUATION_ACCURACY.md"
+    companion = (REPO_ROOT / "docs" / "EVALUATION_ACCURACY.companion.html").read_text(encoding="utf-8")
+    source = source_path.read_bytes().decode("utf-8").replace("\r\n", "\n").replace("\r", "\n").encode("utf-8")
+    digest = sha256(source).hexdigest()
+    assert "v0.22.6 strict Evaluation policy" in companion
+    assert "LOW-confidence" in companion
+    assert "immutable" in companion
+    assert "fail closed" in companion
+    assert f"source-sha256={digest}" in companion
+    assert f'<meta name="source-sha256" content="{digest}">' in companion
+    assert f"Source SHA-256: <code>{digest}</code>" in companion
+    manifest = json.loads((REPO_ROOT / ".html-companions.json").read_text(encoding="utf-8"))
+    entry = next(item for item in manifest["documents"] if item["source"] == "docs/EVALUATION_ACCURACY.md")
+    assert entry["sourceSha256"] == digest
