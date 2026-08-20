@@ -3,6 +3,7 @@ from __future__ import annotations
 import math
 
 import numpy as np
+from openpyxl import load_workbook
 import pytest
 
 import spd_decap_pi.distribution as distribution_module
@@ -264,19 +265,30 @@ def test_workbook_rejects_incomplete_or_contradictory_policy_metadata(
     message: str,
 ) -> None:
     path = tmp_path / f"invalid-{policy}.xlsx"
-    metadata: dict[str, object] = {
-        "Format Version": 3,
-        "Optimization Policy": policy,
-    }
-    if penalty is not None:
-        metadata["Effective Gap Penalty (um)"] = penalty
+    # ``write_distribution_workbook`` refuses these policy/penalty pairings
+    # itself, so the invalid workbook has to be built by writing a valid one
+    # and then rewriting the two metadata cells in place.  That keeps this
+    # test on the loader gate it targets instead of the writer gate.
     write_distribution_workbook(
         path,
         (),
         ("PWR NET", "M1\nTarget"),
         (("V1 (R1)", 1),),
-        metadata=metadata,
+        metadata={
+            "Format Version": 3,
+            "Optimization Policy": "BALANCED_CUSTOM",
+            "Effective Gap Penalty (um)": 1.0,
+        },
     )
+    workbook = load_workbook(path, data_only=False)
+    sheet = workbook["PWR NET Distribution Targets"]
+    for row in sheet.iter_rows(min_col=1, max_col=2):
+        if row[0].value == "Optimization Policy":
+            row[1].value = policy
+        elif row[0].value == "Effective Gap Penalty (um)":
+            row[1].value = penalty
+    workbook.save(path)
+
     with pytest.raises(ValueError, match=message):
         load_distribution_targets(
             path,
