@@ -23,6 +23,13 @@ try {
     if (-not $SkipTests) {
         Invoke-Native $pythonExe @("-m", "pytest")
     }
+    # scipy vendors the array-API shim packages under two different paths across
+    # the range pyproject allows (scipy>=1.15): scipy._lib.* through scipy 1.17
+    # and scipy._external.* from scipy 1.18. Their backends are resolved with
+    # importlib at run time, so PyInstaller cannot discover them statically.
+    # Both layouts are listed because --collect-submodules silently returns an
+    # empty list for a package that is not installed, which makes collecting the
+    # pair safe on either scipy version instead of silently collecting nothing.
     Invoke-Native $pythonExe @(
         "-m", "PyInstaller",
         "--noconfirm",
@@ -31,6 +38,8 @@ try {
         "--paths", "src",
         "--name", "SPDDecapPIEvaluator",
         "--version-file", "packaging\spd_decap_pi_version_info.txt",
+        "--collect-submodules", "scipy._lib.array_api_compat",
+        "--collect-submodules", "scipy._lib.array_api_extra",
         "--collect-submodules", "scipy._external.array_api_compat",
         "--collect-submodules", "scipy._external.array_api_extra",
         "--hidden-import", "scipy.linalg.cython_blas",

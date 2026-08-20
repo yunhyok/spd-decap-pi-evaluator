@@ -1,6 +1,6 @@
 # De-cap Distribution 변동 규칙
 
-> 적용 프로그램: **SPD Decap PI Evaluator v0.22.5**
+> 적용 프로그램: **SPD Decap PI Evaluator v0.22.7** (v0.22.6/v0.22.7은 Distribution 방법론과 물리를 변경하지 않았다)
 >
 > 문서 상태: 현재 구현 및 회귀 테스트에 대응하는 동작 규칙
 >
@@ -421,6 +421,8 @@ zero-gap subset 설명은 최종 MILP의 multi-NET handoff 가능성, gap 선택
 - BALANCED combined objective가 증명된 뒤 gap/canonical 동률 단계가 시간 제한에
   도달하면 combined optimum을 보존하는 최선의 유효 incumbent를 사용하고
   `OBJECTIVE_TIEBREAK_FALLBACK`을 표시한다.
+- 수량·이동 assignment를 고정한 뒤 separator pad를 재최적화하는 단계는
+  `MIN_GAPS`에서만 수행한다. 아래 두 항목은 그 단계가 실행된 경우에만 적용된다.
 - separator 위치를 고정한 뒤의 distance 최적값은 그 separator 위치에 조건부인
   결과다. 앞 단계의 joint assignment/separator 최적값까지 증명되지 않았다면
   전역 joint optimum으로 표현하지 않는다.

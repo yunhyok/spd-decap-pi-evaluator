@@ -19,6 +19,40 @@ jobs:
         with:
           python-version: "3.12"
           cache: pip
+      - name: Verify tag matches packaged version
+        if: startsWith(github.ref, 'refs/tags/')
+        shell: python
+        run: |
+          import os
+          import pathlib
+          import re
+          import sys
+          import tomllib
+
+          project = tomllib.loads(
+              pathlib.Path("pyproject.toml").read_text(encoding="utf-8")
+          )
+          pyproject_version = project["project"]["version"]
+          match = re.search(
+              r'^__version__\s*=\s*"([^"]+)"',
+              pathlib.Path("src/spd_decap_pi/version.py").read_text(encoding="utf-8"),
+              re.MULTILINE,
+          )
+          if match is None:
+              sys.exit("src/spd_decap_pi/version.py does not define __version__")
+          package_version = match.group(1)
+          if package_version != pyproject_version:
+              sys.exit(
+                  f"pyproject version {pyproject_version} does not match "
+                  f"package version {package_version}"
+              )
+          ref_name = os.environ["GITHUB_REF_NAME"]
+          if ref_name != f"v{package_version}":
+              sys.exit(
+                  f"release tag {ref_name} does not match packaged version "
+                  f"{package_version}; expected tag v{package_version}"
+              )
+          print(f"release tag {ref_name} matches packaged version {package_version}")
       - name: Install Inno Setup
         run: choco install innosetup --no-progress --yes
       - name: Build and test installer

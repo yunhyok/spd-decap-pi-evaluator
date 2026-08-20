@@ -4,6 +4,7 @@ from pathlib import Path
 from types import SimpleNamespace
 from hashlib import sha256
 import pytest
+from spd_decap_pi._core.io.touchstone import TouchstoneError
 SCRIPT=Path(__file__).parents[1]/'scripts'/'validate_powersi_reference.py'
 spec=importlib.util.spec_from_file_location('validate_powersi_reference',SCRIPT); module=importlib.util.module_from_spec(spec); assert spec.loader; spec.loader.exec_module(module)
 def test_cli_argument_parsing_and_mapping(tmp_path):
@@ -29,6 +30,48 @@ def test_explicit_port_label_fails_closed_when_touchstone_header_is_absent(monke
  monkeypatch.setattr(module,'s_to_z',lambda _network: pytest.fail('must fail before S-to-Z'))
  with pytest.raises(ValueError,match='requires Touchstone'):
   module.main(['--scenario','missing.spdpi','--touchstone','headerless.s1p','--rail-port','R=1','--port-label','R=custom header','--output',str(tmp_path/'out.json')])
+
+_TWO_PORT_ROWS='\n'.join(f'{f} '+' '.join(['0']*8) for f in ('100000','1000000','10000000','100000000'))
+
+def _labelled_touchstone(tmp_path,*,complete):
+ lines=['# Hz S RI R 1','! Port[1] = 2nd_SITE0-VDD/0']
+ if complete: lines.append('! Port[2] = 2nd_SITE1-VSS/1')
+ lines.append(_TWO_PORT_ROWS)
+ path=tmp_path/('complete.s2p' if complete else 'partial.s2p'); path.write_text('\n'.join(lines)+'\n',encoding='utf-8'); return path
+
+def _stub_solver(monkeypatch):
+ frequencies=module.np.asarray([1e5,1e6,1e7,1e8])
+ solve=SimpleNamespace(
+  frequencies_hz=frequencies,
+  impedance_ohm=module.np.ones(4,dtype=complex),
+  diagnostics=SimpleNamespace(condition_numbers=module.np.ones(4),relative_residuals=module.np.zeros(4)),
+ )
+ outcome=SimpleNamespace(solve=solve,solver_version='test-solver',convergence=None)
+ monkeypatch.setattr(module,'load_scenario_bundle',lambda _path: SimpleNamespace(scenario=object()))
+ monkeypatch.setattr(module,'build_evaluation_project',lambda *_args,**_kwargs: object())
+ monkeypatch.setattr(module,'evaluate_project_rail_converged',lambda *_args,**_kwargs: outcome)
+
+def test_require_port_labels_rejects_a_partially_labelled_header(monkeypatch,tmp_path):
+ """--require-port-labels must be enforced even when some ! Port[n] labels exist."""
+ touchstone=_labelled_touchstone(tmp_path,complete=False)
+ scenario=tmp_path/'scenario.spdpi'; scenario.write_bytes(b'fixture')
+ monkeypatch.setattr(module,'s_to_z',lambda _network: pytest.fail('must fail before S-to-Z'))
+ _stub_solver(monkeypatch)
+ with pytest.raises(TouchstoneError,match='header is incomplete'):
+  module.main(['--scenario',str(scenario),'--touchstone',str(touchstone),'--rail-port','VDD/0=1','--require-port-labels','--output',str(tmp_path/'out.json')])
+ assert not (tmp_path/'out.json').exists()
+
+def test_port_label_validation_string_records_whether_completeness_was_enforced(monkeypatch,tmp_path):
+ scenario=tmp_path/'scenario.spdpi'; scenario.write_bytes(b'fixture')
+ _stub_solver(monkeypatch)
+ def run(touchstone,extra):
+  output=tmp_path/'report.json'
+  module.main(['--scenario',str(scenario),'--touchstone',str(touchstone),'--rail-port','VDD/0=1','--output',str(output)]+extra)
+  return json.loads(output.read_text(encoding='utf-8'))['port_label_validation']
+ partial=_labelled_touchstone(tmp_path,complete=False); complete=_labelled_touchstone(tmp_path,complete=True)
+ assert run(partial,[])=='selected labels exactly match Touchstone header (PowerSI convention or explicit override)'
+ assert run(complete,[])=='selected labels exactly match Touchstone header (PowerSI convention or explicit override)'
+ assert run(complete,['--require-port-labels'])=='required labels exactly match Touchstone header'
 
 def test_comparison_rejects_missing_band_or_reference_endpoint_coverage():
  f=module.np.asarray([1e5,1e6,1e7,1e8]); z=module.np.ones(4,dtype=complex)

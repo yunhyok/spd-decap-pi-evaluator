@@ -211,7 +211,7 @@ See [the research and implementation directive](docs/DECAP_DISTRIBUTION_SIGNAL_T
 - Distribution의 Target/Tolerance 셀은 캐시된 수량으로 즉시 검증하며, `Ctrl`/`Shift`로 같은 종류의 셀을 여러 개 선택한 뒤 숫자를 한 번 입력해 동일 값으로 일괄 변경
 - Distribution 후보를 수신 PWR NET bump에서 가까운 순서 또는 먼 순서로 선택하고, 물리 제약으로 목표에 미달해도 가능한 변경과 `Assignment Failed`·`Isolation Gaps`·shortfall을 표시
 - Distribution 최적화는 기본 `BALANCED_AUTO`, 사용자 penalty의 `BALANCED_CUSTOM`, 기존 strict gap-first `MIN_GAPS`를 제공하며 선택 policy와 실제 penalty를 Preview와 Excel metadata에 기록
-- shared-pad 대형 문제에서 수량·이동 assignment를 먼저 고정한 뒤 separator pad를 재최적화하고, 원자적 topology 검증을 통과한 불필요 gap을 복원하여 서로 다른 NET 경계에 실제로 필요한 isolation gap만 남김
+- shared-pad 대형 문제에서 수량·이동 assignment를 먼저 고정한 뒤 separator pad를 재최적화하는 단계는 `MIN_GAPS`에서만 수행하며, 원자적 topology 검증을 통과한 불필요 gap 복원은 모든 policy에 적용하여 서로 다른 NET 경계에 실제로 필요한 isolation gap만 남김
 - 이전 Distribution Excel의 절대 `Target`·`Tolerance (%)`를 `Import Targets...`로 재사용하며, `Present`는 현재 SPD에서 즉시 다시 계산하고 기록되지 않은 후보 순서는 사용자가 명시적으로 선택
 - Distribution 표를 더블클릭하면 비모달 분리창을 열고, 계산 전후 Target XLSX를 내보내거나 엄격히 검증해 다시 가져오며, 메인 도면과 분리창에서 `Current / distributed`와 `Source SPD (read-only)` assignment/isolation-gap 상태를 번갈아 확인
 - Distribution 결과의 전체 Decap을 `Component`, `REFDES`, `Before NET`, `After NET`, `X`, `Y` 열 CSV 또는 Excel로 내보내며, 희생 cell은 `UNUSED (ISOLATION GAP)`으로 기록하고 Excel의 두 번째 sheet에는 계산 당시 `PWR NET Distribution Targets` 표와 input inventory reconciliation을 보존

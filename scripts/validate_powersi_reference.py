@@ -43,7 +43,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument(
         "--require-port-labels",
         action="store_true",
-        help="require exact ! Port[n] = rail labels for every selected rail",
+        help="require a complete exact ! Port[n] = rail header for every Touchstone matrix port",
     )
     parser.add_argument(
         "--port-label",
@@ -407,8 +407,17 @@ def main(argv: list[str] | None = None) -> None:
     if any(port > source_network.s_parameters.shape[1] for port in ports.values()):
         raise ValueError("--rail-port references a port outside the Touchstone matrix")
     if source_network.port_mapping:
-        validate_port_manifest(source_network, ports, expected_header_labels=expected_labels)
-        label_validation = "selected labels exactly match Touchstone header (PowerSI convention or explicit override)"
+        validate_port_manifest(
+            source_network,
+            ports,
+            expected_header_labels=expected_labels,
+            require_complete_header=args.require_port_labels,
+        )
+        label_validation = (
+            "required labels exactly match Touchstone header"
+            if args.require_port_labels
+            else "selected labels exactly match Touchstone header (PowerSI convention or explicit override)"
+        )
     elif expected_labels:
         raise ValueError(
             "--port-label requires Touchstone ! Port[n] header mappings"

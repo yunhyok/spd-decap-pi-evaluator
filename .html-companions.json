@@ -15,10 +15,10 @@
   "documents": [
     {
       "source": "README.md",
-      "sourceBlobSha": "27ab28b965e248ced4ff6e760e0787be504bdb53",
-      "sourceSha256": "2ceb0649164466db0fe8a1108e19ada1b93bc629e8ee4fa1a37e1bb62ae13f81",
+      "sourceBlobSha": "66c0b695f6cc45d608af81cc25487db197881751",
+      "sourceSha256": "e23936af3b7dffde3dfb4065c4c7251d02ed4d1d351576a8ed364b64aadf6162",
       "output": "README.companion.html",
-      "outputSha256": "c8588419cb97db20831d1d9d8e51f6f682a253192d3462609f2b15ad8d7a5350",
+      "outputSha256": "c04a4750da788df834da0156ab892a458fce910785960c9f4b8c0e5343e5c94f",
       "headingCount": 15,
       "visualClassification": "DOCUMENT_MAP",
       "visualTitle": "Evaluator documentation map",
@@ -63,10 +63,10 @@
     },
     {
       "source": "docs/DECAP_DISTRIBUTION_RULES.md",
-      "sourceBlobSha": "697c2873a8bd117aceb26ff8b329afc631584da2",
-      "sourceSha256": "33d7c81eb68e1c97483e8c9a5cfe4ae1d5dd8173c7920e3bbf5819de292ed53e",
+      "sourceBlobSha": "b02be6f7e986ac2d59d6bacf86e1048f9fda11bc",
+      "sourceSha256": "0997d65d575a7c5525f2660cd3559abae8446eae5f6410d2e5d9a4477dae5193",
       "output": "docs/DECAP_DISTRIBUTION_RULES.companion.html",
-      "outputSha256": "58b7286de3bbb895815f7cdc864cf66b787fa94a3eb0b56f8c697c9dd0a5cbeb",
+      "outputSha256": "6f717bc8056947447ba514cd05809b562dc129ec4f364b4bd263f73f9141ac1b",
       "headingCount": 38,
       "visualClassification": "PROCESS_FLOW",
       "visualTitle": "Distribution eligibility to applied result",

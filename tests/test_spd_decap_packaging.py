@@ -2,8 +2,12 @@ from __future__ import annotations
 
 from hashlib import sha1, sha256
 import json
+import os
 from pathlib import Path
 import re
+import subprocess
+import sys
+import textwrap
 import tomllib
 
 from spd_decap_pi._core import services as core_services
@@ -116,7 +120,8 @@ def test_distribution_methodology_docs_are_current_offline_and_linked() -> None:
     canonical_markdown = markdown.replace("\r\n", "\n").replace("\r", "\n")
     source_hash = sha256(canonical_markdown.encode("utf-8")).hexdigest()
 
-    assert "SPD Decap PI Evaluator v0.22.5" in markdown
+    assert "SPD Decap PI Evaluator v0.22.7" in markdown
+    assert "v0.22.6/v0.22.7은 Distribution 방법론과 물리를 변경하지 않았다" in markdown
     assert "v0.22.5 release note" in markdown
     assert "로컬 final component" in markdown
     assert "NO_ZERO_GAP_EXACT_COUNT_COMBINATION" in markdown
@@ -130,7 +135,8 @@ def test_distribution_methodology_docs_are_current_offline_and_linked() -> None:
         '<meta name="source-sha256-normalization" content="utf-8-lf">'
         in html
     )
-    assert "SPD Decap PI Evaluator v0.22.5" in html
+    assert "SPD Decap PI Evaluator v0.22.7" in html
+    assert "v0.22.6/v0.22.7은 Distribution 방법론과 물리를 변경하지 않았다" in html
     assert "v0.22.5 release note" in html
     assert f'content="{source_hash}"' in html
     assert "TARGET_RELATION_COUNTERFLOW_V1" in html
@@ -258,3 +264,105 @@ def test_evaluation_accuracy_companion_hash_is_consistent_everywhere() -> None:
     manifest = json.loads((REPO_ROOT / ".html-companions.json").read_text(encoding="utf-8"))
     entry = next(item for item in manifest["documents"] if item["source"] == "docs/EVALUATION_ACCURACY.md")
     assert entry["sourceSha256"] == digest
+
+
+def test_build_collects_both_vendored_scipy_array_api_layouts() -> None:
+    """pyproject allows scipy>=1.15, which spans the _lib -> _external rename."""
+
+    build_script = (REPO_ROOT / "scripts" / "build_spd_decap_pi.ps1").read_text(
+        encoding="utf-8"
+    )
+    pyproject = tomllib.loads(
+        (REPO_ROOT / "pyproject.toml").read_text(encoding="utf-8")
+    )
+    assert any(
+        item.startswith("scipy") for item in pyproject["project"]["dependencies"]
+    )
+
+    for package in (
+        "scipy._lib.array_api_compat",
+        "scipy._lib.array_api_extra",
+        "scipy._external.array_api_compat",
+        "scipy._external.array_api_extra",
+    ):
+        assert f'"--collect-submodules", "{package}"' in build_script
+    # --collect-submodules is a silent no-op for the layout that is absent, so
+    # the reason for listing both must stay recorded next to the flags.
+    assert "scipy._external.* from scipy 1.18" in build_script
+
+
+def test_release_workflow_refuses_a_tag_that_does_not_match_the_package() -> None:
+    """A ``v*`` tag push must fail before building when the version was not bumped."""
+
+    workflow = (
+        REPO_ROOT / ".github" / "workflows" / "windows-release.yml"
+    ).read_text(encoding="utf-8")
+
+    assert "- name: Verify tag matches packaged version" in workflow
+    # The guard must not break the manual workflow_dispatch entry point.
+    assert "if: startsWith(github.ref, 'refs/tags/')" in workflow
+    assert 'ref_name != f"v{package_version}"' in workflow
+    assert 'os.environ["GITHUB_REF_NAME"]' in workflow
+    # Both version sources must agree: the artifact name uses the tag while the
+    # installer filename comes from src/spd_decap_pi/version.py.
+    assert 'pathlib.Path("src/spd_decap_pi/version.py")' in workflow
+    assert 'pathlib.Path("pyproject.toml")' in workflow
+    assert workflow.index("- name: Verify tag matches packaged version") < workflow.index(
+        "- name: Build and test installer"
+    )
+
+    guard = workflow.split("        run: |\n", 1)[1].split(
+        "      - name: Install Inno Setup", 1
+    )[0]
+    script = textwrap.dedent(guard)
+    for ref_name, expected_exit in (("v" + __version__, 0), ("v0.0.0", 1), (__version__, 1)):
+        completed = subprocess.run(  # noqa: S603
+            [sys.executable, "-c", script],
+            cwd=REPO_ROOT,
+            env={**os.environ, "GITHUB_REF_NAME": ref_name},
+            capture_output=True,
+            text=True,
+        )
+        assert completed.returncode == expected_exit, (ref_name, completed.stderr)
+
+
+def test_offline_companion_relative_links_resolve_to_tracked_files() -> None:
+    """The offline HTML doc set must not link to companions that were never generated."""
+
+    companions = sorted(REPO_ROOT.rglob("*.companion.html"))
+    assert companions
+    dangling: list[str] = []
+    for companion in companions:
+        html = companion.read_text(encoding="utf-8")
+        for href in re.findall(r'href="([^"]+)"', html):
+            if href.startswith(("#", "http://", "https://", "mailto:", "data:")):
+                continue
+            target = (companion.parent / href.split("#", 1)[0]).resolve()
+            if not target.is_file():
+                dangling.append(
+                    f"{companion.relative_to(REPO_ROOT).as_posix()} -> {href}"
+                )
+    assert dangling == []
+
+
+def test_separator_reoptimization_is_documented_as_min_gaps_only() -> None:
+    """distribution.py runs the fixed-assignment separator stage only for MIN_GAPS."""
+
+    readme = (REPO_ROOT / "README.md").read_text(encoding="utf-8")
+    readme_companion = (REPO_ROOT / "README.companion.html").read_text(encoding="utf-8")
+    methodology = (REPO_ROOT / "docs" / "DECAP_DISTRIBUTION_RULES.md").read_text(
+        encoding="utf-8"
+    )
+
+    assert (
+        "separator pad를 재최적화하는 단계는 `MIN_GAPS`에서만 수행하며, "
+        "원자적 topology 검증을 통과한 불필요 gap 복원은 모든 policy에 적용하여"
+    ) in readme
+    assert (
+        "separator pad를 재최적화하는 단계는 <code>MIN_GAPS</code>에서만 수행하며, "
+        "원자적 topology 검증을 통과한 불필요 gap 복원은 모든 policy에 적용하여"
+    ) in readme_companion
+    assert (
+        "수량·이동 assignment를 고정한 뒤 separator pad를 재최적화하는 단계는\n"
+        "  `MIN_GAPS`에서만 수행한다."
+    ) in methodology

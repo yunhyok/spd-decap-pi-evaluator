@@ -447,16 +447,26 @@ def test_real_viewport_double_click_emits_once_and_keeps_the_marker_placed() -> 
         (plot,) = widget.plot_widgets
         emissions: list[bool] = []
         widget.plotDoubleClicked.connect(lambda: emissions.append(True))
+        # Plot geometry (fonts, DPI, axis widths) differs between platforms, so
+        # the frequency a given viewport pixel maps to is not portable.  Record
+        # the scene position the widget is actually handed and run it through
+        # the same ViewBox mapping ``_plot_clicked`` uses, at the same moment,
+        # so the expectation follows the live geometry instead of assuming it.
+        clicked_values: list[tuple[float, float]] = []
+
+        def _record_clicked_values(event: object) -> None:
+            view_point = plot.plotItem.vb.mapSceneToView(event.scenePos())
+            clicked_values.append(
+                (10.0 ** float(view_point.x()), 10.0 ** float(view_point.y()))
+            )
+
+        plot.scene().sigMouseClicked.connect(_record_clicked_values)
+
         scene_position = plot.plotItem.vb.mapViewToScene(QPointF(7.0, -1.8))
         viewport_position = plot.mapFromScene(scene_position)
-
         global_position = plot.viewport().mapToGlobal(viewport_position)
-        for event_type in (
-            QEvent.Type.MouseButtonPress,
-            QEvent.Type.MouseButtonRelease,
-            QEvent.Type.MouseButtonDblClick,
-            QEvent.Type.MouseButtonRelease,
-        ):
+
+        def _send(event_type: QEvent.Type) -> None:
             pressed_buttons = (
                 Qt.MouseButton.NoButton
                 if event_type == QEvent.Type.MouseButtonRelease
@@ -473,15 +483,37 @@ def test_real_viewport_double_click_emits_once_and_keeps_the_marker_placed() -> 
             )
             QApplication.sendEvent(plot.viewport(), event)
             application.processEvents()
+
+        _send(QEvent.Type.MouseButtonPress)
+        _send(QEvent.Type.MouseButtonRelease)
+
+        # The press placed the markers at the point the widget was handed,
+        # rather than deferring the placement to the double-click interval.
+        assert len(clicked_values) == 1
+        placed_values = widget.marker_values
+        assert placed_values == pytest.approx(clicked_values[0])
+        # Loose sanity only: the click lands inside the plotted data range.
+        assert 1.0e3 <= placed_values[0] <= 1.0e9
+        assert placed_values[1] > 0.0
+        assert widget.x_marker_line is not None
+        assert widget.y_marker_line is not None
+        assert widget.x_marker_line.isVisible()
+        assert widget.y_marker_line.isVisible()
+
+        _send(QEvent.Type.MouseButtonDblClick)
+        _send(QEvent.Type.MouseButtonRelease)
         QTest.qWait(QApplication.doubleClickInterval() + 20)
 
         assert emissions == [True]
-        # The press placed the markers at the clicked point (within viewport
-        # pixel rounding) and the double click neither cancelled nor moved
-        # them; nothing is left pending after the double-click interval.
-        frequency_hz, impedance_ohm = widget.marker_values
-        assert frequency_hz == pytest.approx(1.0e7, rel=0.05)
-        assert impedance_ohm == pytest.approx(10.0**-1.8, rel=0.05)
+        # Same pixel, so the same mapping: the double click neither cancelled
+        # the placement nor moved it, and nothing is left pending after the
+        # double-click interval.
+        assert len(clicked_values) == 2
+        assert widget.marker_values == pytest.approx(placed_values)
+        assert widget.marker_values == pytest.approx(clicked_values[1])
+        assert not hasattr(widget, "_pending_marker_click")
+        assert widget.x_marker_line.isVisible()
+        assert widget.y_marker_line.isVisible()
     finally:
         widget.close()
         application.processEvents()
