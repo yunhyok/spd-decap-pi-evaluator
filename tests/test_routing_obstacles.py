@@ -279,6 +279,36 @@ def test_asset_decoder_enforces_expansion_limit_and_json_boolean_types(
         decode_routing_obstacle_asset(malformed)
 
 
+def _reencode(document: dict) -> bytes:
+    raw = json.dumps(
+        document,
+        sort_keys=True,
+        separators=(",", ":"),
+        ensure_ascii=False,
+        allow_nan=False,
+    ).encode("utf-8")
+    return (
+        routing_module.ROUTING_ASSET_MAGIC
+        + sha256(raw).hexdigest().encode("ascii")
+        + b"\n"
+        + zlib.compress(raw, level=9)
+    )
+
+
+@pytest.mark.parametrize("radius_table", ([["L1"]], "ab", [["L1", 1.0, 2.0]]))
+def test_malformed_via_radius_table_fails_closed_as_value_error(
+    radius_table: object,
+) -> None:
+    # A short row or a JSON string used to leak IndexError past the decoder's
+    # ValueError contract, bypassing the caller's ROUTING_ASSET_STALE handling.
+    payload = encode_routing_obstacle_asset(_asset())
+    _magic, _digest, compressed = payload.split(b"\n", 2)
+    document = json.loads(zlib.decompress(compressed))
+    document["via_profiles"][0]["radius_um_by_layer"] = radius_table
+    with pytest.raises(ValueError, match="schema is invalid"):
+        decode_routing_obstacle_asset(_reencode(document))
+
+
 def test_point_segment_distance_handles_diagonal_and_zero_length() -> None:
     assert point_segment_distance(1.0, 0.0, 0.0, 0.0, 2.0, 2.0) == pytest.approx(
         2**-0.5

@@ -648,6 +648,93 @@ def test_staged_decap_render_is_invalidated_by_direct_replacement() -> None:
         application.processEvents()
 
 
+def test_staged_render_clears_the_previous_documents_disabled_x_marks() -> None:
+    application = _application()
+    board = DecapBoardView(_records())
+    try:
+        assert len(board._disabled_x_scatter.points()) == 1
+
+        board.set_decaps(
+            [
+                {
+                    "refdes": "D1",
+                    "x_um": 900.0,
+                    "y_um": 900.0,
+                    "current_net": "VDD_C",
+                    "enabled": True,
+                },
+                {
+                    "refdes": "D2",
+                    "x_um": 950.0,
+                    "y_um": 900.0,
+                    "current_net": "VDD_C",
+                    "enabled": False,
+                },
+            ],
+            staged=True,
+        )
+        # The replaced coordinate arrays no longer back the previous X marks,
+        # so they must not keep painting at the previous document's positions.
+        assert board._base_render_pending
+        assert len(board._disabled_x_scatter.points()) == 0
+
+        for _ in range(20):
+            application.processEvents()
+            if not board._base_render_pending:
+                break
+        assert not board._base_render_pending
+        x_points = board._disabled_x_scatter.points()
+        assert [point.data() for point in x_points] == ["D2"]
+        assert x_points[0].pos().x() == pytest.approx(950.0)
+    finally:
+        board.close()
+        application.processEvents()
+
+
+def test_active_net_change_during_staged_render_recolors_appended_decaps() -> None:
+    application = _application()
+    records = [
+        {
+            "refdes": f"C{index}",
+            "x_um": float(index),
+            "y_um": 0.0,
+            "current_net": "VDD_A" if index % 2 else "VDD_B",
+            "enabled": True,
+        }
+        for index in range(1_500)
+    ]
+    board = DecapBoardView()
+    try:
+        board.set_decaps(
+            records, {"VDD_A": "#ef5350", "VDD_B": "#42a5f5"}, staged=True
+        )
+        application.processEvents()
+        # The first chunk is already painted with both NETs active.
+        assert board._base_render_pending
+        assert len(board._enabled_scatter.points()) == 1_000
+
+        board.set_active_nets(("VDD_A",))
+        for _ in range(20):
+            application.processEvents()
+            if not board._base_render_pending:
+                break
+        assert not board._base_render_pending
+
+        colors = {
+            point.data(): point.brush().color().name()
+            for point in board._enabled_scatter.points()
+        }
+        assert len(colors) == 1_500
+        # Chunks appended before the coalesced change must be recolored too.
+        assert colors["C1"] == "#ef5350"
+        assert colors["C0"] == board.INACTIVE_NET_COLOR.name()
+        assert colors["C1499"] == "#ef5350"
+        assert colors["C1498"] == board.INACTIVE_NET_COLOR.name()
+    finally:
+        board.close()
+        application.processEvents()
+
+
 def test_active_net_change_restyles_visible_bumps_during_staged_decap_render(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

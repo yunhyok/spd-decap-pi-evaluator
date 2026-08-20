@@ -557,7 +557,9 @@ class DecapBoardView(pg.PlotWidget):
         if getattr(self, "_base_render_pending", False):
             # Bumps may already be visible (or be appended asynchronously).
             # Restyle the visible portion; each later append reads the current
-            # active NET set.
+            # active NET set.  Chunks already appended keep the colors they
+            # were built with, so flag a full recolor for staged completion.
+            self._active_nets_dirty = True
             self._restyle_bump_layers()
             return
         self._render_base_layers()
@@ -720,14 +722,23 @@ class DecapBoardView(pg.PlotWidget):
         )
         self._enabled_scatter.setData(x=[], y=[])
         self._disabled_scatter.setData(x=[], y=[])
+        # The previous document's X marks index the replaced coordinate arrays.
+        self._disabled_x_scatter.setData(x=[], y=[])
         self._base_render_pending = True
+        self._active_nets_dirty = False
 
         def append(batch_index: int, offset: int) -> None:
             if token != self._base_render_token:
                 return
             if batch_index >= len(batches):
                 self._base_render_pending = False
-                self._set_disabled_x_scatter(disabled_indices)
+                if self._active_nets_dirty:
+                    # An active NET change was coalesced while chunks were in
+                    # flight; repaint every batch with the current colors.
+                    self._active_nets_dirty = False
+                    self._render_base_layers()
+                else:
+                    self._set_disabled_x_scatter(disabled_indices)
                 self._render_selection_layer()
                 self._render_companion_layer()
                 return

@@ -194,6 +194,57 @@ def test_rail_checkbox_hides_only_that_rails_curves() -> None:
         application.processEvents()
 
 
+def test_select_all_and_clear_rebuild_marker_bubbles_exactly_once() -> None:
+    application = _application()
+    widget = MultiRailComparisonPlot()
+    try:
+        widget.set_comparisons(
+            (_comparison("RAIL_A"), _comparison("RAIL_B"), _comparison("RAIL_C")),
+            rail_colors={
+                "RAIL_A": "#12AB34",
+                "RAIL_B": "#9A45EF",
+                "RAIL_C": "#EF4444",
+            },
+        )
+        assert widget.x_marker_checkbox is not None
+        widget.x_marker_checkbox.setChecked(True)
+        widget.place_markers(1.0e6, 0.025)
+        assert len(widget.x_marker_bubbles) == 6
+
+        (plot,) = widget.plot_widgets
+        curves = plot.listDataItems()
+        clear_channels = widget.findChild(QPushButton, "clearPlotChannelsButton")
+        select_all = widget.findChild(QPushButton, "selectAllPlotChannelsButton")
+        assert clear_channels is not None and select_all is not None
+
+        refreshes: list[int] = []
+        original_refresh = widget._refresh_marker_bubbles
+
+        def counting_refresh() -> None:
+            refreshes.append(1)
+            original_refresh()
+
+        widget._refresh_marker_bubbles = counting_refresh
+
+        clear_channels.click()
+        # One batched rebuild, not one teardown/rebuild per rail checkbox.
+        assert refreshes == [1]
+        assert all(not box.isChecked() for box in widget.rail_checkboxes.values())
+        assert all(not curve.isVisible() for curve in curves)
+        assert widget.x_marker_bubbles == ()
+
+        refreshes.clear()
+        select_all.click()
+        assert refreshes == [1]
+        assert all(box.isChecked() for box in widget.rail_checkboxes.values())
+        assert all(curve.isVisible() for curve in curves)
+        assert len(widget.x_marker_bubbles) == 6
+    finally:
+        widget.__dict__.pop("_refresh_marker_bubbles", None)
+        widget.close()
+        application.processEvents()
+
+
 def test_x_y_markers_place_disable_drag_and_clear() -> None:
     application = _application()
     widget = MultiRailComparisonPlot()
@@ -228,11 +279,9 @@ def test_x_y_markers_place_disable_drag_and_clear() -> None:
                 )
 
         # Exercise the click path: log10 ViewBox coordinates must be converted
-        # back to physical Hz and ohm values for the marker readout.
+        # back to physical Hz and ohm values for the marker readout.  Placement
+        # is synchronous: the click itself moves the markers.
         widget._plot_clicked(ClickEvent())
-        # A single click is intentionally deferred so an arriving double-click
-        # can cancel it without moving an existing marker.
-        widget._commit_pending_marker_click()
         assert widget.marker_values == pytest.approx((1.0e6, 0.025))
         assert widget.x_marker_line.isVisible()
         assert widget.y_marker_line.isVisible()
@@ -272,7 +321,51 @@ def test_x_y_markers_place_disable_drag_and_clear() -> None:
         application.processEvents()
 
 
-def test_double_click_emits_signal_and_cancels_pending_marker_placement() -> None:
+def test_marker_click_places_immediately_and_a_second_click_repositions() -> None:
+    application = _application()
+    widget = MultiRailComparisonPlot()
+    try:
+        widget.set_comparisons(
+            (_comparison("RAIL_A"),), rail_colors={"RAIL_A": "#0088CC"}
+        )
+        assert widget.x_marker_checkbox is not None
+        assert widget.y_marker_checkbox is not None
+        widget.x_marker_checkbox.setChecked(True)
+        widget.y_marker_checkbox.setChecked(True)
+        widget.resize(900, 500)
+        widget.show()
+        application.processEvents()
+        (plot,) = widget.plot_widgets
+
+        class ClickEvent:
+            def __init__(self, log_x: float, log_y: float) -> None:
+                self._point = QPointF(log_x, log_y)
+
+            def button(self) -> Qt.MouseButton:
+                return Qt.MouseButton.LeftButton
+
+            def scenePos(self) -> QPointF:
+                return plot.plotItem.vb.mapViewToScene(self._point)
+
+            def double(self) -> bool:
+                return False
+
+        # No event-loop turn and no double-click interval: the click that the
+        # user made is the click that places the marker.
+        widget._plot_clicked(ClickEvent(6.0, log10(0.025)))
+        assert widget.marker_values == pytest.approx((1.0e6, 0.025))
+
+        # A second click repositions the marker instead of cancelling it.
+        widget._plot_clicked(ClickEvent(7.0, log10(0.015)))
+        assert widget.marker_values == pytest.approx((1.0e7, 0.015))
+        assert widget.x_marker_line is not None
+        assert widget.x_marker_line.value() == pytest.approx(7.0)
+    finally:
+        widget.close()
+        application.processEvents()
+
+
+def test_double_click_emits_signal_without_cancelling_marker_placement() -> None:
     application = _application()
     widget = MultiRailComparisonPlot()
     try:
@@ -284,11 +377,6 @@ def test_double_click_emits_signal_and_cancels_pending_marker_placement() -> Non
         widget.x_marker_checkbox.setChecked(True)
         widget.y_marker_checkbox.setChecked(True)
         widget.place_markers(1.0e6, 0.025)
-        original_values = widget.marker_values
-        original_bubble_texts = tuple(
-            bubble.toPlainText()
-            for bubble in (*widget.x_marker_bubbles, *widget.y_marker_bubbles)
-        )
         widget.resize(900, 500)
         widget.show()
         application.processEvents()
@@ -313,26 +401,35 @@ def test_double_click_emits_signal_and_cancels_pending_marker_placement() -> Non
             def accept(self) -> None:
                 self.accepted = True
 
+        clicked_values = (1.0e7, 10.0**-1.8)
+        # The click places markers immediately, without waiting out the
+        # platform double-click interval.
         first_click = ClickEvent(double=False)
         widget._plot_clicked(first_click)
-        assert widget.marker_values == original_values
+        assert widget.marker_values == pytest.approx(clicked_values)
+        placed_bubble_texts = tuple(
+            bubble.toPlainText()
+            for bubble in (*widget.x_marker_bubbles, *widget.y_marker_bubbles)
+        )
 
+        # A registered double click still reports the gesture, and it must not
+        # cancel or move the placement the same point already produced.
         double_click = ClickEvent(double=True)
         widget._plot_clicked(double_click)
         assert emissions == [True]
         assert double_click.accepted
-        assert widget.marker_values == original_values
+        assert widget.marker_values == pytest.approx(clicked_values)
         assert tuple(
             bubble.toPlainText()
             for bubble in (*widget.x_marker_bubbles, *widget.y_marker_bubbles)
-        ) == original_bubble_texts
-        assert widget._pending_marker_click is None
+        ) == placed_bubble_texts
+        assert not hasattr(widget, "_pending_marker_click")
     finally:
         widget.close()
         application.processEvents()
 
 
-def test_real_viewport_double_click_emits_once_without_moving_markers() -> None:
+def test_real_viewport_double_click_emits_once_and_keeps_the_marker_placed() -> None:
     application = _application()
     widget = MultiRailComparisonPlot()
     try:
@@ -344,8 +441,6 @@ def test_real_viewport_double_click_emits_once_without_moving_markers() -> None:
         widget.x_marker_checkbox.setChecked(True)
         widget.y_marker_checkbox.setChecked(True)
         widget.place_markers(1.0e6, 0.025)
-        original_values = widget.marker_values
-
         widget.resize(900, 500)
         widget.show()
         application.processEvents()
@@ -381,8 +476,12 @@ def test_real_viewport_double_click_emits_once_without_moving_markers() -> None:
         QTest.qWait(QApplication.doubleClickInterval() + 20)
 
         assert emissions == [True]
-        assert widget.marker_values == original_values
-        assert widget._pending_marker_click is None
+        # The press placed the markers at the clicked point (within viewport
+        # pixel rounding) and the double click neither cancelled nor moved
+        # them; nothing is left pending after the double-click interval.
+        frequency_hz, impedance_ohm = widget.marker_values
+        assert frequency_hz == pytest.approx(1.0e7, rel=0.05)
+        assert impedance_ohm == pytest.approx(10.0**-1.8, rel=0.05)
     finally:
         widget.close()
         application.processEvents()

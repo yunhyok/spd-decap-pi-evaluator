@@ -5,10 +5,9 @@ from __future__ import annotations
 from collections.abc import Hashable, Mapping, Sequence
 from math import isclose, isfinite, log10
 
-from PySide6.QtCore import QTimer, Signal, Qt
+from PySide6.QtCore import Signal, Qt
 from PySide6.QtGui import QColor
 from PySide6.QtWidgets import (
-    QApplication,
     QCheckBox,
     QHBoxLayout,
     QLabel,
@@ -63,10 +62,6 @@ class MultiRailComparisonPlot(QWidget):
         self._y_marker_value_ohm: float | None = None
         self._x_marker_bubbles: list[pg.TextItem] = []
         self._y_marker_bubbles: list[pg.TextItem] = []
-        self._pending_marker_click: tuple[float, float] | None = None
-        self._marker_click_timer = QTimer(self)
-        self._marker_click_timer.setSingleShot(True)
-        self._marker_click_timer.timeout.connect(self._commit_pending_marker_click)
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
@@ -582,8 +577,6 @@ class MultiRailComparisonPlot(QWidget):
             self._controls = None
 
     def _clear_plot_items(self) -> None:
-        self._marker_click_timer.stop()
-        self._pending_marker_click = None
         if self._plot is None:
             return
         self._plot.clear()
@@ -609,15 +602,36 @@ class MultiRailComparisonPlot(QWidget):
         self._y_marker_bubbles.clear()
 
     def _set_all_rails_visible(self, visible: bool) -> None:
+        # Toggle with signals blocked: letting every `toggled` run would tear
+        # down and rebuild every marker bubble once per rail, making the button
+        # quadratic in the rail count.  Apply visibility in one pass instead
+        # and refresh the bubbles exactly once.
         for checkbox in self._rail_checkboxes.values():
-            checkbox.setChecked(visible)
+            blocked = checkbox.blockSignals(True)
+            try:
+                checkbox.setChecked(visible)
+            finally:
+                checkbox.blockSignals(blocked)
+        for rail_key in self._rail_checkboxes:
+            self._apply_rail_item_visibility(rail_key)
+        self._apply_shared_target_visibility()
+        self._refresh_marker_bubbles()
 
     def _apply_rail_visibility(self, rail_key: str) -> None:
+        if rail_key not in self._rail_checkboxes:
+            return
+        self._apply_rail_item_visibility(rail_key)
+        self._apply_shared_target_visibility()
+        self._refresh_marker_bubbles()
+
+    def _apply_rail_item_visibility(self, rail_key: str) -> None:
         checkbox = self._rail_checkboxes.get(rail_key)
         if checkbox is None:
             return
         for item in self._rail_items.get(rail_key, ()):
             item.setVisible(checkbox.isChecked())
+
+    def _apply_shared_target_visibility(self) -> None:
         for item, member_keys in self._shared_target_items:
             item.setVisible(
                 any(
@@ -626,7 +640,6 @@ class MultiRailComparisonPlot(QWidget):
                     if key in self._rail_checkboxes
                 )
             )
-        self._refresh_marker_bubbles()
 
     def _marker_mode_changed(self, _checked: bool) -> None:
         self._sync_marker_visibility()
@@ -661,33 +674,33 @@ class MultiRailComparisonPlot(QWidget):
         view_box = self._plot.plotItem.vb
         if scene_pos is None or not view_box.sceneBoundingRect().contains(scene_pos):
             return
-        if bool(getattr(event, "double", lambda: False)()):
-            # A single-click is deferred for the platform double-click interval,
-            # allowing the second click to cancel marker placement entirely.
-            self._marker_click_timer.stop()
-            self._pending_marker_click = None
+        double = bool(getattr(event, "double", lambda: False)())
+        if double:
             accept = getattr(event, "accept", None)
             if callable(accept):
                 accept()
-            self.plotDoubleClicked.emit()
-            return
         log_point = view_box.mapSceneToView(scene_pos)
         try:
             # pyqtgraph ViewBox coordinates are log10 values in log mode.
             frequency = 10.0 ** float(log_point.x())
             impedance = 10.0 ** float(log_point.y())
         except (OverflowError, TypeError, ValueError):
-            return
-        if isfinite(frequency) and isfinite(impedance):
-            self._pending_marker_click = (frequency, impedance)
-            self._marker_click_timer.start(QApplication.doubleClickInterval())
-
-    def _commit_pending_marker_click(self) -> None:
-        self._marker_click_timer.stop()
-        pending = self._pending_marker_click
-        self._pending_marker_click = None
-        if pending is not None and self._has_comparisons:
-            self.place_markers(*pending)
+            # An unmappable point places nothing, but the gesture is still
+            # reported below.
+            frequency = impedance = 0.0
+        if (
+            isfinite(frequency)
+            and isfinite(impedance)
+            and frequency > 0.0
+            and impedance > 0.0
+        ):
+            # Markers are placed on the click that produced them; a later click
+            # simply repositions them.  Deferring placement for the platform
+            # double-click interval made the plot feel unresponsive and let a
+            # fast second click cancel the first one with no visible effect.
+            self.place_markers(frequency, impedance)
+        if double:
+            self.plotDoubleClicked.emit()
 
     def _x_marker_moved(self) -> None:
         if self._x_marker_line is None or not self._x_marker_line.isVisible():

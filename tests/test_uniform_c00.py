@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from types import SimpleNamespace
+
 import numpy as np
 import pytest
 from shapely.geometry import box
@@ -21,6 +23,7 @@ from spd_decap_pi._core.solver.uniform_c00 import (
     assemble_uniform_effective_admittance,
     replace_modal_c00_admittance,
     replace_modal_c00_from_assembly,
+    replace_prepared_uniform_c00_from_assembly,
 )
 
 
@@ -131,6 +134,32 @@ def test_modal_c00_is_replaced_not_added_and_bad_projection_or_multirail_fails()
     multi = assemble_uniform_effective_admittance(partials, (1e6, 2e6), reference_net="DGND", selected_nets=("A", "B"), port_connectivity=_tie())
     with pytest.raises(UniformC00Error, match="multi-rail"):
         replace_modal_c00_from_assembly(old, modes=((0, 0), (1, 0)), modal_uniform_projection=(1.0, 0.0), legacy_c00_admittance=old[:, 0], assembly=multi)
+
+
+def test_prepared_replacement_requires_the_prepared_frequency_grid() -> None:
+    partials = (DispersiveAdjacentGap(_partial(_c((0, 1, 2.0), (1, 2, 3.0), (0, 2, 5.0))), _disp()),)
+    assembly = assemble_uniform_effective_admittance(
+        partials, (1e6, 2e6), reference_net="DGND", selected_nets=("A",), port_connectivity=_tie()
+    )
+    replaced = object()
+
+    class _Solver:
+        def __init__(self) -> None:
+            self.calls: list[np.ndarray] = []
+
+        def replace_uniform_c00_term(self, prepared, replacement_admittance_s):
+            self.calls.append(np.asarray(replacement_admittance_s))
+            return replaced
+
+    solver = _Solver()
+    shifted = SimpleNamespace(frequencies_hz=np.asarray([1e6, 3e6], dtype=float))
+    with pytest.raises(UniformC00Error, match="different frequency grid"):
+        replace_prepared_uniform_c00_from_assembly(solver, shifted, assembly)
+    assert solver.calls == []
+
+    matched = SimpleNamespace(frequencies_hz=np.asarray([1e6, 2e6], dtype=float))
+    assert replace_prepared_uniform_c00_from_assembly(solver, matched, assembly) is replaced
+    assert len(solver.calls) == 1
 
 
 def test_fail_closed_assembly_never_leaks_invalid_frequency_or_usable_data() -> None:

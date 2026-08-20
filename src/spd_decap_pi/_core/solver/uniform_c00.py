@@ -367,6 +367,11 @@ def replace_prepared_uniform_c00_from_assembly(
         raise UniformC00Error(
             "multi-rail uniform block needs an expanded modal/MNA interface; scalar C00 replacement is forbidden"
         )
+    if not np.array_equal(assembly.frequencies_hz, prepared.frequencies_hz):
+        raise UniformC00Error(
+            "uniform C00 assembly was evaluated on a different frequency grid than "
+            "the prepared Device system"
+        )
     try:
         return solver.replace_uniform_c00_term(
             prepared,

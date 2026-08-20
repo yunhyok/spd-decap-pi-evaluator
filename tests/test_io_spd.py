@@ -53,6 +53,20 @@ def test_bulk_length_parser_preserves_units_and_strict_validation() -> None:
         _length_um(b"1e309mm")
 
 
+def test_node_attribute_padstack_group_is_reachable() -> None:
+    """The documented PadStack fallback group must be able to capture."""
+
+    match = spd_io._NODE_ATTR_RE.search(
+        b"Node1!!101::VDD X = 0mm Y = 0mm Layer = Signal$TOP PadStack = DUT"
+    )
+
+    assert match is not None
+    assert match.groups() == (b"0mm", b"0mm", b"DUT")
+    without = spd_io._NODE_ATTR_RE.search(b"Node2!!1::VDD X = 1mm Y = 2mm")
+    assert without is not None
+    assert without.groups() == (b"1mm", b"2mm", None)
+
+
 MINI_SPD = """Title tiny SPD
 * SourceGraphCapability = LEGACY_SOURCE_GRAPH_UNAVAILABLE
 .Package $Package
@@ -573,6 +587,47 @@ def test_same_net_reachability_can_exclude_lateral_trace_connections(
     assert trace_connected.reaches(landing, "Signal$PWR")
     assert not via_only.reaches(landing, "Signal$PWR")
     assert via_only.statistics["trace_section_passes"] == 0
+
+
+def test_thermal_trace_records_join_same_net_reachability(tmp_path: Path) -> None:
+    """PowerSI writes thermal relief copper as a Trace with a Thermal keyword."""
+
+    source, _analysis = _recoverable_via_source(
+        tmp_path,
+        node_lines=(
+            "NodeLocal!!1::PWR X = 0um Y = 0um Layer = Signal$TOP "
+            "PadStack = DR-0102_60\n"
+            "NodeRemoteTop!!1::PWR X = 1000um Y = 0um Layer = Signal$TOP "
+            "PadStack = DR-0102_60\n"
+            "NodeRemotePwr!!1::PWR X = 1000um Y = 0um Layer = Signal$PWR "
+            "PadStack = DR-0102_60"
+        ),
+        trace_lines=(
+            "TraceThermal::PWR Thermal StartingNode = NodeLocal::PWR "
+            "EndingNode = NodeRemoteTop::PWR Width = 0.10mm"
+        ),
+        via_lines=(
+            "ViaRemote::PWR UpperNode = NodeRemoteTop LowerNode = NodeRemotePwr "
+            "PadStack = DR-0102_60"
+        ),
+    )
+    landing = SpdViaLanding(
+        via_id="ViaLocal",
+        net="PWR",
+        endpoint_node_id="NodeLocal",
+        x_um=0.0,
+        y_um=0.0,
+        padstack="DR-0102_60",
+    )
+
+    result = recover_spd_ground_reachability(
+        source,
+        landings=(landing,),
+        target_layers_by_net={"PWR": ("Signal$PWR",)},
+    )
+
+    assert result.reaches(landing, "Signal$PWR")
+    assert result.statistics["trace_edges"] == 1
 
 
 def test_mixed_reference_ground_reachability_rejects_source_changed_during_recovery(
@@ -1351,6 +1406,36 @@ TraceNeedB::VDD_CORE/0 StartingNode = Node12::VDD_CORE/0 EndingNode = Node13::VD
     assert evidence.target_node_id == "Node14"
     assert evidence.trace_hops == 2
     assert [item.via_id for item in evidence.segments] == ["ViaRoute", "ViaTarget"]
+    # The physical-span correction pass must not drop the proven TOP landing.
+    assert evidence.source_node_id == "Node10"
+
+
+def test_recover_spd_via_path_allows_a_thermal_trace_hop(tmp_path: Path) -> None:
+    """A thermal relief continuation is the same one-hop Trace evidence."""
+
+    source, analysis = _recoverable_via_source(
+        tmp_path,
+        node_lines="""
+Node10!!1::VDD_CORE/0 X = 1mm Y = 2mm Layer = Signal$TOP PadStack = DR-0102_60
+Node11!!1::VDD_CORE/0 X = 1mm Y = 2mm Layer = Medium$D1 PadStack = DR-0102_60
+Node12!!1::VDD_CORE/0 X = 1.2mm Y = 2mm Layer = Medium$D1 PadStack = DR-0102_60
+Node13!!1::VDD_CORE/0 X = 1.2mm Y = 2mm Layer = Signal$PWR PadStack = DR-0102_60
+""",
+        via_lines="""
+ViaRoute::VDD_CORE/0 UpperNode = Node10::VDD_CORE/0 LowerNode = Node11::VDD_CORE/0 PadStack = DR-0102_60
+ViaTarget::VDD_CORE/0 UpperNode = Node12::VDD_CORE/0 LowerNode = Node13::VDD_CORE/0 PadStack = DR-0102_60
+""",
+        trace_lines="""
+TraceThermal::VDD_CORE/0 Thermal StartingNode = Node11::VDD_CORE/0 EndingNode = Node12::VDD_CORE/0 Width = 0.10mm
+""",
+    )
+
+    evidence = _recover_power_path(source, analysis).evidence_for("ViaRoute", "Signal$PWR")
+
+    assert evidence is not None
+    assert evidence.target_node_id == "Node13"
+    assert evidence.trace_hops == 1
+    assert [item.via_id for item in evidence.segments] == ["ViaRoute", "ViaTarget"]
 
 
 @pytest.mark.parametrize(
@@ -1470,6 +1555,57 @@ def test_streaming_spd_normalizes_selected_geometry_and_passive_models(
     assert analysis.counts["skipped_unselected_cap_instances"] == 1
     assert analysis.counts["partial_circuits"] == 2
     assert progress[-1][0] == 100
+
+
+def test_unterminated_connect_block_keeps_following_records(tmp_path: Path) -> None:
+    """A missing .EndC must warn, not swallow the .Part/.Component records."""
+
+    source = tmp_path / "unterminated-connect.spd"
+    source.write_text(
+        MINI_SPD.replace(
+            "2 $Package.Node6!!2::DGND\n.EndC\n.Component C1",
+            "2 $Package.Node6!!2::DGND\n.Component C1",
+        ),
+        encoding="ascii",
+    )
+
+    analysis = analyze_spd(source, scope="decap_scenario")
+
+    assert any(
+        item.code == "CONNECT_UNTERMINATED" and item.severity == "warning"
+        for item in analysis.diagnostics
+    )
+    assert [item.refdes for item in analysis.cap_instances] == ["C1", "C2"]
+    assert all(
+        item.start_layer == "Signal$TOP" for item in analysis.cap_instances
+    )
+    assert analysis.counts["device_pins"] == 2
+    assert not analysis.has_errors
+
+
+def test_conductor_layer_without_conductivity_blocks_the_import(
+    tmp_path: Path,
+) -> None:
+    """A conductor row must never be demoted to a dielectric in silence."""
+
+    source = tmp_path / "unresolved-conductivity.spd"
+    source.write_text(
+        MINI_SPD.replace(
+            "Signal$TOP Thickness = 20u Material = COPPER",
+            "Signal$TOP Thickness = 20u Material = COPPER_FOIL",
+        ),
+        encoding="ascii",
+    )
+
+    analysis = analyze_spd(source)
+
+    assert any(
+        item.code == "LAYER_CONDUCTIVITY_MISSING"
+        and item.severity == "error"
+        and "Signal$TOP" in item.message
+        for item in analysis.diagnostics
+    )
+    assert analysis.has_errors
 
 
 def test_device_ground_bumps_preserve_site_provenance(tmp_path: Path) -> None:

@@ -60,11 +60,33 @@ from .profiles import (
     SolverProfileError,
     solver_profile,
 )
-from .research_uniform_profile import (
-    ResearchProfileUnavailable,
-    UniformC00SourceModel,
-    build_uniform_c00_source_model,
+
+_RESEARCH_UNIFORM_EXPORTS = frozenset(
+    {
+        "ResearchProfileUnavailable",
+        "UniformC00SourceModel",
+        "build_uniform_c00_source_model",
+    }
 )
+
+
+def __getattr__(name: str) -> object:
+    """Bind the optional research uniform-C00 bridge only when it is used.
+
+    Importing ``research_uniform_profile`` during package initialization pulls
+    ``multilayer_capacitance`` -> ``.. services`` -> ``solver.evaluator`` back
+    into a cycle and defeats the local imports documented in
+    ``evaluator.compile_evaluation_kernel`` and ``services.evaluate_workspace``.
+    """
+
+    if name in _RESEARCH_UNIFORM_EXPORTS:
+        from . import research_uniform_profile
+
+        value = getattr(research_uniform_profile, name)
+        globals()[name] = value
+        return value
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+
 
 __all__ = [
     "COUPLING_ASSUMPTION",

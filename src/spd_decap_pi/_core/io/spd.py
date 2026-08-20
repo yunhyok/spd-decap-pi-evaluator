@@ -12,7 +12,7 @@ from __future__ import annotations
 from array import array
 from collections import Counter
 from collections.abc import Callable, Iterable, Iterator, Mapping, Sequence
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 import hashlib
 from math import isfinite, log10
 import mmap
@@ -513,13 +513,20 @@ _VIA_RE = re.compile(
     rb"LowerNode\s*=\s*(Node[^\s:!]+)(?:!![^\s:]+)?(?:::[^\s]+)?\s+"
     rb"PadStack\s*=\s*(\S+)([^\r\n]*)"
 )
+# The optional ``Thermal`` keyword mirrors spd_routing._TRACE_HEADER_RE: PowerSI
+# writes thermal-relief copper as an ordinary Trace record with that keyword
+# between the net and StartingNode.  It stays non-capturing so the group numbers
+# consumed by every reachability pass below are unchanged.
 _TRACE_RE = re.compile(
     rb"(?m)^(Trace[^\r\n:]*)::([^\s]+)\s+"
+    rb"(?:Thermal\s+)?"
     rb"StartingNode\s*=\s*(Node[^\s:!]+)(?:!![^\s:]+)?(?:::[^\s]+)?\s+"
     rb"EndingNode\s*=\s*(Node[^\s:!]+)(?:!![^\s:]+)?(?:::[^\s]+)?"
 )
+# The PadStack scan must live inside the optional group; a bare lazy ``.*?`` in
+# front of it always matches empty and makes the fallback unreachable.
 _NODE_ATTR_RE = re.compile(
-    rb"\bX\s*=\s*(\S+)\s+Y\s*=\s*(\S+).*?(?:\bPadStack\s*=\s*(\S+))?"
+    rb"\bX\s*=\s*(\S+)\s+Y\s*=\s*(\S+)(?:.*?\bPadStack\s*=\s*(\S+))?"
 )
 
 
@@ -1276,7 +1283,12 @@ def _parse_layers(
             ):
                 nets.append(parenthesized.group(1))
         if conductor and conductivity is None:
-            diagnostics.append(SpdDiagnostic("warning", "LAYER_CONDUCTIVITY_MISSING", f"Conductor layer {name!r} references material {material!r} without a usable conductivity table."))
+            # StackupLayer.is_conductor is derived from conductivity_s_m, so a
+            # conductor row without one would be silently demoted to a
+            # dielectric and shift the effective TOP layer.  Substituting a
+            # default conductivity would invent source data, so the import is
+            # blocked instead.
+            diagnostics.append(SpdDiagnostic("error", "LAYER_CONDUCTIVITY_MISSING", f"Conductor layer {name!r} references material {material!r} without a usable conductivity table."))
         try:
             result.append(
                 StackupLayer(
@@ -1513,11 +1525,11 @@ def _parse_metadata(
                 active_header = (_decode(tokens[1]), _decode(tokens[2]), _decode(usage_raw) if usage_raw else None)
         elif folded.startswith(b".endc"):
             flush_connection()
-        elif active_header is not None:
-            port = _parse_port(stripped)
-            if port is not None:
-                active_ports.append(port)
+        # Record-introducing keywords are tested before the port fall-through:
+        # a missing .EndC must only warn about the unterminated block, never
+        # swallow the .Part/.Component records that follow it.
         elif folded.startswith(b".part ") and not folded.startswith(b".partialckt"):
+            flush_connection(active_header is not None)
             tokens = stripped.split()
             if len(tokens) >= 2:
                 part_name = _decode(tokens[1])
@@ -1525,12 +1537,17 @@ def _parse_metadata(
                 tags = () if tag_match is None else tuple(item.strip() for item in _decode(tag_match.group(1)).split(",") if item.strip())
                 parts[part_name.casefold()] = _Part(part_name, tags)
         elif folded.startswith(b".component "):
+            flush_connection(active_header is not None)
             tokens = stripped.split()
             if len(tokens) >= 2:
                 refdes = _decode(tokens[1])
                 start_layer = _attribute(stripped, b"StartLayer")
                 attach_layer = _attribute(stripped, b"AttachLayer")
                 components[refdes.casefold()] = _Component(refdes, _decode(start_layer) if start_layer else None, _decode(attach_layer) if attach_layer else None)
+        elif active_header is not None:
+            port = _parse_port(stripped)
+            if port is not None:
+                active_ports.append(port)
     flush_connection(active_header is not None)
     return parts, components, tuple(connections)
 
@@ -3058,22 +3075,9 @@ def recover_spd_via_paths(
             if any(segment.length_um <= 0 for segment in segments):
                 failures["ZERO_PHYSICAL_SPAN"] += 1
                 continue
-            corrected[via_key].append(
-                SpdViaPathEvidence(
-                    via_id=item.via_id,
-                    target_layer=item.target_layer,
-                    target_node_id=item.target_node_id,
-                    target_padstack=item.target_padstack,
-                    target_pad_kind=item.target_pad_kind,
-                    target_pad_width_um=item.target_pad_width_um,
-                    target_pad_height_um=item.target_pad_height_um,
-                    target_x_um=item.target_x_um,
-                    target_y_um=item.target_y_um,
-                    segments=segments,
-                    trace_hops=item.trace_hops,
-                    trace_alternate_exit=item.trace_alternate_exit,
-                )
-            )
+            # Only the segment spans are corrected here; replace() keeps every
+            # other field (source_node_id in particular) from being dropped.
+            corrected[via_key].append(replace(item, segments=segments))
     for via_key, items in structural_evidence.items():
         corrected_structural[via_key] = []
         for item in items:

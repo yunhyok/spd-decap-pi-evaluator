@@ -702,9 +702,22 @@ def _refine_frequency_for_modes(
             max_new_points=probe_points,
         ).frequencies_hz
         if refined.size == current.solve.frequencies_hz.size:
-            converged = True
             budget_exhausted = False
-            last_rms = last_max = last_peak_shift = 0.0
+            if iterations == 0:
+                # Nothing has been measured yet, so the starting grid is stable
+                # by the curvature heuristic and there is no grid-to-grid error
+                # to report.
+                converged = True
+                last_rms = last_max = last_peak_shift = 0.0
+                break
+            # A stable grid never overrides an already measured grid-to-grid
+            # error: the documented RMS/max/peak gates must still pass on the
+            # last measurement, otherwise this is a fail-closed non-convergence.
+            converged = (
+                last_rms < rms_tolerance_db
+                and last_max < max_tolerance_db
+                and last_peak_shift < peak_shift_tolerance_percent
+            )
             break
         if iterations >= max_refinement_iterations or max_new_frequency_points == 0:
             budget_exhausted = True

@@ -3,6 +3,7 @@ from __future__ import annotations
 from types import SimpleNamespace
 
 import numpy as np
+import pytest
 
 from spd_decap_pi._core.models import SeriesRLModel
 from spd_decap_pi._core.solver import evaluator
@@ -132,5 +133,142 @@ def test_adaptive_modal_convergence_rejects_at_ceiling(monkeypatch) -> None:
     assert refined_orders == [8, 10, 12, 14]
     assert report is not None
     assert report.final_mode_x == report.ceiling_mode_x == 14
+    assert report.modal_budget_exhausted is True
+    assert report.converged is False
+
+
+def _stable_grid_refinement(monkeypatch, request, deltas):
+    """Drive one refinement pass and then a stable-grid probe."""
+
+    refined_grid = np.asarray([1e3, 1e4, 1e6, 1e9], dtype=np.float64)
+
+    def fake_refine_log_grid(frequencies, impedance, *, max_new_points):
+        actual = np.asarray(frequencies, dtype=np.float64)
+        if actual.size == request.frequencies_hz.size:
+            return SimpleNamespace(frequencies_hz=refined_grid)
+        # The curvature heuristic proposes nothing further on the refined grid.
+        return SimpleNamespace(frequencies_hz=actual)
+
+    monkeypatch.setattr(evaluator, "refine_log_grid", fake_refine_log_grid)
+    monkeypatch.setattr(evaluator, "evaluate_rail", _fake_outcome)
+    monkeypatch.setattr(evaluator, "_frequency_grid_delta", lambda *_a, **_k: deltas)
+
+    return evaluator._refine_frequency_for_modes(
+        request,
+        mode_x=8,
+        mode_y=8,
+        max_refinement_iterations=1,
+        max_new_frequency_points=32,
+        rms_tolerance_db=0.2,
+        max_tolerance_db=0.5,
+        peak_shift_tolerance_percent=2.0,
+    )
+
+
+def test_stable_frequency_grid_never_overwrites_failing_measured_deltas(monkeypatch) -> None:
+    request = _request(8)
+
+    result = _stable_grid_refinement(monkeypatch, request, (0.35, 0.9, 0.0, False))
+
+    assert result.iterations == 1
+    assert result.rms_delta_db == pytest.approx(0.35)
+    assert result.max_delta_db == pytest.approx(0.9)
+    assert result.converged is False
+
+
+def test_stable_frequency_grid_reports_passing_measured_deltas_as_converged(monkeypatch) -> None:
+    request = _request(8)
+
+    # White-box probe: the stable-grid branch must re-derive convergence from
+    # the measured deltas themselves, not trust the flag it was handed.
+    result = _stable_grid_refinement(monkeypatch, request, (0.05, 0.1, 0.5, False))
+
+    assert result.iterations == 1
+    assert result.rms_delta_db == pytest.approx(0.05)
+    assert result.converged is True
+    assert result.budget_exhausted is False
+
+
+def test_first_pass_stable_frequency_grid_reports_zero_deltas(monkeypatch) -> None:
+    request = _request(8)
+
+    monkeypatch.setattr(
+        evaluator,
+        "refine_log_grid",
+        lambda frequencies, impedance, *, max_new_points: SimpleNamespace(
+            frequencies_hz=np.asarray(frequencies, dtype=np.float64)
+        ),
+    )
+    monkeypatch.setattr(evaluator, "evaluate_rail", _fake_outcome)
+
+    result = evaluator._refine_frequency_for_modes(
+        request,
+        mode_x=8,
+        mode_y=8,
+        max_refinement_iterations=1,
+        max_new_frequency_points=32,
+        rms_tolerance_db=0.2,
+        max_tolerance_db=0.5,
+        peak_shift_tolerance_percent=2.0,
+    )
+
+    assert result.iterations == 0
+    assert (result.rms_delta_db, result.max_delta_db, result.peak_shift_percent) == (
+        0.0,
+        0.0,
+        0.0,
+    )
+    assert result.converged is True
+    assert result.budget_exhausted is False
+
+
+def test_adaptive_escalation_solves_real_adjacent_orders_on_one_shared_grid(monkeypatch) -> None:
+    """End-to-end: no stubbed solver, no stubbed modal delta arithmetic."""
+
+    request = _request(8)
+    calls: list[tuple[int, int, tuple[float, ...]]] = []
+    real_evaluate_rail = evaluator.evaluate_rail
+
+    def spy(actual: evaluator.EvaluationRequest) -> evaluator.EvaluationOutcome:
+        calls.append(
+            (actual.max_mode_x, actual.max_mode_y, tuple(actual.frequencies_hz.tolist()))
+        )
+        return real_evaluate_rail(actual)
+
+    monkeypatch.setattr(evaluator, "evaluate_rail", spy)
+
+    result = evaluator.evaluate_rail_converged(
+        request,
+        max_mode_x=12,
+        max_mode_y=12,
+        max_refinement_iterations=1,
+        max_new_frequency_points=4,
+        # Tight gates so the small analytic plane really escalates to the ceiling.
+        rms_tolerance_db=0.001,
+        max_tolerance_db=0.002,
+        peak_shift_tolerance_percent=0.5,
+    )
+
+    # Each adjacent comparison solves the lower basis right after its high
+    # partner, two indices below it and on the very same frequency grid.
+    lower_solves = [
+        (index, entry)
+        for index, entry in enumerate(calls)
+        if index and entry[0] == calls[index - 1][0] - 2
+    ]
+    assert [entry[0] for _, entry in lower_solves] == [6, 8, 10]
+    for index, entry in lower_solves:
+        high = calls[index - 1]
+        assert entry[1] == high[1] - 2
+        assert entry[2] == high[2]
+
+    report = result.convergence
+    assert report is not None
+    assert (report.lower_mode_x, report.lower_mode_y) == (10, 10)
+    assert (report.final_mode_x, report.final_mode_y) == (12, 12)
+    assert report.ceiling_mode_x == 12
+    # Real modal arithmetic on two genuinely different bases is never exactly 0.
+    assert report.modal_rms_delta_db > 0.0
+    assert report.modal_converged is False
     assert report.modal_budget_exhausted is True
     assert report.converged is False

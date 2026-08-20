@@ -4,8 +4,10 @@ from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
 from math import isfinite
+import os
 from pathlib import Path
 from typing import Any
+from uuid import uuid4
 
 from xlsxwriter import Workbook
 from xlsxwriter.exceptions import XlsxWriterException
@@ -161,28 +163,79 @@ def write_distribution_workbook(
                     "format 5 Distribution metadata must record Tolerance "
                     f"Semantics {DISTRIBUTION_TOLERANCE_SEMANTICS}"
                 )
+    # The loader rejects these Optimization Policy / Effective Gap Penalty
+    # pairings regardless of format version.  Refusing them here keeps the
+    # writer from emitting a workbook that Import Targets can never accept.
+    raw_policy = metadata_by_key.get("optimization policy")
+    optimization_policy = (
+        str(raw_policy).strip().upper() if raw_policy not in (None, "") else ""
+    )
+    raw_penalty = metadata_by_key.get("effective gap penalty (um)")
+    effective_gap_penalty_um: float | None = None
+    if raw_penalty not in (None, ""):
+        try:
+            effective_gap_penalty_um = float(raw_penalty)
+        except (TypeError, ValueError):
+            raise ValueError(
+                "Distribution metadata Effective Gap Penalty (um) must be a "
+                "finite number"
+            ) from None
+        if not isfinite(effective_gap_penalty_um):
+            raise ValueError(
+                "Distribution metadata Effective Gap Penalty (um) must be a "
+                "finite number"
+            )
+    if optimization_policy == "BALANCED_CUSTOM" and effective_gap_penalty_um is None:
+        raise ValueError(
+            "BALANCED_CUSTOM Distribution metadata must record Effective Gap "
+            "Penalty (um)"
+        )
+    if (
+        optimization_policy == "MIN_GAPS"
+        and effective_gap_penalty_um not in (None, 0.0)
+    ):
+        raise ValueError(
+            "MIN_GAPS Distribution metadata Effective Gap Penalty (um) must be "
+            "0 or omitted"
+        )
 
     options = {
         "constant_memory": True,
         "strings_to_formulas": False,
         "strings_to_urls": False,
     }
+    # ``Workbook.__exit__`` closes (and therefore flushes) even when population
+    # raises, so populate a sibling temporary file and publish it onto the
+    # destination only after a clean close.  A failed export must never destroy
+    # the workbook the user already has.
+    destination = Path(path)
+    temp_path = destination.with_name(
+        f".{destination.name}.{os.getpid():d}-{uuid4().hex}.tmp"
+    )
     try:
-        workbook_context = Workbook(path, options)
-        with workbook_context as workbook:
-            _populate_distribution_workbook(
-                workbook,
-                normalized_decaps,
-                normalized_target_headers,
-                normalized_targets,
-                normalized_inventory_headers,
-                normalized_inventory,
-                normalized_candidate_headers,
-                normalized_candidate_rows,
-                normalized_metadata,
-            )
-    except XlsxWriterException as exc:
-        raise OSError(str(exc)) from exc
+        try:
+            workbook_context = Workbook(temp_path, options)
+            with workbook_context as workbook:
+                _populate_distribution_workbook(
+                    workbook,
+                    normalized_decaps,
+                    normalized_target_headers,
+                    normalized_targets,
+                    normalized_inventory_headers,
+                    normalized_inventory,
+                    normalized_candidate_headers,
+                    normalized_candidate_rows,
+                    normalized_metadata,
+                )
+        except XlsxWriterException as exc:
+            raise OSError(str(exc)) from exc
+        os.replace(temp_path, destination)
+    except BaseException:
+        try:
+            temp_path.unlink(missing_ok=True)
+        except OSError:
+            pass
+        raise
 
 
 def _populate_distribution_workbook(
@@ -329,8 +382,12 @@ def _populate_distribution_workbook(
         target_sheet.set_row(0, 36)
         target_sheet.write_row(0, 0, normalized_target_headers, header)
         target_sheet.set_column(0, 0, 34)
-        if len(normalized_target_headers) > 1:
-            target_sheet.set_column(1, len(normalized_target_headers) - 1, 14)
+        # Tracked so the metadata block below cannot leave its own value-column
+        # width on the shared data matrix.
+        matrix_last_column = len(normalized_target_headers) - 1
+        matrix_column_width = 14
+        if matrix_last_column >= 1:
+            target_sheet.set_column(1, matrix_last_column, matrix_column_width)
         for row_index, row_values in enumerate(normalized_targets, start=1):
             odd = row_index % 2 == 0
             for column, value in enumerate(row_values):
@@ -406,15 +463,15 @@ def _populate_distribution_workbook(
                     if column == len(normalized_inventory_headers) - 1
                     else count_even,
                 )
-            target_sheet.set_column(
-                1,
+            matrix_last_column = (
                 max(
                     len(normalized_target_headers),
                     len(normalized_inventory_headers),
                 )
-                - 1,
-                16,
+                - 1
             )
+            matrix_column_width = 16
+            target_sheet.set_column(1, matrix_last_column, matrix_column_width)
             metadata_row = total_row + 3
 
         if normalized_metadata:
@@ -431,7 +488,13 @@ def _populate_distribution_workbook(
                 target_sheet.write_string(row_index, 0, key, text_even)
                 _write_value(target_sheet, row_index, 1, value, text_even)
             target_sheet.set_column(0, 0, 34)
-            target_sheet.set_column(1, 1, 68)
+            if matrix_last_column >= 1:
+                # The metadata value shares column B with the first component's
+                # data column; restore the matrix width instead of stretching
+                # the whole column to the metadata block's 68 characters.
+                target_sheet.set_column(1, matrix_last_column, matrix_column_width)
+            else:
+                target_sheet.set_column(1, 1, 68)
 
         if normalized_candidate_headers:
             audit_sheet = workbook.add_worksheet("Candidate Audit")

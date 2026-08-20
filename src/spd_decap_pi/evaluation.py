@@ -546,8 +546,14 @@ def _result_key_from_view(
     target_ohm: float | None,
     modal_max_index: int,
     view: EvaluationView,
+    evaluation_policy: str | None = None,
 ) -> ScenarioResultKey:
-    """Bind an emitted curve to its actual profile/evidence identity."""
+    """Bind an emitted curve to its actual profile/evidence identity.
+
+    ``evaluation_policy`` overrides the view's own policy for the hashed
+    settings only; a comparison resolves one Evaluation policy per rail so the
+    Original and Tuned keys stay comparable.
+    """
 
     return ScenarioResultKey.from_settings(
         design_fingerprint=design_fingerprint,
@@ -557,7 +563,11 @@ def _result_key_from_view(
             modal_max_index,
             view.solver_profile_key,
             solver_provenance=view.solver_provenance,
-            evaluation_policy=getattr(view, "evaluation_policy", EVALUATION_POLICY_STRICT),
+            evaluation_policy=(
+                evaluation_policy
+                if evaluation_policy is not None
+                else getattr(view, "evaluation_policy", EVALUATION_POLICY_STRICT)
+            ),
         ),
         solver_version=view.solver_version,
     )
@@ -1934,15 +1944,17 @@ def preflight_evaluation_connectivity(
             scenario, canonical_rails, _project=project
         )
         blockers.extend(geometry_blockers)
-        if geometry_blockers and _source_graph_provenance_refresh_required(
-            scenario, project
-        ):
+        if _source_graph_provenance_refresh_required(scenario, project):
+            # The retained bundle — not one rail's geometry — is what cannot
+            # prove the v0.22.7 source plane pair, so every selected rail is
+            # blocked.  Gating this on another rail's geometry blockers would
+            # both blame a clean rail and let the remaining selected rails run
+            # strictly without any source-graph proof.
             source_path = str(scenario.source.path)
             source_sha = str(scenario.source.sha256)
-            blockers.insert(
-                0,
+            blockers.extend(
                 EvaluationConnectivityBlocker(
-                    rail_id=canonical_rails[0] if canonical_rails else "<scenario>",
+                    rail_id=rail_id,
                     refdes="<scenario migration>",
                     kind=DecapConnectionKind.UNRESOLVED,
                     reason=(
@@ -1953,7 +1965,8 @@ def preflight_evaluation_connectivity(
                         "matching raw SPD in v0.22.7; the loaded bundle remains "
                         "unchanged."
                     ),
-                ),
+                )
+                for rail_id in canonical_rails
             )
     return EvaluationConnectivityPreflight(
         canonical_rails,
@@ -4158,9 +4171,19 @@ def evaluate_comparison_batch(
         tuned_project_fingerprints[rail_id] = _solver_project_fingerprint(
             tuned_project
         )
+        # One rail resolves exactly one effective Evaluation policy across both
+        # configurations.  build_evaluation_project downgrades a strict-clear
+        # configuration back to STRICT on its own, so an Original that is
+        # strict-clear beside a Tuned that needs the alternate pair (or the
+        # reverse) would otherwise stamp two different hashed settings and make
+        # validate_for_scenario reject the completed batch.  A rail that is
+        # strict-clear on both sides stays STRICT.
         effective_policy_by_rail[rail_id] = (
             EVALUATION_POLICY_EMBEDDED_ALTERNATE
-            if baseline_project.metadata.get("evaluation_alternate_pair_provenance")
+            if (
+                baseline_project.metadata.get("evaluation_alternate_pair_provenance")
+                or tuned_project.metadata.get("evaluation_alternate_pair_provenance")
+            )
             else EVALUATION_POLICY_STRICT
         )
 
@@ -4224,6 +4247,7 @@ def evaluate_comparison_batch(
                         target_ohm=target_ohm,
                         modal_max_index=modal_max_index,
                         view=evaluated_baseline.view,
+                        evaluation_policy=effective_policy_by_rail[rail_id],
                     )
                     if profile.experimental
                     else _expected_result_key(
@@ -4232,7 +4256,7 @@ def evaluate_comparison_batch(
                         target_ohm=target_ohm,
                         modal_max_index=modal_max_index,
                         solver_profile=solver_profile,
-                        evaluation_policy=getattr(evaluated_baseline.view, "evaluation_policy", evaluation_policy),
+                        evaluation_policy=effective_policy_by_rail[rail_id],
                     )
                 ),
             )
@@ -4260,6 +4284,7 @@ def evaluate_comparison_batch(
                         target_ohm=target_ohm,
                         modal_max_index=modal_max_index,
                         view=baseline.view,
+                        evaluation_policy=effective_policy_by_rail[rail_id],
                     )
                     if profile.experimental
                     else _expected_result_key(
@@ -4268,7 +4293,7 @@ def evaluate_comparison_batch(
                         target_ohm=target_ohm,
                         modal_max_index=modal_max_index,
                         solver_profile=solver_profile,
-                        evaluation_policy=getattr(baseline.view, "evaluation_policy", evaluation_policy),
+                        evaluation_policy=effective_policy_by_rail[rail_id],
                     )
                 ),
                 scenario_revision=prepared.revision,
@@ -4290,6 +4315,24 @@ def evaluate_comparison_batch(
                 evaluation_policy=evaluation_policy,
                 _alternate_cache=alternate_cache,
             )
+            if (
+                getattr(tuned.view, "evaluation_policy", EVALUATION_POLICY_STRICT)
+                != effective_policy_by_rail[rail_id]
+            ):
+                # The Tuned configuration resolved its own geometry policy; the
+                # rail's harmonized policy is what both result keys must carry.
+                # The solved view keeps its own provenance and confidence.
+                tuned = replace(
+                    tuned,
+                    result_key=_result_key_from_view(
+                        prepared.design_fingerprint,
+                        rail_id,
+                        target_ohm=target_ohm,
+                        modal_max_index=modal_max_index,
+                        view=tuned.view,
+                        evaluation_policy=effective_policy_by_rail[rail_id],
+                    ),
+                )
         completed_stages += 1
         comparisons.append(
             RailComparison(

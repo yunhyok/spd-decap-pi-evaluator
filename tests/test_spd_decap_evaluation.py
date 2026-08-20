@@ -273,6 +273,83 @@ def test_old_bundle_geometry_blocker_requests_raw_spd_provenance_refresh() -> No
     assert scenario.source.path in message
 
 
+def _stale_bundle_scenario(
+    *, tiny_cell: bool, extra_rail: bool = False
+) -> ScenarioSpec:
+    """Return a retained v0.22.6 bundle that cannot prove the v0.22.7 pair."""
+
+    scenario = _scenario()
+    project = scenario.base_project
+    metadata = dict(project.metadata)
+    metadata["spd_import"] = {
+        **dict(metadata.get("spd_import", {})),
+        "source_name": scenario.source.name,
+        "source_sha256": scenario.source.sha256,
+    }
+    update: dict[str, object] = {"app_version": "0.22.6", "metadata": metadata}
+    if tiny_cell:
+        cell = project.partitions[0].cells[0].model_copy(
+            update={"x_max_um": 100.0, "y_max_um": 100.0}
+        )
+        update["partitions"] = [
+            project.partitions[0].model_copy(update={"cells": [cell]})
+        ]
+    if extra_rail:
+        update["rails"] = [
+            project.rails[0],
+            project.rails[0].model_copy(
+                update={"rail_id": "RAIL_VDD_B", "site": "SITE1"}
+            ),
+        ]
+    return scenario.model_copy(
+        update={
+            "normalized_project": project.model_copy(update=update).model_dump(
+                mode="python"
+            )
+        }
+    )
+
+
+def test_stale_bundle_refresh_blocker_does_not_need_a_geometry_blocker() -> None:
+    # Without a geometry blocker anywhere in the selection the stale bundle used
+    # to run fail-open on a plane pair that carries no v0.22.7 source proof.
+    legacy = _stale_bundle_scenario(tiny_cell=False)
+    preflight = preflight_evaluation_connectivity(legacy, ("RAIL_VDD",))
+    assert not preflight.is_clear
+    assert [
+        (item.rail_id, item.refdes)
+        for item in preflight.blockers
+        if item.reason.startswith("SOURCE_GRAPH_PROVENANCE_REFRESH_REQUIRED:")
+    ] == [("RAIL_VDD", "<scenario migration>")]
+    # The opt-in alternate policy cannot rescue it either: this bundle retains
+    # no hash-valid adjacent PWR/pure-GND artwork.
+    assert not preflight_evaluation_connectivity(
+        legacy,
+        ("RAIL_VDD",),
+        evaluation_policy=evaluation_module.EVALUATION_POLICY_EMBEDDED_ALTERNATE,
+    ).is_clear
+
+
+def test_stale_bundle_refresh_blocker_is_emitted_once_per_selected_rail() -> None:
+    # The retained bundle blocks every selected rail under its own rail id; a
+    # clean rail must never be blamed for another rail's geometry blockers.
+    legacy = _stale_bundle_scenario(tiny_cell=True, extra_rail=True)
+    preflight = preflight_evaluation_connectivity(
+        legacy, ("RAIL_VDD", "RAIL_VDD_B")
+    )
+    refresh_rails = sorted(
+        item.rail_id
+        for item in preflight.blockers
+        if item.reason.startswith("SOURCE_GRAPH_PROVENANCE_REFRESH_REQUIRED:")
+    )
+    assert refresh_rails == ["RAIL_VDD", "RAIL_VDD_B"]
+    assert not any(
+        item.reason.startswith("TERMINAL_OUTSIDE_SELECTED_PLANE:")
+        and item.rail_id == "RAIL_VDD_B"
+        for item in preflight.blockers
+    )
+
+
 def test_unresolved_source_plane_pair_blocks_selected_rail_under_both_policies() -> None:
     scenario = _scenario()
     project = scenario.base_project
@@ -860,6 +937,53 @@ def _alternate_fixture() -> tuple[ScenarioSpec, dict[str, bytes]]:
     }
     project = project.model_copy(update={"stackup_layers": layers, "partitions": [partition], "metadata": metadata})
     return scenario.model_copy(update={"normalized_project": project.model_dump(mode="python")}), {pwr_record["asset"]: pwr, gnd_record["asset"]: gnd}
+
+
+def _mixed_policy_alternate_fixture(
+    *, outside_configuration: str
+) -> tuple[ScenarioSpec, dict[str, bytes]]:
+    """Return a rail whose Original and Tuned resolve different strict geometry.
+
+    The selected PWR1/GND1 cell covers C1 but not C2, so enabling C2 in exactly
+    one configuration keeps that side blocked by TERMINAL_OUTSIDE_SELECTED_PLANE
+    while the other side stays strict-clear.  Both configurations still fit the
+    retained PWR2/GND2 artwork, so the blocked side resolves EMBEDDED_ALTERNATE.
+    """
+
+    scenario, attachments = _alternate_fixture()
+    project = scenario.base_project
+    cell = project.partitions[0].cells[0].model_copy(
+        update={"x_max_um": 2100.0, "y_max_um": 8000.0}
+    )
+    partition = project.partitions[0].model_copy(update={"cells": [cell]})
+    project = project.model_copy(update={"partitions": [partition]})
+    outside = scenario.decaps[1].model_copy(
+        update=(
+            {"enabled": True, "model_id": "M1"}
+            if outside_configuration == "TUNED"
+            else {
+                "enabled": False,
+                "model_id": None,
+                "source_mounted": True,
+                "source_model_id": "M1",
+            }
+        )
+    )
+    return (
+        ScenarioSpec.model_validate(
+            {
+                **scenario.model_dump(mode="python"),
+                "normalized_project": project.model_dump(mode="python"),
+                "decaps": [scenario.decaps[0], outside],
+                "attachment_names": sorted(attachments),
+                "attachment_hashes": {
+                    name: sha256(content).hexdigest()
+                    for name, content in attachments.items()
+                },
+            }
+        ),
+        attachments,
+    )
 
 
 def _scenario_with_connection(
@@ -3045,6 +3169,96 @@ def test_comparison_batch_caches_baseline_then_reuses_it(
     assert len(calls) == 1
     assert second.comparisons[0].baseline_from_cache
     assert second.comparisons[0].baseline.view.magnitude_ohm == [0.02, 0.03]
+
+
+@pytest.mark.parametrize("outside_configuration", ["TUNED", "ORIGINAL"])
+def test_mixed_strict_and_alternate_rail_resolves_one_comparison_policy(
+    monkeypatch: pytest.MonkeyPatch, outside_configuration: str
+) -> None:
+    scenario, attachments = _mixed_policy_alternate_fixture(
+        outside_configuration=outside_configuration
+    )
+
+    def fake_workspace(state, rail_id, target_ohm=None, modal_max_index=8, **_kwargs):
+        view = _view(rail_id)
+        view.solver_version = evaluation_module.SOLVER_VERSION
+        return view
+
+    monkeypatch.setattr(core_services, "evaluate_workspace", fake_workspace)
+    batch = evaluate_comparison_batch(
+        scenario,
+        ["RAIL_VDD"],
+        attachments=attachments,
+        evaluation_policy=evaluation_module.EVALUATION_POLICY_EMBEDDED_ALTERNATE,
+    )
+
+    comparison = batch.comparisons[0]
+    # Each side keeps the policy it was actually solved under ...
+    strict_side = (
+        comparison.baseline if outside_configuration == "TUNED" else comparison.tuned
+    )
+    alternate_side = (
+        comparison.tuned if outside_configuration == "TUNED" else comparison.baseline
+    )
+    assert (
+        strict_side.view.evaluation_policy
+        == evaluation_module.EVALUATION_POLICY_STRICT
+    )
+    assert (
+        alternate_side.view.evaluation_policy
+        == evaluation_module.EVALUATION_POLICY_EMBEDDED_ALTERNATE
+    )
+    # ... while the rail resolves one hashed Evaluation policy, so the completed
+    # batch cannot be discarded by "Original/Tuned settings disagree".
+    expected = evaluation_module._expected_result_key(
+        comparison.baseline.result_key.design_fingerprint,
+        "RAIL_VDD",
+        target_ohm=None,
+        modal_max_index=evaluation_module.DEFAULT_EVALUATION_MODAL_MAX_INDEX,
+        evaluation_policy=evaluation_module.EVALUATION_POLICY_EMBEDDED_ALTERNATE,
+    )
+    assert comparison.baseline.result_key.settings_sha256 == expected.settings_sha256
+    assert (
+        comparison.baseline.result_key.settings_sha256
+        == comparison.tuned.result_key.settings_sha256
+    )
+    batch.validate_for_scenario(scenario)
+
+
+def test_strict_clear_rail_keeps_strict_identity_under_alternate_opt_in(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    scenario = _scenario()
+    tuned = scenario.decaps[0].model_copy(update={"enabled": False})
+    scenario = ScenarioSpec.model_validate(
+        {**scenario.model_dump(mode="python"), "decaps": [tuned, scenario.decaps[1]]}
+    )
+
+    def fake_workspace(state, rail_id, target_ohm=None, modal_max_index=8, **_kwargs):
+        view = _view(rail_id)
+        view.solver_version = evaluation_module.SOLVER_VERSION
+        return view
+
+    monkeypatch.setattr(core_services, "evaluate_workspace", fake_workspace)
+    batch = evaluate_comparison_batch(
+        scenario,
+        ["RAIL_VDD"],
+        evaluation_policy=evaluation_module.EVALUATION_POLICY_EMBEDDED_ALTERNATE,
+    )
+
+    comparison = batch.comparisons[0]
+    strict = evaluation_module._expected_result_key(
+        comparison.baseline.result_key.design_fingerprint,
+        "RAIL_VDD",
+        target_ohm=None,
+        modal_max_index=evaluation_module.DEFAULT_EVALUATION_MODAL_MAX_INDEX,
+        evaluation_policy=evaluation_module.EVALUATION_POLICY_STRICT,
+    )
+    assert comparison.baseline.result_key.settings_sha256 == strict.settings_sha256
+    assert (
+        comparison.tuned.result_key.settings_sha256 == strict.settings_sha256
+    )
+    batch.validate_for_scenario(scenario)
 
 
 def test_legacy_stackup_schema_baseline_cache_remains_reusable(

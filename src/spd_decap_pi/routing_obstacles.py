@@ -827,7 +827,10 @@ def decode_routing_obstacle_asset(
             ),
             content_sha256=observed_digest,
         )
-    except (KeyError, TypeError, ValueError) as exc:
+    # ``LookupError`` (not just ``KeyError``) keeps a short or malformed nested
+    # row from escaping this function's documented ValueError contract, which
+    # the Distribution worker relies on to fail closed with ROUTING_ASSET_STALE.
+    except (LookupError, TypeError, ValueError) as exc:
         raise ValueError(f"routing attachment schema is invalid: {exc}") from exc
     if (
         expected_source_sha256 is not None
@@ -1272,8 +1275,15 @@ def _profile_from_json(value: object) -> PlannedViaProfile:
     if not isinstance(value, Mapping):
         raise ValueError("planned via profile row must be an object")
     raw_radii = value.get("radius_um_by_layer", ())
-    if not isinstance(raw_radii, Sequence):
+    # ``str``/``bytes`` are Sequences; accepting them would index into
+    # characters instead of failing closed on a malformed radius table.
+    if not isinstance(raw_radii, Sequence) or isinstance(raw_radii, (str, bytes)):
         raise ValueError("planned via radius table must be an array")
+    for item in raw_radii:
+        if not isinstance(item, (list, tuple)) or len(item) != 2:
+            raise ValueError(
+                "planned via radius row must be a [layer, radius_um] pair"
+            )
     return PlannedViaProfile(
         profile_id=str(value["profile_id"]),
         radius_um_by_layer=tuple(
