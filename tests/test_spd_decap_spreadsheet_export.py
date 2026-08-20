@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 from pathlib import Path
+import re
+import zipfile
 
 from openpyxl import load_workbook
 import pytest
@@ -12,6 +14,25 @@ from spd_decap_pi.spreadsheet_export import (
     EXCEL_MAX_DATA_ROWS,
     write_distribution_workbook,
 )
+
+
+def _column_widths(path: Path, sheet_part: str) -> dict[int, float]:
+    """Return 1-based column index -> emitted width for one worksheet part.
+
+    ``openpyxl`` does not expand ``<col min=.. max=../>`` ranges, so the raw
+    worksheet XML is the only faithful view of the exported widths.
+    """
+
+    with zipfile.ZipFile(path) as archive:
+        xml = archive.read(sheet_part).decode("utf-8")
+    widths: dict[int, float] = {}
+    for element in re.findall(r"<col [^>]*/>", xml):
+        first = int(re.search(r'min="(\d+)"', element).group(1))
+        last = int(re.search(r'max="(\d+)"', element).group(1))
+        width = float(re.search(r'width="([\d.]+)"', element).group(1))
+        for column in range(first, last + 1):
+            widths[column] = width
+    return widths
 
 
 def test_distribution_workbook_has_two_typed_formula_safe_sheets(
@@ -228,3 +249,133 @@ def test_candidate_audit_row_limit_boundary_is_accepted(
         candidate_audit_rows=(row,) * EXCEL_MAX_DATA_ROWS,
     )
     assert path.exists()
+
+
+def test_writer_refuses_the_policy_penalty_pairings_the_loader_rejects(
+    tmp_path: Path,
+) -> None:
+    headers = ("PWR NET", "M1\nTarget")
+    rows = (("V1 (R1)", 3),)
+
+    missing = tmp_path / "balanced-custom-without-penalty.xlsx"
+    with pytest.raises(ValueError, match="Effective Gap Penalty"):
+        write_distribution_workbook(
+            missing,
+            (),
+            headers,
+            rows,
+            metadata={"Optimization Policy": "BALANCED_CUSTOM"},
+        )
+    assert not missing.exists()
+
+    stray = tmp_path / "min-gaps-with-penalty.xlsx"
+    with pytest.raises(ValueError, match="must be 0 or omitted"):
+        write_distribution_workbook(
+            stray,
+            (),
+            headers,
+            rows,
+            metadata={
+                "Optimization Policy": "MIN_GAPS",
+                "Effective Gap Penalty (um)": 120.0,
+            },
+        )
+    assert not stray.exists()
+
+    accepted = tmp_path / "balanced-custom.xlsx"
+    write_distribution_workbook(
+        accepted,
+        (),
+        headers,
+        rows,
+        metadata={
+            "Optimization Policy": "BALANCED_CUSTOM",
+            "Effective Gap Penalty (um)": 120.0,
+        },
+    )
+    imported = load_distribution_targets(
+        accepted,
+        rail_ids=("R1",),
+        model_ids=("M1",),
+        current_present={("R1", "M1"): 1},
+    )
+    assert imported.targets == {("R1", "M1"): 3}
+
+
+def test_failed_export_leaves_the_previous_workbook_intact(tmp_path: Path) -> None:
+    path = tmp_path / "distribution.xlsx"
+    write_distribution_workbook(
+        path,
+        (("M1", "C1", "V1", "V2", 1.0, 2.0),),
+        ("PWR NET", "M1\nTarget"),
+        (("V1 (R1)", 3),),
+    )
+    original = path.read_bytes()
+
+    with pytest.raises(ValueError, match="must be finite"):
+        write_distribution_workbook(
+            path,
+            (("M1", "C1", "V1", "V2", float("nan"), 2.0),),
+            ("PWR NET", "M1\nTarget"),
+            (("V1 (R1)", 4),),
+        )
+
+    assert path.read_bytes() == original
+    assert sorted(item.name for item in tmp_path.iterdir()) == [path.name]
+    imported = load_distribution_targets(
+        path,
+        rail_ids=("R1",),
+        model_ids=("M1",),
+        current_present={("R1", "M1"): 1},
+    )
+    assert imported.targets == {("R1", "M1"): 3}
+
+
+def test_metadata_value_width_does_not_leak_into_the_target_matrix(
+    tmp_path: Path,
+) -> None:
+    path = tmp_path / "metadata-widths.xlsx"
+    headers = ["PWR NET"]
+    row: list[object] = ["V1 (R1)"]
+    for model_id in ("M1", "M2", "M3"):
+        headers.extend(
+            (
+                f"{model_id}\nPresent",
+                f"{model_id}\nTarget",
+                f"{model_id}\nTolerance (%)",
+            )
+        )
+        row.extend((10, 8, 1.25))
+    write_distribution_workbook(
+        path,
+        (),
+        tuple(headers),
+        (tuple(row),),
+        metadata={
+            "Optimization Policy": "BALANCED_AUTO",
+            "Distance Mode": "NEAREST",
+        },
+    )
+
+    widths = _column_widths(path, "xl/worksheets/sheet2.xml")
+    data_columns = range(2, len(headers) + 1)
+    assert {widths[column] for column in data_columns} == {widths[2]}
+    assert widths[1] != widths[2]
+
+
+def test_metadata_value_width_does_not_leak_with_inventory_rows(
+    tmp_path: Path,
+) -> None:
+    path = tmp_path / "inventory-widths.xlsx"
+    write_distribution_workbook(
+        path,
+        (),
+        ("PWR NET", "M1\nPresent", "M1\nTarget"),
+        (("V1 (R1)", 2, 3),),
+        inventory_headers=("Component", "Physical Present", "Delta"),
+        inventory_rows=(("M1", 2, 1),),
+        metadata={"Optimization Policy": "BALANCED_AUTO"},
+    )
+
+    widths = _column_widths(path, "xl/worksheets/sheet2.xml")
+    assert widths[2] == widths[3] == 16.7109375
