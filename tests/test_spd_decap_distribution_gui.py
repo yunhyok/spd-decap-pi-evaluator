@@ -2697,3 +2697,372 @@ def test_scenario_change_and_document_reset_discard_a_stale_preview() -> None:
         window._dirty = False
         window.close()
         application.processEvents()
+
+
+def test_main_distribution_table_double_click_never_opens_an_inplace_editor() -> None:
+    application = _application()
+    window = _window_with_scenario(
+        _direct_scenario(
+            (
+                ("C1", 0.0, ("R1", "R2")),
+                ("C2", 10.0, ("R1", "R2")),
+            ),
+            rail_ids=("R1", "R2"),
+        )
+    )
+    try:
+        window.side_tabs.setCurrentIndex(3)
+        window.show()
+        application.processEvents()
+
+        triggers = window.distribution_table.editTriggers()
+        assert not (triggers & QTableWidget.EditTrigger.DoubleClicked)
+        # The two documented in-place gestures stay reachable.
+        assert triggers & QTableWidget.EditTrigger.EditKeyPressed
+        assert triggers & QTableWidget.EditTrigger.AnyKeyPressed
+
+        target = window.distribution_table.item(_rail_row(window, "R1"), 2)
+        assert target.flags() & Qt.ItemFlag.ItemIsEditable
+        index = window.distribution_table.indexFromItem(target)
+        QTest.mouseDClick(
+            window.distribution_table.viewport(),
+            Qt.MouseButton.LeftButton,
+            Qt.KeyboardModifier.NoModifier,
+            window.distribution_table.visualRect(index).center(),
+        )
+        application.processEvents()
+
+        # Double-click is reserved for the detached window; no editor opened.
+        assert window.distribution_table.currentItem() is target
+        assert window.distribution_table.state() != QTableWidget.State.EditingState
+        assert window.distribution_table.indexWidget(index) is None
+
+        # The detached-window half of the gesture is still wired.
+        window.distribution_table.itemDoubleClicked.emit(target)
+        application.processEvents()
+        assert window._distribution_window is not None
+    finally:
+        window._dirty = False
+        if window._distribution_window is not None:
+            window._distribution_window.close()
+        window.close()
+        application.processEvents()
+
+
+def test_noop_editor_open_and_close_never_bulk_fills_differing_cells() -> None:
+    application = _application()
+    window = _window_with_scenario(
+        _direct_scenario(
+            (
+                ("C1", 0.0, ("R1", "R2", "R3")),
+                ("C2", 10.0, ("R1", "R2", "R3")),
+                ("C3", 20.0, ("R1", "R2", "R3")),
+            )
+        )
+    )
+    try:
+        window.side_tabs.setCurrentIndex(3)
+        window.show()
+        application.processEvents()
+        window.distribution_table.selectionModel().clearSelection()
+        _set_target(window, "R1", 5)
+        _set_target(window, "R2", 9)
+        _set_target(window, "R3", 3)
+
+        cells = tuple(
+            window.distribution_table.item(_rail_row(window, rail_id), 2)
+            for rail_id in ("R1", "R2", "R3")
+        )
+        assert tuple(item.text() for item in cells) == ("5", "9", "3")
+        selection = window.distribution_table.selectionModel()
+        selection.clearSelection()
+        for item in cells:
+            selection.select(
+                window.distribution_table.indexFromItem(item),
+                QItemSelectionModel.SelectionFlag.Select,
+            )
+        window.distribution_table.setCurrentItem(
+            cells[0],
+            QItemSelectionModel.SelectionFlag.NoUpdate,
+        )
+        window.distribution_table.setFocus()
+
+        # F2 opens the editor on the first cell; Enter closes it without any
+        # keystroke, which is not an edit and must not fill the peers.
+        QTest.keyClick(window.distribution_table, Qt.Key.Key_F2)
+        application.processEvents()
+        editor = application.focusWidget()
+        assert isinstance(editor, QLineEdit)
+        QTest.keyClick(editor, Qt.Key.Key_Return)
+        application.processEvents()
+        application.processEvents()
+
+        assert tuple(item.text() for item in cells) == ("5", "9", "3")
+        assert window._distribution_targets[("R1", "M1")] == 5
+        assert window._distribution_targets[("R2", "M1")] == 9
+        assert window._distribution_targets[("R3", "M1")] == 3
+    finally:
+        window._dirty = False
+        window.close()
+        application.processEvents()
+
+
+def test_optimization_policy_combo_follows_document_and_busy_state() -> None:
+    application = _application()
+    idle_window = MainWindow()
+    try:
+        assert not idle_window.distribution_optimization_combo.isEnabled()
+    finally:
+        idle_window.close()
+        application.processEvents()
+
+    window = _window_with_scenario(
+        _direct_scenario(
+            (
+                ("C1", 0.0, ("R1", "R2")),
+                ("C2", 10.0, ("R1", "R2")),
+            ),
+            rail_ids=("R1", "R2"),
+        )
+    )
+    try:
+        assert window.distribution_optimization_combo.isEnabled()
+        window._set_busy(True)
+        # The run identity includes this combo, so a mid-run change would
+        # silently discard the finished preview.
+        assert not window.distribution_optimization_combo.isEnabled()
+        assert not window.distribution_distance_combo.isEnabled()
+        window._set_busy(False)
+        assert window.distribution_optimization_combo.isEnabled()
+    finally:
+        window._dirty = False
+        window.close()
+        application.processEvents()
+
+
+def test_balance_strip_retains_last_balances_when_a_target_is_invalid() -> None:
+    application = _application()
+    window = _window_with_scenario(
+        _direct_scenario(
+            (
+                ("C1", 0.0, ("R1", "R2")),
+                ("C2", 10.0, ("R1", "R2")),
+                ("C3", 20.0, ("R1", "R2")),
+            ),
+            rail_ids=("R1", "R2"),
+        )
+    )
+    try:
+        window.distribution_table.selectionModel().clearSelection()
+        _set_target(window, "R1", 1)
+        _set_target(window, "R2", 2)
+        valid_text = window.distribution_validation_label.text()
+        assert "Donor" in valid_text and "Receiver" in valid_text
+        assert "#047857" in window.distribution_validation_label.styleSheet()
+
+        _set_target(window, "R1", "x")
+        assert window._distribution_invalid_cells
+        stale_text = window.distribution_validation_label.text()
+        # The documented Donor/Receiver/Balance readout must not blank out
+        # exactly when the user mistypes; it is marked stale instead.
+        assert "Donor" in stale_text and "Receiver" in stale_text
+        assert "invalid" in stale_text.casefold()
+        assert "#B45309" in window.distribution_validation_label.styleSheet()
+        assert (
+            "nonnegative whole number"
+            in window.distribution_summary.toPlainText()
+        )
+    finally:
+        window._dirty = False
+        window.close()
+        application.processEvents()
+
+
+def test_preview_invalidation_names_the_control_the_user_changed() -> None:
+    application = _application()
+    scenario = _direct_scenario(
+        (
+            ("C1", 0.0, ("R1", "R2")),
+            ("C2", 10.0, ("R1", "R2")),
+            ("C3", 20.0, ("R1", "R2")),
+        ),
+        rail_ids=("R1", "R2"),
+        bump_x={"R2": 0.0},
+    )
+    window = _window_with_scenario(scenario)
+    try:
+        window.distribution_table.selectionModel().clearSelection()
+        _set_target(window, "R1", 1)
+        _set_target(window, "R2", 2)
+
+        def _seed_preview() -> None:
+            window._accept_distribution_plan(
+                compute_distribution_plan(scenario, _targets(window))
+            )
+            assert window._distribution_plan is not None
+
+        _seed_preview()
+        window.distribution_optimization_combo.setCurrentIndex(
+            window.distribution_optimization_combo.findData("MIN_GAPS")
+        )
+        assert window._distribution_plan is None
+        assert (
+            "Optimization policy changed"
+            in window.distribution_summary.toPlainText()
+        )
+
+        _seed_preview()
+        window.distribution_distance_combo.setCurrentIndex(
+            window.distribution_distance_combo.findData("FARTHEST")
+        )
+        assert window._distribution_plan is None
+        assert (
+            "Candidate order changed" in window.distribution_summary.toPlainText()
+        )
+
+        window.distribution_optimization_combo.setCurrentIndex(
+            window.distribution_optimization_combo.findData("BALANCED_CUSTOM")
+        )
+        _seed_preview()
+        window.distribution_gap_penalty_edit.setText("120")
+        assert window._distribution_plan is None
+        assert (
+            "Custom gap penalty changed"
+            in window.distribution_summary.toPlainText()
+        )
+    finally:
+        window._dirty = False
+        window.close()
+        application.processEvents()
+
+
+def test_exported_template_writes_numbers_not_text_for_count_columns(
+    tmp_path: Path, monkeypatch
+) -> None:
+    application = _application()
+    window = _window_with_scenario(
+        _direct_scenario(
+            (
+                ("C1", 0.0, ("R1", "R2")),
+                ("C2", 10.0, ("R1", "R2")),
+                ("C3", 20.0, ("R1", "R2")),
+            ),
+            rail_ids=("R1", "R2"),
+        )
+    )
+    template_path = tmp_path / "targets.xlsx"
+    try:
+        window.distribution_table.selectionModel().clearSelection()
+        _set_target(window, "R1", 1)
+        _set_target(window, "R2", 2)
+        _set_tolerance(window, "R1", 2.5)
+        monkeypatch.setattr(
+            QFileDialog,
+            "getSaveFileName",
+            lambda *_args, **_kwargs: (
+                str(template_path),
+                "Excel workbook (*.xlsx)",
+            ),
+        )
+        window._export_distribution_template()
+        assert template_path.exists()
+
+        workbook = load_workbook(template_path, data_only=False)
+        try:
+            sheet = workbook["PWR NET Distribution Targets"]
+            rows = {
+                str(sheet.cell(row_index, 1).value): tuple(
+                    sheet.cell(row_index, column) for column in range(1, 6)
+                )
+                for row_index in (2, 3)
+            }
+            assert set(rows) == {"V1 (R1)", "V2 (R2)"}
+            for label, row in rows.items():
+                assert isinstance(row[0].value, str)
+                # Present / Target / Assignment Failed are counts; the writer
+                # only routes int|float to write_number.
+                for cell in (row[1], row[2], row[4]):
+                    assert isinstance(cell.value, int), (label, cell.coordinate)
+                    assert not isinstance(cell.value, bool)
+                assert isinstance(row[3].value, (int, float)), label
+                assert not isinstance(row[3].value, str)
+            assert rows["V1 (R1)"][2].value == 1
+            assert rows["V2 (R2)"][2].value == 2
+            assert float(rows["V1 (R1)"][3].value) == pytest.approx(2.5)
+        finally:
+            workbook.close()
+    finally:
+        window._dirty = False
+        window.close()
+        application.processEvents()
+
+
+def test_template_export_refuses_balanced_custom_without_a_gap_penalty(
+    tmp_path: Path, monkeypatch
+) -> None:
+    application = _application()
+    window = _window_with_scenario(
+        _direct_scenario(
+            (
+                ("C1", 0.0, ("R1", "R2")),
+                ("C2", 10.0, ("R1", "R2")),
+            ),
+            rail_ids=("R1", "R2"),
+        )
+    )
+    template_path = tmp_path / "custom-template.xlsx"
+    messages: list[str] = []
+    try:
+        window.distribution_optimization_combo.setCurrentIndex(
+            window.distribution_optimization_combo.findData("BALANCED_CUSTOM")
+        )
+        assert window.distribution_gap_penalty_edit.text() == ""
+        monkeypatch.setattr(
+            QFileDialog,
+            "getSaveFileName",
+            lambda *_args, **_kwargs: (
+                str(template_path),
+                "Excel workbook (*.xlsx)",
+            ),
+        )
+        monkeypatch.setattr(
+            QMessageBox,
+            "critical",
+            lambda _parent, _title, text, *_args, **_kwargs: messages.append(text),
+        )
+        window._export_distribution_template()
+
+        # Import Targets rejects such a workbook unconditionally, so the export
+        # must never produce one.
+        assert not template_path.exists()
+        assert messages and "gap penalty" in messages[0].casefold()
+        assert "BALANCED_CUSTOM" in messages[0]
+        assert window.status_text.text() == (
+            "De-cap Distribution template export failed"
+        )
+
+        window.distribution_gap_penalty_edit.setText("150")
+        window._export_distribution_template()
+        assert template_path.exists()
+        workbook = load_workbook(template_path, data_only=False)
+        try:
+            targets = workbook["PWR NET Distribution Targets"]
+            metadata_title_row = next(
+                cell.row
+                for cell in targets["A"]
+                if cell.value == DISTRIBUTION_METADATA_TITLE
+            )
+            metadata = {}
+            for row_index in range(metadata_title_row + 1, targets.max_row + 1):
+                key = targets.cell(row_index, 1).value
+                if key in (None, ""):
+                    break
+                metadata[str(key)] = targets.cell(row_index, 2).value
+        finally:
+            workbook.close()
+        assert metadata["Optimization Policy"] == "BALANCED_CUSTOM"
+        assert float(metadata["Effective Gap Penalty (um)"]) == pytest.approx(150.0)
+    finally:
+        window._dirty = False
+        window.close()
+        application.processEvents()

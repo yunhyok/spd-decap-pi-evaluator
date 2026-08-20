@@ -59,6 +59,7 @@ from spd_decap_pi.gui.main_window import (
     _PlaneArtworkItem,
     _PlanePathBuilder,
     _PreparedScenarioBundle,
+    _PreparedScenarioImport,
     _excel_safe_csv_cell,
     _job_compute_distribution,
     _job_load_scenario,
@@ -963,7 +964,10 @@ def test_right_side_sections_are_vertically_resizable_and_noncollapsible() -> No
     try:
         expected_minimums = {
             "selectionSectionSplitter": (170, 160),
-            "evaluationSectionSplitter": (285, 180),
+            # The Evaluation results minimum is 150 so the controls section can
+            # exceed the PWR NET picker's own 140 px minimum at 1200x700; the
+            # results tabs stay well above 150 at every default split.
+            "evaluationSectionSplitter": (285, 150),
             "aiSectionSplitter": (210, 160),
         }
         for object_name, minimums in expected_minimums.items():
@@ -2874,6 +2878,149 @@ def test_restore_source_state_uses_the_frozen_fallback_baseline_model(
         )
         assert restored.enabled
         assert restored.model_id == c1.model_id
+    finally:
+        window._dirty = False
+        window.close()
+        application.processEvents()
+
+
+def test_board_selection_change_never_revalidates_the_whole_scenario(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    application = _application()
+    source = tmp_path / "selection.spd"
+    source.write_text(MINI_SPD, encoding="ascii")
+    imported = import_spd_scenario(source)
+    window = MainWindow()
+    try:
+        window._accept_spd_import(imported)
+        assert window.scenario is not None
+        loaded = window.scenario
+        # The cheap update must be indistinguishable from the JSON round-trip
+        # it replaces.
+        expected = ScenarioSpec.model_validate(
+            {
+                **loaded.model_dump(mode="json"),
+                "selected_refdes": ["C1"],
+            }
+        ).model_dump(mode="json")
+
+        calls: list[object] = []
+        original_model_validate = ScenarioSpec.model_validate
+
+        def counting_model_validate(*args: object, **kwargs: object) -> object:
+            calls.append(args)
+            return original_model_validate(*args, **kwargs)
+
+        monkeypatch.setattr(
+            ScenarioSpec, "model_validate", counting_model_validate
+        )
+        window._selection_changed(("C1",))
+        assert calls == []
+        assert window.scenario is not loaded
+        assert window.scenario.selected_refdes == ["C1"]
+        assert window.scenario.model_dump(mode="json") == expected
+
+        # A repeated identical selection does no work at all.
+        selected_scenario = window.scenario
+        window._selection_changed(("c1",))
+        assert window.scenario is selected_scenario
+
+        # The invariants the model validator enforces still fail closed.
+        with pytest.raises(ValueError):
+            window._selection_changed(("C1", "c1"))
+        with pytest.raises(ValueError):
+            window._selection_changed(("NOT_A_REFDES",))
+        assert calls == []
+    finally:
+        window._dirty = False
+        window.close()
+        application.processEvents()
+
+
+def _staged_document_view(
+    imported: object, plane_cell_repeat: int
+) -> "main_window_module._PreparedDocumentView":
+    view = main_window_module._prepare_document_view(
+        imported.scenario,
+        imported.attachments,
+        progress=lambda _value, _message: None,
+        is_cancelled=lambda: False,
+    )
+    assert view.plane_cells
+    return replace(view, plane_cells=view.plane_cells * plane_cell_repeat)
+
+
+def test_import_summary_survives_the_chunked_plane_render(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    application = _application()
+    source = tmp_path / "chunked.spd"
+    source.write_text(MINI_SPD, encoding="ascii")
+    imported = import_spd_scenario(source)
+    staged = _staged_document_view(imported, 3)
+    window = MainWindow()
+    fits: list[int] = []
+    try:
+        # Force one plane cell per render chunk so the artwork really spans
+        # several event-loop turns, as it does on any real board.
+        ticks = iter(range(1, 10_000))
+        monkeypatch.setattr(
+            main_window_module, "perf_counter", lambda: float(next(ticks))
+        )
+        monkeypatch.setattr(window.board, "fit_board", lambda: fits.append(1))
+        window._accept_spd_import(
+            _PreparedScenarioImport(imported=imported, view=staged)
+        )
+
+        summary = window.status_text.text()
+        assert summary.startswith("Loaded ")
+        assert window._plane_render_cells
+        # The premature fit over an empty scene is gone.
+        assert fits == []
+        assert "deferred" in window.status_text.toolTip()
+
+        for _ in range(40):
+            application.processEvents()
+
+        assert not window._plane_render_cells
+        # The chunked render must hand the status label back to the load
+        # report it overwrote, not to "PWR artwork ready".
+        assert window.status_text.text() == summary
+        assert fits == [1]
+        assert window._board_fit_seconds is not None
+    finally:
+        window._dirty = False
+        window.close()
+        application.processEvents()
+
+
+def test_outline_only_import_still_performs_one_deferred_fit(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    application = _application()
+    source = tmp_path / "outline.spd"
+    source.write_text(MINI_SPD, encoding="ascii")
+    imported = import_spd_scenario(source)
+    outline_only = replace(_staged_document_view(imported, 1), plane_cells=())
+    window = MainWindow()
+    fits: list[int] = []
+    try:
+        monkeypatch.setattr(window.board, "fit_board", lambda: fits.append(1))
+        window._accept_spd_import(
+            _PreparedScenarioImport(imported=imported, view=outline_only)
+        )
+        assert not window._plane_render_cells
+        # Nothing is fitted while the staged decap and bump batches are still
+        # queued.
+        assert fits == []
+
+        for _ in range(10):
+            application.processEvents()
+
+        assert fits == [1]
+        assert window._board_fit_seconds is not None
+        assert f"{window._board_fit_seconds:.3f}s" in window.status_text.toolTip()
     finally:
         window._dirty = False
         window.close()

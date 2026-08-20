@@ -46,6 +46,7 @@ from PySide6.QtWidgets import (
     QProgressBar,
     QPushButton,
     QScrollArea,
+    QSizePolicy,
     QSplitter,
     QStatusBar,
     QTabWidget,
@@ -1913,6 +1914,8 @@ class MainWindow(QMainWindow):
         self._plane_layer_selection_initialized = False
         self._load_all_plane_layers_requested = False
         self._plane_fit_after_render = False
+        self._plane_render_status_restore: str | None = None
+        self._board_fit_seconds: float | None = None
         self._closing = False
         self._distribution_basis_fingerprint: str | None = None
         self._distribution_present_counts: dict[tuple[str, str], int] = {}
@@ -1923,6 +1926,7 @@ class MainWindow(QMainWindow):
         self._distribution_model_ids: tuple[str, ...] = ()
         self._distribution_invalid_cells: set[tuple[str, str]] = set()
         self._distribution_invalid_tolerance_cells: set[tuple[str, str]] = set()
+        self._distribution_last_balances: tuple[_DistributionModelBalance, ...] = ()
         self._distribution_plan: Any | None = None
         self._distribution_preview_scenario: ScenarioSpec | None = None
         self._distribution_power_projection: Any | None = None
@@ -2244,6 +2248,12 @@ class MainWindow(QMainWindow):
         rail_buttons.insertWidget(0, rail_label)
         rail_buttons.addStretch(1)
         rail_picker = QWidget()
+        # The PWR NET list must absorb the controls section's spare height so the
+        # picker grows and shrinks with the evaluation splitter instead of staying
+        # pinned at its 140 px minimum.
+        rail_picker.setSizePolicy(
+            QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Expanding
+        )
         rail_picker_layout = QVBoxLayout(rail_picker)
         rail_picker_layout.setContentsMargins(0, 0, 0, 0)
         rail_picker_layout.setSpacing(0)
@@ -2343,7 +2353,10 @@ class MainWindow(QMainWindow):
 
         results_section = QWidget()
         results_section.setObjectName("evaluationResultsSection")
-        results_section.setMinimumHeight(180)
+        # 150 px still keeps the result tabs readable but leaves the controls
+        # section enough room at 1200x700 for the PWR NET picker to exceed its
+        # own minimum instead of being clipped at every splitter position.
+        results_section.setMinimumHeight(150)
         results_layout = QVBoxLayout(results_section)
         results_layout.setContentsMargins(0, 0, 0, 0)
         results_heading = QLabel("Evaluation Results")
@@ -2510,7 +2523,16 @@ class MainWindow(QMainWindow):
         self.distribution_table.setObjectName("distributionTargetTable")
         self.distribution_table.setAccessibleName("Distribution target matrix")
         self.distribution_table.setToolTip(
-            "Double-click a cell to open the detached Distribution XLSX window."
+            "Double-click a cell to open the detached Distribution XLSX window. "
+            "Select Target or Tolerance cells and type, or press F2, to edit in "
+            "place."
+        )
+        # Double-click is reserved for the detached window: leaving Qt's default
+        # DoubleClicked trigger in place would also open an in-place editor
+        # behind the window that just took activation.
+        self.distribution_table.setEditTriggers(
+            QTableWidget.EditTrigger.EditKeyPressed
+            | QTableWidget.EditTrigger.AnyKeyPressed
         )
         self.distribution_table.setHorizontalHeaderLabels(("PWR NET",))
         self.distribution_table.setAlternatingRowColors(True)
@@ -2558,7 +2580,7 @@ class MainWindow(QMainWindow):
             "Farthest from receiving PWR NET bumps", "FARTHEST"
         )
         self.distribution_distance_combo.currentIndexChanged.connect(
-            self._distribution_option_changed
+            lambda _index: self._distribution_option_changed("Candidate order")
         )
         option_row.addWidget(self.distribution_distance_combo, 1)
         option_row.addWidget(QLabel("Optimization policy"))
@@ -2576,7 +2598,7 @@ class MainWindow(QMainWindow):
             "Minimum gaps (legacy)", "MIN_GAPS"
         )
         self.distribution_optimization_combo.currentIndexChanged.connect(
-            self._distribution_option_changed
+            lambda _index: self._distribution_option_changed("Optimization policy")
         )
         option_row.addWidget(self.distribution_optimization_combo, 1)
         option_row.addWidget(QLabel("Gap penalty (µm)"))
@@ -2587,7 +2609,7 @@ class MainWindow(QMainWindow):
         self.distribution_gap_penalty_edit.setPlaceholderText("AUTO")
         self.distribution_gap_penalty_edit.setMaximumWidth(110)
         self.distribution_gap_penalty_edit.textChanged.connect(
-            self._distribution_option_changed
+            lambda _text: self._distribution_option_changed("Custom gap penalty")
         )
         option_row.addWidget(self.distribution_gap_penalty_edit)
         self.calculate_distribution_button = QPushButton("Calculate Preview")
@@ -3037,7 +3059,17 @@ class MainWindow(QMainWindow):
             narrative += f"\n\n{self._distribution_status_notice}"
         if self._distribution_import_notice:
             narrative += f"\n\n{self._distribution_import_notice}"
-        self.distribution_validation_label.setText(balance_state.compact_text)
+        # The Donor/Receiver/Balance strip is the documented per-model readout;
+        # an invalid edit must not blank it. Keep the last computed balances and
+        # mark them as stale instead of showing an empty amber label.
+        if balance_state.balances:
+            self._distribution_last_balances = balance_state.balances
+        strip_text = balance_state.compact_text
+        if not strip_text and self._distribution_last_balances:
+            strip_text = "Last valid balance (input invalid): " + " | ".join(
+                item.compact_text for item in self._distribution_last_balances
+            )
+        self.distribution_validation_label.setText(strip_text)
         self.distribution_validation_label.setStyleSheet(
             "color: #047857;" if valid else "color: #B45309;"
         )
@@ -3160,6 +3192,7 @@ class MainWindow(QMainWindow):
         self._distribution_model_ids = ()
         self._distribution_invalid_cells.clear()
         self._distribution_invalid_tolerance_cells.clear()
+        self._distribution_last_balances = ()
         self._distribution_plan = None
         self._distribution_preview_scenario = None
         self._distribution_power_projection = None
@@ -3646,10 +3679,17 @@ class MainWindow(QMainWindow):
         self._apply_distribution_target_text(item, target_items)
         self._distribution_targets_edited()
 
-    def _distribution_editor_committed(self, _editor: QWidget) -> None:
+    def _distribution_editor_committed(self, editor: QWidget) -> None:
         # itemChanged is not emitted when the editor commits text identical to
         # the current source cell.  Defer until the view has copied editor data
         # so an unchanged source can still fill differently-valued peer cells.
+        if isinstance(editor, QLineEdit) and not editor.isModified():
+            # commitData also fires when an editor opened by F2 or a click is
+            # closed by Enter or focus-out without a keystroke.  Opening an
+            # editor is not an edit, so it must never overwrite peer cells.
+            # setEditorData populates the editor with setText, which leaves
+            # isModified False; only real user input sets it.
+            return
         item = self.distribution_table.currentItem()
         if item is None:
             return
@@ -3739,6 +3779,46 @@ class MainWindow(QMainWindow):
             for row in range(self.distribution_table.rowCount())
         )
         return headers, rows
+
+    def _distribution_matrix_export_values(
+        self,
+    ) -> tuple[tuple[str, ...], tuple[tuple[object, ...], ...]]:
+        """Return the target matrix with real numbers in every numeric column.
+
+        The writer routes int/float to ``write_number`` and str to
+        ``write_string``, so exporting counts as display text makes the
+        workbook's ``#,##0`` / ``0.###"%"`` formats inert and flags the whole
+        matrix as "Number stored as text" in Excel.  Column 0 is the PWR NET
+        label and stays a string; the repeating per-model columns are Present,
+        Target, Tolerance (%) and Assignment Failed.  A cell that does not hold
+        a number fails the export closed instead of emitting a text matrix.
+        """
+
+        headers, rows = self._distribution_matrix_values()
+        numeric_rows: list[tuple[object, ...]] = []
+        for row_index, values in enumerate(rows):
+            converted: list[object] = []
+            for column, value in enumerate(values):
+                if column == 0:
+                    converted.append(value)
+                    continue
+                text = str(value).strip()
+                try:
+                    converted.append(
+                        float(text) if (column - 1) % 4 == 2 else int(text)
+                    )
+                except ValueError:
+                    label = (
+                        headers[column].replace("\n", " ")
+                        if column < len(headers)
+                        else f"column {column:d}"
+                    )
+                    raise ValueError(
+                        f"{label} must hold a number in every row before "
+                        f"export; row {row_index + 1:d} contains {text!r}"
+                    ) from None
+            numeric_rows.append(tuple(converted))
+        return headers, tuple(numeric_rows)
 
     def _distribution_request_fingerprint(self) -> str:
         """Fingerprint every planner input editable from either Distribution view."""
@@ -4042,11 +4122,11 @@ class MainWindow(QMainWindow):
         if not filename:
             return
         path = Path(filename).with_suffix(".xlsx")
-        headers, rows = self._distribution_matrix_values()
         try:
             from ..distribution import DISTRIBUTION_VIA_PROJECTION_POLICY
             from ..spreadsheet_export import write_distribution_workbook
 
+            headers, rows = self._distribution_matrix_export_values()
             raw_distance_mode = self.distribution_distance_combo.currentData()
             format_version, routing_metadata = self._distribution_workbook_contract()
             metadata: dict[str, object] = {
@@ -4059,15 +4139,22 @@ class MainWindow(QMainWindow):
             }
             if raw_distance_mode in {"NEAREST", "FARTHEST"}:
                 metadata["Distance Mode"] = raw_distance_mode
-            metadata["Optimization Policy"] = str(
+            optimization_policy = str(
                 self.distribution_optimization_combo.currentData()
             )
+            metadata["Optimization Policy"] = optimization_policy
             raw_penalty = self.distribution_gap_penalty_edit.text().strip()
-            if (
-                str(self.distribution_optimization_combo.currentData()).upper()
-                == "BALANCED_CUSTOM"
-                and raw_penalty
-            ):
+            if optimization_policy.upper() == "BALANCED_CUSTOM":
+                # Import Targets rejects a BALANCED_CUSTOM workbook that carries
+                # no Effective Gap Penalty, and so does the writer.  Refuse here
+                # with the control the user has to fill in, rather than emitting
+                # a template that can never be imported.
+                if not raw_penalty:
+                    raise ValueError(
+                        "BALANCED_CUSTOM requires a custom gap penalty (um). "
+                        "Enter a finite nonnegative Gap penalty, or select "
+                        "another Optimization policy, before exporting."
+                    )
                 metadata["Effective Gap Penalty (um)"] = float(raw_penalty)
             metadata.update(routing_metadata)
             write_distribution_workbook(path, (), headers, rows, metadata=metadata)
@@ -4246,7 +4333,7 @@ class MainWindow(QMainWindow):
             f"Imported Distribution targets from {Path(filename).name}"
         )
 
-    def _distribution_option_changed(self, _index: int) -> None:
+    def _distribution_option_changed(self, control: str = "Candidate order") -> None:
         # A penalty is meaningful only for BALANCED_CUSTOM.  Clear stale text
         # when the policy changes away from custom so it cannot leak into a
         # template export or a later request fingerprint.
@@ -4263,8 +4350,10 @@ class MainWindow(QMainWindow):
             finally:
                 self.distribution_gap_penalty_edit.blockSignals(blocked)
         if self._distribution_plan is not None:
+            # Name the control the user actually changed; three different
+            # controls share this slot.
             self._clear_distribution_preview(
-                "Candidate order changed; calculate a new preview."
+                f"{control} changed; calculate a new preview."
             )
         self._update_distribution_validation()
 
@@ -5005,6 +5094,7 @@ class MainWindow(QMainWindow):
             self.save_as_action,
             self.distribution_table,
             self.distribution_distance_combo,
+            self.distribution_optimization_combo,
             self.distribution_protect_signal_routing_checkbox,
         ):
             widget.setEnabled(loaded)
@@ -5042,6 +5132,7 @@ class MainWindow(QMainWindow):
             self.plane_layer_bar,
             self.distribution_table,
             self.distribution_distance_combo,
+            self.distribution_optimization_combo,
             self.distribution_protect_signal_routing_checkbox,
             self.distribution_trace_clearance_edit,
         ):
@@ -5337,15 +5428,21 @@ class MainWindow(QMainWindow):
         board_started = perf_counter()
         self._refresh_all(prepared_view)
         board_s = perf_counter() - board_started
-        fit_started = perf_counter()
-        self.board.fit_board()
-        fit_s = perf_counter() - fit_started
+        # The fit runs when the staged decap/bump batches and the chunked plane
+        # render have really been appended, so it is measured there.  It is part
+        # of board_s only when that already completed inside _refresh_all.
+        fit_s = self._board_fit_seconds
+        fit_note = (
+            f"Fit board: {fit_s:.3f}s"
+            if fit_s is not None
+            else "Fit board: deferred to PWR artwork render completion"
+        )
         warnings = sum(
             str(getattr(item, "severity", "")).casefold() == "warning"
             for item in imported.diagnostics
         )
         timings = imported.timings
-        visible_total_s = timings.total_s + board_s + fit_s
+        visible_total_s = timings.total_s + board_s
         connection_status, connection_details = (
             prepared_view.connection_summary
             if prepared_view is not None
@@ -5356,13 +5453,13 @@ class MainWindow(QMainWindow):
             if prepared_view is not None
             else _source_via_path_recovery_summary(imported.scenario)
         )
-        self.status_text.setText(
+        self._publish_document_status(
             f"Loaded {len(imported.scenario.decaps):,} top-side decaps in "
             f"{visible_total_s:.1f}s (eligibility {timings.eligibility_s:.1f}s, "
             f"Mixed-reference witness selection "
             f"{timings.mixed_witness_selection_s:.1f}s, "
             f"Mixed-reference GND recovery {timings.ground_recovery_s:.1f}s, "
-            f"board {board_s + fit_s:.1f}s; {warnings} warning(s)) | "
+            f"board {board_s:.1f}s; {warnings} warning(s)) | "
             f"{connection_status} | {recovery_status}"
         )
         self.status_text.setToolTip(
@@ -5378,7 +5475,7 @@ class MainWindow(QMainWindow):
                     f"Exact eligibility: {timings.eligibility_s:.3f}s",
                     f"Scenario validation: {timings.finalize_s:.3f}s",
                     f"Board scene build: {board_s:.3f}s",
-                    f"Fit board: {fit_s:.3f}s",
+                    fit_note,
                     f"Visible total: {visible_total_s:.3f}s",
                     connection_details,
                     recovery_details,
@@ -5468,7 +5565,6 @@ class MainWindow(QMainWindow):
             model_keys=prepared_view.model_keys if prepared_view is not None else None,
         )
         self._refresh_all(prepared_view)
-        self.board.fit_board()
         message = f"Opened {path.name}"
         if bundle.recovered_from is not None:
             message += f" (recovered from {bundle.recovered_from.name}; save required)"
@@ -5484,7 +5580,7 @@ class MainWindow(QMainWindow):
             if prepared_view is not None
             else _source_via_path_recovery_summary(bundle.scenario)
         )
-        self.status_text.setText(
+        self._publish_document_status(
             f"{message} | {connection_status} | {recovery_status}"
         )
         self.status_text.setToolTip(
@@ -5630,6 +5726,8 @@ class MainWindow(QMainWindow):
         self._active_plane_layer_key = None
         self._load_all_plane_layers_requested = False
         self._plane_fit_after_render = False
+        self._plane_render_status_restore = None
+        self._board_fit_seconds = None
         self._reset_distribution_state()
         self.board.clear_plane_items()
         signals_were_blocked = self.rail_list.blockSignals(True)
@@ -5642,6 +5740,20 @@ class MainWindow(QMainWindow):
         self._plane_items_by_net.clear()
         self._plane_items_by_layer.clear()
         self._clear_plane_layer_controls(reset_hidden=True)
+
+    def _fit_board_and_record(self) -> None:
+        """Fit the board once its staged layers exist and record the real cost."""
+
+        started = perf_counter()
+        self.board.fit_board()
+        self._board_fit_seconds = perf_counter() - started
+
+    def _publish_document_status(self, text: str) -> None:
+        """Publish a load report a running chunked plane render must not eat."""
+
+        self.status_text.setText(text)
+        if self._plane_render_cells:
+            self._plane_render_status_restore = text
 
     def _refresh_all(self, prepared_view: _PreparedDocumentView | None = None) -> None:
         scenario = self._scenario
@@ -5832,6 +5944,7 @@ class MainWindow(QMainWindow):
         )
         self._load_all_plane_layers_requested = False
         self._plane_fit_after_render = True
+        self._plane_render_status_restore = None
         self.board.clear_plane_items()
         self._plane_items_by_net = {}
         self._plane_items_by_layer = {}
@@ -5850,6 +5963,11 @@ class MainWindow(QMainWindow):
             rectangle.setData(0, "board_outline")
             rectangle.setZValue(-30.0)
             self.board.append_plane_items((rectangle,))
+            # No chunked render will complete here, so nothing would ever run the
+            # deferred fit; the staged decap and bump batches are still queued,
+            # so fit once they exist rather than over an empty scene.
+            self._plane_fit_after_render = False
+            QTimer.singleShot(0, self._fit_board_and_record)
             return
         token = self._plane_render_token
         self._render_plane_chunk(token)
@@ -5891,10 +6009,14 @@ class MainWindow(QMainWindow):
             self._plane_render_cells = ()
             self._plane_render_builder = None
             if self._plane_fit_after_render:
-                self.board.fit_board()
+                self._fit_board_and_record()
             self._plane_fit_after_render = False
+            # A load report published while this render was running must survive
+            # the render progress messages that overwrote the status label.
+            restored = self._plane_render_status_restore
+            self._plane_render_status_restore = None
             if self.status_text.text().startswith("Rendering PWR artwork"):
-                self.status_text.setText("PWR artwork ready")
+                self.status_text.setText(restored or "PWR artwork ready")
             QTimer.singleShot(0, self._load_next_missing_plane_layer)
             return
         self.status_text.setText(
@@ -6421,18 +6543,38 @@ class MainWindow(QMainWindow):
             return DEFAULT_EVALUATION_MODAL_MAX_INDEX
         return value
 
+    @staticmethod
+    def _scenario_with_selection(
+        scenario: ScenarioSpec, selected: tuple[str, ...]
+    ) -> ScenarioSpec:
+        """Return ``scenario`` carrying ``selected`` without a full re-validation.
+
+        A full ``ScenarioSpec.model_validate`` re-parses and re-dumps the whole
+        normalized project on the GUI thread, which is several seconds on a
+        large document.  ``selected_refdes`` only has to stay unique and known
+        (``consistent_indexes`` in scenario.py), so those two invariants are
+        enforced here directly and the rest of the validated scenario is copied
+        as is.  A violation still raises, exactly as the model validator would.
+        """
+
+        values = [str(item).strip() for item in selected]
+        keys = [item.casefold() for item in values]
+        if len(keys) != len(set(keys)):
+            raise ValueError("selected REFDES values must be unique")
+        unknown = set(keys) - {item.refdes.casefold() for item in scenario.decaps}
+        if unknown:
+            raise ValueError(
+                f"selected REFDES values are absent from scenario: {sorted(unknown)}"
+            )
+        return scenario.model_copy(update={"selected_refdes": values})
+
     def _selection_changed(self, selected: tuple[str, ...]) -> None:
         if self._scenario is None:
             return
         if [item.casefold() for item in self._scenario.selected_refdes] != [
             item.casefold() for item in selected
         ]:
-            self._scenario = ScenarioSpec.model_validate(
-                {
-                    **self._scenario.model_dump(mode="json"),
-                    "selected_refdes": list(selected),
-                }
-            )
+            self._scenario = self._scenario_with_selection(self._scenario, selected)
         self._refresh_selection_table()
 
     def _selected_decaps(self) -> list[ScenarioDecap]:
