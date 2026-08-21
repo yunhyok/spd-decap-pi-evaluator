@@ -2,7 +2,7 @@
 
 ## Scope
 
-In v0.22.7, strict Evaluation remains the default and source scenarios remain
+In v0.22.9, strict Evaluation remains the default and source scenarios remain
 immutable. Raw SPD import first recovers source-graph connectivity and selects a
 deterministic source-proven plane pair; the validated VINT rails use
 `L09 (MAIN_POWER1) / L08 (DGND)`, not merely the closest geometric pair. A graph

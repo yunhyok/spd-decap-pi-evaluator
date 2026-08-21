@@ -15,10 +15,10 @@
   "documents": [
     {
       "source": "README.md",
-      "sourceBlobSha": "66c0b695f6cc45d608af81cc25487db197881751",
-      "sourceSha256": "e23936af3b7dffde3dfb4065c4c7251d02ed4d1d351576a8ed364b64aadf6162",
+      "sourceBlobSha": "3586e19db4941e24deb3f85a54e6d809031c1cfc",
+      "sourceSha256": "9861587f20d977d0a9e9c864b9f61fe276c780ec52faa743fcfed7231bc26503",
       "output": "README.companion.html",
-      "outputSha256": "c04a4750da788df834da0156ab892a458fce910785960c9f4b8c0e5343e5c94f",
+      "outputSha256": "563c061b02a038cc5978502442658137ef94374fa018bf2d6f7478a371fd360d",
       "headingCount": 15,
       "visualClassification": "DOCUMENT_MAP",
       "visualTitle": "Evaluator documentation map",
@@ -27,7 +27,7 @@
         {
           "lineStart": 1,
           "lineEnd": 37,
-          "summary": "v0.22.7 source-graph plane-pair selection, L09/L08 VINT evidence, strict-interior target-node and finite-port V2 contract, LOW disclosures, unresolved-rail behavior, raw re-import guidance, and adaptive m8-to-m14 convergence define the current release."
+          "summary": "v0.22.8 source-graph and artwork-reachability improvements; historical v0.22.7 plane-pair selection, L09/L08 VINT evidence, strict-interior target-node and finite-port V2 contract, LOW disclosures, unresolved-rail behavior, raw re-import guidance, and adaptive m8-to-m14 convergence define the current release."
         },
         {
           "lineStart": 39,
@@ -63,10 +63,10 @@
     },
     {
       "source": "docs/DECAP_DISTRIBUTION_RULES.md",
-      "sourceBlobSha": "b02be6f7e986ac2d59d6bacf86e1048f9fda11bc",
-      "sourceSha256": "0997d65d575a7c5525f2660cd3559abae8446eae5f6410d2e5d9a4477dae5193",
+      "sourceBlobSha": "c0cecee0689241616064c20644319a4052ccc58c",
+      "sourceSha256": "d763987729e5bdc177bb37fc17880c3551281fbc37162211ec4ec0393fde81c2",
       "output": "docs/DECAP_DISTRIBUTION_RULES.companion.html",
-      "outputSha256": "6f717bc8056947447ba514cd05809b562dc129ec4f364b4bd263f73f9141ac1b",
+      "outputSha256": "7d82df715a71ba829274a88545b0524783f1029c4cd9d345a298dad073babcd6",
       "headingCount": 38,
       "visualClassification": "PROCESS_FLOW",
       "visualTitle": "Distribution eligibility to applied result",
@@ -155,10 +155,10 @@
     },
     {
       "source": "docs/EVALUATION_ACCURACY.md",
-      "sourceBlobSha": "5003ef745facb49f0ab0d942ab6639c318aa675d",
-      "sourceSha256": "65ad65c0b82e0c5eb39016b490c30f4d7392abcc1a6267fd73a9096e2006ca27",
+      "sourceBlobSha": "8e4ae75881671864df75b05f973871120c5aa962",
+      "sourceSha256": "7763a2035a0fe355f588c06b8d8636fd3b50b815e0531d1b5a743d10c0964008",
       "output": "docs/EVALUATION_ACCURACY.companion.html",
-      "outputSha256": "d254607f94d3a0902bede974dbcf76a576767e91d126341ed350693b67e00b78",
+      "outputSha256": "e7f6cfc296a81587d4b22791ddd308cc22dcbf3108e08646b7b8ce3fcd9e38e1",
       "headingCount": 7,
       "visualClassification": "ARCHITECTURE",
       "visualTitle": "Evaluation modeling boundary",
@@ -167,7 +167,7 @@
         {
           "lineStart": 5,
           "lineEnd": 31,
-          "summary": "v0.22.7 source-graph plane-pair selection, strict-interior target-node and finite-port V2 provenance, LOW/not-sign-off boundaries, unresolved-rail blocking, v0.22.6 re-import guidance, and immutable source scenarios define Evaluation scope."
+          "summary": "v0.22.8 source-graph/artwork reachability and seam recovery; historical v0.22.7 plane-pair selection, strict-interior target-node and finite-port V2 provenance, LOW/not-sign-off boundaries, unresolved-rail blocking, v0.22.6 re-import guidance, and immutable source scenarios define Evaluation scope."
         },
         {
           "lineStart": 68,

@@ -2,7 +2,7 @@
   #define RepoRoot ".."
 #endif
 #ifndef AppVersion
-  #define AppVersion "0.22.7"
+  #define AppVersion "0.22.9"
 #endif
 
 #define AppName "SPD Decap PI Evaluator"

@@ -1,9 +1,16 @@
-# SPD Decap PI Evaluator v0.22.7
+# SPD Decap PI Evaluator v0.22.9
 
-> **v0.22.7 selects source-graph-proven plane pairs before strict Evaluation.**
-> The title bar identifies the application as **SPD Decap PI Evaluator v0.22.7**.
+> **v0.22.9 UI-containment hotfix:** maximized Evaluation workspaces keep the
+> board and side pane reachable; long comparison results remain inside bounded,
+> horizontally scrollable tables.
 
-**v0.22.7 source-graph and convergence release note:**
+> **v0.22.8 adds exact same-layer artwork reachability and conservative finite-width seams.**
+> The title bar identifies the application as **SPD Decap PI Evaluator v0.22.9**.
+
+**v0.22.8 source-graph and convergence release note:**
+
+- Thermal Trace parsing, exact same-layer artwork component reachability, conservative
+  finite-width boundary seams, and fail-closed source-provenance gates are included.
 
 - Raw SPD import recovers source-graph connectivity before choosing a plane pair;
   the validated VINT rails select the internal `L09 (MAIN_POWER1) / L08 (DGND)`
@@ -26,11 +33,15 @@
   RMS 0.2 dB, maximum 0.5 dB, and peak-shift 2% remain unchanged; exhaustion is
   reported as a fail-closed result.
 
+**v0.22.7 source-graph and convergence release note (historical):** source-bound
+plane-pair selection and strict Evaluation provenance preceded the v0.22.8
+artwork/seam recovery improvements.
+
 > **v0.22.5 loader-performance release note (historical):** exact PowerSI Shape
 > parsing was accelerated and unreachable internal code removed. It is not the
 > current release identity.
 
-> 프로그램: **SPD Decap PI Evaluator v0.22.7**
+> 프로그램: **SPD Decap PI Evaluator v0.22.9**
 > 저장소: 기존 PI Calculator와 분리된 독립 프로그램
 > 해석 경계: 선택한 PWR rail의 pre-design `Zii`; 최종 PowerSI/SIwave 검증을 대체하지 않음
 
@@ -257,7 +268,7 @@ powershell.exe -ExecutionPolicy Bypass -NoProfile -File .\scripts\build_spd_deca
 산출물:
 
 - `dist\SPDDecapPIEvaluator\SPDDecapPIEvaluator.exe`
-- `installer-output\SPDDecapPIEvaluatorSetup-0.22.7.exe`
-- `installer-output\SPDDecapPIEvaluatorSetup-0.22.7.exe.sha256`
+- `installer-output\SPDDecapPIEvaluatorSetup-0.22.9.exe`
+- `installer-output\SPDDecapPIEvaluatorSetup-0.22.9.exe.sha256`
 
 프로그램명과 버전은 title bar와 installer metadata에 함께 표시된다.

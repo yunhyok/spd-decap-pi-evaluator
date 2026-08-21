@@ -11,6 +11,7 @@ from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
     QLabel,
     QMainWindow,
+    QSizePolicy,
     QSplitter,
     QTableWidget,
     QTableWidgetItem,
@@ -30,6 +31,36 @@ _IMPEDANCE_UNITS = (
     (1.0e-9, "nΩ"),
     (1.0e-12, "pΩ"),
 )
+
+# Comparison tables intentionally remain wider than a narrow side pane.  Their
+# horizontal scrollbar is the reachable overflow boundary; unbounded Qt size
+# hints must never resize the containing window or splitter.
+COMPARISON_COLUMN_MAX_WIDTH = 360
+
+
+def size_comparison_table_columns(
+    table: QTableWidget,
+    *,
+    max_width: int = COMPARISON_COLUMN_MAX_WIDTH,
+) -> None:
+    """Apply bounded, scrollable sizing to a comparison table.
+
+    Cell text is left intact.  Long cells receive a full-text tooltip so the
+    bounded column width does not hide information from keyboard/mouse users.
+    """
+
+    bounded_width = max(120, int(max_width))
+    table.setMinimumWidth(0)
+    table.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Expanding)
+    table.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
+    header = table.horizontalHeader()
+    for column in range(table.columnCount()):
+        width = max(header.sectionSizeHint(column), table.sizeHintForColumn(column))
+        header.resizeSection(column, min(bounded_width, max(80, width)))
+        for row in range(table.rowCount()):
+            item = table.item(row, column)
+            if item is not None and len(item.text()) > 48 and not item.toolTip():
+                item.setToolTip(item.text())
 
 
 def log_log_interpolate_impedance(
@@ -178,6 +209,9 @@ class ComparisonResultsWindow(QMainWindow):
         self.table = QTableWidget(0, 0, splitter)
         self.table.setObjectName("largeResultComparisonTable")
         self.table.setMinimumHeight(150)
+        self.table.setSizePolicy(
+            QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Expanding
+        )
         self.table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
         self.table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
         splitter.addWidget(self.plot)
@@ -279,11 +313,13 @@ class ComparisonResultsWindow(QMainWindow):
                 item.setToolTip(source_item.toolTip())
                 item.setFlags(item.flags() & ~Qt.ItemFlag.ItemIsEditable)
                 self.table.setItem(row, column, item)
-        self.table.resizeColumnsToContents()
+        size_comparison_table_columns(self.table)
 
 
 __all__ = [
+    "COMPARISON_COLUMN_MAX_WIDTH",
     "ComparisonResultsWindow",
     "impedance_transition_at_frequency",
     "log_log_interpolate_impedance",
+    "size_comparison_table_columns",
 ]

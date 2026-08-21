@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import csv
-from collections.abc import Mapping
+from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
 from decimal import Decimal, ROUND_FLOOR
 from hashlib import sha256
@@ -84,14 +84,13 @@ from ..scenario_edits import (
     ProposedRailAssignmentAnalysis,
     ScenarioEditError,
     analyze_cluster_selection,
-    analyze_rail_assignment,
-    analyze_restore_selection,
     assign_model_atomic,
     assign_rail_atomic,
-    assignment_options_for_selection,
     restore_source_atomic,
     selection_with_required_cluster_members,
     set_enabled_atomic,
+    selection_presentation_analysis,
+    SelectionPresentationAnalysis,
 )
 from ..scenario_io import (
     ScenarioBundle,
@@ -105,6 +104,7 @@ from .distribution_window import DistributionTargetsWindow
 from .results_window import (
     ComparisonResultsWindow,
     impedance_transition_at_frequency,
+    size_comparison_table_columns,
 )
 from .worker import FunctionWorker
 
@@ -1935,6 +1935,10 @@ class MainWindow(QMainWindow):
         self._distribution_table_updating = False
         self._distribution_import_notice: str | None = None
         self._distribution_status_notice: str | None = None
+        self._evaluation_rail_sort_order: Qt.SortOrder | None = None
+        self._selection_presentation_cache_scenario: ScenarioSpec | None = None
+        self._selection_presentation_cache_key: tuple[Any, ...] | None = None
+        self._selection_presentation_cache: SelectionPresentationAnalysis | None = None
 
         self._build_actions()
         self._build_ui()
@@ -2067,30 +2071,44 @@ class MainWindow(QMainWindow):
         self.plane_layer_bar.hide()
         root_layout.addWidget(self.plane_layer_bar)
 
-        splitter = QSplitter(Qt.Orientation.Horizontal)
+        self.main_splitter = QSplitter(Qt.Orientation.Horizontal)
+        self.main_splitter.setObjectName("mainWorkspaceSplitter")
+        self.main_splitter.setChildrenCollapsible(False)
+        self.main_splitter.setHandleWidth(10)
         self.board = DecapBoardView()
+        self.board.setMinimumWidth(320)
+        self.board.setSizePolicy(
+            QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Expanding
+        )
         self.board.selectionChanged.connect(self._selection_changed)
         self.board.contextMenuRequested.connect(self._show_decap_context_menu)
-        splitter.addWidget(self.board)
+        self.main_splitter.addWidget(self.board)
 
         self.side_tabs = QTabWidget()
         self.side_tabs.setObjectName("scenarioSideTabs")
         self.side_tabs.setMinimumWidth(600)
+        self.side_tabs.setSizePolicy(
+            QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Expanding
+        )
         self.side_tabs.addTab(self._build_selection_tab(), "Selection")
         self.side_tabs.addTab(self._build_evaluation_tab(), "Evaluation")
         self.side_tabs.addTab(self._build_ai_tab(), "AI Assist")
         self.side_tabs.addTab(
             self._build_distribution_tab(), "De-cap Distribution"
         )
-        splitter.addWidget(self.side_tabs)
-        splitter.setStretchFactor(0, 4)
-        splitter.setStretchFactor(1, 2)
-        root_layout.addWidget(splitter, 1)
+        self.main_splitter.addWidget(self.side_tabs)
+        self.main_splitter.setStretchFactor(0, 4)
+        self.main_splitter.setStretchFactor(1, 2)
+        root_layout.addWidget(self.main_splitter, 1)
         self.setCentralWidget(root)
 
         status = QStatusBar(self)
         self.setStatusBar(status)
         self.status_text = QLabel("Ready")
+        self.status_text.setMinimumWidth(0)
+        self.status_text.setSizePolicy(
+            QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Preferred
+        )
         self.progress_bar = QProgressBar()
         self.progress_bar.setRange(0, 100)
         self.progress_bar.setFixedWidth(230)
@@ -2202,6 +2220,9 @@ class MainWindow(QMainWindow):
         controls_section = QWidget()
         controls_section.setObjectName("evaluationControlsSection")
         controls_section.setMinimumHeight(285)
+        controls_section.setSizePolicy(
+            QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Expanding
+        )
         controls_layout = QVBoxLayout(controls_section)
         controls_layout.setContentsMargins(0, 0, 0, 0)
         controls_heading = QLabel("PWR NET Selection & Evaluation")
@@ -2238,8 +2259,17 @@ class MainWindow(QMainWindow):
         self.clear_rails_button.clicked.connect(
             lambda: self._set_all_rails_checked(False)
         )
+        self.sort_rails_button = QPushButton("Sort A→Z")
+        self.sort_rails_button.setObjectName("sortEvaluationRailsButton")
+        self.sort_rails_button.setAccessibleName("Sort PWR NETs")
+        self.sort_rails_button.setToolTip(
+            "Sort PWR NETs alphabetically. Click again to reverse the order; "
+            "the button label shows the next sort direction."
+        )
+        self.sort_rails_button.clicked.connect(self._toggle_evaluation_rail_sort)
         rail_buttons.addWidget(self.select_all_rails_button)
         rail_buttons.addWidget(self.clear_rails_button)
+        rail_buttons.addWidget(self.sort_rails_button)
         rail_label = QLabel("PWR NETs")
         rail_label.setObjectName("evaluationRailLabel")
         rail_label.setAccessibleName("PWR NETs")
@@ -2338,12 +2368,13 @@ class MainWindow(QMainWindow):
         form.addRow(rail_picker)
         form.addRow("Common target impedance (ohm)", self.target_edit)
         form.addRow("Physics model", profile_picker)
-        modal_picker = QWidget()
-        modal_picker_layout = QHBoxLayout(modal_picker)
-        modal_picker_layout.setContentsMargins(0, 0, 0, 0)
-        modal_picker_layout.addWidget(self.evaluation_modal_preset_combo, 1)
-        modal_picker_layout.addWidget(self.evaluation_alternate_pair_checkbox)
-        form.addRow("Numerical convergence preset", modal_picker)
+        form.addRow("Numerical convergence preset", self.evaluation_modal_preset_combo)
+        fallback_row = QWidget()
+        fallback_row_layout = QHBoxLayout(fallback_row)
+        fallback_row_layout.setContentsMargins(0, 0, 0, 0)
+        fallback_row_layout.addWidget(self.evaluation_alternate_pair_checkbox)
+        fallback_row_layout.addStretch(1)
+        form.addRow("", fallback_row)
         controls_layout.addLayout(form)
         self._update_evaluation_solver_profile_help()
         self.evaluate_button = QPushButton("Run Original + Tuned evaluation")
@@ -2353,6 +2384,9 @@ class MainWindow(QMainWindow):
 
         results_section = QWidget()
         results_section.setObjectName("evaluationResultsSection")
+        results_section.setSizePolicy(
+            QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Expanding
+        )
         # 150 px still keeps the result tabs readable but leaves the controls
         # section enough room at 1200x700 for the PWR NET picker to exceed its
         # own minimum instead of being clipped at every splitter position.
@@ -2406,9 +2440,16 @@ class MainWindow(QMainWindow):
         self.comparison_table.setSelectionBehavior(
             QTableWidget.SelectionBehavior.SelectRows
         )
+        self.comparison_table.setSizePolicy(
+            QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Expanding
+        )
+        self.comparison_table.setMinimumWidth(0)
         self.evaluation_summary = QTextBrowser()
         result_details = QTabWidget()
         result_details.setObjectName("evaluationResultDetails")
+        result_details.setSizePolicy(
+            QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Expanding
+        )
         result_details.addTab(self.comparison_table, "Comparison table")
         result_details.addTab(self.evaluation_summary, "Summary")
         self.evaluation_notes = QTextBrowser()
@@ -2420,6 +2461,9 @@ class MainWindow(QMainWindow):
 
         section_splitter.addWidget(controls_section)
         section_splitter.addWidget(results_section)
+        section_splitter.setSizePolicy(
+            QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Expanding
+        )
         section_splitter.setStretchFactor(0, 1)
         section_splitter.setStretchFactor(1, 3)
         section_splitter.setSizes((405, 335))
@@ -3318,6 +3362,7 @@ class MainWindow(QMainWindow):
         else:
             raw_counts = prepared_counts
             raw_assignable_counts = prepared_assignable_counts
+        self._clear_selection_presentation_cache()
         self._scenario = scenario
         project = project if project is not None else scenario.base_project
         rails = tuple(project.rails)
@@ -4802,6 +4847,7 @@ class MainWindow(QMainWindow):
 
         summary = self.distribution_summary.toPlainText()
         self._distribution_preview_scenario = preview
+        self._clear_selection_presentation_cache()
         self._scenario = preview
         self._dirty = True
         self._invalidate_evaluation(
@@ -5085,6 +5131,7 @@ class MainWindow(QMainWindow):
             self.rail_list,
             self.select_all_rails_button,
             self.clear_rails_button,
+            self.sort_rails_button,
             self.target_edit,
             self.evaluation_solver_profile_combo,
             self.evaluation_modal_preset_combo,
@@ -5125,6 +5172,7 @@ class MainWindow(QMainWindow):
             self.rail_list,
             self.select_all_rails_button,
             self.clear_rails_button,
+            self.sort_rails_button,
             self.target_edit,
             self.evaluation_solver_profile_combo,
             self.evaluation_modal_preset_combo,
@@ -5468,7 +5516,7 @@ class MainWindow(QMainWindow):
                     f"SPD analysis: {timings.analyze_s:.3f}s",
                     f"Geometry normalization/compression: {timings.plan_s:.3f}s",
                     f"Spatial index build: {timings.index_s:.3f}s",
-                    f"Source Via path recovery: {timings.recovery_s:.3f}s",
+                    f"Source graph/path recovery: {timings.recovery_s:.3f}s",
                     f"Mixed-reference witness selection: "
                     f"{timings.mixed_witness_selection_s:.3f}s",
                     f"Mixed-reference GND recovery: {timings.ground_recovery_s:.3f}s",
@@ -5700,6 +5748,7 @@ class MainWindow(QMainWindow):
     def _reset_document_view_state(self) -> None:
         """Drop rendering and picker state that must not cross documents."""
 
+        self._clear_selection_presentation_cache()
         self.status_text.setToolTip("")
         self._distribution_show_original_board = False
         self._source_board_records = ()
@@ -5740,6 +5789,11 @@ class MainWindow(QMainWindow):
         self._plane_items_by_net.clear()
         self._plane_items_by_layer.clear()
         self._clear_plane_layer_controls(reset_hidden=True)
+
+    def _clear_selection_presentation_cache(self) -> None:
+        self._selection_presentation_cache_scenario = None
+        self._selection_presentation_cache_key = None
+        self._selection_presentation_cache = None
 
     def _fit_board_and_record(self) -> None:
         """Fit the board once its staged layers exist and record the real cost."""
@@ -6297,6 +6351,9 @@ class MainWindow(QMainWindow):
 
     def _refresh_rails(self, project: ProjectSpec | None = None) -> None:
         assert self._scenario is not None
+        source_rails = tuple(
+            (project if project is not None else self._scenario.base_project).rails
+        )
         had_items = self.rail_list.count() > 0
         checked = {
             str(self.rail_list.item(index).data(Qt.ItemDataRole.UserRole)).casefold()
@@ -6317,7 +6374,22 @@ class MainWindow(QMainWindow):
         signals_were_blocked = self.rail_list.blockSignals(True)
         self.rail_list.clear()
         restored_current_item: QListWidgetItem | None = None
-        for rail in (project if project is not None else self._scenario.base_project).rails:
+        ordered_rails = source_rails
+        if self._evaluation_rail_sort_order is not None:
+            ordered_rails = tuple(
+                sorted(
+                    source_rails,
+                    key=lambda rail: (
+                        rail.net.casefold(),
+                        rail.rail_id.casefold(),
+                        rail.net,
+                        rail.rail_id,
+                    ),
+                    reverse=self._evaluation_rail_sort_order
+                    == Qt.SortOrder.DescendingOrder,
+                )
+            )
+        for rail in ordered_rails:
             item = QListWidgetItem(f"{rail.net} ({rail.rail_id})")
             item.setData(Qt.ItemDataRole.UserRole, rail.rail_id)
             item.setIcon(self._net_color_swatch(rail.net))
@@ -6338,8 +6410,13 @@ class MainWindow(QMainWindow):
                 restored_current_item = item
         if restored_current_item is not None:
             self.rail_list.setCurrentItem(restored_current_item)
-        if not had_items and self.rail_list.count():
-            self.rail_list.item(0).setCheckState(Qt.CheckState.Checked)
+        if not had_items and source_rails:
+            first_rail_id = source_rails[0].rail_id.casefold()
+            for index in range(self.rail_list.count()):
+                item = self.rail_list.item(index)
+                if str(item.data(Qt.ItemDataRole.UserRole)).casefold() == first_rail_id:
+                    item.setCheckState(Qt.CheckState.Checked)
+                    break
         self.rail_list.blockSignals(signals_were_blocked)
         self._refresh_board_net_focus(restyle_planes=False)
 
@@ -6357,11 +6434,29 @@ class MainWindow(QMainWindow):
         return QIcon(swatch)
 
     def _checked_rail_ids(self) -> tuple[str, ...]:
-        return tuple(
-            str(self.rail_list.item(index).data(Qt.ItemDataRole.UserRole))
+        checked = {
+            str(self.rail_list.item(index).data(Qt.ItemDataRole.UserRole)).casefold()
             for index in range(self.rail_list.count())
             if self.rail_list.item(index).checkState() == Qt.CheckState.Checked
+        }
+        return tuple(
+            rail.rail_id
+            for rail in self._scenario.base_project.rails
+            if rail.rail_id.casefold() in checked
+        ) if self._scenario is not None else ()
+
+    def _toggle_evaluation_rail_sort(self) -> None:
+        self._evaluation_rail_sort_order = (
+            Qt.SortOrder.DescendingOrder
+            if self._evaluation_rail_sort_order == Qt.SortOrder.AscendingOrder
+            else Qt.SortOrder.AscendingOrder
         )
+        self.sort_rails_button.setText(
+            "Sort A→Z"
+            if self._evaluation_rail_sort_order == Qt.SortOrder.DescendingOrder
+            else "Sort Z→A"
+        )
+        self._refresh_rails()
 
     def _set_all_rails_checked(self, checked: bool) -> None:
         state = Qt.CheckState.Checked if checked else Qt.CheckState.Unchecked
@@ -6574,6 +6669,7 @@ class MainWindow(QMainWindow):
         if [item.casefold() for item in self._scenario.selected_refdes] != [
             item.casefold() for item in selected
         ]:
+            self._clear_selection_presentation_cache()
             self._scenario = self._scenario_with_selection(self._scenario, selected)
         self._refresh_selection_table()
 
@@ -6582,6 +6678,60 @@ class MainWindow(QMainWindow):
             return []
         keys = {item.casefold() for item in self.board.selected_refdes}
         return [item for item in self._scenario.decaps if item.refdes.casefold() in keys]
+
+    def _selection_presentation_analysis(
+        self, selected_refdes: Iterable[str]
+    ) -> SelectionPresentationAnalysis:
+        if self._scenario is None:
+            raise ScenarioEditError(
+                "SCENARIO_REQUIRED", "a scenario is required for PWR analysis"
+            )
+        selected_keys = {
+            str(refdes).strip().casefold()
+            for refdes in selected_refdes
+            if str(refdes).strip()
+        }
+        available_keys = {item.refdes.casefold() for item in self._scenario.decaps}
+        unknown = selected_keys - available_keys
+        if unknown:
+            raise ScenarioEditError(
+                "SELECTION_UNKNOWN",
+                "selection contains unknown REFDES values: "
+                + ", ".join(sorted(unknown)),
+            )
+        canonical = tuple(
+            item.refdes
+            for item in self._scenario.decaps
+            if item.refdes.casefold() in selected_keys
+        )
+        # ``design_fingerprint`` hashes every decap and is intentionally
+        # expensive on production-sized boards.  Identity + revision already
+        # form the GUI mutation boundary; avoid recomputing that hash on every
+        # context-menu invocation when the cached presentation is current.
+        cached_key = self._selection_presentation_cache_key
+        if (
+            self._selection_presentation_cache is not None
+            and self._selection_presentation_cache_scenario is self._scenario
+            and cached_key is not None
+            and cached_key[0] == id(self._scenario)
+            and cached_key[2] == self._scenario.revision
+            and cached_key[3] == tuple(item.casefold() for item in canonical)
+        ):
+            return self._selection_presentation_cache
+        key = (
+            id(self._scenario),
+            self._scenario.design_fingerprint,
+            self._scenario.revision,
+            tuple(item.casefold() for item in canonical),
+        )
+        if key != self._selection_presentation_cache_key:
+            self._selection_presentation_cache = selection_presentation_analysis(
+                self._scenario, canonical
+            )
+            self._selection_presentation_cache_scenario = self._scenario
+            self._selection_presentation_cache_key = key
+        assert self._selection_presentation_cache is not None
+        return self._selection_presentation_cache
 
     def _refresh_selection_table(self) -> None:
         selected = self._selected_decaps()
@@ -6603,10 +6753,12 @@ class MainWindow(QMainWindow):
             )
             self.board.set_required_companion_refdes(())
         else:
-            coverage = analyze_cluster_selection(
-                self._scenario, (item.refdes for item in selected)
-            )
             selection_snapshot = tuple(item.refdes for item in selected)
+            # Keep selectionChanged lightweight for large direct-decap boards.
+            # The full per-rail presentation batch is only needed when the
+            # summary has to explain partial-cluster alternatives; the context
+            # menu computes and caches it on demand for other selections.
+            coverage = analyze_cluster_selection(self._scenario, selection_snapshot)
             selected_keys = {item.casefold() for item in selection_snapshot}
             expanded_selection = selection_with_required_cluster_members(
                 self._scenario, selection_snapshot
@@ -6622,11 +6774,12 @@ class MainWindow(QMainWindow):
                 summary += f" | PWR edit blocked: {coverage.blocked_decaps[0].reason}"
             elif source_cluster_companions:
                 try:
+                    presentation = self._selection_presentation_analysis(
+                        selection_snapshot
+                    )
+                    coverage = presentation.state
                     valid_rail_keys = {
-                        item.casefold()
-                        for item in assignment_options_for_selection(
-                            self._scenario, selection_snapshot
-                        )
+                        item.casefold() for item in presentation.valid_rail_ids
                     }
                     current_rail_keys = {
                         item.current_rail_id.casefold() for item in selected
@@ -6640,12 +6793,12 @@ class MainWindow(QMainWindow):
                         summary += " | Partial source cluster; valid NET choices are enabled"
                     else:
                         blocked_label = None
-                        for rail in self._scenario.base_project.rails:
-                            if rail.rail_id.casefold() in current_rail_keys:
+                        for proposal in presentation.rail_proposals:
+                            rail_id = proposal.rail_id
+                            if rail_id is None:
                                 continue
-                            proposal = analyze_rail_assignment(
-                                self._scenario, selection_snapshot, rail.rail_id
-                            )
+                            if rail_id.casefold() in current_rail_keys:
+                                continue
                             if not proposal.valid:
                                 blocked_label = _proposal_block_label(proposal)
                                 break
@@ -6765,16 +6918,28 @@ class MainWindow(QMainWindow):
         # asynchronous popup call returns, which leaves its action unusable.
         pwr_menu = QMenu("Assign PWR NET", menu)
         menu.addMenu(pwr_menu)
+        presentation: SelectionPresentationAnalysis | None = None
         try:
+            presentation = self._selection_presentation_analysis(selection_snapshot)
             common_rail_ids = {
-                item.casefold()
-                for item in assignment_options_for_selection(
-                    self._scenario, selection_snapshot
-                )
+                item.casefold() for item in presentation.valid_rail_ids
             }
-            blocked_reason = None
+            proposals_by_rail = {
+                proposal.rail_id.casefold(): proposal
+                for proposal in presentation.rail_proposals
+                if proposal.rail_id is not None
+            }
+            if not presentation.state.pwr_editable:
+                blocked_reason = (
+                    presentation.state.blocked_decaps[0].reason
+                    if presentation.state.blocked_decaps
+                    else "source shared-pad connectivity has not been analyzed"
+                )
+            else:
+                blocked_reason = None
         except ScenarioEditError as exc:
             common_rail_ids = set()
+            proposals_by_rail = {}
             blocked_reason = str(exc)
         if blocked_reason is not None:
             unavailable = pwr_menu.addAction(
@@ -6793,9 +6958,7 @@ class MainWindow(QMainWindow):
                         )
                     )
                     continue
-                proposal = analyze_rail_assignment(
-                    self._scenario, selection_snapshot, rail.rail_id
-                )
+                proposal = proposals_by_rail[rail_key]
                 reason = _proposal_block_label(proposal)
                 unavailable = pwr_menu.addAction(
                     f"{rail_label} — blocked: {reason}"
@@ -6828,9 +6991,13 @@ class MainWindow(QMainWindow):
         restore_enabled = False
         restore_reason = None
         try:
-            restore_analysis = analyze_restore_selection(
-                self._scenario, selection_snapshot
+            restore_analysis = (
+                presentation.restore_proposal if presentation is not None else None
             )
+            if restore_analysis is None:
+                raise ScenarioEditError(
+                    "RESTORE_UNAVAILABLE", "restore analysis is unavailable"
+                )
             restore_enabled = restore_analysis.valid
             if not restore_enabled:
                 restore_reason = _proposal_block_label(restore_analysis)
@@ -6857,6 +7024,7 @@ class MainWindow(QMainWindow):
             updater(item) if item.refdes.casefold() in keys else item
             for item in self._scenario.decaps
         ]
+        self._clear_selection_presentation_cache()
         self._scenario = ScenarioSpec.model_validate(
             {
                 **self._scenario.model_dump(mode="json"),
@@ -6872,6 +7040,7 @@ class MainWindow(QMainWindow):
         if self._scenario is None or updated is self._scenario:
             self.status_text.setText("No scenario change was required")
             return
+        self._clear_selection_presentation_cache()
         self._scenario = updated
         self._dirty = True
         self._invalidate_evaluation()
@@ -6967,6 +7136,7 @@ class MainWindow(QMainWindow):
         for key in matching_keys:
             colors.pop(key, None)
         colors[net] = color.name().upper()
+        self._clear_selection_presentation_cache()
         self._scenario = ScenarioSpec.model_validate(
             {**self._scenario.model_dump(mode="json"), "net_colors": colors}
         )
@@ -7024,6 +7194,7 @@ class MainWindow(QMainWindow):
                 name: sha256(payload).hexdigest()
                 for name, payload in self._attachments.items()
             }
+            self._clear_selection_presentation_cache()
             self._scenario = ScenarioSpec.model_validate(
                 {
                     **self._scenario.model_dump(mode="json"),
@@ -7343,6 +7514,7 @@ class MainWindow(QMainWindow):
             # display cache; ordinary current/distribution edits keep it hot.
             self._source_board_records = ()
             self._source_board_cache_key = None
+        self._clear_selection_presentation_cache()
         self._scenario = updated_scenario
         self._attachments = dict(updated_attachments)
         self._dirty = self._dirty or persistent_change
@@ -7393,7 +7565,7 @@ class MainWindow(QMainWindow):
                 if column == 9:
                     item.setToolTip(provenance.details_text)
                 self.comparison_table.setItem(row, column, item)
-        self.comparison_table.resizeColumnsToContents()
+        size_comparison_table_columns(self.comparison_table)
         assert self._results_window is not None
         self._results_window.copy_table_from(self.comparison_table)
 

@@ -29,6 +29,7 @@ from PySide6.QtWidgets import (
     QSplitter,
     QTabWidget,
     QTableWidget,
+    QTableWidgetItem,
     QTextBrowser,
     QWidget,
 )
@@ -41,7 +42,7 @@ from test_spd_decap_scenario_edits import (
 )
 from spd_decap_pi import evaluation as evaluation_module
 from spd_decap_pi._core import services as core_services
-from spd_decap_pi._core.domain import StackupLayer
+from spd_decap_pi._core.domain import RailSpec, StackupLayer
 from spd_decap_pi._core.services import EvaluationView
 from spd_decap_pi._core.solver.profiles import (
     RESEARCH_UNIFORM_ADMITTANCE_PROFILE,
@@ -76,6 +77,7 @@ from spd_decap_pi.gui.main_window import (
 )
 from spd_decap_pi.gui.results_window import (
     ComparisonResultsWindow,
+    size_comparison_table_columns,
     impedance_transition_at_frequency,
     log_log_interpolate_impedance,
 )
@@ -1040,6 +1042,355 @@ def test_evaluation_splitter_keeps_picker_and_result_tabs_usable_at_1200_by_700(
         application.processEvents()
 
 
+def test_evaluation_rail_sort_toggles_preserve_state_and_execution_order(
+    tmp_path: Path,
+) -> None:
+    application = _application()
+    source = tmp_path / "rail-sort.spd"
+    source.write_text(MINI_SPD, encoding="ascii")
+    imported = import_spd_scenario(source)
+    window = MainWindow()
+    try:
+        window._accept_spd_import(imported)
+        source_order = tuple(
+            rail.rail_id for rail in window.scenario.base_project.rails
+        )
+        displayed = tuple(
+            str(window.rail_list.item(index).data(Qt.ItemDataRole.UserRole))
+            for index in range(window.rail_list.count())
+        )
+        assert displayed == source_order
+        assert window.sort_rails_button.text() == "Sort A→Z"
+        assert window.sort_rails_button.accessibleName() == "Sort PWR NETs"
+        assert window.sort_rails_button.toolTip()
+
+        tracked = window.rail_list.item(0)
+        tracked_id = str(tracked.data(Qt.ItemDataRole.UserRole))
+        tracked.setSelected(True)
+        window.rail_list.setCurrentItem(tracked)
+        tracked.setCheckState(Qt.CheckState.Checked)
+        tracked_icon = tracked.icon().pixmap(QSize(12, 12)).toImage()
+        tracked_user_role = tracked.data(Qt.ItemDataRole.UserRole)
+
+        window.sort_rails_button.click()
+        application.processEvents()
+        ascending = tuple(
+            str(window.rail_list.item(index).data(Qt.ItemDataRole.UserRole))
+            for index in range(window.rail_list.count())
+        )
+        expected_ascending = tuple(
+            rail.rail_id
+            for rail in sorted(
+                window.scenario.base_project.rails,
+                key=lambda rail: (
+                    rail.net.casefold(),
+                    rail.rail_id.casefold(),
+                    rail.net,
+                    rail.rail_id,
+                ),
+            )
+        )
+        assert ascending == expected_ascending
+        assert window.sort_rails_button.text() == "Sort Z→A"
+        restored = next(
+            window.rail_list.item(index)
+            for index in range(window.rail_list.count())
+            if str(window.rail_list.item(index).data(Qt.ItemDataRole.UserRole))
+            == tracked_id
+        )
+        assert restored.isSelected()
+        assert window.rail_list.currentItem() is restored
+        assert restored.checkState() == Qt.CheckState.Checked
+        assert restored.data(Qt.ItemDataRole.UserRole) == tracked_user_role
+        assert restored.icon().pixmap(QSize(12, 12)).toImage() == tracked_icon
+
+        window.sort_rails_button.click()
+        application.processEvents()
+        assert window.sort_rails_button.text() == "Sort A→Z"
+        assert window._checked_rail_ids() == (tracked_id,)
+        window._set_all_rails_checked(True)
+        assert window._checked_rail_ids() == source_order
+
+        window._set_busy(True)
+        assert not window.sort_rails_button.isEnabled()
+        window._set_busy(False)
+        assert window.sort_rails_button.isEnabled()
+
+        window.rail_list.clear()
+        window._refresh_rails()
+        first_source = window.scenario.base_project.rails[0].rail_id
+        checked_ids = window._checked_rail_ids()
+        assert checked_ids == (first_source,)
+    finally:
+        window._dirty = False
+        window.close()
+        application.processEvents()
+
+
+def test_evaluation_rail_sort_uses_real_mixed_case_ties_and_stays_reachable(
+    tmp_path: Path,
+) -> None:
+    application = _application()
+    source = tmp_path / "rail-sort-mixed-case.spd"
+    source.write_text(MINI_SPD, encoding="ascii")
+    imported = import_spd_scenario(source)
+    project = imported.scenario.base_project
+    rails = [
+        RailSpec(
+            rail_id="R3",
+            family="V",
+            domain="VDD_CORE/0",
+            net="vDD",
+            site="S0",
+            pwr_layer="Signal$PWR",
+            gnd_layer="Signal$GND",
+        ),
+        RailSpec(
+            rail_id="R1",
+            family="V",
+            domain="VDD_CORE/0",
+            net="VDD",
+            site="S0",
+            pwr_layer="Signal$PWR",
+            gnd_layer="Signal$GND",
+        ),
+        RailSpec(
+            rail_id="R4",
+            family="V",
+            domain="VDD_CORE/0",
+            net="aaa",
+            site="S0",
+            pwr_layer="Signal$PWR",
+            gnd_layer="Signal$GND",
+        ),
+        RailSpec(
+            rail_id="R2",
+            family="V",
+            domain="VDD_CORE/0",
+            net="AAA",
+            site="S0",
+            pwr_layer="Signal$PWR",
+            gnd_layer="Signal$GND",
+        ),
+    ]
+    updated_stackup = [
+        layer.model_copy(
+            update={
+                "pwr_nets": list(layer.pwr_nets) + ["vDD", "VDD", "aaa", "AAA"]
+            }
+        )
+        if layer.name == "Signal$PWR"
+        else layer
+        for layer in project.stackup_layers
+    ]
+    updated_project = project.model_copy(
+        update={"rails": rails, "stackup_layers": updated_stackup}
+    )
+    updated_scenario = imported.scenario.model_copy(
+        update={
+            "normalized_project": updated_project.model_dump(mode="python"),
+            "net_colors": {
+                **imported.scenario.net_colors,
+                "vDD": "#AA3344",
+                "VDD": "#44AA33",
+                "aaa": "#3344AA",
+                "AAA": "#AA8833",
+            },
+        }
+    )
+    imported = replace(imported, scenario=updated_scenario)
+    window = MainWindow()
+    try:
+        window._accept_spd_import(imported)
+        window.resize(1280, 720)
+        window.show()
+        application.processEvents()
+        source_order = tuple(item.rail_id for item in rails)
+        assert tuple(
+            str(window.rail_list.item(i).data(Qt.ItemDataRole.UserRole))
+            for i in range(window.rail_list.count())
+        ) == source_order
+        tracked = next(
+            window.rail_list.item(i)
+            for i in range(window.rail_list.count())
+            if window.rail_list.item(i).data(Qt.ItemDataRole.UserRole) == "R3"
+        )
+        tracked.setSelected(True)
+        window.rail_list.setCurrentItem(tracked)
+        tracked.setCheckState(Qt.CheckState.Checked)
+        tracked_icon = tracked.icon().pixmap(QSize(12, 12)).toImage()
+        window._refresh_colors()
+        window.sort_rails_button.click()
+        application.processEvents()
+        ascending = tuple(
+            str(window.rail_list.item(i).data(Qt.ItemDataRole.UserRole))
+            for i in range(window.rail_list.count())
+        )
+        expected_ascending = tuple(
+            item.rail_id
+            for item in sorted(
+                rails,
+                key=lambda item: (
+                    item.net.casefold(),
+                    item.rail_id.casefold(),
+                    item.net,
+                    item.rail_id,
+                ),
+            )
+        )
+        assert ascending == expected_ascending
+        moved = next(
+            window.rail_list.item(i)
+            for i in range(window.rail_list.count())
+            if window.rail_list.item(i).data(Qt.ItemDataRole.UserRole) == "R3"
+        )
+        assert moved.isSelected()
+        assert window.rail_list.currentItem() is moved
+        assert moved.checkState() == Qt.CheckState.Checked
+        assert moved.icon().pixmap(QSize(12, 12)).toImage() == tracked_icon
+        assert moved.data(Qt.ItemDataRole.UserRole) == "R3"
+        window.sort_rails_button.click()
+        application.processEvents()
+        expected_descending = tuple(reversed(expected_ascending))
+        assert tuple(
+            str(window.rail_list.item(i).data(Qt.ItemDataRole.UserRole))
+            for i in range(window.rail_list.count())
+        ) == expected_descending
+        window._set_all_rails_checked(True)
+        assert window._checked_rail_ids() == source_order
+        window._refresh_colors()
+        window.rail_list.clear()
+        window._evaluation_rail_sort_order = Qt.SortOrder.DescendingOrder
+        window._refresh_rails()
+        assert window._checked_rail_ids() == (source_order[0],)
+        assert window.sort_rails_button.isEnabled()
+        assert window.sort_rails_button.geometry().right() <= window.centralWidget().rect().right()
+        window._set_busy(True)
+        assert not window.sort_rails_button.isEnabled()
+        window._set_busy(False)
+        assert window.sort_rails_button.isEnabled()
+    finally:
+        window._dirty = False
+        window.close()
+        application.processEvents()
+
+
+def test_selection_presentation_cache_reuses_analysis_for_context_menu(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    application = _application()
+    source = tmp_path / "presentation-cache.spd"
+    source.write_text(MINI_SPD, encoding="ascii")
+    imported = import_spd_scenario(source)
+    window = MainWindow()
+    calls = 0
+    original = main_window_module.selection_presentation_analysis
+
+    def counted(scenario, selected_refdes):
+        nonlocal calls
+        calls += 1
+        return original(scenario, selected_refdes)
+
+    monkeypatch.setattr(
+        main_window_module, "selection_presentation_analysis", counted
+    )
+    try:
+        window._accept_spd_import(imported)
+        selected = (window.scenario.decaps[0].refdes,)
+        first = window._selection_presentation_analysis(selected)
+        second = window._selection_presentation_analysis(selected)
+        assert first is second
+        assert calls == 1
+        assert window._selection_presentation_cache_scenario is window.scenario
+        with pytest.raises(ValueError, match="unknown REFDES"):
+            window._selection_presentation_analysis(("UNKNOWN-REFDES",))
+        updated = window.scenario.model_copy(update={"revision": window.scenario.revision + 1})
+        window._commit_atomic_edit(updated)
+        assert window._selection_presentation_cache is None
+        assert window._selection_presentation_cache_scenario is None
+    finally:
+        window._dirty = False
+        window.close()
+        application.processEvents()
+
+
+@pytest.mark.parametrize("size", [(1280, 720), (1440, 900)])
+def test_main_workspace_splitter_contains_board_and_side_pane_at_desktop_sizes(
+    size: tuple[int, int],
+) -> None:
+    application = _application()
+    window = MainWindow()
+    try:
+        window.resize(*size)
+        window.show()
+        application.processEvents()
+        splitter = window.main_splitter
+        window.side_tabs.setCurrentIndex(1)
+        application.processEvents()
+        baseline_geometry = window.geometry()
+        baseline_splitter_sizes = tuple(splitter.sizes())
+        window._set_busy(True)
+        window.progress_bar.show()
+        window.cancel_button.show()
+        window.status_text.setText("Evaluation complete: " + ("long result " * 40))
+        long_text = "solver provenance " + ("full detail; " * 40)
+        window.comparison_table.setRowCount(2)
+        for row in range(window.comparison_table.rowCount()):
+            for column in range(window.comparison_table.columnCount()):
+                item = QTableWidgetItem(
+                    long_text if column == 9 else f"value {row}:{column}"
+                )
+                window.comparison_table.setItem(row, column, item)
+        size_comparison_table_columns(window.comparison_table)
+        application.processEvents()
+        assert splitter.objectName() == "mainWorkspaceSplitter"
+        assert not splitter.childrenCollapsible()
+        assert window.board.minimumWidth() >= 320
+        assert splitter.sizes()[0] >= 320
+        assert splitter.geometry().right() <= window.centralWidget().rect().right()
+        assert splitter.geometry().left() >= 0
+        assert window.geometry() == baseline_geometry
+        assert tuple(splitter.sizes()) == baseline_splitter_sizes
+        assert window.comparison_table.horizontalScrollBar().maximum() > 0
+        assert window.comparison_table.item(1, 9).text() == long_text
+        assert window.comparison_table.item(1, 9).toolTip() == long_text
+        assert window.open_results_button.isVisible()
+        assert window.evaluation_alternate_pair_checkbox.isVisible()
+        assert window.evaluation_alternate_pair_checkbox.parentWidget() is not None
+    finally:
+        window.close()
+        application.processEvents()
+
+
+def test_comparison_table_bounded_sizing_preserves_text_and_detached_copy() -> None:
+    application = _application()
+    source = QTableWidget(2, 10)
+    detached = ComparisonResultsWindow()
+    try:
+        source.setHorizontalHeaderLabels([f"Column {index}" for index in range(10)])
+        long_text = "solver provenance " + ("full detail; " * 40)
+        for row in range(source.rowCount()):
+            for column in range(source.columnCount()):
+                item = QTableWidgetItem()
+                item.setText(long_text if column == 9 else f"value {row}:{column}")
+                source.setItem(row, column, item)
+        size_comparison_table_columns(source)
+        assert source.columnCount() == 10
+        assert source.horizontalScrollBar().maximum() > 0
+        assert source.item(1, 9).text() == long_text
+        assert source.item(1, 9).toolTip() == long_text
+
+        detached.copy_table_from(source)
+        assert detached.table.columnCount() == 10
+        assert detached.table.item(1, 9).text() == long_text
+        assert detached.table.item(1, 9).toolTip() == long_text
+        assert detached.table.horizontalScrollBar().maximum() > 0
+    finally:
+        detached.close()
+        source.deleteLater()
+        application.processEvents()
+
+
 def test_detached_result_window_closes_with_the_main_window() -> None:
     application = _application()
     window = MainWindow()
@@ -1808,6 +2159,20 @@ def test_evaluation_worker_receives_scenario_model_attachments(
             else layer
             for layer in base.stackup_layers
         ]
+        metadata = dict(base.metadata)
+        spd_import = dict(metadata["spd_import"])
+        provenance = dict(spd_import["selected_plane_pair_provenance"])
+        original_proof = next(
+            value
+            for key, value in provenance.items()
+            if str(key).casefold() == base.rails[0].net.casefold()
+        )
+        provenance[second_rail.net] = {
+            **dict(original_proof),
+            "rail_net": second_rail.net,
+        }
+        spd_import["selected_plane_pair_provenance"] = provenance
+        metadata["spd_import"] = spd_import
         window._scenario = ScenarioSpec.model_validate(
             {
                 **window.scenario.model_dump(mode="python"),
@@ -1815,6 +2180,7 @@ def test_evaluation_worker_receives_scenario_model_attachments(
                     update={
                         "rails": [*base.rails, second_rail],
                         "stackup_layers": stackup,
+                        "metadata": metadata,
                     }
                 ),
             }

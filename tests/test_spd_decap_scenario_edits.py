@@ -43,6 +43,7 @@ from spd_decap_pi.scenario_edits import (
     assign_rails_and_isolation_gaps_atomic,
     assignment_options_for_selection,
     restore_source_atomic,
+    selection_presentation_analysis,
     selection_with_required_cluster_members,
     set_enabled_atomic,
 )
@@ -840,6 +841,20 @@ def test_same_net_rail_alias_cannot_split_one_physically_shorted_component() -> 
     changed = assign_rail_atomic(scenario, whole_cluster, "R2")
     assert all(item.current_net == "V1" for item in changed.decaps)
     assert all(item.current_rail_id == "R2" for item in changed.decaps)
+
+
+def test_selection_presentation_batch_matches_public_rail_and_restore_analysis() -> None:
+    scenario = _scenario()
+    selected = ("A", "B", "D", "X")
+    batch = selection_presentation_analysis(scenario, selected)
+    assert batch.selected_refdes == selected
+    assert batch.valid_rail_ids == assignment_options_for_selection(scenario, selected)
+    by_rail = {proposal.rail_id: proposal for proposal in batch.rail_proposals}
+    for rail in scenario.base_project.rails:
+        public = analyze_rail_assignment(scenario, selected, rail.rail_id)
+        proposal = by_rail[rail.rail_id]
+        assert proposal == public
+    assert batch.restore_proposal == analyze_restore_selection(scenario, selected)
 
 
 def test_persisted_same_net_component_with_mixed_rail_ids_is_rejected() -> None:

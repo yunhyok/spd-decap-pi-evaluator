@@ -114,6 +114,24 @@ class ProposedRailAssignmentAnalysis:
 
 
 @dataclass(frozen=True, slots=True)
+class SelectionPresentationAnalysis:
+    """All immutable rail/restore preflights for one canonical selection."""
+
+    selected_refdes: tuple[str, ...]
+    state: ClusterSelectionAnalysis
+    rail_proposals: tuple[ProposedRailAssignmentAnalysis, ...]
+    restore_proposal: ProposedRailAssignmentAnalysis | None
+
+    @property
+    def valid_rail_ids(self) -> tuple[str, ...]:
+        return tuple(
+            proposal.rail_id
+            for proposal in self.rail_proposals
+            if proposal.valid and proposal.rail_id is not None
+        )
+
+
+@dataclass(frozen=True, slots=True)
 class ClusterSelectionAnalysis:
     """Selection coverage and fail-closed PWR-edit state."""
 
@@ -184,9 +202,27 @@ def _analysis_indexes(
     )
 
 
+@dataclass(frozen=True, slots=True)
+class _ProposalAnalysisContext:
+    decap_by_key: dict[str, ScenarioDecap]
+    connection_by_refdes: dict[str, ScenarioDecapConnection]
+    cluster_by_id: dict[str, SharedPadCluster]
+
+
+def _proposal_analysis_context(scenario: ScenarioSpec) -> _ProposalAnalysisContext:
+    connection_by_refdes, cluster_by_id = _analysis_indexes(scenario)
+    return _ProposalAnalysisContext(
+        decap_by_key={item.refdes.casefold(): item for item in scenario.decaps},
+        connection_by_refdes=connection_by_refdes,
+        cluster_by_id=cluster_by_id,
+    )
+
+
 def analyze_cluster_selection(
     scenario: ScenarioSpec,
     selected_refdes: Iterable[str],
+    *,
+    _context: _ProposalAnalysisContext | None = None,
 ) -> ClusterSelectionAnalysis:
     """Return exact cluster coverage without silently expanding selection."""
 
@@ -207,7 +243,13 @@ def analyze_cluster_selection(
             connection_analysis_available=False,
         )
 
-    connection_by_refdes, cluster_by_id = _analysis_indexes(scenario)
+    if _context is None:
+        connection_by_refdes, cluster_by_id = _analysis_indexes(scenario)
+    else:
+        connection_by_refdes, cluster_by_id = (
+            _context.connection_by_refdes,
+            _context.cluster_by_id,
+        )
     touched_cluster_keys: set[str] = set()
     blocked: list[BlockedDecapSelection] = []
     for refdes in selected:
@@ -322,10 +364,13 @@ def _analyze_proposed_state(
     replacements: dict[str, ScenarioDecap],
     *,
     requested_rail_id: str | None,
+    _context: _ProposalAnalysisContext | None = None,
 ) -> ProposedRailAssignmentAnalysis:
-    decap_by_key = {item.refdes.casefold(): item for item in scenario.decaps}
+    context = _context or _proposal_analysis_context(scenario)
+    decap_by_key = dict(context.decap_by_key)
     decap_by_key.update(replacements)
-    connection_by_refdes, cluster_by_id = _analysis_indexes(scenario)
+    connection_by_refdes = context.connection_by_refdes
+    cluster_by_id = context.cluster_by_id
     selected_keys = {item.casefold() for item in selected_refdes}
     touched_cluster_keys = {
         connection.cluster_id.casefold()
@@ -524,35 +569,19 @@ def analyze_rail_assignment(
 ) -> ProposedRailAssignmentAnalysis:
     """Simulate an explicit partial edit against every resulting source cluster."""
 
-    state = analyze_cluster_selection(scenario, selected_refdes)
+    context = _proposal_analysis_context(scenario)
+    state = analyze_cluster_selection(scenario, selected_refdes, _context=context)
     _require_pwr_editable(state)
-    rail = next(
-        (
-            item
-            for item in scenario.base_project.rails
-            if item.rail_id.casefold() == str(rail_id).strip().casefold()
-        ),
-        None,
-    )
+    rail = _find_rail(scenario, rail_id)
     if rail is None:
         raise ScenarioEditError("RAIL_UNKNOWN", f"unknown PWR rail {rail_id!r}")
-    selected_keys = {item.casefold() for item in state.selected_refdes}
-    replacements = {
-        item.refdes.casefold(): ScenarioDecap.model_validate(
-            {
-                **item.model_dump(mode="python"),
-                "current_rail_id": rail.rail_id,
-                "current_net": rail.net,
-            }
-        )
-        for item in scenario.decaps
-        if item.refdes.casefold() in selected_keys
-    }
+    replacements = _rail_replacements(scenario, state.selected_refdes, rail)
     return _analyze_proposed_state(
         scenario,
         state.selected_refdes,
         replacements,
         requested_rail_id=rail.rail_id,
+        _context=context,
     )
 
 
@@ -562,14 +591,77 @@ def assignment_options_for_selection(
 ) -> tuple[str, ...]:
     """Return canonical common rail IDs for one PWR-editable selection."""
 
-    state = analyze_cluster_selection(scenario, selected_refdes)
-    _require_pwr_editable(state)
-    return tuple(
-        rail.rail_id
+    analysis = selection_presentation_analysis(scenario, selected_refdes)
+    _require_pwr_editable(analysis.state)
+    return analysis.valid_rail_ids
+
+
+def _find_rail(scenario: ScenarioSpec, rail_id: str):
+    return next(
+        (
+            item
+            for item in scenario.base_project.rails
+            if item.rail_id.casefold() == str(rail_id).strip().casefold()
+        ),
+        None,
+    )
+
+
+def _rail_replacements(
+    scenario: ScenarioSpec,
+    selected_refdes: tuple[str, ...],
+    rail,
+) -> dict[str, ScenarioDecap]:
+    selected_keys = {item.casefold() for item in selected_refdes}
+    return {
+        item.refdes.casefold(): item.model_copy(
+            update={
+                "current_rail_id": rail.rail_id,
+                "current_net": rail.net,
+            }
+        )
+        for item in scenario.decaps
+        if item.refdes.casefold() in selected_keys
+    }
+
+
+def selection_presentation_analysis(
+    scenario: ScenarioSpec,
+    selected_refdes: Iterable[str],
+) -> SelectionPresentationAnalysis:
+    """Analyze every rail and restore action once for one canonical selection."""
+
+    context = _proposal_analysis_context(scenario)
+    state = analyze_cluster_selection(scenario, selected_refdes, _context=context)
+    if not state.pwr_editable:
+        return SelectionPresentationAnalysis(
+            selected_refdes=state.selected_refdes,
+            state=state,
+            rail_proposals=(),
+            restore_proposal=None,
+        )
+    rail_proposals = tuple(
+        _analyze_proposed_state(
+            scenario,
+            state.selected_refdes,
+            _rail_replacements(scenario, state.selected_refdes, rail),
+            requested_rail_id=rail.rail_id,
+            _context=context,
+        )
         for rail in scenario.base_project.rails
-        if analyze_rail_assignment(
-            scenario, state.selected_refdes, rail.rail_id
-        ).valid
+    )
+    restore_proposal = _analyze_proposed_state(
+        scenario,
+        state.selected_refdes,
+        _restore_replacements(scenario, state.selected_refdes),
+        requested_rail_id=None,
+        _context=context,
+    )
+    return SelectionPresentationAnalysis(
+        selected_refdes=state.selected_refdes,
+        state=state,
+        rail_proposals=rail_proposals,
+        restore_proposal=restore_proposal,
     )
 
 
@@ -603,26 +695,15 @@ def assign_rail_atomic(
 ) -> ScenarioSpec:
     """Assign one rail after validating every resulting source-graph component."""
 
-    state = analyze_cluster_selection(scenario, selected_refdes)
-    _require_pwr_editable(state)
-    rail = next(
-        (
-            item
-            for item in scenario.base_project.rails
-            if item.rail_id.casefold() == str(rail_id).strip().casefold()
-        ),
-        None,
-    )
+    proposal = analyze_rail_assignment(scenario, selected_refdes, rail_id)
+    rail = _find_rail(scenario, rail_id)
     if rail is None:
         raise ScenarioEditError("RAIL_UNKNOWN", f"unknown PWR rail {rail_id!r}")
-    proposal = analyze_rail_assignment(
-        scenario, state.selected_refdes, rail.rail_id
-    )
     if not proposal.valid:
         _raise_invalid_proposal(proposal)
 
     replacements: dict[str, ScenarioDecap] = {}
-    selected_keys = {item.casefold() for item in state.selected_refdes}
+    selected_keys = {item.casefold() for item in proposal.selected_refdes}
     for decap in scenario.decaps:
         key = decap.refdes.casefold()
         if key not in selected_keys:
@@ -641,7 +722,7 @@ def assign_rail_atomic(
         )
     return _replace_selected_decaps(
         scenario,
-        state.selected_refdes,
+        proposal.selected_refdes,
         replacements,
     )
 
@@ -1039,9 +1120,8 @@ def _restore_replacements(
 ) -> dict[str, ScenarioDecap]:
     selected_keys = {item.casefold() for item in selected_refdes}
     return {
-        decap.refdes.casefold(): ScenarioDecap.model_validate(
-            {
-                **decap.model_dump(mode="python"),
+        decap.refdes.casefold(): decap.model_copy(
+            update={
                 "current_net": decap.source_net,
                 "current_rail_id": decap.source_rail_id,
                 "model_id": _source_model_id(scenario, decap),
@@ -1060,13 +1140,15 @@ def analyze_restore_selection(
 ) -> ProposedRailAssignmentAnalysis:
     """Cheap GUI preflight using the same whole-cluster rule as Restore."""
 
-    state = analyze_cluster_selection(scenario, selected_refdes)
+    context = _proposal_analysis_context(scenario)
+    state = analyze_cluster_selection(scenario, selected_refdes, _context=context)
     _require_pwr_editable(state)
     return _analyze_proposed_state(
         scenario,
         state.selected_refdes,
         _restore_replacements(scenario, state.selected_refdes),
         requested_rail_id=None,
+        _context=context,
     )
 
 
@@ -1076,17 +1158,10 @@ def restore_source_atomic(
 ) -> ScenarioSpec:
     """Restore explicit members when the resulting source graph stays valid."""
 
-    state = analyze_cluster_selection(scenario, selected_refdes)
-    _require_pwr_editable(state)
-    proposed = _restore_replacements(scenario, state.selected_refdes)
-    analysis = _analyze_proposed_state(
-        scenario,
-        state.selected_refdes,
-        proposed,
-        requested_rail_id=None,
-    )
+    analysis = analyze_restore_selection(scenario, selected_refdes)
     if not analysis.valid:
         _raise_invalid_proposal(analysis)
+    proposed = _restore_replacements(scenario, analysis.selected_refdes)
     decap_by_key = {item.refdes.casefold(): item for item in scenario.decaps}
     replacements = {
         key: restored
@@ -1095,7 +1170,7 @@ def restore_source_atomic(
     }
     return _replace_selected_decaps(
         scenario,
-        state.selected_refdes,
+        analysis.selected_refdes,
         replacements,
     )
 
@@ -1106,6 +1181,7 @@ __all__ = [
     "IncompleteClusterSelection",
     "InvalidSharedPadIsland",
     "ProposedRailAssignmentAnalysis",
+    "SelectionPresentationAnalysis",
     "ScenarioEditError",
     "analyze_cluster_selection",
     "analyze_rail_assignment",
@@ -1118,5 +1194,6 @@ __all__ = [
     "assignment_options_for_selection",
     "restore_source_atomic",
     "selection_with_required_cluster_members",
+    "selection_presentation_analysis",
     "set_enabled_atomic",
 ]
