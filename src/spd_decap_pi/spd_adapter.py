@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from hashlib import sha256
 import json
@@ -13,6 +13,7 @@ from types import SimpleNamespace
 from typing import Any
 
 from spd_decap_pi._core.domain import (
+    MixedReferenceCertificate,
     MixedReferenceGroundWitness,
     PinKind,
     PlanePairSuggestion,
@@ -531,6 +532,7 @@ def _via_target_layers_by_net(
     project: ProjectSpec,
     *,
     plane_geometries: tuple[Any, ...] = (),
+    mixed_reference_certificates: tuple[MixedReferenceCertificate, ...] = (),
 ) -> dict[str, tuple[str, ...]]:
     """Target layers requested from recovery for every selected terminal net.
 
@@ -571,6 +573,7 @@ def _via_target_layers_by_net(
                 project.stackup_layers,
                 rail_net=rail.net,
                 gnd_aliases=project.gnd_aliases,
+                mixed_reference_certificates=mixed_reference_certificates,
             )
         except (AttributeError, TypeError, ValueError):
             suggestions = ()
@@ -594,6 +597,11 @@ def _via_target_layers_by_net(
         # GND plane layers without adding PWR recovery targets.
         if net and layer and net not in aliases:
             result.setdefault(net, set()).add(layer)
+    for certificate in mixed_reference_certificates:
+        if certificate.gnd_net.casefold() in aliases:
+            result.setdefault(certificate.gnd_net.casefold(), set()).add(
+                certificate.gnd_layer
+            )
     spd_import = project.metadata.get("spd_import", {})
     failures = (
         spd_import.get("mixed_reference_certificate_failures", ())
@@ -684,6 +692,7 @@ def _strict_source_plane_pairs(
     path_recovery: Any,
     connectivity_recovery: Any | None = None,
     indexed_override: Mapping[tuple[str, str], IndexedPlaneGeometry] | None = None,
+    mixed_reference_certificates: tuple[MixedReferenceCertificate, ...] = (),
 ) -> tuple[dict[str, PlanePairSuggestion], dict[str, dict[str, Any]]]:
     """Select source-proven graph-connected PWR/GND pairs for raw import.
 
@@ -948,6 +957,7 @@ def _strict_source_plane_pairs(
             project.stackup_layers,
             rail_net=str(net),
             gnd_aliases=project.gnd_aliases,
+            mixed_reference_certificates=mixed_reference_certificates,
         )
         if not suggestions:
             continue
@@ -1626,9 +1636,18 @@ def _strict_source_plane_pairs(
 
 
 def _mixed_reference_target_node_predicate(
-    project: ProjectSpec, attachments: dict[str, bytes]
+    project: ProjectSpec,
+    attachments: dict[str, bytes],
+    *,
+    indexed_geometry_by_key: Mapping[tuple[str, str], IndexedPlaneGeometry]
+    | None = None,
+    mixed_reference_certificates: tuple[MixedReferenceCertificate, ...] = (),
 ) -> Callable[[str, str, str, float, float], bool]:
-    """Build fail-closed strict-interior tests for certificate DGND artwork."""
+    """Build fail-closed strict-interior tests for certificate DGND artwork.
+
+    ``indexed_geometry_by_key`` uses the shared ``(layer, net)`` key order;
+    certificate identities are naturally handled as ``(net, layer)`` below.
+    """
 
     try:
         from shapely.geometry import Point
@@ -1645,24 +1664,28 @@ def _mixed_reference_target_node_predicate(
             "SPD_MIXED_REFERENCE_GND_ARTWORK_REQUIRED: retained DGND geometry index is missing"
         )
     shapes: dict[tuple[str, str], tuple[Any, tuple[float, float, float, float]]] = {}
-    for rail in project.rails:
-        certificate = rail.mixed_reference_certificate
-        if certificate is None:
-            continue
+    indexed_shapes: dict[tuple[str, str], IndexedPlaneGeometry] = {}
+    certificates = mixed_reference_certificates or tuple(
+        rail.mixed_reference_certificate
+        for rail in project.rails
+        if rail.mixed_reference_certificate is not None
+    )
+    for certificate in certificates:
         key = (certificate.gnd_net.casefold(), certificate.gnd_layer.casefold())
-        if key in shapes:
+        if key in shapes or key in indexed_shapes:
             continue
         matching = [
             item for item in records
             if isinstance(item, dict)
             and str(item.get("net", "")).casefold() == key[0]
             and str(item.get("layer", "")).casefold() == key[1]
-            and str(item.get("asset_sha256", "")) == certificate.gnd_asset_sha256
+            and str(item.get("asset_sha256", "")).casefold()
+            == certificate.gnd_asset_sha256.casefold()
         ]
         if len(matching) != 1:
             raise SpdImportError(
                 "SPD_MIXED_REFERENCE_GND_ARTWORK_REQUIRED: certificate DGND "
-                f"asset binding is missing or ambiguous for {rail.rail_id}"
+                    f"asset binding is missing or ambiguous for {certificate.rail_net}"
             )
         record = matching[0]
         asset_name = str(record.get("asset", ""))
@@ -1670,7 +1693,7 @@ def _mixed_reference_target_node_predicate(
         if compressed is None:
             raise SpdImportError(
                 "SPD_MIXED_REFERENCE_GND_ARTWORK_REQUIRED: certificate DGND "
-                f"asset is absent for {rail.rail_id}"
+                    f"asset is absent for {certificate.rail_net}"
             )
         try:
             payload = core_services._decode_spd_geometry_asset(
@@ -1681,20 +1704,50 @@ def _mixed_reference_target_node_predicate(
                 expected_layer=certificate.gnd_layer,
                 expected_net=certificate.gnd_net,
             )
-            shape = core_services._ordered_spd_geometry(payload)
+            shape = (
+                None
+                if indexed_geometry_by_key is not None
+                else core_services._ordered_spd_geometry(payload)
+            )
         except (ValueError, ArithmeticError) as exc:
             raise SpdImportError(
                 "SPD_MIXED_REFERENCE_GND_ARTWORK_REQUIRED: certificate DGND "
-                f"geometry is invalid for {rail.rail_id}: {exc}"
+                    f"geometry is invalid for {certificate.rail_net}: {exc}"
             ) from exc
+        if indexed_geometry_by_key is not None:
+            indexed = indexed_geometry_by_key.get((key[1], key[0]))
+            if indexed is None:
+                raise SpdImportError(
+                    "SPD_MIXED_REFERENCE_GND_ARTWORK_REQUIRED: certificate DGND "
+                    f"geometry index is missing for {certificate.rail_net}"
+                )
+            if (
+                indexed.geometry.layer.casefold() != key[1]
+                or indexed.geometry.net.casefold() != key[0]
+            ):
+                raise SpdImportError(
+                    "SPD_MIXED_REFERENCE_GND_ARTWORK_REQUIRED: certificate DGND "
+                    f"geometry binding is invalid for {certificate.rail_net}"
+                )
+            indexed_shapes[key] = indexed
+            continue
         if shape is None:
             raise SpdImportError(
                 "SPD_MIXED_REFERENCE_GND_ARTWORK_REQUIRED: certificate DGND "
-                f"geometry cannot be constructed for {rail.rail_id}"
+                f"geometry cannot be constructed for {certificate.rail_net}"
             )
         shapes[key] = (prep(shape), tuple(map(float, shape.bounds)))
 
     def accepts(net: str, layer: str, _node_id: str, x_um: float, y_um: float) -> bool:
+        indexed = indexed_shapes.get((net.casefold(), layer.casefold()))
+        if indexed is not None:
+            try:
+                return indexed.contains(float(x_um), float(y_um)) == "inside"
+            except Exception as exc:  # GEOS failures must never become connectivity.
+                raise SpdImportError(
+                    "SPD_MIXED_REFERENCE_GND_ARTWORK_REQUIRED: DGND target-node "
+                    f"geometry check failed: {exc}"
+                ) from exc
         prepared = shapes.get((net.casefold(), layer.casefold()))
         if prepared is None:
             return False
@@ -2138,13 +2191,7 @@ def import_spd_scenario(
                     preselection_project.stackup_layers,
                     rail_net=rail.net,
                     gnd_aliases=preselection_project.gnd_aliases,
-                    mixed_reference_certificates=tuple(
-                        certificate
-                        for candidate_rail in preselection_project.rails
-                        if candidate_rail.net.casefold() == rail.net.casefold()
-                        for certificate in (candidate_rail.mixed_reference_certificate,)
-                        if certificate is not None
-                    ),
+                    mixed_reference_certificates=plan.mixed_reference_certificates,
                 )
                 if item.pwr_layer.casefold() == rail.pwr_layer.casefold()
                 and item.gnd_layer.casefold() == rail.gnd_layer.casefold()
@@ -2263,10 +2310,65 @@ def import_spd_scenario(
         for indexed in (IndexedPlaneGeometry.build(values[0]),)
         if indexed is not None
     }
+    ground_keys = {item.casefold() for item in base_project.gnd_aliases}
+    artwork_index = {
+        key: indexed
+        for key, indexed in connectivity_index.items()
+        if key[1] in ground_keys
+    }
+    artwork_layers_by_net: dict[str, tuple[str, ...]] = {}
+    for layer_key, net_key in artwork_index:
+        artwork_layers_by_net.setdefault(net_key, ())
+        artwork_layers_by_net[net_key] = tuple(
+            sorted(
+                {*artwork_layers_by_net[net_key], layer_key},
+                key=str.casefold,
+            )
+        )
+
+    def source_artwork_component(
+        net: str, layer: str, x_um: float, y_um: float
+    ) -> object | None:
+        indexed = artwork_index.get((layer.casefold(), net.casefold()))
+        return None if indexed is None else indexed.artwork_component(float(x_um), float(y_um))
+
+    def source_artwork_components_batch(
+        net: str, layer: str, points: Sequence[tuple[float, float]]
+    ) -> tuple[object | None, ...]:
+        indexed = artwork_index.get((layer.casefold(), net.casefold()))
+        return (
+            (None,) * len(points)
+            if indexed is None
+            else indexed.artwork_components_batch(points)
+        )
+
+    def source_artwork_release(net: str, layer: str) -> None:
+        indexed = artwork_index.get((layer.casefold(), net.casefold()))
+        if indexed is not None:
+            indexed.release_artwork_shape()
+
+    mixed_target_node_predicate = _mixed_reference_target_node_predicate(
+        base_project,
+        dict(plan.attachments),
+        indexed_geometry_by_key=artwork_index,
+        mixed_reference_certificates=plan.mixed_reference_certificates,
+    )
+    mixed_target_keys = {
+        (item.gnd_net.casefold(), item.gnd_layer.casefold())
+        for item in plan.mixed_reference_certificates
+    }
 
     def source_target_node_inside(
         net: str, layer: str, _node_id: str, x_um: float, y_um: float
     ) -> bool:
+        if (net.casefold(), layer.casefold()) in mixed_target_keys:
+            return mixed_target_node_predicate(net, layer, _node_id, x_um, y_um)
+        if net.casefold() in ground_keys:
+            indexed = artwork_index.get((layer.casefold(), net.casefold()))
+            return (
+                indexed is not None
+                and indexed.contains(float(x_um), float(y_um)) == "inside"
+            )
         geometry = connectivity_index.get((layer.casefold(), net.casefold()))
         return geometry is not None and geometry.contains(float(x_um), float(y_um)) == "inside"
 
@@ -2276,8 +2378,13 @@ def import_spd_scenario(
         target_layers_by_net=_via_target_layers_by_net(
             base_project,
             plane_geometries=analysis.plane_geometries,
+            mixed_reference_certificates=plan.mixed_reference_certificates,
         ),
         target_node_predicate=source_target_node_inside,
+        same_layer_artwork_layers_by_net=artwork_layers_by_net,
+        same_layer_artwork_component=source_artwork_component,
+        same_layer_artwork_components_batch=source_artwork_components_batch,
+        same_layer_artwork_release=source_artwork_release,
         expected_source=analysis.source,
         progress=lambda _value, message: report(91, message),
         is_cancelled=cancelled,
@@ -2303,6 +2410,7 @@ def import_spd_scenario(
         legacy_targets = _via_target_layers_by_net(
             base_project,
             plane_geometries=analysis.plane_geometries,
+            mixed_reference_certificates=plan.mixed_reference_certificates,
         )
         path_recovery = recover_spd_via_paths(
             source_path,
@@ -2325,6 +2433,7 @@ def import_spd_scenario(
         path_recovery,
         connectivity_recovery,
         indexed_override=connectivity_index,
+        mixed_reference_certificates=plan.mixed_reference_certificates,
     )
     selected_targets: dict[str, set[str]] = {
         str(net).casefold(): {pair.pwr_layer}
@@ -2836,7 +2945,7 @@ def import_spd_scenario(
     mixed_witness_selection_started = perf_counter()
     (
         mixed_ground_landings_by_rail,
-        mixed_target_layers_by_net,
+        _mixed_target_layers_by_net,
     ) = _select_mixed_reference_ground_landings(
         mixed_rails=mixed_rails,
         top_instances=top_instances,
@@ -2847,23 +2956,8 @@ def import_spd_scenario(
         rail_choices_by_pair=rail_choices_by_pair,
     )
     mixed_witness_selection_s = perf_counter() - mixed_witness_selection_started
-    ground_recovery_started = perf_counter()
-    ground_reachability = recover_spd_ground_reachability(
-        source_path,
-        landings=(
-            landing
-            for entries in mixed_ground_landings_by_rail.values()
-            for _refdes, landing in entries
-        ),
-        target_layers_by_net=mixed_target_layers_by_net,
-        target_node_predicate=_mixed_reference_target_node_predicate(
-            base_project, dict(plan.attachments)
-        ),
-        expected_source=analysis.source,
-        progress=lambda value, message: report(91 + round(max(0, min(100, value)) * 1 / 100), message),
-        is_cancelled=cancelled,
-    )
-    ground_recovery_s = perf_counter() - ground_recovery_started
+    ground_reachability = connectivity_recovery
+    ground_recovery_s = 0.0
     mixed_witnesses: dict[str, MixedReferenceGroundWitness] = {}
     mixed_ground_reachability_by_rail: list[dict[str, Any]] = []
     mixed_ground_reachability_diagnostics: list[SpdDiagnostic] = []
@@ -2923,6 +3017,37 @@ def import_spd_scenario(
                     ),
                 )
             )
+    mixed_requested_keys = {
+        (
+            landing.via_id.casefold(),
+            landing.endpoint_node_id.casefold(),
+            rail.mixed_reference_certificate.gnd_layer.casefold(),
+        )
+        for rail_key, rail in mixed_rails.items()
+        for _refdes, landing in mixed_ground_landings_by_rail[rail_key]
+        if rail.mixed_reference_certificate is not None
+    }
+    mixed_reachable_keys = {
+        (
+            landing.via_id.casefold(),
+            landing.endpoint_node_id.casefold(),
+            rail.mixed_reference_certificate.gnd_layer.casefold(),
+        )
+        for rail_key, rail in mixed_rails.items()
+        for _refdes, landing in mixed_ground_landings_by_rail[rail_key]
+        if rail.mixed_reference_certificate is not None
+        and ground_reachability.reaches(
+            landing, rail.mixed_reference_certificate.gnd_layer
+        )
+    }
+    mixed_reachable_count = len(mixed_reachable_keys)
+    mixed_statistics = dict(connectivity_recovery.statistics)
+    mixed_statistics.update(
+        requested=len(mixed_requested_keys),
+        reachable=mixed_reachable_count,
+        unreachable=max(0, len(mixed_requested_keys) - mixed_reachable_count),
+        shared_pass_reused=True,
+    )
     recovery_metadata = dict(base_project.metadata)
     recovery_metadata[MLO_LANDING_CERTIFICATE_METADATA_KEY] = (
         _build_mlo_landing_certificates(
@@ -2957,9 +3082,18 @@ def import_spd_scenario(
         ),
         "skipped_unique_path_recovery": bool(graph_available),
         "fallback_behavior": "legacy_rail_template",
+        "mixed_reference_source_graph": {
+            "algorithm": "dgnd_same_layer_artwork_reachability_v1",
+            "indexed_dgnd_geometry_count": len(artwork_index),
+            "artwork_nodes": int(connectivity_statistics.get("artwork_nodes", 0)),
+            "artwork_edges": int(connectivity_statistics.get("artwork_edges", 0)),
+            "artwork_components": int(
+                connectivity_statistics.get("artwork_components", 0)
+            ),
+        },
         "mixed_reference_ground_reachability": {
-            **dict(ground_reachability.statistics),
-            "algorithm": "same_net_via_trace_reachability_v1",
+            **mixed_statistics,
+            "algorithm": "dgnd_same_layer_artwork_reachability_v1",
             "by_rail": mixed_ground_reachability_by_rail,
         },
     }

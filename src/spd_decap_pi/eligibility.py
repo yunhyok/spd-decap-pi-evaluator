@@ -393,6 +393,169 @@ class IndexedPlaneGeometry:
             return None
         return cls(geometry, primitives, positive_bounds, primitive_grid)
 
+    def release_artwork_shape(self) -> None:
+        """Release the materialized ordered-artwork component cache."""
+
+        self._shape_cache.pop(-1, None)
+
+    def _artwork_components(self):
+        """Return exact ordered components and their prepared spatial index."""
+
+        from shapely.geometry import Point, Polygon
+        from shapely.ops import unary_union
+        from shapely.prepared import prep
+        from shapely.strtree import STRtree
+
+        cached = self._shape_cache.get(-1)
+        if cached is not None:
+            return cached
+        runs: list[tuple[bool, list[object]]] = []
+        try:
+            for item in self.primitives:
+                primitive = item.primitive
+                shape = (
+                    Point(float(primitive[0]), float(primitive[1])).buffer(
+                        float(primitive[2]), quad_segs=64
+                    )
+                    if item.kind.endswith("circle")
+                    else Polygon(primitive)
+                )
+                positive = item.kind.startswith("positive_")
+                if runs and runs[-1][0] == positive:
+                    runs[-1][1].append(shape)
+                else:
+                    runs.append((positive, [shape]))
+
+            def flatten(shape: object) -> list[object]:
+                if getattr(shape, "geom_type", "") == "Polygon":
+                    return [shape]
+                if getattr(shape, "geom_type", "") in {"MultiPolygon", "GeometryCollection"}:
+                    return [part for child in getattr(shape, "geoms", ()) for part in flatten(child)]
+                return []
+
+            components: list[object] = []
+            for positive, run in runs:
+                batch = unary_union(run)
+                if batch.is_empty or not batch.is_valid or batch.area <= 0.0:
+                    self._shape_cache[-1] = False
+                    return False
+                if not positive and not components:
+                    continue
+                selected: list[int] = []
+                if components:
+                    tree = STRtree(tuple(components))
+                    try:
+                        candidates = tree.query(batch, predicate="intersects")
+                    except TypeError:
+                        candidates = tree.query(batch)
+                    for candidate in candidates:
+                        try:
+                            selected.append(int(candidate))
+                        except (TypeError, ValueError):
+                            selected.append(components.index(candidate))
+                    selected = sorted(set(selected))
+                if positive:
+                    merged = unary_union([batch, *(components[index] for index in selected)])
+                    merged_parts = flatten(merged)
+                    if not merged_parts:
+                        self._shape_cache[-1] = False
+                        return False
+                    if selected:
+                        first = selected[0]
+                        components = (
+                            [item for index, item in enumerate(components) if index < first and index not in selected]
+                            + merged_parts
+                            + [item for index, item in enumerate(components) if index > first and index not in selected]
+                        )
+                    else:
+                        components.extend(merged_parts)
+                else:
+                    selected_set = set(selected)
+                    components = [
+                        part
+                        for index, component in enumerate(components)
+                        for part in (
+                            [component]
+                            if index not in selected_set
+                            else flatten(component.difference(batch))
+                        )
+                    ]
+            if not components or any(
+                item.is_empty or not item.is_valid or item.area <= 0.0
+                for item in components
+            ):
+                self._shape_cache[-1] = False
+                return False
+            components.sort(key=lambda item: (tuple(float(value) for value in item.bounds), float(item.area), bytes(item.wkb)))
+            result = (components, STRtree(components), tuple(prep(item) for item in components))
+        except Exception:
+            result = False
+        self._shape_cache[-1] = result
+        return result
+
+    def artwork_component(self, x_um: float, y_um: float, *, tolerance_um: float = 1.0e-6) -> object | None:
+        if not isfinite(x_um) or not isfinite(y_um):
+            raise ValueError("plane query coordinates must be finite")
+        if not _bounds_contains(self.positive_bounds, x_um, y_um, tolerance_um):
+            return None
+        filled = self._artwork_components()
+        if filled is False:
+            return None
+        from shapely.geometry import Point
+        components, tree, prepared = filled
+        point = Point(float(x_um), float(y_um))
+        try:
+            candidates = tree.query(point, predicate="intersects")
+        except TypeError:
+            candidates = tree.query(point)
+        for candidate in candidates:
+            try:
+                index = int(candidate)
+            except (TypeError, ValueError):
+                index = components.index(candidate)
+            if not components[index].is_empty and prepared[index].contains(point):
+                return index
+        return None
+
+    def artwork_components_batch(self, points: Sequence[tuple[float, float]], *, tolerance_um: float = 1.0e-6) -> tuple[object | None, ...]:
+        if not points:
+            return ()
+        normalized = tuple((float(x), float(y)) for x, y in points)
+        if any(not isfinite(x) or not isfinite(y) for x, y in normalized):
+            raise ValueError("plane query coordinates must be finite")
+        in_bounds = tuple(index for index, (x, y) in enumerate(normalized) if _bounds_contains(self.positive_bounds, x, y, tolerance_um))
+        if not in_bounds:
+            return (None,) * len(normalized)
+        filled = self._artwork_components()
+        if filled is False:
+            return (None,) * len(normalized)
+        components, tree, _prepared = filled
+        try:
+            from shapely import contains_xy, points as shapely_points
+        except ImportError:
+            return tuple(self.artwork_component(x, y, tolerance_um=tolerance_um) for x, y in normalized)
+        results: list[object | None] = [None] * len(normalized)
+        for start in range(0, len(in_bounds), 32768):
+            chunk = in_bounds[start : start + 32768]
+            point_geometries = shapely_points(
+                [normalized[index][0] for index in chunk],
+                [normalized[index][1] for index in chunk],
+            )
+            pairs = tree.query(point_geometries)
+            by_component: dict[int, list[int]] = {}
+            for local_index, component_index in zip(pairs[0], pairs[1], strict=False):
+                by_component.setdefault(int(component_index), []).append(int(local_index))
+            for component_index, local_indices in by_component.items():
+                inside = contains_xy(
+                    components[component_index],
+                    [normalized[chunk[index]][0] for index in local_indices],
+                    [normalized[chunk[index]][1] for index in local_indices],
+                )
+                for local_index, is_inside in zip(local_indices, inside, strict=True):
+                    if bool(is_inside):
+                        results[chunk[local_index]] = component_index
+        return tuple(results)
+
     def contains(self, x_um: float, y_um: float, *, tolerance_um: float = 1.0e-6) -> Containment:
         if not isfinite(x_um) or not isfinite(y_um):
             raise ValueError("plane query coordinates must be finite")

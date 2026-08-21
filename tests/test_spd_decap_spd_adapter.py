@@ -15,6 +15,7 @@ from spd_decap_pi._core.domain import (
     MixedReferenceCertificate,
     PinKind,
     PinRecord,
+    PlanePairSuggestion,
     StackupLayer,
     TerminalKind,
 )
@@ -45,6 +46,7 @@ from spd_decap_pi.spd_adapter import (
     _build_mlo_landing_certificates,
     _finite_port_inside_solver_bounds,
     _raise_for_rejected_mixed_reference_landings,
+    _strict_source_plane_pairs,
     _scenario_via_landing,
     _via_target_layers_by_net,
     import_spd_scenario,
@@ -1142,8 +1144,79 @@ def test_via_target_layers_include_all_retained_same_net_planes() -> None:
     assert targets["dgnd"] == ("L02",)
 
 
+def test_detached_mixed_certificate_reaches_targets_and_strict_pair_ranking(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    stack = (
+        StackupLayer(name="TOP", thickness_um=20.0, conductivity_s_m=5.8e7, pwr_nets=("VDD",)),
+        StackupLayer(name="D0", thickness_um=10.0, dk=4.0, df=0.01),
+        StackupLayer(name="L02", thickness_um=20.0, conductivity_s_m=5.8e7, pwr_nets=("DGND",)),
+        StackupLayer(name="D1", thickness_um=80.0, dk=4.0, df=0.01),
+        StackupLayer(name="L11", thickness_um=20.0, conductivity_s_m=5.8e7, pwr_nets=("VDD",)),
+        StackupLayer(name="D2", thickness_um=80.0, dk=4.0, df=0.01),
+        StackupLayer(name="L10", thickness_um=20.0, conductivity_s_m=5.8e7, pwr_nets=("DGND", "SIG_RETURN")),
+    )
+    certificate = MixedReferenceCertificate(
+        rail_net="VDD",
+        gnd_net="DGND",
+        pwr_layer="L11",
+        gnd_layer="L10",
+        pwr_asset_sha256="a" * 64,
+        gnd_asset_sha256="b" * 64,
+        overlap_fraction=0.95,
+        dominant_overlap_component_fraction=0.999,
+    )
+    project = SimpleNamespace(
+        rails=(SimpleNamespace(net="VDD", pwr_layer="TOP", gnd_layer="L02", mixed_reference_certificate=None),),
+        stackup_layers=stack,
+        gnd_aliases=("DGND",),
+        metadata={"spd_import": {"source_sha256": "a" * 64}},
+        via_templates=(),
+    )
+    targets = _via_target_layers_by_net(
+        project,
+        mixed_reference_certificates=(certificate,),
+    )
+    assert targets["vdd"] == ("L11", "TOP")
+    assert targets["dgnd"] == ("L02", "L10")
+
+    offered: list[tuple[PlanePairSuggestion, ...]] = []
+    original_suggest = spd_adapter.suggest_effective_plane_pairs
+
+    def capture_suggestions(*args, **kwargs):
+        suggestions = tuple(original_suggest(*args, **kwargs))
+        offered.append(suggestions)
+        return suggestions
+
+    monkeypatch.setattr(spd_adapter, "suggest_effective_plane_pairs", capture_suggestions)
+    analysis = SimpleNamespace(
+        power_plane_nets=("VDD",),
+        plane_geometries=(),
+        cap_instances=(),
+        decap_connections=(),
+        pins=(),
+        source=SimpleNamespace(sha256="a" * 64),
+        counts={},
+    )
+    selected, _provenance = _strict_source_plane_pairs(
+        project,
+        analysis,
+        SimpleNamespace(evidence_by_via={}),
+        mixed_reference_certificates=(certificate,),
+    )
+    assert offered
+    ranked = offered[-1]
+    certified = next(
+        item for item in ranked if item.pwr_layer == "L11" and item.gnd_layer == "L10"
+    )
+    assert certified.mixed_reference_certificate == certificate
+    assert ranked[0].pwr_layer == "TOP"
+    assert selected["vdd"].pwr_layer == "TOP"
+
+
 def test_certified_ground_attachment_tamper_cannot_be_saved(
     tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     source = tmp_path / "certified-mixed.spd"
     payload = MINI_SPD.replace(
@@ -1160,10 +1233,68 @@ def test_certified_ground_attachment_tamper_cannot_be_saved(
         "PolygonSIG::SIG_RETURN+ -5mm -4mm 5mm -4mm 5mm 4mm -5mm 4mm",
     )
     source.write_text(payload, encoding="ascii")
+    recovery_calls: list[tuple[object, ...]] = []
+    original_recovery = spd_adapter.recover_spd_ground_reachability
+
+    def capture_recovery(*args, **kwargs):
+        recovery_calls.append(args)
+        return original_recovery(*args, **kwargs)
+
+    monkeypatch.setattr(
+        spd_adapter, "recover_spd_ground_reachability", capture_recovery
+    )
     imported = import_spd_scenario(source)
+    assert len(recovery_calls) == 1
+    recovery_metadata = imported.scenario.base_project.metadata[
+        "spd_via_path_recovery"
+    ]
+    assert recovery_metadata["mixed_reference_ground_reachability"][
+        "shared_pass_reused"
+    ] is True
+    assert recovery_metadata["mixed_reference_source_graph"][
+        "indexed_dgnd_geometry_count"
+    ] >= 1
     rail = imported.scenario.base_project.rails[0]
     certificate = rail.mixed_reference_certificate
     assert certificate is not None
+    predicate = spd_adapter._mixed_reference_target_node_predicate(
+        imported.scenario.base_project,
+        imported.attachments,
+        mixed_reference_certificates=(certificate,),
+    )
+    assert predicate(certificate.gnd_net, certificate.gnd_layer, "Node7", 1200.0, 2000.0)
+    assert not predicate(certificate.gnd_net, certificate.gnd_layer, "Node7", -5000.0, 0.0)
+
+    class IndexedSentinel:
+        geometry = SimpleNamespace(
+            layer=certificate.gnd_layer,
+            net=certificate.gnd_net,
+        )
+
+        @staticmethod
+        def contains(x_um: float, y_um: float) -> str:
+            if (x_um, y_um) == (1200.0, 2000.0):
+                return "inside"
+            if (x_um, y_um) == (0.0, 2000.0):
+                return "boundary"
+            return "outside"
+
+        @staticmethod
+        def artwork_component(*_args):
+            raise AssertionError("target membership must not materialize components")
+
+    indexed_predicate = spd_adapter._mixed_reference_target_node_predicate(
+        imported.scenario.base_project,
+        imported.attachments,
+        indexed_geometry_by_key={
+            (certificate.gnd_layer.casefold(), certificate.gnd_net.casefold()): IndexedSentinel()
+        },
+        mixed_reference_certificates=(certificate,),
+    )
+    assert indexed_predicate(certificate.gnd_net, certificate.gnd_layer, "Node7", 1200.0, 2000.0)
+    assert not indexed_predicate(certificate.gnd_net, certificate.gnd_layer, "Node7", 1300.0, 2000.0)
+    assert not indexed_predicate(certificate.gnd_net, certificate.gnd_layer, "Node7", 0.0, 2000.0)
+    assert not indexed_predicate(certificate.gnd_net, certificate.gnd_layer, "Node7", -5000.0, 0.0)
     records = imported.scenario.base_project.metadata["spd_import"][
         "plane_geometries"
     ]
@@ -1174,6 +1305,13 @@ def test_certified_ground_attachment_tamper_cannot_be_saved(
     asset = gnd_record["asset"]
     tampered = dict(imported.attachments)
     tampered[asset] = tampered[asset] + b"tampered"
+
+    with pytest.raises(SpdImportError, match="geometry is invalid"):
+        spd_adapter._mixed_reference_target_node_predicate(
+            imported.scenario.base_project,
+            tampered,
+            mixed_reference_certificates=(certificate,),
+        )
 
     with pytest.raises(
         ScenarioFormatError,

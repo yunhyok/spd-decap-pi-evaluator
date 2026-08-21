@@ -3196,6 +3196,12 @@ def recover_spd_ground_reachability(
     landings: Iterable[object],
     target_layers_by_net: Mapping[str, Iterable[str]],
     target_node_predicate: Callable[[str, str, str, float, float], bool] | None = None,
+    same_layer_artwork_layers_by_net: Mapping[str, Iterable[str]] | None = None,
+    same_layer_artwork_component: Callable[[str, str, float, float], object | None] | None = None,
+    same_layer_artwork_components_batch: Callable[
+        [str, str, Sequence[tuple[float, float]]], Sequence[object | None]
+    ] | None = None,
+    same_layer_artwork_release: Callable[[str, str], None] | None = None,
     expected_source: SpdSourceInfo | None = None,
     include_traces: bool = True,
     progress: ProgressCallback | None = None,
@@ -3206,7 +3212,9 @@ def recover_spd_ground_reachability(
     This is intentionally a separate batched graph pass from unique Via-path
     recovery: a branching Trace/Via graph is valid for return connectivity but
     cannot be condensed into one serial RL chain.  Only target-net records are
-    retained, and every Node, Trace, and Via section is scanned at most once.
+    retained.  When artwork release is requested, a bounded Node-offset
+    prepass precedes the main Node, Trace, and Via scans so materialized artwork
+    can be released as soon as its last node has been indexed.
 
     ``include_traces=False`` restricts the result to a directly joined local Via
     stack.  Distribution audits use that mode to distinguish unchanged-barrel
@@ -3222,6 +3230,11 @@ def recover_spd_ground_reachability(
         str(net).casefold(): {str(layer).casefold() for layer in layers}
         for net, layers in target_layers_by_net.items()
         if str(net).strip() and any(str(layer).strip() for layer in layers)
+    }
+    artwork_layers = {
+        str(net).casefold(): {str(layer).casefold() for layer in layers}
+        for net, layers in (same_layer_artwork_layers_by_net or {}).items()
+        if str(net).strip()
     }
     requested_by_key: dict[tuple[str, str, str], str] = {}
     requested_coordinates: dict[tuple[str, str, str], tuple[float, float]] = {}
@@ -3244,7 +3257,8 @@ def recover_spd_ground_reachability(
         return SpdGroundReachability(frozenset(), frozenset(), {
             "requested": 0, "reachable": 0, "unreachable": 0,
             "node_section_passes": 0, "trace_section_passes": 0,
-            "via_section_passes": 0, "components": 0,
+            "via_section_passes": 0, "artwork_release_prepass": 0,
+            "components": 0,
         })
 
     try:
@@ -3305,7 +3319,7 @@ def recover_spd_ground_reachability(
         net: {} for net in target_layers
     }
     node_index_by_net: dict[str, dict[str, int]] = {
-        net: {} for net in target_layers
+        net: {} for net in set(target_layers) | set(artwork_layers)
     }
     parents = array("I")
     ranks = bytearray()
@@ -3313,6 +3327,13 @@ def recover_spd_ground_reachability(
     graph_edges = 0
     trace_edges = 0
     via_edges = 0
+    artwork_nodes = 0
+    artwork_edges = 0
+    artwork_representatives: dict[tuple[str, str, str], int] = {}
+    artwork_batch_points: dict[tuple[str, str], list[tuple[str, float, float]]] = {}
+    artwork_batch_total = 0
+    artwork_release_last_offsets: dict[tuple[str, str], int] = {}
+    artwork_released_keys: set[tuple[str, str]] = set()
 
     def index_for(net_key: str, node_key: str) -> int:
         nonlocal components
@@ -3337,10 +3358,10 @@ def recover_spd_ground_reachability(
             index = parent
         return root
 
-    def union(net_key: str, first: str, second: str) -> None:
+    def union_indices(first_index: int, second_index: int) -> None:
         nonlocal components
-        first_root = find(index_for(net_key, first))
-        second_root = find(index_for(net_key, second))
+        first_root = find(first_index)
+        second_root = find(second_index)
         if first_root == second_root:
             return
         if ranks[first_root] < ranks[second_root]:
@@ -3349,6 +3370,51 @@ def recover_spd_ground_reachability(
         if ranks[first_root] == ranks[second_root]:
             ranks[first_root] += 1
         components -= 1
+
+    def union(net_key: str, first: str, second: str) -> None:
+        union_indices(index_for(net_key, first), index_for(net_key, second))
+
+    def flush_artwork_batches() -> None:
+        nonlocal artwork_nodes, artwork_edges, artwork_batch_total
+        if same_layer_artwork_components_batch is None:
+            return
+        for (batch_net, batch_layer), batch in tuple(artwork_batch_points.items()):
+            if not batch:
+                continue
+            components_batch = same_layer_artwork_components_batch(
+                batch_net, batch_layer, tuple((x, y) for _node, x, y in batch)
+            )
+            if len(components_batch) != len(batch):
+                raise SpdImportError("artwork batch resolver returned an invalid result length")
+            for (node_id, _x, _y), component in zip(batch, components_batch, strict=True):
+                if component is None:
+                    continue
+                artwork_nodes += 1
+                key = (batch_net.casefold(), batch_layer.casefold(), str(component))
+                node_index = index_for(batch_net.casefold(), node_id.casefold())
+                representative = artwork_representatives.setdefault(key, node_index)
+                if representative != node_index:
+                    artwork_edges += 1
+                    union_indices(node_index, representative)
+            batch.clear()
+        artwork_batch_total = 0
+
+    def release_due_artwork(offset: int | None = None, *, final: bool = False) -> None:
+        if same_layer_artwork_release is None:
+            if final:
+                flush_artwork_batches()
+            return
+        due = {
+            key for key, last_offset in artwork_release_last_offsets.items()
+            if key not in artwork_released_keys
+            and (final or (offset is not None and last_offset < offset))
+        }
+        if not due:
+            return
+        flush_artwork_batches()
+        for net_key, layer_key in sorted(due):
+            same_layer_artwork_release(net_key, layer_key)
+            artwork_released_keys.add((net_key, layer_key))
 
     def node_identity(raw: bytes) -> tuple[str, str] | None:
         cuts = [
@@ -3384,16 +3450,34 @@ def recover_spd_ground_reachability(
                         "requested": len(requested), "reachable": 0,
                         "unreachable": len(requested), "node_section_passes": 0,
                         "trace_section_passes": 0, "via_section_passes": 0,
+                        "artwork_release_prepass": 0,
                         "components": 0,
                     }
                 ))
             node_end = trace_start if trace_start > node_start else via_start
             trace_end = via_start if via_start > trace_start else pad_start
             via_end = pad_start if pad_start > via_start else len(data)
+            if same_layer_artwork_release is not None:
+                for index, (offset, raw) in enumerate(_iter_lines(data, node_start, node_end)):
+                    if index % 16384 == 0:
+                        reporter.check()
+                    if not raw.startswith(b"Node"):
+                        continue
+                    identity = node_identity(raw)
+                    if identity is None:
+                        continue
+                    node_id, net = identity
+                    layer_raw = _attribute(raw, b"Layer")
+                    if layer_raw is None:
+                        continue
+                    layer_key = _decode(layer_raw).casefold()
+                    if layer_key in artwork_layers.get(net.casefold(), ()):
+                        artwork_release_last_offsets[(net.casefold(), layer_key)] = int(offset)
             reporter.report(15, "Indexing exact mixed-reference GND target nodes")
             for index, (_offset, raw) in enumerate(_iter_lines(data, node_start, node_end)):
                 if index % 16384 == 0:
                     reporter.check()
+                release_due_artwork(int(_offset))
                 if not raw.startswith(b"Node"):
                     continue
                 identity = node_identity(raw)
@@ -3401,37 +3485,66 @@ def recover_spd_ground_reachability(
                     continue
                 node_id, net = identity
                 net_key = net.casefold()
-                if net_key not in target_layers:
+                if net_key not in target_layers and net_key not in artwork_layers:
                     continue
                 layer_raw = _attribute(raw, b"Layer")
                 if layer_raw is None:
                     continue
                 layer_key = _decode(layer_raw).casefold()
-                if layer_key in target_layers[net_key]:
-                    attributes = _NODE_ATTR_RE.search(raw)
-                    if attributes is None:
-                        continue
-                    try:
-                        x_um = _length_um(attributes.group(1))
-                        y_um = _length_um(attributes.group(2))
-                    except ValueError:
-                        continue
-                    if target_node_predicate is not None:
-                        if not target_node_predicate(
-                            net, _decode(layer_raw), node_id, x_um, y_um
-                        ):
-                            continue
-                    node_key = node_id.casefold()
-                    target_nodes = target_nodes_by_net[net_key]
-                    target_nodes[node_key] = (
-                        target_nodes.get(node_key, 0)
-                        | target_bit_by_key[(net_key, layer_key)]
+                attributes = _NODE_ATTR_RE.search(raw)
+                if attributes is None:
+                    continue
+                try:
+                    x_um = _length_um(attributes.group(1))
+                    y_um = _length_um(attributes.group(2))
+                except ValueError:
+                    continue
+                if (
+                    net_key in artwork_layers
+                    and layer_key in artwork_layers[net_key]
+                    and (
+                        same_layer_artwork_component is not None
+                        or same_layer_artwork_components_batch is not None
                     )
-                    target_coordinates_by_net[net_key][node_key] = (
-                        node_id,
-                        float(x_um),
-                        float(y_um),
-                    )
+                ):
+                    if same_layer_artwork_components_batch is not None:
+                        artwork_batch_points.setdefault((net, _decode(layer_raw)), []).append(
+                            (node_id, float(x_um), float(y_um))
+                        )
+                        artwork_batch_total += 1
+                        if artwork_batch_total >= 32768:
+                            flush_artwork_batches()
+                    else:
+                        component = same_layer_artwork_component(
+                            net, _decode(layer_raw), x_um, y_um
+                        )
+                        if component is not None:
+                            artwork_nodes += 1
+                            key = (net_key, layer_key, str(component))
+                            node_index = index_for(net_key, node_id.casefold())
+                            representative = artwork_representatives.setdefault(key, node_index)
+                            if representative != node_index:
+                                artwork_edges += 1
+                                union_indices(node_index, representative)
+                if layer_key not in target_layers.get(net_key, ()):
+                    continue
+                if target_node_predicate is not None:
+                    if not target_node_predicate(
+                        net, _decode(layer_raw), node_id, x_um, y_um
+                    ):
+                        continue
+                node_key = node_id.casefold()
+                target_nodes = target_nodes_by_net[net_key]
+                target_nodes[node_key] = (
+                    target_nodes.get(node_key, 0)
+                    | target_bit_by_key[(net_key, layer_key)]
+                )
+                target_coordinates_by_net[net_key][node_key] = (
+                    node_id,
+                    float(x_um),
+                    float(y_um),
+                )
+            release_due_artwork(final=True)
             if include_traces and trace_start >= 0 and trace_end > trace_start:
                 reporter.report(40, "Indexing same-NET GND Trace connectivity")
                 for index, match in enumerate(_TRACE_RE.finditer(data, trace_start, trace_end)):
@@ -3541,6 +3654,9 @@ def recover_spd_ground_reachability(
             "via_section_passes": 1, "components": components,
         "graph_nodes": len(parents), "graph_edges": graph_edges,
         "trace_edges": trace_edges, "via_edges": via_edges,
+        "artwork_nodes": artwork_nodes, "artwork_edges": artwork_edges,
+        "artwork_components": len(artwork_representatives),
+        "artwork_release_prepass": int(same_layer_artwork_release is not None),
         },
         target_contacts_by_key=target_contacts_by_key,
         target_contact_count_by_key=target_contact_count_by_key,

@@ -251,6 +251,7 @@ class SpdImportPlan:
     source_size_bytes: int
     source_sha256: str
     summary_lines: tuple[str, ...]
+    mixed_reference_certificates: tuple[MixedReferenceCertificate, ...]
     can_apply: bool
 
 @dataclass(frozen=True, slots=True)
@@ -1139,6 +1140,92 @@ def _ordered_spd_geometry(record: Mapping[str, Any]) -> Any | None:
     return None if shape.is_empty or not shape.is_valid or shape.area <= 0 else shape
 
 
+def _clip_spd_geometry_payload(
+    record: Mapping[str, Any],
+    clip_bounds: Sequence[float],
+    *,
+    max_primitives: int,
+) -> tuple[dict[str, Any] | None, bool]:
+    """Keep ordered primitives whose bounds can meet the clipping rectangle."""
+
+    if len(clip_bounds) != 4:
+        return None, False
+    try:
+        clip_min_x, clip_min_y, clip_max_x, clip_max_y = map(float, clip_bounds)
+    except (TypeError, ValueError):
+        return None, False
+    if not (
+        math.isfinite(clip_min_x)
+        and math.isfinite(clip_max_x)
+        and math.isfinite(clip_min_y)
+        and math.isfinite(clip_max_y)
+        and clip_max_x > clip_min_x
+        and clip_max_y > clip_min_y
+    ):
+        return None, False
+    collections = {
+        "positive_polygon": record.get("positive_polygons_um", ()),
+        "negative_polygon": record.get("negative_polygons_um", ()),
+        "positive_circle": record.get("positive_circles_um", ()),
+        "negative_circle": record.get("negative_circles_um", ()),
+    }
+    order = record.get("primitive_order", ())
+    if not isinstance(order, Sequence) or not order:
+        return None, False
+    selected: list[Any] = []
+    for step in order:
+        if not isinstance(step, Sequence) or len(step) != 2:
+            return None, False
+        try:
+            kind, offset = str(step[0]), int(step[1])
+        except (TypeError, ValueError, IndexError):
+            return None, False
+        source = collections.get(kind)
+        if source is None or offset < 0 or offset >= len(source):
+            return None, False
+        raw = source[offset]
+        if kind.endswith("polygon"):
+            try:
+                points = [(float(point[0]), float(point[1])) for point in raw]
+            except (TypeError, ValueError, IndexError):
+                return None, False
+            if not points or not all(
+                math.isfinite(value) for point in points for value in point
+            ):
+                return None, False
+            min_x = min(point[0] for point in points)
+            max_x = max(point[0] for point in points)
+            min_y = min(point[1] for point in points)
+            max_y = max(point[1] for point in points)
+        else:
+            try:
+                x_um, y_um, radius_um = map(float, raw)
+            except (TypeError, ValueError):
+                return None, False
+            if not (
+                math.isfinite(x_um)
+                and math.isfinite(y_um)
+                and math.isfinite(radius_um)
+                and radius_um > 0
+            ):
+                return None, False
+            min_x, max_x = x_um - radius_um, x_um + radius_um
+            min_y, max_y = y_um - radius_um, y_um + radius_um
+        if (
+            max_x < clip_min_x
+            or min_x > clip_max_x
+            or max_y < clip_min_y
+            or min_y > clip_max_y
+        ):
+            continue
+        selected.append(step)
+        if len(selected) > max_primitives:
+            return None, True
+    clipped = dict(record)
+    clipped["primitive_order"] = tuple(selected)
+    return clipped, False
+
+
 def _mixed_reference_certificates(
     records: Sequence[Mapping[str, Any]],
     assets: Mapping[str, bytes],
@@ -1181,7 +1268,9 @@ def _mixed_reference_certificates(
     ground_payload_by_identity: dict[
         tuple[str, str, str], dict[str, Any] | None
     ] = {}
-    ground_shape_by_digest: dict[str, Any | None] = {}
+    ground_shape_by_digest: dict[
+        tuple[str, tuple[float, float, float, float]], Any | None
+    ] = {}
 
     def ground_payload_for(record: Mapping[str, Any]) -> dict[str, Any] | None:
         digest = str(record.get("asset_sha256", ""))
@@ -1299,14 +1388,11 @@ def _mixed_reference_certificates(
             # fractions.  Replaying a retained asset with tens of thousands
             # of primitives through a global unary_union is unbounded in
             # memory/time and can stall raw import.  Keep the certificate
-            # fail-closed when either asset exceeds the bounded exact
-            # certificate budget; strict plane-pair artwork validation uses
-            # the indexed local predicate elsewhere.
+            # fail-closed when PWR or locally relevant DGND artwork exceeds the
+            # bounded exact certificate budget; strict plane-pair artwork
+            # validation uses the indexed local predicate elsewhere.
             max_certificate_primitives = 2048
-            if (
-                len(pwr_payload.get("primitive_order", ())) > max_certificate_primitives
-                or len(gnd_payload.get("primitive_order", ())) > max_certificate_primitives
-            ):
+            if len(pwr_payload.get("primitive_order", ())) > max_certificate_primitives:
                 record_failure(
                     rail_net=net,
                     pwr_layer=pwr_layer,
@@ -1334,15 +1420,53 @@ def _mixed_reference_certificates(
                     else None
                 )
                 pwr_shape_checked = True
+            if pwr_shape is None:
+                record_failure(
+                    rail_net=pwr_net, pwr_layer=pwr_payload_layer,
+                    gnd_layer=gnd_payload_layer,
+                    gnd_net=gnd_net,
+                    reason=(
+                        "Shapely geometry engine is unavailable"
+                        if not shapely_available
+                        else "ordered PWR/DGND artwork geometry is invalid or unsupported"
+                    ),
+                    code="SPD_MIXED_REFERENCE_GEOMETRY_UNAVAILABLE",
+                    blocking=True,
+                )
+                continue
+            pwr_bounds = tuple(float(value) for value in pwr_shape.bounds)
+            local_gnd_payload, local_budget_exceeded = _clip_spd_geometry_payload(
+                gnd_payload,
+                pwr_bounds,
+                max_primitives=max_certificate_primitives,
+            )
+            if local_budget_exceeded:
+                record_failure(
+                    rail_net=net,
+                    pwr_layer=pwr_layer,
+                    gnd_layer=gnd_layer,
+                    gnd_net=gnd_record_net,
+                    reason=(
+                        "retained mixed-reference artwork exceeds bounded "
+                        "certificate geometry budget"
+                    ),
+                    code="SPD_MIXED_REFERENCE_GEOMETRY_UNAVAILABLE",
+                    blocking=False,
+                )
+                continue
             gnd_digest = str(gnd_payload.get("asset_sha256", ""))
-            if gnd_digest not in ground_shape_by_digest:
-                ground_shape_by_digest[gnd_digest] = (
-                    _ordered_spd_geometry(gnd_payload)
-                    if shapely_available
+            shape_key = (gnd_digest, pwr_bounds)
+            if shape_key not in ground_shape_by_digest:
+                for stale_key in tuple(ground_shape_by_digest):
+                    if stale_key[0] == gnd_digest:
+                        del ground_shape_by_digest[stale_key]
+                ground_shape_by_digest[shape_key] = (
+                    _ordered_spd_geometry(local_gnd_payload)
+                    if shapely_available and local_gnd_payload is not None
                     else None
                 )
-            gnd_shape = ground_shape_by_digest[gnd_digest]
-            if pwr_shape is None or gnd_shape is None:
+            gnd_shape = ground_shape_by_digest[shape_key]
+            if gnd_shape is None:
                 record_failure(
                     rail_net=pwr_net, pwr_layer=pwr_payload_layer,
                     gnd_layer=gnd_payload_layer,
@@ -2245,6 +2369,7 @@ def build_spd_import_plan(
         source_size_bytes=source_size,
         source_sha256=source_hash,
         summary_lines=summary_lines,
+        mixed_reference_certificates=tuple(mixed_reference_certificates),
         can_apply=can_apply,
     )
 

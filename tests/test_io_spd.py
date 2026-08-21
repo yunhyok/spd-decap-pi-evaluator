@@ -476,6 +476,107 @@ def test_mixed_reference_ground_reachability_accepts_branching_via_graph(
     assert not boundary.reaches(landing, "Signal$GND")
 
 
+def test_ordered_ground_artwork_component_rejects_void_and_boundary() -> None:
+    from spd_decap_pi.eligibility import IndexedPlaneGeometry
+    from spd_decap_pi._core.io.spd import SpdPlaneGeometry
+
+    geometry = SpdPlaneGeometry(
+        layer="L10",
+        net="DGND",
+        positive_polygons_um=(((0.0, 0.0), (10.0, 0.0), (10.0, 10.0), (0.0, 10.0)),),
+        negative_polygons_um=(((4.0, 4.0), (6.0, 4.0), (6.0, 6.0), (4.0, 6.0)),),
+        primitive_order=(("positive_polygon", 0), ("negative_polygon", 0)),
+    )
+    indexed = IndexedPlaneGeometry.build(geometry)
+    assert indexed is not None
+    assert indexed.artwork_component(1.0, 1.0) == 0
+    assert indexed.artwork_component(5.0, 5.0) is None
+    assert indexed.artwork_component(0.0, 5.0) is None
+    assert indexed.artwork_components_batch(((1.0, 1.0), (5.0, 5.0))) == (0, None)
+    indexed.release_artwork_shape()
+
+
+def test_ground_artwork_union_bridges_layers_but_not_trace_via_only(
+    tmp_path: Path,
+) -> None:
+    source, _analysis = _recoverable_via_source(
+        tmp_path,
+        node_lines=(
+            "Node19A!!1::DGND X = 0um Y = 1um Layer = Signal$L19 PadStack = DR-0102_60\n"
+            "Node19B!!1::DGND X = 1um Y = 1um Layer = Signal$L19 PadStack = DR-0102_60\n"
+            "Node10A!!1::DGND X = 2um Y = 1um Layer = Signal$L10 PadStack = DR-0102_60\n"
+            "Node10B!!1::DGND X = 3um Y = 1um Layer = Signal$L10 PadStack = DR-0102_60\n"
+            "NodeGND!!1::DGND X = 4um Y = 1um Layer = Signal$GND PadStack = DR-0102_60"
+        ),
+        via_lines=(
+            "Via19::DGND UpperNode = Node2::DGND LowerNode = Node19A::DGND PadStack = DR-0102_60\n"
+            "Via19to10::DGND UpperNode = Node19B::DGND LowerNode = Node10A::DGND PadStack = DR-0102_60\n"
+            "Via10::DGND UpperNode = Node10B::DGND LowerNode = NodeGND::DGND PadStack = DR-0102_60"
+        ),
+        trace_lines="",
+    )
+    landing = SpdViaLanding(
+        via_id="Via2", net="DGND", endpoint_node_id="Node2", x_um=100.0,
+        y_um=0.0, padstack="DR-0102_60",
+    )
+    kwargs = {
+        "landings": (landing,),
+        "target_layers_by_net": {"DGND": ("Signal$GND",)},
+        "target_node_predicate": lambda *_args: True,
+    }
+    trace_via_only = recover_spd_ground_reachability(source, **kwargs)
+    assert not trace_via_only.reaches(landing, "Signal$GND")
+
+    l10_only = recover_spd_ground_reachability(
+        source,
+        **kwargs,
+        same_layer_artwork_layers_by_net={"DGND": ("Signal$L10",)},
+        same_layer_artwork_component=lambda *_args: "shared",
+    )
+    assert not l10_only.reaches(landing, "Signal$GND")
+
+    artwork_union = recover_spd_ground_reachability(
+        source,
+        **kwargs,
+        same_layer_artwork_layers_by_net={
+            "DGND": ("Signal$L19", "Signal$L10")
+        },
+        same_layer_artwork_component=lambda *_args: "shared",
+    )
+    assert artwork_union.reaches(landing, "Signal$GND")
+    assert artwork_union.statistics["artwork_edges"] >= 2
+
+
+def test_ground_artwork_only_net_is_indexed_without_cross_net_reachability(
+    tmp_path: Path,
+) -> None:
+    source, _analysis = _recoverable_via_source(
+        tmp_path,
+        node_lines=(
+            "NodeAuxA!!1::DGND_AUX X = 0um Y = 1um Layer = Signal$L10 PadStack = DR-0102_60\n"
+            "NodeAuxB!!1::DGND_AUX X = 1um Y = 1um Layer = Signal$L10 PadStack = DR-0102_60"
+        ),
+        via_lines=(
+            "ViaAux::DGND_AUX UpperNode = NodeAuxA::DGND_AUX "
+            "LowerNode = NodeAuxB::DGND_AUX PadStack = DR-0102_60"
+        ),
+        trace_lines="",
+    )
+    landing = SpdViaLanding(
+        via_id="Via2", net="DGND", endpoint_node_id="Node2", x_um=100.0,
+        y_um=0.0, padstack="DR-0102_60",
+    )
+    result = recover_spd_ground_reachability(
+        source,
+        landings=(landing,),
+        target_layers_by_net={"DGND": ("Signal$GND",)},
+        same_layer_artwork_layers_by_net={"DGND_AUX": ("Signal$L10",)},
+        same_layer_artwork_component=lambda *_args: "aux",
+    )
+    assert not result.reaches(landing, "Signal$GND")
+    assert result.statistics["artwork_nodes"] == 2
+
+
 def test_mixed_reference_ground_reachability_fails_closed_when_target_unreachable(
     tmp_path: Path,
 ) -> None:
@@ -2125,16 +2226,12 @@ def test_mixed_reference_decodes_only_candidates_and_caches_shared_ground(
 def test_mixed_reference_large_assets_fail_closed_without_global_union(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    def large_asset(layer: str, net: str) -> tuple[dict[str, object], bytes]:
-        polygons = tuple(
-            (
-                (float(index), 0.0),
-                (float(index) + 1.0, 0.0),
-                (float(index), 1.0),
-            )
-            for index in range(2050)
-        )
-        order = tuple(("positive_polygon", index) for index in range(2050))
+    def geometry_asset(
+        layer: str,
+        net: str,
+        polygons: tuple[tuple[tuple[float, float], ...], ...],
+    ) -> tuple[dict[str, object], bytes]:
+        order = tuple(("positive_polygon", index) for index in range(len(polygons)))
         compressed, _ = core_services._compress_spd_geometry_payload(
             layer=layer,
             net=net,
@@ -2159,13 +2256,34 @@ def test_mixed_reference_large_assets_fail_closed_without_global_union(
             compressed,
         )
 
-    pwr, pwr_bytes = large_asset("PWR0", "VDD")
-    gnd, gnd_bytes = large_asset("DGND_MIX", "DGND")
+    pwr, pwr_bytes = geometry_asset(
+        "PWR0", "VDD",
+        (((0.0, 0.0), (10.0, 0.0), (10.0, 10.0), (0.0, 10.0)),),
+    )
+    gnd_polygons = tuple(
+        (
+            (float(index % 10), float(index // 10 % 10)),
+            (float(index % 10) + 0.5, float(index // 10 % 10)),
+            (float(index % 10), float(index // 10 % 10) + 0.5),
+        )
+        for index in range(2050)
+    )
+    gnd, gnd_bytes = geometry_asset("DGND_MIX", "DGND", gnd_polygons)
     failures: list[dict[str, object]] = []
+    calls: list[str] = []
+
+    def counted_geometry(payload: object):
+        from shapely.geometry import box
+
+        assert isinstance(payload, dict)
+        calls.append(str(payload["net"]))
+        if payload["net"] == "DGND":
+            raise AssertionError("local geometry budget should fail before GND union")
+        return box(0.0, 0.0, 10.0, 10.0)
+
     monkeypatch.setattr(
         core_services,
-        "_ordered_spd_geometry",
-        lambda _payload: (_ for _ in ()).throw(AssertionError("global union called")),
+        "_ordered_spd_geometry", counted_geometry,
     )
     certificates = core_services._mixed_reference_certificates(
         [pwr, gnd],
@@ -2180,11 +2298,91 @@ def test_mixed_reference_large_assets_fail_closed_without_global_union(
         failures=failures,
     )
     assert certificates == ()
+    assert calls == ["VDD"]
     assert any(
         item["code"] == "SPD_MIXED_REFERENCE_GEOMETRY_UNAVAILABLE"
         and not item["blocking"]
         for item in failures
     )
+
+
+def test_mixed_reference_clips_irrelevant_ground_primitives_before_union(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    def geometry_asset(
+        layer: str,
+        net: str,
+        polygons: tuple[tuple[tuple[float, float], ...], ...],
+    ) -> tuple[dict[str, object], bytes]:
+        compressed, _ = core_services._compress_spd_geometry_payload(
+            layer=layer,
+            net=net,
+            positive_polygons=polygons,
+            negative_polygons=(),
+            positive_circles=(),
+            negative_circles=(),
+            primitive_order=tuple(
+                ("positive_polygon", index) for index in range(len(polygons))
+            ),
+            positive_subelement_count=len(polygons),
+            negative_subelement_count=0,
+            polygon_trace_count=0,
+            box_count=0,
+        )
+        digest = sha256(compressed).hexdigest()
+        return (
+            {
+                "layer": layer,
+                "net": net,
+                "asset": f"geometry/{net}.spdgeom.zlib",
+                "asset_sha256": digest,
+            },
+            compressed,
+        )
+
+    pwr, pwr_bytes = geometry_asset(
+        "PWR0", "VDD",
+        (((20.0, 2.0), (30.0, 2.0), (30.0, 12.0), (20.0, 12.0)),),
+    )
+    gnd_polygons = (
+        ((20.0, 2.0), (30.0, 2.0), (30.0, 12.0), (20.0, 12.0)),
+        *tuple(
+            (
+                (100.0 + float(index), 100.0),
+                (101.0 + float(index), 100.0),
+                (100.0 + float(index), 101.0),
+            )
+            for index in range(2049)
+        ),
+    )
+    gnd, gnd_bytes = geometry_asset("DGND_MIX", "DGND", gnd_polygons)
+    batches: list[int] = []
+    import shapely.ops
+
+    original_unary_union = shapely.ops.unary_union
+
+    def counted_unary_union(items):
+        values = list(items)
+        batches.append(len(values))
+        return original_unary_union(values)
+
+    monkeypatch.setattr(shapely.ops, "unary_union", counted_unary_union)
+    certificates = core_services._mixed_reference_certificates(
+        [pwr, gnd],
+        {str(pwr["asset"]): pwr_bytes, str(gnd["asset"]): gnd_bytes},
+        [
+            StackupLayer(name="PWR0", thickness_um=20.0, conductivity_s_m=5.8e7, pwr_nets=("VDD",)),
+            StackupLayer(name="D1", thickness_um=80.0, dk=4.0, df=0.01),
+            StackupLayer(name="DGND_MIX", thickness_um=20.0, conductivity_s_m=5.8e7, pwr_nets=("DGND", "SIG_RETURN")),
+        ],
+        power_keys={"vdd"},
+        ground_keys={"dgnd"},
+    )
+
+    assert len(certificates) == 1
+    assert certificates[0].overlap_fraction == pytest.approx(1.0)
+    assert certificates[0].dominant_overlap_component_fraction == pytest.approx(1.0)
+    assert batches == [1, 1]
 
 
 def test_geometry_asset_compression_is_deterministic_roundtrips_and_keeps_limit(
@@ -2379,6 +2577,7 @@ def test_valid_mixed_reference_certificate_binds_assets_and_low_confidence(
     rail = next(item for item in plan.project.rails if item.net == "VDD_CORE/0")
     certificate = rail.mixed_reference_certificate
     assert certificate is not None
+    assert certificate in plan.mixed_reference_certificates
     assert (rail.pwr_layer, rail.gnd_layer) == ("Signal$PWR", "Signal$GND")
     assert certificate.gnd_net == "DGND"
     assert certificate.overlap_fraction == pytest.approx(1.0)
