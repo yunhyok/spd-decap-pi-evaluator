@@ -2791,10 +2791,10 @@ def _compile_retarget_landing_destination_requests(
         if cancelled():
             raise RuntimeError("SPD retarget destination scan cancelled")
         try:
-            for start in range(0, len(landing_rows), 32768):
+            for start in range(0, len(landing_rows), 4096):
                 if cancelled():
                     raise RuntimeError("SPD retarget destination scan cancelled")
-                batch = landing_rows[start : start + 32768]
+                batch = landing_rows[start : start + 4096]
                 node_ids = tuple(str(item["query_id"]) for item in batch)
                 points = tuple(
                     (float(item["x_um"]), float(item["y_um"]))

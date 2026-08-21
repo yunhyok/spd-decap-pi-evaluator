@@ -1503,6 +1503,7 @@ def test_retained_surface_artwork_is_boundary_inclusive_and_released(
 def test_retarget_destination_hash_does_not_duplicate_request_identities(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    landing_count = 4097
     project = SimpleNamespace(
         rails=(
             SimpleNamespace(
@@ -1522,21 +1523,15 @@ def test_retarget_destination_hash_does_not_duplicate_request_identities(
     )
     connection = SimpleNamespace(
         refdes="C1",
-        power_vias=(
+        power_vias=tuple(
             SimpleNamespace(
-                via_id="V2",
-                endpoint_node_id="N2",
+                via_id=f"V{index:04d}",
+                endpoint_node_id=f"N{index:04d}",
                 net="VDD",
-                x_um=3.0,
-                y_um=4.0,
-            ),
-            SimpleNamespace(
-                via_id="V1",
-                endpoint_node_id="N1",
-                net="VDD",
-                x_um=1.0,
-                y_um=2.0,
-            ),
+                x_um=float(index),
+                y_um=float(index + 1),
+            )
+            for index in reversed(range(landing_count))
         ),
     )
     real_hash = core_services._canonical_metadata_sha256
@@ -1552,6 +1547,17 @@ def test_retarget_destination_hash_does_not_duplicate_request_identities(
         core_services, "_canonical_metadata_sha256", bounded_hash
     )
     released: list[tuple[str, str]] = []
+    strict_batch_sizes: list[int] = []
+
+    def strict_batch(
+        _net: str,
+        _layer: str,
+        node_ids: tuple[str, ...],
+        _points: tuple[tuple[float, float], ...],
+    ) -> tuple[str, ...]:
+        strict_batch_sizes.append(len(node_ids))
+        return ("island-1",) * len(node_ids)
+
     requests, coverage = (
         spd_adapter._compile_retarget_landing_destination_requests(
             project=project,
@@ -1560,30 +1566,34 @@ def test_retarget_destination_hash_does_not_duplicate_request_identities(
                 {"net": "VDD", "layer": "L1", "asset_sha256": "a" * 64},
             ),
             strict_island_resolver=lambda *_args: "island-1",
-            strict_island_resolver_batch=(
-                lambda _net, _layer, node_ids, _points:
-                ("island-1",) * len(node_ids)
-            ),
+            strict_island_resolver_batch=strict_batch,
             release_surface=lambda net, layer: released.append((net, layer)),
         )
     )
 
     identities = [
         {
-            "refdes": item.refdes.casefold(),
-            "via_id": item.via_id.casefold(),
-            "endpoint_node_id": item.endpoint_node_id.casefold(),
-            "destination_net": item.destination_net.casefold(),
-            "destination_layer": item.destination_layer.casefold(),
-            "destination_island_id": item.destination_island_id,
-            "target_rail_id": item.target_rail_id.casefold(),
+            "refdes": "c1",
+            "via_id": f"v{index:04d}",
+            "endpoint_node_id": f"n{index:04d}",
+            "destination_net": "vdd",
+            "destination_layer": "l1",
+            "destination_island_id": "island-1",
+            "target_rail_id": rail_id.casefold(),
         }
-        for item in requests
+        for index in range(landing_count)
+        for rail_id in ("R1", "R2")
     ]
     assert isinstance(requests, list)
+    assert strict_batch_sizes == [4096, 1]
+    assert len(requests) == coverage["covered_destination_count"] == len(identities)
     assert [
         (item.via_id, item.target_rail_id) for item in requests
-    ] == [("V1", "R1"), ("V1", "R2"), ("V2", "R1"), ("V2", "R2")]
+    ] == [
+        (f"V{index:04d}", rail_id)
+        for index in range(landing_count)
+        for rail_id in ("R1", "R2")
+    ]
     assert coverage["covered_destination_ids_sha256"] == real_hash(
         {"destinations": identities}
     )
