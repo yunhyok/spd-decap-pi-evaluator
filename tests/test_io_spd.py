@@ -4628,6 +4628,18 @@ def test_via_island_pair_aggregate_hashes_and_subtracts_exact_terminal_ids(
     )
 
     assert len(result.via_island_pair_aggregates) == 3
+    assert [
+        (
+            item.padstack,
+            item.start_island_id,
+            item.end_island_id,
+        )
+        for item in result.via_island_pair_aggregates
+    ] == [
+        ("DR-0102_60", "island-top", "island-pwr"),
+        ("DR-0102_60", "island-top-other", "island-pwr-other"),
+        ("DR-ALT", "island-top", "island-pwr"),
+    ]
     aggregate = next(
         item
         for item in result.via_island_pair_aggregates
@@ -4697,6 +4709,24 @@ def test_via_island_pair_aggregate_hashes_and_subtracts_exact_terminal_ids(
         "island-top-other",
         "island-pwr-other",
         1,
+    )
+    assert unrelated.segments == aggregate.segments
+    assert unrelated.segments[0] is aggregate.segments[0]
+    shared_finite_terms = [
+        term
+        for edge in result.finite_via_edges
+        for term in edge.series_terms
+        if (
+            term.padstack,
+            term.start_layer,
+            term.end_layer,
+        ) == ("DR-0102_60", "Signal$TOP", "Signal$PWR")
+    ]
+    assert len(shared_finite_terms) == 3
+    assert all(
+        term.segments == aggregate.segments
+        and term.segments[0] is aggregate.segments[0]
+        for term in shared_finite_terms
     )
     assert result.statistics["terminal_owned_via_id_count"] == 1
     assert result.statistics["terminal_owned_via_observed_count"] == 1

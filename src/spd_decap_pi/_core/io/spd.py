@@ -7475,11 +7475,26 @@ def recover_spd_ground_reachability(
     via_terminal_display_endpoints.clear()
     del all_landings, landing_records, terminal_contact_records
 
+    physical_model_cache: dict[
+        tuple[str, str, str],
+        tuple[
+            float | None,
+            str | None,
+            tuple[SpdViaIslandPairSegment, ...],
+            str,
+            tuple[str, ...],
+        ],
+    ] = {}
+
     def physical_model_for_canonical(
         padstack_name: str,
         start_layer: str,
         end_layer: str,
     ) -> tuple[float | None, str | None, tuple[SpdViaIslandPairSegment, ...], str, tuple[str, ...]]:
+        cache_key = (padstack_name, start_layer, end_layer)
+        cached = physical_model_cache.get(cache_key)
+        if cached is not None:
+            return cached
         issues: set[str] = set()
         definitions = tuple(
             item for item in (padstacks or ())
@@ -7541,11 +7556,15 @@ def recover_spd_ground_reachability(
         if start_key not in centers or end_key not in centers:
             issues.add("via_endpoint_layer_missing_from_stackup")
         if issues:
-            return drill, material, (), "incomplete", tuple(sorted(issues))
+            result = drill, material, (), "incomplete", tuple(sorted(issues))
+            physical_model_cache[cache_key] = result
+            return result
         start_index = declared.index(next(layer for layer in declared if layer.casefold() == start_key))
         end_index = declared.index(next(layer for layer in declared if layer.casefold() == end_key))
         if start_index == end_index:
-            return drill, material, (), "incomplete", ("via_endpoint_layers_identical",)
+            result = drill, material, (), "incomplete", ("via_endpoint_layers_identical",)
+            physical_model_cache[cache_key] = result
+            return result
         step = 1 if end_index > start_index else -1
         segments = tuple(
             SpdViaIslandPairSegment(
@@ -7556,7 +7575,9 @@ def recover_spd_ground_reachability(
             )
             for ordinal, index in enumerate(range(start_index, end_index, step))
         )
-        return drill, material, segments, "complete", ()
+        result = drill, material, segments, "complete", ()
+        physical_model_cache[cache_key] = result
+        return result
 
     aggregate_key_by_contact: list[
         tuple[str, str, str, str, str, str] | None
@@ -7596,7 +7617,8 @@ def recover_spd_ground_reachability(
     # one dataclass and one Via-ID list per source edge; the replay keeps only a
     # framed digest/count/ownership counters until this bounded output stage.
     via_island_pair_aggregates = []
-    for source_aggregate_key, state in aggregate_states.items():
+    while aggregate_states:
+        source_aggregate_key, state = aggregate_states.popitem()
         net_key = str(state["net"])
         padstack_name = str(state["padstack"])
         start_layer = target_layer_display.get(
@@ -7651,7 +7673,6 @@ def recover_spd_ground_reachability(
             item.start_island_id, item.end_island_id,
         )
     )
-    aggregate_states.clear()
     state = {}
     component_islands_by_surface.clear()
     # Enrich terminal contact rows from the canonical physical pair.  Surface
@@ -7659,9 +7680,8 @@ def recover_spd_ground_reachability(
     # a terminal landing that has a resolved pair must carry the same physical
     # metadata as its aggregate.
     if landing_surface_contacts:
-        enriched_contacts: list[SpdLandingSurfaceContact] = []
-        for contact, aggregate_key in zip(
-            landing_surface_contacts, aggregate_key_by_contact, strict=True
+        for contact_index, (contact, aggregate_key) in enumerate(
+            zip(landing_surface_contacts, aggregate_key_by_contact, strict=True)
         ):
             net_key = contact.net.casefold()
             endpoint_key = contact.endpoint_node_id.casefold()
@@ -7710,34 +7730,29 @@ def recover_spd_ground_reachability(
                         )
                         physical_status = "complete"
                         physical_issues = ()
-                enriched_contacts.append(
-                    replace(
-                        contact,
-                        terminal_owner_kind=contact.terminal_owner_kind,
-                        external_endpoint_layer=endpoint_layer,
-                        padstack=padstack_name,
-                        drill_diameter_um=drill,
-                        material=material,
-                        segments=segments,
-                        physical_model_status=physical_status,
-                        physical_model_issues=physical_issues,
-                    )
-                )
-                continue
-            enriched_contacts.append(
-                replace(
+                landing_surface_contacts[contact_index] = replace(
                     contact,
                     terminal_owner_kind=contact.terminal_owner_kind,
-                    external_endpoint_layer=aggregate.start_layer,
-                    padstack=aggregate.padstack,
-                    drill_diameter_um=aggregate.drill_diameter_um,
-                    material=aggregate.material,
-                    segments=aggregate.segments,
-                    physical_model_status=aggregate.physical_model_status,
-                    physical_model_issues=aggregate.physical_model_issues,
+                    external_endpoint_layer=endpoint_layer,
+                    padstack=padstack_name,
+                    drill_diameter_um=drill,
+                    material=material,
+                    segments=segments,
+                    physical_model_status=physical_status,
+                    physical_model_issues=physical_issues,
                 )
+                continue
+            landing_surface_contacts[contact_index] = replace(
+                contact,
+                terminal_owner_kind=contact.terminal_owner_kind,
+                external_endpoint_layer=aggregate.start_layer,
+                padstack=aggregate.padstack,
+                drill_diameter_um=aggregate.drill_diameter_um,
+                material=aggregate.material,
+                segments=aggregate.segments,
+                physical_model_status=aggregate.physical_model_status,
+                physical_model_issues=aggregate.physical_model_issues,
             )
-        landing_surface_contacts = enriched_contacts
     aggregate_by_key.clear()
     required_aggregate_keys.clear()
     aggregate_key_by_contact.clear()
@@ -7813,6 +7828,7 @@ def recover_spd_ground_reachability(
         # codes retained by the single replay.  Do not rebuild million-entry
         # string references or raw five-field edge tuples here.
         edge_count = len(finite_via_offsets)
+        del finite_via_offsets[:]
         node_count = graph_node_count
         degree = array("I", [0]) * node_count
         for edge_index in range(edge_count):
@@ -7830,6 +7846,7 @@ def recover_spd_ground_reachability(
             adjacency_cursor[first] += 1
             adjacency_incidence[adjacency_cursor[second]] = edge_index
             adjacency_cursor[second] += 1
+        del adjacency_cursor[:]
 
         def incident_start(node: int) -> int:
             return int(adjacency_offsets[node])
@@ -7938,6 +7955,12 @@ def recover_spd_ground_reachability(
             second_edge = adjacency_incidence[incident_start(node) + 1]
             if bridges[first_edge] and bridges[second_edge] and edge_other(first_edge, node) != edge_other(second_edge, node):
                 contracted[node] = 1
+        del discovery[:]
+        del low[:]
+        del parent_edge[:]
+        del parent_node[:]
+        bridges.clear()
+        boundary_nodes.clear()
 
         vertex_for_node = array("I", range(node_count))
         visited_edges = bytearray(edge_count)
@@ -7984,6 +8007,9 @@ def recover_spd_ground_reachability(
             quotient_paths.append(
                 (vertex_for_node[first], vertex_for_node[second], [edge_index])
             )
+        visited_edges.clear()
+        contracted.clear()
+        del adjacency_incidence[:]
 
         def finite_digest(values: Iterable[str]) -> str:
             digest = hashlib.sha256()
@@ -8010,6 +8036,9 @@ def recover_spd_ground_reachability(
             representative = vertex_for_node[node_index]
             vertex_members[vertex_member_cursor[representative]] = node_index
             vertex_member_cursor[representative] += 1
+        del degree[:]
+        del vertex_for_node[:]
+        del vertex_member_cursor[:]
         vertex_id_by_node: list[str | None] = [None] * node_count
         for representative in range(node_count):
             if not vertex_member_count[representative]:
@@ -8069,6 +8098,15 @@ def recover_spd_ground_reachability(
             )
             for member in members:
                 vertex_id_by_node[member] = vertex_id
+        members = array("I")
+        del adjacency_offsets[:]
+        del vertex_member_count[:]
+        del vertex_member_offsets[:]
+        del vertex_members[:]
+        terminal_ids_by_node.clear()
+        del surface_code_by_index[:]
+        surface_key_by_code.clear()
+        surface_component_islands_by_code.clear()
         def finite_physical(padstack_name: str, start_layer: str, end_layer: str):
             drill, material, segments, status, issues = physical_model_for_canonical(
                 padstack_name, start_layer, end_layer
@@ -8116,6 +8154,18 @@ def recover_spd_ground_reachability(
             edge_digest = finite_digest(edge_owner(index) for index in path)
             edge_id = f"spd-finite-via-edge:{finite_digest((start_vertex, end_vertex, edge_digest))[:24]}"
             finite_via_edges.append(SpdFiniteViaQuotientEdge(edge_id, edge_net(path[0]), start_vertex, end_vertex, 1, len(path), len(path), edge_digest, owner_ids, tuple(terms), total_r if status == "complete" else None, total_l if status == "complete" else None, total_length if status == "complete" else None, "contracted_series" if len(path) > 1 else "retained_explicit", status, tuple(sorted(issues))))
+        path = []
+        quotient_paths.clear()
+        del finite_net_codes[:]
+        del finite_first_indices[:]
+        del finite_second_indices[:]
+        del finite_padstack_codes[:]
+        via_source_net_key_by_code.clear()
+        via_source_padstack_names.clear()
+        del node_layer_codes[:]
+        layer_code_by_key.clear()
+        layer_key_by_code.clear()
+        layer_display_by_code.clear()
         for key, (net_key, _owner_kind, _terminal_id) in (
             terminal_contact_owner_by_key.items()
         ):
@@ -8126,6 +8176,7 @@ def recover_spd_ground_reachability(
                 edge = next((item for item in finite_via_edges if item.start_vertex_id == vertex_id or item.end_vertex_id == vertex_id), None)
                 if edge:
                     finite_via_edge_id_by_landing[key] = edge.edge_id
+        terminal_contact_owner_by_key.clear()
         scenario_requested = tuple(scenario_isolated_terminal_landings or ())
         finite_via_scenario_isolated_landing_keys = frozenset(
             (
@@ -8163,6 +8214,8 @@ def recover_spd_ground_reachability(
             vertex_id = vertex_id_by_node[node_index] if node_index is not None else None
             if vertex_id is not None:
                 finite_via_vertex_id_by_retarget_destination[key] = vertex_id
+        vertex_id_by_node.clear()
+        node_index_by_net.clear()
         destination_digest = finite_digest(
             f"{net}:{layer}:{node}" for net, layer, node in requested_destinations
         )
@@ -8190,6 +8243,7 @@ def recover_spd_ground_reachability(
             modeled_owner_ledger_sha256=finite_digest(f"via:{item}" for item in raw_ids), modeled_owner_canonical_sha256=finite_digest(sorted(f"via:{item}" for item in raw_ids)), outside_scope_via_ids_sha256=hashlib.sha256(b"").hexdigest(),
         )
         del raw_ids
+    physical_model_cache.clear()
     surface_dense_trace_edges = len(surface_trace_first_indices)
     del surface_trace_net_codes[:]
     del surface_trace_first_indices[:]
@@ -8207,6 +8261,13 @@ def recover_spd_ground_reachability(
     del surface_code_by_index[:]
     surface_key_by_code.clear()
     surface_component_islands_by_code.clear()
+    node_index_by_net.clear()
+    node_id_by_index.clear()
+    node_net_key_by_index.clear()
+    del node_layer_codes[:]
+    layer_code_by_key.clear()
+    layer_key_by_code.clear()
+    layer_display_by_code.clear()
     reporter.report(100, "Checked mixed-reference GND landing reachability")
     return finish(SpdGroundReachability(
         frozenset(reachable), frozenset(unreachable), {
