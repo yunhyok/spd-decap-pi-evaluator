@@ -1,0 +1,906 @@
+# SPD Decap PI Evaluator v0.22.0 — T1 AV-BS1 boundary-Schur results
+
+> **Current SPD Decap PI Evaluator v0.22.0 — AV-BS1 H4-P1 manifest-only
+> preregistration, final documentation freeze:** The stable contract fixture
+> `tools/research/av_bs1_boundary_schur_h4_p1.py` is `47295` bytes / `852` LF /
+> SHA-256
+> `6f527c76cbc0928a4b504e01abbb4c049fd39edc75ef865a3335f3a619863200`.
+> Schema `AV-BS1-h4-p1-manifest-v1` is bound to payload SHA-256
+> `ec489c784e01635955560fa0ac0681b22bd890759d6693c111cb8ff28c31b753`
+> and wrapper SHA-256
+> `cfa8f9a2504a8fad40ef03e9cb3842877e176a9f3d620f5805099a98c80523e7`.
+> Static tests are `63350` bytes / `1341` LF / SHA-256
+> `6254e3d28b56d8ec640089c02fdf3308e33775e4c3cd2d6946932bfc1ed7ac9d`;
+> focused `32/32` passed in `19.01 s`, and independent same-byte runs passed
+> `32/32` in `19.51 s` and `18.92 s`.
+>
+> The parser accepts only the required `--stage manifest`. There is no runner,
+> token, claim, public stage, or `primary-h4` parser choice. Current status is
+> `preregistered_H4_P1_contract_only_no_solve`,
+> `authorization_state=not_authorized`, `execution_authorized=false`,
+> `token_state=absent`, `current_terminal_classification=token_absent_no_terminal_evidence`,
+> `authoritative_terminal_evidence=false`, `authoritative_stage_pass=false`,
+> and `next_stage_authorized=false`. No RHS, factorization, factor solve,
+> extension, `Y`, `Y_reverse`, `M9_interior`, sidecar, modal result, H4 physics,
+> or PowerSI comparison ran.
+>
+> The retry-v10 eleventh sealed factor-only pass remains authoritative historical
+> parent evidence only. It creates no present H4-P1 authority and remains a
+> high-memory-host result, not an 8 GB fit proof. The new contract prospectively
+> freezes one resident factor at a time, all `512` RHS in batches `<=4`, raw
+> accuracy gates, fixed little-endian complex128 sidecar, and fail-closed
+> process-tree resource stops; none is implemented or executed here.
+>
+> Selected old-plus-new H4 collection was confirmed exactly: `432 tests
+> collected in 0.56 s`, exit `0`. The first successful full exact-document
+> suite on final documentation bytes recorded `432/432` passed in `111.82 s`,
+> exit `0`, with no failure. This is the **FINAL DOC FREEZE**; do not record any
+> later closure runtime. Every pre-existing retry-v10 eleventh-result,
+> retry-v9, future-tenth/eleventh, `397/397`, `400/400`, `factor_fit_unproven`,
+> or older “current” statement below is an immutable historical snapshot. Only
+> this H4-P1 manifest-only block states current authority.
+>
+
+> **SPD Decap PI Evaluator v0.22.0 — retry-v10 eleventh-result final
+> documentation freeze:** Eleven public `primary-h4-p0r` invocations and token
+> lineages are immutable. The eleventh ran exactly once from token-only commit
+> `e35ef01214f4bf9ec75e7b428e72b21d38c9161b`, token ID
+> `2435fa59edc64efca2fb4665b0854d43`, and exited public stage `0` with
+> empty stderr; it was not rerun. Factor producer PID `63268`, finalizer PID
+> `39580`, and consumer PID `60012` exited `0`. Exactly two certificates
+> and two prefixes were retained in order `A_background_II`,
+> `A_conductor_II`; both factor-cap gates and both resource gates passed.
+> Strict retained classifications are `consumed_v2_authoritative_sealed_pass`
+> and `consumed_v2_authoritative_sealed_pass_no_next_stage_authorization`,
+> with `authoritative_terminal_evidence=true`,
+> `authoritative_stage_pass=true`, authoritative inner disposition
+> `authoritative_inner_pass_observed`, `validation_error=null`, and
+> `next_stage_authorized=false`. M-only consumption
+> `bf94e1890c489e690801b3d90bcbf50ff61ca233` followed by D-only retirement
+> `389ec1e51b87f3eff928278c76bbbf60241af972`; the token is absent.
+>
+> Inner monitoring retained `243/243` samples in `34.0036179 s`, peak
+> working set `510849024` bytes, private bytes `1954021376`, and lifetime
+> commit `2358079488`. Outer monitoring retained `677/677` samples and
+> `47` nontruncated retries in `94.5411269 s`, peak working set
+> `513384448`, private bytes `1958121472`, and lifetime commit
+> `2358079488`. All `164/164` outer identities and the broader `207/207`
+> identity set were absent after cleanup. Minimum host available physical memory
+> was `43885748224` bytes, so this is an authoritative factor-only pass on
+> this host, not an 8 GB fit proof. Both certificates have `rhs_count=0`,
+> `factor_solve_called=false`, and all forbidden-operation flags false. No
+> RHS, solve, extension, boundary `Y`, modal response, H4 physics, or PowerSI
+> comparison ran.
+>
+> Frozen Python/runner/tests SHA-256 remain `46082123fbf98102f3e5995c32bf65d8d04bb835b9c1305de0150349e75e48c7`,
+> `f0159061dbd4d1b34881911edfdfb72146a3a23e5cdc75ca8fa4069c08aadb86`,
+> and `e5496ceb24c33c835b88ce20a3f67f941c8279e0471708a01022238fc211b109`;
+> collection remains `400`. Evidence anchors are numerical raw SHA-256
+> `0af448eeea2eb302f6aeebbb04fd01992067ccc55a017eb780507aa34924728f`,
+> resource raw SHA-256
+> `d6358608dd97c0f245bb781d0bfc63e929a1a74733907a7fa2a1fbdb9dca97de`,
+> and terminal-seal raw SHA-256
+> `070c86e25aeb982d5ef1c9c99c9c15d9ed3a6d08ce4e521e55262e4586a516a4`.
+> The first full exact-document suite on the post-eleventh document bytes
+> passed `400/400` in `95.65 s`, exit `0`, with no failure. This is the
+> **FINAL DOC FREEZE**. Do not record any later closure runtime. Any H4-P1,
+> RHS, or solve work still requires a separate preregistration and
+> authorization; this result creates neither a token nor further authority.
+>
+> **Historical SPD Decap PI Evaluator v0.22.0 — retry-v10 tenth-result final documentation
+> freeze:** Ten public attempts are immutable. The tenth ran once and exited
+> public stage `2`; producer/finalizer/consumer PIDs `54044`/`25200`/`41812`
+> exited `0`, exactly two factor certificates/prefixes were retained in order
+> `A_background_II`, `A_conductor_II`, factor/resource gates passed, and all
+> `205/205` identities were absent after cleanup. Inner/outer monitoring used
+> `245`/`664` samples over `34.1760023`/`91.722828 s`; peak working set was
+> `511868928`/`495939584`, private bytes `1994665984`/`1993838592`, lifetime
+> commit `2322489344`/`2335375360`, with `39` nontruncated outer retries. Host
+> availability was about 45 GB, so no 8 GB claim follows. No RHS, solve,
+> extension, `Y`, modal response, H4 physics, or PowerSI ran. Three order-only
+> claim/guard/resource JSON mismatches made the raw seal non-authoritative.
+> Strict classification is `consumed_v2_provisional_invalid_terminal_evidence`,
+> `authoritative_terminal_evidence=false`, disposition `null`, exact terminal
+> detail `BLOCKED_AV_BS_RESULT_SCHEMA: terminal pre-exit
+> normal_pass_outer_evidence_reconciliation_pass mismatch`. M-only
+> `785f5e9c0a38ad1851c4ba620f520db9087aaf74` then D-only
+> `a139d867bbc727b58f9a7a4cdbad604fc03070cf` leave token absent/next false.
+> Retry-v10 changes only strict JSON: strict UTF-8, duplicate/nonfinite reject,
+> object root/depth32/16 MiB bounds, ordinal O(n) key/string/field/evidence
+> equality, and lowercase SHA-256 hex guards. Schemas, factor math,
+> retry/resource policy, and physics boundary are unchanged. Bindings: Python
+> `46082123fbf98102f3e5995c32bf65d8d04bb835b9c1305de0150349e75e48c7`,
+> runner `f0159061dbd4d1b34881911edfdfb72146a3a23e5cdc75ca8fa4069c08aadb86`
+> (`484795` bytes), tests
+> `e5496ceb24c33c835b88ce20a3f67f941c8279e0471708a01022238fc211b109`
+> (`488591` bytes). Collection `400`; current-byte focused `5/5` in `2.73 s`;
+> independent same-byte `5/5` in `2.71 s`. A provisional full attempt reached
+> `398 passed, 2 failed in 94.17 s` from two corrected static contract drifts;
+> the first successful full exact-document suite then passed `400/400` in
+> `93.89 s`, exit `0`, with no failure. This is the **FINAL DOC FREEZE**; any
+> separately authorized run would be eleventh.
+>
+> **Historical retry-v9 final documentation
+> freeze:** Nine public `primary-h4-p0r` invocations are immutable. The ninth ran
+> once from retry-v8 token-only commit `0597872...`, token ID `0ec78f53...`; the
+> public invocation exited `1`. Factor child PID `51184` exited `0` and produced
+> `factor_certificates_complete` with exactly two certificates and two prefix
+> checkpoints in order `A_background_II`, `A_conductor_II`; both factor cap gates
+> passed. No RHS, solve, extension, boundary `Y`, modal response, or physics ran.
+> Inner and outer resource gates passed, and the terminal cleanup audit found all
+> `182/182` process identities dead. This factor-only resource evidence is not an
+> 8 GB fit claim. The published artifact is a finalizer failure
+> wrapper, `BLOCKED_AV_BS_RESULT_SCHEMA` / `monitor-ready child_process_id
+> mismatch`: offline verifier PID `37248` was incorrectly used instead of the
+> resource-bound producer PID `51184`. A raw terminal seal exists, but strict
+> `_validate_outer_terminal_evidence` rejects `terminal control marker chronology
+> invalid`; three canonical-JSON helper bootstraps mixed Python
+> `time.monotonic_ns()`/GetTickCount64 with PowerShell Stopwatch/QPC. The retained
+> tombstone-plus-seal classification is therefore
+> `consumed_v2_provisional_invalid_terminal_evidence`, not authoritative. M-only
+> consumption `b9c1964...` and D-only retirement `c14f630...` leave the token
+> absent. Retry-v9 only threads the explicit resource child PID through offline
+> validators and changes embedded bootstrap marker timestamps to
+> `time.perf_counter_ns()`/QPC; bootstrap SHA-256 is `0c92a0ec...`. Frozen
+> Python/runner/tests SHA-256 are `46082123...` / `229aa91b...` / `2106e533...`.
+> Collection is `397`; focused exact selection passed `20` with `377` deselected
+> in `2.33 s`, independent same-byte selection passed `20` with `377` deselected
+> in `2.37 s`, and compatibility selection passed `7` with `390` deselected in
+> `0.95 s`. The first full exact-document suite passed `397/397` in `92.95 s`
+> with exit `0` and no failure. This is the **FINAL DOC FREEZE**. Schemas,
+> strictness,
+> retry/max3/cap64, factor order/caps, resource ceilings, and the RHS/solve/physics
+> boundary are unchanged. `factor_fit_unproven=true`;
+> `next_stage_authorized=false`. Earlier retry-v8 sections are immutable history;
+> any separately authorized future public invocation would be tenth. Evidence is in
+> [results](T1_AV_BOUNDARY_SCHUR_RESULTS.md) and the
+> [reproduction appendix](ORACLE_REPRODUCTION.md).
+>
+> This entire retry-v10 eleventh/tenth and retry-v9 banner is retained as an
+> immutable historical snapshot. It does not override the H4-P1 manifest-only
+> current-authority block at the top of this file.
+
+
+## Historical pre-H4-P1 verdict
+
+현재 AV-BS1 physics artifact 상태는 **`passed_AV_BS_h2_stage_only_pending_h4_preregistration`**이다. 17.5 µm/100 kHz의 guarded `primary-h2` 한 번이 local mandatory gate를 통과했지만 이는 h2 한 mesh의 단계 제한 통과일 뿐 circle oracle 또는 h4 권한이 아니다. H0 negative, H1 coarse-h pass, H2-P0 assembly manifest, H4-P0 assembly certificate와 H4-P0R manifest parent를 그대로 보존한다. 아홉 번째 P1 factor-only 시도는 producer PID `51184`에서 exactly two factor certificates/prefixes와 factor/resource gates를 통과했지만 published finalizer PID mismatch와 strict chronology-invalid raw seal 때문에 authoritative H4-P0R result가 아니다. RHS, solve, physics는 미실행이다. 따라서 factor-fit proof는 여전히 없고 `factor_fit_unproven=true`, `next_stage_authorized=false`; first full exact-document suite는 `397/397` in `92.95 s`, exit `0`, no failure로 통과했고 문서는 FINAL DOC FREEZE다.
+
+2026-08-15 clean commit `4fa5ec80a261c21c8489ecd8b708a62bba769a7a`에서 17.5 µm, 100 kHz, `h` 한 mesh의 guarded `primary-h`를 처음 실행했다. 실행은 **`BLOCKED_AV_BS_MESH_HASH`**로 fail-closed 됐다. factorization, harmonic extension, boundary-Schur `Y`, modal response와 physics pass/fail 값은 생성되지 않았다. 따라서 이 결과는 AV-BS1 physics negative가 아니라 **사전등록 sparse-pattern 계약의 negative**다.
+
+제품 parser/solver/UI/version/installer, PowerSI reference와 GitHub 원격은 변경하지 않았다. `h2`만 physics-bearing preregistered one-use path로 실행했다. 아홉 H4-P0R-P1 public invocation은 모두 immutable하다. 아홉 번째 factor path의 two-certificate/two-prefix 및 resource pass는 비권위 terminal evidence를 보정하지 않으며, RHS/solve, `h4` physics, withheld radius와 EQ0는 생성되지 않았다. Resource pass는 PowerSI 정확성 또는 8 GiB 적합성 주장이 아니다.
+
+## Immutable H0 artifact
+
+로컬 ignored artifact는 `validation-output/av-bs1/av-bs1-primary-h-20260814T183617Z.json`에 보존한다. tracked 기준 문서에는 아래 digest와 판정만 고정한다.
+
+| 항목 | 값 |
+|---|---:|
+| artifact SHA-256 | `848a2c5a3683f492d84b59be42ea20b9ed5e2e745304cb9ded88131e8bca45f0` |
+| final payload SHA-256 | `5f0b185809cfe3fd8cb033c86ff74abfee5b3c7ccf75536227affc1e0b588a46` |
+| numerical payload SHA-256 | `448a7c2140eed42be0e4541a2786ad99471437bbaa1dc3fa224ee351fc7c606b` |
+| resource report SHA-256 | `cccc33bd2f63585e059830801bf79db1af91aa4011fbc5a158f5860b4b974a74` |
+| status / detail | `BLOCKED_AV_BS_MESH_HASH` / `h sparse nnz mismatch` |
+| wall / successful samples | `1.0625909 s` / `8` |
+| execution-tree peak WS | `179,126,272 B = 170.828125 MiB` |
+| execution-tree peak private/commit | `1,455,218,688 B = 1.355278 GiB` |
+| minimum system commit headroom | `71.073036 GiB` |
+| minimum available physical memory | `46.802578 GiB` |
+| resource stop / gate | `null` / passed |
+
+resource 수치는 PowerShell runner와 Python child/descendant를 합한 이 host의 process-tree 측정값이며 8 GB laptop 증명이 아니다. 수치 gate 전 차단이므로 solve timing으로도 사용하지 않는다.
+
+H0 resource report의 `child_exit_code=0`은 canonical failure wrapper가 실제로 exit 2를 반환한 사실과 모순한다. Windows PowerShell `Start-Process`가 redirected child의 native handle을 생존 중 retain하지 않아 manual polling 뒤 `ExitCode`가 `$null`이 됐고 `[int]$null`이 0으로 기록된 runner provenance bug다. `mandatory_stage_pass=false`와 원래 mesh failure code는 보존돼 false pass는 없었지만, H1 runner는 child handle을 즉시 retain하고 success/failure wrapper를 exit `0/2`와 각각 결합한다.
+
+## Root cause
+
+기존 fixture는 `V+2E=2049+2×6016=14,081`을 stiffness `K`와 consistent mass `M`의 공통 post-`eliminate_zeros()` nnz로 요구했다. 이는 `M`에는 맞지만 `K`에는 틀리다.
+
+| 구조 | 값 |
+|---|---:|
+| local directed triangle contributions | `35,712` |
+| unique directed nodal adjacency | `14,081` |
+| binary64 raw `K.nnz` after zero elimination | `14,075` |
+| `M.nnz` | `14,081` |
+| `MΓ.nnz` | `384` |
+
+각 annular cell은 inner/outer chord가 평행하고 radial leg 길이가 같은 isosceles trapezoid이므로 cyclic quadrilateral이다. 대각선 `ij`의 P1 Laplacian weight는 두 맞은편 각 `α,β`에 대해 `-(cot α+cot β)/(2µ)`이고 `α+β=π`이므로 정확히 0이다. frozen mesh에는 `15 bands × 128 sectors = 1,920`개의 triangulation diagonal이 있다.
+
+binary64에서는 세 undirected diagonal만 bitwise 0이 되어 여섯 directed CSC entry가 제거됐고, 나머지 1,917개는 물리 coupling이 아닌 cancellation residue로 남았다. 따라서 runtime 우연값 `K.nnz=14,075`를 physics contract로 승격하지 않는다.
+
+독립 Decimal-90 계산은 1,920개 대각선의 두 local contribution에 대해 최대 상대 잔차 `2.2252682637458195e-86`을 재현했다. binary64 raw assembly의 최대 상대 상쇄 잔차는 `2.1676835831040652e-13`이며 frozen bound `128u·κ2,max = 5.788860430596403e-13` 아래다.
+
+## H1 preregistered correction
+
+H1은 magnitude search로 zero edge를 찾지 않는다. generator의 radial-band parity에서 1,920개 diagonal owner를 직접 만들고 canonical tag SHA-256 `e80c75ed02030cb22b648b39d613abac42bf6a4c4dfb46704789eedcc17f5e91`을 요구한다.
+
+각 tagged edge는 두 incident triangle이어야 하며, unassembled 두 local stiffness contribution의 상대 상쇄가 위 `128u·κ2,max` bound를 통과해야 한다. raw transpose를 평균내지 않는다. raw symmetric residue를 `k=Kij=Kji`라 할 때 다음 graph-Laplacian edge block만 제거한다.
+
+```text
+Kij = Kji = 0
+Kii <- Kii + k
+Kjj <- Kjj + k
+```
+
+이 연산은 constant-field row sum을 보존한다. untagged off-diagonal은 바꾸지 않는다. canonical support는 radial/circumferential edge만 남아 `K.nnz=10,241`이어야 한다. `M`은 triangulation diagonal coupling을 유지해 `14,081`, `MΓ`는 `384`다.
+
+| certificate | frozen value |
+|---|---:|
+| raw `K` SHA-256 | `9c199514e0c1863744d40babe3b218f576f74ebbc909780dbd87046de40e1e71` |
+| canonical `K` SHA-256 | `733c83aec575cb28807bebc7a10fb9e05a83ca35c4775677fd347165fb421548` |
+| `M` SHA-256 | `2900e4f481fc9d40ce1282e2532f4ce29b0b858a939fbd3644556e60ba0f8bfe` |
+| `MΓ` SHA-256 | `4bca013ca53c8ce9473329d85d0d8d6691bdd18ccffa232abac89337e5c58d08` |
+| raw/canonical constant-null relative | `1.2640751e-16 / 1.2084099e-16` |
+| canonicalization relative Frobenius | `1.3572885e-16` |
+| maximum tagged raw magnitude | `4.2346073e-9` |
+
+manufactured rectangle의 두 diagonal은 모두 zero weight를 재현해야 하고, noncyclic control은 zero로 만들지 않는다. 이 계약은 commit `057ed39f6a80dfe05aeab06c8bb8f6e6e3429a93`에 고정됐고, 아래 H1 `primary-h`가 같은 canonical certificate를 재현했다.
+
+H1 static candidate는 `16 passed`, fixture SHA-256 `e2a1c8efff67873b57dc7a658b013e3e76d0c921988011f4c8e70cd25f00f8a7`, runner SHA-256 `dd880de721b9a688ae953c7363dc4a8b482ec1b26f59871d4ca8f83397eb2b7c`를 재현했다. 새 token은 이 두 hash, H0 artifact, cyclic tag, canonical K hash와 세 독립 감사 증거를 검증한다. 이 값은 static approval이며 아직 H1 physics 실행 결과가 아니다.
+
+## H1 `primary-h` result
+
+clean commit `057ed39f6a80dfe05aeab06c8bb8f6e6e3429a93`에서 17.5 µm, 100 kHz, `h` 한 mesh를 external execution-tree guard 아래 한 번 실행했다. ignored artifact는 `validation-output/av-bs1/av-bs1-primary-h-20260814T190732Z.json`이다.
+
+| artifact | SHA-256 / value |
+|---|---|
+| file bytes / SHA-256 | `711,486` / `af17bbcc49cebc7e9ddb88e821ec0338a435fb2bf8ce51b117cfb3019b78b44d` |
+| final payload SHA-256 | `3cdef96c8de1585acfe4cc256d63e6815b93be9906df51d9b97ff5d4f51f330b` |
+| numerical payload SHA-256 | `a955393d69e22e87d759656b598e71fccee2492eff4c8d305db48623662f9fc4` |
+| resource report SHA-256 | `8387d19253279120a116cf0e8b48c67007394a86d140bfb0a1770ad4f8b87d72` |
+| review token SHA-256 | `5ad21ccec9cb81e8999441fc43338589ecb92cf0ae08e7bc2b8b4a8c411f8d4e` |
+| status / failure codes | `passed_AV_BS_h_stage_only_pending_h2_review` / `[]` |
+
+mesh와 H1 certificate는 preregistration 값을 그대로 재현했다: raw/canonical `K.nnz=14,075/10,241`, `M.nnz=14,081`, `MΓ.nnz=384`, tag `1,920`, maximum cancellation/bound `2.1676835831040652e-13 / 5.788860430596403e-13`, correction relative Frobenius `1.3572884739080543e-16`이다.
+
+| stage-evaluable gate | raw value | verdict |
+|---|---:|---|
+| max assembly transpose relative | `0` | pass |
+| max background/conductor backward residual | `4.181585185007905e-17` | pass |
+| max equilibrated `kappa1 u` estimate | `2.5342296831638465e-12` | pass |
+| reverse-order relative | `2.2332401790276927e-16` | pass |
+| raw full-space reciprocity relative | `1.072085475889738e-15` | pass |
+| minimum Hermitian eigenvalue / tolerance | `9.256477814190828e-6 / 4.478026532708378e-13 S·m` | pass |
+| max signed-mode power mismatch | `4.7212709501079303e-14` | pass |
+| `m↔-m` trend-only relative | `1.5004933643655415e-16` | diagnostic/trend only; not gated at `h` |
+
+background/conductor factor의 `L/U.nnz`는 각각 `54,630/54,682`, `58,747/60,956`이고 두 solve는 각 128 RHS를 batch `4`로 처리했다. coarse analytic trend는 max relative `0.011619408480801386` (`|m|=4`), nine-mode RMS `0.006192419097349362`, max phase `0.00022308014897348525°`다. max relative 값은 `1%`보다 크지만 `h`에서는 preregistration에 따라 trend로만 기록하고 fine analytic gate로 판정하지 않는다.
+
+resource monitor는 child exit `0`, successful tree samples `11`, wall `1.4714704 s`, stop reason `null`을 기록했다. execution-tree peak WS는 `194,289,664 B = 185.2890625 MiB`, private/committed는 `1,516,937,216 B = 1,446.6640625 MiB = 1.4127578735 GiB`다. minimum commit headroom은 `70.969673 GiB`, minimum available physical memory는 `46.753937 GiB`였다. 이는 이 host의 coarse h-stage evidence이며 8 GB laptop proof가 아니다.
+
+authorized primary-h token은 artifact에 SHA-256 `5ad21ccec9cb81e8999441fc43338589ecb92cf0ae08e7bc2b8b4a8c411f8d4e`로 결합돼 있다. 독립 review 뒤 active file은 SHA-256 `80ffd8b486dbdd8087eb205f71137663cef0497d8ba8df74253743b302fe6f35`의 consumed tombstone으로 바꿨다. 따라서 현재 validator는 primary-h를 solve 전에 거부하며 h2 권한은 별도 token에서만 만들 수 있다.
+
+## H2-P0 assembly-only preregistration
+
+H1 result와 실행 권한을 바꾸지 않고 H2 refined topology와 assembly를 별도 manifest-only fixture로 고정했다. canonical payload SHA-256은 `68d2e20a471e0e9475dd8e575ffd1e246f4098bb6c0e2b688d0f6f702fb511ba`이고 static test는 `6 passed`다.
+
+| P0 field | frozen value |
+|---|---|
+| mesh `V/E/T/B`, interior/boundary | `8065/23936/15872/256`, `7809/256` |
+| candidate / excluded / canonical tags | `3840 / 128 / 3712` |
+| tag SHA-256 | `287feee5d6fb4299895455b870de0eda484e07617cbc6db43bddd0d11b5b5968` |
+| raw / canonical `K.nnz` | `55937 / 48513` |
+| `M / MΓ.nnz` | `55937 / 768` |
+| cancellation maximum / bound | `3.6286352763558246e-13 / 5.802823100831367e-13` |
+| minimum untagged two-triangle ratio | `0.19705186275542091` |
+| sparse base / raw preflight / +25% | `1,328,172 / 2,043,070,476 / 2,553,838,095 B` |
+| factorization / physics / authorization | `false / false / not_authorized` |
+
+projected outer-boundary midpoint를 포함한 child 128개는 cyclic zero edge가 아니므로 제외한다. raw/canonical K, M, MΓ, support/partition exact hashes와 arithmetic details는 [`T1_AV_BOUNDARY_SCHUR_H2_PREREG.md`](T1_AV_BOUNDARY_SCHUR_H2_PREREG.md)에 고정한다. 이는 h2 result artifact가 아니고 coarse H1의 `next_stage_authorized=false`도 바꾸지 않는다.
+
+## H2-P1 frozen execution contract
+
+H2-P0와 H1 artifact를 결합하는 별도 research-only P1 fixture, native process-tree runner, result/failure finalizer, atomic token-consumption path와 bounded regression suite를 작성했다. 현 manifest payload SHA-256은 `05a21364deeb123432a0f52af9a6dbb818f9c9aa2814c34665dfc8da6b8463c4`이고 P1 suite는 `31 passed`, P0+P1 정적 suite는 `37 passed`다. Python compile, PowerShell AST, manifest와 diff check도 통과했다.
+
+| P1 candidate object | SHA-256 |
+|---|---|
+| fixture | `0600604cf7ab7b2a1d2b67c240ed1c659001a989482ce4f94c4b97c305ca3ca4` |
+| runner | `f54d2645bb01dcd287a7836af8a99990055803c793f45ffd9f91e06426624dc6` |
+| tests | `01f0203009087a97f00b58461fb6fda339a2866700399be8d5453bdff47c3199` |
+| preregistration document | `adbd6756343eafa426b54a90aa2dfa56c053c56b145331f803a3e7ce4338b868` |
+
+P1은 signed M9 `h→h2`를 trend-only로 유지한다. 성공 결과도 fine analytic/mesh convergence/final circle을 `null`로 두고 `next_stage_authorized=false`여야 한다. Power certificate는 `7809×9` complex128 interior modal-field blob을 보존하고 finalizer가 frozen H2 `K/M`, conductor `Ap`와 trace mass를 assembly-only로 재구성해 각 field의 PDE backward residual, volume integral, boundary power와 mismatch를 독립 재계산한다. 위조된 pass/failure/resource/field 증거는 token을 재사용 가능하게 남기지 않고 consumed tombstone으로 fail-closed한다.
+
+이 절과 [`T1_AV_BOUNDARY_SCHUR_H2_P1_PREREG.md`](T1_AV_BOUNDARY_SCHUR_H2_P1_PREREG.md)는 실행 전 계약의 immutable snapshot이다. preregistration commit `defbd6dda2e62637f41c1a8fc8f8f422aaba0e8b`와 token-only child commit `9f3d36b106cbad033ae35a716e21d47b2e178aa1` 뒤 아래 one-use result가 생성됐다. preregistration 문서 자체는 token binding SHA-256을 보존하기 위해 사후 수정하지 않는다.
+
+## H2 `primary-h2` result
+
+ignored artifact [`../../validation-output/av-bs1/av-bs1-primary-h2-20260814T222208Z.json`](../../validation-output/av-bs1/av-bs1-primary-h2-20260814T222208Z.json)은 17.5 µm, 100 kHz, `h2` 한 mesh의 guarded result다. wrapper, numerical payload, claim, guard, raw resource report와 one-use token consumption을 세 독립 감사가 read-only로 확인했다.
+
+| artifact / lineage | SHA-256 / value |
+|---|---|
+| file bytes / SHA-256 | `4,319,474` / `b890e4af13d97591b3134788984b3657f6f6b046e3043ce0a6f6792fe1ad7f55` |
+| result payload SHA-256 | `5704f3feb5bb90b6e38f8ed3ec67fc690339e9b7f0c1722d40a977295e82593e` |
+| numerical payload SHA-256 | `bd2f6542a93e3a7adc62f4435540752651ddf1cff84226319b4aa5e8dbdc0be5` |
+| raw resource report SHA-256 | `b17468d7383ed5021a783ade4c3b7c1c5e21628580d5f6c298ef1b7b97b26bd2` |
+| preflight / claim / guard SHA-256 | `6eafea2fe291a7d013c02ee560570fa0afc4acecff78b1145ac89250d9387452` / `f6837c2957704e836fedd5db2e64a0bb4a276c4e5cfc98c4f6a5f0c07101b051` / `57b70d0f96c558d6650fdf2e9c0a9d29e89d5ff45464ce64ff3a5b648c40af14` |
+| original authorized token SHA-256 / id | `f8a1aa5804b0edfd58f485faf83f7c6f73c284bc04b1a4abffbd8d0260aca4df` / `f4a717b50a854973b1ddcfe2776eb021` |
+| consumed tombstone SHA-256 | `81574c1099bdd140004940b7cb768a20298b153445c1b16b9e21de95011c48c2` |
+| execution git head / preregistration parent | `9f3d36b106cbad033ae35a716e21d47b2e178aa1` / `defbd6dda2e62637f41c1a8fc8f8f422aaba0e8b` |
+| status / failure codes | `passed_AV_BS_h2_stage_only_pending_h4_preregistration` / `[]` |
+
+mesh는 preregistration 값을 그대로 재현했다: `V/E/T/B=8065/23936/15872/256`, interior/boundary `7809/256`, raw/canonical `K.nnz=55937/48513`, `M.nnz=55937`, `MΓ.nnz=768`, mesh SHA-256 `34eb4f9cadcefd0b20cff3ae6c483dbee4e412ca11d0ff1a8c2c6f49ec7896a9`다. signed-M9 conductor interior field certificate는 little-endian complex128 `7809×9`, raw `1,124,496 B`이고 finalizer가 frozen `K/M/MΓ`에서 conductor PDE residual과 volume power를 다시 계산했다.
+
+| h2 stage-evaluable gate | raw value | verdict |
+|---|---:|---|
+| full assembly transpose relative | `0` | pass |
+| background / conductor solve residual | `5.981236336103848e-17 / 5.383112747661412e-17` | pass |
+| background / conductor `κ1u` | `1.0244351010046593e-11 / 1.0244323279051323e-11` | pass |
+| signed-M9 PDE residual max | `4.421492019510585e-16` | pass |
+| reverse-order relative | `2.465264212368452e-16` | pass |
+| raw full-space reciprocity relative | `1.8831838353064343e-15` | pass |
+| minimum Hermitian eigenvalue / tolerance | `2.3635694288740116e-6 / 2.2396879199202253e-13 S·m` | pass |
+| max signed-mode power mismatch | `1.1134002810265329e-13` | pass |
+| `m↔-m` relative | `1.6448277478488274e-16` | diagnostic/trend only; not a final gate at `h2` |
+
+독립 감사의 다른 assembly evaluation order는 power mismatch `1.29614e-13`을 재현했다. artifact 값과의 차이는 binary64 roundoff 범위이며 둘 다 `1e-8` gate보다 충분히 작다.
+
+| trend-only comparison | RMS relative | max relative | max eligible phase |
+|---|---:|---:|---:|
+| `h→h2` signed M9 | `0.00462796342945947` (`0.462796%`) | `0.008680146425905828` (`0.868015%`) | `0.00016639608723203282°` |
+| h2 analytic | `0.0015525356105053729` (`0.155254%`) | `0.0029139683841210083` (`0.291397%`) | `0.00005682250879185882°` |
+
+두 행은 모두 `gate_applied=false`, `gate_pass=null`인 진단값이다. mandatory mesh convergence와 fine analytic 판정은 별도 h4에서 처음 수행한다.
+
+resource runner는 child exit `0`, successful tree sample `71`, wall `8.6075797 s`, stop reason `null`과 mandatory resource gate `true`를 기록했다. runner-inclusive execution-tree peak WS는 `348,827,648 B = 332.667969 MiB`, private/commit은 `1,704,058,880 B = 1.587029 GiB`, minimum available physical memory는 `45.138222 GiB`, minimum system commit headroom은 `69.289360 GiB`였다. 이는 이 host의 h2-stage evidence이며 8 GB product proof가 아니다.
+
+active token file은 SHA-256 `81574c1099bdd140004940b7cb768a20298b153445c1b16b9e21de95011c48c2`의 `AV-BS1-h2-p1-consumed-review-token-v1`로 교체됐다. `uses_remaining=0`, `consumption_validated_pass=true`, result/resource/guard evidence `true`, `next_stage_authorized=false`이므로 같은 one-use token은 재사용할 수 없다.
+
+실행 뒤 정적 회귀의 세 executable-stage case는 pre-run의 “token missing”과 post-run의 “consumed token schema mismatch”를 모두 fail-closed success로 인정하도록 lifecycle assertion만 갱신했다. post-run P1 test SHA-256은 `9d266ab5819b30bcae4d269f8c064d496b79290f509fbef7e4a95ab2f7f98654`, P0+P1 결과는 `37 passed`다. artifact가 결합한 preregistration test SHA-256 `01f0203009087a97f00b58461fb6fda339a2866700399be8d5453bdff47c3199`는 commit `defbd6d...`의 역사적 실행 입력으로 그대로 보존한다.
+
+## H4-P0 assembly-only preregistration
+
+H2 result와 consumed token을 바꾸지 않고 별도 H4-P0 fixture가 H2를 한 번 더 deterministic 1-to-4 refine했다. 이 stage는 factorization, RHS, harmonic extension, boundary operator 또는 physics를 실행하지 않으며 `authorization_state=not_authorized`, `primary_h4_authorized=false`다.
+
+| H4-P0 object | SHA-256 |
+|---|---|
+| fixture | `331218882d2004d0d97e03378ae8af12b23cb4129a9c062e0592ee590a53e94b` |
+| manifest-only runner | `b45c907fb5300e46717f423c8512a3500c7db8b42b647101d64a8a11440116c9` |
+| static tests | `1539ef4151b8ea416c9ee2f2bf71c1baebd4e83bb2d3684e050437fcb1def40c` |
+| preregistration document | `419dfb85ff40a43f2a0c2b1143b8531b16c95402f0c0d454764cfd3f5c03e524` |
+| manifest payload | `71f8e902322016541bd9302231fa9965d7dfff67cdce1135e16ee1011a2aa990` |
+
+manifest는 `V/E/T/B=32001/95488/63488/512`, interior/boundary `31489/512`, mesh SHA-256 `a91b4bf147628a34d1a29144ae353a83110b1756c699c71e2b57e9c36822835b`를 재현했다. H2 canonical zero edge 3,712개의 두 child를 모두 소유하므로 tag는 7,424개이고 exclusion은 0이다. candidate/tag SHA-256은 `3902a43ddd16f2cfce16b2892b908f45d02f4464c5157a5c42b5b3ac5cb9d98d`다.
+
+H2 `128uκ`를 복사하면 16 tags가 넘으므로 H4는 추가 midpoint arithmetic을 반영한 `256uκ`를 별도 고정했다. maximum/bound/margin은 `8.540375354048666e-13 / 1.1605646201662821e-12 / 1.358915237391882`다. raw/canonical K는 `222977/208129` nnz와 SHA-256 `8a020c809634a9794292f49198ff1bede84328b6e2c5ef988255cbff32cfe93b` / `a510df2ab39cb85640720f863341d1fe468562442ecb074bafcaf70d9846f2e7`를 재현했고 M/MΓ는 `222977/1536` nnz다. null/transpose/support/correction과 partition hashes도 독립 replay와 일치했다.
+
+resource는 두 의미를 분리한다. all-dense factor upper의 25% margin은 `40,448,792,335 B`로 4 GiB ceiling을 실패한다. one resident factor를 2 GiB hard cap으로 둔 prospective sparse envelope는 `3,470,862,055 B`, 4 GiB slack `824,105,241 B`지만 실제 factor fit을 측정하지 않았으므로 `factor_fit_unproven=true`다. 이 때문에 factorization보다 먼저 별도 H4-P0R contract-only manifest를 고정했다.
+
+정적 결과는 `6 passed`; Python compile, PowerShell AST, UTF-8/LF/fence/link와 diff checks가 통과했다. 이 결과는 H4 physics, h2-to-h4 convergence, fine analytic, final circle 또는 withheld pass가 아니다.
+
+## H4-P0R factor-pilot contract-only preregistration
+
+H4-P0R은 H4 physics 전 실제 sparse factor fit을 측정하기 위한 별도 pilot의 **계약만** 고정한다. 현재 status는 `preregistered_H4_P0R_contract_only_no_factor`, `authorization_state=not_authorized`, `available_solve_stages=[]`, `factorization_performed=false`, `physics_solve_performed=false`, `next_stage_authorized=false`다. manifest runner는 `manifest`만 노출하며 token, claim, guard child, finalizer 또는 factorization 경로가 없다.
+
+| H4-P0R object | SHA-256 |
+|---|---|
+| contract-only fixture | `f6c4149e425021a9133d7ac98fbea403ba048e48f9c70d6e88171e3436374461` |
+| manifest-only runner | `ff6623280a728b2dfe6ad219e965d4c21d2392020b6d0490dcc7e63f43a9e50f` |
+| static tests | `d071584cf6843ca9d2b75cac348ddfa343ac6f173646fe4c2575af68d6d73129` |
+| preregistration document | `5db1b047ca72c72be338b6003507e04598c0b0b89b992302d3aea108a8d2e1f4` |
+| manifest payload | `eaab10df7fb1557490cc75db7e7ff9fca2881013b6a6fb13f02faea43ddf7023` |
+| matrix/equilibration contract | `89fadbf8f7f93118f6cccda65cc635bd37eeecfd70652e40baa6014c722e2f46` |
+| resource policy | `13df68af8b9008824c09653bdb32a56c618107858cdb71b987bf6f4375915680` |
+
+manifest는 H4-P0 commit `8f40fe5696496edb2cb73086927f833ded5e0d5e`과 그 exact fixture/runner/test/doc/payload, H2-P0 및 H2-P1 artifact/consumed tombstone provenance를 재검증한다. frozen interior matrices는 `I=31489`, `KII.nnz=204545`, `MII.nnz=219393`, `AbII.nnz=204545`, `ApII.nnz=219393`다. SHA-256은 차례로 `dddee397ee96ff0bd7acc321cd5755dd611f1e3d1f6bfcf9664c388d27184361`, `4dccc26f1a12bbab4a4ee863e509d317cb518075661867da4e0b6980f7dcc6c4`, `8c099d2cb5947d1b72bd74f64329879c221b86c569b4100baa47dfea9aeff641`, `5ead3bbdc2fc1b4f7a1a94bb7c9ebf9401c6a7d96ee63335045d64e3b082225f`다. manual row/column equilibration과 fixed SuperLU options도 factor 결과를 보기 전에 동결했다.
+
+향후 executable은 `AbII` factor를 먼저 만들고 완전히 해제한 뒤 `ApII` factor만 만들며 동시에 factor 하나만 resident로 둔다. `factor.solve`, RHS, harmonic extension, boundary operator `Y`, signed modes, power와 physics result는 모두 금지한다. process-tree ceiling은 wall `900 s`, WS `4 GiB`, private/commit `5 GiB`이고 pre-spawn physical/commit-headroom floor도 H4-P0 baseline보다 약화하지 않는다. pass/fail 모두 one-use token을 consume하며 pass도 H4-P1을 자동 승인하지 않는다.
+
+정적 결과는 `23 passed`; direct/Powershell manifest가 같은 payload를 재현했고 세 독립 read-only 감사가 승인했다. 이는 factor fit 또는 8 GB proof가 아니다. 다음은 이 frozen 계약과 분리한 executable/runner/claim/finalizer/token family의 static audit 및 clean commit이며, 그 뒤에만 factorization-only pilot 한 번을 실행할 수 있다.
+
+## H4-P0R-P1 public attempts and retry-v2 corrective candidate
+
+> Historical snapshot: this subsection preserves the first and second public
+> interruption record and the retry-v2 candidate frozen before the third public
+> invocation. Its uses of "current" describe that historical freeze, not the
+> retry-v3 candidate below.
+
+H4-P0R-P1은 parent matrix/equilibration/factor 순서를 바꾸지 않고 public outer observer, bounded control-plane, one-use claim/guard/result/tombstone/seal-v2와 factor-only child를 구현했다. 두 fresh token-only commit을 각각 정확히 한 번 호출했지만 둘 다 factor child에 도달하지 않았다.
+
+첫 시도는 token-only commit `b6c8615639a8fb283909bd6613ab5bf5b0e09cb2`에서 `2026-08-15T08:49:35Z`에 시작해 0.83 s 뒤 종료됐다. public dispatcher의 첫 root-only process enumeration이 PowerShell pipeline에서 scalar `Int32`로 축약되어 strict-mode `$ids.Count`가 실패했다. 이는 token read, observer session, inner spawn, claim과 factor보다 앞이었다. token ID `92e6edd1bf01428199c5a492e64858ea`는 untouched `uses_remaining=1`이었지만 재시도하지 않았고 deletion-only commit `412e88049ec1461dd15ae324b583c114fb890393`에서 제거했다.
+
+두 번째 corrective contract `2b7e302aa4ef5abedcd22cda0003380cb8765a42`와 token-only child `d9e064fee6822d8f39318a55646860e24b502f35`도 한 번만 호출했다. token ID는 `7a26f8ea4f89493a95fa78bc62b2d431`이다. observer session `e017a79e5ce345959d8e77f46b8d90b2`는 `2026-08-15T09:16:22.8172642Z`–`09:16:24.0712914Z`, `1.2522612 s`를 기록했다. close-v1 SHA-256은 `3de68a75e4e1fa23876b63f1843ad217f7ba0290f8a86b491bac09124f5ea39c`이고 다음만 보존한다.
+
+| second-attempt evidence | value |
+|---|---|
+| stop/gate | `OUTER_RESOURCE_EXCEPTION`; `mandatory_outer_resource_gate_pass=false` |
+| samples | outer `2`; inner-visible `2` |
+| retained inner exit | `-1`; outer cleanup verified |
+| streams | stdout/stderr both empty |
+| claim/recovery | no claim; `no_claim_no_recovery_required` |
+| absent | ready/start-release/complete/exit-release, control report, claim, guard, result, prefix, quarantine, journal, tombstone, seal |
+
+Inner는 `inner-ready.json`을 쓰고 outer start-release를 받아야 preflight, claim, factor child로 진행한다. 두 marker가 모두 없으므로 factorization, RHS, solve와 physics는 불가능했다. v1 close는 caught exception의 exact PID/API/message를 저장하지 않았다. PID timing은 short-lived inner `Add-Type` compiler/bootstrap descendant가 Toolhelp enumeration과 PSAPI metric probe 사이에서 종료된 race를 강하게 시사하지만, 이는 정확한 원인이 아니라 high-confidence inference다. Untouched second token도 재시도하지 않고 deletion-only retirement commit `7dd1db501b505d1a6a36f0d1f99df23fca655a93`에서 제거했다.
+
+현재 corrective contract는 outer observer의 tree sample만 최대 3 total attempts로 제한한다. native retained handle의 exited 상태 또는 exact not-found 87, fresh complete Toolhelp snapshot의 target 부재, 전후 root PID/birth 동일성을 모두 확인한 non-root disappearance만 whole sample을 재시작한다. failed attempt의 모든 합계와 returned membership은 폐기하고 identity-bound PID만 cleanup/evidence에 유지한다. root loss/reuse, live/access/query failure, target reappearance, incomplete snapshot, malformed metric과 exhaustion은 fatal이다. instrumented outer scope 밖의 call은 default 1 attempt다. close-v2는 bounded retry events와 nullable typed failure를 고정된 ASCII code/정수로 기록하며 raw localized exception을 저장하지 않는다.
+
+현재 static corrective evidence는 Python SHA-256 `8c497cb1d0926600b2ddd974df6fd8d40b09471c617869294a01c0e018ce5acf`, runner `4272d6725cb0e16b7ce39b083985965f792da5893f222ba07cf91695fba8f30c`, tests `b44366596690d6d55d18a89d8df2370faca767fca722affd5e07268da3195235`다. 187-test suite는 real `splu` tripwire 아래 exact function-slice race, partial-sum discard, live failure, root/reuse failure, bounded exhaustion, incomplete snapshot, cleanup-sample failure preservation, operation allowlist와 retry-event/sampled-identity close-v2 tamper를 검사한다. 이는 static approval candidate일 뿐 실제 factor fit, PowerSI 정확성 또는 8 GB proof가 아니다.
+
+## Third public attempt and control-plane retry-v3 corrective candidate
+
+Historical retry-v2 contract commit
+`29aeed318abb1cefb189917d707066987e5ea3b3` was the sole parent of fresh
+token-only child `6328174b8315f71b407f79584f134359b9f48685`. Its token ID was
+`7af97159e9224924832085a293c65c27`. The public runner was invoked exactly once,
+from `2026-08-15T10:58:35.7129115Z` through
+`2026-08-15T10:58:39.7341700Z`, and returned exit `2`.
+
+The run created outer session
+`validation-output/av-bs1/outer-observer/session-399b2ac2a1754822bd7da61aae88acaf`
+and control session
+`validation-output/av-bs1/control-plane/session-401d8ddafdbe42628541ebe2bdc367cf`.
+The immutable outer close SHA-256 is
+`a675b5f829e343717d66c1c1d4d40335aed7015c09ad5c3385d2d90aa97e20cd`.
+The preflight control report SHA-256 is
+`da6069826cf46335bb8b86655abfaad8eb3fb61c87d076ebf916849f998c5f7b`,
+and the pre-close/final session-index SHA-256 values are
+`c693ad457906f54047427e7b9d831d9b1cd764d0457d3557a872c6a5f8fe5018`
+and `f4824fba0f58c71b85acd1fc286aa29e0d323ef704e828649119c6e39f78d579`.
+Outer inner-ready/start-release and control bootstrap-ready/start-release are
+present. Control target-complete/exit-release, outer inner-complete/exit-release,
+claim, guard, factor prefix, result, tombstone, and terminal seal are absent.
+
+The v1 control report proves the stop at bounded `preflight` with
+`monitor_error=BLOCKED_AV_BS_RESOURCE: tree sample failure
+TRANSIENT_DESCENDANT_DISAPPEARANCE_RETRY_EXHAUSTED`,
+`stop_reason=CONTROL_PLANE_SUPERVISOR_EXCEPTION`, actual exit `-1`, cleanup
+verified, and gate false. The retry-v2 runner passed explicit three-attempt
+diagnostics only at outer-observer call sites; its control sampling call sites
+still inherited `Get-TreeSample`'s default `MaximumAttempts=1`. A confirmed
+short-lived non-root disappearance therefore exhausted the only control
+attempt. This exact default-one control path, not a factor or physics failure,
+is the proven cause. Ready/start release precedes target completion, claim, and
+factor-child spawn, so no factorization, RHS, solve, H4 physics, PowerSI result,
+or 8 GiB proof was possible.
+
+The authorized token remained byte-identical and no claim existed. It was not
+reused, recovered, sealed, or mutated by the failed invocation; deletion-only
+retirement commit `ba97dd8b274659a649d9a4020193c3ef72572665` removed it after
+the forensic audit. Current token state is absent.
+
+At the frozen retry-v3 boundary, the candidate retained `Get-TreeSample`'s default
+`MaximumAttempts=1` and leaves all factor call sites unchanged. Exactly these
+six control contexts opt into `MaximumAttempts=3` with retry-event limit `16`:
+
+1. `control_pre_helper_tree_sample`;
+2. `control_active_outer_tree_sample`;
+3. `control_active_cleanup_root_tree_sample`;
+4. `control_post_completion_outer_tree_sample`;
+5. `control_post_completion_cleanup_root_tree_sample`; and
+6. `control_envelope_close_tree_sample`.
+
+The control process report and envelope close are respectively
+`AV-BS1-h4-p0r-control-plane-process-report-v2` and
+`AV-BS1-h4-p0r-control-plane-envelope-close-v2`; execution resource scope is
+`AV-BS1-h4-p0r-execution-resource-scope-v2`. Report and close both carry
+`tree_sample_max_attempts`, `tree_sample_confirmed_disappearance_count`,
+`tree_sample_retry_events`, `tree_sample_retry_events_truncated`, and
+`monitor_failure`. Typed events remain in arrival order and report events must
+be an exact prefix of close events. The report is the pre-close snapshot; the
+close is final. The first fatal monitor failure is sticky and a passing gate
+requires null failure, no truncation, count equal to emitted events, no
+attempt-three exhaustion, and frozen report PID→birth coverage for every
+close-only event. Incomplete retry evidence fails with
+`CONTROL_TREE_SAMPLE_RETRY_EVIDENCE_INCOMPLETE`; uncovered close-only identity
+fails with `CONTROL_ENVELOPE_CLOSE_RETRY_IDENTITY_UNCOVERED`.
+
+Outer and inner contexts now write births into one evidence registry while
+keeping separate cleanup ownership ID sets. Final sampled identities therefore
+include honest inner-only PIDs, and cross-context PID reuse fails at the exact
+sample without widening cleanup scope. An `exited` metric result must carry a
+positive `Int64` birth equal to the bound birth before disappearance
+confirmation; invalid or mismatched birth is fatal and never retries. A prior
+failed stop reason and first monitor failure also remain sticky through later
+successful close sampling and threshold checks.
+
+In the no-claim post-cleanup branch the canonical token is classified without
+mutation or sealing. Exact original bytes use
+`no_claim_exact_original_authorized_token_retained_public_attempt_spent_no_recovery_performed`;
+bounded present drift uses
+`no_claim_token_present_but_drifted_no_recovery_no_terminal_seal`; absence uses
+`no_claim_token_absent_no_recovery_no_terminal_seal`. A present bounded token
+records its current raw SHA-256. No classification makes a spent public token
+retryable or creates terminal authority.
+
+The frozen retry-v3 source bindings are Python
+`95c9f5c08282105f7934fbea194694fff3ab850daac633619534044721639234`,
+runner `cee65497b414a5c9da2b572dc2f026a496b304889c7ddf86a0a2856ebb842d9c`,
+and tests `0f118612aefa9dc80526abf6604a2234f14c50454000f76ef172a534398042fd`.
+The full no-cache suite passed `312/312`; focused implementer and independent
+audits passed `45/45` and `74` with `238 deselected`. Compile, PowerShell AST,
+exact-byte binding, diff, token-absent, and safe manifest parity checks were
+green. These are static/lifecycle-contract results only: factorization and H4
+physics remain unperformed and `next_stage_authorized=false`.
+
+Two failed-only hardening observations are deferred transparently. An omitted
+capped attempt-three virtual identity is not separately bound, but exhaustion
+already forces non-null failure and gate false. A preserved failed stop reason
+is required to be nonempty rather than exact-allowlisted at final close, but
+the sticky failure already prevents authorization. Neither observation can
+turn failed evidence into pass evidence.
+
+## Fourth public attempt and retry-v4 corrective candidate
+
+Retry-v3 clean contract `4d39eab9c464f67e8684e2d539ac3a2b092142a2` was
+the sole parent of token-only commit
+`9b4854d0cc7ae21e5e9eafc394a9474cb53ea689`. The exact token ID/SHA-256 was
+`4c209c8a4dac49b89c59dd69bf68c4c2` /
+`d3bb3a42c83848678f0b99c0c669fffb5ab02e594cfba31ee9251c8216d05d64`.
+The public invocation ran once from `2026-08-15T13:37:16.0468244Z` to
+`2026-08-15T13:37:20.5004777Z` and returned exit `2`.
+
+The outer session was
+`validation-output/av-bs1/outer-observer/session-2085628c53894c8eade7a735ec60f36c`.
+Ready/start/close SHA-256 values are respectively
+`485beb7c468c5f849554a099bf8fa4f456dc4748782968cbc4d2a3729bf7c5fc`,
+`296353a46cccd301adfdbeeef7d7538a79a724a73225c219c988608e20060c51`, and
+`73073432faa0525f560b6536ea2a5fd54329ba3a30f04ab05ab8cef59460e758`.
+The control session was
+`validation-output/av-bs1/control-plane/session-b2db30095a1042f4b4d5bbdc56550727`;
+bootstrap/canonical-helper/ready/release hashes are
+`3b8d2230e316b541c0d59d6334c13eaa1cf1c0e56ab7f02b1753dbefaeddec0f`,
+`7d80a4c230409aa0462a59f5cb9de167101ddd53b9f31119d0679f08a853d45c`,
+`3d123e0ca997949cc24d7a80ac775d0f129d803632e64e59a19d8bde80d05416`, and
+`d0c6b2f8fbfcf39ea8bfdc8d9d28398007a7d75347224d3f6150616769406ede`.
+No control complete/report/close/index was produced.
+
+The exact cause was `NONROOT_DISAPPEARANCE_NOT_CONFIRMED` in
+`outer_tree_sample` attempt `1`: PID `40224` was exited with expected and
+observed birth `639223978396874096`, but remained in the first complete
+Toolhelp snapshot. Cleanup was verified. No claim, factor child, factor prefix,
+result, tombstone, or seal existed, so factorization/RHS/solve/H4 physics did
+not start. The exact token bytes remained but were semantically spent and were
+removed without reuse by `f1aeeac018a96cbd82341db36efbf5e5a9a55431`.
+
+Retry-v4 allows only an exited, positive, same-birth descendant in this initial
+snapshot-present state to receive two 25 ms rechecks, three complete snapshots
+total, and only for existing explicit outer/control `MaximumAttempts>1`
+contexts. Final absence emits the existing confirmed event. `not_found`/87 plus
+presence, default-one factor sampling, reuse/root/query/access/incomplete
+snapshot failures remain fatal. Python and schemas are unchanged.
+
+Frozen retry-v4 SHA-256 bindings are Python
+`95c9f5c08282105f7934fbea194694fff3ab850daac633619534044721639234`, runner
+`7893cd57fd4b1686addd434fa0103d9f3b0e0087f4783f2c82e459661abfb645`, and tests
+`18aabcdf7b32c6b013aec65497d31f4d908f3085f53f64cb3791f38a2e79381d`.
+Focused `11/11`, full no-cache `322/322` in `82.01 s`, PowerShell AST
+`47,623/0`, and Python AST passed. This is static evidence only: token absent,
+`factor_fit_unproven=true`, `next_stage_authorized=false`.
+
+## Fifth public attempt and retry-v5 corrective candidate
+
+Clean retry-v4 contract `099db849564207b636f7431ee2fb52a540a7cb4e` was the sole
+parent of token-only commit `5ba4b69398f526a0fcf640cf1dc4e7197cc7e660`.
+Token ID/raw SHA-256 was `96d4f060ffa94d4888ffe3e59f550225` /
+`a9cbd954b27685892bf720c777ef57f49830da7970eee9a267d6d87eb5665d00`.
+The invocation ran once from `2026-08-15T14:33:12.122Z` through
+`2026-08-15T14:34:23.345Z` and returned exit `2`.
+
+This attempt created a valid claim and reached factor-only child PID `55552`.
+Resource report SHA-256
+`d9b9a858c8f4aaebc1ca6ebb34f90235bcb84dd6288c04ecc95b3d7e5abc1da6`
+contains `108/108` successful/child-visible samples, safe memory margins, and
+stop `MONITOR_QUERY_FAILED` with
+`NONROOT_DISAPPEARANCE_NOT_CONFIRMED`. The four active factor tree-sample calls
+still used default maximum `1`. No factor prefix, completion marker, release,
+or certificate exists. Thus completed factor count is zero, actual `splu`
+entry is indeterminate, and the tombstone correctly records attempted/performed
+as `null`. No RHS, factor solve, H4 physics, or PowerSI result exists.
+
+The zero-byte numerical stdout was hashed by the resource report but omitted
+from the finalizer arguments, producing a secondary result-schema failure
+`resource references missing child stdout`; normalization is deferred and is
+not a retry-v5 change. The primary disposition remains resource monitor stop.
+Consumed tombstone SHA-256
+`3caed852fd51fd908cbfa750becd2c63cbd6f768abff91eba23221bd0f418c2b`
+is frozen in `46c08d405f530cce0cfbba9d908f8c266a26a002`; deletion-only
+retirement `71d3dab442cbdfa6361e4e91de57d8f5b4d1a990` leaves no token.
+
+Outer close SHA-256
+`9d0c0aab58e78eb5d91d36be2aef46bf89968df87d4abcc044089805acce9af2`
+verified exit `2`, cleanup, terminal sample, and null monitor failure/stop
+reason, but counted `27` confirmed disappearances while retaining cap `16`.
+Truncation made the mandatory outer gate false and prevented the seal.
+
+Retry-v5 changes only the four active factor calls to explicit maximum `3` and
+the shared bounded outer/control retry-event cap to `64`. Frozen SHA-256
+bindings are Python
+`54aa7da9daa013cec41585ae07757e6c54e8e9d15da7f4f16d4f6546b6fb35aa`, runner
+`3888524877f7a90966fb932f7f9fc4c9a48480134eb6295712eaa0ef548416a3`, tests
+`b51498ebe27a0210a09b3a12b26e0146d39c1249906469bcb1add1d2f2443f08`.
+Focused `29/29` passed in `15.91 s`; full no-cache `324/324` passed in
+`82.91 s`; PowerShell AST `47,631/0` and Python/test syntax passed. This is
+static evidence only: token absent, factor fit unproven, next false.
+
+## Sixth public attempt and retry-v6 corrective candidate
+
+Clean retry-v5 contract `bddbf9cb3547ae0385c6e6bbc47424f630cca87e` was the sole
+parent of token-only commit `82775327d79742b6c3111ad33a87fd1a4953ee79`.
+Token ID/raw SHA-256 was `a3f49b44dd164da3a0ca1a6dc4c976c3` /
+`69b7e93720d8044d60f4ca95ccc5440670904d27f75ee77730e2947a01d58ed4`.
+The outer observation ran once from `2026-08-15T15:39:01.9701124Z` through
+`2026-08-15T15:39:55.3757836Z`; public exit was `2`.
+
+Claim SHA-256 is
+`f15962f38e5141420a15536eda96653c76fa2ff26be6ec1e7c3fb69fe50ab955`.
+Factor child PID `55380` was launched, but numerical artifact SHA-256
+`ab5adac793f9acda882bfa0c66c5ce20319e1cb06fe5cb88c9968803acf8822e`
+failed on `claimed preflight payload mismatch` before `_factor_one`/`splu`.
+Direct child evidence therefore records attempted/performed `false/false`,
+zero completed/certified factors, and no prefix. No RHS, solve, H4 physics, or
+PowerSI result exists.
+
+Outer close SHA-256
+`d2777207e4000cbde8e4bf2332eeba96dd54ec3b8918a0d107049531d15cd8f8`
+failed independently on attempt-3
+`TRANSIENT_DESCENDANT_DISAPPEARANCE_RETRY_EXHAUSTED`, PID `53404`, operation
+`get_process_times`. It retained all `30/30` retry events without truncation,
+verified cleanup, and wrote no seal. Resource ceilings were not approached.
+The emergency outer layer has null/null factor fields because it cannot claim
+the inner phase; this is compatible with the direct child false/false evidence.
+
+Emergency raw record `43bb34b2...` is exact and honest but strict-validator-
+invalid because nested `bindings.resource_policy_sha256` is absent. Commit
+`06061a234ad7b1b911d7425b7765482bda58a87a` preserves it as provisional only;
+deletion-only retirement `c001b4498fc750b5955f5118844945c499fce119`
+leaves no token. Retry-v6 removes only the redundant post-claim Python three
+lines and adds only the missing runner binding key. Frozen SHA-256 bindings are
+Python `2373a13f51e2833e416e1ce6326587b9e1c782b5165d99f7002e7dbc4658ebc4`,
+runner `852ce8a03b25e33b9eb26ec6f5ce295381dab493b1b26762ddea14be7196000d`, tests
+`f1d0b044cbf53e90dba128ec398ccd8b7a81da8c5137bea202b2852eb3f288af`.
+Focused `8/8` passed; the full no-cache `330/330` passed in `81.83 s`. Schema,
+ABI, strict validator, retry policy/cap, factor, RHS, solve, and physics logic
+are unchanged. Factor fit remains unproven and next remains false.
+
+## Seventh public attempt and retry-v7 corrective candidate
+
+The seventh attempt ran at commit
+`4f60bd5e5fe4e166e72ba00e9bb019a70504e7df` with token ID
+`a7a3942cb0cf421e9fc52fd43176bb35`, original token SHA-256
+`3b6cd6557832358e6235824d680b8fe01eaf29899b89c2dea1850e9109e4511b`.
+Result/quarantine SHA-256 is
+`e2be4dd5fa0467012c194239c8b8ac833723b4355a371c42a8aafc089efeb932`;
+numerical raw/payload SHA-256 are
+`5bf26072794a4030ec311d3c60bcf3efd8c8d112319587d0a48d65490fd56e72` /
+`173e22362525cb34e3d1812731779b5ad454e6d5ea16245ad891904814df19ee`.
+
+`splu` returned for `A_background_II`, making attempted/performed `true/true`
+and adding its name to `completed_factors`. The obsolete equality guard then
+raised `A_background_II native/exported nnz mismatch` before certificate
+construction. Certificates and both prefixes are empty/null,
+`A_conductor_II` was not attempted, and exact native/exported factor counts
+were not persisted. This is one native return, not a certified two-factor
+result.
+
+Resource/outer-close/seal SHA-256 are
+`0f738eb5f098944618d80b1cb2c18b161068a991ef8a4e98ed8a055ba6af324b`,
+`0e88d08f60f56c95678dd8f6c7ae850b681fd60ba8ed6fc9d3868dcb8080ec01`,
+and `0b2f56231315bb260921f2b3fe220fea33315cce4679964c6b86711a4f8b51a1`.
+Inner/outer sample counts are `174/573`; all `31` outer retry events were
+retained without truncation and both resource gates pass. The seal is complete
+but authoritative pass and next authorization are false. No accuracy or 8 GiB
+claim follows; no RHS, solve, H4 physics, or PowerSI work ran.
+
+Consumed/retirement commits `51e50699546fe5b594dfdc669fb1628de0c3adb7` /
+`17414cf0be147d0d5d9d75046354e199f707e7a6` leave the token absent. Retry-v7
+requires `0 < exported <= native`, preserves exact native/exported byte fields,
+checks both portable formulas and both cap bounds, and leaves schema, retry,
+factor order, RHS, solve, and physics logic unchanged. Frozen Python/runner/test
+SHA-256 are `7a1dba5eafcbf601fd532a9a3d2bc10de2218c74bccdacd04bdba5f1038df348`,
+`852ce8a03b25e33b9eb26ec6f5ce295381dab493b1b26762ddea14be7196000d`, and
+`bd2e3e2ca4d668d3cd8c92b55737a74f6bff743a823bae024713d59d393c8ba7`.
+Focused `25/25` and full no-cache `341/341` passed; the latter took `88.40 s`.
+
+## Eighth public attempt under retry-v7 and retry-v8 historical candidate
+
+The eighth public attempt ran once from retry-v7 token-only commit
+`66211efbbdb7e0881e6bc051a2c68e25e5f1040e`, token ID
+`6b7c81431c49432a9b6b7da816424ff7`. Native `splu` returned for
+`A_background_II`, so attempted/performed are `true/true` and its completed name
+is durable. Combined non-canonical L/U storage then stopped certificate and
+prefix publication. Certificates and both prefixes remain zero/empty;
+`A_conductor_II`, RHS, solve, and physics were not attempted.
+
+The resource artifact passed. Independent outer/control monitoring falsely
+exhausted retries across distinct confirmed-dead helper identities, so no
+terminal seal or published result exists. Seven temporary evidence files were
+copied byte-identically into ignored quarantine. These files preserve forensic
+bytes only. Valid provisional emergency consumption is recorded by M-only commit
+`8fce704a878a39497408c42e1e63bdfa683b9413`; D-only retirement
+`7964464018ae898928f151d707fdc52a850cd935` leaves the token absent.
+
+Retry-v8 records raw L/U storage hashes, raw composite canonical flags (false
+when unsorted), and explicit-zero scans before mutation. The pre-sort
+`has_sorted_indices` value is a local sort predicate, not a certificate field;
+chunked CSC column spans and row-index bounds are validated, nonfinite values
+and explicit zeros fail, and every unsorted L/U is sorted in place. Sorted and
+canonical format are then rechecked, which rejects duplicates; the canonical
+hash helper enforces that format, and finite/zero data is re-scanned without
+repeating the span or row-bound scan. There is no schema/field bump, L/U or
+whole-factor matrix copy, coalescing, or pruning.
+
+Attempt grouping is local to one `Get-TreeSample` producer call and state resets
+per invocation. Within one call, `A,B,A => 1,1,1`; `A,B,B,B => 1,1,2,3`,
+with same-identity attempt 3 fatal. Cumulative report history may legitimately
+contain adjacent same-identity attempt `1/1` entries separated by a successful
+return; report history therefore cannot enforce cross-call adjacency. Only the
+close-only suffix, known to come from one call, enforces the exact adjacent-
+strong transition.
+
+The cumulative/local cap remains hard at 64 even when diagnostics are null.
+Within a call, event 64 is stored and increments the total to 64; that same
+64th confirmed retry fails generically with
+`TREE_SAMPLE_TOTAL_RETRY_CAP_REACHED` unless simultaneous same-identity attempt
+3 takes precedence, and the failing call does not return to its retry loop.
+Reused diagnostics in a later cleanup or close call may advance
+`confirmed_count` beyond 64 and truncate the stored list, but that evidence is
+failed/truncated and can never support a passing sample. Existing max3/cap64
+fields and schemas remain unchanged; cleanup-race hardening is deferred.
+
+Frozen current Python/runner/tests SHA-256 are
+`c26112b0738224eed4f1401553adf6fc9a3512b37c475f5b52152cab98e6ecff` /
+`7e675cc31ab229485719200af8b508dae20bd234bff29428e84628029df2763e` /
+`426f83888587dc57b7874a4e8dd47f0965212a0c1d7fabde33e6f3ab2801a2e7`.
+Collection is `387`; focused root `23` passed / `363` deselected and
+independent `27` passed / `360` deselected. The full exact-document suite passed `387/387` in `94.11 s`. A future
+authorized public run would be ninth. Token state is absent, next-stage
+authority is false, and factor fit and H4 physics remain unproven.
+
+## Ninth public attempt under retry-v8 and retry-v9 provisional candidate
+
+The ninth public attempt ran exactly once from retry-v8 token-only commit
+`0597872eeaedd359ce5a3d429748dee2b70ec9a7`, token ID
+`0ec78f5300cc4a63923e735e81b7e713`, and exited `1`. Factor producer PID
+`51184` exited `0` with `factor_certificates_complete`. It published exactly two
+certificates and two prefix checkpoints, in order `A_background_II` then
+`A_conductor_II`; both factor cap gates passed. Inner and outer resource gates
+passed, and the terminal audit found all `182/182` process identities dead. No
+RHS, solve, extension, boundary `Y`, modal response, or physics ran.
+
+The published artifact is a finalizer failure wrapper:
+`BLOCKED_AV_BS_RESULT_SCHEMA` / `monitor-ready child_process_id mismatch`.
+Offline verifier PID `37248` was expected where strict validation required the
+resource-bound producer PID `51184`. A raw seal exists, but strict
+`_validate_outer_terminal_evidence` rejects `terminal control marker chronology
+invalid`; it is not authoritative. Three `canonical_json_hash-*` helper
+bootstraps mixed Python `time.monotonic_ns()`/GetTickCount64 with PowerShell
+Stopwatch/QPC. The retained tombstone-plus-seal classification is
+`consumed_v2_provisional_invalid_terminal_evidence`.
+
+M-only consumption `b9c1964e8a445b2d45487894485dc8453bd002d4` and D-only
+retirement `c14f6309e6b84effbc5139ed8dcdcf05d5ea61f1` leave the token
+absent. Retry-v9 only threads the explicit resource child PID through offline
+validators and changes bootstrap marker timestamps to
+`time.perf_counter_ns()`/QPC; bootstrap SHA-256 is
+`0c92a0ec8fe67868e222647782cb5eedabffcad77319348f55beaeb0dd745404`.
+Schemas, strictness, retry/max3/cap64, factor order/caps, resource ceilings, and
+the RHS/solve/physics boundary are unchanged.
+
+Frozen Python/runner/tests bindings are
+`46082123fbf98102f3e5995c32bf65d8d04bb835b9c1305de0150349e75e48c7`
+(`579582` bytes),
+`229aa91b04bd89e4af03f9a75c52a0a4819381ec5dfa32a272fe35ac7f1d94f9`
+(`443675` bytes), and
+`2106e5338158d2f61a63d572b6f452bd54b752f38500a566f573759096f2c36d`
+(`458913` bytes). Collection is `397`; focused exact selection was `20`
+passed / `377` deselected in `2.33 s`, independent same-byte selection was
+`20/377` in `2.37 s`, and compatibility selection was `7/390` in `0.95 s`.
+The first full exact-document suite passed `397/397` in `92.95 s` with exit
+`0` and no failure. This is the **FINAL DOC FREEZE**. `factor_fit_unproven=true`,
+`next_stage_authorized=false`; retry-v9 creates no token and any separately
+authorized future invocation would be tenth.
+
+## Exact next starting point
+
+1. H0 negative, H1 h-stage, H2 result, H4-P0와 H4-P0R parent artifacts를 immutable하게 보존한다.
+2. 아홉 P1 interruption과 validation-output, retained evidence, consumed records 및 D-only retirement를 보존한다. `b6c8615...`, `d9e064f...`, `6328174...`, `9b4854d...`, `5ba4b69...`, `8277532...`, `4f60bd5...`, `66211ef...`, `0597872...`를 재실행하지 않는다.
+3. retry-v9 Python/runner/tests/docs를 token-absent provisional runtime contract와 FINAL DOC FREEZE에 고정한다. First full exact-document suite는 `397/397` in `92.95 s`, exit `0`, no failure로 통과했다.
+4. Exact final-byte reread, full suite, independent audit와 별도 승인 뒤 새 token이 생긴 경우에만 열 번째 public invocation을 검토한다. RHS/extensions/Y/modal physics는 금지한다. P0R authoritative terminal result 독립 audit와 별도 H4-P1 preregistration/clean audit/fresh token 전에는 h4 physics를 실행하지 않으며, withheld radius/EQ0도 각각의 후속 계약 전까지 금지한다.
+
+## Historical retry-v10 eleventh authoritative factor-only result
+
+All preceding tenth/retry-v9 next-action text is immutable history. Eleven
+public `primary-h4-p0r` invocations are now immutable. The eleventh ran once
+from token-only commit `e35ef01214f4bf9ec75e7b428e72b21d38c9161b`, token ID
+`2435fa59edc64efca2fb4665b0854d43`. Public exit/stderr were `0`/empty and
+there was no retry. Producer/finalizer/consumer PIDs
+`63268`/`39580`/`60012` exited `0`.
+
+Exactly two factor certificates and two prefix checkpoints were retained in
+order `A_background_II`, `A_conductor_II`:
+
+| factor | input nnz | L/U nnz | native nnz | fill ratio | portable/export/native-portable bytes | factor wall |
+|---|---:|---:|---:|---:|---:|---:|
+| `A_background_II` | `204545` | `1570627` / `1615176` | `3342108` | `15.57507150015889` | `77466936` / `64219892` / `81218256` | `1.3330735 s` |
+| `A_conductor_II` | `219393` | `1702688` / `1716333` | `3543771` | `15.584002224318917` | `83064168` / `68884252` / `86058168` | `1.4459152 s` |
+
+Both cap gates passed; `rhs_count=0`, `factor_solve_called=false`, and every
+forbidden-operation flag is false for both certificates. Inner resource
+monitoring retained `243/243` samples in `34.0036179 s` with peak working
+set/private/lifetime commit
+`510849024`/`1954021376`/`2358079488` bytes. Outer monitoring retained
+`677/677` samples plus `47` nontruncated retries in `94.5411269 s` with
+`513384448`/`1958121472`/`2358079488` bytes. All `164/164` outer identities
+and the broader `207/207` set were absent after cleanup. The minimum host
+available physical memory was `43885748224` bytes.
+
+Strict classification is `consumed_v2_authoritative_sealed_pass` /
+`consumed_v2_authoritative_sealed_pass_no_next_stage_authorization`.
+`terminal_evidence_complete=true`, `authoritative_terminal_evidence=true`,
+`authoritative_stage_pass=true`, authoritative inner disposition is
+`authoritative_inner_pass_observed`, `validation_error=null`, and
+`next_stage_authorized=false`. M-only consumption
+`bf94e1890c489e690801b3d90bcbf50ff61ca233` followed by D-only retirement
+`389ec1e51b87f3eff928278c76bbbf60241af972`; the token is absent.
+
+### Exact evidence hashes
+
+| evidence | raw SHA-256 | canonical/payload SHA-256 |
+|---|---|---|
+| original token | `63ceea36ce8fc3a0e97942c7bbdf3487e3478d1f048de2c9a5343118e63b53ca` | `f4e61b9e05557f0d2705119670e1f760e52325da8f2767aa82a2080d3aa7a555` |
+| claim | `7ee75af33cdba5ee9cb4f92ff4acc601a7939717eda24ffd35536f7275c646b9` | `00611c2a7425d0100f0c49abe881b43978645355e73946af23d5424254907b68` |
+| guard | `f8454d99b28195070a8b22ee870df6a0a95d9dc3f35b83aa7ea107ad55f7e7c6` | `f99f1f20362eb7d7cae04f38cc20c01e4c56bf5500dd437914642699f439f755` |
+| numerical | `0af448eeea2eb302f6aeebbb04fd01992067ccc55a017eb780507aa34924728f` | `b236e160b41150b856fbd69f98ab682edb3c61d6f3a53f02c5960c553f1a5c78` |
+| prefix 1 | `d37940d04ede5820c020d5b352c418592f344db89a4db6430762339b115b50e5` | `7e9b6c9d719c8c782f7727a49ea53945867b76721e79b67d143205699b4e49cb` |
+| prefix 2 | `174f6cca5f808094a306c681a9502b9551c7d741657d1d0db62b9510ca74a3e8` | `45e1a18105128778ffae2d0e53aeb2621fd080d077d4a775020f3c52cd0d5ab7` |
+| resource | `d6358608dd97c0f245bb781d0bfc63e929a1a74733907a7fa2a1fbdb9dca97de` | `537350ed7b9b9d14206624ed8fd46014de6cb0d417c0611b7753170bae9abf84` |
+| result | `ad007d6ac4c053981f6ab9da72505848956019cd4b5cdb1e1ecfa7b5e0d02121` | `0d33860805d50e887fe8a43c9adea3da81df99df73a812ca7559c92419bdb6b0` |
+| pre-exit | `5ff55a34ac6687cd2a86c1c890b50b7ae43b2917e862d9a6c6a001d70e10cadb` | `b5cb10f9a8b8eb5fc40f04b4ff11984d497d0ddf178e34963db1aec1e3b61207` |
+| outer close | `184302a02026e1ab9aa84d4a94a2f9605c8254849920379d6b30fb0ce765f3c5` | same |
+| terminal seal | `070c86e25aeb982d5ef1c9c99c9c15d9ed3a6d08ce4e521e55262e4586a516a4` | `8c9de1f93bccac285d81ca60d7b9bc827cb1e66ffc2fe036825a008a491513b6` |
+| consumed tombstone | `3ce2bc00bdb4ee2d2da1a706e7c2211eba2a0579e179990aa34d2e2855cd615f` | same |
+
+Python/runner/tests remain bound to
+`46082123fbf98102f3e5995c32bf65d8d04bb835b9c1305de0150349e75e48c7` /
+`f0159061dbd4d1b34881911edfdfb72146a3a23e5cdc75ca8fa4069c08aadb86` /
+`e5496ceb24c33c835b88ce20a3f67f941c8279e0471708a01022238fc211b109`,
+collection `400`. The first full exact-document suite on these post-eleventh
+bytes passed `400/400` in `95.65 s`, exit `0`, with no failure. This is the
+**FINAL DOC FREEZE**; no later closure runtime is recorded. This is an
+authoritative factor-only pass on this host, not an 8 GB proof and not an H4
+or PowerSI physics result.
+
+## Historical eleventh-result exact-next target
+
+1. Validate exactly the 15 baseline Markdown files for scope, UTF-8, LF-only
+   endings, fences, links, current wording, and immutable `SESSION_LOG.md`
+   prefix.
+2. Preserve the first full exact-document result: `400/400` passed in
+   `95.65 s`, exit `0`, with no failure. Freeze these exact bytes and do not
+   record any later closure runtime.
+3. Keep the token absent and `next_stage_authorized=false`. H4-P1, RHS, or
+   solve requires a separate preregistration and explicit authorization.
+4. The exact next artifact is a non-executable H4-P1 manifest-only prereg:
+   frozen P0R code; one same-process factor lifetime; `512` RHS in batches
+   `<=4`; full `Y`/`Yrev`/`M9` and gates; no L/U persistence/rehydration or
+   standalone synthetic result. Raw `12923024` bytes would become about
+   `17230700` base64 bytes and exceed 16 MiB by `453484`, so a fixed-layout
+   little-endian complex128 sidecar must bind exact offset/shape/dtype/order/
+   size/SHA with atomic publish, quarantine, seal, and tamper/nonfinite/path
+    checks. Prospective envelope `3470862055` bytes leaves `824105241` bytes
+    below 4 GiB; 8 GB remains unproven. This is neither implementation nor
+    authorization.
+
+## Current H4-P1 manifest-only preregistration result
+
+This is a **contract result only**, not a numerical or physics result. Stable
+fixture/test SHA-256 values are
+`6f527c76cbc0928a4b504e01abbb4c049fd39edc75ef865a3335f3a619863200` /
+`6254e3d28b56d8ec640089c02fdf3308e33775e4c3cd2d6946932bfc1ed7ac9d`.
+Canonical payload/wrapper SHA-256 values are
+`ec489c784e01635955560fa0ac0681b22bd890759d6693c111cb8ff28c31b753` /
+`cfa8f9a2504a8fad40ef03e9cb3842877e176a9f3d620f5805099a98c80523e7`.
+
+The current status is `preregistered_H4_P1_contract_only_no_solve`. The parser
+accepts only required `--stage manifest`; current token and terminal evidence
+are absent, `primary-h4` is unavailable, and `next_stage_authorized=false`.
+The historical eleventh factor certificates remain valid parent evidence but
+are not H4-P1 authority.
+
+No RHS, factorization, solve, sidecar, `Y`, `Y_reverse`, `M9_interior`, modal
+response, H4 physics, PowerSI comparison, or 8 GB measurement was produced.
+Focused and independent static results are `32/32` in `19.01 s`, `19.51 s`,
+and `18.92 s`. Selected old-plus-new H4 collection was confirmed exactly at
+`432 tests collected in 0.56 s`, exit `0`. After the preserved `431/432`
+static-heading failure, the first successful full exact-document result records
+`432/432` passed in `111.82 s`, exit `0`, with no failure. This is the **FINAL
+DOC FREEZE**; do not record any later closure runtime.

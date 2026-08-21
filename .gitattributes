@@ -1,0 +1,3 @@
+tools/research/*.py text eol=lf
+tests/test_research_av_bs1_boundary_schur_h4_p1.py text eol=lf
+docs/evaluation-research/*.md text eol=lf
