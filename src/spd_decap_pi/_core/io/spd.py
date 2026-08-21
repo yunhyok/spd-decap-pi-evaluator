@@ -1591,13 +1591,11 @@ class SpdGroundReachability:
                 item.end_layer,
             ),
         )
-        if not all(
-            isinstance(item, SpdViaIslandPairAggregate)
-            for item in via_aggregates
-        ):
-            raise ValueError("Via island-pair aggregates have an invalid record")
-        aggregate_keys = {
-            (
+        previous_aggregate_key: tuple[str, str, str, str, str, str] | None = None
+        for item in via_aggregates:
+            if not isinstance(item, SpdViaIslandPairAggregate):
+                raise ValueError("Via island-pair aggregates have an invalid record")
+            aggregate_key = (
                 item.net.casefold(),
                 item.padstack.casefold(),
                 item.start_layer.casefold(),
@@ -1605,10 +1603,11 @@ class SpdGroundReachability:
                 item.start_island_id,
                 item.end_island_id,
             )
-            for item in via_aggregates
-        }
-        if len(aggregate_keys) != len(via_aggregates):
-            raise ValueError("Via island-pair aggregates duplicate a physical pair")
+            if aggregate_key == previous_aggregate_key:
+                raise ValueError(
+                    "Via island-pair aggregates duplicate a physical pair"
+                )
+            previous_aggregate_key = aggregate_key
         if component_islands_by_surface:
             for item in via_aggregates:
                 start_partitions = component_partitions_by_surface.get(
@@ -5324,6 +5323,9 @@ def recover_spd_ground_reachability(
     path: str | Path,
     *,
     landings: Iterable[object],
+    requested_target_layers_by_landing: Mapping[
+        tuple[str, str, str], Iterable[str]
+    ] | None = None,
     terminal_contact_landings: Iterable[object] | None = None,
     scenario_isolated_terminal_landings: Iterable[object] | None = None,
     retarget_destination_requests: Iterable[tuple[str, str, str]] | None = None,
@@ -5550,16 +5552,63 @@ def recover_spd_ground_reachability(
         if str(getattr(item, "endpoint_node_id", "")).strip()
     }
     landing_records = tuple(landings)
-    requested_by_key: dict[tuple[str, str, str], str] = {}
-    requested_coordinates: dict[tuple[str, str, str], tuple[float, float]] = {}
+    landing_keys: list[tuple[str, str, str]] = []
     for landing in landing_records:
         try:
-            net_key = str(getattr(landing, "net")).casefold()
-            via_key = str(getattr(landing, "via_id")).casefold()
-            node_key = str(getattr(landing, "endpoint_node_id")).casefold()
+            landing_keys.append(
+                (
+                    str(getattr(landing, "via_id")).casefold(),
+                    str(getattr(landing, "endpoint_node_id")).casefold(),
+                    str(getattr(landing, "net")).casefold(),
+                )
+            )
         except AttributeError as exc:
             raise ValueError("GND landing lacks source graph identity") from exc
-        for target_layer in target_layers.get(net_key, ()):
+    requested_layers_by_landing: dict[
+        tuple[str, str, str], set[str]
+    ] | None = None
+    if requested_target_layers_by_landing is not None:
+        requested_layers_by_landing = {}
+        for raw_key, raw_layers in requested_target_layers_by_landing.items():
+            if not isinstance(raw_key, tuple) or len(raw_key) != 3:
+                raise ValueError(
+                    "requested target layer keys must contain Via, endpoint Node, and NET"
+                )
+            if any(not str(item).strip() for item in raw_key):
+                raise ValueError("requested target layer keys must not be blank")
+            key = (
+                str(raw_key[0]).casefold(),
+                str(raw_key[1]).casefold(),
+                str(raw_key[2]).casefold(),
+            )
+            if isinstance(raw_layers, (str, bytes)):
+                raise ValueError("requested target layers must be an iterable of layers")
+            try:
+                layers = {str(layer).casefold() for layer in raw_layers}
+            except TypeError as exc:
+                raise ValueError(
+                    "requested target layers must be an iterable of layers"
+                ) from exc
+            if not layers.issubset(target_layers.get(key[2], set())):
+                raise ValueError(
+                    "requested target layer is outside target_layers_by_net"
+                )
+            requested_layers_by_landing.setdefault(key, set()).update(layers)
+        if set(requested_layers_by_landing) != set(landing_keys):
+            raise ValueError(
+                "requested target layer coverage must exactly match landings"
+            )
+    requested_by_key: dict[tuple[str, str, str], str] = {}
+    requested_coordinates: dict[tuple[str, str, str], tuple[float, float]] = {}
+    for landing, (via_key, node_key, net_key) in zip(
+        landing_records, landing_keys, strict=True
+    ):
+        target_layers_for_landing = (
+            requested_layers_by_landing[(via_key, node_key, net_key)]
+            if requested_layers_by_landing is not None
+            else target_layers.get(net_key, ())
+        )
+        for target_layer in target_layers_for_landing:
             request_key = (via_key, node_key, target_layer)
             requested_by_key[request_key] = net_key
             requested_coordinates[request_key] = (
@@ -5567,6 +5616,9 @@ def recover_spd_ground_reachability(
                 float(getattr(landing, "y_um", 0.0)),
             )
     requested = sorted(requested_by_key)
+    landing_keys.clear()
+    if requested_layers_by_landing is not None:
+        requested_layers_by_landing.clear()
     if not requested and not surface_inventory and not terminal_contact_records:
         return SpdGroundReachability(frozenset(), frozenset(), {
             "requested": 0, "reachable": 0, "unreachable": 0,

@@ -4560,6 +4560,14 @@ def test_via_island_pair_aggregate_hashes_and_subtracts_exact_terminal_ids(
             "NodePwrOwned!!1::PWR X = 0um Y = 0um Layer = Signal$PWR "
             "PadStack = DR-0102_60\n"
             "NodePwrSubstrate!!1::PWR X = 1um Y = 0um Layer = Signal$PWR "
+            "PadStack = DR-0102_60\n"
+            "NodeTopAlt!!1::PWR X = 2um Y = 0um Layer = Signal$TOP "
+            "PadStack = DR-ALT\n"
+            "NodePwrAlt!!1::PWR X = 2um Y = 0um Layer = Signal$PWR "
+            "PadStack = DR-ALT\n"
+            "NodeTopOther!!1::PWR X = 100um Y = 0um Layer = Signal$TOP "
+            "PadStack = DR-0102_60\n"
+            "NodePwrOther!!1::PWR X = 100um Y = 0um Layer = Signal$PWR "
             "PadStack = DR-0102_60"
         ),
         trace_lines="",
@@ -4567,7 +4575,21 @@ def test_via_island_pair_aggregate_hashes_and_subtracts_exact_terminal_ids(
             "ViaOwned::PWR UpperNode = NodeTopOwned "
             "LowerNode = NodePwrOwned PadStack = DR-0102_60\n"
             "ViaSubstrate::PWR UpperNode = NodeTopSubstrate "
-            "LowerNode = NodePwrSubstrate PadStack = DR-0102_60"
+            "LowerNode = NodePwrSubstrate PadStack = DR-0102_60\n"
+            "ViaAlt::PWR UpperNode = NodeTopAlt "
+            "LowerNode = NodePwrAlt PadStack = DR-ALT\n"
+            "ViaOther::PWR UpperNode = NodeTopOther "
+            "LowerNode = NodePwrOther PadStack = DR-0102_60"
+        ),
+        padstack_defs=(
+            ".PadStackDef DR-ALT 0.03mm Material = COPPER\n"
+            ".PadDef Signal$TOP\n"
+            "Regular Circle 0.04mm\n"
+            ".EndPadDef\n"
+            ".PadDef Signal$PWR\n"
+            "Regular Circle 0.04mm\n"
+            ".EndPadDef\n"
+            ".EndPadStackDef"
         ),
     )
     requested = SpdViaLanding(
@@ -4595,17 +4617,34 @@ def test_via_island_pair_aggregate_hashes_and_subtracts_exact_terminal_ids(
         padstacks=analysis.padstacks,
         stackup_layers=analysis.stackup_layers,
         target_layers_by_net={"PWR": ("Signal$TOP", "Signal$PWR")},
-        target_node_surface_resolver=lambda _n, layer, _i, _x, _y: (
-            "island-top" if layer == "Signal$TOP" else "island-pwr"
+        target_node_surface_resolver=lambda _n, layer, _i, x, _y: (
+            ("island-top" if layer == "Signal$TOP" else "island-pwr")
+            + ("-other" if x > 50.0 else "")
         ),
         target_surface_island_ids={
-            ("PWR", "Signal$TOP"): ("island-top",),
-            ("PWR", "Signal$PWR"): ("island-pwr",),
+            ("PWR", "Signal$TOP"): ("island-top", "island-top-other"),
+            ("PWR", "Signal$PWR"): ("island-pwr", "island-pwr-other"),
         },
     )
 
-    assert len(result.via_island_pair_aggregates) == 1
-    aggregate = result.via_island_pair_aggregates[0]
+    assert len(result.via_island_pair_aggregates) == 3
+    aggregate = next(
+        item
+        for item in result.via_island_pair_aggregates
+        if item.padstack == "DR-0102_60"
+        and item.start_island_id == "island-top"
+        and item.end_island_id == "island-pwr"
+    )
+    alternate = next(
+        item
+        for item in result.via_island_pair_aggregates
+        if item.padstack == "DR-ALT"
+    )
+    unrelated = next(
+        item
+        for item in result.via_island_pair_aggregates
+        if item.start_island_id == "island-top-other"
+    )
     assert (
         aggregate.net,
         aggregate.padstack,
@@ -4643,10 +4682,26 @@ def test_via_island_pair_aggregate_hashes_and_subtracts_exact_terminal_ids(
         expected_hash.update(len(encoded).to_bytes(4, "big"))
         expected_hash.update(encoded)
     assert aggregate.via_ids_sha256 == expected_hash.hexdigest()
+    assert (
+        alternate.start_island_id,
+        alternate.end_island_id,
+        alternate.count,
+    ) == ("island-top", "island-pwr", 1)
+    assert (
+        unrelated.padstack,
+        unrelated.start_island_id,
+        unrelated.end_island_id,
+        unrelated.count,
+    ) == (
+        "DR-0102_60",
+        "island-top-other",
+        "island-pwr-other",
+        1,
+    )
     assert result.statistics["terminal_owned_via_id_count"] == 1
     assert result.statistics["terminal_owned_via_observed_count"] == 1
     assert result.statistics["via_island_pair_terminal_owned_record_count"] == 1
-    assert result.statistics["via_island_pair_substrate_record_count"] == 1
+    assert result.statistics["via_island_pair_substrate_record_count"] == 3
     contacts = {
         item.landing_key: dict(item.contact_island_ids_by_layer)
         for item in result.landing_surface_contacts
@@ -4666,6 +4721,7 @@ def test_via_island_pair_aggregate_hashes_and_subtracts_exact_terminal_ids(
     assert all(
         item.terminal_owner_kind == "decap"
         and item.external_endpoint_layer == "Signal$TOP"
+        and item.padstack == "DR-0102_60"
         and item.physical_model_status == "complete"
         and item.physical_model_issues == ()
         and item.segments == aggregate.segments
@@ -4673,7 +4729,7 @@ def test_via_island_pair_aggregate_hashes_and_subtracts_exact_terminal_ids(
     )
     coverage = result.via_island_pair_coverage
     assert coverage is not None and coverage.status == "complete"
-    assert coverage.raw_target_via_count == coverage.paired_via_count == 2
+    assert coverage.raw_target_via_count == coverage.paired_via_count == 4
     assert coverage.terminal_owned_unpaired_count == 0
     assert coverage.unsupported_missing_endpoint_count == 0
 
@@ -4943,6 +4999,162 @@ def test_landing_layer_index_consumes_single_use_rows_once() -> None:
     }
     assert reachable_rows.iteration_count == 1
     assert reachable_rows.row_count == len(rows)
+
+
+def test_requested_target_layers_limit_only_landing_request_keys(
+    tmp_path: Path,
+) -> None:
+    source, analysis = _recoverable_via_source(
+        tmp_path,
+        node_lines="\n".join(
+            f"Node{layer}{suffix}!!1::PWR X = {x}um Y = 0um "
+            f"Layer = Signal${layer} PadStack = DR-0102_60"
+            for suffix, x in (("A", 0), ("B", 100))
+            for layer in ("TOP", "PWR", "GND")
+        ),
+        via_lines="\n".join(
+            f"Via{layer}{suffix}::PWR UpperNode = NodeTOP{suffix} "
+            f"LowerNode = Node{layer}{suffix} PadStack = DR-0102_60"
+            for suffix in ("A", "B")
+            for layer in ("PWR", "GND")
+        ),
+    )
+    landings = tuple(
+        SpdViaLanding(
+            via_id=f"ViaPwr{suffix}",
+            net="PWR",
+            endpoint_node_id=f"NodeTop{suffix}",
+            x_um=x,
+            y_um=0.0,
+            padstack="DR-0102_60",
+        )
+        for suffix, x in (("A", 0.0), ("B", 100.0))
+    )
+    layers = ("Signal$TOP", "Signal$PWR", "Signal$GND")
+    inventory = {
+        ("PWR", layer): tuple(
+            f"island-{layer.rsplit('$', 1)[-1].casefold()}-{suffix}"
+            for suffix in ("a", "b")
+        )
+        for layer in layers
+    }
+    kwargs = {
+        "terminal_contact_landings": landings,
+        "terminal_owned_via_ids": ("ViaPwrA", "ViaPwrB"),
+        "padstacks": analysis.padstacks,
+        "stackup_layers": analysis.stackup_layers,
+        "target_layers_by_net": {"PWR": layers},
+        "target_node_surface_resolver": (
+            lambda _node, layer, _index, x, _y: (
+                f"island-{layer.rsplit('$', 1)[-1].casefold()}-"
+                f"{'a' if x < 50.0 else 'b'}"
+            )
+        ),
+        "target_surface_island_ids": inventory,
+    }
+
+    legacy = recover_spd_ground_reachability(
+        source,
+        landings=landings,
+        **kwargs,
+    )
+    exact_map = {
+        ("ViaPwrA", "NodeTopA", "PWR"): ("Signal$PWR",),
+        ("ViaPwrB", "NodeTopB", "PWR"): ("Signal$GND",),
+    }
+    exact = recover_spd_ground_reachability(
+        source,
+        landings=landings,
+        requested_target_layers_by_landing=exact_map,
+        **kwargs,
+    )
+    exact_keys = {
+        ("viapwra", "nodetopa", "signal$pwr"),
+        ("viapwrb", "nodetopb", "signal$gnd"),
+    }
+
+    assert legacy.statistics["requested"] == 6
+    assert exact.statistics["requested"] == 2
+    assert exact.reachable_keys == exact_keys
+    assert exact.unreachable_keys == frozenset()
+    assert set(exact.target_contacts_by_key) == exact_keys
+    assert set(exact.target_contact_count_by_key) == exact_keys
+    assert set(exact.target_contact_hash_by_key) == exact_keys
+    for key in exact_keys:
+        assert exact.target_contacts_by_key[key] == legacy.target_contacts_by_key[key]
+        assert (
+            exact.target_contact_count_by_key[key]
+            == legacy.target_contact_count_by_key[key]
+        )
+        assert (
+            exact.target_contact_hash_by_key[key]
+            == legacy.target_contact_hash_by_key[key]
+        )
+    for attribute in (
+        "surface_components",
+        "surface_layers_by_landing",
+        "surface_islands_by_landing",
+        "surface_equivalence_proofs",
+        "surface_equivalence_components",
+        "landing_surface_contacts",
+        "via_island_pair_aggregates",
+        "via_island_pair_coverage",
+        "finite_via_vertices",
+        "finite_via_edges",
+        "finite_via_vertex_id_by_landing",
+        "finite_via_edge_id_by_landing",
+        "finite_via_coverage",
+        "finite_via_scenario_isolated_landing_keys",
+        "finite_via_scenario_isolation_coverage",
+        "finite_via_vertex_id_by_retarget_destination",
+        "finite_via_retarget_destination_coverage",
+    ):
+        assert getattr(exact, attribute) == getattr(legacy, attribute)
+
+    with pytest.raises(ValueError, match="keys must contain"):
+        recover_spd_ground_reachability(
+            source,
+            landings=landings,
+            requested_target_layers_by_landing={
+                ("ViaPwrA", "NodeTopA"): ("Signal$PWR",),
+            },
+            **kwargs,
+        )
+    with pytest.raises(ValueError, match="coverage must exactly match"):
+        recover_spd_ground_reachability(
+            source,
+            landings=landings,
+            requested_target_layers_by_landing={
+                ("ViaPwrA", "NodeTopA", "PWR"): ("Signal$PWR",),
+            },
+            **kwargs,
+        )
+    with pytest.raises(ValueError, match="outside target_layers_by_net"):
+        recover_spd_ground_reachability(
+            source,
+            landings=landings,
+            requested_target_layers_by_landing={
+                ("ViaPwrA", "NodeTopA", "PWR"): ("Signal$NOPE",),
+                ("ViaPwrB", "NodeTopB", "PWR"): ("Signal$GND",),
+            },
+            **kwargs,
+        )
+
+    casefold_union = recover_spd_ground_reachability(
+        source,
+        landings=(landings[0], landings[0], landings[1]),
+        requested_target_layers_by_landing={
+            ("ViaPwrA", "NodeTopA", "PWR"): ("Signal$PWR",),
+            ("VIAPWRA", "NODETOPA", "pwr"): ("SIGNAL$GND",),
+            ("ViaPwrB", "NodeTopB", "PWR"): (),
+        },
+        **kwargs,
+    )
+    assert casefold_union.statistics["requested"] == 2
+    assert casefold_union.reachable_keys == {
+        ("viapwra", "nodetopa", "signal$pwr"),
+        ("viapwra", "nodetopa", "signal$gnd"),
+    }
 
 
 def test_terminal_contact_does_not_invent_mismatched_via_endpoint(

@@ -1638,6 +1638,12 @@ def test_import_runs_one_union_reachability_pass_and_persists_surface_certificat
             assert isinstance(inventory, dict)
             pwr = tuple(inventory[("vdd_core/0", "signal$pwr")])
             gnd = tuple(inventory[("dgnd", "signal$gnd")])
+            self.reachable_keys = frozenset(
+                {
+                    ("via1", "node1", "signal$pwr"),
+                    ("via2", "node2", "signal$gnd"),
+                }
+            )
             self.surface_islands_by_landing = {
                 ("via1", "node1"): pwr,
                 ("via2", "node2"): gnd,
@@ -1969,6 +1975,12 @@ def test_import_runs_one_union_reachability_pass_and_persists_surface_certificat
         **_kwargs: object,
     ) -> FakeReachability:
         retained = tuple(landings)
+        requested_targets = {
+            tuple(key): frozenset(layers)
+            for key, layers in _kwargs[
+                "requested_target_layers_by_landing"
+            ].items()
+        }
         calls.append(
             {
                 "landings": retained,
@@ -1978,7 +1990,11 @@ def test_import_runs_one_union_reachability_pass_and_persists_surface_certificat
                 "terminal_owned_via_ids": frozenset(
                     _kwargs["terminal_owned_via_ids"]
                 ),
-                "targets": target_layers_by_net,
+                "targets": {
+                    str(net): frozenset(layers)
+                    for net, layers in target_layers_by_net.items()
+                },
+                "requested_targets": requested_targets,
                 "predicate": target_node_predicate,
             }
         )
@@ -2030,8 +2046,14 @@ def test_import_runs_one_union_reachability_pass_and_persists_surface_certificat
     assert {("Via1", "Node1"), ("Via2", "Node2")} <= terminal_landing_ids
     assert calls[0]["terminal_owned_via_ids"] == {"Via1", "Via2"}
     targets = calls[0]["targets"]
-    assert "Signal$PWR" in targets["vdd_core/0"]
-    assert "Signal$GND" in targets["dgnd"]
+    assert targets == {
+        "vdd_core/0": frozenset({"Signal$PWR"}),
+        "dgnd": frozenset({"Signal$GND"}),
+    }
+    assert calls[0]["requested_targets"] == {
+        ("via1", "node1", "vdd_core/0"): frozenset({"Signal$PWR"}),
+        ("via2", "node2", "dgnd"): frozenset({"Signal$GND"}),
+    }
     certificate = inline_certificate
     assert certificate["schema_version"] == (
         "spd-layer-surface-connectivity-v4"

@@ -7115,6 +7115,43 @@ def import_spd_scenario(
             str(getattr(landing, "net")).casefold(),
         )
         recovery_landing_by_key.setdefault(key, landing)
+    requested_target_layers_by_landing = {
+        key: set() for key in recovery_landing_by_key
+    }
+    for rail_key, entries in mixed_ground_landings_by_rail.items():
+        certificate = mixed_rails[rail_key].mixed_reference_certificate
+        assert certificate is not None
+        for _refdes, landing in entries:
+            key = (
+                str(getattr(landing, "via_id")).casefold(),
+                str(getattr(landing, "endpoint_node_id")).casefold(),
+                str(getattr(landing, "net")).casefold(),
+            )
+            requested_target_layers_by_landing[key].add(
+                certificate.gnd_layer
+            )
+    rail_by_id = {
+        rail.rail_id.casefold(): rail for rail in base_project.rails
+    }
+    for binding in rail_anchor_bindings:
+        landing = anchor_landings_by_pin.get(
+            str(binding.get("pin_id", "")).strip().casefold()
+        )
+        rail = rail_by_id.get(
+            str(binding.get("rail_id", "")).strip().casefold()
+        )
+        role = str(binding.get("role", "")).strip().casefold()
+        if landing is None or rail is None or role not in {"power", "ground"}:
+            continue
+        key = (
+            landing.via_id.casefold(),
+            landing.endpoint_node_id.casefold(),
+            landing.net.casefold(),
+        )
+        requested_target_layers_by_landing[key].add(
+            rail.pwr_layer if role == "power" else rail.gnd_layer
+        )
+    rail_by_id.clear()
     active_cap_keys = set(top_instance_by_key)
     surface_target_net_keys = set(surface_target_layers_by_net)
     def source_connection_kind(connection: object) -> str:
@@ -7227,6 +7264,9 @@ def import_spd_scenario(
     ground_reachability = recover_spd_ground_reachability(
         source_path,
         landings=tuple(recovery_landing_by_key.values()),
+        requested_target_layers_by_landing=(
+            requested_target_layers_by_landing
+        ),
         terminal_contact_landings=tuple(
             terminal_contact_landing_by_key.values()
         ),
@@ -7253,6 +7293,12 @@ def import_spd_scenario(
         progress=lambda value, message: report(92 + round(max(0, min(100, value)) * 1 / 100), message),
         is_cancelled=cancelled,
     )
+    recovery_landing_by_key.clear()
+    requested_target_layers_by_landing.clear()
+    terminal_contact_landing_by_key.clear()
+    terminal_owned_via_ids.clear()
+    surface_target_net_keys.clear()
+    del mixed_recovery_landings, terminal_decap_landings
     ground_recovery_s = perf_counter() - ground_recovery_started
     mixed_witnesses: dict[str, MixedReferenceGroundWitness] = {}
     mixed_ground_reachability_by_rail: list[dict[str, Any]] = []
@@ -7331,11 +7377,18 @@ def import_spd_scenario(
             str(getattr(landing, "net", "")).casefold(), ()
         )
     }
-    mixed_reachable_keys = (
-        set(getattr(ground_reachability, "reachable_keys", ()))
-        & mixed_requested_keys
+    reachable_key_membership = getattr(
+        ground_reachability, "reachable_keys", ()
     )
+    mixed_reachable_keys = {
+        key
+        for key in mixed_requested_keys
+        if key in reachable_key_membership
+    }
+    del reachable_key_membership
     mixed_unreachable_keys = mixed_requested_keys - mixed_reachable_keys
+    mixed_target_layers_by_net.clear()
+    mixed_ground_landings_by_rail.clear()
     mixed_reachability_statistics = dict(
         getattr(ground_reachability, "statistics", {}) or {}
     )
@@ -7398,6 +7451,7 @@ def import_spd_scenario(
         ),
         is_cancelled=cancelled,
     )
+    del ground_reachability
     surface_connectivity_diagnostics: list[SpdDiagnostic] = []
     if surface_connectivity_certificate["status"] != "complete":
         surface_connectivity_diagnostics.append(
