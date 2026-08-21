@@ -4694,6 +4694,233 @@ def test_terminal_endpoint_contact_rejects_multiple_direct_layers() -> None:
         )
 
 
+def test_unresolved_terminal_endpoint_does_not_copy_multilayer_component(
+    tmp_path: Path,
+) -> None:
+    source, _analysis = _recoverable_via_source(
+        tmp_path,
+        node_lines=(
+            "NodeExternal!!1::PWR X = 0um Y = 0um Layer = Signal$TOP "
+            "PadStack = DR-0102_60\n"
+            "NodeInternal!!1::PWR X = 0um Y = 0um Layer = Signal$MID "
+            "PadStack = DR-0102_60\n"
+            "NodePwr!!1::PWR X = 0um Y = 0um Layer = Signal$PWR "
+            "PadStack = DR-0102_60\n"
+            "NodeGnd!!1::PWR X = 0um Y = 0um Layer = Signal$GND "
+            "PadStack = DR-0102_60"
+        ),
+        via_lines=(
+            "ViaTerminal::PWR UpperNode = NodeExternal "
+            "LowerNode = NodeInternal PadStack = DR-0102_60\n"
+            "ViaPwr::PWR UpperNode = NodeInternal "
+            "LowerNode = NodePwr PadStack = DR-0102_60\n"
+            "ViaGnd::PWR UpperNode = NodeInternal "
+            "LowerNode = NodeGnd PadStack = DR-0102_60"
+        ),
+    )
+    landing = SpdViaLanding(
+        via_id="ViaTerminal",
+        net="PWR",
+        endpoint_node_id="NodeExternal",
+        x_um=0.0,
+        y_um=0.0,
+        padstack="DR-0102_60",
+    )
+
+    result = recover_spd_ground_reachability(
+        source,
+        landings=(),
+        terminal_contact_landings=(landing,),
+        terminal_owned_via_ids=("ViaTerminal",),
+        target_layers_by_net={"PWR": ("Signal$PWR", "Signal$GND")},
+        target_node_surface_resolver=lambda _n, layer, _i, _x, _y: (
+            "island-pwr" if layer == "Signal$PWR" else
+            "island-gnd" if layer == "Signal$GND" else None
+        ),
+        target_surface_island_ids={
+            ("PWR", "Signal$PWR"): ("island-pwr",),
+            ("PWR", "Signal$GND"): ("island-gnd",),
+        },
+    )
+
+    contact = result.landing_surface_contacts[0]
+    assert result.surface_layers_by_landing[contact.landing_key] == (
+        "Signal$GND",
+        "Signal$PWR",
+    )
+    assert contact.internal_endpoint_node_id == "NodeInternal"
+    assert dict(contact.contact_island_ids_by_layer) == {}
+    assert contact.physical_model_status == "incomplete"
+    assert contact.physical_model_issues == (
+        "internal_endpoint_equivalence_component_missing",
+    )
+
+
+def test_terminal_contact_keeps_full_internal_equivalence_component(
+    tmp_path: Path,
+) -> None:
+    source, _analysis = _recoverable_via_source(
+        tmp_path,
+        node_lines=(
+            "NodeExternal!!1::PWR X = 0um Y = 0um Layer = Signal$TOP "
+            "PadStack = DR-0102_60\n"
+            "NodeInternal!!1::PWR X = 0um Y = 0um Layer = Signal$PWR "
+            "PadStack = DR-0102_60\n"
+            "NodeInternalPeer!!1::PWR X = 10um Y = 0um Layer = Signal$PWR "
+            "PadStack = DR-0102_60"
+        ),
+        trace_lines=(
+            "TraceInternal::PWR StartingNode = NodeInternal::PWR "
+            "EndingNode = NodeInternalPeer::PWR Width = 0.10mm"
+        ),
+        via_lines=(
+            "ViaTerminal::PWR UpperNode = NodeExternal "
+            "LowerNode = NodeInternal PadStack = DR-0102_60"
+        ),
+    )
+    landing = SpdViaLanding(
+        via_id="ViaTerminal",
+        net="PWR",
+        endpoint_node_id="NodeExternal",
+        x_um=0.0,
+        y_um=0.0,
+        padstack="DR-0102_60",
+    )
+
+    result = recover_spd_ground_reachability(
+        source,
+        landings=(),
+        terminal_contact_landings=(landing,),
+        target_layers_by_net={"PWR": ("Signal$PWR",)},
+        target_node_surface_resolver=lambda _n, _l, _i, x, _y: (
+            "island-pwr-a" if x < 5.0 else "island-pwr-b"
+        ),
+        target_surface_island_ids={
+            ("PWR", "Signal$PWR"): (
+                "island-pwr-a",
+                "island-pwr-b",
+            ),
+        },
+    )
+
+    contact = result.landing_surface_contacts[0]
+    assert contact.internal_endpoint_node_id == "NodeInternal"
+    assert dict(contact.contact_island_ids_by_layer) == {
+        "Signal$PWR": ("island-pwr-a", "island-pwr-b"),
+    }
+
+
+def test_terminal_contact_does_not_invent_mismatched_via_endpoint(
+    tmp_path: Path,
+) -> None:
+    source, _analysis = _recoverable_via_source(
+        tmp_path,
+        node_lines=(
+            "NodeViaTop!!1::PWR X = 0um Y = 0um Layer = Signal$TOP "
+            "PadStack = DR-0102_60\n"
+            "NodeViaPwr!!1::PWR X = 0um Y = 0um Layer = Signal$PWR "
+            "PadStack = DR-0102_60\n"
+            "NodeNotIncident!!1::PWR X = 20um Y = 0um Layer = Signal$TOP "
+            "PadStack = DR-0102_60"
+        ),
+        via_lines=(
+            "ViaTerminal::PWR UpperNode = NodeViaTop "
+            "LowerNode = NodeViaPwr PadStack = DR-0102_60"
+        ),
+    )
+    landing = SpdViaLanding(
+        via_id="ViaTerminal",
+        net="PWR",
+        endpoint_node_id="NodeNotIncident",
+        x_um=20.0,
+        y_um=0.0,
+        padstack="DR-0102_60",
+    )
+
+    result = recover_spd_ground_reachability(
+        source,
+        landings=(),
+        terminal_contact_landings=(landing,),
+        target_layers_by_net={"PWR": ("Signal$PWR",)},
+        target_node_surface_resolver=lambda *_args: "island-pwr",
+        target_surface_island_ids={
+            ("PWR", "Signal$PWR"): ("island-pwr",),
+        },
+    )
+
+    contact = result.landing_surface_contacts[0]
+    assert contact.internal_endpoint_node_id is None
+    assert dict(contact.contact_island_ids_by_layer) == {}
+    assert contact.physical_model_issues == (
+        "internal_via_endpoint_missing_or_ambiguous",
+    )
+
+
+def test_component_contact_reduction_keeps_only_requested_root_hash(
+    tmp_path: Path,
+) -> None:
+    source, _analysis = _recoverable_via_source(
+        tmp_path,
+        node_lines=(
+            "NodeRequestedTop!!1::PWR X = 0um Y = 0um Layer = Signal$TOP "
+            "PadStack = DR-0102_60\n"
+            "NodeRequestedA!!1::PWR X = 0um Y = 0um Layer = Signal$PWR "
+            "PadStack = DR-0102_60\n"
+            "NodeRequestedB!!1::PWR X = 10um Y = 0um Layer = Signal$PWR "
+            "PadStack = DR-0102_60\n"
+            "NodeIrrelevantA!!1::PWR X = 100um Y = 0um Layer = Signal$PWR "
+            "PadStack = DR-0102_60\n"
+            "NodeIrrelevantB!!1::PWR X = 110um Y = 0um Layer = Signal$PWR "
+            "PadStack = DR-0102_60"
+        ),
+        trace_lines=(
+            "TraceRequested::PWR StartingNode = NodeRequestedA::PWR "
+            "EndingNode = NodeRequestedB::PWR Width = 0.10mm\n"
+            "TraceIrrelevant::PWR StartingNode = NodeIrrelevantA::PWR "
+            "EndingNode = NodeIrrelevantB::PWR Width = 0.10mm"
+        ),
+        via_lines=(
+            "ViaRequested::PWR UpperNode = NodeRequestedTop "
+            "LowerNode = NodeRequestedA PadStack = DR-0102_60"
+        ),
+    )
+    landing = SpdViaLanding(
+        via_id="ViaRequested",
+        net="PWR",
+        endpoint_node_id="NodeRequestedTop",
+        x_um=0.0,
+        y_um=0.0,
+        padstack="DR-0102_60",
+    )
+
+    result = recover_spd_ground_reachability(
+        source,
+        landings=(landing,),
+        target_layers_by_net={"PWR": ("Signal$PWR",)},
+        same_layer_artwork_layers_by_net={"PWR": ("Signal$PWR",)},
+        same_layer_artwork_component=lambda _n, _l, x, _y: (
+            "requested" if x < 50.0 else "irrelevant"
+        ),
+        target_node_surface_resolver=lambda *_args: "island-pwr",
+        target_surface_island_ids={
+            ("PWR", "Signal$PWR"): ("island-pwr",),
+        },
+    )
+
+    key = ("viarequested", "noderequestedtop", "signal$pwr")
+    contacts = (
+        ("NodeRequestedA", 0.0, 0.0),
+        ("NodeRequestedB", 10.0, 0.0),
+    )
+    assert result.target_contacts_by_key[key] == (contacts[0],)
+    assert result.target_contact_count_by_key[key] == 2
+    assert result.target_contact_hash_by_key[key] == sha256(
+        repr(contacts).encode("utf-8")
+    ).hexdigest()
+    assert result.statistics["component_contact_records_retained"] == 2
+    assert result.statistics["component_contact_records_filtered"] == 2
+
+
 def test_terminal_owned_one_sided_via_is_excluded_but_nonterminal_blocks(
     tmp_path: Path,
 ) -> None:

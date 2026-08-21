@@ -6826,17 +6826,42 @@ def recover_spd_ground_reachability(
     reporter.report(85, "Reducing mixed-reference GND graph components")
     component_target_masks: dict[int, int] = {}
     component_contacts: dict[tuple[str, int], list[tuple[str, float, float, int]]] = {}
+    required_target_masks: dict[tuple[str, int], int] = {}
+    for via, node, target_layer in requested:
+        net_key = requested_by_key[(via, node, target_layer)]
+        root = find(index_for(net_key, node))
+        key = (net_key, root)
+        required_target_masks[key] = (
+            required_target_masks.get(key, 0)
+            | target_bit_by_key[(net_key, target_layer)]
+        )
+    component_contact_records_retained = 0
+    component_contact_records_filtered = 0
     for net_key, targets in target_nodes_by_net.items():
         for node_key, target_mask in targets.items():
             root = find(index_for(net_key, node_key))
-            component_target_masks[root] = (
-                component_target_masks.get(root, 0) | target_mask
+            retained_mask = target_mask & required_target_masks.get(
+                (net_key, root), 0
             )
             contact = target_coordinates_by_net[net_key].get(node_key)
+            if not retained_mask:
+                component_contact_records_filtered += int(contact is not None)
+                continue
+            component_target_masks[root] = (
+                component_target_masks.get(root, 0) | retained_mask
+            )
             if contact is not None:
                 component_contacts.setdefault((net_key, root), []).append(
-                    (contact[0], contact[1], contact[2], target_mask)
+                    (contact[0], contact[1], contact[2], retained_mask)
                 )
+                component_contact_records_retained += 1
+    # Component contacts are the only remaining consumers of these large
+    # source-node maps.  Release them before building the surface certificate.
+    target_nodes_by_net.clear()
+    target_coordinates_by_net.clear()
+    target_layers_by_node.clear()
+    target_latest_offsets.clear()
+    node_positions_by_net.clear()
     reachable: set[tuple[str, str, str]] = set()
     target_contacts_by_key: dict[tuple[str, str, str], tuple[tuple[str, float, float], ...]] = {}
     target_contact_count_by_key: dict[tuple[str, str, str], int] = {}
@@ -6969,6 +6994,11 @@ def recover_spd_ground_reachability(
                     selected_contact = legacy_selected_contact(ordered_contacts, source_xy)
             target_contacts_by_key[key] = (selected_contact,) if selected_contact else ()
     unreachable = set(requested) - reachable
+    component_contacts.clear()
+    component_contacts_cache.clear()
+    nearest_contact_tree_cache.clear()
+    component_target_masks.clear()
+    required_target_masks.clear()
     reporter.report(72, "Building surface connectivity certificates")
     reporter.check()
     surface_components: set[SpdSurfaceConnectivityComponent] = set()
@@ -7275,10 +7305,17 @@ def recover_spd_ground_reachability(
             endpoint_node = landing_key[1]
             display_endpoints = via_terminal_display_endpoints.get((net_key, via_key), ())
             endpoints = tuple(item.casefold() for item in display_endpoints)
-            internal_node = next((item for item in endpoints if item != endpoint_node), None)
-            internal_node_display = next(
-                (item for item in display_endpoints if item.casefold() != endpoint_node),
-                internal_node,
+            internal_node_display = (
+                display_endpoints[1]
+                if len(display_endpoints) == 2 and endpoints[0] == endpoint_node
+                else display_endpoints[0]
+                if len(display_endpoints) == 2 and endpoints[1] == endpoint_node
+                else None
+            )
+            internal_node = (
+                internal_node_display.casefold()
+                if internal_node_display is not None
+                else None
             )
             contact_rows: dict[str, tuple[str, ...]] = {}
             if internal_node is not None:
@@ -7290,27 +7327,35 @@ def recover_spd_ground_reachability(
                 )
                 if internal_code:
                     _candidate_net, candidate_layer, token = surface_key_by_code[internal_code - 1]
-                    contact_rows[target_layer_display.get((net_key, candidate_layer), candidate_layer)] = (token,)
-            if not contact_rows and matched_islands:
-                # Preserve an incomplete but explicit terminal-contact record
-                # when endpoint geometry is unavailable; never synthesize a
-                # complete physical model from the landing alone.
-                for candidate_layer in sorted(matched_layers):
-                    display_layer = target_layer_display.get((net_key, candidate_layer), candidate_layer)
-                    tokens = tuple(sorted(matched_islands))
-                    if tokens:
-                        contact_rows[display_layer] = (tokens[0],)
-            if contact_rows:
-                landing_surface_contacts.append(
-                    SpdLandingSurfaceContact(
-                        via_id=str(getattr(landing, "via_id", "")),
-                        endpoint_node_id=str(getattr(landing, "endpoint_node_id", "")),
-                        net=str(getattr(landing, "net", net_key)),
-                        contact_island_ids_by_layer=contact_rows,
-                        internal_endpoint_node_id=internal_node_display,
-                        terminal_owner_kind=terminal_owner_kind,
+                    contact_rows[
+                        target_layer_display.get(
+                            (net_key, candidate_layer), candidate_layer
+                        )
+                    ] = surface_component_islands_by_code.get(
+                        internal_code, (token,)
                     )
+            contact_issues = (
+                ()
+                if contact_rows
+                else (
+                    (
+                        "internal_endpoint_equivalence_component_missing"
+                        if internal_node is not None
+                        else "internal_via_endpoint_missing_or_ambiguous"
+                    ),
                 )
+            )
+            landing_surface_contacts.append(
+                SpdLandingSurfaceContact(
+                    via_id=str(getattr(landing, "via_id", "")),
+                    endpoint_node_id=str(getattr(landing, "endpoint_node_id", "")),
+                    net=str(getattr(landing, "net", net_key)),
+                    contact_island_ids_by_layer=contact_rows,
+                    internal_endpoint_node_id=internal_node_display,
+                    terminal_owner_kind=terminal_owner_kind,
+                    physical_model_issues=contact_issues,
+                )
+            )
     def physical_model_for_canonical(
         padstack_name: str,
         start_layer: str,
@@ -7497,7 +7542,7 @@ def recover_spd_ground_reachability(
                             break
                 segments: tuple[SpdViaIslandPairSegment, ...] = ()
                 physical_status = "incomplete"
-                physical_issues: tuple[str, ...] = ("physical_model_not_supplied",)
+                physical_issues = contact.physical_model_issues
                 is_owned_contact = contact.via_id.casefold() in owned_ids
                 if is_owned_contact and contact.contact_island_ids_by_layer and endpoint_layer and internal_layer and drill is not None and stackup_layers is not None:
                     depth = 0.0
@@ -8033,6 +8078,8 @@ def recover_spd_ground_reachability(
             "conditional_target_component_passes": conditional_target_component_passes,
             "conditional_target_components_scanned": conditional_target_components_scanned,
             "conditional_target_components_recovered": conditional_target_components_recovered,
+            "component_contact_records_retained": component_contact_records_retained,
+            "component_contact_records_filtered": component_contact_records_filtered,
             "artwork_algorithm": "same_net_via_trace_artwork_reachability_v3_layerwise_deferred",
             "trace_edges": trace_edges,
             "via_edges": via_edges,
