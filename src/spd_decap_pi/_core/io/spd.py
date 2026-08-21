@@ -5531,6 +5531,7 @@ def recover_spd_ground_reachability(
         terminal_contact_identity_by_via_kind.setdefault(
             via_kind_key, via_kind_identity
         )
+    terminal_contact_identity_by_via_kind.clear()
     terminal_contact_via_ids = {
         via_key for via_key, _node_key in terminal_contact_owner_by_key
     }
@@ -6119,6 +6120,7 @@ def recover_spd_ground_reachability(
             # Duplicate detection is complete; do not retain every Via identity
             # through the expensive Node/surface phases.
             via_seen_keys.clear()
+            terminal_contact_via_ids.clear()
             # For nets without same-layer artwork, a target can only affect a
             # requested result when its Trace/Via DSU component contains one
             # of that net's requested landing endpoints.  Seed these roots
@@ -7198,6 +7200,9 @@ def recover_spd_ground_reachability(
     tokens = set()
     members = ()
 
+    terminal_contact_via_ids.update(
+        via_key for via_key, _node_key in terminal_contact_owner_by_key
+    )
     with source_path.open("rb") as replay_handle, mmap.mmap(
         replay_handle.fileno(), 0, access=mmap.ACCESS_READ
     ) as replay_data:
@@ -7289,6 +7294,7 @@ def recover_spd_ground_reachability(
         invalid_owned_digest = digest_invalid_offsets(invalid_owned_offsets)
         invalid_outside_digest = digest_invalid_offsets(invalid_outside_offsets)
         invalid_unsupported_digest = digest_invalid_offsets(invalid_unsupported_offsets)
+    terminal_contact_via_ids.clear()
     del invalid_owned_offsets[:]
     del invalid_outside_offsets[:]
     del invalid_unsupported_offsets[:]

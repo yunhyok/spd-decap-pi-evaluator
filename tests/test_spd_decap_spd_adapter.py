@@ -1702,6 +1702,17 @@ def test_import_runs_one_union_reachability_pass_and_persists_surface_certificat
         encoding="ascii",
     )
     calls: list[dict[str, object]] = []
+    phase_order: list[str] = []
+    retarget_request_lists: list[list[object]] = []
+    original_retarget_compile = (
+        spd_adapter._compile_retarget_landing_destination_requests
+    )
+
+    def wrapped_retarget_compile(**kwargs):
+        phase_order.append("retarget")
+        result = original_retarget_compile(**kwargs)
+        retarget_request_lists.append(result[0])
+        return result
 
     def fake_compile(_project: ProjectSpec, _rail_id: str) -> SimpleNamespace:
         return SimpleNamespace(
@@ -2075,6 +2086,8 @@ def test_import_runs_one_union_reachability_pass_and_persists_surface_certificat
         target_node_predicate: object,
         **_kwargs: object,
     ) -> FakeReachability:
+        assert phase_order == []
+        phase_order.append("recovery")
         retained = tuple(landings)
         requested_targets = {
             tuple(key): frozenset(layers)
@@ -2110,6 +2123,11 @@ def test_import_runs_one_union_reachability_pass_and_persists_surface_certificat
     monkeypatch.setattr(
         spd_adapter, "recover_spd_ground_reachability", fake_recover
     )
+    monkeypatch.setattr(
+        spd_adapter,
+        "_compile_retarget_landing_destination_requests",
+        wrapped_retarget_compile,
+    )
 
     inline_certificate: dict[str, object] = {}
     real_externalize = spd_adapter.externalize_project_surface_certificate
@@ -2135,6 +2153,8 @@ def test_import_runs_one_union_reachability_pass_and_persists_surface_certificat
     imported = import_spd_scenario(source)
 
     assert len(calls) == 1
+    assert phase_order == ["recovery", "retarget"]
+    assert retarget_request_lists == [[]]
     landing_ids = {
         (item.via_id, item.endpoint_node_id)
         for item in calls[0]["landings"]

@@ -7232,23 +7232,6 @@ def import_spd_scenario(
     active_cap_keys.clear()
     top_instance_by_key.clear()
     landing_cache.clear()
-    (
-        retarget_landing_destination_requests,
-        retarget_landing_scan_coverage,
-    ) = _compile_retarget_landing_destination_requests(
-        project=base_project,
-        decap_connections=certificate_decap_connections,
-        geometry_assets=surface_geometry_assets,
-        strict_island_resolver=surface_artwork.strict_surface_resolver,
-        strict_island_resolver_batch=(
-            surface_artwork.strict_surface_resolver_batch
-        ),
-        release_surface=surface_artwork.release,
-        progress=lambda value, message: report(
-            92 + round(max(0, min(100, value)) * 1 / 100), message
-        ),
-        is_cancelled=cancelled,
-    )
     terminal_decap_landings = tuple(
         landing
         for connection in certificate_decap_connections
@@ -7348,6 +7331,23 @@ def import_spd_scenario(
     terminal_owned_via_ids.clear()
     surface_target_net_keys.clear()
     del terminal_decap_landings
+    (
+        retarget_landing_destination_requests,
+        retarget_landing_scan_coverage,
+    ) = _compile_retarget_landing_destination_requests(
+        project=base_project,
+        decap_connections=certificate_decap_connections,
+        geometry_assets=surface_geometry_assets,
+        strict_island_resolver=surface_artwork.strict_surface_resolver,
+        strict_island_resolver_batch=(
+            surface_artwork.strict_surface_resolver_batch
+        ),
+        release_surface=surface_artwork.release,
+        progress=lambda value, message: report(
+            92 + round(max(0, min(100, value)) * 1 / 100), message
+        ),
+        is_cancelled=cancelled,
+    )
     ground_recovery_s = perf_counter() - ground_recovery_started
     mixed_witnesses: dict[str, MixedReferenceGroundWitness] = {}
     mixed_ground_reachability_by_rail: list[dict[str, Any]] = []
