@@ -5444,6 +5444,7 @@ def recover_spd_ground_reachability(
         }
         if set(surface_inventory) != expected_surface_keys:
             raise ValueError("surface island inventory does not exactly cover target layers")
+        seen_surface_ids.clear()
     surface_layers_by_landing: dict[tuple[str, str], set[str]] = {}
     surface_islands_by_landing: dict[tuple[str, str], set[str]] = {}
     landing_surface_contacts: list[SpdLandingSurfaceContact] = []

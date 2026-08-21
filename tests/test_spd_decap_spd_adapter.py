@@ -1421,22 +1421,23 @@ def test_retained_surface_artwork_is_boundary_inclusive_and_released(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     polygon = ((0.0, 0.0), (10.0, 0.0), (10.0, 10.0), (0.0, 10.0))
+    second_polygon = ((20.0, 0.0), (30.0, 0.0), (30.0, 10.0), (20.0, 10.0))
     geometry = SpdPlaneGeometry(
         layer="L1",
         net="VDD",
-        positive_polygons_um=(polygon,),
+        positive_polygons_um=(polygon, second_polygon),
         negative_polygons_um=(),
-        primitive_order=(("positive_polygon", 0),),
+        primitive_order=(("positive_polygon", 0), ("positive_polygon", 1)),
     )
     compressed, _size = core_services._compress_spd_geometry_payload(
         layer="L1",
         net="VDD",
-        positive_polygons=(polygon,),
+        positive_polygons=(polygon, second_polygon),
         negative_polygons=(),
         positive_circles=(),
         negative_circles=(),
-        primitive_order=(("positive_polygon", 0),),
-        positive_subelement_count=1,
+        primitive_order=(("positive_polygon", 0), ("positive_polygon", 1)),
+        positive_subelement_count=2,
         negative_subelement_count=0,
         polygon_trace_count=0,
         box_count=0,
@@ -1460,6 +1461,15 @@ def test_retained_surface_artwork_is_boundary_inclusive_and_released(
     indexed = IndexedPlaneGeometry.build(geometry)
     assert indexed is not None
     cold_ordered_boolean_builds = 0
+    component_spools: list[object] = []
+    real_temporary_file = spd_adapter.TemporaryFile
+
+    def tracked_temporary_file():
+        spool = real_temporary_file()
+        component_spools.append(spool)
+        return spool
+
+    monkeypatch.setattr(spd_adapter, "TemporaryFile", tracked_temporary_file)
     real_artwork_components = IndexedPlaneGeometry._artwork_components
 
     def count_cold_ordered_boolean_builds(
@@ -1482,22 +1492,31 @@ def test_retained_surface_artwork_is_boundary_inclusive_and_released(
         (geometry,),
         indexed_geometry_by_key={("l1", "vdd"): indexed},
     )
-    expected = retained.island_ids_by_surface[("vdd", "l1")][0]
+    expected = retained.island_ids_by_surface[("vdd", "l1")]
 
     assert -1 not in indexed._shape_cache
     assert retained.surface_resolver_batch(
-        "VDD", "L1", ("edge", "inside"), ((0.0, 5.0), (5.0, 5.0))
-    ) == (expected, expected)
+        "VDD",
+        "L1",
+        ("edge", "inside", "second"),
+        ((0.0, 5.0), (5.0, 5.0), (25.0, 5.0)),
+    ) == (expected[0], expected[0], expected[1])
     assert retained.artwork_components_batch(
-        "VDD", "L1", ((0.0, 5.0), (5.0, 5.0))
-    ) == (None, 0)
+        "VDD", "L1", ((0.0, 5.0), (5.0, 5.0), (25.0, 5.0))
+    ) == (None, 0, 1)
     retained.release("VDD", "L1")
     assert -1 not in indexed._shape_cache
     assert retained.surface_resolver(
         "VDD", "L1", "inside-again", 5.0, 5.0
-    ) == expected
+    ) == expected[0]
     retained.release("VDD", "L1")
     assert cold_ordered_boolean_builds == 1
+    assert component_spools[0].tell() > 0
+    component_spools[0].truncate(0)
+    with pytest.raises(SpdImportError, match="retained ordered artwork cannot be restored"):
+        retained.surface_resolver("VDD", "L1", "truncated", 5.0, 5.0)
+    retained.close()
+    assert component_spools[0].closed
 
 
 def test_retarget_destination_hash_does_not_duplicate_request_identities(

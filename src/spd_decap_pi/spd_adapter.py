@@ -8,6 +8,7 @@ from hashlib import sha256
 import json
 from math import hypot, isclose, isfinite
 from pathlib import Path
+from tempfile import TemporaryFile
 from time import perf_counter
 from types import SimpleNamespace
 from typing import Any
@@ -299,6 +300,7 @@ class _RetainedSurfaceArtwork:
         [str, str, Sequence[tuple[float, float]]], Sequence[object | None]
     ]
     release: Callable[[str, str], None]
+    close: Callable[[], None]
     geometry_assets: list[dict[str, Any]]
     target_layers_by_net: dict[str, set[str]]
     island_ids_by_surface: dict[tuple[str, str], tuple[str, ...]]
@@ -2074,7 +2076,10 @@ def _retained_surface_artwork(
 
     indexes: dict[tuple[str, str], IndexedPlaneGeometry] = {}
     component_island_ids: dict[tuple[str, str], tuple[str, ...]] = {}
-    component_wkb_by_key: dict[tuple[str, str], tuple[bytes, ...]] = {}
+    component_wkb_file = TemporaryFile()
+    component_wkb_refs_by_key: dict[
+        tuple[str, str], tuple[tuple[int, int], ...]
+    ] = {}
     identities: list[dict[str, Any]] = []
     target_layers_by_net: dict[str, set[str]] = {}
     target_surface_island_ids: dict[tuple[str, str], tuple[str, ...]] = {}
@@ -2105,15 +2110,22 @@ def _retained_surface_artwork(
             indexes[active_key].release_artwork_shape()
         active_artwork = None
         active_key = None
-        component_wkbs = component_wkb_by_key.get(key)
-        if component_wkbs is None:
+        component_wkb_refs = component_wkb_refs_by_key.get(key)
+        if component_wkb_refs is None:
             return key, indexed, None
         try:
             from shapely.prepared import prep
             from shapely.strtree import STRtree
             from shapely.wkb import loads as load_wkb
 
-            components = tuple(load_wkb(item) for item in component_wkbs)
+            restored = []
+            for offset, length in component_wkb_refs:
+                component_wkb_file.seek(offset)
+                payload = component_wkb_file.read(length)
+                if len(payload) != length:
+                    raise ValueError("retained component WKB is truncated")
+                restored.append(load_wkb(payload))
+            components = tuple(restored)
             active_artwork = (
                 components,
                 STRtree(components),
@@ -2136,6 +2148,21 @@ def _retained_surface_artwork(
         if active_key == key:
             active_artwork = None
             active_key = None
+
+    def close() -> None:
+        nonlocal active_artwork, active_key
+        if active_key is not None:
+            indexes[active_key].release_artwork_shape()
+        active_artwork = None
+        active_key = None
+        component_wkb_refs_by_key.clear()
+        component_wkb_file.close()
+
+    def retain_component_wkb(component: object) -> tuple[int, int]:
+        payload = bytes(component.wkb)
+        offset = component_wkb_file.tell()
+        component_wkb_file.write(payload)
+        return offset, len(payload)
 
     check_cancelled()
     emit(0, "Indexing retained layer-surface artwork")
@@ -2240,8 +2267,8 @@ def _retained_surface_artwork(
                 ]
                 for component in components
             )
-            aligned_component_wkbs = tuple(
-                bytes(component.wkb) for component in components
+            aligned_component_wkb_refs = tuple(
+                retain_component_wkb(component) for component in components
             )
         except (KeyError, ValueError, ArithmeticError) as exc:
             raise SpdImportError(
@@ -2257,7 +2284,7 @@ def _retained_surface_artwork(
                 f"are not unique for {net!r} on {layer!r}"
             )
         component_island_ids[key] = aligned_ids
-        component_wkb_by_key[key] = aligned_component_wkbs
+        component_wkb_refs_by_key[key] = aligned_component_wkb_refs
         canonical_ids = tuple(sorted(aligned_ids))
         target_surface_island_ids[key] = canonical_ids
         target_layers_by_net.setdefault(net.casefold(), set()).add(layer)
@@ -2602,6 +2629,7 @@ def _retained_surface_artwork(
         artwork_component=artwork_component,
         artwork_components_batch=artwork_components_batch,
         release=release,
+        close=close,
         geometry_assets=identities,
         target_layers_by_net=target_layers_by_net,
         island_ids_by_surface=target_surface_island_ids,
@@ -7348,6 +7376,8 @@ def import_spd_scenario(
         ),
         is_cancelled=cancelled,
     )
+    surface_artwork.close()
+    del surface_artwork
     ground_recovery_s = perf_counter() - ground_recovery_started
     mixed_witnesses: dict[str, MixedReferenceGroundWitness] = {}
     mixed_ground_reachability_by_rail: list[dict[str, Any]] = []
