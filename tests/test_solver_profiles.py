@@ -132,6 +132,14 @@ def _manufactured_project(*, include_certificate: bool = True) -> tuple[ProjectS
         "source_name": "manufactured.spd",
         "source_sha256": source_sha256,
         "plane_geometries": records,
+        "selected_plane_pair_provenance": {
+            "VDD": {
+                "rail_net": "VDD",
+                "pwr_layer": "PWR",
+                "gnd_layer": "GND",
+                "source_sha256": source_sha256,
+            }
+        },
     }
     if include_certificate:
         spd_import["uniform_component_connectivity_certificate"] = {

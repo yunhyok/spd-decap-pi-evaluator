@@ -15,6 +15,8 @@ from spd_decap_pi._core.domain import (
     CapModel,
     ConfidenceLevel,
     ImpedanceSample,
+    MixedReferenceCertificate,
+    MixedReferenceGroundWitness,
     MLOOutline,
     PinKind,
     PinRecord,
@@ -269,7 +271,7 @@ def test_old_bundle_geometry_blocker_requests_raw_spd_provenance_refresh() -> No
     preflight = preflight_evaluation_connectivity(legacy, ("RAIL_VDD",))
     message = preflight.message()
     assert "SOURCE_GRAPH_PROVENANCE_REFRESH_REQUIRED" in message
-    assert "Re-import the matching raw SPD in v0.22.7" in message
+    assert "Re-import the matching raw SPD in v0.22.7 or later" in message
     assert scenario.source.path in message
 
 
@@ -376,6 +378,10 @@ def test_unresolved_source_plane_pair_blocks_selected_rail_under_both_policies()
             item.reason.startswith("SOURCE_GRAPH_PLANE_PAIR_UNRESOLVED:")
             for item in preflight.blockers
         )
+    with pytest.raises(ScenarioEvaluationPreflightError):
+        build_evaluation_project(
+            blocked, evaluation_rail_id="RAIL_VDD", _project=blocked_project
+        )
     duplicate_metadata = dict(project.metadata)
     duplicate_metadata["spd_import"] = {
         **metadata["spd_import"],
@@ -393,6 +399,412 @@ def test_unresolved_source_plane_pair_blocks_selected_rail_under_both_policies()
     assert any(
         item.reason.startswith("SOURCE_GRAPH_PROVENANCE_DUPLICATE_KEY:")
         for item in duplicate_preflight.blockers
+    )
+
+
+def test_stale_source_graph_bundle_cannot_be_rescued_by_embedded_alternate() -> None:
+    scenario, attachments = _alternate_fixture()
+    metadata = dict(scenario.base_project.metadata)
+    spd_import = dict(metadata["spd_import"])
+    spd_import.pop("selected_plane_pair_provenance", None)
+    metadata["spd_import"] = spd_import
+    project = scenario.base_project.model_copy(
+        update={"app_version": "0.22.6", "metadata": metadata}
+    )
+    stale = scenario.model_copy(
+        update={"normalized_project": project.model_dump(mode="python")}
+    )
+    preflight = preflight_evaluation_connectivity(
+        stale,
+        ("RAIL_VDD",),
+        attachments=attachments,
+        evaluation_policy=evaluation_module.EVALUATION_POLICY_EMBEDDED_ALTERNATE,
+    )
+    assert not preflight.is_clear
+    assert any(
+        item.reason.startswith("SOURCE_GRAPH_PROVENANCE_REFRESH_REQUIRED:")
+        for item in preflight.blockers
+    )
+
+
+def test_source_graph_binding_mismatch_is_hard_under_both_policies() -> None:
+    scenario = _scenario()
+    metadata = dict(scenario.base_project.metadata)
+    metadata["spd_import"] = {
+        **metadata["spd_import"],
+        "source_sha256": "b" * 64,
+        "selected_plane_pair_provenance": {"VDD": {}},
+    }
+    project = scenario.base_project.model_copy(update={"metadata": metadata})
+    for policy in (
+        evaluation_module.EVALUATION_POLICY_STRICT,
+        evaluation_module.EVALUATION_POLICY_EMBEDDED_ALTERNATE,
+    ):
+        preflight = preflight_evaluation_connectivity(
+            scenario, ("RAIL_VDD",), _project=project, evaluation_policy=policy
+        )
+        assert any(
+            item.reason.startswith("SOURCE_GRAPH_SOURCE_BINDING_MISMATCH:")
+            for item in preflight.blockers
+        )
+    with pytest.raises(ScenarioEvaluationPreflightError):
+        build_evaluation_project(
+            scenario, evaluation_rail_id="RAIL_VDD", _project=project
+        )
+
+
+def test_empty_selected_plane_pair_proof_is_not_modelable() -> None:
+    scenario = _scenario()
+    metadata = dict(scenario.base_project.metadata)
+    metadata["spd_import"] = {
+        **metadata["spd_import"],
+        "source_sha256": scenario.source.sha256,
+        "selected_plane_pair_provenance": {"VDD": {}},
+    }
+    project = scenario.base_project.model_copy(update={"metadata": metadata})
+    for policy in (
+        evaluation_module.EVALUATION_POLICY_STRICT,
+        evaluation_module.EVALUATION_POLICY_EMBEDDED_ALTERNATE,
+    ):
+        preflight = preflight_evaluation_connectivity(
+            scenario, ("RAIL_VDD",), _project=project, evaluation_policy=policy
+        )
+        assert any(
+            item.reason.startswith("SOURCE_GRAPH_PROVENANCE_INVALID:")
+            for item in preflight.blockers
+        )
+    with pytest.raises(ScenarioEvaluationPreflightError):
+        build_evaluation_project(
+            scenario, evaluation_rail_id="RAIL_VDD", _project=project
+        )
+
+
+def test_source_bound_bundle_without_plane_pair_provenance_is_not_modelable() -> None:
+    scenario = _scenario()
+    metadata = dict(scenario.base_project.metadata)
+    metadata["spd_import"] = {
+        **metadata["spd_import"],
+        "source_sha256": scenario.source.sha256,
+    }
+    project = scenario.base_project.model_copy(update={"metadata": metadata})
+    for policy in (
+        evaluation_module.EVALUATION_POLICY_STRICT,
+        evaluation_module.EVALUATION_POLICY_EMBEDDED_ALTERNATE,
+    ):
+        preflight = preflight_evaluation_connectivity(
+            scenario, ("RAIL_VDD",), _project=project, evaluation_policy=policy
+        )
+        assert any(
+            item.reason.startswith("SOURCE_GRAPH_PROVENANCE_INVALID:")
+            for item in preflight.blockers
+        )
+
+
+def test_source_bound_bundle_with_empty_plane_pair_provenance_is_not_modelable() -> None:
+    scenario = _scenario()
+    metadata = dict(scenario.base_project.metadata)
+    metadata["spd_import"] = {
+        **metadata["spd_import"],
+        "source_sha256": scenario.source.sha256,
+        "selected_plane_pair_provenance": {},
+    }
+    project = scenario.base_project.model_copy(update={"metadata": metadata})
+    for policy in (
+        evaluation_module.EVALUATION_POLICY_STRICT,
+        evaluation_module.EVALUATION_POLICY_EMBEDDED_ALTERNATE,
+    ):
+        preflight = preflight_evaluation_connectivity(
+            scenario, ("RAIL_VDD",), _project=project, evaluation_policy=policy
+        )
+        assert any(
+            item.reason.startswith("SOURCE_GRAPH_PROVENANCE_INVALID:")
+            for item in preflight.blockers
+        )
+
+
+def test_current_source_bound_empty_provenance_cannot_use_mixed_reference_witness() -> None:
+    scenario = _scenario()
+    source_sha = scenario.source.sha256
+    certificate = MixedReferenceCertificate(
+        rail_net="VDD",
+        gnd_net="DGND",
+        pwr_layer="PWR1",
+        gnd_layer="GND1",
+        pwr_asset_sha256="a" * 64,
+        gnd_asset_sha256="b" * 64,
+        overlap_fraction=1.0,
+        dominant_overlap_component_fraction=1.0,
+    )
+    witness = MixedReferenceGroundWitness(
+        rail_net="VDD",
+        gnd_net="DGND",
+        pwr_layer="PWR1",
+        gnd_layer="GND1",
+        gnd_asset_sha256="b" * 64,
+        source_sha256=source_sha,
+        landing_identities=(),
+        landing_count=0,
+        landing_identities_sha256=sha256(b"[]\n").hexdigest(),
+    )
+    rail = scenario.base_project.rails[0].model_copy(
+        update={
+            "mixed_reference_certificate": certificate,
+            "mixed_reference_ground_witness": witness,
+        }
+    )
+    metadata = dict(scenario.base_project.metadata)
+    metadata["spd_import"] = {
+        **metadata["spd_import"],
+        "source_sha256": source_sha,
+        "counts": {},
+        "selected_plane_pair_provenance": {},
+    }
+    project = scenario.base_project.model_copy(
+        update={"rails": [rail], "metadata": metadata}
+    )
+    for policy in (
+        evaluation_module.EVALUATION_POLICY_STRICT,
+        evaluation_module.EVALUATION_POLICY_EMBEDDED_ALTERNATE,
+    ):
+        preflight = preflight_evaluation_connectivity(
+            scenario,
+            (rail.rail_id,),
+            _project=project,
+            evaluation_policy=policy,
+        )
+        assert any(
+            item.reason.startswith("SOURCE_GRAPH_PROVENANCE_INVALID:")
+            for item in preflight.blockers
+        )
+    for policy in (
+        evaluation_module.EVALUATION_POLICY_STRICT,
+        evaluation_module.EVALUATION_POLICY_EMBEDDED_ALTERNATE,
+    ):
+        with pytest.raises(ScenarioEvaluationPreflightError):
+            build_evaluation_project(
+                scenario,
+                evaluation_rail_id=rail.rail_id,
+                _project=project,
+                evaluation_policy=policy,
+            )
+
+
+def test_selected_provenance_alias_matching_is_order_independent_and_fail_closed() -> None:
+    scenario = _scenario()
+    source_sha = scenario.source.sha256
+    valid = {
+        "rail_net": "VDD",
+        "pwr_layer": "PWR1",
+        "gnd_layer": "GND1",
+        "source_sha256": source_sha,
+    }
+    unresolved = {
+        "rail_net": "VDD",
+        "source_graph_pair_unresolved": True,
+    }
+    for entries in (
+        (("RAIL_VDD", valid), ("VDD", unresolved)),
+        (("VDD", unresolved), ("RAIL_VDD", valid)),
+    ):
+        metadata = dict(scenario.base_project.metadata)
+        metadata["spd_import"] = {
+            **metadata["spd_import"],
+            "source_sha256": source_sha,
+            "selected_plane_pair_provenance": dict(entries),
+        }
+        project = scenario.base_project.model_copy(update={"metadata": metadata})
+        for policy in (
+            evaluation_module.EVALUATION_POLICY_STRICT,
+            evaluation_module.EVALUATION_POLICY_EMBEDDED_ALTERNATE,
+        ):
+            preflight = preflight_evaluation_connectivity(
+                scenario,
+                ("RAIL_VDD",),
+                _project=project,
+                evaluation_policy=policy,
+            )
+            assert any(
+                item.reason.startswith("SOURCE_GRAPH_PLANE_PAIR_UNRESOLVED:")
+                for item in preflight.blockers
+            )
+        for policy in (
+            evaluation_module.EVALUATION_POLICY_STRICT,
+            evaluation_module.EVALUATION_POLICY_EMBEDDED_ALTERNATE,
+        ):
+            with pytest.raises(ScenarioEvaluationPreflightError) as captured:
+                build_evaluation_project(
+                    scenario,
+                    evaluation_rail_id="RAIL_VDD",
+                    _project=project,
+                    evaluation_policy=policy,
+                )
+            assert "SOURCE_GRAPH_PLANE_PAIR_UNRESOLVED:" in str(captured.value)
+
+    for entries, expected_prefix in (
+        ((("OTHER", valid),), "SOURCE_GRAPH_PROVENANCE_INVALID:"),
+        (
+            (("RAIL_VDD", valid), ("VDD", dict(valid))),
+            "SOURCE_GRAPH_PROVENANCE_AMBIGUOUS:",
+        ),
+    ):
+        metadata = dict(scenario.base_project.metadata)
+        metadata["spd_import"] = {
+            **metadata["spd_import"],
+            "source_sha256": source_sha,
+            "selected_plane_pair_provenance": dict(entries),
+        }
+        project = scenario.base_project.model_copy(update={"metadata": metadata})
+        preflight = preflight_evaluation_connectivity(
+            scenario, ("RAIL_VDD",), _project=project
+        )
+        assert any(item.reason.startswith(expected_prefix) for item in preflight.blockers)
+        for policy in (
+            evaluation_module.EVALUATION_POLICY_STRICT,
+            evaluation_module.EVALUATION_POLICY_EMBEDDED_ALTERNATE,
+        ):
+            with pytest.raises(ScenarioEvaluationPreflightError):
+                build_evaluation_project(
+                    scenario,
+                    evaluation_rail_id="RAIL_VDD",
+                    _project=project,
+                    evaluation_policy=policy,
+                )
+
+
+def test_present_non_mapping_spd_import_metadata_is_not_a_synthetic_exemption() -> None:
+    scenario = _scenario()
+    metadata = dict(scenario.base_project.metadata)
+    metadata["spd_import"] = ["malformed"]
+    project = scenario.base_project.model_copy(update={"metadata": metadata})
+    for policy in (
+        evaluation_module.EVALUATION_POLICY_STRICT,
+        evaluation_module.EVALUATION_POLICY_EMBEDDED_ALTERNATE,
+    ):
+        preflight = preflight_evaluation_connectivity(
+            scenario,
+            ("RAIL_VDD",),
+            _project=project,
+            evaluation_policy=policy,
+        )
+        assert any(
+            item.reason.startswith("SOURCE_GRAPH_PROVENANCE_INVALID:")
+            for item in preflight.blockers
+        )
+    for policy in (
+        evaluation_module.EVALUATION_POLICY_STRICT,
+        evaluation_module.EVALUATION_POLICY_EMBEDDED_ALTERNATE,
+    ):
+        with pytest.raises(ScenarioEvaluationPreflightError):
+            build_evaluation_project(
+                scenario,
+                evaluation_rail_id="RAIL_VDD",
+                _project=project,
+                evaluation_policy=policy,
+            )
+
+
+def test_unresolved_alias_precedes_source_binding_mismatch() -> None:
+    scenario = _scenario()
+    metadata = dict(scenario.base_project.metadata)
+    metadata["spd_import"] = {
+        **metadata["spd_import"],
+        "source_sha256": "b" * 64,
+        "selected_plane_pair_provenance": {
+            "VDD": {"source_graph_pair_unresolved": True}
+        },
+    }
+    project = scenario.base_project.model_copy(update={"metadata": metadata})
+    for policy in (
+        evaluation_module.EVALUATION_POLICY_STRICT,
+        evaluation_module.EVALUATION_POLICY_EMBEDDED_ALTERNATE,
+    ):
+        preflight = preflight_evaluation_connectivity(
+            scenario,
+            ("RAIL_VDD",),
+            _project=project,
+            evaluation_policy=policy,
+        )
+        assert any(
+            item.reason.startswith("SOURCE_GRAPH_PLANE_PAIR_UNRESOLVED:")
+            for item in preflight.blockers
+        )
+    with pytest.raises(ScenarioEvaluationPreflightError) as captured:
+        build_evaluation_project(
+            scenario,
+            evaluation_rail_id="RAIL_VDD",
+            _project=project,
+            evaluation_policy=evaluation_module.EVALUATION_POLICY_EMBEDDED_ALTERNATE,
+        )
+    assert "SOURCE_GRAPH_PLANE_PAIR_UNRESOLVED:" in str(captured.value)
+
+
+def test_selected_plane_pair_proof_for_wrong_layers_is_not_modelable() -> None:
+    scenario = _scenario()
+    metadata = dict(scenario.base_project.metadata)
+    metadata["spd_import"] = {
+        **metadata["spd_import"],
+        "source_sha256": scenario.source.sha256,
+        "selected_plane_pair_provenance": {
+            "VDD": {
+                "pwr_layer": "OTHER_PWR",
+                "gnd_layer": "OTHER_GND",
+                "source_sha256": scenario.source.sha256,
+            }
+        },
+    }
+    project = scenario.base_project.model_copy(update={"metadata": metadata})
+    for policy in (
+        evaluation_module.EVALUATION_POLICY_STRICT,
+        evaluation_module.EVALUATION_POLICY_EMBEDDED_ALTERNATE,
+    ):
+        preflight = preflight_evaluation_connectivity(
+            scenario, ("RAIL_VDD",), _project=project, evaluation_policy=policy
+        )
+        assert any(
+            item.reason.startswith("SOURCE_GRAPH_PROVENANCE_INVALID:")
+            for item in preflight.blockers
+        )
+
+
+def test_selected_plane_pair_proof_without_bundle_source_hash_is_not_modelable() -> None:
+    scenario = _scenario()
+    metadata = dict(scenario.base_project.metadata)
+    spd_import = dict(metadata["spd_import"])
+    spd_import.pop("source_sha256", None)
+    spd_import["selected_plane_pair_provenance"] = {
+        "VDD": {
+            "pwr_layer": "PWR1",
+            "gnd_layer": "GND1",
+            "source_sha256": scenario.source.sha256,
+        }
+    }
+    metadata["spd_import"] = spd_import
+    project = scenario.base_project.model_copy(update={"metadata": metadata})
+    preflight = preflight_evaluation_connectivity(
+        scenario, ("RAIL_VDD",), _project=project
+    )
+    assert any(
+        item.reason.startswith("SOURCE_GRAPH_SOURCE_BINDING_MISMATCH:")
+        for item in preflight.blockers
+    )
+    mixed = dict(spd_import)
+    mixed["selected_plane_pair_provenance"] = {
+        "VDD": {"source_graph_pair_unresolved": True},
+        "OTHER": {
+            "pwr_layer": "PWR1",
+            "gnd_layer": "GND1",
+            "source_sha256": scenario.source.sha256,
+        },
+    }
+    mixed_project = scenario.base_project.model_copy(
+        update={"metadata": {**metadata, "spd_import": mixed}}
+    )
+    mixed_preflight = preflight_evaluation_connectivity(
+        scenario, ("RAIL_VDD",), _project=mixed_project
+    )
+    assert any(
+        item.reason.startswith("SOURCE_GRAPH_PLANE_PAIR_UNRESOLVED:")
+        for item in mixed_preflight.blockers
     )
 
 
@@ -934,6 +1346,13 @@ def _alternate_fixture() -> tuple[ScenarioSpec, dict[str, bytes]]:
         **metadata["spd_import"],
         "source_sha256": scenario.source.sha256,
         "plane_geometries": [pwr_record, gnd_record],
+        "selected_plane_pair_provenance": {
+            "VDD": {
+                "pwr_layer": "PWR1",
+                "gnd_layer": "GND1",
+                "source_sha256": scenario.source.sha256,
+            }
+        },
     }
     project = project.model_copy(update={"stackup_layers": layers, "partitions": [partition], "metadata": metadata})
     return scenario.model_copy(update={"normalized_project": project.model_dump(mode="python")}), {pwr_record["asset"]: pwr, gnd_record["asset"]: gnd}

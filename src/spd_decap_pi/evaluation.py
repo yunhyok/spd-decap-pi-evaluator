@@ -780,6 +780,272 @@ def _source_graph_provenance_refresh_required(
     except (TypeError, ValueError):
         return False
     return (major, minor, patch) < (0, 22, 7)
+
+
+def _source_graph_provenance_blockers(
+    scenario: ScenarioSpec,
+    project: ProjectSpec,
+    rail_ids: Sequence[str],
+) -> tuple[EvaluationConnectivityBlocker, ...]:
+    """Return hard blockers for an SPD bundle with invalid graph provenance.
+
+    Embedded alternate geometry is an electrical approximation, not a repair
+    for stale or malformed source identity.  Keep these checks separate from
+    the ordinary terminal/partition preflight so the alternate policy cannot
+    rescue a bundle whose source graph proof is absent or bound to another SPD.
+    Synthetic scenarios intentionally remain unaffected when they do not carry
+    ``spd_import`` source metadata.
+    """
+
+    if "spd_import" not in project.metadata:
+        return ()
+    metadata = project.metadata.get("spd_import")
+    if not isinstance(metadata, Mapping):
+        reason = (
+            "SOURCE_GRAPH_PROVENANCE_INVALID: project metadata spd_import "
+            "must be an object when present; re-import matching raw SPD"
+        )
+        return tuple(
+            EvaluationConnectivityBlocker(
+                rail_id=rail_id,
+                refdes="<source graph provenance>",
+                kind=DecapConnectionKind.UNRESOLVED,
+                reason=reason,
+            )
+            for rail_id in rail_ids
+        )
+    source_sha = str(metadata.get("source_sha256", "")).strip().casefold()
+    expected_sha = str(scenario.source.sha256).strip().casefold()
+    source_binding_mismatch = bool(
+        source_sha and (len(source_sha) != 64 or source_sha != expected_sha)
+    )
+
+    def source_binding_blockers() -> tuple[EvaluationConnectivityBlocker, ...]:
+        reason = (
+            "SOURCE_GRAPH_SOURCE_BINDING_MISMATCH: retained SPD source SHA-256 "
+            f"{source_sha or '<missing>'} does not match the scenario source "
+            f"{expected_sha}; re-import the matching raw SPD."
+        )
+        return tuple(
+            EvaluationConnectivityBlocker(
+                rail_id=rail_id,
+                refdes="<source graph provenance>",
+                kind=DecapConnectionKind.UNRESOLVED,
+                reason=reason,
+            )
+            for rail_id in rail_ids
+        )
+    if _source_graph_provenance_refresh_required(scenario, project):
+        source_path = str(scenario.source.path)
+        reason = (
+            "SOURCE_GRAPH_PROVENANCE_REFRESH_REQUIRED: retained bundle "
+            f"source={source_path} sha256={scenario.source.sha256} lacks "
+            "v0.22.7 source-exact plane-pair graph provenance. Re-import the "
+            "matching raw SPD in v0.22.7 or later; the loaded bundle remains "
+            "unchanged."
+        )
+        return tuple(
+            EvaluationConnectivityBlocker(
+                rail_id=rail_id,
+                refdes="<scenario migration>",
+                kind=DecapConnectionKind.UNRESOLVED,
+                reason=reason,
+            )
+            for rail_id in rail_ids
+        )
+
+    # A source-bound bundle is expected to carry the provenance map emitted by
+    # the importer.  Missing/empty maps are malformed even before a rail proof
+    # can be selected.  Metadata-only synthetic scenarios without a retained
+    # source SHA remain outside this contract.
+    if "selected_plane_pair_provenance" not in metadata:
+        if source_binding_mismatch:
+            return source_binding_blockers()
+        if not source_sha:
+            return ()
+        reason = (
+            "SOURCE_GRAPH_PROVENANCE_INVALID: source-bound bundle is missing "
+            "selected plane-pair provenance; re-import matching raw SPD"
+        )
+        return tuple(
+            EvaluationConnectivityBlocker(
+                rail_id=rail_id,
+                refdes="<source graph provenance>",
+                kind=DecapConnectionKind.UNRESOLVED,
+                reason=reason,
+            )
+            for rail_id in rail_ids
+        )
+    provenance = metadata.get("selected_plane_pair_provenance")
+    if not isinstance(provenance, Mapping):
+        invalid_keys = {rail_id.casefold() for rail_id in rail_ids}
+        return tuple(
+            EvaluationConnectivityBlocker(
+                rail_id=rail_id,
+                refdes="<source graph provenance>",
+                kind=DecapConnectionKind.UNRESOLVED,
+                reason=(
+                    "SOURCE_GRAPH_PROVENANCE_INVALID: selected plane-pair "
+                    "provenance is not an object for selected rail(s) "
+                    f"{', '.join(sorted(invalid_keys))}"
+                ),
+            )
+            for rail_id in rail_ids
+        )
+    if not provenance:
+        if source_binding_mismatch:
+            return source_binding_blockers()
+        if not source_sha:
+            return ()
+        reason = (
+            "SOURCE_GRAPH_PROVENANCE_INVALID: source-bound bundle has an empty "
+            "selected plane-pair provenance map; re-import matching raw SPD"
+        )
+        return tuple(
+            EvaluationConnectivityBlocker(
+                rail_id=rail_id,
+                refdes="<source graph provenance>",
+                kind=DecapConnectionKind.UNRESOLVED,
+                reason=reason,
+            )
+            for rail_id in rail_ids
+        )
+    provenance_key_counts: dict[str, int] = {}
+    for raw_key in provenance:
+        folded_key = str(raw_key).casefold()
+        provenance_key_counts[folded_key] = provenance_key_counts.get(folded_key, 0) + 1
+    duplicate_keys = sorted(
+        key for key, count in provenance_key_counts.items() if count > 1
+    )
+    if duplicate_keys:
+        reason = (
+            "SOURCE_GRAPH_PROVENANCE_DUPLICATE_KEY: persisted plane-pair "
+            "provenance contains duplicate case-insensitive rail key(s): "
+            + ", ".join(duplicate_keys)
+        )
+        return tuple(
+            EvaluationConnectivityBlocker(
+                rail_id=rail_id,
+                refdes="<source graph provenance>",
+                kind=DecapConnectionKind.UNRESOLVED,
+                reason=reason,
+            )
+            for rail_id in rail_ids
+        )
+    if source_binding_mismatch:
+        rail_by_key = {item.rail_id.casefold(): item for item in project.rails}
+        selected_unresolved = False
+        for rail_id in rail_ids:
+            rail = rail_by_key.get(rail_id.casefold())
+            aliases = {rail_id.casefold()}
+            if rail is not None:
+                aliases.add(str(rail.net).casefold())
+            selected_unresolved = selected_unresolved or any(
+                str(raw_key).casefold() in aliases
+                and isinstance(value, Mapping)
+                and bool(value.get("source_graph_pair_unresolved"))
+                for raw_key, value in provenance.items()
+            )
+        if not selected_unresolved:
+            return source_binding_blockers()
+    rail_by_key = {item.rail_id.casefold(): item for item in project.rails}
+    blockers: list[EvaluationConnectivityBlocker] = []
+    for rail_id in rail_ids:
+        rail = rail_by_key.get(rail_id.casefold())
+        aliases = {rail_id.casefold()}
+        if rail is not None:
+            aliases.add(str(rail.net).casefold())
+        matching_proofs = sorted(
+            (
+                (str(raw_key), value)
+                for raw_key, value in provenance.items()
+                if str(raw_key).casefold() in aliases
+            ),
+            key=lambda item: (item[0].casefold(), item[0]),
+        )
+        unresolved_matches = [
+            item
+            for item in matching_proofs
+            if isinstance(item[1], Mapping)
+            and bool(item[1].get("source_graph_pair_unresolved"))
+        ]
+        if unresolved_matches:
+            blockers.append(
+                EvaluationConnectivityBlocker(
+                    rail_id=rail_id,
+                    refdes="<source graph plane pair>",
+                    kind=DecapConnectionKind.UNRESOLVED,
+                    reason=(
+                        "SOURCE_GRAPH_PLANE_PAIR_UNRESOLVED: selected rail has "
+                        "no source-proven PWR/GND pair; re-import matching raw SPD"
+                    ),
+                )
+            )
+            continue
+        if len(matching_proofs) == 0:
+            proof: object | None = None
+            provenance_reason = (
+                "SOURCE_GRAPH_PROVENANCE_INVALID: selected rail has no "
+                "matching rail-id/net plane-pair proof; re-import matching raw SPD"
+            )
+        elif len(matching_proofs) > 1:
+            proof = None
+            matched_keys = ", ".join(item[0] for item in matching_proofs)
+            provenance_reason = (
+                "SOURCE_GRAPH_PROVENANCE_AMBIGUOUS: selected rail matches "
+                f"multiple rail-id/net plane-pair proofs ({matched_keys})"
+            )
+        else:
+            proof = matching_proofs[0][1]
+            provenance_reason = ""
+        if len(matching_proofs) != 1:
+            blockers.append(
+                EvaluationConnectivityBlocker(
+                    rail_id=rail_id,
+                    refdes="<source graph provenance>",
+                    kind=DecapConnectionKind.UNRESOLVED,
+                    reason=provenance_reason,
+                )
+            )
+            continue
+        required = ("pwr_layer", "gnd_layer", "source_sha256")
+        valid = isinstance(proof, Mapping) and bool(proof) and all(
+            str(proof.get(field, "")).strip() for field in required
+        )
+        if valid and not source_sha:
+            valid = False
+        if valid and str(proof.get("source_sha256", "")).casefold() != expected_sha:
+            valid = False
+        if valid and rail is not None:
+            valid = (
+                str(proof.get("pwr_layer", "")).casefold()
+                == str(rail.pwr_layer).casefold()
+                and str(proof.get("gnd_layer", "")).casefold()
+                == str(rail.gnd_layer).casefold()
+            )
+        if not valid:
+            blockers.append(
+                EvaluationConnectivityBlocker(
+                    rail_id=rail_id,
+                    refdes="<source graph provenance>",
+                    kind=DecapConnectionKind.UNRESOLVED,
+                    reason=(
+                        provenance_reason
+                        or (
+                            "SOURCE_GRAPH_SOURCE_BINDING_MISMATCH: selected "
+                            "plane-pair provenance is present but the retained "
+                            "SPD source SHA-256 is missing; re-import matching raw SPD"
+                            if not source_sha
+                            else "SOURCE_GRAPH_PROVENANCE_INVALID: selected rail lacks "
+                            "a non-empty source-bound PWR/GND plane-pair proof; "
+                            "re-import matching raw SPD"
+                        )
+                    ),
+                )
+            )
+    return tuple(blockers)
+
+
 def _outside_terminal_blocker(
     *,
     rail: RailSpec,
@@ -1714,6 +1980,7 @@ def preflight_evaluation_connectivity(
     attachments: Mapping[str, bytes] | None = None,
     _skip_geometry: bool = False,
     _alternate_cache: dict[tuple[str, str, str, str], _AlternateEvaluationContext] | None = None,
+    _skip_source_graph_provenance: bool = False,
 ) -> EvaluationConnectivityPreflight:
     """Aggregate fail-closed source-connectivity blockers for selected rails.
 
@@ -1728,6 +1995,17 @@ def preflight_evaluation_connectivity(
         raise ScenarioEvaluationBuildError("EVALUATION_POLICY_UNKNOWN", f"unknown Evaluation geometry policy {evaluation_policy!r}")
     project = _project if _project is not None else scenario.base_project
     canonical_rails = _canonical_rail_ids(scenario, rail_ids, _project=project)
+    if not _skip_source_graph_provenance:
+        source_graph_blockers = _source_graph_provenance_blockers(
+            scenario, project, canonical_rails
+        )
+        if source_graph_blockers:
+            # Source identity/provenance failures are hard gates under every
+            # geometry policy.  In particular, EMBEDDED_ALTERNATE must not turn
+            # a stale or malformed source graph into a selectable evaluation.
+            return EvaluationConnectivityPreflight(
+                canonical_rails, source_graph_blockers
+            )
     if evaluation_policy == EVALUATION_POLICY_EMBEDDED_ALTERNATE:
         blockers: list[EvaluationConnectivityBlocker] = []
         for rail_id in canonical_rails:
@@ -1751,7 +2029,7 @@ def preflight_evaluation_connectivity(
             if context is None:
                 blockers.extend(strict.blockers)
                 continue
-            alternate = preflight_evaluation_connectivity(context.scenario, (rail_id,), _project=context.project, evaluation_policy=EVALUATION_POLICY_STRICT, attachments=attachments, _skip_geometry=True, _alternate_cache=_alternate_cache)
+            alternate = preflight_evaluation_connectivity(context.scenario, (rail_id,), _project=context.project, evaluation_policy=EVALUATION_POLICY_STRICT, attachments=attachments, _skip_geometry=True, _alternate_cache=_alternate_cache, _skip_source_graph_provenance=True)
             blockers.extend(alternate.blockers)
         return EvaluationConnectivityPreflight(canonical_rails, tuple(blockers))
     _require_current_shared_pad_analysis(scenario)
@@ -1944,30 +2222,6 @@ def preflight_evaluation_connectivity(
             scenario, canonical_rails, _project=project
         )
         blockers.extend(geometry_blockers)
-        if _source_graph_provenance_refresh_required(scenario, project):
-            # The retained bundle — not one rail's geometry — is what cannot
-            # prove the v0.22.7 source plane pair, so every selected rail is
-            # blocked.  Gating this on another rail's geometry blockers would
-            # both blame a clean rail and let the remaining selected rails run
-            # strictly without any source-graph proof.
-            source_path = str(scenario.source.path)
-            source_sha = str(scenario.source.sha256)
-            blockers.extend(
-                EvaluationConnectivityBlocker(
-                    rail_id=rail_id,
-                    refdes="<scenario migration>",
-                    kind=DecapConnectionKind.UNRESOLVED,
-                    reason=(
-                        "SOURCE_GRAPH_PROVENANCE_REFRESH_REQUIRED: requested "
-                        f"Evaluation policy={evaluation_policy}; retained bundle "
-                        f"source={source_path} sha256={source_sha} lacks v0.22.7 "
-                        "source-exact plane-pair graph provenance. Re-import the "
-                        "matching raw SPD in v0.22.7; the loaded bundle remains "
-                        "unchanged."
-                    ),
-                )
-                for rail_id in canonical_rails
-            )
     return EvaluationConnectivityPreflight(
         canonical_rails,
         tuple(
@@ -3301,6 +3555,20 @@ def build_evaluation_project(
     if evaluation_policy not in _EVALUATION_POLICIES:
         raise ScenarioEvaluationBuildError("EVALUATION_POLICY_UNKNOWN", f"unknown Evaluation geometry policy {evaluation_policy!r}")
     base = _project if _project is not None else scenario.base_project
+    provenance_rail_ids = _canonical_rail_ids(
+        scenario,
+        ((evaluation_rail_id,) if evaluation_rail_id is not None else tuple(item.rail_id for item in base.rails)),
+        _project=base,
+    )
+    source_graph_blockers = _source_graph_provenance_blockers(
+        scenario, base, provenance_rail_ids
+    )
+    if source_graph_blockers:
+        raise ScenarioEvaluationPreflightError(
+            EvaluationConnectivityPreflight(
+                tuple(provenance_rail_ids), source_graph_blockers
+            )
+        )
     alternate_provenance: dict[str, Any] | None = None
     effective_policy = evaluation_policy
     if evaluation_policy == EVALUATION_POLICY_EMBEDDED_ALTERNATE and evaluation_rail_id is not None:

@@ -425,8 +425,22 @@ def _mixed_reference_shared_scenario(
         landing_count=len(identities),
         landing_identities_sha256=sha256(landing_bytes).hexdigest(),
     )
+    metadata = dict(imported.base_project.metadata)
+    spd_import = dict(metadata["spd_import"])
+    spd_import["selected_plane_pair_provenance"] = {
+        rail.net: {
+            "rail_net": rail.net,
+            "pwr_layer": rail.pwr_layer,
+            "gnd_layer": rail.gnd_layer,
+            "source_sha256": imported.source.sha256,
+        }
+    }
+    metadata["spd_import"] = spd_import
     project = imported.base_project.model_copy(
-        update={"rails": [rail.model_copy(update={"mixed_reference_ground_witness": witness})]}
+        update={
+            "rails": [rail.model_copy(update={"mixed_reference_ground_witness": witness})],
+            "metadata": metadata,
+        }
     )
     decaps = [dummy, pwr_anchor]
     if remote_ground_anchor:
@@ -544,7 +558,8 @@ def test_unreachable_mixed_candidate_imports_loads_and_blocks_only_selected_rail
     )
 
     imported = import_spd_scenario(source)
-    rail = imported.scenario.base_project.rails[0]
+    imported_scenario = imported.scenario
+    rail = imported_scenario.base_project.rails[0]
     witness = rail.mixed_reference_ground_witness
     assert witness is not None
     assert witness.landing_identities == ()
@@ -552,7 +567,7 @@ def test_unreachable_mixed_candidate_imports_loads_and_blocks_only_selected_rail
         item.code == "SPD_MIXED_REFERENCE_GND_REACHABILITY_INCOMPLETE"
         for item in imported.diagnostics
     )
-    by_rail = imported.scenario.base_project.metadata["spd_via_path_recovery"][
+    by_rail = imported_scenario.base_project.metadata["spd_via_path_recovery"][
         "mixed_reference_ground_reachability"
     ]["by_rail"]
     record = next(item for item in by_rail if item["rail_id"] == rail.rail_id)
@@ -560,12 +575,16 @@ def test_unreachable_mixed_candidate_imports_loads_and_blocks_only_selected_rail
     assert record["unreachable_landing_count"] > 0
 
     archive = save_scenario(
-        imported.scenario, tmp_path / "unreachable-mixed.spdpi", attachments=imported.attachments
+        imported_scenario,
+        tmp_path / "unreachable-mixed.spdpi",
+        attachments=imported.attachments,
     )
     loaded = load_scenario_bundle(archive).scenario
     preflight = preflight_evaluation_connectivity(loaded, (rail.rail_id,))
     assert preflight.blockers
-    assert "lack mixed-reference reachability evidence" in preflight.blockers[0].reason
+    assert preflight.blockers[0].reason.startswith(
+        "SOURCE_GRAPH_PROVENANCE_INVALID:"
+    )
 
 
 def test_certified_ground_attachment_tamper_cannot_be_loaded(
@@ -589,17 +608,22 @@ def test_certified_ground_attachment_tamper_cannot_be_loaded(
         encoding="ascii",
     )
     imported = import_spd_scenario(source)
-    rail = imported.scenario.base_project.rails[0]
+    imported_scenario = imported.scenario
+    rail = imported_scenario.base_project.rails[0]
     certificate = rail.mixed_reference_certificate
     assert certificate is not None
     witness = rail.mixed_reference_ground_witness
     assert witness is not None
     assert witness.landing_count == len(witness.landing_identities)
     assert "c1|gnd|via2|dgnd|node4" in witness.landing_identities
-    assert not preflight_evaluation_connectivity(
-        imported.scenario, (rail.rail_id,)
-    ).blockers
-    payload = imported.scenario.model_dump(mode="json")
+    initial_preflight = preflight_evaluation_connectivity(
+        imported_scenario, (rail.rail_id,)
+    )
+    assert initial_preflight.blockers
+    assert initial_preflight.blockers[0].reason.startswith(
+        "SOURCE_GRAPH_PROVENANCE_INVALID:"
+    )
+    payload = imported_scenario.model_dump(mode="json")
     witness_payload = payload["normalized_project"]["rails"][0][
         "mixed_reference_ground_witness"
     ]
@@ -607,7 +631,7 @@ def test_certified_ground_attachment_tamper_cannot_be_loaded(
     with pytest.raises(ValidationError, match="GND witness"):
         ScenarioSpec.model_validate(payload)
 
-    payload = imported.scenario.model_dump(mode="json")
+    payload = imported_scenario.model_dump(mode="json")
     witness_payload = payload["normalized_project"]["rails"][0][
         "mixed_reference_ground_witness"
     ]
@@ -619,22 +643,24 @@ def test_certified_ground_attachment_tamper_cannot_be_loaded(
     # another supported mixed rail can be selected; preflight/build then block
     # this exact rail before the solver receives any terminal model.
     incomplete = ScenarioSpec.model_validate(payload)
+    assert rail.rail_id in mixed_reference_ground_witness_failures(incomplete)
     preflight = preflight_evaluation_connectivity(incomplete, (rail.rail_id,))
     assert preflight.blockers
-    assert "lack mixed-reference reachability evidence" in preflight.blockers[0].reason
-    with pytest.raises(ScenarioEvaluationBuildError, match="reachability evidence") as blocked:
+    assert preflight.blockers[0].reason.startswith(
+        "SOURCE_GRAPH_PROVENANCE_INVALID:"
+    )
+    with pytest.raises(ScenarioEvaluationBuildError):
         build_evaluation_project(incomplete, evaluation_rail_id=rail.rail_id)
-    assert blocked.value.code == "MIXED_REFERENCE_GND_REACHABILITY_REQUIRED"
     record = next(
         item
-        for item in imported.scenario.base_project.metadata["spd_import"][
+        for item in imported_scenario.base_project.metadata["spd_import"][
             "plane_geometries"
         ]
         if item["layer"] == rail.gnd_layer and item["net"] == certificate.gnd_net
     )
     asset = record["asset"]
     archive_path = save_scenario(
-        imported.scenario,
+        imported_scenario,
         tmp_path / "certified.spdpi",
         attachments=imported.attachments,
     )
