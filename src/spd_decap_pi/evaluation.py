@@ -12,8 +12,8 @@ from dataclasses import dataclass, replace
 from hashlib import sha256
 import json
 from math import isfinite
-from typing import Any, Callable, Mapping, Sequence
 import re
+from typing import Any, Callable, Mapping, Sequence
 
 from spd_decap_pi._core import services as evaluation_services
 from spd_decap_pi._core.domain import (
@@ -38,17 +38,29 @@ from spd_decap_pi._core.services import (
     EvaluationView,
     LocalAIAnalysisView,
     WorkspaceState,
+    evaluation_modal_convergence_ceiling,
     scoped_blas_threads,
 )
 from spd_decap_pi._core.solver import (
-    CONVERGENCE_ALGORITHM_VERSION,
-    DEFAULT_MODAL_CEILING_INDEX,
+    CONVERGENCE_POLICY_VERSION,
+    DEFAULT_CURVATURE_THRESHOLD_DB,
+    DEFAULT_MAX_NEW_FREQUENCY_POINTS,
+    DEFAULT_MAX_REFINEMENT_ITERATIONS,
+    DEFAULT_MAX_TOLERANCE_DB,
+    DEFAULT_PEAK_SHIFT_TOLERANCE_PERCENT,
+    DEFAULT_RMS_TOLERANCE_DB,
     SOLVER_VERSION,
+    compile_project_evaluation_template,
 )
 from spd_decap_pi._core.solver.profiles import (
     DEFAULT_SOLVER_PROFILE_KEY,
+    LAYERWISE_ADMITTANCE_PROFILE,
     LEGACY_MODAL_PROFILE,
     solver_profile as resolve_solver_profile,
+    solver_profile_static_identity_sha256,
+)
+from spd_decap_pi._core.solver.layerwise_network import (
+    LAYERWISE_COMPILER_VERSION,
 )
 from spd_decap_pi._core.via_model import ViaModelError, estimate_via_segment_rl
 from spd_decap_pi._core.io.spd import SpdPlaneGeometry
@@ -71,16 +83,14 @@ from .scenario import (
     shared_pad_component_eligibility,
 )
 
+EVALUATION_POLICY_STRICT = "STRICT_EXACT"
+EVALUATION_POLICY_EMBEDDED_ALTERNATE = "EMBEDDED_ALTERNATE_PAIR_APPROXIMATION_V1"
+_EVALUATION_POLICIES = frozenset({EVALUATION_POLICY_STRICT, EVALUATION_POLICY_EMBEDDED_ALTERNATE})
+
 
 ProgressCallback = Callable[[int, str], None]
 CancelCallback = Callable[[], bool]
 PLOT_ANALYST_MODE = "Plot Analyst"
-EVALUATION_POLICY_STRICT = "STRICT_EXACT"
-EVALUATION_POLICY_EMBEDDED_ALTERNATE = "EMBEDDED_ALTERNATE_PAIR_APPROXIMATION_V1"
-_EVALUATION_POLICIES = {
-    EVALUATION_POLICY_STRICT,
-    EVALUATION_POLICY_EMBEDDED_ALTERNATE,
-}
 EVALUATION_ATTACHMENT_FORMAT = "spd-decap-evaluation-0.1"
 MAX_EVALUATION_ATTACHMENT_BYTES = 16 * 1024 * 1024
 # General shared-pad networks materialize one dense F x N x N terminal
@@ -91,6 +101,21 @@ MAX_SHARED_PAD_VIA_PATHS = 128
 # path never materializes N x N terminal matrices during ordinary Evaluation,
 # so permit the largest source-proven production cluster with bounded headroom.
 MAX_BATCHED_SHARED_PAD_VIA_PATHS = 512
+
+_LAYERWISE_PROVENANCE_HASH_FIELDS = (
+    "static_compiler_algorithm_sha256",
+    "source_sha256",
+    "geometry_manifest_sha256",
+    "material_manifest_sha256",
+    "substrate_identity_sha256",
+    "ground_alias_manifest_sha256",
+    "via_group_evidence_sha256",
+    "surface_connectivity_evidence_sha256",
+    "terminal_surface_contact_proof_sha256",
+    "base_layerwise_evidence_sha256",
+    "termination_manifest_sha256",
+    "layerwise_identity_sha256",
+)
 
 
 class ScenarioEvaluationBuildError(ValueError):
@@ -381,6 +406,53 @@ class ScenarioEvaluationBatch:
                         f"unchanged comparison for {comparison.rail_id!r} has different results"
                     )
                 continue
+            if profile == LAYERWISE_ADMITTANCE_PROFILE:
+                # The layer-surface solve includes mounted terminations from
+                # every other rail.  Its Original identity is therefore the
+                # complete board-wide source configuration, not the legacy
+                # selected-rail BaselineCapture fingerprint.  Layerwise
+                # results are deliberately not persisted because the v0.1
+                # attachment schema cannot encode that all-rail dependency.
+                original = _comparison_original_configuration(
+                    self.updated_scenario
+                )
+                if (
+                    comparison.baseline_from_cache
+                    or baseline.design_fingerprint
+                    != original.design_fingerprint
+                ):
+                    raise ScenarioEvaluationCacheError(
+                        f"Original layerwise result for {comparison.rail_id!r} "
+                        "does not match the board-wide source configuration"
+                    )
+                for label, evaluation in (
+                    ("Original", baseline),
+                    ("Tuned", tuned),
+                ):
+                    manifest_sha = evaluation.view.solver_provenance.get(
+                        "termination_manifest_sha256"
+                    )
+                    if (
+                        not isinstance(manifest_sha, str)
+                        or len(manifest_sha) != 64
+                        or any(
+                            character not in "0123456789abcdef"
+                            for character in manifest_sha.casefold()
+                        )
+                    ):
+                        raise ScenarioEvaluationCacheError(
+                            f"{label} layerwise result for "
+                            f"{comparison.rail_id!r} has no mounted-state identity"
+                        )
+                if (
+                    comparison.configuration_unchanged
+                    and baseline.view != tuned.view
+                ):
+                    raise ScenarioEvaluationCacheError(
+                        f"unchanged comparison for {comparison.rail_id!r} "
+                        "has different results"
+                    )
+                continue
             capture = next(
                 (
                     item
@@ -458,20 +530,36 @@ def _evaluation_settings(
     a prior experimental calculation.
     """
 
-    if evaluation_policy not in _EVALUATION_POLICIES:
-        raise ScenarioEvaluationBuildError(
-            "EVALUATION_POLICY_UNKNOWN",
-            f"unknown Evaluation geometry policy {evaluation_policy!r}",
-        )
     profile = resolve_solver_profile(solver_profile)
+    if evaluation_policy not in _EVALUATION_POLICIES:
+        raise ScenarioEvaluationBuildError("EVALUATION_POLICY_UNKNOWN", f"unknown Evaluation geometry policy {evaluation_policy!r}")
     settings: dict[str, Any] = {
         "target_ohm": target_ohm,
         "modal_max_index": modal_max_index,
-        "modal_convergence_algorithm": CONVERGENCE_ALGORITHM_VERSION,
-        "modal_ceiling_max_index": DEFAULT_MODAL_CEILING_INDEX,
         "solver_profile": profile.key,
         "evaluation_policy": evaluation_policy,
+        "modal_convergence_ceiling_index": evaluation_modal_convergence_ceiling(
+            modal_max_index, profile.key
+        ),
+        "convergence_policy": {
+            "version": CONVERGENCE_POLICY_VERSION,
+            "max_refinement_iterations": DEFAULT_MAX_REFINEMENT_ITERATIONS,
+            "max_new_frequency_points_per_iteration": (
+                DEFAULT_MAX_NEW_FREQUENCY_POINTS
+            ),
+            "curvature_threshold_db": DEFAULT_CURVATURE_THRESHOLD_DB,
+            "rms_tolerance_db": DEFAULT_RMS_TOLERANCE_DB,
+            "max_tolerance_db": DEFAULT_MAX_TOLERANCE_DB,
+            "peak_shift_tolerance_percent": (
+                DEFAULT_PEAK_SHIFT_TOLERANCE_PERCENT
+            ),
+        },
     }
+    if profile == LAYERWISE_ADMITTANCE_PROFILE:
+        settings["solver_static_identity_sha256"] = (
+            solver_profile_static_identity_sha256(profile)
+        )
+        return settings
     if not profile.experimental:
         return settings
     if solver_provenance is None:
@@ -548,12 +636,7 @@ def _result_key_from_view(
     view: EvaluationView,
     evaluation_policy: str | None = None,
 ) -> ScenarioResultKey:
-    """Bind an emitted curve to its actual profile/evidence identity.
-
-    ``evaluation_policy`` overrides the view's own policy for the hashed
-    settings only; a comparison resolves one Evaluation policy per rail so the
-    Original and Tuned keys stay comparable.
-    """
+    """Bind an emitted curve to its actual profile/evidence identity."""
 
     return ScenarioResultKey.from_settings(
         design_fingerprint=design_fingerprint,
@@ -672,6 +755,7 @@ def _source_direct_fallback_eligibility(
         net=rail.net,
         pwr_layer=rail.pwr_layer,
         gnd_layer=rail.gnd_layer,
+        destination_pwr_layer=rail.pwr_layer,
         via_template_id=template_id,
         allowed=True,
     )
@@ -734,11 +818,10 @@ def _terminal_footprint(
         target_layer
     )
     if graph_contact is not None:
-        # Graph connectivity identifies an exact retained target node, but it
-        # does not provide a serial impedance path or pad aperture.  Keep the
-        # source template's finite-port dimensions while localizing the port
-        # at the proven target contact; the post-remap domain gate remains
-        # authoritative.
+        # A source graph contact identifies the exact retained target node even
+        # when the legacy landing coordinate is outside the selected plane.
+        # Keep finite-port dimensions from the source template; only the
+        # proven contact location is remapped.
         return _TerminalFootprint(
             x_um=float(graph_contact.x_um),
             y_um=float(graph_contact.y_um),
@@ -757,13 +840,7 @@ def _source_graph_provenance_refresh_required(
     scenario: ScenarioSpec,
     project: ProjectSpec,
 ) -> bool:
-    """Identify old bundles that cannot prove the v0.22.7 source plane pair.
-
-    This is deliberately metadata-only and fail-closed: a bundle is never
-    rewritten or repaired in memory.  Only a retained source binding that
-    predates graph-pair provenance is diagnosed; newly-created synthetic
-    scenarios without SPD import metadata continue through normal tests.
-    """
+    """Identify old bundles that cannot prove the source plane pair."""
 
     metadata = project.metadata.get("spd_import")
     if not isinstance(metadata, Mapping):
@@ -787,14 +864,11 @@ def _source_graph_provenance_blockers(
     project: ProjectSpec,
     rail_ids: Sequence[str],
 ) -> tuple[EvaluationConnectivityBlocker, ...]:
-    """Return hard blockers for an SPD bundle with invalid graph provenance.
+    """Return hard blockers for invalid source graph provenance.
 
-    Embedded alternate geometry is an electrical approximation, not a repair
-    for stale or malformed source identity.  Keep these checks separate from
-    the ordinary terminal/partition preflight so the alternate policy cannot
-    rescue a bundle whose source graph proof is absent or bound to another SPD.
-    Synthetic scenarios intentionally remain unaffected when they do not carry
-    ``spd_import`` source metadata.
+    These checks intentionally run before all geometry policies.  Embedded
+    alternate geometry is an approximation, never a repair for stale source
+    identity or an unresolved source graph pair.
     """
 
     if "spd_import" not in project.metadata:
@@ -835,14 +909,19 @@ def _source_graph_provenance_blockers(
             )
             for rail_id in rail_ids
         )
-    if _source_graph_provenance_refresh_required(scenario, project):
+    # A present malformed/empty proof is an explicit invalid contract, even
+    # for an old bundle that would otherwise qualify for the migration hint.
+    # Only proof-key absence may produce the legacy refresh diagnostic.
+    if (
+        "selected_plane_pair_provenance" not in metadata
+        and _source_graph_provenance_refresh_required(scenario, project)
+    ):
         source_path = str(scenario.source.path)
         reason = (
-            "SOURCE_GRAPH_PROVENANCE_REFRESH_REQUIRED: retained bundle "
-            f"source={source_path} sha256={scenario.source.sha256} lacks "
-            "v0.22.7 source-exact plane-pair graph provenance. Re-import the "
-            "matching raw SPD in v0.22.7 or later; the loaded bundle remains "
-            "unchanged."
+            "SOURCE_GRAPH_PROVENANCE_REFRESH_REQUIRED: retained bundle source="
+            f"{source_path} sha256={scenario.source.sha256} lacks v0.22.7 "
+            "source-exact plane-pair graph provenance. Re-import the matching "
+            "raw SPD in v0.22.7 or later; the loaded bundle remains unchanged."
         )
         return tuple(
             EvaluationConnectivityBlocker(
@@ -853,11 +932,9 @@ def _source_graph_provenance_blockers(
             )
             for rail_id in rail_ids
         )
-
-    # A source-bound bundle is expected to carry the provenance map emitted by
-    # the importer.  Missing/empty maps are malformed even before a rail proof
-    # can be selected.  Metadata-only synthetic scenarios without a retained
-    # source SHA remain outside this contract.
+    # Synthetic fixtures are exempt only when the proof key is absent and no
+    # source SHA is retained.  A present key is an explicit source-graph
+    # contract: malformed, non-mapping, and empty values always fail closed.
     if "selected_plane_pair_provenance" not in metadata:
         if source_binding_mismatch:
             return source_binding_blockers()
@@ -893,13 +970,9 @@ def _source_graph_provenance_blockers(
             for rail_id in rail_ids
         )
     if not provenance:
-        if source_binding_mismatch:
-            return source_binding_blockers()
-        if not source_sha:
-            return ()
         reason = (
-            "SOURCE_GRAPH_PROVENANCE_INVALID: source-bound bundle has an empty "
-            "selected plane-pair provenance map; re-import matching raw SPD"
+            "SOURCE_GRAPH_PROVENANCE_INVALID: selected plane-pair provenance "
+            "is empty; re-import matching raw SPD"
         )
         return tuple(
             EvaluationConnectivityBlocker(
@@ -955,7 +1028,7 @@ def _source_graph_provenance_blockers(
         aliases = {rail_id.casefold()}
         if rail is not None:
             aliases.add(str(rail.net).casefold())
-        matching_proofs = sorted(
+        matches = sorted(
             (
                 (str(raw_key), value)
                 for raw_key, value in provenance.items()
@@ -964,88 +1037,436 @@ def _source_graph_provenance_blockers(
             key=lambda item: (item[0].casefold(), item[0]),
         )
         unresolved_matches = [
-            item
-            for item in matching_proofs
+            item for item in matches
             if isinstance(item[1], Mapping)
             and bool(item[1].get("source_graph_pair_unresolved"))
         ]
         if unresolved_matches:
-            blockers.append(
-                EvaluationConnectivityBlocker(
-                    rail_id=rail_id,
-                    refdes="<source graph plane pair>",
-                    kind=DecapConnectionKind.UNRESOLVED,
-                    reason=(
-                        "SOURCE_GRAPH_PLANE_PAIR_UNRESOLVED: selected rail has "
-                        "no source-proven PWR/GND pair; re-import matching raw SPD"
-                    ),
-                )
-            )
+            blockers.append(EvaluationConnectivityBlocker(
+                rail_id=rail_id,
+                refdes="<source graph plane pair>",
+                kind=DecapConnectionKind.UNRESOLVED,
+                reason=(
+                    "SOURCE_GRAPH_PLANE_PAIR_UNRESOLVED: selected rail has "
+                    "no source-proven PWR/GND pair; re-import matching raw SPD"
+                ),
+            ))
             continue
-        if len(matching_proofs) == 0:
-            proof: object | None = None
-            provenance_reason = (
-                "SOURCE_GRAPH_PROVENANCE_INVALID: selected rail has no "
-                "matching rail-id/net plane-pair proof; re-import matching raw SPD"
-            )
-        elif len(matching_proofs) > 1:
-            proof = None
-            matched_keys = ", ".join(item[0] for item in matching_proofs)
-            provenance_reason = (
-                "SOURCE_GRAPH_PROVENANCE_AMBIGUOUS: selected rail matches "
-                f"multiple rail-id/net plane-pair proofs ({matched_keys})"
-            )
-        else:
-            proof = matching_proofs[0][1]
-            provenance_reason = ""
-        if len(matching_proofs) != 1:
-            blockers.append(
-                EvaluationConnectivityBlocker(
-                    rail_id=rail_id,
-                    refdes="<source graph provenance>",
-                    kind=DecapConnectionKind.UNRESOLVED,
-                    reason=provenance_reason,
+        if len(matches) != 1:
+            if len(matches) > 1:
+                matched_keys = ", ".join(item[0] for item in matches)
+                reason = (
+                    "SOURCE_GRAPH_PROVENANCE_AMBIGUOUS: selected rail matches "
+                    f"multiple rail-id/net plane-pair proofs ({matched_keys})"
                 )
-            )
+            else:
+                reason = (
+                    "SOURCE_GRAPH_PROVENANCE_INVALID: selected rail has no "
+                    "matching rail-id/net plane-pair proof; re-import matching raw SPD"
+                )
+            blockers.append(EvaluationConnectivityBlocker(
+                rail_id=rail_id,
+                refdes="<source graph provenance>",
+                kind=DecapConnectionKind.UNRESOLVED,
+                reason=reason,
+            ))
             continue
+        proof = matches[0][1]
         required = ("pwr_layer", "gnd_layer", "source_sha256")
         valid = isinstance(proof, Mapping) and bool(proof) and all(
-            str(proof.get(field, "")).strip() for field in required
+            str(proof.get(name, "")).strip() for name in required
         )
         if valid and not source_sha:
             valid = False
-        if valid and str(proof.get("source_sha256", "")).casefold() != expected_sha:
-            valid = False
-        if valid and rail is not None:
-            valid = (
-                str(proof.get("pwr_layer", "")).casefold()
-                == str(rail.pwr_layer).casefold()
-                and str(proof.get("gnd_layer", "")).casefold()
-                == str(rail.gnd_layer).casefold()
-            )
+        valid = valid and str(proof.get("source_sha256", "")).casefold() == expected_sha
+        if rail is not None:
+            valid = valid and str(proof.get("pwr_layer", "")).casefold() == rail.pwr_layer.casefold() and str(proof.get("gnd_layer", "")).casefold() == rail.gnd_layer.casefold()
         if not valid:
-            blockers.append(
-                EvaluationConnectivityBlocker(
-                    rail_id=rail_id,
-                    refdes="<source graph provenance>",
-                    kind=DecapConnectionKind.UNRESOLVED,
-                    reason=(
-                        provenance_reason
-                        or (
-                            "SOURCE_GRAPH_SOURCE_BINDING_MISMATCH: selected "
-                            "plane-pair provenance is present but the retained "
-                            "SPD source SHA-256 is missing; re-import matching raw SPD"
-                            if not source_sha
-                            else "SOURCE_GRAPH_PROVENANCE_INVALID: selected rail lacks "
-                            "a non-empty source-bound PWR/GND plane-pair proof; "
-                            "re-import matching raw SPD"
-                        )
-                    ),
-                )
+            reason = (
+                "SOURCE_GRAPH_PROVENANCE_INVALID: selected rail lacks a "
+                "non-empty source-bound PWR/GND plane-pair proof"
             )
+            blockers.append(EvaluationConnectivityBlocker(
+                rail_id=rail_id, refdes="<source graph provenance>",
+                kind=DecapConnectionKind.UNRESOLVED, reason=reason
+            ))
     return tuple(blockers)
 
 
+@dataclass(frozen=True, slots=True)
+class _AlternateEvaluationContext:
+    scenario: ScenarioSpec
+    project: ProjectSpec
+    rail_id: str
+    candidate_layer: str
+    ground_layer: str
+    provenance: dict[str, Any]
+
+
+def _geometry_records(project: ProjectSpec) -> list[Mapping[str, Any]]:
+    raw = project.metadata.get("spd_import")
+    records = raw.get("plane_geometries") if isinstance(raw, Mapping) else None
+    return [item for item in records if isinstance(item, Mapping)] if isinstance(records, list) else []
+
+
+def _record_bounds(record: Mapping[str, Any]) -> tuple[float, float, float, float] | None:
+    values = record.get("solver_bounds_um") or record.get("bounds_um") or record.get("bbox_um")
+    if isinstance(values, (list, tuple)) and len(values) == 4:
+        try:
+            result = tuple(float(item) for item in values)
+        except (TypeError, ValueError):
+            result = None
+        if result is not None and all(isfinite(item) for item in result) and result[1] > result[0] and result[3] > result[2]:
+            return result  # type: ignore[return-value]
+    xs: list[float] = []
+    ys: list[float] = []
+    for poly in record.get("positive_polygons_um", []):
+        if isinstance(poly, (list, tuple)):
+            for point in poly:
+                if isinstance(point, (list, tuple)) and len(point) == 2:
+                    xs.append(float(point[0])); ys.append(float(point[1]))
+    for circle in record.get("positive_circles_um", []):
+        if isinstance(circle, (list, tuple)) and len(circle) == 3:
+            x, y, radius = (float(item) for item in circle)
+            xs.extend((x - radius, x + radius)); ys.extend((y - radius, y + radius))
+    if not xs or not ys:
+        return None
+    result = (min(xs), max(xs), min(ys), max(ys))
+    return result if result[1] > result[0] and result[3] > result[2] else None
+
+
+@dataclass(frozen=True, slots=True)
+class _RetainedArtworkEntry:
+    asset: str
+    digest: str
+    layer: str
+    net: str
+    indexed: IndexedPlaneGeometry
+
+
+class _RetainedArtworkIndex:
+    """Decode retained plane assets once and validate exact finite coverage."""
+
+    def __init__(self, records: Sequence[Mapping[str, Any]], attachments: Mapping[str, bytes]) -> None:
+        entries: list[_RetainedArtworkEntry] = []
+        decoded: set[tuple[str, str]] = set()
+        for record in records:
+            asset = str(record.get("asset", "")).strip()
+            digest = str(record.get("asset_sha256", "")).strip().lower()
+            layer = str(record.get("layer", "")).strip()
+            net = str(record.get("net", "")).strip()
+            if not asset or not re.fullmatch(r"[0-9a-f]{64}", digest):
+                continue
+            key = (asset.casefold(), digest)
+            if key in decoded:
+                continue
+            decoded.add(key)
+            payload_bytes = attachments.get(asset)
+            if payload_bytes is None:
+                continue
+            try:
+                payload = evaluation_services._decode_spd_geometry_asset(digest, payload_bytes)
+                evaluation_services._validate_spd_geometry_payload(payload, expected_layer=layer, expected_net=net)
+                geometry = SpdPlaneGeometry(
+                    layer=str(payload["layer"]),
+                    net=str(payload["net"]),
+                    positive_polygons_um=tuple(tuple((float(point[0]), float(point[1])) for point in polygon) for polygon in payload["positive_polygons_um"]),
+                    negative_polygons_um=tuple(tuple((float(point[0]), float(point[1])) for point in polygon) for polygon in payload["negative_polygons_um"]),
+                    positive_circles_um=tuple(tuple(float(value) for value in circle) for circle in payload["positive_circles_um"]),
+                    negative_circles_um=tuple(tuple(float(value) for value in circle) for circle in payload["negative_circles_um"]),
+                    primitive_order=tuple((str(step[0]), int(step[1])) for step in payload["primitive_order"]),
+                )
+                indexed = IndexedPlaneGeometry.build(geometry)
+                if indexed is not None:
+                    entries.append(_RetainedArtworkEntry(asset, digest, layer, net, indexed))
+            except (TypeError, ValueError, IndexError, ArithmeticError, ImportError):
+                continue
+        self._entries = tuple(entries)
+        self._by_layer_net: dict[tuple[str, str], list[_RetainedArtworkEntry]] = {}
+        for entry in self._entries:
+            self._by_layer_net.setdefault((entry.layer.casefold(), entry.net.casefold()), []).append(entry)
+
+    def covers_footprint(self, *, layer: str, net: str, asset: str, digest: str, x_um: float, y_um: float, width_um: float, height_um: float) -> bool:
+        entry = next((item for item in self._entries if item.asset.casefold() == asset.casefold() and item.digest == digest.casefold() and item.layer.casefold() == layer.casefold() and item.net.casefold() == net.casefold()), None)
+        if entry is None:
+            return False
+        try:
+            return bool(entry.indexed.covers_footprint(float(x_um), float(y_um), float(width_um), float(height_um)))
+        except (ImportError, TypeError, ValueError, ArithmeticError):
+            return False
+
+    def contains(self, *, layer: str, net: str, x_um: float, y_um: float) -> str:
+        entries = self._by_layer_net.get((layer.casefold(), net.casefold()), ())
+        saw_boundary = False
+        saw_inside = False
+        for entry in entries:
+            try:
+                result = entry.indexed.contains(x_um, y_um)
+            except (ImportError, TypeError, ValueError, ArithmeticError):
+                continue
+            if result == "boundary":
+                saw_boundary = True
+            elif result == "inside":
+                saw_inside = True
+        if saw_boundary:
+            return "boundary"
+        return "inside" if saw_inside else "outside"
+
+
+def _alternate_terminal_points(
+    scenario: ScenarioSpec,
+    project: ProjectSpec,
+    rail_id: str,
+    *,
+    pwr_layer: str,
+    gnd_layer: str,
+    via: ViaLoopTemplate,
+) -> tuple[tuple[str, str, float, float, float, float], ...]:
+    analysis = scenario.connection_analysis
+    if analysis is None:
+        return ()
+    decaps = {item.refdes.casefold(): item for item in scenario.decaps}
+    points: list[tuple[str, str, float, float, float, float]] = []
+    for connection in analysis.connections.values():
+        decap = decaps.get(connection.refdes.casefold())
+        if decap is None or decap.current_rail_id.casefold() != rail_id.casefold():
+            continue
+        if not decap.enabled and len(connection.power_vias) == 1 and len(connection.ground_vias) == 1:
+            continue
+        for terminal, landings, layer in ((TerminalKind.PWR, connection.power_vias, pwr_layer), (TerminalKind.GND, connection.ground_vias, gnd_layer)):
+            for landing in landings:
+                evidence = landing.evidence_for_layer(layer)
+                graph_contact = getattr(landing, "graph_contact_for_layer", lambda _layer: None)(layer)
+                x_um = float(evidence.x_um) if evidence is not None else float(graph_contact.x_um) if graph_contact is not None else float(landing.x_um)
+                y_um = float(evidence.y_um) if evidence is not None else float(graph_contact.y_um) if graph_contact is not None else float(landing.y_um)
+                width = float(evidence.target_pad_width_um) if evidence is not None else float(via.finite_port_width_um)
+                height = float(evidence.target_pad_height_um) if evidence is not None else float(via.finite_port_height_um)
+                if not all(isfinite(value) for value in (x_um, y_um)) or not all(isfinite(value) and value > 0.0 for value in (width, height)):
+                    return ()
+                points.extend((
+                    (terminal.value, layer, x_um, y_um, width, height),
+                    (terminal.value, layer, x_um - width / 2.0, y_um - height / 2.0, width, height),
+                    (terminal.value, layer, x_um - width / 2.0, y_um + height / 2.0, width, height),
+                    (terminal.value, layer, x_um + width / 2.0, y_um - height / 2.0, width, height),
+                    (terminal.value, layer, x_um + width / 2.0, y_um + height / 2.0, width, height),
+                ))
+    return tuple(points)
+
+
+def _alternate_context_for_rail(
+    scenario: ScenarioSpec,
+    rail_id: str,
+    *,
+    attachments: Mapping[str, bytes] | None = None,
+    _cache: dict[tuple[str, str, str, str], _AlternateEvaluationContext] | None = None,
+) -> _AlternateEvaluationContext | None:
+    """Derive an attachment/hash-bound alternate plane pair fail-closed."""
+
+    base = scenario.base_project
+    rail = next((item for item in base.rails if item.rail_id.casefold() == rail_id.casefold()), None)
+    if rail is None:
+        return None
+    records = _geometry_records(base)
+    raw_import = base.metadata.get("spd_import")
+    source_hash = str(raw_import.get("source_sha256", "")) if isinstance(raw_import, Mapping) else ""
+    if attachments is None or source_hash.casefold() != str(scenario.source.sha256).casefold() or not re.fullmatch(r"[0-9a-fA-F]{64}", source_hash):
+        return None
+    # Baseline/cache attachments are added after comparison preflight.  Bind
+    # the alternate cache only to the retained geometry assets it consumes so
+    # the same shared cache entry survives the preflight -> preparatory-build
+    # handoff instead of rebuilding once per attachment-set shape.
+    geometry_names = {
+        str(record.get("asset", ""))
+        for record in records
+        if str(record.get("asset", "")).strip()
+    }
+    attachment_fingerprint = sha256(
+        b"".join(
+            name.encode("utf-8") + sha256(payload).digest()
+            for name, payload in sorted(attachments.items(), key=lambda item: item[0].casefold())
+            if name in geometry_names
+        )
+    ).hexdigest()
+    cache_key = (scenario.design_fingerprint, rail.rail_id.casefold(), source_hash.casefold(), attachment_fingerprint)
+    cache = _cache if _cache is not None else {}
+    cached = cache.get(cache_key)
+    if cached is not None:
+        return cached
+    stack = {layer.name.casefold(): index for index, layer in enumerate(base.stackup_layers)}
+    from spd_decap_pi._core.plane_pairs import suggest_effective_plane_pairs
+    allowed_pair_separation = {
+        (item.pwr_layer.casefold(), item.gnd_layer.casefold()): float(item.separation_um)
+        for item in suggest_effective_plane_pairs(base.stackup_layers, rail_net=rail.net, gnd_aliases=base.gnd_aliases)
+    }
+    gnd_keys = {item.casefold() for item in base.gnd_aliases}
+    outline_bounds = (
+        float(base.outline.origin_x_um),
+        float(base.outline.origin_x_um + base.outline.width_um),
+        float(base.outline.origin_y_um),
+        float(base.outline.origin_y_um + base.outline.height_um),
+    )
+    candidates: list[tuple[tuple[Any, ...], Mapping[str, Any], Mapping[str, Any], tuple[float, float, float, float], tuple[float, float, float, float]]] = []
+    for pwr in records:
+        pwr_layer = str(pwr.get("layer", "")).strip()
+        pwr_net = str(pwr.get("net", "")).strip()
+        pwr_bounds = _record_bounds(pwr)
+        pwr_asset = str(pwr.get("asset", "")).strip()
+        pwr_sha = str(pwr.get("asset_sha256", "")).strip().lower()
+        if (not pwr_layer or not pwr_net or pwr_net.casefold() != rail.net.casefold() or pwr_layer.casefold() == rail.pwr_layer.casefold() or pwr_bounds is None or pwr_bounds[0] < outline_bounds[0] or pwr_bounds[1] > outline_bounds[1] or pwr_bounds[2] < outline_bounds[2] or pwr_bounds[3] > outline_bounds[3] or not pwr_asset or not re.fullmatch(r"[0-9a-f]{64}", pwr_sha) or attachments.get(pwr_asset) is None or sha256(attachments[pwr_asset]).hexdigest().casefold() != pwr_sha or pwr_layer.casefold() not in stack):
+            continue
+        for gnd in records:
+            gnd_layer = str(gnd.get("layer", "")).strip()
+            gnd_net = str(gnd.get("net", "")).strip()
+            pair_key = (pwr_layer.casefold(), gnd_layer.casefold())
+            gnd_bounds = _record_bounds(gnd)
+            gnd_asset = str(gnd.get("asset", "")).strip()
+            gnd_sha = str(gnd.get("asset_sha256", "")).strip().lower()
+            if (not gnd_layer or gnd_net.casefold() not in gnd_keys or pair_key not in allowed_pair_separation or gnd_bounds is None or gnd_bounds[0] < outline_bounds[0] or gnd_bounds[1] > outline_bounds[1] or gnd_bounds[2] < outline_bounds[2] or gnd_bounds[3] > outline_bounds[3] or not gnd_asset or not re.fullmatch(r"[0-9a-f]{64}", gnd_sha) or attachments.get(gnd_asset) is None or sha256(attachments[gnd_asset]).hexdigest().casefold() != gnd_sha):
+                continue
+            candidates.append(((allowed_pair_separation[pair_key], pwr_layer.casefold(), gnd_layer.casefold(), pwr_net.casefold()), pwr, gnd, pwr_bounds, gnd_bounds))
+    if not candidates:
+        return None
+    template_ids = _via_template_ids_by_rail(base)
+    source_template_id = template_ids.get(rail.rail_id.casefold())
+    template = next((item for item in base.via_templates if item.template_id.casefold() == (source_template_id or "").casefold()), None)
+    if template is None:
+        template = next((item for item in base.via_templates if item.pwr_reference_layer.casefold() == rail.pwr_layer.casefold() and item.gnd_reference_layer.casefold() == rail.gnd_layer.casefold()), None)
+    if template is None:
+        return None
+    selected: tuple[Mapping[str, Any], Mapping[str, Any], tuple[float, float, float, float], tuple[float, float, float, float], ViaLoopTemplate] | None = None
+    for _key, pwr, gnd, pwr_bounds, gnd_bounds in sorted(candidates, key=lambda item: item[0]):
+        artwork = _RetainedArtworkIndex((pwr, gnd), attachments)
+        if not artwork._entries:
+            continue
+        probe_template = template.model_copy(update={"pwr_reference_layer": str(pwr["layer"]), "gnd_reference_layer": str(gnd["layer"])})
+        points = _alternate_terminal_points(scenario, base, rail.rail_id, pwr_layer=str(pwr["layer"]), gnd_layer=str(gnd["layer"]), via=probe_template)
+        valid = bool(points)
+        for point_index, (_terminal, layer, x_um, y_um, width_um, height_um) in enumerate(points):
+            record = pwr if layer.casefold() == str(pwr["layer"]).casefold() else gnd
+            bounds = pwr_bounds if record is pwr else gnd_bounds
+            if point_index % 5 == 0 and (x_um - width_um / 2.0 < bounds[0] or x_um + width_um / 2.0 > bounds[1] or y_um - height_um / 2.0 < bounds[2] or y_um + height_um / 2.0 > bounds[3]):
+                valid = False
+                break
+            if artwork.contains(layer=layer, net=str(record.get("net", "")), x_um=x_um, y_um=y_um) != "inside":
+                valid = False
+                break
+            if point_index % 5 == 0 and not artwork.covers_footprint(layer=layer, net=str(record.get("net", "")), asset=str(record.get("asset", "")), digest=str(record.get("asset_sha256", "")), x_um=x_um, y_um=y_um, width_um=width_um, height_um=height_um):
+                valid = False
+                break
+        if valid:
+            selected = (pwr, gnd, pwr_bounds, gnd_bounds, probe_template)
+            break
+    if selected is None:
+        return None
+    pwr_record, gnd_record, _pwr_bounds, _gnd_bounds, _ = selected
+    alt_template_id = f"{template.template_id}__ALT_{str(pwr_record['layer']).replace(' ', '_')}__{str(gnd_record['layer']).replace(' ', '_')}"
+    alt_template = template.model_copy(update={"template_id": alt_template_id, "pwr_reference_layer": str(pwr_record["layer"]), "gnd_reference_layer": str(gnd_record["layer"])})
+    rl_recomputed = False
+    resistance, inductance = template.loop_resistance_ohm, template.loop_inductance_h
+    pwr_depth = gnd_depth = None
+    try:
+        depths = evaluation_services._spd_layer_center_depths(base.stackup_layers)
+        pwr_depth, gnd_depth = depths[str(pwr_record["layer"])], depths[str(gnd_record["layer"])]
+        detail = base.metadata.get("spd_via_template_provenance", {}).get(template.template_id, {})
+        drill = detail.get("drill_diameter_um") if isinstance(detail, Mapping) else None
+        resistance, inductance = evaluation_services._spd_uncalibrated_loop_estimate(pwr_depth_um=pwr_depth, gnd_depth_um=gnd_depth, drill_diameter_um=float(drill) if drill is not None else None)
+        alt_template = alt_template.model_copy(update={"loop_resistance_ohm": resistance, "loop_inductance_h": inductance})
+        rl_recomputed = True
+    except (KeyError, TypeError, ValueError):
+        pass
+    alt_rail = rail.model_copy(update={"pwr_layer": str(pwr_record["layer"]), "gnd_layer": str(gnd_record["layer"]), "mixed_reference_certificate": None, "mixed_reference_ground_witness": None})
+    rails = [alt_rail if item.rail_id.casefold() == rail.rail_id.casefold() else item for item in base.rails]
+    metadata = dict(base.metadata)
+    spd_import = dict(metadata.get("spd_import", {})) if isinstance(metadata.get("spd_import"), Mapping) else {}
+    spd_import["plane_geometries"] = [dict(item) for item in records]
+    spd_import["evaluation_alternate_pair"] = {"policy": EVALUATION_POLICY_EMBEDDED_ALTERNATE, "rail_id": rail.rail_id, "pwr_layer": alt_rail.pwr_layer, "gnd_layer": alt_rail.gnd_layer, "pwr_source_net": str(pwr_record.get("net", "")), "gnd_source_net": str(gnd_record.get("net", ""))}
+    metadata["spd_import"] = spd_import
+    # Rebind the imported Via-template provenance to the derived pair.  The
+    # source template entry must not remain selected for this transformed
+    # rail: downstream template resolution is metadata-first and would
+    # otherwise silently choose the original PWR1/GND1 identity.
+    raw_via_provenance = metadata.get("spd_via_template_provenance", {})
+    via_provenance = dict(raw_via_provenance) if isinstance(raw_via_provenance, Mapping) else {}
+    source_details: dict[str, Any] = {}
+    old_key = next(
+        (key for key in via_provenance if str(key).casefold() == template.template_id.casefold()),
+        None,
+    )
+    if old_key is not None and isinstance(via_provenance.get(old_key), Mapping):
+        source_details = dict(via_provenance[old_key])
+        via_provenance.pop(old_key, None)
+    alternate_details = dict(source_details)
+    alternate_details.update(
+        {
+            "rail_id": rail.rail_id,
+            "pwr_reference_layer": alt_rail.pwr_layer,
+            "gnd_reference_layer": alt_rail.gnd_layer,
+            "calibration": "embedded_alternate_analytical_approximation",
+            "source_vertical_path_proven": False,
+            "derived_loop_resistance_ohm": resistance,
+            "derived_loop_inductance_h": inductance,
+            "derived_pwr_depth_um": pwr_depth,
+            "derived_gnd_depth_um": gnd_depth,
+            "source_template_id": template.template_id,
+            "source_template_provenance": source_details,
+        }
+    )
+    via_provenance[alt_template_id] = alternate_details
+    metadata["spd_via_template_provenance"] = via_provenance
+    provisional = base.model_copy(update={"rails": rails, "via_templates": [*base.via_templates, alt_template], "metadata": metadata, "partitions": []})
+    candidate_project = provisional.model_copy(update={"partitions": evaluation_services._spd_plane_partitions(provisional)})
+    decaps: list[ScenarioDecap] = []
+    for decap in scenario.decaps:
+        if decap.current_rail_id.casefold() != rail.rail_id.casefold():
+            decaps.append(decap)
+            continue
+        eligibility = dict(decap.eligibility)
+        eligibility[rail.rail_id] = RailEligibility(rail_id=rail.rail_id, net=rail.net, pwr_layer=alt_rail.pwr_layer, gnd_layer=alt_rail.gnd_layer, via_template_id=alt_template_id, allowed=True)
+        decaps.append(decap.model_copy(update={"eligibility": eligibility}))
+    clusters = []
+    analysis = scenario.connection_analysis
+    for cluster in analysis.clusters if analysis is not None else ():
+        member_keys = {item.casefold() for item in cluster.member_refdes}
+        if not any(
+            decap.current_rail_id.casefold() == rail.rail_id.casefold()
+            for decap in scenario.decaps
+            if decap.refdes.casefold() in member_keys
+        ):
+            clusters.append(cluster)
+            continue
+        selected_via_ids = {
+            landing.via_id.casefold()
+            for connection in (analysis.connections.values() if analysis is not None else ())
+            if connection.refdes.casefold() in member_keys
+            for landing in connection.power_vias
+        }
+        via_eligibility: dict[str, dict[str, RailEligibility]] = {}
+        for via_id, by_rail in cluster.via_eligibility.items():
+            updated = dict(by_rail)
+            selected_key = next((key for key in updated if key.casefold() == rail.rail_id.casefold()), None)
+            if selected_key is not None or via_id.casefold() in selected_via_ids:
+                selected_key = selected_key or rail.rail_id
+                updated[selected_key] = RailEligibility(
+                    rail_id=rail.rail_id, net=rail.net,
+                    pwr_layer=alt_rail.pwr_layer, gnd_layer=alt_rail.gnd_layer,
+                    via_template_id=alt_template_id, allowed=True,
+                )
+            via_eligibility[via_id] = updated
+        updated_eligibility = dict(cluster.eligibility)
+        selected_key = next((key for key in updated_eligibility if key.casefold() == rail.rail_id.casefold()), None)
+        if selected_key is not None:
+            updated_eligibility[selected_key] = RailEligibility(
+                rail_id=rail.rail_id, net=rail.net,
+                pwr_layer=alt_rail.pwr_layer, gnd_layer=alt_rail.gnd_layer,
+                via_template_id=alt_template_id, allowed=True,
+            )
+        clusters.append(cluster.model_copy(update={"via_eligibility": via_eligibility, "eligibility": updated_eligibility}))
+    candidate_analysis = analysis.model_copy(update={"clusters": tuple(clusters)}) if analysis is not None else None
+    candidate_scenario = scenario.model_copy(update={"decaps": tuple(decaps), "connection_analysis": candidate_analysis})
+    provenance = {"policy": EVALUATION_POLICY_EMBEDDED_ALTERNATE, "candidate_pwr_layer": alt_rail.pwr_layer, "candidate_gnd_layer": alt_rail.gnd_layer, "candidate_pwr_source_net": str(pwr_record.get("net", "")), "candidate_gnd_source_net": str(gnd_record.get("net", "")), "candidate_pwr_asset": str(pwr_record.get("asset", "")), "candidate_gnd_asset": str(gnd_record.get("asset", "")), "candidate_pwr_asset_sha256": str(pwr_record.get("asset_sha256", "")), "candidate_gnd_asset_sha256": str(gnd_record.get("asset_sha256", "")), "source_template_id": template.template_id, "alternate_template_id": alt_template_id, "missing_source_vertical_path_approximation": True, "template_rl_recomputed": rl_recomputed, "loop_resistance_ohm": resistance, "loop_inductance_h": inductance, "derived_pwr_depth_um": pwr_depth, "derived_gnd_depth_um": gnd_depth}
+    context = _AlternateEvaluationContext(candidate_scenario, candidate_project, rail.rail_id, alt_rail.pwr_layer, alt_rail.gnd_layer, provenance)
+    cache[cache_key] = context
+    return context
 def _outside_terminal_blocker(
     *,
     rail: RailSpec,
@@ -1332,12 +1753,6 @@ def _evaluation_geometry_blockers(
         ) or any(
             item.evidence_for_layer(rail.gnd_layer) is not None
             for item in unique_ground.values()
-        ) or any(
-            item.graph_contact_for_layer(rail.pwr_layer) is not None
-            for item in unique_power.values()
-        ) or any(
-            item.graph_contact_for_layer(rail.gnd_layer) is not None
-            for item in unique_ground.values()
         )
         coupled = len(unique_power) > 1 or len(unique_ground) > 1 or has_recovered_path
         power_landings = tuple(unique_power[key] for key in sorted(unique_power))
@@ -1372,603 +1787,199 @@ def _evaluation_geometry_blockers(
     return tuple(blockers)
 
 
-@dataclass(frozen=True, slots=True)
-class _AlternateEvaluationContext:
-    scenario: ScenarioSpec
-    project: ProjectSpec
-    rail_id: str
-    candidate_layer: str
-    ground_layer: str
-    provenance: dict[str, Any]
+def _layerwise_artwork_bounds_um(
+    project: ProjectSpec, rail: RailSpec
+) -> tuple[float, float, float, float]:
+    """Union every retained layer bbox for one net without decoding geometry."""
 
-
-def _geometry_records(project: ProjectSpec) -> list[Mapping[str, Any]]:
-    raw = project.metadata.get("spd_import")
-    records = raw.get("plane_geometries") if isinstance(raw, Mapping) else None
-    return [item for item in records if isinstance(item, Mapping)] if isinstance(records, list) else []
-
-
-def _record_bounds(record: Mapping[str, Any]) -> tuple[float, float, float, float] | None:
-    values = record.get("solver_bounds_um") or record.get("bounds_um") or record.get("bbox_um")
-    if isinstance(values, (list, tuple)) and len(values) == 4:
-        try:
-            result = tuple(float(item) for item in values)
-        except (TypeError, ValueError):
-            result = None
-        if result is not None and all(isfinite(item) for item in result) and result[1] > result[0] and result[3] > result[2]:
-            return result  # type: ignore[return-value]
-    xs: list[float] = []
-    ys: list[float] = []
-    for poly in record.get("positive_polygons_um", []):
-        if isinstance(poly, (list, tuple)):
-            for point in poly:
-                if isinstance(point, (list, tuple)) and len(point) == 2:
-                    xs.append(float(point[0])); ys.append(float(point[1]))
-    for circle in record.get("positive_circles_um", []):
-        if isinstance(circle, (list, tuple)) and len(circle) == 3:
-            x, y, radius = (float(item) for item in circle)
-            xs.extend((x - radius, x + radius)); ys.extend((y - radius, y + radius))
-    if not xs or not ys:
-        return None
-    result = (min(xs), max(xs), min(ys), max(ys))
-    return result if result[1] > result[0] and result[3] > result[2] else None
-
-
-@dataclass(frozen=True, slots=True)
-class _RetainedArtworkEntry:
-    asset: str
-    digest: str
-    layer: str
-    net: str
-    indexed: IndexedPlaneGeometry
-    shape: Any | None = None
-
-
-class _RetainedArtworkIndex:
-    """Decode each retained plane asset once and index its exact copper once."""
-
-    def __init__(
-        self,
-        records: Sequence[Mapping[str, Any]],
-        attachments: Mapping[str, bytes],
-    ) -> None:
-        entries: list[_RetainedArtworkEntry] = []
-        decoded: dict[tuple[str, str], _RetainedArtworkEntry | None] = {}
-        for record in records:
-            asset = str(record.get("asset", "")).strip()
-            digest = str(record.get("asset_sha256", "")).strip().lower()
-            layer = str(record.get("layer", "")).strip()
-            net = str(record.get("net", "")).strip()
-            if not asset or not re.fullmatch(r"[0-9a-f]{64}", digest):
-                continue
-            key = (asset.casefold(), digest)
-            if key in decoded:
-                continue
-            payload_bytes = attachments.get(asset)
-            entry: _RetainedArtworkEntry | None = None
-            if payload_bytes is not None:
-                try:
-                    payload = evaluation_services._decode_spd_geometry_asset(
-                        digest, payload_bytes
-                    )
-                    evaluation_services._validate_spd_geometry_payload(
-                        payload, expected_layer=layer, expected_net=net
-                    )
-                    geometry = SpdPlaneGeometry(
-                        layer=str(payload["layer"]),
-                        net=str(payload["net"]),
-                        positive_polygons_um=tuple(
-                            tuple((float(point[0]), float(point[1])) for point in polygon)
-                            for polygon in payload["positive_polygons_um"]
-                        ),
-                        negative_polygons_um=tuple(
-                            tuple((float(point[0]), float(point[1])) for point in polygon)
-                            for polygon in payload["negative_polygons_um"]
-                        ),
-                        positive_circles_um=tuple(
-                            tuple(float(value) for value in circle)
-                            for circle in payload["positive_circles_um"]
-                        ),
-                        negative_circles_um=tuple(
-                            tuple(float(value) for value in circle)
-                            for circle in payload["negative_circles_um"]
-                        ),
-                        primitive_order=tuple(
-                            (str(step[0]), int(step[1]))
-                            for step in payload["primitive_order"]
-                        ),
-                    )
-                    indexed = IndexedPlaneGeometry.build(geometry)
-                    if indexed is not None:
-                        entry = _RetainedArtworkEntry(
-                            asset=asset,
-                            digest=digest,
-                            layer=layer,
-                            net=net,
-                            indexed=indexed,
-                        )
-                except (TypeError, ValueError, IndexError, ArithmeticError):
-                    entry = None
-            decoded[key] = entry
-            if entry is not None:
-                entries.append(entry)
-        self._entries = tuple(entries)
-        self._shapes: dict[tuple[str, str], Any | None] = {}
-        self._prepared_shapes: dict[tuple[str, str], Any | None] = {}
-        self._by_layer_net = {}
-        for entry in self._entries:
-            self._by_layer_net.setdefault(
-                (entry.layer.casefold(), entry.net.casefold()), []
-            ).append(entry)
-
-    def has(self, *, layer: str, net: str, asset: str, digest: str) -> bool:
-        return any(
-            item.asset.casefold() == asset.casefold()
-            and item.digest == digest.casefold()
-            and item.layer.casefold() == layer.casefold()
-            and item.net.casefold() == net.casefold()
-            for item in self._entries
-        )
-
-    def covers_footprint(
-        self,
-        *,
-        layer: str,
-        net: str,
-        asset: str,
-        digest: str,
-        x_um: float,
-        y_um: float,
-        width_um: float,
-        height_um: float,
-    ) -> bool:
-        """Require the complete finite rectangle to be strict-interior copper."""
-        entry = next(
-            (
-                item
-                for item in self._entries
-                if item.asset.casefold() == asset.casefold()
-                and item.digest == digest.casefold()
-                and item.layer.casefold() == layer.casefold()
-                and item.net.casefold() == net.casefold()
-            ),
-            None,
-        )
-        if entry is None:
-            return False
-        try:
-            # Use the same indexed ordered-boolean validator as strict import.
-            # This is intentionally the only artwork containment path here:
-            # center/corner and negative-bbox shortcuts are unsound for narrow
-            # voids, re-add ordering, and tangent footprints.
-            return bool(
-                entry.indexed.covers_footprint(
-                    float(x_um),
-                    float(y_um),
-                    float(width_um),
-                    float(height_um),
-                )
-            )
-        except (ImportError, TypeError, ValueError, ArithmeticError):
-            return False
-
-    def contains(self, *, layer: str, net: str, x_um: float, y_um: float) -> str:
-        entries = self._by_layer_net.get((layer.casefold(), net.casefold()), ())
-        saw_boundary = False
-        saw_inside = False
-        for entry in entries:
-            try:
-                result = entry.indexed.contains(x_um, y_um)
-                if result == "boundary":
-                    saw_boundary = True
-                elif result == "inside":
-                    saw_inside = True
-                continue
-            except (ImportError, TypeError, ValueError, ArithmeticError):
-                pass
-        if saw_boundary:
-            return "boundary"
-        return "inside" if saw_inside else "outside"
-
-
-def _alternate_terminal_points(
-    scenario: ScenarioSpec,
-    project: ProjectSpec,
-    rail_id: str,
-    *,
-    pwr_layer: str,
-    gnd_layer: str,
-    via: ViaLoopTemplate,
-) -> tuple[tuple[str, str, float, float, float, float], ...]:
-    """Return center + four corners for every finite direct terminal landing."""
-    analysis = scenario.connection_analysis
-    if analysis is None:
-        return ()
-    rail_keys = {rail_id.casefold()}
-    decaps = {item.refdes.casefold(): item for item in scenario.decaps}
-    points: list[tuple[str, str, float, float, float, float]] = []
-    for connection in analysis.connections.values():
-        decap = decaps.get(connection.refdes.casefold())
-        if decap is None or decap.current_rail_id.casefold() not in rail_keys:
-            continue
-        if (
-            not decap.enabled
-            and len(connection.power_vias) == 1
-            and len(connection.ground_vias) == 1
-        ):
-            continue
-        for terminal, landings, layer in (
-            (TerminalKind.PWR, connection.power_vias, pwr_layer),
-            (TerminalKind.GND, connection.ground_vias, gnd_layer),
-        ):
-            for landing in landings:
-                evidence = landing.evidence_for_layer(layer)
-                graph_contact = getattr(
-                    landing, "graph_contact_for_layer", lambda _layer: None
-                )(layer)
-                x_um = (
-                    float(evidence.x_um)
-                    if evidence is not None
-                    else float(graph_contact.x_um)
-                    if graph_contact is not None
-                    else float(landing.x_um)
-                )
-                y_um = (
-                    float(evidence.y_um)
-                    if evidence is not None
-                    else float(graph_contact.y_um)
-                    if graph_contact is not None
-                    else float(landing.y_um)
-                )
-                width = float(evidence.target_pad_width_um) if evidence is not None else float(via.finite_port_width_um)
-                height = float(evidence.target_pad_height_um) if evidence is not None else float(via.finite_port_height_um)
-                if not all(isfinite(value) for value in (x_um, y_um)) or not all(
-                    isfinite(value) and value > 0.0 for value in (width, height)
-                ):
-                    return ()
-                for x_value, y_value in (
-                    (x_um, y_um),
-                    (x_um - width / 2.0, y_um - height / 2.0),
-                    (x_um - width / 2.0, y_um + height / 2.0),
-                    (x_um + width / 2.0, y_um - height / 2.0),
-                    (x_um + width / 2.0, y_um + height / 2.0),
-                ):
-                    points.append((terminal.value, layer, x_value, y_value, width, height))
-    return tuple(points)
-
-
-def _alternate_context_for_rail(
-    scenario: ScenarioSpec,
-    rail_id: str,
-    *,
-    attachments: Mapping[str, bytes] | None = None,
-    _cache: dict[tuple[str, str, str, str], _AlternateEvaluationContext] | None = None,
-) -> _AlternateEvaluationContext | None:
-    """Derive a transient, evidence-bound alternate pair for one rail.
-
-    This intentionally uses only retained plane records and immutable board
-    bounds.  Missing source vertical-path proof is disclosed as an assumption;
-    no scenario/project object is modified in place.
-    """
-    base = scenario.base_project
-    rail = next((item for item in base.rails if item.rail_id.casefold() == rail_id.casefold()), None)
-    if rail is None:
-        return None
-    records = _geometry_records(base)
-    if not records:
-        return None
-    source_hash = str(base.metadata.get("spd_import", {}).get("source_sha256", "")) if isinstance(base.metadata.get("spd_import"), Mapping) else ""
-    if attachments is None or source_hash.casefold() != str(scenario.source.sha256).casefold() or len(source_hash) != 64 or not re.fullmatch(r"[0-9a-fA-F]{64}", source_hash):
-        return None
-    attachment_fingerprint = sha256(
-        b"".join(
-            name.encode("utf-8") + sha256(payload).digest()
-            for name, payload in sorted(attachments.items(), key=lambda item: item[0].casefold())
-        )
-    ).hexdigest()
-    cache_key = (
-        scenario.design_fingerprint,
-        rail.rail_id.casefold(),
-        source_hash.casefold(),
-        attachment_fingerprint,
-    )
-    cache = _cache if _cache is not None else {}
-    cached_context = cache.get(cache_key)
-    if cached_context is not None:
-        return cached_context
-    stack = {layer.name.casefold(): index for index, layer in enumerate(base.stackup_layers)}
-    from spd_decap_pi._core.plane_pairs import suggest_effective_plane_pairs
-    allowed_pair_separation = {
-        (item.pwr_layer.casefold(), item.gnd_layer.casefold()): float(item.separation_um)
-        for item in suggest_effective_plane_pairs(
-            base.stackup_layers, rail_net=rail.net, gnd_aliases=base.gnd_aliases
-        )
-    }
-    gnd_keys = {item.casefold() for item in base.gnd_aliases}
-    artwork: _RetainedArtworkIndex | None = None
-    outline_bounds = (
-        float(base.outline.origin_x_um),
-        float(base.outline.origin_x_um + base.outline.width_um),
-        float(base.outline.origin_y_um),
-        float(base.outline.origin_y_um + base.outline.height_um),
-    )
-    candidates: list[tuple[tuple[Any, ...], Mapping[str, Any], Mapping[str, Any], tuple[float, float, float, float], tuple[float, float, float, float]]] = []
-    for pwr in records:
-        pwr_layer = str(pwr.get("layer", "")).strip()
-        pwr_net = str(pwr.get("net", "")).strip()
-        if not pwr_layer or not pwr_net or pwr_net.casefold() != rail.net.casefold() or pwr_layer.casefold() == rail.pwr_layer.casefold():
-            continue
-        pwr_bounds = _record_bounds(pwr)
-        if pwr_bounds is None or any(not isfinite(item) for item in pwr_bounds):
-            continue
-        if pwr_bounds[0] < outline_bounds[0] or pwr_bounds[1] > outline_bounds[1] or pwr_bounds[2] < outline_bounds[2] or pwr_bounds[3] > outline_bounds[3]:
-            continue
-        asset = str(pwr.get("asset", "")).strip()
-        asset_sha = str(pwr.get("asset_sha256", "")).strip().lower()
-        if not asset or not re.fullmatch(r"[0-9a-f]{64}", asset_sha):
-            continue
-        payload = attachments.get(asset)
-        if payload is None or sha256(payload).hexdigest().casefold() != asset_sha:
-            continue
-        pwr_index = stack.get(pwr_layer.casefold())
-        if pwr_index is None:
-            continue
-        for gnd in records:
-            gnd_layer = str(gnd.get("layer", "")).strip()
-            gnd_net = str(gnd.get("net", "")).strip()
-            if not gnd_layer or gnd_net.casefold() not in gnd_keys or (pwr_layer.casefold(), gnd_layer.casefold()) not in allowed_pair_separation:
-                continue
-            gnd_bounds = _record_bounds(gnd)
-            if gnd_bounds is None or gnd_bounds[0] < outline_bounds[0] or gnd_bounds[1] > outline_bounds[1] or gnd_bounds[2] < outline_bounds[2] or gnd_bounds[3] > outline_bounds[3]:
-                continue
-            # The GND record must also be retained and hash-bound.
-            gnd_asset = str(gnd.get("asset", "")).strip(); gnd_sha = str(gnd.get("asset_sha256", "")).strip().lower()
-            if not gnd_asset or not re.fullmatch(r"[0-9a-f]{64}", gnd_sha):
-                continue
-            payload = attachments.get(gnd_asset)
-            if payload is None or sha256(payload).hexdigest().casefold() != gnd_sha:
-                continue
-            key = (allowed_pair_separation[(pwr_layer.casefold(), gnd_layer.casefold())], pwr_layer.casefold(), gnd_layer.casefold(), pwr_net.casefold())
-            candidates.append((key, pwr, gnd, pwr_bounds, gnd_bounds))
-    if not candidates:
-        return None
-    template_ids = _via_template_ids_by_rail(base)
-    old_template_id = template_ids.get(rail.rail_id.casefold())
-    template = next((item for item in base.via_templates if item.template_id.casefold() == (old_template_id or "").casefold()), None)
-    if template is None:
-        template = next((item for item in base.via_templates if item.pwr_reference_layer.casefold() == rail.pwr_layer.casefold() and item.gnd_reference_layer.casefold() == rail.gnd_layer.casefold()), None)
-    if template is None:
-        return None
-    # Candidate order is a preference, not proof.  Reject a nearer pair that
-    # has a void/boundary/insufficient finite-port coverage and continue to a
-    # farther retained same-net pair that passes the exact test.
-    selected: tuple[Mapping[str, Any], Mapping[str, Any], tuple[float, float, float, float]] | None = None
-    for _key, candidate_pwr, candidate_gnd, candidate_bounds, candidate_gnd_bounds in sorted(candidates, key=lambda item: item[0]):
-        pair_artwork = _RetainedArtworkIndex(
-            [candidate_pwr, candidate_gnd], attachments
-        )
-        if not pair_artwork._entries:
-            continue
-        artwork = pair_artwork
-        probe_template = template.model_copy(
-            update={
-                "pwr_reference_layer": str(candidate_pwr["layer"]),
-                "gnd_reference_layer": str(candidate_gnd["layer"]),
-            }
-        )
-        points = _alternate_terminal_points(
-            scenario,
-            base,
-            rail.rail_id,
-            pwr_layer=str(candidate_pwr["layer"]),
-            gnd_layer=str(candidate_gnd["layer"]),
-            via=probe_template,
-        )
-        if not points:
-            continue
-        valid = True
-        for point_index, (_terminal, layer, x_um, y_um, width_um, height_um) in enumerate(points):
-            record = candidate_pwr if layer.casefold() == str(candidate_pwr["layer"]).casefold() else candidate_gnd
-            net = str(record.get("net", ""))
-            bounds = candidate_bounds if record is candidate_pwr else candidate_gnd_bounds
-            if point_index % 5 == 0 and (
-                x_um - width_um / 2.0 < bounds[0]
-                or x_um + width_um / 2.0 > bounds[1]
-                or y_um - height_um / 2.0 < bounds[2]
-                or y_um + height_um / 2.0 > bounds[3]
-            ):
-                valid = False
-                break
-            if artwork.contains(net=net, layer=layer, x_um=x_um, y_um=y_um) != "inside":
-                valid = False
-                break
-            if point_index % 5 == 0 and not artwork.covers_footprint(
-                layer=layer,
-                net=net,
-                asset=str(record.get("asset", "")),
-                digest=str(record.get("asset_sha256", "")),
-                x_um=x_um,
-                y_um=y_um,
-                width_um=width_um,
-                height_um=height_um,
-            ):
-                valid = False
-                break
-        if valid:
-            selected = (candidate_pwr, candidate_gnd, candidate_bounds)
-            break
-    if selected is None:
-        return None
-    pwr_record, gnd_record, pwr_bounds = selected
-    # Preserve the imported template identity so shared-pad eligibility and
-    # source fallback bindings remain coherent; only its transient reference
-    # layers are replaced for this opt-in project.
-    alt_template_id = (
-        f"{template.template_id}__ALT_{str(pwr_record['layer']).replace(' ', '_')}__"
-        f"{str(gnd_record['layer']).replace(' ', '_')}"
-    )
-    alt_template = template.model_copy(update={"template_id": alt_template_id, "pwr_reference_layer": str(pwr_record["layer"]), "gnd_reference_layer": str(gnd_record["layer"])})
-    rl_recomputed = False
-    pwr_depth = gnd_depth = None
-    try:
-        depths = evaluation_services._spd_layer_center_depths(base.stackup_layers)
-        pwr_depth = depths[str(pwr_record["layer"])]
-        gnd_depth = depths[str(gnd_record["layer"])]
-        template_details = base.metadata.get("spd_via_template_provenance", {}).get(template.template_id, {})
-        drill = template_details.get("drill_diameter_um") if isinstance(template_details, Mapping) else None
-        resistance, inductance = evaluation_services._spd_uncalibrated_loop_estimate(
-            pwr_depth_um=pwr_depth,
-            gnd_depth_um=gnd_depth,
-            drill_diameter_um=float(drill) if drill is not None else None,
-        )
-        alt_template = alt_template.model_copy(update={"loop_resistance_ohm": resistance, "loop_inductance_h": inductance})
-        rl_recomputed = True
-    except (KeyError, TypeError, ValueError):
-        resistance, inductance = template.loop_resistance_ohm, template.loop_inductance_h
-    alt_rail = rail.model_copy(update={"pwr_layer": str(pwr_record["layer"]), "gnd_layer": str(gnd_record["layer"]), "mixed_reference_certificate": None, "mixed_reference_ground_witness": None})
-    rails = [alt_rail if item.rail_id.casefold() == rail.rail_id.casefold() else item for item in base.rails]
-    records_out = [dict(item) for item in records]
-    metadata = dict(base.metadata); spd_import = dict(metadata.get("spd_import", {}))
-    spd_import["plane_geometries"] = records_out
-    spd_import["evaluation_alternate_pair"] = {"policy": EVALUATION_POLICY_EMBEDDED_ALTERNATE, "rail_id": rail.rail_id, "pwr_layer": alt_rail.pwr_layer, "gnd_layer": alt_rail.gnd_layer, "pwr_source_net": str(pwr_record.get("net", "")), "gnd_source_net": str(gnd_record.get("net", ""))}
-    metadata["spd_import"] = spd_import
-    provenance = dict(metadata.get("spd_via_template_provenance", {}))
-    if old_template_id and old_template_id in provenance:
-        source_details = dict(provenance[old_template_id])
-        details = dict(source_details)
-        details.update({"rail_id": rail.rail_id, "pwr_reference_layer": alt_rail.pwr_layer, "gnd_reference_layer": alt_rail.gnd_layer, "calibration": "embedded_alternate_analytical_approximation", "source_vertical_path_proven": False, "derived_loop_resistance_ohm": resistance, "derived_loop_inductance_h": inductance, "derived_pwr_depth_um": pwr_depth, "derived_gnd_depth_um": gnd_depth})
-        details["source_template_id"] = old_template_id
-        details["source_template_provenance"] = source_details
-        provenance[alt_template_id] = details
-        provenance.pop(old_template_id, None)
-    metadata["spd_via_template_provenance"] = provenance
-    # Existing partitions refer to the old rail/domain map.  Rebuild from the
-    # transient rail/template/geometry payload before validating the final
-    # project so stale cell mappings cannot leak into this approximation.
-    provisional = base.model_copy(update={"rails": rails, "via_templates": [*base.via_templates, alt_template], "metadata": metadata, "partitions": []})
-    from spd_decap_pi._core.services import _spd_plane_partitions
-    candidate_project = provisional.model_copy(update={"partitions": _spd_plane_partitions(provisional)})
-    decaps = []
-    for decap in scenario.decaps:
-        if decap.current_rail_id.casefold() != rail.rail_id.casefold():
-            decaps.append(decap); continue
-        elig = dict(decap.eligibility)
-        elig[rail.rail_id] = RailEligibility(rail_id=rail.rail_id, net=rail.net, pwr_layer=alt_rail.pwr_layer, gnd_layer=alt_rail.gnd_layer, via_template_id=alt_template_id, allowed=True)
-        decaps.append(decap.model_copy(update={"eligibility": elig}))
-    clusters = []
-    source_clusters = (
-        scenario.connection_analysis.clusters
-        if scenario.connection_analysis is not None
+    spd_import = project.metadata.get("spd_import")
+    records = (
+        spd_import.get("plane_geometries", ())
+        if isinstance(spd_import, Mapping)
         else ()
     )
-    for cluster in source_clusters:
-        if not any(
-            decap.current_rail_id.casefold() == rail.rail_id.casefold()
-            for decap in scenario.decaps
-            if decap.refdes.casefold() in {item.casefold() for item in cluster.member_refdes}
+    bounds: list[tuple[float, float, float, float]] = []
+    for record in records:
+        if (
+            not isinstance(record, Mapping)
+            or str(record.get("net", "")).casefold() != rail.net.casefold()
         ):
-            clusters.append(cluster)
             continue
-        via_eligibility = {}
-        selected_via_ids = {
-            landing.via_id.casefold()
-            for connection in (
-                scenario.connection_analysis.connections.values()
-                if scenario.connection_analysis is not None
-                else ()
-            )
-            if connection.refdes.casefold() in {item.casefold() for item in cluster.member_refdes}
-            for landing in connection.power_vias
-        }
-        for via_id, by_rail in cluster.via_eligibility.items():
-            updated = dict(by_rail)
-            selected_key = next(
-                (key for key in updated if key.casefold() == rail.rail_id.casefold()),
-                None,
-            )
-            if selected_key is not None or via_id.casefold() in selected_via_ids:
-                selected_key = selected_key or rail.rail_id
-                updated[selected_key] = RailEligibility(
-                    rail_id=rail.rail_id,
-                    net=rail.net,
-                    pwr_layer=alt_rail.pwr_layer,
-                    gnd_layer=alt_rail.gnd_layer,
-                    via_template_id=alt_template_id,
-                    allowed=True,
-                )
-            via_eligibility[via_id] = updated
-        updated_cluster_eligibility = dict(cluster.eligibility)
-        selected_key = next(
-            (key for key in updated_cluster_eligibility if key.casefold() == rail.rail_id.casefold()),
-            None,
-        )
-        if selected_key is not None:
-            updated_cluster_eligibility[selected_key] = RailEligibility(
-                rail_id=rail.rail_id,
-                net=rail.net,
-                pwr_layer=alt_rail.pwr_layer,
-                gnd_layer=alt_rail.gnd_layer,
-                via_template_id=alt_template_id,
-                allowed=True,
-            )
-        clusters.append(
-            cluster.model_copy(
-                update={
-                    "via_eligibility": via_eligibility,
-                    "eligibility": updated_cluster_eligibility,
-                }
-            )
-        )
-    candidate_analysis = (
-        scenario.connection_analysis.model_copy(update={"clusters": tuple(clusters)})
-        if scenario.connection_analysis is not None
-        else None
-    )
-    candidate_scenario = scenario.model_copy(
-        update={"decaps": tuple(decaps), "connection_analysis": candidate_analysis}
-    )
-    provenance_result = {"policy": EVALUATION_POLICY_EMBEDDED_ALTERNATE, "candidate_pwr_layer": alt_rail.pwr_layer, "candidate_gnd_layer": alt_rail.gnd_layer, "candidate_pwr_source_net": str(pwr_record.get("net", "")), "candidate_gnd_source_net": str(gnd_record.get("net", "")), "candidate_pwr_asset": str(pwr_record.get("asset", "")), "candidate_gnd_asset": str(gnd_record.get("asset", "")), "candidate_pwr_asset_sha256": str(pwr_record.get("asset_sha256", "")), "candidate_gnd_asset_sha256": str(gnd_record.get("asset_sha256", "")), "source_template_id": template.template_id, "alternate_template_id": alt_template_id, "missing_source_vertical_path_approximation": True, "template_rl_recomputed": rl_recomputed, "loop_resistance_ohm": resistance, "loop_inductance_h": inductance}
-    # Full finite-terminal coverage is mandatory; check the actual retained
-    # ordered boolean artwork at each center and all four footprint corners.
-    terminal_points = _alternate_terminal_points(
-        scenario, candidate_project, rail.rail_id,
-        pwr_layer=alt_rail.pwr_layer,
-        gnd_layer=alt_rail.gnd_layer,
-        via=alt_template,
-    )
-    if not terminal_points:
-        return None
-    for point_index, (_terminal, layer, x_um, y_um, width_um, height_um) in enumerate(terminal_points):
-        record = pwr_record if layer.casefold() == alt_rail.pwr_layer.casefold() else gnd_record
-        result = artwork.contains(
-            net=str(record.get("net", "")),
-            layer=layer,
-            x_um=x_um,
-            y_um=y_um,
-        )
-        if result != "inside":
-            return None
-        if point_index % 5 == 0 and not artwork.covers_footprint(
-            layer=layer,
-            net=str(record.get("net", "")),
-            asset=str(record.get("asset", "")),
-            digest=str(record.get("asset_sha256", "")),
-            x_um=x_um,
-            y_um=y_um,
-            width_um=width_um,
-            height_um=height_um,
+        raw = record.get("bbox_um")
+        if (
+            not isinstance(raw, Sequence)
+            or isinstance(raw, (str, bytes))
+            or len(raw) != 4
         ):
-            return None
-    context = _AlternateEvaluationContext(
-        candidate_scenario,
-        candidate_project,
-        rail.rail_id,
-        alt_rail.pwr_layer,
-        alt_rail.gnd_layer,
-        provenance_result,
+            continue
+        candidate = tuple(float(value) for value in raw)
+        if (
+            all(isfinite(value) for value in candidate)
+            and candidate[1] > candidate[0]
+            and candidate[3] > candidate[2]
+        ):
+            bounds.append(candidate)  # type: ignore[arg-type]
+    if not bounds:
+        raise ScenarioEvaluationBuildError(
+            "LAYERWISE_ARTWORK_BOUNDS_MISSING",
+            f"rail {rail.rail_id!r} has no retained multilayer artwork bbox",
+        )
+    return (
+        min(item[0] for item in bounds),
+        max(item[1] for item in bounds),
+        min(item[2] for item in bounds),
+        max(item[3] for item in bounds),
     )
-    cache[cache_key] = context
-    return context
+
+
+def _layerwise_profile_project(
+    scenario: ScenarioSpec,
+    project: ProjectSpec,
+    rail_ids: Sequence[str],
+) -> ProjectSpec:
+    """Return a transient aggregate-artwork/terminal compatibility envelope.
+
+    Exact adjacent-gap blocks and external Device ports come from retained
+    source evidence.  The shared request/template schema still requires a
+    finite rectangle, so use the union of retained layer bboxes and extend it
+    only as far as a real Device launch footprint requires.  In the production
+    terminal-complete path this rectangle is provenance/compatibility data: no
+    legacy rectangular modal term or higher-mode correction is added to Zii.
+    Mounted decaps therefore never expand it.  No Device terminal is clamped,
+    moved, or dropped; every extension remains recorded for audit.
+    """
+
+    selected = {item.casefold() for item in rail_ids}
+    rail_by_key = {
+        rail.rail_id.casefold(): rail
+        for rail in project.rails
+        if rail.rail_id.casefold() in selected
+    }
+    artwork_bounds = {
+        key: _layerwise_artwork_bounds_um(project, rail)
+        for key, rail in rail_by_key.items()
+    }
+
+    def rebuild_partitions(
+        bounds_by_key: Mapping[str, tuple[float, float, float, float]]
+    ) -> tuple[Any, ...]:
+        updated = []
+        for partition in project.partitions:
+            domain_to_rail = {
+                rail.domain: key
+                for key, rail in rail_by_key.items()
+                if rail.pwr_layer.casefold() == partition.layer.casefold()
+                and rail.domain in partition.domain_to_cell
+            }
+            cell_key = {
+                partition.domain_to_cell[domain]: key
+                for domain, key in domain_to_rail.items()
+            }
+            cells = []
+            for cell in partition.cells:
+                key = cell_key.get(cell.cell_id)
+                if key is None:
+                    cells.append(cell)
+                    continue
+                x_min, x_max, y_min, y_max = bounds_by_key[key]
+                cells.append(
+                    cell.model_copy(
+                        update={
+                            "x_min_um": x_min,
+                            "x_max_um": x_max,
+                            "y_min_um": y_min,
+                            "y_max_um": y_max,
+                            "nominal_x_min_um": None,
+                            "nominal_x_max_um": None,
+                            "nominal_y_min_um": None,
+                            "nominal_y_max_um": None,
+                            "source_net": None,
+                            "source_geometry_asset": None,
+                            "source_geometry_sha256": None,
+                            "source_positive_polygons_um": [],
+                            "source_negative_polygons_um": [],
+                            "source_positive_circles_um": [],
+                            "source_negative_circles_um": [],
+                            "source_primitive_order": [],
+                            "source_positive_subelement_count": 0,
+                            "source_negative_subelement_count": 0,
+                            "solver_geometry": "active_bounds",
+                        }
+                    )
+                )
+            updated.append(partition.model_copy(update={"cells": cells}))
+        return tuple(updated)
+
+    terminal_bounds = dict(artwork_bounds)
+
+    # Preserve a finite compatibility envelope around the exact Device launch
+    # evidence. The terminal-complete global-Y solve uses the certified exposed
+    # quotient port directly and does not evaluate rectangular higher modes.
+    for key, rail in rail_by_key.items():
+        power_pins = [
+            pin
+            for pin in project.pins
+            if pin.kind == PinKind.DEVICE_BUMP
+            and pin.terminal == TerminalKind.PWR
+            and pin.net.casefold() == rail.net.casefold()
+        ]
+        groups = {
+            (str(pin.site or "").casefold(), str(pin.bump_group or "").casefold())
+            for pin in power_pins
+            if pin.bump_group
+        }
+        related_ground = [
+            pin
+            for pin in project.pins
+            if pin.kind == PinKind.DEVICE_BUMP
+            and pin.terminal == TerminalKind.GND
+            and pin.bump_group
+            and (
+                str(pin.site or "").casefold(),
+                str(pin.bump_group or "").casefold(),
+            )
+            in groups
+        ]
+        x_min, x_max, y_min, y_max = terminal_bounds[key]
+        for pin in (*power_pins, *related_ground):
+            x_min = min(x_min, float(pin.x_um) - 50.0)
+            x_max = max(x_max, float(pin.x_um) + 50.0)
+            y_min = min(y_min, float(pin.y_um) - 50.0)
+            y_max = max(y_max, float(pin.y_um) + 50.0)
+        terminal_bounds[key] = (x_min, x_max, y_min, y_max)
+
+    expansion_by_rail = {
+        rail_by_key[key].rail_id: {
+            "artwork_bbox_um": list(artwork_bounds[key]),
+            "terminal_envelope_um": list(terminal_bounds[key]),
+            "extension_um": [
+                max(0.0, artwork_bounds[key][0] - terminal_bounds[key][0]),
+                max(0.0, terminal_bounds[key][1] - artwork_bounds[key][1]),
+                max(0.0, artwork_bounds[key][2] - terminal_bounds[key][2]),
+                max(0.0, terminal_bounds[key][3] - artwork_bounds[key][3]),
+            ],
+        }
+        for key in rail_by_key
+    }
+    metadata = {
+        **project.metadata,
+        "layerwise_solver_envelopes": expansion_by_rail,
+    }
+    assumptions = list(
+        dict.fromkeys(
+            (
+                *project.assumptions,
+                "Terminal-complete Layerwise uses exact retained adjacent artwork and the external Device-port global-Y Zii alone; the recorded artwork/terminal rectangle is compatibility provenance and adds no legacy modal correction.",
+            )
+        )
+    )
+    return project.model_copy(
+        update={
+            "partitions": list(rebuild_partitions(terminal_bounds)),
+            "metadata": metadata,
+            "assumptions": assumptions,
+        }
+    )
 
 
 def preflight_evaluation_connectivity(
@@ -1976,6 +1987,7 @@ def preflight_evaluation_connectivity(
     rail_ids: Sequence[str],
     *,
     _project: ProjectSpec | None = None,
+    solver_profile: str = DEFAULT_SOLVER_PROFILE_KEY,
     evaluation_policy: str = EVALUATION_POLICY_STRICT,
     attachments: Mapping[str, bytes] | None = None,
     _skip_geometry: bool = False,
@@ -1985,51 +1997,59 @@ def preflight_evaluation_connectivity(
     """Aggregate fail-closed source-connectivity blockers for selected rails.
 
     This intentionally follows the evaluation builder's fail-closed ordering:
-    unresolved or out-of-scope source connectivity on a selected rail blocks
-    before population or isolation-gap materialization is considered. The
-    returned rail IDs are canonical project spellings and the full blocker list
-    is retained for callers that need more than the compact UI text.
+    unresolved or out-of-scope source connectivity on a selected legacy rail
+    blocks before population or isolation-gap materialization is considered.
+    The layerwise profile defers only ``UNRESOLVED`` classifications to its
+    stricter exact endpoint-island termination compiler; ``OUT_OF_SCOPE`` and
+    every missing/ambiguous endpoint still fail closed.  The returned rail IDs
+    are canonical project spellings and the full blocker list is retained for
+    callers that need more than the compact UI text.
     """
 
     if evaluation_policy not in _EVALUATION_POLICIES:
         raise ScenarioEvaluationBuildError("EVALUATION_POLICY_UNKNOWN", f"unknown Evaluation geometry policy {evaluation_policy!r}")
+    profile = resolve_solver_profile(solver_profile)
     project = _project if _project is not None else scenario.base_project
     canonical_rails = _canonical_rail_ids(scenario, rail_ids, _project=project)
-    if not _skip_source_graph_provenance:
-        source_graph_blockers = _source_graph_provenance_blockers(
-            scenario, project, canonical_rails
-        )
-        if source_graph_blockers:
-            # Source identity/provenance failures are hard gates under every
-            # geometry policy.  In particular, EMBEDDED_ALTERNATE must not turn
-            # a stale or malformed source graph into a selectable evaluation.
-            return EvaluationConnectivityPreflight(
-                canonical_rails, source_graph_blockers
-            )
+    source_blockers = () if _skip_source_graph_provenance else _source_graph_provenance_blockers(scenario, project, canonical_rails)
+    if source_blockers:
+        # Provenance is a hard gate for both strict and embedded alternate
+        # policies.  An approximation can never repair a stale source binding.
+        return EvaluationConnectivityPreflight(canonical_rails, source_blockers)
     if evaluation_policy == EVALUATION_POLICY_EMBEDDED_ALTERNATE:
         blockers: list[EvaluationConnectivityBlocker] = []
         for rail_id in canonical_rails:
             strict = preflight_evaluation_connectivity(
                 scenario, (rail_id,), _project=project,
+                solver_profile=profile.key,
                 evaluation_policy=EVALUATION_POLICY_STRICT,
                 attachments=attachments,
+                _alternate_cache=_alternate_cache,
             )
             if strict.is_clear:
                 continue
             if any(
                 not item.reason.startswith("TERMINAL_OUTSIDE_SELECTED_PLANE:")
-                and not item.reason.startswith(
-                    "SOURCE_GRAPH_PROVENANCE_REFRESH_REQUIRED:"
-                )
+                and not item.reason.startswith("SOURCE_GRAPH_PROVENANCE_REFRESH_REQUIRED:")
                 for item in strict.blockers
             ):
                 blockers.extend(strict.blockers)
                 continue
-            context = _alternate_context_for_rail(scenario, rail_id, attachments=attachments, _cache=_alternate_cache)
+            context = _alternate_context_for_rail(
+                scenario, rail_id, attachments=attachments, _cache=_alternate_cache
+            )
             if context is None:
                 blockers.extend(strict.blockers)
                 continue
-            alternate = preflight_evaluation_connectivity(context.scenario, (rail_id,), _project=context.project, evaluation_policy=EVALUATION_POLICY_STRICT, attachments=attachments, _skip_geometry=True, _alternate_cache=_alternate_cache, _skip_source_graph_provenance=True)
+            alternate = preflight_evaluation_connectivity(
+                context.scenario, (rail_id,), _project=context.project,
+                solver_profile=profile.key,
+                evaluation_policy=EVALUATION_POLICY_STRICT,
+                attachments=attachments,
+                _skip_geometry=True,
+                _skip_source_graph_provenance=True,
+                _alternate_cache=_alternate_cache,
+            )
             blockers.extend(alternate.blockers)
         return EvaluationConnectivityPreflight(canonical_rails, tuple(blockers))
     _require_current_shared_pad_analysis(scenario)
@@ -2064,60 +2084,6 @@ def preflight_evaluation_connectivity(
         scenario, _project=project
     )
     blockers: list[EvaluationConnectivityBlocker] = []
-    selected_provenance = (
-        project.metadata.get("spd_import", {}).get(
-            "selected_plane_pair_provenance", {}
-        )
-        if isinstance(project.metadata.get("spd_import", {}), Mapping)
-        else {}
-    )
-    if isinstance(selected_provenance, Mapping):
-        provenance_key_counts: dict[str, int] = {}
-        for raw_key in selected_provenance:
-            folded_key = str(raw_key).casefold()
-            provenance_key_counts[folded_key] = provenance_key_counts.get(folded_key, 0) + 1
-        duplicate_provenance_keys = sorted(
-            key for key, count in provenance_key_counts.items() if count > 1
-        )
-        if duplicate_provenance_keys:
-            for rail_id in canonical_rails:
-                blockers.append(
-                    EvaluationConnectivityBlocker(
-                        rail_id=rail_id,
-                        refdes="<source graph provenance>",
-                        kind=DecapConnectionKind.UNRESOLVED,
-                        reason=(
-                            "SOURCE_GRAPH_PROVENANCE_DUPLICATE_KEY: persisted "
-                            "plane-pair provenance contains duplicate case-insensitive "
-                            f"rail key(s): {', '.join(duplicate_provenance_keys)}"
-                        ),
-                    )
-                )
-        for rail_id in canonical_rails:
-            selected_rail = rail_by_key.get(rail_id.casefold())
-            proof_keys = {rail_id.casefold()}
-            if selected_rail is not None:
-                proof_keys.add(str(selected_rail.net).casefold())
-            proof = next(
-                (
-                    value
-                    for key, value in selected_provenance.items()
-                    if str(key).casefold() in proof_keys
-                ),
-                None,
-            )
-            if isinstance(proof, Mapping) and proof.get("source_graph_pair_unresolved"):
-                blockers.append(
-                    EvaluationConnectivityBlocker(
-                        rail_id=rail_id,
-                        refdes="<source graph plane pair>",
-                        kind=DecapConnectionKind.UNRESOLVED,
-                        reason=(
-                            "SOURCE_GRAPH_PLANE_PAIR_UNRESOLVED: selected rail has "
-                            "no source-proven PWR/GND pair; re-import matching raw SPD"
-                        ),
-                    )
-                )
     for rail_id, reason in mixed_witness_failures.items():
         if rail_id.casefold() not in canonical_by_key:
             continue
@@ -2129,10 +2095,9 @@ def preflight_evaluation_connectivity(
                 reason=reason,
             )
         )
-    blocking_kinds = {
-        DecapConnectionKind.UNRESOLVED,
-        DecapConnectionKind.OUT_OF_SCOPE,
-    }
+    blocking_kinds = {DecapConnectionKind.OUT_OF_SCOPE}
+    if profile != LAYERWISE_ADMITTANCE_PROFILE:
+        blocking_kinds.add(DecapConnectionKind.UNRESOLVED)
     for decap in scenario.decaps:
         if decap.current_rail_id.casefold() not in canonical_by_key:
             continue
@@ -2217,11 +2182,19 @@ def preflight_evaluation_connectivity(
                     reason=reason,
                 )
             )
-    if not _skip_geometry:
-        geometry_blockers = _evaluation_geometry_blockers(
-            scenario, canonical_rails, _project=project
+    # The legacy modal worker stamps finite terminals into one selected
+    # rectangular plane, so a terminal outside that rectangle is a real build
+    # error for that profile.  Terminal-complete Layerwise instead binds every
+    # launch and mounted component to an exact retained (layer, NET) surface in
+    # ``_builder_preflight_blockers``.  Applying the legacy rectangle here
+    # would reject valid contacts on non-rectangular or disconnected artwork
+    # before the exact surface/endpoint certificate can be consulted.
+    if profile != LAYERWISE_ADMITTANCE_PROFILE:
+        blockers.extend(
+            _evaluation_geometry_blockers(
+                scenario, canonical_rails, _project=project
+            )
         )
-        blockers.extend(geometry_blockers)
     return EvaluationConnectivityPreflight(
         canonical_rails,
         tuple(
@@ -2253,9 +2226,6 @@ def _comparison_original_configuration(scenario: ScenarioSpec) -> ScenarioSpec:
     for capture in scenario.baseline_captures.values():
         for binding in capture.model_bindings:
             captured_models.setdefault(binding.refdes.casefold(), binding.model_id)
-    connected = {
-        refdes.casefold() for refdes in scenario.electrically_connected_refdes
-    }
     original_decaps = tuple(
         decap.model_copy(
             update={
@@ -2266,7 +2236,6 @@ def _comparison_original_configuration(scenario: ScenarioSpec) -> ScenarioSpec:
                     or decap.source_model_id
                     or decap.model_id
                     if decap.source_mounted
-                    and decap.refdes.casefold() in connected
                     else decap.source_model_id
                 ),
                 "enabled": decap.source_mounted,
@@ -2364,11 +2333,19 @@ def _builder_preflight_blockers(
     stage_offset: int = 0,
     stage_count: int = 1,
     skip_rail_ids: frozenset[str] = frozenset(),
+    solver_profile: str = DEFAULT_SOLVER_PROFILE_KEY,
     evaluation_policy: str = EVALUATION_POLICY_STRICT,
     attachments: Mapping[str, bytes] | None = None,
     _alternate_cache: dict[tuple[str, str, str, str], _AlternateEvaluationContext] | None = None,
 ) -> tuple[EvaluationConnectivityBlocker, ...]:
-    """Dry-build structurally clear rails and convert every build failure."""
+    """Dry-build structurally clear rails and convert every build failure.
+
+    The layerwise profile also compiles its retained artwork/certificates and
+    selected terminal binding here.  A project-only dry build cannot discover
+    a missing attachment, a stale certificate, or a missing selected surface;
+    reporting such a rail as runnable would defer a deterministic source
+    failure until after the user accepted the run manifest.
+    """
 
     report = progress or (lambda _value, _message: None)
     cancelled = is_cancelled or (lambda: False)
@@ -2382,15 +2359,23 @@ def _builder_preflight_blockers(
         else {}
     )
     result: list[EvaluationConnectivityBlocker] = []
-    connected = {
-        refdes.casefold() for refdes in scenario.electrically_connected_refdes
-    }
-    populated_rail_keys = {
-        decap.current_rail_id.casefold()
-        for decap in scenario.decaps
-        if decap.refdes.casefold() in connected
-    }
     design_fingerprint = scenario.design_fingerprint
+    profile = resolve_solver_profile(solver_profile)
+    # A v4 Layerwise scenario binding is the complete mutable board topology
+    # and mounted-termination inventory.  It is independent of the selected
+    # measurement rail: the binding identity covers the Scenario design,
+    # source/certificate, base substrate, every capacitor model, and every Via
+    # template.  Keep the first successful binding local to this one
+    # Original-or-Tuned preflight pass instead of recomputing its board-scale
+    # cache identity for every rail.
+    #
+    # Only failures raised *while creating that binding* are board-global and
+    # replayed for the remaining clear rails.  Project/template/source-model
+    # construction and ``with_termination_manifest`` stay outside this narrow
+    # failure cache because they retain selected-rail endpoint/port checks.
+    layerwise_board_binding: Any = None
+    layerwise_board_binding_ready = False
+    layerwise_board_binding_error: ValueError | None = None
     total = max(stage_count, 1)
     for index, rail_id in enumerate(canonical_rails):
         if cancelled():
@@ -2401,22 +2386,74 @@ def _builder_preflight_blockers(
             f"Preflighting {rail_id} solver project",
         )
         rail_key = rail_id.casefold()
-        if (
-            rail_key in blocked
-            or rail_key in skip_rail_ids
-            or rail_key not in populated_rail_keys
-        ):
+        if rail_key in blocked or rail_key in skip_rail_ids:
             continue
         try:
-            build_evaluation_project(
+            candidate = build_evaluation_project(
                 scenario,
                 evaluation_rail_id=rail_id,
                 _project=project,
                 _design_fingerprint=design_fingerprint,
+                solver_profile=profile.key,
                 evaluation_policy=evaluation_policy,
                 attachments=attachments,
                 _alternate_cache=_alternate_cache,
             )
+            if profile == LAYERWISE_ADMITTANCE_PROFILE:
+                from spd_decap_pi._core.solver.layerwise_network import (
+                    build_layerwise_uniform_source_model,
+                )
+
+                template = compile_project_evaluation_template(candidate, rail_id)
+
+                def source_progress(value: int, message: str) -> None:
+                    bounded = min(max(int(value), 0), 100)
+                    report(
+                        round((stage + bounded / 100.0) * 100 / total),
+                        f"Preflighting {rail_id}: {message}",
+                    )
+
+                source_model = build_layerwise_uniform_source_model(
+                    candidate,
+                    dict(attachments or {}),
+                    rail_id,
+                    template,
+                    progress=source_progress,
+                    is_cancelled=cancelled,
+                )
+                from .layerwise_termination_adapter import (
+                    LayerwiseScenarioTerminationFactory,
+                )
+
+                if layerwise_board_binding_error is not None:
+                    raise layerwise_board_binding_error
+                if not layerwise_board_binding_ready:
+                    try:
+                        layerwise_board_binding = (
+                            LayerwiseScenarioTerminationFactory(
+                                scenario=scenario,
+                                project=candidate,
+                                attachments=dict(attachments or {}),
+                            )(source_model.substrate, template)
+                        )
+                    except ValueError as exc:
+                        # The factory consumes the complete Scenario and the
+                        # board-wide substrate/model inventories; no selected
+                        # rail enters its binding identity.  A deterministic
+                        # failure here therefore makes every selected global-Y
+                        # measurement unmodelable.  Cache only this narrow
+                        # board-global failure, never a rail proof failure.
+                        layerwise_board_binding_error = exc
+                        raise
+                    layerwise_board_binding_ready = True
+                # Binding performs the same physical-surface mapping audit as
+                # the numerical service.  Requiring it here keeps the UI
+                # manifest honest: a rail cannot be shown as runnable and then
+                # silently fall back to a source-only layerwise solve.
+                source_model.with_termination_manifest(
+                    layerwise_board_binding,
+                    required=True,
+                )
         except ScenarioEvaluationPreflightError as exc:
             result.extend(exc.preflight.blockers)
         except ScenarioEvaluationBuildError as exc:
@@ -2448,7 +2485,8 @@ def _builder_preflight_blockers(
                     refdes="<rail project>",
                     kind=DecapConnectionKind.UNRESOLVED,
                     reason=(
-                        "evaluation builder [PROJECT_BUILD_FAILED]: "
+                        "evaluation builder "
+                        f"[{getattr(exc, 'code', 'PROJECT_BUILD_FAILED')}]: "
                         f"{type(exc).__name__}: {exc}"
                     ),
                 )
@@ -2457,12 +2495,33 @@ def _builder_preflight_blockers(
 
 
 def _rail_builder_input_sha256_by_rail(
-    scenario: ScenarioSpec, canonical_rails: Sequence[str]
+    scenario: ScenarioSpec,
+    canonical_rails: Sequence[str],
+    *,
+    include_all_decaps: bool = False,
 ) -> dict[str, str]:
-    """Hash per-rail mutable build inputs in one board-scale pass."""
+    """Hash mutable build inputs in one board-scale pass.
+
+    Legacy modal rails are independent and retain their historical per-rail
+    identity.  The production layer-surface network includes mounted
+    *other-rail* terminations in one global Y solve, so every requested rail
+    must bind the complete board decap state.  Otherwise Original preflight or
+    an unchanged-result shortcut could be reused after an electrically visible
+    change on another rail.
+    """
 
     selected = {rail_id.casefold() for rail_id in canonical_rails}
     decap_by_key = {item.refdes.casefold(): item for item in scenario.decaps}
+    if include_all_decaps:
+        board_sha256 = sha256(
+            _canonical_json(
+                [
+                    decap_by_key[key].model_dump(mode="json")
+                    for key in sorted(decap_by_key)
+                ]
+            )
+        ).hexdigest()
+        return {rail_key: board_sha256 for rail_key in selected}
     relevant_by_rail: dict[str, set[str]] = {key: set() for key in selected}
     for key, decap in decap_by_key.items():
         rail_key = decap.current_rail_id.casefold()
@@ -2499,6 +2558,7 @@ def preflight_evaluation_comparison(
     *,
     progress: ProgressCallback | None = None,
     is_cancelled: CancelCallback | None = None,
+    solver_profile: str = DEFAULT_SOLVER_PROFILE_KEY,
     evaluation_policy: str = EVALUATION_POLICY_STRICT,
     attachments: Mapping[str, bytes] | None = None,
     _alternate_cache: dict[tuple[str, str, str, str], _AlternateEvaluationContext] | None = None,
@@ -2513,18 +2573,45 @@ def preflight_evaluation_comparison(
     cannot be labeled runnable and subsequently fail before its first solve.
     """
 
-    project = scenario.base_project
-    canonical_rails = _canonical_rail_ids(scenario, rail_ids, _project=project)
+    if evaluation_policy not in _EVALUATION_POLICIES:
+        raise ScenarioEvaluationBuildError("EVALUATION_POLICY_UNKNOWN", f"unknown Evaluation geometry policy {evaluation_policy!r}")
+    profile = resolve_solver_profile(solver_profile)
     alternate_cache = _alternate_cache if _alternate_cache is not None else {}
+    source_project = scenario.base_project
+    canonical_rails = _canonical_rail_ids(
+        scenario, rail_ids, _project=source_project
+    )
+    # Provenance is the first public comparison gate.  Do not profile or
+    # alternate-transform the project before rejecting a stale/malformed
+    # source proof; those transforms can otherwise hide the authoritative
+    # source-graph failure behind an artwork/modelability error.
+    source_graph_blockers = _source_graph_provenance_blockers(
+        scenario, source_project, canonical_rails
+    )
+    if source_graph_blockers:
+        return EvaluationConnectivityPreflight(canonical_rails, source_graph_blockers)
+    project = (
+        _layerwise_profile_project(scenario, source_project, canonical_rails)
+        if profile == LAYERWISE_ADMITTANCE_PROFILE
+        else source_project
+    )
     tuned = preflight_evaluation_connectivity(
-        scenario, canonical_rails, _project=project,
-        evaluation_policy=evaluation_policy, attachments=attachments,
+        scenario,
+        canonical_rails,
+        _project=project,
+        solver_profile=profile.key,
+        evaluation_policy=evaluation_policy,
+        attachments=attachments,
         _alternate_cache=alternate_cache,
     )
     original_scenario = _comparison_original_configuration(scenario)
     original = preflight_evaluation_connectivity(
-        original_scenario, canonical_rails, _project=project,
-        evaluation_policy=evaluation_policy, attachments=attachments,
+        original_scenario,
+        canonical_rails,
+        _project=project,
+        solver_profile=profile.key,
+        evaluation_policy=evaluation_policy,
+        attachments=attachments,
         _alternate_cache=alternate_cache,
     )
     tuned_items = (
@@ -2550,16 +2637,21 @@ def preflight_evaluation_comparison(
             progress=progress,
             is_cancelled=is_cancelled,
             stage_count=stage_count,
+            solver_profile=profile.key,
             evaluation_policy=evaluation_policy,
             attachments=attachments,
             _alternate_cache=alternate_cache,
         ),
     )
     tuned_input_sha = _rail_builder_input_sha256_by_rail(
-        scenario, canonical_rails
+        scenario,
+        canonical_rails,
+        include_all_decaps=(profile == LAYERWISE_ADMITTANCE_PROFILE),
     )
     original_input_sha = _rail_builder_input_sha256_by_rail(
-        original_scenario, canonical_rails
+        original_scenario,
+        canonical_rails,
+        include_all_decaps=(profile == LAYERWISE_ADMITTANCE_PROFILE),
     )
     identical_rail_keys = frozenset(
         rail_key
@@ -2586,6 +2678,7 @@ def preflight_evaluation_comparison(
             stage_offset=len(canonical_rails),
             stage_count=stage_count,
             skip_rail_ids=identical_rail_keys,
+            solver_profile=profile.key,
             evaluation_policy=evaluation_policy,
             attachments=attachments,
             _alternate_cache=alternate_cache,
@@ -2642,7 +2735,7 @@ def preflight_evaluation_comparison(
 
 
 def _solver_project_fingerprint(project: ProjectSpec) -> str:
-    """Hash numerical inputs plus source-pair/model provenance identity."""
+    """Hash numerical inputs plus canonical selected-pair provenance identity."""
 
     payload = project.model_dump(mode="json")
     metadata = payload.pop("metadata", {})
@@ -2651,12 +2744,19 @@ def _solver_project_fingerprint(project: ProjectSpec) -> str:
         if isinstance(spd_import, dict):
             provenance = spd_import.get("selected_plane_pair_provenance")
             if provenance:
+                # Keep this one canonical source-graph proof in the solver
+                # cache identity.  Other import metadata (asset paths,
+                # diagnostics, UI notes) is intentionally provenance-only and
+                # must not perturb numerical cache reuse.
                 payload["selected_plane_pair_provenance"] = provenance
     return sha256(_canonical_json(payload)).hexdigest()
 
 
 def baseline_fallback_model_refdes(
-    scenario: ScenarioSpec, rail_ids: Sequence[str]
+    scenario: ScenarioSpec,
+    rail_ids: Sequence[str],
+    *,
+    include_all_source_mounted: bool = False,
 ) -> tuple[str, ...]:
     """Return original mounted parts whose current model would be frozen."""
 
@@ -2676,7 +2776,10 @@ def baseline_fallback_model_refdes(
         item.refdes
         for item in sorted(scenario.decaps, key=lambda entry: entry.refdes.casefold())
         if item.source_mounted
-        and item.refdes.casefold() in connected
+        and (
+            include_all_source_mounted
+            or item.refdes.casefold() in connected
+        )
         and item.source_rail_id.casefold() in uncaptured
         and item.source_model_id is None
         and item.model_id is not None
@@ -2698,6 +2801,9 @@ def _validate_evaluation_view(view: EvaluationView) -> None:
         raise ScenarioEvaluationCacheError(
             "cached evaluation solver profile is unknown"
         ) from exc
+    policy = getattr(view, "evaluation_policy", EVALUATION_POLICY_STRICT)
+    if policy not in _EVALUATION_POLICIES:
+        raise ScenarioEvaluationCacheError("cached evaluation geometry policy is unknown")
     if (
         view.solver_profile_label != profile.label
         or view.solver_profile_badge != profile.badge
@@ -2708,6 +2814,10 @@ def _validate_evaluation_view(view: EvaluationView) -> None:
     if not isinstance(view.solver_provenance, dict):
         raise ScenarioEvaluationCacheError(
             "cached evaluation solver provenance must be an object"
+        )
+    if profile == LAYERWISE_ADMITTANCE_PROFILE and not view.solver_provenance:
+        raise ScenarioEvaluationCacheError(
+            "cached layerwise evaluation has incomplete source/compiler provenance"
         )
     if view.solver_provenance:
         if (
@@ -2726,6 +2836,34 @@ def _validate_evaluation_view(view: EvaluationView) -> None:
             raise ScenarioEvaluationCacheError(
                 "cached research evaluation lacks source-only/validation provenance"
             )
+        if profile == LAYERWISE_ADMITTANCE_PROFILE:
+            provenance = view.solver_provenance
+
+            def layerwise_hash(name: str) -> str:
+                raw_value = provenance.get(name)
+                if name == "terminal_surface_contact_proof_sha256" and not raw_value:
+                    # Read the pre-v0.22 field only as a compatibility alias,
+                    # matching the result UI's disclosure validator.
+                    raw_value = provenance.get("terminal_artwork_proof_sha256")
+                return str(raw_value or "").strip().casefold()
+
+            if (
+                provenance.get("source_only") is not True
+                or any(
+                    len(value := layerwise_hash(name)) != 64
+                    or any(character not in "0123456789abcdef" for character in value)
+                    for name in _LAYERWISE_PROVENANCE_HASH_FIELDS
+                )
+                or provenance.get("compiler_algorithm_id")
+                != LAYERWISE_ADMITTANCE_PROFILE.compiler_algorithm_id
+                or provenance.get("compiler_version") != LAYERWISE_COMPILER_VERSION
+                or provenance.get("termination_manifest_required") is not True
+                or provenance.get("static_compiler_algorithm_sha256")
+                != solver_profile_static_identity_sha256(profile)
+            ):
+                raise ScenarioEvaluationCacheError(
+                    "cached layerwise evaluation has incomplete source/compiler provenance"
+                )
         if profile.experimental:
             # Experimental curves are intentionally never read from the
             # baseline cache, but this validation still protects an exported
@@ -2733,7 +2871,7 @@ def _validate_evaluation_view(view: EvaluationView) -> None:
             try:
                 _evaluation_settings(
                     view.target_ohm,
-                    0,
+                    DEFAULT_EVALUATION_MODAL_MAX_INDEX,
                     profile.key,
                     solver_provenance=view.solver_provenance,
                 )
@@ -2741,8 +2879,6 @@ def _validate_evaluation_view(view: EvaluationView) -> None:
                 raise ScenarioEvaluationCacheError(
                     "cached research evaluation has an incomplete evidence identity"
                 ) from exc
-    if getattr(view, "evaluation_policy", EVALUATION_POLICY_STRICT) not in _EVALUATION_POLICIES:
-        raise ScenarioEvaluationCacheError("cached evaluation geometry policy is unknown")
     arrays = {
         "magnitude_ohm": view.magnitude_ohm,
         "phase_deg": view.phase_deg,
@@ -2976,7 +3112,6 @@ def _decode_baseline_evaluation(
                 "powersi_used_for_parameters": False,
                 "validation_status": "legacy_regression",
             },
-            "evaluation_policy": EVALUATION_POLICY_STRICT,
         }
     try:
         view = EvaluationView(**view_payload)
@@ -3005,10 +3140,14 @@ def _load_baseline_evaluation(
     solver_profile: str = DEFAULT_SOLVER_PROFILE_KEY,
     evaluation_policy: str = EVALUATION_POLICY_STRICT,
 ) -> ScenarioEvaluation | None:
-    if resolve_solver_profile(solver_profile).experimental:
+    profile = resolve_solver_profile(solver_profile)
+    if profile.experimental or profile == LAYERWISE_ADMITTANCE_PROFILE:
         # Evidence is compiled only inside the source-only evaluation path.
-        # Reusing a result before that proof would make cache identity depend on
-        # a prediction, so research baseline cache reads are intentionally off.
+        # The layerwise result additionally owns all-board mounted
+        # terminations, while the historical BaselineCapture schema freezes
+        # only the selected rail's fallback models.  Reusing either result
+        # before compiling that full evidence would make cache identity depend
+        # on a prediction, so these baseline cache reads are intentionally off.
         return None
     capture = next(
         item
@@ -3019,10 +3158,10 @@ def _load_baseline_evaluation(
         capture.evaluation_input_sha256,
         rail_id,
         target_ohm=target_ohm,
-            modal_max_index=modal_max_index,
-            solver_profile=solver_profile,
-            evaluation_policy=evaluation_policy,
-        )
+        modal_max_index=modal_max_index,
+        solver_profile=solver_profile,
+        evaluation_policy=evaluation_policy,
+    )
     metadata = scenario.evaluation_cache.get(expected_key.cache_key)
     if metadata is None:
         return None
@@ -3058,9 +3197,10 @@ def _cache_baseline_evaluation(
     rail_id: str,
     evaluation: ScenarioEvaluation,
 ) -> tuple[ScenarioSpec, dict[str, bytes]]:
-    if resolve_solver_profile(evaluation.view.solver_profile_key).experimental:
+    profile = resolve_solver_profile(evaluation.view.solver_profile_key)
+    if profile.experimental or profile == LAYERWISE_ADMITTANCE_PROFILE:
         raise ScenarioEvaluationCacheError(
-            "experimental research baseline results are intentionally not persisted or reused"
+            "source-compiled/all-board baseline results are intentionally not persisted or reused"
         )
     capture = next(
         item
@@ -3397,9 +3537,6 @@ def _shared_pad_path_from_landing(
     """Materialize compact source evidence or name the rail-template fallback."""
 
     evidence = landing.evidence_for_layer(target_layer)
-    graph_contact = getattr(landing, "graph_contact_for_layer", lambda _layer: None)(
-        target_layer
-    )
     fields: dict[str, Any] = {
         "path_id": path_id,
         "terminal": terminal,
@@ -3410,18 +3547,6 @@ def _shared_pad_path_from_landing(
         "terminal_provenance": "LEGACY_RAIL_TEMPLATE",
     }
     if evidence is None:
-        if graph_contact is not None:
-            fields.update(
-                {
-                    "x_um": graph_contact.x_um,
-                    "y_um": graph_contact.y_um,
-                    "landing_layer": graph_contact.target_layer,
-                    "terminal_provenance": (
-                        "SOURCE_PROVEN_GRAPH_CONNECTIVITY_NEAREST_TARGET_"
-                        "LEGACY_TEMPLATE"
-                    ),
-                }
-            )
         return SharedPadViaPath(**fields)
     fields.update(
         {
@@ -3541,6 +3666,7 @@ def build_evaluation_project(
     evaluation_rail_id: str | None = None,
     _project: ProjectSpec | None = None,
     _design_fingerprint: str | None = None,
+    solver_profile: str = DEFAULT_SOLVER_PROFILE_KEY,
     evaluation_policy: str = EVALUATION_POLICY_STRICT,
     attachments: Mapping[str, bytes] | None = None,
     _alternate_cache: dict[tuple[str, str, str, str], _AlternateEvaluationContext] | None = None,
@@ -3554,57 +3680,69 @@ def build_evaluation_project(
 
     if evaluation_policy not in _EVALUATION_POLICIES:
         raise ScenarioEvaluationBuildError("EVALUATION_POLICY_UNKNOWN", f"unknown Evaluation geometry policy {evaluation_policy!r}")
-    base = _project if _project is not None else scenario.base_project
+    source_base = _project if _project is not None else scenario.base_project
     provenance_rail_ids = _canonical_rail_ids(
         scenario,
-        ((evaluation_rail_id,) if evaluation_rail_id is not None else tuple(item.rail_id for item in base.rails)),
-        _project=base,
+        ((evaluation_rail_id,) if evaluation_rail_id is not None else tuple(item.rail_id for item in source_base.rails)),
+        _project=source_base,
     )
     source_graph_blockers = _source_graph_provenance_blockers(
-        scenario, base, provenance_rail_ids
+        scenario, source_base, provenance_rail_ids
     )
     if source_graph_blockers:
         raise ScenarioEvaluationPreflightError(
-            EvaluationConnectivityPreflight(
-                tuple(provenance_rail_ids), source_graph_blockers
-            )
+            EvaluationConnectivityPreflight(provenance_rail_ids, source_graph_blockers)
         )
-    alternate_provenance: dict[str, Any] | None = None
+    profile = resolve_solver_profile(solver_profile)
     effective_policy = evaluation_policy
+    alternate_provenance: dict[str, Any] | None = None
     if evaluation_policy == EVALUATION_POLICY_EMBEDDED_ALTERNATE and evaluation_rail_id is not None:
-        strict_pf = preflight_evaluation_connectivity(
-            scenario, (evaluation_rail_id,), _project=base,
+        strict_preflight = preflight_evaluation_connectivity(
+            scenario,
+            (evaluation_rail_id,),
+            _project=source_base,
+            solver_profile=profile.key,
             evaluation_policy=EVALUATION_POLICY_STRICT,
             attachments=attachments,
+            _alternate_cache=_alternate_cache,
         )
-        if strict_pf.is_clear:
+        if strict_preflight.is_clear:
             effective_policy = EVALUATION_POLICY_STRICT
-        elif any(
-            not item.reason.startswith("TERMINAL_OUTSIDE_SELECTED_PLANE:")
-            and not item.reason.startswith(
-                "SOURCE_GRAPH_PROVENANCE_REFRESH_REQUIRED:"
+        else:
+            hard = tuple(
+                item for item in strict_preflight.blockers
+                if not item.reason.startswith("TERMINAL_OUTSIDE_SELECTED_PLANE:")
+                and not item.reason.startswith("SOURCE_GRAPH_PROVENANCE_REFRESH_REQUIRED:")
             )
-            for item in strict_pf.blockers
-        ):
-            raise ScenarioEvaluationPreflightError(strict_pf)
-        context = (
-            _alternate_context_for_rail(scenario, evaluation_rail_id, attachments=attachments, _cache=_alternate_cache)
-            if effective_policy == EVALUATION_POLICY_EMBEDDED_ALTERNATE
-            else None
-        )
-        if effective_policy == EVALUATION_POLICY_EMBEDDED_ALTERNATE and context is None:
-            rail_name = str(evaluation_rail_id)
-            blocker = EvaluationConnectivityBlocker(
-                rail_id=rail_name,
-                refdes="<alternate plane evidence>",
-                kind=DecapConnectionKind.UNRESOLVED,
-                reason="EMBEDDED_ALTERNATE_PAIR_APPROXIMATION_V1: no hash-valid retained adjacent PWR/pure-GND geometry pair covers every finite terminal; strict Evaluation remains blocked",
+            if hard:
+                raise ScenarioEvaluationPreflightError(
+                    EvaluationConnectivityPreflight((evaluation_rail_id,), hard)
+                )
+            context = _alternate_context_for_rail(
+                scenario,
+                evaluation_rail_id,
+                attachments=attachments,
+                _cache=_alternate_cache,
             )
-            raise ScenarioEvaluationPreflightError(EvaluationConnectivityPreflight((rail_name,), (blocker,)))
-        if effective_policy == EVALUATION_POLICY_EMBEDDED_ALTERNATE:
+            if context is None:
+                raise ScenarioEvaluationPreflightError(strict_preflight)
+            # Alternate geometry changes both the project plane pair and the
+            # scenario eligibility/connection view.  Keeping only the project
+            # would re-run original rail proofs against PWR2/GND2 and lose the
+            # alternate template/device-pin provenance.
             scenario = context.scenario
-            base = context.project
+            source_base = context.project
             alternate_provenance = context.provenance
+    profile_rail_ids = (
+        (evaluation_rail_id,)
+        if evaluation_rail_id is not None
+        else tuple(rail.rail_id for rail in source_base.rails)
+    )
+    base = (
+        _layerwise_profile_project(scenario, source_base, profile_rail_ids)
+        if profile == LAYERWISE_ADMITTANCE_PROFILE
+        else source_base
+    )
     rail_by_id = _lookup_casefold(base.rails, "rail_id")
     model_by_id = _lookup_casefold(base.cap_models, "model_id")
     via_by_id = _lookup_casefold(base.via_templates, "template_id")
@@ -3651,13 +3789,41 @@ def build_evaluation_project(
         if evaluation_rail_key is None
         or rail.rail_id.casefold() == evaluation_rail_key
     )
-    geometry_blockers = _evaluation_geometry_blockers(
-        scenario, geometry_rail_ids, _project=base
-    )
-    if geometry_blockers:
-        raise ScenarioEvaluationPreflightError(
-            EvaluationConnectivityPreflight(geometry_rail_ids, geometry_blockers)
+    # The original source graph was gated before alternate transformation.
+    # Its retained proof names the source PWR/GND pair (PWR1/GND1), while the
+    # derived project intentionally exposes the alternate PWR2/GND2 rail; do
+    # not revalidate the original proof against that transformed rail.
+    if alternate_provenance is None:
+        source_graph_blockers = _source_graph_provenance_blockers(
+            scenario, base, geometry_rail_ids
         )
+        if source_graph_blockers:
+            raise ScenarioEvaluationPreflightError(
+                EvaluationConnectivityPreflight(geometry_rail_ids, source_graph_blockers)
+            )
+    # Only the rectangular legacy modal builder consumes this geometry gate.
+    # Layerwise performs the stronger exact retained-surface/endpoint binding
+    # when its source model and termination manifest are compiled.
+    if profile != LAYERWISE_ADMITTANCE_PROFILE and effective_policy == EVALUATION_POLICY_STRICT:
+        geometry_blockers = _evaluation_geometry_blockers(
+            scenario, geometry_rail_ids, _project=base
+        )
+        if geometry_blockers:
+            raise ScenarioEvaluationPreflightError(
+                EvaluationConnectivityPreflight(geometry_rail_ids, geometry_blockers)
+            )
+    elif profile != LAYERWISE_ADMITTANCE_PROFILE and effective_policy == EVALUATION_POLICY_EMBEDDED_ALTERNATE:
+        # Alternate is permitted only for finite geometry; all source graph,
+        # mixed-reference, and modelability gates above remain authoritative.
+        geometry_blockers = tuple(
+            item for item in _evaluation_geometry_blockers(
+                scenario, geometry_rail_ids, _project=base
+            ) if not item.reason.startswith("TERMINAL_OUTSIDE_SELECTED_PLANE:")
+        )
+        if geometry_blockers:
+            raise ScenarioEvaluationPreflightError(
+                EvaluationConnectivityPreflight(geometry_rail_ids, geometry_blockers)
+            )
     # ``build_evaluation_project`` is also a public boundary used by callers
     # that bypass UI batch preflight.  Keep the mixed-reference source-GND
     # witness fail-closed here, but only for rails this project will consume;
@@ -3684,6 +3850,44 @@ def build_evaluation_project(
                 "MIXED_REFERENCE_GND_REACHABILITY_REQUIRED",
                 reason,
             )
+    if profile == LAYERWISE_ADMITTANCE_PROFILE:
+        # All mounted decaps, including the selected rail, are physical loads
+        # owned by the exact endpoint-island termination manifest.  Creating
+        # legacy modal placements here would both re-run the old surface-under-
+        # every-landing classifier and stamp the same capacitor again after the
+        # global Kron reduction.  Keep only Device launches in the transient
+        # project; model/via libraries and the full Scenario remain available
+        # to the manifest compiler.
+        partitions = [
+            item.model_copy(update={"confirmed": True}) for item in base.partitions
+        ]
+        payload = base.model_dump(mode="json")
+        payload.update(
+            {
+                "pins": [
+                    item.model_dump(mode="json")
+                    for item in base.pins
+                    if item.kind == PinKind.DEVICE_BUMP
+                ],
+                "topology_maps": [],
+                "shared_pad_clusters": [],
+                "placements": [],
+                "partitions": [item.model_dump(mode="json") for item in partitions],
+                "assumptions": _scenario_assumptions(base),
+                "metadata": _confirmed_metadata(
+                    scenario,
+                    design_fingerprint=_design_fingerprint,
+                    project=base,
+                ),
+            }
+        )
+        try:
+            return ProjectSpec.model_validate(payload)
+        except ValueError as exc:
+            raise ScenarioEvaluationBuildError(
+                "PROJECT_VALIDATION_FAILED",
+                f"transient layerwise evaluation project is invalid: {exc}",
+            ) from exc
     decap_by_key = {item.refdes.casefold(): item for item in scenario.decaps}
     connection_by_key = {
         item.refdes.casefold(): item for item in analysis.connections.values()
@@ -3883,10 +4087,6 @@ def build_evaluation_project(
         exact_batch_eligible = (
             len(power_components) == 1
             and len(ground_components) == 1
-            and all(
-                not path.has_source_terminal_rl
-                for path in (*power_paths, *ground_paths)
-            )
         )
         if path_count > MAX_SHARED_PAD_VIA_PATHS and not exact_batch_eligible:
             raise ScenarioEvaluationBuildError(
@@ -4144,12 +4344,6 @@ def build_evaluation_project(
         ) or any(
             landing.evidence_for_layer(rail.gnd_layer) is not None
             for landing in unique_ground.values()
-        ) or any(
-            landing.graph_contact_for_layer(rail.pwr_layer) is not None
-            for landing in unique_power.values()
-        ) or any(
-            landing.graph_contact_for_layer(rail.gnd_layer) is not None
-            for landing in unique_ground.values()
         )
         if (
             len(unique_power) > 1
@@ -4235,14 +4429,6 @@ def build_evaluation_project(
     ]
     partitions = [item.model_copy(update={"confirmed": True}) for item in base.partitions]
     payload = base.model_dump(mode="json")
-    assumptions = _scenario_assumptions(base)
-    if alternate_provenance is not None:
-        assumptions.extend(
-            [
-                "Evaluation opt-in EMBEDDED_ALTERNATE_PAIR_APPROXIMATION_V1 selected a retained adjacent PWR/pure-GND geometry pair transiently; the source vertical landing path is not persisted or proven.",
-                "Alternate-plane Evaluation is LOW confidence and is not exact PowerSI sign-off; no terminal was clamped, expanded, or dropped.",
-            ]
-        )
     payload.update(
         {
             "pins": [item.model_dump(mode="json") for item in pins],
@@ -4253,7 +4439,7 @@ def build_evaluation_project(
             ],
             "placements": [item.model_dump(mode="json") for item in placements],
             "partitions": [item.model_dump(mode="json") for item in partitions],
-            "assumptions": assumptions,
+            "assumptions": _scenario_assumptions(base),
             "metadata": _confirmed_metadata(
                 scenario,
                 design_fingerprint=_design_fingerprint,
@@ -4261,13 +4447,12 @@ def build_evaluation_project(
             ),
         }
     )
+    if alternate_provenance is not None:
+        metadata = dict(payload["metadata"])
+        metadata["evaluation_alternate_pair_provenance"] = dict(alternate_provenance)
+        payload["metadata"] = metadata
     try:
-        result = ProjectSpec.model_validate(payload)
-        if alternate_provenance is not None:
-            metadata = dict(result.metadata)
-            metadata["evaluation_alternate_pair_provenance"] = alternate_provenance
-            result = result.model_copy(update={"metadata": metadata})
-        return result
+        return ProjectSpec.model_validate(payload)
     except ValueError as exc:
         raise ScenarioEvaluationBuildError(
             "PROJECT_VALIDATION_FAILED",
@@ -4280,20 +4465,96 @@ def build_evaluation_workspace(
     *,
     attachments: Mapping[str, bytes] | None = None,
     evaluation_rail_id: str | None = None,
+    solver_profile: str = DEFAULT_SOLVER_PROFILE_KEY,
     evaluation_policy: str = EVALUATION_POLICY_STRICT,
     _alternate_cache: dict[tuple[str, str, str, str], _AlternateEvaluationContext] | None = None,
 ) -> WorkspaceState:
     """Return an isolated workspace for evaluation; source scenario stays immutable."""
 
-    return WorkspaceState(
-        project=build_evaluation_project(
-            scenario, evaluation_rail_id=evaluation_rail_id,
-            evaluation_policy=evaluation_policy,
-            attachments=attachments,
-            _alternate_cache=_alternate_cache,
-        ),
-        attachments=dict(attachments or {}),
+    project = build_evaluation_project(
+        scenario,
+        evaluation_rail_id=evaluation_rail_id,
+        solver_profile=solver_profile,
+        evaluation_policy=evaluation_policy,
+        attachments=attachments,
+        _alternate_cache=_alternate_cache,
     )
+    termination_factory = None
+    if resolve_solver_profile(solver_profile) == LAYERWISE_ADMITTANCE_PROFILE:
+        from .layerwise_termination_adapter import (
+            LayerwiseScenarioTerminationFactory,
+        )
+
+        termination_factory = LayerwiseScenarioTerminationFactory(
+            scenario=scenario,
+            project=project,
+            attachments=dict(attachments or {}),
+        )
+    return WorkspaceState(
+        project=project,
+        attachments=dict(attachments or {}),
+        layerwise_termination_factory=termination_factory,
+    )
+
+
+def _with_layerwise_mounted_view_counts(
+    scenario: ScenarioSpec,
+    rail_id: str,
+    view: EvaluationView,
+) -> EvaluationView:
+    """Replace cleared legacy-placement counts with bound termination counts.
+
+    Layerwise deliberately removes ``ProjectSpec.placements`` to avoid stamping
+    each capacitor twice.  Therefore its UI counts must come from the exact
+    solve-bound termination provenance, not from that transient empty list.
+    """
+
+    if (
+        resolve_solver_profile(view.solver_profile_key)
+        != LAYERWISE_ADMITTANCE_PROFILE
+    ):
+        return view
+
+    raw_cap_count = view.solver_provenance.get(
+        "termination_active_selected_rail_cluster_count"
+    )
+    if (
+        not isinstance(raw_cap_count, int)
+        or isinstance(raw_cap_count, bool)
+        or raw_cap_count < 0
+    ):
+        raise ScenarioEvaluationBuildError(
+            "LAYERWISE_MOUNTED_COUNT_PROVENANCE_MISSING",
+            "layerwise solve did not prove the selected-rail mounted-cap count",
+        )
+
+    rail_key = rail_id.casefold()
+    mounted = tuple(
+        item
+        for item in scenario.decaps
+        if item.enabled
+        and item.pad_state != DecapPadState.ISOLATION_GAP
+        and item.current_rail_id.casefold() == rail_key
+    )
+    if raw_cap_count != len(mounted):
+        raise ScenarioEvaluationBuildError(
+            "LAYERWISE_MOUNTED_COUNT_MISMATCH",
+            f"bound termination manifest reports {raw_cap_count} mounted cap(s) "
+            f"for rail {rail_id!r}, but the evaluated Scenario requires "
+            f"{len(mounted)}",
+        )
+
+    model_keys: set[str] = set()
+    for item in mounted:
+        model_id = str(item.model_id or "").strip()
+        if not model_id:
+            raise ScenarioEvaluationBuildError(
+                "LAYERWISE_MOUNTED_MODEL_MISSING",
+                "enabled layerwise termination has no capacitor model",
+                refdes=item.refdes,
+            )
+        model_keys.add(model_id.casefold())
+    return replace(view, cap_count=raw_cap_count, model_count=len(model_keys))
 
 
 def evaluate_scenario(
@@ -4311,6 +4572,8 @@ def evaluate_scenario(
 ) -> ScenarioEvaluation:
     """Evaluate one rail and bind the view to deterministic scenario identity."""
 
+    if evaluation_policy not in _EVALUATION_POLICIES:
+        raise ScenarioEvaluationBuildError("EVALUATION_POLICY_UNKNOWN", f"unknown Evaluation geometry policy {evaluation_policy!r}")
     canonical_rail = next(
         (
             item.rail_id
@@ -4328,11 +4591,12 @@ def evaluate_scenario(
         scenario,
         attachments=attachments,
         evaluation_rail_id=canonical_rail,
+        solver_profile=solver_profile,
         evaluation_policy=evaluation_policy,
         _alternate_cache=_alternate_cache,
     )
     with scoped_blas_threads():
-        view = evaluation_services.evaluate_workspace(
+        solved_view = evaluation_services.evaluate_workspace(
             state,
             canonical_rail,
             target_ohm,
@@ -4341,6 +4605,11 @@ def evaluate_scenario(
             is_cancelled=is_cancelled,
             solver_profile=solver_profile,
         )
+    view = _with_layerwise_mounted_view_counts(
+        scenario,
+        canonical_rail,
+        solved_view,
+    )
     actual_policy = (
         EVALUATION_POLICY_EMBEDDED_ALTERNATE
         if state.project.metadata.get("evaluation_alternate_pair_provenance")
@@ -4349,8 +4618,19 @@ def evaluate_scenario(
     view.evaluation_policy = actual_policy
     if actual_policy == EVALUATION_POLICY_EMBEDDED_ALTERNATE:
         view.confidence = "LOW"
-        view.confidence_note = (view.confidence_note + " | " if view.confidence_note else "") + "Embedded alternate plane pair approximation; missing source vertical path proof; not exact sign-off."
-        view.assumptions = list(view.assumptions) + ["Missing source vertical landing path is approximated from retained adjacent PWR/pure-GND geometry; result is LOW confidence and not exact sign-off."]
+        view.confidence_note = (
+            f"{view.confidence_note} | Embedded alternate plane-pair approximation; "
+            "missing source vertical path proof; not exact sign-off."
+        )
+        view.assumptions = [
+            *view.assumptions,
+            "Missing source vertical landing path is approximated from retained adjacent PWR/pure-GND geometry; result is LOW confidence and not exact sign-off.",
+        ]
+    if view is not solved_view:
+        state.last_evaluation = view
+        state.evaluation_history = [
+            view if item is solved_view else item for item in state.evaluation_history
+        ]
     result_key = ScenarioResultKey.from_settings(
         design_fingerprint=scenario.design_fingerprint,
         rail_id=canonical_rail,
@@ -4392,27 +4672,58 @@ def evaluate_comparison_batch(
 
     report = progress or (lambda _value, _message: None)
     cancelled = is_cancelled or (lambda: False)
+    if evaluation_policy not in _EVALUATION_POLICIES:
+        raise ScenarioEvaluationBuildError("EVALUATION_POLICY_UNKNOWN", f"unknown Evaluation geometry policy {evaluation_policy!r}")
     profile = resolve_solver_profile(solver_profile)
     alternate_cache: dict[tuple[str, str, str, str], _AlternateEvaluationContext] = {}
     canonical_rails = _canonical_rail_ids(scenario, rail_ids)
+    preflight_span = 5
+    solve_span = 100 - preflight_span
+
+    def repeat_preflight_progress(value: int, message: str) -> None:
+        bounded = min(max(int(value), 0), 100)
+        report(
+            round(bounded * preflight_span / 100),
+            f"Rechecking worker-side Original/Tuned preflight: {message}",
+        )
+
+    report(0, "Rechecking worker-side Original/Tuned preflight")
     connectivity = preflight_evaluation_comparison(
         scenario,
         canonical_rails,
+        progress=repeat_preflight_progress,
         is_cancelled=cancelled,
+        solver_profile=profile.key,
         evaluation_policy=evaluation_policy,
-        attachments=attachments,
+        attachments=dict(attachments or {}),
         _alternate_cache=alternate_cache,
     )
     if not connectivity.is_clear:
         raise ScenarioEvaluationPreflightError(connectivity)
-    prepared = scenario.with_baseline_captures(canonical_rails)
+    capture_rails = (
+        tuple(item.rail_id for item in scenario.base_project.rails)
+        if profile == LAYERWISE_ADMITTANCE_PROFILE
+        else canonical_rails
+    )
+    prepared = scenario.with_baseline_captures(
+        capture_rails,
+        include_all_source_mounted=(
+            profile == LAYERWISE_ADMITTANCE_PROFILE
+        ),
+    )
     working_attachments = _validated_scenario_attachments(prepared, attachments)
-    baseline_scenarios = {
-        rail_id: prepared.original_configuration(rail_id)
-        for rail_id in canonical_rails
-    }
+    if profile == LAYERWISE_ADMITTANCE_PROFILE:
+        board_original = _comparison_original_configuration(prepared)
+        baseline_scenarios = {
+            rail_id: board_original for rail_id in canonical_rails
+        }
+    else:
+        baseline_scenarios = {
+            rail_id: prepared.original_configuration(rail_id)
+            for rail_id in canonical_rails
+        }
 
-    report(1, "Preflighting Original and Tuned rail projects")
+    report(preflight_span, "Preparing Original and Tuned rail projects")
     baseline_project_fingerprints: dict[str, str] = {}
     tuned_project_fingerprints: dict[str, str] = {}
     effective_policy_by_rail: dict[str, str] = {}
@@ -4422,6 +4733,7 @@ def evaluate_comparison_batch(
         baseline_project = build_evaluation_project(
             baseline_scenarios[rail_id],
             evaluation_rail_id=rail_id,
+            solver_profile=profile.key,
             evaluation_policy=evaluation_policy,
             attachments=working_attachments,
             _alternate_cache=alternate_cache,
@@ -4429,6 +4741,7 @@ def evaluate_comparison_batch(
         tuned_project = build_evaluation_project(
             prepared,
             evaluation_rail_id=rail_id,
+            solver_profile=profile.key,
             evaluation_policy=evaluation_policy,
             attachments=working_attachments,
             _alternate_cache=alternate_cache,
@@ -4439,13 +4752,6 @@ def evaluate_comparison_batch(
         tuned_project_fingerprints[rail_id] = _solver_project_fingerprint(
             tuned_project
         )
-        # One rail resolves exactly one effective Evaluation policy across both
-        # configurations.  build_evaluation_project downgrades a strict-clear
-        # configuration back to STRICT on its own, so an Original that is
-        # strict-clear beside a Tuned that needs the alternate pair (or the
-        # reverse) would otherwise stamp two different hashed settings and make
-        # validate_for_scenario reject the completed batch.  A rail that is
-        # strict-clear on both sides stays STRICT.
         effective_policy_by_rail[rail_id] = (
             EVALUATION_POLICY_EMBEDDED_ALTERNATE
             if (
@@ -4465,7 +4771,9 @@ def evaluate_comparison_batch(
 
         def update(value: int, message: str) -> None:
             bounded = min(max(int(value), 0), 100)
-            overall = round((stage_start + bounded / 100.0) * 100 / total_stages)
+            overall = preflight_span + round(
+                (stage_start + bounded / 100.0) * solve_span / total_stages
+            )
             report(overall, f"{stage_label}: {message}")
 
         return update
@@ -4480,8 +4788,15 @@ def evaluate_comparison_batch(
             if key.casefold() == rail_id.casefold()
         )
         configuration_unchanged = (
-            baseline_project_fingerprints[rail_id]
-            == tuned_project_fingerprints[rail_id]
+            (
+                baseline_scenario.design_fingerprint
+                == prepared.design_fingerprint
+            )
+            if profile == LAYERWISE_ADMITTANCE_PROFILE
+            else (
+                baseline_project_fingerprints[rail_id]
+                == tuned_project_fingerprints[rail_id]
+            )
         )
         baseline = _load_baseline_evaluation(
             prepared,
@@ -4506,36 +4821,44 @@ def evaluate_comparison_batch(
                 evaluation_policy=evaluation_policy,
                 _alternate_cache=alternate_cache,
             )
-            baseline = replace(
-                evaluated_baseline,
-                result_key=(
-                    _result_key_from_view(
-                        capture.evaluation_input_sha256,
-                        rail_id,
-                        target_ohm=target_ohm,
-                        modal_max_index=modal_max_index,
-                        view=evaluated_baseline.view,
-                        evaluation_policy=effective_policy_by_rail[rail_id],
-                    )
-                    if profile.experimental
-                    else _expected_result_key(
-                        capture.evaluation_input_sha256,
-                        rail_id,
-                        target_ohm=target_ohm,
-                        modal_max_index=modal_max_index,
-                        solver_profile=solver_profile,
-                        evaluation_policy=effective_policy_by_rail[rail_id],
-                    )
-                ),
+            baseline = (
+                evaluated_baseline
+                if profile == LAYERWISE_ADMITTANCE_PROFILE
+                else replace(
+                    evaluated_baseline,
+                    result_key=(
+                        _result_key_from_view(
+                            capture.evaluation_input_sha256,
+                            rail_id,
+                            target_ohm=target_ohm,
+                            modal_max_index=modal_max_index,
+                            view=evaluated_baseline.view,
+                            evaluation_policy=effective_policy_by_rail[rail_id],
+                        )
+                        if profile.experimental
+                        else _expected_result_key(
+                            capture.evaluation_input_sha256,
+                            rail_id,
+                            target_ohm=target_ohm,
+                            modal_max_index=modal_max_index,
+                            solver_profile=solver_profile,
+                            evaluation_policy=effective_policy_by_rail[rail_id],
+                        )
+                    ),
+                )
             )
-            if not profile.experimental:
+            if (
+                not profile.experimental
+                and profile != LAYERWISE_ADMITTANCE_PROFILE
+            ):
                 prepared, working_attachments = _cache_baseline_evaluation(
                     prepared, working_attachments, rail_id, baseline
                 )
-            persistent_change = True
+                persistent_change = True
         else:
             report(
-                round((completed_stages + 1) * 100 / total_stages),
+                preflight_span
+                + round((completed_stages + 1) * solve_span / total_stages),
                 f"{rail_id} Original: using saved baseline",
             )
         completed_stages += 1
@@ -4567,7 +4890,8 @@ def evaluate_comparison_batch(
                 scenario_revision=prepared.revision,
             )
             report(
-                round((completed_stages + 1) * 100 / total_stages),
+                preflight_span
+                + round((completed_stages + 1) * solve_span / total_stages),
                 f"{rail_id} Tuned: configuration is unchanged",
             )
         else:
@@ -4583,25 +4907,60 @@ def evaluate_comparison_batch(
                 evaluation_policy=evaluation_policy,
                 _alternate_cache=alternate_cache,
             )
-            if (
-                getattr(tuned.view, "evaluation_policy", EVALUATION_POLICY_STRICT)
-                != effective_policy_by_rail[rail_id]
-            ):
-                # The Tuned configuration resolved its own geometry policy; the
-                # rail's harmonized policy is what both result keys must carry.
-                # The solved view keeps its own provenance and confidence.
-                tuned = replace(
-                    tuned,
-                    result_key=_result_key_from_view(
-                        prepared.design_fingerprint,
-                        rail_id,
-                        target_ohm=target_ohm,
-                        modal_max_index=modal_max_index,
-                        view=tuned.view,
-                        evaluation_policy=effective_policy_by_rail[rail_id],
-                    ),
-                )
         completed_stages += 1
+        # A preparatory project can be strict-clear while the corresponding
+        # worker build resolves the opposite side through the embedded pair
+        # (and vice versa).  Harmonize only the persisted result-key policy
+        # after observing both actual views; each view keeps its own policy and
+        # confidence disclosure.
+        if profile != LAYERWISE_ADMITTANCE_PROFILE:
+            effective_policy = (
+                EVALUATION_POLICY_EMBEDDED_ALTERNATE
+                if (
+                    getattr(baseline.view, "evaluation_policy", evaluation_policy)
+                    == EVALUATION_POLICY_EMBEDDED_ALTERNATE
+                    or getattr(tuned.view, "evaluation_policy", evaluation_policy)
+                    == EVALUATION_POLICY_EMBEDDED_ALTERNATE
+                )
+                else EVALUATION_POLICY_STRICT
+            )
+            effective_policy_by_rail[rail_id] = effective_policy
+            if profile.experimental:
+                baseline_key = _result_key_from_view(
+                    capture.evaluation_input_sha256,
+                    rail_id,
+                    target_ohm=target_ohm,
+                    modal_max_index=modal_max_index,
+                    view=baseline.view,
+                    evaluation_policy=effective_policy,
+                )
+                tuned_key = _result_key_from_view(
+                    prepared.design_fingerprint,
+                    rail_id,
+                    target_ohm=target_ohm,
+                    modal_max_index=modal_max_index,
+                    view=tuned.view,
+                    evaluation_policy=effective_policy,
+                )
+            else:
+                baseline_key = _expected_result_key(
+                    capture.evaluation_input_sha256,
+                    rail_id,
+                    target_ohm=target_ohm,
+                    modal_max_index=modal_max_index,
+                    solver_profile=solver_profile,
+                    evaluation_policy=effective_policy,
+                )
+                tuned_key = _expected_result_key(
+                    prepared.design_fingerprint,
+                    rail_id,
+                    target_ohm=target_ohm,
+                    modal_max_index=modal_max_index,
+                    solver_profile=solver_profile,
+                    evaluation_policy=effective_policy,
+                )
+            baseline = replace(baseline, result_key=baseline_key)
+            tuned = replace(tuned, result_key=tuned_key)
         comparisons.append(
             RailComparison(
                 rail_id=rail_id,
@@ -4646,6 +5005,7 @@ def rehydrate_scenario_evaluation(
         scenario,
         attachments=attachments,
         evaluation_rail_id=evaluation.view.rail_id,
+        solver_profile=evaluation.view.solver_profile_key,
         evaluation_policy=getattr(evaluation.view, "evaluation_policy", EVALUATION_POLICY_STRICT),
     )
     state.last_evaluation = evaluation.view
@@ -4684,9 +5044,9 @@ def analyze_scenario_with_local_llm(
 
 
 __all__ = [
+    "EVALUATION_ATTACHMENT_FORMAT",
     "EVALUATION_POLICY_STRICT",
     "EVALUATION_POLICY_EMBEDDED_ALTERNATE",
-    "EVALUATION_ATTACHMENT_FORMAT",
     "PLOT_ANALYST_MODE",
     "EvaluationConnectivityBlocker",
     "EvaluationConnectivityPreflight",

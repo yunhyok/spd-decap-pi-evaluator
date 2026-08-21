@@ -59,6 +59,7 @@ from .routing_obstacles import (
     REIMPORT_SOURCE_FOR_TRANSITION_EVIDENCE_MESSAGE,
     MloLandingCertificate,
     RoutingCandidateState,
+    RoutingCandidateProof,
     RoutingCollisionEvidence,
     SignalTraceAvoidancePolicy,
     decode_routing_obstacle_asset,
@@ -734,14 +735,6 @@ def _distribution_via_eligibility(
 
     if not _is_distribution_physical_pwr_landing(landing):
         return {}
-    model_copy = getattr(landing, "model_copy", None)
-    if callable(model_copy):
-        # Distribution is a source-XY projection/rebuild plan.  Graph target
-        # contacts are Evaluation-only remapping evidence and must not move a
-        # Distribution landing laterally onto another plane location.
-        landing = model_copy(
-            update={"path_evidence": (), "graph_contact_evidence": ()}
-        )
     return _eligibility_for_via_landing(
         eligibility_index,
         landing,  # type: ignore[arg-type]
@@ -774,6 +767,47 @@ def _is_distribution_physical_pwr_landing(landing: object) -> bool:
             for name in ("via_id", "net", "endpoint_node_id", "padstack")
         )
     )
+
+
+def _distribution_coordinate_for_layer(
+    landing: object,
+    layer: str,
+    *,
+    pwr_layer_order: Mapping[str, int] | None,
+) -> tuple[float, float] | None:
+    """Return the source-proven coordinate for one destination PWR layer.
+
+    The persisted landing is the source (TOP) endpoint. For every non-TOP
+    target, only path evidence whose target layer exactly matches that layer
+    is accepted; evidence for a deeper span cannot prove an intermediate
+    landing. Alternate trace exits are ambiguous and fail closed.
+    """
+
+    layer_key = str(layer).casefold()
+    top_key = (
+        min(pwr_layer_order, key=pwr_layer_order.__getitem__).casefold()
+        if pwr_layer_order
+        else None
+    )
+    source = landing if layer_key == top_key else next(
+        (
+            item
+            for item in getattr(landing, "path_evidence", ())
+            if str(getattr(item, "target_layer", "")).casefold() == layer_key
+            and not bool(getattr(item, "trace_alternate_exit", False))
+        ),
+        None,
+    )
+    if source is None:
+        return None
+    try:
+        x_um = float(getattr(source, "x_um"))
+        y_um = float(getattr(source, "y_um"))
+    except (AttributeError, TypeError, ValueError):
+        return None
+    if not isfinite(x_um) or not isfinite(y_um):
+        return None
+    return x_um, y_um
 
 
 def _distribution_component_eligibility(
@@ -1143,10 +1177,9 @@ def _direct_planner_transition_diagnostics(
 
     The direct planner consumes persisted eligibility maps as a compatibility
     path and cannot remove only the unsafe non-TOP candidates from one landing.
-    Observed MLO evidence therefore always requires the exact power projection.
-    Missing-policy/no-path landings require it only for a real SPD import; the
-    lightweight synthetic scenarios used by API clients before this policy do
-    not carry ``spd_import`` metadata and retain their historical behavior.
+    A real SPD import with any retained non-TOP PWR rail therefore always
+    requires the exact power projection. Only synthetic scenarios without the
+    importer ``spd_import`` marker retain the historical direct-planner path.
     """
 
     analysis = scenario.connection_analysis
@@ -1154,10 +1187,34 @@ def _direct_planner_transition_diagnostics(
         return ()
     project = scenario.base_project
     is_real_spd_import = "spd_import" in project.metadata
+    conductor_names = tuple(
+        str(getattr(layer, "name", "")).casefold()
+        for layer in project.stackup_layers
+        if bool(getattr(layer, "is_conductor", False))
+    )
+    top_layer = conductor_names[0] if conductor_names else ""
+    requires_real_projection = bool(
+        is_real_spd_import
+        and top_layer
+        and any(
+            str(getattr(rail, "pwr_layer", "")).casefold() != top_layer
+            for rail in project.rails
+        )
+    )
     transition_context = _mlo_transition_context(scenario, project=project)
     blocked_by_rejection: dict[tuple[str, str], set[str]] = defaultdict(set)
     for connection in analysis.connections.values():
         for landing in connection.power_vias:
+            if requires_real_projection:
+                blocked_by_rejection[
+                    (
+                        "POWER_PROJECTION_REQUIRED",
+                        "real-SPD Distribution moves involving retained non-TOP "
+                        "PWR rails require exact source-proven target-layer "
+                        "projection",
+                    )
+                ].add(str(landing.via_id))
+                continue
             rejection = _mlo_transition_rejection_for_landing(
                 scenario,
                 landing,
@@ -1256,11 +1313,9 @@ def _distribution_batch_via_eligibility(
     Building one Python polygon search for every Via/rail pair is exact but too
     slow on production SPDs.  GEOS constructs each final PowerSI boolean shape
     once, then Shapely's vectorized predicates test all relevant landings in C.
-    Boundary contact remains fail-closed.  Every test uses the immutable
-    decap PWR-via landing coordinate and projects it vertically to the target
-    conductor.  Existing lateral/microvia transitions never move the query XY
-    and do not gate Distribution eligibility under
-    ``VERTICAL_XY_ASSUME_DESCENT_V1``.
+    Boundary contact remains fail-closed. TOP uses the immutable source
+    landing; every non-TOP query uses source-proven evidence for that exact
+    target layer, including legitimate laterally staggered microvia stacks.
     """
 
     landing_by_key: dict[str, object] = {}
@@ -1273,10 +1328,9 @@ def _distribution_batch_via_eligibility(
         if previous is not None and previous != landing:
             return {}
         landing_by_key[key] = landing
-    # A source-classified PWR landing is projected vertically at its immutable
-    # XY to every retained destination PWR plane.  Existing Via-column reach is
-    # intentionally not a gate: the Distribution operation plans a filled-Cu
-    # microvia-stack retarget/rebuild, not a copper-plane artwork change.
+    # A source-classified PWR landing is necessary but not sufficient. Exact
+    # target-layer path evidence below TOP is a reachability gate; absent or
+    # ambiguous evidence must never become an inferred vertical column.
     landing_by_key = {
         via_key: landing
         for via_key, landing in landing_by_key.items()
@@ -1318,10 +1372,20 @@ def _distribution_batch_via_eligibility(
         shape = core_services._ordered_spd_geometry(payload)
         if shape is None:
             continue
-        coordinates = [
-            (float(getattr(landing, "x_um")), float(getattr(landing, "y_um")))
-            for landing in ordered_landings
-        ]
+        layer_landings: list[object] = []
+        coordinates: list[tuple[float, float]] = []
+        for landing in ordered_landings:
+            coordinate = _distribution_coordinate_for_layer(
+                landing,
+                geometry.layer,
+                pwr_layer_order=pwr_layer_order,
+            )
+            if coordinate is None:
+                continue
+            layer_landings.append(landing)
+            coordinates.append(coordinate)
+        if not coordinates:
+            continue
         xs = np.asarray([item[0] for item in coordinates], dtype=float)
         ys = np.asarray([item[1] for item in coordinates], dtype=float)
         inside = np.asarray(contains_xy(shape, xs, ys), dtype=bool)
@@ -1333,13 +1397,13 @@ def _distribution_batch_via_eligibility(
         )
         for landing_index in np.flatnonzero(inside):
             via_key = str(
-                getattr(ordered_landings[int(landing_index)], "via_id")
+                getattr(layer_landings[int(landing_index)], "via_id")
             ).casefold()
             for pair_key in pair_keys:
                 allowed_pairs[via_key].add(pair_key)
         for landing_index in np.flatnonzero(near_boundary):
             via_key = str(
-                getattr(ordered_landings[int(landing_index)], "via_id")
+                getattr(layer_landings[int(landing_index)], "via_id")
             ).casefold()
             for pair_key in pair_keys:
                 boundary_pairs[via_key].add(pair_key)
@@ -1390,29 +1454,132 @@ def _distribution_batch_via_eligibility(
                 )
                 if routing_policy.enabled:
                     assert routing_asset is not None
-                    proof = evaluate_routing_candidate(
-                        routing_asset,  # type: ignore[arg-type]
-                        x_um=float(getattr(landing, "x_um")),
-                        y_um=float(getattr(landing, "y_um")),
-                        destination_layer=destination_layer,
-                        mount_side=mount_side,
-                        profile_id=(str(template_id) if template_id else None),
-                        policy=routing_policy,
+                    effective_coordinate = _distribution_coordinate_for_layer(
+                        landing,
+                        destination_layer,
+                        pwr_layer_order=pwr_layer_order,
                     )
+                    path_evidence = next(
+                        (
+                            item
+                            for item in getattr(landing, "path_evidence", ())
+                            if str(getattr(item, "target_layer", "")).casefold()
+                            == destination_layer.casefold()
+                        ),
+                        None,
+                    )
+                    path_unresolved = False
+                    if path_evidence is not None:
+                        ordered_segments = tuple(
+                            getattr(path_evidence, "segments", ()) or ()
+                        )
+                        top_layer_name = (
+                            min(
+                                pwr_layer_order,
+                                key=pwr_layer_order.__getitem__,
+                            )
+                            if pwr_layer_order
+                            else None
+                        )
+                        previous_layer = (
+                            str(top_layer_name) if top_layer_name is not None else ""
+                        )
+                        previous_x = float(getattr(landing, "x_um"))
+                        previous_y = float(getattr(landing, "y_um"))
+                        for segment in ordered_segments:
+                            start_layer = str(getattr(segment, "start_layer", ""))
+                            end_layer = str(getattr(segment, "end_layer", ""))
+                            try:
+                                end_x = float(getattr(segment, "end_x_um"))
+                                end_y = float(getattr(segment, "end_y_um"))
+                            except (TypeError, ValueError):
+                                path_unresolved = True
+                                break
+                            if (
+                                not start_layer
+                                or not end_layer
+                                or start_layer.casefold() != previous_layer.casefold()
+                                or end_layer.casefold() == start_layer.casefold()
+                                or not isfinite(end_x)
+                                or not isfinite(end_y)
+                                or abs(end_x - previous_x) > 1.0e-9
+                                or abs(end_y - previous_y) > 1.0e-9
+                            ):
+                                path_unresolved = True
+                                break
+                            previous_layer = end_layer
+                            previous_x, previous_y = end_x, end_y
+                        if (
+                            not ordered_segments
+                            or path_unresolved
+                            or bool(getattr(path_evidence, "trace_hops", 0))
+                            or previous_layer.casefold() != destination_layer.casefold()
+                            or effective_coordinate is None
+                            or abs(previous_x - effective_coordinate[0]) > 1.0e-9
+                            or abs(previous_y - effective_coordinate[1]) > 1.0e-9
+                        ):
+                            path_unresolved = True
+                    if effective_coordinate is None:
+                        proof = RoutingCandidateProof(
+                            RoutingCandidateState.UNKNOWN,
+                            destination_layer,
+                            str(template_id) if template_id else None,
+                            (
+                                RoutingCollisionEvidence(
+                                    code="STACKUP_SPAN_UNRESOLVED",
+                                    layer=destination_layer,
+                                    message="exact target-layer landing coordinate is unresolved",
+                                ),
+                            ),
+                        )
+                    elif path_unresolved:
+                        # The routing asset proves a vertical column at one XY;
+                        # it does not prove the lateral/staggered path between
+                        # retained source segments.  Do not treat endpoint-only
+                        # clearance as a manufacturing-safe path proof.
+                        proof = RoutingCandidateProof(
+                            RoutingCandidateState.UNKNOWN,
+                            destination_layer,
+                            str(template_id) if template_id else None,
+                            (
+                                RoutingCollisionEvidence(
+                                    code="ROUTING_PATH_UNRESOLVED",
+                                    layer=destination_layer,
+                                    message=(
+                                        "staggered or trace-assisted source path "
+                                        "requires segment-level routing proof"
+                                    ),
+                                ),
+                            ),
+                        )
+                    else:
+                        proof = evaluate_routing_candidate(
+                            routing_asset,  # type: ignore[arg-type]
+                            x_um=effective_coordinate[0],
+                            y_um=effective_coordinate[1],
+                            destination_layer=destination_layer,
+                            mount_side=mount_side,
+                            profile_id=(str(template_id) if template_id else None),
+                            policy=routing_policy,
+                        )
                     if routing_counts is not None:
                         routing_counts["checked"] = routing_counts.get("checked", 0) + 1
                         key = proof.state.value.casefold()
                         routing_counts[key] = routing_counts.get(key, 0) + 1
                     if proof.state != RoutingCandidateState.SAFE:
                         if routing_evidence is not None:
+                            evidence_coordinate = effective_coordinate or (
+                                float(getattr(landing, "x_um")),
+                                float(getattr(landing, "y_um")),
+                            )
                             for detail in proof.evidence[:4]:
                                 if len(routing_evidence) >= 256:
                                     break
                                 routing_evidence.append(
                                     DistributionRoutingEvidence(
                                         via_id=str(getattr(landing, "via_id")),
-                                        x_um=float(getattr(landing, "x_um")),
-                                        y_um=float(getattr(landing, "y_um")),
+                                        x_um=evidence_coordinate[0],
+                                        y_um=evidence_coordinate[1],
                                         destination_rail_id=rail_id,
                                         destination_layer=destination_layer,
                                         state=proof.state,
@@ -1427,14 +1594,17 @@ def _distribution_batch_via_eligibility(
                     # selected pair, so Distribution must preserve them.
                     pwr_layer=str(getattr(rail, "pwr_layer")),
                     gnd_layer=str(getattr(rail, "gnd_layer")),
-                    destination_pwr_layer=(
-                        destination_layer if routing_policy.enabled else None
-                    ),
+                    # Persist the exact copper layer selected by the source
+                    # proof even when the optional signal-routing filter is
+                    # disabled.  The filter still controls candidate ordering
+                    # and clearance checks; it must not erase physical layer
+                    # evidence needed by scenario reload and Layerwise build.
+                    destination_pwr_layer=destination_layer,
                     via_template_id=template_id,
                     allowed=True,
                     reason=(
                         "VIA STACK CHANGE REQUIRED — exact target plane exists at "
-                        "immutable PWR landing XY; plane artwork unchanged "
+                        "source-proven target-layer landing XY; plane artwork unchanged "
                         f"({pwr_layer_name_by_key.get(pair_key[1], pair_key[1])}); "
                         "Evaluation-selected PWR/GND pair retained"
                     ),
@@ -3068,6 +3238,17 @@ def validate_distribution_targets(
         scenario, power_projection
     )
     _require_distribution_compatible_connectivity(scenario)
+    if power_projection is None:
+        direct_transition_diagnostics = _direct_planner_transition_diagnostics(
+            scenario
+        )
+        if direct_transition_diagnostics:
+            raise DistributionError(
+                "POWER_PROJECTION_REQUIRED",
+                "exact source-proven target-layer transition evidence is required "
+                "before Distribution planning",
+                diagnostics=direct_transition_diagnostics,
+            )
 
     canonical_present = distribution_present_counts(scenario)
     inventory = _distribution_inventory(scenario)
@@ -3765,6 +3946,17 @@ def compute_distribution_plan(
             "TIME_LIMIT_INVALID", "optimizer time limit must be positive"
         )
     _require_distribution_compatible_connectivity(scenario)
+    if power_projection is None:
+        direct_transition_diagnostics = _direct_planner_transition_diagnostics(
+            scenario
+        )
+        if direct_transition_diagnostics:
+            raise DistributionError(
+                "POWER_PROJECTION_REQUIRED",
+                "exact source-proven target-layer transition evidence is required "
+                "before Distribution planning",
+                diagnostics=direct_transition_diagnostics,
+            )
 
     _notify(progress, 2, "Validating distribution targets")
     _check_cancelled(is_cancelled)
@@ -4924,6 +5116,25 @@ def compute_distribution_plan(
                     limit=remaining_time(),
                     start=local_start,
                 )
+            if (
+                feasible_fallback_stage == "gap"
+                and local_start is not None
+                and (result is None or (result.status == 1 and result.x is None))
+            ):
+                # The isolation-gap stage may exhaust its proof budget
+                # without returning a new incumbent.  The previous stage's
+                # solution was revalidated against this exact local MILP above,
+                # so retaining it preserves every primary optimum and topology
+                # constraint.  Only the secondary optimum remains unproven and
+                # is disclosed through the existing stage-specific diagnostic.
+                stage_fallback_flags.add(feasible_fallback_stage)
+                result = OptimizeResult(
+                    status=0,
+                    success=True,
+                    message="retained the validated prior-stage incumbent",
+                    x=local_start,
+                    fun=float(np.dot(local_c, local_start)),
+                )
             if result is None:
                 raise DistributionError(
                     "OPTIMIZER_TIMEOUT",
@@ -5500,19 +5711,40 @@ def compute_distribution_plan(
                     )
                 )
             else:
-                diagnostics.append(
-                    DistributionDiagnostic(
-                        code="DISTANCE_JOINT_OPTIMIZATION_DEFERRED",
-                        message=(
-                            "the joint assignment/separator distance solve did "
-                            "not return a valid incumbent; distance ordering is "
-                            "deferred until the exact separator positions are "
-                            "fixed"
-                        ),
-                        requested_count=fulfilled_optimum,
-                        actual_count=fulfilled_optimum,
-                    )
+                can_defer_to_fixed_separators = (
+                    optimization_policy == DistributionOptimizationPolicy.MIN_GAPS
+                    and selectable_gap_variables
+                    and selected_move_variables
                 )
+                if not can_defer_to_fixed_separators:
+                    # BALANCED policies have no later fixed-separator distance
+                    # pass. Returning the fulfillment-stage incumbent here
+                    # would silently ignore the requested distance ordering.
+                    # MIN_GAPS may defer only when its explicit separator
+                    # refinement can still establish that ordering.
+                    if selected_move_variables:
+                        raise DistributionError(
+                            "DISTANCE_OPTIMIZER_FAILED",
+                            "joint distance optimization did not return a "
+                            "valid incumbent; no arbitrary assignment was "
+                            "emitted",
+                            diagnostics=tuple(diagnostics),
+                        ) from exc
+                    joint_distance_applied = True
+                else:
+                    diagnostics.append(
+                        DistributionDiagnostic(
+                            code="DISTANCE_JOINT_OPTIMIZATION_DEFERRED",
+                            message=(
+                                "the joint assignment/separator distance solve "
+                                "did not return a valid incumbent; distance "
+                                "ordering is deferred until the exact separator "
+                                "positions are fixed"
+                            ),
+                            requested_count=fulfilled_optimum,
+                            actual_count=fulfilled_optimum,
+                        )
+                    )
 
         if direct_only:
             selected_gap_variables = set()

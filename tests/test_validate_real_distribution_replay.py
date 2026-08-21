@@ -2,10 +2,85 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import os
 from pathlib import Path
+import subprocess
+import sys
 from types import SimpleNamespace
 
 import pytest
+
+from spd_decap_pi.scenario import DecapPadState
+
+
+REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
+ACTIVE_CHECKOUT_SCRIPTS = (
+    "validate_real_distribution_replay.py",
+    "benchmark_raw_spd_powersi_correlation.py",
+    "validate_powersi_reference.py",
+    "validate_island_finite_via_gate.py",
+    "analyze_powersi_all_ports.py",
+)
+
+
+@pytest.mark.parametrize("script_name", ACTIVE_CHECKOUT_SCRIPTS)
+def test_real_validation_script_prefers_active_checkout_over_hostile_pythonpath(
+    tmp_path: Path,
+    script_name: str,
+) -> None:
+    hostile_root = tmp_path / "hostile"
+    hostile_package = hostile_root / "spd_decap_pi"
+    hostile_package.mkdir(parents=True)
+    (hostile_package / "__init__.py").write_text(
+        "raise RuntimeError('hostile package imported')\n",
+        encoding="utf-8",
+    )
+    environment = dict(os.environ)
+    environment["PYTHONPATH"] = str(hostile_root)
+
+    completed = subprocess.run(
+        [sys.executable, str(REPOSITORY_ROOT / "scripts" / script_name), "--help"],
+        cwd=REPOSITORY_ROOT,
+        env=environment,
+        capture_output=True,
+        text=True,
+        timeout=60,
+        check=False,
+    )
+
+    assert completed.returncode == 0, completed.stderr
+    assert "hostile package imported" not in completed.stderr
+
+
+@pytest.mark.parametrize("script_name", ACTIVE_CHECKOUT_SCRIPTS)
+def test_real_validation_script_rejects_preloaded_foreign_package(
+    tmp_path: Path,
+    script_name: str,
+) -> None:
+    hostile_root = tmp_path / "preloaded"
+    hostile_package = hostile_root / "spd_decap_pi"
+    hostile_package.mkdir(parents=True)
+    (hostile_package / "__init__.py").write_text("MARKER = 'foreign'\n", encoding="utf-8")
+    (hostile_root / "sitecustomize.py").write_text(
+        "import spd_decap_pi\n",
+        encoding="utf-8",
+    )
+    environment = dict(os.environ)
+    environment["PYTHONPATH"] = str(hostile_root)
+
+    completed = subprocess.run(
+        [sys.executable, str(REPOSITORY_ROOT / "scripts" / script_name), "--help"],
+        cwd=REPOSITORY_ROOT,
+        env=environment,
+        capture_output=True,
+        text=True,
+        timeout=60,
+        check=False,
+    )
+
+    assert completed.returncode != 0
+    assert "active-checkout import guard failed" in completed.stderr
+    assert str(hostile_package.resolve()) in completed.stderr
 
 
 def _replay_module():
@@ -15,6 +90,117 @@ def _replay_module():
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     return module
+
+
+def test_reuse_candidate_loads_verified_bundle_without_reimport(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    replay = _replay_module()
+    candidate = tmp_path / "source.spdpi"
+    candidate.write_bytes(b"bundle")
+    scenario = SimpleNamespace(decaps=())
+    attachments = {"proof.bin": b"verified"}
+    verified: list[tuple[object, Path]] = []
+    monkeypatch.setattr(
+        replay,
+        "load_scenario_bundle",
+        lambda path: SimpleNamespace(
+            scenario=scenario,
+            attachments=attachments,
+        ),
+    )
+    monkeypatch.setattr(
+        replay,
+        "verify_scenario_source",
+        lambda actual, path: verified.append((actual, path)),
+    )
+    monkeypatch.setattr(
+        replay,
+        "import_spd_scenario",
+        lambda _path: pytest.fail("raw import must not run for explicit reuse"),
+    )
+
+    imported, mode = replay._load_verified_source(
+        tmp_path / "source.spd",
+        candidate,
+    )
+
+    assert mode == "verified_candidate_reuse"
+    assert imported.scenario is scenario
+    assert imported.attachments == attachments
+    assert imported.attachments is not attachments
+    assert verified == [(scenario, tmp_path / "source.spd")]
+
+
+def test_reuse_candidate_rejects_previously_distributed_scenario(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    replay = _replay_module()
+    candidate = tmp_path / "distributed.spdpi"
+    candidate.write_bytes(b"bundle")
+    moved = SimpleNamespace(
+        refdes="C1",
+        source_net="VDD1",
+        current_net="VDD2",
+        source_rail_id="R1",
+        current_rail_id="R2",
+        source_model_id="M1",
+        model_id="M1",
+        source_mounted=True,
+        enabled=True,
+        pad_state=DecapPadState.NORMAL,
+    )
+    scenario = SimpleNamespace(decaps=(moved,))
+    monkeypatch.setattr(
+        replay,
+        "load_scenario_bundle",
+        lambda _path: SimpleNamespace(scenario=scenario, attachments={}),
+    )
+    monkeypatch.setattr(replay, "verify_scenario_source", lambda *_args: None)
+
+    with pytest.raises(replay.ReplayValidationError, match="not a pristine") as exc_info:
+        replay._load_verified_source(tmp_path / "source.spd", candidate)
+
+    assert "C1(current_net,current_rail_id)" in str(exc_info.value)
+
+
+def test_source_state_mismatches_covers_model_mount_and_isolation_edits() -> None:
+    replay = _replay_module()
+    edited = SimpleNamespace(
+        refdes="C2",
+        source_net="VDD",
+        current_net="vdd",
+        source_rail_id="R1",
+        current_rail_id="r1",
+        source_model_id=None,
+        model_id="M2",
+        source_mounted=True,
+        enabled=False,
+        pad_state=DecapPadState.ISOLATION_GAP,
+    )
+
+    assert replay._source_state_mismatches(SimpleNamespace(decaps=(edited,))) == (
+        "C2(enabled,pad_state,model_id)",
+    )
+
+
+def test_reuse_candidate_cli_is_explicit() -> None:
+    replay = _replay_module()
+
+    args = replay._parser().parse_args(
+        [
+            "--spd",
+            "source.spd",
+            "--targets",
+            "targets.xlsx",
+            "--reuse-candidate",
+            "source.spdpi",
+        ]
+    )
+
+    assert args.reuse_candidate == Path("source.spdpi")
 
 
 def test_physical_pwr_landing_requires_identity_and_immutable_xy() -> None:
@@ -167,7 +353,13 @@ def test_replay_artifact_workbook_uses_current_tolerance_metadata(
 
     monkeypatch.setattr(replay, "write_distribution_workbook", capture_workbook)
 
-    _, workbook_path = replay._write_artifacts(tmp_path, scenario, {}, plan)
+    _, _, workbook_path = replay._write_artifacts(
+        tmp_path,
+        scenario,
+        scenario,
+        {},
+        plan,
+    )
 
     assert workbook_path == tmp_path / "distribution-replay.xlsx"
     assert captured["metadata"] == {

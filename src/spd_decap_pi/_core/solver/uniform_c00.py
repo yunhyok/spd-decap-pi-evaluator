@@ -381,7 +381,81 @@ def replace_prepared_uniform_c00_from_assembly(
         raise UniformC00Error(str(exc)) from exc
 
 
+def replace_prepared_external_uniform_input_from_assembly(
+    solver: RectangularCavitySolver,
+    prepared: PreparedDeviceSystem,
+    assembly: UniformC00Assembly,
+) -> PreparedDeviceSystem:
+    """Bind a terminal-complete global-Y input without double-stamping C00.
+
+    This path is intentionally separate from the plane-only C00 replacement.
+    It is valid only when the source assembly is already reduced at the
+    external differential Device port and therefore already owns the uniform
+    Device escape network.
+    """
+
+    if assembly.status != "ok" or assembly.effective_admittance_s is None:
+        raise UniformC00Error(
+            "external uniform input is blocked: "
+            f"{assembly.reason or assembly.status}"
+        )
+    if (
+        len(assembly.selected_net_names) != 1
+        or assembly.effective_admittance_s.shape[1:] != (1, 1)
+    ):
+        raise UniformC00Error(
+            "external uniform input must be one scalar differential port"
+        )
+    try:
+        return solver.replace_uniform_c00_with_external_input(
+            prepared,
+            assembly.effective_admittance_s[:, 0, 0],
+        )
+    except ValueError as exc:
+        raise UniformC00Error(str(exc)) from exc
+
+
+def prepare_external_uniform_input_from_assembly(
+    solver: RectangularCavitySolver,
+    frequencies_hz: Sequence[float] | NDArray[np.float64],
+    assembly: UniformC00Assembly,
+) -> PreparedDeviceSystem:
+    """Directly prepare an externally reduced one-port source assembly.
+
+    Unlike :func:`replace_prepared_external_uniform_input_from_assembly`, this
+    path intentionally has no rectangular ``PreparedDeviceSystem`` input.  It
+    is reserved for a terminal-complete layerwise model and therefore avoids
+    computing modal plane impedance and local Device branch data that the
+    external-input solve will never read.
+    """
+
+    if assembly.status != "ok" or assembly.effective_admittance_s is None:
+        raise UniformC00Error(
+            "external uniform input is blocked: "
+            f"{assembly.reason or assembly.status}"
+        )
+    if (
+        len(assembly.selected_net_names) != 1
+        or assembly.effective_admittance_s.shape[1:] != (1, 1)
+    ):
+        raise UniformC00Error(
+            "external uniform input must be one scalar differential port"
+        )
+    frequencies = np.asarray(frequencies_hz, dtype=np.float64)
+    if not np.array_equal(assembly.frequencies_hz, frequencies):
+        raise UniformC00Error(
+            "external uniform input frequency grid does not match the request"
+        )
+    try:
+        return solver.prepare_external_uniform_input(
+            frequencies,
+            assembly.effective_admittance_s[:, 0, 0],
+        )
+    except ValueError as exc:
+        raise UniformC00Error(str(exc)) from exc
+
+
 __all__ = [
     "DispersiveAdjacentGap", "UniformC00Assembly", "UniformC00Error", "UniformLoadBlock", "UniformPortConnectivityEvidence",
-    "assemble_adjacent_bulk_admittance", "assemble_uniform_effective_admittance", "replace_modal_c00_admittance", "replace_modal_c00_from_assembly", "replace_prepared_uniform_c00_from_assembly",
+    "assemble_adjacent_bulk_admittance", "assemble_uniform_effective_admittance", "replace_modal_c00_admittance", "replace_modal_c00_from_assembly", "replace_prepared_uniform_c00_from_assembly", "replace_prepared_external_uniform_input_from_assembly", "prepare_external_uniform_input_from_assembly",
 ]

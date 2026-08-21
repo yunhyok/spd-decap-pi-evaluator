@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import gc
+from dataclasses import replace
 import tracemalloc
 import weakref
 
@@ -36,17 +37,23 @@ from spd_decap_pi._core.models.impedance import (
 )
 from spd_decap_pi._core.solver.evaluator import (
     EvaluationError,
+    EvaluationOutcome,
     EvaluationRequest,
+    _frequency_grid_delta,
+    _refine_frequency_for_modes,
     _planes_from_project,
     _placement_shunts,
     compile_evaluation_kernel,
     evaluate_shunt_sensitivity,
     sensitivity_port_id,
 )
+from spd_decap_pi._core.solver import evaluator as evaluator_module
+from spd_decap_pi._core.solver.frequency import FrequencyGrid
 from spd_decap_pi._core.solver.metrics import (
     ConfidenceCategory,
     ConfidenceInputs,
     ConfidenceLevel,
+    EvaluationMetrics,
     TargetMask,
     assess_confidence,
 )
@@ -55,6 +62,7 @@ from spd_decap_pi._core.solver.modal import (
     DeviceBranch,
     DeviceConnection,
     FinitePort,
+    ModalSolveResult,
     RectangularCavitySolver,
     RectangularPlane,
     ModalSolverError,
@@ -67,6 +75,365 @@ from spd_decap_pi._core.solver.modal import (
 
 def _constant(model_id: str, value: complex) -> ConstantImpedanceModel:
     return ConstantImpedanceModel(model_id, value)
+
+
+def _frequency_outcome(
+    candidate: EvaluationRequest,
+    impedance_ohm: complex | np.ndarray,
+) -> EvaluationOutcome:
+    count = candidate.frequencies_hz.size
+    impedance = np.broadcast_to(
+        np.asarray(impedance_ohm, dtype=np.complex128),
+        (count,),
+    ).copy()
+    metrics = EvaluationMetrics(
+        magnitude_ohm=np.abs(impedance),
+        phase_deg=np.zeros(count),
+        target_ohm=np.full(count, 10.0),
+        violation_db=np.zeros(count),
+        max_violation_db=0.0,
+        rms_violation_db=0.0,
+        max_peak_prominence_db=0.0,
+        target_met=True,
+        peaks=(),
+    )
+    return EvaluationOutcome(
+        rail_id=candidate.rail_id,
+        solve=ModalSolveResult(
+            frequencies_hz=candidate.frequencies_hz,
+            impedance_ohm=impedance,
+            diagnostics=SolverDiagnostics(
+                condition_numbers=np.ones(count),
+                relative_residuals=np.zeros(count),
+                mode_count=9,
+            ),
+        ),
+        metrics=metrics,
+        confidence=(),
+        assumptions=(),
+    )
+
+
+def test_frequency_refinement_uses_second_production_iteration_before_exhaustion(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    solver, device, _frequencies = _plane_solver_fixture()
+    initial = np.asarray([1.0e5, 1.0e6, 1.0e7])
+    request = EvaluationRequest(
+        rail_id="R1",
+        frequencies_hz=initial,
+        plane=solver.plane,
+        device=device,
+        shunts=(),
+        target=TargetMask.constant(10.0, start_hz=initial[0], stop_hz=initial[-1]),
+        max_mode_x=2,
+        max_mode_y=2,
+    )
+
+    def refine(frequencies, _values, **_kwargs):
+        count = len(frequencies)
+        if count == 3:
+            return FrequencyGrid(np.geomspace(1.0e5, 1.0e7, 5))
+        if count == 5:
+            return FrequencyGrid(np.geomspace(1.0e5, 1.0e7, 7))
+        return FrequencyGrid(np.asarray(frequencies))
+
+    monkeypatch.setattr(
+        "spd_decap_pi._core.solver.evaluator.refine_log_grid", refine
+    )
+
+    def solve(candidate: EvaluationRequest, _label: str) -> EvaluationOutcome:
+        count = candidate.frequencies_hz.size
+        level = {3: 1.0, 5: 2.0, 7: 2.01}[count]
+        impedance = np.full(count, level, dtype=np.complex128)
+        metrics = EvaluationMetrics(
+            magnitude_ohm=np.abs(impedance),
+            phase_deg=np.zeros(count),
+            target_ohm=np.full(count, 10.0),
+            violation_db=np.zeros(count),
+            max_violation_db=0.0,
+            rms_violation_db=0.0,
+            max_peak_prominence_db=0.0,
+            target_met=True,
+            peaks=(),
+        )
+        return EvaluationOutcome(
+            rail_id="R1",
+            solve=ModalSolveResult(
+                frequencies_hz=candidate.frequencies_hz,
+                impedance_ohm=impedance,
+                diagnostics=SolverDiagnostics(
+                    condition_numbers=np.ones(count),
+                    relative_residuals=np.zeros(count),
+                    mode_count=9,
+                ),
+            ),
+            metrics=metrics,
+            confidence=(),
+            assumptions=(),
+        )
+
+    result = _refine_frequency_for_modes(
+        request,
+        mode_x=2,
+        mode_y=2,
+        max_refinement_iterations=2,
+        max_new_frequency_points=64,
+        rms_tolerance_db=0.2,
+        max_tolerance_db=0.5,
+        peak_shift_tolerance_percent=2.0,
+        solve_request=solve,
+    )
+
+    assert result.iterations == 2
+    assert result.request.frequencies_hz.size == 7
+    assert result.converged
+    assert not result.budget_exhausted
+
+
+def test_frequency_refinement_uses_third_v4_iteration_before_exhaustion(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    solver, device, _frequencies = _plane_solver_fixture()
+    initial = np.asarray([1.0e5, 1.0e6, 1.0e7])
+    request = EvaluationRequest(
+        rail_id="R1",
+        frequencies_hz=initial,
+        plane=solver.plane,
+        device=device,
+        shunts=(),
+        target=TargetMask.constant(10.0, start_hz=initial[0], stop_hz=initial[-1]),
+        max_mode_x=2,
+        max_mode_y=2,
+    )
+
+    def refine(frequencies, _values, **_kwargs):
+        next_count = {3: 5, 5: 7, 7: 9}.get(len(frequencies))
+        if next_count is None:
+            return FrequencyGrid(np.asarray(frequencies))
+        return FrequencyGrid(np.geomspace(1.0e5, 1.0e7, next_count))
+
+    monkeypatch.setattr(
+        "spd_decap_pi._core.solver.evaluator.refine_log_grid", refine
+    )
+    levels = {3: 1.0, 5: 2.0, 7: 3.0, 9: 3.01}
+
+    result = _refine_frequency_for_modes(
+        request,
+        mode_x=2,
+        mode_y=2,
+        max_refinement_iterations=3,
+        max_new_frequency_points=64,
+        rms_tolerance_db=0.2,
+        max_tolerance_db=0.5,
+        peak_shift_tolerance_percent=2.0,
+        solve_request=lambda candidate, _label: _frequency_outcome(
+            candidate, levels[candidate.frequencies_hz.size]
+        ),
+    )
+
+    assert result.iterations == 3
+    assert result.request.frequencies_hz.size == 9
+    assert result.converged
+    assert not result.budget_exhausted
+
+
+def test_frequency_refinement_v4_exhaustion_keeps_last_solved_delta(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    solver, device, _frequencies = _plane_solver_fixture()
+    initial = np.asarray([1.0e5, 1.0e6, 1.0e7])
+    request = EvaluationRequest(
+        rail_id="R1",
+        frequencies_hz=initial,
+        plane=solver.plane,
+        device=device,
+        shunts=(),
+        target=TargetMask.constant(10.0, start_hz=initial[0], stop_hz=initial[-1]),
+        max_mode_x=2,
+        max_mode_y=2,
+    )
+
+    def refine(frequencies, _values, **_kwargs):
+        next_count = {3: 5, 5: 7, 7: 9, 9: 11}[len(frequencies)]
+        return FrequencyGrid(np.geomspace(1.0e5, 1.0e7, next_count))
+
+    monkeypatch.setattr(
+        "spd_decap_pi._core.solver.evaluator.refine_log_grid", refine
+    )
+    solved_counts: list[int] = []
+
+    def solve(candidate: EvaluationRequest, _label: str) -> EvaluationOutcome:
+        count = int(candidate.frequencies_hz.size)
+        solved_counts.append(count)
+        return _frequency_outcome(candidate, float(count))
+
+    result = _refine_frequency_for_modes(
+        request,
+        mode_x=2,
+        mode_y=2,
+        max_refinement_iterations=3,
+        max_new_frequency_points=64,
+        rms_tolerance_db=0.2,
+        max_tolerance_db=0.5,
+        peak_shift_tolerance_percent=2.0,
+        solve_request=solve,
+    )
+
+    assert solved_counts == [3, 5, 7, 9]
+    assert result.iterations == 3
+    assert result.request.frequencies_hz.size == 9
+    assert result.max_delta_db > 0.5
+    assert not result.converged
+    assert result.budget_exhausted
+
+
+def test_frequency_grid_max_delta_boundary_remains_strict() -> None:
+    solver, device, _frequencies = _plane_solver_fixture()
+    frequencies = np.geomspace(1.0e5, 1.0e7, 9)
+    request = EvaluationRequest(
+        rail_id="R1",
+        frequencies_hz=frequencies,
+        plane=solver.plane,
+        device=device,
+        shunts=(),
+        target=TargetMask.constant(
+            10.0,
+            start_hz=frequencies[0],
+            stop_hz=frequencies[-1],
+        ),
+        critical_band_hz=(frequencies[0], frequencies[-1]),
+        max_mode_x=2,
+        max_mode_y=2,
+    )
+    higher = np.ones(frequencies.size, dtype=np.complex128)
+    higher[4] = 10.0 ** (0.5 / 20.0)
+
+    rms_delta, max_delta, peak_shift, converged = _frequency_grid_delta(
+        request,
+        _frequency_outcome(request, 1.0),
+        _frequency_outcome(request, higher),
+        rms_tolerance_db=0.2,
+        max_tolerance_db=0.5,
+        peak_shift_tolerance_percent=2.0,
+    )
+
+    assert rms_delta < 0.2
+    assert max_delta == 0.5
+    assert peak_shift == 0.0
+    assert not converged
+
+
+@pytest.mark.parametrize(
+    (
+        "modal_checks",
+        "expected_refined_modes",
+        "expected_lower_modes",
+        "expected_lower_mode",
+        "expected_final_mode",
+        "expected_converged",
+    ),
+    (
+        ((True,), (8,), (6,), 6, 8, True),
+        ((False, True), (8, 10), (6, 8), 8, 10, True),
+        ((False, False, True), (8, 10, 12), (6, 8, 10), 10, 12, True),
+        ((False, False, False), (8, 10, 12), (6, 8, 10), 10, 12, False),
+    ),
+)
+def test_modal_convergence_selectively_escalates_and_fails_closed(
+    monkeypatch: pytest.MonkeyPatch,
+    modal_checks: tuple[bool, ...],
+    expected_refined_modes: tuple[int, ...],
+    expected_lower_modes: tuple[int, ...],
+    expected_lower_mode: int,
+    expected_final_mode: int,
+    expected_converged: bool,
+) -> None:
+    solver, device, _frequencies = _plane_solver_fixture()
+    frequencies = np.asarray([1.0e5, 1.0e6, 1.0e7])
+    request = EvaluationRequest(
+        rail_id="R1",
+        frequencies_hz=frequencies,
+        plane=solver.plane,
+        device=device,
+        shunts=(),
+        target=TargetMask.constant(10.0, start_hz=frequencies[0], stop_hz=frequencies[-1]),
+        max_mode_x=8,
+        max_mode_y=8,
+    )
+
+    def outcome(mode: int) -> EvaluationOutcome:
+        impedance = np.full(frequencies.size, 1.0 + mode / 1000.0, dtype=complex)
+        return EvaluationOutcome(
+            rail_id="R1",
+            solve=ModalSolveResult(
+                frequencies_hz=frequencies,
+                impedance_ohm=impedance,
+                diagnostics=SolverDiagnostics(
+                    condition_numbers=np.ones(frequencies.size),
+                    relative_residuals=np.zeros(frequencies.size),
+                    mode_count=(mode + 1) ** 2,
+                ),
+            ),
+            metrics=EvaluationMetrics(
+                magnitude_ohm=np.abs(impedance),
+                phase_deg=np.zeros(frequencies.size),
+                target_ohm=np.full(frequencies.size, 10.0),
+                violation_db=np.zeros(frequencies.size),
+                max_violation_db=0.0,
+                rms_violation_db=0.0,
+                max_peak_prominence_db=0.0,
+                target_met=True,
+                peaks=(),
+            ),
+            confidence=(),
+            assumptions=(),
+        )
+
+    refined_modes: list[int] = []
+    lower_modes: list[int] = []
+
+    def refine_modes(candidate, *, mode_x, mode_y, **_kwargs):
+        assert mode_x == mode_y
+        refined_modes.append(mode_x)
+        solved_request = replace(candidate, max_mode_x=mode_x, max_mode_y=mode_y)
+        return evaluator_module._FrequencyRefinementResult(
+            request=solved_request,
+            outcome=outcome(mode_x),
+            iterations=0,
+            rms_delta_db=0.0,
+            max_delta_db=0.0,
+            peak_shift_percent=0.0,
+            converged=True,
+            budget_exhausted=False,
+        )
+
+    def solve_lower(candidate, **_kwargs):
+        lower_modes.append(candidate.max_mode_x)
+        return outcome(candidate.max_mode_x)
+
+    checks = iter(modal_checks)
+    monkeypatch.setattr(evaluator_module, "_refine_frequency_for_modes", refine_modes)
+    monkeypatch.setattr(evaluator_module, "evaluate_rail", solve_lower)
+    monkeypatch.setattr(
+        evaluator_module,
+        "_modal_convergence_delta",
+        lambda *_args, **_kwargs: (0.1, 0.4, 0.0, next(checks)),
+    )
+
+    result = evaluator_module.evaluate_rail_converged(
+        request,
+        max_mode_x=12,
+        max_mode_y=12,
+    )
+
+    assert refined_modes == list(expected_refined_modes)
+    assert lower_modes == list(expected_lower_modes)
+    assert result.convergence is not None
+    assert result.convergence.lower_mode_x == expected_lower_mode
+    assert result.convergence.final_mode_x == expected_final_mode
+    assert result.convergence.modal_converged is expected_converged
+    assert result.convergence.converged is expected_converged
 
 
 def test_shared_pad_one_power_one_ground_matches_direct_branch() -> None:
@@ -447,6 +814,100 @@ def _shared_pwr_modal_expected(
     return expected
 
 
+def test_prepared_device_solve_reports_frequency_boundaries_and_cancels() -> None:
+    solver, device, frequencies = _plane_solver_fixture()
+    prepared = solver.prepare_device(frequencies, device)
+    baseline = solver.solve_prepared_device(prepared, max_workers=1)
+    completed: list[tuple[int, int]] = []
+    observed = solver.solve_prepared_device(
+        prepared,
+        max_workers=1,
+        progress=lambda count, total: completed.append((count, total)),
+        is_cancelled=lambda: False,
+    )
+    np.testing.assert_array_equal(
+        observed.impedance_ohm,
+        baseline.impedance_ohm,
+    )
+    assert completed == [
+        (index, len(frequencies)) for index in range(1, len(frequencies) + 1)
+    ]
+
+    progress: list[tuple[int, int]] = []
+
+    with pytest.raises(RuntimeError, match="evaluation cancelled"):
+        solver.solve_prepared_device(
+            prepared,
+            max_workers=1,
+            progress=lambda completed, total: progress.append((completed, total)),
+            is_cancelled=lambda: len(progress) >= 2,
+        )
+
+    assert progress == [(1, len(frequencies)), (2, len(frequencies))]
+
+
+def test_shared_pad_preparation_progress_preserves_exact_prepared_solve() -> None:
+    solver, device, frequencies = _plane_solver_fixture()
+    prepared = solver.prepare_device(frequencies, device)
+    shunts = _homogeneous_cluster_groups(homogeneous=True)[:2]
+    baseline = solver.solve_prepared_device(
+        prepared,
+        shunts=shunts,
+        max_workers=1,
+    )
+    preparation: list[tuple[int, str]] = []
+
+    observed = solver.solve_prepared_device(
+        prepared,
+        shunts=shunts,
+        max_workers=1,
+        preparation_progress=lambda value, message: preparation.append(
+            (value, message)
+        ),
+        is_cancelled=lambda: False,
+    )
+
+    np.testing.assert_array_equal(observed.impedance_ohm, baseline.impedance_ohm)
+    np.testing.assert_array_equal(
+        observed.diagnostics.condition_numbers,
+        baseline.diagnostics.condition_numbers,
+    )
+    np.testing.assert_array_equal(
+        observed.diagnostics.relative_residuals,
+        baseline.diagnostics.relative_residuals,
+    )
+    values = [value for value, _message in preparation]
+    assert values[0] == 0
+    assert values[-1] == 100
+    assert values == sorted(set(values))
+
+
+def test_shared_pad_preparation_can_cancel_before_modal_frequency_solve() -> None:
+    solver, device, frequencies = _plane_solver_fixture()
+    prepared = solver.prepare_device(frequencies, device)
+    shunts = _homogeneous_cluster_groups(homogeneous=True)[:2]
+    preparation: list[tuple[int, str]] = []
+    solve_progress: list[tuple[int, int]] = []
+
+    with pytest.raises(RuntimeError, match="evaluation cancelled"):
+        solver.solve_prepared_device(
+            prepared,
+            shunts=shunts,
+            max_workers=1,
+            preparation_progress=lambda value, message: preparation.append(
+                (value, message)
+            ),
+            progress=lambda completed, total: solve_progress.append(
+                (completed, total)
+            ),
+            is_cancelled=lambda: bool(preparation)
+            and preparation[-1][0] >= 20,
+        )
+
+    assert preparation[-1][0] >= 20
+    assert solve_progress == []
+
+
 def test_one_parallel_component_preserves_single_plane_modal_impedance() -> None:
     solver, _device, frequencies = _plane_solver_fixture()
 
@@ -794,8 +1255,8 @@ def _homogeneous_cluster_groups(
             power = tuple(shared_via for _ in range(power_count))
             ground = tuple(shared_via for _ in range(ground_count))
         else:
-            # Equal impedance values but distinct objects must deliberately
-            # take the established dense path.
+            # Equal impedance values but distinct objects exercise the exact
+            # heterogeneous one-component arrowhead path.
             power = tuple(
                 _constant(f"P-{cluster_index}-{index}", 0.012 + 0.035j)
                 for index in range(power_count)
@@ -834,7 +1295,11 @@ def test_homogeneous_shared_pad_batch_matches_dense_curve_randomized() -> None:
     dense_data = solver._shunt_data(frequencies, dense_groups)
     assert len(batch_data) == 1
     assert type(batch_data[0]).__name__ == "_HomogeneousSharedPadBatchData"
-    assert all(type(item).__name__ == "_CoupledShuntData" for item in dense_data)
+    assert len(dense_data) == len(dense_groups)
+    assert all(
+        type(item).__name__ == "_HomogeneousSharedPadBatchData"
+        for item in dense_data
+    )
 
     batched = solver.solve_device(frequencies, device, shunts=batched_groups)
     dense = solver.solve_device(frequencies, device, shunts=dense_groups)
@@ -844,6 +1309,56 @@ def test_homogeneous_shared_pad_batch_matches_dense_curve_randomized() -> None:
         rtol=3.0e-12,
         atol=3.0e-12,
     )
+
+
+def test_heterogeneous_one_component_shared_pad_stamp_matches_explicit_dense_algebra() -> None:
+    solver, _device, frequencies = _plane_solver_fixture()
+    power_vias = (
+        SeriesRLModel("P1", resistance_ohm=0.008, inductance_h=70.0e-12),
+        SeriesRLModel("P2", resistance_ohm=0.017, inductance_h=160.0e-12),
+        SeriesRLModel("P3", resistance_ohm=0.031, inductance_h=310.0e-12),
+    )
+    ground_vias = (
+        SeriesRLModel("G1", resistance_ohm=0.011, inductance_h=95.0e-12),
+        SeriesRLModel("G2", resistance_ohm=0.026, inductance_h=240.0e-12),
+    )
+    network = SharedPadClusterModel(
+        "HETEROGENEOUS",
+        power_vias,
+        ground_vias,
+        (
+            _constant("C1", 0.006 - 0.21j),
+            _constant("C2", 0.014 - 0.43j),
+        ),
+    )
+    ports = (
+        FinitePort(0.0030, 0.0030, 90.0e-6, 110.0e-6, "P1"),
+        FinitePort(0.0065, 0.0050, 100.0e-6, 80.0e-6, "P2"),
+        FinitePort(0.0120, 0.0090, 120.0e-6, 100.0e-6, "P3"),
+        FinitePort(0.0040, 0.0110, 85.0e-6, 105.0e-6, "G1"),
+        FinitePort(0.0160, 0.0060, 115.0e-6, 95.0e-6, "G2"),
+    )
+    group = CoupledShuntGroup("HETEROGENEOUS", ports, network)
+
+    data = solver._shunt_data(frequencies, (group,))
+    assert len(data) == 1
+    assert type(data[0]).__name__ == "_HomogeneousSharedPadBatchData"
+
+    population = solver.population_matrix(group)
+    expected = np.einsum(
+        "mp,fpq,nq->fmn",
+        population,
+        network.admittance_matrix(frequencies),
+        population,
+        optimize=True,
+    )
+    np.testing.assert_allclose(
+        data[0].stamp,  # type: ignore[attr-defined]
+        expected,
+        rtol=5.0e-12,
+        atol=5.0e-12,
+    )
+    assert not data[0].stamp.flags.writeable  # type: ignore[attr-defined]
 
 
 def test_homogeneous_shared_pad_batches_partition_a_mixed_shunt_solve_exactly() -> None:
@@ -919,8 +1434,8 @@ def test_homogeneous_shared_pad_batches_partition_a_mixed_shunt_solve_exactly() 
 
     data = solver._shunt_data(frequencies, shunts)
     names = [type(item).__name__ for item in data]
-    assert names.count("_HomogeneousSharedPadBatchData") == 2
-    assert names.count("_CoupledShuntData") == 2
+    assert names.count("_HomogeneousSharedPadBatchData") == 3
+    assert names.count("_CoupledShuntData") == 1
     assert names.count("_ScalarShuntData") == 1
 
     expected = np.zeros(
@@ -1026,12 +1541,11 @@ def test_homogeneous_shared_pad_batch_is_rebuilt_after_model_mutation() -> None:
         (_constant("DC1", capacitor.value),),
     )
     dense_group = CoupledShuntGroup("DENSE", ports, dense_network)
-    dense = solver._shunt_data(frequencies, (dense_group,))[0]
-    population = dense.population  # type: ignore[attr-defined]
+    population = solver.population_matrix(dense_group)
     expected = np.einsum(
         "mp,fpq,nq->fmn",
         population,
-        dense.admittance,  # type: ignore[attr-defined]
+        dense_network.admittance_matrix(frequencies),
         population,
         optimize=True,
     )

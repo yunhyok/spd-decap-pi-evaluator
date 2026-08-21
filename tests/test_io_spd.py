@@ -4,6 +4,7 @@ import mmap
 import os
 from dataclasses import replace
 from hashlib import sha256
+from io import BytesIO
 from pathlib import Path
 import math
 from types import SimpleNamespace
@@ -20,10 +21,14 @@ from spd_decap_pi._core.domain import (
 )
 from spd_decap_pi._core.io import spd as spd_io
 from spd_decap_pi._core.io.spd import (
+    SpdSurfaceConnectivityComponent,
+    SpdTraceRecordError,
     SpdImportError,
     SpdPlaneGeometry,
     _length_um,
+    _length_pm_exact,
     _lengths,
+    _iter_spd_trace_records,
     _parse_netlist,
     analyze_spd,
     recover_spd_via_paths,
@@ -160,6 +165,31 @@ VDD_DROP/0::Unselected||DropShape
 .EndNetList
 .EndPackage
 """
+
+
+def test_parsed_pin_and_device_endpoint_preserve_source_node_layer(
+    tmp_path: Path,
+) -> None:
+    source = tmp_path / "pin-source-layer.spd"
+    source.write_text(MINI_SPD, encoding="ascii")
+
+    analysis = analyze_spd(source, scope="decap_scenario")
+
+    device_pins = {
+        pin.pin_id: pin
+        for pin in analysis.pins
+        if pin.kind == PinKind.DEVICE_BUMP
+    }
+    assert device_pins["SITE0:101"].source_node_id == "Node1"
+    assert device_pins["SITE0:101"].source_layer == "Signal$TOP"
+    assert device_pins["SITE0:102"].source_node_id == "Node2"
+    assert device_pins["SITE0:102"].source_layer == "Signal$TOP"
+    endpoints = {
+        endpoint.pin_id: endpoint
+        for endpoint in analysis.device_terminal_via_endpoints
+    }
+    assert endpoints["SITE0:101"].source_layer == "Signal$TOP"
+    assert endpoints["SITE0:102"].source_layer == "Signal$TOP"
 
 
 def test_chunked_shape_headers_preserve_offsets_across_crlf_lf_boundaries(
@@ -568,6 +598,36 @@ def test_ground_reachability_target_batch_bypasses_scalar_predicate(
     assert scalar_calls == 0
     assert result.reaches(landing, "Signal$GND")
     assert any(15 < value < 40 for value, _message in progress)
+
+
+def test_ground_artwork_only_net_is_indexed_without_cross_net_reachability(
+    tmp_path: Path,
+) -> None:
+    source, _analysis = _recoverable_via_source(
+        tmp_path,
+        node_lines=(
+            "NodeAuxA!!1::DGND_AUX X = 0um Y = 1um Layer = Signal$L10 PadStack = DR-0102_60\n"
+            "NodeAuxB!!1::DGND_AUX X = 1um Y = 1um Layer = Signal$L10 PadStack = DR-0102_60"
+        ),
+        via_lines=(
+            "ViaAux::DGND_AUX UpperNode = NodeAuxA::DGND_AUX "
+            "LowerNode = NodeAuxB::DGND_AUX PadStack = DR-0102_60"
+        ),
+        trace_lines="",
+    )
+    landing = SpdViaLanding(
+        via_id="Via2", net="DGND", endpoint_node_id="Node2", x_um=100.0,
+        y_um=0.0, padstack="DR-0102_60",
+    )
+    result = recover_spd_ground_reachability(
+        source,
+        landings=(landing,),
+        target_layers_by_net={"DGND": ("Signal$GND",)},
+        same_layer_artwork_layers_by_net={"DGND_AUX": ("Signal$L10",)},
+        same_layer_artwork_component=lambda *_args: "aux",
+    )
+    assert not result.reaches(landing, "Signal$GND")
+    assert result.statistics["artwork_nodes"] == 2
 
 
 def test_ground_reachability_releases_interleaved_artwork_layers_after_last_node(
@@ -3220,16 +3280,12 @@ def test_mixed_reference_decodes_only_candidates_and_caches_shared_ground(
 def test_mixed_reference_large_assets_fail_closed_without_global_union(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    def large_asset(layer: str, net: str) -> tuple[dict[str, object], bytes]:
-        polygons = tuple(
-            (
-                (float(index), 0.0),
-                (float(index) + 1.0, 0.0),
-                (float(index), 1.0),
-            )
-            for index in range(2050)
-        )
-        order = tuple(("positive_polygon", index) for index in range(2050))
+    def geometry_asset(
+        layer: str,
+        net: str,
+        polygons: tuple[tuple[tuple[float, float], ...], ...],
+    ) -> tuple[dict[str, object], bytes]:
+        order = tuple(("positive_polygon", index) for index in range(len(polygons)))
         compressed, _ = core_services._compress_spd_geometry_payload(
             layer=layer,
             net=net,
@@ -3254,14 +3310,35 @@ def test_mixed_reference_large_assets_fail_closed_without_global_union(
             compressed,
         )
 
-    pwr, pwr_bytes = large_asset("PWR0", "VDD")
-    gnd, gnd_bytes = large_asset("DGND_MIX", "DGND")
-    failures: list[dict[str, object]] = []
-    monkeypatch.setattr(
-        core_services,
-        "_ordered_spd_geometry",
-        lambda _payload: (_ for _ in ()).throw(AssertionError("global union called")),
+    pwr, pwr_bytes = geometry_asset(
+        "PWR0",
+        "VDD",
+        (((20.0, 2.0), (30.0, 2.0), (30.0, 12.0), (20.0, 12.0)),),
     )
+    gnd, gnd_bytes = geometry_asset(
+        "DGND_MIX",
+        "DGND",
+        tuple(
+            (
+                (20.0 + (index % 10), 2.0 + (index // 10 % 10)),
+                (20.4 + (index % 10), 2.0 + (index // 10 % 10)),
+                (20.0 + (index % 10), 2.4 + (index // 10 % 10)),
+            )
+            for index in range(2049)
+        ),
+    )
+    failures: list[dict[str, object]] = []
+    original_geometry = core_services._ordered_spd_geometry
+    ordered_nets: list[str] = []
+
+    def pwr_geometry_only(payload: dict):
+        net = str(payload["net"])
+        ordered_nets.append(net)
+        if net == "DGND":
+            raise AssertionError("local budget must fail before DGND union")
+        return original_geometry(payload)
+
+    monkeypatch.setattr(core_services, "_ordered_spd_geometry", pwr_geometry_only)
     certificates = core_services._mixed_reference_certificates(
         [pwr, gnd],
         {str(pwr["asset"]): pwr_bytes, str(gnd["asset"]): gnd_bytes},
@@ -3275,11 +3352,284 @@ def test_mixed_reference_large_assets_fail_closed_without_global_union(
         failures=failures,
     )
     assert certificates == ()
-    assert any(
-        item["code"] == "SPD_MIXED_REFERENCE_GEOMETRY_UNAVAILABLE"
-        and not item["blocking"]
-        for item in failures
+    assert ordered_nets == ["VDD"]
+    assert failures == [
+        {
+            "rail_net": "VDD",
+            "pwr_layer": "PWR0",
+            "gnd_layer": "DGND_MIX",
+            "gnd_net": "DGND",
+            "reason": "retained mixed-reference artwork exceeds bounded certificate geometry budget",
+            "code": "SPD_MIXED_REFERENCE_GEOMETRY_UNAVAILABLE",
+            "blocking": False,
+        }
+    ]
+
+
+def test_mixed_reference_clips_distant_ground_primitives_before_budget(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    def geometry_asset(layer: str, net: str, polygons: tuple) -> tuple[dict, bytes]:
+        compressed, _ = core_services._compress_spd_geometry_payload(
+            layer=layer,
+            net=net,
+            positive_polygons=polygons,
+            negative_polygons=(),
+            positive_circles=(),
+            negative_circles=(),
+            primitive_order=tuple(
+                ("positive_polygon", index) for index in range(len(polygons))
+            ),
+            positive_subelement_count=len(polygons),
+            negative_subelement_count=0,
+            polygon_trace_count=0,
+            box_count=0,
+        )
+        digest = sha256(compressed).hexdigest()
+        return (
+            {"layer": layer, "net": net, "asset": f"geometry/{net}.zlib", "asset_sha256": digest},
+            compressed,
+        )
+
+    pwr, pwr_bytes = geometry_asset(
+        "PWR0", "VDD", (((0.0, 0.0), (10.0, 0.0), (10.0, 10.0), (0.0, 10.0)),)
     )
+    gnd_polygons = (
+        ((0.0, 0.0), (10.0, 0.0), (10.0, 10.0), (0.0, 10.0)),
+        *tuple(
+            ((100.0 + i, 100.0), (101.0 + i, 100.0), (100.0 + i, 101.0))
+            for i in range(2049)
+        ),
+    )
+    gnd, gnd_bytes = geometry_asset("DGND_MIX", "DGND", gnd_polygons)
+    ordered: list[tuple[str, int]] = []
+
+    original_geometry = core_services._ordered_spd_geometry
+
+    def counted_geometry(payload: dict):
+        ordered.append((str(payload["net"]), len(payload["primitive_order"])))
+        return original_geometry(payload)
+
+    monkeypatch.setattr(core_services, "_ordered_spd_geometry", counted_geometry)
+    certificates = core_services._mixed_reference_certificates(
+        [pwr, gnd],
+        {str(pwr["asset"]): pwr_bytes, str(gnd["asset"]): gnd_bytes},
+        [
+            StackupLayer(name="PWR0", thickness_um=20.0, conductivity_s_m=5.8e7, pwr_nets=("VDD",)),
+            StackupLayer(name="D1", thickness_um=80.0, dk=4.0, df=0.01),
+            StackupLayer(name="DGND_MIX", thickness_um=20.0, conductivity_s_m=5.8e7, pwr_nets=("DGND", "SIG_RETURN")),
+        ],
+        power_keys={"vdd"},
+        ground_keys={"dgnd"},
+    )
+
+    assert len(certificates) == 1
+    assert ordered == [("VDD", 1), ("DGND", 1)]
+    assert certificates[0].pwr_asset_sha256 == pwr["asset_sha256"]
+    assert certificates[0].gnd_asset_sha256 == gnd["asset_sha256"]
+    assert certificates[0].overlap_fraction == pytest.approx(1.0)
+    assert certificates[0].dominant_overlap_component_fraction == pytest.approx(1.0)
+
+
+def test_mixed_reference_local_positive_negative_cancellation_is_no_overlap() -> None:
+    def geometry_asset(
+        layer: str,
+        net: str,
+        positive_polygons: tuple[tuple[tuple[float, float], ...], ...],
+        negative_polygons: tuple[tuple[tuple[float, float], ...], ...] = (),
+    ) -> tuple[dict[str, object], bytes]:
+        order = tuple(
+            [("positive_polygon", index) for index in range(len(positive_polygons))]
+            + [("negative_polygon", index) for index in range(len(negative_polygons))]
+        )
+        compressed, _ = core_services._compress_spd_geometry_payload(
+            layer=layer,
+            net=net,
+            positive_polygons=positive_polygons,
+            negative_polygons=negative_polygons,
+            positive_circles=(),
+            negative_circles=(),
+            primitive_order=order,
+            positive_subelement_count=len(positive_polygons),
+            negative_subelement_count=len(negative_polygons),
+            polygon_trace_count=0,
+            box_count=0,
+        )
+        digest = sha256(compressed).hexdigest()
+        return (
+            {
+                "layer": layer,
+                "net": net,
+                "asset": f"geometry/{net}.zlib",
+                "asset_sha256": digest,
+            },
+            compressed,
+        )
+
+    local = ((0.0, 0.0), (10.0, 0.0), (10.0, 10.0), (0.0, 10.0))
+    distant = ((100.0, 100.0), (110.0, 100.0), (110.0, 110.0), (100.0, 110.0))
+    pwr, pwr_bytes = geometry_asset("PWR0", "VDD", (local,))
+    gnd, gnd_bytes = geometry_asset("DGND_MIX", "DGND", (distant, local), (local,))
+    full_gnd_payload = core_services._decode_spd_geometry_asset(
+        str(gnd["asset_sha256"]), gnd_bytes
+    )
+    full_gnd_shape = core_services._ordered_spd_geometry(full_gnd_payload)
+    assert full_gnd_shape is not None
+    assert tuple(full_gnd_shape.bounds) == pytest.approx((100.0, 100.0, 110.0, 110.0))
+    failures: list[dict[str, object]] = []
+
+    certificates = core_services._mixed_reference_certificates(
+        [pwr, gnd],
+        {str(pwr["asset"]): pwr_bytes, str(gnd["asset"]): gnd_bytes},
+        [
+            StackupLayer(name="PWR0", thickness_um=20.0, conductivity_s_m=5.8e7, pwr_nets=("VDD",)),
+            StackupLayer(name="D1", thickness_um=80.0, dk=4.0, df=0.01),
+            StackupLayer(name="DGND_MIX", thickness_um=20.0, conductivity_s_m=5.8e7, pwr_nets=("DGND", "SIG_RETURN")),
+        ],
+        power_keys={"vdd"},
+        ground_keys={"dgnd"},
+        failures=failures,
+    )
+
+    assert certificates == ()
+    assert failures == [
+        {
+            "rail_net": "VDD",
+            "pwr_layer": "PWR0",
+            "gnd_layer": "DGND_MIX",
+            "gnd_net": "DGND",
+            "reason": "PWR and DGND artwork do not overlap",
+            "code": "SPD_MIXED_REFERENCE_CERTIFICATE_REJECTED",
+            "blocking": False,
+        }
+    ]
+
+
+def test_mixed_reference_globally_empty_small_ground_remains_blocking() -> None:
+    def geometry_asset(
+        layer: str,
+        net: str,
+        positive_polygons: tuple[tuple[tuple[float, float], ...], ...],
+        negative_polygons: tuple[tuple[tuple[float, float], ...], ...] = (),
+    ) -> tuple[dict[str, object], bytes]:
+        order = tuple(
+            [("positive_polygon", index) for index in range(len(positive_polygons))]
+            + [("negative_polygon", index) for index in range(len(negative_polygons))]
+        )
+        compressed, _ = core_services._compress_spd_geometry_payload(
+            layer=layer,
+            net=net,
+            positive_polygons=positive_polygons,
+            negative_polygons=negative_polygons,
+            positive_circles=(),
+            negative_circles=(),
+            primitive_order=order,
+            positive_subelement_count=len(positive_polygons),
+            negative_subelement_count=len(negative_polygons),
+            polygon_trace_count=0,
+            box_count=0,
+        )
+        digest = sha256(compressed).hexdigest()
+        return (
+            {
+                "layer": layer,
+                "net": net,
+                "asset": f"geometry/{net}.zlib",
+                "asset_sha256": digest,
+            },
+            compressed,
+        )
+
+    local = ((0.0, 0.0), (10.0, 0.0), (10.0, 10.0), (0.0, 10.0))
+    pwr, pwr_bytes = geometry_asset("PWR0", "VDD", (local,))
+    gnd, gnd_bytes = geometry_asset("DGND_MIX", "DGND", (local,), (local,))
+    failures: list[dict[str, object]] = []
+
+    certificates = core_services._mixed_reference_certificates(
+        [pwr, gnd],
+        {str(pwr["asset"]): pwr_bytes, str(gnd["asset"]): gnd_bytes},
+        [
+            StackupLayer(name="PWR0", thickness_um=20.0, conductivity_s_m=5.8e7, pwr_nets=("VDD",)),
+            StackupLayer(name="D1", thickness_um=80.0, dk=4.0, df=0.01),
+            StackupLayer(name="DGND_MIX", thickness_um=20.0, conductivity_s_m=5.8e7, pwr_nets=("DGND", "SIG_RETURN")),
+        ],
+        power_keys={"vdd"},
+        ground_keys={"dgnd"},
+        failures=failures,
+    )
+
+    assert certificates == ()
+    assert failures == [
+        {
+            "rail_net": "VDD",
+            "pwr_layer": "PWR0",
+            "gnd_layer": "DGND_MIX",
+            "gnd_net": "DGND",
+            "reason": "ordered PWR/DGND artwork geometry is invalid or unsupported",
+            "code": "SPD_MIXED_REFERENCE_GEOMETRY_UNAVAILABLE",
+            "blocking": True,
+        }
+    ]
+
+    distant = (
+        (100.0, 100.0),
+        (110.0, 100.0),
+        (110.0, 110.0),
+        (100.0, 110.0),
+    )
+    distant_gnd, distant_gnd_bytes = geometry_asset(
+        "DGND_MIX", "DGND", (distant,), (distant,)
+    )
+    distant_failures: list[dict[str, object]] = []
+    distant_certificates = core_services._mixed_reference_certificates(
+        [pwr, distant_gnd],
+        {
+            str(pwr["asset"]): pwr_bytes,
+            str(distant_gnd["asset"]): distant_gnd_bytes,
+        },
+        [
+            StackupLayer(name="PWR0", thickness_um=20.0, conductivity_s_m=5.8e7, pwr_nets=("VDD",)),
+            StackupLayer(name="D1", thickness_um=80.0, dk=4.0, df=0.01),
+            StackupLayer(name="DGND_MIX", thickness_um=20.0, conductivity_s_m=5.8e7, pwr_nets=("DGND", "SIG_RETURN")),
+        ],
+        power_keys={"vdd"},
+        ground_keys={"dgnd"},
+        failures=distant_failures,
+    )
+    assert distant_certificates == ()
+    assert distant_failures[0]["code"] == "SPD_MIXED_REFERENCE_GEOMETRY_UNAVAILABLE"
+    assert distant_failures[0]["blocking"] is True
+
+
+def test_spd_geometry_clip_checks_cancellation_while_scanning() -> None:
+    polygons = tuple(
+        ((float(index), 0.0), (float(index) + 0.5, 0.0), (float(index), 0.5))
+        for index in range(600)
+    )
+    calls = 0
+
+    def cancelled() -> bool:
+        nonlocal calls
+        calls += 1
+        return calls >= 3
+
+    with pytest.raises(RuntimeError, match="geometry clipping cancelled"):
+        core_services._clip_spd_geometry_payload(
+            {
+                "positive_polygons_um": polygons,
+                "negative_polygons_um": (),
+                "positive_circles_um": (),
+                "negative_circles_um": (),
+                "primitive_order": tuple(
+                    ("positive_polygon", index) for index in range(len(polygons))
+                ),
+            },
+            (0.0, 0.0, 1_000.0, 1.0),
+            max_primitives=1_000,
+            is_cancelled=cancelled,
+        )
+
+    assert calls == 3
 
 
 def test_geometry_asset_compression_is_deterministic_roundtrips_and_keeps_limit(
@@ -3453,6 +3803,63 @@ def test_unselected_positive_net_keeps_ground_layer_mixed_and_requires_certifica
     assert failures[0]["pwr_layer"] == "Signal$PWR"
 
 
+def test_distant_mixed_ground_is_nonblocking_when_pure_pair_exists(
+    tmp_path: Path,
+) -> None:
+    source = tmp_path / "distant-mixed-ground.spd"
+    payload = MINI_SPD.replace(
+        ".Shape Signal$GNDpkgshape\n"
+        "Polygon1::DGND+ -5mm -4mm 5mm -4mm 5mm 4mm -5mm 4mm\n"
+        ".EndShape",
+        ".Shape Signal$GND_PUREpkgshape\n"
+        "Polygon10::DGND+ -5mm -4mm 5mm -4mm 5mm 4mm -5mm 4mm\n"
+        ".EndShape\n"
+        ".Shape Signal$GND_MIXpkgshape\n"
+        "Polygon1::DGND+ 50mm 50mm 60mm 50mm 60mm 60mm 50mm 60mm\n"
+        "Polygon11::SIG_RETURN+ -5mm -4mm 5mm -4mm 5mm 4mm -5mm 4mm\n"
+        ".EndShape",
+    ).replace(
+        "Signal$TOP Thickness = 20u Material = COPPER\n"
+        "Medium$D1 Thickness = 0.10mm Material = ABF\n"
+        "Signal$PWR Thickness = 20u Material = COPPER\n"
+        "Medium$D2 Thickness = 100um Material = ABF\n"
+        "Signal$GND Thickness = 20u Material = COPPER",
+        "Signal$TOP Thickness = 20u Material = COPPER\n"
+        "Medium$D0 Thickness = 100um Material = ABF\n"
+        "Signal$GND_PURE Thickness = 20u Material = COPPER\n"
+        "Medium$D1 Thickness = 20um Material = ABF\n"
+        "Signal$PWR Thickness = 20u Material = COPPER\n"
+        "Medium$D2 Thickness = 100um Material = ABF\n"
+        "Signal$GND_MIX Thickness = 20u Material = COPPER",
+    )
+    source.write_text(payload, encoding="ascii")
+
+    analysis = analyze_spd(source, scope="decap_scenario")
+    plan = build_spd_import_plan(create_workspace_state().project, analysis, source)
+
+    rail = next(item for item in plan.project.rails if item.net == "VDD_CORE/0")
+    assert plan.can_apply, [
+        (item.code, item.message)
+        for item in plan.diagnostics
+        if item.severity == "error"
+    ]
+    assert rail.gnd_layer == "Signal$GND_PURE"
+    assert plan.mixed_reference_certificates == ()
+    failures = plan.project.metadata["spd_import"][
+        "mixed_reference_certificate_failures"
+    ]
+    assert any(
+        item["gnd_layer"] == "Signal$GND_MIX"
+        and item["reason"] == "PWR and DGND artwork do not overlap"
+        and not item["blocking"]
+        for item in failures
+    )
+    assert not any(
+        item.code == "SPD_MIXED_REFERENCE_GEOMETRY_UNAVAILABLE"
+        for item in plan.diagnostics
+    )
+
+
 def test_valid_mixed_reference_certificate_binds_assets_and_low_confidence(
     tmp_path: Path,
 ) -> None:
@@ -3474,6 +3881,7 @@ def test_valid_mixed_reference_certificate_binds_assets_and_low_confidence(
     rail = next(item for item in plan.project.rails if item.net == "VDD_CORE/0")
     certificate = rail.mixed_reference_certificate
     assert certificate is not None
+    assert certificate in plan.mixed_reference_certificates
     assert (rail.pwr_layer, rail.gnd_layer) == ("Signal$PWR", "Signal$GND")
     assert certificate.gnd_net == "DGND"
     assert certificate.overlap_fraction == pytest.approx(1.0)
@@ -3846,3 +4254,1314 @@ def test_netlist_truncated_arrow_keeps_the_inherited_group(tmp_path: Path) -> No
 
     assert ground == ("DGND",)
     assert power == ("VDD_CORE/0", "VDD_AUX/0")
+def test_surface_connectivity_reports_branched_exact_layers_deterministically(
+    tmp_path: Path,
+) -> None:
+    source, analysis = _recoverable_via_source(
+        tmp_path,
+        node_lines=(
+            "NodeSurfaceStart!!1::PWR X = 0um Y = 0um Layer = Signal$TOP "
+            "PadStack = DR-0102_60\n"
+            "NodeSurfaceBranch!!1::PWR X = 100um Y = 0um Layer = Signal$TOP "
+            "PadStack = DR-0102_60\n"
+            "NodeSurfacePwr!!1::PWR X = 100um Y = 0um Layer = Signal$PWR "
+            "PadStack = DR-0102_60\n"
+            "NodeSurfaceGnd!!1::PWR X = 100um Y = 0um Layer = Signal$GND "
+            "PadStack = DR-0102_60"
+        ),
+        trace_lines=(
+            "TraceSurface::PWR StartingNode = NodeSurfaceStart::PWR "
+            "EndingNode = NodeSurfaceBranch::PWR Width = 0.10mm"
+        ),
+        via_lines=(
+            "ViaSurfacePwr::PWR UpperNode = NodeSurfaceBranch "
+            "LowerNode = NodeSurfacePwr PadStack = DR-0102_60\n"
+            "ViaSurfaceGnd::PWR UpperNode = NodeSurfaceBranch "
+            "LowerNode = NodeSurfaceGnd PadStack = DR-0102_60"
+        ),
+    )
+    landing = SpdViaLanding(
+        via_id="ViaSurfaceStart",
+        net="PWR",
+        endpoint_node_id="NodeSurfaceStart",
+        x_um=0.0,
+        y_um=0.0,
+        padstack="DR-0102_60",
+    )
+
+    first = recover_spd_ground_reachability(
+        source,
+        landings=(landing,),
+        target_layers_by_net={"PWR": ("Signal$PWR", "Signal$GND")},
+    )
+    second = recover_spd_ground_reachability(
+        source,
+        landings=(landing,),
+        target_layers_by_net={"PWR": ("Signal$GND", "Signal$PWR")},
+    )
+
+    expected_component = SpdSurfaceConnectivityComponent(
+        net="PWR", layers=("Signal$GND", "Signal$PWR")
+    )
+    landing_key = ("viasurfacestart", "nodesurfacestart")
+    assert first.surface_components == (expected_component,)
+    assert second.surface_components == first.surface_components
+    assert first.surface_layers_by_landing[landing_key] == (
+        "Signal$GND",
+        "Signal$PWR",
+    )
+    assert dict(second.surface_layers_by_landing) == dict(
+        first.surface_layers_by_landing
+    )
+    assert first.reaches(landing, "Signal$GND")
+    assert first.reaches(landing, "Signal$PWR")
+    with pytest.raises(TypeError):
+        first.surface_layers_by_landing[landing_key] = ("Signal$TOP",)  # type: ignore[index]
+
+
+def test_surface_island_equivalence_uses_coordinate_binding_and_raw_graph(
+    tmp_path: Path,
+) -> None:
+    source, _analysis = _recoverable_via_source(
+        tmp_path,
+        node_lines=(
+            "NodeTopA1!!1::PWR X = 0um Y = 0um Layer = Signal$TOP "
+            "PadStack = DR-0102_60\n"
+            "NodeTopA2!!1::PWR X = 1um Y = 0um Layer = Signal$TOP "
+            "PadStack = DR-0102_60\n"
+            "NodeTopB!!1::PWR X = 10um Y = 0um Layer = Signal$TOP "
+            "PadStack = DR-0102_60\n"
+            "NodePwr!!1::PWR X = 0um Y = 0um Layer = Signal$PWR "
+            "PadStack = DR-0102_60"
+        ),
+        trace_lines=(
+            "TraceAcrossIslands::PWR StartingNode = NodeTopA1::PWR "
+            "EndingNode = NodeTopB::PWR Width = 0.10mm"
+        ),
+        via_lines=(
+            "ViaFromSameCopper::PWR UpperNode = NodeTopA2 "
+            "LowerNode = NodePwr PadStack = DR-0102_60"
+        ),
+    )
+    landing = SpdViaLanding(
+        via_id="ViaFromSameCopper",
+        net="PWR",
+        endpoint_node_id="NodeTopA2",
+        x_um=1.0,
+        y_um=0.0,
+        padstack="DR-0102_60",
+    )
+
+    def resolve(
+        _net: str, layer: str, _node: str, x_um: float, _y_um: float
+    ) -> str | None:
+        if layer == "Signal$PWR":
+            return "island-pwr"
+        if layer == "Signal$TOP":
+            return "island-top-a" if x_um < 5.0 else "island-top-b"
+        return None
+
+    result = recover_spd_ground_reachability(
+        source,
+        landings=(landing,),
+        terminal_contact_landings=(landing,),
+        target_layers_by_net={"PWR": ("Signal$TOP", "Signal$PWR")},
+        target_node_surface_resolver=resolve,
+        target_surface_island_ids={
+            ("PWR", "Signal$TOP"): ("island-top-a", "island-top-b"),
+            ("PWR", "Signal$PWR"): ("island-pwr",),
+        },
+    )
+
+    proofs = {
+        (item.net, item.layer): item for item in result.surface_equivalence_proofs
+    }
+    top = proofs[("PWR", "Signal$TOP")]
+    assert top.status == "complete"
+    assert top.island_ids == ("island-top-a", "island-top-b")
+    assert top.contacted_island_ids == top.island_ids
+    assert top.graph_component_count == 1
+    assert result.statistics["artwork_island_count"] == 3
+    assert result.statistics["artwork_island_unions"] == 1
+    assert result.statistics["surface_equivalence_complete"] == 2
+    assert result.surface_islands_by_landing[
+        ("viafromsamecopper", "nodetopa2")
+    ] == ("island-pwr", "island-top-a", "island-top-b")
+    top_components = tuple(
+        item.island_ids
+        for item in result.surface_equivalence_components
+        if item.net == "PWR" and item.layer == "Signal$TOP"
+    )
+    assert top_components == (("island-top-a", "island-top-b"),)
+    contact = next(
+        item
+        for item in result.landing_surface_contacts
+        if item.landing_key == ("viafromsamecopper", "nodetopa2")
+    )
+    # The new endpoint proof follows the physical Via to its internal/opposite
+    # endpoint.  It deliberately does not force-bind the external TOP node or
+    # copy the three-island full reachability union above.
+    assert dict(contact.contact_island_ids_by_layer) == {
+        "Signal$PWR": ("island-pwr",)
+    }
+    assert contact.internal_endpoint_node_id == "NodePwr"
+    assert contact.endpoint_layer == "Signal$PWR"
+    assert contact.endpoint_island_id == "island-pwr"
+
+
+def test_surface_island_equivalence_fails_closed_for_uncontacted_island(
+    tmp_path: Path,
+) -> None:
+    source, _analysis = _recoverable_via_source(
+        tmp_path,
+        node_lines=(
+            "NodeOnly!!1::PWR X = 0um Y = 0um Layer = Signal$TOP "
+            "PadStack = DR-0102_60\n"
+            "NodePwr!!1::PWR X = 0um Y = 0um Layer = Signal$PWR "
+            "PadStack = DR-0102_60"
+        ),
+        trace_lines="",
+        via_lines=(
+            "ViaOnly::PWR UpperNode = NodeOnly LowerNode = NodePwr "
+            "PadStack = DR-0102_60"
+        ),
+    )
+    landing = SpdViaLanding(
+        via_id="Landing",
+        net="PWR",
+        endpoint_node_id="NodeOnly",
+        x_um=0.0,
+        y_um=0.0,
+        padstack="DR-0102_60",
+    )
+    result = recover_spd_ground_reachability(
+        source,
+        landings=(landing,),
+        target_layers_by_net={"PWR": ("Signal$TOP", "Signal$PWR")},
+        target_node_surface_resolver=lambda _n, layer, _i, _x, _y: (
+            "island-pwr" if layer == "Signal$PWR" else "island-top-a"
+        ),
+        target_surface_island_ids={
+            ("PWR", "Signal$TOP"): ("island-top-a", "island-top-floating"),
+            ("PWR", "Signal$PWR"): ("island-pwr",),
+        },
+    )
+
+    top = next(
+        item
+        for item in result.surface_equivalence_proofs
+        if item.layer == "Signal$TOP"
+    )
+    assert top.status == "uncontacted_island"
+    assert top.contacted_island_ids == ("island-top-a",)
+    assert result.statistics["surface_equivalence_incomplete"] == 1
+
+
+def test_via_only_cross_layer_detour_does_not_prove_same_layer_equivalence(
+    tmp_path: Path,
+) -> None:
+    source, _analysis = _recoverable_via_source(
+        tmp_path,
+        node_lines=(
+            "NodeTopA!!1::PWR X = 0um Y = 0um Layer = Signal$TOP "
+            "PadStack = DR-0102_60\n"
+            "NodeTopB!!1::PWR X = 10um Y = 0um Layer = Signal$TOP "
+            "PadStack = DR-0102_60\n"
+            "NodePwrA!!1::PWR X = 0um Y = 0um Layer = Signal$PWR "
+            "PadStack = DR-0102_60\n"
+            "NodePwrB!!1::PWR X = 10um Y = 0um Layer = Signal$PWR "
+            "PadStack = DR-0102_60"
+        ),
+        trace_lines="",
+        via_lines=(
+            "ViaA::PWR UpperNode = NodeTopA LowerNode = NodePwrA "
+            "PadStack = DR-0102_60\n"
+            "ViaB::PWR UpperNode = NodeTopB LowerNode = NodePwrB "
+            "PadStack = DR-0102_60"
+        ),
+    )
+    landing = SpdViaLanding(
+        via_id="Landing",
+        net="PWR",
+        endpoint_node_id="NodeTopA",
+        x_um=0.0,
+        y_um=0.0,
+        padstack="DR-0102_60",
+    )
+
+    def resolve(
+        _net: str, layer: str, _node: str, x_um: float, _y_um: float
+    ) -> str | None:
+        if layer == "Signal$PWR":
+            return "island-pwr"
+        if layer == "Signal$TOP":
+            return "island-top-a" if x_um < 5.0 else "island-top-b"
+        return None
+
+    result = recover_spd_ground_reachability(
+        source,
+        landings=(landing,),
+        target_layers_by_net={"PWR": ("Signal$TOP", "Signal$PWR")},
+        target_node_surface_resolver=resolve,
+        target_surface_island_ids={
+            ("PWR", "Signal$TOP"): ("island-top-a", "island-top-b"),
+            ("PWR", "Signal$PWR"): ("island-pwr",),
+        },
+    )
+
+    proofs = {
+        (item.net, item.layer): item for item in result.surface_equivalence_proofs
+    }
+    assert proofs[("PWR", "Signal$TOP")].status == "complete"
+    assert proofs[("PWR", "Signal$TOP")].graph_component_count == 2
+    assert proofs[("PWR", "Signal$PWR")].status == "complete"
+    assert result.statistics["via_edges_excluded_from_surface_equivalence"] == 2
+    # Full reachability still observes the Via detour; only equipotential
+    # coalescing excludes it.
+    assert result.surface_islands_by_landing[("landing", "nodetopa")] == (
+        "island-pwr",
+        "island-top-a",
+        "island-top-b",
+    )
+    top_components = tuple(
+        item.island_ids
+        for item in result.surface_equivalence_components
+        if item.layer == "Signal$TOP"
+    )
+    assert top_components == (("island-top-a",), ("island-top-b",))
+    assert all(
+        item.terminal_owned_count is None
+        and item.substrate_count is None
+        for item in result.via_island_pair_aggregates
+    )
+    assert {
+        (
+            item.start_island_id,
+            item.end_island_id,
+            item.count,
+        )
+        for item in result.via_island_pair_aggregates
+    } == {
+        ("island-top-a", "island-pwr", 1),
+        ("island-top-b", "island-pwr", 1),
+    }
+
+
+def test_via_island_pair_aggregate_hashes_and_subtracts_exact_terminal_ids(
+    tmp_path: Path,
+) -> None:
+    source, analysis = _recoverable_via_source(
+        tmp_path,
+        node_lines=(
+            "NodeTopOwned!!1::PWR X = 0um Y = 0um Layer = Signal$TOP "
+            "PadStack = DR-0102_60\n"
+            "NodeTopSubstrate!!1::PWR X = 1um Y = 0um Layer = Signal$TOP "
+            "PadStack = DR-0102_60\n"
+            "NodePwrOwned!!1::PWR X = 0um Y = 0um Layer = Signal$PWR "
+            "PadStack = DR-0102_60\n"
+            "NodePwrSubstrate!!1::PWR X = 1um Y = 0um Layer = Signal$PWR "
+            "PadStack = DR-0102_60"
+        ),
+        trace_lines="",
+        via_lines=(
+            "ViaOwned::PWR UpperNode = NodeTopOwned "
+            "LowerNode = NodePwrOwned PadStack = DR-0102_60\n"
+            "ViaSubstrate::PWR UpperNode = NodeTopSubstrate "
+            "LowerNode = NodePwrSubstrate PadStack = DR-0102_60"
+        ),
+    )
+    requested = SpdViaLanding(
+        via_id="ViaOwned",
+        net="PWR",
+        endpoint_node_id="NodeTopOwned",
+        x_um=0.0,
+        y_um=0.0,
+        padstack="DR-0102_60",
+    )
+    additional_terminal = SpdViaLanding(
+        via_id="ViaSubstrate",
+        net="PWR",
+        endpoint_node_id="NodeTopSubstrate",
+        x_um=1.0,
+        y_um=0.0,
+        padstack="DR-0102_60",
+    )
+
+    result = recover_spd_ground_reachability(
+        source,
+        landings=(requested,),
+        terminal_contact_landings=(requested, additional_terminal),
+        terminal_owned_via_ids=("ViaOwned",),
+        padstacks=analysis.padstacks,
+        stackup_layers=analysis.stackup_layers,
+        target_layers_by_net={"PWR": ("Signal$TOP", "Signal$PWR")},
+        target_node_surface_resolver=lambda _n, layer, _i, _x, _y: (
+            "island-top" if layer == "Signal$TOP" else "island-pwr"
+        ),
+        target_surface_island_ids={
+            ("PWR", "Signal$TOP"): ("island-top",),
+            ("PWR", "Signal$PWR"): ("island-pwr",),
+        },
+    )
+
+    assert len(result.via_island_pair_aggregates) == 1
+    aggregate = result.via_island_pair_aggregates[0]
+    assert (
+        aggregate.net,
+        aggregate.padstack,
+        aggregate.start_layer,
+        aggregate.end_layer,
+        aggregate.start_island_id,
+        aggregate.end_island_id,
+    ) == (
+        "PWR",
+        "DR-0102_60",
+        "Signal$TOP",
+        "Signal$PWR",
+        "island-top",
+        "island-pwr",
+    )
+    assert aggregate.count == aggregate.total_count == 2
+    assert aggregate.terminal_owned_count == 1
+    assert aggregate.substrate_count == 1
+    assert aggregate.physical_model_status == "complete"
+    assert aggregate.physical_model_issues == ()
+    assert aggregate.drill_diameter_um == 40.0
+    assert aggregate.material == "COPPER"
+    assert [
+        (
+            item.ordinal,
+            item.start_layer,
+            item.end_layer,
+            item.length_um,
+        )
+        for item in aggregate.segments
+    ] == [(0, "Signal$TOP", "Signal$PWR", 120.0)]
+    expected_hash = sha256()
+    for via_id in ("viaowned", "viasubstrate"):
+        encoded = via_id.encode("utf-8")
+        expected_hash.update(len(encoded).to_bytes(4, "big"))
+        expected_hash.update(encoded)
+    assert aggregate.via_ids_sha256 == expected_hash.hexdigest()
+    assert result.statistics["terminal_owned_via_id_count"] == 1
+    assert result.statistics["terminal_owned_via_observed_count"] == 1
+    assert result.statistics["via_island_pair_terminal_owned_record_count"] == 1
+    assert result.statistics["via_island_pair_substrate_record_count"] == 1
+    contacts = {
+        item.landing_key: dict(item.contact_island_ids_by_layer)
+        for item in result.landing_surface_contacts
+    }
+    assert contacts == {
+        ("viaowned", "nodetopowned"): {
+            "Signal$PWR": ("island-pwr",)
+        },
+        ("viasubstrate", "nodetopsubstrate"): {
+            "Signal$PWR": ("island-pwr",)
+        },
+    }
+    assert {
+        item.internal_endpoint_node_id
+        for item in result.landing_surface_contacts
+    } == {"NodePwrOwned", "NodePwrSubstrate"}
+    assert all(
+        item.terminal_owner_kind == "decap"
+        and item.external_endpoint_layer == "Signal$TOP"
+        and item.physical_model_status == "complete"
+        and item.physical_model_issues == ()
+        and item.segments == aggregate.segments
+        for item in result.landing_surface_contacts
+    )
+    coverage = result.via_island_pair_coverage
+    assert coverage is not None and coverage.status == "complete"
+    assert coverage.raw_target_via_count == coverage.paired_via_count == 2
+    assert coverage.terminal_owned_unpaired_count == 0
+    assert coverage.unsupported_missing_endpoint_count == 0
+
+
+def test_terminal_endpoint_contact_rejects_multiple_direct_layers() -> None:
+    with pytest.raises(
+        ValueError,
+        match="cannot directly contact multiple layers",
+    ):
+        spd_io.SpdLandingSurfaceContact(
+            via_id="Via1",
+            endpoint_node_id="Node1",
+            net="PWR",
+            contact_island_ids_by_layer={
+                "Signal$TOP": ("island-top",),
+                "Signal$PWR": ("island-pwr",),
+            },
+        )
+
+
+def test_terminal_owned_one_sided_via_is_excluded_but_nonterminal_blocks(
+    tmp_path: Path,
+) -> None:
+    source, analysis = _recoverable_via_source(
+        tmp_path,
+        node_lines=(
+            "NodeExternal!!1::PWR X = 0um Y = 0um Layer = Signal$TOP "
+            "PadStack = DR-0102_60\n"
+            "NodeInternal!!1::PWR X = 0um Y = 0um Layer = Signal$PWR "
+            "PadStack = DR-0102_60"
+        ),
+        trace_lines="",
+        via_lines=(
+            "ViaOneSided::PWR UpperNode = NodeExternal "
+            "LowerNode = NodeInternal PadStack = DR-0102_60"
+        ),
+    )
+    landing = SpdViaLanding(
+        via_id="ViaOneSided",
+        net="PWR",
+        endpoint_node_id="NodeExternal",
+        x_um=0.0,
+        y_um=0.0,
+        padstack="DR-0102_60",
+    )
+
+    def recover(owned_ids: tuple[str, ...]):
+        return recover_spd_ground_reachability(
+            source,
+            landings=(landing,),
+            terminal_contact_landings=(landing,),
+            terminal_owned_via_ids=owned_ids,
+            padstacks=analysis.padstacks,
+            stackup_layers=analysis.stackup_layers,
+            target_layers_by_net={"PWR": ("Signal$TOP", "Signal$PWR")},
+            target_node_surface_resolver=lambda _n, layer, _i, _x, _y: (
+                "island-pwr" if layer == "Signal$PWR" else None
+            ),
+            target_surface_island_ids={
+                ("PWR", "Signal$TOP"): ("island-top",),
+                ("PWR", "Signal$PWR"): ("island-pwr",),
+            },
+        )
+
+    terminal_owned = recover(("ViaOneSided",))
+    coverage = terminal_owned.via_island_pair_coverage
+    assert coverage is not None and coverage.status == "complete"
+    assert coverage.raw_target_via_count == 1
+    assert coverage.paired_via_count == 0
+    assert coverage.terminal_owned_unpaired_count == 1
+    assert coverage.unsupported_missing_endpoint_count == 0
+    assert coverage.outside_retained_interface_scope_count == 0
+    assert coverage.model_relevant_via_count == 1
+    assert terminal_owned.via_island_pair_aggregates == ()
+    contact = terminal_owned.landing_surface_contacts[0]
+    assert contact.endpoint_node_id == "NodeExternal"
+    assert contact.internal_endpoint_node_id == "NodeInternal"
+    assert contact.endpoint_layer == "Signal$PWR"
+    assert contact.endpoint_island_id == "island-pwr"
+    assert contact.terminal_owner_kind == "decap"
+    assert contact.external_endpoint_layer == "Signal$TOP"
+    assert contact.padstack == "DR-0102_60"
+    assert contact.physical_model_status == "complete"
+    assert contact.physical_model_issues == ()
+    assert [
+        (item.ordinal, item.start_layer, item.end_layer, item.length_um)
+        for item in contact.segments
+    ] == [(0, "Signal$TOP", "Signal$PWR", 120.0)]
+
+    nonterminal = recover(())
+    blocked = nonterminal.via_island_pair_coverage
+    assert blocked is not None and blocked.status == "complete"
+    assert blocked.terminal_owned_unpaired_count == 0
+    assert blocked.unsupported_missing_endpoint_count == 0
+    assert blocked.outside_retained_interface_scope_count == 1
+    assert blocked.model_relevant_via_count == 0
+    assert (
+        blocked.outside_retained_interface_scope_via_ids_sha256
+        == coverage.terminal_owned_unpaired_via_ids_sha256
+    )
+
+
+def test_nonterminal_unpaired_via_blocks_when_component_joins_two_interfaces(
+    tmp_path: Path,
+) -> None:
+    source, _analysis = _recoverable_via_source(
+        tmp_path,
+        node_lines=(
+            "NodeOutside!!1::PWR X = 100um Y = 0um Layer = Signal$TOP "
+            "PadStack = DR-0102_60\n"
+            "NodePwr!!1::PWR X = 0um Y = 0um Layer = Signal$PWR "
+            "PadStack = DR-0102_60\n"
+            "NodeGnd!!1::PWR X = 0um Y = 0um Layer = Signal$GND "
+            "PadStack = DR-0102_60"
+        ),
+        trace_lines="",
+        via_lines=(
+            "ViaMissing::PWR UpperNode = NodeOutside "
+            "LowerNode = NodePwr PadStack = DR-0102_60\n"
+            "ViaPaired::PWR UpperNode = NodePwr "
+            "LowerNode = NodeGnd PadStack = DR-0102_60"
+        ),
+    )
+
+    result = recover_spd_ground_reachability(
+        source,
+        landings=(),
+        terminal_owned_via_ids=(),
+        target_layers_by_net={"PWR": ("Signal$PWR", "Signal$GND")},
+        target_node_surface_resolver=lambda _n, layer, _i, _x, _y: (
+            "island-pwr" if layer == "Signal$PWR" else "island-gnd"
+        ),
+        target_surface_island_ids={
+            ("PWR", "Signal$PWR"): ("island-pwr",),
+            ("PWR", "Signal$GND"): ("island-gnd",),
+        },
+    )
+
+    coverage = result.via_island_pair_coverage
+    assert coverage is not None and coverage.status == "incomplete"
+    assert coverage.raw_target_via_count == 2
+    assert coverage.paired_via_count == 1
+    assert coverage.terminal_owned_unpaired_count == 0
+    assert coverage.unsupported_missing_endpoint_count == 1
+    assert coverage.outside_retained_interface_scope_count == 0
+    assert coverage.model_relevant_via_count == 2
+
+
+def test_device_terminal_via_id_has_one_global_owner(tmp_path: Path) -> None:
+    source, _analysis = _recoverable_via_source(
+        tmp_path,
+        node_lines=(
+            "NodeTop!!1::PWR X = 0um Y = 0um Layer = Signal$TOP "
+            "PadStack = DR-0102_60\n"
+            "NodePwr!!1::PWR X = 0um Y = 0um Layer = Signal$PWR "
+            "PadStack = DR-0102_60"
+        ),
+        trace_lines="",
+        via_lines=(
+            "Via1::PWR UpperNode = NodeTop LowerNode = NodePwr "
+            "PadStack = DR-0102_60"
+        ),
+    )
+    first = SimpleNamespace(
+        via_id="Via1",
+        net="PWR",
+        endpoint_node_id="NodeTop",
+        pin_id="SITE0:1",
+    )
+    second = SimpleNamespace(
+        via_id="Via1",
+        net="PWR",
+        endpoint_node_id="NodePwr",
+        pin_id="SITE0:2",
+    )
+
+    with pytest.raises(ValueError, match="one physical terminal Via ID"):
+        recover_spd_ground_reachability(
+            source,
+            landings=(),
+            terminal_contact_landings=(first, second),
+            terminal_owned_via_ids=("Via1",),
+            target_layers_by_net={"PWR": ("Signal$TOP", "Signal$PWR")},
+        )
+
+
+def test_terminal_via_allows_device_and_decap_on_opposite_endpoints(
+    tmp_path: Path,
+) -> None:
+    source, analysis = _recoverable_via_source(
+        tmp_path,
+        node_lines=(
+            "NodeOwnerTop!!1::PWR X = 0um Y = 0um Layer = Signal$TOP "
+            "PadStack = DR-0102_60\n"
+            "NodeOwnerPwr!!1::PWR X = 0um Y = 0um Layer = Signal$PWR "
+            "PadStack = DR-0102_60"
+        ),
+        via_lines=(
+            "ViaOwner::PWR UpperNode = NodeOwnerTop "
+            "LowerNode = NodeOwnerPwr PadStack = DR-0102_60"
+        ),
+    )
+    device = SimpleNamespace(
+        via_id="ViaOwner",
+        net="PWR",
+        endpoint_node_id="NodeOwnerTop",
+        pin_id="SITE0:1",
+    )
+    decap = SimpleNamespace(
+        via_id="ViaOwner",
+        net="PWR",
+        endpoint_node_id="NodeOwnerPwr",
+    )
+
+    result = recover_spd_ground_reachability(
+        source,
+        landings=(),
+        terminal_contact_landings=(device, decap),
+        terminal_owned_via_ids=("ViaOwner",),
+        padstacks=analysis.padstacks,
+        stackup_layers=analysis.stackup_layers,
+        target_layers_by_net={"PWR": ("Signal$TOP", "Signal$PWR")},
+        target_node_surface_resolver=(
+            lambda _net, layer, _node, _x, _y: {
+                "signal$top": "island-top",
+                "signal$pwr": "island-pwr",
+            }.get(layer.casefold())
+        ),
+        target_surface_island_ids={
+            ("PWR", "Signal$TOP"): ("island-top",),
+            ("PWR", "Signal$PWR"): ("island-pwr",),
+        },
+    )
+
+    contacts = {
+        item.endpoint_node_id.casefold(): item
+        for item in result.landing_surface_contacts
+    }
+    assert contacts["nodeownertop"].terminal_owner_kind == "device"
+    assert contacts["nodeownerpwr"].terminal_owner_kind == "decap"
+    terminal_ids_by_node = {
+        item.representative_node_id.casefold(): set(item.terminal_ids)
+        for item in result.finite_via_vertices
+    }
+    assert terminal_ids_by_node["nodeownertop"] == {"SITE0:1"}
+    assert terminal_ids_by_node["nodeownerpwr"] == {
+        "decap-via:viaowner:nodeownerpwr"
+    }
+
+
+def test_same_net_reachability_can_exclude_lateral_trace_connections(
+    tmp_path: Path,
+) -> None:
+    """A Via-only audit must not treat a distant Trace branch as local reach."""
+
+    source, _analysis = _recoverable_via_source(
+        tmp_path,
+        node_lines=(
+            "NodeLocal!!1::PWR X = 0um Y = 0um Layer = Signal$TOP "
+            "PadStack = DR-0102_60\n"
+            "NodeRemoteTop!!1::PWR X = 1000um Y = 0um Layer = Signal$TOP "
+            "PadStack = DR-0102_60\n"
+            "NodeRemotePwr!!1::PWR X = 1000um Y = 0um Layer = Signal$PWR "
+            "PadStack = DR-0102_60"
+        ),
+        trace_lines=(
+            "TraceRoute::PWR StartingNode = NodeLocal::PWR "
+            "EndingNode = NodeRemoteTop::PWR Width = 0.10mm"
+        ),
+        via_lines=(
+            "ViaRemote::PWR UpperNode = NodeRemoteTop LowerNode = NodeRemotePwr "
+            "PadStack = DR-0102_60"
+        ),
+    )
+    landing = SpdViaLanding(
+        via_id="ViaLocal",
+        net="PWR",
+        endpoint_node_id="NodeLocal",
+        x_um=0.0,
+        y_um=0.0,
+        padstack="DR-0102_60",
+    )
+
+    trace_connected = recover_spd_ground_reachability(
+        source,
+        landings=(landing,),
+        target_layers_by_net={"PWR": ("Signal$PWR",)},
+    )
+    via_only = recover_spd_ground_reachability(
+        source,
+        landings=(landing,),
+        target_layers_by_net={"PWR": ("Signal$PWR",)},
+        include_traces=False,
+    )
+
+    assert trace_connected.reaches(landing, "Signal$PWR")
+    assert not via_only.reaches(landing, "Signal$PWR")
+    assert via_only.statistics["trace_section_passes"] == 0
+
+
+def test_mixed_reference_ground_reachability_rejects_source_changed_during_recovery(
+    tmp_path: Path,
+) -> None:
+    source = tmp_path / "changed-ground.spd"
+    source.write_text(MINI_SPD, encoding="ascii")
+    landing = SpdViaLanding(
+        via_id="Via2",
+        net="DGND",
+        endpoint_node_id="Node4",
+        x_um=1200.0,
+        y_um=2000.0,
+        padstack="DR-0102_60",
+    )
+    changed = False
+
+    def mutate_after_open(value: int, _message: str) -> None:
+        nonlocal changed
+        if changed or value < 15:
+            return
+        before = source.stat()
+        os.utime(
+            source,
+            ns=(before.st_atime_ns, before.st_mtime_ns + 1_000_000_000),
+        )
+        changed = True
+
+    with pytest.raises(SpdImportError, match="changed during mixed-reference GND"):
+        recover_spd_ground_reachability(
+            source,
+            landings=(landing,),
+            target_layers_by_net={"DGND": ("Signal$GND",)},
+            progress=mutate_after_open,
+        )
+
+
+def _replace_source_bytes_preserving_size_and_mtime(path: Path) -> None:
+    """Model a same-stat replacement that only the recorded source hash catches."""
+
+    before = path.stat()
+    original = path.read_bytes()
+    replacement = original.replace(b"Title tiny SPD", b"Title tiny SPX", 1)
+    assert replacement != original
+    assert len(replacement) == len(original)
+    path.write_bytes(replacement)
+    os.utime(path, ns=(before.st_atime_ns, before.st_mtime_ns))
+    after = path.stat()
+    assert (after.st_size, after.st_mtime_ns) == (before.st_size, before.st_mtime_ns)
+
+
+def test_mixed_reference_ground_reachability_rejects_same_stat_source_replacement(
+    tmp_path: Path,
+) -> None:
+    source = tmp_path / "replaced-ground.spd"
+    source.write_text(MINI_SPD, encoding="ascii")
+    analysis = analyze_spd(source)
+    _replace_source_bytes_preserving_size_and_mtime(source)
+    landing = SpdViaLanding(
+        via_id="Via2", net="DGND", endpoint_node_id="Node4", x_um=1200.0,
+        y_um=2000.0, padstack="DR-0102_60",
+    )
+
+    with pytest.raises(SpdImportError, match="SHA-256 mismatch"):
+        recover_spd_ground_reachability(
+            source,
+            landings=(landing,),
+            target_layers_by_net={"DGND": ("Signal$GND",)},
+            expected_source=analysis.source,
+        )
+
+
+def test_terminal_owned_one_sided_via_is_unpaired_but_physically_complete(
+    tmp_path: Path,
+) -> None:
+    source, analysis = _recoverable_via_source(
+        tmp_path,
+        node_lines=(
+            "NodeExternal!!1::PWR X = 0um Y = 0um Layer = Signal$TOP "
+            "PadStack = DR-0102_60\n"
+            "NodeInternal!!1::PWR X = 0um Y = 0um Layer = Signal$PWR "
+            "PadStack = DR-0102_60"
+        ),
+        via_lines=(
+            "ViaOneSided::PWR UpperNode = NodeExternal "
+            "LowerNode = NodeInternal PadStack = DR-0102_60"
+        ),
+    )
+    landing = SpdViaLanding(
+        via_id="ViaOneSided", net="PWR", endpoint_node_id="NodeExternal",
+        x_um=0.0, y_um=0.0, padstack="DR-0102_60",
+    )
+    result = recover_spd_ground_reachability(
+        source,
+        landings=(landing,),
+        terminal_contact_landings=(landing,),
+        terminal_owned_via_ids=("ViaOneSided",),
+        padstacks=analysis.padstacks,
+        stackup_layers=analysis.stackup_layers,
+        target_layers_by_net={"PWR": ("Signal$TOP", "Signal$PWR")},
+        target_node_surface_resolver=lambda _n, layer, _i, _x, _y: (
+            "island-pwr" if layer == "Signal$PWR" else None
+        ),
+        target_surface_island_ids={
+            ("PWR", "Signal$TOP"): ("island-top",),
+            ("PWR", "Signal$PWR"): ("island-pwr",),
+        },
+    )
+    coverage = result.via_island_pair_coverage
+    assert coverage is not None
+    assert coverage.paired_via_count == 0
+    assert coverage.terminal_owned_unpaired_count == 1
+    assert coverage.unsupported_missing_endpoint_count == 0
+    assert coverage.outside_retained_interface_scope_count == 0
+    contact = result.landing_surface_contacts[0]
+    assert contact.terminal_owner_kind == "decap"
+    assert contact.external_endpoint_layer == "Signal$TOP"
+    assert contact.physical_model_status == "complete"
+    assert contact.segments
+
+
+def test_terminal_contact_rejects_duplicate_physical_via_owner(tmp_path: Path) -> None:
+    source, _analysis = _recoverable_via_source(
+        tmp_path,
+        node_lines=(
+            "NodeTop!!1::PWR X = 0um Y = 0um Layer = Signal$TOP PadStack = DUT\n"
+            "NodePwr!!1::PWR X = 0um Y = 0um Layer = Signal$PWR PadStack = DUT"
+        ),
+        via_lines=(
+            "Via1::PWR UpperNode = NodeTop LowerNode = NodePwr PadStack = DUT"
+        ),
+    )
+    first = SimpleNamespace(via_id="Via1", net="PWR", endpoint_node_id="NodeTop")
+    second = SimpleNamespace(via_id="Via1", net="PWR", endpoint_node_id="NodePwr")
+    with pytest.raises(ValueError, match="one physical terminal Via ID"):
+        recover_spd_ground_reachability(
+            source,
+            landings=(),
+            terminal_contact_landings=(first, second),
+            terminal_owned_via_ids=("Via1",),
+            target_layers_by_net={"PWR": ("Signal$TOP", "Signal$PWR")},
+        )
+
+
+def test_finite_via_quotient_emits_owner_complete_graph(tmp_path: Path) -> None:
+    source, analysis = _recoverable_via_source(
+        tmp_path,
+        node_lines=(
+            "NodeTop!!1::PWR X = 0um Y = 0um Layer = Signal$TOP PadStack = DR-0102_60\n"
+            "NodePwr!!1::PWR X = 0um Y = 0um Layer = Signal$PWR PadStack = DR-0102_60\n"
+            "NodeGnd!!1::PWR X = 0um Y = 0um Layer = Signal$GND PadStack = DR-0102_60"
+        ),
+        via_lines=(
+            "ViaTop::PWR UpperNode = NodeTop LowerNode = NodePwr PadStack = DR-0102_60\n"
+            "ViaBottom::PWR UpperNode = NodePwr LowerNode = NodeGnd PadStack = DR-0102_60"
+        ),
+    )
+    landing = SimpleNamespace(via_id="ViaTop", net="PWR", endpoint_node_id="NodeTop")
+    result = recover_spd_ground_reachability(
+        source,
+        landings=(landing,),
+        terminal_contact_landings=(landing,),
+        terminal_owned_via_ids=(),
+        padstacks=analysis.padstacks,
+        stackup_layers=analysis.stackup_layers,
+        target_layers_by_net={"PWR": ("Signal$GND",)},
+    )
+    assert result.finite_via_coverage is not None
+    assert result.finite_via_coverage.modeled_global_via_count == 2
+    assert len(result.finite_via_vertices) >= 2
+    assert len(result.finite_via_edges) >= 1
+
+
+def test_finite_via_quotient_contracts_bridge_not_cycle(tmp_path: Path) -> None:
+    source, analysis = _recoverable_via_source(
+        tmp_path,
+        node_lines=(
+            "NodeQA!!1::PWR X = 10um Y = 0um Layer = Signal$TOP PadStack = DR-0102_60\n"
+            "NodeQX!!1::PWR X = 20um Y = 0um Layer = Signal$PWR PadStack = DR-0102_60\n"
+            "NodeQB!!1::PWR X = 30um Y = 0um Layer = Signal$TOP PadStack = DR-0102_60\n"
+            "NodeQC!!1::PWR X = 40um Y = 0um Layer = Signal$GND PadStack = DR-0102_60\n"
+            "NodeQD!!1::PWR X = 30um Y = 10um Layer = Signal$PWR PadStack = DR-0102_60\n"
+            "NodeQE!!1::PWR X = 30um Y = 20um Layer = Signal$GND PadStack = DR-0102_60"
+        ),
+        via_lines=(
+            "ViaQAX::PWR UpperNode = NodeQA LowerNode = NodeQX PadStack = DR-0102_60\n"
+            "ViaQXB::PWR UpperNode = NodeQX LowerNode = NodeQB PadStack = DR-0102_60\n"
+            "ViaQBC::PWR UpperNode = NodeQB LowerNode = NodeQC PadStack = DR-0102_60\n"
+            "ViaQBD::PWR UpperNode = NodeQB LowerNode = NodeQD PadStack = DR-0102_60\n"
+            "ViaQDE::PWR UpperNode = NodeQD LowerNode = NodeQE PadStack = DR-0102_60\n"
+            "ViaQEB::PWR UpperNode = NodeQE LowerNode = NodeQB PadStack = DR-0102_60"
+        ),
+    )
+    landing = SimpleNamespace(via_id="ViaQAX", net="PWR", endpoint_node_id="NodeQA")
+    result = recover_spd_ground_reachability(
+        source,
+        landings=(landing,),
+        terminal_contact_landings=(landing,),
+        terminal_owned_via_ids=(),
+        padstacks=analysis.padstacks,
+        stackup_layers=analysis.stackup_layers,
+        target_layers_by_net={"PWR": ("Signal$GND",)},
+    )
+    assert result.finite_via_coverage is not None
+    assert len(result.finite_via_vertices) == 5
+    assert len(result.finite_via_edges) == 5
+    contracted = [item for item in result.finite_via_edges if item.mode == "contracted_series"]
+    assert len(contracted) == 1
+    assert contracted[0].raw_via_count == 2
+
+
+def test_finite_via_quotient_middle_first_chain_is_order_independent(tmp_path: Path) -> None:
+    nodes = (
+        "NodeA!!1::PWR X = 10um Y = 0um Layer = Signal$TOP PadStack = DR-0102_60\n"
+        "NodeX!!1::PWR X = 20um Y = 0um Layer = Signal$PWR PadStack = DR-0102_60\n"
+        "NodeY!!1::PWR X = 30um Y = 0um Layer = Signal$GND PadStack = DR-0102_60\n"
+        "NodeB!!1::PWR X = 40um Y = 0um Layer = Signal$TOP PadStack = DR-0102_60"
+    )
+    normal = (
+        "ViaAX::PWR UpperNode = NodeA LowerNode = NodeX PadStack = DR-0102_60\n"
+        "ViaXY::PWR UpperNode = NodeX LowerNode = NodeY PadStack = DR-0102_60\n"
+        "ViaYB::PWR UpperNode = NodeY LowerNode = NodeB PadStack = DR-0102_60"
+    )
+    middle_first = (
+        "ViaXY::PWR UpperNode = NodeX LowerNode = NodeY PadStack = DR-0102_60\n"
+        "ViaAX::PWR UpperNode = NodeA LowerNode = NodeX PadStack = DR-0102_60\n"
+        "ViaYB::PWR UpperNode = NodeY LowerNode = NodeB PadStack = DR-0102_60"
+    )
+
+    def recover(root: Path, vias: str):
+        root.mkdir(parents=True, exist_ok=True)
+        source, analysis = _recoverable_via_source(root, node_lines=nodes, via_lines=vias)
+        landing = SimpleNamespace(via_id="ViaAX", net="PWR", endpoint_node_id="NodeA")
+        return recover_spd_ground_reachability(
+            source,
+            landings=(landing,),
+            terminal_contact_landings=(landing,),
+            terminal_owned_via_ids=(),
+            padstacks=analysis.padstacks,
+            stackup_layers=analysis.stackup_layers,
+            target_layers_by_net={"PWR": ("Signal$GND",)},
+        )
+
+    first = recover(tmp_path / "normal", normal)
+    second = recover(tmp_path / "middle", middle_first)
+    first_edges = {(item.mode, item.raw_via_count, item.per_path_via_count) for item in first.finite_via_edges}
+    second_edges = {(item.mode, item.raw_via_count, item.per_path_via_count) for item in second.finite_via_edges}
+    assert first_edges == second_edges == {("contracted_series", 3, 3)}
+
+
+def test_recover_keeps_same_node_ids_separate_by_net(tmp_path: Path) -> None:
+    source, analysis = _recoverable_via_source(
+        tmp_path,
+        node_lines=(
+            "NodeA!!1::PWR1 X = 0um Y = 0um Layer = Signal$TOP PadStack = DR-0102_60\n"
+            "NodeB!!1::PWR1 X = 0um Y = 0um Layer = Signal$GND PadStack = DR-0102_60\n"
+            "NodeA!!1::PWR2 X = 0um Y = 0um Layer = Signal$TOP PadStack = DR-0102_60\n"
+            "NodeB!!1::PWR2 X = 0um Y = 0um Layer = Signal$GND PadStack = DR-0102_60"
+        ),
+        via_lines=(
+            "Via1::PWR1 UpperNode = NodeA LowerNode = NodeB PadStack = DR-0102_60\n"
+            "Via2::PWR2 UpperNode = NodeA LowerNode = NodeB PadStack = DR-0102_60"
+        ),
+    )
+    first = SimpleNamespace(via_id="Via1", net="PWR1", endpoint_node_id="NodeA")
+    second = SimpleNamespace(via_id="Via2", net="PWR2", endpoint_node_id="NodeA")
+    result = recover_spd_ground_reachability(
+        source,
+        landings=(first, second),
+        terminal_contact_landings=(first, second),
+        terminal_owned_via_ids=(),
+        padstacks=analysis.padstacks,
+        stackup_layers=analysis.stackup_layers,
+        target_layers_by_net={
+            "PWR1": ("Signal$TOP", "Signal$GND"),
+            "PWR2": ("Signal$TOP", "Signal$GND"),
+        },
+        target_node_surface_resolver=lambda net, layer, _node, _x, _y: (
+            ("island-gnd" if net == "PWR1" else "island-gnd-2")
+            if layer == "Signal$GND"
+            else ("island-top" if net == "PWR1" else "island-top-2")
+        ),
+        target_surface_island_ids={
+            ("PWR1", "Signal$TOP"): ("island-top",),
+            ("PWR1", "Signal$GND"): ("island-gnd",),
+            ("PWR2", "Signal$TOP"): ("island-top-2",),
+            ("PWR2", "Signal$GND"): ("island-gnd-2",),
+        },
+    )
+    assert {item.net for item in result.via_island_pair_aggregates} == {"PWR1", "PWR2"}
+    assert {item.net for item in result.finite_via_edges} == {"pwr1", "pwr2"}
+    assert result.statistics["via_source_record_replay_passes"] == 1
+
+
+def test_finite_via_scenario_isolation_and_retarget_bindings(tmp_path: Path) -> None:
+    source, analysis = _recoverable_via_source(
+        tmp_path,
+        node_lines=(
+            "NodeIsoA!!1::PWR X = 10um Y = 0um Layer = Signal$TOP PadStack = DR-0102_60\n"
+            "NodeIsoX!!1::PWR X = 10um Y = 10um Layer = Signal$PWR PadStack = DR-0102_60\n"
+            "NodeIsoD!!1::PWR X = 10um Y = 20um Layer = Signal$GND PadStack = DR-0102_60"
+        ),
+        via_lines=(
+            "ViaIso::PWR UpperNode = NodeIsoA LowerNode = NodeIsoX PadStack = DR-0102_60\n"
+            "ViaDestination::PWR UpperNode = NodeIsoX LowerNode = NodeIsoD PadStack = DR-0102_60"
+        ),
+    )
+    landing = SimpleNamespace(via_id="ViaIso", net="PWR", endpoint_node_id="NodeIsoA")
+    result = recover_spd_ground_reachability(
+        source,
+        landings=(landing,),
+        terminal_contact_landings=(landing,),
+        scenario_isolated_terminal_landings=(landing,),
+        retarget_destination_requests=(("PWR", "Signal$GND", "NodeIsoD"),),
+        terminal_owned_via_ids=("ViaIso",),
+        padstacks=analysis.padstacks,
+        stackup_layers=analysis.stackup_layers,
+        target_layers_by_net={"PWR": ("Signal$TOP", "Signal$GND")},
+        target_node_surface_resolver=lambda _n, layer, node_id, _x, _y: (
+            "island-top" if layer == "Signal$TOP" and node_id == "NodeIsoA" else
+            "island-gnd" if layer == "Signal$GND" and node_id == "NodeIsoD" else None
+        ),
+        target_surface_island_ids={
+            ("PWR", "Signal$TOP"): ("island-top",),
+            ("PWR", "Signal$GND"): ("island-gnd",),
+        },
+    )
+    assert result.finite_via_scenario_isolation_coverage is not None
+    assert result.finite_via_scenario_isolated_landing_keys == {("viaiso", "nodeisoa")}
+    assert result.finite_via_retarget_destination_coverage is not None
+    assert result.finite_via_retarget_destination_coverage.resolved_destination_count == 1
+
+
+def test_surface_batch_none_is_authoritative_and_skips_scalar(tmp_path: Path) -> None:
+    source, _analysis = _recoverable_via_source(
+        tmp_path,
+        node_lines="NodeSurface!!1::DGND X = 0um Y = 0um Layer = Signal$TOP PadStack = DUT",
+        via_lines="",
+    )
+    scalar_calls = 0
+    def scalar(*_args):
+        nonlocal scalar_calls
+        scalar_calls += 1
+        raise AssertionError("scalar surface resolver must not run after batch None")
+    result = recover_spd_ground_reachability(
+        source,
+        landings=(),
+        target_layers_by_net={"DGND": ("Signal$TOP",)},
+        same_layer_artwork_layers_by_net={"DGND": ("Signal$TOP",)},
+        same_layer_artwork_components_batch=lambda _n, _l, points: (0,) * len(points),
+        target_node_surface_resolver=scalar,
+        target_node_surface_resolver_batch=lambda _n, _l, _ids, _points: None,
+        target_surface_island_ids={("DGND", "Signal$TOP"): ("island",)},
+    )
+    assert scalar_calls == 0
+    assert result.surface_equivalence_proofs
+
+
+def test_surface_components_are_global_without_landings(tmp_path: Path) -> None:
+    source, _analysis = _recoverable_via_source(
+        tmp_path,
+        node_lines=(
+            "NodeTop!!1::PWR X = 0um Y = 0um Layer = Signal$TOP PadStack = DUT\n"
+            "NodePwr!!1::PWR X = 0um Y = 0um Layer = Signal$PWR PadStack = DUT"
+        ),
+        via_lines="ViaSurface::PWR UpperNode = NodeTop LowerNode = NodePwr PadStack = DUT",
+    )
+    result = recover_spd_ground_reachability(
+        source,
+        landings=(),
+        target_layers_by_net={"PWR": ("Signal$TOP", "Signal$PWR")},
+        target_node_surface_resolver=lambda _n, layer, _i, _x, _y: (
+            "top" if layer == "Signal$TOP" else "pwr"
+        ),
+        target_surface_island_ids={
+            ("PWR", "Signal$TOP"): ("top",),
+            ("PWR", "Signal$PWR"): ("pwr",),
+        },
+    )
+    assert any(item.layers == ("Signal$PWR", "Signal$TOP") for item in result.surface_components)
+
+
+def test_logical_trace_records_preserve_exact_bytes_digest_and_cardinality() -> None:
+    primary = (
+        b"TraceSame::VDD/0 StartingNode = NodeA!!1::VDD/0 "
+        b"EndingNode = NodeB!!2::VDD/0 Width = 0.125mm\r\n"
+    )
+    continued = (
+        b"TraceContinued::VDD/0 StartingNode = NodeB::VDD/0 "
+        b"EndingNode = NodeC::VDD/0\n"
+        b"+ Width = 4mil\r\n"
+    )
+    widthless = (
+        b"TraceTopology::VDD/0 StartingNode = NodeC::VDD/0 "
+        b"EndingNode = NodeD::VDD/0"
+    )
+    source = b"* Trace description lines\r\n" + primary + continued + widthless
+
+    records = list(_iter_spd_trace_records(BytesIO(source), 0, len(source)))
+
+    assert len(records) == 3
+    assert [item.line_count for item in records] == [1, 2, 1]
+    assert [item.line_offsets for item in records] == [
+        (len(b"* Trace description lines\r\n"),),
+        (
+            len(b"* Trace description lines\r\n") + len(primary),
+            len(b"* Trace description lines\r\n") + len(primary)
+            + len(continued.splitlines(keepends=True)[0]),
+        ),
+        (len(b"* Trace description lines\r\n") + len(primary) + len(continued),),
+    ]
+    assert [item.exact_bytes for item in records] == [primary, continued, widthless]
+    assert [item.source_sha256 for item in records] == [
+        sha256(item).hexdigest() for item in (primary, continued, widthless)
+    ]
+    assert records[0].width_pm == 125_000_000
+    assert records[1].width_pm == 101_600_000
+    assert records[1].starting_node_net_evidence == "VDD/0"
+    assert records[1].geometry_status == "resolved"
+    assert [item.width_location for item in records] == [
+        "same_line",
+        "continuation",
+        "absent",
+    ]
+    assert records[2].geometry_status == "topology_only"
+    assert records[2].issue_codes == ("TRACE_WIDTH_MISSING",)
+
+
+@pytest.mark.parametrize(
+    ("record", "issue_code"),
+    (
+        (
+            b"TraceA::VDD/0 StartingNode = NodeA EndingNode = NodeB "
+            b"Width = 0.1mm\n+ Width = 0.2mm\n",
+            "TRACE_WIDTH_DUPLICATE",
+        ),
+        (
+            b"TraceA::VDD/0 StartingNode = NodeA EndingNode = NodeB Width =\n",
+            "TRACE_WIDTH_MALFORMED",
+        ),
+        (
+            b"TraceA::VDD/0 StartingNode = NodeA EndingNode = NodeB Width = NaN\n",
+            "TRACE_WIDTH_NONFINITE",
+        ),
+        (
+            b"TraceA::VDD/0 StartingNode = NodeA EndingNode = NodeB Width = 0mm\n",
+            "TRACE_WIDTH_NONPOSITIVE",
+        ),
+        (
+            b"TraceA::VDD/0 StartingNode = NodeA EndingNode = NodeB\n"
+            b"+ Unsupported = 0.1mm\n",
+            "TRACE_CONTINUATION_UNKNOWN",
+        ),
+        (
+            b"TraceA::VDD/0 StartingNode = NodeA EndingNode = NodeB "
+            b"Foo = 1 Width = 0.1mm\n",
+            "TRACE_PRIMARY_TAIL_UNKNOWN",
+        ),
+        (
+            b"TraceA::VDD/0 StartingNode = NodeA Width = 0.1mm\n",
+            "MALFORMED_TRACE_RECORD",
+        ),
+    ),
+)
+def test_logical_trace_record_geometry_errors_are_retained_unresolved(
+    record: bytes,
+    issue_code: str,
+) -> None:
+    parsed = list(_iter_spd_trace_records(BytesIO(record), 0, len(record)))
+
+    assert len(parsed) == 1
+    assert parsed[0].exact_bytes == record
+    assert parsed[0].geometry_status == "unresolved"
+    assert parsed[0].width_pm is None
+    assert issue_code in parsed[0].issue_codes
+
+
+def test_orphan_trace_continuation_fails_section_framing() -> None:
+    source = b"* Trace description lines\n+ Width = 0.1mm\n"
+
+    with pytest.raises(SpdTraceRecordError, match="orphan Trace continuation") as exc:
+        list(_iter_spd_trace_records(BytesIO(source), 0, len(source)))
+
+    assert exc.value.code == "ORPHAN_TRACE_CONTINUATION"
+
+
+def test_exact_picometre_parser_does_not_round_fractional_source_units() -> None:
+    assert _length_pm_exact(b"1e-6um") == 1
+    with pytest.raises(ValueError, match="exact integer"):
+        _length_pm_exact(b"0.5e-6um")
+
+
+def test_exact_picometre_parser_is_independent_of_decimal_context() -> None:
+    from decimal import localcontext
+
+    with localcontext() as context:
+        context.prec = 8
+        assert _length_pm_exact(b"123.456789um") == 123_456_789
+        with pytest.raises(ValueError, match="exact integer"):
+            _length_pm_exact(b"1.00000000000000000000000000001um")
+
+
+def test_logical_trace_record_detects_field_and_byte_tamper() -> None:
+    exact = (
+        b"TraceA::VDD/0 StartingNode = NodeA EndingNode = NodeB "
+        b"Width = 0.1mm\n"
+    )
+    record = list(_iter_spd_trace_records(BytesIO(exact), 0, len(exact)))[0]
+
+    with pytest.raises(ValueError, match="parsed fields were tampered"):
+        replace(record, source_id="TraceForged")
+    tampered = exact.replace(b"NodeA", b"NodeC")
+    with pytest.raises(ValueError, match="SHA-256"):
+        replace(record, exact_bytes=tampered)
+
+    reparsed = list(
+        _iter_spd_trace_records(BytesIO(tampered), 0, len(tampered))
+    )[0]
+    assert len(record.exact_bytes) == len(reparsed.exact_bytes)
+    assert record.source_sha256 == sha256(record.exact_bytes).hexdigest()
+    assert reparsed.source_sha256 == sha256(reparsed.exact_bytes).hexdigest()
+    assert record.source_sha256 != reparsed.source_sha256
+
+
+def test_empty_trace_net_is_retained_as_malformed_without_parser_crash() -> None:
+    exact = b"TraceA::\n"
+
+    record = list(_iter_spd_trace_records(BytesIO(exact), 0, len(exact)))[0]
+
+    assert record.source_id == "TraceA"
+    assert record.net is None
+    assert record.geometry_status == "unresolved"
+    assert record.width_location == "unresolved"
+    assert "MALFORMED_TRACE_RECORD" in record.issue_codes
+
+
+def test_extreme_trace_width_fails_closed_without_float_overflow() -> None:
+    exact = (
+        b"TraceHuge::VDD StartingNode = NodeA EndingNode = NodeB Width = "
+        + b"9" * 4000
+        + b"m\n"
+    )
+
+    record = list(_iter_spd_trace_records(BytesIO(exact), 0, len(exact)))[0]
+
+    assert record.geometry_status == "unresolved"
+    assert record.width_pm is None
+    assert record.width_um is None
+    assert record.width_location == "unresolved"
+    assert "TRACE_WIDTH_INVALID" in record.issue_codes
+
+
+def test_trace_record_byte_and_line_work_bounds_are_explicit(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(spd_io, "_MAX_TRACE_RECORD_BYTES", 48)
+    oversized = b"TraceA::VDD StartingNode = NodeA EndingNode = NodeB\n"
+    with pytest.raises(SpdTraceRecordError) as byte_exc:
+        list(_iter_spd_trace_records(BytesIO(oversized), 0, len(oversized)))
+    assert byte_exc.value.code == "TRACE_RECORD_BYTE_BOUND_EXCEEDED"
+    assert byte_exc.value.offset == 0
+
+    monkeypatch.setattr(spd_io, "_MAX_TRACE_RECORD_BYTES", 1024)
+    monkeypatch.setattr(spd_io, "_MAX_TRACE_RECORD_LINES", 2)
+    too_many_lines = (
+        b"TraceA::VDD StartingNode = NodeA EndingNode = NodeB\n"
+        b"+ Width = 1mm\n"
+        b"+ Width = 2mm\n"
+    )
+    with pytest.raises(SpdTraceRecordError) as line_exc:
+        list(_iter_spd_trace_records(BytesIO(too_many_lines), 0, len(too_many_lines)))
+    assert line_exc.value.code == "TRACE_RECORD_LINE_BOUND_EXCEEDED"
+    assert line_exc.value.offset == 0
+
+
+def test_logical_trace_framing_preserves_bare_carriage_return_lines() -> None:
+    first = (
+        b"TraceA::VDD StartingNode = NodeA EndingNode = NodeB\r"
+        b"+ Width = 1mm\r"
+    )
+    second = b"TraceB::VDD StartingNode = NodeB EndingNode = NodeC\r"
+    source = first + second
+
+    records = list(_iter_spd_trace_records(BytesIO(source), 0, len(source)))
+
+    assert [item.exact_bytes for item in records] == [first, second]
+    assert records[0].line_offsets == (
+        0,
+        len(first.splitlines(keepends=True)[0]),
+    )
+    assert records[0].width_location == "continuation"
+    assert records[1].line_offsets == (len(first),)
+    assert records[1].width_location == "absent"

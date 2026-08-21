@@ -1,5 +1,10 @@
 # Evaluation / De-cap Distribution 검증 기록 — 2026-08-06
 
+> **Historical v0.21.0 record.** v0.22.0 supersedes the numerical-solver and
+> release conclusions in this document with the separate
+> [layer-surface validation record](EVALUATION_LAYER_SURFACE_VALIDATION_2026-08-06.md).
+> The measurements and artifact identities below are retained unchanged for audit.
+
 > 대상: **SPD Decap PI Evaluator v0.21.0**
 >
 > 목적: De-cap Distribution 이후 Evaluation Analysis 연계 오류의 재현, 수정 계약,
@@ -78,7 +83,7 @@ isolation sacrifice는 208개다.
 | Atomic Apply | 8.345초 | `MEASURED` |
 | Distribution result | `FULL`; requested 696, fulfilled 696, shortfall 0 | `PASS` |
 | Physical changes | assignment move 696, isolation sacrifice 208 | `PASS` |
-| Route metadata after Apply | recovered/requested 11,874/117,810, fallback 105,936; fresh source와 동일 | `PASS` |
+| Route metadata after Apply (historical v0.21 TOP/L02 rail inventory) | recovered/requested 11,874/117,810, fallback 105,936; fresh source와 동일하며 current v0.22 multilayer target inventory와 직접 비교하지 않음 | `HISTORICAL PASS` |
 | Post-Apply Original/Tuned preflight | blocker 2,807개, 73/92 rail blocked, 19 rail clear | `PASS` |
 | Blocker provenance | fresh-source와 공통 2,010개, Tuned-only 797개 | `PASS` |
 | Blocker class | geometry 2,802개, connectivity 5개 | `PASS` |
@@ -163,9 +168,10 @@ fail-safe fallback한다.
 
 | 확인 항목 | 결과 | 상태 |
 | --- | --- | --- |
-| fresh 260804 source paths | requested 117,810; recovered 11,874; fallback 105,936; recovered segments 11,874 | `PASS` |
+| historical v0.21 fresh 260804 source paths (TOP/L02 rail inventory) | requested 117,810; recovered 11,874; fallback 105,936; recovered segments 11,874; recovered path는 모두 `Signal$L02(DGND)` target | `HISTORICAL PASS` |
 | recovery 입력 규모 | relevant Trace 1,405,367; Trace node 1,915,758; directed trace-incident Via edge 2,235,995; retained node 2,293,666 | `MEASURED` |
-| fallback 사유 | ambiguous branch 91,770; target pad unsupported 11,526; no monotonic Via 2,640 | `PASS` |
+| historical v0.21 fallback 사유 | ambiguous branch 91,770; target pad unsupported 11,526; no monotonic Via 2,640 | `HISTORICAL PASS` |
+| current v0.22 r4 multilayer compatibility paths | requested 200,928; recovered 0; rail-template fallback 200,928; ambiguous trace branch 194,064; no monotonic Via 6,864 | `MEASURED` |
 | fresh raw import runtime | 총 360.07초; analyze 122.61초, plan 85.32초, index 1.16초, recovery 130.52초, eligibility 3.94초 | `MEASURED` |
 | route-recovery focused test | `tests/test_io_spd.py`: 55 passed | `PASS` |
 | fresh 260804 exact preflight | 2,010 blocker, 68/92 rail; route recovery 전후 blocker 수 감소 없음 | `PASS` |
@@ -178,8 +184,11 @@ fail-safe fallback한다.
 - `validation-output\v0.21.0-correlation-260804-fresh-route-current\S4LB002-2Para_260804_1_injected_candidate.spdpi`
 - `validation-output\v0.21.0-correlation-260804-fresh-route-current\correlation_report.json`
 
-따라서 11,874개 source path 복구는 실제 route provenance를 늘렸지만 2,010개 finite-port
-geometry blocker를 제거하지 않았다. Route evidence는 현재 선택된 단일 rectangular cavity 밖의
+위 11,874개 source path 복구는 당시 v0.21 TOP/L02 rail inventory의 historical result이며,
+복구된 path는 모두 `Signal$L02(DGND)`를 target으로 했다. Current v0.22 multilayer rail inventory는
+해당 L02 target을 요청하지 않으므로 r4의 0/200,928 compatibility recovery와 직접 비교할 수 없다.
+v0.21 범위에서는 이 복구가 실제 route provenance를 늘렸지만 2,010개 finite-port geometry
+blocker를 제거하지 않았다. Route evidence는 현재 선택된 단일 rectangular cavity 밖의
 terminal을 자동으로 다른 cavity에 연결했다는 증거가 아니다. v0.21.0은 좌표 clamp, cavity 확장,
 port 삭제를 하지 않고 PWR/GND footprint overrun을 structured blocker로 유지한다. 이 때문에
 mixed-selection partial Evaluation이 필수이며, blocked loaded rail에 numerical accuracy 성공을
@@ -211,7 +220,7 @@ mixed-selection partial Evaluation이 필수이며, blocked loaded rail에 numer
 | 실제 UI: v0.21.0 title, source/current toggle, read-only, Assignment Failed, compact error UX | 실제 10,757-decap replay를 로드하여 Current/Source 양방향 전환, source read-only label, 모든 Distribution 모델의 Assignment Failed header, 18 clear/74 blocked compact partial dialog와 Show Details manifest, default No 취소 후 solver worker 미시작을 확인 | `PASS` |
 | Built EXE smoke | `dist\SPDDecapPIEvaluator\SPDDecapPIEvaluator.exe`; File/Product version 0.21.0; `--smoke-test` exit 0 | `PASS` |
 | Installer build/install/smoke | `installer-output\SPDDecapPIEvaluatorSetup-0.21.0.exe`; 85,936,608 bytes; SHA-256 `2e04203b2837c6d4dc9e59d14a0198f2e3fd153a896c777558dbb29843d679d8`; custom install의 File/Product version 0.21.0 및 `--smoke-test` exit 0 | `PASS` |
-| GitHub branch/tag/release/assets | remote URL과 asset 확인 | `PENDING` |
+| GitHub branch/tag/release/assets | private repository release `v0.21.0`; installer와 checksum asset 재다운로드 및 SHA-256 일치 확인 | `PASS` |
 
-`PENDING` 항목이 채워지기 전에는 v0.21.0 설치 프로그램 또는 GitHub release가 검증 완료되었다고
-간주하지 않는다.
+v0.21.0 publication gate는 완료되었다. 이 문서는 v0.21 기록이며 v0.22.0
+release evidence를 대신하지 않는다.

@@ -1,6 +1,6 @@
 # De-cap Distribution 변동 규칙
 
-> 적용 프로그램: **SPD Decap PI Evaluator v0.22.9** (v0.22.6/v0.22.7은 Distribution 방법론과 물리를 변경하지 않았다)
+> 적용 프로그램: **SPD Decap PI Evaluator v0.23.0**
 >
 > 문서 상태: 현재 구현 및 회귀 테스트에 대응하는 동작 규칙
 >
@@ -27,51 +27,7 @@
    connectivity/modelability 상태와 동일하지 않다. Apply 후 Evaluation은 Original과
    Tuned/current 양쪽을 별도 preflight한다.
 
-## 1.0 v0.22.5 release note
-
-- Exact PowerSI `Shape` parsing now streams Shape and primitive events in one
-  newline-bounded pass, reducing parser traversal and temporary indexing work
-  for large SPD files.
-- Unreachable internal models, helpers, and imports were removed without
-  changing Distribution, Evaluation, solver, or physical decision rules.
-- Methodology and physics are unchanged from v0.22.4; this release is a
-  parser-performance and internal-cleanup update only.
-
-## 1.1 v0.22.4 tolerance counterflow와 방법론 영향
-
-- Tolerance는 Target 관계와 독립된 **방향성 counterflow 허용량**이다. DONOR는
-  교체품을 받은 만큼 추가 공여할 수 있고, RECEIVER는 허용량 안에서 기존 부품을
-  내보내면서 순수 수신 수요를 채울 수 있다. `Target == Present`는 기존처럼
-  count-neutral EXCHANGE다.
-- 최우선 fulfillment는 raw Received가 아니라 RECEIVER의 순수 증가
-  `Received - Sent - Sacrificed`다. 따라서 왕복 이동이나 isolation gap으로 1단계
-  목적값을 부풀릴 수 없다.
-- 세 NET 이상에서는 `A → B → C` handoff가 B의 더 적격한 자리를 C에 넘기고 A가
-  B를 보충해 순수 fulfillment를 높일 수 있다. 순수 이득이 없는 두 NET cycle은
-  fulfillment를 늘리지 못하고 뒤의 relabel/move 최소화 단계에서 제거된다.
-- 분리된 Distribution 창은 메인 표와 같은 same-field 다중 편집을 지원한다. 한 번의
-  editor commit은 canonical 값·검증·preview 무효화를 batch당 한 번만 수행한다.
-- Workbook format 5는
-  `Tolerance Semantics = TARGET_RELATION_COUNTERFLOW_V1`과 routing protection
-  `ON/OFF`를 명시한다. format 1~4에서 `Target != 현재 Present`인 cell에 nonzero
-  Tolerance가 있으면 예전 의미를 조용히 바꾸지 않고 재-export/재입력을 요구한다.
-
-## 1.2 v0.22.3 source/UI hotfix와 방법론 영향
-
-- PowerSI의 simulation selection은 Evaluation 대상 선택 metadata일 뿐 물리
-  PowerNets inventory가 아니다. `decap_scenario` import는 PowerNets group의 실제
-  positive-plane rail을 모두 보존하고, `selected_pi`와 GroundNets 선택 의미는
-  그대로 유지한다.
-- PowerSI `Box`는 중심점이 아니라 **시작 모서리 X/Y + width/height**이다. 이 좌표
-  해석으로 분리된 terminal pad 사이를 잇는 source TOP copper strip을 정확히
-  복원한다.
-- Evaluation의 PWR NET picker는 form 전체 폭을 사용한다. 분리된 Distribution
-  창에서도 `Target`과 `Tolerance (%)`를 직접 편집하지만, 값과 검증 상태의 단일
-  원본은 메인 표이다.
-- 위 UI 변경은 후보 물리 적격성이나 optimizer 우선순위를 바꾸지 않는다. Box
-  수정과 local separator certificate만 source-backed topology 증거를 바로잡는다.
-
-## 1.3 Immutable signal routing 보호 옵션 (v0.22.0)
+## 1.1 Immutable signal routing 보호 옵션 (v0.22.0)
 
 - 기본값은 `OFF`이며 routing asset decode/collision filter를 완전히 우회하고 v0.21.0의 plane-containment/MILP 의미를 유지한다. v0.22.0은 보호 상태와 무관하게 선택된 exact 목적층 metadata를 기록한다.
 - `ON`이면 사용자가 `Trace-to-via clearance (µm)`를 직접 입력한다. 값은 finite, `>= 0`이어야 한다.
@@ -129,45 +85,35 @@ receiver 수량으로 계산하지 않는다.
 Target은 0 이상의 정수여야 한다. Tolerance는 0 이상 100 이하의 유한 실수여야
 한다. 입력되지 않은 Target cell은 현재 Present로, Tolerance는 0%로 취급한다.
 
-기호는 `P = Present`, `T = Target`, `A = Actual`, `O = Sent`,
-`S = Sacrificed`, `I = Received`이며, whole-De-cap 허용량 `L`은 다음과 같이
-내림 계산한다.
+| 조건 | 역할 | 최종 수량 규칙 | 계산 참여 규칙 |
+| --- | --- | --- | --- |
+| `Target < Present` | `DONOR` | `Actual >= Target` | `Present - Target` 범위에서 공여할 수 있으나 전부 공여할 의무는 없음 |
+| `Target > Present` | `RECEIVER` | `Actual <= Target` | `Target - Present`만큼 수신 요청 |
+| `Target == Present`, `Tolerance = 0` | `UNCHANGED` | `Actual == Present` | 이동·교환에서 제외 |
+| `Target == Present`, `Tolerance > 0` | `EXCHANGE` | `Actual == Present` | 최종 수량을 유지하며 제한된 자리 바꿈에 참여 |
+
+Tolerance는 `Target == Present`인 cell에서만 의미가 있다. whole-De-cap 교환
+허용 수량은 다음과 같이 내림 계산한다.
 
 ```text
-L = floor(P × Tolerance (%) / 100)
-A = P - O - S + I
+Tolerance Count = floor(Present x Tolerance (%) / 100)
 ```
 
-| Target 관계 | Tolerance | 역할 | 최종 수량 및 counterflow 제약 |
-| --- | --- | --- | --- |
-| `T < P` | `0%` | `DONOR` | `A >= T`, `I = 0`; 기본 여유 `P - T` 안에서만 `O + S` 가능 |
-| `T < P` | `> 0%` | `DONOR` | `A >= T`, `I <= L`; `O + S <= P - T + I`이므로 받은 교체품만큼 추가 공여 가능 |
-| `T > P` | `0%` | `RECEIVER` | `A <= T`, `O + S = 0`; 최대 `T - P`만큼 수신 |
-| `T > P` | `> 0%` | `RECEIVER` | `A <= T`, `O + S <= L`; `I <= T - P + O + S`이므로 기존 부품을 내보낸 만큼 gross 수신 가능 |
-| `T == P` | `0%` | `UNCHANGED` | `A = P`, 이동·gap·교환에서 제외 |
-| `T == P` | `> 0%` | `EXCHANGE` | `A = P`, `O + S = I`, `O + S <= L`, `I <= L` |
-
-Tolerance는 모든 Target 관계에 직교한다. 다만 `L = 0`이면 실제 counterflow에
-참여하지 않으며
+Tolerance Count가 0이면 실제 교환에는 참여하지 않으며
 `TOLERANCE_ROUNDS_TO_ZERO` 진단을 표시한다.
 
-DONOR/RECEIVER의 Target bound는 tolerance가 있어도 완화되지 않는다. 즉 DONOR는
-Target 아래로 내려갈 수 없고 RECEIVER는 Target 위로 올라갈 수 없다. EXCHANGE는
-최종 수량을 정확히 Present로 유지한다.
+EXCHANGE cell은 최종 수량이 Present와 같아야 하므로 다음 관계가 성립한다.
 
 ```text
-DONOR(tol>0):    I <= L,  A >= T
-RECEIVER(tol>0): O + S <= L,  A <= T
-EXCHANGE:        O + S = I <= L,  A = P
+Received = Sent + Sacrificed
+Sent + Sacrificed <= Tolerance Count
+Received <= Tolerance Count
 ```
 
-세 NET 이상에서는 tolerance-enabled DONOR/RECEIVER/EXCHANGE가 중간 handoff 지점이
-될 수 있다. 그러나 RECEIVER의 fulfillment는 raw inbound가 아니라 아래 순수 증가로
-계산하므로 send/receive cycle은 목적값을 부풀리지 못한다.
-
-```text
-Receiver Net Progress = I - O - S = A - P
-```
+따라서 EXCHANGE는 다른 receiver로 일부를 내어주고 다른 donor 또는 exchange에서
+같은 수량을 받아오는 자리 바꿈 경로가 될 수 있다. receiver 요구가 전혀 없는
+상태에서 의미 없는 exchange cycle을 새로 만들지는 않는다. `Target != Present`인
+DONOR/RECEIVER cell에서는 입력된 Tolerance를 계산에 사용하지 않는다.
 
 ## 4. 계산 시작 전 수량 사전검사
 
@@ -182,8 +128,8 @@ Receiver Demand = sum(max(Target - Present, 0))
 - 이 단계에서는 scenario를 변경하지 않으며 PWR plane/VIA/거리 최적화를 시작하지
   않는다.
 - Fixed row는 Present에는 포함되지만 Assignable Count에는 포함되지 않는다.
-- Tolerance counterflow는 교체·회전 경로일 뿐 새 물리 inventory를 만들지 않으므로
-  이 사전검사의 Donor Supply에 더하지 않는다.
+- EXCHANGE tolerance는 count-neutral이므로 이 사전검사의 Donor Supply에 더하지
+  않는다.
 
 수량 사전검사를 통과했다는 사실은 물리적으로 목표를 전부 채울 수 있다는 뜻이
 아니다. PWR plane, PWR VIA, bump, shared-pad 및 isolation-gap 조건을 적용한 뒤
@@ -195,36 +141,33 @@ Receiver Demand = sum(max(Target - Present, 0))
 ### 5.1 PWR plane 및 VIA
 
 NET 변경 가능 여부는 De-cap 중심 좌표가 아니라 source SPD 연결 분석으로 확인된
-고유한 물리 TOP-side PWR VIA의 정확한 landing 좌표에서 판정한다. 대상 NET의
-retained PWR conductor layer 중 하나에 대해 다음을 모두 만족할 때에만
+고유한 물리 TOP-side PWR VIA의 source landing과, non-TOP이면 해당 layer까지의
+source-proven exact transition endpoint에서 판정한다. 대상 NET의 retained PWR
+conductor layer 중 하나에 대해 다음을 모두 만족할 때에만
 destination으로 허용한다.
 
 - source-classified physical PWR VIA landing이 존재한다. 기존 VIA column이 대상
   layer까지 이미 span할 필요는 없다.
-- 기존 microvia의 short span, lateral/stagger transition, path evidence 유무는
-  Distribution 후보를 차단하지 않는다. 계산은 고정 정책
-  `VERTICAL_XY_ASSUME_DESCENT_V1`에 따라 source landing의 immutable XY에서
-  destination layer까지 단순 수직 하강한다고 가정한다.
-- immutable PWR-via landing XY가 대상 NET의 final ordered copper 내부에 strict하게
-  포함된다. void, boundary contact, 누락/손상 artwork는 허용하지 않는다.
+- TOP은 immutable source landing XY를, non-TOP은 exact target-layer path evidence의
+  endpoint XY를 대상 NET의 final ordered copper 내부에 strict하게 포함한다. void,
+  boundary contact, 누락/손상 artwork는 허용하지 않는다.
 - direct De-cap 또는 변경 후의 shared-pad 활성 PWR component에 적어도 하나의
   위 조건을 만족하는 실제 PWR-via root가 있다. Dummy는 독립 root를 만들지 않는다.
 - 적격성이 불명확하면 허용으로 추정하지 않고 fail-closed로 제외한다.
 
-이는 고정된 동일 XY에서 새 VIA stack을 target NET에 맞춰 수직으로
-retarget/rebuild한다는 배치 계획 가정이다. preview/apply는 plane artwork,
-stack-up, attachment를 변경하지 않는다. Trace/path evidence는 landing을 새로
-만들거나 destination copper를 허용하거나 query XY를 옆으로 이동시키는 근거가 될 수
-없다. Distribution proof는 Evaluation의 PWR/GND pair 선택과 solver 계약을 변경하지
-않는다. 이 가정은 fabricated path, DRC, SI 또는 제조 가능성 sign-off가 아니다.
+이는 source-proven endpoint에서 filled-Cu microvia stack을 target NET에 맞춰
+retarget/rebuild할 수 있다는 제작 계획 가정이다. preview/apply는 plane artwork,
+stack-up, attachment를 변경하지 않는다. exact target-layer path가 없거나
+ambiguous/trace-assisted lateral hop이면 fail-closed로 제외하며, Distribution proof는
+Evaluation의 PWR/GND pair 선택과 solver 계약을 변경하지 않는다.
 
 GND-side via/layer는 destination의 위치·layer 적격성 gate가 아니다. GND는 이
 PWR channel reassignment에서 destination 판정 대상이 아니며, Evaluation Analysis의
 별도 PWR/GND 조건을 Distribution에 역으로 요구하지 않는다.
 
 이 proof projection은 직접 RECEIVER뿐 아니라 실제 whole-De-cap allowance가 있는
-모든 DONOR/RECEIVER/EXCHANGE counterflow source와 destination에 동일하게 수행한다.
-반대로 tolerance를 내림 계산한 `L`이 0인 cell은 counterflow source를 만들지 않는다.
+EXCHANGE chain의 destination에도 동일하게 수행한다. 반대로 `Target == Present`와
+`Tolerance = 0`인 중립 cell은 exchange 후보를 만들지 않는다.
 
 ### 5.2 수신 PWR NET bump
 
@@ -244,15 +187,6 @@ Candidate Distance = min(distance(Decap, each destination PWR bump))
 Distribution은 현재 형식의 source TOP shared-pad 연결 분석과 source-classified
 physical PWR VIA landing을 필요로 한다. 분석 버전이 오래되거나 PWR landing이 없는
 경우에는 추정 계산을 하지 않고 hash-matched 원본 SPD를 다시 열어 분석하도록 요구한다.
-
-### 5.4 Destination eligibility와 source cell 역할은 별도 조건
-
-Candidate Audit의 `Eligible = true`는 해당 cluster/De-cap이 목적 rail의 exact
-copper·VIA root 조건을 만족한다는 뜻이다. 이것만으로 이동 변수가 생기지는 않는다.
-현재 source cell이 `DONOR`이거나 실제 allowance가 있는 tolerance-enabled
-`DONOR`/`RECEIVER`/`EXCHANGE`여야 한다. `UNCHANGED`와 `L = 0`인 RECEIVER는 목적지
-적격성이 있어도 source가 될 수 없다. 즉 destination eligibility와 source role은
-서로 다른 증명이다.
 
 ## 6. Shared-pad cluster 및 dummy 규칙
 
@@ -293,25 +227,10 @@ pad가 필요하다.
 Isolation gap으로 사용할 수 있는 cell은 다음 조건을 모두 만족해야 한다.
 
 1. anchored shared-pad cluster의 member이다.
-2. source TOP copper의 **로컬 final component**가 하나의 untouched axis-aligned
-   positive rectangle임을 입증하고, 그 위 pad 중심이 collinear path를 이루어 해당
-   cell 제거로 PWR path를 분리할 수 있으므로 cluster의
-   `isolation_gap_refdes`에 포함했다.
-3. 해당 source cell이 DONOR이거나 `L > 0`인 tolerance-enabled
-   DONOR/RECEIVER/EXCHANGE이다. RECEIVER의 gap은 `O + S <= L`에 포함된다.
+2. source TOP copper가 해당 cell을 제거하면 collinear PWR path를 분리할 수 있다고
+   입증하여 cluster의 `isolation_gap_refdes`에 포함했다.
+3. 해당 source cell의 역할이 DONOR 또는 허용량이 남은 EXCHANGE이다.
 4. 같은 cell에 NET assignment와 isolation gap을 동시에 적용하지 않는다.
-
-NET 전체에 서로 떨어진 positive `Box`가 여러 개 있어도 각 cluster가 놓인 local
-final component가 정확히 하나의 untouched Box이면 인증할 수 있다. 반대로 다음은
-연결 membership을 알 수 있더라도 separator 인증을 주지 않는다.
-
-- local component에 void/subtraction 또는 ordered re-add가 있음
-- 둘 이상의 positive rectangle이 겹치거나 edge로 맞닿아 한 component를 만듦
-- non-rectangular/circular/unsupported primitive 또는 boundary-only 접촉이 있음
-- pad 중심이 collinear가 아니거나 source PWR edge가 단순 path가 아닌 branch임
-
-즉 원격 disjoint Box는 로컬 증명을 방해하지 않지만, 로컬 ambiguity를 heuristic으로
-허용하지 않는다.
 
 Isolation gap을 적용한 cell은 `enabled = false`, `pad_state = ISOLATION_GAP`이 되고
 그 cell과 incident PWR edge를 topology에서 제거한다. 단순 disabled/DNP는 pad
@@ -350,7 +269,7 @@ NET assignment와 isolation gap은 한 revision에서 함께 검증하고 commit
 기본 `BALANCED_AUTO` 정책은 물리적으로 가능한 후보에 대해 다음 우선순위를
 순서대로 적용한다.
 
-1. receiver의 **순수 요구 충족** `Σ(I - O - S)` 최대화
+1. receiver 요구 충족 수량 최대화
 2. 활성 PWR NET relabel 수 최소화
 3. `signed total bump distance + effective gap penalty × gap count` 최소화
 4. 위 combined objective가 같은 경우 gap 수 최소화
@@ -387,29 +306,6 @@ penalty를 통해 함께 비교된다. 예를 들어 한 gap을 추가해도 절
 effective penalty보다 크면 gap 1개 후보가 gap 0개 후보보다 우선할 수 있다.
 `MIN_GAPS`에서만 gap 수가 distance보다 항상 먼저 적용된다.
 
-따라서 모든 정책에서 **receiver 순수 충족 수량**이 첫 단계다. raw `Received`는
-counterflow의 `Sent`와 `Sacrificed`를 빼지 않으면 cycle/gap으로 부풀릴 수 있으므로
-목적함수에 직접 사용하지 않는다. gap이 0개인 16개 결과와
-source-proven gap 1개를 사용하는 18개 결과가 모두 유효하면 18개가 먼저 선택된다.
-그 뒤에만 정책별 gap/relabel/distance 순서를 적용한다. `MIN_GAPS`의 전체 순서는
-`fulfillment → gap 수 → active relabel 수 → distance → canonical`이며,
-BALANCED 정책의 전체 순서는 위 1~5항과 같다.
-
-### Candidate Audit의 범위
-
-Candidate Audit의 atom 크기와 `NO_ZERO_GAP_EXACT_COUNT_COMBINATION`은 source PWR
-edge를 끊지 않은 **zero-gap connected atom subset**만 설명한다. 이 코드는 해당
-atom이 zero-gap exact-count 조합에 들어갈 수 없다는 뜻이지, 인증된 separator를
-사용하는 최종 MILP까지 불가능하다는 뜻이 아니다. 최종 `Selected`, assignment,
-`Isolation Gaps`, `Actual Delta`가 전체 topology/role/target 제약을 푼 plan의 결과다.
-
-Audit은 실제 inbound가 있는 DONOR/EXCHANGE와 모든 요구 RECEIVER를 destination별로
-설명한다. RECEIVER가 counterflow로 `O + S`를 내보냈다면 조건부 gross inbound 수요는
-`Target - Present + O + S`이고, 실제 plan의 `Received`와 구분한다. source 후보는
-같은 model의 DONOR 또는 `L > 0` counterflow cell로 제한한다. 따라서 Audit의
-zero-gap subset 설명은 최종 MILP의 multi-NET handoff 가능성, gap 선택, 또는 전역
-최적성 증명을 대신하지 않는다.
-
 ### 시간 제한과 최적성 표시
 
 - receiver 최대 충족을 확립할 수 없으면 fail-closed로 종료한다.
@@ -421,8 +317,6 @@ zero-gap subset 설명은 최종 MILP의 multi-NET handoff 가능성, gap 선택
 - BALANCED combined objective가 증명된 뒤 gap/canonical 동률 단계가 시간 제한에
   도달하면 combined optimum을 보존하는 최선의 유효 incumbent를 사용하고
   `OBJECTIVE_TIEBREAK_FALLBACK`을 표시한다.
-- 수량·이동 assignment를 고정한 뒤 separator pad를 재최적화하는 단계는
-  `MIN_GAPS`에서만 수행한다. 아래 두 항목은 그 단계가 실행된 경우에만 적용된다.
 - separator 위치를 고정한 뒤의 distance 최적값은 그 separator 위치에 조건부인
   결과다. 앞 단계의 joint assignment/separator 최적값까지 증명되지 않았다면
   전역 joint optimum으로 표현하지 않는다.
@@ -450,14 +344,9 @@ zero-gap subset 설명은 최종 MILP의 multi-NET handoff 가능성, gap 선택
 
 Plan 전체의 Requested/Fulfilled/Shortfall 합계는 receiver demand만 집계한다.
 
-결과 Workbook은 각 cell에 `Role`, `Turnover Allowance`, `Sent`, `Received`,
-`Isolation Gaps`, `Actual Delta`를 함께 기록한다. 여기서
-`Actual Delta = Received - Sent - Isolation Gaps`이므로 DONOR/RECEIVER의 gross
-counterflow와 순수 최종 변화가 모두 감사 가능하다.
-
 - 모든 receiver shortfall이 0이면 `FULL`이다.
 - receiver shortfall이 하나라도 있으면 `PARTIAL`이다.
-- DONOR가 공여 가능량을 모두 사용하지 않았거나 tolerance allowance가 남았다는
+- DONOR가 공여 가능량을 모두 사용하지 않았거나 EXCHANGE allowance가 남았다는
   이유만으로 `PARTIAL`이 되지는 않는다.
 - `PARTIAL`도 포함된 assignment와 gap이 물리적으로 유효하면 Apply, Export 및
   별도 `.spdpi` 저장이 가능하다.
@@ -515,13 +404,9 @@ cavity를 확장하거나, off-cavity port를 제외하는 geometry 예외가 �
   않는다.
 - 값은 캐시된 Present를 이용해 즉시 검증하며, 매 keystroke마다 물리 최적화를
   실행하지 않는다.
-- 메인 Distribution 표의 cell을 더블클릭하면 같은 matrix를 보여주는 비모달
-  분리창을 연다. 분리창에서도 Target/Tolerance와 same-field 다중 선택을 직접
-  편집할 수 있다. 상태의 단일 소유자는 메인 창이며 분리창은 별도 사본을 유지하지
-  않고 stable `(rail, model, field)` identity로 canonical handler에 batch를 전달한다.
-- batch commit은 validation, preview/plan 무효화, summary/control 갱신을 한 번만
-  수행한다. worker busy, document 없음, matrix revision 변경 뒤 도착한 stale commit은
-  적용하지 않는다.
+- 메인 Distribution 표의 cell을 더블클릭하면 동일 내용을 읽기 전용으로 보여주는
+  비모달 분리창을 연다. 상태의 단일 소유자는 메인 창이며 분리창은 별도 사본을
+  편집하지 않는다.
 - 메인 창의 `Show source SPD assignments`와 분리창의 동기화된 control은 표시 label을
   `Current / distributed` 또는 `Source SPD (read-only)`로 전환한다. 이는 도면 렌더링만
   바꾸며 scenario, revision, dirty 상태, target 및 plan을 변경하지 않는다. Source SPD view는
@@ -543,17 +428,11 @@ Target Workbook은 `PWR NET Distribution Targets` sheet를 사용하며 A1은
   우선한다.
 - Workbook에 없는 현재 rail/Component cell은 `Target = 현재 Present`,
   `Tolerance = 0`으로 초기화한다.
-- format 5는 `Tolerance Semantics = TARGET_RELATION_COUNTERFLOW_V1`과
-  `Signal Routing Protection = ON/OFF`를 반드시 기록한다. 누락되거나 다른 의미
-  식별자를 가진 format 5 Workbook은 fail-closed로 거부한다.
-- format 1~4는 target-changing tolerance semantics를 정의하지 않았다. 현재 SPD의
-  Present를 기준으로 `Target != Present`이고 `Tolerance > 0`인 일치 cell이 하나라도
-  있으면 값을 조용히 활성화하지 않고 format 5 template 재-export와 명시적 재입력을
-  요구한다. `Target == Present` tolerance와 `Tolerance = 0` target 변경은 기존의
-  안전한 의미로 계속 가져올 수 있다.
 - 현재 format에 기록된 NEAREST/FARTHEST는 복원한다.
 - `Optimization Policy`와 `Effective Gap Penalty (um)`을 복원한다.
-- policy가 없는 legacy Workbook은 경고와 함께 새 기본값 `BALANCED_AUTO`로 연다.
+- format 1-4 Workbook 또는 Via Projection Policy가 없는 format 5 Workbook은
+  현재 exact-layer transition 계약으로 재해석하지 않는다. source SPD를 다시 열고
+  format 5 target template을 재생성하도록 re-export를 요구한다.
 - `BALANCED_CUSTOM`에 effective penalty가 없거나 `MIN_GAPS`에 0이 아닌 penalty가
   기록되어 있으면 재현 불가능한 metadata로 보고 fail-closed로 거부한다.
 - 구형 Workbook에 distance mode가 없으면 자동 추정하지 않고 사용자가 명시적으로
@@ -588,13 +467,11 @@ Excel은 정확히 두 sheet를 생성한다.
    - 전체 De-cap의 6개 결과 열
 2. `PWR NET Distribution Targets`
    - 계산 당시의 immutable Present/Target/Tolerance
-   - Role, Turnover Allowance, Sent, Received
    - Actual Delta, Assignment Failed, Isolation Gaps
    - 전체 inventory reconciliation
    - application/format version, source SPD 이름 및 SHA-256
    - 입력 fingerprint/revision, distance mode, Optimization Policy
    - 계산에 실제 적용된 `Effective Gap Penalty (um)`
-   - format 5 tolerance semantics와 routing protection `ON/OFF`
 
 Apply 후 GUI의 Present가 새 최종 수량으로 바뀌더라도 export의 두 번째 sheet는
 해당 Preview를 계산했을 당시의 입력 표를 보존한다. 식으로 해석될 수 있는 식별자는
@@ -649,69 +526,28 @@ dummy만 남고 실제 PWR VIA에 도달할 수 없다면 변경을 허용하지
 맞거나 dummy가 다른 De-cap과 인접해 보이더라도 적격 anchor와 같은 활성
 same-NET component에 속하지 않으면 invalid다.
 
-### Case D: A → B → C tolerance handoff
+### Case D: Tolerance exchange
 
-A에 1개, B에 2개, C에 0개가 있고 Target이 각각 0, 1, 2라고 하자. A의 부품은
-B에만 적격이고 B의 두 부품은 C에 적격하다. B tolerance가 0%이면 B는 Target 1을
-지켜야 하므로 C에 1개만 보내 `PARTIAL 1/2`가 된다.
+PWR_B의 Present와 Target이 1,000개이고 Tolerance가 1%이면 최대 10개의 turnover를
+허용한다. PWR_B가 PWR_C에 10개를 보내면서 PWR_A에서 10개를 받으면 Actual은
+1,000개로 유지된다. 경계 gap이 1개 필요하다면 그 gap도 PWR_B의 10개 allowance와
+실제 감소에 포함된다. 따라서 이 allowance 안에서는 최대 `Sent = 9`,
+`Sacrificed = 1`, `Received = 10`과 같이 구성해야 하며, 10개를 보내고 gap 1개를
+추가하는 11개 turnover는 허용하지 않는다.
 
-B tolerance가 50%이면 `L = floor(2 × 50 / 100) = 1`이다. A에서 1개를 받은 뒤
-B의 기존 2개를 C로 보낼 수 있다.
+## 14A. Filled-Cu microvia stack 재지정 가정 (historical wording superseded)
 
-```text
-A: P=1, T=0, O=1              -> A=0
-B: P=2, T=1, I=1, O=2, L=1   -> A=1
-C: P=0, T=2, I=2              -> A=2
-```
+이 절의 구형 수직-XY 서술은 v0.23에서 superseded되었다. 현재 Distribution은
+TOP에는 source landing XY를 사용하고, non-TOP에는 source-proven exact target-layer
+transition endpoint XY만 사용한다. 해당 plane의 최종 ordered copper가 그 좌표를
+strict하게 포함할 때만 destination으로 허용한다(VOID 및 boundary 접촉은 불가).
 
-이 3-NET handoff는 C의 순수 fulfillment를 1에서 2로 높이므로 선택 가치가 있다.
-반면 A↔B 두 NET 사이에서 보내고 다시 받기만 하는 cycle은 receiver의
-`I - O - S`를 늘리지 못하고 move/relabel 최소화 단계에서 제거된다.
-
-Target이 Present와 같은 EXCHANGE도 기존 count-neutral 의미를 유지한다. 예를 들어
-PWR_B의 Present/Target이 1,000이고 Tolerance가 1%이면 `L=10`이며
-`Sent + Sacrificed = Received <= 10`이어야 한다. gap 1개가 필요하면 최대
-`Sent=9, Sacrificed=1, Received=10`이고, 10개를 보내면서 gap 1개를 추가할 수 없다.
-
-### Case E: zero-gap 16보다 exact 15 + 3 + gap 1 우선
-
-Receiver가 18개를 요구하고 다음 후보가 있다고 가정한다.
-
-- 변경 가능한 whole atom: 15개
-- 변경 가능한 zero-gap whole atom: 16개
-- 양 끝에 적격 anchor가 있는 7-cell collinear chain
-
-gap 인증이 없으면 whole atom 조합으로 만들 수 있는 최대값은 16이므로
-`PARTIAL 16/18`이다. 7-cell chain의 local single-Box separator가 source에서
-인증되면, 15개 atom 전체와 chain 앞 3개를 receiver로 이동하고 네 번째 via-less
-dummy cell 하나를 gap으로 만들 수 있다. 뒤 3개는 반대쪽 source anchor에 rooted된
-채 남는다.
-
-```text
-zero-gap:  [ atom 16 ]                           = 16 / 18
-exact-gap: [ atom 15 ] + [ move 3 ][ gap ][keep] = 18 / 18
-```
-
-Donor는 이동 18개와 희생 1개를 감당해도 Target lower bound를 만족해야 한다.
-이 조건과 양쪽 PWR/GND rooted-component 검증을 통과하면 fulfillment 1순위 때문에
-exact 18 결과가 선택되고, gap penalty는 그 18개 해들 사이에서만 비교된다.
-
-## 14A. 수직 VIA projection 가정
-
-Distribution에서는 source SPD 연결 분석으로 확인된 물리적인 TOP-side PWR VIA
-landing의 고정 XY를 모든 retained destination PWR plane에 수직으로 투영한다. 해당
-plane의 최종 ordered copper가 이 XY를 strict하게 포함할 때만 destination으로
-허용한다(VOID 및 boundary 접촉은 불가).
-
-이 판정은 고정 정책 `VERTICAL_XY_ASSUME_DESCENT_V1`에 따라 동일 XY에서 새 VIA
-stack을 target NET에 맞춰 수직으로 retarget/rebuild한다는 배치 계획 가정에
-기반한다. 따라서 기존 VIA column이 destination layer까지 이미 span할 필요는 없고,
-MLO short span, lateral/stagger transition 또는 path evidence 부재도 Distribution
-후보를 차단하지 않는다. Trace/path evidence는 PWR landing을
-새로 만들거나, destination copper를 허용하거나, query XY를 옆으로 이동시키는 근거가
-될 수 없다. PWR plane artwork는 변경하지 않는다. GND는 destination gate가 아니며,
-dummy는 독립 PWR root를 만들지 않고 기존 anchored shared-pad rule을 그대로 따른다.
-이 결과는 fabricated path, DRC, SI 또는 제조 가능성 sign-off가 아니다.
+이 판정은 source-proven endpoint에서 filled-Cu microvia stack을 target NET에 맞춰
+retarget/rebuild할 수 있다는 제작 계획 가정에 기반한다. 따라서 기존 VIA column이
+destination layer까지 이미 span할 필요는 없다. exact path evidence가 없거나
+ambiguous하면 destination을 허용하지 않는다. PWR plane artwork는 변경하지 않는다.
+GND는 destination gate가 아니며, dummy는 독립 PWR root를 만들지 않고 기존 anchored
+shared-pad rule을 그대로 따른다.
 
 ## 15. 구현 및 회귀 테스트 추적
 
@@ -743,9 +579,6 @@ dummy는 독립 PWR root를 만들지 않고 기존 anchored shared-pad rule을 
 - [`tests/test_spd_decap_scenario_edits.py`](../tests/test_spd_decap_scenario_edits.py)
 - [`tests/test_shared_pad_cluster_core.py`](../tests/test_shared_pad_cluster_core.py)
 - [`tests/test_spd_shared_pad.py`](../tests/test_spd_shared_pad.py)
-- disjoint local Box separator와 15+3 exact fulfillment 회귀:
-  [`tests/test_spd_shared_pad.py`](../tests/test_spd_shared_pad.py),
-  [`tests/test_spd_decap_distribution.py`](../tests/test_spd_decap_distribution.py)
 - [`tests/test_spd_decap_spd_adapter.py`](../tests/test_spd_decap_spd_adapter.py)
 - [`tests/test_spd_decap_eligibility.py`](../tests/test_spd_decap_eligibility.py)
 - [`tests/test_spd_decap_evaluation.py`](../tests/test_spd_decap_evaluation.py)

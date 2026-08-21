@@ -7,7 +7,29 @@ from dataclasses import asdict
 from hashlib import sha256
 import json
 from pathlib import Path
+import sys
 from time import perf_counter
+
+_REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
+_REPOSITORY_SOURCE_ROOT = (_REPOSITORY_ROOT / "src").resolve()
+_EXPECTED_PACKAGE_ROOT = (_REPOSITORY_SOURCE_ROOT / "spd_decap_pi").resolve()
+sys.path.insert(0, str(_REPOSITORY_SOURCE_ROOT))
+
+import spd_decap_pi as _runtime_package
+
+_runtime_package_file = getattr(_runtime_package, "__file__", None)
+_runtime_package_root = (
+    Path(_runtime_package_file).resolve().parent
+    if _runtime_package_file is not None
+    else None
+)
+if _runtime_package_root != _EXPECTED_PACKAGE_ROOT:
+    raise RuntimeError(
+        "active-checkout import guard failed: expected spd_decap_pi from "
+        f"{_EXPECTED_PACKAGE_ROOT}, imported {_runtime_package_root!s}. "
+        "A stale editable install or preloaded package from another worktree "
+        "must not run this validation."
+    )
 
 import numpy as np
 
@@ -18,7 +40,16 @@ from spd_decap_pi._core.io.touchstone import (
     s_to_z,
     validate_port_manifest,
 )
-from spd_decap_pi._core.solver.evaluator import evaluate_project_rail_converged
+from spd_decap_pi._core.solver.evaluator import (
+    CONVERGENCE_POLICY_VERSION,
+    DEFAULT_MAX_NEW_FREQUENCY_POINTS,
+    DEFAULT_MAX_REFINEMENT_ITERATIONS,
+    DEFAULT_MAX_TOLERANCE_DB,
+    DEFAULT_PEAK_SHIFT_TOLERANCE_PERCENT,
+    DEFAULT_RMS_TOLERANCE_DB,
+    evaluate_project_rail_converged,
+)
+from spd_decap_pi._core.solver.frequency import DEFAULT_CURVATURE_THRESHOLD_DB
 from spd_decap_pi.evaluation import build_evaluation_project
 from spd_decap_pi.scenario_io import load_scenario_bundle
 
@@ -53,6 +84,9 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         help="explicit exact Touchstone header label override for one --rail-port rail",
     )
     parser.add_argument("--modal-max-index", type=int, default=10, choices=(6, 8, 10, 12))
+    parser.add_argument(
+        "--modal-ceiling-index", type=int, default=None, choices=(6, 8, 10, 12)
+    )
     parser.add_argument("--output", required=True, type=Path)
     return parser.parse_args(argv)
 
@@ -393,6 +427,13 @@ def _touchstone_metadata(
 
 def main(argv: list[str] | None = None) -> None:
     args = parse_args(argv)
+    modal_ceiling_index = (
+        args.modal_max_index
+        if args.modal_ceiling_index is None
+        else args.modal_ceiling_index
+    )
+    if modal_ceiling_index < args.modal_max_index:
+        raise ValueError("--modal-ceiling-index cannot be below --modal-max-index")
     scenario_path = args.scenario.resolve()
     touchstone_path = args.touchstone.resolve()
     output_path = args.output.resolve()
@@ -438,6 +479,22 @@ def main(argv: list[str] | None = None) -> None:
         "scenario": {"basename": args.scenario.name, "sha256": _file_hash(args.scenario)},
         "solver_version": None,
         "modal_max_index": args.modal_max_index,
+        "modal_convergence_ceiling_index": modal_ceiling_index,
+        "convergence_policy": {
+            "version": CONVERGENCE_POLICY_VERSION,
+            "max_refinement_iterations": DEFAULT_MAX_REFINEMENT_ITERATIONS,
+            "max_new_frequency_points_per_iteration": (
+                DEFAULT_MAX_NEW_FREQUENCY_POINTS
+            ),
+            "curvature_threshold_db": DEFAULT_CURVATURE_THRESHOLD_DB,
+            "rms_tolerance_db": DEFAULT_RMS_TOLERANCE_DB,
+            "max_tolerance_db": DEFAULT_MAX_TOLERANCE_DB,
+            "peak_shift_tolerance_percent": (
+                DEFAULT_PEAK_SHIFT_TOLERANCE_PERCENT
+            ),
+            "modal_start_index": args.modal_max_index,
+            "modal_ceiling_index": modal_ceiling_index,
+        },
         "touchstone": _touchstone_metadata(
             args.touchstone,
             source_network,
@@ -458,10 +515,10 @@ def main(argv: list[str] | None = None) -> None:
             project,
             rail,
             request_options={"max_mode_x": args.modal_max_index, "max_mode_y": args.modal_max_index, "worker_count": 1},
-            max_mode_x=args.modal_max_index,
-            max_mode_y=args.modal_max_index,
-            max_refinement_iterations=1,
-            max_new_frequency_points=32,
+            max_mode_x=modal_ceiling_index,
+            max_mode_y=modal_ceiling_index,
+            max_refinement_iterations=DEFAULT_MAX_REFINEMENT_ITERATIONS,
+            max_new_frequency_points=DEFAULT_MAX_NEW_FREQUENCY_POINTS,
         )
         item = comparison_metrics(
             outcome.solve.frequencies_hz,

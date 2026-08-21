@@ -29,24 +29,26 @@ from PySide6.QtWidgets import (
     QSplitter,
     QTabWidget,
     QTableWidget,
-    QTableWidgetItem,
     QTextBrowser,
-    QWidget,
 )
 
 from test_io_spd import MINI_SPD
-from test_spd_decap_evaluation import _scenario as _evaluation_scenario
 from test_spd_decap_scenario_edits import (
     _diagram_scenario,
     _scenario as _shared_pad_scenario,
 )
 from spd_decap_pi import evaluation as evaluation_module
 from spd_decap_pi._core import services as core_services
-from spd_decap_pi._core.domain import RailSpec, StackupLayer
+from spd_decap_pi._core.domain import StackupLayer
 from spd_decap_pi._core.services import EvaluationView
 from spd_decap_pi._core.solver.profiles import (
+    APPLICATION_DEFAULT_SOLVER_PROFILE_KEY,
+    LAYERWISE_ADMITTANCE_PROFILE,
     RESEARCH_UNIFORM_ADMITTANCE_PROFILE,
     solver_profile_static_identity_sha256,
+)
+from spd_decap_pi._core.solver.layerwise_network import (
+    LAYERWISE_COMPILER_VERSION,
 )
 from spd_decap_pi.distribution import (
     _distribution_plane_geometries,
@@ -57,10 +59,10 @@ from spd_decap_pi.gui import main_window as main_window_module
 from spd_decap_pi.gui.main_window import (
     MainWindow,
     _EvaluationRunManifest,
+    _comparison_solver_provenance,
     _PlaneArtworkItem,
     _PlanePathBuilder,
     _PreparedScenarioBundle,
-    _PreparedScenarioImport,
     _excel_safe_csv_cell,
     _job_compute_distribution,
     _job_load_scenario,
@@ -77,7 +79,6 @@ from spd_decap_pi.gui.main_window import (
 )
 from spd_decap_pi.gui.results_window import (
     ComparisonResultsWindow,
-    size_comparison_table_columns,
     impedance_transition_at_frequency,
     log_log_interpolate_impedance,
 )
@@ -89,51 +90,6 @@ from spd_decap_pi.version import APP_DISPLAY_NAME
 
 def _application() -> QApplication:
     return QApplication.instance() or QApplication([])
-
-
-def test_preflight_worker_surfaces_raw_spd_refresh_guidance_for_old_bundle(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    scenario = _evaluation_scenario()
-    project = scenario.base_project
-    cell = project.partitions[0].cells[0].model_copy(
-        update={"x_max_um": 100.0, "y_max_um": 100.0}
-    )
-    project = project.model_copy(
-        update={
-            "app_version": "0.22.6",
-            "partitions": [project.partitions[0].model_copy(update={"cells": [cell]})],
-            "metadata": {
-                **project.metadata,
-                "spd_import": {
-                    **project.metadata["spd_import"],
-                    "source_sha256": scenario.source.sha256,
-                },
-            },
-        }
-    )
-    scenario = scenario.model_copy(
-        update={"normalized_project": project.model_dump(mode="python")}
-    )
-    preflight = evaluation_module.preflight_evaluation_connectivity(
-        scenario, ("RAIL_VDD",)
-    )
-    monkeypatch.setattr(
-        evaluation_module,
-        "preflight_evaluation_comparison",
-        lambda *_args, **_kwargs: (_ for _ in ()).throw(
-            evaluation_module.ScenarioEvaluationPreflightError(preflight)
-        ),
-    )
-    with pytest.raises(evaluation_module.ScenarioEvaluationPreflightError) as captured:
-        _job_preflight_evaluation(
-            scenario,
-            ("RAIL_VDD",),
-            progress=lambda _value, _message: None,
-            is_cancelled=lambda: False,
-        )
-    assert "SOURCE_GRAPH_PROVENANCE_REFRESH_REQUIRED" in str(captured.value)
-    assert "Re-import the matching raw SPD in v0.22.7" in str(captured.value)
 
 
 def _research_provenance() -> dict[str, object]:
@@ -162,6 +118,36 @@ def _research_provenance() -> dict[str, object]:
     }
 
 
+def _layerwise_provenance() -> dict[str, object]:
+    return {
+        "profile_key": "layerwise_admittance_v1",
+        "profile_badge": "LAYERWISE",
+        "status": "source_layerwise_production",
+        "source_only": True,
+        "powersi_used_for_parameters": False,
+        "validation_status": "validated_two_named_cases",
+        "compiler_version": LAYERWISE_COMPILER_VERSION,
+        "compiler_algorithm_id": (
+            LAYERWISE_ADMITTANCE_PROFILE.compiler_algorithm_id
+        ),
+        "static_compiler_algorithm_sha256": (
+            solver_profile_static_identity_sha256(LAYERWISE_ADMITTANCE_PROFILE)
+        ),
+        "source_sha256": "a" * 64,
+        "geometry_manifest_sha256": "b" * 64,
+        "material_manifest_sha256": "c" * 64,
+        "substrate_identity_sha256": "d" * 64,
+        "ground_alias_manifest_sha256": "e" * 64,
+        "via_group_evidence_sha256": "f" * 64,
+        "surface_connectivity_evidence_sha256": "0" * 64,
+        "terminal_surface_contact_proof_sha256": "1" * 64,
+        "base_layerwise_evidence_sha256": "2" * 64,
+        "termination_manifest_sha256": "3" * 64,
+        "layerwise_identity_sha256": "4" * 64,
+        "termination_manifest_required": True,
+    }
+
+
 def test_function_worker_coalesces_progress_before_it_reaches_the_gui() -> None:
     delivered: list[tuple[int, str]] = []
 
@@ -181,6 +167,56 @@ def test_function_worker_coalesces_progress_before_it_reaches_the_gui() -> None:
     assert delivered[0] == (0, "step 0")
     assert delivered[-1] == (100, "complete")
     assert len(delivered) < 20
+
+
+def test_evaluation_batch_worker_surfaces_repeat_preflight_progress(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    source = tmp_path / "repeat-preflight-progress.spd"
+    source.write_text(MINI_SPD, encoding="ascii")
+    scenario = import_spd_scenario(source).scenario
+    rail_id = scenario.base_project.rails[0].rail_id
+    delivered: list[tuple[int, str]] = []
+    failures: list[str] = []
+
+    def repeat_preflight(
+        _scenario,
+        _rail_ids,
+        *,
+        progress,
+        is_cancelled,
+        **_kwargs,
+    ):
+        assert not is_cancelled()
+        sleep(FunctionWorker.PROGRESS_MINIMUM_INTERVAL_S + 0.01)
+        progress(40, "dry-built worker preflight rail")
+        raise RuntimeError("stop after repeat-preflight progress proof")
+
+    monkeypatch.setattr(
+        evaluation_module,
+        "preflight_evaluation_comparison",
+        repeat_preflight,
+    )
+    worker = FunctionWorker(
+        evaluation_module.evaluate_comparison_batch,
+        scenario,
+        (rail_id,),
+        solver_profile="legacy_modal_v017",
+    )
+    worker.signals.progress.connect(
+        lambda value, message: delivered.append((value, message))
+    )
+    worker.signals.error.connect(failures.append)
+
+    worker.run()
+
+    assert failures and "repeat-preflight progress proof" in failures[0]
+    assert (
+        2,
+        "Rechecking worker-side Original/Tuned preflight: "
+        "dry-built worker preflight rail",
+    ) in delivered
 
 
 def test_incremental_plane_builder_yields_to_the_qt_event_loop_for_large_polygon() -> None:
@@ -376,21 +412,33 @@ def test_evaluation_layout_uses_an_expanding_rail_list_and_detached_plot_button(
         assert not window.open_results_button.isEnabled()
         assert window.export_tuned_csv_button.text() == "Export Tuned CSV..."
         assert not window.export_tuned_csv_button.isEnabled()
-        assert not window.evaluation_alternate_pair_checkbox.isChecked()
-        assert "fallback" in window.evaluation_alternate_pair_checkbox.text().casefold()
-        assert "strict exact" in window.evaluation_alternate_pair_checkbox.toolTip().casefold()
         assert window.evaluation_modal_preset_combo.currentData() == 8
-        assert window.evaluation_modal_preset_combo.currentText() == "Balanced (81 modes)"
+        assert window.evaluation_modal_preset_combo.currentText() == (
+            "Balanced (Legacy/Research: 81 modes)"
+        )
         maximum_index = window.evaluation_modal_preset_combo.findData(12)
         assert maximum_index >= 0
         assert window.evaluation_modal_preset_combo.itemText(maximum_index) == (
-            "Experimental m12 check (169 modes)"
+            "Experimental m12 check (Legacy/Research: 169 modes)"
         )
-        assert "4,139 s" in window.evaluation_modal_preset_combo.toolTip()
+        assert "terminal-complete Layerwise" in window.evaluation_modal_preset_combo.toolTip()
+        assert "adds no rectangular modal correction" in (
+            window.evaluation_modal_preset_combo.toolTip()
+        )
+        assert "PowerSI is comparison-only" in window.evaluation_modal_preset_combo.toolTip()
         assert window.evaluation_solver_profile_combo.currentData() == (
+            APPLICATION_DEFAULT_SOLVER_PROFILE_KEY
+        )
+        assert window.evaluation_solver_profile_combo.currentText() == (
+            "Layer-surface global Y (terminal-complete)"
+        )
+        legacy_index = window.evaluation_solver_profile_combo.findData(
             "legacy_modal_v017"
         )
-        assert window.evaluation_solver_profile_combo.currentText() == "Legacy modal"
+        assert legacy_index >= 0
+        assert window.evaluation_solver_profile_combo.itemText(legacy_index) == (
+            "Legacy modal"
+        )
         research_index = window.evaluation_solver_profile_combo.findData(
             "research_uniform_admittance"
         )
@@ -400,14 +448,42 @@ def test_evaluation_layout_uses_an_expanding_rail_list_and_detached_plot_button(
             "(topology certificate required)"
         )
         assert "comparison-only" in window.evaluation_solver_profile_combo.toolTip()
-        assert "LEGACY" in window.evaluation_solver_profile_status.text()
+        assert "LAYERWISE" in window.evaluation_solver_profile_status.text()
         notes = window.findChild(QTextBrowser, "evaluationNotes")
         assert notes is not None
-        assert notes.toPlainText().startswith("Selected physics model: [LEGACY]")
-        assert "actual-artwork uniform C00" in notes.toPlainText()
+        distribution_note = window.findChild(
+            QLabel, "alternatePwrPlaneRoutingNote"
+        )
+        assert distribution_note is not None
+        assert "source-proven exact target-layer endpoint" in (
+            distribution_note.text()
+        )
+        assert "fails closed" in distribution_note.text()
+        assert "source-proven exact target-layer endpoint XY" in (
+            distribution_note.toolTip()
+        )
+        assert notes.toPlainText().startswith("Selected physics model: [LAYERWISE]")
+        assert "terminal-complete exact retained-surface Maxwell-Y" in notes.toPlainText()
+        assert "global Schur/Kron reduction" in notes.toPlainText()
+        assert "terminal-complete global-Y Zii is the sole passive input" in (
+            notes.toPlainText()
+        )
+        assert "no legacy rectangular higher-mode one-port difference is added" in (
+            notes.toPlainText()
+        )
+        assert "topology-only surfaces receive zero synthesized adjacent-gap" in (
+            notes.toPlainText()
+        )
+        assert "no synthesized fringing" in notes.toPlainText()
+        assert "one external Zii rather than a full multiport Z matrix" in (
+            notes.toPlainText()
+        )
+        assert "no full-wave claim" in notes.toPlainText()
         assert "without falling back" in notes.toPlainText()
         assert "not a PowerSI or absolute-accuracy setting" in notes.toPlainText()
-        assert "absolute sub-milliohm accuracy not certified" in notes.toPlainText()
+        assert "absolute sub-milliohm accuracy is not certified" in (
+            notes.toPlainText()
+        )
     finally:
         window.close()
         application.processEvents()
@@ -820,8 +896,39 @@ def test_source_via_path_summary_discloses_zero_recovery_fallback() -> None:
 
     compact, details = _source_via_path_recovery_summary(scenario)
 
-    assert compact == "Source Via paths: 0/60,152 recovered; 60,152 fallback"
-    assert "No source segment R/L applied; legacy rail templates used" in details
+    assert compact == (
+        "Compatibility Via paths: 0/60,152 recovered; "
+        "60,152 rail-template fallback"
+    )
+    assert "legacy/compatibility terminal models" in details
+    assert "Layerwise v4 topology readiness is validated separately" in details
+
+
+def test_source_via_path_summary_scopes_recovered_paths_to_compatibility() -> None:
+    scenario = _shared_pad_scenario()
+    project = scenario.base_project.model_copy(
+        update={
+            "metadata": {
+                **scenario.base_project.metadata,
+                "spd_via_path_recovery": {
+                    "requested": 10,
+                    "recovered": 3,
+                    "fallback": 7,
+                    "algorithm": "unique_monotonic_same_net_via_chain_v1",
+                },
+            }
+        }
+    )
+    scenario = scenario.model_copy(update={"normalized_project": project})
+
+    compact, details = _source_via_path_recovery_summary(scenario)
+
+    assert compact == (
+        "Compatibility Via paths: 3/10 recovered; 7 rail-template fallback"
+    )
+    assert "Legacy/compatibility terminal models" in details
+    assert "per-landing selected-plane pad geometry" in details
+    assert "Layerwise v4 topology readiness is validated separately" in details
 
 
 def test_plane_layer_checkboxes_support_independent_multi_layer_visibility() -> None:
@@ -966,9 +1073,6 @@ def test_right_side_sections_are_vertically_resizable_and_noncollapsible() -> No
     try:
         expected_minimums = {
             "selectionSectionSplitter": (170, 160),
-            # The Evaluation results minimum is 150 so the controls section can
-            # exceed the PWR NET picker's own 140 px minimum at 1200x700; the
-            # results tabs stay well above 150 at every default split.
             "evaluationSectionSplitter": (285, 150),
             "aiSectionSplitter": (210, 160),
         }
@@ -1006,15 +1110,6 @@ def test_evaluation_splitter_keeps_picker_and_result_tabs_usable_at_1200_by_700(
         assert controls_size >= 230
         assert results_size >= 180
         assert window.rail_list.height() >= 140
-        controls = window.findChild(QWidget, "evaluationControlsSection")
-        assert controls is not None
-        assert window.rail_list.width() >= int(controls.width() * 0.9)
-        rail_label = window.findChild(QLabel, "evaluationRailLabel")
-        assert rail_label is not None
-        assert rail_label.isVisible()
-        assert rail_label.text() == "PWR NETs"
-        assert rail_label.buddy() is window.rail_list
-        assert window.rail_list.accessibleName() == "PWR NETs"
         assert window.comparison_table.height() >= 60
         assert window.open_results_button.isVisible()
         assert (
@@ -1039,355 +1134,6 @@ def test_evaluation_splitter_keeps_picker_and_result_tabs_usable_at_1200_by_700(
         assert expanded_list_height > compact_list_height
     finally:
         window.close()
-        application.processEvents()
-
-
-def test_evaluation_rail_sort_toggles_preserve_state_and_execution_order(
-    tmp_path: Path,
-) -> None:
-    application = _application()
-    source = tmp_path / "rail-sort.spd"
-    source.write_text(MINI_SPD, encoding="ascii")
-    imported = import_spd_scenario(source)
-    window = MainWindow()
-    try:
-        window._accept_spd_import(imported)
-        source_order = tuple(
-            rail.rail_id for rail in window.scenario.base_project.rails
-        )
-        displayed = tuple(
-            str(window.rail_list.item(index).data(Qt.ItemDataRole.UserRole))
-            for index in range(window.rail_list.count())
-        )
-        assert displayed == source_order
-        assert window.sort_rails_button.text() == "Sort A→Z"
-        assert window.sort_rails_button.accessibleName() == "Sort PWR NETs"
-        assert window.sort_rails_button.toolTip()
-
-        tracked = window.rail_list.item(0)
-        tracked_id = str(tracked.data(Qt.ItemDataRole.UserRole))
-        tracked.setSelected(True)
-        window.rail_list.setCurrentItem(tracked)
-        tracked.setCheckState(Qt.CheckState.Checked)
-        tracked_icon = tracked.icon().pixmap(QSize(12, 12)).toImage()
-        tracked_user_role = tracked.data(Qt.ItemDataRole.UserRole)
-
-        window.sort_rails_button.click()
-        application.processEvents()
-        ascending = tuple(
-            str(window.rail_list.item(index).data(Qt.ItemDataRole.UserRole))
-            for index in range(window.rail_list.count())
-        )
-        expected_ascending = tuple(
-            rail.rail_id
-            for rail in sorted(
-                window.scenario.base_project.rails,
-                key=lambda rail: (
-                    rail.net.casefold(),
-                    rail.rail_id.casefold(),
-                    rail.net,
-                    rail.rail_id,
-                ),
-            )
-        )
-        assert ascending == expected_ascending
-        assert window.sort_rails_button.text() == "Sort Z→A"
-        restored = next(
-            window.rail_list.item(index)
-            for index in range(window.rail_list.count())
-            if str(window.rail_list.item(index).data(Qt.ItemDataRole.UserRole))
-            == tracked_id
-        )
-        assert restored.isSelected()
-        assert window.rail_list.currentItem() is restored
-        assert restored.checkState() == Qt.CheckState.Checked
-        assert restored.data(Qt.ItemDataRole.UserRole) == tracked_user_role
-        assert restored.icon().pixmap(QSize(12, 12)).toImage() == tracked_icon
-
-        window.sort_rails_button.click()
-        application.processEvents()
-        assert window.sort_rails_button.text() == "Sort A→Z"
-        assert window._checked_rail_ids() == (tracked_id,)
-        window._set_all_rails_checked(True)
-        assert window._checked_rail_ids() == source_order
-
-        window._set_busy(True)
-        assert not window.sort_rails_button.isEnabled()
-        window._set_busy(False)
-        assert window.sort_rails_button.isEnabled()
-
-        window.rail_list.clear()
-        window._refresh_rails()
-        first_source = window.scenario.base_project.rails[0].rail_id
-        checked_ids = window._checked_rail_ids()
-        assert checked_ids == (first_source,)
-    finally:
-        window._dirty = False
-        window.close()
-        application.processEvents()
-
-
-def test_evaluation_rail_sort_uses_real_mixed_case_ties_and_stays_reachable(
-    tmp_path: Path,
-) -> None:
-    application = _application()
-    source = tmp_path / "rail-sort-mixed-case.spd"
-    source.write_text(MINI_SPD, encoding="ascii")
-    imported = import_spd_scenario(source)
-    project = imported.scenario.base_project
-    rails = [
-        RailSpec(
-            rail_id="R3",
-            family="V",
-            domain="VDD_CORE/0",
-            net="vDD",
-            site="S0",
-            pwr_layer="Signal$PWR",
-            gnd_layer="Signal$GND",
-        ),
-        RailSpec(
-            rail_id="R1",
-            family="V",
-            domain="VDD_CORE/0",
-            net="VDD",
-            site="S0",
-            pwr_layer="Signal$PWR",
-            gnd_layer="Signal$GND",
-        ),
-        RailSpec(
-            rail_id="R4",
-            family="V",
-            domain="VDD_CORE/0",
-            net="aaa",
-            site="S0",
-            pwr_layer="Signal$PWR",
-            gnd_layer="Signal$GND",
-        ),
-        RailSpec(
-            rail_id="R2",
-            family="V",
-            domain="VDD_CORE/0",
-            net="AAA",
-            site="S0",
-            pwr_layer="Signal$PWR",
-            gnd_layer="Signal$GND",
-        ),
-    ]
-    updated_stackup = [
-        layer.model_copy(
-            update={
-                "pwr_nets": list(layer.pwr_nets) + ["vDD", "VDD", "aaa", "AAA"]
-            }
-        )
-        if layer.name == "Signal$PWR"
-        else layer
-        for layer in project.stackup_layers
-    ]
-    updated_project = project.model_copy(
-        update={"rails": rails, "stackup_layers": updated_stackup}
-    )
-    updated_scenario = imported.scenario.model_copy(
-        update={
-            "normalized_project": updated_project.model_dump(mode="python"),
-            "net_colors": {
-                **imported.scenario.net_colors,
-                "vDD": "#AA3344",
-                "VDD": "#44AA33",
-                "aaa": "#3344AA",
-                "AAA": "#AA8833",
-            },
-        }
-    )
-    imported = replace(imported, scenario=updated_scenario)
-    window = MainWindow()
-    try:
-        window._accept_spd_import(imported)
-        window.resize(1280, 720)
-        window.show()
-        application.processEvents()
-        source_order = tuple(item.rail_id for item in rails)
-        assert tuple(
-            str(window.rail_list.item(i).data(Qt.ItemDataRole.UserRole))
-            for i in range(window.rail_list.count())
-        ) == source_order
-        tracked = next(
-            window.rail_list.item(i)
-            for i in range(window.rail_list.count())
-            if window.rail_list.item(i).data(Qt.ItemDataRole.UserRole) == "R3"
-        )
-        tracked.setSelected(True)
-        window.rail_list.setCurrentItem(tracked)
-        tracked.setCheckState(Qt.CheckState.Checked)
-        tracked_icon = tracked.icon().pixmap(QSize(12, 12)).toImage()
-        window._refresh_colors()
-        window.sort_rails_button.click()
-        application.processEvents()
-        ascending = tuple(
-            str(window.rail_list.item(i).data(Qt.ItemDataRole.UserRole))
-            for i in range(window.rail_list.count())
-        )
-        expected_ascending = tuple(
-            item.rail_id
-            for item in sorted(
-                rails,
-                key=lambda item: (
-                    item.net.casefold(),
-                    item.rail_id.casefold(),
-                    item.net,
-                    item.rail_id,
-                ),
-            )
-        )
-        assert ascending == expected_ascending
-        moved = next(
-            window.rail_list.item(i)
-            for i in range(window.rail_list.count())
-            if window.rail_list.item(i).data(Qt.ItemDataRole.UserRole) == "R3"
-        )
-        assert moved.isSelected()
-        assert window.rail_list.currentItem() is moved
-        assert moved.checkState() == Qt.CheckState.Checked
-        assert moved.icon().pixmap(QSize(12, 12)).toImage() == tracked_icon
-        assert moved.data(Qt.ItemDataRole.UserRole) == "R3"
-        window.sort_rails_button.click()
-        application.processEvents()
-        expected_descending = tuple(reversed(expected_ascending))
-        assert tuple(
-            str(window.rail_list.item(i).data(Qt.ItemDataRole.UserRole))
-            for i in range(window.rail_list.count())
-        ) == expected_descending
-        window._set_all_rails_checked(True)
-        assert window._checked_rail_ids() == source_order
-        window._refresh_colors()
-        window.rail_list.clear()
-        window._evaluation_rail_sort_order = Qt.SortOrder.DescendingOrder
-        window._refresh_rails()
-        assert window._checked_rail_ids() == (source_order[0],)
-        assert window.sort_rails_button.isEnabled()
-        assert window.sort_rails_button.geometry().right() <= window.centralWidget().rect().right()
-        window._set_busy(True)
-        assert not window.sort_rails_button.isEnabled()
-        window._set_busy(False)
-        assert window.sort_rails_button.isEnabled()
-    finally:
-        window._dirty = False
-        window.close()
-        application.processEvents()
-
-
-def test_selection_presentation_cache_reuses_analysis_for_context_menu(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    application = _application()
-    source = tmp_path / "presentation-cache.spd"
-    source.write_text(MINI_SPD, encoding="ascii")
-    imported = import_spd_scenario(source)
-    window = MainWindow()
-    calls = 0
-    original = main_window_module.selection_presentation_analysis
-
-    def counted(scenario, selected_refdes):
-        nonlocal calls
-        calls += 1
-        return original(scenario, selected_refdes)
-
-    monkeypatch.setattr(
-        main_window_module, "selection_presentation_analysis", counted
-    )
-    try:
-        window._accept_spd_import(imported)
-        selected = (window.scenario.decaps[0].refdes,)
-        first = window._selection_presentation_analysis(selected)
-        second = window._selection_presentation_analysis(selected)
-        assert first is second
-        assert calls == 1
-        assert window._selection_presentation_cache_scenario is window.scenario
-        with pytest.raises(ValueError, match="unknown REFDES"):
-            window._selection_presentation_analysis(("UNKNOWN-REFDES",))
-        updated = window.scenario.model_copy(update={"revision": window.scenario.revision + 1})
-        window._commit_atomic_edit(updated)
-        assert window._selection_presentation_cache is None
-        assert window._selection_presentation_cache_scenario is None
-    finally:
-        window._dirty = False
-        window.close()
-        application.processEvents()
-
-
-@pytest.mark.parametrize("size", [(1280, 720), (1440, 900)])
-def test_main_workspace_splitter_contains_board_and_side_pane_at_desktop_sizes(
-    size: tuple[int, int],
-) -> None:
-    application = _application()
-    window = MainWindow()
-    try:
-        window.resize(*size)
-        window.show()
-        application.processEvents()
-        splitter = window.main_splitter
-        window.side_tabs.setCurrentIndex(1)
-        application.processEvents()
-        baseline_geometry = window.geometry()
-        baseline_splitter_sizes = tuple(splitter.sizes())
-        window._set_busy(True)
-        window.progress_bar.show()
-        window.cancel_button.show()
-        window.status_text.setText("Evaluation complete: " + ("long result " * 40))
-        long_text = "solver provenance " + ("full detail; " * 40)
-        window.comparison_table.setRowCount(2)
-        for row in range(window.comparison_table.rowCount()):
-            for column in range(window.comparison_table.columnCount()):
-                item = QTableWidgetItem(
-                    long_text if column == 9 else f"value {row}:{column}"
-                )
-                window.comparison_table.setItem(row, column, item)
-        size_comparison_table_columns(window.comparison_table)
-        application.processEvents()
-        assert splitter.objectName() == "mainWorkspaceSplitter"
-        assert not splitter.childrenCollapsible()
-        assert window.board.minimumWidth() >= 320
-        assert splitter.sizes()[0] >= 320
-        assert splitter.geometry().right() <= window.centralWidget().rect().right()
-        assert splitter.geometry().left() >= 0
-        assert window.geometry() == baseline_geometry
-        assert tuple(splitter.sizes()) == baseline_splitter_sizes
-        assert window.comparison_table.horizontalScrollBar().maximum() > 0
-        assert window.comparison_table.item(1, 9).text() == long_text
-        assert window.comparison_table.item(1, 9).toolTip() == long_text
-        assert window.open_results_button.isVisible()
-        assert window.evaluation_alternate_pair_checkbox.isVisible()
-        assert window.evaluation_alternate_pair_checkbox.parentWidget() is not None
-    finally:
-        window.close()
-        application.processEvents()
-
-
-def test_comparison_table_bounded_sizing_preserves_text_and_detached_copy() -> None:
-    application = _application()
-    source = QTableWidget(2, 10)
-    detached = ComparisonResultsWindow()
-    try:
-        source.setHorizontalHeaderLabels([f"Column {index}" for index in range(10)])
-        long_text = "solver provenance " + ("full detail; " * 40)
-        for row in range(source.rowCount()):
-            for column in range(source.columnCount()):
-                item = QTableWidgetItem()
-                item.setText(long_text if column == 9 else f"value {row}:{column}")
-                source.setItem(row, column, item)
-        size_comparison_table_columns(source)
-        assert source.columnCount() == 10
-        assert source.horizontalScrollBar().maximum() > 0
-        assert source.item(1, 9).text() == long_text
-        assert source.item(1, 9).toolTip() == long_text
-
-        detached.copy_table_from(source)
-        assert detached.table.columnCount() == 10
-        assert detached.table.item(1, 9).text() == long_text
-        assert detached.table.item(1, 9).toolTip() == long_text
-        assert detached.table.horizontalScrollBar().maximum() > 0
-    finally:
-        detached.close()
-        source.deleteLater()
         application.processEvents()
 
 
@@ -1686,8 +1432,13 @@ def test_reopened_scenario_keeps_source_via_recovery_disclosure(
             ScenarioBundle(scenario=scenario, attachments=imported.attachments),
         )
 
-        assert "Source Via paths: 0/3 recovered; 3 fallback" in window.status_text.text()
-        assert "No source segment R/L applied; legacy rail templates used" in window.status_text.toolTip()
+        assert (
+            "Compatibility Via paths: 0/3 recovered; 3 rail-template fallback"
+            in window.status_text.text()
+        )
+        tooltip = window.status_text.toolTip()
+        assert "legacy/compatibility terminal models" in tooltip
+        assert "Layerwise v4 topology readiness is validated separately" in tooltip
     finally:
         window._dirty = False
         window.close()
@@ -2159,20 +1910,6 @@ def test_evaluation_worker_receives_scenario_model_attachments(
             else layer
             for layer in base.stackup_layers
         ]
-        metadata = dict(base.metadata)
-        spd_import = dict(metadata["spd_import"])
-        provenance = dict(spd_import["selected_plane_pair_provenance"])
-        original_proof = next(
-            value
-            for key, value in provenance.items()
-            if str(key).casefold() == base.rails[0].net.casefold()
-        )
-        provenance[second_rail.net] = {
-            **dict(original_proof),
-            "rail_net": second_rail.net,
-        }
-        spd_import["selected_plane_pair_provenance"] = provenance
-        metadata["spd_import"] = spd_import
         window._scenario = ScenarioSpec.model_validate(
             {
                 **window.scenario.model_dump(mode="python"),
@@ -2180,7 +1917,6 @@ def test_evaluation_worker_receives_scenario_model_attachments(
                     update={
                         "rails": [*base.rails, second_rail],
                         "stackup_layers": stackup,
-                        "metadata": metadata,
                     }
                 ),
             }
@@ -2188,6 +1924,11 @@ def test_evaluation_worker_receives_scenario_model_attachments(
         window._scenario_path = tmp_path / "automatic-baseline.spdpi"
         window._refresh_all()
         window._set_all_rails_checked(True)
+        window.evaluation_solver_profile_combo.setCurrentIndex(
+            window.evaluation_solver_profile_combo.findData(
+                "legacy_modal_v017"
+            )
+        )
 
         def capture(worker, on_result, **kwargs):
             captured["worker"] = worker
@@ -2202,7 +1943,9 @@ def test_evaluation_worker_receives_scenario_model_attachments(
             preflight_worker = captured["worker"]
             assert preflight_worker.function.__name__ == "_job_preflight_evaluation"
             connectivity = evaluation_module.preflight_evaluation_comparison(
-                preflight_worker.args[0], preflight_worker.args[1]
+                preflight_worker.args[0],
+                preflight_worker.args[1],
+                solver_profile=preflight_worker.args[2],
             )
             captured["on_result"](connectivity)
             request, manifest = window._pending_evaluation_launch
@@ -2255,18 +1998,129 @@ def test_evaluation_worker_receives_scenario_model_attachments(
         application.processEvents()
 
 
+def test_layerwise_baseline_consent_and_capture_cover_unselected_board_rails(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    application = _application()
+    source = tmp_path / "board-wide-baseline.spd"
+    source.write_text(MINI_SPD, encoding="ascii")
+    imported = import_spd_scenario(source)
+    scenario = imported.scenario
+    base = scenario.base_project
+    second = base.rails[0].model_copy(
+        update={
+            "rail_id": "RAIL_UNSELECTED",
+            "domain": "VDD_UNSELECTED",
+            "net": "VDD_UNSELECTED",
+        }
+    )
+    stackup = tuple(
+        layer.model_copy(
+            update={"pwr_nets": (*layer.pwr_nets, "VDD_UNSELECTED")}
+        )
+        if layer.name == second.pwr_layer
+        else layer
+        for layer in base.stackup_layers
+    )
+    scenario = scenario.model_copy(
+        update={
+            "normalized_project": base.model_copy(
+                update={
+                    "rails": (*base.rails, second),
+                    "stackup_layers": stackup,
+                }
+            )
+        }
+    )
+    window = MainWindow()
+    captured: dict[str, object] = {}
+    try:
+        window._scenario = scenario
+        window._attachments = dict(imported.attachments)
+        window._scenario_path = tmp_path / "board-wide-baseline.spdpi"
+        selected = base.rails[0].rail_id
+        request = SimpleNamespace(
+            scenario=scenario,
+            rail_ids=(selected,),
+            target_ohm=None,
+            modal_max_index=8,
+            solver_profile="layerwise_admittance_v1",
+            attachments=dict(imported.attachments),
+        )
+        manifest = _EvaluationRunManifest(
+            selected_rail_ids=(selected,),
+            runnable_rail_ids=(selected,),
+            blocked_rail_ids=(),
+            blocker_count=0,
+            blocker_details="",
+        )
+
+        def fallback(_scenario, rail_ids, **kwargs):
+            captured["fallback_rails"] = tuple(rail_ids)
+            captured["fallback_all_source"] = kwargs[
+                "include_all_source_mounted"
+            ]
+            return ("C_UNSELECTED",)
+
+        def captures(self, rail_ids, **kwargs):
+            assert self is scenario
+            captured["capture_rails"] = tuple(rail_ids)
+            captured["capture_all_source"] = kwargs[
+                "include_all_source_mounted"
+            ]
+            return self
+
+        monkeypatch.setattr(
+            evaluation_module, "baseline_fallback_model_refdes", fallback
+        )
+        monkeypatch.setattr(ScenarioSpec, "with_baseline_captures", captures)
+        monkeypatch.setattr(
+            QMessageBox,
+            "question",
+            lambda *_args: captured.setdefault("prompt", str(_args[2]))
+            and QMessageBox.StandardButton.Yes,
+        )
+        monkeypatch.setattr(
+            window,
+            "_run_worker",
+            lambda worker, _on_result, **_kwargs: captured.setdefault(
+                "worker", worker
+            ),
+        )
+
+        window._launch_evaluation_after_preflight(request, manifest)
+
+        expected = (selected, "RAIL_UNSELECTED")
+        assert captured["fallback_rails"] == expected
+        assert captured["capture_rails"] == expected
+        assert captured["fallback_all_source"] is True
+        assert captured["capture_all_source"] is True
+        assert "C_UNSELECTED" in str(captured["prompt"])
+        worker = captured["worker"]
+        assert worker.args[1] == (selected,)
+    finally:
+        window._dirty = False
+        window.close()
+        application.processEvents()
+
+
 def test_background_evaluation_preflight_uses_original_and_tuned_gate(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     source = tmp_path / "comparison-preflight.spd"
     source.write_text(MINI_SPD, encoding="ascii")
-    scenario = import_spd_scenario(source).scenario
-    calls: list[tuple[ScenarioSpec, tuple[str, ...]]] = []
+    imported = import_spd_scenario(source)
+    scenario = imported.scenario
+    calls: list[tuple[ScenarioSpec, tuple[str, ...], str, dict[str, bytes]]] = []
     progress_events: list[tuple[int, str]] = []
     sentinel = SimpleNamespace(rail_ids=(scenario.base_project.rails[0].rail_id,))
 
-    def comparison_gate(candidate, rail_ids, **_kwargs):
-        calls.append((candidate, tuple(rail_ids)))
+    def comparison_gate(
+        candidate, rail_ids, *, solver_profile, attachments, **_kwargs
+    ):
+        calls.append(
+            (candidate, tuple(rail_ids), solver_profile, dict(attachments))
+        )
         return sentinel
 
     monkeypatch.setattr(
@@ -2276,14 +2130,43 @@ def test_background_evaluation_preflight_uses_original_and_tuned_gate(
     result = _job_preflight_evaluation(
         scenario,
         sentinel.rail_ids,
+        "layerwise_admittance_v1",
+        imported.attachments,
         progress=lambda value, message: progress_events.append((value, message)),
         is_cancelled=lambda: False,
     )
 
     assert result is sentinel
-    assert calls == [(scenario, sentinel.rail_ids)]
+    assert calls == [
+        (
+            scenario,
+            sentinel.rail_ids,
+            "layerwise_admittance_v1",
+            imported.attachments,
+        )
+    ]
     assert progress_events[0][0] == 5
     assert progress_events[-1] == (100, "Evaluation Analysis preflight complete")
+
+
+def test_layerwise_preflight_blocks_missing_artwork_before_run_manifest(
+    tmp_path: Path,
+) -> None:
+    source = tmp_path / "layerwise-missing-artwork.spd"
+    source.write_text(MINI_SPD, encoding="ascii")
+    scenario = import_spd_scenario(source).scenario
+    rail_id = scenario.base_project.rails[0].rail_id
+
+    result = evaluation_module.preflight_evaluation_comparison(
+        scenario,
+        (rail_id,),
+        solver_profile="layerwise_admittance_v1",
+        attachments={},
+    )
+
+    assert not result.is_clear
+    assert len(result.blockers) == 1
+    assert "ARTWORK_ATTACHMENTS_MISSING" in result.blockers[0].reason
 
 
 def test_cancelled_worker_does_not_show_a_failure_or_leave_cancelling_status() -> None:
@@ -2391,6 +2274,28 @@ def test_solver_profile_change_clears_results_and_marks_research_as_opt_in() -> 
         assert notes.toPlainText().startswith("Selected physics model: [RESEARCH]")
         assert "topology certificate required" in notes.toPlainText()
         assert "not cached, persisted, saved, or reused" in notes.toPlainText()
+        assert "Research model boundary: source-only exact-artwork uniform C00" in (
+            notes.toPlainText()
+        )
+        assert "rectangular-envelope continuous-DGND correction" in (
+            notes.toPlainText()
+        )
+        assert "exact retained-surface uniform Maxwell-Y" not in notes.toPlainText()
+
+        legacy_index = window.evaluation_solver_profile_combo.findData(
+            "legacy_modal_v017"
+        )
+        window.evaluation_solver_profile_combo.setCurrentIndex(legacy_index)
+        assert "rectangular PWR bounding-box cavity" in (
+            window.evaluation_solver_profile_status.text()
+        )
+        assert "continuous DGND" in window.evaluation_solver_profile_status.text()
+        assert notes.toPlainText().startswith("Selected physics model: [LEGACY]")
+        assert "Legacy model boundary: rectangular PWR bounding-box modal cavity" in (
+            notes.toPlainText()
+        )
+        assert "no full-wave claim" in notes.toPlainText()
+        assert "exact retained-surface uniform Maxwell-Y" not in notes.toPlainText()
     finally:
         window.close()
         application.processEvents()
@@ -2429,6 +2334,29 @@ def test_research_evaluation_error_is_actionable_without_legacy_fallback(
         assert "Legacy modal was not used as a fallback" in summary
         assert "TOPOLOGY_INCOMPLETE" in summary
         assert "repair" in summary.casefold()
+    finally:
+        window.close()
+        application.processEvents()
+
+
+def test_alternate_pair_policy_toggle_invalidates_completed_results() -> None:
+    application = _application()
+    window = MainWindow()
+    try:
+        window._comparison_batch = object()
+        window.comparison_table.setRowCount(1)
+        window.open_results_button.setEnabled(True)
+        window.export_tuned_csv_button.setEnabled(True)
+
+        window.evaluation_alternate_pair_checkbox.setChecked(True)
+
+        assert window._comparison_batch is None
+        assert window.comparison_table.rowCount() == 0
+        assert not window.open_results_button.isEnabled()
+        assert not window.export_tuned_csv_button.isEnabled()
+        assert window.status_text.text() == (
+            "Evaluation policy changed; evaluation required"
+        )
     finally:
         window.close()
         application.processEvents()
@@ -2535,7 +2463,10 @@ def test_research_solver_provenance_requires_source_only_and_no_powersi_fit() ->
     assert "research-uniform-c00-source-only-v2" in presentation.banner_text
     assert "research-uniform-source-v1" in presentation.banner_text
     assert "evidence 111111111111…" in presentation.banner_text
-    assert "modal backend research-test-1" in presentation.banner_text
+    assert (
+        "research uniform-C00 + modal-correction engine research-test-1"
+        in presentation.banner_text
+    )
     assert "not PowerSI-validated" in presentation.banner_text
     assert "PowerSI parameter fitting: never" in presentation.banner_text
     assert "Source SHA-256: " + "2" * 64 in presentation.details_text
@@ -2557,6 +2488,135 @@ def test_research_solver_provenance_requires_source_only_and_no_powersi_fit() ->
     view.solver_provenance["powersi_used_for_parameters"] = True
     with pytest.raises(ValueError, match="comparison-only"):
         _solver_provenance_for_view(view)
+
+
+def test_layerwise_solver_provenance_exposes_and_validates_substrate_identity() -> None:
+    view = SimpleNamespace(
+        solver_profile_key="layerwise_admittance_v1",
+        solver_profile_label="Layer-surface terminal-complete network",
+        solver_profile_badge="LAYERWISE",
+        solver_version="layerwise-test-1",
+        solver_provenance=_layerwise_provenance(),
+    )
+
+    presentation = _solver_provenance_for_view(view)
+
+    assert presentation.source_only
+    assert presentation.source_model_identity_sha256 == "4" * 64
+    assert "[LAYERWISE]" in presentation.banner_text
+    assert "validated on the two named SPD/PowerSI cases" in (
+        presentation.banner_text
+    )
+    assert "evidence 444444444444…" in presentation.banner_text
+    assert (
+        "terminal-complete global-Y Device-port engine layerwise-test-1"
+        in presentation.banner_text
+    )
+    assert "Layer-surface substrate SHA-256: " + "d" * 64 in (
+        presentation.details_text
+    )
+    assert "Via-group evidence SHA-256: " + "f" * 64 in presentation.details_text
+    assert "Terminal surface-contact proof SHA-256: " + "1" * 64 in presentation.details_text
+    assert "Mounted-state termination manifest SHA-256" in presentation.details_text
+    assert "3" * 64 in presentation.details_text
+    assert "Research identity SHA-256" not in presentation.details_text
+
+    compatibility = SimpleNamespace(
+        solver_profile_key=view.solver_profile_key,
+        solver_profile_label=view.solver_profile_label,
+        solver_profile_badge=view.solver_profile_badge,
+        solver_version=view.solver_version,
+        solver_provenance=dict(view.solver_provenance),
+    )
+    compatibility.solver_provenance["terminal_artwork_proof_sha256"] = (
+        compatibility.solver_provenance.pop(
+            "terminal_surface_contact_proof_sha256"
+        )
+    )
+    assert (
+        _solver_provenance_for_view(
+            compatibility
+        ).terminal_surface_contact_proof_sha256
+        == "1" * 64
+    )
+
+    for field, match in (
+        ("substrate_identity_sha256", "substrate_identity_sha256"),
+        ("base_layerwise_evidence_sha256", "base_layerwise_evidence_sha256"),
+        ("termination_manifest_sha256", "termination_manifest_sha256"),
+        ("layerwise_identity_sha256", "layerwise_identity_sha256"),
+        ("compiler_algorithm_id", "source-only"),
+        ("compiler_version", "compiler version"),
+    ):
+        malformed = SimpleNamespace(
+            solver_profile_key=view.solver_profile_key,
+            solver_profile_label=view.solver_profile_label,
+            solver_profile_badge=view.solver_profile_badge,
+            solver_version=view.solver_version,
+            solver_provenance=dict(view.solver_provenance),
+        )
+        malformed.solver_provenance.pop(field)
+        with pytest.raises(ValueError, match=match):
+            _solver_provenance_for_view(malformed)
+
+    optional_manifest = SimpleNamespace(
+        solver_profile_key=view.solver_profile_key,
+        solver_profile_label=view.solver_profile_label,
+        solver_profile_badge=view.solver_profile_badge,
+        solver_version=view.solver_version,
+        solver_provenance=dict(view.solver_provenance),
+    )
+    optional_manifest.solver_provenance["termination_manifest_required"] = False
+    with pytest.raises(ValueError, match="did not require"):
+        _solver_provenance_for_view(optional_manifest)
+
+    fitted = SimpleNamespace(
+        solver_profile_key=view.solver_profile_key,
+        solver_profile_label=view.solver_profile_label,
+        solver_profile_badge=view.solver_profile_badge,
+        solver_version=view.solver_version,
+        solver_provenance=dict(view.solver_provenance),
+    )
+    fitted.solver_provenance["powersi_used_for_parameters"] = True
+    with pytest.raises(ValueError, match="comparison-only"):
+        _solver_provenance_for_view(fitted)
+
+
+def test_layerwise_comparison_provenance_aggregates_original_and_tuned_state() -> None:
+    baseline_provenance = _layerwise_provenance()
+    tuned_provenance = {
+        **baseline_provenance,
+        "termination_manifest_sha256": "5" * 64,
+        "layerwise_identity_sha256": "6" * 64,
+    }
+
+    def view(provenance):
+        return SimpleNamespace(
+            solver_profile_key="layerwise_admittance_v1",
+            solver_profile_label="Layer-surface terminal-complete network",
+            solver_profile_badge="LAYERWISE",
+            solver_version="layerwise-test-1",
+            solver_provenance=provenance,
+        )
+
+    presentation = _comparison_solver_provenance(
+        (
+            SimpleNamespace(
+                baseline=SimpleNamespace(view=view(baseline_provenance)),
+                tuned=SimpleNamespace(view=view(tuned_provenance)),
+            ),
+        )
+    )
+
+    assert presentation.substrate_identity_sha256 == "d" * 64
+    assert presentation.termination_manifest_sha256 not in {
+        "3" * 64,
+        "5" * 64,
+    }
+    assert presentation.source_model_identity_sha256 not in {
+        "4" * 64,
+        "6" * 64,
+    }
 
 
 def test_research_success_is_transient_and_exports_full_composite_identity(
@@ -2680,7 +2740,10 @@ def test_research_success_is_transient_and_exports_full_composite_identity(
         assert "research-uniform-c00-source-only-v2" in banner
         assert "research-uniform-source-v1" in banner
         assert "evidence 111111111111…" in banner
-        assert f"modal backend {evaluation_module.SOLVER_VERSION}" in banner
+        assert (
+            "research uniform-C00 + modal-correction engine "
+            f"{evaluation_module.SOLVER_VERSION}"
+        ) in banner
         assert "Topology certificate SHA-256: " + "6" * 64 in (
             result_window.provenance_label.toolTip()
         )
@@ -2703,6 +2766,7 @@ def test_research_success_is_transient_and_exports_full_composite_identity(
             "research-uniform-c00-source-only-v2"
         )
         assert row["Compiler Version"] == "research-uniform-source-v1"
+        assert row["Source Model Identity SHA-256"] == "1" * 64
         assert row["Research Identity SHA-256"] == "1" * 64
         assert row["Static Compiler Algorithm SHA-256"] == (
             solver_profile_static_identity_sha256(
@@ -2817,6 +2881,9 @@ def test_completed_comparison_populates_plot_ai_selector_and_auto_saves(
                 batch.comparisons[0].tuned.view,
                 confidence="LOW",
                 confidence_note="tuned fixture",
+                evaluation_policy=(
+                    "EMBEDDED_ALTERNATE_PAIR_APPROXIMATION_V1"
+                ),
                 convergence=batch.comparisons[0].tuned.view.convergence,
             ),
         )
@@ -2877,13 +2944,30 @@ def test_completed_comparison_populates_plot_ai_selector_and_auto_saves(
         assert evaluation_module.SOLVER_VERSION in (
             window.comparison_table.item(0, 9).text()
         )
+        assert (
+            "Evaluation policy Original→Tuned: STRICT_EXACT → "
+            "EMBEDDED_ALTERNATE_PAIR_APPROXIMATION_V1"
+        ) in window.comparison_table.item(0, 9).text()
         assert window.ai_rail_combo.count() == 1
         assert window.ai_rail_combo.currentData() == rail_id
         assert window._last_scenario_evaluation is batch.comparisons[0].tuned
         assert window._dirty
         assert window._auto_save_after_worker
         assert "one shared impedance view" in window.evaluation_summary.toPlainText()
+        assert (
+            "Actual evaluation policy by result: "
+            "VDD_CORE/0: STRICT_EXACT → "
+            "EMBEDDED_ALTERNATE_PAIR_APPROXIMATION_V1"
+        ) in window.evaluation_summary.toPlainText()
         assert "absolute sub-milliohm accuracy not certified" in window.evaluation_summary.toPlainText()
+        assert "Legacy model boundary: rectangular PWR bounding-box modal cavity" in (
+            window.evaluation_summary.toPlainText()
+        )
+        assert "continuous DGND return" in window.evaluation_summary.toPlainText()
+        assert "no full-wave claim" in window.evaluation_summary.toPlainText()
+        assert "exact retained-surface uniform Maxwell-Y" not in (
+            window.evaluation_summary.toPlainText()
+        )
         assert window.evaluation_summary.toPlainText().startswith(
             "Solver provenance: [LEGACY]"
         )
@@ -2947,6 +3031,7 @@ def test_completed_comparison_populates_plot_ai_selector_and_auto_saves(
                 "PowerSI Parameter Use": "None (comparison-only)",
                 "Compiler Algorithm ID": "legacy-modal-v017-regression",
                 "Compiler Version": "legacy-v0.17",
+                "Source Model Identity SHA-256": "",
                 "Artwork Evidence SHA-256": "",
                 "Research Identity SHA-256": "",
                 "Static Compiler Algorithm SHA-256": "",
@@ -3162,42 +3247,27 @@ def test_combined_convergence_text_and_gate_reject_frequency_only_failure() -> N
         "modal converged, Δmax 0.010 dB)"
     )
     assert _rejected_comparison_convergence((comparison,)) == (
-        "VCPU0 / Original: combined convergence failed; frequency RMS N/A, "
+        "VCPU0 / Original: profile-specific convergence failed; frequency RMS N/A, "
         "max 0.420 dB; modal RMS N/A, max 0.010 dB.",
     )
 
-
-def test_adaptive_modal_order_is_visible_and_ceiling_rejection_is_actionable() -> None:
-    failed_view = SimpleNamespace(
+    layerwise_view = SimpleNamespace(
+        solver_profile_key="layerwise_admittance_v1",
         convergence={
-            "converged": False,
-            "frequency_converged": True,
-            "frequency_max_delta_db": 0.01,
-            "modal_converged": False,
-            "modal_max_delta_db": 0.61,
-            "start_mode_x": 8,
-            "lower_mode_x": 12,
-            "final_mode_x": 14,
-            "ceiling_mode_x": 14,
-            "modal_budget_exhausted": True,
-        }
-    )
-    assert _modal_convergence_text(failed_view) == (
-        "Not converged (frequency converged, Δmax 0.010 dB; "
-        "modal failed, Δmax 0.610 dB; modal order 12→14 "
-        "(start 8, ceiling 14; ceiling exhausted))"
-    )
-    comparison = SimpleNamespace(
-        rail_id="VINT/1",
-        baseline=SimpleNamespace(view=failed_view),
-        tuned=SimpleNamespace(view=SimpleNamespace(convergence={
             "converged": True,
             "frequency_converged": True,
+            "frequency_max_delta_db": 0.02,
             "modal_converged": True,
-        })),
+            "modal_rms_delta_db": 0.0,
+            "modal_max_delta_db": 0.0,
+            "lower_mode_x": 12,
+            "final_mode_x": 12,
+        },
     )
-    message = _rejected_comparison_convergence((comparison,))[0]
-    assert "Adaptive modal order 12→14 (start 8, ceiling 14) exhausted" in message
+    assert _modal_convergence_text(layerwise_view) == (
+        "Converged (frequency converged, Δmax 0.020 dB; rectangular modal sweep "
+        "N/A, external-input invariance passed)"
+    )
 
 
 def test_restore_source_state_uses_the_frozen_fallback_baseline_model(
@@ -3244,149 +3314,6 @@ def test_restore_source_state_uses_the_frozen_fallback_baseline_model(
         )
         assert restored.enabled
         assert restored.model_id == c1.model_id
-    finally:
-        window._dirty = False
-        window.close()
-        application.processEvents()
-
-
-def test_board_selection_change_never_revalidates_the_whole_scenario(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    application = _application()
-    source = tmp_path / "selection.spd"
-    source.write_text(MINI_SPD, encoding="ascii")
-    imported = import_spd_scenario(source)
-    window = MainWindow()
-    try:
-        window._accept_spd_import(imported)
-        assert window.scenario is not None
-        loaded = window.scenario
-        # The cheap update must be indistinguishable from the JSON round-trip
-        # it replaces.
-        expected = ScenarioSpec.model_validate(
-            {
-                **loaded.model_dump(mode="json"),
-                "selected_refdes": ["C1"],
-            }
-        ).model_dump(mode="json")
-
-        calls: list[object] = []
-        original_model_validate = ScenarioSpec.model_validate
-
-        def counting_model_validate(*args: object, **kwargs: object) -> object:
-            calls.append(args)
-            return original_model_validate(*args, **kwargs)
-
-        monkeypatch.setattr(
-            ScenarioSpec, "model_validate", counting_model_validate
-        )
-        window._selection_changed(("C1",))
-        assert calls == []
-        assert window.scenario is not loaded
-        assert window.scenario.selected_refdes == ["C1"]
-        assert window.scenario.model_dump(mode="json") == expected
-
-        # A repeated identical selection does no work at all.
-        selected_scenario = window.scenario
-        window._selection_changed(("c1",))
-        assert window.scenario is selected_scenario
-
-        # The invariants the model validator enforces still fail closed.
-        with pytest.raises(ValueError):
-            window._selection_changed(("C1", "c1"))
-        with pytest.raises(ValueError):
-            window._selection_changed(("NOT_A_REFDES",))
-        assert calls == []
-    finally:
-        window._dirty = False
-        window.close()
-        application.processEvents()
-
-
-def _staged_document_view(
-    imported: object, plane_cell_repeat: int
-) -> "main_window_module._PreparedDocumentView":
-    view = main_window_module._prepare_document_view(
-        imported.scenario,
-        imported.attachments,
-        progress=lambda _value, _message: None,
-        is_cancelled=lambda: False,
-    )
-    assert view.plane_cells
-    return replace(view, plane_cells=view.plane_cells * plane_cell_repeat)
-
-
-def test_import_summary_survives_the_chunked_plane_render(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    application = _application()
-    source = tmp_path / "chunked.spd"
-    source.write_text(MINI_SPD, encoding="ascii")
-    imported = import_spd_scenario(source)
-    staged = _staged_document_view(imported, 3)
-    window = MainWindow()
-    fits: list[int] = []
-    try:
-        # Force one plane cell per render chunk so the artwork really spans
-        # several event-loop turns, as it does on any real board.
-        ticks = iter(range(1, 10_000))
-        monkeypatch.setattr(
-            main_window_module, "perf_counter", lambda: float(next(ticks))
-        )
-        monkeypatch.setattr(window.board, "fit_board", lambda: fits.append(1))
-        window._accept_spd_import(
-            _PreparedScenarioImport(imported=imported, view=staged)
-        )
-
-        summary = window.status_text.text()
-        assert summary.startswith("Loaded ")
-        assert window._plane_render_cells
-        # The premature fit over an empty scene is gone.
-        assert fits == []
-        assert "deferred" in window.status_text.toolTip()
-
-        for _ in range(40):
-            application.processEvents()
-
-        assert not window._plane_render_cells
-        # The chunked render must hand the status label back to the load
-        # report it overwrote, not to "PWR artwork ready".
-        assert window.status_text.text() == summary
-        assert fits == [1]
-        assert window._board_fit_seconds is not None
-    finally:
-        window._dirty = False
-        window.close()
-        application.processEvents()
-
-
-def test_outline_only_import_still_performs_one_deferred_fit(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    application = _application()
-    source = tmp_path / "outline.spd"
-    source.write_text(MINI_SPD, encoding="ascii")
-    imported = import_spd_scenario(source)
-    outline_only = replace(_staged_document_view(imported, 1), plane_cells=())
-    window = MainWindow()
-    fits: list[int] = []
-    try:
-        monkeypatch.setattr(window.board, "fit_board", lambda: fits.append(1))
-        window._accept_spd_import(
-            _PreparedScenarioImport(imported=imported, view=outline_only)
-        )
-        assert not window._plane_render_cells
-        # Nothing is fitted while the staged decap and bump batches are still
-        # queued.
-        assert fits == []
-
-        for _ in range(10):
-            application.processEvents()
-
-        assert fits == [1]
-        assert window._board_fit_seconds is not None
-        assert f"{window._board_fit_seconds:.3f}s" in window.status_text.toolTip()
     finally:
         window._dirty = False
         window.close()

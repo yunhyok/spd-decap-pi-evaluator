@@ -1,4 +1,8 @@
-# Distribution MLO evidence and vertical-XY policy
+# Historical v0.22.2 Distribution MLO evidence and vertical-XY policy
+
+> This document is historical. It is superseded by
+> [`DECAP_DISTRIBUTION_TRANSITION_POLICY_2026-08-11.md`](DECAP_DISTRIBUTION_TRANSITION_POLICY_2026-08-11.md)
+> and must not be used as the current Distribution contract.
 
 ## v0.22.2 Distribution behavior
 

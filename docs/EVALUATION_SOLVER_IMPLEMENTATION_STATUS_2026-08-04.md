@@ -1,5 +1,10 @@
 # Evaluation Solver Implementation Status
 
+> Historical v0.18.1 status. v0.22.0 supersedes the production-path statements
+> below with the source-derived layer-surface global Schur/Kron profile. See
+> `EVALUATION_LAYER_SURFACE_VALIDATION_2026-08-06.md` for the current release
+> identity, convergence policy, and evidence.
+
 - Date: 2026-08-04
 - Release: v0.18.1 (prerelease)
 - Scope: Evaluation Analysis only; De-cap Distribution behavior is unchanged.

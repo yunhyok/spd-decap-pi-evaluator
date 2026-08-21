@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import replace
 from hashlib import sha256
 import json
+from pathlib import Path
 from time import perf_counter
 from types import SimpleNamespace
 
@@ -32,6 +33,7 @@ from spd_decap_pi._core.domain import (
 from spd_decap_pi.distribution import (
     DistributionDistanceMode,
     DistributionError,
+    DistributionOptimizationPolicy,
     DistributionPlanStatus,
     _is_feasible_milp_start,
     apply_distribution_plan,
@@ -81,6 +83,7 @@ from spd_decap_pi.routing_obstacles import (
     routing_attachment_name,
     stackup_fingerprint,
 )
+from spd_decap_pi.scenario_io import load_scenario, save_scenario
 
 
 def _rail(rail_id: str) -> RailSpec:
@@ -1961,8 +1964,8 @@ def test_distribution_projection_expands_only_whole_decap_exchange_rails(
     assert seen == {"required": {"r2"}, "alternate": {"r2"}}
 
 
-def test_batch_via_eligibility_uses_immutable_landing_not_bent_path_endpoint() -> None:
-    """A lower-layer endpoint cannot move a physical decap landing sideways."""
+def test_batch_via_eligibility_uses_exact_staggered_target_layer_endpoint() -> None:
+    """A source-proven lateral transition moves the lower landing."""
 
     geometry = SpdPlaneGeometry(
         layer="PWR_ALT",
@@ -2003,14 +2006,125 @@ def test_batch_via_eligibility_uses_immutable_landing_not_bent_path_endpoint() -
     choices = {("v1", "pwr_alt", "gnd"): ((_rail("R1"), "VT1"),)}
 
     result = distribution_module._distribution_batch_via_eligibility(
-        (geometry,), (landing,), choices
+        (geometry,),
+        (landing,),
+        choices,
+        pwr_layer_order={"top": 0, "pwr_alt": 3},
+    )
+
+    assert set(result["V1"]) == {"R1"}
+
+
+def test_protected_batch_rejects_staggered_path_without_segment_clearance_proof() -> None:
+    """Endpoint-only routing clearance cannot certify a laterally staggered path."""
+
+    geometry = SpdPlaneGeometry(
+        layer="PWR_ALT",
+        net="V1",
+        positive_polygons_um=(((40.0, 0.0), (60.0, 0.0), (60.0, 10.0), (40.0, 10.0)),),
+        negative_polygons_um=(),
+        primitive_order=(("positive_polygon", 0),),
+    )
+    landing = ScenarioViaLanding(
+        via_id="V1", net="V1", endpoint_node_id="N1", padstack="P",
+        x_um=0.0, y_um=5.0,
+        path_evidence=(
+            ScenarioViaPathEvidence(
+                target_layer="PWR_ALT", target_node_id="N2", target_padstack="P2",
+                target_pad_kind="CIRCLE", target_pad_width_um=1.0,
+                target_pad_height_um=1.0, x_um=50.0, y_um=5.0,
+                segments=(ScenarioViaSegment(
+                    via_id="V1", padstack="P", drill_diameter_um=1.0,
+                    start_layer="TOP", end_layer="PWR_ALT", length_um=1.0,
+                    end_x_um=50.0, end_y_um=5.0,
+                ),),
+            ),
+        ),
+    )
+    asset = RoutingObstacleAsset(
+        source_sha256="a" * 64,
+        stackup_fingerprint="b" * 64,
+        conductor_layers=("TOP", "PWR_ALT", "GND"),
+        segments=(RoutingTraceSegment(
+            trace_id="TRACE-ENDPOINT", net="SIG", layer="PWR_ALT",
+            x1_um=40.0, y1_um=5.0, x2_um=60.0, y2_um=5.0, width_um=1.0,
+            width_source=TraceWidthSource.INLINE,
+            net_role=RoutingNetRole.SIGNAL,
+            provenance=RoutingObjectProvenance.PHYSICAL_ROUTING,
+        ),),
+        layer_completeness=tuple(
+            RoutingLayerCompleteness(layer=item)
+            for item in ("TOP", "PWR_ALT", "GND")
+        ),
+        via_profiles=(PlannedViaProfile(
+            profile_id="VT1",
+            radius_um_by_layer=(("TOP", 1.0), ("PWR_ALT", 1.0), ("GND", 1.0)),
+        ),),
+    )
+    evidence: list[object] = []
+    result = distribution_module._distribution_batch_via_eligibility(
+        (geometry,),
+        (landing,),
+        {("v1", "pwr_alt", "gnd"): ((_rail("R1"), "VT1"),)},
+        pwr_layer_order={"top": 0, "pwr_alt": 1, "gnd": 2},
+        routing_asset=asset,
+        routing_policy=SignalTraceAvoidancePolicy.fixed(0.0),
+        routing_evidence=evidence,  # type: ignore[arg-type]
     )
 
     assert result == {"V1": {}}
+    assert evidence and getattr(evidence[0], "state").value == "UNKNOWN"
+    assert getattr(evidence[0], "x_um") == 50.0
+    assert getattr(evidence[0], "detail").code == "ROUTING_PATH_UNRESOLVED"
+
+    returning = landing.path_evidence[0]
+    first_segment = returning.segments[0].model_copy(
+        update={"end_layer": "MID", "end_x_um": 50.0, "end_y_um": 5.0}
+    )
+    second_segment = returning.segments[0].model_copy(
+        update={
+            "start_layer": "MID",
+            "end_layer": "PWR_ALT",
+            "end_x_um": 0.0,
+            "end_y_um": 5.0,
+        }
+    )
+    returning_landing = landing.model_copy(
+        update={
+            "path_evidence": (
+                returning.model_copy(
+                    update={
+                        "x_um": 0.0,
+                        "segments": (first_segment, second_segment),
+                    }
+                ),
+            )
+        }
+    )
+    returning_evidence: list[object] = []
+    returning_result = distribution_module._distribution_batch_via_eligibility(
+        (
+            replace(
+                geometry,
+                positive_polygons_um=(
+                    ((-10.0, 0.0), (10.0, 0.0), (10.0, 10.0), (-10.0, 10.0)),
+                ),
+            ),
+        ),
+        (returning_landing,),
+        {("v1", "pwr_alt", "gnd"): ((_rail("R1"), "VT1"),)},
+        pwr_layer_order={"top": 0, "pwr_alt": 1, "gnd": 2},
+        routing_asset=asset,
+        routing_policy=SignalTraceAvoidancePolicy.fixed(0.0),
+        routing_evidence=returning_evidence,  # type: ignore[arg-type]
+    )
+    assert returning_result == {"V1": {}}
+    assert returning_evidence
+    assert getattr(returning_evidence[0], "detail").code == "ROUTING_PATH_UNRESOLVED"
 
 
-def test_batch_vertical_projection_ignores_mlo_transition_evidence() -> None:
-    """MLO transition evidence does not block immutable-XY projection."""
+def test_batch_vertical_projection_requires_exact_target_layer_evidence() -> None:
+    """Non-TOP copper without exact path evidence fails closed."""
 
     geometry = SpdPlaneGeometry(
         layer="PWR_ALT",
@@ -2046,8 +2160,7 @@ def test_batch_vertical_projection_ignores_mlo_transition_evidence() -> None:
         choices,
     )
 
-    assert set(result["V-CONV"]) == {"R1"}
-    assert set(result["V-MLO"]) == {"R1"}
+    assert result == {"V-CONV": {}, "V-MLO": {}}
 
 
 def test_batch_vertical_projection_still_fails_closed_without_geometry_dependency(
@@ -2197,22 +2310,19 @@ def _non_top_direct_transition_scenario(
     )
 
 
-def test_direct_planner_ignores_observed_microvia_without_projection() -> None:
+def test_direct_planner_requires_projection_for_observed_microvia() -> None:
     scenario = _non_top_direct_transition_scenario(path_kind="microvia")
     targets = {("R1", "M1"): 0, ("R2", "M1"): 1}
 
-    plan = compute_distribution_plan(scenario, targets)
+    with pytest.raises(DistributionError) as error:
+        compute_distribution_plan(scenario, targets)
 
-    assert plan.status == DistributionPlanStatus.FULL
-    assert plan.assignment_map == {"C1": "R2"}
-    assert (
-        plan.via_projection_policy
-        == distribution_module.DISTRIBUTION_VIA_PROJECTION_POLICY
-    )
+    assert error.value.code == "POWER_PROJECTION_REQUIRED"
+    assert error.value.diagnostics[0].code == "MLO_TRANSITION_RECIPE_REQUIRED"
 
 
-def test_legacy_missing_policy_and_path_is_accepted_by_vertical_projection() -> None:
-    """Pathless legacy landings use the fixed vertical planning policy."""
+def test_legacy_missing_policy_and_path_requires_reimport_or_projection() -> None:
+    """Pathless real-SPD landings require exact-layer re-import evidence."""
 
     scenario = _non_top_direct_transition_scenario(
         path_kind=None,
@@ -2231,9 +2341,10 @@ def test_legacy_missing_policy_and_path_is_accepted_by_vertical_projection() -> 
     )
     assert rejection is not None
     assert rejection[0] == REIMPORT_SOURCE_FOR_TRANSITION_EVIDENCE_CODE
-    direct_plan = compute_distribution_plan(scenario, targets)
-    assert direct_plan.status == DistributionPlanStatus.FULL
-    assert direct_plan.assignment_map == {"C1": "R2"}
+    with pytest.raises(DistributionError) as error:
+        compute_distribution_plan(scenario, targets)
+    assert error.value.code == "POWER_PROJECTION_REQUIRED"
+    assert error.value.diagnostics[0].code == "POWER_PROJECTION_REQUIRED"
     plane = SpdPlaneGeometry(
         layer="PWR_ALT",
         net="V2",
@@ -2257,12 +2368,12 @@ def test_legacy_missing_policy_and_path_is_accepted_by_vertical_projection() -> 
         targets,
         power_projection=projection,
     )
-    assert plan.status == DistributionPlanStatus.FULL
-    assert plan.assignment_map == {"C1": "R2"}
+    assert plan.status == DistributionPlanStatus.PARTIAL
+    assert plan.assignment_map == {}
 
 
-def test_legacy_conventional_path_without_policy_remains_eligible() -> None:
-    """Explicit continuous evidence is sufficient without board-level policy."""
+def test_real_spd_conventional_path_requires_projection_and_matches_projected_plan() -> None:
+    """Real-SPD non-TOP moves require the exact projection even when conventional."""
 
     scenario = _non_top_direct_transition_scenario(
         path_kind="conventional",
@@ -2281,9 +2392,9 @@ def test_legacy_conventional_path_without_policy_remains_eligible() -> None:
         is None
     )
     targets = {("R1", "M1"): 0, ("R2", "M1"): 1}
-    direct_plan = compute_distribution_plan(scenario, targets)
-    assert direct_plan.status == DistributionPlanStatus.FULL
-    assert direct_plan.assignment_map == {"C1": "R2"}
+    with pytest.raises(DistributionError) as error:
+        compute_distribution_plan(scenario, targets)
+    assert error.value.code == "POWER_PROJECTION_REQUIRED"
     plane = SpdPlaneGeometry(
         layer="PWR_ALT",
         net="V2",
@@ -2851,8 +2962,8 @@ def test_mlo_policy_metadata_is_fail_closed_when_malformed(raw_policy: object) -
     )
 
 
-def test_batch_via_eligibility_accepts_target_copper_below_existing_via_span() -> None:
-    """A filled-Cu microvia rebuild may target deeper exact PWR copper."""
+def test_batch_via_eligibility_requires_evidence_for_exact_target_layer() -> None:
+    """Evidence for another layer cannot imply an unproven column."""
 
     geometry = SpdPlaneGeometry(
         layer="PWR_ALT",
@@ -2906,11 +3017,11 @@ def test_batch_via_eligibility_accepts_target_copper_below_existing_via_span() -
         pwr_layer_order={"top": 0, "pwr": 1, "pwr_alt": 3},
     )
 
-    assert set(result["V1"]) == {"R1"}
+    assert result == {"V1": {}}
 
 
-def test_batch_via_eligibility_does_not_depend_on_existing_via_span() -> None:
-    """A prior same-XY segment is tolerated but is not permission evidence."""
+def test_batch_via_eligibility_does_not_infer_intermediate_span_landing() -> None:
+    """A deeper endpoint is not evidence for an intermediate layer."""
 
     geometry = SpdPlaneGeometry(
         layer="PWR_ALT",
@@ -2932,9 +3043,8 @@ def test_batch_via_eligibility_does_not_depend_on_existing_via_span() -> None:
         y_um=5.0,
         path_evidence=(
             ScenarioViaPathEvidence(
-                # The recovered path terminates farther down-stack at the
-                # same XY, so its vertical segment proves this existing Via
-                # crosses PWR_ALT.
+                # The recovered path terminates farther down-stack. It does
+                # not identify the physical landing coordinate on PWR_ALT.
                 target_layer="PWR_DEEP",
                 target_node_id="N2",
                 target_padstack="P2",
@@ -2967,11 +3077,11 @@ def test_batch_via_eligibility_does_not_depend_on_existing_via_span() -> None:
         pwr_layer_order={"top": 0, "pwr_alt": 3, "pwr_deep": 5},
     )
 
-    assert set(result["V1"]) == {"R1"}
+    assert result == {"V1": {}}
 
 
-def test_batch_via_eligibility_ignores_lateral_path_evidence() -> None:
-    """A lateral path neither moves nor blocks an otherwise valid landing."""
+def test_batch_via_eligibility_rejects_copper_only_at_top_coordinate() -> None:
+    """Non-TOP copper must contain the transitioned endpoint, not TOP XY."""
 
     geometry = SpdPlaneGeometry(
         layer="PWR_ALT",
@@ -3025,11 +3135,11 @@ def test_batch_via_eligibility_ignores_lateral_path_evidence() -> None:
         pwr_layer_order={"top": 0, "pwr_alt": 3},
     )
 
-    assert set(result["V1"]) == {"R1"}
+    assert result == {"V1": {}}
 
 
-def test_batch_via_eligibility_ignores_trace_assisted_path_evidence() -> None:
-    """Trace metadata does not alter immutable-XY copper permission."""
+def test_batch_via_eligibility_accepts_unique_trace_assisted_path_evidence() -> None:
+    """A unique trace hop remains source-proven target-layer reachability."""
 
     geometry = SpdPlaneGeometry(
         layer="PWR_ALT",
@@ -3081,6 +3191,94 @@ def test_batch_via_eligibility_ignores_trace_assisted_path_evidence() -> None:
         (geometry,),
         (landing,),
         choices,
+        pwr_layer_order={"top": 0, "pwr_alt": 3},
+    )
+
+    assert set(result["V1"]) == {"R1"}
+
+
+def test_batch_via_eligibility_rejects_ambiguous_trace_alternate_exit() -> None:
+    geometry = SpdPlaneGeometry(
+        layer="PWR_ALT",
+        net="V1",
+        positive_polygons_um=(
+            ((0.0, 0.0), (10.0, 0.0), (10.0, 10.0), (0.0, 10.0)),
+        ),
+        negative_polygons_um=(),
+        positive_circles_um=(),
+        negative_circles_um=(),
+        primitive_order=(("positive_polygon", 0),),
+    )
+    landing = ScenarioViaLanding(
+        via_id="V1",
+        net="V1",
+        endpoint_node_id="N1",
+        padstack="P",
+        x_um=5.0,
+        y_um=5.0,
+        path_evidence=(
+            ScenarioViaPathEvidence(
+                target_layer="PWR_ALT",
+                target_node_id="N2",
+                target_padstack="P2",
+                target_pad_kind="CIRCLE",
+                target_pad_width_um=1.0,
+                target_pad_height_um=1.0,
+                x_um=5.0,
+                y_um=5.0,
+                segments=(
+                    ScenarioViaSegment(
+                        via_id="V1",
+                        padstack="P",
+                        drill_diameter_um=1.0,
+                        start_layer="TOP",
+                        end_layer="PWR_ALT",
+                        length_um=1.0,
+                        end_x_um=5.0,
+                        end_y_um=5.0,
+                    ),
+                ),
+                trace_hops=1,
+                trace_alternate_exit=True,
+            ),
+        ),
+    )
+
+    result = distribution_module._distribution_batch_via_eligibility(
+        (geometry,),
+        (landing,),
+        {("v1", "pwr_alt", "gnd"): ((_rail("R1"), "VT1"),)},
+        pwr_layer_order={"top": 0, "pwr_alt": 3},
+    )
+
+    assert result == {"V1": {}}
+
+
+def test_batch_via_eligibility_uses_source_landing_on_top() -> None:
+    geometry = SpdPlaneGeometry(
+        layer="TOP",
+        net="V1",
+        positive_polygons_um=(
+            ((0.0, 0.0), (10.0, 0.0), (10.0, 10.0), (0.0, 10.0)),
+        ),
+        negative_polygons_um=(),
+        positive_circles_um=(),
+        negative_circles_um=(),
+        primitive_order=(("positive_polygon", 0),),
+    )
+    landing = ScenarioViaLanding(
+        via_id="V1",
+        net="V1",
+        endpoint_node_id="N1",
+        padstack="P",
+        x_um=5.0,
+        y_um=5.0,
+    )
+
+    result = distribution_module._distribution_batch_via_eligibility(
+        (geometry,),
+        (landing,),
+        {("v1", "top", "gnd"): ((_rail("R1"), "VT1"),)},
         pwr_layer_order={"top": 0, "pwr_alt": 3},
     )
 
@@ -3190,6 +3388,7 @@ def test_batch_via_eligibility_keeps_legacy_off_order_and_protected_mount_side()
     )
 
     assert result["V1"]["R1"].pwr_layer == "PWR"
+    assert result["V1"]["R1"].destination_pwr_layer == "TOP"
     assert "TOP" in str(result["V1"]["R1"].reason)
 
     bottom = distribution_module._distribution_batch_via_eligibility(
@@ -3200,7 +3399,7 @@ def test_batch_via_eligibility_keeps_legacy_off_order_and_protected_mount_side()
         mount_side_by_via={"v1": "BOTTOM"},
     )
 
-    assert bottom["V1"]["R1"].destination_pwr_layer is None
+    assert bottom["V1"]["R1"].destination_pwr_layer == "TOP"
     assert "TOP" in str(bottom["V1"]["R1"].reason)
 
     asset = RoutingObstacleAsset(
@@ -3300,7 +3499,134 @@ def test_shared_chain_full_demand_accepts_feasible_status_one_incumbent(
     assert plan.fulfilled_count == 1
 
 
-def test_distribution_projection_uses_unselected_internal_power_plane_for_direct_donor() -> None:
+def test_secondary_stage_timeout_without_incumbent_retains_validated_prior_solution(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    original_solver = distribution_module._milp_with_optional_start
+    timeout_count = 0
+    gap_timeout_active = False
+
+    def timeout_gap_proof_without_incumbent(c, **kwargs):
+        nonlocal gap_timeout_active, timeout_count
+        objective = np.asarray(c, dtype=float)
+        integrality = np.asarray(kwargs["integrality"])
+        nonzero = objective[objective != 0.0]
+        if (
+            np.any(integrality != 0)
+            and not np.any(objective != 0.0)
+        ):
+            gap_timeout_active = True
+            timeout_count += 1
+            return OptimizeResult(
+                status=1,
+                success=False,
+                message="fixture secondary proof timeout without incumbent",
+                x=None,
+                fun=None,
+            )
+        if (
+            gap_timeout_active
+            and np.any(integrality != 0)
+            and kwargs.get("start") is not None
+            and bool(nonzero.size)
+            and np.all(nonzero == 1.0)
+        ):
+            timeout_count += 1
+            return OptimizeResult(
+                status=1,
+                success=False,
+                message="fixture exact gap timeout without incumbent",
+                x=None,
+                fun=None,
+            )
+        return original_solver(c, **kwargs)
+
+    monkeypatch.setattr(
+        distribution_module,
+        "_milp_with_optional_start",
+        timeout_gap_proof_without_incumbent,
+    )
+    plan = compute_distribution_plan(
+        _shared_chain_scenario(),
+        {("R1", "M1"): 1, ("R2", "M1"): 1},
+        optimization_policy=DistributionOptimizationPolicy.MIN_GAPS,
+    )
+
+    assert timeout_count == 2
+    assert plan.status == DistributionPlanStatus.FULL
+    assert plan.fulfilled_count == 1
+    assert any(
+        item.code == "GAP_OPTIMIZATION_FALLBACK" for item in plan.diagnostics
+    )
+
+
+def test_gap_deadline_without_result_retains_exact_validated_prior_solution(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    scenario = _shared_chain_scenario()
+    original_solver = distribution_module._milp_with_optional_start
+    clock = 0.0
+    gap_probe_exhausted_deadline = False
+
+    def fake_monotonic() -> float:
+        return clock
+
+    def exhaust_deadline_during_gap_probe(c, **kwargs):
+        nonlocal clock, gap_probe_exhausted_deadline
+        objective = np.asarray(c, dtype=float)
+        integrality = np.asarray(kwargs["integrality"])
+        if (
+            not gap_probe_exhausted_deadline
+            and np.any(integrality != 0)
+            and not np.any(objective != 0.0)
+        ):
+            gap_probe_exhausted_deadline = True
+            # The gap stage has a 30-second deadline for this small fixture.
+            # Advancing beyond it leaves `result` as None, which is the exact
+            # path observed in the real replay rather than a returned timeout
+            # result with x=None.
+            clock = 100.0
+            return OptimizeResult(
+                status=1,
+                success=False,
+                message="fixture gap proof exhausted the block deadline",
+                x=None,
+                fun=None,
+            )
+        return original_solver(c, **kwargs)
+
+    monkeypatch.setattr(distribution_module, "monotonic", fake_monotonic)
+    monkeypatch.setattr(
+        distribution_module,
+        "_milp_with_optional_start",
+        exhaust_deadline_during_gap_probe,
+    )
+
+    plan = compute_distribution_plan(
+        scenario,
+        {("R1", "M1"): 1, ("R2", "M1"): 1},
+        optimization_policy=DistributionOptimizationPolicy.MIN_GAPS,
+    )
+
+    assert gap_probe_exhausted_deadline
+    assert plan.status == DistributionPlanStatus.FULL
+    assert plan.fulfilled_count == 1
+    assert plan.assignment_map == {"A0": "R2"}
+    assert plan.isolation_gap_refdes == ("D1",)
+    assert any(
+        item.code == "GAP_OPTIMIZATION_FALLBACK" for item in plan.diagnostics
+    )
+
+    applied = apply_distribution_plan(scenario, plan)
+    by_refdes = {item.refdes: item for item in applied.decaps}
+    assert by_refdes["A0"].current_rail_id == "R2"
+    assert by_refdes["D1"].pad_state.value == "ISOLATION_GAP"
+    assert applied.design_fingerprint == plan.output_design_fingerprint
+
+
+def test_distribution_projection_uses_unselected_internal_power_plane_for_direct_donor(
+    tmp_path: Path,
+) -> None:
     """Distribution must not discard a real lower plane because Evaluation chose TOP."""
 
     scenario = _direct_scenario(
@@ -3376,7 +3702,7 @@ def test_distribution_projection_uses_unselected_internal_power_plane_for_direct
     projected = projection.projected_decaps[0].eligibility["R2"]
     assert projected.pwr_layer == "TOP"
     assert projected.gnd_layer == "GND1"
-    assert projected.destination_pwr_layer is None
+    assert projected.destination_pwr_layer == "PWR_ALT"
     assert "PWR_ALT" in str(projected.reason)
     plan = compute_distribution_plan(
         scenario,
@@ -3385,6 +3711,18 @@ def test_distribution_projection_uses_unselected_internal_power_plane_for_direct
     )
     assert plan.status == DistributionPlanStatus.FULL
     assert plan.assignment_map == {"C1": "R2"}
+    applied = apply_distribution_plan(
+        scenario,
+        plan,
+        power_projection=projection,
+    )
+    archive = save_scenario(applied, tmp_path / "projected-exact-layer.spdpi")
+    restored = load_scenario(archive)
+    assert restored.decaps[0].current_rail_id == "R2"
+    assert (
+        restored.decaps[0].eligibility["R2"].destination_pwr_layer
+        == "PWR_ALT"
+    )
 
 
 def test_distribution_plane_data_is_immutable_after_projection_plan_apply() -> None:
@@ -4109,6 +4447,60 @@ def test_fixed_separator_distance_fallback_still_honors_mode(
     assert "DISTANCE_JOINT_OPTIMIZATION_DEFERRED" in diagnostic_codes
     assert "DISTANCE_FIXED_SEPARATOR_FALLBACK" in diagnostic_codes
     assert "DISTANCE_OPTIMIZATION_FALLBACK" not in diagnostic_codes
+
+
+@pytest.mark.parametrize(
+    ("optimization_policy", "gap_penalty_um", "expected_distance_calls"),
+    (
+        (DistributionOptimizationPolicy.BALANCED_AUTO, None, 1),
+        (DistributionOptimizationPolicy.BALANCED_CUSTOM, 1_000.0, 1),
+        (DistributionOptimizationPolicy.MIN_GAPS, None, 2),
+    ),
+)
+def test_distance_no_incumbent_remains_fail_closed(
+    monkeypatch: pytest.MonkeyPatch,
+    optimization_policy: DistributionOptimizationPolicy,
+    gap_penalty_um: float | None,
+    expected_distance_calls: int,
+) -> None:
+    original_solver = distribution_module._milp_with_optional_start
+    distance_call_count = 0
+
+    def no_distance_incumbent(c, **kwargs):
+        nonlocal distance_call_count
+        objective = np.asarray(c, dtype=float)
+        nonzero = objective[objective != 0.0]
+        is_distance_objective = bool(nonzero.size) and not bool(
+            np.all(np.abs(nonzero) == 1.0)
+        )
+        if not is_distance_objective:
+            return original_solver(c, **kwargs)
+        distance_call_count += 1
+        return OptimizeResult(
+            status=1,
+            success=False,
+            message="fixture distance timeout without incumbent",
+            x=None,
+            fun=None,
+        )
+
+    monkeypatch.setattr(
+        distribution_module,
+        "_milp_with_optional_start",
+        no_distance_incumbent,
+    )
+
+    with pytest.raises(DistributionError) as caught:
+        compute_distribution_plan(
+            _shared_chain_scenario(),
+            {("R1", "M1"): 1, ("R2", "M1"): 2},
+            optimization_policy=optimization_policy,
+            gap_penalty_um=gap_penalty_um,
+        )
+
+    assert distance_call_count == expected_distance_calls
+    assert caught.value.code == "DISTANCE_OPTIMIZER_FAILED"
+    assert "no arbitrary assignment was emitted" in str(caught.value)
 
 
 def test_exchange_tolerance_counts_cluster_members_and_never_strands_dummy() -> None:

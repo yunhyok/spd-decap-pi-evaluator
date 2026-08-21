@@ -1,5 +1,9 @@
 # De-cap Distribution v0.20.0 validation
 
+> Historical validation only. Its immutable TOP-XY vertical rebuild assumption
+> was superseded on 2026-08-11 by the source-proven exact-layer transition policy
+> in `docs/DECAP_DISTRIBUTION_TRANSITION_POLICY_2026-08-11.md`.
+
 ## Scope
 
 This validation covers De-cap Distribution only. Evaluation Analysis remains

@@ -17,7 +17,7 @@ DISTRIBUTION_TARGET_SHEET = "PWR NET Distribution Targets"
 DISTRIBUTION_METADATA_TITLE = "Distribution Run Metadata"
 DISTRIBUTION_LEGACY_OFF_WORKBOOK_FORMAT_VERSION = 3
 DISTRIBUTION_WORKBOOK_FORMAT_VERSION = 5
-DISTRIBUTION_VIA_PROJECTION_POLICY = "VERTICAL_XY_ASSUME_DESCENT_V1"
+DISTRIBUTION_VIA_PROJECTION_POLICY = "SOURCE_PROVEN_TARGET_LAYER_TRANSITION_V1"
 DISTRIBUTION_TOLERANCE_SEMANTICS = "TARGET_RELATION_COUNTERFLOW_V1"
 
 TargetKey = tuple[str, str]
@@ -119,8 +119,9 @@ class DistributionTargetImport:
                 f"{self.optimization_policy}; effective gap penalty {penalty}."
             )
         lines.append(
-            "Via projection policy: straight vertical descent at immutable PWR "
-            "landing XY (MLO transition evidence is not a Distribution gate)."
+            "Via projection policy: TOP uses the source landing; each non-TOP "
+            "target requires source-proven exact-layer transition evidence and "
+            "its retained endpoint XY."
         )
         if self.routing_protection_enabled:
             lines.append(
@@ -503,6 +504,16 @@ def load_distribution_targets(
         )
 
     raw_via_projection_policy = metadata.get("via projection policy")
+    if format_version is None or format_version < DISTRIBUTION_WORKBOOK_FORMAT_VERSION:
+        raise DistributionWorkbookError(
+            "legacy Distribution workbook requires re-export as format 5 with "
+            "source-proven target-layer transition metadata"
+        )
+    if raw_via_projection_policy in (None, ""):
+        raise DistributionWorkbookError(
+            "format 5 workbook is missing Via Projection Policy; re-export the "
+            "targets after reopening the source SPD"
+        )
     via_projection_policy = (
         str(raw_via_projection_policy).strip().upper()
         if raw_via_projection_policy not in (None, "")

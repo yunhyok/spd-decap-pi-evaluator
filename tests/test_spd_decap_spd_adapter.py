@@ -13,9 +13,11 @@ from test_spd_decap_evaluation import _scenario
 from spd_decap_pi import spd_adapter
 from spd_decap_pi._core import services as core_services
 from spd_decap_pi._core.domain import (
+    MLOOutline,
     MixedReferenceCertificate,
     PinKind,
     PinRecord,
+    ProjectSpec,
     StackupLayer,
     TerminalKind,
 )
@@ -24,13 +26,29 @@ from spd_decap_pi._core.io.shared_pad import (
     SpdDecapConnection,
     SpdSharedPadCluster,
 )
-from spd_decap_pi._core.io.spd import SpdImportError, analyze_spd
+from spd_decap_pi._core.io.spd import (
+    SpdFiniteViaQuotientCoverage,
+    SpdFiniteViaScenarioIsolationCoverage,
+    SpdImportError,
+    SpdPlaneGeometry,
+    SpdViaIslandPairCoverage,
+    analyze_spd,
+)
 from spd_decap_pi._core.services import WorkspaceState, import_cap_spice
 from spd_decap_pi.scenario import (
     SHARED_PAD_ANALYSIS_VERSION,
     mixed_reference_ground_landing_identity,
 )
 from spd_decap_pi.scenario_io import ScenarioFormatError, save_scenario
+from spd_decap_pi.raw_spatial_contact_asset import (
+    RAW_SPATIAL_CONTACT_ASSET_METADATA_KEY,
+    load_raw_spatial_contact_asset,
+)
+from spd_decap_pi.compiled_topology_asset import (
+    COMPILED_TOPOLOGY_ASSET_METADATA_KEY,
+    load_compiled_topology_asset,
+)
+from spd_decap_pi.eligibility import IndexedPlaneGeometry
 from spd_decap_pi.routing_obstacles import (
     MLO_LANDING_CLASS_CONVENTIONAL_THROUGH_VIA,
     MLO_LANDING_CLASS_SHORT_SPAN_VIA,
@@ -51,6 +69,19 @@ from spd_decap_pi.spd_adapter import (
     _via_target_layers_by_net,
     import_spd_scenario,
 )
+from spd_decap_pi.surface_certificate_asset import (
+    SURFACE_CERTIFICATE_COMPILED_ONLY_SCHEMA,
+    SURFACE_CERTIFICATE_METADATA_KEY,
+)
+
+
+def _canonical_owner_digest(*owner_ids: str) -> str:
+    digest = sha256()
+    for owner_id in sorted(owner_ids, key=lambda value: (value.casefold(), value)):
+        encoded = owner_id.casefold().encode("utf-8")
+        digest.update(len(encoded).to_bytes(4, "big"))
+        digest.update(encoded)
+    return digest.hexdigest()
 
 
 def test_third_plan_selection_drops_orphan_failed_net_and_restores_known_pair() -> None:
@@ -1384,3 +1415,791 @@ def test_colliding_safe_model_ids_keep_distinct_source_assets(
     )
     import_cap_spice(state, extra)
     assert any(item.model_id == "EXTRA_CAP" for item in state.project.cap_models)
+
+
+def test_retained_surface_artwork_is_boundary_inclusive_and_released(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    polygon = ((0.0, 0.0), (10.0, 0.0), (10.0, 10.0), (0.0, 10.0))
+    geometry = SpdPlaneGeometry(
+        layer="L1",
+        net="VDD",
+        positive_polygons_um=(polygon,),
+        negative_polygons_um=(),
+        primitive_order=(("positive_polygon", 0),),
+    )
+    compressed, _size = core_services._compress_spd_geometry_payload(
+        layer="L1",
+        net="VDD",
+        positive_polygons=(polygon,),
+        negative_polygons=(),
+        positive_circles=(),
+        negative_circles=(),
+        primitive_order=(("positive_polygon", 0),),
+        positive_subelement_count=1,
+        negative_subelement_count=0,
+        polygon_trace_count=0,
+        box_count=0,
+    )
+    asset_name = "geometry/vdd-l1.json.zlib"
+    digest = sha256(compressed).hexdigest()
+    project = SimpleNamespace(
+        metadata={
+            "spd_import": {
+                "plane_geometries": [
+                    {
+                        "layer": "L1",
+                        "net": "VDD",
+                        "asset": asset_name,
+                        "asset_sha256": digest,
+                    }
+                ]
+            }
+        }
+    )
+    indexed = IndexedPlaneGeometry.build(geometry)
+    assert indexed is not None
+    cold_ordered_boolean_builds = 0
+    real_artwork_components = IndexedPlaneGeometry._artwork_components
+
+    def count_cold_ordered_boolean_builds(
+        current: IndexedPlaneGeometry,
+    ) -> object:
+        nonlocal cold_ordered_boolean_builds
+        if -1 not in current._shape_cache:
+            cold_ordered_boolean_builds += 1
+        return real_artwork_components(current)
+
+    monkeypatch.setattr(
+        IndexedPlaneGeometry,
+        "_artwork_components",
+        count_cold_ordered_boolean_builds,
+    )
+
+    retained = spd_adapter._retained_surface_artwork(
+        project,
+        {asset_name: compressed},
+        (geometry,),
+        indexed_geometry_by_key={("l1", "vdd"): indexed},
+    )
+    expected = retained.island_ids_by_surface[("vdd", "l1")][0]
+
+    assert -1 not in indexed._shape_cache
+    assert retained.surface_resolver_batch(
+        "VDD", "L1", ("edge", "inside"), ((0.0, 5.0), (5.0, 5.0))
+    ) == (expected, expected)
+    assert retained.artwork_components_batch(
+        "VDD", "L1", ((0.0, 5.0), (5.0, 5.0))
+    ) == (None, 0)
+    retained.release("VDD", "L1")
+    assert -1 not in indexed._shape_cache
+    assert retained.surface_resolver(
+        "VDD", "L1", "inside-again", 5.0, 5.0
+    ) == expected
+    retained.release("VDD", "L1")
+    assert cold_ordered_boolean_builds == 1
+
+
+def test_bind_certified_surface_islands_is_exact_and_nonmutating() -> None:
+    project_rows = [
+        {
+            "net": "VDD",
+            "layer": "L1",
+            "asset": "geometry/vdd.json",
+            "asset_sha256": "a" * 64,
+            "primitive_count": 7,
+        },
+        {
+            "net": "DGND",
+            "layer": "L2",
+            "asset": "geometry/gnd.json",
+            "asset_sha256": "b" * 64,
+            "custom": {"kept": True},
+        },
+    ]
+    certified_rows = [
+        {
+            "net": "dgnd",
+            "layer": "l2",
+            "asset": "geometry/gnd.json",
+            "asset_sha256": "B" * 64,
+            "island_ids": ["island:gnd:2", "island:gnd:1"],
+        },
+        {
+            "net": "vdd",
+            "layer": "l1",
+            "asset": "geometry/vdd.json",
+            "asset_sha256": "A" * 64,
+            "island_ids": ["island:vdd"],
+        },
+    ]
+    original = [dict(item) for item in project_rows]
+
+    bound = spd_adapter._bind_certified_surface_islands(
+        project_rows, reversed(certified_rows)
+    )
+    assert [item["asset"] for item in bound] == [
+        "geometry/vdd.json",
+        "geometry/gnd.json",
+    ]
+    assert bound[0]["island_ids"] == ["island:vdd"]
+    assert bound[1]["island_ids"] == ["island:gnd:2", "island:gnd:1"]
+    assert bound[0]["primitive_count"] == 7
+    assert bound[1]["custom"] == {"kept": True}
+    assert project_rows == original
+
+    with pytest.raises(
+        SpdImportError,
+        match="^SPD_LAYER_SURFACE_GEOMETRY_MANIFEST_MISMATCH",
+    ):
+        spd_adapter._bind_certified_surface_islands(project_rows, certified_rows[:1])
+
+
+def test_raw_spatial_member_merge_is_collision_safe_and_nonmutating() -> None:
+    project = ProjectSpec(
+        name="raw-spatial-merge",
+        outline=MLOOutline(width_um=100.0, height_um=100.0),
+        split_gap_um=0.0,
+        metadata={"spd_import": {"source_sha256": "a" * 64}},
+    )
+    asset_name = "spatial/raw-spatial-contact-v2-aaaaaaaaaaaaaaaa.sqlite.zlib"
+    manifest = {"asset_name": asset_name, "source_sha256": "a" * 64}
+
+    updated, attachments = spd_adapter._merge_raw_spatial_contact_asset(
+        project, {}, manifest, (asset_name, b"raw-spatial")
+    )
+
+    assert RAW_SPATIAL_CONTACT_ASSET_METADATA_KEY not in project.metadata["spd_import"]
+    assert updated.metadata["spd_import"][
+        RAW_SPATIAL_CONTACT_ASSET_METADATA_KEY
+    ] == manifest
+    assert attachments == {asset_name: b"raw-spatial"}
+    with pytest.raises(SpdImportError, match="^RAW_SPATIAL_ASSET_COLLISION"):
+        spd_adapter._merge_raw_spatial_contact_asset(
+            project,
+            {asset_name.swapcase(): b"raw-spatial"},
+            manifest,
+            (asset_name, b"raw-spatial"),
+        )
+
+
+def test_import_runs_one_union_reachability_pass_and_persists_surface_certificate(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    source = tmp_path / "surface-connectivity.spd"
+    source.write_text(
+        MINI_SPD.replace(
+            "* Via description lines",
+            "* Trace description lines\n* Via description lines",
+        ).replace(
+            "* PadStack collection description lines",
+            "* PadStack collection description lines\n"
+            ".PadStackDef DUT 0.00mm Material = COPPER\n"
+            ".EndPadStackDef",
+        ),
+        encoding="ascii",
+    )
+    calls: list[dict[str, object]] = []
+
+    def fake_compile(_project: ProjectSpec, _rail_id: str) -> SimpleNamespace:
+        return SimpleNamespace(
+            device=SimpleNamespace(
+                branches=(
+                    SimpleNamespace(
+                        branch_id="DEVICE-BRANCH",
+                        source_power_pin_id="SITE0:101",
+                        source_ground_pin_id="SITE0:102",
+                    ),
+                )
+            )
+        )
+
+    class FakeReachability:
+        statistics = {
+            "requested": 2,
+            "reachable": 2,
+            "unreachable": 0,
+            "node_section_passes": 1,
+            "trace_section_passes": 1,
+            "via_section_passes": 2,
+            "components": 2,
+            "terminal_owned_via_ids_supplied": 1,
+            "terminal_owned_via_id_count": 2,
+            "terminal_owned_via_observed_count": 2,
+            "via_island_pair_terminal_owned_record_count": 2,
+        }
+        surface_components = ()
+        surface_layers_by_landing = {
+            ("via1", "node1"): ("Signal$PWR",),
+            ("via2", "node2"): ("Signal$GND",),
+        }
+        def __init__(self, inventory: object) -> None:
+            assert isinstance(inventory, dict)
+            pwr = tuple(inventory[("vdd_core/0", "signal$pwr")])
+            gnd = tuple(inventory[("dgnd", "signal$gnd")])
+            self.surface_islands_by_landing = {
+                ("via1", "node1"): pwr,
+                ("via2", "node2"): gnd,
+            }
+            self.surface_equivalence_proofs = (
+                SimpleNamespace(
+                    net="VDD_CORE/0",
+                    layer="Signal$PWR",
+                    island_ids=pwr,
+                    contacted_island_ids=pwr,
+                    graph_component_count=1,
+                    status="complete",
+                ),
+                SimpleNamespace(
+                    net="DGND",
+                    layer="Signal$GND",
+                    island_ids=gnd,
+                    contacted_island_ids=gnd,
+                    graph_component_count=1,
+                    status="complete",
+                ),
+            )
+            self.surface_equivalence_components = (
+                SimpleNamespace(
+                    net="VDD_CORE/0",
+                    layer="Signal$PWR",
+                    island_ids=pwr,
+                ),
+                SimpleNamespace(
+                    net="DGND",
+                    layer="Signal$GND",
+                    island_ids=gnd,
+                ),
+            )
+            self.landing_surface_contacts = (
+                SimpleNamespace(
+                    via_id="Via1",
+                    endpoint_node_id="Node1",
+                    net="VDD_CORE/0",
+                    contact_island_ids_by_layer={"Signal$PWR": pwr},
+                    internal_endpoint_node_id="Node3",
+                    terminal_owner_kind="device",
+                    external_endpoint_layer="Signal$TOP",
+                    padstack="DR-0102_60",
+                    drill_diameter_um=20.0,
+                    material="COPPER",
+                    segments=(
+                        SimpleNamespace(
+                            ordinal=0,
+                            start_layer="Signal$TOP",
+                            end_layer="Signal$PWR",
+                            length_um=120.0,
+                        ),
+                    ),
+                    physical_model_status="complete",
+                    physical_model_issues=(),
+                ),
+                SimpleNamespace(
+                    via_id="Via2",
+                    endpoint_node_id="Node2",
+                    net="DGND",
+                    contact_island_ids_by_layer={"Signal$GND": gnd},
+                    internal_endpoint_node_id="Node4",
+                    terminal_owner_kind="device",
+                    external_endpoint_layer="Signal$TOP",
+                    padstack="DR-0102_60",
+                    drill_diameter_um=20.0,
+                    material="COPPER",
+                    segments=(
+                        SimpleNamespace(
+                            ordinal=0,
+                            start_layer="Signal$TOP",
+                            end_layer="Signal$GND",
+                            length_um=240.0,
+                        ),
+                    ),
+                    physical_model_status="complete",
+                    physical_model_issues=(),
+                ),
+            )
+            self.via_island_pair_aggregates = (
+                SimpleNamespace(
+                    net="VDD_CORE/0",
+                    padstack="DR-0102_60",
+                    start_layer="Signal$PWR",
+                    end_layer="Signal$PWR",
+                    start_island_id=pwr[0],
+                    end_island_id=pwr[0],
+                    count=1,
+                    via_ids_sha256="c" * 64,
+                    terminal_owned_count=1,
+                    substrate_count=0,
+                ),
+                SimpleNamespace(
+                    net="DGND",
+                    padstack="DR-0102_60",
+                    start_layer="Signal$GND",
+                    end_layer="Signal$GND",
+                    start_island_id=gnd[0],
+                    end_island_id=gnd[0],
+                    count=1,
+                    via_ids_sha256="d" * 64,
+                    terminal_owned_count=1,
+                    substrate_count=0,
+                ),
+            )
+            self.via_island_pair_coverage = SpdViaIslandPairCoverage(
+                raw_target_via_count=2,
+                paired_via_count=2,
+                terminal_owned_unpaired_count=0,
+                terminal_owned_unpaired_via_ids_sha256=(
+                    sha256(b"").hexdigest()
+                ),
+                unsupported_missing_endpoint_count=0,
+                unsupported_missing_endpoint_via_ids_sha256=(
+                    sha256(b"").hexdigest()
+                ),
+                outside_retained_interface_scope_count=0,
+                outside_retained_interface_scope_via_ids_sha256=(
+                    sha256(b"").hexdigest()
+                ),
+                model_relevant_via_count=2,
+                terminal_owned_ids_supplied=True,
+                terminal_owned_declared_count=2,
+                terminal_owned_observed_count=2,
+                paired_terminal_owned_count=2,
+                paired_substrate_count=0,
+            )
+            top_pwr_vertex = "spd-finite-via-vertex:fake-top-pwr"
+            pwr_vertex = "spd-finite-via-vertex:fake-pwr"
+            top_gnd_vertex = "spd-finite-via-vertex:fake-top-gnd"
+            gnd_vertex = "spd-finite-via-vertex:fake-gnd"
+            self.finite_via_vertices = (
+                SimpleNamespace(
+                    vertex_id=top_pwr_vertex,
+                    net="VDD_CORE/0",
+                    layer="Signal$PWR",
+                    representative_node_id="Node1",
+                    source_node_count=1,
+                    source_node_ids_sha256=sha256(b"node1").hexdigest(),
+                    roles=("retained_surface", "terminal"),
+                    retained_component_island_ids_by_layer={
+                        "Signal$PWR": pwr
+                    },
+                    terminal_ids=("SITE0:101",),
+                ),
+                SimpleNamespace(
+                    vertex_id=pwr_vertex,
+                    net="VDD_CORE/0",
+                    layer="Signal$PWR",
+                    representative_node_id="Node3",
+                    source_node_count=1,
+                    source_node_ids_sha256=sha256(b"node3").hexdigest(),
+                    roles=("retarget_cut", "terminal"),
+                    retained_component_island_ids_by_layer={},
+                    terminal_ids=("decap-via:via1:node3",),
+                ),
+                SimpleNamespace(
+                    vertex_id=top_gnd_vertex,
+                    net="DGND",
+                    layer="Signal$GND",
+                    representative_node_id="Node2",
+                    source_node_count=1,
+                    source_node_ids_sha256=sha256(b"node2").hexdigest(),
+                    roles=("retained_surface", "terminal"),
+                    retained_component_island_ids_by_layer={
+                        "Signal$GND": gnd
+                    },
+                    terminal_ids=("SITE0:102",),
+                ),
+                SimpleNamespace(
+                    vertex_id=gnd_vertex,
+                    net="DGND",
+                    layer="Signal$GND",
+                    representative_node_id="Node4",
+                    source_node_count=1,
+                    source_node_ids_sha256=sha256(b"node4").hexdigest(),
+                    roles=("retarget_cut", "terminal"),
+                    retained_component_island_ids_by_layer={},
+                    terminal_ids=("decap-via:via2:node4",),
+                ),
+            )
+
+            def finite_edge(
+                edge_id: str,
+                net: str,
+                start_vertex_id: str,
+                end_vertex_id: str,
+                via_id: str,
+                start_layer: str,
+                end_layer: str,
+                length_um: float,
+            ) -> SimpleNamespace:
+                segment = SimpleNamespace(
+                    ordinal=0,
+                    start_layer=start_layer,
+                    end_layer=end_layer,
+                    length_um=length_um,
+                )
+                term = SimpleNamespace(
+                    ordinal=0,
+                    count=1,
+                    padstack="DR-0102_60",
+                    start_layer=start_layer,
+                    end_layer=end_layer,
+                    drill_diameter_um=20.0,
+                    material="COPPER",
+                    segments=(segment,),
+                    resistance_ohm=1.0e-3,
+                    inductance_h=1.0e-9,
+                    length_um=length_um,
+                    physical_model_status="complete",
+                    physical_model_issues=(),
+                )
+                return SimpleNamespace(
+                    edge_id=edge_id,
+                    net=net,
+                    start_vertex_id=start_vertex_id,
+                    end_vertex_id=end_vertex_id,
+                    parallel_path_count=1,
+                    per_path_via_count=1,
+                    raw_via_count=1,
+                    raw_via_ids_sha256=sha256(
+                        via_id.casefold().encode("utf-8")
+                    ).hexdigest(),
+                    owner_ids=(f"via:{via_id}",),
+                    series_terms=(term,),
+                    resistance_ohm=1.0e-3,
+                    inductance_h=1.0e-9,
+                    length_um=length_um,
+                    mode="retained_explicit",
+                    physical_model_status="complete",
+                    physical_model_issues=(),
+                )
+
+            pwr_edge = "spd-finite-via-edge:fake-pwr"
+            gnd_edge = "spd-finite-via-edge:fake-gnd"
+            self.finite_via_edges = (
+                finite_edge(
+                    pwr_edge,
+                    "VDD_CORE/0",
+                    top_pwr_vertex,
+                    pwr_vertex,
+                    "Via1",
+                    "Signal$TOP",
+                    "Signal$PWR",
+                    120.0,
+                ),
+                finite_edge(
+                    gnd_edge,
+                    "DGND",
+                    top_gnd_vertex,
+                    gnd_vertex,
+                    "Via2",
+                    "Signal$TOP",
+                    "Signal$GND",
+                    240.0,
+                ),
+            )
+            self.finite_via_vertex_id_by_landing = {
+                ("via1", "node1"): top_pwr_vertex,
+                ("via1", "node3"): pwr_vertex,
+                ("via2", "node2"): top_gnd_vertex,
+                ("via2", "node4"): gnd_vertex,
+            }
+            self.finite_via_edge_id_by_landing = {
+                ("via1", "node1"): pwr_edge,
+                ("via1", "node3"): pwr_edge,
+                ("via2", "node2"): gnd_edge,
+                ("via2", "node4"): gnd_edge,
+            }
+            self.finite_via_coverage = SpdFiniteViaQuotientCoverage(
+                raw_target_via_count=2,
+                modeled_global_via_count=2,
+                outside_scope_via_count=0,
+                pruned_dangling_via_count=0,
+                physical_complete_via_count=2,
+                physical_incomplete_via_count=0,
+                raw_target_via_ids_sha256=sha256(b"raw-vias").hexdigest(),
+                modeled_global_via_ids_sha256=sha256(
+                    b"modeled-vias"
+                ).hexdigest(),
+                modeled_owner_ledger_sha256=sha256(
+                    b"owner-ledger"
+                ).hexdigest(),
+                modeled_owner_canonical_sha256=_canonical_owner_digest(
+                    "via:Via1", "via:Via2"
+                ),
+                outside_scope_via_ids_sha256=sha256(b"").hexdigest(),
+            )
+            self.finite_via_scenario_isolated_landing_keys = frozenset(
+                {("via1", "node3"), ("via2", "node4")}
+            )
+            self.finite_via_scenario_isolation_coverage = (
+                SpdFiniteViaScenarioIsolationCoverage(
+                    requested_landing_count=2,
+                    isolated_landing_count=2,
+                    isolated_node_count=2,
+                    suppressed_artwork_contact_count=2,
+                    suppressed_trace_edge_count=0,
+                    requested_landing_ids_sha256=sha256(
+                        b"isolated-landings"
+                    ).hexdigest(),
+                    isolated_landing_ids_sha256=sha256(
+                        b"isolated-landings"
+                    ).hexdigest(),
+                )
+            )
+
+        @staticmethod
+        def reaches(landing: object, target_layer: str) -> bool:
+            return target_layer.casefold() in {
+                item.casefold()
+                for item in FakeReachability.surface_layers_by_landing.get(
+                    (
+                        str(getattr(landing, "via_id")).casefold(),
+                        str(getattr(landing, "endpoint_node_id")).casefold(),
+                    ),
+                    (),
+                )
+            }
+
+    def fake_recover(
+        _path: Path,
+        *,
+        landings: object,
+        target_layers_by_net: object,
+        target_node_predicate: object,
+        **_kwargs: object,
+    ) -> FakeReachability:
+        retained = tuple(landings)
+        calls.append(
+            {
+                "landings": retained,
+                "terminal_landings": tuple(
+                    _kwargs["terminal_contact_landings"]
+                ),
+                "terminal_owned_via_ids": frozenset(
+                    _kwargs["terminal_owned_via_ids"]
+                ),
+                "targets": target_layers_by_net,
+                "predicate": target_node_predicate,
+            }
+        )
+        assert target_node_predicate is None
+        assert callable(_kwargs["target_node_surface_resolver"])
+        assert _kwargs["target_surface_island_ids"]
+        return FakeReachability(_kwargs["target_surface_island_ids"])
+
+    monkeypatch.setattr(
+        spd_adapter, "compile_project_evaluation_template", fake_compile
+    )
+    monkeypatch.setattr(
+        spd_adapter, "recover_spd_ground_reachability", fake_recover
+    )
+
+    inline_certificate: dict[str, object] = {}
+    real_externalize = spd_adapter.externalize_project_surface_certificate
+
+    def capture_inline_certificate(
+        project: ProjectSpec,
+        attachments: object,
+        **kwargs: object,
+    ) -> object:
+        raw_certificate = project.metadata["spd_import"][
+            SURFACE_CERTIFICATE_METADATA_KEY
+        ]
+        assert isinstance(raw_certificate, dict)
+        inline_certificate.update(raw_certificate)
+        return real_externalize(project, attachments, **kwargs)
+
+    monkeypatch.setattr(
+        spd_adapter,
+        "externalize_project_surface_certificate",
+        capture_inline_certificate,
+    )
+
+    imported = import_spd_scenario(source)
+
+    assert len(calls) == 1
+    landing_ids = {
+        (item.via_id, item.endpoint_node_id)
+        for item in calls[0]["landings"]
+    }
+    assert {("Via1", "Node1"), ("Via2", "Node2")} <= landing_ids
+    terminal_landing_ids = {
+        (item.via_id, item.endpoint_node_id)
+        for item in calls[0]["terminal_landings"]
+    }
+    assert {("Via1", "Node1"), ("Via2", "Node2")} <= terminal_landing_ids
+    assert calls[0]["terminal_owned_via_ids"] == {"Via1", "Via2"}
+    targets = calls[0]["targets"]
+    assert "Signal$PWR" in targets["vdd_core/0"]
+    assert "Signal$GND" in targets["dgnd"]
+    certificate = inline_certificate
+    assert certificate["schema_version"] == (
+        "spd-layer-surface-connectivity-v4"
+    )
+    assert certificate["compiler_id"] == (
+        "powersi-same-layer-trace-artwork-finite-via-quotient-v4"
+    )
+    assert not certificate["scenario_decap_terminal_topology"]["issues"], (
+        certificate["scenario_decap_terminal_topology"]["issues"]
+    )
+    assert certificate["scenario_decap_terminal_topology"]["status"] == (
+        "complete"
+    ), certificate["scenario_decap_terminal_topology"]
+    assert certificate["finite_via_quotient"]["status"] == "complete", (
+        certificate["finite_via_quotient"]
+    )
+    assert certificate["status"] == "complete", {
+        "finite_status": certificate["finite_via_quotient"]["status"],
+        "coverage_status": certificate["finite_via_quotient"]["coverage"][
+            "status"
+        ],
+        "owner_status": certificate["finite_via_quotient"]["coverage"][
+            "owner_ledger_status"
+        ],
+        "vertices": [
+            (
+                item["vertex_id"],
+                item["component_binding_status"],
+                item["component_binding_issues"],
+            )
+            for item in certificate["finite_via_quotient"]["vertices"]
+        ],
+        "edges": [
+            (item["edge_id"], item["status"], item["physical_model_issues"])
+            for item in certificate["finite_via_quotient"]["edges"]
+        ],
+        "bindings": [
+            (
+                item["landing_key"],
+                item["global_quotient_binding_status"],
+                item["global_quotient_binding_issues"],
+                item["retarget_cut_status"],
+            )
+            for item in certificate["finite_via_quotient"]["terminal_bindings"]
+        ],
+        "scenario_status": certificate["scenario_decap_terminal_topology"][
+            "status"
+        ],
+        "scenario_issues": certificate["scenario_decap_terminal_topology"][
+            "issues"
+        ],
+        "terminals": [
+            (item["pin_id"], item["status"], item["issues"])
+            for item in certificate["terminal_contacts"]
+        ],
+    }
+    assert certificate["compile_failures"] == []
+    assert len(certificate["rail_anchor_bindings"]) == 2
+    assert all(
+        item["status"] == "complete"
+        for item in certificate["terminal_contacts"]
+    )
+    assert [
+        item["net"] for item in certificate["via_island_pair_aggregates"]
+    ] == ["DGND", "VDD_CORE/0"]
+    assert all(
+        item["terminal_owned_count"] == 1
+        and item["substrate_count"] == 0
+        for item in certificate["via_island_pair_aggregates"]
+    )
+    assert all(
+        item["status"] == "complete"
+        and item["landing_key"]
+        == [item["via_id"].casefold(), item["external_endpoint_node_id"].casefold()]
+        and item["physical_model_status"] == "complete"
+        and item["physical_model_issues"] == []
+        and len(item["contact_island_ids_by_layer"]) == 1
+        and item["endpoint_layer"] is not None
+        and item["endpoint_island_id"] is not None
+        for item in certificate["terminal_landing_contacts"]
+    )
+    payload = dict(certificate)
+    evidence_sha256 = payload.pop("evidence_sha256")
+    assert evidence_sha256 == core_services._canonical_metadata_sha256(payload)
+    persisted_project = imported.scenario.base_project
+    persisted_spd_import = persisted_project.metadata["spd_import"]
+    persisted_certificate = persisted_spd_import[
+        SURFACE_CERTIFICATE_METADATA_KEY
+    ]
+    assert persisted_certificate["storage_schema"] == (
+        SURFACE_CERTIFICATE_COMPILED_ONLY_SCHEMA
+    )
+    compiled_manifest = persisted_spd_import[
+        COMPILED_TOPOLOGY_ASSET_METADATA_KEY
+    ]
+    assert compiled_manifest["asset_name"] in imported.attachments
+    assert all(
+        "layerwise-surface-connectivity-v4-" not in name
+        for name in imported.attachments
+    )
+    persisted_geometries = persisted_spd_import["plane_geometries"]
+    certified_islands = {
+        (
+            str(item["net"]).casefold(),
+            str(item["layer"]).casefold(),
+            str(item["asset"]),
+            str(item["asset_sha256"]).casefold(),
+        ): tuple(item["island_ids"])
+        for item in certificate["geometry_assets"]
+    }
+    assert all(
+        tuple(item["island_ids"])
+        == certified_islands[
+            (
+                str(item["net"]).casefold(),
+                str(item["layer"]).casefold(),
+                str(item["asset"]),
+                str(item["asset_sha256"]).casefold(),
+            )
+        ]
+        for item in persisted_geometries
+    )
+    artwork_node_ids = tuple(
+        str(island_id)
+        for row in persisted_geometries
+        for island_id in row["island_ids"]
+    )
+    assert load_compiled_topology_asset(
+        persisted_project,
+        imported.attachments,
+        artwork_node_ids,
+    ) is not None
+    raw_manifest = persisted_spd_import[
+        RAW_SPATIAL_CONTACT_ASSET_METADATA_KEY
+    ]
+    assert raw_manifest["asset_name"] in imported.attachments
+    assert raw_manifest["source_sha256"] == imported.scenario.source.sha256
+    assert raw_manifest["project_binding_sha256"] == compiled_manifest[
+        "project_binding_sha256"
+    ]
+    assert raw_manifest["certificate_evidence_sha256"] == compiled_manifest[
+        "certificate_evidence_sha256"
+    ]
+    assert raw_manifest["compiled_topology_identity_sha256"] == (
+        compiled_manifest["topology_identity_sha256"]
+    )
+    with load_raw_spatial_contact_asset(
+        raw_manifest,
+        imported.attachments,
+        expected_source_sha256=raw_manifest["source_sha256"],
+        expected_project_binding_sha256=raw_manifest[
+            "project_binding_sha256"
+        ],
+        expected_certificate_evidence_sha256=raw_manifest[
+            "certificate_evidence_sha256"
+        ],
+        expected_compiled_topology_identity_sha256=raw_manifest[
+            "compiled_topology_identity_sha256"
+        ],
+        expected_geometry_identity_sha256=raw_manifest[
+            "geometry_identity_sha256"
+        ],
+    ) as raw_asset:
+        assert raw_asset.get_via("VDD_CORE/0", "Via1") is not None
+        assert raw_asset.get_via("DGND", "Via2") is not None
+    # A pure-reference rail has no provisional witness either; the separate
+    # mixed test above proves the ephemeral copy path explicitly.
+    assert all(
+        rail.mixed_reference_ground_witness is None
+        for rail in imported.scenario.base_project.rails
+    )

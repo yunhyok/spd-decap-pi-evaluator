@@ -4,9 +4,8 @@ This is deliberately an integration verifier, not another planner.  It imports
 the raw source, uses the normal public Distribution APIs, then independently
 checks every applied conventional/legacy replay move against a source-classified
 physical PWR Via landing and exact retained PWR artwork at its landing coordinate.
-Distribution's fixed vertical-XY policy remains authoritative: MLO transition
-evidence is retained as provenance but is not a candidate gate. This verifier
-does not move the query XY or bypass exact destination copper, and it does not
+The planner's MLO/unknown-legacy structural gate remains authoritative; this
+verifier does not turn missing transition evidence into permission.  It does not
 gate a destination on GND vias.
 """
 
@@ -19,13 +18,35 @@ from hashlib import sha256
 import json
 from math import isfinite
 from pathlib import Path
+import sys
 from tempfile import TemporaryDirectory
 from time import perf_counter
+from types import SimpleNamespace
 from typing import Any
 import zlib
 
+_REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
+_REPOSITORY_SOURCE_ROOT = (_REPOSITORY_ROOT / "src").resolve()
+_EXPECTED_PACKAGE_ROOT = (_REPOSITORY_SOURCE_ROOT / "spd_decap_pi").resolve()
+sys.path.insert(0, str(_REPOSITORY_SOURCE_ROOT))
+
+import spd_decap_pi as _runtime_package
+
+_runtime_package_file = getattr(_runtime_package, "__file__", None)
+_runtime_package_root = (
+    Path(_runtime_package_file).resolve().parent
+    if _runtime_package_file is not None
+    else None
+)
+if _runtime_package_root != _EXPECTED_PACKAGE_ROOT:
+    raise RuntimeError(
+        "active-checkout import guard failed: expected spd_decap_pi from "
+        f"{_EXPECTED_PACKAGE_ROOT}, imported {_runtime_package_root!s}. "
+        "A stale editable install or preloaded package from another worktree "
+        "must not run this validation."
+    )
+
 from spd_decap_pi.distribution import (
-    DISTRIBUTION_VIA_PROJECTION_POLICY,
     DistributionDistanceMode,
     DistributionPlan,
     DistributionPlanStatus,
@@ -40,10 +61,19 @@ from spd_decap_pi.distribution import (
 )
 from spd_decap_pi.distribution_workbook import (
     DISTRIBUTION_TOLERANCE_SEMANTICS,
+    DISTRIBUTION_VIA_PROJECTION_POLICY,
     DISTRIBUTION_WORKBOOK_FORMAT_VERSION,
     load_distribution_targets,
 )
-from spd_decap_pi.scenario import ScenarioSpec, derive_shared_pad_current_components
+from spd_decap_pi.evaluation import (
+    evaluate_comparison_batch,
+    preflight_evaluation_comparison,
+)
+from spd_decap_pi.scenario import (
+    DecapPadState,
+    ScenarioSpec,
+    derive_shared_pad_current_components,
+)
 from spd_decap_pi.scenario_io import load_scenario_bundle, save_scenario
 from spd_decap_pi.spd_adapter import import_spd_scenario, verify_scenario_source
 from spd_decap_pi.spreadsheet_export import write_distribution_workbook
@@ -74,6 +104,79 @@ _GEOMETRY_FORMAT = "powersi-spd-plane-primitives-v1"
 
 class ReplayValidationError(RuntimeError):
     """The replay or an independent post-apply proof did not validate."""
+
+
+def _source_state_mismatches(scenario: ScenarioSpec) -> tuple[str, ...]:
+    """Return edits that make a candidate unsafe as a replay source.
+
+    A bundle is reusable only when every mutable decap field still equals its
+    immutable raw-SPD source field.  Verifying the SPD SHA alone cannot
+    distinguish a pristine import checkpoint from a previously distributed
+    scenario derived from the same SPD.
+    """
+
+    mismatches: list[str] = []
+    for decap in scenario.decaps:
+        fields: list[str] = []
+        if decap.current_net.casefold() != decap.source_net.casefold():
+            fields.append("current_net")
+        if decap.current_rail_id.casefold() != decap.source_rail_id.casefold():
+            fields.append("current_rail_id")
+        if decap.enabled is not decap.source_mounted:
+            fields.append("enabled")
+        if decap.pad_state != DecapPadState.NORMAL:
+            fields.append("pad_state")
+        current_model = decap.model_id.casefold() if decap.model_id is not None else None
+        source_model = (
+            decap.source_model_id.casefold()
+            if decap.source_model_id is not None
+            else None
+        )
+        if current_model != source_model:
+            fields.append("model_id")
+        if fields:
+            mismatches.append(f"{decap.refdes}({','.join(fields)})")
+    return tuple(mismatches)
+
+
+def _load_verified_source(
+    spd: Path,
+    reuse_candidate: Path | None,
+) -> tuple[object, str]:
+    """Return an import-shaped source after verifying the named raw SPD.
+
+    A reused candidate is only a performance checkpoint: bundle member hashes,
+    schema, attachments, and the raw-SPD source identity are all revalidated.
+    Distribution is still recomputed from the candidate's immutable source
+    state and never reuses a prior plan.
+    """
+
+    if reuse_candidate is None:
+        imported = import_spd_scenario(spd)
+        verify_scenario_source(imported.scenario, spd)
+        return imported, "fresh_raw_spd_import"
+    candidate = Path(reuse_candidate)
+    if not candidate.is_file():
+        raise ReplayValidationError(
+            f"reusable candidate does not exist: {candidate}"
+        )
+    bundle = load_scenario_bundle(candidate)
+    verify_scenario_source(bundle.scenario, spd)
+    mismatches = _source_state_mismatches(bundle.scenario)
+    if mismatches:
+        examples = ", ".join(mismatches[:8])
+        suffix = f", +{len(mismatches) - 8} more" if len(mismatches) > 8 else ""
+        raise ReplayValidationError(
+            "reusable candidate is not a pristine raw-SPD import; mutable "
+            f"decap state differs from its immutable source: {examples}{suffix}"
+        )
+    return (
+        SimpleNamespace(
+            scenario=bundle.scenario,
+            attachments=dict(bundle.attachments),
+        ),
+        "verified_candidate_reuse",
+    )
 
 
 def _canonical_json(value: object) -> str:
@@ -155,10 +258,11 @@ def has_physical_pwr_landing(landing: object) -> bool:
     """Validate a conventional replay's source-classified PWR-via origin.
 
     This helper checks geometry only after the planner has admitted the landing.
-    It is not a permission oracle. Under the fixed vertical-XY planning policy,
-    an existing path need not already end on the requested target layer and MLO
-    transition evidence does not reject it; recovered path coordinates still
-    cannot move the physical landing XY.
+    It is not a permission oracle: the Distribution structural gate separately
+    rejects MLO paths without a translated recipe and legacy landings without
+    transition evidence.  An admitted conventional path need not already end on
+    the requested target layer, and recovered path coordinates cannot move its
+    physical landing XY.
     """
 
     try:
@@ -347,9 +451,9 @@ def _validate_existing_rules(scenario: ScenarioSpec) -> int:
 
 
 def _independently_validate_moves(scenario: ScenarioSpec, plan: DistributionPlan, attachments: Mapping[str, bytes]) -> list[dict[str, object]]:
-    # A safe PARTIAL plan can contain no moves when exact artwork, routing, or
-    # topology rejects every candidate. In that case there is nothing to prove
-    # and decoding every retained plane asset would add unrelated work.
+    # A safe PARTIAL plan can contain no moves when every candidate is blocked
+    # by the structural MLO gate.  In that case there is nothing to prove and
+    # decoding every retained plane asset would add minutes of unrelated work.
     if not plan.moves:
         return []
     project = scenario.base_project
@@ -399,8 +503,19 @@ def _independently_validate_moves(scenario: ScenarioSpec, plan: DistributionPlan
     return evidence
 
 
-def _write_artifacts(directory: Path, scenario: ScenarioSpec, attachments: Mapping[str, bytes], plan: DistributionPlan) -> tuple[Path, Path]:
+def _write_artifacts(
+    directory: Path,
+    source_scenario: ScenarioSpec,
+    scenario: ScenarioSpec,
+    attachments: Mapping[str, bytes],
+    plan: DistributionPlan,
+) -> tuple[Path, Path, Path]:
     directory.mkdir(parents=True, exist_ok=True)
+    source_path = save_scenario(
+        source_scenario,
+        directory / "source-replay.spdpi",
+        attachments=attachments,
+    )
     scenario_path = save_scenario(scenario, directory / "distribution-replay.spdpi", attachments=attachments)
     headers, target_rows = distribution_target_table(plan)
     inventory_headers, inventory_rows = distribution_inventory_table(plan)
@@ -409,11 +524,11 @@ def _write_artifacts(directory: Path, scenario: ScenarioSpec, attachments: Mappi
         "Format Version": DISTRIBUTION_WORKBOOK_FORMAT_VERSION,
         "Signal Routing Protection": "OFF",
         "Tolerance Semantics": DISTRIBUTION_TOLERANCE_SEMANTICS,
+        "Via Projection Policy": DISTRIBUTION_VIA_PROJECTION_POLICY,
         "Source SPD SHA-256": scenario.source.sha256,
         "Input Design Fingerprint": plan.input_design_fingerprint,
         "Distance Mode": plan.distance_mode.value,
         "Optimization Policy": plan.optimization_policy.value,
-        "Via Projection Policy": DISTRIBUTION_VIA_PROJECTION_POLICY,
     }
     if plan.optimization_policy.value in {"BALANCED_AUTO", "BALANCED_CUSTOM"}:
         metadata["Effective Gap Penalty (um)"] = plan.effective_gap_penalty_um
@@ -426,16 +541,63 @@ def _write_artifacts(directory: Path, scenario: ScenarioSpec, attachments: Mappi
         inventory_rows=inventory_rows,
         metadata=metadata,
     )
-    return scenario_path, workbook_path
+    return source_path, scenario_path, workbook_path
+
+
+def _evaluation_view_summary(view: object) -> dict[str, object]:
+    provenance = dict(getattr(view, "solver_provenance", {}) or {})
+    return {
+        "solver_version": str(getattr(view, "solver_version", "")),
+        "solver_profile_key": str(getattr(view, "solver_profile_key", "")),
+        "solver_profile_badge": str(getattr(view, "solver_profile_badge", "")),
+        "frequency_point_count": len(getattr(view, "frequency_hz", ())),
+        "max_violation_db": float(getattr(view, "max_violation_db")),
+        "peak_magnitude_ohm": float(getattr(view, "peak_magnitude_ohm")),
+        "peak_frequency_hz": float(getattr(view, "peak_frequency_hz")),
+        "convergence": getattr(view, "convergence", None),
+        "provenance": {
+            key: provenance[key]
+            for key in (
+                "source_sha256",
+                "compiler_algorithm_id",
+                "compiler_version",
+                "scenario_identity_sha256",
+                "termination_manifest_sha256",
+                "modal_convergence_applicability",
+            )
+            if key in provenance
+        },
+    }
+
+
+def _evaluation_batch_summary(batch: object) -> dict[str, object]:
+    comparisons = tuple(getattr(batch, "comparisons", ()))
+    return {
+        "status": "completed",
+        "rail_count": len(comparisons),
+        "rails": [
+            {
+                "rail_id": comparison.rail_id,
+                "configuration_unchanged": comparison.configuration_unchanged,
+                "baseline_from_cache": comparison.baseline_from_cache,
+                "original": _evaluation_view_summary(comparison.baseline.view),
+                "tuned": _evaluation_view_summary(comparison.tuned.view),
+            }
+            for comparison in comparisons
+        ],
+    }
 
 
 def run_replay(args: argparse.Namespace) -> dict[str, object]:
     total_started = perf_counter()
     timings: dict[str, float] = {}
     phase_started = perf_counter()
-    imported = import_spd_scenario(args.spd)
+    reuse_candidate = getattr(args, "reuse_candidate", None)
+    imported, source_load_mode = _load_verified_source(
+        args.spd,
+        reuse_candidate,
+    )
     source = imported.scenario
-    verify_scenario_source(source, args.spd)
     source_snapshot = _invariant_snapshot(source, imported.attachments)
     timings["import"] = _elapsed_seconds(phase_started)
 
@@ -504,8 +666,46 @@ def run_replay(args: argparse.Namespace) -> dict[str, object]:
     move_proofs = _independently_validate_moves(applied, plan, imported.attachments)
     timings["independent_proof"] = _elapsed_seconds(phase_started)
 
-    def save_reopen_export(directory: Path) -> tuple[Path, Path, object]:
-        scenario_path, workbook_path = _write_artifacts(directory, applied, imported.attachments, plan)
+    evaluation_report: dict[str, object] = {"status": "not_requested"}
+    evaluation_rails = tuple(dict.fromkeys(args.evaluation_rail or ()))
+    if evaluation_rails:
+        phase_started = perf_counter()
+        preflight = preflight_evaluation_comparison(
+            applied,
+            evaluation_rails,
+            solver_profile="layerwise_admittance_v1",
+            attachments=imported.attachments,
+        )
+        if not preflight.is_clear:
+            raise ReplayValidationError(
+                "Distribution-to-Evaluation preflight is blocked: "
+                + preflight.message(max_refdes_per_group=12)
+            )
+        batch = evaluate_comparison_batch(
+            applied,
+            evaluation_rails,
+            modal_max_index=args.evaluation_modal_max_index,
+            attachments=imported.attachments,
+            solver_profile="layerwise_admittance_v1",
+        )
+        batch.validate_for_scenario(applied)
+        evaluation_report = _evaluation_batch_summary(batch)
+        timings["evaluation"] = _elapsed_seconds(phase_started)
+
+    def save_reopen_export(directory: Path) -> tuple[Path, Path, Path, object]:
+        source_path, scenario_path, workbook_path = _write_artifacts(
+            directory,
+            source,
+            applied,
+            imported.attachments,
+            plan,
+        )
+        source_reopened = load_scenario_bundle(source_path)
+        verify_scenario_source(source_reopened.scenario, args.spd)
+        _assert_invariants(
+            source_snapshot,
+            _invariant_snapshot(source_reopened.scenario, source_reopened.attachments),
+        )
         reopened = load_scenario_bundle(scenario_path)
         verify_scenario_source(reopened.scenario, args.spd)
         _assert_invariants(source_snapshot, _invariant_snapshot(reopened.scenario, reopened.attachments))
@@ -524,15 +724,19 @@ def run_replay(args: argparse.Namespace) -> dict[str, object]:
             for warning in reimported.warnings
         ):
             raise ReplayValidationError("export/reimport emitted a warning other than the known source-fingerprint warning")
-        return scenario_path, workbook_path, reimported
+        return source_path, scenario_path, workbook_path, reimported
 
     phase_started = perf_counter()
     if args.keep_artifacts is not None:
-        scenario_path, workbook_path, reimported = save_reopen_export(args.keep_artifacts)
-        artifact_paths: dict[str, str] = {"scenario": str(scenario_path.resolve()), "workbook": str(workbook_path.resolve())}
+        source_path, scenario_path, workbook_path, reimported = save_reopen_export(args.keep_artifacts)
+        artifact_paths: dict[str, str] = {
+            "source_scenario": str(source_path.resolve()),
+            "scenario": str(scenario_path.resolve()),
+            "workbook": str(workbook_path.resolve()),
+        }
     else:
         with TemporaryDirectory(prefix="distribution-replay-") as temporary:
-            _scenario_path, _workbook_path, reimported = save_reopen_export(Path(temporary))
+            _source_path, _scenario_path, _workbook_path, reimported = save_reopen_export(Path(temporary))
         artifact_paths = {}
     # Saving/reopening/exporting must be observational: the raw-SPD import and
     # its in-memory attachment payloads are the immutable replay baseline.
@@ -542,6 +746,12 @@ def run_replay(args: argparse.Namespace) -> dict[str, object]:
     return {
         "ok": True,
         "source_spd": str(Path(args.spd).resolve()),
+        "source_load_mode": source_load_mode,
+        "reused_candidate": (
+            str(Path(reuse_candidate).resolve())
+            if reuse_candidate is not None
+            else None
+        ),
         "targets_workbook": str(Path(args.targets).resolve()),
         "elapsed_seconds": timings,
         "plan": _plan_analysis(plan),
@@ -555,6 +765,7 @@ def run_replay(args: argparse.Namespace) -> dict[str, object]:
         },
         "workbook_warnings": list(target_import.warnings),
         "round_trip_warnings": list(reimported.warnings),
+        "evaluation": evaluation_report,
         "artifacts": artifact_paths,
     }
 
@@ -562,6 +773,15 @@ def run_replay(args: argparse.Namespace) -> dict[str, object]:
 def _parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Replay and independently validate a real De-cap Distribution workbook.")
     parser.add_argument("--spd", type=Path, required=True, help="raw PowerSI SPD source")
+    parser.add_argument(
+        "--reuse-candidate",
+        type=Path,
+        help=(
+            "load an existing SHA-bound candidate .spdpi instead of repeating "
+            "raw import; the named --spd identity and every bundle member are "
+            "still verified"
+        ),
+    )
     parser.add_argument("--targets", type=Path, required=True, help="Distribution Targets XLSX workbook")
     parser.add_argument("--time-limit-s", type=float, default=120.0, help="planner time limit in seconds (default: 120)")
     parser.add_argument("--expect-status", choices=("FULL", "PARTIAL"), help="expected Distribution status")
@@ -569,6 +789,24 @@ def _parser() -> argparse.ArgumentParser:
     parser.add_argument("--expect-fulfilled", type=int, help="expected total fulfilled count")
     parser.add_argument("--allow-partial", action="store_true", help="permit a PARTIAL result")
     parser.add_argument("--distance-mode", choices=("NEAREST", "FARTHEST"), help="override workbook distance mode")
+    parser.add_argument(
+        "--evaluation-rail",
+        action="append",
+        help=(
+            "repeatable PWR rail for an actual Original/Tuned layer-surface "
+            "Evaluation after Distribution"
+        ),
+    )
+    parser.add_argument(
+        "--evaluation-modal-max-index",
+        type=int,
+        choices=(6, 8, 10, 12),
+        default=8,
+        help=(
+            "compatibility modal index recorded by Evaluation; terminal-complete "
+            "layerwise results are analytically invariant to this basis"
+        ),
+    )
     parser.add_argument("--keep-artifacts", type=Path, help="directory for the reopened .spdpi and export/reimport XLSX")
     parser.add_argument("--json-report", type=Path, help="write the JSON report to this path (otherwise stdout)")
     return parser

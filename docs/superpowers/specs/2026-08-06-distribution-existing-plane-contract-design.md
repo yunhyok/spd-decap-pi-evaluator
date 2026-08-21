@@ -1,5 +1,10 @@
 # Distribution existing-plane contract and status UX design
 
+> Superseded for non-TOP destination eligibility on 2026-08-11. The immutable
+> TOP-XY vertical projection below is unsafe for laterally staggered MLO
+> microvias. See `docs/DECAP_DISTRIBUTION_TRANSITION_POLICY_2026-08-11.md` for
+> the source-proven exact-layer transition contract now enforced by the app.
+
 ## Scope
 
 Improve De-cap Distribution only. Evaluation Analysis physics and solver selection

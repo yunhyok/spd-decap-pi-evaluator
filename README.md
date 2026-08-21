@@ -1,47 +1,8 @@
-# SPD Decap PI Evaluator v0.22.9
+# SPD Decap PI Evaluator v0.23.0
 
-> **v0.22.9 UI-containment hotfix:** maximized Evaluation workspaces keep the
-> board and side pane reachable; long comparison results remain inside bounded,
-> horizontally scrollable tables.
+> **v0.23.0 integrates the v0.22.1 De-cap Distribution/MLO/routing hardening with the checkpoint's source-derived multilayer layer-surface Evaluation.** Distribution retains all 21 physical PWR conductor layers, defaults to the disclosed `BALANCED_AUTO` gap-distance objective, exports Candidate Audit evidence, preserves source-proven MLO transition diagnostics, and blocks non-TOP MLO transitions that lack an engineered translated recipe. Optional immutable signal-Trace avoidance remains OFF by default. Evaluation assembles exact adjacent-gap artwork Maxwell-Y blocks on shared physical `(layer, NET)` surface nodes, uses only source-observed same-NET Trace/Via connectivity, and eliminates internal interfaces through one global sparse Schur/Kron solve. Touchstone remains comparison-only. The title bar identifies the application as **SPD Decap PI Evaluator v0.23.0**.
 
-> **v0.22.8 adds exact same-layer artwork reachability and conservative finite-width seams.**
-> The title bar identifies the application as **SPD Decap PI Evaluator v0.22.9**.
-
-**v0.22.8 source-graph and convergence release note:**
-
-- Thermal Trace parsing, exact same-layer artwork component reachability, conservative
-  finite-width boundary seams, and fail-closed source-provenance gates are included.
-
-- Raw SPD import recovers source-graph connectivity before choosing a plane pair;
-  the validated VINT rails select the internal `L09 (MAIN_POWER1) / L08 (DGND)`
-  pair rather than the closest geometric pair. Selection is source-SHA-bound and
-  fail-closed when a route, target contact, or retained artwork proof is absent.
-- Graph contacts require a strict-interior target node in retained ordered artwork;
-  the solver then uses the `RECTANGULAR_CAVITY_FINITE_PORT_V1` finite-port basis
-  under `FINAL_TEMPLATE_ARTWORK_CONTAINMENT_V2`. Source-graph connectivity is
-  source-proven; nearest-contact reduction, legacy vertical/contact impedance,
-  and rectangular geometry are **LOW confidence** and are not PowerSI/SIwave
-  sign-off or a source-exact electrical model.
-- An unrelated rail with no proven pair may remain in an imported project for
-  inspection, but Evaluation of that selected rail blocks with an actionable
-  unresolved-plane diagnostic. Selected rails never silently drop terminals or
-  mutate source scenario data; the source scenario remains immutable. Existing
-  v0.22.6 bundles require re-import of the
-  matching raw SPD for strict source-graph repair; the bundle is left unchanged.
-- Modal evaluation uses m8 as the starting high basis and first compares m6↔m8,
-  then escalates the high basis through m10, m12, and a bounded m14 ceiling.
-  RMS 0.2 dB, maximum 0.5 dB, and peak-shift 2% remain unchanged; exhaustion is
-  reported as a fail-closed result.
-
-**v0.22.7 source-graph and convergence release note (historical):** source-bound
-plane-pair selection and strict Evaluation provenance preceded the v0.22.8
-artwork/seam recovery improvements.
-
-> **v0.22.5 loader-performance release note (historical):** exact PowerSI Shape
-> parsing was accelerated and unreachable internal code removed. It is not the
-> current release identity.
-
-> 프로그램: **SPD Decap PI Evaluator v0.22.9**
+> 프로그램: **SPD Decap PI Evaluator v0.23.0**
 > 저장소: 기존 PI Calculator와 분리된 독립 프로그램
 > 해석 경계: 선택한 PWR rail의 pre-design `Zii`; 최종 PowerSI/SIwave 검증을 대체하지 않음
 
@@ -50,81 +11,22 @@ artwork/seam recovery improvements.
 desktop 프로그램이다. Stackup, MLO 크기 또는 plane을 새로 작성하는 기능과
 Optimization Mode는 포함하지 않는다.
 
-## v0.22.5 loader-performance release note
-
-- Exact PowerSI `Shape` parsing now streams Shape and primitive events in one
-  newline-bounded pass, reducing parser traversal and temporary indexing work
-  for large SPD files.
-- Unreachable internal models, helpers, and imports were removed without
-  changing Distribution, Evaluation, solver, or physical decision rules.
-- Methodology and physics are unchanged from v0.22.4; this release is a
-  performance and internal-cleanup update only.
-
-## v0.22.4 tolerance-enabled directional turnover
-
-- `Tolerance (%)` is orthogonal to the Target relation. Donors may receive
-  bounded replacements, receivers may release bounded existing parts while
-  receiving their demand, equal-target cells remain count-neutral exchanges,
-  and 0% preserves the prior directional behavior.
-- Receiver fulfillment is measured as net final progress
-  (`Received - Sent - Isolation Gaps`), so send/receive cycling cannot inflate
-  the primary objective. Fulfillment still precedes gap count, move count, and
-  distance in the lexicographic optimizer.
-- Three-or-more-NET handoffs are supported when they improve net fulfillment;
-  two-NET churn with no net benefit is removed by the move-minimization stage.
-- The detached Distribution matrix supports same-field multi-selection bulk
-  edits for Target and decimal Tolerance, with one canonical validation and
-  preview invalidation per committed batch.
-- Distribution workbook format 5 records
-  `Tolerance Semantics = TARGET_RELATION_COUNTERFLOW_V1`, explicit routing
-  protection `ON`/`OFF`, and Sent/Received/Isolation Gaps/net result evidence.
-  Legacy formats 1-4 fail closed if a target-changing cell contains nonzero
-  tolerance, requiring a format-5 re-export and explicit re-entry.
-- Distribution methodology: [Korean Markdown](docs/DECAP_DISTRIBUTION_RULES.md)
-  · [responsive offline HTML](docs/DECAP_DISTRIBUTION_RULES.companion.html)
-
-## v0.22.3 hotfix
-
-- Evaluation imports the full physical PowerNets inventory, including
-  positive-plane rails marked unselected for the source PowerSI simulation;
-  `selected_pi` analysis and GroundNets selection remain unchanged.
-- The Evaluation PWR NET picker uses the available right-panel width while
-  keeping its visible label and vertical splitter behavior.
-- The detached De-cap Distribution matrix edits `Target` and `Tolerance (%)`
-  directly through the main window's canonical validation state; XLSX
-  import/export remains optional.
-- PowerSI `Box` primitives now use their start-corner plus width/height
-  coordinates, restoring shared-pad classification for separated pads bridged
-  by Box copper.
-- Isolation-gap authorization is now evaluated per exact local final-copper
-  component. Multiple remote Box islands on one NET no longer suppress a
-  clean collinear single-Box chain, while local voids, touching/tiled
-  primitives, branches, and ambiguous geometry remain fail-closed.
-- Distribution methodology: [Korean Markdown](docs/DECAP_DISTRIBUTION_RULES.md)
-  · [responsive offline HTML](docs/DECAP_DISTRIBUTION_RULES.companion.html)
-
-## v0.22.2 vertical-VIA Distribution policy
-
-- Distribution policy is fixed to `VERTICAL_XY_ASSUME_DESCENT_V1`: candidate plane geometry is queried directly below each immutable source PWR landing XY.
-- Existing microvia span, lateral transition, stagger, missing path evidence, and translated-recipe status do not reject a Distribution candidate. The imported MLO evidence and source-bound certificates remain preserved for provenance and other analyses.
-- Exact ordered destination copper remains authoritative. Voids, boundary contact, missing/malformed artwork, signal-routing conflicts when protection is ON, shared-pad topology, and isolation-gap requirements still reject candidates.
-- Target and result workbooks record `Via Projection Policy`; the Preview log visibly discloses the assumption and its non-sign-off boundary.
-
-## v0.22.1 Distribution policy and optional signal-routing protection (historical)
+## v0.23.0 Distribution policy and optional signal-routing protection
 
 - Distribution retains all 21 source-classified physical PWR layers for exact immutable-landing eligibility instead of restricting candidates to an Evaluation-selected subset.
 - The new default `BALANCED_AUTO` priority is maximum fulfillment, minimum active relabels, then signed total bump distance plus one board-diagonal penalty per gap. `BALANCED_CUSTOM` accepts an explicit bounded penalty; `MIN_GAPS` preserves the legacy strict gap-first ordering.
 - Result workbooks record the selected optimization policy and effective gap penalty. Candidate Audit explains atomic shared-component eligibility, bounded exact-count evidence, and globally eligible candidates that were not selected.
-- v0.22.1 used a structural MLO transition gate. v0.22.2 supersedes that Distribution-only behavior with the explicit vertical-XY planning assumption above.
+- A structural MLO transition gate is independent of the experimental signal-routing checkbox: a non-TOP move needing a translated via/trace recipe remains blocked when protection is OFF unless that recipe is validated.
+- The real-board projection path reuses one source-bound transition context instead of revalidating the full project for every candidate landing.
 
 - Raw SPD import now reads logical `Trace` records, including inline Width, `+ Width` continuations, `Thermal` records, diagonal/zero-length segments, endpoint coordinates and conductor layers.
 - A deterministic SHA-bound routing attachment is stored in `.spdpi`; saved scenarios can reproduce the same routing decision without reopening the raw SPD. Attachment content, source SHA, stack-up fingerprint, schema, scope and planned-via profiles are validated on save/load.
 - `Experimental: protect immutable signal routing clearances` is OFF by default. When ON, `Trace-to-via clearance` is a finite nonnegative user value in µm. The documented `C = 2w` rule remains an offline research mode and is not a GUI default.
-- Turning this checkbox OFF disables only the experimental signal-Trace collision filter. It does not disable the balanced objective, 21-layer eligibility, Candidate Audit, exact destination-plane checks, or topology rules.
+- Turning this checkbox OFF disables only the experimental signal-Trace collision filter. It does not disable the balanced objective, 21-layer eligibility, Candidate Audit, or the structural MLO transition gate.
 - The filter runs after exact destination-plane containment and before component eligibility/MILP label creation. Tangency is blocked, and evidence gaps produce `UNKNOWN`, which is also rejected.
 - The first implementation scope is `SIGNAL_NET_ONLY`. Width-resolved SIGNAL-role Trace objects use the disclosed `WIDTHED_SIGNAL_TRACE_PROXY_V1` research classifier; routed PWR/GND copper, signal vias, pins, pads and fanout pads are not yet certified. The UI, diagnostics and workbook metadata disclose this limitation.
 - For a terminal with multiple retained PWR via columns, protection ON requires all retained columns to be safe. Protection OFF retains the historical one-root component rule.
-- Distribution workbook format 4 round-trips the protection option, fixed clearance, policy version and routing asset hashes. Older workbooks reopen with protection OFF and an explicit warning.
+- Distribution workbook format 5 round-trips the protection option, fixed clearance, transition policy and routing asset hashes. Format 1-4 workbooks require re-export after reopening the source SPD; they are not silently reopened under the current exact-layer contract.
 - The supplied `PC_2116_S5I5600X08_1P_260606_final_1.spd` is supported as an offline parser/collision research corpus. Its existing scenario import limitation remains separate; it is not claimed as a GUI Import→Distribution golden file.
 
 Offline research scan example:
@@ -136,22 +38,34 @@ python scripts\analyze_signal_routing_avoidance.py `
 
 See [the research and implementation directive](docs/DECAP_DISTRIBUTION_SIGNAL_TRACE_AVOIDANCE_RESEARCH_2026-08-09.md) for formulas, evidence policy, real-SPD measurements and remaining sign-off work.
 
-## v0.21.0 Evaluation / Distribution integration
+## v0.23.0 multilayer Evaluation
+
+- The desktop default is **Layer-surface terminal-complete network**. Each retained physical `(layer, NET)` surface remains independent until exact raw-SPD same-NET Trace/Via topology proves a connection.
+- Every adjacent dielectric gap contributes its exact ordered-artwork complex Maxwell-Y block. The blocks and source-observed vertical topology are embedded in one sparse network, then all internal interfaces are eliminated together by an open-port Schur/Kron solve.
+- A branched topology component contributes no invented serial R/L. Device and decap loop R/L remain separately owned external branches. Gap-isolated retained surfaces may carry certified topology, but the evaluator does not synthesize missing capacitance or fringing for them.
+- The terminal-complete global-Y result at the external Device port is the **sole** Layerwise driving-point input. The legacy rectangular modal matrix is not prepared, and no aggregate higher-mode one-port difference is added. This remains a source-derived circuit model, not a full-wave S-parameter solver.
+- Frequency refinement uses the versioned three-iteration/64-point bounded policy. The shared Balanced/m-index field remains in run provenance for schema compatibility, but it does not stamp rectangular modes into a terminal-complete Layerwise result. Legacy and Research retain their documented modal-order behavior; PowerSI never selects the order.
+- PowerSI Touchstone files are never read while building or fitting the model. They are used only by the validation benchmark. The two named 92-port cases, including all ten no-decap `VQPS` controls and six loaded rails per case, are recorded in the [v0.22.0 validation record](docs/EVALUATION_LAYER_SURFACE_VALIDATION_2026-08-06.md).
+- Evaluation after De-cap Distribution shares the same evidence/compiler path. Unchanged source DIRECT assignments can use their immutable source template, while moved assignments still require exact destination eligibility and remain fail-closed.
+- The Distribution grid reports receiver shortfall as `Assignment Failed`; the board toolbar switches between `Current / distributed` and `Source SPD (read-only)` assignments at fixed physical XY without changing the scenario.
+- **Legacy modal** remains an explicit rollback/regression profile. There is no silent fallback when layer-surface source evidence is incomplete.
+
+## v0.21.0 Evaluation / Distribution integration (historical)
 
 - Evaluation resolves a missing DIRECT eligibility only for the immutable source rail/net and only from the imported rail-template binding. Exact eligibility takes precedence; redistributed assignments without destination proof still block preflight and build.
 - The comparison preflight runs in the background and applies the same build-time connectivity/modelability contract to both **Original** and **Tuned/current**. A rail is runnable only when both sides build. If a selection mixes runnable and blocked rails, an explicit confirmation (default `No`) offers to run only the clear rails; the summary remains `PARTIAL` and marks every omitted rail `NOT evaluated`.
 - The source-DIRECT fallback removed all 470 missing-eligibility blockers in the captured Distribution replay's connectivity-only check. It is not a geometry bypass: a fresh 260804 import still has 2,010 exact finite-port footprint blockers on 68 of 92 rails (1,232 GND and 778 PWR). Coordinates are never clamped, the cavity is never expanded, and blocked ports are never dropped.
 - Compact exact route recovery found 11,874 of 117,810 requested source paths in the fresh 260804 import; 105,936 paths retained the disclosed legacy-template fallback. The same exact geometry preflight still reported 2,010 blockers, so route recovery is evidence preservation, not permission to treat an off-cavity terminal as modelable.
 - The authoritative fresh 260804 active-checkout Distribution replay completed `NEAREST` as `FULL`: 696/696 receiver assignments, shortfall 0, 696 moves and 208 isolation sacrifices. Measured stages were scenario load 5.569 s, targets 2.340 s, proof projection plus validation 53.167 s, planner 157.501 s and atomic Apply 8.345 s; route metadata remained 11,874/117,810 recovered.
-- After that Apply, the two-sided Original/Tuned comparison preflight reported 2,807 blockers on 73 rails and 19 clear rails: the fresh-source 2,010 blockers remained common, while redistribution added 797 Tuned-only blockers. Of the total, 2,802 were geometry and 5 connectivity blockers. This is intentionally different from the fresh-source 2,010 blockers on 68 rails; all 10 VQPS controls remained clear. The optimized all-rail preflight performance rerun is still pending, so no interim timing is treated as a release result.
+- After that Apply, the two-sided Original/Tuned comparison preflight reported 2,807 blockers on 73 rails and 19 clear rails: the fresh-source 2,010 blockers remained common, while redistribution added 797 Tuned-only blockers. Of the total, 2,802 were geometry and 5 connectivity blockers. This is intentionally different from the fresh-source 2,010 blockers on 68 rails; all 10 VQPS controls remained clear. The v0.21 optimized all-rail preflight rerun completed in 10.083 s and preserved the 2,010-blocker/68-rail source manifest; v0.22 replaces that legacy rectangular geometry gate with exact retained-surface binding only for the Layerwise profile.
 - The Distribution grid reports unfulfilled receiver demand as `Assignment Failed`. Requested targets remain visible after Apply so partial results stay auditable.
 - A main-board `Show source SPD assignments` control switches the board between `Current / distributed` and `Source SPD (read-only)` at the same physical XY. Search, selection and viewport are preserved, and source view blocks editing.
 - PowerSI comparison utilities accept both exact legacy `2nd_SITE#-...` and exact run-qualified `SITE#_<run>-...` headers while continuing to reject site/rail mismatches. Touchstone remains comparison-only and is never used for fitting.
 - All 10 no-decap `VQPS` rails are clear in exact preflight and remain bare-PDN controls. Their measured correlation still exposes a systematic accuracy limitation, so this release does not silently promote an experimental numerical solver. See the [v0.21.0 validation record](docs/EVALUATION_DISTRIBUTION_VALIDATION_2026-08-06.md).
 
-## v0.20.0 De-cap Distribution correction
+## v0.20.0 De-cap Distribution correction (historical)
 
-- Distribution uses the actual source-classified PWR Via landing, never the decap center or a lateral Trace/path endpoint, and strictly tests that immutable XY against the target NET's final ordered copper artwork.
+- Historical v0.20 behavior used the source-classified PWR Via landing at immutable XY for every target layer. Current v0.23 uses that landing only for TOP; each non-TOP target requires source-proven exact-layer transition evidence and strictly tests its retained endpoint against the target NET's final ordered copper artwork.
 - A target may be on any retained PWR conductor layer. GND-side Via/layer evidence is not a destination gate because this workflow changes only the PWR assignment and leaves all plane artwork unchanged.
 - Eligibility is a disclosed placement-planning result: `VIA STACK CHANGE REQUIRED` means a filled-Cu microvia stack must be retargeted/rebuilt at that landing. It is not an as-built connectivity claim and the application does not edit the SPD Via or plane artwork.
 - Any one real PWR landing can anchor an active PWR component. Dummy caps still cannot create their own root and may move only through the existing shared-pad anchor, separator, shared-Via, and isolation-gap rules.
@@ -159,7 +73,7 @@ See [the research and implementation directive](docs/DECAP_DISTRIBUTION_SIGNAL_T
 - The table-adjacent status is limited to per-model Donor/Receiver/Balance; detailed validation, import, planning-assumption, partial-result, and stale-result messages are shown in `Distribution Status / Preview Log`.
 - File loading and Distribution calculation remain worker-threaded. v0.20.0 removes the abandoned existing-column recovery pass, so this correction does not add another full Node/Via scan to raw-SPD loading.
 
-## v0.18.1 evaluation solver and loading status
+## v0.18.1 evaluation solver and loading status (historical)
 
 - The 2026-08-04 [evaluation-solver deep-research decision record](docs/EVALUATION_SOLVER_DEEP_RESEARCH_2026-08-04.md) documents the 92-port PowerSI evidence, actual-artwork capacitance experiments, layer-network composition, matrix-free residual go/no-go criteria, selected sparse-MNA architecture, validation gates, and staged implementation order. It is a research record only; no experimental solver is production-enabled by that document.
 - The companion [evaluation-solver implementation plan](docs/EVALUATION_SOLVER_IMPLEMENTATION_PLAN_2026-08-04.md) and the [v0.18.1 implementation status](docs/EVALUATION_SOLVER_IMPLEMENTATION_STATUS_2026-08-04.md) distinguish shipped guarded infrastructure from research prototypes. The legacy modal backend remains the default production path.
@@ -168,11 +82,7 @@ See [the research and implementation directive](docs/DECAP_DISTRIBUTION_SIGNAL_T
 - Research Original/Tuned curves are transient: Original is recomputed for every run and is neither persisted to nor reused from the scenario baseline cache. Legacy retains its existing `Saved now`/cache-reuse behavior.
 - The named source SPD with SHA-256 prefix `40cb44b2376f` currently lacks the required topology certificate. Consequently the research option is intentionally blocked for that source and no accuracy-improvement claim is made for it.
 - The source-only uniform `C00` scaffold above is the only shipped research profile. Separate global MNA, MFDM, PEEC, and associated artwork/via prototypes were investigated but excluded from the v0.18.1 prerelease. PowerSI Touchstone remains comparison-only and is never used for parameter fitting. v0.18.1 remains a prerelease until the documented accuracy-promotion gates, including end-to-end and blinded holdout evidence, are passed.
-- The dated 2026-07-29 fixed-order m6/m8/m12 benchmark is historical comparison
-  evidence only; it is not the current modal preset or acceptance gate. The
-  current **Balanced** preset starts at m8, compares m6↔m8, then adaptively
-  escalates through m10, m12, and bounded m14 under the unchanged RMS/max/peak
-  thresholds. PowerSI remains comparison-only.
+- The default remains **Balanced** (max index 8, 81 modes). **Experimental m12 check** keeps the existing max index 12 / 169-mode API for a comparison-only m10-to-m12 check. In the 2026-07-29 loaded benchmark, VTRIP1 changed by up to 1.346 dB in maximum magnitude from m10 to m12, 3 of 6 loaded configurations still did not converge, and solver runtime was 4,139 s. More modes worsened external correlation in that case, but this does not justify selecting a lower order; PowerSI remains comparison-only.
 - The evaluator can combine only the immediately adjacent, opposite-side conductor when it contains configured GND aliases and valid dielectric rows. It uses the disclosed shared-PWR ideal-common-reference equivalent; it does not enable a general layer cascade. A true layer cascade is a full complex multiport Y-matrix Schur/Kron reduction, not scalar-Z or scalar-admittance merging. See [Evaluation accuracy](docs/EVALUATION_ACCURACY.md).
 - A mixed PWR/DGND return layer is accepted only through a versioned certificate tied to SHA-256-verified exact plane artwork. The certificate requires at least 90% PWR-area overlap with the configured DGND artwork and a 99% dominant overlap component; it is fail-closed if geometry verification is unavailable. Result confidence remains **LOW** and displays the overlap evidence plus the continuous rectangular-return approximation.
 - When a source terminal reaches the selected plane through a same-net Trace, or an alternate Trace-to-Via exit exists, evaluation uses the complete legacy terminal template instead of adding an incomplete source-Via R/L contribution. Compact node indexing avoids repeated full-SPD Node scans during this recovery.
@@ -217,18 +127,18 @@ See [the research and implementation directive](docs/DECAP_DISTRIBUTION_SIGNAL_T
 - Evaluation PWR NET 선택 목록에 도면 색상과 동기화된 color box를 표시하고 우클릭으로 색상 변경
 - 비교 표에서 decap 수, 1 MHz/10 MHz/100 MHz 임피던스, target violation의 Original/Tuned 변화 표시
 - De-cap Distribution 표에서 PWR NET·Component별 현재 수량과 목표 수량을 지정하고, 수치 공급량을 사전 검수한 뒤 실제 PWR plane·bump·shared-pad 조건을 만족하는 최대 수량을 자동 재배정
-- Distribution은 Evaluation에 선택된 단일 pair와 무관하게 source SPD에 보존된 모든 target PWR layer를 검사하고, 모든 source-classified physical PWR landing을 동일 XY에서 수직 하강한다고 가정한다. 기존 microvia span·lateral/stagger transition·path evidence 유무는 Distribution gate가 아니며, exact destination copper의 void/boundary, optional signal-routing, shared-pad/isolation-gap 조건은 그대로 적용한다. GND layer는 destination gate가 아니다.
+- Distribution은 Evaluation에 선택된 단일 pair와 무관하게 source SPD에 보존된 모든 target PWR layer를 검사하되, source-proven 연속 수직 VIA만 동일 landing XY의 filled-Cu retarget/rebuild 대상으로 취급한다. MLO 전이 증거가 있으면 `MLO_TRANSITION_RECIPE_REQUIRED`로 차단하고, fresh/legacy 여부와 board-level policy 값에 관계없이 landing path 증거가 없으면 `REIMPORT_SOURCE_FOR_TRANSITION_EVIDENCE`로 non-TOP 후보를 차단한다. GND layer는 destination gate가 아니다.
 - 현재치와 목표치가 같은 PWR NET도 `Tolerance (%)`가 양수이면 최종 수량을 유지한 채 `floor(현재 수량 × tolerance / 100)`개까지 주고받는 교환 경로로 참여; 0%이면 기존처럼 연산에서 제외
 - Distribution의 Target/Tolerance 셀은 캐시된 수량으로 즉시 검증하며, `Ctrl`/`Shift`로 같은 종류의 셀을 여러 개 선택한 뒤 숫자를 한 번 입력해 동일 값으로 일괄 변경
 - Distribution 후보를 수신 PWR NET bump에서 가까운 순서 또는 먼 순서로 선택하고, 물리 제약으로 목표에 미달해도 가능한 변경과 `Assignment Failed`·`Isolation Gaps`·shortfall을 표시
 - Distribution 최적화는 기본 `BALANCED_AUTO`, 사용자 penalty의 `BALANCED_CUSTOM`, 기존 strict gap-first `MIN_GAPS`를 제공하며 선택 policy와 실제 penalty를 Preview와 Excel metadata에 기록
-- shared-pad 대형 문제에서 수량·이동 assignment를 먼저 고정한 뒤 separator pad를 재최적화하는 단계는 `MIN_GAPS`에서만 수행하며, 원자적 topology 검증을 통과한 불필요 gap 복원은 모든 policy에 적용하여 서로 다른 NET 경계에 실제로 필요한 isolation gap만 남김
+- shared-pad 대형 문제에서 수량·이동 assignment를 먼저 고정한 뒤 separator pad를 재최적화하고, 원자적 topology 검증을 통과한 불필요 gap을 복원하여 서로 다른 NET 경계에 실제로 필요한 isolation gap만 남김
 - 이전 Distribution Excel의 절대 `Target`·`Tolerance (%)`를 `Import Targets...`로 재사용하며, `Present`는 현재 SPD에서 즉시 다시 계산하고 기록되지 않은 후보 순서는 사용자가 명시적으로 선택
 - Distribution 표를 더블클릭하면 비모달 분리창을 열고, 계산 전후 Target XLSX를 내보내거나 엄격히 검증해 다시 가져오며, 메인 도면과 분리창에서 `Current / distributed`와 `Source SPD (read-only)` assignment/isolation-gap 상태를 번갈아 확인
 - Distribution 결과의 전체 Decap을 `Component`, `REFDES`, `Before NET`, `After NET`, `X`, `Y` 열 CSV 또는 Excel로 내보내며, 희생 cell은 `UNUSED (ISOLATION GAP)`으로 기록하고 Excel의 두 번째 sheet에는 계산 당시 `PWR NET Distribution Targets` 표와 input inventory reconciliation을 보존
-- 새 Distribution Excel은 source SPD SHA-256, design fingerprint, revision, 후보 순서, optimization policy/effective gap penalty, `Via Projection Policy`와 프로그램 버전을 두 번째 sheet에 함께 기록하며, 변경 대상 rail의 기존 unresolved connection은 해석 차단 경고로 별도 표시
+- 새 Distribution Excel은 source SPD SHA-256, design fingerprint, revision, 후보 순서, optimization policy/effective gap penalty와 프로그램 버전을 두 번째 sheet에 함께 기록하며, 변경 대상 rail의 기존 unresolved connection은 해석 차단 경고로 별도 표시
 - 원본 source TOP copper 경로가 없는 구형 V2 scenario에서는 Distribution을 fail-closed로 차단하고 원본 SPD 재열기를 안내하며, 변경된 배치는 별도 `.spdpi`로 저장
-- De-cap Distribution의 수량·PWR plane/VIA·shared-pad/dummy·isolation-gap·부분 충족·Apply·입출력 규칙은 [Markdown 방법론](docs/DECAP_DISTRIBUTION_RULES.md)과 [반응형 오프라인 HTML](docs/DECAP_DISTRIBUTION_RULES.companion.html)에 명시하고, 지정된 실파일 검증 결과는 [`docs/DECAP_DISTRIBUTION_VALIDATION_2026-08-06.md`](docs/DECAP_DISTRIBUTION_VALIDATION_2026-08-06.md)에 기록
+- De-cap Distribution의 수량·PWR plane/VIA·shared-pad/dummy·isolation-gap·부분 충족·Apply·입출력 규칙은 [`docs/DECAP_DISTRIBUTION_RULES.md`](docs/DECAP_DISTRIBUTION_RULES.md)에 명시하고, 지정된 실파일 검증 결과는 [`docs/DECAP_DISTRIBUTION_VALIDATION_2026-08-06.md`](docs/DECAP_DISTRIBUTION_VALIDATION_2026-08-06.md)에 기록
 - Selection, Evaluation, AI Assist, De-cap Distribution의 내부 section 높이를 선명한 가로 splitter bar로 조절
 - 선택한 Tuned PWR NET 한 개를 명시적으로 분석하는 evidence-grounded Local AI Plot Analyst
 - 원본 SPD를 포함하지 않는 hash 검증 `.spdpi` scenario 저장/재열기
@@ -268,7 +178,7 @@ powershell.exe -ExecutionPolicy Bypass -NoProfile -File .\scripts\build_spd_deca
 산출물:
 
 - `dist\SPDDecapPIEvaluator\SPDDecapPIEvaluator.exe`
-- `installer-output\SPDDecapPIEvaluatorSetup-0.22.9.exe`
-- `installer-output\SPDDecapPIEvaluatorSetup-0.22.9.exe.sha256`
+- `installer-output\SPDDecapPIEvaluatorSetup-0.23.0.exe`
+- `installer-output\SPDDecapPIEvaluatorSetup-0.23.0.exe.sha256`
 
 프로그램명과 버전은 title bar와 installer metadata에 함께 표시된다.

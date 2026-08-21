@@ -347,9 +347,12 @@ class PinRecord(DomainModel):
     site: str | None = None
     bump_group: str | None = None
     via_template_id: str | None = None
-    # Raw SPD identity retained for source-exact route witnesses.  Existing
+    # Raw SPD identity retained for source-exact route witnesses. Existing
     # hand-authored scenarios leave these unset; raw imports populate them.
+    # These fields identify the exact source Node/Layer/Padstack used by a
+    # Connect record without claiming a complete electrical path.
     source_node_id: str | None = None
+    source_layer: str | None = None
     source_padstack: str | None = None
 
     @field_validator("x_um", "y_um")

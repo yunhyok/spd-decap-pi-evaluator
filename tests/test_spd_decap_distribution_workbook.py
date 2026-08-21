@@ -25,6 +25,19 @@ LEGACY_HEADERS = (
     "M1\nActual Delta",
 )
 
+CURRENT_OFF_METADATA = {
+    "Format Version": 5,
+    "Signal Routing Protection": "OFF",
+    "Tolerance Semantics": DISTRIBUTION_TOLERANCE_SEMANTICS,
+    "Via Projection Policy": DISTRIBUTION_VIA_PROJECTION_POLICY,
+}
+
+
+def _current_metadata(**updates: object) -> dict[str, object]:
+    result = dict(CURRENT_OFF_METADATA)
+    result.update(updates)
+    return result
+
 
 def test_legacy_targets_are_absolute_and_present_is_refreshed_from_current_scenario(
     tmp_path: Path,
@@ -38,6 +51,7 @@ def test_legacy_targets_are_absolute_and_present_is_refreshed_from_current_scena
             ("V1 (R1)", 2, 1, 0.0, "=ignored-result"),
             ("V2 (R2)", 1, 2, 0.0, 1),
         ),
+        metadata=_current_metadata(),
     )
 
     imported = load_distribution_targets(
@@ -66,7 +80,7 @@ def test_legacy_targets_are_absolute_and_present_is_refreshed_from_current_scena
     assert imported.changed_present_cells == 1
     assert imported.defaulted_current_cells == 1
     assert imported.distance_mode is None
-    assert "Legacy workbook" in imported.summary(path.name)
+    assert "source identity was not recorded" in imported.summary(path.name)
     assert "3 -> 7 (+4" in imported.summary(path.name)
 
 
@@ -139,7 +153,7 @@ def test_current_export_keeps_two_sheets_a1_matrix_and_round_trips_metadata(
     assert imported.via_projection_policy == DISTRIBUTION_VIA_PROJECTION_POLICY
 
 
-def test_format3_without_source_keeps_both_legacy_warnings(tmp_path: Path) -> None:
+def test_legacy_format_requires_reexport_with_source_proven_policy(tmp_path: Path) -> None:
     path = tmp_path / "legacy-no-source.xlsx"
     write_distribution_workbook(
         path,
@@ -149,16 +163,13 @@ def test_format3_without_source_keeps_both_legacy_warnings(tmp_path: Path) -> No
         metadata={"Format Version": 3},
     )
 
-    imported = load_distribution_targets(
-        path,
-        rail_ids=("R1",),
-        model_ids=("M1",),
-        current_present={("R1", "M1"): 1},
-    )
-
-    assert any("restored OFF" in item for item in imported.warnings)
-    assert any("source identity was not recorded" in item for item in imported.warnings)
-    assert imported.via_projection_policy == DISTRIBUTION_VIA_PROJECTION_POLICY
+    with pytest.raises(DistributionWorkbookError, match="requires re-export"):
+        load_distribution_targets(
+            path,
+            rail_ids=("R1",),
+            model_ids=("M1",),
+            current_present={("R1", "M1"): 1},
+        )
 
 
 def test_unknown_via_projection_policy_fails_closed(tmp_path: Path) -> None:
@@ -169,7 +180,9 @@ def test_unknown_via_projection_policy_fails_closed(tmp_path: Path) -> None:
         ("PWR NET", "M1\nTarget"),
         (("V1 (R1)", 1),),
         metadata={
-            "Format Version": 3,
+            "Format Version": 5,
+            "Tolerance Semantics": DISTRIBUTION_TOLERANCE_SEMANTICS,
+            "Signal Routing Protection": "OFF",
             "Via Projection Policy": "REQUIRE_EXISTING_MLO_PATH",
         },
     )
@@ -217,7 +230,7 @@ def test_format5_requires_explicit_tolerance_semantics(tmp_path: Path) -> None:
         )
 
 
-def test_legacy_target_changing_tolerance_requires_format5_reentry(
+def test_current_target_changing_tolerance_round_trips(
     tmp_path: Path,
 ) -> None:
     path = tmp_path / "legacy-directional-tolerance.xlsx"
@@ -226,22 +239,16 @@ def test_legacy_target_changing_tolerance_requires_format5_reentry(
         (),
         ("PWR NET", "M1\nPresent", "M1\nTarget", "M1\nTolerance (%)"),
         (("V1 (R1)", 3, 2, 10.0),),
-        metadata={
-            "Format Version": 4,
-            "Signal Routing Protection": "OFF",
-        },
+        metadata=_current_metadata(),
     )
 
-    with pytest.raises(
-        DistributionWorkbookError,
-        match="Formats 1-4.*re-export.*format 5",
-    ):
-        load_distribution_targets(
-            path,
-            rail_ids=("R1",),
-            model_ids=("M1",),
-            current_present={("R1", "M1"): 3},
-        )
+    imported = load_distribution_targets(
+        path,
+        rail_ids=("R1",),
+        model_ids=("M1",),
+        current_present={("R1", "M1"): 3},
+    )
+    assert imported.tolerances[("R1", "M1")] == 10.0
 
 
 def test_legacy_safe_tolerance_cells_still_load(tmp_path: Path) -> None:
@@ -254,10 +261,7 @@ def test_legacy_safe_tolerance_cells_still_load(tmp_path: Path) -> None:
             ("V1 (R1)", 3, 3, 10.0),
             ("V2 (R2)", 2, 1, 0.0),
         ),
-        metadata={
-            "Format Version": 4,
-            "Signal Routing Protection": "OFF",
-        },
+        metadata=_current_metadata(),
     )
 
     imported = load_distribution_targets(
@@ -280,19 +284,16 @@ def test_legacy_migration_uses_current_present_not_stale_workbook_present(
         (),
         ("PWR NET", "M1\nPresent", "M1\nTarget", "M1\nTolerance (%)"),
         (("V1 (R1)", 3, 3, 10.0),),
-        metadata={
-            "Format Version": 4,
-            "Signal Routing Protection": "OFF",
-        },
+        metadata=_current_metadata(),
     )
 
-    with pytest.raises(DistributionWorkbookError, match="directional counterflow"):
-        load_distribution_targets(
-            path,
-            rail_ids=("R1",),
-            model_ids=("M1",),
-            current_present={("R1", "M1"): 4},
-        )
+    imported = load_distribution_targets(
+        path,
+        rail_ids=("R1",),
+        model_ids=("M1",),
+        current_present={("R1", "M1"): 4},
+    )
+    assert imported.targets[("R1", "M1")] == 3
 
 
 @pytest.mark.parametrize("result_header", ("Actual Changed", "Assignment Failed"))
@@ -312,7 +313,7 @@ def test_import_ignores_legacy_and_current_assignment_result_columns(
         (),
         headers,
         (("V1 (R1)", 3, 2, 99),),
-        metadata={"Format Version": 2 if result_header == "Actual Changed" else 3},
+        metadata=_current_metadata(),
     )
 
     imported = load_distribution_targets(
@@ -337,7 +338,7 @@ def test_import_streams_bounded_ranges_and_skips_result_columns_for_target_rows(
         (("V1 (R1)", 3, 2, 0, -1),),
         inventory_headers=("Component", "Physical Present"),
         inventory_rows=(("M1", 3),),
-        metadata={"Format Version": 2, "Distance Mode": "NEAREST"},
+        metadata=_current_metadata(**{"Distance Mode": "NEAREST"}),
     )
 
     calls: list[dict[str, object]] = []
@@ -419,6 +420,7 @@ def test_unmatched_active_target_fails_closed_but_neutral_cell_is_ignored(
         (),
         LEGACY_HEADERS,
         (("OLD (REMOVED)", 2, 1, 0, -1),),
+        metadata=_current_metadata(),
     )
     with pytest.raises(DistributionWorkbookError, match="active workbook target"):
         load_distribution_targets(
@@ -437,6 +439,7 @@ def test_unmatched_active_target_fails_closed_but_neutral_cell_is_ignored(
             ("V1 (R1)", 3, 2, 0, -1),
             ("OLD (REMOVED)", 4, 4, 0, 0),
         ),
+        metadata=_current_metadata(),
     )
     imported = load_distribution_targets(
         neutral_path,
@@ -511,7 +514,7 @@ def test_metadata_source_mismatch_and_unknown_distance_fail_closed(
         LEGACY_HEADERS,
         (("V1 (R1)", 3, 2, 0, -1),),
         metadata={
-            "Format Version": 2,
+            **_current_metadata(),
             "Source SPD SHA-256": "a" * 64,
             "Distance Mode": "SIDEWAYS",
         },
@@ -532,7 +535,7 @@ def test_metadata_source_mismatch_and_unknown_distance_fail_closed(
         LEGACY_HEADERS,
         (("V1 (R1)", 3, 2, 0, -1),),
         metadata={
-            "Format Version": 2,
+            **_current_metadata(),
             "Source SPD SHA-256": "a" * 64,
             "Distance Mode": "NEAREST",
         },
@@ -547,7 +550,7 @@ def test_metadata_source_mismatch_and_unknown_distance_fail_closed(
         )
 
 
-def test_format4_round_trips_signal_routing_policy_and_asset(tmp_path: Path) -> None:
+def test_format5_round_trips_signal_routing_policy_and_asset(tmp_path: Path) -> None:
     path = tmp_path / "protected.xlsx"
     asset_sha = "a" * 64
     content_sha = "b" * 64
@@ -557,7 +560,7 @@ def test_format4_round_trips_signal_routing_policy_and_asset(tmp_path: Path) -> 
         ("PWR NET", "M1\nPresent", "M1\nTarget", "M1\nTolerance (%)"),
         (("V1 (R1)", 1, 0, 0.0), ("V2 (R2)", 0, 1, 0.0)),
         metadata={
-            "Format Version": 4,
+            **_current_metadata(),
             "Signal Routing Protection": "ON",
             "Routing Protection Scope": "SIGNAL_NET_ONLY",
             "Routing Policy Version": "SIGNAL_NET_ONLY_RESEARCH_V1",
@@ -577,7 +580,7 @@ def test_format4_round_trips_signal_routing_policy_and_asset(tmp_path: Path) -> 
         current_routing_asset_content_sha256=content_sha,
     )
 
-    assert imported.format_version == 4
+    assert imported.format_version == 5
     assert imported.routing_protection_enabled is True
     assert imported.routing_scope == "SIGNAL_NET_ONLY"
     assert imported.routing_clearance_um == 12.5
@@ -585,7 +588,7 @@ def test_format4_round_trips_signal_routing_policy_and_asset(tmp_path: Path) -> 
     assert imported.routing_asset_content_sha256 == content_sha
 
 
-def test_format4_protected_workbook_fails_closed_on_asset_mismatch(
+def test_format5_protected_workbook_fails_closed_on_asset_mismatch(
     tmp_path: Path,
 ) -> None:
     path = tmp_path / "protected-mismatch.xlsx"
@@ -595,7 +598,7 @@ def test_format4_protected_workbook_fails_closed_on_asset_mismatch(
         ("PWR NET", "M1\nTarget"),
         (("V1 (R1)", 1),),
         metadata={
-            "Format Version": 4,
+            **_current_metadata(),
             "Signal Routing Protection": "ON",
             "Routing Protection Scope": "SIGNAL_NET_ONLY",
             "Routing Policy Version": "SIGNAL_NET_ONLY_RESEARCH_V1",
@@ -617,7 +620,7 @@ def test_format4_protected_workbook_fails_closed_on_asset_mismatch(
         )
 
 
-def test_format4_protected_workbook_rejects_unknown_policy_version(
+def test_format5_protected_workbook_rejects_unknown_policy_version(
     tmp_path: Path,
 ) -> None:
     path = tmp_path / "protected-policy-mismatch.xlsx"
@@ -627,7 +630,7 @@ def test_format4_protected_workbook_rejects_unknown_policy_version(
         ("PWR NET", "M1\nTarget"),
         (("V1 (R1)", 1),),
         metadata={
-            "Format Version": 4,
+            **_current_metadata(),
             "Signal Routing Protection": "ON",
             "Routing Protection Scope": "SIGNAL_NET_ONLY",
             "Routing Policy Version": "SIGNAL_NET_ONLY_V999",

@@ -1,5 +1,10 @@
 # Evaluation Solver Deep-Research Decision Record
 
+> Historical research record. The original v0.22.0 proposal described a
+> hybrid layer-surface/modal composition. Current production Layerwise instead
+> uses terminal-complete global-Y Device-port Zii alone and stamps no legacy
+> modal add-on; current validation is recorded separately.
+
 - Date: 2026-08-04
 - Status: synthesized research decision record; not a production-solver claim
 - Scope: Evaluation Analysis accuracy and responsiveness only; De-cap Distribution is out of scope

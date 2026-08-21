@@ -4,6 +4,12 @@ from .evaluator import (
     COUPLING_ASSUMPTION,
     CONVERGENCE_ALGORITHM_VERSION,
     DEFAULT_MODAL_CEILING_INDEX,
+    CONVERGENCE_POLICY_VERSION,
+    DEFAULT_MAX_NEW_FREQUENCY_POINTS,
+    DEFAULT_MAX_REFINEMENT_ITERATIONS,
+    DEFAULT_MAX_TOLERANCE_DB,
+    DEFAULT_PEAK_SHIFT_TOLERANCE_PERCENT,
+    DEFAULT_RMS_TOLERANCE_DB,
     SOLVER_VERSION,
     ConvergenceReport,
     EvaluationError,
@@ -23,7 +29,7 @@ from .evaluator import (
     sensitivity_port_id,
     to_domain_evaluation_result,
 )
-from .frequency import FrequencyGrid, refine_log_grid
+from .frequency import DEFAULT_CURVATURE_THRESHOLD_DB, FrequencyGrid, refine_log_grid
 from .metrics import (
     ConfidenceAssessment,
     ConfidenceCategory,
@@ -52,7 +58,9 @@ from .modal import (
     copper_slab_surface_impedance_per_square,
 )
 from .profiles import (
+    APPLICATION_DEFAULT_SOLVER_PROFILE_KEY,
     DEFAULT_SOLVER_PROFILE_KEY,
+    LAYERWISE_ADMITTANCE_PROFILE,
     LEGACY_MODAL_PROFILE,
     RESEARCH_UNIFORM_ADMITTANCE_PROFILE,
     SOLVER_PROFILES,
@@ -60,7 +68,6 @@ from .profiles import (
     SolverProfileError,
     solver_profile,
 )
-
 _RESEARCH_UNIFORM_EXPORTS = frozenset(
     {
         "ResearchProfileUnavailable",
@@ -68,8 +75,11 @@ _RESEARCH_UNIFORM_EXPORTS = frozenset(
         "build_uniform_c00_source_model",
     }
 )
-
-
+from .layerwise_network import (
+    LayerwiseNetworkUnavailable,
+    LayerwiseUniformSourceModel,
+    build_layerwise_uniform_source_model,
+)
 def __getattr__(name: str) -> object:
     """Bind the optional research uniform-C00 bridge only when it is used.
 
@@ -89,11 +99,20 @@ def __getattr__(name: str) -> object:
 
 
 __all__ = [
+    "APPLICATION_DEFAULT_SOLVER_PROFILE_KEY",
     "COUPLING_ASSUMPTION",
     "CONVERGENCE_ALGORITHM_VERSION",
     "DEFAULT_MODAL_CEILING_INDEX",
+    "CONVERGENCE_POLICY_VERSION",
+    "DEFAULT_CURVATURE_THRESHOLD_DB",
+    "DEFAULT_MAX_NEW_FREQUENCY_POINTS",
+    "DEFAULT_MAX_REFINEMENT_ITERATIONS",
+    "DEFAULT_MAX_TOLERANCE_DB",
+    "DEFAULT_PEAK_SHIFT_TOLERANCE_PERCENT",
+    "DEFAULT_RMS_TOLERANCE_DB",
     "DEFAULT_SOLVER_PROFILE_KEY",
     "LEGACY_MODAL_PROFILE",
+    "LAYERWISE_ADMITTANCE_PROFILE",
     "RESEARCH_UNIFORM_ADMITTANCE_PROFILE",
     "SOLVER_PROFILES",
     "SOLVER_VERSION",
@@ -113,6 +132,8 @@ __all__ = [
     "FinitePort",
     "FrequencyGrid",
     "MetricsError",
+    "LayerwiseNetworkUnavailable",
+    "LayerwiseUniformSourceModel",
     "ModalSolveResult",
     "ModalSolverError",
     "PreparedDeviceSystem",
@@ -129,6 +150,7 @@ __all__ = [
     "TargetMask",
     "assess_confidence",
     "build_project_evaluation_request",
+    "build_layerwise_uniform_source_model",
     "build_uniform_c00_source_model",
     "compile_evaluation_kernel",
     "compile_project_evaluation_template",

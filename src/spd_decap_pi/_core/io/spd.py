@@ -10,15 +10,18 @@ device/capacitor connections.
 from __future__ import annotations
 
 from array import array
-from collections import Counter
+from collections import Counter, deque
 from collections.abc import Callable, Iterable, Iterator, Mapping, Sequence
 from dataclasses import dataclass, field, replace
 import hashlib
+import json
+from decimal import Decimal, DecimalException, InvalidOperation
 from math import isfinite, log10, nextafter, sqrt
 import mmap
 from pathlib import Path
 import re
-from typing import Literal
+from types import MappingProxyType
+from typing import Any, Literal
 
 from scipy.spatial import cKDTree
 
@@ -31,6 +34,7 @@ from ..domain import (
     TerminalKind,
 )
 from ..models.spice import PassiveSubcircuitModel, SpiceModelError, parse_passive_subcircuit
+from ..via_model import ViaModelError, estimate_via_segment_rl
 from .shared_pad import (
     DecapPadEvidence,
     SpdDecapConnection,
@@ -151,6 +155,43 @@ class SpdViaUsage:
     count: int
 
 
+SpdDeviceTerminalViaStatus = Literal[
+    "complete",
+    "source_node_missing",
+    "source_layer_missing",
+    "source_pin_not_top",
+    "missing_incident_via",
+    "ambiguous_incident_via",
+    "incident_net_mismatch",
+    "incident_padstack_definition_missing",
+    "incident_padstack_not_on_top",
+]
+
+
+@dataclass(frozen=True, slots=True)
+class SpdDeviceTerminalViaEndpoint:
+    """Exact source attachment from a Device pin to its first Via."""
+
+    pin_id: str
+    refdes: str
+    pin: str
+    terminal: str
+    net: str
+    source_node_id: str | None
+    source_layer: str | None
+    source_padstack: str | None
+    source_x_um: float
+    source_y_um: float
+    status: SpdDeviceTerminalViaStatus
+    issues: tuple[str, ...]
+    candidate_count: int
+    candidate_via_ids: tuple[str, ...]
+    incident_via_id: str | None = None
+    incident_net: str | None = None
+    incident_padstack: str | None = None
+    incident_opposite_node_id: str | None = None
+
+
 @dataclass(frozen=True, slots=True)
 class SpdViaPathSegment:
     """One uniquely traversed source Via segment in a recovered vertical path."""
@@ -247,6 +288,1064 @@ class SpdViaPathRecovery:
 
 
 @dataclass(frozen=True, slots=True)
+class SpdSurfaceConnectivityComponent:
+    """One exact same-NET raw-graph component spanning target layers."""
+
+    net: str
+    layers: tuple[str, ...]
+
+    def __post_init__(self) -> None:
+        net = str(self.net).strip()
+        if not net:
+            raise ValueError("surface connectivity NET must not be blank")
+        layer_by_key: dict[str, str] = {}
+        for raw_layer in self.layers:
+            layer = str(raw_layer).strip()
+            if not layer:
+                raise ValueError("surface connectivity layers must not be blank")
+            key = layer.casefold()
+            previous = layer_by_key.get(key)
+            if previous is None or layer < previous:
+                layer_by_key[key] = layer
+        layers = tuple(layer_by_key[key] for key in sorted(layer_by_key))
+        if len(layers) < 2:
+            raise ValueError(
+                "a surface connectivity component must span at least two target layers"
+            )
+        object.__setattr__(self, "net", net)
+        object.__setattr__(self, "layers", layers)
+
+
+@dataclass(frozen=True, slots=True)
+class SpdSurfaceIslandEquivalenceComponent:
+    """One same-layer Trace/artwork equipotential island partition member."""
+
+    net: str
+    layer: str
+    island_ids: tuple[str, ...]
+
+    def __post_init__(self) -> None:
+        net = str(self.net).strip()
+        layer = str(self.layer).strip()
+        island_ids = tuple(
+            sorted({str(item).strip() for item in self.island_ids})
+        )
+        if (
+            not net
+            or not layer
+            or not island_ids
+            or any(not item for item in island_ids)
+        ):
+            raise ValueError("surface island-equivalence component is incomplete")
+        object.__setattr__(self, "net", net)
+        object.__setattr__(self, "layer", layer)
+        object.__setattr__(self, "island_ids", island_ids)
+
+
+@dataclass(frozen=True, slots=True)
+class SpdLandingSurfaceContact:
+    """One terminal Via endpoint's exact same-layer artwork component."""
+
+    via_id: str
+    endpoint_node_id: str
+    net: str
+    contact_island_ids_by_layer: Mapping[str, tuple[str, ...]]
+    internal_endpoint_node_id: str | None = None
+    terminal_owner_kind: Literal["device", "decap", "unknown"] = "unknown"
+    external_endpoint_layer: str | None = None
+    padstack: str | None = None
+    drill_diameter_um: float | None = None
+    material: str | None = None
+    segments: tuple[SpdViaIslandPairSegment, ...] = ()
+    physical_model_status: Literal["complete", "incomplete"] = "incomplete"
+    physical_model_issues: tuple[str, ...] = ()
+
+    def __post_init__(self) -> None:
+        via_id = str(self.via_id).strip()
+        endpoint_node_id = str(self.endpoint_node_id).strip()
+        net = str(self.net).strip()
+        internal_endpoint_node_id = str(
+            self.internal_endpoint_node_id or ""
+        ).strip()
+        terminal_owner_kind = str(self.terminal_owner_kind).strip().casefold()
+        if terminal_owner_kind not in {"device", "decap", "unknown"}:
+            raise ValueError("terminal landing owner kind is invalid")
+        external_endpoint_layer = str(
+            self.external_endpoint_layer or ""
+        ).strip() or None
+        padstack = str(self.padstack or "").strip() or None
+        material = str(self.material or "").strip() or None
+        drill_diameter_um = self.drill_diameter_um
+        if drill_diameter_um is not None:
+            try:
+                drill_diameter_um = float(drill_diameter_um)
+            except (TypeError, ValueError) as exc:
+                raise ValueError(
+                    "terminal landing drill diameter is invalid"
+                ) from exc
+            if not isfinite(drill_diameter_um) or drill_diameter_um <= 0.0:
+                raise ValueError(
+                    "terminal landing drill diameter must be finite and positive"
+                )
+        segments = tuple(sorted(self.segments, key=lambda item: item.ordinal))
+        if not all(isinstance(item, SpdViaIslandPairSegment) for item in segments):
+            raise ValueError("terminal landing physical segment is invalid")
+        physical_model_status = str(
+            self.physical_model_status
+        ).strip().casefold()
+        if physical_model_status not in {"complete", "incomplete"}:
+            raise ValueError("terminal landing physical-model status is invalid")
+        physical_model_issues = tuple(
+            sorted(
+                {
+                    str(item).strip()
+                    for item in self.physical_model_issues
+                    if str(item).strip()
+                }
+            )
+        )
+        if not via_id or not endpoint_node_id or not net:
+            raise ValueError("terminal landing surface-contact identity is incomplete")
+        layer_rows: dict[str, tuple[str, tuple[str, ...]]] = {}
+        for raw_layer, raw_ids in self.contact_island_ids_by_layer.items():
+            layer = str(raw_layer).strip()
+            island_ids = tuple(
+                sorted({str(item).strip() for item in raw_ids})
+            )
+            if (
+                not layer
+                or not island_ids
+                or any(not item for item in island_ids)
+            ):
+                raise ValueError("terminal landing surface-contact layer is invalid")
+            layer_key = layer.casefold()
+            previous = layer_rows.get(layer_key)
+            candidate = (layer, island_ids)
+            if previous is not None and previous != candidate:
+                raise ValueError(
+                    "terminal landing surface-contact duplicates one physical layer"
+                )
+            layer_rows[layer_key] = candidate
+        if len(layer_rows) > 1:
+            raise ValueError(
+                "one terminal endpoint Node cannot directly contact multiple layers"
+            )
+        if layer_rows and not internal_endpoint_node_id:
+            raise ValueError(
+                "a resolved terminal island contact requires its internal Via endpoint"
+            )
+        endpoint_layer = next(
+            (row[0] for row in layer_rows.values()), None
+        )
+        segment_chain_complete = bool(segments) and (
+            tuple(item.ordinal for item in segments) == tuple(range(len(segments)))
+            and external_endpoint_layer is not None
+            and segments[0].start_layer.casefold()
+            == external_endpoint_layer.casefold()
+            and endpoint_layer is not None
+            and segments[-1].end_layer.casefold() == endpoint_layer.casefold()
+            and all(
+                first.end_layer.casefold() == second.start_layer.casefold()
+                for first, second in zip(segments, segments[1:], strict=False)
+            )
+        )
+        if physical_model_status == "complete" and (
+            terminal_owner_kind == "unknown"
+            or not padstack
+            or drill_diameter_um is None
+            or not segment_chain_complete
+            or physical_model_issues
+        ):
+            raise ValueError(
+                "complete terminal landing physical model is not self-contained"
+            )
+        if physical_model_status == "incomplete" and not physical_model_issues:
+            physical_model_issues = ("physical_model_not_supplied",)
+        object.__setattr__(self, "via_id", via_id)
+        object.__setattr__(self, "endpoint_node_id", endpoint_node_id)
+        object.__setattr__(self, "net", net)
+        object.__setattr__(
+            self,
+            "internal_endpoint_node_id",
+            internal_endpoint_node_id or None,
+        )
+        object.__setattr__(self, "terminal_owner_kind", terminal_owner_kind)
+        object.__setattr__(
+            self, "external_endpoint_layer", external_endpoint_layer
+        )
+        object.__setattr__(self, "padstack", padstack)
+        object.__setattr__(self, "drill_diameter_um", drill_diameter_um)
+        object.__setattr__(self, "material", material)
+        object.__setattr__(self, "segments", segments)
+        object.__setattr__(self, "physical_model_status", physical_model_status)
+        object.__setattr__(self, "physical_model_issues", physical_model_issues)
+        object.__setattr__(
+            self,
+            "contact_island_ids_by_layer",
+            MappingProxyType(
+                {
+                    layer_rows[key][0]: layer_rows[key][1]
+                    for key in sorted(layer_rows)
+                }
+            ),
+        )
+
+    @property
+    def endpoint_layer(self) -> str | None:
+        """Canonical internal endpoint layer (compatibility convenience)."""
+        return next(iter(self.contact_island_ids_by_layer), None)
+
+    @property
+    def endpoint_island_id(self) -> str | None:
+        """Canonical internal endpoint island (compatibility convenience)."""
+        values = tuple(self.contact_island_ids_by_layer.values())
+        return values[0][0] if values and values[0] else None
+
+    @property
+    def landing_key(self) -> tuple[str, str]:
+        return (self.via_id.casefold(), self.endpoint_node_id.casefold())
+
+    @property
+    def endpoint_layer(self) -> str | None:
+        return next(iter(self.contact_island_ids_by_layer), None)
+
+    @property
+    def endpoint_island_id(self) -> str | None:
+        values = next(iter(self.contact_island_ids_by_layer.values()), ())
+        return values[0] if values else None
+
+    @property
+    def component_island_ids(self) -> tuple[str, ...]:
+        return next(iter(self.contact_island_ids_by_layer.values()), ())
+
+
+@dataclass(frozen=True, slots=True)
+class SpdViaIslandPairSegment:
+    """One source-proven physical segment inside an island-pair Via span."""
+
+    ordinal: int
+    start_layer: str
+    end_layer: str
+    length_um: float
+
+    def __post_init__(self) -> None:
+        start_layer = str(self.start_layer).strip()
+        end_layer = str(self.end_layer).strip()
+        try:
+            length_um = float(self.length_um)
+        except (TypeError, ValueError) as exc:
+            raise ValueError("Via island-pair segment length is invalid") from exc
+        if (
+            not isinstance(self.ordinal, int)
+            or isinstance(self.ordinal, bool)
+            or self.ordinal < 0
+            or not start_layer
+            or not end_layer
+            or start_layer.casefold() == end_layer.casefold()
+            or not isfinite(length_um)
+            or length_um <= 0.0
+        ):
+            raise ValueError("Via island-pair segment is incomplete")
+        object.__setattr__(self, "start_layer", start_layer)
+        object.__setattr__(self, "end_layer", end_layer)
+        object.__setattr__(self, "length_um", length_um)
+
+
+@dataclass(frozen=True, slots=True)
+class SpdViaIslandPairAggregate:
+    """Compact source-order aggregate of raw Vias between exact islands."""
+
+    net: str
+    padstack: str
+    start_layer: str
+    end_layer: str
+    start_island_id: str
+    end_island_id: str
+    count: int
+    via_ids_sha256: str
+    start_component_island_ids: tuple[str, ...] = ()
+    end_component_island_ids: tuple[str, ...] = ()
+    terminal_owned_count: int | None = None
+    substrate_count: int | None = None
+    drill_diameter_um: float | None = None
+    material: str | None = None
+    segments: tuple[SpdViaIslandPairSegment, ...] = ()
+    physical_model_status: Literal["complete", "incomplete"] = "incomplete"
+    physical_model_issues: tuple[str, ...] = ()
+
+    def __post_init__(self) -> None:
+        strings = tuple(
+            str(item).strip()
+            for item in (
+                self.net,
+                self.padstack,
+                self.start_layer,
+                self.end_layer,
+                self.start_island_id,
+                self.end_island_id,
+            )
+        )
+        digest = str(self.via_ids_sha256).strip().casefold()
+        if any(not item for item in strings):
+            raise ValueError("Via island-pair aggregate identity is incomplete")
+        if not re.fullmatch(r"[0-9a-f]{64}", digest):
+            raise ValueError("Via island-pair aggregate SHA-256 is invalid")
+        if (
+            not isinstance(self.count, int)
+            or isinstance(self.count, bool)
+            or self.count <= 0
+        ):
+            raise ValueError("Via island-pair aggregate count must be positive")
+        owned = self.terminal_owned_count
+        substrate = self.substrate_count
+        if (owned is None) != (substrate is None):
+            raise ValueError(
+                "Via island-pair terminal/substrate counts must be supplied together"
+            )
+        if owned is not None and (
+            not isinstance(owned, int)
+            or isinstance(owned, bool)
+            or owned < 0
+            or owned > self.count
+            or not isinstance(substrate, int)
+            or isinstance(substrate, bool)
+            or substrate < 0
+            or substrate != self.count - owned
+        ):
+            raise ValueError("Via island-pair ownership counts are inconsistent")
+        drill_diameter_um = self.drill_diameter_um
+        if drill_diameter_um is not None:
+            try:
+                drill_diameter_um = float(drill_diameter_um)
+            except (TypeError, ValueError) as exc:
+                raise ValueError(
+                    "Via island-pair drill diameter is invalid"
+                ) from exc
+            if not isfinite(drill_diameter_um) or drill_diameter_um <= 0.0:
+                raise ValueError(
+                    "Via island-pair drill diameter must be finite and positive"
+                )
+        material = str(self.material or "").strip() or None
+        start_component_island_ids = tuple(
+            sorted(
+                {
+                    str(item).strip()
+                    for item in self.start_component_island_ids
+                    if str(item).strip()
+                }
+            )
+        ) or (strings[4],)
+        end_component_island_ids = tuple(
+            sorted(
+                {
+                    str(item).strip()
+                    for item in self.end_component_island_ids
+                    if str(item).strip()
+                }
+            )
+        ) or (strings[5],)
+        if (
+            strings[4] != start_component_island_ids[0]
+            or strings[5] != end_component_island_ids[0]
+        ):
+            raise ValueError(
+                "Via island-pair representative must be its component's first island"
+            )
+        segments = tuple(sorted(self.segments, key=lambda item: item.ordinal))
+        if not all(isinstance(item, SpdViaIslandPairSegment) for item in segments):
+            raise ValueError("Via island-pair segment record is invalid")
+        status = str(self.physical_model_status).strip().casefold()
+        if status not in {"complete", "incomplete"}:
+            raise ValueError("Via island-pair physical-model status is invalid")
+        issues = tuple(
+            sorted(
+                {
+                    str(item).strip()
+                    for item in self.physical_model_issues
+                    if str(item).strip()
+                }
+            )
+        )
+        segment_chain_complete = bool(segments) and (
+            tuple(item.ordinal for item in segments) == tuple(range(len(segments)))
+            and segments[0].start_layer.casefold() == strings[2].casefold()
+            and segments[-1].end_layer.casefold() == strings[3].casefold()
+            and all(
+                first.end_layer.casefold() == second.start_layer.casefold()
+                for first, second in zip(segments, segments[1:], strict=False)
+            )
+        )
+        if status == "complete" and (
+            drill_diameter_um is None or not segment_chain_complete or issues
+        ):
+            raise ValueError(
+                "complete Via island-pair physical model is not self-contained"
+            )
+        if status == "incomplete" and not issues:
+            issues = ("physical_model_not_supplied",)
+        (
+            net,
+            padstack,
+            start_layer,
+            end_layer,
+            start_island_id,
+            end_island_id,
+        ) = strings
+        object.__setattr__(self, "net", net)
+        object.__setattr__(self, "padstack", padstack)
+        object.__setattr__(self, "start_layer", start_layer)
+        object.__setattr__(self, "end_layer", end_layer)
+        object.__setattr__(self, "start_island_id", start_island_id)
+        object.__setattr__(self, "end_island_id", end_island_id)
+        object.__setattr__(self, "via_ids_sha256", digest)
+        object.__setattr__(
+            self, "start_component_island_ids", start_component_island_ids
+        )
+        object.__setattr__(
+            self, "end_component_island_ids", end_component_island_ids
+        )
+        object.__setattr__(self, "drill_diameter_um", drill_diameter_um)
+        object.__setattr__(self, "material", material)
+        object.__setattr__(self, "segments", segments)
+        object.__setattr__(self, "physical_model_status", status)
+        object.__setattr__(self, "physical_model_issues", issues)
+
+    @property
+    def total_count(self) -> int:
+        return self.count
+
+
+@dataclass(frozen=True, slots=True)
+class SpdViaIslandPairCoverage:
+    """Fail-closed partition of every target-NET raw Via record."""
+
+    raw_target_via_count: int
+    paired_via_count: int
+    terminal_owned_unpaired_count: int
+    terminal_owned_unpaired_via_ids_sha256: str
+    unsupported_missing_endpoint_count: int
+    unsupported_missing_endpoint_via_ids_sha256: str
+    outside_retained_interface_scope_count: int
+    outside_retained_interface_scope_via_ids_sha256: str
+    model_relevant_via_count: int
+    terminal_owned_ids_supplied: bool
+    terminal_owned_declared_count: int
+    terminal_owned_observed_count: int
+    paired_terminal_owned_count: int | None = None
+    paired_substrate_count: int | None = None
+
+    def __post_init__(self) -> None:
+        counts = (
+            self.raw_target_via_count,
+            self.paired_via_count,
+            self.terminal_owned_unpaired_count,
+            self.unsupported_missing_endpoint_count,
+            self.outside_retained_interface_scope_count,
+            self.model_relevant_via_count,
+            self.terminal_owned_declared_count,
+            self.terminal_owned_observed_count,
+        )
+        if any(
+            not isinstance(value, int)
+            or isinstance(value, bool)
+            or value < 0
+            for value in counts
+        ):
+            raise ValueError("Via island-pair coverage count is invalid")
+        if self.raw_target_via_count != (
+            self.paired_via_count
+            + self.terminal_owned_unpaired_count
+            + self.unsupported_missing_endpoint_count
+            + self.outside_retained_interface_scope_count
+        ):
+            raise ValueError("Via island-pair coverage does not partition raw Vias")
+        if self.model_relevant_via_count != (
+            self.paired_via_count
+            + self.terminal_owned_unpaired_count
+            + self.unsupported_missing_endpoint_count
+        ):
+            raise ValueError(
+                "Via island-pair model-relevant count is inconsistent"
+            )
+        for digest in (
+            self.terminal_owned_unpaired_via_ids_sha256,
+            self.unsupported_missing_endpoint_via_ids_sha256,
+            self.outside_retained_interface_scope_via_ids_sha256,
+        ):
+            if not re.fullmatch(r"[0-9a-fA-F]{64}", str(digest).strip()):
+                raise ValueError("Via island-pair coverage SHA-256 is invalid")
+        paired_owned = self.paired_terminal_owned_count
+        paired_substrate = self.paired_substrate_count
+        if bool(self.terminal_owned_ids_supplied):
+            if (
+                not isinstance(paired_owned, int)
+                or isinstance(paired_owned, bool)
+                or paired_owned < 0
+                or not isinstance(paired_substrate, int)
+                or isinstance(paired_substrate, bool)
+                or paired_substrate < 0
+                or paired_owned + paired_substrate != self.paired_via_count
+                or self.terminal_owned_observed_count
+                != paired_owned + self.terminal_owned_unpaired_count
+                or self.terminal_owned_observed_count
+                > self.terminal_owned_declared_count
+            ):
+                raise ValueError("Via island-pair ownership partition is inconsistent")
+        elif (
+            paired_owned is not None
+            or paired_substrate is not None
+            or self.terminal_owned_declared_count
+            or self.terminal_owned_observed_count
+            or self.terminal_owned_unpaired_count
+        ):
+            raise ValueError(
+                "Via island-pair ownership counts require exact terminal IDs"
+            )
+        object.__setattr__(
+            self,
+            "terminal_owned_unpaired_via_ids_sha256",
+            str(self.terminal_owned_unpaired_via_ids_sha256).strip().casefold(),
+        )
+        object.__setattr__(
+            self,
+            "unsupported_missing_endpoint_via_ids_sha256",
+            str(self.unsupported_missing_endpoint_via_ids_sha256)
+            .strip()
+            .casefold(),
+        )
+        object.__setattr__(
+            self,
+            "outside_retained_interface_scope_via_ids_sha256",
+            str(self.outside_retained_interface_scope_via_ids_sha256)
+            .strip()
+            .casefold(),
+        )
+
+    @property
+    def status(self) -> str:
+        return (
+            "complete"
+            if self.terminal_owned_ids_supplied
+            and self.terminal_owned_observed_count
+            == self.terminal_owned_declared_count
+            and self.unsupported_missing_endpoint_count == 0
+            else "incomplete"
+        )
+
+
+@dataclass(frozen=True, slots=True)
+class SpdFiniteViaSeriesTerm:
+    """One repeated physical Via model inside a contracted series path."""
+
+    ordinal: int
+    count: int
+    padstack: str
+    start_layer: str
+    end_layer: str
+    drill_diameter_um: float | None
+    material: str | None
+    segments: tuple[SpdViaIslandPairSegment, ...]
+    resistance_ohm: float | None
+    inductance_h: float | None
+    length_um: float | None
+    physical_model_status: Literal["complete", "incomplete"]
+    physical_model_issues: tuple[str, ...] = ()
+
+    def __post_init__(self) -> None:
+        if (
+            not isinstance(self.ordinal, int)
+            or isinstance(self.ordinal, bool)
+            or self.ordinal < 0
+            or not isinstance(self.count, int)
+            or isinstance(self.count, bool)
+            or self.count <= 0
+        ):
+            raise ValueError("finite-Via series term ordinal/count is invalid")
+        padstack = str(self.padstack).strip()
+        start_layer = str(self.start_layer).strip()
+        end_layer = str(self.end_layer).strip()
+        if (
+            not padstack
+            or not start_layer
+            or not end_layer
+        ):
+            raise ValueError("finite-Via series term identity is incomplete")
+        drill = self.drill_diameter_um
+        if drill is not None:
+            try:
+                drill = float(drill)
+            except (TypeError, ValueError) as exc:
+                raise ValueError("finite-Via drill diameter is invalid") from exc
+            if not isfinite(drill) or drill <= 0.0:
+                raise ValueError("finite-Via drill diameter must be positive")
+        material = str(self.material or "").strip() or None
+        segments = tuple(sorted(self.segments, key=lambda item: item.ordinal))
+        if not all(isinstance(item, SpdViaIslandPairSegment) for item in segments):
+            raise ValueError("finite-Via physical segment is invalid")
+        status = str(self.physical_model_status).strip().casefold()
+        if status not in {"complete", "incomplete"}:
+            raise ValueError("finite-Via physical-model status is invalid")
+        issues = tuple(
+            sorted(
+                {
+                    str(item).strip()
+                    for item in self.physical_model_issues
+                    if str(item).strip()
+                }
+            )
+        )
+        electrical_values: list[float | None] = []
+        for raw in (self.resistance_ohm, self.inductance_h, self.length_um):
+            try:
+                electrical_values.append(float(raw) if raw is not None else None)
+            except (TypeError, ValueError):
+                electrical_values.append(None)
+        resistance, inductance, length_um = electrical_values
+        electrical_complete = (
+            resistance is not None
+            and inductance is not None
+            and length_um is not None
+            and isfinite(resistance)
+            and isfinite(inductance)
+            and isfinite(length_um)
+            and resistance >= 0.0
+            and inductance >= 0.0
+            and length_um > 0.0
+            and (resistance > 0.0 or inductance > 0.0)
+        )
+        if status == "complete" and (
+            drill is None or not segments or issues or not electrical_complete
+        ):
+            raise ValueError("complete finite-Via term is not self-contained")
+        if status == "incomplete" and not issues:
+            issues = ("physical_model_not_supplied",)
+        object.__setattr__(self, "padstack", padstack)
+        object.__setattr__(self, "start_layer", start_layer)
+        object.__setattr__(self, "end_layer", end_layer)
+        object.__setattr__(self, "drill_diameter_um", drill)
+        object.__setattr__(self, "material", material)
+        object.__setattr__(self, "segments", segments)
+        object.__setattr__(self, "resistance_ohm", resistance)
+        object.__setattr__(self, "inductance_h", inductance)
+        object.__setattr__(self, "length_um", length_um)
+        object.__setattr__(self, "physical_model_status", status)
+        object.__setattr__(self, "physical_model_issues", issues)
+
+
+@dataclass(frozen=True, slots=True)
+class SpdFiniteViaQuotientVertex:
+    """One explicit node of the same-layer Trace/artwork quotient graph."""
+
+    vertex_id: str
+    net: str
+    layer: str
+    representative_node_id: str
+    source_node_count: int
+    source_node_ids_sha256: str
+    roles: tuple[str, ...]
+    retained_component_island_ids_by_layer: Mapping[str, tuple[str, ...]] = field(
+        default_factory=dict
+    )
+    terminal_ids: tuple[str, ...] = ()
+
+    def __post_init__(self) -> None:
+        vertex_id = str(self.vertex_id).strip()
+        net = str(self.net).strip()
+        layer = str(self.layer).strip()
+        representative = str(self.representative_node_id).strip()
+        digest = str(self.source_node_ids_sha256).strip().casefold()
+        if (
+            not vertex_id.startswith("spd-finite-via-vertex:")
+            or not net
+            or not layer
+            or not representative
+            or not isinstance(self.source_node_count, int)
+            or isinstance(self.source_node_count, bool)
+            or self.source_node_count <= 0
+            or not re.fullmatch(r"[0-9a-f]{64}", digest)
+        ):
+            raise ValueError("finite-Via quotient vertex identity is invalid")
+        roles = tuple(sorted({str(item).strip() for item in self.roles}))
+        allowed_roles = {
+            "retained_surface",
+            "terminal",
+            "retarget_cut",
+            "junction",
+            "leaf",
+            "cycle_anchor",
+        }
+        if not roles or any(item not in allowed_roles for item in roles):
+            raise ValueError("finite-Via quotient vertex role is invalid")
+        retained: dict[str, tuple[str, ...]] = {}
+        for raw_layer, raw_ids in self.retained_component_island_ids_by_layer.items():
+            retained_layer = str(raw_layer).strip()
+            island_ids = tuple(
+                sorted({str(item).strip() for item in raw_ids if str(item).strip()})
+            )
+            if not retained_layer or not island_ids:
+                raise ValueError("finite-Via retained component binding is invalid")
+            retained[retained_layer] = island_ids
+        terminal_ids = tuple(
+            sorted({str(item).strip() for item in self.terminal_ids if str(item).strip()})
+        )
+        if ("retained_surface" in roles) != bool(retained):
+            raise ValueError("finite-Via retained-surface role is inconsistent")
+        if ("terminal" in roles) != bool(terminal_ids):
+            raise ValueError("finite-Via terminal role is inconsistent")
+        object.__setattr__(self, "vertex_id", vertex_id)
+        object.__setattr__(self, "net", net)
+        object.__setattr__(self, "layer", layer)
+        object.__setattr__(self, "representative_node_id", representative)
+        object.__setattr__(self, "source_node_ids_sha256", digest)
+        object.__setattr__(self, "roles", roles)
+        object.__setattr__(
+            self,
+            "retained_component_island_ids_by_layer",
+            MappingProxyType(dict(sorted(retained.items(), key=lambda item: item[0].casefold()))),
+        )
+        object.__setattr__(self, "terminal_ids", terminal_ids)
+
+
+@dataclass(frozen=True, slots=True)
+class SpdFiniteViaQuotientEdge:
+    """One degree-2-contracted series path, optionally repeated in parallel."""
+
+    edge_id: str
+    net: str
+    start_vertex_id: str
+    end_vertex_id: str
+    parallel_path_count: int
+    per_path_via_count: int
+    raw_via_count: int
+    raw_via_ids_sha256: str
+    owner_ids: tuple[str, ...]
+    series_terms: tuple[SpdFiniteViaSeriesTerm, ...]
+    resistance_ohm: float | None
+    inductance_h: float | None
+    length_um: float | None
+    mode: Literal["retained_explicit", "contracted_series"]
+    physical_model_status: Literal["complete", "incomplete"]
+    physical_model_issues: tuple[str, ...] = ()
+
+    def __post_init__(self) -> None:
+        strings = tuple(
+            str(item).strip()
+            for item in (
+                self.edge_id,
+                self.net,
+                self.start_vertex_id,
+                self.end_vertex_id,
+            )
+        )
+        if (
+            not strings[0].startswith("spd-finite-via-edge:")
+            or any(not item for item in strings)
+            or any(
+                not isinstance(value, int)
+                or isinstance(value, bool)
+                or value <= 0
+                for value in (
+                    self.parallel_path_count,
+                    self.per_path_via_count,
+                    self.raw_via_count,
+                )
+            )
+            or self.raw_via_count
+            != self.parallel_path_count * self.per_path_via_count
+        ):
+            raise ValueError("finite-Via quotient edge identity/count is invalid")
+        digest = str(self.raw_via_ids_sha256).strip().casefold()
+        if not re.fullmatch(r"[0-9a-f]{64}", digest):
+            raise ValueError("finite-Via quotient edge Via-ID digest is invalid")
+        terms = tuple(sorted(self.series_terms, key=lambda item: item.ordinal))
+        owner_ids = tuple(str(item).strip() for item in self.owner_ids)
+        if (
+            len(owner_ids) != self.raw_via_count
+            or any(not item.startswith("via:") for item in owner_ids)
+            or len({item.casefold() for item in owner_ids}) != len(owner_ids)
+        ):
+            raise ValueError("finite-Via quotient edge owner ledger is invalid")
+        if (
+            not terms
+            or not all(isinstance(item, SpdFiniteViaSeriesTerm) for item in terms)
+            or tuple(item.ordinal for item in terms) != tuple(range(len(terms)))
+            or sum(item.count for item in terms) != self.per_path_via_count
+        ):
+            raise ValueError("finite-Via quotient edge series terms are invalid")
+        status = str(self.physical_model_status).strip().casefold()
+        issues = tuple(
+            sorted(
+                {
+                    str(item).strip()
+                    for item in self.physical_model_issues
+                    if str(item).strip()
+                }
+            )
+        )
+        complete = all(item.physical_model_status == "complete" for item in terms)
+        if status not in {"complete", "incomplete"} or (status == "complete") != complete:
+            raise ValueError("finite-Via quotient edge physical status is invalid")
+        if status == "complete" and issues:
+            raise ValueError("complete finite-Via quotient edge has issues")
+        if status == "incomplete" and not issues:
+            issues = tuple(
+                sorted(
+                    {
+                        issue
+                        for item in terms
+                        for issue in item.physical_model_issues
+                    }
+                )
+            ) or ("physical_model_incomplete",)
+        try:
+            resistance = (
+                float(self.resistance_ohm)
+                if self.resistance_ohm is not None
+                else None
+            )
+            inductance = (
+                float(self.inductance_h)
+                if self.inductance_h is not None
+                else None
+            )
+            length_um = float(self.length_um) if self.length_um is not None else None
+        except (TypeError, ValueError):
+            resistance = inductance = length_um = None
+        electrical_complete = (
+            resistance is not None
+            and inductance is not None
+            and length_um is not None
+            and isfinite(resistance)
+            and isfinite(inductance)
+            and isfinite(length_um)
+            and resistance >= 0.0
+            and inductance >= 0.0
+            and length_um > 0.0
+            and (resistance > 0.0 or inductance > 0.0)
+        )
+        if (status == "complete") != electrical_complete:
+            raise ValueError("finite-Via quotient edge electrical model is invalid")
+        mode = str(self.mode).strip().casefold()
+        if mode not in {"retained_explicit", "contracted_series"}:
+            raise ValueError("finite-Via quotient edge reduction mode is invalid")
+        if (mode == "retained_explicit") != (self.per_path_via_count == 1):
+            raise ValueError("finite-Via quotient edge mode contradicts its path")
+        object.__setattr__(self, "edge_id", strings[0])
+        object.__setattr__(self, "net", strings[1])
+        object.__setattr__(self, "start_vertex_id", strings[2])
+        object.__setattr__(self, "end_vertex_id", strings[3])
+        object.__setattr__(self, "raw_via_ids_sha256", digest)
+        object.__setattr__(self, "owner_ids", owner_ids)
+        object.__setattr__(self, "series_terms", terms)
+        object.__setattr__(self, "resistance_ohm", resistance)
+        object.__setattr__(self, "inductance_h", inductance)
+        object.__setattr__(self, "length_um", length_um)
+        object.__setattr__(self, "mode", mode)
+        object.__setattr__(self, "physical_model_status", status)
+        object.__setattr__(self, "physical_model_issues", issues)
+
+
+@dataclass(frozen=True, slots=True)
+class SpdFiniteViaQuotientCoverage:
+    """Exact-once raw Via ownership proof for the finite quotient network."""
+
+    raw_target_via_count: int
+    modeled_global_via_count: int
+    outside_scope_via_count: int
+    pruned_dangling_via_count: int
+    physical_complete_via_count: int
+    physical_incomplete_via_count: int
+    raw_target_via_ids_sha256: str
+    modeled_global_via_ids_sha256: str
+    modeled_owner_ledger_sha256: str
+    modeled_owner_canonical_sha256: str
+    outside_scope_via_ids_sha256: str
+    terminal_exclusive_via_count: int = 0
+
+    def __post_init__(self) -> None:
+        counts = (
+            self.raw_target_via_count,
+            self.modeled_global_via_count,
+            self.outside_scope_via_count,
+            self.pruned_dangling_via_count,
+            self.physical_complete_via_count,
+            self.physical_incomplete_via_count,
+            self.terminal_exclusive_via_count,
+        )
+        if any(
+            not isinstance(value, int)
+            or isinstance(value, bool)
+            or value < 0
+            for value in counts
+        ):
+            raise ValueError("finite-Via quotient coverage count is invalid")
+        if self.raw_target_via_count != (
+            self.modeled_global_via_count + self.outside_scope_via_count
+        ):
+            raise ValueError("finite-Via quotient does not partition raw Vias")
+        if self.pruned_dangling_via_count != self.outside_scope_via_count:
+            raise ValueError("finite-Via pruned/outside disposition is inconsistent")
+        if self.modeled_global_via_count != (
+            self.physical_complete_via_count + self.physical_incomplete_via_count
+        ):
+            raise ValueError("finite-Via physical coverage is inconsistent")
+        if self.terminal_exclusive_via_count != 0:
+            raise ValueError(
+                "v4 finite-Via ownership keeps every relevant Via in global MNA"
+            )
+        for name in (
+            "raw_target_via_ids_sha256",
+            "modeled_global_via_ids_sha256",
+            "modeled_owner_ledger_sha256",
+            "modeled_owner_canonical_sha256",
+            "outside_scope_via_ids_sha256",
+        ):
+            digest = str(getattr(self, name)).strip().casefold()
+            if not re.fullmatch(r"[0-9a-f]{64}", digest):
+                raise ValueError("finite-Via quotient coverage digest is invalid")
+            object.__setattr__(self, name, digest)
+
+    @property
+    def status(self) -> str:
+        return "complete" if self.physical_incomplete_via_count == 0 else "incomplete"
+
+
+@dataclass(frozen=True, slots=True)
+class SpdFiniteViaScenarioIsolationCoverage:
+    """Proof that editable decap landing Nodes were not ideal-unioned.
+
+    The finite-Via base network must keep each editable decap TOP landing as a
+    distinct quotient vertex.  Scenario compilation can then add the
+    source-proven pad/contact links conditionally, remove one gap cell and its
+    incident links, or detach a moved capacitor without a hidden raw
+    Trace/artwork bypass surviving in the permanent quotient.
+    """
+
+    requested_landing_count: int
+    isolated_landing_count: int
+    isolated_node_count: int
+    suppressed_artwork_contact_count: int
+    suppressed_trace_edge_count: int
+    requested_landing_ids_sha256: str
+    isolated_landing_ids_sha256: str
+
+    def __post_init__(self) -> None:
+        counts = (
+            self.requested_landing_count,
+            self.isolated_landing_count,
+            self.isolated_node_count,
+            self.suppressed_artwork_contact_count,
+            self.suppressed_trace_edge_count,
+        )
+        if any(
+            not isinstance(value, int)
+            or isinstance(value, bool)
+            or value < 0
+            for value in counts
+        ):
+            raise ValueError("finite-Via scenario-isolation count is invalid")
+        if self.isolated_landing_count > self.requested_landing_count:
+            raise ValueError("finite-Via scenario isolation exceeds its request")
+        if self.isolated_node_count > self.isolated_landing_count:
+            raise ValueError("finite-Via scenario isolated-Node count is invalid")
+        for name in (
+            "requested_landing_ids_sha256",
+            "isolated_landing_ids_sha256",
+        ):
+            digest = str(getattr(self, name)).strip().casefold()
+            if not re.fullmatch(r"[0-9a-f]{64}", digest):
+                raise ValueError("finite-Via scenario-isolation digest is invalid")
+            object.__setattr__(self, name, digest)
+
+    @property
+    def status(self) -> str:
+        return (
+            "complete"
+            if self.requested_landing_count == self.isolated_landing_count
+            else "incomplete"
+        )
+
+
+@dataclass(frozen=True, slots=True)
+class SpdFiniteViaRetargetDestinationCoverage:
+    """Coverage for requested path-evidence destination Nodes."""
+
+    requested_destination_count: int
+    resolved_destination_count: int
+    requested_destination_ids_sha256: str
+    resolved_destination_ids_sha256: str
+
+    def __post_init__(self) -> None:
+        if (
+            not isinstance(self.requested_destination_count, int)
+            or isinstance(self.requested_destination_count, bool)
+            or self.requested_destination_count < 0
+            or not isinstance(self.resolved_destination_count, int)
+            or isinstance(self.resolved_destination_count, bool)
+            or self.resolved_destination_count < 0
+            or self.resolved_destination_count > self.requested_destination_count
+        ):
+            raise ValueError("finite-Via retarget-destination count is invalid")
+        for name in (
+            "requested_destination_ids_sha256",
+            "resolved_destination_ids_sha256",
+        ):
+            digest = str(getattr(self, name)).strip().casefold()
+            if not re.fullmatch(r"[0-9a-f]{64}", digest):
+                raise ValueError("finite-Via retarget-destination digest is invalid")
+            object.__setattr__(self, name, digest)
+
+    @property
+    def status(self) -> str:
+        return (
+            "complete"
+            if self.requested_destination_count == self.resolved_destination_count
+            else "incomplete"
+        )
+
+
+@dataclass(frozen=True, slots=True)
+class SpdSurfaceEquivalenceProof:
+    """Summary gate for one exact layer/NET island equivalence partition."""
+
+    net: str
+    layer: str
+    island_ids: tuple[str, ...]
+    contacted_island_ids: tuple[str, ...]
+    graph_component_count: int
+    status: str
+
+    def __post_init__(self) -> None:
+        net = str(self.net).strip()
+        layer = str(self.layer).strip()
+        island_ids = tuple(sorted({str(item).strip() for item in self.island_ids}))
+        contacted = tuple(
+            sorted({str(item).strip() for item in self.contacted_island_ids})
+        )
+        status = str(self.status).strip()
+        if not net or not layer or not island_ids or any(not item for item in island_ids):
+            raise ValueError("surface equivalence proof identity is incomplete")
+        if any(not item for item in contacted) or not set(contacted) <= set(island_ids):
+            raise ValueError("surface equivalence proof contacts unknown islands")
+        if (
+            not isinstance(self.graph_component_count, int)
+            or isinstance(self.graph_component_count, bool)
+            or self.graph_component_count < 0
+        ):
+            raise ValueError("surface equivalence graph-component count is invalid")
+        allowed = {"complete", "uncontacted_island"}
+        if status not in allowed:
+            raise ValueError("surface equivalence proof status is invalid")
+        complete = contacted == island_ids and self.graph_component_count >= 1
+        if (status == "complete") != complete:
+            raise ValueError("surface equivalence proof status contradicts its counts")
+        object.__setattr__(self, "net", net)
+        object.__setattr__(self, "layer", layer)
+        object.__setattr__(self, "island_ids", island_ids)
+        object.__setattr__(self, "contacted_island_ids", contacted)
+        object.__setattr__(self, "status", status)
+
+@dataclass(frozen=True, slots=True)
 class SpdGroundReachability:
     """Batch raw-graph reachability for mixed-reference GND landings.
 
@@ -268,6 +1367,473 @@ class SpdGroundReachability:
     target_contact_hash_by_key: Mapping[tuple[str, str, str], str] = field(
         default_factory=dict
     )
+    surface_components: tuple[SpdSurfaceConnectivityComponent, ...] = ()
+    surface_layers_by_landing: Mapping[
+        tuple[str, str], tuple[str, ...]
+    ] = field(default_factory=dict)
+    surface_islands_by_landing: Mapping[
+        tuple[str, str], tuple[str, ...]
+    ] = field(default_factory=dict)
+    surface_equivalence_proofs: tuple[SpdSurfaceEquivalenceProof, ...] = ()
+    surface_equivalence_components: tuple[
+        SpdSurfaceIslandEquivalenceComponent, ...
+    ] = ()
+    landing_surface_contacts: tuple[SpdLandingSurfaceContact, ...] = ()
+    via_island_pair_aggregates: tuple[SpdViaIslandPairAggregate, ...] = ()
+    via_island_pair_coverage: SpdViaIslandPairCoverage | None = None
+    finite_via_vertices: tuple[SpdFiniteViaQuotientVertex, ...] = ()
+    finite_via_edges: tuple[SpdFiniteViaQuotientEdge, ...] = ()
+    finite_via_vertex_id_by_landing: Mapping[
+        tuple[str, str], str
+    ] = field(default_factory=dict)
+    finite_via_edge_id_by_landing: Mapping[
+        tuple[str, str], str
+    ] = field(default_factory=dict)
+    finite_via_coverage: SpdFiniteViaQuotientCoverage | None = None
+    finite_via_scenario_isolated_landing_keys: frozenset[
+        tuple[str, str]
+    ] = frozenset()
+    finite_via_scenario_isolation_coverage: (
+        SpdFiniteViaScenarioIsolationCoverage | None
+    ) = None
+    finite_via_vertex_id_by_retarget_destination: Mapping[
+        tuple[str, str, str], str
+    ] = field(default_factory=dict)
+    finite_via_retarget_destination_coverage: (
+        SpdFiniteViaRetargetDestinationCoverage | None
+    ) = None
+
+    def __post_init__(self) -> None:
+        def sorted_tuple_if_needed(
+            values: Iterable[Any], *, key: Callable[[Any], Any]
+        ) -> tuple[Any, ...]:
+            """Reuse an already-canonical tuple without a second list copy."""
+
+            concrete = tuple(values)
+            previous: Any = None
+            has_previous = False
+            for item in concrete:
+                current = key(item)
+                if has_previous and current < previous:
+                    return tuple(sorted(concrete, key=key))
+                previous = current
+                has_previous = True
+            return concrete
+
+        def ordered_mapping_proxy(
+            values: dict[Any, Any],
+        ) -> Mapping[Any, Any]:
+            """Freeze a locally owned mapping, sorting only when necessary."""
+
+            previous: Any = None
+            has_previous = False
+            for current in values:
+                if has_previous and current < previous:
+                    return MappingProxyType(
+                        {key: values[key] for key in sorted(values)}
+                    )
+                previous = current
+                has_previous = True
+            return MappingProxyType(values)
+
+        component_values = tuple(self.surface_components)
+        component_set = set(component_values)
+        components = sorted_tuple_if_needed(
+            component_values if len(component_set) == len(component_values) else component_set,
+            key=lambda item: (
+                item.net.casefold(),
+                tuple(layer.casefold() for layer in item.layers),
+                item.net,
+                item.layers,
+            ),
+        )
+        layers_by_landing: dict[tuple[str, str], tuple[str, ...]] = {}
+        for raw_key, raw_layers in self.surface_layers_by_landing.items():
+            if len(raw_key) != 2:
+                raise ValueError(
+                    "surface landing keys must contain Via and endpoint Node IDs"
+                )
+            key = (str(raw_key[0]).casefold(), str(raw_key[1]).casefold())
+            layer_by_key: dict[str, str] = {}
+            for raw_layer in raw_layers:
+                layer = str(raw_layer).strip()
+                if not layer:
+                    raise ValueError("surface landing layers must not be blank")
+                layer_key = layer.casefold()
+                previous = layer_by_key.get(layer_key)
+                if previous is None or layer < previous:
+                    layer_by_key[layer_key] = layer
+            layers_by_landing[key] = tuple(
+                layer_by_key[layer_key] for layer_key in sorted(layer_by_key)
+            )
+        object.__setattr__(self, "surface_components", components)
+        object.__setattr__(
+            self,
+            "surface_layers_by_landing",
+            ordered_mapping_proxy(layers_by_landing),
+        )
+        islands_by_landing: dict[tuple[str, str], tuple[str, ...]] = {}
+        for raw_key, raw_islands in self.surface_islands_by_landing.items():
+            if len(raw_key) != 2:
+                raise ValueError(
+                    "surface landing island keys must contain Via and endpoint Node IDs"
+                )
+            key = (str(raw_key[0]).casefold(), str(raw_key[1]).casefold())
+            islands = tuple(
+                sorted({str(item).strip() for item in raw_islands if str(item).strip()})
+            )
+            islands_by_landing[key] = islands
+        proofs = sorted_tuple_if_needed(
+            self.surface_equivalence_proofs,
+            key=lambda item: (
+                item.net.casefold(),
+                item.layer.casefold(),
+                item.net,
+                item.layer,
+            ),
+        )
+        if not all(isinstance(item, SpdSurfaceEquivalenceProof) for item in proofs):
+            raise ValueError("surface equivalence proofs have an invalid record")
+        proof_keys = {(item.net.casefold(), item.layer.casefold()) for item in proofs}
+        if len(proof_keys) != len(proofs):
+            raise ValueError("surface equivalence proofs duplicate a layer/NET surface")
+        equivalence_components = sorted_tuple_if_needed(
+            self.surface_equivalence_components,
+            key=lambda item: (
+                item.net.casefold(),
+                item.layer.casefold(),
+                item.island_ids,
+                item.net,
+                item.layer,
+            ),
+        )
+        if not all(
+            isinstance(item, SpdSurfaceIslandEquivalenceComponent)
+            for item in equivalence_components
+        ):
+            raise ValueError("surface equivalence components have an invalid record")
+        component_islands_by_surface: dict[
+            tuple[str, str], set[str]
+        ] = {}
+        component_partitions_by_surface: dict[
+            tuple[str, str], set[tuple[str, ...]]
+        ] = {}
+        component_identities: set[tuple[str, str, tuple[str, ...]]] = set()
+        for item in equivalence_components:
+            surface_key = (item.net.casefold(), item.layer.casefold())
+            identity = (*surface_key, item.island_ids)
+            if identity in component_identities:
+                raise ValueError("surface equivalence components duplicate a partition")
+            component_identities.add(identity)
+            observed = component_islands_by_surface.setdefault(surface_key, set())
+            if observed.intersection(item.island_ids):
+                raise ValueError(
+                    "surface equivalence components overlap one artwork island"
+                )
+            observed.update(item.island_ids)
+            component_partitions_by_surface.setdefault(surface_key, set()).add(
+                item.island_ids
+            )
+        if proofs and equivalence_components:
+            proof_islands = {
+                (item.net.casefold(), item.layer.casefold()): set(item.island_ids)
+                for item in proofs
+            }
+            if component_islands_by_surface != proof_islands:
+                raise ValueError(
+                    "surface equivalence components do not partition every proof island"
+                )
+
+        landing_contacts = sorted_tuple_if_needed(
+            self.landing_surface_contacts,
+            key=lambda item: (
+                item.via_id.casefold(),
+                item.endpoint_node_id.casefold(),
+                item.net.casefold(),
+                item.via_id,
+                item.endpoint_node_id,
+                item.net,
+            ),
+        )
+        if not all(
+            isinstance(item, SpdLandingSurfaceContact)
+            for item in landing_contacts
+        ):
+            raise ValueError("terminal landing surface contacts have an invalid record")
+        landing_keys = [item.landing_key for item in landing_contacts]
+        if len(set(landing_keys)) != len(landing_keys):
+            raise ValueError("terminal landing surface contacts duplicate a landing")
+        if component_islands_by_surface:
+            for contact in landing_contacts:
+                net_key = contact.net.casefold()
+                for layer, island_ids in contact.contact_island_ids_by_layer.items():
+                    partitions = component_partitions_by_surface.get(
+                        (net_key, layer.casefold())
+                    )
+                    if partitions is None or tuple(island_ids) not in partitions:
+                        raise ValueError(
+                            "terminal landing contact does not reference one exact "
+                            "surface-equivalence component"
+                        )
+
+        via_aggregates = sorted_tuple_if_needed(
+            self.via_island_pair_aggregates,
+            key=lambda item: (
+                item.net.casefold(),
+                item.padstack.casefold(),
+                item.start_layer.casefold(),
+                item.end_layer.casefold(),
+                item.start_island_id,
+                item.end_island_id,
+                item.net,
+                item.padstack,
+                item.start_layer,
+                item.end_layer,
+            ),
+        )
+        if not all(
+            isinstance(item, SpdViaIslandPairAggregate)
+            for item in via_aggregates
+        ):
+            raise ValueError("Via island-pair aggregates have an invalid record")
+        aggregate_keys = {
+            (
+                item.net.casefold(),
+                item.padstack.casefold(),
+                item.start_layer.casefold(),
+                item.end_layer.casefold(),
+                item.start_island_id,
+                item.end_island_id,
+            )
+            for item in via_aggregates
+        }
+        if len(aggregate_keys) != len(via_aggregates):
+            raise ValueError("Via island-pair aggregates duplicate a physical pair")
+        if component_islands_by_surface:
+            for item in via_aggregates:
+                start_partitions = component_partitions_by_surface.get(
+                    (item.net.casefold(), item.start_layer.casefold())
+                )
+                end_partitions = component_partitions_by_surface.get(
+                    (item.net.casefold(), item.end_layer.casefold())
+                )
+                if (
+                    start_partitions is None
+                    or item.start_component_island_ids not in start_partitions
+                    or end_partitions is None
+                    or item.end_component_island_ids not in end_partitions
+                ):
+                    raise ValueError(
+                        "Via island-pair aggregate does not reference exact "
+                        "surface-equivalence components"
+                    )
+        coverage = self.via_island_pair_coverage
+        if coverage is not None:
+            if not isinstance(coverage, SpdViaIslandPairCoverage):
+                raise ValueError("Via island-pair coverage has an invalid record")
+            if sum(item.count for item in via_aggregates) != coverage.paired_via_count:
+                raise ValueError(
+                    "Via island-pair aggregate counts mismatch their coverage"
+                )
+            if coverage.terminal_owned_ids_supplied and (
+                sum(
+                    int(item.terminal_owned_count or 0)
+                    for item in via_aggregates
+                )
+                != coverage.paired_terminal_owned_count
+                or sum(int(item.substrate_count or 0) for item in via_aggregates)
+                != coverage.paired_substrate_count
+            ):
+                raise ValueError(
+                    "Via island-pair aggregate ownership mismatches coverage"
+                )
+        finite_vertices = sorted_tuple_if_needed(
+            self.finite_via_vertices,
+            key=lambda item: (item.vertex_id.casefold(), item.vertex_id),
+        )
+        if not all(
+            isinstance(item, SpdFiniteViaQuotientVertex)
+            for item in finite_vertices
+        ):
+            raise ValueError("finite-Via quotient vertices have an invalid record")
+        finite_vertex_ids = [item.vertex_id for item in finite_vertices]
+        if len(set(finite_vertex_ids)) != len(finite_vertex_ids):
+            raise ValueError("finite-Via quotient duplicates a vertex")
+        finite_vertex_id_set = set(finite_vertex_ids)
+        finite_edges = sorted_tuple_if_needed(
+            self.finite_via_edges,
+            key=lambda item: (item.edge_id.casefold(), item.edge_id),
+        )
+        if not all(
+            isinstance(item, SpdFiniteViaQuotientEdge) for item in finite_edges
+        ):
+            raise ValueError("finite-Via quotient edges have an invalid record")
+        finite_edge_ids = [item.edge_id for item in finite_edges]
+        if len(set(finite_edge_ids)) != len(finite_edge_ids):
+            raise ValueError("finite-Via quotient duplicates an edge")
+        if any(
+            item.start_vertex_id not in finite_vertex_id_set
+            or item.end_vertex_id not in finite_vertex_id_set
+            for item in finite_edges
+        ):
+            raise ValueError("finite-Via quotient edge references an unknown vertex")
+        finite_owner_keys = [
+            owner_id.casefold()
+            for item in finite_edges
+            for owner_id in item.owner_ids
+        ]
+        if len(set(finite_owner_keys)) != len(finite_owner_keys):
+            raise ValueError(
+                "finite-Via raw owner is assigned to multiple global edges"
+            )
+        finite_landing_bindings: dict[tuple[str, str], str] = {}
+        for raw_key, raw_vertex_id in self.finite_via_vertex_id_by_landing.items():
+            if len(raw_key) != 2:
+                raise ValueError("finite-Via landing key is invalid")
+            key = (str(raw_key[0]).casefold(), str(raw_key[1]).casefold())
+            vertex_id = str(raw_vertex_id).strip()
+            if not vertex_id or vertex_id not in finite_vertex_id_set:
+                raise ValueError("finite-Via landing references an unknown vertex")
+            finite_landing_bindings[key] = vertex_id
+        finite_landing_edge_bindings: dict[tuple[str, str], str] = {}
+        finite_edge_id_set = set(finite_edge_ids)
+        for raw_key, raw_edge_id in self.finite_via_edge_id_by_landing.items():
+            if len(raw_key) != 2:
+                raise ValueError("finite-Via landing edge key is invalid")
+            key = (str(raw_key[0]).casefold(), str(raw_key[1]).casefold())
+            edge_id = str(raw_edge_id).strip()
+            if not edge_id or edge_id not in finite_edge_id_set:
+                raise ValueError("finite-Via landing references an unknown edge")
+            finite_landing_edge_bindings[key] = edge_id
+        finite_coverage = self.finite_via_coverage
+        if finite_coverage is not None:
+            if not isinstance(finite_coverage, SpdFiniteViaQuotientCoverage):
+                raise ValueError("finite-Via quotient coverage has an invalid record")
+            if sum(item.raw_via_count for item in finite_edges) != (
+                finite_coverage.modeled_global_via_count
+            ):
+                raise ValueError("finite-Via edge counts mismatch their coverage")
+            if len(finite_owner_keys) != finite_coverage.modeled_global_via_count:
+                raise ValueError("finite-Via owner ledger mismatches its coverage")
+        scenario_isolated_landing_keys = frozenset(
+            (str(raw_key[0]).casefold(), str(raw_key[1]).casefold())
+            for raw_key in self.finite_via_scenario_isolated_landing_keys
+            if len(raw_key) == 2
+        )
+        if len(scenario_isolated_landing_keys) != len(
+            self.finite_via_scenario_isolated_landing_keys
+        ):
+            raise ValueError("finite-Via scenario-isolated landing key is invalid")
+        vertex_by_id = {item.vertex_id: item for item in finite_vertices}
+        if any(
+            key not in finite_landing_bindings
+            or vertex_by_id[finite_landing_bindings[key]].source_node_count != 1
+            for key in scenario_isolated_landing_keys
+        ):
+            raise ValueError(
+                "finite-Via scenario-isolated landing is not a singleton vertex"
+            )
+        scenario_isolation_coverage = (
+            self.finite_via_scenario_isolation_coverage
+        )
+        if scenario_isolation_coverage is not None:
+            if not isinstance(
+                scenario_isolation_coverage,
+                SpdFiniteViaScenarioIsolationCoverage,
+            ):
+                raise ValueError(
+                    "finite-Via scenario-isolation coverage has an invalid record"
+                )
+            if scenario_isolation_coverage.isolated_landing_count != len(
+                scenario_isolated_landing_keys
+            ):
+                raise ValueError(
+                    "finite-Via scenario-isolated landing count mismatches coverage"
+                )
+        finite_retarget_destination_bindings: dict[
+            tuple[str, str, str], str
+        ] = {}
+        for raw_key, raw_vertex_id in (
+            self.finite_via_vertex_id_by_retarget_destination.items()
+        ):
+            if len(raw_key) != 3:
+                raise ValueError("finite-Via retarget-destination key is invalid")
+            key = tuple(str(item).casefold() for item in raw_key)
+            vertex_id = str(raw_vertex_id).strip()
+            vertex = vertex_by_id.get(vertex_id)
+            if (
+                any(not item for item in key)
+                or vertex is None
+                or vertex.net.casefold() != key[0]
+                or vertex.layer.casefold() != key[1]
+                or "retained_surface" not in vertex.roles
+            ):
+                raise ValueError(
+                    "finite-Via retarget destination is not a retained surface vertex"
+                )
+            finite_retarget_destination_bindings[key] = vertex_id
+        retarget_destination_coverage = (
+            self.finite_via_retarget_destination_coverage
+        )
+        if retarget_destination_coverage is not None:
+            if not isinstance(
+                retarget_destination_coverage,
+                SpdFiniteViaRetargetDestinationCoverage,
+            ):
+                raise ValueError(
+                    "finite-Via retarget-destination coverage has an invalid record"
+                )
+            if retarget_destination_coverage.resolved_destination_count != len(
+                finite_retarget_destination_bindings
+            ):
+                raise ValueError(
+                    "finite-Via retarget destinations mismatch their coverage"
+                )
+        object.__setattr__(
+            self,
+            "surface_islands_by_landing",
+            ordered_mapping_proxy(islands_by_landing),
+        )
+        object.__setattr__(self, "surface_equivalence_proofs", proofs)
+        object.__setattr__(
+            self, "surface_equivalence_components", equivalence_components
+        )
+        object.__setattr__(self, "landing_surface_contacts", landing_contacts)
+        object.__setattr__(self, "via_island_pair_aggregates", via_aggregates)
+        object.__setattr__(self, "via_island_pair_coverage", coverage)
+        object.__setattr__(self, "finite_via_vertices", finite_vertices)
+        object.__setattr__(self, "finite_via_edges", finite_edges)
+        object.__setattr__(
+            self,
+            "finite_via_vertex_id_by_landing",
+            ordered_mapping_proxy(finite_landing_bindings),
+        )
+        object.__setattr__(
+            self,
+            "finite_via_edge_id_by_landing",
+            ordered_mapping_proxy(finite_landing_edge_bindings),
+        )
+        object.__setattr__(self, "finite_via_coverage", finite_coverage)
+        object.__setattr__(
+            self,
+            "finite_via_scenario_isolated_landing_keys",
+            scenario_isolated_landing_keys,
+        )
+        object.__setattr__(
+            self,
+            "finite_via_scenario_isolation_coverage",
+            scenario_isolation_coverage,
+        )
+        object.__setattr__(
+            self,
+            "finite_via_vertex_id_by_retarget_destination",
+            ordered_mapping_proxy(finite_retarget_destination_bindings),
+        )
+        object.__setattr__(
+            self,
+            "finite_via_retarget_destination_coverage",
+            retarget_destination_coverage,
+        )
 
     def reaches(self, landing: object, target_layer: str) -> bool:
         return (
@@ -364,6 +1930,7 @@ class SpdAnalysis:
     decap_connections: tuple[SpdDecapConnection, ...] = ()
     shared_pad_clusters: tuple[SpdSharedPadCluster, ...] = ()
     routing_extraction: SpdRoutingExtraction | None = None
+    device_terminal_via_endpoints: tuple[SpdDeviceTerminalViaEndpoint, ...] = ()
 
     @property
     def partial_models(self) -> dict[str, PassiveSubcircuitModel]:
@@ -519,6 +2086,11 @@ _VIA_RE = re.compile(
     rb"LowerNode\s*=\s*(Node[^\s:!]+)(?:!![^\s:]+)?(?:::[^\s]+)?\s+"
     rb"PadStack\s*=\s*(\S+)([^\r\n]*)"
 )
+
+# A batch callback returning ``None`` is an authoritative empty result.  Keep
+# that distinct from an omitted callback (which selects the scalar fallback),
+# otherwise a valid batch miss can trigger a second per-node query.
+_BATCH_UNSET = object()
 # The optional ``Thermal`` keyword mirrors spd_routing._TRACE_HEADER_RE: PowerSI
 # writes thermal-relief copper as an ordinary Trace record with that keyword
 # between the net and StartingNode.  It stays non-capturing so the group numbers
@@ -530,11 +2102,482 @@ _TRACE_RE = re.compile(
     rb"EndingNode\s*=\s*(Node[^\s:!]+)(?:!![^\s:]+)?(?:::[^\s]+)?"
 )
 _TRACE_WIDTH_RE = re.compile(rb"\bWidth\s*=\s*(\S+)")
+_TRACE_PRIMARY_RE = re.compile(
+    rb"^(Trace[^\r\n:]*)::([^\s]+)\s+"
+    rb"(?:Thermal\s+)?"
+    rb"StartingNode\s*=\s*(Node[^\s:!]+)(?:!![^\s:]+)?(?:::([^\s]+))?\s+"
+    rb"EndingNode\s*=\s*(Node[^\s:!]+)(?:!![^\s:]+)?(?:::([^\s]+))?"
+    rb"(?P<tail>[^\r\n]*)$"
+)
+_TRACE_WIDTH_ATTRIBUTE_RE = re.compile(
+    rb"\bWidth\s*=\s*(\S+)",
+    re.IGNORECASE,
+)
+_TRACE_CONTINUATION_RE = re.compile(
+    rb"^[ \t]*\+[ \t]*Width\s*=\s*(\S+)[ \t]*$",
+    re.IGNORECASE,
+)
+_TRACE_PRIMARY_TAIL_RE = re.compile(
+    rb"^[ \t]*(?:Width\s*=\s*\S+)?[ \t]*$",
+    re.IGNORECASE,
+)
 # The PadStack scan must live inside the optional group; a bare lazy ``.*?`` in
 # front of it always matches empty and makes the fallback unreachable.
 _NODE_ATTR_RE = re.compile(
     rb"\bX\s*=\s*(\S+)\s+Y\s*=\s*(\S+)(?:.*?\bPadStack\s*=\s*(\S+))?"
 )
+
+
+class SpdTraceRecordError(ValueError):
+    """Raised when a Trace section cannot be framed without ambiguity."""
+
+    def __init__(self, code: str, message: str, *, offset: int) -> None:
+        super().__init__(message)
+        self.code = code
+        self.offset = offset
+
+
+_TRACE_RECORD_FACTORY_TOKEN = object()
+_MAX_TRACE_RECORD_BYTES = 1024 * 1024
+_MAX_TRACE_RECORD_LINES = 64
+
+
+@dataclass(frozen=True, slots=True)
+class SpdTraceRecord:
+    """One exact logical SPD Trace record and its bounded geometry status."""
+
+    source_offset: int
+    exact_bytes: bytes
+    source_sha256: str
+    line_count: int
+    line_offsets: tuple[int, ...]
+    source_id: str | None
+    net: str | None
+    starting_node_id: str | None
+    ending_node_id: str | None
+    starting_node_net_evidence: str | None
+    ending_node_net_evidence: str | None
+    source_tail: str
+    width_pm: int | None
+    width_um: float | None
+    width_location: Literal["same_line", "continuation", "absent", "unresolved"]
+    geometry_status: Literal["resolved", "topology_only", "unresolved"]
+    issue_codes: tuple[str, ...]
+    _parsed_manifest_sha256: str = field(repr=False, compare=False)
+    _factory_token: object = field(repr=False, compare=False)
+
+    def __post_init__(self) -> None:
+        if self._factory_token is not _TRACE_RECORD_FACTORY_TOKEN:
+            raise ValueError("Trace records must be created by the bounded parser")
+        if (
+            isinstance(self.source_offset, bool)
+            or not isinstance(self.source_offset, int)
+            or self.source_offset < 0
+            or isinstance(self.line_count, bool)
+            or not isinstance(self.line_count, int)
+            or self.line_count < 1
+            or not isinstance(self.exact_bytes, bytes)
+            or not self.exact_bytes
+        ):
+            raise ValueError("Trace record provenance is incomplete")
+        if len(self.exact_bytes.splitlines(keepends=True)) != self.line_count:
+            raise ValueError("Trace record physical-line cardinality is inconsistent")
+        expected_offsets: list[int] = []
+        offset = self.source_offset
+        for line in self.exact_bytes.splitlines(keepends=True):
+            expected_offsets.append(offset)
+            offset += len(line)
+        if self.line_offsets != tuple(expected_offsets):
+            raise ValueError("Trace record physical-line offsets are inconsistent")
+        if hashlib.sha256(self.exact_bytes).hexdigest() != self.source_sha256:
+            raise ValueError("Trace record SHA-256 does not match its exact bytes")
+        if _trace_record_manifest_sha256(self) != self._parsed_manifest_sha256:
+            raise ValueError("Trace record parsed fields were tampered")
+        has_identity = all(
+            isinstance(item, str) and bool(item.strip())
+            for item in (
+                self.source_id,
+                self.net,
+                self.starting_node_id,
+                self.ending_node_id,
+            )
+        )
+        if self.geometry_status == "resolved":
+            if (
+                not has_identity
+                or isinstance(self.width_pm, bool)
+                or not isinstance(self.width_pm, int)
+                or self.width_pm <= 0
+                or not isinstance(self.width_um, float)
+                or not isfinite(self.width_um)
+                or self.width_um != self.width_pm / 1_000_000.0
+                or self.width_location not in {"same_line", "continuation"}
+                or self.issue_codes
+            ):
+                raise ValueError("resolved Trace record has incomplete Width evidence")
+        elif self.geometry_status == "topology_only":
+            if (
+                not has_identity
+                or self.width_pm is not None
+                or self.width_um is not None
+                or self.width_location != "absent"
+                or self.issue_codes != ("TRACE_WIDTH_MISSING",)
+            ):
+                raise ValueError("topology-only Trace record status is inconsistent")
+        elif self.geometry_status == "unresolved":
+            if (
+                self.width_pm is not None
+                or self.width_um is not None
+                or self.width_location != "unresolved"
+                or not self.issue_codes
+            ):
+                raise ValueError("unresolved Trace record status is inconsistent")
+        else:
+            raise ValueError("Trace record geometry status is invalid")
+
+
+def _trace_record_manifest_sha256(record: SpdTraceRecord | Mapping[str, object]) -> str:
+    def value(name: str) -> object:
+        if isinstance(record, Mapping):
+            return record[name]
+        return getattr(record, name)
+
+    payload = {
+        name: value(name)
+        for name in (
+            "source_offset",
+            "source_sha256",
+            "line_count",
+            "line_offsets",
+            "source_id",
+            "net",
+            "starting_node_id",
+            "ending_node_id",
+            "starting_node_net_evidence",
+            "ending_node_net_evidence",
+            "source_tail",
+            "width_pm",
+            "width_um",
+            "width_location",
+            "geometry_status",
+            "issue_codes",
+        )
+    }
+    encoded = json.dumps(
+        payload,
+        allow_nan=False,
+        ensure_ascii=True,
+        sort_keys=True,
+        separators=(",", ":"),
+    ).encode("ascii")
+    return hashlib.sha256(encoded).hexdigest()
+
+
+def _line_without_ending(raw: bytes) -> bytes:
+    if raw.endswith(b"\r\n"):
+        return raw[:-2]
+    if raw.endswith((b"\r", b"\n")):
+        return raw[:-1]
+    return raw
+
+
+def _decimal_scaled_integer_exact(
+    token: bytes | str,
+    scale: int,
+    *,
+    label: str,
+) -> int:
+    """Scale one source Decimal into a bounded exact integer.
+
+    Decimal multiplication and quantization use the ambient thread context and
+    can silently round before an integrality check.  Work from the immutable
+    coefficient/exponent tuple instead so the result is context-independent.
+    """
+
+    if type(scale) is not int or scale <= 0:
+        raise ValueError(f"{label} scale is invalid")
+    try:
+        raw = token.encode("ascii", errors="strict") if isinstance(token, str) else token
+    except UnicodeEncodeError as exc:
+        raise ValueError(f"invalid {label} {token!r}") from exc
+    stripped = raw.strip()
+    if _FLOAT_RE.fullmatch(stripped) is None:
+        raise ValueError(f"invalid {label} {_decode(raw)!r}")
+    try:
+        value = Decimal(stripped.decode("ascii"))
+    except (DecimalException, UnicodeDecodeError, ValueError) as exc:
+        raise ValueError(f"invalid {label} {_decode(raw)!r}") from exc
+    if not value.is_finite():
+        raise ValueError(f"{label} is not finite")
+    sign, raw_digits, raw_exponent = value.as_tuple()
+    digits = "".join(str(digit) for digit in raw_digits).lstrip("0")
+    if not digits:
+        return 0
+    trailing_zeros = len(digits) - len(digits.rstrip("0"))
+    digits = digits.rstrip("0")
+    if len(digits) > 128:
+        raise ValueError(f"{label} precision exceeds its exact bound")
+    exponent = int(raw_exponent) + trailing_zeros
+    coefficient = int(digits)
+    numerator = coefficient * scale
+    if exponent >= 0:
+        if exponent > 19:
+            raise ValueError(f"{label} is outside the signed 64-bit range")
+        result = numerator * (10**exponent)
+    else:
+        decimal_places = -exponent
+        if decimal_places > len(str(numerator)):
+            raise ValueError(f"{label} is not an exact integer")
+        divisor = 10**decimal_places
+        if numerator % divisor:
+            raise ValueError(f"{label} is not an exact integer")
+        result = numerator // divisor
+    if sign:
+        result = -result
+    if result < -(2**63) or result > 2**63 - 1:
+        raise ValueError(f"{label} is outside the signed 64-bit range")
+    return result
+
+
+def _length_pm_exact(token: bytes | str) -> int:
+    """Parse one SPD length as exact integer picometres.
+
+    This is intentionally separate from :func:`_length_um`; existing public
+    float-length behavior is unchanged.  Values below one picometre are not
+    rounded into geometry evidence.
+    """
+
+    raw = token.encode("ascii", errors="strict") if isinstance(token, str) else token
+    match = _LENGTH_RE.fullmatch(raw.strip())
+    if match is None:
+        lowered = raw.strip().lower()
+        if lowered in {
+            b"nan",
+            b"+nan",
+            b"-nan",
+            b"inf",
+            b"+inf",
+            b"-inf",
+            b"infinity",
+            b"+infinity",
+            b"-infinity",
+        }:
+            raise ValueError("SPD length is not finite")
+        raise ValueError(f"invalid SPD length {_decode(raw)!r}")
+    scale = {
+        b"m": 1_000_000_000_000,
+        b"mm": 1_000_000_000,
+        b"u": 1_000_000,
+        b"um": 1_000_000,
+        b"mil": 25_400_000,
+    }[match.group(2).lower()]
+    try:
+        return _decimal_scaled_integer_exact(
+            match.group(1), scale, label="SPD length in picometres"
+        )
+    except ValueError as exc:
+        if "not an exact integer" in str(exc):
+            raise ValueError(
+                "SPD length is not an exact integer number of picometres"
+            ) from exc
+        raise
+
+
+def _parse_spd_trace_record(
+    *,
+    source_offset: int,
+    lines: Sequence[bytes],
+) -> SpdTraceRecord:
+    exact_bytes = b"".join(lines)
+    primary = _line_without_ending(lines[0])
+    match = _TRACE_PRIMARY_RE.fullmatch(primary)
+    issue_codes: list[str] = []
+    source_id: str | None = None
+    net: str | None = None
+    starting_node_id: str | None = None
+    ending_node_id: str | None = None
+    starting_net: str | None = None
+    ending_net: str | None = None
+    source_tail = ""
+    if match is None:
+        issue_codes.append("MALFORMED_TRACE_RECORD")
+        if primary.startswith(b"Trace") and b"::" in primary:
+            source_id = _decode(primary.split(b"::", 1)[0]).strip() or None
+            net_fields = primary.split(b"::", 1)[1].split(None, 1)
+            if net_fields:
+                net = _decode(net_fields[0]).strip() or None
+    else:
+        source_id = _decode(match.group(1))
+        net = _decode(match.group(2))
+        starting_node_id = _decode(match.group(3))
+        starting_net = _decode(match.group(4)) if match.group(4) else None
+        ending_node_id = _decode(match.group(5))
+        ending_net = _decode(match.group(6)) if match.group(6) else None
+        source_tail = _decode(match.group("tail"))
+        if _TRACE_PRIMARY_TAIL_RE.fullmatch(match.group("tail")) is None:
+            issue_codes.append("TRACE_PRIMARY_TAIL_UNKNOWN")
+
+    width_tokens: list[bytes] = []
+    primary_widths = list(_TRACE_WIDTH_ATTRIBUTE_RE.finditer(primary))
+    if b"width" in primary.lower() and not primary_widths:
+        issue_codes.append("TRACE_WIDTH_MALFORMED")
+    width_tokens.extend(item.group(1) for item in primary_widths)
+    for raw_continuation in lines[1:]:
+        continuation = _line_without_ending(raw_continuation)
+        continuation_match = _TRACE_CONTINUATION_RE.fullmatch(continuation)
+        if continuation_match is None:
+            issue_codes.append("TRACE_CONTINUATION_UNKNOWN")
+        else:
+            width_tokens.append(continuation_match.group(1))
+            source_tail += "\n" + _decode(continuation)
+
+    if len(width_tokens) > 1:
+        issue_codes.append("TRACE_WIDTH_DUPLICATE")
+    width_pm: int | None = None
+    width_um: float | None = None
+    width_location: Literal["same_line", "continuation", "absent", "unresolved"]
+    if len(width_tokens) == 1 and not issue_codes:
+        try:
+            width_pm = _length_pm_exact(width_tokens[0])
+        except ValueError as exc:
+            code = (
+                "TRACE_WIDTH_NONFINITE"
+                if "not finite" in str(exc)
+                else "TRACE_WIDTH_INVALID"
+            )
+            issue_codes.append(code)
+        else:
+            if width_pm <= 0:
+                issue_codes.append("TRACE_WIDTH_NONPOSITIVE")
+                width_pm = None
+            else:
+                try:
+                    width_um = width_pm / 1_000_000.0
+                except OverflowError:
+                    issue_codes.append("TRACE_WIDTH_INVALID")
+                    width_pm = None
+                else:
+                    if not isfinite(width_um) or width_um <= 0.0:
+                        issue_codes.append("TRACE_WIDTH_INVALID")
+                        width_pm = None
+                        width_um = None
+
+    issue_codes = list(dict.fromkeys(issue_codes))
+    if issue_codes:
+        status: Literal["resolved", "topology_only", "unresolved"] = "unresolved"
+        width_pm = None
+        width_um = None
+        width_location = "unresolved"
+    elif width_pm is None:
+        status = "topology_only"
+        issue_codes.append("TRACE_WIDTH_MISSING")
+        width_location = "absent"
+    else:
+        status = "resolved"
+        width_location = "same_line" if primary_widths else "continuation"
+    line_offsets: list[int] = []
+    line_offset = source_offset
+    for line in lines:
+        line_offsets.append(line_offset)
+        line_offset += len(line)
+    record_values: dict[str, object] = {
+        "source_offset": source_offset,
+        "exact_bytes": exact_bytes,
+        "source_sha256": hashlib.sha256(exact_bytes).hexdigest(),
+        "line_count": len(lines),
+        "line_offsets": tuple(line_offsets),
+        "source_id": source_id,
+        "net": net,
+        "starting_node_id": starting_node_id,
+        "ending_node_id": ending_node_id,
+        "starting_node_net_evidence": starting_net,
+        "ending_node_net_evidence": ending_net,
+        "source_tail": source_tail,
+        "width_pm": width_pm,
+        "width_um": width_um,
+        "width_location": width_location,
+        "geometry_status": status,
+        "issue_codes": tuple(issue_codes),
+    }
+    return SpdTraceRecord(
+        **record_values,
+        _parsed_manifest_sha256=_trace_record_manifest_sha256(record_values),
+        _factory_token=_TRACE_RECORD_FACTORY_TOKEN,
+    )
+
+
+def _iter_spd_trace_records(handle: object, start: int, end: int):
+    """Yield bounded logical Trace records with their exact original bytes."""
+
+    file_handle = handle
+    file_handle.seek(start)
+
+    def bounded_readline(offset: int, budget: int) -> bytes:
+        remaining = max(0, end - offset)
+        raw = file_handle.readline(min(remaining, budget + 1))
+        carriage = raw.find(b"\r")
+        newline = raw.find(b"\n")
+        if carriage >= 0 and (newline < 0 or carriage < newline):
+            stop = carriage + 1
+            if newline == stop:
+                stop += 1
+            if stop < len(raw):
+                file_handle.seek(offset + stop)
+                raw = raw[:stop]
+        if len(raw) > budget:
+            raise SpdTraceRecordError(
+                "TRACE_RECORD_BYTE_BOUND_EXCEEDED",
+                f"Trace physical/logical record exceeds {_MAX_TRACE_RECORD_BYTES} "
+                f"bytes at byte offset {offset}",
+                offset=offset,
+            )
+        return raw
+
+    while file_handle.tell() < end:
+        offset = file_handle.tell()
+        raw = bounded_readline(offset, _MAX_TRACE_RECORD_BYTES)
+        if not raw or offset >= end:
+            return
+        if offset + len(raw) > end:
+            raw = raw[: end - offset]
+        physical = _line_without_ending(raw)
+        if physical.lstrip().startswith(b"+"):
+            raise SpdTraceRecordError(
+                "ORPHAN_TRACE_CONTINUATION",
+                f"orphan Trace continuation at byte offset {offset}",
+                offset=offset,
+            )
+        if not physical.startswith(b"Trace"):
+            continue
+        lines = [raw]
+        while file_handle.tell() < end:
+            continuation_offset = file_handle.tell()
+            record_bytes = sum(len(item) for item in lines)
+            candidate = bounded_readline(continuation_offset, _MAX_TRACE_RECORD_BYTES)
+            if not candidate:
+                break
+            if continuation_offset + len(candidate) > end:
+                candidate = candidate[: end - continuation_offset]
+            if not _line_without_ending(candidate).lstrip().startswith(b"+"):
+                file_handle.seek(continuation_offset)
+                break
+            if record_bytes + len(candidate) > _MAX_TRACE_RECORD_BYTES:
+                raise SpdTraceRecordError(
+                    "TRACE_RECORD_BYTE_BOUND_EXCEEDED",
+                    f"Trace logical record exceeds {_MAX_TRACE_RECORD_BYTES} bytes "
+                    f"at byte offset {offset}",
+                    offset=offset,
+                )
+            if len(lines) >= _MAX_TRACE_RECORD_LINES:
+                raise SpdTraceRecordError(
+                    "TRACE_RECORD_LINE_BOUND_EXCEEDED",
+                    f"Trace logical record exceeds {_MAX_TRACE_RECORD_LINES} physical "
+                    f"lines at byte offset {offset}",
+                    offset=offset,
+                )
+            lines.append(candidate)
+        yield _parse_spd_trace_record(source_offset=offset, lines=lines)
+
 
 
 def _decode(raw: bytes) -> str:
@@ -1821,6 +3864,7 @@ def _materialize_geometry(
             via_template_id=None,
             source_node_id=candidate.node_id,
             source_padstack=node.padstack,
+            source_layer=node.layer,
         )
 
     for candidate in device:
@@ -1902,11 +3946,13 @@ def _parse_vias(
     *,
     top_layer: str | None,
     padstacks: tuple[SpdPadStack, ...],
+    device_pins: tuple[PinRecord, ...] = (),
 ) -> tuple[
     tuple[SpdViaUsage, ...],
     int,
     tuple[ViaTopEndpoint, ...],
     tuple[str, ...],
+    tuple[SpdDeviceTerminalViaEndpoint, ...],
 ]:
     counter: Counter[tuple[str, str]] = Counter()
     total = 0
@@ -1931,8 +3977,20 @@ def _parse_vias(
     top_padstack_key_bytes = {
         item.encode("utf-8") for item in top_padstack_keys
     }
+    incident_by_node: dict[str, list[tuple[str, str, str, str]]] = {}
     for index, match in enumerate(_VIA_RE.finditer(data, start, end)):
         total += 1
+        via_id_display = _decode(match.group(1))
+        net_display = _decode(match.group(2))
+        padstack_display = _decode(match.group(5))
+        upper_display = _decode(match.group(3))
+        lower_display = _decode(match.group(4))
+        incident_by_node.setdefault(upper_display.casefold(), []).append(
+            (via_id_display, net_display, padstack_display, lower_display)
+        )
+        incident_by_node.setdefault(lower_display.casefold(), []).append(
+            (via_id_display, net_display, padstack_display, upper_display)
+        )
         if index % 8192 == 0:
             reporter.report(
                 _span_percent(match.start(), start, end, 83, 96),
@@ -2000,6 +4058,58 @@ def _parse_vias(
         SpdViaUsage(net, padstack, count)
         for (net, padstack), count in sorted(counter.items(), key=lambda item: (item[0][0].casefold(), item[0][1].casefold()))
     )
+    terminal_endpoints: list[SpdDeviceTerminalViaEndpoint] = []
+    for pin in device_pins:
+        source_node_id = getattr(pin, "source_node_id", None)
+        source_layer = getattr(pin, "source_layer", None)
+        source_padstack = getattr(pin, "source_padstack", None)
+        pin_net = str(getattr(pin, "net", ""))
+        candidates = tuple(
+            item
+            for item in incident_by_node.get(str(source_node_id or "").casefold(), ())
+            if item[1].casefold() == pin_net.casefold()
+        )
+        issues: list[str] = []
+        if not source_node_id:
+            status: SpdDeviceTerminalViaStatus = "source_node_missing"
+            issues.append("source_node_missing")
+        elif not source_layer:
+            status = "source_layer_missing"
+            issues.append("source_layer_missing")
+        elif top_key is not None and str(source_layer).casefold() != top_key:
+            status = "source_pin_not_top"
+            issues.append("source_pin_not_top")
+        elif not candidates:
+            status = "missing_incident_via"
+            issues.append("missing_incident_via")
+        elif len(candidates) > 1:
+            status = "ambiguous_incident_via"
+            issues.append("ambiguous_incident_via")
+        else:
+            status = "complete"
+        incident = candidates[0] if len(candidates) == 1 else None
+        terminal_endpoints.append(
+            SpdDeviceTerminalViaEndpoint(
+                pin_id=str(getattr(pin, "pin_id", "")),
+                refdes=str(getattr(pin, "refdes", "")),
+                pin=str(getattr(pin, "pin", "")),
+                terminal=str(getattr(getattr(pin, "terminal", ""), "value", getattr(pin, "terminal", ""))),
+                net=pin_net,
+                source_node_id=source_node_id,
+                source_layer=source_layer,
+                source_padstack=source_padstack,
+                source_x_um=float(getattr(pin, "x_um", 0.0)),
+                source_y_um=float(getattr(pin, "y_um", 0.0)),
+                status=status,
+                issues=tuple(issues),
+                candidate_count=len(candidates),
+                candidate_via_ids=tuple(item[0] for item in candidates),
+                incident_via_id=incident[0] if incident else None,
+                incident_net=incident[1] if incident else None,
+                incident_padstack=incident[2] if incident else None,
+                incident_opposite_node_id=incident[3] if incident else None,
+            )
+        )
     return (
         result,
         total,
@@ -2013,6 +4123,7 @@ def _parse_vias(
             )
         ),
         tuple(sorted(uncertain_nets, key=str.casefold)),
+        tuple(sorted(terminal_endpoints, key=lambda item: (item.refdes.casefold(), item.pin.casefold()))),
     )
 
 
@@ -3201,6 +5312,12 @@ def recover_spd_ground_reachability(
     path: str | Path,
     *,
     landings: Iterable[object],
+    terminal_contact_landings: Iterable[object] | None = None,
+    scenario_isolated_terminal_landings: Iterable[object] | None = None,
+    retarget_destination_requests: Iterable[tuple[str, str, str]] | None = None,
+    terminal_owned_via_ids: Iterable[str] | None = None,
+    padstacks: Iterable[SpdPadStack] | None = None,
+    stackup_layers: Iterable[StackupLayer] | None = None,
     target_layers_by_net: Mapping[str, Iterable[str]],
     target_node_predicate: Callable[[str, str, str, float, float], bool] | None = None,
     target_node_predicate_batch: Callable[
@@ -3216,6 +5333,13 @@ def recover_spd_ground_reachability(
     ] | None = None,
     same_layer_artwork_release: Callable[[str, str], None] | None = None,
     target_trace_contact_predicate: Callable[..., tuple[object, ...] | None] | None = None,
+    target_node_surface_resolver: Callable[
+        [str, str, str, float, float], str | None
+    ] | None = None,
+    target_node_surface_resolver_batch: Callable[
+        [str, str, Sequence[str], Sequence[tuple[float, float]]], Sequence[str | None]
+    ] | None = None,
+    target_surface_island_ids: Mapping[tuple[str, str], Iterable[str]] | None = None,
     expected_source: SpdSourceInfo | None = None,
     include_traces: bool = True,
     progress: ProgressCallback | None = None,
@@ -3240,6 +5364,12 @@ def recover_spd_ground_reachability(
     source_path = Path(path)
     if not source_path.is_file():
         raise SpdImportError(f"SPD source does not exist: {source_path}")
+    target_layer_display: dict[tuple[str, str], str] = {}
+    for raw_net, raw_layers in target_layers_by_net.items():
+        for raw_layer in raw_layers:
+            target_layer_display.setdefault(
+                (str(raw_net).casefold(), str(raw_layer).casefold()), str(raw_layer)
+            )
     target_layers = {
         str(net).casefold(): {str(layer).casefold() for layer in layers}
         for net, layers in target_layers_by_net.items()
@@ -3250,9 +5380,167 @@ def recover_spd_ground_reachability(
         for net, layers in (same_layer_artwork_layers_by_net or {}).items()
         if str(net).strip()
     }
+    # The dense graph universe includes artwork-only nets as well as regular
+    # target nets.  This lets same-NET artwork connectivity be indexed without
+    # ever admitting cross-NET Trace/Via edges into a target component.
+    graph_layers = {
+        net: set(target_layers.get(net, ())) | set(artwork_layers.get(net, ()))
+        for net in (set(target_layers) | set(artwork_layers))
+    }
+    # Surface classification is an independent, boundary-inclusive channel
+    # from strict target acceptance.  Require the resolver/inventory pair when
+    # callers request a surface certificate; fail closed on malformed IDs.
+    if (
+        target_node_surface_resolver is None
+        and target_node_surface_resolver_batch is None
+    ) != (target_surface_island_ids is None):
+        raise ValueError(
+            "target_node_surface_resolver and target_surface_island_ids must be supplied together"
+        )
+    surface_inventory: dict[tuple[str, str], tuple[str, ...]] = {}
+    seen_surface_ids: set[str] = set()
+    if target_surface_island_ids is not None:
+        for raw_key, raw_ids in target_surface_island_ids.items():
+            if not isinstance(raw_key, tuple) or len(raw_key) != 2:
+                raise ValueError("surface island inventory key is invalid")
+            net_key, layer_key = (str(raw_key[0]).casefold(), str(raw_key[1]).casefold())
+            raw_id_values = tuple(str(item).strip() for item in raw_ids if str(item).strip())
+            # Preserve the established source-contract normalization: exact
+            # duplicate IDs within one layer are harmless and IDs are
+            # case-sensitive for cross-layer uniqueness.
+            ids = tuple(sorted(set(raw_id_values)))
+            if (
+                not net_key
+                or not layer_key
+                or not ids
+                or (net_key, layer_key) not in {
+                    (target_net, target_layer)
+                    for target_net, target_layers_for_net in target_layers.items()
+                    for target_layer in target_layers_for_net
+                }
+                or seen_surface_ids.intersection(ids)
+            ):
+                raise ValueError("surface island inventory is invalid")
+            seen_surface_ids.update(ids)
+            surface_inventory[(net_key, layer_key)] = ids
+        expected_surface_keys = {
+            (target_net, target_layer)
+            for target_net, target_layers_for_net in target_layers.items()
+            for target_layer in target_layers_for_net
+        }
+        if set(surface_inventory) != expected_surface_keys:
+            raise ValueError("surface island inventory does not exactly cover target layers")
+    surface_layers_by_landing: dict[tuple[str, str], set[str]] = {}
+    surface_islands_by_landing: dict[tuple[str, str], set[str]] = {}
+    landing_surface_contacts: list[SpdLandingSurfaceContact] = []
+    via_island_pair_aggregates: list[SpdViaIslandPairAggregate] = []
+    via_island_pair_coverage: SpdViaIslandPairCoverage | None = None
+    surface_equivalence_components: set[SpdSurfaceIslandEquivalenceComponent] = set()
+    surface_equivalence_proofs: list[SpdSurfaceEquivalenceProof] = []
+    surface_code_by_key: dict[tuple[str, str, str], int] = {}
+    surface_key_by_code: list[tuple[str, str, str]] = []
+    surface_code_by_index = array("I")
+    surface_code_representative: list[int] = []
+    surface_code_count = array("I")
+    surface_trace_net_codes = array("I")
+    surface_trace_first_indices = array("I")
+    surface_trace_second_indices = array("I")
+    surface_trace_net_by_code: list[str] = []
+    surface_trace_net_code_by_key: dict[str, int] = {}
+    # Keep raw Via records as fixed-width source offsets and dense codes only.
+    # Decoding a Via identity is deferred to the single mmap replay below (and
+    # to final finite-edge owner emission), avoiding one Python tuple/string per
+    # source record on production-sized SPD files.
+    via_source_net_codes = array("I")
+    via_source_net_key_by_code: list[str] = []
+    via_source_net_code_by_key: dict[str, int] = {}
+    via_source_first_indices = array("I")
+    via_source_second_indices = array("I")
+    via_source_padstack_codes = array("I")
+    via_source_padstack_names: list[str] = []
+    via_padstack_code_by_key: dict[str, int] = {}
+    via_terminal_display_endpoints: dict[tuple[str, str], tuple[str, str]] = {}
+    via_terminal_padstack_by_key: dict[tuple[str, str], str] = {}
+    via_seen_keys: set[tuple[str, str]] = set()
+    terminal_contact_records = tuple(terminal_contact_landings or ())
+    terminal_contact_owner_by_key: dict[
+        tuple[str, str], tuple[str, str, str]
+    ] = {}
+    terminal_contact_identity_by_via_kind: dict[
+        tuple[str, str], tuple[str, str, str]
+    ] = {}
+    for item in terminal_contact_records:
+        via_id = str(getattr(item, "via_id", "")).strip()
+        node_id = str(getattr(item, "endpoint_node_id", "")).strip()
+        net = str(getattr(item, "net", "")).strip()
+        if not via_id or not node_id or not net:
+            raise ValueError("terminal landing has a blank source graph identity")
+        via_key = via_id.casefold()
+        node_key = node_id.casefold()
+        net_key = net.casefold()
+        if net_key not in target_layers:
+            continue
+        pin_id = str(getattr(item, "pin_id", "") or "").strip()
+        owner_kind = "device" if pin_id else "decap"
+        terminal_id = (
+            pin_id
+            if owner_kind == "device"
+            else f"decap-via:{via_key}:{node_key}"
+        )
+        contact_key = (via_key, node_key)
+        contact_identity = (net_key, owner_kind, terminal_id.casefold())
+        previous_contact = terminal_contact_owner_by_key.get(contact_key)
+        if previous_contact is not None and (
+            previous_contact[0],
+            previous_contact[1],
+            previous_contact[2].casefold(),
+        ) != contact_identity:
+            raise ValueError(
+                "one terminal landing identity has conflicting NET or owner"
+            )
+        terminal_contact_owner_by_key.setdefault(
+            contact_key, (net_key, owner_kind, terminal_id)
+        )
+        via_kind_key = (via_key, owner_kind)
+        via_kind_identity = (net_key, node_key, terminal_id.casefold())
+        previous_via_kind = terminal_contact_identity_by_via_kind.get(
+            via_kind_key
+        )
+        if (
+            previous_via_kind is not None
+            and previous_via_kind != via_kind_identity
+        ):
+            raise ValueError(
+                "one physical terminal Via ID cannot be claimed by conflicting "
+                "NETs, endpoint Nodes, or same-kind terminal owners"
+            )
+        terminal_contact_identity_by_via_kind.setdefault(
+            via_kind_key, via_kind_identity
+        )
+    terminal_contact_via_ids = {
+        via_key for via_key, _node_key in terminal_contact_owner_by_key
+    }
+    isolated_landing_keys = {
+        (str(getattr(item, "via_id", "")).casefold(), str(getattr(item, "endpoint_node_id", "")).casefold())
+        for item in (scenario_isolated_terminal_landings or ())
+    }
+    isolated_node_ids = {
+        str(getattr(item, "endpoint_node_id", "")).casefold()
+        for item in (scenario_isolated_terminal_landings or ())
+        if str(getattr(item, "endpoint_node_id", "")).strip()
+    }
+    isolated_node_keys = {
+        (
+            str(getattr(item, "net", "")).casefold(),
+            str(getattr(item, "endpoint_node_id", "")).casefold(),
+        )
+        for item in (scenario_isolated_terminal_landings or ())
+        if str(getattr(item, "endpoint_node_id", "")).strip()
+    }
+    landing_records = tuple(landings)
     requested_by_key: dict[tuple[str, str, str], str] = {}
     requested_coordinates: dict[tuple[str, str, str], tuple[float, float]] = {}
-    for landing in landings:
+    for landing in landing_records:
         try:
             net_key = str(getattr(landing, "net")).casefold()
             via_key = str(getattr(landing, "via_id")).casefold()
@@ -3267,7 +5555,7 @@ def recover_spd_ground_reachability(
                 float(getattr(landing, "y_um", 0.0)),
             )
     requested = sorted(requested_by_key)
-    if not requested:
+    if not requested and not surface_inventory and not terminal_contact_records:
         return SpdGroundReachability(frozenset(), frozenset(), {
             "requested": 0, "reachable": 0, "unreachable": 0,
             "node_section_passes": 0, "trace_section_passes": 0,
@@ -3338,16 +5626,30 @@ def recover_spd_ground_reachability(
     target_coordinates_by_net: dict[str, dict[str, tuple[str, float, float]]] = {
         net: {} for net in target_layers
     }
-    target_layers_by_node: dict[str, dict[str, str]] = {net: {} for net in target_layers}
+    target_layers_by_node: dict[str, dict[str, str]] = {net: {} for net in graph_layers}
     node_positions_by_net: dict[str, dict[str, tuple[str, float, float]]] = {
-        net: {} for net in target_layers
+        net: {} for net in graph_layers
     }
+    node_net_key_by_index: list[str] = []
+    node_id_by_index: list[str] = []
     layer_display_by_key: dict[tuple[str, str], str] = {}
     node_index_by_net: dict[str, dict[str, int]] = {
-        net: {} for net in target_layers
+        net: {} for net in graph_layers
     }
     parents = array("I")
     ranks = bytearray()
+    # Dense auxiliary DSUs share the regular node index space.  They avoid a
+    # second million-entry string-key parent map for surface/equivalence
+    # certificates while retaining the legacy maps for contact provenance.
+    surface_parents = array("I")
+    surface_ranks = bytearray()
+    equivalence_parents = array("I")
+    equivalence_ranks = bytearray()
+    node_layer_codes = array("I")
+    layer_code_by_key: dict[str, int] = {}
+    layer_key_by_code: dict[int, str] = {}
+    layer_display_by_code: list[str] = []
+    via_source_offsets = array("Q")
     components = 0
     graph_edges = 0
     trace_edges = 0
@@ -3434,6 +5736,8 @@ def recover_spd_ground_reachability(
                 batch_layer,
                 tuple((x_um, y_um) for _seq, _node_id, x_um, y_um, _display in batch),
             )
+            if accepted is None:
+                accepted = (False,) * len(batch)
             if len(accepted) != len(batch):
                 raise SpdImportError("target batch resolver returned an invalid result length")
             all_decisions.extend(
@@ -3464,10 +5768,43 @@ def recover_spd_ground_reachability(
             return existing
         index = len(parents)
         by_node[node_key] = index
+        node_net_key_by_index.append(net_key)
+        node_id_by_index.append(node_key)
         parents.append(index)
         ranks.append(0)
+        surface_parents.append(index)
+        surface_ranks.append(0)
+        equivalence_parents.append(index)
+        equivalence_ranks.append(0)
+        node_layer_codes.append(0)
+        surface_code_by_index.append(0)
         components += 1
         return index
+
+    def layer_code(layer_key: str, display: str | None = None) -> int:
+        code = layer_code_by_key.get(layer_key)
+        if code is None:
+            code = len(layer_code_by_key) + 1
+            layer_code_by_key[layer_key] = code
+            layer_key_by_code[code] = layer_key
+            layer_display_by_code.append(display or layer_key)
+        elif display and layer_display_by_code[code - 1] == layer_key:
+            layer_display_by_code[code - 1] = display
+        return code
+
+    def node_id_for(net_key: str, index: int) -> str:
+        if 0 <= index < len(node_id_by_index) and node_net_key_by_index[index] == net_key:
+            return node_id_by_index[index]
+        return ""
+
+    def node_layer_for(net_key: str, node_key: str) -> str:
+        index = node_index_by_net.get(net_key, {}).get(node_key.casefold())
+        if index is None:
+            return "UNKNOWN"
+        code = int(node_layer_codes[index])
+        if code <= 0:
+            return "UNKNOWN"
+        return layer_display_by_code[code - 1]
 
     def find(index: int) -> int:
         root = index
@@ -3491,6 +5828,38 @@ def recover_spd_ground_reachability(
         if ranks[first_root] == ranks[second_root]:
             ranks[first_root] += 1
         components -= 1
+
+    def _dense_find(parent: array, index: int) -> int:
+        root = index
+        while parent[root] != root:
+            root = parent[root]
+        while parent[index] != index:
+            previous = parent[index]
+            parent[index] = root
+            index = previous
+        return root
+
+    def surface_union_indices(first_index: int, second_index: int) -> None:
+        first_root = _dense_find(surface_parents, first_index)
+        second_root = _dense_find(surface_parents, second_index)
+        if first_root == second_root:
+            return
+        if surface_ranks[first_root] < surface_ranks[second_root]:
+            first_root, second_root = second_root, first_root
+        surface_parents[second_root] = first_root
+        if surface_ranks[first_root] == surface_ranks[second_root]:
+            surface_ranks[first_root] += 1
+
+    def equivalence_union_indices(first_index: int, second_index: int) -> None:
+        first_root = _dense_find(equivalence_parents, first_index)
+        second_root = _dense_find(equivalence_parents, second_index)
+        if first_root == second_root:
+            return
+        if equivalence_ranks[first_root] < equivalence_ranks[second_root]:
+            first_root, second_root = second_root, first_root
+        equivalence_parents[second_root] = first_root
+        if equivalence_ranks[first_root] == equivalence_ranks[second_root]:
+            equivalence_ranks[first_root] += 1
 
     def union(net_key: str, first: str, second: str) -> None:
         union_indices(index_for(net_key, first), index_for(net_key, second))
@@ -3534,6 +5903,54 @@ def recover_spd_ground_reachability(
                 float(y_um),
             )
             target_layers_by_node[net_key][node_key] = layer_key
+
+    def record_surface_node(
+        net: str,
+        layer: str,
+        node_id: str,
+        x_um: float,
+        y_um: float,
+        surface_id_override: str | None | object = _BATCH_UNSET,
+    ) -> None:
+        if target_node_surface_resolver is None and surface_id_override is _BATCH_UNSET:
+            return
+        net_key = net.casefold()
+        layer_key = layer.casefold()
+        if surface_id_override is _BATCH_UNSET:
+            try:
+                surface_id = target_node_surface_resolver(
+                    net, layer, node_id, float(x_um), float(y_um)
+                )
+            except Exception as exc:
+                raise SpdImportError("surface island resolver failed closed") from exc
+        else:
+            surface_id = surface_id_override
+        if surface_id is None:
+            return
+        if (net_key, node_id.casefold()) in isolated_node_keys:
+            return
+        token = str(surface_id).strip()
+        if token not in surface_inventory.get((net_key, layer_key), ()):
+            raise SpdImportError("surface island resolver returned an unknown island identity")
+        node_index = index_for(net_key, node_id.casefold())
+        surface_key = (net_key, layer_key, token)
+        code = surface_code_by_key.get(surface_key)
+        if code is None:
+            code = len(surface_key_by_code) + 1
+            surface_code_by_key[surface_key] = code
+            surface_key_by_code.append(surface_key)
+            surface_code_representative.append(node_index)
+            surface_code_count.append(0)
+        existing_code = surface_code_by_index[node_index]
+        if existing_code and existing_code != code:
+            raise SpdImportError("one source Node resolved to multiple exact artwork islands")
+        if existing_code == 0:
+            surface_code_count[code - 1] += 1
+            representative = surface_code_representative[code - 1]
+            if representative != node_index:
+                surface_union_indices(node_index, representative)
+                equivalence_union_indices(node_index, representative)
+        surface_code_by_index[node_index] = code
 
     try:
         with source_path.open("rb") as handle, mmap.mmap(
@@ -3581,6 +5998,17 @@ def recover_spd_ground_reachability(
                     first = _decode(match.group(3)).casefold()
                     second = _decode(match.group(4)).casefold()
                     union(net_key, first, second)
+                    first_index = index_for(net_key, first)
+                    second_index = index_for(net_key, second)
+                    surface_union_indices(first_index, second_index)
+                    trace_net_code = surface_trace_net_code_by_key.setdefault(
+                        net_key, len(surface_trace_net_by_code)
+                    )
+                    if trace_net_code == len(surface_trace_net_by_code):
+                        surface_trace_net_by_code.append(net_key)
+                    surface_trace_net_codes.append(trace_net_code)
+                    surface_trace_first_indices.append(first_index)
+                    surface_trace_second_indices.append(second_index)
                     graph_edges += 1
                     trace_edges += 1
             reporter.report(10, "Indexing same-NET GND Via connectivity")
@@ -3592,9 +6020,41 @@ def recover_spd_ground_reachability(
                     continue
                 first = _decode(match.group(3)).casefold()
                 second = _decode(match.group(4)).casefold()
+                via_key_display = _decode(match.group(1))
+                via_key = via_key_display.casefold()
+                if (net_key, via_key) in via_seen_keys:
+                    raise ValueError("duplicate physical Via ID in SPD source")
+                via_seen_keys.add((net_key, via_key))
+                padstack_name = _decode(match.group(5))
+                padstack_code = via_padstack_code_by_key.setdefault(
+                    padstack_name.casefold(), len(via_source_padstack_names)
+                )
+                if padstack_code == len(via_source_padstack_names):
+                    via_source_padstack_names.append(padstack_name)
+                net_code = via_source_net_code_by_key.setdefault(
+                    net_key, len(via_source_net_key_by_code)
+                )
+                if net_code == len(via_source_net_key_by_code):
+                    via_source_net_key_by_code.append(net_key)
+                via_source_net_codes.append(net_code)
+                via_source_first_indices.append(index_for(net_key, first))
+                via_source_second_indices.append(index_for(net_key, second))
+                via_source_padstack_codes.append(padstack_code)
+                if via_key in terminal_contact_via_ids:
+                    via_terminal_display_endpoints[(net_key, via_key)] = (
+                        _decode(match.group(3)), _decode(match.group(4))
+                    )
+                    via_terminal_padstack_by_key[(net_key, via_key)] = padstack_name
                 union(net_key, first, second)
+                first_index = index_for(net_key, first)
+                second_index = index_for(net_key, second)
+                via_source_offsets.append(int(match.start()))
+                surface_union_indices(first_index, second_index)
                 graph_edges += 1
                 via_edges += 1
+            # Duplicate detection is complete; do not retain every Via identity
+            # through the expensive Node/surface phases.
+            via_seen_keys.clear()
             # For nets without same-layer artwork, a target can only affect a
             # requested result when its Trace/Via DSU component contains one
             # of that net's requested landing endpoints.  Seed these roots
@@ -3620,12 +6080,13 @@ def recover_spd_ground_reachability(
                     continue
                 node_id, net = identity
                 net_key = net.casefold()
-                if net_key not in target_layers:
+                if net_key not in graph_layers:
                     continue
                 layer_raw = _attribute(raw, b"Layer")
                 if layer_raw is None:
                     continue
                 layer_key = _decode(layer_raw).casefold()
+                layer_display = _decode(layer_raw)
                 if (
                     layer_key in artwork_layers.get(net_key, ())
                     and (
@@ -3654,7 +6115,13 @@ def recover_spd_ground_reachability(
                 except ValueError:
                     continue
                 node_key = node_id.casefold()
+                if layer_key in target_layers.get(net_key, ()) or layer_key in artwork_layers.get(net_key, ()):
+                    record_surface_node(net, layer_display, node_id, x_um, y_um)
                 dense_node_index = node_index_by_net[net_key].get(node_key)
+                if dense_node_index is not None:
+                    observed_code = layer_code(layer_key, layer_display)
+                    if node_layer_codes[dense_node_index] in (0, observed_code):
+                        node_layer_codes[dense_node_index] = observed_code
                 # An omitted artwork-layer map means the caller may still be
                 # supplying an artwork callback (legacy/tests); fail safe and
                 # retain all target Nodes in that case.  Production provides
@@ -3728,6 +6195,8 @@ def recover_spd_ground_reachability(
                             if representative != dense_node_index:
                                 artwork_edges += 1
                                 union_indices(dense_node_index, representative)
+                                surface_union_indices(dense_node_index, representative)
+                                equivalence_union_indices(dense_node_index, representative)
                     if layer_key not in target_layers[net_key]:
                         continue
                     node_predicate = target_node_predicate
@@ -3820,7 +6289,28 @@ def recover_spd_ground_reachability(
                         components_batch = (None,) * len(records)
                     if len(components_batch) != len(records):
                         raise SpdImportError("deferred artwork resolver returned an invalid result length")
-                    for record, component in zip(records, components_batch, strict=True):
+                    surface_ids_batch: Sequence[str | None] | object = _BATCH_UNSET
+                    if target_node_surface_resolver_batch is not None:
+                        try:
+                            surface_ids_batch = target_node_surface_resolver_batch(
+                                display_net,
+                                display_layer,
+                                tuple(record[1] for record in records),
+                                tuple((record[4], record[5]) for record in records),
+                            )
+                        except Exception as exc:
+                            raise SpdImportError("surface island batch resolver failed closed") from exc
+                        if surface_ids_batch is None:
+                            surface_ids_batch = (None,) * len(records)
+                        if len(surface_ids_batch) != len(records):
+                            raise SpdImportError("surface island batch resolver returned an invalid result length")
+                    for record_index, (record, component) in enumerate(zip(records, components_batch, strict=True)):
+                        record_surface_node(
+                            record[2], record[3], record[1], record[4], record[5],
+                            _BATCH_UNSET
+                            if surface_ids_batch is _BATCH_UNSET
+                            else surface_ids_batch[record_index],
+                        )
                         if component is None:
                             continue
                         artwork_nodes += 1
@@ -3838,6 +6328,8 @@ def recover_spd_ground_reachability(
                         if representative != node_index:
                             artwork_edges += 1
                             union_indices(node_index, representative)
+                            surface_union_indices(node_index, representative)
+                            equivalence_union_indices(node_index, representative)
 
                     target_records = [
                         record
@@ -3869,6 +6361,8 @@ def recover_spd_ground_reachability(
                             display_layer,
                             tuple((record[4], record[5]) for record in target_records),
                         )
+                        if accepted is None:
+                            accepted = (False,) * len(target_records)
                     elif target_node_predicate is not None:
                         accepted = tuple(
                             target_node_predicate(
@@ -4159,6 +6653,8 @@ def recover_spd_ground_reachability(
                             batch_layer_display,
                             tuple((x_um, y_um) for _seq, _node_id, _net, _layer_display, x_um, y_um, _layer_key, _component in batch),
                         )
+                        if accepted is None:
+                            accepted = (False,) * len(batch)
                     elif target_node_predicate is not None:
                         accepted = tuple(
                             target_node_predicate(batch_net, layer_display, node_id, x_um, y_um)
@@ -4473,6 +6969,1031 @@ def recover_spd_ground_reachability(
                     selected_contact = legacy_selected_contact(ordered_contacts, source_xy)
             target_contacts_by_key[key] = (selected_contact,) if selected_contact else ()
     unreachable = set(requested) - reachable
+    reporter.report(72, "Building surface connectivity certificates")
+    reporter.check()
+    surface_components: set[SpdSurfaceConnectivityComponent] = set()
+    surface_token_layers: dict[tuple[str, str], set[str]] = {}
+    for net_key, layer_key, token in surface_key_by_code:
+        surface_token_layers.setdefault((net_key, token), set()).add(layer_key)
+    for (net_key, _token), layers in sorted(surface_token_layers.items()):
+        if len(layers) >= 2:
+            surface_components.add(
+                SpdSurfaceConnectivityComponent(net_key, tuple(sorted(layers)))
+            )
+    # Surface equivalence excludes Via edges: only same-island artwork and
+    # same-layer Trace edges coalesce equipotential islands.
+    def eq_find(net_key: str, node_index: int) -> tuple[str, int]:
+        return (net_key, _dense_find(equivalence_parents, node_index))
+    for _trace_index, (trace_net_code, first_index, second_index) in enumerate(
+        zip(surface_trace_net_codes, surface_trace_first_indices, surface_trace_second_indices, strict=True)
+    ):
+        if _trace_index % 16384 == 0:
+            reporter.check()
+        if (
+            node_layer_codes[first_index]
+            and node_layer_codes[first_index] == node_layer_codes[second_index]
+        ):
+            equivalence_union_indices(first_index, second_index)
+    grouped_equivalence: dict[tuple[str, str, tuple[str, int]], set[str]] = {}
+    for node_index, code_value in enumerate(surface_code_by_index):
+        if not code_value:
+            continue
+        net_key, layer_key, token = surface_key_by_code[int(code_value) - 1]
+        root = eq_find(net_key, node_index)
+        grouped_equivalence.setdefault((net_key, layer_key, root), set()).add(token)
+    # Preserve uncontacted inventory islands as explicit singleton partitions;
+    # proofs must cover the complete declared surface universe.
+    for (net_key, layer_key), island_ids in surface_inventory.items():
+        observed = {
+            token
+            for (candidate_net, candidate_layer, _root), tokens in grouped_equivalence.items()
+            if candidate_net == net_key and candidate_layer == layer_key
+            for token in tokens
+        }
+        for index, token in enumerate(island_ids):
+            if token not in observed:
+                grouped_equivalence.setdefault((net_key, layer_key, ("inventory", str(index))), set()).add(token)
+    for (net_key, layer_key, _root), tokens in grouped_equivalence.items():
+        display_net = next(
+            (str(raw_net) for raw_net in target_layers_by_net if str(raw_net).casefold() == net_key),
+            net_key,
+        )
+        display_layer = target_layer_display.get((net_key, layer_key), layer_key)
+        surface_equivalence_components.add(
+            SpdSurfaceIslandEquivalenceComponent(display_net, display_layer, tuple(sorted(tokens)))
+        )
+    # A single source-offset replay supplies Via surface unions, canonical pair
+    # aggregates, ownership counts, and compact finite-route arrays.  The
+    # initial graph pass above retains only fixed-width offsets/codes.
+    owned_ids = {str(item).casefold() for item in (terminal_owned_via_ids or ())}
+    raw_via_count = len(via_source_offsets)
+    invalid_owned_count = 0
+    invalid_outside_count = 0
+    invalid_unsupported_count = 0
+    invalid_owned_offsets = array("Q")
+    invalid_outside_offsets = array("Q")
+    invalid_unsupported_offsets = array("Q")
+    invalid_owned_digest = hashlib.sha256()
+    invalid_outside_digest = hashlib.sha256()
+    invalid_unsupported_digest = hashlib.sha256()
+    paired_owned = 0
+    paired_substrate = 0
+    aggregate_states: dict[tuple[str, str, str, str, str, str], dict[str, object]] = {}
+    finite_requested = bool(
+        terminal_contact_records
+        or scenario_isolated_terminal_landings
+        or retarget_destination_requests
+        or terminal_owned_via_ids is not None
+    )
+    finite_net_codes = array("I")
+    finite_first_indices = array("I")
+    finite_second_indices = array("I")
+    finite_padstack_codes = array("I")
+    finite_via_offsets = array("Q")
+    finite_via_ids: list[str] = []
+
+    def surface_row(net_key: str, node_key: str) -> tuple[str, str] | None:
+        node_index = node_index_by_net.get(net_key, {}).get(node_key.casefold())
+        if node_index is None:
+            return None
+        code = surface_code_by_index[node_index]
+        if not code:
+            return None
+        _surface_net, surface_layer, surface_token = surface_key_by_code[code - 1]
+        return surface_layer, surface_token
+
+    # grouped_equivalence is complete before this replay; cache its component
+    # island lookup so each Via performs O(1) provenance work.
+    component_islands_by_surface: dict[tuple[str, str, str], tuple[str, ...]] = {}
+    for (eq_net, eq_layer, _root), tokens in grouped_equivalence.items():
+        for token in tokens:
+            component_islands_by_surface[(eq_net, eq_layer, token)] = tuple(sorted(tokens))
+
+    with source_path.open("rb") as replay_handle, mmap.mmap(
+        replay_handle.fileno(), 0, access=mmap.ACCESS_READ
+    ) as replay_data:
+        via_end = _find_line(replay_data, b"* PadStack collection description lines")
+        if via_end < 0:
+            via_end = len(replay_data)
+        for via_index, offset in enumerate(via_source_offsets):
+            if via_index % 16384 == 0:
+                reporter.check()
+            match = _VIA_RE.match(replay_data, int(offset), via_end)
+            if match is None:
+                raise SpdImportError("Via source offset replay no longer matches the SPD source")
+            net_key = via_source_net_key_by_code[via_source_net_codes[via_index]]
+            via_key = _decode(match.group(1)).casefold()
+            first_index = via_source_first_indices[via_index]
+            second_index = via_source_second_indices[via_index]
+            first_node = node_id_for(net_key, first_index)
+            second_node = node_id_for(net_key, second_index)
+            padstack_name = via_source_padstack_names[via_source_padstack_codes[via_index]]
+            surface_union_indices(first_index, second_index)
+            first_surface = surface_row(net_key, first_node)
+            second_surface = surface_row(net_key, second_node)
+            if first_surface is None or second_surface is None or first_surface[0] == second_surface[0]:
+                if via_key in owned_ids:
+                    invalid_owned_count += 1
+                    invalid_owned_offsets.append(int(offset))
+                elif via_key in terminal_contact_via_ids:
+                    invalid_outside_count += 1
+                    invalid_outside_offsets.append(int(offset))
+                else:
+                    invalid_unsupported_count += 1
+                    invalid_unsupported_offsets.append(int(offset))
+            else:
+                aggregate_key = (
+                    net_key,
+                    padstack_name.casefold(),
+                    first_surface[0].casefold(),
+                    second_surface[0].casefold(),
+                    first_surface[1],
+                    second_surface[1],
+                )
+                state = aggregate_states.get(aggregate_key)
+                if state is None:
+                    state = {
+                        "net": net_key,
+                        "padstack": padstack_name,
+                        "start_layer": first_surface[0],
+                        "end_layer": second_surface[0],
+                        "start_island": first_surface[1],
+                        "end_island": second_surface[1],
+                        "count": 0,
+                        "digest": hashlib.sha256(),
+                        "owned": 0,
+                        "substrate": 0,
+                    }
+                    aggregate_states[aggregate_key] = state
+                state["count"] = int(state["count"]) + 1
+                encoded = via_key.encode("utf-8")
+                cast_digest = state["digest"]
+                cast_digest.update(len(encoded).to_bytes(4, "big"))
+                cast_digest.update(encoded)
+                if via_key in owned_ids:
+                    state["owned"] = int(state["owned"]) + 1
+                    paired_owned += 1
+                else:
+                    state["substrate"] = int(state["substrate"]) + 1
+                    paired_substrate += 1
+            if finite_requested:
+                finite_net_codes.append(via_source_net_codes[via_index])
+                finite_first_indices.append(first_index)
+                finite_second_indices.append(second_index)
+                finite_padstack_codes.append(via_source_padstack_codes[via_index])
+                finite_via_offsets.append(int(offset))
+                # Owner IDs are output-contract strings; retain them only for
+                # the optional finite result, never for the general graph path.
+                finite_via_ids.append(via_key)
+        def digest_invalid_offsets(offsets: array):
+            values = []
+            for offset in offsets:
+                match = _VIA_RE.match(replay_data, int(offset), via_end)
+                if match is not None:
+                    values.append(_decode(match.group(1)).casefold())
+            digest = hashlib.sha256()
+            for value in sorted(values):
+                encoded = value.encode("utf-8")
+                digest.update(len(encoded).to_bytes(4, "big"))
+                digest.update(encoded)
+            return digest
+        invalid_owned_digest = digest_invalid_offsets(invalid_owned_offsets)
+        invalid_outside_digest = digest_invalid_offsets(invalid_outside_offsets)
+        invalid_unsupported_digest = digest_invalid_offsets(invalid_unsupported_offsets)
+    # One post-replay metadata pass turns surface codes into direct root/layer
+    # lookups.  Contacts and finite vertices use these tables instead of
+    # repeatedly scanning every surface group.
+    surface_root_by_code: dict[int, int] = {}
+    surface_codes_by_root: dict[tuple[str, int], tuple[int, ...]] = {}
+    surface_component_islands_by_code: dict[int, tuple[str, ...]] = {}
+    global_surface_layers: dict[tuple[str, int], set[str]] = {}
+    codes_by_root_mutable: dict[tuple[str, int], list[int]] = {}
+    surface_code_by_key = {
+        key: code for code, key in enumerate(surface_key_by_code, start=1)
+    }
+    component_by_surface_key = {
+        (eq_net, eq_layer, token): tuple(sorted(tokens))
+        for (eq_net, eq_layer, _eq_root), tokens in grouped_equivalence.items()
+        for token in tokens
+    }
+    for node_index, code_value in enumerate(surface_code_by_index):
+        code = int(code_value)
+        if not code or code in surface_root_by_code:
+            continue
+        if node_index % 16384 == 0:
+            reporter.check()
+        candidate_net, candidate_layer, token = surface_key_by_code[code - 1]
+        root = _dense_find(surface_parents, node_index)
+        surface_root_by_code[code] = root
+        codes_by_root_mutable.setdefault((candidate_net, root), []).append(code)
+        global_surface_layers.setdefault((candidate_net, root), set()).add(candidate_layer)
+        surface_component_islands_by_code[code] = component_by_surface_key.get(
+            (candidate_net, candidate_layer, token), (token,)
+        )
+    surface_codes_by_root = {
+        key: tuple(values) for key, values in codes_by_root_mutable.items()
+    }
+    for (candidate_net, _root), layers in global_surface_layers.items():
+        if len(layers) < 2:
+            continue
+        display_net = next(
+            (str(raw_net) for raw_net in target_layers_by_net if str(raw_net).casefold() == candidate_net),
+            candidate_net,
+        )
+        display_layers = tuple(
+            sorted(target_layer_display.get((candidate_net, layer), layer) for layer in layers)
+        )
+        surface_components.add(SpdSurfaceConnectivityComponent(display_net, display_layers))
+    all_landings = landing_records + terminal_contact_records
+    terminal_contact_keys = set(terminal_contact_owner_by_key)
+    contact_seen: set[tuple[str, str]] = set()
+    for landing in all_landings:
+        landing_key = (
+            str(getattr(landing, "via_id", "")).casefold(),
+            str(getattr(landing, "endpoint_node_id", "")).casefold(),
+        )
+        net_key = str(getattr(landing, "net", "")).casefold()
+        landing_node_key = landing_key[1]
+        landing_index = node_index_by_net.get(net_key, {}).get(landing_node_key)
+        landing_root = (
+            _dense_find(surface_parents, landing_index)
+            if landing_index is not None
+            else None
+        )
+        matched_layers: set[str] = set()
+        matched_islands: set[str] = set()
+        reachable_target_layers = {
+            target_layer
+            for candidate_via, candidate_node, target_layer in reachable
+            if candidate_via == landing_key[0] and candidate_node == landing_key[1]
+        }
+        if len(reachable_target_layers) >= 2:
+            display_layers = tuple(
+                sorted(
+                    target_layer_display.get((net_key, layer), layer)
+                    for layer in reachable_target_layers
+                )
+            )
+            display_net = str(getattr(landing, "net", net_key))
+            surface_components.add(SpdSurfaceConnectivityComponent(display_net, display_layers))
+            surface_layers_by_landing[landing_key] = set(display_layers)
+        if landing_key in isolated_landing_keys:
+            # Scenario-isolated terminal pads retain source identity but must
+            # not inherit a permanent artwork/Via ideal union.
+            matched_layers.clear()
+            matched_islands.clear()
+        if landing_key not in isolated_landing_keys:
+            for code in surface_codes_by_root.get((net_key, landing_root), ()):
+                _candidate_net, candidate_layer, token = surface_key_by_code[code - 1]
+                matched_layers.add(candidate_layer)
+                matched_islands.add(token)
+        if matched_layers:
+            surface_layers_by_landing[landing_key] = {
+                target_layer_display.get((net_key, layer), layer)
+                for layer in matched_layers
+            }
+            surface_islands_by_landing[landing_key] = matched_islands
+            if len(matched_layers) >= 2:
+                display_net = str(getattr(landing, "net", net_key))
+                display_layers = tuple(
+                    sorted(
+                        target_layer_display.get((net_key, layer), layer)
+                        for layer in matched_layers
+                    )
+                )
+                surface_components.add(
+                    SpdSurfaceConnectivityComponent(display_net, display_layers)
+                )
+        if landing_key in terminal_contact_keys and landing_key not in contact_seen:
+            terminal_net_key, terminal_owner_kind, _terminal_id = (
+                terminal_contact_owner_by_key[landing_key]
+            )
+            if net_key != terminal_net_key:
+                continue
+            contact_seen.add(landing_key)
+            via_key = str(getattr(landing, "via_id", "")).casefold()
+            endpoint_node = landing_key[1]
+            display_endpoints = via_terminal_display_endpoints.get((net_key, via_key), ())
+            endpoints = tuple(item.casefold() for item in display_endpoints)
+            internal_node = next((item for item in endpoints if item != endpoint_node), None)
+            internal_node_display = next(
+                (item for item in display_endpoints if item.casefold() != endpoint_node),
+                internal_node,
+            )
+            contact_rows: dict[str, tuple[str, ...]] = {}
+            if internal_node is not None:
+                internal_index = node_index_by_net.get(net_key, {}).get(str(internal_node).casefold())
+                internal_code = (
+                    int(surface_code_by_index[internal_index])
+                    if internal_index is not None
+                    else 0
+                )
+                if internal_code:
+                    _candidate_net, candidate_layer, token = surface_key_by_code[internal_code - 1]
+                    contact_rows[target_layer_display.get((net_key, candidate_layer), candidate_layer)] = (token,)
+            if not contact_rows and matched_islands:
+                # Preserve an incomplete but explicit terminal-contact record
+                # when endpoint geometry is unavailable; never synthesize a
+                # complete physical model from the landing alone.
+                for candidate_layer in sorted(matched_layers):
+                    display_layer = target_layer_display.get((net_key, candidate_layer), candidate_layer)
+                    tokens = tuple(sorted(matched_islands))
+                    if tokens:
+                        contact_rows[display_layer] = (tokens[0],)
+            if contact_rows:
+                landing_surface_contacts.append(
+                    SpdLandingSurfaceContact(
+                        via_id=str(getattr(landing, "via_id", "")),
+                        endpoint_node_id=str(getattr(landing, "endpoint_node_id", "")),
+                        net=str(getattr(landing, "net", net_key)),
+                        contact_island_ids_by_layer=contact_rows,
+                        internal_endpoint_node_id=internal_node_display,
+                        terminal_owner_kind=terminal_owner_kind,
+                    )
+                )
+    def physical_model_for_canonical(
+        padstack_name: str,
+        start_layer: str,
+        end_layer: str,
+    ) -> tuple[float | None, str | None, tuple[SpdViaIslandPairSegment, ...], str, tuple[str, ...]]:
+        issues: set[str] = set()
+        definitions = tuple(
+            item for item in (padstacks or ())
+            if str(getattr(item, "name", "")).strip().casefold() == padstack_name.casefold()
+        )
+        padstack = definitions[0] if len(definitions) == 1 else None
+        if padstacks is None:
+            issues.add("physical_model_source_not_supplied")
+        elif not definitions:
+            issues.add("padstack_definition_missing")
+        elif len(definitions) > 1:
+            issues.add("padstack_definition_ambiguous")
+        drill = None
+        material = None
+        if padstack is not None:
+            try:
+                drill = float(getattr(padstack, "drill_diameter_um"))
+            except (TypeError, ValueError, AttributeError):
+                drill = None
+            if drill is None or not isfinite(drill) or drill <= 0.0:
+                drill = None
+                issues.add("drill_diameter_um_missing_or_invalid")
+            material = str(getattr(padstack, "material", "") or "").strip() or None
+            if not material:
+                issues.add("padstack_material_missing")
+        declared: list[str] = []
+        seen_declared: set[str] = set()
+        if padstack is not None:
+            for raw_layer in getattr(padstack, "layers", ()):
+                layer = str(raw_layer).strip()
+                if not layer:
+                    continue
+                key = layer.casefold()
+                if key in seen_declared:
+                    issues.add("padstack_conductor_layer_duplicated")
+                else:
+                    seen_declared.add(key)
+                    declared.append(layer)
+        start_key, end_key = start_layer.casefold(), end_layer.casefold()
+        if start_key not in seen_declared or end_key not in seen_declared:
+            issues.add("via_endpoint_layer_not_declared_by_padstack")
+        stackup = tuple(stackup_layers or ())
+        centers: dict[str, float] = {}
+        stack_seen: set[str] = set()
+        depth = 0.0
+        for layer in stackup:
+            layer_name = str(getattr(layer, "name", "")).strip()
+            key = layer_name.casefold()
+            try:
+                thickness = float(getattr(layer, "thickness_um"))
+            except (TypeError, ValueError, AttributeError):
+                thickness = float("nan")
+            if not layer_name or key in stack_seen or not isfinite(thickness) or thickness <= 0.0:
+                issues.add("stackup_layer_missing_or_ambiguous")
+                continue
+            stack_seen.add(key)
+            centers[key] = depth + thickness / 2.0
+            depth += thickness
+        if start_key not in centers or end_key not in centers:
+            issues.add("via_endpoint_layer_missing_from_stackup")
+        if issues:
+            return drill, material, (), "incomplete", tuple(sorted(issues))
+        start_index = declared.index(next(layer for layer in declared if layer.casefold() == start_key))
+        end_index = declared.index(next(layer for layer in declared if layer.casefold() == end_key))
+        if start_index == end_index:
+            return drill, material, (), "incomplete", ("via_endpoint_layers_identical",)
+        step = 1 if end_index > start_index else -1
+        segments = tuple(
+            SpdViaIslandPairSegment(
+                ordinal,
+                declared[index],
+                declared[index + step],
+                abs(centers[declared[index + step].casefold()] - centers[declared[index].casefold()]) or 1.0,
+            )
+            for ordinal, index in enumerate(range(start_index, end_index, step))
+        )
+        return drill, material, segments, "complete", ()
+
+    # Materialize one canonical row per replay accumulator.  The old path built
+    # one dataclass and one Via-ID list per source edge; the replay keeps only a
+    # framed digest/count/ownership counters until this bounded output stage.
+    via_island_pair_aggregates = []
+    for state in aggregate_states.values():
+        net_key = str(state["net"])
+        padstack_name = str(state["padstack"])
+        start_layer = target_layer_display.get(
+            (net_key, str(state["start_layer"]).casefold()), str(state["start_layer"])
+        )
+        end_layer = target_layer_display.get(
+            (net_key, str(state["end_layer"]).casefold()), str(state["end_layer"])
+        )
+        drill, material, segments, physical_status, physical_issues = physical_model_for_canonical(
+            padstack_name, start_layer, end_layer
+        )
+        start_island = str(state["start_island"])
+        end_island = str(state["end_island"])
+        start_component = component_islands_by_surface.get(
+            (net_key, str(state["start_layer"]).casefold(), start_island),
+            (start_island,),
+        )
+        end_component = component_islands_by_surface.get(
+            (net_key, str(state["end_layer"]).casefold(), end_island),
+            (end_island,),
+        )
+        via_island_pair_aggregates.append(
+            SpdViaIslandPairAggregate(
+                net=next(
+                    (str(raw_net) for raw_net in target_layers_by_net
+                     if str(raw_net).casefold() == net_key),
+                    net_key,
+                ),
+                padstack=padstack_name,
+                start_layer=start_layer,
+                end_layer=end_layer,
+                start_island_id=start_island,
+                end_island_id=end_island,
+                count=int(state["count"]),
+                via_ids_sha256=state["digest"].hexdigest(),
+                start_component_island_ids=tuple(sorted(start_component)),
+                end_component_island_ids=tuple(sorted(end_component)),
+                terminal_owned_count=(int(state["owned"]) if terminal_owned_via_ids is not None else None),
+                substrate_count=(int(state["substrate"]) if terminal_owned_via_ids is not None else None),
+                drill_diameter_um=drill,
+                material=material,
+                segments=segments,
+                physical_model_status=physical_status,
+                physical_model_issues=physical_issues,
+            )
+        )
+    via_island_pair_aggregates.sort(
+        key=lambda item: (
+            item.net.casefold(), item.padstack.casefold(),
+            item.start_layer.casefold(), item.end_layer.casefold(),
+            item.start_island_id, item.end_island_id,
+        )
+    )
+    # Enrich terminal contact rows from the canonical physical pair.  Surface
+    # contact classification is independent from strict target acceptance, but
+    # a terminal landing that has a resolved pair must carry the same physical
+    # metadata as its aggregate.
+    if landing_surface_contacts:
+        enriched_contacts: list[SpdLandingSurfaceContact] = []
+        for contact in landing_surface_contacts:
+            net_key = contact.net.casefold()
+            endpoint_key = contact.endpoint_node_id.casefold()
+            endpoint_surface = surface_row(net_key, endpoint_key)
+            internal_key = (contact.internal_endpoint_node_id or "").casefold()
+            internal_surface = surface_row(net_key, internal_key)
+            aggregate = next(
+                (
+                    item
+                    for item in via_island_pair_aggregates
+                    if item.net.casefold() == net_key
+                    and endpoint_surface is not None
+                    and internal_surface is not None
+                    and item.start_layer.casefold() == endpoint_surface[0].casefold()
+                    and item.end_layer.casefold() == internal_surface[0].casefold()
+                    and item.start_island_id == endpoint_surface[1]
+                    and item.end_island_id == internal_surface[1]
+                ),
+                None,
+            )
+            if aggregate is None:
+                # Owned one-sided terminal Vias have no paired aggregate, but
+                # their retained internal endpoint still carries complete
+                # physical evidence and must be serialized as an unpaired
+                # terminal contact rather than dropped.
+                via_key = contact.via_id.casefold()
+                endpoint_layer = node_layer_for(net_key, endpoint_key)
+                internal_layer = node_layer_for(net_key, internal_key)
+                padstack_name = via_terminal_padstack_by_key.get((net_key, via_key))
+                drill = None
+                material = None
+                if padstack_name and padstacks is not None:
+                    for padstack in padstacks:
+                        if str(padstack.name).casefold() == padstack_name.casefold():
+                            drill = padstack.drill_diameter_um
+                            material = padstack.material
+                            break
+                segments: tuple[SpdViaIslandPairSegment, ...] = ()
+                physical_status = "incomplete"
+                physical_issues: tuple[str, ...] = ("physical_model_not_supplied",)
+                is_owned_contact = contact.via_id.casefold() in owned_ids
+                if is_owned_contact and contact.contact_island_ids_by_layer and endpoint_layer and internal_layer and drill is not None and stackup_layers is not None:
+                    depth = 0.0
+                    centres: dict[str, float] = {}
+                    for stack_layer in stackup_layers:
+                        thickness = float(stack_layer.thickness_um)
+                        centres[str(stack_layer.name).casefold()] = depth + thickness / 2.0
+                        depth += thickness
+                    if endpoint_layer.casefold() in centres and internal_layer.casefold() in centres:
+                        segments = (
+                            SpdViaIslandPairSegment(
+                                0,
+                                endpoint_layer,
+                                internal_layer,
+                                abs(centres[internal_layer.casefold()] - centres[endpoint_layer.casefold()]) or 1.0,
+                            ),
+                        )
+                        physical_status = "complete"
+                        physical_issues = ()
+                enriched_contacts.append(
+                    replace(
+                        contact,
+                        terminal_owner_kind=contact.terminal_owner_kind,
+                        external_endpoint_layer=endpoint_layer,
+                        padstack=padstack_name,
+                        drill_diameter_um=drill,
+                        material=material,
+                        segments=segments,
+                        physical_model_status=physical_status,
+                        physical_model_issues=physical_issues,
+                    )
+                )
+                continue
+            enriched_contacts.append(
+                replace(
+                    contact,
+                    terminal_owner_kind=contact.terminal_owner_kind,
+                    external_endpoint_layer=aggregate.start_layer,
+                    padstack=aggregate.padstack,
+                    drill_diameter_um=aggregate.drill_diameter_um,
+                    material=aggregate.material,
+                    segments=aggregate.segments,
+                    physical_model_status=aggregate.physical_model_status,
+                    physical_model_issues=aggregate.physical_model_issues,
+                )
+            )
+        landing_surface_contacts = enriched_contacts
+    if raw_via_count:
+        paired_count = sum(item.count for item in via_island_pair_aggregates)
+        # An observed terminal-owned Via whose endpoint cannot be bound to two
+        # retained surface islands is an explicit unpaired-owned record.  A
+        # nonterminal missing endpoint is unsupported unless it was supplied as
+        # an external terminal contact, in which case it remains outside the
+        # retained interface scope.
+        unpaired_owned = invalid_owned_count
+        unsupported = invalid_unsupported_count
+        outside = invalid_outside_count
+
+        via_island_pair_coverage = SpdViaIslandPairCoverage(
+            raw_target_via_count=raw_via_count,
+            paired_via_count=paired_count,
+            terminal_owned_unpaired_count=unpaired_owned,
+            terminal_owned_unpaired_via_ids_sha256=invalid_owned_digest.hexdigest(),
+            unsupported_missing_endpoint_count=unsupported,
+            unsupported_missing_endpoint_via_ids_sha256=invalid_unsupported_digest.hexdigest(),
+            outside_retained_interface_scope_count=outside,
+            outside_retained_interface_scope_via_ids_sha256=invalid_outside_digest.hexdigest(),
+            model_relevant_via_count=paired_count + unpaired_owned + unsupported,
+            terminal_owned_ids_supplied=bool(terminal_owned_via_ids is not None),
+            terminal_owned_declared_count=len(owned_ids),
+            terminal_owned_observed_count=paired_owned + unpaired_owned,
+            paired_terminal_owned_count=paired_owned if terminal_owned_via_ids is not None else None,
+            paired_substrate_count=paired_substrate if terminal_owned_via_ids is not None else None,
+        )
+    for (net_key, layer_key), island_ids in sorted(surface_inventory.items()):
+        contacted = tuple(
+            sorted(
+                token
+                for candidate_net, candidate_layer, token in surface_key_by_code
+                if candidate_net == net_key and candidate_layer == layer_key
+            )
+        )
+        component_count = sum(
+            1
+            for (candidate_net, candidate_layer, _root) in grouped_equivalence
+            if candidate_net == net_key and candidate_layer == layer_key
+        )
+        status = "complete" if set(contacted) == set(island_ids) and component_count else "uncontacted_island"
+        display_net = next(
+            (str(raw_net) for raw_net in target_layers_by_net if str(raw_net).casefold() == net_key),
+            net_key,
+        )
+        display_layer = target_layer_display.get((net_key, layer_key), layer_key)
+        surface_equivalence_proofs.append(
+            SpdSurfaceEquivalenceProof(
+                display_net,
+                display_layer,
+                tuple(island_ids),
+                contacted,
+                component_count,
+                status,
+            )
+        )
+    # Build the finite Via quotient from the already-retained endpoint graph.
+    # This is intentionally post-replay: no second Via section scan or eager
+    # raw geometry is needed, and every edge keeps its source Via owner.
+    finite_via_vertices: list[SpdFiniteViaQuotientVertex] = []
+    finite_via_edges: list[SpdFiniteViaQuotientEdge] = []
+    finite_via_vertex_id_by_landing: dict[tuple[str, str], str] = {}
+    finite_via_edge_id_by_landing: dict[tuple[str, str], str] = {}
+    finite_via_coverage: SpdFiniteViaQuotientCoverage | None = None
+    finite_via_scenario_isolated_landing_keys: frozenset[tuple[str, str]] = frozenset()
+    finite_via_scenario_isolation_coverage: SpdFiniteViaScenarioIsolationCoverage | None = None
+    finite_via_vertex_id_by_retarget_destination: dict[tuple[str, str, str], str] = {}
+    finite_via_retarget_destination_coverage: SpdFiniteViaRetargetDestinationCoverage | None = None
+    if finite_via_offsets and finite_requested:
+        # The finite quotient consumes only dense endpoint indices and compact
+        # codes retained by the single replay.  Do not rebuild million-entry
+        # string references or raw five-field edge tuples here.
+        edge_count = len(finite_via_offsets)
+        node_count = len(parents)
+        degree = array("I", [0]) * node_count
+        for edge_index in range(edge_count):
+            degree[finite_first_indices[edge_index]] += 1
+            degree[finite_second_indices[edge_index]] += 1
+        adjacency_offsets = array("I", [0]) * (node_count + 1)
+        for node_index in range(node_count):
+            adjacency_offsets[node_index + 1] = adjacency_offsets[node_index] + degree[node_index]
+        adjacency_incidence = array("I", [0]) * (2 * edge_count)
+        adjacency_cursor = array("I", adjacency_offsets[:-1])
+        for edge_index in range(edge_count):
+            first = finite_first_indices[edge_index]
+            second = finite_second_indices[edge_index]
+            adjacency_incidence[adjacency_cursor[first]] = edge_index
+            adjacency_cursor[first] += 1
+            adjacency_incidence[adjacency_cursor[second]] = edge_index
+            adjacency_cursor[second] += 1
+
+        def incident_start(node: int) -> int:
+            return int(adjacency_offsets[node])
+
+        def incident_end(node: int) -> int:
+            return int(adjacency_offsets[node + 1])
+
+        def incident_degree(node: int) -> int:
+            return incident_end(node) - incident_start(node)
+
+        def edge_net(edge_index: int) -> str:
+            return via_source_net_key_by_code[finite_net_codes[edge_index]]
+
+        def edge_owner(edge_index: int) -> str:
+            return finite_via_ids[edge_index]
+
+        def edge_padstack(edge_index: int) -> str:
+            return via_source_padstack_names[finite_padstack_codes[edge_index]]
+
+        boundary_nodes = bytearray(node_count)
+        terminal_ids_by_node: dict[int, list[str]] = {}
+        for (_via_key, node_key), (
+            net_key,
+            _owner_kind,
+            terminal_id,
+        ) in terminal_contact_owner_by_key.items():
+            node_index = node_index_by_net.get(net_key, {}).get(node_key)
+            if node_index is None:
+                continue
+            boundary_nodes[node_index] = 1
+            terminal_ids_by_node.setdefault(node_index, []).append(
+                terminal_id
+            )
+        for node_index, code_value in enumerate(surface_code_by_index):
+            if code_value:
+                boundary_nodes[node_index] = 1
+        # Keep an isolated terminal landing as a singleton quotient vertex;
+        # its immediate Via neighbor is a boundary of the conditional graph
+        # and must not be absorbed into a contracted series path.
+        for isolated_net, isolated_node in isolated_node_keys:
+            isolated_index = node_index_by_net.get(isolated_net, {}).get(isolated_node)
+            if isolated_index is None:
+                continue
+            for incidence_index in range(incident_start(isolated_index), incident_end(isolated_index)):
+                edge_index = adjacency_incidence[incidence_index]
+                first = finite_first_indices[edge_index]
+                second = finite_second_indices[edge_index]
+                boundary_nodes[second if first == isolated_index else first] = 1
+
+        def edge_other(edge_index: int, node: int) -> int:
+            first = finite_first_indices[edge_index]
+            second = finite_second_indices[edge_index]
+            return second if first == node else first
+
+        # Tarjan bridges classify cycle/parallel topology in O(V+E).  A
+        # non-boundary degree-two node is contractible iff both incident edges
+        # are bridges; the previous per-node BFS made middle-first chains
+        # quadratic and could oscillate on cycles.
+        discovery = array("i", [-1]) * node_count
+        low = array("i", [0]) * node_count
+        parent_edge = array("i", [-1]) * node_count
+        parent_node = array("i", [-1]) * node_count
+        bridges = bytearray(edge_count)
+        timer = 0
+        for start in range(node_count):
+            if not degree[start] or discovery[start] >= 0:
+                continue
+            discovery[start] = low[start] = timer
+            timer += 1
+            stack_nodes = array("I", [start])
+            stack_cursors = array("I", [incident_start(start)])
+            while stack_nodes:
+                node = stack_nodes[-1]
+                cursor = stack_cursors[-1]
+                end = incident_end(node)
+                if cursor >= end:
+                    stack_nodes.pop()
+                    stack_cursors.pop()
+                    parent = parent_node[node]
+                    parent_edge_index = parent_edge[node]
+                    if parent >= 0 and parent_edge_index >= 0:
+                        low[parent] = min(low[parent], low[node])
+                        if low[node] > discovery[parent]:
+                            bridges[parent_edge_index] = 1
+                    continue
+                edge_index = adjacency_incidence[cursor]
+                stack_cursors[-1] = cursor + 1
+                if edge_index == parent_edge[node]:
+                    continue
+                neighbor = edge_other(edge_index, node)
+                if discovery[neighbor] < 0:
+                    parent_node[neighbor] = node
+                    parent_edge[neighbor] = edge_index
+                    discovery[neighbor] = low[neighbor] = timer
+                    timer += 1
+                    stack_nodes.append(neighbor)
+                    stack_cursors.append(incident_start(neighbor))
+                else:
+                    low[node] = min(low[node], discovery[neighbor])
+
+        contracted = bytearray(node_count)
+        for node in range(node_count):
+            if boundary_nodes[node] or degree[node] != 2:
+                continue
+            first_edge = adjacency_incidence[incident_start(node)]
+            second_edge = adjacency_incidence[incident_start(node) + 1]
+            if bridges[first_edge] and bridges[second_edge] and edge_other(first_edge, node) != edge_other(second_edge, node):
+                contracted[node] = 1
+
+        vertex_for_node = array("I", range(node_count))
+        visited_edges = bytearray(edge_count)
+        quotient_paths: list[tuple[int, int, list[int]]] = []
+        # Walk each bridge chain once from a kept endpoint.  Every contracted
+        # interior node is assigned during that walk, so source ordering no
+        # longer depends on which middle node happens to be visited first.
+        for start in range(node_count):
+            if not degree[start] or contracted[start]:
+                continue
+            for incidence_index in range(incident_start(start), incident_end(start)):
+                first_edge = adjacency_incidence[incidence_index]
+                if visited_edges[first_edge]:
+                    continue
+                current = start
+                previous_edge = -1
+                path: list[int] = []
+                while True:
+                    current_edge = -1
+                    for candidate_offset in range(incident_start(current), incident_end(current)):
+                        candidate = adjacency_incidence[candidate_offset]
+                        if candidate != previous_edge and not visited_edges[candidate]:
+                            current_edge = candidate
+                            break
+                    if current_edge < 0:
+                        break
+                    visited_edges[current_edge] = 1
+                    path.append(current_edge)
+                    nxt = edge_other(current_edge, current)
+                    if not contracted[nxt]:
+                        quotient_paths.append((start, nxt, path))
+                        break
+                    vertex_for_node[nxt] = start
+                    previous_edge = current_edge
+                    current = nxt
+        # Any remaining edge is cyclic/parallel (or a defensive malformed
+        # component); retain it explicitly rather than forcing contraction.
+        for edge_index in range(edge_count):
+            if visited_edges[edge_index]:
+                continue
+            visited_edges[edge_index] = 1
+            first = finite_first_indices[edge_index]
+            second = finite_second_indices[edge_index]
+            quotient_paths.append(
+                (vertex_for_node[first], vertex_for_node[second], [edge_index])
+            )
+
+        def finite_digest(values: Iterable[str]) -> str:
+            digest = hashlib.sha256()
+            for value in values:
+                encoded = str(value).casefold().encode("utf-8")
+                digest.update(len(encoded).to_bytes(4, "big"))
+                digest.update(encoded)
+            return digest.hexdigest()
+
+        vertex_member_count = array("I", [0]) * node_count
+        for node_index in range(node_count):
+            if degree[node_index]:
+                vertex_member_count[vertex_for_node[node_index]] += 1
+        vertex_member_offsets = array("I", [0]) * (node_count + 1)
+        for node_index in range(node_count):
+            vertex_member_offsets[node_index + 1] = (
+                vertex_member_offsets[node_index] + vertex_member_count[node_index]
+            )
+        vertex_members = array("I", [0]) * vertex_member_offsets[-1]
+        vertex_member_cursor = array("I", vertex_member_offsets[:-1])
+        for node_index in range(node_count):
+            if not degree[node_index]:
+                continue
+            representative = vertex_for_node[node_index]
+            vertex_members[vertex_member_cursor[representative]] = node_index
+            vertex_member_cursor[representative] += 1
+        vertex_id_by_node: list[str | None] = [None] * node_count
+        for representative in range(node_count):
+            if not vertex_member_count[representative]:
+                continue
+            members = vertex_members[
+                vertex_member_offsets[representative] : vertex_member_offsets[representative + 1]
+            ]
+            net_for_vertex = node_net_key_by_index[representative]
+            representative_node = node_id_by_index[representative]
+            layer = node_layer_for(net_for_vertex, representative_node)
+            node_ids_hash = finite_digest(
+                sorted(node_id_by_index[member] for member in members)
+            )
+            vertex_id = f"spd-finite-via-vertex:{finite_digest((net_for_vertex, layer, representative_node, str(len(members)), node_ids_hash))[:24]}"
+            retained_mutable: dict[str, set[str]] = {}
+            roles: set[str] = set()
+            for member in members:
+                if node_net_key_by_index[member] != net_for_vertex:
+                    continue
+                surface_code = int(surface_code_by_index[member])
+                if not surface_code:
+                    continue
+                _surface_net, candidate_layer, token = surface_key_by_code[surface_code - 1]
+                display_layer = target_layer_display.get((net_for_vertex, candidate_layer), candidate_layer)
+                retained_mutable.setdefault(display_layer, set()).update(
+                    surface_component_islands_by_code.get(surface_code, (token,))
+                )
+            retained = {
+                layer_key: tuple(sorted(tokens))
+                for layer_key, tokens in retained_mutable.items()
+            }
+            if retained:
+                roles.add("retained_surface")
+            terminal_ids = tuple(sorted(
+                terminal_id
+                for member in members
+                for terminal_id in terminal_ids_by_node.get(member, ())
+            ))
+            if terminal_ids:
+                roles.add("terminal")
+            if incident_degree(representative) > 2:
+                roles.add("junction")
+            elif not roles:
+                roles.add("cycle_anchor" if incident_degree(representative) == 2 else "leaf")
+            finite_via_vertices.append(
+                SpdFiniteViaQuotientVertex(
+                    vertex_id=vertex_id,
+                    net=next((str(raw_net) for raw_net in target_layers_by_net if str(raw_net).casefold() == net_for_vertex), net_for_vertex),
+                    layer=layer,
+                    representative_node_id=representative_node,
+                    source_node_count=len(members),
+                    source_node_ids_sha256=node_ids_hash,
+                    roles=tuple(roles),
+                    retained_component_island_ids_by_layer=retained,
+                    terminal_ids=terminal_ids,
+                )
+            )
+            for member in members:
+                vertex_id_by_node[member] = vertex_id
+        def finite_physical(padstack_name: str, start_layer: str, end_layer: str):
+            drill, material, segments, status, issues = physical_model_for_canonical(
+                padstack_name, start_layer, end_layer
+            )
+            if status != "complete" or not segments:
+                return drill, material, segments, status, issues, None, None, None
+            segment = segments[0]
+            try:
+                model = estimate_via_segment_rl(
+                    length_um=segment.length_um,
+                    drill_diameter_um=drill,
+                    padstack_material=material,
+                    start_layer=start_layer,
+                    end_layer=end_layer,
+                    stackup_layers=stackup_layers,
+                )
+                return drill, material, segments, "complete", (), model.resistance_ohm, model.inductance_h, segment.length_um
+            except Exception:
+                return drill, material, segments, "incomplete", ("physical_model_unavailable",), None, None, None
+
+        for start_node, end_node, path in quotient_paths:
+            owner_ids = tuple(f"via:{edge_owner(index)}" for index in path)
+            start_vertex = vertex_id_by_node[start_node]
+            end_vertex = vertex_id_by_node[end_node]
+            terms = []
+            total_r = total_l = total_length = 0.0
+            status = "complete"
+            issues: set[str] = set()
+            for ordinal, edge_index in enumerate(path):
+                net_for_edge = edge_net(edge_index)
+                first_index = finite_first_indices[edge_index]
+                second_index = finite_second_indices[edge_index]
+                first_layer = node_layer_for(net_for_edge, node_id_by_index[first_index])
+                second_layer = node_layer_for(net_for_edge, node_id_by_index[second_index])
+                padstack_name = edge_padstack(edge_index)
+                drill, material, segments, term_status, term_issues, resistance, inductance, length_um = finite_physical(padstack_name, first_layer, second_layer)
+                if term_status != "complete":
+                    status = "incomplete"
+                    issues.update(term_issues)
+                else:
+                    total_r += resistance or 0.0
+                    total_l += inductance or 0.0
+                    total_length += length_um or 0.0
+                terms.append(SpdFiniteViaSeriesTerm(ordinal, 1, padstack_name, first_layer, second_layer, drill, material, segments, resistance, inductance, length_um, term_status, term_issues))
+            edge_digest = finite_digest(edge_owner(index) for index in path)
+            edge_id = f"spd-finite-via-edge:{finite_digest((start_vertex, end_vertex, edge_digest))[:24]}"
+            finite_via_edges.append(SpdFiniteViaQuotientEdge(edge_id, edge_net(path[0]), start_vertex, end_vertex, 1, len(path), len(path), edge_digest, owner_ids, tuple(terms), total_r if status == "complete" else None, total_l if status == "complete" else None, total_length if status == "complete" else None, "contracted_series" if len(path) > 1 else "retained_explicit", status, tuple(sorted(issues))))
+        for key, (net_key, _owner_kind, _terminal_id) in (
+            terminal_contact_owner_by_key.items()
+        ):
+            node_index = node_index_by_net.get(net_key, {}).get(key[1])
+            vertex_id = vertex_id_by_node[node_index] if node_index is not None else None
+            if vertex_id:
+                finite_via_vertex_id_by_landing[key] = vertex_id
+                edge = next((item for item in finite_via_edges if item.start_vertex_id == vertex_id or item.end_vertex_id == vertex_id), None)
+                if edge:
+                    finite_via_edge_id_by_landing[key] = edge.edge_id
+        scenario_requested = tuple(scenario_isolated_terminal_landings or ())
+        finite_via_scenario_isolated_landing_keys = frozenset(
+            (
+                str(getattr(item, "via_id", "")).casefold(),
+                str(getattr(item, "endpoint_node_id", "")).casefold(),
+            )
+            for item in scenario_requested
+        )
+        scenario_ids_hash = finite_digest(
+            f"{via}:{node}" for via, node in sorted(finite_via_scenario_isolated_landing_keys)
+        )
+        finite_via_scenario_isolation_coverage = (
+            SpdFiniteViaScenarioIsolationCoverage(
+                requested_landing_count=len(scenario_requested),
+                isolated_landing_count=len(finite_via_scenario_isolated_landing_keys),
+                isolated_node_count=len({node for _via, node in finite_via_scenario_isolated_landing_keys}),
+                suppressed_artwork_contact_count=len(isolated_node_ids),
+                suppressed_trace_edge_count=sum(
+                    1
+                    for trace_net_code, first_index, second_index in zip(surface_trace_net_codes, surface_trace_first_indices, surface_trace_second_indices, strict=True)
+                    for _net in (surface_trace_net_by_code[trace_net_code],)
+                    for first, second in ((node_id_for(_net, first_index), node_id_for(_net, second_index)),)
+                    if (_net, first) in isolated_node_keys or (_net, second) in isolated_node_keys
+                ),
+                requested_landing_ids_sha256=scenario_ids_hash,
+                isolated_landing_ids_sha256=scenario_ids_hash,
+            )
+            if scenario_requested
+            else None
+        )
+        requested_destinations = tuple(retarget_destination_requests or ())
+        for raw_net, raw_layer, raw_node in requested_destinations:
+            key = (str(raw_net).casefold(), str(raw_layer).casefold(), str(raw_node).casefold())
+            node_index = node_index_by_net.get(key[0], {}).get(key[2])
+            vertex_id = vertex_id_by_node[node_index] if node_index is not None else None
+            if vertex_id is not None:
+                finite_via_vertex_id_by_retarget_destination[key] = vertex_id
+        destination_digest = finite_digest(
+            f"{net}:{layer}:{node}" for net, layer, node in requested_destinations
+        )
+        finite_via_retarget_destination_coverage = (
+            SpdFiniteViaRetargetDestinationCoverage(
+                requested_destination_count=len(requested_destinations),
+                resolved_destination_count=len(finite_via_vertex_id_by_retarget_destination),
+                requested_destination_ids_sha256=destination_digest,
+                resolved_destination_ids_sha256=finite_digest(
+                    f"{net}:{layer}:{node}"
+                    for net, layer, node in finite_via_vertex_id_by_retarget_destination
+                ),
+            )
+            if requested_destinations
+            else None
+        )
+        raw_ids = tuple(finite_via_ids[index] for index in range(edge_count))
+        complete_count = sum(1 for edge in finite_via_edges for term in edge.series_terms if term.physical_model_status == "complete")
+        incomplete_count = edge_count - complete_count
+        finite_via_coverage = SpdFiniteViaQuotientCoverage(
+            raw_target_via_count=edge_count, modeled_global_via_count=edge_count, outside_scope_via_count=0,
+            pruned_dangling_via_count=0, physical_complete_via_count=complete_count,
+            physical_incomplete_via_count=incomplete_count,
+            raw_target_via_ids_sha256=finite_digest(raw_ids), modeled_global_via_ids_sha256=finite_digest(raw_ids),
+            modeled_owner_ledger_sha256=finite_digest(f"via:{item}" for item in raw_ids), modeled_owner_canonical_sha256=finite_digest(sorted(f"via:{item}" for item in raw_ids)), outside_scope_via_ids_sha256=hashlib.sha256(b"").hexdigest(),
+        )
     reporter.report(100, "Checked mixed-reference GND landing reachability")
     return finish(SpdGroundReachability(
         frozenset(reachable), frozenset(unreachable), {
@@ -4488,6 +8009,15 @@ def recover_spd_ground_reachability(
             "artwork_nodes": artwork_nodes,
             "artwork_edges": artwork_edges,
             "artwork_components": len(artwork_components),
+            "artwork_island_count": sum(len(ids) for ids in surface_inventory.values()),
+            "artwork_island_unions": sum(max(0, len(tokens) - 1) for tokens in grouped_equivalence.values()),
+            "surface_equivalence_complete": sum(1 for proof in surface_equivalence_proofs if proof.status == "complete"),
+            "surface_equivalence_incomplete": sum(1 for proof in surface_equivalence_proofs if proof.status != "complete"),
+            "via_edges_excluded_from_surface_equivalence": via_edges,
+            "terminal_owned_via_id_count": len(owned_ids),
+            "terminal_owned_via_observed_count": paired_owned + (invalid_owned_count if raw_via_count else 0),
+            "via_island_pair_terminal_owned_record_count": paired_owned,
+            "via_island_pair_substrate_record_count": paired_substrate,
             "artwork_trace_contacts": artwork_trace_contacts,
             "trace_artwork_contact_count": artwork_trace_contacts,
             "trace_artwork_conditional_passes": trace_artwork_conditional_passes,
@@ -4506,10 +8036,30 @@ def recover_spd_ground_reachability(
             "artwork_algorithm": "same_net_via_trace_artwork_reachability_v3_layerwise_deferred",
             "trace_edges": trace_edges,
             "via_edges": via_edges,
+            "via_source_record_replay_passes": 1 if via_source_offsets else 0,
+            "surface_dense_node_count": len(surface_parents),
+            "surface_dense_trace_edges": len(surface_trace_first_indices),
         },
         target_contacts_by_key=target_contacts_by_key,
         target_contact_count_by_key=target_contact_count_by_key,
         target_contact_hash_by_key=target_contact_hash_by_key,
+        surface_components=tuple(sorted(surface_components, key=lambda item: (item.net.casefold(), item.layers))),
+        surface_layers_by_landing={key: tuple(sorted(value)) for key, value in surface_layers_by_landing.items()},
+        surface_islands_by_landing={key: tuple(sorted(value)) for key, value in surface_islands_by_landing.items()},
+        surface_equivalence_proofs=tuple(surface_equivalence_proofs),
+        surface_equivalence_components=tuple(sorted(surface_equivalence_components, key=lambda item: (item.net.casefold(), item.layer.casefold(), item.island_ids))),
+        landing_surface_contacts=tuple(landing_surface_contacts),
+        via_island_pair_aggregates=tuple(via_island_pair_aggregates),
+        via_island_pair_coverage=via_island_pair_coverage,
+        finite_via_vertices=tuple(finite_via_vertices),
+        finite_via_edges=tuple(finite_via_edges),
+        finite_via_vertex_id_by_landing=finite_via_vertex_id_by_landing,
+        finite_via_edge_id_by_landing=finite_via_edge_id_by_landing,
+        finite_via_coverage=finite_via_coverage,
+        finite_via_scenario_isolated_landing_keys=finite_via_scenario_isolated_landing_keys,
+        finite_via_scenario_isolation_coverage=finite_via_scenario_isolation_coverage,
+        finite_via_vertex_id_by_retarget_destination=finite_via_vertex_id_by_retarget_destination,
+        finite_via_retarget_destination_coverage=finite_via_retarget_destination_coverage,
     ))
 
 
@@ -4957,6 +8507,7 @@ def analyze_spd(
                 total_vias,
                 top_via_endpoints,
                 uncertain_via_nets,
+                device_terminal_via_endpoints,
             ) = _parse_vias(
                 data,
                 via_start,
@@ -4967,6 +8518,7 @@ def analyze_spd(
                 reporter,
                 top_layer=top_layer,
                 padstacks=padstacks,
+                device_pins=tuple(pins),
             )
             padstack_shapes = {
                 item.name.casefold(): item.pad_shapes for item in padstacks
@@ -5173,6 +8725,7 @@ def analyze_spd(
                 decap_connections=shared_pad.connections,
                 shared_pad_clusters=shared_pad.clusters,
                 routing_extraction=routing_extraction,
+                device_terminal_via_endpoints=device_terminal_via_endpoints,
             )
     except SpdImportError:
         raise
