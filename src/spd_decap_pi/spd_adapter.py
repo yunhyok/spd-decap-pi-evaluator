@@ -2623,7 +2623,7 @@ def _compile_retarget_landing_destination_requests(
     progress: ProgressCallback | None = None,
     is_cancelled: CancelCallback | None = None,
 ) -> tuple[
-    tuple[_RetargetLandingDestinationRequest, ...],
+    list[_RetargetLandingDestinationRequest],
     dict[str, Any],
 ]:
     """Enumerate exact retarget destinations in bounded surface batches."""
@@ -2707,6 +2707,9 @@ def _compile_retarget_landing_destination_requests(
             item["asset_sha256"],
         )
     )
+    rails_by_net.clear()
+    conductor_net_layers.clear()
+    seen_surface_keys.clear()
 
     landing_identities: list[dict[str, str]] = []
     landing_rows: list[dict[str, Any]] = []
@@ -2772,6 +2775,14 @@ def _compile_retarget_landing_destination_requests(
                 }
             )
             processed_landings += 1
+
+    power_landing_count = len(landing_identities)
+    scanned_landing_count = len(seen_landing_keys)
+    power_landing_ids_sha256 = core_services._canonical_metadata_sha256(
+        {"landings": landing_identities}
+    )
+    landing_identities.clear()
+    seen_landing_keys.clear()
 
     requests: list[_RetargetLandingDestinationRequest] = []
     total_tests = len(landing_rows) * len(surfaces)
@@ -2852,19 +2863,34 @@ def _compile_retarget_landing_destination_requests(
                     str(surface["net"]), str(surface["layer"])
                 )
 
-    requests.sort(
-        key=lambda item: (
-            item.refdes.casefold(),
-            item.via_id.casefold(),
-            item.endpoint_node_id.casefold(),
-            item.destination_net.casefold(),
-            item.destination_layer.casefold(),
-            item.target_rail_id.casefold(),
-            item.destination_island_id,
-        )
+    candidate_surface_count = len(surfaces)
+    candidate_surface_rail_count = sum(
+        len(item["eligible_rails"]) for item in surfaces
     )
-    request_identities = [
-        {
+    candidate_surface_ids_sha256 = core_services._canonical_metadata_sha256(
+        {"surfaces": surfaces}
+    )
+    landing_rows.clear()
+    batch = []
+    node_ids = ()
+    points = ()
+    island_ids = ()
+    surfaces.clear()
+    surface = {}
+
+    # Stable scalar passes preserve the exact tuple-key order without keeping
+    # seven derived key objects alive for every request at once.
+    requests.sort(key=lambda item: item.destination_island_id)
+    requests.sort(key=lambda item: item.target_rail_id.casefold())
+    requests.sort(key=lambda item: item.destination_layer.casefold())
+    requests.sort(key=lambda item: item.destination_net.casefold())
+    requests.sort(key=lambda item: item.endpoint_node_id.casefold())
+    requests.sort(key=lambda item: item.via_id.casefold())
+    requests.sort(key=lambda item: item.refdes.casefold())
+    request_identity_digest = sha256()
+    request_identity_digest.update(b'{"destinations":[')
+    for request_index, item in enumerate(requests):
+        request_identity = {
             "refdes": item.refdes.casefold(),
             "via_id": item.via_id.casefold(),
             "endpoint_node_id": item.endpoint_node_id.casefold(),
@@ -2873,28 +2899,30 @@ def _compile_retarget_landing_destination_requests(
             "destination_island_id": item.destination_island_id,
             "target_rail_id": item.target_rail_id.casefold(),
         }
-        for item in requests
-    ]
+        if request_index:
+            request_identity_digest.update(b",")
+        request_identity_digest.update(
+            json.dumps(
+                request_identity,
+                ensure_ascii=False,
+                sort_keys=True,
+                separators=(",", ":"),
+                allow_nan=False,
+            ).encode("utf-8")
+        )
+    request_identity_digest.update(b"]}")
+    covered_destination_ids_sha256 = request_identity_digest.hexdigest()
+    request_count = len(requests)
     coverage = {
-        "power_landing_count": len(landing_identities),
-        "scanned_landing_count": len(seen_landing_keys),
-        "candidate_surface_count": len(surfaces),
-        "candidate_surface_rail_count": sum(
-            len(item["eligible_rails"]) for item in surfaces
-        ),
+        "power_landing_count": power_landing_count,
+        "scanned_landing_count": scanned_landing_count,
+        "candidate_surface_count": candidate_surface_count,
+        "candidate_surface_rail_count": candidate_surface_rail_count,
         "landing_surface_test_count": total_tests,
-        "covered_destination_count": len(requests),
-        "power_landing_ids_sha256": core_services._canonical_metadata_sha256(
-            {"landings": landing_identities}
-        ),
-        "candidate_surface_ids_sha256": (
-            core_services._canonical_metadata_sha256({"surfaces": surfaces})
-        ),
-        "covered_destination_ids_sha256": (
-            core_services._canonical_metadata_sha256(
-                {"destinations": request_identities}
-            )
-        ),
+        "covered_destination_count": request_count,
+        "power_landing_ids_sha256": power_landing_ids_sha256,
+        "candidate_surface_ids_sha256": candidate_surface_ids_sha256,
+        "covered_destination_ids_sha256": covered_destination_ids_sha256,
         "artwork_predicate": (
             "ordered_geometry_strict_interior_boundary_distance_gt_1e-6_um"
         ),
@@ -2903,9 +2931,9 @@ def _compile_retarget_landing_destination_requests(
     report(
         100,
         "Indexed exact Distribution retarget destinations "
-        f"({len(requests):,} destination binding(s))",
+        f"({request_count:,} destination binding(s))",
     )
-    return tuple(requests), coverage
+    return requests, coverage
 
 def _bind_certified_surface_islands(
     plane_geometry_records: object,
@@ -3068,9 +3096,13 @@ def _layer_surface_connectivity_certificate(
     check_cancelled("starting layer-surface certificate compilation")
     decap_connections = tuple(decap_connections)
     shared_pad_clusters = tuple(shared_pad_clusters)
-    retarget_landing_destination_requests = tuple(
-        retarget_landing_destination_requests
+    owns_retarget_request_list = isinstance(
+        retarget_landing_destination_requests, list
     )
+    if not owns_retarget_request_list:
+        retarget_landing_destination_requests = tuple(
+            retarget_landing_destination_requests
+        )
     previous_order_key: tuple[str, ...] | None = None
     retarget_requests_are_sorted = True
     for request_index, request in enumerate(
@@ -3084,12 +3116,30 @@ def _layer_surface_connectivity_certificate(
             break
         previous_order_key = order_key
     if not retarget_requests_are_sorted:
-        retarget_landing_destination_requests = tuple(
-            sorted(
-                retarget_landing_destination_requests,
-                key=retarget_landing_order_key,
+        if owns_retarget_request_list:
+            for attribute, folded in (
+                ("destination_island_id", False),
+                ("target_rail_id", True),
+                ("destination_layer", True),
+                ("destination_net", True),
+                ("endpoint_node_id", True),
+                ("via_id", True),
+                ("refdes", True),
+            ):
+                retarget_landing_destination_requests.sort(
+                    key=lambda item, attribute=attribute, folded=folded: (
+                        str(getattr(item, attribute, "")).casefold()
+                        if folded
+                        else str(getattr(item, attribute, ""))
+                    )
+                )
+        else:
+            retarget_landing_destination_requests = tuple(
+                sorted(
+                    retarget_landing_destination_requests,
+                    key=retarget_landing_order_key,
+                )
             )
-        )
     scenario_topology_requested = bool(decap_connections)
 
     if not isinstance(geometry_assets, list) or not all(
@@ -4647,9 +4697,8 @@ def _layer_surface_connectivity_certificate(
         f"(0/{total_retarget_landing_bindings:,})",
     )
     report(61, "Hashing exact retarget landing bindings")
-    for request_index, request in enumerate(
-        retarget_landing_destination_requests
-    ):
+    for request_index in range(total_retarget_landing_bindings):
+        request = retarget_landing_destination_requests[request_index]
         if request_index % 2048 == 0:
             check_cancelled("normalizing exact retarget landing bindings")
             report(
@@ -4871,6 +4920,11 @@ def _layer_surface_connectivity_certificate(
             binding_rows_digest.update(b",")
         binding_rows_digest.update(canonical_concrete_row_bytes(row))
         scenario_topology_issues.update(binding_issues)
+        if owns_retarget_request_list:
+            retarget_landing_destination_requests[request_index] = None
+    if owns_retarget_request_list:
+        retarget_landing_destination_requests.clear()
+    request = None
 
     check_cancelled("normalizing exact retarget landing bindings")
     request_identity_digest.update(b"]}")
@@ -4893,9 +4947,7 @@ def _layer_surface_connectivity_certificate(
     )
     retarget_landing_xy_coverage = {
         **(scan_coverage or {}),
-        "requested_binding_count": len(
-            retarget_landing_destination_requests
-        ),
+        "requested_binding_count": total_retarget_landing_bindings,
         "resolved_binding_count": sum(
             item["status"] == "complete"
             for item in retarget_landing_xy_bindings
@@ -4932,8 +4984,8 @@ def _layer_surface_connectivity_certificate(
             landing_coverage_issues.append(
                 "retarget_landing_scan_coverage_incomplete"
             )
-        if int(scan_coverage.get("covered_destination_count", -1)) != len(
-            retarget_landing_destination_requests
+        if int(scan_coverage.get("covered_destination_count", -1)) != (
+            total_retarget_landing_bindings
         ):
             landing_coverage_issues.append(
                 "retarget_landing_scan_destination_count_mismatch"
@@ -6520,14 +6572,6 @@ def import_spd_scenario(
     top_instance_by_key = {
         instance.refdes.casefold(): instance for instance in top_instances
     }
-    source_rail_id_by_key = {
-        key: (
-            rail.rail_id
-            if (rail := _rail_for_instance(base_project, instance)) is not None
-            else f"UNAVAILABLE::{instance.power_net}"
-        )
-        for key, instance in top_instance_by_key.items()
-    }
     parsed_connection_by_key = {
         item.refdes.casefold(): item for item in analysis.decap_connections
     }
@@ -7042,6 +7086,7 @@ def import_spd_scenario(
         eligibility_index=eligibility_index,
         rail_choices_by_pair=rail_choices_by_pair,
     )
+    source_rail_id_by_key.clear()
     cluster_eligibility_s = perf_counter() - cluster_eligibility_started
     # A mixed-reference artwork certificate establishes plane overlap, not the
     # source GND topology.  Build one stable witness universe per mixed rail:
@@ -7115,6 +7160,7 @@ def import_spd_scenario(
             str(getattr(landing, "net")).casefold(),
         )
         recovery_landing_by_key.setdefault(key, landing)
+    del mixed_recovery_landings
     requested_target_layers_by_landing = {
         key: set() for key in recovery_landing_by_key
     }
@@ -7183,6 +7229,9 @@ def import_spd_scenario(
         and source_connection_kind(connection)
         in scenario_topology_connection_kinds
     )
+    active_cap_keys.clear()
+    top_instance_by_key.clear()
+    landing_cache.clear()
     (
         retarget_landing_destination_requests,
         retarget_landing_scan_coverage,
@@ -7298,7 +7347,7 @@ def import_spd_scenario(
     terminal_contact_landing_by_key.clear()
     terminal_owned_via_ids.clear()
     surface_target_net_keys.clear()
-    del mixed_recovery_landings, terminal_decap_landings
+    del terminal_decap_landings
     ground_recovery_s = perf_counter() - ground_recovery_started
     mixed_witnesses: dict[str, MixedReferenceGroundWitness] = {}
     mixed_ground_reachability_by_rail: list[dict[str, Any]] = []

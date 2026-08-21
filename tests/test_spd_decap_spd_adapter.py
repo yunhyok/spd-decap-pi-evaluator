@@ -1500,6 +1500,97 @@ def test_retained_surface_artwork_is_boundary_inclusive_and_released(
     assert cold_ordered_boolean_builds == 1
 
 
+def test_retarget_destination_hash_does_not_duplicate_request_identities(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    project = SimpleNamespace(
+        rails=(
+            SimpleNamespace(
+                rail_id="R1", net="VDD", pwr_layer="L1", gnd_layer="L2"
+            ),
+            SimpleNamespace(
+                rail_id="R2", net="VDD", pwr_layer="L1", gnd_layer="L2"
+            ),
+        ),
+        stackup_layers=(
+            SimpleNamespace(
+                name="L1", is_conductor=True, pwr_nets=("VDD",)
+            ),
+        ),
+        via_templates=(),
+        metadata={},
+    )
+    connection = SimpleNamespace(
+        refdes="C1",
+        power_vias=(
+            SimpleNamespace(
+                via_id="V2",
+                endpoint_node_id="N2",
+                net="VDD",
+                x_um=3.0,
+                y_um=4.0,
+            ),
+            SimpleNamespace(
+                via_id="V1",
+                endpoint_node_id="N1",
+                net="VDD",
+                x_um=1.0,
+                y_um=2.0,
+            ),
+        ),
+    )
+    real_hash = core_services._canonical_metadata_sha256
+    hashed_keys: list[tuple[str, ...]] = []
+
+    def bounded_hash(payload: object) -> str:
+        if isinstance(payload, dict):
+            hashed_keys.append(tuple(sorted(payload)))
+            assert "destinations" not in payload
+        return real_hash(payload)
+
+    monkeypatch.setattr(
+        core_services, "_canonical_metadata_sha256", bounded_hash
+    )
+    released: list[tuple[str, str]] = []
+    requests, coverage = (
+        spd_adapter._compile_retarget_landing_destination_requests(
+            project=project,
+            decap_connections=(connection,),
+            geometry_assets=(
+                {"net": "VDD", "layer": "L1", "asset_sha256": "a" * 64},
+            ),
+            strict_island_resolver=lambda *_args: "island-1",
+            strict_island_resolver_batch=(
+                lambda _net, _layer, node_ids, _points:
+                ("island-1",) * len(node_ids)
+            ),
+            release_surface=lambda net, layer: released.append((net, layer)),
+        )
+    )
+
+    identities = [
+        {
+            "refdes": item.refdes.casefold(),
+            "via_id": item.via_id.casefold(),
+            "endpoint_node_id": item.endpoint_node_id.casefold(),
+            "destination_net": item.destination_net.casefold(),
+            "destination_layer": item.destination_layer.casefold(),
+            "destination_island_id": item.destination_island_id,
+            "target_rail_id": item.target_rail_id.casefold(),
+        }
+        for item in requests
+    ]
+    assert isinstance(requests, list)
+    assert [
+        (item.via_id, item.target_rail_id) for item in requests
+    ] == [("V1", "R1"), ("V1", "R2"), ("V2", "R1"), ("V2", "R2")]
+    assert coverage["covered_destination_ids_sha256"] == real_hash(
+        {"destinations": identities}
+    )
+    assert hashed_keys == [("landings",), ("surfaces",)]
+    assert released == [("VDD", "L1")]
+
+
 def test_bind_certified_surface_islands_is_exact_and_nonmutating() -> None:
     project_rows = [
         {
