@@ -5310,10 +5310,13 @@ def recover_spd_via_paths(
 
 def _index_reachable_layers_by_landing(
     reachable_rows: Iterable[tuple[str, str, str]],
+    needed_landing_keys: set[tuple[str, str]],
 ) -> dict[tuple[str, str], set[str]]:
     layers_by_landing: dict[tuple[str, str], set[str]] = {}
     for via_key, node_key, target_layer in reachable_rows:
-        layers_by_landing.setdefault((via_key, node_key), set()).add(target_layer)
+        landing_key = (via_key, node_key)
+        if landing_key in needed_landing_keys:
+            layers_by_landing.setdefault(landing_key, set()).add(target_layer)
     return layers_by_landing
 
 
@@ -7282,8 +7285,17 @@ def recover_spd_ground_reachability(
         )
         surface_components.add(SpdSurfaceConnectivityComponent(display_net, display_layers))
     global_surface_layers.clear()
-    reachable_layers_by_landing = _index_reachable_layers_by_landing(reachable)
     all_landings = landing_records + terminal_contact_records
+    needed_landing_keys = {
+        (
+            str(getattr(landing, "via_id", "")).casefold(),
+            str(getattr(landing, "endpoint_node_id", "")).casefold(),
+        )
+        for landing in all_landings
+    }
+    reachable_layers_by_landing = _index_reachable_layers_by_landing(
+        reachable, needed_landing_keys
+    )
     terminal_contact_keys = set(terminal_contact_owner_by_key)
     contact_seen: set[tuple[str, str]] = set()
     for landing in all_landings:
@@ -7405,6 +7417,7 @@ def recover_spd_ground_reachability(
     del surface_parents[:]
     surface_codes_by_root.clear()
     reachable_layers_by_landing.clear()
+    needed_landing_keys.clear()
     terminal_contact_keys.clear()
     contact_seen.clear()
     via_terminal_display_endpoints.clear()

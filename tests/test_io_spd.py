@@ -4911,6 +4911,13 @@ def test_landing_layer_index_consumes_single_use_rows_once() -> None:
         ("via-b", "node-b", "signal$gnd"),
         ("via-a", "node-a", "signal$gnd"),
         ("via-a", "node-a", "signal$pwr"),
+    ) + tuple(
+        (
+            f"via-unrelated-{index}",
+            f"node-unrelated-{index}",
+            "signal$other",
+        )
+        for index in range(100)
     )
 
     class SingleUseRows:
@@ -4926,11 +4933,13 @@ def test_landing_layer_index_consumes_single_use_rows_once() -> None:
                 yield row
 
     reachable_rows = SingleUseRows()
-    indexed = spd_io._index_reachable_layers_by_landing(reachable_rows)
+    indexed = spd_io._index_reachable_layers_by_landing(
+        reachable_rows,
+        {("via-a", "node-a"), ("via-missing", "node-missing")},
+    )
 
     assert indexed == {
         ("via-a", "node-a"): {"signal$gnd", "signal$pwr"},
-        ("via-b", "node-b"): {"signal$gnd"},
     }
     assert reachable_rows.iteration_count == 1
     assert reachable_rows.row_count == len(rows)
