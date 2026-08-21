@@ -676,6 +676,94 @@ def test_ground_reachability_releases_interleaved_artwork_layers_after_last_node
     assert events.index("target") < events.index("release")
 
 
+def test_ground_reachability_deferred_surface_batches_are_bounded_and_exact(
+    tmp_path: Path,
+) -> None:
+    extra_nodes = "\n".join(
+        f"NodeBatch{index}!!1::DGND X = {index + 10}um Y = 0um "
+        "Layer = Signal$TOP PadStack = DUT"
+        for index in range(4096)
+    )
+    source = tmp_path / "deferred-surface-batches.spd"
+    source.write_text(
+        MINI_SPD.replace(
+            "* Via description lines",
+            extra_nodes + "\n* Via description lines",
+        ),
+        encoding="ascii",
+    )
+    landing = SpdViaLanding(
+        via_id="Via2", net="DGND", endpoint_node_id="Node2",
+        x_um=100.0, y_um=0.0, padstack="DR-0102_60",
+    )
+    scalar_surface_ids: list[str] = []
+
+    def is_target(x_um: float) -> bool:
+        return int(x_um) % 257 == 0
+
+    def scalar_surface(
+        _net: str, _layer: str, node_id: str, _x_um: float, _y_um: float,
+    ) -> str:
+        scalar_surface_ids.append(node_id)
+        return "top-island"
+
+    scalar = recover_spd_ground_reachability(
+        source,
+        landings=(landing,),
+        target_layers_by_net={"DGND": ("Signal$TOP",)},
+        target_node_predicate=lambda _net, _layer, _node, x_um, _y_um: is_target(x_um),
+        same_layer_artwork_layers_by_net={"DGND": ("Signal$TOP",)},
+        same_layer_artwork_component=lambda *_args: "top-component",
+        target_node_surface_resolver=scalar_surface,
+        target_surface_island_ids={
+            ("DGND", "Signal$TOP"): ("top-island",),
+        },
+    )
+
+    artwork_batch_sizes: list[int] = []
+    surface_batch_sizes: list[int] = []
+    batch_surface_ids: list[str] = []
+
+    def artwork_batch(
+        _net: str, _layer: str, points: tuple[tuple[float, float], ...],
+    ) -> tuple[str, ...]:
+        artwork_batch_sizes.append(len(points))
+        return ("top-component",) * len(points)
+
+    def surface_batch(
+        _net: str,
+        _layer: str,
+        node_ids: tuple[str, ...],
+        _points: tuple[tuple[float, float], ...],
+    ) -> tuple[str, ...]:
+        surface_batch_sizes.append(len(node_ids))
+        batch_surface_ids.extend(node_ids)
+        return ("top-island",) * len(node_ids)
+
+    batched = recover_spd_ground_reachability(
+        source,
+        landings=(landing,),
+        target_layers_by_net={"DGND": ("Signal$TOP",)},
+        target_node_predicate_batch=lambda _net, _layer, points: tuple(
+            is_target(x_um) for x_um, _y_um in points
+        ),
+        same_layer_artwork_layers_by_net={"DGND": ("Signal$TOP",)},
+        same_layer_artwork_components_batch=artwork_batch,
+        target_node_surface_resolver_batch=surface_batch,
+        target_surface_island_ids={
+            ("DGND", "Signal$TOP"): ("top-island",),
+        },
+    )
+
+    assert len(surface_batch_sizes) > 1
+    assert max(artwork_batch_sizes) == max(surface_batch_sizes) == 4096
+    assert batch_surface_ids == scalar_surface_ids
+    assert batched.reachable_keys == scalar.reachable_keys
+    assert batched.target_contacts_by_key == scalar.target_contacts_by_key
+    assert batched.target_contact_count_by_key == scalar.target_contact_count_by_key
+    assert batched.target_contact_hash_by_key == scalar.target_contact_hash_by_key
+
+
 def test_ground_reachability_batch_preserves_target_layer_bits_and_bound(
     tmp_path: Path,
 ) -> None:
