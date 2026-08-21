@@ -6,6 +6,7 @@ import json
 import math
 import os
 import re
+from copy import deepcopy
 from collections import Counter
 from collections.abc import Iterator
 from contextlib import contextmanager
@@ -1077,6 +1078,82 @@ def _spd_plane_geometry_assets(
     return index, assets
 
 
+def _reuse_spd_plane_geometry_assets(
+    donor: SpdImportPlan,
+    *,
+    source_name: str,
+    source_size: int,
+    source_hash: str,
+    retained_net_keys: set[str],
+    selected_power_keys: set[str],
+    ground_nets: set[str],
+) -> tuple[list[dict[str, Any]], dict[str, bytes]] | None:
+    """Reuse only source-identity-validated geometry metadata/assets."""
+
+    if (
+        donor.source_name != source_name
+        or int(donor.source_size_bytes) != int(source_size)
+        or donor.source_sha256.casefold() != source_hash.casefold()
+        or any(
+            str(getattr(item, "code", "")) == "SPD_PLANE_GEOMETRY_ASSET_TOO_LARGE"
+            for item in donor.diagnostics
+        )
+    ):
+        return None
+    metadata = getattr(donor.project, "metadata", {})
+    spd_import = metadata.get("spd_import", {}) if isinstance(metadata, Mapping) else {}
+    donor_power = {
+        str(item).casefold()
+        for item in (spd_import.get("selected_power_nets", ()) if isinstance(spd_import, Mapping) else ())
+    }
+    donor_ground = {str(item).casefold() for item in getattr(donor.project, "gnd_aliases", ())}
+    if donor_power != selected_power_keys or donor_ground != ground_nets:
+        return None
+    records = spd_import.get(_SPD_PLANE_GEOMETRIES_KEY) if isinstance(spd_import, Mapping) else None
+    if not isinstance(records, list):
+        return None
+    copied_records = deepcopy(records)
+    copied_assets: dict[str, bytes] = {}
+    referenced: set[str] = set()
+    referenced_casefold: set[str] = set()
+    for ordinal, record in enumerate(copied_records):
+        if not isinstance(record, Mapping):
+            return None
+        net = str(record.get("net", ""))
+        layer = str(record.get("layer", ""))
+        asset_name = str(record.get("asset", ""))
+        digest = str(record.get("asset_sha256", "")).casefold()
+        if (
+            not net
+            or not layer
+            or net.casefold() not in retained_net_keys
+            or not asset_name
+            or asset_name in referenced
+            or asset_name.casefold() in referenced_casefold
+            or len(digest) != 64
+            or asset_name.casefold()
+            != f"geometry/{ordinal:04d}-{digest[:16]}.spdgeom.zlib".casefold()
+        ):
+            return None
+        source_asset = donor.attachments.get(asset_name)
+        if not isinstance(source_asset, (bytes, bytearray, memoryview)):
+            return None
+        payload = bytes(source_asset)
+        if sha256(payload).hexdigest().casefold() != digest:
+            return None
+        referenced.add(asset_name)
+        referenced_casefold.add(asset_name.casefold())
+        copied_assets[asset_name] = payload
+    donor_geometry_assets = {
+        str(name)
+        for name in donor.attachments
+        if str(name).casefold().startswith("geometry/")
+    }
+    if {name.casefold() for name in donor_geometry_assets} != referenced_casefold:
+        return None
+    return copied_records, copied_assets
+
+
 def _ordered_spd_geometry(record: Mapping[str, Any]) -> Any | None:
     """Return the exact ordered PowerSI boolean geometry, or fail closed."""
 
@@ -1570,15 +1647,35 @@ def build_spd_import_plan(
     *,
     selected_pairs: Mapping[str, PlanePairSuggestion] | None = None,
     selected_pair_provenance: Mapping[str, Mapping[str, Any]] | None = None,
+    _geometry_from_plan: SpdImportPlan | None = None,
 ) -> SpdImportPlan:
     diagnostics: list[Any] = list(analysis.diagnostics)
     ground_nets = _unique_strings([*current.gnd_aliases, *analysis.ground_nets])
     ground_keys = {item.casefold() for item in ground_nets}
     selected_power_nets = _unique_strings(analysis.power_plane_nets)
     selected_power_keys = {item.casefold() for item in selected_power_nets}
-    plane_geometry_payload, plane_geometry_assets = _spd_plane_geometry_assets(
-        analysis, selected_power_keys | ground_keys, diagnostics
+    source_name, source_size, source_hash = _spd_source_identity(
+        analysis.source, source_path
     )
+    reused_geometry = (
+        _reuse_spd_plane_geometry_assets(
+            _geometry_from_plan,
+            source_name=source_name,
+            source_size=source_size,
+            source_hash=source_hash,
+            retained_net_keys=selected_power_keys | ground_keys,
+            selected_power_keys=selected_power_keys,
+            ground_nets=ground_keys,
+        )
+        if _geometry_from_plan is not None
+        else None
+    )
+    if reused_geometry is None:
+        plane_geometry_payload, plane_geometry_assets = _spd_plane_geometry_assets(
+            analysis, selected_power_keys | ground_keys, diagnostics
+        )
+    else:
+        plane_geometry_payload, plane_geometry_assets = reused_geometry
     incomplete_plane_primitives = any(
         str(getattr(item, "code", ""))
         in {
@@ -1645,9 +1742,6 @@ def build_spd_import_plan(
             and item.refdes.casefold() in active_cap_refdes
         )
     ]
-    source_name, source_size, source_hash = _spd_source_identity(
-        analysis.source, source_path
-    )
     counts = {
         str(key): int(value)
         for key, value in dict(analysis.counts).items()

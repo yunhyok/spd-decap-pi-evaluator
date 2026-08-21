@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from hashlib import sha256
 import json
@@ -797,6 +797,8 @@ def _strict_source_plane_pairs(
             return False
         return plane.covers_footprint(float(x_um), float(y_um), float(width_um), float(height_um))
 
+    covered_point_cache: dict[tuple[int, float, float], bool] = {}
+
     def covered_point(
         plane: IndexedPlaneGeometry | None,
         x_um: float,
@@ -812,9 +814,21 @@ def _strict_source_plane_pairs(
         if plane is None:
             return False
         try:
-            return plane.contains(float(x_um), float(y_um)) == "inside"
+            x_value = float(x_um)
+            y_value = float(y_um)
         except (TypeError, ValueError, ArithmeticError):
             return False
+        if not (isfinite(x_value) and isfinite(y_value)):
+            return False
+        cache_key = (id(plane), x_value, y_value)
+        if cache_key in covered_point_cache:
+            return covered_point_cache[cache_key]
+        try:
+            result = plane.contains(x_value, y_value) == "inside"
+        except (TypeError, ValueError, ArithmeticError):
+            result = False
+        covered_point_cache[cache_key] = result
+        return result
 
     # Device pins are consulted for every candidate pair.  Materialize one
     # immutable index up front so candidate evaluation stays O(1) per net and
@@ -1626,10 +1640,15 @@ def _strict_source_plane_pairs(
 
 
 def _mixed_reference_target_node_predicate(
-    project: ProjectSpec, attachments: dict[str, bytes]
+    project: ProjectSpec,
+    attachments: dict[str, bytes],
+    *,
+    indexed_geometry_by_key: Mapping[tuple[str, str], IndexedPlaneGeometry]
+    | None = None,
 ) -> Callable[[str, str, str, float, float], bool]:
     """Build fail-closed strict-interior tests for certificate DGND artwork."""
 
+    indexed_by_key = indexed_geometry_by_key or {}
     try:
         from shapely.geometry import Point
         from shapely.prepared import prep
@@ -1645,6 +1664,7 @@ def _mixed_reference_target_node_predicate(
             "SPD_MIXED_REFERENCE_GND_ARTWORK_REQUIRED: retained DGND geometry index is missing"
         )
     shapes: dict[tuple[str, str], tuple[Any, tuple[float, float, float, float]]] = {}
+    indexed_shapes: dict[tuple[str, str], IndexedPlaneGeometry] = {}
     for rail in project.rails:
         certificate = rail.mixed_reference_certificate
         if certificate is None:
@@ -1681,12 +1701,19 @@ def _mixed_reference_target_node_predicate(
                 expected_layer=certificate.gnd_layer,
                 expected_net=certificate.gnd_net,
             )
-            shape = core_services._ordered_spd_geometry(payload)
         except (ValueError, ArithmeticError) as exc:
             raise SpdImportError(
                 "SPD_MIXED_REFERENCE_GND_ARTWORK_REQUIRED: certificate DGND "
                 f"geometry is invalid for {rail.rail_id}: {exc}"
             ) from exc
+        indexed = indexed_by_key.get(key)
+        if indexed is not None:
+            # The compressed certificate asset has been decoded and validated
+            # above; reuse the already-built source index so exact ordered
+            # boolean artwork is not materialized twice for the same layer.
+            indexed_shapes[key] = indexed
+            continue
+        shape = core_services._ordered_spd_geometry(payload)
         if shape is None:
             raise SpdImportError(
                 "SPD_MIXED_REFERENCE_GND_ARTWORK_REQUIRED: certificate DGND "
@@ -1695,6 +1722,15 @@ def _mixed_reference_target_node_predicate(
         shapes[key] = (prep(shape), tuple(map(float, shape.bounds)))
 
     def accepts(net: str, layer: str, _node_id: str, x_um: float, y_um: float) -> bool:
+        indexed = indexed_shapes.get((net.casefold(), layer.casefold()))
+        if indexed is not None:
+            try:
+                return indexed.artwork_component(float(x_um), float(y_um)) is not None
+            except Exception as exc:
+                raise SpdImportError(
+                    "SPD_MIXED_REFERENCE_GND_ARTWORK_REQUIRED: DGND target-node "
+                    f"geometry check failed: {exc}"
+                ) from exc
         prepared = shapes.get((net.casefold(), layer.casefold()))
         if prepared is None:
             return False
@@ -2105,6 +2141,7 @@ def import_spd_scenario(
     )
     plan_started = perf_counter()
     plan = build_spd_import_plan(state.project, analysis, source_path)
+    geometry_donor_plan = plan
     plan_s = perf_counter() - plan_started
     blocking = [
         item
@@ -2247,11 +2284,24 @@ def import_spd_scenario(
             "skipped_unique_path_recovery": 1,
         },
     )
+    # This stage covers the shared source Node/Trace/Via graph pass.  Legacy
+    # unique-path fallback time is retained separately in ``path_recovery_s``.
+    recovery_s = 0.0
     path_recovery_s = 0.0
     # Build one shared artwork index, retaining only unique (layer, net)
     # records.  Duplicate retained records are ambiguous evidence and must
     # remain absent rather than being silently overwritten by a dict
     # comprehension (which could make strict/final validation disagree).
+    target_layers_by_net = _via_target_layers_by_net(
+        base_project,
+        plane_geometries=analysis.plane_geometries,
+    )
+    ground_keys = {str(item).casefold() for item in base_project.gnd_aliases}
+    requested_geometry_keys = {
+        (str(layer).casefold(), str(net).casefold())
+        for net, layers in target_layers_by_net.items()
+        for layer in layers
+    }
     connectivity_geometry_groups: dict[tuple[str, str], list[Any]] = {}
     for item in analysis.plane_geometries:
         key = (str(item.layer).casefold(), str(item.net).casefold())
@@ -2259,29 +2309,248 @@ def import_spd_scenario(
     connectivity_index = {
         key: indexed
         for key, values in connectivity_geometry_groups.items()
-        if len(values) == 1
+        if (
+            len(values) == 1
+            and values[0].primitive_order
+            and (key[1] in ground_keys or key in requested_geometry_keys)
+        )
         for indexed in (IndexedPlaneGeometry.build(values[0]),)
         if indexed is not None
     }
 
+    # Same-NET copper on an intermediate conductor plane is an electrical graph
+    # edge, even when PowerSI did not emit an explicit Trace for that plane.
+    # Restrict this to the requested graph nets; solver cavity checks remain
+    # unchanged and still validate exact PWR/GND geometry separately.
+    artwork_layers_by_net: dict[str, tuple[str, ...]] = {}
+    for (layer_key, net_key), _indexed in connectivity_index.items():
+        if net_key not in ground_keys or net_key not in target_layers_by_net:
+            continue
+        artwork_layers_by_net.setdefault(net_key, ())
+        artwork_layers_by_net[net_key] = tuple(
+            sorted(
+                {*artwork_layers_by_net[net_key], _indexed.geometry.layer},
+                key=str.casefold,
+            )
+        )
+    target_layer_keys_by_net = {
+        net: {str(layer).casefold() for layer in layers}
+        for net, layers in target_layers_by_net.items()
+    }
+    artwork_query_cache: tuple[tuple[str, str, float, float], object | None] | None = None
+    artwork_batch_result_cache: dict[tuple[str, str, float, float], object | None] = {}
+
+    def source_artwork_component(
+        net: str, layer: str, x_um: float, y_um: float
+    ) -> object | None:
+        nonlocal artwork_query_cache
+        cache_key = (net.casefold(), layer.casefold(), float(x_um), float(y_um))
+        if artwork_query_cache is not None and artwork_query_cache[0] == cache_key:
+            return artwork_query_cache[1]
+        indexed = connectivity_index.get((layer.casefold(), net.casefold()))
+        result = (
+            None
+            if indexed is None
+            else indexed.artwork_component(float(x_um), float(y_um))
+        )
+        artwork_query_cache = (cache_key, result)
+        return result
+
+    def source_artwork_components_batch(
+        net: str, layer: str, points: tuple[tuple[float, float], ...]
+    ) -> tuple[object | None, ...]:
+        indexed = connectivity_index.get((layer.casefold(), net.casefold()))
+        if indexed is None:
+            return (None,) * len(points)
+        result = indexed.artwork_components_batch(points)
+        # Only retain results for target layers: artwork-only points can never
+        # be consumed by the target resolver and would otherwise retain ~1M
+        # coordinate keys through the entire import.
+        if (
+            layer.casefold() in target_layer_keys_by_net.get(net.casefold(), set())
+            and (net.casefold(), layer.casefold()) not in target_node_predicates_by_key
+        ):
+            for point, component in zip(points, result, strict=True):
+                artwork_batch_result_cache[
+                    (net.casefold(), layer.casefold(), float(point[0]), float(point[1]))
+                ] = component
+        return result
+
+    def source_artwork_release(net: str, layer: str) -> None:
+        nonlocal artwork_query_cache
+        key = (net.casefold(), layer.casefold())
+        if artwork_query_cache is not None and artwork_query_cache[0][:2] == key:
+            artwork_query_cache = None
+        if net.casefold() not in ground_keys:
+            return
+        indexed = connectivity_index.get((layer.casefold(), net.casefold()))
+        if indexed is not None:
+            indexed.release_artwork_shape()
+
+    def source_trace_contact(
+        net: str,
+        _trace_id: str,
+        _first_node: str,
+        _second_node: str,
+        first_layer: str,
+        first_x: float,
+        first_y: float,
+        second_layer: str,
+        second_x: float,
+        second_y: float,
+        width_um: float,
+    ) -> tuple[str, object] | None:
+        if not isfinite(float(width_um)) or float(width_um) <= 0.0:
+            return None
+        target_layers = target_layer_keys_by_net.get(net.casefold(), set())
+        if net.casefold() in ground_keys:
+            return None
+        if first_layer.casefold() != second_layer.casefold():
+            return None
+        indexed_candidate = connectivity_index.get(
+            (first_layer.casefold(), net.casefold())
+        )
+        if indexed_candidate is None:
+            return None
+        first_status = indexed_candidate.contains(float(first_x), float(first_y))
+        second_status = indexed_candidate.contains(float(second_x), float(second_y))
+        if (
+            "inside" in {first_status, second_status}
+            or "boundary" not in {first_status, second_status}
+        ):
+            return None
+        for layer, x_um, y_um in (
+            (first_layer, first_x, first_y),
+            (second_layer, second_x, second_y),
+        ):
+            if layer.casefold() not in target_layers:
+                continue
+            indexed = connectivity_index.get((layer.casefold(), net.casefold()))
+            if indexed is None:
+                continue
+            if indexed.contains(float(x_um), float(y_um)) == "inside":
+                # Existing strict target Nodes already provide the witness;
+                # do not manufacture a duplicate synthetic contact.
+                return None
+            contact = indexed.artwork_trace_component(
+                first_x,
+                first_y,
+                second_x,
+                second_y,
+                width_um,
+            )
+            if contact is not None:
+                component, _contact_x, _contact_y = contact
+                return layer, component
+        return None
+
     def source_target_node_inside(
         net: str, layer: str, _node_id: str, x_um: float, y_um: float
     ) -> bool:
+        if net.casefold() in ground_keys:
+            return source_artwork_component(net, layer, x_um, y_um) is not None
         geometry = connectivity_index.get((layer.casefold(), net.casefold()))
         return geometry is not None and geometry.contains(float(x_um), float(y_um)) == "inside"
 
+    # The source graph and mixed-reference witness checks need the same raw
+    # Node/Trace/Via graph.  Include the certified DGND target keys in this
+    # first pass and select the stricter certificate predicate only for those
+    # keys; this lets the later witness phase reuse the completed reachability
+    # result instead of reopening and rescanning the 1+ GB SPD.
+    mixed_graph_target_layers_by_net: dict[str, set[str]] = {}
+    for rail in base_project.rails:
+        certificate = rail.mixed_reference_certificate
+        if certificate is None:
+            continue
+        mixed_graph_target_layers_by_net.setdefault(
+            certificate.gnd_net.casefold(), set()
+        ).add(certificate.gnd_layer)
+    target_node_predicates_by_key: dict[
+        tuple[str, str], Callable[[str, str, str, float, float], bool]
+    ] = {}
+    if mixed_graph_target_layers_by_net:
+        mixed_graph_predicate = _mixed_reference_target_node_predicate(
+            base_project,
+            dict(plan.attachments),
+            indexed_geometry_by_key={
+                (net, layer): indexed
+                for (layer, net), indexed in connectivity_index.items()
+            },
+        )
+        for net, layers in mixed_graph_target_layers_by_net.items():
+            for layer in layers:
+                target_node_predicates_by_key[(net, layer.casefold())] = (
+                    mixed_graph_predicate
+                )
+    graph_target_layers_by_net = {
+        net: set(layers) for net, layers in target_layers_by_net.items()
+    }
+    for net, layers in mixed_graph_target_layers_by_net.items():
+        graph_target_layers_by_net.setdefault(net, set()).update(layers)
+
+    def source_target_nodes_batch(
+        net: str, layer: str, points: tuple[tuple[float, float], ...]
+    ) -> tuple[bool, ...]:
+        strict = target_node_predicates_by_key.get((net.casefold(), layer.casefold()))
+        if strict is not None:
+            return tuple(strict(net, layer, "BATCH", x_um, y_um) for x_um, y_um in points)
+        indexed = connectivity_index.get((layer.casefold(), net.casefold()))
+        if indexed is None:
+            return (False,) * len(points)
+        if net.casefold() in ground_keys:
+            components: list[object | None] = []
+            missing_indices: list[int] = []
+            consumed_keys: set[tuple[str, str, float, float]] = set()
+            for index, (x_um, y_um) in enumerate(points):
+                cache_key = (net.casefold(), layer.casefold(), float(x_um), float(y_um))
+                if cache_key in artwork_batch_result_cache:
+                    # Read shared results first so duplicate-coordinate Nodes
+                    # in one batch reuse the same exact lookup. Evict once the
+                    # complete batch has been reconstructed below.
+                    components.append(artwork_batch_result_cache[cache_key])
+                    consumed_keys.add(cache_key)
+                else:
+                    components.append(None)
+                    missing_indices.append(index)
+            if missing_indices:
+                fresh = indexed.artwork_components_batch(
+                    tuple(points[index] for index in missing_indices)
+                )
+                if len(fresh) != len(missing_indices):
+                    raise RuntimeError("artwork batch resolver returned an invalid result length")
+                for index, component in zip(missing_indices, fresh, strict=True):
+                    components[index] = component
+            for cache_key in consumed_keys:
+                artwork_batch_result_cache.pop(cache_key, None)
+            return tuple(component is not None for component in components)
+        return tuple(
+            indexed.contains(float(x_um), float(y_um)) == "inside"
+            for x_um, y_um in points
+        )
+
+    recovery_started = perf_counter()
     connectivity_recovery = recover_spd_ground_reachability(
         source_path,
         landings=source_graph_landings,
-        target_layers_by_net=_via_target_layers_by_net(
-            base_project,
-            plane_geometries=analysis.plane_geometries,
-        ),
+        target_layers_by_net=graph_target_layers_by_net,
         target_node_predicate=source_target_node_inside,
+        target_node_predicate_batch=source_target_nodes_batch,
+        target_node_predicates_by_key=target_node_predicates_by_key,
+        same_layer_artwork_layers_by_net=artwork_layers_by_net,
+        same_layer_artwork_component=source_artwork_component,
+        same_layer_artwork_components_batch=source_artwork_components_batch,
+        same_layer_artwork_release=source_artwork_release,
+        target_trace_contact_predicate=source_trace_contact,
         expected_source=analysis.source,
-        progress=lambda _value, message: report(91, message),
+        progress=lambda value, message: report(
+            87 + round(max(0, min(100, value)) * 4 / 100), message
+        ),
         is_cancelled=cancelled,
     )
+    # No subsequent import phase consumes these coordinate-keyed results;
+    # release any residual tail (e.g. artwork-only target layers) promptly.
+    artwork_batch_result_cache.clear()
+    recovery_s = perf_counter() - recovery_started
     connectivity_statistics = getattr(connectivity_recovery, "statistics", {}) or {}
     explicit_graph_capability = str(
         (getattr(analysis, "counts", {}) or {}).get("source_graph_capability", "")
@@ -2299,7 +2568,7 @@ def import_spd_scenario(
         source_landings
         and not graph_available
     ):
-        recovery_started = perf_counter()
+        path_recovery_started = perf_counter()
         legacy_targets = _via_target_layers_by_net(
             base_project,
             plane_geometries=analysis.plane_geometries,
@@ -2315,10 +2584,12 @@ def import_spd_scenario(
             progress=lambda _value, message: report(91, message),
             is_cancelled=cancelled,
         )
-        path_recovery_s = perf_counter() - recovery_started
+        path_recovery_s = perf_counter() - path_recovery_started
+        recovery_s += path_recovery_s
     # The source graph pass proves connectivity before any pair is finalized.
     # Graph-capable imports remain graph/contact-only; the legacy unique-chain
     # recovery above runs once only for explicitly graph-unavailable sources.
+    report(91, "Selecting strict source plane pairs")
     selected_pairs, pair_provenance = _strict_source_plane_pairs(
         base_project,
         analysis,
@@ -2326,6 +2597,7 @@ def import_spd_scenario(
         connectivity_recovery,
         indexed_override=connectivity_index,
     )
+    report(91, "Selected strict source plane pairs")
     selected_targets: dict[str, set[str]] = {
         str(net).casefold(): {pair.pwr_layer}
         for net, pair in selected_pairs.items()
@@ -2404,14 +2676,17 @@ def import_spd_scenario(
             proof["vertical_impedance_model"] = (
                 "SOURCE_PROVEN_GRAPH_CONNECTIVITY_LEGACY_TEMPLATE"
             )
+    report(91, "Building second SPD import plan")
     plan = build_spd_import_plan(
         state.project,
         analysis,
         source_path,
         selected_pairs=selected_pairs,
         selected_pair_provenance=pair_provenance,
+        _geometry_from_plan=geometry_donor_plan,
     )
     base_project = _normalized_base_project(plan.project)
+    report(91, "Built second SPD import plan")
 
     # The first pair-selection pass may not yet have a ViaLoopTemplate for a
     # newly selected internal pair.  Re-check every persisted target contact
@@ -2445,6 +2720,7 @@ def import_spd_scenario(
                 ).hexdigest()
         return final_shapes[key]
 
+    report(91, "Validating final template footprints")
     post_plan_reverts: set[str] = set()
     for net_key, proof in pair_provenance.items():
         matching_rails = tuple(
@@ -2687,6 +2963,7 @@ def import_spd_scenario(
             "pwr_artwork_net": proof.get("pwr_artwork_net"),
             "gnd_artwork_net": proof.get("gnd_artwork_net"),
         }
+    report(91, "Validated final template footprints")
     if post_plan_reverts:
         # Rebuild the complete import plan with failed nets restored to their
         # exact preselection pair.  This restores templates, pin bindings,
@@ -2725,18 +3002,22 @@ def import_spd_scenario(
                 proof["pwr_artwork_net"] = original_rail.net
                 proof["selection_mode"] = "LEGACY_PREEXISTING_PAIR_UNRESOLVED"
                 proof["source_graph_pair_unresolved"] = True
+        report(91, "Rebuilding restored SPD import plan")
         restored_plan = build_spd_import_plan(
             state.project,
             analysis,
             source_path,
             selected_pairs=restored_selected_pairs,
             selected_pair_provenance=pair_provenance,
+            _geometry_from_plan=geometry_donor_plan,
         )
         if not restored_plan.can_apply:
             raise SpdImportError(
                 "cannot safely rebuild import after rail-scoped final validation failure"
             )
+        plan = restored_plan
         base_project = _normalized_base_project(restored_plan.project)
+        report(91, "Rebuilt restored SPD import plan")
         # Preserve the unresolved diagnostics after the complete rebuild.
         rebuilt_provenance = dict(
             base_project.metadata.get("spd_import", {}).get(
@@ -2847,22 +3128,12 @@ def import_spd_scenario(
         rail_choices_by_pair=rail_choices_by_pair,
     )
     mixed_witness_selection_s = perf_counter() - mixed_witness_selection_started
+    # ``connectivity_recovery`` already covered every mixed-reference landing
+    # and its certified DGND target layer in the shared graph pass above.
+    # Reusing it avoids a second full-file hash plus Node/Trace/Via scan.
     ground_recovery_started = perf_counter()
-    ground_reachability = recover_spd_ground_reachability(
-        source_path,
-        landings=(
-            landing
-            for entries in mixed_ground_landings_by_rail.values()
-            for _refdes, landing in entries
-        ),
-        target_layers_by_net=mixed_target_layers_by_net,
-        target_node_predicate=_mixed_reference_target_node_predicate(
-            base_project, dict(plan.attachments)
-        ),
-        expected_source=analysis.source,
-        progress=lambda value, message: report(91 + round(max(0, min(100, value)) * 1 / 100), message),
-        is_cancelled=cancelled,
-    )
+    ground_reachability = connectivity_recovery
+    report(91, "Reused source graph for mixed-reference GND witnesses")
     ground_recovery_s = perf_counter() - ground_recovery_started
     mixed_witnesses: dict[str, MixedReferenceGroundWitness] = {}
     mixed_ground_reachability_by_rail: list[dict[str, Any]] = []
@@ -2923,6 +3194,46 @@ def import_spd_scenario(
                     ),
                 )
             )
+    mixed_requested_keys = {
+        (
+            str(getattr(landing, "via_id", "")).casefold(),
+            str(getattr(landing, "endpoint_node_id", "")).casefold(),
+            str(layer).casefold(),
+        )
+        for entries in mixed_ground_landings_by_rail.values()
+        for _refdes, landing in entries
+        for layer in mixed_target_layers_by_net.get(
+            str(getattr(landing, "net", "")).casefold(), ()
+        )
+    }
+    mixed_reachable_keys = (
+        set(getattr(ground_reachability, "reachable_keys", ()))
+        & mixed_requested_keys
+    )
+    mixed_unreachable_keys = mixed_requested_keys - mixed_reachable_keys
+    mixed_reachability_statistics = dict(
+        getattr(ground_reachability, "statistics", {}) or {}
+    )
+    mixed_reachability_statistics.update(
+        requested=len(mixed_requested_keys),
+        reachable=len(mixed_reachable_keys),
+        unreachable=len(mixed_unreachable_keys),
+        shared_source_graph_reused=True,
+    )
+    if not mixed_requested_keys:
+        # No mixed witness scan was requested; do not expose the shared full
+        # source-graph counters as if they described an empty mixed pass.
+        for key in (
+            "node_section_passes",
+            "trace_section_passes",
+            "via_section_passes",
+            "components",
+            "graph_nodes",
+            "graph_edges",
+            "trace_edges",
+            "via_edges",
+        ):
+            mixed_reachability_statistics[key] = 0
     recovery_metadata = dict(base_project.metadata)
     recovery_metadata[MLO_LANDING_CERTIFICATE_METADATA_KEY] = (
         _build_mlo_landing_certificates(
@@ -2958,9 +3269,52 @@ def import_spd_scenario(
         "skipped_unique_path_recovery": bool(graph_available),
         "fallback_behavior": "legacy_rail_template",
         "mixed_reference_ground_reachability": {
-            **dict(ground_reachability.statistics),
-            "algorithm": "same_net_via_trace_reachability_v1",
+            **mixed_reachability_statistics,
+            "algorithm": str(
+                mixed_reachability_statistics.get(
+                    "artwork_algorithm",
+                    "same_net_via_trace_artwork_reachability_v3_layerwise_deferred",
+                )
+            ),
+            "indexed_geometry_count": len(connectivity_index),
+            "exact_geometry_build_count": sum(
+                int(indexed.artwork_shape_built)
+                for indexed in connectivity_index.values()
+            ),
             "by_rail": mixed_ground_reachability_by_rail,
+        },
+        "source_graph_artwork_reachability": {
+            "version": str(
+                connectivity_statistics.get(
+                    "artwork_algorithm",
+                    "same_net_via_trace_artwork_reachability_v3_layerwise_deferred",
+                )
+            ),
+            "indexed_geometry_count": len(connectivity_index),
+            "exact_geometry_build_count": sum(
+                int(indexed.artwork_shape_built)
+                for indexed in connectivity_index.values()
+            ),
+            "artwork_nodes": int(connectivity_statistics.get("artwork_nodes", 0)),
+            "artwork_edges": int(connectivity_statistics.get("artwork_edges", 0)),
+            "artwork_components": int(
+                connectivity_statistics.get("artwork_components", 0)
+            ),
+            "artwork_trace_contacts": int(
+                connectivity_statistics.get("artwork_trace_contacts", 0)
+            ),
+            "trace_artwork_contact_count": int(
+                connectivity_statistics.get("trace_artwork_contact_count", 0)
+            ),
+            "trace_artwork_conditional_passes": int(
+                connectivity_statistics.get("trace_artwork_conditional_passes", 0)
+            ),
+            "trace_artwork_conditional_checks": int(
+                connectivity_statistics.get("trace_artwork_conditional_checks", 0)
+            ),
+            "trace_artwork_conditional_successes": int(
+                connectivity_statistics.get("trace_artwork_conditional_successes", 0)
+            ),
         },
     }
     base_project = base_project.model_copy(
@@ -3330,7 +3684,7 @@ def import_spd_scenario(
         analyze_s=analyze_s,
         plan_s=plan_s,
         index_s=index_s,
-        recovery_s=path_recovery_s,
+        recovery_s=recovery_s,
         mixed_witness_selection_s=mixed_witness_selection_s,
         ground_recovery_s=ground_recovery_s,
         eligibility_s=eligibility_s,

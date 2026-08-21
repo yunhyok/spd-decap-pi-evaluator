@@ -1,6 +1,7 @@
 ﻿from pathlib import Path
 from dataclasses import replace
 from hashlib import sha256
+import json
 import math
 from types import SimpleNamespace
 
@@ -45,6 +46,7 @@ from spd_decap_pi.spd_adapter import (
     _build_mlo_landing_certificates,
     _finite_port_inside_solver_bounds,
     _raise_for_rejected_mixed_reference_landings,
+    _strict_source_plane_pairs,
     _scenario_via_landing,
     _via_target_layers_by_net,
     import_spd_scenario,
@@ -116,6 +118,95 @@ def test_graph_target_node_contract_separates_exact_artwork_from_solver_port() -
     assert _finite_port_inside_solver_bounds(50.0, 50.0, 60.0, 20.0, bounds) is True
     assert _finite_port_inside_solver_bounds(0.0, 50.0, 1.0, 1.0, bounds) is False
     assert _finite_port_inside_solver_bounds(50.0, 50.0, 100.0, 20.0, bounds) is False
+
+
+def test_strict_source_plane_pairs_memoizes_repeated_exact_coverage_points() -> None:
+    class CountingPlane:
+        def __init__(self, layer: str, net: str) -> None:
+            self.layer = layer
+            self.net = net
+            self.positive_bounds = (0.0, 100.0, 0.0, 100.0)
+            self.geometry = SimpleNamespace(
+                positive_polygons_um=(),
+                negative_polygons_um=(),
+                positive_circles_um=(),
+                negative_circles_um=(),
+                primitive_order=(),
+            )
+            self.contains_calls = 0
+
+        def contains(self, _x: float, _y: float) -> str:
+            self.contains_calls += 1
+            return "inside"
+
+        def covers_footprint(self, *_args: float) -> bool:
+            return True
+
+    pwr = CountingPlane("PWR", "VDD")
+    gnd = CountingPlane("GND", "DGND")
+    source_sha = "a" * 64
+    pwr_via = SimpleNamespace(
+        via_id="P0", endpoint_node_id="NP", net="VDD", padstack="P",
+        x_um=10.0, y_um=10.0,
+    )
+    gnd_via = SimpleNamespace(
+        via_id="G0", endpoint_node_id="NG", net="DGND", padstack="P",
+        x_um=10.0, y_um=10.0,
+    )
+    connection = SimpleNamespace(
+        refdes="C1", power_vias=(pwr_via, pwr_via), ground_vias=(gnd_via, gnd_via)
+    )
+    analysis = SimpleNamespace(
+        plane_geometries=(pwr, gnd),
+        cap_instances=(),
+        decap_connections=(connection,),
+        power_plane_nets=("VDD",),
+        pins=(),
+        padstacks=(),
+        counts={"source_graph_capability": "SOURCE_GRAPH_AVAILABLE"},
+        source=SimpleNamespace(sha256=source_sha),
+    )
+    project = SimpleNamespace(
+        gnd_aliases=("DGND",),
+        rails=(SimpleNamespace(net="VDD", pwr_layer="PWR", gnd_layer="GND"),),
+        stackup_layers=(
+            StackupLayer(name="PWR", thickness_um=10.0, conductivity_s_m=1.0, pwr_nets=["VDD"]),
+            StackupLayer(name="D", thickness_um=10.0, dk=4.0),
+            StackupLayer(name="GND", thickness_um=10.0, conductivity_s_m=1.0, pwr_nets=["DGND"]),
+        ),
+        via_templates=(
+            SimpleNamespace(
+                pwr_reference_layer="PWR", gnd_reference_layer="GND",
+                finite_port_width_um=1.0, finite_port_height_um=1.0,
+            ),
+        ),
+        metadata={"spd_import": {"source_sha256": source_sha}},
+    )
+    path_recovery = SimpleNamespace(evidence_by_via={})
+    connectivity = SimpleNamespace(
+        statistics={"requested": 1, "node_section_passes": 1, "via_edges": 1, "trace_edges": 0},
+        reaches=lambda *_args: True,
+        target_contacts_by_key={
+            ("p0", "np", "pwr"): (("NP", 10.0, 10.0),),
+            ("g0", "ng", "gnd"): (("NG", 10.0, 10.0),),
+        },
+        target_contact_count_by_key={},
+        target_contact_hash_by_key={},
+    )
+    selected, provenance = _strict_source_plane_pairs(
+        project,
+        analysis,
+        path_recovery,
+        connectivity,
+        indexed_override={("pwr", "vdd"): pwr, ("gnd", "dgnd"): gnd},
+    )
+    assert selected, provenance
+    assert selected["vdd"].pwr_layer == "PWR"
+    assert selected["vdd"].gnd_layer == "GND"
+    assert provenance["vdd"]["pwr_layer"] == "PWR"
+    assert provenance["vdd"]["gnd_layer"] == "GND"
+    assert pwr.contains_calls == 1
+    assert gnd.contains_calls == 1
 
 
 def test_adapter_persists_structural_only_via_evidence() -> None:
@@ -392,6 +483,43 @@ def test_read_only_spd_import_builds_top_side_editable_scenario(tmp_path: Path):
         ]["contract_version"]
         == FINAL_TEMPLATE_ARTWORK_CONTRACT_VERSION
     )
+
+
+def test_forced_post_plan_rebuild_inputs_summary_matches_final_rails(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    source = tmp_path / "forced-rebuild.spd"
+    source.write_text(MINI_SPD, encoding="ascii")
+    monkeypatch.setattr(
+        spd_adapter,
+        "_finite_port_inside_solver_bounds",
+        lambda *_args: False,
+    )
+    geometry_builds = 0
+    original_geometry_assets = core_services._spd_plane_geometry_assets
+
+    def counted_geometry_assets(*args, **kwargs):
+        nonlocal geometry_builds
+        geometry_builds += 1
+        return original_geometry_assets(*args, **kwargs)
+
+    monkeypatch.setattr(
+        core_services, "_spd_plane_geometry_assets", counted_geometry_assets
+    )
+    imported = import_spd_scenario(source)
+    assert geometry_builds == 1
+    input_assets = [
+        payload
+        for name, payload in imported.attachments.items()
+        if name.startswith("inputs/") and name.endswith("-spd-import.json")
+    ]
+    assert len(input_assets) == 1
+    summary = json.loads(input_assets[0].decode("utf-8"))
+    final_rails = [
+        item.model_dump(mode="json")
+        for item in imported.scenario.base_project.rails
+    ]
+    assert summary["extracted"]["rails"] == final_rails
 
 
 def test_adapter_clears_gap_certificate_when_cluster_is_demoted(
@@ -746,6 +874,35 @@ def test_spd_import_reports_monotonic_stage_progress_and_nonpersistent_timings(
     assert all(math.isfinite(value) and value >= 0.0 for value in stages)
     assert timings.total_s >= sum(stages)
     assert "timings" not in imported.scenario.model_dump(mode="json")
+
+
+def test_spd_import_reuses_one_ground_graph_pass(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    source = tmp_path / "single-ground-graph-pass.spd"
+    source.write_text(MINI_SPD, encoding="ascii")
+    calls: list[dict[str, object]] = []
+    original = spd_adapter.recover_spd_ground_reachability
+
+    def wrapped(*args, **kwargs):
+        calls.append(dict(kwargs))
+        return original(*args, **kwargs)
+
+    monkeypatch.setattr(spd_adapter, "recover_spd_ground_reachability", wrapped)
+    imported = import_spd_scenario(source)
+
+    assert len(calls) == 1
+    assert imported.timings.recovery_s > 0.0
+    mixed = imported.scenario.base_project.metadata["spd_via_path_recovery"][
+        "mixed_reference_ground_reachability"
+    ]
+    assert mixed["requested"] == 0
+    assert mixed["reachable"] == 0
+    assert mixed["unreachable"] == 0
+    assert mixed["node_section_passes"] == 0
+    assert mixed["trace_section_passes"] == 0
+    assert mixed["via_section_passes"] == 0
+    assert mixed["shared_source_graph_reused"] is True
 
 
 def test_mixed_witness_selection_batches_direct_and_shared_candidates_exactly(

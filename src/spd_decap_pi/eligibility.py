@@ -366,6 +366,330 @@ class IndexedPlaneGeometry:
     primitive_grid: _SpatialGrid
     _shape_cache: dict[int, object] = field(default_factory=dict, compare=False, repr=False)
 
+    @property
+    def artwork_shape_built(self) -> bool:
+        """Whether the final ordered shape has ever been materialized."""
+
+        return -3 in self._shape_cache
+
+    def release_artwork_shape(self) -> None:
+        """Release the final Shapely shape while retaining primitive caches."""
+
+        self._shape_cache.pop(-1, None)
+
+    def _artwork_components(self):
+        """Return cached final ordered components and their spatial index."""
+
+        from shapely.geometry import Point, Polygon
+        from shapely.ops import unary_union
+        from shapely.prepared import prep
+        from shapely.strtree import STRtree
+
+        filled = self._shape_cache.get(-1)
+        if filled is not None:
+            return filled
+        # Keep a separate ever-built sentinel so releasing the final shape
+        # does not change exact-geometry build diagnostics.
+        self._shape_cache[-3] = True
+        runs: list[tuple[bool, list[object]]] = []
+        try:
+            for item in self.primitives:
+                primitive = item.primitive
+                raw_shape = (
+                    Point(float(primitive[0]), float(primitive[1])).buffer(
+                        float(primitive[2]), quad_segs=64
+                    )
+                    if item.kind.endswith("circle")
+                    else Polygon(primitive)
+                )
+                positive = item.kind.startswith("positive_")
+                if runs and runs[-1][0] == positive:
+                    runs[-1][1].append(raw_shape)
+                else:
+                    runs.append((positive, [raw_shape]))
+            def flatten(shape: object) -> list[object]:
+                kind = getattr(shape, "geom_type", "")
+                if kind == "Polygon":
+                    return [shape]
+                if kind in {"MultiPolygon", "GeometryCollection"}:
+                    result: list[object] = []
+                    for child in getattr(shape, "geoms", ()):
+                        result.extend(flatten(child))
+                    return result
+                return []
+
+            components: list[object] = []
+            for positive, run in runs:
+                batch = unary_union(run)
+                if batch.is_empty or not batch.is_valid or batch.area <= 0.0:
+                    self._shape_cache[-1] = False
+                    return False
+                if not positive and not components:
+                    continue
+                selected: list[int] = []
+                if components:
+                    tree = STRtree(tuple(components))
+                    try:
+                        candidates = tree.query(batch, predicate="intersects")
+                    except TypeError:
+                        candidates = tree.query(batch)
+                    for candidate in candidates:
+                        try:
+                            selected.append(int(candidate))
+                        except (TypeError, ValueError):
+                            selected.append(components.index(candidate))
+                    selected = sorted(set(selected))
+                if positive:
+                    merged = unary_union([batch, *(components[index] for index in selected)])
+                    merged_parts = flatten(merged)
+                    if not merged_parts:
+                        self._shape_cache[-1] = False
+                        return False
+                    if selected:
+                        first = selected[0]
+                        components = (
+                            [item for index, item in enumerate(components) if index < first and index not in selected]
+                            + merged_parts
+                            + [item for index, item in enumerate(components) if index > first and index not in selected]
+                        )
+                    else:
+                        components.extend(merged_parts)
+                else:
+                    selected_set = set(selected)
+                    next_components: list[object] = []
+                    for index, component in enumerate(components):
+                        if index not in selected_set:
+                            next_components.append(component)
+                            continue
+                        difference = component.difference(batch)
+                        next_components.extend(flatten(difference))
+                    components = next_components
+            if not components:
+                self._shape_cache[-1] = False
+                return False
+            if any(
+                item.is_empty or not item.is_valid or item.area <= 0.0
+                for item in components
+            ):
+                self._shape_cache[-1] = False
+                return False
+            components.sort(
+                key=lambda item: (
+                    tuple(float(value) for value in item.bounds),
+                    float(item.area),
+                    bytes(item.wkb),
+                )
+            )
+            result = (
+                (
+                    components,
+                    STRtree(components),
+                    tuple(prep(item) for item in components),
+                )
+                if components
+                else False
+            )
+        except Exception:
+            result = False
+        self._shape_cache[-1] = result
+        return result
+
+    def artwork_component(
+        self,
+        x_um: float,
+        y_um: float,
+        *,
+        tolerance_um: float = 1.0e-6,
+    ) -> object | None:
+        """Return the exact ordered-copper component containing a point.
+
+        Source graph recovery models same-NET artwork as an electrical edge,
+        but only for a point that is strictly inside the retained ordered
+        artwork.  Boundary, void and outside queries deliberately return
+        ``None`` so a malformed or marginal Node cannot bridge components.
+        The replay is cached per indexed geometry because a production SPD
+        can query tens of thousands of Nodes on one plane.
+        """
+
+        if not isfinite(x_um) or not isfinite(y_um):
+            raise ValueError("plane query coordinates must be finite")
+        if not _bounds_contains(self.positive_bounds, x_um, y_um, tolerance_um):
+            return None
+        filled = self._artwork_components()
+        if filled is False:
+            return None
+
+        from shapely.geometry import Point
+
+        point = Point(float(x_um), float(y_um))
+        components, tree, prepared = filled
+        try:
+            candidates = tree.query(point, predicate="intersects")
+        except TypeError:
+            candidates = tree.query(point)
+        for candidate in candidates:
+            try:
+                index = int(candidate)
+            except (TypeError, ValueError):
+                index = components.index(candidate)
+            component = components[index]
+            if component.is_empty:
+                continue
+            if prepared[index].contains(point):
+                return index
+        return None
+
+    def artwork_components_batch(
+        self,
+        points: Sequence[tuple[float, float]],
+        *,
+        tolerance_um: float = 1.0e-6,
+    ) -> tuple[object | None, ...]:
+        """Resolve ordered-artwork components for a bounded point batch.
+
+        The result preserves input order and component indices exactly as the
+        scalar query.  Shapely 2's vectorized STRtree path avoids constructing
+        one Python ``Point``/query pair per source Node; older Shapely falls
+        back to the scalar implementation without changing semantics.
+        """
+
+        if not points:
+            return ()
+        normalized = tuple((float(x), float(y)) for x, y in points)
+        if any(not isfinite(x) or not isfinite(y) for x, y in normalized):
+            raise ValueError("plane query coordinates must be finite")
+        # Avoid materializing the expensive ordered-boolean artwork shape when
+        # an entire Node batch is outside its positive envelope.
+        in_bounds = tuple(
+            index
+            for index, (x, y) in enumerate(normalized)
+            if _bounds_contains(self.positive_bounds, x, y, tolerance_um)
+        )
+        if not in_bounds:
+            return (None,) * len(normalized)
+        filled = self._artwork_components()
+        if filled is False:
+            return (None,) * len(normalized)
+        components, tree, _prepared = filled
+        try:
+            from shapely import contains_xy, points as shapely_points
+        except ImportError:
+            return tuple(self.artwork_component(x, y, tolerance_um=tolerance_um) for x, y in normalized)
+        results: list[object | None] = [None] * len(normalized)
+        if len(components) == 1:
+            # For a singleton exact component, vectorized GEOS contains_xy
+            # avoids STRtree candidate-pair materialization while retaining
+            # strict boundary rejection and input ordering.
+            try:
+                component = components[0]
+                for start in range(0, len(in_bounds), 32768):
+                    chunk = in_bounds[start : start + 32768]
+                    inside = contains_xy(
+                        component,
+                        [normalized[index][0] for index in chunk],
+                        [normalized[index][1] for index in chunk],
+                    )
+                    for local_index, is_inside in enumerate(inside):
+                        if bool(is_inside):
+                            results[chunk[local_index]] = 0
+                return tuple(results)
+            except (AttributeError, TypeError, ValueError):
+                pass
+        try:
+            # Keep temporary NumPy/Shapely arrays bounded even if callers use
+            # this API directly with a larger sequence than graph recovery's
+            # 32,768-record flush limit.
+            for start in range(0, len(in_bounds), 32768):
+                chunk = in_bounds[start : start + 32768]
+                point_geometries = shapely_points(
+                    [normalized[index][0] for index in chunk],
+                    [normalized[index][1] for index in chunk],
+                )
+                pairs = tree.query(point_geometries)
+                candidate_indices_by_component: dict[int, list[int]] = {}
+                for local_index, component_index in zip(pairs[0], pairs[1], strict=False):
+                    candidate_indices_by_component.setdefault(int(component_index), []).append(
+                        int(local_index)
+                    )
+                for component_index, local_indices in candidate_indices_by_component.items():
+                    component = components[component_index]
+                    inside = contains_xy(
+                        component,
+                        [normalized[chunk[local_index]][0] for local_index in local_indices],
+                        [normalized[chunk[local_index]][1] for local_index in local_indices],
+                    )
+                    for local_index, is_inside in zip(local_indices, inside, strict=True):
+                        index = chunk[local_index]
+                        if bool(is_inside) and results[index] is None:
+                            results[index] = component_index
+        except (AttributeError, TypeError, ValueError):
+            for index in in_bounds:
+                x, y = normalized[index]
+                results[index] = self.artwork_component(x, y, tolerance_um=tolerance_um)
+        return tuple(results)
+
+    def artwork_trace_component(
+        self,
+        x1_um: float,
+        y1_um: float,
+        x2_um: float,
+        y2_um: float,
+        width_um: float,
+        *,
+        tolerance_um: float = 1.0e-6,
+    ) -> tuple[object, float, float] | None:
+        """Find strict copper contact made by a finite-width trace."""
+
+        try:
+            width = float(width_um)
+            if not isfinite(width) or width <= 0.0:
+                return None
+            from shapely.geometry import LineString, Point
+
+            corridor = LineString(
+                ((float(x1_um), float(y1_um)), (float(x2_um), float(y2_um)))
+            ).buffer(width / 2.0, quad_segs=32, cap_style=2)
+            if corridor.is_empty or corridor.area <= 0.0:
+                return None
+            bounds = corridor.bounds
+            if (
+                bounds[2] < self.positive_bounds[0]
+                or bounds[0] > self.positive_bounds[1]
+                or bounds[3] < self.positive_bounds[2]
+                or bounds[1] > self.positive_bounds[3]
+            ):
+                return None
+            filled = self._artwork_components()
+            if filled is False:
+                return None
+            components, tree, _prepared = filled
+            candidates = tree.query(corridor, predicate="intersects")
+            qualifying: list[tuple[int, object]] = []
+            for candidate in candidates:
+                try:
+                    index = int(candidate)
+                except (TypeError, ValueError):
+                    index = components.index(candidate)
+                component = components[index]
+                overlap = component.intersection(corridor)
+                if overlap.is_empty:
+                    continue
+                if overlap.area <= max(tolerance_um * tolerance_um, 1.0e-12):
+                    if not hasattr(overlap, "length") or overlap.length <= tolerance_um:
+                        continue
+                    qualifying.append((index, overlap.representative_point()))
+                    continue
+                point = overlap.representative_point()
+                if component.boundary.distance(point) <= tolerance_um:
+                    continue
+                qualifying.append((index, point))
+            if len(qualifying) == 1:
+                index, point = qualifying[0]
+                return index, float(point.x), float(point.y)
+        except Exception:
+            return None
+        return None
+
     @classmethod
     def build(
         cls, geometry: SpdPlaneGeometry, *, tolerance_um: float = 1.0e-6

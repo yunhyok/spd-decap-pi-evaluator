@@ -2,8 +2,10 @@
 
 import mmap
 import os
+from dataclasses import replace
 from hashlib import sha256
 from pathlib import Path
+import math
 from types import SimpleNamespace
 
 import numpy as np
@@ -19,6 +21,7 @@ from spd_decap_pi._core.domain import (
 from spd_decap_pi._core.io import spd as spd_io
 from spd_decap_pi._core.io.spd import (
     SpdImportError,
+    SpdPlaneGeometry,
     _length_um,
     _lengths,
     _parse_netlist,
@@ -33,6 +36,7 @@ from spd_decap_pi._core.services import (
     create_workspace_state,
 )
 from spd_decap_pi._core.solver.evaluator import EvaluationError, _planes_from_project
+from spd_decap_pi.eligibility import IndexedPlaneGeometry
 
 
 def test_bulk_length_parser_preserves_units_and_strict_validation() -> None:
@@ -474,6 +478,1097 @@ def test_mixed_reference_ground_reachability_accepts_branching_via_graph(
         target_node_predicate=lambda _net, _layer, _node, x_um, _y_um: x_um > 1300,
     )
     assert not boundary.reaches(landing, "Signal$GND")
+
+
+def test_ground_reachability_dispatches_target_predicate_by_net_and_layer(
+    tmp_path: Path,
+) -> None:
+    """A shared graph pass can apply a stricter predicate to one target key."""
+
+    source = tmp_path / "per-target-ground-predicate.spd"
+    source.write_text(
+        MINI_SPD.replace(
+            "* Via description lines",
+            "\n".join(
+                (
+                    "* Node description lines",
+                    "NodeTarget!!1::DGND X = 1.3mm Y = 2mm Layer = Signal$GND PadStack = DR-0102_60",
+                    "* Via description lines",
+                )
+            ),
+        ).replace(
+            "Via2::DGND UpperNode = Node2 LowerNode = Node4 PadStack = DR-0102_60",
+            "Via2::DGND UpperNode = Node2 LowerNode = Node4 PadStack = DR-0102_60\n"
+            "ViaTarget::DGND UpperNode = Node4 LowerNode = NodeTarget PadStack = DR-0102_60",
+        ),
+        encoding="ascii",
+    )
+    landing = SpdViaLanding(
+        via_id="Via2",
+        net="DGND",
+        endpoint_node_id="Node4",
+        x_um=1200.0,
+        y_um=2000.0,
+        padstack="DR-0102_60",
+    )
+    result = recover_spd_ground_reachability(
+        source,
+        landings=(landing,),
+        target_layers_by_net={"DGND": ("Signal$GND",)},
+        target_node_predicate=lambda *_args: False,
+        target_node_predicates_by_key={
+            ("dgnd", "signal$gnd"): lambda _net, _layer, node, _x, _y: node
+            == "NodeTarget"
+        },
+    )
+    assert result.reaches(landing, "Signal$GND")
+
+
+def test_ground_reachability_target_batch_bypasses_scalar_predicate(
+    tmp_path: Path,
+) -> None:
+    source = tmp_path / "target-batch-ground.spd"
+    source.write_text(
+        MINI_SPD.replace(
+            "* Via description lines",
+            "\n".join(
+                (
+                    "* Node description lines",
+                    "NodeTarget!!1::DGND X = 1.3mm Y = 2mm Layer = Signal$GND PadStack = DR-0102_60",
+                    "* Via description lines",
+                )
+            ),
+        ).replace(
+            "Via2::DGND UpperNode = Node2 LowerNode = Node4 PadStack = DR-0102_60",
+            "Via2::DGND UpperNode = Node2 LowerNode = Node4 PadStack = DR-0102_60\n"
+            "ViaTarget::DGND UpperNode = Node4 LowerNode = NodeTarget PadStack = DR-0102_60",
+        ),
+        encoding="ascii",
+    )
+    landing = SpdViaLanding(
+        via_id="Via2", net="DGND", endpoint_node_id="Node4",
+        x_um=1200.0, y_um=2000.0, padstack="DR-0102_60",
+    )
+    scalar_calls = 0
+    progress: list[tuple[int, str]] = []
+    def scalar(*_args):
+        nonlocal scalar_calls
+        scalar_calls += 1
+        raise AssertionError("scalar target predicate should not run")
+    result = recover_spd_ground_reachability(
+        source,
+        landings=(landing,),
+        target_layers_by_net={"DGND": ("Signal$GND",)},
+        target_node_predicate=scalar,
+        target_node_predicate_batch=lambda _net, _layer, points: tuple(
+            x_um == 1300.0 for x_um, _y_um in points
+        ),
+        progress=lambda value, message: progress.append((value, message)),
+    )
+    assert scalar_calls == 0
+    assert result.reaches(landing, "Signal$GND")
+    assert any(15 < value < 40 for value, _message in progress)
+
+
+def test_ground_reachability_releases_interleaved_artwork_layers_after_last_node(
+    tmp_path: Path,
+) -> None:
+    source, _analysis = _recoverable_via_source(
+        tmp_path,
+        node_lines=(
+            "NodeA!!11::DGND X = 4mm Y = 4mm Layer = Signal$TOP PadStack = DUT\n"
+            "NodeB!!12::DGND X = 5mm Y = 5mm Layer = Signal$PWR PadStack = DUT\n"
+            "NodeA2!!13::DGND X = 6mm Y = 6mm Layer = Signal$TOP PadStack = DUT"
+        ),
+        via_lines="",
+    )
+    releases: list[str] = []
+    artwork_batches: list[str] = []
+    events: list[str] = []
+    def release(net: str, layer: str) -> None:
+        events.append("release")
+        releases.append(f"{net.casefold()}:{layer.casefold()}")
+    landing = SpdViaLanding(
+        via_id="Via2", net="DGND", endpoint_node_id="Node2",
+        x_um=100.0, y_um=0.0, padstack="DR-0102_60",
+    )
+    result = recover_spd_ground_reachability(
+        source,
+        landings=(landing,),
+        target_layers_by_net={"DGND": ("Signal$TOP", "Signal$PWR")},
+        same_layer_artwork_layers_by_net={"DGND": ("Signal$TOP", "Signal$PWR")},
+        same_layer_artwork_components_batch=lambda _net, layer, points: (
+            artwork_batches.append(layer.casefold()) or (0,) * len(points)
+        ),
+        same_layer_artwork_release=release,
+        target_node_predicate_batch=lambda _net, _layer, points: (
+            events.append("target") or (True,) * len(points)
+        ),
+    )
+    assert result.statistics["node_release_index_passes"] == 0
+    assert result.statistics["deferred_artwork_passes"] == 1
+    assert result.statistics["deferred_artwork_keys"] == 2
+    assert result.statistics["max_live_artwork_shapes"] == 1
+    assert "dgnd:signal$pwr" in releases
+    assert "dgnd:signal$top" in releases
+    assert releases.index("dgnd:signal$top") < releases.index("dgnd:signal$pwr")
+    assert artwork_batches
+    assert events.index("target") < events.index("release")
+
+
+def test_ground_reachability_batch_preserves_target_layer_bits_and_bound(
+    tmp_path: Path,
+) -> None:
+    prefix, node_tail = MINI_SPD.split("* Node description lines", 1)
+    _old_nodes, via_tail = node_tail.split("* Via description lines", 1)
+    source = tmp_path / "target-batch-layers.spd"
+    nodes = "\n".join(
+        (
+            "Node2!!102::DGND X = 0.1mm Y = 0mm Layer = Signal$TOP PadStack = DUT",
+            "Node4!!2::DGND X = 1.2mm Y = 2mm Layer = Signal$TOP PadStack = CAP",
+            "Node6!!2::DGND X = 3.2mm Y = 2mm Layer = Signal$PWR PadStack = CAP",
+        )
+    )
+    source.write_text(
+        prefix
+        + "* Node description lines\n"
+        + nodes
+        + "\n* Via description lines\n"
+        + "ViaTop::DGND UpperNode = Node2 LowerNode = Node4 PadStack = DR-0102_60\n"
+        + "ViaPwr::DGND UpperNode = Node4 LowerNode = Node6 PadStack = DR-0102_60"
+        + via_tail,
+        encoding="ascii",
+    )
+    landing = SpdViaLanding(
+        via_id="ViaTop", net="DGND", endpoint_node_id="Node2",
+        x_um=100.0, y_um=0.0, padstack="DR-0102_60",
+    )
+    batches: list[tuple[str, str, int]] = []
+    result = recover_spd_ground_reachability(
+        source,
+        landings=(landing,),
+        target_layers_by_net={"DGND": ("Signal$TOP", "Signal$PWR")},
+        target_node_predicate_batch=lambda net, layer, points: (
+            batches.append((layer, "batch", len(points))) or (True,) * len(points)
+        ),
+    )
+    assert max(size for _layer, _kind, size in batches) <= 32768
+    assert {layer for layer, _kind, _size in batches} == {"Signal$TOP", "Signal$PWR"}
+    assert sum(size for _layer, _kind, size in batches) == 3
+    assert result.reaches(landing, "Signal$TOP")
+    assert result.reaches(landing, "Signal$PWR")
+
+
+def test_ground_reachability_deferred_artwork_duplicate_id_preserves_masks_and_last_source(
+    tmp_path: Path,
+) -> None:
+    """Artwork-deferred and immediate target records retain scalar source order."""
+
+    source, _analysis = _recoverable_via_source(
+        tmp_path,
+        node_lines=(
+            "NodeDup!!1::DGND X = 1mm Y = 1mm Layer = Signal$TOP PadStack = DUT\n"
+            "NodeDup!!1::DGND X = 2mm Y = 2mm Layer = Signal$PWR PadStack = DUT"
+        ),
+        via_lines=(
+            "ViaDup::DGND UpperNode = Node2 LowerNode = NodeDup PadStack = DUT"
+        ),
+    )
+    landing = SpdViaLanding(
+        via_id="ViaDup", net="DGND", endpoint_node_id="Node2",
+        x_um=100.0, y_um=0.0, padstack="DUT",
+    )
+    result = recover_spd_ground_reachability(
+        source,
+        landings=(landing,),
+        target_layers_by_net={"DGND": ("Signal$TOP", "Signal$PWR")},
+        same_layer_artwork_layers_by_net={"DGND": ("Signal$TOP",)},
+        same_layer_artwork_components_batch=lambda _net, layer, points: (
+            ("top-component",) * len(points)
+            if layer.casefold() == "signal$top"
+            else (None,) * len(points)
+        ),
+        target_node_predicate=lambda _net, _layer, node_id, *_coords: node_id == "NodeDup",
+    )
+    assert result.reaches(landing, "Signal$TOP")
+    assert result.reaches(landing, "Signal$PWR")
+    top_key = ("viadup", "node2", "signal$top")
+    pwr_key = ("viadup", "node2", "signal$pwr")
+    assert result.target_contact_count_by_key[top_key] == 1
+    assert result.target_contact_count_by_key[pwr_key] == 1
+    assert result.target_contact_hash_by_key[top_key] == result.target_contact_hash_by_key[pwr_key]
+    assert result.target_contacts_by_key[top_key] == result.target_contacts_by_key[pwr_key]
+    assert result.target_contacts_by_key[top_key] == (("NodeDup", 2000.0, 2000.0),)
+    assert result.statistics["max_live_artwork_shapes"] == 1
+
+
+def test_ground_reachability_filters_unrelated_no_artwork_target_components(
+    tmp_path: Path,
+) -> None:
+    """No-artwork target predicates see only requested Trace/Via roots."""
+
+    source, _analysis = _recoverable_via_source(
+        tmp_path,
+        node_lines=(
+            "NodeRequested!!1::DGND X = 1mm Y = 2mm Layer = Signal$GND PadStack = DUT\n"
+            "NodeConnected!!1::DGND X = 2mm Y = 2mm Layer = Signal$GND PadStack = DUT\n"
+            "NodeUnrelated!!1::DGND X = 9mm Y = 9mm Layer = Signal$GND PadStack = DUT"
+        ),
+        via_lines="",
+        trace_lines=(
+            "TraceRequested::DGND StartingNode = NodeRequested::DGND "
+            "EndingNode = NodeConnected::DGND Width = 1mm"
+        ),
+    )
+    landing = SpdViaLanding(
+        via_id="ViaRequested",
+        net="DGND",
+        endpoint_node_id="NodeRequested",
+        x_um=1000.0,
+        y_um=2000.0,
+        padstack="DUT",
+    )
+    seen: list[str] = []
+    result = recover_spd_ground_reachability(
+        source,
+        landings=(landing,),
+        target_layers_by_net={"DGND": ("Signal$GND",)},
+        target_node_predicate=lambda _net, _layer, node_id, *_coords: (
+            seen.append(node_id) or node_id == "NodeConnected"
+        ),
+    )
+    assert result.reaches(landing, "Signal$GND")
+    assert seen == ["NodeRequested", "NodeConnected"]
+    assert result.statistics["target_nodes_considered"] == 3
+    assert result.statistics["target_nodes_filtered"] == 1
+    assert result.statistics["conditional_target_component_passes"] == 0
+
+
+def test_ground_reachability_root_filter_keeps_requested_standalone_and_via_only(
+    tmp_path: Path,
+) -> None:
+    """Requested Via roots remain exact when Trace is disabled."""
+
+    source, _analysis = _recoverable_via_source(
+        tmp_path,
+        node_lines=(
+            "NodeRequested!!1::DGND X = 1mm Y = 2mm Layer = Signal$GND PadStack = DUT\n"
+            "NodeViaTarget!!1::DGND X = 2mm Y = 2mm Layer = Signal$GND PadStack = DUT\n"
+            "NodeUnrelated!!1::DGND X = 9mm Y = 9mm Layer = Signal$GND PadStack = DUT\n"
+            "NodeStandalone!!1::DGND X = 3mm Y = 2mm Layer = Signal$GND PadStack = DUT"
+        ),
+        via_lines=(
+            "ViaRequested::DGND UpperNode = NodeRequested LowerNode = NodeViaTarget PadStack = DUT"
+        ),
+        trace_lines=(
+            "TraceIgnored::DGND StartingNode = NodeViaTarget::DGND "
+            "EndingNode = NodeUnrelated::DGND Width = 1mm"
+        ),
+    )
+    landing = SpdViaLanding(
+        via_id="ViaRequested",
+        net="DGND",
+        endpoint_node_id="NodeRequested",
+        x_um=1000.0,
+        y_um=2000.0,
+        padstack="DUT",
+    )
+    standalone = SpdViaLanding(
+        via_id="ViaStandalone",
+        net="DGND",
+        endpoint_node_id="NodeStandalone",
+        x_um=3000.0,
+        y_um=2000.0,
+        padstack="DUT",
+    )
+    seen: list[str] = []
+    result = recover_spd_ground_reachability(
+        source,
+        landings=(landing, standalone),
+        target_layers_by_net={"DGND": ("Signal$GND",)},
+        target_node_predicate=lambda _net, _layer, node_id, *_coords: (
+            seen.append(node_id) or node_id in {"NodeViaTarget", "NodeStandalone"}
+        ),
+        include_traces=False,
+    )
+    assert result.reaches(landing, "Signal$GND")
+    assert result.reaches(standalone, "Signal$GND")
+    assert seen == ["NodeRequested", "NodeViaTarget", "NodeStandalone"]
+    assert result.statistics["trace_section_passes"] == 0
+    assert result.statistics["target_nodes_filtered"] == 1
+
+
+def test_ground_reachability_deferred_filtered_trace_artwork_matches_unfiltered_oracle(
+    tmp_path: Path,
+) -> None:
+    """PWR Trace-to-artwork seams recover filtered contacts with exact hashes."""
+
+    source, _analysis = _recoverable_via_source(
+        tmp_path,
+        node_lines=(
+            "NodeTraceStart!!1::VDD_CORE/0 X = -1mm Y = 5mm Layer = Signal$L08 PadStack = DUT\n"
+            "NodeTraceBoundary!!1::VDD_CORE/0 X = 0mm Y = 5mm Layer = Signal$L08 PadStack = DUT\n"
+            "NodeTraceTarget!!1::VDD_CORE/0 X = 0.5mm Y = 5mm Layer = Signal$L08 PadStack = DUT"
+        ),
+        via_lines="",
+        trace_lines=(
+            "TraceFinite::VDD_CORE/0 StartingNode = NodeTraceStart::VDD_CORE/0 "
+            "EndingNode = NodeTraceBoundary::VDD_CORE/0 Width = 2mm"
+        ),
+    )
+    landing = SpdViaLanding(
+        via_id="ViaTrace",
+        net="VDD_CORE/0",
+        endpoint_node_id="NodeTraceStart",
+        x_um=-1000.0,
+        y_um=5000.0,
+        padstack="DUT",
+    )
+
+    def component(_net: str, _layer: str, *_coords: float) -> str:
+        return "component"
+
+    def target(_net: str, _layer: str, node_id: str, *_coords: float) -> bool:
+        return node_id == "NodeTraceTarget"
+
+    def trace_contact(_net: str, *_args: object) -> tuple[str, str]:
+        return "Signal$L08", "component"
+
+    kwargs = dict(
+        landings=(landing,),
+        target_layers_by_net={"VDD_CORE/0": ("Signal$L08",)},
+        same_layer_artwork_component=component,
+        target_node_predicate=target,
+        target_trace_contact_predicate=trace_contact,
+    )
+    oracle = recover_spd_ground_reachability(source, **kwargs)
+    filtered = recover_spd_ground_reachability(
+        source,
+        same_layer_artwork_layers_by_net={"DGND": ("Signal$L08",)},
+        **kwargs,
+    )
+    key = ("viatrace", "nodetracestart", "signal$l08")
+    assert filtered.reachable_keys == oracle.reachable_keys
+    assert filtered.unreachable_keys == oracle.unreachable_keys
+    assert filtered.target_contacts_by_key[key] == oracle.target_contacts_by_key[key]
+    assert filtered.target_contact_count_by_key[key] == oracle.target_contact_count_by_key[key]
+    assert filtered.target_contact_hash_by_key[key] == oracle.target_contact_hash_by_key[key]
+    assert filtered.statistics["conditional_target_component_passes"] == 1
+    assert filtered.statistics["conditional_target_components_recovered"] >= 1
+    assert oracle.statistics["conditional_target_component_passes"] == 0
+
+    # A generic seam callback without an exact scalar artwork resolver must
+    # fail safe to the unfiltered path rather than discard contact candidates.
+    no_resolver_kwargs = {**kwargs, "same_layer_artwork_component": None}
+    no_resolver_seen: list[str] = []
+    no_resolver_kwargs["target_node_predicate"] = (
+        lambda _net, _layer, node_id, *_coords: (
+            no_resolver_seen.append(node_id) or node_id == "NodeTraceTarget"
+        )
+    )
+    no_resolver = recover_spd_ground_reachability(
+        source,
+        same_layer_artwork_layers_by_net={"DGND": ("Signal$L08",)},
+        **no_resolver_kwargs,
+    )
+    assert "NodeTraceTarget" in no_resolver_seen
+    assert no_resolver.statistics["target_nodes_filtered"] == 0
+    assert no_resolver.statistics["conditional_target_component_passes"] == 0
+
+
+def test_mixed_reference_ground_reachability_bridges_strict_same_layer_artwork(
+    tmp_path: Path,
+) -> None:
+    """Intermediate same-plane copper bridges the retained L06 Node chain.
+
+    This is the reduced topology observed for the production C1301_0 path
+    (the retained raw records are Node1247035/Node1247025 on L06 DGND).
+    """
+
+    source = tmp_path / "same-layer-artwork-ground.spd"
+    payload = MINI_SPD.replace(
+        "* Via description lines",
+        "\n".join(
+            (
+                "* Node description lines",
+                "NodeL06A!!1::DGND X = 1.5mm Y = 2mm Layer = Signal$L06 PadStack = DR-0102_60",
+                "NodeL06B!!1::DGND X = 1.6mm Y = 2mm Layer = Signal$L06 PadStack = DR-0102_60",
+                "NodeVoidRoot!!1::DGND X = 2.4mm Y = 2mm Layer = Signal$TOP PadStack = DR-0102_60",
+                "NodeVoid!!1::DGND X = 2.5mm Y = 2mm Layer = Signal$L06 PadStack = DR-0102_60",
+                "NodeVoidB!!1::DGND X = 2.6mm Y = 2mm Layer = Signal$L06 PadStack = DR-0102_60",
+                "NodeBoundaryRoot!!1::DGND X = 2.1mm Y = 2mm Layer = Signal$TOP PadStack = DR-0102_60",
+                "NodeBoundary!!1::DGND X = 2.0mm Y = 2mm Layer = Signal$L06 PadStack = DR-0102_60",
+                "NodeBoundaryB!!1::DGND X = 1.9mm Y = 2mm Layer = Signal$L06 PadStack = DR-0102_60",
+                "NodeTargetInside!!1::DGND X = 1.6mm Y = 2mm Layer = Signal$L08 PadStack = DR-0102_60",
+                "NodeTargetVoid!!1::DGND X = 2.5mm Y = 2mm Layer = Signal$L08 PadStack = DR-0102_60",
+                "NodeTargetBoundary!!1::DGND X = 2.0mm Y = 2mm Layer = Signal$L08 PadStack = DR-0102_60",
+                "* Via description lines",
+            )
+        ),
+    ).replace(
+        "Via2::DGND UpperNode = Node2 LowerNode = Node4 PadStack = DR-0102_60",
+        "\n".join(
+            (
+                "Via2::DGND UpperNode = Node2 LowerNode = Node4 PadStack = DR-0102_60",
+                "ViaInside::DGND UpperNode = Node4 LowerNode = NodeL06A PadStack = DR-0102_60",
+                "ViaInsideTarget::DGND UpperNode = NodeL06B LowerNode = NodeTargetInside PadStack = DR-0102_60",
+                "ViaVoid::DGND UpperNode = NodeVoidRoot LowerNode = NodeVoid PadStack = DR-0102_60",
+                "ViaVoidTarget::DGND UpperNode = NodeVoidB LowerNode = NodeTargetVoid PadStack = DR-0102_60",
+                "ViaBoundary::DGND UpperNode = NodeBoundaryRoot LowerNode = NodeBoundary PadStack = DR-0102_60",
+                "ViaBoundaryTarget::DGND UpperNode = NodeBoundaryB LowerNode = NodeTargetBoundary PadStack = DR-0102_60",
+            )
+        ),
+    )
+    source.write_text(payload, encoding="ascii")
+    landings = tuple(
+        SpdViaLanding(
+            via_id=via,
+            net="DGND",
+            endpoint_node_id="Node4",
+            x_um=1200.0,
+            y_um=2000.0,
+            padstack="DR-0102_60",
+        )
+        for via in ("ViaInside", "ViaVoid", "ViaBoundary")
+    )
+    landings = tuple(
+        replace(landing, endpoint_node_id=endpoint)
+        for landing, endpoint in zip(
+            landings, ("NodeL06A", "NodeVoid", "NodeBoundary"), strict=True
+        )
+    )
+    # Keep the component callback strict: the two interior L06 nodes share one
+    # ordered-artwork component, while the void and boundary points do not.
+    def component(_net: str, layer: str, x_um: float, _y_um: float) -> object | None:
+        return (
+            "L06-component"
+            if layer == "Signal$L06" and 1000.0 < x_um < 2000.0
+            else None
+        )
+
+    without_artwork = recover_spd_ground_reachability(
+        source,
+        landings=landings,
+        target_layers_by_net={"DGND": ("Signal$L08",)},
+        target_node_predicate=lambda _net, _layer, node_id, _x, _y: node_id
+        in {"NodeTargetInside", "NodeTargetVoid", "NodeTargetBoundary"},
+    )
+    assert not without_artwork.reaches(landings[0], "Signal$L08")
+    result = recover_spd_ground_reachability(
+        source,
+        landings=landings,
+        target_layers_by_net={"DGND": ("Signal$L08",)},
+        same_layer_artwork_layers_by_net={"DGND": ("Signal$L06",)},
+        same_layer_artwork_component=component,
+        target_node_predicate=lambda _net, _layer, node_id, _x, _y: node_id
+        in {"NodeTargetInside", "NodeTargetVoid", "NodeTargetBoundary"},
+    )
+    assert result.reaches(landings[0], "Signal$L08")
+    assert not result.reaches(landings[1], "Signal$L08")
+    assert not result.reaches(landings[2], "Signal$L08")
+
+
+def test_ordered_artwork_component_rejects_void_and_boundary_points() -> None:
+    geometry = SpdPlaneGeometry(
+        layer="L06",
+        net="DGND",
+        positive_polygons_um=(
+            ((0.0, 0.0), (10.0, 0.0), (10.0, 10.0), (0.0, 10.0)),
+            ((20.0, 0.0), (30.0, 0.0), (30.0, 10.0), (20.0, 10.0)),
+        ),
+        negative_polygons_um=(
+            ((4.0, 4.0), (6.0, 4.0), (6.0, 6.0), (4.0, 6.0)),
+        ),
+        primitive_order=(
+            ("positive_polygon", 0),
+            ("positive_polygon", 1),
+            ("negative_polygon", 0),
+        ),
+    )
+    indexed = IndexedPlaneGeometry.build(geometry)
+    assert indexed is not None
+    assert indexed.artwork_component(1.0, 1.0) == 0
+    assert indexed.artwork_component(1.0e-7, 5.0) == 0
+    assert indexed.artwork_component(21.0, 1.0) == 1
+    assert indexed.artwork_component(5.0, 5.0) is None
+    assert indexed.artwork_component(0.0, 5.0) is None
+    assert all(key < 0 for key in indexed._shape_cache)
+
+    invalid = IndexedPlaneGeometry.build(
+        SpdPlaneGeometry(
+            layer="L07",
+            net="DGND",
+            positive_polygons_um=(((0.0, 0.0), (1.0, 0.0), (1.0, 1.0), (0.0, 1.0)),),
+            negative_polygons_um=(((0.0, 0.0), (1.0, 0.0), (1.0, 1.0), (0.0, 1.0)),),
+            primitive_order=(("positive_polygon", 0), ("negative_polygon", 0)),
+        )
+    )
+    assert invalid is not None
+    assert invalid.artwork_component(0.5, 0.5) is None
+    assert invalid.artwork_shape_built
+    invalid.release_artwork_shape()
+    assert invalid.artwork_shape_built
+
+
+def test_ordered_artwork_batch_matches_scalar_for_negative_circle_sliver() -> None:
+    """Batch ``within`` keeps scalar ordered-circle sliver semantics."""
+
+    geometry = SpdPlaneGeometry(
+        layer="L02",
+        net="DGND",
+        positive_polygons_um=(
+            ((-10.0, -10.0), (10.0, -10.0), (10.0, 10.0), (-10.0, 10.0)),
+        ),
+        negative_polygons_um=(),
+        negative_circles_um=((0.0, 0.0, 1.0),),
+        primitive_order=(("positive_polygon", 0), ("negative_circle", 0)),
+    )
+    indexed = IndexedPlaneGeometry.build(geometry)
+    assert indexed is not None
+    singleton = indexed._artwork_components()
+    assert singleton is not False
+    assert len(singleton[0]) == 1
+    theta = math.pi / 256.0
+    points = (
+        (math.cos(theta) * 0.99996, math.sin(theta) * 0.99996),
+        (0.0, 0.0),
+        (10.0, 0.0),
+        (0.0, 10.0),
+    )
+    scalar = tuple(indexed.artwork_component(*point) for point in points)
+    assert indexed.artwork_components_batch(points) == scalar
+    indexed.release_artwork_shape()
+    assert indexed.artwork_shape_built
+    assert indexed.artwork_components_batch(points) == scalar
+
+    split = SpdPlaneGeometry(
+        layer="L06",
+        net="DGND",
+        positive_polygons_um=(
+            ((0.0, 0.0), (10.0, 0.0), (10.0, 10.0), (0.0, 10.0)),
+        ),
+        negative_polygons_um=(
+            ((4.0, -1.0), (6.0, -1.0), (6.0, 11.0), (4.0, 11.0)),
+        ),
+        primitive_order=(("positive_polygon", 0), ("negative_polygon", 0)),
+    )
+    split_index = IndexedPlaneGeometry.build(split)
+    assert split_index is not None
+    assert split_index.artwork_component(2.0, 5.0) == 0
+    assert split_index.artwork_component(8.0, 5.0) == 1
+    assert split_index.artwork_component(5.0, 5.0) is None
+    split_points = ((2.0, 5.0), (8.0, 5.0), (5.0, 5.0), (4.0, 5.0), (10.0, 5.0))
+    assert split_index.artwork_components_batch(split_points) == tuple(
+        split_index.artwork_component(*point) for point in split_points
+    )
+
+    contact = split_index.artwork_trace_component(-1.0, 5.0, 5.0, 5.0, 2.0)
+    assert contact is not None
+    assert contact[0] == 0
+    assert 0.0 < contact[1] < 4.0
+    assert split_index.artwork_trace_component(-1.0, 20.0, 5.0, 20.0, 2.0) is None
+    assert split_index.artwork_trace_component(-1.0, 5.0, 5.0, 5.0, 0.0) is None
+    assert split_index.artwork_trace_component(0.0, 0.0, 0.0, 10.0, 2.0) is not None
+    assert split_index.artwork_trace_component(-1.0, 5.0, 31.0, 5.0, 2.0) is None
+
+
+def test_local_artwork_replay_matches_legacy_ordered_geometry() -> None:
+    """Spatial-local run replay preserves the legacy final geometry exactly."""
+
+    from shapely.ops import unary_union
+
+    geometry = SpdPlaneGeometry(
+        layer="L07",
+        net="DGND",
+        positive_polygons_um=(
+            ((0.0, 0.0), (20.0, 0.0), (20.0, 20.0), (0.0, 20.0)),
+            ((30.0, 0.0), (50.0, 0.0), (50.0, 20.0), (30.0, 20.0)),
+            ((18.0, 8.0), (32.0, 8.0), (32.0, 12.0), (18.0, 12.0)),
+        ),
+        negative_polygons_um=(
+            ((4.0, 4.0), (16.0, 4.0), (16.0, 16.0), (4.0, 16.0)),
+            ((34.0, 4.0), (46.0, 4.0), (46.0, 16.0), (34.0, 16.0)),
+        ),
+        primitive_order=(
+            ("positive_polygon", 0),
+            ("positive_polygon", 1),
+            ("negative_polygon", 0),
+            ("negative_polygon", 1),
+            ("positive_polygon", 2),
+        ),
+    )
+    indexed = IndexedPlaneGeometry.build(geometry)
+    assert indexed is not None
+    local = indexed._artwork_components()
+    assert local is not False
+    local_shape = unary_union(local[0])
+    legacy = core_services._ordered_spd_geometry(
+        {
+            "positive_polygons_um": geometry.positive_polygons_um,
+            "negative_polygons_um": geometry.negative_polygons_um,
+            "positive_circles_um": (),
+            "negative_circles_um": (),
+            "primitive_order": geometry.primitive_order,
+        }
+    )
+    assert legacy is not None
+    assert local_shape.is_valid
+    assert local_shape.symmetric_difference(legacy).is_empty
+
+
+def test_ground_reachability_accepts_only_finite_trace_artwork_contact(
+    tmp_path: Path,
+) -> None:
+    source, _analysis = _recoverable_via_source(
+        tmp_path,
+            node_lines=(
+                "NodeTraceStart!!1::DGND X = -1mm Y = 5mm Layer = Signal$L08 PadStack = DUT\n"
+                "NodeTraceBoundary!!1::DGND X = 0mm Y = 5mm Layer = Signal$L08 PadStack = DUT\n"
+                "NodeTraceTarget!!1::DGND X = 0.5mm Y = 5mm Layer = Signal$L08 PadStack = DUT"
+        ),
+        via_lines="",
+        trace_lines=(
+            "TraceFinite::DGND StartingNode = NodeTraceStart::DGND "
+            "EndingNode = NodeTraceBoundary::DGND Width = 2mm"
+        ),
+    )
+    landing = SpdViaLanding(
+        via_id="ViaTrace",
+        net="DGND",
+        endpoint_node_id="NodeTraceStart",
+        x_um=-1000.0,
+        y_um=5000.0,
+        padstack="DR-0102_60",
+    )
+    no_contact = recover_spd_ground_reachability(
+        source,
+        landings=(landing,),
+        target_layers_by_net={"DGND": ("Signal$L08",)},
+        same_layer_artwork_layers_by_net={"DGND": ("Signal$L08",)},
+        same_layer_artwork_component=lambda *_args: "component",
+        target_node_predicate=lambda *_args: False,
+    )
+    assert not no_contact.reaches(landing, "Signal$L08")
+    seen_nets: list[str] = []
+    def trace_contact(net: str, *_args):
+        seen_nets.append(net)
+        assert net == "DGND"
+        return "Signal$L08", "component"
+    result = recover_spd_ground_reachability(
+        source,
+        landings=(landing,),
+        target_layers_by_net={"DGND": ("Signal$L08",)},
+        same_layer_artwork_component=lambda *_args: "component",
+        target_node_predicate=lambda _net, _layer, node_id, *_args: node_id
+        == "NodeTraceTarget",
+        target_trace_contact_predicate=trace_contact,
+    )
+    assert result.reaches(landing, "Signal$L08")
+    assert seen_nets == ["DGND"]
+
+
+def test_trace_artwork_contact_second_pass_skips_irrelevant_components(
+    tmp_path: Path,
+) -> None:
+    """Only unresolved requested roots may invoke the expensive seam callback."""
+
+    irrelevant_nodes = "\n".join(
+        f"NodeIrrelevant{index}A!!1::DGND X = {100 + index}mm Y = 5mm "
+        "Layer = Signal$L08 PadStack = DUT\n"
+        f"NodeIrrelevant{index}B!!1::DGND X = {100.5 + index}mm Y = 5mm "
+        "Layer = Signal$L08 PadStack = DUT"
+        for index in range(48)
+    )
+    irrelevant_traces = "\n".join(
+        f"TraceIrrelevant{index}::DGND StartingNode = NodeIrrelevant{index}A::DGND "
+        f"EndingNode = NodeIrrelevant{index}B::DGND Width = 2mm"
+        for index in range(48)
+    )
+    source, _analysis = _recoverable_via_source(
+        tmp_path,
+        node_lines=(
+            "NodeTraceStart!!1::DGND X = -1mm Y = 5mm Layer = Signal$L08 PadStack = DUT\n"
+            "NodeTraceBoundary!!1::DGND X = 0mm Y = 5mm Layer = Signal$L08 PadStack = DUT\n"
+            "NodeTraceTarget!!1::DGND X = 0.5mm Y = 5mm Layer = Signal$L08 PadStack = DUT\n"
+            + irrelevant_nodes
+        ),
+        via_lines="",
+        trace_lines=(
+            "TraceFinite::DGND StartingNode = NodeTraceStart::DGND "
+            "EndingNode = NodeTraceBoundary::DGND Width = 2mm\n"
+            + irrelevant_traces
+        ),
+    )
+    landing = SpdViaLanding(
+        via_id="ViaTrace",
+        net="DGND",
+        endpoint_node_id="NodeTraceStart",
+        x_um=-1000.0,
+        y_um=5000.0,
+        padstack="DR-0102_60",
+    )
+    callback_calls: list[str] = []
+
+    def trace_contact(net: str, *_args):
+        callback_calls.append(net)
+        return "Signal$L08", "component"
+
+    result = recover_spd_ground_reachability(
+        source,
+        landings=(landing,),
+        target_layers_by_net={"DGND": ("Signal$L08",)},
+        same_layer_artwork_component=lambda *_args: "component",
+        target_node_predicate=lambda _net, _layer, node_id, *_args: node_id
+        == "NodeTraceTarget",
+        target_trace_contact_predicate=trace_contact,
+    )
+    assert result.reaches(landing, "Signal$L08")
+    assert callback_calls == ["DGND"]
+    assert result.statistics["trace_artwork_conditional_passes"] == 1
+    assert result.statistics["trace_artwork_conditional_checks"] == 1
+    assert result.statistics["trace_artwork_conditional_successes"] == 1
+    no_trace_calls: list[str] = []
+    no_trace = recover_spd_ground_reachability(
+        source,
+        landings=(landing,),
+        target_layers_by_net={"DGND": ("Signal$L08",)},
+        same_layer_artwork_component=lambda *_args: "component",
+        target_node_predicate=lambda _net, _layer, node_id, *_args: node_id
+        == "NodeTraceTarget",
+        target_trace_contact_predicate=lambda net, *_args: (
+            no_trace_calls.append(net) or ("Signal$L08", "component")
+        ),
+        include_traces=False,
+    )
+    assert not no_trace.reaches(landing, "Signal$L08")
+    assert no_trace_calls == []
+    assert no_trace.statistics["trace_section_passes"] == 0
+    assert no_trace.statistics["trace_artwork_conditional_passes"] == 0
+
+
+def test_trace_artwork_contact_collects_all_target_layers_before_union(
+    tmp_path: Path,
+) -> None:
+    source, _analysis = _recoverable_via_source(
+        tmp_path,
+        node_lines=(
+            "NodeStart!!1::DGND X = -1mm Y = 5mm Layer = Signal$L08 PadStack = DUT\n"
+            "NodeL09Start!!1::DGND X = -1mm Y = 6mm Layer = Signal$L09 PadStack = DUT\n"
+            "NodeL08Boundary!!1::DGND X = 0mm Y = 5mm Layer = Signal$L08 PadStack = DUT\n"
+            "NodeL09Boundary!!1::DGND X = 0mm Y = 6mm Layer = Signal$L09 PadStack = DUT\n"
+            "NodeL08Target!!1::DGND X = 0.5mm Y = 5mm Layer = Signal$L08 PadStack = DUT\n"
+            "NodeL09Target!!1::DGND X = 0.5mm Y = 6mm Layer = Signal$L09 PadStack = DUT"
+        ),
+        via_lines="ViaL09::DGND UpperNode = NodeStart LowerNode = NodeL09Start PadStack = DUT",
+        trace_lines=(
+            "TraceL08::DGND StartingNode = NodeStart::DGND EndingNode = NodeL08Boundary::DGND Width = 2mm\n"
+            "TraceL09::DGND StartingNode = NodeL09Start::DGND EndingNode = NodeL09Boundary::DGND Width = 2mm"
+        ),
+    )
+    landing = SpdViaLanding(
+        via_id="ViaTrace",
+        net="DGND",
+        endpoint_node_id="NodeStart",
+        x_um=-1000.0,
+        y_um=5000.0,
+        padstack="DR-0102_60",
+    )
+
+    def trace_contact(_net: str, trace_id: str, *_args):
+        return ("Signal$L08", "component-08") if trace_id == "TraceL08" else (
+            "Signal$L09", "component-09"
+        )
+
+    result = recover_spd_ground_reachability(
+        source,
+        landings=(landing,),
+        target_layers_by_net={"DGND": ("Signal$L08", "Signal$L09")},
+        same_layer_artwork_component=lambda _net, layer, *_args: (
+            "component-08" if layer.casefold() == "signal$l08" else "component-09"
+        ),
+        target_node_predicate=lambda _net, _layer, node_id, *_args: node_id
+        in {"NodeL08Target", "NodeL09Target"},
+        target_trace_contact_predicate=trace_contact,
+    )
+    assert result.reaches(landing, "Signal$L08")
+    assert result.reaches(landing, "Signal$L09")
+    assert result.statistics["trace_artwork_conditional_successes"] == 2
+
+
+def test_trace_artwork_contact_preserves_all_same_layer_candidates(
+    tmp_path: Path,
+) -> None:
+    source, _analysis = _recoverable_via_source(
+        tmp_path,
+        node_lines=(
+            "NodeStart!!1::DGND X = -1mm Y = 5mm Layer = Signal$L08 PadStack = DUT\n"
+            "NodeBoundaryA!!1::DGND X = 0mm Y = 5mm Layer = Signal$L08 PadStack = DUT\n"
+            "NodeBoundaryB!!1::DGND X = 1mm Y = 5mm Layer = Signal$L08 PadStack = DUT\n"
+            "NodeTargetA!!1::DGND X = 0.5mm Y = 5mm Layer = Signal$L08 PadStack = DUT\n"
+            "NodeTargetB!!1::DGND X = 1.5mm Y = 5mm Layer = Signal$L08 PadStack = DUT"
+        ),
+        via_lines="",
+        trace_lines=(
+            "TraceA::DGND StartingNode = NodeStart::DGND EndingNode = NodeBoundaryA::DGND Width = 2mm\n"
+            "TraceB::DGND StartingNode = NodeStart::DGND EndingNode = NodeBoundaryB::DGND Width = 2mm"
+        ),
+    )
+    landing = SpdViaLanding(
+        via_id="ViaTrace",
+        net="DGND",
+        endpoint_node_id="NodeStart",
+        x_um=0.0,
+        y_um=5000.0,
+        padstack="DR-0102_60",
+    )
+
+    def trace_contact(_net: str, trace_id: str, *_args):
+        return ("Signal$L08", "component-a") if trace_id == "TraceA" else (
+            "Signal$L08", "component-b"
+        )
+
+    result = recover_spd_ground_reachability(
+        source,
+        landings=(landing,),
+        target_layers_by_net={"DGND": ("Signal$L08",)},
+        same_layer_artwork_component=lambda _net, _layer, x_um, *_args: (
+            "component-a" if x_um < 1000.0 else "component-b"
+        ),
+        target_node_predicate=lambda _net, _layer, node_id, *_args: node_id
+        in {"NodeTargetA", "NodeTargetB"},
+        target_trace_contact_predicate=trace_contact,
+    )
+    assert result.reaches(landing, "Signal$L08")
+    key = ("viatrace", "nodestart", "signal$l08")
+    assert result.target_contact_count_by_key[key] == 2
+    assert result.target_contacts_by_key[key] == (("NodeTargetA", 500.0, 5000.0),)
+
+
+def test_ground_reachability_nearest_contact_tree_preserves_legacy_ties_and_cache(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Large components use one deterministic tree without changing witnesses."""
+
+    target_coordinates = {
+        "NodeTargetA": (1000.0, 0.0),
+        "NodeTargetB": (1000.0, 0.0),
+        "NodeTargetZ": (-1000.0, 0.0),
+    }
+    target_coordinates.update(
+        {
+            f"NodeTarget{index:02d}": (10_000.0 + index, 2_000.0)
+            for index in range(61)
+        }
+    )
+    node_lines = "\n".join(
+        [
+            "NodeStart!!1::DGND X = 0um Y = 0um Layer = Signal$L08 PadStack = DUT",
+            *(
+                f"{node_id}!!1::DGND X = {x_um:g}um Y = {y_um:g}um "
+                "Layer = Signal$L08 PadStack = DUT"
+                for node_id, (x_um, y_um) in target_coordinates.items()
+            ),
+        ]
+    )
+    target_ids = tuple(target_coordinates)
+    trace_lines = "\n".join(
+        [
+            "TraceStart::DGND StartingNode = NodeStart::DGND "
+            f"EndingNode = {target_ids[0]}::DGND Width = 0.10mm",
+            *(
+                f"Trace{index}::DGND StartingNode = {target_ids[index]}::DGND "
+                f"EndingNode = {target_ids[index + 1]}::DGND Width = 0.10mm"
+                for index in range(len(target_ids) - 1)
+            ),
+        ]
+    )
+    source, _analysis = _recoverable_via_source(
+        tmp_path,
+        node_lines=node_lines,
+        via_lines="",
+        trace_lines=trace_lines,
+    )
+    landings = tuple(
+        SpdViaLanding(
+            via_id=f"ViaTree{index}",
+            net="DGND",
+            endpoint_node_id="NodeStart",
+            x_um=0.0,
+            y_um=0.0,
+            padstack="DR-0102_60",
+        )
+        for index in range(8)
+    )
+
+    builds = 0
+    queries = 0
+    real_tree = spd_io.cKDTree
+
+    class CountingTree:
+        def __init__(self, coordinates):
+            nonlocal builds
+            builds += 1
+            self._tree = real_tree(coordinates)
+
+        def query(self, *args, **kwargs):
+            nonlocal queries
+            queries += 1
+            return self._tree.query(*args, **kwargs)
+
+        def query_ball_point(self, *args, **kwargs):
+            nonlocal queries
+            queries += 1
+            return self._tree.query_ball_point(*args, **kwargs)
+
+    monkeypatch.setattr(spd_io, "cKDTree", CountingTree)
+    result = recover_spd_ground_reachability(
+        source,
+        landings=landings,
+        target_layers_by_net={"DGND": ("Signal$L08",)},
+        target_node_predicate=lambda _net, _layer, node_id, *_args: node_id
+        in target_coordinates,
+    )
+
+    expected_contacts = tuple(
+        sorted(
+            (
+                (node_id, float(x_um), float(y_um))
+                for node_id, (x_um, y_um) in target_coordinates.items()
+            ),
+            key=lambda item: (item[0].casefold(), item[0], item[1], item[2]),
+        )
+    )
+    expected_hash = sha256(repr(expected_contacts).encode("utf-8")).hexdigest()
+    legacy_selected = min(
+        expected_contacts,
+        key=lambda item: (
+            item[1] ** 2 + item[2] ** 2,
+            item[0].casefold(),
+            item[0],
+            item[1],
+            item[2],
+        ),
+    )
+    for landing in landings:
+        key = (landing.via_id.casefold(), "nodestart", "signal$l08")
+        assert result.reaches(landing, "Signal$L08")
+        assert result.target_contact_count_by_key[key] == len(expected_contacts)
+        assert result.target_contact_hash_by_key[key] == expected_hash
+        # NodeTargetA wins both the duplicate-coordinate and equidistant ties,
+        # matching the pre-tree exact min key byte-for-byte.
+        assert result.target_contacts_by_key[key] == (legacy_selected,)
+        assert legacy_selected == ("NodeTargetA", 1000.0, 0.0)
+    assert builds == 1
+    assert queries == 2 * len(landings)
+
+
+def test_ground_reachability_tree_preserves_subnormal_legacy_distance_tie(
+    tmp_path: Path,
+) -> None:
+    """Tree radius derives from Python d² for extremely small coordinates."""
+
+    source_x = -5.291516328261232e-157
+    source_y = source_x
+    target_coordinates = {
+        "NodeN000": (8.920401028942637e-155, 8.920401028942637e-155),
+        "NodeN006": (8.920401028942635e-155, 8.920401028942635e-155),
+    }
+    target_coordinates.update(
+        {
+            f"NodeTarget{index:02d}": (10_000.0 + index, 2_000.0)
+            for index in range(62)
+        }
+    )
+    node_lines = "\n".join(
+        [
+            f"NodeStart!!1::DGND X = {source_x:.17e}um Y = {source_y:.17e}um "
+            "Layer = Signal$L08 PadStack = DUT",
+            *(
+                f"{node_id}!!1::DGND X = {x_um:.17e}um Y = {y_um:.17e}um "
+                "Layer = Signal$L08 PadStack = DUT"
+                for node_id, (x_um, y_um) in target_coordinates.items()
+            ),
+        ]
+    )
+    target_ids = tuple(target_coordinates)
+    trace_lines = "\n".join(
+        [
+            "TraceStart::DGND StartingNode = NodeStart::DGND "
+            f"EndingNode = {target_ids[0]}::DGND Width = 0.10mm",
+            *(
+                f"Trace{index}::DGND StartingNode = {target_ids[index]}::DGND "
+                f"EndingNode = {target_ids[index + 1]}::DGND Width = 0.10mm"
+                for index in range(len(target_ids) - 1)
+            ),
+        ]
+    )
+    source, _analysis = _recoverable_via_source(
+        tmp_path,
+        node_lines=node_lines,
+        via_lines="",
+        trace_lines=trace_lines,
+    )
+    landing = SpdViaLanding(
+        via_id="ViaSubnormal",
+        net="DGND",
+        endpoint_node_id="NodeStart",
+        x_um=source_x,
+        y_um=source_y,
+        padstack="DR-0102_60",
+    )
+    result = recover_spd_ground_reachability(
+        source,
+        landings=(landing,),
+        target_layers_by_net={"DGND": ("Signal$L08",)},
+        target_node_predicate=lambda _net, _layer, node_id, *_args: node_id
+        in target_coordinates,
+    )
+    key = ("viasubnormal", "nodestart", "signal$l08")
+    assert result.reaches(landing, "Signal$L08")
+    # Both Python d² values round to the same subnormal float; the legacy
+    # identifier tie-break therefore selects N000, not cKDTree's N006 order.
+    assert result.target_contacts_by_key[key] == (
+        (
+            "NodeN000",
+            target_coordinates["NodeN000"][0],
+            target_coordinates["NodeN000"][1],
+        ),
+    )
+
+
+def test_ground_reachability_nonfinite_source_origin_remains_fail_closed(
+    tmp_path: Path,
+) -> None:
+    source, _analysis = _recoverable_via_source(
+        tmp_path,
+        node_lines=(
+            "NodeStart!!1::DGND X = 0um Y = 0um Layer = Signal$L08 PadStack = DUT\n"
+            "NodeTarget!!1::DGND X = 1mm Y = 0um Layer = Signal$L08 PadStack = DUT"
+        ),
+        via_lines="",
+        trace_lines=(
+            "TraceStart::DGND StartingNode = NodeStart::DGND "
+            "EndingNode = NodeTarget::DGND Width = 0.10mm"
+        ),
+    )
+    landing = SpdViaLanding(
+        via_id="ViaNonfinite",
+        net="DGND",
+        endpoint_node_id="NodeStart",
+        x_um=float("inf"),
+        y_um=0.0,
+        padstack="DR-0102_60",
+    )
+    result = recover_spd_ground_reachability(
+        source,
+        landings=(landing,),
+        target_layers_by_net={"DGND": ("Signal$L08",)},
+        target_node_predicate=lambda _net, _layer, node_id, *_args: node_id
+        == "NodeTarget",
+    )
+    assert not result.reaches(landing, "Signal$L08")
+    assert result.target_contacts_by_key == {}
 
 
 def test_mixed_reference_ground_reachability_fails_closed_when_target_unreachable(
@@ -2642,6 +3737,52 @@ def test_netlist_uses_explicit_group_markers_and_inherited_rows(tmp_path: Path) 
     assert ground == ("DGND", "AGND")
     assert power == ("VDD_CORE/0", "VDD_AUX/0")
     assert "SIG_BEFORE" not in power
+
+
+def test_build_spd_import_plan_reuses_only_validated_geometry_assets(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    source = tmp_path / "geometry-reuse.spd"
+    source.write_text(MINI_SPD, encoding="ascii")
+    analysis = analyze_spd(source, scope="decap_scenario")
+    calls = 0
+    original = core_services._spd_plane_geometry_assets
+
+    def counted(*args, **kwargs):
+        nonlocal calls
+        calls += 1
+        return original(*args, **kwargs)
+
+    monkeypatch.setattr(core_services, "_spd_plane_geometry_assets", counted)
+    current = create_workspace_state().project
+    first = build_spd_import_plan(current, analysis, source)
+    second = build_spd_import_plan(current, analysis, source, _geometry_from_plan=first)
+    third = build_spd_import_plan(current, analysis, source, _geometry_from_plan=first)
+    assert calls == 1
+    first_geometry = first.project.metadata["spd_import"]["plane_geometries"]
+    assert second.project.model_dump(mode="json") == first.project.model_dump(mode="json")
+    assert second.project.metadata["spd_import"]["plane_geometries"] == first_geometry
+    assert second.attachments == first.attachments
+    geometry_names = [item["asset"] for item in first_geometry]
+    assert {
+        name: second.attachments[name] for name in geometry_names
+    } == {name: first.attachments[name] for name in geometry_names}
+    assert third.attachments == second.attachments
+
+    tampered_name = geometry_names[0]
+    tampered = replace(
+        first,
+        attachments={**first.attachments, tampered_name: b"tampered"},
+    )
+    build_spd_import_plan(current, analysis, source, _geometry_from_plan=tampered)
+    assert calls == 2
+
+    changed_ground = current.model_copy(
+        update={"gnd_aliases": (*current.gnd_aliases, "EXTRA_GROUND")}
+    )
+    changed_donor = replace(first, project=changed_ground)
+    build_spd_import_plan(current, analysis, source, _geometry_from_plan=changed_donor)
+    assert calls == 3
 
 
 def test_netlist_full_power_inventory_preserves_other_selection_boundaries(

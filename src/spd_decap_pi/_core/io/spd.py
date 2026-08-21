@@ -14,11 +14,13 @@ from collections import Counter
 from collections.abc import Callable, Iterable, Iterator, Mapping, Sequence
 from dataclasses import dataclass, field, replace
 import hashlib
-from math import isfinite, log10
+from math import isfinite, log10, nextafter, sqrt
 import mmap
 from pathlib import Path
 import re
 from typing import Literal
+
+from scipy.spatial import cKDTree
 
 from ..domain import (
     DielectricPropertyPoint,
@@ -507,6 +509,10 @@ _SHAPE_EVENT_RE = re.compile(
     rb"(?P<net>\S+?)(?P<polarity>[+-])(?:\s+|$))"
 )
 _SHAPE_INDEX_CHUNK_BYTES = 8 * 1024 * 1024
+# A tree is worthwhile only for components large enough that repeated nearest
+# scans dominate its build cost.  Smaller components retain the exact legacy
+# scan, including its deterministic tie-break.
+_NEAREST_CONTACT_TREE_THRESHOLD = 64
 _VIA_RE = re.compile(
     rb"(?m)^(Via[^\r\n:]*)::([^\s]+)\s+"
     rb"UpperNode\s*=\s*(Node[^\s:!]+)(?:!![^\s:]+)?(?:::[^\s]+)?\s+"
@@ -523,6 +529,7 @@ _TRACE_RE = re.compile(
     rb"StartingNode\s*=\s*(Node[^\s:!]+)(?:!![^\s:]+)?(?:::[^\s]+)?\s+"
     rb"EndingNode\s*=\s*(Node[^\s:!]+)(?:!![^\s:]+)?(?:::[^\s]+)?"
 )
+_TRACE_WIDTH_RE = re.compile(rb"\bWidth\s*=\s*(\S+)")
 # The PadStack scan must live inside the optional group; a bare lazy ``.*?`` in
 # front of it always matches empty and makes the fallback unreachable.
 _NODE_ATTR_RE = re.compile(
@@ -3196,6 +3203,19 @@ def recover_spd_ground_reachability(
     landings: Iterable[object],
     target_layers_by_net: Mapping[str, Iterable[str]],
     target_node_predicate: Callable[[str, str, str, float, float], bool] | None = None,
+    target_node_predicate_batch: Callable[
+        [str, str, Sequence[tuple[float, float]]], Sequence[bool]
+    ] | None = None,
+    target_node_predicates_by_key: Mapping[
+        tuple[str, str], Callable[[str, str, str, float, float], bool]
+    ] | None = None,
+    same_layer_artwork_layers_by_net: Mapping[str, Iterable[str]] | None = None,
+    same_layer_artwork_component: Callable[[str, str, float, float], object | None] | None = None,
+    same_layer_artwork_components_batch: Callable[
+        [str, str, Sequence[tuple[float, float]]], Sequence[object | None]
+    ] | None = None,
+    same_layer_artwork_release: Callable[[str, str], None] | None = None,
+    target_trace_contact_predicate: Callable[..., tuple[object, ...] | None] | None = None,
     expected_source: SpdSourceInfo | None = None,
     include_traces: bool = True,
     progress: ProgressCallback | None = None,
@@ -3205,8 +3225,10 @@ def recover_spd_ground_reachability(
 
     This is intentionally a separate batched graph pass from unique Via-path
     recovery: a branching Trace/Via graph is valid for return connectivity but
-    cannot be condensed into one serial RL chain.  Only target-net records are
-    retained, and every Node, Trace, and Via section is scanned at most once.
+    cannot be condensed into one serial RL chain. Trace/Via connectivity is
+    indexed before the single Node/artwork pass; Trace records receive one
+    conditional unresolved-component seam pass when finite-width evidence is
+    required.
 
     ``include_traces=False`` restricts the result to a directly joined local Via
     stack.  Distribution audits use that mode to distinguish unchanged-barrel
@@ -3222,6 +3244,11 @@ def recover_spd_ground_reachability(
         str(net).casefold(): {str(layer).casefold() for layer in layers}
         for net, layers in target_layers_by_net.items()
         if str(net).strip() and any(str(layer).strip() for layer in layers)
+    }
+    artwork_layers = {
+        str(net).casefold(): {str(layer).casefold() for layer in layers}
+        for net, layers in (same_layer_artwork_layers_by_net or {}).items()
+        if str(net).strip()
     }
     requested_by_key: dict[tuple[str, str, str], str] = {}
     requested_coordinates: dict[tuple[str, str, str], tuple[float, float]] = {}
@@ -3245,6 +3272,13 @@ def recover_spd_ground_reachability(
             "requested": 0, "reachable": 0, "unreachable": 0,
             "node_section_passes": 0, "trace_section_passes": 0,
             "via_section_passes": 0, "components": 0,
+            "node_release_index_passes": 0,
+            "deferred_artwork_passes": 0, "deferred_artwork_keys": 0,
+            "max_live_artwork_shapes": 0,
+            "target_nodes_considered": 0, "target_nodes_filtered": 0,
+            "conditional_target_component_passes": 0,
+            "conditional_target_components_scanned": 0,
+            "conditional_target_components_recovered": 0,
         })
 
     try:
@@ -3304,6 +3338,11 @@ def recover_spd_ground_reachability(
     target_coordinates_by_net: dict[str, dict[str, tuple[str, float, float]]] = {
         net: {} for net in target_layers
     }
+    target_layers_by_node: dict[str, dict[str, str]] = {net: {} for net in target_layers}
+    node_positions_by_net: dict[str, dict[str, tuple[str, float, float]]] = {
+        net: {} for net in target_layers
+    }
+    layer_display_by_key: dict[tuple[str, str], str] = {}
     node_index_by_net: dict[str, dict[str, int]] = {
         net: {} for net in target_layers
     }
@@ -3313,6 +3352,109 @@ def recover_spd_ground_reachability(
     graph_edges = 0
     trace_edges = 0
     via_edges = 0
+    artwork_edges = 0
+    artwork_nodes = 0
+    artwork_components: set[tuple[str, str, str]] = set()
+    artwork_representatives: dict[tuple[str, str, str], int] = {}
+    artwork_trace_contacts = 0
+    artwork_component_members_registered: set[tuple[str, str, str]] = set()
+    trace_artwork_conditional_passes = 0
+    conditional_node_position_passes = 0
+    trace_artwork_conditional_checks = 0
+    trace_artwork_conditional_successes = 0
+    target_nodes_considered = 0
+    target_nodes_filtered = 0
+    filtered_target_nets: set[str] = set()
+    conditional_target_component_passes = 0
+    conditional_target_components_scanned = 0
+    conditional_target_components_recovered = 0
+    artwork_batch_points: dict[tuple[str, str], list[tuple[str, int | None, float, float]]] = {}
+    target_batch_points: dict[tuple[str, str], list[tuple[int, str, float, float, str]]] = {}
+    deferred_artwork_offsets: dict[tuple[str, str], array] = {}
+    deferred_artwork_key_order: list[tuple[str, str]] = []
+    target_latest_offsets: dict[tuple[str, str], int] = {}
+    artwork_batch_total = 0
+    target_batch_total = 0
+    batch_progress = 15
+    node_release_index_passes = 0
+    deferred_artwork_passes = 0
+    deferred_artwork_keys = 0
+    max_live_artwork_shapes = 0
+
+    def report_batch_progress(message: str) -> None:
+        nonlocal batch_progress
+        # Keep the graph's bounded sub-phase monotonic while leaving room for
+        # the subsequent Trace/Via and certificate phases.
+        batch_progress = min(40, batch_progress + 1)
+        reporter.report(batch_progress, message)
+
+    def flush_artwork_batches() -> None:
+        nonlocal artwork_nodes, artwork_edges, artwork_batch_total
+        if same_layer_artwork_components_batch is None:
+            return
+        for (batch_net, batch_layer), batch in tuple(artwork_batch_points.items()):
+            if not batch:
+                continue
+            reporter.check()
+            components_batch = same_layer_artwork_components_batch(
+                batch_net,
+                batch_layer,
+                tuple((x_um, y_um) for _node_id, _node_index, x_um, y_um in batch),
+            )
+            if len(components_batch) != len(batch):
+                raise SpdImportError("artwork batch resolver returned an invalid result length")
+            for (node_id, node_index, _x_um, _y_um), component in zip(batch, components_batch, strict=True):
+                if component is None:
+                    continue
+                artwork_nodes += 1
+                component_key = (batch_net.casefold(), batch_layer.casefold(), str(component))
+                artwork_components.add(component_key)
+                if node_index is None:
+                    node_index = index_for(batch_net.casefold(), node_id)
+                representative = artwork_representatives.setdefault(component_key, node_index)
+                artwork_component_members_registered.add(component_key)
+                if representative != node_index:
+                    artwork_edges += 1
+                    union_indices(node_index, representative)
+            batch.clear()
+            report_batch_progress("Resolving same-layer artwork batches")
+        artwork_batch_total = 0
+
+    def flush_target_batches() -> None:
+        nonlocal target_batch_total
+        if target_node_predicate_batch is None:
+            return
+        all_decisions: list[tuple[int, str, str, str, float, float, str]] = []
+        for (batch_net, batch_layer), batch in tuple(target_batch_points.items()):
+            if not batch:
+                continue
+            reporter.check()
+            accepted = target_node_predicate_batch(
+                batch_net,
+                batch_layer,
+                tuple((x_um, y_um) for _seq, _node_id, x_um, y_um, _display in batch),
+            )
+            if len(accepted) != len(batch):
+                raise SpdImportError("target batch resolver returned an invalid result length")
+            all_decisions.extend(
+                (seq, batch_net, batch_layer, display_node_id, x_um, y_um, layer_display)
+                for (seq, display_node_id, x_um, y_um, layer_display), is_target
+                in zip(batch, accepted, strict=True)
+                if is_target
+            )
+            batch.clear()
+            report_batch_progress("Resolving target-node batches")
+        target_batch_total = 0
+        for _seq, batch_net, batch_layer, display_node_id, x_um, y_um, layer_display in sorted(all_decisions):
+            register_target(
+                batch_net.casefold(),
+                batch_layer.casefold(),
+                display_node_id,
+                x_um,
+                y_um,
+                _seq,
+                layer_display=layer_display,
+            )
 
     def index_for(net_key: str, node_key: str) -> int:
         nonlocal components
@@ -3337,10 +3479,10 @@ def recover_spd_ground_reachability(
             index = parent
         return root
 
-    def union(net_key: str, first: str, second: str) -> None:
+    def union_indices(first_index: int, second_index: int) -> None:
         nonlocal components
-        first_root = find(index_for(net_key, first))
-        second_root = find(index_for(net_key, second))
+        first_root = find(first_index)
+        second_root = find(second_index)
         if first_root == second_root:
             return
         if ranks[first_root] < ranks[second_root]:
@@ -3349,6 +3491,9 @@ def recover_spd_ground_reachability(
         if ranks[first_root] == ranks[second_root]:
             ranks[first_root] += 1
         components -= 1
+
+    def union(net_key: str, first: str, second: str) -> None:
+        union_indices(index_for(net_key, first), index_for(net_key, second))
 
     def node_identity(raw: bytes) -> tuple[str, str] | None:
         cuts = [
@@ -3361,6 +3506,34 @@ def recover_spd_ground_reachability(
         node_id = _decode(raw[: min(cuts)])
         net_token = raw[separator + 2 :].split(None, 1)[0]
         return (node_id, _decode(net_token)) if node_id and net_token else None
+
+    def register_target(
+        net_key: str,
+        layer_key: str,
+        node_id: str,
+        x_um: float,
+        y_um: float,
+        source_offset: int,
+        *,
+        layer_display: str,
+    ) -> None:
+        """Apply target mask/coordinates with source-order last-write parity."""
+
+        node_key = node_id.casefold()
+        target_nodes = target_nodes_by_net[net_key]
+        target_nodes[node_key] = (
+            target_nodes.get(node_key, 0) | target_bit_by_key[(net_key, layer_key)]
+        )
+        latest_key = (net_key, node_key)
+        previous_offset = target_latest_offsets.get(latest_key)
+        if previous_offset is None or source_offset >= previous_offset:
+            target_latest_offsets[latest_key] = source_offset
+            target_coordinates_by_net[net_key][node_key] = (
+                node_id,
+                float(x_um),
+                float(y_um),
+            )
+            target_layers_by_node[net_key][node_key] = layer_key
 
     try:
         with source_path.open("rb") as handle, mmap.mmap(
@@ -3384,12 +3557,58 @@ def recover_spd_ground_reachability(
                         "requested": len(requested), "reachable": 0,
                         "unreachable": len(requested), "node_section_passes": 0,
                         "trace_section_passes": 0, "via_section_passes": 0,
-                        "components": 0,
+                        "components": 0, "node_release_index_passes": 0,
+                        "deferred_artwork_passes": 0, "deferred_artwork_keys": 0,
+                        "max_live_artwork_shapes": 0,
+                        "target_nodes_considered": 0, "target_nodes_filtered": 0,
+                        "conditional_target_component_passes": 0,
+                        "conditional_target_components_scanned": 0,
+                        "conditional_target_components_recovered": 0,
                     }
                 ))
             node_end = trace_start if trace_start > node_start else via_start
             trace_end = via_start if via_start > trace_start else pad_start
             via_end = pad_start if pad_start > via_start else len(data)
+            if include_traces and trace_start >= 0 and trace_end > trace_start:
+                reporter.report(5, "Indexing same-NET GND Trace connectivity")
+                for index, match in enumerate(_TRACE_RE.finditer(data, trace_start, trace_end)):
+                    if index % 8192 == 0:
+                        reporter.check()
+                    trace_net = _decode(match.group(2))
+                    net_key = trace_net.casefold()
+                    if net_key not in node_index_by_net:
+                        continue
+                    first = _decode(match.group(3)).casefold()
+                    second = _decode(match.group(4)).casefold()
+                    union(net_key, first, second)
+                    graph_edges += 1
+                    trace_edges += 1
+            reporter.report(10, "Indexing same-NET GND Via connectivity")
+            for index, match in enumerate(_VIA_RE.finditer(data, via_start, via_end)):
+                if index % 8192 == 0:
+                    reporter.check()
+                net_key = _decode(match.group(2)).casefold()
+                if net_key not in node_index_by_net:
+                    continue
+                first = _decode(match.group(3)).casefold()
+                second = _decode(match.group(4)).casefold()
+                union(net_key, first, second)
+                graph_edges += 1
+                via_edges += 1
+            # For nets without same-layer artwork, a target can only affect a
+            # requested result when its Trace/Via DSU component contains one
+            # of that net's requested landing endpoints.  Seed these roots
+            # before the Node pass so unrelated target Nodes never enter the
+            # target contact/provenance dictionaries. Artwork-bearing nets
+            # intentionally skip this filter because artwork may join roots
+            # while Nodes are scanned.
+            requested_roots_by_net: dict[str, set[int]] = {
+                net_key: set() for net_key in target_layers
+            }
+            for (_via_key, node_key, _target_layer), net_key in requested_by_key.items():
+                requested_roots_by_net.setdefault(net_key, set()).add(
+                    find(index_for(net_key, node_key))
+                )
             reporter.report(15, "Indexing exact mixed-reference GND target nodes")
             for index, (_offset, raw) in enumerate(_iter_lines(data, node_start, node_end)):
                 if index % 16384 == 0:
@@ -3407,7 +3626,391 @@ def recover_spd_ground_reachability(
                 if layer_raw is None:
                     continue
                 layer_key = _decode(layer_raw).casefold()
-                if layer_key in target_layers[net_key]:
+                if (
+                    layer_key in artwork_layers.get(net_key, ())
+                    and (
+                        same_layer_artwork_components_batch is not None
+                        or same_layer_artwork_component is not None
+                    )
+                ):
+                    deferred_key = (net_key, layer_key)
+                    offsets = deferred_artwork_offsets.get(deferred_key)
+                    if offsets is None:
+                        offsets = array("Q")
+                        deferred_artwork_offsets[deferred_key] = offsets
+                        deferred_artwork_key_order.append(deferred_key)
+                    offsets.append(int(_offset))
+                    continue
+                layer_display = layer_display_by_key.get((net_key, layer_key))
+                if layer_display is None:
+                    layer_display = _decode(layer_raw)
+                    layer_display_by_key[(net_key, layer_key)] = layer_display
+                attributes = _NODE_ATTR_RE.search(raw)
+                if attributes is None:
+                    continue
+                try:
+                    x_um = _length_um(attributes.group(1))
+                    y_um = _length_um(attributes.group(2))
+                except ValueError:
+                    continue
+                node_key = node_id.casefold()
+                dense_node_index = node_index_by_net[net_key].get(node_key)
+                # An omitted artwork-layer map means the caller may still be
+                # supplying an artwork callback (legacy/tests); fail safe and
+                # retain all target Nodes in that case.  Production provides
+                # an explicit ground artwork map, so no-artwork nets can use
+                # the requested-root filter; any deferred Trace seam on such
+                # a net is recovered in the bounded conditional Node pass.
+                if (
+                    layer_key in target_layers[net_key]
+                    and (
+                        bool(artwork_layers)
+                        or (
+                            same_layer_artwork_component is None
+                            and same_layer_artwork_components_batch is None
+                        )
+                    )
+                    and (
+                        same_layer_artwork_component is not None
+                        or same_layer_artwork_components_batch is None
+                    )
+                    and (
+                        target_trace_contact_predicate is None
+                        or same_layer_artwork_component is not None
+                    )
+                    and not artwork_layers.get(net_key)
+                ):
+                    target_nodes_considered += 1
+                    requested_roots = requested_roots_by_net.get(net_key, set())
+                    if (
+                        dense_node_index is None
+                        or find(dense_node_index) not in requested_roots
+                    ):
+                        target_nodes_filtered += 1
+                        filtered_target_nets.add(net_key)
+                        continue
+                if (
+                    layer_key in target_layers[net_key]
+                    or layer_key in artwork_layers.get(net_key, ())
+                ):
+                    if (
+                        (
+                            same_layer_artwork_component is not None
+                            or same_layer_artwork_components_batch is not None
+                        )
+                        and layer_key in artwork_layers.get(net_key, ())
+                    ):
+                        if same_layer_artwork_components_batch is not None:
+                            artwork_batch_total += 1
+                            batch_key = (net, layer_display)
+                            artwork_batch_points.setdefault(batch_key, []).append(
+                                (node_key, dense_node_index, float(x_um), float(y_um))
+                            )
+                            if artwork_batch_total >= 32768:
+                                reporter.check()
+                                flush_artwork_batches()
+                            component = None
+                        else:
+                            component = same_layer_artwork_component(
+                                net, layer_display, x_um, y_um
+                            )
+                        if component is not None:
+                            artwork_nodes += 1
+                            component_key = (net_key, layer_key, str(component))
+                            if component_key not in artwork_component_members_registered:
+                                artwork_components.add(component_key)
+                                artwork_component_members_registered.add(component_key)
+                            if dense_node_index is None:
+                                dense_node_index = index_for(net_key, node_key)
+                            representative = artwork_representatives.setdefault(
+                                component_key, dense_node_index
+                            )
+                            if representative != dense_node_index:
+                                artwork_edges += 1
+                                union_indices(dense_node_index, representative)
+                    if layer_key not in target_layers[net_key]:
+                        continue
+                    node_predicate = target_node_predicate
+                    if target_node_predicates_by_key is not None:
+                        node_predicate = target_node_predicates_by_key.get(
+                            (net_key, layer_key), node_predicate
+                        )
+                    strict_target_predicate = target_node_predicates_by_key is not None and (
+                        net_key, layer_key
+                    ) in target_node_predicates_by_key
+                    if target_node_predicate_batch is not None and not strict_target_predicate:
+                        target_batch_total += 1
+                        target_batch_points.setdefault((net, layer_display), []).append(
+                            (int(_offset), node_id, float(x_um), float(y_um), layer_display)
+                        )
+                        if target_batch_total >= 32768:
+                            reporter.check()
+                            # Flush same-layer results first so target nodes
+                            # consume the shared artwork cache in this source
+                            # window; otherwise a later artwork flush could
+                            # repopulate keys that the target flush already
+                            # consumed.
+                            flush_artwork_batches()
+                            flush_target_batches()
+                        continue
+                    if node_predicate is not None:
+                        if not node_predicate(
+                            net, layer_display, node_id, x_um, y_um
+                        ):
+                            continue
+                    register_target(
+                        net_key,
+                        layer_key,
+                        node_id,
+                        x_um,
+                        y_um,
+                        int(_offset),
+                        layer_display=layer_display,
+                    )
+            if deferred_artwork_offsets:
+                deferred_artwork_passes = 1
+                reporter.report(16, "Resolving deferred artwork layers")
+                live_artwork_shapes = 0
+
+                def process_deferred_artwork_batch(
+                    batch_key: tuple[str, str],
+                    records: list[tuple[int, str, str, str, float, float, str]],
+                ) -> None:
+                    nonlocal artwork_nodes, artwork_edges, live_artwork_shapes
+                    if not records:
+                        return
+                    net_key, layer_key = batch_key
+                    # The folded key is only for queueing/release.  Preserve
+                    # each Node's original net/layer spelling when invoking
+                    # callbacks, matching the source-order main pass.
+                    display_groups: dict[tuple[str, str], list[tuple[int, str, str, str, float, float, str]]] = {}
+                    display_order: list[tuple[str, str]] = []
+                    for record in records:
+                        display_key = (record[2], record[3])
+                        group = display_groups.get(display_key)
+                        if group is None:
+                            group = []
+                            display_groups[display_key] = group
+                            display_order.append(display_key)
+                        group.append(record)
+                    if len(display_order) > 1:
+                        for display_key in display_order:
+                            process_deferred_artwork_batch(batch_key, display_groups[display_key])
+                        return
+                    display_net = records[0][2]
+                    display_layer = records[0][3]
+                    points = tuple((record[4], record[5]) for record in records)
+                    if same_layer_artwork_components_batch is not None:
+                        components_batch = same_layer_artwork_components_batch(
+                            display_net,
+                            display_layer,
+                            points,
+                        )
+                    elif same_layer_artwork_component is not None:
+                        components_batch = tuple(
+                            same_layer_artwork_component(
+                                display_net,
+                                display_layer,
+                                record[4],
+                                record[5],
+                            )
+                            for record in records
+                        )
+                    else:
+                        components_batch = (None,) * len(records)
+                    if len(components_batch) != len(records):
+                        raise SpdImportError("deferred artwork resolver returned an invalid result length")
+                    for record, component in zip(records, components_batch, strict=True):
+                        if component is None:
+                            continue
+                        artwork_nodes += 1
+                        component_key = (net_key, layer_key, str(component))
+                        artwork_components.add(component_key)
+                        node_key = record[6]
+                        node_index = node_index_by_net[net_key].get(node_key)
+                        if node_index is None:
+                            node_index = index_for(net_key, node_key)
+                        representative = artwork_representatives.setdefault(
+                            component_key,
+                            node_index,
+                        )
+                        artwork_component_members_registered.add(component_key)
+                        if representative != node_index:
+                            artwork_edges += 1
+                            union_indices(node_index, representative)
+
+                    target_records = [
+                        record
+                        for record in records
+                        if layer_key in target_layers.get(net_key, ())
+                    ]
+                    if not target_records:
+                        report_batch_progress("Resolving deferred artwork batches")
+                        return
+                    strict = (
+                        target_node_predicates_by_key.get((net_key, layer_key))
+                        if target_node_predicates_by_key is not None
+                        else None
+                    )
+                    if strict is not None:
+                        accepted = tuple(
+                            strict(
+                                record[2],
+                                record[3],
+                                record[1],
+                                record[4],
+                                record[5],
+                            )
+                            for record in target_records
+                        )
+                    elif target_node_predicate_batch is not None:
+                        accepted = target_node_predicate_batch(
+                            display_net,
+                            display_layer,
+                            tuple((record[4], record[5]) for record in target_records),
+                        )
+                    elif target_node_predicate is not None:
+                        accepted = tuple(
+                            target_node_predicate(
+                                record[2],
+                                record[3],
+                                record[1],
+                                record[4],
+                                record[5],
+                            )
+                            for record in target_records
+                        )
+                    else:
+                        accepted = (True,) * len(target_records)
+                    if len(accepted) != len(target_records):
+                        raise SpdImportError("deferred target resolver returned an invalid result length")
+                    for record, is_target in zip(target_records, accepted, strict=True):
+                        if not is_target:
+                            continue
+                        register_target(
+                            net_key,
+                            layer_key,
+                            record[1],
+                            record[4],
+                            record[5],
+                            record[0],
+                            layer_display=record[3],
+                        )
+                    report_batch_progress("Resolving deferred artwork batches")
+
+                for deferred_key in deferred_artwork_key_order:
+                    offsets = deferred_artwork_offsets[deferred_key]
+                    deferred_artwork_keys += 1
+                    live_artwork_shapes += 1
+                    max_live_artwork_shapes = max(max_live_artwork_shapes, live_artwork_shapes)
+                    records: list[tuple[int, str, str, str, float, float, str]] = []
+                    try:
+                        for offset in offsets:
+                            line_end = _line_end(data, int(offset), node_end)
+                            raw = data[int(offset):line_end]
+                            if raw.endswith(b"\r"):
+                                raw = raw[:-1]
+                            identity = node_identity(raw)
+                            if identity is None:
+                                continue
+                            node_id, node_net = identity
+                            node_net_key = node_net.casefold()
+                            if (node_net_key, deferred_key[1]) != deferred_key:
+                                continue
+                            layer_raw = _attribute(raw, b"Layer")
+                            attributes = _NODE_ATTR_RE.search(raw)
+                            if layer_raw is None or attributes is None:
+                                continue
+                            layer_display = _decode(layer_raw)
+                            layer_display_by_key.setdefault(deferred_key, layer_display)
+                            try:
+                                x_um = _length_um(attributes.group(1))
+                                y_um = _length_um(attributes.group(2))
+                            except ValueError:
+                                continue
+                            records.append(
+                                (
+                                    int(offset),
+                                    node_id,
+                                    node_net,
+                                    layer_display,
+                                    float(x_um),
+                                    float(y_um),
+                                    node_id.casefold(),
+                                )
+                            )
+                            if len(records) >= 32768:
+                                reporter.check()
+                                process_deferred_artwork_batch(deferred_key, records)
+                                records.clear()
+                        process_deferred_artwork_batch(deferred_key, records)
+                    finally:
+                        if same_layer_artwork_release is not None:
+                            same_layer_artwork_release(*deferred_key)
+                        del offsets[:]
+                        live_artwork_shapes -= 1
+            flush_artwork_batches()
+            flush_target_batches()
+            # The first Trace pass above is deliberately union-only.  Resolve
+            # the handful of components that still lack a real strict target
+            # before considering any finite Trace-to-artwork seam.  This keeps
+            # the expensive geometry callback out of the common case and out
+            # of unrelated boundary traces.
+            pre_contact_masks: dict[int, int] = {}
+            for net_key, targets in target_nodes_by_net.items():
+                for node_key, target_mask in targets.items():
+                    root = find(index_for(net_key, node_key))
+                    pre_contact_masks[root] = (
+                        pre_contact_masks.get(root, 0) | target_mask
+                    )
+            unresolved_root_bits: set[tuple[str, int, int]] = set()
+            if target_trace_contact_predicate is not None:
+                for via, node, target_layer in requested:
+                    net_key = requested_by_key[(via, node, target_layer)]
+                    target_bit = target_bit_by_key[(net_key, target_layer)]
+                    root = find(index_for(net_key, node))
+                    if not (pre_contact_masks.get(root, 0) & target_bit):
+                        unresolved_root_bits.add((net_key, root, target_bit))
+
+            if (
+                include_traces
+                and target_trace_contact_predicate is not None
+                and unresolved_root_bits
+                and trace_start >= 0
+                and trace_end > trace_start
+            ):
+                # Revisit only the Node endpoints belonging to unresolved
+                # components.  Boundary/outside endpoints rejected by the
+                # strict target predicate remain available for finite-width
+                # Trace seam checks, while unrelated target nodes do not stay
+                # resident for the whole import.
+                conditional_node_position_passes = 1
+                reporter.report(72, "Indexing unresolved Trace endpoint coordinates")
+                for index, (_offset, raw) in enumerate(_iter_lines(data, node_start, node_end)):
+                    if index % 16384 == 0:
+                        reporter.check()
+                    if not raw.startswith(b"Node"):
+                        continue
+                    identity = node_identity(raw)
+                    if identity is None:
+                        continue
+                    node_id, net = identity
+                    net_key = net.casefold()
+                    if net_key not in target_layers:
+                        continue
+                    layer_raw = _attribute(raw, b"Layer")
+                    if layer_raw is None:
+                        continue
+                    layer_key = _decode(layer_raw).casefold()
+                    target_bit = target_bit_by_key.get((net_key, layer_key))
+                    if target_bit is None:
+                        continue
+                    node_key = node_id.casefold()
+                    node_index = node_index_by_net[net_key].get(node_key)
+                    if node_index is None:
+                        continue
+                    if (net_key, find(node_index), target_bit) not in unresolved_root_bits:
+                        continue
                     attributes = _NODE_ATTR_RE.search(raw)
                     if attributes is None:
                         continue
@@ -3416,45 +4019,309 @@ def recover_spd_ground_reachability(
                         y_um = _length_um(attributes.group(2))
                     except ValueError:
                         continue
-                    if target_node_predicate is not None:
-                        if not target_node_predicate(
-                            net, _decode(layer_raw), node_id, x_um, y_um
-                        ):
-                            continue
-                    node_key = node_id.casefold()
-                    target_nodes = target_nodes_by_net[net_key]
-                    target_nodes[node_key] = (
-                        target_nodes.get(node_key, 0)
-                        | target_bit_by_key[(net_key, layer_key)]
-                    )
-                    target_coordinates_by_net[net_key][node_key] = (
-                        node_id,
+                    layer_display = layer_display_by_key.get((net_key, layer_key))
+                    if layer_display is None:
+                        layer_display = _decode(layer_raw)
+                        layer_display_by_key[(net_key, layer_key)] = layer_display
+                    node_positions_by_net[net_key][node_key] = (
+                        layer_display,
                         float(x_um),
                         float(y_um),
                     )
-            if include_traces and trace_start >= 0 and trace_end > trace_start:
-                reporter.report(40, "Indexing same-NET GND Trace connectivity")
+                trace_artwork_conditional_passes = 1
+                reporter.report(75, "Checking conditional Trace-to-artwork contacts")
+                pending_seams: dict[
+                    tuple[str, int, int, str, str], tuple[set[str], str, str]
+                ] = {}
                 for index, match in enumerate(_TRACE_RE.finditer(data, trace_start, trace_end)):
                     if index % 8192 == 0:
                         reporter.check()
-                    net_key = _decode(match.group(2)).casefold()
-                    if net_key not in node_index_by_net:
+                    trace_net = _decode(match.group(2))
+                    net_key = trace_net.casefold()
+                    if net_key not in target_layers:
                         continue
-                    first, second = _decode(match.group(3)).casefold(), _decode(match.group(4)).casefold()
-                    union(net_key, first, second)
-                    graph_edges += 1
-                    trace_edges += 1
-            reporter.report(65, "Indexing same-NET GND Via connectivity")
-            for index, match in enumerate(_VIA_RE.finditer(data, via_start, via_end)):
-                if index % 8192 == 0:
-                    reporter.check()
-                net_key = _decode(match.group(2)).casefold()
-                if net_key not in node_index_by_net:
-                    continue
-                first, second = _decode(match.group(3)).casefold(), _decode(match.group(4)).casefold()
-                union(net_key, first, second)
-                graph_edges += 1
-                via_edges += 1
+                    first = _decode(match.group(3)).casefold()
+                    second = _decode(match.group(4)).casefold()
+                    first_position = node_positions_by_net[net_key].get(first)
+                    second_position = node_positions_by_net[net_key].get(second)
+                    if first_position is None or second_position is None:
+                        continue
+                    first_layer_key = first_position[0].casefold()
+                    if (
+                        first_layer_key != second_position[0].casefold()
+                        or first_layer_key not in target_layers[net_key]
+                    ):
+                        continue
+                    target_bit = target_bit_by_key.get((net_key, first_layer_key))
+                    if target_bit is None:
+                        continue
+                    root = find(index_for(net_key, first))
+                    root_bit = (net_key, root, target_bit)
+                    if root_bit not in unresolved_root_bits:
+                        continue
+                    # The graph is already fully unioned, so both endpoints
+                    # should have the same root.  Keep the guard fail-closed
+                    # if a malformed source violates that invariant.
+                    if find(index_for(net_key, second)) != root:
+                        continue
+                    width_match = _TRACE_WIDTH_RE.search(
+                        data,
+                        match.start(),
+                        _line_end(data, match.start(), trace_end),
+                    )
+                    try:
+                        width_um = (
+                            _length_um(width_match.group(1))
+                            if width_match is not None
+                            else 0.0
+                        )
+                    except ValueError:
+                        width_um = 0.0
+                    trace_artwork_conditional_checks += 1
+                    try:
+                        contact = target_trace_contact_predicate(
+                            trace_net,
+                            _decode(match.group(1)),
+                            first,
+                            second,
+                            first_position[0],
+                            first_position[1],
+                            first_position[2],
+                            second_position[0],
+                            second_position[1],
+                            second_position[2],
+                            float(width_um),
+                        )
+                    except Exception:
+                        contact = None
+                    if contact is None or len(contact) != 2:
+                        continue
+                    contact_layer, component = contact
+                    contact_layer_key = str(contact_layer).casefold()
+                    contact_bit = target_bit_by_key.get((net_key, contact_layer_key))
+                    if contact_bit is None or contact_bit != target_bit or component is None:
+                        continue
+                    component_key = (net_key, contact_layer_key, str(component))
+                    seam_key = (
+                        net_key,
+                        root,
+                        target_bit,
+                        contact_layer_key,
+                        str(component),
+                    )
+                    pending = pending_seams.get(seam_key)
+                    if pending is not None:
+                        pending[0].add(first)
+                        continue
+                    pending_seams[seam_key] = ({first}, trace_net, str(contact_layer))
+
+                # A seam-capable net may have target Nodes that are not in a
+                # requested DSU root: the finite Trace can contact their
+                # ordered artwork component and make them witnesses.  Those
+                # Nodes were intentionally omitted by the root prefilter, so
+                # recover only the pending (net, layer, component) tokens in
+                # one bounded source-order pass before reducing components.
+                deferred_component_tokens: dict[tuple[str, str], set[str]] = {}
+                for (
+                    pending_net,
+                    _pending_root,
+                    _pending_bit,
+                    pending_layer,
+                    pending_component,
+                ), (_nodes, _display_net, display_layer) in pending_seams.items():
+                    if pending_net not in filtered_target_nets:
+                        continue
+                    key = (pending_net, pending_layer)
+                    deferred_component_tokens.setdefault(key, set()).add(
+                        pending_component
+                    )
+                def classify_deferred_batch(
+                    batch_key: tuple[str, str, str],
+                    batch: list[tuple[int, str, str, str, float, float, str, str]],
+                ) -> list[tuple[int, str, str, str, float, float, str]]:
+                    if not batch:
+                        return []
+                    batch_net, batch_layer_display, batch_layer = batch_key
+                    batch_net_key = batch_net.casefold()
+                    strict = (
+                        target_node_predicates_by_key.get((batch_net_key, batch_layer))
+                        if target_node_predicates_by_key is not None
+                        else None
+                    )
+                    if strict is not None:
+                        accepted = tuple(
+                            strict(batch_net, layer_display, node_id, x_um, y_um)
+                            for _seq, node_id, _net, layer_display, x_um, y_um, _layer_key, _component in batch
+                        )
+                    elif target_node_predicate_batch is not None:
+                        accepted = target_node_predicate_batch(
+                            batch_net,
+                            batch_layer_display,
+                            tuple((x_um, y_um) for _seq, _node_id, _net, _layer_display, x_um, y_um, _layer_key, _component in batch),
+                        )
+                    elif target_node_predicate is not None:
+                        accepted = tuple(
+                            target_node_predicate(batch_net, layer_display, node_id, x_um, y_um)
+                            for _seq, node_id, _net, layer_display, x_um, y_um, _layer_key, _component in batch
+                        )
+                    else:
+                        accepted = (True,) * len(batch)
+                    if len(accepted) != len(batch):
+                        raise SpdImportError("deferred target resolver returned an invalid result length")
+                    decisions = [
+                        (seq, batch_net, batch_layer, node_id, x_um, y_um, layer_display)
+                        for (seq, node_id, _net, layer_display, x_um, y_um, _layer_key, _component), is_target
+                        in zip(batch, accepted, strict=True)
+                        if is_target
+                    ]
+                    return decisions
+
+                def register_deferred_window(
+                    window: list[tuple[int, str, str, str, float, float, str, str]],
+                ) -> None:
+                    nonlocal conditional_target_components_recovered
+                    if not window:
+                        return
+                    grouped: dict[
+                        tuple[str, str, str],
+                        list[tuple[int, str, str, str, float, float, str, str]],
+                    ] = {}
+                    for record in window:
+                        grouped.setdefault((record[2], record[3], record[6]), []).append(record)
+                    decisions: list[tuple[int, str, str, str, float, float, str]] = []
+                    for batch_key, batch in grouped.items():
+                        decisions.extend(classify_deferred_batch(batch_key, batch))
+                    for (
+                        _seq,
+                        batch_net,
+                        batch_layer,
+                        display_node_id,
+                        x_um,
+                        y_um,
+                        _layer_display,
+                    ) in sorted(decisions):
+                        register_target(
+                            batch_net.casefold(),
+                            batch_layer.casefold(),
+                            display_node_id,
+                            x_um,
+                            y_um,
+                            _seq,
+                            layer_display=_layer_display,
+                        )
+                    conditional_target_components_recovered += len(decisions)
+                    window.clear()
+
+                if deferred_component_tokens and same_layer_artwork_component is not None:
+                    conditional_target_component_passes = 1
+                    reporter.report(78, "Recovering filtered Trace-artwork target contacts")
+                    deferred_window: list[
+                        tuple[int, str, str, str, float, float, str, str]
+                    ] = []
+                    for index, (_offset, raw) in enumerate(_iter_lines(data, node_start, node_end)):
+                        if index % 16384 == 0:
+                            reporter.check()
+                        if not raw.startswith(b"Node"):
+                            continue
+                        identity = node_identity(raw)
+                        if identity is None:
+                            continue
+                        node_id, node_net = identity
+                        node_net_key = node_net.casefold()
+                        if node_net_key not in filtered_target_nets:
+                            continue
+                        layer_raw = _attribute(raw, b"Layer")
+                        attributes = _NODE_ATTR_RE.search(raw)
+                        if layer_raw is None or attributes is None:
+                            continue
+                        layer_key = _decode(layer_raw).casefold()
+                        candidate_key = (node_net_key, layer_key)
+                        tokens = deferred_component_tokens.get(candidate_key)
+                        if not tokens or layer_key not in target_layers.get(node_net_key, ()):
+                            continue
+                        try:
+                            x_um = _length_um(attributes.group(1))
+                            y_um = _length_um(attributes.group(2))
+                        except ValueError:
+                            continue
+                        layer_display = layer_display_by_key.get(candidate_key)
+                        if layer_display is None:
+                            layer_display = _decode(layer_raw)
+                            layer_display_by_key[candidate_key] = layer_display
+                        conditional_target_components_scanned += 1
+                        component = same_layer_artwork_component(
+                            node_net,
+                            layer_display,
+                            x_um,
+                            y_um,
+                        )
+                        if component is None or str(component) not in tokens:
+                            continue
+                        deferred_window.append(
+                            (
+                                int(_offset),
+                                node_id,
+                                node_net,
+                                layer_display,
+                                float(x_um),
+                                float(y_um),
+                                layer_key,
+                                str(component),
+                            )
+                        )
+                        if len(deferred_window) >= 32768:
+                            reporter.check()
+                            register_deferred_window(deferred_window)
+                    register_deferred_window(deferred_window)
+
+                # Keep all exact components contacted by an immutable original
+                # root/target bit.  Applying unions only after the scan avoids
+                # DSU-root mutation changing which pending traces are visited.
+                component_members_cache: dict[tuple[str, str, str], tuple[str, ...]] = {}
+                for (
+                    net_key,
+                    original_root,
+                    target_bit,
+                    contact_layer_key,
+                    component_token,
+                ), (first_nodes, display_net, display_layer) in sorted(pending_seams.items()):
+                    component_key = (net_key, contact_layer_key, component_token)
+                    members = component_members_cache.get(component_key)
+                    if members is None:
+                        members_list: list[str] = []
+                        if same_layer_artwork_component is not None:
+                            for candidate_node, candidate_contact in target_coordinates_by_net[net_key].items():
+                                if target_layers_by_node[net_key].get(candidate_node) != contact_layer_key:
+                                    continue
+                                candidate_component = same_layer_artwork_component(
+                                    display_net,
+                                    display_layer,
+                                    candidate_contact[1],
+                                    candidate_contact[2],
+                                )
+                                if (
+                                    candidate_component is not None
+                                    and str(candidate_component) == component_token
+                                ):
+                                    members_list.append(candidate_node)
+                        members = tuple(sorted(set(members_list)))
+                        component_members_cache[component_key] = members
+                    if not members:
+                        continue
+                    representative = members[0]
+                    representative_index = index_for(net_key, representative)
+                    artwork_representatives[component_key] = representative_index
+                    if component_key not in artwork_component_members_registered:
+                        artwork_component_members_registered.add(component_key)
+                        artwork_nodes += len(members)
+                        artwork_edges += max(0, len(members) - 1)
+                        artwork_components.add(component_key)
+                    for member in members[1:]:
+                        union_indices(index_for(net_key, member), representative_index)
+                    for first in sorted(first_nodes):
+                        union_indices(index_for(net_key, first), representative_index)
+                    trace_artwork_conditional_successes += 1
+                    artwork_trace_contacts += 1
     except OSError as exc:
         raise SpdImportError(
             f"cannot recover mixed-reference GND graph from {source_path}: {exc}"
@@ -3481,6 +4348,26 @@ def recover_spd_ground_reachability(
     component_contacts_cache: dict[
         tuple[str, int, int], tuple[tuple[tuple[str, float, float], ...], int, str]
     ] = {}
+    nearest_contact_tree_cache: dict[
+        tuple[str, int, int], tuple[cKDTree, tuple[tuple[str, float, float], ...]]
+    ] = {}
+
+    def legacy_selected_contact(
+        contacts: tuple[tuple[str, float, float], ...],
+        source_xy: tuple[float, float],
+    ) -> tuple[str, float, float]:
+        return min(
+            contacts,
+            key=lambda item: (
+                (item[1] - source_xy[0]) ** 2
+                + (item[2] - source_xy[1]) ** 2,
+                item[0].casefold(),
+                item[0],
+                item[1],
+                item[2],
+            ),
+        )
+
     for via, node, target_layer in requested:
         net_key = requested_by_key[(via, node, target_layer)]
         root = find(index_for(net_key, node))
@@ -3507,6 +4394,31 @@ def recover_spd_ground_reachability(
                     hashlib.sha256(repr(ordered_contacts).encode("utf-8")).hexdigest(),
                 )
                 component_contacts_cache[cache_key] = cached_contacts
+                if len(ordered_contacts) >= _NEAREST_CONTACT_TREE_THRESHOLD:
+                    # Keep the persisted candidate universe untouched while
+                    # collapsing duplicate coordinates for nearest lookup.
+                    # The first item in canonical order is exactly the legacy
+                    # lexicographic winner for an equal-coordinate tie.
+                    unique_contacts_by_coordinate: dict[
+                        tuple[float, float], tuple[str, float, float]
+                    ] = {}
+                    finite_contacts = True
+                    for contact_item in ordered_contacts:
+                        x_value, y_value = contact_item[1], contact_item[2]
+                        if not isfinite(x_value) or not isfinite(y_value):
+                            finite_contacts = False
+                            break
+                        unique_contacts_by_coordinate.setdefault(
+                            (x_value, y_value), contact_item
+                        )
+                    if finite_contacts and unique_contacts_by_coordinate:
+                        unique_contacts = tuple(
+                            unique_contacts_by_coordinate.values()
+                        )
+                        nearest_contact_tree_cache[cache_key] = (
+                            cKDTree([(item[1], item[2]) for item in unique_contacts]),
+                            unique_contacts,
+                        )
             ordered_contacts, contact_count, contact_hash = cached_contacts
             source_xy = requested_coordinates.get((via, node, target_layer))
             if (
@@ -3521,13 +4433,44 @@ def recover_spd_ground_reachability(
             reachable.add(key)
             target_contact_count_by_key[key] = contact_count
             target_contact_hash_by_key[key] = contact_hash
-            selected_contact = min(
-                ordered_contacts,
-                key=lambda item: (
-                    (item[1] - source_xy[0]) ** 2 + (item[2] - source_xy[1]) ** 2,
-                    item[0].casefold(), item[0], item[1], item[2],
-                ),
-            )
+            nearest_tree_info = nearest_contact_tree_cache.get(cache_key)
+            if nearest_tree_info is None:
+                selected_contact = legacy_selected_contact(ordered_contacts, source_xy)
+            else:
+                nearest_tree, nearest_contacts = nearest_tree_info
+                try:
+                    _tree_distance, nearest_index = nearest_tree.query(
+                        (source_xy[0], source_xy[1]), k=1, workers=1
+                    )
+                    nearest_index = int(nearest_index)
+                    if not 0 <= nearest_index < len(nearest_contacts):
+                        raise ValueError("nearest contact index is outside the tree")
+                    nearest_candidate = nearest_contacts[nearest_index]
+                    nearest_d2 = (
+                        (nearest_candidate[1] - source_xy[0]) ** 2
+                        + (nearest_candidate[2] - source_xy[1]) ** 2
+                    )
+                    d2_for_radius = nextafter(nearest_d2, float("inf"))
+                    if not isfinite(nearest_d2) or not isfinite(d2_for_radius):
+                        raise ValueError("nearest contact distance is not finite")
+                    radius = nextafter(sqrt(d2_for_radius), float("inf"))
+                    if not isfinite(radius):
+                        raise ValueError("nearest contact radius is not finite")
+                    # cKDTree does not promise stable ordering for equidistant
+                    # points.  Include the next representable radius derived
+                    # from the legacy Python d² and apply its exact key to all
+                    # possible nearest ties.
+                    candidate_indices = nearest_tree.query_ball_point(
+                        (source_xy[0], source_xy[1]), radius
+                    )
+                    if not candidate_indices:
+                        candidate_indices = [nearest_index]
+                    selected_contact = legacy_selected_contact(
+                        tuple(nearest_contacts[int(index)] for index in candidate_indices),
+                        source_xy,
+                    )
+                except (OverflowError, TypeError, ValueError):
+                    selected_contact = legacy_selected_contact(ordered_contacts, source_xy)
             target_contacts_by_key[key] = (selected_contact,) if selected_contact else ()
     unreachable = set(requested) - reachable
     reporter.report(100, "Checked mixed-reference GND landing reachability")
@@ -3538,9 +4481,31 @@ def recover_spd_ground_reachability(
             "trace_section_passes": int(
                 include_traces and trace_start >= 0 and trace_end > trace_start
             ),
-            "via_section_passes": 1, "components": components,
-        "graph_nodes": len(parents), "graph_edges": graph_edges,
-        "trace_edges": trace_edges, "via_edges": via_edges,
+            "via_section_passes": 1,
+            "components": components,
+            "graph_nodes": len(parents),
+            "graph_edges": graph_edges,
+            "artwork_nodes": artwork_nodes,
+            "artwork_edges": artwork_edges,
+            "artwork_components": len(artwork_components),
+            "artwork_trace_contacts": artwork_trace_contacts,
+            "trace_artwork_contact_count": artwork_trace_contacts,
+            "trace_artwork_conditional_passes": trace_artwork_conditional_passes,
+            "conditional_node_position_passes": conditional_node_position_passes,
+            "node_release_index_passes": node_release_index_passes,
+            "deferred_artwork_passes": deferred_artwork_passes,
+            "deferred_artwork_keys": deferred_artwork_keys,
+            "max_live_artwork_shapes": max_live_artwork_shapes,
+            "trace_artwork_conditional_checks": trace_artwork_conditional_checks,
+            "trace_artwork_conditional_successes": trace_artwork_conditional_successes,
+            "target_nodes_considered": target_nodes_considered,
+            "target_nodes_filtered": target_nodes_filtered,
+            "conditional_target_component_passes": conditional_target_component_passes,
+            "conditional_target_components_scanned": conditional_target_components_scanned,
+            "conditional_target_components_recovered": conditional_target_components_recovered,
+            "artwork_algorithm": "same_net_via_trace_artwork_reachability_v3_layerwise_deferred",
+            "trace_edges": trace_edges,
+            "via_edges": via_edges,
         },
         target_contacts_by_key=target_contacts_by_key,
         target_contact_count_by_key=target_contact_count_by_key,
