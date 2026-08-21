@@ -5308,6 +5308,15 @@ def recover_spd_via_paths(
     ))
 
 
+def _index_reachable_layers_by_landing(
+    reachable_rows: Iterable[tuple[str, str, str]],
+) -> dict[tuple[str, str], set[str]]:
+    layers_by_landing: dict[tuple[str, str], set[str]] = {}
+    for via_key, node_key, target_layer in reachable_rows:
+        layers_by_landing.setdefault((via_key, node_key), set()).add(target_layer)
+    return layers_by_landing
+
+
 def recover_spd_ground_reachability(
     path: str | Path,
     *,
@@ -6862,6 +6871,17 @@ def recover_spd_ground_reachability(
     target_layers_by_node.clear()
     target_latest_offsets.clear()
     node_positions_by_net.clear()
+    requested_roots_by_net.clear()
+    filtered_target_nets.clear()
+    deferred_artwork_offsets.clear()
+    deferred_artwork_key_order.clear()
+    artwork_batch_points.clear()
+    target_batch_points.clear()
+    artwork_representatives.clear()
+    artwork_component_members_registered.clear()
+    surface_code_by_key.clear()
+    surface_code_representative.clear()
+    del surface_code_count[:]
     reachable: set[tuple[str, str, str]] = set()
     target_contacts_by_key: dict[tuple[str, str, str], tuple[tuple[str, float, float], ...]] = {}
     target_contact_count_by_key: dict[tuple[str, str, str], int] = {}
@@ -6994,6 +7014,17 @@ def recover_spd_ground_reachability(
                     selected_contact = legacy_selected_contact(ordered_contacts, source_xy)
             target_contacts_by_key[key] = (selected_contact,) if selected_contact else ()
     unreachable = set(requested) - reachable
+    requested_count = len(requested)
+    graph_node_count = len(parents)
+    artwork_component_count = len(artwork_components)
+    artwork_island_count = sum(len(ids) for ids in surface_inventory.values())
+    requested.clear()
+    requested_by_key.clear()
+    requested_coordinates.clear()
+    target_bit_by_key.clear()
+    del parents[:]
+    ranks.clear()
+    artwork_components.clear()
     component_contacts.clear()
     component_contacts_cache.clear()
     nearest_contact_tree_cache.clear()
@@ -7010,6 +7041,7 @@ def recover_spd_ground_reachability(
             surface_components.add(
                 SpdSurfaceConnectivityComponent(net_key, tuple(sorted(layers)))
             )
+    surface_token_layers.clear()
     # Surface equivalence excludes Via edges: only same-island artwork and
     # same-layer Trace edges coalesce equipotential islands.
     def eq_find(net_key: str, node_index: int) -> tuple[str, int]:
@@ -7031,6 +7063,8 @@ def recover_spd_ground_reachability(
         net_key, layer_key, token = surface_key_by_code[int(code_value) - 1]
         root = eq_find(net_key, node_index)
         grouped_equivalence.setdefault((net_key, layer_key, root), set()).add(token)
+    del equivalence_parents[:]
+    equivalence_ranks.clear()
     # Preserve uncontacted inventory islands as explicit singleton partitions;
     # proofs must cover the complete declared surface universe.
     for (net_key, layer_key), island_ids in surface_inventory.items():
@@ -7095,9 +7129,19 @@ def recover_spd_ground_reachability(
     # grouped_equivalence is complete before this replay; cache its component
     # island lookup so each Via performs O(1) provenance work.
     component_islands_by_surface: dict[tuple[str, str, str], tuple[str, ...]] = {}
+    component_count_by_surface: dict[tuple[str, str], int] = {}
+    artwork_island_union_count = 0
     for (eq_net, eq_layer, _root), tokens in grouped_equivalence.items():
-        for token in tokens:
-            component_islands_by_surface[(eq_net, eq_layer, token)] = tuple(sorted(tokens))
+        members = tuple(sorted(tokens))
+        component_count_by_surface[(eq_net, eq_layer)] = (
+            component_count_by_surface.get((eq_net, eq_layer), 0) + 1
+        )
+        artwork_island_union_count += max(0, len(members) - 1)
+        for token in members:
+            component_islands_by_surface[(eq_net, eq_layer, token)] = members
+    grouped_equivalence.clear()
+    tokens = set()
+    members = ()
 
     with source_path.open("rb") as replay_handle, mmap.mmap(
         replay_handle.fileno(), 0, access=mmap.ACCESS_READ
@@ -7190,6 +7234,15 @@ def recover_spd_ground_reachability(
         invalid_owned_digest = digest_invalid_offsets(invalid_owned_offsets)
         invalid_outside_digest = digest_invalid_offsets(invalid_outside_offsets)
         invalid_unsupported_digest = digest_invalid_offsets(invalid_unsupported_offsets)
+    del invalid_owned_offsets[:]
+    del invalid_outside_offsets[:]
+    del invalid_unsupported_offsets[:]
+    del via_source_offsets[:]
+    del via_source_net_codes[:]
+    del via_source_first_indices[:]
+    del via_source_second_indices[:]
+    del via_source_padstack_codes[:]
+    surface_ranks.clear()
     # One post-replay metadata pass turns surface codes into direct root/layer
     # lookups.  Contacts and finite vertices use these tables instead of
     # repeatedly scanning every surface group.
@@ -7198,14 +7251,6 @@ def recover_spd_ground_reachability(
     surface_component_islands_by_code: dict[int, tuple[str, ...]] = {}
     global_surface_layers: dict[tuple[str, int], set[str]] = {}
     codes_by_root_mutable: dict[tuple[str, int], list[int]] = {}
-    surface_code_by_key = {
-        key: code for code, key in enumerate(surface_key_by_code, start=1)
-    }
-    component_by_surface_key = {
-        (eq_net, eq_layer, token): tuple(sorted(tokens))
-        for (eq_net, eq_layer, _eq_root), tokens in grouped_equivalence.items()
-        for token in tokens
-    }
     for node_index, code_value in enumerate(surface_code_by_index):
         code = int(code_value)
         if not code or code in surface_root_by_code:
@@ -7217,12 +7262,14 @@ def recover_spd_ground_reachability(
         surface_root_by_code[code] = root
         codes_by_root_mutable.setdefault((candidate_net, root), []).append(code)
         global_surface_layers.setdefault((candidate_net, root), set()).add(candidate_layer)
-        surface_component_islands_by_code[code] = component_by_surface_key.get(
+        surface_component_islands_by_code[code] = component_islands_by_surface.get(
             (candidate_net, candidate_layer, token), (token,)
         )
     surface_codes_by_root = {
         key: tuple(values) for key, values in codes_by_root_mutable.items()
     }
+    surface_root_by_code.clear()
+    codes_by_root_mutable.clear()
     for (candidate_net, _root), layers in global_surface_layers.items():
         if len(layers) < 2:
             continue
@@ -7234,6 +7281,8 @@ def recover_spd_ground_reachability(
             sorted(target_layer_display.get((candidate_net, layer), layer) for layer in layers)
         )
         surface_components.add(SpdSurfaceConnectivityComponent(display_net, display_layers))
+    global_surface_layers.clear()
+    reachable_layers_by_landing = _index_reachable_layers_by_landing(reachable)
     all_landings = landing_records + terminal_contact_records
     terminal_contact_keys = set(terminal_contact_owner_by_key)
     contact_seen: set[tuple[str, str]] = set()
@@ -7252,11 +7301,7 @@ def recover_spd_ground_reachability(
         )
         matched_layers: set[str] = set()
         matched_islands: set[str] = set()
-        reachable_target_layers = {
-            target_layer
-            for candidate_via, candidate_node, target_layer in reachable
-            if candidate_via == landing_key[0] and candidate_node == landing_key[1]
-        }
+        reachable_target_layers = reachable_layers_by_landing.get(landing_key, ())
         if len(reachable_target_layers) >= 2:
             display_layers = tuple(
                 sorted(
@@ -7356,6 +7401,15 @@ def recover_spd_ground_reachability(
                     physical_model_issues=contact_issues,
                 )
             )
+    surface_dense_node_count = len(surface_parents)
+    del surface_parents[:]
+    surface_codes_by_root.clear()
+    reachable_layers_by_landing.clear()
+    terminal_contact_keys.clear()
+    contact_seen.clear()
+    via_terminal_display_endpoints.clear()
+    del all_landings, landing_records, terminal_contact_records
+
     def physical_model_for_canonical(
         padstack_name: str,
         start_layer: str,
@@ -7497,6 +7551,9 @@ def recover_spd_ground_reachability(
             item.start_island_id, item.end_island_id,
         )
     )
+    aggregate_states.clear()
+    state = {}
+    component_islands_by_surface.clear()
     # Enrich terminal contact rows from the canonical physical pair.  Surface
     # contact classification is independent from strict target acceptance, but
     # a terminal landing that has a resolved pair must carry the same physical
@@ -7590,6 +7647,7 @@ def recover_spd_ground_reachability(
                 )
             )
         landing_surface_contacts = enriched_contacts
+    via_terminal_padstack_by_key.clear()
     if raw_via_count:
         paired_count = sum(item.count for item in via_island_pair_aggregates)
         # An observed terminal-owned Via whose endpoint cannot be bound to two
@@ -7625,11 +7683,7 @@ def recover_spd_ground_reachability(
                 if candidate_net == net_key and candidate_layer == layer_key
             )
         )
-        component_count = sum(
-            1
-            for (candidate_net, candidate_layer, _root) in grouped_equivalence
-            if candidate_net == net_key and candidate_layer == layer_key
-        )
+        component_count = component_count_by_surface.get((net_key, layer_key), 0)
         status = "complete" if set(contacted) == set(island_ids) and component_count else "uncontacted_island"
         display_net = next(
             (str(raw_net) for raw_net in target_layers_by_net if str(raw_net).casefold() == net_key),
@@ -7646,6 +7700,8 @@ def recover_spd_ground_reachability(
                 status,
             )
         )
+    component_count_by_surface.clear()
+    surface_inventory.clear()
     # Build the finite Via quotient from the already-retained endpoint graph.
     # This is intentionally post-replay: no second Via section scan or eager
     # raw geometry is needed, and every edge keeps its source Via owner.
@@ -7663,7 +7719,7 @@ def recover_spd_ground_reachability(
         # codes retained by the single replay.  Do not rebuild million-entry
         # string references or raw five-field edge tuples here.
         edge_count = len(finite_via_offsets)
-        node_count = len(parents)
+        node_count = graph_node_count
         degree = array("I", [0]) * node_count
         for edge_index in range(edge_count):
             degree[finite_first_indices[edge_index]] += 1
@@ -8039,23 +8095,41 @@ def recover_spd_ground_reachability(
             raw_target_via_ids_sha256=finite_digest(raw_ids), modeled_global_via_ids_sha256=finite_digest(raw_ids),
             modeled_owner_ledger_sha256=finite_digest(f"via:{item}" for item in raw_ids), modeled_owner_canonical_sha256=finite_digest(sorted(f"via:{item}" for item in raw_ids)), outside_scope_via_ids_sha256=hashlib.sha256(b"").hexdigest(),
         )
+        del raw_ids
+    surface_dense_trace_edges = len(surface_trace_first_indices)
+    del surface_trace_net_codes[:]
+    del surface_trace_first_indices[:]
+    del surface_trace_second_indices[:]
+    surface_trace_net_by_code.clear()
+    del finite_via_offsets[:]
+    del finite_net_codes[:]
+    del finite_first_indices[:]
+    del finite_second_indices[:]
+    del finite_padstack_codes[:]
+    finite_via_ids.clear()
+    via_source_net_key_by_code.clear()
+    via_source_padstack_names.clear()
+    terminal_contact_owner_by_key.clear()
+    del surface_code_by_index[:]
+    surface_key_by_code.clear()
+    surface_component_islands_by_code.clear()
     reporter.report(100, "Checked mixed-reference GND landing reachability")
     return finish(SpdGroundReachability(
         frozenset(reachable), frozenset(unreachable), {
-            "requested": len(requested), "reachable": len(reachable),
+            "requested": requested_count, "reachable": len(reachable),
             "unreachable": len(unreachable), "node_section_passes": 1,
             "trace_section_passes": int(
                 include_traces and trace_start >= 0 and trace_end > trace_start
             ),
             "via_section_passes": 1,
             "components": components,
-            "graph_nodes": len(parents),
+            "graph_nodes": graph_node_count,
             "graph_edges": graph_edges,
             "artwork_nodes": artwork_nodes,
             "artwork_edges": artwork_edges,
-            "artwork_components": len(artwork_components),
-            "artwork_island_count": sum(len(ids) for ids in surface_inventory.values()),
-            "artwork_island_unions": sum(max(0, len(tokens) - 1) for tokens in grouped_equivalence.values()),
+            "artwork_components": artwork_component_count,
+            "artwork_island_count": artwork_island_count,
+            "artwork_island_unions": artwork_island_union_count,
             "surface_equivalence_complete": sum(1 for proof in surface_equivalence_proofs if proof.status == "complete"),
             "surface_equivalence_incomplete": sum(1 for proof in surface_equivalence_proofs if proof.status != "complete"),
             "via_edges_excluded_from_surface_equivalence": via_edges,
@@ -8083,9 +8157,9 @@ def recover_spd_ground_reachability(
             "artwork_algorithm": "same_net_via_trace_artwork_reachability_v3_layerwise_deferred",
             "trace_edges": trace_edges,
             "via_edges": via_edges,
-            "via_source_record_replay_passes": 1 if via_source_offsets else 0,
-            "surface_dense_node_count": len(surface_parents),
-            "surface_dense_trace_edges": len(surface_trace_first_indices),
+            "via_source_record_replay_passes": int(raw_via_count > 0),
+            "surface_dense_node_count": surface_dense_node_count,
+            "surface_dense_trace_edges": surface_dense_trace_edges,
         },
         target_contacts_by_key=target_contacts_by_key,
         target_contact_count_by_key=target_contact_count_by_key,

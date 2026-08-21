@@ -4791,11 +4791,13 @@ def test_terminal_contact_keeps_full_internal_equivalence_component(
         source,
         landings=(),
         terminal_contact_landings=(landing,),
-        target_layers_by_net={"PWR": ("Signal$PWR",)},
-        target_node_surface_resolver=lambda _n, _l, _i, x, _y: (
+        target_layers_by_net={"PWR": ("Signal$TOP", "Signal$PWR")},
+        target_node_surface_resolver=lambda _n, layer, _i, x, _y: (
+            "island-top" if layer == "Signal$TOP" else
             "island-pwr-a" if x < 5.0 else "island-pwr-b"
         ),
         target_surface_island_ids={
+            ("PWR", "Signal$TOP"): ("island-top",),
             ("PWR", "Signal$PWR"): (
                 "island-pwr-a",
                 "island-pwr-b",
@@ -4808,6 +4810,130 @@ def test_terminal_contact_keeps_full_internal_equivalence_component(
     assert dict(contact.contact_island_ids_by_layer) == {
         "Signal$PWR": ("island-pwr-a", "island-pwr-b"),
     }
+    aggregate = result.via_island_pair_aggregates[0]
+    assert {
+        aggregate.start_layer: aggregate.start_component_island_ids,
+        aggregate.end_layer: aggregate.end_component_island_ids,
+    } == {
+        "Signal$TOP": ("island-top",),
+        "Signal$PWR": ("island-pwr-a", "island-pwr-b"),
+    }
+    assert any(
+        dict(vertex.retained_component_island_ids_by_layer).get("Signal$PWR")
+        == ("island-pwr-a", "island-pwr-b")
+        for vertex in result.finite_via_vertices
+    )
+
+
+def test_landing_layer_index_preserves_many_exact_contact_hashes(
+    tmp_path: Path,
+) -> None:
+    landing_count = 12
+    source, _analysis = _recoverable_via_source(
+        tmp_path,
+        node_lines="\n".join(
+            line
+            for index in range(landing_count)
+            for line in (
+                f"NodeLanding{index}!!1::PWR X = {index}um Y = 0um "
+                "Layer = Signal$TOP PadStack = DR-0102_60",
+                f"NodePwr{index}!!1::PWR X = {index}um Y = 0um "
+                "Layer = Signal$PWR PadStack = DR-0102_60",
+                f"NodeGnd{index}!!1::PWR X = {index}um Y = 0um "
+                "Layer = Signal$GND PadStack = DR-0102_60",
+            )
+        ),
+        via_lines="\n".join(
+            line
+            for index in range(landing_count)
+            for line in (
+                f"ViaPwr{index}::PWR UpperNode = NodeLanding{index} "
+                f"LowerNode = NodePwr{index} PadStack = DR-0102_60",
+                f"ViaGnd{index}::PWR UpperNode = NodeLanding{index} "
+                f"LowerNode = NodeGnd{index} PadStack = DR-0102_60",
+            )
+        ),
+    )
+    landings = tuple(
+        SpdViaLanding(
+            via_id=f"ViaPwr{index}",
+            net="PWR",
+            endpoint_node_id=f"NodeLanding{index}",
+            x_um=float(index),
+            y_um=0.0,
+            padstack="DR-0102_60",
+        )
+        for index in range(landing_count)
+    )
+
+    result = recover_spd_ground_reachability(
+        source,
+        landings=landings,
+        target_layers_by_net={"PWR": ("Signal$PWR", "Signal$GND")},
+        target_node_surface_resolver=lambda _n, layer, _i, x, _y: (
+            f"island-{layer.rsplit('$', 1)[-1].casefold()}-{int(x)}"
+        ),
+        target_surface_island_ids={
+            ("PWR", layer): tuple(
+                f"island-{layer.rsplit('$', 1)[-1].casefold()}-{index}"
+                for index in range(landing_count)
+            )
+            for layer in ("Signal$PWR", "Signal$GND")
+        },
+    )
+
+    for index in range(landing_count):
+        landing_key = (f"viapwr{index}", f"nodelanding{index}")
+        assert result.surface_layers_by_landing[landing_key] == (
+            "Signal$GND",
+            "Signal$PWR",
+        )
+        for layer, node_prefix in (
+            ("Signal$PWR", "NodePwr"),
+            ("Signal$GND", "NodeGnd"),
+        ):
+            target_key = (*landing_key, layer.casefold())
+            contacts = ((f"{node_prefix}{index}", float(index), 0.0),)
+            assert result.target_contacts_by_key[target_key] == contacts
+            assert result.target_contact_count_by_key[target_key] == 1
+            assert result.target_contact_hash_by_key[target_key] == sha256(
+                repr(contacts).encode("utf-8")
+            ).hexdigest()
+    assert result.statistics["component_contact_records_retained"] == (
+        landing_count * 2
+    )
+    assert result.statistics["component_contact_records_filtered"] == 0
+
+
+def test_landing_layer_index_consumes_single_use_rows_once() -> None:
+    rows = (
+        ("via-a", "node-a", "signal$pwr"),
+        ("via-b", "node-b", "signal$gnd"),
+        ("via-a", "node-a", "signal$gnd"),
+        ("via-a", "node-a", "signal$pwr"),
+    )
+
+    class SingleUseRows:
+        iteration_count = 0
+        row_count = 0
+
+        def __iter__(self):
+            self.iteration_count += 1
+            if self.iteration_count != 1:
+                raise AssertionError("reachable rows were iterated more than once")
+            for row in rows:
+                self.row_count += 1
+                yield row
+
+    reachable_rows = SingleUseRows()
+    indexed = spd_io._index_reachable_layers_by_landing(reachable_rows)
+
+    assert indexed == {
+        ("via-a", "node-a"): {"signal$gnd", "signal$pwr"},
+        ("via-b", "node-b"): {"signal$gnd"},
+    }
+    assert reachable_rows.iteration_count == 1
+    assert reachable_rows.row_count == len(rows)
 
 
 def test_terminal_contact_does_not_invent_mismatched_via_endpoint(
