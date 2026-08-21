@@ -1,5 +1,46 @@
 # Evaluation Algorithm Research State
 
+> **Current SPD Decap PI Evaluator v0.22.0 — AV-BS1 H4-P1 manifest-only
+> preregistration, final documentation freeze:** The stable contract fixture
+> `tools/research/av_bs1_boundary_schur_h4_p1.py` is `47295` bytes / `852` LF /
+> SHA-256
+> `6f527c76cbc0928a4b504e01abbb4c049fd39edc75ef865a3335f3a619863200`.
+> Schema `AV-BS1-h4-p1-manifest-v1` is bound to payload SHA-256
+> `ec489c784e01635955560fa0ac0681b22bd890759d6693c111cb8ff28c31b753`
+> and wrapper SHA-256
+> `cfa8f9a2504a8fad40ef03e9cb3842877e176a9f3d620f5805099a98c80523e7`.
+> Static tests are `63350` bytes / `1341` LF / SHA-256
+> `6254e3d28b56d8ec640089c02fdf3308e33775e4c3cd2d6946932bfc1ed7ac9d`;
+> focused `32/32` passed in `19.01 s`, and independent same-byte runs passed
+> `32/32` in `19.51 s` and `18.92 s`.
+>
+> The parser accepts only the required `--stage manifest`. There is no runner,
+> token, claim, public stage, or `primary-h4` parser choice. Current status is
+> `preregistered_H4_P1_contract_only_no_solve`,
+> `authorization_state=not_authorized`, `execution_authorized=false`,
+> `token_state=absent`, `current_terminal_classification=token_absent_no_terminal_evidence`,
+> `authoritative_terminal_evidence=false`, `authoritative_stage_pass=false`,
+> and `next_stage_authorized=false`. No RHS, factorization, factor solve,
+> extension, `Y`, `Y_reverse`, `M9_interior`, sidecar, modal result, H4 physics,
+> or PowerSI comparison ran.
+>
+> The retry-v10 eleventh sealed factor-only pass remains authoritative historical
+> parent evidence only. It creates no present H4-P1 authority and remains a
+> high-memory-host result, not an 8 GB fit proof. The new contract prospectively
+> freezes one resident factor at a time, all `512` RHS in batches `<=4`, raw
+> accuracy gates, fixed little-endian complex128 sidecar, and fail-closed
+> process-tree resource stops; none is implemented or executed here.
+>
+> Selected old-plus-new H4 collection was confirmed exactly: `432 tests
+> collected in 0.56 s`, exit `0`. The first successful full exact-document
+> suite on final documentation bytes recorded `432/432` passed in `111.82 s`,
+> exit `0`, with no failure. This is the **FINAL DOC FREEZE**; do not record any
+> later closure runtime. Every pre-existing retry-v10 eleventh-result,
+> retry-v9, future-tenth/eleventh, `397/397`, `400/400`, `factor_fit_unproven`,
+> or older “current” statement below is an immutable historical snapshot. Only
+> this H4-P1 manifest-only block states current authority.
+>
+
 > **SPD Decap PI Evaluator v0.22.0 — retry-v10 eleventh-result final
 > documentation freeze:** Eleven public `primary-h4-p0r` invocations and token
 > lineages are immutable. The eleventh ran exactly once from token-only commit
@@ -115,20 +156,34 @@
 > [results](T1_AV_BOUNDARY_SCHUR_RESULTS.md) and the
 > [reproduction appendix](ORACLE_REPRODUCTION.md).
 >
-> Every pre-existing retry-v10 tenth-result, future-eleventh, `400/400`,
-> retry-v9, ninth-attempt, future-tenth, `397/397`, or **FINAL DOC FREEZE**
-> statement later in this file is an immutable historical
-> snapshot. Only the retry-v10 eleventh-result block at the top states current authority.
+> This entire retry-v10 eleventh/tenth and retry-v9 banner is retained as an
+> immutable historical snapshot. It does not override the H4-P1 manifest-only
+> current-authority block at the top of this file.
 
 
 최종 갱신: 2026-08-16 (Asia/Seoul)
 
 ## 상태 요약
 
-> **Current authority override:** the retry-v10 eleventh-result banner at the
-> top and decision `D-054` are current. Any tenth-result, future-eleventh,
-> `factor_fit_unproven=true`, or FINAL DOC FREEZE wording in the legacy table
-> below is an immutable historical snapshot.
+> **Current authority override:** the H4-P1 manifest-only banner at the top and
+> decision `D-055` are current. Decision `D-054`, retry-v10 eleventh/tenth,
+> retry-v9, `factor_fit_unproven=true`, and FINAL DOC FREEZE wording below are
+> immutable historical snapshots.
+
+| current H4-P1 item | state |
+|---|---|
+| program | SPD Decap PI Evaluator v0.22.0 |
+| contract | `preregistered_H4_P1_contract_only_no_solve` |
+| stable fixture | `47295` bytes, SHA-256 `6f527c76cbc0928a4b504e01abbb4c049fd39edc75ef865a3335f3a619863200` |
+| stable tests | `63350` bytes, SHA-256 `6254e3d28b56d8ec640089c02fdf3308e33775e4c3cd2d6946932bfc1ed7ac9d` |
+| parser | required `--stage manifest` only; `primary-h4` unavailable |
+| authority | no token, no terminal evidence, no stage pass, `next_stage_authorized=false` |
+| execution | no factor/RHS/solve/sidecar/H4 physics/PowerSI comparison |
+| validation | focused `32/32` in `19.01 s`; independent `32/32` in `19.51 s` and `18.92 s`; selected old-plus-new H4 collection exactly `432 tests collected in 0.56 s`, exit `0` |
+| document closure | first successful full exact-document result: `432/432` passed in `111.82 s`, exit `0`, with no failure; **FINAL DOC FREEZE**; do not record any later closure runtime |
+| 8 GB | unproven; prospective resource envelope only |
+
+### Historical status table
 
 | 항목 | 현재 상태 |
 |---|---|
@@ -228,6 +283,7 @@
 | D-052 | Retry-v10 hardens only the PowerShell strict-JSON trust boundary: strict UTF-8, duplicate-key streaming rejection, finite JSON tree, object/depth32/16 MiB bounds, ordinal O(n) object/string/field/evidence comparison, and lowercase hash guards. Schemas, Python, factor math, retry/resource policy, and physics scope do not change. | Tenth token-only child `13bfe70d...` exited public `2` after exactly three order-only claim/guard/resource false mismatches. Producer/finalizer/consumer `54044`/`25200`/`41812` exited `0`; exactly two ordered certificates/prefixes, factor caps, inner/outer resource gates, and `205/205` absent cleanup passed. Strict terminal authority remains false with null disposition; M-only `785f5e9...` then D-only `a139d86...` leave token absent. Frozen Python/runner/tests SHA `46082123fbf98102f3e5995c32bf65d8d04bb835b9c1305de0150349e75e48c7`/`f0159061dbd4d1b34881911edfdfb72146a3a23e5cdc75ca8fa4069c08aadb86`/`e5496ceb24c33c835b88ce20a3f67f941c8279e0471708a01022238fc211b109`; collection `400`, current-byte focused `5/5` in `2.73 s`, independent same-byte `5/5` in `2.71 s`. The provisional full reached `398 passed, 2 failed in 94.17 s` from the corrected old source pin and exact heading drift; the first successful full then passed `400/400` in `93.89 s`, exit `0`, with no failure. FINAL DOC FREEZE; no token, no H4/PowerSI/8 GB claim, future public run would be eleventh. |
 | D-053 | The eleventh retry-v10 run tests the already-frozen strict-JSON runner and only the H4-P0R factor-cap/resource contract. It does not widen the physics scope. | Token-only child `e35ef012...` / `2435fa59...` ran exactly once, public exit/stderr `0`/empty, no retry. PIDs `63268`/`39580`/`60012` exited `0`; exactly two ordered certificates/prefixes, both cap/resource gates, `164/164` outer and `207/207` broader absent cleanup passed. Strict classifications are `consumed_v2_authoritative_sealed_pass` / `consumed_v2_authoritative_sealed_pass_no_next_stage_authorization` with terminal/stage authority true, disposition pass, validation error null, and next false. M-only `bf94e189...` then D-only `389ec1e...` leave token absent. Host minimum physical availability was `43885748224` bytes: authoritative factor-only pass on this host, not 8 GB/H4/PowerSI. Full exact-document `400` is pending after provisional docs. |
 | D-054 | The first post-eleventh full exact-document result is the only runtime recorded for the final document freeze. Later closure checks do not rewrite this runtime. | Exactly `400/400` passed in `95.65 s`, exit `0`, with no failure. Exact15 scope, immutable session prefix, no-token/no-next authority, and factor-only/H4/PowerSI/8 GB boundaries remain unchanged. **FINAL DOC FREEZE**. |
+| D-055 | Freeze a non-executable H4-P1 manifest-only contract before any RHS or solve work. | Stable fixture/test SHA-256 `6f527c76...` / `6254e3d2...`; parser accepts only required `--stage manifest`; current token and terminal evidence are absent; historical eleventh factor-only authority remains separate. One resident factor, `512` RHS in batches `<=4`, raw accuracy gates, fixed binary sidecar, exact resource stops, and H2 commitments are prospective only. Focused and two independent `32/32` runs passed; selected old-plus-new H4 collection was exactly `432 tests collected in 0.56 s`, exit `0`. After the preserved `431/432` static-heading failure, the first successful full exact-document result was `432/432` passed in `111.82 s`, exit `0`, with no failure. **FINAL DOC FREEZE**; no later closure runtime, H4/PowerSI result, 8 GB claim, or next-stage authority exists. |
 
 ## 현재 가설 순위
 
@@ -304,7 +360,25 @@ PowerSI repeatability와 mesh/order convergence를 측정한 뒤 수치는 조�
 14. two-DtN subtraction이 없는 A–v boundary Schur circle reference candidate가 같은 balanced basis에서 analytic DtN, raw reciprocity/passivity, power, h/crop convergence를 동시에 만족해 oracle로 승격될 수 있는가?
 15. retry-v9의 explicit resource child PID threading과 `time.perf_counter_ns()`/QPC bootstrap markers가 동일 frozen schemas와 strict validator에서 producer identity와 terminal chronology를 정확히 닫는가? First full exact-document suite `397/397` in `92.95 s`, exit `0`, no failure와 FINAL DOC FREEZE 뒤에도 exact-byte reread/independent audit에서 factor-only boundary를 유지하며, 별도 승인된 열 번째 run 전에는 token/H4 physics가 생성되지 않는가?
 
-## 현재 retry-v10 eleventh-result 우선 작업
+## Current H4-P1 manifest-only priority
+
+1. Preserve fixture/test bytes and the immutable pre-edit `SESSION_LOG.md`
+   prefix (`200255` bytes, `2707` LF, SHA-256 `0d44c6a6...`).
+2. Maintain the current no-token/no-terminal-evidence split from the historical
+   authoritative eleventh factor-only parent.
+3. Validate exactly 15 baseline Markdown files plus the new H4-P1 prereg for
+   UTF-8/LF, fences, links, parser wording, current/history separation, and
+   stale authority.
+4. Preserve the confirmed selected old-plus-new H4 collection result,
+   `432 tests collected in 0.56 s`, exit `0`, and the first successful full
+   exact-document result, `432/432` passed in `111.82 s`, exit `0`, with no
+   failure. This is the **FINAL DOC FREEZE**; do not record any later closure
+   runtime.
+5. Do not create an executable, runner, token, claim, factor, RHS, solve,
+   sidecar, H4 result, PowerSI comparison, or 8 GB claim. Those require a new
+   clean contract, independent approval, and explicit authorization.
+
+## Historical retry-v10 eleventh-result priority
 
 1. 열한 public invocation, token lineage, consumption, retirement와 exact
    evidence를 immutable하게 보존한다. 소비·폐기 token은 절대 재실행하지

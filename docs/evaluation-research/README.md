@@ -1,5 +1,46 @@
 # SPD Decap PI Evaluator v0.22.0 — Evaluation Algorithm Research
 
+> **Current SPD Decap PI Evaluator v0.22.0 — AV-BS1 H4-P1 manifest-only
+> preregistration, final documentation freeze:** The stable contract fixture
+> `tools/research/av_bs1_boundary_schur_h4_p1.py` is `47295` bytes / `852` LF /
+> SHA-256
+> `6f527c76cbc0928a4b504e01abbb4c049fd39edc75ef865a3335f3a619863200`.
+> Schema `AV-BS1-h4-p1-manifest-v1` is bound to payload SHA-256
+> `ec489c784e01635955560fa0ac0681b22bd890759d6693c111cb8ff28c31b753`
+> and wrapper SHA-256
+> `cfa8f9a2504a8fad40ef03e9cb3842877e176a9f3d620f5805099a98c80523e7`.
+> Static tests are `63350` bytes / `1341` LF / SHA-256
+> `6254e3d28b56d8ec640089c02fdf3308e33775e4c3cd2d6946932bfc1ed7ac9d`;
+> focused `32/32` passed in `19.01 s`, and independent same-byte runs passed
+> `32/32` in `19.51 s` and `18.92 s`.
+>
+> The parser accepts only the required `--stage manifest`. There is no runner,
+> token, claim, public stage, or `primary-h4` parser choice. Current status is
+> `preregistered_H4_P1_contract_only_no_solve`,
+> `authorization_state=not_authorized`, `execution_authorized=false`,
+> `token_state=absent`, `current_terminal_classification=token_absent_no_terminal_evidence`,
+> `authoritative_terminal_evidence=false`, `authoritative_stage_pass=false`,
+> and `next_stage_authorized=false`. No RHS, factorization, factor solve,
+> extension, `Y`, `Y_reverse`, `M9_interior`, sidecar, modal result, H4 physics,
+> or PowerSI comparison ran.
+>
+> The retry-v10 eleventh sealed factor-only pass remains authoritative historical
+> parent evidence only. It creates no present H4-P1 authority and remains a
+> high-memory-host result, not an 8 GB fit proof. The new contract prospectively
+> freezes one resident factor at a time, all `512` RHS in batches `<=4`, raw
+> accuracy gates, fixed little-endian complex128 sidecar, and fail-closed
+> process-tree resource stops; none is implemented or executed here.
+>
+> Selected old-plus-new H4 collection was confirmed exactly: `432 tests
+> collected in 0.56 s`, exit `0`. The first successful full exact-document
+> suite on final documentation bytes recorded `432/432` passed in `111.82 s`,
+> exit `0`, with no failure. This is the **FINAL DOC FREEZE**; do not record any
+> later closure runtime. Every pre-existing retry-v10 eleventh-result,
+> retry-v9, future-tenth/eleventh, `397/397`, `400/400`, `factor_fit_unproven`,
+> or older “current” statement below is an immutable historical snapshot. Only
+> this H4-P1 manifest-only block states current authority.
+>
+
 > **SPD Decap PI Evaluator v0.22.0 — retry-v10 eleventh-result final
 > documentation freeze:** Eleven public `primary-h4-p0r` invocations and token
 > lineages are immutable. The eleventh ran exactly once from token-only commit
@@ -115,10 +156,9 @@
 > [results](T1_AV_BOUNDARY_SCHUR_RESULTS.md) and the
 > [reproduction appendix](ORACLE_REPRODUCTION.md).
 >
-> Every pre-existing retry-v10 tenth-result, future-eleventh, `400/400`,
-> retry-v9, ninth-attempt, future-tenth, `397/397`, or **FINAL DOC FREEZE**
-> statement later in this file is an immutable historical
-> snapshot. Only the retry-v10 eleventh-result block at the top states current authority.
+> This entire retry-v10 eleventh/tenth and retry-v9 banner is retained as an
+> immutable historical snapshot. It does not override the H4-P1 manifest-only
+> current-authority block at the top of this file.
 
 
 이 디렉터리는 Evaluation PI 계산 알고리즘의 장기 연구를 위한 **단일 재시작 지점(single restart point)** 이다. 연구 세션이 바뀌거나 대화 문맥이 압축되어도 이 문서에서 다시 시작한다.
@@ -424,11 +464,12 @@ token; any separately authorized future public invocation would be tenth.
 17. [`T1_AV_BOUNDARY_SCHUR_H4_P0_PREREG.md`](T1_AV_BOUNDARY_SCHUR_H4_P0_PREREG.md): H4 topology/cyclic lineage/canonical assembly와 dual resource envelope의 no-solve 경계 확인
 18. [`T1_AV_BOUNDARY_SCHUR_H4_P0R_PREREG.md`](T1_AV_BOUNDARY_SCHUR_H4_P0R_PREREG.md): factorization-only pilot의 frozen matrix/equilibration/resource/lifecycle 계약과 현재 no-factor 경계 확인
 19. [`T1_AV_BOUNDARY_SCHUR_H4_P0R_P1_PREREG.md`](T1_AV_BOUNDARY_SCHUR_H4_P0R_P1_PREREG.md): executable/outer-observer/one-use/seal-v2 계약, 아홉 public attempt와 token retirement, immutable retry-v8 history, 아홉 번째 two-certificate/two-prefix factor/resource pass와 published finalizer PID mismatch, strict chronology-invalid raw seal 및 non-authoritative `consumed_v2_provisional_invalid_terminal_evidence`, frozen retry-v9 Python/runner/tests와 first full exact-document `397/397` in `92.95 s`, exit `0`, no failure 및 FINAL DOC FREEZE, prior token 재사용 없이 corrected no-token contract -> exact-byte/audit -> 별도 승인 -> fresh tenth token-only child 순서 확인
-20. [`T1_M1_EQ0_RESULTS.md`](T1_M1_EQ0_RESULTS.md): immutable collocation failure, G1 exterior-only, G2 pair-only pass와 100 kHz circle reciprocity/cancellation failure 확인
-21. [`T1_CIRCLE_DTN_RESULTS.md`](T1_CIRCLE_DTN_RESULTS.md): frozen `C0-A0` 실패, selected `C0-A1` circle-only 통과와 withheld/수치 범위 확인
-22. [`T1_M0_SLAB_RESULTS.md`](T1_M0_SLAB_RESULTS.md): periodic slab의 independent 1-D FEM pass, withheld 결과와 free-space/periodic boundary mismatch 확인
-23. [`ORACLE_REPRODUCTION.md`](ORACLE_REPRODUCTION.md): custom numerical table과 manifest의 exact 재현 명령 확인
-24. [`SESSION_LOG.md`](SESSION_LOG.md)의 가장 최근 항목: 직전 세션의 증거와 중단 지점 확인
+20. [`T1_AV_BOUNDARY_SCHUR_H4_P1_PREREG.md`](T1_AV_BOUNDARY_SCHUR_H4_P1_PREREG.md): current non-executable manifest-only parser, frozen matrix/solve/accuracy/sidecar/resource/H2 commitments, historical-parent separation, no-token/no-authority boundary와 first successful full exact-document `432/432` passed in `111.82 s`, exit `0`, no failure 및 **FINAL DOC FREEZE** 확인
+21. [`T1_M1_EQ0_RESULTS.md`](T1_M1_EQ0_RESULTS.md): immutable collocation failure, G1 exterior-only, G2 pair-only pass와 100 kHz circle reciprocity/cancellation failure 확인
+22. [`T1_CIRCLE_DTN_RESULTS.md`](T1_CIRCLE_DTN_RESULTS.md): frozen `C0-A0` 실패, selected `C0-A1` circle-only 통과와 withheld/수치 범위 확인
+23. [`T1_M0_SLAB_RESULTS.md`](T1_M0_SLAB_RESULTS.md): periodic slab의 independent 1-D FEM pass, withheld 결과와 free-space/periodic boundary mismatch 확인
+24. [`ORACLE_REPRODUCTION.md`](ORACLE_REPRODUCTION.md): custom numerical table과 manifest의 exact 재현 명령 확인
+25. [`SESSION_LOG.md`](SESSION_LOG.md)의 가장 최근 항목: 직전 세션의 증거와 중단 지점 확인
 
 그 뒤 `git status`, 현재 branch/HEAD, 원본 파일의 존재와 hash를 확인한다. 이미 확정한 분석을 근거 없이 다시 수행하거나 목표를 재정의하지 않는다.
 

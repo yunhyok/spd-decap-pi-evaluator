@@ -2705,3 +2705,234 @@ extension, boundary `Y`, modal response, H4 physics, PowerSI comparison, or
 8 GB proof is created. The exact next artifact remains the non-executable
 H4-P1 manifest-only preregistration recorded above; it is neither implemented
 nor authorized.
+
+## 2026-08-16 — AV-BS1 H4-P1 manifest-only preregistration, provisional documentation state
+
+### Immutable append boundary
+
+Before this entry, the complete committed `SESSION_LOG.md` was verified and
+preserved byte-for-byte:
+
+```text
+prefix bytes: 200255
+prefix LF: 2707
+prefix CR: 0
+prefix trailing LF: true
+prefix SHA-256: 0d44c6a6abebe1a48fba351f18bced194428ee13a47792a8fd8386da1f9ae3cb
+```
+
+No byte before this entry was edited. All earlier prefix sizes, “current”
+headings, future-eleventh wording, test counts, and FINAL DOC FREEZE statements
+inside that prefix remain immutable historical records.
+
+### Scope and preservation boundary
+
+The exact next artifact from the post-eleventh cycle was implemented as a
+**non-executable H4-P1 manifest-only preregistration**. Product source under
+`src/`, UI, parser, solver, application version, installer, GitHub state, raw
+SPD, PowerSI references, and all prior H4-P0R implementation/evidence were left
+unchanged. The visible program identity remains **SPD Decap PI Evaluator
+v0.22.0**.
+
+The documentation task did not invoke the manifest CLI, `primary-h4`, any
+public stage, factor process, finalizer, consumer, RHS, linear solve, sidecar
+writer, H4 physics, or PowerSI comparison. No token, claim, tombstone, seal, or
+authorization artifact was created.
+
+### Stable fixture and test bindings
+
+```text
+fixture: tools/research/av_bs1_boundary_schur_h4_p1.py
+fixture bytes/LF/CR: 47295 / 852 / 0
+fixture SHA-256: 6f527c76cbc0928a4b504e01abbb4c049fd39edc75ef865a3335f3a619863200
+
+tests: tests/test_research_av_bs1_boundary_schur_h4_p1.py
+test bytes/LF/CR: 63350 / 1341 / 0
+test SHA-256: 6254e3d28b56d8ec640089c02fdf3308e33775e4c3cd2d6946932bfc1ed7ac9d
+
+schema: AV-BS1-h4-p1-manifest-v1
+manifest payload SHA-256: ec489c784e01635955560fa0ac0681b22bd890759d6693c111cb8ff28c31b753
+manifest wrapper SHA-256: cfa8f9a2504a8fad40ef03e9cb3842877e176a9f3d620f5805099a98c80523e7
+```
+
+The parser accepts only the required `--stage manifest`. There is no default,
+runner, `primary-h4` parser choice, executable stage, or token-gated stage.
+
+### Current and historical authority split
+
+Current status is `preregistered_H4_P1_contract_only_no_solve` with
+`authorization_state=not_authorized`, `execution_authorized=false`, token
+absent, current terminal evidence absent, `authoritative_stage_pass=false`, and
+`next_stage_authorized=false`. A successful manifest validation may state
+`token_absence_validated=true`; any validation failure must instead state
+`token_state=unvalidated_or_unexpected` and
+`token_absence_validated=false`.
+
+The eleventh retry-v10 result remains immutable historical parent evidence:
+`consumed_v2_authoritative_sealed_pass` /
+`consumed_v2_authoritative_sealed_pass_no_next_stage_authorization`. Its two
+ordered factor certificates and resource/cleanup evidence remain authoritative
+for the factor-only pilot on that measured high-memory host. They are not
+current H4-P1 terminal evidence and do not authorize a solve. Minimum host
+available physical memory was `43885748224` bytes, so neither the historical
+pass nor this prospective contract proves 8 GB execution.
+
+### Frozen prospective execution contract
+
+The manifest fixes the `31489`-interior / `512`-boundary H4 matrix hashes,
+deterministic row-max then row-scaled column-max equilibration, and exactly one
+`splu` per factor using `COLAMD`, pivot threshold `1.0`, and `Equil=False`.
+Each future resident factor must solve all `512` raw RHS columns in contiguous
+batches `<=4`; raw-system recovery and residual evaluation are mandatory. Only
+one factor may be resident. Two extensions may be retained until operator
+assembly, but L/U persistence/rehydration, factor rebuilding, fallback tuning,
+and standalone synthetic results are forbidden.
+
+Future full output uses a fixed little-endian complex128 C-order sidecar:
+
+```text
+Y:            offset 0       shape 512 x 512   bytes 4194304
+Y_reverse:    offset 4194304 shape 512 x 512   bytes 4194304
+M9_interior:  offset 8388608 shape 31489 x 9   bytes 4534416
+total raw bytes: 12923024
+payload-only base64 bytes: 17230700
+excess above 16 MiB: 453484
+```
+
+Atomic no-replace publication, exact path/file identity, normalized signed
+zero, finite values, exact size/layout/hash, quarantine/result/tombstone/seal
+bindings, and tamper rejection are mandatory. This session created no sidecar.
+
+Accuracy is prioritized ahead of laptop feasibility. Prospective gates include
+raw backward residual `<=1e-10`, `kappa1*2^-53<=1e-8`, assembly transpose
+`<=1e-12`, independent reverse `<=1e-12`, raw reciprocity `<=1e-8`, raw
+Hermitian passivity, modal field residual `<=1e-10`, modal power mismatch
+`<=1e-8`, analytic signed-mode error `<=0.5%`, H2-to-H4 RMS/max
+`<=0.5%/1%`, eligible phase `<=0.25 deg`, and `+/-m<=1e-8`. Missing,
+nonfinite, zero-denominator, or no-eligible-phase evidence fails closed. No
+symmetrization, averaging, clipping, or post-hoc threshold/mode/seed tuning is
+allowed.
+
+The prospective resource total is `2776689644` bytes raw and `3470862055`
+bytes with 25% margin, leaving `824105241` bytes below the 4 GiB working-set
+stop. Runtime private/commit stops are 5 GiB, wall stop is 900 s, available
+physical stop is 1.5 GiB, and system commit-headroom stop is 2 GiB. Pre-spawn
+minimums are `5081474791` physical and `5618345703` commit-headroom bytes. At
+least one successful identity-bound tree sample must observe the future solve
+child. These are preregistered arithmetic/stops, not measured 8 GB evidence.
+
+### H2 comparison commitment
+
+The historical H2 status string
+`passed_AV_BS_h2_stage_only_pending_h4_preregistration` remains unchanged in
+its artifact. Exact H2 result/payload/numerical hashes are
+`b890e4af13d97591b3134788984b3657f6f6b046e3043ce0a6f6792fe1ad7f55` /
+`5704f3feb5bb90b6e38f8ed3ec67fc690339e9b7f0c1722d40a977295e82593e` /
+`bd2f6542a93e3a7adc62f4435540752651ddf1cff84226319b4aa5e8dbdc0be5`.
+The manifest does not live-revalidate ignored H2 evidence. Future execution
+requires exact evidence restoration or a separately committed compact
+certificate.
+
+### Static validation evidence
+
+```text
+focused stable-byte selection: 32/32 passed in 19.01 s
+independent same-byte selection 1: 32/32 passed in 19.51 s
+independent same-byte selection 2: 32/32 passed in 18.92 s
+selected old-plus-new H4 collection: 432 tests collected in 0.56 s, exit 0
+```
+
+A broad repository `--collect-only` diagnostic also found `2200` tests in
+`3.47 s`; it did not run tests or an execution stage. The frozen H4 document
+validation scope is the selected `432`, not the unrelated whole-repository
+count.
+
+The full exact-document `432/432` suite on final documentation bytes is
+**PENDING**. No full-suite runtime is recorded in this entry, and this cycle is
+not yet **FINAL DOC FREEZE**.
+
+### Files changed
+
+New research artifacts:
+
+- `tools/research/av_bs1_boundary_schur_h4_p1.py`;
+- `tests/test_research_av_bs1_boundary_schur_h4_p1.py`; and
+- `docs/evaluation-research/T1_AV_BOUNDARY_SCHUR_H4_P1_PREREG.md`.
+
+Exactly the same 15 baseline Markdown paths from the post-eleventh cycle were
+updated. This `SESSION_LOG.md` was changed only by appending after the immutable
+prefix above. The new H4-P1 preregistration is a sixteenth Markdown document
+beyond that exact15 baseline.
+
+### Exact next starting point
+
+1. Complete UTF-8/LF, fence, local-link, current/history, parser-contract,
+   prefix, exact-scope, and final-diff checks on the final bytes.
+2. Run the full selected exact-document suite from the root workflow. Record
+   only its first successful `432/432` runtime; do not replace it with later
+   closure timing.
+3. Obtain independent static/document audit and commit only the intended
+   fixture, test, new preregistration, and exact15 documentation scope.
+4. Keep the token absent and `primary-h4` unavailable. Any executable fixture,
+   runner, lifecycle, public stage, or fresh one-use token requires a separate
+   clean preregistration, independent approval, and explicit authorization.
+5. Continue to report H4 physics, PowerSI accuracy, and 8 GB feasibility as
+   unproven until their own fail-closed evidence gates are actually executed.
+
+## 2026-08-16 — H4-P1 first full selected-suite static-document failure and focused correction
+
+The root workflow ran the first full exact selected suite on the then-frozen
+documentation bytes for these same two paths:
+
+- `tests/test_research_av_bs1_boundary_schur_h4_p0r_p1.py`; and
+- `tests/test_research_av_bs1_boundary_schur_h4_p1.py`.
+
+The exact terminal result was `431 passed, 1 failed in 112.88 s`. The only
+failing node was
+`tests/test_research_av_bs1_boundary_schur_h4_p0r_p1.py::test_doc_declares_token_absent_no_factor_and_no_physics`.
+It raised `ValueError` while locating the exact static heading
+`## 1. Current status and authority` in the historical H4-P0R-P1 preregistration,
+because that heading had been renamed to
+`## 1. Historical eleventh status and authority` during current/historical
+reclassification.
+
+This was one static documentation-contract failure. There was no
+runtime-contract failure. The failed `431/432` run is not a pass, creates no
+authority, and is not a final documentation freeze.
+
+The correction restores the exact parser-owned heading while immediately
+stating that the body is a historical, superseded H4-P0R-P1 record and that
+current authority remains the separate H4-P1 manifest-only preregistration.
+Focused verification of the previously failing node then passed `1/1` in
+`0.44 s`, exit `0`. A read-only collection recheck of the same two paths found
+`432 tests collected in 0.58 s`, exit `0`.
+
+The full run of those same two paths on the corrected final documentation bytes
+is still **PENDING**. This correction invoked only the focused static document
+test, collect-only, and documentation mechanics; it did not run the full suite
+or any H4 solve, factor, public, or consumer path.
+
+## 2026-08-16 — H4-P1 first successful full exact two-path suite and final documentation freeze
+
+After the static-heading correction recorded immediately above, the root
+workflow ran the full exact selected suite on the corrected final documentation
+bytes for the same two paths:
+
+- `tests/test_research_av_bs1_boundary_schur_h4_p0r_p1.py`; and
+- `tests/test_research_av_bs1_boundary_schur_h4_p1.py`.
+
+The exact pytest terminal result was
+`432 passed in 111.82s (0:01:51)`, exit `0`, with no failure. In exact-document
+form, `432/432` passed in `111.82 s`, exit `0`, with no failure.
+
+This is the first successful full exact-document runtime after the preserved
+`431 passed, 1 failed in 112.88 s` static-heading failure. That failed run and
+its cause remain immutable history; the success does not rewrite or erase it.
+The corrected H4-P1 documentation is now **FINAL DOC FREEZE**. Do not record
+any later closure runtime or replace `111.82 s` with later mechanics timing.
+
+This documentation validation changes no execution boundary. Current status
+remains `preregistered_H4_P1_contract_only_no_solve`; the token and current
+terminal evidence remain absent, `primary-h4` remains unavailable, and no RHS,
+factorization, factor solve, sidecar, H4 physics, PowerSI comparison, 8 GB
+execution claim, or next-stage authorization follows.

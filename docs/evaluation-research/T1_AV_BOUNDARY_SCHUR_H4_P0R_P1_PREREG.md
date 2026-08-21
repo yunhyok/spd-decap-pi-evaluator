@@ -1,6 +1,25 @@
 # SPD Decap PI Evaluator v0.22.0 - AV-BS1 H4-P0R-P1 executable-contract candidate
 
+> **Current supersession boundary:** This document now preserves the complete
+> historical H4-P0R-P1 factor-only lifecycle. Current research state is the
+> separate [H4-P1 manifest-only preregistration](T1_AV_BOUNDARY_SCHUR_H4_P1_PREREG.md),
+> status `preregistered_H4_P1_contract_only_no_solve`. Its stable fixture/test
+> SHA-256 values are
+> `6f527c76cbc0928a4b504e01abbb4c049fd39edc75ef865a3335f3a619863200` /
+> `6254e3d28b56d8ec640089c02fdf3308e33775e4c3cd2d6946932bfc1ed7ac9d`.
+> It accepts only `--stage manifest`, creates no token or execution authority,
+> and leaves `primary-h4` unavailable. The historical eleventh terminal seal is
+> authoritative only for its factor-only parent result. Selected old-plus-new
+> H4 collection was confirmed exactly at `432 tests collected in 0.56 s`, exit
+> `0`. The first successful full exact-document result records `432/432` passed
+> in `111.82 s`, exit `0`, with no failure. The new cycle is now **FINAL DOC
+> FREEZE**; do not record any later closure runtime.
+
 ## 1. Current status and authority
+
+This exact legacy heading is retained for the frozen static documentation
+contract. The body below is a historical, superseded H4-P0R-P1 record; current
+authority remains the separate H4-P1 manifest-only preregistration linked above.
 
 Eleven public `primary-h4-p0r` invocations and their token lineages are
 immutable. The eleventh ran exactly once from token-only commit
@@ -29,7 +48,7 @@ reused. This authoritative result closes only the H4-P0R factor-cap/resource
 pilot on the measured host. It is not H4-P1, an RHS or factor solve, an H4
 physics result, a PowerSI comparison, or an 8 GB fit proof.
 
-### Current eleventh factor-only result
+### Historical eleventh factor-only result
 
 | factor | input nnz | L/U nnz | native factor nnz | fill ratio | portable/export/native-portable bytes | wall |
 |---|---:|---:|---:|---:|---:|---:|
@@ -53,7 +72,7 @@ were absent after cleanup. Minimum available physical memory on the host was
 host and these exact artifacts, but it does not establish execution on an 8 GB
 laptop.
 
-### Current exact eleventh evidence bindings
+### Historical exact eleventh evidence bindings
 
 | evidence | raw SHA-256 | canonical/payload SHA-256 |
 |---|---|---|
@@ -1331,9 +1350,9 @@ Any hash drift, dirty checkout, missing prerequisite, failed final audit,
 unexpected token-commit content, missing cleanup proof, or absent/invalid seal
 stops this sequence fail-closed.
 
-## 17. Current retry-v10 eleventh-result exact next sequence
+## 17. Historical retry-v10 eleventh-result exact next sequence
 
-The only permitted current sequence is:
+The only permitted sequence at that historical checkpoint was:
 
 1. Preserve the complete history of all eleven public invocations, consumed
    records, D-only retirements, and all retry-v8/retry-v9/retry-v10 historical
@@ -1375,7 +1394,7 @@ the sequence fail-closed.
 
 ## Historical retry-v10 pre-eleventh exact next sequence
 
-The only permitted current sequence is:
+The only permitted sequence at that historical pre-eleventh checkpoint was:
 
 1. Preserve the complete history of all ten public invocations, consumed
    records, D-only retirements, and retry-v8/retry-v9 sections. No retired token
@@ -1402,3 +1421,24 @@ The only permitted current sequence is:
 Any missing prerequisite, dirty unexpected path, failed audit, token presence,
 or attempt to reinterpret the tenth raw seal as authoritative stops this
 sequence fail-closed.
+
+## 18. Current H4-P1 manifest-only handoff
+
+The H4-P0R-P1 lifecycle is closed. Eleven public attempts and every token
+lineage remain immutable and may not be replayed. Current work is limited to
+the non-executable `AV-BS1-h4-p1-manifest-v1` fixture and its static tests.
+Fixture/test bytes are `47295`/`63350`; SHA-256 values are
+`6f527c76cbc0928a4b504e01abbb4c049fd39edc75ef865a3335f3a619863200` /
+`6254e3d28b56d8ec640089c02fdf3308e33775e4c3cd2d6946932bfc1ed7ac9d`.
+Focused `32/32` passed in `19.01 s`; independent same-byte runs passed
+`32/32` in `19.51 s` and `18.92 s`. Selected old-plus-new H4 collection was
+confirmed exactly at `432 tests collected in 0.56 s`, exit `0`.
+
+The current token is absent, current terminal evidence is absent, and
+`next_stage_authorized=false`. No factorization, RHS, solve, sidecar, H4
+physics, PowerSI comparison, or 8 GB execution result exists. The first
+successful full exact-document result records `432/432` passed in `111.82 s`,
+exit `0`, with no failure. This is the **FINAL DOC FREEZE**; no later closure
+runtime is recorded. Any executable H4-P1 work requires a distinct
+runner/lifecycle contract, independent approval, and a fresh explicit
+authorization.

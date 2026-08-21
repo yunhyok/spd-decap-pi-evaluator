@@ -1,5 +1,46 @@
 # SPD Decap PI Evaluator v0.22.0 — T1 AV-BS1 boundary-Schur results
 
+> **Current SPD Decap PI Evaluator v0.22.0 — AV-BS1 H4-P1 manifest-only
+> preregistration, final documentation freeze:** The stable contract fixture
+> `tools/research/av_bs1_boundary_schur_h4_p1.py` is `47295` bytes / `852` LF /
+> SHA-256
+> `6f527c76cbc0928a4b504e01abbb4c049fd39edc75ef865a3335f3a619863200`.
+> Schema `AV-BS1-h4-p1-manifest-v1` is bound to payload SHA-256
+> `ec489c784e01635955560fa0ac0681b22bd890759d6693c111cb8ff28c31b753`
+> and wrapper SHA-256
+> `cfa8f9a2504a8fad40ef03e9cb3842877e176a9f3d620f5805099a98c80523e7`.
+> Static tests are `63350` bytes / `1341` LF / SHA-256
+> `6254e3d28b56d8ec640089c02fdf3308e33775e4c3cd2d6946932bfc1ed7ac9d`;
+> focused `32/32` passed in `19.01 s`, and independent same-byte runs passed
+> `32/32` in `19.51 s` and `18.92 s`.
+>
+> The parser accepts only the required `--stage manifest`. There is no runner,
+> token, claim, public stage, or `primary-h4` parser choice. Current status is
+> `preregistered_H4_P1_contract_only_no_solve`,
+> `authorization_state=not_authorized`, `execution_authorized=false`,
+> `token_state=absent`, `current_terminal_classification=token_absent_no_terminal_evidence`,
+> `authoritative_terminal_evidence=false`, `authoritative_stage_pass=false`,
+> and `next_stage_authorized=false`. No RHS, factorization, factor solve,
+> extension, `Y`, `Y_reverse`, `M9_interior`, sidecar, modal result, H4 physics,
+> or PowerSI comparison ran.
+>
+> The retry-v10 eleventh sealed factor-only pass remains authoritative historical
+> parent evidence only. It creates no present H4-P1 authority and remains a
+> high-memory-host result, not an 8 GB fit proof. The new contract prospectively
+> freezes one resident factor at a time, all `512` RHS in batches `<=4`, raw
+> accuracy gates, fixed little-endian complex128 sidecar, and fail-closed
+> process-tree resource stops; none is implemented or executed here.
+>
+> Selected old-plus-new H4 collection was confirmed exactly: `432 tests
+> collected in 0.56 s`, exit `0`. The first successful full exact-document
+> suite on final documentation bytes recorded `432/432` passed in `111.82 s`,
+> exit `0`, with no failure. This is the **FINAL DOC FREEZE**; do not record any
+> later closure runtime. Every pre-existing retry-v10 eleventh-result,
+> retry-v9, future-tenth/eleventh, `397/397`, `400/400`, `factor_fit_unproven`,
+> or older “current” statement below is an immutable historical snapshot. Only
+> this H4-P1 manifest-only block states current authority.
+>
+
 > **SPD Decap PI Evaluator v0.22.0 — retry-v10 eleventh-result final
 > documentation freeze:** Eleven public `primary-h4-p0r` invocations and token
 > lineages are immutable. The eleventh ran exactly once from token-only commit
@@ -115,13 +156,12 @@
 > [results](T1_AV_BOUNDARY_SCHUR_RESULTS.md) and the
 > [reproduction appendix](ORACLE_REPRODUCTION.md).
 >
-> Every pre-existing retry-v10 tenth-result, future-eleventh, `400/400`,
-> retry-v9, ninth-attempt, future-tenth, `397/397`, or **FINAL DOC FREEZE**
-> statement later in this file is an immutable historical
-> snapshot. Only the retry-v10 eleventh-result block at the top states current authority.
+> This entire retry-v10 eleventh/tenth and retry-v9 banner is retained as an
+> immutable historical snapshot. It does not override the H4-P1 manifest-only
+> current-authority block at the top of this file.
 
 
-## Current verdict
+## Historical pre-H4-P1 verdict
 
 현재 AV-BS1 physics artifact 상태는 **`passed_AV_BS_h2_stage_only_pending_h4_preregistration`**이다. 17.5 µm/100 kHz의 guarded `primary-h2` 한 번이 local mandatory gate를 통과했지만 이는 h2 한 mesh의 단계 제한 통과일 뿐 circle oracle 또는 h4 권한이 아니다. H0 negative, H1 coarse-h pass, H2-P0 assembly manifest, H4-P0 assembly certificate와 H4-P0R manifest parent를 그대로 보존한다. 아홉 번째 P1 factor-only 시도는 producer PID `51184`에서 exactly two factor certificates/prefixes와 factor/resource gates를 통과했지만 published finalizer PID mismatch와 strict chronology-invalid raw seal 때문에 authoritative H4-P0R result가 아니다. RHS, solve, physics는 미실행이다. 따라서 factor-fit proof는 여전히 없고 `factor_fit_unproven=true`, `next_stage_authorized=false`; first full exact-document suite는 `397/397` in `92.95 s`, exit `0`, no failure로 통과했고 문서는 FINAL DOC FREEZE다.
 
@@ -756,7 +796,7 @@ authorized future invocation would be tenth.
 3. retry-v9 Python/runner/tests/docs를 token-absent provisional runtime contract와 FINAL DOC FREEZE에 고정한다. First full exact-document suite는 `397/397` in `92.95 s`, exit `0`, no failure로 통과했다.
 4. Exact final-byte reread, full suite, independent audit와 별도 승인 뒤 새 token이 생긴 경우에만 열 번째 public invocation을 검토한다. RHS/extensions/Y/modal physics는 금지한다. P0R authoritative terminal result 독립 audit와 별도 H4-P1 preregistration/clean audit/fresh token 전에는 h4 physics를 실행하지 않으며, withheld radius/EQ0도 각각의 후속 계약 전까지 금지한다.
 
-## Current retry-v10 eleventh authoritative factor-only result
+## Historical retry-v10 eleventh authoritative factor-only result
 
 All preceding tenth/retry-v9 next-action text is immutable history. Eleven
 public `primary-h4-p0r` invocations are now immutable. The eleventh ran once
@@ -819,7 +859,7 @@ bytes passed `400/400` in `95.65 s`, exit `0`, with no failure. This is the
 authoritative factor-only pass on this host, not an 8 GB proof and not an H4
 or PowerSI physics result.
 
-## Current exact next action
+## Historical eleventh-result exact-next target
 
 1. Validate exactly the 15 baseline Markdown files for scope, UTF-8, LF-only
    endings, fences, links, current wording, and immutable `SESSION_LOG.md`
@@ -836,6 +876,31 @@ or PowerSI physics result.
    `17230700` base64 bytes and exceed 16 MiB by `453484`, so a fixed-layout
    little-endian complex128 sidecar must bind exact offset/shape/dtype/order/
    size/SHA with atomic publish, quarantine, seal, and tamper/nonfinite/path
-   checks. Prospective envelope `3470862055` bytes leaves `824105241` bytes
-   below 4 GiB; 8 GB remains unproven. This is neither implementation nor
-   authorization.
+    checks. Prospective envelope `3470862055` bytes leaves `824105241` bytes
+    below 4 GiB; 8 GB remains unproven. This is neither implementation nor
+    authorization.
+
+## Current H4-P1 manifest-only preregistration result
+
+This is a **contract result only**, not a numerical or physics result. Stable
+fixture/test SHA-256 values are
+`6f527c76cbc0928a4b504e01abbb4c049fd39edc75ef865a3335f3a619863200` /
+`6254e3d28b56d8ec640089c02fdf3308e33775e4c3cd2d6946932bfc1ed7ac9d`.
+Canonical payload/wrapper SHA-256 values are
+`ec489c784e01635955560fa0ac0681b22bd890759d6693c111cb8ff28c31b753` /
+`cfa8f9a2504a8fad40ef03e9cb3842877e176a9f3d620f5805099a98c80523e7`.
+
+The current status is `preregistered_H4_P1_contract_only_no_solve`. The parser
+accepts only required `--stage manifest`; current token and terminal evidence
+are absent, `primary-h4` is unavailable, and `next_stage_authorized=false`.
+The historical eleventh factor certificates remain valid parent evidence but
+are not H4-P1 authority.
+
+No RHS, factorization, solve, sidecar, `Y`, `Y_reverse`, `M9_interior`, modal
+response, H4 physics, PowerSI comparison, or 8 GB measurement was produced.
+Focused and independent static results are `32/32` in `19.01 s`, `19.51 s`,
+and `18.92 s`. Selected old-plus-new H4 collection was confirmed exactly at
+`432 tests collected in 0.56 s`, exit `0`. After the preserved `431/432`
+static-heading failure, the first successful full exact-document result records
+`432/432` passed in `111.82 s`, exit `0`, with no failure. This is the **FINAL
+DOC FREEZE**; do not record any later closure runtime.

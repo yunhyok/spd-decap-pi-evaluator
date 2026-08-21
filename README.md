@@ -1,6 +1,47 @@
 # SPD Decap PI Evaluator v0.22.0
 
-> **Current AV-BS1 H4-P0R-P1 retry-v10 eleventh-result final
+> **Current SPD Decap PI Evaluator v0.22.0 — AV-BS1 H4-P1 manifest-only
+> preregistration, final documentation freeze:** The stable contract fixture
+> `tools/research/av_bs1_boundary_schur_h4_p1.py` is `47295` bytes / `852` LF /
+> SHA-256
+> `6f527c76cbc0928a4b504e01abbb4c049fd39edc75ef865a3335f3a619863200`.
+> Schema `AV-BS1-h4-p1-manifest-v1` is bound to payload SHA-256
+> `ec489c784e01635955560fa0ac0681b22bd890759d6693c111cb8ff28c31b753`
+> and wrapper SHA-256
+> `cfa8f9a2504a8fad40ef03e9cb3842877e176a9f3d620f5805099a98c80523e7`.
+> Static tests are `63350` bytes / `1341` LF / SHA-256
+> `6254e3d28b56d8ec640089c02fdf3308e33775e4c3cd2d6946932bfc1ed7ac9d`;
+> focused `32/32` passed in `19.01 s`, and independent same-byte runs passed
+> `32/32` in `19.51 s` and `18.92 s`.
+>
+> The parser accepts only the required `--stage manifest`. There is no runner,
+> token, claim, public stage, or `primary-h4` parser choice. Current status is
+> `preregistered_H4_P1_contract_only_no_solve`,
+> `authorization_state=not_authorized`, `execution_authorized=false`,
+> `token_state=absent`, `current_terminal_classification=token_absent_no_terminal_evidence`,
+> `authoritative_terminal_evidence=false`, `authoritative_stage_pass=false`,
+> and `next_stage_authorized=false`. No RHS, factorization, factor solve,
+> extension, `Y`, `Y_reverse`, `M9_interior`, sidecar, modal result, H4 physics,
+> or PowerSI comparison ran.
+>
+> The retry-v10 eleventh sealed factor-only pass remains authoritative historical
+> parent evidence only. It creates no present H4-P1 authority and remains a
+> high-memory-host result, not an 8 GB fit proof. The new contract prospectively
+> freezes one resident factor at a time, all `512` RHS in batches `<=4`, raw
+> accuracy gates, fixed little-endian complex128 sidecar, and fail-closed
+> process-tree resource stops; none is implemented or executed here.
+>
+> Selected old-plus-new H4 collection was confirmed exactly: `432 tests
+> collected in 0.56 s`, exit `0`. The first successful full exact-document
+> suite on final documentation bytes recorded `432/432` passed in `111.82 s`,
+> exit `0`, with no failure. This is the **FINAL DOC FREEZE**; do not record any
+> later closure runtime. Every pre-existing retry-v10 eleventh-result,
+> retry-v9, future-tenth/eleventh, `397/397`, `400/400`, `factor_fit_unproven`,
+> or older “current” statement below is an immutable historical snapshot. Only
+> this H4-P1 manifest-only block states current authority.
+>
+
+> **Historical AV-BS1 H4-P0R-P1 retry-v10 eleventh-result final
 > documentation freeze:** Eleven public `primary-h4-p0r` invocations and token
 > lineages are immutable. The eleventh ran exactly once from token-only commit
 > `e35ef01214f4bf9ec75e7b428e72b21d38c9161b`, token ID
@@ -146,10 +187,9 @@
 > [results](docs/evaluation-research/T1_AV_BOUNDARY_SCHUR_RESULTS.md) and
 > [reproduction appendix](docs/evaluation-research/ORACLE_REPRODUCTION.md).
 >
-> Every pre-existing retry-v10 tenth-result, future-eleventh, `400/400`,
-> retry-v9, ninth-attempt, future-tenth, `397/397`, or **FINAL DOC FREEZE**
-> statement later in this file is an immutable historical
-> snapshot. Only the retry-v10 eleventh-result block at the top states current authority.
+> This entire retry-v10 eleventh/tenth and retry-v9 banner is retained as an
+> immutable historical snapshot. It does not override the H4-P1 manifest-only
+> current-authority block at the top of this file.
 
 > **v0.22.0 implements the source-derived multilayer layer-surface network and binds its release decision to both named SPD/PowerSI cases.** Exact adjacent-gap artwork Maxwell-Y blocks share physical `(layer, NET)` surface nodes, exact same-NET Trace/Via components provide only source-observed connectivity, and all internal interfaces are eliminated by one global sparse Schur/Kron solve. Touchstone remains comparison-only. Distribution reports `Assignment Failed`, and the main board can switch between Source SPD and Current cap assignments at their fixed physical XY. The title bar identifies the application as **SPD Decap PI Evaluator v0.22.0**.
 
