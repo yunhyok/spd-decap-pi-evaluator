@@ -7506,11 +7506,45 @@ def recover_spd_ground_reachability(
         )
         return drill, material, segments, "complete", ()
 
+    aggregate_key_by_contact: list[
+        tuple[str, str, str, str, str, str] | None
+    ] = []
+    required_aggregate_keys: set[tuple[str, str, str, str, str, str]] = set()
+    for contact in landing_surface_contacts:
+        net_key = contact.net.casefold()
+        endpoint_surface = surface_row(net_key, contact.endpoint_node_id.casefold())
+        internal_surface = surface_row(
+            net_key, (contact.internal_endpoint_node_id or "").casefold()
+        )
+        padstack_name = via_terminal_padstack_by_key.get(
+            (net_key, contact.via_id.casefold())
+        )
+        aggregate_key = (
+            (
+                net_key,
+                padstack_name.casefold(),
+                endpoint_surface[0].casefold(),
+                internal_surface[0].casefold(),
+                endpoint_surface[1],
+                internal_surface[1],
+            )
+            if padstack_name is not None
+            and endpoint_surface is not None
+            and internal_surface is not None
+            else None
+        )
+        aggregate_key_by_contact.append(aggregate_key)
+        if aggregate_key is not None:
+            required_aggregate_keys.add(aggregate_key)
+    aggregate_by_key: dict[
+        tuple[str, str, str, str, str, str], SpdViaIslandPairAggregate
+    ] = {}
+
     # Materialize one canonical row per replay accumulator.  The old path built
     # one dataclass and one Via-ID list per source edge; the replay keeps only a
     # framed digest/count/ownership counters until this bounded output stage.
     via_island_pair_aggregates = []
-    for state in aggregate_states.values():
+    for source_aggregate_key, state in aggregate_states.items():
         net_key = str(state["net"])
         padstack_name = str(state["padstack"])
         start_layer = target_layer_display.get(
@@ -7532,31 +7566,32 @@ def recover_spd_ground_reachability(
             (net_key, str(state["end_layer"]).casefold(), end_island),
             (end_island,),
         )
-        via_island_pair_aggregates.append(
-            SpdViaIslandPairAggregate(
-                net=next(
-                    (str(raw_net) for raw_net in target_layers_by_net
-                     if str(raw_net).casefold() == net_key),
-                    net_key,
-                ),
-                padstack=padstack_name,
-                start_layer=start_layer,
-                end_layer=end_layer,
-                start_island_id=start_island,
-                end_island_id=end_island,
-                count=int(state["count"]),
-                via_ids_sha256=state["digest"].hexdigest(),
-                start_component_island_ids=tuple(sorted(start_component)),
-                end_component_island_ids=tuple(sorted(end_component)),
-                terminal_owned_count=(int(state["owned"]) if terminal_owned_via_ids is not None else None),
-                substrate_count=(int(state["substrate"]) if terminal_owned_via_ids is not None else None),
-                drill_diameter_um=drill,
-                material=material,
-                segments=segments,
-                physical_model_status=physical_status,
-                physical_model_issues=physical_issues,
-            )
+        aggregate = SpdViaIslandPairAggregate(
+            net=next(
+                (str(raw_net) for raw_net in target_layers_by_net
+                 if str(raw_net).casefold() == net_key),
+                net_key,
+            ),
+            padstack=padstack_name,
+            start_layer=start_layer,
+            end_layer=end_layer,
+            start_island_id=start_island,
+            end_island_id=end_island,
+            count=int(state["count"]),
+            via_ids_sha256=state["digest"].hexdigest(),
+            start_component_island_ids=tuple(sorted(start_component)),
+            end_component_island_ids=tuple(sorted(end_component)),
+            terminal_owned_count=(int(state["owned"]) if terminal_owned_via_ids is not None else None),
+            substrate_count=(int(state["substrate"]) if terminal_owned_via_ids is not None else None),
+            drill_diameter_um=drill,
+            material=material,
+            segments=segments,
+            physical_model_status=physical_status,
+            physical_model_issues=physical_issues,
         )
+        via_island_pair_aggregates.append(aggregate)
+        if source_aggregate_key in required_aggregate_keys:
+            aggregate_by_key[source_aggregate_key] = aggregate
     via_island_pair_aggregates.sort(
         key=lambda item: (
             item.net.casefold(), item.padstack.casefold(),
@@ -7573,25 +7608,16 @@ def recover_spd_ground_reachability(
     # metadata as its aggregate.
     if landing_surface_contacts:
         enriched_contacts: list[SpdLandingSurfaceContact] = []
-        for contact in landing_surface_contacts:
+        for contact, aggregate_key in zip(
+            landing_surface_contacts, aggregate_key_by_contact, strict=True
+        ):
             net_key = contact.net.casefold()
             endpoint_key = contact.endpoint_node_id.casefold()
-            endpoint_surface = surface_row(net_key, endpoint_key)
             internal_key = (contact.internal_endpoint_node_id or "").casefold()
-            internal_surface = surface_row(net_key, internal_key)
-            aggregate = next(
-                (
-                    item
-                    for item in via_island_pair_aggregates
-                    if item.net.casefold() == net_key
-                    and endpoint_surface is not None
-                    and internal_surface is not None
-                    and item.start_layer.casefold() == endpoint_surface[0].casefold()
-                    and item.end_layer.casefold() == internal_surface[0].casefold()
-                    and item.start_island_id == endpoint_surface[1]
-                    and item.end_island_id == internal_surface[1]
-                ),
-                None,
+            aggregate = (
+                aggregate_by_key.get(aggregate_key)
+                if aggregate_key is not None
+                else None
             )
             if aggregate is None:
                 # Owned one-sided terminal Vias have no paired aggregate, but
@@ -7660,6 +7686,9 @@ def recover_spd_ground_reachability(
                 )
             )
         landing_surface_contacts = enriched_contacts
+    aggregate_by_key.clear()
+    required_aggregate_keys.clear()
+    aggregate_key_by_contact.clear()
     via_terminal_padstack_by_key.clear()
     if raw_via_count:
         paired_count = sum(item.count for item in via_island_pair_aggregates)
