@@ -5958,7 +5958,10 @@ def test_recover_keeps_same_node_ids_separate_by_net(tmp_path: Path) -> None:
     assert result.statistics["via_source_record_replay_passes"] == 1
 
 
-def test_finite_via_scenario_isolation_and_retarget_bindings(tmp_path: Path) -> None:
+def test_finite_via_scenario_isolation_and_retarget_bindings(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     source, analysis = _recoverable_via_source(
         tmp_path,
         node_lines=(
@@ -5972,6 +5975,21 @@ def test_finite_via_scenario_isolation_and_retarget_bindings(tmp_path: Path) -> 
         ),
     )
     landing = SimpleNamespace(via_id="ViaIso", net="PWR", endpoint_node_id="NodeIsoA")
+    needed_key_sets: list[set[tuple[str, str]]] = []
+    real_index = spd_io._index_reachable_layers_by_landing
+
+    class ReleaseCheckingIndex(dict):
+        def get(self, key, default=None):
+            assert not needed_key_sets[0]
+            return super().get(key, default)
+
+    def track_needed_keys(reachable_rows, needed_keys):
+        needed_key_sets.append(needed_keys)
+        return ReleaseCheckingIndex(real_index(reachable_rows, needed_keys))
+
+    monkeypatch.setattr(
+        spd_io, "_index_reachable_layers_by_landing", track_needed_keys
+    )
     result = recover_spd_ground_reachability(
         source,
         landings=(landing,),
@@ -5992,6 +6010,7 @@ def test_finite_via_scenario_isolation_and_retarget_bindings(tmp_path: Path) -> 
         },
     )
     assert result.finite_via_scenario_isolation_coverage is not None
+    assert needed_key_sets == [set()]
     assert result.finite_via_scenario_isolated_landing_keys == {("viaiso", "nodeisoa")}
     assert result.finite_via_retarget_destination_coverage is not None
     assert result.finite_via_retarget_destination_coverage.resolved_destination_count == 1

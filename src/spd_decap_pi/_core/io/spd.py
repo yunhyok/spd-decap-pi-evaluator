@@ -7355,7 +7355,7 @@ def recover_spd_ground_reachability(
     reachable_layers_by_landing = _index_reachable_layers_by_landing(
         reachable, needed_landing_keys
     )
-    terminal_contact_keys = set(terminal_contact_owner_by_key)
+    needed_landing_keys.clear()
     contact_seen: set[tuple[str, str]] = set()
     for landing in all_landings:
         landing_key = (
@@ -7410,7 +7410,10 @@ def recover_spd_ground_reachability(
                 surface_components.add(
                     SpdSurfaceConnectivityComponent(display_net, display_layers)
                 )
-        if landing_key in terminal_contact_keys and landing_key not in contact_seen:
+        if (
+            landing_key in terminal_contact_owner_by_key
+            and landing_key not in contact_seen
+        ):
             terminal_net_key, terminal_owner_kind, _terminal_id = (
                 terminal_contact_owner_by_key[landing_key]
             )
@@ -7476,8 +7479,6 @@ def recover_spd_ground_reachability(
     del surface_parents[:]
     surface_codes_by_root.clear()
     reachable_layers_by_landing.clear()
-    needed_landing_keys.clear()
-    terminal_contact_keys.clear()
     contact_seen.clear()
     via_terminal_display_endpoints.clear()
     del all_landings, landing_records, terminal_contact_records
