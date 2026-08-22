@@ -37,6 +37,7 @@ from spd_decap_pi._core.solver.evaluator import (
     build_project_evaluation_request,
     compile_project_evaluation_template,
 )
+from spd_decap_pi._core.solver.modal import ModalSolverError
 from spd_decap_pi._core.models.impedance import SeriesRLModel
 from spd_decap_pi._core.solver.layer_surface_termination import (
     LayerSurfaceTerminationError,
@@ -51,6 +52,7 @@ from spd_decap_pi._core.solver.profiles import (
 )
 from spd_decap_pi._core.solver.research_uniform_profile import UniformC00SourceModel
 from spd_decap_pi import evaluation as evaluation_module
+from spd_decap_pi import spd_adapter as spd_adapter_module
 from spd_decap_pi import scenario as scenario_module
 from spd_decap_pi.distribution import (
     DistributionDistanceMode,
@@ -3475,6 +3477,81 @@ def test_evaluation_policy_is_bound_and_source_sha_is_required_for_proof() -> No
         item.reason.startswith("SOURCE_GRAPH_PROVENANCE_INVALID:")
         for item in blocked.blockers
     )
+
+
+def test_layerwise_anchor_compile_keeps_source_port_outside_legacy_rectangle() -> None:
+    project = _base_project()
+    source_sha256 = "a" * 64
+    power_pin = project.pins[0].model_copy(
+        update={"source_node_id": "NODE_PWR", "source_layer": "TOP"}
+    )
+    ground_pin = project.pins[1].model_copy(
+        update={"source_node_id": "NODE_GND", "source_layer": "TOP"}
+    )
+    partition = project.partitions[0]
+    partition = partition.model_copy(
+        update={
+            "cells": [
+                partition.cells[0].model_copy(update={"x_max_um": 500.0})
+            ]
+        }
+    )
+    metadata = deepcopy(project.metadata)
+    metadata["spd_import"] = {
+        "source_name": "fixture.spd",
+        "source_sha256": source_sha256,
+        "selected_plane_pair_provenance": {
+            "VDD": {
+                "source_sha256": source_sha256,
+                "source_graph_capability": "TRACE_VIA_COMPONENTS_AVAILABLE",
+                "device_route_witnesses": [
+                    {
+                        "pin_id": power_pin.pin_id,
+                        "terminal": "PWR",
+                        "source_node_id": power_pin.source_node_id,
+                        "target_layer": "PWR1",
+                        "reachable": True,
+                        "target_contact_count": 1,
+                        "target_contacts": [{"x_um": 1200.0, "y_um": 1000.0}],
+                    },
+                    {
+                        "pin_id": ground_pin.pin_id,
+                        "terminal": "GND",
+                        "source_node_id": ground_pin.source_node_id,
+                        "target_layer": "GND1",
+                        "reachable": True,
+                        "target_contact_count": 1,
+                        "target_contacts": [{"x_um": 1300.0, "y_um": 1000.0}],
+                    },
+                ],
+            }
+        },
+    }
+    project = project.model_copy(
+        update={
+            "pins": [power_pin, ground_pin, *project.pins[2:]],
+            "partitions": [partition],
+            "metadata": metadata,
+        }
+    )
+
+    with pytest.raises(ModalSolverError, match="lies outside the rectangular plane"):
+        compile_project_evaluation_template(project, "RAIL_VDD")
+
+    template = compile_project_evaluation_template(
+        project,
+        "RAIL_VDD",
+        terminal_complete_external_input=True,
+    )
+    branch = template.device.branches[0]
+    assert template.origin_um[0] + branch.port.x_m * 1.0e6 == pytest.approx(1000.0)
+    assert template.origin_um[1] + branch.port.y_m * 1.0e6 == pytest.approx(1000.0)
+    bindings, failures = spd_adapter_module._compile_active_rail_anchor_bindings(
+        project,
+        source_sha256=source_sha256,
+    )
+    assert failures == []
+    assert {item["pin_id"] for item in bindings} == {power_pin.pin_id, ground_pin.pin_id}
 
 
 def _alternate_fixture() -> tuple[ScenarioSpec, dict[str, bytes]]:

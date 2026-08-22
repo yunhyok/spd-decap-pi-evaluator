@@ -1176,8 +1176,14 @@ def _modal_convergence_delta(
 def compile_project_evaluation_template(
     project: Any,
     rail_id: str,
+    *,
+    terminal_complete_external_input: bool = False,
 ) -> ProjectEvaluationTemplate:
-    """Compile plane, Device pairing, models, and topology for repeated states."""
+    """Compile plane, Device pairing, models, and topology for repeated states.
+
+    Terminal-complete Layerwise uses source-anchor IDs and exact retained
+    surfaces; its compatibility port is not a rectangular modal excitation.
+    """
 
     rails = {item.rail_id: item for item in project.rails}
     if rail_id not in rails:
@@ -1207,6 +1213,7 @@ def compile_project_evaluation_template(
         origin_um,
         via_templates,
         via_models,
+        terminal_complete_external_input=terminal_complete_external_input,
     )
     return ProjectEvaluationTemplate(
         source_project=project,
@@ -1256,7 +1263,12 @@ def build_project_evaluation_request(
     if str(getattr(rail.state, "value", rail.state)) != "ACTIVE":
         raise EvaluationError(f"rail {rail_id!r} is not ACTIVE")
 
-    compiled = template or compile_project_evaluation_template(project, rail_id)
+    profile = solver_profile(solver_profile_key)
+    compiled = template or compile_project_evaluation_template(
+        project,
+        rail_id,
+        terminal_complete_external_input=(profile == LAYERWISE_ADMITTANCE_PROFILE),
+    )
     if compiled.rail_id != rail_id:
         raise EvaluationError(
             f"evaluation template rail {compiled.rail_id!r} does not match {rail_id!r}"
@@ -1272,7 +1284,6 @@ def build_project_evaluation_request(
             "topology, and via data are unchanged"
         )
 
-    profile = solver_profile(solver_profile_key)
     frequencies = _project_frequencies(project.frequency)
     target = _target_from_rail(rail, frequencies)
     placements = {
@@ -1907,6 +1918,8 @@ def _device_connection(
     origin_um: tuple[float, float],
     templates: dict[str, Any],
     via_models: dict[str, ImpedanceModel],
+    *,
+    terminal_complete_external_input: bool = False,
 ) -> tuple[DeviceConnection, tuple[str, ...], bool]:
     from spd_decap_pi._core.geometry.pairing import BumpPairingError, pair_device_bumps
 
@@ -2236,13 +2249,12 @@ def _device_connection(
                 f"Device cluster {cluster.cluster_id!r} must have exactly one "
                 "coordinate-pairing anchor"
             )
-        # Validate every graph-modeled terminal.  Only the anchor PWR contact
-        # determines the single modal excitation coordinate; all other PWR
-        # and GND contacts still require source-node/layer/reachability and
-        # target-contact provenance before this cluster can compile.
+        # Validate every graph-modeled terminal.  Only legacy/research modal
+        # profiles require those contacts to fit the rectangular cavity;
+        # terminal-complete Layerwise consumes their exact surface bindings.
         for pin in cluster_power:
             target = graph_target(pin, "PWR")
-            if target is not None:
+            if target is not None and not terminal_complete_external_input:
                 _finite_port(
                     target[0],
                     target[1],
@@ -2252,7 +2264,7 @@ def _device_connection(
                 ).validate_inside(plane)
         for pin in cluster_ground:
             target = graph_target(pin, "GND")
-            if target is not None:
+            if target is not None and not terminal_complete_external_input:
                 _finite_port(
                     target[0],
                     target[1],
@@ -2262,21 +2274,27 @@ def _device_connection(
                 ).validate_inside(plane)
         anchor_power = power_lookup[anchor_pairs[0].power_pin_id]
         anchor_ground = ground_lookup[anchor_pairs[0].ground_pin_id]
-        # The modal cavity is the selected PWR artwork with a continuous DGND
-        # reference.  Locate the excitation at the original paired PWR terminal,
-        # just as decap ports use their PWR-pad coordinate.  A PWR/DGND midpoint
-        # can legitimately fall outside a narrow PWR polygon when the return bump
-        # is beside it.  A full PWR centroid can likewise be displaced by surplus
-        # terminals attached to this conservative shared cluster.
+        # Legacy modal uses the reduced target contact.  Layerwise keeps the
+        # explicit source PWR anchor required by its terminal-contact proof;
+        # the exact Via/surface certificate owns the internal transition.
         target_xy = graph_target(anchor_power, "PWR")
         port = _finite_port(
-            float(anchor_power.x_um) if target_xy is None else target_xy[0],
-            float(anchor_power.y_um) if target_xy is None else target_xy[1],
+            (
+                float(anchor_power.x_um)
+                if terminal_complete_external_input or target_xy is None
+                else target_xy[0]
+            ),
+            (
+                float(anchor_power.y_um)
+                if terminal_complete_external_input or target_xy is None
+                else target_xy[1]
+            ),
             origin_um,
             template,
             cluster.cluster_id,
         )
-        port.validate_inside(plane)
+        if not terminal_complete_external_input:
+            port.validate_inside(plane)
         branch_id = "|".join(
             [cluster.cluster_id, *cluster.power_pin_ids, *cluster.ground_pin_ids]
         )

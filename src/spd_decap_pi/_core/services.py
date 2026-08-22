@@ -829,7 +829,13 @@ def evaluate_workspace(
             15,
             "Auditing source artwork, adjacent layers, reference, and Device evidence…",
         )
-        template = compile_project_evaluation_template(project, rail_id)
+        template = compile_project_evaluation_template(
+            project,
+            rail_id,
+            terminal_complete_external_input=(
+                profile == LAYERWISE_ADMITTANCE_PROFILE
+            ),
+        )
         request_options["template"] = template
         if profile == LAYERWISE_ADMITTANCE_PROFILE:
             from .solver.layerwise_network import (

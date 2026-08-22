@@ -2404,7 +2404,11 @@ def _builder_preflight_blockers(
                     build_layerwise_uniform_source_model,
                 )
 
-                template = compile_project_evaluation_template(candidate, rail_id)
+                template = compile_project_evaluation_template(
+                    candidate,
+                    rail_id,
+                    terminal_complete_external_input=True,
+                )
 
                 def source_progress(value: int, message: str) -> None:
                     bounded = min(max(int(value), 0), 100)

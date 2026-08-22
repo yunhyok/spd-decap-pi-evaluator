@@ -1823,7 +1823,9 @@ def _compile_active_rail_anchor_bindings(
     for rail in active_rails:
         try:
             template = compile_project_evaluation_template(
-                compile_project, rail.rail_id
+                compile_project,
+                rail.rail_id,
+                terminal_complete_external_input=True,
             )
         except Exception as exc:
             failures.append(

@@ -1748,7 +1748,13 @@ def test_import_runs_one_union_reachability_pass_and_persists_surface_certificat
         retarget_request_lists.append(result[0])
         return result
 
-    def fake_compile(_project: ProjectSpec, _rail_id: str) -> SimpleNamespace:
+    def fake_compile(
+        _project: ProjectSpec,
+        _rail_id: str,
+        *,
+        terminal_complete_external_input: bool = False,
+    ) -> SimpleNamespace:
+        assert terminal_complete_external_input
         return SimpleNamespace(
             device=SimpleNamespace(
                 branches=(
