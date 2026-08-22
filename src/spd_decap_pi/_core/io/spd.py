@@ -7369,9 +7369,12 @@ def recover_spd_ground_reachability(
         return surface_layer, surface_token
 
     def surface_row(net_key: str, node_key: str) -> tuple[str, str] | None:
-        return surface_row_at(
-            net_key, late_node_indices.get((net_key, node_key.casefold()))
-        )
+        node_index = late_node_indices.get((net_key, node_key.casefold()))
+        row = surface_row_at(net_key, node_index)
+        if row is None or node_index is None:
+            return None
+        code = surface_code_by_index[node_index]
+        return row[0], surface_component_islands_by_code.get(code, (row[1],))[0]
 
     # grouped_equivalence is complete before this replay; cache its component
     # island lookup so each Via performs O(1) provenance work.
@@ -7458,13 +7461,21 @@ def recover_spd_ground_reachability(
                     invalid_unsupported_count += 1
                     invalid_unsupported_offsets.append(int(offset))
             else:
+                start_component = component_islands_by_surface.get(
+                    (net_key, first_surface[0], first_surface[1]),
+                    (first_surface[1],),
+                )
+                end_component = component_islands_by_surface.get(
+                    (net_key, second_surface[0], second_surface[1]),
+                    (second_surface[1],),
+                )
                 aggregate_key = (
                     net_key,
                     padstack_name.casefold(),
                     first_surface[0].casefold(),
                     second_surface[0].casefold(),
-                    first_surface[1],
-                    second_surface[1],
+                    start_component[0],
+                    end_component[0],
                 )
                 state = aggregate_states.get(aggregate_key)
                 if state is None:
@@ -7473,16 +7484,10 @@ def recover_spd_ground_reachability(
                         "padstack": padstack_name,
                         "start_layer": first_surface[0],
                         "end_layer": second_surface[0],
-                        "start_island": first_surface[1],
-                        "end_island": second_surface[1],
-                        "start_component": component_islands_by_surface.get(
-                            (net_key, first_surface[0], first_surface[1]),
-                            (first_surface[1],),
-                        ),
-                        "end_component": component_islands_by_surface.get(
-                            (net_key, second_surface[0], second_surface[1]),
-                            (second_surface[1],),
-                        ),
+                        "start_island": start_component[0],
+                        "end_island": end_component[0],
+                        "start_component": start_component,
+                        "end_component": end_component,
                         "count": 0,
                         "digest": hashlib.sha256(),
                         "owned": 0,

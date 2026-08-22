@@ -5087,9 +5087,9 @@ def test_terminal_contact_keeps_full_internal_equivalence_component(
         node_lines=(
             "NodeExternal!!1::PWR X = 0um Y = 0um Layer = Signal$TOP "
             "PadStack = DR-0102_60\n"
-            "NodeInternal!!1::PWR X = 0um Y = 0um Layer = Signal$PWR "
+            "NodeInternal!!1::PWR X = 10um Y = 0um Layer = Signal$PWR "
             "PadStack = DR-0102_60\n"
-            "NodeInternalPeer!!1::PWR X = 10um Y = 0um Layer = Signal$PWR "
+            "NodeInternalPeer!!1::PWR X = 0um Y = 0um Layer = Signal$PWR "
             "PadStack = DR-0102_60"
         ),
         trace_lines=(
@@ -5134,6 +5134,13 @@ def test_terminal_contact_keeps_full_internal_equivalence_component(
         "Signal$PWR": ("island-pwr-a", "island-pwr-b"),
     }
     aggregate = result.via_island_pair_aggregates[0]
+    assert {
+        aggregate.start_layer: aggregate.start_island_id,
+        aggregate.end_layer: aggregate.end_island_id,
+    } == {
+        "Signal$TOP": "island-top",
+        "Signal$PWR": "island-pwr-a",
+    }
     assert {
         aggregate.start_layer: aggregate.start_component_island_ids,
         aggregate.end_layer: aggregate.end_component_island_ids,
