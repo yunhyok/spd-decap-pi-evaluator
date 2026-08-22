@@ -7065,11 +7065,8 @@ def recover_spd_ground_reachability(
     target_contacts_by_key: dict[tuple[str, str, str], tuple[tuple[str, float, float], ...]] = {}
     target_contact_count_by_key: dict[tuple[str, str, str], int] = {}
     target_contact_hash_by_key: dict[tuple[str, str, str], str] = {}
-    component_contacts_cache: dict[
-        tuple[str, int, int], tuple[tuple[tuple[str, float, float], ...], int, str]
-    ] = {}
-    nearest_contact_tree_cache: dict[
-        tuple[str, int, int], tuple[cKDTree, tuple[tuple[str, float, float], ...]]
+    requests_by_component: dict[
+        tuple[str, int], dict[int, list[tuple[str, str, str]]]
     ] = {}
 
     def legacy_selected_contact(
@@ -7088,120 +7085,137 @@ def recover_spd_ground_reachability(
             ),
         )
 
-    for via, node, target_layer in requested:
+    for request in requested:
+        via, node, target_layer = request
         net_key = requested_by_key[(via, node, target_layer)]
         root = find(index_for(net_key, node))
         target_bit = target_bit_by_key[(net_key, target_layer)]
         if component_target_masks.get(root, 0) & target_bit:
-            key = (via, node, target_layer)
-            cache_key = (net_key, root, target_bit)
-            cached_contacts = component_contacts_cache.get(cache_key)
-            if cached_contacts is None:
-                contacts = tuple(
-                    (node_id, float(x_um), float(y_um))
-                    for node_id, x_um, y_um, mask in component_contacts.get((net_key, root), ())
-                    if mask & target_bit
+            requests_by_component.setdefault((net_key, root), {}).setdefault(
+                target_bit, []
+            ).append(request)
+    resolved_contacts_by_key: dict[
+        tuple[str, str, str], tuple[tuple[str, float, float], int, str]
+    ] = {}
+    while requests_by_component:
+        (net_key, root), requests_by_target_bit = requests_by_component.popitem()
+        raw_component_contacts = component_contacts.pop((net_key, root), ())
+        while requests_by_target_bit:
+            target_bit, grouped_requests = requests_by_target_bit.popitem()
+            ordered_contacts = tuple(
+                sorted(
+                    {
+                        (node_id, float(x_um), float(y_um))
+                        for node_id, x_um, y_um, mask in raw_component_contacts
+                        if mask & target_bit
+                    },
+                    key=lambda item: (item[0].casefold(), item[0], item[1], item[2]),
                 )
-                ordered_contacts = tuple(
-                    sorted(
-                        set(contacts),
-                        key=lambda item: (item[0].casefold(), item[0], item[1], item[2]),
+            )
+            contact_digest = hashlib.sha256()
+            contact_digest.update(b"(")
+            for contact_index, contact_item in enumerate(ordered_contacts):
+                if contact_index:
+                    contact_digest.update(b", ")
+                contact_digest.update(repr(contact_item).encode("utf-8"))
+            if len(ordered_contacts) == 1:
+                contact_digest.update(b",")
+            contact_digest.update(b")")
+            contact_count = len(ordered_contacts)
+            contact_hash = contact_digest.hexdigest()
+            nearest_tree: cKDTree | None = None
+            nearest_contacts: tuple[tuple[str, float, float], ...] = ()
+            if len(ordered_contacts) >= _NEAREST_CONTACT_TREE_THRESHOLD:
+                # Collapse duplicate coordinates without changing the persisted
+                # candidate universe or its canonical equal-distance winner.
+                unique_contacts_by_coordinate: dict[
+                    tuple[float, float], tuple[str, float, float]
+                ] = {}
+                finite_contacts = True
+                for contact_item in ordered_contacts:
+                    x_value, y_value = contact_item[1], contact_item[2]
+                    if not isfinite(x_value) or not isfinite(y_value):
+                        finite_contacts = False
+                        break
+                    unique_contacts_by_coordinate.setdefault(
+                        (x_value, y_value), contact_item
                     )
-                )
-                del contacts
-                contact_digest = hashlib.sha256()
-                contact_digest.update(b"(")
-                for contact_index, contact_item in enumerate(ordered_contacts):
-                    if contact_index:
-                        contact_digest.update(b", ")
-                    contact_digest.update(repr(contact_item).encode("utf-8"))
-                if len(ordered_contacts) == 1:
-                    contact_digest.update(b",")
-                contact_digest.update(b")")
-                cached_contacts = (
-                    ordered_contacts,
-                    len(ordered_contacts),
-                    contact_digest.hexdigest(),
-                )
-                component_contacts_cache[cache_key] = cached_contacts
-                if len(ordered_contacts) >= _NEAREST_CONTACT_TREE_THRESHOLD:
-                    # Keep the persisted candidate universe untouched while
-                    # collapsing duplicate coordinates for nearest lookup.
-                    # The first item in canonical order is exactly the legacy
-                    # lexicographic winner for an equal-coordinate tie.
-                    unique_contacts_by_coordinate: dict[
-                        tuple[float, float], tuple[str, float, float]
-                    ] = {}
-                    finite_contacts = True
-                    for contact_item in ordered_contacts:
-                        x_value, y_value = contact_item[1], contact_item[2]
-                        if not isfinite(x_value) or not isfinite(y_value):
-                            finite_contacts = False
-                            break
-                        unique_contacts_by_coordinate.setdefault(
-                            (x_value, y_value), contact_item
-                        )
-                    if finite_contacts and unique_contacts_by_coordinate:
-                        unique_contacts = tuple(
-                            unique_contacts_by_coordinate.values()
-                        )
-                        nearest_contact_tree_cache[cache_key] = (
-                            cKDTree([(item[1], item[2]) for item in unique_contacts]),
-                            unique_contacts,
-                        )
-            ordered_contacts, contact_count, contact_hash = cached_contacts
-            source_xy = requested_coordinates.get((via, node, target_layer))
-            if (
-                source_xy is None
-                or not all(isfinite(float(value)) for value in source_xy)
-                or not ordered_contacts
-            ):
-                # A graph component without a finite source origin cannot be
-                # reduced to a deterministic target contact.  Keep the
-                # request fail-closed instead of selecting the first contact.
-                continue
-            reachable.add(key)
-            target_contact_count_by_key[key] = contact_count
-            target_contact_hash_by_key[key] = contact_hash
-            nearest_tree_info = nearest_contact_tree_cache.get(cache_key)
-            if nearest_tree_info is None:
-                selected_contact = legacy_selected_contact(ordered_contacts, source_xy)
-            else:
-                nearest_tree, nearest_contacts = nearest_tree_info
-                try:
-                    _tree_distance, nearest_index = nearest_tree.query(
-                        (source_xy[0], source_xy[1]), k=1, workers=1
+                if finite_contacts and unique_contacts_by_coordinate:
+                    nearest_contacts = tuple(unique_contacts_by_coordinate.values())
+                    nearest_tree = cKDTree(
+                        [(item[1], item[2]) for item in nearest_contacts]
                     )
-                    nearest_index = int(nearest_index)
-                    if not 0 <= nearest_index < len(nearest_contacts):
-                        raise ValueError("nearest contact index is outside the tree")
-                    nearest_candidate = nearest_contacts[nearest_index]
-                    nearest_d2 = (
-                        (nearest_candidate[1] - source_xy[0]) ** 2
-                        + (nearest_candidate[2] - source_xy[1]) ** 2
-                    )
-                    d2_for_radius = nextafter(nearest_d2, float("inf"))
-                    if not isfinite(nearest_d2) or not isfinite(d2_for_radius):
-                        raise ValueError("nearest contact distance is not finite")
-                    radius = nextafter(sqrt(d2_for_radius), float("inf"))
-                    if not isfinite(radius):
-                        raise ValueError("nearest contact radius is not finite")
-                    # cKDTree does not promise stable ordering for equidistant
-                    # points.  Include the next representable radius derived
-                    # from the legacy Python d² and apply its exact key to all
-                    # possible nearest ties.
-                    candidate_indices = nearest_tree.query_ball_point(
-                        (source_xy[0], source_xy[1]), radius
-                    )
-                    if not candidate_indices:
-                        candidate_indices = [nearest_index]
+                del unique_contacts_by_coordinate
+            for via, node, target_layer in grouped_requests:
+                key = (via, node, target_layer)
+                source_xy = requested_coordinates.get(key)
+                if (
+                    source_xy is None
+                    or not all(isfinite(float(value)) for value in source_xy)
+                    or not ordered_contacts
+                ):
+                    # A graph component without a finite source origin cannot be
+                    # reduced to a deterministic target contact.
+                    continue
+                if nearest_tree is None:
                     selected_contact = legacy_selected_contact(
-                        tuple(nearest_contacts[int(index)] for index in candidate_indices),
-                        source_xy,
+                        ordered_contacts, source_xy
                     )
-                except (OverflowError, TypeError, ValueError):
-                    selected_contact = legacy_selected_contact(ordered_contacts, source_xy)
-            target_contacts_by_key[key] = (selected_contact,) if selected_contact else ()
+                else:
+                    candidate_indices = None
+                    try:
+                        _tree_distance, nearest_index = nearest_tree.query(
+                            (source_xy[0], source_xy[1]), k=1, workers=1
+                        )
+                        nearest_index = int(nearest_index)
+                        if not 0 <= nearest_index < len(nearest_contacts):
+                            raise ValueError("nearest contact index is outside the tree")
+                        nearest_candidate = nearest_contacts[nearest_index]
+                        nearest_d2 = (
+                            (nearest_candidate[1] - source_xy[0]) ** 2
+                            + (nearest_candidate[2] - source_xy[1]) ** 2
+                        )
+                        d2_for_radius = nextafter(nearest_d2, float("inf"))
+                        if not isfinite(nearest_d2) or not isfinite(d2_for_radius):
+                            raise ValueError("nearest contact distance is not finite")
+                        radius = nextafter(sqrt(d2_for_radius), float("inf"))
+                        if not isfinite(radius):
+                            raise ValueError("nearest contact radius is not finite")
+                        candidate_indices = nearest_tree.query_ball_point(
+                            (source_xy[0], source_xy[1]), radius
+                        )
+                        if not candidate_indices:
+                            candidate_indices = [nearest_index]
+                        selected_contact = legacy_selected_contact(
+                            tuple(
+                                nearest_contacts[int(index)]
+                                for index in candidate_indices
+                            ),
+                            source_xy,
+                        )
+                    except (OverflowError, TypeError, ValueError):
+                        selected_contact = legacy_selected_contact(
+                            ordered_contacts, source_xy
+                        )
+                    candidate_indices = None
+                resolved_contacts_by_key[key] = (
+                    selected_contact,
+                    contact_count,
+                    contact_hash,
+                )
+            del ordered_contacts, nearest_tree, nearest_contacts, grouped_requests
+        del raw_component_contacts
+    requests_by_component.clear()
+    for key in requested:
+        resolved = resolved_contacts_by_key.pop(key, None)
+        if resolved is None:
+            continue
+        selected_contact, contact_count, contact_hash = resolved
+        reachable.add(key)
+        target_contact_count_by_key[key] = contact_count
+        target_contact_hash_by_key[key] = contact_hash
+        target_contacts_by_key[key] = (selected_contact,) if selected_contact else ()
+    resolved_contacts_by_key.clear()
     unreachable = set(requested) - reachable
     requested_count = len(requested)
     graph_node_count = len(parents)
@@ -7215,8 +7229,6 @@ def recover_spd_ground_reachability(
     ranks.clear()
     artwork_components.clear()
     component_contacts.clear()
-    component_contacts_cache.clear()
-    nearest_contact_tree_cache.clear()
     component_target_masks.clear()
     required_target_masks.clear()
     reporter.report(72, "Building surface connectivity certificates")

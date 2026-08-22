@@ -1661,6 +1661,75 @@ def test_ground_reachability_nearest_contact_tree_preserves_legacy_ties_and_cach
     assert queries == 2 * len(landings)
 
 
+def test_ground_reachability_releases_contact_tree_after_each_component(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    source, _analysis = _recoverable_via_source(
+        tmp_path,
+        node_lines=(
+            "NodeStartA!!1::DGND X = 0um Y = 0um Layer = Signal$L08 PadStack = DUT\n"
+            "NodeTargetA!!1::DGND X = 1um Y = 0um Layer = Signal$L08 PadStack = DUT\n"
+            "NodeStartB!!1::DGND X = 10um Y = 0um Layer = Signal$L08 PadStack = DUT\n"
+            "NodeTargetB!!1::DGND X = 11um Y = 0um Layer = Signal$L08 PadStack = DUT"
+        ),
+        via_lines="",
+        trace_lines=(
+            "TraceA::DGND StartingNode = NodeStartA::DGND "
+            "EndingNode = NodeTargetA::DGND Width = 0.10mm\n"
+            "TraceB::DGND StartingNode = NodeStartB::DGND "
+            "EndingNode = NodeTargetB::DGND Width = 0.10mm"
+        ),
+    )
+    landings = tuple(
+        SpdViaLanding(
+            via_id=f"Via{suffix}",
+            net="DGND",
+            endpoint_node_id=f"NodeStart{suffix}",
+            x_um=x_um,
+            y_um=0.0,
+            padstack="DR-0102_60",
+        )
+        for suffix, x_um in (("A", 0.0), ("B", 10.0))
+    )
+    real_tree = spd_io.cKDTree
+    live = peak_live = builds = 0
+
+    class CountingTree:
+        def __init__(self, coordinates):
+            nonlocal live, peak_live, builds
+            builds += 1
+            live += 1
+            peak_live = max(peak_live, live)
+            self._tree = real_tree(coordinates)
+
+        def __del__(self):
+            nonlocal live
+            live -= 1
+
+        def query(self, *args, **kwargs):
+            return self._tree.query(*args, **kwargs)
+
+        def query_ball_point(self, *args, **kwargs):
+            return self._tree.query_ball_point(*args, **kwargs)
+
+    monkeypatch.setattr(spd_io, "_NEAREST_CONTACT_TREE_THRESHOLD", 1)
+    monkeypatch.setattr(spd_io, "cKDTree", CountingTree)
+    result = recover_spd_ground_reachability(
+        source,
+        landings=landings,
+        target_layers_by_net={"DGND": ("Signal$L08",)},
+        target_node_predicate=lambda _net, _layer, node_id, *_args: node_id.startswith(
+            "NodeTarget"
+        ),
+    )
+
+    assert all(result.reaches(landing, "Signal$L08") for landing in landings)
+    assert builds == 2
+    assert peak_live == 1
+    assert live == 0
+
+
 def test_ground_reachability_tree_preserves_subnormal_legacy_distance_tie(
     tmp_path: Path,
 ) -> None:
