@@ -4489,6 +4489,12 @@ def test_surface_island_equivalence_uses_coordinate_binding_and_raw_graph(
         y_um=0.0,
         padstack="DR-0102_60",
     )
+    shared_root_landing = replace(
+        landing,
+        via_id="SharedRootLanding",
+        endpoint_node_id="NodeTopA1",
+        x_um=0.0,
+    )
 
     def resolve(
         _net: str, layer: str, _node: str, x_um: float, _y_um: float
@@ -4501,7 +4507,7 @@ def test_surface_island_equivalence_uses_coordinate_binding_and_raw_graph(
 
     result = recover_spd_ground_reachability(
         source,
-        landings=(landing,),
+        landings=(landing, shared_root_landing),
         terminal_contact_landings=(landing,),
         target_layers_by_net={"PWR": ("Signal$TOP", "Signal$PWR")},
         target_node_surface_resolver=resolve,
@@ -4522,9 +4528,26 @@ def test_surface_island_equivalence_uses_coordinate_binding_and_raw_graph(
     assert result.statistics["artwork_island_count"] == 3
     assert result.statistics["artwork_island_unions"] == 1
     assert result.statistics["surface_equivalence_complete"] == 2
-    assert result.surface_islands_by_landing[
+    landing_islands = result.surface_islands_by_landing[
         ("viafromsamecopper", "nodetopa2")
-    ] == ("island-pwr", "island-top-a", "island-top-b")
+    ]
+    shared_root_islands = result.surface_islands_by_landing[
+        ("sharedrootlanding", "nodetopa1")
+    ]
+    landing_layers = result.surface_layers_by_landing[
+        ("viafromsamecopper", "nodetopa2")
+    ]
+    shared_root_layers = result.surface_layers_by_landing[
+        ("sharedrootlanding", "nodetopa1")
+    ]
+    assert landing_islands == (
+        "island-pwr",
+        "island-top-a",
+        "island-top-b",
+    )
+    assert shared_root_islands is landing_islands
+    assert landing_layers == ("Signal$PWR", "Signal$TOP")
+    assert shared_root_layers is landing_layers
     top_components = tuple(
         item.island_ids
         for item in result.surface_equivalence_components
@@ -5969,9 +5992,9 @@ def test_recover_keeps_same_node_ids_separate_by_net(tmp_path: Path) -> None:
         tmp_path,
         node_lines=(
             "NodeA!!1::PWR1 X = 0um Y = 0um Layer = Signal$TOP PadStack = DR-0102_60\n"
-            "NodeB!!1::PWR1 X = 0um Y = 0um Layer = Signal$GND PadStack = DR-0102_60\n"
-            "NodeA!!1::PWR2 X = 0um Y = 0um Layer = Signal$TOP PadStack = DR-0102_60\n"
-            "NodeB!!1::PWR2 X = 0um Y = 0um Layer = Signal$GND PadStack = DR-0102_60"
+            "NodeB!!1::PWR1 X = 0um Y = 0um Layer = Signal$PWR PadStack = DR-0102_60\n"
+            "NodeA!!1::PWR2 X = 0um Y = 0um Layer = Signal$GND PadStack = DR-0102_60\n"
+            "NodeB!!1::PWR2 X = 0um Y = 0um Layer = Signal$TOP PadStack = DR-0102_60"
         ),
         via_lines=(
             "Via1::PWR1 UpperNode = NodeA LowerNode = NodeB PadStack = DR-0102_60\n"
@@ -5988,23 +6011,44 @@ def test_recover_keeps_same_node_ids_separate_by_net(tmp_path: Path) -> None:
         padstacks=analysis.padstacks,
         stackup_layers=analysis.stackup_layers,
         target_layers_by_net={
-            "PWR1": ("Signal$TOP", "Signal$GND"),
-            "PWR2": ("Signal$TOP", "Signal$GND"),
+            "PWR1": ("Signal$TOP", "Signal$PWR"),
+            "PWR2": ("Signal$GND", "Signal$TOP"),
         },
         target_node_surface_resolver=lambda net, layer, _node, _x, _y: (
             ("island-gnd" if net == "PWR1" else "island-gnd-2")
             if layer == "Signal$GND"
-            else ("island-top" if net == "PWR1" else "island-top-2")
+            else (
+                ("island-pwr" if net == "PWR1" else "island-pwr-2")
+                if layer == "Signal$PWR"
+                else ("island-top" if net == "PWR1" else "island-top-2")
+            )
         ),
         target_surface_island_ids={
             ("PWR1", "Signal$TOP"): ("island-top",),
-            ("PWR1", "Signal$GND"): ("island-gnd",),
-            ("PWR2", "Signal$TOP"): ("island-top-2",),
+            ("PWR1", "Signal$PWR"): ("island-pwr",),
             ("PWR2", "Signal$GND"): ("island-gnd-2",),
+            ("PWR2", "Signal$TOP"): ("island-top-2",),
         },
     )
     assert {item.net for item in result.via_island_pair_aggregates} == {"PWR1", "PWR2"}
-    assert {item.net for item in result.finite_via_edges} == {"pwr1", "pwr2"}
+    assert {
+        (item.net, item.representative_node_id): item.layer
+        for item in result.finite_via_vertices
+    } == {
+        ("PWR1", "nodea"): "Signal$TOP",
+        ("PWR1", "nodeb"): "Signal$PWR",
+        ("PWR2", "nodea"): "Signal$GND",
+        ("PWR2", "nodeb"): "Signal$TOP",
+    }
+    assert {
+        item.net: tuple(
+            (term.start_layer, term.end_layer) for term in item.series_terms
+        )
+        for item in result.finite_via_edges
+    } == {
+        "pwr1": (("Signal$TOP", "Signal$PWR"),),
+        "pwr2": (("Signal$GND", "Signal$TOP"),),
+    }
     assert result.statistics["via_source_record_replay_passes"] == 1
 
 
@@ -6025,6 +6069,17 @@ def test_finite_via_scenario_isolation_and_retarget_bindings(
         ),
     )
     landing = SimpleNamespace(via_id="ViaIso", net="PWR", endpoint_node_id="NodeIsoA")
+
+    class SingleUseRetargetRequests:
+        iteration_count = 0
+
+        def __iter__(self):
+            self.iteration_count += 1
+            if self.iteration_count != 1:
+                raise AssertionError("retarget requests were iterated more than once")
+            yield "PWR", "Signal$GND", "NodeIsoD"
+
+    retarget_requests = SingleUseRetargetRequests()
     needed_key_sets: list[set[tuple[str, str]]] = []
     real_index = spd_io._index_reachable_layers_by_landing
 
@@ -6045,7 +6100,7 @@ def test_finite_via_scenario_isolation_and_retarget_bindings(
         landings=(landing,),
         terminal_contact_landings=(landing,),
         scenario_isolated_terminal_landings=(landing,),
-        retarget_destination_requests=(("PWR", "Signal$GND", "NodeIsoD"),),
+        retarget_destination_requests=retarget_requests,
         terminal_owned_via_ids=("ViaIso",),
         padstacks=analysis.padstacks,
         stackup_layers=analysis.stackup_layers,
@@ -6060,6 +6115,7 @@ def test_finite_via_scenario_isolation_and_retarget_bindings(
         },
     )
     assert result.finite_via_scenario_isolation_coverage is not None
+    assert retarget_requests.iteration_count == 1
     assert needed_key_sets == [set()]
     assert result.finite_via_scenario_isolated_landing_keys == {("viaiso", "nodeisoa")}
     assert result.finite_via_retarget_destination_coverage is not None

@@ -1450,24 +1450,40 @@ class SpdGroundReachability:
             ),
         )
         layers_by_landing: dict[tuple[str, str], tuple[str, ...]] = {}
+        normalized_layers_by_identity: dict[
+            int, tuple[object, tuple[str, ...]]
+        ] = {}
         for raw_key, raw_layers in self.surface_layers_by_landing.items():
             if len(raw_key) != 2:
                 raise ValueError(
                     "surface landing keys must contain Via and endpoint Node IDs"
                 )
             key = (str(raw_key[0]).casefold(), str(raw_key[1]).casefold())
-            layer_by_key: dict[str, str] = {}
-            for raw_layer in raw_layers:
-                layer = str(raw_layer).strip()
-                if not layer:
-                    raise ValueError("surface landing layers must not be blank")
-                layer_key = layer.casefold()
-                previous = layer_by_key.get(layer_key)
-                if previous is None or layer < previous:
-                    layer_by_key[layer_key] = layer
-            layers_by_landing[key] = tuple(
-                layer_by_key[layer_key] for layer_key in sorted(layer_by_key)
+            identity = id(raw_layers)
+            cacheable = type(raw_layers) is tuple
+            cached = (
+                normalized_layers_by_identity.get(identity)
+                if cacheable
+                else None
             )
+            if cached is None or cached[0] is not raw_layers:
+                layer_by_key: dict[str, str] = {}
+                for raw_layer in raw_layers:
+                    layer = str(raw_layer).strip()
+                    if not layer:
+                        raise ValueError("surface landing layers must not be blank")
+                    layer_key = layer.casefold()
+                    previous = layer_by_key.get(layer_key)
+                    if previous is None or layer < previous:
+                        layer_by_key[layer_key] = layer
+                layers = tuple(
+                    layer_by_key[layer_key] for layer_key in sorted(layer_by_key)
+                )
+                if cacheable:
+                    normalized_layers_by_identity[identity] = raw_layers, layers
+            else:
+                layers = cached[1]
+            layers_by_landing[key] = layers
         object.__setattr__(self, "surface_components", components)
         object.__setattr__(
             self,
@@ -1475,15 +1491,36 @@ class SpdGroundReachability:
             ordered_mapping_proxy(layers_by_landing),
         )
         islands_by_landing: dict[tuple[str, str], tuple[str, ...]] = {}
+        normalized_islands_by_identity: dict[
+            int, tuple[object, tuple[str, ...]]
+        ] = {}
         for raw_key, raw_islands in self.surface_islands_by_landing.items():
             if len(raw_key) != 2:
                 raise ValueError(
                     "surface landing island keys must contain Via and endpoint Node IDs"
                 )
             key = (str(raw_key[0]).casefold(), str(raw_key[1]).casefold())
-            islands = tuple(
-                sorted({str(item).strip() for item in raw_islands if str(item).strip()})
+            identity = id(raw_islands)
+            cacheable = type(raw_islands) is tuple
+            cached = (
+                normalized_islands_by_identity.get(identity)
+                if cacheable
+                else None
             )
+            if cached is None or cached[0] is not raw_islands:
+                islands = tuple(
+                    sorted(
+                        {
+                            str(item).strip()
+                            for item in raw_islands
+                            if str(item).strip()
+                        }
+                    )
+                )
+                if cacheable:
+                    normalized_islands_by_identity[identity] = raw_islands, islands
+            else:
+                islands = cached[1]
             islands_by_landing[key] = islands
         proofs = sorted_tuple_if_needed(
             self.surface_equivalence_proofs,
@@ -5519,8 +5556,8 @@ def recover_spd_ground_reachability(
         if set(surface_inventory) != expected_surface_keys:
             raise ValueError("surface island inventory does not exactly cover target layers")
         seen_surface_ids.clear()
-    surface_layers_by_landing: dict[tuple[str, str], set[str]] = {}
-    surface_islands_by_landing: dict[tuple[str, str], set[str]] = {}
+    surface_layers_by_landing: dict[tuple[str, str], tuple[str, ...]] = {}
+    surface_islands_by_landing: dict[tuple[str, str], tuple[str, ...]] = {}
     landing_surface_contacts: list[SpdLandingSurfaceContact] = []
     via_island_pair_aggregates: list[SpdViaIslandPairAggregate] = []
     via_island_pair_coverage: SpdViaIslandPairCoverage | None = None
@@ -5937,14 +5974,24 @@ def recover_spd_ground_reachability(
             return node_id_by_index[index]
         return ""
 
-    def node_layer_for(net_key: str, node_key: str) -> str:
-        index = node_index_by_net.get(net_key, {}).get(node_key.casefold())
-        if index is None:
+    def node_layer_at(net_key: str, index: int | None) -> str:
+        if (
+            index is None
+            or not 0 <= index < len(node_layer_codes)
+            or node_net_key_by_index[index] != net_key
+        ):
             return "UNKNOWN"
         code = int(node_layer_codes[index])
         if code <= 0:
             return "UNKNOWN"
         return layer_display_by_code[code - 1]
+
+    late_node_indices: dict[tuple[str, str], int] = {}
+
+    def node_layer_for(net_key: str, node_key: str) -> str:
+        return node_layer_at(
+            net_key, late_node_indices.get((net_key, node_key.casefold()))
+        )
 
     def find(index: int) -> int:
         root = index
@@ -7241,6 +7288,11 @@ def recover_spd_ground_reachability(
         or retarget_destination_requests
         or terminal_owned_via_ids is not None
     )
+    requested_destinations = tuple(
+        retarget_destination_requests
+        if retarget_destination_requests is not None
+        else ()
+    )
     finite_net_codes = array("I")
     finite_first_indices = array("I")
     finite_second_indices = array("I")
@@ -7248,15 +7300,27 @@ def recover_spd_ground_reachability(
     finite_via_offsets = array("Q")
     finite_via_ids: list[str] = []
 
-    def surface_row(net_key: str, node_key: str) -> tuple[str, str] | None:
-        node_index = node_index_by_net.get(net_key, {}).get(node_key.casefold())
-        if node_index is None:
+    def surface_row_at(
+        net_key: str, node_index: int | None
+    ) -> tuple[str, str] | None:
+        if (
+            node_index is None
+            or not 0 <= node_index < len(surface_code_by_index)
+            or node_net_key_by_index[node_index] != net_key
+        ):
             return None
         code = surface_code_by_index[node_index]
         if not code:
             return None
-        _surface_net, surface_layer, surface_token = surface_key_by_code[code - 1]
+        surface_net, surface_layer, surface_token = surface_key_by_code[code - 1]
+        if surface_net != net_key:
+            return None
         return surface_layer, surface_token
+
+    def surface_row(net_key: str, node_key: str) -> tuple[str, str] | None:
+        return surface_row_at(
+            net_key, late_node_indices.get((net_key, node_key.casefold()))
+        )
 
     # grouped_equivalence is complete before this replay; cache its component
     # island lookup so each Via performs O(1) provenance work.
@@ -7275,6 +7339,38 @@ def recover_spd_ground_reachability(
     tokens = set()
     members = ()
 
+    all_landings = landing_records + terminal_contact_records
+    late_node_keys = {
+        (
+            str(getattr(landing, "net", "")).casefold(),
+            str(getattr(landing, "endpoint_node_id", "")).casefold(),
+        )
+        for landing in all_landings
+    }
+    late_node_keys.update(
+        (net_key, node_key)
+        for (_via_key, node_key), (
+            net_key,
+            _owner_kind,
+            _terminal_id,
+        ) in terminal_contact_owner_by_key.items()
+    )
+    late_node_keys.update(
+        (net_key, str(node_id).casefold())
+        for (net_key, _via_key), endpoints in via_terminal_display_endpoints.items()
+        for node_id in endpoints
+    )
+    late_node_keys.update(isolated_node_keys)
+    late_node_keys.update(
+        (str(net).casefold(), str(node).casefold())
+        for net, _layer, node in requested_destinations
+    )
+    for net_key, node_key in late_node_keys:
+        node_index = node_index_by_net.get(net_key, {}).get(node_key)
+        if node_index is not None:
+            late_node_indices[(net_key, node_key)] = node_index
+    node_index_by_net.clear()
+    late_node_keys.clear()
     terminal_contact_via_ids.update(
         via_key for via_key, _node_key in terminal_contact_owner_by_key
     )
@@ -7294,12 +7390,10 @@ def recover_spd_ground_reachability(
             via_key = _decode(match.group(1)).casefold()
             first_index = via_source_first_indices[via_index]
             second_index = via_source_second_indices[via_index]
-            first_node = node_id_for(net_key, first_index)
-            second_node = node_id_for(net_key, second_index)
             padstack_name = via_source_padstack_names[via_source_padstack_codes[via_index]]
             surface_union_indices(first_index, second_index)
-            first_surface = surface_row(net_key, first_node)
-            second_surface = surface_row(net_key, second_node)
+            first_surface = surface_row_at(net_key, first_index)
+            second_surface = surface_row_at(net_key, second_index)
             if first_surface is None or second_surface is None or first_surface[0] == second_surface[0]:
                 if via_key in owned_ids:
                     invalid_owned_count += 1
@@ -7328,6 +7422,14 @@ def recover_spd_ground_reachability(
                         "end_layer": second_surface[0],
                         "start_island": first_surface[1],
                         "end_island": second_surface[1],
+                        "start_component": component_islands_by_surface.get(
+                            (net_key, first_surface[0], first_surface[1]),
+                            (first_surface[1],),
+                        ),
+                        "end_component": component_islands_by_surface.get(
+                            (net_key, second_surface[0], second_surface[1]),
+                            (second_surface[1],),
+                        ),
                         "count": 0,
                         "digest": hashlib.sha256(),
                         "owned": 0,
@@ -7397,24 +7499,44 @@ def recover_spd_ground_reachability(
         surface_component_islands_by_code[code] = component_islands_by_surface.get(
             (candidate_net, candidate_layer, token), (token,)
         )
+    component_islands_by_surface.clear()
     surface_codes_by_root = {
         key: tuple(values) for key, values in codes_by_root_mutable.items()
     }
     surface_root_by_code.clear()
     codes_by_root_mutable.clear()
-    for (candidate_net, _root), layers in global_surface_layers.items():
+    surface_summary_by_root: dict[
+        tuple[str, int], tuple[int, tuple[str, ...], tuple[str, ...]]
+    ] = {}
+    for root_key, codes in surface_codes_by_root.items():
+        candidate_net, _root = root_key
+        layers = global_surface_layers[root_key]
+        display_layers = tuple(
+            sorted(
+                {
+                    target_layer_display.get((candidate_net, layer), layer)
+                    for layer in layers
+                },
+                key=lambda item: (item.casefold(), item),
+            )
+        )
+        surface_summary_by_root[root_key] = (
+            len(layers),
+            display_layers,
+            tuple(sorted({surface_key_by_code[code - 1][2] for code in codes})),
+        )
+    surface_codes_by_root.clear()
+    for root_key, layers in global_surface_layers.items():
+        candidate_net, _root = root_key
         if len(layers) < 2:
             continue
         display_net = next(
             (str(raw_net) for raw_net in target_layers_by_net if str(raw_net).casefold() == candidate_net),
             candidate_net,
         )
-        display_layers = tuple(
-            sorted(target_layer_display.get((candidate_net, layer), layer) for layer in layers)
-        )
+        display_layers = surface_summary_by_root[root_key][1]
         surface_components.add(SpdSurfaceConnectivityComponent(display_net, display_layers))
     global_surface_layers.clear()
-    all_landings = landing_records + terminal_contact_records
     needed_landing_keys = {
         (
             str(getattr(landing, "via_id", "")).casefold(),
@@ -7434,51 +7556,40 @@ def recover_spd_ground_reachability(
         )
         net_key = str(getattr(landing, "net", "")).casefold()
         landing_node_key = landing_key[1]
-        landing_index = node_index_by_net.get(net_key, {}).get(landing_node_key)
+        landing_index = late_node_indices.get((net_key, landing_node_key))
         landing_root = (
             _dense_find(surface_parents, landing_index)
             if landing_index is not None
             else None
         )
-        matched_layers: set[str] = set()
-        matched_islands: set[str] = set()
+        matched_layer_count = 0
+        matched_layers: tuple[str, ...] = ()
+        matched_islands: tuple[str, ...] = ()
         reachable_target_layers = reachable_layers_by_landing.get(landing_key, ())
         if len(reachable_target_layers) >= 2:
             display_layers = tuple(
                 sorted(
-                    target_layer_display.get((net_key, layer), layer)
-                    for layer in reachable_target_layers
+                    {
+                        target_layer_display.get((net_key, layer), layer)
+                        for layer in reachable_target_layers
+                    },
+                    key=lambda item: (item.casefold(), item),
                 )
             )
             display_net = str(getattr(landing, "net", net_key))
             surface_components.add(SpdSurfaceConnectivityComponent(display_net, display_layers))
-            surface_layers_by_landing[landing_key] = set(display_layers)
-        if landing_key in isolated_landing_keys:
-            # Scenario-isolated terminal pads retain source identity but must
-            # not inherit a permanent artwork/Via ideal union.
-            matched_layers.clear()
-            matched_islands.clear()
+            surface_layers_by_landing[landing_key] = display_layers
         if landing_key not in isolated_landing_keys:
-            for code in surface_codes_by_root.get((net_key, landing_root), ()):
-                _candidate_net, candidate_layer, token = surface_key_by_code[code - 1]
-                matched_layers.add(candidate_layer)
-                matched_islands.add(token)
-        if matched_layers:
-            surface_layers_by_landing[landing_key] = {
-                target_layer_display.get((net_key, layer), layer)
-                for layer in matched_layers
-            }
+            matched_layer_count, matched_layers, matched_islands = (
+                surface_summary_by_root.get((net_key, landing_root), (0, (), ()))
+            )
+        if matched_layer_count:
+            surface_layers_by_landing[landing_key] = matched_layers
             surface_islands_by_landing[landing_key] = matched_islands
-            if len(matched_layers) >= 2:
+            if matched_layer_count >= 2:
                 display_net = str(getattr(landing, "net", net_key))
-                display_layers = tuple(
-                    sorted(
-                        target_layer_display.get((net_key, layer), layer)
-                        for layer in matched_layers
-                    )
-                )
                 surface_components.add(
-                    SpdSurfaceConnectivityComponent(display_net, display_layers)
+                    SpdSurfaceConnectivityComponent(display_net, matched_layers)
                 )
         if (
             landing_key in terminal_contact_owner_by_key
@@ -7508,7 +7619,9 @@ def recover_spd_ground_reachability(
             )
             contact_rows: dict[str, tuple[str, ...]] = {}
             if internal_node is not None:
-                internal_index = node_index_by_net.get(net_key, {}).get(str(internal_node).casefold())
+                internal_index = late_node_indices.get(
+                    (net_key, str(internal_node).casefold())
+                )
                 internal_code = (
                     int(surface_code_by_index[internal_index])
                     if internal_index is not None
@@ -7547,7 +7660,7 @@ def recover_spd_ground_reachability(
             )
     surface_dense_node_count = len(surface_parents)
     del surface_parents[:]
-    surface_codes_by_root.clear()
+    surface_summary_by_root.clear()
     reachable_layers_by_landing.clear()
     contact_seen.clear()
     via_terminal_display_endpoints.clear()
@@ -7710,14 +7823,8 @@ def recover_spd_ground_reachability(
         )
         start_island = str(state["start_island"])
         end_island = str(state["end_island"])
-        start_component = component_islands_by_surface.get(
-            (net_key, str(state["start_layer"]).casefold(), start_island),
-            (start_island,),
-        )
-        end_component = component_islands_by_surface.get(
-            (net_key, str(state["end_layer"]).casefold(), end_island),
-            (end_island,),
-        )
+        start_component = state["start_component"]
+        end_component = state["end_component"]
         aggregate = SpdViaIslandPairAggregate(
             net=next(
                 (str(raw_net) for raw_net in target_layers_by_net
@@ -7752,7 +7859,6 @@ def recover_spd_ground_reachability(
         )
     )
     state = {}
-    component_islands_by_surface.clear()
     # Enrich terminal contact rows from the canonical physical pair.  Surface
     # contact classification is independent from strict target acceptance, but
     # a terminal landing that has a resolved pair must carry the same physical
@@ -7951,7 +8057,7 @@ def recover_spd_ground_reachability(
             _owner_kind,
             terminal_id,
         ) in terminal_contact_owner_by_key.items():
-            node_index = node_index_by_net.get(net_key, {}).get(node_key)
+            node_index = late_node_indices.get((net_key, node_key))
             if node_index is None:
                 continue
             boundary_nodes[node_index] = 1
@@ -7965,7 +8071,7 @@ def recover_spd_ground_reachability(
         # its immediate Via neighbor is a boundary of the conditional graph
         # and must not be absorbed into a contracted series path.
         for isolated_net, isolated_node in isolated_node_keys:
-            isolated_index = node_index_by_net.get(isolated_net, {}).get(isolated_node)
+            isolated_index = late_node_indices.get((isolated_net, isolated_node))
             if isolated_index is None:
                 continue
             for incidence_index in range(incident_start(isolated_index), incident_end(isolated_index)):
@@ -8126,7 +8232,7 @@ def recover_spd_ground_reachability(
             ]
             net_for_vertex = node_net_key_by_index[representative]
             representative_node = node_id_by_index[representative]
-            layer = node_layer_for(net_for_vertex, representative_node)
+            layer = node_layer_at(net_for_vertex, representative)
             node_ids_hash = finite_digest(
                 sorted(node_id_by_index[member] for member in members)
             )
@@ -8217,8 +8323,8 @@ def recover_spd_ground_reachability(
                 net_for_edge = edge_net(edge_index)
                 first_index = finite_first_indices[edge_index]
                 second_index = finite_second_indices[edge_index]
-                first_layer = node_layer_for(net_for_edge, node_id_by_index[first_index])
-                second_layer = node_layer_for(net_for_edge, node_id_by_index[second_index])
+                first_layer = node_layer_at(net_for_edge, first_index)
+                second_layer = node_layer_at(net_for_edge, second_index)
                 padstack_name = edge_padstack(edge_index)
                 drill, material, segments, term_status, term_issues, resistance, inductance, length_um = finite_physical(padstack_name, first_layer, second_layer)
                 if term_status != "complete":
@@ -8247,7 +8353,7 @@ def recover_spd_ground_reachability(
         for key, (net_key, _owner_kind, _terminal_id) in (
             terminal_contact_owner_by_key.items()
         ):
-            node_index = node_index_by_net.get(net_key, {}).get(key[1])
+            node_index = late_node_indices.get((net_key, key[1]))
             vertex_id = vertex_id_by_node[node_index] if node_index is not None else None
             if vertex_id:
                 finite_via_vertex_id_by_landing[key] = vertex_id
@@ -8285,15 +8391,14 @@ def recover_spd_ground_reachability(
             if scenario_requested
             else None
         )
-        requested_destinations = tuple(retarget_destination_requests or ())
         for raw_net, raw_layer, raw_node in requested_destinations:
             key = (str(raw_net).casefold(), str(raw_layer).casefold(), str(raw_node).casefold())
-            node_index = node_index_by_net.get(key[0], {}).get(key[2])
+            node_index = late_node_indices.get((key[0], key[2]))
             vertex_id = vertex_id_by_node[node_index] if node_index is not None else None
             if vertex_id is not None:
                 finite_via_vertex_id_by_retarget_destination[key] = vertex_id
         vertex_id_by_node.clear()
-        node_index_by_net.clear()
+        late_node_indices.clear()
         destination_digest = finite_digest(
             f"{net}:{layer}:{node}" for net, layer, node in requested_destinations
         )
@@ -8339,7 +8444,7 @@ def recover_spd_ground_reachability(
     del surface_code_by_index[:]
     surface_key_by_code.clear()
     surface_component_islands_by_code.clear()
-    node_index_by_net.clear()
+    late_node_indices.clear()
     node_id_by_index.clear()
     node_net_key_by_index.clear()
     del node_layer_codes[:]
@@ -8398,8 +8503,8 @@ def recover_spd_ground_reachability(
         target_contact_count_by_key=target_contact_count_by_key,
         target_contact_hash_by_key=target_contact_hash_by_key,
         surface_components=tuple(sorted(surface_components, key=lambda item: (item.net.casefold(), item.layers))),
-        surface_layers_by_landing={key: tuple(sorted(value)) for key, value in surface_layers_by_landing.items()},
-        surface_islands_by_landing={key: tuple(sorted(value)) for key, value in surface_islands_by_landing.items()},
+        surface_layers_by_landing=surface_layers_by_landing,
+        surface_islands_by_landing=surface_islands_by_landing,
         surface_equivalence_proofs=tuple(surface_equivalence_proofs),
         surface_equivalence_components=tuple(sorted(surface_equivalence_components, key=lambda item: (item.net.casefold(), item.layer.casefold(), item.island_ids))),
         landing_surface_contacts=tuple(landing_surface_contacts),
