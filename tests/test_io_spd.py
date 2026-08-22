@@ -5986,6 +5986,63 @@ def test_finite_via_quotient_emits_owner_complete_graph(tmp_path: Path) -> None:
     assert len(result.finite_via_edges) >= 1
 
 
+def test_trace_terminal_binds_unique_first_via_quotient_vertex(
+    tmp_path: Path,
+) -> None:
+    source, analysis = _recoverable_via_source(
+        tmp_path,
+        node_lines=(
+            "NodeTerminal!!1::PWR X = 0um Y = 0um Layer = Signal$TOP PadStack = DUT\n"
+            "NodeTrace!!1::PWR X = 1um Y = 0um Layer = Signal$TOP PadStack = DUT\n"
+            "NodePwr!!1::PWR X = 1um Y = 0um Layer = Signal$PWR PadStack = DR-0102_60"
+        ),
+        trace_lines=(
+            "TraceTerminal::PWR StartingNode = NodeTerminal "
+            "EndingNode = NodeTrace Width = 0.10mm"
+        ),
+        via_lines=(
+            "ViaTrace::PWR UpperNode = NodeTrace LowerNode = NodePwr "
+            "PadStack = DR-0102_60"
+        ),
+    )
+    landing = SimpleNamespace(
+        via_id="source-node:NodeTerminal",
+        net="PWR",
+        endpoint_node_id="NodeTerminal",
+        pin_id="SITE0:1",
+    )
+
+    result = recover_spd_ground_reachability(
+        source,
+        landings=(landing,),
+        terminal_contact_landings=(landing,),
+        terminal_owned_via_ids=(),
+        padstacks=analysis.padstacks,
+        stackup_layers=analysis.stackup_layers,
+        target_layers_by_net={"PWR": ("Signal$PWR",)},
+        target_node_surface_resolver=(
+            lambda _net, layer, node, _x, _y: (
+                "island-pwr"
+                if layer == "Signal$PWR" and node == "NodePwr"
+                else None
+            )
+        ),
+        target_surface_island_ids={
+            ("PWR", "Signal$PWR"): ("island-pwr",),
+        },
+    )
+
+    landing_key = ("source-node:nodeterminal", "nodeterminal")
+    vertex_id = result.finite_via_vertex_id_by_landing[landing_key]
+    vertex = next(
+        item for item in result.finite_via_vertices if item.vertex_id == vertex_id
+    )
+    assert landing_key not in result.finite_via_edge_id_by_landing
+    assert result.surface_islands_by_landing[landing_key] == ("island-pwr",)
+    assert vertex.terminal_ids == ("SITE0:1",)
+    assert "terminal" in vertex.roles
+
+
 def test_finite_via_quotient_contracts_bridge_not_cycle(tmp_path: Path) -> None:
     source, analysis = _recoverable_via_source(
         tmp_path,

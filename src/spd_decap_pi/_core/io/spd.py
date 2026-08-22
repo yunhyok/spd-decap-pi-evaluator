@@ -7251,6 +7251,44 @@ def recover_spd_ground_reachability(
             and node_layer_codes[first_index] == node_layer_codes[second_index]
         ):
             equivalence_union_indices(first_index, second_index)
+    trace_terminal_node_index_by_landing: dict[tuple[str, str], int] = {}
+    trace_terminal_landings_by_root: dict[
+        tuple[str, int], list[tuple[str, str]]
+    ] = {}
+    for landing_key, (net_key, _owner_kind, _terminal_id) in (
+        terminal_contact_owner_by_key.items()
+    ):
+        if not landing_key[0].startswith("source-node:"):
+            continue
+        node_index = node_index_by_net.get(net_key, {}).get(landing_key[1])
+        if node_index is None:
+            continue
+        trace_terminal_landings_by_root.setdefault(
+            eq_find(net_key, node_index), []
+        ).append(landing_key)
+    if trace_terminal_landings_by_root:
+        via_nodes_by_root: dict[tuple[str, int], set[int]] = {}
+        for via_index, (first_index, second_index) in enumerate(
+            zip(via_source_first_indices, via_source_second_indices, strict=True)
+        ):
+            if via_index % 16384 == 0:
+                reporter.check()
+            net_key = via_source_net_key_by_code[
+                via_source_net_codes[via_index]
+            ]
+            for node_index in (first_index, second_index):
+                root = eq_find(net_key, node_index)
+                if root in trace_terminal_landings_by_root:
+                    via_nodes_by_root.setdefault(root, set()).add(node_index)
+        for root, landing_keys_for_root in trace_terminal_landings_by_root.items():
+            candidates = via_nodes_by_root.get(root, set())
+            if len(candidates) != 1:
+                continue
+            node_index = next(iter(candidates))
+            for landing_key in landing_keys_for_root:
+                trace_terminal_node_index_by_landing[landing_key] = node_index
+        via_nodes_by_root.clear()
+    trace_terminal_landings_by_root.clear()
     grouped_equivalence: dict[tuple[str, str, tuple[str, int]], set[str]] = {}
     for node_index, code_value in enumerate(surface_code_by_index):
         if not code_value:
@@ -8091,7 +8129,11 @@ def recover_spd_ground_reachability(
             _owner_kind,
             terminal_id,
         ) in terminal_contact_owner_by_key.items():
-            node_index = late_node_indices.get((net_key, node_key))
+            landing_key = (_via_key, node_key)
+            node_index = trace_terminal_node_index_by_landing.get(
+                landing_key,
+                late_node_indices.get((net_key, node_key)),
+            )
             if node_index is None:
                 continue
             boundary_nodes[node_index] = 1
@@ -8414,13 +8456,18 @@ def recover_spd_ground_reachability(
         for key, (net_key, _owner_kind, _terminal_id) in (
             terminal_contact_owner_by_key.items()
         ):
-            node_index = late_node_indices.get((net_key, key[1]))
+            node_index = trace_terminal_node_index_by_landing.get(
+                key,
+                late_node_indices.get((net_key, key[1])),
+            )
             vertex_id = vertex_id_by_node[node_index] if node_index is not None else None
             if vertex_id:
                 finite_via_vertex_id_by_landing[key] = vertex_id
-                edge = next((item for item in finite_via_edges if item.start_vertex_id == vertex_id or item.end_vertex_id == vertex_id), None)
-                if edge:
-                    finite_via_edge_id_by_landing[key] = edge.edge_id
+                if not key[0].startswith("source-node:"):
+                    edge = next((item for item in finite_via_edges if item.start_vertex_id == vertex_id or item.end_vertex_id == vertex_id), None)
+                    if edge:
+                        finite_via_edge_id_by_landing[key] = edge.edge_id
+        trace_terminal_node_index_by_landing.clear()
         terminal_contact_owner_by_key.clear()
         scenario_requested = tuple(scenario_isolated_terminal_landings or ())
         finite_via_scenario_isolated_landing_keys = frozenset(
@@ -8509,6 +8556,7 @@ def recover_spd_ground_reachability(
     via_source_net_key_by_code.clear()
     via_source_padstack_names.clear()
     terminal_contact_owner_by_key.clear()
+    trace_terminal_node_index_by_landing.clear()
     del surface_code_by_index[:]
     surface_key_by_code.clear()
     surface_component_islands_by_code.clear()
