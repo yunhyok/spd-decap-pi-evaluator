@@ -6527,6 +6527,10 @@ def test_finite_via_scenario_isolation_and_retarget_bindings(
         padstacks=analysis.padstacks,
         stackup_layers=analysis.stackup_layers,
         target_layers_by_net={"PWR": ("Signal$TOP", "Signal$GND")},
+        same_layer_artwork_layers_by_net={"PWR": ("Signal$TOP",)},
+        same_layer_artwork_components_batch=lambda _n, _l, points: (
+            ("component-top",) * len(points)
+        ),
         target_node_surface_resolver=lambda _n, layer, node_id, _x, _y: (
             "island-top" if layer == "Signal$TOP" and node_id == "NodeIsoA" else
             "island-gnd" if layer == "Signal$GND" and node_id == "NodeIsoD" else None
