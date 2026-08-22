@@ -7128,9 +7128,19 @@ def recover_spd_ground_reachability(
                     for item in ordered_contacts
                 )
             ):
-                nearest_tree = cKDTree(
-                    [(item[1], item[2]) for item in ordered_contacts]
+                coordinate_buffer = array(
+                    "d",
+                    (
+                        coordinate
+                        for item in ordered_contacts
+                        for coordinate in item[1:]
+                    ),
                 )
+                coordinate_view = memoryview(coordinate_buffer).cast("B").cast(
+                    "d", shape=[len(ordered_contacts), 2]
+                )
+                nearest_tree = cKDTree(coordinate_view)
+                del coordinate_view, coordinate_buffer
             for via, node, target_layer in grouped_requests:
                 key = (via, node, target_layer)
                 source_xy = requested_coordinates.get(key)

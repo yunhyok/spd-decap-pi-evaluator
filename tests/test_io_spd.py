@@ -1698,6 +1698,7 @@ def test_ground_reachability_releases_contact_tree_after_each_component(
     class CountingTree:
         def __init__(self, coordinates):
             nonlocal live, peak_live, builds
+            assert isinstance(coordinates, memoryview)
             builds += 1
             live += 1
             peak_live = max(peak_live, live)
