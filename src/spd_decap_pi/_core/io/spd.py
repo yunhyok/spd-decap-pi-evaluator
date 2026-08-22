@@ -5797,13 +5797,9 @@ def recover_spd_ground_reachability(
             )
         )
     }
-    target_nodes_by_net: dict[str, dict[str, int]] = {
-        net: {} for net in target_layers
-    }
-    target_coordinates_by_net: dict[str, dict[str, tuple[str, float, float]]] = {
-        net: {} for net in target_layers
-    }
-    target_layers_by_node: dict[str, dict[str, str]] = {net: {} for net in graph_layers}
+    target_records_by_net: dict[
+        str, dict[str, tuple[int, str, float, float, str, int]]
+    ] = {net: {} for net in target_layers}
     node_positions_by_net: dict[str, dict[str, tuple[str, float, float]]] = {
         net: {} for net in graph_layers
     }
@@ -5851,7 +5847,6 @@ def recover_spd_ground_reachability(
     target_batch_points: dict[tuple[str, str], list[tuple[int, str, float, float, str]]] = {}
     deferred_artwork_offsets: dict[tuple[str, str], array] = {}
     deferred_artwork_key_order: list[tuple[str, str]] = []
-    target_latest_offsets: dict[tuple[str, str], int] = {}
     artwork_batch_total = 0
     target_batch_total = 0
     batch_progress = 15
@@ -6076,20 +6071,22 @@ def recover_spd_ground_reachability(
         """Apply target mask/coordinates with source-order last-write parity."""
 
         node_key = node_id.casefold()
-        target_nodes = target_nodes_by_net[net_key]
-        target_nodes[node_key] = (
-            target_nodes.get(node_key, 0) | target_bit_by_key[(net_key, layer_key)]
-        )
-        latest_key = (net_key, node_key)
-        previous_offset = target_latest_offsets.get(latest_key)
-        if previous_offset is None or source_offset >= previous_offset:
-            target_latest_offsets[latest_key] = source_offset
-            target_coordinates_by_net[net_key][node_key] = (
+        target_records = target_records_by_net[net_key]
+        previous = target_records.get(node_key)
+        target_mask = (previous[0] if previous is not None else 0) | target_bit_by_key[
+            (net_key, layer_key)
+        ]
+        if previous is None or source_offset >= previous[5]:
+            target_records[node_key] = (
+                target_mask,
                 node_id,
                 float(x_um),
                 float(y_um),
+                layer_key,
+                source_offset,
             )
-            target_layers_by_node[net_key][node_key] = layer_key
+        elif target_mask != previous[0]:
+            target_records[node_key] = (target_mask, *previous[1:])
 
     def record_surface_node(
         net: str,
@@ -6317,7 +6314,7 @@ def recover_spd_ground_reachability(
                 # the requested-root filter; any deferred Trace seam on such
                 # a net is recovered in the bounded conditional Node pass.
                 if (
-                    layer_key in target_layers[net_key]
+                    layer_key in target_layers.get(net_key, ())
                     and (
                         bool(artwork_layers)
                         or (
@@ -6345,7 +6342,7 @@ def recover_spd_ground_reachability(
                         filtered_target_nets.add(net_key)
                         continue
                 if (
-                    layer_key in target_layers[net_key]
+                    layer_key in target_layers.get(net_key, ())
                     or layer_key in artwork_layers.get(net_key, ())
                 ):
                     if (
@@ -6385,7 +6382,7 @@ def recover_spd_ground_reachability(
                                 union_indices(dense_node_index, representative)
                                 surface_union_indices(dense_node_index, representative)
                                 equivalence_union_indices(dense_node_index, representative)
-                    if layer_key not in target_layers[net_key]:
+                    if layer_key not in target_layers.get(net_key, ()):
                         continue
                     node_predicate = target_node_predicate
                     if target_node_predicates_by_key is not None:
@@ -6639,8 +6636,9 @@ def recover_spd_ground_reachability(
             # the expensive geometry callback out of the common case and out
             # of unrelated boundary traces.
             pre_contact_masks: dict[int, int] = {}
-            for net_key, targets in target_nodes_by_net.items():
-                for node_key, target_mask in targets.items():
+            for net_key, targets in target_records_by_net.items():
+                for node_key, target_record in targets.items():
+                    target_mask = target_record[0]
                     root = find(index_for(net_key, node_key))
                     pre_contact_masks[root] = (
                         pre_contact_masks.get(root, 0) | target_mask
@@ -6974,14 +6972,14 @@ def recover_spd_ground_reachability(
                     if members is None:
                         members_list: list[str] = []
                         if same_layer_artwork_component is not None:
-                            for candidate_node, candidate_contact in target_coordinates_by_net[net_key].items():
-                                if target_layers_by_node[net_key].get(candidate_node) != contact_layer_key:
+                            for candidate_node, candidate_record in target_records_by_net[net_key].items():
+                                if candidate_record[4] != contact_layer_key:
                                     continue
                                 candidate_component = same_layer_artwork_component(
                                     display_net,
                                     display_layer,
-                                    candidate_contact[1],
-                                    candidate_contact[2],
+                                    candidate_record[2],
+                                    candidate_record[3],
                                 )
                                 if (
                                     candidate_component is not None
@@ -7025,30 +7023,31 @@ def recover_spd_ground_reachability(
         )
     component_contact_records_retained = 0
     component_contact_records_filtered = 0
-    for net_key, targets in target_nodes_by_net.items():
-        for node_key, target_mask in targets.items():
+    for net_key, targets in target_records_by_net.items():
+        for node_key, target_record in targets.items():
+            target_mask = target_record[0]
             root = find(index_for(net_key, node_key))
             retained_mask = target_mask & required_target_masks.get(
                 (net_key, root), 0
             )
-            contact = target_coordinates_by_net[net_key].get(node_key)
             if not retained_mask:
-                component_contact_records_filtered += int(contact is not None)
+                component_contact_records_filtered += 1
                 continue
             component_target_masks[root] = (
                 component_target_masks.get(root, 0) | retained_mask
             )
-            if contact is not None:
-                component_contacts.setdefault((net_key, root), []).append(
-                    (contact[0], contact[1], contact[2], retained_mask)
+            component_contacts.setdefault((net_key, root), []).append(
+                (
+                    target_record[1],
+                    target_record[2],
+                    target_record[3],
+                    retained_mask,
                 )
-                component_contact_records_retained += 1
+            )
+            component_contact_records_retained += 1
     # Component contacts are the only remaining consumers of these large
     # source-node maps.  Release them before building the surface certificate.
-    target_nodes_by_net.clear()
-    target_coordinates_by_net.clear()
-    target_layers_by_node.clear()
-    target_latest_offsets.clear()
+    target_records_by_net.clear()
     node_positions_by_net.clear()
     requested_roots_by_net.clear()
     filtered_target_nets.clear()
