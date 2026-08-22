@@ -6621,7 +6621,7 @@ def recover_spd_ground_reachability(
                                     node_id.casefold(),
                                 )
                             )
-                            if len(records) >= 4096:
+                            if len(records) >= 1024:
                                 reporter.check()
                                 process_deferred_artwork_batch(deferred_key, records)
                                 records.clear()

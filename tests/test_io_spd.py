@@ -805,8 +805,8 @@ def test_ground_reachability_deferred_surface_batches_are_bounded_and_exact(
         },
     )
 
-    assert len(surface_batch_sizes) > 1
-    assert max(artwork_batch_sizes) == max(surface_batch_sizes) == 4096
+    assert artwork_batch_sizes == [1024, 1024, 1024, 1024, 3]
+    assert surface_batch_sizes == [1024, 1024, 1024, 1024, 3]
     assert batch_surface_ids == scalar_surface_ids
     assert batched.reachable_keys == scalar.reachable_keys
     assert batched.target_contacts_by_key == scalar.target_contacts_by_key
