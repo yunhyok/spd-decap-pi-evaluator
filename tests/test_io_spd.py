@@ -6477,8 +6477,13 @@ def test_finite_via_scenario_isolation_and_retarget_bindings(
         tmp_path,
         node_lines=(
             "NodeIsoA!!1::PWR X = 10um Y = 0um Layer = Signal$TOP PadStack = DR-0102_60\n"
+            "NodeIsoPeer!!1::PWR X = 20um Y = 0um Layer = Signal$TOP PadStack = DR-0102_60\n"
             "NodeIsoX!!1::PWR X = 10um Y = 10um Layer = Signal$PWR PadStack = DR-0102_60\n"
             "NodeIsoD!!1::PWR X = 10um Y = 20um Layer = Signal$GND PadStack = DR-0102_60"
+        ),
+        trace_lines=(
+            "TraceIso::PWR StartingNode = NodeIsoA::PWR "
+            "EndingNode = NodeIsoPeer::PWR Width = 0.10mm"
         ),
         via_lines=(
             "ViaIso::PWR UpperNode = NodeIsoA LowerNode = NodeIsoX PadStack = DR-0102_60\n"
@@ -6532,6 +6537,7 @@ def test_finite_via_scenario_isolation_and_retarget_bindings(
         },
     )
     assert result.finite_via_scenario_isolation_coverage is not None
+    assert result.finite_via_scenario_isolation_coverage.suppressed_trace_edge_count == 1
     assert retarget_requests.iteration_count == 1
     assert needed_key_sets == [set()]
     assert result.finite_via_scenario_isolated_landing_keys == {("viaiso", "nodeisoa")}

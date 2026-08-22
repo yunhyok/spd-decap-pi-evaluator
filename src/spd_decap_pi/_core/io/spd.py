@@ -7248,9 +7248,14 @@ def recover_spd_ground_reachability(
     ):
         if _trace_index % 16384 == 0:
             reporter.check()
+        trace_net_key = surface_trace_net_by_code[trace_net_code]
         if (
             node_layer_codes[first_index]
             and node_layer_codes[first_index] == node_layer_codes[second_index]
+            and (trace_net_key, node_id_by_index[first_index])
+            not in isolated_node_keys
+            and (trace_net_key, node_id_by_index[second_index])
+            not in isolated_node_keys
         ):
             equivalence_union_indices(first_index, second_index)
     trace_terminal_node_index_by_landing: dict[tuple[str, str], int] = {}
