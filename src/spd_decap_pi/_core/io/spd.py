@@ -7108,10 +7108,20 @@ def recover_spd_ground_reachability(
                         key=lambda item: (item[0].casefold(), item[0], item[1], item[2]),
                     )
                 )
+                del contacts
+                contact_digest = hashlib.sha256()
+                contact_digest.update(b"(")
+                for contact_index, contact_item in enumerate(ordered_contacts):
+                    if contact_index:
+                        contact_digest.update(b", ")
+                    contact_digest.update(repr(contact_item).encode("utf-8"))
+                if len(ordered_contacts) == 1:
+                    contact_digest.update(b",")
+                contact_digest.update(b")")
                 cached_contacts = (
                     ordered_contacts,
                     len(ordered_contacts),
-                    hashlib.sha256(repr(ordered_contacts).encode("utf-8")).hexdigest(),
+                    contact_digest.hexdigest(),
                 )
                 component_contacts_cache[cache_key] = cached_contacts
                 if len(ordered_contacts) >= _NEAREST_CONTACT_TREE_THRESHOLD:
