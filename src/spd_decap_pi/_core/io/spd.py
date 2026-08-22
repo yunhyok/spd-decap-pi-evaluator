@@ -7213,13 +7213,15 @@ def recover_spd_ground_reachability(
     unreachable = set(requested) - reachable
     requested_count = len(requested)
     graph_node_count = len(parents)
+    for node_index in range(graph_node_count):
+        parents[node_index] = find(node_index)
+    full_root_by_node = parents
     artwork_component_count = len(artwork_components)
     artwork_island_count = sum(len(ids) for ids in surface_inventory.values())
     requested.clear()
     requested_by_key.clear()
     requested_coordinates.clear()
     target_bit_by_key.clear()
-    del parents[:]
     ranks.clear()
     artwork_components.clear()
     component_contacts.clear()
@@ -7296,7 +7298,6 @@ def recover_spd_ground_reachability(
         net_key, layer_key, token = surface_key_by_code[int(code_value) - 1]
         root = eq_find(net_key, node_index)
         grouped_equivalence.setdefault((net_key, layer_key, root), set()).add(token)
-    del equivalence_parents[:]
     equivalence_ranks.clear()
     # Preserve uncontacted inventory islands as explicit singleton partitions;
     # proofs must cover the complete declared surface universe.
@@ -7319,6 +7320,11 @@ def recover_spd_ground_reachability(
         surface_equivalence_components.add(
             SpdSurfaceIslandEquivalenceComponent(display_net, display_layer, tuple(sorted(tokens)))
         )
+    for node_index in range(len(equivalence_parents)):
+        equivalence_parents[node_index] = _dense_find(
+            equivalence_parents, node_index
+        )
+    equivalence_root_by_node = equivalence_parents
     # A single source-offset replay supplies Via surface unions, canonical pair
     # aggregates, ownership counts, and compact finite-route arrays.  The
     # initial graph pass above retains only fixed-width offsets/codes.
@@ -7350,6 +7356,7 @@ def recover_spd_ground_reachability(
     finite_via_id_bytes = bytearray()
     finite_raw_via_ids_digest = hashlib.sha256()
     finite_owner_ledger_digest = hashlib.sha256()
+    finite_edge_index_by_terminal_via: dict[tuple[str, str], int] = {}
 
     def surface_row_at(
         net_key: str, node_index: int | None
@@ -7447,6 +7454,8 @@ def recover_spd_ground_reachability(
             first_index = via_source_first_indices[via_index]
             second_index = via_source_second_indices[via_index]
             padstack_name = via_source_padstack_names[padstack_code]
+            if finite_requested and via_key in terminal_contact_via_ids:
+                finite_edge_index_by_terminal_via[(net_key, via_key)] = via_index
             surface_union_indices(first_index, second_index)
             first_surface = surface_row_at(net_key, first_index)
             second_surface = surface_row_at(net_key, second_index)
@@ -7516,11 +7525,6 @@ def recover_spd_ground_reachability(
                 via_source_offsets[via_index] = len(finite_via_id_bytes)
                 finite_raw_via_ids_digest.update(len(encoded).to_bytes(4, "big"))
                 finite_raw_via_ids_digest.update(encoded)
-                finite_owner_ledger_digest.update(
-                    (len(encoded) + 4).to_bytes(4, "big")
-                )
-                finite_owner_ledger_digest.update(b"via:")
-                finite_owner_ledger_digest.update(encoded)
         def digest_invalid_offsets(offsets: array):
             def values() -> Iterator[str]:
                 for offset in offsets:
@@ -8080,37 +8084,11 @@ def recover_spd_ground_reachability(
     finite_via_vertex_id_by_retarget_destination: dict[tuple[str, str, str], str] = {}
     finite_via_retarget_destination_coverage: SpdFiniteViaRetargetDestinationCoverage | None = None
     if finite_via_id_end_offsets and finite_requested:
-        # The finite quotient consumes only dense endpoint indices and compact
-        # codes retained by the single replay.  Do not rebuild million-entry
-        # string references or raw five-field edge tuples here.
+        # Restore the canonical finite scope before reducing the dense graph:
+        # same-layer Trace/artwork components are ideal nodes, while Via-only
+        # components and passive dangling trees remain outside global MNA.
         edge_count = len(finite_via_id_end_offsets)
         node_count = graph_node_count
-        degree = array("I", [0]) * node_count
-        for edge_index in range(edge_count):
-            degree[finite_first_indices[edge_index]] += 1
-            degree[finite_second_indices[edge_index]] += 1
-        adjacency_offsets = array("I", [0]) * (node_count + 1)
-        for node_index in range(node_count):
-            adjacency_offsets[node_index + 1] = adjacency_offsets[node_index] + degree[node_index]
-        adjacency_incidence = array("I", [0]) * (2 * edge_count)
-        adjacency_cursor = array("I", adjacency_offsets[:-1])
-        for edge_index in range(edge_count):
-            first = finite_first_indices[edge_index]
-            second = finite_second_indices[edge_index]
-            adjacency_incidence[adjacency_cursor[first]] = edge_index
-            adjacency_cursor[first] += 1
-            adjacency_incidence[adjacency_cursor[second]] = edge_index
-            adjacency_cursor[second] += 1
-        del adjacency_cursor[:]
-
-        def incident_start(node: int) -> int:
-            return int(adjacency_offsets[node])
-
-        def incident_end(node: int) -> int:
-            return int(adjacency_offsets[node + 1])
-
-        def incident_degree(node: int) -> int:
-            return incident_end(node) - incident_start(node)
 
         def edge_net(edge_index: int) -> str:
             return via_source_net_key_by_code[finite_net_codes[edge_index]]
@@ -8127,44 +8105,204 @@ def recover_spd_ground_reachability(
         def edge_padstack(edge_index: int) -> str:
             return via_source_padstack_names[finite_padstack_codes[edge_index]]
 
+        finite_root_layer_codes = array("I", [0]) * node_count
+        for node_index, root in enumerate(equivalence_root_by_node):
+            if node_net_key_by_index[node_index] != node_net_key_by_index[root]:
+                raise SpdImportError("same-layer quotient root spans multiple NETs")
+            observed_code = int(node_layer_codes[node_index])
+            if not observed_code:
+                continue
+            previous_code = finite_root_layer_codes[root]
+            if previous_code not in (0, observed_code):
+                raise SpdImportError(
+                    "same-layer quotient root spans multiple conductor layers"
+                )
+            finite_root_layer_codes[root] = observed_code
+        for edge_index in range(edge_count):
+            finite_first_indices[edge_index] = equivalence_root_by_node[
+                finite_first_indices[edge_index]
+            ]
+            finite_second_indices[edge_index] = equivalence_root_by_node[
+                finite_second_indices[edge_index]
+            ]
+
         boundary_nodes = bytearray(node_count)
         terminal_ids_by_node: dict[int, list[str]] = {}
-        for (_via_key, node_key), (
+        retarget_cut_nodes: set[int] = set()
+        for (via_key, node_key), (
             net_key,
             _owner_kind,
             terminal_id,
         ) in terminal_contact_owner_by_key.items():
-            landing_key = (_via_key, node_key)
+            landing_key = (via_key, node_key)
             node_index = trace_terminal_node_index_by_landing.get(
                 landing_key,
                 late_node_indices.get((net_key, node_key)),
             )
             if node_index is None:
                 continue
-            boundary_nodes[node_index] = 1
-            terminal_ids_by_node.setdefault(node_index, []).append(
-                terminal_id
-            )
+            source_root = equivalence_root_by_node[node_index]
+            boundary_nodes[source_root] = 1
+            terminal_ids_by_node.setdefault(source_root, []).append(terminal_id)
+            edge_index = finite_edge_index_by_terminal_via.get((net_key, via_key))
+            if edge_index is None:
+                continue
+            first = finite_first_indices[edge_index]
+            second = finite_second_indices[edge_index]
+            if source_root == first:
+                opposite = second
+            elif source_root == second:
+                opposite = first
+            else:
+                raise SpdImportError(
+                    "terminal first Via is not incident to its exposed quotient vertex"
+                )
+            if (net_key, node_key) in isolated_node_keys:
+                boundary_nodes[opposite] = 1
+                retarget_cut_nodes.add(opposite)
+        finite_edge_index_by_terminal_via.clear()
         for node_index, code_value in enumerate(surface_code_by_index):
             if code_value:
-                boundary_nodes[node_index] = 1
-        # Keep an isolated terminal landing as a singleton quotient vertex;
-        # its immediate Via neighbor is a boundary of the conditional graph
-        # and must not be absorbed into a contracted series path.
-        for isolated_net, isolated_node in isolated_node_keys:
-            isolated_index = late_node_indices.get((isolated_net, isolated_node))
-            if isolated_index is None:
+                boundary_nodes[equivalence_root_by_node[node_index]] = 1
+        for raw_net, _raw_layer, raw_node in requested_destinations:
+            node_index = late_node_indices.get(
+                (str(raw_net).casefold(), str(raw_node).casefold())
+            )
+            if node_index is not None:
+                boundary_nodes[equivalence_root_by_node[node_index]] = 1
+
+        boundaries_by_full_root: dict[int, set[int]] = {}
+        for node_index, is_boundary in enumerate(boundary_nodes):
+            if is_boundary:
+                boundaries_by_full_root.setdefault(
+                    full_root_by_node[node_index], set()
+                ).add(node_index)
+        relevant_full_roots = {
+            root
+            for root, boundaries in boundaries_by_full_root.items()
+            if len(boundaries) >= 2
+        }
+        boundaries_by_full_root.clear()
+
+        active_edges = bytearray(edge_count)
+        degree = array("I", [0]) * node_count
+        for edge_index in range(edge_count):
+            first = finite_first_indices[edge_index]
+            second = finite_second_indices[edge_index]
+            if (
+                first == second
+                or full_root_by_node[first] != full_root_by_node[second]
+                or full_root_by_node[first] not in relevant_full_roots
+            ):
                 continue
-            for incidence_index in range(incident_start(isolated_index), incident_end(isolated_index)):
-                edge_index = adjacency_incidence[incidence_index]
-                first = finite_first_indices[edge_index]
-                second = finite_second_indices[edge_index]
-                boundary_nodes[second if first == isolated_index else first] = 1
+            active_edges[edge_index] = 1
+            degree[first] += 1
+            degree[second] += 1
+        relevant_full_roots.clear()
+
+        adjacency_offsets = array("I", [0]) * (node_count + 1)
+        for node_index in range(node_count):
+            adjacency_offsets[node_index + 1] = adjacency_offsets[node_index] + degree[node_index]
+        adjacency_incidence = array("I", [0]) * adjacency_offsets[-1]
+        adjacency_cursor = array("I", adjacency_offsets[:-1])
+        for edge_index in range(edge_count):
+            if not active_edges[edge_index]:
+                continue
+            first = finite_first_indices[edge_index]
+            second = finite_second_indices[edge_index]
+            adjacency_incidence[adjacency_cursor[first]] = edge_index
+            adjacency_cursor[first] += 1
+            adjacency_incidence[adjacency_cursor[second]] = edge_index
+            adjacency_cursor[second] += 1
+        del adjacency_cursor[:]
 
         def edge_other(edge_index: int, node: int) -> int:
             first = finite_first_indices[edge_index]
             second = finite_second_indices[edge_index]
             return second if first == node else first
+
+        prune_queue = deque(
+            node_index
+            for node_index, active_degree in enumerate(degree)
+            if 0 < active_degree <= 1 and not boundary_nodes[node_index]
+        )
+        queued = bytearray(node_count)
+        for node_index in prune_queue:
+            queued[node_index] = 1
+        while prune_queue:
+            node_index = prune_queue.popleft()
+            queued[node_index] = 0
+            if boundary_nodes[node_index] or degree[node_index] > 1:
+                continue
+            active_incident = -1
+            for slot in range(
+                adjacency_offsets[node_index], adjacency_offsets[node_index + 1]
+            ):
+                candidate = adjacency_incidence[slot]
+                if active_edges[candidate]:
+                    active_incident = candidate
+                    break
+            if active_incident < 0:
+                continue
+            active_edges[active_incident] = 0
+            neighbor = edge_other(active_incident, node_index)
+            degree[node_index] -= 1
+            degree[neighbor] -= 1
+            if (
+                not boundary_nodes[neighbor]
+                and degree[neighbor] <= 1
+                and not queued[neighbor]
+            ):
+                prune_queue.append(neighbor)
+                queued[neighbor] = 1
+        queued.clear()
+
+        del adjacency_offsets[:]
+        del adjacency_incidence[:]
+        adjacency_offsets = array("I", [0]) * (node_count + 1)
+        for node_index in range(node_count):
+            adjacency_offsets[node_index + 1] = (
+                adjacency_offsets[node_index] + degree[node_index]
+            )
+        adjacency_incidence = array("I", [0]) * adjacency_offsets[-1]
+        adjacency_cursor = array("I", adjacency_offsets[:-1])
+        for edge_index in range(edge_count):
+            if not active_edges[edge_index]:
+                continue
+            first = finite_first_indices[edge_index]
+            second = finite_second_indices[edge_index]
+            adjacency_incidence[adjacency_cursor[first]] = edge_index
+            adjacency_cursor[first] += 1
+            adjacency_incidence[adjacency_cursor[second]] = edge_index
+            adjacency_cursor[second] += 1
+        del adjacency_cursor[:]
+
+        finite_modeled_via_ids_digest = hashlib.sha256()
+        finite_outside_via_ids_digest = hashlib.sha256()
+        for edge_index in range(edge_count):
+            encoded = edge_owner(edge_index).encode("utf-8")
+            target_digest = (
+                finite_modeled_via_ids_digest
+                if active_edges[edge_index]
+                else finite_outside_via_ids_digest
+            )
+            target_digest.update(len(encoded).to_bytes(4, "big"))
+            target_digest.update(encoded)
+            if active_edges[edge_index]:
+                finite_owner_ledger_digest.update(
+                    (len(encoded) + 4).to_bytes(4, "big")
+                )
+                finite_owner_ledger_digest.update(b"via:")
+                finite_owner_ledger_digest.update(encoded)
+
+        def incident_start(node: int) -> int:
+            return int(adjacency_offsets[node])
+
+        def incident_end(node: int) -> int:
+            return int(adjacency_offsets[node + 1])
+
+        def incident_degree(node: int) -> int:
+            return incident_end(node) - incident_start(node)
 
         # Tarjan bridges classify cycle/parallel topology in O(V+E).  A
         # non-boundary degree-two node is contractible iff both incident edges
@@ -8225,7 +8363,6 @@ def recover_spd_ground_reachability(
         del parent_edge[:]
         del parent_node[:]
         bridges.clear()
-        boundary_nodes.clear()
 
         vertex_for_node = array("I", range(node_count))
         visited_edges = bytearray(edge_count)
@@ -8274,7 +8411,7 @@ def recover_spd_ground_reachability(
         # Any remaining edge is cyclic/parallel (or a defensive malformed
         # component); retain it explicitly rather than forcing contraction.
         for edge_index in range(edge_count):
-            if visited_edges[edge_index]:
+            if not active_edges[edge_index] or visited_edges[edge_index]:
                 continue
             visited_edges[edge_index] = 1
             first = finite_first_indices[edge_index]
@@ -8297,8 +8434,9 @@ def recover_spd_ground_reachability(
 
         vertex_member_count = array("I", [0]) * node_count
         for node_index in range(node_count):
-            if degree[node_index]:
-                vertex_member_count[vertex_for_node[node_index]] += 1
+            root = equivalence_root_by_node[node_index]
+            if degree[root] or boundary_nodes[root]:
+                vertex_member_count[vertex_for_node[root]] += 1
         vertex_member_offsets = array("I", [0]) * (node_count + 1)
         for node_index in range(node_count):
             vertex_member_offsets[node_index + 1] = (
@@ -8307,9 +8445,10 @@ def recover_spd_ground_reachability(
         vertex_members = array("I", [0]) * vertex_member_offsets[-1]
         vertex_member_cursor = array("I", vertex_member_offsets[:-1])
         for node_index in range(node_count):
-            if not degree[node_index]:
+            root = equivalence_root_by_node[node_index]
+            if not degree[root] and not boundary_nodes[root]:
                 continue
-            representative = vertex_for_node[node_index]
+            representative = vertex_for_node[root]
             vertex_members[vertex_member_cursor[representative]] = node_index
             vertex_member_cursor[representative] += 1
         del degree[:]
@@ -8322,9 +8461,14 @@ def recover_spd_ground_reachability(
             members = vertex_members[
                 vertex_member_offsets[representative] : vertex_member_offsets[representative + 1]
             ]
-            net_for_vertex = node_net_key_by_index[representative]
-            representative_node = node_id_by_index[representative]
-            layer = node_layer_at(net_for_vertex, representative)
+            net_for_vertex = node_net_key_by_index[members[0]]
+            representative_node = min(node_id_by_index[member] for member in members)
+            layer_code = finite_root_layer_codes[representative]
+            layer = (
+                layer_display_by_code[layer_code - 1]
+                if layer_code
+                else "UNKNOWN"
+            )
             node_ids_hash = finite_digest(
                 sorted(node_id_by_index[member] for member in members)
             )
@@ -8348,13 +8492,22 @@ def recover_spd_ground_reachability(
             }
             if retained:
                 roles.add("retained_surface")
-            terminal_ids = tuple(sorted(
-                terminal_id
-                for member in members
-                for terminal_id in terminal_ids_by_node.get(member, ())
-            ))
+            member_roots = {
+                equivalence_root_by_node[member] for member in members
+            }
+            terminal_ids = tuple(
+                sorted(
+                    {
+                        terminal_id
+                        for root in member_roots
+                        for terminal_id in terminal_ids_by_node.get(root, ())
+                    }
+                )
+            )
             if terminal_ids:
                 roles.add("terminal")
+            if member_roots & retarget_cut_nodes:
+                roles.add("retarget_cut")
             if incident_degree(representative) > 2:
                 roles.add("junction")
             elif not roles:
@@ -8380,6 +8533,10 @@ def recover_spd_ground_reachability(
         del vertex_member_offsets[:]
         del vertex_members[:]
         terminal_ids_by_node.clear()
+        boundary_nodes.clear()
+        retarget_cut_nodes.clear()
+        del equivalence_root_by_node[:]
+        del full_root_by_node[:]
         del surface_code_by_index[:]
         surface_key_by_code.clear()
         surface_component_islands_by_code.clear()
@@ -8429,8 +8586,18 @@ def recover_spd_ground_reachability(
                 net_for_edge = edge_net(edge_index)
                 first_index = finite_first_indices[edge_index]
                 second_index = finite_second_indices[edge_index]
-                first_layer = node_layer_at(net_for_edge, first_index)
-                second_layer = node_layer_at(net_for_edge, second_index)
+                first_code = finite_root_layer_codes[first_index]
+                second_code = finite_root_layer_codes[second_index]
+                first_layer = (
+                    layer_display_by_code[first_code - 1]
+                    if first_code
+                    else "UNKNOWN"
+                )
+                second_layer = (
+                    layer_display_by_code[second_code - 1]
+                    if second_code
+                    else "UNKNOWN"
+                )
                 padstack_name = edge_padstack(edge_index)
                 drill, material, segments, term_status, term_issues, resistance, inductance, length_um = finite_physical(padstack_name, first_layer, second_layer)
                 if term_status != "complete":
@@ -8452,6 +8619,7 @@ def recover_spd_ground_reachability(
         del finite_first_indices[:]
         del finite_second_indices[:]
         del finite_padstack_codes[:]
+        del finite_root_layer_codes[:]
         via_source_net_key_by_code.clear()
         via_source_padstack_names.clear()
         del node_layer_codes[:]
@@ -8532,20 +8700,32 @@ def recover_spd_ground_reachability(
             (
                 f"via:{edge_owner(index)}"
                 for index in range(edge_count)
+                if active_edges[index]
             ),
             check=reporter.check,
         ).hexdigest()
-        complete_count = sum(1 for edge in finite_via_edges for term in edge.series_terms if term.physical_model_status == "complete")
-        incomplete_count = edge_count - complete_count
-        finite_via_coverage = SpdFiniteViaQuotientCoverage(
-            raw_target_via_count=edge_count, modeled_global_via_count=edge_count, outside_scope_via_count=0,
-            pruned_dangling_via_count=0, physical_complete_via_count=complete_count,
-            physical_incomplete_via_count=incomplete_count,
-            raw_target_via_ids_sha256=finite_raw_via_ids_digest.hexdigest(), modeled_global_via_ids_sha256=finite_raw_via_ids_digest.hexdigest(),
-            modeled_owner_ledger_sha256=finite_owner_ledger_digest.hexdigest(), modeled_owner_canonical_sha256=canonical_owner_digest, outside_scope_via_ids_sha256=hashlib.sha256(b"").hexdigest(),
+        modeled_count = sum(active_edges)
+        complete_count = sum(
+            term.count
+            for edge in finite_via_edges
+            for term in edge.series_terms
+            if term.physical_model_status == "complete"
         )
+        incomplete_count = modeled_count - complete_count
+        outside_count = edge_count - modeled_count
+        finite_via_coverage = SpdFiniteViaQuotientCoverage(
+            raw_target_via_count=edge_count, modeled_global_via_count=modeled_count, outside_scope_via_count=outside_count,
+            pruned_dangling_via_count=outside_count, physical_complete_via_count=complete_count,
+            physical_incomplete_via_count=incomplete_count,
+            raw_target_via_ids_sha256=finite_raw_via_ids_digest.hexdigest(), modeled_global_via_ids_sha256=finite_modeled_via_ids_digest.hexdigest(),
+            modeled_owner_ledger_sha256=finite_owner_ledger_digest.hexdigest(), modeled_owner_canonical_sha256=canonical_owner_digest, outside_scope_via_ids_sha256=finite_outside_via_ids_digest.hexdigest(),
+        )
+        active_edges.clear()
         finite_via_id_bytes.clear()
         del finite_via_id_end_offsets[:]
+    del full_root_by_node[:]
+    del equivalence_root_by_node[:]
+    finite_edge_index_by_terminal_via.clear()
     physical_model_cache.clear()
     surface_dense_trace_edges = len(surface_trace_first_indices)
     del surface_trace_net_codes[:]

@@ -5986,11 +5986,80 @@ def test_finite_via_quotient_emits_owner_complete_graph(tmp_path: Path) -> None:
         padstacks=analysis.padstacks,
         stackup_layers=analysis.stackup_layers,
         target_layers_by_net={"PWR": ("Signal$GND",)},
+        target_node_surface_resolver=(
+            lambda _net, _layer, node, _x, _y: (
+                "island-gnd" if node == "NodeGnd" else None
+            )
+        ),
+        target_surface_island_ids={
+            ("PWR", "Signal$GND"): ("island-gnd",),
+        },
     )
     assert result.finite_via_coverage is not None
     assert result.finite_via_coverage.modeled_global_via_count == 2
     assert len(result.finite_via_vertices) >= 2
     assert len(result.finite_via_edges) >= 1
+
+
+def test_finite_via_quotient_prunes_nonboundary_dangling_physical_gap(
+    tmp_path: Path,
+) -> None:
+    source, analysis = _recoverable_via_source(
+        tmp_path,
+        node_lines=(
+            "NodeFiniteTop!!1::PWR X = 0um Y = 0um Layer = Signal$TOP "
+            "PadStack = DR-0102_60\n"
+            "NodeFinitePwr!!1::PWR X = 0um Y = 0um Layer = Signal$PWR "
+            "PadStack = DR-0102_60\n"
+            "NodePackageLeaf!!1::PWR X = 0um Y = 0um Layer = Package$DIE "
+            "PadStack = DR-0102_60"
+        ),
+        via_lines=(
+            "ViaFinite::PWR UpperNode = NodeFiniteTop LowerNode = NodeFinitePwr "
+            "PadStack = DR-0102_60\n"
+            "ViaDangling::PWR UpperNode = NodeFinitePwr LowerNode = NodePackageLeaf "
+            "PadStack = DR-0102_60"
+        ),
+    )
+    landing = SimpleNamespace(
+        via_id="ViaFinite", net="PWR", endpoint_node_id="NodeFiniteTop"
+    )
+
+    result = recover_spd_ground_reachability(
+        source,
+        landings=(landing,),
+        terminal_contact_landings=(landing,),
+        terminal_owned_via_ids=(),
+        padstacks=analysis.padstacks,
+        stackup_layers=analysis.stackup_layers,
+        target_layers_by_net={"PWR": ("Signal$PWR",)},
+        target_node_surface_resolver=(
+            lambda _net, _layer, node, _x, _y: (
+                "island-pwr" if node == "NodeFinitePwr" else None
+            )
+        ),
+        target_surface_island_ids={
+            ("PWR", "Signal$PWR"): ("island-pwr",),
+        },
+    )
+
+    coverage = result.finite_via_coverage
+    assert coverage is not None and coverage.status == "complete"
+    assert (
+        coverage.raw_target_via_count,
+        coverage.modeled_global_via_count,
+        coverage.outside_scope_via_count,
+        coverage.pruned_dangling_via_count,
+        coverage.physical_complete_via_count,
+        coverage.physical_incomplete_via_count,
+    ) == (2, 1, 1, 1, 1, 0)
+    assert tuple(edge.owner_ids for edge in result.finite_via_edges) == (
+        ("via:viafinite",),
+    )
+    encoded = b"viadangling"
+    assert coverage.outside_scope_via_ids_sha256 == sha256(
+        len(encoded).to_bytes(4, "big") + encoded
+    ).hexdigest()
 
 
 def test_trace_terminal_binds_unique_first_via_quotient_vertex(
@@ -6047,6 +6116,7 @@ def test_trace_terminal_binds_unique_first_via_quotient_vertex(
     assert landing_key not in result.finite_via_edge_id_by_landing
     assert result.surface_islands_by_landing[landing_key] == ("island-pwr",)
     assert vertex.terminal_ids == ("SITE0:1",)
+    assert vertex.source_node_count == 2
     assert "terminal" in vertex.roles
 
 
@@ -6079,6 +6149,14 @@ def test_finite_via_quotient_contracts_bridge_not_cycle(tmp_path: Path) -> None:
         padstacks=analysis.padstacks,
         stackup_layers=analysis.stackup_layers,
         target_layers_by_net={"PWR": ("Signal$GND",)},
+        target_node_surface_resolver=(
+            lambda _net, _layer, node, _x, _y: (
+                "island-gnd" if node == "NodeQC" else None
+            )
+        ),
+        target_surface_island_ids={
+            ("PWR", "Signal$GND"): ("island-gnd",),
+        },
     )
     assert result.finite_via_coverage is not None
     assert len(result.finite_via_vertices) == 5
@@ -6147,6 +6225,14 @@ def test_finite_via_owner_ledger_preserves_casefold_and_replacement_ids(
         padstacks=analysis.padstacks,
         stackup_layers=analysis.stackup_layers,
         target_layers_by_net={"PWR": ("Signal$PWR",)},
+        target_node_surface_resolver=(
+            lambda _net, _layer, node, _x, _y: (
+                "island-pwr" if node == "NodeUnicodePwr" else None
+            )
+        ),
+        target_surface_island_ids={
+            ("PWR", "Signal$PWR"): ("island-pwr",),
+        },
     )
 
     raw_ids = ("viass", "via\N{REPLACEMENT CHARACTER}")
@@ -6187,6 +6273,14 @@ def test_finite_via_quotient_many_explicit_paths_preserve_source_order(
         padstacks=analysis.padstacks,
         stackup_layers=analysis.stackup_layers,
         target_layers_by_net={"PWR": ("Signal$PWR",)},
+        target_node_surface_resolver=(
+            lambda _net, _layer, node, _x, _y: (
+                "island-pwr" if node == "NodeParallelPwr" else None
+            )
+        ),
+        target_surface_island_ids={
+            ("PWR", "Signal$PWR"): ("island-pwr",),
+        },
     )
 
     assert len(result.finite_via_edges) == edge_count
@@ -6240,16 +6334,34 @@ def test_finite_via_quotient_middle_first_chain_is_order_independent(tmp_path: P
 
     def recover(root: Path, vias: str):
         root.mkdir(parents=True, exist_ok=True)
-        source, analysis = _recoverable_via_source(root, node_lines=nodes, via_lines=vias)
-        landing = SimpleNamespace(via_id="ViaAX", net="PWR", endpoint_node_id="NodeA")
+        source, analysis = _recoverable_via_source(
+            root, node_lines=nodes, via_lines=vias
+        )
+        landing = SimpleNamespace(
+            via_id="ViaAX", net="PWR", endpoint_node_id="NodeA"
+        )
+        sink = SimpleNamespace(
+            via_id="ViaYB",
+            net="PWR",
+            endpoint_node_id="NodeB",
+            pin_id="SITE0:B",
+        )
         return recover_spd_ground_reachability(
             source,
             landings=(landing,),
-            terminal_contact_landings=(landing,),
+            terminal_contact_landings=(landing, sink),
             terminal_owned_via_ids=(),
             padstacks=analysis.padstacks,
             stackup_layers=analysis.stackup_layers,
-            target_layers_by_net={"PWR": ("Signal$GND",)},
+            target_layers_by_net={"PWR": ("Signal$TOP",)},
+            target_node_surface_resolver=(
+                lambda _net, _layer, node, _x, _y: (
+                    "island-top" if node == "NodeB" else None
+                )
+            ),
+            target_surface_island_ids={
+                ("PWR", "Signal$TOP"): ("island-top",),
+            },
         )
 
     first = recover(tmp_path / "normal", normal)
