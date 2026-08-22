@@ -7069,7 +7069,7 @@ def recover_spd_ground_reachability(
     ] = {}
 
     def legacy_selected_contact(
-        contacts: tuple[tuple[str, float, float], ...],
+        contacts: Iterable[tuple[str, float, float]],
         source_xy: tuple[float, float],
     ) -> tuple[str, float, float]:
         return min(
@@ -7101,15 +7101,13 @@ def recover_spd_ground_reachability(
         raw_component_contacts = component_contacts.pop((net_key, root), ())
         while requests_by_target_bit:
             target_bit, grouped_requests = requests_by_target_bit.popitem()
-            ordered_contacts = tuple(
-                sorted(
-                    {
-                        (node_id, float(x_um), float(y_um))
-                        for node_id, x_um, y_um, mask in raw_component_contacts
-                        if mask & target_bit
-                    },
-                    key=lambda item: (item[0].casefold(), item[0], item[1], item[2]),
-                )
+            ordered_contacts = sorted(
+                (
+                    (node_id, float(x_um), float(y_um))
+                    for node_id, x_um, y_um, mask in raw_component_contacts
+                    if mask & target_bit
+                ),
+                key=lambda item: (item[0].casefold(), item[0], item[1], item[2]),
             )
             contact_digest = hashlib.sha256()
             contact_digest.update(b"(")
@@ -7123,28 +7121,16 @@ def recover_spd_ground_reachability(
             contact_count = len(ordered_contacts)
             contact_hash = contact_digest.hexdigest()
             nearest_tree: cKDTree | None = None
-            nearest_contacts: tuple[tuple[str, float, float], ...] = ()
-            if len(ordered_contacts) >= _NEAREST_CONTACT_TREE_THRESHOLD:
-                # Collapse duplicate coordinates without changing the persisted
-                # candidate universe or its canonical equal-distance winner.
-                unique_contacts_by_coordinate: dict[
-                    tuple[float, float], tuple[str, float, float]
-                ] = {}
-                finite_contacts = True
-                for contact_item in ordered_contacts:
-                    x_value, y_value = contact_item[1], contact_item[2]
-                    if not isfinite(x_value) or not isfinite(y_value):
-                        finite_contacts = False
-                        break
-                    unique_contacts_by_coordinate.setdefault(
-                        (x_value, y_value), contact_item
-                    )
-                if finite_contacts and unique_contacts_by_coordinate:
-                    nearest_contacts = tuple(unique_contacts_by_coordinate.values())
-                    nearest_tree = cKDTree(
-                        [(item[1], item[2]) for item in nearest_contacts]
-                    )
-                del unique_contacts_by_coordinate
+            if (
+                len(ordered_contacts) >= _NEAREST_CONTACT_TREE_THRESHOLD
+                and all(
+                    isfinite(item[1]) and isfinite(item[2])
+                    for item in ordered_contacts
+                )
+            ):
+                nearest_tree = cKDTree(
+                    [(item[1], item[2]) for item in ordered_contacts]
+                )
             for via, node, target_layer in grouped_requests:
                 key = (via, node, target_layer)
                 source_xy = requested_coordinates.get(key)
@@ -7167,9 +7153,9 @@ def recover_spd_ground_reachability(
                             (source_xy[0], source_xy[1]), k=1, workers=1
                         )
                         nearest_index = int(nearest_index)
-                        if not 0 <= nearest_index < len(nearest_contacts):
+                        if not 0 <= nearest_index < len(ordered_contacts):
                             raise ValueError("nearest contact index is outside the tree")
-                        nearest_candidate = nearest_contacts[nearest_index]
+                        nearest_candidate = ordered_contacts[nearest_index]
                         nearest_d2 = (
                             (nearest_candidate[1] - source_xy[0]) ** 2
                             + (nearest_candidate[2] - source_xy[1]) ** 2
@@ -7186,8 +7172,8 @@ def recover_spd_ground_reachability(
                         if not candidate_indices:
                             candidate_indices = [nearest_index]
                         selected_contact = legacy_selected_contact(
-                            tuple(
-                                nearest_contacts[int(index)]
+                            (
+                                ordered_contacts[int(index)]
                                 for index in candidate_indices
                             ),
                             source_xy,
@@ -7202,7 +7188,7 @@ def recover_spd_ground_reachability(
                     contact_count,
                     contact_hash,
                 )
-            del ordered_contacts, nearest_tree, nearest_contacts, grouped_requests
+            del ordered_contacts, nearest_tree, grouped_requests
         del raw_component_contacts
     requests_by_component.clear()
     for key in requested:
