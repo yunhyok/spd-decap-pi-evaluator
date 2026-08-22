@@ -3659,14 +3659,6 @@ def _layer_surface_connectivity_certificate(
         finite_via_vertices.append(vertex)
         finite_vertex_by_id[vertex["vertex_id"]] = vertex
     finite_via_vertices.sort(key=lambda item: item["vertex_id"])
-    finite_vertex_ids_by_component_id: dict[str, list[str]] = {}
-    for vertex in finite_via_vertices:
-        for component_id in vertex["retained_component_ids"]:
-            finite_vertex_ids_by_component_id.setdefault(
-                component_id, []
-            ).append(vertex["vertex_id"])
-    for vertex_ids in finite_vertex_ids_by_component_id.values():
-        vertex_ids.sort()
 
     finite_via_edges = []
     for raw_edge in getattr(reachability, "finite_via_edges", ()):
@@ -4791,20 +4783,10 @@ def _layer_surface_connectivity_certificate(
                 destination_island_id,
             )
         )
-        destination_vertex_ids = (
-            finite_vertex_ids_by_component_id.get(
-                destination_component["component_id"], []
-            )
-            if destination_component is not None
-            else []
-        )
         destination_vertex_id = (
-            destination_vertex_ids[0]
-            if len(destination_vertex_ids) == 1
+            destination_component["representative_island_id"]
+            if destination_component is not None
             else None
-        )
-        destination_vertex = finite_vertex_by_id.get(
-            str(destination_vertex_id or "")
         )
         source_vertex_id = raw_finite_vertex_by_landing.get(
             source_landing_key
@@ -4859,26 +4841,6 @@ def _layer_surface_connectivity_certificate(
             binding_issues.append("destination_surface_component_unresolved")
         elif destination_component["contact_status"] != "complete":
             binding_issues.append("destination_surface_component_uncontacted")
-        if not destination_vertex_ids:
-            binding_issues.append("destination_quotient_vertex_unresolved")
-        elif len(destination_vertex_ids) != 1:
-            binding_issues.append("destination_quotient_vertex_ambiguous")
-        elif destination_vertex is None:
-            binding_issues.append("destination_quotient_vertex_missing")
-        else:
-            if (
-                destination_vertex["net"].casefold()
-                != destination_net.casefold()
-            ):
-                binding_issues.append("destination_vertex_net_mismatch")
-            if (
-                destination_component is not None
-                and destination_component["component_id"]
-                not in destination_vertex["retained_component_ids"]
-            ):
-                binding_issues.append(
-                    "destination_vertex_component_binding_mismatch"
-                )
         request_identity = {
             "refdes": refdes.casefold(),
             "via_id": via_id.casefold(),

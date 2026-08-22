@@ -1723,13 +1723,28 @@ def test_import_runs_one_union_reachability_pass_and_persists_surface_certificat
     calls: list[dict[str, object]] = []
     phase_order: list[str] = []
     retarget_request_lists: list[list[object]] = []
+    retarget_request_counts: list[int] = []
     original_retarget_compile = (
         spd_adapter._compile_retarget_landing_destination_requests
     )
 
     def wrapped_retarget_compile(**kwargs):
         phase_order.append("retarget")
+        pwr_asset = next(
+            item
+            for item in kwargs["geometry_assets"]
+            if str(item["net"]).casefold() == "vdd_core/0"
+        )
+        destination_island_id = str(pwr_asset["island_ids"][0])
+        kwargs["strict_island_resolver_batch"] = (
+            lambda net, _layer, node_ids, _points: (
+                (destination_island_id,) * len(node_ids)
+                if net.casefold() == "vdd_core/0"
+                else (None,) * len(node_ids)
+            )
+        )
         result = original_retarget_compile(**kwargs)
+        retarget_request_counts.append(len(result[0]))
         retarget_request_lists.append(result[0])
         return result
 
@@ -1904,6 +1919,7 @@ def test_import_runs_one_union_reachability_pass_and_persists_surface_certificat
                 paired_substrate_count=0,
             )
             top_pwr_vertex = "spd-finite-via-vertex:fake-top-pwr"
+            other_pwr_vertex = "spd-finite-via-vertex:fake-other-pwr"
             pwr_vertex = "spd-finite-via-vertex:fake-pwr"
             top_gnd_vertex = "spd-finite-via-vertex:fake-top-gnd"
             gnd_vertex = "spd-finite-via-vertex:fake-gnd"
@@ -1920,6 +1936,19 @@ def test_import_runs_one_union_reachability_pass_and_persists_surface_certificat
                         "Signal$PWR": pwr
                     },
                     terminal_ids=("SITE0:101",),
+                ),
+                SimpleNamespace(
+                    vertex_id=other_pwr_vertex,
+                    net="VDD_CORE/0",
+                    layer="Signal$PWR",
+                    representative_node_id="Node5",
+                    source_node_count=1,
+                    source_node_ids_sha256=sha256(b"node5").hexdigest(),
+                    roles=("retained_surface",),
+                    retained_component_island_ids_by_layer={
+                        "Signal$PWR": pwr
+                    },
+                    terminal_ids=(),
                 ),
                 SimpleNamespace(
                     vertex_id=pwr_vertex,
@@ -2173,6 +2202,7 @@ def test_import_runs_one_union_reachability_pass_and_persists_surface_certificat
 
     assert len(calls) == 1
     assert phase_order == ["recovery", "retarget"]
+    assert retarget_request_counts == [1]
     assert retarget_request_lists == [[]]
     landing_ids = {
         (item.via_id, item.endpoint_node_id)
@@ -2207,6 +2237,14 @@ def test_import_runs_one_union_reachability_pass_and_persists_surface_certificat
     assert certificate["scenario_decap_terminal_topology"]["status"] == (
         "complete"
     ), certificate["scenario_decap_terminal_topology"]
+    retarget_bindings = certificate["scenario_decap_terminal_topology"][
+        "retarget_landing_xy_bindings"
+    ]
+    assert len(retarget_bindings) == 1
+    assert retarget_bindings[0]["status"] == "complete"
+    assert retarget_bindings[0]["destination_vertex_id"] == (
+        retarget_bindings[0]["destination_representative_island_id"]
+    )
     assert certificate["finite_via_quotient"]["status"] == "complete", (
         certificate["finite_via_quotient"]
     )
