@@ -5948,6 +5948,75 @@ def test_finite_via_quotient_contracts_bridge_not_cycle(tmp_path: Path) -> None:
     assert contracted[0].raw_via_count == 2
 
 
+def _assert_finite_via_coverage_hashes(result, raw_ids: tuple[str, ...]) -> None:
+    def framed_digest(values) -> str:
+        digest = sha256()
+        for value in values:
+            encoded = str(value).casefold().encode("utf-8")
+            digest.update(len(encoded).to_bytes(4, "big"))
+            digest.update(encoded)
+        return digest.hexdigest()
+
+    coverage = result.finite_via_coverage
+    assert coverage is not None
+    owner_ids = tuple(f"via:{raw_id}" for raw_id in raw_ids)
+    raw_digest = framed_digest(raw_ids)
+    assert (
+        coverage.raw_target_via_ids_sha256,
+        coverage.modeled_global_via_ids_sha256,
+        coverage.modeled_owner_ledger_sha256,
+        coverage.modeled_owner_canonical_sha256,
+    ) == (
+        raw_digest,
+        raw_digest,
+        framed_digest(owner_ids),
+        framed_digest(sorted(owner_ids, key=str.casefold)),
+    )
+
+
+def test_finite_via_owner_ledger_preserves_casefold_and_replacement_ids(
+    tmp_path: Path,
+) -> None:
+    source, _analysis = _recoverable_via_source(
+        tmp_path,
+        node_lines=(
+            "NodeUnicodeTop!!1::PWR X = 0um Y = 0um Layer = Signal$TOP PadStack = DR-0102_60\n"
+            "NodeUnicodePwr!!1::PWR X = 0um Y = 0um Layer = Signal$PWR PadStack = DR-0102_60"
+        ),
+        via_lines=(
+            "ViaCasefold::PWR UpperNode = NodeUnicodeTop LowerNode = NodeUnicodePwr PadStack = DR-0102_60\n"
+            "ViaInvalid::PWR UpperNode = NodeUnicodeTop LowerNode = NodeUnicodePwr PadStack = DR-0102_60"
+        ),
+    )
+    raw = source.read_bytes().replace(
+        b"ViaCasefold::PWR", "Via\N{LATIN SMALL LETTER SHARP S}::PWR".encode("utf-8")
+    ).replace(b"ViaInvalid::PWR", b"Via\xff::PWR")
+    source.write_bytes(raw)
+    analysis = analyze_spd(source)
+    landing = SimpleNamespace(
+        via_id="Via\N{LATIN SMALL LETTER SHARP S}",
+        net="PWR",
+        endpoint_node_id="NodeUnicodeTop",
+    )
+
+    result = recover_spd_ground_reachability(
+        source,
+        landings=(landing,),
+        terminal_contact_landings=(landing,),
+        terminal_owned_via_ids=(),
+        padstacks=analysis.padstacks,
+        stackup_layers=analysis.stackup_layers,
+        target_layers_by_net={"PWR": ("Signal$PWR",)},
+    )
+
+    raw_ids = ("viass", "via\N{REPLACEMENT CHARACTER}")
+    assert tuple(edge.owner_ids for edge in result.finite_via_edges) == (
+        ("via:viass",),
+        ("via:via\N{REPLACEMENT CHARACTER}",),
+    )
+    _assert_finite_via_coverage_hashes(result, raw_ids)
+
+
 def test_finite_via_quotient_many_explicit_paths_preserve_source_order(
     tmp_path: Path,
 ) -> None:
@@ -5987,8 +6056,11 @@ def test_finite_via_quotient_many_explicit_paths_preserve_source_order(
     assert set(edges_by_owner) == {
         f"via:viaparallel{index}" for index in range(edge_count)
     }
+    raw_ids = tuple(f"viaparallel{index}" for index in range(edge_count))
+    _assert_finite_via_coverage_hashes(result, raw_ids)
+    assert result.statistics["via_source_record_replay_passes"] == 1
     for index in range(edge_count):
-        raw_id = f"viaparallel{index}"
+        raw_id = raw_ids[index]
         encoded = raw_id.encode("utf-8")
         edge = edges_by_owner[f"via:{raw_id}"]
         assert (
@@ -6072,6 +6144,12 @@ def test_finite_via_quotient_middle_first_chain_is_order_independent(tmp_path: P
             ),
             expected_digest.hexdigest(),
         )
+    _assert_finite_via_coverage_hashes(
+        first, ("viaax", "viaxy", "viayb")
+    )
+    _assert_finite_via_coverage_hashes(
+        second, ("viaxy", "viaax", "viayb")
+    )
 
 
 def test_recover_keeps_same_node_ids_separate_by_net(tmp_path: Path) -> None:

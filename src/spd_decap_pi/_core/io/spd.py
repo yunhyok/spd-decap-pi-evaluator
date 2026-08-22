@@ -7293,12 +7293,9 @@ def recover_spd_ground_reachability(
         if retarget_destination_requests is not None
         else ()
     )
-    finite_net_codes = array("I")
-    finite_first_indices = array("I")
-    finite_second_indices = array("I")
-    finite_padstack_codes = array("I")
-    finite_via_offsets = array("Q")
-    finite_via_ids: list[str] = []
+    finite_via_id_bytes = bytearray()
+    finite_raw_via_ids_digest = hashlib.sha256()
+    finite_owner_ledger_digest = hashlib.sha256()
 
     def surface_row_at(
         net_key: str, node_index: int | None
@@ -7386,11 +7383,13 @@ def recover_spd_ground_reachability(
             match = _VIA_RE.match(replay_data, int(offset), via_end)
             if match is None:
                 raise SpdImportError("Via source offset replay no longer matches the SPD source")
-            net_key = via_source_net_key_by_code[via_source_net_codes[via_index]]
+            net_code = via_source_net_codes[via_index]
+            padstack_code = via_source_padstack_codes[via_index]
+            net_key = via_source_net_key_by_code[net_code]
             via_key = _decode(match.group(1)).casefold()
             first_index = via_source_first_indices[via_index]
             second_index = via_source_second_indices[via_index]
-            padstack_name = via_source_padstack_names[via_source_padstack_codes[via_index]]
+            padstack_name = via_source_padstack_names[padstack_code]
             surface_union_indices(first_index, second_index)
             first_surface = surface_row_at(net_key, first_index)
             second_surface = surface_row_at(net_key, second_index)
@@ -7448,14 +7447,21 @@ def recover_spd_ground_reachability(
                     state["substrate"] = int(state["substrate"]) + 1
                     paired_substrate += 1
             if finite_requested:
-                finite_net_codes.append(via_source_net_codes[via_index])
-                finite_first_indices.append(first_index)
-                finite_second_indices.append(second_index)
-                finite_padstack_codes.append(via_source_padstack_codes[via_index])
-                finite_via_offsets.append(int(offset))
-                # Owner IDs are output-contract strings; retain them only for
-                # the optional finite result, never for the general graph path.
-                finite_via_ids.append(via_key)
+                # Replay order is already the finite source order.  Transfer
+                # the compact source arrays after this loop instead of copying
+                # one fixed-width row per Via.
+                encoded = via_key.encode("utf-8")
+                finite_via_id_bytes.extend(encoded)
+                # This source offset has completed its final replay use.
+                # Reuse its Q slot as the compact UTF-8 ledger end offset.
+                via_source_offsets[via_index] = len(finite_via_id_bytes)
+                finite_raw_via_ids_digest.update(len(encoded).to_bytes(4, "big"))
+                finite_raw_via_ids_digest.update(encoded)
+                finite_owner_ledger_digest.update(
+                    (len(encoded) + 4).to_bytes(4, "big")
+                )
+                finite_owner_ledger_digest.update(b"via:")
+                finite_owner_ledger_digest.update(encoded)
         def digest_invalid_offsets(offsets: array):
             def values() -> Iterator[str]:
                 for offset in offsets:
@@ -7471,11 +7477,18 @@ def recover_spd_ground_reachability(
     del invalid_owned_offsets[:]
     del invalid_outside_offsets[:]
     del invalid_unsupported_offsets[:]
-    del via_source_offsets[:]
-    del via_source_net_codes[:]
-    del via_source_first_indices[:]
-    del via_source_second_indices[:]
-    del via_source_padstack_codes[:]
+    if not finite_requested:
+        del via_source_offsets[:]
+    finite_via_id_end_offsets = via_source_offsets
+    finite_edge_count = len(finite_via_id_end_offsets)
+    del via_source_net_codes[finite_edge_count:]
+    del via_source_first_indices[finite_edge_count:]
+    del via_source_second_indices[finite_edge_count:]
+    del via_source_padstack_codes[finite_edge_count:]
+    finite_net_codes = via_source_net_codes
+    finite_first_indices = via_source_first_indices
+    finite_second_indices = via_source_second_indices
+    finite_padstack_codes = via_source_padstack_codes
     surface_ranks.clear()
     # One post-replay metadata pass turns surface codes into direct root/layer
     # lookups.  Contacts and finite vertices use these tables instead of
@@ -8007,12 +8020,11 @@ def recover_spd_ground_reachability(
     finite_via_scenario_isolation_coverage: SpdFiniteViaScenarioIsolationCoverage | None = None
     finite_via_vertex_id_by_retarget_destination: dict[tuple[str, str, str], str] = {}
     finite_via_retarget_destination_coverage: SpdFiniteViaRetargetDestinationCoverage | None = None
-    if finite_via_offsets and finite_requested:
+    if finite_via_id_end_offsets and finite_requested:
         # The finite quotient consumes only dense endpoint indices and compact
         # codes retained by the single replay.  Do not rebuild million-entry
         # string references or raw five-field edge tuples here.
-        edge_count = len(finite_via_offsets)
-        del finite_via_offsets[:]
+        edge_count = len(finite_via_id_end_offsets)
         node_count = graph_node_count
         degree = array("I", [0]) * node_count
         for edge_index in range(edge_count):
@@ -8045,7 +8057,13 @@ def recover_spd_ground_reachability(
             return via_source_net_key_by_code[finite_net_codes[edge_index]]
 
         def edge_owner(edge_index: int) -> str:
-            return finite_via_ids[edge_index]
+            start = (
+                finite_via_id_end_offsets[edge_index - 1]
+                if edge_index
+                else 0
+            )
+            end = finite_via_id_end_offsets[edge_index]
+            return finite_via_id_bytes[start:end].decode("utf-8")
 
         def edge_padstack(edge_index: int) -> str:
             return via_source_padstack_names[finite_padstack_codes[edge_index]]
@@ -8328,18 +8346,23 @@ def recover_spd_ground_reachability(
             path_start = quotient_path_offsets[path_index]
             path_end = quotient_path_offsets[path_index + 1]
             path_length = path_end - path_start
-            owner_ids = tuple(
-                f"via:{edge_owner(quotient_path_edge_ids[offset])}"
-                for offset in range(path_start, path_end)
-            )
             start_vertex = vertex_id_by_node[start_node]
             end_vertex = vertex_id_by_node[end_node]
+            owner_ids: list[str] = []
+            edge_digest_builder = hashlib.sha256()
             terms = []
             total_r = total_l = total_length = 0.0
             status = "complete"
             issues: set[str] = set()
             for ordinal, offset in enumerate(range(path_start, path_end)):
                 edge_index = quotient_path_edge_ids[offset]
+                raw_owner_id = edge_owner(edge_index)
+                encoded_owner_id = raw_owner_id.encode("utf-8")
+                edge_digest_builder.update(
+                    len(encoded_owner_id).to_bytes(4, "big")
+                )
+                edge_digest_builder.update(encoded_owner_id)
+                owner_ids.append(f"via:{raw_owner_id}")
                 net_for_edge = edge_net(edge_index)
                 first_index = finite_first_indices[edge_index]
                 second_index = finite_second_indices[edge_index]
@@ -8355,12 +8378,9 @@ def recover_spd_ground_reachability(
                     total_l += inductance or 0.0
                     total_length += length_um or 0.0
                 terms.append(SpdFiniteViaSeriesTerm(ordinal, 1, padstack_name, first_layer, second_layer, drill, material, segments, resistance, inductance, length_um, term_status, term_issues))
-            edge_digest = finite_digest(
-                edge_owner(quotient_path_edge_ids[offset])
-                for offset in range(path_start, path_end)
-            )
+            edge_digest = edge_digest_builder.hexdigest()
             edge_id = f"spd-finite-via-edge:{finite_digest((start_vertex, end_vertex, edge_digest))[:24]}"
-            finite_via_edges.append(SpdFiniteViaQuotientEdge(edge_id, edge_net(quotient_path_edge_ids[path_start]), start_vertex, end_vertex, 1, path_length, path_length, edge_digest, owner_ids, tuple(terms), total_r if status == "complete" else None, total_l if status == "complete" else None, total_length if status == "complete" else None, "contracted_series" if path_length > 1 else "retained_explicit", status, tuple(sorted(issues))))
+            finite_via_edges.append(SpdFiniteViaQuotientEdge(edge_id, edge_net(quotient_path_edge_ids[path_start]), start_vertex, end_vertex, 1, path_length, path_length, edge_digest, tuple(owner_ids), tuple(terms), total_r if status == "complete" else None, total_l if status == "complete" else None, total_length if status == "complete" else None, "contracted_series" if path_length > 1 else "retained_explicit", status, tuple(sorted(issues))))
         del quotient_path_starts[:]
         del quotient_path_ends[:]
         del quotient_path_offsets[:]
@@ -8440,29 +8460,36 @@ def recover_spd_ground_reachability(
             if requested_destinations
             else None
         )
-        raw_ids = tuple(finite_via_ids[index] for index in range(edge_count))
+        canonical_owner_digest = _canonical_casefolded_ids_digest(
+            (
+                f"via:{edge_owner(index)}"
+                for index in range(edge_count)
+            ),
+            check=reporter.check,
+        ).hexdigest()
         complete_count = sum(1 for edge in finite_via_edges for term in edge.series_terms if term.physical_model_status == "complete")
         incomplete_count = edge_count - complete_count
         finite_via_coverage = SpdFiniteViaQuotientCoverage(
             raw_target_via_count=edge_count, modeled_global_via_count=edge_count, outside_scope_via_count=0,
             pruned_dangling_via_count=0, physical_complete_via_count=complete_count,
             physical_incomplete_via_count=incomplete_count,
-            raw_target_via_ids_sha256=finite_digest(raw_ids), modeled_global_via_ids_sha256=finite_digest(raw_ids),
-            modeled_owner_ledger_sha256=finite_digest(f"via:{item}" for item in raw_ids), modeled_owner_canonical_sha256=finite_digest(sorted(f"via:{item}" for item in raw_ids)), outside_scope_via_ids_sha256=hashlib.sha256(b"").hexdigest(),
+            raw_target_via_ids_sha256=finite_raw_via_ids_digest.hexdigest(), modeled_global_via_ids_sha256=finite_raw_via_ids_digest.hexdigest(),
+            modeled_owner_ledger_sha256=finite_owner_ledger_digest.hexdigest(), modeled_owner_canonical_sha256=canonical_owner_digest, outside_scope_via_ids_sha256=hashlib.sha256(b"").hexdigest(),
         )
-        del raw_ids
+        finite_via_id_bytes.clear()
+        del finite_via_id_end_offsets[:]
     physical_model_cache.clear()
     surface_dense_trace_edges = len(surface_trace_first_indices)
     del surface_trace_net_codes[:]
     del surface_trace_first_indices[:]
     del surface_trace_second_indices[:]
     surface_trace_net_by_code.clear()
-    del finite_via_offsets[:]
     del finite_net_codes[:]
     del finite_first_indices[:]
     del finite_second_indices[:]
     del finite_padstack_codes[:]
-    finite_via_ids.clear()
+    finite_via_id_bytes.clear()
+    del finite_via_id_end_offsets[:]
     via_source_net_key_by_code.clear()
     via_source_padstack_names.clear()
     terminal_contact_owner_by_key.clear()
