@@ -62,6 +62,56 @@ def test_bulk_length_parser_preserves_units_and_strict_validation() -> None:
         _length_um(b"1e309mm")
 
 
+def test_invalid_via_id_digest_external_merge_matches_scalar_and_cleans_up(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    values = ["ViaZ", "viaß", "VIASS", "VIAΩ", "viaω", "ViaA", "ViaA"]
+
+    def scalar(rows: list[str]) -> str:
+        digest = sha256()
+        for value in sorted(item.casefold() for item in rows):
+            encoded = value.encode("utf-8")
+            digest.update(len(encoded).to_bytes(4, "big"))
+            digest.update(encoded)
+        return digest.hexdigest()
+
+    created: list[BytesIO] = []
+
+    def temporary_file(*, mode: str) -> BytesIO:
+        assert mode == "w+b"
+        created.append(BytesIO())
+        return created[-1]
+
+    monkeypatch.setattr(spd_io, "TemporaryFile", temporary_file)
+    expected = scalar(values)
+    assert (
+        spd_io._canonical_casefolded_ids_digest(values, chunk_size=2).hexdigest()
+        == expected
+    )
+    assert (
+        spd_io._canonical_casefolded_ids_digest(
+            reversed(values), chunk_size=2
+        ).hexdigest()
+        == expected
+    )
+    assert len(created) >= 6 and all(run.closed for run in created)
+
+    created.clear()
+    checks = 0
+
+    def cancel_after_first_spill() -> None:
+        nonlocal checks
+        checks += 1
+        if checks == 2:
+            raise SpdImportError("cancelled")
+
+    with pytest.raises(SpdImportError, match="cancelled"):
+        spd_io._canonical_casefolded_ids_digest(
+            values, chunk_size=2, check=cancel_after_first_spill
+        )
+    assert created and all(run.closed for run in created)
+
+
 def test_node_attribute_padstack_group_is_reachable() -> None:
     """The documented PadStack fallback group must be able to capture."""
 

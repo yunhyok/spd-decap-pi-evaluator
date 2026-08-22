@@ -14,14 +14,16 @@ from collections import Counter, deque
 from collections.abc import Callable, Iterable, Iterator, Mapping, Sequence
 from dataclasses import dataclass, field, replace
 import hashlib
+import heapq
 import json
 from decimal import Decimal, DecimalException, InvalidOperation
 from math import isfinite, log10, nextafter, sqrt
 import mmap
 from pathlib import Path
 import re
+from tempfile import TemporaryFile
 from types import MappingProxyType
-from typing import Any, Literal
+from typing import Any, BinaryIO, Literal
 
 from scipy.spatial import cKDTree
 
@@ -2581,6 +2583,78 @@ def _iter_spd_trace_records(handle: object, start: int, end: int):
 
 def _decode(raw: bytes) -> str:
     return raw.decode("utf-8", errors="replace")
+
+
+def _canonical_casefolded_ids_digest(
+    values: Iterable[str],
+    *,
+    chunk_size: int = 16384,
+    check: Callable[[], None] | None = None,
+) -> Any:
+    """Hash case-folded IDs in canonical order without retaining them all."""
+
+    if chunk_size <= 0:
+        raise ValueError("canonical digest chunk size must be positive")
+    runs: list[BinaryIO] = []
+
+    def spill(chunk: list[str]) -> None:
+        chunk.sort()
+        run = TemporaryFile(mode="w+b")
+        try:
+            for value in chunk:
+                encoded = value.encode("utf-8")
+                run.write(len(encoded).to_bytes(4, "big"))
+                run.write(encoded)
+            run.seek(0)
+        except Exception:
+            run.close()
+            raise
+        runs.append(run)
+
+    def read_run(run: BinaryIO) -> Iterator[str]:
+        while header := run.read(4):
+            if len(header) != 4:
+                raise SpdImportError("Canonical via ID digest run is truncated")
+            size = int.from_bytes(header, "big")
+            encoded = run.read(size)
+            if len(encoded) != size:
+                raise SpdImportError("Canonical via ID digest run is truncated")
+            try:
+                yield encoded.decode("utf-8")
+            except UnicodeDecodeError as exc:
+                raise SpdImportError("Canonical via ID digest run is invalid") from exc
+
+    try:
+        if check is not None:
+            check()
+        chunk: list[str] = []
+        for value in values:
+            chunk.append(value.casefold())
+            if len(chunk) == chunk_size:
+                spill(chunk)
+                chunk = []
+                if check is not None:
+                    check()
+        if chunk:
+            spill(chunk)
+            if check is not None:
+                check()
+
+        digest = hashlib.sha256()
+        for index, value in enumerate(
+            heapq.merge(*(read_run(run) for run in runs)), start=1
+        ):
+            encoded = value.encode("utf-8")
+            digest.update(len(encoded).to_bytes(4, "big"))
+            digest.update(encoded)
+            if check is not None and index % chunk_size == 0:
+                check()
+        if check is not None:
+            check()
+        return digest
+    finally:
+        for run in runs:
+            run.close()
 
 
 def _line_end(data: mmap.mmap, start: int, end: int) -> int:
@@ -7281,17 +7355,13 @@ def recover_spd_ground_reachability(
                 # the optional finite result, never for the general graph path.
                 finite_via_ids.append(via_key)
         def digest_invalid_offsets(offsets: array):
-            values = []
-            for offset in offsets:
-                match = _VIA_RE.match(replay_data, int(offset), via_end)
-                if match is not None:
-                    values.append(_decode(match.group(1)).casefold())
-            digest = hashlib.sha256()
-            for value in sorted(values):
-                encoded = value.encode("utf-8")
-                digest.update(len(encoded).to_bytes(4, "big"))
-                digest.update(encoded)
-            return digest
+            def values() -> Iterator[str]:
+                for offset in offsets:
+                    match = _VIA_RE.match(replay_data, int(offset), via_end)
+                    if match is not None:
+                        yield _decode(match.group(1))
+
+            return _canonical_casefolded_ids_digest(values(), check=reporter.check)
         invalid_owned_digest = digest_invalid_offsets(invalid_owned_offsets)
         invalid_outside_digest = digest_invalid_offsets(invalid_outside_offsets)
         invalid_unsupported_digest = digest_invalid_offsets(invalid_unsupported_offsets)
