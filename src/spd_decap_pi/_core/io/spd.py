@@ -6271,7 +6271,16 @@ def recover_spd_ground_reachability(
                 if layer_raw is None:
                     continue
                 layer_key = _decode(layer_raw).casefold()
-                layer_display = _decode(layer_raw)
+                layer_display = layer_display_by_key.get((net_key, layer_key))
+                if layer_display is None:
+                    layer_display = _decode(layer_raw)
+                    layer_display_by_key[(net_key, layer_key)] = layer_display
+                node_key = node_id.casefold()
+                dense_node_index = node_index_by_net[net_key].get(node_key)
+                if dense_node_index is not None:
+                    observed_code = layer_code(layer_key, layer_display)
+                    if node_layer_codes[dense_node_index] in (0, observed_code):
+                        node_layer_codes[dense_node_index] = observed_code
                 if (
                     layer_key in artwork_layers.get(net_key, ())
                     and (
@@ -6287,10 +6296,6 @@ def recover_spd_ground_reachability(
                         deferred_artwork_key_order.append(deferred_key)
                     offsets.append(int(_offset))
                     continue
-                layer_display = layer_display_by_key.get((net_key, layer_key))
-                if layer_display is None:
-                    layer_display = _decode(layer_raw)
-                    layer_display_by_key[(net_key, layer_key)] = layer_display
                 attributes = _NODE_ATTR_RE.search(raw)
                 if attributes is None:
                     continue
@@ -6299,14 +6304,8 @@ def recover_spd_ground_reachability(
                     y_um = _length_um(attributes.group(2))
                 except ValueError:
                     continue
-                node_key = node_id.casefold()
                 if layer_key in target_layers.get(net_key, ()) or layer_key in artwork_layers.get(net_key, ()):
                     record_surface_node(net, layer_display, node_id, x_um, y_um)
-                dense_node_index = node_index_by_net[net_key].get(node_key)
-                if dense_node_index is not None:
-                    observed_code = layer_code(layer_key, layer_display)
-                    if node_layer_codes[dense_node_index] in (0, observed_code):
-                        node_layer_codes[dense_node_index] = observed_code
                 # An omitted artwork-layer map means the caller may still be
                 # supplying an artwork callback (legacy/tests); fail safe and
                 # retain all target Nodes in that case.  Production provides

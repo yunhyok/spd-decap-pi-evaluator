@@ -4848,6 +4848,12 @@ def test_via_island_pair_aggregate_hashes_and_subtracts_exact_terminal_ids(
         padstacks=analysis.padstacks,
         stackup_layers=analysis.stackup_layers,
         target_layers_by_net={"PWR": ("Signal$TOP", "Signal$PWR")},
+        same_layer_artwork_layers_by_net={
+            "PWR": ("Signal$TOP", "Signal$PWR")
+        },
+        same_layer_artwork_component=lambda _n, layer, x, _y: (
+            f"{layer}:{'other' if x > 50.0 else 'main'}"
+        ),
         target_node_surface_resolver=lambda _n, layer, _i, x, _y: (
             ("island-top" if layer == "Signal$TOP" else "island-pwr")
             + ("-other" if x > 50.0 else "")
