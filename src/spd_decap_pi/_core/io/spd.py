@@ -8148,7 +8148,10 @@ def recover_spd_ground_reachability(
 
         vertex_for_node = array("I", range(node_count))
         visited_edges = bytearray(edge_count)
-        quotient_paths: list[tuple[int, int, list[int]]] = []
+        quotient_path_starts = array("I")
+        quotient_path_ends = array("I")
+        quotient_path_offsets = array("Q", [0])
+        quotient_path_edge_ids = array("I")
         # Walk each bridge chain once from a kept endpoint.  Every contracted
         # interior node is assigned during that walk, so source ordering no
         # longer depends on which middle node happens to be visited first.
@@ -8161,7 +8164,8 @@ def recover_spd_ground_reachability(
                     continue
                 current = start
                 previous_edge = -1
-                path: list[int] = []
+                path_offset = len(quotient_path_edge_ids)
+                path_committed = False
                 while True:
                     current_edge = -1
                     for candidate_offset in range(incident_start(current), incident_end(current)):
@@ -8172,14 +8176,20 @@ def recover_spd_ground_reachability(
                     if current_edge < 0:
                         break
                     visited_edges[current_edge] = 1
-                    path.append(current_edge)
+                    quotient_path_edge_ids.append(current_edge)
                     nxt = edge_other(current_edge, current)
                     if not contracted[nxt]:
-                        quotient_paths.append((start, nxt, path))
+                        quotient_path_starts.append(start)
+                        quotient_path_ends.append(nxt)
+                        quotient_path_offsets.append(len(quotient_path_edge_ids))
+                        path_committed = True
                         break
                     vertex_for_node[nxt] = start
                     previous_edge = current_edge
                     current = nxt
+                if path_committed:
+                    continue
+                del quotient_path_edge_ids[path_offset:]
         # Any remaining edge is cyclic/parallel (or a defensive malformed
         # component); retain it explicitly rather than forcing contraction.
         for edge_index in range(edge_count):
@@ -8188,9 +8198,10 @@ def recover_spd_ground_reachability(
             visited_edges[edge_index] = 1
             first = finite_first_indices[edge_index]
             second = finite_second_indices[edge_index]
-            quotient_paths.append(
-                (vertex_for_node[first], vertex_for_node[second], [edge_index])
-            )
+            quotient_path_starts.append(vertex_for_node[first])
+            quotient_path_ends.append(vertex_for_node[second])
+            quotient_path_edge_ids.append(edge_index)
+            quotient_path_offsets.append(len(quotient_path_edge_ids))
         visited_edges.clear()
         contracted.clear()
         del adjacency_incidence[:]
@@ -8311,15 +8322,24 @@ def recover_spd_ground_reachability(
             except Exception:
                 return drill, material, segments, "incomplete", ("physical_model_unavailable",), None, None, None
 
-        for start_node, end_node, path in quotient_paths:
-            owner_ids = tuple(f"via:{edge_owner(index)}" for index in path)
+        for path_index, (start_node, end_node) in enumerate(
+            zip(quotient_path_starts, quotient_path_ends, strict=True)
+        ):
+            path_start = quotient_path_offsets[path_index]
+            path_end = quotient_path_offsets[path_index + 1]
+            path_length = path_end - path_start
+            owner_ids = tuple(
+                f"via:{edge_owner(quotient_path_edge_ids[offset])}"
+                for offset in range(path_start, path_end)
+            )
             start_vertex = vertex_id_by_node[start_node]
             end_vertex = vertex_id_by_node[end_node]
             terms = []
             total_r = total_l = total_length = 0.0
             status = "complete"
             issues: set[str] = set()
-            for ordinal, edge_index in enumerate(path):
+            for ordinal, offset in enumerate(range(path_start, path_end)):
+                edge_index = quotient_path_edge_ids[offset]
                 net_for_edge = edge_net(edge_index)
                 first_index = finite_first_indices[edge_index]
                 second_index = finite_second_indices[edge_index]
@@ -8335,11 +8355,16 @@ def recover_spd_ground_reachability(
                     total_l += inductance or 0.0
                     total_length += length_um or 0.0
                 terms.append(SpdFiniteViaSeriesTerm(ordinal, 1, padstack_name, first_layer, second_layer, drill, material, segments, resistance, inductance, length_um, term_status, term_issues))
-            edge_digest = finite_digest(edge_owner(index) for index in path)
+            edge_digest = finite_digest(
+                edge_owner(quotient_path_edge_ids[offset])
+                for offset in range(path_start, path_end)
+            )
             edge_id = f"spd-finite-via-edge:{finite_digest((start_vertex, end_vertex, edge_digest))[:24]}"
-            finite_via_edges.append(SpdFiniteViaQuotientEdge(edge_id, edge_net(path[0]), start_vertex, end_vertex, 1, len(path), len(path), edge_digest, owner_ids, tuple(terms), total_r if status == "complete" else None, total_l if status == "complete" else None, total_length if status == "complete" else None, "contracted_series" if len(path) > 1 else "retained_explicit", status, tuple(sorted(issues))))
-        path = []
-        quotient_paths.clear()
+            finite_via_edges.append(SpdFiniteViaQuotientEdge(edge_id, edge_net(quotient_path_edge_ids[path_start]), start_vertex, end_vertex, 1, path_length, path_length, edge_digest, owner_ids, tuple(terms), total_r if status == "complete" else None, total_l if status == "complete" else None, total_length if status == "complete" else None, "contracted_series" if path_length > 1 else "retained_explicit", status, tuple(sorted(issues))))
+        del quotient_path_starts[:]
+        del quotient_path_ends[:]
+        del quotient_path_offsets[:]
+        del quotient_path_edge_ids[:]
         del finite_net_codes[:]
         del finite_first_indices[:]
         del finite_second_indices[:]

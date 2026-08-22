@@ -5948,6 +5948,66 @@ def test_finite_via_quotient_contracts_bridge_not_cycle(tmp_path: Path) -> None:
     assert contracted[0].raw_via_count == 2
 
 
+def test_finite_via_quotient_many_explicit_paths_preserve_source_order(
+    tmp_path: Path,
+) -> None:
+    edge_count = 2_048
+    source, analysis = _recoverable_via_source(
+        tmp_path,
+        node_lines=(
+            "NodeParallelTop!!1::PWR X = 0um Y = 0um Layer = Signal$TOP PadStack = DR-0102_60\n"
+            "NodeParallelPwr!!1::PWR X = 0um Y = 0um Layer = Signal$PWR PadStack = DR-0102_60"
+        ),
+        via_lines="\n".join(
+            f"ViaParallel{index}::PWR UpperNode = NodeParallelTop "
+            "LowerNode = NodeParallelPwr PadStack = DR-0102_60"
+            for index in range(edge_count)
+        ),
+    )
+    landing = SimpleNamespace(
+        via_id="ViaParallel0",
+        net="PWR",
+        endpoint_node_id="NodeParallelTop",
+    )
+
+    result = recover_spd_ground_reachability(
+        source,
+        landings=(landing,),
+        terminal_contact_landings=(landing,),
+        terminal_owned_via_ids=(),
+        padstacks=analysis.padstacks,
+        stackup_layers=analysis.stackup_layers,
+        target_layers_by_net={"PWR": ("Signal$PWR",)},
+    )
+
+    assert len(result.finite_via_edges) == edge_count
+    edges_by_owner = {
+        edge.owner_ids[0]: edge for edge in result.finite_via_edges
+    }
+    assert set(edges_by_owner) == {
+        f"via:viaparallel{index}" for index in range(edge_count)
+    }
+    for index in range(edge_count):
+        raw_id = f"viaparallel{index}"
+        encoded = raw_id.encode("utf-8")
+        edge = edges_by_owner[f"via:{raw_id}"]
+        assert (
+            edge.net,
+            edge.mode,
+            edge.per_path_via_count,
+            edge.raw_via_count,
+            edge.owner_ids,
+            edge.raw_via_ids_sha256,
+        ) == (
+            "pwr",
+            "retained_explicit",
+            1,
+            1,
+            (f"via:{raw_id}",),
+            sha256(len(encoded).to_bytes(4, "big") + encoded).hexdigest(),
+        )
+
+
 def test_finite_via_quotient_middle_first_chain_is_order_independent(tmp_path: Path) -> None:
     nodes = (
         "NodeA!!1::PWR X = 10um Y = 0um Layer = Signal$TOP PadStack = DR-0102_60\n"
@@ -5982,9 +6042,36 @@ def test_finite_via_quotient_middle_first_chain_is_order_independent(tmp_path: P
 
     first = recover(tmp_path / "normal", normal)
     second = recover(tmp_path / "middle", middle_first)
-    first_edges = {(item.mode, item.raw_via_count, item.per_path_via_count) for item in first.finite_via_edges}
-    second_edges = {(item.mode, item.raw_via_count, item.per_path_via_count) for item in second.finite_via_edges}
-    assert first_edges == second_edges == {("contracted_series", 3, 3)}
+    expected_digest = sha256()
+    for raw_id in ("viaax", "viaxy", "viayb"):
+        encoded = raw_id.encode("utf-8")
+        expected_digest.update(len(encoded).to_bytes(4, "big"))
+        expected_digest.update(encoded)
+    for result in (first, second):
+        assert len(result.finite_via_edges) == 1
+        edge = result.finite_via_edges[0]
+        assert (
+            edge.mode,
+            edge.raw_via_count,
+            edge.per_path_via_count,
+            edge.owner_ids,
+            tuple(
+                (term.start_layer, term.end_layer)
+                for term in edge.series_terms
+            ),
+            edge.raw_via_ids_sha256,
+        ) == (
+            "contracted_series",
+            3,
+            3,
+            ("via:viaax", "via:viaxy", "via:viayb"),
+            (
+                ("Signal$TOP", "Signal$PWR"),
+                ("Signal$PWR", "Signal$GND"),
+                ("Signal$GND", "Signal$TOP"),
+            ),
+            expected_digest.hexdigest(),
+        )
 
 
 def test_recover_keeps_same_node_ids_separate_by_net(tmp_path: Path) -> None:
