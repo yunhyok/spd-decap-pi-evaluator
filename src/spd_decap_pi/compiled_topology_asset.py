@@ -40,7 +40,7 @@ from .canonical_json import (
 from .surface_certificate_asset import (
     FINITE_VIA_SURFACE_COMPILER,
     FINITE_VIA_SURFACE_SCHEMA,
-    MAX_SURFACE_CERTIFICATE_UNCOMPRESSED_BYTES,
+    MAX_SURFACE_CERTIFICATE_COMPILED_ONLY_IDENTITY_BYTES,
     SURFACE_CERTIFICATE_METADATA_KEY,
     SurfaceCertificateAssetError,
     _compiled_only_stub_from_verified_inline,
@@ -932,7 +932,7 @@ def _validated_manifest(project: Any, manifest: Mapping[str, Any]) -> dict[str, 
     surface_uncompressed_size = _bounded_int(
         manifest.get("surface_asset_uncompressed_size_bytes"),
         label="surface certificate canonical size",
-        maximum=MAX_SURFACE_CERTIFICATE_UNCOMPRESSED_BYTES,
+        maximum=MAX_SURFACE_CERTIFICATE_COMPILED_ONLY_IDENTITY_BYTES,
     )
     surface_uncompressed = _hash(
         manifest.get("surface_asset_uncompressed_sha256"), label="surface asset identity"
@@ -1281,7 +1281,7 @@ def build_compiled_topology_asset(
                 + int(
                     (end - start)
                     * processed_bytes
-                    / max(1, MAX_SURFACE_CERTIFICATE_UNCOMPRESSED_BYTES)
+                    / max(1, MAX_SURFACE_CERTIFICATE_COMPILED_ONLY_IDENTITY_BYTES)
                 ),
             )
             if value > last_value:

@@ -63,6 +63,8 @@ SURFACE_CERTIFICATE_ASSET_PREFIX: Final = "topology"
 # from claiming the storage allowance.
 MAX_SURFACE_CERTIFICATE_COMPRESSED_BYTES = 1024 * 1024 * 1024
 MAX_SURFACE_CERTIFICATE_UNCOMPRESSED_BYTES = 8 * 1024 * 1024 * 1024
+# Compiled-only storage streams this identity and never hydrates the raw JSON.
+MAX_SURFACE_CERTIFICATE_COMPILED_ONLY_IDENTITY_BYTES = 16 * 1024 * 1024 * 1024
 MAX_SURFACE_CERTIFICATE_HYDRATION_BYTES = 1024 * 1024 * 1024
 MAX_SURFACE_CERTIFICATE_EXPANSION_RATIO = 128
 _EXPANSION_RATIO_GRACE_BYTES: Final = 1024 * 1024
@@ -326,11 +328,12 @@ def canonical_surface_certificate_identity(
             if progress is not None:
                 progress(size)
             next_check = size + _STREAM_CANCEL_CHECK_BYTES
-        if size > MAX_SURFACE_CERTIFICATE_UNCOMPRESSED_BYTES:
+        if size > MAX_SURFACE_CERTIFICATE_COMPILED_ONLY_IDENTITY_BYTES:
             _fail(
                 "SURFACE_CERTIFICATE_UNCOMPRESSED_TOO_LARGE",
-                "v4 surface certificate exceeds the uncompressed safety limit "
-                f"({size} > {MAX_SURFACE_CERTIFICATE_UNCOMPRESSED_BYTES} bytes)",
+                "v4 surface certificate exceeds the compiled-only identity limit "
+                f"({size} > "
+                f"{MAX_SURFACE_CERTIFICATE_COMPILED_ONLY_IDENTITY_BYTES} bytes)",
             )
         digest.update(chunk)
     if cancelled():
@@ -624,7 +627,7 @@ def _validated_compiled_only_stub(stub: Mapping[str, Any]) -> dict[str, Any]:
         "uncompressed_size_bytes": _size_field(
             stub.get("uncompressed_size_bytes"),
             label="canonical size",
-            maximum=MAX_SURFACE_CERTIFICATE_UNCOMPRESSED_BYTES,
+            maximum=MAX_SURFACE_CERTIFICATE_COMPILED_ONLY_IDENTITY_BYTES,
         ),
         "uncompressed_sha256": _hash_field(
             stub.get("uncompressed_sha256"), label="canonical SHA-256"
@@ -1351,6 +1354,7 @@ def externalize_scenario_surface_certificate(
 
 __all__ = [
     "MAX_SURFACE_CERTIFICATE_COMPRESSED_BYTES",
+    "MAX_SURFACE_CERTIFICATE_COMPILED_ONLY_IDENTITY_BYTES",
     "MAX_SURFACE_CERTIFICATE_EXPANSION_RATIO",
     "MAX_SURFACE_CERTIFICATE_HYDRATION_BYTES",
     "MAX_SURFACE_CERTIFICATE_UNCOMPRESSED_BYTES",

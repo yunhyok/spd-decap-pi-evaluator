@@ -273,6 +273,32 @@ def test_concrete_container_fast_path_preserves_canonical_hash_and_size() -> Non
     assert fast_identity[1] == fast_hash
 
 
+def test_compiled_only_identity_is_independent_of_raw_attachment_limit(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    certificate = _v4_certificate(padding="compiled-only-over-raw-limit")
+    canonical = json.dumps(
+        certificate,
+        ensure_ascii=False,
+        sort_keys=True,
+        separators=(",", ":"),
+        allow_nan=False,
+    ).encode("utf-8")
+    monkeypatch.setattr(
+        certificate_asset,
+        "MAX_SURFACE_CERTIFICATE_UNCOMPRESSED_BYTES",
+        len(canonical) - 1,
+    )
+
+    stub = certificate_asset.compiled_only_surface_certificate_stub(certificate)
+
+    assert stub["uncompressed_size_bytes"] == len(canonical)
+    assert stub["uncompressed_sha256"] == sha256(canonical).hexdigest()
+    with pytest.raises(SurfaceCertificateAssetError) as error:
+        externalize_surface_certificate(certificate)
+    assert error.value.code == "SURFACE_CERTIFICATE_UNCOMPRESSED_TOO_LARGE"
+
+
 def test_projectspec_externalization_does_not_dump_inline_certificate(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
