@@ -142,7 +142,7 @@ def test_release_workflow_requires_tracked_production_attestation() -> None:
     gate = "Validate tracked production attestation"
     build = "Build and test installer"
     upload = "Upload installer"
-    tag_fetch = '"+refs/tags/$env:GITHUB_REF_NAME:refs/tags/$env:GITHUB_REF_NAME"'
+    tag_fetch = '"+refs/tags/${env:GITHUB_REF_NAME}:refs/tags/${env:GITHUB_REF_NAME}"'
     tag_type_check = '$tagType = (& git cat-file -t "refs/tags/$env:GITHUB_REF_NAME")'
     assert gate in workflow
     assert workflow.index(gate) < workflow.index(build) < workflow.index(upload)
