@@ -75,6 +75,13 @@ def test_application_build_rejects_a_foreign_editable_import() -> None:
     assert '$env:PYTHONNOUSERSITE = "1"' in build_script
     assert "spd_decap_pi.__file__" in build_script
     assert "active-checkout import guard failed" in build_script
+    origin_check_line = next(
+        line for line in build_script.splitlines() if line.strip().startswith("$originCheck =")
+    )
+    assert origin_check_line.strip().startswith('$originCheck = "')
+    assert origin_check_line.strip().endswith('"')
+    assert "$originCheck = @'" not in build_script
+    assert 'f"' not in origin_check_line
     assert build_script.index(install) < build_script.index(guard)
     assert build_script.index(guard) < build_script.index('"-m", "pytest"')
 

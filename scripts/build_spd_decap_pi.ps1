@@ -23,20 +23,7 @@ Push-Location $repoRoot
 try {
     $env:PYTHONNOUSERSITE = "1"
     Invoke-Native $pythonExe @("-m", "pip", "install", "-e", ".[dev]")
-    $originCheck = @'
-import pathlib
-import sys
-
-import spd_decap_pi
-
-expected = pathlib.Path(sys.argv[1]).resolve()
-actual = pathlib.Path(spd_decap_pi.__file__).resolve().parent
-if actual != expected:
-    raise SystemExit(
-        f"active-checkout import guard failed: expected {expected}, imported {actual}"
-    )
-print(actual)
-'@
+    $originCheck = "import pathlib,sys,spd_decap_pi; expected=pathlib.Path(sys.argv[1]).resolve(); actual=pathlib.Path(spd_decap_pi.__file__).resolve().parent; sys.exit(f'active-checkout import guard failed: expected {expected}, imported {actual}') if actual != expected else print(actual)"
     Invoke-Native $pythonExe @("-c", $originCheck, $expectedPackageRoot)
     if (-not $SkipTests) {
         Invoke-Native $pythonExe @("-m", "pytest")
