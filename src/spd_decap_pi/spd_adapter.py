@@ -6707,21 +6707,28 @@ def import_spd_scenario(
             analysis.device_terminal_via_endpoints,
         )
     )
-    complete_device_endpoint_bindings = tuple(
+    device_pin_keys = {
+        pin.pin_id.casefold()
+        for pin in analysis.pins
+        if pin.kind == PinKind.DEVICE_BUMP
+    }
+    # A missing first Via is still a valid trace-component start.  Seed every
+    # source-identified device pin because strict selection may promote one
+    # that was not present in the preselection anchor bindings.
+    device_endpoint_bindings = tuple(
         {"pin_id": str(endpoint.pin_id)}
         for endpoint in analysis.device_terminal_via_endpoints
-        if endpoint.status == "complete"
-        and str(endpoint.pin_id).strip()
-        and str(endpoint.incident_via_id or "").strip()
+        if str(endpoint.pin_id).strip().casefold() in device_pin_keys
     )
-    complete_device_endpoint_landings, _complete_device_endpoint_contacts = (
+    device_endpoint_landings, _device_endpoint_contacts = (
         _anchor_graph_landings(
-            complete_device_endpoint_bindings,
+            device_endpoint_bindings,
             analysis.device_terminal_via_endpoints,
         )
     )
+    device_pin_keys.clear()
     recovery_terminal_anchor_landings_by_pin = dict(
-        complete_device_endpoint_landings
+        device_endpoint_landings
     )
     recovery_terminal_anchor_landings_by_pin.update(
         recovery_anchor_landings_by_pin

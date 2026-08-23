@@ -1786,6 +1786,38 @@ def test_import_runs_one_union_reachability_pass_and_persists_surface_certificat
     original_retarget_compile = (
         spd_adapter._compile_retarget_landing_destination_requests
     )
+    original_analyze_spd = spd_adapter.analyze_spd
+
+    def analyze_with_trace_component(*args, **kwargs):
+        analysis = original_analyze_spd(*args, **kwargs)
+        trace_pin = next(
+            pin for pin in analysis.pins if pin.pin_id == "SITE0:101"
+        ).model_copy(update={"pin": "TRACE"})
+        trace_endpoint = replace(
+            next(
+                endpoint
+                for endpoint in analysis.device_terminal_via_endpoints
+                if endpoint.pin_id == "SITE0:101"
+            ),
+            pin_id="SITE0:TRACE",
+            pin="TRACE",
+            status="missing_incident_via",
+            issues=("missing_incident_via",),
+            candidate_count=0,
+            candidate_via_ids=(),
+            incident_via_id=None,
+            incident_net=None,
+            incident_padstack=None,
+            incident_opposite_node_id=None,
+        )
+        return replace(
+            analysis,
+            pins=(*analysis.pins, trace_pin),
+            device_terminal_via_endpoints=(
+                *analysis.device_terminal_via_endpoints,
+                trace_endpoint,
+            ),
+        )
 
     def wrapped_retarget_compile(**kwargs):
         phase_order.append("retarget")
@@ -2233,6 +2265,7 @@ def test_import_runs_one_union_reachability_pass_and_persists_surface_certificat
     monkeypatch.setattr(
         spd_adapter, "compile_project_evaluation_template", fake_compile
     )
+    monkeypatch.setattr(spd_adapter, "analyze_spd", analyze_with_trace_component)
     monkeypatch.setattr(
         spd_adapter, "recover_spd_ground_reachability", fake_recover
     )
@@ -2273,12 +2306,20 @@ def test_import_runs_one_union_reachability_pass_and_persists_surface_certificat
         (item.via_id, item.endpoint_node_id)
         for item in calls[0]["landings"]
     }
-    assert {("Via1", "Node1"), ("Via2", "Node2")} <= landing_ids
+    assert {
+        ("Via1", "Node1"),
+        ("Via2", "Node2"),
+        ("source-node:Node1", "Node1"),
+    } <= landing_ids
     terminal_landing_ids = {
         (item.via_id, item.endpoint_node_id)
         for item in calls[0]["terminal_landings"]
     }
-    assert {("Via1", "Node1"), ("Via2", "Node2")} <= terminal_landing_ids
+    assert {
+        ("Via1", "Node1"),
+        ("Via2", "Node2"),
+        ("source-node:Node1", "Node1"),
+    } <= terminal_landing_ids
     assert calls[0]["terminal_owned_via_ids"] == {"Via1", "Via2"}
     targets = calls[0]["targets"]
     assert targets == {
@@ -2291,6 +2332,12 @@ def test_import_runs_one_union_reachability_pass_and_persists_surface_certificat
         ),
         ("pin::site0:102", "node2", "dgnd"): frozenset(
             {"Signal$GND"}
+        ),
+        ("pin::site0:trace", "node1", "vdd_core/0"): frozenset(
+            {"Signal$PWR"}
+        ),
+        ("source-node:node1", "node1", "vdd_core/0"): frozenset(
+            {"Signal$PWR"}
         ),
         ("via1", "node1", "vdd_core/0"): frozenset({"Signal$PWR"}),
         ("via1", "node3", "vdd_core/0"): frozenset({"Signal$PWR"}),
