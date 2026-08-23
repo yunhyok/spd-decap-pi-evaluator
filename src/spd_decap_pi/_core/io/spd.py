@@ -7363,7 +7363,11 @@ def recover_spd_ground_reachability(
     finite_via_id_bytes = bytearray()
     finite_raw_via_ids_digest = hashlib.sha256()
     finite_owner_ledger_digest = hashlib.sha256()
-    finite_edge_index_by_terminal_via: dict[tuple[str, str], int] = {}
+    # Values transition from raw edge indexes to exact quotient edge IDs as
+    # the CSR paths are emitted; the key count is bounded by terminal Vias.
+    finite_edge_binding_by_terminal_via: dict[
+        tuple[str, str], int | str
+    ] = {}
 
     def surface_row_at(
         net_key: str, node_index: int | None
@@ -7462,7 +7466,7 @@ def recover_spd_ground_reachability(
             second_index = via_source_second_indices[via_index]
             padstack_name = via_source_padstack_names[padstack_code]
             if finite_requested and via_key in terminal_contact_via_ids:
-                finite_edge_index_by_terminal_via[(net_key, via_key)] = via_index
+                finite_edge_binding_by_terminal_via[(net_key, via_key)] = via_index
             surface_union_indices(first_index, second_index)
             first_surface = surface_row_at(net_key, first_index)
             second_surface = surface_row_at(net_key, second_index)
@@ -7792,8 +7796,6 @@ def recover_spd_ground_reachability(
                 drill = None
                 issues.add("drill_diameter_um_missing_or_invalid")
             material = str(getattr(padstack, "material", "") or "").strip() or None
-            if not material:
-                issues.add("padstack_material_missing")
         declared: list[str] = []
         seen_declared: set[str] = set()
         if padstack is not None:
@@ -8151,8 +8153,8 @@ def recover_spd_ground_reachability(
             source_root = equivalence_root_by_node[node_index]
             boundary_nodes[source_root] = 1
             terminal_ids_by_node.setdefault(source_root, []).append(terminal_id)
-            edge_index = finite_edge_index_by_terminal_via.get((net_key, via_key))
-            if edge_index is None:
+            edge_index = finite_edge_binding_by_terminal_via.get((net_key, via_key))
+            if not isinstance(edge_index, int):
                 continue
             first = finite_first_indices[edge_index]
             second = finite_second_indices[edge_index]
@@ -8167,7 +8169,6 @@ def recover_spd_ground_reachability(
             if (net_key, node_key) in isolated_node_keys:
                 boundary_nodes[opposite] = 1
                 retarget_cut_nodes.add(opposite)
-        finite_edge_index_by_terminal_via.clear()
         for node_index, code_value in enumerate(surface_code_by_index):
             if code_value:
                 boundary_nodes[equivalence_root_by_node[node_index]] = 1
@@ -8576,6 +8577,7 @@ def recover_spd_ground_reachability(
             start_vertex = vertex_id_by_node[start_node]
             end_vertex = vertex_id_by_node[end_node]
             owner_ids: list[str] = []
+            terminal_via_keys: list[tuple[str, str]] = []
             edge_digest_builder = hashlib.sha256()
             terms = []
             total_r = total_l = total_length = 0.0
@@ -8584,13 +8586,16 @@ def recover_spd_ground_reachability(
             for ordinal, offset in enumerate(range(path_start, path_end)):
                 edge_index = quotient_path_edge_ids[offset]
                 raw_owner_id = edge_owner(edge_index)
+                net_for_edge = edge_net(edge_index)
+                terminal_via_key = (net_for_edge, raw_owner_id)
+                if terminal_via_key in finite_edge_binding_by_terminal_via:
+                    terminal_via_keys.append(terminal_via_key)
                 encoded_owner_id = raw_owner_id.encode("utf-8")
                 edge_digest_builder.update(
                     len(encoded_owner_id).to_bytes(4, "big")
                 )
                 edge_digest_builder.update(encoded_owner_id)
                 owner_ids.append(f"via:{raw_owner_id}")
-                net_for_edge = edge_net(edge_index)
                 first_index = finite_first_indices[edge_index]
                 second_index = finite_second_indices[edge_index]
                 first_code = finite_root_layer_codes[first_index]
@@ -8618,6 +8623,8 @@ def recover_spd_ground_reachability(
             edge_digest = edge_digest_builder.hexdigest()
             edge_id = f"spd-finite-via-edge:{finite_digest((start_vertex, end_vertex, edge_digest))[:24]}"
             finite_via_edges.append(SpdFiniteViaQuotientEdge(edge_id, edge_net(quotient_path_edge_ids[path_start]), start_vertex, end_vertex, 1, path_length, path_length, edge_digest, tuple(owner_ids), tuple(terms), total_r if status == "complete" else None, total_l if status == "complete" else None, total_length if status == "complete" else None, "contracted_series" if path_length > 1 else "retained_explicit", status, tuple(sorted(issues))))
+            for terminal_via_key in terminal_via_keys:
+                finite_edge_binding_by_terminal_via[terminal_via_key] = edge_id
         del quotient_path_starts[:]
         del quotient_path_ends[:]
         del quotient_path_offsets[:]
@@ -8644,9 +8651,12 @@ def recover_spd_ground_reachability(
             if vertex_id:
                 finite_via_vertex_id_by_landing[key] = vertex_id
                 if not key[0].startswith("source-node:"):
-                    edge = next((item for item in finite_via_edges if item.start_vertex_id == vertex_id or item.end_vertex_id == vertex_id), None)
-                    if edge:
-                        finite_via_edge_id_by_landing[key] = edge.edge_id
+                    edge_id = finite_edge_binding_by_terminal_via.get(
+                        (net_key, key[0])
+                    )
+                    if isinstance(edge_id, str):
+                        finite_via_edge_id_by_landing[key] = edge_id
+        finite_edge_binding_by_terminal_via.clear()
         trace_terminal_node_index_by_landing.clear()
         terminal_contact_owner_by_key.clear()
         scenario_requested = tuple(scenario_isolated_terminal_landings or ())
@@ -8732,7 +8742,7 @@ def recover_spd_ground_reachability(
         del finite_via_id_end_offsets[:]
     del full_root_by_node[:]
     del equivalence_root_by_node[:]
-    finite_edge_index_by_terminal_via.clear()
+    finite_edge_binding_by_terminal_via.clear()
     physical_model_cache.clear()
     surface_dense_trace_edges = len(surface_trace_first_indices)
     del surface_trace_net_codes[:]

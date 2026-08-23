@@ -5969,15 +5969,98 @@ def test_finite_via_quotient_emits_owner_complete_graph(tmp_path: Path) -> None:
         tmp_path,
         node_lines=(
             "NodeTop!!1::PWR X = 0um Y = 0um Layer = Signal$TOP PadStack = DR-0102_60\n"
+            "NodeTopPeer!!1::PWR X = 10um Y = 0um Layer = Signal$TOP PadStack = DR-0102_60\n"
             "NodePwr!!1::PWR X = 0um Y = 0um Layer = Signal$PWR PadStack = DR-0102_60\n"
-            "NodeGnd!!1::PWR X = 0um Y = 0um Layer = Signal$GND PadStack = DR-0102_60"
+            "NodePwrPeer!!1::PWR X = 10um Y = 10um Layer = Signal$PWR PadStack = DR-0102_60"
+        ),
+        trace_lines=(
+            "TraceTop::PWR StartingNode = NodeTop EndingNode = NodeTopPeer "
+            "Width = 0.10mm"
         ),
         via_lines=(
             "ViaTop::PWR UpperNode = NodeTop LowerNode = NodePwr PadStack = DR-0102_60\n"
-            "ViaBottom::PWR UpperNode = NodePwr LowerNode = NodeGnd PadStack = DR-0102_60"
+            "ViaPeer::PWR UpperNode = NodeTopPeer LowerNode = NodePwrPeer PadStack = DR-0102_60"
         ),
     )
-    landing = SimpleNamespace(via_id="ViaTop", net="PWR", endpoint_node_id="NodeTop")
+    landings = (
+        SimpleNamespace(via_id="ViaTop", net="PWR", endpoint_node_id="NodeTop"),
+        SimpleNamespace(
+            via_id="ViaPeer", net="PWR", endpoint_node_id="NodeTopPeer"
+        ),
+    )
+    result = recover_spd_ground_reachability(
+        source,
+        landings=landings,
+        terminal_contact_landings=landings,
+        terminal_owned_via_ids=(),
+        padstacks=analysis.padstacks,
+        stackup_layers=analysis.stackup_layers,
+        target_layers_by_net={"PWR": ("Signal$PWR",)},
+        target_node_surface_resolver=(
+            lambda _net, layer, node, _x, _y: (
+                "island-pwr"
+                if layer == "Signal$PWR" and node == "NodePwr"
+                else "island-pwr-peer"
+                if layer == "Signal$PWR" and node == "NodePwrPeer"
+                else None
+            )
+        ),
+        target_surface_island_ids={
+            ("PWR", "Signal$PWR"): ("island-pwr", "island-pwr-peer"),
+        },
+    )
+    assert result.finite_via_coverage is not None
+    assert result.finite_via_coverage.status == "complete"
+    assert result.finite_via_coverage.modeled_global_via_count == 2
+    edges_by_id = {item.edge_id: item for item in result.finite_via_edges}
+    assert len(edges_by_id) == 2
+    landing_keys = tuple(
+        (landing.via_id.casefold(), landing.endpoint_node_id.casefold())
+        for landing in landings
+    )
+    assert len(
+        {
+            result.finite_via_vertex_id_by_landing[key]
+            for key in landing_keys
+        }
+    ) == 1
+    for landing in landings:
+        key = (landing.via_id.casefold(), landing.endpoint_node_id.casefold())
+        assert f"via:{landing.via_id.casefold()}" in edges_by_id[
+            result.finite_via_edge_id_by_landing[key]
+        ].owner_ids
+
+
+def test_finite_via_quotient_missing_padstack_material_uses_legacy_plated_barrel(
+    tmp_path: Path,
+) -> None:
+    source, analysis = _recoverable_via_source(
+        tmp_path,
+        node_lines=(
+            "NodeTop!!1::PWR X = 0um Y = 0um Layer = Signal$TOP "
+            "PadStack = NO_MATERIAL\n"
+            "NodePwr!!1::PWR X = 0um Y = 0um Layer = Signal$PWR "
+            "PadStack = NO_MATERIAL"
+        ),
+        via_lines=(
+            "ViaNoMaterial::PWR UpperNode = NodeTop LowerNode = NodePwr "
+            "PadStack = NO_MATERIAL"
+        ),
+        padstack_defs=(
+            ".PadStackDef NO_MATERIAL 2.000000e-02mm\n"
+            ".PadDef Signal$TOP\n"
+            "Regular Circle 5.000000e-02mm\n"
+            ".EndPadDef\n"
+            ".PadDef Signal$PWR\n"
+            "Regular Circle 5.000000e-02mm\n"
+            ".EndPadDef\n"
+            ".EndPadStackDef"
+        ),
+    )
+    landing = SimpleNamespace(
+        via_id="ViaNoMaterial", net="PWR", endpoint_node_id="NodeTop"
+    )
+
     result = recover_spd_ground_reachability(
         source,
         landings=(landing,),
@@ -5985,20 +6068,36 @@ def test_finite_via_quotient_emits_owner_complete_graph(tmp_path: Path) -> None:
         terminal_owned_via_ids=(),
         padstacks=analysis.padstacks,
         stackup_layers=analysis.stackup_layers,
-        target_layers_by_net={"PWR": ("Signal$GND",)},
-        target_node_surface_resolver=(
-            lambda _net, _layer, node, _x, _y: (
-                "island-gnd" if node == "NodeGnd" else None
-            )
+        target_layers_by_net={"PWR": ("Signal$TOP", "Signal$PWR")},
+        target_node_surface_resolver=lambda _n, layer, _i, _x, _y: (
+            "island-top" if layer == "Signal$TOP" else "island-pwr"
         ),
         target_surface_island_ids={
-            ("PWR", "Signal$GND"): ("island-gnd",),
+            ("PWR", "Signal$TOP"): ("island-top",),
+            ("PWR", "Signal$PWR"): ("island-pwr",),
         },
     )
-    assert result.finite_via_coverage is not None
-    assert result.finite_via_coverage.modeled_global_via_count == 2
-    assert len(result.finite_via_vertices) >= 2
-    assert len(result.finite_via_edges) >= 1
+
+    aggregate = next(
+        item
+        for item in result.via_island_pair_aggregates
+        if item.padstack == "NO_MATERIAL"
+    )
+    edge = result.finite_via_edges[0]
+    term = edge.series_terms[0]
+    coverage = result.finite_via_coverage
+    assert aggregate.physical_model_status == "complete"
+    assert not aggregate.physical_model_issues
+    assert term.material is None
+    assert term.physical_model_status == edge.physical_model_status == "complete"
+    assert not term.physical_model_issues and not edge.physical_model_issues
+    assert term.resistance_ohm > 0.0 and term.inductance_h > 0.0
+    assert coverage is not None
+    assert coverage.status == "complete"
+    assert (
+        coverage.physical_complete_via_count,
+        coverage.physical_incomplete_via_count,
+    ) == (1, 0)
 
 
 def test_finite_via_quotient_prunes_nonboundary_dangling_physical_gap(
