@@ -124,39 +124,30 @@ def test_release_workflow_smokes_the_silently_installed_application() -> None:
     assert "Installed ProductVersion string is not the application version" in workflow
 
 
-def test_release_workflow_requires_tracked_v5_nonregression_evidence() -> None:
+def test_release_workflow_requires_tracked_production_attestation() -> None:
     workflow = (
         REPO_ROOT / ".github" / "workflows" / "windows-release.yml"
     ).read_text(encoding="utf-8")
 
-    gate = "Validate tracked v5/r4 evidence"
+    gate = "Validate tracked production attestation"
     build = "Build and test installer"
     upload = "Upload installer"
     assert gate in workflow
     assert workflow.index(gate) < workflow.index(build) < workflow.index(upload)
     assert "git ls-files --error-unmatch" in workflow
-    assert "scripts/validate_correlation_v5.py" in workflow
-    assert "scripts/validate_known_case_nonregression.py" in workflow
-    assert ".codex/capture_r4_numerical_source_manifest.py" in workflow
-    assert ".codex/run_release_correlations_r4.ps1" in workflow
-    assert "validation-fixtures/r4-numerical-source-start-manifest.json" in workflow
-    assert (
-        "e7512fe41612aaf8c591d4a0fc8ebd60420d52f623f396d1edf65886dbb8702e"
-        in workflow
-    )
-    assert "R4 numerical-source byte verification failed" in workflow
-    assert "PIP_CONSTRAINT=$constraintPath" in workflow
-    assert '"numpy==$($sourceIdentity.runtime.numpy_version)"' in workflow
-    assert '"scipy==$($sourceIdentity.runtime.scipy_version)"' in workflow
+    assert "validation-fixtures/release/" in workflow
+    assert "SPDDecapPIEvaluator-$version-production-attestation.json" in workflow
+    assert '"spd-decap-production-attestation-v1"' in workflow
+    assert '"candidate-import-save-validation-v1"' in workflow
+    assert '"evaluation-entry-gate-v1"' in workflow
+    assert "$evaluation.rail_count -ne 92" in workflow
+    assert "$evaluation.preflight_blocker_count -ne 0" in workflow
+    assert "$evaluation.solver_entry_count -ne 92" in workflow
+    assert "$evaluation.cancelled_after_entry_count -ne 92" in workflow
+    assert '"tests/test_spd_decap_packaging.py"' in workflow
+    assert "Validated application commit is not release ancestry" in workflow
+    assert "Production attestation identity changed" in workflow
     assert 'python-version: "3.12.10"' in workflow
-    assert "--verify-sidecar" in workflow
-    assert "$env:RUNNER_TEMP" in workflow
-    for case_id in ("260729", "260804"):
-        report = (
-            "validation-fixtures/known-case-nonregression-v1/"
-            f"{case_id}/r4/correlation_report.json"
-        )
-        assert report in workflow
 
 
 def test_tagged_release_publishes_installer_and_validation_evidence() -> None:
@@ -164,7 +155,7 @@ def test_tagged_release_publishes_installer_and_validation_evidence() -> None:
         REPO_ROOT / ".github" / "workflows" / "windows-release.yml"
     ).read_text(encoding="utf-8")
 
-    gate = "Validate tracked v5/r4 evidence"
+    gate = "Validate tracked production attestation"
     upload = "Upload installer"
     publish = "Publish GitHub Release"
     assert workflow.index(gate) < workflow.index(upload) < workflow.index(publish)
@@ -184,23 +175,16 @@ def test_tagged_release_publishes_installer_and_validation_evidence() -> None:
     assert "--verify-tag" in workflow
     assert "#Windows installer" in workflow
     assert "#SHA-256 checksum" in workflow
-    assert "#Known-case non-regression attestation" in workflow
-    assert "#PowerSI correlation report $caseId" in workflow
+    assert (
+        "#Production raw-SPD import/save and Evaluation Analysis entry attestation"
+        in workflow
+    )
     resolve = "Resolve release identity"
     verify = "Verify exact installer identity"
     assert resolve in workflow
     assert verify in workflow
     assert workflow.index(resolve) < workflow.index(gate)
     assert workflow.index(resolve) < workflow.index("Build and test installer")
-    runtime_gate = "Verify exact R4 source and build-host runtime"
-    assert runtime_gate in workflow
-    constraint = '"PIP_CONSTRAINT=$constraintPath"'
-    assert workflow.index(constraint) < workflow.index("Build and test installer")
-    assert workflow.index("Build and test installer") < workflow.index(runtime_gate)
-    assert workflow.index(runtime_gate) < workflow.index(upload)
-    assert "--verify-runtime" in workflow
-    assert '$env:PYTHONNOUSERSITE = "1"' in workflow
-    assert "Build-host runtime differs from validated R4 runtime" in workflow
     assert "SPDDecapPIEvaluatorSetup-" in workflow
     assert "SPDDecapPIEvaluatorSetup-{0}.exe" in workflow
     assert "$env:SPD_DECAP_APP_VERSION" in workflow
@@ -212,8 +196,11 @@ def test_tagged_release_publishes_installer_and_validation_evidence() -> None:
     assert workflow.count(artifact_name) == 2
     assert "overwrite: true" in workflow
     assert "SPDDecapPIEvaluator-${{ github.ref_name }}" not in workflow
-    assert "Expected exactly seven downloaded release assets" in workflow
-    assert "spd-decap-release-provenance-v1" in workflow
+    assert "Expected exactly four staged release assets" in workflow
+    assert "Expected exactly four downloaded release assets" in workflow
+    assert "spd-decap-release-provenance-v2" in workflow
+    assert "production_attestation_sha256" in workflow
+    assert "Downloaded production attestation identity changed" in workflow
     assert "#Release provenance" in workflow
     assert "Installer build manifest is not bound to the validated source" in workflow
     assert "Publish job source/tag identity differs from the installer job" in workflow

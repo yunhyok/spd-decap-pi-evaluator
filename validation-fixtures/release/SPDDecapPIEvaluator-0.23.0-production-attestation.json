@@ -1,0 +1,64 @@
+{
+  "schema": "spd-decap-production-attestation-v1",
+  "app_version": "0.23.0",
+  "status": "passed",
+  "validation_source": {
+    "commit": "ba39f8f0bae31961d39e6f888063f43f166bb052",
+    "tree": "7f61f031ff6c5ecffc163a3d15794b266a4d9cc1"
+  },
+  "import_save": {
+    "report_schema": "candidate-import-save-validation-v1",
+    "report_sha256": "e61b3efd0aa2afdc4cae24adc3e970dc955613ba76fd9cd81a5fa7fdd56c328c",
+    "status": "passed",
+    "mode": "import_save_only",
+    "source": {
+      "basename": "S4LB002-2Para_260820_1_injected.spd",
+      "size_bytes": 1387708218,
+      "sha256": "ecb6986a0488377496fc51db2ef3703559ac4574ad4627ab273461be47df7d3d"
+    },
+    "candidate_bundle": {
+      "size_bytes": 906874067,
+      "sha256": "2aaaf24a2266b3f12981c87cf1767d61ed6b53ee2ae8737c57af461ac24dcd79"
+    },
+    "fresh_import": true,
+    "source_state_validation": {
+      "status": "validated",
+      "checked_decap_count": 10589,
+      "mismatch_count": 0
+    },
+    "compiled_topology_asset": {
+      "status": "validated",
+      "manifest_identity_sha256": "fb835d25d7866d8dc7d0813a293478a168f3165c37aa4ae26469ec8f3a75a892"
+    },
+    "raw_spatial_contact_asset": {
+      "status": "validated",
+      "full_loader_status": "validated",
+      "manifest_identity_sha256": "59139a80a37e11259e2576ee8b4c37fa378f98e0a6f5ccd8f936e8f895e5c6f5",
+      "geometry_identity_sha256": "d9cfc00e35c753cab53df816bd8a5dacb43f0afdf248944dc9c377101dc24f2c",
+      "logical_rows_sha256": "40e250a66f1e42db0242337288d202344eddcada4d288a3fcc76652153b50158",
+      "loaded_manifest_matches_persisted": true,
+      "loaded_counts_match_persisted": true
+    },
+    "atomic_save_load_validation": {
+      "archive_manifest_and_member_hashes_validated": true,
+      "scenario_schema_validated_after_reload": true,
+      "source_identity_validated_after_reload": true,
+      "attachment_hashes_validated_after_reload": true,
+      "loaded_attachment_count": 473
+    },
+    "frequency_solves_executed": 0,
+    "touchstone_read": false
+  },
+  "evaluation_entry": {
+    "report_schema": "evaluation-entry-gate-v1",
+    "report_sha256": "9c53ddcfdb94a3bb36efc96f5aa14971d3721f43e8aa79651051f99e269027c7",
+    "status": "passed",
+    "candidate_sha256": "2aaaf24a2266b3f12981c87cf1767d61ed6b53ee2ae8737c57af461ac24dcd79",
+    "solver_profile": "layerwise_admittance_v1",
+    "evaluation_policy": "STRICT_EXACT",
+    "rail_count": 92,
+    "preflight_blocker_count": 0,
+    "solver_entry_count": 92,
+    "cancelled_after_entry_count": 92
+  }
+}
