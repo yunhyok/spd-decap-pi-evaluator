@@ -62,7 +62,6 @@ from spd_decap_pi.spd_adapter import (
     FINAL_TEMPLATE_ARTWORK_CONTRACT_VERSION,
     _prepare_post_plan_selection,
     _build_mlo_landing_certificates,
-    _finite_port_inside_solver_bounds,
     _raise_for_rejected_mixed_reference_landings,
     _strict_source_plane_pairs,
     _scenario_via_landing,
@@ -140,17 +139,6 @@ def test_preselection_pair_suggestion_retains_mixed_reference_certificate() -> N
 from spd_decap_pi.evaluation import _terminal_footprint
 
 
-def test_graph_target_node_contract_separates_exact_artwork_from_solver_port() -> None:
-    bounds = (0.0, 100.0, 0.0, 100.0)
-    # Graph-only target nodes are exact point evidence.  The analytical
-    # finite port may cross detailed artwork, but must remain inside the
-    # rectangular solver cavity and is disclosed LOW confidence.
-    assert _finite_port_inside_solver_bounds(10.0, 50.0, 60.0, 20.0, bounds) is False
-    assert _finite_port_inside_solver_bounds(50.0, 50.0, 60.0, 20.0, bounds) is True
-    assert _finite_port_inside_solver_bounds(0.0, 50.0, 1.0, 1.0, bounds) is False
-    assert _finite_port_inside_solver_bounds(50.0, 50.0, 100.0, 20.0, bounds) is False
-
-
 def test_strict_source_plane_pairs_memoizes_repeated_exact_coverage_points() -> None:
     class CountingPlane:
         def __init__(self, layer: str, net: str) -> None:
@@ -187,12 +175,32 @@ def test_strict_source_plane_pairs_memoizes_repeated_exact_coverage_points() -> 
     connection = SimpleNamespace(
         refdes="C1", power_vias=(pwr_via, pwr_via), ground_vias=(gnd_via, gnd_via)
     )
+    pwr_pin = SimpleNamespace(
+        kind=PinKind.DEVICE_BUMP,
+        terminal=TerminalKind.PWR,
+        net="VDD",
+        site="SITE0",
+        pin_id="DP",
+        source_node_id="NDP",
+        x_um=10.0,
+        y_um=10.0,
+    )
+    gnd_pin = SimpleNamespace(
+        kind=PinKind.DEVICE_BUMP,
+        terminal=TerminalKind.GND,
+        net="DGND",
+        site="SITE0",
+        pin_id="DG",
+        source_node_id="NDG",
+        x_um=10.0,
+        y_um=10.0,
+    )
     analysis = SimpleNamespace(
         plane_geometries=(pwr, gnd),
         cap_instances=(),
         decap_connections=(connection,),
         power_plane_nets=("VDD",),
-        pins=(),
+        pins=(pwr_pin, gnd_pin),
         padstacks=(),
         counts={"source_graph_capability": "SOURCE_GRAPH_AVAILABLE"},
         source=SimpleNamespace(sha256=source_sha),
@@ -208,7 +216,9 @@ def test_strict_source_plane_pairs_memoizes_repeated_exact_coverage_points() -> 
         via_templates=(
             SimpleNamespace(
                 pwr_reference_layer="PWR", gnd_reference_layer="GND",
-                finite_port_width_um=1.0, finite_port_height_um=1.0,
+                # The compatibility port would cross xmin=0, but terminal-
+                # complete Layerwise owns this exact graph contact as a point.
+                finite_port_width_um=60.0, finite_port_height_um=20.0,
             ),
         ),
         metadata={"spd_import": {"source_sha256": source_sha}},
@@ -220,6 +230,8 @@ def test_strict_source_plane_pairs_memoizes_repeated_exact_coverage_points() -> 
         target_contacts_by_key={
             ("p0", "np", "pwr"): (("NP", 10.0, 10.0),),
             ("g0", "ng", "gnd"): (("NG", 10.0, 10.0),),
+            ("pin::dp", "ndp", "pwr"): (("NDP", 10.0, 10.0),),
+            ("pin::dg", "ndg", "gnd"): (("NDG", 10.0, 10.0),),
         },
         target_contact_count_by_key={},
         target_contact_hash_by_key={},
@@ -514,43 +526,6 @@ def test_read_only_spd_import_builds_top_side_editable_scenario(tmp_path: Path):
         ]["contract_version"]
         == FINAL_TEMPLATE_ARTWORK_CONTRACT_VERSION
     )
-
-
-def test_forced_post_plan_rebuild_inputs_summary_matches_final_rails(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    source = tmp_path / "forced-rebuild.spd"
-    source.write_text(MINI_SPD, encoding="ascii")
-    monkeypatch.setattr(
-        spd_adapter,
-        "_finite_port_inside_solver_bounds",
-        lambda *_args: False,
-    )
-    geometry_builds = 0
-    original_geometry_assets = core_services._spd_plane_geometry_assets
-
-    def counted_geometry_assets(*args, **kwargs):
-        nonlocal geometry_builds
-        geometry_builds += 1
-        return original_geometry_assets(*args, **kwargs)
-
-    monkeypatch.setattr(
-        core_services, "_spd_plane_geometry_assets", counted_geometry_assets
-    )
-    imported = import_spd_scenario(source)
-    assert geometry_builds == 1
-    input_assets = [
-        payload
-        for name, payload in imported.attachments.items()
-        if name.startswith("inputs/") and name.endswith("-spd-import.json")
-    ]
-    assert len(input_assets) == 1
-    summary = json.loads(input_assets[0].decode("utf-8"))
-    final_rails = [
-        item.model_dump(mode="json")
-        for item in imported.scenario.base_project.rails
-    ]
-    assert summary["extracted"]["rails"] == final_rails
 
 
 def test_adapter_clears_gap_certificate_when_cluster_is_demoted(

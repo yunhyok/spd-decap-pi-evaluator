@@ -725,34 +725,6 @@ def _via_target_layers_by_net(
     }
 
 
-def _finite_port_inside_solver_bounds(
-    x_um: float,
-    y_um: float,
-    width_um: float,
-    height_um: float,
-    bounds: tuple[float, float, float, float],
-) -> bool:
-    """Require a finite analytical port to be strictly inside its solver cell."""
-    try:
-        x_value = float(x_um)
-        y_value = float(y_um)
-        width = float(width_um)
-        height = float(height_um)
-        xmin, xmax, ymin, ymax = (float(item) for item in bounds)
-    except (TypeError, ValueError, ArithmeticError):
-        return False
-    if not all(isfinite(item) for item in (x_value, y_value, width, height, xmin, xmax, ymin, ymax)):
-        return False
-    if width <= 0.0 or height <= 0.0 or xmax <= xmin or ymax <= ymin:
-        return False
-    return (
-        x_value - width / 2.0 > xmin
-        and x_value + width / 2.0 < xmax
-        and y_value - height / 2.0 > ymin
-        and y_value + height / 2.0 < ymax
-    )
-
-
 def _prepare_post_plan_selection(
     selected_pairs: Mapping[str, PlanePairSuggestion],
     pair_provenance: dict[str, dict[str, Any]],
@@ -1032,29 +1004,6 @@ def _strict_source_plane_pairs(
                 fallback.append((width, height))
         return max(fallback, key=lambda item: (item[0] * item[1], item[0], item[1])) if fallback else None
 
-    def template_footprint_inside_candidate_domain(
-        plane: IndexedPlaneGeometry | None,
-        x_um: float,
-        y_um: float,
-        footprint: tuple[float, float] | None,
-    ) -> bool:
-        """Keep graph contacts inside the candidate's solver rectangle.
-
-        Graph contacts prove exact target-node artwork, while the finite
-        template port is an analytical rectangular cavity.  The candidate
-        plane's positive artwork bounds are the pre-plan domain available for
-        this check; strict edges fail closed.
-        """
-        if plane is None or footprint is None:
-            return False
-        return _finite_port_inside_solver_bounds(
-            float(x_um),
-            float(y_um),
-            float(footprint[0]),
-            float(footprint[1]),
-            plane.positive_bounds,
-        )
-
     selected: dict[str, PlanePairSuggestion] = {}
     provenance: dict[str, dict[str, Any]] = {}
     failures: list[str] = []
@@ -1223,12 +1172,6 @@ def _strict_source_plane_pairs(
                     not contacts
                     or pwr is None
                     or not covered_point(pwr, float(contacts[0][1]), float(contacts[0][2]))
-                    or not template_footprint_inside_candidate_domain(
-                        pwr,
-                        float(contacts[0][1]),
-                        float(contacts[0][2]),
-                        effective_footprint,
-                    )
                 ):
                     reachable = False
                 device_route_witnesses.append(
@@ -1299,12 +1242,6 @@ def _strict_source_plane_pairs(
                     not contacts
                     or gnd is None
                     or not covered_point(gnd, float(contacts[0][1]), float(contacts[0][2]))
-                    or not template_footprint_inside_candidate_domain(
-                        pwr,
-                        float(contacts[0][1]),
-                        float(contacts[0][2]),
-                        effective_footprint,
-                    )
                 ):
                     reachable = False
                 if not reachable:
@@ -1421,12 +1358,6 @@ def _strict_source_plane_pairs(
                                     target,
                                     float(selected_contact[1]),
                                     float(selected_contact[2]),
-                                )
-                                or not template_footprint_inside_candidate_domain(
-                                    pwr,
-                                    float(selected_contact[1]),
-                                    float(selected_contact[2]),
-                                    effective_footprint,
                                 )
                             ):
                                 uncovered += 1
@@ -7031,10 +6962,8 @@ def import_spd_scenario(
             f"rebuild is invalid. {details or 'Import plan is not applicable.'}"
         )
     base_project = _normalized_base_project(plan.project)
-    # The first pair-selection pass may not yet have a ViaLoopTemplate for a
-    # newly selected internal pair.  Re-check every persisted target contact
-    # against the *final* template footprint after the import plan derives
-    # those templates.  This is exact ordered artwork containment; bbox-only
+    # Re-check every persisted target contact against the exact retained
+    # artwork after the import plan derives its final rail bindings.  Bbox-only
     # acceptance is not sufficient for voids or boundary contact.
     final_shapes: dict[tuple[str, str], IndexedPlaneGeometry | None] = {}
     final_artwork_digests: dict[tuple[str, str], str] = {}
@@ -7163,43 +7092,6 @@ def import_spd_scenario(
             *proof.get("route_witnesses", ()),
             *proof.get("device_route_witnesses", ()),
         ]
-        solver_bounds: tuple[float, float, float, float] | None = None
-        if len(matching_rails) == 1:
-            bound_rail = matching_rails[0]
-            bound_partition = next(
-                (
-                    item
-                    for item in base_project.partitions
-                    if item.layer.casefold() == bound_rail.pwr_layer.casefold()
-                    and bound_rail.domain in item.domain_to_cell
-                ),
-                None,
-            )
-            if bound_partition is not None:
-                bound_cell_id = bound_partition.domain_to_cell[bound_rail.domain]
-                bound_cell = next(
-                    (item for item in bound_partition.cells if item.cell_id == bound_cell_id),
-                    None,
-                )
-                if bound_cell is not None:
-                    solver_bounds = (
-                        float(bound_cell.x_min_um),
-                        float(bound_cell.x_max_um),
-                        float(bound_cell.y_min_um),
-                        float(bound_cell.y_max_um),
-                    )
-            if solver_bounds is None:
-                solver_bounds = (
-                    float(base_project.outline.origin_x_um),
-                    float(base_project.outline.origin_x_um + base_project.outline.width_um),
-                    float(base_project.outline.origin_y_um),
-                    float(base_project.outline.origin_y_um + base_project.outline.height_um),
-                )
-        if solver_bounds is None:
-            raise SpdImportError(
-                f"SPD final plane-pair footprint validation is blocked for {net_key}: "
-                "selected rail has no rectangular solver domain"
-            )
         for witness in witnesses:
             layer = str(witness.get("target_layer", ""))
             artwork_net = (
@@ -7221,23 +7113,6 @@ def import_spd_scenario(
                 )
             x_value = float(x_um)
             y_value = float(y_um)
-            if not _finite_port_inside_solver_bounds(
-                x_value, y_value, width, height, solver_bounds
-            ):
-                post_plan_reverts.add(str(net_key).casefold())
-                proof["source_graph_pair_unresolved"] = True
-                proof["selection_mode"] = "LEGACY_PREEXISTING_PAIR_UNRESOLVED"
-                failures = list(proof.get("selected_plane_pair_failures", ()))
-                failures.append(
-                    "final template footprint crosses the rectangular solver domain boundary"
-                )
-                proof["selected_plane_pair_failures"] = tuple(dict.fromkeys(failures))
-                proof["final_template_footprint"] = {
-                    "basis": "FINAL_TEMPLATE_SOLVER_DOMAIN_UNRESOLVED",
-                    "validated": False,
-                    "contract_version": FINAL_TEMPLATE_ARTWORK_CONTRACT_VERSION,
-                }
-                break
             graph_contact = (
                 str(witness.get("artwork_coverage_basis", "")).upper()
                 == "SOURCE_GRAPH_TARGET_NODE_STRICT_INTERIOR"
