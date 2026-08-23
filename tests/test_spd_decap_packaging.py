@@ -135,12 +135,16 @@ def test_release_workflow_requires_tracked_production_attestation() -> None:
     workflow = (
         REPO_ROOT / ".github" / "workflows" / "windows-release.yml"
     ).read_text(encoding="utf-8")
+    ci_workflow = (
+        REPO_ROOT / ".github" / "workflows" / "ci.yml"
+    ).read_text(encoding="utf-8")
 
     gate = "Validate tracked production attestation"
     build = "Build and test installer"
     upload = "Upload installer"
     assert gate in workflow
     assert workflow.index(gate) < workflow.index(build) < workflow.index(upload)
+    assert "-File .\\scripts\\build_spd_decap_pi_installer.ps1 -SkipTests" in workflow
     assert "git ls-files --error-unmatch" in workflow
     assert "validation-fixtures/release/" in workflow
     assert "SPDDecapPIEvaluator-$version-production-attestation.json" in workflow
@@ -151,11 +155,13 @@ def test_release_workflow_requires_tracked_production_attestation() -> None:
     assert "$evaluation.preflight_blocker_count -ne 0" in workflow
     assert "$evaluation.solver_entry_count -ne 92" in workflow
     assert "$evaluation.cancelled_after_entry_count -ne 92" in workflow
+    assert '".github/workflows/ci.yml"' in workflow
     assert '"scripts/build_spd_decap_pi.ps1"' in workflow
     assert '"tests/test_spd_decap_packaging.py"' in workflow
     assert "Validated application commit is not release ancestry" in workflow
     assert "Production attestation identity changed" in workflow
     assert 'python-version: "3.12.10"' in workflow
+    assert "python -m pytest -q tests/test_spd_decap_packaging.py" in ci_workflow
 
 
 def test_tagged_release_publishes_installer_and_validation_evidence() -> None:

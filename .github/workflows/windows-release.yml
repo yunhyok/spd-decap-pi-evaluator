@@ -213,6 +213,7 @@ jobs:
             throw "Validated application commit is not release ancestry"
           }
           $allowedReleaseOnlyChanges = @(
+            ".github/workflows/ci.yml"
             ".github/workflows/windows-release.yml"
             $attestationPath
             "scripts/build_spd_decap_pi.ps1"
@@ -232,7 +233,7 @@ jobs:
       - name: Build and test installer
         run: >-
           powershell.exe -ExecutionPolicy Bypass -NoProfile
-          -File .\scripts\build_spd_decap_pi_installer.ps1
+          -File .\scripts\build_spd_decap_pi_installer.ps1 -SkipTests
       - name: Verify exact installer identity
         shell: pwsh
         run: |
