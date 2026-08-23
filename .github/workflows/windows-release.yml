@@ -215,6 +215,7 @@ jobs:
           $allowedReleaseOnlyChanges = @(
             ".github/workflows/windows-release.yml"
             $attestationPath
+            "scripts/build_spd_decap_pi.ps1"
             "tests/test_spd_decap_packaging.py"
           ) | Sort-Object
           $releaseOnlyChanges = @(

@@ -151,6 +151,7 @@ def test_release_workflow_requires_tracked_production_attestation() -> None:
     assert "$evaluation.preflight_blocker_count -ne 0" in workflow
     assert "$evaluation.solver_entry_count -ne 92" in workflow
     assert "$evaluation.cancelled_after_entry_count -ne 92" in workflow
+    assert '"scripts/build_spd_decap_pi.ps1"' in workflow
     assert '"tests/test_spd_decap_packaging.py"' in workflow
     assert "Validated application commit is not release ancestry" in workflow
     assert "Production attestation identity changed" in workflow
