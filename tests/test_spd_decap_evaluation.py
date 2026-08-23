@@ -3479,9 +3479,19 @@ def test_evaluation_policy_is_bound_and_source_sha_is_required_for_proof() -> No
     )
 
 
-def test_layerwise_anchor_compile_keeps_source_port_outside_legacy_rectangle() -> None:
+def test_layerwise_anchor_compile_keeps_source_port_outside_legacy_rectangle(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     project = _base_project()
     source_sha256 = "a" * 64
+    unresolved_rail = project.rails[0].model_copy(
+        update={
+            "rail_id": "RAIL_UNRESOLVED",
+            "family": "VDD_UNRESOLVED",
+            "domain": "VDD_UNRESOLVED",
+            "net": "VDD_UNRESOLVED",
+        }
+    )
     power_pin = project.pins[0].model_copy(
         update={"source_node_id": "NODE_PWR", "source_layer": "TOP"}
     )
@@ -3524,13 +3534,20 @@ def test_layerwise_anchor_compile_keeps_source_port_outside_legacy_rectangle() -
                         "target_contacts": [{"x_um": 1300.0, "y_um": 1000.0}],
                     },
                 ],
-            }
+            },
+            "vDd_UnReSoLvEd": {
+                "pwr_layer": "PWR1",
+                "gnd_layer": "GND1",
+                "source_sha256": source_sha256,
+                "source_graph_pair_unresolved": True,
+            },
         },
     }
     project = project.model_copy(
         update={
             "pins": [power_pin, ground_pin, *project.pins[2:]],
             "partitions": [partition],
+            "rails": [*project.rails, unresolved_rail],
             "metadata": metadata,
         }
     )
@@ -3546,12 +3563,43 @@ def test_layerwise_anchor_compile_keeps_source_port_outside_legacy_rectangle() -
     branch = template.device.branches[0]
     assert template.origin_um[0] + branch.port.x_m * 1.0e6 == pytest.approx(1000.0)
     assert template.origin_um[1] + branch.port.y_m * 1.0e6 == pytest.approx(1000.0)
+    original_anchor_compile = (
+        spd_adapter_module.compile_project_evaluation_template
+    )
+    anchor_compile_calls: list[str] = []
+
+    def record_anchor_compile(
+        compile_project: ProjectSpec,
+        rail_id: str,
+        **kwargs: object,
+    ) -> object:
+        anchor_compile_calls.append(rail_id)
+        assert rail_id != "RAIL_UNRESOLVED"
+        return original_anchor_compile(compile_project, rail_id, **kwargs)
+
+    monkeypatch.setattr(
+        spd_adapter_module,
+        "compile_project_evaluation_template",
+        record_anchor_compile,
+    )
     bindings, failures = spd_adapter_module._compile_active_rail_anchor_bindings(
         project,
         source_sha256=source_sha256,
     )
     assert failures == []
+    assert anchor_compile_calls == ["RAIL_VDD"]
+    assert {item["rail_id"] for item in bindings} == {"RAIL_VDD"}
     assert {item["pin_id"] for item in bindings} == {power_pin.pin_id, ground_pin.pin_id}
+    scenario = _scenario().model_copy(update={"normalized_project": project})
+    preflight = preflight_evaluation_connectivity(
+        scenario,
+        ("RAIL_UNRESOLVED",),
+        _project=project,
+    )
+    assert [item.reason for item in preflight.blockers] == [
+        "SOURCE_GRAPH_PLANE_PAIR_UNRESOLVED: selected rail has no "
+        "source-proven PWR/GND pair; re-import matching raw SPD"
+    ]
 
 
 def _alternate_fixture() -> tuple[ScenarioSpec, dict[str, bytes]]:

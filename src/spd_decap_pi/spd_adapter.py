@@ -1808,6 +1808,21 @@ def _compile_active_rail_anchor_bindings(
 ) -> tuple[list[dict[str, str]], list[dict[str, str]]]:
     """Compile every ACTIVE rail and flatten exact Device branch anchors."""
 
+    spd_import = project.metadata.get("spd_import")
+    provenance = (
+        spd_import.get("selected_plane_pair_provenance")
+        if isinstance(spd_import, Mapping)
+        else None
+    )
+    unresolved_rail_aliases = {
+        str(alias).strip().casefold()
+        for alias, proof in (
+            provenance.items() if isinstance(provenance, Mapping) else ()
+        )
+        if str(alias).strip()
+        and isinstance(proof, Mapping)
+        and bool(proof.get("source_graph_pair_unresolved"))
+    }
     compile_project = _ephemeral_anchor_compile_project(
         project, source_sha256=source_sha256
     )
@@ -1818,6 +1833,8 @@ def _compile_active_rail_anchor_bindings(
             rail
             for rail in project.rails
             if str(getattr(rail.state, "value", rail.state)) == "ACTIVE"
+            and rail.rail_id.casefold() not in unresolved_rail_aliases
+            and rail.net.casefold() not in unresolved_rail_aliases
         ),
         key=lambda rail: (rail.rail_id.casefold(), rail.rail_id),
     )
@@ -5561,17 +5578,12 @@ def _layer_surface_connectivity_certificate(
                 issues.add("first_via_global_edge_not_incident")
             elif first_via_edge["status"] != "complete":
                 issues.add("first_via_global_edge_incomplete")
-        if (
-            path_kind == "trace_component"
-            and candidates
-            and exposed_vertex is not None
-        ):
-            issues.difference_update(
-                {
-                    "first_via_status:missing_incident_via",
-                    "first_via_status:ambiguous_incident_via",
-                }
-            )
+        if path_kind == "trace_component" and candidates:
+            issues = {
+                item
+                for item in issues
+                if item != "first_via_status:missing_incident_via"
+            }
         if not required_layer_keys:
             issues.add("required_rail_surface_missing")
         if not candidates:
@@ -7716,7 +7728,10 @@ def import_spd_scenario(
         94,
         "Bound exact surface-island manifest; "
         f"certificate={surface_connectivity_certificate['status']}, "
-        f"quotient={quotient_status}, scenario={topology_status}",
+        f"quotient={quotient_status}, scenario={topology_status}, "
+        f"compile_failures={len(anchor_compile_failures)}, "
+        "incomplete_contacts="
+        f"{sum(item['status'] != 'complete' for item in surface_connectivity_certificate['terminal_contacts'])}",
     )
     recovery_metadata["spd_import"] = spd_import_metadata
     recovery_metadata["spd_via_path_recovery"] = {
