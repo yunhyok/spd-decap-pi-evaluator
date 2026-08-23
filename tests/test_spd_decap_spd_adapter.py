@@ -1801,10 +1801,10 @@ def test_import_runs_one_union_reachability_pass_and_persists_surface_certificat
             ),
             pin_id="SITE0:TRACE",
             pin="TRACE",
-            status="missing_incident_via",
-            issues=("missing_incident_via",),
-            candidate_count=0,
-            candidate_via_ids=(),
+            status="ambiguous_incident_via",
+            issues=("ambiguous_incident_via",),
+            candidate_count=2,
+            candidate_via_ids=("Via1", "ViaBranch"),
             incident_via_id=None,
             incident_net=None,
             incident_padstack=None,
@@ -1851,7 +1851,7 @@ def test_import_runs_one_union_reachability_pass_and_persists_surface_certificat
                 branches=(
                     SimpleNamespace(
                         branch_id="DEVICE-BRANCH",
-                        source_power_pin_id="SITE0:101",
+                        source_power_pin_id="SITE0:TRACE",
                         source_ground_pin_id="SITE0:102",
                     ),
                 )
@@ -1876,6 +1876,7 @@ def test_import_runs_one_union_reachability_pass_and_persists_surface_certificat
         surface_layers_by_landing = {
             ("via1", "node1"): ("Signal$PWR",),
             ("via2", "node2"): ("Signal$GND",),
+            ("source-node:node1", "node1"): ("Signal$PWR",),
         }
         def __init__(self, inventory: object) -> None:
             assert isinstance(inventory, dict)
@@ -1885,11 +1886,13 @@ def test_import_runs_one_union_reachability_pass_and_persists_surface_certificat
                 {
                     ("via1", "node1", "signal$pwr"),
                     ("via2", "node2", "signal$gnd"),
+                    ("source-node:node1", "node1", "signal$pwr"),
                 }
             )
             self.surface_islands_by_landing = {
                 ("via1", "node1"): pwr,
                 ("via2", "node2"): gnd,
+                ("source-node:node1", "node1"): pwr,
             }
             self.surface_equivalence_proofs = (
                 SimpleNamespace(
@@ -2032,7 +2035,7 @@ def test_import_runs_one_union_reachability_pass_and_persists_surface_certificat
                     retained_component_island_ids_by_layer={
                         "Signal$PWR": pwr
                     },
-                    terminal_ids=("SITE0:101",),
+                    terminal_ids=("SITE0:101", "SITE0:TRACE"),
                 ),
                 SimpleNamespace(
                     vertex_id=other_pwr_vertex,
@@ -2165,6 +2168,7 @@ def test_import_runs_one_union_reachability_pass_and_persists_surface_certificat
                 ("via1", "node3"): pwr_vertex,
                 ("via2", "node2"): top_gnd_vertex,
                 ("via2", "node4"): gnd_vertex,
+                ("source-node:node1", "node1"): top_pwr_vertex,
             }
             self.finite_via_edge_id_by_landing = {
                 ("via1", "node1"): pwr_edge,
@@ -2413,6 +2417,18 @@ def test_import_runs_one_union_reachability_pass_and_persists_surface_certificat
     assert all(
         item["status"] == "complete"
         for item in certificate["terminal_contacts"]
+    )
+    trace_contact = next(
+        item
+        for item in certificate["terminal_contacts"]
+        if item["pin_id"] == "SITE0:TRACE"
+    )
+    assert trace_contact["contact_path_kind"] == "trace_component"
+    assert trace_contact["status"] == "complete"
+    assert trace_contact["issues"] == []
+    assert trace_contact["contact_component_ids"]
+    assert trace_contact["exposed_quotient_vertex_id"] == (
+        "spd-finite-via-vertex:fake-top-pwr"
     )
     assert [
         item["net"] for item in certificate["via_island_pair_aggregates"]

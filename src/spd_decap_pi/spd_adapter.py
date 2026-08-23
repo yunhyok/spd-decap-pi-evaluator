@@ -5561,12 +5561,17 @@ def _layer_surface_connectivity_certificate(
                 issues.add("first_via_global_edge_not_incident")
             elif first_via_edge["status"] != "complete":
                 issues.add("first_via_global_edge_incomplete")
-        if path_kind == "trace_component" and candidates:
-            issues = {
-                item
-                for item in issues
-                if item != "first_via_status:missing_incident_via"
-            }
+        if (
+            path_kind == "trace_component"
+            and candidates
+            and exposed_vertex is not None
+        ):
+            issues.difference_update(
+                {
+                    "first_via_status:missing_incident_via",
+                    "first_via_status:ambiguous_incident_via",
+                }
+            )
         if not required_layer_keys:
             issues.add("required_rail_surface_missing")
         if not candidates:
