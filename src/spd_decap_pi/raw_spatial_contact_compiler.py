@@ -719,7 +719,8 @@ def _parse_via(record: _LogicalRecord, padstack_by_fold: Mapping[str, str]) -> t
             f"Via padstack {raw_padstack!r} is absent",
             offset=record.source_offset,
         )
-    tracked = _CORE_VIA_RE.fullmatch(_without_ending(record.exact_bytes))
+    primary = record.exact_bytes.splitlines(keepends=True)[0]
+    tracked = _CORE_VIA_RE.fullmatch(_without_ending(primary))
     if tracked is None:
         _fail(
             "RAW_SPATIAL_VIA_PARSER_MISMATCH",

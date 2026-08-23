@@ -617,7 +617,12 @@ def test_via_absolute_rotation_continuation_matches_tracked_parser(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, newline: bytes
 ) -> None:
     primary = b"Via1::VDD UpperNode = Node1 LowerNode = Node3 PadStack = PS1"
-    exact = primary + newline + b"+            AbsoluteRotation = 180" + newline
+    exact = (
+        primary
+        + newline
+        + b"+            AbsoluteRotation = 180.000000"
+        + newline
+    )
     source = _raw_source(newline).replace(
         primary + b" AbsoluteRotation = 180" + newline,
         exact,
