@@ -55,6 +55,11 @@ jobs:
             throw "Checked-out release source does not match GITHUB_SHA"
           }
           if ($env:GITHUB_REF -like "refs/tags/*") {
+            & git fetch --force --no-tags origin `
+              "+refs/tags/$env:GITHUB_REF_NAME:refs/tags/$env:GITHUB_REF_NAME"
+            if ($LASTEXITCODE -ne 0) {
+              throw "Unable to fetch the annotated release tag object"
+            }
             $tagType = (& git cat-file -t "refs/tags/$env:GITHUB_REF_NAME").Trim()
             $tagCommit = (& git rev-parse `
               "refs/tags/$env:GITHUB_REF_NAME^{commit}").Trim()

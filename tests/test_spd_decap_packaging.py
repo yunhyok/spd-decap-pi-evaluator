@@ -142,6 +142,8 @@ def test_release_workflow_requires_tracked_production_attestation() -> None:
     gate = "Validate tracked production attestation"
     build = "Build and test installer"
     upload = "Upload installer"
+    tag_fetch = '"+refs/tags/$env:GITHUB_REF_NAME:refs/tags/$env:GITHUB_REF_NAME"'
+    tag_type_check = '$tagType = (& git cat-file -t "refs/tags/$env:GITHUB_REF_NAME")'
     assert gate in workflow
     assert workflow.index(gate) < workflow.index(build) < workflow.index(upload)
     assert "-File .\\scripts\\build_spd_decap_pi_installer.ps1 -SkipTests" in workflow
@@ -155,6 +157,8 @@ def test_release_workflow_requires_tracked_production_attestation() -> None:
     assert "$evaluation.preflight_blocker_count -ne 0" in workflow
     assert "$evaluation.solver_entry_count -ne 92" in workflow
     assert "$evaluation.cancelled_after_entry_count -ne 92" in workflow
+    assert workflow.index(tag_fetch) < workflow.index(tag_type_check)
+    assert "Unable to fetch the annotated release tag object" in workflow
     assert '".github/workflows/ci.yml"' in workflow
     assert '"scripts/build_spd_decap_pi.ps1"' in workflow
     assert '"tests/test_spd_decap_packaging.py"' in workflow
