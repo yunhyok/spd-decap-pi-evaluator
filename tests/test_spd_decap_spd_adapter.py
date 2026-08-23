@@ -911,19 +911,78 @@ def test_spd_import_reuses_one_ground_graph_pass(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     source = tmp_path / "single-ground-graph-pass.spd"
-    source.write_text(MINI_SPD, encoding="ascii")
+    source.write_text(
+        MINI_SPD.replace(
+            "LEGACY_SOURCE_GRAPH_UNAVAILABLE",
+            "TRACE_VIA_COMPONENTS_AVAILABLE",
+        )
+        .replace("VDD_CORE/0", "VDD_CORE/1")
+        .replace(
+            "Node4!!2::DGND X = 1.2mm Y = 2mm Layer = Signal$TOP PadStack = CAP",
+            "Node4!!2::DGND X = 1.2mm Y = 2mm Layer = Signal$TOP PadStack = CAP\n"
+            "Node7!!7::VDD_CORE/1 X = 1mm Y = 2mm Layer = Signal$PWR PadStack = DR-0102_60\n"
+            "Node8!!8::VDD_CORE/1 X = 1.3mm Y = 2mm Layer = Signal$PWR PadStack = DR-0102_60\n"
+            "Node9!!9::DGND X = 1.2mm Y = 2mm Layer = Signal$GND PadStack = DR-0102_60",
+        )
+        .replace(
+            "Via2::DGND UpperNode = Node2 LowerNode = Node4 PadStack = DR-0102_60",
+            "Via2::DGND UpperNode = Node2 LowerNode = Node4 PadStack = DR-0102_60\n"
+            "Via7::VDD_CORE/1 UpperNode = Node3 LowerNode = Node7 PadStack = DR-0102_60\n"
+            "Via8::VDD_CORE/1 UpperNode = Node3 LowerNode = Node8 PadStack = DR-0102_60\n"
+            "Via9::DGND UpperNode = Node4 LowerNode = Node9 PadStack = DR-0102_60",
+        )
+        .replace(
+            ".PadDef Signal$PWR\nRegular Circle 0.03mm\n.EndPadDef",
+            ".PadDef Signal$PWR\nRegular Circle 0.03mm\n.EndPadDef\n"
+            ".PadDef Signal$GND\nRegular Circle 0.03mm\n.EndPadDef",
+        ),
+        encoding="ascii",
+    )
     calls: list[dict[str, object]] = []
+    recoveries: list[object] = []
+    strict_recoveries: list[object | None] = []
+    certificate_recoveries: list[object] = []
     original = spd_adapter.recover_spd_ground_reachability
+    original_strict = spd_adapter._strict_source_plane_pairs
+    original_certificate = spd_adapter._layer_surface_connectivity_certificate
 
     def wrapped(*args, **kwargs):
         calls.append(dict(kwargs))
-        return original(*args, **kwargs)
+        result = original(*args, **kwargs)
+        recoveries.append(result)
+        return result
+
+    def wrapped_strict(*args, **kwargs):
+        strict_recoveries.append(
+            args[3] if len(args) > 3 else kwargs.get("connectivity_recovery")
+        )
+        return original_strict(*args, **kwargs)
+
+    def wrapped_certificate(*args, **kwargs):
+        certificate_recoveries.append(kwargs["reachability"])
+        return original_certificate(*args, **kwargs)
 
     monkeypatch.setattr(spd_adapter, "recover_spd_ground_reachability", wrapped)
+    monkeypatch.setattr(
+        spd_adapter,
+        "recover_spd_via_paths",
+        lambda *_args, **_kwargs: pytest.fail(
+            "graph-capable import must not run unique-path recovery"
+        ),
+    )
+    monkeypatch.setattr(spd_adapter, "_strict_source_plane_pairs", wrapped_strict)
+    monkeypatch.setattr(
+        spd_adapter,
+        "_layer_surface_connectivity_certificate",
+        wrapped_certificate,
+    )
     imported = import_spd_scenario(source)
 
     assert len(calls) == 1
-    assert imported.timings.recovery_s > 0.0
+    assert len(recoveries) == 1
+    assert strict_recoveries[0] is recoveries[0]
+    assert certificate_recoveries[0] is recoveries[0]
+    assert imported.timings.recovery_s == 0.0
     mixed = imported.scenario.base_project.metadata["spd_via_path_recovery"][
         "mixed_reference_ground_reachability"
     ]
@@ -2227,8 +2286,16 @@ def test_import_runs_one_union_reachability_pass_and_persists_surface_certificat
         "dgnd": frozenset({"Signal$GND"}),
     }
     assert calls[0]["requested_targets"] == {
+        ("pin::site0:101", "node1", "vdd_core/0"): frozenset(
+            {"Signal$PWR"}
+        ),
+        ("pin::site0:102", "node2", "dgnd"): frozenset(
+            {"Signal$GND"}
+        ),
         ("via1", "node1", "vdd_core/0"): frozenset({"Signal$PWR"}),
+        ("via1", "node3", "vdd_core/0"): frozenset({"Signal$PWR"}),
         ("via2", "node2", "dgnd"): frozenset({"Signal$GND"}),
+        ("via2", "node4", "dgnd"): frozenset({"Signal$GND"}),
     }
     certificate = inline_certificate
     assert certificate["schema_version"] == (

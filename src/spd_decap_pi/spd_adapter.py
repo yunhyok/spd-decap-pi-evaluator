@@ -12,6 +12,7 @@ from tempfile import TemporaryFile
 from time import perf_counter
 from types import SimpleNamespace
 from typing import Any
+from weakref import finalize
 
 from spd_decap_pi._core.domain import (
     MixedReferenceGroundWitness,
@@ -6575,26 +6576,57 @@ def import_spd_scenario(
         for connection in analysis.decap_connections
         for landing in (*connection.power_vias, *connection.ground_vias)
     )
-    recovery_started = perf_counter()
-    def recovery_progress(value: int, message: str) -> None:
-        report(87 + round(max(0, min(100, value)) * 4 / 100), message)
-
-    path_recovery = recover_spd_via_paths(
-        source_path,
-        landings=source_landings,
-        target_layers_by_net=_via_target_layers_by_net(
-            base_project,
-            plane_geometries=analysis.plane_geometries,
-            mixed_reference_certificates=plan.mixed_reference_certificates,
-        ),
-        stackup_layers=base_project.stackup_layers,
-        padstacks=analysis.padstacks,
-        top_layer=top_layer,
-        expected_source=analysis.source,
-        progress=recovery_progress,
-        is_cancelled=cancelled,
+    device_pin_landings = tuple(
+        _SourcePinLanding(
+            via_id=f"PIN::{pin.pin_id}",
+            net=pin.net,
+            endpoint_node_id=str(pin.source_node_id),
+            x_um=float(pin.x_um),
+            y_um=float(pin.y_um),
+        )
+        for pin in analysis.pins
+        if pin.kind == PinKind.DEVICE_BUMP and pin.source_node_id
     )
-    path_recovery_s = perf_counter() - recovery_started
+    path_recovery = SimpleNamespace(
+        evidence_by_via={},
+        structural_evidence_by_via={},
+        diagnostics=(),
+        statistics={
+            "algorithm": "graph_connectivity_contact_recovery_v1",
+            "skipped_unique_path_recovery": 1,
+        },
+    )
+    path_recovery_s = 0.0
+
+    def recovery_progress(value: int, message: str) -> None:
+        report(87 + round(max(0, min(100, value)) * 1 / 100), message)
+
+    explicit_graph_capability = str(
+        (getattr(analysis, "counts", {}) or {}).get(
+            "source_graph_capability", ""
+        )
+    ).upper()
+    if (
+        source_landings
+        and explicit_graph_capability == "LEGACY_SOURCE_GRAPH_UNAVAILABLE"
+    ):
+        recovery_started = perf_counter()
+        path_recovery = recover_spd_via_paths(
+            source_path,
+            landings=source_landings,
+            target_layers_by_net=_via_target_layers_by_net(
+                base_project,
+                plane_geometries=analysis.plane_geometries,
+                mixed_reference_certificates=plan.mixed_reference_certificates,
+            ),
+            stackup_layers=base_project.stackup_layers,
+            padstacks=analysis.padstacks,
+            top_layer=top_layer,
+            expected_source=analysis.source,
+            progress=recovery_progress,
+            is_cancelled=cancelled,
+        )
+        path_recovery_s = perf_counter() - recovery_started
     _raise_for_rejected_mixed_reference_landings(
         base_project,
         source_landings,
@@ -6621,11 +6653,329 @@ def import_spd_scenario(
         for indexed in (IndexedPlaneGeometry.build(values[0]),)
         if indexed is not None
     }
+
+    # Build the complete source/surface graph once, before selecting a plane
+    # pair.  Pair selection, mixed witnesses, and the persisted v4 certificate
+    # all consume this same result; reopening the SPD here would both duplicate
+    # the authoritative pass and make branched source routes look unresolved.
+    landing_cache: dict[str, ScenarioViaLanding] = {}
+
+    def scenario_landing(landing: Any) -> ScenarioViaLanding:
+        key = landing.via_id.casefold()
+        result = landing_cache.get(key)
+        if result is None:
+            result = _scenario_via_landing(landing, path_recovery)
+            landing_cache[key] = result
+        return result
+
+    surface_artwork = _retained_surface_artwork(
+        base_project,
+        dict(plan.attachments),
+        analysis.plane_geometries,
+        indexed_geometry_by_key=connectivity_index,
+        progress=lambda value, message: report(
+            87 + round(max(0, min(100, value)) * 1 / 100), message
+        ),
+        is_cancelled=cancelled,
+    )
+
+    class SurfaceArtworkCleanupToken:
+        pass
+
+    surface_artwork_cleanup_token = SurfaceArtworkCleanupToken()
+    surface_artwork_cleanup = finalize(
+        surface_artwork_cleanup_token,
+        surface_artwork.close,
+    )
+    surface_geometry_assets = surface_artwork.geometry_assets
+    surface_target_layers_by_net = surface_artwork.target_layers_by_net
+    surface_target_island_ids = surface_artwork.island_ids_by_surface
+    for certificate in plan.mixed_reference_certificates:
+        surface_target_layers_by_net.setdefault(
+            str(certificate.gnd_net).casefold(), set()
+        ).add(str(certificate.gnd_layer))
+
+    recovery_anchor_bindings, _recovery_anchor_compile_failures = (
+        _compile_active_rail_anchor_bindings(
+            base_project,
+            source_sha256=analysis.source.sha256,
+        )
+    )
+    recovery_anchor_landings_by_pin, _recovery_anchor_contact_seeds = (
+        _anchor_graph_landings(
+            recovery_anchor_bindings,
+            analysis.device_terminal_via_endpoints,
+        )
+    )
+    complete_device_endpoint_bindings = tuple(
+        {"pin_id": str(endpoint.pin_id)}
+        for endpoint in analysis.device_terminal_via_endpoints
+        if endpoint.status == "complete"
+        and str(endpoint.pin_id).strip()
+        and str(endpoint.incident_via_id or "").strip()
+    )
+    complete_device_endpoint_landings, _complete_device_endpoint_contacts = (
+        _anchor_graph_landings(
+            complete_device_endpoint_bindings,
+            analysis.device_terminal_via_endpoints,
+        )
+    )
+    recovery_terminal_anchor_landings_by_pin = dict(
+        complete_device_endpoint_landings
+    )
+    recovery_terminal_anchor_landings_by_pin.update(
+        recovery_anchor_landings_by_pin
+    )
+
+    def source_connection_kind(connection: object) -> str:
+        value = getattr(connection, "kind", "")
+        return str(getattr(value, "value", value)).strip().upper()
+
+    scenario_topology_connection_kinds = {
+        "DIRECT",
+        "SHARED_ANCHOR",
+        "SHARED_DUMMY",
+    }
+    active_cap_keys = set(top_instance_by_key)
+    certificate_decap_connections = tuple(
+        ScenarioDecapConnection(
+            refdes=connection.refdes,
+            kind=DecapConnectionKind(source_connection_kind(connection)),
+            cluster_id=connection.cluster_id,
+            power_vias=tuple(
+                scenario_landing(landing) for landing in connection.power_vias
+            ),
+            ground_vias=tuple(
+                scenario_landing(landing) for landing in connection.ground_vias
+            ),
+            reason=connection.reason,
+        )
+        for connection in analysis.decap_connections
+        if connection.refdes.casefold() in active_cap_keys
+        and source_connection_kind(connection) in scenario_topology_connection_kinds
+    )
+    active_cap_keys.clear()
+    surface_target_net_keys = set(surface_target_layers_by_net)
+    terminal_decap_landings = tuple(
+        landing
+        for connection in certificate_decap_connections
+        for landing in (*connection.power_vias, *connection.ground_vias)
+        if landing.net.casefold() in surface_target_net_keys
+    )
+    retarget_destination_requests = tuple(
+        (
+            landing.net,
+            evidence.target_layer,
+            evidence.target_node_id,
+        )
+        for connection in certificate_decap_connections
+        for landing in (*connection.power_vias, *connection.ground_vias)
+        for evidence in landing.path_evidence
+        if landing.net.casefold() in surface_target_net_keys
+    )
+    terminal_contact_landing_by_key: dict[tuple[str, str, str], Any] = {}
+    for landing in (
+        *terminal_decap_landings,
+        *recovery_terminal_anchor_landings_by_pin.values(),
+    ):
+        key = (
+            str(getattr(landing, "via_id")).casefold(),
+            str(getattr(landing, "endpoint_node_id")).casefold(),
+            str(getattr(landing, "net")).casefold(),
+        )
+        terminal_contact_landing_by_key.setdefault(key, landing)
+    terminal_owned_via_ids = {
+        str(landing.via_id).strip()
+        for landing in terminal_decap_landings
+        if str(landing.via_id).strip()
+    }
+    terminal_owned_via_ids.update(
+        str(endpoint.incident_via_id).strip()
+        for endpoint in analysis.device_terminal_via_endpoints
+        if endpoint.status == "complete"
+        and endpoint.incident_via_id is not None
+        and endpoint.incident_net is not None
+        and endpoint.incident_net.casefold() in surface_target_net_keys
+        and str(endpoint.incident_via_id).strip()
+    )
+    mixed_target_predicates_by_key: dict[
+        tuple[str, str], Callable[[str, str, str, float, float], bool]
+    ] = {}
+    if plan.mixed_reference_certificates:
+        mixed_target_predicate = _mixed_reference_target_node_predicate(
+            base_project,
+            dict(plan.attachments),
+            indexed_geometry_by_key={
+                (net, layer): indexed
+                for (layer, net), indexed in connectivity_index.items()
+            },
+        )
+        mixed_target_predicates_by_key = {
+            (
+                str(certificate.gnd_net).casefold(),
+                str(certificate.gnd_layer).casefold(),
+            ): mixed_target_predicate
+            for certificate in plan.mixed_reference_certificates
+        }
+    recovery_landing_by_key: dict[tuple[str, str, str], Any] = {}
+    for landing in (
+        *source_landings,
+        *device_pin_landings,
+        *recovery_terminal_anchor_landings_by_pin.values(),
+    ):
+        key = (
+            str(getattr(landing, "via_id")).casefold(),
+            str(getattr(landing, "endpoint_node_id")).casefold(),
+            str(getattr(landing, "net")).casefold(),
+        )
+        recovery_landing_by_key.setdefault(key, landing)
+
+    target_layer_display_by_net = {
+        net: {str(layer).casefold(): str(layer) for layer in layers}
+        for net, layers in surface_target_layers_by_net.items()
+    }
+    candidate_target_layers_by_net = {
+        net: {
+            target_layer_display_by_net[net][str(layer).casefold()]
+            for layer in layers
+            if str(layer).casefold() in target_layer_display_by_net.get(net, {})
+        }
+        for net, layers in _via_target_layers_by_net(
+            base_project,
+            plane_geometries=analysis.plane_geometries,
+            mixed_reference_certificates=plan.mixed_reference_certificates,
+        ).items()
+    }
+    ground_keys = {str(item).casefold() for item in base_project.gnd_aliases}
+    for raw_net in analysis.power_plane_nets:
+        net_key = str(raw_net).casefold()
+        for suggestion in suggest_effective_plane_pairs(
+            base_project.stackup_layers,
+            rail_net=str(raw_net),
+            gnd_aliases=base_project.gnd_aliases,
+            mixed_reference_certificates=plan.mixed_reference_certificates,
+        ):
+            pwr_layer = target_layer_display_by_net.get(net_key, {}).get(
+                suggestion.pwr_layer.casefold()
+            )
+            if pwr_layer is not None:
+                candidate_target_layers_by_net.setdefault(net_key, set()).add(
+                    pwr_layer
+                )
+            gnd_layer = next(
+                (
+                    layer
+                    for layer in base_project.stackup_layers
+                    if layer.name.casefold() == suggestion.gnd_layer.casefold()
+                ),
+                None,
+            )
+            certified_gnd_net = (
+                suggestion.mixed_reference_certificate.gnd_net.casefold()
+                if suggestion.mixed_reference_certificate is not None
+                else None
+            )
+            for ground_net in (
+                gnd_layer.pwr_nets if gnd_layer is not None else ()
+            ):
+                ground_net_key = ground_net.casefold()
+                if (
+                    ground_net_key in ground_keys
+                    and (
+                        certified_gnd_net is None
+                        or ground_net_key == certified_gnd_net
+                    )
+                    and suggestion.gnd_layer.casefold()
+                    in target_layer_display_by_net.get(ground_net_key, {})
+                ):
+                    candidate_target_layers_by_net.setdefault(
+                        ground_net_key, set()
+                    ).add(
+                        target_layer_display_by_net[ground_net_key][
+                            suggestion.gnd_layer.casefold()
+                        ]
+                    )
+    requested_target_layers_by_landing = {
+        key: set(candidate_target_layers_by_net.get(key[2], ()))
+        for key in recovery_landing_by_key
+    }
+    recovery_rail_by_id = {
+        rail.rail_id.casefold(): rail for rail in base_project.rails
+    }
+    for binding in recovery_anchor_bindings:
+        landing = recovery_terminal_anchor_landings_by_pin.get(
+            str(binding.get("pin_id", "")).strip().casefold()
+        )
+        rail = recovery_rail_by_id.get(
+            str(binding.get("rail_id", "")).strip().casefold()
+        )
+        role = str(binding.get("role", "")).strip().casefold()
+        if landing is None or rail is None or role not in {"power", "ground"}:
+            continue
+        key = (
+            landing.via_id.casefold(),
+            landing.endpoint_node_id.casefold(),
+            landing.net.casefold(),
+        )
+        layer = rail.pwr_layer if role == "power" else rail.gnd_layer
+        target_layer = target_layer_display_by_net.get(key[2], {}).get(
+            layer.casefold()
+        )
+        if target_layer is not None:
+            requested_target_layers_by_landing[key].add(target_layer)
+    recovery_rail_by_id.clear()
+
+    ground_recovery_started = perf_counter()
+    connectivity_recovery = recover_spd_ground_reachability(
+        source_path,
+        landings=tuple(recovery_landing_by_key.values()),
+        requested_target_layers_by_landing=(
+            requested_target_layers_by_landing
+        ),
+        terminal_contact_landings=tuple(
+            terminal_contact_landing_by_key.values()
+        ),
+        scenario_isolated_terminal_landings=terminal_decap_landings,
+        retarget_destination_requests=retarget_destination_requests,
+        terminal_owned_via_ids=terminal_owned_via_ids,
+        padstacks=analysis.padstacks,
+        stackup_layers=base_project.stackup_layers,
+        target_layers_by_net=surface_target_layers_by_net,
+        target_node_predicate=None,
+        target_node_predicates_by_key=mixed_target_predicates_by_key,
+        same_layer_artwork_layers_by_net=surface_target_layers_by_net,
+        same_layer_artwork_component=surface_artwork.artwork_component,
+        same_layer_artwork_components_batch=(
+            surface_artwork.artwork_components_batch
+        ),
+        same_layer_artwork_release=surface_artwork.release,
+        target_node_surface_resolver=surface_artwork.surface_resolver,
+        target_node_surface_resolver_batch=(
+            surface_artwork.surface_resolver_batch
+        ),
+        target_surface_island_ids=surface_target_island_ids,
+        expected_source=analysis.source,
+        progress=lambda value, message: report(
+            87 + round(max(0, min(100, value)) * 4 / 100), message
+        ),
+        is_cancelled=cancelled,
+    )
+    ground_recovery_s = perf_counter() - ground_recovery_started
+    recovery_landing_by_key.clear()
+    requested_target_layers_by_landing.clear()
+    candidate_target_layers_by_net.clear()
+    target_layer_display_by_net.clear()
+    terminal_contact_landing_by_key.clear()
+    terminal_owned_via_ids.clear()
+    surface_target_net_keys.clear()
+    del terminal_decap_landings
+
     report(91, "Selecting strict source-proven plane pairs")
     selected_pairs, pair_provenance = _strict_source_plane_pairs(
         base_project,
         analysis,
         path_recovery,
+        connectivity_recovery,
         indexed_override=connectivity_index,
         mixed_reference_certificates=plan.mixed_reference_certificates,
     )
@@ -7052,16 +7402,6 @@ def import_spd_scenario(
         )
         for key, instance in top_instance_by_key.items()
     }
-    landing_cache: dict[str, ScenarioViaLanding] = {}
-
-    def scenario_landing(landing: Any) -> ScenarioViaLanding:
-        key = landing.via_id.casefold()
-        result = landing_cache.get(key)
-        if result is None:
-            result = _scenario_via_landing(landing, path_recovery)
-            landing_cache[key] = result
-        return result
-
     cluster_eligibility_started = perf_counter()
     (
         accepted_cluster_keys,
@@ -7120,209 +7460,12 @@ def import_spd_scenario(
         rail_anchor_bindings,
         analysis.device_terminal_via_endpoints,
     )
-    surface_artwork = _retained_surface_artwork(
-        base_project,
-        dict(plan.attachments),
-        analysis.plane_geometries,
-        indexed_geometry_by_key=connectivity_index,
-        progress=lambda value, message: report(
-            91 + round(max(0, min(100, value)) * 1 / 100), message
-        ),
-        is_cancelled=cancelled,
-    )
-    surface_geometry_assets = surface_artwork.geometry_assets
-    surface_target_layers_by_net = surface_artwork.target_layers_by_net
-    surface_target_island_ids = surface_artwork.island_ids_by_surface
-    for net, layers in mixed_target_layers_by_net.items():
-        surface_target_layers_by_net.setdefault(net.casefold(), set()).update(
-            layers
-        )
     mixed_witness_selection_s = perf_counter() - mixed_witness_selection_started
-    ground_recovery_started = perf_counter()
-    mixed_recovery_landings = tuple(
-        landing
-        for entries in mixed_ground_landings_by_rail.values()
-        for _refdes, landing in entries
-    )
-    recovery_landing_by_key: dict[tuple[str, str, str], Any] = {}
-    for landing in (*mixed_recovery_landings, *anchor_landings_by_pin.values()):
-        key = (
-            str(getattr(landing, "via_id")).casefold(),
-            str(getattr(landing, "endpoint_node_id")).casefold(),
-            str(getattr(landing, "net")).casefold(),
-        )
-        recovery_landing_by_key.setdefault(key, landing)
-    del mixed_recovery_landings
-    requested_target_layers_by_landing = {
-        key: set() for key in recovery_landing_by_key
-    }
-    for rail_key, entries in mixed_ground_landings_by_rail.items():
-        certificate = mixed_rails[rail_key].mixed_reference_certificate
-        assert certificate is not None
-        for _refdes, landing in entries:
-            key = (
-                str(getattr(landing, "via_id")).casefold(),
-                str(getattr(landing, "endpoint_node_id")).casefold(),
-                str(getattr(landing, "net")).casefold(),
-            )
-            requested_target_layers_by_landing[key].add(
-                certificate.gnd_layer
-            )
-    rail_by_id = {
-        rail.rail_id.casefold(): rail for rail in base_project.rails
-    }
-    for binding in rail_anchor_bindings:
-        landing = anchor_landings_by_pin.get(
-            str(binding.get("pin_id", "")).strip().casefold()
-        )
-        rail = rail_by_id.get(
-            str(binding.get("rail_id", "")).strip().casefold()
-        )
-        role = str(binding.get("role", "")).strip().casefold()
-        if landing is None or rail is None or role not in {"power", "ground"}:
-            continue
-        key = (
-            landing.via_id.casefold(),
-            landing.endpoint_node_id.casefold(),
-            landing.net.casefold(),
-        )
-        requested_target_layers_by_landing[key].add(
-            rail.pwr_layer if role == "power" else rail.gnd_layer
-        )
-    rail_by_id.clear()
-    active_cap_keys = set(top_instance_by_key)
-    surface_target_net_keys = set(surface_target_layers_by_net)
-    def source_connection_kind(connection: object) -> str:
-        value = getattr(connection, "kind", "")
-        return str(getattr(value, "value", value)).strip().upper()
-
-    scenario_topology_connection_kinds = {
-        "DIRECT",
-        "SHARED_ANCHOR",
-        "SHARED_DUMMY",
-    }
-    certificate_decap_connections = tuple(
-        ScenarioDecapConnection(
-            refdes=connection.refdes,
-            kind=DecapConnectionKind(source_connection_kind(connection)),
-            cluster_id=connection.cluster_id,
-            power_vias=tuple(
-                scenario_landing(landing)
-                for landing in connection.power_vias
-            ),
-            ground_vias=tuple(
-                scenario_landing(landing)
-                for landing in connection.ground_vias
-            ),
-            reason=connection.reason,
-        )
-        for connection in analysis.decap_connections
-        if connection.refdes.casefold() in active_cap_keys
-        and source_connection_kind(connection)
-        in scenario_topology_connection_kinds
-    )
-    active_cap_keys.clear()
     top_instance_by_key.clear()
     landing_cache.clear()
-    terminal_decap_landings = tuple(
-        landing
-        for connection in certificate_decap_connections
-        for landing in (*connection.power_vias, *connection.ground_vias)
-        if landing.net.casefold() in surface_target_net_keys
-    )
-    retarget_destination_requests = tuple(
-        (
-            landing.net,
-            evidence.target_layer,
-            evidence.target_node_id,
-        )
-        for connection in certificate_decap_connections
-        for landing in (*connection.power_vias, *connection.ground_vias)
-        for evidence in landing.path_evidence
-        if landing.net.casefold() in surface_target_net_keys
-    )
-    terminal_contact_landing_by_key: dict[tuple[str, str, str], Any] = {}
-    for landing in (
-        *terminal_decap_landings,
-        *anchor_landings_by_pin.values(),
-    ):
-        key = (
-            str(getattr(landing, "via_id")).casefold(),
-            str(getattr(landing, "endpoint_node_id")).casefold(),
-            str(getattr(landing, "net")).casefold(),
-        )
-        terminal_contact_landing_by_key.setdefault(key, landing)
-    terminal_owned_via_ids = {
-        str(landing.via_id).strip()
-        for landing in terminal_decap_landings
-        if str(landing.via_id).strip()
-    }
-    terminal_owned_via_ids.update(
-        str(endpoint.incident_via_id).strip()
-        for endpoint in analysis.device_terminal_via_endpoints
-        if endpoint.status == "complete"
-        and endpoint.incident_via_id is not None
-        and endpoint.incident_net is not None
-        and endpoint.incident_net.casefold() in surface_target_net_keys
-        and str(endpoint.incident_via_id).strip()
-    )
-    mixed_target_predicates_by_key: dict[
-        tuple[str, str], Callable[[str, str, str, float, float], bool]
-    ] = {}
-    if plan.mixed_reference_certificates:
-        mixed_target_predicate = _mixed_reference_target_node_predicate(
-            base_project,
-            dict(plan.attachments),
-            indexed_geometry_by_key={
-                (net, layer): indexed
-                for (layer, net), indexed in connectivity_index.items()
-            },
-        )
-        mixed_target_predicates_by_key = {
-            (
-                str(certificate.gnd_net).casefold(),
-                str(certificate.gnd_layer).casefold(),
-            ): mixed_target_predicate
-            for certificate in plan.mixed_reference_certificates
-        }
-    ground_reachability = recover_spd_ground_reachability(
-        source_path,
-        landings=tuple(recovery_landing_by_key.values()),
-        requested_target_layers_by_landing=(
-            requested_target_layers_by_landing
-        ),
-        terminal_contact_landings=tuple(
-            terminal_contact_landing_by_key.values()
-        ),
-        scenario_isolated_terminal_landings=terminal_decap_landings,
-        retarget_destination_requests=retarget_destination_requests,
-        terminal_owned_via_ids=terminal_owned_via_ids,
-        padstacks=analysis.padstacks,
-        stackup_layers=base_project.stackup_layers,
-        target_layers_by_net=surface_target_layers_by_net,
-        target_node_predicate=None,
-        target_node_predicates_by_key=mixed_target_predicates_by_key,
-        same_layer_artwork_layers_by_net=surface_target_layers_by_net,
-        same_layer_artwork_component=surface_artwork.artwork_component,
-        same_layer_artwork_components_batch=(
-            surface_artwork.artwork_components_batch
-        ),
-        same_layer_artwork_release=surface_artwork.release,
-        target_node_surface_resolver=surface_artwork.surface_resolver,
-        target_node_surface_resolver_batch=(
-            surface_artwork.surface_resolver_batch
-        ),
-        target_surface_island_ids=surface_target_island_ids,
-        expected_source=analysis.source,
-        progress=lambda value, message: report(92 + round(max(0, min(100, value)) * 1 / 100), message),
-        is_cancelled=cancelled,
-    )
-    recovery_landing_by_key.clear()
-    requested_target_layers_by_landing.clear()
-    terminal_contact_landing_by_key.clear()
-    terminal_owned_via_ids.clear()
-    surface_target_net_keys.clear()
-    del terminal_decap_landings
+    ground_reachability = connectivity_recovery
+    report(92, "Reused source graph for strict pairs and surface certificate")
+    retarget_compile_started = perf_counter()
     (
         retarget_landing_destination_requests,
         retarget_landing_scan_coverage,
@@ -7340,9 +7483,10 @@ def import_spd_scenario(
         ),
         is_cancelled=cancelled,
     )
-    surface_artwork.close()
+    surface_artwork_cleanup()
+    del surface_artwork_cleanup_token
     del surface_artwork
-    ground_recovery_s = perf_counter() - ground_recovery_started
+    ground_recovery_s += perf_counter() - retarget_compile_started
     mixed_witnesses: dict[str, MixedReferenceGroundWitness] = {}
     mixed_ground_reachability_by_rail: list[dict[str, Any]] = []
     mixed_ground_reachability_diagnostics: list[SpdDiagnostic] = []
