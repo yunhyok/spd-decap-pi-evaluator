@@ -6124,6 +6124,14 @@ def recover_spd_ground_reachability(
         if token not in surface_inventory.get((net_key, layer_key), ()):
             raise SpdImportError("surface island resolver returned an unknown island identity")
         node_index = index_for(net_key, node_id.casefold())
+        resolved_layer_code = layer_code(layer_key, layer)
+        if node_layer_codes[node_index] not in (0, resolved_layer_code):
+            raise SpdImportError(
+                "one source Node resolved to a surface on a conflicting conductor layer"
+            )
+        # Artwork-only Nodes are first indexed here, after the caller's dense
+        # layer lookup.  Retain their exact layer for the finite quotient.
+        node_layer_codes[node_index] = resolved_layer_code
         surface_key = (net_key, layer_key, token)
         code = surface_code_by_key.get(surface_key)
         if code is None:

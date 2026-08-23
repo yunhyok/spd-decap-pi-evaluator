@@ -6031,6 +6031,61 @@ def test_finite_via_quotient_emits_owner_complete_graph(tmp_path: Path) -> None:
         ].owner_ids
 
 
+def test_finite_via_retained_artwork_only_node_keeps_exact_surface_layer(
+    tmp_path: Path,
+) -> None:
+    source, analysis = _recoverable_via_source(
+        tmp_path,
+        node_lines=(
+            "NodeLanding!!1::PWR X = 0um Y = 0um Layer = Signal$TOP "
+            "PadStack = DR-0102_60\n"
+            "NodeViaEnd!!1::PWR X = 0um Y = 0um Layer = Signal$PWR "
+            "PadStack = DR-0102_60\n"
+            "NodeRetainedOnly!!1::PWR X = 10um Y = 0um Layer = Signal$PWR "
+            "PadStack = DR-0102_60"
+        ),
+        via_lines=(
+            "ViaLanding::PWR UpperNode = NodeLanding LowerNode = NodeViaEnd "
+            "PadStack = DR-0102_60"
+        ),
+    )
+    landing = SimpleNamespace(
+        via_id="ViaLanding", net="PWR", endpoint_node_id="NodeLanding"
+    )
+
+    result = recover_spd_ground_reachability(
+        source,
+        landings=(landing,),
+        terminal_contact_landings=(landing,),
+        terminal_owned_via_ids=(),
+        padstacks=analysis.padstacks,
+        stackup_layers=analysis.stackup_layers,
+        target_layers_by_net={"PWR": ("Signal$PWR",)},
+        target_node_surface_resolver=(
+            lambda _net, layer, node, _x, _y: (
+                "island-pwr"
+                if layer == "Signal$PWR" and node == "NodeRetainedOnly"
+                else None
+            )
+        ),
+        target_surface_island_ids={
+            ("PWR", "Signal$PWR"): ("island-pwr",),
+        },
+    )
+
+    retained_vertex = next(
+        vertex
+        for vertex in result.finite_via_vertices
+        if vertex.retained_component_island_ids_by_layer
+    )
+    assert retained_vertex.layer == "Signal$PWR"
+    assert dict(retained_vertex.retained_component_island_ids_by_layer) == {
+        "Signal$PWR": ("island-pwr",),
+    }
+    assert result.finite_via_coverage is not None
+    assert result.finite_via_coverage.status == "complete"
+
+
 def test_finite_via_quotient_missing_padstack_material_uses_legacy_plated_barrel(
     tmp_path: Path,
 ) -> None:
