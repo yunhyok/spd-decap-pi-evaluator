@@ -13,10 +13,8 @@ jobs:
   installer:
     runs-on: windows-latest
     timeout-minutes: 30
-    outputs:
-      source_commit: ${{ steps.release_identity.outputs.source_commit }}
-      source_tree: ${{ steps.release_identity.outputs.source_tree }}
-      production_attestation_sha256: ${{ steps.release_identity.outputs.production_attestation_sha256 }}
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v4
         with:
@@ -26,7 +24,6 @@ jobs:
           python-version: "3.12.10"
           cache: pip
       - name: Resolve release identity
-        id: release_identity
         shell: pwsh
         run: |
           $version = (& python -c `
@@ -96,12 +93,6 @@ jobs:
             -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
           "SPD_DECAP_PRODUCTION_ATTESTATION_SHA256=$productionAttestationSha256" | Out-File `
             -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
-          "source_commit=$sourceCommit" | Out-File `
-            -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
-          "source_tree=$sourceTree" | Out-File `
-            -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
-          "production_attestation_sha256=$productionAttestationSha256" | Out-File `
-            -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
       - name: Validate tracked production attestation
         shell: pwsh
         run: |
@@ -406,30 +397,8 @@ jobs:
           if ($staged.Count -ne 4) {
             throw "Expected exactly four staged release assets; found $($staged.Count)"
           }
-      - name: Upload installer
-        uses: actions/upload-artifact@v4
-        with:
-          name: SPDDecapPIEvaluator-${{ github.run_id }}
-          path: release-artifacts/*
-          if-no-files-found: error
-          overwrite: true
-
-  publish:
-    if: startsWith(github.ref, 'refs/tags/')
-    needs: installer
-    runs-on: windows-latest
-    permissions:
-      contents: write
-    env:
-      SPD_DECAP_SOURCE_COMMIT: ${{ needs.installer.outputs.source_commit }}
-      SPD_DECAP_SOURCE_TREE: ${{ needs.installer.outputs.source_tree }}
-      SPD_DECAP_PRODUCTION_ATTESTATION_SHA256: ${{ needs.installer.outputs.production_attestation_sha256 }}
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-          ref: ${{ needs.installer.outputs.source_commit }}
       - name: Verify release tag and validated source commit
+        if: startsWith(github.ref, 'refs/tags/')
         shell: pwsh
         run: |
           $ErrorActionPreference = "Stop"
@@ -446,7 +415,7 @@ jobs:
             $headTree -ne $env:SPD_DECAP_SOURCE_TREE -or
             $tagType -ne "tag"
           ) {
-            throw "Publish job source/tag identity differs from the installer job"
+            throw "Release source/tag identity changed before publication"
           }
           & git fetch --no-tags origin `
             "+refs/heads/main:refs/remotes/origin/main"
@@ -459,12 +428,8 @@ jobs:
           if ($LASTEXITCODE -ne 0) {
             throw "Validated release commit is not reachable from origin/main"
           }
-      - name: Download exact release assets
-        uses: actions/download-artifact@v4
-        with:
-          name: SPDDecapPIEvaluator-${{ github.run_id }}
-          path: release-artifacts
       - name: Publish GitHub Release
+        if: startsWith(github.ref, 'refs/tags/')
         shell: pwsh
         env:
           GH_TOKEN: ${{ github.token }}
@@ -472,7 +437,7 @@ jobs:
           $ErrorActionPreference = "Stop"
           $assets = @(Get-ChildItem -LiteralPath release-artifacts -File)
           if ($assets.Count -ne 4) {
-            throw "Expected exactly four downloaded release assets"
+            throw "Expected exactly four staged release assets"
           }
           $installers = @($assets | Where-Object Name -Like "*.exe")
           $checksums = @($assets | Where-Object Name -Like "*.exe.sha256")
@@ -484,13 +449,13 @@ jobs:
             $attestations.Count -ne 1 -or
             $provenanceFiles.Count -ne 1
           ) {
-            throw "Downloaded release asset inventory is invalid"
+            throw "Staged release asset inventory is invalid"
           }
           $attestationHash = (
             Get-FileHash -LiteralPath $attestations[0].FullName -Algorithm SHA256
           ).Hash.ToLowerInvariant()
           if ($attestationHash -ne $env:SPD_DECAP_PRODUCTION_ATTESTATION_SHA256) {
-            throw "Downloaded production attestation identity changed"
+            throw "Staged production attestation identity changed"
           }
           $provenanceFile = $provenanceFiles[0]
           $provenance = Get-Content -LiteralPath $provenanceFile.FullName -Raw |

@@ -141,11 +141,13 @@ def test_release_workflow_requires_tracked_production_attestation() -> None:
 
     gate = "Validate tracked production attestation"
     build = "Build and test installer"
-    upload = "Upload installer"
+    stage = "Stage exact release assets"
+    publish = "Publish GitHub Release"
     tag_fetch = '"+refs/tags/${env:GITHUB_REF_NAME}:refs/tags/${env:GITHUB_REF_NAME}"'
     tag_type_check = '$tagType = (& git cat-file -t "refs/tags/$env:GITHUB_REF_NAME")'
     assert gate in workflow
-    assert workflow.index(gate) < workflow.index(build) < workflow.index(upload)
+    assert workflow.index(gate) < workflow.index(build) < workflow.index(stage)
+    assert workflow.index(stage) < workflow.index(publish)
     assert "-File .\\scripts\\build_spd_decap_pi_installer.ps1 -SkipTests" in workflow
     assert "git ls-files --error-unmatch" in workflow
     assert "validation-fixtures/release/" in workflow
@@ -174,14 +176,15 @@ def test_tagged_release_publishes_installer_and_validation_evidence() -> None:
     ).read_text(encoding="utf-8")
 
     gate = "Validate tracked production attestation"
-    upload = "Upload installer"
+    stage = "Stage exact release assets"
     publish = "Publish GitHub Release"
-    assert workflow.index(gate) < workflow.index(upload) < workflow.index(publish)
+    assert workflow.index(gate) < workflow.index(stage) < workflow.index(publish)
     assert "contents: write" in workflow
     assert "contents: read" in workflow
-    assert "\n  publish:\n" in workflow
-    assert "needs: installer" in workflow
-    assert "if: startsWith(github.ref, 'refs/tags/')" in workflow
+    assert "    permissions:\n      contents: write\n" in workflow
+    assert "\n  publish:\n" not in workflow
+    assert "needs: installer" not in workflow
+    assert workflow.count("if: startsWith(github.ref, 'refs/tags/')") == 2
     assert "GH_TOKEN: ${{ github.token }}" in workflow
     assert "gh release create" in workflow
     assert "gh release view" in workflow
@@ -209,19 +212,16 @@ def test_tagged_release_publishes_installer_and_validation_evidence() -> None:
     assert '$env:GITHUB_REF_NAME -ne "v$version"' in workflow
     assert "Release tag $env:GITHUB_REF_NAME does not match" in workflow
     assert "Select-Object -First 1" not in workflow
-    assert "path: release-artifacts/*" in workflow
-    artifact_name = "SPDDecapPIEvaluator-${{ github.run_id }}"
-    assert workflow.count(artifact_name) == 2
-    assert "overwrite: true" in workflow
-    assert "SPDDecapPIEvaluator-${{ github.ref_name }}" not in workflow
+    assert "actions/upload-artifact" not in workflow
+    assert "actions/download-artifact" not in workflow
     assert "Expected exactly four staged release assets" in workflow
-    assert "Expected exactly four downloaded release assets" in workflow
+    assert "Expected exactly four downloaded release assets" not in workflow
     assert "spd-decap-release-provenance-v2" in workflow
     assert "production_attestation_sha256" in workflow
-    assert "Downloaded production attestation identity changed" in workflow
+    assert "Staged production attestation identity changed" in workflow
     assert "#Release provenance" in workflow
     assert "Installer build manifest is not bound to the validated source" in workflow
-    assert "Publish job source/tag identity differs from the installer job" in workflow
+    assert "Release source/tag identity changed before publication" in workflow
     assert "Validated release commit is not reachable from origin/main" in workflow
     assert "Remote release tag moved before publication" in workflow
     assert "Remote release tag moved during publication" in workflow
