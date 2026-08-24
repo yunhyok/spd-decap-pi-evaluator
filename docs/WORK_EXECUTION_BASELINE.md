@@ -4,7 +4,7 @@
 - 문서 버전: **1.0**
 - 상위 기준: [목적·기술 기준](PRODUCT_PURPOSE_AND_TECHNICAL_BASELINE.md) v1.1
 - 현행 source 기준: `main` commit `1e144bd`
-- 상태: **ACTIVE CONTROL DOCUMENT — W2-SPD-C 완료; W2-IO-A 대기**
+- 상태: **ACTIVE CONTROL DOCUMENT — W2-IO-A 완료; W2-IO-B 대기**
 - 최종 개정: 2026-08-24 (Asia/Seoul)
 
 ## 1. 압축 후 즉시 복구 카드
@@ -16,13 +16,13 @@ context가 압축되거나 새 session에서 작업을 재개하면 다른 연�
 |---|---|
 | 변하지 않는 목적 | source-derived single-rail `Zii`의 PowerSI 근접 정확성과 일반화 |
 | 현재 branch | `main`만 사용; 정리된 과거 branch를 다시 조사하지 않음 |
-| 현재 active work item | `NONE` — `W2-SPD-C` 완료; `W2-IO-A` 승인 대기 |
+| 현재 active work item | `NONE` — `W2-IO-A` 완료; `W2-IO-B` 승인 대기 |
 | 다음 권장 묶음 | `W1` product-core test truth 복원 후 `W2` bounded correctness fixes |
 | 코드 수정 권한 | active item 승인 전 production code 수정 금지 |
 | 고비용 검증 권한 | 없음 — W1은 V0–V2 focused 검증만 허용 |
 | 현재 정확성 상태 | `current / unknown / not_run` |
 | 현재 release 계산 증거 | import/save/solver-entry만 통과; frequency solve `0` |
-| 현재 working tree | W2-SPD-C commit 완료; warning-only/blocking importer 경계 적용 |
+| 현재 working tree | W2-IO-A commit 완료; Distribution/Tuned CSV atomic replace 적용 |
 
 최초 목적은 [목적·기술 기준 2장](PRODUCT_PURPOSE_AND_TECHNICAL_BASELINE.md#2-최우선-목적),
 현재 증거 상태는 [6장](PRODUCT_PURPOSE_AND_TECHNICAL_BASELINE.md#6-증거와-상태-표기)이
@@ -97,7 +97,7 @@ active work item에 명시된 source/test/subsystem 문서만 추가로 읽는�
 | `W2-SPD-A` | 2 | DONE | source-graph target contact persistence 복구 | target-layer coordinate가 저장·사용되는 focused regression |
 | `W2-SPD-B` | 3 | DONE | graph-contact `source_sha256` 교차 검증 | 다른 source coordinate가 scenario validation에서 차단 |
 | `W2-SPD-C` | 4 | DONE | `blocking:false` mixed-reference warning이 import를 중단하는 문제 수정 | warning-only case import 성공, blocking case 차단 유지 |
-| `W2-IO-A` | 5 | READY | Distribution/Tuned CSV atomic replace | write 실패 시 기존 파일 보존 |
+| `W2-IO-A` | 5 | DONE | Distribution/Tuned CSV atomic replace | write 실패 시 기존 파일 보존 |
 | `W2-IO-B` | 6 | READY | 대형 `.spdpi` load cancellation과 load 중 close 경로 | 기존 loader callback 재사용, 취소 후 stale state 없음 |
 | `W3-CI` | 7 | READY | 짧은 product-core lane을 required CI로 연결 | parser/scenario/solver/Distribution/GUI I/O 핵심 경로 green |
 | `W4-FREQ` | 8 | READY | adaptive frequency가 sample 사이 narrow peak를 보지 않고 converged 처리하는 blind spot | midpoint/coverage focused case가 peak 누락을 검출 |
@@ -171,18 +171,18 @@ evidence identity before:
 다음 사용자 결정:
 ```
 
-ID / 상태: `W2-SPD-C / DONE`
-사용자 목적과의 연결: producer가 warning-only로 명시한 mixed-reference failure를 importer가 blocking rejection으로 오해하지 않도록 product-core import 경계를 보존한다.
-이번 변경 묶음: `_raise_for_rejected_mixed_reference_landings` failure loop에서 정확히 `failure.get("blocking") is False`인 항목만 제외하고, key 누락·True·0/None/문자열은 기존 blocking 경로를 유지한다.
-명시적 제외 범위: producer/metadata schema/recovery orchestration, 다른 함수·helper·dependency, solver/Distribution/PowerSI, W2-IO-A, production SPD solve, installer/release.
-root-cause 가설: importer가 failure의 `blocking` 값을 확인하지 않고 source/path evidence가 일치하는 모든 producer failure를 rejection으로 수집한다.
-읽을 source/test/subsystem 문서: 목적·기술 기준, 이 작업 기준, `spd_adapter.py`의 rejection helper, `test_spd_decap_spd_adapter.py`의 warning-only 및 blocking regression.
-acceptance: warning-only failure는 예외 없이 반환되고, blocking key 누락 failure는 `SpdImportError`로 계속 차단된다.
-V0–V5 계획과 최대 횟수: V0 단일 guard/diff 1회; warning-only V1 red 재현 1회와 warning/blocking 두 focused node green 1회; V2–V5 금지.
-중단 조건: bool truthiness로 판정해야 하거나 producer/schema 변경이 필요해지는 경우, 또는 V2 이상 검증이 필요해지는 경우.
-evidence identity before: `main` / `178c9d4` / v0.23.0.
-결과 / artifact / diff: `_raise_for_rejected_mixed_reference_landings`의 failure loop에서 정확히 `failure.get("blocking") is False`인 항목만 제외했다. warning-only red 1회 후 warning-only와 blocking-key-missing focused node 2개가 green이다. W2-IO-A와 그 이후 항목은 수행하지 않았다.
-다음 사용자 결정: W2-IO-A를 active로 승인할지 결정.
+ID / 상태: `W2-IO-A / DONE`
+사용자 목적과의 연결: Distribution/Tuned CSV export의 row/write 실패가 기존 사용자 destination을 덮어쓰거나 손상시키지 않도록 data-loss 경계를 보존한다.
+이번 변경 묶음: `main_window.py`에 두 CSV export가 공유하는 module-level atomic writer 하나를 추가하고 기존 header/row 생성은 callback으로 그대로 유지한다.
+명시적 제외 범위: CSV schema/row semantics, XLSX export, Distribution planner, solver/PowerSI, W2-IO-B, production SPD solve, installer/release.
+root-cause 가설: 두 export가 destination을 직접 열어 쓰므로 row iteration/write/flush/close 실패 시 기존 파일이 truncate되거나 partial output으로 남을 수 있다.
+읽을 source/test/subsystem 문서: 목적·기술 기준, 이 작업 기준, 두 `main_window.py` CSV export/callers, `spreadsheet_export.py` atomic sibling pattern, 기존 Distribution/Tuned GUI export tests.
+acceptance: sibling temp를 `utf-8-sig`/`newline=""`로 닫은 뒤 한 번만 replace하고, write/close/replace 실패 시 sentinel destination과 temp cleanup을 보존한다. 기존 BOM/header/row success node 2개가 유지된다.
+V0–V5 계획과 최대 횟수: V0 diff/compile 정적 확인 1회; failure-preservation V1 red 재현 1회와 failure + Distribution/Tuned success 3 focused node green 1회; V2–V5 금지.
+중단 조건: existing row/schema 변경이 필요하거나 Windows open-temp replace 경계가 불명확해지는 경우, 또는 V2 이상 검증이 필요해지는 경우.
+evidence identity before: `main` / `66dc98a` / v0.23.0.
+결과 / artifact / diff: `main_window.py`의 Distribution/Tuned CSV export가 sibling `NamedTemporaryFile`에 UTF-8 BOM/newline 보존으로 쓰고 정상 close 후 한 번만 destination을 replace한다. write/flush/close/replace 실패 시 temp를 삭제하고 기존 destination을 보존한다. failure-preservation 1개와 기존 Distribution/Tuned success node 2개가 green이다. W2-IO-B와 그 이후 항목은 수행하지 않았다.
+다음 사용자 결정: W2-IO-B를 active로 승인할지 결정.
 
 ## 8. Context 압축·새 session 복구 절차
 

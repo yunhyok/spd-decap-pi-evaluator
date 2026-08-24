@@ -1209,6 +1209,22 @@ def test_tuned_csv_rows_exclude_floating_dummy_from_validated_scenario() -> None
     assert _excel_safe_csv_cell("\t=CMD") == "'\t=CMD"
 
 
+def test_csv_export_write_failure_preserves_destination_and_cleans_temp(
+    tmp_path: Path,
+) -> None:
+    destination = tmp_path / "results.csv"
+    destination.write_text("sentinel\n", encoding="utf-8")
+
+    def fail_write(_stream) -> None:
+        raise OSError("simulated CSV write failure")
+
+    with pytest.raises(OSError, match="simulated CSV write failure"):
+        main_window_module._write_csv_atomically(destination, fail_write)
+
+    assert destination.read_text(encoding="utf-8") == "sentinel\n"
+    assert not tuple(tmp_path.glob(f".{destination.name}.*.tmp"))
+
+
 def test_result_table_impedance_uses_log_log_interpolation_and_compact_units() -> None:
     class View:
         frequency_hz = [1.0e6, 100.0e6]

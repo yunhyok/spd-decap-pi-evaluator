@@ -10,6 +10,7 @@ from decimal import Decimal, ROUND_FLOOR
 from hashlib import sha256
 from math import hypot, isfinite
 from pathlib import Path
+from tempfile import NamedTemporaryFile
 from time import perf_counter
 from typing import Any, Callable
 
@@ -1551,6 +1552,34 @@ def _excel_safe_csv_cell(value: object) -> str:
     if text.startswith(("=", "+", "-", "@", "\t", "\r", "\n")):
         return f"'{text}"
     return text
+
+
+def _write_csv_atomically(
+    destination: Path,
+    write_rows: Callable[[Any], None],
+) -> None:
+    temp_path: Path | None = None
+    try:
+        with NamedTemporaryFile(
+            mode="w",
+            encoding="utf-8-sig",
+            newline="",
+            dir=destination.parent,
+            prefix=f".{destination.name}.",
+            suffix=".tmp",
+            delete=False,
+        ) as stream:
+            temp_path = Path(stream.name)
+            write_rows(stream)
+            stream.flush()
+        temp_path.replace(destination)
+    except BaseException:
+        if temp_path is not None:
+            try:
+                temp_path.unlink(missing_ok=True)
+            except OSError:
+                pass
+        raise
 
 
 def _tuned_decap_csv_rows(
@@ -5172,7 +5201,7 @@ class MainWindow(QMainWindow):
         )
         try:
             if suffix == ".csv":
-                with path.open("w", encoding="utf-8-sig", newline="") as stream:
+                def write_distribution_csv(stream: Any) -> None:
                     writer = csv.writer(stream, lineterminator="\n")
                     writer.writerow(
                         (
@@ -5196,6 +5225,7 @@ class MainWindow(QMainWindow):
                                 float(y_um),
                             )
                         )
+                _write_csv_atomically(path, write_distribution_csv)
             else:
                 from ..distribution import (
                     DISTRIBUTION_VIA_PROJECTION_POLICY,
@@ -8131,7 +8161,7 @@ class MainWindow(QMainWindow):
         if path.suffix.casefold() != ".csv":
             path = path.with_suffix(".csv")
         try:
-            with path.open("w", encoding="utf-8-sig", newline="") as stream:
+            def write_tuned_csv(stream: Any) -> None:
                 writer = csv.writer(stream, lineterminator="\n")
                 writer.writerow(
                     (
@@ -8179,6 +8209,7 @@ class MainWindow(QMainWindow):
                     )
                     for row in rows
                 )
+            _write_csv_atomically(path, write_tuned_csv)
         except OSError as exc:
             QMessageBox.critical(
                 self,
