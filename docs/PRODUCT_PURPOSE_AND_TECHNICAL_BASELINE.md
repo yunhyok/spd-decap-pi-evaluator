@@ -76,7 +76,7 @@ DRC, 제조 또는 sign-off 도구를 대체한다고 주장하지 않는다.
 
 - Desktop 기본 profile은 `layerwise_admittance_v1`, 표시명은
   **Layer-surface terminal-complete network**다.
-- 현행 solver identity는 `modal-mvp-0.8.3`, compiler algorithm은
+- 현행 solver identity는 `modal-mvp-0.8.4`, compiler algorithm은
   `layer-surface-adjacent-y-island-finite-via-termination-kron-v8`이다.
 - retained physical `(layer, NET)` artwork surface를 독립 node로 두고, 인접
   dielectric gap의 ordered artwork에서 Maxwell admittance block을 만든다.

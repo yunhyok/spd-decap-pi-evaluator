@@ -44,6 +44,7 @@ _TINY = 1.0e-30
 _SYMMETRY_REL_LIMIT = 1.0e-10
 _ROW_SUM_REL_LIMIT = 1.0e-10
 _RESIDUAL_REL_LIMIT = 1.0e-9
+_MAX_FACTOR_PIVOT_RATIO = 1.0e13
 _PORT_RHS_BATCH_SIZE = 4
 _TERMINATION_MAPPING_CACHE_LIMIT = 4
 # Two simultaneous SuperLU factors are an intentional memory-aware ceiling for
@@ -1638,6 +1639,7 @@ class CompiledLayerSurfaceNetwork:
                 )
                 and isfinite(result.maximum_factor_pivot_ratio)
                 and result.maximum_factor_pivot_ratio >= 1.0
+                and result.maximum_factor_pivot_ratio <= _MAX_FACTOR_PIVOT_RATIO
                 and isfinite(result.maximum_relative_residual)
                 and 0.0 <= result.maximum_relative_residual
                 <= _RESIDUAL_REL_LIMIT
@@ -2241,11 +2243,18 @@ class CompiledLayerSurfaceNetwork:
                         f"layer-network Kron block is singular near {labels!r}"
                     ) from exc
                 diagonal = np.abs(factor.U.diagonal())
-                if diagonal.size and float(np.min(diagonal)) > 0.0:
-                    frequency_pivot_ratio = max(
-                        frequency_pivot_ratio,
-                        float(np.max(diagonal) / np.min(diagonal)),
+                if (
+                    not diagonal.size
+                    or not np.all(np.isfinite(diagonal))
+                    or np.any(diagonal <= 0.0)
+                ):
+                    raise LayerSurfaceNetworkError(
+                        "layer-network factor forward-reliability pivots are invalid"
                     )
+                frequency_pivot_ratio = max(
+                    frequency_pivot_ratio,
+                    float(np.max(diagonal) / np.min(diagonal)),
+                )
                 local_norm = float(np.linalg.norm(local.data))
                 for batch_start in range(0, len(port_indices), _PORT_RHS_BATCH_SIZE):
                     if stop_requested.is_set():
@@ -2322,6 +2331,11 @@ class CompiledLayerSurfaceNetwork:
                         raise LayerSurfaceNetworkError(
                             "layer-network Kron solve residual is excessive "
                             f"({relative_residual:.3e})"
+                        )
+                    if frequency_pivot_ratio > _MAX_FACTOR_PIVOT_RATIO:
+                        raise LayerSurfaceNetworkError(
+                            "layer-network factor forward-reliability pivot ratio is excessive "
+                            f"({frequency_pivot_ratio:.3e})"
                         )
                     for column, (port_index, endpoints) in enumerate(
                         zip(batch_indices, incidence, strict=True)

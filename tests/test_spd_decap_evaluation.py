@@ -3893,7 +3893,7 @@ def test_layerwise_batch_uses_board_original_identity_without_cache(
 def test_solver_version_0_8_2_recalculates_0_6_baseline_cache(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    assert evaluation_module.SOLVER_VERSION == "modal-mvp-0.8.3"
+    assert evaluation_module.SOLVER_VERSION == "modal-mvp-0.8.4"
     scenario = _scenario()
     tuned = scenario.decaps[0].model_copy(update={"enabled": False})
     scenario = ScenarioSpec.model_validate(

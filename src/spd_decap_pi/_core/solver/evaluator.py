@@ -70,7 +70,9 @@ if TYPE_CHECKING:
 # share a solver identity with this transfer function.  v0.8.3 adds one bounded
 # refinement depth after two passes proved insufficient for a narrow real-board
 # holdout feature without relaxing any convergence tolerance.
-SOLVER_VERSION = "modal-mvp-0.8.3"
+# v0.8.4 adds a fail-closed sparse-factor forward-reliability gate without
+# changing the layer-surface compiler or convergence policy.
+SOLVER_VERSION = "modal-mvp-0.8.4"
 CONVERGENCE_POLICY_VERSION = "adaptive-frequency-modal-v5"
 DEFAULT_MAX_REFINEMENT_ITERATIONS = 3
 DEFAULT_MAX_NEW_FREQUENCY_POINTS = 64

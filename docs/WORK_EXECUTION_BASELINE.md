@@ -1,10 +1,10 @@
 # SPD Decap PI Evaluator 작업 기준
 
 - 적용 제품: **SPD Decap PI Evaluator v0.23.0**
-- 문서 버전: **1.1**
+- 문서 버전: **1.2**
 - 상위 기준: [목적·기술 기준](PRODUCT_PURPOSE_AND_TECHNICAL_BASELINE.md) v1.1
-- 현행 source 기준: `main` commit `3adb9f357f2ca4248d66cd4349faff276c3aa007`
-- 상태: **ACTIVE CONTROL DOCUMENT — W4-FREQ 완료; W4-COND 대기**
+- 현행 source 기준: `main` commit `3b6ed2cc6308179002fee817c1b14f7efebd6cb9`
+- 상태: **ACTIVE CONTROL DOCUMENT — W4-COND 완료; W5-GATE 승인 대기**
 - 최종 개정: 2026-08-24 (Asia/Seoul)
 
 ## 1. 압축 후 즉시 복구 카드
@@ -16,13 +16,13 @@ context가 압축되거나 새 session에서 작업을 재개하면 다른 연�
 |---|---|
 | 변하지 않는 목적 | source-derived single-rail `Zii`의 PowerSI 근접 정확성과 일반화 |
 | 현재 branch | `main`만 사용; 정리된 과거 branch를 다시 조사하지 않음 |
-| 현재 active work item | `NONE` — `W4-FREQ` 완료; `W4-COND` 대기 |
-| 다음 권장 묶음 | `W4-COND` ill-conditioned sparse solve reliability gate |
+| 현재 active work item | `NONE` — `W4-COND` 완료; `W5-GATE` 승인 대기 |
+| 다음 권장 묶음 | `W5-GATE` 정확성 계약·frozen baseline 승인 검토 |
 | 코드 수정 권한 | active item 승인 전 production code 수정 금지 |
-| 고비용 검증 권한 | `W4-COND` synthetic focused/V2–V3만 허용; production SPD/PowerSI 금지 |
+| 고비용 검증 권한 | `W5-GATE` 사용자 승인 전 numerical/PowerSI 실행 금지 |
 | 현재 정확성 상태 | `current / unknown / not_run` |
 | 현재 release 계산 증거 | import/save/solver-entry만 통과; frequency solve `0` |
-| 현재 working tree | W4-FREQ midpoint coverage focused gate와 identity 갱신 완료; current HEAD 기록 |
+| 현재 working tree | W4-COND forward-reliability gate와 solver identity v0.8.4 갱신 완료; current HEAD 기록 |
 
 최초 목적은 [목적·기술 기준 2장](PRODUCT_PURPOSE_AND_TECHNICAL_BASELINE.md#2-최우선-목적),
 현재 증거 상태는 [6장](PRODUCT_PURPOSE_AND_TECHNICAL_BASELINE.md#6-증거와-상태-표기)이
@@ -101,7 +101,7 @@ active work item에 명시된 source/test/subsystem 문서만 추가로 읽는�
 | `W2-IO-B` | 6 | DONE | 대형 `.spdpi` load cancellation과 load 중 close 경로 | 기존 loader callback 재사용, 취소 후 stale state 없음 |
 | `W3-CI` | 7 | DONE | 짧은 product-core lane을 required CI로 연결 | parser/scenario/solver/Distribution/GUI I/O 핵심 경로 green |
 | `W4-FREQ` | 8 | DONE | adaptive frequency가 sample 사이 narrow peak를 보지 않고 converged 처리하는 blind spot | midpoint/coverage focused case가 peak 누락을 검출 |
-| `W4-COND` | 9 | READY | ill-conditioned sparse solve의 결과 신뢰성 gate | residual과 별도 conditioning/forward-reliability 판정 |
+| `W4-COND` | 9 | DONE | ill-conditioned sparse solve의 결과 신뢰성 gate | residual과 별도 conditioning/forward-reliability 판정 |
 | `W5-GATE` | 10 | BLOCKED | 제품 PowerSI 수치 gate와 development/holdout/unseen partition 확정 | 사용자 승인 필요 |
 | `W6-BASE` | 11 | BLOCKED | exact current solver baseline 1회 | W1–W5 완료와 run manifest 승인 필요 |
 | `W7-PHYS` | 12 | BLOCKED | 가장 큰 error component의 owning physical block 하나 수정 | W6 rail별 error decomposition 필요 |
@@ -171,18 +171,18 @@ evidence identity before:
 다음 사용자 결정:
 ```
 
-ID / 상태: `W4-FREQ / DONE`
-사용자 목적과의 연결: 초기 flat grid가 curvature heuristic만으로 수렴 처리되어 adjacent geometric midpoint의 narrow feature를 놓치는 product-core blind spot을 synthetic gate로 차단한다. 이는 PowerSI 정확성 증거가 아니다.
-이번 변경 묶음: `evaluator.py` first-stable branch에서 refinement budget 안의 deterministic interval-index midpoint probe를 먼저 측정하고, 기존 delta/cancel/progress/escalation 경로를 재사용한다. `CONVERGENCE_POLICY_VERSION`을 `adaptive-frequency-modal-v5`로 갱신하고 current identity assertions만 맞췄다.
-명시적 제외 범위: `frequency.py`, solver physics, public config/schema/dependency, modal/Distribution 범위, production SPD/PowerSI, installer/release, hidden-peak 일반 보장.
-root-cause 가설: 초기 측정값이 flat하면 `refine_log_grid`가 unchanged grid를 반환하여 grid-to-grid delta를 한 번도 측정하지 않고 converged 처리한다.
-읽을 source/test/subsystem 문서: 목적·기술 기준, 이 작업 기준, `evaluator.py`의 `_refine_frequency_for_modes`/`_frequency_grid_delta`, `tests/test_modal_convergence.py`, `tests/test_shared_pad_cluster_core.py`.
-acceptance: initial flat grid에서 max-new-point budget 내 deterministic geometric midpoint를 측정하고, 0.6 dB synthetic narrow peak를 `max_delta_db > 0.5`와 budget exhaustion으로 검출한다. 동일 midpoint second measurement가 flat이면 delta 0으로 수렴한다.
-V0–V5 계획과 최대 횟수: adversarial V1 red 1회; adversarial+flat V1 최종 `2 passed` 1회; modal/shared V2 최종 `58 passed` 1회; V0 diff-check 1회; V3–V5와 production solve 금지.
-중단 조건: midpoint budget 초과, cancellation/progress 경로 변경 필요, focused red가 production defect로 보이거나 full suite/production SPD/PowerSI가 필요해지는 경우.
-evidence identity before: `main` / `3adb9f357f2ca4248d66cd4349faff276c3aa007` / v0.23.0.
-결과 / artifact / diff: adversarial node 최초 red는 `1 failed`; test target 보정 후 adversarial+flat focused는 `2 passed in 0.64s`. V2 첫 실행에서 기존 flat fake의 `metrics.peaks` 누락이 드러나 이를 stale test double로 최소 보정했고, 최종 `pytest -q tests/test_modal_convergence.py tests/test_shared_pad_cluster_core.py`는 `58 passed in 4.48s`였다. 변경은 evaluator first-stable midpoint probe, W4 tests, current v5 identity assertions, 이 work register에 한정했다. accuracy는 `unknown / not_run`; production SPD/PowerSI/installer/release와 hidden-peak 일반 보장은 수행·주장하지 않았다.
-다음 사용자 결정: W4-COND를 active로 승인할지 결정.
+ID / 상태: `W4-COND / DONE`
+사용자 목적과의 연결: sparse factor가 작은 backward residual을 내더라도 극단적인 U-pivot spread로 forward reliability가 무너지는 결과를 product-core 경계에서 fail-closed 한다. 이는 model-form 또는 PowerSI 정확성 증거가 아니다.
+이번 변경 묶음: `layer_surface_network.py`의 기존 U-diagonal ratio 계산에 `1.0e13` ceiling과 invalid-pivot rejection을 추가하고 residual gate 이후 forward-reliability rejection을 적용했다. cache payload에도 동일 ceiling을 검증하며 solver identity를 `modal-mvp-0.8.4`로 갱신했다.
+명시적 제외 범위: fallback/reordering/pivot tuning/clamp, residual gate 완화, compiler `kron-v8`, convergence `v5`, app `v0.23.0`, model physics, W5 hash-bound PowerSI validation, production SPD/PowerSI, installer/release.
+root-cause 가설: 기존 코드는 `factor.U.diagonal()` ratio를 진단에만 기록하고 극단적인 spread를 결과·cache에 허용했다.
+읽을 source/test/subsystem 문서: 목적·기술 기준, 이 작업 기준, `layer_surface_network.py` factor/cache 경계, `tests/test_layer_surface_network.py`, `tests/test_layerwise_network.py`, 그리고 W5 승인 전 재생성하지 않는 frozen pre-W4 validator/non-regression scripts.
+acceptance: 실제 SuperLU `solve`를 위임하는 wrapper가 backward residual `<=1e-9`인 상태에서 1:1e-17 pivot ratio를 forward-reliability wording으로 거부한다. 1:1e-13(정확히 `1.0e13`)은 admittance/residual/보고 ratio를 보존하며 허용된다. 빈/nonfinite/nonpositive pivot과 초과 cache payload는 fail-closed다.
+V0–V5 계획과 최대 횟수: conditioning adversarial V1 red 1회; adversarial+ceiling V1 green `2 passed` 1회; layer-surface/layerwise plus exact solver identity V2 `94 passed` 1회; V0 diff-check 1회; V3–V5와 production solve 금지.
+중단 조건: residual gate와 forward gate를 혼합해야 하거나, fallback/reordering/physics 변경이 필요하거나, W5 numerical/PowerSI run 승인이 필요한 경우.
+evidence identity before: `main` / `3b6ed2cc6308179002fee817c1b14f7efebd6cb9` / solver `modal-mvp-0.8.3` / compiler `kron-v8` / convergence `v5`.
+결과 / artifact / diff: conditioning red node는 `1 failed`; 최소 solver/cache gate 후 adversarial+ceiling focused는 `2 passed in 0.72s`였다. 최종 `pytest -q tests/test_layer_surface_network.py tests/test_layerwise_network.py tests/test_spd_decap_evaluation.py::test_solver_version_0_8_2_recalculates_0_6_baseline_cache`는 `94 passed in 2.16s`였다. W4-FREQ synthetic closure는 별도 commit에서 완료되었고, 이번 묶음은 forward-reliability gate와 v0.8.4 live identity에 한정한다. W5 hash-bound validator/non-regression scripts와 기존 artifact identity는 pre-W4 값으로 동결해 두었으며 W5 사용자 승인 전 갱신하지 않는다. accuracy는 `unknown / not_run`; model-form/PowerSI 수치 합격을 주장하지 않는다.
+다음 사용자 결정: W5-GATE를 승인할지 결정.
 
 ## 8. Context 압축·새 session 복구 절차
 
@@ -250,3 +250,4 @@ evidence identity before: `main` / `3adb9f357f2ca4248d66cd4349faff276c3aa007` / 
 |---|---|---|
 | 1.0 | 2026-08-24 | 두 문서 기반 작업 통제, 우선순위 register, 검증 사다리·최대 횟수, active-item 형식, context 복구와 중단 조건을 생성. |
 | 1.1 | 2026-08-24 | W4-FREQ midpoint coverage gate 완료, v5 identity와 focused evidence를 기록하고 W4-COND를 다음 item으로 지정. |
+| 1.2 | 2026-08-24 | W4-COND forward-reliability gate와 v0.8.4 solver identity 완료, W5-GATE 승인 대기로 전환. |

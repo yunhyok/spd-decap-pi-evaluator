@@ -1733,6 +1733,87 @@ def test_rhs_batch_residual_gate_checks_each_port_column(
         network.solve([8.0e6])
 
 
+def test_factor_pivot_ratio_rejects_forward_unreliable_real_superlu_result(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    network = compile_layer_surface_network(
+        NODES,
+        partials=(_edge(0, 3, 2.5e-9, upper="L1", lower="L3"),),
+        via_links=(),
+        ports=(LayerSurfacePort("P", NODES[0], NODES[3]),),
+    )
+    original_splu = layer_surface_network.splu
+
+    class DelegatingFactor:
+        def __init__(self, factor: object) -> None:
+            self._factor = factor
+            self.U = type(
+                "PivotView",
+                (),
+                {"diagonal": lambda _self: np.asarray([1.0, 1.0e-17])},
+            )()
+
+        def solve(self, rhs: np.ndarray) -> np.ndarray:
+            return np.asarray(self._factor.solve(rhs))
+
+    monkeypatch.setattr(
+        layer_surface_network,
+        "splu",
+        lambda matrix: DelegatingFactor(original_splu(matrix)),
+    )
+
+    with pytest.raises(LayerSurfaceNetworkError, match="forward-reliability"):
+        network.solve([8.0e6])
+
+
+def test_factor_pivot_ratio_ceiling_preserves_real_result_and_residual(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    def make_network() -> object:
+        return compile_layer_surface_network(
+            NODES,
+            partials=(_edge(0, 3, 2.5e-9, upper="L1", lower="L3"),),
+            via_links=(),
+            ports=(LayerSurfacePort("P", NODES[0], NODES[3]),),
+        )
+
+    baseline = make_network().solve([8.0e6])
+    network = make_network()
+    original_splu = layer_surface_network.splu
+    solve_calls = 0
+
+    class DelegatingFactor:
+        def __init__(self, factor: object) -> None:
+            self._factor = factor
+            self.U = type(
+                "PivotView",
+                (),
+                {"diagonal": lambda _self: np.asarray([1.0, 1.0e-13])},
+            )()
+
+        def solve(self, rhs: np.ndarray) -> np.ndarray:
+            nonlocal solve_calls
+            solve_calls += 1
+            return np.asarray(self._factor.solve(rhs))
+
+    monkeypatch.setattr(
+        layer_surface_network,
+        "splu",
+        lambda matrix: DelegatingFactor(original_splu(matrix)),
+    )
+    result = network.solve([8.0e6])
+
+    assert solve_calls == 1
+    np.testing.assert_allclose(
+        result.effective_admittance_by_port["P"],
+        baseline.effective_admittance_by_port["P"],
+        rtol=1.0e-12,
+        atol=1.0e-18,
+    )
+    assert result.diagnostics.maximum_factor_pivot_ratio == pytest.approx(1.0e13)
+    assert result.diagnostics.maximum_relative_residual <= 1.0e-9
+
+
 def test_finite_link_suppression_changes_rl_stamp_and_structural_components() -> None:
     capacitance = 1.8e-9
     resistance = 0.012
