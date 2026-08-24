@@ -142,7 +142,14 @@ def _stable_grid_refinement(monkeypatch, request, deltas):
 
     refined_grid = np.asarray([1e3, 1e4, 1e6, 1e9], dtype=np.float64)
 
-    def fake_refine_log_grid(frequencies, impedance, *, max_new_points, **_kwargs):
+    def fake_refine_log_grid(
+        frequencies,
+        impedance,
+        *,
+        curvature_threshold_db,
+        max_new_points,
+    ):
+        assert curvature_threshold_db == evaluator.DEFAULT_CURVATURE_THRESHOLD_DB
         actual = np.asarray(frequencies, dtype=np.float64)
         if actual.size == request.frequencies_hz.size:
             return SimpleNamespace(frequencies_hz=refined_grid)
@@ -192,13 +199,19 @@ def test_stable_frequency_grid_reports_passing_measured_deltas_as_converged(monk
 def test_first_pass_stable_frequency_grid_reports_zero_deltas(monkeypatch) -> None:
     request = _request(8)
 
-    monkeypatch.setattr(
-        evaluator,
-        "refine_log_grid",
-        lambda frequencies, impedance, *, max_new_points, **_kwargs: SimpleNamespace(
+    def fake_refine_log_grid(
+        frequencies,
+        impedance,
+        *,
+        curvature_threshold_db,
+        max_new_points,
+    ):
+        assert curvature_threshold_db == evaluator.DEFAULT_CURVATURE_THRESHOLD_DB
+        return SimpleNamespace(
             frequencies_hz=np.asarray(frequencies, dtype=np.float64)
-        ),
-    )
+        )
+
+    monkeypatch.setattr(evaluator, "refine_log_grid", fake_refine_log_grid)
     monkeypatch.setattr(evaluator, "evaluate_rail", _fake_outcome)
 
     result = evaluator._refine_frequency_for_modes(

@@ -2319,8 +2319,12 @@ def test_layerwise_builder_preflight_compiles_one_board_binding_and_proves_92_ra
         return SimpleNamespace(rail_id=evaluation_rail_id)
 
     def compile_template(
-        candidate: object, rail_id: str, **_kwargs: object
+        candidate: object,
+        rail_id: str,
+        *,
+        terminal_complete_external_input: bool,
     ) -> object:
+        assert terminal_complete_external_input is True
         assert candidate.rail_id == rail_id
         return SimpleNamespace(rail_id=rail_id, cap_models={"M1": object()})
 
@@ -2409,12 +2413,19 @@ def test_layerwise_builder_preflight_caches_only_board_binding_failure(
             rail_id=evaluation_rail_id
         ),
     )
+    def compile_template(
+        _candidate: object,
+        rail_id: str,
+        *,
+        terminal_complete_external_input: bool,
+    ) -> object:
+        assert terminal_complete_external_input is True
+        return SimpleNamespace(rail_id=rail_id, cap_models={"M1": object()})
+
     monkeypatch.setattr(
         evaluation_module,
         "compile_project_evaluation_template",
-        lambda _candidate, rail_id, **_kwargs: SimpleNamespace(
-            rail_id=rail_id, cap_models={"M1": object()}
-        ),
+        compile_template,
     )
 
     class SourceModel:
@@ -2505,14 +2516,23 @@ def test_layerwise_board_binding_is_separate_for_tuned_and_original_builder_pass
             scenario=scenario, rail_id=evaluation_rail_id
         ),
     )
-    monkeypatch.setattr(
-        evaluation_module,
-        "compile_project_evaluation_template",
-        lambda candidate, rail_id, **_kwargs: SimpleNamespace(
+    def compile_template(
+        candidate: object,
+        rail_id: str,
+        *,
+        terminal_complete_external_input: bool,
+    ) -> object:
+        assert terminal_complete_external_input is True
+        return SimpleNamespace(
             scenario=candidate.scenario,
             rail_id=rail_id,
             cap_models={"M1": object()},
-        ),
+        )
+
+    monkeypatch.setattr(
+        evaluation_module,
+        "compile_project_evaluation_template",
+        compile_template,
     )
 
     class SourceModel:
