@@ -3,8 +3,8 @@
 - 적용 제품: **SPD Decap PI Evaluator v0.23.0**
 - 문서 버전: **1.0**
 - 상위 기준: [목적·기술 기준](PRODUCT_PURPOSE_AND_TECHNICAL_BASELINE.md) v1.1
-- 현행 source 기준: `main` commit `0f24363c14e9b9f588f03e7f9e0c48a27118546f`
-- 상태: **ACTIVE CONTROL DOCUMENT — W1-TEST 완료; W2-SPD-A 대기**
+- 현행 source 기준: `main` commit `575514a90c359f87b82753dd9b0e43270320948c`
+- 상태: **ACTIVE CONTROL DOCUMENT — W2-SPD-A 완료; W2-SPD-B 대기**
 - 최종 개정: 2026-08-24 (Asia/Seoul)
 
 ## 1. 압축 후 즉시 복구 카드
@@ -16,13 +16,13 @@ context가 압축되거나 새 session에서 작업을 재개하면 다른 연�
 |---|---|
 | 변하지 않는 목적 | source-derived single-rail `Zii`의 PowerSI 근접 정확성과 일반화 |
 | 현재 branch | `main`만 사용; 정리된 과거 branch를 다시 조사하지 않음 |
-| 현재 active work item | `NONE` — `W1-TEST` 완료; 다음 승인 대기 |
+| 현재 active work item | `NONE` — `W2-SPD-A` 완료; 다음 승인 대기 |
 | 다음 권장 묶음 | `W1` product-core test truth 복원 후 `W2` bounded correctness fixes |
 | 코드 수정 권한 | active item 승인 전 production code 수정 금지 |
 | 고비용 검증 권한 | 없음 — W1은 V0–V2 focused 검증만 허용 |
 | 현재 정확성 상태 | `current / unknown / not_run` |
 | 현재 release 계산 증거 | import/save/solver-entry만 통과; frequency solve `0` |
-| 현재 working tree | W0 문서와 W1 test 계약 변경이 각각 commit됨; production code는 변경하지 않음 |
+| 현재 working tree | W0/W1/W2-SPD-A commit 완료; production/source graph 변경 적용 |
 
 최초 목적은 [목적·기술 기준 2장](PRODUCT_PURPOSE_AND_TECHNICAL_BASELINE.md#2-최우선-목적),
 현재 증거 상태는 [6장](PRODUCT_PURPOSE_AND_TECHNICAL_BASELINE.md#6-증거와-상태-표기)이
@@ -94,7 +94,7 @@ active work item에 명시된 source/test/subsystem 문서만 추가로 읽는�
 |---|---:|---|---|---|
 | `W0-DOC` | 0 | DONE | 목적·기술 기준과 이 작업 기준 작성 | 상호 링크, Markdown/link/diff 검증 |
 | `W1-TEST` | 1 | DONE | stale test double·구형 정책 기대를 current v0.23 계약에 맞게 정리하고 product-core selection 고정 | 실제 결함은 red로 남기고 test 자체 오류 제거 |
-| `W2-SPD-A` | 2 | READY | source-graph target contact persistence 복구 | target-layer coordinate가 저장·사용되는 focused regression |
+| `W2-SPD-A` | 2 | DONE | source-graph target contact persistence 복구 | target-layer coordinate가 저장·사용되는 focused regression |
 | `W2-SPD-B` | 3 | READY | graph-contact `source_sha256` 교차 검증 | 다른 source coordinate가 scenario validation에서 차단 |
 | `W2-SPD-C` | 4 | READY | `blocking:false` mixed-reference warning이 import를 중단하는 문제 수정 | warning-only case import 성공, blocking case 차단 유지 |
 | `W2-IO-A` | 5 | READY | Distribution/Tuned CSV atomic replace | write 실패 시 기존 파일 보존 |
@@ -171,18 +171,18 @@ evidence identity before:
 다음 사용자 결정:
 ```
 
-ID / 상태: `W1-TEST / DONE`
-사용자 목적과의 연결: product-core test truth를 먼저 복원하여 이후 정확성·물리 결함 수정의 판정 기반을 확보한다.
-이번 변경 묶음: stale evaluation mock, Distribution exact target-layer evidence, scenario blocker/initial-state, modal convergence fake/spy, mixed-witness selector, saved distributed reload test의 현재 caller/signature 계약 정렬.
-명시적 제외 범위: production code, solver 물리식, PowerSI/production SPD solve, installer/release, 수치 합격선 변경.
-root-cause 가설: 실패 대부분은 v0.23 production API와 분리된 오래된 test double/정책 기대이며, 실제 product defect는 기대값 변경으로 숨기지 않는다.
-읽을 source/test/subsystem 문서: 목적·기술 기준, 이 작업 기준, 변경된 test 파일의 현재 caller/signature와 해당 production helper.
-acceptance: 위 stale 계약 오류가 사라지고 실제 결함 red는 그대로 식별되며 product-core selection이 재현 가능하게 기록된다.
-V0–V5 계획과 최대 횟수: V0 문서 검증 1회; 각 root cause V1 focused 1회; W1 종료 시 관련 test selection V2 1회; V3–V5 금지.
+ID / 상태: `W2-SPD-A / DONE`
+사용자 목적과의 연결: source-derived graph contact를 저장해 Layerwise solver port localization이 원본 landing과 target artwork를 분리해 사용하도록 한다.
+이번 변경 묶음: `_scenario_via_landing`에 source SHA와 layer별 첫 graph contact persistence를 복구하고 모든 production caller가 `analysis.source.sha256`를 전달한다.
+명시적 제외 범위: W2-SPD-B source SHA 교차검증, mixed-reference blocking 정책, solver physics, Distribution, PowerSI/production SPD solve, installer/release.
+root-cause 가설: recovery graph maps는 생성되지만 `_scenario_via_landing` 변환 단계에서 `ScenarioViaGraphContactEvidence`가 누락되어 저장 scenario가 raw landing XY로 잘못 fallback한다.
+읽을 source/test/subsystem 문서: 목적·기술 기준, 이 작업 기준, `spd_adapter.py` 변환/호출부, `scenario.py` graph evidence schema, 두 graph-contact regression.
+acceptance: 동일 via/endpoint의 각 target layer 첫 contact가 원본 landing XY를 보존한 graph evidence로 저장되고 두 focused regression이 green이다.
+V0–V5 계획과 최대 횟수: V0 정적 caller/diff 1회; 기존 두 graph-contact V1 red 재현 1회와 수정 후 green 1회; V2–V5 금지.
 중단 조건: production defect로 판정되는 실패, source/signature 불명확, 또는 V3 이상 검증이 필요해지는 경우.
-evidence identity before: `main` / `0f24363c14e9b9f588f03e7f9e0c48a27118546f` / v0.23.0.
-결과 / artifact / diff: evaluation mock 3건, Distribution exact target-layer 기대 2건, scenario blocker/초기 상태 3건, modal fake/spy 4건, mixed-witness selector 계약 1건, saved distributed reload projection 경로 1건을 최소 수정했다. Production code는 수정하지 않았다. V2 선택 suite 최초 실행은 299 passed, 4 failed, 1 skipped였고, 이후 stale Distribution 1건을 focused green으로 닫았다. 남은 red는 graph-contact persistence 2건(W2-SPD-A)과 `blocking:false` mixed-reference import 1건(W2-SPD-C)이다.
-다음 사용자 결정: W2-SPD-A를 active로 승인할지 결정.
+evidence identity before: `main` / `575514a90c359f87b82753dd9b0e43270320948c` / v0.23.0.
+결과 / artifact / diff: `9cc8662`에서 `_scenario_via_landing`의 layer별 첫 graph contact, candidate count/hash, selected distance, source SHA persistence와 모든 production caller SHA 전달을 적용했다. 기존 graph-contact regression 2개가 수정 후 green이다. W2-SPD-B source SHA 교차검증은 수행하지 않았다.
+다음 사용자 결정: W2-SPD-B를 active로 승인할지 결정.
 
 ## 8. Context 압축·새 session 복구 절차
 

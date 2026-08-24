@@ -571,6 +571,8 @@ def _common_eligibility_at_landings(
 def _scenario_via_landing(
     landing: Any,
     recovery: Any,
+    *,
+    source_sha256: str,
 ) -> ScenarioViaLanding:
     """Convert ephemeral path recovery output into compact persisted evidence."""
 
@@ -639,6 +641,56 @@ def _scenario_via_landing(
             landing.via_id.casefold(), ()
         )
     )
+    graph_contact_evidence: list[ScenarioViaGraphContactEvidence] = []
+    target_contacts_by_key = getattr(recovery, "target_contacts_by_key", {})
+    target_contact_count_by_key = getattr(
+        recovery, "target_contact_count_by_key", {}
+    )
+    target_contact_hash_by_key = getattr(recovery, "target_contact_hash_by_key", {})
+    via_key = str(landing.via_id).casefold()
+    endpoint_key = str(landing.endpoint_node_id).casefold()
+    for key, contacts in target_contacts_by_key.items():
+        if (
+            not isinstance(key, tuple)
+            or len(key) != 3
+            or str(key[0]).casefold() != via_key
+            or str(key[1]).casefold() != endpoint_key
+            or not contacts
+        ):
+            continue
+        first_contact = contacts[0]
+        try:
+            target_node_id = str(first_contact[0]).strip()
+            target_x_um = float(first_contact[1])
+            target_y_um = float(first_contact[2])
+            candidate_count = int(target_contact_count_by_key[key])
+            candidate_contacts_sha256 = str(target_contact_hash_by_key[key])
+        except (KeyError, TypeError, ValueError, IndexError):
+            continue
+        if (
+            not target_node_id
+            or candidate_count < 1
+            or len(candidate_contacts_sha256) != 64
+            or not isfinite(target_x_um)
+            or not isfinite(target_y_um)
+        ):
+            continue
+        graph_contact_evidence.append(
+            ScenarioViaGraphContactEvidence(
+                target_layer=str(key[2]),
+                target_node_id=target_node_id,
+                x_um=target_x_um,
+                y_um=target_y_um,
+                candidate_count=candidate_count,
+                candidate_contacts_sha256=candidate_contacts_sha256,
+                selection_basis="NEAREST_COMPONENT_TARGET",
+                source_sha256=source_sha256,
+                selected_distance_um=hypot(
+                    target_x_um - float(landing.x_um),
+                    target_y_um - float(landing.y_um),
+                ),
+            )
+        )
     return ScenarioViaLanding(
         via_id=landing.via_id,
         net=landing.net,
@@ -648,6 +700,7 @@ def _scenario_via_landing(
         padstack=landing.padstack,
         rotation_degrees=landing.rotation_degrees,
         path_evidence=evidence,
+        graph_contact_evidence=tuple(graph_contact_evidence),
         structural_evidence=structural_evidence,
     )
 
@@ -6093,6 +6146,7 @@ def _select_mixed_reference_ground_landings(
     cluster_state_by_key: dict[str, SharedPadClusterState],
     cluster_eligibility_by_key: dict[str, dict[str, RailEligibility]],
     path_recovery: Any,
+    source_sha256: str,
     eligibility_index: PlaneEligibilityIndex,
     rail_choices_by_pair: dict[tuple[str, str, str], tuple[tuple[Any, str], ...]],
 ) -> tuple[dict[str, list[tuple[str, Any]]], dict[str, set[str]]]:
@@ -6145,7 +6199,9 @@ def _select_mixed_reference_ground_landings(
             if connection.cluster_id is not None:
                 continue
             power_vias = tuple(
-                _scenario_via_landing(landing, path_recovery)
+                _scenario_via_landing(
+                    landing, path_recovery, source_sha256=source_sha256
+                )
                 for landing in connection.power_vias
             )
             eligible = _common_eligibility_at_landings(
@@ -6612,7 +6668,9 @@ def import_spd_scenario(
         key = landing.via_id.casefold()
         result = landing_cache.get(key)
         if result is None:
-            result = _scenario_via_landing(landing, path_recovery)
+            result = _scenario_via_landing(
+                landing, path_recovery, source_sha256=analysis.source.sha256
+            )
             landing_cache[key] = result
         return result
 
@@ -7346,6 +7404,7 @@ def import_spd_scenario(
         cluster_state_by_key=cluster_state_by_key,
         cluster_eligibility_by_key=cluster_eligibility_by_key,
         path_recovery=path_recovery,
+        source_sha256=analysis.source.sha256,
         eligibility_index=eligibility_index,
         rail_choices_by_pair=rail_choices_by_pair,
     )

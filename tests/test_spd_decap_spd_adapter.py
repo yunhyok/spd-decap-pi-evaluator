@@ -292,7 +292,7 @@ def test_adapter_persists_structural_only_via_evidence() -> None:
             )
         },
     )
-    converted = _scenario_via_landing(landing, recovery)
+    converted = _scenario_via_landing(landing, recovery, source_sha256="a" * 64)
     assert converted.path_evidence == ()
     assert len(converted.structural_evidence) == 1
     assert converted.structural_evidence[0].target_layer == "L2"
@@ -324,11 +324,15 @@ def test_graph_contact_remap_preserves_source_landing_and_localizes_solver_port(
         target_contact_count_by_key=graph.target_contact_count_by_key,
         target_contact_hash_by_key=graph.target_contact_hash_by_key,
     )
-    converted = _scenario_via_landing(landing, recovery)
+    converted = _scenario_via_landing(landing, recovery, source_sha256="a" * 64)
     assert (converted.x_um, converted.y_um) == (10.0, 20.0)
     evidence = converted.graph_contact_for_layer("L09")
     assert evidence is not None
     assert (evidence.x_um, evidence.y_um) == (110.0, 220.0)
+    assert evidence.source_sha256 == "a" * 64
+    assert evidence.candidate_count == 1
+    assert evidence.candidate_contacts_sha256 == contact_hash
+    assert evidence.selected_distance_um == pytest.approx(math.hypot(100.0, 200.0))
     footprint = _terminal_footprint(
         converted,
         "L09",
@@ -363,7 +367,7 @@ def test_graph_contact_lookup_preserves_multiple_target_layers_without_global_sc
         target_contact_count_by_key=graph.target_contact_count_by_key,
         target_contact_hash_by_key=graph.target_contact_hash_by_key,
     )
-    converted = _scenario_via_landing(landing, recovery)
+    converted = _scenario_via_landing(landing, recovery, source_sha256="b" * 64)
     assert {
         item.target_layer: (item.target_node_id, item.x_um, item.y_um)
         for item in converted.graph_contact_evidence
@@ -371,6 +375,7 @@ def test_graph_contact_lookup_preserves_multiple_target_layers_without_global_sc
         "L09": ("N09", 110.0, 220.0),
         "L08": ("N08", 111.0, 221.0),
     }
+    assert all(item.source_sha256 == "b" * 64 for item in converted.graph_contact_evidence)
 
 
 def test_raw_pin_source_identity_is_retained_for_graph_witnesses(tmp_path: Path) -> None:
@@ -1050,7 +1055,11 @@ def test_mixed_witness_selection_batches_direct_and_shared_candidates_exactly(
             "P-S2": {"R2": allowed("R2")},
         }[value.via_id]
 
-    monkeypatch.setattr(spd_adapter, "_scenario_via_landing", lambda value, _recovery: value)
+    monkeypatch.setattr(
+        spd_adapter,
+        "_scenario_via_landing",
+        lambda value, _recovery, *, source_sha256: value,
+    )
     monkeypatch.setattr(
         spd_adapter, "_common_eligibility_at_landings", fake_common_at_landings
     )
@@ -1076,7 +1085,9 @@ def test_mixed_witness_selection_batches_direct_and_shared_candidates_exactly(
                     continue
                 if connection.kind == "DIRECT":
                     power_vias = tuple(
-                        spd_adapter._scenario_via_landing(item, object())
+                        spd_adapter._scenario_via_landing(
+                            item, object(), source_sha256="a" * 64
+                        )
                         for item in connection.power_vias
                     )
                     eligible = spd_adapter._common_eligibility_at_landings(
@@ -1102,7 +1113,7 @@ def test_mixed_witness_selection_batches_direct_and_shared_candidates_exactly(
                         else:
                             power_landings = {
                                 item.via_id.casefold(): spd_adapter._scenario_via_landing(
-                                    item, object()
+                                    item, object(), source_sha256="a" * 64
                                 )
                                 for member in cluster.member_refdes
                                 for item in connections[member.casefold()].power_vias
@@ -1157,6 +1168,7 @@ def test_mixed_witness_selection_batches_direct_and_shared_candidates_exactly(
             "cl-a": {"R2": allowed("R2")},
         },
         path_recovery=object(),
+        source_sha256="a" * 64,
         eligibility_index=object(),
         rail_choices_by_pair={},
     )
