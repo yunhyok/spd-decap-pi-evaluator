@@ -1,5 +1,11 @@
 # Evaluation Accuracy and Modeling Boundary
 
+> Technical appendix to the canonical [Product Purpose and Technical
+> Baseline](PRODUCT_PURPOSE_AND_TECHNICAL_BASELINE.md). This document explains
+> the current model; it does not define product priority or prove PowerSI
+> accuracy promotion. If a historical statement here conflicts with the
+> canonical baseline, the canonical baseline governs the current claim.
+
 ## Scope
 
 SPD Decap PI Evaluator is a pre-design, single-rail `Zii` evaluator. It uses
@@ -85,10 +91,12 @@ not by a local user path. SPD: `S4LB002-2Para_260724_1_injected.spd`, SHA-256
 
 ## Numerical convergence and validation
 
-The v0.22.0 release evidence for the production layer-surface profile is kept
-in the [two-case validation record](EVALUATION_LAYER_SURFACE_VALIDATION_2026-08-06.md).
-The measurements below predate that profile and are retained as the historical
-Legacy-modal/mode-selection baseline; they are not v0.22 layer-surface results.
+The intended v0.22.0 named-case evidence structure is kept in the
+[two-case validation record](EVALUATION_LAYER_SURFACE_VALIDATION_2026-08-06.md),
+but its final production-policy and release-evidence sections remain
+incomplete. It is therefore not current release proof. The measurements below
+predate the production layer-surface profile and are retained as a historical
+Legacy-modal/mode-selection baseline; they are not current Layerwise results.
 
 Balanced remains the desktop's shared preset and the m-index fields remain in
 the cache/report identity for compatibility. They do not select or add modes
@@ -96,10 +104,11 @@ for a terminal-complete Layerwise solve. Its bounded frequency policy allows
 three refinement iterations with at most 64 new points per iteration. The
 existing convergence-report modal slots encode “not applicable” as equal
 lower/final indices with exact-zero deltas and a passing analytic invariance
-flag; no lower/higher modal matrices are evaluated. Acceptance therefore uses
-the frequency gate plus that external-input invariance. Legacy and Research
-continue to use the actual rectangular modal orders documented for those
-profiles. PowerSI error and runtime never select an order.
+flag; no lower/higher modal matrices are evaluated. Internal numerical status
+therefore uses the frequency gate plus that external-input invariance. This is
+not a PowerSI accuracy-promotion gate. Legacy and Research continue to use the
+actual rectangular modal orders documented for those profiles. PowerSI error
+and runtime never select an order.
 
 The modal figures below are a historical pre-v0.22 Legacy/modal-selection
 baseline, not the current layer-surface release result. The 2026-07-29 loaded
@@ -124,10 +133,12 @@ In that historical 2026-07-29 loaded six-configuration benchmark, the mode
 6/8/12 loaded PowerSI RMS values were
 `3.1874/3.5387/4.0106 dB`; all six loaded configurations were nonconverged at
 m6 and m8, and VTRIP0, VTRIP1, and VCPU0 remained nonconverged at m12.
-Those numbers remain diagnostic history only. Current release acceptance uses
-frequency convergence plus terminal-complete external-input invariance for
+Those numbers remain diagnostic history only. Current internal result status
+uses frequency convergence plus terminal-complete external-input invariance for
 Layerwise, and combined frequency/modal convergence for Research and Legacy.
-A failed Research/Legacy m12 check must not silently fall back to a lower order.
+The current product-level PowerSI accuracy status remains `unknown / not_run`
+under the canonical baseline. A failed Research/Legacy m12 check must not
+silently fall back to a lower order.
 
 The comparison contract is `Z = Z0(I+S)(I-S)^-1`; all non-driven currents are
 zero (open), and the selected result is row-major `Zpp`. The tracked,
