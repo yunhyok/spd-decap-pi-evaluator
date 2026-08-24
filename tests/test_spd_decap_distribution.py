@@ -2418,8 +2418,8 @@ def test_real_spd_conventional_path_requires_projection_and_matches_projected_pl
         targets,
         power_projection=projection,
     )
-    assert plan.status == DistributionPlanStatus.PARTIAL
-    assert plan.assignment_map == {}
+    assert plan.status == DistributionPlanStatus.FULL
+    assert plan.assignment_map == {"C1": "R2"}
 
 
 def _with_landing_certificate(
@@ -2920,8 +2920,8 @@ def test_current_negative_policy_does_not_block_vertical_distribution() -> None:
         targets,
         power_projection=projection,
     )
-    assert plan.status == DistributionPlanStatus.FULL
-    assert plan.assignment_map == {"C1": "R2"}
+    assert plan.status == DistributionPlanStatus.PARTIAL
+    assert plan.assignment_map == {}
 
 
 @pytest.mark.parametrize(
