@@ -1762,8 +1762,24 @@ def test_factor_pivot_ratio_rejects_forward_unreliable_real_superlu_result(
         lambda matrix: DelegatingFactor(original_splu(matrix)),
     )
 
-    with pytest.raises(LayerSurfaceNetworkError, match="forward-reliability"):
+    with pytest.raises(LayerSurfaceNetworkError, match="forward-reliability") as exc_info:
         network.solve([8.0e6])
+
+    message = str(exc_info.value)
+    assert "frequency_hz=8000000" in message
+    assert "component_index=0" in message
+    assert "u_pivot_abs_min=1.000e-17" in message
+    assert "u_pivot_abs_max=1.000e+00" in message
+    assert "pivot_ratio=1.000e+17" in message
+    assert "retained_nodes=1" in message
+    assert "local_nnz=1" in message
+    assert "local_abs_min=1.257e-01" in message
+    assert "local_abs_max=1.257e-01" in message
+    assert "backward_residual=0.000e+00" in message
+    assert (
+        "matrix_sha256=beb18d600835869fe1bf59108684b20fb8c266978c87ad9d70eae6899bdb8f8b)"
+        in message
+    )
 
 
 def test_factor_pivot_ratio_ceiling_preserves_real_result_and_residual(

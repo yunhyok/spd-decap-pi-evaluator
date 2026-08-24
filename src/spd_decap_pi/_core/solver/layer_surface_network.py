@@ -2251,9 +2251,12 @@ class CompiledLayerSurfaceNetwork:
                     raise LayerSurfaceNetworkError(
                         "layer-network factor forward-reliability pivots are invalid"
                     )
+                u_pivot_abs_min = float(np.min(diagonal))
+                u_pivot_abs_max = float(np.max(diagonal))
+                component_pivot_ratio = u_pivot_abs_max / u_pivot_abs_min
                 frequency_pivot_ratio = max(
                     frequency_pivot_ratio,
-                    float(np.max(diagonal) / np.min(diagonal)),
+                    component_pivot_ratio,
                 )
                 local_norm = float(np.linalg.norm(local.data))
                 for batch_start in range(0, len(port_indices), _PORT_RHS_BATCH_SIZE):
@@ -2333,9 +2336,32 @@ class CompiledLayerSurfaceNetwork:
                             f"({relative_residual:.3e})"
                         )
                     if frequency_pivot_ratio > _MAX_FACTOR_PIVOT_RATIO:
+                        local_abs = np.abs(local.data)
+                        nonzero_local_abs = local_abs[local_abs > 0.0]
+                        local_abs_min = (
+                            float(np.min(nonzero_local_abs))
+                            if nonzero_local_abs.size
+                            else 0.0
+                        )
+                        local_abs_max = (
+                            float(np.max(nonzero_local_abs))
+                            if nonzero_local_abs.size
+                            else 0.0
+                        )
                         raise LayerSurfaceNetworkError(
                             "layer-network factor forward-reliability pivot ratio is excessive "
-                            f"({frequency_pivot_ratio:.3e})"
+                            f"({frequency_pivot_ratio:.3e}; "
+                            f"frequency_hz={frequency:.9g}, "
+                            f"component_index={component_index}, "
+                            f"retained_nodes={retained.size}, "
+                            f"local_nnz={local.nnz}, "
+                            f"local_abs_min={local_abs_min:.3e}, "
+                            f"local_abs_max={local_abs_max:.3e}, "
+                            f"u_pivot_abs_min={u_pivot_abs_min:.3e}, "
+                            f"u_pivot_abs_max={u_pivot_abs_max:.3e}, "
+                            f"pivot_ratio={component_pivot_ratio:.3e}, "
+                            f"backward_residual={relative_residual:.3e}, "
+                            f"matrix_sha256={matrix_identity.hexdigest()})"
                         )
                     for column, (port_index, endpoints) in enumerate(
                         zip(batch_indices, incidence, strict=True)

@@ -1,10 +1,10 @@
 # SPD Decap PI Evaluator 작업 기준
 
 - 적용 제품: **SPD Decap PI Evaluator v0.23.0**
-- 문서 버전: **1.7**
-- 상위 기준: [목적·기술 기준](PRODUCT_PURPOSE_AND_TECHNICAL_BASELINE.md) v1.6
-- 현행 source-before: W6-BLOCK-A adapter parity at caller-approved HEAD `46d17dc73381d4292ea342d7a10e85d4f2e338f6`; resulting commit must be clean `main`
-- 상태: **APPROVED/MACHINE-FROZEN CONTROL DOCUMENT — W5 DONE; W6-BLOCK-A DONE; W6-BLOCK-B READY; W6-BASE READY (HELD)**
+- 문서 버전: **1.8**
+- 상위 기준: [목적·기술 기준](PRODUCT_PURPOSE_AND_TECHNICAL_BASELINE.md) v1.7
+- 현행 source-before: W6-BLOCK-C pivot-context instrumentation at clean `main` HEAD `6bbe44e2f36610755103757d6a4502c9ed9760d3`; resulting commit must be clean `main`
+- 상태: **APPROVED/MACHINE-FROZEN CONTROL DOCUMENT — W5 DONE; W6-BLOCK-A DONE; W6-BLOCK-B BLOCKED; W6-BLOCK-C ACTIVE; W6-BASE READY (HELD)**
 - 최종 개정: 2026-08-25 (Asia/Seoul)
 
 ## 1. 압축 후 즉시 복구 카드
@@ -16,16 +16,17 @@ context가 압축되거나 새 session에서 작업을 재개하면 다른 연�
 |---|---|
 | 변하지 않는 목적 | source-derived single-rail `Zii`의 PowerSI 근접 정확성과 일반화 |
 | 현재 branch | `main`만 사용; 정리된 과거 branch를 다시 조사하지 않음 |
-| 현재 active work item | `NONE` |
-| 다음 권장 묶음 | `W6-BLOCK-B` READY: old candidate/report read-only pivot classification before any W6-BASE rerun |
+| 현재 active work item | `W6-BLOCK-C` ACTIVE: preserve deterministic pivot context before any W6-BASE rerun |
+| 다음 권장 묶음 | `W6-BASE` READY (HELD): only after W6-BLOCK-C evidence and a new clean main/root |
 | standing authorization | bounded W6 and ranked in-scope local code/tests may proceed automatically until Usage Guard stop/checkpoint; Sol reviews, Luna writes |
-| authorization boundary | exact clean `main`, new output root, one run/no retry required; old root is immutable and never a W6-BASE output/scoring/retry; W6-BLOCK-B may read it diagnostically |
+| authorization boundary | exact clean `main`, new output root, one run/no retry required; B correlation is historical evidence; C may use old candidate/import report for exactly one read-only diagnostic; old root forbidden for W6-BASE output/scoring/retry/mutation; C output fresh-root only |
 | 고비용 검증 권한 | production SPD/PowerSI only through the frozen one-run gate; Usage Guard stop/checkpoint halts work |
 | 현재 정확성 상태 | `unknown / not_run` |
 | 현재 release 계산 증거 | W6 260729 attempt blocked_partial; import passed, correlation failed, no scoring |
-| W6 attempt root | `D:\SPD-Decap-PI-Evaluator-W6\46d17dc73381d4292ea342d7a10e85d4f2e338f6\260729` (immutable; no W6-BASE output/scoring/retry; B read-only diagnostic only) |
+| W6 attempt root | `D:\SPD-Decap-PI-Evaluator-W6\46d17dc73381d4292ea342d7a10e85d4f2e338f6\260729` (immutable; B correlation is historical; C may read candidate/import exactly once; no W6-BASE output/scoring/retry/mutation; C output is fresh-root only) |
+| W6-BLOCK-B diagnostic | `D:\SPD-Decap-PI-Evaluator-W6-Diagnostics\6bbe44e2f36610755103757d6a4502c9ed9760d3\260729-vtrip0-1khz` — exit 1, no report/artifact |
 | W6 tombstone | `blocked_partial.json` SHA `b81525bd47744dc1ea5c75bb26f20ea354246ad88b8ce5bc9aef131cb50c09f7`; old policy SHA `c362acb01ef28cefbbd1d32753f86bccafbdd53355b42eda83c03a6ea810698b` |
-| source/bundle boundary | W6-BLOCK-A source-before `46d17dc73381d4292ea342d7a10e85d4f2e338f6`; resulting commit must establish clean `main`; old root is immutable, diagnostic-only for W6-BLOCK-B |
+| source/bundle boundary | W6-BLOCK-C source-before `6bbe44e2f36610755103757d6a4502c9ed9760d3`; resulting commit must establish clean `main`; B correlation is historical, C reads candidate/import exactly once read-only, and C writes only to a fresh diagnostic root |
 
 최초 목적은 [목적·기술 기준 2장](PRODUCT_PURPOSE_AND_TECHNICAL_BASELINE.md#2-최우선-목적),
 현재 증거 상태는 [6장](PRODUCT_PURPOSE_AND_TECHNICAL_BASELINE.md#6-증거와-상태-표기)이
@@ -113,10 +114,11 @@ retry 또는 threshold/fallback 변경을 승인하지 않는다. 그 밖의 권
 | `W4-COND` | 9 | DONE | ill-conditioned sparse solve의 결과 신뢰성 gate | residual과 별도 conditioning/forward-reliability 판정 |
 | `W5-GATE` | 10 | DONE | approved gate/partition/manifest plus trust-boundary adapter/controller evidence | focused trust tests and bounded V3 green |
 | `W6-BLOCK-A` | 11 | DONE | versioned Layerwise comparison-runner template parity | layerwise diagnostic/correlation에만 terminal-complete 입력 보강; frozen base/physics/pivot gate unchanged |
-| `W6-BLOCK-B` | 12 | READY | immutable failed-run pivot classification before rerun | read-only old candidate/report plus separate fresh diagnostic; decide whether full rerun is informative |
-| `W6-BASE` | 13 | READY | caller-approved exact current main HEAD의 retrospective one-run baseline | W6-BLOCK-B decision, 새 clean HEAD·새 output root·one-run/no-retry gate; old blocked root never reused |
-| `W7-PHYS` | 14 | BLOCKED | 가장 큰 error component의 owning physical block 하나 수정 | W6 rail별 error decomposition 필요 |
-| `W8-REL` | 15 | BLOCKED | completed known-case solve를 release gate에 연결하고 최종 전달 | accuracy/product gate와 exact release commit 필요 |
+| `W6-BLOCK-B` | 12 | BLOCKED | immutable failed-run pivot classification before rerun | 2.543e17 pivot reproduced at VTRIP/0 1 kHz, but factor context was absent; root cause remains unclassified |
+| `W6-BLOCK-C` | 13 | ACTIVE | preserve deterministic factor/matrix context at the existing fail-closed pivot | one focused red→green node; no solver/threshold/cache/physics change |
+| `W6-BASE` | 14 | READY | caller-approved exact current main HEAD의 retrospective one-run baseline | W6-BLOCK-C evidence, 새 clean HEAD·새 output root·one-run/no-retry gate; old blocked root never reused |
+| `W7-PHYS` | 15 | BLOCKED | 가장 큰 error component의 owning physical block 하나 수정 | W6 rail별 error decomposition 필요 |
+| `W8-REL` | 16 | BLOCKED | completed known-case solve를 release gate에 연결하고 최종 전달 | accuracy/product gate와 exact release commit 필요 |
 | `D-DIST` | - | DEFERRED | Distribution routing/DRC scope 확대 | 사용자가 implementation-ready/DRC 목표로 승격할 때만 |
 | `D-DOC` | - | DEFERRED | README와 동결 연구 배너 정리 | current work를 방해할 때 별도 문서 묶음으로 처리 |
 
@@ -197,8 +199,9 @@ V0–V5 계획과 최대 횟수: conditioning adversarial V1 red 1회; adversari
 evidence identity before: `main` / `3b6ed2cc6308179002fee817c1b14f7efebd6cb9` / solver `modal-mvp-0.8.3` / compiler `kron-v8` / convergence `v5`.
 결과 / artifact / diff: conditioning red node는 `1 failed`; 최소 solver/cache gate 후 adversarial+ceiling focused는 `2 passed in 0.72s`였다. 최종 `pytest -q tests/test_layer_surface_network.py tests/test_layerwise_network.py tests/test_spd_decap_evaluation.py::test_solver_version_0_8_2_recalculates_0_6_baseline_cache`는 `94 passed in 2.16s`였다. source-before는 `main` / `b2608a260a1f952c9b1f6c11d57b71e060ae575c`이며, 그 W4 묶음은 workflow Test command에 두 W4 conditioning gate를 보존적으로 추가한 bounded V3 selection을 `QT_QPA_PLATFORM=offscreen`으로 1회 실행해 `325 passed, 1 skipped in 18.25s`였다. Required CI command에는 두 W4 gate node가 유지된다. W4-FREQ synthetic closure는 별도 commit에서 완료되었고, 이번 묶음은 forward-reliability gate와 v0.8.4 live identity에 한정한다. W5 hash-bound validator/non-regression scripts와 기존 artifact identity는 pre-W4 값으로 동결해 두었으며, 이는 해당 W4 시점의 historical evidence이다. W5 승인 후에도 historical assets는 갱신하지 않는다. 그 W4 묶음에서는 remote CI/full suite/production SPD/PowerSI/installer/release를 실행하지 않았다. accuracy는 `unknown / not_run`; model-form/PowerSI 수치 합격을 주장하지 않는다.
 W5 policy와 implementation은 승인·동결되었고 W5-GATE는 DONE이다. W6-BLOCK-A도
-DONE이며, W6-BASE는 이전 root의 실패로 READY 상태를 유지한다. active item은
-`NONE`이다. 제품 최상위 목적은 PowerSI와 비슷한 정확도의 계산이며, accuracy는
+DONE이며, W6-BLOCK-B는 diagnostic pivot 미분류로 BLOCKED, W6-BLOCK-C는 ACTIVE,
+W6-BASE는 READY (HELD) 상태다. 제품 최상위 목적은 PowerSI와 비슷한 정확도의
+계산이며, accuracy는
 `unknown / not_run`, P5 unseen design 없이는 generalization/final signoff를
 금지한다.
 
@@ -219,8 +222,9 @@ frozen base benchmark, solver physics, pivot gate와 v6 validator는 변경하�
 통과, phase2는 exit 2, v6는 not_started, scoring은 refused였다. 이 tombstone은
 구 policy SHA `c362acb01ef28cefbbd1d32753f86bccafbdd53355b42eda83c03a6ea810698b`에
 결속되므로 새 policy로 소급 검증하지 않으며, root는 W6-BASE controller output·scoring
-snapshot·retry에 사용하지 않는다. W6-BLOCK-B의 read-only 진단만 허용하고, 새
-diagnostics는 별도 fresh root에 쓴다.
+snapshot·retry·mutation에 사용하지 않는다. B의 correlation은 historical evidence이고,
+C는 old candidate/import report를 정확히 한 번 read-only로 열며 correlation report는
+입력으로 사용하지 않는다. C diagnostics는 별도 fresh root에 쓴다.
 Fresh import는 `5078.367847900023s`, candidate `796205663` bytes /
 `8b02836c03aa38c447fba37ddd30434a3e4ed34ce772654fa5bc3a8512543320`, import report
 `e65cae7297b28a36e405074e7135c216c65c483d237973928d9bf63488d3b0b5`, frequency
@@ -233,19 +237,35 @@ blocked, so no completed comparison or score was produced. Correlation report는
 16 source blocker를 유지·재사용했고, release failure 32는 독립 solve 32개가
 아니다. exact parity와 수치 정확성 결과는 없다. 260804는 실행하지 않았다.
 
-다음 묶음 `W6-BLOCK-B / READY`는 84분급 controller 재실행 전에 수행하는 저비용
-classification boundary다. immutable old candidate와 correlation report는
-read-only로만 분석하고, 별도 fresh diagnostic output에서 관찰된
-`2.543e17 > 1e13` pivot을 assembly/scaling/topology defect인지 genuine
-conditioning boundary인지 분류한다. old root는 immutable하며 W6-BASE controller
-output, scoring snapshot 또는 retry에 사용하지 않는다. W6-BLOCK-B는 old
-candidate/import report/correlation report를 read-only diagnostic input으로만
-열 수 있고, 모든 diagnostics는 별도 fresh root에 쓴다. threshold 완화·fallback·
-reordering·port 이동·physics 변경은 금지한다.
-acceptance는 evidence-backed classification과 full rerun이 informative한지에
-대한 결정이다. 이 묶음이 닫힐 때까지 `W6-BASE`는 실행하지 않는다.
+`W6-BLOCK-B`는 BLOCKED다. 진단 root
+`D:\SPD-Decap-PI-Evaluator-W6-Diagnostics\6bbe44e2f36610755103757d6a4502c9ed9760d3\260729-vtrip0-1khz`
+에서 `ADC_VDD_055_VTRIP/0`의 1000 Hz 단일 diagnostic이 exit 1로 종료되며
+`2.543e17 > 1e13` pivot을 재현했지만, 기존 예외에 factor context가 없어
+assembly/scaling/topology defect와 genuine conditioning boundary를 구분하지 못했다.
+stdout SHA는 `e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855`,
+stderr SHA는 `cb0d72713189a6fb71f6622afc80128fdc435917f63b8a27032981e3e732623a`이며
+report/artifact는 없다. elapsed는 약 `687.84s`이며 old root와 repo는 불변이다.
 
-현재 trust identities는 base `d43b868629464f408ea19362daa78fc369d2fd446cf3d458cfdc044ccbf57f08`,
+`W6-BLOCK-C / ACTIVE`는 기존 pivot-ratio 초과 raise에 이미 계산·보유된
+frequency/component/retained/local/U-pivot/residual/matrix SHA context를 inline으로
+보존한다. solver 결과, threshold/order/cache/admittance/port/physics와 trust
+identity는 변경하지 않는다. C는 old root의 candidate와 import report를 각각 정확히
+한 번 read-only 입력으로만 열고, 결과는 새 clean HEAD를 포함한 brand-new diagnostic
+root에만 쓴다. old root는 W6-BASE/controller/scoring/retry/mutation에 사용하지 않는다.
+현재까지 같은 node 호출은 4회였다: pre-code red `1 failed in 0.85s`, post-code
+frequency-format mismatch `1 failed in 0.78s`, SHA trailing-parenthesis mismatch
+`1 failed in 0.97s`, 최종 `1 passed in 0.68s`. review-strengthened assertion의
+첫 실행은 SHA literal에서 trailing `b`를 빠뜨려 `1 failed in 0.83s`였고, exact
+64-hex literal로 교정한 최소 재실행은 `1 passed in 0.71s`였다. 따라서 이 node의
+실제 호출은 총 6회이며, 다른 node는 실행하지 않았다. 새 clean `main` HEAD가 생긴
+뒤 동일한 단일 diagnostic 1회만 예정하며, 재시도·full W6·scoring은 금지한다.
+
+acceptance는 deterministic context로 원인을 분류하고 full rerun이 informative한지
+결정하는 것이다. 이 묶음이 닫힐 때까지 `W6-BASE`는 실행하지 않는다.
+
+Listed W5 normalized policy/adapter/validator/controller identities와 declared
+solver/compiler/convergence identities는 불변이며, 결과 commit에서 exact Git HEAD만
+변경될 수 있다. 현재 trust identities는 base `d43b868629464f408ea19362daa78fc369d2fd446cf3d458cfdc044ccbf57f08`,
 adapter `6b7e399b4a843028ce754ac9154b8ce1a4575b1581c8d6007cebf26f94e6d440`, v6
 `ae6757057044cdc603106210997a45fa3bcba0238f50089fe2c45d29d6573552`, accuracy
 validator `18dd2010b85dd9cf4a355ff6214119ed16fbec3f63f6fe6fa5834ed1bf732caa`,
@@ -254,7 +274,7 @@ controller `3defa5991049e70042b3ac7c7d8243b34d2cab355aef5244b9643d3487550840`이
 Historical v5 validator/policy/fixtures와 base benchmark는 byte-identical이며,
 260804 S92P SHA의 trailing `b`는 frozen registry correction이다. 새 W6-BASE는
 standing authorization 아래 Sol이 동결한 정확한 clean `main` HEAD와 brand-new
-output root를 제공하고, W6-BLOCK-B classification을 닫은 뒤에만 시작한다.
+output root를 제공하고, W6-BLOCK-C context 보존을 닫은 뒤에만 시작한다.
 one-run/no-retry 경계를 유지한다. D:/ hash 재검산과 old root의 W6-BASE controller
 재사용은 없었고, external PowerSI solver 실행은 없었다. Phase2는 등록된 PowerSI
 Touchstone을 소비했지만 완료 비교/score로 승격하지 않았다. remote/full suite,
@@ -336,3 +356,4 @@ installer/release는 수행하지 않았다.
 | 1.5 | 2026-08-24 | trust-boundary correction: controller-only/verify-only execution, exact artifact and manifest SHA binding, adapter passthrough. |
 | 1.6 | 2026-08-24 | 최종 bounded V3 green 증거를 기록하고 W5 DONE, W6 READY, active NONE으로 동결. |
 | 1.7 | 2026-08-25 | W6-BLOCK-A parity, standing authorization, 260729 blocked_partial 증거와 W6-BLOCK-B pivot classification boundary를 기록. |
+| 1.8 | 2026-08-25 | W6-BLOCK-B diagnostic exit1과 W6-BLOCK-C deterministic pivot-context instrumentation을 기록하고 W6-BASE를 보류. |
