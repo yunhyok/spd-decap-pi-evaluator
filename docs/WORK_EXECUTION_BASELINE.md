@@ -3,7 +3,7 @@
 - 적용 제품: **SPD Decap PI Evaluator v0.23.0**
 - 문서 버전: **1.0**
 - 상위 기준: [목적·기술 기준](PRODUCT_PURPOSE_AND_TECHNICAL_BASELINE.md) v1.1
-- 현행 source 기준: `main` commit `1e144bd`
+- 현행 source 기준: `main` commit `3445c40a6eff961f635e9d17718ffb468effe8ff`
 - 상태: **ACTIVE CONTROL DOCUMENT — W3-CI 완료; W4-FREQ 대기**
 - 최종 개정: 2026-08-24 (Asia/Seoul)
 
@@ -17,12 +17,12 @@ context가 압축되거나 새 session에서 작업을 재개하면 다른 연�
 | 변하지 않는 목적 | source-derived single-rail `Zii`의 PowerSI 근접 정확성과 일반화 |
 | 현재 branch | `main`만 사용; 정리된 과거 branch를 다시 조사하지 않음 |
 | 현재 active work item | `NONE` — `W3-CI` 완료; `W4-FREQ` 승인 대기 |
-| 다음 권장 묶음 | `W1` product-core test truth 복원 후 `W2` bounded correctness fixes |
+| 다음 권장 묶음 | `W4-FREQ` synthetic frequency-coverage reliability gate |
 | 코드 수정 권한 | active item 승인 전 production code 수정 금지 |
-| 고비용 검증 권한 | 없음 — W1은 V0–V2 focused 검증만 허용 |
+| 고비용 검증 권한 | `W4-FREQ` synthetic focused/V2–V3만 허용; production SPD/PowerSI 금지 |
 | 현재 정확성 상태 | `current / unknown / not_run` |
 | 현재 release 계산 증거 | import/save/solver-entry만 통과; frequency solve `0` |
-| 현재 working tree | W3-CI workflow selection과 stale Distribution 기대 수정 완료 |
+| 현재 working tree | W3-CI bounded workflow selection과 stale Distribution 기대 수정 완료; current HEAD 기록 |
 
 최초 목적은 [목적·기술 기준 2장](PRODUCT_PURPOSE_AND_TECHNICAL_BASELINE.md#2-최우선-목적),
 현재 증거 상태는 [6장](PRODUCT_PURPOSE_AND_TECHNICAL_BASELINE.md#6-증거와-상태-표기)이
@@ -175,13 +175,13 @@ ID / 상태: `W3-CI / DONE`
 사용자 목적과의 연결: green intermediate가 아닌 짧은 product-core truth를 기존 `main`/PR `test-and-wheel` CI에 실제 연결한다. 이는 solver accuracy/PowerSI evidence가 아니다.
 이번 변경 묶음: 기존 Windows/Python 3.12/Qt offscreen/timeout/wheel 구조를 보존하고 packaging-only Test step의 pytest command만 명시된 bounded file+GUI node selection으로 교체한다.
 명시적 제외 범위: 새 marker/script/job/dependency/action, research/benchmark, production SPD/PowerSI, installer, full 2,434 suite, wheel build 실행 및 remote CI/push.
-root-cause 가설: existing CI Test가 `tests/test_spd_decap_packaging.py`만 실행해 W1/W2 product-core truth를 required main/PR gate로 차단하지 못한다.
+root-cause 가설: existing CI Test가 `tests/test_spd_decap_packaging.py`만 실행해 bounded product-core truth를 required main/PR gate로 차단하지 못한다.
 읽을 source/test/subsystem 문서: 목적·기술 기준, 이 작업 기준, `.github/workflows/ci.yml`의 `test-and-wheel`, bounded six test files와 five GUI nodes.
 acceptance: CI Test command가 지정된 six files와 five GUI nodes만 실행하며 QT offscreen 환경을 유지한다. initial bounded run의 stale expectations를 분류·수정한 뒤 compositional focused closure가 green이다.
 V0–V5 계획과 최대 횟수: V0 YAML/command/diff 정적 확인 1회; CI와 동일한 QT offscreen bounded selection V3 로컬 1회; V1/V2 및 V4–V5 금지.
 중단 조건: YAML/selection 불일치, bounded selection failure가 production defect로 보이거나 full suite/remote CI/build가 필요해지는 경우.
 evidence identity before: `main` / `306a3a1` / v0.23.0.
-결과 / artifact / diff: 기존 `test-and-wheel` 구조를 보존하고 Test command를 지정된 six files + five GUI nodes로 bounded 교체했다. initial 동일 QT offscreen V3는 `319 passed, 1 skipped, 3 failed in 18.90s`였다. packaging workflow assertion stale 기대는 full-file focused `test_spd_decap_packaging.py` 1회 `11 passed`로 확인했고, Root/Sol triage에 따른 Distribution stale 기대 2개도 지정 두 node 1회 green으로 수정했다. 이는 bounded local compositional closure이며 remote CI는 실행하지 않았다. solver accuracy/PowerSI evidence가 아니다. W4-FREQ와 그 이후 항목은 수행하지 않았다.
+결과 / artifact / diff: 기존 `test-and-wheel` 구조를 보존하고 Test command를 지정된 six files + five GUI nodes로 bounded 교체했다. initial 동일 QT offscreen V3는 `319 passed, 1 skipped, 3 failed in 18.90s`였다. packaging workflow assertion stale 기대는 full-file focused `test_spd_decap_packaging.py` 1회 `11 passed`로 확인했고, Root/Sol triage에 따른 Distribution stale 기대 2개도 지정 두 node 1회 green으로 수정했다. 최종 current HEAD에서 exact bounded selection을 QT offscreen으로 1회 실행해 `322 passed, 1 skipped in 18.17s`로 closure했다. 이는 bounded local compositional closure이며 remote CI는 실행하지 않았다. solver accuracy/PowerSI evidence가 아니다. W4-FREQ와 그 이후 항목은 수행하지 않았다.
 다음 사용자 결정: W4-FREQ를 active로 승인할지 결정.
 
 ## 8. Context 압축·새 session 복구 절차

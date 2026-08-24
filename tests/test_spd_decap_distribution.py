@@ -2870,7 +2870,7 @@ def test_pathless_landing_certificate_source_mismatch_is_fail_closed() -> None:
 
 
 def test_current_negative_policy_does_not_block_vertical_distribution() -> None:
-    """A negative MLO policy remains provenance, not a Distribution gate."""
+    """A negative policy is not a gate, but cannot replace missing exact path evidence."""
 
     scenario = _non_top_direct_transition_scenario(
         path_kind=None,
