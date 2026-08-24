@@ -1,9 +1,9 @@
 # SPD Decap PI Evaluator 목적·기술 기준
 
 - 적용 제품: **SPD Decap PI Evaluator v0.23.0**
-- 문서 버전: **1.9**
+- 문서 버전: **1.10**
 - W5 approved/machine-frozen source-before: `main` commit `027ac7a09a3eded15f45c41860945f9d4c7f488d`
-- 상태: **G0 기준 문서** — [작업 기준](WORK_EXECUTION_BASELINE.md)과 함께 사용하며, W5 DONE·W6-BLOCK-A DONE·W6-BLOCK-B BLOCKED·W6-BLOCK-C DONE·W6-BLOCK-D DONE·W6-BLOCK-E ACTIVE·W6-BASE 실행 보류
+- 상태: **G0 기준 문서** — [작업 기준](WORK_EXECUTION_BASELINE.md)과 함께 사용하며, W5 DONE·W6-BLOCK-A DONE·W6-BLOCK-B BLOCKED·W6-BLOCK-C DONE·W6-BLOCK-D DONE·W6-BLOCK-E DONE·W6-BASE READY(미실행)
 - 최종 개정: 2026-08-25 (Asia/Seoul)
 
 ## 1. 문서 역할과 권위
@@ -339,8 +339,10 @@ W5 policy and implementation closure are machine-frozen and DONE. W6-BLOCK-A is
 DONE; W6-BLOCK-B is BLOCKED after a deterministic pivot reproduction,
 W6-BLOCK-C is DONE after preserving deterministic factor/matrix context,
 W6-BLOCK-D is DONE after recording a sparse raw-system condition lower bound,
-and W6-BLOCK-E is ACTIVE to classify and gate the rejected factor. W6-BASE is
-READY (HELD) only for a new clean main HEAD and a brand-new root. The product's highest purpose remains calculation
+and W6-BLOCK-E is DONE after classifying and gating the rejected factor. W6-BASE is
+READY (not yet executed) from the new exact clean `main` HEAD established by this
+documentation closure commit plus a brand-new root; `f23c5b2...` is only the E
+diagnostic source HEAD. The product's highest purpose remains calculation
 with accuracy comparable to PowerSI; V1/V2/V3 and the blocked production
 attempt do not establish that accuracy. Accuracy is `unknown / not_run`, P5
 unseen design is mandatory for generalization/final signoff, and 260804 was not
@@ -351,12 +353,13 @@ proceed automatically until the Usage Guard stop/checkpoint, with Sol review and
 Luna writes. It does not authorize remote/release/installer work, retries, old-root
 W6-BASE reuse or mutation, threshold weakening, fallback, reordering, port movement,
 or physics changes.
-Before any W6-BASE rerun, W6-BLOCK-E must close. C and D already consumed their
-exactly-one old candidate/import reads and wrote only to fresh roots. E may perform
-one future read-only diagnostic using only that candidate/import pair (not the
-correlation report), after a clean result commit, and must write only to a
-brand-new E root. The old root remains forbidden for
-W6-BASE/controller/scoring/retry/mutation. The local
+Before any W6-BASE run, the completed W6-BLOCK-E gate remains a prerequisite. C and D already consumed their
+exactly-one old candidate/import reads and wrote only to fresh roots; E had one
+production candidate/import invocation plus one separate orchestration ZIP
+central-directory read, did not use the correlation report, and wrote only to its
+brand-new diagnostic root. The old root remains forbidden for
+W6-BASE/controller/scoring/retry/mutation. The next BASE run must use a new root,
+controller-only execution, one-run/no-retry. The local
 bounded V3 result is a mirror of the required CI selection, not remote CI evidence.
 
 The focused parity V1 was red once and green once (`1 passed in 0.88s`); V2 was
@@ -394,8 +397,23 @@ attempts collected zero tests. The final valid bounded V2 was `131 passed in 4.1
 exit 0. This is local structural evidence, not PowerSI accuracy evidence.
 E applies row-scaled `Aeq=SAS` with `S=diag(1/sqrt(row_norm))`, solves `beq=S*b`
 then maps `x=S*y`, and retains original-coordinate `A@x-b` residuals. The
-existing pivot ceiling and no-fallback boundary are unchanged. A failed E gate is
-BLOCKED with no automatic extra diagnostic.
+existing pivot ceiling and no-fallback boundary are unchanged. The single E
+diagnostic at `D:\SPD-Decap-PI-Evaluator-W6-Diagnostics\f23c5b241d522d05f50f6de05bd6819723b7d3db\260729-vtrip0-1khz-equilibrated`
+completed with exit 0 in `697.35s`: report `6464` bytes/SHA
+`70e1264e6e4223da9c8715ade5695d02f1ab951aa36b418e5b067a3145fd2e9f`, stdout
+`281` bytes/SHA `da71076cad8e6c7308b46bcfc42b8ef0395b430b81cb78dcb905607c4a5d783d`,
+stderr `0` bytes/SHA `e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855`.
+The completed report is solver `modal-mvp-0.8.5`, profile
+`layerwise_admittance_v1`, rail `ADC_VDD_055_VTRIP/0`, frequency `1000 Hz`, with
+finite admittance `[0.13437046955500517, 12.100420788716686]`, scaled pivot
+`9.966405069248625e9 <= 1e13`, original residual
+`3.919670457452144e-17 <= 1e-9`, one frequency solve, Touchstone `false`, and
+adaptive sweep `false`. Candidate/import bindings matched their immutable inputs;
+the ZIP central directory was opened read-only once during orchestration, but only
+one production diagnostic invocation occurred. No retry or edit was performed.
+This proves the numerical promotion gate only, not model-form or PowerSI accuracy.
+E is DONE; W6-BASE is READY for a future one-run with a fresh root, controller-only
+execution, and no retry.
 
 Approval basis commit `027ac7a09a3eded15f45c41860945f9d4c7f488d` is distinct from
 the caller-supplied exact current `main` HEAD required at a future W6 invocation;
@@ -427,5 +445,6 @@ and the exact Git HEAD are frozen together. Current trust identities: base `d43b
 | 1.7 | 2026-08-25 | W6-BLOCK-B diagnostic exit1과 W6-BLOCK-C deterministic pivot-context instrumentation을 기록하고 W6-BASE를 보류. |
 | 1.8 | 2026-08-25 | W6-BLOCK-C 완료와 W6-BLOCK-D sparse condition lower-bound instrumentation을 기록하고 W6-BASE를 보류. |
 | 1.9 | 2026-08-25 | W6-BLOCK-D 완료, W6-BLOCK-E row-scaled factorization 및 solver 0.8.5 trust rotation을 기록하고 W6-BASE를 보류. |
+| 1.10 | 2026-08-25 | W6-BLOCK-E 단일 진단 exit0 및 수치 promotion gate를 기록하고 W6-BASE READY(미실행)로 전환. |
 | 1.1 | 2026-08-24 | `WORK_EXECUTION_BASELINE.md`를 두 번째 canonical 문서로 연결. |
 | 1.0 | 2026-08-24 | v0.24 계획 중심의 Distribution–solver PRD를 제품 전체의 목적·기술 기준으로 개정. PowerSI 정확성 우선, 상태 어휘, 기술 경계, promotion gate, 검증 비용 통제와 two-document 작업 방식을 고정. |

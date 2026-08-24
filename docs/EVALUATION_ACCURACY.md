@@ -252,8 +252,8 @@ The manifest schema is `powersi-retrospective-run-manifest-v1`. Its approval bas
 commit `027ac7a09a3eded15f45c41860945f9d4c7f488d` is historical; runtime uses a
 caller/standing-authorization supplied exact clean `main` HEAD. Policy, adapter,
 v6 validator, accuracy-validator, and controller hashes are atomically pinned.
-W6-BLOCK-B is blocked; W6-BLOCK-C and W6-BLOCK-D are DONE; W6-BLOCK-E must
-close before the next W6-BASE run.
+W6-BLOCK-B is blocked; W6-BLOCK-C, W6-BLOCK-D, and W6-BLOCK-E are DONE. W6-BASE
+is READY for a new exact clean `main` HEAD and brand-new output root, but has not run.
 It also binds app `0.23.0`, solver `modal-mvp-0.8.5`, profile
 `layerwise_admittance_v1`, compiler
 `layer-surface-adjacent-y-island-finite-via-termination-kron-v8`, full static
@@ -274,10 +274,11 @@ manifest records basename, bytes, SHA-256, and exit/cancel status. The candidate
 hash is created by W6 fresh import and cross-bound between import and correlation
 reports. Any cancellation, error, or resource exhaustion is `blocked partial`: no
 scoring, W6-BASE controller reuse, or retry. W6-BLOCK-B correlation is historical
-evidence. C and D already consumed their exactly-one old candidate/import reads and
-wrote only to separate fresh roots. E may open only that candidate/import pair
-exactly once, read-only (not the correlation report), and must write only to a
-brand-new E root; the old root remains forbidden for W6-BASE/controller/scoring/retry/mutation.
+evidence. C and D consumed their exactly-one old candidate/import reads. E had one
+production diagnostic invocation using candidate/import plus one separate
+orchestration ZIP central-directory read, did not use the correlation report, and
+wrote only to a fresh root; the old root remains forbidden for W6-BASE/controller/
+scoring/retry/mutation.
 
 W6 is controller-only. The caller first invokes the controller with the approved
 policy/case and exact current clean `main` HEAD, then verifies the completed
@@ -335,8 +336,10 @@ W5 policy and implementation closure are machine-frozen and DONE. W6-BLOCK-A is
 DONE; W6-BLOCK-B is BLOCKED after a deterministic pivot reproduction,
 W6-BLOCK-C is DONE after preserving deterministic factor/matrix context,
 W6-BLOCK-D is DONE after recording a sparse raw-system condition lower bound,
-and W6-BLOCK-E is ACTIVE to classify and gate the rejected factor. W6-BASE remains
-READY (HELD) for a new clean main HEAD and a brand-new output root.
+and W6-BLOCK-E is DONE after classifying and gating the rejected factor. W6-BASE is
+READY (not executed) from the new exact clean `main` HEAD established by this
+documentation closure commit and a brand-new output root; `f23c5b2...` is only the
+E diagnostic source HEAD.
 Accuracy remains `unknown / not_run`; P5 unseen design is mandatory for
 generalization/final signoff. The approved basis commit
 `027ac7a09a3eded15f45c41860945f9d4c7f488d` is distinct from the caller-supplied
@@ -348,11 +351,13 @@ Standing authorization permits bounded W6 and ranked in-scope local code/tests t
 proceed until the Usage Guard stop/checkpoint, with Sol review/Luna writes. It does
 not authorize remote/release/installer, retries, old-root W6-BASE reuse or mutation,
 or any threshold,
-fallback, reordering, port, or physics change. Before W6-BASE, W6-BLOCK-E must
-close with its row-scaled solve gate. C and D already consumed their exactly-one
-old candidate/import reads; E may open only that pair exactly once, read-only (not
-the correlation report), and write only to a brand-new E root. The local bounded V3 is a mirror of the
-required CI selection; remote CI was not run.
+fallback, reordering, port, or physics change. Before W6-BASE, the completed
+W6-BLOCK-E row-scaled solve gate remains required. C and D already consumed their
+exactly-one old candidate/import reads. E had one production candidate/import
+invocation plus one separate orchestration ZIP read, did not use the correlation
+report, and wrote only to a brand-new E root. The next BASE
+run must use a new root, controller-only one-run/no-retry. The local bounded V3 is a
+mirror of the required CI selection; remote CI was not run.
 
 The B diagnostic root
 `D:\SPD-Decap-PI-Evaluator-W6-Diagnostics\6bbe44e2f36610755103757d6a4502c9ed9760d3\260729-vtrip0-1khz`
@@ -397,10 +402,9 @@ result exists. The tombstone is bound to old policy SHA
 `c362acb01ef28cefbbd1d32753f86bccafbdd53355b42eda83c03a6ea810698b` and must not
 be retroactively verified under the new policy; the old root is never written or used
 as a W6-BASE controller output, scoring snapshot, retry, or mutation. W6-BLOCK-B
-correlation remains historical evidence. C and D already opened only their candidate and
-import report exactly once, read-only, and wrote diagnostics to separate fresh roots. E may
-open only that candidate/import pair exactly once (not the correlation report) and must write
-to a brand-new E root. 260804 was not run. No completed manifest, sidecar,
+correlation remains historical evidence. C and D opened their candidate and import
+report exactly once, read-only, and E had one production candidate/import invocation
+plus one separate orchestration ZIP read; E did not use the correlation report. 260804 was not run. No completed manifest, sidecar,
 or offline verification exists.
 
 W6-BLOCK-C's exact fresh-root evidence is
@@ -433,8 +437,24 @@ occurred. The first valid exact V2 was `129 passed, 2 failed in 3.89s`; after th
 test-only correction it was `130 passed, 1 failed in 4.63s`. Two command/path typo
 attempts collected zero tests and are not validation evidence. The final valid bounded
 V2 was `131 passed in 4.13s`, exit 0. This is local structural evidence, not PowerSI
-accuracy evidence. E remains ACTIVE and W6-BASE remains HELD; no automatic extra
-diagnostic or retry.
+accuracy evidence.
+
+The single E production diagnostic at
+`D:\SPD-Decap-PI-Evaluator-W6-Diagnostics\f23c5b241d522d05f50f6de05bd6819723b7d3db\260729-vtrip0-1khz-equilibrated`
+completed with status `completed`, exit 0, and elapsed `697.35s`. Report `6464`
+bytes/SHA `70e1264e6e4223da9c8715ade5695d02f1ab951aa36b418e5b067a3145fd2e9f`,
+stdout `281` bytes/SHA `da71076cad8e6c7308b46bcfc42b8ef0395b430b81cb78dcb905607c4a5d783d`,
+stderr `0` bytes/SHA `e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855`.
+Solver/profile/rail/frequency were `modal-mvp-0.8.5` /
+`layerwise_admittance_v1` / `ADC_VDD_055_VTRIP/0` / `1000 Hz`; finite admittance
+was `[0.13437046955500517, 12.100420788716686]`, scaled pivot
+`9.966405069248625e9 <= 1e13`, original residual
+`3.919670457452144e-17 <= 1e-9`, with one solve, Touchstone `false`, and adaptive
+sweep `false`. Candidate/import bindings matched the immutable inputs. The ZIP
+central directory was opened read-only once during orchestration; there was one
+production diagnostic invocation and no retry/edit. E is DONE and W6-BASE is READY
+but not executed. This proves the numerical promotion gate only, not model-form or
+PowerSI accuracy.
 
 Frozen historical v5 validator/policy/fixtures and base benchmark remain byte-identical.
 W6-E atomically rotated the current v6→policy→accuracy-validator→controller trust
