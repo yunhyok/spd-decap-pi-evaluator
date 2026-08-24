@@ -1,8 +1,8 @@
 # SPD Decap PI Evaluator 목적·기술 기준
 
 - 적용 제품: **SPD Decap PI Evaluator v0.23.0**
-- 문서 버전: **1.1**
-- 현행 구현 검토 기준: `main` commit `0f24363c14e9b9f588f03e7f9e0c48a27118546f`
+- 문서 버전: **1.2**
+- W5 DRAFT source-before: `main` commit `9ce0d65d4190d55c8abb6ee157bd30f1031f2309`
 - 상태: **G0 기준 문서** — [작업 기준](WORK_EXECUTION_BASELINE.md)과 함께 사용하며, 별도 지시 전 코드 수정·고비용 검증을 승인하지 않음
 - 최종 개정: 2026-08-24 (Asia/Seoul)
 
@@ -165,6 +165,34 @@ import/save 성공은 PowerSI accuracy promotion이 아니다.
 PowerSI gate로 전용해서는 안 된다. solver 구현 작업 전에 사용자가 수치
 합격선과 reference partition을 승인해야 한다.
 
+### 6.2 W5-GATE DRAFT 정책 (사용자 승인 전)
+
+W5에서 검토할 threshold, partition, run manifest는 현재 **DRAFT 정책 판단**일
+뿐이며 역사적 측정 결과나 제품 sign-off가 아니다. 아래 수치와 분류는 사용자가
+명시적으로 승인하기 전에는 accuracy promotion에 사용할 수 없다. 현재 등록된
+자료에는 최종 generalization을 판정할 P5 unseen design이 없으므로, 최종 정확성
+및 일반화 승격은 BLOCKED다.
+
+- 제안 threshold: 100 kHz/1 MHz low-frequency offset, 100 kHz–100 MHz
+  critical-band magnitude, rail별 max magnitude, phase, low-impedance complex
+  error, dominant-peak 위치/진폭을 함께 판정한다.
+- VQPS 10개 bare rail과 VTRIP/VINT/VCPU 6개 loaded rail은 별도 strata로
+  유지하며 pooled 평균이나 한 strata가 다른 strata의 실패를 숨기는 판정을
+  하지 않는다.
+- 260729 development와 260804 retrospective design holdout은 모두
+  retrospective evidence다. 양쪽 모두 등록된 `D:\` raw 경로와 S92P 경로의
+  존재/size 일치만 확인된 상태이며, 이 turn에는 SHA를 재계산하지 않았다.
+  candidate `.spdpi`는 없으므로 W6는 fresh import에서 시작해야 한다.
+- Site0/site1/loaded는 blind sample이 아니라 노출된 strata다. P1 transfer/scale
+  holdout은 160-port runner와 memory-safe preprocessing 부재로, P2는 현재
+  weighting/reference-plane/de-embedding 미확정으로, P3/P4는 등록 경로의
+  reference 부재와 multifactor/solver-state confound로 BLOCKED다. P5 unseen
+  design은 없으며 최종 generalization에 필수다.
+
+따라서 W6가 승인 없이 만들 수 있는 것은 260729/260804의 **비-blind
+retrospective baseline**뿐이다. 이것을 unseen generalization 또는 제품
+PowerSI 합격으로 재사용할 수 없다.
+
 ## 7. Promotion gate
 
 다음 gate는 순서대로 통과한다. 앞 단계 실패나 unknown 상태에서 뒤의 고비용
@@ -283,5 +311,6 @@ flowchart TD
 
 | 문서 버전 | 날짜 | 변경 |
 |---|---|---|
+| 1.2 | 2026-08-24 | W5-GATE의 승인 전 DRAFT threshold/partition/manifest 경계와 P5 generalization blocker를 명시. |
 | 1.1 | 2026-08-24 | `WORK_EXECUTION_BASELINE.md`를 두 번째 canonical 문서로 연결. |
 | 1.0 | 2026-08-24 | v0.24 계획 중심의 Distribution–solver PRD를 제품 전체의 목적·기술 기준으로 개정. PowerSI 정확성 우선, 상태 어휘, 기술 경계, promotion gate, 검증 비용 통제와 two-document 작업 방식을 고정. |

@@ -1,10 +1,10 @@
 # SPD Decap PI Evaluator 작업 기준
 
 - 적용 제품: **SPD Decap PI Evaluator v0.23.0**
-- 문서 버전: **1.2**
-- 상위 기준: [목적·기술 기준](PRODUCT_PURPOSE_AND_TECHNICAL_BASELINE.md) v1.1
-- 현행 source 기준: `main` commit `b2608a260a1f952c9b1f6c11d57b71e060ae575c`
-- 상태: **ACTIVE CONTROL DOCUMENT — W4-COND 완료; W5-GATE 승인 대기**
+- 문서 버전: **1.3**
+- 상위 기준: [목적·기술 기준](PRODUCT_PURPOSE_AND_TECHNICAL_BASELINE.md) v1.2
+- 현행 source 기준: `main` commit `9ce0d65d4190d55c8abb6ee157bd30f1031f2309`
+- 상태: **ACTIVE CONTROL DOCUMENT — W5-GATE DRAFT; 사용자 승인 대기**
 - 최종 개정: 2026-08-24 (Asia/Seoul)
 
 ## 1. 압축 후 즉시 복구 카드
@@ -16,13 +16,13 @@ context가 압축되거나 새 session에서 작업을 재개하면 다른 연�
 |---|---|
 | 변하지 않는 목적 | source-derived single-rail `Zii`의 PowerSI 근접 정확성과 일반화 |
 | 현재 branch | `main`만 사용; 정리된 과거 branch를 다시 조사하지 않음 |
-| 현재 active work item | `NONE` — `W4-COND` 완료; `W5-GATE` 승인 대기 |
-| 다음 권장 묶음 | `W5-GATE` 정확성 계약·frozen baseline 승인 검토 |
-| 코드 수정 권한 | active item 승인 전 production code 수정 금지 |
+| 현재 active work item | `W5-GATE` — docs-only DRAFT; numeric/partition/manifest 승인 대기 |
+| 다음 권장 묶음 | `W6-BASE`는 W5 승인 후에만 검토 |
+| 코드 수정 권한 | docs-only DRAFT; production/runtime code 수정 금지 |
 | 고비용 검증 권한 | `W5-GATE` 사용자 승인 전 numerical/PowerSI 실행 금지 |
 | 현재 정확성 상태 | `current / unknown / not_run` |
 | 현재 release 계산 증거 | import/save/solver-entry만 통과; frequency solve `0` |
-| 현재 working tree | W4-COND forward-reliability gate와 solver identity v0.8.4 갱신 완료; current HEAD 기록 |
+| 현재 working tree | W5 DRAFT threshold/partition/manifest만 문서화; W6 candidate 없음 |
 
 최초 목적은 [목적·기술 기준 2장](PRODUCT_PURPOSE_AND_TECHNICAL_BASELINE.md#2-최우선-목적),
 현재 증거 상태는 [6장](PRODUCT_PURPOSE_AND_TECHNICAL_BASELINE.md#6-증거와-상태-표기)이
@@ -102,7 +102,7 @@ active work item에 명시된 source/test/subsystem 문서만 추가로 읽는�
 | `W3-CI` | 7 | DONE | 짧은 product-core lane을 required CI로 연결 | parser/scenario/solver/Distribution/GUI I/O 핵심 경로 green |
 | `W4-FREQ` | 8 | DONE | adaptive frequency가 sample 사이 narrow peak를 보지 않고 converged 처리하는 blind spot | midpoint/coverage focused case가 peak 누락을 검출 |
 | `W4-COND` | 9 | DONE | ill-conditioned sparse solve의 결과 신뢰성 gate | residual과 별도 conditioning/forward-reliability 판정 |
-| `W5-GATE` | 10 | BLOCKED | 제품 PowerSI 수치 gate와 development/holdout/unseen partition 확정 | 사용자 승인 필요 |
+| `W5-GATE` | 10 | ACTIVE | 제품 PowerSI 수치 gate와 development/holdout/unseen partition의 DRAFT 승인 준비 | 사용자 numeric/partition/manifest/hash-rotation 승인 필요 |
 | `W6-BASE` | 11 | BLOCKED | exact current solver baseline 1회 | W1–W5 완료와 run manifest 승인 필요 |
 | `W7-PHYS` | 12 | BLOCKED | 가장 큰 error component의 owning physical block 하나 수정 | W6 rail별 error decomposition 필요 |
 | `W8-REL` | 13 | BLOCKED | completed known-case solve를 release gate에 연결하고 최종 전달 | accuracy/product gate와 exact release commit 필요 |
@@ -184,6 +184,42 @@ evidence identity before: `main` / `3b6ed2cc6308179002fee817c1b14f7efebd6cb9` / 
 결과 / artifact / diff: conditioning red node는 `1 failed`; 최소 solver/cache gate 후 adversarial+ceiling focused는 `2 passed in 0.72s`였다. 최종 `pytest -q tests/test_layer_surface_network.py tests/test_layerwise_network.py tests/test_spd_decap_evaluation.py::test_solver_version_0_8_2_recalculates_0_6_baseline_cache`는 `94 passed in 2.16s`였다. source-before는 `main` / `b2608a260a1f952c9b1f6c11d57b71e060ae575c`이며, 그 상태에서 workflow Test command에 두 W4 conditioning gate를 보존적으로 추가한 resulting bounded V3 selection을 `QT_QPA_PLATFORM=offscreen`으로 1회 실행해 `325 passed, 1 skipped in 18.25s`였다. Required CI command에는 두 W4 gate node가 유지된다. W4-FREQ synthetic closure는 별도 commit에서 완료되었고, 이번 묶음은 forward-reliability gate와 v0.8.4 live identity에 한정한다. W5 hash-bound validator/non-regression scripts와 기존 artifact identity는 pre-W4 값으로 동결해 두었으며 W5 사용자 승인 전 갱신하지 않는다. remote CI/full suite/production SPD/PowerSI/installer/release는 실행하지 않았다. accuracy는 `unknown / not_run`; model-form/PowerSI 수치 합격을 주장하지 않는다.
 다음 사용자 결정: W5-GATE를 승인할지 결정.
 
+ID / 상태: `W5-GATE / ACTIVE (docs-only DRAFT)`
+사용자 목적과의 연결: PowerSI 근접 정확성과 새로운 설계 일반화를 판정할 수치,
+reference partition, exact run manifest를 사용자 승인 가능한 형태로 고정한다.
+현재 수치와 분류는 모두 **unapproved policy judgment**이며 historical evidence나
+제품 sign-off가 아니다. P5 unseen design이 없어 final accuracy/generalization
+promotion은 BLOCKED다.
+이번 변경 묶음: 이 문서, `PRODUCT_PURPOSE_AND_TECHNICAL_BASELINE.md`,
+`EVALUATION_ACCURACY.md`에 W5 DRAFT threshold/formula, strata/partition,
+W6 manifest, hash-rotation 경계를 기록한다.
+명시적 제외 범위: source/runtime/solver/validator/policy JSON/historical fixture
+수정, 새 script/JSON/doc 생성, numerical/PowerSI/test 실행, W6 fresh import,
+production SPD, installer/release/remote CI.
+root-cause 가설: 현재는 승인된 numeric gate와 blind/unseen partition 및
+hash-bound manifest가 없어 과거 비교값을 product accuracy로 승격할 수 없다.
+읽을 source/test/subsystem 문서: 두 canonical baseline과 `EVALUATION_ACCURACY.md`
+만 사용하며, frozen validator/fixture는 identity 확인 외에 변경하지 않는다.
+acceptance: low-frequency/critical magnitude/phase/low-Z complex/peak DRAFT
+threshold와 260729/260804 strata, P1–P5 blockers, W6 manifest 및 hash rotation이
+모두 승인 전 상태로 표시된다. W6는 at most non-blind retrospective baseline이다.
+V0–V5 계획과 최대 횟수: 세 문서 cross-document string/status static check 1회와
+`git diff --check` 1회; numerical/PowerSI/tests 및 V1–V5 실행 금지.
+중단 조건: 사용자가 숫자, strata 경계, manifest identity 또는 hash rotation을
+승인하지 않은 상태에서 candidate/import/correlation을 시작해야 하는 경우.
+evidence identity before: `main` / `9ce0d65d4190d55c8abb6ee157bd30f1031f2309` /
+runtime `modal-mvp-0.8.4` / convergence `adaptive-frequency-modal-v5` /
+compiler `kron-v8`.
+결과 / artifact / diff: W5 DRAFT 문서만 작성했다. 260729/260804 raw+S92P
+path 존재/size 일치 사실은 등록 정책에서 가져오되 SHA는 이 turn에 재계산하지
+않았고, candidate `.spdpi`는 absent/fresh import required다. Bare VQPS 10개와
+loaded VTRIP/VINT/VCPU 6개는 별도 strata이며 pooled 판정을 하지 않는다. P1–P4
+blocker와 P5 missing을 유지하고, W5 hash-bound validators/policy JSON/historical
+fixtures는 pre-W4 값으로 frozen 상태다. accuracy `unknown / not_run`.
+다음 사용자 결정(정확히 네 그룹): (1) numeric thresholds/formulas, (2) partition/
+strata 및 P1–P5 blocker 해석, (3) W6 manifest/runtime/resource/output contract,
+(4) hash rotation과 frozen validator/fixture 보존 정책.
+
 ## 8. Context 압축·새 session 복구 절차
 
 1. 상위 목적 문서와 이 문서의 `압축 후 즉시 복구 카드`만 읽는다.
@@ -251,3 +287,4 @@ evidence identity before: `main` / `3b6ed2cc6308179002fee817c1b14f7efebd6cb9` / 
 | 1.0 | 2026-08-24 | 두 문서 기반 작업 통제, 우선순위 register, 검증 사다리·최대 횟수, active-item 형식, context 복구와 중단 조건을 생성. |
 | 1.1 | 2026-08-24 | W4-FREQ midpoint coverage gate 완료, v5 identity와 focused evidence를 기록하고 W4-COND를 다음 item으로 지정. |
 | 1.2 | 2026-08-24 | W4-COND forward-reliability gate와 v0.8.4 solver identity 완료, W5-GATE 승인 대기로 전환. |
+| 1.3 | 2026-08-24 | W5-GATE DRAFT threshold/partition/manifest/hash-rotation을 문서화하고 사용자 승인 전 실행을 차단. |
