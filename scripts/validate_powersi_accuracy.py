@@ -24,7 +24,7 @@ POLICY_PATH = ROOT / "validation-policies" / "powersi_accuracy_v1.json"
 BENCHMARK = ROOT / "scripts" / "benchmark_raw_spd_powersi_correlation.py"
 BENCHMARK_ADAPTER = ROOT / "scripts" / "benchmark_raw_spd_powersi_correlation_v6.py"
 V6_VALIDATOR = ROOT / "scripts" / "validate_correlation_v6.py"
-EXPECTED_POLICY_SHA256 = "192bcb127a7ece49d4f7f6ec4d10d7bd0ccc3fbdb3e527290fd6b8ab033d3496"
+EXPECTED_POLICY_SHA256 = "6ea6e0b3327eaf828257334d7bb0211582fcc85ed632468223c7b566d0d3fd4d"
 RAILS = (
     "ADC_VDD_180_VQPS_OTP_TOP_AON/0",
     "ADC_VDD_180_VQPS_SYS_0_AON/0",
@@ -159,7 +159,7 @@ def _require_policy_shape(policy: Mapping[str, Any]) -> None:
     if type(approval["product_purpose_document_version"]) is not str or type(approval["evaluation_accuracy_document_version"]) is not str:
         raise IntegrityError("approval document versions are invalid")
     identity = exact(policy["release_identity"], {"app_version", "solver_version", "solver_profile", "convergence_policy", "compiler_version", "static_compiler_sha256"}, "release_identity")
-    if identity != {"app_version": "0.23.0", "solver_version": "modal-mvp-0.8.4", "solver_profile": "layerwise_admittance_v1", "convergence_policy": "adaptive-frequency-modal-v5", "compiler_version": "layer-surface-adjacent-y-island-finite-via-termination-kron-v8", "static_compiler_sha256": "3894d6174dd6765f5f830bc19511cd1bb843f3f88b1b305ceb5be32c52056615"}:
+    if identity != {"app_version": "0.23.0", "solver_version": "modal-mvp-0.8.5", "solver_profile": "layerwise_admittance_v1", "convergence_policy": "adaptive-frequency-modal-v5", "compiler_version": "layer-surface-adjacent-y-island-finite-via-termination-kron-v8", "static_compiler_sha256": "3894d6174dd6765f5f830bc19511cd1bb843f3f88b1b305ceb5be32c52056615"}:
         raise IntegrityError("release identity mismatch")
     benchmark_source = exact(policy["benchmark_base_source"], {"path", "hash_semantics", "sha256"}, "benchmark_base_source")
     benchmark_adapter = exact(policy["benchmark_adapter"], {"path", "hash_semantics", "sha256"}, "benchmark_adapter")

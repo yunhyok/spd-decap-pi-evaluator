@@ -1,9 +1,9 @@
 # SPD Decap PI Evaluator 목적·기술 기준
 
 - 적용 제품: **SPD Decap PI Evaluator v0.23.0**
-- 문서 버전: **1.8**
+- 문서 버전: **1.9**
 - W5 approved/machine-frozen source-before: `main` commit `027ac7a09a3eded15f45c41860945f9d4c7f488d`
-- 상태: **G0 기준 문서** — [작업 기준](WORK_EXECUTION_BASELINE.md)과 함께 사용하며, W5 DONE·W6-BLOCK-A DONE·W6-BLOCK-B BLOCKED·W6-BLOCK-C DONE·W6-BLOCK-D ACTIVE·W6-BASE 실행 보류
+- 상태: **G0 기준 문서** — [작업 기준](WORK_EXECUTION_BASELINE.md)과 함께 사용하며, W5 DONE·W6-BLOCK-A DONE·W6-BLOCK-B BLOCKED·W6-BLOCK-C DONE·W6-BLOCK-D DONE·W6-BLOCK-E ACTIVE·W6-BASE 실행 보류
 - 최종 개정: 2026-08-25 (Asia/Seoul)
 
 ## 1. 문서 역할과 권위
@@ -76,7 +76,7 @@ DRC, 제조 또는 sign-off 도구를 대체한다고 주장하지 않는다.
 
 - Desktop 기본 profile은 `layerwise_admittance_v1`, 표시명은
   **Layer-surface terminal-complete network**다.
-- 현행 solver identity는 `modal-mvp-0.8.4`, compiler algorithm은
+- 현행 solver identity는 `modal-mvp-0.8.5`, compiler algorithm은
   `layer-surface-adjacent-y-island-finite-via-termination-kron-v8`이다.
 - retained physical `(layer, NET)` artwork surface를 독립 node로 두고, 인접
   dielectric gap의 ordered artwork에서 Maxwell admittance block을 만든다.
@@ -201,10 +201,10 @@ PowerSI 합격으로 재사용할 수 없다.
 현재 trust identity는 benchmark base normalized SHA
 `d43b868629464f408ea19362daa78fc369d2fd446cf3d458cfdc044ccbf57f08`, adapter
 `6b7e399b4a843028ce754ac9154b8ce1a4575b1581c8d6007cebf26f94e6d440`, v6
-validator `ae6757057044cdc603106210997a45fa3bcba0238f50089fe2c45d29d6573552`,
-accuracy validator `18dd2010b85dd9cf4a355ff6214119ed16fbec3f63f6fe6fa5834ed1bf732caa`,
-policy `192bcb127a7ece49d4f7f6ec4d10d7bd0ccc3fbdb3e527290fd6b8ab033d3496`,
-controller `3defa5991049e70042b3ac7c7d8243b34d2cab355aef5244b9643d3487550840`이다.
+validator `3f26b2aa7880cd9aff89cd5407643c934367764b590db98962cbc30bfa1b04a0`,
+accuracy validator `8487be60cad523f9ed2ea1c61c57b580d9c2bb0fee598eea0bb938145b82151e`,
+policy `6ea6e0b3327eaf828257334d7bb0211582fcc85ed632468223c7b566d0d3fd4d`,
+controller `b7d5b87d97e1441ccaa950a1fbe50a49f599483e68acee99596eda7dd612262d`이다.
 기존 v5 validator, known-case policy와 historical fixtures는 byte-identical로
 보존되며, W6 controller는 `blocked_partial`에서 부분 결과를 점수화하지 않는다.
 
@@ -337,10 +337,10 @@ flowchart TD
 
 W5 policy and implementation closure are machine-frozen and DONE. W6-BLOCK-A is
 DONE; W6-BLOCK-B is BLOCKED after a deterministic pivot reproduction,
-W6-BLOCK-C is DONE after preserving deterministic factor/matrix context, and
-W6-BLOCK-D is ACTIVE to estimate a sparse raw-system condition lower bound at
-the same fail-closed pivot. W6-BASE is READY (HELD) only for a new clean main
-HEAD and a brand-new root. The product's highest purpose remains calculation
+W6-BLOCK-C is DONE after preserving deterministic factor/matrix context,
+W6-BLOCK-D is DONE after recording a sparse raw-system condition lower bound,
+and W6-BLOCK-E is ACTIVE to classify and gate the rejected factor. W6-BASE is
+READY (HELD) only for a new clean main HEAD and a brand-new root. The product's highest purpose remains calculation
 with accuracy comparable to PowerSI; V1/V2/V3 and the blocked production
 attempt do not establish that accuracy. Accuracy is `unknown / not_run`, P5
 unseen design is mandatory for generalization/final signoff, and 260804 was not
@@ -351,11 +351,11 @@ proceed automatically until the Usage Guard stop/checkpoint, with Sol review and
 Luna writes. It does not authorize remote/release/installer work, retries, old-root
 W6-BASE reuse or mutation, threshold weakening, fallback, reordering, port movement,
 or physics changes.
-Before any W6-BASE rerun, W6-BLOCK-D must close with its lower-bound evidence.
-C already consumed its exactly-one old candidate/import read and wrote only to its
-fresh root. D may perform one future read-only diagnostic using only that
-candidate/import pair (not the correlation report), after a clean commit, and
-must write only to a brand-new D root. The old root remains forbidden for
+Before any W6-BASE rerun, W6-BLOCK-E must close. C and D already consumed their
+exactly-one old candidate/import reads and wrote only to fresh roots. E may perform
+one future read-only diagnostic using only that candidate/import pair (not the
+correlation report), after a clean result commit, and must write only to a
+brand-new E root. The old root remains forbidden for
 W6-BASE/controller/scoring/retry/mutation. The local
 bounded V3 result is a mirror of the required CI selection, not remote CI evidence.
 
@@ -366,8 +366,8 @@ exit 0. The only skip was the unavailable local v0.13 SPD regression bundle at
 performed; the external PowerSI solver was not run. Phase2 consumed the registered
 PowerSI Touchstone but produced no completed comparison or score. Remote/full suite,
 installer, release, and production rerun were not performed. The B diagnostic
-reproduced the pivot but did not classify its root cause. C's exact evidence is
-the fresh root
+reproduced the pivot but did not classify its root cause. C's exact evidence is the
+fresh root
 `D:\SPD-Decap-PI-Evaluator-W6-Diagnostics\e9a1ca124d94f1bd0192d519aa22996e87266ac5\260729-vtrip0-1khz`:
 exit 1 after about `667.19s`, no report, stdout SHA
 `e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855`, stderr SHA
@@ -379,7 +379,23 @@ backward residual `6.808e-20`, and matrix SHA
 and repo were unchanged. D now adds sparse condition lower-bound evidence only
 inside that existing pivot failure branch; its V1 red/green and V2 results are
 recorded in the work document. No threshold relaxation, fallback, reordering,
-port, or physics change is allowed.
+port, or physics change is allowed. D's diagnostic root was
+`D:\SPD-Decap-PI-Evaluator-W6-Diagnostics\ac828f306da4ca4fa4e4c80c2cb77cadf0d3185f\260729-vtrip0-1khz-cond1`:
+exit 1 after `668.63s`, no report; inverse lower bound `3.040e+09`, condition
+lower bound `9.572e+17`, stderr SHA
+`d40503688889e51afd00504321ca37e032ff6b81fcb800c3bb51d722abab5c58`. The raw
+system is therefore proven to have condition lower bound at least `9.572e+17`;
+the tiny backward residual does not prove forward, assembly, or PowerSI accuracy.
+E's analytic V1 was red once (`1 failed in 0.93s`) and corrected green once
+(`1 passed in 0.72s`); two intermediate source-indentation/syntax collection
+failures occurred. The first valid exact V2 was `129 passed, 2 failed in 3.89s`,
+then `130 passed, 1 failed in 4.63s` after the test-only correction; two typo
+attempts collected zero tests. The final valid bounded V2 was `131 passed in 4.13s`,
+exit 0. This is local structural evidence, not PowerSI accuracy evidence.
+E applies row-scaled `Aeq=SAS` with `S=diag(1/sqrt(row_norm))`, solves `beq=S*b`
+then maps `x=S*y`, and retains original-coordinate `A@x-b` residuals. The
+existing pivot ceiling and no-fallback boundary are unchanged. A failed E gate is
+BLOCKED with no automatic extra diagnostic.
 
 Approval basis commit `027ac7a09a3eded15f45c41860945f9d4c7f488d` is distinct from
 the caller-supplied exact current `main` HEAD required at a future W6 invocation;
@@ -394,9 +410,10 @@ The registered 260804 S92P SHA is
 trailing `b` in the earlier draft was a registry transcription typo, not a new
 hash computation.
 
-Listed W5 normalized policy/adapter/validator/controller identities and declared
-solver/compiler/convergence identities are immutable; only the exact Git HEAD may
-change as the result commit. Current trust identities: base `d43b868629464f408ea19362daa78fc369d2fd446cf3d458cfdc044ccbf57f08`; adapter `6b7e399b4a843028ce754ac9154b8ce1a4575b1581c8d6007cebf26f94e6d440`; v6 `ae6757057044cdc603106210997a45fa3bcba0238f50089fe2c45d29d6573552`; accuracy validator `18dd2010b85dd9cf4a355ff6214119ed16fbec3f63f6fe6fa5834ed1bf732caa`; policy `192bcb127a7ece49d4f7f6ec4d10d7bd0ccc3fbdb3e527290fd6b8ab033d3496`; controller normalized source `3defa5991049e70042b3ac7c7d8243b34d2cab355aef5244b9643d3487550840`.
+Frozen historical v5 validator/policy/fixtures and base benchmark remain byte-identical.
+W6-E atomically rotated the current v6→policy→accuracy-validator→controller trust
+chain for solver `modal-mvp-0.8.5`; after the result commit, listed current identities
+and the exact Git HEAD are frozen together. Current trust identities: base `d43b868629464f408ea19362daa78fc369d2fd446cf3d458cfdc044ccbf57f08`; adapter `6b7e399b4a843028ce754ac9154b8ce1a4575b1581c8d6007cebf26f94e6d440`; v6 `3f26b2aa7880cd9aff89cd5407643c934367764b590db98962cbc30bfa1b04a0`; accuracy validator `8487be60cad523f9ed2ea1c61c57b580d9c2bb0fee598eea0bb938145b82151e`; policy `6ea6e0b3327eaf828257334d7bb0211582fcc85ed632468223c7b566d0d3fd4d`; controller normalized source `b7d5b87d97e1441ccaa950a1fbe50a49f599483e68acee99596eda7dd612262d`.
 
 ## 12. 변경 기록
 
@@ -409,5 +426,6 @@ change as the result commit. Current trust identities: base `d43b868629464f408ea
 | 1.6 | 2026-08-25 | W6-BLOCK-A parity, blocked 260729 attempt, standing authorization과 W6-BLOCK-B pre-rerun boundary를 기록. |
 | 1.7 | 2026-08-25 | W6-BLOCK-B diagnostic exit1과 W6-BLOCK-C deterministic pivot-context instrumentation을 기록하고 W6-BASE를 보류. |
 | 1.8 | 2026-08-25 | W6-BLOCK-C 완료와 W6-BLOCK-D sparse condition lower-bound instrumentation을 기록하고 W6-BASE를 보류. |
+| 1.9 | 2026-08-25 | W6-BLOCK-D 완료, W6-BLOCK-E row-scaled factorization 및 solver 0.8.5 trust rotation을 기록하고 W6-BASE를 보류. |
 | 1.1 | 2026-08-24 | `WORK_EXECUTION_BASELINE.md`를 두 번째 canonical 문서로 연결. |
 | 1.0 | 2026-08-24 | v0.24 계획 중심의 Distribution–solver PRD를 제품 전체의 목적·기술 기준으로 개정. PowerSI 정확성 우선, 상태 어휘, 기술 경계, promotion gate, 검증 비용 통제와 two-document 작업 방식을 고정. |

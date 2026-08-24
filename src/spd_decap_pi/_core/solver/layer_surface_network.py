@@ -2232,8 +2232,20 @@ class CompiledLayerSurfaceNetwork:
                 gauge = int(members[0])
                 retained = members[1:]
                 local = csc_matrix(matrix[retained, :][:, retained])
+                row_norm = np.asarray(np.abs(local).sum(axis=1)).ravel()
+                if (
+                    not row_norm.size
+                    or not np.all(np.isfinite(row_norm))
+                    or np.any(row_norm <= 0.0)
+                ):
+                    raise LayerSurfaceNetworkError(
+                        "layer-network row scaling is invalid"
+                    )
+                row_scale = 1.0 / np.sqrt(row_norm)
+                scaling = diags(row_scale, offsets=0, format="csc")
+                scaled_local = csc_matrix(scaling @ local @ scaling)
                 try:
-                    factor = splu(local)
+                    factor = splu(scaled_local)
                 except Exception as exc:
                     labels = tuple(
                         self._reduced_node_ids[int(active_global_nodes[index])]
@@ -2310,9 +2322,11 @@ class CompiledLayerSurfaceNetwork:
                             rhs[positive_position, column] += 1.0
                         if negative_position is not None:
                             rhs[negative_position, column] -= 1.0
-                    solution = np.asarray(
-                        factor.solve(rhs), dtype=np.complex128
+                    scaled_rhs = row_scale[:, None] * rhs
+                    scaled_solution = np.asarray(
+                        factor.solve(scaled_rhs), dtype=np.complex128
                     )
+                    solution = row_scale[:, None] * scaled_solution
                     residual = local @ solution - rhs
                     residual_norms = np.linalg.norm(residual, axis=0)
                     solution_norms = np.linalg.norm(solution, axis=0)
@@ -2354,8 +2368,12 @@ class CompiledLayerSurfaceNetwork:
                             matrix_one_norm = float(sparse_norm(local, ord=1))
                             inverse = LinearOperator(
                                 local.shape,
-                                matvec=lambda x: factor.solve(x),
-                                rmatvec=lambda x: factor.solve(x, trans="H"),
+                                matvec=lambda x: row_scale * factor.solve(
+                                    row_scale * x
+                                ),
+                                rmatvec=lambda x: row_scale * factor.solve(
+                                    row_scale * x, trans="H"
+                                ),
                                 dtype=np.complex128,
                             )
                             inverse_one_norm = float(

@@ -252,9 +252,9 @@ The manifest schema is `powersi-retrospective-run-manifest-v1`. Its approval bas
 commit `027ac7a09a3eded15f45c41860945f9d4c7f488d` is historical; runtime uses a
 caller/standing-authorization supplied exact clean `main` HEAD. Policy, adapter,
 v6 validator, accuracy-validator, and controller hashes are atomically pinned.
-W6-BLOCK-B is blocked; W6-BLOCK-C is DONE; W6-BLOCK-D must close before the
-next W6-BASE run.
-It also binds app `0.23.0`, solver `modal-mvp-0.8.4`, profile
+W6-BLOCK-B is blocked; W6-BLOCK-C and W6-BLOCK-D are DONE; W6-BLOCK-E must
+close before the next W6-BASE run.
+It also binds app `0.23.0`, solver `modal-mvp-0.8.5`, profile
 `layerwise_admittance_v1`, compiler
 `layer-surface-adjacent-y-island-finite-via-termination-kron-v8`, full static
 compiler SHA `3894d6174dd6765f5f830bc19511cd1bb843f3f88b1b305ceb5be32c52056615`,
@@ -274,10 +274,10 @@ manifest records basename, bytes, SHA-256, and exit/cancel status. The candidate
 hash is created by W6 fresh import and cross-bound between import and correlation
 reports. Any cancellation, error, or resource exhaustion is `blocked partial`: no
 scoring, W6-BASE controller reuse, or retry. W6-BLOCK-B correlation is historical
-evidence. C already consumed its exactly-one old candidate/import read and wrote
-only to its separate fresh root. D may open only that candidate/import pair exactly
-once, read-only (not the correlation report), and must write only to a brand-new D
-root; the old root remains forbidden for W6-BASE/controller/scoring/retry/mutation.
+evidence. C and D already consumed their exactly-one old candidate/import reads and
+wrote only to separate fresh roots. E may open only that candidate/import pair
+exactly once, read-only (not the correlation report), and must write only to a
+brand-new E root; the old root remains forbidden for W6-BASE/controller/scoring/retry/mutation.
 
 W6 is controller-only. The caller first invokes the controller with the approved
 policy/case and exact current clean `main` HEAD, then verifies the completed
@@ -333,9 +333,10 @@ fixtures/results.
 
 W5 policy and implementation closure are machine-frozen and DONE. W6-BLOCK-A is
 DONE; W6-BLOCK-B is BLOCKED after a deterministic pivot reproduction,
-W6-BLOCK-C is DONE after preserving deterministic factor/matrix context, and
-W6-BLOCK-D is ACTIVE to estimate a sparse raw-system condition lower bound.
-W6-BASE remains READY (HELD) for a new clean main HEAD and a brand-new output root.
+W6-BLOCK-C is DONE after preserving deterministic factor/matrix context,
+W6-BLOCK-D is DONE after recording a sparse raw-system condition lower bound,
+and W6-BLOCK-E is ACTIVE to classify and gate the rejected factor. W6-BASE remains
+READY (HELD) for a new clean main HEAD and a brand-new output root.
 Accuracy remains `unknown / not_run`; P5 unseen design is mandatory for
 generalization/final signoff. The approved basis commit
 `027ac7a09a3eded15f45c41860945f9d4c7f488d` is distinct from the caller-supplied
@@ -347,10 +348,10 @@ Standing authorization permits bounded W6 and ranked in-scope local code/tests t
 proceed until the Usage Guard stop/checkpoint, with Sol review/Luna writes. It does
 not authorize remote/release/installer, retries, old-root W6-BASE reuse or mutation,
 or any threshold,
-fallback, reordering, port, or physics change. Before W6-BASE, W6-BLOCK-D must
-close with sparse condition lower-bound evidence for the `2.543e17 > 1e13` pivot;
-D may open only the old candidate and import report exactly once, read-only (not
-the correlation report), and writes only to a brand-new diagnostic root. The local bounded V3 is a mirror of the
+fallback, reordering, port, or physics change. Before W6-BASE, W6-BLOCK-E must
+close with its row-scaled solve gate. C and D already consumed their exactly-one
+old candidate/import reads; E may open only that pair exactly once, read-only (not
+the correlation report), and write only to a brand-new E root. The local bounded V3 is a mirror of the
 required CI selection; remote CI was not run.
 
 The B diagnostic root
@@ -396,10 +397,10 @@ result exists. The tombstone is bound to old policy SHA
 `c362acb01ef28cefbbd1d32753f86bccafbdd53355b42eda83c03a6ea810698b` and must not
 be retroactively verified under the new policy; the old root is never written or used
 as a W6-BASE controller output, scoring snapshot, retry, or mutation. W6-BLOCK-B
-correlation remains historical evidence. C already opened only its candidate and import report
-exactly once, read-only, and wrote its diagnostics to a separate fresh root. D may open
-only that candidate/import pair exactly once (not the correlation report) and must write
-to a brand-new D root. 260804 was not run. No completed manifest, sidecar,
+correlation remains historical evidence. C and D already opened only their candidate and
+import report exactly once, read-only, and wrote diagnostics to separate fresh roots. E may
+open only that candidate/import pair exactly once (not the correlation report) and must write
+to a brand-new E root. 260804 was not run. No completed manifest, sidecar,
 or offline verification exists.
 
 W6-BLOCK-C's exact fresh-root evidence is
@@ -412,23 +413,39 @@ context was `756888` nodes, `2904010` nonzeros, local magnitudes
 backward residual `6.808e-20`, and matrix SHA
 `709efcd1b8857c1ab9c4f73bec20cc7ec7d144cd9bfd32b9ee1657b956587524`.
 W6-BLOCK-D adds only `||A||1` and factor-solve inverse `onenormest(t=1,itmax=5)`
-inside this existing pivot failure branch. It records
-`inverse_one_norm_lower_bound` and `condition_1_lower_bound`, or `unavailable`
-on estimator failure; no threshold relaxation, fallback, reordering, port, or
-physics change is permitted. V1 red/green and the layer-surface V2 are recorded
-in the work document. A lower bound above `1e13` proves only that the raw local
-system is at least that ill-conditioned; it does not prove actual condition,
-assembly/topology correctness, forward accuracy, or PowerSI accuracy.
+inside this existing pivot failure branch. Its diagnostic root was
+`D:\SPD-Decap-PI-Evaluator-W6-Diagnostics\ac828f306da4ca4fa4e4c80c2cb77cadf0d3185f\260729-vtrip0-1khz-cond1`:
+exit 1 after `668.63s`, no report, inverse lower bound `3.040e+09`, condition
+lower bound `9.572e+17`, stderr SHA
+`d40503688889e51afd00504321ca37e032ff6b81fcb800c3bb51d722abab5c58`. A lower
+bound above `1e13` proves only that the raw local system is at least that
+ill-conditioned; it does not prove actual condition, assembly/topology
+correctness, forward accuracy, or PowerSI accuracy.
 
-Listed W5 normalized policy/adapter/validator/controller identities and declared
-solver/compiler/convergence identities are immutable; only the exact Git HEAD may
-change as the result commit. Current trust identities are base
+W6-BLOCK-E uses positive row scaling `S=diag(1/sqrt(row_norm))` and sparse
+`Aeq=SAS`, solves `beq=S*b`, maps `x=S*y`, and retains the original-coordinate
+`A@x-b` residual gate. The rejected-factor raw inverse lower bound uses
+`S*factor.solve(S*x)` and its H equivalent. Pivot ceiling `1e13`, residual `1e-9`,
+cache/hash, assembly, ports, and physics are unchanged; solver identity is
+`modal-mvp-0.8.5`. V1 analytic red was `1 failed in 0.93s`, corrected green was
+`1 passed in 0.72s`; two intermediate source-indentation/syntax collection failures
+occurred. The first valid exact V2 was `129 passed, 2 failed in 3.89s`; after the
+test-only correction it was `130 passed, 1 failed in 4.63s`. Two command/path typo
+attempts collected zero tests and are not validation evidence. The final valid bounded
+V2 was `131 passed in 4.13s`, exit 0. This is local structural evidence, not PowerSI
+accuracy evidence. E remains ACTIVE and W6-BASE remains HELD; no automatic extra
+diagnostic or retry.
+
+Frozen historical v5 validator/policy/fixtures and base benchmark remain byte-identical.
+W6-E atomically rotated the current v6→policy→accuracy-validator→controller trust
+chain for solver `modal-mvp-0.8.5`; after the result commit, listed current identities
+and the exact Git HEAD are frozen together. Current trust identities are base
 `d43b868629464f408ea19362daa78fc369d2fd446cf3d458cfdc044ccbf57f08`, adapter
 `6b7e399b4a843028ce754ac9154b8ce1a4575b1581c8d6007cebf26f94e6d440`, v6
-`ae6757057044cdc603106210997a45fa3bcba0238f50089fe2c45d29d6573552`, accuracy
-validator `18dd2010b85dd9cf4a355ff6214119ed16fbec3f63f6fe6fa5834ed1bf732caa`,
-policy `192bcb127a7ece49d4f7f6ec4d10d7bd0ccc3fbdb3e527290fd6b8ab033d3496`,
-controller normalized `3defa5991049e70042b3ac7c7d8243b34d2cab355aef5244b9643d3487550840`.
+`3f26b2aa7880cd9aff89cd5407643c934367764b590db98962cbc30bfa1b04a0`, accuracy
+validator `8487be60cad523f9ed2ea1c61c57b580d9c2bb0fee598eea0bb938145b82151e`,
+policy `6ea6e0b3327eaf828257334d7bb0211582fcc85ed632468223c7b566d0d3fd4d`,
+controller normalized `b7d5b87d97e1441ccaa950a1fbe50a49f599483e68acee99596eda7dd612262d`.
 
 - [D. M. Pozar, *Microwave Engineering*, cavity and parallel-plate foundations](https://onlinelibrary.wiley.com/doi/book/10.1002/9781119770580)
 - [Zhang et al., multilayer microwave-network cascade, IEEE TEMC (2010)](https://doi.org/10.1109/TEMC.2010.2040389)

@@ -52,7 +52,7 @@ GUARD = "terminal-complete-batch-reuse-v1"
 PROFILE = "layerwise_admittance_v1"
 POLICY = "adaptive-frequency-modal-v5"
 APP_VERSION = "0.23.0"
-SOLVER_VERSION = "modal-mvp-0.8.4"
+SOLVER_VERSION = "modal-mvp-0.8.5"
 COMPILER = "layer-surface-adjacent-y-island-finite-via-termination-kron-v8"
 POLICY_SETTINGS = {
     "version": POLICY,

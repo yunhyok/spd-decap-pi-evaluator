@@ -15,7 +15,7 @@ import validate_powersi_accuracy as accuracy
 
 POLICY_PATH = accuracy.POLICY_PATH
 ACCURACY_VALIDATOR = Path(accuracy.__file__).resolve()
-EXPECTED_ACCURACY_VALIDATOR_SHA256 = "18dd2010b85dd9cf4a355ff6214119ed16fbec3f63f6fe6fa5834ed1bf732caa"
+EXPECTED_ACCURACY_VALIDATOR_SHA256 = "8487be60cad523f9ed2ea1c61c57b580d9c2bb0fee598eea0bb938145b82151e"
 
 
 def _write_new_bytes(path: Path, payload: bytes) -> None:

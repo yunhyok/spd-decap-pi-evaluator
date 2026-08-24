@@ -227,7 +227,7 @@ def test_frozen_historical_validation_assets_remain_byte_identical():
         assert current == subprocess.run(["git", "hash-object", "--stdin"], input=baseline, capture_output=True, check=True).stdout.decode().strip()
     assert subprocess.run(["git", "diff", "--quiet", "027ac7a", "--", "validation-fixtures/known-case-nonregression-v1"], check=False).returncode == 0
     v6_text = (ROOT / "scripts" / "validate_correlation_v6.py").read_text(encoding="utf-8")
-    assert 'SOLVER_VERSION = "modal-mvp-0.8.4"' in v6_text and 'POLICY = "adaptive-frequency-modal-v5"' in v6_text and 'V6_PASS_MARKER = "PASS: v6 current correlation structure/conditioning validated"' in v6_text and "MAX_FACTOR_PIVOT_RATIO" in v6_text and "BLAS" not in v6_text
+    assert 'SOLVER_VERSION = "modal-mvp-0.8.5"' in v6_text and 'POLICY = "adaptive-frequency-modal-v5"' in v6_text and 'V6_PASS_MARKER = "PASS: v6 current correlation structure/conditioning validated"' in v6_text and "MAX_FACTOR_PIVOT_RATIO" in v6_text and "BLAS" not in v6_text
     policy, _ = module._load_policy()
     assert policy["validator_v6"]["sha256"] == module._normalized_sha(ROOT / "scripts" / "validate_correlation_v6.py")
 

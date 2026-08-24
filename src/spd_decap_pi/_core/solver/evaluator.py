@@ -72,7 +72,7 @@ if TYPE_CHECKING:
 # holdout feature without relaxing any convergence tolerance.
 # v0.8.4 adds a fail-closed sparse-factor forward-reliability gate without
 # changing the layer-surface compiler or convergence policy.
-SOLVER_VERSION = "modal-mvp-0.8.4"
+SOLVER_VERSION = "modal-mvp-0.8.5"
 CONVERGENCE_POLICY_VERSION = "adaptive-frequency-modal-v5"
 DEFAULT_MAX_REFINEMENT_ITERATIONS = 3
 DEFAULT_MAX_NEW_FREQUENCY_POINTS = 64
