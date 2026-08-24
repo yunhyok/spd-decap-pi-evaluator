@@ -2003,7 +2003,7 @@ def test_scenario_load_cancellation_stops_multichunk_member_without_recovery(
     def cancel_during_attachment() -> bool:
         nonlocal checks
         checks += 1
-        return checks >= checks_before_attachment + 2
+        return checks >= checks_before_attachment + 3
 
     loaded_paths: list[Path] = []
     original_loader = scenario_io_module.load_scenario_bundle
@@ -2017,7 +2017,7 @@ def test_scenario_load_cancellation_stops_multichunk_member_without_recovery(
         load_scenario_with_recovery(path, is_cancelled=cancel_during_attachment)
 
     assert loaded_paths == [path]
-    assert checks == checks_before_attachment + 2
+    assert checks == checks_before_attachment + 3
 
 
 def test_normalized_project_is_validated_and_stored_as_plain_json() -> None:
