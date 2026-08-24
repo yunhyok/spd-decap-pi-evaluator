@@ -36,7 +36,10 @@ jobs:
             tests/test_spd_decap_distribution_gui.py::test_full_preview_exports_saves_and_applies_one_atomic_revision `
             tests/test_spd_decap_gui.py::test_research_success_is_transient_and_exports_full_composite_identity `
             tests/test_spd_decap_gui.py::test_scenario_load_worker_is_cancelable_and_forwards_callback `
-            tests/test_spd_decap_gui.py::test_close_during_scenario_load_cancels_and_preserves_document
+            tests/test_spd_decap_gui.py::test_close_during_scenario_load_cancels_and_preserves_document `
+            tests/test_validate_powersi_accuracy.py `
+            tests/test_run_powersi_retrospective_baseline.py `
+            tests/test_benchmark_raw_spd_powersi_correlation_v6.py
       - name: Build wheel
         run: python -m pip wheel . --no-deps --wheel-dir wheelhouse
       - name: Fresh wheel boundary smoke

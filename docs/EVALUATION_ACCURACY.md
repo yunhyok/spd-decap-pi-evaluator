@@ -152,11 +152,11 @@ python scripts/validate_powersi_reference.py --scenario <scenario.spdpi> --touch
 The reference is never fed back into the solver. These metrics establish only
 numerical stability of this disclosed model.
 
-## W5-GATE DRAFT contract (not approved)
+## W5-GATE approved/machine-frozen contract
 
-This section is a **DRAFT policy judgment** awaiting explicit user approval. Every
-number below is proposed and is not historical evidence, a current pass/fail
-result, or a product sign-off threshold. No W5 numerical or PowerSI run has been
+This section is the user-approved **machine-frozen policy judgment**. Every
+number below is approved policy and is not historical evidence, a current pass/fail
+result, or a product sign-off result. No W5 numerical or PowerSI run has been
 performed in this document update. The final promotion remains blocked because no
 P5 unseen design is registered.
 
@@ -169,19 +169,19 @@ p_i = principal_angle(Zm(f_i) / Zr(f_i))         [deg]
 c_i = abs(Zm(f_i) - Zr(f_i)) * 1e6               [uOhm]
 ```
 
-The proposed low-frequency offset is `low_offset <= 1.0 dB` per rail. The
+The approved low-frequency offset is `low_offset <= 1.0 dB` per rail. The
 critical grid is 241 logarithmic points from 100 kHz through 100 MHz. Its phase
-RMS is `sqrt(mean(p_i^2))` and phase max is `max(abs(p_i))`; proposed ceilings
+RMS is `sqrt(mean(p_i^2))` and phase max is `max(abs(p_i))`; approved ceilings
 are RMS `<= 7 deg` and max `<= 15 deg` per rail. Every rail's magnitude max
-absolute error is proposed as `<= 2.00 dB`.
+absolute error is approved as `<= 2.00 dB`.
 
 The design/stratum macro is the **unweighted arithmetic equal-rail mean** of
 each rail's 241-point magnitude RMS. Frequency samples, rails, designs, and
-strata are never pooled. For 260729, each bare and loaded macro is proposed as
-`<= 1.00 dB`; for 260804, each bare and loaded macro is proposed as `<= 1.25
-dB`. All numbers remain unapproved policy judgments.
+strata are never pooled. For 260729, each bare and loaded macro is approved as
+`<= 1.00 dB`; for 260804, each bare and loaded macro is approved as `<= 1.25
+dB`. These are machine-frozen policy judgments, not historical accuracy evidence.
 
-For the strict applicability class `abs(Zref) < 1e-3 Ohm` only, proposed
+For the strict applicability class `abs(Zref) < 1e-3 Ohm` only, approved
 complex-error ceilings are RMS `<= 100 uOhm` and p95 `<= 200 uOhm`. Zero samples
 is explicitly `N/A`; N/A does not enter pass/fail or any macro. Each report must
 include applicability and sample counts plus per-stratum applicable/pass/fail/
@@ -191,10 +191,10 @@ For resonance, use the same 241-point critical grid, interior local maxima only
 (a point must be at least both neighbors; band edges are excluded), and choose
 the dominant maximum by magnitude, breaking ties by lowest frequency. If the
 reference has no peak, the result is `N/A`, not pass. If a reference peak exists
-but the model has none, it is `FAIL`. If both exist, proposed frequency error is
+but the model has none, it is `FAIL`. If both exist, approved frequency error is
 `100 * abs(fm/fr - 1) <= 10%` and amplitude error is
-`abs(20 log10(|Zm_peak| / |Zr_peak|)) <= 2 dB`. These are unapproved policy
-judgments.
+`abs(20 log10(|Zm_peak| / |Zr_peak|)) <= 2 dB`. These are approved machine-frozen
+policy judgments, not historical accuracy evidence.
 
 The ordered exact 16-rail manifest, used identically by the manifest and each
 phase-2 repeated `--rail` flag, is:
@@ -221,7 +221,7 @@ ADC_VDD_075_VCPU/1
 The first 10 are bare VQPS and the final 6 are loaded VTRIP/VINT/VCPU; these
 strata are separate and are never pooled.
 
-### DRAFT reference partition and artifact registry
+### Approved reference partition and artifact registry
 
 `260729` is retrospective development and `260804` is retrospective design
 holdout. Both designs use the same exact 16-rail manifest. The registered files
@@ -233,7 +233,7 @@ registered values and were **not recomputed in this turn**.
 | 260729 | raw SPD | `D:\S4LB002-2Para_260729_1_injected.spd` | 1116717287 | `40cb44b2376f59d6b606eb9b4d138204fe51b2dc6b3332d3b7c0e7d4202866d2` | path_exists_size_matches/hash_unverified |
 | 260729 | S92P | `D:\S4LB002-2Para_260729_1_injected_073026_100913_33216_S.s92p` | 303974090 | `c5fca21da6f3b1f1e097ac6fc4c2c4f40a44201617502a9e5bf864e2a5fe7a11` | path_exists_size_matches/hash_unverified |
 | 260804 | raw SPD | `D:\S4LB002-2Para_260804_1_injected.spd` | 1120159188 | `45253f438fc7c328c50364fe610a7ecfbf72ca842a032921fbbb8d645e2a4f35` | path_exists_size_matches/hash_unverified |
-| 260804 | S92P | `D:\S4LB002-2Para_260804_1_injected_080526_104445_27112_S.s92p` | 303902333 | `cd103f42412c2a63518105d7e10fae8a0538c84982e1eddbfb74829a6972951` | path_exists_size_matches/hash_unverified |
+| 260804 | S92P | `D:\S4LB002-2Para_260804_1_injected_080526_104445_27112_S.s92p` | 303902333 | `cd103f42412c2a63518105d7e10fae8a0538c84982e1eddbfb74829a6972951b` | path_exists_size_matches/hash_unverified |
 
 Candidate per design is `absent/must_be_generated`; no candidate hash is
 invented. `site0`, `site1`, and `loaded` are exposed strata, not blind samples.
@@ -246,11 +246,11 @@ solver-state confounds remain. P5 is absent and mandatory for final
 generalization. W6 can at most produce a non-blind retrospective 260729/260804
 baseline until these blockers change.
 
-### W6 manifest DRAFT
+### W6 manifest contract (READY; not executed)
 
-The proposed manifest schema is `powersi-retrospective-run-manifest-v1`. It binds
-W5 DRAFT source-before `9ce0d65d4190d55c8abb6ee157bd30f1031f2309`, runtime change
-commit `b2608a260a1f952c9b1f6c11d57b71e060ae575c`, and a post-approval W6
+The manifest schema is `powersi-retrospective-run-manifest-v1`. It binds
+W5 approved source-before `027ac7a09a3eded15f45c41860945f9d4c7f488d`, runtime
+implementation is versioned separately, and a post-approval W6
 run-control commit that is `UNASSIGNED/BLOCKED` until policy rotation is atomic.
 It also binds app `0.23.0`, solver `modal-mvp-0.8.4`, profile
 `layerwise_admittance_v1`, compiler
@@ -266,28 +266,33 @@ reuse/no fallback, registered source/reference basename/bytes/SHA, worker `1`,
 W6 must record the loaded backend/version and resolved thread count through
 `threadpoolctl` and block unless the resolved count is exactly `1`. It must use
 an exact command/configuration. For every candidate, import report, correlation
-report, structural/accuracy sidecar, manifest copy, and stdout/stderr log, the
+report, v6 stdout/stderr logs, accuracy sidecar, manifest copy, and phase
+stdout/stderr logs, the
 manifest records basename, bytes, SHA-256, and exit/cancel status. The candidate
 hash is created by W6 fresh import and cross-bound between import and correlation
 reports. Any cancellation, error, or resource exhaustion is `blocked partial`:
 no scoring, reuse, or retry without new approval.
 
-Two-phase PowerShell command templates, tied to the artifact table and
-new/empty output directories, are:
+W6 is controller-only. The caller first invokes the controller with the approved
+policy/case and exact current clean `main` HEAD, then verifies the completed
+snapshot offline; direct benchmark execution is forbidden. The PowerShell
+command templates, tied to the artifact table and new/empty output directory,
+are:
 
 ```text
 $env:SPD_DECAP_PI_BLAS_THREADS = '1'
-python scripts/benchmark_raw_spd_powersi_correlation.py --spd <registered-raw.spd> --out-dir <new-empty-import-dir> --solver-profile layerwise_admittance_v1 --import-save-only
+python scripts/run_powersi_retrospective_baseline.py --policy validation-policies/powersi_accuracy_v1.json --case <260729-or-260804> --expected-head <caller-approved-exact-current-main-HEAD> --out-root <new-empty-output-dir>
 
-python scripts/benchmark_raw_spd_powersi_correlation.py --spd <same-registered-raw.spd> --touchstone <registered-reference.s92p> --out-dir <new-empty-correlation-dir> --reuse-candidate <new-empty-import-dir>\<raw-stem>_candidate.spdpi --reuse-candidate-import-report <new-empty-import-dir>\import_save_validation_report.json --solver-profile layerwise_admittance_v1 --modal-max-index 10 --modal-max-index 12 --modal-ceiling-index 12 --require-all-converged --require-terminal-complete-reuse `
-  --rail ADC_VDD_180_VQPS_OTP_TOP_AON/0 --rail ADC_VDD_180_VQPS_SYS_0_AON/0 --rail ADC_VDD_180_VQPS_SYS_1_AON/0 --rail ADC_VDD_180_VQPS_SYS_2_AON/0 --rail ADC_VDD_180_VQPS_SYS_3_AON/0 `
-  --rail ADC_VDD_180_VQPS_OTP_TOP_AON/1 --rail ADC_VDD_180_VQPS_SYS_0_AON/1 --rail ADC_VDD_180_VQPS_SYS_1_AON/1 --rail ADC_VDD_180_VQPS_SYS_2_AON/1 --rail ADC_VDD_180_VQPS_SYS_3_AON/1 `
-  --rail ADC_VDD_055_VTRIP/0 --rail ADC_VDD_055_VTRIP/1 --rail ADC_VDD_070_VINT/0 --rail ADC_VDD_070_VINT/1 --rail ADC_VDD_075_VCPU/0 --rail ADC_VDD_075_VCPU/1
+python scripts/validate_powersi_accuracy.py --policy validation-policies/powersi_accuracy_v1.json --manifest <new-empty-output-dir>\run_manifest.json --sidecar <new-empty-output-dir>\accuracy_sidecar.json --verify-sidecar
 ```
 
-The exact 16-rail configuration, source/reference paths, and manifest are
-required inputs; output directories must be new/empty and automatic retry is
-`0`. These templates are unapproved and were not executed.
+The controller reconstructs the exact two internal phase argv arrays using
+`benchmark_raw_spd_powersi_correlation_v6.py` for both import-save-only and
+correlation; those internal commands are not run directly. The exact 16-rail
+configuration, source/reference paths, and manifest are required inputs; output
+directories must be new/empty and automatic retry is `0`. These are execution
+templates for the caller-approved W6 one-run gate; they were not executed in
+this turn.
 
 ### Hash rotation boundary
 
@@ -295,10 +300,9 @@ The frozen `scripts/validate_correlation_v5.py`,
 `scripts/validate_known_case_nonregression.py`,
 `validation-policies/known_case_nonregression_v1.json`, and historical
 fixtures/results remain unchanged now. They intentionally retain their pre-W4
-identities and must fail closed against the current runtime until W5 is
-approved. After explicit approval, rotate current identity, validator hash,
-release identity, new accuracy policy plus hash, fresh-import binding schema, and
-offline tests atomically; never rewrite historical fixtures/results.
+identities; W6 must not rewrite them. Any future identity or fresh-import binding
+schema rotation must be versioned and atomic, and must never rewrite historical
+fixtures/results.
 
 ## Remaining limits
 
@@ -316,6 +320,38 @@ offline tests atomically; never rewrite historical fixtures/results.
   layer-pair S-parameter extraction.
 
 ## Primary references
+
+## W5 closure / W6 handoff
+
+W5 policy and implementation closure are machine-frozen and DONE; W6 is READY
+but not executed. The approved contract is retrospective-only; accuracy remains
+`unknown / not_run`, P5 unseen design is mandatory for generalization/final
+signoff, and no D:/ hash recomputation, candidate, PowerSI, production, remote
+CI, installer, or release run occurred. The intermediate trust-correction V3 was
+`359 passed, 1 skipped, 1 failed in 19.05s` because the canonical-policy parser
+test reached a path guard before its duplicate-key assertion; a test-only parser
+unit correction then passed its node in `0.08s`. Final V3 was `360 passed, 1
+skipped in 19.23s`, exit 0; the skip was the unavailable local v0.13 SPD
+regression bundle.
+V1 was focused synthetic/offline; the first V2 exposed a frozen historical
+benchmark-identity expectation after the initial BLAS implementation, which was
+resolved by restoring the base benchmark byte-for-byte and moving BLAS evidence
+to the v6 adapter; final V2 was `63 passed in 2.24s`. Historical v5 validator,
+known-case policy/fixtures, and base benchmark remain frozen. The adapter writes
+`correlation/blas_runtime_evidence.json` atomically; the correlation report does
+not own BLAS evidence. The 260804 S92P registry SHA ends in `...2951b` (the
+earlier missing `b` was a transcription typo).
+
+Final trust-correction identities are base
+`d43b868629464f408ea19362daa78fc369d2fd446cf3d458cfdc044ccbf57f08`, adapter
+`06a73478e5d48aa8f90797feb24cd8478e83b1b10716d8e9c0b278165a950177`, v6
+`ae6757057044cdc603106210997a45fa3bcba0238f50089fe2c45d29d6573552`, accuracy
+validator `fe537d57eab7fb06f327f1cd3804a9959309af0de5d616a7c05e2542be3016c3`,
+policy `c362acb01ef28cefbbd1d32753f86bccafbdd53355b42eda83c03a6ea810698b`,
+controller normalized `27936047bec81874818de977a0b5be9593f73e618de075de16a225cd1fea4cac`.
+The approval basis commit `027ac7a09a3eded15f45c41860945f9d4c7f488d` is not a
+future W6 implementation HEAD; W6 requires a caller-supplied exact clean main
+HEAD at invocation.
 
 - [D. M. Pozar, *Microwave Engineering*, cavity and parallel-plate foundations](https://onlinelibrary.wiley.com/doi/book/10.1002/9781119770580)
 - [Zhang et al., multilayer microwave-network cascade, IEEE TEMC (2010)](https://doi.org/10.1109/TEMC.2010.2040389)

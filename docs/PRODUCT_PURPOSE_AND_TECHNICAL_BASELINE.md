@@ -1,9 +1,9 @@
 # SPD Decap PI Evaluator 목적·기술 기준
 
 - 적용 제품: **SPD Decap PI Evaluator v0.23.0**
-- 문서 버전: **1.2**
-- W5 DRAFT source-before: `main` commit `9ce0d65d4190d55c8abb6ee157bd30f1031f2309`
-- 상태: **G0 기준 문서** — [작업 기준](WORK_EXECUTION_BASELINE.md)과 함께 사용하며, 별도 지시 전 코드 수정·고비용 검증을 승인하지 않음
+- 문서 버전: **1.3**
+- W5 approved/machine-frozen source-before: `main` commit `027ac7a09a3eded15f45c41860945f9d4c7f488d`
+- 상태: **G0 기준 문서** — [작업 기준](WORK_EXECUTION_BASELINE.md)과 함께 사용하며, W6 실행은 별도 run manifest 승인 후 1회만 허용
 - 최종 개정: 2026-08-24 (Asia/Seoul)
 
 ## 1. 문서 역할과 권위
@@ -151,7 +151,7 @@ quasi-static circuit model이며 다음을 충분히 표현하지 않는다.
 | 제품명·버전 identity | current v0.23.0 / `0f24363c` | verified | passed | source, title, package, installer metadata 범위 |
 | production-size import·save·92-rail solver entry | current v0.23.0 attestation | verified | passed | import/save/entry 범위에 한함 |
 | 같은 attestation의 frequency solve·Touchstone comparison | current v0.23.0 | verified | not_run | `frequency_solves_executed=0`, `touchstone_read=false` |
-| 현행 default solver의 PowerSI 정확성 | current v0.23.0 | unknown | not_run | current raw correlation artifact와 승인된 수치 gate가 없음 |
+| 현행 default solver의 PowerSI 정확성 | current v0.23.0 | unknown | not_run | W5 승인 gate는 있으나 current raw correlation artifact가 없고 실행하지 않음 |
 | 260804 terminal-complete loaded correlation | historical v0.22.0 | provisional | failed | 문서상 critical-band `16.743 dB`, `44.28°`; raw report가 Git에 없어 current 결과로 재사용 불가 |
 | 목표 장비의 시간·memory promotion | current | unknown | not_run | workstation 또는 import-only 수치로 승격 금지 |
 | product-core CI 회귀 차단 | current | verified | failed | CI는 수집된 2,434개 중 packaging 11개만 실행 |
@@ -160,20 +160,21 @@ quasi-static circuit model이며 다음을 충분히 표현하지 않는다.
 validation 문서의 placeholder, report-level pass, 작은 backward residual,
 import/save 성공은 PowerSI accuracy promotion이 아니다.
 
-제품 수준 PowerSI 수치 합격선은 아직 **미확정**이다. 과거 연구 문서의
-`1.00/1.25 dB` 등은 제안값이며, local mesh/oracle convergence 수치를 제품
-PowerSI gate로 전용해서는 안 된다. solver 구현 작업 전에 사용자가 수치
-합격선과 reference partition을 승인해야 한다.
+W5 이전에는 제품 수준 PowerSI 수치 합격선이 **미확정**이었다. W5에서
+`1.00/1.25 dB` 등을 포함한 수치와 reference partition을 승인해
+machine-frozen policy로 고정했지만, 이 turn에는 수치 실행이 없으므로 제품
+정확성 상태는 여전히 `unknown / not_run`이다. local mesh/oracle convergence
+수치를 제품 PowerSI gate로 전용해서는 안 된다.
 
-### 6.2 W5-GATE DRAFT 정책 (사용자 승인 전)
+### 6.2 W5-GATE approved/machine-frozen policy
 
-W5에서 검토할 threshold, partition, run manifest는 현재 **DRAFT 정책 판단**일
-뿐이며 역사적 측정 결과나 제품 sign-off가 아니다. 아래 수치와 분류는 사용자가
-명시적으로 승인하기 전에는 accuracy promotion에 사용할 수 없다. 현재 등록된
+W5 threshold, partition, run manifest는 사용자 승인으로 **machine-frozen**된
+정책 계약이다. 수치와 분류는 여전히 역사적 측정 결과나 제품 sign-off가 아니다.
+현재 등록된
 자료에는 최종 generalization을 판정할 P5 unseen design이 없으므로, 최종 정확성
 및 일반화 승격은 BLOCKED다.
 
-- 제안 threshold: 100 kHz/1 MHz low-frequency offset, 100 kHz–100 MHz
+- 승인 threshold: 100 kHz/1 MHz low-frequency offset, 100 kHz–100 MHz
   critical-band magnitude, rail별 max magnitude, phase, low-impedance complex
   error, dominant-peak 위치/진폭을 함께 판정한다.
 - VQPS 10개 bare rail과 VTRIP/VINT/VCPU 6개 loaded rail은 별도 strata로
@@ -189,9 +190,19 @@ W5에서 검토할 threshold, partition, run manifest는 현재 **DRAFT 정책 �
   reference 부재와 multifactor/solver-state confound로 BLOCKED다. P5 unseen
   design은 없으며 최종 generalization에 필수다.
 
-따라서 W6가 승인 없이 만들 수 있는 것은 260729/260804의 **비-blind
+따라서 W6가 만들 수 있는 것은 260729/260804의 **비-blind
 retrospective baseline**뿐이다. 이것을 unseen generalization 또는 제품
 PowerSI 합격으로 재사용할 수 없다.
+
+현재 trust-correction implementation identity는 benchmark base normalized SHA
+`d43b868629464f408ea19362daa78fc369d2fd446cf3d458cfdc044ccbf57f08`, adapter
+`06a73478e5d48aa8f90797feb24cd8478e83b1b10716d8e9c0b278165a950177`, v6
+validator `ae6757057044cdc603106210997a45fa3bcba0238f50089fe2c45d29d6573552`,
+accuracy validator `fe537d57eab7fb06f327f1cd3804a9959309af0de5d616a7c05e2542be3016c3`,
+policy `c362acb01ef28cefbbd1d32753f86bccafbdd53355b42eda83c03a6ea810698b`,
+controller `27936047bec81874818de977a0b5be9593f73e618de075de16a225cd1fea4cac`이다.
+기존 v5 validator, known-case policy와 historical fixtures는 byte-identical로
+보존되며, W6 controller는 `blocked_partial`에서 부분 결과를 점수화하지 않는다.
 
 ## 7. Promotion gate
 
@@ -307,10 +318,43 @@ flowchart TD
   Distribution 상세 계약.
 - [Embedded evaluation core](CORE_EXTRACTION.md): standalone/runtime 독립성.
 
+## W5 implementation closure
+
+W5 policy and implementation closure are machine-frozen and DONE; W6 remains
+READY but has not been executed. The product's highest purpose remains
+calculation with accuracy comparable to PowerSI; import/save, synthetic V1, and
+bounded offline V2 evidence do not establish that accuracy. Accuracy is
+`unknown / not_run`, P5 unseen design is mandatory for generalization/final signoff,
+and D:/ inputs were not rehashed or executed. Candidate generation, PowerSI,
+remote CI, installer, release were not run. The intermediate trust-correction V3
+was `359 passed, 1 skipped, 1 failed in 19.05s` because the canonical-policy
+parser test reached a path guard before its duplicate-key assertion; the test-only
+parser unit correction then passed its node in `0.08s`. Final V3 was `360 passed,
+1 skipped in 19.23s`, exit 0; the skip was the unavailable local v0.13 SPD
+regression bundle.
+
+Approval basis commit `027ac7a09a3eded15f45c41860945f9d4c7f488d` is distinct from
+the caller-supplied exact current `main` HEAD required at a future W6 invocation;
+the policy contains no implementation self-HEAD. The frozen historical v5
+validator, known-case policy/fixtures, and base benchmark remain byte-identical.
+W5 adds a versioned adapter boundary and a separate atomic BLAS evidence artifact;
+W6 execution is controller-only and completed output is accepted only through the
+offline `validate_powersi_accuracy.py --verify-sidecar` boundary. The benchmark
+phase argv is internal controller evidence, not a direct user command.
+The registered 260804 S92P SHA is
+`cd103f42412c2a63518105d7e10fae8a0538c84982e1eddbfb74829a6972951b`; the missing
+trailing `b` in the earlier draft was a registry transcription typo, not a new
+hash computation.
+
+Implementation identities after trust correction: base `d43b868629464f408ea19362daa78fc369d2fd446cf3d458cfdc044ccbf57f08`; adapter `06a73478e5d48aa8f90797feb24cd8478e83b1b10716d8e9c0b278165a950177`; v6 `ae6757057044cdc603106210997a45fa3bcba0238f50089fe2c45d29d6573552`; accuracy validator `fe537d57eab7fb06f327f1cd3804a9959309af0de5d616a7c05e2542be3016c3`; policy `c362acb01ef28cefbbd1d32753f86bccafbdd53355b42eda83c03a6ea810698b`; controller normalized source `27936047bec81874818de977a0b5be9593f73e618de075de16a225cd1fea4cac`.
+
 ## 12. 변경 기록
 
 | 문서 버전 | 날짜 | 변경 |
 |---|---|---|
 | 1.2 | 2026-08-24 | W5-GATE의 승인 전 DRAFT threshold/partition/manifest 경계와 P5 generalization blocker를 명시. |
+| 1.3 | 2026-08-24 | W5 machine-frozen implementation closure, adapter/BLAS artifact boundary, bounded V1/V2 evidence, W6 READY and accuracy unknown/not_run. |
+| 1.4 | 2026-08-24 | trust-boundary correction과 controller-only/verify-only W6 boundary를 반영. |
+| 1.5 | 2026-08-24 | 최종 V3 green 증거와 W5 DONE/W6 READY 상태를 동결. |
 | 1.1 | 2026-08-24 | `WORK_EXECUTION_BASELINE.md`를 두 번째 canonical 문서로 연결. |
 | 1.0 | 2026-08-24 | v0.24 계획 중심의 Distribution–solver PRD를 제품 전체의 목적·기술 기준으로 개정. PowerSI 정확성 우선, 상태 어휘, 기술 경계, promotion gate, 검증 비용 통제와 two-document 작업 방식을 고정. |

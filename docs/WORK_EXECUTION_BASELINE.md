@@ -1,10 +1,10 @@
 # SPD Decap PI Evaluator 작업 기준
 
 - 적용 제품: **SPD Decap PI Evaluator v0.23.0**
-- 문서 버전: **1.3**
-- 상위 기준: [목적·기술 기준](PRODUCT_PURPOSE_AND_TECHNICAL_BASELINE.md) v1.2
-- 현행 source 기준: `main` commit `9ce0d65d4190d55c8abb6ee157bd30f1031f2309`
-- 상태: **ACTIVE CONTROL DOCUMENT — W5-GATE DRAFT; 사용자 승인 대기**
+- 문서 버전: **1.6**
+- 상위 기준: [목적·기술 기준](PRODUCT_PURPOSE_AND_TECHNICAL_BASELINE.md) v1.5
+- 현행 source 기준: W5 implementation closure; W6 invocation requires caller-supplied exact clean `main` HEAD
+- 상태: **APPROVED/MACHINE-FROZEN CONTROL DOCUMENT — W5 DONE; W6 READY (NOT EXECUTED)**
 - 최종 개정: 2026-08-24 (Asia/Seoul)
 
 ## 1. 압축 후 즉시 복구 카드
@@ -16,13 +16,13 @@ context가 압축되거나 새 session에서 작업을 재개하면 다른 연�
 |---|---|
 | 변하지 않는 목적 | source-derived single-rail `Zii`의 PowerSI 근접 정확성과 일반화 |
 | 현재 branch | `main`만 사용; 정리된 과거 branch를 다시 조사하지 않음 |
-| 현재 active work item | `W5-GATE` — docs-only DRAFT; numeric/partition/manifest 승인 대기 |
-| 다음 권장 묶음 | `W6-BASE`는 W5 승인 후에만 검토 |
-| 코드 수정 권한 | docs-only DRAFT; production/runtime code 수정 금지 |
-| 고비용 검증 권한 | `W5-GATE` 사용자 승인 전 numerical/PowerSI 실행 금지 |
-| 현재 정확성 상태 | `current / unknown / not_run` |
+| 현재 active work item | `NONE` |
+| 다음 권장 묶음 | `W6-BASE` READY; caller exact current main HEAD + one-run manifest approval required |
+| 코드 수정 권한 | NONE until W6 caller approval |
+| 고비용 검증 권한 | production SPD/PowerSI/remote/installer/release 금지; W6 one-run gate 별도 승인 필요 |
+| 현재 정확성 상태 | `unknown / not_run` |
 | 현재 release 계산 증거 | import/save/solver-entry만 통과; frequency solve `0` |
-| 현재 working tree | W5 DRAFT threshold/partition/manifest만 문서화; W6 candidate 없음 |
+| 현재 working tree | W5 implementation/docs closure; W6 candidate 없음 |
 
 최초 목적은 [목적·기술 기준 2장](PRODUCT_PURPOSE_AND_TECHNICAL_BASELINE.md#2-최우선-목적),
 현재 증거 상태는 [6장](PRODUCT_PURPOSE_AND_TECHNICAL_BASELINE.md#6-증거와-상태-표기)이
@@ -102,8 +102,8 @@ active work item에 명시된 source/test/subsystem 문서만 추가로 읽는�
 | `W3-CI` | 7 | DONE | 짧은 product-core lane을 required CI로 연결 | parser/scenario/solver/Distribution/GUI I/O 핵심 경로 green |
 | `W4-FREQ` | 8 | DONE | adaptive frequency가 sample 사이 narrow peak를 보지 않고 converged 처리하는 blind spot | midpoint/coverage focused case가 peak 누락을 검출 |
 | `W4-COND` | 9 | DONE | ill-conditioned sparse solve의 결과 신뢰성 gate | residual과 별도 conditioning/forward-reliability 판정 |
-| `W5-GATE` | 10 | ACTIVE | 제품 PowerSI 수치 gate와 development/holdout/unseen partition의 DRAFT 승인 준비 | 사용자 numeric/partition/manifest/hash-rotation 승인 필요 |
-| `W6-BASE` | 11 | BLOCKED | exact current solver baseline 1회 | W1–W5 완료와 run manifest 승인 필요 |
+| `W5-GATE` | 10 | DONE | approved gate/partition/manifest plus trust-boundary adapter/controller evidence | focused trust tests and bounded V3 green |
+| `W6-BASE` | 11 | READY | caller-approved exact current main HEAD의 retrospective one-run baseline | W5 trust correction closure + caller exact HEAD + run manifest approval required |
 | `W7-PHYS` | 12 | BLOCKED | 가장 큰 error component의 owning physical block 하나 수정 | W6 rail별 error decomposition 필요 |
 | `W8-REL` | 13 | BLOCKED | completed known-case solve를 release gate에 연결하고 최종 전달 | accuracy/product gate와 exact release commit 필요 |
 | `D-DIST` | - | DEFERRED | Distribution routing/DRC scope 확대 | 사용자가 implementation-ready/DRC 목표로 승격할 때만 |
@@ -176,49 +176,39 @@ ID / 상태: `W4-COND / DONE`
 이번 변경 묶음: `layer_surface_network.py`의 기존 U-diagonal ratio 계산에 `1.0e13` ceiling과 invalid-pivot rejection을 추가하고 residual gate 이후 forward-reliability rejection을 적용했다. cache payload에도 동일 ceiling을 검증하며 solver identity를 `modal-mvp-0.8.4`로 갱신했다.
 명시적 제외 범위: fallback/reordering/pivot tuning/clamp, residual gate 완화, compiler `kron-v8`, convergence `v5`, app `v0.23.0`, model physics, W5 hash-bound PowerSI validation, production SPD/PowerSI, installer/release.
 root-cause 가설: 기존 코드는 `factor.U.diagonal()` ratio를 진단에만 기록하고 극단적인 spread를 결과·cache에 허용했다.
-읽을 source/test/subsystem 문서: 목적·기술 기준, 이 작업 기준, `layer_surface_network.py` factor/cache 경계, `tests/test_layer_surface_network.py`, `tests/test_layerwise_network.py`, 그리고 W5 승인 전 재생성하지 않는 frozen pre-W4 validator/non-regression scripts.
+읽을 source/test/subsystem 문서: 목적·기술 기준, 이 작업 기준, `layer_surface_network.py` factor/cache 경계, `tests/test_layer_surface_network.py`, `tests/test_layerwise_network.py`, 그리고 W5 이후에도 재생성하지 않는 frozen pre-W4 validator/non-regression scripts.
 acceptance: 실제 SuperLU `solve`를 위임하는 wrapper가 backward residual `<=1e-9`인 상태에서 1:1e-17 pivot ratio를 forward-reliability wording으로 거부한다. 1:1e-13(정확히 `1.0e13`)은 admittance/residual/보고 ratio를 보존하며 허용된다. 빈/nonfinite/nonpositive pivot과 초과 cache payload는 fail-closed다.
 V0–V5 계획과 최대 횟수: conditioning adversarial V1 red 1회; adversarial+ceiling V1 green `2 passed` 1회; layer-surface/layerwise plus exact solver identity V2 `94 passed` 1회; resulting CI bounded V3 selection 1회; V0 YAML/diff 정적 확인 1회; V4–V5와 production solve 금지.
 중단 조건: residual gate와 forward gate를 혼합해야 하거나, fallback/reordering/physics 변경이 필요하거나, W5 numerical/PowerSI run 승인이 필요한 경우.
 evidence identity before: `main` / `3b6ed2cc6308179002fee817c1b14f7efebd6cb9` / solver `modal-mvp-0.8.3` / compiler `kron-v8` / convergence `v5`.
-결과 / artifact / diff: conditioning red node는 `1 failed`; 최소 solver/cache gate 후 adversarial+ceiling focused는 `2 passed in 0.72s`였다. 최종 `pytest -q tests/test_layer_surface_network.py tests/test_layerwise_network.py tests/test_spd_decap_evaluation.py::test_solver_version_0_8_2_recalculates_0_6_baseline_cache`는 `94 passed in 2.16s`였다. source-before는 `main` / `b2608a260a1f952c9b1f6c11d57b71e060ae575c`이며, 그 상태에서 workflow Test command에 두 W4 conditioning gate를 보존적으로 추가한 resulting bounded V3 selection을 `QT_QPA_PLATFORM=offscreen`으로 1회 실행해 `325 passed, 1 skipped in 18.25s`였다. Required CI command에는 두 W4 gate node가 유지된다. W4-FREQ synthetic closure는 별도 commit에서 완료되었고, 이번 묶음은 forward-reliability gate와 v0.8.4 live identity에 한정한다. W5 hash-bound validator/non-regression scripts와 기존 artifact identity는 pre-W4 값으로 동결해 두었으며 W5 사용자 승인 전 갱신하지 않는다. remote CI/full suite/production SPD/PowerSI/installer/release는 실행하지 않았다. accuracy는 `unknown / not_run`; model-form/PowerSI 수치 합격을 주장하지 않는다.
-다음 사용자 결정: W5-GATE를 승인할지 결정.
+결과 / artifact / diff: conditioning red node는 `1 failed`; 최소 solver/cache gate 후 adversarial+ceiling focused는 `2 passed in 0.72s`였다. 최종 `pytest -q tests/test_layer_surface_network.py tests/test_layerwise_network.py tests/test_spd_decap_evaluation.py::test_solver_version_0_8_2_recalculates_0_6_baseline_cache`는 `94 passed in 2.16s`였다. source-before는 `main` / `b2608a260a1f952c9b1f6c11d57b71e060ae575c`이며, 그 상태에서 workflow Test command에 두 W4 conditioning gate를 보존적으로 추가한 resulting bounded V3 selection을 `QT_QPA_PLATFORM=offscreen`으로 1회 실행해 `325 passed, 1 skipped in 18.25s`였다. Required CI command에는 두 W4 gate node가 유지된다. W4-FREQ synthetic closure는 별도 commit에서 완료되었고, 이번 묶음은 forward-reliability gate와 v0.8.4 live identity에 한정한다. W5 hash-bound validator/non-regression scripts와 기존 artifact identity는 pre-W4 값으로 동결해 두었으며, 이는 해당 W4 시점의 historical evidence이다. W5 승인 후에도 historical assets는 갱신하지 않는다. remote CI/full suite/production SPD/PowerSI/installer/release는 실행하지 않았다. accuracy는 `unknown / not_run`; model-form/PowerSI 수치 합격을 주장하지 않는다.
+W5 policy와 implementation은 승인·동결되었고 W5-GATE는 DONE이다. W6-BASE는
+READY지만 아직 실행하지 않았다. active item은 `NONE`이다. 사용자 목적은
+PowerSI와 비슷한 정확도의 계산이며, W5 import/adapter/evidence와 synthetic
+V1·bounded V2는 수치 정확도 증거가 아니다. accuracy는 `unknown / not_run`이고
+P5 unseen design 없이는 generalization/final signoff를 금지한다.
+W5 approval basis는 `027ac7a09a3eded15f45c41860945f9d4c7f488d`; W6 실행 시에는
+caller가 제공한 exact clean main HEAD를 별도로 요구한다. D:/ 입력 hash 재검산,
+candidate/PowerSI/production/remote/installer/release는 실행하지 않았다. Pre-correction
+중간 trust-correction V3는 `359 passed, 1 skipped, 1 failed in 19.05s`로
+canonical-policy parser test 순서 충돌을 드러냈다. test-only parser unit 교정 후
+해당 node는 `1 passed in 0.08s`였고, 최종 V3는 `360 passed, 1 skipped in
+19.23s`, exit 0이었다. skip은 local v0.13 SPD regression bundle unavailable다.
+historical v5 validator/policy/fixtures와 base benchmark는 byte-frozen이며,
+새 v6 adapter가 correlation phase의 BLAS artifact를 별도로 기록한다. W6는
+`run_powersi_retrospective_baseline.py` controller와
+`validate_powersi_accuracy.py --verify-sidecar` offline boundary만 사용하고,
+내부 phase adapter argv를 직접 실행하지 않는다. 260804
+S92P SHA는 frozen registry의 trailing `b`를 포함한다(초기 문서의 누락은 typo).
+최종 V2는 `63 passed in 2.24s`; 최초 V2 red는 base benchmark 변경과 frozen
+validator identity 충돌이어서 base를 원복하고 adapter 경계로 교정했다. 이후
+trust correction focused selection은 `13 passed in 1.84s`였고, 최종 bounded V3는
+`360 passed, 1 skipped in 19.23s`, exit 0이었다.
+검증은 active item별 focused V1 1회, item 종료 V2 1회 원칙을 유지하며,
+실패 시 원인 노드만 최소 재현하고 green 묶음은 반복하지 않는다. W6는 caller가
+정확한 HEAD·one-run manifest·고비용 실행을 명시적으로 승인할 때만 1회 시작한다.
 
-ID / 상태: `W5-GATE / ACTIVE (docs-only DRAFT)`
-사용자 목적과의 연결: PowerSI 근접 정확성과 새로운 설계 일반화를 판정할 수치,
-reference partition, exact run manifest를 사용자 승인 가능한 형태로 고정한다.
-현재 수치와 분류는 모두 **unapproved policy judgment**이며 historical evidence나
-제품 sign-off가 아니다. P5 unseen design이 없어 final accuracy/generalization
-promotion은 BLOCKED다.
-이번 변경 묶음: 이 문서, `PRODUCT_PURPOSE_AND_TECHNICAL_BASELINE.md`,
-`EVALUATION_ACCURACY.md`에 W5 DRAFT threshold/formula, strata/partition,
-W6 manifest, hash-rotation 경계를 기록한다.
-명시적 제외 범위: source/runtime/solver/validator/policy JSON/historical fixture
-수정, 새 script/JSON/doc 생성, numerical/PowerSI/test 실행, W6 fresh import,
-production SPD, installer/release/remote CI.
-root-cause 가설: 현재는 승인된 numeric gate와 blind/unseen partition 및
-hash-bound manifest가 없어 과거 비교값을 product accuracy로 승격할 수 없다.
-읽을 source/test/subsystem 문서: 두 canonical baseline과 `EVALUATION_ACCURACY.md`
-만 사용하며, frozen validator/fixture는 identity 확인 외에 변경하지 않는다.
-acceptance: low-frequency/critical magnitude/phase/low-Z complex/peak DRAFT
-threshold와 260729/260804 strata, P1–P5 blockers, W6 manifest 및 hash rotation이
-모두 승인 전 상태로 표시된다. W6는 at most non-blind retrospective baseline이다.
-V0–V5 계획과 최대 횟수: 세 문서 cross-document string/status static check 1회와
-`git diff --check` 1회; numerical/PowerSI/tests 및 V1–V5 실행 금지.
-중단 조건: 사용자가 숫자, strata 경계, manifest identity 또는 hash rotation을
-승인하지 않은 상태에서 candidate/import/correlation을 시작해야 하는 경우.
-evidence identity before: `main` / `9ce0d65d4190d55c8abb6ee157bd30f1031f2309` /
-runtime `modal-mvp-0.8.4` / convergence `adaptive-frequency-modal-v5` /
-compiler `kron-v8`.
-결과 / artifact / diff: W5 DRAFT 문서만 작성했다. 260729/260804 raw+S92P
-path 존재/size 일치 사실은 등록 정책에서 가져오되 SHA는 이 turn에 재계산하지
-않았고, candidate `.spdpi`는 absent/fresh import required다. Bare VQPS 10개와
-loaded VTRIP/VINT/VCPU 6개는 별도 strata이며 pooled 판정을 하지 않는다. P1–P4
-blocker와 P5 missing을 유지하고, W5 hash-bound validators/policy JSON/historical
-fixtures는 pre-W4 값으로 frozen 상태다. accuracy `unknown / not_run`.
-다음 사용자 결정(정확히 네 그룹): (1) numeric thresholds/formulas, (2) partition/
-strata 및 P1–P5 blocker 해석, (3) W6 manifest/runtime/resource/output contract,
-(4) hash rotation과 frozen validator/fixture 보존 정책.
+최종 trust-correction source identities: base `d43b868629464f408ea19362daa78fc369d2fd446cf3d458cfdc044ccbf57f08`, adapter `06a73478e5d48aa8f90797feb24cd8478e83b1b10716d8e9c0b278165a950177`, v6 `ae6757057044cdc603106210997a45fa3bcba0238f50089fe2c45d29d6573552`, accuracy validator `fe537d57eab7fb06f327f1cd3804a9959309af0de5d616a7c05e2542be3016c3`, policy `c362acb01ef28cefbbd1d32753f86bccafbdd53355b42eda83c03a6ea810698b`, controller normalized `27936047bec81874818de977a0b5be9593f73e618de075de16a225cd1fea4cac`. Controller pins the accuracy validator source before execution; its normalized SHA is recomputed whenever source changes.
 
 ## 8. Context 압축·새 session 복구 절차
 
@@ -259,7 +249,7 @@ strata 및 P1–P5 blocker 해석, (3) W6 manifest/runtime/resource/output contr
 | `D-001` | `main`만 대상으로 하며 정리된 branch를 다시 감사하지 않음 | 확정 |
 | `D-002` | PowerSI 근접 Evaluation 정확성이 최우선이고 Distribution은 2차 목적 | 확정 |
 | `D-003` | PowerSI는 comparison-only이며 fitting 입력이 아님 | 확정 |
-| `D-004` | 제품 PowerSI 수치 합격선은 사용자 승인 전 미확정 | 확정 |
+| `D-004` | W5 이전 제품 PowerSI 수치 합격선은 사용자 승인 전 미확정 | W5에서 superseded; historical decision |
 | `D-005` | 작은 수정마다 전체 검증하지 않고 frozen milestone에서 1회 실행 | 확정 |
 | `D-006` | context 기본 입력은 두 canonical 문서뿐 | 확정 |
 | `D-007` | 현재 active code item은 없으며 다음 item을 자동 시작하지 않음 | 확정 |
@@ -288,3 +278,6 @@ strata 및 P1–P5 blocker 해석, (3) W6 manifest/runtime/resource/output contr
 | 1.1 | 2026-08-24 | W4-FREQ midpoint coverage gate 완료, v5 identity와 focused evidence를 기록하고 W4-COND를 다음 item으로 지정. |
 | 1.2 | 2026-08-24 | W4-COND forward-reliability gate와 v0.8.4 solver identity 완료, W5-GATE 승인 대기로 전환. |
 | 1.3 | 2026-08-24 | W5-GATE DRAFT threshold/partition/manifest/hash-rotation을 문서화하고 사용자 승인 전 실행을 차단. |
+| 1.4 | 2026-08-24 | W5 approved implementation closure: adapter BLAS boundary, strict offline/controller evidence, V1/V2 bounded results, W6 READY with active NONE. |
+| 1.5 | 2026-08-24 | trust-boundary correction: controller-only/verify-only execution, exact artifact and manifest SHA binding, adapter passthrough. |
+| 1.6 | 2026-08-24 | 최종 bounded V3 green 증거를 기록하고 W5 DONE, W6 READY, active NONE으로 동결. |
