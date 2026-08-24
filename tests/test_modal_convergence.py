@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from dataclasses import replace
 from types import SimpleNamespace
 
 import numpy as np
@@ -53,7 +54,7 @@ def _fake_outcome(request: evaluator.EvaluationRequest) -> evaluator.EvaluationO
     return evaluator.EvaluationOutcome(
         rail_id=request.rail_id,
         solve=solve,
-        metrics=SimpleNamespace(),
+        metrics=SimpleNamespace(peaks=()),
         confidence=(),
         assumptions=(),
     )
@@ -225,7 +226,7 @@ def test_first_pass_stable_frequency_grid_reports_zero_deltas(monkeypatch) -> No
         peak_shift_tolerance_percent=2.0,
     )
 
-    assert result.iterations == 0
+    assert result.iterations == 1
     assert (result.rms_delta_db, result.max_delta_db, result.peak_shift_percent) == (
         0.0,
         0.0,
@@ -233,6 +234,50 @@ def test_first_pass_stable_frequency_grid_reports_zero_deltas(monkeypatch) -> No
     )
     assert result.converged is True
     assert result.budget_exhausted is False
+
+
+def test_flat_initial_grid_probes_adjacent_midpoint_peak_before_convergence(monkeypatch) -> None:
+    request = replace(_request(8), frequencies_hz=np.asarray(
+        [1e3, 1e5, 1e7, 1e9], dtype=np.float64
+    ))
+    narrow_peak = float(np.sqrt(1e7 * 1e9))
+    calls: list[np.ndarray] = []
+
+    def deterministic_solve(actual: evaluator.EvaluationRequest, **_kwargs):
+        frequencies = np.asarray(actual.frequencies_hz, dtype=np.float64)
+        calls.append(frequencies.copy())
+        impedance = np.ones(frequencies.size, dtype=np.complex128)
+        if frequencies.size > request.frequencies_hz.size:
+            impedance[np.isclose(frequencies, narrow_peak)] = 10.0 ** (0.6 / 20.0)
+        return evaluator.EvaluationOutcome(
+            rail_id=actual.rail_id,
+            solve=SimpleNamespace(
+                frequencies_hz=frequencies,
+                impedance_ohm=impedance,
+                diagnostics=SimpleNamespace(),
+            ),
+            metrics=SimpleNamespace(peaks=()),
+            confidence=(),
+            assumptions=(),
+        )
+
+    monkeypatch.setattr(evaluator, "evaluate_rail", deterministic_solve)
+    result = evaluator._refine_frequency_for_modes(
+        request,
+        mode_x=8,
+        mode_y=8,
+        max_refinement_iterations=1,
+        max_new_frequency_points=2,
+        rms_tolerance_db=0.2,
+        max_tolerance_db=0.5,
+        peak_shift_tolerance_percent=2.0,
+    )
+
+    assert len(calls) == 2
+    assert any(np.isclose(calls[1], narrow_peak))
+    assert result.converged is False
+    assert result.max_delta_db > 0.5
+    assert result.budget_exhausted is True
 
 
 def test_adaptive_escalation_solves_real_adjacent_orders_on_one_shared_grid(monkeypatch) -> None:

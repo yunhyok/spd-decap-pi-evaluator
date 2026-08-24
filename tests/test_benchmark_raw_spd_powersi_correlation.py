@@ -1700,7 +1700,7 @@ def test_report_v4_identity_is_explicit_and_validates_completed_outcomes():
     assert fields["solver_version"] == module.SOLVER_VERSION
     assert fields["solver_profile_key"] == "layerwise_admittance_v1"
     assert fields["convergence_policy"] == {
-        "version": "adaptive-frequency-modal-v4",
+        "version": "adaptive-frequency-modal-v5",
         "max_refinement_iterations": 3,
         "max_new_frequency_points_per_iteration": 64,
         "curvature_threshold_db": 0.75,

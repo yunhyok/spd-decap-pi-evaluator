@@ -3461,7 +3461,7 @@ def test_convergence_policy_is_explicit_and_changes_result_identity(
 ) -> None:
     settings = evaluation_module._evaluation_settings(None, 8)
     assert settings["convergence_policy"] == {
-        "version": "adaptive-frequency-modal-v4",
+        "version": "adaptive-frequency-modal-v5",
         "max_refinement_iterations": 3,
         "max_new_frequency_points_per_iteration": 64,
         "curvature_threshold_db": 0.75,

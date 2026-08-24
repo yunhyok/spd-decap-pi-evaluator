@@ -1,10 +1,10 @@
 # SPD Decap PI Evaluator 작업 기준
 
 - 적용 제품: **SPD Decap PI Evaluator v0.23.0**
-- 문서 버전: **1.0**
+- 문서 버전: **1.1**
 - 상위 기준: [목적·기술 기준](PRODUCT_PURPOSE_AND_TECHNICAL_BASELINE.md) v1.1
-- 현행 source 기준: `main` commit `3445c40a6eff961f635e9d17718ffb468effe8ff`
-- 상태: **ACTIVE CONTROL DOCUMENT — W3-CI 완료; W4-FREQ 대기**
+- 현행 source 기준: `main` commit `3adb9f357f2ca4248d66cd4349faff276c3aa007`
+- 상태: **ACTIVE CONTROL DOCUMENT — W4-FREQ 완료; W4-COND 대기**
 - 최종 개정: 2026-08-24 (Asia/Seoul)
 
 ## 1. 압축 후 즉시 복구 카드
@@ -16,13 +16,13 @@ context가 압축되거나 새 session에서 작업을 재개하면 다른 연�
 |---|---|
 | 변하지 않는 목적 | source-derived single-rail `Zii`의 PowerSI 근접 정확성과 일반화 |
 | 현재 branch | `main`만 사용; 정리된 과거 branch를 다시 조사하지 않음 |
-| 현재 active work item | `NONE` — `W3-CI` 완료; `W4-FREQ` 승인 대기 |
-| 다음 권장 묶음 | `W4-FREQ` synthetic frequency-coverage reliability gate |
+| 현재 active work item | `NONE` — `W4-FREQ` 완료; `W4-COND` 대기 |
+| 다음 권장 묶음 | `W4-COND` ill-conditioned sparse solve reliability gate |
 | 코드 수정 권한 | active item 승인 전 production code 수정 금지 |
-| 고비용 검증 권한 | `W4-FREQ` synthetic focused/V2–V3만 허용; production SPD/PowerSI 금지 |
+| 고비용 검증 권한 | `W4-COND` synthetic focused/V2–V3만 허용; production SPD/PowerSI 금지 |
 | 현재 정확성 상태 | `current / unknown / not_run` |
 | 현재 release 계산 증거 | import/save/solver-entry만 통과; frequency solve `0` |
-| 현재 working tree | W3-CI bounded workflow selection과 stale Distribution 기대 수정 완료; current HEAD 기록 |
+| 현재 working tree | W4-FREQ midpoint coverage focused gate와 identity 갱신 완료; current HEAD 기록 |
 
 최초 목적은 [목적·기술 기준 2장](PRODUCT_PURPOSE_AND_TECHNICAL_BASELINE.md#2-최우선-목적),
 현재 증거 상태는 [6장](PRODUCT_PURPOSE_AND_TECHNICAL_BASELINE.md#6-증거와-상태-표기)이
@@ -100,7 +100,7 @@ active work item에 명시된 source/test/subsystem 문서만 추가로 읽는�
 | `W2-IO-A` | 5 | DONE | Distribution/Tuned CSV atomic replace | write 실패 시 기존 파일 보존 |
 | `W2-IO-B` | 6 | DONE | 대형 `.spdpi` load cancellation과 load 중 close 경로 | 기존 loader callback 재사용, 취소 후 stale state 없음 |
 | `W3-CI` | 7 | DONE | 짧은 product-core lane을 required CI로 연결 | parser/scenario/solver/Distribution/GUI I/O 핵심 경로 green |
-| `W4-FREQ` | 8 | READY | adaptive frequency가 sample 사이 narrow peak를 보지 않고 converged 처리하는 blind spot | midpoint/coverage focused case가 peak 누락을 검출 |
+| `W4-FREQ` | 8 | DONE | adaptive frequency가 sample 사이 narrow peak를 보지 않고 converged 처리하는 blind spot | midpoint/coverage focused case가 peak 누락을 검출 |
 | `W4-COND` | 9 | READY | ill-conditioned sparse solve의 결과 신뢰성 gate | residual과 별도 conditioning/forward-reliability 판정 |
 | `W5-GATE` | 10 | BLOCKED | 제품 PowerSI 수치 gate와 development/holdout/unseen partition 확정 | 사용자 승인 필요 |
 | `W6-BASE` | 11 | BLOCKED | exact current solver baseline 1회 | W1–W5 완료와 run manifest 승인 필요 |
@@ -171,18 +171,18 @@ evidence identity before:
 다음 사용자 결정:
 ```
 
-ID / 상태: `W3-CI / DONE`
-사용자 목적과의 연결: green intermediate가 아닌 짧은 product-core truth를 기존 `main`/PR `test-and-wheel` CI에 실제 연결한다. 이는 solver accuracy/PowerSI evidence가 아니다.
-이번 변경 묶음: 기존 Windows/Python 3.12/Qt offscreen/timeout/wheel 구조를 보존하고 packaging-only Test step의 pytest command만 명시된 bounded file+GUI node selection으로 교체한다.
-명시적 제외 범위: 새 marker/script/job/dependency/action, research/benchmark, production SPD/PowerSI, installer, full 2,434 suite, wheel build 실행 및 remote CI/push.
-root-cause 가설: existing CI Test가 `tests/test_spd_decap_packaging.py`만 실행해 bounded product-core truth를 required main/PR gate로 차단하지 못한다.
-읽을 source/test/subsystem 문서: 목적·기술 기준, 이 작업 기준, `.github/workflows/ci.yml`의 `test-and-wheel`, bounded six test files와 five GUI nodes.
-acceptance: CI Test command가 지정된 six files와 five GUI nodes만 실행하며 QT offscreen 환경을 유지한다. initial bounded run의 stale expectations를 분류·수정한 뒤 compositional focused closure가 green이다.
-V0–V5 계획과 최대 횟수: V0 YAML/command/diff 정적 확인 1회; CI와 동일한 QT offscreen bounded selection V3 로컬 1회; V1/V2 및 V4–V5 금지.
-중단 조건: YAML/selection 불일치, bounded selection failure가 production defect로 보이거나 full suite/remote CI/build가 필요해지는 경우.
-evidence identity before: `main` / `306a3a1` / v0.23.0.
-결과 / artifact / diff: 기존 `test-and-wheel` 구조를 보존하고 Test command를 지정된 six files + five GUI nodes로 bounded 교체했다. initial 동일 QT offscreen V3는 `319 passed, 1 skipped, 3 failed in 18.90s`였다. packaging workflow assertion stale 기대는 full-file focused `test_spd_decap_packaging.py` 1회 `11 passed`로 확인했고, Root/Sol triage에 따른 Distribution stale 기대 2개도 지정 두 node 1회 green으로 수정했다. 최종 current HEAD에서 exact bounded selection을 QT offscreen으로 1회 실행해 `322 passed, 1 skipped in 18.17s`로 closure했다. 이는 bounded local compositional closure이며 remote CI는 실행하지 않았다. solver accuracy/PowerSI evidence가 아니다. W4-FREQ와 그 이후 항목은 수행하지 않았다.
-다음 사용자 결정: W4-FREQ를 active로 승인할지 결정.
+ID / 상태: `W4-FREQ / DONE`
+사용자 목적과의 연결: 초기 flat grid가 curvature heuristic만으로 수렴 처리되어 adjacent geometric midpoint의 narrow feature를 놓치는 product-core blind spot을 synthetic gate로 차단한다. 이는 PowerSI 정확성 증거가 아니다.
+이번 변경 묶음: `evaluator.py` first-stable branch에서 refinement budget 안의 deterministic interval-index midpoint probe를 먼저 측정하고, 기존 delta/cancel/progress/escalation 경로를 재사용한다. `CONVERGENCE_POLICY_VERSION`을 `adaptive-frequency-modal-v5`로 갱신하고 current identity assertions만 맞췄다.
+명시적 제외 범위: `frequency.py`, solver physics, public config/schema/dependency, modal/Distribution 범위, production SPD/PowerSI, installer/release, hidden-peak 일반 보장.
+root-cause 가설: 초기 측정값이 flat하면 `refine_log_grid`가 unchanged grid를 반환하여 grid-to-grid delta를 한 번도 측정하지 않고 converged 처리한다.
+읽을 source/test/subsystem 문서: 목적·기술 기준, 이 작업 기준, `evaluator.py`의 `_refine_frequency_for_modes`/`_frequency_grid_delta`, `tests/test_modal_convergence.py`, `tests/test_shared_pad_cluster_core.py`.
+acceptance: initial flat grid에서 max-new-point budget 내 deterministic geometric midpoint를 측정하고, 0.6 dB synthetic narrow peak를 `max_delta_db > 0.5`와 budget exhaustion으로 검출한다. 동일 midpoint second measurement가 flat이면 delta 0으로 수렴한다.
+V0–V5 계획과 최대 횟수: adversarial V1 red 1회; adversarial+flat V1 최종 `2 passed` 1회; modal/shared V2 최종 `58 passed` 1회; V0 diff-check 1회; V3–V5와 production solve 금지.
+중단 조건: midpoint budget 초과, cancellation/progress 경로 변경 필요, focused red가 production defect로 보이거나 full suite/production SPD/PowerSI가 필요해지는 경우.
+evidence identity before: `main` / `3adb9f357f2ca4248d66cd4349faff276c3aa007` / v0.23.0.
+결과 / artifact / diff: adversarial node 최초 red는 `1 failed`; test target 보정 후 adversarial+flat focused는 `2 passed in 0.64s`. V2 첫 실행에서 기존 flat fake의 `metrics.peaks` 누락이 드러나 이를 stale test double로 최소 보정했고, 최종 `pytest -q tests/test_modal_convergence.py tests/test_shared_pad_cluster_core.py`는 `58 passed in 4.48s`였다. 변경은 evaluator first-stable midpoint probe, W4 tests, current v5 identity assertions, 이 work register에 한정했다. accuracy는 `unknown / not_run`; production SPD/PowerSI/installer/release와 hidden-peak 일반 보장은 수행·주장하지 않았다.
+다음 사용자 결정: W4-COND를 active로 승인할지 결정.
 
 ## 8. Context 압축·새 session 복구 절차
 
@@ -240,11 +240,13 @@ evidence identity before: `main` / `306a3a1` / v0.23.0.
 - W1/W2 focused evidence는 graph-contact persistence/source provenance와
   mixed-reference warning/blocking 경계를 각각 확인했다. 이 evidence는 해당
   commit·노드 범위 밖의 product accuracy 또는 PowerSI 증거로 재사용하지 않는다.
-- 현재 문서 변경을 이유로 solver, production SPD, PowerSI, installer 검증을
-  실행하지 않는다.
+- W4-FREQ synthetic focused solver checks는 해당 acceptance에 한해 사용했으며,
+  이를 production SPD/PowerSI 정확성 증거로 재사용하지 않는다. production SPD,
+  PowerSI, installer 검증은 실행하지 않는다.
 
 ## 12. 변경 기록
 
 | 문서 버전 | 날짜 | 변경 |
 |---|---|---|
 | 1.0 | 2026-08-24 | 두 문서 기반 작업 통제, 우선순위 register, 검증 사다리·최대 횟수, active-item 형식, context 복구와 중단 조건을 생성. |
+| 1.1 | 2026-08-24 | W4-FREQ midpoint coverage gate 완료, v5 identity와 focused evidence를 기록하고 W4-COND를 다음 item으로 지정. |

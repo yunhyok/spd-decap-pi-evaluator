@@ -71,7 +71,7 @@ if TYPE_CHECKING:
 # refinement depth after two passes proved insufficient for a narrow real-board
 # holdout feature without relaxing any convergence tolerance.
 SOLVER_VERSION = "modal-mvp-0.8.3"
-CONVERGENCE_POLICY_VERSION = "adaptive-frequency-modal-v4"
+CONVERGENCE_POLICY_VERSION = "adaptive-frequency-modal-v5"
 DEFAULT_MAX_REFINEMENT_ITERATIONS = 3
 DEFAULT_MAX_NEW_FREQUENCY_POINTS = 64
 DEFAULT_RMS_TOLERANCE_DB = 0.2
@@ -1025,10 +1025,21 @@ def _refine_frequency_for_modes(
             False,
             True,
         )
+    if max_refinement_iterations == 0 or max_new_frequency_points == 0:
+        return _FrequencyRefinementResult(
+            working,
+            current,
+            iterations,
+            last_rms,
+            last_max,
+            last_peak_shift,
+            False,
+            True,
+        )
 
     while True:
-        # Probe with one point even when the budget is zero: lack of budget is
-        # not evidence that the current grid is stable.
+        # Keep the refinement helper's probe count positive; a zero budget was
+        # rejected above instead of being treated as evidence of stability.
         probe_points = max(1, max_new_frequency_points)
         refined = refine_log_grid(
             current.solve.frequencies_hz,
@@ -1037,23 +1048,43 @@ def _refine_frequency_for_modes(
             max_new_points=probe_points,
         ).frequencies_hz
         if refined.size == current.solve.frequencies_hz.size:
-            budget_exhausted = False
             if iterations == 0:
-                # Nothing has been measured yet, so the starting grid is stable
-                # by the curvature heuristic and there is no grid-to-grid error
-                # to report.
-                converged = True
-                last_rms = last_max = last_peak_shift = 0.0
+                frequencies = current.solve.frequencies_hz
+                midpoint_count = min(max_new_frequency_points, frequencies.size - 1)
+                if midpoint_count:
+                    midpoints = np.sqrt(frequencies[:-1] * frequencies[1:])
+                    indices = np.rint(
+                        np.linspace(0, midpoints.size - 1, midpoint_count)
+                    ).astype(int)
+                    selected = np.unique(midpoints[indices])
+                    refined = np.unique(
+                        np.concatenate((frequencies, selected.astype(np.float64)))
+                    )
+            if refined.size == current.solve.frequencies_hz.size:
+                budget_exhausted = False
+                if iterations == 0:
+                    # Nothing has been measured yet, so the starting grid is stable
+                    # by the curvature heuristic and there is no grid-to-grid error
+                    # to report.
+                    converged = True
+                    last_rms = last_max = last_peak_shift = 0.0
+                    break
+                # A stable grid never overrides an already measured grid-to-grid
+                # error: the documented RMS/max/peak gates must still pass on the
+                # last measurement, otherwise this is a fail-closed non-convergence.
+                converged = (
+                    last_rms < rms_tolerance_db
+                    and last_max < max_tolerance_db
+                    and last_peak_shift < peak_shift_tolerance_percent
+                )
+                budget_exhausted = (
+                    not converged and iterations >= max_refinement_iterations
+                )
                 break
-            # A stable grid never overrides an already measured grid-to-grid
-            # error: the documented RMS/max/peak gates must still pass on the
-            # last measurement, otherwise this is a fail-closed non-convergence.
-            converged = (
-                last_rms < rms_tolerance_db
-                and last_max < max_tolerance_db
-                and last_peak_shift < peak_shift_tolerance_percent
-            )
-            break
+            # The initial curvature heuristic can be flat while a narrow
+            # feature lies at an adjacent geometric midpoint.  Measure a
+            # deterministic, log-stratified subset before declaring the
+            # starting grid converged.
         if iterations >= max_refinement_iterations or max_new_frequency_points == 0:
             budget_exhausted = True
             break
