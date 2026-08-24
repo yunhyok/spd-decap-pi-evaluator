@@ -30,6 +30,8 @@ jobs:
             tests/test_spd_decap_distribution.py `
             tests/test_spd_decap_evaluation.py `
             tests/test_modal_convergence.py `
+            tests/test_layer_surface_network.py::test_factor_pivot_ratio_rejects_forward_unreliable_real_superlu_result `
+            tests/test_layer_surface_network.py::test_factor_pivot_ratio_ceiling_preserves_real_result_and_residual `
             tests/test_spd_decap_gui.py::test_csv_export_write_failure_preserves_destination_and_cleans_temp `
             tests/test_spd_decap_distribution_gui.py::test_full_preview_exports_saves_and_applies_one_atomic_revision `
             tests/test_spd_decap_gui.py::test_research_success_is_transient_and_exports_full_composite_identity `
