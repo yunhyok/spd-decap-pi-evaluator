@@ -2037,6 +2037,14 @@ class ScenarioSpec(ScenarioModel):
                 ("GND", connection.ground_vias),
             ):
                 for landing in landings:
+                    for graph_contact in landing.graph_contact_evidence:
+                        if graph_contact.source_sha256 != self.source.sha256:
+                            raise ValueError(
+                                "graph contact evidence source SHA mismatch for "
+                                f"Via {landing.via_id!r}: expected "
+                                f"{self.source.sha256}, got "
+                                f"{graph_contact.source_sha256}"
+                            )
                     via_key = landing.via_id.casefold()
                     previous = physical_vias.get(via_key)
                     if previous is None:

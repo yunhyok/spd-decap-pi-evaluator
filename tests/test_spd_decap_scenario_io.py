@@ -274,6 +274,58 @@ def _scenario_with_via_material(material: str | None) -> ScenarioSpec:
     return base.model_copy(update={"connection_analysis": analysis})
 
 
+def test_graph_contact_source_sha_mismatch_is_rejected() -> None:
+    scenario = _scenario_with_via_material("COPPER")
+    payload = scenario.model_dump(mode="python")
+    landing = payload["connection_analysis"]["connections"]["C101"][
+        "power_vias"
+    ][0]
+    landing["graph_contact_evidence"] = [
+        {
+            "x_um": 1075.0,
+            "y_um": 2200.0,
+            "target_layer": "L3_PWR",
+            "target_node_id": "PWR_NODE",
+            "candidate_count": 1,
+            "candidate_contacts_sha256": "2" * 64,
+            "selection_basis": "SOURCE_GRAPH_TARGET_CONTACT",
+            "source_sha256": "3" * 64,
+            "selected_distance_um": 0.0,
+            "connectivity_only": True,
+        }
+    ]
+
+    with pytest.raises(
+        ValidationError, match="graph contact evidence source SHA mismatch"
+    ):
+        ScenarioSpec.model_validate(payload)
+
+
+def test_graph_contact_source_sha_same_source_is_accepted() -> None:
+    scenario = _scenario_with_via_material("COPPER")
+    payload = scenario.model_dump(mode="python")
+    landing = payload["connection_analysis"]["connections"]["C101"][
+        "power_vias"
+    ][0]
+    landing["graph_contact_evidence"] = [
+        {
+            "x_um": 1075.0,
+            "y_um": 2200.0,
+            "target_layer": "L3_PWR",
+            "target_node_id": "PWR_NODE",
+            "candidate_count": 1,
+            "candidate_contacts_sha256": "2" * 64,
+            "selection_basis": "SOURCE_GRAPH_TARGET_CONTACT",
+            "source_sha256": payload["source"]["sha256"],
+            "selected_distance_um": 0.0,
+            "connectivity_only": True,
+        }
+    ]
+
+    validated = ScenarioSpec.model_validate(payload)
+    assert validated.connection_analysis is not None
+
+
 def _rewrite_archive(path: Path, edits) -> None:
     with ZipFile(path) as archive:
         members = [(info.filename, archive.read(info.filename)) for info in archive.infolist()]
