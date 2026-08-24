@@ -1980,6 +1980,46 @@ def test_valid_previous_save_is_backed_up_and_recovered(tmp_path) -> None:
     assert "valid ZIP" in (recovered.recovery_reason or "")
 
 
+def test_scenario_load_cancellation_stops_multichunk_member_without_recovery(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(scenario_io_module, "SCENARIO_LOAD_CHUNK_BYTES", 4)
+    path = save_scenario(
+        _scenario(),
+        tmp_path / "cancel.spdpi",
+        attachments={"models/a.cir": b"x" * 24},
+    )
+    backup = path.with_name(path.name + ".bak")
+    backup.write_bytes(path.read_bytes())
+
+    with ZipFile(path) as archive:
+        sizes = tuple(
+            archive.getinfo(name).file_size
+            for name in (MANIFEST_FILENAME, SCENARIO_FILENAME)
+        )
+    checks_before_attachment = sum((size + 3) // 4 + 1 for size in sizes)
+    checks = 0
+
+    def cancel_during_attachment() -> bool:
+        nonlocal checks
+        checks += 1
+        return checks >= checks_before_attachment + 2
+
+    loaded_paths: list[Path] = []
+    original_loader = scenario_io_module.load_scenario_bundle
+
+    def track_loader(candidate, **kwargs):
+        loaded_paths.append(Path(candidate))
+        return original_loader(candidate, **kwargs)
+
+    monkeypatch.setattr(scenario_io_module, "load_scenario_bundle", track_loader)
+    with pytest.raises(RuntimeError, match="scenario load cancelled"):
+        load_scenario_with_recovery(path, is_cancelled=cancel_during_attachment)
+
+    assert loaded_paths == [path]
+    assert checks == checks_before_attachment + 2
+
+
 def test_normalized_project_is_validated_and_stored_as_plain_json() -> None:
     scenario = _scenario()
     assert isinstance(scenario.normalized_project, dict)

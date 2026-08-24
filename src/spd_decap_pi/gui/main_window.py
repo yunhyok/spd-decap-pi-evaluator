@@ -1826,7 +1826,7 @@ def _job_load_scenario(
     is_cancelled: Callable[[], bool],
 ) -> ScenarioBundle | _PreparedScenarioBundle:
     progress(5, "Reading .spdpi scenario")
-    bundle = load_scenario_with_recovery(path)
+    bundle = load_scenario_with_recovery(path, is_cancelled=is_cancelled)
     progress(35, "Validating external SPD identity")
     resolved = verify_scenario_source(
         bundle.scenario,
@@ -5863,7 +5863,7 @@ class MainWindow(QMainWindow):
             ),
             label="Opening scenario...",
             on_error=lambda details: self._scenario_load_error(path, details),
-            cancelable=False,
+            cancelable=True,
         )
 
     def _scenario_load_error(self, path: Path, details: str) -> None:
