@@ -4,7 +4,7 @@
 - 문서 버전: **1.0**
 - 상위 기준: [목적·기술 기준](PRODUCT_PURPOSE_AND_TECHNICAL_BASELINE.md) v1.1
 - 현행 source 기준: `main` commit `1e144bd`
-- 상태: **ACTIVE CONTROL DOCUMENT — W2-SPD-B 완료; W2-SPD-C 대기**
+- 상태: **ACTIVE CONTROL DOCUMENT — W2-SPD-C 완료; W2-IO-A 대기**
 - 최종 개정: 2026-08-24 (Asia/Seoul)
 
 ## 1. 압축 후 즉시 복구 카드
@@ -16,13 +16,13 @@ context가 압축되거나 새 session에서 작업을 재개하면 다른 연�
 |---|---|
 | 변하지 않는 목적 | source-derived single-rail `Zii`의 PowerSI 근접 정확성과 일반화 |
 | 현재 branch | `main`만 사용; 정리된 과거 branch를 다시 조사하지 않음 |
-| 현재 active work item | `NONE` — `W2-SPD-B` 완료; `W2-SPD-C` 승인 대기 |
+| 현재 active work item | `NONE` — `W2-SPD-C` 완료; `W2-IO-A` 승인 대기 |
 | 다음 권장 묶음 | `W1` product-core test truth 복원 후 `W2` bounded correctness fixes |
-| 코드 수정 권한 | `W2-SPD-B`의 `scenario.py` 공통 validator와 focused regression만 허용 |
+| 코드 수정 권한 | active item 승인 전 production code 수정 금지 |
 | 고비용 검증 권한 | 없음 — W1은 V0–V2 focused 검증만 허용 |
 | 현재 정확성 상태 | `current / unknown / not_run` |
 | 현재 release 계산 증거 | import/save/solver-entry만 통과; frequency solve `0` |
-| 현재 working tree | W2-SPD-B commit 완료; common graph-contact source validation 적용 |
+| 현재 working tree | W2-SPD-C commit 완료; warning-only/blocking importer 경계 적용 |
 
 최초 목적은 [목적·기술 기준 2장](PRODUCT_PURPOSE_AND_TECHNICAL_BASELINE.md#2-최우선-목적),
 현재 증거 상태는 [6장](PRODUCT_PURPOSE_AND_TECHNICAL_BASELINE.md#6-증거와-상태-표기)이
@@ -96,7 +96,7 @@ active work item에 명시된 source/test/subsystem 문서만 추가로 읽는�
 | `W1-TEST` | 1 | DONE | stale test double·구형 정책 기대를 current v0.23 계약에 맞게 정리하고 product-core selection 고정 | 실제 결함은 red로 남기고 test 자체 오류 제거 |
 | `W2-SPD-A` | 2 | DONE | source-graph target contact persistence 복구 | target-layer coordinate가 저장·사용되는 focused regression |
 | `W2-SPD-B` | 3 | DONE | graph-contact `source_sha256` 교차 검증 | 다른 source coordinate가 scenario validation에서 차단 |
-| `W2-SPD-C` | 4 | READY | `blocking:false` mixed-reference warning이 import를 중단하는 문제 수정 | warning-only case import 성공, blocking case 차단 유지 |
+| `W2-SPD-C` | 4 | DONE | `blocking:false` mixed-reference warning이 import를 중단하는 문제 수정 | warning-only case import 성공, blocking case 차단 유지 |
 | `W2-IO-A` | 5 | READY | Distribution/Tuned CSV atomic replace | write 실패 시 기존 파일 보존 |
 | `W2-IO-B` | 6 | READY | 대형 `.spdpi` load cancellation과 load 중 close 경로 | 기존 loader callback 재사용, 취소 후 stale state 없음 |
 | `W3-CI` | 7 | READY | 짧은 product-core lane을 required CI로 연결 | parser/scenario/solver/Distribution/GUI I/O 핵심 경로 green |
@@ -171,18 +171,18 @@ evidence identity before:
 다음 사용자 결정:
 ```
 
-ID / 상태: `W2-SPD-B / DONE`
-사용자 목적과의 연결: 저장된 graph-contact evidence가 다른 raw SPD source 좌표와 혼용되지 않도록 공통 `ScenarioSpec` 검증 경계에서 source provenance를 확인한다.
-이번 변경 묶음: 기존 PWR/GND landing 순회에서 각 `graph_contact_evidence.source_sha256`를 `self.source.sha256`와 비교하고 mismatch를 명시적 validation error로 거부한다.
-명시적 제외 범위: `_scenario_via_landing`, solver/footprint/metadata/PowerSI 경로, mixed-reference 정책, Distribution, W2-SPD-C, production SPD solve, installer/release.
-root-cause 가설: W2-SPD-A가 graph-contact source SHA를 저장하지만 common scenario validation이 해당 evidence identity를 현재 raw source와 교차검증하지 않아 다른 source 좌표가 통과할 수 있다.
-읽을 source/test/subsystem 문서: 목적·기술 기준, 이 작업 기준, `scenario.py`의 `_validate_connection_analysis`와 graph evidence schema, `test_spd_decap_scenario_io.py`의 ScenarioSpec validation fixture.
-acceptance: 유효한 64자리지만 다른 graph-contact source SHA는 `ScenarioSpec.model_validate`에서 구체적 mismatch message로 차단되고 동일 source SHA는 통과한다.
-V0–V5 계획과 최대 횟수: V0 정적 validator/diff 1회; negative V1 red 재현 1회와 negative/positive focused V1 green 1회; V2–V5 금지.
-중단 조건: source/signature 경계가 불명확하거나 기존 validator 밖의 consumer별 guard 또는 V3 이상 검증이 필요해지는 경우.
-evidence identity before: `main` / `1e144bd` / v0.23.0.
-결과 / artifact / diff: 기존 `_validate_connection_analysis`의 공통 PWR/GND landing 순회에서 graph-contact source SHA mismatch를 구체적 validation error로 차단했다. mismatch negative red 1회 후 negative/positive focused node 2개가 green이다. W2-SPD-C mixed-reference warning 정책과 solver/Distribution/PowerSI 변경은 수행하지 않았다.
-다음 사용자 결정: W2-SPD-C를 active로 승인할지 결정.
+ID / 상태: `W2-SPD-C / DONE`
+사용자 목적과의 연결: producer가 warning-only로 명시한 mixed-reference failure를 importer가 blocking rejection으로 오해하지 않도록 product-core import 경계를 보존한다.
+이번 변경 묶음: `_raise_for_rejected_mixed_reference_landings` failure loop에서 정확히 `failure.get("blocking") is False`인 항목만 제외하고, key 누락·True·0/None/문자열은 기존 blocking 경로를 유지한다.
+명시적 제외 범위: producer/metadata schema/recovery orchestration, 다른 함수·helper·dependency, solver/Distribution/PowerSI, W2-IO-A, production SPD solve, installer/release.
+root-cause 가설: importer가 failure의 `blocking` 값을 확인하지 않고 source/path evidence가 일치하는 모든 producer failure를 rejection으로 수집한다.
+읽을 source/test/subsystem 문서: 목적·기술 기준, 이 작업 기준, `spd_adapter.py`의 rejection helper, `test_spd_decap_spd_adapter.py`의 warning-only 및 blocking regression.
+acceptance: warning-only failure는 예외 없이 반환되고, blocking key 누락 failure는 `SpdImportError`로 계속 차단된다.
+V0–V5 계획과 최대 횟수: V0 단일 guard/diff 1회; warning-only V1 red 재현 1회와 warning/blocking 두 focused node green 1회; V2–V5 금지.
+중단 조건: bool truthiness로 판정해야 하거나 producer/schema 변경이 필요해지는 경우, 또는 V2 이상 검증이 필요해지는 경우.
+evidence identity before: `main` / `178c9d4` / v0.23.0.
+결과 / artifact / diff: `_raise_for_rejected_mixed_reference_landings`의 failure loop에서 정확히 `failure.get("blocking") is False`인 항목만 제외했다. warning-only red 1회 후 warning-only와 blocking-key-missing focused node 2개가 green이다. W2-IO-A와 그 이후 항목은 수행하지 않았다.
+다음 사용자 결정: W2-IO-A를 active로 승인할지 결정.
 
 ## 8. Context 압축·새 session 복구 절차
 
@@ -237,9 +237,9 @@ evidence identity before: `main` / `1e144bd` / v0.23.0.
   재사용하지 않는다.
 - 문서에 남은 historical v0.22 loaded correlation은 model-form failure를
   가리키지만 raw report가 Git에 없어 current baseline 숫자로 재사용하지 않는다.
-- W1 selected suite는 stale 계약을 정리한 뒤에도 graph-contact persistence 2건과
-  nonblocking mixed-reference 1건을 red로 남겼다. 이는 product defect 후보이며
-  기대값 변경으로 숨기지 않는다.
+- W1/W2 focused evidence는 graph-contact persistence/source provenance와
+  mixed-reference warning/blocking 경계를 각각 확인했다. 이 evidence는 해당
+  commit·노드 범위 밖의 product accuracy 또는 PowerSI 증거로 재사용하지 않는다.
 - 현재 문서 변경을 이유로 solver, production SPD, PowerSI, installer 검증을
   실행하지 않는다.
 

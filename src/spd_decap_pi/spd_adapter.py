@@ -5964,6 +5964,8 @@ def _raise_for_rejected_mixed_reference_landings(
     for failure in failed_candidates if isinstance(failed_candidates, list) else ():
         if not isinstance(failure, dict):
             continue
+        if failure.get("blocking") is False:
+            continue
         net_key = str(failure.get("rail_net", "")).casefold()
         target_key = str(failure.get("pwr_layer", "")).casefold()
         if any(
