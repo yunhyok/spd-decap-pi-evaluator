@@ -142,7 +142,7 @@ def _stable_grid_refinement(monkeypatch, request, deltas):
 
     refined_grid = np.asarray([1e3, 1e4, 1e6, 1e9], dtype=np.float64)
 
-    def fake_refine_log_grid(frequencies, impedance, *, max_new_points):
+    def fake_refine_log_grid(frequencies, impedance, *, max_new_points, **_kwargs):
         actual = np.asarray(frequencies, dtype=np.float64)
         if actual.size == request.frequencies_hz.size:
             return SimpleNamespace(frequencies_hz=refined_grid)
@@ -195,7 +195,7 @@ def test_first_pass_stable_frequency_grid_reports_zero_deltas(monkeypatch) -> No
     monkeypatch.setattr(
         evaluator,
         "refine_log_grid",
-        lambda frequencies, impedance, *, max_new_points: SimpleNamespace(
+        lambda frequencies, impedance, *, max_new_points, **_kwargs: SimpleNamespace(
             frequencies_hz=np.asarray(frequencies, dtype=np.float64)
         ),
     )
@@ -229,11 +229,13 @@ def test_adaptive_escalation_solves_real_adjacent_orders_on_one_shared_grid(monk
     calls: list[tuple[int, int, tuple[float, ...]]] = []
     real_evaluate_rail = evaluator.evaluate_rail
 
-    def spy(actual: evaluator.EvaluationRequest) -> evaluator.EvaluationOutcome:
+    def spy(
+        actual: evaluator.EvaluationRequest, **kwargs: object
+    ) -> evaluator.EvaluationOutcome:
         calls.append(
             (actual.max_mode_x, actual.max_mode_y, tuple(actual.frequencies_hz.tolist()))
         )
-        return real_evaluate_rail(actual)
+        return real_evaluate_rail(actual, **kwargs)
 
     monkeypatch.setattr(evaluator, "evaluate_rail", spy)
 

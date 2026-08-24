@@ -4,7 +4,7 @@
 - 문서 버전: **1.0**
 - 상위 기준: [목적·기술 기준](PRODUCT_PURPOSE_AND_TECHNICAL_BASELINE.md) v1.1
 - 현행 source 기준: `main` commit `0f24363c14e9b9f588f03e7f9e0c48a27118546f`
-- 상태: **ACTIVE CONTROL DOCUMENT — W1-TEST 진행 중**
+- 상태: **ACTIVE CONTROL DOCUMENT — W1-TEST 완료; W2-SPD-A 대기**
 - 최종 개정: 2026-08-24 (Asia/Seoul)
 
 ## 1. 압축 후 즉시 복구 카드
@@ -16,13 +16,13 @@ context가 압축되거나 새 session에서 작업을 재개하면 다른 연�
 |---|---|
 | 변하지 않는 목적 | source-derived single-rail `Zii`의 PowerSI 근접 정확성과 일반화 |
 | 현재 branch | `main`만 사용; 정리된 과거 branch를 다시 조사하지 않음 |
-| 현재 active work item | `W1-TEST ACTIVE` — stale test 계약 복구와 product-core selection 확정 |
+| 현재 active work item | `NONE` — `W1-TEST` 완료; 다음 승인 대기 |
 | 다음 권장 묶음 | `W1` product-core test truth 복원 후 `W2` bounded correctness fixes |
-| 코드 수정 권한 | W1 범위의 test/doc만 허용; production code는 수정하지 않음 |
+| 코드 수정 권한 | active item 승인 전 production code 수정 금지 |
 | 고비용 검증 권한 | 없음 — W1은 V0–V2 focused 검증만 허용 |
 | 현재 정확성 상태 | `current / unknown / not_run` |
 | 현재 release 계산 증거 | import/save/solver-entry만 통과; frequency solve `0` |
-| 현재 working tree | 두 canonical 문서와 Evaluation 기술 부속서의 문서 변경을 W0 문서 commit으로 적용 예정 |
+| 현재 working tree | W0 문서와 W1 test 계약 변경이 각각 commit됨; production code는 변경하지 않음 |
 
 최초 목적은 [목적·기술 기준 2장](PRODUCT_PURPOSE_AND_TECHNICAL_BASELINE.md#2-최우선-목적),
 현재 증거 상태는 [6장](PRODUCT_PURPOSE_AND_TECHNICAL_BASELINE.md#6-증거와-상태-표기)이
@@ -93,7 +93,7 @@ active work item에 명시된 source/test/subsystem 문서만 추가로 읽는�
 | ID | 순서 | 상태 | 작업 묶음 | 완료 기준 |
 |---|---:|---|---|---|
 | `W0-DOC` | 0 | DONE | 목적·기술 기준과 이 작업 기준 작성 | 상호 링크, Markdown/link/diff 검증 |
-| `W1-TEST` | 1 | ACTIVE | stale test double·구형 정책 기대를 current v0.23 계약에 맞게 정리하고 product-core selection 고정 | 실제 결함은 red로 남기고 test 자체 오류 제거 |
+| `W1-TEST` | 1 | DONE | stale test double·구형 정책 기대를 current v0.23 계약에 맞게 정리하고 product-core selection 고정 | 실제 결함은 red로 남기고 test 자체 오류 제거 |
 | `W2-SPD-A` | 2 | READY | source-graph target contact persistence 복구 | target-layer coordinate가 저장·사용되는 focused regression |
 | `W2-SPD-B` | 3 | READY | graph-contact `source_sha256` 교차 검증 | 다른 source coordinate가 scenario validation에서 차단 |
 | `W2-SPD-C` | 4 | READY | `blocking:false` mixed-reference warning이 import를 중단하는 문제 수정 | warning-only case import 성공, blocking case 차단 유지 |
@@ -171,7 +171,7 @@ evidence identity before:
 다음 사용자 결정:
 ```
 
-ID / 상태: `W1-TEST / ACTIVE`
+ID / 상태: `W1-TEST / DONE`
 사용자 목적과의 연결: product-core test truth를 먼저 복원하여 이후 정확성·물리 결함 수정의 판정 기반을 확보한다.
 이번 변경 묶음: stale evaluation mock, Distribution exact target-layer evidence, scenario blocker/initial-state, modal convergence fake/spy, mixed-witness selector, saved distributed reload test의 현재 caller/signature 계약 정렬.
 명시적 제외 범위: production code, solver 물리식, PowerSI/production SPD solve, installer/release, 수치 합격선 변경.
@@ -181,8 +181,8 @@ acceptance: 위 stale 계약 오류가 사라지고 실제 결함 red는 그대�
 V0–V5 계획과 최대 횟수: V0 문서 검증 1회; 각 root cause V1 focused 1회; W1 종료 시 관련 test selection V2 1회; V3–V5 금지.
 중단 조건: production defect로 판정되는 실패, source/signature 불명확, 또는 V3 이상 검증이 필요해지는 경우.
 evidence identity before: `main` / `0f24363c14e9b9f588f03e7f9e0c48a27118546f` / v0.23.0.
-결과 / artifact / diff: W1 종료 시 갱신.
-다음 사용자 결정: W1 결과 검토 후 W2-SPD-A 진행 여부.
+결과 / artifact / diff: evaluation mock 3건, Distribution exact target-layer 기대 2건, scenario blocker/초기 상태 3건, modal fake/spy 4건, mixed-witness selector 계약 1건, saved distributed reload projection 경로 1건을 최소 수정했다. Production code는 수정하지 않았다. V2 선택 suite 최초 실행은 299 passed, 4 failed, 1 skipped였고, 이후 stale Distribution 1건을 focused green으로 닫았다. 남은 red는 graph-contact persistence 2건(W2-SPD-A)과 `blocking:false` mixed-reference import 1건(W2-SPD-C)이다.
+다음 사용자 결정: W2-SPD-A를 active로 승인할지 결정.
 
 ## 8. Context 압축·새 session 복구 절차
 
@@ -237,8 +237,9 @@ evidence identity before: `main` / `0f24363c14e9b9f588f03e7f9e0c48a27118546f` / 
   재사용하지 않는다.
 - 문서에 남은 historical v0.22 loaded correlation은 model-form failure를
   가리키지만 raw report가 Git에 없어 current baseline 숫자로 재사용하지 않는다.
-- 이전 audit의 selected test 결과는 문제 분류 근거일 뿐 clean product-core
-  baseline이 아니다. W1에서 exact selection과 current 결과를 새로 기록한다.
+- W1 selected suite는 stale 계약을 정리한 뒤에도 graph-contact persistence 2건과
+  nonblocking mixed-reference 1건을 red로 남겼다. 이는 product defect 후보이며
+  기대값 변경으로 숨기지 않는다.
 - 현재 문서 변경을 이유로 solver, production SPD, PowerSI, installer 검증을
   실행하지 않는다.
 

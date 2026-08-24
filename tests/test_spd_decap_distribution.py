@@ -2418,8 +2418,8 @@ def test_real_spd_conventional_path_requires_projection_and_matches_projected_pl
         targets,
         power_projection=projection,
     )
-    assert plan.status == DistributionPlanStatus.FULL
-    assert plan.assignment_map == {"C1": "R2"}
+    assert plan.status == DistributionPlanStatus.PARTIAL
+    assert plan.assignment_map == {}
 
 
 def _with_landing_certificate(
@@ -2590,8 +2590,8 @@ def test_landing_certificate_claim_digest_and_count_are_strict() -> None:
         )
 
 
-def test_short_span_landing_is_eligible_under_vertical_projection_policy() -> None:
-    """DR-0102-like spans do not block same-XY Distribution planning."""
+def test_short_span_landing_requires_exact_target_layer_evidence() -> None:
+    """A short-span certificate alone cannot authorize a non-TOP landing."""
 
     scenario = _non_top_direct_transition_scenario(
         path_kind=None,
@@ -2640,8 +2640,8 @@ def test_short_span_landing_is_eligible_under_vertical_projection_policy() -> No
         targets,
         power_projection=projection,
     )
-    assert plan.status == DistributionPlanStatus.FULL
-    assert plan.assignment_map == {"C1": "R2"}
+    assert plan.status == DistributionPlanStatus.PARTIAL
+    assert plan.assignment_map == {}
 
 
 def test_source_bound_conventional_landing_certificate_allows_pathless_pth() -> None:
@@ -2892,9 +2892,11 @@ def test_current_negative_policy_does_not_block_vertical_distribution() -> None:
         )
     )
     targets = {("R1", "M1"): 0, ("R2", "M1"): 1}
-    direct_plan = compute_distribution_plan(scenario, targets)
-    assert direct_plan.status == DistributionPlanStatus.FULL
-    assert direct_plan.assignment_map == {"C1": "R2"}
+    with pytest.raises(
+        DistributionError,
+        match="exact source-proven target-layer transition evidence",
+    ):
+        compute_distribution_plan(scenario, targets)
 
     plane = SpdPlaneGeometry(
         layer="PWR_ALT",

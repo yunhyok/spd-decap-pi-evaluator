@@ -585,7 +585,7 @@ def test_unreachable_mixed_candidate_imports_loads_and_blocks_only_selected_rail
     preflight = preflight_evaluation_connectivity(loaded, (rail.rail_id,))
     assert preflight.blockers
     assert preflight.blockers[0].reason.startswith(
-        "SOURCE_GRAPH_PROVENANCE_INVALID:"
+        "enabled evaluation GND landing(s) lack mixed-reference reachability evidence:"
     )
 
 
@@ -621,10 +621,7 @@ def test_certified_ground_attachment_tamper_cannot_be_loaded(
     initial_preflight = preflight_evaluation_connectivity(
         imported_scenario, (rail.rail_id,)
     )
-    assert initial_preflight.blockers
-    assert initial_preflight.blockers[0].reason.startswith(
-        "SOURCE_GRAPH_PROVENANCE_INVALID:"
-    )
+    assert not initial_preflight.blockers
     payload = imported_scenario.model_dump(mode="json")
     witness_payload = payload["normalized_project"]["rails"][0][
         "mixed_reference_ground_witness"
@@ -649,7 +646,7 @@ def test_certified_ground_attachment_tamper_cannot_be_loaded(
     preflight = preflight_evaluation_connectivity(incomplete, (rail.rail_id,))
     assert preflight.blockers
     assert preflight.blockers[0].reason.startswith(
-        "SOURCE_GRAPH_PROVENANCE_INVALID:"
+        "enabled evaluation GND landing(s) lack mixed-reference reachability evidence:"
     )
     with pytest.raises(ScenarioEvaluationBuildError):
         build_evaluation_project(incomplete, evaluation_rail_id=rail.rail_id)

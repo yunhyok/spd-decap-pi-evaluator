@@ -30,6 +30,7 @@ from spd_decap_pi._core.domain import (
     ViaPathKind,
 )
 from spd_decap_pi._core import services as core_services
+from spd_decap_pi._core.io.spd import SpdPlaneGeometry
 from spd_decap_pi._core.solver import evaluator as solver_evaluator_module
 from spd_decap_pi._core.services import EvaluationView
 from spd_decap_pi._core.solver.evaluator import (
@@ -57,6 +58,7 @@ from spd_decap_pi import scenario as scenario_module
 from spd_decap_pi.distribution import (
     DistributionDistanceMode,
     apply_distribution_plan,
+    build_distribution_power_projection,
     compute_distribution_plan,
 )
 from spd_decap_pi.evaluation import (
@@ -2316,7 +2318,9 @@ def test_layerwise_builder_preflight_compiles_one_board_binding_and_proves_92_ra
         project_builds.append(evaluation_rail_id)
         return SimpleNamespace(rail_id=evaluation_rail_id)
 
-    def compile_template(candidate: object, rail_id: str) -> object:
+    def compile_template(
+        candidate: object, rail_id: str, **_kwargs: object
+    ) -> object:
         assert candidate.rail_id == rail_id
         return SimpleNamespace(rail_id=rail_id, cap_models={"M1": object()})
 
@@ -2408,7 +2412,7 @@ def test_layerwise_builder_preflight_caches_only_board_binding_failure(
     monkeypatch.setattr(
         evaluation_module,
         "compile_project_evaluation_template",
-        lambda _candidate, rail_id: SimpleNamespace(
+        lambda _candidate, rail_id, **_kwargs: SimpleNamespace(
             rail_id=rail_id, cap_models={"M1": object()}
         ),
     )
@@ -2504,7 +2508,7 @@ def test_layerwise_board_binding_is_separate_for_tuned_and_original_builder_pass
     monkeypatch.setattr(
         evaluation_module,
         "compile_project_evaluation_template",
-        lambda candidate, rail_id: SimpleNamespace(
+        lambda candidate, rail_id, **_kwargs: SimpleNamespace(
             scenario=candidate.scenario,
             rail_id=rail_id,
             cap_models={"M1": object()},
@@ -2956,12 +2960,35 @@ def test_saved_distributed_scenario_reloads_and_blocks_outside_changed_rail(
                 ).model_dump(mode="python"),
             )
     scenario = ScenarioSpec.model_validate(payload)
+    plane_geometries = tuple(
+        SpdPlaneGeometry(
+            layer="PWR1",
+            net=net,
+            positive_polygons_um=(
+                ((0.0, 0.0), (10_000.0, 0.0), (10_000.0, 8_000.0), (0.0, 8_000.0)),
+            ),
+            negative_polygons_um=(),
+            primitive_order=(("positive_polygon", 0),),
+        )
+        for net in ("VDD", "VDD_ALT")
+    )
+    targets = {("RAIL_VDD", "M1"): 0, ("RAIL_ALT", "M1"): 2}
+    projection = build_distribution_power_projection(
+        scenario,
+        {},
+        plane_geometries=plane_geometries,
+        targets=targets,
+    )
+    assert projection is not None
     plan = compute_distribution_plan(
         scenario,
-        {("RAIL_VDD", "M1"): 0, ("RAIL_ALT", "M1"): 2},
+        targets,
         DistributionDistanceMode.NEAREST,
+        power_projection=projection,
     )
-    distributed = apply_distribution_plan(scenario, plan)
+    distributed = apply_distribution_plan(
+        scenario, plan, power_projection=projection
+    )
     path = save_scenario(distributed, tmp_path / "distributed.spdpi")
     reloaded = load_scenario_bundle(path).scenario
 
