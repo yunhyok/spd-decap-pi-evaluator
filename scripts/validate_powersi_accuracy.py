@@ -24,7 +24,7 @@ POLICY_PATH = ROOT / "validation-policies" / "powersi_accuracy_v1.json"
 BENCHMARK = ROOT / "scripts" / "benchmark_raw_spd_powersi_correlation.py"
 BENCHMARK_ADAPTER = ROOT / "scripts" / "benchmark_raw_spd_powersi_correlation_v6.py"
 V6_VALIDATOR = ROOT / "scripts" / "validate_correlation_v6.py"
-EXPECTED_POLICY_SHA256 = "c362acb01ef28cefbbd1d32753f86bccafbdd53355b42eda83c03a6ea810698b"
+EXPECTED_POLICY_SHA256 = "192bcb127a7ece49d4f7f6ec4d10d7bd0ccc3fbdb3e527290fd6b8ab033d3496"
 RAILS = (
     "ADC_VDD_180_VQPS_OTP_TOP_AON/0",
     "ADC_VDD_180_VQPS_SYS_0_AON/0",

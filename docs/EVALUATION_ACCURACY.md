@@ -246,12 +246,13 @@ solver-state confounds remain. P5 is absent and mandatory for final
 generalization. W6 can at most produce a non-blind retrospective 260729/260804
 baseline until these blockers change.
 
-### W6 manifest contract (READY; not executed)
+### W6 manifest contract (READY for a new run; prior 260729 attempt blocked_partial)
 
-The manifest schema is `powersi-retrospective-run-manifest-v1`. It binds
-W5 approved source-before `027ac7a09a3eded15f45c41860945f9d4c7f488d`, runtime
-implementation is versioned separately, and a post-approval W6
-run-control commit that is `UNASSIGNED/BLOCKED` until policy rotation is atomic.
+The manifest schema is `powersi-retrospective-run-manifest-v1`. Its approval basis
+commit `027ac7a09a3eded15f45c41860945f9d4c7f488d` is historical; runtime uses a
+caller/standing-authorization supplied exact clean `main` HEAD. Policy, adapter,
+v6 validator, accuracy-validator, and controller hashes are atomically pinned.
+W6-BLOCK-B must close before the next W6-BASE run.
 It also binds app `0.23.0`, solver `modal-mvp-0.8.4`, profile
 `layerwise_admittance_v1`, compiler
 `layer-surface-adjacent-y-island-finite-via-termination-kron-v8`, full static
@@ -270,8 +271,10 @@ report, v6 stdout/stderr logs, accuracy sidecar, manifest copy, and phase
 stdout/stderr logs, the
 manifest records basename, bytes, SHA-256, and exit/cancel status. The candidate
 hash is created by W6 fresh import and cross-bound between import and correlation
-reports. Any cancellation, error, or resource exhaustion is `blocked partial`:
-no scoring, reuse, or retry without new approval.
+reports. Any cancellation, error, or resource exhaustion is `blocked partial`: no
+scoring, W6-BASE controller reuse, or retry. W6-BLOCK-B may inspect the old
+candidate, import report, and correlation report read-only as diagnostic inputs,
+but all new diagnostic outputs use a separate fresh root.
 
 W6 is controller-only. The caller first invokes the controller with the approved
 policy/case and exact current clean `main` HEAD, then verifies the completed
@@ -291,8 +294,10 @@ The controller reconstructs the exact two internal phase argv arrays using
 correlation; those internal commands are not run directly. The exact 16-rail
 configuration, source/reference paths, and manifest are required inputs; output
 directories must be new/empty and automatic retry is `0`. These are execution
-templates for the caller-approved W6 one-run gate; they were not executed in
-this turn.
+templates for a standing-authorized one-run gate. They were used
+once for 260729 at the exact HEAD recorded in the execution evidence below;
+that attempt produced `blocked_partial`, so no offline verifier was run and a
+new run must use a new output root.
 
 ### Hash rotation boundary
 
@@ -321,37 +326,68 @@ fixtures/results.
 
 ## Primary references
 
-## W5 closure / W6 handoff
+## W5/W6 closure and execution evidence
 
-W5 policy and implementation closure are machine-frozen and DONE; W6 is READY
-but not executed. The approved contract is retrospective-only; accuracy remains
-`unknown / not_run`, P5 unseen design is mandatory for generalization/final
-signoff, and no D:/ hash recomputation, candidate, PowerSI, production, remote
-CI, installer, or release run occurred. The intermediate trust-correction V3 was
-`359 passed, 1 skipped, 1 failed in 19.05s` because the canonical-policy parser
-test reached a path guard before its duplicate-key assertion; a test-only parser
-unit correction then passed its node in `0.08s`. Final V3 was `360 passed, 1
-skipped in 19.23s`, exit 0; the skip was the unavailable local v0.13 SPD
-regression bundle.
-V1 was focused synthetic/offline; the first V2 exposed a frozen historical
-benchmark-identity expectation after the initial BLAS implementation, which was
-resolved by restoring the base benchmark byte-for-byte and moving BLAS evidence
-to the v6 adapter; final V2 was `63 passed in 2.24s`. Historical v5 validator,
-known-case policy/fixtures, and base benchmark remain frozen. The adapter writes
-`correlation/blas_runtime_evidence.json` atomically; the correlation report does
-not own BLAS evidence. The 260804 S92P registry SHA ends in `...2951b` (the
-earlier missing `b` was a transcription typo).
+W5 policy and implementation closure are machine-frozen and DONE. W6-BLOCK-A is
+DONE; W6-BASE remains READY for a new clean main HEAD and a brand-new output root.
+Accuracy remains `unknown / not_run`; P5 unseen design is mandatory for
+generalization/final signoff. The approved basis commit
+`027ac7a09a3eded15f45c41860945f9d4c7f488d` is distinct from the caller-supplied
+exact current W6 HEAD. Historical v5 validator/policy/fixtures and base benchmark
+remain byte-identical. The 260804 S92P SHA trailing `b` is a frozen registry typo
+correction, not a recomputation.
 
-Final trust-correction identities are base
+Standing authorization permits bounded W6 and ranked in-scope local code/tests to
+proceed until the Usage Guard stop/checkpoint, with Sol review/Luna writes. It does
+not authorize remote/release/installer, retries, old-root W6-BASE reuse or mutation,
+or any threshold,
+fallback, reordering, port, or physics change. Before W6-BASE, W6-BLOCK-B must
+classify the `2.543e17 > 1e13` pivot using immutable old candidate/report read-only
+and a separate fresh diagnostic output. The local bounded V3 is a mirror of the
+required CI selection; remote CI was not run.
+
+W6-BLOCK-A supplies missing `terminal_complete_external_input=True` only in the
+versioned layerwise diagnostic/correlation adapter, preserves explicit values and
+restores the hook; import passthrough and legacy/research profiles are unchanged.
+V1 was red once and then `1 passed in 0.88s`; V2 was `10 passed in 2.13s`. The
+current bounded V3 was `361 passed, 1 skipped in 22.88s`, exit 0; the skip is the
+unavailable local v0.13 SPD regression bundle at
+`tests/test_spd_decap_scenario_io.py:1048`.
+
+The first 260729 controller attempt used source HEAD
+`46d17dc73381d4292ea342d7a10e85d4f2e338f6` and immutable root
+`D:\SPD-Decap-PI-Evaluator-W6\46d17dc73381d4292ea342d7a10e85d4f2e338f6\260729`.
+Its `blocked_partial.json` SHA was
+`b81525bd47744dc1ea5c75bb26f20ea354246ad88b8ce5bc9aef131cb50c09f7`: phase1
+passed, phase2 exited 2, v6 was not_started, and scoring was refused. The fresh
+import took `5078.367847900023s`; candidate was `796205663` bytes with SHA
+`8b02836c03aa38c447fba37ddd30434a3e4ed34ce772654fa5bc3a8512543320`; import
+report SHA was `e65cae7297b28a36e405074e7135c216c65c483d237973928d9bf63488d3b0b5`.
+Phase1 import report recorded frequency solves `0` and Touchstone read `false`.
+Phase2 consumed and hashed the registered PowerSI Touchstone and attempted correlation;
+all rails were blocked, so no completed comparison or score was produced. Correlation
+report SHA was `1fbc44ddb9f9c59254a56fd355096332d2fa4ea091516aa02cec3e9a20368dbb`.
+
+Mode10 executed all 16 selected rails. Twelve rails (10 VQPS and 2 VCPU) hit the
+comparison-runner rectangular-plane contract; VTRIP/0,/1 and VINT/0,/1 hit the
+separate correct fail-closed pivot gate `2.543e17 > 1e13`. Mode12 executed no
+new solves and retained/reused 16 source blockers; release failure count 32 is
+not 32 independent solves. No exact parity comparison or numerical accuracy
+result exists. The tombstone is bound to old policy SHA
+`c362acb01ef28cefbbd1d32753f86bccafbdd53355b42eda83c03a6ea810698b` and must not
+be retroactively verified under the new policy; the old root is never written or used
+as a W6-BASE controller output, scoring snapshot, or retry. W6-BLOCK-B may inspect its
+candidate/import/correlation artifacts read-only, with all new diagnostics written to
+a separate fresh root. 260804 was not run. No completed manifest, sidecar, or offline
+verification exists.
+
+Current trust identities are base
 `d43b868629464f408ea19362daa78fc369d2fd446cf3d458cfdc044ccbf57f08`, adapter
-`06a73478e5d48aa8f90797feb24cd8478e83b1b10716d8e9c0b278165a950177`, v6
+`6b7e399b4a843028ce754ac9154b8ce1a4575b1581c8d6007cebf26f94e6d440`, v6
 `ae6757057044cdc603106210997a45fa3bcba0238f50089fe2c45d29d6573552`, accuracy
-validator `fe537d57eab7fb06f327f1cd3804a9959309af0de5d616a7c05e2542be3016c3`,
-policy `c362acb01ef28cefbbd1d32753f86bccafbdd53355b42eda83c03a6ea810698b`,
-controller normalized `27936047bec81874818de977a0b5be9593f73e618de075de16a225cd1fea4cac`.
-The approval basis commit `027ac7a09a3eded15f45c41860945f9d4c7f488d` is not a
-future W6 implementation HEAD; W6 requires a caller-supplied exact clean main
-HEAD at invocation.
+validator `18dd2010b85dd9cf4a355ff6214119ed16fbec3f63f6fe6fa5834ed1bf732caa`,
+policy `192bcb127a7ece49d4f7f6ec4d10d7bd0ccc3fbdb3e527290fd6b8ab033d3496`,
+controller normalized `3defa5991049e70042b3ac7c7d8243b34d2cab355aef5244b9643d3487550840`.
 
 - [D. M. Pozar, *Microwave Engineering*, cavity and parallel-plate foundations](https://onlinelibrary.wiley.com/doi/book/10.1002/9781119770580)
 - [Zhang et al., multilayer microwave-network cascade, IEEE TEMC (2010)](https://doi.org/10.1109/TEMC.2010.2040389)

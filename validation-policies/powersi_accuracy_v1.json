@@ -25,7 +25,7 @@
   "benchmark_adapter": {
     "path": "scripts/benchmark_raw_spd_powersi_correlation_v6.py",
     "hash_semantics": "utf8_lf_normalized",
-    "sha256": "06a73478e5d48aa8f90797feb24cd8478e83b1b10716d8e9c0b278165a950177"
+    "sha256": "6b7e399b4a843028ce754ac9154b8ce1a4575b1581c8d6007cebf26f94e6d440"
   },
   "validator_v6": {
     "path": "scripts/validate_correlation_v6.py",

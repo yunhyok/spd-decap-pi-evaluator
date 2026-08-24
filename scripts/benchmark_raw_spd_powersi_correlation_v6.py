@@ -60,17 +60,33 @@ def _write_exclusive(path: Path, value: dict[str, Any]) -> None:
         except FileNotFoundError: pass
 
 
+def _call_base_main(args: Any, argv: list[str] | None) -> int:
+    if args.import_save_only or getattr(args, "solver_profile", None) != "layerwise_admittance_v1":
+        return base.main(argv)
+    original_compile = base.compile_project_evaluation_template
+
+    def compile_with_terminal_complete(*compile_args: Any, **compile_kwargs: Any) -> Any:
+        compile_kwargs.setdefault("terminal_complete_external_input", True)
+        return original_compile(*compile_args, **compile_kwargs)
+
+    base.compile_project_evaluation_template = compile_with_terminal_complete
+    try:
+        return base.main(argv)
+    finally:
+        base.compile_project_evaluation_template = original_compile
+
+
 def main(argv: list[str] | None = None) -> int:
     args = base.parse_args(argv)
     if args.import_save_only or args.layerwise_diagnostic_frequency_hz is not None:
-        return base.main(argv)
+        return _call_base_main(args, argv)
     if os.environ.get("SPD_DECAP_PI_BLAS_THREADS") != "1":
         raise RuntimeError("SPD_DECAP_PI_BLAS_THREADS must be exactly '1'")
     if threadpool_info is None or threadpool_limits is None:
         raise RuntimeError("BLAS runtime evidence unavailable: threadpoolctl is missing")
     out_dir = args.out_dir
     with threadpool_limits(limits=1, user_api="blas"):
-        result = base.main(argv)
+        result = _call_base_main(args, argv)
         if result != 0:
             return result
         evidence = _blas_evidence()
