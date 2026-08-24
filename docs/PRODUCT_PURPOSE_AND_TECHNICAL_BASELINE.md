@@ -1,9 +1,9 @@
 # SPD Decap PI Evaluator 목적·기술 기준
 
 - 적용 제품: **SPD Decap PI Evaluator v0.23.0**
-- 문서 버전: **1.7**
+- 문서 버전: **1.8**
 - W5 approved/machine-frozen source-before: `main` commit `027ac7a09a3eded15f45c41860945f9d4c7f488d`
-- 상태: **G0 기준 문서** — [작업 기준](WORK_EXECUTION_BASELINE.md)과 함께 사용하며, W5 DONE·W6-BLOCK-A DONE·W6-BLOCK-B BLOCKED·W6-BLOCK-C ACTIVE·W6-BASE 실행 보류
+- 상태: **G0 기준 문서** — [작업 기준](WORK_EXECUTION_BASELINE.md)과 함께 사용하며, W5 DONE·W6-BLOCK-A DONE·W6-BLOCK-B BLOCKED·W6-BLOCK-C DONE·W6-BLOCK-D ACTIVE·W6-BASE 실행 보류
 - 최종 개정: 2026-08-25 (Asia/Seoul)
 
 ## 1. 문서 역할과 권위
@@ -186,9 +186,8 @@ W5 threshold, partition, run manifest는 사용자 승인으로 **machine-frozen
   등록 baseline candidate는 없었고, 이전 blocked root에서 생성된 candidate는
   W6-BASE controller output·scoring snapshot·retry에 재사용하지 않는다. 새 W6는
   brand-new root의 fresh import에서 시작해야 한다. B의 correlation은 historical
-  evidence이고, C는 old candidate/import report를 정확히 한 번 read-only로 열며
-  correlation report는 입력으로 사용하지 않는다. C output은 별도 fresh diagnostic
-  root에만 쓴다.
+  evidence이고, C는 old candidate/import report를 정확히 한 번 read-only로
+  열었고, correlation report는 사용하지 않았으며, fresh C root에만 썼다.
 - Site0/site1/loaded는 blind sample이 아니라 노출된 strata다. P1 transfer/scale
   holdout은 160-port runner와 memory-safe preprocessing 부재로, P2는 현재
   weighting/reference-plane/de-embedding 미확정으로, P3/P4는 등록 경로의
@@ -337,23 +336,28 @@ flowchart TD
 ## W5/W6 implementation closure
 
 W5 policy and implementation closure are machine-frozen and DONE. W6-BLOCK-A is
-DONE; W6-BLOCK-B is BLOCKED after a deterministic pivot reproduction, and
-W6-BLOCK-C is ACTIVE to preserve the missing context. W6-BASE is READY only for a new clean main HEAD and a brand-new output
-root. The product's highest purpose remains calculation with accuracy comparable
-to PowerSI; V1/V2/V3 and the blocked production attempt do not establish that
-accuracy. Accuracy is `unknown / not_run`, P5 unseen design is mandatory for
-generalization/final signoff, and 260804 was not run. No completed manifest,
-sidecar, or offline verification exists.
+DONE; W6-BLOCK-B is BLOCKED after a deterministic pivot reproduction,
+W6-BLOCK-C is DONE after preserving deterministic factor/matrix context, and
+W6-BLOCK-D is ACTIVE to estimate a sparse raw-system condition lower bound at
+the same fail-closed pivot. W6-BASE is READY (HELD) only for a new clean main
+HEAD and a brand-new root. The product's highest purpose remains calculation
+with accuracy comparable to PowerSI; V1/V2/V3 and the blocked production
+attempt do not establish that accuracy. Accuracy is `unknown / not_run`, P5
+unseen design is mandatory for generalization/final signoff, and 260804 was not
+run. No completed manifest, sidecar, or offline verification exists.
 
 Standing authorization permits bounded W6 and ranked in-scope local code/tests to
 proceed automatically until the Usage Guard stop/checkpoint, with Sol review and
 Luna writes. It does not authorize remote/release/installer work, retries, old-root
 W6-BASE reuse or mutation, threshold weakening, fallback, reordering, port movement,
 or physics changes.
-Before any W6-BASE rerun, W6-BLOCK-C must preserve deterministic factor/matrix context
-at the observed pivot; C may open the old candidate and import report exactly once,
-read-only, and must write output only to a brand-new diagnostic root. The local bounded
-V3 result is a mirror of the required CI selection, not remote CI evidence.
+Before any W6-BASE rerun, W6-BLOCK-D must close with its lower-bound evidence.
+C already consumed its exactly-one old candidate/import read and wrote only to its
+fresh root. D may perform one future read-only diagnostic using only that
+candidate/import pair (not the correlation report), after a clean commit, and
+must write only to a brand-new D root. The old root remains forbidden for
+W6-BASE/controller/scoring/retry/mutation. The local
+bounded V3 result is a mirror of the required CI selection, not remote CI evidence.
 
 The focused parity V1 was red once and green once (`1 passed in 0.88s`); V2 was
 `10 passed in 2.13s`; current bounded V3 was `361 passed, 1 skipped in 22.88s`,
@@ -361,9 +365,21 @@ exit 0. The only skip was the unavailable local v0.13 SPD regression bundle at
 `tests/test_spd_decap_scenario_io.py:1048`. D:/ input hash recomputation was not
 performed; the external PowerSI solver was not run. Phase2 consumed the registered
 PowerSI Touchstone but produced no completed comparison or score. Remote/full suite,
-installer, release, and production rerun were not performed. The B diagnostic reproduced
-the pivot but did not classify its root cause; C is the active minimal instrumentation
-step and does not alter solver behavior.
+installer, release, and production rerun were not performed. The B diagnostic
+reproduced the pivot but did not classify its root cause. C's exact evidence is
+the fresh root
+`D:\SPD-Decap-PI-Evaluator-W6-Diagnostics\e9a1ca124d94f1bd0192d519aa22996e87266ac5\260729-vtrip0-1khz`:
+exit 1 after about `667.19s`, no report, stdout SHA
+`e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855`, stderr SHA
+`8468b8f0798dc754c2c5926cc01dbe26d612b9cba7867efe4fa96f389bf89fc8`. It retained
+`756888` nodes and `2904010` nonzeros; local magnitudes were
+`2.467e-13..1.575e+08`, pivots `3.290e-10..8.366e+07`, ratio `2.543e17`,
+backward residual `6.808e-20`, and matrix SHA
+`709efcd1b8857c1ab9c4f73bec20cc7ec7d144cd9bfd32b9ee1657b956587524`. Old inputs
+and repo were unchanged. D now adds sparse condition lower-bound evidence only
+inside that existing pivot failure branch; its V1 red/green and V2 results are
+recorded in the work document. No threshold relaxation, fallback, reordering,
+port, or physics change is allowed.
 
 Approval basis commit `027ac7a09a3eded15f45c41860945f9d4c7f488d` is distinct from
 the caller-supplied exact current `main` HEAD required at a future W6 invocation;
@@ -392,5 +408,6 @@ change as the result commit. Current trust identities: base `d43b868629464f408ea
 | 1.5 | 2026-08-24 | 최종 V3 green 증거와 W5 DONE/W6 READY 상태를 동결. |
 | 1.6 | 2026-08-25 | W6-BLOCK-A parity, blocked 260729 attempt, standing authorization과 W6-BLOCK-B pre-rerun boundary를 기록. |
 | 1.7 | 2026-08-25 | W6-BLOCK-B diagnostic exit1과 W6-BLOCK-C deterministic pivot-context instrumentation을 기록하고 W6-BASE를 보류. |
+| 1.8 | 2026-08-25 | W6-BLOCK-C 완료와 W6-BLOCK-D sparse condition lower-bound instrumentation을 기록하고 W6-BASE를 보류. |
 | 1.1 | 2026-08-24 | `WORK_EXECUTION_BASELINE.md`를 두 번째 canonical 문서로 연결. |
 | 1.0 | 2026-08-24 | v0.24 계획 중심의 Distribution–solver PRD를 제품 전체의 목적·기술 기준으로 개정. PowerSI 정확성 우선, 상태 어휘, 기술 경계, promotion gate, 검증 비용 통제와 two-document 작업 방식을 고정. |

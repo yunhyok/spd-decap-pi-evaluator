@@ -1753,8 +1753,8 @@ def test_factor_pivot_ratio_rejects_forward_unreliable_real_superlu_result(
                 {"diagonal": lambda _self: np.asarray([1.0, 1.0e-17])},
             )()
 
-        def solve(self, rhs: np.ndarray) -> np.ndarray:
-            return np.asarray(self._factor.solve(rhs))
+        def solve(self, rhs: np.ndarray, trans: str = "N") -> np.ndarray:
+            return np.asarray(self._factor.solve(rhs, trans=trans))
 
     monkeypatch.setattr(
         layer_surface_network,
@@ -1771,6 +1771,8 @@ def test_factor_pivot_ratio_rejects_forward_unreliable_real_superlu_result(
     assert "u_pivot_abs_min=1.000e-17" in message
     assert "u_pivot_abs_max=1.000e+00" in message
     assert "pivot_ratio=1.000e+17" in message
+    assert "inverse_one_norm_lower_bound=7.958e+00" in message
+    assert "condition_1_lower_bound=1.000e+00" in message
     assert "retained_nodes=1" in message
     assert "local_nnz=1" in message
     assert "local_abs_min=1.257e-01" in message

@@ -25,7 +25,7 @@ from typing import Callable, Mapping, Sequence
 import numpy as np
 from numpy.typing import NDArray
 from scipy.sparse import csc_matrix, diags, issparse
-from scipy.sparse.linalg import splu
+from scipy.sparse.linalg import LinearOperator, norm as sparse_norm, onenormest, splu
 
 from .modal import DielectricDispersion
 from .layer_surface_termination import (
@@ -2348,6 +2348,33 @@ class CompiledLayerSurfaceNetwork:
                             if nonzero_local_abs.size
                             else 0.0
                         )
+                        inverse_one_norm_lower_bound = "unavailable"
+                        condition_1_lower_bound = "unavailable"
+                        try:
+                            matrix_one_norm = float(sparse_norm(local, ord=1))
+                            inverse = LinearOperator(
+                                local.shape,
+                                matvec=lambda x: factor.solve(x),
+                                rmatvec=lambda x: factor.solve(x, trans="H"),
+                                dtype=np.complex128,
+                            )
+                            inverse_one_norm = float(
+                                onenormest(inverse, t=1, itmax=5)
+                            )
+                            condition_1 = matrix_one_norm * inverse_one_norm
+                            if (
+                                not isfinite(matrix_one_norm)
+                                or matrix_one_norm <= 0.0
+                                or not isfinite(inverse_one_norm)
+                                or inverse_one_norm <= 0.0
+                                or not isfinite(condition_1)
+                                or condition_1 <= 0.0
+                            ):
+                                raise ValueError("invalid sparse condition estimate")
+                            inverse_one_norm_lower_bound = f"{inverse_one_norm:.3e}"
+                            condition_1_lower_bound = f"{condition_1:.3e}"
+                        except Exception:
+                            pass
                         raise LayerSurfaceNetworkError(
                             "layer-network factor forward-reliability pivot ratio is excessive "
                             f"({frequency_pivot_ratio:.3e}; "
@@ -2361,6 +2388,8 @@ class CompiledLayerSurfaceNetwork:
                             f"u_pivot_abs_max={u_pivot_abs_max:.3e}, "
                             f"pivot_ratio={component_pivot_ratio:.3e}, "
                             f"backward_residual={relative_residual:.3e}, "
+                            f"inverse_one_norm_lower_bound={inverse_one_norm_lower_bound}, "
+                            f"condition_1_lower_bound={condition_1_lower_bound}, "
                             f"matrix_sha256={matrix_identity.hexdigest()})"
                         )
                     for column, (port_index, endpoints) in enumerate(

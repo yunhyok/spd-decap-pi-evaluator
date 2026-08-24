@@ -252,7 +252,8 @@ The manifest schema is `powersi-retrospective-run-manifest-v1`. Its approval bas
 commit `027ac7a09a3eded15f45c41860945f9d4c7f488d` is historical; runtime uses a
 caller/standing-authorization supplied exact clean `main` HEAD. Policy, adapter,
 v6 validator, accuracy-validator, and controller hashes are atomically pinned.
-W6-BLOCK-B is blocked; W6-BLOCK-C must close before the next W6-BASE run.
+W6-BLOCK-B is blocked; W6-BLOCK-C is DONE; W6-BLOCK-D must close before the
+next W6-BASE run.
 It also binds app `0.23.0`, solver `modal-mvp-0.8.4`, profile
 `layerwise_admittance_v1`, compiler
 `layer-surface-adjacent-y-island-finite-via-termination-kron-v8`, full static
@@ -273,9 +274,10 @@ manifest records basename, bytes, SHA-256, and exit/cancel status. The candidate
 hash is created by W6 fresh import and cross-bound between import and correlation
 reports. Any cancellation, error, or resource exhaustion is `blocked partial`: no
 scoring, W6-BASE controller reuse, or retry. W6-BLOCK-B correlation is historical
-evidence. C may open only the old candidate and import report, exactly once, read-only;
-the correlation report is not a C input, and all C diagnostic outputs use a separate
-fresh root.
+evidence. C already consumed its exactly-one old candidate/import read and wrote
+only to its separate fresh root. D may open only that candidate/import pair exactly
+once, read-only (not the correlation report), and must write only to a brand-new D
+root; the old root remains forbidden for W6-BASE/controller/scoring/retry/mutation.
 
 W6 is controller-only. The caller first invokes the controller with the approved
 policy/case and exact current clean `main` HEAD, then verifies the completed
@@ -330,9 +332,10 @@ fixtures/results.
 ## W5/W6 closure and execution evidence
 
 W5 policy and implementation closure are machine-frozen and DONE. W6-BLOCK-A is
-DONE; W6-BLOCK-B is BLOCKED after a deterministic pivot reproduction, and
-W6-BLOCK-C is ACTIVE to preserve missing factor context. W6-BASE remains READY for
-a new clean main HEAD and a brand-new output root.
+DONE; W6-BLOCK-B is BLOCKED after a deterministic pivot reproduction,
+W6-BLOCK-C is DONE after preserving deterministic factor/matrix context, and
+W6-BLOCK-D is ACTIVE to estimate a sparse raw-system condition lower bound.
+W6-BASE remains READY (HELD) for a new clean main HEAD and a brand-new output root.
 Accuracy remains `unknown / not_run`; P5 unseen design is mandatory for
 generalization/final signoff. The approved basis commit
 `027ac7a09a3eded15f45c41860945f9d4c7f488d` is distinct from the caller-supplied
@@ -344,10 +347,10 @@ Standing authorization permits bounded W6 and ranked in-scope local code/tests t
 proceed until the Usage Guard stop/checkpoint, with Sol review/Luna writes. It does
 not authorize remote/release/installer, retries, old-root W6-BASE reuse or mutation,
 or any threshold,
-fallback, reordering, port, or physics change. Before W6-BASE, W6-BLOCK-C must
-preserve deterministic context for the `2.543e17 > 1e13` pivot using the existing
-fail-closed path; C may open the old candidate and import report exactly once,
-read-only, and writes only to a brand-new diagnostic root. The local bounded V3 is a mirror of the
+fallback, reordering, port, or physics change. Before W6-BASE, W6-BLOCK-D must
+close with sparse condition lower-bound evidence for the `2.543e17 > 1e13` pivot;
+D may open only the old candidate and import report exactly once, read-only (not
+the correlation report), and writes only to a brand-new diagnostic root. The local bounded V3 is a mirror of the
 required CI selection; remote CI was not run.
 
 The B diagnostic root
@@ -357,10 +360,10 @@ ran only `ADC_VDD_055_VTRIP/0` at 1000 Hz and exited 1 after reproducing
 `e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855`, stderr SHA is
 `cb0d72713189a6fb71f6622afc80128fdc435917f63b8a27032981e3e732623a`, and no report
 or scored artifact exists. The existing exception lacked factor context, so root cause
-remains unclassified. C adds only deterministic context to that existing fail-closed
+remains unclassified. C added only deterministic context to that existing fail-closed
 exception; solver results, thresholds, ordering, cache, ports, physics, and trust
-identities are unchanged. A new clean HEAD will permit one identical diagnostic only;
-no retry or full W6 run is authorized before C closes.
+identities are unchanged. A D clean result commit will permit one identical D
+diagnostic only; no retry or full W6 run is authorized before D closes.
 
 W6-BLOCK-A supplies missing `terminal_complete_external_input=True` only in the
 versioned layerwise diagnostic/correlation adapter, preserves explicit values and
@@ -393,10 +396,29 @@ result exists. The tombstone is bound to old policy SHA
 `c362acb01ef28cefbbd1d32753f86bccafbdd53355b42eda83c03a6ea810698b` and must not
 be retroactively verified under the new policy; the old root is never written or used
 as a W6-BASE controller output, scoring snapshot, retry, or mutation. W6-BLOCK-B
-correlation remains historical evidence. C may open only its candidate and import report,
-exactly once, read-only; the correlation report is not a C input, and all C diagnostics
-are written to a separate fresh root. 260804 was not run. No completed manifest, sidecar,
+correlation remains historical evidence. C already opened only its candidate and import report
+exactly once, read-only, and wrote its diagnostics to a separate fresh root. D may open
+only that candidate/import pair exactly once (not the correlation report) and must write
+to a brand-new D root. 260804 was not run. No completed manifest, sidecar,
 or offline verification exists.
+
+W6-BLOCK-C's exact fresh-root evidence is
+`D:\SPD-Decap-PI-Evaluator-W6-Diagnostics\e9a1ca124d94f1bd0192d519aa22996e87266ac5\260729-vtrip0-1khz`:
+exit 1 after about `667.19s`, no report, stdout SHA
+`e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855`, stderr SHA
+`8468b8f0798dc754c2c5926cc01dbe26d612b9cba7867efe4fa96f389bf89fc8`. The retained
+context was `756888` nodes, `2904010` nonzeros, local magnitudes
+`2.467e-13..1.575e+08`, pivots `3.290e-10..8.366e+07`, ratio `2.543e17`,
+backward residual `6.808e-20`, and matrix SHA
+`709efcd1b8857c1ab9c4f73bec20cc7ec7d144cd9bfd32b9ee1657b956587524`.
+W6-BLOCK-D adds only `||A||1` and factor-solve inverse `onenormest(t=1,itmax=5)`
+inside this existing pivot failure branch. It records
+`inverse_one_norm_lower_bound` and `condition_1_lower_bound`, or `unavailable`
+on estimator failure; no threshold relaxation, fallback, reordering, port, or
+physics change is permitted. V1 red/green and the layer-surface V2 are recorded
+in the work document. A lower bound above `1e13` proves only that the raw local
+system is at least that ill-conditioned; it does not prove actual condition,
+assembly/topology correctness, forward accuracy, or PowerSI accuracy.
 
 Listed W5 normalized policy/adapter/validator/controller identities and declared
 solver/compiler/convergence identities are immutable; only the exact Git HEAD may
