@@ -667,14 +667,24 @@ command `pytest -q tests/test_raw_spatial_contact_compiler.py::test_plane_sheet_
 ran exactly once: exit 1, `1 failed in 1.55s`; `_plane_sheet_payload` raised
 `RAW_SPATIAL_PLANE_SHEET_REQUIRED` with `ProjectSpec stackup physical fields are incomplete` before
 the v3 asset. There was no rerun, and this does not classify fixture versus production cause.
-The three-path technical diff remains uncommitted. 17AA and 17AA-S1 remain historical BLOCKED
-failed attempts. 17AA-S2 is DONE: the approved command
+The three-path technical diff was atomically committed as
+`c7306f2b2633b8d610bb962eb5b64966235afd2f` (3 files, 618 insertions/21 deletions), leaving clean
+`main` as the query base. 17AA and 17AA-S1 remain historical BLOCKED failed attempts. 17AA-S2 is
+DONE: the approved command
 `pytest -q tests/test_raw_spatial_contact_compiler.py::test_plane_sheet_payload_v3_is_hash_bound_and_v2_remains_unchanged`
 ran once under S2 with exit 0, `1 passed in 1.09s`; no rerun, broad-suite, or production run.
-The v3 emission goal is achieved via S2. Sole ACTIVE next is
-`W7-PHYS-W6-RAW-SPATIAL-V3-PERSISTENCE-OWNER-DISCOVERY` (17AB), limited to one exact read-only
-query with the <=60-line/<=10-file cap and STOP on definitions/reexports-only or zero useful caller.
-No file open, code/test/profile/accuracy/production proof, or whitelist expansion is authorized.
+The v3 emission goal is achieved via S2. 17AB then ran its exact frozen rg once on clean `main`
+(exit 0, 26 lines/5 files). The useful unique raw-spatial persistence seam is
+`src/spd_decap_pi/spd_adapter.py` (imports both keys, requires the compiled manifest, and
+normalizes/sets `RAW_SPATIAL_CONTACT_ASSET_METADATA_KEY`); other matches are definitions/validator,
+the sibling compiled builder/persistence in `surface_certificate_asset`, and the compiled reader in
+`layerwise_network`. Matches are location evidence only. Sole ACTIVE next is
+`W7-PHYS-W6-RAW-SPATIAL-V3-SPD-ADAPTER-PERSISTENCE-TRACE` (17AC), limited to exactly
+`src/spd_decap_pi/spd_adapter.py` lines 100-215 read once. No whole-file reread/search, code/test,
+profile/accuracy/production proof, or whitelist expansion is authorized. Questions are owner
+signature/return/mutation, attachment/metadata normalization, v3 preservation/fail-closed, and
+compiler invocation versus delegated output; if a boundary/delegate is outside the excerpt,
+source-classify STOP with no second range automatic.
 Contract: v2 constants/API byte-identical; profile/global/app/solver/convergence/policy/controller
 identities unchanged; only the opt-in raw-spatial v3 schema/compiler sibling identity is new. v3 sibling with kw-only opt-in flags, five normalized tables,
 no gap table, positive-intervening-thickness fsum spacing, row/coordinate/ProjectSpec/source-SHA digest,
