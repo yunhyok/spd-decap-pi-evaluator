@@ -1,10 +1,10 @@
 # SPD Decap PI Evaluator 작업 기준
 
 - 적용 제품: **SPD Decap PI Evaluator v0.23.0**
-- 문서 버전: **1.35**
-- 상위 기준: [목적·기술 기준](PRODUCT_PURPOSE_AND_TECHNICAL_BASELINE.md) v1.34
+- 문서 버전: **1.36**
+- 상위 기준: [목적·기술 기준](PRODUCT_PURPOSE_AND_TECHNICAL_BASELINE.md) v1.35
 - W6-BASE source-before: clean `main` HEAD `fb36288781dcc0b884950ef5a486c474090ceebd`; this is the exact source boundary for the completed one-run evidence
-- 상태: **APPROVED/MACHINE-FROZEN CONTROL DOCUMENT — W5 DONE; W6-BLOCK-A DONE; W6-BLOCK-B BLOCKED; W6-BLOCK-C DONE; W6-BLOCK-D DONE; W6-BLOCK-E DONE; W6-BASE DONE (260729 numerical FAIL); W7-PHYS-AUDIT-MOUNTED-PATH DONE (negative/unclassified); W7-PHYS-OWNER-TERMINAL-VIA-VS-SPATIAL DONE (negative/evidence-unavailable); W7-PHYS-EVIDENCE-MISSING-PATH-COVERAGE DONE (negative/evidence-unavailable); W7-PHYS-PRODUCTION-VIA-ROUTE-SOURCE-TRACE DONE (source-classified raw-base/global finite-route ownership; local calibrated half-branches not selected; mixed ownership fail-closed); W7-PHYS-RAW-FINITE-VIA-RL-GENERATION-TRACE DONE (producer unclassified, high confidence); W7-PHYS-GROUND-REACHABILITY-RL-PRODUCER-TRACE DONE (producer delegated/unclassified, high confidence); W7-PHYS-VIA-SEGMENT-RL-MODEL-TRACE DONE (source-classified model; conditional multi-segment caller-contract bug confirmed; W6 exposure unknown); W7-PHYS-MULTISEGMENT-RL-CALLER-FIX BLOCKED (fixture-contract red; production diff statically accepted and retained uncommitted); W7-PHYS-CORRECTED-SUCCESSOR BLOCKED (static REJECT; zero pytest executions); W7-PHYS-CORRECTED-SUCCESSOR-2 DONE; W7-PHYS-W6-MULTISEGMENT-EXPOSURE DONE (source-classified evidence unavailable; actual exposure unknown); W7-PHYS-PLANE-SHEET-NONUNIFORM-RL-SOURCE-TRACE DONE (local stamps source-classified; Maxwell partial generation external/unclassified); W7-PHYS-MAXWELL-PARTIAL-SOURCE-TRACE DONE (local adjacent-gap dispersive admittance classified; Maxwell C/dispersion/load/solver insertion external); W7-PHYS-MAXWELL-CAPACITANCE-PRODUCER-TRACE DONE (exact 2D polygon-overlay lumped parallel-plate Maxwell C source-classified; W6 inputs/asset fidelity external); W7-PHYS-PLANE-SHEET-RL-REUSE-DISCOVERY DONE (canonical rg once, candidates found; no reuse/production proof); W7-PHYS-COPPER-SURFACE-IMPEDANCE-REUSE-TRACE DONE (surface-impedance constitutive law and MFDM stamp source-classified; W6 reuse unclassified/STOP); W7-PHYS-SURFACE-PATCH-PLANE-REUSE-TRACE ACTIVE; W7-PHYS-PROSPECTIVE-RUNTIME-TERM-EVIDENCE BLOCKED/YAGNI; W7-PHYS BLOCKED; ACTIVE W7-PHYS-SURFACE-PATCH-PLANE-REUSE-TRACE**
+- 상태: **APPROVED/MACHINE-FROZEN CONTROL DOCUMENT — W5 DONE; W6-BLOCK-A DONE; W6-BLOCK-B BLOCKED; W6-BLOCK-C DONE; W6-BLOCK-D DONE; W6-BLOCK-E DONE; W6-BASE DONE (260729 numerical FAIL); W7-PHYS-AUDIT-MOUNTED-PATH DONE (negative/unclassified); W7-PHYS-OWNER-TERMINAL-VIA-VS-SPATIAL DONE (negative/evidence-unavailable); W7-PHYS-EVIDENCE-MISSING-PATH-COVERAGE DONE (negative/evidence-unavailable); W7-PHYS-PRODUCTION-VIA-ROUTE-SOURCE-TRACE DONE (source-classified raw-base/global finite-route ownership; local calibrated half-branches not selected; mixed ownership fail-closed); W7-PHYS-RAW-FINITE-VIA-RL-GENERATION-TRACE DONE (producer unclassified, high confidence); W7-PHYS-GROUND-REACHABILITY-RL-PRODUCER-TRACE DONE (producer delegated/unclassified, high confidence); W7-PHYS-VIA-SEGMENT-RL-MODEL-TRACE DONE (source-classified model; conditional multi-segment caller-contract bug confirmed; W6 exposure unknown); W7-PHYS-MULTISEGMENT-RL-CALLER-FIX BLOCKED (fixture-contract red; production diff statically accepted and retained uncommitted); W7-PHYS-CORRECTED-SUCCESSOR BLOCKED (static REJECT; zero pytest executions); W7-PHYS-CORRECTED-SUCCESSOR-2 DONE; W7-PHYS-W6-MULTISEGMENT-EXPOSURE DONE (source-classified evidence unavailable; actual exposure unknown); W7-PHYS-PLANE-SHEET-NONUNIFORM-RL-SOURCE-TRACE DONE (local stamps source-classified; Maxwell partial generation external/unclassified); W7-PHYS-MAXWELL-PARTIAL-SOURCE-TRACE DONE (local adjacent-gap dispersive admittance classified; Maxwell C/dispersion/load/solver insertion external); W7-PHYS-MAXWELL-CAPACITANCE-PRODUCER-TRACE DONE (exact 2D polygon-overlay lumped parallel-plate Maxwell C source-classified; W6 inputs/asset fidelity external); W7-PHYS-PLANE-SHEET-RL-REUSE-DISCOVERY DONE (canonical rg once, candidates found; no reuse/production proof); W7-PHYS-COPPER-SURFACE-IMPEDANCE-REUSE-TRACE DONE (surface-impedance constitutive law and MFDM stamp source-classified; W6 reuse unclassified/STOP); W7-PHYS-SURFACE-PATCH-PLANE-REUSE-TRACE DONE (surface-patch local solver/operator source-classified; whole-solver W6 compatibility reuse unclassified/STOP); W7-PHYS-W6-PLANE-SHEET-REIMPLEMENTATION-DESIGN ACTIVE; W7-PHYS-PROSPECTIVE-RUNTIME-TERM-EVIDENCE BLOCKED/YAGNI; W7-PHYS BLOCKED; ACTIVE W7-PHYS-W6-PLANE-SHEET-REIMPLEMENTATION-DESIGN**
 - 최종 개정: 2026-08-26 (Asia/Seoul)
 
 ## 1. 압축 후 즉시 복구 카드
@@ -16,12 +16,12 @@ context가 압축되거나 새 session에서 작업을 재개하면 다른 연�
 |---|---|
 | 변하지 않는 목적 | source-derived single-rail `Zii`의 PowerSI 근접 정확성과 일반화 |
 | 현재 branch | `main`만 사용; 정리된 과거 branch를 다시 조사하지 않음 |
-| 현재 active work item | `W7-PHYS-SURFACE-PATCH-PLANE-REUSE-TRACE` |
-| 다음 권장 묶음 | `W7-PHYS-SURFACE-PATCH-PLANE-REUSE-TRACE` ACTIVE; exact one-file source V0 + one Sol review |
-| current authorization | clean `main` HEAD `badfffc972489084fa0a5b8b746fd0c93fce0852`; only `src/spd_decap_pi/_core/solver/surface_patch_plane.py` may be read; no import, Python/test/artifact/raw-SPD/solver/production/edit |
+| 현재 active work item | `W7-PHYS-W6-PLANE-SHEET-REIMPLEMENTATION-DESIGN` |
+| 다음 권장 묶음 | 17P docs-only design pass; one Sol design review + one targeted docs review |
+| current authorization | clean `main` HEAD `ccb0522341817a048ffa7e35a90d40380445471b`; use only canonical docs plus bound 17J–17O findings; no code/test/artifact/production execution until design review |
 | consumed 17M discovery | canonical rg ran once (exit 0), found candidate symbols only; no reuse or production proof |
 | future production invariant (not current authority) | if a future run is authorized: exact clean `main`, new output root, one run/no retry; B correlation is historical evidence; C/D consumed their exactly-one old candidate/import reads; E had one production diagnostic invocation plus one orchestration ZIP read; old root remains forbidden for W6-BASE output/scoring/retry/mutation |
-| 고비용 검증 권한 | none; bounded one-file source V0 + Sol review only; no artifact/Python/import/test/solver/production execution |
+| 고비용 검증 권한 | 17P docs-only design + one Sol design review + one targeted docs review; no code/test/artifact/Python/import/solver/production execution before design review |
 | 현재 정확성 상태 | `260729 retrospective FAIL`; unseen/generalization remains `unknown / not_run` |
 | 현재 release 계산 증거 | W6-BASE 260729 completed numerical FAIL; offline verifier exit 2 (integrity-valid) |
 | W6-BASE result root | `D:\SPD-Decap-PI-Evaluator-W6\fb36288781dcc0b884950ef5a486c474090ceebd\260729` — manifest `2b14f90e762abc49833518137812e8fc97fcde0e9c145795b7384210cfd9f5de`, sidecar `0d103e0ad47df80641fac0952a35a6eaa56cc9fdb71be24661903e451926e932`, correlation `969e40046e3a099d09557ba7500693460362336d76b067962436bd3b5177abc4` |
@@ -141,7 +141,8 @@ root, one-run/no-retry 조건을 다시 확정할 때만 고려한다.
 | `W7-PHYS-MAXWELL-CAPACITANCE-PRODUCER-TRACE` | 17L | DONE (exact 2D polygon-overlay lumped parallel-plate Maxwell C source-classified; W6 inputs/asset fidelity external) | classify retained-artwork C generation boundary | no frequency/complex-Y/conductivity/sheet R/L/skin/nonuniform/current-spreading claim |
 | `W7-PHYS-PLANE-SHEET-RL-REUSE-DISCOVERY` | 17M | DONE (canonical rg once, exit 0; candidates found; no reuse/production proof) | classify solver-directory candidate symbols | no implementation/W6 binding claim |
 | `W7-PHYS-COPPER-SURFACE-IMPEDANCE-REUSE-TRACE` | 17N | DONE (surface-impedance constitutive law and MFDM stamp source-classified; W6 reuse unclassified/STOP) | close helper/MFDM reuse boundary | one-/two-face coth/csch Ω/square; DC `1/(σt)`; high-frequency transfer→0; no W6 reuse claim |
-| `W7-PHYS-SURFACE-PATCH-PLANE-REUSE-TRACE` | 17O | ACTIVE | bind the caller’s retained-artwork-like geometry/material integration, network/admittance boundary, topology/ownership, dependencies, and numeric gates | exact whitelist `src/spd_decap_pi/_core/solver/surface_patch_plane.py`; one source V0 + one Sol review; mesh/material/output delegation stops reuse classification |
+| `W7-PHYS-SURFACE-PATCH-PLANE-REUSE-TRACE` | 17O | DONE (surface-patch local solver/operator source-classified; whole-solver W6 compatibility reuse unclassified/STOP) | bind the caller’s retained-artwork-like geometry/material integration, network/admittance boundary, topology/ownership, dependencies, and numeric gates | polygon clip/mesh and constant-signature strips; scalar σ/t and dielectric provenance; helper + gap L + dielectric C/loss differential nodal S; common-potential null/differential-only; absolute MNA rejected; no terminal/Via/pad/antipad/fringe/full-wave; no drop-in W6 reuse proof |
+| `W7-PHYS-W6-PLANE-SHEET-REIMPLEMENTATION-DESIGN` | 17P | ACTIVE | authorized replacement-vs-augmentation design using bound 17J–17O findings | clean `ccb0522341817a048ffa7e35a90d40380445471b`; docs-only design; freeze input/provenance mapping, W6 node/port/gauge adapter, no-double-counting, fail-closed/fallback, resource/cache/concurrency ceilings, exact code/test whitelist/commit partitions, version identity, minimal V1/V2; Sol supervises, Luna implements after review |
 | `W7-PHYS-PROSPECTIVE-RUNTIME-TERM-EVIDENCE` | next candidate | BLOCKED/YAGNI | provide a grounded runtime term digest/count/owner partition only after an independently selected physical change | new candidate/HEAD/root, one run/no retry; no current authority |
 | `W8-REL` | 18 | BLOCKED | completed known-case solve를 release gate에 연결하고 최종 전달 | accuracy/product gate와 exact release commit 필요 |
 | `D-DIST` | - | DEFERRED | Distribution routing/DRC scope 확대 | 사용자가 implementation-ready/DRC 목표로 승격할 때만 |
@@ -665,12 +666,19 @@ delta, W6 cause, accuracy, causal owner, and fix benefit remain unclaimed. The n
 selected grounded physical change, a new candidate/HEAD/root, and one no-retry term digest/
 count/owner-partition run.
 
-The sole ACTIVE item is `W7-PHYS-SURFACE-PATCH-PLANE-REUSE-TRACE`: read only
-`src/spd_decap_pi/_core/solver/surface_patch_plane.py` once, then one independent Sol static
-review. Bind retained-artwork-like geometry/material inputs, copper two-face impedance use,
-network/admittance output, topology/ownership, dependencies, and numeric gates. Stop if mesh
-builder, topology mapping, material provenance, or output binding delegates externally or cannot
-be separated. This is observability ordering only, not causality or physics authorization.
+17O is DONE: the surface-patch local solver/operator is source-classified, but whole-solver W6
+compatibility reuse is unclassified/STOP. Its ceiling is polygon clip/mesh plus constant-signature
+strips; scalar σ/t and dielectric provenance; copper helper + gap L + dielectric C/loss differential
+nodal S; common-potential null/differential-only output with absolute MNA rejected; gates/cache.
+Terminal/Via/pad/antipad/fringe/full-wave behavior and whole-solver drop-in compatibility were not
+proven. The sole ACTIVE item is 17P `W7-PHYS-W6-PLANE-SHEET-REIMPLEMENTATION-DESIGN`, a docs-only
+design pass at clean HEAD `ccb0522341817a048ffa7e35a90d40380445471b` using only canonical docs and
+bound 17J–17O findings. It must freeze replacement-vs-augmentation, source/provenance mapping,
+surface node/port/gauge-to-W6 output, no-double-counting against Maxwell C/Via/termination,
+fail-closed/fallback and resource/cache/concurrency ceilings, exact code/test whitelist and commit
+partitions, version identity, and minimal V1/V2 evidence. Sol reviews once; Luna implements only
+after review. Production runs, old-root reuse, release, and parent accuracy/causal promotion remain
+unauthorized.
 
 17J is closed: topology-only links are ideal vertical-node coalescence, not a same-layer numeric
 stamp; incoming C[F] is remapped/collapsed, dielectric-ratio `j2πf·C` becomes S, finite
@@ -687,7 +695,7 @@ complex-Y, conductivity, sheet R/L, skin, nonuniform in-plane current, or curren
 is present, and W6 input/asset fidelity is external. 17M is DONE: canonical rg ran once (exit 0),
 found candidate symbols in solver files, but made no reuse or production-binding proof. 17N is DONE:
 surface-impedance constitutive law and MFDM stamp are source-classified, but W6 reuse is
-unclassified/STOP. The sole ACTIVE successor is 17O, limited to
+unclassified/STOP. At the 17N closure, the sole ACTIVE successor was 17O, limited to
 `src/spd_decap_pi/_core/solver/surface_patch_plane.py` from clean HEAD
 `badfffc972489084fa0a5b8b746fd0c93fce0852`.
 
@@ -731,3 +739,4 @@ unclassified/STOP. The sole ACTIVE successor is 17O, limited to
 | 1.33 | 2026-08-25 | 17L을 exact 2D polygon-overlay lumped parallel-plate Maxwell C source-classified/W6 input fidelity external로 닫고 17M solver-directory `rg -n -i` reuse discovery를 유일 ACTIVE로 지정. |
 | 1.34 | 2026-08-26 | 17M canonical rg discovery를 candidates-found/no-reuse-proof로 닫고 `mfdm.py` copper surface-impedance reuse trace를 유일 ACTIVE로 지정. |
 | 1.35 | 2026-08-26 | 17N을 surface-impedance constitutive law/MFDM stamp source-classified·W6 reuse unclassified/STOP으로 닫고 `surface_patch_plane.py` caller trace를 유일 ACTIVE로 지정. |
+| 1.36 | 2026-08-26 | 17O를 surface-patch local solver/operator source-classified·whole-solver W6 reuse unclassified/STOP으로 닫고 17P W6 plane-sheet reimplementation design을 유일 ACTIVE로 지정. |

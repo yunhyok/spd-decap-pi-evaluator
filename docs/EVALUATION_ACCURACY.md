@@ -604,11 +604,20 @@ current-spreading term; W6 input/asset fidelity remains external. 17M is DONE: t
 ran once (exit 0), found candidate symbols in solver files, but made no reuse or production-binding
 proof. 17N is DONE: the surface-impedance constitutive law and MFDM stamp are source-classified,
 with one-/two-face coth/csch Ω/square behavior, DC `1/(σt)`, and high-frequency transfer tending
-to zero; W6 reuse is unclassified/STOP. The sole ACTIVE successor is
-`W7-PHYS-SURFACE-PATCH-PLANE-REUSE-TRACE`, restricted to one complete read of
-`src/spd_decap_pi/_core/solver/surface_patch_plane.py` from clean HEAD
-`badfffc972489084fa0a5b8b746fd0c93fce0852` plus one Sol review; no implementation/W6 binding is
-implied. The compact scenario quotient
+to zero; W6 reuse is unclassified/STOP. 17O is DONE: the surface-patch local solver/operator is
+source-classified, but whole-solver W6 compatibility reuse is unclassified/STOP. Its ceiling is
+polygon clip/mesh and constant-signature strips; scalar σ/t and dielectric provenance; copper helper
++ gap L + dielectric C/loss differential nodal S; common-potential null/differential-only output;
+absolute MNA rejected; gates/cache. Terminal/Via/pad/antipad/fringe/full-wave and drop-in W6
+compatibility were not proven. The sole ACTIVE successor is
+`W7-PHYS-W6-PLANE-SHEET-REIMPLEMENTATION-DESIGN`, a docs-only design pass from clean HEAD
+`ccb0522341817a048ffa7e35a90d40380445471b` using bound 17J–17O findings; no code/test/artifact/
+production execution occurs before design review. The design must freeze replacement-vs-augmentation,
+source/provenance mapping, surface-patch node/port/gauge-to-W6 output, no-double-counting against
+Maxwell C/Via/termination, fail-closed/fallback and mesh/resource/cache/concurrency ceilings,
+exact code/test whitelist and commit partitions, version identity, and minimal V1/V2 evidence.
+Sol reviews once; Luna implements only after review. W6 production runs, old-root reuse, release,
+and parent accuracy/causal promotion remain unauthorized. The compact scenario quotient
 stores only schema/status, compiled SQLite stores aggregate `finite_parallel_rl` links/count/
 R/L/owners without source series terms, segments, or `physical_model_status`, and the
 production-complete surface certificate uses a compiled-only stub without the raw canonical
