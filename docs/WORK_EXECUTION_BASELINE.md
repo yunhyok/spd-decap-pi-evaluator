@@ -1,10 +1,10 @@
 # SPD Decap PI Evaluator 작업 기준
 
 - 적용 제품: **SPD Decap PI Evaluator v0.23.0**
-- 문서 버전: **1.29**
-- 상위 기준: [목적·기술 기준](PRODUCT_PURPOSE_AND_TECHNICAL_BASELINE.md) v1.28
+- 문서 버전: **1.30**
+- 상위 기준: [목적·기술 기준](PRODUCT_PURPOSE_AND_TECHNICAL_BASELINE.md) v1.29
 - W6-BASE source-before: clean `main` HEAD `fb36288781dcc0b884950ef5a486c474090ceebd`; this is the exact source boundary for the completed one-run evidence
-- 상태: **APPROVED/MACHINE-FROZEN CONTROL DOCUMENT — W5 DONE; W6-BLOCK-A DONE; W6-BLOCK-B BLOCKED; W6-BLOCK-C DONE; W6-BLOCK-D DONE; W6-BLOCK-E DONE; W6-BASE DONE (260729 numerical FAIL); W7-PHYS-AUDIT-MOUNTED-PATH DONE (negative/unclassified); W7-PHYS-OWNER-TERMINAL-VIA-VS-SPATIAL DONE (negative/evidence-unavailable); W7-PHYS-EVIDENCE-MISSING-PATH-COVERAGE DONE (negative/evidence-unavailable); W7-PHYS-PRODUCTION-VIA-ROUTE-SOURCE-TRACE DONE (source-classified raw-base/global finite-route ownership; local calibrated half-branches not selected; mixed ownership fail-closed); W7-PHYS-RAW-FINITE-VIA-RL-GENERATION-TRACE DONE (producer unclassified, high confidence); W7-PHYS-GROUND-REACHABILITY-RL-PRODUCER-TRACE DONE (producer delegated/unclassified, high confidence); W7-PHYS-VIA-SEGMENT-RL-MODEL-TRACE DONE (source-classified model; conditional multi-segment caller-contract bug confirmed; W6 exposure unknown); W7-PHYS-MULTISEGMENT-RL-CALLER-FIX BLOCKED (fixture-contract red; production diff statically accepted and retained uncommitted); W7-PHYS-CORRECTED-SUCCESSOR BLOCKED (static REJECT; zero pytest executions); W7-PHYS-CORRECTED-SUCCESSOR-2 DONE; W7-PHYS-W6-MULTISEGMENT-EXPOSURE DONE (source-classified evidence unavailable; actual exposure unknown); W7-PHYS-PROSPECTIVE-RUNTIME-TERM-EVIDENCE BLOCKED; W7-PHYS BLOCKED; ACTIVE NONE**
+- 상태: **APPROVED/MACHINE-FROZEN CONTROL DOCUMENT — W5 DONE; W6-BLOCK-A DONE; W6-BLOCK-B BLOCKED; W6-BLOCK-C DONE; W6-BLOCK-D DONE; W6-BLOCK-E DONE; W6-BASE DONE (260729 numerical FAIL); W7-PHYS-AUDIT-MOUNTED-PATH DONE (negative/unclassified); W7-PHYS-OWNER-TERMINAL-VIA-VS-SPATIAL DONE (negative/evidence-unavailable); W7-PHYS-EVIDENCE-MISSING-PATH-COVERAGE DONE (negative/evidence-unavailable); W7-PHYS-PRODUCTION-VIA-ROUTE-SOURCE-TRACE DONE (source-classified raw-base/global finite-route ownership; local calibrated half-branches not selected; mixed ownership fail-closed); W7-PHYS-RAW-FINITE-VIA-RL-GENERATION-TRACE DONE (producer unclassified, high confidence); W7-PHYS-GROUND-REACHABILITY-RL-PRODUCER-TRACE DONE (producer delegated/unclassified, high confidence); W7-PHYS-VIA-SEGMENT-RL-MODEL-TRACE DONE (source-classified model; conditional multi-segment caller-contract bug confirmed; W6 exposure unknown); W7-PHYS-MULTISEGMENT-RL-CALLER-FIX BLOCKED (fixture-contract red; production diff statically accepted and retained uncommitted); W7-PHYS-CORRECTED-SUCCESSOR BLOCKED (static REJECT; zero pytest executions); W7-PHYS-CORRECTED-SUCCESSOR-2 DONE; W7-PHYS-W6-MULTISEGMENT-EXPOSURE DONE (source-classified evidence unavailable; actual exposure unknown); W7-PHYS-PLANE-SHEET-NONUNIFORM-RL-SOURCE-TRACE ACTIVE; W7-PHYS-PROSPECTIVE-RUNTIME-TERM-EVIDENCE BLOCKED/YAGNI; W7-PHYS BLOCKED; ACTIVE W7-PHYS-PLANE-SHEET-NONUNIFORM-RL-SOURCE-TRACE**
 - 최종 개정: 2026-08-25 (Asia/Seoul)
 
 ## 1. 압축 후 즉시 복구 카드
@@ -16,11 +16,11 @@ context가 압축되거나 새 session에서 작업을 재개하면 다른 연�
 |---|---|
 | 변하지 않는 목적 | source-derived single-rail `Zii`의 PowerSI 근접 정확성과 일반화 |
 | 현재 branch | `main`만 사용; 정리된 과거 branch를 다시 조사하지 않음 |
-| 현재 active work item | `NONE` |
-| 다음 권장 묶음 | `W7-PHYS-PROSPECTIVE-RUNTIME-TERM-EVIDENCE` BLOCKED/YAGNI; no active technical or artifact authority |
-| current authorization | successor-2 DONE; commit `7fd8df954791b5a17229b49153d0f5dd57a248d2` clean; no active technical authority |
+| 현재 active work item | `W7-PHYS-PLANE-SHEET-NONUNIFORM-RL-SOURCE-TRACE` |
+| 다음 권장 묶음 | `W7-PHYS-PLANE-SHEET-NONUNIFORM-RL-SOURCE-TRACE` ACTIVE; exact one-file source V0 + one Sol review |
+| current authorization | clean `main` HEAD `9d8cb2e5e09c2cef49895cbaee3b23c66d305820`; only `src/spd_decap_pi/_core/solver/layer_surface_network.py` may be read; Python/import/test/artifact/raw-SPD/solver/production/edit remain zero |
 | future production invariant (not current authority) | if a future run is authorized: exact clean `main`, new output root, one run/no retry; B correlation is historical evidence; C/D consumed their exactly-one old candidate/import reads; E had one production diagnostic invocation plus one orchestration ZIP read; old root remains forbidden for W6-BASE output/scoring/retry/mutation |
-| 고비용 검증 권한 | none; no active technical or artifact authority; no bounded test correction, artifact/Python/import/solver/production execution |
+| 고비용 검증 권한 | none; bounded read-only source V0 + Sol review only; no artifact/Python/import/test/solver/production execution |
 | 현재 정확성 상태 | `260729 retrospective FAIL`; unseen/generalization remains `unknown / not_run` |
 | 현재 release 계산 증거 | W6-BASE 260729 completed numerical FAIL; offline verifier exit 2 (integrity-valid) |
 | W6-BASE result root | `D:\SPD-Decap-PI-Evaluator-W6\fb36288781dcc0b884950ef5a486c474090ceebd\260729` — manifest `2b14f90e762abc49833518137812e8fc97fcde0e9c145795b7384210cfd9f5de`, sidecar `0d103e0ad47df80641fac0952a35a6eaa56cc9fdb71be24661903e451926e932`, correlation `969e40046e3a099d09557ba7500693460362336d76b067962436bd3b5177abc4` |
@@ -135,6 +135,7 @@ root, one-run/no-retry 조건을 다시 확정할 때만 고려한다.
 | `W7-PHYS-CORRECTED-SUCCESSOR` | 17H successor | BLOCKED (static REJECT; zero pytest executions) | long Via used DR-0102_60 without GND PadDef and long stackup omitted intermediate PWR | original 17H remains blocked; no technical rerun |
 | `W7-PHYS-CORRECTED-SUCCESSOR-2` | 17H successor-2 | DONE | long-Via-only padstack TOP/PWR/GND, full analysis stackup, short TOP→PWR existing DR | exact node once: exit0, 1 passed in1.08s, wall~2.07s; commit `7fd8df9` exactly two files |
 | `W7-PHYS-W6-MULTISEGMENT-EXPOSURE` | 17I | DONE (source-classified evidence unavailable; actual exposure unknown) | determine whether the fixed conditional branch was present in frozen 260729 evidence | candidate/compiled/runtime term evidence was insufficient; no exposure claim |
+| `W7-PHYS-PLANE-SHEET-NONUNIFORM-RL-SOURCE-TRACE` | 17J | ACTIVE | determine whether W6 layer-surface stamps position/material-dependent plane-sheet series R/L or current-spreading/nonuniform corrections | exact whitelist `src/spd_decap_pi/_core/solver/layer_surface_network.py`; one source V0 + one Sol review; all execution/artifact/edit paths zero |
 | `W7-PHYS-PROSPECTIVE-RUNTIME-TERM-EVIDENCE` | next candidate | BLOCKED/YAGNI | provide a grounded runtime term digest/count/owner partition only after an independently selected physical change | new candidate/HEAD/root, one run/no retry; no current authority |
 | `W8-REL` | 18 | BLOCKED | completed known-case solve를 release gate에 연결하고 최종 전달 | accuracy/product gate와 exact release commit 필요 |
 | `D-DIST` | - | DEFERRED | Distribution routing/DRC scope 확대 | 사용자가 implementation-ready/DRC 목표로 승격할 때만 |
@@ -658,6 +659,13 @@ delta, W6 cause, accuracy, causal owner, and fix benefit remain unclaimed. The n
 selected grounded physical change, a new candidate/HEAD/root, and one no-retry term digest/
 count/owner-partition run.
 
+The sole ACTIVE item is `W7-PHYS-PLANE-SHEET-NONUNIFORM-RL-SOURCE-TRACE`: read only
+`src/spd_decap_pi/_core/solver/layer_surface_network.py` once, then one independent Sol
+static review. Classify each layer-surface stamp, source field, units, frequency dependence,
+and included/excluded/unknown plane-sheet/current-spreading term; stop and require a separately
+approved delegate whitelist if the file delegates any coefficient or frozen W6 binding cannot
+be maintained. This is observability ordering only, not causality or physics authorization.
+
 ## 20. 변경 기록
 
 | 문서 버전 | 날짜 | 변경 |
@@ -692,3 +700,4 @@ count/owner-partition run.
 | 1.27 | 2026-08-25 | 17H-CORRECTED-SUCCESSOR-2를 단일 focused PASS와 commit `7fd8df9`로 DONE 처리하고 W6 multisegment exposure 후보를 BLOCKED로 등록. |
 | 1.28 | 2026-08-25 | successor-2의 세그먼트별 geometry/합산/fail-closed 동작과 정확성 비주장을 기록하고 active NONE으로 전환. |
 | 1.29 | 2026-08-25 | W6 multisegment exposure를 evidence unavailable/actual exposure unknown으로 닫고 prospective runtime-term evidence를 BLOCKED/YAGNI로 등록. |
+| 1.30 | 2026-08-25 | W7-PHYS-PLANE-SHEET-NONUNIFORM-RL-SOURCE-TRACE를 유일한 ACTIVE one-file source V0/Sol review로 지정하고 plane-sheet/nonuniform 관측성 질문과 fail-closed 경계를 고정. |
