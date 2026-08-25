@@ -700,7 +700,15 @@ cap <=10 output lines and exactly 1 file. Ignore import/definition matches; requ
 non-definition compiler occurrence at or before the known non-definition merge call, select nearest
 compiler occurrence, and require compiler-to-merge span <=120 lines. Error, over-cap, wrong file,
 missing actual call, compiler after merge, or span >120 => STOP. Location evidence only; 17AF opens no
-files and any contiguous read requires separate authorization.
+files and any contiguous read requires separate authorization. 17AF is DONE at clean main HEAD
+`e4a6704247770cce084fd70fa3d5307f95a3a64a`: exact query once exit0, 4 lines/1 file (compiler import
+45, merge definition 131, actual compiler call 7860, known merge call 7868); nearest compiler-to-merge
+span 8 lines <=120, location evidence only with no file open or inference beyond placement. Sole ACTIVE
+next is `W7-PHYS-W6-RAW-SPATIAL-V3-COMPILER-MERGE-CALLSITE-TRACE` (17AG), exactly one read of
+`src/spd_decap_pi/spd_adapter.py` lines 7848-7885 (38 lines), no whole-file/search/second range/code/
+test. Questions are immediate guard/provenance; complete compiler and merge calls/arguments/results;
+adjacent downstream use/return; and structural v3 manifest/generated passage to merge. Endpoint
+truncation => source-classified STOP without extension. No profile/solver/accuracy/production proof.
 Contract: v2 constants/API byte-identical; profile/global/app/solver/convergence/policy/controller
 identities unchanged; only the opt-in raw-spatial v3 schema/compiler sibling identity is new. v3 sibling with kw-only opt-in flags, five normalized tables,
 no gap table, positive-intervening-thickness fsum spacing, row/coordinate/ProjectSpec/source-SHA digest,
