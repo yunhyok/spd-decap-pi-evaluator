@@ -736,14 +736,16 @@ Together with known `import_spd_scenario(source)`, the owner is a viable integra
 default-v2 and no-v3-regression claims remain unproven. 17AM is DONE at clean main
 `2076ba2764a4ae7614a7fdaa55ee6b208f6fdbad`: exact6423-6465 once, complete
 `import_spd_scenario(path: str|Path, *, progress=None, is_cancelled=None) -> ScenarioImport`, safe
-kw-only extension point, setup not truncated. Sole ACTIVE next is
-`W7-PHYS-W6-RAW-SPATIAL-V3-ADAPTER-OPTIN-WIRING` (17AN), exact two-file authority only:
-`spd_adapter.py` adds kw-only `include_plane_sheet_payload: bool=False` and forwards the exact named kwarg
-at the frozen compiler call; selected test calls
-`import_spd_scenario(source, include_plane_sheet_payload=True)` and loader uses
-`require_plane_sheet_payload=True`; no manifest internals/helper/unrelated assertion. After Sol static diff,
-run exactly one focused node; failure STOP/no rerun. PASS => exact two authorized technical files only atomic commit; FAIL => STOP, no rerun. Other callers default-v2; no broad/production/release/
-profile/accuracy inference.
+kw-only extension point, setup not truncated. 17AN is DONE at clean main
+`f178f4a12720a30db6f12e0011c79d9e2346bd54`: 2 files, 4 insertions/1 deletion; adapter kw-only
+defaultFalse forwarded, selected test include True + loader require True, Sol static ACCEPT, and the
+focused node ran once with exit0 (`1 passed in 1.59s`); no rerun, default callers remain v2, and no
+production W6/accuracy claim. Sole ACTIVE next is
+`W7-PHYS-W6-RAW-SPATIAL-V3-PRODUCTION-IMPORT-CALLER-DISCOVERY` (17AO), authorizing exactly once the
+query `rg -n --with-filename --no-heading --color never --glob '*.py' '\bimport_spd_scenario\b' 'src/spd_decap_pi'`.
+Cap <=20 output lines and <=5 files; ignore import/definition matches and require exactly one actual
+application caller to select a later bounded trace; zero/multiple/error/overcap => STOP. Location evidence
+only; no file open/code/test/production/accuracy proof.
 Contract: v2 constants/API byte-identical; profile/global/app/solver/convergence/policy/controller
 identities unchanged; only the opt-in raw-spatial v3 schema/compiler sibling identity is new. v3 sibling with kw-only opt-in flags, five normalized tables,
 no gap table, positive-intervening-thickness fsum spacing, row/coordinate/ProjectSpec/source-SHA digest,
