@@ -658,15 +658,16 @@ evidence and was not reread. 17X is source-classified BLOCKED on an existing-con
 ProjectSpec types prove geometry primitives/assets, `_um`, source SHA/order, stackup thickness/conductivity,
 and dielectric frequency epsilon/loss, while adjacent-conductor spacing is only derived by summing
 positive intervening dielectric thickness; the existing compiler handoff is absent and frozen 17F
-remains unproven. Sole ACTIVE 17Y
-`W7-PHYS-W6-RAW-SPATIAL-V3-TEST-PATH-DISCOVERY` permits exactly one query
-`rg --files tests | rg '(?:^|[\\/])test_.*raw_spatial_contact.*\.py$'`; accept 1–3 existing paths,
-then Sol selects exactly one by filename; 0 or >3 fail closed without a second query/open. Proposed
-`W7-PHYS-W6-RAW-SPATIAL-ASSET-V3-EMISSION` is not active. Conditionally, after selection, existing
-SQLite/hash/resource helpers may support a v3 asset with normalized plane/stackup/dielectric tables,
-deterministic spacing validation and row/source hashing; no duplicate gap table/new solver, v2 or
-missing tables fail closed, and historical path remains unchanged. This is not an accuracy/causal/
-production claim or implementation authority.
+remains unproven. 17Y ran its filename query once with no matches (0 paths, rg exit 1), so it is
+source-classified BLOCKED and proves filename absence only. Sole ACTIVE 17Z
+`W7-PHYS-W6-RAW-SPATIAL-V3-TEST-SYMBOL-DISCOVERY` permits exactly one query
+`rg -n --no-heading --color never --glob 'test_*.py' '\b(?:compile_raw_spatial_contact_asset|build_raw_spatial_contact_asset|validate_project_topology_storage_envelope)\b' 'tests'`.
+Budget is <=40 lines and <=6 files; exactly one compiler-referencing file is selectable, while
+builder/validator-only, ambiguous, or over-budget results fail closed without a second query/open.
+If zero compiler references are found, the only candidate is the named new
+`tests/test_raw_spatial_contact_compiler.py`, because 17Y found no conflicting filename. Proposed
+`W7-PHYS-W6-RAW-SPATIAL-ASSET-V3-EMISSION` remains inactive until mapping is documented. This is not
+an accuracy/causal/production claim or implementation authority.
 The compact scenario quotient
 stores only schema/status, compiled SQLite stores aggregate `finite_parallel_rl` links/count/
 R/L/owners without source series terms, segments, or `physical_model_status`, and the
