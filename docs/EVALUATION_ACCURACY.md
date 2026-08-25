@@ -616,17 +616,18 @@ disables old plane Maxwell C/ideal plane topology, retains finite Via + terminat
 and fails closed on missing evidence; app v0.23.0, exact solver identity pending. 17Q is BLOCKED:
 profile/fallback, worker/cache, raw geometry/material provenance, differential nullspace/final
 rail-order Zii, and no-double-counting owner transition remain external to its five-file trace.
-The sole ACTIVE successor is `W7-PHYS-W6-PLANE-SHEET-INTEGRATION-BINDING-TRACE`, based on clean
-HEAD `2bf27d4c49d8d4c7d51866815df4ab42ca537f16`, with exact whitelist `src/spd_decap_pi/_core/solver/profiles.py`,
-`src/spd_decap_pi/_core/solver/layerwise_network.py`, and `src/spd_decap_pi/spd_adapter.py`.
-One complete read each must bind opt-in no-fallback profile/static identity, hash-bound polygon/
-material input without solve-time raw SPD/full-Scenario hydration, balanced differential incidence
-`N^H B=0`, stable rail order/Zii, old plane Maxwell C/ideal topology disabled, Via/termination
-exactly once, and single-worker/no-shared-mutable-cache behavior; any whitelist-outside delegate
-ends 17R as source-classified BLOCKED, with no fourth read or automatic whitelist expansion. One Sol
-review then freezes code/test whitelist, identity, commits and V1/V2. No code/test/
-artifact/production execution occurs before review; production runs, old-root reuse, release, and
-parent accuracy/causal promotion remain unauthorized. The compact scenario quotient
+17R ends as **source-classified BLOCKED**. At clean main HEAD
+`8451c4afca57fb46e89b7096026b281ba54bbf52`, the exact three files were each read once and no
+other source was read. All five acceptance items were UNPROVEN: the opt-in no-fallback profile
+and application enforcement are absent/outside scope; hash-bound plane input without solve-time
+raw/full Scenario hydration is not established and the visible adapter retains a
+`legacy_rail_template` fallback; balanced `N^H B=0`, stable rail/Zii and nullspace ownership are
+delegated; the old Maxwell C/ideal disable seam with exactly-once Via/termination is absent or
+delegated; and global OrderedDict/RLock caches leave single-worker/no-shared-mutable-cache
+unproven. Sol accepted the fail-closed stop: no fourth read, automatic whitelist expansion,
+coding, tests, or execution. User W6 reimplementation authority is recorded but cannot proceed
+without an explicit new bounded source-whitelist/contract decision; production runs, old-root
+reuse, release, and parent accuracy/causal promotion remain unauthorized. The compact scenario quotient
 stores only schema/status, compiled SQLite stores aggregate `finite_parallel_rl` links/count/
 R/L/owners without source series terms, segments, or `physical_model_status`, and the
 production-complete surface certificate uses a compiled-only stub without the raw canonical
