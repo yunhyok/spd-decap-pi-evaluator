@@ -703,12 +703,21 @@ missing actual call, compiler after merge, or span >120 => STOP. Location eviden
 files and any contiguous read requires separate authorization. 17AF is DONE at clean main HEAD
 `e4a6704247770cce084fd70fa3d5307f95a3a64a`: exact query once exit0, 4 lines/1 file (compiler import
 45, merge definition 131, actual compiler call 7860, known merge call 7868); nearest compiler-to-merge
-span 8 lines <=120, location evidence only with no file open or inference beyond placement. Sole ACTIVE
-next is `W7-PHYS-W6-RAW-SPATIAL-V3-COMPILER-MERGE-CALLSITE-TRACE` (17AG), exactly one read of
-`src/spd_decap_pi/spd_adapter.py` lines 7848-7885 (38 lines), no whole-file/search/second range/code/
-test. Questions are immediate guard/provenance; complete compiler and merge calls/arguments/results;
-adjacent downstream use/return; and structural v3 manifest/generated passage to merge. Endpoint
-truncation => source-classified STOP without extension. No profile/solver/accuracy/production proof.
+span 8 lines <=120, location evidence only with no file open or inference beyond placement. 17AG is DONE
+(integration-gap evidence) at clean main HEAD `300d5aacc6386ad8c55ce6bd198ab207fb1f4597`: exact read
+lines 7848-7885 found guard 7854 `_has_compiled_topology_manifest(base_project)`; compiler tuple
+7859-7867 passes source_path, analysis, base_project, scenario_attachments, cancelled but omits
+`include_plane_sheet_payload=True`, so frozen default False leaves actual SPD import schema-v2;
+7868-7873 pass manifest/generated unchanged to merge and rebind updated project/attachments; 7874-7877
+validate updated envelope; 7878-7881 report success/block completion. 7882 onward is unrelated sorting;
+`nets=sorted` is endpoint-truncated, so downstream persistence/return remains UNPROVEN/outside with no
+extension. Missing flag is an immediate wiring gap, not a safe standalone fix or PowerSI root cause;
+unconditional opt-in may violate legacy/default v2 imports. Sole ACTIVE next is
+`W7-PHYS-W6-RAW-SPATIAL-V3-ADAPTER-TEST-SEAM-DISCOVERY` (17AH), limited to exactly one frozen query:
+`rg -n --with-filename --no-heading --color never '\b(?:import_spd_scenario|compile_raw_spatial_contact_asset|include_plane_sheet_payload|RAW_SPATIAL_CONTACT_ASSET_METADATA_KEY)\b' 'tests/test_spd_decap_spd_adapter.py'`;
+cap <=30 output lines/exactly 1 file; command error/over-cap/wrong file/no relevant non-import test
+call of `import_spd_scenario` => STOP. Location evidence only; at most one existing adapter test seam
+may be selected for later bounded read; 17AH opens no files. No profile/solver/accuracy/production proof.
 Contract: v2 constants/API byte-identical; profile/global/app/solver/convergence/policy/controller
 identities unchanged; only the opt-in raw-spatial v3 schema/compiler sibling identity is new. v3 sibling with kw-only opt-in flags, five normalized tables,
 no gap table, positive-intervening-thickness fsum spacing, row/coordinate/ProjectSpec/source-SHA digest,
