@@ -613,17 +613,20 @@ compatibility were not proven. 17P is BLOCKED before coding: the high-level deci
 new `layerwise_surface_patch_v1` replacement profile; the historical profile remains unchanged
 with no automatic fallback. The new profile owns polygon C/loss + lateral gap L + sheet impedance,
 disables old plane Maxwell C/ideal plane topology, retains finite Via + termination exactly once,
-and fails closed on missing evidence; app v0.23.0, exact solver identity pending. The sole ACTIVE
-successor is `W7-PHYS-W6-PLANE-SHEET-ADAPTER-BINDING-TRACE`, based on clean HEAD
-`b060a5b229adbe898330794250c097bfe0e91184`, with exact whitelist `src/spd_decap_pi/evaluation.py`,
-`src/spd_decap_pi/layerwise_scenario_adapter.py`, `src/spd_decap_pi/layerwise_scenario_topology.py`,
-`src/spd_decap_pi/scenario_topology_plan.py`, and `src/spd_decap_pi/compiled_topology_asset.py`.
-One complete read each must bind profile/cache/worker ownership, persisted polygon/material/
-provenance, port/node incidence, Via/termination/owner/certificate handoff, compiled-asset
-availability, and nullspace-compatible adapter inputs; any delegate outside stops the trace. One Sol
-review then freezes code/test whitelist, identity, commits and V1/V2. No code/test/artifact/
-production execution occurs before review; production runs, old-root reuse, release, and parent
-accuracy/causal promotion remain unauthorized. The compact scenario quotient
+and fails closed on missing evidence; app v0.23.0, exact solver identity pending. 17Q is BLOCKED:
+profile/fallback, worker/cache, raw geometry/material provenance, differential nullspace/final
+rail-order Zii, and no-double-counting owner transition remain external to its five-file trace.
+The sole ACTIVE successor is `W7-PHYS-W6-PLANE-SHEET-INTEGRATION-BINDING-TRACE`, based on clean
+HEAD `2bf27d4c49d8d4c7d51866815df4ab42ca537f16`, with exact whitelist `src/spd_decap_pi/_core/solver/profiles.py`,
+`src/spd_decap_pi/_core/solver/layerwise_network.py`, and `src/spd_decap_pi/spd_adapter.py`.
+One complete read each must bind opt-in no-fallback profile/static identity, hash-bound polygon/
+material input without solve-time raw SPD/full-Scenario hydration, balanced differential incidence
+`N^H B=0`, stable rail order/Zii, old plane Maxwell C/ideal topology disabled, Via/termination
+exactly once, and single-worker/no-shared-mutable-cache behavior; any whitelist-outside delegate
+ends 17R as source-classified BLOCKED, with no fourth read or automatic whitelist expansion. One Sol
+review then freezes code/test whitelist, identity, commits and V1/V2. No code/test/
+artifact/production execution occurs before review; production runs, old-root reuse, release, and
+parent accuracy/causal promotion remain unauthorized. The compact scenario quotient
 stores only schema/status, compiled SQLite stores aggregate `finite_parallel_rl` links/count/
 R/L/owners without source series terms, segments, or `physical_model_status`, and the
 production-complete surface certificate uses a compiled-only stub without the raw canonical
