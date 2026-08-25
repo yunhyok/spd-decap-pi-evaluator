@@ -661,8 +661,17 @@ positive intervening dielectric thickness; the existing compiler handoff is abse
 remains unproven. 17Y ran its filename query once with no matches (0 paths, rg exit 1), so it is
 source-classified BLOCKED. 17Z then ran its symbol query once at clean HEAD
 `4f5d149a1e803caa2a2b78b854b6579cafb3bed4`, returning 17 lines/5 files; the unique compiler test is
-`tests/test_raw_spatial_contact_compiler.py`, so 17Z is DONE. Sole ACTIVE 17AA
-`W7-PHYS-W6-RAW-SPATIAL-ASSET-V3-EMISSION` is limited to three production files plus that test.
+`tests/test_raw_spatial_contact_compiler.py`, so 17Z is DONE. 17AA
+`W7-PHYS-W6-RAW-SPATIAL-ASSET-V3-EMISSION` is BLOCKED at its test gate. The approved focused
+command `pytest -q tests/test_raw_spatial_contact_compiler.py::test_plane_sheet_payload_v3_is_hash_bound_and_v2_remains_unchanged`
+ran exactly once: exit 1, `1 failed in 1.55s`; `_plane_sheet_payload` raised
+`RAW_SPATIAL_PLANE_SHEET_REQUIRED` with `ProjectSpec stackup physical fields are incomplete` before
+the v3 asset. There was no rerun, and this does not classify fixture versus production cause.
+The three-path technical diff remains uncommitted. Sole ACTIVE successor 17AA-S1 is
+`W7-PHYS-W6-RAW-SPATIAL-ASSET-V3-EMISSION-S1`, limited to compiler/test static typed-field
+binding; it must use actual StackupLayer and dielectric-point fields, then receive Sol review
+before one focused node. Failure stops without rerun. No accuracy, causal, or production claim
+follows.
 Contract: v2 constants/API byte-identical; profile/global/app/solver/convergence/policy/controller
 identities unchanged; only the opt-in raw-spatial v3 schema/compiler sibling identity is new. v3 sibling with kw-only opt-in flags, five normalized tables,
 no gap table, positive-intervening-thickness fsum spacing, row/coordinate/ProjectSpec/source-SHA digest,
