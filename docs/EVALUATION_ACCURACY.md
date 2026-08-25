@@ -136,8 +136,8 @@ m6 and m8, and VTRIP0, VTRIP1, and VCPU0 remained nonconverged at m12.
 Those numbers remain diagnostic history only. Current internal result status
 uses frequency convergence plus terminal-complete external-input invariance for
 Layerwise, and combined frequency/modal convergence for Research and Legacy.
-The current product-level PowerSI accuracy status remains `unknown / not_run`
-under the canonical baseline. A failed Research/Legacy m12 check must not
+The current product-level status is `260729 retrospective FAIL`; unseen/generalization
+remains `unknown / not_run` under the canonical baseline. A failed Research/Legacy m12 check must not
 silently fall back to a lower order.
 
 The comparison contract is `Z = Z0(I+S)(I-S)^-1`; all non-driven currents are
@@ -246,14 +246,17 @@ solver-state confounds remain. P5 is absent and mandatory for final
 generalization. W6 can at most produce a non-blind retrospective 260729/260804
 baseline until these blockers change.
 
-### W6 manifest contract (READY for a new run; prior 260729 attempt blocked_partial)
+### W6 manifest contract and completed 260729 evidence
 
 The manifest schema is `powersi-retrospective-run-manifest-v1`. Its approval basis
 commit `027ac7a09a3eded15f45c41860945f9d4c7f488d` is historical; runtime uses a
 caller/standing-authorization supplied exact clean `main` HEAD. Policy, adapter,
 v6 validator, accuracy-validator, and controller hashes are atomically pinned.
 W6-BLOCK-B is blocked; W6-BLOCK-C, W6-BLOCK-D, and W6-BLOCK-E are DONE. W6-BASE
-is READY for a new exact clean `main` HEAD and brand-new output root, but has not run.
+completed exactly one 260729 run from clean `main` HEAD
+`fb36288781dcc0b884950ef5a486c474090ceebd` in a brand-new output root. The
+controller and offline verifier both exited `2`; the manifest was completed and
+the numerical score was FAIL.
 It also binds app `0.23.0`, solver `modal-mvp-0.8.5`, profile
 `layerwise_admittance_v1`, compiler
 `layer-surface-adjacent-y-island-finite-via-termination-kron-v8`, full static
@@ -298,10 +301,17 @@ The controller reconstructs the exact two internal phase argv arrays using
 correlation; those internal commands are not run directly. The exact 16-rail
 configuration, source/reference paths, and manifest are required inputs; output
 directories must be new/empty and automatic retry is `0`. These are execution
-templates for a standing-authorized one-run gate. They were used
-once for 260729 at the exact HEAD recorded in the execution evidence below;
-that attempt produced `blocked_partial`, so no offline verifier was run and a
-new run must use a new output root.
+templates for a consumed W6 one-run gate; any future use is dormant until W7 audit,
+one physical change, focused evidence, and a new gate. They were used once for 260729
+at the exact HEAD recorded below; no retry, resume, reuse, or mutation occurred.
+The completed root is
+`D:\SPD-Decap-PI-Evaluator-W6\fb36288781dcc0b884950ef5a486c474090ceebd\260729`.
+Manifest SHA is `2b14f90e762abc49833518137812e8fc97fcde0e9c145795b7384210cfd9f5de`,
+sidecar SHA `0d103e0ad47df80641fac0952a35a6eaa56cc9fdb71be24661903e451926e932`,
+and correlation SHA `969e40046e3a099d09557ba7500693460362336d76b067962436bd3b5177abc4`.
+Bare macro `1.7071112227372152` and loaded macro `15.910646842123072` both exceeded
+the 1.0 dB limit; this is retrospective numerical FAIL, not unseen/generalization
+or PowerSI sign-off.
 
 ### Hash rotation boundary
 
@@ -337,27 +347,26 @@ DONE; W6-BLOCK-B is BLOCKED after a deterministic pivot reproduction,
 W6-BLOCK-C is DONE after preserving deterministic factor/matrix context,
 W6-BLOCK-D is DONE after recording a sparse raw-system condition lower bound,
 and W6-BLOCK-E is DONE after classifying and gating the rejected factor. W6-BASE is
-READY (not executed) from the new exact clean `main` HEAD established by this
-documentation closure commit and a brand-new output root; `f23c5b2...` is only the
-E diagnostic source HEAD.
-Accuracy remains `unknown / not_run`; P5 unseen design is mandatory for
-generalization/final signoff. The approved basis commit
+DONE for the completed 260729 numerical FAIL from clean `main` HEAD
+`fb36288781dcc0b884950ef5a486c474090ceebd`; offline verification exited `2`
+(integrity-valid). Accuracy for unseen/generalization remains `unknown / not_run`;
+P5 unseen design is mandatory for generalization/final signoff. The approved basis commit
 `027ac7a09a3eded15f45c41860945f9d4c7f488d` is distinct from the caller-supplied
 exact current W6 HEAD. Historical v5 validator/policy/fixtures and base benchmark
 remain byte-identical. The 260804 S92P SHA trailing `b` is a frozen registry typo
 correction, not a recomputation.
 
-Standing authorization permits bounded W6 and ranked in-scope local code/tests to
-proceed until the Usage Guard stop/checkpoint, with Sol review/Luna writes. It does
-not authorize remote/release/installer, retries, old-root W6-BASE reuse or mutation,
-or any threshold,
-fallback, reordering, port, or physics change. Before W6-BASE, the completed
-W6-BLOCK-E row-scaled solve gate remains required. C and D already consumed their
+W6 production authority is consumed by the completed 260729 numerical FAIL. Only
+W7 frozen-artifact read-only audit and bounded local code/test work remain authorized,
+with Sol review/Luna writes. It does not authorize remote/release/installer, retries,
+old-root W6-BASE reuse or mutation, or any threshold,
+fallback, reordering, port, or physics change. C and D already consumed their
 exactly-one old candidate/import reads. E had one production candidate/import
 invocation plus one separate orchestration ZIP read, did not use the correlation
-report, and wrote only to a brand-new E root. The next BASE
-run must use a new root, controller-only one-run/no-retry. The local bounded V3 is a
-mirror of the required CI selection; remote CI was not run.
+report, and wrote only to a brand-new E root. W6-BASE is now complete for 260729
+numerical FAIL; W7-PHYS mounted-path audit is the active next step. 260804/P5 and
+additional production reruns remain forbidden while the development case is FAIL.
+The local bounded V3 is a mirror of the required CI selection; remote CI was not run.
 
 The B diagnostic root
 `D:\SPD-Decap-PI-Evaluator-W6-Diagnostics\6bbe44e2f36610755103757d6a4502c9ed9760d3\260729-vtrip0-1khz`
@@ -368,8 +377,9 @@ ran only `ADC_VDD_055_VTRIP/0` at 1000 Hz and exited 1 after reproducing
 or scored artifact exists. The existing exception lacked factor context, so root cause
 remains unclassified. C added only deterministic context to that existing fail-closed
 exception; solver results, thresholds, ordering, cache, ports, physics, and trust
-identities are unchanged. A D clean result commit will permit one identical D
-diagnostic only; no retry or full W6 run is authorized before D closes.
+identities are unchanged. D's exactly-once diagnostic is consumed; no retry or full
+W6 run is authorized before the W7 audit and one-physical-change/new-gate sequence
+closes.
 
 W6-BLOCK-A supplies missing `terminal_complete_external_input=True` only in the
 versioned layerwise diagnostic/correlation adapter, preserves explicit values and
@@ -404,8 +414,9 @@ be retroactively verified under the new policy; the old root is never written or
 as a W6-BASE controller output, scoring snapshot, retry, or mutation. W6-BLOCK-B
 correlation remains historical evidence. C and D opened their candidate and import
 report exactly once, read-only, and E had one production candidate/import invocation
-plus one separate orchestration ZIP read; E did not use the correlation report. 260804 was not run. No completed manifest, sidecar,
-or offline verification exists.
+plus one separate orchestration ZIP read; E did not use the correlation report. 260804 was not run. In the first blocked
+`46d17dc...` root only, no completed manifest, sidecar, or offline verification
+exists; the later `fb36288...` W6-BASE root is the completed numerical FAIL above.
 
 W6-BLOCK-C's exact fresh-root evidence is
 `D:\SPD-Decap-PI-Evaluator-W6-Diagnostics\e9a1ca124d94f1bd0192d519aa22996e87266ac5\260729-vtrip0-1khz`:
@@ -452,9 +463,14 @@ was `[0.13437046955500517, 12.100420788716686]`, scaled pivot
 `3.919670457452144e-17 <= 1e-9`, with one solve, Touchstone `false`, and adaptive
 sweep `false`. Candidate/import bindings matched the immutable inputs. The ZIP
 central directory was opened read-only once during orchestration; there was one
-production diagnostic invocation and no retry/edit. E is DONE and W6-BASE is READY
-but not executed. This proves the numerical promotion gate only, not model-form or
-PowerSI accuracy.
+production diagnostic invocation and no retry/edit. E is DONE and W6-BASE is DONE
+for the 260729 numerical FAIL. These structural/artifact checks are not model-form
+correctness, unseen/generalization evidence, or a PowerSI-accuracy PASS/sign-off;
+the retrospective 260729 comparison is FAIL.
+W7-PHYS audit is read-only over frozen artifacts: distinguish cap body, terminal Via,
+pad/anti-pad/current-spreading, and select exactly one source-derived owning term.
+If loaded-rail error sign and frequency onset cannot be explained, stop as
+`owner unclassified` and make no physics code change.
 
 Frozen historical v5 validator/policy/fixtures and base benchmark remain byte-identical.
 W6-E atomically rotated the current v6→policy→accuracy-validator→controller trust

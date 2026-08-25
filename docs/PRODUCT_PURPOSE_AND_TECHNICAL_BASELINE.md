@@ -1,9 +1,9 @@
 # SPD Decap PI Evaluator 목적·기술 기준
 
 - 적용 제품: **SPD Decap PI Evaluator v0.23.0**
-- 문서 버전: **1.10**
+- 문서 버전: **1.12**
 - W5 approved/machine-frozen source-before: `main` commit `027ac7a09a3eded15f45c41860945f9d4c7f488d`
-- 상태: **G0 기준 문서** — [작업 기준](WORK_EXECUTION_BASELINE.md)과 함께 사용하며, W5 DONE·W6-BLOCK-A DONE·W6-BLOCK-B BLOCKED·W6-BLOCK-C DONE·W6-BLOCK-D DONE·W6-BLOCK-E DONE·W6-BASE READY(미실행)
+- 상태: **G0 기준 문서** — [작업 기준](WORK_EXECUTION_BASELINE.md)과 함께 사용하며, W5 DONE·W6-BLOCK-A DONE·W6-BLOCK-B BLOCKED·W6-BLOCK-C DONE·W6-BLOCK-D DONE·W6-BLOCK-E DONE·W6-BASE DONE (260729 numerical FAIL)·W7-PHYS READY·active W7-PHYS-AUDIT-MOUNTED-PATH
 - 최종 개정: 2026-08-25 (Asia/Seoul)
 
 ## 1. 문서 역할과 권위
@@ -151,7 +151,7 @@ quasi-static circuit model이며 다음을 충분히 표현하지 않는다.
 | 제품명·버전 identity | current v0.23.0 / `0f24363c` | verified | passed | source, title, package, installer metadata 범위 |
 | production-size import·save·92-rail solver entry | current v0.23.0 attestation | verified | passed | import/save/entry 범위에 한함 |
 | 같은 attestation의 frequency solve·Touchstone comparison | current v0.23.0 | verified | not_run | `frequency_solves_executed=0`, `touchstone_read=false` |
-| 현행 default solver의 PowerSI 정확성 | current v0.23.0 / blocked 260729 attempt | unknown | blocked/not_run | correlation gate에서 중단되어 completed manifest·sidecar·offline verification·수치 판정 없음 |
+| 현행 default solver의 PowerSI 정확성 | current v0.23.0 / 260729 retrospective | provisional | failed | completed manifest·sidecar와 offline verifier exit 2가 무결성을 확인했으며, bare/loaded macro가 각 limit을 초과했다; unseen/generalization은 아직 unknown/not_run |
 | 260804 terminal-complete loaded correlation | historical v0.22.0 | provisional | failed | 문서상 critical-band `16.743 dB`, `44.28°`; raw report가 Git에 없어 current 결과로 재사용 불가 |
 | 목표 장비의 시간·memory promotion | current | unknown | not_run | workstation 또는 import-only 수치로 승격 금지 |
 | product-core CI 회귀 차단 | current bounded selection | verified | passed | V3 `361 passed, 1 skipped in 22.88s`, local v0.13 bundle skip |
@@ -162,9 +162,9 @@ import/save 성공은 PowerSI accuracy promotion이 아니다.
 
 W5 이전에는 제품 수준 PowerSI 수치 합격선이 **미확정**이었다. W5에서
 `1.00/1.25 dB` 등을 포함한 수치와 reference partition을 승인해
-machine-frozen policy로 고정했지만, 이 turn에는 수치 실행이 없으므로 제품
-정확성 상태는 여전히 `unknown / not_run`이다. local mesh/oracle convergence
-수치를 제품 PowerSI gate로 전용해서는 안 된다.
+machine-frozen policy로 고정했다. 260729 retrospective는 completed numerical
+FAIL이며, unseen/generalization과 260804/P5는 여전히 `unknown / not_run`이다.
+local mesh/oracle convergence 수치를 제품 PowerSI gate로 전용해서는 안 된다.
 
 ### 6.2 W5-GATE approved/machine-frozen policy
 
@@ -181,10 +181,10 @@ W5 threshold, partition, run manifest는 사용자 승인으로 **machine-frozen
   유지하며 pooled 평균이나 한 strata가 다른 strata의 실패를 숨기는 판정을
   하지 않는다.
 - 260729 development와 260804 retrospective design holdout은 모두
-  retrospective evidence다. 양쪽 모두 등록된 `D:\` raw 경로와 S92P 경로의
-  존재/size 일치만 확인된 상태이며, 이 turn에는 SHA를 재계산하지 않았다.
-  등록 baseline candidate는 없었고, 이전 blocked root에서 생성된 candidate는
-  W6-BASE controller output·scoring snapshot·retry에 재사용하지 않는다. 새 W6는
+  retrospective evidence다. W5 freeze 당시 양쪽 등록 `D:\` raw 경로와 S92P
+  경로는 존재/size 일치만 확인되었고 SHA는 재계산하지 않았다. 등록 baseline
+  candidate는 없었고, 이전 blocked root에서 생성된 candidate는 W6-BASE controller
+  output·scoring snapshot·retry에 재사용하지 않는다. 당시 승인된 W6 contract는
   brand-new root의 fresh import에서 시작해야 한다. B의 correlation은 historical
   evidence이고, C는 old candidate/import report를 정확히 한 번 read-only로
   열었고, correlation report는 사용하지 않았으며, fresh C root에만 썼다.
@@ -339,35 +339,44 @@ W5 policy and implementation closure are machine-frozen and DONE. W6-BLOCK-A is
 DONE; W6-BLOCK-B is BLOCKED after a deterministic pivot reproduction,
 W6-BLOCK-C is DONE after preserving deterministic factor/matrix context,
 W6-BLOCK-D is DONE after recording a sparse raw-system condition lower bound,
-and W6-BLOCK-E is DONE after classifying and gating the rejected factor. W6-BASE is
-READY (not yet executed) from the new exact clean `main` HEAD established by this
-documentation closure commit plus a brand-new root; `f23c5b2...` is only the E
-diagnostic source HEAD. The product's highest purpose remains calculation
-with accuracy comparable to PowerSI; V1/V2/V3 and the blocked production
-attempt do not establish that accuracy. Accuracy is `unknown / not_run`, P5
-unseen design is mandatory for generalization/final signoff, and 260804 was not
-run. No completed manifest, sidecar, or offline verification exists.
+and W6-BLOCK-E is DONE after classifying and gating the rejected factor. W6-BASE
+is DONE for the single 260729 run from clean `main` HEAD
+`fb36288781dcc0b884950ef5a486c474090ceebd`: the completed manifest/sidecar was
+verified offline with exit 2 and the numerical result is FAIL. Bare macro was
+`1.7071112227372152` and loaded macro `15.910646842123072`, both above the 1.0 dB
+limit. The product's highest purpose remains calculation with accuracy comparable
+to PowerSI; this is retrospective evidence only. Accuracy for unseen/generalization
+remains `unknown / not_run`, P5 is mandatory for final signoff, and 260804 was not
+run. The completed root is
+`D:\SPD-Decap-PI-Evaluator-W6\fb36288781dcc0b884950ef5a486c474090ceebd\260729`;
+manifest SHA `2b14f90e762abc49833518137812e8fc97fcde0e9c145795b7384210cfd9f5de`,
+sidecar SHA `0d103e0ad47df80641fac0952a35a6eaa56cc9fdb71be24661903e451926e932`,
+and correlation SHA `969e40046e3a099d09557ba7500693460362336d76b067962436bd3b5177abc4`.
 
-Standing authorization permits bounded W6 and ranked in-scope local code/tests to
-proceed automatically until the Usage Guard stop/checkpoint, with Sol review and
-Luna writes. It does not authorize remote/release/installer work, retries, old-root
-W6-BASE reuse or mutation, threshold weakening, fallback, reordering, port movement,
-or physics changes.
-Before any W6-BASE run, the completed W6-BLOCK-E gate remains a prerequisite. C and D already consumed their
+W6 production authority is consumed by the completed 260729 numerical FAIL. Only
+W7 frozen-artifact read-only audit and bounded local code/test work remain authorized,
+with Sol review and Luna writes. It does not authorize remote/release/installer work,
+retries, old-root W6-BASE reuse or mutation, threshold weakening, fallback,
+reordering, port movement, or physics changes. Any future 260729 production rerun
+requires W7 audit, exactly one physical change, focused evidence, and a new gate.
+Before any future W6 run, the completed W6-BLOCK-E gate remains a prerequisite. C and D already consumed their
 exactly-one old candidate/import reads and wrote only to fresh roots; E had one
 production candidate/import invocation plus one separate orchestration ZIP
 central-directory read, did not use the correlation report, and wrote only to its
 brand-new diagnostic root. The old root remains forbidden for
 W6-BASE/controller/scoring/retry/mutation. The next BASE run must use a new root,
-controller-only execution, one-run/no-retry. The local
+controller-only execution, one-run/no-retry, and cannot start before the W7 sequence
+closes. The local
 bounded V3 result is a mirror of the required CI selection, not remote CI evidence.
 
 The focused parity V1 was red once and green once (`1 passed in 0.88s`); V2 was
 `10 passed in 2.13s`; current bounded V3 was `361 passed, 1 skipped in 22.88s`,
 exit 0. The only skip was the unavailable local v0.13 SPD regression bundle at
 `tests/test_spd_decap_scenario_io.py:1048`. D:/ input hash recomputation was not
-performed; the external PowerSI solver was not run. Phase2 consumed the registered
-PowerSI Touchstone but produced no completed comparison or score. Remote/full suite,
+performed; the external PowerSI solver was not run. For the first
+`46d17dc...` blocked root only, Phase2 consumed the registered PowerSI Touchstone
+but produced no completed comparison or score; the current `fb36288...` W6-BASE
+root produced the completed numerical FAIL recorded above. Remote/full suite,
 installer, release, and production rerun were not performed. The B diagnostic
 reproduced the pivot but did not classify its root cause. C's exact evidence is the
 fresh root
@@ -412,8 +421,11 @@ adaptive sweep `false`. Candidate/import bindings matched their immutable inputs
 the ZIP central directory was opened read-only once during orchestration, but only
 one production diagnostic invocation occurred. No retry or edit was performed.
 This proves the numerical promotion gate only, not model-form or PowerSI accuracy.
-E is DONE; W6-BASE is READY for a future one-run with a fresh root, controller-only
-execution, and no retry.
+E is DONE; W6-BASE is DONE for the 260729 numerical FAIL. W7-PHYS is READY and its
+active mounted-path audit must finish before any 260804/P5 or production rerun. The
+audit is read-only and must distinguish cap body, terminal Via, pad/anti-pad/current-
+spreading, selecting exactly one source-derived owning term; if loaded-rail sign and
+frequency onset remain unexplained, stop as `owner unclassified` without physics code.
 
 Approval basis commit `027ac7a09a3eded15f45c41860945f9d4c7f488d` is distinct from
 the caller-supplied exact current `main` HEAD required at a future W6 invocation;
@@ -446,5 +458,7 @@ and the exact Git HEAD are frozen together. Current trust identities: base `d43b
 | 1.8 | 2026-08-25 | W6-BLOCK-C 완료와 W6-BLOCK-D sparse condition lower-bound instrumentation을 기록하고 W6-BASE를 보류. |
 | 1.9 | 2026-08-25 | W6-BLOCK-D 완료, W6-BLOCK-E row-scaled factorization 및 solver 0.8.5 trust rotation을 기록하고 W6-BASE를 보류. |
 | 1.10 | 2026-08-25 | W6-BLOCK-E 단일 진단 exit0 및 수치 promotion gate를 기록하고 W6-BASE READY(미실행)로 전환. |
+| 1.11 | 2026-08-25 | W6-BASE 260729 completed numerical FAIL과 integrity-valid offline exit 2를 기록하고 W7-PHYS mounted-path audit를 지정. |
+| 1.12 | 2026-08-25 | W6 production authority consumed; W7 frozen-artifact owner audit와 one-physical-change/new-gate 순서를 고정. |
 | 1.1 | 2026-08-24 | `WORK_EXECUTION_BASELINE.md`를 두 번째 canonical 문서로 연결. |
 | 1.0 | 2026-08-24 | v0.24 계획 중심의 Distribution–solver PRD를 제품 전체의 목적·기술 기준으로 개정. PowerSI 정확성 우선, 상태 어휘, 기술 경계, promotion gate, 검증 비용 통제와 two-document 작업 방식을 고정. |

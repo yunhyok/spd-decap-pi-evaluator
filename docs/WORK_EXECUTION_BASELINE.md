@@ -1,10 +1,10 @@
 # SPD Decap PI Evaluator 작업 기준
 
 - 적용 제품: **SPD Decap PI Evaluator v0.23.0**
-- 문서 버전: **1.11**
-- 상위 기준: [목적·기술 기준](PRODUCT_PURPOSE_AND_TECHNICAL_BASELINE.md) v1.10
-- E diagnostic source-before: clean `main` HEAD `f23c5b241d522d05f50f6de05bd6819723b7d3db`; W6-BASE must use the new exact clean `main` HEAD established by this documentation closure commit plus a brand-new root
-- 상태: **APPROVED/MACHINE-FROZEN CONTROL DOCUMENT — W5 DONE; W6-BLOCK-A DONE; W6-BLOCK-B BLOCKED; W6-BLOCK-C DONE; W6-BLOCK-D DONE; W6-BLOCK-E DONE; W6-BASE READY (not executed)**
+- 문서 버전: **1.13**
+- 상위 기준: [목적·기술 기준](PRODUCT_PURPOSE_AND_TECHNICAL_BASELINE.md) v1.12
+- W6-BASE source-before: clean `main` HEAD `fb36288781dcc0b884950ef5a486c474090ceebd`; this is the exact source boundary for the completed one-run evidence
+- 상태: **APPROVED/MACHINE-FROZEN CONTROL DOCUMENT — W5 DONE; W6-BLOCK-A DONE; W6-BLOCK-B BLOCKED; W6-BLOCK-C DONE; W6-BLOCK-D DONE; W6-BLOCK-E DONE; W6-BASE DONE (260729 numerical FAIL); W7-PHYS READY; active W7-PHYS-AUDIT-MOUNTED-PATH**
 - 최종 개정: 2026-08-25 (Asia/Seoul)
 
 ## 1. 압축 후 즉시 복구 카드
@@ -16,17 +16,18 @@ context가 압축되거나 새 session에서 작업을 재개하면 다른 연�
 |---|---|
 | 변하지 않는 목적 | source-derived single-rail `Zii`의 PowerSI 근접 정확성과 일반화 |
 | 현재 branch | `main`만 사용; 정리된 과거 branch를 다시 조사하지 않음 |
-| 현재 active work item | `NONE` after W6-BLOCK-E DONE |
-| 다음 권장 묶음 | `W6-BASE` READY (not executed): new clean main/root, controller-only one-run/no-retry |
-| standing authorization | bounded W6 and ranked in-scope local code/tests may proceed automatically until Usage Guard stop/checkpoint; Sol reviews, Luna writes |
-| authorization boundary | exact clean `main`, new output root, one run/no retry required; B correlation is historical evidence; C/D consumed their exactly-one old candidate/import reads; E had one production diagnostic invocation using candidate/import plus one separate orchestration ZIP central-directory read; all outputs were fresh-root only; old root forbidden for W6-BASE output/scoring/retry/mutation |
-| 고비용 검증 권한 | production SPD/PowerSI only through the frozen one-run gate; Usage Guard stop/checkpoint halts work |
-| 현재 정확성 상태 | `unknown / not_run` |
-| 현재 release 계산 증거 | W6 260729 attempt blocked_partial; import passed, correlation failed, no scoring |
+| 현재 active work item | `W7-PHYS-AUDIT-MOUNTED-PATH` (read-only frozen-artifact diagnosis before code changes) |
+| 다음 권장 묶음 | `W7-PHYS` READY: mounted-path audit of the completed 260729 FAIL artifacts |
+| current authorization | W6 production authority is consumed; only W7 frozen-artifact read-only audit and bounded local code/test work are authorized; Sol reviews, Luna writes |
+| future production invariant (not current authority) | if a future run is authorized: exact clean `main`, new output root, one run/no retry; B correlation is historical evidence; C/D consumed their exactly-one old candidate/import reads; E had one production diagnostic invocation plus one orchestration ZIP read; old root remains forbidden for W6-BASE output/scoring/retry/mutation |
+| 고비용 검증 권한 | W6 production one-run authority consumed; W7 read-only audit first, then one physical change/focused evidence/new gate |
+| 현재 정확성 상태 | `260729 retrospective FAIL`; unseen/generalization remains `unknown / not_run` |
+| 현재 release 계산 증거 | W6-BASE 260729 completed numerical FAIL; offline verifier exit 2 (integrity-valid) |
+| W6-BASE result root | `D:\SPD-Decap-PI-Evaluator-W6\fb36288781dcc0b884950ef5a486c474090ceebd\260729` — manifest `2b14f90e762abc49833518137812e8fc97fcde0e9c145795b7384210cfd9f5de`, sidecar `0d103e0ad47df80641fac0952a35a6eaa56cc9fdb71be24661903e451926e932`, correlation `969e40046e3a099d09557ba7500693460362336d76b067962436bd3b5177abc4` |
 | W6 attempt root | `D:\SPD-Decap-PI-Evaluator-W6\46d17dc73381d4292ea342d7a10e85d4f2e338f6\260729` (immutable; B correlation is historical; C/D reads are consumed; E had one production candidate/import invocation plus one separate orchestration ZIP read and did not use correlation; no W6-BASE output/scoring/retry/mutation; all output is fresh-root only) |
 | W6-BLOCK-B diagnostic | `D:\SPD-Decap-PI-Evaluator-W6-Diagnostics\6bbe44e2f36610755103757d6a4502c9ed9760d3\260729-vtrip0-1khz` — exit 1, no report/artifact |
 | W6 tombstone | `blocked_partial.json` SHA `b81525bd47744dc1ea5c75bb26f20ea354246ad88b8ce5bc9aef131cb50c09f7`; old policy SHA `c362acb01ef28cefbbd1d32753f86bccafbdd53355b42eda83c03a6ea810698b` |
-| source/bundle boundary | E diagnostic source-only HEAD `f23c5b241d522d05f50f6de05bd6819723b7d3db`; W6-BASE requires the new clean main HEAD from this docs closure commit plus a brand-new root; B correlation is historical, C/D reads are consumed, E did not use correlation, and all diagnostics were fresh-root only |
+| source/bundle boundary | W6-BASE ran once from clean `main` HEAD `fb36288781dcc0b884950ef5a486c474090ceebd` into its brand-new root; B correlation is historical, C/D reads are consumed, E did not use correlation, and no retry/reuse/mutation occurred |
 
 최초 목적은 [목적·기술 기준 2장](PRODUCT_PURPOSE_AND_TECHNICAL_BASELINE.md#2-최우선-목적),
 현재 증거 상태는 [6장](PRODUCT_PURPOSE_AND_TECHNICAL_BASELINE.md#6-증거와-상태-표기)이
@@ -55,12 +56,13 @@ active work item에 명시된 source/test/subsystem 문서만 추가로 읽는�
 - 완료 결과와 다음 사용자 결정
 
 목적, 제품 sign-off 범위 또는 PowerSI 수치 합격선은 이 문서에서 임의로 바꾸지
-않는다. 사용자는 bounded W6와 이후 ranked in-scope local code/tests에 standing
-authorization을 부여했으며, Usage Guard의 stop/checkpoint까지 Sol review/Luna
-write로 자동 진행할 수 있다. 이는 remote/release/installer, old-root W6-BASE reuse
-or mutation,
-retry 또는 threshold/fallback 변경을 승인하지 않는다. 그 밖의 권한 확장은
-작업을 멈추고 사용자 검토 후 상위 기준부터 개정한다.
+않는다. W6 one-run production authority는 260729 completed numerical FAIL과
+함께 소진되었다. 현재는 W7 frozen-artifact read-only audit와 bounded local
+code/test work만 Sol review/Luna write로 허용한다. 260729 candidate의 향후
+production rerun은 W7 audit 완료 → 정확히 한 physical change → focused evidence
+→ 새 gate 순서를 거쳐야 하며, 260804/P5/unseen은 개발 case FAIL 동안 금지한다.
+remote/release/installer, old-root reuse/mutation, retry, threshold/fallback 변경은
+승인되지 않았다.
 
 ### 2.3 갱신 시점
 
@@ -87,13 +89,14 @@ retry 또는 threshold/fallback 변경을 승인하지 않는다. 그 밖의 권
 | `W3` | product-core CI gate 활성화 | W1/W2 묶음이 한 번의 core suite에서 green | production solve 금지 |
 | `W4` | solver 수치 신뢰성 선행 문제 해결 | synthetic/analytic focused gate 통과 | full correlation 금지 |
 | `W5` | 정확성 계약과 frozen baseline 준비 | 사용자 승인 수치 gate, reference partition, exact run manifest | 실행 전 승인 필요 |
-| `W6` | current frozen candidate 1회 baseline | completed solve와 raw hash-bound artifact, rail별 판정 | standing authorization + exact one-run gate |
+| `W6` | current frozen candidate 1회 baseline | completed solve와 raw hash-bound artifact, rail별 판정 | consumed: 260729 exact one-run 결과 보존 |
 | `W7` | model-form error를 한 owning block씩 개선 | 사전 가설과 focused evidence 통과 | 승인된 candidate만 1회 |
 | `W8` | completed-solve release gate 및 전달 | 계산·artifact·installer가 exact release commit에 결속 | 최종 1회 |
 
 `W1`부터 `W4`까지는 production SPD 전체 correlation 없이 닫는 것이 원칙이다.
-`W6`는 낮은 단계가 모두 통과하고 standing authorization 아래에서도 exact clean
-`main`, brand-new output root, one-run/no-retry manifest 조건을 만족할 때만 시작한다.
+`W6` one-run gate는 260729에서 소진되었다. 향후 재실행은 W7 audit와 새 physical
+change/evidence/gate가 닫힌 뒤 별도 승인된 exact clean `main`, brand-new output
+root, one-run/no-retry 조건에서만 고려한다.
 
 ## 4. 작업 항목 register
 
@@ -118,8 +121,9 @@ retry 또는 threshold/fallback 변경을 승인하지 않는다. 그 밖의 권
 | `W6-BLOCK-C` | 13 | DONE | preserve deterministic factor/matrix context at the existing fail-closed pivot | exact one-run context retained; no solver/threshold/cache/physics change |
 | `W6-BLOCK-D` | 14 | DONE | estimate raw-system sparse condition lower bound at the fail-closed pivot | exact diagnostic lower bound retained; no threshold relaxation |
 | `W6-BLOCK-E` | 15 | DONE | classify and gate the rejected factor after row-scaled sparse solve | exact one-shot diagnostic met finite admittance, scaled pivot, and original residual gates; no threshold/fallback change |
-| `W6-BASE` | 16 | READY | exact clean main HEAD의 retrospective one-run baseline | W6-BLOCK-E closed; new clean HEAD·new output root·controller-only one-run/no-retry gate; old blocked root never reused |
-| `W7-PHYS` | 17 | BLOCKED | 가장 큰 error component의 owning physical block 하나 수정 | W6 rail별 error decomposition 필요 |
+| `W6-BASE` | 16 | DONE | exact clean main HEAD의 retrospective one-run baseline | 260729 completed manifest/sidecar, integrity-valid offline FAIL; no retry |
+| `W7-PHYS` | 17 | READY | 가장 큰 error component의 owning physical block 하나 수정 | mounted-path audit가 read-only frozen artifacts로 error owner를 분류 |
+| `W7-PHYS-AUDIT-MOUNTED-PATH` | 17A | ACTIVE | completed 260729 FAIL artifact의 mounted-path/physical error decomposition | frozen report/sidecar/candidate/import evidence read-only; code 수정 전 분류; 260804/P5 및 production rerun 금지 |
 | `W8-REL` | 18 | BLOCKED | completed known-case solve를 release gate에 연결하고 최종 전달 | accuracy/product gate와 exact release commit 필요 |
 | `D-DIST` | - | DEFERRED | Distribution routing/DRC scope 확대 | 사용자가 implementation-ready/DRC 목표로 승격할 때만 |
 | `D-DOC` | - | DEFERRED | README와 동결 연구 배너 정리 | current work를 방해할 때 별도 문서 묶음으로 처리 |
@@ -146,10 +150,9 @@ retry 또는 threshold/fallback 변경을 승인하지 않는다. 그 밖의 권
 더 작은 재현으로 돌아간다.
 
 `V4`는 자동 재시도하지 않는다. 실패·중단·자원 초과가 발생하면 raw evidence를
-보존하고 원인을 저비용 단계로 축소한다. standing authorization이 없으면
-사용자에게 다음 candidate/run 승인을 요청한다. 현재 standing authorization 아래서는
-저비용 classification이 닫히고 Sol이 새 exact clean HEAD와 brand-new root를
-동결한 뒤에만 다음 one-run을 자동 진행할 수 있다. `V5`는 intermediate code나
+보존하고 원인을 저비용 단계로 축소한다. W6 authority는 consumed 상태이므로,
+W7 audit가 owner를 분류하고 physical change/focused evidence/new gate가 닫히기
+전에는 어떤 production one-run도 시작하지 않는다. `V5`는 intermediate code나
 문서 변경 때문에 실행하지 않는다.
 
 ## 6. 변경 유형별 최소 검증
@@ -202,10 +205,12 @@ evidence identity before: `main` / `3b6ed2cc6308179002fee817c1b14f7efebd6cb9` / 
 결과 / artifact / diff: conditioning red node는 `1 failed`; 최소 solver/cache gate 후 adversarial+ceiling focused는 `2 passed in 0.72s`였다. 최종 `pytest -q tests/test_layer_surface_network.py tests/test_layerwise_network.py tests/test_spd_decap_evaluation.py::test_solver_version_0_8_2_recalculates_0_6_baseline_cache`는 `94 passed in 2.16s`였다. source-before는 `main` / `b2608a260a1f952c9b1f6c11d57b71e060ae575c`이며, 그 W4 묶음은 workflow Test command에 두 W4 conditioning gate를 보존적으로 추가한 bounded V3 selection을 `QT_QPA_PLATFORM=offscreen`으로 1회 실행해 `325 passed, 1 skipped in 18.25s`였다. Required CI command에는 두 W4 gate node가 유지된다. W4-FREQ synthetic closure는 별도 commit에서 완료되었고, 이번 묶음은 forward-reliability gate와 v0.8.4 live identity에 한정한다. W5 hash-bound validator/non-regression scripts와 기존 artifact identity는 pre-W4 값으로 동결해 두었으며, 이는 해당 W4 시점의 historical evidence이다. W5 승인 후에도 historical assets는 갱신하지 않는다. 그 W4 묶음에서는 remote CI/full suite/production SPD/PowerSI/installer/release를 실행하지 않았다. accuracy는 `unknown / not_run`; model-form/PowerSI 수치 합격을 주장하지 않는다.
 W5 policy와 implementation은 승인·동결되었고 W5-GATE는 DONE이다. W6-BLOCK-A도
 DONE이며, W6-BLOCK-B는 diagnostic pivot 미분류로 BLOCKED, W6-BLOCK-C와
-W6-BLOCK-D와 W6-BLOCK-E는 DONE, W6-BASE는 READY (미실행) 상태다. 제품 최상위 목적은 PowerSI와 비슷한 정확도의
-계산이며, accuracy는
-`unknown / not_run`, P5 unseen design 없이는 generalization/final signoff를
-금지한다.
+W6-BLOCK-D와 W6-BLOCK-E는 DONE이다. W6-BASE는 260729에 대해 completed
+manifest/sidecar를 남긴 **numerical FAIL**로 DONE이며, offline verifier는 exit 2로
+무결성을 확인했다. 제품 최상위 목적은 PowerSI와 비슷한 정확도의 계산이며,
+현재 개발 case 정확성은 `260729 retrospective FAIL`, unseen/generalization과
+260804/P5는 `unknown / not_run`이다. 개발 case FAIL 동안 260804/P5 실행과
+추가 production rerun은 금지한다.
 
 W6-BLOCK-A는 v6 adapter가 layerwise diagnostic/correlation에서만 누락된
 `terminal_complete_external_input=True`를 보강하고 explicit value를 보존하며
@@ -320,8 +325,45 @@ residual는 `3.919670457452144e-17 <= 1e-9`, frequency solve는 `1`, Touchstone�
 입력과 일치했다. ZIP central directory는 orchestration 중 read-only로 한 번
 열었지만 production diagnostic invocation은 한 번뿐이며 retry/edit는 없었다.
 이는 numerical promotion gate만 증명하며 model-form 또는 PowerSI accuracy를
-증명하지 않는다. W6-BASE는 이제 READY지만 아직 실행하지 않았고, 새 clean HEAD,
-brand-new root, controller-only, one-run/no-retry 경계를 유지한다.
+증명하지 않는다. W6-BASE는 260729 completed numerical FAIL로 닫혔고, 향후
+W7-PHYS audit가 끝나기 전에는 260804/P5 또는 production rerun을 시작하지 않는다.
+
+### W6-BASE completed evidence (260729)
+
+W6-BASE는 source-before clean `main` HEAD
+`fb36288781dcc0b884950ef5a486c474090ceebd`에서 정확히 한 번 실행되었다.
+새 root는
+`D:\SPD-Decap-PI-Evaluator-W6\fb36288781dcc0b884950ef5a486c474090ceebd\260729`이며
+controller exit `2`, elapsed `17938.47s`, manifest status `completed`,
+score status `FAIL`이다. Offline
+`validate_powersi_accuracy.py --verify-sidecar`도 정확히 한 번 실행되어 exit `2`
+(integrity-valid numerical FAIL)였다. retry/resume/reuse는 없었다.
+
+핵심 artifact SHA는 candidate `8b02836c03aa38c447fba37ddd30434a3e4ed34ce772654fa5bc3a8512543320`,
+import report `5a2714c7ce0d90df6cc9c4155c8f5ef43b78802cec47872d53f1c8361b4261a3`,
+correlation report `969e40046e3a099d09557ba7500693460362336d76b067962436bd3b5177abc4`,
+BLAS evidence `c9037556772693d56d61cd287b813c9b3964dc14b4ad4b248926a84d2eb5e83a`,
+manifest `2b14f90e762abc49833518137812e8fc97fcde0e9c145795b7384210cfd9f5de`,
+accuracy sidecar `0d103e0ad47df80641fac0952a35a6eaa56cc9fdb71be24661903e451926e932`이다.
+Mode10은 16개 rail을 실행했고 mode12는 16개 terminal-complete 결과를 재사용했다.
+Bare macro는 `1.7071112227372152`(limit 1.0), loaded macro는
+`15.910646842123072`(limit 1.0)로 모두 FAIL이다. 총 failure는 `57`건이다:
+low-offset/magnitude `16/16` FAIL, bare phase RMS `10/10` PASS와 phase max
+`9/10` PASS, loaded phase RMS/max/resonance 각각 `6/6` FAIL이다. Loaded
+signed-error anchors는 0.1 MHz `-0.142..-0.038 dB`, 1 MHz
+`-6.023..-3.058 dB`, 10 MHz `-27.527..-22.830 dB`, 100 MHz
+`-25.061..-18.059 dB`로 여섯 rail 모두 음수이며, VTRIP/0 critical magnitude
+RMS는 `17.644824 dB` (문서 표기 `17.645 dB`)다. 개발 case FAIL 동안
+260804/P5 실행, fitting, 전역 scaling/threshold weakening, 추가 production rerun은
+금지한다.
+
+현재 active item은 `W7-PHYS-AUDIT-MOUNTED-PATH`이다. 이는 code 변경 전
+완료된 260729 candidate/import/correlation/manifest/sidecar를 mounted-path와
+physical error-owner 관점에서 read-only 분류하는 묶음이다. 감사는 cap body,
+terminal Via, pad/anti-pad/current-spreading을 구분하고 정확히 하나의
+source-derived owning term을 선택해야 한다. 여섯 loaded rail의 error sign과
+frequency onset을 설명하지 못하면 `owner unclassified`로 중단하고 physics code를
+수정하지 않는다. W7-PHYS는 이 감사가 끝날 때까지 READY로 유지한다.
 
 Frozen historical v5 validator/policy/fixtures와 base benchmark는 byte-identical로
 보존된다. W6-E는 current v6→policy→accuracy-validator→controller trust chain을
@@ -333,13 +375,14 @@ validator `8487be60cad523f9ed2ea1c61c57b580d9c2bb0fee598eea0bb938145b82151e`,
 policy `6ea6e0b3327eaf828257334d7bb0211582fcc85ed632468223c7b566d0d3fd4d`,
 controller `b7d5b87d97e1441ccaa950a1fbe50a49f599483e68acee99596eda7dd612262d`이다.
 Historical v5 validator/policy/fixtures와 base benchmark는 byte-identical이며,
-260804 S92P SHA의 trailing `b`는 frozen registry correction이다. 새 W6-BASE는
-standing authorization 아래 이 문서 closure commit이 만든 새 exact clean `main`
-HEAD와 brand-new output root를 제공한다.
-one-run/no-retry 경계를 유지한다. D:/ hash 재검산과 old root의 W6-BASE controller
-재사용은 없었고, external PowerSI solver 실행은 없었다. Phase2는 등록된 PowerSI
-Touchstone을 소비했지만 완료 비교/score로 승격하지 않았다. remote/full suite,
-installer/release는 수행하지 않았다.
+260804 S92P SHA의 trailing `b`는 frozen registry correction이다. W6 one-run
+authority는 consumed 상태다. D:/ hash 재검산과 old root의 W6-BASE controller
+재사용은 없었고, external PowerSI solver 실행은 없었다. For the first
+`46d17dc...` blocked root only, Phase2는 등록된 PowerSI Touchstone을 소비했지만
+완료 비교/score로 승격하지 않았다; current `fb36288...` Phase2는 completed
+numerical FAIL을 남겼다. W7 audit와 하나의
+physical change/evidence/new gate 전에는 production rerun을 하지 않는다.
+remote/full suite, installer/release는 수행하지 않았다.
 
 ## 8. Context 압축·새 session 복구 절차
 
@@ -367,8 +410,9 @@ installer/release는 수행하지 않았다.
 - 사전 예산에 없는 `V4` 또는 `V5`가 필요함
 - 같은 고비용 검증을 원인 변경 없이 다시 실행하려 함
 - source/reference/port/profile/compiler identity가 불명확함
-- standing authorization 범위를 넘어 실제 입력·외부 권한·release authority 또는
-  사용자 선택이 필요함 (in-scope local code/tests와 새 W6 one-run은 예외)
+- 현재 권한 범위를 넘어 실제 입력·외부 권한·release authority 또는 사용자
+  선택이 필요함 (허용된 예외는 W7 frozen-artifact read-only audit와 bounded local
+  code/tests뿐)
 - 사용자 변경과 active item이 같은 파일에서 충돌함
 
 어려움, 긴 runtime 또는 test 수가 많다는 이유만으로 범위를 넓히거나 목적을
@@ -421,3 +465,5 @@ installer/release는 수행하지 않았다.
 | 1.9 | 2026-08-25 | W6-BLOCK-C DONE 및 W6-BLOCK-D sparse condition lower-bound instrumentation과 V1/V2 evidence를 기록하고 W6-BASE를 보류. |
 | 1.10 | 2026-08-25 | W6-BLOCK-D DONE, W6-BLOCK-E row-scaled sparse solve ACTIVE, solver 0.8.5 trust rotation과 E V1 evidence를 기록. |
 | 1.11 | 2026-08-25 | W6-BLOCK-E 단일 진단 exit0과 numerical promotion gate를 기록하고 W6-BASE READY(미실행)로 전환. |
+| 1.12 | 2026-08-25 | W6-BASE 260729 completed numerical FAIL과 integrity-valid offline exit 2를 기록하고 W7-PHYS mounted-path audit를 ACTIVE로 지정. |
+| 1.13 | 2026-08-25 | W6 authority consumed를 명시하고 W7 owning-term audit·57 failure evidence·owner-unclassified stop 조건을 고정. |
