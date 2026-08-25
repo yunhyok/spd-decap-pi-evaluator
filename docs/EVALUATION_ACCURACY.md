@@ -301,8 +301,10 @@ The controller reconstructs the exact two internal phase argv arrays using
 correlation; those internal commands are not run directly. The exact 16-rail
 configuration, source/reference paths, and manifest are required inputs; output
 directories must be new/empty and automatic retry is `0`. These are execution
-templates for a consumed W6 one-run gate; any future use is dormant until W7 audit,
-one physical change, focused evidence, and a new gate. They were used once for 260729
+templates for a consumed W6 one-run gate; any future use is dormant until the user
+activates and completes a new exclusive-owner classification item selecting exactly
+one source-derived block, then exactly one physical change, focused evidence, and a
+new gate. They were used once for 260729
 at the exact HEAD recorded below; no retry, resume, reuse, or mutation occurred.
 The completed root is
 `D:\SPD-Decap-PI-Evaluator-W6\fb36288781dcc0b884950ef5a486c474090ceebd\260729`.
@@ -356,16 +358,19 @@ exact current W6 HEAD. Historical v5 validator/policy/fixtures and base benchmar
 remain byte-identical. The 260804 S92P SHA trailing `b` is a frozen registry typo
 correction, not a recomputation.
 
-W6 production authority is consumed by the completed 260729 numerical FAIL. Only
-W7 frozen-artifact read-only audit and bounded local code/test work remain authorized,
-with Sol review/Luna writes. It does not authorize remote/release/installer, retries,
-old-root W6-BASE reuse or mutation, or any threshold,
-fallback, reordering, port, or physics change. C and D already consumed their
+W6 production authority is consumed by the completed 260729 numerical FAIL. The W7
+frozen-artifact audit is complete but negative/unclassified; active item is NONE and
+no further technical authority is granted. A future production rerun requires the
+user to activate and complete a new exclusive-owner classification item selecting
+exactly one source-derived block, then exactly one physical change, focused evidence,
+and a new gate. Remote/release/installer, retries, old-root W6-BASE reuse or mutation,
+and threshold, fallback, reordering, port, or physics changes remain unauthorized. C and D already consumed their
 exactly-one old candidate/import reads. E had one production candidate/import
 invocation plus one separate orchestration ZIP read, did not use the correlation
 report, and wrote only to a brand-new E root. W6-BASE is now complete for 260729
-numerical FAIL; W7-PHYS mounted-path audit is the active next step. 260804/P5 and
-additional production reruns remain forbidden while the development case is FAIL.
+numerical FAIL; W7-PHYS-AUDIT-MOUNTED-PATH is DONE negative/unclassified and W7-PHYS
+is BLOCKED because no exclusive owner was classified. Active item is NONE; 260804/P5
+and additional production reruns remain forbidden while the development case is FAIL.
 The local bounded V3 is a mirror of the required CI selection; remote CI was not run.
 
 The B diagnostic root
@@ -378,8 +383,8 @@ or scored artifact exists. The existing exception lacked factor context, so root
 remains unclassified. C added only deterministic context to that existing fail-closed
 exception; solver results, thresholds, ordering, cache, ports, physics, and trust
 identities are unchanged. D's exactly-once diagnostic is consumed; no retry or full
-W6 run is authorized before the W7 audit and one-physical-change/new-gate sequence
-closes.
+W6 run is authorized until that new user-selected owner-classification,
+physical-change, focused-evidence, and new-gate sequence closes.
 
 W6-BLOCK-A supplies missing `terminal_complete_external_input=True` only in the
 versioned layerwise diagnostic/correlation adapter, preserves explicit values and
@@ -467,10 +472,24 @@ production diagnostic invocation and no retry/edit. E is DONE and W6-BASE is DON
 for the 260729 numerical FAIL. These structural/artifact checks are not model-form
 correctness, unseen/generalization evidence, or a PowerSI-accuracy PASS/sign-off;
 the retrospective 260729 comparison is FAIL.
-W7-PHYS audit is read-only over frozen artifacts: distinguish cap body, terminal Via,
-pad/anti-pad/current-spreading, and select exactly one source-derived owning term.
-If loaded-rail error sign and frequency onset cannot be explained, stop as
-`owner unclassified` and make no physics code change.
+W7-PHYS-AUDIT-MOUNTED-PATH is DONE negative/unclassified. It was read-only over frozen
+artifacts and retained cap/Via/spatial provenance, but did not select an owning term;
+W7-PHYS is BLOCKED and no physics code change is authorized.
+
+### W7 mounted-path numerical evidence (negative)
+
+The single audit output was
+`D:\SPD-Decap-PI-Evaluator-W7\1af7dd7a1150749a579b55623415ee8abedefda4\260729\mounted_path_audit.json`
+(15,796 bytes, SHA-256
+`e3c28144b4578c6d17846b70bc345ffab634eb58c9faa698401b9bffcc663ceb`). It returned
+exit 2 after 62.98s: `diagnostic_fail`, selected block `null`, causal owner `null`,
+owner `unclassified`, six failures, all cap-only first-peak bin mismatches. Cap-only /
+candidate first peaks were VTRIP 2.660725/2.440619 MHz (3 bins), VINT
+2.660725/2.371374 MHz (4), and VCPU 2.818383/2.585235 MHz (3); the ±1-bin condition
+therefore failed. Pair RMS candidate/reference dB was VTRIP 0.004525/0.073046,
+VINT 0.011577/0.787786, VCPU 0.041046/2.430263. These are diagnostic/provenance
+numbers only, not numeric accuracy or PowerSI evidence; 260729 remains FAIL and
+unseen/generalization remains unknown/not_run.
 
 Frozen historical v5 validator/policy/fixtures and base benchmark remain byte-identical.
 W6-E atomically rotated the current v6→policy→accuracy-validator→controller trust

@@ -1,9 +1,9 @@
 # SPD Decap PI Evaluator 목적·기술 기준
 
 - 적용 제품: **SPD Decap PI Evaluator v0.23.0**
-- 문서 버전: **1.12**
+- 문서 버전: **1.13**
 - W5 approved/machine-frozen source-before: `main` commit `027ac7a09a3eded15f45c41860945f9d4c7f488d`
-- 상태: **G0 기준 문서** — [작업 기준](WORK_EXECUTION_BASELINE.md)과 함께 사용하며, W5 DONE·W6-BLOCK-A DONE·W6-BLOCK-B BLOCKED·W6-BLOCK-C DONE·W6-BLOCK-D DONE·W6-BLOCK-E DONE·W6-BASE DONE (260729 numerical FAIL)·W7-PHYS READY·active W7-PHYS-AUDIT-MOUNTED-PATH
+- 상태: **G0 기준 문서** — [작업 기준](WORK_EXECUTION_BASELINE.md)과 함께 사용하며, W5 DONE·W6-BLOCK-A DONE·W6-BLOCK-B BLOCKED·W6-BLOCK-C DONE·W6-BLOCK-D DONE·W6-BLOCK-E DONE·W6-BASE DONE (260729 numerical FAIL)·W7-PHYS-AUDIT-MOUNTED-PATH DONE (negative/unclassified)·W7-PHYS BLOCKED·active NONE
 - 최종 개정: 2026-08-25 (Asia/Seoul)
 
 ## 1. 문서 역할과 권위
@@ -353,20 +353,22 @@ manifest SHA `2b14f90e762abc49833518137812e8fc97fcde0e9c145795b7384210cfd9f5de`,
 sidecar SHA `0d103e0ad47df80641fac0952a35a6eaa56cc9fdb71be24661903e451926e932`,
 and correlation SHA `969e40046e3a099d09557ba7500693460362336d76b067962436bd3b5177abc4`.
 
-W6 production authority is consumed by the completed 260729 numerical FAIL. Only
-W7 frozen-artifact read-only audit and bounded local code/test work remain authorized,
-with Sol review and Luna writes. It does not authorize remote/release/installer work,
+W6 production authority is consumed by the completed 260729 numerical FAIL. The W7
+frozen-artifact audit is complete but negative/unclassified; active work is NONE and
+no further technical authority is granted. A future 260729 production rerun requires
+the user to activate and complete a new exclusive-owner classification item selecting
+exactly one source-derived block, followed by exactly one physical change, focused
+evidence, and a new gate. This does not authorize remote/release/installer work,
 retries, old-root W6-BASE reuse or mutation, threshold weakening, fallback,
-reordering, port movement, or physics changes. Any future 260729 production rerun
-requires W7 audit, exactly one physical change, focused evidence, and a new gate.
+reordering, port movement, or physics changes.
 Before any future W6 run, the completed W6-BLOCK-E gate remains a prerequisite. C and D already consumed their
 exactly-one old candidate/import reads and wrote only to fresh roots; E had one
 production candidate/import invocation plus one separate orchestration ZIP
 central-directory read, did not use the correlation report, and wrote only to its
 brand-new diagnostic root. The old root remains forbidden for
 W6-BASE/controller/scoring/retry/mutation. The next BASE run must use a new root,
-controller-only execution, one-run/no-retry, and cannot start before the W7 sequence
-closes. The local
+controller-only execution, one-run/no-retry, and cannot start until that newly
+user-authorized owner-classification/change/evidence/gate sequence closes. The local
 bounded V3 result is a mirror of the required CI selection, not remote CI evidence.
 
 The focused parity V1 was red once and green once (`1 passed in 0.88s`); V2 was
@@ -421,11 +423,16 @@ adaptive sweep `false`. Candidate/import bindings matched their immutable inputs
 the ZIP central directory was opened read-only once during orchestration, but only
 one production diagnostic invocation occurred. No retry or edit was performed.
 This proves the numerical promotion gate only, not model-form or PowerSI accuracy.
-E is DONE; W6-BASE is DONE for the 260729 numerical FAIL. W7-PHYS is READY and its
-active mounted-path audit must finish before any 260804/P5 or production rerun. The
-audit is read-only and must distinguish cap body, terminal Via, pad/anti-pad/current-
-spreading, selecting exactly one source-derived owning term; if loaded-rail sign and
-frequency onset remain unexplained, stop as `owner unclassified` without physics code.
+E is DONE; W6-BASE is DONE for the 260729 numerical FAIL. W7-PHYS-AUDIT-MOUNTED-PATH
+is DONE negative/unclassified: the read-only audit preserved cap/Via/spatial provenance
+but its cap-only peak/bin prerequisite failed on all six loaded rails. No exclusive
+source-derived owning term was selected, so W7-PHYS is BLOCKED, active work is NONE,
+and no physics code change is authorized.
+
+The single W7 audit run (tool commit `1af7dd7a1150749a579b55623415ee8abedefda4`)
+returned exit 2 after 62.98s with `diagnostic_fail`, selected block `null`, causal
+owner `null`, and owner `unclassified`. It produced no accuracy pass or sign-off;
+260729 remains FAIL and 260804/P5/unseen remain unrun/unknown.
 
 Approval basis commit `027ac7a09a3eded15f45c41860945f9d4c7f488d` is distinct from
 the caller-supplied exact current `main` HEAD required at a future W6 invocation;
@@ -460,5 +467,6 @@ and the exact Git HEAD are frozen together. Current trust identities: base `d43b
 | 1.10 | 2026-08-25 | W6-BLOCK-E 단일 진단 exit0 및 수치 promotion gate를 기록하고 W6-BASE READY(미실행)로 전환. |
 | 1.11 | 2026-08-25 | W6-BASE 260729 completed numerical FAIL과 integrity-valid offline exit 2를 기록하고 W7-PHYS mounted-path audit를 지정. |
 | 1.12 | 2026-08-25 | W6 production authority consumed; W7 frozen-artifact owner audit와 one-physical-change/new-gate 순서를 고정. |
+| 1.13 | 2026-08-25 | W7 mounted-path audit negative/unclassified 종료, owning block 미분류로 W7-PHYS BLOCKED 및 active NONE. |
 | 1.1 | 2026-08-24 | `WORK_EXECUTION_BASELINE.md`를 두 번째 canonical 문서로 연결. |
 | 1.0 | 2026-08-24 | v0.24 계획 중심의 Distribution–solver PRD를 제품 전체의 목적·기술 기준으로 개정. PowerSI 정확성 우선, 상태 어휘, 기술 경계, promotion gate, 검증 비용 통제와 two-document 작업 방식을 고정. |
