@@ -640,6 +640,12 @@ payload unproven; all joint acceptance groups are unmet. Sol accepted the fail-c
 ACTIVE is now NONE.
 W6 reimplementation authority remains unusable; no automatic path discovery/whitelist expansion,
 code, test, artifact, production, old-root, release, or accuracy claim is authorized.
+17T is the sole ACTIVE bounded path-discovery item at clean main HEAD
+`d5f489ba28000cd13bfaef719b17e5b4559d1d23`. User approval permits only the three sequential
+queries recorded in the Work recovery card, each once with a 40-line/12-file budget; zero,
+over-budget, split, or unrelated results stop the item. The queries classify candidates only;
+they do not prove implementation readiness. No fourth query, file open, automatic expansion,
+code/test/artifact/production execution, old-root reuse, release, or accuracy claim is authorized.
 The compact scenario quotient
 stores only schema/status, compiled SQLite stores aggregate `finite_parallel_rl` links/count/
 R/L/owners without source series terms, segments, or `physical_model_status`, and the
