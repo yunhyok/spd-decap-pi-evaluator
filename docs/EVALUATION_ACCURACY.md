@@ -688,14 +688,19 @@ delegated; absence is not evidence. 17AD is DONE at clean main HEAD
 `7537c8ebee9109071db54cc84f5562e375bfc07f`: its exact frozen query ran once, exit 0, with 2 output
 lines/1 file. The definition is `src/spd_decap_pi/spd_adapter.py:131` and the exactly one selected
 non-definition caller is `src/spd_decap_pi/spd_adapter.py:7868`; location evidence only, no files
-opened and no compiler/delegate inference. Sole ACTIVE next is
-`W7-PHYS-W6-RAW-SPATIAL-V3-MERGE-OWNER-BOUNDARY-DISCOVERY` (17AE), limited to the exact fenced
-PowerShell gate in the Work document with mandatory `--with-filename`: exactly 2 output lines/1 file,
-first line <=7868 and second >7868; command error, parse failure, wrong count/file count, or
-nonbracketing => STOP. Output is only top-level owner/signature boundary location evidence; no
-implementation read, file open, code/test/profile/accuracy/production claim, or automatic contiguous
-read. A later contiguous source read requires separate documentation/authorization and a reasonably
-bounded bracket.
+opened and no compiler/delegate inference. 17AE is DONE as source-location boundary evidence at clean
+main HEAD `c5f3b1a234c8deeffa26b0fa6cf60dabc4d576d9`: exact frozen PowerShell once, exit 0, exactly
+2 lines/1 file: `src/spd_decap_pi/spd_adapter.py:6423:def import_spd_scenario(` and
+`src/spd_decap_pi/spd_adapter.py:8024:def verify_scenario_source(`. The bracketing owner is
+`import_spd_scenario`, but the 6423-8024 span is 1601 lines and not reasonably bounded; no contiguous/
+implementation read was made and no compiler/delegate inference is claimed. Sole ACTIVE next is
+`W7-PHYS-W6-RAW-SPATIAL-V3-COMPILER-MERGE-SYMBOL-DISCOVERY` (17AF), limited to the exact query
+`rg -n --with-filename --no-heading --color never '\b(?:compile_raw_spatial_contact_asset|_merge_raw_spatial_contact_asset)\b' 'src/spd_decap_pi/spd_adapter.py'`;
+cap <=10 output lines and exactly 1 file. Ignore import/definition matches; require a non-import/
+non-definition compiler occurrence at or before the known non-definition merge call, select nearest
+compiler occurrence, and require compiler-to-merge span <=120 lines. Error, over-cap, wrong file,
+missing actual call, compiler after merge, or span >120 => STOP. Location evidence only; 17AF opens no
+files and any contiguous read requires separate authorization.
 Contract: v2 constants/API byte-identical; profile/global/app/solver/convergence/policy/controller
 identities unchanged; only the opt-in raw-spatial v3 schema/compiler sibling identity is new. v3 sibling with kw-only opt-in flags, five normalized tables,
 no gap table, positive-intervening-thickness fsum spacing, row/coordinate/ProjectSpec/source-SHA digest,
