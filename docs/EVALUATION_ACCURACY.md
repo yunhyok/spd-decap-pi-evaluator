@@ -596,10 +596,14 @@ unclassified. 17K is DONE: local adjacent-gap dispersive admittance is classifie
 `Ybulk=j2πf Σ[(Dk(1−jDf)/εr_nom) C_M]` (Hz/F/dimensionless inputs yield S), while
 Maxwell C/dispersion/load/solver insertion remains external/unclassified. Grounding/Schur/
 modal(0,0) replacement and numerical gates are reduction/validation, not extra physics; arbitrary
-caller loads remain external/unclassified. The sole ACTIVE successor is
-`W7-PHYS-MAXWELL-CAPACITANCE-PRODUCER-TRACE`, restricted to one complete read of
-`src/spd_decap_pi/_core/solver/multilayer_capacitance.py` plus one Sol review, with all
-execution/artifact/edit paths zero. The compact scenario quotient
+caller loads remain external/unclassified. 17L is DONE: exact 2D polygon-overlay lumped parallel-plate
+Maxwell C is source-classified as `C=eps0·epsr·A/d` (F) with Laplacian assembly; optional
+nonadjacent opening coupling is an opt-in projected-aperture parallel-plate approximation.
+There is no frequency/complex-Y, conductivity, sheet R/L, skin, nonuniform in-plane current, or
+current-spreading term; W6 input/asset fidelity remains external. The sole ACTIVE successor is
+`W7-PHYS-PLANE-SHEET-RL-REUSE-DISCOVERY`, restricted to the exact one-invocation command in
+the Work recovery card from clean HEAD `7cf6d6072777750a5932ac3f68710d11e1f5e2e1`, followed
+by one Sol review; no full-file read or execution. The compact scenario quotient
 stores only schema/status, compiled SQLite stores aggregate `finite_parallel_rl` links/count/
 R/L/owners without source series terms, segments, or `physical_model_status`, and the
 production-complete surface certificate uses a compiled-only stub without the raw canonical
