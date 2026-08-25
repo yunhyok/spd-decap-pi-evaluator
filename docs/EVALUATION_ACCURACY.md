@@ -760,9 +760,12 @@ and no solver/production/accuracy claim. 17AS is DONE-negative at clean main
 test/production/PowerSI/accuracy/causal claim. 17AT is BLOCKED/implementation REJECT after one
 frozen-evidence design pass; all six bindings remain UNPROVEN: profile+require owner, hash-bound
 evaluation→solver handoff, replacement/no-double-counting owner-off seam, differential/nullspace/gauge/
-rail-order mapping, worker/immutable/cache fencing, and minimal file/test/V1/V2 whitelist. Sole ACTIVE
-successor is 17AU `W7-PHYS-W6-RAW-SPATIAL-V3-EVALUATION-HANDOFF-BOUNDARY-DISCOVERY`, limited to its exact
-once query; no code/test/source/production/PowerSI/profile/solver/accuracy/causal claim.
+rail-order mapping, worker/immutable/cache fencing, and minimal file/test/V1/V2 whitelist. 17AU is DONE
+(location evidence) at clean main `9f1c95fa0a933445bbb918aff050fcb6238b1e6b`: exact query once exit0,
+22 lines/2 files; raw loader/require cluster 2460-2477 unique; evaluation profile resolution 2363 plus
+build import 2404/call 2420 one unambiguous cluster; no source range/code/test/claims. Sole ACTIVE successor
+is 17AV `W7-PHYS-W6-RAW-SPATIAL-V3-EVALUATION-HANDOFF-CALLSITE-TRACE`, one exact 120-line read only; no
+code/test/production/profile/solver/accuracy/causal claim.
 Contract: v2 constants/API byte-identical; profile/global/app/solver/convergence/policy/controller
 identities unchanged; only the opt-in raw-spatial v3 schema/compiler sibling identity is new. v3 sibling with kw-only opt-in flags, five normalized tables,
 no gap table, positive-intervening-thickness fsum spacing, row/coordinate/ProjectSpec/source-SHA digest,
