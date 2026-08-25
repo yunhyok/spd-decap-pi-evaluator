@@ -366,7 +366,9 @@ raw-base/global finite-route ownership in the v4 scenario network;
 fail-closed. This is source-proven with high confidence, not certificate R/L or
 PowerSI accuracy evidence. At the 17D closure active work was NONE. The first corrected
 successor remains BLOCKED after its static REJECT; successor-2 is DONE and current active
-work is NONE. The next `W7-PHYS-W6-MULTISEGMENT-EXPOSURE` is BLOCKED. A future production rerun requires the
+work is NONE. `W7-PHYS-W6-MULTISEGMENT-EXPOSURE` is now DONE as source-classified evidence
+unavailable/actual exposure unknown; the prospective runtime-term evidence candidate is
+BLOCKED/YAGNI. A future production rerun requires the
 user to activate and complete a new exclusive-owner classification item selecting
 exactly one source-derived block, then exactly one physical change, focused evidence,
 and a new gate. Remote/release/installer, retries, old-root W6-BASE reuse or mutation,
@@ -577,8 +579,21 @@ and the worktree was clean. The narrow behavior evidence is per-segment geometry
 aggregation, no partial aggregate on segment failure, and one contribution per segment; this
 does not prove W6 exposure, PowerSI/forward accuracy, causal ownership, artifact/solver/
 production validation, or release readiness. The next
-`W7-PHYS-W6-MULTISEGMENT-EXPOSURE` is BLOCKED pending separate exact read authority; old-root
-mutation/retry and production execution remain prohibited.
+`W7-PHYS-W6-MULTISEGMENT-EXPOSURE` is DONE as source-classified evidence unavailable; actual
+W6 first-segment versus all-segment exposure remains unknown. The sole prospective evidence
+candidate is `W7-PHYS-PROSPECTIVE-RUNTIME-TERM-EVIDENCE`, BLOCKED/YAGNI. The compact scenario quotient
+stores only schema/status, compiled SQLite stores aggregate `finite_parallel_rl` links/count/
+R/L/owners without source series terms, segments, or `physical_model_status`, and the
+production-complete surface certificate uses a compiled-only stub without the raw canonical
+certificate. Import/correlation/manifest data retain identities/counts, not in-memory
+retained/suppressed/retarget rows, so candidate rereading cannot classify the old execution.
+This turn's evidence budget was D: root/candidate path+size metadata enumeration only; candidate
+outer hash, ZIP central/manifest, `scenario.json`, small reports, prior audit JSON, and Python/
+test/solver/production execution were all zero. No exposure, affected-term/rail count, R/L
+delta, W6 cause, accuracy, causal owner, or fix-benefit claim is made. The sole next candidate,
+`W7-PHYS-PROSPECTIVE-RUNTIME-TERM-EVIDENCE`, is BLOCKED/YAGNI and would require an independently
+selected grounded physical change, new candidate/HEAD/root, and one no-retry term digest/count/
+owner-partition run.
 
 Frozen historical v5 validator/policy/fixtures and base benchmark remain byte-identical.
 W6-E atomically rotated the current v6→policy→accuracy-validator→controller trust

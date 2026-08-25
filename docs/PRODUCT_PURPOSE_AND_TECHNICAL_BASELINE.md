@@ -1,9 +1,9 @@
 # SPD Decap PI Evaluator 목적·기술 기준
 
 - 적용 제품: **SPD Decap PI Evaluator v0.23.0**
-- 문서 버전: **1.27**
+- 문서 버전: **1.28**
 - W5 approved/machine-frozen source-before: `main` commit `027ac7a09a3eded15f45c41860945f9d4c7f488d`
-- 상태: **G0 기준 문서** — [작업 기준](WORK_EXECUTION_BASELINE.md)과 함께 사용하며, W5 DONE·W6-BLOCK-A DONE·W6-BLOCK-B BLOCKED·W6-BLOCK-C DONE·W6-BLOCK-D DONE·W6-BLOCK-E DONE·W6-BASE DONE (260729 numerical FAIL)·W7-PHYS-AUDIT-MOUNTED-PATH DONE (negative/unclassified)·W7-PHYS-OWNER-TERMINAL-VIA-VS-SPATIAL DONE (negative/evidence-unavailable)·W7-PHYS-EVIDENCE-MISSING-PATH-COVERAGE DONE (negative/evidence-unavailable)·W7-PHYS-PRODUCTION-VIA-ROUTE-SOURCE-TRACE DONE (source-classified raw-base/global finite-route ownership; local calibrated half-branches not selected; mixed ownership fail-closed)·W7-PHYS-RAW-FINITE-VIA-RL-GENERATION-TRACE DONE (producer unclassified, high confidence)·W7-PHYS-GROUND-REACHABILITY-RL-PRODUCER-TRACE DONE (producer delegated/unclassified, high confidence)·W7-PHYS-VIA-SEGMENT-RL-MODEL-TRACE DONE (source-classified model; conditional multi-segment caller-contract bug confirmed; W6 exposure unknown)·W7-PHYS-MULTISEGMENT-RL-CALLER-FIX BLOCKED (fixture-contract red; production diff statically accepted and retained uncommitted)·W7-PHYS-CORRECTED-SUCCESSOR BLOCKED (static REJECT; zero pytest executions)·W7-PHYS-CORRECTED-SUCCESSOR-2 DONE·W7-PHYS-W6-MULTISEGMENT-EXPOSURE BLOCKED·W7-PHYS BLOCKED·ACTIVE NONE
+- 상태: **G0 기준 문서** — [작업 기준](WORK_EXECUTION_BASELINE.md)과 함께 사용하며, W5 DONE·W6-BLOCK-A DONE·W6-BLOCK-B BLOCKED·W6-BLOCK-C DONE·W6-BLOCK-D DONE·W6-BLOCK-E DONE·W6-BASE DONE (260729 numerical FAIL)·W7-PHYS-AUDIT-MOUNTED-PATH DONE (negative/unclassified)·W7-PHYS-OWNER-TERMINAL-VIA-VS-SPATIAL DONE (negative/evidence-unavailable)·W7-PHYS-EVIDENCE-MISSING-PATH-COVERAGE DONE (negative/evidence-unavailable)·W7-PHYS-PRODUCTION-VIA-ROUTE-SOURCE-TRACE DONE (source-classified raw-base/global finite-route ownership; local calibrated half-branches not selected; mixed ownership fail-closed)·W7-PHYS-RAW-FINITE-VIA-RL-GENERATION-TRACE DONE (producer unclassified, high confidence)·W7-PHYS-GROUND-REACHABILITY-RL-PRODUCER-TRACE DONE (producer delegated/unclassified, high confidence)·W7-PHYS-VIA-SEGMENT-RL-MODEL-TRACE DONE (source-classified model; conditional multi-segment caller-contract bug confirmed; W6 exposure unknown)·W7-PHYS-MULTISEGMENT-RL-CALLER-FIX BLOCKED (fixture-contract red; production diff statically accepted and retained uncommitted)·W7-PHYS-CORRECTED-SUCCESSOR BLOCKED (static REJECT; zero pytest executions)·W7-PHYS-CORRECTED-SUCCESSOR-2 DONE·W7-PHYS-W6-MULTISEGMENT-EXPOSURE DONE (source-classified evidence unavailable; actual exposure unknown)·W7-PHYS-PROSPECTIVE-RUNTIME-TERM-EVIDENCE BLOCKED·W7-PHYS BLOCKED·ACTIVE NONE
 - 최종 개정: 2026-08-25 (Asia/Seoul)
 
 ## 1. 문서 역할과 권위
@@ -515,8 +515,20 @@ the worktree was clean. The behavior claim is narrow: each persisted segment use
 geometry, completed tuples are fsum-summed, failures leave aggregate fields unavailable,
 and each contribution is added once. W6 exposure, PowerSI/forward accuracy, causal ownership,
 artifact/solver/production validation, and release readiness remain unclaimed. Next
-`W7-PHYS-W6-MULTISEGMENT-EXPOSURE` is BLOCKED pending separate exact read authority; no
-old-root mutation or retry.
+`W7-PHYS-W6-MULTISEGMENT-EXPOSURE` is DONE as source-classified evidence unavailable:
+the compact scenario quotient stores only schema/status, compiled SQLite stores aggregate
+`finite_parallel_rl` links/count/R/L/owners without source `series_terms`, segments, or
+`physical_model_status`, and production-complete surface certificates use a compiled-only
+stub without the raw canonical certificate. Import/correlation/manifest data provide
+identities and counts, not in-memory retained/suppressed/retarget rows. Therefore rereading
+the candidate cannot classify old W6 first-segment versus all-segment execution. The only
+allowed evidence budget here was D: root/candidate path+size metadata enumeration; candidate
+outer hash, ZIP central/manifest, `scenario.json`, small reports, prior audit JSON, and all
+Python/test/solver/production execution were zero. No exposure-present/absent, affected-term
+or rail count, R/L delta, W6-cause, accuracy, causal-owner, or fix-benefit claim is made.
+`W7-PHYS-PROSPECTIVE-RUNTIME-TERM-EVIDENCE` is BLOCKED/YAGNI and would require a separately
+selected grounded physical change plus a new candidate/HEAD/root, one-run/no-retry term
+digest/count/owner partition.
 
 Approval basis commit `027ac7a09a3eded15f45c41860945f9d4c7f488d` is distinct from
 the caller-supplied exact current `main` HEAD required at a future W6 invocation;
@@ -565,5 +577,6 @@ and the exact Git HEAD are frozen together. Current trust identities: base `d43b
 | 1.25 | 2026-08-25 | 17H focused fixture-contract node가 1회 red로 종료되어 production diff는 retained uncommitted로 보존되었고, corrected successor의 static REJECT(0 pytest) 후 17H-CORRECTED-SUCCESSOR-2를 사용자 pre-approval 아래 유일한 ACTIVE test-only correction으로 지정하며 exact HEAD/diff/node boundary를 고정. |
 | 1.26 | 2026-08-25 | first corrected successor static REJECT를 기록하고 17H-CORRECTED-SUCCESSOR-2의 TOP/PWR/GND padstack·full-stackup test-only contract를 유일한 ACTIVE item으로 고정. |
 | 1.27 | 2026-08-25 | 17H-CORRECTED-SUCCESSOR-2를 단일 focused PASS와 commit `7fd8df9`로 DONE 처리하고 W6 multisegment exposure 후보를 BLOCKED로 등록. |
+| 1.28 | 2026-08-25 | W6 multisegment exposure를 source-classified evidence unavailable/actual exposure unknown으로 종료하고 prospective runtime-term evidence를 BLOCKED/YAGNI로 등록. |
 | 1.1 | 2026-08-24 | `WORK_EXECUTION_BASELINE.md`를 두 번째 canonical 문서로 연결. |
 | 1.0 | 2026-08-24 | v0.24 계획 중심의 Distribution–solver PRD를 제품 전체의 목적·기술 기준으로 개정. PowerSI 정확성 우선, 상태 어휘, 기술 경계, promotion gate, 검증 비용 통제와 two-document 작업 방식을 고정. |
