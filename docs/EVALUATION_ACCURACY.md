@@ -744,11 +744,17 @@ production W6/accuracy claim. 17AO is DONE as location evidence at clean main
 `f9ab13c752f7b9c832e69f1d0a16f54fabd38085`: exact query once exit0, 4 lines/2 files; gui/main_window.py
 line109 import and line1867 actual call, spd_adapter.py line6423 def and line8070 __all__; ignoring
 import/def/string yields exactly one app caller `src/spd_decap_pi/gui/main_window.py:1867`; no production
-activation claim. Sole ACTIVE next is
-`W7-PHYS-W6-RAW-SPATIAL-V3-PRODUCTION-IMPORT-CALLER-TRACE` (17AP), authorizing exactly once reading
-`src/spd_decap_pi/gui/main_window.py` lines1838-1895 (58 lines). Require complete worker boundary, call
-args, progress/cancellation, return/error handling, and local product/profile opt-in setting; boundary
-truncation => STOP without extension. No code/test/production/accuracy claim.
+activation claim. 17AP is DONE at clean main
+`d476ce2da4bdb852c8164f2036be07eed8c504b0`: exact once read gui/main_window.py 1838-1895 (58 lines)
+completed `_job_import_spd` boundary1859-1877; sole call omits include_plane_sheet_payload => default-v2;
+progress scaled to65%, cancellation forwarded, view prep + `_PreparedScenarioImport` return; no local
+try/except or product/profile opt-in, upper error handling unproven. No code/test/production/accuracy claim.
+Sole ACTIVE next is `W7-PHYS-W6-RAW-SPATIAL-V3-GUI-CALLER-TEST-SEAM-DISCOVERY` (17AQ), authorizing
+exactly once `rg -n --with-filename --no-heading --color never --glob '*.py' '\b_job_import_spd\b' 'tests'`.
+Discovery/location evidence only; no source read/test/code. Require exit0 bounded output, classify matches,
+and select at most one viable existing regression seam; zero match or unbounded/ambiguous owner =>
+STOP/BLOCKED, no rerun/extension. Only exactly one viable seam may support a later separately documented
+one-line GUI opt-in plus existing focused regression design.
 Contract: v2 constants/API byte-identical; profile/global/app/solver/convergence/policy/controller
 identities unchanged; only the opt-in raw-spatial v3 schema/compiler sibling identity is new. v3 sibling with kw-only opt-in flags, five normalized tables,
 no gap table, positive-intervening-thickness fsum spacing, row/coordinate/ProjectSpec/source-SHA digest,
