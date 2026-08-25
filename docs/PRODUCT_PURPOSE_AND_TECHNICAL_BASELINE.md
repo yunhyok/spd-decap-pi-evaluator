@@ -1,10 +1,10 @@
 # SPD Decap PI Evaluator 목적·기술 기준
 
 - 적용 제품: **SPD Decap PI Evaluator v0.23.0**
-- 문서 버전: **1.73**
+- 문서 버전: **1.74**
 - W5 approved/machine-frozen source-before: `main` commit `027ac7a09a3eded15f45c41860945f9d4c7f488d`
-- 상태: **G0 기준 문서** — full execution history and sole ACTIVE authority live in `WORK_EXECUTION_BASELINE.md` recovery/register; W5 DONE; W6-BASE 260729 numerical FAIL; W7-PHYS BLOCKED; raw-spatial chain: 17AR DONE, 17AS DONE-negative, 17AT BLOCKED/implementation REJECT, 17AU DONE (location evidence), 17AV BLOCKED/STOP, 17AW ACTIVE.
-- 현재 권위 상태: sole ACTIVE 17AW authorizes the exact once PowerShell owner-boundary query; gate requires exactly 2 lines/1 file, before<=2330, after>2449, span<=240; errors/missing/order/over-span => STOP; no file open/range/code/test/production/solver/accuracy claims.
+- 상태: **G0 기준 문서** — full execution history and sole ACTIVE authority live in `WORK_EXECUTION_BASELINE.md` recovery/register; W5 DONE; W6-BASE 260729 numerical FAIL; W7-PHYS BLOCKED; raw-spatial chain: 17AR DONE, 17AS DONE-negative, 17AT BLOCKED/implementation REJECT, 17AU DONE (location evidence), 17AV BLOCKED/STOP, 17AW DONE (location evidence), 17AX ACTIVE.
+- 현재 권위 상태: sole ACTIVE 17AX authorizes exactly one read of `evaluation.py` lines2325-2500 (176); questions cover signature/return, profile+attachments, layerwise/termination assembly, error/cancel, raw-v3 handoff, and owner boundary; delegate-owned or absent v3/replacement/nullspace/Zii contract => STOP; no code/test/solver/production/profile/accuracy/causal claim.
 - 최종 개정: 2026-08-26 (Asia/Seoul)
 
 ## 1. 문서 역할과 권위
@@ -733,8 +733,11 @@ and minimal file/test/V1/V2 whitelist. 17AU is DONE (location evidence) at clean
 cluster 2460-2477 unique; evaluation profile resolution 2363 plus build import 2404/call 2420 one
 unambiguous cluster; no source range/code/test/claims. 17AV is BLOCKED/STOP: exact2330-2449 read
 started mid-signature/function name and ended mid termination exception/comment/downstream; no extension.
-Sole ACTIVE successor is 17AW `W7-PHYS-W6-RAW-SPATIAL-V3-EVALUATION-OWNER-BOUNDARY-DISCOVERY`, limited
-to its exact definition query; no code/test/production/profile/solver/accuracy/causal claim.
+17AW is DONE (location evidence) at clean main `24382198a02c01cb9720b02148784d1b57abf33c`: exact
+PowerShell once exit0, exactly 2 lines/1 file (`evaluation.py:2325 def _builder_preflight_blockers`,
+`2501` next def), span176<=240. Sole ACTIVE successor is 17AX
+`W7-PHYS-W6-PLANE-SHEET-BUILDER-PREFLIGHT-OWNER-TRACE`, one exact 176-line read only; no code/test/solver/
+production/profile/accuracy/causal claim.
 The frozen contract keeps v2 constants/API byte-identical and adds a schema-v3 sibling: compiler
 keyword-only `include_plane_sheet_payload=False`, validator keyword-only `require_plane_sheet_payload=False`,
 opt-in no downgrade, exactly five normalized tables (`plane_primitives`, `vertices`, `circles`,
@@ -845,5 +848,6 @@ and the exact Git HEAD are frozen together. Current trust identities: base `d43b
 | 1.71 | 2026-08-26 | clean-main HEAD `293c64b4de6aad9f5d828f7c270e5c8eccd53e68`에서 17AT frozen-evidence design을 implementation REJECT/BLOCKED로 닫고 여섯 바인딩 UNPROVEN을 기록하며 17AU evaluation-handoff boundary discovery를 sole ACTIVE로 지정. |
 | 1.72 | 2026-08-26 | clean-main HEAD `9f1c95fa0a933445bbb918aff050fcb6238b1e6b`의 17AU exact query exit0(22 lines/2 files) location evidence를 기록하고 17AV evaluation-handoff callsite trace를 sole ACTIVE로 지정. |
 | 1.73 | 2026-08-26 | clean-main HEAD `03b3d06b5a24686b64bd03a247cd8988d70ce402`의 17AV exact2330-2449 read truncation STOP을 기록하고 17AW evaluation-owner boundary discovery를 sole ACTIVE로 지정. |
+| 1.74 | 2026-08-26 | clean-main HEAD `24382198a02c01cb9720b02148784d1b57abf33c`의 17AW exact PowerShell exit0(2 lines/1 file, span176) location evidence를 기록하고 17AX builder-preflight owner trace를 sole ACTIVE로 지정. |
 | 1.1 | 2026-08-24 | `WORK_EXECUTION_BASELINE.md`를 두 번째 canonical 문서로 연결. |
 | 1.0 | 2026-08-24 | v0.24 계획 중심의 Distribution–solver PRD를 제품 전체의 목적·기술 기준으로 개정. PowerSI 정확성 우선, 상태 어휘, 기술 경계, promotion gate, 검증 비용 통제와 two-document 작업 방식을 고정. |
