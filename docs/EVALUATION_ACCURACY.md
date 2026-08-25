@@ -646,16 +646,21 @@ code, test, artifact, production, old-root, release, or accuracy claim is author
 was `src/spd_decap_pi/raw_spatial_contact_compiler.py`; B's candidates were prior-read/frozen
 `evaluation.py`, `services.py`, `layerwise_network.py` plus re-export-only `solver/__init__.py`;
 C found only prior-read `surface_patch_plane.py` definitions/references and no integration caller.
-Future candidate budget is A1/B0/C0; symbol matches are not implementation proof. The user then
-explicitly activated `W7-PHYS-W6-RAW-SPATIAL-PAYLOAD-CONTRACT-TRACE` under standing preapproval
-at clean main HEAD `c6c5dec9ceab37a2011b1f7bd2eedc4e87d00ef5`. It is the sole ACTIVE one-file
-read-only trace of `src/spd_decap_pi/raw_spatial_contact_compiler.py` followed by one Sol review.
-Acceptance is local proof of compile input/output/types/units/limits, complete polygon/material/
-dielectric/provenance/hash payload, bounded deterministic/hashable solve-time data without raw-SPD/
-full-Scenario hydration, and exact fallback/delegate/resource ceilings; any outside dependency or
-missing field fails closed. Standing preapproval may continue only the next bounded repo-local
-source/design/code/test step after review until further command or Usage Guard 50%; production,
-old-root, release, broad/full tests, and accuracy/causal promotion remain unauthorized.
+Future candidate budget is A1/B0/C0; symbol matches are not implementation proof. 17U's compiler
+trust/resource/determinism/fail-closed behavior is source-proven, but asset assembly, certificate
+envelope, complete polygon/material/dielectric provenance, and a raw-SPD/full-Scenario-free solve-time
+payload are delegated/unproven; 17U is therefore source-classified BLOCKED. The user then activated
+`W7-PHYS-W6-RAW-SPATIAL-ASSET-CERTIFICATE-CONTRACT-TRACE` (17V) under standing preapproval at clean
+main HEAD `6bec2ab4b7f2d1ef094c0ad44df198f37fc05fb4`. It is the sole ACTIVE two-file read-only trace:
+complete reads exactly once of `src/spd_decap_pi/raw_spatial_contact_asset.py` and
+`src/spd_decap_pi/surface_certificate_asset.py`, followed by one Sol review. Q1/Q2 must jointly
+prove hash-bound complete asset/certificate payload schema, units, polygons, ordered sigma/thickness,
+dielectric spacing/epsilon/loss/dispersion, direct bounded hydration, and fallback/delegate/resource
+ceilings without raw-SPD/full-Scenario hydration; any missing/outside dependency fails closed.
+Payload PASS is necessary but not sufficient for profile/nullspace/Zii/cache implementation or W7
+accuracy/causal promotion. Standing preapproval permits only the next bounded repo-local source/
+design/code/test step after review until further command or Usage Guard 50%; production, old-root,
+release, and broad/full tests remain unauthorized.
 The compact scenario quotient
 stores only schema/status, compiled SQLite stores aggregate `finite_parallel_rl` links/count/
 R/L/owners without source series terms, segments, or `physical_model_status`, and the

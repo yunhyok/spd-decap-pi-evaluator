@@ -1,11 +1,11 @@
 # SPD Decap PI Evaluator 작업 기준
 
 - 적용 제품: **SPD Decap PI Evaluator v0.23.0**
-- 문서 버전: **1.44**
-- 상위 기준: [목적·기술 기준](PRODUCT_PURPOSE_AND_TECHNICAL_BASELINE.md) v1.43
+- 문서 버전: **1.45**
+- 상위 기준: [목적·기술 기준](PRODUCT_PURPOSE_AND_TECHNICAL_BASELINE.md) v1.44
 - W6-BASE source-before: clean `main` HEAD `fb36288781dcc0b884950ef5a486c474090ceebd`; this is the exact source boundary for the completed one-run evidence
-- 상태: **APPROVED/MACHINE-FROZEN CONTROL DOCUMENT — W5 DONE; W6-BLOCK-A DONE; W6-BLOCK-B BLOCKED; W6-BLOCK-C DONE; W6-BLOCK-D DONE; W6-BLOCK-E DONE; W6-BASE DONE (260729 numerical FAIL); W7-PHYS-AUDIT-MOUNTED-PATH DONE (negative/unclassified); W7-PHYS-OWNER-TERMINAL-VIA-VS-SPATIAL DONE (negative/evidence-unavailable); W7-PHYS-EVIDENCE-MISSING-PATH-COVERAGE DONE (negative/evidence-unavailable); W7-PHYS-PRODUCTION-VIA-ROUTE-SOURCE-TRACE DONE (source-classified raw-base/global finite-route ownership; local calibrated half-branches not selected; mixed ownership fail-closed); W7-PHYS-RAW-FINITE-VIA-RL-GENERATION-TRACE DONE (producer unclassified, high confidence); W7-PHYS-GROUND-REACHABILITY-RL-PRODUCER-TRACE DONE (producer delegated/unclassified, high confidence); W7-PHYS-VIA-SEGMENT-RL-MODEL-TRACE DONE (source-classified model; conditional multi-segment caller-contract bug confirmed; W6 exposure unknown); W7-PHYS-MULTISEGMENT-RL-CALLER-FIX BLOCKED (fixture-contract red; production diff statically accepted and retained uncommitted); W7-PHYS-CORRECTED-SUCCESSOR BLOCKED (static REJECT; zero pytest executions); W7-PHYS-CORRECTED-SUCCESSOR-2 DONE; W7-PHYS-W6-MULTISEGMENT-EXPOSURE DONE (source-classified evidence unavailable; actual exposure unknown); W7-PHYS-PLANE-SHEET-NONUNIFORM-RL-SOURCE-TRACE DONE (local stamps source-classified; Maxwell partial generation external/unclassified); W7-PHYS-MAXWELL-PARTIAL-SOURCE-TRACE DONE (local adjacent-gap dispersive admittance classified; Maxwell C/dispersion/load/solver insertion external); W7-PHYS-MAXWELL-CAPACITANCE-PRODUCER-TRACE DONE (exact 2D polygon-overlay lumped parallel-plate Maxwell C source-classified; W6 inputs/asset fidelity external); W7-PHYS-PLANE-SHEET-RL-REUSE-DISCOVERY DONE (canonical rg once, candidates found; no reuse or production proof); W7-PHYS-COPPER-SURFACE-IMPEDANCE-REUSE-TRACE DONE (surface-impedance constitutive law and MFDM stamp source-classified; W6 reuse unclassified/STOP); W7-PHYS-SURFACE-PATCH-PLANE-REUSE-TRACE DONE (surface-patch local solver/operator source-classified; whole-solver W6 compatibility reuse unclassified/STOP); W7-PHYS-W6-PLANE-SHEET-REIMPLEMENTATION-DESIGN BLOCKED (design before coding; replacement profile decision frozen); W7-PHYS-W6-PLANE-SHEET-ADAPTER-BINDING-TRACE BLOCKED (profile/fallback, worker/cache, raw geometry/material provenance, differential nullspace/final rail-order Zii, and no-double-counting owner transition remain external); W7-PHYS-W6-PLANE-SHEET-INTEGRATION-BINDING-TRACE BLOCKED (source-classified; five acceptance items UNPROVEN; stopped at whitelist-outside delegates); W7-PHYS-W6-PLANE-SHEET-SOURCE-CONTRACT-TRACE BLOCKED (source-classified; approved asset path missing; all joint acceptance unmet); W7-PHYS-W6-PLANE-SHEET-BOUNDED-PATH-DISCOVERY BLOCKED (source-classified; A/B/C insufficient); W7-PHYS-PROSPECTIVE-RUNTIME-TERM-EVIDENCE BLOCKED/YAGNI; W7-PHYS BLOCKED; ACTIVE W7-PHYS-W6-RAW-SPATIAL-PAYLOAD-CONTRACT-TRACE
-- 현재 권위 상태: 17T는 historical source-classified BLOCKED; `W7-PHYS-W6-RAW-SPATIAL-PAYLOAD-CONTRACT-TRACE`가 사용자의 명시적 승인과 standing preapproval 아래 유일한 ACTIVE read-only trace다.
+- 상태: **APPROVED/MACHINE-FROZEN CONTROL DOCUMENT — W5 DONE; W6-BLOCK-A DONE; W6-BLOCK-B BLOCKED; W6-BLOCK-C DONE; W6-BLOCK-D DONE; W6-BLOCK-E DONE; W6-BASE DONE (260729 numerical FAIL); W7-PHYS-AUDIT-MOUNTED-PATH DONE (negative/unclassified); W7-PHYS-OWNER-TERMINAL-VIA-VS-SPATIAL DONE (negative/evidence-unavailable); W7-PHYS-EVIDENCE-MISSING-PATH-COVERAGE DONE (negative/evidence-unavailable); W7-PHYS-PRODUCTION-VIA-ROUTE-SOURCE-TRACE DONE (source-classified raw-base/global finite-route ownership; local calibrated half-branches not selected; mixed ownership fail-closed); W7-PHYS-RAW-FINITE-VIA-RL-GENERATION-TRACE DONE (producer unclassified, high confidence); W7-PHYS-GROUND-REACHABILITY-RL-PRODUCER-TRACE DONE (producer delegated/unclassified, high confidence); W7-PHYS-VIA-SEGMENT-RL-MODEL-TRACE DONE (source-classified model; conditional multi-segment caller-contract bug confirmed; W6 exposure unknown); W7-PHYS-MULTISEGMENT-RL-CALLER-FIX BLOCKED (fixture-contract red; production diff statically accepted and retained uncommitted); W7-PHYS-CORRECTED-SUCCESSOR BLOCKED (static REJECT; zero pytest executions); W7-PHYS-CORRECTED-SUCCESSOR-2 DONE; W7-PHYS-W6-MULTISEGMENT-EXPOSURE DONE (source-classified evidence unavailable; actual exposure unknown); W7-PHYS-PLANE-SHEET-NONUNIFORM-RL-SOURCE-TRACE DONE (local stamps source-classified; Maxwell partial generation external/unclassified); W7-PHYS-MAXWELL-PARTIAL-SOURCE-TRACE DONE (local adjacent-gap dispersive admittance classified; Maxwell C/dispersion/load/solver insertion external); W7-PHYS-MAXWELL-CAPACITANCE-PRODUCER-TRACE DONE (exact 2D polygon-overlay lumped parallel-plate Maxwell C source-classified; W6 inputs/asset fidelity external); W7-PHYS-PLANE-SHEET-RL-REUSE-DISCOVERY DONE (canonical rg once, candidates found; no reuse or production proof); W7-PHYS-COPPER-SURFACE-IMPEDANCE-REUSE-TRACE DONE (surface-impedance constitutive law and MFDM stamp source-classified; W6 reuse unclassified/STOP); W7-PHYS-SURFACE-PATCH-PLANE-REUSE-TRACE DONE (surface-patch local solver/operator source-classified; whole-solver W6 compatibility reuse unclassified/STOP); W7-PHYS-W6-PLANE-SHEET-REIMPLEMENTATION-DESIGN BLOCKED (design before coding; replacement profile decision frozen); W7-PHYS-W6-PLANE-SHEET-ADAPTER-BINDING-TRACE BLOCKED (profile/fallback, worker/cache, raw geometry/material provenance, differential nullspace/final rail-order Zii, and no-double-counting owner transition remain external); W7-PHYS-W6-PLANE-SHEET-INTEGRATION-BINDING-TRACE BLOCKED (source-classified; five acceptance items UNPROVEN; stopped at whitelist-outside delegates); W7-PHYS-W6-PLANE-SHEET-SOURCE-CONTRACT-TRACE BLOCKED (source-classified; approved asset path missing; all joint acceptance unmet); W7-PHYS-W6-PLANE-SHEET-BOUNDED-PATH-DISCOVERY BLOCKED (source-classified; A/B/C insufficient); W7-PHYS-PROSPECTIVE-RUNTIME-TERM-EVIDENCE BLOCKED/YAGNI; W7-PHYS BLOCKED; ACTIVE W7-PHYS-W6-RAW-SPATIAL-ASSET-CERTIFICATE-CONTRACT-TRACE
+- 현재 권위 상태: 17T는 historical BLOCKED; 17U는 source-classified BLOCKED (compiler trust/resource/determinism proven, payload assembly/certificate envelope delegated/unproven); `W7-PHYS-W6-RAW-SPATIAL-ASSET-CERTIFICATE-CONTRACT-TRACE` 17V가 standing preapproval 아래 유일한 ACTIVE read-only trace다.
 - 최종 개정: 2026-08-26 (Asia/Seoul)
 
 ## 1. 압축 후 즉시 복구 카드
@@ -17,15 +17,15 @@ context가 압축되거나 새 session에서 작업을 재개하면 다른 연�
 |---|---|
 | 변하지 않는 목적 | source-derived single-rail `Zii`의 PowerSI 근접 정확성과 일반화 |
 | 현재 branch | `main`만 사용; 정리된 과거 branch를 다시 조사하지 않음 |
-| 현재 active work item | `W7-PHYS-W6-RAW-SPATIAL-PAYLOAD-CONTRACT-TRACE` |
-| 다음 권장 묶음 | `W7-PHYS-W6-RAW-SPATIAL-PAYLOAD-CONTRACT-TRACE` (ACTIVE; exact one-file read + one Sol review) |
-| current authorization | user-approved at clean `main` HEAD `c6c5dec9ceab37a2011b1f7bd2eedc4e87d00ef5`; one complete read of `src/spd_decap_pi/raw_spatial_contact_compiler.py` plus one Sol review; standing preapproval permits the next bounded repo-local source/design/code/test step after review until further command or Usage Guard 50%, but never production/old-root/release/broad-suite work |
+| 현재 active work item | `W7-PHYS-W6-RAW-SPATIAL-ASSET-CERTIFICATE-CONTRACT-TRACE` |
+| 다음 권장 묶음 | `W7-PHYS-W6-RAW-SPATIAL-ASSET-CERTIFICATE-CONTRACT-TRACE` (ACTIVE; exact two-file read + one Sol review) |
+| current authorization | 17U consumed at `c6c5dec9ceab37a2011b1f7bd2eedc4e87d00ef5`; 17V activated at `6bec2ab4b7f2d1ef094c0ad44df198f37fc05fb4`; 17V permits one complete read each of `src/spd_decap_pi/raw_spatial_contact_asset.py` and `src/spd_decap_pi/surface_certificate_asset.py` plus one Sol review; standing preapproval permits the next bounded repo-local source/design/code/test step after review until further command or Usage Guard 50%, but never production/old-root/release/broad-suite work |
 | 17T command A | `rg -n --no-heading --color never --glob '*.py' '\bcompile_raw_spatial_contact_asset\b' 'src/spd_decap_pi'` |
 | 17T command B | `rg -n --no-heading --color never --glob '*.py' '\b(?:resolve_solver_profile|numerical_worker_count|build_layerwise_uniform_source_model)\b' 'src/spd_decap_pi'` |
 | 17T command C | `rg -n --no-heading --color never --glob '*.py' '\b(?:GLOBAL_KRON|SurfacePatchDifferentialProjection|SurfacePatchFinitePortProjection|assemble_differential_admittance|differential_projection)\b' 'src/spd_decap_pi'` |
 | consumed 17M discovery | canonical rg ran once (exit 0), found candidate symbols only; no reuse or production proof |
 | future production invariant (not current authority) | if a future run is authorized: exact clean `main`, new output root, one run/no retry; B correlation is historical evidence; C/D consumed their exactly-one old candidate/import reads; E had one production diagnostic invocation plus one orchestration ZIP read; old root remains forbidden for W6-BASE output/scoring/retry/mutation |
-| 고비용 검증 권한 | one bounded raw-spatial compiler read + one Sol review are authorized; after a bounded trace Sol may automatically design/document/execute the next minimal repo-local source contract, and Luna may implement/add a focused test when ready; stop at Usage Guard 50% or further command; no production/old-root/release/broad-suite authority |
+| 고비용 검증 권한 | one bounded two-file asset/certificate read + one Sol review are authorized; after a bounded trace Sol may automatically design/document/execute the next minimal repo-local source contract, and Luna may implement/add a focused test when ready; stop at Usage Guard 50% or further command; no production/old-root/release/broad-suite authority |
 | 현재 정확성 상태 | `260729 retrospective FAIL`; unseen/generalization remains `unknown / not_run` |
 | 현재 release 계산 증거 | W6-BASE 260729 completed numerical FAIL; offline verifier exit 2 (integrity-valid) |
 | W6-BASE result root | `D:\SPD-Decap-PI-Evaluator-W6\fb36288781dcc0b884950ef5a486c474090ceebd\260729` — manifest `2b14f90e762abc49833518137812e8fc97fcde0e9c145795b7384210cfd9f5de`, sidecar `0d103e0ad47df80641fac0952a35a6eaa56cc9fdb71be24661903e451926e932`, correlation `969e40046e3a099d09557ba7500693460362336d76b067962436bd3b5177abc4` |
@@ -151,7 +151,8 @@ root, one-run/no-retry 조건을 다시 확정할 때만 고려한다.
 | `W7-PHYS-W6-PLANE-SHEET-INTEGRATION-BINDING-TRACE` | 17R | BLOCKED (source-classified; five acceptance items UNPROVEN) | bind opt-in no-fallback profile, hash-bound inputs, balanced differential incidence, stable rail/Zii output, and exact ownership transitions | clean `8451c4afca57fb46e89b7096026b281ba54bbf52`; exact three-file read once; profile/application enforcement, raw/full hydration boundary, differential/nullspace/Zii, owner-off seam, and cache/worker proof remain unbound; stop with no fourth read or whitelist expansion |
 | `W7-PHYS-W6-PLANE-SHEET-SOURCE-CONTRACT-TRACE` | 17S | BLOCKED (source-classified; approved asset path missing) | bind services/profile enforcement, hash-bound surface certificate inputs, balanced termination/nullspace and stable rail/Zii, and Via/termination ownership | clean `bc0147e5e15b91a77593ad7306b492aae3079d4c`; services.py and layer_surface_termination.py read once; approved surface_certificate_asset.py missing (`Cannot find path`); no search/substitution/fourth read; all joint acceptance unmet; resume requires explicit path-discovery/source-contract authorization |
 | `W7-PHYS-W6-PLANE-SHEET-BOUNDED-PATH-DISCOVERY` | 17T | BLOCKED (source-classified; A/B/C insufficient) | identify bounded producer/profile/worker/differential integration candidates without opening files | clean `57aae22531d481623d34b6fb1b68bc0a201702c9`; A 4/2, B 29/4, C 12/1 lines/files; future budget A1/B0/C0; no additional search/read/expansion |
-| `W7-PHYS-W6-RAW-SPATIAL-PAYLOAD-CONTRACT-TRACE` | 17U | ACTIVE | compile input/output/types/units/limits; complete layer/net polygon geometry, ordered sigma/thickness, dielectric spacing/epsilon/loss/dispersion provenance and source hashes; bounded deterministic/hashable solve-time payload without raw-SPD/full-Scenario hydration; exact fallback/delegate/resource ceilings | clean `main` HEAD `c6c5dec9ceab37a2011b1f7bd2eedc4e87d00ef5`; exact whitelist `src/spd_decap_pi/raw_spatial_contact_compiler.py`, one complete read + one Sol review; any outside dependency or missing field fails closed |
+| `W7-PHYS-W6-RAW-SPATIAL-PAYLOAD-CONTRACT-TRACE` | 17U | BLOCKED (source-classified) | compile input/output/types/units/limits; complete layer/net polygon geometry, ordered sigma/thickness, dielectric spacing/epsilon/loss/dispersion provenance and source hashes; bounded deterministic/hashable payload without raw-SPD/full-Scenario hydration | clean `main` HEAD `c6c5dec9ceab37a2011b1f7bd2eedc4e87d00ef5`; compiler trust/resource/determinism/fail-closed are proven, but `raw_spatial_contact_asset.py` and `surface_certificate_asset.py` delegates leave payload assembly/certificate envelope and required completeness unproven |
+| `W7-PHYS-W6-RAW-SPATIAL-ASSET-CERTIFICATE-CONTRACT-TRACE` | 17V | ACTIVE | Q1 asset schema/units/provenance/source+content hashes, complete layer/net polygons, ordered sigma/thickness, dielectric spacing/epsilon/loss/dispersion; Q2 certificate validation of physics payload invariants versus structural envelope; bounded deterministic direct-consumer hydration and fallback/delegate/resource ceilings | clean `main` HEAD `6bec2ab4b7f2d1ef094c0ad44df198f37fc05fb4`; exact whitelist `src/spd_decap_pi/raw_spatial_contact_asset.py` and `src/spd_decap_pi/surface_certificate_asset.py`, each complete read once + one Sol review; any missing/outside dependency fails closed; payload PASS is necessary but not sufficient for profile/nullspace/Zii/cache implementation |
 | `W7-PHYS-PROSPECTIVE-RUNTIME-TERM-EVIDENCE` | next candidate | BLOCKED/YAGNI | provide a grounded runtime term digest/count/owner partition only after an independently selected physical change | new candidate/HEAD/root, one run/no retry; no current authority |
 | `W8-REL` | 18 | BLOCKED | completed known-case solve를 release gate에 연결하고 최종 전달 | accuracy/product gate와 exact release commit 필요 |
 | `D-DIST` | - | DEFERRED | Distribution routing/DRC scope 확대 | 사용자가 implementation-ready/DRC 목표로 승격할 때만 |
@@ -715,7 +716,7 @@ unclassified/STOP. At the 17N closure, the sole ACTIVE successor was 17O, limite
 `src/spd_decap_pi/_core/solver/surface_patch_plane.py` from clean HEAD
 `badfffc972489084fa0a5b8b746fd0c93fce0852`.
 
-### 17U. W7-PHYS-W6-RAW-SPATIAL-PAYLOAD-CONTRACT-TRACE (ACTIVE; source contract)
+### 17U. W7-PHYS-W6-RAW-SPATIAL-PAYLOAD-CONTRACT-TRACE (BLOCKED; source-classified)
 
 사용자가 2026-08-26 명시 승인했고 standing preapproval가 적용된다. Base clean main HEAD는
 `c6c5dec9ceab37a2011b1f7bd2eedc4e87d00ef5`이다. 정확한 whitelist는
@@ -728,11 +729,31 @@ payload, fallback/delegate/resource ceiling이다. 필요한 payload/material/pe
 위임되거나 한 항목이라도 증명되지 않으면 source-classified BLOCKED로 닫고 두 번째 파일을
 자동으로 열지 않는다.
 
+컴파일러 trust/resource/determinism/fail-closed는 source로 결속되었지만 실제 asset assembly,
+certificate envelope, complete polygon/material/dielectric provenance와 raw-SPD/full-Scenario 없는
+solve-time payload는 `src/spd_decap_pi/raw_spatial_contact_asset.py` 및
+`src/spd_decap_pi/surface_certificate_asset.py`에 위임되어 이 차수에서 증명되지 않았다. 따라서
+17U는 source-classified BLOCKED로 닫고 세 번째 파일을 열지 않는다.
+
 이 차수의 실행은 source read + Sol review뿐이며 Python/import/test/artifact/solver/production,
 260729/260804/P5, old-root, release/push/tag/installer, accuracy/causal promotion은 권한 밖이다.
 standing preapproval는 이 bounded trace와 review 후 다음 최소 repo-local source/design/code/test
 단계를 추가 사용자 승인 없이 진행할 수 있게 하지만, further command 또는 Usage Guard 50%에서
 멈춘다. broad/full suite와 unbounded whitelist expansion은 금지한다.
+
+### 17V. W7-PHYS-W6-RAW-SPATIAL-ASSET-CERTIFICATE-CONTRACT-TRACE (ACTIVE; two-file contract)
+
+17U의 delegated boundary를 닫기 위해 사용자가 standing preapproval 아래 17V를 활성화했다.
+Base clean main HEAD는 `6bec2ab4b7f2d1ef094c0ad44df198f37fc05fb4`이며, exact whitelist는
+`src/spd_decap_pi/raw_spatial_contact_asset.py`와
+`src/spd_decap_pi/surface_certificate_asset.py`이다. 각 파일은 complete read exactly once 후
+Sol review exactly once만 수행한다. Q1은 asset schema/units/provenance/source+content hashes,
+complete layer/net polygons, ordered sigma/thickness, dielectric spacing/epsilon/loss/dispersion,
+bounded deterministic direct-consumer hydration과 fallback/resource ceilings를 묻고, Q2는
+certificate가 physics payload invariants를 structural envelope와 구분해 검증하는지와 omissions/
+delegates를 묻는다. 두 질문이 함께 hash-bound complete solve-time payload를 raw-SPD/full-Scenario
+hydration 없이 증명해야 하며, 외부 delegate·누락·구조 전용 결과면 source-classified BLOCKED다.
+Payload PASS만으로 profile/nullspace/Zii/cache 구현 계약이나 W7 정확성/causal 승인을 만들지 않는다.
 
 ## 20. 변경 기록
 
@@ -783,3 +804,4 @@ standing preapproval는 이 bounded trace와 review 후 다음 최소 repo-local
 | 1.42 | 2026-08-26 | 17T bounded path-discovery를 사용자 승인 sole ACTIVE item으로 지정하고 A→B→C exact rg query와 line/file budget STOP 경계를 기록. |
 | 1.43 | 2026-08-26 | 17T A/B/C 검색을 within-cap source-classified BLOCKED로 닫고 A1/B0/C0, active NONE 및 `W7-PHYS-W6-RAW-SPATIAL-PAYLOAD-CONTRACT-TRACE` 명시 승인 경계를 기록. |
 | 1.44 | 2026-08-26 | 17T를 historical BLOCKED로 닫고 사용자 승인/standing preapproval 아래 17U raw-spatial payload contract trace를 유일한 ACTIVE one-file read + Sol review로 지정. |
+| 1.45 | 2026-08-26 | 17U를 compiler trust/resource/determinism proven 및 payload assembly/certificate envelope delegated/unproven으로 BLOCKED 종료하고, 17V asset/certificate two-file read + Sol review를 유일 ACTIVE로 지정. |
