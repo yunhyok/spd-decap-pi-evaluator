@@ -364,7 +364,8 @@ W7 frozen-artifact audits are complete and negative/unclassified. The completed
 raw-base/global finite-route ownership in the v4 scenario network;
 `local_calibrated_via_half_branches` was not selected and mixed ownership is
 fail-closed. This is source-proven with high confidence, not certificate R/L or
-PowerSI accuracy evidence. Active work is now NONE. A future production rerun requires the
+PowerSI accuracy evidence. At the 17D closure active work was NONE; the current
+`17H-CORRECTED-SUCCESSOR` remains the sole ACTIVE test-only item. A future production rerun requires the
 user to activate and complete a new exclusive-owner classification item selecting
 exactly one source-derived block, then exactly one physical change, focused evidence,
 and a new gate. Remote/release/installer, retries, old-root W6-BASE reuse or mutation,
@@ -557,10 +558,17 @@ hollow/solid area policies, R/L equations, fallback, and Ω/H outputs. It confir
 conditional caller-contract bug: `spd.py` may construct multiple segments without a
 len-one guard, then passes `segments[0].length_um` with full endpoints; W6 exposure is
 unknown. This is not an accuracy or causal-owner claim. At 17G closure ACTIVE was NONE;
-subsequent approval makes `W7-PHYS-MULTISEGMENT-RL-CALLER-FIX` the sole ACTIVE item under the 2026-08-25
-code+test authority, bounded to `src/spd_decap_pi/_core/io/spd.py` and
-`tests/test_io_spd.py`; its one V0 read and focused review precede any future gate, and
-no production/solver/PowerSI execution is authorized.
+the consumed evidence boundary is clean `main` HEAD `17836612ceaf09adf83237ec377c845fd1b6ecfd`,
+with retained uncommitted diff exactly `src/spd_decap_pi/_core/io/spd.py` and
+`tests/test_io_spd.py`; pytest produced no artifact/result root. The original 17H remains
+BLOCKED after one focused fixture-contract red:
+exit 1, `1 failed in 2.13s` (wall 3.40s), expected two segments but the fixture correctly
+produced one `Signal$TOP→Signal$PWR` segment of 220um. The production diff remains statically
+accepted and uncommitted; user pre-approval makes `17H-CORRECTED-SUCCESSOR` the sole ACTIVE
+test-only correction. It keeps the same node, adds long TOP→GND unequal D1/D2 plus short
+TOP→PWR control with PWR/GND bindings, and runs only after one Sol static ACCEPT; PASS
+commits the retained two-file diff, FAIL stops with no rerun. No production/solver/PowerSI
+execution is authorized.
 
 Frozen historical v5 validator/policy/fixtures and base benchmark remain byte-identical.
 W6-E atomically rotated the current v6→policy→accuracy-validator→controller trust
