@@ -365,7 +365,8 @@ raw-base/global finite-route ownership in the v4 scenario network;
 `local_calibrated_via_half_branches` was not selected and mixed ownership is
 fail-closed. This is source-proven with high confidence, not certificate R/L or
 PowerSI accuracy evidence. At the 17D closure active work was NONE; the current
-`17H-CORRECTED-SUCCESSOR` remains the sole ACTIVE test-only item. A future production rerun requires the
+`17H-CORRECTED-SUCCESSOR` remains BLOCKED after its static REJECT; the user-preapproved
+`17H-CORRECTED-SUCCESSOR-2` is now the sole ACTIVE test-only item. A future production rerun requires the
 user to activate and complete a new exclusive-owner classification item selecting
 exactly one source-derived block, then exactly one physical change, focused evidence,
 and a new gate. Remote/release/installer, retries, old-root W6-BASE reuse or mutation,
@@ -564,11 +565,17 @@ with retained uncommitted diff exactly `src/spd_decap_pi/_core/io/spd.py` and
 BLOCKED after one focused fixture-contract red:
 exit 1, `1 failed in 2.13s` (wall 3.40s), expected two segments but the fixture correctly
 produced one `Signal$TOP→Signal$PWR` segment of 220um. The production diff remains statically
-accepted and uncommitted; user pre-approval makes `17H-CORRECTED-SUCCESSOR` the sole ACTIVE
-test-only correction. It keeps the same node, adds long TOP→GND unequal D1/D2 plus short
-TOP→PWR control with PWR/GND bindings, and runs only after one Sol static ACCEPT; PASS
-commits the retained two-file diff, FAIL stops with no rerun. No production/solver/PowerSI
-execution is authorized.
+accepted and uncommitted. The first static-reject/successor-2 retained-diff base is clean
+`main` HEAD `0cbe18e6b7c36dbfd686a14439a164c12f4abccb`, exactly
+`src/spd_decap_pi/_core/io/spd.py` and `tests/test_io_spd.py`; zero new pytest executions
+and no pytest artifact/result root. The first corrected successor is BLOCKED at static REJECT with
+zero pytest executions because its long Via used `DR-0102_60` without GND PadDef and its
+long stackup omitted intermediate PWR. User pre-approval makes
+`17H-CORRECTED-SUCCESSOR-2` the sole ACTIVE test-only correction: leave `spd.py` unchanged,
+use a long-Via-only padstack declaring TOP/PWR/GND with full `analysis.stackup_layers`,
+retain the short TOP→PWR control on existing DR, then one Sol static review and the same
+node exactly once. PASS commits the retained two-file diff, FAIL stops with no rerun. No
+production/solver/PowerSI execution is authorized.
 
 Frozen historical v5 validator/policy/fixtures and base benchmark remain byte-identical.
 W6-E atomically rotated the current v6→policy→accuracy-validator→controller trust
