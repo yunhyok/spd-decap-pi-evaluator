@@ -601,10 +601,13 @@ Maxwell C is source-classified as `C=eps0·epsr·A/d` (F) with Laplacian assembl
 nonadjacent opening coupling is an opt-in projected-aperture parallel-plate approximation.
 There is no frequency/complex-Y, conductivity, sheet R/L, skin, nonuniform in-plane current, or
 current-spreading term; W6 input/asset fidelity remains external. 17M is DONE: the canonical rg
-ran once (exit 0), found candidate symbols in solver files, and proved no reuse or production
-binding. The sole ACTIVE successor is `W7-PHYS-COPPER-SURFACE-IMPEDANCE-REUSE-TRACE`, restricted
-to one complete read of `src/spd_decap_pi/_core/solver/mfdm.py` from clean HEAD
-`1bd942b7b6e85fecef1d6074826e00a45adb71b4` plus one Sol review; no implementation/W6 binding is
+ran once (exit 0), found candidate symbols in solver files, but made no reuse or production-binding
+proof. 17N is DONE: the surface-impedance constitutive law and MFDM stamp are source-classified,
+with one-/two-face coth/csch Ω/square behavior, DC `1/(σt)`, and high-frequency transfer tending
+to zero; W6 reuse is unclassified/STOP. The sole ACTIVE successor is
+`W7-PHYS-SURFACE-PATCH-PLANE-REUSE-TRACE`, restricted to one complete read of
+`src/spd_decap_pi/_core/solver/surface_patch_plane.py` from clean HEAD
+`badfffc972489084fa0a5b8b746fd0c93fce0852` plus one Sol review; no implementation/W6 binding is
 implied. The compact scenario quotient
 stores only schema/status, compiled SQLite stores aggregate `finite_parallel_rl` links/count/
 R/L/owners without source series terms, segments, or `physical_model_status`, and the
