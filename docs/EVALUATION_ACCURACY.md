@@ -667,14 +667,14 @@ command `pytest -q tests/test_raw_spatial_contact_compiler.py::test_plane_sheet_
 ran exactly once: exit 1, `1 failed in 1.55s`; `_plane_sheet_payload` raised
 `RAW_SPATIAL_PLANE_SHEET_REQUIRED` with `ProjectSpec stackup physical fields are incomplete` before
 the v3 asset. There was no rerun, and this does not classify fixture versus production cause.
-The three-path technical diff remains uncommitted. The 17AA-S1 successor
-`W7-PHYS-W6-RAW-SPATIAL-ASSET-V3-EMISSION-S1` is BLOCKED at its test gate. Its approved command
-ran once: exit 1, `1 failed in 1.51s`; `raw_spatial_contact_asset.py::_plane_sheet_rows` line 1389
-raised `KeyError: 0` from direct `circles_by[row["primitive_ordinal"]]` for a polygon with no
-circle rows. This is source-classified as an asset grouping bug; no rerun. Sole ACTIVE successor
-S2 is `W7-PHYS-W6-RAW-SPATIAL-ASSET-V3-EMISSION-S2`, limited to the raw asset file and the
-`.get(primitive_ordinal, [])` fix for both grouped maps. No accuracy, causal, or production claim
-follows.
+The three-path technical diff remains uncommitted. 17AA and 17AA-S1 remain historical BLOCKED
+failed attempts. 17AA-S2 is DONE: the approved command
+`pytest -q tests/test_raw_spatial_contact_compiler.py::test_plane_sheet_payload_v3_is_hash_bound_and_v2_remains_unchanged`
+ran once under S2 with exit 0, `1 passed in 1.09s`; no rerun, broad-suite, or production run.
+The v3 emission goal is achieved via S2. Sole ACTIVE next is
+`W7-PHYS-W6-RAW-SPATIAL-V3-PERSISTENCE-OWNER-DISCOVERY` (17AB), limited to one exact read-only
+query with the <=60-line/<=10-file cap and STOP on definitions/reexports-only or zero useful caller.
+No file open, code/test/profile/accuracy/production proof, or whitelist expansion is authorized.
 Contract: v2 constants/API byte-identical; profile/global/app/solver/convergence/policy/controller
 identities unchanged; only the opt-in raw-spatial v3 schema/compiler sibling identity is new. v3 sibling with kw-only opt-in flags, five normalized tables,
 no gap table, positive-intervening-thickness fsum spacing, row/coordinate/ProjectSpec/source-SHA digest,
