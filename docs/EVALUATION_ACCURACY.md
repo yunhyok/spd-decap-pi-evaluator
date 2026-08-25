@@ -733,13 +733,17 @@ is DONE (source-classified test gap) at clean main HEAD `7618408f8979d07f6810ed1
 exact tail2500-2540 once, natural EOF2524; loader checks expected source/project/certificate/topology/
 geometry hashes but no `require_plane_sheet_payload=True`, only get_via assertions plus rail witness.
 Together with known `import_spd_scenario(source)`, the owner is a viable integration seam, but
-default-v2 and no-v3-regression claims remain unproven. Sole ACTIVE next is
-`W7-PHYS-W6-RAW-SPATIAL-V3-IMPORT-API-SIGNATURE-TRACE` (17AM), authorizing exactly once reading
-`src/spd_decap_pi/spd_adapter.py` lines6423-6465 (max43), no search/second range; signature/default
-truncation at6465 => STOP without extension. No code/test authority in17AM. Frozen later candidate
-only: two-file kw-only `include_plane_sheet_payload: bool=False` forwarding at7860, selected test
-`import_spd_scenario(source, include_plane_sheet_payload=True)` at2298 and loader call2500 require True, then Sol diff plus one focused node; other calls remain
-default-v2. No profile/accuracy/production inference.
+default-v2 and no-v3-regression claims remain unproven. 17AM is DONE at clean main
+`2076ba2764a4ae7614a7fdaa55ee6b208f6fdbad`: exact6423-6465 once, complete
+`import_spd_scenario(path: str|Path, *, progress=None, is_cancelled=None) -> ScenarioImport`, safe
+kw-only extension point, setup not truncated. Sole ACTIVE next is
+`W7-PHYS-W6-RAW-SPATIAL-V3-ADAPTER-OPTIN-WIRING` (17AN), exact two-file authority only:
+`spd_adapter.py` adds kw-only `include_plane_sheet_payload: bool=False` and forwards the exact named kwarg
+at the frozen compiler call; selected test calls
+`import_spd_scenario(source, include_plane_sheet_payload=True)` and loader uses
+`require_plane_sheet_payload=True`; no manifest internals/helper/unrelated assertion. After Sol static diff,
+run exactly one focused node; failure STOP/no rerun. PASS => exact two authorized technical files only atomic commit; FAIL => STOP, no rerun. Other callers default-v2; no broad/production/release/
+profile/accuracy inference.
 Contract: v2 constants/API byte-identical; profile/global/app/solver/convergence/policy/controller
 identities unchanged; only the opt-in raw-spatial v3 schema/compiler sibling identity is new. v3 sibling with kw-only opt-in flags, five normalized tables,
 no gap table, positive-intervening-thickness fsum spacing, row/coordinate/ProjectSpec/source-SHA digest,
