@@ -646,13 +646,16 @@ code, test, artifact, production, old-root, release, or accuracy claim is author
 was `src/spd_decap_pi/raw_spatial_contact_compiler.py`; B's candidates were prior-read/frozen
 `evaluation.py`, `services.py`, `layerwise_network.py` plus re-export-only `solver/__init__.py`;
 C found only prior-read `surface_patch_plane.py` definitions/references and no integration caller.
-Future candidate budget is A1/B0/C0; symbol matches are not implementation proof. Sol accepted
-BLOCKED and ACTIVE is now NONE. No additional search/read/expansion/code/test/artifact/production
-action is authorized. The proposed successor `W7-PHYS-W6-RAW-SPATIAL-PAYLOAD-CONTRACT-TRACE` is
-NOT ACTIVE and requires explicit user approval for one complete read of
-`src/spd_decap_pi/raw_spatial_contact_compiler.py` plus one Sol review; any outside dependency
-or missing compile input/output/units/limits, polygon/material/dielectric/provenance/hash,
-bounded solve-time payload, or fallback/resource contract remains fail-closed.
+Future candidate budget is A1/B0/C0; symbol matches are not implementation proof. The user then
+explicitly activated `W7-PHYS-W6-RAW-SPATIAL-PAYLOAD-CONTRACT-TRACE` under standing preapproval
+at clean main HEAD `c6c5dec9ceab37a2011b1f7bd2eedc4e87d00ef5`. It is the sole ACTIVE one-file
+read-only trace of `src/spd_decap_pi/raw_spatial_contact_compiler.py` followed by one Sol review.
+Acceptance is local proof of compile input/output/types/units/limits, complete polygon/material/
+dielectric/provenance/hash payload, bounded deterministic/hashable solve-time data without raw-SPD/
+full-Scenario hydration, and exact fallback/delegate/resource ceilings; any outside dependency or
+missing field fails closed. Standing preapproval may continue only the next bounded repo-local
+source/design/code/test step after review until further command or Usage Guard 50%; production,
+old-root, release, broad/full tests, and accuracy/causal promotion remain unauthorized.
 The compact scenario quotient
 stores only schema/status, compiled SQLite stores aggregate `finite_parallel_rl` links/count/
 R/L/owners without source series terms, segments, or `physical_model_status`, and the
