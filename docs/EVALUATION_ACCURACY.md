@@ -581,14 +581,20 @@ does not prove W6 exposure, PowerSI/forward accuracy, causal ownership, artifact
 production validation, or release readiness. The next
 `W7-PHYS-W6-MULTISEGMENT-EXPOSURE` is DONE as source-classified evidence unavailable; actual
 W6 first-segment versus all-segment exposure remains unknown. The sole prospective evidence
-candidate is `W7-PHYS-PROSPECTIVE-RUNTIME-TERM-EVIDENCE`, BLOCKED/YAGNI. The sole current
-read-only item is `W7-PHYS-PLANE-SHEET-NONUNIFORM-RL-SOURCE-TRACE`, using clean `main`
-HEAD `9d8cb2e5e09c2cef49895cbaee3b23c66d305820` and only
+candidate is `W7-PHYS-PROSPECTIVE-RUNTIME-TERM-EVIDENCE`, BLOCKED/YAGNI. The prior
+`W7-PHYS-PLANE-SHEET-NONUNIFORM-RL-SOURCE-TRACE` is DONE, using clean `main`
+historical HEAD `9d8cb2e5e09c2cef49895cbaee3b23c66d305820` and only
 `src/spd_decap_pi/_core/solver/layer_surface_network.py`; one source V0 and one Sol review
-are allowed, with all execution/artifact/edit paths at zero. It asks whether the W6-bound
-layer-surface matrix stamps position/material-dependent plane-sheet series R/L or only
-retained-artwork quasi-static Maxwell-Y; this is observability ordering, not causality or
-physics authorization. The compact scenario quotient
+were allowed, with all execution/artifact/edit paths at zero. This was an observability
+classification, not causality, accuracy, or physics authorization. The accepted 17J table records
+topology-only links as ideal vertical-node coalescence with no topology-only numeric stamp;
+incoming C[F] is
+remapped/collapsed and dielectric-ratio `j2πf·C` is S, finite vertical Via links use
+`count/(R+j2πfL)`, and termination returns S. No local plane-sheet series R/L or
+nonuniform/current-spreading term was found; Maxwell partial generation remains external/
+unclassified. The sole ACTIVE successor is `W7-PHYS-MAXWELL-PARTIAL-SOURCE-TRACE`, restricted
+to one complete read of `src/spd_decap_pi/_core/solver/uniform_c00.py` plus one Sol review,
+with all execution/artifact/edit paths zero. The compact scenario quotient
 stores only schema/status, compiled SQLite stores aggregate `finite_parallel_rl` links/count/
 R/L/owners without source series terms, segments, or `physical_model_status`, and the
 production-complete surface certificate uses a compiled-only stub without the raw canonical
