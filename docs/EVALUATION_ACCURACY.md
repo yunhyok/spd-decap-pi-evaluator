@@ -712,12 +712,16 @@ lines 7848-7885 found guard 7854 `_has_compiled_topology_manifest(base_project)`
 validate updated envelope; 7878-7881 report success/block completion. 7882 onward is unrelated sorting;
 `nets=sorted` is endpoint-truncated, so downstream persistence/return remains UNPROVEN/outside with no
 extension. Missing flag is an immediate wiring gap, not a safe standalone fix or PowerSI root cause;
-unconditional opt-in may violate legacy/default v2 imports. Sole ACTIVE next is
-`W7-PHYS-W6-RAW-SPATIAL-V3-ADAPTER-TEST-SEAM-DISCOVERY` (17AH), limited to exactly one frozen query:
-`rg -n --with-filename --no-heading --color never '\b(?:import_spd_scenario|compile_raw_spatial_contact_asset|include_plane_sheet_payload|RAW_SPATIAL_CONTACT_ASSET_METADATA_KEY)\b' 'tests/test_spd_decap_spd_adapter.py'`;
-cap <=30 output lines/exactly 1 file; command error/over-cap/wrong file/no relevant non-import test
-call of `import_spd_scenario` => STOP. Location evidence only; at most one existing adapter test seam
-may be selected for later bounded read; 17AH opens no files. No profile/solver/accuracy/production proof.
+unconditional opt-in may violate legacy/default v2 imports. 17AH is DONE (bounded location evidence)
+at clean main HEAD `d45a23f62ebd417a50498724bdea79ba77d8d041`: its exact query ran once, exit0, 22
+lines/1 file; `import_spd_scenario` import line70 and non-import calls 509, 587, 618, 647, 698, 791,
+863, 965, 1207, 1208, 1229, 1249, 1272, 1291, 1409, 1450, 2298; raw metadata key import45 and
+checks 1750, 1752, 2487; no compiler/include flag matches. Location evidence only; no test owner was
+selected. Sole ACTIVE next is `W7-PHYS-W6-RAW-SPATIAL-V3-ADAPTER-TEST-OWNER-BOUNDARY-DISCOVERY`
+(17AI), with the exact frozen PowerShell gate in Work: run once, exactly 4 lines/1 file; bracket
+targets 1750 and 2487 with top-level test definitions; use only the frozen 17AH call list for interval
+membership and select at most one owner only if exactly one bracket contains an observed non-import
+call; zero/both/ambiguous/overlap => STOP. No file open, code, test, or inference.
 Contract: v2 constants/API byte-identical; profile/global/app/solver/convergence/policy/controller
 identities unchanged; only the opt-in raw-spatial v3 schema/compiler sibling identity is new. v3 sibling with kw-only opt-in flags, five normalized tables,
 no gap table, positive-intervening-thickness fsum spacing, row/coordinate/ProjectSpec/source-SHA digest,
