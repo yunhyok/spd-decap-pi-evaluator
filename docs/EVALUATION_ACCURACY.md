@@ -592,9 +592,14 @@ incoming C[F] is
 remapped/collapsed and dielectric-ratio `j2πf·C` is S, finite vertical Via links use
 `count/(R+j2πfL)`, and termination returns S. No local plane-sheet series R/L or
 nonuniform/current-spreading term was found; Maxwell partial generation remains external/
-unclassified. The sole ACTIVE successor is `W7-PHYS-MAXWELL-PARTIAL-SOURCE-TRACE`, restricted
-to one complete read of `src/spd_decap_pi/_core/solver/uniform_c00.py` plus one Sol review,
-with all execution/artifact/edit paths zero. The compact scenario quotient
+unclassified. 17K is DONE: local adjacent-gap dispersive admittance is classified by
+`Ybulk=j2πf Σ[(Dk(1−jDf)/εr_nom) C_M]` (Hz/F/dimensionless inputs yield S), while
+Maxwell C/dispersion/load/solver insertion remains external/unclassified. Grounding/Schur/
+modal(0,0) replacement and numerical gates are reduction/validation, not extra physics; arbitrary
+caller loads remain external/unclassified. The sole ACTIVE successor is
+`W7-PHYS-MAXWELL-CAPACITANCE-PRODUCER-TRACE`, restricted to one complete read of
+`src/spd_decap_pi/_core/solver/multilayer_capacitance.py` plus one Sol review, with all
+execution/artifact/edit paths zero. The compact scenario quotient
 stores only schema/status, compiled SQLite stores aggregate `finite_parallel_rl` links/count/
 R/L/owners without source series terms, segments, or `physical_model_status`, and the
 production-complete surface certificate uses a compiled-only stub without the raw canonical
