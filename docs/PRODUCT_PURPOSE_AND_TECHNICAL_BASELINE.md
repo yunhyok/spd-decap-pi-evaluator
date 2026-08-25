@@ -1,9 +1,9 @@
 # SPD Decap PI Evaluator 목적·기술 기준
 
 - 적용 제품: **SPD Decap PI Evaluator v0.23.0**
-- 문서 버전: **1.35**
+- 문서 버전: **1.36**
 - W5 approved/machine-frozen source-before: `main` commit `027ac7a09a3eded15f45c41860945f9d4c7f488d`
-- 상태: **G0 기준 문서** — [작업 기준](WORK_EXECUTION_BASELINE.md)과 함께 사용하며, W5 DONE·W6-BLOCK-A DONE·W6-BLOCK-B BLOCKED·W6-BLOCK-C DONE·W6-BLOCK-D DONE·W6-BLOCK-E DONE·W6-BASE DONE (260729 numerical FAIL)·W7-PHYS-AUDIT-MOUNTED-PATH DONE (negative/unclassified)·W7-PHYS-OWNER-TERMINAL-VIA-VS-SPATIAL DONE (negative/evidence-unavailable)·W7-PHYS-EVIDENCE-MISSING-PATH-COVERAGE DONE (negative/evidence-unavailable)·W7-PHYS-PRODUCTION-VIA-ROUTE-SOURCE-TRACE DONE (source-classified raw-base/global finite-route ownership; local calibrated half-branches not selected; mixed ownership fail-closed)·W7-PHYS-RAW-FINITE-VIA-RL-GENERATION-TRACE DONE (producer unclassified, high confidence)·W7-PHYS-GROUND-REACHABILITY-RL-PRODUCER-TRACE DONE (producer delegated/unclassified, high confidence)·W7-PHYS-VIA-SEGMENT-RL-MODEL-TRACE DONE (source-classified model; conditional multi-segment caller-contract bug confirmed; W6 exposure unknown)·W7-PHYS-MULTISEGMENT-RL-CALLER-FIX BLOCKED (fixture-contract red; production diff statically accepted and retained uncommitted)·W7-PHYS-CORRECTED-SUCCESSOR BLOCKED (static REJECT; zero pytest executions)·W7-PHYS-CORRECTED-SUCCESSOR-2 DONE·W7-PHYS-W6-MULTISEGMENT-EXPOSURE DONE (source-classified evidence unavailable; actual exposure unknown)·W7-PHYS-PLANE-SHEET-NONUNIFORM-RL-SOURCE-TRACE DONE (local stamps source-classified; Maxwell partial generation external/unclassified)·W7-PHYS-MAXWELL-PARTIAL-SOURCE-TRACE DONE (local adjacent-gap dispersive admittance classified; Maxwell C/dispersion/load/solver insertion external)·W7-PHYS-MAXWELL-CAPACITANCE-PRODUCER-TRACE DONE (exact 2D polygon-overlay lumped parallel-plate Maxwell C source-classified; W6 inputs/asset fidelity external)·W7-PHYS-PLANE-SHEET-RL-REUSE-DISCOVERY DONE (canonical rg once, candidates found; no reuse/production proof)·W7-PHYS-COPPER-SURFACE-IMPEDANCE-REUSE-TRACE DONE (surface-impedance constitutive law and MFDM stamp source-classified; W6 reuse unclassified/STOP)·W7-PHYS-SURFACE-PATCH-PLANE-REUSE-TRACE DONE (surface-patch local solver/operator source-classified; whole-solver W6 compatibility reuse unclassified/STOP)·W7-PHYS-W6-PLANE-SHEET-REIMPLEMENTATION-DESIGN ACTIVE·W7-PHYS-PROSPECTIVE-RUNTIME-TERM-EVIDENCE BLOCKED/YAGNI·W7-PHYS BLOCKED·ACTIVE W7-PHYS-W6-PLANE-SHEET-REIMPLEMENTATION-DESIGN
+- 상태: **G0 기준 문서** — [작업 기준](WORK_EXECUTION_BASELINE.md)과 함께 사용하며, W5 DONE·W6-BLOCK-A DONE·W6-BLOCK-B BLOCKED·W6-BLOCK-C DONE·W6-BLOCK-D DONE·W6-BLOCK-E DONE·W6-BASE DONE (260729 numerical FAIL)·W7-PHYS-AUDIT-MOUNTED-PATH DONE (negative/unclassified)·W7-PHYS-OWNER-TERMINAL-VIA-VS-SPATIAL DONE (negative/evidence-unavailable)·W7-PHYS-EVIDENCE-MISSING-PATH-COVERAGE DONE (negative/evidence-unavailable)·W7-PHYS-PRODUCTION-VIA-ROUTE-SOURCE-TRACE DONE (source-classified raw-base/global finite-route ownership; local calibrated half-branches not selected; mixed ownership fail-closed)·W7-PHYS-RAW-FINITE-VIA-RL-GENERATION-TRACE DONE (producer unclassified, high confidence)·W7-PHYS-GROUND-REACHABILITY-RL-PRODUCER-TRACE DONE (producer delegated/unclassified, high confidence)·W7-PHYS-VIA-SEGMENT-RL-MODEL-TRACE DONE (source-classified model; conditional multi-segment caller-contract bug confirmed; W6 exposure unknown)·W7-PHYS-MULTISEGMENT-RL-CALLER-FIX BLOCKED (fixture-contract red; production diff statically accepted and retained uncommitted)·W7-PHYS-CORRECTED-SUCCESSOR BLOCKED (static REJECT; zero pytest executions)·W7-PHYS-CORRECTED-SUCCESSOR-2 DONE·W7-PHYS-W6-MULTISEGMENT-EXPOSURE DONE (source-classified evidence unavailable; actual exposure unknown)·W7-PHYS-PLANE-SHEET-NONUNIFORM-RL-SOURCE-TRACE DONE (local stamps source-classified; Maxwell partial generation external/unclassified)·W7-PHYS-MAXWELL-PARTIAL-SOURCE-TRACE DONE (local adjacent-gap dispersive admittance classified; Maxwell C/dispersion/load/solver insertion external)·W7-PHYS-MAXWELL-CAPACITANCE-PRODUCER-TRACE DONE (exact 2D polygon-overlay lumped parallel-plate Maxwell C source-classified; W6 inputs/asset fidelity external)·W7-PHYS-PLANE-SHEET-RL-REUSE-DISCOVERY DONE (canonical rg once, candidates found; no reuse/production proof)·W7-PHYS-COPPER-SURFACE-IMPEDANCE-REUSE-TRACE DONE (surface-impedance constitutive law and MFDM stamp source-classified; W6 reuse unclassified/STOP)·W7-PHYS-SURFACE-PATCH-PLANE-REUSE-TRACE DONE (surface-patch local solver/operator source-classified; whole-solver W6 compatibility reuse unclassified/STOP)·W7-PHYS-W6-PLANE-SHEET-REIMPLEMENTATION-DESIGN BLOCKED (design before coding; replacement profile decision frozen)·W7-PHYS-W6-PLANE-SHEET-ADAPTER-BINDING-TRACE ACTIVE·W7-PHYS-PROSPECTIVE-RUNTIME-TERM-EVIDENCE BLOCKED/YAGNI·W7-PHYS BLOCKED·ACTIVE W7-PHYS-W6-PLANE-SHEET-ADAPTER-BINDING-TRACE
 - 최종 개정: 2026-08-26 (Asia/Seoul)
 
 ## 1. 문서 역할과 권위
@@ -568,13 +568,21 @@ dielectric C/loss differential nodal S; common-potential null/differential-only 
 MNA rejected; gates/cache. Terminal/Via/pad/antipad/fringe/full-wave and whole-solver drop-in
 compatibility were not proven.
 
-The authorized next item is `W7-PHYS-W6-PLANE-SHEET-REIMPLEMENTATION-DESIGN`, based on
-clean HEAD `ccb0522341817a048ffa7e35a90d40380445471b`. It is a docs-only design pass using
-the already-bound 17J–17O findings: choose replacement versus augmentation; map source
-inputs/provenance into surface-patch nodes, ports, gauge and W6 outputs; prevent double-counting
-against Maxwell C, finite Via and termination; freeze fail-closed/fallback, mesh/resource/cache/
-concurrency ceilings, exact code/test whitelist and commit partitions, version identity, and
-minimal V1/V2 evidence. Sol supervises the design; Luna implements only after review. W6
+17P is BLOCKED before coding. Its high-level decision is frozen as an explicit new
+`layerwise_surface_patch_v1` profile, replacement rather than augmentation; the historical
+profile remains unchanged with no automatic fallback. The new profile owns polygon C/loss,
+lateral gap L, and sheet impedance; it disables old plane Maxwell C/ideal plane topology while
+retaining finite Via and termination exactly once, and fails closed when evidence is missing.
+The bounded core remains app v0.23.0; exact solver identity is pending. The sole ACTIVE successor
+is `W7-PHYS-W6-PLANE-SHEET-ADAPTER-BINDING-TRACE`, based on clean HEAD
+`b060a5b229adbe898330794250c097bfe0e91184`, with the exact five-file whitelist:
+`src/spd_decap_pi/evaluation.py`, `src/spd_decap_pi/layerwise_scenario_adapter.py`,
+`src/spd_decap_pi/layerwise_scenario_topology.py`, `src/spd_decap_pi/scenario_topology_plan.py`,
+`src/spd_decap_pi/compiled_topology_asset.py`. It reuses frozen 17J–17O findings without reread;
+Luna reads each file once, and any delegate outside the whitelist stops the trace. The trace must
+bind profile/cache/worker ownership, persisted polygon/material/provenance, port/node incidence,
+Via/termination/owner/certificate handoff, compiled-asset availability, and nullspace-compatible
+adapter inputs. One Sol design review then freezes code/test whitelist, identity, commits, V1/V2;
 production runs, old-root reuse, release, and parent accuracy/causal promotion remain unauthorized.
 
 Approval basis commit `027ac7a09a3eded15f45c41860945f9d4c7f488d` is distinct from
@@ -632,5 +640,6 @@ and the exact Git HEAD are frozen together. Current trust identities: base `d43b
 | 1.33 | 2026-08-26 | 17M canonical solver-directory `rg` discovery를 candidate-found/no-reuse-proof로 종료하고 `mfdm.py` copper surface-impedance reuse trace를 유일 ACTIVE로 지정. |
 | 1.34 | 2026-08-26 | 17N을 surface-impedance constitutive law/MFDM stamp source-classified·W6 reuse unclassified/STOP으로 종료하고 `surface_patch_plane.py` caller trace를 유일 ACTIVE로 지정. |
 | 1.35 | 2026-08-26 | 17O를 surface-patch local solver/operator source-classified·whole-solver W6 reuse unclassified/STOP으로 종료하고 17P W6 plane-sheet reimplementation design을 유일 ACTIVE로 지정. |
+| 1.36 | 2026-08-26 | 17P를 명시적 `layerwise_surface_patch_v1` replacement profile 결정과 함께 BLOCKED로 닫고 17Q 5-file adapter binding trace를 유일 ACTIVE로 지정. |
 | 1.1 | 2026-08-24 | `WORK_EXECUTION_BASELINE.md`를 두 번째 canonical 문서로 연결. |
 | 1.0 | 2026-08-24 | v0.24 계획 중심의 Distribution–solver PRD를 제품 전체의 목적·기술 기준으로 개정. PowerSI 정확성 우선, 상태 어휘, 기술 경계, promotion gate, 검증 비용 통제와 two-document 작업 방식을 고정. |

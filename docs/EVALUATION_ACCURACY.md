@@ -609,15 +609,21 @@ source-classified, but whole-solver W6 compatibility reuse is unclassified/STOP.
 polygon clip/mesh and constant-signature strips; scalar σ/t and dielectric provenance; copper helper
 + gap L + dielectric C/loss differential nodal S; common-potential null/differential-only output;
 absolute MNA rejected; gates/cache. Terminal/Via/pad/antipad/fringe/full-wave and drop-in W6
-compatibility were not proven. The sole ACTIVE successor is
-`W7-PHYS-W6-PLANE-SHEET-REIMPLEMENTATION-DESIGN`, a docs-only design pass from clean HEAD
-`ccb0522341817a048ffa7e35a90d40380445471b` using bound 17J–17O findings; no code/test/artifact/
-production execution occurs before design review. The design must freeze replacement-vs-augmentation,
-source/provenance mapping, surface-patch node/port/gauge-to-W6 output, no-double-counting against
-Maxwell C/Via/termination, fail-closed/fallback and mesh/resource/cache/concurrency ceilings,
-exact code/test whitelist and commit partitions, version identity, and minimal V1/V2 evidence.
-Sol reviews once; Luna implements only after review. W6 production runs, old-root reuse, release,
-and parent accuracy/causal promotion remain unauthorized. The compact scenario quotient
+compatibility were not proven. 17P is BLOCKED before coding: the high-level decision is an explicit
+new `layerwise_surface_patch_v1` replacement profile; the historical profile remains unchanged
+with no automatic fallback. The new profile owns polygon C/loss + lateral gap L + sheet impedance,
+disables old plane Maxwell C/ideal plane topology, retains finite Via + termination exactly once,
+and fails closed on missing evidence; app v0.23.0, exact solver identity pending. The sole ACTIVE
+successor is `W7-PHYS-W6-PLANE-SHEET-ADAPTER-BINDING-TRACE`, based on clean HEAD
+`b060a5b229adbe898330794250c097bfe0e91184`, with exact whitelist `src/spd_decap_pi/evaluation.py`,
+`src/spd_decap_pi/layerwise_scenario_adapter.py`, `src/spd_decap_pi/layerwise_scenario_topology.py`,
+`src/spd_decap_pi/scenario_topology_plan.py`, and `src/spd_decap_pi/compiled_topology_asset.py`.
+One complete read each must bind profile/cache/worker ownership, persisted polygon/material/
+provenance, port/node incidence, Via/termination/owner/certificate handoff, compiled-asset
+availability, and nullspace-compatible adapter inputs; any delegate outside stops the trace. One Sol
+review then freezes code/test whitelist, identity, commits and V1/V2. No code/test/artifact/
+production execution occurs before review; production runs, old-root reuse, release, and parent
+accuracy/causal promotion remain unauthorized. The compact scenario quotient
 stores only schema/status, compiled SQLite stores aggregate `finite_parallel_rl` links/count/
 R/L/owners without source series terms, segments, or `physical_model_status`, and the
 production-complete surface certificate uses a compiled-only stub without the raw canonical
