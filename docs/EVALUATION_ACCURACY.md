@@ -749,12 +749,14 @@ activation claim. 17AP is DONE at clean main
 completed `_job_import_spd` boundary1859-1877; sole call omits include_plane_sheet_payload => default-v2;
 progress scaled to65%, cancellation forwarded, view prep + `_PreparedScenarioImport` return; no local
 try/except or product/profile opt-in, upper error handling unproven. No code/test/production/accuracy claim.
-Sole ACTIVE next is `W7-PHYS-W6-RAW-SPATIAL-V3-GUI-CALLER-TEST-SEAM-DISCOVERY` (17AQ), authorizing
-exactly once `rg -n --with-filename --no-heading --color never --glob '*.py' '\b_job_import_spd\b' 'tests'`.
-Discovery/location evidence only; no source read/test/code. Require exit0 bounded output, classify matches,
-and select at most one viable existing regression seam; zero match or unbounded/ambiguous owner =>
-STOP/BLOCKED, no rerun/extension. Only exactly one viable seam may support a later separately documented
-one-line GUI opt-in plus existing focused regression design.
+17AQ is BLOCKED at clean main `f79927da0f96adc4a60644aa29388965b0dd6df8`: exact authorized rg once exit1
+zero output; no rerun; no existing direct `_job_import_spd` test seam; no source/test/code. Sole ACTIVE next
+is `W7-PHYS-W6-RAW-SPATIAL-V3-GUI-OPTIN-ACTIVATION` (17AR), limited to `src/spd_decap_pi/gui/main_window.py`:
+add exactly one line `include_plane_sheet_payload=True,` to the existing import call; expected diff 1 file/1
+insertion, preserve path/progress/cancellation/view/return and API default/other callers. Sol static diff
+exactly once; no tests (reuse prior adapter opt-in focused PASS); ACCEPT => one-file atomic commit, REJECT
+=> STOP. No search/source extension/new GUI test/helper/production SPD or GUI run/solver/profile/accuracy/
+release/version claim.
 Contract: v2 constants/API byte-identical; profile/global/app/solver/convergence/policy/controller
 identities unchanged; only the opt-in raw-spatial v3 schema/compiler sibling identity is new. v3 sibling with kw-only opt-in flags, five normalized tables,
 no gap table, positive-intervening-thickness fsum spacing, row/coordinate/ProjectSpec/source-SHA digest,
