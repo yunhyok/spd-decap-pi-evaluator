@@ -757,15 +757,12 @@ and no solver/production/accuracy claim. 17AS is DONE-negative at clean main
 `9dba3076b6648e7aeb874c96fa721997e1629bb3`: the exact authorized query ran once with exit0, 6 lines/1 file
 (`raw_spatial_contact_asset.py`); definitions/signatures/guards/exports only, with zero actual
 `require_plane_sheet_payload=True` source callers. Producer active/no solver consumer; no rerun/read/code/
-test/production/PowerSI/accuracy/causal claim. Sole ACTIVE successor is
-`W7-PHYS-W6-RAW-SPATIAL-V3-SOLVER-CONSUMER-INTEGRATION-DESIGN` (17AT), a frozen-evidence-only design pass.
-Candidates are limited to `raw_spatial_contact_asset.py`, `evaluation.py`, `_core/solver/profiles.py`, and
-`_core/solver/layer_surface_network.py`; `surface_patch_plane.py` and `mfdm.py` are reused without reread.
-The pass must resolve owner/opt-in no-fallback profile/loader require flag, hash-bound solve handoff,
-new-profile-only replacement/no-double-counting, differential/nullspace/gauge and rail-order Zii,
-single-worker immutable payload/cache, and minimal whitelist/V1/V2 once-only STOP. Missing contract means
-implementation not approved and a max2-file successor whitelist; no code/test/production/PowerSI/accuracy/
-causal/release claim.
+test/production/PowerSI/accuracy/causal claim. 17AT is BLOCKED/implementation REJECT after one
+frozen-evidence design pass; all six bindings remain UNPROVEN: profile+require owner, hash-bound
+evaluation→solver handoff, replacement/no-double-counting owner-off seam, differential/nullspace/gauge/
+rail-order mapping, worker/immutable/cache fencing, and minimal file/test/V1/V2 whitelist. Sole ACTIVE
+successor is 17AU `W7-PHYS-W6-RAW-SPATIAL-V3-EVALUATION-HANDOFF-BOUNDARY-DISCOVERY`, limited to its exact
+once query; no code/test/source/production/PowerSI/profile/solver/accuracy/causal claim.
 Contract: v2 constants/API byte-identical; profile/global/app/solver/convergence/policy/controller
 identities unchanged; only the opt-in raw-spatial v3 schema/compiler sibling identity is new. v3 sibling with kw-only opt-in flags, five normalized tables,
 no gap table, positive-intervening-thickness fsum spacing, row/coordinate/ProjectSpec/source-SHA digest,
