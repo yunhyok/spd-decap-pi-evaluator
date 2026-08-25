@@ -750,13 +750,16 @@ completed `_job_import_spd` boundary1859-1877; sole call omits include_plane_she
 progress scaled to65%, cancellation forwarded, view prep + `_PreparedScenarioImport` return; no local
 try/except or product/profile opt-in, upper error handling unproven. No code/test/production/accuracy claim.
 17AQ is BLOCKED at clean main `f79927da0f96adc4a60644aa29388965b0dd6df8`: exact authorized rg once exit1
-zero output; no rerun; no existing direct `_job_import_spd` test seam; no source/test/code. Sole ACTIVE next
-is `W7-PHYS-W6-RAW-SPATIAL-V3-GUI-OPTIN-ACTIVATION` (17AR), limited to `src/spd_decap_pi/gui/main_window.py`:
-add exactly one line `include_plane_sheet_payload=True,` to the existing import call; expected diff 1 file/1
-insertion, preserve path/progress/cancellation/view/return and API default/other callers. Sol static diff
-exactly once; no tests (reuse prior adapter opt-in focused PASS); ACCEPT => one-file atomic commit, REJECT
-=> STOP. No search/source extension/new GUI test/helper/production SPD or GUI run/solver/profile/accuracy/
-release/version claim.
+zero output; no rerun; no existing direct `_job_import_spd` test seam; no source/test/code. 17AR is DONE at
+clean main commit `fba20767abfbc357f972f77172f6e7f0a5f67772` (source-before `d20eabf267f06799a4f13caa0dce51357eecd4aa`):
+exactly 1 file/1 insertion `include_plane_sheet_payload=True,` in the GUI call, Sol static ACCEPT, no tests,
+and no solver/production/accuracy claim. Sole ACTIVE successor is
+`W7-PHYS-W6-RAW-SPATIAL-V3-SOLVER-CONSUMER-DISCOVERY` (17AS), authorizing exactly once query
+`rg -n --with-filename --no-heading --color never --glob '*.py' '\b(?:load_raw_spatial_contact_asset|require_plane_sheet_payload)\b' 'src/spd_decap_pi'`.
+Cap max30 lines/6 files; location evidence only, exclude import/definition/export strings, require exactly
+one actual source caller bound to `require_plane_sheet_payload=True` for a later bounded trace; zero actual
+caller => DONE-negative producer/no solver consumer and separately documented integration design; multiple,
+ambiguous, error, or over-budget => STOP. No file open/code/test/production/profile/solver/accuracy/causal claim.
 Contract: v2 constants/API byte-identical; profile/global/app/solver/convergence/policy/controller
 identities unchanged; only the opt-in raw-spatial v3 schema/compiler sibling identity is new. v3 sibling with kw-only opt-in flags, five normalized tables,
 no gap table, positive-intervening-thickness fsum spacing, row/coordinate/ProjectSpec/source-SHA digest,
