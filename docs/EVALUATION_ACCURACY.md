@@ -719,12 +719,17 @@ lines/1 file; `import_spd_scenario` import line70 and non-import calls 509, 587,
 checks 1750, 1752, 2487; no compiler/include flag matches. Location evidence only; no test owner was
 selected. 17AI is BLOCKED (gate STOP) at clean main HEAD `0b9e75f5367c12e76e8e06edb652f112d518b69d`:
 the exact frozen PowerShell ran once, exit2, zero output; no rerun; failure stage unclassified among
-silent gates and no cause inferred. Sole ACTIVE next is
-`W7-PHYS-W6-RAW-SPATIAL-V3-ADAPTER-TEST-OWNER-BOUNDARY-DIAGNOSTIC` (17AJ), with the exact frozen
-diagnostic PowerShell gate in Work: run once; success exit0, exactly 4 lines for one expected file,
-complete top-level test-definition scan, and final EOF sentinel only when no later test definition
-exists; any STOP/nonzero/count/path mismatch => STOP. Use only frozen 17AH non-import call lines for
-interval membership; zero/both/overlap/ambiguity => STOP. No file open, code, test, or inference.
+silent gates and no cause inferred. 17AJ is DONE as deterministic owner-location evidence at clean
+main HEAD `4aaf242dc6da530b600b01e924f4a9c01ab88c01`: exact diagnostic once exit0, exactly four lines
+for the expected file; target 1750 bracketed by definition lines 1736-1764 with no frozen 17AH
+non-import call; target 2487 bracketed by line 1764 and valid EOF sentinel with frozen call 2298;
+exactly one owner selected. Sole ACTIVE next is
+`W7-PHYS-W6-RAW-SPATIAL-V3-ADAPTER-OPTIN-TEST-SEAM-TRACE` (17AK), authorizing exactly two excerpts
+from the same test file, A lines 2284-2312 (29) and B lines 2468-2505 (38), total <=67; no owner-wide
+read/search/other range. A must include call 2298 assignment/args/kwargs and immediate result/status;
+B must include RAW-key extraction/assertions/schema/version/tables/attachment expectations and test-tail
+completion. Endpoint truncation => STOP. Only opt-in seam viability may be concluded while default-v2
+tests stay separate. No owner-wide read/search, code edit, test execution, or profile/accuracy/production inference.
 Contract: v2 constants/API byte-identical; profile/global/app/solver/convergence/policy/controller
 identities unchanged; only the opt-in raw-spatial v3 schema/compiler sibling identity is new. v3 sibling with kw-only opt-in flags, five normalized tables,
 no gap table, positive-intervening-thickness fsum spacing, row/coordinate/ProjectSpec/source-SHA digest,
