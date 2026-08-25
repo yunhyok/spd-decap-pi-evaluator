@@ -717,11 +717,14 @@ at clean main HEAD `d45a23f62ebd417a50498724bdea79ba77d8d041`: its exact query r
 lines/1 file; `import_spd_scenario` import line70 and non-import calls 509, 587, 618, 647, 698, 791,
 863, 965, 1207, 1208, 1229, 1249, 1272, 1291, 1409, 1450, 2298; raw metadata key import45 and
 checks 1750, 1752, 2487; no compiler/include flag matches. Location evidence only; no test owner was
-selected. Sole ACTIVE next is `W7-PHYS-W6-RAW-SPATIAL-V3-ADAPTER-TEST-OWNER-BOUNDARY-DISCOVERY`
-(17AI), with the exact frozen PowerShell gate in Work: run once, exactly 4 lines/1 file; bracket
-targets 1750 and 2487 with top-level test definitions; use only the frozen 17AH call list for interval
-membership and select at most one owner only if exactly one bracket contains an observed non-import
-call; zero/both/ambiguous/overlap => STOP. No file open, code, test, or inference.
+selected. 17AI is BLOCKED (gate STOP) at clean main HEAD `0b9e75f5367c12e76e8e06edb652f112d518b69d`:
+the exact frozen PowerShell ran once, exit2, zero output; no rerun; failure stage unclassified among
+silent gates and no cause inferred. Sole ACTIVE next is
+`W7-PHYS-W6-RAW-SPATIAL-V3-ADAPTER-TEST-OWNER-BOUNDARY-DIAGNOSTIC` (17AJ), with the exact frozen
+diagnostic PowerShell gate in Work: run once; success exit0, exactly 4 lines for one expected file,
+complete top-level test-definition scan, and final EOF sentinel only when no later test definition
+exists; any STOP/nonzero/count/path mismatch => STOP. Use only frozen 17AH non-import call lines for
+interval membership; zero/both/overlap/ambiguity => STOP. No file open, code, test, or inference.
 Contract: v2 constants/API byte-identical; profile/global/app/solver/convergence/policy/controller
 identities unchanged; only the opt-in raw-spatial v3 schema/compiler sibling identity is new. v3 sibling with kw-only opt-in flags, five normalized tables,
 no gap table, positive-intervening-thickness fsum spacing, row/coordinate/ProjectSpec/source-SHA digest,
