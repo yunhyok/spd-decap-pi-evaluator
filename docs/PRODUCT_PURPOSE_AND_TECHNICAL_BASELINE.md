@@ -1,9 +1,9 @@
 # SPD Decap PI Evaluator 목적·기술 기준
 
 - 적용 제품: **SPD Decap PI Evaluator v0.23.0**
-- 문서 버전: **1.17**
+- 문서 버전: **1.18**
 - W5 approved/machine-frozen source-before: `main` commit `027ac7a09a3eded15f45c41860945f9d4c7f488d`
-- 상태: **G0 기준 문서** — [작업 기준](WORK_EXECUTION_BASELINE.md)과 함께 사용하며, W5 DONE·W6-BLOCK-A DONE·W6-BLOCK-B BLOCKED·W6-BLOCK-C DONE·W6-BLOCK-D DONE·W6-BLOCK-E DONE·W6-BASE DONE (260729 numerical FAIL)·W7-PHYS-AUDIT-MOUNTED-PATH DONE (negative/unclassified)·W7-PHYS-OWNER-TERMINAL-VIA-VS-SPATIAL DONE (negative/evidence-unavailable)·W7-PHYS-EVIDENCE-MISSING-PATH-COVERAGE DONE (negative/evidence-unavailable)·W7-PHYS-PRODUCTION-VIA-ROUTE-SOURCE-TRACE DONE (source-classified raw-base/global finite-route ownership; local calibrated half-branches not selected; mixed ownership fail-closed)·W7-PHYS BLOCKED·active NONE
+- 상태: **G0 기준 문서** — [작업 기준](WORK_EXECUTION_BASELINE.md)과 함께 사용하며, W5 DONE·W6-BLOCK-A DONE·W6-BLOCK-B BLOCKED·W6-BLOCK-C DONE·W6-BLOCK-D DONE·W6-BLOCK-E DONE·W6-BASE DONE (260729 numerical FAIL)·W7-PHYS-AUDIT-MOUNTED-PATH DONE (negative/unclassified)·W7-PHYS-OWNER-TERMINAL-VIA-VS-SPATIAL DONE (negative/evidence-unavailable)·W7-PHYS-EVIDENCE-MISSING-PATH-COVERAGE DONE (negative/evidence-unavailable)·W7-PHYS-PRODUCTION-VIA-ROUTE-SOURCE-TRACE DONE (source-classified raw-base/global finite-route ownership; local calibrated half-branches not selected; mixed ownership fail-closed)·W7-PHYS-RAW-FINITE-VIA-RL-GENERATION-TRACE ACTIVE·W7-PHYS BLOCKED
 - 최종 개정: 2026-08-25 (Asia/Seoul)
 
 ## 1. 문서 역할과 권위
@@ -470,8 +470,13 @@ v6 → base benchmark → `_build_bound_layerwise_source_model` → v4-only term
 factory → required v4 certificate → scenario network → retained base
 `finite_parallel_rl` links plus cap-only termination manifest. Local calibrated
 half-branches were not selected and mixed ownership is rejected. The next candidate,
-`W7-PHYS-RAW-FINITE-VIA-RL-GENERATION-TRACE`, is BLOCKED pending a new explicit
-source whitelist; it is not ACTIVE or auto-started.
+User approval on 2026-08-25 activates `W7-PHYS-RAW-FINITE-VIA-RL-GENERATION-TRACE` as
+the sole read-only producer trace. Its whitelist is limited to `spd_adapter.py`,
+`compiled_topology_asset.py`, `reduced_conductor.py`, `finite_route_reducer.py`,
+`via_peec.py`, and `finite_via_layerwise.py`; no 17D scenario/network reread,
+artifact access, solver run, numeric recomputation, calibration, threshold, or physics
+change is authorized. Failure to statically bind a producer formula or runtime branch
+closes the item unclassified.
 
 Approval basis commit `027ac7a09a3eded15f45c41860945f9d4c7f488d` is distinct from
 the caller-supplied exact current `main` HEAD required at a future W6 invocation;
@@ -510,5 +515,6 @@ and the exact Git HEAD are frozen together. Current trust identities: base `d43b
 | 1.15 | 2026-08-25 | terminal-Via 감사의 persisted path evidence 누락을 exit 2로 기록하고 W7-PHYS-EVIDENCE-MISSING-PATH-COVERAGE를 새 read-only active item으로 지정. |
 | 1.16 | 2026-08-25 | corrected v2 coverage audit를 negative/evidence-unavailable로 닫고 W7-PHYS-PRODUCTION-VIA-ROUTE-SOURCE-TRACE를 유일한 ACTIVE static-trace item으로 지정. |
 | 1.17 | 2026-08-25 | W7-PHYS-PRODUCTION-VIA-ROUTE-SOURCE-TRACE를 raw-base/global finite-route ownership으로 source-proven 종료하고 active NONE, 다음 producer-trace 후보 BLOCKED로 갱신. |
+| 1.18 | 2026-08-25 | 사용자 승인으로 W7-PHYS-RAW-FINITE-VIA-RL-GENERATION-TRACE를 유일한 read-only ACTIVE producer trace로 지정하고 6-file whitelist와 비목표를 고정. |
 | 1.1 | 2026-08-24 | `WORK_EXECUTION_BASELINE.md`를 두 번째 canonical 문서로 연결. |
 | 1.0 | 2026-08-24 | v0.24 계획 중심의 Distribution–solver PRD를 제품 전체의 목적·기술 기준으로 개정. PowerSI 정확성 우선, 상태 어휘, 기술 경계, promotion gate, 검증 비용 통제와 two-document 작업 방식을 고정. |
