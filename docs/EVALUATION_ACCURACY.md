@@ -684,13 +684,18 @@ after its single authorized read of `src/spd_decap_pi/spd_adapter.py` lines 100-
 prove copy-on-write persistence, exact generated attachment name/type/payload match, casefold collision
 rejection, canonical `RAW_SPATIAL_CONTACT_ASSET_METADATA_KEY` preservation, and divergent existing
 manifest rejection. v3 semantic validation and compiler/caller ownership remain explicitly unproven/
-delegated; absence is not evidence. Sole ACTIVE next is
-`W7-PHYS-W6-RAW-SPATIAL-V3-MERGE-CALLER-DISCOVERY` (17AD), limited to exactly one frozen query:
-`rg -n --no-heading --color never --glob '*.py' '\b_merge_raw_spatial_contact_asset\b' 'src/spd_decap_pi'`;
-cap <=10 output lines and <=2 files, with command error, over-cap, or definition-only => STOP. If
-within cap, at most one non-definition caller may be selected for a later separately authorized trace;
-17AD itself opens no files. No whole-file reread/search, code/test/profile/accuracy/production proof,
-or whitelist expansion is authorized.
+delegated; absence is not evidence. 17AD is DONE at clean main HEAD
+`7537c8ebee9109071db54cc84f5562e375bfc07f`: its exact frozen query ran once, exit 0, with 2 output
+lines/1 file. The definition is `src/spd_decap_pi/spd_adapter.py:131` and the exactly one selected
+non-definition caller is `src/spd_decap_pi/spd_adapter.py:7868`; location evidence only, no files
+opened and no compiler/delegate inference. Sole ACTIVE next is
+`W7-PHYS-W6-RAW-SPATIAL-V3-MERGE-OWNER-BOUNDARY-DISCOVERY` (17AE), limited to the exact fenced
+PowerShell gate in the Work document with mandatory `--with-filename`: exactly 2 output lines/1 file,
+first line <=7868 and second >7868; command error, parse failure, wrong count/file count, or
+nonbracketing => STOP. Output is only top-level owner/signature boundary location evidence; no
+implementation read, file open, code/test/profile/accuracy/production claim, or automatic contiguous
+read. A later contiguous source read requires separate documentation/authorization and a reasonably
+bounded bracket.
 Contract: v2 constants/API byte-identical; profile/global/app/solver/convergence/policy/controller
 identities unchanged; only the opt-in raw-spatial v3 schema/compiler sibling identity is new. v3 sibling with kw-only opt-in flags, five normalized tables,
 no gap table, positive-intervening-thickness fsum spacing, row/coordinate/ProjectSpec/source-SHA digest,
