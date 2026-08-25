@@ -74,6 +74,8 @@ def _write_fixture(root, audit):
             "power_vias": [_landing("V3P", "PWR", 3)] if shared_vias else ([_landing("V0P", "PWR", 0), _landing("V0P2", "PWR", 0.25)] if decap["refdes"] == "C0" else [_landing(f"V{index}P", "PWR", index)]),
             "ground_vias": [_landing("V3G", "GND", 3.5)] if shared_vias else ([_landing("V0G", "GND", 0.5), _landing("V0G2", "GND", 0.75)] if decap["refdes"] == "C0" else [_landing(f"V{index}G", "GND", index + 0.5)]),
         }
+    connections["C1"]["power_vias"][0]["path_evidence"] = []
+    connections["C2"]["ground_vias"][0]["path_evidence"][0]["trace_hops"] = 1
     cluster = {
         "cluster_id": "CL3", "state": "ANCHORED", "member_refdes": ["C3", "C3A", "C3D", "C3X"],
         "anchor_refdes": ["C3", "C3A"], "dummy_refdes": ["C3D", "C3X"], "power_net": rails[3],
@@ -189,7 +191,7 @@ def test_terminal_via_vs_spatial_contract_table(tmp_path):
     output = tmp_path / "valid.json"
     assert audit.main(["--candidate", str(candidate), "--import-report", str(import_report), "--correlation-report", str(correlation), "--previous-w7-audit", str(previous), "--output", str(output), "--expected-head", expected_head]) == 2
     result = json.loads(output.read_text(encoding="utf-8"))
-    assert result["schema"] == "powersi-terminal-via-vs-spatial-audit-v1"
+    assert result["schema"] == "powersi-terminal-via-vs-spatial-audit-v2"
     assert result["status"] == "diagnostic_complete"
     assert result["selected_investigation_block"] is None
     assert result["audited_scope"] == "terminal_landing_spatial_core"
@@ -201,6 +203,12 @@ def test_terminal_via_vs_spatial_contract_table(tmp_path):
     first = result["terminal_via_inventory"]["per_rail"][audit.LOADED_RAILS[0]]
     assert len(first["pwr_vias"]) == 2 and len(first["gnd_vias"]) == 2
     assert first["segments"] == 8 and sum(row["count"] for row in first["segment_classifications"]) == 8
+    assert result["terminal_via_inventory"]["coverage_summary"] == {"available": 12, "missing": 1, "trace_NA": 1, "total_inventoried_terminal_vias": 14, "available_numeric_vias": 12, "state_classification_complete": True, "coverage_complete": False}
+    missing = result["terminal_via_inventory"]["per_rail"][audit.LOADED_RAILS[1]]
+    traced = result["terminal_via_inventory"]["per_rail"][audit.LOADED_RAILS[2]]
+    assert missing["path_coverage"]["PWR"]["missing"] == 1 and missing["segments"] == 2 and len(missing["segment_classifications"]) == 2
+    assert traced["path_coverage"]["GND"]["trace_NA"] == 1 and traced["segments"] == 2 and len(traced["segment_classifications"]) == 2
+    assert all(isinstance(rail["path_coverage"][net]["state_evidence_sha256"], str) and len(rail["path_coverage"][net]["state_evidence_sha256"]) == 64 and rail["path_coverage"][net]["state_evidence_count"] == sum(rail["path_coverage"][net][status] for status in ("available", "missing", "trace_NA")) == len(rail["pwr_vias"] if net == "PWR" else rail["gnd_vias"]) for rail in result["terminal_via_inventory"]["per_rail"].values() for net in ("PWR", "GND"))
     shared = result["terminal_via_inventory"]["per_rail"][audit.LOADED_RAILS[3]]
     assert len(shared["pwr_vias"]) == 1 and len(shared["gnd_vias"]) == 1
     assert shared["segments"] == 4 and len(shared["segment_classifications"]) == 4
@@ -221,14 +229,8 @@ def test_terminal_via_vs_spatial_contract_table(tmp_path):
     broken["connection_analysis"]["connections"]["C0"]["ground_vias"][0]["via_id"] = "V0P"
     cases.append(("via-terminal-crossover", broken))
     broken = json.loads(json.dumps(scenario))
-    broken["connection_analysis"]["connections"]["C0"]["power_vias"][0]["path_evidence"] = []
-    cases.append(("missing-path", broken))
-    broken = json.loads(json.dumps(scenario))
     broken.pop("connection_analysis")
     cases.append(("missing-target-fragment", broken))
-    broken = json.loads(json.dumps(scenario))
-    broken["connection_analysis"]["connections"]["C0"]["power_vias"][0]["path_evidence"][0]["trace_hops"] = 1
-    cases.append(("trace-hop", broken))
     broken = json.loads(json.dumps(scenario))
     broken["connection_analysis"]["connections"]["C0"]["power_vias"][0]["path_evidence"].append(broken["connection_analysis"]["connections"]["C0"]["power_vias"][0]["path_evidence"][0])
     cases.append(("duplicate-target-fragment", broken))

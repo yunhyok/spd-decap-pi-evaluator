@@ -54,7 +54,7 @@ EXPECTED_PREVIOUS_W7 = {
     "size_bytes": 15796,
     "sha256": "e3c28144b4578c6d17846b70bc345ffab634eb58c9faa698401b9bffcc663ceb",
 }
-SCHEMA = "powersi-terminal-via-vs-spatial-audit-v1"
+SCHEMA = "powersi-terminal-via-vs-spatial-audit-v2"
 TOOL = "SPD Decap PI Evaluator v0.23.0"
 SELECTED_BLOCK = "terminal_landing_spatial_core"
 _FRAGMENT_LIMITS = {
@@ -445,7 +445,7 @@ def _inventory(decaps: list[ScenarioDecap], analysis: SharedPadConnectionAnalysi
             raise IntegrityError(f"missing connection for {item.refdes}")
         if connection.kind not in {DecapConnectionKind.DIRECT, DecapConnectionKind.SHARED_ANCHOR, DecapConnectionKind.SHARED_DUMMY}:
             raise IntegrityError("selected decap connection is not actionable")
-        family = per_rail.setdefault(item.current_rail_id, {"direct": 0, "shared": 0, "pwr_units": set(), "gnd_units": set(), "pwr_vias": {}, "gnd_vias": {}, "segments": 0, "length_um": 0.0, "resistance_ohm": 0.0, "inductance_h": 0.0, "landing_count": 0, "landing_x_min": None, "landing_x_max": None, "landing_y_min": None, "landing_y_max": None, "target_layers": set(), "target_nodes": set(), "evidence_sha256": set(), "segment_classifications": {}})
+        family = per_rail.setdefault(item.current_rail_id, {"direct": 0, "shared": 0, "pwr_units": set(), "gnd_units": set(), "pwr_vias": {}, "gnd_vias": {}, "segments": 0, "length_um": 0.0, "resistance_ohm": 0.0, "inductance_h": 0.0, "landing_count": 0, "landing_x_min": None, "landing_x_max": None, "landing_y_min": None, "landing_y_max": None, "target_layers": set(), "target_nodes": set(), "evidence_sha256": set(), "segment_classifications": {}, "path_coverage": {"PWR": {"available": 0, "missing": 0, "trace_NA": 0, "state_evidence_sha256": []}, "GND": {"available": 0, "missing": 0, "trace_NA": 0, "state_evidence_sha256": []}}, "inventoried_terminal_vias": 0})
         family["direct" if connection.kind == DecapConnectionKind.DIRECT else "shared"] += 1
         if connection.kind == DecapConnectionKind.DIRECT:
             unit_id = (f"direct:{item.refdes.casefold()}", f"direct:{item.refdes.casefold()}", connection.power_vias, connection.ground_vias)
@@ -469,15 +469,35 @@ def _inventory(decaps: list[ScenarioDecap], analysis: SharedPadConnectionAnalysi
                 if via_key in target:
                     continue
                 target[via_key] = landing.endpoint_node_id
-                if not landing.path_evidence:
-                    raise IntegrityError("target Via path evidence is missing")
                 expected_layer = rail_map[item.current_rail_id.casefold()].pwr_layer if net_name == "PWR" else rail_map[item.current_rail_id.casefold()].gnd_layer
-                matching_path = landing.evidence_for_layer(expected_layer)
-                if matching_path is None or sum(path.target_layer.casefold() == expected_layer.casefold() for path in landing.path_evidence) != 1:
+                target_paths = [path for path in landing.path_evidence if path.target_layer.casefold() == expected_layer.casefold()]
+                if len(target_paths) > 1:
                     raise IntegrityError("Via target layer is missing or ambiguous")
+                try:
+                    matching_path = landing.evidence_for_layer(expected_layer)
+                except Exception as exc:
+                    raise IntegrityError("Via target layer evidence is malformed") from exc
+                if target_paths and matching_path is None:
+                    raise IntegrityError("Via target layer evidence is inconsistent")
+                if matching_path is None:
+                    status = "missing"
+                elif matching_path.trace_hops != 0 or matching_path.trace_alternate_exit:
+                    status = "trace_NA"
+                else:
+                    status = "available"
+                family["inventoried_terminal_vias"] += 1
+                state_row = {"rail": item.current_rail_id, "unit": unit_key, "terminal": net_name, "via_id": landing.via_id, "expected_layer": expected_layer, "status": status, "landing_fingerprint_sha256": hashlib.sha256(fingerprint.encode("utf-8")).hexdigest()}
+                state_hash = hashlib.sha256(json.dumps(state_row, sort_keys=True, separators=(",", ":")).encode("utf-8")).hexdigest()
+                family["path_coverage"][net_name][status] += 1
+                family["path_coverage"][net_name]["state_evidence_sha256"].append(state_hash)
+                family["landing_count"] += 1
+                family["landing_x_min"] = landing.x_um if family["landing_x_min"] is None else min(family["landing_x_min"], landing.x_um)
+                family["landing_x_max"] = landing.x_um if family["landing_x_max"] is None else max(family["landing_x_max"], landing.x_um)
+                family["landing_y_min"] = landing.y_um if family["landing_y_min"] is None else min(family["landing_y_min"], landing.y_um)
+                family["landing_y_max"] = landing.y_um if family["landing_y_max"] is None else max(family["landing_y_max"], landing.y_um)
+                if matching_path is None or status != "available":
+                    continue
                 for path in (matching_path,):
-                    if path.trace_hops != 0 or path.trace_alternate_exit:
-                        raise IntegrityError("Via path contains trace hop/alternate exit")
                     try:
                         resistance, inductance, models = _source_terminal_estimate(path.segments, stackup)
                     except Exception as exc:
@@ -502,11 +522,6 @@ def _inventory(decaps: list[ScenarioDecap], analysis: SharedPadConnectionAnalysi
                         row["length_um"] += float(segment.length_um)
                         row["resistance_ohm"] += model_r
                         row["inductance_h"] += model_l
-                    family["landing_count"] += 1
-                    family["landing_x_min"] = landing.x_um if family["landing_x_min"] is None else min(family["landing_x_min"], landing.x_um)
-                    family["landing_x_max"] = landing.x_um if family["landing_x_max"] is None else max(family["landing_x_max"], landing.x_um)
-                    family["landing_y_min"] = landing.y_um if family["landing_y_min"] is None else min(family["landing_y_min"], landing.y_um)
-                    family["landing_y_max"] = landing.y_um if family["landing_y_max"] is None else max(family["landing_y_max"], landing.y_um)
                     family["target_layers"].add(path.target_layer)
                     family["target_nodes"].add(path.target_node_id)
                     family["evidence_sha256"].add(hashlib.sha256(path.model_dump_json().encode("utf-8")).hexdigest())
@@ -515,6 +530,18 @@ def _inventory(decaps: list[ScenarioDecap], analysis: SharedPadConnectionAnalysi
     for value in per_rail.values():
         if not all(value[key] for key in ("pwr_units", "gnd_units", "pwr_vias", "gnd_vias")):
             raise IntegrityError("rail Via inventory is incomplete")
+        for net_name in ("PWR", "GND"):
+            coverage = value["path_coverage"][net_name]
+            state_count = sum(coverage[status] for status in ("available", "missing", "trace_NA"))
+            expected_count = len(value["pwr_vias"] if net_name == "PWR" else value["gnd_vias"])
+            if state_count != expected_count:
+                raise IntegrityError("Via state coverage does not match unique terminal Via inventory")
+            state_hashes = sorted(coverage.pop("state_evidence_sha256"))
+            coverage["state_evidence_sha256"] = hashlib.sha256(json.dumps(state_hashes, separators=(",", ":")).encode("utf-8")).hexdigest()
+            coverage["state_evidence_count"] = state_count
+        state_complete = all(sum(value["path_coverage"][net_name][status] for status in ("available", "missing", "trace_NA")) == len(value["pwr_vias"] if net_name == "PWR" else value["gnd_vias"]) for net_name in ("PWR", "GND"))
+        value["path_coverage"]["state_classification_complete"] = state_complete
+        value["path_coverage"]["coverage_complete"] = state_complete and sum(value["path_coverage"][net_name][status] for net_name in ("PWR", "GND") for status in ("missing", "trace_NA")) == 0
         value["pwr_vias"] = sorted(value["pwr_vias"])
         value["gnd_vias"] = sorted(value["gnd_vias"])
         value["pwr_units"] = sorted(value["pwr_units"])
@@ -526,7 +553,12 @@ def _inventory(decaps: list[ScenarioDecap], analysis: SharedPadConnectionAnalysi
         value["target_nodes"] = sorted(value["target_nodes"], key=str.casefold)
         value["evidence_sha256"] = sorted(value["evidence_sha256"])
         value["segment_classifications"] = sorted(value["segment_classifications"].values(), key=lambda row: tuple(str(row[key] or "").casefold() for key in ("terminal", "start_layer", "end_layer", "padstack_material", "conductor_model", "fill_provenance")))
-    return {"selected_loaded_decap_count": len(selected), "per_rail": per_rail}
+    coverage_summary = {status: sum(value["path_coverage"][net][status] for value in per_rail.values() for net in ("PWR", "GND")) for status in ("available", "missing", "trace_NA")}
+    coverage_summary["total_inventoried_terminal_vias"] = sum(coverage_summary[status] for status in ("available", "missing", "trace_NA"))
+    coverage_summary["available_numeric_vias"] = coverage_summary["available"]
+    coverage_summary["state_classification_complete"] = all(value["path_coverage"]["state_classification_complete"] for value in per_rail.values())
+    coverage_summary["coverage_complete"] = all(value["path_coverage"]["coverage_complete"] for value in per_rail.values())
+    return {"selected_loaded_decap_count": len(selected), "per_rail": per_rail, "coverage_summary": coverage_summary}
 
 
 def audit(candidate: Path, import_report: Path, correlation_report: Path, previous_w7_audit: Path, expected_head: str) -> dict[str, Any]:
