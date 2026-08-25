@@ -62,7 +62,7 @@ def _write_fixture(root, audit):
     for index, decap in enumerate(decaps):
         if decap["refdes"] in {"C3D", "C3X"}:
             connections[decap["refdes"]] = {
-                "refdes": decap["refdes"], "kind": "SHARED_DUMMY", "cluster_id": "CL3",
+                "refdes": decap["refdes"], "kind": "UNRESOLVED" if decap["refdes"] == "C3D" else "SHARED_DUMMY", "cluster_id": "CL3",
                 "power_vias": [], "ground_vias": [],
             }
             continue
@@ -77,11 +77,14 @@ def _write_fixture(root, audit):
     connections["C1"]["power_vias"][0]["path_evidence"] = []
     connections["C2"]["ground_vias"][0]["path_evidence"][0]["trace_hops"] = 1
     cluster = {
-        "cluster_id": "CL3", "state": "ANCHORED", "member_refdes": ["C3", "C3A", "C3D", "C3X"],
+        "cluster_id": "CL3", "state": "UNRESOLVED", "reason": "fixture cluster evidence is unresolved", "member_refdes": ["C3", "C3A", "C3D", "C3X"],
         "anchor_refdes": ["C3", "C3A"], "dummy_refdes": ["C3D", "C3X"], "power_net": rails[3],
         "ground_net": "GND", "layer": "L1", "power_edges": [["C3", "C3A"], ["C3A", "C3D"], ["C3D", "C3X"]],
         "ground_edges": [["C3", "C3A"], ["C3A", "C3D"], ["C3D", "C3X"]],
     }
+    for refdes in ("C3", "C3A", "C3D", "C3X"):
+        connections[refdes]["kind"] = "UNRESOLVED"
+        connections[refdes]["reason"] = "fixture connection evidence is unresolved"
     source_sha = audit.EXPECTED_SOURCE["sha256"]
     scenario = {
         "metadata": {"note": 'quoted \\"brace}:colon:'},
@@ -183,7 +186,7 @@ def _rewrite_candidate_raw(candidate, raw, audit, import_report, correlation):
     audit.EXPECTED_CORRELATION["sha256"] = hashlib.sha256(correlation.read_bytes()).hexdigest()
 
 
-def test_terminal_via_vs_spatial_contract_table(tmp_path):
+def test_terminal_via_vs_spatial_contract_table(tmp_path, capsys):
     audit = _load_audit()
     audit._git_identity = lambda expected: {"branch": "main", "clean": True, "expected": expected, "observed": expected}
     candidate, import_report, correlation, previous, scenario = _write_fixture(tmp_path / "valid", audit)
@@ -247,6 +250,24 @@ def test_terminal_via_vs_spatial_contract_table(tmp_path):
         _rewrite_candidate(case_candidate, mutation, audit, case_import, case_corr)
         out = case_root / "audit.json"
         assert audit.main(["--candidate", str(case_candidate), "--import-report", str(case_import), "--correlation-report", str(case_corr), "--previous-w7-audit", str(case_previous), "--output", str(out), "--expected-head", expected_head]) == 2
+        assert not out.exists()
+
+    for kind, reason, clear_vias in (("OUT_OF_SCOPE", "standalone out-of-scope", False), ("FLOATING_DUMMY", "standalone floating dummy", True)):
+        case_root = tmp_path / f"non-actionable-{kind.lower()}"
+        case_root.mkdir()
+        case_candidate, case_import, case_corr, case_previous, case_scenario = _write_fixture(case_root, audit)
+        connection = case_scenario["connection_analysis"]["connections"]["C0"]
+        connection["kind"] = kind
+        connection["reason"] = reason
+        connection.pop("cluster_id", None)
+        if clear_vias:
+            connection["power_vias"] = []
+            connection["ground_vias"] = []
+        _rewrite_candidate(case_candidate, case_scenario, audit, case_import, case_corr)
+        out = case_root / "audit.json"
+        capsys.readouterr()
+        assert audit.main(["--candidate", str(case_candidate), "--import-report", str(case_import), "--correlation-report", str(case_corr), "--previous-w7-audit", str(case_previous), "--output", str(out), "--expected-head", expected_head]) == 2
+        assert capsys.readouterr().err == "integrity failure: selected decap connection is not actionable\n"
         assert not out.exists()
 
     raw_root = tmp_path / "duplicate-target-scalar"

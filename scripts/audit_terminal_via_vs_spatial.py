@@ -443,11 +443,19 @@ def _inventory(decaps: list[ScenarioDecap], analysis: SharedPadConnectionAnalysi
         connection = connection_by_refdes.get(item.refdes.casefold())
         if connection is None:
             raise IntegrityError(f"missing connection for {item.refdes}")
-        if connection.kind not in {DecapConnectionKind.DIRECT, DecapConnectionKind.SHARED_ANCHOR, DecapConnectionKind.SHARED_DUMMY}:
+        if connection.kind == DecapConnectionKind.DIRECT:
+            unit_kind = "direct"
+        elif connection.kind in {
+            DecapConnectionKind.SHARED_ANCHOR,
+            DecapConnectionKind.SHARED_DUMMY,
+            DecapConnectionKind.UNRESOLVED,
+        }:
+            unit_kind = "shared"
+        else:
             raise IntegrityError("selected decap connection is not actionable")
         family = per_rail.setdefault(item.current_rail_id, {"direct": 0, "shared": 0, "pwr_units": set(), "gnd_units": set(), "pwr_vias": {}, "gnd_vias": {}, "segments": 0, "length_um": 0.0, "resistance_ohm": 0.0, "inductance_h": 0.0, "landing_count": 0, "landing_x_min": None, "landing_x_max": None, "landing_y_min": None, "landing_y_max": None, "target_layers": set(), "target_nodes": set(), "evidence_sha256": set(), "segment_classifications": {}, "path_coverage": {"PWR": {"available": 0, "missing": 0, "trace_NA": 0, "state_evidence_sha256": []}, "GND": {"available": 0, "missing": 0, "trace_NA": 0, "state_evidence_sha256": []}}, "inventoried_terminal_vias": 0})
-        family["direct" if connection.kind == DecapConnectionKind.DIRECT else "shared"] += 1
-        if connection.kind == DecapConnectionKind.DIRECT:
+        family[unit_kind] += 1
+        if unit_kind == "direct":
             unit_id = (f"direct:{item.refdes.casefold()}", f"direct:{item.refdes.casefold()}", connection.power_vias, connection.ground_vias)
         else:
             unit_id = shared_units.get(item.refdes.casefold())
