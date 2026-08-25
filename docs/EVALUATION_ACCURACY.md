@@ -535,16 +535,16 @@ recomputation, test/solver/production execution, physics change, or owner promot
 The statically bound chain is v6 → base benchmark → `_build_bound_layerwise_source_model`
 → v4-only termination factory → required v4 certificate → scenario network retaining
 base `finite_parallel_rl` links plus cap-only termination manifest. Local calibrated
-half-branches were not selected; mixed ownership is rejected. User approval on
-2026-08-25 activates `W7-PHYS-RAW-FINITE-VIA-RL-GENERATION-TRACE` as the sole
-read-only producer trace. Its exact whitelist is `spd_adapter.py`,
-`compiled_topology_asset.py`, `reduced_conductor.py`, `finite_route_reducer.py`,
-`via_peec.py`, and `finite_via_layerwise.py`; no 17D scenario/network reread,
-artifact access, solver/test execution, numeric recomputation, calibration, threshold,
-or physics change is permitted. The question is raw field+unit → formula → per-Via or
-equivalent grouping → parallel aggregation → certificate R/L/count →
-`finite_parallel_rl`; failure to bind the producer or runtime branch closes 17E
-unclassified. Accuracy and causal-owner claims remain out of scope.
+half-branches were not selected; mixed ownership is rejected. The subsequent 17E
+six-file source V0 and one Sol review are DONE as `producer unclassified (high
+confidence)`: adapter reachability fields are persisted; reduced-conductor count is
+source-Via parallel count without invented R/L; finite-route reduction is exact series
+`fsum` with equivalent count 1; finite-via and compiled-asset layers validate and
+persist precomputed R/L; isolated PEEC is diagnostic-only and not production-bound in
+the allowed files. The production formula/unit conversion and runtime producer branch
+remain unknown. Accuracy and causal-owner claims remain out of scope. The next
+candidate `W7-PHYS-GROUND-REACHABILITY-RL-PRODUCER-TRACE` is BLOCKED pending a new
+whitelist authority for `src/spd_decap_pi/_core/io/spd.py`; it is not active.
 
 Frozen historical v5 validator/policy/fixtures and base benchmark remain byte-identical.
 W6-E atomically rotated the current v6→policy→accuracy-validator→controller trust
