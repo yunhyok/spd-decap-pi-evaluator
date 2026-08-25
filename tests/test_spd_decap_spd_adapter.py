@@ -2295,7 +2295,7 @@ def test_import_runs_one_union_reachability_pass_and_persists_surface_certificat
         capture_inline_certificate,
     )
 
-    imported = import_spd_scenario(source)
+    imported = import_spd_scenario(source, include_plane_sheet_payload=True)
 
     assert len(calls) == 1
     assert phase_order == ["recovery", "retarget"]
@@ -2513,6 +2513,7 @@ def test_import_runs_one_union_reachability_pass_and_persists_surface_certificat
         expected_geometry_identity_sha256=raw_manifest[
             "geometry_identity_sha256"
         ],
+        require_plane_sheet_payload=True,
     ) as raw_asset:
         assert raw_asset.get_via("VDD_CORE/0", "Via1") is not None
         assert raw_asset.get_via("DGND", "Via2") is not None

@@ -6425,6 +6425,7 @@ def import_spd_scenario(
     *,
     progress: ProgressCallback | None = None,
     is_cancelled: CancelCallback | None = None,
+    include_plane_sheet_payload: bool = False,
 ) -> ScenarioImport:
     """Create a sibling-app scenario without ever modifying the source SPD."""
 
@@ -7863,6 +7864,7 @@ def import_spd_scenario(
                 project=base_project,
                 attachments=scenario_attachments,
                 is_cancelled=cancelled,
+                include_plane_sheet_payload=include_plane_sheet_payload,
             )
         )
         base_project, scenario_attachments = _merge_raw_spatial_contact_asset(
