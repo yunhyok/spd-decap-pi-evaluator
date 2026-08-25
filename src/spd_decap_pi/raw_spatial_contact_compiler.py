@@ -771,6 +771,104 @@ def _project_spd_import(project: Any) -> Mapping[str, Any]:
     return metadata["spd_import"]
 
 
+def _plane_sheet_payload(project: Any, analysis: Any) -> Mapping[str, Any]:
+    stackup = tuple(project.stackup_layers)
+    if not stackup:
+        _fail("RAW_SPATIAL_PLANE_SHEET_REQUIRED", "typed ProjectSpec stackup is absent")
+    metadata = project.metadata
+    spd_import = metadata.get("spd_import") if isinstance(metadata, Mapping) else None
+    records = spd_import.get("plane_geometries") if isinstance(spd_import, Mapping) else None
+    if not isinstance(records, (list, tuple)):
+        _fail("RAW_SPATIAL_PLANE_SHEET_REQUIRED", "canonical plane geometry records are absent")
+    record_keys: list[tuple[str, str]] = []
+    record_by_key: dict[tuple[str, str], Mapping[str, Any]] = {}
+    for row in records:
+        if not isinstance(row, Mapping):
+            _fail("RAW_SPATIAL_PLANE_SHEET_REQUIRED", "canonical plane geometry record is invalid")
+        key = (str(row.get("layer")), str(row.get("net")))
+        if not key[0] or not key[1] or key in record_by_key:
+            _fail("RAW_SPATIAL_PLANE_SHEET_REQUIRED", "canonical plane geometry keys are not unique")
+        record_keys.append(key)
+        record_by_key[key] = row
+    geometries = tuple(getattr(analysis, "plane_geometries", ()))
+    analysis_keys = [(str(getattr(item, "layer", "")), str(getattr(item, "net", ""))) for item in geometries]
+    if len(set(analysis_keys)) != len(analysis_keys) or set(analysis_keys) != set(record_keys):
+        _fail("RAW_SPATIAL_PLANE_SHEET_REQUIRED", "plane geometry identities differ from analysis")
+    primitives: list[dict[str, Any]] = []
+    vertices: list[dict[str, Any]] = []
+    circles: list[dict[str, Any]] = []
+    for geometry in geometries:
+        key = (str(getattr(geometry, "layer", "")), str(getattr(geometry, "net", "")))
+        record = record_by_key.get(key)
+        if not isinstance(record, Mapping) or not isinstance(record.get("asset"), str) or not isinstance(record.get("asset_sha256"), str):
+            _fail("RAW_SPATIAL_PLANE_SHEET_REQUIRED", "canonical source geometry binding is incomplete")
+        order = tuple(getattr(geometry, "primitive_order", ()))
+        arrays = {
+            "positive_polygon": tuple(getattr(geometry, "positive_polygons_um", ())),
+            "negative_polygon": tuple(getattr(geometry, "negative_polygons_um", ())),
+            "positive_circle": tuple(getattr(geometry, "positive_circles_um", ())),
+            "negative_circle": tuple(getattr(geometry, "negative_circles_um", ())),
+        }
+        for kind_name, index in order:
+            if kind_name not in arrays or type(index) is not int or not 0 <= index < len(arrays[kind_name]):
+                _fail("RAW_SPATIAL_PLANE_SHEET_REQUIRED", "canonical primitive order is invalid")
+            polarity = "+" if kind_name.startswith("positive") else "-"
+            kind = "circle" if kind_name.endswith("circle") else "polygon"
+            primitive_ordinal = len(primitives)
+            primitive = {"primitive_ordinal": primitive_ordinal, "layer_ordinal": next((i for i, item in enumerate(stackup) if item.name == key[0]), -1), "layer_name": key[0], "net_name": key[1], "polarity": polarity, "kind": kind, "source_asset_name": record["asset"], "source_asset_sha256": record["asset_sha256"], "coordinate_unit": "um"}
+            if primitive["layer_ordinal"] < 0:
+                _fail("RAW_SPATIAL_PLANE_SHEET_REQUIRED", "primitive layer is absent from ProjectSpec stackup")
+            try:
+                shape = arrays[kind_name][index]
+                if kind == "polygon":
+                    primitive_values = {"vertices": tuple(tuple(point) for point in shape)}
+                    primitive["primitive_sha256"] = _canonical_sha(primitive_values | {"kind": kind_name})
+                    for vertex_ordinal, (x_um, y_um) in enumerate(shape):
+                        vertices.append({"primitive_ordinal": primitive_ordinal, "vertex_ordinal": vertex_ordinal, "x_um": x_um, "y_um": y_um})
+                else:
+                    center_x, center_y, radius = shape
+                    primitive_values = {"circle": tuple(shape)}
+                    primitive["primitive_sha256"] = _canonical_sha(primitive_values | {"kind": kind_name})
+                    circles.append({"primitive_ordinal": primitive_ordinal, "center_x_um": center_x, "center_y_um": center_y, "radius_um": radius})
+            except (TypeError, ValueError, OverflowError):
+                _fail("RAW_SPATIAL_PLANE_SHEET_INVALID", "plane primitive geometry is invalid")
+            primitives.append(primitive)
+    if not primitives:
+        _fail("RAW_SPATIAL_PLANE_SHEET_REQUIRED", "plane geometry has no primitives")
+    stack_rows: list[dict[str, Any]] = []
+    dielectric_points: list[dict[str, Any]] = []
+    for ordinal, layer in enumerate(stackup):
+        is_conductor = layer.is_conductor
+        thickness = layer.thickness_um
+        material = layer.material
+        if type(is_conductor) is not bool or not isinstance(material, str) or not material or not isinstance(thickness, (int, float)) or not math.isfinite(float(thickness)) or thickness <= 0:
+            _fail("RAW_SPATIAL_PLANE_SHEET_REQUIRED", "ProjectSpec stackup physical fields are incomplete")
+        sigma = layer.conductivity_s_m
+        stack_rows.append({"layer_ordinal": ordinal, "layer_name": layer.name, "layer_kind": "conductor" if is_conductor else "dielectric", "thickness_um": thickness, "conductivity_s_per_m": sigma if is_conductor else None, "material_name": material})
+        if not is_conductor:
+            for point_ordinal, point in enumerate(layer.dielectric_properties):
+                frequency = point.frequency_hz
+                epsilon = point.dk
+                loss = point.df
+                dielectric_points.append({"layer_ordinal": ordinal, "point_ordinal": point_ordinal, "frequency_hz": frequency, "epsilon_r": epsilon, "loss_tangent": loss})
+    return {"plane_primitives": primitives, "plane_vertices": vertices, "plane_circles": circles, "stackup_layers": stack_rows, "dielectric_points": dielectric_points}
+
+
+def _validate_plane_sheet_assets(payload: Mapping[str, Any], attachments: Mapping[str, bytes]) -> None:
+    digests: dict[str, str] = {}
+    for row in payload.get("plane_primitives", ()):
+        name = row.get("source_asset_name") if isinstance(row, Mapping) else None
+        digest = row.get("source_asset_sha256") if isinstance(row, Mapping) else None
+        if not isinstance(name, str) or not isinstance(digest, str) or name not in attachments:
+            _fail("RAW_SPATIAL_PLANE_SHEET_INVALID", "plane primitive source asset is absent")
+        observed = digests.get(name)
+        if observed is None:
+            observed = sha256(attachments[name]).hexdigest()
+            digests[name] = observed
+        if observed != digest:
+            _fail("RAW_SPATIAL_PLANE_SHEET_INVALID", "plane primitive source asset hash differs")
+
+
 def _parse_layers(
     path: Path,
     start: int,
@@ -2950,6 +3048,7 @@ def _compile_snapshot(
     batch_rows: int,
     cancelled: Callable[[], bool],
     temp_dir: Path,
+    plane_sheet_payload: Mapping[str, Any] | None = None,
 ) -> tuple[dict[str, Any], tuple[str, bytes]]:
     offsets = _index_markers(path, size, cancelled)
     spans = _section_spans(path, size, offsets, cancelled)
@@ -3099,6 +3198,7 @@ def _compile_snapshot(
             nodes=_node_rows(connection),
             traces=_trace_rows(connection),
             vias=_via_rows(connection),
+            plane_sheet_payload=plane_sheet_payload,
             batch_rows=batch_rows,
             is_cancelled=cancelled,
             **bindings,
@@ -3125,6 +3225,7 @@ def compile_raw_spatial_contact_asset(
     attachments: Mapping[str, bytes],
     batch_rows: int = 10_000,
     is_cancelled: Callable[[], bool] | None = None,
+    include_plane_sheet_payload: bool = False,
 ) -> tuple[dict[str, Any], tuple[str, bytes]]:
     """Compile exact raw spatial contacts without mutating or wiring a project."""
 
@@ -3135,6 +3236,8 @@ def compile_raw_spatial_contact_asset(
         or not 1 <= batch_rows <= _MAX_BATCH_ROWS
     ):
         _fail("RAW_SPATIAL_BATCH_INVALID", "batch_rows must be in [1, 10000]")
+    if type(include_plane_sheet_payload) is not bool:
+        _fail("RAW_SPATIAL_PLANE_SHEET_REQUIRED", "include_plane_sheet_payload must be boolean")
     path = Path(source_path)
     if not path.is_file():
         _fail("RAW_SPATIAL_SOURCE_MISSING", f"raw SPD {path} is absent")
@@ -3169,6 +3272,9 @@ def compile_raw_spatial_contact_asset(
     if str(spd_import.get("source_sha256", "")) != observed_sha:
         _fail("RAW_SPATIAL_PROJECT_SOURCE_MISMATCH", "project names a different raw SPD")
     try:
+        plane_sheet_payload = _plane_sheet_payload(project, analysis) if include_plane_sheet_payload else None
+        if plane_sheet_payload is not None:
+            _validate_plane_sheet_assets(plane_sheet_payload, attachments)
         _surface, compiled = validate_project_topology_storage_envelope(project, attachments)
     except SurfaceCertificateAssetError as exc:
         _fail(
@@ -3210,6 +3316,7 @@ def compile_raw_spatial_contact_asset(
             batch_rows=batch_rows,
             cancelled=cancelled,
             temp_dir=temp_path,
+            plane_sheet_payload=plane_sheet_payload,
         )
 
 

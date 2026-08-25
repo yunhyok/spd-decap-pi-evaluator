@@ -12,6 +12,7 @@ from dataclasses import dataclass, fields
 from functools import lru_cache
 from hashlib import sha256
 import json
+import math
 from pathlib import Path
 import sqlite3
 import tempfile
@@ -25,6 +26,9 @@ RAW_SPATIAL_CONTACT_ASSET_METADATA_KEY: Final = "raw_spatial_contact_asset"
 RAW_SPATIAL_CONTACT_ASSET_SCHEMA: Final = "spd-raw-spatial-contact-asset-v2"
 RAW_SPATIAL_CONTACT_PAYLOAD_SCHEMA: Final = "spd-raw-spatial-contact-sqlite-v2"
 RAW_SPATIAL_CONTACT_COMPILER_ID: Final = "raw-spd-finite-via-spatial-contact-v2"
+RAW_SPATIAL_CONTACT_ASSET_SCHEMA_V3: Final = "spd-raw-spatial-contact-asset-v3"
+RAW_SPATIAL_CONTACT_PAYLOAD_SCHEMA_V3: Final = "spd-raw-spatial-contact-sqlite-v3"
+RAW_SPATIAL_CONTACT_COMPILER_ID_V3: Final = "raw-spd-finite-via-spatial-contact-v3"
 RAW_SPATIAL_CONTACT_ASSET_PREFIX: Final = "spatial/"
 RAW_SPATIAL_CONTACT_COMPRESSION: Final = "zlib"
 
@@ -64,6 +68,13 @@ _SECTIONS: Final = (
     "nodes",
     "traces",
     "vias",
+)
+_PLANE_SHEET_SECTIONS: Final = (
+    "plane_primitives",
+    "plane_vertices",
+    "plane_circles",
+    "stackup_layers",
+    "dielectric_points",
 )
 _GEOMETRY_SECTIONS: Final = (
     "layers",
@@ -695,6 +706,50 @@ ON traces(net_fold, layer_id_fold, ordinal);
 CREATE INDEX vias_net_idx ON vias(net_fold, ordinal);
 """
 
+_PLANE_SHEET_SQL: Final = """
+CREATE TABLE plane_primitives (
+    primitive_ordinal INTEGER NOT NULL PRIMARY KEY,
+    layer_ordinal INTEGER NOT NULL,
+    layer_name TEXT NOT NULL,
+    net_name TEXT NOT NULL,
+    polarity TEXT NOT NULL,
+    kind TEXT NOT NULL,
+    source_asset_name TEXT NOT NULL,
+    source_asset_sha256 TEXT NOT NULL,
+    coordinate_unit TEXT NOT NULL,
+    primitive_sha256 TEXT NOT NULL
+) WITHOUT ROWID;
+CREATE TABLE plane_vertices (
+    primitive_ordinal INTEGER NOT NULL,
+    vertex_ordinal INTEGER NOT NULL,
+    x_um REAL NOT NULL,
+    y_um REAL NOT NULL,
+    PRIMARY KEY (primitive_ordinal, vertex_ordinal)
+) WITHOUT ROWID;
+CREATE TABLE plane_circles (
+    primitive_ordinal INTEGER NOT NULL PRIMARY KEY,
+    center_x_um REAL NOT NULL,
+    center_y_um REAL NOT NULL,
+    radius_um REAL NOT NULL
+) WITHOUT ROWID;
+CREATE TABLE stackup_layers (
+    layer_ordinal INTEGER NOT NULL PRIMARY KEY,
+    layer_name TEXT NOT NULL,
+    layer_kind TEXT NOT NULL,
+    thickness_um REAL NOT NULL,
+    conductivity_s_per_m REAL,
+    material_name TEXT NOT NULL
+) WITHOUT ROWID;
+CREATE TABLE dielectric_points (
+    layer_ordinal INTEGER NOT NULL,
+    point_ordinal INTEGER NOT NULL,
+    frequency_hz REAL NOT NULL,
+    epsilon_r REAL NOT NULL,
+    loss_tangent REAL NOT NULL,
+    PRIMARY KEY (layer_ordinal, point_ordinal)
+) WITHOUT ROWID;
+"""
+
 _ROW_TYPES: Final = {
     "source_coverage": RawSpatialSourceCoverageRow,
     "section_coverage": RawSpatialSectionCoverageRow,
@@ -816,7 +871,12 @@ def _logical_digest(connection: sqlite3.Connection) -> str:
     return digest.hexdigest()
 
 
-def _geometry_digest(connection: sqlite3.Connection) -> str:
+def _geometry_digest(
+    connection: sqlite3.Connection,
+    plane_digest: str | None = None,
+    *,
+    is_cancelled: Callable[[], bool] | None = None,
+) -> str:
     """Derive geometry identity from exact layer/surface/pad evidence ledgers."""
 
     digest = sha256(RAW_SPATIAL_CONTACT_COMPILER_ID.encode("ascii"))
@@ -830,6 +890,8 @@ def _geometry_digest(connection: sqlite3.Connection) -> str:
             _fail("RAW_SPATIAL_LEDGER_INVALID", "geometry ledger is incomplete")
         digest.update(_canonical_row_bytes((section, row[0], row[1])))
         digest.update(b"\n")
+    if connection.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='plane_primitives'").fetchone() is not None:
+        digest.update((plane_digest or _plane_sheet_digest(connection, is_cancelled=is_cancelled)).encode("ascii"))
     return digest.hexdigest()
 
 
@@ -1213,6 +1275,213 @@ def _fail_build_database_error(
     _fail("RAW_SPATIAL_DATABASE_INVALID", message)
 
 
+def _validate_plane_stackup(
+    stackup_rows: list[dict[str, Any]], dielectric_rows: list[dict[str, Any]]
+) -> list[dict[str, Any]]:
+    required = {"layer_ordinal", "layer_name", "layer_kind", "thickness_um", "conductivity_s_per_m", "material_name"}
+    layer_ids: set[int] = set()
+    for row in stackup_rows:
+        ordinal = row.get("layer_ordinal")
+        thickness = row.get("thickness_um")
+        if frozenset(row) != frozenset(required) or type(ordinal) is not int or ordinal < 0 or ordinal in layer_ids or not isinstance(row.get("layer_name"), str) or not row["layer_name"] or row.get("layer_kind") not in {"conductor", "dielectric"} or not isinstance(thickness, (int, float)) or isinstance(thickness, bool) or not math.isfinite(float(thickness)) or thickness <= 0 or not isinstance(row.get("material_name"), str) or not row["material_name"]:
+            _fail("RAW_SPATIAL_PLANE_SHEET_INVALID", "stackup columns/row are invalid")
+        conductivity = row["conductivity_s_per_m"]
+        if row["layer_kind"] == "conductor" and (not isinstance(conductivity, (int, float)) or isinstance(conductivity, bool) or not math.isfinite(float(conductivity)) or conductivity <= 0):
+            _fail("RAW_SPATIAL_PLANE_SHEET_INVALID", "conductor conductivity is invalid")
+        if row["layer_kind"] == "dielectric" and conductivity is not None:
+            _fail("RAW_SPATIAL_PLANE_SHEET_INVALID", "dielectric conductivity must be null")
+        layer_ids.add(ordinal)
+    if [row.get("layer_ordinal") for row in stackup_rows] != list(range(len(stackup_rows))):
+        _fail("RAW_SPATIAL_PLANE_SHEET_INVALID", "stackup ordinals are not contiguous")
+    points_by: dict[int, list[dict[str, Any]]] = {}
+    for row in dielectric_rows:
+        if frozenset(row) != frozenset({"layer_ordinal", "point_ordinal", "frequency_hz", "epsilon_r", "loss_tangent"}):
+            _fail("RAW_SPATIAL_PLANE_SHEET_INVALID", "dielectric point columns differ")
+        if (type(row.get("layer_ordinal")) is not int or type(row.get("point_ordinal")) is not int or row["layer_ordinal"] not in layer_ids or row["point_ordinal"] < 0 or not all(isinstance(row.get(key), (int, float)) and not isinstance(row.get(key), bool) and math.isfinite(float(row[key])) for key in ("frequency_hz", "epsilon_r", "loss_tangent")) or row["frequency_hz"] <= 0 or row["epsilon_r"] <= 0 or row["loss_tangent"] < 0):
+            _fail("RAW_SPATIAL_PLANE_SHEET_INVALID", "dielectric point is invalid")
+        points_by.setdefault(row["layer_ordinal"], []).append(row)
+    for row in stackup_rows:
+        points = sorted(points_by.get(row["layer_ordinal"], ()), key=lambda item: item["point_ordinal"])
+        if row["layer_kind"] == "dielectric" and (not points or [point["frequency_hz"] for point in points] != sorted({point["frequency_hz"] for point in points})):
+            _fail("RAW_SPATIAL_PLANE_SHEET_INVALID", "dielectric dispersion points are invalid")
+        if points and [point["point_ordinal"] for point in points] != list(range(len(points))):
+            _fail("RAW_SPATIAL_PLANE_SHEET_INVALID", "dielectric point order is not contiguous")
+        if row["layer_kind"] == "conductor" and points:
+            _fail("RAW_SPATIAL_PLANE_SHEET_INVALID", "conductors cannot carry dielectric points")
+    conductors = [row for row in stackup_rows if row.get("layer_kind") == "conductor"]
+    gaps: list[dict[str, Any]] = []
+    for lower, upper in zip(conductors, conductors[1:]):
+        between = stackup_rows[lower["layer_ordinal"] + 1 : upper["layer_ordinal"]]
+        if not between or any(row.get("layer_kind") != "dielectric" for row in between):
+            _fail("RAW_SPATIAL_PLANE_SHEET_INVALID", "conductor gap is not dielectric")
+        gaps.append({"lower_layer_ordinal": lower["layer_ordinal"], "upper_layer_ordinal": upper["layer_ordinal"], "separation_um": math.fsum(row["thickness_um"] for row in between)})
+    return gaps
+
+
+def _validate_plane_primitive(
+    primitive: dict[str, Any],
+    vertices: list[dict[str, Any]],
+    circles: list[dict[str, Any]],
+    stackup: list[dict[str, Any]],
+) -> None:
+    required = {"primitive_ordinal", "layer_ordinal", "layer_name", "net_name", "polarity", "kind", "source_asset_name", "source_asset_sha256", "coordinate_unit", "primitive_sha256"}
+    if frozenset(primitive) != frozenset(required):
+        _fail("RAW_SPATIAL_PLANE_SHEET_INVALID", "primitive identity/geometry contract is invalid")
+    if (type(primitive["primitive_ordinal"]) is not int or primitive["primitive_ordinal"] < 0 or type(primitive["layer_ordinal"]) is not int or primitive["layer_ordinal"] < 0 or not isinstance(primitive["layer_name"], str) or not primitive["layer_name"] or not isinstance(primitive["net_name"], str) or not primitive["net_name"] or primitive["coordinate_unit"] != "um" or primitive["polarity"] not in {"+", "-"} or primitive["kind"] not in {"polygon", "circle"} or any(not isinstance(primitive[key], str) or not primitive[key] for key in ("source_asset_name", "source_asset_sha256", "primitive_sha256"))):
+        _fail("RAW_SPATIAL_PLANE_SHEET_INVALID", "primitive identity/geometry contract is invalid")
+    if primitive["layer_ordinal"] not in range(len(stackup)) or stackup[primitive["layer_ordinal"]]["layer_name"] != primitive["layer_name"] or stackup[primitive["layer_ordinal"]]["layer_kind"] != "conductor":
+        _fail("RAW_SPATIAL_PLANE_SHEET_INVALID", "primitive layer binding is invalid")
+    _sha(primitive["source_asset_sha256"], "primitive source asset")
+    _sha(primitive["primitive_sha256"], "primitive")
+    for row in vertices:
+        if (frozenset(row) != frozenset({"primitive_ordinal", "vertex_ordinal", "x_um", "y_um"}) or type(row["primitive_ordinal"]) is not int or row["primitive_ordinal"] != primitive["primitive_ordinal"] or type(row["vertex_ordinal"]) is not int or row["vertex_ordinal"] < 0 or not all(isinstance(row[key], (int, float)) and not isinstance(row[key], bool) and math.isfinite(float(row[key])) for key in ("x_um", "y_um"))):
+            _fail("RAW_SPATIAL_PLANE_SHEET_INVALID", "vertex row is invalid")
+    if [row["vertex_ordinal"] for row in vertices] != list(range(len(vertices))):
+        _fail("RAW_SPATIAL_PLANE_SHEET_INVALID", "vertex order is not contiguous")
+    for row in circles:
+        if (frozenset(row) != frozenset({"primitive_ordinal", "center_x_um", "center_y_um", "radius_um"}) or type(row["primitive_ordinal"]) is not int or row["primitive_ordinal"] != primitive["primitive_ordinal"] or not all(isinstance(row[key], (int, float)) and not isinstance(row[key], bool) and math.isfinite(float(row[key])) for key in ("center_x_um", "center_y_um", "radius_um")) or row["radius_um"] <= 0):
+            _fail("RAW_SPATIAL_PLANE_SHEET_INVALID", "circle row is invalid")
+    if primitive["kind"] == "polygon" and (len(vertices) < 3 or circles):
+        _fail("RAW_SPATIAL_PLANE_SHEET_INVALID", "polygon geometry is incomplete")
+    if primitive["kind"] == "circle" and (len(circles) != 1 or vertices):
+        _fail("RAW_SPATIAL_PLANE_SHEET_INVALID", "circle geometry is incomplete")
+    geometry = (
+        {"vertices": tuple((item["x_um"], item["y_um"]) for item in vertices)}
+        if primitive["kind"] == "polygon"
+        else {"circle": (circles[0]["center_x_um"], circles[0]["center_y_um"], circles[0]["radius_um"])}
+    )
+    expected_hash = sha256(json.dumps(geometry | {"kind": ("positive_" if primitive["polarity"] == "+" else "negative_") + primitive["kind"]}, ensure_ascii=True, allow_nan=False, sort_keys=True, separators=(",", ":")).encode("ascii")).hexdigest()
+    if primitive["primitive_sha256"] != expected_hash:
+        _fail("RAW_SPATIAL_PLANE_SHEET_INVALID", "primitive digest differs")
+
+
+def _plane_sheet_rows(payload: Mapping[str, Any]) -> tuple[dict[str, list[dict[str, Any]]], list[dict[str, Any]]]:
+    if not isinstance(payload, Mapping) or frozenset(payload) != frozenset(_PLANE_SHEET_SECTIONS):
+        _fail("RAW_SPATIAL_PLANE_SHEET_INVALID", "plane-sheet tables are incomplete")
+    rows: dict[str, list[dict[str, Any]]] = {}
+    for name in _PLANE_SHEET_SECTIONS:
+        values = payload[name]
+        if not isinstance(values, (list, tuple)):
+            _fail("RAW_SPATIAL_PLANE_SHEET_INVALID", f"{name} rows are not a sequence")
+        if any(not isinstance(row, Mapping) for row in values):
+            _fail("RAW_SPATIAL_PLANE_SHEET_INVALID", f"{name} row is not a mapping")
+        rows[name] = [dict(row) for row in values]
+        if len(rows[name]) > MAX_RAW_SPATIAL_ROWS_PER_SECTION:
+            _fail("RAW_SPATIAL_BOUND_EXCEEDED", f"{name} count exceeds its bound")
+    gaps = _validate_plane_stackup(rows["stackup_layers"], rows["dielectric_points"])
+    primitives = rows["plane_primitives"]
+    if any(type(row.get("primitive_ordinal")) is not int or row["primitive_ordinal"] != ordinal for ordinal, row in enumerate(primitives)):
+        _fail("RAW_SPATIAL_PLANE_SHEET_INVALID", "primitive ordinals are not unique")
+    primitive_ids = {row["primitive_ordinal"] for row in primitives}
+    vertices_by: dict[int, list[dict[str, Any]]] = {}
+    circles_by: dict[int, list[dict[str, Any]]] = {}
+    for row in rows["plane_vertices"]:
+        if type(row.get("primitive_ordinal")) is not int:
+            _fail("RAW_SPATIAL_PLANE_SHEET_INVALID", "vertex row is invalid")
+        vertices_by.setdefault(row["primitive_ordinal"], []).append(row)
+    for row in rows["plane_circles"]:
+        if type(row.get("primitive_ordinal")) is not int:
+            _fail("RAW_SPATIAL_PLANE_SHEET_INVALID", "circle row is invalid")
+        circles_by.setdefault(row["primitive_ordinal"], []).append(row)
+    if set(vertices_by) | set(circles_by) != primitive_ids:
+        _fail("RAW_SPATIAL_PLANE_SHEET_INVALID", "each primitive needs geometry")
+    for row in primitives:
+        _validate_plane_primitive(row, vertices_by.get(row["primitive_ordinal"], []), circles_by.get(row["primitive_ordinal"], []), rows["stackup_layers"])
+    return rows, gaps
+
+
+def _plane_sheet_digest(
+    connection: sqlite3.Connection,
+    identities: Mapping[str, str] | None = None,
+    *,
+    is_cancelled: Callable[[], bool] | None = None,
+) -> str:
+    cancelled = is_cancelled or (lambda: False)
+    digest = sha256(b"spd-plane-sheet-payload-v3\0")
+    for section in _PLANE_SHEET_SECTIONS:
+        for ordinal, row in enumerate(connection.execute(f"SELECT * FROM {section} ORDER BY 1,2"), 1):
+            if ordinal % 1024 == 0 and cancelled():
+                _fail("RAW_SPATIAL_CANCELLED", "plane-sheet digest was cancelled")
+            digest.update(_canonical_row_bytes(tuple(row)))
+            digest.update(b"\n")
+    bound = identities or {
+        key: value
+        for key, value in connection.execute("SELECT key,value FROM meta")
+        if key in {"source_sha256", "project_binding_sha256", "certificate_evidence_sha256", "compiled_topology_identity_sha256"}
+    }
+    digest.update(_canonical_row_bytes(("coordinate_unit", "um")))
+    for key in sorted(bound):
+        digest.update(_canonical_row_bytes((key, bound[key])))
+        digest.update(b"\n")
+    return digest.hexdigest()
+
+
+def _validate_plane_sheet_stream(
+    connection: sqlite3.Connection,
+    *,
+    is_cancelled: Callable[[], bool],
+) -> tuple[int, str]:
+    counts: dict[str, int] = {}
+    for section in _PLANE_SHEET_SECTIONS:
+        count = int(connection.execute(f"SELECT COUNT(*) FROM {section}").fetchone()[0])
+        if count > MAX_RAW_SPATIAL_ROWS_PER_SECTION:
+            _fail("RAW_SPATIAL_BOUND_EXCEEDED", f"{section} count exceeds its bound")
+        counts[section] = count
+
+    def rows_for(section: str) -> list[dict[str, Any]]:
+        cursor = connection.execute(f"SELECT * FROM {section} ORDER BY 1,2")
+        names = tuple(item[0] for item in cursor.description)
+        result: list[dict[str, Any]] = []
+        while rows := cursor.fetchmany(1024):
+            if is_cancelled():
+                _fail("RAW_SPATIAL_CANCELLED", "plane-sheet validation was cancelled")
+            result.extend(dict(zip(names, row)) for row in rows)
+        return result
+
+    stackup = rows_for("stackup_layers")
+    dielectric = rows_for("dielectric_points")
+    gap_rows = _validate_plane_stackup(stackup, dielectric)
+    primitive_cursor = connection.execute("SELECT * FROM plane_primitives ORDER BY primitive_ordinal")
+    vertex_cursor = connection.execute("SELECT * FROM plane_vertices ORDER BY primitive_ordinal,vertex_ordinal")
+    circle_cursor = connection.execute("SELECT * FROM plane_circles ORDER BY primitive_ordinal")
+    primitive_names = tuple(item[0] for item in primitive_cursor.description)
+    vertex_names = tuple(item[0] for item in vertex_cursor.description)
+    circle_names = tuple(item[0] for item in circle_cursor.description)
+    vertex_row = next(vertex_cursor, None)
+    circle_row = next(circle_cursor, None)
+    expected_ordinal = 0
+    vertex_seen = 0
+    circle_seen = 0
+    for values in iter(primitive_cursor.fetchone, None):
+        if is_cancelled():
+            _fail("RAW_SPATIAL_CANCELLED", "plane-sheet validation was cancelled")
+        primitive = dict(zip(primitive_names, values))
+        if primitive.get("primitive_ordinal") != expected_ordinal:
+            _fail("RAW_SPATIAL_PLANE_SHEET_INVALID", "primitive order is not contiguous")
+        expected_ordinal += 1
+        if expected_ordinal % 1024 == 0 and is_cancelled():
+            _fail("RAW_SPATIAL_CANCELLED", "plane-sheet validation was cancelled")
+        vertices: list[dict[str, Any]] = []
+        while vertex_row is not None and vertex_row[0] == primitive["primitive_ordinal"]:
+            vertices.append(dict(zip(vertex_names, vertex_row)))
+            vertex_seen += 1
+            if vertex_seen % 1024 == 0 and is_cancelled():
+                _fail("RAW_SPATIAL_CANCELLED", "plane-sheet validation was cancelled")
+            vertex_row = next(vertex_cursor, None)
+        circles: list[dict[str, Any]] = []
+        while circle_row is not None and circle_row[0] == primitive["primitive_ordinal"]:
+            circles.append(dict(zip(circle_names, circle_row)))
+            circle_seen += 1
+            if circle_seen % 1024 == 0 and is_cancelled():
+                _fail("RAW_SPATIAL_CANCELLED", "plane-sheet validation was cancelled")
+            circle_row = next(circle_cursor, None)
+        _validate_plane_primitive(primitive, vertices, circles, stackup)
+    if expected_ordinal != counts["plane_primitives"] or vertex_row is not None or circle_row is not None:
+        _fail("RAW_SPATIAL_PLANE_SHEET_INVALID", "plane-sheet row grouping is incomplete")
+    gap_digest = sha256(json.dumps(gap_rows, sort_keys=True, separators=(",", ":")).encode("utf-8")).hexdigest()
+    return len(gap_rows), gap_digest
+
+
 def build_raw_spatial_contact_asset(
     *,
     source_path: str | Path,
@@ -1229,6 +1498,7 @@ def build_raw_spatial_contact_asset(
     nodes: Iterable[RawSpatialNodeRow],
     traces: Iterable[RawSpatialTraceRow],
     vias: Iterable[RawSpatialViaRow],
+    plane_sheet_payload: Mapping[str, Any] | None = None,
     batch_rows: int = _BATCH_ROWS,
     is_cancelled: Callable[[], bool] | None = None,
 ) -> tuple[dict[str, Any], tuple[str, bytes]]:
@@ -1245,6 +1515,10 @@ def build_raw_spatial_contact_asset(
             compiled_topology_identity_sha256, "compiled topology identity"
         ),
     }
+    plane_rows: dict[str, list[dict[str, Any]]] | None = None
+    gap_rows: list[dict[str, Any]] = []
+    if plane_sheet_payload is not None:
+        plane_rows, gap_rows = _plane_sheet_rows(plane_sheet_payload)
     if type(source_coverage) is not RawSpatialSourceCoverageRow:
         _fail("RAW_SPATIAL_COVERAGE_INVALID", "exact source coverage row is required")
     if source_coverage.source_sha256 != identities["source_sha256"]:
@@ -1291,6 +1565,8 @@ def build_raw_spatial_contact_asset(
             connection.execute(f"PRAGMA application_id={_APPLICATION_ID}")
             connection.execute(f"PRAGMA user_version={_USER_VERSION}")
             connection.executescript(_CREATE_SQL)
+            if plane_rows is not None:
+                connection.executescript(_PLANE_SHEET_SQL)
             counts = {
                 section: _insert_rows(
                     connection,
@@ -1301,6 +1577,27 @@ def build_raw_spatial_contact_asset(
                 )
                 for section in _SECTIONS
             }
+            if plane_rows is not None:
+                connection.executemany(
+                    "INSERT INTO plane_primitives VALUES (?,?,?,?,?,?,?,?,?,?)",
+                    [tuple(row[key] for key in ("primitive_ordinal", "layer_ordinal", "layer_name", "net_name", "polarity", "kind", "source_asset_name", "source_asset_sha256", "coordinate_unit", "primitive_sha256")) for row in plane_rows["plane_primitives"]],
+                )
+                connection.executemany(
+                    "INSERT INTO plane_vertices VALUES (?,?,?,?)",
+                    [tuple(row[key] for key in ("primitive_ordinal", "vertex_ordinal", "x_um", "y_um")) for row in plane_rows["plane_vertices"]],
+                )
+                connection.executemany(
+                    "INSERT INTO plane_circles VALUES (?,?,?,?)",
+                    [tuple(row[key] for key in ("primitive_ordinal", "center_x_um", "center_y_um", "radius_um")) for row in plane_rows["plane_circles"]],
+                )
+                connection.executemany(
+                    "INSERT INTO stackup_layers VALUES (?,?,?,?,?,?)",
+                    [tuple(row[key] for key in ("layer_ordinal", "layer_name", "layer_kind", "thickness_um", "conductivity_s_per_m", "material_name")) for row in plane_rows["stackup_layers"]],
+                )
+                connection.executemany(
+                    "INSERT INTO dielectric_points VALUES (?,?,?,?,?)",
+                    [tuple(row[key] for key in ("layer_ordinal", "point_ordinal", "frequency_hz", "epsilon_r", "loss_tangent")) for row in plane_rows["dielectric_points"]],
+                )
             _validate_relations(connection)
             _validate_coverage(connection)
             _verify_source_file(connection, source_file, is_cancelled=cancelled)
@@ -1313,14 +1610,26 @@ def build_raw_spatial_contact_asset(
                     "INSERT INTO section_ledger VALUES(?,?,?)",
                     (section, *ledgers[section]),
                 )
-            geometry_identity = _geometry_digest(connection)
+            plane_digest = (
+                _plane_sheet_digest(connection, identities=identities, is_cancelled=cancelled)
+                if plane_rows is not None
+                else None
+            )
+            geometry_identity = _geometry_digest(connection, plane_digest, is_cancelled=cancelled)
             meta = {
-                "payload_schema": RAW_SPATIAL_CONTACT_PAYLOAD_SCHEMA,
-                "compiler_id": RAW_SPATIAL_CONTACT_COMPILER_ID,
+                "payload_schema": RAW_SPATIAL_CONTACT_PAYLOAD_SCHEMA_V3 if plane_rows is not None else RAW_SPATIAL_CONTACT_PAYLOAD_SCHEMA,
+                "compiler_id": RAW_SPATIAL_CONTACT_COMPILER_ID_V3 if plane_rows is not None else RAW_SPATIAL_CONTACT_COMPILER_ID,
                 **identities,
                 "geometry_identity_sha256": geometry_identity,
                 **{f"{key}_count": str(value) for key, value in counts.items()},
             }
+            if plane_digest is not None:
+                meta.update({
+                    "plane_sheet_payload_sha256": plane_digest,
+                    **{f"plane_sheet_{key}_count": str(len(plane_rows[key])) for key in _PLANE_SHEET_SECTIONS},
+                    "adjacent_conductor_gap_count": str(len(gap_rows)),
+                    "adjacent_conductor_gap_sha256": sha256(json.dumps(gap_rows, sort_keys=True, separators=(",", ":")).encode("utf-8")).hexdigest(),
+                })
             connection.executemany(
                 "INSERT INTO meta(key,value) VALUES(?,?)", sorted(meta.items())
             )
@@ -1340,14 +1649,18 @@ def build_raw_spatial_contact_asset(
         compressed, uncompressed_size, uncompressed_sha = _compress_file(
             database_path, is_cancelled=cancelled
         )
+    v3 = plane_rows is not None
     asset_name = (
-        f"{RAW_SPATIAL_CONTACT_ASSET_PREFIX}raw-spatial-contact-v2-"
+        f"{RAW_SPATIAL_CONTACT_ASSET_PREFIX}raw-spatial-contact-{'v3' if v3 else 'v2'}-"
         f"{identities['source_sha256'][:16]}.sqlite.zlib"
     )
+    payload_schema = RAW_SPATIAL_CONTACT_PAYLOAD_SCHEMA_V3 if v3 else RAW_SPATIAL_CONTACT_PAYLOAD_SCHEMA
+    storage_schema = RAW_SPATIAL_CONTACT_ASSET_SCHEMA_V3 if v3 else RAW_SPATIAL_CONTACT_ASSET_SCHEMA
+    compiler_id = RAW_SPATIAL_CONTACT_COMPILER_ID_V3 if v3 else RAW_SPATIAL_CONTACT_COMPILER_ID
     manifest: dict[str, Any] = {
-        "storage_schema": RAW_SPATIAL_CONTACT_ASSET_SCHEMA,
-        "payload_schema": RAW_SPATIAL_CONTACT_PAYLOAD_SCHEMA,
-        "compiler_id": RAW_SPATIAL_CONTACT_COMPILER_ID,
+        "storage_schema": storage_schema,
+        "payload_schema": payload_schema,
+        "compiler_id": compiler_id,
         **identities,
         "geometry_identity_sha256": geometry_identity,
         "logical_rows_sha256": logical,
@@ -1359,17 +1672,30 @@ def build_raw_spatial_contact_asset(
         "uncompressed_sha256": uncompressed_sha,
         "counts": dict(counts),
     }
+    if plane_rows is not None:
+        manifest.update({
+            "plane_sheet_payload_sha256": meta["plane_sheet_payload_sha256"],
+            "plane_sheet_counts": {key: len(plane_rows[key]) for key in _PLANE_SHEET_SECTIONS},
+            "adjacent_conductor_gap_count": len(gap_rows),
+            "adjacent_conductor_gap_sha256": meta["adjacent_conductor_gap_sha256"],
+        })
     return manifest, (asset_name, compressed)
 
 
 def _validate_manifest(manifest: Mapping[str, Any]) -> dict[str, Any]:
-    if not isinstance(manifest, Mapping) or frozenset(manifest) != _MANIFEST_KEYS:
+    if not isinstance(manifest, Mapping):
+        _fail("RAW_SPATIAL_MANIFEST_INVALID", "manifest is not a mapping")
+    v3 = manifest.get("storage_schema") == RAW_SPATIAL_CONTACT_ASSET_SCHEMA_V3
+    expected_keys = _MANIFEST_KEYS | ({"plane_sheet_payload_sha256", "plane_sheet_counts", "adjacent_conductor_gap_count", "adjacent_conductor_gap_sha256"} if v3 else set())
+    if frozenset(manifest) != expected_keys:
         _fail("RAW_SPATIAL_MANIFEST_INVALID", "manifest keys differ from the v2 contract")
-    if manifest["storage_schema"] != RAW_SPATIAL_CONTACT_ASSET_SCHEMA:
+    if manifest["storage_schema"] not in {RAW_SPATIAL_CONTACT_ASSET_SCHEMA, RAW_SPATIAL_CONTACT_ASSET_SCHEMA_V3}:
         _fail("RAW_SPATIAL_MANIFEST_INVALID", "storage schema differs")
-    if manifest["payload_schema"] != RAW_SPATIAL_CONTACT_PAYLOAD_SCHEMA:
+    expected_payload = RAW_SPATIAL_CONTACT_PAYLOAD_SCHEMA_V3 if v3 else RAW_SPATIAL_CONTACT_PAYLOAD_SCHEMA
+    expected_compiler = RAW_SPATIAL_CONTACT_COMPILER_ID_V3 if v3 else RAW_SPATIAL_CONTACT_COMPILER_ID
+    if manifest["payload_schema"] != expected_payload:
         _fail("RAW_SPATIAL_MANIFEST_INVALID", "payload schema differs")
-    if manifest["compiler_id"] != RAW_SPATIAL_CONTACT_COMPILER_ID:
+    if manifest["compiler_id"] != expected_compiler:
         _fail("RAW_SPATIAL_MANIFEST_INVALID", "compiler identity differs")
     if manifest["compression"] != RAW_SPATIAL_CONTACT_COMPRESSION:
         _fail("RAW_SPATIAL_MANIFEST_INVALID", "compression differs")
@@ -1387,7 +1713,7 @@ def _validate_manifest(manifest: Mapping[str, Any]) -> dict[str, Any]:
         validated[key] = _sha(manifest[key], key)
     name = manifest["asset_name"]
     expected_name = (
-        f"{RAW_SPATIAL_CONTACT_ASSET_PREFIX}raw-spatial-contact-v2-"
+        f"{RAW_SPATIAL_CONTACT_ASSET_PREFIX}raw-spatial-contact-{'v3' if v3 else 'v2'}-"
         f"{validated['source_sha256'][:16]}.sqlite.zlib"
     )
     if (
@@ -1414,6 +1740,14 @@ def _validate_manifest(manifest: Mapping[str, Any]) -> dict[str, Any]:
         > manifest["compressed_size_bytes"] * MAX_RAW_SPATIAL_EXPANSION_RATIO
     ):
         _fail("RAW_SPATIAL_EXPANSION_RATIO_EXCEEDED", "declared expansion is unsafe")
+    if v3:
+        counts = manifest["plane_sheet_counts"]
+        if not isinstance(counts, Mapping) or frozenset(counts) != frozenset(_PLANE_SHEET_SECTIONS) or any(type(value) is not int or value < 0 for value in counts.values()):
+            _fail("RAW_SPATIAL_PLANE_SHEET_INVALID", "plane-sheet counts are invalid")
+        for key in ("plane_sheet_payload_sha256", "adjacent_conductor_gap_sha256"):
+            validated[key] = _sha(manifest[key], key)
+        if type(manifest["adjacent_conductor_gap_count"]) is not int or manifest["adjacent_conductor_gap_count"] < 0:
+            _fail("RAW_SPATIAL_PLANE_SHEET_INVALID", "gap count is invalid")
     return validated
 
 
@@ -1699,10 +2033,12 @@ def _open_readonly(path: Path) -> sqlite3.Connection:
 
 
 @lru_cache(maxsize=1)
-def _schema_signature() -> tuple[Any, ...]:
+def _schema_signature(include_plane_sheet: bool = False) -> tuple[Any, ...]:
     reference = sqlite3.connect(":memory:")
     try:
         reference.executescript(_CREATE_SQL)
+        if include_plane_sheet:
+            reference.executescript(_PLANE_SHEET_SQL)
         objects = tuple(
             reference.execute(
                 "SELECT type,name,sql FROM sqlite_master "
@@ -1721,12 +2057,12 @@ def _schema_signature() -> tuple[Any, ...]:
         reference.close()
 
 
-def _validate_schema(connection: sqlite3.Connection) -> None:
+def _validate_schema(connection: sqlite3.Connection, *, include_plane_sheet: bool = False) -> None:
     if connection.execute("PRAGMA application_id").fetchone() != (_APPLICATION_ID,):
         _fail("RAW_SPATIAL_DATABASE_INVALID", "database application ID differs")
     if connection.execute("PRAGMA user_version").fetchone() != (_USER_VERSION,):
         _fail("RAW_SPATIAL_DATABASE_INVALID", "database user version differs")
-    expected_objects, expected_xinfo = _schema_signature()
+    expected_objects, expected_xinfo = _schema_signature(include_plane_sheet)
     objects = tuple(
         connection.execute(
             "SELECT type,name,sql FROM sqlite_master "
@@ -1863,12 +2199,14 @@ def _validate_database(
     *,
     is_cancelled: Callable[[], bool],
 ) -> None:
-    _validate_schema(connection)
+    include_plane_sheet = manifest.get("storage_schema") == RAW_SPATIAL_CONTACT_ASSET_SCHEMA_V3
+    _validate_schema(connection, include_plane_sheet=include_plane_sheet)
     _validate_cells(connection)
     _validate_semantic_rows(connection)
     meta_rows = tuple(connection.execute("SELECT key,value FROM meta ORDER BY key"))
     meta = dict(meta_rows)
-    if len(meta) != len(meta_rows) or frozenset(meta) != _META_KEYS:
+    expected_meta_keys = _META_KEYS | ({"plane_sheet_payload_sha256", *(f"plane_sheet_{key}_count" for key in _PLANE_SHEET_SECTIONS), "adjacent_conductor_gap_count", "adjacent_conductor_gap_sha256"} if include_plane_sheet else set())
+    if len(meta) != len(meta_rows) or frozenset(meta) != expected_meta_keys:
         _fail("RAW_SPATIAL_META_INVALID", "database metadata keys differ")
     expected_meta = {
         "payload_schema": manifest["payload_schema"],
@@ -1883,6 +2221,13 @@ def _validate_database(
         "logical_rows_sha256": manifest["logical_rows_sha256"],
         **{f"{key}_count": str(value) for key, value in manifest["counts"].items()},
     }
+    if include_plane_sheet:
+        expected_meta.update({
+            "plane_sheet_payload_sha256": manifest["plane_sheet_payload_sha256"],
+            **{f"plane_sheet_{key}_count": str(value) for key, value in manifest["plane_sheet_counts"].items()},
+            "adjacent_conductor_gap_count": str(manifest["adjacent_conductor_gap_count"]),
+            "adjacent_conductor_gap_sha256": manifest["adjacent_conductor_gap_sha256"],
+        })
     if meta != expected_meta:
         _fail("RAW_SPATIAL_META_INVALID", "database metadata differs from manifest")
     ledgers = dict(
@@ -1907,12 +2252,24 @@ def _validate_database(
         expected = (None, None, 0) if count == 0 else (0, count - 1, count)
         if ordinals != expected:
             _fail("RAW_SPATIAL_ORDINAL_INVALID", f"{section} ordinals are not contiguous")
-    if _geometry_digest(connection) != manifest["geometry_identity_sha256"]:
+    plane_digest = _plane_sheet_digest(connection, is_cancelled=is_cancelled) if include_plane_sheet else None
+    if _geometry_digest(connection, plane_digest, is_cancelled=is_cancelled) != manifest["geometry_identity_sha256"]:
         _fail("RAW_SPATIAL_GEOMETRY_IDENTITY_INVALID", "derived geometry identity differs")
     if _logical_digest(connection) != manifest["logical_rows_sha256"]:
         _fail("RAW_SPATIAL_LOGICAL_INTEGRITY_FAILED", "overall logical digest differs")
     _validate_relations(connection)
     _validate_coverage(connection)
+    if include_plane_sheet:
+        gap_count, gap_digest = _validate_plane_sheet_stream(connection, is_cancelled=is_cancelled)
+        if gap_count != manifest["adjacent_conductor_gap_count"] or gap_digest != manifest["adjacent_conductor_gap_sha256"]:
+            _fail("RAW_SPATIAL_PLANE_SHEET_INVALID", "adjacent conductor gap digest differs")
+        if plane_digest != manifest["plane_sheet_payload_sha256"]:
+            _fail("RAW_SPATIAL_PLANE_SHEET_INVALID", "plane-sheet payload digest differs")
+        counts = manifest["plane_sheet_counts"]
+        for section in _PLANE_SHEET_SECTIONS:
+            actual = connection.execute(f"SELECT COUNT(*) FROM {section}").fetchone()[0]
+            if actual != counts[section] or meta[f"plane_sheet_{section}_count"] != str(actual):
+                _fail("RAW_SPATIAL_PLANE_SHEET_INVALID", f"{section} count differs")
 
 
 T = TypeVar("T")
@@ -2109,11 +2466,16 @@ def load_raw_spatial_contact_asset(
     expected_certificate_evidence_sha256: str,
     expected_compiled_topology_identity_sha256: str,
     expected_geometry_identity_sha256: str,
+    require_plane_sheet_payload: bool = False,
     is_cancelled: Callable[[], bool] | None = None,
 ) -> LoadedRawSpatialContactAsset:
     """Verify and open a source/project/certificate/topology-bound asset."""
 
     validated = _validate_manifest(manifest)
+    if type(require_plane_sheet_payload) is not bool:
+        _fail("RAW_SPATIAL_PLANE_SHEET_REQUIRED", "require_plane_sheet_payload must be boolean")
+    if require_plane_sheet_payload and validated["storage_schema"] != RAW_SPATIAL_CONTACT_ASSET_SCHEMA_V3:
+        _fail("RAW_SPATIAL_PLANE_SHEET_REQUIRED", "v3 plane-sheet asset is required")
     expected = {
         "source_sha256": expected_source_sha256,
         "project_binding_sha256": expected_project_binding_sha256,
@@ -2177,8 +2539,11 @@ __all__ = [
     "RAW_SPATIAL_CONTACT_ASSET_METADATA_KEY",
     "RAW_SPATIAL_CONTACT_ASSET_PREFIX",
     "RAW_SPATIAL_CONTACT_ASSET_SCHEMA",
+    "RAW_SPATIAL_CONTACT_ASSET_SCHEMA_V3",
     "RAW_SPATIAL_CONTACT_COMPILER_ID",
+    "RAW_SPATIAL_CONTACT_COMPILER_ID_V3",
     "RAW_SPATIAL_CONTACT_PAYLOAD_SCHEMA",
+    "RAW_SPATIAL_CONTACT_PAYLOAD_SCHEMA_V3",
     "LoadedRawSpatialContactAsset",
     "RawSpatialContactAssetError",
     "RawSpatialLayerRow",

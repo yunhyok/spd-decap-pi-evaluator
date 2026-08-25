@@ -20,7 +20,12 @@ from spd_decap_pi.compiled_topology_asset import (
     COMPILED_TOPOLOGY_ASSET_METADATA_KEY,
     build_compiled_topology_asset,
 )
-from spd_decap_pi.raw_spatial_contact_asset import load_raw_spatial_contact_asset
+from spd_decap_pi import raw_spatial_contact_asset as asset
+from spd_decap_pi._core.domain import DielectricPropertyPoint
+from spd_decap_pi.raw_spatial_contact_asset import (
+    RawSpatialContactAssetError,
+    load_raw_spatial_contact_asset,
+)
 from spd_decap_pi.surface_certificate_asset import (
     SURFACE_CERTIFICATE_METADATA_KEY,
     canonical_surface_certificate_sha256,
@@ -116,6 +121,32 @@ def _real_compiled_context(tmp_path: Path) -> _RealCompiledContext:
 
     scenario, geometry_attachments = _full_v4_roundtrip_fixture()
     project = scenario.base_project
+    project = project.model_copy(
+        update={
+            "stackup_layers": [
+                layer.model_copy(
+                    update={
+                        "material": "Copper" if layer.is_conductor else "ABF",
+                        "dielectric_properties": (
+                            [
+                                DielectricPropertyPoint(
+                                    frequency_hz=project.frequency.start_hz,
+                                    dk=layer.dk,
+                                    df=layer.df,
+                                )
+                            ]
+                            if not layer.is_conductor
+                            and not layer.dielectric_properties
+                            and layer.dk is not None
+                            and layer.df is not None
+                            else layer.dielectric_properties
+                        ),
+                    }
+                )
+                for layer in project.stackup_layers
+            ]
+        }
+    )
     metadata = dict(project.metadata)
     spd_import = dict(metadata["spd_import"])
     records: list[dict[str, object]] = []
@@ -360,7 +391,7 @@ def _compile(context: _Context, **kwargs: object):
     )
 
 
-def _open(manifest: dict[str, object], attachment: tuple[str, bytes]):
+def _open(manifest: dict[str, object], attachment: tuple[str, bytes], *, require_plane_sheet_payload: bool = False):
     return load_raw_spatial_contact_asset(
         manifest,
         {attachment[0]: attachment[1]},
@@ -373,6 +404,7 @@ def _open(manifest: dict[str, object], attachment: tuple[str, bytes]):
             manifest["compiled_topology_identity_sha256"]
         ),
         expected_geometry_identity_sha256=str(manifest["geometry_identity_sha256"]),
+        require_plane_sheet_payload=require_plane_sheet_payload,
     )
 
 
@@ -2338,3 +2370,96 @@ def test_cancellation_and_source_stat_mutation_are_hard_gates(
     with pytest.raises(compiler.RawSpatialCompilerError) as mutated:
         _compile(context)
     assert mutated.value.code == "RAW_SPATIAL_SOURCE_MUTATED"
+
+
+def test_plane_sheet_payload_v3_is_hash_bound_and_v2_remains_unchanged(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    real = _real_compiled_context(tmp_path)
+    context = _Context(real.path, real.source, real.analysis, real.project, real.attachments, real.compiled)
+    v2, attachment_v2 = _compile(context)
+    v2_explicit, attachment_v2_explicit = _compile(context, include_plane_sheet_payload=False)
+    assert v2_explicit == v2
+    assert attachment_v2_explicit == attachment_v2
+    with pytest.raises(RawSpatialContactAssetError) as required_error:
+        load_raw_spatial_contact_asset(
+            v2,
+            {attachment_v2[0]: attachment_v2[1]},
+            expected_source_sha256=str(v2["source_sha256"]),
+            expected_project_binding_sha256=str(v2["project_binding_sha256"]),
+            expected_certificate_evidence_sha256=str(v2["certificate_evidence_sha256"]),
+            expected_compiled_topology_identity_sha256=str(v2["compiled_topology_identity_sha256"]),
+            expected_geometry_identity_sha256=str(v2["geometry_identity_sha256"]),
+            require_plane_sheet_payload=True,
+        )
+    assert required_error.value.code == "RAW_SPATIAL_PLANE_SHEET_REQUIRED"
+    v3, attachment = _compile(context, include_plane_sheet_payload=True)
+    assert v2["payload_schema"] == "spd-raw-spatial-contact-sqlite-v2"
+    assert v3["payload_schema"] == "spd-raw-spatial-contact-sqlite-v3"
+    assert v3["plane_sheet_counts"]["plane_primitives"] > 0
+    assert v3["plane_sheet_counts"]["stackup_layers"] > 0
+    assert v3["adjacent_conductor_gap_count"] >= 1
+    with _open(v3, attachment, require_plane_sheet_payload=True) as loaded:
+        assert loaded.manifest["plane_sheet_payload_sha256"] == v3["plane_sheet_payload_sha256"]
+    plane_payload = compiler._plane_sheet_payload(context.project, context.analysis)
+    plane_rows, _ = asset._plane_sheet_rows(plane_payload)
+    assert len(plane_rows["plane_primitives"]) >= 2
+
+    def open_plane_db() -> sqlite3.Connection:
+        connection = sqlite3.connect(":memory:")
+        connection.executescript(asset._PLANE_SHEET_SQL)
+        for section in asset._PLANE_SHEET_SECTIONS:
+            rows = plane_rows[section]
+            if section in {"plane_primitives", "plane_vertices", "plane_circles"}:
+                rows = [row for row in rows if row["primitive_ordinal"] < 2]
+            names = tuple(item[0] for item in connection.execute(f"SELECT * FROM {section} LIMIT 0").description)
+            connection.executemany(f"INSERT INTO {section} VALUES ({','.join('?' for _ in names)})", [tuple(row[name] for name in names) for row in rows])
+        return connection
+
+    with open_plane_db() as connection:
+        assert asset._validate_plane_sheet_stream(connection, is_cancelled=lambda: False)[0] >= 1
+    for section, values in (("plane_vertices", (999999, 0, 0.0, 0.0)), ("plane_circles", (999999, 0.0, 0.0, 1.0))):
+        with open_plane_db() as connection:
+            connection.execute(
+                f"INSERT INTO {section} VALUES ({','.join('?' for _ in values)})", values
+            )
+            with pytest.raises(RawSpatialContactAssetError) as orphan_error:
+                asset._validate_plane_sheet_stream(connection, is_cancelled=lambda: False)
+            assert orphan_error.value.code == "RAW_SPATIAL_PLANE_SHEET_INVALID"
+    with open_plane_db() as connection:
+        with monkeypatch.context() as patch:
+            patch.setattr(asset, "MAX_RAW_SPATIAL_ROWS_PER_SECTION", 1)
+            with pytest.raises(RawSpatialContactAssetError) as bound_error:
+                asset._validate_plane_sheet_stream(connection, is_cancelled=lambda: False)
+            assert bound_error.value.code == "RAW_SPATIAL_BOUND_EXCEEDED"
+    original_project = context.project
+    metadata = deepcopy(original_project.metadata)
+    records = deepcopy(metadata["spd_import"]["plane_geometries"])
+    metadata["spd_import"]["plane_geometries"] = records + [deepcopy(records[0])]
+    context.project = original_project.model_copy(update={"metadata": metadata})
+    with pytest.raises(compiler.RawSpatialCompilerError) as duplicate_error:
+        _compile(context, include_plane_sheet_payload=True)
+    assert duplicate_error.value.code == "RAW_SPATIAL_PLANE_SHEET_REQUIRED"
+    metadata["spd_import"]["plane_geometries"] = records
+    metadata["spd_import"]["plane_geometries"][0]["asset_sha256"] = "0" * 64
+    context.project = original_project.model_copy(update={"metadata": metadata})
+    with pytest.raises(compiler.RawSpatialCompilerError) as source_error:
+        _compile(context, include_plane_sheet_payload=True)
+    assert source_error.value.code == "RAW_SPATIAL_PLANE_SHEET_INVALID"
+    context.project = original_project
+    tampered_manifest = deepcopy(v3)
+    tampered_manifest["adjacent_conductor_gap_sha256"] = "0" * 64
+    with pytest.raises(RawSpatialContactAssetError) as tampered_error:
+        _open(tampered_manifest, attachment)
+    assert tampered_error.value.code == "RAW_SPATIAL_META_INVALID"
+    original_order = context.analysis.plane_geometries[0].primitive_order
+    context.analysis.plane_geometries[0].primitive_order = (("positive_polygon", 999),)
+    with pytest.raises(compiler.RawSpatialCompilerError) as order_error:
+        _compile(context, include_plane_sheet_payload=True)
+    assert order_error.value.code == "RAW_SPATIAL_PLANE_SHEET_REQUIRED"
+    context.analysis.plane_geometries[0].primitive_order = original_order
+    geometry = context.analysis.plane_geometries[0]
+    geometry.positive_polygons_um = (( (math.nan, 0.0), (1.0, 0.0), (1.0, 1.0)),)
+    with pytest.raises(compiler.RawSpatialCompilerError) as nan_error:
+        _compile(context, include_plane_sheet_payload=True)
+    assert nan_error.value.code == "RAW_SPATIAL_PLANE_SHEET_INVALID"
