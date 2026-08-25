@@ -1,9 +1,9 @@
 # SPD Decap PI Evaluator 목적·기술 기준
 
 - 적용 제품: **SPD Decap PI Evaluator v0.23.0**
-- 문서 버전: **1.14**
+- 문서 버전: **1.15**
 - W5 approved/machine-frozen source-before: `main` commit `027ac7a09a3eded15f45c41860945f9d4c7f488d`
-- 상태: **G0 기준 문서** — [작업 기준](WORK_EXECUTION_BASELINE.md)과 함께 사용하며, W5 DONE·W6-BLOCK-A DONE·W6-BLOCK-B BLOCKED·W6-BLOCK-C DONE·W6-BLOCK-D DONE·W6-BLOCK-E DONE·W6-BASE DONE (260729 numerical FAIL)·W7-PHYS-AUDIT-MOUNTED-PATH DONE (negative/unclassified)·W7-PHYS BLOCKED·W7-PHYS-OWNER-TERMINAL-VIA-VS-SPATIAL ACTIVE
+- 상태: **G0 기준 문서** — [작업 기준](WORK_EXECUTION_BASELINE.md)과 함께 사용하며, W5 DONE·W6-BLOCK-A DONE·W6-BLOCK-B BLOCKED·W6-BLOCK-C DONE·W6-BLOCK-D DONE·W6-BLOCK-E DONE·W6-BASE DONE (260729 numerical FAIL)·W7-PHYS-AUDIT-MOUNTED-PATH DONE (negative/unclassified)·W7-PHYS-OWNER-TERMINAL-VIA-VS-SPATIAL DONE (negative/evidence-unavailable)·W7-PHYS BLOCKED·W7-PHYS-EVIDENCE-MISSING-PATH-COVERAGE ACTIVE
 - 최종 개정: 2026-08-25 (Asia/Seoul)
 
 ## 1. 문서 역할과 권위
@@ -355,8 +355,9 @@ and correlation SHA `969e40046e3a099d09557ba7500693460362336d76b067962436bd3b517
 
 W6 production authority is consumed by the completed 260729 numerical FAIL. The prior
 W7 frozen-artifact audit is complete but negative/unclassified; its closure state was
-active NONE, and no further technical authority is granted outside a newly selected
-item. A future 260729 production rerun requires
+active NONE. The current active item is the separate
+`W7-PHYS-EVIDENCE-MISSING-PATH-COVERAGE` read-only coverage question; no further
+technical authority is granted outside that bounded item. A future 260729 production rerun requires
 the user to activate and complete a new exclusive-owner classification item selecting
 exactly one source-derived block, followed by exactly one physical change, focused
 evidence, and a new gate. This does not authorize remote/release/installer work,
@@ -431,10 +432,26 @@ source-derived owning term was selected, so W7-PHYS is BLOCKED; at that closure,
 active work was NONE,
 and no physics code change is authorized.
 
-The single W7 audit run (tool commit `1af7dd7a1150749a579b55623415ee8abedefda4`)
+The single W7 mounted-path audit run (tool commit `1af7dd7a1150749a579b55623415ee8abedefda4`)
 returned exit 2 after 62.98s with `diagnostic_fail`, selected block `null`, causal
-owner `null`, and owner `unclassified`. It produced no accuracy pass or sign-off;
-260729 remains FAIL and 260804/P5/unseen remain unrun/unknown.
+owner `null`, and `owner_status=unclassified`. The versioned terminal-Via audit
+commit `5d3846cd85b4b5631440dc7f84f8f865900e7bcd` was then run exactly once from
+clean `main` against a new root
+`D:\SPD-Decap-PI-Evaluator-W7\5d3846cd85b4b5631440dc7f84f8f865900e7bcd\260729`;
+it exited 2 after 82.84s with exact stderr `integrity failure: target Via path evidence is missing`,
+created no JSON, and produced no owner field. At least one target landing therefore
+lacks persisted path evidence; no rail/Via count, R/L, or owner claim is made. The
+scientific owner remains unclassified and no physics change is authorized.
+
+`W7-PHYS-OWNER-TERMINAL-VIA-VS-SPATIAL` is DONE (negative/evidence-unavailable).
+The active follow-up is `W7-PHYS-EVIDENCE-MISSING-PATH-COVERAGE`: it is a new
+read-only coverage question, not a retry, and may inspect only the existing script,
+test, and frozen candidate/import/correlation inputs. It must report 8,986 selected
+decaps across six rails with terminal/unit/Via states `available`, `missing`, or
+`trace_NA`; only available paths may contribute all-segment R/L/classification, with
+missing/trace values explicitly N/A. No legacy imputation, owner selection, or physics
+authorization is permitted. A normal coverage report is diagnostic-complete exit 2,
+with owner null/unclassified; its report schema is v2 and trust conflicts remain no-output.
 
 Approval basis commit `027ac7a09a3eded15f45c41860945f9d4c7f488d` is distinct from
 the caller-supplied exact current `main` HEAD required at a future W6 invocation;
@@ -470,5 +487,6 @@ and the exact Git HEAD are frozen together. Current trust identities: base `d43b
 | 1.11 | 2026-08-25 | W6-BASE 260729 completed numerical FAIL과 integrity-valid offline exit 2를 기록하고 W7-PHYS mounted-path audit를 지정. |
 | 1.12 | 2026-08-25 | W6 production authority consumed; W7 frozen-artifact owner audit와 one-physical-change/new-gate 순서를 고정. |
 | 1.13 | 2026-08-25 | W7 mounted-path audit negative/unclassified 종료, owning block 미분류로 W7-PHYS BLOCKED 및 active NONE. |
+| 1.15 | 2026-08-25 | terminal-Via 감사의 persisted path evidence 누락을 exit 2로 기록하고 W7-PHYS-EVIDENCE-MISSING-PATH-COVERAGE를 새 read-only active item으로 지정. |
 | 1.1 | 2026-08-24 | `WORK_EXECUTION_BASELINE.md`를 두 번째 canonical 문서로 연결. |
 | 1.0 | 2026-08-24 | v0.24 계획 중심의 Distribution–solver PRD를 제품 전체의 목적·기술 기준으로 개정. PowerSI 정확성 우선, 상태 어휘, 기술 경계, promotion gate, 검증 비용 통제와 two-document 작업 방식을 고정. |

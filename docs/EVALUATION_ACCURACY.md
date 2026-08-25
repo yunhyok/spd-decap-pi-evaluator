@@ -360,8 +360,9 @@ correction, not a recomputation.
 
 W6 production authority is consumed by the completed 260729 numerical FAIL. The prior
 W7 frozen-artifact audit is complete but negative/unclassified; its closure active item
-was NONE, and no further technical authority is granted outside the newly selected
-classification item. A future production rerun requires the
+was NONE. The current active item is the separate
+`W7-PHYS-EVIDENCE-MISSING-PATH-COVERAGE` read-only coverage question, and no further
+technical authority is granted outside that bounded item. A future production rerun requires the
 user to activate and complete a new exclusive-owner classification item selecting
 exactly one source-derived block, then exactly one physical change, focused evidence,
 and a new gate. Remote/release/installer, retries, old-root W6-BASE reuse or mutation,
@@ -493,8 +494,16 @@ VINT 0.011577/0.787786, VCPU 0.041046/2.430263. These are diagnostic/provenance
 numbers only, not numeric accuracy or PowerSI evidence; 260729 remains FAIL and
 unseen/generalization remains unknown/not_run.
 
-`W7-PHYS-OWNER-TERMINAL-VIA-VS-SPATIAL` is now ACTIVE as a read-only
-exclusive-owner classification item. It may inspect persisted source-bound terminal
+`W7-PHYS-OWNER-TERMINAL-VIA-VS-SPATIAL` is DONE (negative/evidence-unavailable).
+The versioned audit commit `5d3846cd85b4b5631440dc7f84f8f865900e7bcd` ran exactly
+once from clean `main` against
+`D:\SPD-Decap-PI-Evaluator-W7\5d3846cd85b4b5631440dc7f84f8f865900e7bcd\260729`;
+it exited 2 after 82.84s with `integrity failure: target Via path evidence is missing`,
+created no JSON, and therefore produced no owner/rail/Via/count/RL field. At least one
+target landing lacks persisted path evidence; no physics change is authorized.
+
+`W7-PHYS-EVIDENCE-MISSING-PATH-COVERAGE` is now ACTIVE as a new read-only
+coverage item, not a retry. It may inspect persisted source-bound terminal
 Via all-segment self-R/L and landing geometry after cap-mix control, but a repeated
 `estimate_via_segment_rl` calculation is implementation-consistency evidence only.
 Disabled-link counterfactuals and pair-RMS-only ownership are invalid; absent persisted
@@ -503,7 +512,15 @@ exact read budget is one sequential candidate SHA, one ZIP central/manifest pass
 streaming `scenario.json` pass extracting decaps/connection_analysis/normalized rails
 and stackup, and at most one read each for small reports. Six independent quantitative
 signatures are required; otherwise the item exits 2 as negative/unclassified and does
-not authorize physics, scoring, or production rerun.
+not authorize physics, scoring, or production rerun. The coverage contract reports
+8,986 selected decaps across six rails with terminal/unit/Via states
+`available`/`missing`/`trace_NA`; only available paths contribute all-segment R/L and
+classification, while missing/trace values are N/A. The coverage report schema is v2;
+trust conflicts remain no-output;
+a normal coverage report is diagnostic-complete exit 2 with owner null/unclassified.
+The existing script/test are the only implementation scope; one focused node and one
+new clean-main/new-root candidate read are allowed, with no retry, solver, production
+rerun, remote/release, 260804, P5, or unseen execution.
 
 Frozen historical v5 validator/policy/fixtures and base benchmark remain byte-identical.
 W6-E atomically rotated the current v6→policy→accuracy-validator→controller trust
