@@ -728,12 +728,18 @@ exactly one owner selected. 17AK is BLOCKED (source-classified endpoint STOP) at
 ran once. A proves `import_spd_scenario(source)` line2298 without args/kwargs/opt-in and immediate
 status assertions. B proves persisted topology/raw-manifest attachment/source/project/certificate/
 topology-hash checks through2499, then `load_raw_spatial_contact_asset` begins2500 and truncates at2505;
-schema/version/tables/`require_plane_sheet_payload`/tail remain UNPROVEN; no extension or reread. Sole
-ACTIVE next is `W7-PHYS-W6-RAW-SPATIAL-V3-ADAPTER-OPTIN-TEST-TAIL-TRACE` (17AL), authorizing exactly
-once reading lines2500-2540 (max41; natural EOF earlier valid), no search/other range; if loader
-call/assertions remain open at2540 => STOP. Only opt-in seam viability while default-v2 tests stay
-separate may be concluded. No owner-wide read/search, code edit, test execution, or
-profile/accuracy/production inference.
+schema/version/tables/`require_plane_sheet_payload`/tail remain UNPROVEN; no extension or reread. 17AL
+is DONE (source-classified test gap) at clean main HEAD `7618408f8979d07f6810ed1052cb472b8837b222`:
+exact tail2500-2540 once, natural EOF2524; loader checks expected source/project/certificate/topology/
+geometry hashes but no `require_plane_sheet_payload=True`, only get_via assertions plus rail witness.
+Together with known `import_spd_scenario(source)`, the owner is a viable integration seam, but
+default-v2 and no-v3-regression claims remain unproven. Sole ACTIVE next is
+`W7-PHYS-W6-RAW-SPATIAL-V3-IMPORT-API-SIGNATURE-TRACE` (17AM), authorizing exactly once reading
+`src/spd_decap_pi/spd_adapter.py` lines6423-6465 (max43), no search/second range; signature/default
+truncation at6465 => STOP without extension. No code/test authority in17AM. Frozen later candidate
+only: two-file kw-only `include_plane_sheet_payload: bool=False` forwarding at7860, selected test
+`import_spd_scenario(source, include_plane_sheet_payload=True)` at2298 and loader call2500 require True, then Sol diff plus one focused node; other calls remain
+default-v2. No profile/accuracy/production inference.
 Contract: v2 constants/API byte-identical; profile/global/app/solver/convergence/policy/controller
 identities unchanged; only the opt-in raw-spatial v3 schema/compiler sibling identity is new. v3 sibling with kw-only opt-in flags, five normalized tables,
 no gap table, positive-intervening-thickness fsum spacing, row/coordinate/ProjectSpec/source-SHA digest,
