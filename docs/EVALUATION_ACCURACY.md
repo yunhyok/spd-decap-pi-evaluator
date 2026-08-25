@@ -740,12 +740,15 @@ kw-only extension point, setup not truncated. 17AN is DONE at clean main
 `f178f4a12720a30db6f12e0011c79d9e2346bd54`: 2 files, 4 insertions/1 deletion; adapter kw-only
 defaultFalse forwarded, selected test include True + loader require True, Sol static ACCEPT, and the
 focused node ran once with exit0 (`1 passed in 1.59s`); no rerun, default callers remain v2, and no
-production W6/accuracy claim. Sole ACTIVE next is
-`W7-PHYS-W6-RAW-SPATIAL-V3-PRODUCTION-IMPORT-CALLER-DISCOVERY` (17AO), authorizing exactly once the
-query `rg -n --with-filename --no-heading --color never --glob '*.py' '\bimport_spd_scenario\b' 'src/spd_decap_pi'`.
-Cap <=20 output lines and <=5 files; ignore import/definition matches and require exactly one actual
-application caller to select a later bounded trace; zero/multiple/error/overcap => STOP. Location evidence
-only; no file open/code/test/production/accuracy proof.
+production W6/accuracy claim. 17AO is DONE as location evidence at clean main
+`f9ab13c752f7b9c832e69f1d0a16f54fabd38085`: exact query once exit0, 4 lines/2 files; gui/main_window.py
+line109 import and line1867 actual call, spd_adapter.py line6423 def and line8070 __all__; ignoring
+import/def/string yields exactly one app caller `src/spd_decap_pi/gui/main_window.py:1867`; no production
+activation claim. Sole ACTIVE next is
+`W7-PHYS-W6-RAW-SPATIAL-V3-PRODUCTION-IMPORT-CALLER-TRACE` (17AP), authorizing exactly once reading
+`src/spd_decap_pi/gui/main_window.py` lines1838-1895 (58 lines). Require complete worker boundary, call
+args, progress/cancellation, return/error handling, and local product/profile opt-in setting; boundary
+truncation => STOP without extension. No code/test/production/accuracy claim.
 Contract: v2 constants/API byte-identical; profile/global/app/solver/convergence/policy/controller
 identities unchanged; only the opt-in raw-spatial v3 schema/compiler sibling identity is new. v3 sibling with kw-only opt-in flags, five normalized tables,
 no gap table, positive-intervening-thickness fsum spacing, row/coordinate/ProjectSpec/source-SHA digest,
