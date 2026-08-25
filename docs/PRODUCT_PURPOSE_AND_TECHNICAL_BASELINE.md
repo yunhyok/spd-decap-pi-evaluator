@@ -1,10 +1,10 @@
 # SPD Decap PI Evaluator 목적·기술 기준
 
 - 적용 제품: **SPD Decap PI Evaluator v0.23.0**
-- 문서 버전: **1.46**
+- 문서 버전: **1.47**
 - W5 approved/machine-frozen source-before: `main` commit `027ac7a09a3eded15f45c41860945f9d4c7f488d`
-- 상태: **G0 기준 문서** — [작업 기준](WORK_EXECUTION_BASELINE.md)과 함께 사용하며, W5 DONE·W6-BLOCK-A DONE·W6-BLOCK-B BLOCKED·W6-BLOCK-C DONE·W6-BLOCK-D DONE·W6-BLOCK-E DONE·W6-BASE DONE (260729 numerical FAIL)·W7-PHYS-AUDIT-MOUNTED-PATH DONE (negative/unclassified)·W7-PHYS-OWNER-TERMINAL-VIA-VS-SPATIAL DONE (negative/evidence-unavailable)·W7-PHYS-EVIDENCE-MISSING-PATH-COVERAGE DONE (negative/evidence-unavailable)·W7-PHYS-PRODUCTION-VIA-ROUTE-SOURCE-TRACE DONE (source-classified raw-base/global finite-route ownership; local calibrated half-branches not selected; mixed ownership fail-closed)·W7-PHYS-RAW-FINITE-VIA-RL-GENERATION-TRACE DONE (producer unclassified, high confidence)·W7-PHYS-GROUND-REACHABILITY-RL-PRODUCER-TRACE DONE (producer delegated/unclassified, high confidence)·W7-PHYS-VIA-SEGMENT-RL-MODEL-TRACE DONE (source-classified model; conditional multi-segment caller-contract bug confirmed; W6 exposure unknown)·W7-PHYS-MULTISEGMENT-RL-CALLER-FIX BLOCKED (fixture-contract red; production diff statically accepted and retained uncommitted)·W7-PHYS-CORRECTED-SUCCESSOR BLOCKED (static REJECT; zero pytest executions)·W7-PHYS-CORRECTED-SUCCESSOR-2 DONE·W7-PHYS-W6-MULTISEGMENT-EXPOSURE DONE (source-classified evidence unavailable; actual exposure unknown)·W7-PHYS-PLANE-SHEET-NONUNIFORM-RL-SOURCE-TRACE DONE (local stamps source-classified; Maxwell partial generation external/unclassified)·W7-PHYS-MAXWELL-PARTIAL-SOURCE-TRACE DONE (local adjacent-gap dispersive admittance classified; Maxwell C/dispersion/load/solver insertion external)·W7-PHYS-MAXWELL-CAPACITANCE-PRODUCER-TRACE DONE (exact 2D polygon-overlay lumped parallel-plate Maxwell C source-classified; W6 inputs/asset fidelity external)·W7-PHYS-PLANE-SHEET-RL-REUSE-DISCOVERY DONE (canonical rg once, candidates found; no reuse or production proof)·W7-PHYS-COPPER-SURFACE-IMPEDANCE-REUSE-TRACE DONE (surface-impedance constitutive law and MFDM stamp source-classified; W6 reuse unclassified/STOP)·W7-PHYS-SURFACE-PATCH-PLANE-REUSE-TRACE DONE (surface-patch local solver/operator source-classified; whole-solver W6 compatibility reuse unclassified/STOP)·W7-PHYS-W6-PLANE-SHEET-REIMPLEMENTATION-DESIGN BLOCKED (design before coding; replacement profile decision frozen)·W7-PHYS-W6-PLANE-SHEET-ADAPTER-BINDING-TRACE BLOCKED (profile/fallback, worker/cache, raw geometry/material provenance, differential nullspace/final rail-order Zii, and no-double-counting owner transition remain external)·W7-PHYS-W6-PLANE-SHEET-INTEGRATION-BINDING-TRACE BLOCKED (source-classified; five acceptance items UNPROVEN; stopped at whitelist-outside delegates)·W7-PHYS-W6-PLANE-SHEET-SOURCE-CONTRACT-TRACE BLOCKED (source-classified; approved asset path missing; all joint acceptance unmet)·W7-PHYS-W6-PLANE-SHEET-BOUNDED-PATH-DISCOVERY BLOCKED (source-classified; A/B/C insufficient)·W7-PHYS-PROSPECTIVE-RUNTIME-TERM-EVIDENCE BLOCKED/YAGNI·W7-PHYS BLOCKED·ACTIVE W7-PHYS-W6-PROJECTSPEC-PLANE-MATERIAL-OWNER-TRACE
-- 현재 권위 상태: 17T historical BLOCKED; 17U/17V source-classified BLOCKED; 17W DONE (2-line/2-file definition query); `W7-PHYS-W6-PROJECTSPEC-PLANE-MATERIAL-OWNER-TRACE` 17X가 standing preapproval 아래 유일한 ACTIVE one-file trace다.
+- 상태: **G0 기준 문서** — [작업 기준](WORK_EXECUTION_BASELINE.md)과 함께 사용하며, W5 DONE·W6-BLOCK-A DONE·W6-BLOCK-B BLOCKED·W6-BLOCK-C DONE·W6-BLOCK-D DONE·W6-BLOCK-E DONE·W6-BASE DONE (260729 numerical FAIL)·W7-PHYS-AUDIT-MOUNTED-PATH DONE (negative/unclassified)·W7-PHYS-OWNER-TERMINAL-VIA-VS-SPATIAL DONE (negative/evidence-unavailable)·W7-PHYS-EVIDENCE-MISSING-PATH-COVERAGE DONE (negative/evidence-unavailable)·W7-PHYS-PRODUCTION-VIA-ROUTE-SOURCE-TRACE DONE (source-classified raw-base/global finite-route ownership; local calibrated half-branches not selected; mixed ownership fail-closed)·W7-PHYS-RAW-FINITE-VIA-RL-GENERATION-TRACE DONE (producer unclassified, high confidence)·W7-PHYS-GROUND-REACHABILITY-RL-PRODUCER-TRACE DONE (producer delegated/unclassified, high confidence)·W7-PHYS-VIA-SEGMENT-RL-MODEL-TRACE DONE (source-classified model; conditional multi-segment caller-contract bug confirmed; W6 exposure unknown)·W7-PHYS-MULTISEGMENT-RL-CALLER-FIX BLOCKED (fixture-contract red; production diff statically accepted and retained uncommitted)·W7-PHYS-CORRECTED-SUCCESSOR BLOCKED (static REJECT; zero pytest executions)·W7-PHYS-CORRECTED-SUCCESSOR-2 DONE·W7-PHYS-W6-MULTISEGMENT-EXPOSURE DONE (source-classified evidence unavailable; actual exposure unknown)·W7-PHYS-PLANE-SHEET-NONUNIFORM-RL-SOURCE-TRACE DONE (local stamps source-classified; Maxwell partial generation external/unclassified)·W7-PHYS-MAXWELL-PARTIAL-SOURCE-TRACE DONE (local adjacent-gap dispersive admittance classified; Maxwell C/dispersion/load/solver insertion external)·W7-PHYS-MAXWELL-CAPACITANCE-PRODUCER-TRACE DONE (exact 2D polygon-overlay lumped parallel-plate Maxwell C source-classified; W6 inputs/asset fidelity external)·W7-PHYS-PLANE-SHEET-RL-REUSE-DISCOVERY DONE (canonical rg once, candidates found; no reuse or production proof)·W7-PHYS-COPPER-SURFACE-IMPEDANCE-REUSE-TRACE DONE (surface-impedance constitutive law and MFDM stamp source-classified; W6 reuse unclassified/STOP)·W7-PHYS-SURFACE-PATCH-PLANE-REUSE-TRACE DONE (surface-patch local solver/operator source-classified; whole-solver W6 compatibility reuse unclassified/STOP)·W7-PHYS-W6-PLANE-SHEET-REIMPLEMENTATION-DESIGN BLOCKED (design before coding; replacement profile decision frozen)·W7-PHYS-W6-PLANE-SHEET-ADAPTER-BINDING-TRACE BLOCKED (profile/fallback, worker/cache, raw geometry/material provenance, differential nullspace/final rail-order Zii, and no-double-counting owner transition remain external)·W7-PHYS-W6-PLANE-SHEET-INTEGRATION-BINDING-TRACE BLOCKED (source-classified; five acceptance items UNPROVEN; stopped at whitelist-outside delegates)·W7-PHYS-W6-PLANE-SHEET-SOURCE-CONTRACT-TRACE BLOCKED (source-classified; approved asset path missing; all joint acceptance unmet)·W7-PHYS-W6-PLANE-SHEET-BOUNDED-PATH-DISCOVERY BLOCKED (source-classified; A/B/C insufficient)·W7-PHYS-PROSPECTIVE-RUNTIME-TERM-EVIDENCE BLOCKED/YAGNI·W7-PHYS-W6-PROJECTSPEC-PLANE-MATERIAL-OWNER-TRACE BLOCKED (existing-contract gap)·W7-PHYS BLOCKED·ACTIVE W7-PHYS-W6-RAW-SPATIAL-V3-TEST-PATH-DISCOVERY
+- 현재 권위 상태: 17T historical BLOCKED; 17U/17V source-classified BLOCKED; 17W DONE (2-line/2-file definition query); 17X source-classified BLOCKED (existing-contract gap); `W7-PHYS-W6-RAW-SPATIAL-V3-TEST-PATH-DISCOVERY` 17Y가 standing preapproval 아래 유일한 ACTIVE query다.
 - 최종 개정: 2026-08-26 (Asia/Seoul)
 
 ## 1. 문서 역할과 권위
@@ -616,20 +616,28 @@ structural schema/hash/bounds and certificate envelope checks; full polygons/mat
 and a solve-ready payload remain absent, so 17V is source-classified BLOCKED. 17W then ran at clean main
 HEAD `43b244909b4bbb03057666a2451b14f2cce566e5`: its exact definition query returned 2 lines/2 files
 once, with `domain.py` unread before that query and `spd.py` retained as prior-17F evidence (no reread).
-17W is DONE (source-classified). Under standing preapproval, sole ACTIVE 17X
-`W7-PHYS-W6-PROJECTSPEC-PLANE-MATERIAL-OWNER-TRACE` permits one complete read of
-`src/spd_decap_pi/_core/domain.py` plus one Sol review. It must source-prove full layer/net polygon
-vertices with coordinate units/order/source provenance, ordered conductor thickness/conductivity,
-dielectric thickness/spacing/epsilon/loss/dispersion units with explicit/default semantics, and a
-deterministic/hashable compiler handoff. Any delegate, silent physical default, missing unit/provenance/
-order, or incomplete polygon fails closed; material-only evidence is insufficient. No payload/accuracy/
-causal or production claim follows, and schema-v3 direction remains conditional on a pass.
-Frozen 17F `SpdAnalysis` evidence did not establish complete per-layer/net polygon vertices,
-coordinate units, raw-source identity, or preservation; those remain UNPROVEN unless ProjectSpec
-itself directly supplies them. On PASS only, the existing raw-spatial asset may be versioned/extended
-to schema v3 with existing SQLite/hash/resource helpers; no second attachment or new physics solver,
-new opt-in rejects v2/missing physical tables fail-closed, and the historical path remains unchanged.
-This is direction only, not proof or implementation authority.
+17W is DONE (source-classified). 17X then read `src/spd_decap_pi/_core/domain.py` once, but is
+source-classified BLOCKED on the existing-contract gap: same-file ProjectSpec types prove geometry
+primitives/assets, `_um`, source SHA/order, stackup thickness/conductivity, and dielectric frequency
+epsilon/loss, while separate adjacent-conductor spacing is derived only by summing positive intervening
+dielectric thickness; the existing compiler handoff is absent and frozen 17F remains unproven.
+Material-only evidence is not accuracy proof. Under standing preapproval, sole ACTIVE 17Y
+`W7-PHYS-W6-RAW-SPATIAL-V3-TEST-PATH-DISCOVERY` permits exactly one query:
+`rg --files tests | rg '(?:^|[\\/])test_.*raw_spatial_contact.*\.py$'`.
+Acceptance is 1–3 existing test paths, after which Sol selects exactly one by filename; 0 or >3
+closes BLOCKED without a second query/open. The proposed production successor
+`W7-PHYS-W6-RAW-SPATIAL-ASSET-V3-EMISSION` is NOT ACTIVE: only conditionally, after test-path
+selection, may the existing raw-spatial asset be versioned to v3 with normalized plane primitives,
+stackup/dielectric tables, deterministic adjacent-conductor validation, row/source hashing, and
+existing spool/hash/bounds/cancel helpers; no duplicate gap table, new profile/global/accuracy claim,
+or historical-path change is authorized.
+Frozen 17F `SpdAnalysis` polygon evidence remains UNPROVEN and unused. ProjectSpec itself source-proves
+the geometry/material inputs above; 17X failed only because the existing compiler handoff is absent.
+Under standing W6 reimplementation authority, after 17Y selects one test path the proposed v3 successor
+may be activated, but it is NOT ACTIVE now. If activated, it may version/extend the existing raw-spatial
+asset to schema v3 with existing SQLite/hash/resource helpers; no second attachment or new physics solver,
+v2 or missing physical tables fail closed, and the historical path remains unchanged. This is direction
+only, not proof, implementation readiness, accuracy, or causal authority.
 
 Approval basis commit `027ac7a09a3eded15f45c41860945f9d4c7f488d` is distinct from
 the caller-supplied exact current `main` HEAD required at a future W6 invocation;
@@ -697,5 +705,6 @@ and the exact Git HEAD are frozen together. Current trust identities: base `d43b
 | 1.44 | 2026-08-26 | 17U raw-spatial compiler trace를 compiler trust/resource/determinism proven 및 payload assembly/certificate envelope delegated/unproven으로 BLOCKED 종료하고, 17V asset/certificate two-file contract trace를 유일 ACTIVE로 지정. |
 | 1.45 | 2026-08-26 | 17V를 structural schema/hash/bounds 및 certificate envelope만 proven, full polygons/material/dielectric payload absent로 BLOCKED 종료하고 17W exact definition-owner query를 유일 ACTIVE로 지정. |
 | 1.46 | 2026-08-26 | 17W exact definition query를 2 lines/2 files로 DONE(source-classified) 종료하고 `domain.py` 단일 owner read + Sol review의 17X ProjectSpec plane/material trace를 sole ACTIVE로 지정. |
+| 1.47 | 2026-08-26 | 17X를 existing-contract gap으로 source-classified BLOCKED 종료하고 17Y raw-spatial v3 test-path discovery query를 sole ACTIVE로 지정. |
 | 1.1 | 2026-08-24 | `WORK_EXECUTION_BASELINE.md`를 두 번째 canonical 문서로 연결. |
 | 1.0 | 2026-08-24 | v0.24 계획 중심의 Distribution–solver PRD를 제품 전체의 목적·기술 기준으로 개정. PowerSI 정확성 우선, 상태 어휘, 기술 경계, promotion gate, 검증 비용 통제와 two-document 작업 방식을 고정. |

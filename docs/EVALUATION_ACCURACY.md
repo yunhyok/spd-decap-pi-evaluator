@@ -654,19 +654,19 @@ schema/hash/bounds and certificate-envelope checks; full polygons/material/diele
 solve-ready payload remain absent, so 17V is source-classified BLOCKED. 17W then ran once at clean main
 HEAD `43b244909b4bbb03057666a2451b14f2cce566e5`, returned exactly 2 definition lines in 2 files, and
 closed DONE (source-classified); `domain.py` was unread before the query while `spd.py` was prior-17F
-evidence and was not reread. Sole ACTIVE 17X
-`W7-PHYS-W6-PROJECTSPEC-PLANE-MATERIAL-OWNER-TRACE` permits one complete `domain.py` read plus one Sol
-review. Pass requires source-bound full layer/net polygons with units/order/provenance, ordered
-conductor thickness/conductivity, dielectric d/spacing/epsilon/loss/dispersion units/default semantics,
-and a deterministic/hashable compiler handoff; any delegate, silent default, missing provenance/order,
-or incomplete polygon fails closed, and material-only evidence is insufficient. This is a source
-contract trace only, not an accuracy/causal/production claim; schema-v3 remains conditional on pass.
-Frozen 17F `SpdAnalysis` evidence did not prove complete per-layer/net polygon vertices, coordinate
-units, raw-source identity, or preservation; ProjectSpec must supply these directly or the dimension
-stays UNPROVEN. A pass may only conditionally version/extend the existing raw-spatial asset to schema
-v3 with existing SQLite/hash/resource helpers; no second attachment/new solver, v2 or missing physical
-tables fail closed, and the historical path is unchanged. This direction is not proof or implementation
-authority.
+evidence and was not reread. 17X is source-classified BLOCKED on an existing-contract gap: same-file
+ProjectSpec types prove geometry primitives/assets, `_um`, source SHA/order, stackup thickness/conductivity,
+and dielectric frequency epsilon/loss, while adjacent-conductor spacing is only derived by summing
+positive intervening dielectric thickness; the existing compiler handoff is absent and frozen 17F
+remains unproven. Sole ACTIVE 17Y
+`W7-PHYS-W6-RAW-SPATIAL-V3-TEST-PATH-DISCOVERY` permits exactly one query
+`rg --files tests | rg '(?:^|[\\/])test_.*raw_spatial_contact.*\.py$'`; accept 1–3 existing paths,
+then Sol selects exactly one by filename; 0 or >3 fail closed without a second query/open. Proposed
+`W7-PHYS-W6-RAW-SPATIAL-ASSET-V3-EMISSION` is not active. Conditionally, after selection, existing
+SQLite/hash/resource helpers may support a v3 asset with normalized plane/stackup/dielectric tables,
+deterministic spacing validation and row/source hashing; no duplicate gap table/new solver, v2 or
+missing tables fail closed, and historical path remains unchanged. This is not an accuracy/causal/
+production claim or implementation authority.
 The compact scenario quotient
 stores only schema/status, compiled SQLite stores aggregate `finite_parallel_rl` links/count/
 R/L/owners without source series terms, segments, or `physical_model_status`, and the
