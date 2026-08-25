@@ -361,7 +361,7 @@ correction, not a recomputation.
 W6 production authority is consumed by the completed 260729 numerical FAIL. The prior
 W7 frozen-artifact audit is complete but negative/unclassified; its closure active item
 was NONE. The current active item is the separate
-`W7-PHYS-EVIDENCE-MISSING-PATH-COVERAGE` read-only coverage question, and no further
+`W7-PHYS-PRODUCTION-VIA-ROUTE-SOURCE-TRACE` read-only source-trace question, and no further
 technical authority is granted outside that bounded item. A future production rerun requires the
 user to activate and complete a new exclusive-owner classification item selecting
 exactly one source-derived block, then exactly one physical change, focused evidence,
@@ -502,8 +502,8 @@ it exited 2 after 82.84s with `integrity failure: target Via path evidence is mi
 created no JSON, and therefore produced no owner/rail/Via/count/RL field. At least one
 target landing lacks persisted path evidence; no physics change is authorized.
 
-`W7-PHYS-EVIDENCE-MISSING-PATH-COVERAGE` is now ACTIVE as a new read-only
-coverage item, not a retry. It may inspect persisted source-bound terminal
+`W7-PHYS-EVIDENCE-MISSING-PATH-COVERAGE` is DONE (diagnostic-complete, negative/evidence-unavailable),
+not a retry. It inspected persisted source-bound terminal
 Via all-segment self-R/L and landing geometry after cap-mix control, but a repeated
 `estimate_via_segment_rl` calculation is implementation-consistency evidence only.
 Disabled-link counterfactuals and pair-RMS-only ownership are invalid; absent persisted
@@ -518,9 +518,21 @@ not authorize physics, scoring, or production rerun. The coverage contract repor
 classification, while missing/trace values are N/A. The coverage report schema is v2;
 trust conflicts remain no-output;
 a normal coverage report is diagnostic-complete exit 2 with owner null/unclassified.
-The existing script/test are the only implementation scope; one focused node and one
-new clean-main/new-root candidate read are allowed, with no retry, solver, production
-rerun, remote/release, 260804, P5, or unseen execution.
+The corrected v2 run from commit `66b2e2d5c39fe24d224544ffb590a87bc6f2a9aa` was
+exactly one audit in
+`D:\SPD-Decap-PI-Evaluator-W7\66b2e2d5c39fe24d224544ffb590a87bc6f2a9aa\260729`:
+82.08s, exit 2, JSON 527477 bytes, SHA-256
+`2816958e48d3713d179d7420834ad9ff97b177ba661848f1646def104c867a14`.
+Coverage was available 0, missing 19,218, trace_NA 0, total 19,218, with state
+classification complete true and coverage complete false. This is path-coverage
+evidence only; it creates no accuracy PASS/FAIL and no owner.
+
+The current active item is `W7-PHYS-PRODUCTION-VIA-ROUTE-SOURCE-TRACE`: a read-only
+static trace of v6/base benchmark → scenario topology → termination manifest to
+classify production Via links as raw-base, local-template, mixed, or unclassified.
+Read only the listed source modules and provenance definitions; no artifact reread,
+numeric recomputation, test/solver/production execution, physics change, or owner
+promotion is allowed. Missing runtime branch binding closes the item unclassified.
 
 Frozen historical v5 validator/policy/fixtures and base benchmark remain byte-identical.
 W6-E atomically rotated the current v6→policy→accuracy-validator→controller trust
