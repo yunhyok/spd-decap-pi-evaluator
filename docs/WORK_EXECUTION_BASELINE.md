@@ -1,11 +1,11 @@
 # SPD Decap PI Evaluator 작업 기준
 
 - 적용 제품: **SPD Decap PI Evaluator v0.23.0**
-- 문서 버전: **1.54**
-- 상위 기준: [목적·기술 기준](PRODUCT_PURPOSE_AND_TECHNICAL_BASELINE.md) v1.53
+- 문서 버전: **1.55**
+- 상위 기준: [목적·기술 기준](PRODUCT_PURPOSE_AND_TECHNICAL_BASELINE.md) v1.54
 - W6-BASE source-before: clean `main` HEAD `fb36288781dcc0b884950ef5a486c474090ceebd`; this is the exact source boundary for the completed one-run evidence
-- 상태: **APPROVED/MACHINE-FROZEN CONTROL DOCUMENT — W5 DONE; W6-BLOCK-A DONE; W6-BLOCK-B BLOCKED; W6-BLOCK-C DONE; W6-BLOCK-D DONE; W6-BLOCK-E DONE; W6-BASE DONE (260729 numerical FAIL); W7-PHYS-AUDIT-MOUNTED-PATH DONE (negative/unclassified); W7-PHYS-OWNER-TERMINAL-VIA-VS-SPATIAL DONE (negative/evidence-unavailable); W7-PHYS-EVIDENCE-MISSING-PATH-COVERAGE DONE (negative/evidence-unavailable); W7-PHYS-PRODUCTION-VIA-ROUTE-SOURCE-TRACE DONE (source-classified raw-base/global finite-route ownership; local calibrated half-branches not selected; mixed ownership fail-closed); W7-PHYS-RAW-FINITE-VIA-RL-GENERATION-TRACE DONE (producer unclassified, high confidence); W7-PHYS-GROUND-REACHABILITY-RL-PRODUCER-TRACE DONE (producer delegated/unclassified, high confidence); W7-PHYS-VIA-SEGMENT-RL-MODEL-TRACE DONE (source-classified model; conditional multi-segment caller-contract bug confirmed; W6 exposure unknown); W7-PHYS-MULTISEGMENT-RL-CALLER-FIX BLOCKED (fixture-contract red; production diff statically accepted and retained uncommitted); W7-PHYS-CORRECTED-SUCCESSOR BLOCKED (static REJECT; zero pytest executions); W7-PHYS-CORRECTED-SUCCESSOR-2 DONE; W7-PHYS-W6-MULTISEGMENT-EXPOSURE DONE (source-classified evidence unavailable; actual exposure unknown); W7-PHYS-PLANE-SHEET-NONUNIFORM-RL-SOURCE-TRACE DONE (local stamps source-classified; Maxwell partial generation external/unclassified); W7-PHYS-MAXWELL-PARTIAL-SOURCE-TRACE DONE (local adjacent-gap dispersive admittance classified; Maxwell C/dispersion/load/solver insertion external); W7-PHYS-MAXWELL-CAPACITANCE-PRODUCER-TRACE DONE (exact 2D polygon-overlay lumped parallel-plate Maxwell C source-classified; W6 inputs/asset fidelity external); W7-PHYS-PLANE-SHEET-RL-REUSE-DISCOVERY DONE (canonical rg once, candidates found; no reuse or production proof); W7-PHYS-COPPER-SURFACE-IMPEDANCE-REUSE-TRACE DONE (surface-impedance constitutive law and MFDM stamp source-classified; W6 reuse unclassified/STOP); W7-PHYS-SURFACE-PATCH-PLANE-REUSE-TRACE DONE (surface-patch local solver/operator source-classified; whole-solver W6 compatibility reuse unclassified/STOP); W7-PHYS-W6-PLANE-SHEET-REIMPLEMENTATION-DESIGN BLOCKED (design before coding; replacement profile decision frozen); W7-PHYS-W6-PLANE-SHEET-ADAPTER-BINDING-TRACE BLOCKED (profile/fallback, worker/cache, raw geometry/material provenance, differential nullspace/final rail-order Zii, and no-double-counting owner transition remain external); W7-PHYS-W6-PLANE-SHEET-INTEGRATION-BINDING-TRACE BLOCKED (source-classified; five acceptance items UNPROVEN; stopped at whitelist-outside delegates); W7-PHYS-W6-PLANE-SHEET-SOURCE-CONTRACT-TRACE BLOCKED (source-classified; approved asset path missing; all joint acceptance unmet); W7-PHYS-W6-PLANE-SHEET-BOUNDED-PATH-DISCOVERY BLOCKED (source-classified; A/B/C insufficient); W7-PHYS-PROSPECTIVE-RUNTIME-TERM-EVIDENCE BLOCKED/YAGNI; W7-PHYS-W6-PROJECTSPEC-PLANE-MATERIAL-OWNER-TRACE BLOCKED (existing-contract gap); W7-PHYS BLOCKED; W7-PHYS-W6-RAW-SPATIAL-V3-TEST-SYMBOL-DISCOVERY DONE (17 lines/5 files, unique compiler test); W7-PHYS-W6-RAW-SPATIAL-ASSET-V3-EMISSION BLOCKED (test-gate); W7-PHYS-W6-RAW-SPATIAL-ASSET-V3-EMISSION-S1 BLOCKED (test-gate); W7-PHYS-W6-RAW-SPATIAL-ASSET-V3-EMISSION-S2 DONE (test-gate PASS; 1 passed in 1.09s); W7-PHYS-W6-RAW-SPATIAL-V3-PERSISTENCE-OWNER-DISCOVERY DONE (26 lines/5 files; source-classified persistence seam); ACTIVE W7-PHYS-W6-RAW-SPATIAL-V3-SPD-ADAPTER-PERSISTENCE-TRACE
-- 현재 권위 상태: 17T historical BLOCKED; 17U/17V source-classified BLOCKED; 17W DONE (2-line/2-file definition query); 17X source-classified BLOCKED (existing-contract gap); 17Y source-classified BLOCKED (0-match filename query); 17Z DONE (17 lines/5 files, unique compiler test); 17AA `W7-PHYS-W6-RAW-SPATIAL-ASSET-V3-EMISSION` BLOCKED (test-gate); 17AA-S1 `W7-PHYS-W6-RAW-SPATIAL-ASSET-V3-EMISSION-S1` BLOCKED (test-gate); 17AA-S2 `W7-PHYS-W6-RAW-SPATIAL-ASSET-V3-EMISSION-S2` DONE (test-gate PASS; 1 passed in 1.09s); 17AB `W7-PHYS-W6-RAW-SPATIAL-V3-PERSISTENCE-OWNER-DISCOVERY` DONE (26 lines/5 files; source-classified persistence seam); ACTIVE `W7-PHYS-W6-RAW-SPATIAL-V3-SPD-ADAPTER-PERSISTENCE-TRACE`.
+- 상태: **APPROVED/MACHINE-FROZEN CONTROL DOCUMENT — W5 DONE; W6-BLOCK-A DONE; W6-BLOCK-B BLOCKED; W6-BLOCK-C DONE; W6-BLOCK-D DONE; W6-BLOCK-E DONE; W6-BASE DONE (260729 numerical FAIL); W7-PHYS-AUDIT-MOUNTED-PATH DONE (negative/unclassified); W7-PHYS-OWNER-TERMINAL-VIA-VS-SPATIAL DONE (negative/evidence-unavailable); W7-PHYS-EVIDENCE-MISSING-PATH-COVERAGE DONE (negative/evidence-unavailable); W7-PHYS-PRODUCTION-VIA-ROUTE-SOURCE-TRACE DONE (source-classified raw-base/global finite-route ownership; local calibrated half-branches not selected; mixed ownership fail-closed); W7-PHYS-RAW-FINITE-VIA-RL-GENERATION-TRACE DONE (producer unclassified, high confidence); W7-PHYS-GROUND-REACHABILITY-RL-PRODUCER-TRACE DONE (producer delegated/unclassified, high confidence); W7-PHYS-VIA-SEGMENT-RL-MODEL-TRACE DONE (source-classified model; conditional multi-segment caller-contract bug confirmed; W6 exposure unknown); W7-PHYS-MULTISEGMENT-RL-CALLER-FIX BLOCKED (fixture-contract red; production diff statically accepted and retained uncommitted); W7-PHYS-CORRECTED-SUCCESSOR BLOCKED (static REJECT; zero pytest executions); W7-PHYS-CORRECTED-SUCCESSOR-2 DONE; W7-PHYS-W6-MULTISEGMENT-EXPOSURE DONE (source-classified evidence unavailable; actual exposure unknown); W7-PHYS-PLANE-SHEET-NONUNIFORM-RL-SOURCE-TRACE DONE (local stamps source-classified; Maxwell partial generation external/unclassified); W7-PHYS-MAXWELL-PARTIAL-SOURCE-TRACE DONE (local adjacent-gap dispersive admittance classified; Maxwell C/dispersion/load/solver insertion external); W7-PHYS-MAXWELL-CAPACITANCE-PRODUCER-TRACE DONE (exact 2D polygon-overlay lumped parallel-plate Maxwell C source-classified; W6 inputs/asset fidelity external); W7-PHYS-PLANE-SHEET-RL-REUSE-DISCOVERY DONE (canonical rg once, candidates found; no reuse or production proof); W7-PHYS-COPPER-SURFACE-IMPEDANCE-REUSE-TRACE DONE (surface-impedance constitutive law and MFDM stamp source-classified; W6 reuse unclassified/STOP); W7-PHYS-SURFACE-PATCH-PLANE-REUSE-TRACE DONE (surface-patch local solver/operator source-classified; whole-solver W6 compatibility reuse unclassified/STOP); W7-PHYS-W6-PLANE-SHEET-REIMPLEMENTATION-DESIGN BLOCKED (design before coding; replacement profile decision frozen); W7-PHYS-W6-PLANE-SHEET-ADAPTER-BINDING-TRACE BLOCKED (profile/fallback, worker/cache, raw geometry/material provenance, differential nullspace/final rail-order Zii, and no-double-counting owner transition remain external); W7-PHYS-W6-PLANE-SHEET-INTEGRATION-BINDING-TRACE BLOCKED (source-classified; five acceptance items UNPROVEN; stopped at whitelist-outside delegates); W7-PHYS-W6-PLANE-SHEET-SOURCE-CONTRACT-TRACE BLOCKED (source-classified; approved asset path missing; all joint acceptance unmet); W7-PHYS-W6-PLANE-SHEET-BOUNDED-PATH-DISCOVERY BLOCKED (source-classified; A/B/C insufficient); W7-PHYS-PROSPECTIVE-RUNTIME-TERM-EVIDENCE BLOCKED/YAGNI; W7-PHYS-W6-PROJECTSPEC-PLANE-MATERIAL-OWNER-TRACE BLOCKED (existing-contract gap); W7-PHYS BLOCKED; W7-PHYS-W6-RAW-SPATIAL-V3-TEST-SYMBOL-DISCOVERY DONE (17 lines/5 files, unique compiler test); W7-PHYS-W6-RAW-SPATIAL-ASSET-V3-EMISSION BLOCKED (test-gate); W7-PHYS-W6-RAW-SPATIAL-ASSET-V3-EMISSION-S1 BLOCKED (test-gate); W7-PHYS-W6-RAW-SPATIAL-ASSET-V3-EMISSION-S2 DONE (test-gate PASS; 1 passed in 1.09s); W7-PHYS-W6-RAW-SPATIAL-V3-PERSISTENCE-OWNER-DISCOVERY DONE (26 lines/5 files; source-classified persistence seam); W7-PHYS-W6-RAW-SPATIAL-V3-SPD-ADAPTER-PERSISTENCE-TRACE BLOCKED (source-classified STOP); ACTIVE W7-PHYS-W6-RAW-SPATIAL-V3-MERGE-CALLER-DISCOVERY
+- 현재 권위 상태: 17T historical BLOCKED; 17U/17V source-classified BLOCKED; 17W DONE (2-line/2-file definition query); 17X source-classified BLOCKED (existing-contract gap); 17Y source-classified BLOCKED (0-match filename query); 17Z DONE (17 lines/5 files, unique compiler test); 17AA `W7-PHYS-W6-RAW-SPATIAL-ASSET-V3-EMISSION` BLOCKED (test-gate); 17AA-S1 `W7-PHYS-W6-RAW-SPATIAL-ASSET-V3-EMISSION-S1` BLOCKED (test-gate); 17AA-S2 `W7-PHYS-W6-RAW-SPATIAL-ASSET-V3-EMISSION-S2` DONE (test-gate PASS; 1 passed in 1.09s); 17AB `W7-PHYS-W6-RAW-SPATIAL-V3-PERSISTENCE-OWNER-DISCOVERY` DONE (26 lines/5 files; source-classified persistence seam); 17AC `W7-PHYS-W6-RAW-SPATIAL-V3-SPD-ADAPTER-PERSISTENCE-TRACE` BLOCKED (source-classified STOP); ACTIVE `W7-PHYS-W6-RAW-SPATIAL-V3-MERGE-CALLER-DISCOVERY`.
 - 최종 개정: 2026-08-26 (Asia/Seoul)
 
 ## 1. 압축 후 즉시 복구 카드
@@ -17,15 +17,15 @@ context가 압축되거나 새 session에서 작업을 재개하면 다른 연�
 |---|---|
 | 변하지 않는 목적 | source-derived single-rail `Zii`의 PowerSI 근접 정확성과 일반화 |
 | 현재 branch | `main`만 사용; 정리된 과거 branch를 다시 조사하지 않음 |
-| 현재 active work item | `W7-PHYS-W6-RAW-SPATIAL-V3-SPD-ADAPTER-PERSISTENCE-TRACE` |
-| 다음 권장 묶음 | `W7-PHYS-W6-RAW-SPATIAL-V3-SPD-ADAPTER-PERSISTENCE-TRACE` (ACTIVE; exactly one bounded read + Sol review) |
-| current authorization | S2 ran the approved focused node once: exit 0, `1 passed in 1.09s`; no rerun, broad-suite, or production run. The v3 emission goal is DONE. 17AB is DONE: its frozen rg ran once on clean `main` (exit 0, 26 lines/5 files), with `src/spd_decap_pi/spd_adapter.py` the useful unique raw-spatial persistence seam; matches are location evidence only. 17AC permits exactly one read of `src/spd_decap_pi/spd_adapter.py` lines 100-215, no whole-file reread/search/code/test; answer owner signature/return/mutation, attachment/metadata normalization, v3 preservation/fail-closed, and compiler invocation versus delegated output. If a boundary/delegate is outside the excerpt, source-classified STOP; no second range automatic. |
+| 현재 active work item | `W7-PHYS-W6-RAW-SPATIAL-V3-MERGE-CALLER-DISCOVERY` |
+| 다음 권장 묶음 | `W7-PHYS-W6-RAW-SPATIAL-V3-MERGE-CALLER-DISCOVERY` (ACTIVE; one frozen caller query) |
+| current authorization | S2 ran the approved focused node once: exit 0, `1 passed in 1.09s`; no rerun, broad-suite, or production run. The v3 emission goal is DONE. 17AB is DONE: its frozen rg ran once on clean `main` (exit 0, 26 lines/5 files), with `src/spd_decap_pi/spd_adapter.py` the useful unique raw-spatial persistence seam; matches are location evidence only. 17AC is BLOCKED/source-classified STOP after one read: `_has_compiled_topology_manifest` lines 114-128 and `_merge_raw_spatial_contact_asset` lines 131-206 prove copy-on-write persistence, exact generated attachment name/type/payload match, casefold collision rejection, canonical `RAW_SPATIAL_CONTACT_ASSET_METADATA_KEY` preservation, and divergent existing manifest rejection; v3 semantic validation and compiler/caller ownership remain unproven/delegated. 17AD permits only `rg -n --no-heading --color never --glob '*.py' '\b_merge_raw_spatial_contact_asset\b' 'src/spd_decap_pi'`, cap <=10 output lines and <=2 files; command error, over-cap, or definition-only => STOP. If within cap, select at most one non-definition caller for a later separately authorized trace; 17AD opens no files; no code/test/profile/accuracy/production proof or whitelist expansion. |
 | 17T command A | `rg -n --no-heading --color never --glob '*.py' '\bcompile_raw_spatial_contact_asset\b' 'src/spd_decap_pi'` |
 | 17T command B | `rg -n --no-heading --color never --glob '*.py' '\b(?:resolve_solver_profile|numerical_worker_count|build_layerwise_uniform_source_model)\b' 'src/spd_decap_pi'` |
 | 17T command C | `rg -n --no-heading --color never --glob '*.py' '\b(?:GLOBAL_KRON|SurfacePatchDifferentialProjection|SurfacePatchFinitePortProjection|assemble_differential_admittance|differential_projection)\b' 'src/spd_decap_pi'` |
 | consumed 17M discovery | canonical rg ran once (exit 0), found candidate symbols only; no reuse or production proof |
 | future production invariant (not current authority) | if a future run is authorized: exact clean `main`, new output root, one run/no retry; B correlation is historical evidence; C/D consumed their exactly-one old candidate/import reads; E had one production diagnostic invocation plus one orchestration ZIP read; old root remains forbidden for W6-BASE output/scoring/retry/mutation |
-| 고비용 검증 권한 | one bounded 17AC read-only excerpt + one Sol review are authorized; exact range/STOP rules above apply; no code/test/production work |
+| 고비용 검증 권한 | one frozen 17AD caller query + one Sol review are authorized; cap/STOP rules above apply; no file open, code/test/production work |
 | 현재 정확성 상태 | `260729 retrospective FAIL`; unseen/generalization remains `unknown / not_run` |
 | 현재 release 계산 증거 | W6-BASE 260729 completed numerical FAIL; offline verifier exit 2 (integrity-valid) |
 | W6-BASE result root | `D:\SPD-Decap-PI-Evaluator-W6\fb36288781dcc0b884950ef5a486c474090ceebd\260729` — manifest `2b14f90e762abc49833518137812e8fc97fcde0e9c145795b7384210cfd9f5de`, sidecar `0d103e0ad47df80641fac0952a35a6eaa56cc9fdb71be24661903e451926e932`, correlation `969e40046e3a099d09557ba7500693460362336d76b067962436bd3b5177abc4` |
@@ -161,7 +161,8 @@ root, one-run/no-retry 조건을 다시 확정할 때만 고려한다.
 | `W7-PHYS-W6-RAW-SPATIAL-ASSET-V3-EMISSION-S1` | 17AA-S1 | BLOCKED (test-gate) | typed StackupLayer/fixture contract correction | exact node once, exit1, `1 failed in 1.51s`; `_plane_sheet_rows` line 1389 raised `KeyError: 0` from direct circle lookup for a polygon with no circle rows; source-classified asset grouping bug; no rerun |
 | `W7-PHYS-W6-RAW-SPATIAL-ASSET-V3-EMISSION-S2` | 17AA-S2 | DONE (test-gate PASS) | asset grouping correction | approved focused node ran once under S2, exit 0, `1 passed in 1.09s`; no rerun/broad/production |
 | `W7-PHYS-W6-RAW-SPATIAL-V3-PERSISTENCE-OWNER-DISCOVERY` | 17AB | DONE (source-classified) | discover one existing persistence owner/caller | exact frozen query ran once on clean `main`, exit 0, 26 lines/5 files; useful unique seam is `src/spd_decap_pi/spd_adapter.py` (imports both keys, requires compiled manifest, normalizes/sets `RAW_SPATIAL_CONTACT_ASSET_METADATA_KEY`); other matches are definitions/validator, sibling compiled builder/persistence in `surface_certificate_asset`, and compiled reader in `layerwise_network`; location evidence only |
-| `W7-PHYS-W6-RAW-SPATIAL-V3-SPD-ADAPTER-PERSISTENCE-TRACE` | 17AC | ACTIVE | read the bounded SPD-adapter persistence seam and answer owner/normalization/v3/delegate questions | exactly `src/spd_decap_pi/spd_adapter.py` lines 100-215 once; no whole-file reread/search/code/test; if boundary/delegate is outside excerpt, source-classified STOP with no second range automatic |
+| `W7-PHYS-W6-RAW-SPATIAL-V3-SPD-ADAPTER-PERSISTENCE-TRACE` | 17AC | BLOCKED (source-classified STOP) | read the bounded SPD-adapter persistence seam and answer owner/normalization/v3/delegate questions | one authorized read of lines 100-215: `_has_compiled_topology_manifest` 114-128 and `_merge_raw_spatial_contact_asset` 131-206 prove copy-on-write persistence, exact generated attachment name/type/payload match, casefold collision rejection, canonical metadata-key preservation, and divergent manifest rejection; v3 semantic validation and compiler/caller ownership remain unproven/delegated |
+| `W7-PHYS-W6-RAW-SPATIAL-V3-MERGE-CALLER-DISCOVERY` | 17AD | ACTIVE | locate at most one non-definition caller of the raw-spatial merge seam | exact once-only query `rg -n --no-heading --color never --glob '*.py' '\b_merge_raw_spatial_contact_asset\b' 'src/spd_decap_pi'`; cap <=10 output lines/<=2 files; command error, over-cap, or definition-only => STOP; 17AD opens no files |
 | `W7-PHYS-PROSPECTIVE-RUNTIME-TERM-EVIDENCE` | next candidate | BLOCKED/YAGNI | provide a grounded runtime term digest/count/owner partition only after an independently selected physical change | new candidate/HEAD/root, one run/no retry; no current authority |
 | `W8-REL` | 18 | BLOCKED | completed known-case solve를 release gate에 연결하고 최종 전달 | accuracy/product gate와 exact release commit 필요 |
 | `D-DIST` | - | DEFERRED | Distribution routing/DRC scope 확대 | 사용자가 implementation-ready/DRC 목표로 승격할 때만 |
@@ -819,7 +820,7 @@ Base clean main HEAD는 `94df6d30cb1b6e8e1be686e311e7ebaa2e96e6b9`이며, exact 
 
 Budget는 <=40 lines 및 <=6 files였고 17 lines/5 files로 통과했다. compiler symbol을 참조한
 유일한 file은 `tests/test_raw_spatial_contact_compiler.py`이며 나머지는 builder/validator-only다.
-17Z는 DONE으로 닫고, 17AA와 17AA-S1은 historical BLOCKED로 남기며 17AA-S2는 test-gate PASS DONE으로 닫는다. 17AB는 DONE으로 닫고 ACTIVE는 `W7-PHYS-W6-RAW-SPATIAL-V3-SPD-ADAPTER-PERSISTENCE-TRACE`(17AC)로 지정한다.
+17Z는 DONE으로 닫고, 17AA와 17AA-S1은 historical BLOCKED로 남기며 17AA-S2는 test-gate PASS DONE으로 닫는다. 17AB는 DONE, 17AC는 source-classified STOP/BLOCKED로 닫고 ACTIVE는 `W7-PHYS-W6-RAW-SPATIAL-V3-MERGE-CALLER-DISCOVERY`(17AD)로 지정한다.
 
 ### 17AA. W7-PHYS-W6-RAW-SPATIAL-ASSET-V3-EMISSION (BLOCKED; test-gate)
 
@@ -839,12 +840,17 @@ The historical exact whitelist before the failure was
 unique seam is `src/spd_decap_pi/spd_adapter.py` (imports both keys, requires compiled manifest,
 normalizes/sets `RAW_SPATIAL_CONTACT_ASSET_METADATA_KEY`), while other matches are definitions/
 validator, sibling compiled builder/persistence in `surface_certificate_asset`, and compiled reader
-in `layerwise_network`. Matches are location evidence only. 17AC is now the sole ACTIVE read with
-exactly `src/spd_decap_pi/spd_adapter.py` lines 100-215 once; no whole-file reread/search/code/test/
-profile/accuracy/production proof is authorized. Questions are owner signature/return/mutation,
-attachment/metadata normalization, v3 preservation/fail-closed, and compiler invocation versus
-delegated output; if a boundary/delegate is outside the excerpt, source-classify STOP with no second
-range automatic. v2 constants/API는
+in `layerwise_network`. Matches are location evidence only. 17AC is source-classified STOP/BLOCKED
+after one authorized read of `src/spd_decap_pi/spd_adapter.py` lines 100-215: `_has_compiled_topology_manifest`
+lines 114-128 and `_merge_raw_spatial_contact_asset` lines 131-206 prove copy-on-write persistence,
+exact generated attachment name/type/payload match, casefold collision rejection, canonical
+`RAW_SPATIAL_CONTACT_ASSET_METADATA_KEY` preservation, and divergent existing manifest rejection.
+v3 semantic validation and compiler/caller ownership remain explicitly unproven/delegated; absence is
+not evidence. 17AD is now the sole ACTIVE read with exact once-only query
+`rg -n --no-heading --color never --glob '*.py' '\b_merge_raw_spatial_contact_asset\b' 'src/spd_decap_pi'`;
+cap <=10 output lines/<=2 files, command error/over-cap/definition-only => STOP. If within cap, at
+most one non-definition caller may be selected for a later separately authorized trace; 17AD opens
+no files. No code/test/profile/accuracy/production proof is authorized. v2 constants/API는
 byte-identical로 유지하고 schema-v3 sibling만 추가한다: compiler kw-only
 `include_plane_sheet_payload=False`, validator kw-only `require_plane_sheet_payload=False`, opt-in
 no downgrade, 정확히 `plane_primitives`/`vertices`/`circles`/`stackup_layers`/`dielectric_points`
@@ -867,13 +873,22 @@ normalizes/sets `RAW_SPATIAL_CONTACT_ASSET_METADATA_KEY`). Other matches are def
 the sibling compiled builder/persistence in `surface_certificate_asset`, and the compiled reader in
 `layerwise_network`; matches are location evidence only.
 
-### 17AC. W7-PHYS-W6-RAW-SPATIAL-V3-SPD-ADAPTER-PERSISTENCE-TRACE (ACTIVE)
+### 17AC. W7-PHYS-W6-RAW-SPATIAL-V3-SPD-ADAPTER-PERSISTENCE-TRACE (BLOCKED; source-classified STOP)
 
-Read exactly `src/spd_decap_pi/spd_adapter.py` lines 100-215 once. No whole-file reread/search,
-code/test/profile/accuracy/production proof, or whitelist expansion is authorized. Answer the
-enclosing owner signature/return/mutation, attachment/metadata normalization, v3 preservation/
-fail-closed behavior, and compiler invocation versus delegated output. If a function boundary or
-delegate is outside the excerpt, source-classify STOP; no second range is automatic.
+The single authorized read of `src/spd_decap_pi/spd_adapter.py` lines 100-215 covered
+`_has_compiled_topology_manifest` lines 114-128 and `_merge_raw_spatial_contact_asset` lines 131-206.
+It proves copy-on-write persistence, exact generated attachment name/type/payload match, casefold
+collision rejection, canonical `RAW_SPATIAL_CONTACT_ASSET_METADATA_KEY` preservation, and divergent
+existing manifest rejection. v3 semantic validation and compiler/caller ownership remain explicitly
+unproven/delegated; no inference is made from absence. No whole-file reread/search, code/test/profile/
+accuracy/production proof, or whitelist expansion is authorized.
+
+### 17AD. W7-PHYS-W6-RAW-SPATIAL-V3-MERGE-CALLER-DISCOVERY (ACTIVE)
+
+Freeze exactly one query: `rg -n --no-heading --color never --glob '*.py' '\b_merge_raw_spatial_contact_asset\b' 'src/spd_decap_pi'`.
+Cap output at <=10 lines and <=2 files; command error, over-cap, or definition-only => STOP. If
+within cap, select at most one non-definition caller for a later separately authorized bounded trace.
+17AD itself opens no files.
 
 ## 20. 변경 기록
 
@@ -934,3 +949,4 @@ delegate is outside the excerpt, source-classify STOP; no second range is automa
 | 1.52 | 2026-08-26 | 17AA-S1 asset grouping test-gate exit1(`KeyError: 0`)을 no-rerun source-classified BLOCKED로 기록하고 raw asset 단일파일 S2 successor를 sole ACTIVE로 지정. |
 | 1.53 | 2026-08-26 | 17AA-S2 approved focused node exit0(`1 passed in 1.09s`)으로 v3 emission DONE을 기록하고 17AB persistence-owner discovery를 sole ACTIVE로 지정. |
 | 1.54 | 2026-08-26 | technical atomic commit `c7306f2b2633b8d610bb962eb5b64966235afd2f`와 clean-main 17AB query exit0(26 lines/5 files)을 기록하고 17AB DONE, 17AC SPD-adapter persistence trace를 sole ACTIVE로 지정. |
+| 1.55 | 2026-08-26 | 17AC SPD-adapter persistence trace를 source-classified STOP/BLOCKED로 닫고, <=10-line/<=2-file merge-caller query의 17AD를 sole ACTIVE로 지정. |

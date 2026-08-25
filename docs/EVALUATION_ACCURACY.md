@@ -678,13 +678,19 @@ The v3 emission goal is achieved via S2. 17AB then ran its exact frozen rg once 
 `src/spd_decap_pi/spd_adapter.py` (imports both keys, requires the compiled manifest, and
 normalizes/sets `RAW_SPATIAL_CONTACT_ASSET_METADATA_KEY`); other matches are definitions/validator,
 the sibling compiled builder/persistence in `surface_certificate_asset`, and the compiled reader in
-`layerwise_network`. Matches are location evidence only. Sole ACTIVE next is
-`W7-PHYS-W6-RAW-SPATIAL-V3-SPD-ADAPTER-PERSISTENCE-TRACE` (17AC), limited to exactly
-`src/spd_decap_pi/spd_adapter.py` lines 100-215 read once. No whole-file reread/search, code/test,
-profile/accuracy/production proof, or whitelist expansion is authorized. Questions are owner
-signature/return/mutation, attachment/metadata normalization, v3 preservation/fail-closed, and
-compiler invocation versus delegated output; if a boundary/delegate is outside the excerpt,
-source-classify STOP with no second range automatic.
+`layerwise_network`. Matches are location evidence only. 17AC is BLOCKED (source-classified STOP)
+after its single authorized read of `src/spd_decap_pi/spd_adapter.py` lines 100-215:
+`_has_compiled_topology_manifest` lines 114-128 and `_merge_raw_spatial_contact_asset` lines 131-206
+prove copy-on-write persistence, exact generated attachment name/type/payload match, casefold collision
+rejection, canonical `RAW_SPATIAL_CONTACT_ASSET_METADATA_KEY` preservation, and divergent existing
+manifest rejection. v3 semantic validation and compiler/caller ownership remain explicitly unproven/
+delegated; absence is not evidence. Sole ACTIVE next is
+`W7-PHYS-W6-RAW-SPATIAL-V3-MERGE-CALLER-DISCOVERY` (17AD), limited to exactly one frozen query:
+`rg -n --no-heading --color never --glob '*.py' '\b_merge_raw_spatial_contact_asset\b' 'src/spd_decap_pi'`;
+cap <=10 output lines and <=2 files, with command error, over-cap, or definition-only => STOP. If
+within cap, at most one non-definition caller may be selected for a later separately authorized trace;
+17AD itself opens no files. No whole-file reread/search, code/test/profile/accuracy/production proof,
+or whitelist expansion is authorized.
 Contract: v2 constants/API byte-identical; profile/global/app/solver/convergence/policy/controller
 identities unchanged; only the opt-in raw-spatial v3 schema/compiler sibling identity is new. v3 sibling with kw-only opt-in flags, five normalized tables,
 no gap table, positive-intervening-thickness fsum spacing, row/coordinate/ProjectSpec/source-SHA digest,
