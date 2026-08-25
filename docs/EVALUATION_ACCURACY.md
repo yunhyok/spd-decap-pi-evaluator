@@ -723,13 +723,17 @@ silent gates and no cause inferred. 17AJ is DONE as deterministic owner-location
 main HEAD `4aaf242dc6da530b600b01e924f4a9c01ab88c01`: exact diagnostic once exit0, exactly four lines
 for the expected file; target 1750 bracketed by definition lines 1736-1764 with no frozen 17AH
 non-import call; target 2487 bracketed by line 1764 and valid EOF sentinel with frozen call 2298;
-exactly one owner selected. Sole ACTIVE next is
-`W7-PHYS-W6-RAW-SPATIAL-V3-ADAPTER-OPTIN-TEST-SEAM-TRACE` (17AK), authorizing exactly two excerpts
-from the same test file, A lines 2284-2312 (29) and B lines 2468-2505 (38), total <=67; no owner-wide
-read/search/other range. A must include call 2298 assignment/args/kwargs and immediate result/status;
-B must include RAW-key extraction/assertions/schema/version/tables/attachment expectations and test-tail
-completion. Endpoint truncation => STOP. Only opt-in seam viability may be concluded while default-v2
-tests stay separate. No owner-wide read/search, code edit, test execution, or profile/accuracy/production inference.
+exactly one owner selected. 17AK is BLOCKED (source-classified endpoint STOP) at clean main HEAD
+`286e939fce53918465de72f8be9b67d3f1844470`: excerpts A lines 2284-2312 and B lines 2468-2505 each
+ran once. A proves `import_spd_scenario(source)` line2298 without args/kwargs/opt-in and immediate
+status assertions. B proves persisted topology/raw-manifest attachment/source/project/certificate/
+topology-hash checks through2499, then `load_raw_spatial_contact_asset` begins2500 and truncates at2505;
+schema/version/tables/`require_plane_sheet_payload`/tail remain UNPROVEN; no extension or reread. Sole
+ACTIVE next is `W7-PHYS-W6-RAW-SPATIAL-V3-ADAPTER-OPTIN-TEST-TAIL-TRACE` (17AL), authorizing exactly
+once reading lines2500-2540 (max41; natural EOF earlier valid), no search/other range; if loader
+call/assertions remain open at2540 => STOP. Only opt-in seam viability while default-v2 tests stay
+separate may be concluded. No owner-wide read/search, code edit, test execution, or
+profile/accuracy/production inference.
 Contract: v2 constants/API byte-identical; profile/global/app/solver/convergence/policy/controller
 identities unchanged; only the opt-in raw-spatial v3 schema/compiler sibling identity is new. v3 sibling with kw-only opt-in flags, five normalized tables,
 no gap table, positive-intervening-thickness fsum spacing, row/coordinate/ProjectSpec/source-SHA digest,
