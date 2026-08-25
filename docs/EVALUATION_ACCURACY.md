@@ -766,9 +766,11 @@ rail-order mapping, worker/immutable/cache fencing, and minimal file/test/V1/V2 
 build import 2404/call 2420 one unambiguous cluster; no source range/code/test/claims. 17AV is BLOCKED/STOP:
 exact2330-2449 read started mid-signature/function name and ended mid termination exception/comment/downstream;
 no extension. 17AW is DONE (location evidence) at clean main `24382198a02c01cb9720b02148784d1b57abf33c`:
-exact PowerShell once exit0, exactly 2 lines/1 file, span176<=240. Sole ACTIVE successor is 17AX
-`W7-PHYS-W6-PLANE-SHEET-BUILDER-PREFLIGHT-OWNER-TRACE`, one exact 176-line read only; no code/test/solver/
-production/profile/accuracy/causal claim.
+exact PowerShell once exit0, exactly 2 lines/1 file, span176<=240. 17AX is BLOCKED/STOP (source-classified
+preflight-only): raw-v3 loader/requireTrue, replacement, nullspace/gauge, and rail-order Zii are absent or
+delegate-owned; no implementation approval. Sole ACTIVE successor is 17AY
+`W7-PHYS-W6-LAYERWISE-SOURCE-MODEL-OWNER-BOUNDARY-DISCOVERY`, one exact definition query only; no code/test/
+solver/production/profile/accuracy/causal claim.
 Contract: v2 constants/API byte-identical; profile/global/app/solver/convergence/policy/controller
 identities unchanged; only the opt-in raw-spatial v3 schema/compiler sibling identity is new. v3 sibling with kw-only opt-in flags, five normalized tables,
 no gap table, positive-intervening-thickness fsum spacing, row/coordinate/ProjectSpec/source-SHA digest,
