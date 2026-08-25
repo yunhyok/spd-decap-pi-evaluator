@@ -1,10 +1,10 @@
 # SPD Decap PI Evaluator 작업 기준
 
 - 적용 제품: **SPD Decap PI Evaluator v0.23.0**
-- 문서 버전: **1.22**
-- 상위 기준: [목적·기술 기준](PRODUCT_PURPOSE_AND_TECHNICAL_BASELINE.md) v1.21
+- 문서 버전: **1.23**
+- 상위 기준: [목적·기술 기준](PRODUCT_PURPOSE_AND_TECHNICAL_BASELINE.md) v1.22
 - W6-BASE source-before: clean `main` HEAD `fb36288781dcc0b884950ef5a486c474090ceebd`; this is the exact source boundary for the completed one-run evidence
-- 상태: **APPROVED/MACHINE-FROZEN CONTROL DOCUMENT — W5 DONE; W6-BLOCK-A DONE; W6-BLOCK-B BLOCKED; W6-BLOCK-C DONE; W6-BLOCK-D DONE; W6-BLOCK-E DONE; W6-BASE DONE (260729 numerical FAIL); W7-PHYS-AUDIT-MOUNTED-PATH DONE (negative/unclassified); W7-PHYS-OWNER-TERMINAL-VIA-VS-SPATIAL DONE (negative/evidence-unavailable); W7-PHYS-EVIDENCE-MISSING-PATH-COVERAGE DONE (negative/evidence-unavailable); W7-PHYS-PRODUCTION-VIA-ROUTE-SOURCE-TRACE DONE (source-classified raw-base/global finite-route ownership; local calibrated half-branches not selected; mixed ownership fail-closed); W7-PHYS-RAW-FINITE-VIA-RL-GENERATION-TRACE DONE (producer unclassified, high confidence); W7-PHYS-GROUND-REACHABILITY-RL-PRODUCER-TRACE DONE (producer delegated/unclassified, high confidence); W7-PHYS-VIA-SEGMENT-RL-MODEL-TRACE BLOCKED; W7-PHYS BLOCKED; ACTIVE NONE**
+- 상태: **APPROVED/MACHINE-FROZEN CONTROL DOCUMENT — W5 DONE; W6-BLOCK-A DONE; W6-BLOCK-B BLOCKED; W6-BLOCK-C DONE; W6-BLOCK-D DONE; W6-BLOCK-E DONE; W6-BASE DONE (260729 numerical FAIL); W7-PHYS-AUDIT-MOUNTED-PATH DONE (negative/unclassified); W7-PHYS-OWNER-TERMINAL-VIA-VS-SPATIAL DONE (negative/evidence-unavailable); W7-PHYS-EVIDENCE-MISSING-PATH-COVERAGE DONE (negative/evidence-unavailable); W7-PHYS-PRODUCTION-VIA-ROUTE-SOURCE-TRACE DONE (source-classified raw-base/global finite-route ownership; local calibrated half-branches not selected; mixed ownership fail-closed); W7-PHYS-RAW-FINITE-VIA-RL-GENERATION-TRACE DONE (producer unclassified, high confidence); W7-PHYS-GROUND-REACHABILITY-RL-PRODUCER-TRACE DONE (producer delegated/unclassified, high confidence); W7-PHYS-VIA-SEGMENT-RL-MODEL-TRACE ACTIVE; W7-PHYS BLOCKED**
 - 최종 개정: 2026-08-25 (Asia/Seoul)
 
 ## 1. 압축 후 즉시 복구 카드
@@ -16,11 +16,11 @@ context가 압축되거나 새 session에서 작업을 재개하면 다른 연�
 |---|---|
 | 변하지 않는 목적 | source-derived single-rail `Zii`의 PowerSI 근접 정확성과 일반화 |
 | 현재 branch | `main`만 사용; 정리된 과거 branch를 다시 조사하지 않음 |
-| 현재 active work item | `NONE` |
-| 다음 권장 묶음 | `W7-PHYS-VIA-SEGMENT-RL-MODEL-TRACE` BLOCKED; new whitelist authority required |
-| current authorization | 17F one-file V0 and Sol review complete; no active technical authority |
+| 현재 active work item | `W7-PHYS-VIA-SEGMENT-RL-MODEL-TRACE` (read-only source V0) |
+| 다음 권장 묶음 | one-file producer-model V0 1회 및 Sol independent static review 1회 |
+| current authorization | user-approved read-only access to `src/spd_decap_pi/_core/via_model.py` only; no artifact/Python/import/test/solver/physics authority |
 | future production invariant (not current authority) | if a future run is authorized: exact clean `main`, new output root, one run/no retry; B correlation is historical evidence; C/D consumed their exactly-one old candidate/import reads; E had one production diagnostic invocation plus one orchestration ZIP read; old root remains forbidden for W6-BASE output/scoring/retry/mutation |
-| 고비용 검증 권한 | none; no source/artifact/Python/import/test/solver/production work is active |
+| 고비용 검증 권한 | none; only the bounded one-file read-only source V0 and Sol static review are active; no artifact/Python/import/test/solver/production execution is authorized |
 | 현재 정확성 상태 | `260729 retrospective FAIL`; unseen/generalization remains `unknown / not_run` |
 | 현재 release 계산 증거 | W6-BASE 260729 completed numerical FAIL; offline verifier exit 2 (integrity-valid) |
 | W6-BASE result root | `D:\SPD-Decap-PI-Evaluator-W6\fb36288781dcc0b884950ef5a486c474090ceebd\260729` — manifest `2b14f90e762abc49833518137812e8fc97fcde0e9c145795b7384210cfd9f5de`, sidecar `0d103e0ad47df80641fac0952a35a6eaa56cc9fdb71be24661903e451926e932`, correlation `969e40046e3a099d09557ba7500693460362336d76b067962436bd3b5177abc4` |
@@ -130,7 +130,7 @@ root, one-run/no-retry 조건을 다시 확정할 때만 고려한다.
 | `W7-PHYS-PRODUCTION-VIA-ROUTE-SOURCE-TRACE` | 17D | DONE | W6 finite Via links의 단일 source call-chain/ownership 정적 추적 | source-classified raw-base/global finite-route ownership (v4 scenario network); local calibrated half-branches not selected; mixed fail-closed; confidence high/source-proven |
 | `W7-PHYS-RAW-FINITE-VIA-RL-GENERATION-TRACE` | 17E | DONE (producer unclassified; high confidence) | six-file producer call-chain/source trace | reachability-produced fields and exact handoff are bound; producer formula/unit conversion and runtime binding remain unknown; no physics/accuracy claim |
 | `W7-PHYS-GROUND-REACHABILITY-RL-PRODUCER-TRACE` | 17F | DONE (producer delegated/unclassified; high confidence) | `recover_spd_ground_reachability` geometry/provenance and R/L handoff trace | local R/L formula/fallback absent; delegate `src/spd_decap_pi/_core/via_model.py::estimate_via_segment_rl`; multi-segment/full-span contract unresolved; no accuracy/physics claim |
-| `W7-PHYS-VIA-SEGMENT-RL-MODEL-TRACE` | 17G | BLOCKED | delegated `estimate_via_segment_rl` formula/unit/default/fallback/return trace | exact one-file whitelist candidate only; no execution or broad search |
+| `W7-PHYS-VIA-SEGMENT-RL-MODEL-TRACE` | 17G | ACTIVE | delegated `estimate_via_segment_rl` formula/unit/default/fallback/return trace | exact one-file whitelist only; caller multi-segment/first-segment contract must be resolved or remain unclassified; no execution or broad search |
 | `W8-REL` | 18 | BLOCKED | completed known-case solve를 release gate에 연결하고 최종 전달 | accuracy/product gate와 exact release commit 필요 |
 | `D-DIST` | - | DEFERRED | Distribution routing/DRC scope 확대 | 사용자가 implementation-ready/DRC 목표로 승격할 때만 |
 | `D-DOC` | - | DEFERRED | README와 동결 연구 배너 정리 | current work를 방해할 때 별도 문서 묶음으로 처리 |
@@ -568,11 +568,11 @@ v4 certificate와 scenario-network owner invariants가 결합되어 raw-base own
 `local_calibrated_via_half_branches`는 선택되지 않았고 mixed ownership은
 `TERMINAL_VIA_OWNERSHIP_CONFLICT`로 fail-closed된다. confidence는 high/source-proven이다.
 이는 certificate R/L accuracy, forward/PowerSI accuracy, 또는 causal terminal-Via
-error owner를 증명하지 않는다. 17F one-file V0는 delegated/unclassified로 닫혔고
-ACTIVE item은 NONE이다. `physical_model_for_canonical`의 다중 segment 가능성
-(`:7853-7861`)과 `finite_physical`의 `segments[0].length_um` 전달은 unresolved
-delegate contract로 기록하며 bug/truncation 또는 complete path-length modeling을
-주장하지 않는다. 다음 17G는 새 whitelist 전까지 BLOCKED다.
+error owner를 증명하지 않는다. 17F one-file V0는 delegated/unclassified로 닫혔다.
+사용자 one-file 승인으로 17G가 sole ACTIVE가 되었으며, `physical_model_for_canonical`의
+다중 segment 가능성과 `finite_physical`의 first-segment handoff 계약을 해결하거나
+unclassified로 남긴다. bug/truncation 또는 complete path-length modeling을 선제적으로
+주장하지 않는다.
 
 검증 예산은 source V0 정적 추적 1회와 Sol independent static review 1회이며,
 code/test/production 실행은 0회다.
@@ -613,12 +613,16 @@ segment chain과 `segments[0].length_um` 전달 사이의 delegate contract는 �
 complete path-length modeling은 주장하지 않는다. 17F 결과는 producer
 delegated/unclassified (high confidence)이고 정확도·물리 권한은 없다.
 
-## 18. W7-PHYS-VIA-SEGMENT-RL-MODEL-TRACE (BLOCKED)
+## 18. W7-PHYS-VIA-SEGMENT-RL-MODEL-TRACE (ACTIVE)
 
 17G는 `src/spd_decap_pi/_core/via_model.py`의 `estimate_via_segment_rl`와 같은
-파일의 상수/helper/unit conversion/default/fallback/return만 읽는 단일 파일
-후보다. 새 whitelist 승인 후에만 source V0 정확히 1회와 Sol independent static
-review 정확히 1회를 수행하며, Python/import/test/solver/artifact 실행은 0회다.
+파일의 직접 사용 constants/helpers/material policy/unit conversions/default/fallback/
+return fields만 읽는다. 정확한 R/L equations와 Ω/H units, length/start-end interaction,
+drill/material/conductivity/plating assumptions, caller multi-segment ambiguity를
+결속한다. same-file evidence는 modeled terms를 included/excluded/unknown으로 분류해야
+하며 file 밖의 추론은 금지한다. 외부 위임이면 정확한 file/symbol을 기록하고 producer unclassified로
+중단한다. 검증 예산은 source V0 정확히 1회와 Sol review 정확히 1회이며,
+Python/import/test/solver/artifact/raw-SPD 실행과 수치 재계산은 0회다.
 
 ## 19. 변경 기록
 
@@ -647,3 +651,4 @@ review 정확히 1회를 수행하며, Python/import/test/solver/artifact 실행
 | 1.20 | 2026-08-25 | 17E six-file source V0를 producer unclassified (high confidence)로 닫고 active NONE, 17F ground-reachability producer trace를 BLOCKED로 등록. |
 | 1.21 | 2026-08-25 | 사용자 1-file whitelist 승인으로 17F ground-reachability R/L producer trace를 유일한 ACTIVE read-only item으로 지정. |
 | 1.22 | 2026-08-25 | 17F one-file V0/Sol review를 delegated/unclassified로 종료하고 active NONE, 17G via-segment R/L model trace를 BLOCKED로 등록. |
+| 1.23 | 2026-08-25 | 사용자 one-file 승인으로 17G via-segment R/L model trace를 유일한 ACTIVE read-only item으로 지정하고 방정식·단위·다중 segment 완료 기준을 고정. |

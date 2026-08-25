@@ -551,9 +551,18 @@ incomplete/None. Local series terms use count 1 and local R/L/length sums; edges
 parallel_path_count=1 and per_path/raw count equal to path length. A multi-segment
 chain can be built (`spd.py:7853-7861`) but `finite_physical` passes only
 `segments[0].length_um`; no len==1 invariant or complete path-length modeling is
-claimed, and this is not called a bug. ACTIVE is NONE. The next
-`W7-PHYS-VIA-SEGMENT-RL-MODEL-TRACE` is BLOCKED pending a new one-file whitelist for
-`src/spd_decap_pi/_core/via_model.py`; no accuracy or physical-owner claim follows.
+claimed, and this is not called a bug. At 17F closure ACTIVE was NONE; subsequent
+approval activates 17G. The next
+`W7-PHYS-VIA-SEGMENT-RL-MODEL-TRACE` is now the sole ACTIVE read-only item under the
+user-approved one-file whitelist `src/spd_decap_pi/_core/via_model.py`. It must bind
+`estimate_via_segment_rl` equations, input/output units, length/start-end interaction,
+drill/material/conductivity/plating assumptions, defaults/fallbacks, and return fields.
+Same-file evidence must classify modeled terms as included/excluded/unknown; no
+inference outside the file is allowed.
+The caller's possible multi-segment chain versus first-segment length handoff must be
+resolved from source or remain unclassified; no bug or complete path-length claim is
+allowed. No Python/import/test/solver/artifact/numeric/PowerSI/physics execution is
+authorized; ACTIVE is this read-only trace only.
 
 Frozen historical v5 validator/policy/fixtures and base benchmark remain byte-identical.
 W6-E atomically rotated the current v6→policy→accuracy-validator→controller trust
