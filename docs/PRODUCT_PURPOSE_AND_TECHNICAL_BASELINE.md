@@ -1,9 +1,9 @@
 # SPD Decap PI Evaluator 목적·기술 기준
 
 - 적용 제품: **SPD Decap PI Evaluator v0.23.0**
-- 문서 버전: **1.13**
+- 문서 버전: **1.14**
 - W5 approved/machine-frozen source-before: `main` commit `027ac7a09a3eded15f45c41860945f9d4c7f488d`
-- 상태: **G0 기준 문서** — [작업 기준](WORK_EXECUTION_BASELINE.md)과 함께 사용하며, W5 DONE·W6-BLOCK-A DONE·W6-BLOCK-B BLOCKED·W6-BLOCK-C DONE·W6-BLOCK-D DONE·W6-BLOCK-E DONE·W6-BASE DONE (260729 numerical FAIL)·W7-PHYS-AUDIT-MOUNTED-PATH DONE (negative/unclassified)·W7-PHYS BLOCKED·active NONE
+- 상태: **G0 기준 문서** — [작업 기준](WORK_EXECUTION_BASELINE.md)과 함께 사용하며, W5 DONE·W6-BLOCK-A DONE·W6-BLOCK-B BLOCKED·W6-BLOCK-C DONE·W6-BLOCK-D DONE·W6-BLOCK-E DONE·W6-BASE DONE (260729 numerical FAIL)·W7-PHYS-AUDIT-MOUNTED-PATH DONE (negative/unclassified)·W7-PHYS BLOCKED·W7-PHYS-OWNER-TERMINAL-VIA-VS-SPATIAL ACTIVE
 - 최종 개정: 2026-08-25 (Asia/Seoul)
 
 ## 1. 문서 역할과 권위
@@ -353,9 +353,10 @@ manifest SHA `2b14f90e762abc49833518137812e8fc97fcde0e9c145795b7384210cfd9f5de`,
 sidecar SHA `0d103e0ad47df80641fac0952a35a6eaa56cc9fdb71be24661903e451926e932`,
 and correlation SHA `969e40046e3a099d09557ba7500693460362336d76b067962436bd3b5177abc4`.
 
-W6 production authority is consumed by the completed 260729 numerical FAIL. The W7
-frozen-artifact audit is complete but negative/unclassified; active work is NONE and
-no further technical authority is granted. A future 260729 production rerun requires
+W6 production authority is consumed by the completed 260729 numerical FAIL. The prior
+W7 frozen-artifact audit is complete but negative/unclassified; its closure state was
+active NONE, and no further technical authority is granted outside a newly selected
+item. A future 260729 production rerun requires
 the user to activate and complete a new exclusive-owner classification item selecting
 exactly one source-derived block, followed by exactly one physical change, focused
 evidence, and a new gate. This does not authorize remote/release/installer work,
@@ -426,7 +427,8 @@ This proves the numerical promotion gate only, not model-form or PowerSI accurac
 E is DONE; W6-BASE is DONE for the 260729 numerical FAIL. W7-PHYS-AUDIT-MOUNTED-PATH
 is DONE negative/unclassified: the read-only audit preserved cap/Via/spatial provenance
 but its cap-only peak/bin prerequisite failed on all six loaded rails. No exclusive
-source-derived owning term was selected, so W7-PHYS is BLOCKED, active work is NONE,
+source-derived owning term was selected, so W7-PHYS is BLOCKED; at that closure,
+active work was NONE,
 and no physics code change is authorized.
 
 The single W7 audit run (tool commit `1af7dd7a1150749a579b55623415ee8abedefda4`)

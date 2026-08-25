@@ -1,10 +1,10 @@
 # SPD Decap PI Evaluator 작업 기준
 
 - 적용 제품: **SPD Decap PI Evaluator v0.23.0**
-- 문서 버전: **1.14**
-- 상위 기준: [목적·기술 기준](PRODUCT_PURPOSE_AND_TECHNICAL_BASELINE.md) v1.13
+- 문서 버전: **1.15**
+- 상위 기준: [목적·기술 기준](PRODUCT_PURPOSE_AND_TECHNICAL_BASELINE.md) v1.14
 - W6-BASE source-before: clean `main` HEAD `fb36288781dcc0b884950ef5a486c474090ceebd`; this is the exact source boundary for the completed one-run evidence
-- 상태: **APPROVED/MACHINE-FROZEN CONTROL DOCUMENT — W5 DONE; W6-BLOCK-A DONE; W6-BLOCK-B BLOCKED; W6-BLOCK-C DONE; W6-BLOCK-D DONE; W6-BLOCK-E DONE; W6-BASE DONE (260729 numerical FAIL); W7-PHYS-AUDIT-MOUNTED-PATH DONE (negative/unclassified); W7-PHYS BLOCKED; active NONE; next user decision**
+- 상태: **APPROVED/MACHINE-FROZEN CONTROL DOCUMENT — W5 DONE; W6-BLOCK-A DONE; W6-BLOCK-B BLOCKED; W6-BLOCK-C DONE; W6-BLOCK-D DONE; W6-BLOCK-E DONE; W6-BASE DONE (260729 numerical FAIL); W7-PHYS-AUDIT-MOUNTED-PATH DONE (negative/unclassified); W7-PHYS BLOCKED; W7-PHYS-OWNER-TERMINAL-VIA-VS-SPATIAL ACTIVE**
 - 최종 개정: 2026-08-25 (Asia/Seoul)
 
 ## 1. 압축 후 즉시 복구 카드
@@ -16,11 +16,11 @@ context가 압축되거나 새 session에서 작업을 재개하면 다른 연�
 |---|---|
 | 변하지 않는 목적 | source-derived single-rail `Zii`의 PowerSI 근접 정확성과 일반화 |
 | 현재 branch | `main`만 사용; 정리된 과거 branch를 다시 조사하지 않음 |
-| 현재 active work item | `NONE` |
-| 다음 권장 묶음 | 사용자 결정 (자동 code/diagnostic item 생성 금지) |
-| current authorization | active NONE; no code/diagnostic/production authority; new technical work requires a user-selected active item; Sol reviews/Luna writes when activated |
+| 현재 active work item | `W7-PHYS-OWNER-TERMINAL-VIA-VS-SPATIAL` (read-only exclusive-owner classification) |
+| 다음 권장 묶음 | active item의 focused direct check 후 frozen artifact audit 1회 |
+| current authorization | user-selected read-only owner classification only; Sol reviews/Luna writes; no physics, production, score, or rerun authority |
 | future production invariant (not current authority) | if a future run is authorized: exact clean `main`, new output root, one run/no retry; B correlation is historical evidence; C/D consumed their exactly-one old candidate/import reads; E had one production diagnostic invocation plus one orchestration ZIP read; old root remains forbidden for W6-BASE output/scoring/retry/mutation |
-| 고비용 검증 권한 | none; W7 audit negative/unclassified; any new gate requires user decision |
+| 고비용 검증 권한 | this item only: exact clean `main`/brand-new root/read-only inputs/one audit/no retry; production or new gate requires user decision |
 | 현재 정확성 상태 | `260729 retrospective FAIL`; unseen/generalization remains `unknown / not_run` |
 | 현재 release 계산 증거 | W6-BASE 260729 completed numerical FAIL; offline verifier exit 2 (integrity-valid) |
 | W6-BASE result root | `D:\SPD-Decap-PI-Evaluator-W6\fb36288781dcc0b884950ef5a486c474090ceebd\260729` — manifest `2b14f90e762abc49833518137812e8fc97fcde0e9c145795b7384210cfd9f5de`, sidecar `0d103e0ad47df80641fac0952a35a6eaa56cc9fdb71be24661903e451926e932`, correlation `969e40046e3a099d09557ba7500693460362336d76b067962436bd3b5177abc4` |
@@ -125,6 +125,7 @@ root, one-run/no-retry 조건을 다시 확정할 때만 고려한다.
 | `W6-BASE` | 16 | DONE | exact clean main HEAD의 retrospective one-run baseline | 260729 completed manifest/sidecar, integrity-valid offline FAIL; no retry |
 | `W7-PHYS` | 17 | BLOCKED | source-derived owning block이 분류되지 않아 physics 변경 보류 | exclusive owner가 분류될 때까지 260804/P5·production rerun 금지 |
 | `W7-PHYS-AUDIT-MOUNTED-PATH` | 17A | DONE (negative/unclassified) | completed 260729 FAIL artifact의 mounted-path/physical error decomposition | cap-only peak prerequisite 실패; owner null; code/physics 변경 없음 |
+| `W7-PHYS-OWNER-TERMINAL-VIA-VS-SPATIAL` | 17B | ACTIVE | cap-mix 통제 후 persisted terminal-Via self-R/L·landing geometry와 six loaded-rail signature의 exclusive ownership read-only 분류 | exactly one source-derived block 또는 negative/unclassified exit 2; physics authorization 없음 |
 | `W8-REL` | 18 | BLOCKED | completed known-case solve를 release gate에 연결하고 최종 전달 | accuracy/product gate와 exact release commit 필요 |
 | `D-DIST` | - | DEFERRED | Distribution routing/DRC scope 확대 | 사용자가 implementation-ready/DRC 목표로 승격할 때만 |
 | `D-DOC` | - | DEFERRED | README와 동결 연구 배너 정리 | current work를 방해할 때 별도 문서 묶음으로 처리 |
@@ -362,7 +363,8 @@ RMS는 `17.644824 dB` (문서 표기 `17.645 dB`)다. 개발 case FAIL 동안
 `W7-PHYS-AUDIT-MOUNTED-PATH`는 DONE (negative/unclassified)이다. 260729
 candidate/import/correlation/manifest/sidecar를 read-only로 분류했지만 cap-only
 peak/bin prerequisite가 실패하여 정확히 하나의 source-derived owning term을
-선택하지 못했다. 따라서 W7-PHYS는 BLOCKED, active item은 NONE이며 physics code를
+선택하지 못했다. 따라서 W7-PHYS는 BLOCKED이며, 당시 closure의 active item은
+NONE이었고 physics code를
 수정하지 않는다.
 
 Frozen historical v5 validator/policy/fixtures와 base benchmark는 byte-identical로
@@ -427,7 +429,7 @@ remote/full suite, installer/release는 수행하지 않았다.
 | `D-004` | W5 이전 제품 PowerSI 수치 합격선은 사용자 승인 전 미확정 | W5에서 superseded; historical decision |
 | `D-005` | 작은 수정마다 전체 검증하지 않고 frozen milestone에서 1회 실행 | 확정 |
 | `D-006` | context 기본 입력은 두 canonical 문서뿐 | 확정 |
-| `D-007` | 현재 active code item은 없으며 다음 item을 자동 시작하지 않음 | 확정 |
+| `D-007` | historical: active code item이 없던 closure 상태에서는 다음 item을 자동 시작하지 않음; 현재는 사용자 선택 `W7-PHYS-OWNER-TERMINAL-VIA-VS-SPATIAL`만 실행 | superseded by current ACTIVE item |
 
 ## 11. 현재 evidence와 비재사용 경계
 
@@ -472,10 +474,34 @@ exit 2, 62.98s였으며 solver/controller는 실행하지 않았다.
   보존한다. 이는 inclusion/provenance evidence이지 numeric accuracy 증거가 아니다.
 
 현재 `W7-PHYS`는 exclusive source-derived owning block이 분류되지 않아 BLOCKED이며,
-active item은 NONE이다. 물리/physics 변경, 260729 production rerun, 260804/P5/unseen
-실행은 계속 금지하고 다음 단계는 사용자 결정으로 남긴다.
+새 active item은 아래 owner-classification 묶음이다. 물리/physics 변경, 260729
+production rerun, 260804/P5/unseen 실행은 계속 금지한다.
 
-## 13. 변경 기록
+## 13. W7-PHYS-OWNER-TERMINAL-VIA-VS-SPATIAL (ACTIVE)
+
+사용자의 2026-08-25 계속 진행 지시에 따라 다음 read-only exclusive-owner
+classification item을 활성화했다. 목적은 cap-mix를 통제한 뒤 persisted source-bound
+terminal Via all-segment self-R/L 및 landing geometry inventory가 6 loaded rail의
+3/4/3-bin peak shift와 pair spatial difference를 배타적으로 설명하는지 분류하는
+것이다. `estimate_via_segment_rl` 재계산은 implementation consistency일 뿐
+independent Via accuracy가 아니며, disabled-link counterfactual·pair RMS 단독
+선택은 금지한다. persisted antipad clearance/return artwork/current-spreading
+impedance가 없으므로 해당 수치·기여도·owner는 N/A다.
+
+입력 read budget은 candidate outer SHA 순차 1회, ZIP central/manifest 1회,
+scenario.json streaming pass 정확히 1회(동일 pass에서 top-level decaps,
+connection_analysis, nested normalized_project rails/stackup 추출), small
+import/correlation/W7 JSON 각각 최대 1회다. Raw SPD, Touchstone, solver,
+normalized full ScenarioSpec hydration, production rerun은 범위 밖이다. 기존
+helper/type만 재사용하고 새 physics/dependency는 만들지 않는다.
+
+종료 조건은 정확히 하나의 source-derived block을 선택하거나, 6 rail 독립 정량
+signature가 없으면 `negative/unclassified`, exit 2로 닫는 것이다. 후자는 physics
+authorization·score·threshold 변경을 허용하지 않는다. 검증 예산은 focused direct
+check 1회와 frozen-artifact audit 정확히 1회(no retry)이며, exact clean `main`,
+brand-new output root, remote/release/CI/full suite는 요구하지 않는다.
+
+## 14. 변경 기록
 
 | 문서 버전 | 날짜 | 변경 |
 |---|---|---|
@@ -494,3 +520,4 @@ active item은 NONE이다. 물리/physics 변경, 260729 production rerun, 26080
 | 1.12 | 2026-08-25 | W6-BASE 260729 completed numerical FAIL과 integrity-valid offline exit 2를 기록하고 W7-PHYS mounted-path audit를 ACTIVE로 지정. |
 | 1.13 | 2026-08-25 | W6 authority consumed를 명시하고 W7 owning-term audit·57 failure evidence·owner-unclassified stop 조건을 고정. |
 | 1.14 | 2026-08-25 | W7 mounted-path audit를 negative/unclassified로 종료하고 W7-PHYS를 BLOCKED, active NONE으로 전환. |
+| 1.15 | 2026-08-25 | W7-PHYS-OWNER-TERMINAL-VIA-VS-SPATIAL read-only owner-classification item을 ACTIVE로 지정하고 read budget·fail-closed 종료조건을 고정. |

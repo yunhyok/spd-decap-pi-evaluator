@@ -358,9 +358,10 @@ exact current W6 HEAD. Historical v5 validator/policy/fixtures and base benchmar
 remain byte-identical. The 260804 S92P SHA trailing `b` is a frozen registry typo
 correction, not a recomputation.
 
-W6 production authority is consumed by the completed 260729 numerical FAIL. The W7
-frozen-artifact audit is complete but negative/unclassified; active item is NONE and
-no further technical authority is granted. A future production rerun requires the
+W6 production authority is consumed by the completed 260729 numerical FAIL. The prior
+W7 frozen-artifact audit is complete but negative/unclassified; its closure active item
+was NONE, and no further technical authority is granted outside the newly selected
+classification item. A future production rerun requires the
 user to activate and complete a new exclusive-owner classification item selecting
 exactly one source-derived block, then exactly one physical change, focused evidence,
 and a new gate. Remote/release/installer, retries, old-root W6-BASE reuse or mutation,
@@ -369,8 +370,9 @@ exactly-one old candidate/import reads. E had one production candidate/import
 invocation plus one separate orchestration ZIP read, did not use the correlation
 report, and wrote only to a brand-new E root. W6-BASE is now complete for 260729
 numerical FAIL; W7-PHYS-AUDIT-MOUNTED-PATH is DONE negative/unclassified and W7-PHYS
-is BLOCKED because no exclusive owner was classified. Active item is NONE; 260804/P5
-and additional production reruns remain forbidden while the development case is FAIL.
+is BLOCKED because no exclusive owner was classified. At that prior closure, the active
+item was NONE; the current read-only owner-classification item is recorded separately.
+260804/P5 and additional production reruns remain forbidden while the development case is FAIL.
 The local bounded V3 is a mirror of the required CI selection; remote CI was not run.
 
 The B diagnostic root
@@ -490,6 +492,18 @@ therefore failed. Pair RMS candidate/reference dB was VTRIP 0.004525/0.073046,
 VINT 0.011577/0.787786, VCPU 0.041046/2.430263. These are diagnostic/provenance
 numbers only, not numeric accuracy or PowerSI evidence; 260729 remains FAIL and
 unseen/generalization remains unknown/not_run.
+
+`W7-PHYS-OWNER-TERMINAL-VIA-VS-SPATIAL` is now ACTIVE as a read-only
+exclusive-owner classification item. It may inspect persisted source-bound terminal
+Via all-segment self-R/L and landing geometry after cap-mix control, but a repeated
+`estimate_via_segment_rl` calculation is implementation-consistency evidence only.
+Disabled-link counterfactuals and pair-RMS-only ownership are invalid; absent persisted
+antipad/return-artwork/current-spreading impedance makes those contributions N/A. The
+exact read budget is one sequential candidate SHA, one ZIP central/manifest pass, one
+streaming `scenario.json` pass extracting decaps/connection_analysis/normalized rails
+and stackup, and at most one read each for small reports. Six independent quantitative
+signatures are required; otherwise the item exits 2 as negative/unclassified and does
+not authorize physics, scoring, or production rerun.
 
 Frozen historical v5 validator/policy/fixtures and base benchmark remain byte-identical.
 W6-E atomically rotated the current v6→policy→accuracy-validator→controller trust
