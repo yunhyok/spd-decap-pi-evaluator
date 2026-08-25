@@ -640,12 +640,19 @@ payload unproven; all joint acceptance groups are unmet. Sol accepted the fail-c
 ACTIVE is now NONE.
 W6 reimplementation authority remains unusable; no automatic path discovery/whitelist expansion,
 code, test, artifact, production, old-root, release, or accuracy claim is authorized.
-17T is the sole ACTIVE bounded path-discovery item at clean main HEAD
-`d5f489ba28000cd13bfaef719b17e5b4559d1d23`. User approval permits only the three sequential
-queries recorded in the Work recovery card, each once with a 40-line/12-file budget; zero,
-over-budget, split, or unrelated results stop the item. The queries classify candidates only;
-they do not prove implementation readiness. No fourth query, file open, automatic expansion,
-code/test/artifact/production execution, old-root reuse, release, or accuracy claim is authorized.
+17T ends as **source-classified BLOCKED**. At clean main HEAD
+`57aae22531d481623d34b6fb1b68bc0a201702c9`, A/B/C ran exactly once sequentially: A returned
+4 lines/2 files, B 29 lines/4 files, C 12 lines/1 file, all within caps. A's only new candidate
+was `src/spd_decap_pi/raw_spatial_contact_compiler.py`; B's candidates were prior-read/frozen
+`evaluation.py`, `services.py`, `layerwise_network.py` plus re-export-only `solver/__init__.py`;
+C found only prior-read `surface_patch_plane.py` definitions/references and no integration caller.
+Future candidate budget is A1/B0/C0; symbol matches are not implementation proof. Sol accepted
+BLOCKED and ACTIVE is now NONE. No additional search/read/expansion/code/test/artifact/production
+action is authorized. The proposed successor `W7-PHYS-W6-RAW-SPATIAL-PAYLOAD-CONTRACT-TRACE` is
+NOT ACTIVE and requires explicit user approval for one complete read of
+`src/spd_decap_pi/raw_spatial_contact_compiler.py` plus one Sol review; any outside dependency
+or missing compile input/output/units/limits, polygon/material/dielectric/provenance/hash,
+bounded solve-time payload, or fallback/resource contract remains fail-closed.
 The compact scenario quotient
 stores only schema/status, compiled SQLite stores aggregate `finite_parallel_rl` links/count/
 R/L/owners without source series terms, segments, or `physical_model_status`, and the
