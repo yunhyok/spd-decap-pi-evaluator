@@ -17,7 +17,7 @@ import hashlib
 import heapq
 import json
 from decimal import Decimal, DecimalException, InvalidOperation
-from math import isfinite, log10, nextafter, sqrt
+from math import fsum, isfinite, log10, nextafter, sqrt
 import mmap
 from pathlib import Path
 import re
@@ -8562,17 +8562,28 @@ def recover_spd_ground_reachability(
             )
             if status != "complete" or not segments:
                 return drill, material, segments, status, issues, None, None, None
-            segment = segments[0]
             try:
-                model = estimate_via_segment_rl(
-                    length_um=segment.length_um,
-                    drill_diameter_um=drill,
-                    padstack_material=material,
-                    start_layer=start_layer,
-                    end_layer=end_layer,
-                    stackup_layers=stackup_layers,
+                models = tuple(
+                    estimate_via_segment_rl(
+                        length_um=segment.length_um,
+                        drill_diameter_um=drill,
+                        padstack_material=material,
+                        start_layer=segment.start_layer,
+                        end_layer=segment.end_layer,
+                        stackup_layers=stackup_layers,
+                    )
+                    for segment in segments
                 )
-                return drill, material, segments, "complete", (), model.resistance_ohm, model.inductance_h, segment.length_um
+                return (
+                    drill,
+                    material,
+                    segments,
+                    "complete",
+                    (),
+                    fsum(model.resistance_ohm for model in models),
+                    fsum(model.inductance_h for model in models),
+                    fsum(segment.length_um for segment in segments),
+                )
             except Exception:
                 return drill, material, segments, "incomplete", ("physical_model_unavailable",), None, None, None
 

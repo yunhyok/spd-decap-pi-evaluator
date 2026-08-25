@@ -6155,6 +6155,175 @@ def test_finite_via_quotient_missing_padstack_material_uses_legacy_plated_barrel
     ) == (1, 0)
 
 
+def test_ground_reachability_multisegment_via_sums_each_segment_rl(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    source, _analysis = _recoverable_via_source(
+        tmp_path,
+        node_lines=(
+            "NodeLongTop!!1::DGND X = 0um Y = 0um Layer = Signal$TOP "
+            "PadStack = DR-LONG-GND\n"
+            "NodeLongGnd!!1::DGND X = 0um Y = 0um Layer = Signal$GND "
+            "PadStack = DR-LONG-GND\n"
+            "NodeMultiTop!!1::PWR X = 0um Y = 0um Layer = Signal$TOP "
+            "PadStack = DR-0102_60\n"
+            "NodeMultiPwr!!1::PWR X = 0um Y = 0um Layer = Signal$PWR "
+            "PadStack = DR-0102_60"
+        ),
+        via_lines=(
+            "ViaLong::DGND UpperNode = NodeLongTop LowerNode = NodeLongGnd "
+            "PadStack = DR-LONG-GND\n"
+            "ViaMulti::PWR UpperNode = NodeMultiTop LowerNode = NodeMultiPwr "
+            "PadStack = DR-0102_60"
+        ),
+        padstack_defs=(
+            ".PadStackDef DR-LONG-GND 0.02mm Material = COPPER\n"
+            ".PadDef Signal$TOP\n"
+            "Regular Circle 0.03mm\n"
+            ".EndPadDef\n"
+            ".PadDef Signal$PWR\n"
+            "Regular Circle 0.03mm\n"
+            ".EndPadDef\n"
+            ".PadDef Signal$GND\n"
+            "Regular Circle 0.03mm\n"
+            ".EndPadDef\n"
+            ".EndPadStackDef"
+        ),
+    )
+    source.write_text(
+        source.read_text(encoding="ascii").replace(
+            "Medium$D1 Thickness = 0.10mm",
+            "Medium$D1 Thickness = 0.20mm",
+        ),
+        encoding="ascii",
+    )
+    source.write_text(
+        source.read_text(encoding="ascii").replace(
+            "Signal$GND Thickness = 20u",
+            "Signal$GND Thickness = 40u",
+        ),
+        encoding="ascii",
+    )
+    analysis = analyze_spd(source)
+    long_landing = SimpleNamespace(
+        via_id="ViaLong",
+        net="DGND",
+        endpoint_node_id="NodeLongTop",
+    )
+    short_landing = SimpleNamespace(
+        via_id="ViaMulti",
+        net="PWR",
+        endpoint_node_id="NodeMultiTop",
+    )
+    long_stackup = analysis.stackup_layers
+    short_stackup = (analysis.stackup_layers[0], analysis.stackup_layers[2])
+    long_kwargs = {
+        "landings": (long_landing,),
+        "terminal_contact_landings": (long_landing,),
+        "terminal_owned_via_ids": (),
+        "padstacks": analysis.padstacks,
+        "stackup_layers": long_stackup,
+        "target_layers_by_net": {"DGND": ("Signal$GND",)},
+        "target_node_surface_resolver": lambda _net, layer, _node, _x, _y: (
+            "island-gnd" if layer == "Signal$GND" else None
+        ),
+        "target_surface_island_ids": {
+            ("DGND", "Signal$GND"): ("island-gnd",),
+        },
+    }
+    short_kwargs = {
+        "landings": (short_landing,),
+        "terminal_contact_landings": (short_landing,),
+        "terminal_owned_via_ids": (),
+        "padstacks": analysis.padstacks,
+        "stackup_layers": short_stackup,
+        "target_layers_by_net": {"PWR": ("Signal$PWR",)},
+        "target_node_surface_resolver": lambda _net, layer, _node, _x, _y: (
+            "island-pwr" if layer == "Signal$PWR" else None
+        ),
+        "target_surface_island_ids": {
+            ("PWR", "Signal$PWR"): ("island-pwr",),
+        },
+    }
+    result = recover_spd_ground_reachability(source, **long_kwargs)
+    edge = next(
+        edge for edge in result.finite_via_edges if edge.owner_ids == ("via:vialong",)
+    )
+    term = edge.series_terms[0]
+    assert len(term.segments) == 2
+    direct = tuple(
+        spd_io.estimate_via_segment_rl(
+            length_um=segment.length_um,
+            drill_diameter_um=term.drill_diameter_um,
+            padstack_material=term.material,
+            start_layer=segment.start_layer,
+            end_layer=segment.end_layer,
+            stackup_layers=long_stackup,
+        )
+        for segment in term.segments
+    )
+    assert term.resistance_ohm == pytest.approx(
+        math.fsum(model.resistance_ohm for model in direct)
+    )
+    assert term.inductance_h == pytest.approx(
+        math.fsum(model.inductance_h for model in direct)
+    )
+    assert term.length_um == pytest.approx(
+        math.fsum(segment.length_um for segment in term.segments)
+    )
+    first_only = spd_io.estimate_via_segment_rl(
+        length_um=term.segments[0].length_um,
+        drill_diameter_um=term.drill_diameter_um,
+        padstack_material=term.material,
+        start_layer=term.start_layer,
+        end_layer=term.end_layer,
+        stackup_layers=long_stackup,
+    )
+    assert term.resistance_ohm != pytest.approx(first_only.resistance_ohm)
+    assert term.inductance_h != pytest.approx(first_only.inductance_h)
+    single_result = recover_spd_ground_reachability(source, **short_kwargs)
+    single_edge = next(
+        edge for edge in single_result.finite_via_edges if edge.owner_ids == ("via:viamulti",)
+    )
+    single_term = single_edge.series_terms[0]
+    assert len(single_term.segments) == 1
+    single_direct = spd_io.estimate_via_segment_rl(
+        length_um=single_term.segments[0].length_um,
+        drill_diameter_um=single_term.drill_diameter_um,
+        padstack_material=single_term.material,
+        start_layer=single_term.segments[0].start_layer,
+        end_layer=single_term.segments[0].end_layer,
+        stackup_layers=short_stackup,
+    )
+    assert single_term.resistance_ohm == pytest.approx(single_direct.resistance_ohm)
+    assert single_term.inductance_h == pytest.approx(single_direct.inductance_h)
+    assert single_term.length_um == pytest.approx(single_term.segments[0].length_um)
+    assert (term.count, term.physical_model_status, edge.mode) == (
+        1,
+        "complete",
+        "retained_explicit",
+    )
+
+    second_length = term.segments[1].length_um
+    original_estimate = spd_io.estimate_via_segment_rl
+
+    def fail_second(**kwargs):
+        if kwargs["length_um"] == second_length:
+            raise RuntimeError("second segment unavailable")
+        return original_estimate(**kwargs)
+
+    monkeypatch.setattr(spd_io, "estimate_via_segment_rl", fail_second)
+    failed = recover_spd_ground_reachability(source, **long_kwargs)
+    failed_edge = next(
+        edge for edge in failed.finite_via_edges if edge.owner_ids == ("via:vialong",)
+    )
+    failed_term = failed_edge.series_terms[0]
+    assert failed_edge.physical_model_status == failed_term.physical_model_status == "incomplete"
+    assert failed_edge.resistance_ohm is None and failed_edge.inductance_h is None
+    assert failed_term.resistance_ohm is None and failed_term.inductance_h is None
+
+
 def test_finite_via_quotient_prunes_nonboundary_dangling_physical_gap(
     tmp_path: Path,
 ) -> None:
