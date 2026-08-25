@@ -600,10 +600,12 @@ caller loads remain external/unclassified. 17L is DONE: exact 2D polygon-overlay
 Maxwell C is source-classified as `C=eps0·epsr·A/d` (F) with Laplacian assembly; optional
 nonadjacent opening coupling is an opt-in projected-aperture parallel-plate approximation.
 There is no frequency/complex-Y, conductivity, sheet R/L, skin, nonuniform in-plane current, or
-current-spreading term; W6 input/asset fidelity remains external. The sole ACTIVE successor is
-`W7-PHYS-PLANE-SHEET-RL-REUSE-DISCOVERY`, restricted to the exact one-invocation command in
-the Work recovery card from clean HEAD `7cf6d6072777750a5932ac3f68710d11e1f5e2e1`, followed
-by one Sol review; no full-file read or execution. The compact scenario quotient
+current-spreading term; W6 input/asset fidelity remains external. 17M is DONE: the canonical rg
+ran once (exit 0), found candidate symbols in solver files, and proved no reuse or production
+binding. The sole ACTIVE successor is `W7-PHYS-COPPER-SURFACE-IMPEDANCE-REUSE-TRACE`, restricted
+to one complete read of `src/spd_decap_pi/_core/solver/mfdm.py` from clean HEAD
+`1bd942b7b6e85fecef1d6074826e00a45adb71b4` plus one Sol review; no implementation/W6 binding is
+implied. The compact scenario quotient
 stores only schema/status, compiled SQLite stores aggregate `finite_parallel_rl` links/count/
 R/L/owners without source series terms, segments, or `physical_model_status`, and the
 production-complete surface certificate uses a compiled-only stub without the raw canonical
