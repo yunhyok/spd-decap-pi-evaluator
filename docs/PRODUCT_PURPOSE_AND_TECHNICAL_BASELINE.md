@@ -1,9 +1,9 @@
 # SPD Decap PI Evaluator 목적·기술 기준
 
 - 적용 제품: **SPD Decap PI Evaluator v0.23.0**
-- 문서 버전: **1.20**
+- 문서 버전: **1.21**
 - W5 approved/machine-frozen source-before: `main` commit `027ac7a09a3eded15f45c41860945f9d4c7f488d`
-- 상태: **G0 기준 문서** — [작업 기준](WORK_EXECUTION_BASELINE.md)과 함께 사용하며, W5 DONE·W6-BLOCK-A DONE·W6-BLOCK-B BLOCKED·W6-BLOCK-C DONE·W6-BLOCK-D DONE·W6-BLOCK-E DONE·W6-BASE DONE (260729 numerical FAIL)·W7-PHYS-AUDIT-MOUNTED-PATH DONE (negative/unclassified)·W7-PHYS-OWNER-TERMINAL-VIA-VS-SPATIAL DONE (negative/evidence-unavailable)·W7-PHYS-EVIDENCE-MISSING-PATH-COVERAGE DONE (negative/evidence-unavailable)·W7-PHYS-PRODUCTION-VIA-ROUTE-SOURCE-TRACE DONE (source-classified raw-base/global finite-route ownership; local calibrated half-branches not selected; mixed ownership fail-closed)·W7-PHYS-RAW-FINITE-VIA-RL-GENERATION-TRACE DONE (producer unclassified, high confidence)·W7-PHYS-GROUND-REACHABILITY-RL-PRODUCER-TRACE ACTIVE·W7-PHYS BLOCKED
+- 상태: **G0 기준 문서** — [작업 기준](WORK_EXECUTION_BASELINE.md)과 함께 사용하며, W5 DONE·W6-BLOCK-A DONE·W6-BLOCK-B BLOCKED·W6-BLOCK-C DONE·W6-BLOCK-D DONE·W6-BLOCK-E DONE·W6-BASE DONE (260729 numerical FAIL)·W7-PHYS-AUDIT-MOUNTED-PATH DONE (negative/unclassified)·W7-PHYS-OWNER-TERMINAL-VIA-VS-SPATIAL DONE (negative/evidence-unavailable)·W7-PHYS-EVIDENCE-MISSING-PATH-COVERAGE DONE (negative/evidence-unavailable)·W7-PHYS-PRODUCTION-VIA-ROUTE-SOURCE-TRACE DONE (source-classified raw-base/global finite-route ownership; local calibrated half-branches not selected; mixed ownership fail-closed)·W7-PHYS-RAW-FINITE-VIA-RL-GENERATION-TRACE DONE (producer unclassified, high confidence)·W7-PHYS-GROUND-REACHABILITY-RL-PRODUCER-TRACE DONE (producer delegated/unclassified, high confidence)·W7-PHYS-VIA-SEGMENT-RL-MODEL-TRACE BLOCKED·W7-PHYS BLOCKED·ACTIVE NONE
 - 최종 개정: 2026-08-25 (Asia/Seoul)
 
 ## 1. 문서 역할과 권위
@@ -482,11 +482,17 @@ producer binding to it. Therefore 17E is DONE as `producer unclassified (high
 confidence)`: production formula/unit conversion and runtime producer binding remain
 unknown. No artifact/raw-SPD/Python/import/test/solver/edit execution, PowerSI,
 forward-accuracy, causal-owner, threshold, physics, or retry claim is made. The next
-candidate `W7-PHYS-GROUND-REACHABILITY-RL-PRODUCER-TRACE` is now the sole ACTIVE
-read-only item under the 2026-08-25 user-approved whitelist. Its exact single-file
-whitelist is
-`src/spd_decap_pi/_core/io/spd.py` for read-only `recover_spd_ground_reachability`
-definition/imports and finite-via R/L construction only.
+candidate `W7-PHYS-GROUND-REACHABILITY-RL-PRODUCER-TRACE` is DONE as
+`producer delegated/unclassified (high confidence)`. The one-file V0 found local
+geometry/provenance assembly but no local R/L formula or fallback; it delegates to
+`src/spd_decap_pi/_core/via_model.py::estimate_via_segment_rl` with length, drill,
+material, layer endpoints, and stackup, returning Ω/H or incomplete/None on exception.
+`physical_model_for_canonical` may build a multi-segment chain (`:7853-7861`), while
+`finite_physical` passes only `segments[0].length_um` with the full layer endpoints;
+there is no local `len==1` invariant. This unresolved delegate contract is not called
+a bug, and complete path-length modeling is not claimed. The next candidate
+`W7-PHYS-VIA-SEGMENT-RL-MODEL-TRACE` is BLOCKED pending a new whitelist and is not
+active; proposed whitelist is only `src/spd_decap_pi/_core/via_model.py`.
 
 Approval basis commit `027ac7a09a3eded15f45c41860945f9d4c7f488d` is distinct from
 the caller-supplied exact current `main` HEAD required at a future W6 invocation;
@@ -528,5 +534,6 @@ and the exact Git HEAD are frozen together. Current trust identities: base `d43b
 | 1.18 | 2026-08-25 | 사용자 승인으로 W7-PHYS-RAW-FINITE-VIA-RL-GENERATION-TRACE를 유일한 read-only ACTIVE producer trace로 지정하고 6-file whitelist와 비목표를 고정. |
 | 1.19 | 2026-08-25 | 17E six-file source V0와 Sol review를 producer unclassified (high confidence)로 종료하고 active NONE, 17F ground-reachability producer trace 후보를 BLOCKED로 지정. |
 | 1.20 | 2026-08-25 | 사용자 승인으로 17F ground-reachability R/L producer trace를 유일한 ACTIVE read-only item으로 지정하고 단일 파일 whitelist와 비목표를 고정. |
+| 1.21 | 2026-08-25 | 17F one-file V0와 Sol review를 delegated/unclassified (high confidence)로 종료하고 active NONE, 17G via-segment R/L model trace 후보를 BLOCKED로 지정. |
 | 1.1 | 2026-08-24 | `WORK_EXECUTION_BASELINE.md`를 두 번째 canonical 문서로 연결. |
 | 1.0 | 2026-08-24 | v0.24 계획 중심의 Distribution–solver PRD를 제품 전체의 목적·기술 기준으로 개정. PowerSI 정확성 우선, 상태 어휘, 기술 경계, promotion gate, 검증 비용 통제와 two-document 작업 방식을 고정. |

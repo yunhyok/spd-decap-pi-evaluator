@@ -542,15 +542,18 @@ source-Via parallel count without invented R/L; finite-route reduction is exact 
 `fsum` with equivalent count 1; finite-via and compiled-asset layers validate and
 persist precomputed R/L; isolated PEEC is diagnostic-only and not production-bound in
 the allowed files. The production formula/unit conversion and runtime producer branch
-remain unknown. Accuracy and causal-owner claims remain out of scope. The
-user-approved 2026-08-25 next item is now the sole ACTIVE read-only
-`W7-PHYS-GROUND-REACHABILITY-RL-PRODUCER-TRACE`, restricted to
-`src/spd_decap_pi/_core/io/spd.py` and the directly relevant
-`recover_spd_ground_reachability` producer chain. It may classify raw field/unit,
-formula/default/fallback, finite-via/series aggregation, and R/L/count/unit
-construction; no artifact, Python/import/test/solver, numeric, PowerSI, or physics
-execution is authorized. If delegated outside the file, record exact module/file/
-symbol names and close as producer unclassified/delegated.
+remain unknown. Accuracy and causal-owner claims remain out of scope. The completed
+17F one-file V0 and Sol review classify the producer as delegated/unclassified (high
+confidence): `spd.py` assembles geometry/provenance and delegates R/L to
+`src/spd_decap_pi/_core/via_model.py::estimate_via_segment_rl` with length, drill,
+material, layer endpoints, and stackup; returns are Ω/H and exceptions become
+incomplete/None. Local series terms use count 1 and local R/L/length sums; edges use
+parallel_path_count=1 and per_path/raw count equal to path length. A multi-segment
+chain can be built (`spd.py:7853-7861`) but `finite_physical` passes only
+`segments[0].length_um`; no len==1 invariant or complete path-length modeling is
+claimed, and this is not called a bug. ACTIVE is NONE. The next
+`W7-PHYS-VIA-SEGMENT-RL-MODEL-TRACE` is BLOCKED pending a new one-file whitelist for
+`src/spd_decap_pi/_core/via_model.py`; no accuracy or physical-owner claim follows.
 
 Frozen historical v5 validator/policy/fixtures and base benchmark remain byte-identical.
 W6-E atomically rotated the current v6→policy→accuracy-validator→controller trust
