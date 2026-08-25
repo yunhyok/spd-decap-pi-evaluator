@@ -1867,6 +1867,7 @@ def _job_import_spd(
     imported = import_spd_scenario(
         path, progress=lambda value, message: progress(round(value * 0.65), message),
         is_cancelled=is_cancelled,
+        include_plane_sheet_payload=True,
     )
     view = _prepare_document_view(
         imported.scenario,
