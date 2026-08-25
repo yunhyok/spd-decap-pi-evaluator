@@ -1,10 +1,10 @@
 # SPD Decap PI Evaluator 작업 기준
 
 - 적용 제품: **SPD Decap PI Evaluator v0.23.0**
-- 문서 버전: **1.20**
-- 상위 기준: [목적·기술 기준](PRODUCT_PURPOSE_AND_TECHNICAL_BASELINE.md) v1.19
+- 문서 버전: **1.21**
+- 상위 기준: [목적·기술 기준](PRODUCT_PURPOSE_AND_TECHNICAL_BASELINE.md) v1.20
 - W6-BASE source-before: clean `main` HEAD `fb36288781dcc0b884950ef5a486c474090ceebd`; this is the exact source boundary for the completed one-run evidence
-- 상태: **APPROVED/MACHINE-FROZEN CONTROL DOCUMENT — W5 DONE; W6-BLOCK-A DONE; W6-BLOCK-B BLOCKED; W6-BLOCK-C DONE; W6-BLOCK-D DONE; W6-BLOCK-E DONE; W6-BASE DONE (260729 numerical FAIL); W7-PHYS-AUDIT-MOUNTED-PATH DONE (negative/unclassified); W7-PHYS-OWNER-TERMINAL-VIA-VS-SPATIAL DONE (negative/evidence-unavailable); W7-PHYS-EVIDENCE-MISSING-PATH-COVERAGE DONE (negative/evidence-unavailable); W7-PHYS-PRODUCTION-VIA-ROUTE-SOURCE-TRACE DONE (source-classified raw-base/global finite-route ownership; local calibrated half-branches not selected; mixed ownership fail-closed); W7-PHYS-RAW-FINITE-VIA-RL-GENERATION-TRACE DONE (producer unclassified, high confidence); W7-PHYS-GROUND-REACHABILITY-RL-PRODUCER-TRACE BLOCKED; W7-PHYS BLOCKED; ACTIVE NONE**
+- 상태: **APPROVED/MACHINE-FROZEN CONTROL DOCUMENT — W5 DONE; W6-BLOCK-A DONE; W6-BLOCK-B BLOCKED; W6-BLOCK-C DONE; W6-BLOCK-D DONE; W6-BLOCK-E DONE; W6-BASE DONE (260729 numerical FAIL); W7-PHYS-AUDIT-MOUNTED-PATH DONE (negative/unclassified); W7-PHYS-OWNER-TERMINAL-VIA-VS-SPATIAL DONE (negative/evidence-unavailable); W7-PHYS-EVIDENCE-MISSING-PATH-COVERAGE DONE (negative/evidence-unavailable); W7-PHYS-PRODUCTION-VIA-ROUTE-SOURCE-TRACE DONE (source-classified raw-base/global finite-route ownership; local calibrated half-branches not selected; mixed ownership fail-closed); W7-PHYS-RAW-FINITE-VIA-RL-GENERATION-TRACE DONE (producer unclassified, high confidence); W7-PHYS-GROUND-REACHABILITY-RL-PRODUCER-TRACE ACTIVE; W7-PHYS BLOCKED**
 - 최종 개정: 2026-08-25 (Asia/Seoul)
 
 ## 1. 압축 후 즉시 복구 카드
@@ -16,11 +16,11 @@ context가 압축되거나 새 session에서 작업을 재개하면 다른 연�
 |---|---|
 | 변하지 않는 목적 | source-derived single-rail `Zii`의 PowerSI 근접 정확성과 일반화 |
 | 현재 branch | `main`만 사용; 정리된 과거 branch를 다시 조사하지 않음 |
-| 현재 active work item | `NONE` |
-| 다음 권장 묶음 | `W7-PHYS-GROUND-REACHABILITY-RL-PRODUCER-TRACE` BLOCKED; new whitelist authority required |
-| current authorization | 17E six-file source V0 and Sol review complete; no active technical authority |
+| 현재 active work item | `W7-PHYS-GROUND-REACHABILITY-RL-PRODUCER-TRACE` (read-only source V0) |
+| 다음 권장 묶음 | one-file producer trace V0 1회 및 Sol independent static review 1회 |
+| current authorization | user-approved read-only access to `src/spd_decap_pi/_core/io/spd.py` only; no artifact/Python/import/test/solver/physics authority |
 | future production invariant (not current authority) | if a future run is authorized: exact clean `main`, new output root, one run/no retry; B correlation is historical evidence; C/D consumed their exactly-one old candidate/import reads; E had one production diagnostic invocation plus one orchestration ZIP read; old root remains forbidden for W6-BASE output/scoring/retry/mutation |
-| 고비용 검증 권한 | none; no source/artifact/solver/test/production work is active |
+| 고비용 검증 권한 | none; only the bounded one-file read-only source V0 and Sol static review are active; no artifact/Python/import/test/solver/production execution is authorized |
 | 현재 정확성 상태 | `260729 retrospective FAIL`; unseen/generalization remains `unknown / not_run` |
 | 현재 release 계산 증거 | W6-BASE 260729 completed numerical FAIL; offline verifier exit 2 (integrity-valid) |
 | W6-BASE result root | `D:\SPD-Decap-PI-Evaluator-W6\fb36288781dcc0b884950ef5a486c474090ceebd\260729` — manifest `2b14f90e762abc49833518137812e8fc97fcde0e9c145795b7384210cfd9f5de`, sidecar `0d103e0ad47df80641fac0952a35a6eaa56cc9fdb71be24661903e451926e932`, correlation `969e40046e3a099d09557ba7500693460362336d76b067962436bd3b5177abc4` |
@@ -129,7 +129,7 @@ root, one-run/no-retry 조건을 다시 확정할 때만 고려한다.
 | `W7-PHYS-EVIDENCE-MISSING-PATH-COVERAGE` | 17C | DONE (diagnostic-complete; negative/evidence-unavailable) | 8,986 selected decaps의 persisted terminal path coverage | available 0/missing 19,218/trace_NA 0; owner null; physics authorization 없음 |
 | `W7-PHYS-PRODUCTION-VIA-ROUTE-SOURCE-TRACE` | 17D | DONE | W6 finite Via links의 단일 source call-chain/ownership 정적 추적 | source-classified raw-base/global finite-route ownership (v4 scenario network); local calibrated half-branches not selected; mixed fail-closed; confidence high/source-proven |
 | `W7-PHYS-RAW-FINITE-VIA-RL-GENERATION-TRACE` | 17E | DONE (producer unclassified; high confidence) | six-file producer call-chain/source trace | reachability-produced fields and exact handoff are bound; producer formula/unit conversion and runtime binding remain unknown; no physics/accuracy claim |
-| `W7-PHYS-GROUND-REACHABILITY-RL-PRODUCER-TRACE` | 17F | BLOCKED | `recover_spd_ground_reachability` raw producer definition/imports and finite-via R/L construction | new whitelist authority required; one-file read-only V0 only, no broad search or execution |
+| `W7-PHYS-GROUND-REACHABILITY-RL-PRODUCER-TRACE` | 17F | ACTIVE | `recover_spd_ground_reachability` raw producer definition/imports and finite-via R/L construction | exact one-file whitelist only; no broad search, artifact, Python/import/test/solver, or numerical execution |
 | `W8-REL` | 18 | BLOCKED | completed known-case solve를 release gate에 연결하고 최종 전달 | accuracy/product gate와 exact release commit 필요 |
 | `D-DIST` | - | DEFERRED | Distribution routing/DRC scope 확대 | 사용자가 implementation-ready/DRC 목표로 승격할 때만 |
 | `D-DOC` | - | DEFERRED | README와 동결 연구 배너 정리 | current work를 방해할 때 별도 문서 묶음으로 처리 |
@@ -567,8 +567,8 @@ v4 certificate와 scenario-network owner invariants가 결합되어 raw-base own
 `local_calibrated_via_half_branches`는 선택되지 않았고 mixed ownership은
 `TERMINAL_VIA_OWNERSHIP_CONFLICT`로 fail-closed된다. confidence는 high/source-proven이다.
 이는 certificate R/L accuracy, forward/PowerSI accuracy, 또는 causal terminal-Via
-error owner를 증명하지 않는다. 사용자의 2026-08-25 producer discovery/trace 승인으로
-다음 17E 묶음을 유일한 ACTIVE read-only item으로 연다.
+error owner를 증명하지 않는다. 사용자의 2026-08-25 one-file whitelist 승인으로
+17F 묶음을 유일한 ACTIVE read-only item으로 연다.
 
 검증 예산은 source V0 정적 추적 1회와 Sol independent static review 1회이며,
 code/test/production 실행은 0회다.
@@ -594,16 +594,19 @@ producer unclassified로 닫는다. artifact/raw SPD/solver/PowerSI/수치 재�
 calibration, threshold, physics 변경은 비목표다.
 
 검증 예산은 6-file source V0 1회와 Sol review 1회이며 Python/import/test/solver/
-artifact/raw-SPD 실행은 0회다. 결과는 producer unclassified (high confidence)이며
-ACTIVE item은 NONE이다. 다음 후보 17F는 BLOCKED이며 새 whitelist 권한 없이는
-자동 시작하지 않는다.
+artifact/raw-SPD 실행은 0회다. 결과는 producer unclassified (high confidence)이며,
+17E closure 당시 ACTIVE NONE/17F BLOCKED였으나 이후 사용자 승인으로 아래 17F가
+sole ACTIVE read-only item이 되었다.
 
-## 17. W7-PHYS-GROUND-REACHABILITY-RL-PRODUCER-TRACE (BLOCKED)
+## 17. W7-PHYS-GROUND-REACHABILITY-RL-PRODUCER-TRACE (ACTIVE)
 
 17F는 `src/spd_decap_pi/_core/io/spd.py`의 `recover_spd_ground_reachability`
-정의/imports와 finite-via edge/series-term R/L construction만 읽는 단일 파일
-read-only V0 후보다. 새 whitelist 권한 전에는 source/code/test/import/solver/artifact
-실행을 하지 않으며, 위임 시 정확한 producer 파일명을 확인한 뒤 중단한다.
+정의와 직접 관련된 imports/helpers/call sites, finite_via_edges 및 series-term
+R/L/count/unit construction만 읽는다. 완료 기준은 raw SPD field+unit에서 계산/default/
+fallback, edge/series aggregation, `resistance_ohm`/`inductance_h`/count 생성까지의
+정적 결속이며, 외부 위임이면 정확한 module/file/symbol명을 기록하고 producer
+unclassified/delegated로 중단한다. 검증 예산은 source V0 1회와 Sol review 1회이고,
+Python/import/test/solver/artifact/raw-SPD 실행과 수치 재계산은 0회다.
 
 ## 18. 변경 기록
 
@@ -630,3 +633,4 @@ read-only V0 후보다. 새 whitelist 권한 전에는 source/code/test/import/s
 | 1.18 | 2026-08-25 | 17D source V0를 raw-base/global finite-route ownership으로 source-proven 종료하고 active NONE, 17E producer-trace 후보 BLOCKED로 갱신. |
 | 1.19 | 2026-08-25 | 사용자 승인 producer discovery/trace를 17E 유일 ACTIVE로 지정하고 exact six-file whitelist, producer call-chain 질문과 실행 금지를 기록. |
 | 1.20 | 2026-08-25 | 17E six-file source V0를 producer unclassified (high confidence)로 닫고 active NONE, 17F ground-reachability producer trace를 BLOCKED로 등록. |
+| 1.21 | 2026-08-25 | 사용자 1-file whitelist 승인으로 17F ground-reachability R/L producer trace를 유일한 ACTIVE read-only item으로 지정. |

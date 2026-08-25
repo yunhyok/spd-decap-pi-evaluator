@@ -542,9 +542,15 @@ source-Via parallel count without invented R/L; finite-route reduction is exact 
 `fsum` with equivalent count 1; finite-via and compiled-asset layers validate and
 persist precomputed R/L; isolated PEEC is diagnostic-only and not production-bound in
 the allowed files. The production formula/unit conversion and runtime producer branch
-remain unknown. Accuracy and causal-owner claims remain out of scope. The next
-candidate `W7-PHYS-GROUND-REACHABILITY-RL-PRODUCER-TRACE` is BLOCKED pending a new
-whitelist authority for `src/spd_decap_pi/_core/io/spd.py`; it is not active.
+remain unknown. Accuracy and causal-owner claims remain out of scope. The
+user-approved 2026-08-25 next item is now the sole ACTIVE read-only
+`W7-PHYS-GROUND-REACHABILITY-RL-PRODUCER-TRACE`, restricted to
+`src/spd_decap_pi/_core/io/spd.py` and the directly relevant
+`recover_spd_ground_reachability` producer chain. It may classify raw field/unit,
+formula/default/fallback, finite-via/series aggregation, and R/L/count/unit
+construction; no artifact, Python/import/test/solver, numeric, PowerSI, or physics
+execution is authorized. If delegated outside the file, record exact module/file/
+symbol names and close as producer unclassified/delegated.
 
 Frozen historical v5 validator/policy/fixtures and base benchmark remain byte-identical.
 W6-E atomically rotated the current v6→policy→accuracy-validator→controller trust
