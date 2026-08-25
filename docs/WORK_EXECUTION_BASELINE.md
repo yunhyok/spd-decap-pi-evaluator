@@ -1,10 +1,10 @@
 # SPD Decap PI Evaluator 작업 기준
 
 - 적용 제품: **SPD Decap PI Evaluator v0.23.0**
-- 문서 버전: **1.27**
-- 상위 기준: [목적·기술 기준](PRODUCT_PURPOSE_AND_TECHNICAL_BASELINE.md) v1.26
+- 문서 버전: **1.28**
+- 상위 기준: [목적·기술 기준](PRODUCT_PURPOSE_AND_TECHNICAL_BASELINE.md) v1.27
 - W6-BASE source-before: clean `main` HEAD `fb36288781dcc0b884950ef5a486c474090ceebd`; this is the exact source boundary for the completed one-run evidence
-- 상태: **APPROVED/MACHINE-FROZEN CONTROL DOCUMENT — W5 DONE; W6-BLOCK-A DONE; W6-BLOCK-B BLOCKED; W6-BLOCK-C DONE; W6-BLOCK-D DONE; W6-BLOCK-E DONE; W6-BASE DONE (260729 numerical FAIL); W7-PHYS-AUDIT-MOUNTED-PATH DONE (negative/unclassified); W7-PHYS-OWNER-TERMINAL-VIA-VS-SPATIAL DONE (negative/evidence-unavailable); W7-PHYS-EVIDENCE-MISSING-PATH-COVERAGE DONE (negative/evidence-unavailable); W7-PHYS-PRODUCTION-VIA-ROUTE-SOURCE-TRACE DONE (source-classified raw-base/global finite-route ownership; local calibrated half-branches not selected; mixed ownership fail-closed); W7-PHYS-RAW-FINITE-VIA-RL-GENERATION-TRACE DONE (producer unclassified, high confidence); W7-PHYS-GROUND-REACHABILITY-RL-PRODUCER-TRACE DONE (producer delegated/unclassified, high confidence); W7-PHYS-VIA-SEGMENT-RL-MODEL-TRACE DONE (source-classified model; conditional multi-segment caller-contract bug confirmed; W6 exposure unknown); W7-PHYS-MULTISEGMENT-RL-CALLER-FIX BLOCKED (fixture-contract red; production diff statically accepted and retained uncommitted); W7-PHYS-CORRECTED-SUCCESSOR BLOCKED (static REJECT; zero pytest executions); W7-PHYS-CORRECTED-SUCCESSOR-2 ACTIVE; W7-PHYS BLOCKED**
+- 상태: **APPROVED/MACHINE-FROZEN CONTROL DOCUMENT — W5 DONE; W6-BLOCK-A DONE; W6-BLOCK-B BLOCKED; W6-BLOCK-C DONE; W6-BLOCK-D DONE; W6-BLOCK-E DONE; W6-BASE DONE (260729 numerical FAIL); W7-PHYS-AUDIT-MOUNTED-PATH DONE (negative/unclassified); W7-PHYS-OWNER-TERMINAL-VIA-VS-SPATIAL DONE (negative/evidence-unavailable); W7-PHYS-EVIDENCE-MISSING-PATH-COVERAGE DONE (negative/evidence-unavailable); W7-PHYS-PRODUCTION-VIA-ROUTE-SOURCE-TRACE DONE (source-classified raw-base/global finite-route ownership; local calibrated half-branches not selected; mixed ownership fail-closed); W7-PHYS-RAW-FINITE-VIA-RL-GENERATION-TRACE DONE (producer unclassified, high confidence); W7-PHYS-GROUND-REACHABILITY-RL-PRODUCER-TRACE DONE (producer delegated/unclassified, high confidence); W7-PHYS-VIA-SEGMENT-RL-MODEL-TRACE DONE (source-classified model; conditional multi-segment caller-contract bug confirmed; W6 exposure unknown); W7-PHYS-MULTISEGMENT-RL-CALLER-FIX BLOCKED (fixture-contract red; production diff statically accepted and retained uncommitted); W7-PHYS-CORRECTED-SUCCESSOR BLOCKED (static REJECT; zero pytest executions); W7-PHYS-CORRECTED-SUCCESSOR-2 DONE; W7-PHYS-W6-MULTISEGMENT-EXPOSURE BLOCKED; W7-PHYS BLOCKED; ACTIVE NONE**
 - 최종 개정: 2026-08-25 (Asia/Seoul)
 
 ## 1. 압축 후 즉시 복구 카드
@@ -16,9 +16,9 @@ context가 압축되거나 새 session에서 작업을 재개하면 다른 연�
 |---|---|
 | 변하지 않는 목적 | source-derived single-rail `Zii`의 PowerSI 근접 정확성과 일반화 |
 | 현재 branch | `main`만 사용; 정리된 과거 branch를 다시 조사하지 않음 |
-| 현재 active work item | `17H-CORRECTED-SUCCESSOR-2` |
-| 다음 권장 묶음 | test-only correction in existing `tests/test_io_spd.py`; one Sol static review then same node once |
-| current authorization | user pre-approved successor-2; base `main` HEAD `0cbe18e6b7c36dbfd686a14439a164c12f4abccb`, retained diff exactly `src/spd_decap_pi/_core/io/spd.py` + `tests/test_io_spd.py`; no pytest artifact/result root |
+| 현재 active work item | `NONE` |
+| 다음 권장 묶음 | `W7-PHYS-W6-MULTISEGMENT-EXPOSURE` BLOCKED; separate exact read authority required |
+| current authorization | successor-2 DONE; commit `7fd8df954791b5a17229b49153d0f5dd57a248d2` clean; no active technical authority |
 | future production invariant (not current authority) | if a future run is authorized: exact clean `main`, new output root, one run/no retry; B correlation is historical evidence; C/D consumed their exactly-one old candidate/import reads; E had one production diagnostic invocation plus one orchestration ZIP read; old root remains forbidden for W6-BASE output/scoring/retry/mutation |
 | 고비용 검증 권한 | none; only bounded test-file correction is active; no artifact/Python/import/solver/production execution |
 | 현재 정확성 상태 | `260729 retrospective FAIL`; unseen/generalization remains `unknown / not_run` |
@@ -133,7 +133,8 @@ root, one-run/no-retry 조건을 다시 확정할 때만 고려한다.
 | `W7-PHYS-VIA-SEGMENT-RL-MODEL-TRACE` | 17G | DONE (source-classified model; conditional caller-contract bug confirmed) | one-file R/L equation/policy trace plus caller handoff review | W6 exposure unknown; no accuracy/physics owner claim |
 | `W7-PHYS-MULTISEGMENT-RL-CALLER-FIX` | 17H | BLOCKED (fixture-contract red; production diff statically accepted and retained uncommitted) | bounded V0 plus focused regression | exact whitelist `src/spd_decap_pi/_core/io/spd.py`, `tests/test_io_spd.py`; node exit 1, no rerun |
 | `W7-PHYS-CORRECTED-SUCCESSOR` | 17H successor | BLOCKED (static REJECT; zero pytest executions) | long Via used DR-0102_60 without GND PadDef and long stackup omitted intermediate PWR | original 17H remains blocked; no technical rerun |
-| `W7-PHYS-CORRECTED-SUCCESSOR-2` | 17H successor-2 | ACTIVE | test-only long-Via-only padstack declares TOP/PWR/GND; full analysis stackup; short TOP→PWR retains existing DR | Sol static review once → same node once; PASS commit two technical files, FAIL stop/no rerun |
+| `W7-PHYS-CORRECTED-SUCCESSOR-2` | 17H successor-2 | DONE | long-Via-only padstack TOP/PWR/GND, full analysis stackup, short TOP→PWR existing DR | exact node once: exit0, 1 passed in1.08s, wall~2.07s; commit `7fd8df9` exactly two files |
+| `W7-PHYS-W6-MULTISEGMENT-EXPOSURE` | next candidate | BLOCKED | determine whether the fixed conditional branch was present in frozen 260729 evidence | separate exact read authority; no old-root mutation/retry |
 | `W8-REL` | 18 | BLOCKED | completed known-case solve를 release gate에 연결하고 최종 전달 | accuracy/product gate와 exact release commit 필요 |
 | `D-DIST` | - | DEFERRED | Distribution routing/DRC scope 확대 | 사용자가 implementation-ready/DRC 목표로 승격할 때만 |
 | `D-DOC` | - | DEFERRED | README와 동결 연구 배너 정리 | current work를 방해할 때 별도 문서 묶음으로 처리 |
@@ -629,24 +630,21 @@ first-segment length+full-endpoint 전달로 조건부 caller-contract bug를 �
 W6 exposure는 unknown이다. 검증 예산은 source V0 정확히 1회와 Sol review 정확히
 1회이고, Python/import/test/solver/artifact/raw-SPD 실행과 수치 재계산은 0회다.
 
-## 19. W7-PHYS-MULTISEGMENT-RL-CALLER-FIX (BLOCKED; fixture-contract red)
+## 19. 17H closure (original BLOCKED; successor-2 DONE)
 
-17H production diff는 정적으로 accepted 되었지만 fixture contract가 red였다. Original
-17H remains BLOCKED and consumed. The first corrected successor is BLOCKED at static REJECT
-with zero pytest executions because its long Via used `DR-0102_60` without GND PadDef and
-its long stackup omitted intermediate PWR. User pre-approval activates
-`17H-CORRECTED-SUCCESSOR-2` as the sole ACTIVE test-only correction; production `spd.py`
-remains unchanged. It adds a long-Via-only padstack declaring TOP/PWR/GND, uses full
-`analysis.stackup_layers`, and retains the short TOP→PWR control on existing DR. Sol static
-review exactly once precedes the exact command exactly once; PASS commits the retained
-two-file diff, FAIL stops with no rerun:
-`python -m pytest -q tests/test_io_spd.py::test_ground_reachability_multisegment_via_sums_each_segment_rl`.
-The original command result was exit 1, `1 failed in 2.13s` (wall 3.40s); line 6207 expected
-len2 but the fixture correctly produced one `Signal$TOP→Signal$PWR` 220um segment. unequal adjacent 2-segment
-결과는 두 real direct one-segment estimates의 합과 같고 first-only 결과와 달라야 하며,
-one-segment 결과는 불변이어야 한다. 어떤 segment failure도 incomplete/no partial이어야
-하고 classifier/legacy fallback 및 term의 R/L/length/count/owner 동작은 보존한다.
-그 전후 artifact/raw-SPD/solver/production 실행은 금지된다.
+17H original remains BLOCKED and consumed at its fixture red (exit1). The first corrected
+successor remains BLOCKED at static REJECT with zero pytest executions because its long Via
+used `DR-0102_60` without GND PadDef and its long stackup omitted intermediate PWR.
+`17H-CORRECTED-SUCCESSOR-2` is DONE. The exact command
+`python -m pytest -q tests/test_io_spd.py::test_ground_reachability_multisegment_via_sums_each_segment_rl`
+ran once and passed: exit0, `1 passed in 1.08s` (wall~2.07s), no rerun and no artifact/result
+root. Commit `7fd8df954791b5a17229b49153d0f5dd57a248d2` contains exactly the production/test
+files and the worktree was clean. Every persisted segment used own geometry, completed
+tuples were fsum-summed, failures leave aggregate fields unavailable, and each contribution
+is added once. This proves no W6 exposure, PowerSI/forward accuracy, causal ownership,
+artifact/solver/production validation, or release readiness. The next
+`W7-PHYS-W6-MULTISEGMENT-EXPOSURE` is BLOCKED pending separate exact read authority and
+cannot mutate or retry the old root.
 
 ## 20. 변경 기록
 
@@ -679,4 +677,5 @@ one-segment 결과는 불변이어야 한다. 어떤 segment failure도 incomple
 | 1.24 | 2026-08-25 | 17G를 source-classified model 및 조건부 caller-contract bug 확인으로 종료하고 active NONE, 17H multisegment caller fix 후보를 BLOCKED로 지정. |
 | 1.25 | 2026-08-25 | 사용자 code+test authority로 17H multisegment caller fix를 두 파일 bounded V0의 유일한 ACTIVE item으로 지정. |
 | 1.26 | 2026-08-25 | 17H fixture-contract node를 1회 red로 기록하고 production diff를 retained uncommitted로 보존했으며, first corrected successor static REJECT(0 pytest) 후 17H-CORRECTED-SUCCESSOR-2를 사용자 pre-approval로 유일한 ACTIVE test-only correction으로 지정하고 HEAD/diff/node boundary를 고정. |
-| 1.27 | 2026-08-25 | 17H-CORRECTED-SUCCESSOR-2의 TOP/PWR/GND long-Via padstack와 full analysis stackup test-only contract를 유일한 ACTIVE item으로 고정. |
+| 1.27 | 2026-08-25 | 17H-CORRECTED-SUCCESSOR-2를 단일 focused PASS와 commit `7fd8df9`로 DONE 처리하고 W6 multisegment exposure 후보를 BLOCKED로 등록. |
+| 1.28 | 2026-08-25 | successor-2의 세그먼트별 geometry/합산/fail-closed 동작과 정확성 비주장을 기록하고 active NONE으로 전환. |
