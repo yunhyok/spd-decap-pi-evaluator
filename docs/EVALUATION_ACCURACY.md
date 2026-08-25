@@ -659,15 +659,17 @@ ProjectSpec types prove geometry primitives/assets, `_um`, source SHA/order, sta
 and dielectric frequency epsilon/loss, while adjacent-conductor spacing is only derived by summing
 positive intervening dielectric thickness; the existing compiler handoff is absent and frozen 17F
 remains unproven. 17Y ran its filename query once with no matches (0 paths, rg exit 1), so it is
-source-classified BLOCKED and proves filename absence only. Sole ACTIVE 17Z
-`W7-PHYS-W6-RAW-SPATIAL-V3-TEST-SYMBOL-DISCOVERY` permits exactly one query
-`rg -n --no-heading --color never --glob 'test_*.py' '\b(?:compile_raw_spatial_contact_asset|build_raw_spatial_contact_asset|validate_project_topology_storage_envelope)\b' 'tests'`.
-Budget is <=40 lines and <=6 files; exactly one compiler-referencing file is selectable, while
-builder/validator-only, ambiguous, or over-budget results fail closed without a second query/open.
-If zero compiler references are found, the only candidate is the named new
-`tests/test_raw_spatial_contact_compiler.py`, because 17Y found no conflicting filename. Proposed
-`W7-PHYS-W6-RAW-SPATIAL-ASSET-V3-EMISSION` remains inactive until mapping is documented. This is not
-an accuracy/causal/production claim or implementation authority.
+source-classified BLOCKED. 17Z then ran its symbol query once at clean HEAD
+`4f5d149a1e803caa2a2b78b854b6579cafb3bed4`, returning 17 lines/5 files; the unique compiler test is
+`tests/test_raw_spatial_contact_compiler.py`, so 17Z is DONE. Sole ACTIVE 17AA
+`W7-PHYS-W6-RAW-SPATIAL-ASSET-V3-EMISSION` is limited to three production files plus that test.
+Contract: v2 constants/API byte-identical; profile/global/app/solver/convergence/policy/controller
+identities unchanged; only the opt-in raw-spatial v3 schema/compiler sibling identity is new. v3 sibling with kw-only opt-in flags, five normalized tables,
+no gap table, positive-intervening-thickness fsum spacing, row/coordinate/ProjectSpec/source-SHA digest,
+and explicit v3 fail-closed against v2/compiled-only/legacy/missing/tampered payloads. Existing
+spool/hash/bounds/cancel/cleanup are reused; Sol reviews the 4-file diff before exactly one focused
+`test_plane_sheet_payload_v3_is_hash_bound_and_v2_remains_unchanged` node, with failure stopping rerun.
+No accuracy/causal/production claim follows.
 The compact scenario quotient
 stores only schema/status, compiled SQLite stores aggregate `finite_parallel_rl` links/count/
 R/L/owners without source series terms, segments, or `physical_model_status`, and the
