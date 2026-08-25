@@ -649,18 +649,21 @@ C found only prior-read `surface_patch_plane.py` definitions/references and no i
 Future candidate budget is A1/B0/C0; symbol matches are not implementation proof. 17U's compiler
 trust/resource/determinism/fail-closed behavior is source-proven, but asset assembly, certificate
 envelope, complete polygon/material/dielectric provenance, and a raw-SPD/full-Scenario-free solve-time
-payload are delegated/unproven; 17U is therefore source-classified BLOCKED. The user then activated
-`W7-PHYS-W6-RAW-SPATIAL-ASSET-CERTIFICATE-CONTRACT-TRACE` (17V) under standing preapproval at clean
-main HEAD `6bec2ab4b7f2d1ef094c0ad44df198f37fc05fb4`. It is the sole ACTIVE two-file read-only trace:
-complete reads exactly once of `src/spd_decap_pi/raw_spatial_contact_asset.py` and
-`src/spd_decap_pi/surface_certificate_asset.py`, followed by one Sol review. Q1/Q2 must jointly
-prove hash-bound complete asset/certificate payload schema, units, polygons, ordered sigma/thickness,
-dielectric spacing/epsilon/loss/dispersion, direct bounded hydration, and fallback/delegate/resource
-ceilings without raw-SPD/full-Scenario hydration; any missing/outside dependency fails closed.
-Payload PASS is necessary but not sufficient for profile/nullspace/Zii/cache implementation or W7
-accuracy/causal promotion. Standing preapproval permits only the next bounded repo-local source/
-design/code/test step after review until further command or Usage Guard 50%; production, old-root,
-release, and broad/full tests remain unauthorized.
+payload are delegated/unproven; 17U is source-classified BLOCKED. 17V proved only structural
+schema/hash/bounds and certificate-envelope checks; full polygons/material/dielectric fields and a
+solve-ready payload remain absent, so 17V is source-classified BLOCKED. The user then activated
+`W7-PHYS-W6-RAW-PLANE-MATERIAL-SOURCE-DISCOVERY` (17W) under standing preapproval at clean main HEAD
+`bf0dc6be265eb3375a64f510d5e51d98cd199074`. It is the sole ACTIVE one-query read-only trace. The
+exact query must return exactly one `SpdAnalysis` definition and one `ProjectSpec` definition in no
+more than two files; missing/duplicate/nested/non-class aliases or over-cap results fail closed, and
+any future owner field outside those definitions stops without expansion. No payload/accuracy/causal
+or production claim follows from a passing definition query. Conditional storage direction only: if
+the owner trace passes, version/extend the existing raw-spatial asset to schema v3 with existing
+SQLite/hash/resource helpers; no second attachment or new physics solver, and a new opt-in profile
+rejects v2/missing physical tables fail-closed while the historical path remains unchanged. Standing
+preapproval permits only the
+next bounded repo-local source/design/code/test step after review until further command or Usage Guard
+50%; production, old-root, release, and broad/full tests remain unauthorized.
 The compact scenario quotient
 stores only schema/status, compiled SQLite stores aggregate `finite_parallel_rl` links/count/
 R/L/owners without source series terms, segments, or `physical_model_status`, and the
