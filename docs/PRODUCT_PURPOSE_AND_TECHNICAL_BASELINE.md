@@ -1,10 +1,10 @@
 # SPD Decap PI Evaluator 목적·기술 기준
 
 - 적용 제품: **SPD Decap PI Evaluator v0.23.0**
-- 문서 버전: **1.75**
+- 문서 버전: **1.76**
 - W5 approved/machine-frozen source-before: `main` commit `027ac7a09a3eded15f45c41860945f9d4c7f488d`
-- 상태: **G0 기준 문서** — full execution history and sole ACTIVE authority live in `WORK_EXECUTION_BASELINE.md` recovery/register; W5 DONE; W6-BASE 260729 numerical FAIL; W7-PHYS BLOCKED; raw-spatial chain: 17AR DONE, 17AS DONE-negative, 17AT BLOCKED/implementation REJECT, 17AU DONE (location evidence), 17AV BLOCKED/STOP, 17AW DONE (location evidence), 17AX BLOCKED/STOP, 17AY ACTIVE.
-- 현재 권위 상태: sole ACTIVE 17AY authorizes exactly one PowerShell definition query for `build_layerwise_uniform_source_model`; exactly 2 lines/1 file, target then next top-level def, span<=400; errors/duplicate/no-next/over-span => STOP; location only, no file read/code/test/solver/production/accuracy claim.
+- 상태: **G0 기준 문서** — full execution history and sole ACTIVE authority live in `WORK_EXECUTION_BASELINE.md` recovery/register; W5 DONE; W6-BASE 260729 numerical FAIL; W7-PHYS BLOCKED; raw-spatial chain: 17AR DONE, 17AS DONE-negative, 17AT BLOCKED/implementation REJECT, 17AU DONE (location evidence), 17AV BLOCKED/STOP, 17AW DONE (location evidence), 17AX BLOCKED/STOP, 17AY DONE (location evidence), 17AZ ACTIVE.
+- 현재 권위 상태: sole ACTIVE 17AZ authorizes exactly one read of `layerwise_network.py` lines5432-5605 (174); questions cover raw-v3 loader/require/hash, attachments, substrate/source-model composition, cache/resource/cancel, replacement/no-double-counting, and delegates; absent/delegate-owned v3/replacement/nullspace/Zii => STOP; no code/test/solver/production/profile/accuracy/causal claim.
 - 최종 개정: 2026-08-26 (Asia/Seoul)
 
 ## 1. 문서 역할과 권위
@@ -737,9 +737,10 @@ started mid-signature/function name and ended mid termination exception/comment/
 PowerShell once exit0, exactly 2 lines/1 file (`evaluation.py:2325 def _builder_preflight_blockers`,
 `2501` next def), span176<=240. 17AX is BLOCKED/STOP (source-classified preflight-only): raw-v3
 loader/requireTrue, replacement, nullspace/gauge, and rail-order Zii are absent/delegate-owned; no
-implementation approval. Sole ACTIVE successor is 17AY
-`W7-PHYS-W6-LAYERWISE-SOURCE-MODEL-OWNER-BOUNDARY-DISCOVERY`, one exact definition query only; no
-code/test/solver/production/profile/accuracy/causal claim.
+implementation approval. 17AY is DONE (location evidence) at clean main `ab36421d41146613574fa65538efa0695adb398a`:
+exact query once exit0, 2 lines/1 file, span174<=400. Sole ACTIVE successor is 17AZ
+`W7-PHYS-W6-LAYERWISE-SOURCE-MODEL-OWNER-TRACE`, one exact 174-line read only; no code/test/solver/
+production/profile/accuracy/causal claim.
 The frozen contract keeps v2 constants/API byte-identical and adds a schema-v3 sibling: compiler
 keyword-only `include_plane_sheet_payload=False`, validator keyword-only `require_plane_sheet_payload=False`,
 opt-in no downgrade, exactly five normalized tables (`plane_primitives`, `vertices`, `circles`,
@@ -852,5 +853,6 @@ and the exact Git HEAD are frozen together. Current trust identities: base `d43b
 | 1.73 | 2026-08-26 | clean-main HEAD `03b3d06b5a24686b64bd03a247cd8988d70ce402`의 17AV exact2330-2449 read truncation STOP을 기록하고 17AW evaluation-owner boundary discovery를 sole ACTIVE로 지정. |
 | 1.74 | 2026-08-26 | clean-main HEAD `24382198a02c01cb9720b02148784d1b57abf33c`의 17AW exact PowerShell exit0(2 lines/1 file, span176) location evidence를 기록하고 17AX builder-preflight owner trace를 sole ACTIVE로 지정. |
 | 1.75 | 2026-08-26 | clean-main HEAD `8d1be41756c263d382eed7809681b2e7501311d2`의 17AX exact2325-2500 preflight-only STOP을 기록하고 17AY layerwise source-model owner-boundary discovery를 sole ACTIVE로 지정. |
+| 1.76 | 2026-08-26 | clean-main HEAD `ab36421d41146613574fa65538efa0695adb398a`의 17AY exact query exit0(2 lines/1 file, span174) location evidence를 기록하고 17AZ layerwise source-model owner trace를 sole ACTIVE로 지정. |
 | 1.1 | 2026-08-24 | `WORK_EXECUTION_BASELINE.md`를 두 번째 canonical 문서로 연결. |
 | 1.0 | 2026-08-24 | v0.24 계획 중심의 Distribution–solver PRD를 제품 전체의 목적·기술 기준으로 개정. PowerSI 정확성 우선, 상태 어휘, 기술 경계, promotion gate, 검증 비용 통제와 two-document 작업 방식을 고정. |

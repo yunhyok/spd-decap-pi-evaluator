@@ -1,11 +1,11 @@
 # SPD Decap PI Evaluator 작업 기준
 
 - 적용 제품: **SPD Decap PI Evaluator v0.23.0**
-- 문서 버전: **1.76**
-- 상위 기준: [목적·기술 기준](PRODUCT_PURPOSE_AND_TECHNICAL_BASELINE.md) v1.75
+- 문서 버전: **1.77**
+- 상위 기준: [목적·기술 기준](PRODUCT_PURPOSE_AND_TECHNICAL_BASELINE.md) v1.76
 - W6-BASE source-before: clean `main` HEAD `fb36288781dcc0b884950ef5a486c474090ceebd`; this is the exact source boundary for the completed one-run evidence
-- 상태: **APPROVED/MACHINE-FROZEN CONTROL DOCUMENT**; full phase/item history lives in the register and changelog; W5 DONE; W6-BASE 260729 numerical FAIL; W7-PHYS BLOCKED; 17AX BLOCKED/STOP; 17AY ACTIVE.
-- 현재 권위 상태: sole ACTIVE 17AY authorizes exactly one PowerShell definition query on `src/spd_decap_pi/_core/solver/layerwise_network.py` for `build_layerwise_uniform_source_model`; gate exactly 2 lines/1 file (target then next top-level, span<=400); errors/parse/duplicate/no-next/over-span => STOP; no file/range/code/test/solver/production/accuracy execution.
+- 상태: **APPROVED/MACHINE-FROZEN CONTROL DOCUMENT**; full phase/item history lives in the register and changelog; W5 DONE; W6-BASE 260729 numerical FAIL; W7-PHYS BLOCKED; 17AX BLOCKED/STOP; 17AY DONE (location evidence); 17AZ ACTIVE.
+- 현재 권위 상태: sole ACTIVE 17AZ authorizes exactly one read of `src/spd_decap_pi/_core/solver/layerwise_network.py` lines5432-5605 (174); questions raw-v3 loader/require/hash, attachments, substrate/source-model composition, cache/resource/cancel, replacement/no-double-counting, delegates; absent/delegate-owned v3/replacement/nullspace/Zii => STOP; no file/range/code/test/solver/production/profile/accuracy execution.
 - 최종 개정: 2026-08-26 (Asia/Seoul)
 
 ## 1. 압축 후 즉시 복구 카드
@@ -17,15 +17,15 @@ context가 압축되거나 새 session에서 작업을 재개하면 다른 연�
 |---|---|
 | 변하지 않는 목적 | source-derived single-rail `Zii`의 PowerSI 근접 정확성과 일반화 |
 | 현재 branch | `main`만 사용; 정리된 과거 branch를 다시 조사하지 않음 |
-| 현재 active work item | `W7-PHYS-W6-LAYERWISE-SOURCE-MODEL-OWNER-BOUNDARY-DISCOVERY` |
-| 다음 권장 묶음 | `W7-PHYS-W6-LAYERWISE-SOURCE-MODEL-OWNER-BOUNDARY-DISCOVERY` (ACTIVE; one exact owner query) |
-| current authorization | 17AX BLOCKED/STOP (source-classified preflight-only): exact2325-2500 once; raw-v3 loader/requireTrue, replacement, nullspace/gauge, rail-order Zii absent/delegate-owned; no implementation approval. Sole ACTIVE 17AY authorizes one exact PowerShell definition query; no file read/range/code/test/solver/production/accuracy execution. |
+| 현재 active work item | `W7-PHYS-W6-LAYERWISE-SOURCE-MODEL-OWNER-TRACE` |
+| 다음 권장 묶음 | `W7-PHYS-W6-LAYERWISE-SOURCE-MODEL-OWNER-TRACE` (ACTIVE; one exact 174-line read) |
+| current authorization | 17AY DONE (location evidence): exact query once exit0, 2 lines/1 file; layerwise_network.py5432 target def,5606 next def,span174<=400. Sole ACTIVE 17AZ authorizes one read layerwise_network.py5432-5605 (174); no other source/range/code/test/solver/production/profile/accuracy execution. |
 | 17T command A | `rg -n --no-heading --color never --glob '*.py' '\bcompile_raw_spatial_contact_asset\b' 'src/spd_decap_pi'` |
 | 17T command B | `rg -n --no-heading --color never --glob '*.py' '\b(?:resolve_solver_profile|numerical_worker_count|build_layerwise_uniform_source_model)\b' 'src/spd_decap_pi'` |
 | 17T command C | `rg -n --no-heading --color never --glob '*.py' '\b(?:GLOBAL_KRON|SurfacePatchDifferentialProjection|SurfacePatchFinitePortProjection|assemble_differential_admittance|differential_projection)\b' 'src/spd_decap_pi'` |
 | consumed 17M discovery | canonical rg ran once (exit 0), found candidate symbols only; no reuse or production proof |
 | future production invariant (not current authority) | if a future run is authorized: exact clean `main`, new output root, one run/no retry; B correlation is historical evidence; C/D consumed their exactly-one old candidate/import reads; E had one production diagnostic invocation plus one orchestration ZIP read; old root remains forbidden for W6-BASE output/scoring/retry/mutation |
-| 고비용 검증 권한 | none; only the low-cost bounded 17AY owner query is authorized, with no file read/range/code/test/production execution |
+| 고비용 검증 권한 | none; only the low-cost bounded 17AZ 174-line read is authorized, with no other source/range/code/test/production execution |
 | 현재 정확성 상태 | `260729 retrospective FAIL`; unseen/generalization remains `unknown / not_run` |
 | 현재 release 계산 증거 | W6-BASE 260729 completed numerical FAIL; offline verifier exit 2 (integrity-valid) |
 | W6-BASE result root | `D:\SPD-Decap-PI-Evaluator-W6\fb36288781dcc0b884950ef5a486c474090ceebd\260729` — manifest `2b14f90e762abc49833518137812e8fc97fcde0e9c145795b7384210cfd9f5de`, sidecar `0d103e0ad47df80641fac0952a35a6eaa56cc9fdb71be24661903e451926e932`, correlation `969e40046e3a099d09557ba7500693460362336d76b067962436bd3b5177abc4` |
@@ -183,7 +183,8 @@ root, one-run/no-retry 조건을 다시 확정할 때만 고려한다.
 | `W7-PHYS-W6-RAW-SPATIAL-V3-EVALUATION-HANDOFF-CALLSITE-TRACE` | 17AV | BLOCKED/STOP | trace the evaluation handoff callsite | exact read2330-2449 once; start mid-signature/function name and end mid termination exception/comment/downstream; no extension. Profile/per-rail cancel/report, attachments→build_evaluation_project, layerwise branch/template/build inputs, and termination factory start are proven; enclosing owner/full signature, termination+solver+return/error boundary, raw v3 loader/hash-bound ownership unproven; no code/test/claims |
 | `W7-PHYS-W6-RAW-SPATIAL-V3-EVALUATION-OWNER-BOUNDARY-DISCOVERY` | 17AW | DONE (location evidence) | discover evaluation owner boundary | clean main `24382198a02c01cb9720b02148784d1b57abf33c`; exact PowerShell once exit0, exactly 2 lines/1 file: evaluation.py2325 `def _builder_preflight_blockers`, 2501 next def; span176<=240 |
 | `W7-PHYS-W6-PLANE-SHEET-BUILDER-PREFLIGHT-OWNER-TRACE` | 17AX | BLOCKED/STOP | trace builder preflight owner | exact2325-2500 once complete owner; dry-build blocker collector; profile/cancel/attachments/source-model/termination/error-to-blockers proven; raw-v3 loader/requireTrue, replacement, nullspace/gauge, rail-order Zii absent/delegate-owned; no implementation approval |
-| `W7-PHYS-W6-LAYERWISE-SOURCE-MODEL-OWNER-BOUNDARY-DISCOVERY` | 17AY | ACTIVE | discover layerwise source-model owner boundary | exact once PowerShell definition query on `src/spd_decap_pi/_core/solver/layerwise_network.py`; exactly 2 lines/1 file, target `build_layerwise_uniform_source_model` then next top-level def, span<=400; error/parse/duplicate/no-next/over-span => STOP; location only, no file read/code/test/solver/production/accuracy claim |
+| `W7-PHYS-W6-LAYERWISE-SOURCE-MODEL-OWNER-BOUNDARY-DISCOVERY` | 17AY | DONE (location evidence) | discover layerwise source-model owner boundary | clean main `ab36421d41146613574fa65538efa0695adb398a`; exact query once exit0, 2 lines/1 file: layerwise_network.py5432 target def,5606 next def, span174<=400 |
+| `W7-PHYS-W6-LAYERWISE-SOURCE-MODEL-OWNER-TRACE` | 17AZ | ACTIVE | trace layerwise source-model owner | exactly one read `src/spd_decap_pi/_core/solver/layerwise_network.py` lines5432-5605 (174); require raw-v3 loader/require/hash, attachments, substrate/source-model, cache/cancel, replacement/no-double-counting, delegates; absent/delegate-owned v3/replacement/nullspace/Zii => STOP; no code/test/solver/production/profile/accuracy/causal claim |
 | `W7-PHYS-PROSPECTIVE-RUNTIME-TERM-EVIDENCE` | next candidate | BLOCKED/YAGNI | provide a grounded runtime term digest/count/owner partition only after an independently selected physical change | new candidate/HEAD/root, one run/no retry; no current authority |
 | `W8-REL` | 18 | BLOCKED | completed known-case solve를 release gate에 연결하고 최종 전달 | accuracy/product gate와 exact release commit 필요 |
 | `D-DIST` | - | DEFERRED | Distribution routing/DRC scope 확대 | 사용자가 implementation-ready/DRC 목표로 승격할 때만 |
@@ -841,7 +842,7 @@ Base clean main HEAD는 `94df6d30cb1b6e8e1be686e311e7ebaa2e96e6b9`이며, exact 
 
 Budget는 <=40 lines 및 <=6 files였고 17 lines/5 files로 통과했다. compiler symbol을 참조한
 유일한 file은 `tests/test_raw_spatial_contact_compiler.py`이며 나머지는 builder/validator-only다.
-17Z는 DONE으로 닫고, 17AA와 17AA-S1은 historical BLOCKED로 남기며 17AA-S2는 test-gate PASS DONE으로 닫는다. 17AB는 DONE, 17AC는 source-classified STOP/BLOCKED로 닫고 17AD는 DONE으로 닫는다. 17AE는 source-location boundary evidence DONE으로 닫고 17AF는 DONE으로 닫는다. 17AG는 integration-gap evidence DONE으로 닫고, 17AH는 bounded location evidence DONE으로 닫는다. 17AI는 gate STOP/BLOCKED로 닫고 17AJ는 deterministic owner-location evidence DONE으로 닫는다. 17AK는 source-classified endpoint STOP/BLOCKED로 닫고 17AL은 source-classified test gap DONE으로 닫는다. 17AM은 DONE, 17AN은 test-gate PASS DONE으로 닫고, 17AO는 location evidence DONE으로 닫는다. 17AP는 source-classified caller trace DONE으로 닫고, 17AQ는 source-classified test-seam STOP/BLOCKED로 닫는다. 17AR는 one-file GUI opt-in activation DONE으로 닫고 17AS는 DONE-negative producer-active/no-solver-consumer로 닫는다. 17AT는 BLOCKED/implementation REJECT, 17AU는 DONE(location evidence), 17AV는 BLOCKED/STOP, 17AW는 DONE(location evidence), 17AX는 BLOCKED/STOP(source-classified preflight-only)으로 닫고, ACTIVE는 `W7-PHYS-W6-LAYERWISE-SOURCE-MODEL-OWNER-BOUNDARY-DISCOVERY`(17AY)로 지정한다.
+17Z는 DONE으로 닫고, 17AA와 17AA-S1은 historical BLOCKED로 남기며 17AA-S2는 test-gate PASS DONE으로 닫는다. 17AB는 DONE, 17AC는 source-classified STOP/BLOCKED로 닫고 17AD는 DONE으로 닫는다. 17AE는 source-location boundary evidence DONE으로 닫고 17AF는 DONE으로 닫는다. 17AG는 integration-gap evidence DONE으로 닫고, 17AH는 bounded location evidence DONE으로 닫는다. 17AI는 gate STOP/BLOCKED로 닫고 17AJ는 deterministic owner-location evidence DONE으로 닫는다. 17AK는 source-classified endpoint STOP/BLOCKED로 닫고 17AL은 source-classified test gap DONE으로 닫는다. 17AM은 DONE, 17AN은 test-gate PASS DONE으로 닫고, 17AO는 location evidence DONE으로 닫는다. 17AP는 source-classified caller trace DONE으로 닫고, 17AQ는 source-classified test-seam STOP/BLOCKED로 닫는다. 17AR는 one-file GUI opt-in activation DONE으로 닫고 17AS는 DONE-negative producer-active/no-solver-consumer로 닫는다. 17AT는 BLOCKED/implementation REJECT, 17AU는 DONE(location evidence), 17AV는 BLOCKED/STOP, 17AW는 DONE(location evidence), 17AX는 BLOCKED/STOP(source-classified preflight-only), 17AY는 DONE(location evidence)으로 닫고, ACTIVE는 `W7-PHYS-W6-LAYERWISE-SOURCE-MODEL-OWNER-TRACE`(17AZ)로 지정한다.
 
 ### 17AA. W7-PHYS-W6-RAW-SPATIAL-ASSET-V3-EMISSION (BLOCKED; test-gate)
 
@@ -1129,12 +1130,20 @@ exact2325-2500 read completed the owner, dry-build blocker collector, profile/ca
 termination/error-to-blockers path, but raw-v3 loader/requireTrue, replacement, nullspace/gauge, and rail-order
 Zii are absent or delegate-owned. No implementation approval.
 
-### 17AY. W7-PHYS-W6-LAYERWISE-SOURCE-MODEL-OWNER-BOUNDARY-DISCOVERY (ACTIVE)
+### 17AY. W7-PHYS-W6-LAYERWISE-SOURCE-MODEL-OWNER-BOUNDARY-DISCOVERY (DONE; location evidence)
 
 Run exactly once the frozen PowerShell definition query on `src/spd_decap_pi/_core/solver/layerwise_network.py`.
 Gate: exactly 2 lines/1 file, target `build_layerwise_uniform_source_model` then next top-level definition,
 span<=400; error/parse/duplicate/no-next/over-span => STOP. Location only; no file read/code/test/solver/
-production/accuracy claim.
+production/accuracy claim. At clean main `ab36421d41146613574fa65538efa0695adb398a`, the exact query ran once exit0 with 2 lines/1 file: target def line5432 and next def line5606; span174<=400. Location evidence only.
+
+### 17AZ. W7-PHYS-W6-LAYERWISE-SOURCE-MODEL-OWNER-TRACE (ACTIVE)
+
+Authorize exactly one read of `src/spd_decap_pi/_core/solver/layerwise_network.py` lines5432-5605 (174).
+Questions: raw-v3 loader/require/hash; attachment ownership; substrate/source-model composition; cache/resource/
+cancellation; replacement of existing Maxwell C + ideal same-layer plane without Via/termination double count;
+and return/delegates. Missing or delegate-owned v3/replacement/nullspace/Zii contract => STOP/source-classified
+BLOCKED; no range/file expansion and no code/test/solver/production/profile/accuracy/causal claim.
 ## 20. 변경 기록
 
 | 문서 버전 | 날짜 | 변경 |
@@ -1216,3 +1225,4 @@ production/accuracy claim.
 | 1.74 | 2026-08-26 | clean-main HEAD `03b3d06b5a24686b64bd03a247cd8988d70ce402`의 17AV exact2330-2449 read truncation STOP을 기록하고 17AW evaluation-owner boundary discovery를 sole ACTIVE로 지정. |
 | 1.75 | 2026-08-26 | clean-main HEAD `24382198a02c01cb9720b02148784d1b57abf33c`의 17AW exact PowerShell exit0(2 lines/1 file, span176) location evidence를 기록하고 17AX builder-preflight owner trace를 sole ACTIVE로 지정. |
 | 1.76 | 2026-08-26 | clean-main HEAD `8d1be41756c263d382eed7809681b2e7501311d2`의 17AX exact2325-2500 preflight-only STOP을 기록하고 17AY layerwise source-model owner-boundary discovery를 sole ACTIVE로 지정. |
+| 1.77 | 2026-08-26 | clean-main HEAD `ab36421d41146613574fa65538efa0695adb398a`의 17AY exact query exit0(2 lines/1 file, span174) location evidence를 기록하고 17AZ layerwise source-model owner trace를 sole ACTIVE로 지정. |
