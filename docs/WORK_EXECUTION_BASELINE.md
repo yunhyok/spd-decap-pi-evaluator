@@ -1,10 +1,10 @@
 # SPD Decap PI Evaluator 작업 기준
 
 - 적용 제품: **SPD Decap PI Evaluator v0.23.0**
-- 문서 버전: **1.24**
-- 상위 기준: [목적·기술 기준](PRODUCT_PURPOSE_AND_TECHNICAL_BASELINE.md) v1.23
+- 문서 버전: **1.25**
+- 상위 기준: [목적·기술 기준](PRODUCT_PURPOSE_AND_TECHNICAL_BASELINE.md) v1.24
 - W6-BASE source-before: clean `main` HEAD `fb36288781dcc0b884950ef5a486c474090ceebd`; this is the exact source boundary for the completed one-run evidence
-- 상태: **APPROVED/MACHINE-FROZEN CONTROL DOCUMENT — W5 DONE; W6-BLOCK-A DONE; W6-BLOCK-B BLOCKED; W6-BLOCK-C DONE; W6-BLOCK-D DONE; W6-BLOCK-E DONE; W6-BASE DONE (260729 numerical FAIL); W7-PHYS-AUDIT-MOUNTED-PATH DONE (negative/unclassified); W7-PHYS-OWNER-TERMINAL-VIA-VS-SPATIAL DONE (negative/evidence-unavailable); W7-PHYS-EVIDENCE-MISSING-PATH-COVERAGE DONE (negative/evidence-unavailable); W7-PHYS-PRODUCTION-VIA-ROUTE-SOURCE-TRACE DONE (source-classified raw-base/global finite-route ownership; local calibrated half-branches not selected; mixed ownership fail-closed); W7-PHYS-RAW-FINITE-VIA-RL-GENERATION-TRACE DONE (producer unclassified, high confidence); W7-PHYS-GROUND-REACHABILITY-RL-PRODUCER-TRACE DONE (producer delegated/unclassified, high confidence); W7-PHYS-VIA-SEGMENT-RL-MODEL-TRACE DONE (source-classified model; conditional multi-segment caller-contract bug confirmed; W6 exposure unknown); W7-PHYS-MULTISEGMENT-RL-CALLER-FIX BLOCKED; W7-PHYS BLOCKED; ACTIVE NONE**
+- 상태: **APPROVED/MACHINE-FROZEN CONTROL DOCUMENT — W5 DONE; W6-BLOCK-A DONE; W6-BLOCK-B BLOCKED; W6-BLOCK-C DONE; W6-BLOCK-D DONE; W6-BLOCK-E DONE; W6-BASE DONE (260729 numerical FAIL); W7-PHYS-AUDIT-MOUNTED-PATH DONE (negative/unclassified); W7-PHYS-OWNER-TERMINAL-VIA-VS-SPATIAL DONE (negative/evidence-unavailable); W7-PHYS-EVIDENCE-MISSING-PATH-COVERAGE DONE (negative/evidence-unavailable); W7-PHYS-PRODUCTION-VIA-ROUTE-SOURCE-TRACE DONE (source-classified raw-base/global finite-route ownership; local calibrated half-branches not selected; mixed ownership fail-closed); W7-PHYS-RAW-FINITE-VIA-RL-GENERATION-TRACE DONE (producer unclassified, high confidence); W7-PHYS-GROUND-REACHABILITY-RL-PRODUCER-TRACE DONE (producer delegated/unclassified, high confidence); W7-PHYS-VIA-SEGMENT-RL-MODEL-TRACE DONE (source-classified model; conditional multi-segment caller-contract bug confirmed; W6 exposure unknown); W7-PHYS-MULTISEGMENT-RL-CALLER-FIX ACTIVE; W7-PHYS BLOCKED**
 - 최종 개정: 2026-08-25 (Asia/Seoul)
 
 ## 1. 압축 후 즉시 복구 카드
@@ -16,11 +16,11 @@ context가 압축되거나 새 session에서 작업을 재개하면 다른 연�
 |---|---|
 | 변하지 않는 목적 | source-derived single-rail `Zii`의 PowerSI 근접 정확성과 일반화 |
 | 현재 branch | `main`만 사용; 정리된 과거 branch를 다시 조사하지 않음 |
-| 현재 active work item | `NONE` |
-| 다음 권장 묶음 | `W7-PHYS-MULTISEGMENT-RL-CALLER-FIX` BLOCKED; new code+test authority and exact test-file whitelist required |
-| current authorization | 17G one-file V0 and Sol review complete; no active technical authority |
+| 현재 active work item | `W7-PHYS-MULTISEGMENT-RL-CALLER-FIX` |
+| 다음 권장 묶음 | `W7-PHYS-MULTISEGMENT-RL-CALLER-FIX` ACTIVE; bounded V0 read only |
+| current authorization | user-approved code+test authority for `src/spd_decap_pi/_core/io/spd.py` and `tests/test_io_spd.py`; one bounded V0 read, then focused review gate |
 | future production invariant (not current authority) | if a future run is authorized: exact clean `main`, new output root, one run/no retry; B correlation is historical evidence; C/D consumed their exactly-one old candidate/import reads; E had one production diagnostic invocation plus one orchestration ZIP read; old root remains forbidden for W6-BASE output/scoring/retry/mutation |
-| 고비용 검증 권한 | none; no source/artifact/Python/import/test/solver/production work is active |
+| 고비용 검증 권한 | none; only the bounded two-file source V0 is active; no artifact/Python/import/solver/production execution is authorized |
 | 현재 정확성 상태 | `260729 retrospective FAIL`; unseen/generalization remains `unknown / not_run` |
 | 현재 release 계산 증거 | W6-BASE 260729 completed numerical FAIL; offline verifier exit 2 (integrity-valid) |
 | W6-BASE result root | `D:\SPD-Decap-PI-Evaluator-W6\fb36288781dcc0b884950ef5a486c474090ceebd\260729` — manifest `2b14f90e762abc49833518137812e8fc97fcde0e9c145795b7384210cfd9f5de`, sidecar `0d103e0ad47df80641fac0952a35a6eaa56cc9fdb71be24661903e451926e932`, correlation `969e40046e3a099d09557ba7500693460362336d76b067962436bd3b5177abc4` |
@@ -131,7 +131,7 @@ root, one-run/no-retry 조건을 다시 확정할 때만 고려한다.
 | `W7-PHYS-RAW-FINITE-VIA-RL-GENERATION-TRACE` | 17E | DONE (producer unclassified; high confidence) | six-file producer call-chain/source trace | reachability-produced fields and exact handoff are bound; producer formula/unit conversion and runtime binding remain unknown; no physics/accuracy claim |
 | `W7-PHYS-GROUND-REACHABILITY-RL-PRODUCER-TRACE` | 17F | DONE (producer delegated/unclassified; high confidence) | `recover_spd_ground_reachability` geometry/provenance and R/L handoff trace | local R/L formula/fallback absent; delegate `src/spd_decap_pi/_core/via_model.py::estimate_via_segment_rl`; multi-segment/full-span contract unresolved; no accuracy/physics claim |
 | `W7-PHYS-VIA-SEGMENT-RL-MODEL-TRACE` | 17G | DONE (source-classified model; conditional caller-contract bug confirmed) | one-file R/L equation/policy trace plus caller handoff review | W6 exposure unknown; no accuracy/physics owner claim |
-| `W7-PHYS-MULTISEGMENT-RL-CALLER-FIX` | 17H | BLOCKED | estimate each persisted segment with its own length/start/end and preserve existing term aggregation | proposed production file `src/spd_decap_pi/_core/io/spd.py`; exact test-file whitelist not yet identified; no code/test/solver/production authority |
+| `W7-PHYS-MULTISEGMENT-RL-CALLER-FIX` | 17H | ACTIVE | bounded V0 of each persisted segment plus focused regression | exact whitelist `src/spd_decap_pi/_core/io/spd.py`, `tests/test_io_spd.py`; no runtime/solver/production authority |
 | `W8-REL` | 18 | BLOCKED | completed known-case solve를 release gate에 연결하고 최종 전달 | accuracy/product gate와 exact release commit 필요 |
 | `D-DIST` | - | DEFERRED | Distribution routing/DRC scope 확대 | 사용자가 implementation-ready/DRC 목표로 승격할 때만 |
 | `D-DOC` | - | DEFERRED | README와 동결 연구 배너 정리 | current work를 방해할 때 별도 문서 묶음으로 처리 |
@@ -627,15 +627,16 @@ first-segment length+full-endpoint 전달로 조건부 caller-contract bug를 �
 W6 exposure는 unknown이다. 검증 예산은 source V0 정확히 1회와 Sol review 정확히
 1회이고, Python/import/test/solver/artifact/raw-SPD 실행과 수치 재계산은 0회다.
 
-## 19. W7-PHYS-MULTISEGMENT-RL-CALLER-FIX (BLOCKED)
+## 19. W7-PHYS-MULTISEGMENT-RL-CALLER-FIX (ACTIVE)
 
-17H는 새 code+test authority 후 `src/spd_decap_pi/_core/io/spd.py`에서 각 persisted
-segment의 length/start/end로 `estimate_via_segment_rl`을 호출하고, unequal adjacent
-2-segment 결과가 두 direct one-segment estimates의 합과 같고 first-only 결과와 달라야
-하며, one-segment 결과는 불변이어야 한다. 기존 classifier/legacy fallback과 term의
-R/L/length 합산을 보존하고, failure는 incomplete로 닫는다. exact test-file whitelist는
-아직 식별하지 않았으며, focused evidence+review+new gate 전에는 artifact/raw-SPD/
-solver/production 실행이 금지된다.
+17H는 사용자 승인 code+test authority 아래 두 파일을 bounded read/edit한다. Sol static
+review가 정확히 1회 ACCEPT한 뒤에만 다음 명령을 정확히 1회 실행한다:
+`python -m pytest -q tests/test_io_spd.py::test_ground_reachability_multisegment_via_sums_each_segment_rl`.
+PASS면 commit하고, FAIL이면 즉시 중단하며 rerun하지 않는다. unequal adjacent 2-segment
+결과는 두 real direct one-segment estimates의 합과 같고 first-only 결과와 달라야 하며,
+one-segment 결과는 불변이어야 한다. 어떤 segment failure도 incomplete/no partial이어야
+하고 classifier/legacy fallback 및 term의 R/L/length/count/owner 동작은 보존한다.
+그 전후 artifact/raw-SPD/solver/production 실행은 금지된다.
 
 ## 20. 변경 기록
 
@@ -666,3 +667,4 @@ solver/production 실행이 금지된다.
 | 1.22 | 2026-08-25 | 17F one-file V0/Sol review를 delegated/unclassified로 종료하고 active NONE, 17G via-segment R/L model trace를 BLOCKED로 등록. |
 | 1.23 | 2026-08-25 | 사용자 one-file 승인으로 17G via-segment R/L model trace를 유일한 ACTIVE read-only item으로 지정하고 방정식·단위·다중 segment 완료 기준을 고정. |
 | 1.24 | 2026-08-25 | 17G를 source-classified model 및 조건부 caller-contract bug 확인으로 종료하고 active NONE, 17H multisegment caller fix 후보를 BLOCKED로 지정. |
+| 1.25 | 2026-08-25 | 사용자 code+test authority로 17H multisegment caller fix를 두 파일 bounded V0의 유일한 ACTIVE item으로 지정. |

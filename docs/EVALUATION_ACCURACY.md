@@ -556,9 +556,11 @@ approval activated 17G. The completed 17G one-file V0+Sol review bound sigma `5.
 hollow/solid area policies, R/L equations, fallback, and Ω/H outputs. It confirmed a
 conditional caller-contract bug: `spd.py` may construct multiple segments without a
 len-one guard, then passes `segments[0].length_um` with full endpoints; W6 exposure is
-unknown. This is not an accuracy or causal-owner claim. ACTIVE is NONE. The next
-`W7-PHYS-MULTISEGMENT-RL-CALLER-FIX` is BLOCKED pending new code+test authority and an
-exact test-file whitelist; no production/solver/PowerSI execution is authorized.
+unknown. This is not an accuracy or causal-owner claim. At 17G closure ACTIVE was NONE;
+subsequent approval makes `W7-PHYS-MULTISEGMENT-RL-CALLER-FIX` the sole ACTIVE item under the 2026-08-25
+code+test authority, bounded to `src/spd_decap_pi/_core/io/spd.py` and
+`tests/test_io_spd.py`; its one V0 read and focused review precede any future gate, and
+no production/solver/PowerSI execution is authorized.
 
 Frozen historical v5 validator/policy/fixtures and base benchmark remain byte-identical.
 W6-E atomically rotated the current v6→policy→accuracy-validator→controller trust
