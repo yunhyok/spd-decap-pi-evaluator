@@ -359,10 +359,12 @@ remain byte-identical. The 260804 S92P SHA trailing `b` is a frozen registry typ
 correction, not a recomputation.
 
 W6 production authority is consumed by the completed 260729 numerical FAIL. The prior
-W7 frozen-artifact audit is complete but negative/unclassified; its closure active item
-was NONE. The current active item is the separate
-`W7-PHYS-PRODUCTION-VIA-ROUTE-SOURCE-TRACE` read-only source-trace question, and no further
-technical authority is granted outside that bounded item. A future production rerun requires the
+W7 frozen-artifact audits are complete and negative/unclassified. The completed
+`W7-PHYS-PRODUCTION-VIA-ROUTE-SOURCE-TRACE` source trace classifies ownership as
+raw-base/global finite-route ownership in the v4 scenario network;
+`local_calibrated_via_half_branches` was not selected and mixed ownership is
+fail-closed. This is source-proven with high confidence, not certificate R/L or
+PowerSI accuracy evidence. Active work is now NONE. A future production rerun requires the
 user to activate and complete a new exclusive-owner classification item selecting
 exactly one source-derived block, then exactly one physical change, focused evidence,
 and a new gate. Remote/release/installer, retries, old-root W6-BASE reuse or mutation,
@@ -527,12 +529,15 @@ Coverage was available 0, missing 19,218, trace_NA 0, total 19,218, with state
 classification complete true and coverage complete false. This is path-coverage
 evidence only; it creates no accuracy PASS/FAIL and no owner.
 
-The current active item is `W7-PHYS-PRODUCTION-VIA-ROUTE-SOURCE-TRACE`: a read-only
-static trace of v6/base benchmark → scenario topology → termination manifest to
-classify production Via links as raw-base, local-template, mixed, or unclassified.
-Read only the listed source modules and provenance definitions; no artifact reread,
-numeric recomputation, test/solver/production execution, physics change, or owner
-promotion is allowed. Missing runtime branch binding closes the item unclassified.
+The completed `W7-PHYS-PRODUCTION-VIA-ROUTE-SOURCE-TRACE` used only the listed 11
+source modules and provenance definitions, with no artifact reread, numeric
+recomputation, test/solver/production execution, physics change, or owner promotion.
+The statically bound chain is v6 → base benchmark → `_build_bound_layerwise_source_model`
+→ v4-only termination factory → required v4 certificate → scenario network retaining
+base `finite_parallel_rl` links plus cap-only termination manifest. Local calibrated
+half-branches were not selected; mixed ownership is rejected. The next candidate
+`W7-PHYS-RAW-FINITE-VIA-RL-GENERATION-TRACE` is BLOCKED pending a new source whitelist
+and cannot become ACTIVE automatically.
 
 Frozen historical v5 validator/policy/fixtures and base benchmark remain byte-identical.
 W6-E atomically rotated the current v6→policy→accuracy-validator→controller trust

@@ -1,9 +1,9 @@
 # SPD Decap PI Evaluator 목적·기술 기준
 
 - 적용 제품: **SPD Decap PI Evaluator v0.23.0**
-- 문서 버전: **1.16**
+- 문서 버전: **1.17**
 - W5 approved/machine-frozen source-before: `main` commit `027ac7a09a3eded15f45c41860945f9d4c7f488d`
-- 상태: **G0 기준 문서** — [작업 기준](WORK_EXECUTION_BASELINE.md)과 함께 사용하며, W5 DONE·W6-BLOCK-A DONE·W6-BLOCK-B BLOCKED·W6-BLOCK-C DONE·W6-BLOCK-D DONE·W6-BLOCK-E DONE·W6-BASE DONE (260729 numerical FAIL)·W7-PHYS-AUDIT-MOUNTED-PATH DONE (negative/unclassified)·W7-PHYS-OWNER-TERMINAL-VIA-VS-SPATIAL DONE (negative/evidence-unavailable)·W7-PHYS-EVIDENCE-MISSING-PATH-COVERAGE DONE (negative/evidence-unavailable)·W7-PHYS BLOCKED·W7-PHYS-PRODUCTION-VIA-ROUTE-SOURCE-TRACE ACTIVE
+- 상태: **G0 기준 문서** — [작업 기준](WORK_EXECUTION_BASELINE.md)과 함께 사용하며, W5 DONE·W6-BLOCK-A DONE·W6-BLOCK-B BLOCKED·W6-BLOCK-C DONE·W6-BLOCK-D DONE·W6-BLOCK-E DONE·W6-BASE DONE (260729 numerical FAIL)·W7-PHYS-AUDIT-MOUNTED-PATH DONE (negative/unclassified)·W7-PHYS-OWNER-TERMINAL-VIA-VS-SPATIAL DONE (negative/evidence-unavailable)·W7-PHYS-EVIDENCE-MISSING-PATH-COVERAGE DONE (negative/evidence-unavailable)·W7-PHYS-PRODUCTION-VIA-ROUTE-SOURCE-TRACE DONE (source-classified raw-base/global finite-route ownership; local calibrated half-branches not selected; mixed ownership fail-closed)·W7-PHYS BLOCKED·active NONE
 - 최종 개정: 2026-08-25 (Asia/Seoul)
 
 ## 1. 문서 역할과 권위
@@ -354,10 +354,13 @@ sidecar SHA `0d103e0ad47df80641fac0952a35a6eaa56cc9fdb71be24661903e451926e932`,
 and correlation SHA `969e40046e3a099d09557ba7500693460362336d76b067962436bd3b5177abc4`.
 
 W6 production authority is consumed by the completed 260729 numerical FAIL. The prior
-W7 frozen-artifact audit is complete but negative/unclassified; its closure state was
-active NONE. The current active item is the separate
-`W7-PHYS-PRODUCTION-VIA-ROUTE-SOURCE-TRACE` read-only source-trace question; no further
-technical authority is granted outside that bounded item. A future 260729 production rerun requires
+W7 frozen-artifact audits are complete and negative/unclassified. The completed
+`W7-PHYS-PRODUCTION-VIA-ROUTE-SOURCE-TRACE` static source trace classifies the production
+ownership as raw-base/global finite-route ownership in the v4 scenario network;
+`local_calibrated_via_half_branches` was not selected and mixed ownership is
+fail-closed. Confidence is high and source-proven, but this does not prove certificate
+R/L accuracy, forward/PowerSI accuracy, or a causal terminal-Via error owner. Active work
+is now NONE. A future 260729 production rerun requires
 the user to activate and complete a new exclusive-owner classification item selecting
 exactly one source-derived block, followed by exactly one physical change, focused
 evidence, and a new gate. This does not authorize remote/release/installer work,
@@ -460,10 +463,15 @@ ran exactly once for 82.08s at
 Its JSON is 527477 bytes, SHA-256
 `2816958e48d3713d179d7420834ad9ff97b177ba661848f1646def104c867a14`; all
 19,218 inventoried terminal Vias were missing (available 0, trace_NA 0), so this
-is coverage evidence only and creates no accuracy PASS/FAIL. The sole active item
-is now `W7-PHYS-PRODUCTION-VIA-ROUTE-SOURCE-TRACE`, a read-only static trace of
-the v6/base benchmark → scenario topology → termination manifest source call-chain;
-runtime branch ambiguity closes it unclassified without physics or owner changes.
+is coverage evidence only and creates no accuracy PASS/FAIL. The subsequent
+`W7-PHYS-PRODUCTION-VIA-ROUTE-SOURCE-TRACE` source V0 used only the documented 11
+source files, with no artifact/test/solver/edit execution, and closed source-proven:
+v6 → base benchmark → `_build_bound_layerwise_source_model` → v4-only termination
+factory → required v4 certificate → scenario network → retained base
+`finite_parallel_rl` links plus cap-only termination manifest. Local calibrated
+half-branches were not selected and mixed ownership is rejected. The next candidate,
+`W7-PHYS-RAW-FINITE-VIA-RL-GENERATION-TRACE`, is BLOCKED pending a new explicit
+source whitelist; it is not ACTIVE or auto-started.
 
 Approval basis commit `027ac7a09a3eded15f45c41860945f9d4c7f488d` is distinct from
 the caller-supplied exact current `main` HEAD required at a future W6 invocation;
@@ -501,5 +509,6 @@ and the exact Git HEAD are frozen together. Current trust identities: base `d43b
 | 1.13 | 2026-08-25 | W7 mounted-path audit negative/unclassified 종료, owning block 미분류로 W7-PHYS BLOCKED 및 active NONE. |
 | 1.15 | 2026-08-25 | terminal-Via 감사의 persisted path evidence 누락을 exit 2로 기록하고 W7-PHYS-EVIDENCE-MISSING-PATH-COVERAGE를 새 read-only active item으로 지정. |
 | 1.16 | 2026-08-25 | corrected v2 coverage audit를 negative/evidence-unavailable로 닫고 W7-PHYS-PRODUCTION-VIA-ROUTE-SOURCE-TRACE를 유일한 ACTIVE static-trace item으로 지정. |
+| 1.17 | 2026-08-25 | W7-PHYS-PRODUCTION-VIA-ROUTE-SOURCE-TRACE를 raw-base/global finite-route ownership으로 source-proven 종료하고 active NONE, 다음 producer-trace 후보 BLOCKED로 갱신. |
 | 1.1 | 2026-08-24 | `WORK_EXECUTION_BASELINE.md`를 두 번째 canonical 문서로 연결. |
 | 1.0 | 2026-08-24 | v0.24 계획 중심의 Distribution–solver PRD를 제품 전체의 목적·기술 기준으로 개정. PowerSI 정확성 우선, 상태 어휘, 기술 경계, promotion gate, 검증 비용 통제와 two-document 작업 방식을 고정. |

@@ -1,10 +1,10 @@
 # SPD Decap PI Evaluator 작업 기준
 
 - 적용 제품: **SPD Decap PI Evaluator v0.23.0**
-- 문서 버전: **1.17**
-- 상위 기준: [목적·기술 기준](PRODUCT_PURPOSE_AND_TECHNICAL_BASELINE.md) v1.16
+- 문서 버전: **1.18**
+- 상위 기준: [목적·기술 기준](PRODUCT_PURPOSE_AND_TECHNICAL_BASELINE.md) v1.17
 - W6-BASE source-before: clean `main` HEAD `fb36288781dcc0b884950ef5a486c474090ceebd`; this is the exact source boundary for the completed one-run evidence
-- 상태: **APPROVED/MACHINE-FROZEN CONTROL DOCUMENT — W5 DONE; W6-BLOCK-A DONE; W6-BLOCK-B BLOCKED; W6-BLOCK-C DONE; W6-BLOCK-D DONE; W6-BLOCK-E DONE; W6-BASE DONE (260729 numerical FAIL); W7-PHYS-AUDIT-MOUNTED-PATH DONE (negative/unclassified); W7-PHYS-OWNER-TERMINAL-VIA-VS-SPATIAL DONE (negative/evidence-unavailable); W7-PHYS-EVIDENCE-MISSING-PATH-COVERAGE DONE (negative/evidence-unavailable); W7-PHYS BLOCKED; W7-PHYS-PRODUCTION-VIA-ROUTE-SOURCE-TRACE ACTIVE**
+- 상태: **APPROVED/MACHINE-FROZEN CONTROL DOCUMENT — W5 DONE; W6-BLOCK-A DONE; W6-BLOCK-B BLOCKED; W6-BLOCK-C DONE; W6-BLOCK-D DONE; W6-BLOCK-E DONE; W6-BASE DONE (260729 numerical FAIL); W7-PHYS-AUDIT-MOUNTED-PATH DONE (negative/unclassified); W7-PHYS-OWNER-TERMINAL-VIA-VS-SPATIAL DONE (negative/evidence-unavailable); W7-PHYS-EVIDENCE-MISSING-PATH-COVERAGE DONE (negative/evidence-unavailable); W7-PHYS-PRODUCTION-VIA-ROUTE-SOURCE-TRACE DONE (source-classified raw-base/global finite-route ownership; local calibrated half-branches not selected; mixed ownership fail-closed); W7-PHYS BLOCKED; active NONE**
 - 최종 개정: 2026-08-25 (Asia/Seoul)
 
 ## 1. 압축 후 즉시 복구 카드
@@ -16,11 +16,11 @@ context가 압축되거나 새 session에서 작업을 재개하면 다른 연�
 |---|---|
 | 변하지 않는 목적 | source-derived single-rail `Zii`의 PowerSI 근접 정확성과 일반화 |
 | 현재 branch | `main`만 사용; 정리된 과거 branch를 다시 조사하지 않음 |
-| 현재 active work item | `W7-PHYS-PRODUCTION-VIA-ROUTE-SOURCE-TRACE` (read-only source call-chain trace) |
-| 다음 권장 묶음 | v6/base benchmark→scenario topology→termination manifest source V0 trace 1회 및 Sol independent static review 1회 |
-| current authorization | this static source-trace item only; Sol reviews/Luna writes; no physics, production, score, artifact reread, or retry authority |
+| 현재 active work item | `NONE` |
+| 다음 권장 묶음 | `W7-PHYS-RAW-FINITE-VIA-RL-GENERATION-TRACE` (BLOCKED; 새 source whitelist/user authority 필요) |
+| current authorization | no active technical authority; the completed 17D source trace is evidence only |
 | future production invariant (not current authority) | if a future run is authorized: exact clean `main`, new output root, one run/no retry; B correlation is historical evidence; C/D consumed their exactly-one old candidate/import reads; E had one production diagnostic invocation plus one orchestration ZIP read; old root remains forbidden for W6-BASE output/scoring/retry/mutation |
-| 고비용 검증 권한 | none; static trace only, with production/solver/artifact rerun or new gate requiring a new user decision |
+| 고비용 검증 권한 | none; no static/artifact/solver/production work is active |
 | 현재 정확성 상태 | `260729 retrospective FAIL`; unseen/generalization remains `unknown / not_run` |
 | 현재 release 계산 증거 | W6-BASE 260729 completed numerical FAIL; offline verifier exit 2 (integrity-valid) |
 | W6-BASE result root | `D:\SPD-Decap-PI-Evaluator-W6\fb36288781dcc0b884950ef5a486c474090ceebd\260729` — manifest `2b14f90e762abc49833518137812e8fc97fcde0e9c145795b7384210cfd9f5de`, sidecar `0d103e0ad47df80641fac0952a35a6eaa56cc9fdb71be24661903e451926e932`, correlation `969e40046e3a099d09557ba7500693460362336d76b067962436bd3b5177abc4` |
@@ -127,7 +127,8 @@ root, one-run/no-retry 조건을 다시 확정할 때만 고려한다.
 | `W7-PHYS-AUDIT-MOUNTED-PATH` | 17A | DONE (negative/unclassified) | completed 260729 FAIL artifact의 mounted-path/physical error decomposition | cap-only peak prerequisite 실패; owner null; code/physics 변경 없음 |
 | `W7-PHYS-OWNER-TERMINAL-VIA-VS-SPATIAL` | 17B | DONE (negative/evidence-unavailable) | persisted terminal-Via self-R/L·landing geometry의 exclusive ownership read-only 분류 | target path evidence 누락으로 exit 2/no owner; physics authorization 없음 |
 | `W7-PHYS-EVIDENCE-MISSING-PATH-COVERAGE` | 17C | DONE (diagnostic-complete; negative/evidence-unavailable) | 8,986 selected decaps의 persisted terminal path coverage | available 0/missing 19,218/trace_NA 0; owner null; physics authorization 없음 |
-| `W7-PHYS-PRODUCTION-VIA-ROUTE-SOURCE-TRACE` | 17D | ACTIVE | W6 finite Via links의 단일 source call-chain/ownership 정적 추적 | raw-base/local-template/mixed/unclassified 판정; runtime branch 미결속이면 unclassified; 실행 0 |
+| `W7-PHYS-PRODUCTION-VIA-ROUTE-SOURCE-TRACE` | 17D | DONE | W6 finite Via links의 단일 source call-chain/ownership 정적 추적 | source-classified raw-base/global finite-route ownership (v4 scenario network); local calibrated half-branches not selected; mixed fail-closed; confidence high/source-proven |
+| `W7-PHYS-RAW-FINITE-VIA-RL-GENERATION-TRACE` | 17E | BLOCKED | finite Via R/L producer source를 새 whitelist로 추적 | `src/spd_decap_pi/_core/solver/finite_via_layerwise.py`, `src/spd_decap_pi/layerwise_scenario_topology.py`, `src/spd_decap_pi/layerwise_scenario_adapter.py`, `src/spd_decap_pi/scenario_topology_plan.py`는 certificate R/L을 consume/bind할 뿐 생성하지 않음; producer source authority가 없어 자동 시작 금지 |
 | `W8-REL` | 18 | BLOCKED | completed known-case solve를 release gate에 연결하고 최종 전달 | accuracy/product gate와 exact release commit 필요 |
 | `D-DIST` | - | DEFERRED | Distribution routing/DRC scope 확대 | 사용자가 implementation-ready/DRC 목표로 승격할 때만 |
 | `D-DOC` | - | DEFERRED | README와 동결 연구 배너 정리 | current work를 방해할 때 별도 문서 묶음으로 처리 |
@@ -431,7 +432,7 @@ remote/full suite, installer/release는 수행하지 않았다.
 | `D-004` | W5 이전 제품 PowerSI 수치 합격선은 사용자 승인 전 미확정 | W5에서 superseded; historical decision |
 | `D-005` | 작은 수정마다 전체 검증하지 않고 frozen milestone에서 1회 실행 | 확정 |
 | `D-006` | context 기본 입력은 두 canonical 문서뿐 | 확정 |
-| `D-007` | historical: active code item이 없던 closure 상태에서는 다음 item을 자동 시작하지 않음; 현재는 사용자 선택 `W7-PHYS-PRODUCTION-VIA-ROUTE-SOURCE-TRACE`만 실행 | superseded by current ACTIVE item |
+| `D-007` | historical: active code item이 없던 closure 상태에서는 다음 item을 자동 시작하지 않음; 17D source trace도 종료되어 현재 active item은 없음 | superseded by 17D DONE/17E BLOCKED |
 
 ## 11. 현재 evidence와 비재사용 경계
 
@@ -538,11 +539,11 @@ SHA-256 `2816958e48d3713d179d7420834ad9ff97b177ba661848f1646def104c867a14`,
 VTRIP/0 6788, VTRIP/1 6776, VINT/0 2204, VINT/1 2192, VCPU/0 626,
 VCPU/1 632이며 모든 PWR/GND state가 missing이었다.
 
-## 15. W7-PHYS-PRODUCTION-VIA-ROUTE-SOURCE-TRACE (ACTIVE)
+## 15. W7-PHYS-PRODUCTION-VIA-ROUTE-SOURCE-TRACE (DONE; source-classified)
 
 질문은 persisted terminal path가 모두 missing인 상태에서 W6 finite Via link의
 실제 source ownership이 raw-base finite topology, local terminal template, mixed,
-또는 unclassified 중 무엇인지다. 허용된 읽기 파일은
+또는 unclassified 중 무엇인지였다. 허용된 읽기 파일은
 `scripts/benchmark_raw_spd_powersi_correlation_v6.py`,
 `scripts/benchmark_raw_spd_powersi_correlation.py`,
 `src/spd_decap_pi/evaluation.py`, `src/spd_decap_pi/layerwise_scenario_adapter.py`,
@@ -553,11 +554,21 @@ VCPU/1 632이며 모든 PWR/GND state가 missing이었다.
 `src/spd_decap_pi/_core/solver/finite_via_layerwise.py`,
 `src/spd_decap_pi/_core/solver/layerwise_terminal_proof.py`,
 `src/spd_decap_pi/_core/solver/layerwise_terminal_contact_proof.py`, 및 canonical
-3문서다. 완료 조건은
+3문서다. source V0는 이 11개 파일만 읽고 artifact/test/solver/edit를 실행하지
+않았다. 초기 보수적 unclassified 판단은 independent review에서 source evidence로
+정정되었다. 완료 조건인
 v6 call → `terminal_complete_external_input` → scenario topology → termination
-manifest의 단일 source call-chain과 ownership 표를 static source로 결속하는 것이다;
-실제 runtime branch가 결속되지 않으면 unclassified로 닫는다. artifact 재열람,
-수치 재계산, test/solver/production 실행, physics/owner 변경은 금지한다.
+manifest의 단일 source call-chain과 ownership 표를 static source로 결속하는 것이다.
+`terminal_complete_external_input=True` 단독은 ownership 확정에 불충분하며, required
+v4 certificate와 scenario-network owner invariants가 결합되어 raw-base ownership이
+확정된다;
+결론은 v4 scenario network의 raw-base/global finite-route ownership이며,
+`local_calibrated_via_half_branches`는 선택되지 않았고 mixed ownership은
+`TERMINAL_VIA_OWNERSHIP_CONFLICT`로 fail-closed된다. confidence는 high/source-proven이다.
+이는 certificate R/L accuracy, forward/PowerSI accuracy, 또는 causal terminal-Via
+error owner를 증명하지 않는다. 다음 후보 `W7-PHYS-RAW-FINITE-VIA-RL-GENERATION-TRACE`
+는 현재 consumer/binder만 허용된 상태라 BLOCKED이며, 새 source whitelist/user
+authority 없이는 ACTIVE 또는 자동 시작할 수 없다.
 
 검증 예산은 source V0 정적 추적 1회와 Sol independent static review 1회이며,
 code/test/production 실행은 0회다.
@@ -584,3 +595,4 @@ code/test/production 실행은 0회다.
 | 1.15 | 2026-08-25 | W7-PHYS-OWNER-TERMINAL-VIA-VS-SPATIAL read-only owner-classification item을 ACTIVE로 지정하고 read budget·fail-closed 종료조건을 고정. |
 | 1.16 | 2026-08-25 | terminal target Via path evidence 누락으로 W7 owner 감사가 negative/evidence-unavailable로 종료되어 W7-PHYS-EVIDENCE-MISSING-PATH-COVERAGE를 새 active item으로 지정. |
 | 1.17 | 2026-08-25 | corrected v2 coverage를 17C DONE으로 닫고 W7-PHYS-PRODUCTION-VIA-ROUTE-SOURCE-TRACE를 유일한 ACTIVE static-trace item으로 지정. |
+| 1.18 | 2026-08-25 | 17D source V0를 raw-base/global finite-route ownership으로 source-proven 종료하고 active NONE, 17E producer-trace 후보 BLOCKED로 갱신. |
