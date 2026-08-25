@@ -753,13 +753,19 @@ try/except or product/profile opt-in, upper error handling unproven. No code/tes
 zero output; no rerun; no existing direct `_job_import_spd` test seam; no source/test/code. 17AR is DONE at
 clean main commit `fba20767abfbc357f972f77172f6e7f0a5f67772` (source-before `d20eabf267f06799a4f13caa0dce51357eecd4aa`):
 exactly 1 file/1 insertion `include_plane_sheet_payload=True,` in the GUI call, Sol static ACCEPT, no tests,
-and no solver/production/accuracy claim. Sole ACTIVE successor is
-`W7-PHYS-W6-RAW-SPATIAL-V3-SOLVER-CONSUMER-DISCOVERY` (17AS), authorizing exactly once query
-`rg -n --with-filename --no-heading --color never --glob '*.py' '\b(?:load_raw_spatial_contact_asset|require_plane_sheet_payload)\b' 'src/spd_decap_pi'`.
-Cap max30 lines/6 files; location evidence only, exclude import/definition/export strings, require exactly
-one actual source caller bound to `require_plane_sheet_payload=True` for a later bounded trace; zero actual
-caller => DONE-negative producer/no solver consumer and separately documented integration design; multiple,
-ambiguous, error, or over-budget => STOP. No file open/code/test/production/profile/solver/accuracy/causal claim.
+and no solver/production/accuracy claim. 17AS is DONE-negative at clean main
+`9dba3076b6648e7aeb874c96fa721997e1629bb3`: the exact authorized query ran once with exit0, 6 lines/1 file
+(`raw_spatial_contact_asset.py`); definitions/signatures/guards/exports only, with zero actual
+`require_plane_sheet_payload=True` source callers. Producer active/no solver consumer; no rerun/read/code/
+test/production/PowerSI/accuracy/causal claim. Sole ACTIVE successor is
+`W7-PHYS-W6-RAW-SPATIAL-V3-SOLVER-CONSUMER-INTEGRATION-DESIGN` (17AT), a frozen-evidence-only design pass.
+Candidates are limited to `raw_spatial_contact_asset.py`, `evaluation.py`, `_core/solver/profiles.py`, and
+`_core/solver/layer_surface_network.py`; `surface_patch_plane.py` and `mfdm.py` are reused without reread.
+The pass must resolve owner/opt-in no-fallback profile/loader require flag, hash-bound solve handoff,
+new-profile-only replacement/no-double-counting, differential/nullspace/gauge and rail-order Zii,
+single-worker immutable payload/cache, and minimal whitelist/V1/V2 once-only STOP. Missing contract means
+implementation not approved and a max2-file successor whitelist; no code/test/production/PowerSI/accuracy/
+causal/release claim.
 Contract: v2 constants/API byte-identical; profile/global/app/solver/convergence/policy/controller
 identities unchanged; only the opt-in raw-spatial v3 schema/compiler sibling identity is new. v3 sibling with kw-only opt-in flags, five normalized tables,
 no gap table, positive-intervening-thickness fsum spacing, row/coordinate/ProjectSpec/source-SHA digest,
