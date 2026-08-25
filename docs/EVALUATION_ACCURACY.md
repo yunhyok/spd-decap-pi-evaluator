@@ -651,19 +651,22 @@ trust/resource/determinism/fail-closed behavior is source-proven, but asset asse
 envelope, complete polygon/material/dielectric provenance, and a raw-SPD/full-Scenario-free solve-time
 payload are delegated/unproven; 17U is source-classified BLOCKED. 17V proved only structural
 schema/hash/bounds and certificate-envelope checks; full polygons/material/dielectric fields and a
-solve-ready payload remain absent, so 17V is source-classified BLOCKED. The user then activated
-`W7-PHYS-W6-RAW-PLANE-MATERIAL-SOURCE-DISCOVERY` (17W) under standing preapproval at clean main HEAD
-`bf0dc6be265eb3375a64f510d5e51d98cd199074`. It is the sole ACTIVE one-query read-only trace. The
-exact query must return exactly one `SpdAnalysis` definition and one `ProjectSpec` definition in no
-more than two files; missing/duplicate/nested/non-class aliases or over-cap results fail closed, and
-any future owner field outside those definitions stops without expansion. No payload/accuracy/causal
-or production claim follows from a passing definition query. Conditional storage direction only: if
-the owner trace passes, version/extend the existing raw-spatial asset to schema v3 with existing
-SQLite/hash/resource helpers; no second attachment or new physics solver, and a new opt-in profile
-rejects v2/missing physical tables fail-closed while the historical path remains unchanged. Standing
-preapproval permits only the
-next bounded repo-local source/design/code/test step after review until further command or Usage Guard
-50%; production, old-root, release, and broad/full tests remain unauthorized.
+solve-ready payload remain absent, so 17V is source-classified BLOCKED. 17W then ran once at clean main
+HEAD `43b244909b4bbb03057666a2451b14f2cce566e5`, returned exactly 2 definition lines in 2 files, and
+closed DONE (source-classified); `domain.py` was unread before the query while `spd.py` was prior-17F
+evidence and was not reread. Sole ACTIVE 17X
+`W7-PHYS-W6-PROJECTSPEC-PLANE-MATERIAL-OWNER-TRACE` permits one complete `domain.py` read plus one Sol
+review. Pass requires source-bound full layer/net polygons with units/order/provenance, ordered
+conductor thickness/conductivity, dielectric d/spacing/epsilon/loss/dispersion units/default semantics,
+and a deterministic/hashable compiler handoff; any delegate, silent default, missing provenance/order,
+or incomplete polygon fails closed, and material-only evidence is insufficient. This is a source
+contract trace only, not an accuracy/causal/production claim; schema-v3 remains conditional on pass.
+Frozen 17F `SpdAnalysis` evidence did not prove complete per-layer/net polygon vertices, coordinate
+units, raw-source identity, or preservation; ProjectSpec must supply these directly or the dimension
+stays UNPROVEN. A pass may only conditionally version/extend the existing raw-spatial asset to schema
+v3 with existing SQLite/hash/resource helpers; no second attachment/new solver, v2 or missing physical
+tables fail closed, and the historical path is unchanged. This direction is not proof or implementation
+authority.
 The compact scenario quotient
 stores only schema/status, compiled SQLite stores aggregate `finite_parallel_rl` links/count/
 R/L/owners without source series terms, segments, or `physical_model_status`, and the
