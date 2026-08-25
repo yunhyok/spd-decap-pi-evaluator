@@ -628,17 +628,18 @@ unproven. Sol accepted the fail-closed stop: no fourth read, automatic whitelist
 coding, tests, or execution. User W6 reimplementation authority is recorded but cannot proceed
 without an explicit new bounded source-whitelist/contract decision; production runs, old-root
 reuse, release, and parent accuracy/causal promotion remain unauthorized. Separately,
-17S is now the sole ACTIVE read-only source-contract trace at clean main HEAD
-`78cd240dff6b704595574d888da4b9c089ae39ab`, limited to complete reads of
-`src/spd_decap_pi/_core/services.py`,
-`src/spd_decap_pi/_core/solver/surface_certificate_asset.py`, and
-`src/spd_decap_pi/_core/solver/layer_surface_termination.py`. It must jointly bind actual
-profile construction/no-fallback and worker/cache fencing, hash-bound solve-ready polygon/material/
-dielectric inputs without raw-SPD/full-Scenario hydration, balanced `N^H B=0` gauge/Kron/nullspace
-and stable rail/Zii, and old Maxwell C/ideal disable with Via/termination exactly once. Any
-external delegate or missing group—including the unknown `compile_raw_spatial_contact_asset`
-module—ends 17S as source-classified BLOCKED; no fourth read or automatic whitelist expansion,
-code, test, artifact, or production execution is authorized.
+17S ends as **source-classified BLOCKED**. At clean main HEAD
+`bc0147e5e15b91a77593ad7306b492aae3079d4c`, `services.py` and
+`layer_surface_termination.py` were each read completely once. The approved
+`src/spd_decap_pi/_core/solver/surface_certificate_asset.py` was missing (`Cannot find path`),
+with no search, substitution, or fourth read. Services left profile/application, no-fallback,
+replacement, and cache-lifetime seams delegated/unproven, with legacy/whole-outline fallback
+visible. Termination proves local Via/termination-once and owner/Kron checks only, not global
+`N^H B=0`, stable rail/Zii, or old-plane disable. The missing asset leaves hash-bound solve
+payload unproven; all joint acceptance groups are unmet. Sol accepted the fail-closed stop and
+ACTIVE is now NONE.
+W6 reimplementation authority remains unusable; no automatic path discovery/whitelist expansion,
+code, test, artifact, production, old-root, release, or accuracy claim is authorized.
 The compact scenario quotient
 stores only schema/status, compiled SQLite stores aggregate `finite_parallel_rl` links/count/
 R/L/owners without source series terms, segments, or `physical_model_status`, and the
