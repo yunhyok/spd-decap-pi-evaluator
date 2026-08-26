@@ -806,11 +806,15 @@ DONE/PASS at technical commit `bbf5598c76beb0190863a492c3a4b68ca007b687`; its fo
 after Sol ACCEPT, exit0 (`1 passed in 0.79s`, process elapsed `1.401s`). Limited evidence covers v3
 opt-in full validated-manifest SHA, separate normal/finite cache namespaces, miss-only context loading
 with digest/binding checks, immutable counts/plane-count snapshots, builder v3 True plus v2/absent False,
-and missing/tampered fail-closed behavior. 17BJ is closed; sole ACTIVE read-only successor is 17BK,
-restricted to the
-frozen one-shot location query in `src/spd_decap_pi/raw_spatial_contact_asset.py` and at most one
-contiguous <=220-line cluster read after Sol review. Zero/over-cap/multiple/ambiguous/>220 STOP; no
-tests/build/import/stamp/profile/replacement/nullspace/gauge/Zii/production/release/accuracy claim.
+and missing/tampered fail-closed behavior. 17BJ is closed. 17BK is BLOCKED/source-classified STOP:
+its exact query/read at clean main `afda7f5c9e88f71235229a34e386528c11909647` returned 3 lines/1 file
+(1360/1395/1421), and read1360-1484 (125 lines) proved inventory/count/ordinal/grouping, ordered digest,
+coordinate_unit um, four identity bindings, batch1024/cancel, and incomplete-grouping fail-closed behavior,
+but field/type/unit/layer/net semantics delegate to `_validate_plane_stackup` and `_validate_plane_primitive`;
+no further read occurred. Sole ACTIVE read-only successor is 17BL, restricted to the exact two-symbol
+validator-boundary query in `src/spd_decap_pi/raw_spatial_contact_asset.py`; it must exit0 with exactly
+2 unique lines/1 file or STOP. No source read/code/test/stamp/profile/production/accuracy execution is
+authorized.
 Contract: v2 constants/API byte-identical; profile/global/app/solver/convergence/policy/controller
 identities unchanged; only the opt-in raw-spatial v3 schema/compiler sibling identity is new. v3 sibling with kw-only opt-in flags, five normalized tables,
 no gap table, positive-intervening-thickness fsum spacing, row/coordinate/ProjectSpec/source-SHA digest,
