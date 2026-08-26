@@ -1,11 +1,11 @@
 # SPD Decap PI Evaluator 작업 기준
 
 - 적용 제품: **SPD Decap PI Evaluator v0.23.0**
-- 문서 버전: **1.98**
-- 상위 기준: [목적·기술 기준](PRODUCT_PURPOSE_AND_TECHNICAL_BASELINE.md) v1.97
+- 문서 버전: **1.99**
+- 상위 기준: [목적·기술 기준](PRODUCT_PURPOSE_AND_TECHNICAL_BASELINE.md) v1.98
 - W6-BASE source-before: clean `main` HEAD `fb36288781dcc0b884950ef5a486c474090ceebd`; this is the exact source boundary for the completed one-run evidence
-- 상태: **APPROVED/MACHINE-FROZEN CONTROL DOCUMENT**; full phase/item history lives in the register and changelog; W5 DONE; W6-BASE 260729 numerical FAIL; W7-PHYS BLOCKED; 17AX BLOCKED/STOP; 17AY DONE (location evidence); 17AZ BLOCKED/STOP (source-classified delegated substrate owner); 17BA BLOCKED/STOP (boundary span627>500); 17BB BLOCKED/STOP (cache-only multiple clusters); 17BC BLOCKED/STOP (endpoint truncation + delegated identity); 17BD DONE (location evidence); 17BE BLOCKED/STOP (raw-v3/hash seam unproven); 17BF BLOCKED/design REJECT; 17BG BLOCKED/STOP (canonical payload/content identity delegated); 17BH BLOCKED/source-classified STOP (lifetime trace endpoint incomplete); 17BI DONE/PASS; 17BJ DONE/PASS; 17BK BLOCKED/source-classified STOP (validator field/type/unit/layer/net semantics delegated); 17BL DONE/location PASS (validator boundaries 1280/1323); 17BM DONE/PASS (local validator contract; physical ownership BLOCKED); 17BN DONE/PASS (typed immutable facade; physical scope unproven); 17BO BLOCKED/design REJECT (surface/island field-domain equivalence unproven); 17BP BLOCKED/source-classified location STOP (required surface-row producer missing); 17BQ DONE/location PASS (unique producer at raw_spatial_contact_compiler.py:2575); 17BR ACTIVE. Any physical implementation following a future PASS remains separately gated by fresh whitelist/test authority.
-- 현재 권위 상태: sole ACTIVE 17BR is a location-evidence-only compiler-owner boundary discovery. Exact once-only PowerShell definition query must exit0 with exactly 2 lines/1 file, first top-level boundary <=2575 and next >2575, inclusive span <=160; otherwise STOP/no retry. PASS only authorizes a later separately approved full-function read for source/artwork SHA and net/layer normalization/validation. No source open/code/test/physical ownership/stamp/production/accuracy execution.
+- 상태: **APPROVED/MACHINE-FROZEN CONTROL DOCUMENT**; full phase/item history lives in the register and changelog; W5 DONE; W6-BASE 260729 numerical FAIL; W7-PHYS BLOCKED; 17AX BLOCKED/STOP; 17AY DONE (location evidence); 17AZ BLOCKED/STOP (source-classified delegated substrate owner); 17BA BLOCKED/STOP (boundary span627>500); 17BB BLOCKED/STOP (cache-only multiple clusters); 17BC BLOCKED/STOP (endpoint truncation + delegated identity); 17BD DONE (location evidence); 17BE BLOCKED/STOP (raw-v3/hash seam unproven); 17BF BLOCKED/design REJECT; 17BG BLOCKED/STOP (canonical payload/content identity delegated); 17BH BLOCKED/source-classified STOP (lifetime trace endpoint incomplete); 17BI DONE/PASS; 17BJ DONE/PASS; 17BK BLOCKED/source-classified STOP (validator field/type/unit/layer/net semantics delegated); 17BL DONE/location PASS (validator boundaries 1280/1323); 17BM DONE/PASS (local validator contract; physical ownership BLOCKED); 17BN DONE/PASS (typed immutable facade; physical scope unproven); 17BO BLOCKED/design REJECT (surface/island field-domain equivalence unproven); 17BP BLOCKED/source-classified location STOP (required surface-row producer missing); 17BQ DONE/location PASS (unique producer at raw_spatial_contact_compiler.py:2575); 17BR BLOCKED/boundary STOP (258-line span >160); 17BS ACTIVE. Any physical implementation following a future PASS remains separately gated by fresh whitelist/test authority.
+- 현재 권위 상태: sole ACTIVE 17BS is a bounded local constructor trace. Exact one-time numbered read is restricted to `src/spd_decap_pi/raw_spatial_contact_compiler.py` lines2550-2600; endpoint/semantic delegation STOP with no expansion. PASS only if constructor line2575 and relevant source/artwork identity plus net/layer normalization/validation are complete and direct/validated in-range. No source expansion/code/test/physical ownership/stamp/production/accuracy execution beyond this bounded read.
 - 최종 개정: 2026-08-26 (Asia/Seoul)
 
 ## 1. 압축 후 즉시 복구 카드
@@ -17,15 +17,15 @@ context가 압축되거나 새 session에서 작업을 재개하면 다른 연�
 |---|---|
 | 변하지 않는 목적 | source-derived single-rail `Zii`의 PowerSI 근접 정확성과 일반화 |
 | 현재 branch | `main`만 사용; 정리된 과거 branch를 다시 조사하지 않음 |
-| 현재 active work item | `W7-PHYS-W6-RAW-SURFACE-PRODUCER-BOUNDARY-DISCOVERY` (17BR) |
-| 다음 권장 묶음 | `17BR` exact once-only compiler owner boundary query |
-| current authorization | 17BR location-only gate: run the recorded PowerShell definition query exactly once; exit0, exactly 2 lines/1 file, first top-level boundary <=2575 and next >2575, inclusive span <=160; otherwise STOP/no retry. PASS only authorizes a later separately approved full-function read for source/artwork SHA and net/layer normalization/validation. No source read/code/test/implementation. |
+| 현재 active work item | `W7-PHYS-W6-RAW-SURFACE-CONSTRUCTOR-LOCAL-TRACE` (17BS) |
+| 다음 권장 묶음 | `17BS` exact once-only numbered constructor read 2550-2600 |
+| current authorization | 17BS bounded read: use the recorded Get-Content numbered command exactly once for compiler.py lines2550-2600; no expansion/retry. Require complete constructor line2575, immediate origins, source/artwork identity, and net/layer normalization/validation direct or validated in-range; endpoint/external-helper delegation STOP. Field-domain/provenance only; islands/electrical ownership/stamp/accuracy remain separate. |
 | 17T command A | `rg -n --no-heading --color never --glob '*.py' '\bcompile_raw_spatial_contact_asset\b' 'src/spd_decap_pi'` |
 | 17T command B | `rg -n --no-heading --color never --glob '*.py' '\b(?:resolve_solver_profile|numerical_worker_count|build_layerwise_uniform_source_model)\b' 'src/spd_decap_pi'` |
 | 17T command C | `rg -n --no-heading --color never --glob '*.py' '\b(?:GLOBAL_KRON|SurfacePatchDifferentialProjection|SurfacePatchFinitePortProjection|assemble_differential_admittance|differential_projection)\b' 'src/spd_decap_pi'` |
 | consumed 17M discovery | canonical rg ran once (exit 0), found candidate symbols only; no reuse or production proof |
 | future production invariant (not current authority) | if a future run is authorized: exact clean `main`, new output root, one run/no retry; B correlation is historical evidence; C/D consumed their exactly-one old candidate/import reads; E had one production diagnostic invocation plus one orchestration ZIP read; old root remains forbidden for W6-BASE output/scoring/retry/mutation |
-| 고비용 검증 권한 | none; 17BR allows only bounded location evidence, with source read/code/test/build/import/production execution forbidden |
+| 고비용 검증 권한 | none; 17BS allows only one bounded 51-line source read, with source expansion/code/test/build/import/production execution forbidden |
 | 현재 정확성 상태 | `260729 retrospective FAIL`; unseen/generalization remains `unknown / not_run` |
 | 현재 release 계산 증거 | W6-BASE 260729 completed numerical FAIL; offline verifier exit 2 (integrity-valid) |
 | W6-BASE result root | `D:\SPD-Decap-PI-Evaluator-W6\fb36288781dcc0b884950ef5a486c474090ceebd\260729` — manifest `2b14f90e762abc49833518137812e8fc97fcde0e9c145795b7384210cfd9f5de`, sidecar `0d103e0ad47df80641fac0952a35a6eaa56cc9fdb71be24661903e451926e932`, correlation `969e40046e3a099d09557ba7500693460362336d76b067962436bd3b5177abc4` |
@@ -202,7 +202,8 @@ root, one-run/no-retry 조건을 다시 확정할 때만 고려한다.
 | `W7-PHYS-W6-PLANE-PRIMITIVE-EXACT-SURFACE-OWNERSHIP-DESIGN` | 17BO | BLOCKED/design REJECT | frozen-evidence primitive-to-surface ownership design | primitive source/hash + net/layer bindings and surface-row fields are frozen, but source-vs-artwork SHA/domain/content equivalence, canonical namespaces, and islands_by_surface provenance/electrical owner meaning are unproven; no PASS/whitelist |
 | `W7-PHYS-W6-SURFACE-ISLAND-FIELD-DOMAIN-BOUNDARY-DISCOVERY` | 17BP | BLOCKED/source-classified location STOP | locate surface-row producer and island inventory boundaries | clean main/doc commit `f50bcd5`; exact once-only query returned exactly 2 unique lines/2 files (raw asset class at342, layerwise inventory def at1556) but no actual `RawSpatialSurfaceRow` producer; no rerun |
 | `W7-PHYS-W6-RAW-SURFACE-ROW-PRODUCER-DISCOVERY` | 17BQ | DONE/location PASS | discover one actual surface-row producer | clean main/docs HEAD `d8a5c49`; exact query once exit0, 9 unique lines/2 files; excluded class/_ROW_TYPES/annotations/`__all__` and compiler import/annotations, leaving exactly one actual constructor at `src/spd_decap_pi/raw_spatial_contact_compiler.py:2575`; no file open/retry |
-| `W7-PHYS-W6-RAW-SURFACE-PRODUCER-BOUNDARY-DISCOVERY` | 17BR | ACTIVE | bound the unique compiler producer | exact once-only PowerShell definition query over `src/spd_decap_pi/raw_spatial_contact_compiler.py`; exit0, exactly 2 lines/1 file, first boundary <=2575, next >2575, inclusive span <=160; otherwise STOP/no retry; later full-function read remains separately gated |
+| `W7-PHYS-W6-RAW-SURFACE-PRODUCER-BOUNDARY-DISCOVERY` | 17BR | BLOCKED/boundary STOP | bound the unique compiler producer | clean main/docs HEAD `d28dcd2`; exact script once exit0 exactly 2 lines/1 file, boundaries compiler.py:2363 `_parse_surfaces(` and 2621 `class _Batch:`; inclusive 258-line span exceeds 160; no source read/retry |
+| `W7-PHYS-W6-RAW-SURFACE-CONSTRUCTOR-LOCAL-TRACE` | 17BS | ACTIVE | inspect the unique compiler constructor locally | exact one-time numbered Get-Content read of `src/spd_decap_pi/raw_spatial_contact_compiler.py` lines2550-2600 (51 lines), no expansion/retry; require complete constructor line2575, immediate origins, source/artwork identity and net/layer normalization/validation direct or validated in-range; endpoint/external-helper delegation STOP |
 | `W7-PHYS-PROSPECTIVE-RUNTIME-TERM-EVIDENCE` | next candidate | BLOCKED/YAGNI | provide a grounded runtime term digest/count/owner partition only after an independently selected physical change | new candidate/HEAD/root, one run/no retry; no current authority |
 | `W8-REL` | 18 | BLOCKED | completed known-case solve를 release gate에 연결하고 최종 전달 | accuracy/product gate와 exact release commit 필요 |
 | `D-DIST` | - | DEFERRED | Distribution routing/DRC scope 확대 | 사용자가 implementation-ready/DRC 목표로 승격할 때만 |
@@ -865,7 +866,8 @@ Budget는 <=40 lines 및 <=6 files였고 17 lines/5 files로 통과했다. compi
 Historical status summary is superseded by the current register: 17BL is DONE/location PASS, 17BM is
 DONE/PASS with physical ownership BLOCKED, 17BN is DONE/PASS, 17BO is BLOCKED/design REJECT, 17BP is
 BLOCKED/source-classified location STOP, 17BQ is DONE/location PASS with the unique compiler constructor at
-line2575, and 17BR is the sole ACTIVE location-only compiler-owner boundary discovery.
+line2575, 17BR is BLOCKED/boundary STOP (258-line span >160), and 17BS is the sole ACTIVE bounded local
+constructor trace.
 
 ### 17AA. W7-PHYS-W6-RAW-SPATIAL-ASSET-V3-EMISSION (BLOCKED; test-gate)
 
@@ -1320,8 +1322,9 @@ DONE/PASS with physical ownership BLOCKED. 17BN is DONE/PASS. 17BO is BLOCKED/de
 source-vs-artwork SHA/domain/content equivalence, canonical net/layer namespaces, and islands_by_surface
 provenance/electrical-owner meaning are unproven. 17BP is BLOCKED/source-classified location STOP because
 its exact query found no actual surface-row producer. 17BQ is DONE/location PASS at clean main/docs HEAD
-`d8a5c49` with the unique compiler constructor at line2575. Sole current read-only successor 17BR owns the
-exact compiler-owner boundary query. Frozen evidence establishes no physical stamp/profile/replacement/nullspace/
+`d8a5c49` with the unique compiler constructor at line2575. 17BR is BLOCKED/boundary STOP: clean main/docs
+HEAD `d28dcd2` produced boundaries 2363/2621, an inclusive 258-line span exceeding the 160-line gate.
+Sole current read-only successor 17BS owns the exact 2550-2600 constructor trace. Frozen evidence establishes no physical stamp/profile/replacement/nullspace/
 gauge/Zii/production/release/PowerSI accuracy claim.
 
 ### 17BK. W7-PHYS-W6-PLANE-SHEET-BOUNDED-QUERY-CONTRACT-TRACE (BLOCKED/source-classified STOP)
@@ -1387,27 +1390,31 @@ At clean main/docs HEAD `d8a5c49`, the exact once-only query exited0 with 9 uniq
 After excluding raw class/_ROW_TYPES/annotations/`__all__` and compiler import/annotations, exactly one
 actual constructor remained at `src/spd_decap_pi/raw_spatial_contact_compiler.py:2575`; no file open or retry.
 
-### 17BR. W7-PHYS-W6-RAW-SURFACE-PRODUCER-BOUNDARY-DISCOVERY (ACTIVE)
+### 17BR. W7-PHYS-W6-RAW-SURFACE-PRODUCER-BOUNDARY-DISCOVERY (BLOCKED/boundary STOP)
 
-Standing preapproval authorizes exactly this location query once, with no source open:
+At clean main/docs HEAD `d28dcd2`, the exact boundary script ran once, exited0, and returned exactly 2 lines
+from one file: compiler.py:2363 `_parse_surfaces(` and 2621 `class _Batch:`. The inclusive 2363-2620 span
+is 258 lines, exceeding the <=160 gate; no source read or retry occurred.
+
+### 17BS. W7-PHYS-W6-RAW-SURFACE-CONSTRUCTOR-LOCAL-TRACE (ACTIVE)
+
+Standing preapproval authorizes exactly this numbered read once, with no expansion or retry:
 
 ```powershell
-$defs = @(rg -n --with-filename --no-heading --color never '^(?:async\s+def|def|class)\s' 'src/spd_decap_pi/raw_spatial_contact_compiler.py')
-if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-$rows = foreach ($line in $defs) {
-    if ($line -match '^[^:]+:(\d+):') {
-        [pscustomobject]@{ Number = [int]$Matches[1]; Text = $line }
+$path = 'src/spd_decap_pi/raw_spatial_contact_compiler.py'
+$lines = Get-Content -LiteralPath $path
+for ($number = 2550; $number -le 2600; $number++) {
+    if ($number -le $lines.Count) {
+        '{0}:{1}' -f $number, $lines[$number - 1]
     }
 }
-$rows | Where-Object Number -le 2575 | Select-Object -Last 1 -ExpandProperty Text
-$rows | Where-Object Number -gt 2575 | Select-Object -First 1 -ExpandProperty Text
 ```
 
-Gate: exactly once, exit0, exactly 2 lines/1 file, first boundary <=2575 and next >2575, inclusive span
-<=160; otherwise STOP/no retry. PASS only authorizes a later separately approved full-function read for
-source_asset_sha versus artwork_asset_sha and net/layer inputs/normalization/validation. `islands_by_surface`
-is a separate future item. Current authority is location only; no source open/code/test/physical ownership/
-stamp/production/accuracy execution.
+Gate: exactly once, output only numbered lines2550-2600. Require constructor line2575, immediate origins,
+source_asset_sha versus artwork identity, and net/layer normalization/validation to be complete and direct or
+validated in-range. STOP if an endpoint cuts a statement/loop/branch, relevant data originates before2550 or
+through an external helper, or the constructor continues past2600; no expansion/second read. Field-domain and
+provenance only; `islands_by_surface`, electrical ownership, physical stamp, and accuracy remain separate.
 
 ## 20. 변경 기록
 
@@ -1512,3 +1519,4 @@ stamp/production/accuracy execution.
 | 1.96 | 2026-08-26 | 17BO를 source-vs-artwork SHA/domain/content, canonical namespace, islands_by_surface provenance 미증명으로 BLOCKED/design REJECT로 닫고, exact two-file location-only 17BP surface-island field-domain boundary query를 sole ACTIVE로 지정. |
 | 1.97 | 2026-08-26 | clean main/doc commit `f50bcd5`의 17BP exact query(2 unique lines/2 files)에서 실제 `RawSpatialSurfaceRow` producer가 없어 BLOCKED/source-classified location STOP으로 닫고, exact once-only 17BQ producer discovery query를 sole ACTIVE로 지정. |
 | 1.98 | 2026-08-26 | clean main/docs HEAD `d8a5c49`의 17BQ exact query(9 unique lines/2 files)에서 exclusions 후 `raw_spatial_contact_compiler.py:2575` 단일 실제 constructor를 확인해 DONE/location PASS로 닫고, exact once-only 17BR compiler-owner boundary query를 sole ACTIVE로 지정. |
+| 1.99 | 2026-08-26 | clean main/docs HEAD `d28dcd2`의 17BR exact boundary script(2 lines/1 file, 2363→2621, 258-line span) gate 초과로 BLOCKED/boundary STOP으로 닫고, exact numbered 2550-2600 constructor trace 17BS를 sole ACTIVE로 지정. |
