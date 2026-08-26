@@ -1,11 +1,11 @@
 # SPD Decap PI Evaluator 작업 기준
 
 - 적용 제품: **SPD Decap PI Evaluator v0.23.0**
-- 문서 버전: **1.85**
-- 상위 기준: [목적·기술 기준](PRODUCT_PURPOSE_AND_TECHNICAL_BASELINE.md) v1.84
+- 문서 버전: **1.86**
+- 상위 기준: [목적·기술 기준](PRODUCT_PURPOSE_AND_TECHNICAL_BASELINE.md) v1.85
 - W6-BASE source-before: clean `main` HEAD `fb36288781dcc0b884950ef5a486c474090ceebd`; this is the exact source boundary for the completed one-run evidence
-- 상태: **APPROVED/MACHINE-FROZEN CONTROL DOCUMENT**; full phase/item history lives in the register and changelog; W5 DONE; W6-BASE 260729 numerical FAIL; W7-PHYS BLOCKED; 17AX BLOCKED/STOP; 17AY DONE (location evidence); 17AZ BLOCKED/STOP (source-classified delegated substrate owner); 17BA BLOCKED/STOP (boundary span627>500); 17BB BLOCKED/STOP (cache-only multiple clusters); 17BC BLOCKED/STOP (endpoint truncation + delegated identity); 17BD DONE (location evidence); 17BE BLOCKED/STOP (raw-v3/hash seam unproven); 17BF BLOCKED/design REJECT; 17BG ACTIVE.
-- 현재 권위 상태: sole ACTIVE 17BG authorizes exactly one read of `src/spd_decap_pi/raw_spatial_contact_asset.py` lines2460-2558 under standing W6 authority; frozen boundary loader def2460/export2559. Questions signature/return/error, require=True project/attachments/hash inputs, canonical payload/content identity, manifest-only vs hydration, cancellation/resource, no fallback. PASS requires complete loader and named verified identity; endpoint/incomplete or delegated identity => STOP; no expansion or profile/physical/code/test/solver/production/release/accuracy claim.
+- 상태: **APPROVED/MACHINE-FROZEN CONTROL DOCUMENT**; full phase/item history lives in the register and changelog; W5 DONE; W6-BASE 260729 numerical FAIL; W7-PHYS BLOCKED; 17AX BLOCKED/STOP; 17AY DONE (location evidence); 17AZ BLOCKED/STOP (source-classified delegated substrate owner); 17BA BLOCKED/STOP (boundary span627>500); 17BB BLOCKED/STOP (cache-only multiple clusters); 17BC BLOCKED/STOP (endpoint truncation + delegated identity); 17BD DONE (location evidence); 17BE BLOCKED/STOP (raw-v3/hash seam unproven); 17BF BLOCKED/design REJECT; 17BG BLOCKED/STOP (canonical payload/content identity delegated); 17BH ACTIVE.
+- 현재 권위 상태: sole ACTIVE 17BH authorizes exactly one bounded query `rg -n --with-filename --no-heading --color never -B 3 -A 160 '^class\s+LoadedRawSpatialContactAsset\b' 'src/spd_decap_pi/raw_spatial_contact_asset.py'`; gate is exact once/exit0, one class match/one file, <=165 lines, complete decorator/fields through next top-level boundary; absent boundary or external cleanup/validated delegate => STOP, no further source trace or code/test/solver/production/profile/accuracy execution.
 - 최종 개정: 2026-08-26 (Asia/Seoul)
 
 ## 1. 압축 후 즉시 복구 카드
@@ -17,15 +17,15 @@ context가 압축되거나 새 session에서 작업을 재개하면 다른 연�
 |---|---|
 | 변하지 않는 목적 | source-derived single-rail `Zii`의 PowerSI 근접 정확성과 일반화 |
 | 현재 branch | `main`만 사용; 정리된 과거 branch를 다시 조사하지 않음 |
-| 현재 active work item | `W7-PHYS-W6-RAW-SPATIAL-V3-LOADER-RETURN-CONTRACT-TRACE` |
-| 다음 권장 묶음 | `W7-PHYS-W6-RAW-SPATIAL-V3-LOADER-RETURN-CONTRACT-TRACE` (ACTIVE; one exact 2460-2558 read) |
-| current authorization | 17BF BLOCKED/design REJECT: frozen evidence lacked owner/loader/identity/propagation/cache/whitelist bindings. Sole ACTIVE 17BG authorizes one read `src/spd_decap_pi/raw_spatial_contact_asset.py`2460-2558; loader def2460/export2559 frozen; endpoint/delegated identity => STOP; no expansion or execution. |
+| 현재 active work item | `W7-PHYS-W6-LOADED-RAW-SPATIAL-ASSET-LIFETIME-CONTRACT-TRACE` |
+| 다음 권장 묶음 | `W7-PHYS-W6-LOADED-RAW-SPATIAL-ASSET-LIFETIME-CONTRACT-TRACE` (ACTIVE; one exact class query) |
+| current authorization | 17BG BLOCKED/STOP: exact2460-2558 read completed require=True v3/five binding hashes/attachment-cancel-temp-SQLite cleanup/no fallback, but canonical payload/content identity delegates to `_validate_manifest` and `LoadedRawSpatialContactAsset` constructor/type. Sole ACTIVE17BH authorizes one bounded class query; no expansion or execution. |
 | 17T command A | `rg -n --no-heading --color never --glob '*.py' '\bcompile_raw_spatial_contact_asset\b' 'src/spd_decap_pi'` |
 | 17T command B | `rg -n --no-heading --color never --glob '*.py' '\b(?:resolve_solver_profile|numerical_worker_count|build_layerwise_uniform_source_model)\b' 'src/spd_decap_pi'` |
 | 17T command C | `rg -n --no-heading --color never --glob '*.py' '\b(?:GLOBAL_KRON|SurfacePatchDifferentialProjection|SurfacePatchFinitePortProjection|assemble_differential_admittance|differential_projection)\b' 'src/spd_decap_pi'` |
 | consumed 17M discovery | canonical rg ran once (exit 0), found candidate symbols only; no reuse or production proof |
 | future production invariant (not current authority) | if a future run is authorized: exact clean `main`, new output root, one run/no retry; B correlation is historical evidence; C/D consumed their exactly-one old candidate/import reads; E had one production diagnostic invocation plus one orchestration ZIP read; old root remains forbidden for W6-BASE output/scoring/retry/mutation |
-| 고비용 검증 권한 | none; only the low-cost bounded 17BG 2460-2558 read is authorized, with no expansion or code/test/solver/production/release/accuracy execution |
+| 고비용 검증 권한 | none; only the low-cost bounded 17BH class query is authorized, with no expansion or code/test/solver/production/release/accuracy execution |
 | 현재 정확성 상태 | `260729 retrospective FAIL`; unseen/generalization remains `unknown / not_run` |
 | 현재 release 계산 증거 | W6-BASE 260729 completed numerical FAIL; offline verifier exit 2 (integrity-valid) |
 | W6-BASE result root | `D:\SPD-Decap-PI-Evaluator-W6\fb36288781dcc0b884950ef5a486c474090ceebd\260729` — manifest `2b14f90e762abc49833518137812e8fc97fcde0e9c145795b7384210cfd9f5de`, sidecar `0d103e0ad47df80641fac0952a35a6eaa56cc9fdb71be24661903e451926e932`, correlation `969e40046e3a099d09557ba7500693460362336d76b067962436bd3b5177abc4` |
@@ -191,7 +191,8 @@ root, one-run/no-retry 조건을 다시 확정할 때만 고려한다.
 | `W7-PHYS-W6-LAYERWISE-SUBSTRATE-IDENTITY-HELPER-BOUNDARY-DISCOVERY` | 17BD | DONE (location evidence) | discover substrate identity helper boundaries | clean main `662de67882c27bafc3420c965bb069da7458b826`; exact query once exit0, 4 lines/1 file: finite identity3462→3546 span84; substrate identity3343→3462 span119; repeated3462 is intended adjacency despite output order |
 | `W7-PHYS-W6-LAYERWISE-SUBSTRATE-IDENTITY-HELPER-TRACE` | 17BE | BLOCKED/STOP | trace substrate identity helpers | exact3343-3545 read at clean main `0bea406939f3f84a1000c56d4b74b490cbf3a2cb` completed both helpers; current identity binds source/geometry/material/blocks/GND/certificate or topology/ports/omissions/compiler/static `layerwise_admittance_v1`; raw-v3 manifest/payload/content hash absent, no profile opt-in arg, canonical/key/static identity delegated externally; no implementation approval |
 | `W7-PHYS-W6-RAW-SPATIAL-V3-SUBSTRATE-HANDOFF-DESIGN` | 17BF | BLOCKED/design REJECT | design raw-spatial v3 substrate handoff | frozen 17AN-17BE evidence cannot name activation owner/call boundary, require=True loader/attachment/project binding, loader return identity/hash, kw-only propagation, v2/v3 cache alias/resource contract, or exact whitelist/focused V1; closed fail-closed |
-| `W7-PHYS-W6-RAW-SPATIAL-V3-LOADER-RETURN-CONTRACT-TRACE` | 17BG | ACTIVE | trace loader return contract | exactly one read `src/spd_decap_pi/raw_spatial_contact_asset.py` lines2460-2558; frozen loader def2460/export2559; questions signature/return/error, require=True project/attachments/hash inputs, canonical payload/content identity, manifest-only vs hydration, cancellation/resource, no fallback; PASS complete loader/named identity; endpoint/delegated identity => STOP; no expansion/profile/physical/code/test/solver/production/release/accuracy claim |
+| `W7-PHYS-W6-RAW-SPATIAL-V3-LOADER-RETURN-CONTRACT-TRACE` | 17BG | BLOCKED/STOP | trace loader return contract | exact2460-2558 read at clean main `95cb94d28090021c8b21081b771b1d8d30d2b353` completed require=True v3/five binding hashes/attachment-cancel-temp-SQLite cleanup/no fallback; canonical payload/content identity delegated to `_validate_manifest` and `LoadedRawSpatialContactAsset` constructor/type; no further source trace |
+| `W7-PHYS-W6-LOADED-RAW-SPATIAL-ASSET-LIFETIME-CONTRACT-TRACE` | 17BH | ACTIVE | trace loaded raw spatial asset lifetime contract | exactly one bounded query `rg -n --with-filename --no-heading --color never -B 3 -A 160 '^class\s+LoadedRawSpatialContactAsset\b' 'src/spd_decap_pi/raw_spatial_contact_asset.py'`; exact once exit0, one class match/one file, <=165 lines, complete decorator/fields through next top-level; absent boundary or external cleanup/validated delegate => STOP; no further source trace |
 | `W7-PHYS-PROSPECTIVE-RUNTIME-TERM-EVIDENCE` | next candidate | BLOCKED/YAGNI | provide a grounded runtime term digest/count/owner partition only after an independently selected physical change | new candidate/HEAD/root, one run/no retry; no current authority |
 | `W8-REL` | 18 | BLOCKED | completed known-case solve를 release gate에 연결하고 최종 전달 | accuracy/product gate와 exact release commit 필요 |
 | `D-DIST` | - | DEFERRED | Distribution routing/DRC scope 확대 | 사용자가 implementation-ready/DRC 목표로 승격할 때만 |
@@ -849,7 +850,7 @@ Base clean main HEAD는 `94df6d30cb1b6e8e1be686e311e7ebaa2e96e6b9`이며, exact 
 
 Budget는 <=40 lines 및 <=6 files였고 17 lines/5 files로 통과했다. compiler symbol을 참조한
 유일한 file은 `tests/test_raw_spatial_contact_compiler.py`이며 나머지는 builder/validator-only다.
-17Z는 DONE으로 닫고, 17AA와 17AA-S1은 historical BLOCKED로 남기며 17AA-S2는 test-gate PASS DONE으로 닫는다. 17AB는 DONE, 17AC는 source-classified STOP/BLOCKED로 닫고 17AD는 DONE으로 닫는다. 17AE는 source-location boundary evidence DONE으로 닫고 17AF는 DONE으로 닫는다. 17AG는 integration-gap evidence DONE으로 닫고, 17AH는 bounded location evidence DONE으로 닫는다. 17AI는 gate STOP/BLOCKED로 닫고 17AJ는 deterministic owner-location evidence DONE으로 닫는다. 17AK는 source-classified endpoint STOP/BLOCKED로 닫고 17AL은 source-classified test gap DONE으로 닫는다. 17AM은 DONE, 17AN은 test-gate PASS DONE으로 닫고, 17AO는 location evidence DONE으로 닫는다. 17AP는 source-classified caller trace DONE으로 닫고, 17AQ는 source-classified test-seam STOP/BLOCKED로 닫는다. 17AR는 one-file GUI opt-in activation DONE으로 닫고 17AS는 DONE-negative producer-active/no-solver-consumer로 닫는다. 17AT는 BLOCKED/implementation REJECT, 17AU는 DONE(location evidence), 17AV는 BLOCKED/STOP, 17AW는 DONE(location evidence), 17AX는 BLOCKED/STOP(source-classified preflight-only), 17AY는 DONE(location evidence), 17AZ는 BLOCKED/STOP(source-classified delegated substrate owner)으로 닫고, 17BA는 boundary span627>500으로 BLOCKED/STOP으로 닫으며, 17BB는 cache-only multiple clusters로 BLOCKED/STOP으로 닫고, 17BC는 endpoint truncation + delegated identity로 BLOCKED/STOP으로 닫고, 17BD는 DONE(location evidence)으로 닫으며, 17BE는 raw-v3/hash seam unproven으로 BLOCKED/STOP으로 닫고, ACTIVE NONE으로 전환한다. 17BG is the sole ACTIVE bounded loader-return contract trace.
+17Z는 DONE으로 닫고, 17AA와 17AA-S1은 historical BLOCKED로 남기며 17AA-S2는 test-gate PASS DONE으로 닫는다. 17AB는 DONE, 17AC는 source-classified STOP/BLOCKED로 닫고 17AD는 DONE으로 닫는다. 17AE는 source-location boundary evidence DONE으로 닫고 17AF는 DONE으로 닫는다. 17AG는 integration-gap evidence DONE으로 닫고, 17AH는 bounded location evidence DONE으로 닫는다. 17AI는 gate STOP/BLOCKED로 닫고 17AJ는 deterministic owner-location evidence DONE으로 닫는다. 17AK는 source-classified endpoint STOP/BLOCKED로 닫고 17AL은 source-classified test gap DONE으로 닫는다. 17AM은 DONE, 17AN은 test-gate PASS DONE으로 닫고, 17AO는 location evidence DONE으로 닫는다. 17AP는 source-classified caller trace DONE으로 닫고, 17AQ는 source-classified test-seam STOP/BLOCKED로 닫는다. 17AR는 one-file GUI opt-in activation DONE으로 닫고 17AS는 DONE-negative producer-active/no-solver-consumer로 닫는다. 17AT는 BLOCKED/implementation REJECT, 17AU는 DONE(location evidence), 17AV는 BLOCKED/STOP, 17AW는 DONE(location evidence), 17AX는 BLOCKED/STOP(source-classified preflight-only), 17AY는 DONE(location evidence), 17AZ는 BLOCKED/STOP(source-classified delegated substrate owner)으로 닫고, 17BA는 boundary span627>500으로 BLOCKED/STOP으로 닫으며, 17BB는 cache-only multiple clusters로 BLOCKED/STOP으로 닫고, 17BC는 endpoint truncation + delegated identity로 BLOCKED/STOP으로 닫고, 17BD는 DONE(location evidence)으로 닫으며, 17BE는 raw-v3/hash seam unproven으로 BLOCKED/STOP으로 닫고, 17BF는 BLOCKED/design REJECT로 닫으며, 17BG는 canonical payload/content identity delegation으로 BLOCKED/STOP으로 닫는다. 17BH is the sole ACTIVE bounded loaded-asset lifetime contract trace.
 
 ### 17AA. W7-PHYS-W6-RAW-SPATIAL-ASSET-V3-EMISSION (BLOCKED; test-gate)
 
@@ -1248,19 +1249,37 @@ kw-only defaultFalse propagation, v2/v3 cache alias prevention/resource contract
 production/test whitelist plus focused V1. ACTIVE is NONE; no successor is invented. Non-goals remain physical
 plane-sheet stamping, replacement/no-double-count, nullspace/gauge/Zii, solver/production/release/accuracy.
 
-### 17BG. W7-PHYS-W6-RAW-SPATIAL-V3-LOADER-RETURN-CONTRACT-TRACE (ACTIVE)
+### 17BG. W7-PHYS-W6-RAW-SPATIAL-V3-LOADER-RETURN-CONTRACT-TRACE (BLOCKED/STOP)
 
-Authorize exactly one read of `src/spd_decap_pi/raw_spatial_contact_asset.py` lines2460-2558 under standing
-W6 authority; frozen boundary loader definition line2460/export line2559. Questions: signature/return/error;
-require=True project/attachments/hash inputs; canonical payload/content identity fields; manifest-only versus
-hydration; cancellation/resource; and no fallback. PASS requires a complete loader with named verified identity;
-STOP on endpoint incompleteness or delegated identity, with no expansion. Frozen design decisions: handoff/validation
-owner `compile_layerwise_substrate`; activation owner `build_layerwise_uniform_source_model`; manifest-present
-canonical builder passes kw-only `require_plane_sheet_payload=True`; v2/manifest-absent/direct calls defaultFalse
-with existing identity JSON/hash and behavior unchanged; payload validation and identity/cache split only, no
-physical stamp. Implementation whitelist (PASS only): `src/spd_decap_pi/raw_spatial_contact_asset.py`,
+The exact2460-2558 read at clean main `95cb94d28090021c8b21081b771b1d8d30d2b353` completed the loader,
+require=True v3 path, five binding hashes, attachment/cancellation/temp-SQLite cleanup, and no fallback;
+canonical payload/content identity is delegated to `_validate_manifest` and the
+`LoadedRawSpatialContactAsset` constructor/type, so 17BG is BLOCKED/STOP. No further source trace was made.
+Frozen design decisions remain: handoff/validation owner `compile_layerwise_substrate`; activation owner
+`build_layerwise_uniform_source_model`; manifest-present canonical builder passes kw-only
+`require_plane_sheet_payload=True`; v2/manifest-absent/direct calls defaultFalse with existing identity
+JSON/hash and behavior unchanged; payload validation and identity/cache split only, no physical stamp.
+Implementation whitelist (PASS only): `src/spd_decap_pi/raw_spatial_contact_asset.py`,
 `src/spd_decap_pi/_core/solver/layerwise_network.py`, `tests/test_layerwise_raw_spatial_handoff.py`;
 focused node `tests/test_layerwise_raw_spatial_handoff.py::test_layerwise_substrate_v3_handoff_is_opt_in_hash_bound_and_fail_closed`.
+
+### 17BH. W7-PHYS-W6-LOADED-RAW-SPATIAL-ASSET-LIFETIME-CONTRACT-TRACE (ACTIVE)
+
+Authorize exactly once the bounded query below under standing W6 authority:
+
+```powershell
+rg -n --with-filename --no-heading --color never -B 3 -A 160 '^class\s+LoadedRawSpatialContactAsset\b' 'src/spd_decap_pi/raw_spatial_contact_asset.py'
+```
+
+Gate: exit0, exactly one class match in one file, output <=165 lines, and complete decorator/fields through
+the next top-level definition. Questions: validated mapping public; connection/tempdir ownership;
+close/context-manager behavior; immutability; cleanup/error behavior. If the next boundary is absent within
+160 lines or cleanup/validated ownership is external/delegated, STOP with no further source trace. On PASS,
+freeze owners `compile_layerwise_substrate`/`build_layerwise_uniform_source_model`; after require=True use
+canonicalized validated manifest full SHA256 as the v3 cache identity, while defaultFalse omits the new key
+and preserves the existing hash. Reuse the exact existing three-file whitelist and fully qualified focused
+node above; preserve the prior Mermaid as historical proposed flow. Exclude profile, physical stamp,
+replacement/no-double-count, nullspace/gauge/Zii, code/test/solver/production/release/accuracy claims.
 
 ```mermaid
 flowchart LR
@@ -1362,3 +1381,4 @@ flowchart LR
 | 1.83 | 2026-08-26 | clean-main HEAD `0bea406939f3f84a1000c56d4b74b490cbf3a2cb`의 17BE exact3343-3545 read에서 raw-v3/hash seam·profile opt-in·loader identity 부재와 외부 delegation을 기록해 BLOCKED/STOP으로 닫고 17BF substrate-handoff design을 docs-only sole ACTIVE로 지정. |
 | 1.84 | 2026-08-26 | frozen 17AN-17BE evidence만으로 17BF docs-only design gate를 수행해 activation/loader/identity/propagation/cache/whitelist bindings가 UNPROVEN임을 기록하고 BLOCKED/design REJECT, ACTIVE NONE으로 전환. |
 | 1.85 | 2026-08-26 | clean main `46d5fdac0c348d2e35948921679ebf3259a8b478`에서 17BG loader-return contract trace를 sole ACTIVE로 지정하고 exact raw_spatial_contact_asset.py:2460-2558 read/def2460-export2559 boundary를 동결. |
+| 1.86 | 2026-08-26 | clean main `95cb94d28090021c8b21081b771b1d8d30d2b353`의 17BG exact2460-2558 read에서 require=True v3/five binding hashes/attachment-cancel-temp-SQLite cleanup/no-fallback을 확인했으나 canonical payload/content identity가 `_validate_manifest`와 `LoadedRawSpatialContactAsset` constructor/type에 위임됨을 기록해 BLOCKED/STOP으로 닫고 17BH lifetime-contract trace를 sole ACTIVE로 지정. |
