@@ -1,11 +1,11 @@
 # SPD Decap PI Evaluator 작업 기준
 
 - 적용 제품: **SPD Decap PI Evaluator v0.23.0**
-- 문서 버전: **1.102**
-- 상위 기준: [목적·기술 기준](PRODUCT_PURPOSE_AND_TECHNICAL_BASELINE.md) v1.101
+- 문서 버전: **1.103**
+- 상위 기준: [목적·기술 기준](PRODUCT_PURPOSE_AND_TECHNICAL_BASELINE.md) v1.102
 - W6-BASE source-before: clean `main` HEAD `fb36288781dcc0b884950ef5a486c474090ceebd`; this is the exact source boundary for the completed one-run evidence
-- 상태: **APPROVED/MACHINE-FROZEN CONTROL DOCUMENT**; full phase/item history lives in the register and changelog; W5 DONE; W6-BASE 260729 numerical FAIL; W7-PHYS BLOCKED; 17AX BLOCKED/STOP; 17AY DONE (location evidence); 17AZ BLOCKED/STOP (source-classified delegated substrate owner); 17BA BLOCKED/STOP (boundary span627>500); 17BB BLOCKED/STOP (cache-only multiple clusters); 17BC BLOCKED/STOP (endpoint truncation + delegated identity); 17BD DONE (location evidence); 17BE BLOCKED/STOP (raw-v3/hash seam unproven); 17BF BLOCKED/design REJECT; 17BG BLOCKED/STOP (canonical payload/content identity delegated); 17BH BLOCKED/source-classified STOP (lifetime trace endpoint incomplete); 17BI DONE/PASS; 17BJ DONE/PASS; 17BK BLOCKED/source-classified STOP (validator field/type/unit/layer/net semantics delegated); 17BL DONE/location PASS (validator boundaries 1280/1323); 17BM DONE/PASS (local validator contract; physical ownership BLOCKED); 17BN DONE/PASS (typed immutable facade; physical scope unproven); 17BO BLOCKED/design REJECT (surface/island field-domain equivalence unproven); 17BP BLOCKED/source-classified location STOP (required surface-row producer missing); 17BQ DONE/location PASS (unique producer at raw_spatial_contact_compiler.py:2575); 17BR BLOCKED/boundary STOP (258-line span >160); 17BS BLOCKED/source-classified STOP (origin/normalization before range and `_canonical_sha` delegated); 17BT DONE/location PASS (single pre-range field-origin cluster at 2500-2512); 17BU BLOCKED/source-classified STOP (range starts/ends mid-flow; net/layer/asset SHA/key origins and helper semantics not proven); 17BV ACTIVE. Any physical implementation following a future PASS remains separately gated by fresh whitelist/test authority.
-- 현재 권위 상태: sole ACTIVE 17BV is a bounded key-origin discovery. Exact once-only hit query is restricted to `src/spd_decap_pi/raw_spatial_contact_compiler.py` lines2363-2459; exit0, 4-16 unique lines, exact1 file, actual assignments for net/layer/asset_sha/key in one clear cluster required, otherwise STOP/no retry. PASS only authorizes a later <=100-line read; helpers, canonical SHA, islands, and ownership remain separate. No physical stamp/accuracy execution.
+- 상태: **APPROVED/MACHINE-FROZEN CONTROL DOCUMENT**; full phase/item history lives in the register and changelog; W5 DONE; W6-BASE 260729 numerical FAIL; W7-PHYS BLOCKED; 17AX BLOCKED/STOP; 17AY DONE (location evidence); 17AZ BLOCKED/STOP (source-classified delegated substrate owner); 17BA BLOCKED/STOP (boundary span627>500); 17BB BLOCKED/STOP (cache-only multiple clusters); 17BC BLOCKED/STOP (endpoint truncation + delegated identity); 17BD DONE (location evidence); 17BE BLOCKED/STOP (raw-v3/hash seam unproven); 17BF BLOCKED/design REJECT; 17BG BLOCKED/STOP (canonical payload/content identity delegated); 17BH BLOCKED/source-classified STOP (lifetime trace endpoint incomplete); 17BI DONE/PASS; 17BJ DONE/PASS; 17BK BLOCKED/source-classified STOP (validator field/type/unit/layer/net semantics delegated); 17BL DONE/location PASS (validator boundaries 1280/1323); 17BM DONE/PASS (local validator contract; physical ownership BLOCKED); 17BN DONE/PASS (typed immutable facade; physical scope unproven); 17BO BLOCKED/design REJECT (surface/island field-domain equivalence unproven); 17BP BLOCKED/source-classified location STOP (required surface-row producer missing); 17BQ DONE/location PASS (unique producer at raw_spatial_contact_compiler.py:2575); 17BR BLOCKED/boundary STOP (258-line span >160); 17BS BLOCKED/source-classified STOP (origin/normalization before range and `_canonical_sha` delegated); 17BT DONE/location PASS (single pre-range field-origin cluster at 2500-2512); 17BU BLOCKED/source-classified STOP (range starts/ends mid-flow; net/layer/asset SHA/key origins and helper semantics not proven); 17BV BLOCKED/location STOP (duplicate key semantic/domain ambiguous from location output); 17BW ACTIVE. Any physical implementation following a future PASS remains separately gated by fresh whitelist/test authority.
+- 현재 권위 상태: sole ACTIVE 17BW is a bounded key-domain local trace. Exact once-only numbered read is restricted to `src/spd_decap_pi/raw_spatial_contact_compiler.py` lines2388-2435 (48 lines); require complete RHS/uses of both key assignments, direct net/layer/asset SHA origins, casefold tuple domain, and relation2396↔2425 in range. STOP/no expansion/no retry if endpoints or semantics leave range; source hash helper, canonical SHA, islands, ownership/stamp/accuracy remain separate.
 - 최종 개정: 2026-08-26 (Asia/Seoul)
 
 ## 1. 압축 후 즉시 복구 카드
@@ -17,15 +17,15 @@ context가 압축되거나 새 session에서 작업을 재개하면 다른 연�
 |---|---|
 | 변하지 않는 목적 | source-derived single-rail `Zii`의 PowerSI 근접 정확성과 일반화 |
 | 현재 branch | `main`만 사용; 정리된 과거 branch를 다시 조사하지 않음 |
-| 현재 active work item | `W7-PHYS-W6-RAW-SURFACE-KEY-ORIGIN-DISCOVERY` (17BV) |
-| 다음 권장 묶음 | `17BV` exact once-only pre-range key-origin assignment query |
-| current authorization | 17BV bounded hit query: use the recorded PowerShell command exactly once over compiler.py lines2363-2459; exit0, 4-16 unique lines, exact1 file, actual assignments for net/layer/asset_sha/key in one clear cluster; missing/duplicate/multiple/ambiguous/comments-only/cap STOP/no retry. PASS only authorizes a later <=100-line read; helpers, canonical SHA, islands, ownership remain separate. No source expansion/code/test/implementation. |
+| 현재 active work item | `W7-PHYS-W6-RAW-SURFACE-KEY-DOMAIN-LOCAL-TRACE` (17BW) |
+| 다음 권장 묶음 | `17BW` exact once-only numbered key-domain read 2388-2435 |
+| current authorization | 17BW bounded read: use the recorded Get-Content numbered command exactly once for compiler.py lines2388-2435; require complete RHS/uses of both key assignments, direct net/layer/asset SHA origins, casefold tuple domain, and relation2396↔2425 in range; endpoint/pre-range/external-helper semantics STOP/no expansion/retry. Source hash helper, canonical SHA, islands, ownership/stamp/accuracy remain separate. No physical execution. |
 | 17T command A | `rg -n --no-heading --color never --glob '*.py' '\bcompile_raw_spatial_contact_asset\b' 'src/spd_decap_pi'` |
 | 17T command B | `rg -n --no-heading --color never --glob '*.py' '\b(?:resolve_solver_profile|numerical_worker_count|build_layerwise_uniform_source_model)\b' 'src/spd_decap_pi'` |
 | 17T command C | `rg -n --no-heading --color never --glob '*.py' '\b(?:GLOBAL_KRON|SurfacePatchDifferentialProjection|SurfacePatchFinitePortProjection|assemble_differential_admittance|differential_projection)\b' 'src/spd_decap_pi'` |
 | consumed 17M discovery | canonical rg ran once (exit 0), found candidate symbols only; no reuse or production proof |
 | future production invariant (not current authority) | if a future run is authorized: exact clean `main`, new output root, one run/no retry; B correlation is historical evidence; C/D consumed their exactly-one old candidate/import reads; E had one production diagnostic invocation plus one orchestration ZIP read; old root remains forbidden for W6-BASE output/scoring/retry/mutation |
-| 고비용 검증 권한 | none; 17BV allows only one bounded hit query, with source expansion/code/test/build/import/production execution forbidden |
+| 고비용 검증 권한 | none; 17BW allows only one bounded 48-line source read, with source expansion/code/test/build/import/production execution forbidden |
 | 현재 정확성 상태 | `260729 retrospective FAIL`; unseen/generalization remains `unknown / not_run` |
 | 현재 release 계산 증거 | W6-BASE 260729 completed numerical FAIL; offline verifier exit 2 (integrity-valid) |
 | W6-BASE result root | `D:\SPD-Decap-PI-Evaluator-W6\fb36288781dcc0b884950ef5a486c474090ceebd\260729` — manifest `2b14f90e762abc49833518137812e8fc97fcde0e9c145795b7384210cfd9f5de`, sidecar `0d103e0ad47df80641fac0952a35a6eaa56cc9fdb71be24661903e451926e932`, correlation `969e40046e3a099d09557ba7500693460362336d76b067962436bd3b5177abc4` |
@@ -206,7 +206,8 @@ root, one-run/no-retry 조건을 다시 확정할 때만 고려한다.
 | `W7-PHYS-W6-RAW-SURFACE-CONSTRUCTOR-LOCAL-TRACE` | 17BS | BLOCKED/source-classified STOP | inspect the unique compiler constructor locally | clean main/docs HEAD `5095ed3`; exact2550-2600 once showed constructor/return 2575-2586 but started mid-control-flow; item origins/normalization/source hash before2550 and `_canonical_sha` remained delegated; no expansion/retry |
 | `W7-PHYS-W6-RAW-SURFACE-FIELD-ORIGIN-DISCOVERY` | 17BT | DONE/location PASS | locate pre-range field origins and hash binding | clean main/docs HEAD `e042611`; exact query once exit0 exactly5 unique lines/1 file, single cluster at compiler 2500 net/2501 layer/2502 asset_sha/2503 islands/2512 source_hashes; no source read/retry |
 | `W7-PHYS-W6-RAW-SURFACE-FIELD-ORIGIN-LOCAL-TRACE` | 17BU | BLOCKED/source-classified STOP | trace local field origins and source-hash call | clean main/docs HEAD `37b1934`; exact2460-2535 once proved geometry equality, island sequence uniqueness, item append, analysis-key equality, complete `_surface_source_hashes(...)` args, but started/ended mid-flow; key origins/helper semantics outside range; no expansion/retry |
-| `W7-PHYS-W6-RAW-SURFACE-KEY-ORIGIN-DISCOVERY` | 17BV | ACTIVE | locate pre-range key assignments | exact once-only PowerShell hit query over compiler.py2363-2459; exit0, 4-16 unique lines, exact1 file, actual net/layer/asset_sha/key assignments in one clear cluster; missing/duplicate/multiple/ambiguous/comments-only/cap STOP/no retry; later <=100-line read separately gated |
+| `W7-PHYS-W6-RAW-SURFACE-KEY-ORIGIN-DISCOVERY` | 17BV | BLOCKED/location STOP | locate pre-range key assignments | clean main/docs HEAD `ebba672`; exact query once exit0 5 unique lines/1 file, key assignments2396/2425 plus net2413 asset_sha2416 layer2417; duplicate key semantic/domain ambiguous from location output; no read/retry |
+| `W7-PHYS-W6-RAW-SURFACE-KEY-DOMAIN-LOCAL-TRACE` | 17BW | ACTIVE | trace key domains and relation | exact once-only numbered read compiler.py2388-2435 (48 lines), no expansion/retry; require both key assignment RHS/uses, net/layer/asset SHA origins, casefold tuple domain, relation2396↔2425 in range; source hash/canonical/island/ownership separate |
 | `W7-PHYS-PROSPECTIVE-RUNTIME-TERM-EVIDENCE` | next candidate | BLOCKED/YAGNI | provide a grounded runtime term digest/count/owner partition only after an independently selected physical change | new candidate/HEAD/root, one run/no retry; no current authority |
 | `W8-REL` | 18 | BLOCKED | completed known-case solve를 release gate에 연결하고 최종 전달 | accuracy/product gate와 exact release commit 필요 |
 | `D-DIST` | - | DEFERRED | Distribution routing/DRC scope 확대 | 사용자가 implementation-ready/DRC 목표로 승격할 때만 |
@@ -870,8 +871,8 @@ Historical status summary is superseded by the current register: 17BL is DONE/lo
 DONE/PASS with physical ownership BLOCKED, 17BN is DONE/PASS, 17BO is BLOCKED/design REJECT, 17BP is
 BLOCKED/source-classified location STOP, 17BQ is DONE/location PASS with the unique compiler constructor at
 line2575, 17BR is BLOCKED/boundary STOP (258-line span >160), 17BS is BLOCKED/source-classified STOP, 17BT
-is DONE/location PASS, 17BU is BLOCKED/source-classified STOP, and 17BV is the sole ACTIVE bounded key-origin
-discovery.
+is DONE/location PASS, 17BU is BLOCKED/source-classified STOP, 17BV is BLOCKED/location STOP, and 17BW is the
+sole ACTIVE bounded key-domain local trace.
 
 ### 17AA. W7-PHYS-W6-RAW-SPATIAL-ASSET-V3-EMISSION (BLOCKED; test-gate)
 
@@ -1333,8 +1334,10 @@ complete but item origins/normalization/source hash before2550 and `_canonical_s
 17BT is DONE/location PASS at clean main/docs HEAD `e042611`: exact query once exit0 with 5 unique lines/1 file
 at the single 2500-2512 cluster. 17BU is BLOCKED/source-classified STOP at clean main/docs HEAD `37b1934`:
 exact2460-2535 proved local equality/append/hash-call evidence but key origins and helper semantics were outside
-the range. Sole current read-only successor 17BV owns the exact 2363-2459 key-origin query. Frozen evidence
-establishes no physical stamp/profile/replacement/nullspace/gauge/Zii/production/release/PowerSI accuracy claim.
+the range. 17BV is BLOCKED/location STOP at clean main/docs HEAD `ebba672`: location output had duplicate key
+assignments/domain ambiguity. Sole current read-only successor 17BW owns the exact 2388-2435 key-domain trace.
+Frozen evidence establishes no physical stamp/profile/replacement/nullspace/gauge/Zii/production/release/PowerSI
+accuracy claim.
 
 ### 17BK. W7-PHYS-W6-PLANE-SHEET-BOUNDED-QUERY-CONTRACT-TRACE (BLOCKED/source-classified STOP)
 
@@ -1425,27 +1428,30 @@ signature equality, island sequence strip/nonempty/casefold uniqueness, item app
 the complete `_surface_source_hashes(...)` call/args. The read began and ended mid-flow; net/layer/asset SHA/key
 origins and helper semantics were outside the range. No expansion or retry occurred.
 
-### 17BV. W7-PHYS-W6-RAW-SURFACE-KEY-ORIGIN-DISCOVERY (ACTIVE)
+### 17BV. W7-PHYS-W6-RAW-SURFACE-KEY-ORIGIN-DISCOVERY (BLOCKED/location STOP)
 
-Standing preapproval authorizes exactly this hit query once, with no source read:
+At clean main/docs HEAD `ebba672`, the exact query ran once, exited0, and returned 5 unique lines in one file:
+key assignments at2396 and2425 plus net2413, asset_sha2416, and layer2417. Location output alone left duplicate
+key semantic/domain ambiguous; no source read or retry occurred.
+
+### 17BW. W7-PHYS-W6-RAW-SURFACE-KEY-DOMAIN-LOCAL-TRACE (ACTIVE)
+
+Standing preapproval authorizes exactly this numbered read once, with no expansion or retry:
 
 ```powershell
 $path = 'src/spd_decap_pi/raw_spatial_contact_compiler.py'
-$hits = @(rg -n --with-filename --no-heading --color never `
-    '^\s*(?:net|layer|asset_sha|key)\s*=' `
-    $path)
-if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-$hits | Where-Object {
-    $_ -match '^[^:]+:(\d+):' -and
-    [int]$Matches[1] -ge 2363 -and
-    [int]$Matches[1] -le 2459
+$lines = Get-Content -LiteralPath $path
+for ($number = 2388; $number -le 2435; $number++) {
+    if ($number -le $lines.Count) {
+        '{0}:{1}' -f $number, $lines[$number - 1]
+    }
 }
 ```
 
-Gate: exactly once, exit0, 4-16 unique lines, exact1 file, all lines2363-2459, with actual assignments for
-net/layer/asset_sha/key in one clear cluster; missing/duplicate semantic/multiple/ambiguous/comments-only/cap
-STOP/no retry. PASS only authorizes a later <=100-line bounded read. Helpers, canonical SHA, islands, and
-ownership remain separate; no physical stamp/accuracy claim.
+Gate: exactly once, output only numbered lines2388-2435 (48 lines). Require complete RHS/uses of both key
+assignments, direct net/layer/asset SHA origins, casefold tuple domain, and relation2396↔2425 in range. STOP/no
+expansion/no retry if an endpoint cuts a statement/branch/loop or semantics depend on pre-range/external helper
+state. Source hash helper, canonical SHA, islands, ownership, physical stamp, and accuracy remain separate.
 
 ## 20. 변경 기록
 
@@ -1554,3 +1560,4 @@ ownership remain separate; no physical stamp/accuracy claim.
 | 1.100 | 2026-08-26 | clean main/docs HEAD `5095ed3`의 17BS exact2550-2600 read에서 origin/normalization/source-hash와 `_canonical_sha`가 범위 밖/위임되어 BLOCKED/source-classified STOP으로 닫고, exact once-only 17BT field-origin discovery query를 sole ACTIVE로 지정. |
 | 1.101 | 2026-08-26 | clean main/docs HEAD `e042611`의 17BT exact query(5 unique lines/1 file, 2500-2512 single cluster) DONE/location PASS를 기록하고, exact numbered 2460-2535 local field-origin trace 17BU를 sole ACTIVE로 지정. |
 | 1.102 | 2026-08-26 | clean main/docs HEAD `37b1934`의 17BU exact2460-2535 read에서 key origins/helper semantics가 범위 밖/위임되어 BLOCKED/source-classified STOP으로 닫고, exact once-only 17BV key-origin discovery query를 sole ACTIVE로 지정. |
+| 1.103 | 2026-08-26 | clean main/docs HEAD `ebba672`의 17BV exact query(5 unique lines/1 file)에서 duplicate key semantic/domain이 location-only로 ambiguous해 BLOCKED/location STOP으로 닫고, exact numbered 2388-2435 key-domain trace 17BW를 sole ACTIVE로 지정. |
