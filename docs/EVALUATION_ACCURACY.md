@@ -769,9 +769,12 @@ no extension. 17AW is DONE (location evidence) at clean main `24382198a02c01cb97
 exact PowerShell once exit0, exactly 2 lines/1 file, span176<=240. 17AX is BLOCKED/STOP (source-classified
 preflight-only): raw-v3 loader/requireTrue, replacement, nullspace/gauge, and rail-order Zii are absent or
 delegate-owned; no implementation approval. 17AY is DONE (location evidence) at clean main `ab36421d41146613574fa65538efa0695adb398a`:
-exact query once exit0, 2 lines/1 file, span174<=400. Sole ACTIVE successor is 17AZ
-`W7-PHYS-W6-LAYERWISE-SOURCE-MODEL-OWNER-TRACE`, one exact 174-line read only; no code/test/solver/
-production/profile/accuracy/causal claim.
+exact query once exit0, 2 lines/1 file, span174<=400. The 17AZ owner trace is BLOCKED/STOP
+(source-classified delegated substrate owner): exact5432-5605 validated v4 certificate/rail/port/device/
+geometry/provenance and returned `LayerwiseUniformSourceModel`, but raw-v3/replacement/nullspace/Zii were
+absent and substrate was delegated to `compile_layerwise_substrate`. Sole ACTIVE successor is 17BA
+`W7-PHYS-W6-LAYERWISE-SUBSTRATE-OWNER-BOUNDARY-DISCOVERY`, one exact PowerShell definition query only;
+no file read/code/test/solver/production/profile/accuracy/causal claim.
 Contract: v2 constants/API byte-identical; profile/global/app/solver/convergence/policy/controller
 identities unchanged; only the opt-in raw-spatial v3 schema/compiler sibling identity is new. v3 sibling with kw-only opt-in flags, five normalized tables,
 no gap table, positive-intervening-thickness fsum spacing, row/coordinate/ProjectSpec/source-SHA digest,
