@@ -790,7 +790,12 @@ raw-v3 manifest/payload/content hash is absent, no profile opt-in arg exists, an
 is delegated externally. 17BF docs-only design gate is BLOCKED/design REJECT: frozen evidence cannot name
 activation owner/call boundary, require=True v3 loader/attachment/project binding, loader return identity/hash,
 kw-only defaultFalse propagation, v2/v3 cache alias/resource contract, or exact whitelist/focused V1. ACTIVE is
-NONE; no successor or source/query/code/test/solver/production/release/accuracy execution is authorized.
+NONE; no successor or source/query/code/test/solver/production/release/accuracy execution is authorized. Sole
+ACTIVE successor is 17BG `W7-PHYS-W6-RAW-SPATIAL-V3-LOADER-RETURN-CONTRACT-TRACE`: exactly one read of
+`raw_spatial_contact_asset.py` lines2460-2558 under standing W6 authority; loader def2460/export2559. Questions
+signature/return/error, require=True binding/hash inputs, canonical payload/content identity, manifest-only versus
+hydration, cancellation/resource, and no fallback; endpoint/delegated identity => STOP, no expansion or profile/
+physical/code/test/solver/production/release/accuracy claim.
 Contract: v2 constants/API byte-identical; profile/global/app/solver/convergence/policy/controller
 identities unchanged; only the opt-in raw-spatial v3 schema/compiler sibling identity is new. v3 sibling with kw-only opt-in flags, five normalized tables,
 no gap table, positive-intervening-thickness fsum spacing, row/coordinate/ProjectSpec/source-SHA digest,
