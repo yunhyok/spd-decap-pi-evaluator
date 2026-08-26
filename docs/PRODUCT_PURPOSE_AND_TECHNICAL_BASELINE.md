@@ -1,10 +1,10 @@
 # SPD Decap PI Evaluator 목적·기술 기준
 
 - 적용 제품: **SPD Decap PI Evaluator v0.23.0**
-- 문서 버전: **1.89**
+- 문서 버전: **1.90**
 - W5 approved/machine-frozen source-before: `main` commit `027ac7a09a3eded15f45c41860945f9d4c7f488d`
-- 상태: **G0 기준 문서** — full execution history and sole ACTIVE authority live in `WORK_EXECUTION_BASELINE.md` recovery/register; W5 DONE; W6-BASE 260729 numerical FAIL; W7-PHYS BLOCKED; raw-spatial chain: 17AR DONE, 17AS DONE-negative, 17AT BLOCKED/implementation REJECT, 17AU DONE (location evidence), 17AV BLOCKED/STOP, 17AW DONE (location evidence), 17AX BLOCKED/STOP, 17AY DONE (location evidence), 17AZ BLOCKED/STOP (source-classified delegated substrate owner), 17BA BLOCKED/STOP (boundary span627>500), 17BB BLOCKED/STOP (cache-only multiple clusters), 17BC BLOCKED/STOP (endpoint truncation + delegated identity), 17BD DONE (location evidence), 17BE BLOCKED/STOP (raw-v3/hash seam unproven), 17BF BLOCKED/design REJECT, 17BG BLOCKED/STOP (canonical payload/content identity delegated), 17BH BLOCKED/source-classified STOP (lifetime trace endpoint incomplete), 17BI DONE/PASS, 17BJ DONE/PASS; ACTIVE NONE. Any bounded physical-integration design is only a future candidate requiring fresh explicit authority.
-- 현재 권위 상태: ACTIVE is NONE. 17BJ is DONE/PASS at technical commit `bbf5598c76beb0190863a492c3a4b68ca007b687`; its focused node ran once after Sol ACCEPT, exit0 (`1 passed in 0.79s`, process elapsed `1.401s`). Limited evidence covers v3 opt-in full validated-manifest SHA, separate normal/finite cache namespaces, miss-only context loading with digest/binding checks, immutable counts/plane-count snapshots, builder v3 True plus v2/absent False, and missing/tampered fail-closed behavior. No physical stamp/profile/replacement/nullspace/gauge/Zii/production/release/PowerSI-accuracy claim follows.
+- 상태: **G0 기준 문서** — full execution history and sole ACTIVE authority live in `WORK_EXECUTION_BASELINE.md` recovery/register; W5 DONE; W6-BASE 260729 numerical FAIL; W7-PHYS BLOCKED; raw-spatial chain: 17AR DONE, 17AS DONE-negative, 17AT BLOCKED/implementation REJECT, 17AU DONE (location evidence), 17AV BLOCKED/STOP, 17AW DONE (location evidence), 17AX BLOCKED/STOP, 17AY DONE (location evidence), 17AZ BLOCKED/STOP (source-classified delegated substrate owner), 17BA BLOCKED/STOP (boundary span627>500), 17BB BLOCKED/STOP (cache-only multiple clusters), 17BC BLOCKED/STOP (endpoint truncation + delegated identity), 17BD DONE (location evidence), 17BE BLOCKED/STOP (raw-v3/hash seam unproven), 17BF BLOCKED/design REJECT, 17BG BLOCKED/STOP (canonical payload/content identity delegated), 17BH BLOCKED/source-classified STOP (lifetime trace endpoint incomplete), 17BI DONE/PASS, 17BJ DONE/PASS, 17BK ACTIVE. Any bounded physical-integration design is only a future candidate requiring fresh explicit authority.
+- 현재 권위 상태: sole ACTIVE 17BK `W7-PHYS-W6-PLANE-SHEET-BOUNDED-QUERY-CONTRACT-TRACE` under standing user preapproval. Source whitelist only `src/spd_decap_pi/raw_spatial_contact_asset.py`; exact location query once, 1-30 unique rows/1 file, then at most one contiguous cluster read <=220 lines; zero/over-cap/multiple/ambiguous/>220 STOP. 17BJ PASS facts remain frozen; no tests/build/import/stamp/profile/replacement/nullspace/gauge/Zii/production/release/PowerSI-accuracy claim.
 - 최종 개정: 2026-08-26 (Asia/Seoul)
 
 ## 1. 문서 역할과 권위
@@ -776,8 +776,9 @@ top-level boundary. 17BI is DONE/PASS at clean main `c8e97c3ca8937775c869d3e4be2
 2275-2459 once exit0 completed the class, immutable public manifest, lifecycle/context, and blank2458-2459
 plus frozen def2460 exact boundary. 17BJ is DONE/PASS at technical commit
 `bbf5598c76beb0190863a492c3a4b68ca007b687`; its focused node ran once after Sol ACCEPT,
-exit0 (`1 passed in 0.79s`, process elapsed `1.401s`), and ACTIVE is NONE. No physical
-stamp/profile/replacement/nullspace/gauge/Zii/production/release/accuracy claim follows.
+exit0 (`1 passed in 0.79s`, process elapsed `1.401s`). Sole ACTIVE successor is 17BK,
+the bounded plane-sheet query/read gate; no physical stamp/profile/replacement/nullspace/gauge/
+Zii/production/release/accuracy claim follows.
 The frozen contract keeps v2 constants/API byte-identical and adds a schema-v3 sibling: compiler
 keyword-only `include_plane_sheet_payload=False`, validator keyword-only `require_plane_sheet_payload=False`,
 opt-in no downgrade, exactly five normalized tables (`plane_primitives`, `vertices`, `circles`,
@@ -904,5 +905,6 @@ and the exact Git HEAD are frozen together. Current trust identities: base `d43b
 | 1.87 | 2026-08-26 | 사용자 승인에 따라 clean main `48caf37613db8f4bd8d00e7aa685b79862b7dcf7`에서 17BI raw_spatial_contact_asset.py:2275-2459(185) 단일 read를 sole ACTIVE로 지정하고, frozen 17BG def2460을 재독하지 않는 complete-contract boundary를 동결. |
 | 1.88 | 2026-08-26 | clean main `c8e97c3ca8937775c869d3e4be20bd3cb489787f`의 17BI exact2275-2459 read PASS/DONE(complete class, immutable public manifest, lifecycle/context, blank2458-2459 + frozen def2460 boundary)을 기록하고 exact three-file 17BJ substrate-handoff implementation을 sole ACTIVE로 지정. |
 | 1.89 | 2026-08-26 | technical commit `bbf5598c76beb0190863a492c3a4b68ca007b687`의 17BJ implementation과 Sol ACCEPT 후 focused node 1회 exit0(`1 passed in 0.79s`, elapsed1.401s)을 기록해 DONE/PASS로 닫고 ACTIVE NONE으로 전환. v3 digest/cache/loader/snapshot/builder/fail-closed 결과만 기록하며 physical/production/accuracy 주장은 하지 않음. |
+| 1.90 | 2026-08-26 | 17BJ DONE/PASS를 보존하고 standing user preapproval 아래 17BK plane-sheet bounded-query contract trace를 sole ACTIVE로 지정. Exact one-shot query, <=220-line single-cluster read gate, STOP/no-retry와 no-stamp/no-production 금지를 동결. |
 | 1.1 | 2026-08-24 | `WORK_EXECUTION_BASELINE.md`를 두 번째 canonical 문서로 연결. |
 | 1.0 | 2026-08-24 | v0.24 계획 중심의 Distribution–solver PRD를 제품 전체의 목적·기술 기준으로 개정. PowerSI 정확성 우선, 상태 어휘, 기술 경계, promotion gate, 검증 비용 통제와 two-document 작업 방식을 고정. |

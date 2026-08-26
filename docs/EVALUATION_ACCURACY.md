@@ -806,9 +806,11 @@ DONE/PASS at technical commit `bbf5598c76beb0190863a492c3a4b68ca007b687`; its fo
 after Sol ACCEPT, exit0 (`1 passed in 0.79s`, process elapsed `1.401s`). Limited evidence covers v3
 opt-in full validated-manifest SHA, separate normal/finite cache namespaces, miss-only context loading
 with digest/binding checks, immutable counts/plane-count snapshots, builder v3 True plus v2/absent False,
-and missing/tampered fail-closed behavior. ACTIVE is NONE. No physical stamp/profile/replacement/nullspace/
-gauge/Zii/production/release/PowerSI accuracy claim; any bounded physical-integration design requires
-fresh explicit authority.
+and missing/tampered fail-closed behavior. 17BJ is closed; sole ACTIVE read-only successor is 17BK,
+restricted to the
+frozen one-shot location query in `src/spd_decap_pi/raw_spatial_contact_asset.py` and at most one
+contiguous <=220-line cluster read after Sol review. Zero/over-cap/multiple/ambiguous/>220 STOP; no
+tests/build/import/stamp/profile/replacement/nullspace/gauge/Zii/production/release/accuracy claim.
 Contract: v2 constants/API byte-identical; profile/global/app/solver/convergence/policy/controller
 identities unchanged; only the opt-in raw-spatial v3 schema/compiler sibling identity is new. v3 sibling with kw-only opt-in flags, five normalized tables,
 no gap table, positive-intervening-thickness fsum spacing, row/coordinate/ProjectSpec/source-SHA digest,
