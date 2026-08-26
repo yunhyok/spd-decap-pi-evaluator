@@ -92,6 +92,39 @@ def _application() -> QApplication:
     return QApplication.instance() or QApplication([])
 
 
+def test_gui_spd_import_keeps_optional_plane_sheet_payload_disabled(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    imported = SimpleNamespace(scenario=object(), attachments={})
+    prepared_view = object()
+
+    def import_without_plane_sheet_opt_in(
+        _path: Path,
+        *,
+        progress: object,
+        is_cancelled: object,
+    ) -> object:
+        assert callable(progress)
+        assert callable(is_cancelled)
+        return imported
+
+    monkeypatch.setattr(
+        main_window_module, "import_spd_scenario", import_without_plane_sheet_opt_in
+    )
+    monkeypatch.setattr(
+        main_window_module,
+        "_prepare_document_view",
+        lambda *_args, **_kwargs: prepared_view,
+    )
+
+    result = main_window_module._job_import_spd(
+        Path("production.spd"), progress=lambda *_args: None, is_cancelled=lambda: False
+    )
+
+    assert result.imported is imported
+    assert result.view is prepared_view
+
+
 def _research_provenance() -> dict[str, object]:
     """Return a complete current-profile identity for GUI-only result fixtures."""
 

@@ -644,6 +644,71 @@ def test_compiler_closes_exact_sections_and_preserves_contact_evidence(
         ]
 
 
+def test_trace_metadata_assignments_are_skipped_like_core_trace_iterator(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    metadata = (
+        b"ClippedTrace = 34980230-8602573B-0FC99C32-5C3BC7C4\n\n"
+        b"SegmentedTrace = 24E455E4-F19050DD-C747A1FD-9F1AD3E9\n\n"
+    )
+    source = _raw_source().replace(
+        b"* Via description lines", metadata + b"* Via description lines", 1
+    )
+    context = _context(tmp_path, monkeypatch, source)
+
+    manifest, attachment = _compile(context)
+    assert manifest["counts"]["traces"] == 2
+    with _open(manifest, attachment) as loaded:
+        assert loaded.get_trace("VDD", "Trace1") is not None
+        assert loaded.get_trace("VDD", "Trace2") is not None
+        trace_coverage = next(
+            row for row in loaded.iter_section_coverage() if row.section_name == "Trace"
+        )
+        trace_start = source.index(b"* Trace description lines")
+        trace_end = source.index(b"* Via description lines")
+        assert trace_coverage.section_sha256 == sha256(
+            source[trace_start:trace_end]
+        ).hexdigest()
+
+
+@pytest.mark.parametrize(
+    "section_marker", (b"* Node description lines", b"* Via description lines")
+)
+def test_trace_metadata_is_not_accepted_in_other_sections(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, section_marker: bytes
+) -> None:
+    metadata = b"ClippedTrace = 34980230-8602573B-0FC99C32-5C3BC7C4"
+    source = _raw_source().replace(
+        section_marker, section_marker + b"\n" + metadata, 1
+    )
+    context = _context(tmp_path, monkeypatch, source)
+
+    with pytest.raises(compiler.RawSpatialCompilerError) as caught:
+        _compile(context)
+    assert caught.value.code == "RAW_SPATIAL_SECTION_GRAMMAR_INVALID"
+
+
+@pytest.mark.parametrize(
+    "metadata",
+    (
+        b"ClippedTrace = malformed",
+        b"SegmentedTrace",
+        b"UnexpectedTrace = 34980230-8602573B-0FC99C32-5C3BC7C4",
+    ),
+)
+def test_unknown_or_malformed_trace_metadata_remains_section_error(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, metadata: bytes
+) -> None:
+    source = _raw_source().replace(
+        b"* Via description lines", metadata + b"\n* Via description lines", 1
+    )
+    context = _context(tmp_path, monkeypatch, source)
+
+    with pytest.raises(compiler.RawSpatialCompilerError) as caught:
+        _compile(context)
+    assert caught.value.code == "RAW_SPATIAL_SECTION_GRAMMAR_INVALID"
+
+
 @pytest.mark.parametrize("newline", (b"\n", b"\r\n", b"\r"))
 def test_via_absolute_rotation_continuation_matches_tracked_parser(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, newline: bytes
@@ -668,6 +733,78 @@ def test_via_absolute_rotation_continuation_matches_tracked_parser(
         assert via is not None
         assert via.rotation_microdegrees == -180_000_000
         assert via.source_record_sha256 == sha256(exact).hexdigest()
+
+
+@pytest.mark.parametrize(
+    "replacement",
+    (
+        b"Via1::VDD UpperNode = Node1 LowerNode = Node3 PadStack = PS1 "
+        b"AbsoluteRotation = 180 NoAntiPadLayers = L1\n",
+        b"Via1::VDD UpperNode = Node1 LowerNode = Node3 PadStack = PS1 "
+        b"AbsoluteRotation = 180\n"
+        b"+ NoAntiPadLayers = L1 L2\n",
+    ),
+)
+def test_via_no_antipad_layers_suffix_matches_tracked_parser(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, replacement: bytes
+) -> None:
+    original = (
+        b"Via1::VDD UpperNode = Node1 LowerNode = Node3 PadStack = PS1 "
+        b"AbsoluteRotation = 180\n"
+    )
+    source = _raw_source().replace(original, replacement, 1)
+    context = _context(tmp_path, monkeypatch, source)
+
+    manifest, attachment = _compile(context)
+    assert manifest["source_sha256"] == sha256(source).hexdigest()
+    with _open(manifest, attachment) as loaded:
+        via = loaded.get_via("VDD", "Via1")
+        assert via is not None
+        assert via.source_record_sha256 == sha256(replacement).hexdigest()
+        via_coverage = next(
+            row for row in loaded.iter_section_coverage() if row.section_name == "Via"
+        )
+        via_start = source.index(b"* Via description lines")
+        via_end = source.index(b"* PadStack collection description lines")
+        assert via_coverage.section_sha256 == sha256(
+            source[via_start:via_end]
+        ).hexdigest()
+
+
+@pytest.mark.parametrize(
+    ("suffix", "code"),
+    (
+        (b"NoAntiPadLayers =", "RAW_SPATIAL_ATTRIBUTE_INVALID"),
+        (b"NoAntiPadLayers =   ", "RAW_SPATIAL_ATTRIBUTE_INVALID"),
+        (b"NoAntiPadLayers = L3", "RAW_SPATIAL_LAYER_UNRESOLVED"),
+        (b"NoAntiPadLayers = L1 L1", "RAW_SPATIAL_ATTRIBUTE_DUPLICATE"),
+        (
+            b"NoAntiPadLayers = L1 NoAntiPadLayers = L2",
+            "RAW_SPATIAL_ATTRIBUTE_DUPLICATE",
+        ),
+        (
+            b"NoAntiPadLayers = L1 AbsoluteRotation = 180",
+            "RAW_SPATIAL_LAYER_UNRESOLVED",
+        ),
+    ),
+)
+def test_via_no_antipad_layers_suffix_fails_closed(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    suffix: bytes,
+    code: str,
+) -> None:
+    primary = b"Via1::VDD UpperNode = Node1 LowerNode = Node3 PadStack = PS1 "
+    source = _raw_source().replace(
+        primary + b"AbsoluteRotation = 180\n",
+        primary + b"AbsoluteRotation = 180 " + suffix + b"\n",
+        1,
+    )
+    context = _context(tmp_path, monkeypatch, source)
+
+    with pytest.raises(compiler.RawSpatialCompilerError) as caught:
+        _compile(context)
+    assert caught.value.code == code
 
 
 @pytest.mark.parametrize(
@@ -1981,12 +2118,11 @@ def test_fractional_shape_circle_and_box_edges_remain_exact(
             primitive_order=(("positive_polygon", 0), ("negative_circle", 0)),
         )
     else:
-        half = value_um / 2.0
         polygon = (
-            (value_um - half, value_um - half),
-            (value_um + half, value_um - half),
-            (value_um + half, value_um + half),
-            (value_um - half, value_um + half),
+            (value_um, value_um),
+            (value_um + value_um, value_um),
+            (value_um + value_um, value_um + value_um),
+            (value_um, value_um + value_um),
         )
         _replace_l1_geometry(
             context,
@@ -2096,6 +2232,42 @@ def test_via_parser_parity_preserves_case_insensitive_padstack_resolution(
         assert via is not None and via.padstack_id == "PS1"
 
 
+def test_polygon_vertex_node_prefix_matches_tracked_core_parser(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    original = b"Node1::VDD X = 0mm Y = 0mm Layer = L1"
+    replacement = b"Node1::VDD PolygonVertex X = 0mm Y = 0mm Layer = L1"
+    source = _raw_source().replace(original, replacement, 1)
+    context = _context(tmp_path, monkeypatch, source)
+
+    manifest, attachment = _compile(context)
+    with _open(manifest, attachment) as loaded:
+        node = loaded.get_node("VDD", "Node1")
+        assert node is not None
+        assert (node.x_pm, node.y_pm) == (0, 0)
+
+
+@pytest.mark.parametrize(
+    "prefix_body",
+    (
+        b"PolygonVertexX X = 0mm Y = 0mm Layer = L1",
+        b"PolygonVertex PolygonVertex X = 0mm Y = 0mm Layer = L1",
+        b"X = 0mm PolygonVertex Y = 0mm Layer = L1",
+    ),
+)
+def test_unknown_node_prefix_remains_unframed_attribute_error(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, prefix_body: bytes
+) -> None:
+    original = b"Node1::VDD X = 0mm Y = 0mm Layer = L1"
+    replacement = b"Node1::VDD " + prefix_body
+    source = _raw_source().replace(original, replacement, 1)
+    context = _context(tmp_path, monkeypatch, source)
+
+    with pytest.raises(compiler.RawSpatialCompilerError) as caught:
+        _compile(context)
+    assert caught.value.code == "RAW_SPATIAL_ATTRIBUTE_INVALID"
+
+
 def test_box_binary64_edges_round_trip_to_exact_picometres(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -2106,17 +2278,17 @@ def test_box_binary64_edges_round_trip_to_exact_picometres(
         1,
     )
     context = _context(tmp_path, monkeypatch, source)
-    center_um = _length_um(b"0.1um")
-    half_extent_um = _length_um(b"0.1um") / 2.0
-    minimum_um = center_um - half_extent_um
-    maximum_um = center_um + half_extent_um
+    start_um = _length_um(b"0.1um")
+    width_um = _length_um(b"0.1um")
+    minimum_um = start_um
+    maximum_um = start_um + width_um
     box = (
         (minimum_um, minimum_um),
         (maximum_um, minimum_um),
         (maximum_um, maximum_um),
         (minimum_um, maximum_um),
     )
-    assert (minimum_um, maximum_um) == (0.05, 0.15000000000000002)
+    assert (minimum_um, maximum_um) == (0.1, 0.2)
     l1_geometry = SimpleNamespace(
         net="VDD",
         layer="L1",
@@ -2164,7 +2336,37 @@ def test_box_binary64_edges_round_trip_to_exact_picometres(
             surface.min_y_pm,
             surface.max_x_pm,
             surface.max_y_pm,
-        ) == (50_000, 50_000, 150_000, 150_000)
+        ) == (100_000, 100_000, 200_000, 200_000)
+
+
+def test_box_center_forgery_is_rejected_against_start_corner_replay(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    original = b"Polygon::VDD+ 0mm 0mm 1mm 0mm 1mm 1mm 0mm 1mm"
+    source = _raw_source().replace(
+        original,
+        b"Box::VDD+ 0.1um 0.1um 0.1um 0.1um",
+        1,
+    )
+    context = _context(tmp_path, monkeypatch, source)
+    center = 0.1
+    half = 0.05
+    forged_center_polygon = (
+        (center - half, center - half),
+        (center + half, center - half),
+        (center + half, center + half),
+        (center - half, center + half),
+    )
+    _replace_l1_geometry(
+        context,
+        positive_polygons=(forged_center_polygon,),
+        primitive_order=(("positive_polygon", 0),),
+        box_count=1,
+    )
+
+    with pytest.raises(compiler.RawSpatialCompilerError) as caught:
+        _compile(context)
+    assert caught.value.code == "RAW_SPATIAL_SOURCE_GEOMETRY_MISMATCH"
 
 
 def test_project_bbox_integer_alias_is_not_accepted_as_binary64_evidence(

@@ -110,7 +110,13 @@ _ISLAND_MANIFEST_SCHEMA: Final = "spd-raw-surface-island-manifest-v1"
 _NODE_PRIMARY_RE = re.compile(
     rb"^(?P<id>Node[^\s:!]+)(?:!![^\s:]+)?(?:::(?P<net>\S+))?\s+(?P<body>.+)$"
 )
+_TRACE_METADATA_RE = re.compile(
+    rb"^(?:ClippedTrace|SegmentedTrace) = [0-9A-Fa-f]{8}(?:-[0-9A-Fa-f]{8}){3}$"
+)
 _VIA_PRIMARY_RE = re.compile(rb"^(?P<id>Via[^\s:]+)::(?P<net>\S+)\s+(?P<body>.+)$")
+_VIA_NO_ANTIPAD_RE = re.compile(
+    rb"(?:^|[ \t])NoAntiPadLayers[ \t]*=[ \t]*(?P<layers>.*)$"
+)
 _ENDPOINT_RE = re.compile(rb"^(?P<id>Node[^\s:!]+)(?:!![^\s:]+)?(?:::(?P<net>\S+))?$")
 _ATTRIBUTE_RE = re.compile(rb"(?P<name>[A-Za-z][A-Za-z0-9_]*)\s*=\s*(?P<value>\S+)")
 _LAYER_RE = re.compile(
@@ -384,6 +390,8 @@ def _frame_section(handle: Any, span: _SourceSpan, prefix: bytes) -> Iterator[_L
             yield finish()
         if not physical.strip():
             continue
+        if prefix == b"Trace" and _TRACE_METADATA_RE.fullmatch(physical):
+            continue
         if not physical.startswith(prefix):
             _fail(
                 "RAW_SPATIAL_SECTION_GRAMMAR_INVALID",
@@ -583,8 +591,20 @@ def _parse_node(
         if match.group("net") is not None
         else None
     )
+    body = match.group("body")
+    # PowerSI annotates some package-shape Nodes with a leading bare
+    # ``PolygonVertex`` token.  The tracked core parser searches X/Y/LAYER
+    # attributes within the full record, so strip only this known framing
+    # marker before strict attribute validation; every other unframed token
+    # remains fail-closed in _attributes.
+    if body.startswith(b"PolygonVertex") and (
+        len(body) == len(b"PolygonVertex")
+        or body[len(b"PolygonVertex") : len(b"PolygonVertex") + 1]
+        in b" \t"
+    ):
+        body = body[len(b"PolygonVertex") :].lstrip()
     attrs = _attributes(
-        match.group("body"),
+        body,
         {"x", "y", "layer", "padstack", "absoluterotation"},
         offset=record.source_offset,
     )
@@ -667,7 +687,11 @@ def _endpoint(token: bytes, label: str, *, offset: int) -> tuple[str, str | None
     )
 
 
-def _parse_via(record: _LogicalRecord, padstack_by_fold: Mapping[str, str]) -> tuple[Any, ...]:
+def _parse_via(
+    record: _LogicalRecord,
+    padstack_by_fold: Mapping[str, str],
+    layer_by_fold: Mapping[str, str],
+) -> tuple[Any, ...]:
     payload = _logical_payload(record)
     match = _VIA_PRIMARY_RE.fullmatch(payload)
     if match is None:
@@ -678,8 +702,45 @@ def _parse_via(record: _LogicalRecord, padstack_by_fold: Mapping[str, str]) -> t
         )
     via_id = _decode_token(match.group("id"), "Via id", offset=record.source_offset)
     net = _decode_token(match.group("net"), "Via net", offset=record.source_offset)
+    body = match.group("body")
+    no_antipad = _VIA_NO_ANTIPAD_RE.search(body)
+    if no_antipad is not None:
+        raw_layers = no_antipad.group("layers")
+        layer_tokens = raw_layers.split()
+        if not layer_tokens:
+            _fail(
+                "RAW_SPATIAL_ATTRIBUTE_INVALID",
+                "NoAntiPadLayers requires one or more layers",
+                offset=record.source_offset,
+            )
+        seen_layers: set[str] = set()
+        for raw_layer in layer_tokens:
+            if raw_layer == b"NoAntiPadLayers":
+                _fail(
+                    "RAW_SPATIAL_ATTRIBUTE_DUPLICATE",
+                    "Via supplies duplicate NoAntiPadLayers suffix",
+                    offset=record.source_offset,
+                )
+            layer_name = _decode_token(
+                raw_layer, "NoAntiPadLayers layer", offset=record.source_offset
+            )
+            layer_fold = layer_name.casefold()
+            if layer_fold in seen_layers:
+                _fail(
+                    "RAW_SPATIAL_ATTRIBUTE_DUPLICATE",
+                    f"Via repeats NoAntiPadLayers layer {layer_name!r}",
+                    offset=record.source_offset,
+                )
+            if layer_fold not in layer_by_fold:
+                _fail(
+                    "RAW_SPATIAL_LAYER_UNRESOLVED",
+                    f"NoAntiPadLayers layer {layer_name!r} is absent",
+                    offset=record.source_offset,
+                )
+            seen_layers.add(layer_fold)
+        body = body[: no_antipad.start()].rstrip()
     attrs = _attributes(
-        match.group("body"),
+        body,
         {"uppernode", "lowernode", "padstack", "absoluterotation", "rotation"},
         offset=record.source_offset,
     )
@@ -1868,19 +1929,17 @@ def _validate_raw_surface_primitive(
                 offset=offset,
             )
         x, y, width, height = values
-        half_width = width / 2
-        half_height = height / 2
         min_x = _checked_surface_pm(
-            x - half_width, "Box minimum X", offset=offset
+            x, "Box minimum X", offset=offset
         )
         max_x = _checked_surface_pm(
-            x + half_width, "Box maximum X", offset=offset
+            x + width, "Box maximum X", offset=offset
         )
         min_y = _checked_surface_pm(
-            y - half_height, "Box minimum Y", offset=offset
+            y, "Box minimum Y", offset=offset
         )
         max_y = _checked_surface_pm(
-            y + half_height, "Box maximum Y", offset=offset
+            y + height, "Box maximum Y", offset=offset
         )
         observed = (
             (min_x, min_y),
@@ -1889,13 +1948,11 @@ def _validate_raw_surface_primitive(
             (min_x, max_y),
         )
         x_um, y_um, width_um, height_um = core_values
-        half_width = width_um / 2.0
-        half_height = height_um / 2.0
         source_float = (
-            (x_um - half_width, y_um - half_height),
-            (x_um + half_width, y_um - half_height),
-            (x_um + half_width, y_um + half_height),
-            (x_um - half_width, y_um + half_height),
+            (x_um, y_um),
+            (x_um + width_um, y_um),
+            (x_um + width_um, y_um + height_um),
+            (x_um, y_um + height_um),
         )
         source_bounds = observed
     else:
@@ -2804,7 +2861,7 @@ def _parse_contacts(
         for record in _frame_section(handle, via_span, b"Via"):
             if record.ordinal >= _MAX_ROWS:
                 _fail("RAW_SPATIAL_BOUND_EXCEEDED", "Via section exceeds its row bound")
-            parsed_via = _parse_via(record, padstack_by_fold)
+            parsed_via = _parse_via(record, padstack_by_fold, layer_by_fold)
             via_batch.add(parsed_via)
             net, net_fold = parsed_via[3], parsed_via[4]
             for node_id, node_fold in (

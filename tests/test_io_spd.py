@@ -6031,6 +6031,112 @@ def test_finite_via_quotient_emits_owner_complete_graph(tmp_path: Path) -> None:
         ].owner_ids
 
 
+def test_finite_via_keeps_direct_terminal_first_via_when_opposite_is_leaf(
+    tmp_path: Path,
+) -> None:
+    """A nominated terminal Via must survive dangling-leaf pruning."""
+    source, analysis = _recoverable_via_source(
+        tmp_path,
+        node_lines=(
+            "NodeTerminal!!1::PWR X = 0um Y = 0um Layer = Signal$TOP "
+            "PadStack = DUT\n"
+            "NodeTrace!!1::PWR X = 1um Y = 0um Layer = Signal$TOP "
+            "PadStack = DUT\n"
+            "NodePwr!!1::PWR X = 1um Y = 0um Layer = Signal$PWR "
+            "PadStack = DR-0102_60\n"
+            "NodeLeaf!!1::PWR X = 0um Y = 1um Layer = Signal$GND "
+            "PadStack = DR-0102_60"
+        ),
+        trace_lines=(
+            "TraceAlt::PWR StartingNode = NodeTerminal "
+            "EndingNode = NodeTrace Width = 0.10mm"
+        ),
+        via_lines=(
+            "ViaFirst::PWR UpperNode = NodeTerminal LowerNode = NodeLeaf "
+            "PadStack = DR-0102_60\n"
+            "ViaAlt::PWR UpperNode = NodeTrace LowerNode = NodePwr "
+            "PadStack = DR-0102_60"
+        ),
+    )
+    landing = SimpleNamespace(
+        via_id="ViaFirst", net="PWR", endpoint_node_id="NodeTerminal"
+    )
+    result = recover_spd_ground_reachability(
+        source,
+        landings=(landing,),
+        terminal_contact_landings=(landing,),
+        terminal_owned_via_ids=(),
+        padstacks=analysis.padstacks,
+        stackup_layers=analysis.stackup_layers,
+        target_layers_by_net={"PWR": ("Signal$PWR",)},
+        target_node_surface_resolver=lambda _net, layer, node, _x, _y: (
+            "island-pwr" if layer == "Signal$PWR" and node == "NodePwr" else None
+        ),
+        target_surface_island_ids={
+            ("PWR", "Signal$PWR"): ("island-pwr",),
+        },
+    )
+
+    key = ("viafirst", "nodeterminal")
+    edge_id = result.finite_via_edge_id_by_landing[key]
+    edge = next(item for item in result.finite_via_edges if item.edge_id == edge_id)
+    assert edge.owner_ids == ("via:viafirst",)
+    exposed_vertex = result.finite_via_vertex_id_by_landing[key]
+    assert exposed_vertex in {edge.start_vertex_id, edge.end_vertex_id}
+    assert result.finite_via_coverage is not None
+    assert result.finite_via_coverage.outside_scope_via_count == 0
+
+
+def test_finite_via_required_edge_only_in_one_boundary_component(
+    tmp_path: Path,
+) -> None:
+    """Required terminal edges activate only their exact quotient edge."""
+    source, analysis = _recoverable_via_source(
+        tmp_path,
+        node_lines=(
+            "NodeTerminal!!1::PWR X = 0um Y = 0um Layer = Signal$TOP "
+            "PadStack = DUT\n"
+            "NodeLeaf!!1::PWR X = 0um Y = 1um Layer = Signal$PWR "
+            "PadStack = DR-0102_60\n"
+            "NodeFloating!!1::PWR X = 0um Y = 2um Layer = Signal$GND "
+            "PadStack = DR-0102_60"
+        ),
+        via_lines=(
+            "ViaFirst::PWR UpperNode = NodeTerminal LowerNode = NodeLeaf "
+            "PadStack = DR-0102_60\n"
+            "ViaCycleA::PWR UpperNode = NodeLeaf LowerNode = NodeFloating "
+            "PadStack = DR-0102_60\n"
+            "ViaCycleB::PWR UpperNode = NodeLeaf LowerNode = NodeFloating "
+            "PadStack = DR-0102_60"
+        ),
+    )
+    landing = SimpleNamespace(
+        via_id="ViaFirst", net="PWR", endpoint_node_id="NodeTerminal"
+    )
+    result = recover_spd_ground_reachability(
+        source,
+        landings=(landing,),
+        terminal_contact_landings=(landing,),
+        terminal_owned_via_ids=(),
+        padstacks=analysis.padstacks,
+        stackup_layers=analysis.stackup_layers,
+        target_layers_by_net={"PWR": ("Signal$TOP",)},
+        target_node_surface_resolver=lambda _net, layer, node, _x, _y: (
+            "island-top" if layer == "Signal$TOP" and node == "NodeTerminal" else None
+        ),
+        target_surface_island_ids={("PWR", "Signal$TOP"): ("island-top",)},
+    )
+
+    key = ("viafirst", "nodeterminal")
+    edge_id = result.finite_via_edge_id_by_landing[key]
+    edge = next(item for item in result.finite_via_edges if item.edge_id == edge_id)
+    assert edge.owner_ids == ("via:viafirst",)
+    exposed_vertex = result.finite_via_vertex_id_by_landing[key]
+    assert exposed_vertex in {edge.start_vertex_id, edge.end_vertex_id}
+    assert result.finite_via_coverage is not None
+    assert result.finite_via_coverage.outside_scope_via_count == 2
+
+
 def test_finite_via_retained_artwork_only_node_keeps_exact_surface_layer(
     tmp_path: Path,
 ) -> None:

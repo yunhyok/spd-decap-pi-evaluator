@@ -8144,6 +8144,7 @@ def recover_spd_ground_reachability(
             ]
 
         boundary_nodes = bytearray(node_count)
+        required_terminal_edge_indices = bytearray(edge_count)
         terminal_ids_by_node: dict[int, list[str]] = {}
         retarget_cut_nodes: set[int] = set()
         for (via_key, node_key), (
@@ -8174,6 +8175,14 @@ def recover_spd_ground_reachability(
                 raise SpdImportError(
                     "terminal first Via is not incident to its exposed quotient vertex"
                 )
+            # Keep the physical first Via in the finite quotient even when its
+            # opposite endpoint is an otherwise dangling package node.  The
+            # terminal binding must expose that edge to the global MNA graph;
+            # pruning it as a non-boundary leaf leaves the landing with no
+            # first_via_quotient_edge_id.  Protect the exact edge instead of
+            # making the opposite node a boundary, so ordinary bridge chains
+            # still contract and scenario isolation remains the only path cut.
+            required_terminal_edge_indices[edge_index] = 1
             if (net_key, node_key) in isolated_node_keys:
                 boundary_nodes[opposite] = 1
                 retarget_cut_nodes.add(opposite)
@@ -8208,7 +8217,10 @@ def recover_spd_ground_reachability(
             if (
                 first == second
                 or full_root_by_node[first] != full_root_by_node[second]
-                or full_root_by_node[first] not in relevant_full_roots
+                or (
+                    full_root_by_node[first] not in relevant_full_roots
+                    and not required_terminal_edge_indices[edge_index]
+                )
             ):
                 continue
             active_edges[edge_index] = 1
@@ -8259,6 +8271,8 @@ def recover_spd_ground_reachability(
                     active_incident = candidate
                     break
             if active_incident < 0:
+                continue
+            if required_terminal_edge_indices[active_incident]:
                 continue
             active_edges[active_incident] = 0
             neighbor = edge_other(active_incident, node_index)
@@ -8548,6 +8562,7 @@ def recover_spd_ground_reachability(
         del vertex_member_count[:]
         del vertex_member_offsets[:]
         del vertex_members[:]
+        required_terminal_edge_indices.clear()
         terminal_ids_by_node.clear()
         boundary_nodes.clear()
         retarget_cut_nodes.clear()
