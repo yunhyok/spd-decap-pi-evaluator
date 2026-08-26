@@ -1,10 +1,10 @@
 # SPD Decap PI Evaluator 목적·기술 기준
 
 - 적용 제품: **SPD Decap PI Evaluator v0.23.0**
-- 문서 버전: **1.94**
+- 문서 버전: **1.95**
 - W5 approved/machine-frozen source-before: `main` commit `027ac7a09a3eded15f45c41860945f9d4c7f488d`
-- 상태: **G0 기준 문서** — full execution history and sole ACTIVE authority live in `WORK_EXECUTION_BASELINE.md` recovery/register; W5 DONE; W6-BASE 260729 numerical FAIL; W7-PHYS BLOCKED; raw-spatial chain: 17AR DONE, 17AS DONE-negative, 17AT BLOCKED/implementation REJECT, 17AU DONE (location evidence), 17AV BLOCKED/STOP, 17AW DONE (location evidence), 17AX BLOCKED/STOP, 17AY DONE (location evidence), 17AZ BLOCKED/STOP (source-classified delegated substrate owner), 17BA BLOCKED/STOP (boundary span627>500), 17BB BLOCKED/STOP (cache-only multiple clusters), 17BC BLOCKED/STOP (endpoint truncation + delegated identity), 17BD DONE (location evidence), 17BE BLOCKED/STOP (raw-v3/hash seam unproven), 17BF BLOCKED/design REJECT, 17BG BLOCKED/STOP (canonical payload/content identity delegated), 17BH BLOCKED/source-classified STOP (lifetime trace endpoint incomplete), 17BI DONE/PASS, 17BJ DONE/PASS, 17BK BLOCKED/source-classified STOP (validator field/type/unit/layer/net semantics delegated), 17BL DONE/location PASS (validator boundaries 1280/1323), 17BM DONE/PASS (local validator contract; physical ownership BLOCKED), 17BN DONE/PASS (typed immutable facade; physical scope unproven), 17BO ACTIVE. Any physical implementation following 17BO remains a future candidate requiring a separately frozen whitelist/test authority.
-- 현재 권위 상태: sole ACTIVE 17BO `W7-PHYS-W6-PLANE-PRIMITIVE-EXACT-SURFACE-OWNERSHIP-DESIGN`, a docs/frozen-evidence-only read-only design gate. Primitive `(source_asset_sha256, casefold(net_name), casefold(layer_name))` must match exactly one `RawSpatialSurfaceRow` `(artwork_asset_sha256, net_fold, layer_id_fold)` and its frozen islands_by_surface exactly one island; zero/>1 surface or island is STOP/no inference. Negative-shape electrical-node semantics are not source-proven and remain outside the PASS claim; multi-island overlap is not inferred. No source/artifact/test execution or implementation authority.
+- 상태: **G0 기준 문서** — full execution history and sole ACTIVE authority live in `WORK_EXECUTION_BASELINE.md` recovery/register; W5 DONE; W6-BASE 260729 numerical FAIL; W7-PHYS BLOCKED; raw-spatial chain: 17AR DONE, 17AS DONE-negative, 17AT BLOCKED/implementation REJECT, 17AU DONE (location evidence), 17AV BLOCKED/STOP, 17AW DONE (location evidence), 17AX BLOCKED/STOP, 17AY DONE (location evidence), 17AZ BLOCKED/STOP (source-classified delegated substrate owner), 17BA BLOCKED/STOP (boundary span627>500), 17BB BLOCKED/STOP (cache-only multiple clusters), 17BC BLOCKED/STOP (endpoint truncation + delegated identity), 17BD DONE (location evidence), 17BE BLOCKED/STOP (raw-v3/hash seam unproven), 17BF BLOCKED/design REJECT, 17BG BLOCKED/STOP (canonical payload/content identity delegated), 17BH BLOCKED/source-classified STOP (lifetime trace endpoint incomplete), 17BI DONE/PASS, 17BJ DONE/PASS, 17BK BLOCKED/source-classified STOP (validator field/type/unit/layer/net semantics delegated), 17BL DONE/location PASS (validator boundaries 1280/1323), 17BM DONE/PASS (local validator contract; physical ownership BLOCKED), 17BN DONE/PASS (typed immutable facade; physical scope unproven), 17BO BLOCKED/design REJECT (surface/island field-domain equivalence unproven), 17BP ACTIVE. Any physical implementation following a future PASS remains separately gated by fresh whitelist/test authority.
+- 현재 권위 상태: sole ACTIVE 17BP `W7-PHYS-W6-SURFACE-ISLAND-FIELD-DOMAIN-BOUNDARY-DISCOVERY`, location evidence only. Exact once-only query must exit0 with 2-8 unique lines across exactly the two specified files and identify the `RawSpatialSurfaceRow` class definition, an actual surface-row producer call, and `_certificate_island_inventory`; missing/duplicate/ambiguous/over-cap STOP. No source open/code/test/physical stamp/negative electrical semantics/overlap/profile/production/accuracy execution.
 - 최종 개정: 2026-08-26 (Asia/Seoul)
 
 ## 1. 문서 역할과 권위
@@ -790,8 +790,11 @@ physical ownership were not proven, so physical ownership remains BLOCKED. 17BN 
 commit `8f74ccc1f22c94373f48b07edac6480ef116e830`; Sol static ACCEPT and its focused node ran exactly once,
 exit0 `1 passed in 1.19s` (elapsed1.866s). Evidence is limited to typed immutable five-table rows,
 bounded iterators, counts/order, v2/closed/batch contracts; physical ownership/stamp/profile/replacement/
-nullspace/Zii/production/accuracy/release remain unproven and prohibited. Sole ACTIVE successor is 17BO,
-the frozen-evidence-only primitive-to-surface ownership design; no implementation authority follows.
+nullspace/Zii/production/accuracy/release remain unproven and prohibited. 17BO is BLOCKED/design REJECT:
+frozen evidence proves primitive source/hash plus net/layer conductor bindings and surface-row field existence,
+but does not prove source-vs-artwork SHA producer/domain/content equivalence, canonical net/layer namespaces,
+or islands_by_surface provenance/electrical-owner meaning. Sole ACTIVE successor is 17BP, a location-only
+field-domain boundary query; no implementation whitelist or physical inference follows.
 The frozen contract keeps v2 constants/API byte-identical and adds a schema-v3 sibling: compiler
 keyword-only `include_plane_sheet_payload=False`, validator keyword-only `require_plane_sheet_payload=False`,
 opt-in no downgrade, exactly five normalized tables (`plane_primitives`, `vertices`, `circles`,
@@ -923,5 +926,6 @@ and the exact Git HEAD are frozen together. Current trust identities: base `d43b
 | 1.92 | 2026-08-26 | clean main `59c7e4b1a457057c00ef9ebd2286829d8c9710a7`의 17BL exact query(1280/1323, 2 lines/1 file) DONE/location PASS를 기록하고, exact 1280-1359(80-line) 17BM validator-contract read를 sole ACTIVE로 지정. |
 | 1.93 | 2026-08-26 | clean main `7d5eb16d67d9d98fad3a89939819eb4f30e45b80`의 17BM exact1280-1359 read PASS/DONE(typed fields/units/order/group/hash/gaps; physical ownership BLOCKED)을 기록하고, exact two-file 17BN bounded typed facade와 focused regression gate를 sole ACTIVE로 지정. |
 | 1.94 | 2026-08-26 | technical commit `8f74ccc1f22c94373f48b07edac6480ef116e830`의 17BN Sol ACCEPT 및 focused node 1회 exit0(`1 passed in 1.19s`, elapsed1.866s)을 기록해 DONE/PASS로 닫고, frozen-evidence-only 17BO primitive-to-surface ownership design을 sole ACTIVE로 지정. |
+| 1.95 | 2026-08-26 | 17BO를 field-domain equivalence/islands_by_surface provenance 미증명으로 BLOCKED/design REJECT로 닫고, exact two-file location-only 17BP surface-island field-domain boundary query를 sole ACTIVE로 지정. |
 | 1.1 | 2026-08-24 | `WORK_EXECUTION_BASELINE.md`를 두 번째 canonical 문서로 연결. |
 | 1.0 | 2026-08-24 | v0.24 계획 중심의 Distribution–solver PRD를 제품 전체의 목적·기술 기준으로 개정. PowerSI 정확성 우선, 상태 어휘, 기술 경계, promotion gate, 검증 비용 통제와 two-document 작업 방식을 고정. |
