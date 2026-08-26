@@ -21,6 +21,8 @@ from typing import Any, Final, TypeVar
 from urllib.parse import quote
 import zlib
 
+from .canonical_json import concrete_canonical_json_bytes
+
 
 RAW_SPATIAL_CONTACT_ASSET_METADATA_KEY: Final = "raw_spatial_contact_asset"
 RAW_SPATIAL_CONTACT_ASSET_SCHEMA: Final = "spd-raw-spatial-contact-asset-v2"
@@ -1732,6 +1734,7 @@ def _validate_manifest(manifest: Mapping[str, Any]) -> dict[str, Any]:
     counts = manifest["counts"]
     if not isinstance(counts, Mapping) or frozenset(counts) != frozenset(_SECTIONS):
         _fail("RAW_SPATIAL_MANIFEST_INVALID", "manifest counts differ")
+    validated["counts"] = dict(counts)
     for section, count in counts.items():
         if type(count) is not int or count < 0 or count > MAX_RAW_SPATIAL_ROWS_PER_SECTION:
             _fail("RAW_SPATIAL_BOUND_EXCEEDED", f"{section} count exceeds its bound")
@@ -1746,6 +1749,7 @@ def _validate_manifest(manifest: Mapping[str, Any]) -> dict[str, Any]:
             _fail("RAW_SPATIAL_PLANE_SHEET_INVALID", "plane-sheet counts are invalid")
         for key in ("plane_sheet_payload_sha256", "adjacent_conductor_gap_sha256"):
             validated[key] = _sha(manifest[key], key)
+        validated["plane_sheet_counts"] = dict(counts)
         if type(manifest["adjacent_conductor_gap_count"]) is not int or manifest["adjacent_conductor_gap_count"] < 0:
             _fail("RAW_SPATIAL_PLANE_SHEET_INVALID", "gap count is invalid")
     return validated
@@ -1970,6 +1974,8 @@ def validate_project_raw_spatial_contact_asset_envelope(
         )
     result = dict(validated)
     result["counts"] = dict(validated["counts"])
+    if "plane_sheet_counts" in validated:
+        result["plane_sheet_counts"] = dict(validated["plane_sheet_counts"])
     return result
 
 
@@ -2278,7 +2284,7 @@ T = TypeVar("T")
 class LoadedRawSpatialContactAsset:
     """Bounded query facade owning one immutable temporary SQLite database."""
 
-    __slots__ = ("_connection", "_temporary_directory", "manifest")
+    __slots__ = ("_connection", "_temporary_directory", "_manifest_sha256", "manifest")
 
     def __init__(
         self,
@@ -2289,8 +2295,17 @@ class LoadedRawSpatialContactAsset:
         self._connection = connection
         self._temporary_directory = temporary_directory
         copied = dict(manifest)
-        copied["counts"] = MappingProxyType(dict(copied["counts"]))
+        self._manifest_sha256 = sha256(
+            concrete_canonical_json_bytes(copied)
+        ).hexdigest()
+        for key in ("counts", "plane_sheet_counts"):
+            if key in copied:
+                copied[key] = MappingProxyType(dict(copied[key]))
         self.manifest = MappingProxyType(copied)
+
+    @property
+    def manifest_sha256(self) -> str:
+        return self._manifest_sha256
 
     def close(self) -> None:
         if self._connection is not None:
