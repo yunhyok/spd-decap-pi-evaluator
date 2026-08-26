@@ -1,11 +1,11 @@
 # SPD Decap PI Evaluator 작업 기준
 
 - 적용 제품: **SPD Decap PI Evaluator v0.23.0**
-- 문서 버전: **1.89**
-- 상위 기준: [목적·기술 기준](PRODUCT_PURPOSE_AND_TECHNICAL_BASELINE.md) v1.88
+- 문서 버전: **1.90**
+- 상위 기준: [목적·기술 기준](PRODUCT_PURPOSE_AND_TECHNICAL_BASELINE.md) v1.89
 - W6-BASE source-before: clean `main` HEAD `fb36288781dcc0b884950ef5a486c474090ceebd`; this is the exact source boundary for the completed one-run evidence
-- 상태: **APPROVED/MACHINE-FROZEN CONTROL DOCUMENT**; full phase/item history lives in the register and changelog; W5 DONE; W6-BASE 260729 numerical FAIL; W7-PHYS BLOCKED; 17AX BLOCKED/STOP; 17AY DONE (location evidence); 17AZ BLOCKED/STOP (source-classified delegated substrate owner); 17BA BLOCKED/STOP (boundary span627>500); 17BB BLOCKED/STOP (cache-only multiple clusters); 17BC BLOCKED/STOP (endpoint truncation + delegated identity); 17BD DONE (location evidence); 17BE BLOCKED/STOP (raw-v3/hash seam unproven); 17BF BLOCKED/design REJECT; 17BG BLOCKED/STOP (canonical payload/content identity delegated); 17BH BLOCKED/source-classified STOP (lifetime trace endpoint incomplete); 17BI DONE/PASS; 17BJ ACTIVE.
-- 현재 권위 상태: sole ACTIVE 17BJ authorizes the exact three-file implementation contract: `src/spd_decap_pi/raw_spatial_contact_asset.py`, `src/spd_decap_pi/_core/solver/layerwise_network.py`, `tests/test_layerwise_raw_spatial_handoff.py`; focused node `tests/test_layerwise_raw_spatial_handoff.py::test_layerwise_substrate_v3_handoff_is_opt_in_hash_bound_and_fail_closed`, max once after Sol static gate. RequireTrue is v3-manifest-only with separate full-manifest SHA256 identity/cache; defaultFalse/direct/manifest-absent behavior remains byte-identical; no physical stamp/profile/replacement/nullspace/Zii/production/release/accuracy claim.
+- 상태: **APPROVED/MACHINE-FROZEN CONTROL DOCUMENT**; full phase/item history lives in the register and changelog; W5 DONE; W6-BASE 260729 numerical FAIL; W7-PHYS BLOCKED; 17AX BLOCKED/STOP; 17AY DONE (location evidence); 17AZ BLOCKED/STOP (source-classified delegated substrate owner); 17BA BLOCKED/STOP (boundary span627>500); 17BB BLOCKED/STOP (cache-only multiple clusters); 17BC BLOCKED/STOP (endpoint truncation + delegated identity); 17BD DONE (location evidence); 17BE BLOCKED/STOP (raw-v3/hash seam unproven); 17BF BLOCKED/design REJECT; 17BG BLOCKED/STOP (canonical payload/content identity delegated); 17BH BLOCKED/source-classified STOP (lifetime trace endpoint incomplete); 17BI DONE/PASS; 17BJ DONE/PASS; ACTIVE NONE. Any bounded physical-integration design remains a future candidate requiring fresh explicit authority.
+- 현재 권위 상태: ACTIVE is NONE. 17BJ DONE/PASS is recorded at technical commit `bbf5598c76beb0190863a492c3a4b68ca007b687`; the focused node ran once after Sol ACCEPT, exit0 (`1 passed in 0.79s`, elapsed `1.401s`). Limited evidence covers v3 opt-in full-manifest SHA, separate normal/finite cache namespaces, miss-only loader with digest/binding checks, immutable count snapshots, builder v3 True plus v2/absent False, and missing/tampered fail-closed behavior. No physical stamp/profile/replacement/nullspace/gauge/Zii/production/release/accuracy claim.
 - 최종 개정: 2026-08-26 (Asia/Seoul)
 
 ## 1. 압축 후 즉시 복구 카드
@@ -17,15 +17,15 @@ context가 압축되거나 새 session에서 작업을 재개하면 다른 연�
 |---|---|
 | 변하지 않는 목적 | source-derived single-rail `Zii`의 PowerSI 근접 정확성과 일반화 |
 | 현재 branch | `main`만 사용; 정리된 과거 branch를 다시 조사하지 않음 |
-| 현재 active work item | `W7-PHYS-W6-RAW-SPATIAL-V3-SUBSTRATE-HANDOFF-IMPLEMENTATION` |
-| 다음 권장 묶음 | `W7-PHYS-W6-RAW-SPATIAL-V3-SUBSTRATE-HANDOFF-IMPLEMENTATION` (ACTIVE; exact three-file whitelist + one focused node, max once) |
-| current authorization | 17BI DONE/PASS at clean main `c8e97c3ca8937775c869d3e4be20bd3cb489787f`: exact2275-2459 once exit0 completed class/immutable public manifest/lifecycle/context and blank2458-2459 + frozen def2460 boundary. Sole ACTIVE17BJ authorizes only the exact three files/node; no broad tests or production/physical claims. |
+| 현재 active work item | `none (17BJ DONE/PASS; ACTIVE NONE)` |
+| 다음 권장 묶음 | `none; any bounded physical-integration design requires fresh explicit authority` |
+| current authorization | 17BJ DONE/PASS at technical commit `bbf5598c76beb0190863a492c3a4b68ca007b687`; focused node once after Sol ACCEPT, exit0 (`1 passed in 0.79s`, elapsed `1.401s`). No current implementation/test/production authority; no successor is active. |
 | 17T command A | `rg -n --no-heading --color never --glob '*.py' '\bcompile_raw_spatial_contact_asset\b' 'src/spd_decap_pi'` |
 | 17T command B | `rg -n --no-heading --color never --glob '*.py' '\b(?:resolve_solver_profile|numerical_worker_count|build_layerwise_uniform_source_model)\b' 'src/spd_decap_pi'` |
 | 17T command C | `rg -n --no-heading --color never --glob '*.py' '\b(?:GLOBAL_KRON|SurfacePatchDifferentialProjection|SurfacePatchFinitePortProjection|assemble_differential_admittance|differential_projection)\b' 'src/spd_decap_pi'` |
 | consumed 17M discovery | canonical rg ran once (exit 0), found candidate symbols only; no reuse or production proof |
 | future production invariant (not current authority) | if a future run is authorized: exact clean `main`, new output root, one run/no retry; B correlation is historical evidence; C/D consumed their exactly-one old candidate/import reads; E had one production diagnostic invocation plus one orchestration ZIP read; old root remains forbidden for W6-BASE output/scoring/retry/mutation |
-| 고비용 검증 권한 | none; only the exact three-file 17BJ implementation and one focused node (max once after Sol static gate) are authorized |
+| 고비용 검증 권한 | none; 17BJ is closed and no successor is authorized |
 | 현재 정확성 상태 | `260729 retrospective FAIL`; unseen/generalization remains `unknown / not_run` |
 | 현재 release 계산 증거 | W6-BASE 260729 completed numerical FAIL; offline verifier exit 2 (integrity-valid) |
 | W6-BASE result root | `D:\SPD-Decap-PI-Evaluator-W6\fb36288781dcc0b884950ef5a486c474090ceebd\260729` — manifest `2b14f90e762abc49833518137812e8fc97fcde0e9c145795b7384210cfd9f5de`, sidecar `0d103e0ad47df80641fac0952a35a6eaa56cc9fdb71be24661903e451926e932`, correlation `969e40046e3a099d09557ba7500693460362336d76b067962436bd3b5177abc4` |
@@ -194,7 +194,7 @@ root, one-run/no-retry 조건을 다시 확정할 때만 고려한다.
 | `W7-PHYS-W6-RAW-SPATIAL-V3-LOADER-RETURN-CONTRACT-TRACE` | 17BG | BLOCKED/STOP | trace loader return contract | exact2460-2558 read at clean main `95cb94d28090021c8b21081b771b1d8d30d2b353` completed require=True v3/five binding hashes/attachment-cancel-temp-SQLite cleanup/no fallback; canonical payload/content identity delegated to `_validate_manifest` and `LoadedRawSpatialContactAsset` constructor/type; no further source trace |
 | `W7-PHYS-W6-LOADED-RAW-SPATIAL-ASSET-LIFETIME-CONTRACT-TRACE` | 17BH | BLOCKED/source-classified STOP | trace loaded raw spatial asset lifetime contract | exact once at clean main `3b507dd9aab7871baab29226f9849c87659c058b` exit0, 164 lines/1 match/1 file; class starts2278, defensive manifest copy/nested-count/public MappingProxy/connection-tempdir/idempotent close/context/closed-query fail-closed proven; output ends line2438 inside `get_padstack` without next top-level boundary; no further source trace or implementation promotion |
 | `W7-PHYS-W6-LOADED-RAW-SPATIAL-ASSET-COMPLETE-CONTRACT-TRACE` | 17BI | DONE/PASS | complete loaded raw spatial asset contract | clean main `c8e97c3ca8937775c869d3e4be20bd3cb489787f`; exact2275-2459 once exit0 completed class, immutable public manifest, lifecycle/context, blank2458-2459 + frozen def2460 exact boundary |
-| `W7-PHYS-W6-RAW-SPATIAL-V3-SUBSTRATE-HANDOFF-IMPLEMENTATION` | 17BJ | ACTIVE | implement opt-in substrate handoff | exact whitelist `src/spd_decap_pi/raw_spatial_contact_asset.py`, `src/spd_decap_pi/_core/solver/layerwise_network.py`, `tests/test_layerwise_raw_spatial_handoff.py`; focused node `tests/test_layerwise_raw_spatial_handoff.py::test_layerwise_substrate_v3_handoff_is_opt_in_hash_bound_and_fail_closed`, max once after Sol static gate; requireTrue v3-only separate full-manifest SHA256 identity/cache, defaultFalse byte-identical, no physical stamp |
+| `W7-PHYS-W6-RAW-SPATIAL-V3-SUBSTRATE-HANDOFF-IMPLEMENTATION` | 17BJ | DONE/PASS | opt-in substrate handoff | technical commit `bbf5598c76beb0190863a492c3a4b68ca007b687`; focused node once after Sol ACCEPT, exit0 `1 passed in 0.79s` (elapsed1.401s); v3 digest/cache/loader/snapshot/builder/fail-closed evidence only; no physical stamp |
 | `W7-PHYS-PROSPECTIVE-RUNTIME-TERM-EVIDENCE` | next candidate | BLOCKED/YAGNI | provide a grounded runtime term digest/count/owner partition only after an independently selected physical change | new candidate/HEAD/root, one run/no retry; no current authority |
 | `W8-REL` | 18 | BLOCKED | completed known-case solve를 release gate에 연결하고 최종 전달 | accuracy/product gate와 exact release commit 필요 |
 | `D-DIST` | - | DEFERRED | Distribution routing/DRC scope 확대 | 사용자가 implementation-ready/DRC 목표로 승격할 때만 |
@@ -852,7 +852,7 @@ Base clean main HEAD는 `94df6d30cb1b6e8e1be686e311e7ebaa2e96e6b9`이며, exact 
 
 Budget는 <=40 lines 및 <=6 files였고 17 lines/5 files로 통과했다. compiler symbol을 참조한
 유일한 file은 `tests/test_raw_spatial_contact_compiler.py`이며 나머지는 builder/validator-only다.
-17Z는 DONE으로 닫고, 17AA와 17AA-S1은 historical BLOCKED로 남기며 17AA-S2는 test-gate PASS DONE으로 닫는다. 17AB는 DONE, 17AC는 source-classified STOP/BLOCKED로 닫고 17AD는 DONE으로 닫는다. 17AE는 source-location boundary evidence DONE으로 닫고 17AF는 DONE으로 닫는다. 17AG는 integration-gap evidence DONE으로 닫고, 17AH는 bounded location evidence DONE으로 닫는다. 17AI는 gate STOP/BLOCKED로 닫고 17AJ는 deterministic owner-location evidence DONE으로 닫는다. 17AK는 source-classified endpoint STOP/BLOCKED로 닫고 17AL은 source-classified test gap DONE으로 닫는다. 17AM은 DONE, 17AN은 test-gate PASS DONE으로 닫고, 17AO는 location evidence DONE으로 닫는다. 17AP는 source-classified caller trace DONE으로 닫고, 17AQ는 source-classified test-seam STOP/BLOCKED로 닫는다. 17AR는 one-file GUI opt-in activation DONE으로 닫고 17AS는 DONE-negative producer-active/no-solver-consumer로 닫는다. 17AT는 BLOCKED/implementation REJECT, 17AU는 DONE(location evidence), 17AV는 BLOCKED/STOP, 17AW는 DONE(location evidence), 17AX는 BLOCKED/STOP(source-classified preflight-only), 17AY는 DONE(location evidence), 17AZ는 BLOCKED/STOP(source-classified delegated substrate owner)으로 닫고, 17BA는 boundary span627>500으로 BLOCKED/STOP으로 닫으며, 17BB는 cache-only multiple clusters로 BLOCKED/STOP으로 닫고, 17BC는 endpoint truncation + delegated identity로 BLOCKED/STOP으로 닫고, 17BD는 DONE(location evidence)으로 닫으며, 17BE는 raw-v3/hash seam unproven으로 BLOCKED/STOP으로 닫고, 17BF는 BLOCKED/design REJECT로 닫으며, 17BG는 canonical payload/content identity delegation으로 BLOCKED/STOP으로 닫고 17BH는 source-classified endpoint STOP으로 닫고 17BI는 DONE/PASS로 닫는다. 17BJ is the sole ACTIVE exact three-file substrate-handoff implementation; no broad tests or production/physical claims.
+17Z는 DONE으로 닫고, 17AA와 17AA-S1은 historical BLOCKED로 남기며 17AA-S2는 test-gate PASS DONE으로 닫는다. 17AB는 DONE, 17AC는 source-classified STOP/BLOCKED로 닫고 17AD는 DONE으로 닫는다. 17AE는 source-location boundary evidence DONE으로 닫고 17AF는 DONE으로 닫는다. 17AG는 integration-gap evidence DONE으로 닫고, 17AH는 bounded location evidence DONE으로 닫는다. 17AI는 gate STOP/BLOCKED로 닫고 17AJ는 deterministic owner-location evidence DONE으로 닫는다. 17AK는 source-classified endpoint STOP/BLOCKED로 닫고 17AL은 source-classified test gap DONE으로 닫는다. 17AM은 DONE, 17AN은 test-gate PASS DONE으로 닫고, 17AO는 location evidence DONE으로 닫는다. 17AP는 source-classified caller trace DONE으로 닫고, 17AQ는 source-classified test-seam STOP/BLOCKED로 닫는다. 17AR는 one-file GUI opt-in activation DONE으로 닫고 17AS는 DONE-negative producer-active/no-solver-consumer로 닫는다. 17AT는 BLOCKED/implementation REJECT, 17AU는 DONE(location evidence), 17AV는 BLOCKED/STOP, 17AW는 DONE(location evidence), 17AX는 BLOCKED/STOP(source-classified preflight-only), 17AY는 DONE(location evidence), 17AZ는 BLOCKED/STOP(source-classified delegated substrate owner)으로 닫고, 17BA는 boundary span627>500으로 BLOCKED/STOP으로 닫으며, 17BB는 cache-only multiple clusters로 BLOCKED/STOP으로 닫고, 17BC는 endpoint truncation + delegated identity로 BLOCKED/STOP으로 닫고, 17BD는 DONE(location evidence)으로 닫으며, 17BE는 raw-v3/hash seam unproven으로 BLOCKED/STOP으로 닫고, 17BF는 BLOCKED/design REJECT로 닫으며, 17BG는 canonical payload/content identity delegation으로 BLOCKED/STOP으로 닫고 17BH는 source-classified endpoint STOP으로 닫고 17BI는 DONE/PASS로 닫는다. 17BJ is DONE/PASS at technical commit `bbf5598c76beb0190863a492c3a4b68ca007b687`; its focused node ran once after Sol ACCEPT, exit0 (`1 passed in 0.79s`, elapsed1.401s). ACTIVE is NONE; no successor or broad/production/physical claim.
 
 ### 17AA. W7-PHYS-W6-RAW-SPATIAL-ASSET-V3-EMISSION (BLOCKED; test-gate)
 
@@ -1293,21 +1293,17 @@ The exact2275-2459 read at clean main `c8e97c3ca8937775c869d3e4be20bd3cb489787f`
 the class, immutable public manifest, lifecycle/context, and blank2458-2459 plus frozen def2460 exact boundary.
 17BI is DONE/PASS; no further source expansion is authorized by this item.
 
-### 17BJ. W7-PHYS-W6-RAW-SPATIAL-V3-SUBSTRATE-HANDOFF-IMPLEMENTATION (ACTIVE)
+### 17BJ. W7-PHYS-W6-RAW-SPATIAL-V3-SUBSTRATE-HANDOFF-IMPLEMENTATION (DONE/PASS)
 
 Exact whitelist: `src/spd_decap_pi/raw_spatial_contact_asset.py`,
 `src/spd_decap_pi/_core/solver/layerwise_network.py`,
-`tests/test_layerwise_raw_spatial_handoff.py`; exact focused node
-`tests/test_layerwise_raw_spatial_handoff.py::test_layerwise_substrate_v3_handoff_is_opt_in_hash_bound_and_fail_closed`,
-run max once after Sol static gate. Contract: raw asset computes existing canonical-helper SHA256 over the
-full validated manifest before MappingProxy freeze and stores the immutable scalar; `compile_layerwise_substrate`
-adds kw-only `require_plane_sheet_payload=False`; `build_layerwise_uniform_source_model` passes True only for
-canonical projects with a v3 raw-spatial manifest. requireTrue opens the loader with existing expected hashes/
-context manager, captures the manifest digest, and closes immediately; invalid v3 fails closed with no fallback.
-The digest adds a v3-only separate identity/cache namespace; defaultFalse/direct/manifest-absent behavior remains
-byte-for-byte unchanged. Physical substrate stamping is unchanged. The focused node asserts the default invariant,
-requireTrue+digest, non-aliasing different digests, missing/tampered fail-closed behavior, and unchanged physical
-stamp. Exclude broad tests, profile, replacement/no-double-count, nullspace/gauge/Zii, production/release/accuracy.
+`tests/test_layerwise_raw_spatial_handoff.py`; focused node ran once after Sol ACCEPT, exit0
+(`1 passed in 0.79s`, process elapsed `1.401s`). DONE/PASS evidence is limited to v3 opt-in full
+validated-manifest SHA, separate normal/finite cache namespaces, miss-only context loader with digest/
+binding checks, immutable counts/plane-count snapshots, builder v3 True plus v2/absent False, and
+missing/tampered fail-closed behavior. ACTIVE is NONE. No physical stamp/profile/replacement/
+nullspace/gauge/Zii/production/release/PowerSI accuracy claim; any bounded physical-integration design
+is only a future candidate requiring fresh explicit authority.
 
 ## 20. 변경 기록
 
@@ -1403,3 +1399,4 @@ stamp. Exclude broad tests, profile, replacement/no-double-count, nullspace/gaug
 | 1.87 | 2026-08-26 | clean main `3b507dd9aab7871baab29226f9849c87659c058b`의 17BH exact once query exit0(164 lines/1 match/1 file)에서 manifest copy/MappingProxy/connection-tempdir/close/context/fail-closed를 확인했으나 line2438 `get_padstack` 내부에서 next top-level boundary가 잘려 BLOCKED/source-classified STOP으로 닫고 ACTIVE NONE으로 전환. |
 | 1.88 | 2026-08-26 | 사용자 승인과 clean main `48caf37613db8f4bd8d00e7aa685b79862b7dcf7`를 기준으로 17BI raw_spatial_contact_asset.py:2275-2459(185) 단일 complete-contract read를 sole ACTIVE로 지정하고 frozen 17BG def2460을 재독하지 않는 경계를 동결. |
 | 1.89 | 2026-08-26 | clean main `c8e97c3ca8937775c869d3e4be20bd3cb489787f`의 17BI exact2275-2459 read PASS/DONE을 기록하고 exact three-file 17BJ substrate-handoff implementation 및 focused node(max once after Sol static gate)을 sole ACTIVE로 지정. |
+| 1.90 | 2026-08-26 | technical commit `bbf5598c76beb0190863a492c3a4b68ca007b687`의 17BJ implementation과 Sol ACCEPT 후 focused node 1회 exit0(`1 passed in 0.79s`, elapsed1.401s)을 기록해 DONE/PASS로 닫고 ACTIVE NONE으로 전환. 제한된 v3 digest/cache/loader/snapshot/builder/fail-closed 결과만 보존. |

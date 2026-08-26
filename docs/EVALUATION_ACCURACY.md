@@ -801,14 +801,14 @@ one match/one file; class start2278 proves defensive manifest copy, nested-count
 connection/tempdir ownership, idempotent close, context manager, and closed-query fail-closed behavior, but
 the output ends line2438 inside `get_padstack` without the next top-level boundary. 17BI is DONE/PASS at clean
 main `c8e97c3ca8937775c869d3e4be20bd3cb489787f`: exact2275-2459 once exit0 completed the class, immutable
-public manifest, lifecycle/context, and blank2458-2459 plus frozen def2460 exact boundary. Sole ACTIVE successor
-is 17BJ `W7-PHYS-W6-RAW-SPATIAL-V3-SUBSTRATE-HANDOFF-IMPLEMENTATION`, restricted to
-`src/spd_decap_pi/raw_spatial_contact_asset.py`, `src/spd_decap_pi/_core/solver/layerwise_network.py`,
-`tests/test_layerwise_raw_spatial_handoff.py` and node
-`tests/test_layerwise_raw_spatial_handoff.py::test_layerwise_substrate_v3_handoff_is_opt_in_hash_bound_and_fail_closed`,
-max once after Sol static gate. requireTrue is v3-manifest-only with
-separate full-manifest SHA256 identity/cache; defaultFalse/direct/manifest-absent behavior is byte-identical;
-no physical stamp/profile/replacement/nullspace/Zii/production/release/accuracy claim.
+public manifest, lifecycle/context, and blank2458-2459 plus frozen def2460 exact boundary. 17BJ is
+DONE/PASS at technical commit `bbf5598c76beb0190863a492c3a4b68ca007b687`; its focused node ran once
+after Sol ACCEPT, exit0 (`1 passed in 0.79s`, process elapsed `1.401s`). Limited evidence covers v3
+opt-in full validated-manifest SHA, separate normal/finite cache namespaces, miss-only context loading
+with digest/binding checks, immutable counts/plane-count snapshots, builder v3 True plus v2/absent False,
+and missing/tampered fail-closed behavior. ACTIVE is NONE. No physical stamp/profile/replacement/nullspace/
+gauge/Zii/production/release/PowerSI accuracy claim; any bounded physical-integration design requires
+fresh explicit authority.
 Contract: v2 constants/API byte-identical; profile/global/app/solver/convergence/policy/controller
 identities unchanged; only the opt-in raw-spatial v3 schema/compiler sibling identity is new. v3 sibling with kw-only opt-in flags, five normalized tables,
 no gap table, positive-intervening-thickness fsum spacing, row/coordinate/ProjectSpec/source-SHA digest,
