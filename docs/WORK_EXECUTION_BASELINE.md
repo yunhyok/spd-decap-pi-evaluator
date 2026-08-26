@@ -1,11 +1,11 @@
 # SPD Decap PI Evaluator 작업 기준
 
 - 적용 제품: **SPD Decap PI Evaluator v0.23.0**
-- 문서 버전: **1.93**
-- 상위 기준: [목적·기술 기준](PRODUCT_PURPOSE_AND_TECHNICAL_BASELINE.md) v1.92
+- 문서 버전: **1.94**
+- 상위 기준: [목적·기술 기준](PRODUCT_PURPOSE_AND_TECHNICAL_BASELINE.md) v1.93
 - W6-BASE source-before: clean `main` HEAD `fb36288781dcc0b884950ef5a486c474090ceebd`; this is the exact source boundary for the completed one-run evidence
-- 상태: **APPROVED/MACHINE-FROZEN CONTROL DOCUMENT**; full phase/item history lives in the register and changelog; W5 DONE; W6-BASE 260729 numerical FAIL; W7-PHYS BLOCKED; 17AX BLOCKED/STOP; 17AY DONE (location evidence); 17AZ BLOCKED/STOP (source-classified delegated substrate owner); 17BA BLOCKED/STOP (boundary span627>500); 17BB BLOCKED/STOP (cache-only multiple clusters); 17BC BLOCKED/STOP (endpoint truncation + delegated identity); 17BD DONE (location evidence); 17BE BLOCKED/STOP (raw-v3/hash seam unproven); 17BF BLOCKED/design REJECT; 17BG BLOCKED/STOP (canonical payload/content identity delegated); 17BH BLOCKED/source-classified STOP (lifetime trace endpoint incomplete); 17BI DONE/PASS; 17BJ DONE/PASS; 17BK BLOCKED/source-classified STOP (validator field/type/unit/layer/net semantics delegated); 17BL DONE/location PASS (validator boundaries 1280/1323); 17BM ACTIVE. Any bounded physical-integration design remains a future candidate requiring fresh explicit authority.
-- 현재 권위 상태: sole ACTIVE 17BM authorizes only the frozen exact read of `src/spd_decap_pi/raw_spatial_contact_asset.py` lines 1280-1359 inclusive (80 lines), once, with no query or second range. STOP if the range truncates or fields/types/units/ownership delegate externally; no source expansion/code/test or physical/production/accuracy claim.
+- 상태: **APPROVED/MACHINE-FROZEN CONTROL DOCUMENT**; full phase/item history lives in the register and changelog; W5 DONE; W6-BASE 260729 numerical FAIL; W7-PHYS BLOCKED; 17AX BLOCKED/STOP; 17AY DONE (location evidence); 17AZ BLOCKED/STOP (source-classified delegated substrate owner); 17BA BLOCKED/STOP (boundary span627>500); 17BB BLOCKED/STOP (cache-only multiple clusters); 17BC BLOCKED/STOP (endpoint truncation + delegated identity); 17BD DONE (location evidence); 17BE BLOCKED/STOP (raw-v3/hash seam unproven); 17BF BLOCKED/design REJECT; 17BG BLOCKED/STOP (canonical payload/content identity delegated); 17BH BLOCKED/source-classified STOP (lifetime trace endpoint incomplete); 17BI DONE/PASS; 17BJ DONE/PASS; 17BK BLOCKED/source-classified STOP (validator field/type/unit/layer/net semantics delegated); 17BL DONE/location PASS (validator boundaries 1280/1323); 17BM DONE/PASS (local validator contract; physical ownership BLOCKED); 17BN ACTIVE. Any bounded physical-integration design remains a future candidate requiring fresh explicit authority.
+- 현재 권위 상태: sole ACTIVE 17BN authorizes only the exact two-file whitelist `src/spd_decap_pi/raw_spatial_contact_asset.py` and `tests/test_raw_spatial_contact_compiler.py`. Contract is immutable typed rows plus bounded iterators reusing existing loaded-asset/iterator surfaces; no new schema/join/helper/attachment/manifest/hash. Sol static review then at most one focused node; no broad/physical/profile/solver/production/accuracy execution.
 - 최종 개정: 2026-08-26 (Asia/Seoul)
 
 ## 1. 압축 후 즉시 복구 카드
@@ -17,15 +17,15 @@ context가 압축되거나 새 session에서 작업을 재개하면 다른 연�
 |---|---|
 | 변하지 않는 목적 | source-derived single-rail `Zii`의 PowerSI 근접 정확성과 일반화 |
 | 현재 branch | `main`만 사용; 정리된 과거 branch를 다시 조사하지 않음 |
-| 현재 active work item | `W7-PHYS-W6-PLANE-SHEET-ROW-VALIDATOR-CONTRACT-TRACE` (17BM) |
-| 다음 권장 묶음 | `17BM` exact one-shot read of raw_spatial_contact_asset.py:1280-1359 (80 lines) |
-| current authorization | 17BM standing user preapproval: read exactly lines 1280-1359 once; no query/second range. STOP on truncation or external field/type/unit/ownership delegation; no code/test/stamp/profile/production/accuracy execution. |
+| 현재 active work item | `W7-PHYS-W6-PLANE-SHEET-BOUNDED-QUERY-FACADE` (17BN) |
+| 다음 권장 묶음 | `17BN` exact two-file typed-row facade diff, then one focused regression node after Sol static review |
+| current authorization | 17BN standing preapproval: whitelist only `src/spd_decap_pi/raw_spatial_contact_asset.py` and `tests/test_raw_spatial_contact_compiler.py`; reuse existing loaded asset/iterator, add immutable typed rows/bounded iterators only; no schema/join/helper/attachment/manifest/hash; focused node max once. |
 | 17T command A | `rg -n --no-heading --color never --glob '*.py' '\bcompile_raw_spatial_contact_asset\b' 'src/spd_decap_pi'` |
 | 17T command B | `rg -n --no-heading --color never --glob '*.py' '\b(?:resolve_solver_profile|numerical_worker_count|build_layerwise_uniform_source_model)\b' 'src/spd_decap_pi'` |
 | 17T command C | `rg -n --no-heading --color never --glob '*.py' '\b(?:GLOBAL_KRON|SurfacePatchDifferentialProjection|SurfacePatchFinitePortProjection|assemble_differential_admittance|differential_projection)\b' 'src/spd_decap_pi'` |
 | consumed 17M discovery | canonical rg ran once (exit 0), found candidate symbols only; no reuse or production proof |
 | future production invariant (not current authority) | if a future run is authorized: exact clean `main`, new output root, one run/no retry; B correlation is historical evidence; C/D consumed their exactly-one old candidate/import reads; E had one production diagnostic invocation plus one orchestration ZIP read; old root remains forbidden for W6-BASE output/scoring/retry/mutation |
-| 고비용 검증 권한 | none; 17BM allows only one bounded source read, with code/tests/build/import/production execution forbidden |
+| 고비용 검증 권한 | none; 17BN allows only Sol static review and at most one focused node, with broad tests/build/import/production execution forbidden |
 | 현재 정확성 상태 | `260729 retrospective FAIL`; unseen/generalization remains `unknown / not_run` |
 | 현재 release 계산 증거 | W6-BASE 260729 completed numerical FAIL; offline verifier exit 2 (integrity-valid) |
 | W6-BASE result root | `D:\SPD-Decap-PI-Evaluator-W6\fb36288781dcc0b884950ef5a486c474090ceebd\260729` — manifest `2b14f90e762abc49833518137812e8fc97fcde0e9c145795b7384210cfd9f5de`, sidecar `0d103e0ad47df80641fac0952a35a6eaa56cc9fdb71be24661903e451926e932`, correlation `969e40046e3a099d09557ba7500693460362336d76b067962436bd3b5177abc4` |
@@ -197,7 +197,8 @@ root, one-run/no-retry 조건을 다시 확정할 때만 고려한다.
 | `W7-PHYS-W6-RAW-SPATIAL-V3-SUBSTRATE-HANDOFF-IMPLEMENTATION` | 17BJ | DONE/PASS | opt-in substrate handoff | technical commit `bbf5598c76beb0190863a492c3a4b68ca007b687`; focused node once after Sol ACCEPT, exit0 `1 passed in 0.79s` (elapsed1.401s); v3 digest/cache/loader/snapshot/builder/fail-closed evidence only; no physical stamp |
 | `W7-PHYS-W6-PLANE-SHEET-BOUNDED-QUERY-CONTRACT-TRACE` | 17BK | BLOCKED/source-classified STOP | trace plane-sheet bounded query contract | clean main `afda7f5c9e88f71235229a34e386528c11909647`; exact query once 3 lines/1 file at1360/1395/1421; read1360-1484 (125 lines) proved inventory/count/ordinal/grouping/digest/coordinate_unit/bindings/batch-cancel/incomplete grouping, but field/type/unit/layer/net semantics delegated to validators; no further read |
 | `W7-PHYS-W6-PLANE-SHEET-ROW-VALIDATOR-BOUNDARY-DISCOVERY` | 17BL | DONE/location PASS | locate plane-sheet validator boundaries | clean main `59c7e4b1a457057c00ef9ebd2286829d8c9710a7`; exact query once exit0 exactly 2 lines/1 file at definitions 1280/1323; location evidence only |
-| `W7-PHYS-W6-PLANE-SHEET-ROW-VALIDATOR-CONTRACT-TRACE` | 17BM | ACTIVE | trace typed plane-sheet validator contract | standing preapproval; exact read only `src/spd_decap_pi/raw_spatial_contact_asset.py` lines1280-1359 inclusive (80 lines), once; STOP on truncation or external field/type/unit/ownership delegation; no query/second range/code/test |
+| `W7-PHYS-W6-PLANE-SHEET-ROW-VALIDATOR-CONTRACT-TRACE` | 17BM | DONE/PASS | trace typed plane-sheet validator contract | clean main `7d5eb16d67d9d98fad3a89939819eb4f30e45b80`; exact1280-1359 read once locally complete for fields/types/units/order/group/hash/gaps and primitive layer/net/source bindings; no island/surface identity; physical ownership BLOCKED |
+| `W7-PHYS-W6-PLANE-SHEET-BOUNDED-QUERY-FACADE` | 17BN | ACTIVE | expose bounded typed plane-sheet rows | exact whitelist `src/spd_decap_pi/raw_spatial_contact_asset.py` + `tests/test_raw_spatial_contact_compiler.py`; reuse existing LoadedRawSpatialContactAsset/`_iter`, immutable typed rows and bounded iterators for five existing tables, no new schema/join/helper/attachment/manifest/hash; focused node max once after Sol static review |
 | `W7-PHYS-PROSPECTIVE-RUNTIME-TERM-EVIDENCE` | next candidate | BLOCKED/YAGNI | provide a grounded runtime term digest/count/owner partition only after an independently selected physical change | new candidate/HEAD/root, one run/no retry; no current authority |
 | `W8-REL` | 18 | BLOCKED | completed known-case solve를 release gate에 연결하고 최종 전달 | accuracy/product gate와 exact release commit 필요 |
 | `D-DIST` | - | DEFERRED | Distribution routing/DRC scope 확대 | 사용자가 implementation-ready/DRC 목표로 승격할 때만 |
@@ -857,8 +858,8 @@ Budget는 <=40 lines 및 <=6 files였고 17 lines/5 files로 통과했다. compi
 유일한 file은 `tests/test_raw_spatial_contact_compiler.py`이며 나머지는 builder/validator-only다.
 17Z는 DONE으로 닫고, 17AA와 17AA-S1은 historical BLOCKED로 남기며 17AA-S2는 test-gate PASS DONE으로 닫는다. 17AB는 DONE, 17AC는 source-classified STOP/BLOCKED로 닫고 17AD는 DONE으로 닫는다. 17AE는 source-location boundary evidence DONE으로 닫고 17AF는 DONE으로 닫는다. 17AG는 integration-gap evidence DONE으로 닫고, 17AH는 bounded location evidence DONE으로 닫는다. 17AI는 gate STOP/BLOCKED로 닫고 17AJ는 deterministic owner-location evidence DONE으로 닫는다. 17AK는 source-classified endpoint STOP/BLOCKED로 닫고 17AL은 source-classified test gap DONE으로 닫는다. 17AM은 DONE, 17AN은 test-gate PASS DONE으로 닫고, 17AO는 location evidence DONE으로 닫는다. 17AP는 source-classified caller trace DONE으로 닫고, 17AQ는 source-classified test-seam STOP/BLOCKED로 닫는다. 17AR는 one-file GUI opt-in activation DONE으로 닫고 17AS는 DONE-negative producer-active/no-solver-consumer로 닫는다. 17AT는 BLOCKED/implementation REJECT, 17AU는 DONE(location evidence), 17AV는 BLOCKED/STOP, 17AW는 DONE(location evidence), 17AX는 BLOCKED/STOP(source-classified preflight-only), 17AY는 DONE(location evidence), 17AZ는 BLOCKED/STOP(source-classified delegated substrate owner)으로 닫고, 17BA는 boundary span627>500으로 BLOCKED/STOP으로 닫으며, 17BB는 cache-only multiple clusters로 BLOCKED/STOP으로 닫고, 17BC는 endpoint truncation + delegated identity로 BLOCKED/STOP으로 닫고, 17BD는 DONE(location evidence)으로 닫으며, 17BE는 raw-v3/hash seam unproven으로 BLOCKED/STOP으로 닫고, 17BF는 BLOCKED/design REJECT로 닫으며, 17BG는 canonical payload/content identity delegation으로 BLOCKED/STOP으로 닫고 17BH는 source-classified endpoint STOP으로 닫고 17BI는 DONE/PASS로 닫는다. 17BJ is DONE/PASS at technical commit `bbf5598c76beb0190863a492c3a4b68ca007b687`; its focused node ran once after Sol ACCEPT, exit0 (`1 passed in 0.79s`, elapsed1.401s). 17BK is BLOCKED/source-classified STOP: exact query/read at `afda7f5c9e88f71235229a34e386528c11909647` returned 3 lines/1 file (1360/1395/1421), read 1360-1484 (125 lines), and proved bounded row/digest/cancel behavior but delegated field/type/unit/layer/net semantics to `_validate_plane_stackup` and `_validate_plane_primitive`; no further read occurred. Sole ACTIVE successor is 17BL, a read-only two-symbol validator-boundary query; no physical stamp or production claim.
 
-Historical status summary is superseded by the current register: 17BL is DONE/location PASS and 17BM is
-the sole ACTIVE bounded validator-contract read.
+Historical status summary is superseded by the current register: 17BL is DONE/location PASS, 17BM is
+DONE/PASS with physical ownership BLOCKED, and 17BN is the sole ACTIVE bounded typed-row facade.
 
 ### 17AA. W7-PHYS-W6-RAW-SPATIAL-ASSET-V3-EMISSION (BLOCKED; test-gate)
 
@@ -1308,8 +1309,9 @@ Exact whitelist: `src/spd_decap_pi/raw_spatial_contact_asset.py`,
 validated-manifest SHA, separate normal/finite cache namespaces, miss-only context loader with digest/
 binding checks, immutable counts/plane-count snapshots, builder v3 True plus v2/absent False, and
 missing/tampered fail-closed behavior. 17BJ closure had no implementation authority; 17BK is now
-BLOCKED/source-classified STOP. 17BL is DONE/location PASS at definitions 1280/1323, and sole current
-read-only successor 17BM owns the validator-contract read. No physical stamp/profile/replacement/
+BLOCKED/source-classified STOP. 17BL is DONE/location PASS at definitions 1280/1323, and 17BM is
+DONE/PASS with physical ownership BLOCKED. Sole current read-only successor 17BN owns the typed-row
+facade gate. No physical stamp/profile/replacement/
 nullspace/gauge/Zii/production/release/PowerSI accuracy claim; any bounded physical-integration design
 is only a future candidate requiring fresh explicit authority.
 
@@ -1336,14 +1338,22 @@ lines/1 file at validator definitions 1280/1323. This was location evidence only
 No stamp, profile, replacement/augmentation, finite-Via/termination duplication, tests, build, import, or
 production claim is authorized; any future opt-in profile requires fresh explicit authority and exact ownership.
 
-### 17BM. W7-PHYS-W6-PLANE-SHEET-ROW-VALIDATOR-CONTRACT-TRACE (ACTIVE)
+### 17BM. W7-PHYS-W6-PLANE-SHEET-ROW-VALIDATOR-CONTRACT-TRACE (DONE/PASS)
 
-Standing user preapproval authorizes exactly one read of `src/spd_decap_pi/raw_spatial_contact_asset.py`
-lines 1280-1359 inclusive (80 lines), with no query or second range. Questions are exact required/optional
-fields and normalized output; units um/S/m/Hz/dielectric and finite/type bounds; layer/net/ordinal/kind/
-vertex-circle grouping/conductor-gap semantics; and whether the existing frozen loader facade exposes a
-bounded typed contract or only minimal same-class accessors. STOP if field/type/unit/ownership semantics
-delegate externally or the range truncates; no expansion, code/test/stamp/profile/production/accuracy claim.
+The exact 1280-1359 read at clean main `7d5eb16d67d9d98fad3a89939819eb4f30e45b80` was locally complete
+for fields/types/units/order/group/hash and gaps; primitive layer, nonblank net, and source asset/hash
+bindings were present, but island/surface identity was absent and physical ownership remains BLOCKED.
+17BM is DONE/PASS with no further source expansion.
+
+### 17BN. W7-PHYS-W6-PLANE-SHEET-BOUNDED-QUERY-FACADE (ACTIVE)
+
+Standing preapproval authorizes only `src/spd_decap_pi/raw_spatial_contact_asset.py` and
+`tests/test_raw_spatial_contact_compiler.py`. Reuse existing `LoadedRawSpatialContactAsset` and `_iter`;
+add only immutable typed rows and bounded iterators for `plane_primitives`, `plane_vertices`,
+`plane_circles`, `stackup_layers`, and `dielectric_points`. Preserve ordinal ordering, batch bounds,
+closed failure, existing fields, and `plane_sheet_counts` grouping; add no SQL join/filter/helper,
+attachment/schema/manifest/hash or island/surface inference. Sol static review precedes at most one
+focused node `tests/test_raw_spatial_contact_compiler.py::test_plane_sheet_payload_v3_is_hash_bound_and_v2_remains_unchanged`; no broad tests/physical/profile/solver/production/accuracy claim.
 
 ## 20. 변경 기록
 
@@ -1443,3 +1453,4 @@ delegate externally or the range truncates; no expansion, code/test/stamp/profil
 | 1.91 | 2026-08-26 | 17BJ DONE/PASS를 보존하고 standing user preapproval 아래 17BK plane-sheet bounded-query contract trace를 sole ACTIVE로 지정. Exact one-shot location query, <=220-line single-cluster read gate, STOP/no-retry 경계와 no-stamp/no-production 금지를 동결. |
 | 1.92 | 2026-08-26 | clean main `afda7f5c9e88f71235229a34e386528c11909647`의 17BK exact query/read evidence를 기록해 delegated validator semantics로 BLOCKED/source-classified STOP으로 닫고, `_validate_plane_stackup`/`_validate_plane_primitive` 2-line exact query를 17BL sole ACTIVE로 지정. |
 | 1.93 | 2026-08-26 | clean main `59c7e4b1a457057c00ef9ebd2286829d8c9710a7`의 17BL exact query(1280/1323, 2 lines/1 file) DONE/location PASS를 기록하고, exact 1280-1359 (80-line) 17BM validator-contract read를 sole ACTIVE로 지정. |
+| 1.94 | 2026-08-26 | clean main `7d5eb16d67d9d98fad3a89939819eb4f30e45b80`의 17BM exact1280-1359 read PASS/DONE과 physical ownership BLOCKED를 기록하고, exact two-file 17BN bounded typed facade 및 focused node(max once after Sol static review)를 sole ACTIVE로 지정. |
