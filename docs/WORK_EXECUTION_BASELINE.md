@@ -1,11 +1,11 @@
 # SPD Decap PI Evaluator 작업 기준
 
 - 적용 제품: **SPD Decap PI Evaluator v0.23.0**
-- 문서 버전: **1.117**
-- 상위 기준: [목적·기술 기준](PRODUCT_PURPOSE_AND_TECHNICAL_BASELINE.md) v1.116
+- 문서 버전: **1.118**
+- 상위 기준: [목적·기술 기준](PRODUCT_PURPOSE_AND_TECHNICAL_BASELINE.md) v1.117
 - W6-BASE source-before: clean `main` HEAD `fb36288781dcc0b884950ef5a486c474090ceebd`; this is the exact source boundary for the completed one-run evidence
-- 상태: **APPROVED/MACHINE-FROZEN CONTROL DOCUMENT**; full phase/item history lives in the register and changelog; W5 DONE; W6-BASE 260729 numerical FAIL; W7-PHYS BLOCKED; 17AX BLOCKED/STOP; 17AY DONE (location evidence); 17AZ BLOCKED/STOP (source-classified delegated substrate owner); 17BA BLOCKED/STOP (boundary span627>500); 17BB BLOCKED/STOP (cache-only multiple clusters); 17BC BLOCKED/STOP (endpoint truncation + delegated identity); 17BD DONE (location evidence); 17BE BLOCKED/STOP (raw-v3/hash seam unproven); 17BF BLOCKED/design REJECT; 17BG BLOCKED/STOP (canonical payload/content identity delegated); 17BH BLOCKED/source-classified STOP (lifetime trace endpoint incomplete); 17BI DONE/PASS; 17BJ DONE/PASS; 17BK BLOCKED/source-classified STOP (validator field/type/unit/layer/net semantics delegated); 17BL DONE/location PASS (validator boundaries 1280/1323); 17BM DONE/PASS (local validator contract; physical ownership BLOCKED); 17BN DONE/PASS (typed immutable facade; physical scope unproven); 17BO BLOCKED/design REJECT (surface/island field-domain equivalence unproven); 17BP BLOCKED/source-classified location STOP (required surface-row producer missing); 17BQ DONE/location PASS (unique producer at raw_spatial_contact_compiler.py:2575); 17BR BLOCKED/boundary STOP (258-line span >160); 17BS BLOCKED/source-classified STOP (origin/normalization before range and `_canonical_sha` delegated); 17BT DONE/location PASS (single pre-range field-origin cluster at 2500-2512); 17BU BLOCKED/source-classified STOP (range starts/ends mid-flow; net/layer/asset SHA/key origins and helper semantics not proven); 17BV BLOCKED/location STOP (duplicate key semantic/domain ambiguous from location output); 17BW BLOCKED/source-classified STOP (canonical layer/raw-record origins and attachment continuation not proven); 17BX BLOCKED/source-classified STOP (canonical layer mapping and SHA decode verification delegated); 17BY DONE/location PASS (decode helper2292, parse_layers boundary query prerequisites); 17BZ BLOCKED/boundary STOP (oversize span at clean main/docs HEAD `5b4c68d`; exact command exit6 zero output); 17CA DONE/location PASS (clean main HEAD `d6f9ebab38532d573bccdde3a982dbbf0b36999f`; exact query exit0, 2 lines/1 file, parse_layers872→header_material1068 span196); 17CB BLOCKED/location STOP (clean main HEAD `a3c4219e8bbfc22b027a46d2023f7169b09380fc`; exact query exit0, 12 unique lines/1 file, multiple casefold meanings); 17CC DONE/location PASS (clean HEAD `ba407555ccc7170e1c215c0aafe8d87bab7f545c`; exact query exit0, 6 lines/1 file: rows898/by_fold899/append917/constructor918/insert1058/return1065); 17CD BLOCKED/source-classified STOP (clean HEAD `e2ed0ed33869c8a5371937abd122be1be11b7811`; one Get-Content invocation exit0 exactly99 output lines A872-940+B1038-1067; layer_match origin skipped941-1037); 17CE BLOCKED/location STOP (clean HEAD `5e8f5f7f5dfe265c5ca7b94853e2f82bd00f8033`; exact query exit0 8 lines/1 file, span94>80 and two clusters); 17CF DONE/location PASS (clean HEAD `7b4a00cbfa79216afe1172eadad9dba96dec0542`; exact query exit0 19 lines/1 file, two nonoverlap clusters942-967 and969-1038); 17CG BLOCKED/source-classified STOP (clean HEAD `e289c7954d337ff48624a63e2905872a617864c`; exact body read once exit0 97 lines941-1037; control/pending/layer_match/by_fold complete but canonical layer delegated to `_decode_token`); 17CH DONE/location PASS (clean HEAD `5b6968a6118e9c432ae2ce1785a282e8081a525c`; exact query exit0 2 lines/1 file, def402→415 span13); 17CI DONE/PASS (clean HEAD `120850c7a44b461423f5b69555f9ce5f4e88a01d`; exact body read once exit0 13 lines, strict token contract and same string domain); 17CJ DONE/PASS (clean HEAD `8ad1a8d17e3292fde0d2a893d918cae4f9caf814`; exact body read once exit0 71 lines, surface asset_sha bound to attachment content); 17CK ACTIVE. Any physical implementation following a future PASS remains separately gated by fresh whitelist/test authority.
-- 현재 권위 상태: sole ACTIVE 17CK `W7-PHYS-W6-PLANE-PRIMITIVE-SOURCE-ASSET-SHA-PRODUCER-DISCOVERY`. Run the exact once-only source_asset_sha256 query in compiler.py; require exit0, 1-20 unique lines/exact1 file, assignment/row construction plus source-origin reference in one cluster span<=120; import/annotation/schema/string/comment-only, multiple meaning, span/cap STOP. Location-only; no source read/requery/expansion/code/test/physical/profile/solver/production/accuracy execution.
+- 상태: **APPROVED/MACHINE-FROZEN CONTROL DOCUMENT**; full phase/item history lives in the register and changelog; W5 DONE; W6-BASE 260729 numerical FAIL; W7-PHYS BLOCKED; 17AX BLOCKED/STOP; 17AY DONE (location evidence); 17AZ BLOCKED/STOP (source-classified delegated substrate owner); 17BA BLOCKED/STOP (boundary span627>500); 17BB BLOCKED/STOP (cache-only multiple clusters); 17BC BLOCKED/STOP (endpoint truncation + delegated identity); 17BD DONE (location evidence); 17BE BLOCKED/STOP (raw-v3/hash seam unproven); 17BF BLOCKED/design REJECT; 17BG BLOCKED/STOP (canonical payload/content identity delegated); 17BH BLOCKED/source-classified STOP (lifetime trace endpoint incomplete); 17BI DONE/PASS; 17BJ DONE/PASS; 17BK BLOCKED/source-classified STOP (validator field/type/unit/layer/net semantics delegated); 17BL DONE/location PASS (validator boundaries 1280/1323); 17BM DONE/PASS (local validator contract; physical ownership BLOCKED); 17BN DONE/PASS (typed immutable facade; physical scope unproven); 17BO BLOCKED/design REJECT (surface/island field-domain equivalence unproven); 17BP BLOCKED/source-classified location STOP (required surface-row producer missing); 17BQ DONE/location PASS (unique producer at raw_spatial_contact_compiler.py:2575); 17BR BLOCKED/boundary STOP (258-line span >160); 17BS BLOCKED/source-classified STOP (origin/normalization before range and `_canonical_sha` delegated); 17BT DONE/location PASS (single pre-range field-origin cluster at 2500-2512); 17BU BLOCKED/source-classified STOP (range starts/ends mid-flow; net/layer/asset SHA/key origins and helper semantics not proven); 17BV BLOCKED/location STOP (duplicate key semantic/domain ambiguous from location output); 17BW BLOCKED/source-classified STOP (canonical layer/raw-record origins and attachment continuation not proven); 17BX BLOCKED/source-classified STOP (canonical layer mapping and SHA decode verification delegated); 17BY DONE/location PASS (decode helper2292, parse_layers boundary query prerequisites); 17BZ BLOCKED/boundary STOP (oversize span at clean main/docs HEAD `5b4c68d`; exact command exit6 zero output); 17CA DONE/location PASS (clean main HEAD `d6f9ebab38532d573bccdde3a982dbbf0b36999f`; exact query exit0, 2 lines/1 file, parse_layers872→header_material1068 span196); 17CB BLOCKED/location STOP (clean main HEAD `a3c4219e8bbfc22b027a46d2023f7169b09380fc`; exact query exit0, 12 unique lines/1 file, multiple casefold meanings); 17CC DONE/location PASS (clean HEAD `ba407555ccc7170e1c215c0aafe8d87bab7f545c`; exact query exit0, 6 lines/1 file: rows898/by_fold899/append917/constructor918/insert1058/return1065); 17CD BLOCKED/source-classified STOP (clean HEAD `e2ed0ed33869c8a5371937abd122be1be11b7811`; one Get-Content invocation exit0 exactly99 output lines A872-940+B1038-1067; layer_match origin skipped941-1037); 17CE BLOCKED/location STOP (clean HEAD `5e8f5f7f5dfe265c5ca7b94853e2f82bd00f8033`; exact query exit0 8 lines/1 file, span94>80 and two clusters); 17CF DONE/location PASS (clean HEAD `7b4a00cbfa79216afe1172eadad9dba96dec0542`; exact query exit0 19 lines/1 file, two nonoverlap clusters942-967 and969-1038); 17CG BLOCKED/source-classified STOP (clean HEAD `e289c7954d337ff48624a63e2905872a617864c`; exact body read once exit0 97 lines941-1037; control/pending/layer_match/by_fold complete but canonical layer delegated to `_decode_token`); 17CH DONE/location PASS (clean HEAD `5b6968a6118e9c432ae2ce1785a282e8081a525c`; exact query exit0 2 lines/1 file, def402→415 span13); 17CI DONE/PASS (clean HEAD `120850c7a44b461423f5b69555f9ce5f4e88a01d`; exact body read once exit0 13 lines, strict token contract and same string domain); 17CJ DONE/PASS (clean HEAD `8ad1a8d17e3292fde0d2a893d918cae4f9caf814`; exact body read once exit0 71 lines, surface asset_sha bound to attachment content); 17CK DONE/location PASS (clean HEAD `b43561eb26097e5ea1245e66761987fcd19759e3`; exact query exit0 2 lines/1 file, span43, record provenance external); 17CL ACTIVE. Any physical implementation following a future PASS remains separately gated by fresh whitelist/test authority.
+- 현재 권위 상태: sole ACTIVE 17CL `W7-PHYS-W6-PLANE-PRIMITIVE-SOURCE-RECORD-ORIGIN-DISCOVERY`. Run the exact once-only record/source origin query in compiler.py lines700-861; require exit0, 2-24 unique lines/1 file, record container/iteration plus asset/asset_sha256 derivation and line818 transfer in one cluster span<=120; missing/generic/multiple/span/cap STOP/no retry. Location-only; no source read/requery/expansion/code/test/physical/profile/solver/production/accuracy execution.
 - 최종 개정: 2026-08-26 (Asia/Seoul)
 
 ## 1. 압축 후 즉시 복구 카드
@@ -17,15 +17,15 @@ context가 압축되거나 새 session에서 작업을 재개하면 다른 연�
 |---|---|
 | 변하지 않는 목적 | source-derived single-rail `Zii`의 PowerSI 근접 정확성과 일반화 |
 | 현재 branch | `main`만 사용; 정리된 과거 branch를 다시 조사하지 않음 |
-| 현재 active work item | `W7-PHYS-W6-PLANE-PRIMITIVE-SOURCE-ASSET-SHA-PRODUCER-DISCOVERY` (17CK) |
-| 다음 권장 묶음 | `17CK` exact once-only `source_asset_sha256` producer query |
-| current authorization | 17CK location gate: exact query once; exit0 1-20 unique lines/exact1 file, assignment/row construction + source-origin reference in one clear cluster span<=120; import/annotation/schema/string/comment-only, multiple meaning, span/cap STOP; no source read/requery. |
+| 현재 active work item | `W7-PHYS-W6-PLANE-PRIMITIVE-SOURCE-RECORD-ORIGIN-DISCOVERY` (17CL) |
+| 다음 권장 묶음 | `17CL` exact once-only record/source origin query |
+| current authorization | 17CL location gate: exact query once; exit0 2-24 unique lines/1 file all700-861, record container/iteration plus asset/asset_sha256 derivation and line818 transfer in one cluster span<=120; missing/generic/multiple/span/cap STOP/no retry; no body read. |
 | 17T command A | `rg -n --no-heading --color never --glob '*.py' '\bcompile_raw_spatial_contact_asset\b' 'src/spd_decap_pi'` |
 | 17T command B | `rg -n --no-heading --color never --glob '*.py' '\b(?:resolve_solver_profile|numerical_worker_count|build_layerwise_uniform_source_model)\b' 'src/spd_decap_pi'` |
 | 17T command C | `rg -n --no-heading --color never --glob '*.py' '\b(?:GLOBAL_KRON|SurfacePatchDifferentialProjection|SurfacePatchFinitePortProjection|assemble_differential_admittance|differential_projection)\b' 'src/spd_decap_pi'` |
 | consumed 17M discovery | canonical rg ran once (exit 0), found candidate symbols only; no reuse or production proof |
 | future production invariant (not current authority) | if a future run is authorized: exact clean `main`, new output root, one run/no retry; B correlation is historical evidence; C/D consumed their exactly-one old candidate/import reads; E had one production diagnostic invocation plus one orchestration ZIP read; old root remains forbidden for W6-BASE output/scoring/retry/mutation |
-| 고비용 검증 권한 | none; 17CK allows only the bounded location query, with source body/code/test/build/import/production execution forbidden |
+| 고비용 검증 권한 | none; 17CL allows only the bounded location query, with source body/code/test/build/import/production execution forbidden |
 | 현재 정확성 상태 | `260729 retrospective FAIL`; unseen/generalization remains `unknown / not_run` |
 | 현재 release 계산 증거 | W6-BASE 260729 completed numerical FAIL; offline verifier exit 2 (integrity-valid) |
 | W6-BASE result root | `D:\SPD-Decap-PI-Evaluator-W6\fb36288781dcc0b884950ef5a486c474090ceebd\260729` — manifest `2b14f90e762abc49833518137812e8fc97fcde0e9c145795b7384210cfd9f5de`, sidecar `0d103e0ad47df80641fac0952a35a6eaa56cc9fdb71be24661903e451926e932`, correlation `969e40046e3a099d09557ba7500693460362336d76b067962436bd3b5177abc4` |
@@ -221,7 +221,8 @@ root, one-run/no-retry 조건을 다시 확정할 때만 고려한다.
 | `W7-PHYS-W6-RAW-SPATIAL-DECODE-TOKEN-BOUNDARY-DISCOVERY` | 17CH | DONE/location PASS | locate decode-token owner boundary | clean HEAD `5b6968a6118e9c432ae2ce1785a282e8081a525c`; exact query once exit0, 2 lines/1 file, def402→415 span13 |
 | `W7-PHYS-W6-RAW-SPATIAL-DECODE-TOKEN-CONTRACT-TRACE` | 17CI | DONE/PASS | trace decode-token contract | clean HEAD `120850c7a44b461423f5b69555f9ce5f4e88a01d`; exact body read once exit0, 13 lines; strict token and same string-domain binding proven; asset/SHA/island/ownership/stamp claims unproven |
 | `W7-PHYS-W6-RAW-SPATIAL-GEOMETRY-ATTACHMENT-SHA-CONTRACT-TRACE` | 17CJ | DONE/PASS | trace geometry attachment SHA contract | clean HEAD `8ad1a8d17e3292fde0d2a893d918cae4f9caf814`; exact body read once exit0, 71 lines; attachment SHA/decode/bounds and final surface asset_sha binding proven; primitive source_asset_sha/islands/ownership/stamp unproven |
-| `W7-PHYS-W6-PLANE-PRIMITIVE-SOURCE-ASSET-SHA-PRODUCER-DISCOVERY` | 17CK | ACTIVE | locate primitive source-asset SHA producer | exact source_asset_sha256 query once; exit0 1-20 unique lines/exact1 file; assignment/row construction + source-origin reference cluster span<=120; import/annotation/schema/string/comment-only, multiple meaning, span/cap STOP; no body read |
+| `W7-PHYS-W6-PLANE-PRIMITIVE-SOURCE-ASSET-SHA-PRODUCER-DISCOVERY` | 17CK | DONE/location PASS | locate primitive source-asset SHA producer | clean HEAD `b43561eb26097e5ea1245e66761987fcd19759e3`; exact query once exit0, 2 lines/1 file, span43; fields818/digest861 direct, provenance external |
+| `W7-PHYS-W6-PLANE-PRIMITIVE-SOURCE-RECORD-ORIGIN-DISCOVERY` | 17CL | ACTIVE | locate primitive source-record origin | exact query once lines700-861; exit0 2-24 unique lines/1 file; record container/iteration + asset/asset_sha256 derivation + line818 transfer cluster span<=120; missing/generic/multiple/span/cap STOP/no retry; no body read |
 | `W7-PHYS-PROSPECTIVE-RUNTIME-TERM-EVIDENCE` | next candidate | BLOCKED/YAGNI | provide a grounded runtime term digest/count/owner partition only after an independently selected physical change | new candidate/HEAD/root, one run/no retry; no current authority |
 | `W8-REL` | 18 | BLOCKED | completed known-case solve를 release gate에 연결하고 최종 전달 | accuracy/product gate와 exact release commit 필요 |
 | `D-DIST` | - | DEFERRED | Distribution routing/DRC scope 확대 | 사용자가 implementation-ready/DRC 목표로 승격할 때만 |
@@ -1366,7 +1367,8 @@ BLOCKED/source-classified STOP at `e2ed0ed33869c8a5371937abd122be1be11b7811` bec
 17CH is DONE/location PASS at `5b6968a6118e9c432ae2ce1785a282e8081a525c` (def402→415 span13);
 17CI is DONE/PASS at `120850c7a44b461423f5b69555f9ce5f4e88a01d` (13-line strict token contract and same string domain);
 17CJ is DONE/PASS at `8ad1a8d17e3292fde0d2a893d918cae4f9caf814` (71-line attachment SHA/decode/bounds contract);
-sole current read-only successor 17CK owns the exact source-asset SHA query. Frozen
+17CK is DONE/location PASS at `b43561eb26097e5ea1245e66761987fcd19759e3` (fields818/digest861 direct; record provenance external);
+sole current read-only successor 17CL owns the exact source-record origin query. Frozen
 evidence establishes no physical stamp/profile/replacement/nullspace/gauge/Zii/production/release/PowerSI accuracy claim.
 
 ### 17BK. W7-PHYS-W6-PLANE-SHEET-BOUNDED-QUERY-CONTRACT-TRACE (BLOCKED/source-classified STOP)
@@ -1544,22 +1546,33 @@ At clean HEAD `8ad1a8d17e3292fde0d2a893d918cae4f9caf814`, the exact body read ra
 attachment bytes streaming SHA==expected before decode, bounded framed zlib/cancel, strict UTF8 JSON, and final surface
 asset_sha binding were proven. Primitive source_asset_sha domain, islands, ownership, and stamp remain unproven.
 
-### 17CK. W7-PHYS-W6-PLANE-PRIMITIVE-SOURCE-ASSET-SHA-PRODUCER-DISCOVERY (ACTIVE)
+### 17CK. W7-PHYS-W6-PLANE-PRIMITIVE-SOURCE-ASSET-SHA-PRODUCER-DISCOVERY (DONE/location PASS)
+
+At clean HEAD `b43561eb26097e5ea1245e66761987fcd19759e3`, the exact query ran once with exit0 and 2 lines/1 file,
+span43; primitive source_asset fields at818 and digest consumption at861 were direct, but record provenance remains external.
+
+### 17CL. W7-PHYS-W6-PLANE-PRIMITIVE-SOURCE-RECORD-ORIGIN-DISCOVERY (ACTIVE)
 
 Standing preapproval authorizes exactly this location query once:
 
 ```powershell
 $path = 'src/spd_decap_pi/raw_spatial_contact_compiler.py'
 $hits = @(rg -n --with-filename --no-heading --color never `
-    '\bsource_asset_sha256\b' `
+    '^\s*(?:for\s+record\s+in\b|record\s*=|records\s*=)|record\["(?:asset|asset_sha256)"\]|"(?:asset|asset_sha256)"\s*:' `
     $path)
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-$hits
+$selected = @($hits | Where-Object {
+    $_ -match '^[^:]+:(\d+):' -and
+    [int]$Matches[1] -ge 700 -and
+    [int]$Matches[1] -le 861
+})
+if ($selected.Count -lt 2 -or $selected.Count -gt 24) { exit 2 }
+$selected
 ```
 
-Gate: one query, exit0 1-20 unique lines/exact1 file; actual assignment/row construction plus source-origin reference
-must form one clear cluster span<=120. Import/annotation/schema/string/comment-only, multiple meaning, span/cap STOP;
-no source read/requery/expansion. Islands/ownership/stamp/profile/replacement/nullspace/Zii/production/accuracy/release excluded.
+Gate: one query, exit0 2-24 unique lines/1 file all700-861; record container/iteration plus asset/asset_sha256
+derivation and line818 transfer must form one clear cluster span<=120. Missing/generic/multiple/span/cap STOP/no retry;
+location-only, no body read/requery/expansion. Islands/ownership/stamp/profile/replacement/nullspace/Zii/production/accuracy/release excluded.
 
 ## 20. 변경 기록
 
@@ -1683,3 +1696,4 @@ no source read/requery/expansion. Islands/ownership/stamp/profile/replacement/nu
 | 1.115 | 2026-08-26 | clean HEAD `5b6968a6118e9c432ae2ce1785a282e8081a525c`의 17CH exact query(2 lines/1 file, def402→415 span13) DONE/location PASS를 기록하고, exact once-only 17CI numbered 402-414 contract trace를 sole ACTIVE로 지정. |
 | 1.116 | 2026-08-26 | clean HEAD `120850c7a44b461423f5b69555f9ce5f4e88a01d`의 17CI exact body read(13 lines)에서 strict token/string-domain contract PASS를 기록하고, exact once-only 17CJ geometry-attachment SHA contract trace를 sole ACTIVE로 지정. |
 | 1.117 | 2026-08-26 | clean HEAD `8ad1a8d17e3292fde0d2a893d918cae4f9caf814`의 17CJ exact body read(71 lines)에서 attachment SHA/decode/bounds contract PASS를 기록하고, exact once-only 17CK source-asset SHA producer query를 sole ACTIVE로 지정. |
+| 1.118 | 2026-08-26 | clean HEAD `b43561eb26097e5ea1245e66761987fcd19759e3`의 17CK exact query(2 lines/1 file, span43) DONE/location PASS를 기록하고, exact once-only 17CL source-record origin query를 sole ACTIVE로 지정. |
