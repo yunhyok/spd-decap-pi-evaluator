@@ -168,6 +168,7 @@ def test_release_workflow_requires_tracked_production_attestation() -> None:
     assert "Production attestation identity changed" in workflow
     assert 'python-version: "3.12.10"' in workflow
     assert "python -m pytest -q tests/test_spd_decap_packaging.py" in ci_workflow
+    assert "fetch-depth: 0" in ci_workflow
 
 
 def test_tagged_release_publishes_installer_and_validation_evidence() -> None:
