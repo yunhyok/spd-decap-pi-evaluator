@@ -551,6 +551,55 @@ class RawSpatialViaRow:
         _sha(self.source_record_sha256, "via source record")
 
 
+@dataclass(frozen=True, slots=True)
+class RawSpatialPlanePrimitiveRow:
+    primitive_ordinal: int
+    layer_ordinal: int
+    layer_name: str
+    net_name: str
+    polarity: str
+    kind: str
+    source_asset_name: str
+    source_asset_sha256: str
+    coordinate_unit: str
+    primitive_sha256: str
+
+
+@dataclass(frozen=True, slots=True)
+class RawSpatialPlaneVertexRow:
+    primitive_ordinal: int
+    vertex_ordinal: int
+    x_um: float
+    y_um: float
+
+
+@dataclass(frozen=True, slots=True)
+class RawSpatialPlaneCircleRow:
+    primitive_ordinal: int
+    center_x_um: float
+    center_y_um: float
+    radius_um: float
+
+
+@dataclass(frozen=True, slots=True)
+class RawSpatialStackupLayerRow:
+    layer_ordinal: int
+    layer_name: str
+    layer_kind: str
+    thickness_um: float
+    conductivity_s_per_m: float | None
+    material_name: str
+
+
+@dataclass(frozen=True, slots=True)
+class RawSpatialDielectricPointRow:
+    layer_ordinal: int
+    point_ordinal: int
+    frequency_hz: float
+    epsilon_r: float
+    loss_tangent: float
+
+
 _CREATE_SQL: Final = """
 CREATE TABLE meta (
     key TEXT NOT NULL PRIMARY KEY,
@@ -762,6 +811,11 @@ _ROW_TYPES: Final = {
     "nodes": RawSpatialNodeRow,
     "traces": RawSpatialTraceRow,
     "vias": RawSpatialViaRow,
+    "plane_primitives": RawSpatialPlanePrimitiveRow,
+    "plane_vertices": RawSpatialPlaneVertexRow,
+    "plane_circles": RawSpatialPlaneCircleRow,
+    "stackup_layers": RawSpatialStackupLayerRow,
+    "dielectric_points": RawSpatialDielectricPointRow,
 }
 
 
@@ -2329,6 +2383,8 @@ class LoadedRawSpatialContactAsset:
     ) -> Iterator[Any]:
         if self._connection is None:
             _fail("RAW_SPATIAL_CLOSED", "raw spatial asset is closed")
+        if section in _PLANE_SHEET_SECTIONS and "plane_sheet_counts" not in self.manifest:
+            _fail("RAW_SPATIAL_PLANE_SHEET_REQUIRED", "plane-sheet rows require schema v3")
         if type(batch_rows) is not int or batch_rows < 1 or batch_rows > MAX_RAW_SPATIAL_QUERY_ROWS:
             _fail("RAW_SPATIAL_BOUND_INVALID", "query batch size is outside its bound")
         clauses: list[str] = []
@@ -2346,8 +2402,15 @@ class LoadedRawSpatialContactAsset:
                 clauses.append("layer_id_fold=?")
                 parameters.append(layer_id.casefold())
         where = " WHERE " + " AND ".join(clauses) if clauses else ""
+        order_by = "ordinal"
+        if section == "plane_vertices":
+            order_by = "primitive_ordinal, vertex_ordinal"
+        elif section == "dielectric_points":
+            order_by = "layer_ordinal, point_ordinal"
+        elif section in {"plane_primitives", "plane_circles", "stackup_layers"}:
+            order_by = "primitive_ordinal" if section != "stackup_layers" else "layer_ordinal"
         cursor = self._connection.execute(
-            f"SELECT * FROM {section}{where} ORDER BY ordinal", parameters
+            f"SELECT * FROM {section}{where} ORDER BY {order_by}", parameters
         )
         row_type = _ROW_TYPES[section]
         field_names = tuple(field.name for field in fields(row_type))
@@ -2427,6 +2490,31 @@ class LoadedRawSpatialContactAsset:
         return self._iter(
             "vias", net_name=net_name, layer_id=layer_id, batch_rows=batch_rows
         )
+
+    def iter_plane_primitives(
+        self, *, batch_rows: int = 1000
+    ) -> Iterator[RawSpatialPlanePrimitiveRow]:
+        return self._iter("plane_primitives", batch_rows=batch_rows)
+
+    def iter_plane_vertices(
+        self, *, batch_rows: int = 1000
+    ) -> Iterator[RawSpatialPlaneVertexRow]:
+        return self._iter("plane_vertices", batch_rows=batch_rows)
+
+    def iter_plane_circles(
+        self, *, batch_rows: int = 1000
+    ) -> Iterator[RawSpatialPlaneCircleRow]:
+        return self._iter("plane_circles", batch_rows=batch_rows)
+
+    def iter_stackup_layers(
+        self, *, batch_rows: int = 1000
+    ) -> Iterator[RawSpatialStackupLayerRow]:
+        return self._iter("stackup_layers", batch_rows=batch_rows)
+
+    def iter_dielectric_points(
+        self, *, batch_rows: int = 1000
+    ) -> Iterator[RawSpatialDielectricPointRow]:
+        return self._iter("dielectric_points", batch_rows=batch_rows)
 
     def _get(
         self, section: str, id_column: str, net_name: str, value: str
@@ -2561,15 +2649,20 @@ __all__ = [
     "RAW_SPATIAL_CONTACT_PAYLOAD_SCHEMA_V3",
     "LoadedRawSpatialContactAsset",
     "RawSpatialContactAssetError",
+    "RawSpatialDielectricPointRow",
     "RawSpatialLayerRow",
     "RawSpatialNodeRow",
     "RawSpatialPadShapeRow",
     "RawSpatialPadstackRow",
+    "RawSpatialPlaneCircleRow",
+    "RawSpatialPlanePrimitiveRow",
+    "RawSpatialPlaneVertexRow",
     "RawSpatialSectionCoverageRow",
     "RawSpatialSourceCoverageRow",
     "RawSpatialSurfaceRow",
     "RawSpatialTraceRow",
     "RawSpatialViaRow",
+    "RawSpatialStackupLayerRow",
     "build_raw_spatial_contact_asset",
     "load_raw_spatial_contact_asset",
     "validate_project_raw_spatial_contact_asset_envelope",

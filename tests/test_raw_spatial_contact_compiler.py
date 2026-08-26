@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from copy import deepcopy
-from dataclasses import dataclass
+from dataclasses import FrozenInstanceError, dataclass
 from decimal import Decimal, localcontext
 from fractions import Fraction
 from hashlib import sha256
@@ -2401,9 +2401,55 @@ def test_plane_sheet_payload_v3_is_hash_bound_and_v2_remains_unchanged(
     assert v3["adjacent_conductor_gap_count"] >= 1
     with _open(v3, attachment, require_plane_sheet_payload=True) as loaded:
         assert loaded.manifest["plane_sheet_payload_sha256"] == v3["plane_sheet_payload_sha256"]
+        primitives = list(loaded.iter_plane_primitives(batch_rows=1))
+        vertices = list(loaded.iter_plane_vertices(batch_rows=1))
+        circles = list(loaded.iter_plane_circles(batch_rows=1))
+        stackup = list(loaded.iter_stackup_layers(batch_rows=1))
+        dielectric = list(loaded.iter_dielectric_points(batch_rows=1))
+        assert len(primitives) == v3["plane_sheet_counts"]["plane_primitives"]
+        assert len(vertices) == v3["plane_sheet_counts"]["plane_vertices"]
+        assert len(circles) == v3["plane_sheet_counts"]["plane_circles"]
+        assert len(stackup) == v3["plane_sheet_counts"]["stackup_layers"]
+        assert len(dielectric) == v3["plane_sheet_counts"]["dielectric_points"]
+        assert [row.primitive_ordinal for row in primitives] == list(range(len(primitives)))
+        assert [(row.primitive_ordinal, row.vertex_ordinal) for row in vertices] == sorted(
+            (row.primitive_ordinal, row.vertex_ordinal) for row in vertices
+        )
+        assert [row.primitive_ordinal for row in circles] == sorted(
+            row.primitive_ordinal for row in circles
+        )
+        assert [row.layer_ordinal for row in stackup] == list(range(len(stackup)))
+        assert [(row.layer_ordinal, row.point_ordinal) for row in dielectric] == sorted(
+            (row.layer_ordinal, row.point_ordinal) for row in dielectric
+        )
+        assert primitives[0].coordinate_unit == "um"
+        assert len(primitives[0].source_asset_sha256) == 64
+        assert all(isinstance(row.x_um, (int, float)) for row in vertices)
+        assert all(row.radius_um > 0 for row in circles)
+        assert stackup[0].thickness_um > 0
+        assert stackup[0].material_name
+        assert all(
+            row.frequency_hz > 0 and row.epsilon_r > 0 and row.loss_tangent >= 0
+            for row in dielectric
+        )
+        with pytest.raises(FrozenInstanceError):
+            primitives[0].primitive_ordinal = 1  # type: ignore[misc]
+        with pytest.raises(RawSpatialContactAssetError) as invalid_batch:
+            list(loaded.iter_plane_primitives(batch_rows=0))
+        assert invalid_batch.value.code == "RAW_SPATIAL_BOUND_INVALID"
     plane_payload = compiler._plane_sheet_payload(context.project, context.analysis)
     plane_rows, _ = asset._plane_sheet_rows(plane_payload)
     assert len(plane_rows["plane_primitives"]) >= 2
+
+    with _open(v2, attachment_v2) as loaded_v2:
+        with pytest.raises(RawSpatialContactAssetError) as v2_plane_error:
+            list(loaded_v2.iter_plane_primitives())
+        assert v2_plane_error.value.code == "RAW_SPATIAL_PLANE_SHEET_REQUIRED"
+    closed = _open(v3, attachment)
+    closed.close()
+    with pytest.raises(RawSpatialContactAssetError) as closed_plane_error:
+        list(closed.iter_plane_primitives())
+    assert closed_plane_error.value.code == "RAW_SPATIAL_CLOSED"
 
     def open_plane_db() -> sqlite3.Connection:
         connection = sqlite3.connect(":memory:")
