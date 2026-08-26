@@ -799,8 +799,10 @@ is delegated to `_validate_manifest` and `LoadedRawSpatialContactAsset` construc
 the exact once query at clean main `3b507dd9aab7871baab29226f9849c87659c058b` exited0 with 164 lines,
 one match/one file; class start2278 proves defensive manifest copy, nested-count/public MappingProxy,
 connection/tempdir ownership, idempotent close, context manager, and closed-query fail-closed behavior, but
-the output ends line2438 inside `get_padstack` without the next top-level boundary. ACTIVE is NONE; no
-implementation whitelist/test promotion, further source trace, or profile/physical/code/test/solver/
+the output ends line2438 inside `get_padstack` without the next top-level boundary. Sole ACTIVE successor is
+17BI `W7-PHYS-W6-LOADED-RAW-SPATIAL-ASSET-COMPLETE-CONTRACT-TRACE`, authorizing only
+`src/spd_decap_pi/raw_spatial_contact_asset.py` lines2275-2459 (185) with frozen def2460 as boundary and no
+reread; truncation/mutability/delegation => STOP, no expansion or profile/physical/code/test/solver/
 production/release/accuracy claim.
 Contract: v2 constants/API byte-identical; profile/global/app/solver/convergence/policy/controller
 identities unchanged; only the opt-in raw-spatial v3 schema/compiler sibling identity is new. v3 sibling with kw-only opt-in flags, five normalized tables,
