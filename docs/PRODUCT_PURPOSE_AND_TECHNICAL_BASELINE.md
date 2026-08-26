@@ -1,10 +1,10 @@
 # SPD Decap PI Evaluator 목적·기술 기준
 
 - 적용 제품: **SPD Decap PI Evaluator v0.23.0**
-- 문서 버전: **1.77**
+- 문서 버전: **1.78**
 - W5 approved/machine-frozen source-before: `main` commit `027ac7a09a3eded15f45c41860945f9d4c7f488d`
-- 상태: **G0 기준 문서** — full execution history and sole ACTIVE authority live in `WORK_EXECUTION_BASELINE.md` recovery/register; W5 DONE; W6-BASE 260729 numerical FAIL; W7-PHYS BLOCKED; raw-spatial chain: 17AR DONE, 17AS DONE-negative, 17AT BLOCKED/implementation REJECT, 17AU DONE (location evidence), 17AV BLOCKED/STOP, 17AW DONE (location evidence), 17AX BLOCKED/STOP, 17AY DONE (location evidence), 17AZ BLOCKED/STOP (source-classified delegated substrate owner), 17BA ACTIVE.
-- 현재 권위 상태: sole ACTIVE 17BA authorizes exactly one PowerShell definition query targeting `compile_layerwise_substrate` in `src/spd_decap_pi/_core/solver/layerwise_network.py`; gate exactly 2 lines/1 file (target then next top-level, span<=500); errors/parse/duplicate/no-next/over-span => STOP; location evidence only, no file read/code/test/solver/production/accuracy execution.
+- 상태: **G0 기준 문서** — full execution history and sole ACTIVE authority live in `WORK_EXECUTION_BASELINE.md` recovery/register; W5 DONE; W6-BASE 260729 numerical FAIL; W7-PHYS BLOCKED; raw-spatial chain: 17AR DONE, 17AS DONE-negative, 17AT BLOCKED/implementation REJECT, 17AU DONE (location evidence), 17AV BLOCKED/STOP, 17AW DONE (location evidence), 17AX BLOCKED/STOP, 17AY DONE (location evidence), 17AZ BLOCKED/STOP (source-classified delegated substrate owner), 17BA BLOCKED/STOP (boundary span627>500), 17BB ACTIVE.
+- 현재 권위 상태: sole ACTIVE 17BB authorizes exactly one Sol PowerShell query targeting terms within `src/spd_decap_pi/_core/solver/layerwise_network.py` and filtering lines3669-4295; gate once exit0, 1-24 lines, exact file, unique line numbers; comments/strings-only => STOP; otherwise require one unambiguous cluster with span<=160; multiple/ambiguous/over-span => STOP; location only, no file read/code/test/solver/production/accuracy/implementation approval.
 - 최종 개정: 2026-08-26 (Asia/Seoul)
 
 ## 1. 문서 역할과 권위
@@ -742,8 +742,10 @@ exact query once exit0, 2 lines/1 file, span174<=400. The 17AZ owner trace is BL
 (source-classified delegated substrate owner): its exact5432-5605 read validated v4 certificate/
 rail/port/device/geometry/provenance and returned `LayerwiseUniformSourceModel`, but raw-v3/
 replacement/nullspace/Zii were absent and substrate was delegated to `compile_layerwise_substrate`.
-Sole ACTIVE successor is 17BA `W7-PHYS-W6-LAYERWISE-SUBSTRATE-OWNER-BOUNDARY-DISCOVERY`, one
-exact PowerShell definition query only; no file read/code/test/solver/production/accuracy claim.
+17BA is BLOCKED/STOP (source-classified boundary span): its exact query ran once exit0 with target
+`compile_layerwise_substrate` at line3669 and next top-level definition at4296, span627>500; no file
+read was made. Sole ACTIVE successor is 17BB `W7-PHYS-W6-LAYERWISE-SUBSTRATE-INTEGRATION-CLUSTER-DISCOVERY`,
+one exact filtered-term query only; no file read/code/test/solver/production/accuracy/implementation claim.
 The frozen contract keeps v2 constants/API byte-identical and adds a schema-v3 sibling: compiler
 keyword-only `include_plane_sheet_payload=False`, validator keyword-only `require_plane_sheet_payload=False`,
 opt-in no downgrade, exactly five normalized tables (`plane_primitives`, `vertices`, `circles`,
@@ -858,5 +860,6 @@ and the exact Git HEAD are frozen together. Current trust identities: base `d43b
 | 1.75 | 2026-08-26 | clean-main HEAD `8d1be41756c263d382eed7809681b2e7501311d2`의 17AX exact2325-2500 preflight-only STOP을 기록하고 17AY layerwise source-model owner-boundary discovery를 sole ACTIVE로 지정. |
 | 1.76 | 2026-08-26 | clean-main HEAD `ab36421d41146613574fa65538efa0695adb398a`의 17AY exact query exit0(2 lines/1 file, span174) location evidence를 기록하고 17AZ layerwise source-model owner trace를 sole ACTIVE로 지정. |
 | 1.77 | 2026-08-26 | clean-main HEAD `d76f4a064eba51cf394a9af2d99b9400a04c4e77`의 17AZ exact5432-5605 trace에서 substrate owner delegation과 raw-v3/replacement/nullspace/Zii 부재를 기록해 BLOCKED/STOP으로 닫고 17BA substrate-owner boundary discovery를 sole ACTIVE로 지정. |
+| 1.78 | 2026-08-26 | clean-main HEAD `f9c8d9b33d37badcf331fc313b2433dd962c2e27`의 17BA exact query에서 `compile_layerwise_substrate` line3669와 next definition4296의 span627>500 STOP을 기록하고 17BB substrate-integration cluster discovery를 sole ACTIVE로 지정. |
 | 1.1 | 2026-08-24 | `WORK_EXECUTION_BASELINE.md`를 두 번째 canonical 문서로 연결. |
 | 1.0 | 2026-08-24 | v0.24 계획 중심의 Distribution–solver PRD를 제품 전체의 목적·기술 기준으로 개정. PowerSI 정확성 우선, 상태 어휘, 기술 경계, promotion gate, 검증 비용 통제와 two-document 작업 방식을 고정. |

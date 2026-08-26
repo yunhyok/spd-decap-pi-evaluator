@@ -772,9 +772,11 @@ delegate-owned; no implementation approval. 17AY is DONE (location evidence) at 
 exact query once exit0, 2 lines/1 file, span174<=400. The 17AZ owner trace is BLOCKED/STOP
 (source-classified delegated substrate owner): exact5432-5605 validated v4 certificate/rail/port/device/
 geometry/provenance and returned `LayerwiseUniformSourceModel`, but raw-v3/replacement/nullspace/Zii were
-absent and substrate was delegated to `compile_layerwise_substrate`. Sole ACTIVE successor is 17BA
-`W7-PHYS-W6-LAYERWISE-SUBSTRATE-OWNER-BOUNDARY-DISCOVERY`, one exact PowerShell definition query only;
-no file read/code/test/solver/production/profile/accuracy/causal claim.
+absent and substrate was delegated to `compile_layerwise_substrate`. 17BA is BLOCKED/STOP:
+its exact query ran once exit0 with target line3669 and next definition4296, span627>500; no file read.
+Sole ACTIVE successor is 17BB `W7-PHYS-W6-LAYERWISE-SUBSTRATE-INTEGRATION-CLUSTER-DISCOVERY`,
+one exact filtered-term query only; no file read/code/test/solver/production/profile/accuracy/causal/
+implementation claim.
 Contract: v2 constants/API byte-identical; profile/global/app/solver/convergence/policy/controller
 identities unchanged; only the opt-in raw-spatial v3 schema/compiler sibling identity is new. v3 sibling with kw-only opt-in flags, five normalized tables,
 no gap table, positive-intervening-thickness fsum spacing, row/coordinate/ProjectSpec/source-SHA digest,
