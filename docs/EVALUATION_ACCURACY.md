@@ -795,10 +795,12 @@ NONE; no successor or source/query/code/test/solver/production/release/accuracy 
 main `95cb94d28090021c8b21081b771b1d8d30d2b353` completed the loader, require=True v3 path, five binding
 hashes, attachment/cancellation/temp-SQLite cleanup, and no fallback, but canonical payload/content identity
 is delegated to `_validate_manifest` and `LoadedRawSpatialContactAsset` constructor/type; no further trace.
-Sole ACTIVE successor is 17BH `W7-PHYS-W6-LOADED-RAW-SPATIAL-ASSET-LIFETIME-CONTRACT-TRACE`: exactly one
-bounded query `rg -n --with-filename --no-heading --color never -B 3 -A 160 '^class\s+LoadedRawSpatialContactAsset\b' 'src/spd_decap_pi/raw_spatial_contact_asset.py'`
-with one-file/one-match/<=165-line and complete-boundary gates; absent next boundary or
-external cleanup/validated delegate => STOP, no further source trace or profile/physical/code/test/solver/
+17BH `W7-PHYS-W6-LOADED-RAW-SPATIAL-ASSET-LIFETIME-CONTRACT-TRACE` is BLOCKED/source-classified STOP:
+the exact once query at clean main `3b507dd9aab7871baab29226f9849c87659c058b` exited0 with 164 lines,
+one match/one file; class start2278 proves defensive manifest copy, nested-count/public MappingProxy,
+connection/tempdir ownership, idempotent close, context manager, and closed-query fail-closed behavior, but
+the output ends line2438 inside `get_padstack` without the next top-level boundary. ACTIVE is NONE; no
+implementation whitelist/test promotion, further source trace, or profile/physical/code/test/solver/
 production/release/accuracy claim.
 Contract: v2 constants/API byte-identical; profile/global/app/solver/convergence/policy/controller
 identities unchanged; only the opt-in raw-spatial v3 schema/compiler sibling identity is new. v3 sibling with kw-only opt-in flags, five normalized tables,

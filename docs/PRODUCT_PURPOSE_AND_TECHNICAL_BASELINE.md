@@ -1,10 +1,10 @@
 # SPD Decap PI Evaluator 목적·기술 기준
 
 - 적용 제품: **SPD Decap PI Evaluator v0.23.0**
-- 문서 버전: **1.85**
+- 문서 버전: **1.86**
 - W5 approved/machine-frozen source-before: `main` commit `027ac7a09a3eded15f45c41860945f9d4c7f488d`
-- 상태: **G0 기준 문서** — full execution history and sole ACTIVE authority live in `WORK_EXECUTION_BASELINE.md` recovery/register; W5 DONE; W6-BASE 260729 numerical FAIL; W7-PHYS BLOCKED; raw-spatial chain: 17AR DONE, 17AS DONE-negative, 17AT BLOCKED/implementation REJECT, 17AU DONE (location evidence), 17AV BLOCKED/STOP, 17AW DONE (location evidence), 17AX BLOCKED/STOP, 17AY DONE (location evidence), 17AZ BLOCKED/STOP (source-classified delegated substrate owner), 17BA BLOCKED/STOP (boundary span627>500), 17BB BLOCKED/STOP (cache-only multiple clusters), 17BC BLOCKED/STOP (endpoint truncation + delegated identity), 17BD DONE (location evidence), 17BE BLOCKED/STOP (raw-v3/hash seam unproven), 17BF BLOCKED/design REJECT, 17BG BLOCKED/STOP (canonical payload/content identity delegated); 17BH ACTIVE.
-- 현재 권위 상태: sole ACTIVE 17BH authorizes exactly one bounded query `rg -n --with-filename --no-heading --color never -B 3 -A 160 '^class\s+LoadedRawSpatialContactAsset\b' 'src/spd_decap_pi/raw_spatial_contact_asset.py'`; gate is exact once/exit0, one class match/one file, <=165 lines, complete decorator/fields through next top-level boundary; absent boundary or external cleanup/validated delegate => STOP, no further source trace or code/test/solver/production/profile/accuracy execution.
+- 상태: **G0 기준 문서** — full execution history and sole ACTIVE authority live in `WORK_EXECUTION_BASELINE.md` recovery/register; W5 DONE; W6-BASE 260729 numerical FAIL; W7-PHYS BLOCKED; raw-spatial chain: 17AR DONE, 17AS DONE-negative, 17AT BLOCKED/implementation REJECT, 17AU DONE (location evidence), 17AV BLOCKED/STOP, 17AW DONE (location evidence), 17AX BLOCKED/STOP, 17AY DONE (location evidence), 17AZ BLOCKED/STOP (source-classified delegated substrate owner), 17BA BLOCKED/STOP (boundary span627>500), 17BB BLOCKED/STOP (cache-only multiple clusters), 17BC BLOCKED/STOP (endpoint truncation + delegated identity), 17BD DONE (location evidence), 17BE BLOCKED/STOP (raw-v3/hash seam unproven), 17BF BLOCKED/design REJECT, 17BG BLOCKED/STOP (canonical payload/content identity delegated), 17BH BLOCKED/source-classified STOP (lifetime trace endpoint incomplete); ACTIVE NONE.
+- 현재 권위 상태: ACTIVE NONE. 17BH is BLOCKED/source-classified STOP after its exact once query at clean main `3b507dd9aab7871baab29226f9849c87659c058b` returned 164 lines/one match/one file: class starts2278 and proves defensive manifest copy, nested-count/public MappingProxy, connection/tempdir ownership, idempotent close, context manager, and closed-query fail-closed behavior, but ends at line2438 inside `get_padstack` without the next top-level boundary. No implementation whitelist/test promotion or further source trace is authorized.
 - 최종 개정: 2026-08-26 (Asia/Seoul)
 
 ## 1. 문서 역할과 권위
@@ -769,9 +769,11 @@ prevention/resource contract, or an exact minimal production/test whitelist plus
 at clean main `95cb94d28090021c8b21081b771b1d8d30d2b353` completed the loader, require=True v3 path, five
 binding hashes, attachment/cancellation/temp-SQLite cleanup, and no fallback, but canonical payload/content
 identity is delegated to `_validate_manifest` and the `LoadedRawSpatialContactAsset` constructor/type; no
-further source trace was made. Sole ACTIVE successor is 17BH `W7-PHYS-W6-LOADED-RAW-SPATIAL-ASSET-LIFETIME-CONTRACT-TRACE`,
-with exactly one bounded class query; no profile/physical/code/test/solver/production/release/
-accuracy claim.
+further source trace was made. 17BH `W7-PHYS-W6-LOADED-RAW-SPATIAL-ASSET-LIFETIME-CONTRACT-TRACE` is
+BLOCKED/source-classified STOP: its exact once query at clean main `3b507dd9aab7871baab29226f9849c87659c058b`
+returned 164 lines/one match/one file, but the output ended inside `get_padstack` at line2438 without a next
+top-level boundary. ACTIVE is NONE; no implementation whitelist/test promotion or code/test/solver/production/
+release/accuracy claim.
 The frozen contract keeps v2 constants/API byte-identical and adds a schema-v3 sibling: compiler
 keyword-only `include_plane_sheet_payload=False`, validator keyword-only `require_plane_sheet_payload=False`,
 opt-in no downgrade, exactly five normalized tables (`plane_primitives`, `vertices`, `circles`,
@@ -894,5 +896,6 @@ and the exact Git HEAD are frozen together. Current trust identities: base `d43b
 | 1.83 | 2026-08-26 | frozen 17AN-17BE evidence만으로 17BF docs-only design gate를 수행해 activation/loader/identity/propagation/cache/whitelist bindings가 UNPROVEN임을 기록하고 BLOCKED/design REJECT, ACTIVE NONE으로 전환. |
 | 1.84 | 2026-08-26 | clean main `46d5fdac0c348d2e35948921679ebf3259a8b478`에서 17BG loader-return contract trace를 sole ACTIVE로 지정하고 exact raw_spatial_contact_asset.py:2460-2558 read/def2460-export2559 boundary를 동결. |
 | 1.85 | 2026-08-26 | clean main `95cb94d28090021c8b21081b771b1d8d30d2b353`의 17BG exact2460-2558 read에서 require=True v3/five binding hashes/attachment-cancel-temp-SQLite cleanup/no-fallback을 확인했으나 canonical payload/content identity가 `_validate_manifest`와 `LoadedRawSpatialContactAsset` constructor/type에 위임됨을 기록해 BLOCKED/STOP으로 닫고 17BH lifetime-contract trace를 sole ACTIVE로 지정. |
+| 1.86 | 2026-08-26 | clean main `3b507dd9aab7871baab29226f9849c87659c058b`의 17BH exact once class query exit0(164 lines/1 match/1 file)에서 manifest copy/MappingProxy/connection-tempdir/close/context/fail-closed를 확인했으나 line2438 `get_padstack` 내부에서 next top-level boundary가 잘려 BLOCKED/source-classified STOP으로 닫고 ACTIVE NONE으로 전환. |
 | 1.1 | 2026-08-24 | `WORK_EXECUTION_BASELINE.md`를 두 번째 canonical 문서로 연결. |
 | 1.0 | 2026-08-24 | v0.24 계획 중심의 Distribution–solver PRD를 제품 전체의 목적·기술 기준으로 개정. PowerSI 정확성 우선, 상태 어휘, 기술 경계, promotion gate, 검증 비용 통제와 two-document 작업 방식을 고정. |
