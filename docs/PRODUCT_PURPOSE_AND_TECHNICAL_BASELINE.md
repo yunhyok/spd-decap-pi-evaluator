@@ -1,10 +1,10 @@
 # SPD Decap PI Evaluator 목적·기술 기준
 
 - 적용 제품: **SPD Decap PI Evaluator v0.23.0**
-- 문서 버전: **1.79**
+- 문서 버전: **1.80**
 - W5 approved/machine-frozen source-before: `main` commit `027ac7a09a3eded15f45c41860945f9d4c7f488d`
-- 상태: **G0 기준 문서** — full execution history and sole ACTIVE authority live in `WORK_EXECUTION_BASELINE.md` recovery/register; W5 DONE; W6-BASE 260729 numerical FAIL; W7-PHYS BLOCKED; raw-spatial chain: 17AR DONE, 17AS DONE-negative, 17AT BLOCKED/implementation REJECT, 17AU DONE (location evidence), 17AV BLOCKED/STOP, 17AW DONE (location evidence), 17AX BLOCKED/STOP, 17AY DONE (location evidence), 17AZ BLOCKED/STOP (source-classified delegated substrate owner), 17BA BLOCKED/STOP (boundary span627>500), 17BB BLOCKED/STOP (cache-only multiple clusters), 17BC ACTIVE.
-- 현재 권위 상태: sole ACTIVE 17BC authorizes exactly one read only of `src/spd_decap_pi/_core/solver/layerwise_network.py` lines3669-3945 under existing W6 reimplementation and standing preapproval; questions compile signature/inputs, manifest/certificate/source/hash validation and raw-v3 absence, cache identity/hash binding, lookup/hit immutability/resource/cancellation, and opt-in require-plane seam; range cuts or delegated key contract => STOP; no expansion or replacement/nullspace/Zii/code/test/solver/production/release/accuracy claims.
+- 상태: **G0 기준 문서** — full execution history and sole ACTIVE authority live in `WORK_EXECUTION_BASELINE.md` recovery/register; W5 DONE; W6-BASE 260729 numerical FAIL; W7-PHYS BLOCKED; raw-spatial chain: 17AR DONE, 17AS DONE-negative, 17AT BLOCKED/implementation REJECT, 17AU DONE (location evidence), 17AV BLOCKED/STOP, 17AW DONE (location evidence), 17AX BLOCKED/STOP, 17AY DONE (location evidence), 17AZ BLOCKED/STOP (source-classified delegated substrate owner), 17BA BLOCKED/STOP (boundary span627>500), 17BB BLOCKED/STOP (cache-only multiple clusters), 17BC BLOCKED/STOP (endpoint truncation + delegated identity), 17BD ACTIVE.
+- 현재 권위 상태: sole ACTIVE 17BD authorizes exactly one PowerShell definition query targeting `_finite_via_substrate_identity` and `_substrate_identity` in `src/spd_decap_pi/_core/solver/layerwise_network.py`; gate exactly once exit0, 4 lines/1 file, each unique target+immediate next top-level span<=240; repeated row only when first helper’s next equals second target; errors/duplicate/no-next/over-span => STOP; location only, no source read/expansion/code/test/solver/production/release/accuracy.
 - 최종 개정: 2026-08-26 (Asia/Seoul)
 
 ## 1. 문서 역할과 권위
@@ -748,8 +748,14 @@ read was made. 17BB is BLOCKED/STOP (cache-only multiple clusters): its document
 with 8 unique exact-file rows in3669-4295 at 3901,3906,3933,3939 (cache-read span39) and 4278,4283,
 4284,4285 (cache-write/eviction span8), combined span385; raw-v3 loader/require/plane/surface/layer
 tokens were 0 and no source range was read. Sole ACTIVE successor is 17BC
-`W7-PHYS-W6-LAYERWISE-SUBSTRATE-INPUT-CACHE-SEAM-TRACE`, one exact read only; no replacement/nullspace/
-Zii/code/test/solver/production/release/accuracy claim.
+`W7-PHYS-W6-LAYERWISE-SUBSTRATE-INPUT-CACHE-SEAM-TRACE`, one exact read only. Its 3669-3945 read at
+clean main `76b550ddbf0301d3c682840d206f312ed60345fc` proved signature/project/attachments plus
+required_rail_id/progress/is_cancelled, topology/certificate/geometry snapshot, two cache lookups,
+asset SHA and cancellation; raw-v3/require/plane-sheet absent, identity delegated to
+`_finite_via_substrate_identity` and `_substrate_identity`, and the range ended in a continuing block.
+17BC is therefore BLOCKED/STOP (endpoint truncation + delegated identity). Sole ACTIVE successor is
+17BD `W7-PHYS-W6-LAYERWISE-SUBSTRATE-IDENTITY-HELPER-BOUNDARY-DISCOVERY`, one exact definition query only;
+no source read/expansion/code/test/solver/production/release/accuracy claim.
 The frozen contract keeps v2 constants/API byte-identical and adds a schema-v3 sibling: compiler
 keyword-only `include_plane_sheet_payload=False`, validator keyword-only `require_plane_sheet_payload=False`,
 opt-in no downgrade, exactly five normalized tables (`plane_primitives`, `vertices`, `circles`,
@@ -866,5 +872,6 @@ and the exact Git HEAD are frozen together. Current trust identities: base `d43b
 | 1.77 | 2026-08-26 | clean-main HEAD `d76f4a064eba51cf394a9af2d99b9400a04c4e77`의 17AZ exact5432-5605 trace에서 substrate owner delegation과 raw-v3/replacement/nullspace/Zii 부재를 기록해 BLOCKED/STOP으로 닫고 17BA substrate-owner boundary discovery를 sole ACTIVE로 지정. |
 | 1.78 | 2026-08-26 | clean-main HEAD `f9c8d9b33d37badcf331fc313b2433dd962c2e27`의 17BA exact query에서 `compile_layerwise_substrate` line3669와 next definition4296의 span627>500 STOP을 기록하고 17BB substrate-integration cluster discovery를 sole ACTIVE로 지정. |
 | 1.79 | 2026-08-26 | clean-main HEAD `c218cc81b56cf61a48373b7fceb140e48638af85`의 17BB exact query에서 cache-only 8개 row와 combined span385, raw-v3 관련 token 0을 기록해 multiple-cluster BLOCKED/STOP으로 닫고 17BC substrate-input cache seam trace를 sole ACTIVE로 지정. |
+| 1.80 | 2026-08-26 | clean-main HEAD `76b550ddbf0301d3c682840d206f312ed60345fc`의 17BC exact3669-3945 read에서 raw-v3/require/plane-sheet 부재, identity helper delegation, endpoint truncation을 기록해 BLOCKED/STOP으로 닫고 17BD identity-helper boundary discovery를 sole ACTIVE로 지정. |
 | 1.1 | 2026-08-24 | `WORK_EXECUTION_BASELINE.md`를 두 번째 canonical 문서로 연결. |
 | 1.0 | 2026-08-24 | v0.24 계획 중심의 Distribution–solver PRD를 제품 전체의 목적·기술 기준으로 개정. PowerSI 정확성 우선, 상태 어휘, 기술 경계, promotion gate, 검증 비용 통제와 two-document 작업 방식을 고정. |

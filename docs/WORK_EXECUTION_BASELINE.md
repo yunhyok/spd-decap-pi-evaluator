@@ -1,11 +1,11 @@
 # SPD Decap PI Evaluator 작업 기준
 
 - 적용 제품: **SPD Decap PI Evaluator v0.23.0**
-- 문서 버전: **1.80**
-- 상위 기준: [목적·기술 기준](PRODUCT_PURPOSE_AND_TECHNICAL_BASELINE.md) v1.79
+- 문서 버전: **1.81**
+- 상위 기준: [목적·기술 기준](PRODUCT_PURPOSE_AND_TECHNICAL_BASELINE.md) v1.80
 - W6-BASE source-before: clean `main` HEAD `fb36288781dcc0b884950ef5a486c474090ceebd`; this is the exact source boundary for the completed one-run evidence
-- 상태: **APPROVED/MACHINE-FROZEN CONTROL DOCUMENT**; full phase/item history lives in the register and changelog; W5 DONE; W6-BASE 260729 numerical FAIL; W7-PHYS BLOCKED; 17AX BLOCKED/STOP; 17AY DONE (location evidence); 17AZ BLOCKED/STOP (source-classified delegated substrate owner); 17BA BLOCKED/STOP (boundary span627>500); 17BB BLOCKED/STOP (cache-only multiple clusters); 17BC ACTIVE.
-- 현재 권위 상태: sole ACTIVE 17BC authorizes exactly one read only of `src/spd_decap_pi/_core/solver/layerwise_network.py` lines3669-3945 under existing W6 reimplementation and standing preapproval; questions compile signature/inputs, manifest/certificate/source/hash validation and raw-v3 absence, cache identity/hash binding, lookup/hit immutability/resource/cancellation, and opt-in require-plane seam; range cuts or delegated key contract => STOP; no expansion or replacement/nullspace/Zii/code/test/solver/production/release/accuracy claims.
+- 상태: **APPROVED/MACHINE-FROZEN CONTROL DOCUMENT**; full phase/item history lives in the register and changelog; W5 DONE; W6-BASE 260729 numerical FAIL; W7-PHYS BLOCKED; 17AX BLOCKED/STOP; 17AY DONE (location evidence); 17AZ BLOCKED/STOP (source-classified delegated substrate owner); 17BA BLOCKED/STOP (boundary span627>500); 17BB BLOCKED/STOP (cache-only multiple clusters); 17BC BLOCKED/STOP (endpoint truncation + delegated identity); 17BD ACTIVE.
+- 현재 권위 상태: sole ACTIVE 17BD authorizes exactly one PowerShell definition query targeting `_finite_via_substrate_identity` and `_substrate_identity` in `src/spd_decap_pi/_core/solver/layerwise_network.py`; gate exactly once exit0, 4 lines/1 file, each unique target+immediate next top-level span<=240; repeated row only when first helper’s next equals second target; errors/duplicate/no-next/over-span => STOP; location only, no source read/expansion/code/test/solver/production/release/accuracy.
 - 최종 개정: 2026-08-26 (Asia/Seoul)
 
 ## 1. 압축 후 즉시 복구 카드
@@ -17,15 +17,15 @@ context가 압축되거나 새 session에서 작업을 재개하면 다른 연�
 |---|---|
 | 변하지 않는 목적 | source-derived single-rail `Zii`의 PowerSI 근접 정확성과 일반화 |
 | 현재 branch | `main`만 사용; 정리된 과거 branch를 다시 조사하지 않음 |
-| 현재 active work item | `W7-PHYS-W6-LAYERWISE-SUBSTRATE-INPUT-CACHE-SEAM-TRACE` |
-| 다음 권장 묶음 | `W7-PHYS-W6-LAYERWISE-SUBSTRATE-INPUT-CACHE-SEAM-TRACE` (ACTIVE; one exact 3669-3945 read) |
-| current authorization | 17BA BLOCKED/STOP: exact query once exit0, target compile_layerwise_substrate line3669 and next definition4296, span627>500; no file read. 17BB BLOCKED/STOP: 8 unique cache-only rows in3669-4295 (3901,3906,3933,3939; 4278,4283,4284,4285), combined span385, raw-v3 token0. Sole ACTIVE 17BC authorizes one read layerwise_network.py3669-3945 only under standing preapproval; range cuts/delegated key contract => STOP; no expansion or implementation execution. |
+| 현재 active work item | `W7-PHYS-W6-LAYERWISE-SUBSTRATE-IDENTITY-HELPER-BOUNDARY-DISCOVERY` |
+| 다음 권장 묶음 | `W7-PHYS-W6-LAYERWISE-SUBSTRATE-IDENTITY-HELPER-BOUNDARY-DISCOVERY` (ACTIVE; one exact helper definition query) |
+| current authorization | 17BA BLOCKED/STOP: exact query once exit0, target compile_layerwise_substrate line3669 and next definition4296, span627>500; no file read. 17BB BLOCKED/STOP: 8 cache-only rows, combined span385, raw-v3 token0. 17BC BLOCKED/STOP: exact3669-3945 read proved cache/cancellation but raw-v3 absent, identity delegated, endpoint truncated. Sole ACTIVE 17BD authorizes one helper definition query; exactly 4 lines/1 file, each target+immediate next span<=240; no source read/expansion/code/test/solver/production/release/accuracy execution. |
 | 17T command A | `rg -n --no-heading --color never --glob '*.py' '\bcompile_raw_spatial_contact_asset\b' 'src/spd_decap_pi'` |
 | 17T command B | `rg -n --no-heading --color never --glob '*.py' '\b(?:resolve_solver_profile|numerical_worker_count|build_layerwise_uniform_source_model)\b' 'src/spd_decap_pi'` |
 | 17T command C | `rg -n --no-heading --color never --glob '*.py' '\b(?:GLOBAL_KRON|SurfacePatchDifferentialProjection|SurfacePatchFinitePortProjection|assemble_differential_admittance|differential_projection)\b' 'src/spd_decap_pi'` |
 | consumed 17M discovery | canonical rg ran once (exit 0), found candidate symbols only; no reuse or production proof |
 | future production invariant (not current authority) | if a future run is authorized: exact clean `main`, new output root, one run/no retry; B correlation is historical evidence; C/D consumed their exactly-one old candidate/import reads; E had one production diagnostic invocation plus one orchestration ZIP read; old root remains forbidden for W6-BASE output/scoring/retry/mutation |
-| 고비용 검증 권한 | none; only the low-cost bounded 17BC 3669-3945 read is authorized, with no expansion or code/test/solver/production/release/accuracy execution |
+| 고비용 검증 권한 | none; only the low-cost bounded 17BD helper definition query is authorized, with no source read/expansion/code/test/solver/production/release/accuracy execution |
 | 현재 정확성 상태 | `260729 retrospective FAIL`; unseen/generalization remains `unknown / not_run` |
 | 현재 release 계산 증거 | W6-BASE 260729 completed numerical FAIL; offline verifier exit 2 (integrity-valid) |
 | W6-BASE result root | `D:\SPD-Decap-PI-Evaluator-W6\fb36288781dcc0b884950ef5a486c474090ceebd\260729` — manifest `2b14f90e762abc49833518137812e8fc97fcde0e9c145795b7384210cfd9f5de`, sidecar `0d103e0ad47df80641fac0952a35a6eaa56cc9fdb71be24661903e451926e932`, correlation `969e40046e3a099d09557ba7500693460362336d76b067962436bd3b5177abc4` |
@@ -187,7 +187,8 @@ root, one-run/no-retry 조건을 다시 확정할 때만 고려한다.
 | `W7-PHYS-W6-LAYERWISE-SOURCE-MODEL-OWNER-TRACE` | 17AZ | BLOCKED/STOP | trace layerwise source-model owner | exact5432-5605 read validated v4 certificate/rail/port/device/geometry/provenance and returned `LayerwiseUniformSourceModel`; raw-v3/replacement/nullspace/Zii absent and substrate delegated to `compile_layerwise_substrate`; no implementation approval |
 | `W7-PHYS-W6-LAYERWISE-SUBSTRATE-OWNER-BOUNDARY-DISCOVERY` | 17BA | BLOCKED/STOP | discover delegated substrate owner boundary | exact query once exit0, target `compile_layerwise_substrate` line3669 and next definition4296, span627>500; no file read |
 | `W7-PHYS-W6-LAYERWISE-SUBSTRATE-INTEGRATION-CLUSTER-DISCOVERY` | 17BB | BLOCKED/STOP | discover substrate integration cluster | documented query once exit0; 8 unique cache-only rows in3669-4295 (3901,3906,3933,3939; 4278,4283,4284,4285), combined span385; raw-v3 loader/require/plane/surface/layer tokens=0; no source range read |
-| `W7-PHYS-W6-LAYERWISE-SUBSTRATE-INPUT-CACHE-SEAM-TRACE` | 17BC | ACTIVE | trace substrate input/cache seam | exactly one read `src/spd_decap_pi/_core/solver/layerwise_network.py` lines3669-3945 under existing W6 reimplementation and standing preapproval; questions compile signature/inputs, manifest/certificate/source/hash validation and raw-v3 absence, cache identity/hash binding, lookup/hit immutability/resource/cancellation, and opt-in require-plane seam; range cuts/delegated key contract => STOP; no expansion or replacement/nullspace/Zii/code/test/solver/production/release/accuracy claims |
+| `W7-PHYS-W6-LAYERWISE-SUBSTRATE-INPUT-CACHE-SEAM-TRACE` | 17BC | BLOCKED/STOP | trace substrate input/cache seam | exact3669-3945 read at clean main `76b550ddbf0301d3c682840d206f312ed60345fc` proved signature/project/attachments, required_rail_id/progress/is_cancelled, snapshot/cache lookups/asset SHA/cancellation; raw-v3/require/plane-sheet absent; identity delegated to `_finite_via_substrate_identity` and `_substrate_identity`; endpoint continuing block; no expansion |
+| `W7-PHYS-W6-LAYERWISE-SUBSTRATE-IDENTITY-HELPER-BOUNDARY-DISCOVERY` | 17BD | ACTIVE | discover substrate identity helper boundaries | exactly one PowerShell definition query targeting `_finite_via_substrate_identity` and `_substrate_identity`; gate exact once exit0, 4 lines/1 file, each target+immediate next top-level span<=240; repeated row only if first helper’s next equals second target; errors/duplicate/no-next/over-span => STOP; location only, no source read/expansion/code/test/solver/production/release/accuracy claim |
 | `W7-PHYS-PROSPECTIVE-RUNTIME-TERM-EVIDENCE` | next candidate | BLOCKED/YAGNI | provide a grounded runtime term digest/count/owner partition only after an independently selected physical change | new candidate/HEAD/root, one run/no retry; no current authority |
 | `W8-REL` | 18 | BLOCKED | completed known-case solve를 release gate에 연결하고 최종 전달 | accuracy/product gate와 exact release commit 필요 |
 | `D-DIST` | - | DEFERRED | Distribution routing/DRC scope 확대 | 사용자가 implementation-ready/DRC 목표로 승격할 때만 |
@@ -845,7 +846,7 @@ Base clean main HEAD는 `94df6d30cb1b6e8e1be686e311e7ebaa2e96e6b9`이며, exact 
 
 Budget는 <=40 lines 및 <=6 files였고 17 lines/5 files로 통과했다. compiler symbol을 참조한
 유일한 file은 `tests/test_raw_spatial_contact_compiler.py`이며 나머지는 builder/validator-only다.
-17Z는 DONE으로 닫고, 17AA와 17AA-S1은 historical BLOCKED로 남기며 17AA-S2는 test-gate PASS DONE으로 닫는다. 17AB는 DONE, 17AC는 source-classified STOP/BLOCKED로 닫고 17AD는 DONE으로 닫는다. 17AE는 source-location boundary evidence DONE으로 닫고 17AF는 DONE으로 닫는다. 17AG는 integration-gap evidence DONE으로 닫고, 17AH는 bounded location evidence DONE으로 닫는다. 17AI는 gate STOP/BLOCKED로 닫고 17AJ는 deterministic owner-location evidence DONE으로 닫는다. 17AK는 source-classified endpoint STOP/BLOCKED로 닫고 17AL은 source-classified test gap DONE으로 닫는다. 17AM은 DONE, 17AN은 test-gate PASS DONE으로 닫고, 17AO는 location evidence DONE으로 닫는다. 17AP는 source-classified caller trace DONE으로 닫고, 17AQ는 source-classified test-seam STOP/BLOCKED로 닫는다. 17AR는 one-file GUI opt-in activation DONE으로 닫고 17AS는 DONE-negative producer-active/no-solver-consumer로 닫는다. 17AT는 BLOCKED/implementation REJECT, 17AU는 DONE(location evidence), 17AV는 BLOCKED/STOP, 17AW는 DONE(location evidence), 17AX는 BLOCKED/STOP(source-classified preflight-only), 17AY는 DONE(location evidence), 17AZ는 BLOCKED/STOP(source-classified delegated substrate owner)으로 닫고, 17BA는 boundary span627>500으로 BLOCKED/STOP으로 닫으며, 17BB는 cache-only multiple clusters로 BLOCKED/STOP으로 닫고, ACTIVE는 `W7-PHYS-W6-LAYERWISE-SUBSTRATE-INPUT-CACHE-SEAM-TRACE`(17BC)로 지정한다.
+17Z는 DONE으로 닫고, 17AA와 17AA-S1은 historical BLOCKED로 남기며 17AA-S2는 test-gate PASS DONE으로 닫는다. 17AB는 DONE, 17AC는 source-classified STOP/BLOCKED로 닫고 17AD는 DONE으로 닫는다. 17AE는 source-location boundary evidence DONE으로 닫고 17AF는 DONE으로 닫는다. 17AG는 integration-gap evidence DONE으로 닫고, 17AH는 bounded location evidence DONE으로 닫는다. 17AI는 gate STOP/BLOCKED로 닫고 17AJ는 deterministic owner-location evidence DONE으로 닫는다. 17AK는 source-classified endpoint STOP/BLOCKED로 닫고 17AL은 source-classified test gap DONE으로 닫는다. 17AM은 DONE, 17AN은 test-gate PASS DONE으로 닫고, 17AO는 location evidence DONE으로 닫는다. 17AP는 source-classified caller trace DONE으로 닫고, 17AQ는 source-classified test-seam STOP/BLOCKED로 닫는다. 17AR는 one-file GUI opt-in activation DONE으로 닫고 17AS는 DONE-negative producer-active/no-solver-consumer로 닫는다. 17AT는 BLOCKED/implementation REJECT, 17AU는 DONE(location evidence), 17AV는 BLOCKED/STOP, 17AW는 DONE(location evidence), 17AX는 BLOCKED/STOP(source-classified preflight-only), 17AY는 DONE(location evidence), 17AZ는 BLOCKED/STOP(source-classified delegated substrate owner)으로 닫고, 17BA는 boundary span627>500으로 BLOCKED/STOP으로 닫으며, 17BB는 cache-only multiple clusters로 BLOCKED/STOP으로 닫고, 17BC는 endpoint truncation + delegated identity로 BLOCKED/STOP으로 닫고, ACTIVE는 `W7-PHYS-W6-LAYERWISE-SUBSTRATE-IDENTITY-HELPER-BOUNDARY-DISCOVERY`(17BD)로 지정한다.
 
 ### 17AA. W7-PHYS-W6-RAW-SPATIAL-ASSET-V3-EMISSION (BLOCKED; test-gate)
 
@@ -1185,17 +1186,49 @@ $rows.Text
 Gate: run exactly once; exit0 with 1-24 rows, exact file, unique line numbers, and all rows within
 3669-4295. Comments/strings-only or multiple/ambiguous clusters, or selected cluster span>160 => STOP.
 
-### 17BC. W7-PHYS-W6-LAYERWISE-SUBSTRATE-INPUT-CACHE-SEAM-TRACE (ACTIVE)
+### 17BC. W7-PHYS-W6-LAYERWISE-SUBSTRATE-INPUT-CACHE-SEAM-TRACE (BLOCKED; endpoint truncation + delegated identity)
 
-Authorize exactly one read only of `src/spd_decap_pi/_core/solver/layerwise_network.py` lines3669-3945
-under existing W6 reimplementation and standing preapproval. Questions: full `compile_layerwise_substrate`
-signature and profile/project/attachment inputs; manifest/certificate/source/hash validation and raw-v3
-loader absence; cache identity constituents and plane-sheet payload hash binding; lookup/hit immutability,
-resource/cancellation; and the minimal fail-closed seam for `require_plane_sheet_payload=True` only in a
-new opt-in profile. PASS requires complete input/hash/cache seam with source-proven opt-in-only v3 require+
-identity binding. If the range cuts a statement/block or a key identity/attachment/cache contract delegates
-externally, STOP with no expansion. Exclude replacement/no-double-counting, nullspace/gauge/Zii, and all
-code/test/solver/production/release/accuracy claims.
+The exact3669-3945 read at clean main `76b550ddbf0301d3c682840d206f312ed60345fc` proved
+signature/project/attachments, required_rail_id/progress/is_cancelled, topology/certificate/geometry
+snapshot, two cache lookups, asset SHA and cancellation; raw-v3/require/plane-sheet were absent. Identity
+was delegated to `_finite_via_substrate_identity` and `_substrate_identity`, and line3945 continued a
+comment/block. 17BC is BLOCKED/STOP (endpoint truncation + delegated identity), with no expansion.
+
+### 17BD. W7-PHYS-W6-LAYERWISE-SUBSTRATE-IDENTITY-HELPER-BOUNDARY-DISCOVERY (ACTIVE)
+
+Authorize exactly one PowerShell definition query targeting `_finite_via_substrate_identity` and
+`_substrate_identity` in `src/spd_decap_pi/_core/solver/layerwise_network.py`.
+Gate: exactly once exit0, 4 lines/1 file; each exact unique target plus immediate next top-level definition,
+span<=240; repeated row permitted only if the first helper’s next equals the second target; error/duplicate
+target/no-next/over-span => STOP. Location evidence only; no source read/expansion/code/test/solver/production/
+release/accuracy claim.
+
+```powershell
+$path = 'src/spd_decap_pi/_core/solver/layerwise_network.py'
+$defs = @(rg -n --with-filename --no-heading --color never '^(?:async\s+def|def|class)\s' $path)
+if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+$rows = @(
+    foreach ($line in $defs) {
+        if ($line -match '^[^:]+:(\d+):') {
+            [pscustomobject]@{ Number = [int]$Matches[1]; Text = $line }
+        }
+    }
+)
+$out = @()
+foreach ($name in @('_finite_via_substrate_identity', '_substrate_identity')) {
+    $pattern = ':(?:async\s+def|def)\s+' + [regex]::Escape($name) + '\b'
+    $target = @($rows | Where-Object { $_.Text -match $pattern })
+    if ($target.Count -ne 1) { exit 2 }
+    $after = $rows | Where-Object Number -gt $target[0].Number | Select-Object -First 1
+    if ($null -eq $after) { exit 2 }
+    $span = $after.Number - $target[0].Number
+    if ($span -le 0 -or $span -gt 240) { exit 2 }
+    $out += $target[0].Text
+    $out += $after.Text
+}
+if ($out.Count -ne 4) { exit 2 }
+$out
+```
 ## 20. 변경 기록
 
 | 문서 버전 | 날짜 | 변경 |
@@ -1281,3 +1314,4 @@ code/test/solver/production/release/accuracy claims.
 | 1.78 | 2026-08-26 | clean-main HEAD `d76f4a064eba51cf394a9af2d99b9400a04c4e77`의 17AZ exact5432-5605 trace에서 substrate owner delegation과 raw-v3/replacement/nullspace/Zii 부재를 기록해 BLOCKED/STOP으로 닫고 17BA substrate-owner boundary discovery를 sole ACTIVE로 지정. |
 | 1.79 | 2026-08-26 | clean-main HEAD `f9c8d9b33d37badcf331fc313b2433dd962c2e27`의 17BA exact query에서 `compile_layerwise_substrate` line3669와 next definition4296의 span627>500 STOP을 기록하고 17BB substrate-integration cluster discovery를 sole ACTIVE로 지정. |
 | 1.80 | 2026-08-26 | clean-main HEAD `c218cc81b56cf61a48373b7fceb140e48638af85`의 17BB exact query에서 cache-only 8개 row와 combined span385, raw-v3 관련 token 0을 기록해 multiple-cluster BLOCKED/STOP으로 닫고 17BC substrate-input cache seam trace를 sole ACTIVE로 지정. |
+| 1.81 | 2026-08-26 | clean-main HEAD `76b550ddbf0301d3c682840d206f312ed60345fc`의 17BC exact3669-3945 read에서 raw-v3/require/plane-sheet 부재, identity helper delegation, endpoint truncation을 기록해 BLOCKED/STOP으로 닫고 17BD identity-helper boundary discovery를 sole ACTIVE로 지정. |

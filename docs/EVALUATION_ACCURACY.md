@@ -776,9 +776,13 @@ absent and substrate was delegated to `compile_layerwise_substrate`. 17BA is BLO
 its exact query ran once exit0 with target line3669 and next definition4296, span627>500; no file read.
 17BB is BLOCKED/STOP (cache-only multiple clusters): its exact query ran once exit0 with 8 unique
 exact-file rows in3669-4295 (3901,3906,3933,3939; 4278,4283,4284,4285), combined span385; raw-v3
-loader/require/plane/surface/layer tokens=0 and no source range read. Sole ACTIVE successor is 17BC
-`W7-PHYS-W6-LAYERWISE-SUBSTRATE-INPUT-CACHE-SEAM-TRACE`, one exact read only; no replacement/nullspace/
-Zii/code/test/solver/production/release/accuracy/causal claim.
+loader/require/plane/surface/layer tokens=0 and no source range read. 17BC is BLOCKED/STOP:
+exact3669-3945 at clean main `76b550ddbf0301d3c682840d206f312ed60345fc` proved signature/project/
+attachments, required_rail_id/progress/is_cancelled, snapshot/cache lookups/asset SHA/cancellation;
+raw-v3/require/plane-sheet absent, identity delegated to `_finite_via_substrate_identity` and
+`_substrate_identity`, and the endpoint continued a comment/block. Sole ACTIVE successor is 17BD
+`W7-PHYS-W6-LAYERWISE-SUBSTRATE-IDENTITY-HELPER-BOUNDARY-DISCOVERY`, one exact definition query only;
+no source read/expansion/code/test/solver/production/release/accuracy/causal claim.
 Contract: v2 constants/API byte-identical; profile/global/app/solver/convergence/policy/controller
 identities unchanged; only the opt-in raw-spatial v3 schema/compiler sibling identity is new. v3 sibling with kw-only opt-in flags, five normalized tables,
 no gap table, positive-intervening-thickness fsum spacing, row/coordinate/ProjectSpec/source-SHA digest,
