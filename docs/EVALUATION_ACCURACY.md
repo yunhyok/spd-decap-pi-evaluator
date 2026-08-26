@@ -799,11 +799,16 @@ is delegated to `_validate_manifest` and `LoadedRawSpatialContactAsset` construc
 the exact once query at clean main `3b507dd9aab7871baab29226f9849c87659c058b` exited0 with 164 lines,
 one match/one file; class start2278 proves defensive manifest copy, nested-count/public MappingProxy,
 connection/tempdir ownership, idempotent close, context manager, and closed-query fail-closed behavior, but
-the output ends line2438 inside `get_padstack` without the next top-level boundary. Sole ACTIVE successor is
-17BI `W7-PHYS-W6-LOADED-RAW-SPATIAL-ASSET-COMPLETE-CONTRACT-TRACE`, authorizing only
-`src/spd_decap_pi/raw_spatial_contact_asset.py` lines2275-2459 (185) with frozen def2460 as boundary and no
-reread; truncation/mutability/delegation => STOP, no expansion or profile/physical/code/test/solver/
-production/release/accuracy claim.
+the output ends line2438 inside `get_padstack` without the next top-level boundary. 17BI is DONE/PASS at clean
+main `c8e97c3ca8937775c869d3e4be20bd3cb489787f`: exact2275-2459 once exit0 completed the class, immutable
+public manifest, lifecycle/context, and blank2458-2459 plus frozen def2460 exact boundary. Sole ACTIVE successor
+is 17BJ `W7-PHYS-W6-RAW-SPATIAL-V3-SUBSTRATE-HANDOFF-IMPLEMENTATION`, restricted to
+`src/spd_decap_pi/raw_spatial_contact_asset.py`, `src/spd_decap_pi/_core/solver/layerwise_network.py`,
+`tests/test_layerwise_raw_spatial_handoff.py` and node
+`tests/test_layerwise_raw_spatial_handoff.py::test_layerwise_substrate_v3_handoff_is_opt_in_hash_bound_and_fail_closed`,
+max once after Sol static gate. requireTrue is v3-manifest-only with
+separate full-manifest SHA256 identity/cache; defaultFalse/direct/manifest-absent behavior is byte-identical;
+no physical stamp/profile/replacement/nullspace/Zii/production/release/accuracy claim.
 Contract: v2 constants/API byte-identical; profile/global/app/solver/convergence/policy/controller
 identities unchanged; only the opt-in raw-spatial v3 schema/compiler sibling identity is new. v3 sibling with kw-only opt-in flags, five normalized tables,
 no gap table, positive-intervening-thickness fsum spacing, row/coordinate/ProjectSpec/source-SHA digest,
