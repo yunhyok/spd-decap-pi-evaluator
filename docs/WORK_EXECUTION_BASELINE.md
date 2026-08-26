@@ -1,11 +1,11 @@
 # SPD Decap PI Evaluator 작업 기준
 
 - 적용 제품: **SPD Decap PI Evaluator v0.23.0**
-- 문서 버전: **1.104**
-- 상위 기준: [목적·기술 기준](PRODUCT_PURPOSE_AND_TECHNICAL_BASELINE.md) v1.103
+- 문서 버전: **1.105**
+- 상위 기준: [목적·기술 기준](PRODUCT_PURPOSE_AND_TECHNICAL_BASELINE.md) v1.104
 - W6-BASE source-before: clean `main` HEAD `fb36288781dcc0b884950ef5a486c474090ceebd`; this is the exact source boundary for the completed one-run evidence
-- 상태: **APPROVED/MACHINE-FROZEN CONTROL DOCUMENT**; full phase/item history lives in the register and changelog; W5 DONE; W6-BASE 260729 numerical FAIL; W7-PHYS BLOCKED; 17AX BLOCKED/STOP; 17AY DONE (location evidence); 17AZ BLOCKED/STOP (source-classified delegated substrate owner); 17BA BLOCKED/STOP (boundary span627>500); 17BB BLOCKED/STOP (cache-only multiple clusters); 17BC BLOCKED/STOP (endpoint truncation + delegated identity); 17BD DONE (location evidence); 17BE BLOCKED/STOP (raw-v3/hash seam unproven); 17BF BLOCKED/design REJECT; 17BG BLOCKED/STOP (canonical payload/content identity delegated); 17BH BLOCKED/source-classified STOP (lifetime trace endpoint incomplete); 17BI DONE/PASS; 17BJ DONE/PASS; 17BK BLOCKED/source-classified STOP (validator field/type/unit/layer/net semantics delegated); 17BL DONE/location PASS (validator boundaries 1280/1323); 17BM DONE/PASS (local validator contract; physical ownership BLOCKED); 17BN DONE/PASS (typed immutable facade; physical scope unproven); 17BO BLOCKED/design REJECT (surface/island field-domain equivalence unproven); 17BP BLOCKED/source-classified location STOP (required surface-row producer missing); 17BQ DONE/location PASS (unique producer at raw_spatial_contact_compiler.py:2575); 17BR BLOCKED/boundary STOP (258-line span >160); 17BS BLOCKED/source-classified STOP (origin/normalization before range and `_canonical_sha` delegated); 17BT DONE/location PASS (single pre-range field-origin cluster at 2500-2512); 17BU BLOCKED/source-classified STOP (range starts/ends mid-flow; net/layer/asset SHA/key origins and helper semantics not proven); 17BV BLOCKED/location STOP (duplicate key semantic/domain ambiguous from location output); 17BW BLOCKED/source-classified STOP (canonical layer/raw-record origins and attachment continuation not proven); 17BX ACTIVE. Any physical implementation following a future PASS remains separately gated by fresh whitelist/test authority.
-- 현재 권위 상태: sole ACTIVE 17BX is a bounded asset-domain completion trace. Exact once-only numbered reads are restricted to `src/spd_decap_pi/raw_spatial_contact_compiler.py` A2363-2387 and B2436-2459 (49 total lines), without rereading2388-2435. PASS only if canonical layer mapping, raw record source, and asset name/SHA attachment binding/validation are complete in the new excerpts plus frozen boundaries; STOP/no expansion/no retry otherwise. Source hash helper, canonical SHA, islands, ownership/stamp/accuracy remain separate.
+- 상태: **APPROVED/MACHINE-FROZEN CONTROL DOCUMENT**; full phase/item history lives in the register and changelog; W5 DONE; W6-BASE 260729 numerical FAIL; W7-PHYS BLOCKED; 17AX BLOCKED/STOP; 17AY DONE (location evidence); 17AZ BLOCKED/STOP (source-classified delegated substrate owner); 17BA BLOCKED/STOP (boundary span627>500); 17BB BLOCKED/STOP (cache-only multiple clusters); 17BC BLOCKED/STOP (endpoint truncation + delegated identity); 17BD DONE (location evidence); 17BE BLOCKED/STOP (raw-v3/hash seam unproven); 17BF BLOCKED/design REJECT; 17BG BLOCKED/STOP (canonical payload/content identity delegated); 17BH BLOCKED/source-classified STOP (lifetime trace endpoint incomplete); 17BI DONE/PASS; 17BJ DONE/PASS; 17BK BLOCKED/source-classified STOP (validator field/type/unit/layer/net semantics delegated); 17BL DONE/location PASS (validator boundaries 1280/1323); 17BM DONE/PASS (local validator contract; physical ownership BLOCKED); 17BN DONE/PASS (typed immutable facade; physical scope unproven); 17BO BLOCKED/design REJECT (surface/island field-domain equivalence unproven); 17BP BLOCKED/source-classified location STOP (required surface-row producer missing); 17BQ DONE/location PASS (unique producer at raw_spatial_contact_compiler.py:2575); 17BR BLOCKED/boundary STOP (258-line span >160); 17BS BLOCKED/source-classified STOP (origin/normalization before range and `_canonical_sha` delegated); 17BT DONE/location PASS (single pre-range field-origin cluster at 2500-2512); 17BU BLOCKED/source-classified STOP (range starts/ends mid-flow; net/layer/asset SHA/key origins and helper semantics not proven); 17BV BLOCKED/location STOP (duplicate key semantic/domain ambiguous from location output); 17BW BLOCKED/source-classified STOP (canonical layer/raw-record origins and attachment continuation not proven); 17BX BLOCKED/source-classified STOP (canonical layer mapping and SHA decode verification delegated); 17BY ACTIVE. Any physical implementation following a future PASS remains separately gated by fresh whitelist/test authority.
+- 현재 권위 상태: sole ACTIVE 17BY is a bounded decode/layer-map boundary discovery. Exact once-only query is the recorded compiler.py symbol query; exit0, 5-20 unique lines, exact1 file, decode helper def + parse def and one actual call + layer mapping creation/binding and call passage required, otherwise STOP/no retry. PASS only authorizes at most two later <=120-line reads. Source hash helper, canonical SHA, islands, ownership/stamp/accuracy remain separate.
 - 최종 개정: 2026-08-26 (Asia/Seoul)
 
 ## 1. 압축 후 즉시 복구 카드
@@ -17,15 +17,15 @@ context가 압축되거나 새 session에서 작업을 재개하면 다른 연�
 |---|---|
 | 변하지 않는 목적 | source-derived single-rail `Zii`의 PowerSI 근접 정확성과 일반화 |
 | 현재 branch | `main`만 사용; 정리된 과거 branch를 다시 조사하지 않음 |
-| 현재 active work item | `W7-PHYS-W6-RAW-SURFACE-ASSET-DOMAIN-COMPLETION-TRACE` (17BX) |
-| 다음 권장 묶음 | `17BX` exact once-only A2363-2387+B2436-2459 completion read |
-| current authorization | 17BX bounded read: use the recorded two-range Get-Content command exactly once, total49 numbered lines, without rereading2388-2435; require canonical layer mapping/raw record source and asset name/SHA attachment binding/validation complete in-range; endpoint/helper semantics STOP/no expansion/retry. Source hash helper, canonical SHA, islands, ownership/stamp/accuracy remain separate. No physical execution. |
+| 현재 active work item | `W7-PHYS-W6-RAW-SURFACE-DECODE-LAYER-MAP-BOUNDARY-DISCOVERY` (17BY) |
+| 다음 권장 묶음 | `17BY` exact once-only decode/parse/layer symbol query |
+| current authorization | 17BY location gate: run the recorded rg query exactly once; exit0, 5-20 unique lines, exact1 file, uniquely identify decode helper def, parse def + one actual call, and layer_by_fold creation/binding + call passage; missing/multiple/ambiguous/cap STOP/no retry. PASS only authorizes at most two later <=120-line reads. No source expansion/code/test/implementation. |
 | 17T command A | `rg -n --no-heading --color never --glob '*.py' '\bcompile_raw_spatial_contact_asset\b' 'src/spd_decap_pi'` |
 | 17T command B | `rg -n --no-heading --color never --glob '*.py' '\b(?:resolve_solver_profile|numerical_worker_count|build_layerwise_uniform_source_model)\b' 'src/spd_decap_pi'` |
 | 17T command C | `rg -n --no-heading --color never --glob '*.py' '\b(?:GLOBAL_KRON|SurfacePatchDifferentialProjection|SurfacePatchFinitePortProjection|assemble_differential_admittance|differential_projection)\b' 'src/spd_decap_pi'` |
 | consumed 17M discovery | canonical rg ran once (exit 0), found candidate symbols only; no reuse or production proof |
 | future production invariant (not current authority) | if a future run is authorized: exact clean `main`, new output root, one run/no retry; B correlation is historical evidence; C/D consumed their exactly-one old candidate/import reads; E had one production diagnostic invocation plus one orchestration ZIP read; old root remains forbidden for W6-BASE output/scoring/retry/mutation |
-| 고비용 검증 권한 | none; 17BX allows only one bounded 49-line split source read, with source expansion/code/test/build/import/production execution forbidden |
+| 고비용 검증 권한 | none; 17BY allows only bounded location evidence, with source expansion/code/test/build/import/production execution forbidden |
 | 현재 정확성 상태 | `260729 retrospective FAIL`; unseen/generalization remains `unknown / not_run` |
 | 현재 release 계산 증거 | W6-BASE 260729 completed numerical FAIL; offline verifier exit 2 (integrity-valid) |
 | W6-BASE result root | `D:\SPD-Decap-PI-Evaluator-W6\fb36288781dcc0b884950ef5a486c474090ceebd\260729` — manifest `2b14f90e762abc49833518137812e8fc97fcde0e9c145795b7384210cfd9f5de`, sidecar `0d103e0ad47df80641fac0952a35a6eaa56cc9fdb71be24661903e451926e932`, correlation `969e40046e3a099d09557ba7500693460362336d76b067962436bd3b5177abc4` |
@@ -208,7 +208,8 @@ root, one-run/no-retry 조건을 다시 확정할 때만 고려한다.
 | `W7-PHYS-W6-RAW-SURFACE-FIELD-ORIGIN-LOCAL-TRACE` | 17BU | BLOCKED/source-classified STOP | trace local field origins and source-hash call | clean main/docs HEAD `37b1934`; exact2460-2535 once proved geometry equality, island sequence uniqueness, item append, analysis-key equality, complete `_surface_source_hashes(...)` args, but started/ended mid-flow; key origins/helper semantics outside range; no expansion/retry |
 | `W7-PHYS-W6-RAW-SURFACE-KEY-ORIGIN-DISCOVERY` | 17BV | BLOCKED/location STOP | locate pre-range key assignments | clean main/docs HEAD `ebba672`; exact query once exit0 5 unique lines/1 file, key assignments2396/2425 plus net2413 asset_sha2416 layer2417; duplicate key semantic/domain ambiguous from location output; no read/retry |
 | `W7-PHYS-W6-RAW-SURFACE-KEY-DOMAIN-LOCAL-TRACE` | 17BW | BLOCKED/source-classified STOP | trace key domains and relation | clean main/docs HEAD `4595cdb`; exact2388-2435 once proved analysis key casefold geometry net/layer uniqueness, raw key lookup, but layer_by_fold/raw_records origins before range and attachment binding after2435 unproven; no expansion/retry |
-| `W7-PHYS-W6-RAW-SURFACE-ASSET-DOMAIN-COMPLETION-TRACE` | 17BX | ACTIVE | complete canonical layer/raw record/asset binding | exact once-only split read A2363-2387+B2436-2459 (49 lines), no reread2388-2435/expansion/retry; require canonical layer mapping, raw record source, asset name/SHA attachment binding/validation; source hash/canonical/island/ownership separate |
+| `W7-PHYS-W6-RAW-SURFACE-ASSET-DOMAIN-COMPLETION-TRACE` | 17BX | BLOCKED/source-classified STOP | complete canonical layer/raw record/asset binding | clean main/docs HEAD `ddfec8a`; exact split A/B once 49 new lines, no reread; plane-geometries source/bound, duplicate-ambiguous attachment index, original name+bytes, expected layer/net/bounds proven; canonical layer_by_fold external and SHA verification delegated to `_decode_geometry_attachment`; no expansion/retry |
+| `W7-PHYS-W6-RAW-SURFACE-DECODE-LAYER-MAP-BOUNDARY-DISCOVERY` | 17BY | ACTIVE | locate decode helper, parse call, and layer map passage | exact once-only rg query over compiler.py for `_decode_geometry_attachment|_parse_surfaces|layer_by_fold`; exit0, 5-20 unique lines, exact1 file, decode def + parse def/one actual call + layer map creation/binding/call passage; missing/multiple/ambiguous/cap STOP/no retry; later max two <=120-line reads separately gated |
 | `W7-PHYS-PROSPECTIVE-RUNTIME-TERM-EVIDENCE` | next candidate | BLOCKED/YAGNI | provide a grounded runtime term digest/count/owner partition only after an independently selected physical change | new candidate/HEAD/root, one run/no retry; no current authority |
 | `W8-REL` | 18 | BLOCKED | completed known-case solve를 release gate에 연결하고 최종 전달 | accuracy/product gate와 exact release commit 필요 |
 | `D-DIST` | - | DEFERRED | Distribution routing/DRC scope 확대 | 사용자가 implementation-ready/DRC 목표로 승격할 때만 |
@@ -873,7 +874,8 @@ DONE/PASS with physical ownership BLOCKED, 17BN is DONE/PASS, 17BO is BLOCKED/de
 BLOCKED/source-classified location STOP, 17BQ is DONE/location PASS with the unique compiler constructor at
 line2575, 17BR is BLOCKED/boundary STOP (258-line span >160), 17BS is BLOCKED/source-classified STOP, 17BT
 is DONE/location PASS, 17BU is BLOCKED/source-classified STOP, 17BV is BLOCKED/location STOP, 17BW is
-BLOCKED/source-classified STOP, and 17BX is the sole ACTIVE split asset-domain completion trace.
+BLOCKED/source-classified STOP, 17BX is BLOCKED/source-classified STOP, and 17BY is the sole ACTIVE decode/
+layer-map boundary discovery.
 
 ### 17AA. W7-PHYS-W6-RAW-SPATIAL-ASSET-V3-EMISSION (BLOCKED; test-gate)
 
@@ -1338,8 +1340,10 @@ exact2460-2535 proved local equality/append/hash-call evidence but key origins a
 the range. 17BV is BLOCKED/location STOP at clean main/docs HEAD `ebba672`: location output had duplicate key
 assignments/domain ambiguity. 17BW is BLOCKED/source-classified STOP at clean main/docs HEAD `4595cdb`:
 exact2388-2435 proved key casefold/lookup evidence, but canonical layer/raw-record origins and attachment binding
-were outside/truncated. Sole current read-only successor 17BX owns the split A/B completion read. Frozen evidence
-establishes no physical stamp/profile/replacement/nullspace/gauge/Zii/production/release/PowerSI accuracy claim.
+were outside/truncated. 17BX is BLOCKED/source-classified STOP at clean main/docs HEAD `ddfec8a`: split A/B
+proved plane-geometries source/bound and payload expectations, but canonical layer mapping and SHA decode
+verification were delegated. Sole current read-only successor 17BY owns the exact decode/layer-map query. Frozen
+evidence establishes no physical stamp/profile/replacement/nullspace/gauge/Zii/production/release/PowerSI accuracy claim.
 
 ### 17BK. W7-PHYS-W6-PLANE-SHEET-BOUNDED-QUERY-CONTRACT-TRACE (BLOCKED/source-classified STOP)
 
@@ -1442,28 +1446,28 @@ At clean main/docs HEAD `4595cdb`, the exact2388-2435 read ran once. It proved a
 net/layer nonblank uniqueness and raw key exact analysis lookup, but layer_by_fold/raw_records origins before the
 range and attachment binding after2435 were unproven. No expansion or retry occurred.
 
-### 17BX. W7-PHYS-W6-RAW-SURFACE-ASSET-DOMAIN-COMPLETION-TRACE (ACTIVE)
+### 17BX. W7-PHYS-W6-RAW-SURFACE-ASSET-DOMAIN-COMPLETION-TRACE (BLOCKED/source-classified STOP)
 
-Standing preapproval authorizes exactly these two numbered excerpts once, without rereading2388-2435:
+At clean main/docs HEAD `ddfec8a`, split A/B reads ran once for 49 new lines without rereading2388-2435. They
+proved raw plane-geometries source/bound, attachment casefold index with duplicate ambiguity, exact original
+name+bytes, and expected payload layer/net/bounds. Canonical layer_by_fold was an external argument and SHA
+verification was delegated to `_decode_geometry_attachment`; no expansion or retry occurred.
+
+### 17BY. W7-PHYS-W6-RAW-SURFACE-DECODE-LAYER-MAP-BOUNDARY-DISCOVERY (ACTIVE)
+
+Standing preapproval authorizes exactly this location query once, with no source read:
 
 ```powershell
-$path = 'src/spd_decap_pi/raw_spatial_contact_compiler.py'
-$lines = Get-Content -LiteralPath $path
-$ranges = @(@(2363,2387), @(2436,2459))
-foreach ($range in $ranges) {
-    for ($number = $range[0]; $number -le $range[1]; $number++) {
-        if ($number -le $lines.Count) {
-            '{0}:{1}' -f $number, $lines[$number - 1]
-        }
-    }
-}
+rg -n --with-filename --no-heading --color never `
+  '\b(?:_decode_geometry_attachment|_parse_surfaces|layer_by_fold)\b' `
+  'src/spd_decap_pi/raw_spatial_contact_compiler.py'
 ```
 
-Gate: exactly once, output only A2363-2387 and B2436-2459 (49 numbered lines total). PASS only if canonical
-layer mapping, raw record source, and asset name/SHA exact attachment binding/validation are complete using the
-new excerpts plus frozen boundaries. STOP if an endpoint cuts control flow or semantics remain helper-delegated;
-no expansion/retry. Source hash helper, canonical SHA, islands, electrical ownership, physical stamp, and
-accuracy remain separate.
+Gate: exit0, 5-20 unique lines, exact1 file, uniquely identify the decode helper definition, parse_surfaces
+definition plus exactly one actual call, and layer_by_fold creation/binding plus call passage; missing/multiple
+actual call/ambiguous mapping/cap STOP/no retry. PASS only authorizes at most two later <=120-line bounded
+reads (decode helper and caller/mapping cluster). Source hash helper, canonical SHA, islands, ownership,
+physical stamp, and accuracy remain separate.
 
 ## 20. 변경 기록
 
@@ -1574,3 +1578,4 @@ accuracy remain separate.
 | 1.102 | 2026-08-26 | clean main/docs HEAD `37b1934`의 17BU exact2460-2535 read에서 key origins/helper semantics가 범위 밖/위임되어 BLOCKED/source-classified STOP으로 닫고, exact once-only 17BV key-origin discovery query를 sole ACTIVE로 지정. |
 | 1.103 | 2026-08-26 | clean main/docs HEAD `ebba672`의 17BV exact query(5 unique lines/1 file)에서 duplicate key semantic/domain이 location-only로 ambiguous해 BLOCKED/location STOP으로 닫고, exact numbered 2388-2435 key-domain trace 17BW를 sole ACTIVE로 지정. |
 | 1.104 | 2026-08-26 | clean main/docs HEAD `4595cdb`의 17BW exact2388-2435 read에서 canonical layer/raw-record origins와 attachment binding이 범위 밖/위임되어 BLOCKED/source-classified STOP으로 닫고, exact split A2363-2387+B2436-2459 49-line 17BX completion trace를 sole ACTIVE로 지정. |
+| 1.105 | 2026-08-26 | clean main/docs HEAD `ddfec8a`의 17BX split A/B read(49 new lines, no reread)에서 canonical layer mapping과 SHA decode verification이 위임되어 BLOCKED/source-classified STOP으로 닫고, exact once-only 17BY decode/layer-map boundary query를 sole ACTIVE로 지정. |
