@@ -783,9 +783,12 @@ raw-v3/require/plane-sheet absent, identity delegated to `_finite_via_substrate_
 `_substrate_identity`, and the endpoint continued a comment/block. 17BD is DONE (location evidence) at
 clean main `662de67882c27bafc3420c965bb069da7458b826`: exact query once exit0, 4 lines/1 file, finite
 identity3462→3546 span84 and substrate identity3343→3462 span119; repeated3462 is intended adjacency.
-Sole ACTIVE successor is 17BE `W7-PHYS-W6-LAYERWISE-SUBSTRATE-IDENTITY-HELPER-TRACE`, one exact read
-only; no expansion or replacement/no-double-count/nullspace/gauge/Zii/code/test/solver/production/release/
-accuracy/causal claim.
+17BE is BLOCKED/STOP (raw-v3/hash seam unproven): exact3343-3545 at clean main
+`0bea406939f3f84a1000c56d4b74b490cbf3a2cb` completed both helpers; current identity binds source/geometry/
+material/blocks/GND/certificate or topology/ports/omissions/compiler/static `layerwise_admittance_v1`, but
+raw-v3 manifest/payload/content hash is absent, no profile opt-in arg exists, and canonical/key/static identity
+is delegated externally. Sole ACTIVE successor is 17BF `W7-PHYS-W6-RAW-SPATIAL-V3-SUBSTRATE-HANDOFF-DESIGN`,
+docs-only activation; no source/query/code/test/solver/production/release/accuracy claim.
 Contract: v2 constants/API byte-identical; profile/global/app/solver/convergence/policy/controller
 identities unchanged; only the opt-in raw-spatial v3 schema/compiler sibling identity is new. v3 sibling with kw-only opt-in flags, five normalized tables,
 no gap table, positive-intervening-thickness fsum spacing, row/coordinate/ProjectSpec/source-SHA digest,
