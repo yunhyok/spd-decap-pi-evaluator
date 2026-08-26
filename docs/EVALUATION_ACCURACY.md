@@ -780,9 +780,12 @@ loader/require/plane/surface/layer tokens=0 and no source range read. 17BC is BL
 exact3669-3945 at clean main `76b550ddbf0301d3c682840d206f312ed60345fc` proved signature/project/
 attachments, required_rail_id/progress/is_cancelled, snapshot/cache lookups/asset SHA/cancellation;
 raw-v3/require/plane-sheet absent, identity delegated to `_finite_via_substrate_identity` and
-`_substrate_identity`, and the endpoint continued a comment/block. Sole ACTIVE successor is 17BD
-`W7-PHYS-W6-LAYERWISE-SUBSTRATE-IDENTITY-HELPER-BOUNDARY-DISCOVERY`, one exact definition query only;
-no source read/expansion/code/test/solver/production/release/accuracy/causal claim.
+`_substrate_identity`, and the endpoint continued a comment/block. 17BD is DONE (location evidence) at
+clean main `662de67882c27bafc3420c965bb069da7458b826`: exact query once exit0, 4 lines/1 file, finite
+identity3462→3546 span84 and substrate identity3343→3462 span119; repeated3462 is intended adjacency.
+Sole ACTIVE successor is 17BE `W7-PHYS-W6-LAYERWISE-SUBSTRATE-IDENTITY-HELPER-TRACE`, one exact read
+only; no expansion or replacement/no-double-count/nullspace/gauge/Zii/code/test/solver/production/release/
+accuracy/causal claim.
 Contract: v2 constants/API byte-identical; profile/global/app/solver/convergence/policy/controller
 identities unchanged; only the opt-in raw-spatial v3 schema/compiler sibling identity is new. v3 sibling with kw-only opt-in flags, five normalized tables,
 no gap table, positive-intervening-thickness fsum spacing, row/coordinate/ProjectSpec/source-SHA digest,
