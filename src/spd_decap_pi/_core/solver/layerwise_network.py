@@ -31,6 +31,7 @@ from typing import Any, Callable, Mapping, Sequence
 import numpy as np
 from numpy.typing import NDArray
 
+from spd_decap_pi.canonical_json import concrete_canonical_json_bytes
 from spd_decap_pi.surface_certificate_asset import (
     SurfaceCertificateAssetError,
     clear_surface_certificate_hydration_cache,
@@ -75,6 +76,14 @@ from spd_decap_pi.compiled_topology_asset import (
     _freeze_owned_compact_certificate_view,
     compact_finite_certificate_views,
     load_compiled_topology_asset,
+)
+from spd_decap_pi.raw_spatial_contact_asset import (
+    RAW_SPATIAL_CONTACT_ASSET_METADATA_KEY,
+    RAW_SPATIAL_CONTACT_ASSET_SCHEMA,
+    RAW_SPATIAL_CONTACT_ASSET_SCHEMA_V3,
+    RawSpatialContactAssetError,
+    load_raw_spatial_contact_asset,
+    validate_project_raw_spatial_contact_asset_envelope,
 )
 from .profiles import (
     LAYERWISE_ADMITTANCE_PROFILE,
@@ -3347,6 +3356,7 @@ def _substrate_identity(
     *,
     rail_port_manifest: Sequence[Mapping[str, str]] | None = None,
     omitted_rail_ids: Sequence[str] | None = None,
+    raw_spatial_manifest_sha256: str | None = None,
 ) -> tuple[str, str, str, str]:
     spd_import = project.metadata.get("spd_import", {})
     source_sha256 = str(spd_import.get("source_sha256", "")).lower()
@@ -3448,11 +3458,14 @@ def _substrate_identity(
                 # surface/terminal/Via-pair certificate.
                 "via_group_evidence_sha256": surface_evidence_sha256,
                 "surface_connectivity_evidence_sha256": surface_evidence_sha256,
-                "device_terminal_via_evidence_sha256": (
-                    terminal_via_evidence_sha256
-                ),
+                "device_terminal_via_evidence_sha256": terminal_via_evidence_sha256,
                 "rail_ports": canonical_port_manifest,
                 "omitted_rail_ids": canonical_omitted,
+                **(
+                    {"raw_spatial_v3_manifest_sha256": raw_spatial_manifest_sha256}
+                    if raw_spatial_manifest_sha256 is not None
+                    else {}
+                ),
             }
         )
     ).hexdigest()
@@ -3464,6 +3477,8 @@ def _finite_via_substrate_identity(
     records: Sequence[Mapping[str, Any]],
     blocks: Sequence[Sequence[str]],
     topology: CompiledFiniteViaBaseTopology,
+    *,
+    raw_spatial_manifest_sha256: str | None = None,
 ) -> tuple[str, str, str, str]:
     """Bind the v4 quotient, artwork, stack-up and external port manifest."""
 
@@ -3537,6 +3552,11 @@ def _finite_via_substrate_identity(
                 ),
                 "rail_ports": port_manifest,
                 "omitted_rail_ids": list(topology.omitted_rail_ids),
+                **(
+                    {"raw_spatial_v3_manifest_sha256": raw_spatial_manifest_sha256}
+                    if raw_spatial_manifest_sha256 is not None
+                    else {}
+                ),
             }
         )
     ).hexdigest()
@@ -3673,6 +3693,7 @@ def compile_layerwise_substrate(
     required_rail_id: str | None = None,
     progress: Callable[[int, str], None] | None = None,
     is_cancelled: Callable[[], bool] | None = None,
+    require_plane_sheet_payload: bool = False,
 ) -> LayerwiseNetworkSubstrate:
     """Compile/cache one explicit layer-surface network from a retained SPD."""
 
@@ -3696,6 +3717,65 @@ def compile_layerwise_substrate(
         raise LayerwiseNetworkUnavailable(
             "ARTWORK_ATTACHMENTS_MISSING", "retained SPD geometry attachments are required"
         )
+    if type(require_plane_sheet_payload) is not bool:
+        raise LayerwiseNetworkUnavailable(
+            "RAW_SPATIAL_PLANE_SHEET_REQUIRED",
+            "require_plane_sheet_payload must be boolean",
+        )
+    raw_spatial_manifest_sha256: str | None = None
+    validated_raw_manifest: Mapping[str, Any] | None = None
+    raw_spatial_expected_bindings: Mapping[str, str] | None = None
+    raw_manifest = (
+        spd_import.get(RAW_SPATIAL_CONTACT_ASSET_METADATA_KEY)
+        if isinstance(spd_import, Mapping)
+        else None
+    )
+    if require_plane_sheet_payload:
+        if not (
+            isinstance(raw_manifest, Mapping)
+            and raw_manifest.get("storage_schema") == RAW_SPATIAL_CONTACT_ASSET_SCHEMA_V3
+        ):
+            raise LayerwiseNetworkUnavailable(
+                "RAW_SPATIAL_PLANE_SHEET_REQUIRED",
+                "canonical v3 raw-spatial manifest is required",
+            )
+        try:
+            validated_raw_manifest = validate_project_raw_spatial_contact_asset_envelope(
+                project, attachments
+            )
+            compiled_manifest = spd_import.get(COMPILED_TOPOLOGY_ASSET_METADATA_KEY)
+            if not isinstance(validated_raw_manifest, Mapping) or not isinstance(
+                compiled_manifest, Mapping
+            ):
+                raise RawSpatialContactAssetError(
+                    "RAW_SPATIAL_MANIFEST_INVALID",
+                    "validated v3 raw-spatial bindings are unavailable",
+                )
+            raw_spatial_manifest_sha256 = sha256(
+                concrete_canonical_json_bytes(dict(validated_raw_manifest))
+            ).hexdigest()
+            raw_spatial_expected_bindings = {
+                "source_sha256": str(compiled_manifest["source_sha256"]),
+                "project_binding_sha256": str(
+                    compiled_manifest["project_binding_sha256"]
+                ),
+                "certificate_evidence_sha256": str(
+                    compiled_manifest["certificate_evidence_sha256"]
+                ),
+                "compiled_topology_identity_sha256": str(
+                    compiled_manifest["topology_identity_sha256"]
+                ),
+                "geometry_identity_sha256": str(
+                    validated_raw_manifest["geometry_identity_sha256"]
+                ),
+            }
+        except RawSpatialContactAssetError as exc:
+            raise LayerwiseNetworkUnavailable(exc.code, str(exc)) from exc
+        except (KeyError, TypeError, ValueError) as exc:
+            raise LayerwiseNetworkUnavailable(
+                "RAW_SPATIAL_MANIFEST_INVALID",
+                "validated v3 raw-spatial bindings are unavailable",
+            ) from exc
     raw_surface_certificate = (
         spd_import.get("layerwise_surface_connectivity_certificate")
         if isinstance(spd_import, Mapping)
@@ -3875,7 +3955,11 @@ def compile_layerwise_substrate(
         omitted_rail_ids = finite_topology.omitted_rail_ids
         identity, source_sha256, geometry_sha256, material_sha256 = (
             _finite_via_substrate_identity(
-                project, records, blocks, finite_topology
+                project,
+                records,
+                blocks,
+                finite_topology,
+                raw_spatial_manifest_sha256=raw_spatial_manifest_sha256,
             )
         )
     else:
@@ -3892,6 +3976,7 @@ def compile_layerwise_substrate(
             blocks,
             rail_port_manifest=rail_port_manifest,
             omitted_rail_ids=omitted_rail_ids,
+            raw_spatial_manifest_sha256=raw_spatial_manifest_sha256,
         )
     geometry_attachment_snapshot = _immutable_attachment_snapshot(
         attachments,
@@ -3939,6 +4024,44 @@ def compile_layerwise_substrate(
             _SUBSTRATE_CACHE.move_to_end(identity)
             report(70, "Reusing verified layer-surface substrate")
             return cached
+
+    if require_plane_sheet_payload:
+        if validated_raw_manifest is None or raw_spatial_expected_bindings is None:
+            raise LayerwiseNetworkUnavailable(
+                "RAW_SPATIAL_MANIFEST_INVALID",
+                "validated v3 raw-spatial bindings are unavailable",
+            )
+        try:
+            with load_raw_spatial_contact_asset(
+                validated_raw_manifest,
+                attachments,
+                expected_source_sha256=raw_spatial_expected_bindings[
+                    "source_sha256"
+                ],
+                expected_project_binding_sha256=raw_spatial_expected_bindings[
+                    "project_binding_sha256"
+                ],
+                expected_certificate_evidence_sha256=raw_spatial_expected_bindings[
+                    "certificate_evidence_sha256"
+                ],
+                expected_compiled_topology_identity_sha256=(
+                    raw_spatial_expected_bindings[
+                        "compiled_topology_identity_sha256"
+                    ]
+                ),
+                expected_geometry_identity_sha256=raw_spatial_expected_bindings[
+                    "geometry_identity_sha256"
+                ],
+                require_plane_sheet_payload=True,
+                is_cancelled=cancelled,
+            ) as loaded_raw_spatial:
+                if loaded_raw_spatial.manifest_sha256 != raw_spatial_manifest_sha256:
+                    raise RawSpatialContactAssetError(
+                        "RAW_SPATIAL_MANIFEST_INVALID",
+                        "loaded v3 raw-spatial manifest differs from its validated envelope",
+                    )
+        except RawSpatialContactAssetError as exc:
+            raise LayerwiseNetworkUnavailable(exc.code, str(exc)) from exc
 
     report(20, f"Compiling {len(blocks)} physical conductor-layer block(s)")
     local_partials: list[DispersiveAdjacentGap] = []
@@ -5464,12 +5587,32 @@ def build_layerwise_uniform_source_model(
             "terminal-complete certificate; re-import the source SPD with the "
             "current application before running Evaluation",
         )
+    raw_spatial_manifest = (
+        spd_import.get(RAW_SPATIAL_CONTACT_ASSET_METADATA_KEY)
+        if isinstance(spd_import, Mapping)
+        else None
+    )
+    raw_schema = (
+        raw_spatial_manifest.get("storage_schema")
+        if isinstance(raw_spatial_manifest, Mapping)
+        else None
+    )
+    if raw_spatial_manifest is not None and raw_schema not in {
+        RAW_SPATIAL_CONTACT_ASSET_SCHEMA,
+        RAW_SPATIAL_CONTACT_ASSET_SCHEMA_V3,
+    }:
+        raise LayerwiseNetworkUnavailable(
+            "RAW_SPATIAL_PLANE_SHEET_REQUIRED",
+            "raw spatial metadata is not a canonical v3 manifest",
+        )
+    require_plane_sheet_payload = raw_schema == RAW_SPATIAL_CONTACT_ASSET_SCHEMA_V3
     substrate = compile_layerwise_substrate(
         project,
         attachments,
         required_rail_id=rail_id,
         progress=progress,
         is_cancelled=is_cancelled,
+        require_plane_sheet_payload=require_plane_sheet_payload,
     )
     rail_key = _key(rail.rail_id)
     if rail_key not in substrate.port_by_rail_key:

@@ -25,7 +25,7 @@ from typing import Callable, Mapping, Sequence
 import numpy as np
 from numpy.typing import NDArray
 from scipy.sparse import csc_matrix, diags, issparse
-from scipy.sparse.linalg import splu
+from scipy.sparse.linalg import LinearOperator, norm as sparse_norm, onenormest, splu
 
 from .modal import DielectricDispersion
 from .layer_surface_termination import (
@@ -44,6 +44,7 @@ _TINY = 1.0e-30
 _SYMMETRY_REL_LIMIT = 1.0e-10
 _ROW_SUM_REL_LIMIT = 1.0e-10
 _RESIDUAL_REL_LIMIT = 1.0e-9
+_MAX_FACTOR_PIVOT_RATIO = 1.0e13
 _PORT_RHS_BATCH_SIZE = 4
 _TERMINATION_MAPPING_CACHE_LIMIT = 4
 # Two simultaneous SuperLU factors are an intentional memory-aware ceiling for
@@ -1638,6 +1639,7 @@ class CompiledLayerSurfaceNetwork:
                 )
                 and isfinite(result.maximum_factor_pivot_ratio)
                 and result.maximum_factor_pivot_ratio >= 1.0
+                and result.maximum_factor_pivot_ratio <= _MAX_FACTOR_PIVOT_RATIO
                 and isfinite(result.maximum_relative_residual)
                 and 0.0 <= result.maximum_relative_residual
                 <= _RESIDUAL_REL_LIMIT
@@ -2230,8 +2232,20 @@ class CompiledLayerSurfaceNetwork:
                 gauge = int(members[0])
                 retained = members[1:]
                 local = csc_matrix(matrix[retained, :][:, retained])
+                row_norm = np.asarray(np.abs(local).sum(axis=1)).ravel()
+                if (
+                    not row_norm.size
+                    or not np.all(np.isfinite(row_norm))
+                    or np.any(row_norm <= 0.0)
+                ):
+                    raise LayerSurfaceNetworkError(
+                        "layer-network row scaling is invalid"
+                    )
+                row_scale = 1.0 / np.sqrt(row_norm)
+                scaling = diags(row_scale, offsets=0, format="csc")
+                scaled_local = csc_matrix(scaling @ local @ scaling)
                 try:
-                    factor = splu(local)
+                    factor = splu(scaled_local)
                 except Exception as exc:
                     labels = tuple(
                         self._reduced_node_ids[int(active_global_nodes[index])]
@@ -2241,11 +2255,21 @@ class CompiledLayerSurfaceNetwork:
                         f"layer-network Kron block is singular near {labels!r}"
                     ) from exc
                 diagonal = np.abs(factor.U.diagonal())
-                if diagonal.size and float(np.min(diagonal)) > 0.0:
-                    frequency_pivot_ratio = max(
-                        frequency_pivot_ratio,
-                        float(np.max(diagonal) / np.min(diagonal)),
+                if (
+                    not diagonal.size
+                    or not np.all(np.isfinite(diagonal))
+                    or np.any(diagonal <= 0.0)
+                ):
+                    raise LayerSurfaceNetworkError(
+                        "layer-network factor forward-reliability pivots are invalid"
                     )
+                u_pivot_abs_min = float(np.min(diagonal))
+                u_pivot_abs_max = float(np.max(diagonal))
+                component_pivot_ratio = u_pivot_abs_max / u_pivot_abs_min
+                frequency_pivot_ratio = max(
+                    frequency_pivot_ratio,
+                    component_pivot_ratio,
+                )
                 local_norm = float(np.linalg.norm(local.data))
                 for batch_start in range(0, len(port_indices), _PORT_RHS_BATCH_SIZE):
                     if stop_requested.is_set():
@@ -2298,9 +2322,11 @@ class CompiledLayerSurfaceNetwork:
                             rhs[positive_position, column] += 1.0
                         if negative_position is not None:
                             rhs[negative_position, column] -= 1.0
-                    solution = np.asarray(
-                        factor.solve(rhs), dtype=np.complex128
+                    scaled_rhs = row_scale[:, None] * rhs
+                    scaled_solution = np.asarray(
+                        factor.solve(scaled_rhs), dtype=np.complex128
                     )
+                    solution = row_scale[:, None] * scaled_solution
                     residual = local @ solution - rhs
                     residual_norms = np.linalg.norm(residual, axis=0)
                     solution_norms = np.linalg.norm(solution, axis=0)
@@ -2322,6 +2348,67 @@ class CompiledLayerSurfaceNetwork:
                         raise LayerSurfaceNetworkError(
                             "layer-network Kron solve residual is excessive "
                             f"({relative_residual:.3e})"
+                        )
+                    if frequency_pivot_ratio > _MAX_FACTOR_PIVOT_RATIO:
+                        local_abs = np.abs(local.data)
+                        nonzero_local_abs = local_abs[local_abs > 0.0]
+                        local_abs_min = (
+                            float(np.min(nonzero_local_abs))
+                            if nonzero_local_abs.size
+                            else 0.0
+                        )
+                        local_abs_max = (
+                            float(np.max(nonzero_local_abs))
+                            if nonzero_local_abs.size
+                            else 0.0
+                        )
+                        inverse_one_norm_lower_bound = "unavailable"
+                        condition_1_lower_bound = "unavailable"
+                        try:
+                            matrix_one_norm = float(sparse_norm(local, ord=1))
+                            inverse = LinearOperator(
+                                local.shape,
+                                matvec=lambda x: row_scale * factor.solve(
+                                    row_scale * x
+                                ),
+                                rmatvec=lambda x: row_scale * factor.solve(
+                                    row_scale * x, trans="H"
+                                ),
+                                dtype=np.complex128,
+                            )
+                            inverse_one_norm = float(
+                                onenormest(inverse, t=1, itmax=5)
+                            )
+                            condition_1 = matrix_one_norm * inverse_one_norm
+                            if (
+                                not isfinite(matrix_one_norm)
+                                or matrix_one_norm <= 0.0
+                                or not isfinite(inverse_one_norm)
+                                or inverse_one_norm <= 0.0
+                                or not isfinite(condition_1)
+                                or condition_1 <= 0.0
+                            ):
+                                raise ValueError("invalid sparse condition estimate")
+                            inverse_one_norm_lower_bound = f"{inverse_one_norm:.3e}"
+                            condition_1_lower_bound = f"{condition_1:.3e}"
+                        except Exception:
+                            pass
+                        raise LayerSurfaceNetworkError(
+                            "layer-network factor forward-reliability pivot ratio is excessive "
+                            f"({frequency_pivot_ratio:.3e}; "
+                            f"frequency_hz={frequency:.9g}, "
+                            f"component_index={component_index}, "
+                            f"retained_nodes={retained.size}, "
+                            f"local_nnz={local.nnz}, "
+                            f"local_abs_min={local_abs_min:.3e}, "
+                            f"local_abs_max={local_abs_max:.3e}, "
+                            f"u_pivot_abs_min={u_pivot_abs_min:.3e}, "
+                            f"u_pivot_abs_max={u_pivot_abs_max:.3e}, "
+                            f"pivot_ratio={component_pivot_ratio:.3e}, "
+                            f"backward_residual={relative_residual:.3e}, "
+                            f"inverse_one_norm_lower_bound={inverse_one_norm_lower_bound}, "
+                            f"condition_1_lower_bound={condition_1_lower_bound}, "
+                            f"matrix_sha256={matrix_identity.hexdigest()})"
                         )
                     for column, (port_index, endpoints) in enumerate(
                         zip(batch_indices, incidence, strict=True)

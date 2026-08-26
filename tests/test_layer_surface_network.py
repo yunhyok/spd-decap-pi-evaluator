@@ -112,6 +112,33 @@ def test_layer_surfaces_remain_distinct_and_raw_gaps_merge_before_kron() -> None
     )
 
 
+def test_row_scaled_series_laplacian_preserves_exact_series_result() -> None:
+    strong_c = 2.0e-9
+    weak_c = 1.0e-22
+    frequency = 1.0e6
+    network = compile_layer_surface_network(
+        NODES,
+        partials=(
+            _edge(0, 2, strong_c, upper="L1", lower="L2"),
+            _edge(2, 3, weak_c, upper="L2", lower="L3"),
+        ),
+        via_links=(),
+        ports=(LayerSurfacePort("P", NODES[0], NODES[3]),),
+    )
+
+    result = network.solve([frequency])
+    series_c = strong_c * weak_c / (strong_c + weak_c)
+    expected_admittance = 1j * 2.0 * np.pi * frequency * series_c
+
+    np.testing.assert_allclose(
+        result.effective_admittance_by_port["P"][0],
+        expected_admittance,
+        rtol=1.0e-10,
+        atol=1.0e-28,
+    )
+    assert result.diagnostics.maximum_relative_residual <= 1.0e-9
+
+
 def test_compiled_sparse_partials_are_deep_readonly_across_replace() -> None:
     network = compile_layer_surface_network(
         NODES,
@@ -639,7 +666,17 @@ def test_frequency_parallel_failure_is_deterministic_and_releases_workers(
     network = compile_layer_surface_network(
         NODES,
         partials=(_edge(0, 3, capacitance, upper="L1", lower="L3"),),
-        via_links=(),
+        via_links=(
+            LayerSurfaceViaLink(
+                "frequency-marker",
+                NODES[0],
+                NODES[3],
+                1,
+                "finite_parallel_rl",
+                1.0,
+                0.0,
+            ),
+        ),
         ports=(LayerSurfacePort("P", NODES[0], NODES[3]),),
     )
     frequencies = np.asarray([1.0e6, 2.0e6, 3.0e6, 4.0e6])
@@ -654,10 +691,18 @@ def test_frequency_parallel_failure_is_deterministic_and_releases_workers(
         lambda: 128 * 1024**3,
     )
 
+    splu_calls = 0
+    splu_calls_lock = threading.Lock()
+
     def failing_splu(matrix):
+        nonlocal splu_calls
+        with splu_calls_lock:
+            splu_calls += 1
+        scaled_entry = complex(matrix[0, 0])
         frequency_multiple = int(
             round(
-                float(np.max(np.abs(matrix.data)))
+                scaled_entry.imag
+                / scaled_entry.real
                 / (2.0 * np.pi * 1.0e6 * capacitance)
             )
         )
@@ -676,6 +721,7 @@ def test_frequency_parallel_failure_is_deterministic_and_releases_workers(
 
     assert isinstance(captured.value.__cause__, ValueError)
     assert str(captured.value.__cause__) == "first-frequency failure"
+    assert splu_calls == 2
     assert not any(
         thread.name.startswith("layer-surface-frequency")
         for thread in threading.enumerate()
@@ -1731,6 +1777,108 @@ def test_rhs_batch_residual_gate_checks_each_port_column(
 
     with pytest.raises(LayerSurfaceNetworkError, match="residual is excessive"):
         network.solve([8.0e6])
+
+
+def test_factor_pivot_ratio_rejects_forward_unreliable_real_superlu_result(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    network = compile_layer_surface_network(
+        NODES,
+        partials=(_edge(0, 3, 2.5e-9, upper="L1", lower="L3"),),
+        via_links=(),
+        ports=(LayerSurfacePort("P", NODES[0], NODES[3]),),
+    )
+    original_splu = layer_surface_network.splu
+
+    class DelegatingFactor:
+        def __init__(self, factor: object) -> None:
+            self._factor = factor
+            self.U = type(
+                "PivotView",
+                (),
+                {"diagonal": lambda _self: np.asarray([1.0, 1.0e-17])},
+            )()
+
+        def solve(self, rhs: np.ndarray, trans: str = "N") -> np.ndarray:
+            return np.asarray(self._factor.solve(rhs, trans=trans))
+
+    monkeypatch.setattr(
+        layer_surface_network,
+        "splu",
+        lambda matrix: DelegatingFactor(original_splu(matrix)),
+    )
+
+    with pytest.raises(LayerSurfaceNetworkError, match="forward-reliability") as exc_info:
+        network.solve([8.0e6])
+
+    message = str(exc_info.value)
+    assert "frequency_hz=8000000" in message
+    assert "component_index=0" in message
+    assert "u_pivot_abs_min=1.000e-17" in message
+    assert "u_pivot_abs_max=1.000e+00" in message
+    assert "pivot_ratio=1.000e+17" in message
+    assert "inverse_one_norm_lower_bound=7.958e+00" in message
+    assert "condition_1_lower_bound=1.000e+00" in message
+    assert "retained_nodes=1" in message
+    assert "local_nnz=1" in message
+    assert "local_abs_min=1.257e-01" in message
+    assert "local_abs_max=1.257e-01" in message
+    backward_residual = float(
+        message.split("backward_residual=", 1)[1].split(",", 1)[0]
+    )
+    assert 0.0 <= backward_residual <= 1.0e-9
+    assert (
+        "matrix_sha256=beb18d600835869fe1bf59108684b20fb8c266978c87ad9d70eae6899bdb8f8b)"
+        in message
+    )
+
+
+def test_factor_pivot_ratio_ceiling_preserves_real_result_and_residual(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    def make_network() -> object:
+        return compile_layer_surface_network(
+            NODES,
+            partials=(_edge(0, 3, 2.5e-9, upper="L1", lower="L3"),),
+            via_links=(),
+            ports=(LayerSurfacePort("P", NODES[0], NODES[3]),),
+        )
+
+    baseline = make_network().solve([8.0e6])
+    network = make_network()
+    original_splu = layer_surface_network.splu
+    solve_calls = 0
+
+    class DelegatingFactor:
+        def __init__(self, factor: object) -> None:
+            self._factor = factor
+            self.U = type(
+                "PivotView",
+                (),
+                {"diagonal": lambda _self: np.asarray([1.0, 1.0e-13])},
+            )()
+
+        def solve(self, rhs: np.ndarray) -> np.ndarray:
+            nonlocal solve_calls
+            solve_calls += 1
+            return np.asarray(self._factor.solve(rhs))
+
+    monkeypatch.setattr(
+        layer_surface_network,
+        "splu",
+        lambda matrix: DelegatingFactor(original_splu(matrix)),
+    )
+    result = network.solve([8.0e6])
+
+    assert solve_calls == 1
+    np.testing.assert_allclose(
+        result.effective_admittance_by_port["P"],
+        baseline.effective_admittance_by_port["P"],
+        rtol=1.0e-12,
+        atol=1.0e-18,
+    )
+    assert result.diagnostics.maximum_factor_pivot_ratio == pytest.approx(1.0e13)
+    assert result.diagnostics.maximum_relative_residual <= 1.0e-9
 
 
 def test_finite_link_suppression_changes_rl_stamp_and_structural_components() -> None:

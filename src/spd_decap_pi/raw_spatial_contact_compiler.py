@@ -110,7 +110,13 @@ _ISLAND_MANIFEST_SCHEMA: Final = "spd-raw-surface-island-manifest-v1"
 _NODE_PRIMARY_RE = re.compile(
     rb"^(?P<id>Node[^\s:!]+)(?:!![^\s:]+)?(?:::(?P<net>\S+))?\s+(?P<body>.+)$"
 )
+_TRACE_METADATA_RE = re.compile(
+    rb"^(?:ClippedTrace|SegmentedTrace) = [0-9A-Fa-f]{8}(?:-[0-9A-Fa-f]{8}){3}$"
+)
 _VIA_PRIMARY_RE = re.compile(rb"^(?P<id>Via[^\s:]+)::(?P<net>\S+)\s+(?P<body>.+)$")
+_VIA_NO_ANTIPAD_RE = re.compile(
+    rb"(?:^|[ \t])NoAntiPadLayers[ \t]*=[ \t]*(?P<layers>.*)$"
+)
 _ENDPOINT_RE = re.compile(rb"^(?P<id>Node[^\s:!]+)(?:!![^\s:]+)?(?:::(?P<net>\S+))?$")
 _ATTRIBUTE_RE = re.compile(rb"(?P<name>[A-Za-z][A-Za-z0-9_]*)\s*=\s*(?P<value>\S+)")
 _LAYER_RE = re.compile(
@@ -384,6 +390,8 @@ def _frame_section(handle: Any, span: _SourceSpan, prefix: bytes) -> Iterator[_L
             yield finish()
         if not physical.strip():
             continue
+        if prefix == b"Trace" and _TRACE_METADATA_RE.fullmatch(physical):
+            continue
         if not physical.startswith(prefix):
             _fail(
                 "RAW_SPATIAL_SECTION_GRAMMAR_INVALID",
@@ -583,8 +591,20 @@ def _parse_node(
         if match.group("net") is not None
         else None
     )
+    body = match.group("body")
+    # PowerSI annotates some package-shape Nodes with a leading bare
+    # ``PolygonVertex`` token.  The tracked core parser searches X/Y/LAYER
+    # attributes within the full record, so strip only this known framing
+    # marker before strict attribute validation; every other unframed token
+    # remains fail-closed in _attributes.
+    if body.startswith(b"PolygonVertex") and (
+        len(body) == len(b"PolygonVertex")
+        or body[len(b"PolygonVertex") : len(b"PolygonVertex") + 1]
+        in b" \t"
+    ):
+        body = body[len(b"PolygonVertex") :].lstrip()
     attrs = _attributes(
-        match.group("body"),
+        body,
         {"x", "y", "layer", "padstack", "absoluterotation"},
         offset=record.source_offset,
     )
@@ -667,7 +687,11 @@ def _endpoint(token: bytes, label: str, *, offset: int) -> tuple[str, str | None
     )
 
 
-def _parse_via(record: _LogicalRecord, padstack_by_fold: Mapping[str, str]) -> tuple[Any, ...]:
+def _parse_via(
+    record: _LogicalRecord,
+    padstack_by_fold: Mapping[str, str],
+    layer_by_fold: Mapping[str, str],
+) -> tuple[Any, ...]:
     payload = _logical_payload(record)
     match = _VIA_PRIMARY_RE.fullmatch(payload)
     if match is None:
@@ -678,8 +702,45 @@ def _parse_via(record: _LogicalRecord, padstack_by_fold: Mapping[str, str]) -> t
         )
     via_id = _decode_token(match.group("id"), "Via id", offset=record.source_offset)
     net = _decode_token(match.group("net"), "Via net", offset=record.source_offset)
+    body = match.group("body")
+    no_antipad = _VIA_NO_ANTIPAD_RE.search(body)
+    if no_antipad is not None:
+        raw_layers = no_antipad.group("layers")
+        layer_tokens = raw_layers.split()
+        if not layer_tokens:
+            _fail(
+                "RAW_SPATIAL_ATTRIBUTE_INVALID",
+                "NoAntiPadLayers requires one or more layers",
+                offset=record.source_offset,
+            )
+        seen_layers: set[str] = set()
+        for raw_layer in layer_tokens:
+            if raw_layer == b"NoAntiPadLayers":
+                _fail(
+                    "RAW_SPATIAL_ATTRIBUTE_DUPLICATE",
+                    "Via supplies duplicate NoAntiPadLayers suffix",
+                    offset=record.source_offset,
+                )
+            layer_name = _decode_token(
+                raw_layer, "NoAntiPadLayers layer", offset=record.source_offset
+            )
+            layer_fold = layer_name.casefold()
+            if layer_fold in seen_layers:
+                _fail(
+                    "RAW_SPATIAL_ATTRIBUTE_DUPLICATE",
+                    f"Via repeats NoAntiPadLayers layer {layer_name!r}",
+                    offset=record.source_offset,
+                )
+            if layer_fold not in layer_by_fold:
+                _fail(
+                    "RAW_SPATIAL_LAYER_UNRESOLVED",
+                    f"NoAntiPadLayers layer {layer_name!r} is absent",
+                    offset=record.source_offset,
+                )
+            seen_layers.add(layer_fold)
+        body = body[: no_antipad.start()].rstrip()
     attrs = _attributes(
-        match.group("body"),
+        body,
         {"uppernode", "lowernode", "padstack", "absoluterotation", "rotation"},
         offset=record.source_offset,
     )
@@ -769,6 +830,104 @@ def _project_spd_import(project: Any) -> Mapping[str, Any]:
     if not isinstance(metadata, Mapping) or not isinstance(metadata.get("spd_import"), Mapping):
         _fail("RAW_SPATIAL_PROJECT_INVALID", "project SPD import metadata is absent")
     return metadata["spd_import"]
+
+
+def _plane_sheet_payload(project: Any, analysis: Any) -> Mapping[str, Any]:
+    stackup = tuple(project.stackup_layers)
+    if not stackup:
+        _fail("RAW_SPATIAL_PLANE_SHEET_REQUIRED", "typed ProjectSpec stackup is absent")
+    metadata = project.metadata
+    spd_import = metadata.get("spd_import") if isinstance(metadata, Mapping) else None
+    records = spd_import.get("plane_geometries") if isinstance(spd_import, Mapping) else None
+    if not isinstance(records, (list, tuple)):
+        _fail("RAW_SPATIAL_PLANE_SHEET_REQUIRED", "canonical plane geometry records are absent")
+    record_keys: list[tuple[str, str]] = []
+    record_by_key: dict[tuple[str, str], Mapping[str, Any]] = {}
+    for row in records:
+        if not isinstance(row, Mapping):
+            _fail("RAW_SPATIAL_PLANE_SHEET_REQUIRED", "canonical plane geometry record is invalid")
+        key = (str(row.get("layer")), str(row.get("net")))
+        if not key[0] or not key[1] or key in record_by_key:
+            _fail("RAW_SPATIAL_PLANE_SHEET_REQUIRED", "canonical plane geometry keys are not unique")
+        record_keys.append(key)
+        record_by_key[key] = row
+    geometries = tuple(getattr(analysis, "plane_geometries", ()))
+    analysis_keys = [(str(getattr(item, "layer", "")), str(getattr(item, "net", ""))) for item in geometries]
+    if len(set(analysis_keys)) != len(analysis_keys) or set(analysis_keys) != set(record_keys):
+        _fail("RAW_SPATIAL_PLANE_SHEET_REQUIRED", "plane geometry identities differ from analysis")
+    primitives: list[dict[str, Any]] = []
+    vertices: list[dict[str, Any]] = []
+    circles: list[dict[str, Any]] = []
+    for geometry in geometries:
+        key = (str(getattr(geometry, "layer", "")), str(getattr(geometry, "net", "")))
+        record = record_by_key.get(key)
+        if not isinstance(record, Mapping) or not isinstance(record.get("asset"), str) or not isinstance(record.get("asset_sha256"), str):
+            _fail("RAW_SPATIAL_PLANE_SHEET_REQUIRED", "canonical source geometry binding is incomplete")
+        order = tuple(getattr(geometry, "primitive_order", ()))
+        arrays = {
+            "positive_polygon": tuple(getattr(geometry, "positive_polygons_um", ())),
+            "negative_polygon": tuple(getattr(geometry, "negative_polygons_um", ())),
+            "positive_circle": tuple(getattr(geometry, "positive_circles_um", ())),
+            "negative_circle": tuple(getattr(geometry, "negative_circles_um", ())),
+        }
+        for kind_name, index in order:
+            if kind_name not in arrays or type(index) is not int or not 0 <= index < len(arrays[kind_name]):
+                _fail("RAW_SPATIAL_PLANE_SHEET_REQUIRED", "canonical primitive order is invalid")
+            polarity = "+" if kind_name.startswith("positive") else "-"
+            kind = "circle" if kind_name.endswith("circle") else "polygon"
+            primitive_ordinal = len(primitives)
+            primitive = {"primitive_ordinal": primitive_ordinal, "layer_ordinal": next((i for i, item in enumerate(stackup) if item.name == key[0]), -1), "layer_name": key[0], "net_name": key[1], "polarity": polarity, "kind": kind, "source_asset_name": record["asset"], "source_asset_sha256": record["asset_sha256"], "coordinate_unit": "um"}
+            if primitive["layer_ordinal"] < 0:
+                _fail("RAW_SPATIAL_PLANE_SHEET_REQUIRED", "primitive layer is absent from ProjectSpec stackup")
+            try:
+                shape = arrays[kind_name][index]
+                if kind == "polygon":
+                    primitive_values = {"vertices": tuple(tuple(point) for point in shape)}
+                    primitive["primitive_sha256"] = _canonical_sha(primitive_values | {"kind": kind_name})
+                    for vertex_ordinal, (x_um, y_um) in enumerate(shape):
+                        vertices.append({"primitive_ordinal": primitive_ordinal, "vertex_ordinal": vertex_ordinal, "x_um": x_um, "y_um": y_um})
+                else:
+                    center_x, center_y, radius = shape
+                    primitive_values = {"circle": tuple(shape)}
+                    primitive["primitive_sha256"] = _canonical_sha(primitive_values | {"kind": kind_name})
+                    circles.append({"primitive_ordinal": primitive_ordinal, "center_x_um": center_x, "center_y_um": center_y, "radius_um": radius})
+            except (TypeError, ValueError, OverflowError):
+                _fail("RAW_SPATIAL_PLANE_SHEET_INVALID", "plane primitive geometry is invalid")
+            primitives.append(primitive)
+    if not primitives:
+        _fail("RAW_SPATIAL_PLANE_SHEET_REQUIRED", "plane geometry has no primitives")
+    stack_rows: list[dict[str, Any]] = []
+    dielectric_points: list[dict[str, Any]] = []
+    for ordinal, layer in enumerate(stackup):
+        is_conductor = layer.is_conductor
+        thickness = layer.thickness_um
+        material = layer.material
+        if type(is_conductor) is not bool or not isinstance(material, str) or not material or not isinstance(thickness, (int, float)) or not math.isfinite(float(thickness)) or thickness <= 0:
+            _fail("RAW_SPATIAL_PLANE_SHEET_REQUIRED", "ProjectSpec stackup physical fields are incomplete")
+        sigma = layer.conductivity_s_m
+        stack_rows.append({"layer_ordinal": ordinal, "layer_name": layer.name, "layer_kind": "conductor" if is_conductor else "dielectric", "thickness_um": thickness, "conductivity_s_per_m": sigma if is_conductor else None, "material_name": material})
+        if not is_conductor:
+            for point_ordinal, point in enumerate(layer.dielectric_properties):
+                frequency = point.frequency_hz
+                epsilon = point.dk
+                loss = point.df
+                dielectric_points.append({"layer_ordinal": ordinal, "point_ordinal": point_ordinal, "frequency_hz": frequency, "epsilon_r": epsilon, "loss_tangent": loss})
+    return {"plane_primitives": primitives, "plane_vertices": vertices, "plane_circles": circles, "stackup_layers": stack_rows, "dielectric_points": dielectric_points}
+
+
+def _validate_plane_sheet_assets(payload: Mapping[str, Any], attachments: Mapping[str, bytes]) -> None:
+    digests: dict[str, str] = {}
+    for row in payload.get("plane_primitives", ()):
+        name = row.get("source_asset_name") if isinstance(row, Mapping) else None
+        digest = row.get("source_asset_sha256") if isinstance(row, Mapping) else None
+        if not isinstance(name, str) or not isinstance(digest, str) or name not in attachments:
+            _fail("RAW_SPATIAL_PLANE_SHEET_INVALID", "plane primitive source asset is absent")
+        observed = digests.get(name)
+        if observed is None:
+            observed = sha256(attachments[name]).hexdigest()
+            digests[name] = observed
+        if observed != digest:
+            _fail("RAW_SPATIAL_PLANE_SHEET_INVALID", "plane primitive source asset hash differs")
 
 
 def _parse_layers(
@@ -1770,19 +1929,17 @@ def _validate_raw_surface_primitive(
                 offset=offset,
             )
         x, y, width, height = values
-        half_width = width / 2
-        half_height = height / 2
         min_x = _checked_surface_pm(
-            x - half_width, "Box minimum X", offset=offset
+            x, "Box minimum X", offset=offset
         )
         max_x = _checked_surface_pm(
-            x + half_width, "Box maximum X", offset=offset
+            x + width, "Box maximum X", offset=offset
         )
         min_y = _checked_surface_pm(
-            y - half_height, "Box minimum Y", offset=offset
+            y, "Box minimum Y", offset=offset
         )
         max_y = _checked_surface_pm(
-            y + half_height, "Box maximum Y", offset=offset
+            y + height, "Box maximum Y", offset=offset
         )
         observed = (
             (min_x, min_y),
@@ -1791,13 +1948,11 @@ def _validate_raw_surface_primitive(
             (min_x, max_y),
         )
         x_um, y_um, width_um, height_um = core_values
-        half_width = width_um / 2.0
-        half_height = height_um / 2.0
         source_float = (
-            (x_um - half_width, y_um - half_height),
-            (x_um + half_width, y_um - half_height),
-            (x_um + half_width, y_um + half_height),
-            (x_um - half_width, y_um + half_height),
+            (x_um, y_um),
+            (x_um + width_um, y_um),
+            (x_um + width_um, y_um + height_um),
+            (x_um, y_um + height_um),
         )
         source_bounds = observed
     else:
@@ -2706,7 +2861,7 @@ def _parse_contacts(
         for record in _frame_section(handle, via_span, b"Via"):
             if record.ordinal >= _MAX_ROWS:
                 _fail("RAW_SPATIAL_BOUND_EXCEEDED", "Via section exceeds its row bound")
-            parsed_via = _parse_via(record, padstack_by_fold)
+            parsed_via = _parse_via(record, padstack_by_fold, layer_by_fold)
             via_batch.add(parsed_via)
             net, net_fold = parsed_via[3], parsed_via[4]
             for node_id, node_fold in (
@@ -2950,6 +3105,7 @@ def _compile_snapshot(
     batch_rows: int,
     cancelled: Callable[[], bool],
     temp_dir: Path,
+    plane_sheet_payload: Mapping[str, Any] | None = None,
 ) -> tuple[dict[str, Any], tuple[str, bytes]]:
     offsets = _index_markers(path, size, cancelled)
     spans = _section_spans(path, size, offsets, cancelled)
@@ -3099,6 +3255,7 @@ def _compile_snapshot(
             nodes=_node_rows(connection),
             traces=_trace_rows(connection),
             vias=_via_rows(connection),
+            plane_sheet_payload=plane_sheet_payload,
             batch_rows=batch_rows,
             is_cancelled=cancelled,
             **bindings,
@@ -3125,6 +3282,7 @@ def compile_raw_spatial_contact_asset(
     attachments: Mapping[str, bytes],
     batch_rows: int = 10_000,
     is_cancelled: Callable[[], bool] | None = None,
+    include_plane_sheet_payload: bool = False,
 ) -> tuple[dict[str, Any], tuple[str, bytes]]:
     """Compile exact raw spatial contacts without mutating or wiring a project."""
 
@@ -3135,6 +3293,8 @@ def compile_raw_spatial_contact_asset(
         or not 1 <= batch_rows <= _MAX_BATCH_ROWS
     ):
         _fail("RAW_SPATIAL_BATCH_INVALID", "batch_rows must be in [1, 10000]")
+    if type(include_plane_sheet_payload) is not bool:
+        _fail("RAW_SPATIAL_PLANE_SHEET_REQUIRED", "include_plane_sheet_payload must be boolean")
     path = Path(source_path)
     if not path.is_file():
         _fail("RAW_SPATIAL_SOURCE_MISSING", f"raw SPD {path} is absent")
@@ -3169,6 +3329,9 @@ def compile_raw_spatial_contact_asset(
     if str(spd_import.get("source_sha256", "")) != observed_sha:
         _fail("RAW_SPATIAL_PROJECT_SOURCE_MISMATCH", "project names a different raw SPD")
     try:
+        plane_sheet_payload = _plane_sheet_payload(project, analysis) if include_plane_sheet_payload else None
+        if plane_sheet_payload is not None:
+            _validate_plane_sheet_assets(plane_sheet_payload, attachments)
         _surface, compiled = validate_project_topology_storage_envelope(project, attachments)
     except SurfaceCertificateAssetError as exc:
         _fail(
@@ -3210,6 +3373,7 @@ def compile_raw_spatial_contact_asset(
             batch_rows=batch_rows,
             cancelled=cancelled,
             temp_dir=temp_path,
+            plane_sheet_payload=plane_sheet_payload,
         )
 
 

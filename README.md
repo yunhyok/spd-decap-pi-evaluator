@@ -1,8 +1,8 @@
-# SPD Decap PI Evaluator v0.23.0
+# SPD Decap PI Evaluator v0.23.1
 
-> **v0.23.0 integrates the v0.22.1 De-cap Distribution/MLO/routing hardening with the checkpoint's source-derived multilayer layer-surface Evaluation.** Distribution retains all 21 physical PWR conductor layers, defaults to the disclosed `BALANCED_AUTO` gap-distance objective, exports Candidate Audit evidence, preserves source-proven MLO transition diagnostics, and blocks non-TOP MLO transitions that lack an engineered translated recipe. Optional immutable signal-Trace avoidance remains OFF by default. Evaluation assembles exact adjacent-gap artwork Maxwell-Y blocks on shared physical `(layer, NET)` surface nodes, uses only source-observed same-NET Trace/Via connectivity, and eliminates internal interfaces through one global sparse Schur/Kron solve. Touchstone remains comparison-only. The title bar identifies the application as **SPD Decap PI Evaluator v0.23.0**.
+> **v0.23.1 restores production-size GUI SPD loading while retaining the v0.23.0 source-derived multilayer Evaluation.** Distribution retains all 21 physical PWR conductor layers, defaults to the disclosed `BALANCED_AUTO` gap-distance objective, exports Candidate Audit evidence, preserves source-proven MLO transition diagnostics, and blocks non-TOP MLO transitions that lack an engineered translated recipe. Optional immutable signal-Trace avoidance remains OFF by default. Evaluation assembles exact adjacent-gap artwork Maxwell-Y blocks on shared physical `(layer, NET)` surface nodes, uses only source-observed same-NET Trace/Via connectivity, and eliminates internal interfaces through one global sparse Schur/Kron solve. Touchstone remains comparison-only. The title bar identifies the application as **SPD Decap PI Evaluator v0.23.1**.
 
-> 프로그램: **SPD Decap PI Evaluator v0.23.0**
+> 프로그램: **SPD Decap PI Evaluator v0.23.1**
 > **Preserved v0.22.0 research record — AV-BS1 H4-P1 manifest-only
 > preregistration, final documentation freeze:** The stable contract fixture
 > `tools/research/av_bs1_boundary_schur_h4_p1.py` is `47295` bytes / `852` LF /
@@ -563,7 +563,7 @@ powershell.exe -ExecutionPolicy Bypass -NoProfile -File .\scripts\build_spd_deca
 산출물:
 
 - `dist\SPDDecapPIEvaluator\SPDDecapPIEvaluator.exe`
-- `installer-output\SPDDecapPIEvaluatorSetup-0.23.0.exe`
-- `installer-output\SPDDecapPIEvaluatorSetup-0.23.0.exe.sha256`
+- `installer-output\SPDDecapPIEvaluatorSetup-0.23.1.exe`
+- `installer-output\SPDDecapPIEvaluatorSetup-0.23.1.exe.sha256`
 
 프로그램명과 버전은 title bar와 installer metadata에 함께 표시된다.

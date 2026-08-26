@@ -37,6 +37,7 @@ from spd_decap_pi._core.io.spd import (
 from spd_decap_pi._core.services import WorkspaceState, import_cap_spice
 from spd_decap_pi.scenario import (
     SHARED_PAD_ANALYSIS_VERSION,
+    SharedPadClusterState,
     mixed_reference_ground_landing_identity,
 )
 from spd_decap_pi.scenario_io import ScenarioFormatError, save_scenario
@@ -291,7 +292,7 @@ def test_adapter_persists_structural_only_via_evidence() -> None:
             )
         },
     )
-    converted = _scenario_via_landing(landing, recovery)
+    converted = _scenario_via_landing(landing, recovery, source_sha256="a" * 64)
     assert converted.path_evidence == ()
     assert len(converted.structural_evidence) == 1
     assert converted.structural_evidence[0].target_layer == "L2"
@@ -311,17 +312,27 @@ def test_graph_contact_remap_preserves_source_landing_and_localizes_solver_port(
     )
     contacts = (("NODE_TARGET", 110.0, 220.0),)
     contact_hash = sha256(repr(contacts).encode("utf-8")).hexdigest()
-    recovery = SimpleNamespace(evidence_by_via={}, structural_evidence_by_via={})
     graph = SimpleNamespace(
         target_contacts_by_key={("v_graph", "node_source", "l09"): contacts},
         target_contact_count_by_key={("v_graph", "node_source", "l09"): 1},
         target_contact_hash_by_key={("v_graph", "node_source", "l09"): contact_hash},
     )
-    converted = _scenario_via_landing(landing, recovery, graph, "a" * 64)
+    recovery = SimpleNamespace(
+        evidence_by_via={},
+        structural_evidence_by_via={},
+        target_contacts_by_key=graph.target_contacts_by_key,
+        target_contact_count_by_key=graph.target_contact_count_by_key,
+        target_contact_hash_by_key=graph.target_contact_hash_by_key,
+    )
+    converted = _scenario_via_landing(landing, recovery, source_sha256="a" * 64)
     assert (converted.x_um, converted.y_um) == (10.0, 20.0)
     evidence = converted.graph_contact_for_layer("L09")
     assert evidence is not None
     assert (evidence.x_um, evidence.y_um) == (110.0, 220.0)
+    assert evidence.source_sha256 == "a" * 64
+    assert evidence.candidate_count == 1
+    assert evidence.candidate_contacts_sha256 == contact_hash
+    assert evidence.selected_distance_um == pytest.approx(math.hypot(100.0, 200.0))
     footprint = _terminal_footprint(
         converted,
         "L09",
@@ -340,7 +351,6 @@ def test_graph_contact_lookup_preserves_multiple_target_layers_without_global_sc
         padstack="P1",
         rotation_degrees=0.0,
     )
-    recovery = SimpleNamespace(evidence_by_via={}, structural_evidence_by_via={})
     contacts = {
         ("v_lookup", "node_source", "L09"): (("N09", 110.0, 220.0),),
         ("v_lookup", "node_source", "L08"): (("N08", 111.0, 221.0),),
@@ -350,14 +360,14 @@ def test_graph_contact_lookup_preserves_multiple_target_layers_without_global_sc
         target_contact_count_by_key={key: 1 for key in contacts},
         target_contact_hash_by_key={key: sha256(repr(value).encode()).hexdigest() for key, value in contacts.items()},
     )
-    lookup = (
-        ("L09", contacts[("v_lookup", "node_source", "L09")]),
-        ("L08", contacts[("v_lookup", "node_source", "L08")]),
+    recovery = SimpleNamespace(
+        evidence_by_via={},
+        structural_evidence_by_via={},
+        target_contacts_by_key=contacts,
+        target_contact_count_by_key=graph.target_contact_count_by_key,
+        target_contact_hash_by_key=graph.target_contact_hash_by_key,
     )
-    converted = _scenario_via_landing(
-        landing, recovery, graph, "b" * 64,
-        contact_lookup={("v_lookup", "node_source"): lookup},
-    )
+    converted = _scenario_via_landing(landing, recovery, source_sha256="b" * 64)
     assert {
         item.target_layer: (item.target_node_id, item.x_um, item.y_um)
         for item in converted.graph_contact_evidence
@@ -365,6 +375,7 @@ def test_graph_contact_lookup_preserves_multiple_target_layers_without_global_sc
         "L09": ("N09", 110.0, 220.0),
         "L08": ("N08", 111.0, 221.0),
     }
+    assert all(item.source_sha256 == "b" * 64 for item in converted.graph_contact_evidence)
 
 
 def test_raw_pin_source_identity_is_retained_for_graph_witnesses(tmp_path: Path) -> None:
@@ -1044,7 +1055,11 @@ def test_mixed_witness_selection_batches_direct_and_shared_candidates_exactly(
             "P-S2": {"R2": allowed("R2")},
         }[value.via_id]
 
-    monkeypatch.setattr(spd_adapter, "_scenario_via_landing", lambda value, _recovery: value)
+    monkeypatch.setattr(
+        spd_adapter,
+        "_scenario_via_landing",
+        lambda value, _recovery, *, source_sha256: value,
+    )
     monkeypatch.setattr(
         spd_adapter, "_common_eligibility_at_landings", fake_common_at_landings
     )
@@ -1070,7 +1085,9 @@ def test_mixed_witness_selection_batches_direct_and_shared_candidates_exactly(
                     continue
                 if connection.kind == "DIRECT":
                     power_vias = tuple(
-                        spd_adapter._scenario_via_landing(item, object())
+                        spd_adapter._scenario_via_landing(
+                            item, object(), source_sha256="a" * 64
+                        )
                         for item in connection.power_vias
                     )
                     eligible = spd_adapter._common_eligibility_at_landings(
@@ -1096,7 +1113,7 @@ def test_mixed_witness_selection_batches_direct_and_shared_candidates_exactly(
                         else:
                             power_landings = {
                                 item.via_id.casefold(): spd_adapter._scenario_via_landing(
-                                    item, object()
+                                    item, object(), source_sha256="a" * 64
                                 )
                                 for member in cluster.member_refdes
                                 for item in connections[member.casefold()].power_vias
@@ -1146,7 +1163,12 @@ def test_mixed_witness_selection_batches_direct_and_shared_candidates_exactly(
         top_instances=top_instances,
         parsed_connection_by_key=connections,
         parsed_cluster_by_key=clusters,
+        cluster_state_by_key={"cl-a": SharedPadClusterState.ANCHORED},
+        cluster_eligibility_by_key={
+            "cl-a": {"R2": allowed("R2")},
+        },
         path_recovery=object(),
+        source_sha256="a" * 64,
         eligibility_index=object(),
         rail_choices_by_pair={},
     )
@@ -1156,7 +1178,9 @@ def test_mixed_witness_selection_batches_direct_and_shared_candidates_exactly(
         "dgnd": {"L10"}, "agnd": {"L12"}
     }
     assert direct_calls == [("P-D1",), ("P-D4",)]
-    assert shared_calls == ["P-S1", "P-S2"]
+    # Cluster eligibility is supplied by the importer once; selection must not
+    # recompute the shared component's per-Via map.
+    assert shared_calls == []
     assert {
         key: tuple(
             mixed_reference_ground_landing_identity(owner, value)
@@ -2271,7 +2295,7 @@ def test_import_runs_one_union_reachability_pass_and_persists_surface_certificat
         capture_inline_certificate,
     )
 
-    imported = import_spd_scenario(source)
+    imported = import_spd_scenario(source, include_plane_sheet_payload=True)
 
     assert len(calls) == 1
     assert phase_order == ["recovery", "retarget"]
@@ -2489,6 +2513,7 @@ def test_import_runs_one_union_reachability_pass_and_persists_surface_certificat
         expected_geometry_identity_sha256=raw_manifest[
             "geometry_identity_sha256"
         ],
+        require_plane_sheet_payload=True,
     ) as raw_asset:
         assert raw_asset.get_via("VDD_CORE/0", "Via1") is not None
         assert raw_asset.get_via("DGND", "Via2") is not None

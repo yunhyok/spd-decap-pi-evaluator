@@ -92,6 +92,39 @@ def _application() -> QApplication:
     return QApplication.instance() or QApplication([])
 
 
+def test_gui_spd_import_keeps_optional_plane_sheet_payload_disabled(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    imported = SimpleNamespace(scenario=object(), attachments={})
+    prepared_view = object()
+
+    def import_without_plane_sheet_opt_in(
+        _path: Path,
+        *,
+        progress: object,
+        is_cancelled: object,
+    ) -> object:
+        assert callable(progress)
+        assert callable(is_cancelled)
+        return imported
+
+    monkeypatch.setattr(
+        main_window_module, "import_spd_scenario", import_without_plane_sheet_opt_in
+    )
+    monkeypatch.setattr(
+        main_window_module,
+        "_prepare_document_view",
+        lambda *_args, **_kwargs: prepared_view,
+    )
+
+    result = main_window_module._job_import_spd(
+        Path("production.spd"), progress=lambda *_args: None, is_cancelled=lambda: False
+    )
+
+    assert result.imported is imported
+    assert result.view is prepared_view
+
+
 def _research_provenance() -> dict[str, object]:
     """Return a complete current-profile identity for GUI-only result fixtures."""
 
@@ -1209,6 +1242,22 @@ def test_tuned_csv_rows_exclude_floating_dummy_from_validated_scenario() -> None
     assert _excel_safe_csv_cell("\t=CMD") == "'\t=CMD"
 
 
+def test_csv_export_write_failure_preserves_destination_and_cleans_temp(
+    tmp_path: Path,
+) -> None:
+    destination = tmp_path / "results.csv"
+    destination.write_text("sentinel\n", encoding="utf-8")
+
+    def fail_write(_stream) -> None:
+        raise OSError("simulated CSV write failure")
+
+    with pytest.raises(OSError, match="simulated CSV write failure"):
+        main_window_module._write_csv_atomically(destination, fail_write)
+
+    assert destination.read_text(encoding="utf-8") == "sentinel\n"
+    assert not tuple(tmp_path.glob(f".{destination.name}.*.tmp"))
+
+
 def test_result_table_impedance_uses_log_log_interpolation_and_compact_units() -> None:
     class View:
         frequency_hz = [1.0e6, 100.0e6]
@@ -1843,6 +1892,87 @@ def test_scenario_load_can_relink_only_an_identical_external_spd(tmp_path: Path)
             progress=lambda _value, _message: None,
             is_cancelled=lambda: False,
         )
+
+
+def test_scenario_load_worker_is_cancelable_and_forwards_callback(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    source = tmp_path / "worker.spd"
+    source.write_text(MINI_SPD, encoding="ascii")
+    imported = import_spd_scenario(source)
+    scenario_path = tmp_path / "worker.spdpi"
+    save_scenario(imported.scenario, scenario_path, attachments=imported.attachments)
+    captured: dict[str, object] = {}
+
+    def fake_loader(path, *, is_cancelled):
+        captured["path"] = path
+        captured["is_cancelled"] = is_cancelled
+        return ScenarioBundle(
+            scenario=imported.scenario,
+            attachments=imported.attachments,
+        )
+
+    monkeypatch.setattr(main_window_module, "load_scenario_with_recovery", fake_loader)
+    callback = lambda: False
+    _job_load_scenario(
+        scenario_path,
+        progress=lambda _value, _message: None,
+        is_cancelled=callback,
+    )
+    assert captured["path"] == scenario_path
+    assert captured["is_cancelled"] is callback
+
+    application = _application()
+    window = MainWindow()
+    worker_call: dict[str, object] = {}
+    try:
+        def capture_worker(worker, _on_result, **kwargs):
+            worker_call["worker"] = worker
+            worker_call.update(kwargs)
+
+        monkeypatch.setattr(window, "_run_worker", capture_worker)
+        window._start_scenario_load(scenario_path)
+        assert worker_call["cancelable"] is True
+    finally:
+        window.deleteLater()
+        application.processEvents()
+
+
+def test_close_during_scenario_load_cancels_and_preserves_document(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    application = _application()
+    source = tmp_path / "close-load.spd"
+    source.write_text(MINI_SPD, encoding="ascii")
+    imported = import_spd_scenario(source)
+    window = MainWindow()
+    try:
+        window._accept_spd_import(imported)
+        original_scenario = window.scenario
+        original_attachments = dict(window._attachments)
+        worker = FunctionWorker(lambda **_kwargs: None)
+        window._worker = worker
+        window._worker_cancelable = True
+        monkeypatch.setattr(
+            QMessageBox,
+            "question",
+            lambda *_args, **_kwargs: QMessageBox.StandardButton.Yes,
+        )
+
+        event = QCloseEvent()
+        window.closeEvent(event)
+
+        assert not event.isAccepted()
+        assert window._worker_cancel_requested
+        assert window.scenario is original_scenario
+        assert window._attachments == original_attachments
+    finally:
+        window._worker = None
+        window._worker_cancelable = False
+        window._worker_cancel_requested = False
+        window._dirty = False
+        window.deleteLater()
+        application.processEvents()
 
 
 def test_stale_save_and_evaluation_results_are_not_accepted(tmp_path: Path) -> None:

@@ -30,6 +30,7 @@ from spd_decap_pi._core.domain import (
     ViaPathKind,
 )
 from spd_decap_pi._core import services as core_services
+from spd_decap_pi._core.io.spd import SpdPlaneGeometry
 from spd_decap_pi._core.solver import evaluator as solver_evaluator_module
 from spd_decap_pi._core.services import EvaluationView
 from spd_decap_pi._core.solver.evaluator import (
@@ -57,6 +58,7 @@ from spd_decap_pi import scenario as scenario_module
 from spd_decap_pi.distribution import (
     DistributionDistanceMode,
     apply_distribution_plan,
+    build_distribution_power_projection,
     compute_distribution_plan,
 )
 from spd_decap_pi.evaluation import (
@@ -2316,7 +2318,13 @@ def test_layerwise_builder_preflight_compiles_one_board_binding_and_proves_92_ra
         project_builds.append(evaluation_rail_id)
         return SimpleNamespace(rail_id=evaluation_rail_id)
 
-    def compile_template(candidate: object, rail_id: str) -> object:
+    def compile_template(
+        candidate: object,
+        rail_id: str,
+        *,
+        terminal_complete_external_input: bool,
+    ) -> object:
+        assert terminal_complete_external_input is True
         assert candidate.rail_id == rail_id
         return SimpleNamespace(rail_id=rail_id, cap_models={"M1": object()})
 
@@ -2405,12 +2413,19 @@ def test_layerwise_builder_preflight_caches_only_board_binding_failure(
             rail_id=evaluation_rail_id
         ),
     )
+    def compile_template(
+        _candidate: object,
+        rail_id: str,
+        *,
+        terminal_complete_external_input: bool,
+    ) -> object:
+        assert terminal_complete_external_input is True
+        return SimpleNamespace(rail_id=rail_id, cap_models={"M1": object()})
+
     monkeypatch.setattr(
         evaluation_module,
         "compile_project_evaluation_template",
-        lambda _candidate, rail_id: SimpleNamespace(
-            rail_id=rail_id, cap_models={"M1": object()}
-        ),
+        compile_template,
     )
 
     class SourceModel:
@@ -2501,14 +2516,23 @@ def test_layerwise_board_binding_is_separate_for_tuned_and_original_builder_pass
             scenario=scenario, rail_id=evaluation_rail_id
         ),
     )
-    monkeypatch.setattr(
-        evaluation_module,
-        "compile_project_evaluation_template",
-        lambda candidate, rail_id: SimpleNamespace(
+    def compile_template(
+        candidate: object,
+        rail_id: str,
+        *,
+        terminal_complete_external_input: bool,
+    ) -> object:
+        assert terminal_complete_external_input is True
+        return SimpleNamespace(
             scenario=candidate.scenario,
             rail_id=rail_id,
             cap_models={"M1": object()},
-        ),
+        )
+
+    monkeypatch.setattr(
+        evaluation_module,
+        "compile_project_evaluation_template",
+        compile_template,
     )
 
     class SourceModel:
@@ -2956,12 +2980,35 @@ def test_saved_distributed_scenario_reloads_and_blocks_outside_changed_rail(
                 ).model_dump(mode="python"),
             )
     scenario = ScenarioSpec.model_validate(payload)
+    plane_geometries = tuple(
+        SpdPlaneGeometry(
+            layer="PWR1",
+            net=net,
+            positive_polygons_um=(
+                ((0.0, 0.0), (10_000.0, 0.0), (10_000.0, 8_000.0), (0.0, 8_000.0)),
+            ),
+            negative_polygons_um=(),
+            primitive_order=(("positive_polygon", 0),),
+        )
+        for net in ("VDD", "VDD_ALT")
+    )
+    targets = {("RAIL_VDD", "M1"): 0, ("RAIL_ALT", "M1"): 2}
+    projection = build_distribution_power_projection(
+        scenario,
+        {},
+        plane_geometries=plane_geometries,
+        targets=targets,
+    )
+    assert projection is not None
     plan = compute_distribution_plan(
         scenario,
-        {("RAIL_VDD", "M1"): 0, ("RAIL_ALT", "M1"): 2},
+        targets,
         DistributionDistanceMode.NEAREST,
+        power_projection=projection,
     )
-    distributed = apply_distribution_plan(scenario, plan)
+    distributed = apply_distribution_plan(
+        scenario, plan, power_projection=projection
+    )
     path = save_scenario(distributed, tmp_path / "distributed.spdpi")
     reloaded = load_scenario_bundle(path).scenario
 
@@ -3414,7 +3461,7 @@ def test_convergence_policy_is_explicit_and_changes_result_identity(
 ) -> None:
     settings = evaluation_module._evaluation_settings(None, 8)
     assert settings["convergence_policy"] == {
-        "version": "adaptive-frequency-modal-v4",
+        "version": "adaptive-frequency-modal-v5",
         "max_refinement_iterations": 3,
         "max_new_frequency_points_per_iteration": 64,
         "curvature_threshold_db": 0.75,
@@ -3846,7 +3893,7 @@ def test_layerwise_batch_uses_board_original_identity_without_cache(
 def test_solver_version_0_8_2_recalculates_0_6_baseline_cache(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    assert evaluation_module.SOLVER_VERSION == "modal-mvp-0.8.3"
+    assert evaluation_module.SOLVER_VERSION == "modal-mvp-0.8.5"
     scenario = _scenario()
     tuned = scenario.decaps[0].model_copy(update={"enabled": False})
     scenario = ScenarioSpec.model_validate(

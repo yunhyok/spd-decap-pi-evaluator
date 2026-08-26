@@ -1,0 +1,1107 @@
+# SPD Decap PI Evaluator 목적·기술 기준
+
+- 적용 제품: **SPD Decap PI Evaluator v0.23.0**
+- 문서 버전: **1.131**
+- W5 approved/machine-frozen source-before: `main` commit `027ac7a09a3eded15f45c41860945f9d4c7f488d`
+- 상태: **G0 기준 문서** — full execution history and sole ACTIVE authority live in `WORK_EXECUTION_BASELINE.md` recovery/register; W5 DONE; W6-BASE 260729 numerical FAIL; W7-PHYS BLOCKED; raw-spatial chain: 17AR DONE, 17AS DONE-negative, 17AT BLOCKED/implementation REJECT, 17AU DONE (location evidence), 17AV BLOCKED/STOP, 17AW DONE (location evidence), 17AX BLOCKED/STOP, 17AY DONE (location evidence), 17AZ BLOCKED/STOP (source-classified delegated substrate owner), 17BA BLOCKED/STOP (boundary span627>500), 17BB BLOCKED/STOP (cache-only multiple clusters), 17BC BLOCKED/STOP (endpoint truncation + delegated identity), 17BD DONE (location evidence), 17BE BLOCKED/STOP (raw-v3/hash seam unproven), 17BF BLOCKED/design REJECT, 17BG BLOCKED/STOP (canonical payload/content identity delegated), 17BH BLOCKED/source-classified STOP (lifetime trace endpoint incomplete), 17BI DONE/PASS, 17BJ DONE/PASS, 17BK BLOCKED/source-classified STOP (validator field/type/unit/layer/net semantics delegated), 17BL DONE/location PASS (validator boundaries 1280/1323), 17BM DONE/PASS (local validator contract; physical ownership BLOCKED), 17BN DONE/PASS (typed immutable facade; physical scope unproven), 17BO BLOCKED/design REJECT (surface/island field-domain equivalence unproven), 17BP BLOCKED/source-classified location STOP (required surface-row producer missing), 17BQ DONE/location PASS (unique producer at raw_spatial_contact_compiler.py:2575), 17BR BLOCKED/boundary STOP (258-line span >160), 17BS BLOCKED/source-classified STOP (origin/normalization before range and `_canonical_sha` delegated), 17BT DONE/location PASS (single pre-range field-origin cluster at 2500-2512), 17BU BLOCKED/source-classified STOP (range starts/ends mid-flow; net/layer/asset SHA/key origins and helper semantics not proven), 17BV BLOCKED/location STOP (duplicate key semantic/domain ambiguous from location output), 17BW BLOCKED/source-classified STOP (canonical layer/raw-record origins and attachment continuation not proven), 17BX BLOCKED/source-classified STOP (canonical layer mapping and SHA decode verification delegated), 17BY DONE/location PASS, 17BZ BLOCKED/boundary STOP (oversize span at clean main/docs HEAD `5b4c68d`; exact command exit6 zero output), 17CA DONE/location PASS (clean main HEAD `d6f9ebab38532d573bccdde3a982dbbf0b36999f`; exact query exit0, 2 lines/1 file, parse_layers872→header_material1068 span196), 17CB BLOCKED/location STOP (clean main HEAD `a3c4219e8bbfc22b027a46d2023f7169b09380fc`; exact query exit0, 12 unique lines/1 file, multiple casefold meanings), 17CC DONE/location PASS (clean HEAD `ba407555ccc7170e1c215c0aafe8d87bab7f545c`; exact query exit0, 6 lines/1 file: rows898/by_fold899/append917/constructor918/insert1058/return1065), 17CD BLOCKED/source-classified STOP (clean HEAD `e2ed0ed33869c8a5371937abd122be1be11b7811`; one Get-Content invocation exit0 exactly99 output lines A872-940+B1038-1067; layer_match origin skipped941-1037), 17CE BLOCKED/location STOP (clean HEAD `5e8f5f7f5dfe265c5ca7b94853e2f82bd00f8033`; exact query exit0 8 lines/1 file, span94>80 and two clusters), 17CF DONE/location PASS (clean HEAD `7b4a00cbfa79216afe1172eadad9dba96dec0542`; exact query exit0 19 lines/1 file, two nonoverlap clusters942-967 and969-1038), 17CG BLOCKED/source-classified STOP (clean HEAD `e289c7954d337ff48624a63e2905872a617864c`; exact body read once exit0 97 lines941-1037; control/pending/layer_match/by_fold complete but canonical layer delegated to `_decode_token`), 17CH DONE/location PASS (clean HEAD `5b6968a6118e9c432ae2ce1785a282e8081a525c`; exact query exit0 2 lines/1 file, def402→415 span13), 17CI DONE/PASS (clean HEAD `120850c7a44b461423f5b69555f9ce5f4e88a01d`; exact body read once exit0 13 lines, strict token contract and same string domain), 17CJ DONE/PASS (clean HEAD `8ad1a8d17e3292fde0d2a893d918cae4f9caf814`; exact body read once exit0 71 lines, surface asset_sha bound to attachment content); 17CK DONE/location PASS (clean HEAD `b43561eb26097e5ea1245e66761987fcd19759e3`; exact query exit0 2 lines/1 file, span43, record provenance external); 17CL BLOCKED/source-classified STOP (clean HEAD `4c07698a84f03c5305b59a965061dff27a01d982`; exact query exit0 3 lines/1 file, span38, record_by_key population and asset validation unproven); 17CM BLOCKED/location STOP (clean HEAD `45be04069c3723627bcd9e61cc75e2d0deb98cda`; exact query exit0 4 lines/1 file, span18, records iteration/key construction absent); 17CN BLOCKED/location STOP (clean HEAD `55424cb09610260cf46699a5b6b6c9004ab8f56f`; exact query exit0 3 lines/1 file, span16, two semantic key assignments); 17CO BLOCKED/source-classified STOP (clean HEAD `4df620768744bd8563cacf430ffca19e6c3eb535`; exact 23-line body read exit0, records/keys proven but asset/asset_sha256 validation absent); 17CP BLOCKED/source-classified STOP (clean HEAD `652ee17f39b34a2c6f5ba93cb27cfe5e6944fd42`; exact 16-line body read exit0, str-only asset/SHA allows empty/nonhex/non64 values); 17CQ BLOCKED (location STOP; exact boundary command once exit3, zero output). 17CR BLOCKED/location STOP (exact file-scoped `_digest_hex` query once exit1, zero output); 17CS BLOCKED/source-classified STOP (line861 read once exit0, exactly one line: simple digest accessor with no validator/helper/inline check); 17CT BLOCKED/location STOP (clean evidence HEAD `6dec0446c8b23d294104d1aea4fc843f763e20f6`, exact validation-use query once exit0, 2 lines/1 file, span6; line862 name/digest str + attachment-membership guard and line868 open `if observed != digest:` lacked observed origin and complete mismatch body); 17CU BLOCKED/source-classified STOP (clean docs/evidence HEAD `c2acac75c41a65c30a88efb65d11a202f8dfa4f9`, exact lines862–870 body read once exit0, exactly 9 lines; type/name membership, cache-miss SHA-256 computation, cache write, equality/mismatch fail, and closed line870 proven, but cache-hit reuse and cache ownership/initialization/aliasing unproven); 17CV BLOCKED/location STOP (clean evidence HEAD `90ae22d410433b27383386281ea4e700bc7d0733`; exact `digests` query once, exit0, 11 lines/1 file; separate 858/864/867 and 1951–2118 clusters failed one-cluster/no-additional-mutation gate); 17CW DONE/location PASS (clean docs/evidence HEAD `0540090cd05ea29b202c5b62462d9f03c12e6c4f`; exact defs-boundary command once, exit0 exactly 2 lines/1 file, line857 `_validate_plane_sheet_assets(...)`, line872 `_parse_layers(`, owner span15; combined frozen 17CV evidence plus 17CU proves all-path attachment-byte digest provenance); 17CX BLOCKED/design REJECT (clean canonical docs HEAD `15d860672cdb11d09d080207a46a37789ba94c45`; docs-only frozen judgment: same primitive/surface record and artwork-name transfer unproven; attachment-name/exact-byte SHA domain passes; net/layer casefold domain unproven; tuple cross-row match unproven; no retry/new reads); 17CY BLOCKED/location STOP (clean docs/evidence HEAD `c9bec2c83934d48655ff4c6d4fab4dd65533eabd`; quoted-key-colon query once, exit1, zero output; pattern-local literal producer absence only, no global/dynamic inference/retry/file read); ACTIVE 17CZ `W7-PHYS-W6-PLANE-GEOMETRIES-ASSIGNMENT-MUTATION-DISCOVERY`. Any implementation remains gated.
+- 현재 권위 상태: 17CQ `W7-PHYS-W6-PLANE-PRIMITIVE-SOURCE-ASSET-SHA-DIGEST-VALIDATOR-BOUNDARY-DISCOVERY` BLOCKED (location STOP; exact boundary command once exit3, zero output; unique top-level definition condition failed); 17CR `W7-PHYS-W6-PLANE-PRIMITIVE-SOURCE-ASSET-SHA-DIGEST-SYMBOL-OWNER-DISCOVERY` BLOCKED/location STOP (file-scoped `_digest_hex` query once exit1, zero output; no repo-global absence inference); 17CS `W7-PHYS-W6-PLANE-PRIMITIVE-SOURCE-ASSET-SHA-DIGEST-CONSUMER-EXPRESSION-TRACE` BLOCKED/source-classified STOP (line861 read once exit0, exactly one line: simple digest accessor with no validator/helper/inline check); 17CT `W7-PHYS-W6-PLANE-PRIMITIVE-SOURCE-ASSET-SHA-DIGEST-VALIDATION-USE-DISCOVERY` BLOCKED/location STOP (6dec0446... exact query once exit0, 2 lines/1 file, span6; origin/body incomplete); 17CU BLOCKED/source-classified STOP (c2acac75... exact body read once exit0, 9 lines; cache-hit ownership and all-path byte provenance unproven); 17CV BLOCKED/location STOP (90ae22d... exact `digests` query once, 11 lines/1 file; separate clusters failed one-cluster/no-additional-mutation gate); 17CW DONE/location PASS (0540090... exact defs-boundary query once, 2 lines/1 file, line857 `_validate_plane_sheet_assets(...)`, line872 `_parse_layers(`, span15; combined 17CV/17CU evidence proves all-path attachment-byte digest provenance); 17CX `W7-PHYS-W6-PLANE-PRIMITIVE-SURFACE-ASSET-DOMAIN-FROZEN-SYNTHESIS` is BLOCKED/design REJECT at clean canonical docs HEAD `15d860672cdb11d09d080207a46a37789ba94c45`: record/artwork-name transfer and net/layer domain are unproven; SHA domain passes; tuple match therefore unproven. No retry/new reads. 17CY BLOCKED/location STOP at `c9bec2c83934d48655ff4c6d4fab4dd65533eabd` (quoted-key-colon query once, exit1, zero output; pattern-local only, no global/dynamic inference or retry); sole ACTIVE 17CZ `W7-PHYS-W6-PLANE-GEOMETRIES-ASSIGNMENT-MUTATION-DISCOVERY`; its exact command is fenced only in Work §17CZ.
+- 최종 개정: 2026-08-26 (Asia/Seoul)
+
+## 1. 문서 역할과 권위
+
+이 문서는 프로그램의 **왜**, **무엇**, **합격의 의미**, **넘지 말아야 할
+경계**를 고정한다. 작업 목록, 구현 순서, 진행 상황, 검증 실행 기록은 이
+문서에 누적하지 않는다. 그것들은 추후 별도로 만들 **작업 기준 문서**에서
+관리한다.
+
+권위는 두 축으로 구분한다.
+
+1. **목적과 우선순위:** 이 문서가 최우선이다. 작업 기준 문서와 개별 계획은
+   이 문서를 변경하거나 우회할 수 없다.
+2. **현재 구현과 결과 사실:** exact commit의 source, hash-bound input/output
+   artifact, 실행 log가 요약 문서보다 우선한다. 코드가 이 문서와 다르면
+   코드가 옳다는 뜻이 아니라 해결할 불일치가 발견된 것이다.
+
+과거 release note, 연구 문서, PRD, session log는 증거와 결정 이력이다.
+현재 목적이나 현재 통과 상태를 자동으로 정의하지 않는다. 목적, 수치 합격선,
+제품 sign-off 범위를 바꾸려면 사용자 검토와 이 문서의 명시적 개정이 필요하다.
+
+## 2. 최우선 목적
+
+> **완성된 SPD 도면에서 source-derived 물리·연결 근거만 사용하여 single-rail
+> driving-point impedance `Zii`를 계산하고, 공급된 PowerSI 결과와 비슷한
+> 정확도를 새로운 설계에도 재현할 수 있는 알고리즘과 제품 workflow를
+> 확립한다.**
+
+PowerSI Touchstone은 외부 비교 자료다. PowerSI 응답을 이용해 R/L/C, 재료,
+geometry correction 또는 설계별 보정값을 fitting하지 않는다. 목표는 특정
+파일 네 개를 맞추는 것이 아니라, source evidence에서 일반화되는 계산법을
+확립하는 것이다.
+
+이 프로그램은 pre-design 판단 도구다. PowerSI, SIwave, full-wave field solver,
+DRC, 제조 또는 sign-off 도구를 대체한다고 주장하지 않는다.
+
+## 3. 목적 우선순위
+
+앞선 항목을 뒤의 항목과 교환하지 않는다.
+
+1. **외부 정확성 및 일반화:** rail별 magnitude, phase, resonance, complex error가
+   승인된 PowerSI 비교 기준을 만족해야 한다.
+2. **물리·증거·수치 건전성:** source provenance, topology ownership, passivity,
+   reciprocity, conservation, conditioning과 convergence가 설명 가능해야 한다.
+3. **실사용 가능성:** 목표 장비에서 시간, memory, 취소, 저장 및 복구가
+   실용적이어야 한다.
+4. **보조 workflow:** De-cap Distribution, UI, workbook, AI 보조 분석은 위 세
+   목적을 지원한다. 그 자체가 정확성 목표를 대체하지 않는다.
+5. **배포:** installer와 release는 앞선 gate를 통과한 범위만 전달한다.
+
+성능 최적화는 틀린 물리 모델을 빠르게 만드는 근거가 될 수 없다. Distribution
+호환성이나 UI 편의 작업을 최우선 정확성 과제로 승격하려면 사용자 승인이
+필요하다.
+
+## 4. 제품 입력·출력 경계
+
+| 구분 | 현행 역할 | 경계 |
+|---|---|---|
+| Raw SPD | geometry, stack-up, material table, net, node, trace, via, plane artwork, Device/Decap source | 원본을 수정하거나 덮어쓰지 않음 |
+| `.spdpi` | source identity, scenario state, normalized attachment와 Original baseline 보존 | raw SPD 자체를 내장하지 않으며 source/hash 불일치 시 재사용 금지 |
+| Decap model | passive two-terminal branch와 assignment | PowerSI 응답으로 parameter fitting 금지 |
+| Distribution workbook | format 5 Target/Tolerance 및 policy 교환 | format 1–4는 현행 exact-layer 계약으로 직접 import하지 않고 source SPD에서 재-export 필요 |
+| PowerSI Touchstone | 외부 complex impedance 비교와 promotion 판단 | production network 구성·parameter fitting 입력이 아님 |
+| Evaluation 결과 | Original/Tuned `Zii`, target 비교, plot/table/CSV | 통과한 evidence scope 밖의 정확성 또는 sign-off 주장 금지 |
+| Distribution 결과 | immutable landing에서의 assignment planning, audit, workbook/CSV | SPD via/plane artwork를 실제로 고치지 않으며 제조·DRC·SI sign-off가 아님 |
+
+## 5. 현행 기술 기준
+
+### 5.1 Evaluation
+
+- Desktop 기본 profile은 `layerwise_admittance_v1`, 표시명은
+  **Layer-surface terminal-complete network**다.
+- 현행 solver identity는 `modal-mvp-0.8.5`, compiler algorithm은
+  `layer-surface-adjacent-y-island-finite-via-termination-kron-v8`이다.
+- retained physical `(layer, NET)` artwork surface를 독립 node로 두고, 인접
+  dielectric gap의 ordered artwork에서 Maxwell admittance block을 만든다.
+- source-observed same-NET Trace/Via connectivity와 ownership-resolved finite
+  Via R/L만 결합한다. Device terminal과 Decap loop branch의 소유권을 substrate와
+  중복하지 않는다.
+- 모든 내부 interface는 하나의 sparse global-Y system에서 Schur/Kron
+  reduction하며 외부 Device port의 open-port `Zii`를 읽는다.
+- **Legacy modal**은 명시적 rollback/regression profile이다. source evidence가
+  부족할 때 Layerwise가 몰래 Legacy로 fallback해서는 안 된다.
+- PowerSI는 network compile이나 parameter 생성 중 읽히지 않는다.
+
+세부 공식과 modeling 설명은 [Evaluation Accuracy and Modeling
+Boundary](EVALUATION_ACCURACY.md)에 둔다. 현행 Layerwise는 source-derived
+quasi-static circuit model이며 다음을 충분히 표현하지 않는다.
+
+- lateral Trace impedance와 plane-sheet nonuniform R/L
+- Via return/mutual coupling, pad/anti-pad field와 copper spreading
+- inter-rail/site transfer coupling, DC IR drop, DGND tie impedance
+- general multiport/full-wave field behavior
+
+### 5.2 De-cap Distribution
+
+- 물리적 Decap/PWR Via landing XY와 source plane artwork는 불변이다.
+- candidate는 retained target PWR artwork와 source evidence로 eligibility를
+  판정한다. non-TOP 이동은 현행 v0.23 transition evidence/gate를 통과해야 한다.
+- 결과는 assignment planning이다. 필요한 Via stack retarget/rebuild를 실제
+  source SPD에 적용했다는 뜻이 아니다.
+- optional signal-routing protection은 기본 OFF이고 현재
+  `SIGNAL_NET_ONLY` width-resolved Trace scope다. routed PWR/GND, signal Via,
+  pin, pad, fanout 전체를 인증하지 않으므로 DRC-safe 결과로 승격하지 않는다.
+- 자세한 수량, topology, preview/apply 규칙은
+  [De-cap Distribution 변동 규칙](DECAP_DISTRIBUTION_RULES.md)에 둔다.
+
+### 5.3 Persistence, UI와 독립성
+
+- source identity, scenario state, solver/profile/compiler identity가 다르면
+  cache와 artifact를 공유하지 않는다.
+- `.spdpi`를 다시 열 때는 scenario가 가리키는 외부 raw SPD payload의 size와
+  SHA-256이 일치해야 한다. 따라서 `.spdpi`를 raw source 없이 완전히
+  self-contained인 project로 설명하지 않는다.
+- immutable Original **configuration**과 계산된 Original **result curve**를
+  구분한다. 현행 기본 Layerwise Original result는 run마다 다시 계산되므로,
+  저장된 baseline curve를 자동 재사용한다고 주장하지 않는다.
+- Original/Tuned 양쪽은 같은 builder-time connectivity/modelability 경계로
+  검사하며, 차단된 rail은 결과에 `NOT evaluated`로 남겨야 한다.
+- 장시간 parse, compile, solve, save/load는 GUI thread 밖에서 수행하고 progress,
+  cancellation, stale-result rejection을 보존해야 한다.
+- 프로그램명과 버전은 title bar와 installer metadata에서 쉽게 식별 가능해야
+  한다.
+- runtime에 다른 PI Calculator 또는 `probe-card-mlo-pdn`을 설치·import·갱신하지
+  않는다. 세부 경계는 [Embedded evaluation core](CORE_EXTRACTION.md)에 둔다.
+
+## 6. 증거와 상태 표기
+
+`passed` 한 단어만 사용하지 않는다. 모든 중요한 주장은 최소한 다음 세 요소를
+가진다.
+
+| 요소 | 허용 예 | 의미 |
+|---|---|---|
+| 적용 대상 | `current`, `historical`, `planned` + commit/profile/input hash | 어느 구현과 자료에 적용되는가 |
+| 증거 상태 | `verified`, `provisional`, `unknown` | artifact와 재현 범위가 충분한가 |
+| 실행 결과 | `passed`, `failed`, `blocked`, `not_run` | 해당 범위의 판정 또는 미실행 상태 |
+
+`verified + passed`도 명시된 coupon, parser, import 또는 gate 범위만 통과했다는
+뜻이다. product accuracy, performance, release까지 자동 승격하지 않는다.
+
+### 6.1 G0 작성 시점의 상태
+
+| 주장 | 적용 대상 | 증거 상태 | 실행 결과 | 해석 |
+|---|---|---|---|---|
+| 제품명·버전 identity | current v0.23.0 / `0f24363c` | verified | passed | source, title, package, installer metadata 범위 |
+| production-size import·save·92-rail solver entry | current v0.23.0 attestation | verified | passed | import/save/entry 범위에 한함 |
+| 같은 attestation의 frequency solve·Touchstone comparison | current v0.23.0 | verified | not_run | `frequency_solves_executed=0`, `touchstone_read=false` |
+| 현행 default solver의 PowerSI 정확성 | current v0.23.0 / 260729 retrospective | provisional | failed | completed manifest·sidecar와 offline verifier exit 2가 무결성을 확인했으며, bare/loaded macro가 각 limit을 초과했다; unseen/generalization은 아직 unknown/not_run |
+| 260804 terminal-complete loaded correlation | historical v0.22.0 | provisional | failed | 문서상 critical-band `16.743 dB`, `44.28°`; raw report가 Git에 없어 current 결과로 재사용 불가 |
+| 목표 장비의 시간·memory promotion | current | unknown | not_run | workstation 또는 import-only 수치로 승격 금지 |
+| product-core CI 회귀 차단 | current bounded selection | verified | passed | V3 `361 passed, 1 skipped in 22.88s`, local v0.13 bundle skip |
+
+현재 GUI의 `layerwise validation pending` 표시는 이 상태와 일치한다. 과거
+validation 문서의 placeholder, report-level pass, 작은 backward residual,
+import/save 성공은 PowerSI accuracy promotion이 아니다.
+
+W5 이전에는 제품 수준 PowerSI 수치 합격선이 **미확정**이었다. W5에서
+`1.00/1.25 dB` 등을 포함한 수치와 reference partition을 승인해
+machine-frozen policy로 고정했다. 260729 retrospective는 completed numerical
+FAIL이며, unseen/generalization과 260804/P5는 여전히 `unknown / not_run`이다.
+local mesh/oracle convergence 수치를 제품 PowerSI gate로 전용해서는 안 된다.
+
+### 6.2 W5-GATE approved/machine-frozen policy
+
+W5 threshold, partition, run manifest는 사용자 승인으로 **machine-frozen**된
+정책 계약이다. 수치와 분류는 여전히 역사적 측정 결과나 제품 sign-off가 아니다.
+현재 등록된
+자료에는 최종 generalization을 판정할 P5 unseen design이 없으므로, 최종 정확성
+및 일반화 승격은 BLOCKED다.
+
+- 승인 threshold: 100 kHz/1 MHz low-frequency offset, 100 kHz–100 MHz
+  critical-band magnitude, rail별 max magnitude, phase, low-impedance complex
+  error, dominant-peak 위치/진폭을 함께 판정한다.
+- VQPS 10개 bare rail과 VTRIP/VINT/VCPU 6개 loaded rail은 별도 strata로
+  유지하며 pooled 평균이나 한 strata가 다른 strata의 실패를 숨기는 판정을
+  하지 않는다.
+- 260729 development와 260804 retrospective design holdout은 모두
+  retrospective evidence다. W5 freeze 당시 양쪽 등록 `D:\` raw 경로와 S92P
+  경로는 존재/size 일치만 확인되었고 SHA는 재계산하지 않았다. 등록 baseline
+  candidate는 없었고, 이전 blocked root에서 생성된 candidate는 W6-BASE controller
+  output·scoring snapshot·retry에 재사용하지 않는다. 당시 승인된 W6 contract는
+  brand-new root의 fresh import에서 시작해야 한다. B의 correlation은 historical
+  evidence이고, C는 old candidate/import report를 정확히 한 번 read-only로
+  열었고, correlation report는 사용하지 않았으며, fresh C root에만 썼다.
+- Site0/site1/loaded는 blind sample이 아니라 노출된 strata다. P1 transfer/scale
+  holdout은 160-port runner와 memory-safe preprocessing 부재로, P2는 현재
+  weighting/reference-plane/de-embedding 미확정으로, P3/P4는 등록 경로의
+  reference 부재와 multifactor/solver-state confound로 BLOCKED다. P5 unseen
+  design은 없으며 최종 generalization에 필수다.
+
+따라서 W6가 만들 수 있는 것은 260729/260804의 **비-blind
+retrospective baseline**뿐이다. 이것을 unseen generalization 또는 제품
+PowerSI 합격으로 재사용할 수 없다.
+
+현재 trust identity는 benchmark base normalized SHA
+`d43b868629464f408ea19362daa78fc369d2fd446cf3d458cfdc044ccbf57f08`, adapter
+`6b7e399b4a843028ce754ac9154b8ce1a4575b1581c8d6007cebf26f94e6d440`, v6
+validator `3f26b2aa7880cd9aff89cd5407643c934367764b590db98962cbc30bfa1b04a0`,
+accuracy validator `8487be60cad523f9ed2ea1c61c57b580d9c2bb0fee598eea0bb938145b82151e`,
+policy `6ea6e0b3327eaf828257334d7bb0211582fcc85ed632468223c7b566d0d3fd4d`,
+controller `b7d5b87d97e1441ccaa950a1fbe50a49f599483e68acee99596eda7dd612262d`이다.
+기존 v5 validator, known-case policy와 historical fixtures는 byte-identical로
+보존되며, W6 controller는 `blocked_partial`에서 부분 결과를 점수화하지 않는다.
+
+첫 W6 260729 실행은 source HEAD
+`46d17dc73381d4292ea342d7a10e85d4f2e338f6`와 immutable root
+`D:\SPD-Decap-PI-Evaluator-W6\46d17dc73381d4292ea342d7a10e85d4f2e338f6\260729`에
+결속된다. tombstone `blocked_partial.json` SHA는
+`b81525bd47744dc1ea5c75bb26f20ea354246ad88b8ce5bc9aef131cb50c09f7`이며 phase1
+passed, phase2 exit2, v6 not_started, scoring refused였다. 이 결과는 old policy
+`c362acb01ef28cefbbd1d32753f86bccafbdd53355b42eda83c03a6ea810698b`에 결속되므로
+새 policy로 소급 검증하지 않고 root도 재사용하지 않는다. W6-BLOCK-A는 layerwise
+diagnostic/correlation의 누락 terminal-complete argument를 adapter에서만 보강한
+DONE 묶음이며 base/solver/pivot gate/physics는 변경하지 않았다.
+
+## 7. Promotion gate
+
+다음 gate는 순서대로 통과한다. 앞 단계 실패나 unknown 상태에서 뒤의 고비용
+단계를 실행하거나 release claim으로 건너뛰지 않는다.
+
+1. **Identity/evidence:** source, reference, port manifest, code, compiler,
+   profile, material assumption, frequency policy hash가 완전하다.
+2. **Physical/numerical integrity:** source ownership, limiting case, passivity,
+   reciprocity, conservation, conditioning, residual과 frequency coverage를
+   focused case로 판정한다.
+3. **Subsystem/known-case:** 변경된 subsystem의 deterministic regression과
+   catastrophe floor를 통과한다. 이는 외부 정확성 승격이 아니다.
+4. **Frozen candidate:** 관련 변경 묶음과 설정을 동결한 뒤 end-to-end
+   frequency solve와 artifact 생성을 완료한다.
+5. **External accuracy/generalization:** development, reserved holdout, 최종
+   unseen design을 분리해 rail별 magnitude RMS/max, phase RMS/max, resonance
+   위치·진폭, low-impedance complex error를 판정한다. 평균이 한 rail의 실패를
+   숨길 수 없다.
+6. **Performance/product/release:** 목표 장비의 wall time, process-tree memory,
+   cancellation, save/export, GUI response와 installer workflow를 판정한다.
+
+정확성 후보가 동결되기 전에 acceleration, adaptive sampling 또는 MOR 결과를
+정확성 개선으로 해석하지 않는다. source-derived 물리 변경은 한 번에 한 owning
+block만 바꾸고, 어떤 error component를 줄이려는지 사전에 명시한다.
+
+## 8. 검증 비용을 통제하는 불변 원칙
+
+구체 명령, 예상 비용, 최대 재시도 횟수와 중단 조건은
+[작업 기준 문서](WORK_EXECUTION_BASELINE.md)에 적는다. 이 문서에서는 다음
+원칙만 고정한다.
+
+- 작은 수정마다 전체 테스트, production SPD, PowerSI correlation, installer를
+  반복하지 않는다.
+- 관련 수정을 하나의 원인·결과 묶음으로 닫고 focused check를 수행한 뒤,
+  사전 정의된 milestone에서 subsystem 검증을 한 번 실행한다.
+- production/PowerSI 전체 검증은 solver 의미, profile, threshold와 변경 묶음이
+  동결된 candidate마다 원칙적으로 한 번 실행한다.
+- 낮은 단계가 실패하면 원인을 작은 재현으로 축소한다. 전체 실행을 디버깅
+  수단으로 사용하거나 원인 변경 없이 같은 고비용 실행을 반복하지 않는다.
+- commit, input hash, profile/compiler, 설정과 판정 환경이 모두 같을 때만 기존
+  증거를 재사용한다. 하나가 달라지면 상태를 `unknown`으로 되돌리되, 즉시 전체
+  검증을 실행하지 않고 다음 필요한 milestone에 배치한다.
+- `not_run`, `reused`, `not_required`를 구분해서 기록한다.
+- 문서만 바뀐 단계에서는 link, Markdown structure와 diff만 검사한다. 문서 변경을
+  이유로 solver나 installer 검증을 실행하지 않는다.
+
+```mermaid
+flowchart TD
+    P["목적·기술 기준<br/>왜·무엇·합격·금지"] --> W["작업 기준<br/>현재 목표·변경 묶음·검증 계획·중단점"]
+    W --> F["변경 묶음별 focused check"]
+    F --> M{"사전 정의된 milestone인가?"}
+    M -->|아니오| W
+    M -->|예| S["subsystem / known-case 검증 1회"]
+    S --> E{"production·PowerSI·release 조건인가?"}
+    E -->|아니오| W
+    E -->|예| H["동결 candidate의 고비용 검증 1회"]
+    H --> W
+    W -. "목적·합격 기준 변경" .-> U["사용자 검토"]
+    U --> P
+```
+
+## 9. Fail-closed와 비주장
+
+- source, geometry, topology, terminal, workbook, cache 또는 result identity가
+  불일치하면 재사용하지 않는다.
+- 누락·모호한 source evidence를 좌표 clamp, 임의 연결, fitted value 또는
+  silent fallback으로 숨기지 않는다. 명시적으로 versioned fallback을 지원하는
+  경우에는 그 범위와 confidence를 결과에 표시하고 exact-source 주장에 사용하지
+  않는다.
+- Original/Tuned 중 한쪽이 build되지 않으면 완전 비교로 표시하지 않는다.
+- 실행하지 않은 solve, rail 또는 reference 비교를 0, pass 또는 evaluated로
+  기록하지 않는다.
+- 특정 rail, 한 평균값, 한 보드 또는 한 PowerSI 파일의 개선을 일반 정확성으로
+  확대하지 않는다.
+- Distribution planning 결과를 as-built connectivity, DRC, 제조 또는 PI
+  sign-off로 부르지 않는다.
+- AI는 solver 결과나 design state를 직접 변경하지 않는다.
+
+## 10. 두 기준 문서를 이용한 작업 방식
+
+새 작업과 context가 재개될 때 기본 입력은 다음 두 문서로 제한한다.
+
+1. 이 **목적·기술 기준 문서**
+2. [**작업 기준 문서**](WORK_EXECUTION_BASELINE.md)
+
+필요한 subsystem 문서와 source는 현재 작업 범위에 따라 선택해서 읽는다. 과거
+연구 문서 전체를 세션 시작 조건으로 삼지 않는다.
+
+작업 기준 문서는 최소한 현재 목표, 제외 범위, 변경 묶음, 해당 파일/함수,
+검증 단계와 실행 조건, 예상 비용, 최대 재시도, 중단점, evidence identity,
+결과와 다음 결정을 기록해야 한다. 작업 기준 문서는 목적이나 합격선을 임의로
+바꾸지 못한다.
+
+목적에서 벗어난 문제가 발견되면 별도 후보로 기록할 수는 있지만 현재 작업을
+중단하고 확장하지 않는다. 목적 또는 수치 gate 변경이 필요하면 사용자 검토
+전까지 작업을 멈춘다.
+
+## 11. 관련 문서와 해석 범위
+
+- [Evaluation Accuracy and Modeling Boundary](EVALUATION_ACCURACY.md): 현행
+  Evaluation 수식·modeling 상세. 일부 과거 validation 서술은 역사적 범위다.
+- [Evaluation Solver Deep-Research Decision Record](EVALUATION_SOLVER_DEEP_RESEARCH_2026-08-04.md):
+  accuracy-first 연구 방향과 후보 기술의 역사적 결정 기록.
+- [Evaluation Algorithm Research State](evaluation-research/RESEARCH_STATE.md):
+  상세 연구·실행 이력. current product promotion 근거로 자동 사용하지 않는다.
+- [Bounded Baseline Protocol](evaluation-research/BASELINE_PROTOCOL.md): 상태 분리와
+  단계형 baseline의 역사적 프로토콜.
+- [Layer-Surface Validation Record](EVALUATION_LAYER_SURFACE_VALIDATION_2026-08-06.md):
+  named input과 과거 실행 기록. `TO_FILL` 구간이 있어 완료된 current release
+  evidence로 인용하지 않는다.
+- [De-cap Distribution 변동 규칙](DECAP_DISTRIBUTION_RULES.md): 현행
+  Distribution 상세 계약.
+- [Embedded evaluation core](CORE_EXTRACTION.md): standalone/runtime 독립성.
+
+## W5/W6 implementation closure
+
+W5 policy and implementation closure are machine-frozen and DONE. W6-BLOCK-A is
+DONE; W6-BLOCK-B is BLOCKED after a deterministic pivot reproduction,
+W6-BLOCK-C is DONE after preserving deterministic factor/matrix context,
+W6-BLOCK-D is DONE after recording a sparse raw-system condition lower bound,
+and W6-BLOCK-E is DONE after classifying and gating the rejected factor. W6-BASE
+is DONE for the single 260729 run from clean `main` HEAD
+`fb36288781dcc0b884950ef5a486c474090ceebd`: the completed manifest/sidecar was
+verified offline with exit 2 and the numerical result is FAIL. Bare macro was
+`1.7071112227372152` and loaded macro `15.910646842123072`, both above the 1.0 dB
+limit. The product's highest purpose remains calculation with accuracy comparable
+to PowerSI; this is retrospective evidence only. Accuracy for unseen/generalization
+remains `unknown / not_run`, P5 is mandatory for final signoff, and 260804 was not
+run. The completed root is
+`D:\SPD-Decap-PI-Evaluator-W6\fb36288781dcc0b884950ef5a486c474090ceebd\260729`;
+manifest SHA `2b14f90e762abc49833518137812e8fc97fcde0e9c145795b7384210cfd9f5de`,
+sidecar SHA `0d103e0ad47df80641fac0952a35a6eaa56cc9fdb71be24661903e451926e932`,
+and correlation SHA `969e40046e3a099d09557ba7500693460362336d76b067962436bd3b5177abc4`.
+
+W6 production authority is consumed by the completed 260729 numerical FAIL. The prior
+W7 frozen-artifact audits are complete and negative/unclassified. The completed
+`W7-PHYS-PRODUCTION-VIA-ROUTE-SOURCE-TRACE` static source trace classifies the production
+ownership as raw-base/global finite-route ownership in the v4 scenario network;
+`local_calibrated_via_half_branches` was not selected and mixed ownership is
+fail-closed. Confidence is high and source-proven, but this does not prove certificate
+R/L accuracy, forward/PowerSI accuracy, or a causal terminal-Via error owner. At the 17D
+closure active work was NONE; the current successor remains the sole ACTIVE item. A future
+260729 production rerun requires
+the user to activate and complete a new exclusive-owner classification item selecting
+exactly one source-derived block, followed by exactly one physical change, focused
+evidence, and a new gate. This does not authorize remote/release/installer work,
+retries, old-root W6-BASE reuse or mutation, threshold weakening, fallback,
+reordering, port movement, or physics changes.
+Before any future W6 run, the completed W6-BLOCK-E gate remains a prerequisite. C and D already consumed their
+exactly-one old candidate/import reads and wrote only to fresh roots; E had one
+production candidate/import invocation plus one separate orchestration ZIP
+central-directory read, did not use the correlation report, and wrote only to its
+brand-new diagnostic root. The old root remains forbidden for
+W6-BASE/controller/scoring/retry/mutation. The next BASE run must use a new root,
+controller-only execution, one-run/no-retry, and cannot start until that newly
+user-authorized owner-classification/change/evidence/gate sequence closes. The local
+bounded V3 result is a mirror of the required CI selection, not remote CI evidence.
+
+The focused parity V1 was red once and green once (`1 passed in 0.88s`); V2 was
+`10 passed in 2.13s`; current bounded V3 was `361 passed, 1 skipped in 22.88s`,
+exit 0. The only skip was the unavailable local v0.13 SPD regression bundle at
+`tests/test_spd_decap_scenario_io.py:1048`. D:/ input hash recomputation was not
+performed; the external PowerSI solver was not run. For the first
+`46d17dc...` blocked root only, Phase2 consumed the registered PowerSI Touchstone
+but produced no completed comparison or score; the current `fb36288...` W6-BASE
+root produced the completed numerical FAIL recorded above. Remote/full suite,
+installer, release, and production rerun were not performed. The B diagnostic
+reproduced the pivot but did not classify its root cause. C's exact evidence is the
+fresh root
+`D:\SPD-Decap-PI-Evaluator-W6-Diagnostics\e9a1ca124d94f1bd0192d519aa22996e87266ac5\260729-vtrip0-1khz`:
+exit 1 after about `667.19s`, no report, stdout SHA
+`e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855`, stderr SHA
+`8468b8f0798dc754c2c5926cc01dbe26d612b9cba7867efe4fa96f389bf89fc8`. It retained
+`756888` nodes and `2904010` nonzeros; local magnitudes were
+`2.467e-13..1.575e+08`, pivots `3.290e-10..8.366e+07`, ratio `2.543e17`,
+backward residual `6.808e-20`, and matrix SHA
+`709efcd1b8857c1ab9c4f73bec20cc7ec7d144cd9bfd32b9ee1657b956587524`. Old inputs
+and repo were unchanged. D now adds sparse condition lower-bound evidence only
+inside that existing pivot failure branch; its V1 red/green and V2 results are
+recorded in the work document. No threshold relaxation, fallback, reordering,
+port, or physics change is allowed. D's diagnostic root was
+`D:\SPD-Decap-PI-Evaluator-W6-Diagnostics\ac828f306da4ca4fa4e4c80c2cb77cadf0d3185f\260729-vtrip0-1khz-cond1`:
+exit 1 after `668.63s`, no report; inverse lower bound `3.040e+09`, condition
+lower bound `9.572e+17`, stderr SHA
+`d40503688889e51afd00504321ca37e032ff6b81fcb800c3bb51d722abab5c58`. The raw
+system is therefore proven to have condition lower bound at least `9.572e+17`;
+the tiny backward residual does not prove forward, assembly, or PowerSI accuracy.
+E's analytic V1 was red once (`1 failed in 0.93s`) and corrected green once
+(`1 passed in 0.72s`); two intermediate source-indentation/syntax collection
+failures occurred. The first valid exact V2 was `129 passed, 2 failed in 3.89s`,
+then `130 passed, 1 failed in 4.63s` after the test-only correction; two typo
+attempts collected zero tests. The final valid bounded V2 was `131 passed in 4.13s`,
+exit 0. This is local structural evidence, not PowerSI accuracy evidence.
+E applies row-scaled `Aeq=SAS` with `S=diag(1/sqrt(row_norm))`, solves `beq=S*b`
+then maps `x=S*y`, and retains original-coordinate `A@x-b` residuals. The
+existing pivot ceiling and no-fallback boundary are unchanged. The single E
+diagnostic at `D:\SPD-Decap-PI-Evaluator-W6-Diagnostics\f23c5b241d522d05f50f6de05bd6819723b7d3db\260729-vtrip0-1khz-equilibrated`
+completed with exit 0 in `697.35s`: report `6464` bytes/SHA
+`70e1264e6e4223da9c8715ade5695d02f1ab951aa36b418e5b067a3145fd2e9f`, stdout
+`281` bytes/SHA `da71076cad8e6c7308b46bcfc42b8ef0395b430b81cb78dcb905607c4a5d783d`,
+stderr `0` bytes/SHA `e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855`.
+The completed report is solver `modal-mvp-0.8.5`, profile
+`layerwise_admittance_v1`, rail `ADC_VDD_055_VTRIP/0`, frequency `1000 Hz`, with
+finite admittance `[0.13437046955500517, 12.100420788716686]`, scaled pivot
+`9.966405069248625e9 <= 1e13`, original residual
+`3.919670457452144e-17 <= 1e-9`, one frequency solve, Touchstone `false`, and
+adaptive sweep `false`. Candidate/import bindings matched their immutable inputs;
+the ZIP central directory was opened read-only once during orchestration, but only
+one production diagnostic invocation occurred. No retry or edit was performed.
+This proves the numerical promotion gate only, not model-form or PowerSI accuracy.
+E is DONE; W6-BASE is DONE for the 260729 numerical FAIL. W7-PHYS-AUDIT-MOUNTED-PATH
+is DONE negative/unclassified: the read-only audit preserved cap/Via/spatial provenance
+but its cap-only peak/bin prerequisite failed on all six loaded rails. No exclusive
+source-derived owning term was selected, so W7-PHYS is BLOCKED; at that closure,
+active work was NONE,
+and no physics code change is authorized.
+
+The single W7 mounted-path audit run (tool commit `1af7dd7a1150749a579b55623415ee8abedefda4`)
+returned exit 2 after 62.98s with `diagnostic_fail`, selected block `null`, causal
+owner `null`, and `owner_status=unclassified`. The versioned terminal-Via audit
+commit `5d3846cd85b4b5631440dc7f84f8f865900e7bcd` was then run exactly once from
+clean `main` against a new root
+`D:\SPD-Decap-PI-Evaluator-W7\5d3846cd85b4b5631440dc7f84f8f865900e7bcd\260729`;
+it exited 2 after 82.84s with exact stderr `integrity failure: target Via path evidence is missing`,
+created no JSON, and produced no owner field. At least one target landing therefore
+lacks persisted path evidence; no rail/Via count, R/L, or owner claim is made. The
+scientific owner remains unclassified and no physics change is authorized.
+
+`W7-PHYS-OWNER-TERMINAL-VIA-VS-SPATIAL` is DONE (negative/evidence-unavailable).
+The completed follow-up was `W7-PHYS-EVIDENCE-MISSING-PATH-COVERAGE`; it was a
+read-only coverage question, not a retry, and inspected only the existing script,
+test, and frozen candidate/import/correlation inputs. It must report 8,986 selected
+decaps across six rails with terminal/unit/Via states `available`, `missing`, or
+`trace_NA`; only available paths could contribute all-segment R/L/classification,
+but none were available, with
+missing/trace values explicitly N/A. No legacy imputation, owner selection, or physics
+authorization is permitted. A normal coverage report is diagnostic-complete exit 2,
+with owner null/unclassified; its report schema is v2 and trust conflicts remain no-output.
+
+The corrected v2 result from commit `66b2e2d5c39fe24d224544ffb590a87bc6f2a9aa`
+ran exactly once for 82.08s at
+`D:\SPD-Decap-PI-Evaluator-W7\66b2e2d5c39fe24d224544ffb590a87bc6f2a9aa\260729`.
+Its JSON is 527477 bytes, SHA-256
+`2816958e48d3713d179d7420834ad9ff97b177ba661848f1646def104c867a14`; all
+19,218 inventoried terminal Vias were missing (available 0, trace_NA 0), so this
+is coverage evidence only and creates no accuracy PASS/FAIL. The subsequent
+`W7-PHYS-PRODUCTION-VIA-ROUTE-SOURCE-TRACE` source V0 used only the documented 11
+source files, with no artifact/test/solver/edit execution, and closed source-proven:
+v6 → base benchmark → `_build_bound_layerwise_source_model` → v4-only termination
+factory → required v4 certificate → scenario network → retained base
+`finite_parallel_rl` links plus cap-only termination manifest. Local calibrated
+half-branches were not selected and mixed ownership is rejected. The 2026-08-25
+six-file source V0 and one Sol review are complete. `spd_adapter.py` persists
+reachability-produced drill/material/segment length/R/L/count from
+`recover_spd_ground_reachability`; `reduced_conductor.py` preserves source-Via
+parallel count without inventing R/L; `finite_route_reducer.py` performs exact series
+`fsum` aggregation and emits equivalent count 1; `finite_via_layerwise.py` validates
+`raw_count = parallel_path_count * per_path_via_count` and hands precomputed R/L to
+`finite_parallel_rl`; `compiled_topology_asset.py` persists/reloads those fields.
+`via_peec.py` is isolated diagnostic-only, and the other five files contain no
+producer binding to it. Therefore 17E is DONE as `producer unclassified (high
+confidence)`: production formula/unit conversion and runtime producer binding remain
+unknown. No artifact/raw-SPD/Python/import/test/solver/edit execution, PowerSI,
+forward-accuracy, causal-owner, threshold, physics, or retry claim is made. The next
+candidate `W7-PHYS-GROUND-REACHABILITY-RL-PRODUCER-TRACE` is DONE as
+`producer delegated/unclassified (high confidence)`. The one-file V0 found local
+geometry/provenance assembly but no local R/L formula or fallback; it delegates to
+`src/spd_decap_pi/_core/via_model.py::estimate_via_segment_rl` with length, drill,
+material, layer endpoints, and stackup, returning Ω/H or incomplete/None on exception.
+`physical_model_for_canonical` may build a multi-segment chain (`:7853-7861`), while
+`finite_physical` passes only `segments[0].length_um` with the full layer endpoints;
+there is no local `len==1` invariant. This unresolved delegate contract is not called
+a bug, and complete path-length modeling is not claimed. The next candidate
+`W7-PHYS-VIA-SEGMENT-RL-MODEL-TRACE` is DONE as a source-classified model. The one-file
+V0+Sol review bound sigma `5.959e7`, hollow area `pi*d*min(20,d/4)*1e-12`, qualifying
+solid area `pi*(d/2)^2*1e-12`, R/L equations, legacy fallback, and Ω/H outputs. It
+confirmed a conditional caller-contract bug: `spd.py` may construct multiple segments
+without a len-one guard, then passes `segments[0].length_um` with full endpoints; the
+one-segment model cannot recover full span. W6 exposure is unknown; this is not an
+accuracy or causal-owner claim. The consumed focused pytest execution boundary was clean
+`main` HEAD `17836612ceaf09adf83237ec377c845fd1b6ecfd`; it ran exactly once and failed: exit 1,
+`1 failed in 2.13s` (wall 3.40s), expected two segments but the fixture produced one correct
+`Signal$TOP→Signal$PWR` segment of 220um. The production diff remains statically accepted
+and uncommitted. The first static-reject/successor-2 retained-diff base is clean `main` HEAD
+`0cbe18e6b7c36dbfd686a14439a164c12f4abccb`, exactly `src/spd_decap_pi/_core/io/spd.py` plus
+`tests/test_io_spd.py`, with zero new pytest executions and no pytest artifact/result root.
+`W7-PHYS-MULTISEGMENT-RL-CALLER-FIX` remains BLOCKED; its corrected
+successor was statically REJECTED with zero pytest executions because the long Via used
+`DR-0102_60` without a GND PadDef and the long stackup omitted intermediate PWR.
+`17H-CORRECTED-SUCCESSOR-2` is DONE. The exact node ran once with exit 0, `1 passed in
+1.08s` (wall ~2.07s), no rerun and no artifact/result root. Commit
+`7fd8df954791b5a17229b49153d0f5dd57a248d2` contains exactly the production/test files;
+the worktree was clean. The behavior claim is narrow: each persisted segment uses its own
+geometry, completed tuples are fsum-summed, failures leave aggregate fields unavailable,
+and each contribution is added once. W6 exposure, PowerSI/forward accuracy, causal ownership,
+artifact/solver/production validation, and release readiness remain unclaimed. Next
+`W7-PHYS-W6-MULTISEGMENT-EXPOSURE` is DONE as source-classified evidence unavailable:
+the compact scenario quotient stores only schema/status, compiled SQLite stores aggregate
+`finite_parallel_rl` links/count/R/L/owners without source `series_terms`, segments, or
+`physical_model_status`, and production-complete surface certificates use a compiled-only
+stub without the raw canonical certificate. Import/correlation/manifest data provide
+identities and counts, not in-memory retained/suppressed/retarget rows. Therefore rereading
+the candidate cannot classify old W6 first-segment versus all-segment execution. The only
+allowed evidence budget here was D: root/candidate path+size metadata enumeration; candidate
+outer hash, ZIP central/manifest, `scenario.json`, small reports, prior audit JSON, and all
+Python/test/solver/production execution were zero. No exposure-present/absent, affected-term
+or rail count, R/L delta, W6-cause, accuracy, causal-owner, or fix-benefit claim is made.
+`W7-PHYS-PROSPECTIVE-RUNTIME-TERM-EVIDENCE` is BLOCKED/YAGNI and would require a separately
+selected grounded physical change plus a new candidate/HEAD/root, one-run/no-retry term
+digest/count/owner partition.
+
+The completed 17J read-only item used clean `main` HEAD `9d8cb2e5e09c2cef49895cbaee3b23c66d305820`.
+Its exact one-file whitelist was `src/spd_decap_pi/_core/solver/layer_surface_network.py`; one
+source V0 and one independent Sol review were allowed, with Python/import/test/artifact/raw-SPD/
+solver/production/edit at zero. The prior 17K item was limited to
+`src/spd_decap_pi/_core/solver/uniform_c00.py` from clean HEAD `675a7d9ccb9240ab3c88aadcef5dbe059aef7bb3`.
+The completed 17J question was whether the W6-bound layer-surface matrix stamps position/material-dependent
+plane-sheet series R/L or current-spreading/nonuniform corrections, rather than only retained
+artwork quasi-static Maxwell-Y. This is an observability ordering item, not a causal or physics
+authorization claim; lateral Trace was not selected because its production integration is not
+bounded.
+
+17J is DONE: local stamps are source-classified, while Maxwell partial generation is external/
+unclassified. Topology-only links are ideal vertical-node coalescence; incoming C[F] is remapped/
+collapsed to dielectric-ratio `j2πf·C` S, finite vertical Via links use `count/(R+j2πfL)`, and
+termination returns S. No local plane-sheet series R/L or nonuniform/current-spreading term was
+found. 17K is DONE: local adjacent-gap dispersive admittance is classified by
+`Ybulk=j2πf Σ[(Dk(1−jDf)/εr_nom) C_M]` (Hz/F/dimensionless inputs yield S), while Maxwell
+C/dispersion/load/solver insertion remains external/unclassified. Grounding/Schur/modal(0,0)
+replacement and numerical gates are reduction/validation, not extra physics; arbitrary caller
+loads remain external/unclassified. 17L is DONE: exact 2D polygon-overlay lumped parallel-plate
+Maxwell C is source-classified with `C=ε0·εr·A/d` (F) and Laplacian assembly; optional
+nonadjacent opening coupling is an opt-in projected-aperture parallel-plate approximation.
+There is no frequency/complex-Y, conductivity, sheet R/L, skin, nonuniform in-plane current, or
+current-spreading term; W6 inputs/asset fidelity remain external. 17M is DONE: the canonical
+`rg -n -i` discovery ran once (exit 0) and found candidate symbols in solver files, but no reuse
+or production proof was made. At the 17M closure, the sole ACTIVE successor was
+`W7-PHYS-COPPER-SURFACE-IMPEDANCE-REUSE-TRACE`, limited to one complete read of
+`src/spd_decap_pi/_core/solver/mfdm.py` from clean HEAD `1bd942b7b6e85fecef1d6074826e00a45adb71b4`
+and one Sol review; no implementation or W6 binding is implied. 17N is DONE: the surface-
+impedance constitutive law and MFDM stamp are source-classified, with one-/two-face coth/csch
+Ω/square behavior, DC `1/(σt)`, and high-frequency transfer tending to zero; W6 reuse is
+unclassified/STOP. 17O is DONE: the surface-patch local solver/operator is source-classified,
+but whole-solver W6 compatibility reuse is unclassified/STOP. Its ceiling is polygon clip/mesh
+and constant-signature strips; scalar σ/t and dielectric provenance; copper helper + gap L +
+dielectric C/loss differential nodal S; common-potential null/differential-only output; absolute
+MNA rejected; gates/cache. Terminal/Via/pad/antipad/fringe/full-wave and whole-solver drop-in
+compatibility were not proven.
+
+17P is BLOCKED before coding. Its high-level decision is frozen as an explicit new
+`layerwise_surface_patch_v1` profile, replacement rather than augmentation; the historical
+profile remains unchanged with no automatic fallback. The new profile owns polygon C/loss,
+lateral gap L, and sheet impedance; it disables old plane Maxwell C/ideal plane topology while
+retaining finite Via and termination exactly once, and fails closed when evidence is missing.
+The bounded core remains app v0.23.0; exact solver identity is pending. 17Q is BLOCKED because
+profile/fallback, worker/cache, raw geometry/material provenance, differential nullspace/final
+rail-order Zii, and no-double-counting owner transition remain external to its five-file trace.
+17R is now **source-classified BLOCKED**. At clean main HEAD
+`8451c4afca57fb46e89b7096026b281ba54bbf52`, the exact three files were each read once and no
+other source was read. All five acceptance items were UNPROVEN: the opt-in no-fallback profile
+and application enforcement are absent/outside scope; hash-bound plane input without solve-time
+raw/full Scenario hydration is not established and the visible adapter retains a
+`legacy_rail_template` fallback; balanced `N^H B=0`, stable rail/Zii and nullspace ownership are
+delegated; the old Maxwell C/ideal disable seam with exactly-once Via/termination is absent or
+delegated; and global OrderedDict/RLock caches leave single-worker/no-shared-mutable-cache
+unproven. Sol accepted the fail-closed stop: no fourth read, automatic whitelist expansion,
+coding, tests, or execution. User W6 reimplementation authority is recorded but cannot proceed
+without an explicit new bounded source-whitelist/contract decision; production runs, old-root
+reuse, release, and parent accuracy/causal promotion remain unauthorized.
+
+17S is now **source-classified BLOCKED**. At clean main HEAD
+`bc0147e5e15b91a77593ad7306b492aae3079d4c`, `services.py` and
+`layer_surface_termination.py` were each read completely once. The approved
+`src/spd_decap_pi/_core/solver/surface_certificate_asset.py` was missing (`Cannot find path`),
+with no search, substitution, or fourth read. Services left profile/application, no-fallback,
+replacement, and cache-lifetime seams delegated/unproven, with legacy/whole-outline fallback
+visible. Termination proves local Via/termination-once and owner/Kron checks only, not global
+`N^H B=0`, stable rail/Zii, or old-plane disable. The missing asset leaves hash-bound solve
+payload unproven; all joint acceptance groups are unmet. Sol accepted the fail-closed stop.
+W6 reimplementation authority remains unusable; no automatic path discovery/whitelist expansion,
+code, test, artifact, production, old-root, release, or accuracy claim is authorized.
+
+17T is now **source-classified BLOCKED**. At clean main HEAD
+`57aae22531d481623d34b6fb1b68bc0a201702c9`, A/B/C ran exactly once sequentially: A returned
+4 lines/2 files, B 29 lines/4 files, C 12 lines/1 file, all within caps. A's only new candidate
+was `src/spd_decap_pi/raw_spatial_contact_compiler.py`; B's candidates were prior-read/frozen
+`evaluation.py`, `services.py`, `layerwise_network.py` plus re-export-only `solver/__init__.py`;
+C found only prior-read `surface_patch_plane.py` definitions/references and no integration caller.
+Thus future candidate budget collapses to A1/B0/C0; symbol matches are not implementation proof.
+17U's compiler trust/resource/determinism/fail-closed behavior is source-proven, but asset assembly,
+certificate envelope, complete polygon/material/dielectric provenance, and a raw-SPD/full-Scenario-free
+solve-time payload are delegated/unproven; 17U is source-classified BLOCKED. 17V then proved only
+structural schema/hash/bounds and certificate envelope checks; full polygons/material/dielectric fields
+and a solve-ready payload remain absent, so 17V is source-classified BLOCKED. 17W then ran at clean main
+HEAD `43b244909b4bbb03057666a2451b14f2cce566e5`: its exact definition query returned 2 lines/2 files
+once, with `domain.py` unread before that query and `spd.py` retained as prior-17F evidence (no reread).
+17W is DONE (source-classified). 17X then read `src/spd_decap_pi/_core/domain.py` once, but is
+source-classified BLOCKED on the existing-contract gap: same-file ProjectSpec types prove geometry
+primitives/assets, `_um`, source SHA/order, stackup thickness/conductivity, and dielectric frequency
+epsilon/loss, while separate adjacent-conductor spacing is derived only by summing positive intervening
+dielectric thickness; the existing compiler handoff is absent and frozen 17F remains unproven.
+Material-only evidence is not accuracy proof. 17Y ran its filename query once with no matches and is
+source-classified BLOCKED. 17Z then ran its symbol query once at clean HEAD
+`4f5d149a1e803caa2a2b78b854b6579cafb3bed4`, returning 17 lines/5 files; only
+`tests/test_raw_spatial_contact_compiler.py` referenced the compiler symbol, so that existing test is
+ selected. 17Z is DONE. 17AA `W7-PHYS-W6-RAW-SPATIAL-ASSET-V3-EMISSION` is BLOCKED at its
+test gate. The approved command `pytest -q tests/test_raw_spatial_contact_compiler.py::test_plane_sheet_payload_v3_is_hash_bound_and_v2_remains_unchanged`
+ran exactly once: exit 1, `1 failed in 1.55s`; `_plane_sheet_payload` raised
+`RAW_SPATIAL_PLANE_SHEET_REQUIRED` with `ProjectSpec stackup physical fields are incomplete` before
+the v3 asset. There was no rerun, and this record does not classify the cause as fixture or
+production. The three-path technical diff was atomically committed as
+`c7306f2b2633b8d610bb962eb5b64966235afd2f` (3 files, 618 insertions/21 deletions), leaving clean
+`main` as the query base. 17AA and 17AA-S1 remain historical BLOCKED failed attempts. S2 is DONE:
+the approved command
+`pytest -q tests/test_raw_spatial_contact_compiler.py::test_plane_sheet_payload_v3_is_hash_bound_and_v2_remains_unchanged`
+ran once under S2 with exit 0, `1 passed in 1.09s`; no rerun, broad-suite, or production run.
+The v3 emission goal is achieved via S2. 17AB then ran its exact frozen query once on clean `main`
+(exit 0, 26 lines/5 files). The useful unique raw-spatial persistence seam is
+`src/spd_decap_pi/spd_adapter.py`: it imports both keys, requires the compiled manifest, and
+normalizes/sets `RAW_SPATIAL_CONTACT_ASSET_METADATA_KEY`; other matches are definitions/validator,
+the sibling compiled builder/persistence in `surface_certificate_asset`, and the compiled reader in
+`layerwise_network`. These matches are location evidence only. 17AC is BLOCKED (source-classified
+STOP) after its single authorized read of `src/spd_decap_pi/spd_adapter.py` lines 100-215:
+`_has_compiled_topology_manifest` lines 114-128 and `_merge_raw_spatial_contact_asset` lines 131-206
+prove copy-on-write persistence, exact generated attachment name/type/payload match, casefold collision
+rejection, canonical `RAW_SPATIAL_CONTACT_ASSET_METADATA_KEY` preservation, and divergent existing
+manifest rejection. v3 semantic validation and compiler/caller ownership remain explicitly unproven/
+delegated; absence is not evidence. 17AD is DONE at clean main HEAD
+`7537c8ebee9109071db54cc84f5562e375bfc07f`: its exact frozen query ran once, exit 0, with 2 output
+lines/1 file. The definition is `src/spd_decap_pi/spd_adapter.py:131` and the exactly one selected
+non-definition caller is `src/spd_decap_pi/spd_adapter.py:7868`; this is location evidence only, with
+no files opened and no compiler/delegate inference. 17AE is DONE as source-location boundary evidence
+at clean main HEAD `c5f3b1a234c8deeffa26b0fa6cf60dabc4d576d9`: its exact frozen PowerShell ran once,
+exit 0, exactly 2 lines/1 file: `src/spd_decap_pi/spd_adapter.py:6423:def import_spd_scenario(` and
+`src/spd_decap_pi/spd_adapter.py:8024:def verify_scenario_source(`. The bracketing owner is
+`import_spd_scenario`, but the 6423-8024 span is 1601 lines and not reasonably bounded; no contiguous/
+implementation read was made and no compiler/delegate inference is allowed. Sole ACTIVE successor is
+`W7-PHYS-W6-RAW-SPATIAL-V3-COMPILER-MERGE-SYMBOL-DISCOVERY` (17AF), limited to the exact query
+`rg -n --with-filename --no-heading --color never '\b(?:compile_raw_spatial_contact_asset|_merge_raw_spatial_contact_asset)\b' 'src/spd_decap_pi/spd_adapter.py'`;
+cap <=10 output lines and exactly 1 file. Ignore import/definition matches; require a non-import/
+non-definition compiler occurrence at or before the known non-definition merge call, select nearest
+compiler occurrence, and require compiler-to-merge span <=120 lines. Error, over-cap, wrong file,
+missing actual call, compiler after merge, or span >120 => STOP. Location evidence only; 17AF opens no
+files and any contiguous read requires separate authorization. 17AF is DONE at clean main HEAD
+`e4a6704247770cce084fd70fa3d5307f95a3a64a`: the exact frozen query ran once, exit 0, 4 lines/1 file
+(line 45 compiler import, line 131 merge definition, line 7860 actual compiler call, line 7868 known
+merge call). After ignoring import/definition, nearest compiler-to-merge span is 8 lines <=120; this
+is location evidence only with no file open or inference beyond placement. 17AF is DONE at clean main
+HEAD `e4a6704247770cce084fd70fa3d5307f95a3a64a`: exact query once exit0, 4 lines/1 file (compiler
+import 45, merge definition 131, actual compiler call 7860, known merge call 7868); nearest filtered
+span is 8 lines <=120. 17AG is DONE as integration-gap evidence at clean main HEAD
+`300d5aacc6386ad8c55ce6bd198ab207fb1f4597`: its 38-line read found the omitted
+`include_plane_sheet_payload=True` wiring and therefore actual schema-v2 import; downstream
+persistence/return remains unproven. 17AH is DONE as bounded location evidence at clean main HEAD
+`d45a23f62ebd417a50498724bdea79ba77d8d041`: exact query once exit0, 22 lines/1 file; import line70,
+non-import `import_spd_scenario` calls 509, 587, 618, 647, 698, 791, 863, 965, 1207, 1208, 1229,
+1249, 1272, 1291, 1409, 1450, 2298; raw metadata key import45/checks1750, 1752, 2487; no
+compiler/include flag matches. Location evidence only; no test owner selected. 17AI is BLOCKED (gate
+STOP) at clean main HEAD `0b9e75f5367c12e76e8e06edb652f112d518b69d`: exact frozen PowerShell once,
+exit2, zero output; no rerun; failure stage unclassified among silent gates and no cause inferred.
+17AJ is DONE as deterministic owner-location evidence at clean main HEAD
+`4aaf242dc6da530b600b01e924f4a9c01ab88c01`: exact diagnostic once exit0, exactly four lines for the
+expected file; target 1750 bracketed by definition lines 1736-1764 with no frozen 17AH non-import
+call; target 2487 bracketed by line 1764 and valid EOF sentinel with frozen call 2298; exactly one
+owner selected. 17AK is BLOCKED (source-classified endpoint STOP) at clean main HEAD
+`286e939fce53918465de72f8be9b67d3f1844470`: excerpts A lines 2284-2312 and B lines 2468-2505 each
+ran once. A proves `import_spd_scenario(source)` line2298 with no args/kwargs/opt-in and immediate
+status assertions. B proves persisted topology/raw-manifest attachment/source/project/certificate/
+topology-hash checks through2499, then `load_raw_spatial_contact_asset` starts at2500 and truncates
+at2505; schema/version/tables/`require_plane_sheet_payload`/tail UNPROVEN, with no extension or reread.
+17AL is DONE (source-classified test gap) at clean main HEAD `7618408f8979d07f6810ed1052cb472b8837b222`:
+exact tail2500-2540 once, natural EOF2524; loader checks source/project/certificate/topology/geometry
+hashes but no `require_plane_sheet_payload=True`, only get_via assertions plus rail witness. Together
+with known `import_spd_scenario(source)`, the owner is a viable integration seam, but default-v2 and
+no-v3-regression claims remain unproven. 17AM is DONE at clean main
+`2076ba2764a4ae7614a7fdaa55ee6b208f6fdbad`: exact6423-6465 once, complete
+`import_spd_scenario(path: str|Path, *, progress=None, is_cancelled=None) -> ScenarioImport`, safe
+kw-only extension point, setup not truncated. 17AN is DONE at clean main
+`f178f4a12720a30db6f12e0011c79d9e2346bd54`: 2 files, 4 insertions/1 deletion; adapter kw-only
+defaultFalse was forwarded, selected test used include True and loader require True, Sol static ACCEPT,
+and the focused node ran once with exit0 (`1 passed in 1.59s`); no rerun, default callers remain v2,
+and no production W6/accuracy claim. 17AO is DONE as location evidence at clean main
+`f9ab13c752f7b9c832e69f1d0a16f54fabd38085`: exact query once exit0, 4 lines/2 files; gui/main_window.py
+line109 import and line1867 actual call, spd_adapter.py line6423 def and line8070 __all__; ignoring
+import/def/string yields exactly one app caller `src/spd_decap_pi/gui/main_window.py:1867`. No production
+activation claim. 17AP is DONE at clean main
+`d476ce2da4bdb852c8164f2036be07eed8c504b0`: exact once read of gui/main_window.py lines1838-1895
+(58 lines) completed `_job_import_spd` boundary1859-1877; sole call omits include_plane_sheet_payload
+and therefore remains default-v2; progress scales to65%, cancellation is forwarded, view preparation and
+`_PreparedScenarioImport` return are present, with no local try/except or product/profile opt-in and upper
+error handling unproven. No code/test/production/accuracy claim. 17AQ is BLOCKED at clean main
+`f79927da0f96adc4a60644aa29388965b0dd6df8`: exact authorized rg once exit1 with zero output; no rerun,
+no existing direct `_job_import_spd` test seam, and no source/test/code. Sole ACTIVE successor is
+`W7-PHYS-W6-RAW-SPATIAL-V3-GUI-OPTIN-ACTIVATION` (17AR), limited to `src/spd_decap_pi/gui/main_window.py`
+only: add exactly one line `include_plane_sheet_payload=True,` to the existing import call; expected diff
+1 file/1 insertion, preserving path/progress/cancellation/view/return and API default/other callers. Sol
+static diff exactly once; no tests (reuse prior adapter opt-in focused PASS). ACCEPT => one-file atomic commit;
+REJECT => STOP. No search/source extension/new GUI test/helper/production SPD or GUI run/solver/profile/
+accuracy/release/version claim. 17AR is DONE at clean main commit `fba20767abfbc357f972f77172f6e7f0a5f67772`;
+source-before `d20eabf267f06799a4f13caa0dce51357eecd4aa`, exactly 1 file/1 insertion
+`include_plane_sheet_payload=True,` in the GUI call, Sol static ACCEPT, no tests, and no solver/production/
+accuracy claim. 17AS is DONE-negative at clean main `9dba3076b6648e7aeb874c96fa721997e1629bb3`: the
+exact authorized query ran once with exit0, 6 lines/1 file (`raw_spatial_contact_asset.py`), and after
+excluding definitions/signatures/guards/exports the actual `require_plane_sheet_payload=True` source
+caller count is zero. Producer active/no solver consumer; no rerun/read/code/test/production/PowerSI/
+accuracy/causal claim. 17AT is BLOCKED/implementation REJECT after one frozen-evidence design pass; all six
+bindings remain UNPROVEN: profile+require owner; hash-bound evaluation→solver handoff; replacement/no-double-
+counting owner-off seam; differential/nullspace/gauge/rail-order global mapping; worker/immutable/cache fencing;
+and minimal file/test/V1/V2 whitelist. 17AU is DONE (location evidence) at clean main
+`9f1c95fa0a933445bbb918aff050fcb6238b1e6b`: exact query once exit0, 22 lines/2 files; raw loader/require
+cluster 2460-2477 unique; evaluation profile resolution 2363 plus build import 2404/call 2420 one
+unambiguous cluster; no source range/code/test/claims. 17AV is BLOCKED/STOP: exact2330-2449 read
+started mid-signature/function name and ended mid termination exception/comment/downstream; no extension.
+17AW is DONE (location evidence) at clean main `24382198a02c01cb9720b02148784d1b57abf33c`: exact
+PowerShell once exit0, exactly 2 lines/1 file (`evaluation.py:2325 def _builder_preflight_blockers`,
+`2501` next def), span176<=240. 17AX is BLOCKED/STOP (source-classified preflight-only): raw-v3
+loader/requireTrue, replacement, nullspace/gauge, and rail-order Zii are absent/delegate-owned; no
+implementation approval. 17AY is DONE (location evidence) at clean main `ab36421d41146613574fa65538efa0695adb398a`:
+exact query once exit0, 2 lines/1 file, span174<=400. The 17AZ owner trace is BLOCKED/STOP
+(source-classified delegated substrate owner): its exact5432-5605 read validated v4 certificate/
+rail/port/device/geometry/provenance and returned `LayerwiseUniformSourceModel`, but raw-v3/
+replacement/nullspace/Zii were absent and substrate was delegated to `compile_layerwise_substrate`.
+17BA is BLOCKED/STOP (source-classified boundary span): its exact query ran once exit0 with target
+`compile_layerwise_substrate` at line3669 and next top-level definition at4296, span627>500; no file
+read was made. 17BB is BLOCKED/STOP (cache-only multiple clusters): its documented query ran once exit0
+with 8 unique exact-file rows in3669-4295 at 3901,3906,3933,3939 (cache-read span39) and 4278,4283,
+4284,4285 (cache-write/eviction span8), combined span385; raw-v3 loader/require/plane/surface/layer
+tokens were 0 and no source range was read. Sole ACTIVE successor is 17BC
+`W7-PHYS-W6-LAYERWISE-SUBSTRATE-INPUT-CACHE-SEAM-TRACE`, one exact read only. Its 3669-3945 read at
+clean main `76b550ddbf0301d3c682840d206f312ed60345fc` proved signature/project/attachments plus
+required_rail_id/progress/is_cancelled, topology/certificate/geometry snapshot, two cache lookups,
+asset SHA and cancellation; raw-v3/require/plane-sheet absent, identity delegated to
+`_finite_via_substrate_identity` and `_substrate_identity`, and the range ended in a continuing block.
+17BC is therefore BLOCKED/STOP (endpoint truncation + delegated identity). Sole ACTIVE successor is
+17BD is DONE (location evidence) at clean main `662de67882c27bafc3420c965bb069da7458b826`:
+its exact query ran once exit0 with finite identity3462→next3546 span84 and substrate identity3343→next3462
+span119; repeated3462 is intended adjacency (the first helper’s immediate next is the second target),
+despite output list order. 17BE is BLOCKED/STOP (raw-v3/hash seam unproven): its exact3343-3545 read at
+clean main `0bea406939f3f84a1000c56d4b74b490cbf3a2cb` completed both helpers and showed current identity
+binds source/geometry/material/blocks/GND/certificate or topology/ports/omissions/compiler/static
+`layerwise_admittance_v1`; raw-v3 manifest/payload/content hash absent, no profile opt-in arg, and
+canonical/key/static identity delegated externally. 17BF docs-only design gate is BLOCKED/design REJECT:
+frozen evidence cannot name the activation owner/call boundary, require=True v3 loader and attachment/
+project binding, loader return identity/hash fields, kw-only defaultFalse propagation, v2/v3 cache alias
+prevention/resource contract, or an exact minimal production/test whitelist plus focused V1. Sole ACTIVE
+17BG `W7-PHYS-W6-RAW-SPATIAL-V3-LOADER-RETURN-CONTRACT-TRACE` is BLOCKED/STOP: its exact 2460-2558 read
+at clean main `95cb94d28090021c8b21081b771b1d8d30d2b353` completed the loader, require=True v3 path, five
+binding hashes, attachment/cancellation/temp-SQLite cleanup, and no fallback, but canonical payload/content
+identity is delegated to `_validate_manifest` and the `LoadedRawSpatialContactAsset` constructor/type; no
+further source trace was made. 17BH `W7-PHYS-W6-LOADED-RAW-SPATIAL-ASSET-LIFETIME-CONTRACT-TRACE` is
+BLOCKED/source-classified STOP: its exact once query at clean main `3b507dd9aab7871baab29226f9849c87659c058b`
+returned 164 lines/one match/one file, but the output ended inside `get_padstack` at line2438 without a next
+top-level boundary. 17BI is DONE/PASS at clean main `c8e97c3ca8937775c869d3e4be20bd3cb489787f`: exact
+2275-2459 once exit0 completed the class, immutable public manifest, lifecycle/context, and blank2458-2459
+plus frozen def2460 exact boundary. 17BJ is DONE/PASS at technical commit
+`bbf5598c76beb0190863a492c3a4b68ca007b687`; its focused node ran once after Sol ACCEPT,
+exit0 (`1 passed in 0.79s`, process elapsed `1.401s`). 17BK is BLOCKED/source-classified STOP:
+its exact location query at clean main `afda7f5c9e88f71235229a34e386528c11909647` returned 3 lines/1 file
+at 1360/1395/1421, and the conditional 1360-1484 (125-line) read proved inventory/count/ordinal/grouping,
+ordered digest, coordinate_unit um, four identity bindings, batch1024/cancel, and incomplete-grouping
+fail-closed behavior, but field/type/unit/layer/net semantics delegate to `_validate_plane_stackup` and
+`_validate_plane_primitive`; no further 17BK read occurred. 17BL is DONE/location PASS: clean main
+`59c7e4b1a457057c00ef9ebd2286829d8c9710a7` exact query once exited0 with exactly 2 lines/1 file at
+validator definitions 1280/1323. 17BM is DONE/PASS at clean main `7d5eb16d67d9d98fad3a89939819eb4f30e45b80`:
+the exact 1280-1359 (80-line) read was locally complete for fields/types/units/order/group/hash and gaps;
+primitive layer, nonblank net, and source-asset/hash binding were present, but island/surface identity and
+physical ownership were not proven, so physical ownership remains BLOCKED. 17BN is DONE/PASS at technical
+commit `8f74ccc1f22c94373f48b07edac6480ef116e830`; Sol static ACCEPT and its focused node ran exactly once,
+exit0 `1 passed in 1.19s` (elapsed1.866s). Evidence is limited to typed immutable five-table rows,
+bounded iterators, counts/order, v2/closed/batch contracts; physical ownership/stamp/profile/replacement/
+nullspace/Zii/production/accuracy/release remain unproven and prohibited. 17BO is BLOCKED/design REJECT:
+frozen evidence proves primitive source/hash plus net/layer conductor bindings and surface-row field existence,
+but does not prove source-vs-artwork SHA producer/domain/content equivalence, canonical net/layer namespaces,
+or islands_by_surface provenance/electrical-owner meaning. 17BO is therefore BLOCKED/design REJECT with no
+implementation whitelist or physical inference. 17BP is closed BLOCKED/source-classified location STOP at
+clean main/doc commit `f50bcd5`: its exact query returned only the class definition and island inventory,
+without an actual `RawSpatialSurfaceRow` producer. 17BP is BLOCKED/source-classified location STOP. 17BQ
+is DONE/location PASS at clean main/docs HEAD `d8a5c49`: its exact query returned 9 unique lines/2 files,
+with exclusions leaving exactly one actual constructor at `src/spd_decap_pi/raw_spatial_contact_compiler.py:2575`.
+17BR is BLOCKED/boundary STOP at clean main/docs HEAD `d28dcd2`: its exact script produced compiler boundaries
+2363/2621, an inclusive 258-line span exceeding the 160-line gate; no source read or retry occurred. 17BS
+was the bounded constructor read and is now BLOCKED/source-classified STOP; no islands/electrical ownership/
+stamp/accuracy claim follows. 17BS is BLOCKED/source-classified STOP at clean main/docs HEAD `5095ed3`:
+exact2550-2600 read
+completed constructor/return lines2575-2586 but began mid-control-flow, leaving item origins/normalization and
+source hash before2550 plus `_canonical_sha` delegated; no expansion/retry. 17BT is DONE/location PASS at clean
+main/docs HEAD `e042611`: exact query once exit0 with 5 unique lines/1 file, one cluster at 2500-2512. Sole
+Its bounded successor was 17BU, a local field-origin read; no islands/electrical ownership/stamp/accuracy
+claim follows. 17BU is BLOCKED/source-classified STOP at clean main/docs HEAD `37b1934`: exact2460-2535
+read proved decoded/analysis geometry equality, island sequence uniqueness, item append, analysis-key equality,
+and complete `_surface_source_hashes(...)` call, but began/ended mid-flow with key origins and helper semantics
+outside the range; no expansion/retry. 17BV is BLOCKED/location STOP at clean main/docs HEAD `ebba672`:
+exact query once exit0 with 5 unique lines/1 file found key assignments at2396/2425 plus net/layer/asset_sha
+at2413/2416/2417, but duplicate key semantics/domain were ambiguous from location output; no read/retry.
+17BW is BLOCKED/source-classified STOP at clean main/docs HEAD `4595cdb`: exact2388-2435 proved analysis key
+casefold geometry net/layer uniqueness and raw key lookup, but layer_by_fold/raw_records origins before the range
+and attachment binding after2435 remained unproven; no expansion/retry. Its split successor was 17BX, a
+two-excerpt asset-domain completion trace. 17BX is BLOCKED/source-classified STOP at clean main/docs HEAD
+`ddfec8a`: split A/B once returned 49 new lines without rereading2388-2435; raw plane-geometries source/bound,
+attachment casefold index with duplicate ambiguity, original name+bytes, and expected layer/net/bounds were
+proven, but canonical layer_by_fold was an external arg and SHA verification delegated to
+`_decode_geometry_attachment`; no expansion/retry. 17BY is DONE/location PASS at clean main/docs HEAD `65fbced`:
+the exact query ran once (exit0, 17 unique lines/1 file), uniquely identifying decode definition2292, parse
+definition2363 plus actual call3074-75, and layer-map creation3055 with passage; sibling layer lookups were not
+creators. 17BZ is BLOCKED/boundary STOP at clean main/docs HEAD `5b4c68d`: its exact command ran once and exited6
+with zero output because the positive target-to-next boundary span exceeded120; no retry/body read. At the 17BZ
+closure, the successor was 17CA, an oversize parse-layers boundary diagnostic. 17CA is DONE/location PASS at clean main HEAD
+`d6f9ebab38532d573bccdde3a982dbbf0b36999f`: exact query once exit0, exactly2 lines/1 file, parse_layers872 and
+next header_material1068, span196; no body/context read. 17CB is BLOCKED/location STOP at clean main HEAD
+`a3c4219e8bbfc22b027a46d2023f7169b09380fc`: exact query once exit0, 12 unique lines/1 file all872-1067,
+constructor918 and return1065 present but casefold meanings multiple; no body read. 17CC is DONE/location PASS at
+clean HEAD `ba407555ccc7170e1c215c0aafe8d87bab7f545c`: exact query once exit0, 6 lines/1 file at rows898,
+by_fold899, append917, constructor918, insert1058, return1065. 17CD is BLOCKED/source-classified STOP at clean
+HEAD `e2ed0ed33869c8a5371937abd122be1be11b7811`: one Get-Content invocation emitted exactly99 lines A/B; A was
+complete, B began1038 as a continuation and layer_match origin was skipped941-1037. 17CE is BLOCKED/location STOP
+at clean HEAD `5e8f5f7f5dfe265c5ca7b94853e2f82bd00f8033`: exact query exit0, 8 lines/1 file, span94>80 and two
+clusters; no body read or retry. Sole ACTIVE successor is 17CF, a control-boundary discovery query.
+
+17CF is DONE/location PASS at clean HEAD `7b4a00cbfa79216afe1172eadad9dba96dec0542`: the exact query ran once
+with exit0 and 19 lines/1 file, proving two nonoverlap control clusters942-967 and969-1038 with coherent
+indentation/nesting. Sole ACTIVE successor is 17CG, a bounded control-body trace.
+
+17CG is BLOCKED/source-classified STOP at clean HEAD `e289c7954d337ff48624a63e2905872a617864c`: the exact body read
+ran once with exit0 and 97 lines941-1037; control/pending/layer_match/by_fold binding was complete, but canonical
+layer depends on external `_decode_token` return/error/normalization. No retry or expansion occurred. Sole ACTIVE
+successor is 17CH, a decode-token definition-boundary query.
+
+17CH is DONE/location PASS at clean HEAD `5b6968a6118e9c432ae2ce1785a282e8081a525c`: exact query ran once with
+exit0, 2 lines/1 file, unique def402 and immediate next top-level def415, span13. Sole ACTIVE successor is 17CI,
+a bounded `_decode_token` contract trace.
+
+17CI is DONE/PASS at clean HEAD `120850c7a44b461423f5b69555f9ce5f4e88a01d`: exact body read ran once with exit0 and
+13 lines, proving strict UTF-8/strip, blank/control/>16KiB rejection, same-value return, and raw layer/casefold/by_fold/
+analysis string-domain binding. Asset/SHA/island/ownership/stamp claims remain unproven. Sole ACTIVE successor is 17CJ,
+a bounded geometry-attachment SHA contract trace.
+
+17CJ is DONE/PASS at clean HEAD `8ad1a8d17e3292fde0d2a893d918cae4f9caf814`: exact body read ran once with exit0 and
+71 lines, proving attachment bytes streaming SHA==expected before decode, bounded framed zlib/cancel, strict UTF8 JSON,
+and final surface asset_sha binding. Primitive source_asset_sha domain, islands, ownership, and stamp remain unproven.
+Sole ACTIVE successor is 17CK, an exact source-asset SHA producer discovery query.
+
+17CK is DONE/location PASS at clean HEAD `b43561eb26097e5ea1245e66761987fcd19759e3`: exact query ran once with
+exit0, 2 lines/1 file, span43; primitive source_asset fields at818 and digest consumption at861 were direct, but record
+provenance remains external.
+
+17CL is BLOCKED/source-classified STOP at clean HEAD `4c07698a84f03c5305b59a965061dff27a01d982`: the exact query ran once with exit0, 3 lines/1 file, span38; container line780, lookup802, and transfer818 were found, but record_by_key population and asset/asset_sha256 validation were unproven. No body read or retry occurred.
+17CM is BLOCKED/location STOP at clean HEAD `45be04069c3723627bcd9e61cc75e2d0deb98cda`: the exact record_by_key query ran once with exit0, 4 unique lines/1 file, span18 (init784, guard789, population792, lookup802), but records iteration and key construction were absent. No retry or body read occurred.
+17CN is BLOCKED/location STOP at clean HEAD `55424cb09610260cf46699a5b6b6c9004ab8f56f`: the exact query ran once with exit0, 3 unique lines/1 file, span16 at lines785/788/801; two semantic key assignments were present, so normalization/equality/intermediate validation were not inferred. No body read or retry occurred.
+17CO is BLOCKED/source-classified STOP at clean HEAD `4df620768744bd8563cacf430ffca19e6c3eb535`: the exact 23-line body read ran once with exit0 and proved plane_geometries records, raw/analysis key guards, and line802 lookup, but asset/asset_sha256 validation and preservation were absent. No expansion or retry occurred.
+17CP is BLOCKED/source-classified STOP at clean HEAD `652ee17f39b34a2c6f5ba93cb27cfe5e6944fd42`: the exact 16-line body read ran once with exit0 and proved missing/non-Mapping lookup and non-str asset/SHA failure, primitive-order validation, and unchanged transfer in complete line818; str-only values allow empty/nonhex/non64 SHA, so format validation was absent. No expansion or retry occurred.
+
+17CQ is BLOCKED/location STOP: its exact boundary command ran once at clean main HEAD `46b2cca9c1448ff7ad696fe066e2d1e512a16c74`, exited 3 with zero output because the unique top-level definition condition failed. No body read, 0-vs-multiple inference, or retry occurred.
+
+17CR is BLOCKED/location STOP at clean evidence `92a92a95b5d9f0d9da10c738c07b8195d47dfd87`: its exact file-scoped `_digest_hex` query ran once, exit1 with zero output. This proves only no exact match in the specified file, not repo-global absence or helper-name absence; no body read or retry occurred.
+
+17CT `W7-PHYS-W6-PLANE-PRIMITIVE-SOURCE-ASSET-SHA-DIGEST-VALIDATION-USE-DISCOVERY` is BLOCKED/location STOP at clean evidence HEAD `6dec0446c8b23d294104d1aea4fc843f763e20f6`: its exact location query ran once, exit0, 2 lines/1 file, span6. Line862 had name/digest str plus attachment-membership guard; line868 was an open `if observed != digest:` with observed origin and mismatch body absent. No retry or body read occurred.
+
+17CU `W7-PHYS-W6-PLANE-PRIMITIVE-SOURCE-ASSET-ATTACHMENT-CONTENT-HASH-BODY-TRACE` is BLOCKED/source-classified STOP at clean docs/evidence HEAD `c2acac75c41a65c30a88efb65d11a202f8dfa4f9`: its exact lines862–870 body read ran once, exit0, exactly 9 lines. Type/name membership guard+fail, cache-miss `sha256(attachments[name]).hexdigest()`, cache write, equality/mismatch fail, and closed line870 were proven; cache-hit `digests.get(name)` trusts cached values and cache initialization/ownership/no-other-writer/no-aliasing were unproven. No retry or expansion occurred. The retained command below is historical/consumed, not active.
+
+```powershell
+$path = 'src/spd_decap_pi/raw_spatial_contact_compiler.py'
+$lines = @(Get-Content -LiteralPath $path)
+if ($lines.Count -lt 870) { exit 2 }
+
+$output = for ($line = 862; $line -le 870; $line++) {
+    '{0}:{1}:{2}' -f $path, $line, $lines[$line - 1]
+}
+if ($output.Count -ne 9) { exit 3 }
+$output
+```
+
+Gate: exact once, exit0, exactly 9 lines (862–870) from 1 file. All type/membership guards, canonical SHA-256 over exact selected attachment bytes, equality comparison and mismatch fail branch must be complete within those lines, with no alias/default/synthesis or essential external helper and a closed line870. Any outside/delegated/truncated dependency stops with no retry or expansion. This is a bounded body trace only; asset-name meaning, islands, ownership, stamps, profile, replacement, nullspace, Zii, production, accuracy, and release remain out of scope.
+
+17CV `W7-PHYS-W6-PLANE-PRIMITIVE-ATTACHMENT-DIGEST-CACHE-OWNERSHIP-DISCOVERY` is BLOCKED/location STOP at clean evidence HEAD `90ae22d410433b27383386281ea4e700bc7d0733`: its exact `digests` query ran once, exit0, 11 lines/1 file. The 858/864/867 cluster and separate 1951–2118 init/writer/membership/update/items cluster failed the one-cluster/no-additional-mutation gate. No retry or body read occurred; its command is consumed historical evidence.
+
+17CW `W7-PHYS-W6-PLANE-PRIMITIVE-ATTACHMENT-DIGEST-CACHE-OWNER-BOUNDARY-DISCOVERY` is DONE/location PASS at clean docs/evidence HEAD `0540090cd05ea29b202c5b62462d9f03c12e6c4f`; its exact defs-boundary command ran once, exit0, 2 lines/1 file (line857 `_validate_plane_sheet_assets(...)`, line872 `_parse_layers(`, span15), and is consumed historical evidence:
+
+```powershell
+$path = 'src/spd_decap_pi/raw_spatial_contact_compiler.py'
+$defs = @(rg -n --with-filename --no-heading --color never `
+    '^(?:async\s+def|def|class)\s' `
+    $path)
+if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+$numbered = foreach ($line in $defs) {
+    if ($line -notmatch '^(.+):(\d+):(.*)$') { exit 2 }
+    [pscustomobject]@{
+        Path = $Matches[1]
+        Number = [int]$Matches[2]
+        Raw = $line
+    }
+}
+
+$before = @($numbered |
+    Where-Object { $_.Number -le 858 } |
+    Select-Object -Last 1)
+$after = @($numbered |
+    Where-Object { $_.Number -gt 858 } |
+    Select-Object -First 1)
+
+if ($before.Count -ne 1 -or $after.Count -ne 1) { exit 3 }
+if ($before[0].Path -ne $path -or $after[0].Path -ne $path) { exit 4 }
+if ($before[0].Number -gt 858 -or $after[0].Number -le 858) { exit 5 }
+
+$output = @($before[0].Raw, $after[0].Raw)
+if ($output.Count -ne 2) { exit 6 }
+$output
+```
+
+Gate: exact once, exit0, exactly 2 lines/1 file; first boundary <=858 and next >858, positive owner span<=200, unique enclosing top-level owner for the line858 cluster ending before/separate from the 1951+ cluster. Parse/path/order/count/span errors, nested/dynamic ambiguity, or any cap failure stops with no retry. Location-only; no body read. Asset-name meaning, islands, ownership, stamps, profile, replacement, nullspace, Zii, production, accuracy, and release remain out of scope.
+
+17CX is BLOCKED/design REJECT at clean canonical docs HEAD `15d860672cdb11d09d080207a46a37789ba94c45`: record/artwork-name transfer and net/layer casefold domains were unproven; attachment-name/exact-byte SHA domain passed, so tuple equality remained unproven. No retry or new reads occurred.
+
+17CY `W7-PHYS-W6-PLANE-GEOMETRIES-CANONICAL-PRODUCER-DISCOVERY` is BLOCKED/location STOP at clean docs/evidence HEAD `c9bec2c83934d48655ff4c6d4fab4dd65533eabd`: its quoted-key-colon query ran once, exit1, with zero output, proving only pattern-local literal producer absence (no global/dynamic inference, retry, or file read). Sole ACTIVE 17CZ `W7-PHYS-W6-PLANE-GEOMETRIES-ASSIGNMENT-MUTATION-DISCOVERY` uses the exact command fenced only in Work §17CZ; gate is exit0, 1–16 unique lines across at most 4 files, one source-side initialization/population cluster span<=120. No asset/electrical/production/accuracy inference.
+
+The frozen contract keeps v2 constants/API byte-identical and adds a schema-v3 sibling: compiler
+keyword-only `include_plane_sheet_payload=False`, validator keyword-only `require_plane_sheet_payload=False`,
+opt-in no downgrade, exactly five normalized tables (`plane_primitives`, `vertices`, `circles`,
+`stackup_layers`, `dielectric_points`), no gap table, adjacent separation as fsum of positive intervening
+dielectric thickness, and fail-closed missing/duplicate/tampered rows. Digest all rows, coordinate
+transform, ProjectSpec/source-asset SHA, row counts, derived-gap count/hash into geometry/content
+identity; reuse spool/hash/bounds/cancel/cleanup, with explicit v3 flag blocking v2/compiled-only/
+legacy/missing/tampered payloads. No profile/global/app/solver identity, accuracy, or production claim.
+Frozen 17F `SpdAnalysis` polygon evidence remains UNPROVEN and unused. ProjectSpec itself source-proves
+the geometry/material inputs above; 17X failed only because the existing compiler handoff is absent.
+The historical 17AA activation contract was to select the uniquely mapped existing compiler test or
+freeze the named new `tests/test_raw_spatial_contact_compiler.py` path. That contract is superseded:
+17AA-S2 completed the v3 emission gate while preserving the existing SQLite/hash/resource helpers;
+no second attachment or new physics solver was introduced, v2 and missing physical tables fail closed,
+and the historical path remains unchanged. This records implementation completion only, not accuracy
+or causal authority.
+
+Approval basis commit `027ac7a09a3eded15f45c41860945f9d4c7f488d` is distinct from
+the caller-supplied exact current `main` HEAD required at a future W6 invocation;
+the policy contains no implementation self-HEAD. The frozen historical v5
+validator, known-case policy/fixtures, and base benchmark remain byte-identical.
+W5 adds a versioned adapter boundary and a separate atomic BLAS evidence artifact;
+W6 execution is controller-only and completed output is accepted only through the
+offline `validate_powersi_accuracy.py --verify-sidecar` boundary. The benchmark
+phase argv is internal controller evidence, not a direct user command.
+The registered 260804 S92P SHA is
+`cd103f42412c2a63518105d7e10fae8a0538c84982e1eddbfb74829a6972951b`; the missing
+trailing `b` in the earlier draft was a registry transcription typo, not a new
+hash computation.
+
+Frozen historical v5 validator/policy/fixtures and base benchmark remain byte-identical.
+W6-E atomically rotated the current v6→policy→accuracy-validator→controller trust
+chain for solver `modal-mvp-0.8.5`; after the result commit, listed current identities
+and the exact Git HEAD are frozen together. Current trust identities: base `d43b868629464f408ea19362daa78fc369d2fd446cf3d458cfdc044ccbf57f08`; adapter `6b7e399b4a843028ce754ac9154b8ce1a4575b1581c8d6007cebf26f94e6d440`; v6 `3f26b2aa7880cd9aff89cd5407643c934367764b590db98962cbc30bfa1b04a0`; accuracy validator `8487be60cad523f9ed2ea1c61c57b580d9c2bb0fee598eea0bb938145b82151e`; policy `6ea6e0b3327eaf828257334d7bb0211582fcc85ed632468223c7b566d0d3fd4d`; controller normalized source `b7d5b87d97e1441ccaa950a1fbe50a49f599483e68acee99596eda7dd612262d`.
+
+## 12. 변경 기록
+
+| 문서 버전 | 날짜 | 변경 |
+|---|---|---|
+| 1.2 | 2026-08-24 | W5-GATE의 승인 전 DRAFT threshold/partition/manifest 경계와 P5 generalization blocker를 명시. |
+| 1.3 | 2026-08-24 | W5 machine-frozen implementation closure, adapter/BLAS artifact boundary, bounded V1/V2 evidence, W6 READY and accuracy unknown/not_run. |
+| 1.4 | 2026-08-24 | trust-boundary correction과 controller-only/verify-only W6 boundary를 반영. |
+| 1.5 | 2026-08-24 | 최종 V3 green 증거와 W5 DONE/W6 READY 상태를 동결. |
+| 1.6 | 2026-08-25 | W6-BLOCK-A parity, blocked 260729 attempt, standing authorization과 W6-BLOCK-B pre-rerun boundary를 기록. |
+| 1.7 | 2026-08-25 | W6-BLOCK-B diagnostic exit1과 W6-BLOCK-C deterministic pivot-context instrumentation을 기록하고 W6-BASE를 보류. |
+| 1.8 | 2026-08-25 | W6-BLOCK-C 완료와 W6-BLOCK-D sparse condition lower-bound instrumentation을 기록하고 W6-BASE를 보류. |
+| 1.9 | 2026-08-25 | W6-BLOCK-D 완료, W6-BLOCK-E row-scaled factorization 및 solver 0.8.5 trust rotation을 기록하고 W6-BASE를 보류. |
+| 1.10 | 2026-08-25 | W6-BLOCK-E 단일 진단 exit0 및 수치 promotion gate를 기록하고 W6-BASE READY(미실행)로 전환. |
+| 1.11 | 2026-08-25 | W6-BASE 260729 completed numerical FAIL과 integrity-valid offline exit 2를 기록하고 W7-PHYS mounted-path audit를 지정. |
+| 1.12 | 2026-08-25 | W6 production authority consumed; W7 frozen-artifact owner audit와 one-physical-change/new-gate 순서를 고정. |
+| 1.13 | 2026-08-25 | W7 mounted-path audit negative/unclassified 종료, owning block 미분류로 W7-PHYS BLOCKED 및 active NONE. |
+| 1.15 | 2026-08-25 | terminal-Via 감사의 persisted path evidence 누락을 exit 2로 기록하고 W7-PHYS-EVIDENCE-MISSING-PATH-COVERAGE를 새 read-only active item으로 지정. |
+| 1.16 | 2026-08-25 | corrected v2 coverage audit를 negative/evidence-unavailable로 닫고 W7-PHYS-PRODUCTION-VIA-ROUTE-SOURCE-TRACE를 유일한 ACTIVE static-trace item으로 지정. |
+| 1.17 | 2026-08-25 | W7-PHYS-PRODUCTION-VIA-ROUTE-SOURCE-TRACE를 raw-base/global finite-route ownership으로 source-proven 종료하고 active NONE, 다음 producer-trace 후보 BLOCKED로 갱신. |
+| 1.18 | 2026-08-25 | 사용자 승인으로 W7-PHYS-RAW-FINITE-VIA-RL-GENERATION-TRACE를 유일한 read-only ACTIVE producer trace로 지정하고 6-file whitelist와 비목표를 고정. |
+| 1.19 | 2026-08-25 | 17E six-file source V0와 Sol review를 producer unclassified (high confidence)로 종료하고 active NONE, 17F ground-reachability producer trace 후보를 BLOCKED로 지정. |
+| 1.20 | 2026-08-25 | 사용자 승인으로 17F ground-reachability R/L producer trace를 유일한 ACTIVE read-only item으로 지정하고 단일 파일 whitelist와 비목표를 고정. |
+| 1.21 | 2026-08-25 | 17F one-file V0와 Sol review를 delegated/unclassified (high confidence)로 종료하고 active NONE, 17G via-segment R/L model trace 후보를 BLOCKED로 지정. |
+| 1.22 | 2026-08-25 | 사용자 승인으로 17G via-segment R/L model trace를 유일한 ACTIVE read-only item으로 지정하고 단일 파일 whitelist와 완료 기준을 고정. |
+| 1.23 | 2026-08-25 | 17G one-file V0와 Sol review를 source-classified model 및 conditional multi-segment caller-contract bug로 종료하고 active NONE, 17H caller fix 후보를 BLOCKED로 지정. |
+| 1.24 | 2026-08-25 | 17H multisegment caller fix를 사용자 code+test authority 아래 두 파일 whitelist의 유일한 ACTIVE bounded V0로 지정. |
+| 1.25 | 2026-08-25 | 17H focused fixture-contract node가 1회 red로 종료되어 production diff는 retained uncommitted로 보존되었고, corrected successor의 static REJECT(0 pytest) 후 17H-CORRECTED-SUCCESSOR-2를 사용자 pre-approval 아래 유일한 ACTIVE test-only correction으로 지정하며 exact HEAD/diff/node boundary를 고정. |
+| 1.26 | 2026-08-25 | first corrected successor static REJECT를 기록하고 17H-CORRECTED-SUCCESSOR-2의 TOP/PWR/GND padstack·full-stackup test-only contract를 유일한 ACTIVE item으로 고정. |
+| 1.27 | 2026-08-25 | 17H-CORRECTED-SUCCESSOR-2를 단일 focused PASS와 commit `7fd8df9`로 DONE 처리하고 W6 multisegment exposure 후보를 BLOCKED로 등록. |
+| 1.28 | 2026-08-25 | W6 multisegment exposure를 source-classified evidence unavailable/actual exposure unknown으로 종료하고 prospective runtime-term evidence를 BLOCKED/YAGNI로 등록. |
+| 1.29 | 2026-08-25 | W7-PHYS-PLANE-SHEET-NONUNIFORM-RL-SOURCE-TRACE를 유일한 ACTIVE one-file source V0/Sol review item으로 지정하고 W6 layer-surface 관측성 경계를 고정. |
+| 1.30 | 2026-08-25 | 17J를 local-stamp source-classified/Maxwell-generation external-unclassified로 종료하고 17K `uniform_c00.py` source trace를 유일 ACTIVE로 지정. |
+| 1.31 | 2026-08-25 | 17K를 local adjacent-gap dispersive admittance source-classified/Maxwell C·dispersion·load·solver insertion external-unclassified로 종료하고 17L `multilayer_capacitance.py` producer trace를 유일 ACTIVE로 지정. |
+| 1.32 | 2026-08-25 | 17L을 exact 2D polygon-overlay lumped parallel-plate Maxwell C source-classified/W6 input fidelity external로 종료하고 17M solver-directory reuse discovery를 유일 ACTIVE로 지정. |
+| 1.33 | 2026-08-26 | 17M canonical solver-directory `rg` discovery를 candidate-found/no-reuse-proof로 종료하고 `mfdm.py` copper surface-impedance reuse trace를 유일 ACTIVE로 지정. |
+| 1.34 | 2026-08-26 | 17N을 surface-impedance constitutive law/MFDM stamp source-classified·W6 reuse unclassified/STOP으로 종료하고 `surface_patch_plane.py` caller trace를 유일 ACTIVE로 지정. |
+| 1.35 | 2026-08-26 | 17O를 surface-patch local solver/operator source-classified·whole-solver W6 reuse unclassified/STOP으로 종료하고 17P W6 plane-sheet reimplementation design을 유일 ACTIVE로 지정. |
+| 1.36 | 2026-08-26 | 17P를 명시적 `layerwise_surface_patch_v1` replacement profile 결정과 함께 BLOCKED로 닫고 17Q 5-file adapter binding trace를 유일 ACTIVE로 지정. |
+| 1.37 | 2026-08-26 | 17Q를 외부 binding 미결로 BLOCKED 처리하고 `profiles.py`·`layerwise_network.py`·`spd_adapter.py` 3-file integration binding trace를 유일 ACTIVE로 지정. |
+| 1.38 | 2026-08-26 | 17R 세 파일 완전 read trace를 다섯 acceptance UNPROVEN/source-classified BLOCKED로 닫고 active NONE 및 새 bounded source-whitelist/contract 결정 경계를 기록. |
+| 1.39 | 2026-08-26 | 17R을 source-classified BLOCKED로 닫은 뒤 사용자 승인 exact three-file 17S source-contract trace를 sole ACTIVE read-only item으로 지정. |
+| 1.40 | 2026-08-26 | 17S 지정 asset 경로 누락과 외부 delegate로 source-classified BLOCKED 종료, active NONE 및 새 명시적 path-discovery/source-contract 승인 경계를 기록. |
+| 1.41 | 2026-08-26 | 17T bounded path-discovery를 사용자 승인 sole ACTIVE item으로 지정하고 세 sequential rg query의 budget/STOP 경계를 고정. |
+| 1.42 | 2026-08-26 | 17T A/B/C 검색을 within-cap source-classified BLOCKED로 닫고 A1/B0/C0, active NONE 및 명시적 successor 승인 경계를 기록. |
+| 1.43 | 2026-08-26 | 사용자 승인과 standing preapproval로 `W7-PHYS-W6-RAW-SPATIAL-PAYLOAD-CONTRACT-TRACE`를 유일한 ACTIVE one-file source trace로 지정하고 exact HEAD, payload completeness, hash-bound solve-time, fallback/delegate, resource STOP 경계를 고정. |
+| 1.44 | 2026-08-26 | 17U raw-spatial compiler trace를 compiler trust/resource/determinism proven 및 payload assembly/certificate envelope delegated/unproven으로 BLOCKED 종료하고, 17V asset/certificate two-file contract trace를 유일 ACTIVE로 지정. |
+| 1.45 | 2026-08-26 | 17V를 structural schema/hash/bounds 및 certificate envelope만 proven, full polygons/material/dielectric payload absent로 BLOCKED 종료하고 17W exact definition-owner query를 유일 ACTIVE로 지정. |
+| 1.46 | 2026-08-26 | 17W exact definition query를 2 lines/2 files로 DONE(source-classified) 종료하고 `domain.py` 단일 owner read + Sol review의 17X ProjectSpec plane/material trace를 sole ACTIVE로 지정. |
+| 1.47 | 2026-08-26 | 17X를 existing-contract gap으로 source-classified BLOCKED 종료하고 17Y raw-spatial v3 test-path discovery query를 sole ACTIVE로 지정. |
+| 1.48 | 2026-08-26 | 17Y 0-match filename query를 source-classified BLOCKED로 닫고 17Z raw-spatial v3 test-symbol discovery query를 sole ACTIVE로 지정. |
+| 1.49 | 2026-08-26 | 17Z 17-line/5-file symbol discovery에서 unique compiler test를 선택해 DONE으로 닫고 17AA 4-file v3 emission implementation gate를 sole ACTIVE로 지정. |
+| 1.50 | 2026-08-26 | 17AA focused test-gate exit1을 no-rerun BLOCKED로 기록하고, uncommitted three-file diff를 보존한 채 typed StackupLayer/fixture static gate의 17AA-S1 successor를 sole ACTIVE로 지정. |
+| 1.51 | 2026-08-26 | 17AA-S1 asset grouping test-gate exit1(`KeyError: 0`)을 no-rerun source-classified BLOCKED로 기록하고, raw asset 단일파일 S2 successor를 sole ACTIVE로 지정. |
+| 1.52 | 2026-08-26 | 17AA-S2 approved focused node exit0(`1 passed in 1.09s`)으로 v3 emission DONE을 기록하고 17AB persistence-owner discovery를 sole ACTIVE로 지정. |
+| 1.53 | 2026-08-26 | technical atomic commit `c7306f2b2633b8d610bb962eb5b64966235afd2f` (3 files, 618 insertions/21 deletions)과 clean-main 17AB query exit0(26 lines/5 files)을 기록하고 17AB DONE, 17AC SPD-adapter persistence trace를 sole ACTIVE로 지정. |
+| 1.54 | 2026-08-26 | 17AC SPD-adapter persistence trace를 source-classified STOP/BLOCKED로 닫고, 단일 caller query의 17AD merge-caller discovery를 sole ACTIVE로 지정. |
+| 1.55 | 2026-08-26 | clean-main HEAD `7537c8ebee9109071db54cc84f5562e375bfc07f`의 17AD query exit0(2 lines/1 file)과 definition/selected-caller 위치 evidence를 기록하고 17AE owner-boundary discovery를 sole ACTIVE로 지정. |
+| 1.56 | 2026-08-26 | clean-main HEAD `c5f3b1a234c8deeffa26b0fa6cf60dabc4d576d9`의 17AE boundary query exit0(2 lines/1 file), 1601-line unbounded STOP을 기록하고 17AF compiler/merge symbol discovery를 sole ACTIVE로 지정. |
+| 1.57 | 2026-08-26 | clean-main HEAD `e4a6704247770cce084fd70fa3d5307f95a3a64a`의 17AF query exit0(4 lines/1 file), 8-line compiler-to-merge span PASS를 기록하고 17AG bounded callsite trace를 sole ACTIVE로 지정. |
+| 1.58 | 2026-08-26 | clean-main HEAD `300d5aacc6386ad8c55ce6bd198ab207fb1f4597`의 17AG bounded callsite read에서 schema-v2 wiring gap을 source-classified로 기록하고 17AH adapter-test seam discovery를 sole ACTIVE로 지정. |
+| 1.59 | 2026-08-26 | clean-main HEAD `d45a23f62ebd417a50498724bdea79ba77d8d041`의 17AH query exit0(22 lines/1 file) bounded location evidence와 no-owner 결과를 기록하고 17AI adapter-test owner-boundary gate를 sole ACTIVE로 지정. |
+| 1.60 | 2026-08-26 | clean-main HEAD `0b9e75f5367c12e76e8e06edb652f112d518b69d`의 17AI frozen gate exit2/zero-output STOP(no rerun, failure stage unclassified)을 기록하고 17AJ owner-boundary diagnostic gate를 sole ACTIVE로 지정. |
+| 1.61 | 2026-08-26 | clean-main HEAD `4aaf242dc6da530b600b01e924f4a9c01ab88c01`의 17AJ diagnostic exit0(4 lines/expected file) deterministic owner-location evidence와 one-owner 선택을 기록하고 17AK opt-in test-seam trace를 sole ACTIVE로 지정. |
+| 1.62 | 2026-08-26 | clean-main HEAD `286e939fce53918465de72f8be9b67d3f1844470`의 17AK A/B excerpt endpoint STOP과 schema/version/tables/require-plane/tail UNPROVEN을 기록하고 17AL opt-in test-tail trace를 sole ACTIVE로 지정. |
+| 1.63 | 2026-08-26 | clean-main HEAD `7618408f8979d07f6810ed1052cb472b8837b222`의 17AL tail natural EOF2524와 source-classified test gap을 기록하고 17AM import-API signature trace를 sole ACTIVE로 지정. |
+| 1.64 | 2026-08-26 | clean-main HEAD `2076ba2764a4ae7614a7fdaa55ee6b208f6fdbad`의 17AM exact6423-6465 signature trace 완료와 17AN exact two-file adapter opt-in wiring authority를 sole ACTIVE로 지정. |
+| 1.65 | 2026-08-26 | clean-main HEAD `f178f4a12720a30db6f12e0011c79d9e2346bd54`의 17AN two-file opt-in wiring PASS와 focused node `1 passed in 1.59s`를 기록하고 17AO production import-caller discovery를 sole ACTIVE로 지정. |
+| 1.66 | 2026-08-26 | clean-main HEAD `f9ab13c752f7b9c832e69f1d0a16f54fabd38085`의 17AO exact query exit0(4 lines/2 files)와 unique gui/main_window.py:1867 caller location evidence를 기록하고 17AP bounded production import-caller trace를 sole ACTIVE로 지정. |
+| 1.67 | 2026-08-26 | clean-main HEAD `d476ce2da4bdb852c8164f2036be07eed8c504b0`의 17AP bounded gui caller trace 완료와 default-v2/error-boundary evidence를 기록하고 17AQ GUI caller test-seam discovery를 sole ACTIVE로 지정. |
+| 1.68 | 2026-08-26 | clean-main HEAD `f79927da0f96adc4a60644aa29388965b0dd6df8`의 17AQ exact rg exit1/zero-output STOP을 기록하고 17AR one-line GUI opt-in activation을 sole ACTIVE로 지정. |
+| 1.69 | 2026-08-26 | clean-main HEAD `fba20767abfbc357f972f77172f6e7f0a5f67772`의 17AR one-file GUI opt-in activation PASS를 기록하고 17AS solver-consumer discovery를 sole ACTIVE로 지정. |
+| 1.70 | 2026-08-26 | clean-main HEAD `9dba3076b6648e7aeb874c96fa721997e1629bb3`의 17AS exact query exit0(6 lines/1 file)에서 실제 `require_plane_sheet_payload=True` source caller 0을 확인한 DONE-negative 결과를 기록하고 17AT solver-consumer integration design을 sole ACTIVE로 지정. |
+| 1.71 | 2026-08-26 | clean-main HEAD `293c64b4de6aad9f5d828f7c270e5c8eccd53e68`에서 17AT frozen-evidence design을 implementation REJECT/BLOCKED로 닫고 여섯 바인딩 UNPROVEN을 기록하며 17AU evaluation-handoff boundary discovery를 sole ACTIVE로 지정. |
+| 1.72 | 2026-08-26 | clean-main HEAD `9f1c95fa0a933445bbb918aff050fcb6238b1e6b`의 17AU exact query exit0(22 lines/2 files) location evidence를 기록하고 17AV evaluation-handoff callsite trace를 sole ACTIVE로 지정. |
+| 1.73 | 2026-08-26 | clean-main HEAD `03b3d06b5a24686b64bd03a247cd8988d70ce402`의 17AV exact2330-2449 read truncation STOP을 기록하고 17AW evaluation-owner boundary discovery를 sole ACTIVE로 지정. |
+| 1.74 | 2026-08-26 | clean-main HEAD `24382198a02c01cb9720b02148784d1b57abf33c`의 17AW exact PowerShell exit0(2 lines/1 file, span176) location evidence를 기록하고 17AX builder-preflight owner trace를 sole ACTIVE로 지정. |
+| 1.75 | 2026-08-26 | clean-main HEAD `8d1be41756c263d382eed7809681b2e7501311d2`의 17AX exact2325-2500 preflight-only STOP을 기록하고 17AY layerwise source-model owner-boundary discovery를 sole ACTIVE로 지정. |
+| 1.76 | 2026-08-26 | clean-main HEAD `ab36421d41146613574fa65538efa0695adb398a`의 17AY exact query exit0(2 lines/1 file, span174) location evidence를 기록하고 17AZ layerwise source-model owner trace를 sole ACTIVE로 지정. |
+| 1.77 | 2026-08-26 | clean-main HEAD `d76f4a064eba51cf394a9af2d99b9400a04c4e77`의 17AZ exact5432-5605 trace에서 substrate owner delegation과 raw-v3/replacement/nullspace/Zii 부재를 기록해 BLOCKED/STOP으로 닫고 17BA substrate-owner boundary discovery를 sole ACTIVE로 지정. |
+| 1.78 | 2026-08-26 | clean-main HEAD `f9c8d9b33d37badcf331fc313b2433dd962c2e27`의 17BA exact query에서 `compile_layerwise_substrate` line3669와 next definition4296의 span627>500 STOP을 기록하고 17BB substrate-integration cluster discovery를 sole ACTIVE로 지정. |
+| 1.79 | 2026-08-26 | clean-main HEAD `c218cc81b56cf61a48373b7fceb140e48638af85`의 17BB exact query에서 cache-only 8개 row와 combined span385, raw-v3 관련 token 0을 기록해 multiple-cluster BLOCKED/STOP으로 닫고 17BC substrate-input cache seam trace를 sole ACTIVE로 지정. |
+| 1.80 | 2026-08-26 | clean-main HEAD `76b550ddbf0301d3c682840d206f312ed60345fc`의 17BC exact3669-3945 read에서 raw-v3/require/plane-sheet 부재, identity helper delegation, endpoint truncation을 기록해 BLOCKED/STOP으로 닫고 17BD identity-helper boundary discovery를 sole ACTIVE로 지정. |
+| 1.81 | 2026-08-26 | clean-main HEAD `662de67882c27bafc3420c965bb069da7458b826`의 17BD exact query exit0(4 lines/1 file)에서 helper spans84/119와 반복3462 의도적 adjacency를 location evidence로 기록해 DONE으로 닫고 17BE identity-helper trace를 sole ACTIVE로 지정. |
+| 1.82 | 2026-08-26 | clean-main HEAD `0bea406939f3f84a1000c56d4b74b490cbf3a2cb`의 17BE exact3343-3545 read에서 raw-v3/hash seam·profile opt-in·loader identity 부재와 외부 delegation을 기록해 BLOCKED/STOP으로 닫고 17BF substrate-handoff design을 docs-only sole ACTIVE로 지정. |
+| 1.83 | 2026-08-26 | frozen 17AN-17BE evidence만으로 17BF docs-only design gate를 수행해 activation/loader/identity/propagation/cache/whitelist bindings가 UNPROVEN임을 기록하고 BLOCKED/design REJECT, ACTIVE NONE으로 전환. |
+| 1.84 | 2026-08-26 | clean main `46d5fdac0c348d2e35948921679ebf3259a8b478`에서 17BG loader-return contract trace를 sole ACTIVE로 지정하고 exact raw_spatial_contact_asset.py:2460-2558 read/def2460-export2559 boundary를 동결. |
+| 1.85 | 2026-08-26 | clean main `95cb94d28090021c8b21081b771b1d8d30d2b353`의 17BG exact2460-2558 read에서 require=True v3/five binding hashes/attachment-cancel-temp-SQLite cleanup/no-fallback을 확인했으나 canonical payload/content identity가 `_validate_manifest`와 `LoadedRawSpatialContactAsset` constructor/type에 위임됨을 기록해 BLOCKED/STOP으로 닫고 17BH lifetime-contract trace를 sole ACTIVE로 지정. |
+| 1.86 | 2026-08-26 | clean main `3b507dd9aab7871baab29226f9849c87659c058b`의 17BH exact once class query exit0(164 lines/1 match/1 file)에서 manifest copy/MappingProxy/connection-tempdir/close/context/fail-closed를 확인했으나 line2438 `get_padstack` 내부에서 next top-level boundary가 잘려 BLOCKED/source-classified STOP으로 닫고 ACTIVE NONE으로 전환. |
+| 1.87 | 2026-08-26 | 사용자 승인에 따라 clean main `48caf37613db8f4bd8d00e7aa685b79862b7dcf7`에서 17BI raw_spatial_contact_asset.py:2275-2459(185) 단일 read를 sole ACTIVE로 지정하고, frozen 17BG def2460을 재독하지 않는 complete-contract boundary를 동결. |
+| 1.88 | 2026-08-26 | clean main `c8e97c3ca8937775c869d3e4be20bd3cb489787f`의 17BI exact2275-2459 read PASS/DONE(complete class, immutable public manifest, lifecycle/context, blank2458-2459 + frozen def2460 boundary)을 기록하고 exact three-file 17BJ substrate-handoff implementation을 sole ACTIVE로 지정. |
+| 1.89 | 2026-08-26 | technical commit `bbf5598c76beb0190863a492c3a4b68ca007b687`의 17BJ implementation과 Sol ACCEPT 후 focused node 1회 exit0(`1 passed in 0.79s`, elapsed1.401s)을 기록해 DONE/PASS로 닫고 ACTIVE NONE으로 전환. v3 digest/cache/loader/snapshot/builder/fail-closed 결과만 기록하며 physical/production/accuracy 주장은 하지 않음. |
+| 1.90 | 2026-08-26 | 17BJ DONE/PASS를 보존하고 standing user preapproval 아래 17BK plane-sheet bounded-query contract trace를 sole ACTIVE로 지정. Exact one-shot query, <=220-line single-cluster read gate, STOP/no-retry와 no-stamp/no-production 금지를 동결. |
+| 1.91 | 2026-08-26 | clean main `afda7f5c9e88f71235229a34e386528c11909647`의 17BK query/read evidence(1360/1395/1421; 1360-1484, 125 lines)를 기록해 delegated validator semantics로 BLOCKED/source-classified STOP으로 닫고, exact two-symbol 17BL validator-boundary query를 sole ACTIVE로 지정. |
+| 1.92 | 2026-08-26 | clean main `59c7e4b1a457057c00ef9ebd2286829d8c9710a7`의 17BL exact query(1280/1323, 2 lines/1 file) DONE/location PASS를 기록하고, exact 1280-1359(80-line) 17BM validator-contract read를 sole ACTIVE로 지정. |
+| 1.93 | 2026-08-26 | clean main `7d5eb16d67d9d98fad3a89939819eb4f30e45b80`의 17BM exact1280-1359 read PASS/DONE(typed fields/units/order/group/hash/gaps; physical ownership BLOCKED)을 기록하고, exact two-file 17BN bounded typed facade와 focused regression gate를 sole ACTIVE로 지정. |
+| 1.94 | 2026-08-26 | technical commit `8f74ccc1f22c94373f48b07edac6480ef116e830`의 17BN Sol ACCEPT 및 focused node 1회 exit0(`1 passed in 1.19s`, elapsed1.866s)을 기록해 DONE/PASS로 닫고, frozen-evidence-only 17BO primitive-to-surface ownership design을 sole ACTIVE로 지정. |
+| 1.95 | 2026-08-26 | 17BO를 field-domain equivalence/islands_by_surface provenance 미증명으로 BLOCKED/design REJECT로 닫고, exact two-file location-only 17BP surface-island field-domain boundary query를 sole ACTIVE로 지정. |
+| 1.96 | 2026-08-26 | clean main/doc commit `f50bcd5`의 17BP exact query(2 unique lines/2 files)에서 실제 `RawSpatialSurfaceRow` producer가 없어 BLOCKED/source-classified location STOP으로 닫고, exact once-only 17BQ producer discovery query를 sole ACTIVE로 지정. |
+| 1.97 | 2026-08-26 | clean main/docs HEAD `d8a5c49`의 17BQ exact query(9 unique lines/2 files)에서 exclusions 후 `raw_spatial_contact_compiler.py:2575` 단일 실제 constructor를 확인해 DONE/location PASS로 닫고, exact once-only 17BR compiler-owner boundary query를 sole ACTIVE로 지정. |
+| 1.98 | 2026-08-26 | clean main/docs HEAD `d28dcd2`의 17BR exact boundary script(2 lines/1 file, 2363→2621, 258-line span) gate 초과로 BLOCKED/boundary STOP으로 닫고, exact numbered 2550-2600 constructor trace 17BS를 sole ACTIVE로 지정. |
+| 1.99 | 2026-08-26 | clean main/docs HEAD `5095ed3`의 17BS exact2550-2600 read에서 origin/normalization/source-hash와 `_canonical_sha`가 범위 밖/위임되어 BLOCKED/source-classified STOP으로 닫고, exact once-only 17BT field-origin discovery query를 sole ACTIVE로 지정. |
+| 1.100 | 2026-08-26 | clean main/docs HEAD `e042611`의 17BT exact query(5 unique lines/1 file, 2500-2512 single cluster) DONE/location PASS를 기록하고, exact numbered 2460-2535 local field-origin trace 17BU를 sole ACTIVE로 지정. |
+| 1.101 | 2026-08-26 | clean main/docs HEAD `37b1934`의 17BU exact2460-2535 read에서 key origins/helper semantics가 범위 밖/위임되어 BLOCKED/source-classified STOP으로 닫고, exact once-only 17BV key-origin discovery query를 sole ACTIVE로 지정. |
+| 1.102 | 2026-08-26 | clean main/docs HEAD `ebba672`의 17BV exact query(5 unique lines/1 file)에서 2396/2425 duplicate key semantics/domain이 location-only로 ambiguous해 BLOCKED/location STOP으로 닫고, exact numbered 2388-2435 key-domain trace 17BW를 sole ACTIVE로 지정. |
+| 1.103 | 2026-08-26 | clean main/docs HEAD `4595cdb`의 17BW exact2388-2435 read에서 canonical layer/raw-record origins와 attachment continuation이 범위 밖/위임되어 BLOCKED/source-classified STOP으로 닫고, exact split A2363-2387+B2436-2459 49-line 17BX completion trace를 sole ACTIVE로 지정. |
+| 1.104 | 2026-08-26 | clean main/docs HEAD `ddfec8a`의 17BX split A/B read(49 new lines, no reread)에서 canonical layer mapping과 SHA decode verification이 위임되어 BLOCKED/source-classified STOP으로 닫고, exact once-only 17BY decode/layer-map boundary query를 sole ACTIVE로 지정. |
+| 1.105 | 2026-08-26 | clean main/docs HEAD `65fbced`의 17BY exact query(17 unique lines/1 file)에서 decode/parse/layer-map location gate를 DONE/location PASS로 닫고, exact once-only `_parse_layers` definition-boundary query 17BZ를 sole ACTIVE로 지정. |
+| 1.106 | 2026-08-26 | clean main/docs HEAD `5b4c68d`의 17BZ exact boundary command가 exit6/zero output으로 span cap을 초과해 BLOCKED/boundary STOP으로 닫고, distinct no-span-cap 17CA oversize-boundary diagnostic을 sole ACTIVE로 지정. |
+| 1.107 | 2026-08-26 | clean main HEAD `d6f9ebab38532d573bccdde3a982dbbf0b36999f`의 17CA exact query(2 lines/1 file, parse_layers872→header_material1068 span196) DONE/location PASS를 기록하고, exact once-only 17CB normalization-cluster query를 sole ACTIVE로 지정. |
+| 1.108 | 2026-08-26 | clean main HEAD `a3c4219e8bbfc22b027a46d2023f7169b09380fc`의 17CB exact query(12 unique lines/1 file)에서 casefold 의미가 multiple해 BLOCKED/location STOP으로 닫고, exact once-only 17CC rows/by_fold mutation query를 sole ACTIVE로 지정. |
+| 1.109 | 2026-08-26 | clean HEAD `ba407555ccc7170e1c215c0aafe8d87bab7f545c`의 17CC exact query(6 lines/1 file: 898/899/917/918/1058/1065) DONE/location PASS를 기록하고, exact A872-940+B1038-1067 split 17CD map-binding trace를 sole ACTIVE로 지정. |
+| 1.110 | 2026-08-26 | clean HEAD `e2ed0ed33869c8a5371937abd122be1be11b7811`의 17CD one-Get-Content A/B read(99 lines)에서 layer_match origin이 skipped941-1037로 남아 BLOCKED/source-classified STOP으로 닫고, exact once-only 17CE layer_match/pending origin query를 sole ACTIVE로 지정. |
+| 1.111 | 2026-08-26 | clean HEAD `5e8f5f7f5dfe265c5ca7b94853e2f82bd00f8033`의 17CE exact query(8 lines/1 file, span94>80, two clusters)를 BLOCKED/location STOP으로 닫고, exact once-only 17CF control-header boundary query를 sole ACTIVE로 지정. |
+| 1.112 | 2026-08-26 | clean HEAD `7b4a00cbfa79216afe1172eadad9dba96dec0542`의 17CF exact query(19 lines/1 file, clusters942-967/969-1038) DONE/location PASS를 기록하고, exact once-only 17CG numbered 941-1037 body trace를 sole ACTIVE로 지정. |
+| 1.113 | 2026-08-26 | clean HEAD `e289c7954d337ff48624a63e2905872a617864c`의 17CG exact body read(97 lines941-1037)에서 `_decode_token` return/error/normalization 외부 위임으로 BLOCKED/source-classified STOP으로 닫고, exact once-only 17CH definition-boundary query를 sole ACTIVE로 지정. |
+| 1.114 | 2026-08-26 | clean HEAD `5b6968a6118e9c432ae2ce1785a282e8081a525c`의 17CH exact query(2 lines/1 file, def402→415 span13) DONE/location PASS를 기록하고, exact once-only 17CI numbered 402-414 contract trace를 sole ACTIVE로 지정. |
+| 1.115 | 2026-08-26 | clean HEAD `120850c7a44b461423f5b69555f9ce5f4e88a01d`의 17CI exact body read(13 lines)에서 strict token/string-domain contract PASS를 기록하고, exact once-only 17CJ geometry-attachment SHA contract trace를 sole ACTIVE로 지정. |
+| 1.116 | 2026-08-26 | clean HEAD `8ad1a8d17e3292fde0d2a893d918cae4f9caf814`의 17CJ exact body read(71 lines)에서 attachment SHA/decode/bounds contract PASS를 기록하고, exact once-only 17CK source-asset SHA producer query를 sole ACTIVE로 지정. |
+| 1.117 | 2026-08-26 | clean HEAD `b43561eb26097e5ea1245e66761987fcd19759e3`의 17CK exact query(2 lines/1 file, span43) DONE/location PASS를 기록하고, exact once-only 17CL source-record origin query를 sole ACTIVE로 지정. |
+| 1.118 | 2026-08-26 | clean HEAD `4c07698a84f03c5305b59a965061dff27a01d982`의 17CL exact query(3 lines/1 file, span38)에서 record_by_key population/asset validation이 미증명되어 BLOCKED/source-classified STOP으로 닫고, exact once-only 17CM record-by-key population discovery query를 sole ACTIVE로 지정. |
+| 1.119 | 2026-08-26 | clean main HEAD `45be04069c3723627bcd9e61cc75e2d0deb98cda`의 17CM exact query(4 lines/1 file, span18)에서 records iteration/key construction 부재로 BLOCKED/location STOP으로 닫고, exact once-only 17CN source-record key-construction discovery query를 sole ACTIVE로 지정. |
+| 1.120 | 2026-08-26 | clean main HEAD `55424cb09610260cf46699a5b6b6c9004ab8f56f`의 17CN exact query(3 lines/1 file, span16)에서 두 semantic key assignments로 BLOCKED/location STOP으로 닫고, exact once-only 17CO record-by-key population body trace를 sole ACTIVE로 지정. |
+| 1.121 | 2026-08-26 | clean main HEAD `4df620768744bd8563cacf430ffca19e6c3eb535`의 17CO exact 23-line body read에서 asset/asset_sha256 validation 부재로 BLOCKED/source-classified STOP으로 닫고, exact once-only 17CP source-asset field-binding body trace를 sole ACTIVE로 지정. |
+| 1.122 | 2026-08-26 | clean evidence HEAD `652ee17f39b34a2c6f5ba93cb27cfe5e6944fd42`의 17CP exact 16-line read에서 str-only asset/SHA format validation 부재로 BLOCKED/source-classified STOP으로 닫고, exact once-only 17CQ `_digest_hex` definition-boundary discovery query를 sole ACTIVE로 지정. |
+| 1.123 | 2026-08-26 | 17CQ boundary command exit3/zero output을 location STOP으로 닫고, `_digest_hex` owner/use location query 17CR을 sole ACTIVE로 지정. |
+| 1.124 | 2026-08-26 | 17CR file-scoped `_digest_hex` query exit1/zero output을 location STOP으로 닫고, line-861 consumer-expression trace 17CS를 sole ACTIVE로 지정. |
+| 1.125 | 2026-08-26 | 17CS line-861 read exit0/one-line simple accessor without validation/use를 source-classified STOP으로 닫고, lines862–900 validation-use query 17CT를 sole ACTIVE로 지정. |
+| 1.126 | 2026-08-26 | 17CT validation-use query를 clean evidence `6dec0446c8b23d294104d1aea4fc843f763e20f6`에서 exit0, 2 lines/1 file, span6으로 완료했으나 observed origin/mismatch body가 없어 BLOCKED/location STOP으로 닫고, bounded lines862–870 body trace 17CU를 sole ACTIVE로 지정. |
+| 1.127 | 2026-08-26 | 17CU lines862–870 body read를 clean docs/evidence HEAD `c2acac75c41a65c30a88efb65d11a202f8dfa4f9`에서 exit0, 9 lines로 완료했으나 cache-hit/ownership/aliasing 증명이 없어 BLOCKED/source-classified STOP으로 닫고, `digests` cache ownership query 17CV를 sole ACTIVE로 지정. |
+| 1.128 | 2026-08-26 | 17CV `digests` query를 clean evidence HEAD `90ae22d410433b27383386281ea4e700bc7d0733`에서 exit0, 11 lines/1 file로 완료했으나 858/864/867과 1951–2118의 별도 클러스터가 one-cluster/no-additional-mutation gate를 깨 BLOCKED/location STOP으로 닫고, defs-boundary owner query 17CW를 sole ACTIVE로 지정. |
+| 1.129 | 2026-08-26 | 17CW defs-boundary query를 clean docs/evidence HEAD `0540090cd05ea29b202c5b62462d9f03c12e6c4f`에서 exit0, 2 lines/1 file, span15로 완료하고 17CV/17CU와 결속해 all-path attachment-byte digest provenance를 DONE/location PASS로 닫았으며, frozen surface-asset domain judgment 17CX를 sole ACTIVE로 지정. |
+| 1.130 | 2026-08-26 | 17CX docs-only frozen judgment를 clean canonical docs HEAD `15d860672cdb11d09d080207a46a37789ba94c45`에서 수행해 SHA domain만 PASS, record/artwork-name 및 net/layer domain과 tuple match를 UNPROVEN으로 확인하여 BLOCKED/design REJECT로 닫고, `plane_geometries` canonical producer discovery 17CY를 sole ACTIVE로 지정. |
+| 1.131 | 2026-08-26 | 17CY quoted-key-colon query를 clean docs/evidence HEAD `c9bec2c83934d48655ff4c6d4fab4dd65533eabd`에서 한 번 실행해 exit1/zero output으로 pattern-local producer absence만 확인하고 BLOCKED/location STOP으로 닫았으며, 17CZ assignment/mutation discovery를 sole ACTIVE로 지정. |
+| 1.1 | 2026-08-24 | `WORK_EXECUTION_BASELINE.md`를 두 번째 canonical 문서로 연결. |
+| 1.0 | 2026-08-24 | v0.24 계획 중심의 Distribution–solver PRD를 제품 전체의 목적·기술 기준으로 개정. PowerSI 정확성 우선, 상태 어휘, 기술 경계, promotion gate, 검증 비용 통제와 two-document 작업 방식을 고정. |

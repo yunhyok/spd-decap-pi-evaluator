@@ -274,6 +274,58 @@ def _scenario_with_via_material(material: str | None) -> ScenarioSpec:
     return base.model_copy(update={"connection_analysis": analysis})
 
 
+def test_graph_contact_source_sha_mismatch_is_rejected() -> None:
+    scenario = _scenario_with_via_material("COPPER")
+    payload = scenario.model_dump(mode="python")
+    landing = payload["connection_analysis"]["connections"]["C101"][
+        "power_vias"
+    ][0]
+    landing["graph_contact_evidence"] = [
+        {
+            "x_um": 1075.0,
+            "y_um": 2200.0,
+            "target_layer": "L3_PWR",
+            "target_node_id": "PWR_NODE",
+            "candidate_count": 1,
+            "candidate_contacts_sha256": "2" * 64,
+            "selection_basis": "SOURCE_GRAPH_TARGET_CONTACT",
+            "source_sha256": "3" * 64,
+            "selected_distance_um": 0.0,
+            "connectivity_only": True,
+        }
+    ]
+
+    with pytest.raises(
+        ValidationError, match="graph contact evidence source SHA mismatch"
+    ):
+        ScenarioSpec.model_validate(payload)
+
+
+def test_graph_contact_source_sha_same_source_is_accepted() -> None:
+    scenario = _scenario_with_via_material("COPPER")
+    payload = scenario.model_dump(mode="python")
+    landing = payload["connection_analysis"]["connections"]["C101"][
+        "power_vias"
+    ][0]
+    landing["graph_contact_evidence"] = [
+        {
+            "x_um": 1075.0,
+            "y_um": 2200.0,
+            "target_layer": "L3_PWR",
+            "target_node_id": "PWR_NODE",
+            "candidate_count": 1,
+            "candidate_contacts_sha256": "2" * 64,
+            "selection_basis": "SOURCE_GRAPH_TARGET_CONTACT",
+            "source_sha256": payload["source"]["sha256"],
+            "selected_distance_um": 0.0,
+            "connectivity_only": True,
+        }
+    ]
+
+    validated = ScenarioSpec.model_validate(payload)
+    assert validated.connection_analysis is not None
+
+
 def _rewrite_archive(path: Path, edits) -> None:
     with ZipFile(path) as archive:
         members = [(info.filename, archive.read(info.filename)) for info in archive.infolist()]
@@ -585,7 +637,7 @@ def test_unreachable_mixed_candidate_imports_loads_and_blocks_only_selected_rail
     preflight = preflight_evaluation_connectivity(loaded, (rail.rail_id,))
     assert preflight.blockers
     assert preflight.blockers[0].reason.startswith(
-        "SOURCE_GRAPH_PROVENANCE_INVALID:"
+        "enabled evaluation GND landing(s) lack mixed-reference reachability evidence:"
     )
 
 
@@ -621,10 +673,7 @@ def test_certified_ground_attachment_tamper_cannot_be_loaded(
     initial_preflight = preflight_evaluation_connectivity(
         imported_scenario, (rail.rail_id,)
     )
-    assert initial_preflight.blockers
-    assert initial_preflight.blockers[0].reason.startswith(
-        "SOURCE_GRAPH_PROVENANCE_INVALID:"
-    )
+    assert not initial_preflight.blockers
     payload = imported_scenario.model_dump(mode="json")
     witness_payload = payload["normalized_project"]["rails"][0][
         "mixed_reference_ground_witness"
@@ -649,7 +698,7 @@ def test_certified_ground_attachment_tamper_cannot_be_loaded(
     preflight = preflight_evaluation_connectivity(incomplete, (rail.rail_id,))
     assert preflight.blockers
     assert preflight.blockers[0].reason.startswith(
-        "SOURCE_GRAPH_PROVENANCE_INVALID:"
+        "enabled evaluation GND landing(s) lack mixed-reference reachability evidence:"
     )
     with pytest.raises(ScenarioEvaluationBuildError):
         build_evaluation_project(incomplete, evaluation_rail_id=rail.rail_id)
@@ -1929,6 +1978,46 @@ def test_valid_previous_save_is_backed_up_and_recovered(tmp_path) -> None:
     assert recovered.scenario.revision == 1
     assert recovered.recovered_from == backup
     assert "valid ZIP" in (recovered.recovery_reason or "")
+
+
+def test_scenario_load_cancellation_stops_multichunk_member_without_recovery(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(scenario_io_module, "SCENARIO_LOAD_CHUNK_BYTES", 4)
+    path = save_scenario(
+        _scenario(),
+        tmp_path / "cancel.spdpi",
+        attachments={"models/a.cir": b"x" * 24},
+    )
+    backup = path.with_name(path.name + ".bak")
+    backup.write_bytes(path.read_bytes())
+
+    with ZipFile(path) as archive:
+        sizes = tuple(
+            archive.getinfo(name).file_size
+            for name in (MANIFEST_FILENAME, SCENARIO_FILENAME)
+        )
+    checks_before_attachment = sum((size + 3) // 4 + 1 for size in sizes)
+    checks = 0
+
+    def cancel_during_attachment() -> bool:
+        nonlocal checks
+        checks += 1
+        return checks >= checks_before_attachment + 3
+
+    loaded_paths: list[Path] = []
+    original_loader = scenario_io_module.load_scenario_bundle
+
+    def track_loader(candidate, **kwargs):
+        loaded_paths.append(Path(candidate))
+        return original_loader(candidate, **kwargs)
+
+    monkeypatch.setattr(scenario_io_module, "load_scenario_bundle", track_loader)
+    with pytest.raises(RuntimeError, match="scenario load cancelled"):
+        load_scenario_with_recovery(path, is_cancelled=cancel_during_attachment)
+
+    assert loaded_paths == [path]
+    assert checks == checks_before_attachment + 3
 
 
 def test_normalized_project_is_validated_and_stored_as_plain_json() -> None:

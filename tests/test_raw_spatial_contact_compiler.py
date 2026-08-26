@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from copy import deepcopy
-from dataclasses import dataclass
+from dataclasses import FrozenInstanceError, dataclass
 from decimal import Decimal, localcontext
 from fractions import Fraction
 from hashlib import sha256
@@ -20,7 +20,12 @@ from spd_decap_pi.compiled_topology_asset import (
     COMPILED_TOPOLOGY_ASSET_METADATA_KEY,
     build_compiled_topology_asset,
 )
-from spd_decap_pi.raw_spatial_contact_asset import load_raw_spatial_contact_asset
+from spd_decap_pi import raw_spatial_contact_asset as asset
+from spd_decap_pi._core.domain import DielectricPropertyPoint
+from spd_decap_pi.raw_spatial_contact_asset import (
+    RawSpatialContactAssetError,
+    load_raw_spatial_contact_asset,
+)
 from spd_decap_pi.surface_certificate_asset import (
     SURFACE_CERTIFICATE_METADATA_KEY,
     canonical_surface_certificate_sha256,
@@ -116,6 +121,32 @@ def _real_compiled_context(tmp_path: Path) -> _RealCompiledContext:
 
     scenario, geometry_attachments = _full_v4_roundtrip_fixture()
     project = scenario.base_project
+    project = project.model_copy(
+        update={
+            "stackup_layers": [
+                layer.model_copy(
+                    update={
+                        "material": "Copper" if layer.is_conductor else "ABF",
+                        "dielectric_properties": (
+                            [
+                                DielectricPropertyPoint(
+                                    frequency_hz=project.frequency.start_hz,
+                                    dk=layer.dk,
+                                    df=layer.df,
+                                )
+                            ]
+                            if not layer.is_conductor
+                            and not layer.dielectric_properties
+                            and layer.dk is not None
+                            and layer.df is not None
+                            else layer.dielectric_properties
+                        ),
+                    }
+                )
+                for layer in project.stackup_layers
+            ]
+        }
+    )
     metadata = dict(project.metadata)
     spd_import = dict(metadata["spd_import"])
     records: list[dict[str, object]] = []
@@ -360,7 +391,7 @@ def _compile(context: _Context, **kwargs: object):
     )
 
 
-def _open(manifest: dict[str, object], attachment: tuple[str, bytes]):
+def _open(manifest: dict[str, object], attachment: tuple[str, bytes], *, require_plane_sheet_payload: bool = False):
     return load_raw_spatial_contact_asset(
         manifest,
         {attachment[0]: attachment[1]},
@@ -373,6 +404,7 @@ def _open(manifest: dict[str, object], attachment: tuple[str, bytes]):
             manifest["compiled_topology_identity_sha256"]
         ),
         expected_geometry_identity_sha256=str(manifest["geometry_identity_sha256"]),
+        require_plane_sheet_payload=require_plane_sheet_payload,
     )
 
 
@@ -612,6 +644,71 @@ def test_compiler_closes_exact_sections_and_preserves_contact_evidence(
         ]
 
 
+def test_trace_metadata_assignments_are_skipped_like_core_trace_iterator(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    metadata = (
+        b"ClippedTrace = 34980230-8602573B-0FC99C32-5C3BC7C4\n\n"
+        b"SegmentedTrace = 24E455E4-F19050DD-C747A1FD-9F1AD3E9\n\n"
+    )
+    source = _raw_source().replace(
+        b"* Via description lines", metadata + b"* Via description lines", 1
+    )
+    context = _context(tmp_path, monkeypatch, source)
+
+    manifest, attachment = _compile(context)
+    assert manifest["counts"]["traces"] == 2
+    with _open(manifest, attachment) as loaded:
+        assert loaded.get_trace("VDD", "Trace1") is not None
+        assert loaded.get_trace("VDD", "Trace2") is not None
+        trace_coverage = next(
+            row for row in loaded.iter_section_coverage() if row.section_name == "Trace"
+        )
+        trace_start = source.index(b"* Trace description lines")
+        trace_end = source.index(b"* Via description lines")
+        assert trace_coverage.section_sha256 == sha256(
+            source[trace_start:trace_end]
+        ).hexdigest()
+
+
+@pytest.mark.parametrize(
+    "section_marker", (b"* Node description lines", b"* Via description lines")
+)
+def test_trace_metadata_is_not_accepted_in_other_sections(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, section_marker: bytes
+) -> None:
+    metadata = b"ClippedTrace = 34980230-8602573B-0FC99C32-5C3BC7C4"
+    source = _raw_source().replace(
+        section_marker, section_marker + b"\n" + metadata, 1
+    )
+    context = _context(tmp_path, monkeypatch, source)
+
+    with pytest.raises(compiler.RawSpatialCompilerError) as caught:
+        _compile(context)
+    assert caught.value.code == "RAW_SPATIAL_SECTION_GRAMMAR_INVALID"
+
+
+@pytest.mark.parametrize(
+    "metadata",
+    (
+        b"ClippedTrace = malformed",
+        b"SegmentedTrace",
+        b"UnexpectedTrace = 34980230-8602573B-0FC99C32-5C3BC7C4",
+    ),
+)
+def test_unknown_or_malformed_trace_metadata_remains_section_error(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, metadata: bytes
+) -> None:
+    source = _raw_source().replace(
+        b"* Via description lines", metadata + b"\n* Via description lines", 1
+    )
+    context = _context(tmp_path, monkeypatch, source)
+
+    with pytest.raises(compiler.RawSpatialCompilerError) as caught:
+        _compile(context)
+    assert caught.value.code == "RAW_SPATIAL_SECTION_GRAMMAR_INVALID"
+
+
 @pytest.mark.parametrize("newline", (b"\n", b"\r\n", b"\r"))
 def test_via_absolute_rotation_continuation_matches_tracked_parser(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, newline: bytes
@@ -636,6 +733,78 @@ def test_via_absolute_rotation_continuation_matches_tracked_parser(
         assert via is not None
         assert via.rotation_microdegrees == -180_000_000
         assert via.source_record_sha256 == sha256(exact).hexdigest()
+
+
+@pytest.mark.parametrize(
+    "replacement",
+    (
+        b"Via1::VDD UpperNode = Node1 LowerNode = Node3 PadStack = PS1 "
+        b"AbsoluteRotation = 180 NoAntiPadLayers = L1\n",
+        b"Via1::VDD UpperNode = Node1 LowerNode = Node3 PadStack = PS1 "
+        b"AbsoluteRotation = 180\n"
+        b"+ NoAntiPadLayers = L1 L2\n",
+    ),
+)
+def test_via_no_antipad_layers_suffix_matches_tracked_parser(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, replacement: bytes
+) -> None:
+    original = (
+        b"Via1::VDD UpperNode = Node1 LowerNode = Node3 PadStack = PS1 "
+        b"AbsoluteRotation = 180\n"
+    )
+    source = _raw_source().replace(original, replacement, 1)
+    context = _context(tmp_path, monkeypatch, source)
+
+    manifest, attachment = _compile(context)
+    assert manifest["source_sha256"] == sha256(source).hexdigest()
+    with _open(manifest, attachment) as loaded:
+        via = loaded.get_via("VDD", "Via1")
+        assert via is not None
+        assert via.source_record_sha256 == sha256(replacement).hexdigest()
+        via_coverage = next(
+            row for row in loaded.iter_section_coverage() if row.section_name == "Via"
+        )
+        via_start = source.index(b"* Via description lines")
+        via_end = source.index(b"* PadStack collection description lines")
+        assert via_coverage.section_sha256 == sha256(
+            source[via_start:via_end]
+        ).hexdigest()
+
+
+@pytest.mark.parametrize(
+    ("suffix", "code"),
+    (
+        (b"NoAntiPadLayers =", "RAW_SPATIAL_ATTRIBUTE_INVALID"),
+        (b"NoAntiPadLayers =   ", "RAW_SPATIAL_ATTRIBUTE_INVALID"),
+        (b"NoAntiPadLayers = L3", "RAW_SPATIAL_LAYER_UNRESOLVED"),
+        (b"NoAntiPadLayers = L1 L1", "RAW_SPATIAL_ATTRIBUTE_DUPLICATE"),
+        (
+            b"NoAntiPadLayers = L1 NoAntiPadLayers = L2",
+            "RAW_SPATIAL_ATTRIBUTE_DUPLICATE",
+        ),
+        (
+            b"NoAntiPadLayers = L1 AbsoluteRotation = 180",
+            "RAW_SPATIAL_LAYER_UNRESOLVED",
+        ),
+    ),
+)
+def test_via_no_antipad_layers_suffix_fails_closed(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    suffix: bytes,
+    code: str,
+) -> None:
+    primary = b"Via1::VDD UpperNode = Node1 LowerNode = Node3 PadStack = PS1 "
+    source = _raw_source().replace(
+        primary + b"AbsoluteRotation = 180\n",
+        primary + b"AbsoluteRotation = 180 " + suffix + b"\n",
+        1,
+    )
+    context = _context(tmp_path, monkeypatch, source)
+
+    with pytest.raises(compiler.RawSpatialCompilerError) as caught:
+        _compile(context)
+    assert caught.value.code == code
 
 
 @pytest.mark.parametrize(
@@ -1949,12 +2118,11 @@ def test_fractional_shape_circle_and_box_edges_remain_exact(
             primitive_order=(("positive_polygon", 0), ("negative_circle", 0)),
         )
     else:
-        half = value_um / 2.0
         polygon = (
-            (value_um - half, value_um - half),
-            (value_um + half, value_um - half),
-            (value_um + half, value_um + half),
-            (value_um - half, value_um + half),
+            (value_um, value_um),
+            (value_um + value_um, value_um),
+            (value_um + value_um, value_um + value_um),
+            (value_um, value_um + value_um),
         )
         _replace_l1_geometry(
             context,
@@ -2064,6 +2232,42 @@ def test_via_parser_parity_preserves_case_insensitive_padstack_resolution(
         assert via is not None and via.padstack_id == "PS1"
 
 
+def test_polygon_vertex_node_prefix_matches_tracked_core_parser(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    original = b"Node1::VDD X = 0mm Y = 0mm Layer = L1"
+    replacement = b"Node1::VDD PolygonVertex X = 0mm Y = 0mm Layer = L1"
+    source = _raw_source().replace(original, replacement, 1)
+    context = _context(tmp_path, monkeypatch, source)
+
+    manifest, attachment = _compile(context)
+    with _open(manifest, attachment) as loaded:
+        node = loaded.get_node("VDD", "Node1")
+        assert node is not None
+        assert (node.x_pm, node.y_pm) == (0, 0)
+
+
+@pytest.mark.parametrize(
+    "prefix_body",
+    (
+        b"PolygonVertexX X = 0mm Y = 0mm Layer = L1",
+        b"PolygonVertex PolygonVertex X = 0mm Y = 0mm Layer = L1",
+        b"X = 0mm PolygonVertex Y = 0mm Layer = L1",
+    ),
+)
+def test_unknown_node_prefix_remains_unframed_attribute_error(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, prefix_body: bytes
+) -> None:
+    original = b"Node1::VDD X = 0mm Y = 0mm Layer = L1"
+    replacement = b"Node1::VDD " + prefix_body
+    source = _raw_source().replace(original, replacement, 1)
+    context = _context(tmp_path, monkeypatch, source)
+
+    with pytest.raises(compiler.RawSpatialCompilerError) as caught:
+        _compile(context)
+    assert caught.value.code == "RAW_SPATIAL_ATTRIBUTE_INVALID"
+
+
 def test_box_binary64_edges_round_trip_to_exact_picometres(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -2074,17 +2278,17 @@ def test_box_binary64_edges_round_trip_to_exact_picometres(
         1,
     )
     context = _context(tmp_path, monkeypatch, source)
-    center_um = _length_um(b"0.1um")
-    half_extent_um = _length_um(b"0.1um") / 2.0
-    minimum_um = center_um - half_extent_um
-    maximum_um = center_um + half_extent_um
+    start_um = _length_um(b"0.1um")
+    width_um = _length_um(b"0.1um")
+    minimum_um = start_um
+    maximum_um = start_um + width_um
     box = (
         (minimum_um, minimum_um),
         (maximum_um, minimum_um),
         (maximum_um, maximum_um),
         (minimum_um, maximum_um),
     )
-    assert (minimum_um, maximum_um) == (0.05, 0.15000000000000002)
+    assert (minimum_um, maximum_um) == (0.1, 0.2)
     l1_geometry = SimpleNamespace(
         net="VDD",
         layer="L1",
@@ -2132,7 +2336,37 @@ def test_box_binary64_edges_round_trip_to_exact_picometres(
             surface.min_y_pm,
             surface.max_x_pm,
             surface.max_y_pm,
-        ) == (50_000, 50_000, 150_000, 150_000)
+        ) == (100_000, 100_000, 200_000, 200_000)
+
+
+def test_box_center_forgery_is_rejected_against_start_corner_replay(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    original = b"Polygon::VDD+ 0mm 0mm 1mm 0mm 1mm 1mm 0mm 1mm"
+    source = _raw_source().replace(
+        original,
+        b"Box::VDD+ 0.1um 0.1um 0.1um 0.1um",
+        1,
+    )
+    context = _context(tmp_path, monkeypatch, source)
+    center = 0.1
+    half = 0.05
+    forged_center_polygon = (
+        (center - half, center - half),
+        (center + half, center - half),
+        (center + half, center + half),
+        (center - half, center + half),
+    )
+    _replace_l1_geometry(
+        context,
+        positive_polygons=(forged_center_polygon,),
+        primitive_order=(("positive_polygon", 0),),
+        box_count=1,
+    )
+
+    with pytest.raises(compiler.RawSpatialCompilerError) as caught:
+        _compile(context)
+    assert caught.value.code == "RAW_SPATIAL_SOURCE_GEOMETRY_MISMATCH"
 
 
 def test_project_bbox_integer_alias_is_not_accepted_as_binary64_evidence(
@@ -2338,3 +2572,142 @@ def test_cancellation_and_source_stat_mutation_are_hard_gates(
     with pytest.raises(compiler.RawSpatialCompilerError) as mutated:
         _compile(context)
     assert mutated.value.code == "RAW_SPATIAL_SOURCE_MUTATED"
+
+
+def test_plane_sheet_payload_v3_is_hash_bound_and_v2_remains_unchanged(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    real = _real_compiled_context(tmp_path)
+    context = _Context(real.path, real.source, real.analysis, real.project, real.attachments, real.compiled)
+    v2, attachment_v2 = _compile(context)
+    v2_explicit, attachment_v2_explicit = _compile(context, include_plane_sheet_payload=False)
+    assert v2_explicit == v2
+    assert attachment_v2_explicit == attachment_v2
+    with pytest.raises(RawSpatialContactAssetError) as required_error:
+        load_raw_spatial_contact_asset(
+            v2,
+            {attachment_v2[0]: attachment_v2[1]},
+            expected_source_sha256=str(v2["source_sha256"]),
+            expected_project_binding_sha256=str(v2["project_binding_sha256"]),
+            expected_certificate_evidence_sha256=str(v2["certificate_evidence_sha256"]),
+            expected_compiled_topology_identity_sha256=str(v2["compiled_topology_identity_sha256"]),
+            expected_geometry_identity_sha256=str(v2["geometry_identity_sha256"]),
+            require_plane_sheet_payload=True,
+        )
+    assert required_error.value.code == "RAW_SPATIAL_PLANE_SHEET_REQUIRED"
+    v3, attachment = _compile(context, include_plane_sheet_payload=True)
+    assert v2["payload_schema"] == "spd-raw-spatial-contact-sqlite-v2"
+    assert v3["payload_schema"] == "spd-raw-spatial-contact-sqlite-v3"
+    assert v3["plane_sheet_counts"]["plane_primitives"] > 0
+    assert v3["plane_sheet_counts"]["stackup_layers"] > 0
+    assert v3["adjacent_conductor_gap_count"] >= 1
+    with _open(v3, attachment, require_plane_sheet_payload=True) as loaded:
+        assert loaded.manifest["plane_sheet_payload_sha256"] == v3["plane_sheet_payload_sha256"]
+        primitives = list(loaded.iter_plane_primitives(batch_rows=1))
+        vertices = list(loaded.iter_plane_vertices(batch_rows=1))
+        circles = list(loaded.iter_plane_circles(batch_rows=1))
+        stackup = list(loaded.iter_stackup_layers(batch_rows=1))
+        dielectric = list(loaded.iter_dielectric_points(batch_rows=1))
+        assert len(primitives) == v3["plane_sheet_counts"]["plane_primitives"]
+        assert len(vertices) == v3["plane_sheet_counts"]["plane_vertices"]
+        assert len(circles) == v3["plane_sheet_counts"]["plane_circles"]
+        assert len(stackup) == v3["plane_sheet_counts"]["stackup_layers"]
+        assert len(dielectric) == v3["plane_sheet_counts"]["dielectric_points"]
+        assert [row.primitive_ordinal for row in primitives] == list(range(len(primitives)))
+        assert [(row.primitive_ordinal, row.vertex_ordinal) for row in vertices] == sorted(
+            (row.primitive_ordinal, row.vertex_ordinal) for row in vertices
+        )
+        assert [row.primitive_ordinal for row in circles] == sorted(
+            row.primitive_ordinal for row in circles
+        )
+        assert [row.layer_ordinal for row in stackup] == list(range(len(stackup)))
+        assert [(row.layer_ordinal, row.point_ordinal) for row in dielectric] == sorted(
+            (row.layer_ordinal, row.point_ordinal) for row in dielectric
+        )
+        assert primitives[0].coordinate_unit == "um"
+        assert len(primitives[0].source_asset_sha256) == 64
+        assert all(isinstance(row.x_um, (int, float)) for row in vertices)
+        assert all(row.radius_um > 0 for row in circles)
+        assert stackup[0].thickness_um > 0
+        assert stackup[0].material_name
+        assert all(
+            row.frequency_hz > 0 and row.epsilon_r > 0 and row.loss_tangent >= 0
+            for row in dielectric
+        )
+        with pytest.raises(FrozenInstanceError):
+            primitives[0].primitive_ordinal = 1  # type: ignore[misc]
+        with pytest.raises(RawSpatialContactAssetError) as invalid_batch:
+            list(loaded.iter_plane_primitives(batch_rows=0))
+        assert invalid_batch.value.code == "RAW_SPATIAL_BOUND_INVALID"
+    plane_payload = compiler._plane_sheet_payload(context.project, context.analysis)
+    plane_rows, _ = asset._plane_sheet_rows(plane_payload)
+    assert len(plane_rows["plane_primitives"]) >= 2
+
+    with _open(v2, attachment_v2) as loaded_v2:
+        with pytest.raises(RawSpatialContactAssetError) as v2_plane_error:
+            list(loaded_v2.iter_plane_primitives())
+        assert v2_plane_error.value.code == "RAW_SPATIAL_PLANE_SHEET_REQUIRED"
+    closed = _open(v3, attachment)
+    closed.close()
+    with pytest.raises(RawSpatialContactAssetError) as closed_plane_error:
+        list(closed.iter_plane_primitives())
+    assert closed_plane_error.value.code == "RAW_SPATIAL_CLOSED"
+
+    def open_plane_db() -> sqlite3.Connection:
+        connection = sqlite3.connect(":memory:")
+        connection.executescript(asset._PLANE_SHEET_SQL)
+        for section in asset._PLANE_SHEET_SECTIONS:
+            rows = plane_rows[section]
+            if section in {"plane_primitives", "plane_vertices", "plane_circles"}:
+                rows = [row for row in rows if row["primitive_ordinal"] < 2]
+            names = tuple(item[0] for item in connection.execute(f"SELECT * FROM {section} LIMIT 0").description)
+            connection.executemany(f"INSERT INTO {section} VALUES ({','.join('?' for _ in names)})", [tuple(row[name] for name in names) for row in rows])
+        return connection
+
+    with open_plane_db() as connection:
+        assert asset._validate_plane_sheet_stream(connection, is_cancelled=lambda: False)[0] >= 1
+    for section, values in (("plane_vertices", (999999, 0, 0.0, 0.0)), ("plane_circles", (999999, 0.0, 0.0, 1.0))):
+        with open_plane_db() as connection:
+            connection.execute(
+                f"INSERT INTO {section} VALUES ({','.join('?' for _ in values)})", values
+            )
+            with pytest.raises(RawSpatialContactAssetError) as orphan_error:
+                asset._validate_plane_sheet_stream(connection, is_cancelled=lambda: False)
+            assert orphan_error.value.code == "RAW_SPATIAL_PLANE_SHEET_INVALID"
+    with open_plane_db() as connection:
+        with monkeypatch.context() as patch:
+            patch.setattr(asset, "MAX_RAW_SPATIAL_ROWS_PER_SECTION", 1)
+            with pytest.raises(RawSpatialContactAssetError) as bound_error:
+                asset._validate_plane_sheet_stream(connection, is_cancelled=lambda: False)
+            assert bound_error.value.code == "RAW_SPATIAL_BOUND_EXCEEDED"
+    original_project = context.project
+    metadata = deepcopy(original_project.metadata)
+    records = deepcopy(metadata["spd_import"]["plane_geometries"])
+    metadata["spd_import"]["plane_geometries"] = records + [deepcopy(records[0])]
+    context.project = original_project.model_copy(update={"metadata": metadata})
+    with pytest.raises(compiler.RawSpatialCompilerError) as duplicate_error:
+        _compile(context, include_plane_sheet_payload=True)
+    assert duplicate_error.value.code == "RAW_SPATIAL_PLANE_SHEET_REQUIRED"
+    metadata["spd_import"]["plane_geometries"] = records
+    metadata["spd_import"]["plane_geometries"][0]["asset_sha256"] = "0" * 64
+    context.project = original_project.model_copy(update={"metadata": metadata})
+    with pytest.raises(compiler.RawSpatialCompilerError) as source_error:
+        _compile(context, include_plane_sheet_payload=True)
+    assert source_error.value.code == "RAW_SPATIAL_PLANE_SHEET_INVALID"
+    context.project = original_project
+    tampered_manifest = deepcopy(v3)
+    tampered_manifest["adjacent_conductor_gap_sha256"] = "0" * 64
+    with pytest.raises(RawSpatialContactAssetError) as tampered_error:
+        _open(tampered_manifest, attachment)
+    assert tampered_error.value.code == "RAW_SPATIAL_META_INVALID"
+    original_order = context.analysis.plane_geometries[0].primitive_order
+    context.analysis.plane_geometries[0].primitive_order = (("positive_polygon", 999),)
+    with pytest.raises(compiler.RawSpatialCompilerError) as order_error:
+        _compile(context, include_plane_sheet_payload=True)
+    assert order_error.value.code == "RAW_SPATIAL_PLANE_SHEET_REQUIRED"
+    context.analysis.plane_geometries[0].primitive_order = original_order
+    geometry = context.analysis.plane_geometries[0]
+    geometry.positive_polygons_um = (( (math.nan, 0.0), (1.0, 0.0), (1.0, 1.0)),)
+    with pytest.raises(compiler.RawSpatialCompilerError) as nan_error:
+        _compile(context, include_plane_sheet_payload=True)
+    assert nan_error.value.code == "RAW_SPATIAL_PLANE_SHEET_INVALID"

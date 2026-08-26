@@ -10,6 +10,7 @@ from decimal import Decimal, ROUND_FLOOR
 from hashlib import sha256
 from math import hypot, isfinite
 from pathlib import Path
+from tempfile import NamedTemporaryFile
 from time import perf_counter
 from typing import Any, Callable
 
@@ -1553,6 +1554,34 @@ def _excel_safe_csv_cell(value: object) -> str:
     return text
 
 
+def _write_csv_atomically(
+    destination: Path,
+    write_rows: Callable[[Any], None],
+) -> None:
+    temp_path: Path | None = None
+    try:
+        with NamedTemporaryFile(
+            mode="w",
+            encoding="utf-8-sig",
+            newline="",
+            dir=destination.parent,
+            prefix=f".{destination.name}.",
+            suffix=".tmp",
+            delete=False,
+        ) as stream:
+            temp_path = Path(stream.name)
+            write_rows(stream)
+            stream.flush()
+        temp_path.replace(destination)
+    except BaseException:
+        if temp_path is not None:
+            try:
+                temp_path.unlink(missing_ok=True)
+            except OSError:
+                pass
+        raise
+
+
 def _tuned_decap_csv_rows(
     scenario: ScenarioSpec,
     evaluated_rail_ids: tuple[str, ...],
@@ -1797,7 +1826,7 @@ def _job_load_scenario(
     is_cancelled: Callable[[], bool],
 ) -> ScenarioBundle | _PreparedScenarioBundle:
     progress(5, "Reading .spdpi scenario")
-    bundle = load_scenario_with_recovery(path)
+    bundle = load_scenario_with_recovery(path, is_cancelled=is_cancelled)
     progress(35, "Validating external SPD identity")
     resolved = verify_scenario_source(
         bundle.scenario,
@@ -5172,7 +5201,7 @@ class MainWindow(QMainWindow):
         )
         try:
             if suffix == ".csv":
-                with path.open("w", encoding="utf-8-sig", newline="") as stream:
+                def write_distribution_csv(stream: Any) -> None:
                     writer = csv.writer(stream, lineterminator="\n")
                     writer.writerow(
                         (
@@ -5196,6 +5225,7 @@ class MainWindow(QMainWindow):
                                 float(y_um),
                             )
                         )
+                _write_csv_atomically(path, write_distribution_csv)
             else:
                 from ..distribution import (
                     DISTRIBUTION_VIA_PROJECTION_POLICY,
@@ -5833,7 +5863,7 @@ class MainWindow(QMainWindow):
             ),
             label="Opening scenario...",
             on_error=lambda details: self._scenario_load_error(path, details),
-            cancelable=False,
+            cancelable=True,
         )
 
     def _scenario_load_error(self, path: Path, details: str) -> None:
@@ -8131,7 +8161,7 @@ class MainWindow(QMainWindow):
         if path.suffix.casefold() != ".csv":
             path = path.with_suffix(".csv")
         try:
-            with path.open("w", encoding="utf-8-sig", newline="") as stream:
+            def write_tuned_csv(stream: Any) -> None:
                 writer = csv.writer(stream, lineterminator="\n")
                 writer.writerow(
                     (
@@ -8179,6 +8209,7 @@ class MainWindow(QMainWindow):
                     )
                     for row in rows
                 )
+            _write_csv_atomically(path, write_tuned_csv)
         except OSError as exc:
             QMessageBox.critical(
                 self,

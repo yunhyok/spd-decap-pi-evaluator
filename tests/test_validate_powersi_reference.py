@@ -153,7 +153,7 @@ def test_cli_filters_singular_dc_before_s_to_z_and_reports_it(monkeypatch,tmp_pa
  assert report['modal_max_index']==8
  assert report['modal_convergence_ceiling_index']==12
  assert report['convergence_policy']=={
-  'version':'adaptive-frequency-modal-v4',
+ 'version':'adaptive-frequency-modal-v5',
   'max_refinement_iterations':3,
   'max_new_frequency_points_per_iteration':64,
   'curvature_threshold_db':0.75,

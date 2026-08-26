@@ -1,0 +1,138 @@
+{
+  "schema_version": "powersi-accuracy-policy-v1",
+  "policy_name": "powersi_accuracy_v1",
+  "policy_hash_semantics": "canonical_json_utf8_sort_keys_compact",
+  "approval_basis": {
+    "commit": "027ac7a09a3eded15f45c41860945f9d4c7f488d",
+    "product_purpose_document_version": "1.3",
+    "evaluation_accuracy_document_version": "W5 approved/machine-frozen",
+    "claim_scope": "retrospective_accuracy_not_unseen_generalization",
+    "excluded_scope": ["P5", "unseen", "final_signoff"]
+  },
+  "release_identity": {
+    "app_version": "0.23.0",
+    "solver_version": "modal-mvp-0.8.5",
+    "solver_profile": "layerwise_admittance_v1",
+    "convergence_policy": "adaptive-frequency-modal-v5",
+    "compiler_version": "layer-surface-adjacent-y-island-finite-via-termination-kron-v8",
+    "static_compiler_sha256": "3894d6174dd6765f5f830bc19511cd1bb843f3f88b1b305ceb5be32c52056615"
+  },
+  "benchmark_base_source": {
+    "path": "scripts/benchmark_raw_spd_powersi_correlation.py",
+    "hash_semantics": "utf8_lf_normalized",
+    "sha256": "d43b868629464f408ea19362daa78fc369d2fd446cf3d458cfdc044ccbf57f08"
+  },
+  "benchmark_adapter": {
+    "path": "scripts/benchmark_raw_spd_powersi_correlation_v6.py",
+    "hash_semantics": "utf8_lf_normalized",
+    "sha256": "6b7e399b4a843028ce754ac9154b8ce1a4575b1581c8d6007cebf26f94e6d440"
+  },
+  "validator_v6": {
+    "path": "scripts/validate_correlation_v6.py",
+    "hash_semantics": "utf8_lf_normalized",
+    "sha256": "3f26b2aa7880cd9aff89cd5407643c934367764b590db98962cbc30bfa1b04a0"
+  },
+  "run_manifest_schema": "powersi-retrospective-run-manifest-v1",
+  "runtime": {
+    "expected_head_contract": "required_cli_exact_current_main_commit",
+    "branch": "main",
+    "clean_required": true,
+    "worker": 1,
+    "blas_env": {"SPD_DECAP_PI_BLAS_THREADS": "1"},
+    "blas_required_num_threads": 1,
+    "retries": 0,
+    "modal_modes": [10, 12],
+    "modal_ceiling_index": 12,
+    "modal_source_index": 10,
+    "terminal_reuse_index": 12,
+    "no_fallback": true,
+    "partial_status": "blocked_partial"
+  },
+  "grids": {
+    "critical": {"low_hz": 100000.0, "high_hz": 100000000.0, "points": 241, "spacing": "log"},
+    "diagnostic": {"low_hz": 1000.0, "high_hz": 1000000000.0, "points": 481, "spacing": "log"}
+  },
+  "rails": {
+    "ordered": [
+      "ADC_VDD_180_VQPS_OTP_TOP_AON/0",
+      "ADC_VDD_180_VQPS_SYS_0_AON/0",
+      "ADC_VDD_180_VQPS_SYS_1_AON/0",
+      "ADC_VDD_180_VQPS_SYS_2_AON/0",
+      "ADC_VDD_180_VQPS_SYS_3_AON/0",
+      "ADC_VDD_180_VQPS_OTP_TOP_AON/1",
+      "ADC_VDD_180_VQPS_SYS_0_AON/1",
+      "ADC_VDD_180_VQPS_SYS_1_AON/1",
+      "ADC_VDD_180_VQPS_SYS_2_AON/1",
+      "ADC_VDD_180_VQPS_SYS_3_AON/1",
+      "ADC_VDD_055_VTRIP/0",
+      "ADC_VDD_055_VTRIP/1",
+      "ADC_VDD_070_VINT/0",
+      "ADC_VDD_070_VINT/1",
+      "ADC_VDD_075_VCPU/0",
+      "ADC_VDD_075_VCPU/1"
+    ],
+    "bare_vqps_count": 10,
+    "loaded_count": 6
+  },
+  "metrics": {
+    "magnitude_db": "e_f=20log10(|Zm(f)|/|Zr(f)|); low_offset=abs((e_100k+e_1M)/2)",
+    "phase_deg": "principal_angle(Zm/Zr) in degrees; RMS=sqrt(mean(p_i^2)); max=max(abs(p_i))",
+    "complex_uohm": "c_i=abs(Zm-Zr)*1e6",
+    "rail_gates": {
+      "low_frequency_offset_db": {"max": 1.0},
+      "magnitude_max_abs_db": {"max": 2.0},
+      "phase_rms_deg": {"max": 7.0},
+      "phase_max_abs_deg": {"max": 15.0},
+      "strict_reference_below_ohm": 0.001,
+      "complex_rms_uohm": {"max": 100.0},
+      "complex_p95_uohm": {"max": 200.0},
+      "zero_samples": "N/A and excluded from pass/fail and macro"
+    },
+    "resonance": {
+      "grid": "critical",
+      "interior_local_maximum": "magnitude >= both neighbors; band edges excluded",
+      "dominant": "maximum magnitude; ties choose lowest frequency",
+      "reference_without_peak": "N/A",
+      "reference_peak_model_without_peak": "FAIL",
+      "frequency_error_percent_max": 10.0,
+      "amplitude_error_db_max": 2.0
+    },
+    "macro": {
+      "aggregation": "equal-rail arithmetic mean of each rail 241-point magnitude RMS; never pool samples/rails/designs/strata",
+      "260729": {"bare_vqps_db_max": 1.0, "loaded_db_max": 1.0},
+      "260804": {"bare_vqps_db_max": 1.25, "loaded_db_max": 1.25},
+      "counts_required": ["applicable", "pass", "fail", "N/A"]
+    }
+  },
+  "cases": {
+    "260729": {
+      "role": "retrospective_development",
+      "source": {"basename": "S4LB002-2Para_260729_1_injected.spd", "path": "D:\\S4LB002-2Para_260729_1_injected.spd", "size_bytes": 1116717287, "sha256": "40cb44b2376f59d6b606eb9b4d138204fe51b2dc6b3332d3b7c0e7d4202866d2"},
+      "touchstone": {"basename": "S4LB002-2Para_260729_1_injected_073026_100913_33216_S.s92p", "path": "D:\\S4LB002-2Para_260729_1_injected_073026_100913_33216_S.s92p", "size_bytes": 303974090, "sha256": "c5fca21da6f3b1f1e097ac6fc4c2c4f40a44201617502a9e5bf864e2a5fe7a11", "ports": 92},
+      "candidate": "absent/must_be_generated",
+      "strata": ["site0", "site1", "loaded"]
+    },
+    "260804": {
+      "role": "retrospective_design_holdout",
+      "source": {"basename": "S4LB002-2Para_260804_1_injected.spd", "path": "D:\\S4LB002-2Para_260804_1_injected.spd", "size_bytes": 1120159188, "sha256": "45253f438fc7c328c50364fe610a7ecfbf72ca842a032921fbbb8d645e2a4f35"},
+      "touchstone": {"basename": "S4LB002-2Para_260804_1_injected_080526_104445_27112_S.s92p", "path": "D:\\S4LB002-2Para_260804_1_injected_080526_104445_27112_S.s92p", "size_bytes": 303902333, "sha256": "cd103f42412c2a63518105d7e10fae8a0538c84982e1eddbfb74829a6972951b", "ports": 92},
+      "candidate": "absent/must_be_generated",
+      "strata": ["site0", "site1", "loaded"]
+    }
+  },
+  "partition": {
+    "p1": "blocked_missing_160_port_runner_or_memory_safe_preprocessing",
+    "p2": "blocked_weighting_reference_plane_deembedding",
+    "p3_p4": "blocked_reference_unavailable_and_multifactor_solver_state_confound",
+    "p5": "missing_mandatory_for_final_generalization"
+  },
+  "execution": {
+    "fresh_import_args": ["--import-save-only"],
+    "correlation_args": ["--reuse-candidate", "--reuse-candidate-import-report", "--solver-profile", "layerwise_admittance_v1", "--modal-max-index", "10", "--modal-max-index", "12", "--modal-ceiling-index", "12", "--require-all-converged", "--require-terminal-complete-reuse"],
+    "output_dirs": "new_empty",
+    "argv_order": "exact_two_phase_templates_and_rails_ordered",
+    "cancel_error_resource": "blocked_partial",
+    "candidate_binding": "fresh_import_then_cross_bound_to_correlation",
+    "blas_artifact": "correlation/blas_runtime_evidence.json"
+  }
+}

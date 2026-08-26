@@ -18,10 +18,10 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 
 def test_spd_decap_release_identity_is_explicit_and_versioned() -> None:
     assert APP_NAME == "SPD Decap PI Evaluator"
-    assert __version__ == "0.23.0"
-    assert APP_DISPLAY_NAME == "SPD Decap PI Evaluator v0.23.0"
+    assert __version__ == "0.23.1"
+    assert APP_DISPLAY_NAME == "SPD Decap PI Evaluator v0.23.1"
     assert EXECUTABLE_BASENAME == "SPDDecapPIEvaluator"
-    assert INSTALLER_BASENAME == "SPDDecapPIEvaluatorSetup-0.23.0"
+    assert INSTALLER_BASENAME == "SPDDecapPIEvaluatorSetup-0.23.1"
 
 
 def test_spd_decap_console_and_packaging_metadata_are_consistent() -> None:
@@ -168,6 +168,7 @@ def test_release_workflow_requires_tracked_production_attestation() -> None:
     assert "Production attestation identity changed" in workflow
     assert 'python-version: "3.12.10"' in workflow
     assert "python -m pytest -q tests/test_spd_decap_packaging.py" in ci_workflow
+    assert "fetch-depth: 0" in ci_workflow
 
 
 def test_tagged_release_publishes_installer_and_validation_evidence() -> None:
@@ -243,10 +244,10 @@ def test_windows_version_resource_matches_release_identity() -> None:
     version_info = (
         REPO_ROOT / "packaging" / "spd_decap_pi_version_info.txt"
     ).read_text(encoding="utf-8")
-    assert "filevers=(0, 23, 0, 0)" in version_info
-    assert "prodvers=(0, 23, 0, 0)" in version_info
-    assert "StringStruct('FileVersion', '0.23.0')" in version_info
-    assert "StringStruct('ProductVersion', '0.23.0')" in version_info
+    assert "filevers=(0, 23, 1, 0)" in version_info
+    assert "prodvers=(0, 23, 1, 0)" in version_info
+    assert "StringStruct('FileVersion', '0.23.1')" in version_info
+    assert "StringStruct('ProductVersion', '0.23.1')" in version_info
 
 
 def test_packaged_numerical_path_imports_threadpoolctl() -> None:

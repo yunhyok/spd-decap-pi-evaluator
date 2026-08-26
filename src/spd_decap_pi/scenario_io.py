@@ -10,7 +10,7 @@ import os
 from pathlib import Path, PurePosixPath
 import shutil
 import tempfile
-from typing import Any, Final
+from typing import Any, Callable, Final
 from zipfile import ZIP_DEFLATED, ZIP_STORED, BadZipFile, ZipFile, ZipInfo
 
 from pydantic import ValidationError
@@ -44,6 +44,7 @@ ATTACHMENT_PREFIX: Final = "attachments"
 # gates.  Complete production evidence uses the smaller compiled-only contract.
 MAX_SCENARIO_MEMBER_BYTES: Final = 1024 * 1024 * 1024
 MAX_TOTAL_UNCOMPRESSED_BYTES: Final = 2 * 1024 * 1024 * 1024
+SCENARIO_LOAD_CHUNK_BYTES: Final = 1024 * 1024
 
 
 class ScenarioFormatError(ValueError):
@@ -453,7 +454,28 @@ def _manifest_hash(value: object, *, label: str) -> str:
     return normalized
 
 
-def _validate_archive(archive: ZipFile) -> tuple[dict[str, Any], dict[str, ZipInfo]]:
+def _read_archive_member(
+    archive: ZipFile,
+    member: str | ZipInfo,
+    *,
+    is_cancelled: Callable[[], bool] | None,
+) -> bytes:
+    chunks: list[bytes] = []
+    with archive.open(member, mode="r") as stream:
+        while True:
+            if is_cancelled is not None and is_cancelled():
+                raise RuntimeError("scenario load cancelled")
+            chunk = stream.read(SCENARIO_LOAD_CHUNK_BYTES)
+            if not chunk:
+                return b"".join(chunks)
+            chunks.append(chunk)
+
+
+def _validate_archive(
+    archive: ZipFile,
+    *,
+    is_cancelled: Callable[[], bool] | None = None,
+) -> tuple[dict[str, Any], dict[str, ZipInfo]]:
     infos = archive.infolist()
     by_name: dict[str, ZipInfo] = {}
     folded_names: set[str] = set()
@@ -470,7 +492,12 @@ def _validate_archive(archive: ZipFile) -> tuple[dict[str, Any], dict[str, ZipIn
         raise ScenarioFormatError(
             "scenario archive is missing manifest.json or scenario.json"
         )
-    manifest = _strict_json(archive.read(MANIFEST_FILENAME), label="scenario manifest")
+    manifest = _strict_json(
+        _read_archive_member(
+            archive, MANIFEST_FILENAME, is_cancelled=is_cancelled
+        ),
+        label="scenario manifest",
+    )
     if manifest.get("format") != SCENARIO_FORMAT:
         raise ScenarioFormatError("unsupported scenario archive format")
     if manifest.get("format_version") != SCENARIO_FORMAT_VERSION:
@@ -484,13 +511,21 @@ def _validate_archive(archive: ZipFile) -> tuple[dict[str, Any], dict[str, ZipIn
     return manifest, by_name
 
 
-def load_scenario_bundle(path: str | os.PathLike[str]) -> ScenarioBundle:
+def load_scenario_bundle(
+    path: str | os.PathLike[str],
+    *,
+    is_cancelled: Callable[[], bool] | None = None,
+) -> ScenarioBundle:
     """Load a scenario only after validating every member and declared hash."""
 
     source = Path(path)
     try:
+        if is_cancelled is not None and is_cancelled():
+            raise RuntimeError("scenario load cancelled")
         with ZipFile(source, mode="r") as archive:
-            manifest, by_name = _validate_archive(archive)
+            manifest, by_name = _validate_archive(
+                archive, is_cancelled=is_cancelled
+            )
             scenario_info = by_name[SCENARIO_FILENAME]
             expected_scenario_size = _manifest_int(manifest, "scenario_size")
             expected_scenario_hash = _manifest_hash(
@@ -564,7 +599,9 @@ def load_scenario_bundle(path: str | os.PathLike[str]) -> ScenarioBundle:
             if set(by_name) != allowed_members:
                 raise ScenarioFormatError("scenario archive contains undeclared members")
 
-            scenario_bytes = archive.read(SCENARIO_FILENAME)
+            scenario_bytes = _read_archive_member(
+                archive, SCENARIO_FILENAME, is_cancelled=is_cancelled
+            )
             if len(scenario_bytes) != expected_scenario_size:
                 raise ScenarioFormatError(
                     "scenario.json size does not match its manifest"
@@ -596,7 +633,9 @@ def load_scenario_bundle(path: str | os.PathLike[str]) -> ScenarioBundle:
 
             attachments: dict[str, bytes] = {}
             for name, archive_path, expected_size, expected_hash in parsed_entries:
-                content = archive.read(archive_path)
+                content = _read_archive_member(
+                    archive, archive_path, is_cancelled=is_cancelled
+                )
                 if len(content) != expected_size:
                     raise ScenarioFormatError(
                         f"scenario attachment {name!r} has wrong size"
@@ -695,18 +734,22 @@ def read_scenario_attachment(path: str | os.PathLike[str], name: str) -> bytes:
         ) from exc
 
 
-def load_scenario_with_recovery(path: str | os.PathLike[str]) -> ScenarioBundle:
+def load_scenario_with_recovery(
+    path: str | os.PathLike[str],
+    *,
+    is_cancelled: Callable[[], bool] | None = None,
+) -> ScenarioBundle:
     """Load the primary archive, falling back to its last validated backup."""
 
     source = Path(path)
     try:
-        return load_scenario_bundle(source)
+        return load_scenario_bundle(source, is_cancelled=is_cancelled)
     except ScenarioFormatError as original_error:
         backup = source.with_name(source.name + ".bak")
         if not backup.is_file():
             raise
         try:
-            bundle = load_scenario_bundle(backup)
+            bundle = load_scenario_bundle(backup, is_cancelled=is_cancelled)
         except ScenarioFormatError:
             raise original_error
         return replace(
