@@ -1,11 +1,11 @@
 # SPD Decap PI Evaluator 작업 기준
 
 - 적용 제품: **SPD Decap PI Evaluator v0.23.0**
-- 문서 버전: **1.112**
-- 상위 기준: [목적·기술 기준](PRODUCT_PURPOSE_AND_TECHNICAL_BASELINE.md) v1.111
+- 문서 버전: **1.113**
+- 상위 기준: [목적·기술 기준](PRODUCT_PURPOSE_AND_TECHNICAL_BASELINE.md) v1.112
 - W6-BASE source-before: clean `main` HEAD `fb36288781dcc0b884950ef5a486c474090ceebd`; this is the exact source boundary for the completed one-run evidence
-- 상태: **APPROVED/MACHINE-FROZEN CONTROL DOCUMENT**; full phase/item history lives in the register and changelog; W5 DONE; W6-BASE 260729 numerical FAIL; W7-PHYS BLOCKED; 17AX BLOCKED/STOP; 17AY DONE (location evidence); 17AZ BLOCKED/STOP (source-classified delegated substrate owner); 17BA BLOCKED/STOP (boundary span627>500); 17BB BLOCKED/STOP (cache-only multiple clusters); 17BC BLOCKED/STOP (endpoint truncation + delegated identity); 17BD DONE (location evidence); 17BE BLOCKED/STOP (raw-v3/hash seam unproven); 17BF BLOCKED/design REJECT; 17BG BLOCKED/STOP (canonical payload/content identity delegated); 17BH BLOCKED/source-classified STOP (lifetime trace endpoint incomplete); 17BI DONE/PASS; 17BJ DONE/PASS; 17BK BLOCKED/source-classified STOP (validator field/type/unit/layer/net semantics delegated); 17BL DONE/location PASS (validator boundaries 1280/1323); 17BM DONE/PASS (local validator contract; physical ownership BLOCKED); 17BN DONE/PASS (typed immutable facade; physical scope unproven); 17BO BLOCKED/design REJECT (surface/island field-domain equivalence unproven); 17BP BLOCKED/source-classified location STOP (required surface-row producer missing); 17BQ DONE/location PASS (unique producer at raw_spatial_contact_compiler.py:2575); 17BR BLOCKED/boundary STOP (258-line span >160); 17BS BLOCKED/source-classified STOP (origin/normalization before range and `_canonical_sha` delegated); 17BT DONE/location PASS (single pre-range field-origin cluster at 2500-2512); 17BU BLOCKED/source-classified STOP (range starts/ends mid-flow; net/layer/asset SHA/key origins and helper semantics not proven); 17BV BLOCKED/location STOP (duplicate key semantic/domain ambiguous from location output); 17BW BLOCKED/source-classified STOP (canonical layer/raw-record origins and attachment continuation not proven); 17BX BLOCKED/source-classified STOP (canonical layer mapping and SHA decode verification delegated); 17BY DONE/location PASS (decode helper2292, parse_layers boundary query prerequisites); 17BZ BLOCKED/boundary STOP (oversize span at clean main/docs HEAD `5b4c68d`; exact command exit6 zero output); 17CA DONE/location PASS (clean main HEAD `d6f9ebab38532d573bccdde3a982dbbf0b36999f`; exact query exit0, 2 lines/1 file, parse_layers872→header_material1068 span196); 17CB BLOCKED/location STOP (clean main HEAD `a3c4219e8bbfc22b027a46d2023f7169b09380fc`; exact query exit0, 12 unique lines/1 file, multiple casefold meanings); 17CC DONE/location PASS (clean HEAD `ba407555ccc7170e1c215c0aafe8d87bab7f545c`; exact query exit0, 6 lines/1 file: rows898/by_fold899/append917/constructor918/insert1058/return1065); 17CD BLOCKED/source-classified STOP (clean HEAD `e2ed0ed33869c8a5371937abd122be1be11b7811`; one Get-Content invocation exit0 exactly99 output lines A872-940+B1038-1067; layer_match origin skipped941-1037); 17CE BLOCKED/location STOP (clean HEAD `5e8f5f7f5dfe265c5ca7b94853e2f82bd00f8033`; exact query exit0 8 lines/1 file, span94>80 and two clusters); 17CF ACTIVE. Any physical implementation following a future PASS remains separately gated by fresh whitelist/test authority.
-- 현재 권위 상태: sole ACTIVE 17CF `W7-PHYS-W6-RAW-SURFACE-LAYER-MATCH-CONTROL-BOUNDARY-DISCOVERY`. Run the exact once-only control-header query over compiler.py; require exit0, 6-32 unique lines/1 file all935-1040, control headers/continue boundaries governing both pending updates and layer_match with indentation, max2 nonoverlap clusters, possible later split total<=100; missing/ambiguous nesting/3+clusters/cap STOP/no retry. Location-only; no direct body approval or source expansion/code/test/physical/profile/solver/production/accuracy execution.
+- 상태: **APPROVED/MACHINE-FROZEN CONTROL DOCUMENT**; full phase/item history lives in the register and changelog; W5 DONE; W6-BASE 260729 numerical FAIL; W7-PHYS BLOCKED; 17AX BLOCKED/STOP; 17AY DONE (location evidence); 17AZ BLOCKED/STOP (source-classified delegated substrate owner); 17BA BLOCKED/STOP (boundary span627>500); 17BB BLOCKED/STOP (cache-only multiple clusters); 17BC BLOCKED/STOP (endpoint truncation + delegated identity); 17BD DONE (location evidence); 17BE BLOCKED/STOP (raw-v3/hash seam unproven); 17BF BLOCKED/design REJECT; 17BG BLOCKED/STOP (canonical payload/content identity delegated); 17BH BLOCKED/source-classified STOP (lifetime trace endpoint incomplete); 17BI DONE/PASS; 17BJ DONE/PASS; 17BK BLOCKED/source-classified STOP (validator field/type/unit/layer/net semantics delegated); 17BL DONE/location PASS (validator boundaries 1280/1323); 17BM DONE/PASS (local validator contract; physical ownership BLOCKED); 17BN DONE/PASS (typed immutable facade; physical scope unproven); 17BO BLOCKED/design REJECT (surface/island field-domain equivalence unproven); 17BP BLOCKED/source-classified location STOP (required surface-row producer missing); 17BQ DONE/location PASS (unique producer at raw_spatial_contact_compiler.py:2575); 17BR BLOCKED/boundary STOP (258-line span >160); 17BS BLOCKED/source-classified STOP (origin/normalization before range and `_canonical_sha` delegated); 17BT DONE/location PASS (single pre-range field-origin cluster at 2500-2512); 17BU BLOCKED/source-classified STOP (range starts/ends mid-flow; net/layer/asset SHA/key origins and helper semantics not proven); 17BV BLOCKED/location STOP (duplicate key semantic/domain ambiguous from location output); 17BW BLOCKED/source-classified STOP (canonical layer/raw-record origins and attachment continuation not proven); 17BX BLOCKED/source-classified STOP (canonical layer mapping and SHA decode verification delegated); 17BY DONE/location PASS (decode helper2292, parse_layers boundary query prerequisites); 17BZ BLOCKED/boundary STOP (oversize span at clean main/docs HEAD `5b4c68d`; exact command exit6 zero output); 17CA DONE/location PASS (clean main HEAD `d6f9ebab38532d573bccdde3a982dbbf0b36999f`; exact query exit0, 2 lines/1 file, parse_layers872→header_material1068 span196); 17CB BLOCKED/location STOP (clean main HEAD `a3c4219e8bbfc22b027a46d2023f7169b09380fc`; exact query exit0, 12 unique lines/1 file, multiple casefold meanings); 17CC DONE/location PASS (clean HEAD `ba407555ccc7170e1c215c0aafe8d87bab7f545c`; exact query exit0, 6 lines/1 file: rows898/by_fold899/append917/constructor918/insert1058/return1065); 17CD BLOCKED/source-classified STOP (clean HEAD `e2ed0ed33869c8a5371937abd122be1be11b7811`; one Get-Content invocation exit0 exactly99 output lines A872-940+B1038-1067; layer_match origin skipped941-1037); 17CE BLOCKED/location STOP (clean HEAD `5e8f5f7f5dfe265c5ca7b94853e2f82bd00f8033`; exact query exit0 8 lines/1 file, span94>80 and two clusters); 17CF DONE/location PASS (clean HEAD `7b4a00cbfa79216afe1172eadad9dba96dec0542`; exact query exit0 19 lines/1 file, two nonoverlap clusters942-967 and969-1038); 17CG ACTIVE. Any physical implementation following a future PASS remains separately gated by fresh whitelist/test authority.
+- 현재 권위 상태: sole ACTIVE 17CG `W7-PHYS-W6-RAW-SURFACE-LAYER-PENDING-CONTROL-BODY-TRACE`. Run the exact once-only numbered read of compiler.py lines941-1037 (97 lines), with frozen continue boundaries at940 and1038. PASS requires complete two-cluster control flow, pending create/update/consume, layer_match create/branch binding, and both boundaries; mid-statement/branch, omitted mutation, or external helper semantics STOP/no extension/no retry. Location/body trace only; no source expansion/code/test/physical/profile/solver/production/accuracy execution.
 - 최종 개정: 2026-08-26 (Asia/Seoul)
 
 ## 1. 압축 후 즉시 복구 카드
@@ -17,15 +17,15 @@ context가 압축되거나 새 session에서 작업을 재개하면 다른 연�
 |---|---|
 | 변하지 않는 목적 | source-derived single-rail `Zii`의 PowerSI 근접 정확성과 일반화 |
 | 현재 branch | `main`만 사용; 정리된 과거 branch를 다시 조사하지 않음 |
-| 현재 active work item | `W7-PHYS-W6-RAW-SURFACE-LAYER-MATCH-CONTROL-BOUNDARY-DISCOVERY` (17CF) |
-| 다음 권장 묶음 | `17CF` exact once-only control-header location query |
-| current authorization | 17CF location gate: run the recorded query exactly once; exit0, 6-32 unique lines/1 file all935-1040; control headers/continue boundaries govern both pending updates and layer_match with indentation, max2 nonoverlap clusters, possible later split total<=100; missing/ambiguous nesting/3+clusters/cap STOP/no retry. Location-only; no source expansion/code/test/implementation. |
+| 현재 active work item | `W7-PHYS-W6-RAW-SURFACE-LAYER-PENDING-CONTROL-BODY-TRACE` (17CG) |
+| 다음 권장 묶음 | `17CG` exact once-only numbered body read lines941-1037 |
+| current authorization | 17CG body gate: one numbered read exactly once; 97 lines/1 file, frozen continue boundaries at940 and1038; complete two-cluster control flow, pending create/update/consume, and layer_match create/branch binding required; mid-statement/branch, omitted mutation, or external helper semantics STOP/no extension/no retry. |
 | 17T command A | `rg -n --no-heading --color never --glob '*.py' '\bcompile_raw_spatial_contact_asset\b' 'src/spd_decap_pi'` |
 | 17T command B | `rg -n --no-heading --color never --glob '*.py' '\b(?:resolve_solver_profile|numerical_worker_count|build_layerwise_uniform_source_model)\b' 'src/spd_decap_pi'` |
 | 17T command C | `rg -n --no-heading --color never --glob '*.py' '\b(?:GLOBAL_KRON|SurfacePatchDifferentialProjection|SurfacePatchFinitePortProjection|assemble_differential_admittance|differential_projection)\b' 'src/spd_decap_pi'` |
 | consumed 17M discovery | canonical rg ran once (exit 0), found candidate symbols only; no reuse or production proof |
 | future production invariant (not current authority) | if a future run is authorized: exact clean `main`, new output root, one run/no retry; B correlation is historical evidence; C/D consumed their exactly-one old candidate/import reads; E had one production diagnostic invocation plus one orchestration ZIP read; old root remains forbidden for W6-BASE output/scoring/retry/mutation |
-| 고비용 검증 권한 | none; 17CF allows only the bounded control-header location query, with body read/code/test/build/import/production execution forbidden |
+| 고비용 검증 권한 | none; 17CG allows only the bounded 97-line body read, with source expansion/code/test/build/import/production execution forbidden |
 | 현재 정확성 상태 | `260729 retrospective FAIL`; unseen/generalization remains `unknown / not_run` |
 | 현재 release 계산 증거 | W6-BASE 260729 completed numerical FAIL; offline verifier exit 2 (integrity-valid) |
 | W6-BASE result root | `D:\SPD-Decap-PI-Evaluator-W6\fb36288781dcc0b884950ef5a486c474090ceebd\260729` — manifest `2b14f90e762abc49833518137812e8fc97fcde0e9c145795b7384210cfd9f5de`, sidecar `0d103e0ad47df80641fac0952a35a6eaa56cc9fdb71be24661903e451926e932`, correlation `969e40046e3a099d09557ba7500693460362336d76b067962436bd3b5177abc4` |
@@ -216,7 +216,8 @@ root, one-run/no-retry 조건을 다시 확정할 때만 고려한다.
 | `W7-PHYS-W6-RAW-SURFACE-PARSE-LAYERS-MAP-MUTATION-DISCOVERY` | 17CC | DONE/location PASS | locate rows/by_fold map mutation flow | clean HEAD `ba407555ccc7170e1c215c0aafe8d87bab7f545c`; exact query once exit0, 6 lines/1 file at 898/899/917/918/1058/1065; no source body |
 | `W7-PHYS-W6-RAW-SURFACE-PARSE-LAYERS-MAP-BINDING-TRACE` | 17CD | BLOCKED/source-classified STOP | trace split map-binding source contract | clean HEAD `e2ed0ed33869c8a5371937abd122be1be11b7811`; one Get-Content invocation exit0 exactly99 output lines A872-940+B1038-1067; A complete, B begins1038 continue and layer_match origin is skipped941-1037; no retry |
 | `W7-PHYS-W6-RAW-SURFACE-LAYER-MATCH-PENDING-ORIGIN-DISCOVERY` | 17CE | BLOCKED/location STOP | locate layer_match/pending origin cluster | clean HEAD `5e8f5f7f5dfe265c5ca7b94853e2f82bd00f8033`; exact query once exit0, 8 unique lines/1 file, span94>80 and two clusters; no body/retry |
-| `W7-PHYS-W6-RAW-SURFACE-LAYER-MATCH-CONTROL-BOUNDARY-DISCOVERY` | 17CF | ACTIVE | locate governing control boundaries | exact once control-header query lines935-1040; exit0 6-32 unique lines/1 file; max2 nonoverlap clusters, possible split total<=100; missing/ambiguous/3+clusters/cap STOP/no retry; no body approval |
+| `W7-PHYS-W6-RAW-SURFACE-LAYER-MATCH-CONTROL-BOUNDARY-DISCOVERY` | 17CF | DONE/location PASS | locate governing control boundaries | clean HEAD `7b4a00cbfa79216afe1172eadad9dba96dec0542`; exact query once exit0, 19 lines/1 file, two nonoverlap clusters942-967 and969-1038; indentation/nesting coherent |
+| `W7-PHYS-W6-RAW-SURFACE-LAYER-PENDING-CONTROL-BODY-TRACE` | 17CG | ACTIVE | trace pending/layer_match body control flow | exact numbered read once lines941-1037 (97 lines); line940/1038 continue boundaries frozen from17CD; complete mutations and binding required, endpoint/control omission or external helper semantics STOP/no extension/no retry |
 | `W7-PHYS-PROSPECTIVE-RUNTIME-TERM-EVIDENCE` | next candidate | BLOCKED/YAGNI | provide a grounded runtime term digest/count/owner partition only after an independently selected physical change | new candidate/HEAD/root, one run/no retry; no current authority |
 | `W8-REL` | 18 | BLOCKED | completed known-case solve를 release gate에 연결하고 최종 전달 | accuracy/product gate와 exact release commit 필요 |
 | `D-DIST` | - | DEFERRED | Distribution routing/DRC scope 확대 | 사용자가 implementation-ready/DRC 목표로 승격할 때만 |
@@ -883,7 +884,7 @@ line2575, 17BR is BLOCKED/boundary STOP (258-line span >160), 17BS is BLOCKED/so
 is DONE/location PASS, 17BU is BLOCKED/source-classified STOP, 17BV is BLOCKED/location STOP, 17BW is
 BLOCKED/source-classified STOP, 17BX is BLOCKED/source-classified STOP, 17BY is DONE/location PASS, 17BZ is
 BLOCKED/boundary STOP, 17CA is DONE/location PASS, 17CB is BLOCKED/location STOP, 17CC is DONE/location PASS,
-17CD is BLOCKED/source-classified STOP, 17CE is BLOCKED/location STOP, and 17CF is the sole ACTIVE control-boundary discovery.
+17CD is BLOCKED/source-classified STOP, 17CE is BLOCKED/location STOP, 17CF is DONE/location PASS, and 17CG is the sole ACTIVE control-body trace.
 
 ### 17AA. W7-PHYS-W6-RAW-SPATIAL-ASSET-V3-EMISSION (BLOCKED; test-gate)
 
@@ -1356,7 +1357,8 @@ zero output, span>120); 17CA is DONE/location PASS at `d6f9ebab38532d573bccdde3a
 meanings); 17CC is DONE/location PASS at `ba407555ccc7170e1c215c0aafe8d87bab7f545c`; 17CD is
 BLOCKED/source-classified STOP at `e2ed0ed33869c8a5371937abd122be1be11b7811` because layer_match origin was skipped;
 17CE is BLOCKED/location STOP at `5e8f5f7f5dfe265c5ca7b94853e2f82bd00f8033` (8 lines, span94>80, two clusters);
-sole current read-only successor 17CF owns the exact control-header query. Frozen
+17CF is DONE/location PASS at `7b4a00cbfa79216afe1172eadad9dba96dec0542` (19 lines, two clusters942-967/969-1038);
+sole current read-only successor 17CG owns the exact 97-line body read. Frozen
 evidence establishes no physical stamp/profile/replacement/nullspace/gauge/Zii/production/release/PowerSI accuracy claim.
 
 ### 17BK. W7-PHYS-W6-PLANE-SHEET-BOUNDED-QUERY-CONTRACT-TRACE (BLOCKED/source-classified STOP)
@@ -1506,27 +1508,30 @@ At clean HEAD `5e8f5f7f5dfe265c5ca7b94853e2f82bd00f8033`, the exact query ran on
 unique lines/1 file (pending943/949/966, layer_match969/971, pending1006/1012/1037). The span is94>80 and
 the hits form two clusters, so no body read or retry occurred.
 
-### 17CF. W7-PHYS-W6-RAW-SURFACE-LAYER-MATCH-CONTROL-BOUNDARY-DISCOVERY (ACTIVE)
+### 17CF. W7-PHYS-W6-RAW-SURFACE-LAYER-MATCH-CONTROL-BOUNDARY-DISCOVERY (DONE/location PASS)
 
-Standing preapproval authorizes exactly this control-header location query once, with no source body read:
+At clean HEAD `7b4a00cbfa79216afe1172eadad9dba96dec0542`, the exact query ran once with exit0 and 19 lines/1 file;
+two nonoverlap control clusters942-967 and969-1038 had coherent indentation/nesting. No body read occurred in17CF.
+
+### 17CG. W7-PHYS-W6-RAW-SURFACE-LAYER-PENDING-CONTROL-BODY-TRACE (ACTIVE)
+
+Standing preapproval authorizes exactly this numbered body read once:
 
 ```powershell
 $path = 'src/spd_decap_pi/raw_spatial_contact_compiler.py'
-$hits = @(rg -n --with-filename --no-heading --color never `
-    '^\s*(?:if|elif|else|for|while|try|except|finally|continue|break)\b|^\s*(?:pending|layer_match)\s*=' `
-    $path)
-if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-
-$hits | Where-Object {
-    $_ -match '^[^:]+:(\d+):' -and
-    [int]$Matches[1] -ge 935 -and
-    [int]$Matches[1] -le 1040
+$lines = @(Get-Content -LiteralPath $path)
+if ($lines.Count -lt 1038) { exit 2 }
+$output = for ($line = 941; $line -le 1037; $line++) {
+    '{0}:{1}:{2}' -f $path, $line, $lines[$line - 1]
 }
+if ($output.Count -ne 97) { exit 3 }
+$output
 ```
 
-Gate: exit0, 6-32 unique lines, exactly1 file, all935-1040; control headers/continue boundaries governing both
-pending updates and layer_match with indentation, max2 nonoverlap clusters, possible later split total<=100.
-Missing/ambiguous nesting/3+clusters/cap STOP/no retry. Location-only; no direct body approval; decode/SHA/source hash/islands/
+Gate: one invocation, exact97 output lines/1 file for941-1037; frozen continue boundaries line940/1038 are not reread.
+PASS requires complete two-cluster control flow, pending create/update/consume, layer_match create/branch, and both
+continue boundaries binding. Mid-statement/branch, omitted mutation, or required external helper semantics STOP/no
+extension/no retry. Decode/SHA/source hash/islands/
 ownership/stamp/profile/replacement/nullspace/Zii/production/accuracy/release remain excluded.
 
 ## 20. 변경 기록
@@ -1646,3 +1651,4 @@ ownership/stamp/profile/replacement/nullspace/Zii/production/accuracy/release re
 | 1.110 | 2026-08-26 | clean HEAD `ba407555ccc7170e1c215c0aafe8d87bab7f545c`의 17CC exact query(6 lines/1 file: 898/899/917/918/1058/1065) DONE/location PASS를 기록하고, exact A872-940+B1038-1067 split 17CD map-binding trace를 sole ACTIVE로 지정. |
 | 1.111 | 2026-08-26 | clean HEAD `e2ed0ed33869c8a5371937abd122be1be11b7811`의 17CD one-Get-Content A/B read(99 lines)에서 layer_match origin이 skipped941-1037로 남아 BLOCKED/source-classified STOP으로 닫고, exact once-only 17CE layer_match/pending origin query를 sole ACTIVE로 지정. |
 | 1.112 | 2026-08-26 | clean HEAD `5e8f5f7f5dfe265c5ca7b94853e2f82bd00f8033`의 17CE exact query(8 lines/1 file, span94>80, two clusters)를 BLOCKED/location STOP으로 닫고, exact once-only 17CF control-header boundary query를 sole ACTIVE로 지정. |
+| 1.113 | 2026-08-26 | clean HEAD `7b4a00cbfa79216afe1172eadad9dba96dec0542`의 17CF exact query(19 lines/1 file, clusters942-967/969-1038) DONE/location PASS를 기록하고, exact once-only 17CG numbered 941-1037 body trace를 sole ACTIVE로 지정. |
