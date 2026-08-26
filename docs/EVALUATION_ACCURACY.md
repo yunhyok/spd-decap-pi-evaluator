@@ -811,10 +811,13 @@ its exact query/read at clean main `afda7f5c9e88f71235229a34e386528c11909647` re
 (1360/1395/1421), and read1360-1484 (125 lines) proved inventory/count/ordinal/grouping, ordered digest,
 coordinate_unit um, four identity bindings, batch1024/cancel, and incomplete-grouping fail-closed behavior,
 but field/type/unit/layer/net semantics delegate to `_validate_plane_stackup` and `_validate_plane_primitive`;
-no further read occurred. Sole ACTIVE read-only successor is 17BL, restricted to the exact two-symbol
-validator-boundary query in `src/spd_decap_pi/raw_spatial_contact_asset.py`; it must exit0 with exactly
-2 unique lines/1 file or STOP. No source read/code/test/stamp/profile/production/accuracy execution is
-authorized.
+no further read occurred. 17BL is DONE/location PASS: clean main `59c7e4b1a457057c00ef9ebd2286829d8c9710a7`
+exact query once exited0 with exactly 2 lines/1 file at validator definitions 1280/1323. Sole ACTIVE
+read-only successor is 17BM, restricted to one read of `src/spd_decap_pi/raw_spatial_contact_asset.py`
+lines 1280-1359 inclusive (80 lines), with no query or second range. Questions cover exact normalized
+fields, units/bounds, layer/net/ordinal/kind/grouping/conductor-gap semantics, and typed loader exposure;
+truncation or external delegation is STOP. No source expansion/code/test/stamp/profile/production/accuracy
+execution is authorized.
 Contract: v2 constants/API byte-identical; profile/global/app/solver/convergence/policy/controller
 identities unchanged; only the opt-in raw-spatial v3 schema/compiler sibling identity is new. v3 sibling with kw-only opt-in flags, five normalized tables,
 no gap table, positive-intervening-thickness fsum spacing, row/coordinate/ProjectSpec/source-SHA digest,
