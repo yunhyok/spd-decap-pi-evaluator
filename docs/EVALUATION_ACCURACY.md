@@ -787,8 +787,10 @@ identity3462→3546 span84 and substrate identity3343→3462 span119; repeated34
 `0bea406939f3f84a1000c56d4b74b490cbf3a2cb` completed both helpers; current identity binds source/geometry/
 material/blocks/GND/certificate or topology/ports/omissions/compiler/static `layerwise_admittance_v1`, but
 raw-v3 manifest/payload/content hash is absent, no profile opt-in arg exists, and canonical/key/static identity
-is delegated externally. Sole ACTIVE successor is 17BF `W7-PHYS-W6-RAW-SPATIAL-V3-SUBSTRATE-HANDOFF-DESIGN`,
-docs-only activation; no source/query/code/test/solver/production/release/accuracy claim.
+is delegated externally. 17BF docs-only design gate is BLOCKED/design REJECT: frozen evidence cannot name
+activation owner/call boundary, require=True v3 loader/attachment/project binding, loader return identity/hash,
+kw-only defaultFalse propagation, v2/v3 cache alias/resource contract, or exact whitelist/focused V1. ACTIVE is
+NONE; no successor or source/query/code/test/solver/production/release/accuracy execution is authorized.
 Contract: v2 constants/API byte-identical; profile/global/app/solver/convergence/policy/controller
 identities unchanged; only the opt-in raw-spatial v3 schema/compiler sibling identity is new. v3 sibling with kw-only opt-in flags, five normalized tables,
 no gap table, positive-intervening-thickness fsum spacing, row/coordinate/ProjectSpec/source-SHA digest,

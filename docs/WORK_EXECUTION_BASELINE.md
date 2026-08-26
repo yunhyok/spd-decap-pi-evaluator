@@ -1,11 +1,11 @@
 # SPD Decap PI Evaluator 작업 기준
 
 - 적용 제품: **SPD Decap PI Evaluator v0.23.0**
-- 문서 버전: **1.83**
-- 상위 기준: [목적·기술 기준](PRODUCT_PURPOSE_AND_TECHNICAL_BASELINE.md) v1.82
+- 문서 버전: **1.84**
+- 상위 기준: [목적·기술 기준](PRODUCT_PURPOSE_AND_TECHNICAL_BASELINE.md) v1.83
 - W6-BASE source-before: clean `main` HEAD `fb36288781dcc0b884950ef5a486c474090ceebd`; this is the exact source boundary for the completed one-run evidence
-- 상태: **APPROVED/MACHINE-FROZEN CONTROL DOCUMENT**; full phase/item history lives in the register and changelog; W5 DONE; W6-BASE 260729 numerical FAIL; W7-PHYS BLOCKED; 17AX BLOCKED/STOP; 17AY DONE (location evidence); 17AZ BLOCKED/STOP (source-classified delegated substrate owner); 17BA BLOCKED/STOP (boundary span627>500); 17BB BLOCKED/STOP (cache-only multiple clusters); 17BC BLOCKED/STOP (endpoint truncation + delegated identity); 17BD DONE (location evidence); 17BE BLOCKED/STOP (raw-v3/hash seam unproven); 17BF ACTIVE.
-- 현재 권위 상태: sole ACTIVE 17BF is a docs-only design activation under canonical docs plus frozen 17AN-17BE evidence; questions kw-only opt-in defaultFalse legacy preservation, require=True loader/attachment/project binding, additive raw payload/content identity without changing False canonical JSON/hash, v2/v3 cache alias prevention, immutable payload/resource/cancel, no fallback, and minimal whitelist/V1 contract; PASS requires implementable legacy-preserving opt-in loader/identity/cache/fail-closed; missing loader return identity or activation owner => STOP/design BLOCKED; no source/query/code/test/solver/production/release/accuracy execution.
+- 상태: **APPROVED/MACHINE-FROZEN CONTROL DOCUMENT**; full phase/item history lives in the register and changelog; W5 DONE; W6-BASE 260729 numerical FAIL; W7-PHYS BLOCKED; 17AX BLOCKED/STOP; 17AY DONE (location evidence); 17AZ BLOCKED/STOP (source-classified delegated substrate owner); 17BA BLOCKED/STOP (boundary span627>500); 17BB BLOCKED/STOP (cache-only multiple clusters); 17BC BLOCKED/STOP (endpoint truncation + delegated identity); 17BD DONE (location evidence); 17BE BLOCKED/STOP (raw-v3/hash seam unproven); 17BF BLOCKED/design REJECT; ACTIVE NONE.
+- 현재 권위 상태: 17BF docs-only design gate is BLOCKED/design REJECT from frozen 17AN-17BE evidence; missing exact activation owner/call boundary, v3 loader require=True attachment/project binding, loader return identity/hash fields, kw-only propagation proof, v2/v3 cache-alias/resource contract, and exact minimal whitelist plus focused V1. ACTIVE is NONE; no successor or source/query/code/test/solver/production/release/accuracy execution.
 - 최종 개정: 2026-08-26 (Asia/Seoul)
 
 ## 1. 압축 후 즉시 복구 카드
@@ -17,15 +17,15 @@ context가 압축되거나 새 session에서 작업을 재개하면 다른 연�
 |---|---|
 | 변하지 않는 목적 | source-derived single-rail `Zii`의 PowerSI 근접 정확성과 일반화 |
 | 현재 branch | `main`만 사용; 정리된 과거 branch를 다시 조사하지 않음 |
-| 현재 active work item | `W7-PHYS-W6-RAW-SPATIAL-V3-SUBSTRATE-HANDOFF-DESIGN` |
-| 다음 권장 묶음 | `W7-PHYS-W6-RAW-SPATIAL-V3-SUBSTRATE-HANDOFF-DESIGN` (ACTIVE; docs-only design activation) |
-| current authorization | 17BA BLOCKED/STOP: boundary span627>500; 17BB BLOCKED/STOP: 8 cache-only rows, combined span385, raw-v3 token0; 17BC BLOCKED/STOP: endpoint-truncated with identity delegated. 17BD DONE(location evidence): helper spans84/119, repeated3462 intended adjacency. 17BE BLOCKED/STOP: exact3343-3545 completed helpers but raw-v3/hash seam, profile opt-in, loader identity absent/delegated. Sole ACTIVE 17BF is docs-only design under frozen 17AN-17BE evidence; no source/query/code/test/production execution. |
+| 현재 active work item | NONE |
+| 다음 권장 묶음 | NONE; 17BF design gate BLOCKED/design REJECT |
+| current authorization | 17BA BLOCKED/STOP: boundary span627>500; 17BB BLOCKED/STOP: 8 cache-only rows, combined span385, raw-v3 token0; 17BC BLOCKED/STOP: endpoint-truncated with identity delegated. 17BD DONE(location evidence): helper spans84/119, repeated3462 intended adjacency. 17BE BLOCKED/STOP: raw-v3/hash seam, profile opt-in, loader identity absent/delegated. 17BF docs-only design gate BLOCKED/design REJECT: activation owner/call boundary, require=True loader/binding, return identity/hash, propagation, cache alias/resource, and whitelist/V1 are all UNPROVEN; no successor or execution. |
 | 17T command A | `rg -n --no-heading --color never --glob '*.py' '\bcompile_raw_spatial_contact_asset\b' 'src/spd_decap_pi'` |
 | 17T command B | `rg -n --no-heading --color never --glob '*.py' '\b(?:resolve_solver_profile|numerical_worker_count|build_layerwise_uniform_source_model)\b' 'src/spd_decap_pi'` |
 | 17T command C | `rg -n --no-heading --color never --glob '*.py' '\b(?:GLOBAL_KRON|SurfacePatchDifferentialProjection|SurfacePatchFinitePortProjection|assemble_differential_admittance|differential_projection)\b' 'src/spd_decap_pi'` |
 | consumed 17M discovery | canonical rg ran once (exit 0), found candidate symbols only; no reuse or production proof |
 | future production invariant (not current authority) | if a future run is authorized: exact clean `main`, new output root, one run/no retry; B correlation is historical evidence; C/D consumed their exactly-one old candidate/import reads; E had one production diagnostic invocation plus one orchestration ZIP read; old root remains forbidden for W6-BASE output/scoring/retry/mutation |
-| 고비용 검증 권한 | none; 17BF is docs-only design activation, with zero source/query/code/test/solver/production/release/accuracy execution |
+| 고비용 검증 권한 | none; ACTIVE NONE after 17BF design REJECT, with zero source/query/code/test/solver/production/release/accuracy execution |
 | 현재 정확성 상태 | `260729 retrospective FAIL`; unseen/generalization remains `unknown / not_run` |
 | 현재 release 계산 증거 | W6-BASE 260729 completed numerical FAIL; offline verifier exit 2 (integrity-valid) |
 | W6-BASE result root | `D:\SPD-Decap-PI-Evaluator-W6\fb36288781dcc0b884950ef5a486c474090ceebd\260729` — manifest `2b14f90e762abc49833518137812e8fc97fcde0e9c145795b7384210cfd9f5de`, sidecar `0d103e0ad47df80641fac0952a35a6eaa56cc9fdb71be24661903e451926e932`, correlation `969e40046e3a099d09557ba7500693460362336d76b067962436bd3b5177abc4` |
@@ -190,7 +190,7 @@ root, one-run/no-retry 조건을 다시 확정할 때만 고려한다.
 | `W7-PHYS-W6-LAYERWISE-SUBSTRATE-INPUT-CACHE-SEAM-TRACE` | 17BC | BLOCKED/STOP | trace substrate input/cache seam | exact3669-3945 read at clean main `76b550ddbf0301d3c682840d206f312ed60345fc` proved signature/project/attachments, required_rail_id/progress/is_cancelled, snapshot/cache lookups/asset SHA/cancellation; raw-v3/require/plane-sheet absent; identity delegated to `_finite_via_substrate_identity` and `_substrate_identity`; endpoint continuing block; no expansion |
 | `W7-PHYS-W6-LAYERWISE-SUBSTRATE-IDENTITY-HELPER-BOUNDARY-DISCOVERY` | 17BD | DONE (location evidence) | discover substrate identity helper boundaries | clean main `662de67882c27bafc3420c965bb069da7458b826`; exact query once exit0, 4 lines/1 file: finite identity3462→3546 span84; substrate identity3343→3462 span119; repeated3462 is intended adjacency despite output order |
 | `W7-PHYS-W6-LAYERWISE-SUBSTRATE-IDENTITY-HELPER-TRACE` | 17BE | BLOCKED/STOP | trace substrate identity helpers | exact3343-3545 read at clean main `0bea406939f3f84a1000c56d4b74b490cbf3a2cb` completed both helpers; current identity binds source/geometry/material/blocks/GND/certificate or topology/ports/omissions/compiler/static `layerwise_admittance_v1`; raw-v3 manifest/payload/content hash absent, no profile opt-in arg, canonical/key/static identity delegated externally; no implementation approval |
-| `W7-PHYS-W6-RAW-SPATIAL-V3-SUBSTRATE-HANDOFF-DESIGN` | 17BF | ACTIVE | design raw-spatial v3 substrate handoff | docs-only activation under canonical docs plus frozen 17AN-17BE evidence; questions kw-only opt-in/defaultFalse legacy preservation, require=True loader/attachment/project binding, additive payload/content identity and cache separation, immutable payload/resource/cancel, no fallback, and minimal whitelist/V1 contract; PASS requires implementable legacy-preserving opt-in loader/identity/cache/fail-closed; missing loader return identity/activation owner => STOP/design BLOCKED; no source/query/code/test/solver/production/release/accuracy claim |
+| `W7-PHYS-W6-RAW-SPATIAL-V3-SUBSTRATE-HANDOFF-DESIGN` | 17BF | BLOCKED/design REJECT | design raw-spatial v3 substrate handoff | frozen 17AN-17BE evidence cannot name activation owner/call boundary, require=True loader/attachment/project binding, loader return identity/hash, kw-only propagation, v2/v3 cache alias/resource contract, or exact whitelist/focused V1; ACTIVE NONE; no successor or execution |
 | `W7-PHYS-PROSPECTIVE-RUNTIME-TERM-EVIDENCE` | next candidate | BLOCKED/YAGNI | provide a grounded runtime term digest/count/owner partition only after an independently selected physical change | new candidate/HEAD/root, one run/no retry; no current authority |
 | `W8-REL` | 18 | BLOCKED | completed known-case solve를 release gate에 연결하고 최종 전달 | accuracy/product gate와 exact release commit 필요 |
 | `D-DIST` | - | DEFERRED | Distribution routing/DRC scope 확대 | 사용자가 implementation-ready/DRC 목표로 승격할 때만 |
@@ -848,7 +848,7 @@ Base clean main HEAD는 `94df6d30cb1b6e8e1be686e311e7ebaa2e96e6b9`이며, exact 
 
 Budget는 <=40 lines 및 <=6 files였고 17 lines/5 files로 통과했다. compiler symbol을 참조한
 유일한 file은 `tests/test_raw_spatial_contact_compiler.py`이며 나머지는 builder/validator-only다.
-17Z는 DONE으로 닫고, 17AA와 17AA-S1은 historical BLOCKED로 남기며 17AA-S2는 test-gate PASS DONE으로 닫는다. 17AB는 DONE, 17AC는 source-classified STOP/BLOCKED로 닫고 17AD는 DONE으로 닫는다. 17AE는 source-location boundary evidence DONE으로 닫고 17AF는 DONE으로 닫는다. 17AG는 integration-gap evidence DONE으로 닫고, 17AH는 bounded location evidence DONE으로 닫는다. 17AI는 gate STOP/BLOCKED로 닫고 17AJ는 deterministic owner-location evidence DONE으로 닫는다. 17AK는 source-classified endpoint STOP/BLOCKED로 닫고 17AL은 source-classified test gap DONE으로 닫는다. 17AM은 DONE, 17AN은 test-gate PASS DONE으로 닫고, 17AO는 location evidence DONE으로 닫는다. 17AP는 source-classified caller trace DONE으로 닫고, 17AQ는 source-classified test-seam STOP/BLOCKED로 닫는다. 17AR는 one-file GUI opt-in activation DONE으로 닫고 17AS는 DONE-negative producer-active/no-solver-consumer로 닫는다. 17AT는 BLOCKED/implementation REJECT, 17AU는 DONE(location evidence), 17AV는 BLOCKED/STOP, 17AW는 DONE(location evidence), 17AX는 BLOCKED/STOP(source-classified preflight-only), 17AY는 DONE(location evidence), 17AZ는 BLOCKED/STOP(source-classified delegated substrate owner)으로 닫고, 17BA는 boundary span627>500으로 BLOCKED/STOP으로 닫으며, 17BB는 cache-only multiple clusters로 BLOCKED/STOP으로 닫고, 17BC는 endpoint truncation + delegated identity로 BLOCKED/STOP으로 닫고, 17BD는 DONE(location evidence)으로 닫으며, 17BE는 raw-v3/hash seam unproven으로 BLOCKED/STOP으로 닫고, ACTIVE는 `W7-PHYS-W6-RAW-SPATIAL-V3-SUBSTRATE-HANDOFF-DESIGN`(17BF)로 지정한다.
+17Z는 DONE으로 닫고, 17AA와 17AA-S1은 historical BLOCKED로 남기며 17AA-S2는 test-gate PASS DONE으로 닫는다. 17AB는 DONE, 17AC는 source-classified STOP/BLOCKED로 닫고 17AD는 DONE으로 닫는다. 17AE는 source-location boundary evidence DONE으로 닫고 17AF는 DONE으로 닫는다. 17AG는 integration-gap evidence DONE으로 닫고, 17AH는 bounded location evidence DONE으로 닫는다. 17AI는 gate STOP/BLOCKED로 닫고 17AJ는 deterministic owner-location evidence DONE으로 닫는다. 17AK는 source-classified endpoint STOP/BLOCKED로 닫고 17AL은 source-classified test gap DONE으로 닫는다. 17AM은 DONE, 17AN은 test-gate PASS DONE으로 닫고, 17AO는 location evidence DONE으로 닫는다. 17AP는 source-classified caller trace DONE으로 닫고, 17AQ는 source-classified test-seam STOP/BLOCKED로 닫는다. 17AR는 one-file GUI opt-in activation DONE으로 닫고 17AS는 DONE-negative producer-active/no-solver-consumer로 닫는다. 17AT는 BLOCKED/implementation REJECT, 17AU는 DONE(location evidence), 17AV는 BLOCKED/STOP, 17AW는 DONE(location evidence), 17AX는 BLOCKED/STOP(source-classified preflight-only), 17AY는 DONE(location evidence), 17AZ는 BLOCKED/STOP(source-classified delegated substrate owner)으로 닫고, 17BA는 boundary span627>500으로 BLOCKED/STOP으로 닫으며, 17BB는 cache-only multiple clusters로 BLOCKED/STOP으로 닫고, 17BC는 endpoint truncation + delegated identity로 BLOCKED/STOP으로 닫고, 17BD는 DONE(location evidence)으로 닫으며, 17BE는 raw-v3/hash seam unproven으로 BLOCKED/STOP으로 닫고, ACTIVE NONE으로 전환한다.
 
 ### 17AA. W7-PHYS-W6-RAW-SPATIAL-ASSET-V3-EMISSION (BLOCKED; test-gate)
 
@@ -1238,16 +1238,14 @@ static `layerwise_admittance_v1`, but raw-v3 manifest/payload/content hash is ab
 exists, and canonical/key/static identity is delegated externally. 17BE is BLOCKED/STOP (raw-v3/hash seam
 unproven), with no design or implementation approval.
 
-### 17BF. W7-PHYS-W6-RAW-SPATIAL-V3-SUBSTRATE-HANDOFF-DESIGN (ACTIVE; docs-only)
+### 17BF. W7-PHYS-W6-RAW-SPATIAL-V3-SUBSTRATE-HANDOFF-DESIGN (BLOCKED/design REJECT; ACTIVE NONE)
 
-Activate a docs-only design pass using canonical docs plus frozen 17AN-17BE evidence; source/query/code/test/
-production executions remain zero. Questions: kw-only opt-in defaultFalse preserving existing byte/behavior;
-require=True v3 loader owner plus attachment/project binding; additive raw payload/content identity in substrate
-cache without changing False canonical JSON/hash; v2/v3 cache alias prevention; immutable payload/resource/cancel;
-no downgrade/fallback; and exact minimal production/test whitelist plus one focused V1 contract. PASS requires
-an implementable legacy-preserving opt-in loader/identity/cache/fail-closed design. STOP/design BLOCKED if frozen
-evidence cannot name loader return identity or activation owner; no physical plane-sheet stamp, replacement/
-no-double-count, nullspace/gauge/Zii, code/test/solver/production/release/accuracy claim.
+The docs-only design gate used canonical docs plus frozen 17AN-17BE evidence; source/query/code/test/production
+executions remained zero. It is BLOCKED/design REJECT because frozen evidence cannot name the activation owner/
+call boundary, require=True v3 loader and attachment/project binding, loader return identity/hash fields,
+kw-only defaultFalse propagation, v2/v3 cache alias prevention/resource contract, or an exact minimal
+production/test whitelist plus focused V1. ACTIVE is NONE; no successor is invented. Non-goals remain physical
+plane-sheet stamping, replacement/no-double-count, nullspace/gauge/Zii, solver/production/release/accuracy.
 ## 20. 변경 기록
 
 | 문서 버전 | 날짜 | 변경 |
@@ -1336,3 +1334,4 @@ no-double-count, nullspace/gauge/Zii, code/test/solver/production/release/accura
 | 1.81 | 2026-08-26 | clean-main HEAD `76b550ddbf0301d3c682840d206f312ed60345fc`의 17BC exact3669-3945 read에서 raw-v3/require/plane-sheet 부재, identity helper delegation, endpoint truncation을 기록해 BLOCKED/STOP으로 닫고 17BD identity-helper boundary discovery를 sole ACTIVE로 지정. |
 | 1.82 | 2026-08-26 | clean-main HEAD `662de67882c27bafc3420c965bb069da7458b826`의 17BD exact query exit0(4 lines/1 file)에서 helper spans84/119와 반복3462 의도적 adjacency를 location evidence로 기록해 DONE으로 닫고 17BE identity-helper trace를 sole ACTIVE로 지정. |
 | 1.83 | 2026-08-26 | clean-main HEAD `0bea406939f3f84a1000c56d4b74b490cbf3a2cb`의 17BE exact3343-3545 read에서 raw-v3/hash seam·profile opt-in·loader identity 부재와 외부 delegation을 기록해 BLOCKED/STOP으로 닫고 17BF substrate-handoff design을 docs-only sole ACTIVE로 지정. |
+| 1.84 | 2026-08-26 | frozen 17AN-17BE evidence만으로 17BF docs-only design gate를 수행해 activation/loader/identity/propagation/cache/whitelist bindings가 UNPROVEN임을 기록하고 BLOCKED/design REJECT, ACTIVE NONE으로 전환. |

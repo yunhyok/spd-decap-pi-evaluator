@@ -1,10 +1,10 @@
 # SPD Decap PI Evaluator 목적·기술 기준
 
 - 적용 제품: **SPD Decap PI Evaluator v0.23.0**
-- 문서 버전: **1.82**
+- 문서 버전: **1.83**
 - W5 approved/machine-frozen source-before: `main` commit `027ac7a09a3eded15f45c41860945f9d4c7f488d`
-- 상태: **G0 기준 문서** — full execution history and sole ACTIVE authority live in `WORK_EXECUTION_BASELINE.md` recovery/register; W5 DONE; W6-BASE 260729 numerical FAIL; W7-PHYS BLOCKED; raw-spatial chain: 17AR DONE, 17AS DONE-negative, 17AT BLOCKED/implementation REJECT, 17AU DONE (location evidence), 17AV BLOCKED/STOP, 17AW DONE (location evidence), 17AX BLOCKED/STOP, 17AY DONE (location evidence), 17AZ BLOCKED/STOP (source-classified delegated substrate owner), 17BA BLOCKED/STOP (boundary span627>500), 17BB BLOCKED/STOP (cache-only multiple clusters), 17BC BLOCKED/STOP (endpoint truncation + delegated identity), 17BD DONE (location evidence), 17BE BLOCKED/STOP (raw-v3/hash seam unproven), 17BF ACTIVE.
-- 현재 권위 상태: sole ACTIVE 17BF is a docs-only design activation under canonical docs plus frozen 17AN-17BE evidence; questions kw-only opt-in defaultFalse legacy preservation, require=True loader/attachment/project binding, additive raw payload/content identity without changing False canonical JSON/hash, v2/v3 cache alias prevention, immutable payload/resource/cancel, no fallback, and minimal whitelist/V1 contract; PASS requires implementable legacy-preserving opt-in loader/identity/cache/fail-closed; missing loader return identity or activation owner => STOP/design BLOCKED; no source/query/code/test/solver/production/release/accuracy execution.
+- 상태: **G0 기준 문서** — full execution history and sole ACTIVE authority live in `WORK_EXECUTION_BASELINE.md` recovery/register; W5 DONE; W6-BASE 260729 numerical FAIL; W7-PHYS BLOCKED; raw-spatial chain: 17AR DONE, 17AS DONE-negative, 17AT BLOCKED/implementation REJECT, 17AU DONE (location evidence), 17AV BLOCKED/STOP, 17AW DONE (location evidence), 17AX BLOCKED/STOP, 17AY DONE (location evidence), 17AZ BLOCKED/STOP (source-classified delegated substrate owner), 17BA BLOCKED/STOP (boundary span627>500), 17BB BLOCKED/STOP (cache-only multiple clusters), 17BC BLOCKED/STOP (endpoint truncation + delegated identity), 17BD DONE (location evidence), 17BE BLOCKED/STOP (raw-v3/hash seam unproven), 17BF BLOCKED/design REJECT; ACTIVE NONE.
+- 현재 권위 상태: 17BF docs-only design gate is BLOCKED/design REJECT from frozen 17AN-17BE evidence; missing exact activation owner/call boundary, v3 loader require=True attachment/project binding, loader return identity/hash fields, kw-only propagation proof, v2/v3 cache-alias/resource contract, and exact minimal whitelist plus focused V1. ACTIVE is NONE; no successor or source/query/code/test/solver/production/release/accuracy execution.
 - 최종 개정: 2026-08-26 (Asia/Seoul)
 
 ## 1. 문서 역할과 권위
@@ -761,9 +761,11 @@ despite output list order. 17BE is BLOCKED/STOP (raw-v3/hash seam unproven): its
 clean main `0bea406939f3f84a1000c56d4b74b490cbf3a2cb` completed both helpers and showed current identity
 binds source/geometry/material/blocks/GND/certificate or topology/ports/omissions/compiler/static
 `layerwise_admittance_v1`; raw-v3 manifest/payload/content hash absent, no profile opt-in arg, and
-canonical/key/static identity delegated externally. Sole ACTIVE successor is 17BF
-`W7-PHYS-W6-RAW-SPATIAL-V3-SUBSTRATE-HANDOFF-DESIGN`, docs-only activation; no source/query/code/test/
-production/solver/release/accuracy execution.
+canonical/key/static identity delegated externally. 17BF docs-only design gate is BLOCKED/design REJECT:
+frozen evidence cannot name the activation owner/call boundary, require=True v3 loader and attachment/
+project binding, loader return identity/hash fields, kw-only defaultFalse propagation, v2/v3 cache alias
+prevention/resource contract, or an exact minimal production/test whitelist plus focused V1. ACTIVE is NONE;
+no successor is invented and no source/query/code/test/solver/production/release/accuracy execution is authorized.
 The frozen contract keeps v2 constants/API byte-identical and adds a schema-v3 sibling: compiler
 keyword-only `include_plane_sheet_payload=False`, validator keyword-only `require_plane_sheet_payload=False`,
 opt-in no downgrade, exactly five normalized tables (`plane_primitives`, `vertices`, `circles`,
@@ -883,5 +885,6 @@ and the exact Git HEAD are frozen together. Current trust identities: base `d43b
 | 1.80 | 2026-08-26 | clean-main HEAD `76b550ddbf0301d3c682840d206f312ed60345fc`의 17BC exact3669-3945 read에서 raw-v3/require/plane-sheet 부재, identity helper delegation, endpoint truncation을 기록해 BLOCKED/STOP으로 닫고 17BD identity-helper boundary discovery를 sole ACTIVE로 지정. |
 | 1.81 | 2026-08-26 | clean-main HEAD `662de67882c27bafc3420c965bb069da7458b826`의 17BD exact query exit0(4 lines/1 file)에서 helper spans84/119와 반복3462 의도적 adjacency를 location evidence로 기록해 DONE으로 닫고 17BE identity-helper trace를 sole ACTIVE로 지정. |
 | 1.82 | 2026-08-26 | clean-main HEAD `0bea406939f3f84a1000c56d4b74b490cbf3a2cb`의 17BE exact3343-3545 read에서 raw-v3/hash seam·profile opt-in·loader identity 부재와 외부 delegation을 기록해 BLOCKED/STOP으로 닫고 17BF substrate-handoff design을 docs-only sole ACTIVE로 지정. |
+| 1.83 | 2026-08-26 | frozen 17AN-17BE evidence만으로 17BF docs-only design gate를 수행해 activation/loader/identity/propagation/cache/whitelist bindings가 UNPROVEN임을 기록하고 BLOCKED/design REJECT, ACTIVE NONE으로 전환. |
 | 1.1 | 2026-08-24 | `WORK_EXECUTION_BASELINE.md`를 두 번째 canonical 문서로 연결. |
 | 1.0 | 2026-08-24 | v0.24 계획 중심의 Distribution–solver PRD를 제품 전체의 목적·기술 기준으로 개정. PowerSI 정확성 우선, 상태 어휘, 기술 경계, promotion gate, 검증 비용 통제와 two-document 작업 방식을 고정. |
