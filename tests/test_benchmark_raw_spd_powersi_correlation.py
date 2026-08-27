@@ -281,9 +281,17 @@ def test_cli_defaults_to_development_and_holdout_modes_and_requires_new_output()
 
 def test_cli_exposes_bounded_import_and_single_frequency_layerwise_modes():
     imported = module.parse_args(
-        ["--spd", "raw.spd", "--out-dir", "result", "--import-save-only"]
+        [
+            "--spd",
+            "raw.spd",
+            "--out-dir",
+            "result",
+            "--import-save-only",
+            "--include-plane-sheet-payload",
+        ]
     )
     assert imported.import_save_only is True
+    assert imported.include_plane_sheet_payload is True
     assert imported.touchstone is None
 
     diagnostic = module.parse_args(
@@ -314,6 +322,18 @@ def test_cli_exposes_bounded_import_and_single_frequency_layerwise_modes():
                 "--import-save-only",
                 "--reuse-candidate",
                 "candidate.spdpi",
+            ]
+        )
+    with pytest.raises(SystemExit):
+        module.parse_args(
+            [
+                "--spd",
+                "raw.spd",
+                "--touchstone",
+                "r.s92p",
+                "--out-dir",
+                "result",
+                "--include-plane-sheet-payload",
             ]
         )
 
@@ -398,11 +418,26 @@ def test_import_save_only_main_validates_reload_and_never_reads_touchstone_or_so
     )
     events: list[str] = []
 
-    monkeypatch.setattr(
-        module,
-        "import_spd_scenario",
-        lambda path, **_kwargs: imported,
-    )
+    import_kwargs: list[dict[str, object]] = []
+
+    def fake_import(path, **kwargs):
+        import_kwargs.append(kwargs)
+        return imported
+
+    monkeypatch.setattr(module, "import_spd_scenario", fake_import)
+    raw_identity_kwargs: dict[str, object] = {}
+
+    def fake_raw_identity(*_args, **kwargs):
+        raw_identity_kwargs.update(kwargs)
+        return {
+            "status": "absent",
+            "required": False,
+            "full_loader_status": "not_applicable",
+            "manifest": None,
+            "counts": None,
+        }
+
+    monkeypatch.setattr(module, "_raw_spatial_contact_asset_identity", fake_raw_identity)
 
     def save(_scenario, path, *, attachments):
         assert attachments == imported.attachments
@@ -439,10 +474,15 @@ def test_import_save_only_main_validates_reload_and_never_reads_touchstone_or_so
             "--out-dir",
             str(out_dir),
             "--import-save-only",
+            "--include-plane-sheet-payload",
         ]
     )
 
     assert result == 0
+    assert len(import_kwargs) == 1
+    assert callable(import_kwargs[0]["progress"])
+    assert import_kwargs[0]["include_plane_sheet_payload"] is True
+    assert raw_identity_kwargs["require_plane_sheet_payload"] is True
     assert events == ["save", "load"]
     report = json.loads(
         (out_dir / "import_save_validation_report.json").read_text(
@@ -1939,6 +1979,64 @@ def test_raw_spatial_identity_fully_loads_persisted_bindings_and_counts(
     assert result["loaded_manifest_matches_persisted"] is True
     assert result["loaded_counts_match_persisted"] is True
     assert len(result["manifest_identity_sha256"]) == 64
+
+
+def test_raw_spatial_identity_requires_nonempty_v3_plane_counts(monkeypatch):
+    scenario, attachments, compiled, raw_manifest = (
+        _raw_spatial_identity_fixture()
+    )
+    raw_manifest.update(
+        {
+            "plane_sheet_counts": {
+                "plane_primitives": 1,
+                "plane_vertices": 1,
+                "plane_circles": 0,
+                "stackup_layers": 1,
+                "dielectric_points": 0,
+            },
+        }
+    )
+
+    class Loaded:
+        manifest = MappingProxyType(
+            {
+                **raw_manifest,
+                "counts": MappingProxyType(dict(raw_manifest["counts"])),
+                "plane_sheet_counts": MappingProxyType(
+                    dict(raw_manifest["plane_sheet_counts"])
+                ),
+            }
+        )
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_args):
+            return None
+
+        def iter_source_coverage(self):
+            source, _sections = _raw_spatial_identity_coverage()
+            return iter((source,))
+
+        def iter_section_coverage(self):
+            _source, sections = _raw_spatial_identity_coverage()
+            return iter(sections)
+
+    observed = {}
+
+    def load(_manifest, _attachments, **kwargs):
+        observed.update(kwargs)
+        return Loaded()
+
+    monkeypatch.setattr(module, "load_raw_spatial_contact_asset", load)
+    with pytest.raises(ValueError, match="dielectric_points"):
+        module._raw_spatial_contact_asset_identity(
+            scenario,
+            attachments,
+            compiled_topology_asset=compiled,
+            require_plane_sheet_payload=True,
+        )
+    assert observed["require_plane_sheet_payload"] is True
 
 
 def test_raw_spatial_identity_requires_metadata_for_compiled_candidate():

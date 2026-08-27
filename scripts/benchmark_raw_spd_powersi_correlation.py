@@ -692,6 +692,14 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
             "write import_save_validation_report.json, and execute no frequency solve"
         ),
     )
+    parser.add_argument(
+        "--include-plane-sheet-payload",
+        action="store_true",
+        help=(
+            "include source-derived v3 plane/stackup/dielectric tables during "
+            "a fresh --import-save-only import"
+        ),
+    )
     bounded_mode.add_argument(
         "--layerwise-diagnostic-frequency-hz",
         type=float,
@@ -737,6 +745,8 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         )
     if args.import_save_only and args.rail is not None:
         parser.error("--rail is not used by --import-save-only")
+    if args.include_plane_sheet_payload and not args.import_save_only:
+        parser.error("--include-plane-sheet-payload requires --import-save-only")
     if diagnostic_requested:
         if (
             not np.isfinite(args.layerwise_diagnostic_frequency_hz)
@@ -1149,6 +1159,7 @@ def _raw_spatial_contact_asset_identity(
     attachments: Mapping[str, bytes],
     *,
     compiled_topology_asset: Mapping[str, Any],
+    require_plane_sheet_payload: bool = False,
 ) -> dict[str, Any]:
     """Fully load and disclose the raw asset from one reloaded bundle."""
 
@@ -1172,6 +1183,8 @@ def _raw_spatial_contact_asset_identity(
     )
     compiled_validated = compiled_topology_asset.get("status") == "validated"
     if not raw_present:
+        if require_plane_sheet_payload:
+            raise ValueError("raw spatial v3 asset is required")
         if compiled_validated:
             raise ValueError(
                 "reloaded compiled-topology candidate lacks raw spatial metadata"
@@ -1242,12 +1255,33 @@ def _raw_spatial_contact_asset_identity(
     ):
         raise ValueError("raw spatial persisted binding differs after reload")
 
+    loader_kwargs = dict(expected)
+    if require_plane_sheet_payload:
+        loader_kwargs["require_plane_sheet_payload"] = True
     with load_raw_spatial_contact_asset(
         raw_manifest,
         attachments,
-        **expected,
+        **loader_kwargs,
     ) as loaded:
         disclosed = dict(loaded.manifest)
+        if require_plane_sheet_payload:
+            plane_sheet_counts = loaded.manifest.get("plane_sheet_counts")
+            if not isinstance(plane_sheet_counts, Mapping):
+                raise ValueError("raw spatial v3 plane-sheet counts are missing")
+            for section in (
+                "plane_primitives",
+                "stackup_layers",
+                "dielectric_points",
+            ):
+                try:
+                    count = int(plane_sheet_counts.get(section, 0))
+                except (TypeError, ValueError):
+                    count = 0
+                if count <= 0:
+                    raise ValueError(
+                        f"raw spatial v3 {section} count is missing or empty"
+                    )
+            disclosed["plane_sheet_counts"] = dict(plane_sheet_counts)
         loaded_counts = loaded.manifest.get("counts")
         if not isinstance(loaded_counts, Mapping):
             raise ValueError("raw spatial loaded counts are invalid")
@@ -3366,6 +3400,7 @@ def main(argv: list[str] | None = None) -> int:
         imported = import_spd_scenario(
             spd,
             progress=import_progress if args.import_save_only else None,
+            include_plane_sheet_payload=args.include_plane_sheet_payload,
         )
         if args.import_save_only:
             print(
@@ -3427,6 +3462,7 @@ def main(argv: list[str] | None = None) -> int:
             bundle.scenario,
             bundle.attachments,
             compiled_topology_asset=compiled_topology_asset,
+            require_plane_sheet_payload=args.include_plane_sheet_payload,
         )
         report = {
             "schema_version": IMPORT_SAVE_REPORT_SCHEMA_VERSION,
