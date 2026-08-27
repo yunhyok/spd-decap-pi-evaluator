@@ -1,10 +1,10 @@
 # SPD Decap PI Evaluator 작업 기준
 
 - 적용 제품: **SPD Decap PI Evaluator v0.23.1**
-- 문서 버전: **1.150**
-- 상위 기준: [목적·기술 기준](PRODUCT_PURPOSE_AND_TECHNICAL_BASELINE.md) v1.149
-- 현재 상태: W6 numerical FAIL; W7 BLOCKED; ACTIVE NONE; 17DG standalone/no Zii change; 17DK–17DP validation-only; 17DR candidate gate **NOT READY/STOP** (surface-patch plane current-spreading R/L only credible direction); no follow-up authority.
-- 최종 개정: 2026-08-27 (Asia/Seoul)
+- 문서 버전: **1.151**
+- 상위 기준: [목적·기술 기준](PRODUCT_PURPOSE_AND_TECHNICAL_BASELINE.md) v1.150
+- 현재 상태: W6 numerical FAIL; W7 BLOCKED; ACTIVE NONE; 17DG standalone/no Zii change; 17DK–17DP validation-only; 17DS candidate gate **NOT READY/STOP** (surface-patch plane current-spreading R/L only credible direction); no follow-up authority.
+- 최종 개정: 2026-08-28 (Asia/Seoul)
 
 ## 1. 압축 후 즉시 복구 카드
 
@@ -14,7 +14,7 @@ context가 압축되거나 새 session에서 작업을 재개하면 이 표만 �
 |---|---|
 | 변하지 않는 목적 | source-derived single-rail `Zii`의 PowerSI 근접 정확성과 일반화 |
 | 현재 branch | `main`만 사용 |
-| 현재 assessment | W6-BASE 260729 numerical FAIL; W7 BLOCKED; 17DR candidate gate NOT READY/STOP |
+| 현재 assessment | W6-BASE 260729 numerical FAIL; W7 BLOCKED; 17DS candidate gate NOT READY/STOP |
 | 현재 active work item | NONE |
 | 현재 정확성 상태 | `260729 retrospective FAIL`; unseen/generalization `unknown / not_run` |
 | current authorization | 없음: code/test/build/production/manifest/schema/physics/profile 변경 및 rerun 금지 |
@@ -125,6 +125,7 @@ disjoint owner ledger 확보와 사용자 명시 승인
 | `W7-PHYS-COVERAGE` | 17DK–17DP | BLOCKED | audit API/lifecycle repair, strict source coverage, owner-ledger reconciliation | execution evidence는 확보했으나 17DP `SOURCE_OWNER_GAP_STOP`; validation/metadata only |
 | `W7-PHYS-OUTCOME-REVIEW` | 17DQ | DONE | 현재 결과 재평가와 후속 필요성 판정 | artifact-only ablation과 owner-manifest/schema continuation을 열지 않고 ACTIVE NONE 유지 |
 | `W7-PHYS-CANDIDATE-REVIEW` | 17DR | DONE | source/provenance/ownership feasibility candidate gate review | review 완료; candidate 결과 **NOT READY/STOP**; 상위 W7 **BLOCKED** / **ACTIVE NONE** |
+| `W7-PHYS-CANDIDATE-REVIEW-CLOSURE` | 17DS | DONE | exact source-only bare-development rail candidate closure | `ADC_VDD_180_VQPS_SYS_1_AON/0` subject review 완료; raw-spatial v2 only로 `STOP_RAW_SPATIAL_V3_ABSENT`; candidate **NOT READY/STOP**; 상위 W7 **BLOCKED** / **ACTIVE NONE** |
 | `W7-PHYS-PROSPECTIVE` | next | BLOCKED | 단일 source-derived physical candidate의 causal checkpoint | geometry/material provenance, rail-complete 범위, deterministic stamp, falsifiable physical/analytic limiting-case invariant, disjoint owner ledger 및 사용자 명시 승인 후에만 READY 가능 |
 | `W8-REL` | 18 | BLOCKED | completed known-case solve를 release gate에 연결하고 최종 전달 | accuracy/product gate와 exact release commit 필요 |
 | `D-DIST` | - | DEFERRED | Distribution routing/DRC scope 확대 | 사용자가 implementation-ready/DRC 목표로 승격할 때만 |
@@ -503,19 +504,27 @@ source/provenance/ownership feasibility review에서 다음 물리 방향은
 `raw_to_authoritative_owner_partition_manifest` 또는 새 schema/audit를 만드는
 작업은 validation churn이다. 둘 다 현재 후속 과제로 승인하지 않는다.
 
-17DR은 exact rail 미선정 provisional bare-development rail shape다. raw-v3
-plane/material과 Device terminal footprint를 17DG finite-port condensation에
-연결하고 기존 terminal R/L을 유지하는 형태지만, deterministic replacement
-stamp, footprint-to-owner mapping, global port assembly, replaced-plane owner-off가
-source-complete하게 결속되지 않아 **STOP / NOT READY**다. W7은 **BLOCKED**,
-`ACTIVE NONE`이며 사용자 명시 승인 전 code/test/build/production/rerun은 금지한다.
+17DS source-only audit subject는 `ADC_VDD_180_VQPS_SYS_1_AON/0` (pair L30
+`OTHER_POWER1`/L29 `DGND`, active selected caps 0, device branches/pins 3/6,
+양 endpoint authoritative finite-via vertex)이다. Selection rule은 eligible bare
+→ both endpoints finite-Via → minimum branch/pin → canonical rail ID다. Frozen
+candidate SHA `8b02836c03aa38c447fba37ddd30434a3e4ed34ce772654fa5bc3a8512543320`에는
+raw-spatial v2 attachment
+`attachments/spatial/raw-spatial-contact-v2-40cb44b2376f59d6.sqlite.zlib` (SHA
+`275c839633a37f3de3f76fd502d3a790d7c48da82e9ca156700449d1fa71f9c4`)만 있고 v3 `plane_primitives/vertices/circles`,
+`stackup_layers`, `dielectric_points`가 없어 `STOP_RAW_SPATIAL_V3_ABSENT`다.
+Old AdjacentGap/Dispersive plane stamps도 persisted physical owner ID가 없어
+disjoint replacement ledger를 증명할 수 없다. 17DS review는 **DONE**, candidate는
+**NOT READY**, W7은 **BLOCKED**, `ACTIVE NONE`이다. 원본 SPD full scan, 새 audit
+script/test, v3 generation, solver/profile/GUI/code/build/production은 정보 증가
+없이 churn이므로 실행하지 않았다.
 
 ### 12.4 재개 조건
 
 ```mermaid
 flowchart LR
-  A[W6 PowerSI FAIL] --> B[17DR: plane current-spreading R/L만 credible]
-  B --> C[현 artifact로 단일 owner 식별 불가]
+  A[W6 PowerSI FAIL] --> B[17DS: plane current-spreading R/L만 credible]
+  B --> C[finite-area PWR/return footprint와 old-plane owner-off joint ledger 없음]
   D[17DG foundation] -. production binding 없음 .-> C
   E[17DO coverage] --> F[17DP owner identity gap]
   F --> C

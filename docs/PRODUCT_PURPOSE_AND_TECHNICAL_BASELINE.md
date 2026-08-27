@@ -1,14 +1,14 @@
 # SPD Decap PI Evaluator 목적·기술 기준
 
 - 적용 제품: **SPD Decap PI Evaluator v0.23.1**
-- 문서 버전: **1.149**
+- 문서 버전: **1.150**
 - W5 approved/machine-frozen source-before: `main` commit `027ac7a09a3eded15f45c41860945f9d4c7f488d`
 - 상태: **G0 기준 문서** — W5 DONE; W6-BASE 260729 numerical FAIL; W7-PHYS BLOCKED.
-- 현재 평가: 17DG는 standalone mathematical foundation이고, 17DR 재검토에서 **surface-patch plane current-spreading R/L**만 credible한 다음 물리 방향으로 남았지만 global port/owner seam 부재로 **NOT READY/STOP**이다. 17DK–17DP는 validation/metadata only이며 production `Y_global` 또는 `Zii`를 변경하지 않았다.
-- Sole ACTIVE item (current): **NONE**. 17DR candidate gate는 **NOT READY/STOP**이고 W7은 BLOCKED 상태다.
+- 현재 평가: 17DG는 standalone mathematical foundation이고, 17DR–17DS review에서 source/provenance/ownership feasibility 기준 **surface-patch plane current-spreading R/L**만 credible한 다음 물리 방향으로 남았지만 global port/owner seam 부재로 **NOT READY/STOP**이다. 17DK–17DP는 validation/metadata only이며 production `Y_global` 또는 `Zii`를 변경하지 않았다.
+- Sole ACTIVE item (current): **NONE**. 17DS candidate gate는 **NOT READY/STOP**이고 W7은 BLOCKED 상태다.
 - 후속 권한: artifact-only ablation, owner-manifest/schema, physics/profile 변경, production rerun, release는 모두 미승인이다.
 - 재개 조건: geometry/material provenance, falsifiable physical/analytic limiting-case invariant, deterministic stamp, disjoint owner ledger를 갖춘 source-certified rail-complete physical candidate.
-- 최종 개정: 2026-08-27 (Asia/Seoul)
+- 최종 개정: 2026-08-28 (Asia/Seoul)
 
 ## 1. 문서 역할과 권위
 
@@ -344,8 +344,9 @@ flowchart TD
 | 제품 기반 | W0–W5에서 목적·작업 통제, product-core truth, SPD/I/O 안전성, CI, solver fail-closed guard와 frozen accuracy gate를 확보했다. |
 | 외부 정확성 | W6-BASE 260729는 완료된 수치 결과지만 PowerSI 기준 **FAIL**이다. unseen/generalization은 `unknown / not_run`이다. |
 | W7의 유효 성과 | 17DG의 sparse gauge-safe finite-port condensation은 재사용 가능한 standalone 수학 기반이다. 17DL/17DN은 audit API/lifecycle 결함을 고쳤고, 17DO는 source coverage의 실제 한계를 계량했다. |
-| W7의 한계 | overall 17DO strict coverage는 terminal 30,526/63,872 complete와 via-pair gaps로 **BLOCKED/STOP**이다. 다만 nested `surface.production_compile`/`rail_port_audit`는 92/92 rail, 42,674 binding pins, 1,692,366 finite links, 1,729,871 owners를 complete로 확인했고 canonical W6 finite-via links는 1,692,389개다. 남은 17DR blocker는 rail 자체 불완전이 아니라 authoritative point/topology owner 집합과 raw-v3 finite-area PWR/return patch footprint 및 replaced-plane owners 사이 identity-level join, production global assembly, replacement owner-off 증거의 부재다. |
+| W7의 한계 | overall 17DO strict coverage는 terminal 30,526/63,872 complete와 via-pair gaps로 **BLOCKED/STOP**이다. 다만 nested `surface.production_compile`/`rail_port_audit`는 92/92 rail, 42,674 binding pins, 1,692,366 finite links, 1,729,871 owners를 complete로 확인했고 canonical W6 finite-via links는 1,692,389개다. 현재 17DS blocker는 rail 자체 불완전이 아니라 authoritative point/topology owner 집합과 raw-v3 finite-area PWR/return patch footprint 및 replaced-plane owners 사이 identity-level join, production global assembly, replacement owner-off 증거의 부재다. |
 | 17DR candidate gate | physical gate는 `C=ε₀εrA/d`와 uniform-strip series R/L analytic limits로 분리하고, 17DG는 별도의 gauge-safe finite-port condensation foundation으로 둔다(게이지/reciprocity/passivity는 physical limiting-case invariant가 아님). source/provenance/ownership feasibility 기준 sole credible next direction은 **surface-patch plane current-spreading R/L replacement**이지만 deterministic production replacement stamp와 global port/owner seam이 없어 W6 원인 또는 정확도 개선 판정이 아닌 **NOT READY/STOP**이다. |
+| 17DS closure | exact source-only subject `ADC_VDD_180_VQPS_SYS_1_AON/0` (pair L30 `OTHER_POWER1`/L29 `DGND`, active selected caps 0, device branches/pins 3/6, both endpoints authoritative finite-via vertices). Selection: eligible bare → both endpoints finite-Via → minimum branch/pin → canonical rail ID. Frozen candidate SHA `8b02836c03aa38c447fba37ddd30434a3e4ed34ce772654fa5bc3a8512543320` has only raw-spatial v2 `attachments/spatial/raw-spatial-contact-v2-40cb44b2376f59d6.sqlite.zlib` (attachment SHA `275c839633a37f3de3f76fd502d3a790d7c48da82e9ca156700449d1fa71f9c4`); v3 plane primitives/vertices/circles, stackup, and dielectric rows are absent: `STOP_RAW_SPATIAL_V3_ABSENT`. Old AdjacentGap/Dispersive plane stamps also lack persisted physical owner IDs, so disjoint replacement ownership is unprovable. Review **DONE**, candidate **NOT READY**, W7 **BLOCKED**, `ACTIVE NONE`. |
 | 열지 않는 후보 | Trace R/L은 source trace-width/return assignment가 incomplete하고, Via return/mutual은 source-complete plating/fill/return-plane contract가 없다. Pad/anti-pad는 complete antipad/replacement boundary가 없고, dielectric은 scalar/table dispersion이 이미 active라 temperature-less model로 temperature variant를 source-faithful하게 표현할 수 없다. GUI `include_plane_sheet_payload` 플래그만 켜는 것은 데이터만 만들 뿐 physics를 바꾸지 않으므로 금지한다. |
 | 후속 필요성 | 현 artifact만 이용한 Via/sheet/profile ablation은 여러 누락 물리 항을 식별하지 못하므로 실행하지 않는다. owner-manifest/schema 작업도 선택된 물리 후보 없이 진행하면 validation churn이다. |
 | 현재 권한 | `ACTIVE NONE`. 코드, test, build, production audit/rerun, release를 시작하지 않는다. |
