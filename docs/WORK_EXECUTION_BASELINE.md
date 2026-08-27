@@ -1,9 +1,9 @@
 # SPD Decap PI Evaluator 작업 기준
 
 - 적용 제품: **SPD Decap PI Evaluator v0.23.1**
-- 문서 버전: **1.149**
-- 상위 기준: [목적·기술 기준](PRODUCT_PURPOSE_AND_TECHNICAL_BASELINE.md) v1.148
-- 현재 상태: W6 numerical FAIL; W7 BLOCKED; ACTIVE NONE; 17DG standalone/no Zii change; 17DK–17DP validation-only with 17DP source-owner-gap STOP; no follow-up authority.
+- 문서 버전: **1.150**
+- 상위 기준: [목적·기술 기준](PRODUCT_PURPOSE_AND_TECHNICAL_BASELINE.md) v1.149
+- 현재 상태: W6 numerical FAIL; W7 BLOCKED; ACTIVE NONE; 17DG standalone/no Zii change; 17DK–17DP validation-only; 17DR candidate gate **NOT READY/STOP** (surface-patch plane current-spreading R/L only credible direction); no follow-up authority.
 - 최종 개정: 2026-08-27 (Asia/Seoul)
 
 ## 1. 압축 후 즉시 복구 카드
@@ -14,7 +14,7 @@ context가 압축되거나 새 session에서 작업을 재개하면 이 표만 �
 |---|---|
 | 변하지 않는 목적 | source-derived single-rail `Zii`의 PowerSI 근접 정확성과 일반화 |
 | 현재 branch | `main`만 사용 |
-| 현재 assessment | W6-BASE 260729 numerical FAIL; W7 source-owner-gap으로 BLOCKED |
+| 현재 assessment | W6-BASE 260729 numerical FAIL; W7 BLOCKED; 17DR candidate gate NOT READY/STOP |
 | 현재 active work item | NONE |
 | 현재 정확성 상태 | `260729 retrospective FAIL`; unseen/generalization `unknown / not_run` |
 | current authorization | 없음: code/test/build/production/manifest/schema/physics/profile 변경 및 rerun 금지 |
@@ -124,6 +124,7 @@ disjoint owner ledger 확보와 사용자 명시 승인
 | `W7-PHYS-PREREQUISITES` | 17DH–17DJ | BLOCKED | landing ownership과 one-block causal experiment gate | source-certified rail-complete candidate와 authoritative owner relation 부재 |
 | `W7-PHYS-COVERAGE` | 17DK–17DP | BLOCKED | audit API/lifecycle repair, strict source coverage, owner-ledger reconciliation | execution evidence는 확보했으나 17DP `SOURCE_OWNER_GAP_STOP`; validation/metadata only |
 | `W7-PHYS-OUTCOME-REVIEW` | 17DQ | DONE | 현재 결과 재평가와 후속 필요성 판정 | artifact-only ablation과 owner-manifest/schema continuation을 열지 않고 ACTIVE NONE 유지 |
+| `W7-PHYS-CANDIDATE-REVIEW` | 17DR | DONE | source/provenance/ownership feasibility candidate gate review | review 완료; candidate 결과 **NOT READY/STOP**; 상위 W7 **BLOCKED** / **ACTIVE NONE** |
 | `W7-PHYS-PROSPECTIVE` | next | BLOCKED | 단일 source-derived physical candidate의 causal checkpoint | geometry/material provenance, rail-complete 범위, deterministic stamp, falsifiable physical/analytic limiting-case invariant, disjoint owner ledger 및 사용자 명시 승인 후에만 READY 가능 |
 | `W8-REL` | 18 | BLOCKED | completed known-case solve를 release gate에 연결하고 최종 전달 | accuracy/product gate와 exact release commit 필요 |
 | `D-DIST` | - | DEFERRED | Distribution routing/DRC scope 확대 | 사용자가 implementation-ready/DRC 목표로 승격할 때만 |
@@ -474,41 +475,46 @@ falsifiable physical/analytic limiting-case invariant + disjoint owner ledger와
 |---|---|---|
 | 17DG | sparse, gauge-safe, reciprocal/passive finite-port condensation의 standalone 수학 기반; technical commit `fdb70ad0...`, focused gate 1회 PASS | production attachment, old Maxwell owner-off, `Y_global`/`Zii`, PowerSI 정확성 |
 | 17DL/17DN | audit lifecycle와 frozen-row serialization/API 결함의 focused regression PASS | source coverage 완전성, R/L 또는 정확도 개선 |
-| 17DO | one-run execution PASS, raw/candidate SHA 확인, reachability 831,516/831,516, proofs 371/371 | strict source coverage PASS 또는 causal physics owner |
+| 17DO | authoritative production topology (`surface.production_compile` / `rail_port_audit` nested evidence): rail 92/92 complete, binding pins 42,674, finite links 1,692,366, owners 1,729,871 complete; canonical W6 finite-via links 1,692,389 | 이 completeness 수치는 overall 17DO audit가 아니라 nested production sections다. 17DR blocker는 point/topology owner 집합과 raw-v3 finite-area PWR/return patch footprint 및 replaced-plane owners의 identity-level join, production global assembly, replacement owner-off 증거 |
 | 17DP | terminal/via partition count conservation 확인 | identity-level raw-to-authoritative owner intersection |
 
-17DO execution identity: technical commit `ea78c0181aa98c565efedf1b3b19e2117decdcd7`; root `D:\SPD-Decap-PI-Evaluator-W7\ea78c0181aa98c565efedf1b3b19e2117decdcd7\260729-17do-source-coverage`; one run/no retry, exit 2; stderr empty; elapsed `3176.038s`; classification execution PASS + strict source coverage BLOCKED/STOP; no rerun.
+17DO execution identity: technical commit `ea78c0181aa98c565efedf1b3b19e2117decdcd7`; root `D:\SPD-Decap-PI-Evaluator-W7\ea78c0181aa98c565efedf1b3b19e2117decdcd7\260729-17do-source-coverage`; one run/no retry, exit 2; classification **execution PASS + strict source coverage BLOCKED/STOP**; final JSON SHA-256 `9c387bd5767c563cd993201472f7a74c67f483837f15724480d4c6d1fec0b20d`. 17DR의 현재 candidate-gate blocker는 rail 자체 불완전이 아니라 authoritative point/topology owner와 raw-v3 finite-area patch/replaced-plane owner의 identity-level join, production global assembly, replacement owner-off 증거 부재다.
 
-17DO의 terminal landing은 63,872개 중 30,526 complete, 33,346 incomplete였고,
-via-pair diagnostic은 1,547,649 missing-endpoint와 61,192
-terminal-owned-unpaired를 남겼다. Final JSON SHA-256은
-`9c387bd5767c563cd993201472f7a74c67f483837f15724480d4c6d1fec0b20d`다.
-이 수치는 source coverage 진단이지 PowerSI 정확성 증거가 아니다.
+전체 17DO strict-coverage 집계는 terminal landing 63,872개 중 30,526 complete / 33,346 incomplete, via-pair missing endpoint 1,547,649 및 terminal-owned-unpaired 61,192였고, 이 별도 집계가 strict source coverage BLOCKED/STOP의 근거다.
 
 ### 12.3 지금 후속 실험을 열지 않는 이유
 
 W6 loaded rail 오차는 1 MHz `-6.023..-3.058 dB`, 10 MHz
 `-27.527..-22.830 dB`, 100 MHz `-25.061..-18.059 dB`로 모두
-음수였지만, lateral Trace/plane-sheet R/L, Via return/mutual, pad/anti-pad,
-current spreading 등 여러 누락 후보가 동시에 남아 있다. 기존 artifact의
-port response만으로 이 inverse problem을 한 block에 귀속할 수 없다.
+음수였다. W6 port response만으로는 원인 block이 ambiguous했지만, 17DR
+source/provenance/ownership feasibility review에서 다음 물리 방향은
+**surface-patch plane current-spreading R/L replacement 하나**로 좁혀졌다.
+이는 W6 원인이나 정확도 개선 판정이 아니라 candidate feasibility 범위다.
 
 - `disabled_via_link_ids`는 finite Via link를 끌 수 있지만 production Evaluation
   call path와 authoritative owner partition에 결속되지 않아 구조 민감도만 보인다.
 - sheet-loss evidence는 solver ablation을 실행하지 않으며, legacy sheet
   monkeypatch는 current Layerwise production 경로가 아니다.
-- 17DG surface-patch operator는 production caller와 old-Maxwell replacement가 없다.
+- physical gate는 `C=ε₀εrA/d`와 uniform-strip series R/L analytic limits로 분리한다. 17DG는 별도의 gauge-safe finite-port condensation foundation이며, gauge/reciprocity/passivity는 physical limiting-case invariant가 아니다. raw-v3 plane/stackup/material provenance는 있으나 production caller와 old-Maxwell replacement의 global port/owner seam이 없어 surface-patch plane current-spreading R/L replacement는 **NOT READY/STOP**이다.
 - profile 전환은 여러 modeling 차이를 함께 바꾸므로 one-block experiment가 아니다.
+- Trace R/L은 source trace-width/return assignment가 incomplete하다. Via return/mutual은 source-complete plating/fill/return-plane contract가 없다. Pad/anti-pad는 complete antipad/replacement boundary가 없다. Scalar/table dielectric dispersion은 이미 active이며 temperature variants는 현재 temperature-less model로 source-faithful하게 표현할 수 없다. GUI `include_plane_sheet_payload` 플래그만 켜는 것은 데이터를 만들 뿐 physics를 바꾸지 않으므로 금지한다.
 
 따라서 artifact-only ablation은 non-identifying이고, 선택된 물리 후보 없이
 `raw_to_authoritative_owner_partition_manifest` 또는 새 schema/audit를 만드는
 작업은 validation churn이다. 둘 다 현재 후속 과제로 승인하지 않는다.
 
+17DR은 exact rail 미선정 provisional bare-development rail shape다. raw-v3
+plane/material과 Device terminal footprint를 17DG finite-port condensation에
+연결하고 기존 terminal R/L을 유지하는 형태지만, deterministic replacement
+stamp, footprint-to-owner mapping, global port assembly, replaced-plane owner-off가
+source-complete하게 결속되지 않아 **STOP / NOT READY**다. W7은 **BLOCKED**,
+`ACTIVE NONE`이며 사용자 명시 승인 전 code/test/build/production/rerun은 금지한다.
+
 ### 12.4 재개 조건
 
 ```mermaid
 flowchart LR
-  A[W6 PowerSI FAIL] --> B[여러 causal physics 후보]
+  A[W6 PowerSI FAIL] --> B[17DR: plane current-spreading R/L만 credible]
   B --> C[현 artifact로 단일 owner 식별 불가]
   D[17DG foundation] -. production binding 없음 .-> C
   E[17DO coverage] --> F[17DP owner identity gap]
@@ -526,7 +532,7 @@ flowchart LR
 2. 대상 rail 전체에 적용 가능한 physical model 또는 omitted-block candidate다.
 3. baseline과 candidate를 구별하는 deterministic stamp가 있다.
 4. candidate가 검증할 falsifiable physical/analytic limiting-case invariant가 있다.
-5. replaced/retained topology가 중복되지 않는 owner ledger로 결속된다.
+5. replaced/retained topology가 **disjoint owner ledger**로 중복 없이 결속된다.
 6. 사용자가 exact whitelist와 검증 예산을 명시 승인한다.
 
 그 전에는 code/test/build, owner-manifest/schema, physics/profile 변경,
