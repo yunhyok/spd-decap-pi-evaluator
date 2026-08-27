@@ -360,6 +360,47 @@ class SurfacePatchAdmittance:
 
 
 @dataclass(frozen=True, slots=True)
+class SurfacePatchFinitePortCondensation:
+    """Gauge-safe finite-port terminal admittance and gate diagnostics."""
+
+    port_ids: tuple[str, ...]
+    terminal_admittance_s: NDArray[np.complex128]
+    terminal_constraint_matrix: NDArray[np.float64]
+    solve_residual: float
+    compatible_current_residual: float
+    gauge_residual: float
+    reciprocity_relative: float
+    passivity_min_eigenvalue_s: float
+    passivity_tolerance_s: float
+    terminal_condition: float
+
+    def __post_init__(self) -> None:
+        names = tuple(str(item).strip() for item in self.port_ids)
+        admittance = _readonly(self.terminal_admittance_s, dtype=np.complex128)
+        constraints = _readonly(self.terminal_constraint_matrix, dtype=np.float64)
+        if not names or not all(names) or len({item.casefold() for item in names}) != len(names):
+            raise SurfacePatchPlaneError("finite-port condensation ids must be non-empty and unique")
+        if admittance.shape != (len(names), len(names)) or constraints.ndim != 2 or constraints.shape[0] != len(names):
+            raise SurfacePatchPlaneError("finite-port condensation dimensions are invalid")
+        if not np.all(np.isfinite(admittance)) or not np.all(np.isfinite(constraints)):
+            raise SurfacePatchPlaneError("finite-port condensation result contains non-finite values")
+        diagnostics = (
+            self.solve_residual,
+            self.compatible_current_residual,
+            self.gauge_residual,
+            self.reciprocity_relative,
+            self.passivity_min_eigenvalue_s,
+            self.passivity_tolerance_s,
+            self.terminal_condition,
+        )
+        if not all(np.isfinite(float(value)) for value in diagnostics):
+            raise SurfacePatchPlaneError("finite-port condensation diagnostics are non-finite")
+        object.__setattr__(self, "port_ids", names)
+        object.__setattr__(self, "terminal_admittance_s", admittance)
+        object.__setattr__(self, "terminal_constraint_matrix", constraints)
+
+
+@dataclass(frozen=True, slots=True)
 class _CoupledFactorization:
     lu: NDArray[np.complex128]
     pivots: NDArray[np.int32]
@@ -464,6 +505,153 @@ class SurfacePatchPlaneOperator:
             (values, (rows, columns)), shape=(len(self.mesh.nodes), len(requested)), dtype=np.float64
         ).tocsc()
         return SurfacePatchFinitePortProjection(port_ids, weights, np.asarray(areas, dtype=np.float64))
+
+    def condense_finite_ports(
+        self,
+        frequency_hz: float,
+        ports: Sequence[SurfacePatchFinitePort],
+    ) -> SurfacePatchFinitePortCondensation:
+        """Condense compatible finite-port currents through the sparse differential plane."""
+        _positive("frequency_hz", frequency_hz)
+        terminal_projection = self.finite_port_projection(ports)
+        port_ids = terminal_projection.port_ids
+        W = terminal_projection.node_weights
+        P = self._projection_metadata.projection
+        N = self._projection_metadata.nullspace
+        if P.shape[1] == 0:
+            raise SurfacePatchPlaneError("surface-patch plane has no differential degrees of freedom")
+
+        # C = W.T @ N is the terminal/gauge constraint.  Keep the rank
+        # decision in p x p terminal space; no dense mesh-sized nullspace is
+        # formed.
+        M = sparse.csc_matrix(N.T @ W)
+        constraint_sparse = sparse.csc_matrix(W.T @ N)
+        constraint = np.asarray(constraint_sparse.toarray(), dtype=np.float64)
+        if not np.all(np.isfinite(constraint)):
+            raise SurfacePatchPlaneError("finite-port terminal constraint contains non-finite values")
+        gram = np.asarray((M.T @ M).toarray(), dtype=np.float64)
+        if gram.ndim != 2 or gram.shape != (len(port_ids), len(port_ids)) or not np.all(np.isfinite(gram)):
+            raise SurfacePatchPlaneError("finite-port terminal-space rank matrix is invalid")
+        try:
+            _u, singular_values, vh = np.linalg.svd(gram, full_matrices=True)
+        except (TypeError, ValueError, np.linalg.LinAlgError) as exc:
+            raise SurfacePatchPlaneError("finite-port terminal-space rank decision failed") from exc
+        if not np.all(np.isfinite(singular_values)) or not np.all(np.isfinite(vh)):
+            raise SurfacePatchPlaneError("finite-port terminal-space rank is non-finite")
+        largest = float(singular_values[0]) if singular_values.size else 0.0
+        rank_tolerance = max(largest * 1.0e-12, np.finfo(np.float64).eps * max(len(port_ids), 1) * 10.0)
+        if largest > 0.0 and np.any(
+            np.isclose(singular_values, rank_tolerance, rtol=0.1, atol=rank_tolerance * 0.1)
+        ):
+            raise SurfacePatchPlaneError("finite-port terminal-space rank is ambiguous")
+        rank = int(np.count_nonzero(singular_values > rank_tolerance))
+        if rank >= len(port_ids):
+            raise SurfacePatchPlaneError("finite-port input has no admissible return mode")
+        A = np.asarray(vh[rank:, :].T, dtype=np.float64)
+        if A.shape[1] == 0 or not np.all(np.isfinite(A)):
+            raise SurfacePatchPlaneError("finite-port terminal-space nullspace is invalid")
+        orthogonality = np.linalg.norm(A.T @ A - np.eye(A.shape[1]))
+        if not np.isfinite(orthogonality) or orthogonality > 1.0e-10:
+            raise SurfacePatchPlaneError("finite-port terminal-space basis is not orthonormal")
+
+        modes = np.asarray(W @ A, dtype=np.float64)
+        gauge_mode_residual = float(
+            np.linalg.norm(M @ A)
+            / max(sparse.linalg.norm(M) * np.linalg.norm(A), 1.0e-30)
+        )
+        if not np.isfinite(gauge_mode_residual) or gauge_mode_residual > _NULLSPACE_LIMIT:
+            raise SurfacePatchPlaneError(
+                f"finite-port compatible-current residual {gauge_mode_residual:.3e} exceeds {_NULLSPACE_LIMIT:.3e}"
+            )
+
+        Y = self.assemble_differential_admittance(frequency_hz).nodal_admittance_s
+        K = sparse.csc_matrix(P.T @ Y @ P)
+        if K.shape[0] == 0 or K.shape[0] != K.shape[1] or not np.all(np.isfinite(K.data)):
+            raise SurfacePatchPlaneError("finite-port reduced differential matrix is invalid")
+        R = np.asarray(P.T @ modes, dtype=np.complex128)
+        try:
+            with warnings.catch_warnings():
+                warnings.simplefilter("error")
+                factor = sparse.linalg.splu(K)
+                X = np.asarray(factor.solve(R), dtype=np.complex128)
+        except (Warning, ValueError, RuntimeError, np.linalg.LinAlgError) as exc:
+            raise SurfacePatchPlaneError("finite-port sparse factorization or solve failed") from exc
+        if not np.all(np.isfinite(X)):
+            raise SurfacePatchPlaneError("finite-port sparse solve produced non-finite values")
+        solve_residual = float(
+            np.linalg.norm(K @ X - R)
+            / max(sparse.linalg.norm(K) * np.linalg.norm(X) + np.linalg.norm(R), 1.0e-30)
+        )
+        if not np.isfinite(solve_residual) or solve_residual > _COUPLED_RESIDUAL_LIMIT:
+            raise SurfacePatchPlaneError(
+                f"finite-port sparse solve residual {solve_residual:.3e} exceeds {_COUPLED_RESIDUAL_LIMIT:.3e}"
+            )
+        node_voltage = np.asarray(P @ X, dtype=np.complex128)
+        current_residual = float(
+            np.linalg.norm(Y @ node_voltage - modes)
+            / max(sparse.linalg.norm(Y) * np.linalg.norm(node_voltage) + np.linalg.norm(modes), 1.0e-30)
+        )
+        if not np.isfinite(current_residual) or current_residual > _COUPLED_RESIDUAL_LIMIT:
+            raise SurfacePatchPlaneError(
+                f"finite-port compatible-current solve residual {current_residual:.3e} exceeds "
+                f"{_COUPLED_RESIDUAL_LIMIT:.3e}"
+            )
+
+        Za = np.asarray(R.T @ X, dtype=np.complex128)
+        if Za.ndim != 2 or Za.shape[0] == 0 or Za.shape[0] != Za.shape[1] or not np.all(np.isfinite(Za)):
+            raise SurfacePatchPlaneError("finite-port terminal impedance is invalid")
+        try:
+            za_singular = np.linalg.svd(Za, compute_uv=False)
+        except (TypeError, ValueError, np.linalg.LinAlgError) as exc:
+            raise SurfacePatchPlaneError("finite-port terminal impedance rank decision failed") from exc
+        if not np.all(np.isfinite(za_singular)) or za_singular[0] <= 0.0:
+            raise SurfacePatchPlaneError("finite-port terminal impedance has deficient rank")
+        za_tolerance = max(float(za_singular[0]) * 1.0e-12, 1.0e-30)
+        if np.any(za_singular <= za_tolerance):
+            raise SurfacePatchPlaneError("finite-port terminal impedance has deficient rank")
+        terminal_condition = float(za_singular[0] / za_singular[-1])
+        if not np.isfinite(terminal_condition) or terminal_condition > _MAX_COUPLED_CONDITION:
+            raise SurfacePatchPlaneError(
+                f"finite-port terminal impedance condition {terminal_condition:.3e} exceeds "
+                f"{_MAX_COUPLED_CONDITION:.3e}"
+            )
+        try:
+            Yport = np.asarray(A @ np.linalg.solve(Za, A.T), dtype=np.complex128)
+        except (ValueError, np.linalg.LinAlgError) as exc:
+            raise SurfacePatchPlaneError("finite-port terminal admittance solve failed") from exc
+        if Yport.shape != (len(port_ids), len(port_ids)) or not np.all(np.isfinite(Yport)):
+            raise SurfacePatchPlaneError("finite-port terminal admittance is non-finite or malformed")
+        y_norm = max(float(np.linalg.norm(Yport)), 1.0e-30)
+        reciprocity = float(np.linalg.norm(Yport - Yport.T) / y_norm)
+        if not np.isfinite(reciprocity) or reciprocity > _RECIPROCITY_LIMIT:
+            raise SurfacePatchPlaneError(
+                f"finite-port terminal reciprocity residual {reciprocity:.3e} exceeds {_RECIPROCITY_LIMIT:.3e}"
+            )
+        passive_minimum, passivity_tolerance = _local_passivity_gate(
+            Yport, name="finite-port terminal admittance"
+        )
+        gauge_output_scale = max(np.linalg.norm(constraint) * np.linalg.norm(Yport), 1.0e-30)
+        gauge_output_residual = max(
+            float(np.linalg.norm(constraint.T @ Yport) / gauge_output_scale),
+            float(np.linalg.norm(Yport @ constraint) / gauge_output_scale),
+        )
+        gauge_residual = max(gauge_mode_residual, gauge_output_residual)
+        if not np.isfinite(gauge_output_residual) or gauge_output_residual > _NULLSPACE_LIMIT:
+            raise SurfacePatchPlaneError(
+                f"finite-port terminal gauge residual {gauge_output_residual:.3e} exceeds {_NULLSPACE_LIMIT:.3e}"
+            )
+        return SurfacePatchFinitePortCondensation(
+            port_ids,
+            Yport,
+            constraint,
+            solve_residual,
+            current_residual,
+            gauge_residual,
+            reciprocity,
+            passive_minimum,
+            passivity_tolerance,
+            terminal_condition,
+        )
 
     def assemble_differential_admittance(self, frequency_hz: float) -> SurfacePatchAdmittance:
         """Build the raw, unreduced MFDM differential stamp at one frequency."""
@@ -1135,5 +1323,6 @@ __all__ = [
     "SurfacePatchFinitePort", "SurfacePatchFinitePortProjection",
     "SurfacePatchMesh", "SurfacePatchMeshDiagnostics", "SurfacePatchLateralStrip", "SurfacePatchVerticalStamp",
     "SurfacePatchDifferentialProjection", "SurfacePatchPlaneError", "SurfacePatchPlaneDiagnostics",
-    "SurfacePatchAdmittance", "SurfacePatchPlaneOperator", "compile_surface_patch_plane",
+    "SurfacePatchAdmittance", "SurfacePatchFinitePortCondensation", "SurfacePatchPlaneOperator",
+    "compile_surface_patch_plane",
 ]

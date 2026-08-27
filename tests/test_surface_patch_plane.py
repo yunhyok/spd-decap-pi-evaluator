@@ -303,6 +303,53 @@ def test_finite_port_projection_uses_exact_area_and_rejects_partial_or_other_net
         ))
 
 
+def test_surface_patch_finite_port_condensation_is_gauge_safe_and_fails_without_return(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    mesh, dielectric = _two_layer()
+    operator = compile_surface_patch_plane(mesh, dielectrics=dielectric)
+    reduced_inputs: list[object] = []
+    real_splu = surface_patch_module.sparse.linalg.splu
+
+    def tracking_splu(matrix, *args, **kwargs):
+        reduced_inputs.append(matrix)
+        return real_splu(matrix, *args, **kwargs)
+
+    monkeypatch.setattr(surface_patch_module.sparse.linalg, "splu", tracking_splu)
+    frequency = 2e6
+    result = operator.condense_finite_ports(
+        frequency,
+        (
+            SurfacePatchFinitePort("P", "TOP", "P", box(0, 0, 1_000, 1_000), "full-cell TOP footprint"),
+            SurfacePatchFinitePort("G", "BOT", "G", box(0, 0, 1_000, 1_000), "full-cell BOT footprint"),
+        ),
+    )
+    expected_c = EPSILON_0_F_PER_M * 4.0 * 1e-6 / 100e-6
+    expected_y = 2j * np.pi * frequency * expected_c + 2 * np.pi * frequency * expected_c * 0.01
+    np.testing.assert_allclose(
+        result.terminal_admittance_s,
+        expected_y * np.asarray(((1.0, -1.0), (-1.0, 1.0))),
+        rtol=2e-11,
+        atol=1e-16,
+    )
+    assert result.port_ids == ("P", "G")
+    np.testing.assert_allclose(result.terminal_constraint_matrix, ((1.0,), (1.0,)))
+    assert not result.terminal_admittance_s.flags.writeable
+    assert result.reciprocity_relative < 1e-12
+    assert result.compatible_current_residual < 1e-12
+    assert result.gauge_residual < 1e-12
+    hermitian = (result.terminal_admittance_s + result.terminal_admittance_s.conj().T) * 0.5
+    assert np.min(np.linalg.eigvalsh(hermitian)) >= -result.passivity_tolerance_s
+    np.testing.assert_allclose(result.terminal_admittance_s.sum(axis=0), (0.0, 0.0), atol=1e-18)
+    assert reduced_inputs and all(sparse.issparse(matrix) for matrix in reduced_inputs)
+
+    with pytest.raises(SurfacePatchPlaneError, match="no admissible return"):
+        operator.condense_finite_ports(
+            frequency,
+            (SurfacePatchFinitePort("P-only", "TOP", "P", box(0, 0, 1_000, 1_000), "single terminal"),),
+        )
+
+
 def test_coupled_factor_cache_is_bounded_and_excludes_strip_geometry_factor() -> None:
     mesh, dielectric = _two_layer(width=2_000, cells=2)
     plane = compile_surface_patch_plane(mesh, dielectrics=dielectric)
