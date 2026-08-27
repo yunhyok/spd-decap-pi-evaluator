@@ -17,6 +17,10 @@ SPEC = importlib.util.spec_from_file_location(
 MODULE = importlib.util.module_from_spec(SPEC)
 assert SPEC.loader is not None
 SPEC.loader.exec_module(MODULE)
+from spd_decap_pi.compiled_topology_asset import freeze_compact_certificate_view
+from spd_decap_pi.surface_certificate_asset import (
+    canonical_surface_certificate_sha256,
+)
 
 
 def _complete_gate_inputs():
@@ -147,14 +151,15 @@ def test_compiled_only_anchor_bindings_use_external_port_proof_view(
         {"rail_id": "R1", "pin_id": "PWR"},
         {"rail_id": "R1", "pin_id": "GND"},
     )
+    frozen_external_port_proof_view = freeze_compact_certificate_view(
+        {"rail_anchor_bindings": retained_bindings}
+    )
     calls = []
 
     def load_compiled(project_arg, attachments_arg, artwork_node_ids):
         calls.append((project_arg, attachments_arg, artwork_node_ids))
         return SimpleNamespace(
-            external_port_proof_view={
-                "rail_anchor_bindings": retained_bindings,
-            }
+            external_port_proof_view=frozen_external_port_proof_view,
         )
 
     monkeypatch.setattr(
@@ -170,6 +175,14 @@ def test_compiled_only_anchor_bindings_use_external_port_proof_view(
     )
 
     assert bindings == list(retained_bindings)
+    assert all(type(row) is dict for row in bindings)
+    assert canonical_surface_certificate_sha256(
+        bindings,
+        concrete_containers=True,
+    ) == canonical_surface_certificate_sha256(
+        list(retained_bindings),
+        concrete_containers=True,
+    )
     assert calls == [(project, attachments, ("I1", "", "I2", "I3"))]
 
 

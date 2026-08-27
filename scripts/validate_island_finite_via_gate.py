@@ -202,7 +202,7 @@ def _retained_rail_anchor_bindings(
     project: ProjectSpec,
     attachments: Mapping[str, bytes],
     surface_certificate: Mapping[str, Any],
-) -> list[Mapping[str, Any]]:
+) -> list[dict[str, Any]]:
     """Read rail anchors without hydrating compiled-only surface evidence."""
 
     certificate_view = surface_certificate
@@ -253,7 +253,7 @@ def _retained_rail_anchor_bindings(
         raise ValueError("candidate surface evidence is missing rail anchor bindings")
     if any(not isinstance(row, Mapping) for row in bindings):
         raise ValueError("candidate surface evidence has an invalid rail anchor binding")
-    return list(bindings)
+    return [dict(row) for row in bindings]
 
 
 def _production_surface_gate(
