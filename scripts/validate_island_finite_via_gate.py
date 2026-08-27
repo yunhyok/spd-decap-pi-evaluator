@@ -12,6 +12,7 @@ import argparse
 from collections import Counter, defaultdict
 from collections.abc import Mapping, Sequence
 from copy import deepcopy
+import hashlib
 import json
 from pathlib import Path
 import sys
@@ -59,6 +60,121 @@ from spd_decap_pi.spd_adapter import (
 from spd_decap_pi.surface_certificate_asset import (
     is_surface_certificate_compiled_only_stub,
 )
+
+
+def _normalize_sha256(value: Any) -> str:
+    normalized = str(value).strip().casefold()
+    if len(normalized) != 64 or any(character not in "0123456789abcdef" for character in normalized):
+        raise ValueError("SHA-256 must be exactly 64 hexadecimal characters")
+    return normalized
+
+
+def _sha256_file(path: Path) -> str:
+    with path.open("rb") as stream:
+        return hashlib.file_digest(stream, "sha256").hexdigest()
+
+
+def _source_coverage_audit(
+    result: Mapping[str, Any],
+    *,
+    expected_candidate_sha256: str | None,
+) -> dict[str, Any]:
+    """Check strict raw-source coverage from already-computed gate evidence."""
+
+    failures: list[dict[str, Any]] = []
+
+    def require(check: str, actual: Any, expected: Any = True) -> None:
+        if actual != expected:
+            failures.append({"kind": "source_coverage", "check": check, "actual": actual, "expected": expected})
+
+    candidate_sha256 = str(result.get("candidate_sha256") or "").casefold()
+    if expected_candidate_sha256 is None or candidate_sha256 != expected_candidate_sha256:
+        failures.append(
+            {
+                "kind": "candidate_identity",
+                "candidate_sha256": candidate_sha256,
+                "expected_candidate_sha256": expected_candidate_sha256,
+            }
+        )
+    require("raw_spd_hash_verified_during_graph_pass", result.get("raw_spd_hash_verified_during_graph_pass"), True)
+    surface = result.get("surface")
+    surface = surface if isinstance(surface, Mapping) else {}
+    recovery = surface.get("recovery_statistics")
+    recovery = recovery if isinstance(recovery, Mapping) else {}
+    for key in (
+        "node_section_passes",
+        "trace_section_passes",
+        "via_section_passes",
+        "via_source_record_replay_passes",
+    ):
+        require(f"recovery_statistics.{key}", recovery.get(key), 1)
+    require("surface.status", surface.get("status"), "complete")
+    require("surface.production_gate_error", surface.get("production_gate_error"), None)
+    production_compile = surface.get("production_compile")
+    production_compile = production_compile if isinstance(production_compile, Mapping) else {}
+    require("surface.production_compile.status", production_compile.get("status"), "complete")
+    require("surface.proof_count_positive", int(surface.get("proof_count") or 0) > 0)
+    require("surface.noncomplete_proof_count", surface.get("noncomplete_proof_count"), 0)
+    require("surface.artwork_island_count_positive", int(surface.get("artwork_island_count") or 0) > 0)
+
+    def complete_counts(prefix: str, count: int, counts: Any) -> None:
+        if not isinstance(counts, Mapping):
+            require(f"{prefix}.counts", False)
+            return
+        try:
+            total = sum(int(value) for value in counts.values())
+            complete = int(counts.get("complete", 0))
+        except (TypeError, ValueError):
+            require(f"{prefix}.counts", False)
+            return
+        require(f"{prefix}.count_positive", count > 0)
+        require(f"{prefix}.complete_only", complete == count and total == count)
+
+    terminal_count = int(surface.get("terminal_landing_contact_count") or 0)
+    complete_counts("terminal_landing.status", terminal_count, surface.get("terminal_landing_contact_status_counts"))
+    complete_counts("terminal_landing.physical", terminal_count, surface.get("terminal_landing_physical_status_counts"))
+    complete_counts(
+        "terminal_landing.component_binding",
+        terminal_count,
+        surface.get("terminal_landing_component_binding_status_counts"),
+    )
+    owner_counts = surface.get("terminal_owner_kind_counts")
+    require(
+        "terminal_landing.terminal_owner_kind_unknown",
+        int(owner_counts.get("unknown", 0)) if isinstance(owner_counts, Mapping) else None,
+        0,
+    )
+    pair_count = int(surface.get("via_island_pair_aggregate_count") or 0)
+    complete_counts("via_island_pair.physical", pair_count, surface.get("via_island_pair_physical_status_counts"))
+    complete_counts(
+        "via_island_pair.component_binding",
+        pair_count,
+        surface.get("via_island_pair_component_binding_status_counts"),
+    )
+    pair_coverage = surface.get("via_island_pair_coverage")
+    pair_coverage = pair_coverage if isinstance(pair_coverage, Mapping) else {}
+    require("via_island_pair_coverage.status", pair_coverage.get("status"), "complete")
+    require("via_island_pair_coverage.unsupported_missing_endpoint_count", pair_coverage.get("unsupported_missing_endpoint_count"), 0)
+    require(
+        "via_island_pair_coverage.terminal_owned_counts",
+        pair_coverage.get("terminal_owned_declared_count"),
+        pair_coverage.get("terminal_owned_observed_count"),
+    )
+    substrate = surface.get("substrate_audit")
+    substrate = substrate if isinstance(substrate, Mapping) else {}
+    require("substrate_audit.population_positive", int(substrate.get("population_count") or 0) > 0)
+    require("substrate_audit.status", substrate.get("status"), "complete")
+    scenario_topology = surface.get("scenario_decap_terminal_topology")
+    scenario_topology = scenario_topology if isinstance(scenario_topology, Mapping) else {}
+    require("scenario_decap_terminal_topology.status", scenario_topology.get("status"), "complete")
+    rail_port = surface.get("rail_port_audit")
+    rail_port = rail_port if isinstance(rail_port, Mapping) else {}
+    require("rail_port_audit.status", rail_port.get("status"), "complete")
+    require("surface.first_failure", surface.get("first_failure", result.get("first_failure")), None)
+    return {
+        "status": "complete" if not failures else "incomplete",
+        "first_failure": failures[0] if failures else None,
+    }
 
 
 def _retained_rail_anchor_bindings(
@@ -450,7 +566,10 @@ def validate(
     output: Path,
     *,
     case: str,
+    expected_candidate_sha256: str | None = None,
 ) -> dict[str, Any]:
+    if expected_candidate_sha256 is not None:
+        expected_candidate_sha256 = _normalize_sha256(expected_candidate_sha256)
     started = perf_counter()
     progress_path = output.with_suffix(".progress.ndjson")
     output.parent.mkdir(parents=True, exist_ok=True)
@@ -468,6 +587,33 @@ def validate(
             )
             progress_file.flush()
 
+        candidate_sha256 = (
+            _sha256_file(candidate) if expected_candidate_sha256 is not None else None
+        )
+        if expected_candidate_sha256 is not None and candidate_sha256 != expected_candidate_sha256:
+            result = {
+                "case": case,
+                "raw_spd": str(raw_spd),
+                "candidate": str(candidate),
+                "candidate_sha256": candidate_sha256,
+                "expected_candidate_sha256": expected_candidate_sha256,
+                "source_coverage_audit": {
+                    "status": "incomplete",
+                    "first_failure": {
+                        "kind": "candidate_identity",
+                        "candidate_sha256": candidate_sha256,
+                        "expected_candidate_sha256": expected_candidate_sha256,
+                    },
+                },
+            }
+            temporary = output.with_suffix(".tmp")
+            temporary.write_text(
+                json.dumps(result, ensure_ascii=False, sort_keys=True, indent=2) + "\n",
+                encoding="utf-8",
+            )
+            temporary.replace(output)
+            log("candidate", 100, "Candidate SHA-256 does not match expected identity")
+            return result
         log("bundle", 0, "Loading persisted candidate evidence")
         bundle = load_scenario_bundle(candidate)
         project = ProjectSpec.model_validate(bundle.scenario.normalized_project)
@@ -800,6 +946,8 @@ def validate(
             "raw_spd": str(raw_spd),
             "candidate": str(candidate),
             "elapsed_s": round(perf_counter() - started, 3),
+            "candidate_sha256": candidate_sha256,
+            "expected_candidate_sha256": expected_candidate_sha256,
             "source_sha256": source_sha256,
             "raw_spd_size_bytes": int(raw_stat.st_size),
             "raw_spd_mtime_ns": int(raw_stat.st_mtime_ns),
@@ -1048,6 +1196,10 @@ def validate(
                 ),
             },
         }
+        result["source_coverage_audit"] = _source_coverage_audit(
+            result,
+            expected_candidate_sha256=expected_candidate_sha256,
+        )
         temporary = output.with_suffix(".tmp")
         temporary.write_text(
             json.dumps(result, ensure_ascii=False, sort_keys=True, indent=2) + "\n",
@@ -1058,20 +1210,39 @@ def validate(
         return result
 
 
-def main() -> int:
+def main(argv: Sequence[str] | None = None) -> int:
+    def sha256_argument(value: str) -> str:
+        try:
+            return _normalize_sha256(value)
+        except ValueError as exc:
+            raise argparse.ArgumentTypeError(str(exc)) from exc
+
     parser = argparse.ArgumentParser()
     parser.add_argument("--case", required=True)
     parser.add_argument("--raw-spd", type=Path, required=True)
     parser.add_argument("--candidate", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
-    args = parser.parse_args()
+    parser.add_argument("--expected-candidate-sha256", type=sha256_argument)
+    parser.add_argument("--require-source-coverage", action="store_true")
+    args = parser.parse_args(argv)
+    if args.require_source_coverage and args.expected_candidate_sha256 is None:
+        parser.error("--require-source-coverage requires --expected-candidate-sha256")
     result = validate(
         args.raw_spd,
         args.candidate,
         args.output,
         case=args.case,
+        expected_candidate_sha256=args.expected_candidate_sha256,
     )
     print(json.dumps(result, ensure_ascii=False, sort_keys=True), flush=True)
+    audit = result.get("source_coverage_audit", {})
+    if args.expected_candidate_sha256 is not None and isinstance(audit, Mapping) and isinstance(audit.get("first_failure"), Mapping):
+        if audit["first_failure"].get("kind") == "candidate_identity":
+            return 2
+    if args.require_source_coverage and (
+        not isinstance(audit, Mapping) or audit.get("status") != "complete"
+    ):
+        return 2
     return 0
 
 

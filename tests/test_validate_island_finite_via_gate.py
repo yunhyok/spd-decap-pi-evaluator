@@ -1,4 +1,5 @@
 import importlib.util
+import json
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -168,3 +169,95 @@ def test_compiled_only_anchor_bindings_use_external_port_proof_view(
 
     assert bindings == list(retained_bindings)
     assert calls == [(project, attachments, ("I1", "", "I2", "I3"))]
+
+
+def test_strict_source_coverage_audit_hash_and_cli_contract(tmp_path, monkeypatch):
+    candidate_sha = "a" * 64
+    complete_result = {
+        "candidate_sha256": candidate_sha,
+        "raw_spd_hash_verified_during_graph_pass": True,
+        "surface": {
+            "status": "complete",
+            "production_gate_error": None,
+            "production_compile": {"status": "complete"},
+            "proof_count": 1,
+            "noncomplete_proof_count": 0,
+            "artwork_island_count": 1,
+            "terminal_landing_contact_count": 1,
+            "terminal_landing_contact_status_counts": {"complete": 1},
+            "terminal_landing_physical_status_counts": {"complete": 1},
+            "terminal_landing_component_binding_status_counts": {"complete": 1},
+            "terminal_owner_kind_counts": {"device": 1},
+            "via_island_pair_aggregate_count": 1,
+            "via_island_pair_physical_status_counts": {"complete": 1},
+            "via_island_pair_component_binding_status_counts": {"complete": 1},
+            "via_island_pair_coverage": {
+                "status": "complete",
+                "unsupported_missing_endpoint_count": 0,
+                "terminal_owned_declared_count": 2,
+                "terminal_owned_observed_count": 2,
+            },
+            "substrate_audit": {"population_count": 1, "status": "complete"},
+            "scenario_decap_terminal_topology": {"status": "complete"},
+            "rail_port_audit": {"status": "complete"},
+            "first_failure": None,
+            "recovery_statistics": {
+                "node_section_passes": 1,
+                "trace_section_passes": 1,
+                "via_section_passes": 1,
+                "via_source_record_replay_passes": 1,
+            },
+        },
+    }
+    complete_audit = MODULE._source_coverage_audit(
+        complete_result, expected_candidate_sha256=candidate_sha
+    )
+    assert complete_audit == {"status": "complete", "first_failure": None}
+    complete_result["source_coverage_audit"] = complete_audit
+    incomplete_result = {
+        **complete_result,
+        "surface": {**complete_result["surface"], "status": "incomplete"},
+    }
+    incomplete_result["source_coverage_audit"] = MODULE._source_coverage_audit(
+        incomplete_result, expected_candidate_sha256=candidate_sha
+    )
+    assert incomplete_result["source_coverage_audit"]["status"] == "incomplete"
+
+    candidate = tmp_path / "candidate.zip"
+    candidate.write_bytes(b"candidate")
+    mismatch_output = tmp_path / "mismatch.json"
+    assert MODULE.main(
+        [
+            "--case",
+            "case",
+            "--raw-spd",
+            str(tmp_path / "missing.spd"),
+            "--candidate",
+            str(candidate),
+            "--output",
+            str(mismatch_output),
+            "--expected-candidate-sha256",
+            "0" * 64,
+        ]
+    ) == 2
+    mismatch = json.loads(mismatch_output.read_text(encoding="utf-8"))
+    assert mismatch["source_coverage_audit"]["first_failure"]["kind"] == "candidate_identity"
+    assert mismatch["candidate_sha256"] != mismatch["expected_candidate_sha256"]
+
+    returned = iter((complete_result, incomplete_result))
+    monkeypatch.setattr(MODULE, "validate", lambda *_args, **_kwargs: next(returned))
+    cli_args = [
+        "--case",
+        "case",
+        "--raw-spd",
+        str(tmp_path / "raw.spd"),
+        "--candidate",
+        str(candidate),
+        "--output",
+        str(tmp_path / "strict.json"),
+        "--expected-candidate-sha256",
+        candidate_sha,
+        "--require-source-coverage",
+    ]
+    assert MODULE.main(cli_args) == 0
+    assert MODULE.main(cli_args) == 2
