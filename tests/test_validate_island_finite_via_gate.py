@@ -3,6 +3,8 @@ import json
 from pathlib import Path
 from types import SimpleNamespace
 
+import pytest
+
 
 SCRIPT = (
     Path(__file__).parents[1]
@@ -261,3 +263,69 @@ def test_strict_source_coverage_audit_hash_and_cli_contract(tmp_path, monkeypatc
     ]
     assert MODULE.main(cli_args) == 0
     assert MODULE.main(cli_args) == 2
+
+
+def test_candidate_retained_surface_artwork_uses_current_lifecycle_contract(
+    monkeypatch,
+):
+    project = SimpleNamespace(name="project")
+    attachments = {"geometry.bin": b"payload"}
+    plane_geometries = (SimpleNamespace(layer="TOP", net="VDD"),)
+    resolver = object()
+    strict_resolver = object()
+    strict_resolver_batch = object()
+    surface_resolver_batch = object()
+    artwork_component = object()
+    artwork_components_batch = object()
+    release = object()
+    closed = []
+    calls = []
+
+    artwork = SimpleNamespace(
+        surface_resolver=resolver,
+        strict_surface_resolver=strict_resolver,
+        strict_surface_resolver_batch=strict_resolver_batch,
+        surface_resolver_batch=surface_resolver_batch,
+        artwork_component=artwork_component,
+        artwork_components_batch=artwork_components_batch,
+        release=release,
+        geometry_assets=("asset",),
+        target_layers_by_net={"vdd": {"TOP"}},
+        island_ids_by_surface={("TOP", "vdd"): ("I1",)},
+        close=lambda: closed.append("closed"),
+    )
+
+    def retain(project_arg, attachments_arg, plane_geometries_arg, *, progress):
+        calls.append((project_arg, attachments_arg, plane_geometries_arg, progress))
+        return artwork
+
+    monkeypatch.setattr(MODULE, "_retained_surface_artwork", retain)
+    progress = lambda *_args: None
+
+    with MODULE._retained_surface_artwork_context(
+        project,
+        attachments,
+        plane_geometries,
+        progress=progress,
+    ) as retained:
+        assert retained is artwork
+        assert retained.surface_resolver is resolver
+        assert retained.strict_surface_resolver is strict_resolver
+        assert retained.strict_surface_resolver_batch is strict_resolver_batch
+        assert retained.surface_resolver_batch is surface_resolver_batch
+        assert retained.artwork_component is artwork_component
+        assert retained.artwork_components_batch is artwork_components_batch
+        assert retained.release is release
+
+    assert calls == [(project, attachments, plane_geometries, progress)]
+    assert closed == ["closed"]
+
+    with pytest.raises(RuntimeError, match="body failure"):
+        with MODULE._retained_surface_artwork_context(
+            project,
+            attachments,
+            plane_geometries,
+            progress=progress,
+        ):
+            raise RuntimeError("body failure")
+    assert closed == ["closed", "closed"]

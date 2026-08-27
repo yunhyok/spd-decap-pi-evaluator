@@ -11,6 +11,7 @@ from __future__ import annotations
 import argparse
 from collections import Counter, defaultdict
 from collections.abc import Mapping, Sequence
+from contextlib import contextmanager
 from copy import deepcopy
 import hashlib
 import json
@@ -72,6 +73,26 @@ def _normalize_sha256(value: Any) -> str:
 def _sha256_file(path: Path) -> str:
     with path.open("rb") as stream:
         return hashlib.file_digest(stream, "sha256").hexdigest()
+
+
+@contextmanager
+def _retained_surface_artwork_context(
+    project: ProjectSpec,
+    attachments: Mapping[str, bytes],
+    plane_geometries: Sequence[Any],
+    *,
+    progress: Any,
+):
+    artwork = _retained_surface_artwork(
+        project,
+        attachments,
+        plane_geometries,
+        progress=progress,
+    )
+    try:
+        yield artwork
+    finally:
+        artwork.close()
 
 
 def _source_coverage_audit(
@@ -695,77 +716,104 @@ def validate(
             f"{len(finite_links)} finite links",
         )
 
-        (
-            _covers,
-            resolver,
-            strict_resolver,
-            geometry_assets,
-            target_layers,
-            island_inventory,
-        ) = _retained_surface_artwork(
+        try:
+            plane_geometries = tuple(
+                SimpleNamespace(
+                    **core_services.spd_plane_geometry_record_payload(
+                        record,
+                        bundle.attachments,
+                    )
+                )
+                for record in spd_import["plane_geometries"]
+            )
+        except (AttributeError, TypeError, ValueError, ArithmeticError) as exc:
+            raise ValueError(
+                "candidate retained plane geometry cannot be validated"
+            ) from exc
+
+        with _retained_surface_artwork_context(
             project,
             bundle.attachments,
+            plane_geometries,
             progress=lambda value, message: log("artwork", value, message),
-        )
-        (
-            retarget_landing_destination_requests,
-            retarget_landing_scan_coverage,
-        ) = _compile_retarget_landing_destination_requests(
-            project=project,
-            decap_connections=certificate_connections,
-            geometry_assets=geometry_assets,
-            strict_island_resolver=strict_resolver,
-        )
-        target_net_keys = set(target_layers)
-        decap_terminal_landings = tuple(
-            landing
-            for connection in certificate_connections
-            for landing in (*connection.power_vias, *connection.ground_vias)
-            if landing.net.casefold() in target_net_keys
-        )
-        retarget_destination_requests = tuple(
+        ) as surface_artwork:
+            resolver = surface_artwork.surface_resolver
+            geometry_assets = surface_artwork.geometry_assets
+            target_layers = surface_artwork.target_layers_by_net
+            island_inventory = surface_artwork.island_ids_by_surface
+            strict_resolver = surface_artwork.strict_surface_resolver
             (
-                landing.net,
-                evidence.target_layer,
-                evidence.target_node_id,
+                retarget_landing_destination_requests,
+                retarget_landing_scan_coverage,
+            ) = _compile_retarget_landing_destination_requests(
+                project=project,
+                decap_connections=certificate_connections,
+                geometry_assets=geometry_assets,
+                strict_island_resolver=strict_resolver,
+                strict_island_resolver_batch=(
+                    surface_artwork.strict_surface_resolver_batch
+                ),
+                release_surface=surface_artwork.release,
             )
-            for landing in decap_terminal_landings
-            for evidence in landing.path_evidence
-        )
-        terminal_contact_landings = (
-            *decap_terminal_landings,
-            *landing_by_pin.values(),
-        )
-        terminal_owned_via_ids = {
-            str(getattr(landing, "via_id", "")).strip()
-            for landing in decap_terminal_landings
-            if str(getattr(landing, "via_id", "")).strip()
-        }
-        terminal_owned_via_ids.update(
-            str(row.get("incident_via_id") or "").strip()
-            for row in device_certificate["terminals"]
-            if row.get("status") == "complete"
-            and str(row.get("incident_net") or "").casefold()
-            in target_net_keys
-            and str(row.get("incident_via_id") or "").strip()
-        )
-        reachability = recover_spd_ground_reachability(
-            raw_spd,
-            landings=tuple(landing_by_pin.values()),
-            terminal_contact_landings=terminal_contact_landings,
-            scenario_isolated_terminal_landings=decap_terminal_landings,
-            retarget_destination_requests=retarget_destination_requests,
-            terminal_owned_via_ids=terminal_owned_via_ids,
-            padstacks=physical_padstacks,
-            stackup_layers=project.stackup_layers,
-            target_layers_by_net=target_layers,
-            target_node_predicate=None,
-            target_node_surface_resolver=resolver,
-            target_surface_island_ids=island_inventory,
-            expected_source=expected_source,
-            include_traces=True,
-            progress=lambda value, message: log("reachability", value, message),
-        )
+            target_net_keys = set(target_layers)
+            decap_terminal_landings = tuple(
+                landing
+                for connection in certificate_connections
+                for landing in (*connection.power_vias, *connection.ground_vias)
+                if landing.net.casefold() in target_net_keys
+            )
+            retarget_destination_requests = tuple(
+                (
+                    landing.net,
+                    evidence.target_layer,
+                    evidence.target_node_id,
+                )
+                for landing in decap_terminal_landings
+                for evidence in landing.path_evidence
+            )
+            terminal_contact_landings = (
+                *decap_terminal_landings,
+                *landing_by_pin.values(),
+            )
+            terminal_owned_via_ids = {
+                str(getattr(landing, "via_id", "")).strip()
+                for landing in decap_terminal_landings
+                if str(getattr(landing, "via_id", "")).strip()
+            }
+            terminal_owned_via_ids.update(
+                str(row.get("incident_via_id") or "").strip()
+                for row in device_certificate["terminals"]
+                if row.get("status") == "complete"
+                and str(row.get("incident_net") or "").casefold()
+                in target_net_keys
+                and str(row.get("incident_via_id") or "").strip()
+            )
+            reachability = recover_spd_ground_reachability(
+                raw_spd,
+                landings=tuple(landing_by_pin.values()),
+                terminal_contact_landings=terminal_contact_landings,
+                scenario_isolated_terminal_landings=decap_terminal_landings,
+                retarget_destination_requests=retarget_destination_requests,
+                terminal_owned_via_ids=terminal_owned_via_ids,
+                padstacks=physical_padstacks,
+                stackup_layers=project.stackup_layers,
+                target_layers_by_net=target_layers,
+                target_node_predicate=None,
+                same_layer_artwork_layers_by_net=target_layers,
+                same_layer_artwork_component=surface_artwork.artwork_component,
+                same_layer_artwork_components_batch=(
+                    surface_artwork.artwork_components_batch
+                ),
+                same_layer_artwork_release=surface_artwork.release,
+                target_node_surface_resolver=resolver,
+                target_node_surface_resolver_batch=(
+                    surface_artwork.surface_resolver_batch
+                ),
+                target_surface_island_ids=island_inventory,
+                expected_source=expected_source,
+                include_traces=True,
+                progress=lambda value, message: log("reachability", value, message),
+            )
         surface_certificate = _layer_surface_connectivity_certificate(
             project=project,
             source_sha256=source_sha256,
