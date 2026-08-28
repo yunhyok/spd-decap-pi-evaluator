@@ -1,9 +1,9 @@
 # SPD Decap PI Evaluator 작업 기준
 
 - 적용 제품: **SPD Decap PI Evaluator v0.23.1**
-- 문서 버전: **1.162**
-- 상위 기준: [목적·기술 기준](PRODUCT_PURPOSE_AND_TECHNICAL_BASELINE.md) v1.161
-- 현재 상태: W6 numerical FAIL; W7-PHYS BLOCKED; W7-SOURCE-IR-P1/P2/P3 DONE (shadow-only); ACTIVE NONE; 17DG standalone/no Zii change; 17DT/17DU/17DV immutable DONE/STOP.
+- 문서 버전: **1.164**
+- 상위 기준: [목적·기술 기준](PRODUCT_PURPOSE_AND_TECHNICAL_BASELINE.md) v1.163
+- 현재 상태: W6 numerical FAIL; W7-PHYS BLOCKED; W7-SOURCE-IR-P1/P2/P3 DONE; P4 BLOCKED (validation budget exhausted); 17DG standalone/no Zii change; 17DT/17DU/17DV immutable DONE/STOP.
 - 최종 개정: 2026-08-28 (Asia/Seoul)
 
 ## 1. 압축 후 즉시 복구 카드
@@ -15,10 +15,10 @@ context가 압축되거나 새 session에서 작업을 재개하면 이 표만 �
 | 변하지 않는 목적 | source-derived single-rail `Zii`의 PowerSI 근접 정확성과 일반화 |
 | 현재 branch | `main`만 사용 |
 | 현재 assessment | W6-BASE numerical FAIL; 17DV persisted bridge STOP은 유효하나 원본 SPD 정보 부재 주장은 하지 않음; source-derived canonical IR prerequisite 승인 |
-| 현재 active work item | **NONE** — `W7-SOURCE-IR-P3` shadow witness까지 DONE |
+| 현재 active work item | **NONE** — W7-SOURCE-IR-P4는 focused fixture evidence 미완료로 BLOCKED |
 | 현재 정확성 상태 | `260729 retrospective FAIL`; unseen/generalization `unknown / not_run` |
-| current authorization | 12.7의 다섯 파일과 V0/V1 완료·동결; 새 exact whitelist와 별도 승인 전 parser/raw-v3 schema/adapter/production solver/W6/Touchstone/GUI/build/release 금지; `accuracy_parse.py` 보존 |
-| 정확한 재개 조건 | Phase 3 shadow analytic/owner gate PASS 후에도 별도 production seam 승인 전 `Zii` 변경 금지 |
+| current authorization | 2026-08-29 오전까지 bounded 후속 작업 사전 승인; 다만 12.8의 Phase 4 fixture 수정·재실행 예산은 소진; 사용량 50% floor, main-only, `accuracy_parse.py` 보존 |
+| 정확한 재개 조건 | P/G anchor island를 보존하며 generic Via가 retained edge에 남는 fixture 계약과 추가 focused 실행 예산을 먼저 고정; PASS 전 adjacent-gap/production `Zii` 변경 금지 |
 | 핵심 증거 | [W6-BASE completed evidence](#w6-base-completed-evidence-260729), [W7 결과 재평가](#12-w7-결과-재평가와-후속-과제-판정) |
 
 최초 목적은 [목적·기술 기준 2장](PRODUCT_PURPOSE_AND_TECHNICAL_BASELINE.md#2-최우선-목적),
@@ -132,6 +132,7 @@ disjoint owner ledger 확보와 사용자 명시 승인
 | `W7-SOURCE-IR-P1` | IR-1 | DONE | source-plane ownership SQLite storage/validation vertical slice | deterministic schema/hash round-trip, per-field material lineage, complete terminal provenance, exact island와 owner exact-once ledger; `7 passed in 0.84s` |
 | `W7-SOURCE-IR-P2` | IR-2 | DONE | import-time producer seam과 atomic scenario envelope 결속 | exact SPD spans/records, cleanup 전 live relation, raw/compiled identity finalization; combined focused evidence green, final end-to-end node `1 passed in 1.39s` |
 | `W7-SOURCE-IR-P3` | IR-3 | DONE | source-plane patch shadow finite-port witness | exact IR/raw/owner join, analytic R/L/C와 deterministic finite-port witness PASS; production stamp/owner/`Zii` 불변 |
+| `W7-SOURCE-IR-P4` | IR-4 | BLOCKED | quotient-authoritative contact-complete ownership IR v2 | Sol static GO 후 focused `3 passed, 1 failed`; 허용된 fixture 수정 뒤 동일 node `1 failed`; v2 candidate not accepted |
 | `W7-PHYS-PROSPECTIVE` | next | BLOCKED | 단일 source-derived physical candidate의 causal checkpoint | geometry/material provenance, rail-complete 범위, deterministic stamp, falsifiable physical/analytic limiting-case invariant, disjoint owner ledger 및 사용자 명시 승인 후에만 READY 가능 |
 | `W8-REL` | 18 | BLOCKED | completed known-case solve를 release gate에 연결하고 최종 전달 | accuracy/product gate와 exact release commit 필요 |
 | `D-DIST` | - | DEFERRED | Distribution routing/DRC scope 확대 | 사용자가 implementation-ready/DRC 목표로 승격할 때만 |
@@ -733,3 +734,66 @@ Closure evidence:
 
 Phase 3 DONE은 source-derived analytic/owner hand-off prerequisite만 증명한다. 다음
 production seam은 `W7-PHYS-PROSPECTIVE / BLOCKED`이며 별도 사용자 승인 전 열지 않는다.
+
+### 12.8 W7-SOURCE-IR-P4 blocked closure
+
+목적은 current v1이 target Device P/G anchor만 보존해 같은 rail-bound component의
+mounted decap와 다른 finite edge를 누락하는 원인을 import-time에서 한 번 닫는 것이다.
+먼저 P/G anchor가 증명한 정확한 두 surface-equivalence component를 고정하고, finite-via
+quotient의 그 component vertex에서 시작해 모든 incident edge와 전체 owner를 권위
+inventory로 선택한다. `terminal_landing_contacts`는 Device/decap/other 분류 보강에만
+사용하고 contact 모집단으로 사용하지 않는다.
+
+새 `source-plane-ownership-ir-v2`는 기존 terminal anchor와 Phase 3 소비 필드를
+보존하면서 `contact_boundary` section을 추가한다. 각 row는 owner kind, NET,
+plane/opposite endpoint Node, layer/대표 island/component, Via/finite vertex/edge와 edge
+전체 owner, raw Via 회전, PadDef/Regular 및 raw PadShape ordinal/SHA와 source record를
+결속한다. quotient에서 독립 산출한 canonical
+`(component/island, vertex, edge, owner)` 집합과 persisted row를 다시 확장한 집합이
+정확히 같아야 한다. 여러 contact가 같은 Node/PadStack을 공유하는 것은 허용한다.
+
+Exact whitelist는 다음 일곱 파일뿐이다.
+
+1. `docs/PRODUCT_PURPOSE_AND_TECHNICAL_BASELINE.md`
+2. `docs/WORK_EXECUTION_BASELINE.md`
+3. `docs/SOURCE_DERIVED_PHYSICAL_IR.md`
+4. `src/spd_decap_pi/source_plane_ownership_ir.py`
+5. `src/spd_decap_pi/spd_adapter.py`
+6. `src/spd_decap_pi/raw_spatial_contact_compiler.py`
+7. `tests/test_source_plane_ownership_ir_producer.py`
+
+기본 `import_spd_scenario()` 동작과 v1 소비 필드의 의미는 바꾸지 않는다. 새 post-import
+network scanner, `_core/io/spd.py`, current patch consumer, solver/evaluator/scenario/GUI,
+profile, production stamp와 `Zii`는 변경하지 않는다. ledger status는 계속
+`prerequisite_only`이며 `replacement_ready`를 기록하지 않는다.
+
+검증 예산은 구현 중 실행 없음, Luna 구현 완료 뒤
+`python -m pytest -q tests/test_source_plane_ownership_ir_producer.py` 한 번, Sol 정적
+diff review 한 번, `git diff --check` 한 번이다. full suite, 기존 test 재실행,
+production SPD, W6/Touchstone, build/release는 금지한다. 첫 focused failure가 실제
+logic이면 같은 node만 최대 한 번 수정·재실행하고, fixture 결함이면 fixture와 실패
+node만 최대 한 번 수정·재실행한다.
+
+다음이면 즉시 STOP한다: selected-component incident owner의 Via→양 endpoint Node→Pad
+provenance가 누락/복수, persisted/quotient canonical set 불일치, contracted edge의
+boundary-side owner/term 방향을 유일하게 환원할 수 없음, raw Via endpoint 중 selected
+layer Node가 정확히 하나가 아님, casefold owner/component 충돌, intermediate 또는 최종
+총 100,000행 상한 초과, 기본 import나 기존 consumer 호환을 whitelist 안에서 유지 불가,
+또는 owner-off/solver 변경이 필요함. Phase 4의 `complete`는 finite equivalence-boundary
+source/provenance에 한정한다. direct artwork overlap은 후속 physical gate이며 Phase 4
+PASS도 정확도 개선 증거가 아니다.
+
+실행 결과는 **BLOCKED / candidate not accepted**다. Luna 구현 뒤 첫 Sol 검토에서 raw
+Via padstack key, selected-component subset, retained fixture, pre-add bound, edge/owner
+exact-once의 5개 blocker를 찾아 한 번에 수정했고 최종 정적 판정은 GO였다. 그 뒤 계약된
+focused file은 `3 passed, 1 failed in 2.77s`였다. 실패 원인은 fixture의 Via11이 실제
+retained quotient contact가 아니어서 IR generic row가 없었던 것이다. 허용된 1회 fixture
+수정으로 Device→Via12→GND-layer Node12→Via11→PWR Node11 series 경로를 만들었으나,
+동일 node 재실행은 `1 failed in 1.42s`로 power anchor representative island가 selected
+PWR surface에 속하지 않아 fail-closed됐다.
+
+따라서 12.8의 fixture 수정·재실행 예산은 소진됐고 추가 실행, adjacent-gap inventory,
+direct-artwork gate와 production physics는 열지 않는다. 현재 7-file worktree candidate는
+승인·커밋된 기준이 아니다. 재개하려면 P/G anchor island를 바꾸지 않는 unselected
+conductor intermediate 또는 동등한 source-valid retained topology를 먼저 문서로 고정하고,
+추가 focused 실행 예산을 명시해야 한다.

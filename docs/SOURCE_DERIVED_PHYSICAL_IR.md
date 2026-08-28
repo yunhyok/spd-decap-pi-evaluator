@@ -1,7 +1,7 @@
 # SPD Decap PI Evaluator v0.23.1 — Source-derived physical IR
 
-- 상태: **ACCEPTED / Phase 1/2/3 DONE (Phase 3 shadow-only)**
-- 스키마: `source-plane-ownership-ir-v1`
+- 상태: **ACCEPTED / Phase 1/2/3 DONE; Phase 4 BLOCKED (candidate not accepted)**
+- 스키마: `source-plane-ownership-ir-v1` DONE → contact-complete `source-plane-ownership-ir-v2` BLOCKED
 - 최종 개정: 2026-08-28 (Asia/Seoul)
 
 ## 1. 목적
@@ -30,7 +30,8 @@ flowchart LR
   E --> F[compiler-assigned plane owner]
   F --> G[replacement ledger]
   G --> H[Phase 3 shadow patch witness DONE]
-  H -. 별도 승인 전 연결 금지 .-> K[production Y_global / Zii]
+  H --> L[Phase 4 all-contact boundary IR v2 BLOCKED]
+  L -. owner-off/N-port gate 전 연결 금지 .-> K[production Y_global / Zii]
   I[raw-v3 geometry/material] -. hash reference .-> B
   J[compiled finite topology] -. hash/owner reference .-> D
 ```
@@ -144,9 +145,44 @@ mesh convergence, causal broadband A/B, PowerSI correlation과 holdout은 별도
 `1 passed in 0.97s`였고 `Rdc`, `L=mu0*d*ell/w`,
 `C=epsilon0*epsilon_r*A/d`의 상대오차 `<=1e-10`과 deterministic replay를 닫았다.
 
+### Phase 4 — contact-complete import-time boundary
+
+BLOCKED. Phase 3의 두 Device terminal은 analytic witness에는 충분하지만 production
+loaded plane replacement의 경계로는 충분하지 않다. target rail의 P/G anchor가
+증명한 두 surface-equivalence component를 먼저 고정하고, finite-via quotient에서 그
+component vertex에 incident한 모든 edge와 전체 owner를 권위 inventory로 선택한다.
+`terminal_landing_contacts`는 Device/decap 종류 보강에만 사용하며 inventory source로
+사용하지 않는다. 같은 raw compiler pass에서 각 boundary Via의 양 endpoint Node와
+PadDef/Regular/PadShape source provenance를 결속하고 solve 때 SPD나 network를 다시
+스캔하지 않는다.
+
+v2는 v1의 `terminal_bindings` 의미를 유지하고 별도 `contact_boundary` relation을
+추가한다. relation은 owner kind, plane/opposite endpoint, rail-bound component와 대표
+island, finite vertex/edge와 edge 전체 owner, raw Via rotation과 exact footprint source를
+포함한다. quotient의 canonical `(component/island, vertex, edge, owner)` 집합과 persisted
+집합이 정확히 같지 않으면 부분 attachment 없이 STOP한다. 공유 Node/PadStack은 정상적인
+many-to-one 관계로 허용하되 모든 intermediate와 최종 관계는 기존 100,000행 상한 안에
+있어야 한다.
+
+여기서 `complete`는 finite equivalence-boundary의 source/provenance가 완전하다는 뜻이다.
+Pad footprint가 selected artwork에 직접 겹치는지와 trace-equivalent contact를 production
+patch port로 쓸 수 있는지는 후속 단일 physical gate이며 Phase 4가 미리 주장하지 않는다.
+
+Whitelist, 검증 예산과 STOP 조건은 작업 기준 12.8이 권위 있다. 이 단계에서도
+replacement ledger는 `prerequisite_only`이고 current patch consumer, adjacent-gap
+partial, solver, `Y_global`과 `Zii`는 바꾸지 않는다.
+
+구현 candidate는 raw Via endpoint/rotation, quotient owner 방향, v1/v2 loader와
+edge/owner exact-once까지 Sol 정적 GO를 받았다. 그러나 첫 focused file은 generic Via가
+retained quotient에 남지 않아 `3 passed, 1 failed in 2.77s`, 허용된 fixture 수정 뒤
+동일 node는 중간 GND-layer 경로가 power anchor representative island를 selected PWR
+surface 밖으로 바꿔 `1 failed in 1.42s`로 fail-closed됐다. 작업 기준의 1회 fixture
+수정·재실행 예산을 소진했으므로 v2 asset, contact completeness와 Phase 4 PASS를
+주장하지 않는다. candidate diff는 승인·커밋된 기준이 아니다.
+
 ## 7. 주장 한계
 
-- Phase 1/2/3 PASS는 source identity, ownership과 shadow analytic prerequisite만 증명한다.
+- Phase 1/2/3 PASS와 Phase 4 결과는 source identity, ownership, contact boundary와 shadow analytic prerequisite만 증명한다.
 - reciprocity, passivity, deterministic replay는 non-regression이며 PowerSI 정확도
   개선 증거가 아니다.
 - PowerSI 데이터는 comparison gate에만 사용하고 parameter fitting 입력으로 쓰지
