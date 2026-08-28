@@ -1,6 +1,6 @@
 # SPD Decap PI Evaluator v0.23.1 — Source-derived physical IR
 
-- 상태: **ACCEPTED / Phase 1/2 DONE / Phase 3 ACTIVE (shadow-only)**
+- 상태: **ACCEPTED / Phase 1/2/3 DONE (Phase 3 shadow-only)**
 - 스키마: `source-plane-ownership-ir-v1`
 - 최종 개정: 2026-08-28 (Asia/Seoul)
 
@@ -29,7 +29,7 @@ flowchart LR
   D --> E[rail PWR/return binding]
   E --> F[compiler-assigned plane owner]
   F --> G[replacement ledger]
-  G --> H[Phase 3 shadow patch witness]
+  G --> H[Phase 3 shadow patch witness DONE]
   H -. 별도 승인 전 연결 금지 .-> K[production Y_global / Zii]
   I[raw-v3 geometry/material] -. hash reference .-> B
   J[compiled finite topology] -. hash/owner reference .-> D
@@ -117,10 +117,12 @@ hand-off와 Pydantic envelope 변환을 바로잡았으며 최종 결과는
 
 ### Phase 3 — shadow-only source-plane patch consumer
 
-ACTIVE. validated IR/raw-v3에서 source-certified PWR/return surface와 complete
-terminal footprint 하나를 선택해 `source-plane-patch-v1` finite-port shadow witness를
-만든다. production stamp를 교체하지 않으며 owner inventory, `Y_global`, `Zii`도
-변경하지 않는다.
+DONE. validated IR/raw-v3에서 source-certified PWR/return surface와 complete
+terminal footprint 하나를 exact join해 `source-plane-patch-v1` finite-port shadow
+witness를 만든다. 선택 rail 이외의 surface/terminal 중간 데이터는 보존하지 않고,
+실제 stack corridor와 dielectric global ordinal 증명에 필요한 raw stackup/dielectric
+stream만 전체 순서를 유지한다. production stamp를 교체하지 않았으며 owner
+inventory, `Y_global`, `Zii`도 변경하지 않았다.
 
 ```mermaid
 flowchart LR
@@ -137,9 +139,14 @@ Whitelist와 검증 예산은 작업 기준 12.7이 권위 있다. Phase 3 PASS�
 limiting case와 owner hand-off prerequisite만 증명한다. production replacement,
 mesh convergence, causal broadband A/B, PowerSI correlation과 holdout은 별도 단계다.
 
+검증은 첫 focused file에서 identity-tamper가 PASS하고 float canonicalization fixture만
+실패해 `1 failed, 1 passed in 1.30s`였다. fixture 수정 뒤 exact happy node는
+`1 passed in 0.97s`였고 `Rdc`, `L=mu0*d*ell/w`,
+`C=epsilon0*epsilon_r*A/d`의 상대오차 `<=1e-10`과 deterministic replay를 닫았다.
+
 ## 7. 주장 한계
 
-- Phase 1/2 PASS는 source identity와 ownership prerequisite만 증명한다.
+- Phase 1/2/3 PASS는 source identity, ownership과 shadow analytic prerequisite만 증명한다.
 - reciprocity, passivity, deterministic replay는 non-regression이며 PowerSI 정확도
   개선 증거가 아니다.
 - PowerSI 데이터는 comparison gate에만 사용하고 parameter fitting 입력으로 쓰지

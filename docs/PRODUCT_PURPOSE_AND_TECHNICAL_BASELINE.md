@@ -1,12 +1,12 @@
 # SPD Decap PI Evaluator 목적·기술 기준
 
 - 적용 제품: **SPD Decap PI Evaluator v0.23.1**
-- 문서 버전: **1.160**
+- 문서 버전: **1.161**
 - W5 approved/machine-frozen source-before: `main` commit `027ac7a09a3eded15f45c41860945f9d4c7f488d`
-- 상태: **G0 기준 문서** — W5 DONE; W6-BASE 260729 numerical FAIL; W7-PHYS BLOCKED; W7-SOURCE-IR Phase 1/2 DONE / Phase 3 ACTIVE (shadow-only).
-- 현재 평가: 17DV는 persisted artifact의 authoritative join 부재를 확인했지만 원본 SPD의 정보 부재를 증명하지 않았다. 원본 SPD에서 필요한 data를 추출한 import-time `source-plane-ownership-ir-v1` storage와 producer seam은 완료했다. 다음 단계는 production stamp를 건드리지 않는 단일 source-plane patch shadow consumer다.
-- Sole ACTIVE item (current): **W7-SOURCE-IR-P3** — validated IR/raw-v3만 읽는 shadow finite-port witness. Phase 1/2는 DONE이고 17DU/17DV는 immutable DONE/STOP이며 production physics/`Zii`는 unchanged다.
-- 현재 권한: 작업 기준 12.7의 다섯 파일과 V0/V1만 허용한다. 기존 parser/raw-v3 schema/adapter/solver/GUI/profile, production rerun, Touchstone/W6 correlation, build/release는 계속 금지한다.
+- 상태: **G0 기준 문서** — W5 DONE; W6-BASE 260729 numerical FAIL; W7-PHYS BLOCKED; W7-SOURCE-IR Phase 1/2/3 DONE (shadow-only).
+- 현재 평가: 17DV는 persisted artifact의 authoritative join 부재를 확인했지만 원본 SPD의 정보 부재를 증명하지 않았다. 원본 SPD에서 필요한 data를 추출한 `source-plane-ownership-ir-v1` storage, producer seam과 `source-plane-patch-v1` shadow consumer를 완료했다. 이는 production 정확도 개선이 아니라 다음 물리 후보를 평가하기 위한 prerequisite다.
+- Sole ACTIVE item (current): **NONE** — Phase 1/2/3는 DONE이고 17DU/17DV는 immutable DONE/STOP이며 production physics/`Zii`는 unchanged다.
+- 현재 권한: 작업 기준 12.7의 다섯 파일과 V0/V1은 완료·동결했다. 새 exact whitelist와 별도 production seam 승인 전 parser/raw-v3 schema/adapter/solver/GUI/profile, production rerun, Touchstone/W6 correlation, build/release는 계속 금지한다.
 - 물리 작업 재개 조건: IR prerequisite 완료 후에도 geometry/material provenance, physical limiting-case invariant, rail-complete 적용 범위, deterministic stamp와 실제 consumer에 결속된 disjoint owner ledger를 갖춘 단일 physical candidate가 필요하다.
 - 최종 개정: 2026-08-28 (Asia/Seoul)
 
@@ -353,11 +353,11 @@ flowchart TD
 | source-derived IR pivot | 2026-08-28 사용자 결정으로 기존 prospective NO-GO의 `no-schema/no-raw` 권한 제한은 superseded되었다. 원본 SPD에서 source span, plane Boolean lineage, material origin, terminal footprint와 compiler-assigned plane owner를 보존하는 compact hash-bound SQLite를 새 prerequisite로 연다. 세부 계약은 [Source-derived physical IR](SOURCE_DERIVED_PHYSICAL_IR.md)에 둔다. |
 | source-derived IR Phase 1 | DONE. `source-plane-ownership-ir-v1`은 필드별 Layer/Material source record, PadDef+Regular terminal footprint, exact rail-bound island와 retained/plane owner exact-once ledger를 fail-closed 보존한다. 선택 rail 총 100,000행 상한과 complete-only terminal 계약을 적용하며 focused synthetic 결과는 `7 passed in 0.84s`다. 이는 storage prerequisite만 증명한다. |
 | source-derived IR Phase 2 | DONE. importer가 exact SPD span/record, cleanup 전 primitive↔island 관계, complete terminal chain과 raw/compiled identity를 한 원자적 scenario envelope에 결속한다. 두 full-file 실행은 각각 fixture 결함으로 `3 passed, 1 failed`였고, fixture와 producer integration seam을 수정한 뒤 축소한 end-to-end node가 `1 passed in 1.39s`로 닫혔다. production SPD/solver/W6는 실행하지 않았다. |
-| source-derived IR Phase 3 | ACTIVE (shadow-only). validated IR/raw-v3에서 선택 rail의 PWR/return patch와 stackup/material을 읽어 finite-port R/L/C witness를 만들되 `NodalAdmittanceBlock`, production owner inventory, `Y_global`과 `Zii`는 변경하지 않는다. analytic limit과 exact owner-ledger gate가 먼저다. |
+| source-derived IR Phase 3 | DONE (shadow-only). validated IR/raw-v3에서 선택 rail의 PWR/return patch, stackup/material과 complete terminal footprint를 exact join해 deterministic finite-port witness를 만들었다. uniform-strip 양면 `Rdc`, `L=mu0*d*ell/w`, `C=epsilon0*epsilon_r*A/d` gate를 `<=1e-10`으로 닫았다. 첫 focused file은 float canonicalization fixture 결함으로 `1 failed, 1 passed in 1.30s`, fixture 수정 뒤 exact happy node는 `1 passed in 0.97s`였다. `NodalAdmittanceBlock`, production owner inventory, `Y_global`과 `Zii`는 변경하지 않았다. |
 | 열지 않는 후보 | Trace R/L은 source trace-width/return assignment가 incomplete하고, Via return/mutual은 source-complete plating/fill/return-plane contract가 없다. Pad/anti-pad는 complete antipad/replacement boundary가 없고, dielectric은 scalar/table dispersion이 이미 active라 temperature-less model로 temperature variant를 source-faithful하게 표현할 수 없다. GUI `include_plane_sheet_payload` 플래그만 켜는 것은 데이터만 만들 뿐 physics를 바꾸지 않으므로 금지한다. |
 | 후속 필요성 | 현 artifact만 이용한 Via/sheet/profile ablation은 여러 누락 물리 항을 식별하지 못하므로 실행하지 않는다. owner-manifest/schema 작업도 선택된 물리 후보 없이 진행하면 validation churn이다. |
-| 현재 권한 | `W7-SOURCE-IR-P1/P2 DONE`, `W7-SOURCE-IR-P3 ACTIVE`. 작업 기준 12.7의 shadow-only consumer만 열며 17DU/17DV는 preserved immutable DONE/STOP으로 재실행하지 않는다. |
-| 재개 조건 | Phase 1/2 IR은 prerequisite다. source-derived geometry/material 근거, falsifiable physical/analytic limiting-case invariant, rail-complete 범위, deterministic stamp와 실제 stamp inventory에 결속된 disjoint owner ledger가 확보된 뒤에만 physics item을 하나 연다. |
+| 현재 권한 | `W7-SOURCE-IR-P1/P2/P3 DONE`, `ACTIVE NONE`. 17DU/17DV는 preserved immutable DONE/STOP으로 재실행하지 않으며 production seam은 별도 승인 전 BLOCKED다. |
+| 재개 조건 | Phase 1/2/3은 prerequisite다. source-derived geometry/material 근거, falsifiable physical/analytic limiting-case invariant, rail-complete 범위, deterministic production stamp와 실제 stamp inventory에 결속된 disjoint owner ledger가 확보된 뒤에만 physics item을 하나 연다. |
 
 세부 실행 이력과 exact artifact identity는
 [작업 기준](WORK_EXECUTION_BASELINE.md)에 두고 이 문서에 다시 복제하지 않는다.

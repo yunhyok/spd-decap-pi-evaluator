@@ -1,9 +1,9 @@
 # SPD Decap PI Evaluator 작업 기준
 
 - 적용 제품: **SPD Decap PI Evaluator v0.23.1**
-- 문서 버전: **1.161**
-- 상위 기준: [목적·기술 기준](PRODUCT_PURPOSE_AND_TECHNICAL_BASELINE.md) v1.160
-- 현재 상태: W6 numerical FAIL; W7-PHYS BLOCKED; W7-SOURCE-IR-P1/P2 DONE / P3 ACTIVE (shadow-only); 17DG standalone/no Zii change; 17DT/17DU/17DV immutable DONE/STOP.
+- 문서 버전: **1.162**
+- 상위 기준: [목적·기술 기준](PRODUCT_PURPOSE_AND_TECHNICAL_BASELINE.md) v1.161
+- 현재 상태: W6 numerical FAIL; W7-PHYS BLOCKED; W7-SOURCE-IR-P1/P2/P3 DONE (shadow-only); ACTIVE NONE; 17DG standalone/no Zii change; 17DT/17DU/17DV immutable DONE/STOP.
 - 최종 개정: 2026-08-28 (Asia/Seoul)
 
 ## 1. 압축 후 즉시 복구 카드
@@ -15,9 +15,9 @@ context가 압축되거나 새 session에서 작업을 재개하면 이 표만 �
 | 변하지 않는 목적 | source-derived single-rail `Zii`의 PowerSI 근접 정확성과 일반화 |
 | 현재 branch | `main`만 사용 |
 | 현재 assessment | W6-BASE numerical FAIL; 17DV persisted bridge STOP은 유효하나 원본 SPD 정보 부재 주장은 하지 않음; source-derived canonical IR prerequisite 승인 |
-| 현재 active work item | `W7-SOURCE-IR-P3` — validated IR/raw-v3 기반 source-plane patch shadow witness |
+| 현재 active work item | **NONE** — `W7-SOURCE-IR-P3` shadow witness까지 DONE |
 | 현재 정확성 상태 | `260729 retrospective FAIL`; unseen/generalization `unknown / not_run` |
-| current authorization | 12.7의 다섯 파일과 V0/V1만 허용; parser/raw-v3 schema/adapter/production solver/W6/Touchstone/GUI/build/release 금지; `accuracy_parse.py` 보존 |
+| current authorization | 12.7의 다섯 파일과 V0/V1 완료·동결; 새 exact whitelist와 별도 승인 전 parser/raw-v3 schema/adapter/production solver/W6/Touchstone/GUI/build/release 금지; `accuracy_parse.py` 보존 |
 | 정확한 재개 조건 | Phase 3 shadow analytic/owner gate PASS 후에도 별도 production seam 승인 전 `Zii` 변경 금지 |
 | 핵심 증거 | [W6-BASE completed evidence](#w6-base-completed-evidence-260729), [W7 결과 재평가](#12-w7-결과-재평가와-후속-과제-판정) |
 
@@ -96,7 +96,7 @@ disjoint owner ledger 확보와 사용자 명시 승인
 ## 4. 작업 항목 register
 
 상태 어휘는 `READY`, `ACTIVE`, `BLOCKED`, `DEFERRED`, `DONE`만 사용한다.
-동시에 `ACTIVE`는 하나만 허용하며 현재는 **W7-SOURCE-IR-P3**다. 완료된 미시적 item을
+동시에 `ACTIVE`는 하나만 허용하며 현재는 **NONE**이다. 완료된 미시적 item을
 다시 펼쳐 읽지 말고 아래 phase-level 결론과 Git history를 사용한다.
 
 | ID | 순서 | 상태 | 작업 묶음 | 완료 기준·현재 결론 |
@@ -131,7 +131,7 @@ disjoint owner ledger 확보와 사용자 명시 승인
 | `W7-PHYS-METADATA-BRIDGE` | 17DV | DONE | one-shot read-only metadata-only logical-to-physical bridge gate | `STOP_NO_AUTHORITATIVE_BRIDGE`; HEAD `11ef7af81ba087c0d9ec7442ba43940a23c734d9`, exit 2, runtime 172.429 s, peak RSS 7,324,794,880 bytes, no retry; output SHA-256 `86C3330EA47974167FE987821631A5F0FCB5DF9C4A56617A8574B5934D9CDB5A`; frozen four-file whitelist remains historical execution scope |
 | `W7-SOURCE-IR-P1` | IR-1 | DONE | source-plane ownership SQLite storage/validation vertical slice | deterministic schema/hash round-trip, per-field material lineage, complete terminal provenance, exact island와 owner exact-once ledger; `7 passed in 0.84s` |
 | `W7-SOURCE-IR-P2` | IR-2 | DONE | import-time producer seam과 atomic scenario envelope 결속 | exact SPD spans/records, cleanup 전 live relation, raw/compiled identity finalization; combined focused evidence green, final end-to-end node `1 passed in 1.39s` |
-| `W7-SOURCE-IR-P3` | IR-3 | ACTIVE | source-plane patch shadow finite-port witness | production stamp/owner/`Zii` 불변, analytic R/L/C와 exact owner-ledger focused PASS |
+| `W7-SOURCE-IR-P3` | IR-3 | DONE | source-plane patch shadow finite-port witness | exact IR/raw/owner join, analytic R/L/C와 deterministic finite-port witness PASS; production stamp/owner/`Zii` 불변 |
 | `W7-PHYS-PROSPECTIVE` | next | BLOCKED | 단일 source-derived physical candidate의 causal checkpoint | geometry/material provenance, rail-complete 범위, deterministic stamp, falsifiable physical/analytic limiting-case invariant, disjoint owner ledger 및 사용자 명시 승인 후에만 READY 가능 |
 | `W8-REL` | 18 | BLOCKED | completed known-case solve를 release gate에 연결하고 최종 전달 | accuracy/product gate와 exact release commit 필요 |
 | `D-DIST` | - | DEFERRED | Distribution routing/DRC scope 확대 | 사용자가 implementation-ready/DRC 목표로 승격할 때만 |
@@ -445,6 +445,7 @@ remote/full suite, installer/release는 수행하지 않았다.
 | `D-010` | 17DT 내부 v3 PASS/W6 `STOP_IDENTITY_DRIFT` 후, 승인된 네 파일로 17DU current-lineage local seam audit를 1회 수행; `accuracy_parse.py` 보존·미수정, W7/global owner-off는 계속 BLOCKED | 확정 |
 | `D-011` | 17DV는 persisted join 부재만 증명한다. 2026-08-28 사용자 승인으로 원본 SPD 기반 canonical IR을 새 prerequisite로 열되 raw-v3를 변경하거나 solve-time 재파싱하지 않음 | 확정 |
 | `D-012` | Phase 2 producer seam을 combined focused evidence로 닫고, 다음 단계는 production assembly가 아닌 `source-plane-patch-v1` shadow consumer로 제한 | 확정 |
+| `D-013` | Phase 3 shadow consumer를 exact selected-rail provenance와 analytic R/L/C gate로 닫되 production `NodalAdmittanceBlock`, owner inventory, `Y_global`/`Zii`에는 연결하지 않고 ACTIVE NONE으로 복귀 | 확정 |
 
 ## 11. 현재 evidence와 비재사용 경계
 
@@ -598,8 +599,8 @@ identities remain the current 17DT values above. The deterministic output schema
 selected pair provenance, `raw_spatial_loaded=false`, and exclusive output; one run/no
 retry, internal 480 s and external 600 s wall, coordinator RSS 10 GiB, temp 4 GiB,
 output 8 MiB, target anchors ≤2 and vertex-surface links ≤4096. 17DV closure 당시
-W7은 BLOCKED, ACTIVE는 NONE이었다. 이후 D-011/D-012가 source IR prerequisite만
-열어 P1/P2를 닫았고 현재 P3 shadow가 ACTIVE다. production physical candidate는
+W7은 BLOCKED, ACTIVE는 NONE이었다. 이후 D-011/D-012/D-013이 source IR prerequisite
+P1/P2/P3를 shadow 범위에서 닫았고 다시 ACTIVE NONE이다. production physical candidate는
 아래 조건과 별도 승인을 여전히 요구한다. 17DW나 새 metadata/raw/schema/owner
 audit은 열지 않으며 prospective production seam은 BLOCKED다.
 
@@ -615,7 +616,7 @@ flowchart LR
   C --> G[17DV DONE: persisted bridge STOP]
   G --> M[W7-SOURCE-IR-P1: source identity/owner DB DONE]
   M --> N[W7-SOURCE-IR-P2: importer producer seam DONE]
-  N --> O[W7-SOURCE-IR-P3: shadow analytic/owner gate ACTIVE]
+  N --> O[W7-SOURCE-IR-P3: shadow analytic/owner gate DONE]
   O --> H
   H[source-certified rail-complete candidate<br/>deterministic stamp<br/>falsifiable physical/analytic limiting-case invariant<br/>disjoint owner ledger] --> I[사용자 명시 승인]
   I --> J[one physical change]
@@ -692,10 +693,10 @@ Closure evidence는 다음처럼 비용을 축소해 얻었다.
 앞의 세 guard test는 두 full-file 실행에서 모두 PASS했다. Phase 1 test, 원본/production
 SPD, solver/physics/`Zii`, W6/Touchstone, GUI, build/release는 실행하지 않았다.
 
-### 12.7 W7-SOURCE-IR-P3 active shadow contract
+### 12.7 W7-SOURCE-IR-P3 closure
 
 Phase 3는 `source-plane-ownership-ir-v1`과 그 manifest가 결속한 raw-spatial v3만
-읽어 선택 rail의 PWR/return surface-patch finite-port witness를 계산한다. 결과는
+읽어 선택 rail의 PWR/return surface-patch finite-port witness를 계산하도록 완료했다. 결과는
 `source-plane-patch-v1` shadow data이며 production `NodalAdmittanceBlock`, owner
 inventory, `Y_global`과 `Zii`에 연결하지 않는다.
 
@@ -713,3 +714,22 @@ Acceptance는 (a) IR/raw identity와 prerequisite owner ledger exact match, (b) 
 `git diff --check` 1회, V1은 새 focused test file 1회다. 기존 test 재실행,
 production SPD/candidate, parser/raw-v3 schema/adapter/solver/physics/`Zii`, W6/Touchstone,
 GUI, build/release는 금지한다.
+
+Closure evidence:
+
+- Sol 최종 정적 review: **GO**. selected-only raw 범위, real PadShape composite
+  provenance, Via rotation, full stack corridor, global dielectric ordinal과 owner ledger를 확인했다.
+- 첫 V1: `python -m pytest -q tests/test_source_plane_patch_consumer.py`
+  → `1 failed, 1 passed in 1.30s`. failure는 integer polygon 좌표가 SQLite REAL
+  round-trip에서 float가 되어 raw-v3 primitive digest가 달라진 test fixture 결함이었다.
+  같은 실행의 identity-tamper fail-closed node는 PASS했다.
+- fixture 좌표만 canonical float로 고친 뒤 실패 node만 축소 재실행:
+  `python -m pytest -q tests/test_source_plane_patch_consumer.py::test_real_v3_loader_roundtrip`
+  → `1 passed in 0.97s`.
+- V0 첫 staged check는 공백만 있는 한 줄을 검출했고, whitespace-only 수정 뒤
+  `git diff --cached --check` PASS로 닫았다. 기존 test, production SPD/candidate,
+  parser/raw-v3 schema/adapter/solver/physics/`Zii`, W6/Touchstone, GUI,
+  build/release는 실행하지 않았다.
+
+Phase 3 DONE은 source-derived analytic/owner hand-off prerequisite만 증명한다. 다음
+production seam은 `W7-PHYS-PROSPECTIVE / BLOCKED`이며 별도 사용자 승인 전 열지 않는다.
