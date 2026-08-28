@@ -1,13 +1,13 @@
 # SPD Decap PI Evaluator 목적·기술 기준
 
 - 적용 제품: **SPD Decap PI Evaluator v0.23.1**
-- 문서 버전: **1.156**
+- 문서 버전: **1.158**
 - W5 approved/machine-frozen source-before: `main` commit `027ac7a09a3eded15f45c41860945f9d4c7f488d`
-- 상태: **G0 기준 문서** — W5 DONE; W6-BASE 260729 numerical FAIL; W7-PHYS BLOCKED.
-- 현재 평가: 17DG는 standalone mathematical foundation이고, 17DR–17DS review에서 source/provenance/ownership feasibility 기준 **surface-patch plane current-spreading R/L**만 credible한 다음 물리 방향으로 남았지만 global port/owner seam 부재로 **NOT READY/STOP**이다. 17DT는 raw-spatial v3 내부 재현은 PASS했으나 W6 비교는 `STOP_IDENTITY_DRIFT`다. 17DU는 실행 후 compiled rail-port NET 계약 불일치로 `STOP_AUDIT_CONTRACT_MISMATCH` 종료했고, 17DV도 DONE with `STOP_NO_AUTHORITATIVE_BRIDGE`로 종료되어 W7은 BLOCKED 상태다.
-- Sole ACTIVE item (current): **NONE**. 17DU/17DV는 immutable DONE/STOP 상태이며 production physics/`Zii`는 unchanged다.
-- 후속 권한: 새 audit/metadata/raw/schema/owner 작업은 승인하지 않는다. raw-spatial loader/import, raw-v3 decode, SPD/W6/Touchstone/correlation/solver/GUI/physics/profile 변경, production rerun, build/release는 미승인이다.
-- 재개 조건: geometry/material provenance, falsifiable physical/analytic limiting-case invariant, deterministic stamp, disjoint owner ledger를 갖춘 source-certified rail-complete physical candidate가 확보되고 사용자가 exact whitelist와 validation budget을 명시 승인할 때만 재개한다.
+- 상태: **G0 기준 문서** — W5 DONE; W6-BASE 260729 numerical FAIL; W7-PHYS BLOCKED; W7-SOURCE-IR Phase 1 DONE / Phase 2 READY; ACTIVE NONE.
+- 현재 평가: 17DV는 persisted artifact의 authoritative join 부재를 확인했지만 원본 SPD의 정보 부재를 증명하지 않았다. 사용자는 PowerSI 근접 정확도를 위해 원본 SPD에서 필요한 data를 추출해 새 DB를 구성하도록 명시 승인했다. 따라서 raw-v3 보강/추가 audit 대신 import-time `source-plane-ownership-ir-v1` prerequisite를 시작한다.
+- Sole ACTIVE item (current): **NONE**. `W7-SOURCE-IR-P1` storage contract는 DONE이고 importer producer seam인 Phase 2가 READY다. 17DU/17DV는 immutable DONE/STOP이고 production physics/`Zii`는 unchanged다.
+- 현재 권한: Phase 1 다섯 파일의 closure만 확정한다. Phase 2는 작업 기준 문서의 별도 whitelist/검증 예산으로 전환한 뒤 시작하며, solver/raw-v3 schema/GUI/profile, production rerun, Touchstone/W6 correlation, build/release는 계속 금지한다.
+- 물리 작업 재개 조건: IR prerequisite 완료 후에도 geometry/material provenance, physical limiting-case invariant, rail-complete 적용 범위, deterministic stamp와 실제 consumer에 결속된 disjoint owner ledger를 갖춘 단일 physical candidate가 필요하다.
 - 최종 개정: 2026-08-28 (Asia/Seoul)
 
 ## 1. 문서 역할과 권위
@@ -350,10 +350,12 @@ flowchart TD
 | 17DT activation | Raw SPD contains source plane/stackup/material data. Fresh import-save-only v3 reproduction completed internally, but W6 comparison is `STOP_IDENTITY_DRIFT`; no production physics changed. |
 | 17DU closure | DONE with `STOP_AUDIT_CONTRACT_MISMATCH`; execution HEAD `36aacaf18dd09da66fae249b4756a8e082e51b3e`, runtime 160.5 s, max RSS 7.48 GiB, exit 2, no retry. Output `D:\SPD-Decap-PI-Evaluator-W7\36aacaf18dd09da66fae249b4756a8e082e51b3e\260729-17du-current-lineage-rail-footprint\rail_footprint_audit.json` (222 bytes, SHA-256 `BD175CB7C095A966923D92E305C248EB6EC64954A878CE0FB9819BBB19BEB72B`) contained error `target compiled rail port is absent or has unexpected net pair`; no local seam evidence was produced. Root cause is logical rail/contact/Via NET `ADC_VDD_180_VQPS_SYS_1_AON/0` versus physical layer-label token `Signal$L30(OTHER_POWER1)`, so changing only the first guard would leave contact/Via/surface lookup and success-stamp conflation. W7 remains BLOCKED; production physics/`Zii` unchanged. |
 | 17DV metadata bridge | DONE with `STOP_NO_AUTHORITATIVE_BRIDGE`; execution HEAD `11ef7af81ba087c0d9ec7442ba43940a23c734d9`, runtime 172.429 s, peak RSS 7,324,794,880 bytes, exit 2, no retry. Output `D:\SPD-Decap-PI-Evaluator-W7\11ef7af81ba087c0d9ec7442ba43940a23c734d9\260729-17dv-metadata-bridge\metadata_bridge_audit.json` (227 bytes, SHA-256 `86C3330EA47974167FE987821631A5F0FCB5DF9C4A56617A8574B5934D9CDB5A`) reported `artwork island has no unique plane geometry record`. This proves only that the frozen metadata bridge could not uniquely bind the selected finite-surface island to component/geometry/project plane metadata; it does not distinguish zero vs multiple matches or PWR vs GND, and does not prove raw artwork/physical-link absence, direction, PowerSI effect, W6 causality, global assembly, rail completeness, or owner-ledger state. 17DV is immutable and not retried; the historical four-file whitelist remains execution scope. |
+| source-derived IR pivot | 2026-08-28 사용자 결정으로 기존 prospective NO-GO의 `no-schema/no-raw` 권한 제한은 superseded되었다. 원본 SPD에서 source span, plane Boolean lineage, material origin, terminal footprint와 compiler-assigned plane owner를 보존하는 compact hash-bound SQLite를 새 prerequisite로 연다. 세부 계약은 [Source-derived physical IR](SOURCE_DERIVED_PHYSICAL_IR.md)에 둔다. |
+| source-derived IR Phase 1 | DONE. `source-plane-ownership-ir-v1`은 필드별 Layer/Material source record, PadDef+Regular terminal footprint, exact rail-bound island와 retained/plane owner exact-once ledger를 fail-closed 보존한다. 선택 rail 총 100,000행 상한과 complete-only terminal 계약을 적용하며 focused synthetic 결과는 `7 passed in 0.84s`다. 이는 storage prerequisite만 증명한다. |
 | 열지 않는 후보 | Trace R/L은 source trace-width/return assignment가 incomplete하고, Via return/mutual은 source-complete plating/fill/return-plane contract가 없다. Pad/anti-pad는 complete antipad/replacement boundary가 없고, dielectric은 scalar/table dispersion이 이미 active라 temperature-less model로 temperature variant를 source-faithful하게 표현할 수 없다. GUI `include_plane_sheet_payload` 플래그만 켜는 것은 데이터만 만들 뿐 physics를 바꾸지 않으므로 금지한다. |
 | 후속 필요성 | 현 artifact만 이용한 Via/sheet/profile ablation은 여러 누락 물리 항을 식별하지 못하므로 실행하지 않는다. owner-manifest/schema 작업도 선택된 물리 후보 없이 진행하면 validation churn이다. |
-| 현재 권한 | `ACTIVE NONE`; 17DV is a preserved immutable DONE/STOP one-shot contract and is never retried. No new metadata/raw/schema/owner audit or raw-spatial loader/import, raw-v3 decode, W6/Touchstone/correlation/solver/GUI/physics/profile/build/release execution is authorized. |
-| 재개 조건 | source-derived geometry/material 근거, falsifiable physical/analytic limiting-case invariant, rail-complete 적용 범위, deterministic stamp, disjoint owner ledger를 갖춘 단일 physical candidate가 확보되고 명시적으로 승인될 때 한 item만 연다. |
+| 현재 권한 | `W7-SOURCE-IR-P1 DONE`, `W7-SOURCE-IR-P2 READY`, ACTIVE NONE. Phase 2는 별도 transition에서 importer producer seam만 열며 17DU/17DV는 preserved immutable DONE/STOP으로 재실행하지 않는다. |
+| 재개 조건 | Phase 1/2 IR은 prerequisite다. source-derived geometry/material 근거, falsifiable physical/analytic limiting-case invariant, rail-complete 범위, deterministic stamp와 실제 stamp inventory에 결속된 disjoint owner ledger가 확보된 뒤에만 physics item을 하나 연다. |
 
 세부 실행 이력과 exact artifact identity는
 [작업 기준](WORK_EXECUTION_BASELINE.md)에 두고 이 문서에 다시 복제하지 않는다.
