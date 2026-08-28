@@ -1,9 +1,9 @@
 # SPD Decap PI Evaluator 작업 기준
 
 - 적용 제품: **SPD Decap PI Evaluator v0.23.1**
-- 문서 버전: **1.156**
-- 상위 기준: [목적·기술 기준](PRODUCT_PURPOSE_AND_TECHNICAL_BASELINE.md) v1.155
-- 현재 상태: W6 numerical FAIL; W7 BLOCKED; ACTIVE 17DV; 17DG standalone/no Zii change; 17DK–17DP validation-only; 17DS candidate gate **NOT READY/STOP**; 17DT DONE (`internal v3 PASS / W6 comparability STOP_IDENTITY_DRIFT`); 17DU immutable DONE (`STOP_AUDIT_CONTRACT_MISMATCH`); 17DV metadata-only bridge gate ACTIVE under standing preapproval.
+- 문서 버전: **1.157**
+- 상위 기준: [목적·기술 기준](PRODUCT_PURPOSE_AND_TECHNICAL_BASELINE.md) v1.156
+- 현재 상태: W6 numerical FAIL; W7 BLOCKED; ACTIVE NONE; 17DG standalone/no Zii change; 17DK–17DP validation-only; 17DS candidate gate **NOT READY/STOP**; 17DT DONE (`internal v3 PASS / W6 comparability STOP_IDENTITY_DRIFT`); 17DU immutable DONE (`STOP_AUDIT_CONTRACT_MISMATCH`); 17DV DONE (`STOP_NO_AUTHORITATIVE_BRIDGE`), no retry.
 - 최종 개정: 2026-08-28 (Asia/Seoul)
 
 ## 1. 압축 후 즉시 복구 카드
@@ -14,10 +14,10 @@ context가 압축되거나 새 session에서 작업을 재개하면 이 표만 �
 |---|---|
 | 변하지 않는 목적 | source-derived single-rail `Zii`의 PowerSI 근접 정확성과 일반화 |
 | 현재 branch | `main`만 사용 |
-| 현재 assessment | W6-BASE 260729 numerical FAIL; W7 BLOCKED; 17DS candidate gate NOT READY/STOP; 17DT DONE (`internal v3 PASS / W6 comparability STOP_IDENTITY_DRIFT`); 17DU DONE with `STOP_AUDIT_CONTRACT_MISMATCH`, no local seam evidence; 17DV ACTIVE metadata-only bridge gate |
-| 현재 active work item | 17DV — read-only metadata bridge gate; 17DU is immutable historical one-shot and never retried |
+| 현재 assessment | W6-BASE 260729 numerical FAIL; W7 BLOCKED; 17DS candidate gate NOT READY/STOP; 17DT DONE (`internal v3 PASS / W6 comparability STOP_IDENTITY_DRIFT`); 17DU DONE with `STOP_AUDIT_CONTRACT_MISMATCH`; 17DV DONE with `STOP_NO_AUTHORITATIVE_BRIDGE`; no retry |
+| 현재 active work item | NONE — 17DU/17DV are immutable historical one-shots and never retried |
 | 현재 정확성 상태 | `260729 retrospective FAIL`; unseen/generalization `unknown / not_run` |
-| current authorization | ACTIVE 17DV under standing preapproval: metadata/scenario/compiled attachment only; no raw-spatial loader/import, raw-v3 decode, plane payload, containment, W6/Touchstone/correlation/solver/physics/profile/GUI, production solve, build/release; 17DU script/test remain immutable historical evidence |
+| current authorization | ACTIVE NONE: no new metadata/raw/schema/owner audit; no raw-spatial loader/import, raw-v3 decode, plane payload, containment, W6/Touchstone/correlation/solver/physics/profile/GUI, production solve, build/release; 17DU/17DV script/test remain immutable historical evidence |
 | 정확한 재개 조건 | source-certified rail-complete physical candidate + deterministic stamp + falsifiable physical/analytic limiting-case invariant + disjoint owner ledger 확보 및 사용자 명시 승인; 이후에만 one physical change → focused evidence → new gate |
 | 핵심 증거 | [W6-BASE completed evidence](#w6-base-completed-evidence-260729), [W7 결과 재평가](#12-w7-결과-재평가와-후속-과제-판정) |
 
@@ -96,7 +96,7 @@ disjoint owner ledger 확보와 사용자 명시 승인
 ## 4. 작업 항목 register
 
 상태 어휘는 `READY`, `ACTIVE`, `BLOCKED`, `DEFERRED`, `DONE`만 사용한다.
-동시에 `ACTIVE`는 하나만 허용하며 현재는 **17DV**이다. 완료된 미시적 item을
+동시에 `ACTIVE`는 하나만 허용하며 현재는 **NONE**이다. 완료된 미시적 item을
 다시 펼쳐 읽지 말고 아래 phase-level 결론과 Git history를 사용한다.
 
 | ID | 순서 | 상태 | 작업 묶음 | 완료 기준·현재 결론 |
@@ -118,7 +118,7 @@ disjoint owner ledger 확보와 사용자 명시 승인
 | `W6-BLOCK-D` | 14 | DONE | estimate raw-system sparse condition lower bound at the fail-closed pivot | exact diagnostic lower bound retained; no threshold relaxation |
 | `W6-BLOCK-E` | 15 | DONE | classify and gate the rejected factor after row-scaled sparse solve | exact one-shot diagnostic met finite admittance, scaled pivot, and original residual gates; no threshold/fallback change |
 | `W6-BASE` | 16 | DONE | exact clean main HEAD의 retrospective one-run baseline | 260729 completed manifest/sidecar, integrity-valid offline FAIL; no retry |
-| `W7-PHYS` | 17 | BLOCKED | model-form error를 한 source-derived physical block씩 개선 | admissible causal block 부재; 17DV evidence gate ACTIVE; no physics implementation item active |
+| `W7-PHYS` | 17 | BLOCKED | model-form error를 한 source-derived physical block씩 개선 | admissible causal block 부재; 17DV evidence gate DONE/STOP; no physics implementation item active |
 | `W7-PHYS-HISTORY` | 17A–17DF | DONE | mounted-path, ownership, raw-spatial/plane provenance의 bounded audit·discovery | exclusive causal owner를 고르지 못함; production `Y_global`/`Zii` 미변경; 개별 micro-item 재개 금지 |
 | `W7-PHYS-FOUNDATION` | 17DG | DONE | sparse gauge-safe finite-port condensation foundation | standalone analytic gate PASS; production binding/accuracy는 BLOCKED |
 | `W7-PHYS-PREREQUISITES` | 17DH–17DJ | BLOCKED | landing ownership과 one-block causal experiment gate | source-certified rail-complete candidate와 authoritative owner relation 부재 |
@@ -128,7 +128,7 @@ disjoint owner ledger 확보와 사용자 명시 승인
 | `W7-PHYS-CANDIDATE-REVIEW-CLOSURE` | 17DS | DONE | exact source-only bare-development rail candidate closure | `ADC_VDD_180_VQPS_SYS_1_AON/0` subject review 완료; raw-spatial v2 only로 `STOP_RAW_SPATIAL_V3_ABSENT`; candidate **NOT READY/STOP**; 상위 W7 **BLOCKED** |
 | `W7-PHYS-V3-REPRODUCTION` | 17DT | DONE | fresh import-save-only source raw-spatial v3 reproduction | internal v3 PASS; W6 comparability `STOP_IDENTITY_DRIFT`; no physics/profile/GUI change |
 | `W7-PHYS-LOCAL-SEAM` | 17DU | DONE | one read-only current-lineage rail footprint seam audit + focused test | execution `STOP_AUDIT_CONTRACT_MISMATCH`; no local seam evidence; W7 remains BLOCKED and production physics/`Zii` unchanged |
-| `W7-PHYS-METADATA-BRIDGE` | 17DV | ACTIVE | one-shot read-only metadata-only logical-to-physical bridge gate | `PASS_METADATA_BRIDGE_ONLY` ceiling; STOP contracts `STOP_INPUT_IDENTITY`, `STOP_CONTRACT_UNSUPPORTED`, `STOP_NO_AUTHORITATIVE_BRIDGE`, `STOP_RESOURCE_OR_CANCELLED`; no raw-spatial loader/import, plane payload/decode, containment, or physics; frozen four-file whitelist is the 17DV script/test plus Product/Work docs, with `accuracy_parse.py` preserved and excluded |
+| `W7-PHYS-METADATA-BRIDGE` | 17DV | DONE | one-shot read-only metadata-only logical-to-physical bridge gate | `STOP_NO_AUTHORITATIVE_BRIDGE`; HEAD `11ef7af81ba087c0d9ec7442ba43940a23c734d9`, exit 2, runtime 172.429 s, peak RSS 7,324,794,880 bytes, no retry; output SHA-256 `86C3330EA47974167FE987821631A5F0FCB5DF9C4A56617A8574B5934D9CDB5A`; frozen four-file whitelist remains historical execution scope |
 | `W7-PHYS-PROSPECTIVE` | next | BLOCKED | 단일 source-derived physical candidate의 causal checkpoint | geometry/material provenance, rail-complete 범위, deterministic stamp, falsifiable physical/analytic limiting-case invariant, disjoint owner ledger 및 사용자 명시 승인 후에만 READY 가능 |
 | `W8-REL` | 18 | BLOCKED | completed known-case solve를 release gate에 연결하고 최종 전달 | accuracy/product gate와 exact release commit 필요 |
 | `D-DIST` | - | DEFERRED | Distribution routing/DRC scope 확대 | 사용자가 implementation-ready/DRC 목표로 승격할 때만 |
@@ -473,8 +473,10 @@ falsifiable physical/analytic limiting-case invariant + disjoint owner ledger와
 - W7은 source/provenance와 수학·운영 기반을 개선했지만 production network,
   계산된 `Zii`, PowerSI correlation을 바꾸지 않았다.
 - 따라서 현재 product risk는 그대로 **외부 정확성 미달**이며, sole ACTIVE는
-  **NONE**이다. 17DT는 internal v3 PASS / W6 comparability STOP_IDENTITY_DRIFT로
-  종료되었고 17DU도 `STOP_AUDIT_CONTRACT_MISMATCH`로 종료되었다.
+  **NONE**이다.
+  17DT는 internal v3 PASS / W6 comparability STOP_IDENTITY_DRIFT로 종료되었고
+  17DU도 `STOP_AUDIT_CONTRACT_MISMATCH`, 17DV도
+  `STOP_NO_AUTHORITATIVE_BRIDGE`로 종료되었다.
 
 ### 12.2 보존할 성과와 주장 한계
 
@@ -552,11 +554,22 @@ one read-only audit, one focused test selection, bounded phase/decode/temp
 preflights, and a coordinator-enforced external 30-minute/RSS hard wall with no
 retry; stop on identity/loader/contact/geometry/cancellation/resource failure
 and persist only a bounded STOP envelope with the failure reason. This does not select a physical owner or change
-`Y_global`/`Zii`; old-plane owner-off/global assembly remain out of scope. 17DV is the
-sole ACTIVE, one-shot read-only metadata-only bridge gate under standing preapproval.
-It proves `rail binding → contact → Via landing key → quotient vertex → finite-vertex
-surface topology link → artwork island → compact surface component → project
-plane_geometries record` for `ADC_VDD_180_VQPS_SYS_1_AON/0`. `OTHER_POWER1` is observed
+`Y_global`/`Zii`; old-plane owner-off/global assembly remain out of scope. 17DV is DONE
+with `STOP_NO_AUTHORITATIVE_BRIDGE`; no retry. Execution HEAD
+`11ef7af81ba087c0d9ec7442ba43940a23c734d9`, runtime 172.429 s, peak RSS
+7,324,794,880 bytes, exit 2, coordinator stop null. Output is
+`D:\SPD-Decap-PI-Evaluator-W7\11ef7af81ba087c0d9ec7442ba43940a23c734d9\260729-17dv-metadata-bridge\metadata_bridge_audit.json`
+(227 bytes, SHA-256 `86C3330EA47974167FE987821631A5F0FCB5DF9C4A56617A8574B5934D9CDB5A`);
+error exact `artwork island has no unique plane geometry record`. This proves only
+that the frozen metadata bridge could not uniquely bind the selected finite-surface
+island to component/geometry/project plane metadata; it does not distinguish zero
+vs multiple matches or PWR vs GND, and does not prove raw artwork/physical link
+absence, physical direction invalidity, PowerSI effect, W6 causality, global assembly,
+rail completeness, or disjoint owner ledger.
+The frozen gate was intended to prove `rail binding → contact → Via landing key → quotient
+vertex → finite-vertex surface topology link → artwork island → compact surface component
+→ project plane_geometries record` for `ADC_VDD_180_VQPS_SYS_1_AON/0`; execution did not
+complete that proof chain. `OTHER_POWER1` is observed
 inside the physical layer label `Signal$L30(OTHER_POWER1)`, not an assumed logical or
 artwork NET: logical PWR is project `rail.net`/compiled `selected_net`, while physical
 layer+NET must be cross-checked from `selected_plane_pair_provenance`, compact component,
@@ -564,7 +577,7 @@ and `plane_geometries`. Success ceiling is `PASS_METADATA_BRIDGE_ONLY`; STOP con
 are `STOP_INPUT_IDENTITY`, `STOP_CONTRACT_UNSUPPORTED`, `STOP_NO_AUTHORITATIVE_BRIDGE`,
 and `STOP_RESOURCE_OR_CANCELLED` (exit 0/2). It must not load raw-spatial, import raw-v3,
 decode plane payloads, run containment, or run SPD/W6/Touchstone/correlation/solver/
-physics/profile/GUI/build/release. Frozen opened allowlist is exactly `manifest.json`,
+physics/profile/GUI/build/release. Frozen opened allowlist was exactly `manifest.json`,
 `scenario.json`, and `attachments/topology/layerwise-compiled-topology-v1-fac8e711e65a3fe4.sqlite.zlib`;
 manifest is 79,199 bytes, scenario is 760,816,272 bytes (SHA-256
 `15115693d43bdfe69bfcf2d17faeb465da0adac640072183ee24eeea414fa9d9`), and compiled
@@ -574,7 +587,11 @@ identities remain the current 17DT values above. The deterministic output schema
 `17dv-metadata-bridge-v1` with normalized main/exact-HEAD/clean identity, bridge rows,
 selected pair provenance, `raw_spatial_loaded=false`, and exclusive output; one run/no
 retry, internal 480 s and external 600 s wall, coordinator RSS 10 GiB, temp 4 GiB,
-output 8 MiB, target anchors ≤2 and vertex-surface links ≤4096.
+output 8 MiB, target anchors ≤2 and vertex-surface links ≤4096. W7 remains BLOCKED
+and ACTIVE is NONE. Resume only when existing source-certified rail-complete
+physical-candidate conditions are all met and the user explicitly approves an exact
+whitelist plus validation budget. Do not open 17DW or any new metadata/raw/schema/
+owner audit; prospective remains BLOCKED.
 
 ### 12.4 재개 조건
 
@@ -585,7 +602,7 @@ flowchart LR
   D[17DG foundation] -. production binding 없음 .-> C
   E[17DO coverage] --> F[17DP owner identity gap]
   F --> C
-  C --> G[ACTIVE 17DV: metadata bridge only]
+  C --> G[17DV DONE: STOP_NO_AUTHORITATIVE_BRIDGE; ACTIVE NONE]
   H[source-certified rail-complete candidate<br/>deterministic stamp<br/>falsifiable physical/analytic limiting-case invariant<br/>disjoint owner ledger] --> I[사용자 명시 승인]
   I --> J[one physical change]
   J --> K[focused evidence]
