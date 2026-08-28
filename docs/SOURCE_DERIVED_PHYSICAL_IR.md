@@ -1,8 +1,8 @@
 # SPD Decap PI Evaluator v0.23.1 — Source-derived physical IR
 
 - 상태: **ACCEPTED / Phase 1/2/3 DONE; Phase 4 BLOCKED (candidate not accepted)**
-- 스키마: `source-plane-ownership-ir-v1` DONE → contact-complete `source-plane-ownership-ir-v2` BLOCKED
-- 최종 개정: 2026-08-28 (Asia/Seoul)
+- 스키마: `source-plane-ownership-ir-v1` DONE → contact-complete `source-plane-ownership-ir-v2` BLOCKED candidate
+- 최종 개정: 2026-08-29 (Asia/Seoul)
 
 ## 1. 목적
 
@@ -179,6 +179,21 @@ retained quotient에 남지 않아 `3 passed, 1 failed in 2.77s`, 허용된 fixt
 surface 밖으로 바꿔 `1 failed in 1.42s`로 fail-closed됐다. 작업 기준의 1회 fixture
 수정·재실행 예산을 소진했으므로 v2 asset, contact completeness와 Phase 4 PASS를
 주장하지 않는다. candidate diff는 승인·커밋된 기준이 아니다.
+
+2026-08-29 사용자 재개 지시로 R1을 한 번 열었다. R1은 P/G anchor island를 보존하는
+source-valid retained nonterminal fixture를 Sol이 먼저 정적으로 고정하고, Luna가 테스트
+파일만 1회 수정한 뒤 Sol 검토와 실패했던 node 1회 실행으로 끝낸다. 실패하면 추가
+fixture 반복 없이 다시 BLOCKED로 닫는다.
+
+R1은 Device Via1/Node7 PWR와 Via2/Node9 GND anchor를 원복하고, 기존 검증 topology와
+같은 `Node3--Trace11--Node12(TOP)--Via11--Node11(PWR)` 경로를 사용했다. Sol 정적
+검토는 Via11의 단일 `retained_explicit` edge, `other` 분류, owner 방향과 raw provenance에
+GO를 주었다. 단일 허용 node는 import와 v2 asset load까지 진행했으나 persisted
+`contact_boundary`에 `owner_kind=decap` 행이 하나도 없어
+`tests/test_source_plane_ownership_ir_producer.py:191`에서 `1 failed in 1.70s`로 끝났다.
+뒤의 Via11/authority assertion은 실행되지 않았으므로 runtime completeness를 주장하지
+않는다. fixture·코드 추가 수정과 재실행은 금지하며 candidate diff는 승인·커밋된 기준이
+아니다.
 
 ## 7. 주장 한계
 

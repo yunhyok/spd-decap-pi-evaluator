@@ -1,14 +1,14 @@
 # SPD Decap PI Evaluator 목적·기술 기준
 
 - 적용 제품: **SPD Decap PI Evaluator v0.23.1**
-- 문서 버전: **1.163**
+- 문서 버전: **1.165**
 - W5 approved/machine-frozen source-before: `main` commit `027ac7a09a3eded15f45c41860945f9d4c7f488d`
 - 상태: **G0 기준 문서** — W5 DONE; W6-BASE 260729 numerical FAIL; W7-PHYS BLOCKED; W7-SOURCE-IR Phase 1/2/3 DONE, Phase 4 BLOCKED (모두 shadow/prerequisite 범위).
-- 현재 평가: Phase 3의 Device P/G 2-contact witness만으로는 동일 rail-bound component에 연결된 mounted decap와 다른 finite contact의 공간 전류 경계를 보존할 수 없다. Phase 4 구현 candidate는 정적 GO까지 도달했지만, 허용된 focused fixture 실행과 1회 수정·재실행에서 retained nonterminal contact 증거를 닫지 못했으므로 `source-plane-ownership-ir-v2`는 아직 승인되지 않았다.
-- Sole ACTIVE item (current): **NONE.** `W7-SOURCE-IR-P4`는 검증 예산을 소진한 BLOCKED 상태이며 production physics/`Zii`는 unchanged다.
-- 현재 권한: 2026-08-28 사용자 지시로 2026-08-29 오전까지 bounded 후속 작업은 사전 승인되어 있으나, 작업 기준 12.8의 Phase 4 fixture 수정·재실행 예산은 소진됐다. 사용량 50% floor·단일 causal item·main-only·`accuracy_parse.py` 보존을 유지하며, 추가 Phase 4 실행은 새 검증 예산이 명시된 뒤에만 가능하다.
+- 현재 평가: Phase 3의 Device P/G 2-contact witness만으로는 동일 rail-bound component에 연결된 mounted decap와 다른 finite contact의 공간 전류 경계를 보존할 수 없다. Phase 4-R1은 P/G anchor를 보존하는 proven trace-terminal fixture와 Sol 정적 GO까지 닫았지만, 단일 허용 node에서 persisted `contact_boundary`에 `owner_kind=decap` 행이 없어 `1 failed in 1.70s`로 끝났다. v2 candidate는 승인되지 않았다.
+- Sole ACTIVE item (current): **NONE.** Phase 4-R1 검증 예산을 소진했고 production physics/`Zii`는 unchanged다.
+- 현재 권한: 추가 fixture 수정·pytest 재실행·direct-artwork/adjacent-gap/production physics 작업은 열려 있지 않다. main-only와 `accuracy_parse.py` 보존을 유지하며, 재개 전에는 decap boundary 분류 누락의 causal contract와 새 단일 검증 예산을 먼저 문서로 승인해야 한다.
 - 물리 작업 재개 조건: IR prerequisite 완료 후에도 geometry/material provenance, physical limiting-case invariant, rail-complete 적용 범위, deterministic stamp와 실제 consumer에 결속된 disjoint owner ledger를 갖춘 단일 physical candidate가 필요하다.
-- 최종 개정: 2026-08-28 (Asia/Seoul)
+- 최종 개정: 2026-08-29 (Asia/Seoul)
 
 ## 1. 문서 역할과 권위
 
@@ -354,11 +354,11 @@ flowchart TD
 | source-derived IR Phase 1 | DONE. `source-plane-ownership-ir-v1`은 필드별 Layer/Material source record, PadDef+Regular terminal footprint, exact rail-bound island와 retained/plane owner exact-once ledger를 fail-closed 보존한다. 선택 rail 총 100,000행 상한과 complete-only terminal 계약을 적용하며 focused synthetic 결과는 `7 passed in 0.84s`다. 이는 storage prerequisite만 증명한다. |
 | source-derived IR Phase 2 | DONE. importer가 exact SPD span/record, cleanup 전 primitive↔island 관계, complete terminal chain과 raw/compiled identity를 한 원자적 scenario envelope에 결속한다. 두 full-file 실행은 각각 fixture 결함으로 `3 passed, 1 failed`였고, fixture와 producer integration seam을 수정한 뒤 축소한 end-to-end node가 `1 passed in 1.39s`로 닫혔다. production SPD/solver/W6는 실행하지 않았다. |
 | source-derived IR Phase 3 | DONE (shadow-only). validated IR/raw-v3에서 선택 rail의 PWR/return patch, stackup/material과 complete terminal footprint를 exact join해 deterministic finite-port witness를 만들었다. uniform-strip 양면 `Rdc`, `L=mu0*d*ell/w`, `C=epsilon0*epsilon_r*A/d` gate를 `<=1e-10`으로 닫았다. 첫 focused file은 float canonicalization fixture 결함으로 `1 failed, 1 passed in 1.30s`, fixture 수정 뒤 exact happy node는 `1 passed in 0.97s`였다. `NodalAdmittanceBlock`, production owner inventory, `Y_global`과 `Zii`는 변경하지 않았다. |
-| source-derived IR Phase 4 | **BLOCKED / candidate not accepted.** quotient-authoritative all-incident edge/owner와 raw Node/Via/Pad provenance 구현 candidate는 Sol 정적 GO였으나, 첫 focused file은 `3 passed, 1 failed in 2.77s`로 generic Via가 pruning됐고 허용된 fixture 수정 뒤 동일 node도 `1 failed in 1.42s`로 power anchor representative island가 selected PWR surface와 달라 fail-closed됐다. 검증 예산 소진으로 v2 PASS를 주장하지 않으며 production stamp/`Zii`는 불변이다. |
+| source-derived IR Phase 4 | **BLOCKED / candidate not accepted.** 이전 실행은 `3 passed, 1 failed in 2.77s`, 허용된 fixture 수정 뒤 `1 failed in 1.42s`였다. R1은 Device P/G anchor를 원복하고 proven trace-terminal topology로 generic Via를 구성해 Sol 정적 GO를 받았으나, 단일 허용 node가 persisted `contact_boundary`의 decap 분류 부재로 `1 failed in 1.70s`였다. 추가 반복은 금지하며 production stamp/`Zii`는 불변이다. |
 | 열지 않는 후보 | Trace R/L은 source trace-width/return assignment가 incomplete하고, Via return/mutual은 source-complete plating/fill/return-plane contract가 없다. Pad/anti-pad는 complete antipad/replacement boundary가 없고, dielectric은 scalar/table dispersion이 이미 active라 temperature-less model로 temperature variant를 source-faithful하게 표현할 수 없다. GUI `include_plane_sheet_payload` 플래그만 켜는 것은 데이터만 만들 뿐 physics를 바꾸지 않으므로 금지한다. |
 | 후속 필요성 | 현 artifact만 이용한 Via/sheet/profile ablation은 여러 누락 물리 항을 식별하지 못하므로 실행하지 않는다. owner-manifest/schema 작업도 선택된 물리 후보 없이 진행하면 validation churn이다. |
-| 현재 권한 | `W7-SOURCE-IR-P1/P2/P3 DONE`, `P4 BLOCKED`, `ACTIVE NONE`. 2026-08-29 오전까지의 사전 승인은 bounded prerequisite를 연속 진행할 권한이지만 소진된 Phase 4 검증 예산이나 production physics 범위를 자동 확대하지 않는다. 17DU/17DV는 preserved immutable DONE/STOP으로 재실행하지 않는다. |
-| 재개 조건 | selected PWR/GND anchor island를 바꾸지 않으면서 generic Via가 실제 retained quotient edge에 남는 source-valid fixture 계약과 추가 focused 실행 예산을 먼저 고정한다. 그 PASS 뒤에만 direct-artwork contact 분류와 adjacent-gap pre-collapse owner inventory를 각각 한 causal 단계로 연다. |
+| 현재 권한 | `W7-SOURCE-IR-P1/P2/P3 DONE`, `P4-R1 BLOCKED`, `ACTIVE NONE`. R1의 fixture 수정·정적 검토·동일 node 1회 실행 예산은 소진됐다. 17DU/17DV는 preserved immutable DONE/STOP으로 재실행하지 않는다. |
+| 재개 조건 | persisted boundary에서 mounted decap 분류가 왜 누락되는지 quotient 모집단과 terminal 보강 계약을 정적으로 한 causal item으로 고정하고 새 단일 검증 예산을 명시해야 한다. 그 PASS 전 direct-artwork contact 분류와 adjacent-gap pre-collapse owner inventory는 열지 않는다. |
 
 세부 실행 이력과 exact artifact identity는
 [작업 기준](WORK_EXECUTION_BASELINE.md)에 두고 이 문서에 다시 복제하지 않는다.

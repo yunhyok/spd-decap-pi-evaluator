@@ -1,10 +1,10 @@
 # SPD Decap PI Evaluator 작업 기준
 
 - 적용 제품: **SPD Decap PI Evaluator v0.23.1**
-- 문서 버전: **1.164**
-- 상위 기준: [목적·기술 기준](PRODUCT_PURPOSE_AND_TECHNICAL_BASELINE.md) v1.163
-- 현재 상태: W6 numerical FAIL; W7-PHYS BLOCKED; W7-SOURCE-IR-P1/P2/P3 DONE; P4 BLOCKED (validation budget exhausted); 17DG standalone/no Zii change; 17DT/17DU/17DV immutable DONE/STOP.
-- 최종 개정: 2026-08-28 (Asia/Seoul)
+- 문서 버전: **1.166**
+- 상위 기준: [목적·기술 기준](PRODUCT_PURPOSE_AND_TECHNICAL_BASELINE.md) v1.165
+- 현재 상태: W6 numerical FAIL; W7-PHYS BLOCKED; W7-SOURCE-IR-P1/P2/P3 DONE; P4-R1 BLOCKED; 17DG standalone/no Zii change; 17DT/17DU/17DV immutable DONE/STOP.
+- 최종 개정: 2026-08-29 (Asia/Seoul)
 
 ## 1. 압축 후 즉시 복구 카드
 
@@ -15,10 +15,10 @@ context가 압축되거나 새 session에서 작업을 재개하면 이 표만 �
 | 변하지 않는 목적 | source-derived single-rail `Zii`의 PowerSI 근접 정확성과 일반화 |
 | 현재 branch | `main`만 사용 |
 | 현재 assessment | W6-BASE numerical FAIL; 17DV persisted bridge STOP은 유효하나 원본 SPD 정보 부재 주장은 하지 않음; source-derived canonical IR prerequisite 승인 |
-| 현재 active work item | **NONE** — W7-SOURCE-IR-P4는 focused fixture evidence 미완료로 BLOCKED |
+| 현재 active work item | **NONE** — P4-R1 단일 node 실패 후 no-repeat 계약으로 BLOCKED |
 | 현재 정확성 상태 | `260729 retrospective FAIL`; unseen/generalization `unknown / not_run` |
-| current authorization | 2026-08-29 오전까지 bounded 후속 작업 사전 승인; 다만 12.8의 Phase 4 fixture 수정·재실행 예산은 소진; 사용량 50% floor, main-only, `accuracy_parse.py` 보존 |
-| 정확한 재개 조건 | P/G anchor island를 보존하며 generic Via가 retained edge에 남는 fixture 계약과 추가 focused 실행 예산을 먼저 고정; PASS 전 adjacent-gap/production `Zii` 변경 금지 |
+| current authorization | P4-R1 검증 예산 소진; 추가 fixture/pytest/direct-artwork/adjacent-gap/production physics 권한 없음; main-only, `accuracy_parse.py` 보존 |
+| 정확한 재개 조건 | persisted boundary의 decap 분류 누락 원인을 quotient 모집단과 terminal 보강 계약에서 한 causal item으로 정적으로 고정하고 새 단일 검증 예산을 명시; 그 전 production `Zii` 변경 금지 |
 | 핵심 증거 | [W6-BASE completed evidence](#w6-base-completed-evidence-260729), [W7 결과 재평가](#12-w7-결과-재평가와-후속-과제-판정) |
 
 최초 목적은 [목적·기술 기준 2장](PRODUCT_PURPOSE_AND_TECHNICAL_BASELINE.md#2-최우선-목적),
@@ -132,7 +132,7 @@ disjoint owner ledger 확보와 사용자 명시 승인
 | `W7-SOURCE-IR-P1` | IR-1 | DONE | source-plane ownership SQLite storage/validation vertical slice | deterministic schema/hash round-trip, per-field material lineage, complete terminal provenance, exact island와 owner exact-once ledger; `7 passed in 0.84s` |
 | `W7-SOURCE-IR-P2` | IR-2 | DONE | import-time producer seam과 atomic scenario envelope 결속 | exact SPD spans/records, cleanup 전 live relation, raw/compiled identity finalization; combined focused evidence green, final end-to-end node `1 passed in 1.39s` |
 | `W7-SOURCE-IR-P3` | IR-3 | DONE | source-plane patch shadow finite-port witness | exact IR/raw/owner join, analytic R/L/C와 deterministic finite-port witness PASS; production stamp/owner/`Zii` 불변 |
-| `W7-SOURCE-IR-P4` | IR-4 | BLOCKED | quotient-authoritative contact-complete ownership IR v2 | Sol static GO 후 focused `3 passed, 1 failed`; 허용된 fixture 수정 뒤 동일 node `1 failed`; v2 candidate not accepted |
+| `W7-SOURCE-IR-P4` | IR-4 | BLOCKED | quotient-authoritative contact-complete ownership IR v2 R1 | proven trace-terminal fixture와 Sol 정적 GO 뒤 단일 node가 persisted decap boundary 부재로 `1 failed in 1.70s`; no retry; v2 candidate not accepted |
 | `W7-PHYS-PROSPECTIVE` | next | BLOCKED | 단일 source-derived physical candidate의 causal checkpoint | geometry/material provenance, rail-complete 범위, deterministic stamp, falsifiable physical/analytic limiting-case invariant, disjoint owner ledger 및 사용자 명시 승인 후에만 READY 가능 |
 | `W8-REL` | 18 | BLOCKED | completed known-case solve를 release gate에 연결하고 최종 전달 | accuracy/product gate와 exact release commit 필요 |
 | `D-DIST` | - | DEFERRED | Distribution routing/DRC scope 확대 | 사용자가 implementation-ready/DRC 목표로 승격할 때만 |
@@ -735,7 +735,7 @@ Closure evidence:
 Phase 3 DONE은 source-derived analytic/owner hand-off prerequisite만 증명한다. 다음
 production seam은 `W7-PHYS-PROSPECTIVE / BLOCKED`이며 별도 사용자 승인 전 열지 않는다.
 
-### 12.8 W7-SOURCE-IR-P4 blocked closure
+### 12.8 W7-SOURCE-IR-P4 blocked closure, R1 reactivation and closure
 
 목적은 current v1이 target Device P/G anchor만 보존해 같은 rail-bound component의
 mounted decap와 다른 finite edge를 누락하는 원인을 import-time에서 한 번 닫는 것이다.
@@ -797,3 +797,29 @@ direct-artwork gate와 production physics는 열지 않는다. 현재 7-file wor
 승인·커밋된 기준이 아니다. 재개하려면 P/G anchor island를 바꾸지 않는 unselected
 conductor intermediate 또는 동등한 source-valid retained topology를 먼저 문서로 고정하고,
 추가 focused 실행 예산을 명시해야 한다.
+
+2026-08-29 사용자 `계속 진행` 지시를 추가 focused 실행 예산 승인으로 기록한다. R1의
+정확한 순서는 Sol source-valid fixture 설계, Luna 테스트 파일 1회 수정, Sol 정적 검토,
+실패했던 node 1회 실행이다. source/solver/consumer 코드는 fixture가 기존 구현 결함을
+새로 증명하지 않는 한 더 수정하지 않는다. R1 실패 시 세 번째 fixture 반복 없이 즉시
+BLOCKED로 복귀한다.
+
+R1 실행 결과는 **BLOCKED / candidate not accepted**다. Sol은 Device P/G anchor를
+각각 Via1→Node7 PWR, Via2→Node9 GND로 보존하고 C1 power 쪽에 proven trace-terminal
+`Node3--Trace11--Node12(TOP)--Via11--Node11(PWR)` topology를 고정했다. Luna는 테스트
+파일만 한 번 수정했고, Sol 최종 정적 검토는 Via11의 단일 explicit edge, `other` 분류,
+owner 방향, raw endpoint/rotation/padstack provenance와 v1/v2 분리에 GO를 주었다.
+
+허용된 명령
+`python -m pytest -q tests/test_source_plane_ownership_ir_producer.py::test_source_plane_ownership_producer_roundtrip_and_atomic_failure`
+은 정확히 한 번 실행되어 `1 failed in 1.70s`로 끝났다. import와 v2 asset load는
+완료됐지만 persisted `contact_boundary`에 `owner_kind=decap` 행이 없어
+`tests/test_source_plane_ownership_ir_producer.py:191`에서 실패했다. 이후 Via11 row와
+canonical authority list/set/count/SHA assertion은 실행되지 않았으므로 runtime PASS로
+간주하지 않는다.
+
+no-repeat 계약에 따라 추가 fixture·생산 코드 수정, pytest 재실행, direct-artwork gate,
+adjacent-gap inventory와 production physics는 열지 않는다. 현재 7-file candidate 중
+생산 코드와 테스트 diff는 승인·커밋하지 않고 보존한다. 재개하려면 decap boundary가
+quotient incident 모집단에서 누락되는지, terminal kind 보강에서 누락되는지를 실행 없이
+먼저 분리하는 새 causal contract와 단일 검증 예산을 문서로 승인해야 한다.
