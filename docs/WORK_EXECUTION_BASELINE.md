@@ -1,9 +1,9 @@
 # SPD Decap PI Evaluator 작업 기준
 
 - 적용 제품: **SPD Decap PI Evaluator v0.23.1**
-- 문서 버전: **1.152**
-- 상위 기준: [목적·기술 기준](PRODUCT_PURPOSE_AND_TECHNICAL_BASELINE.md) v1.151
-- 현재 상태: W6 numerical FAIL; W7 BLOCKED; ACTIVE 17DT; 17DG standalone/no Zii change; 17DK–17DP validation-only; 17DS candidate gate **NOT READY/STOP**; 17DT fresh import-save-only v3 reproduction active (surface-patch plane current-spreading R/L remains only credible physical direction); no other follow-up authority.
+- 문서 버전: **1.153**
+- 상위 기준: [목적·기술 기준](PRODUCT_PURPOSE_AND_TECHNICAL_BASELINE.md) v1.152
+- 현재 상태: W6 numerical FAIL; W7 BLOCKED; ACTIVE 17DU; 17DG standalone/no Zii change; 17DK–17DP validation-only; 17DS candidate gate **NOT READY/STOP**; 17DT DONE (`internal v3 PASS / W6 comparability STOP_IDENTITY_DRIFT`); 17DU read-only local seam audit is the sole active follow-up.
 - 최종 개정: 2026-08-28 (Asia/Seoul)
 
 ## 1. 압축 후 즉시 복구 카드
@@ -14,10 +14,10 @@ context가 압축되거나 새 session에서 작업을 재개하면 이 표만 �
 |---|---|
 | 변하지 않는 목적 | source-derived single-rail `Zii`의 PowerSI 근접 정확성과 일반화 |
 | 현재 branch | `main`만 사용 |
-| 현재 assessment | W6-BASE 260729 numerical FAIL; W7 BLOCKED; 17DS candidate gate NOT READY/STOP; 17DT v3 reproduction ACTIVE |
-| 현재 active work item | 17DT — fresh import-save-only raw-spatial v3 generation/evidence |
+| 현재 assessment | W6-BASE 260729 numerical FAIL; W7 BLOCKED; 17DS candidate gate NOT READY/STOP; 17DT DONE (`internal v3 PASS / W6 comparability STOP_IDENTITY_DRIFT`); 17DU candidate gate **PASS_LOCAL_SEAM_ONLY** scope, otherwise NOT READY/STOP |
+| 현재 active work item | 17DU — one read-only current-lineage rail footprint seam audit + focused test |
 | 현재 정확성 상태 | `260729 retrospective FAIL`; unseen/generalization `unknown / not_run` |
-| current authorization | 17DT whitelist only: fresh import-save-only v3 generation + focused evidence; no W6 mutation, GUI default, physics/profile, production solve, build/release |
+| current authorization | 17DU four-file whitelist only: read-only candidate audit + focused test; no W6 mutation, raw SPD reread, solver/physics/profile/GUI, production solve, build/release |
 | 정확한 재개 조건 | source-certified rail-complete physical candidate + deterministic stamp + falsifiable physical/analytic limiting-case invariant + disjoint owner ledger 확보 및 사용자 명시 승인; 이후에만 one physical change → focused evidence → new gate |
 | 핵심 증거 | [W6-BASE completed evidence](#w6-base-completed-evidence-260729), [W7 결과 재평가](#12-w7-결과-재평가와-후속-과제-판정) |
 
@@ -96,7 +96,7 @@ disjoint owner ledger 확보와 사용자 명시 승인
 ## 4. 작업 항목 register
 
 상태 어휘는 `READY`, `ACTIVE`, `BLOCKED`, `DEFERRED`, `DONE`만 사용한다.
-동시에 `ACTIVE`는 하나만 허용하며 현재는 **NONE**이다. 완료된 미시적 item을
+동시에 `ACTIVE`는 하나만 허용하며 현재는 **17DU**이다. 완료된 미시적 item을
 다시 펼쳐 읽지 말고 아래 phase-level 결론과 Git history를 사용한다.
 
 | ID | 순서 | 상태 | 작업 묶음 | 완료 기준·현재 결론 |
@@ -126,7 +126,8 @@ disjoint owner ledger 확보와 사용자 명시 승인
 | `W7-PHYS-OUTCOME-REVIEW` | 17DQ | DONE | 현재 결과 재평가와 후속 필요성 판정 | artifact-only ablation과 owner-manifest/schema continuation을 열지 않고 ACTIVE NONE 유지 |
 | `W7-PHYS-CANDIDATE-REVIEW` | 17DR | DONE | source/provenance/ownership feasibility candidate gate review | review 완료; candidate 결과 **NOT READY/STOP**; 상위 W7 **BLOCKED** / **ACTIVE NONE** |
 | `W7-PHYS-CANDIDATE-REVIEW-CLOSURE` | 17DS | DONE | exact source-only bare-development rail candidate closure | `ADC_VDD_180_VQPS_SYS_1_AON/0` subject review 완료; raw-spatial v2 only로 `STOP_RAW_SPATIAL_V3_ABSENT`; candidate **NOT READY/STOP**; 상위 W7 **BLOCKED** |
-| `W7-PHYS-V3-REPRODUCTION` | 17DT | ACTIVE | fresh import-save-only source raw-spatial v3 reproduction | source SPD plane/stackup/material → normalized/hash-bound v3 attachment; no physics/profile/GUI change; exact rail footprint join and old-plane owner-off deferred |
+| `W7-PHYS-V3-REPRODUCTION` | 17DT | DONE | fresh import-save-only source raw-spatial v3 reproduction | internal v3 PASS; W6 comparability `STOP_IDENTITY_DRIFT`; no physics/profile/GUI change |
+| `W7-PHYS-LOCAL-SEAM` | 17DU | ACTIVE | one read-only current-lineage rail footprint seam audit + focused test | `PASS_LOCAL_SEAM_ONLY` may prove six Device pin owner/landing/node and pad-shape containment rows; W7 remains BLOCKED and global replacement evidence is out of scope |
 | `W7-PHYS-PROSPECTIVE` | next | BLOCKED | 단일 source-derived physical candidate의 causal checkpoint | geometry/material provenance, rail-complete 범위, deterministic stamp, falsifiable physical/analytic limiting-case invariant, disjoint owner ledger 및 사용자 명시 승인 후에만 READY 가능 |
 | `W8-REL` | 18 | BLOCKED | completed known-case solve를 release gate에 연결하고 최종 전달 | accuracy/product gate와 exact release commit 필요 |
 | `D-DIST` | - | DEFERRED | Distribution routing/DRC scope 확대 | 사용자가 implementation-ready/DRC 목표로 승격할 때만 |
@@ -437,6 +438,7 @@ remote/full suite, installer/release는 수행하지 않았다.
 | `D-007` | historical closure에서 다음 item을 자동 시작하지 않음 | D-008로 superseded |
 | `D-008` | artifact-only ablation은 non-identifying이며 owner-manifest/schema continuation은 지금 진행하지 않음; ACTIVE NONE 유지 | historical; D-009 supersedes only for approved 17DT scope |
 | `D-009` | 사용자 승인 17DT에 한해 fresh import-save-only raw-spatial v3 reproduction을 네 파일 whitelist로 실행; `accuracy_parse.py`는 보존·미수정 | 확정 |
+| `D-010` | 17DT 내부 v3 PASS/W6 `STOP_IDENTITY_DRIFT` 후, 승인된 네 파일로 17DU current-lineage local seam audit를 1회 수행; `accuracy_parse.py` 보존·미수정, W7/global owner-off는 계속 BLOCKED | 확정 |
 
 ## 11. 현재 evidence와 비재사용 경계
 
@@ -470,7 +472,8 @@ falsifiable physical/analytic limiting-case invariant + disjoint owner ledger와
 - W7은 source/provenance와 수학·운영 기반을 개선했지만 production network,
   계산된 `Zii`, PowerSI correlation을 바꾸지 않았다.
 - 따라서 현재 product risk는 그대로 **외부 정확성 미달**이며, sole ACTIVE는
-  **17DT**이다.
+  **17DU**이다. 17DT는 internal v3 PASS / W6 comparability STOP_IDENTITY_DRIFT로
+  종료되었다.
 
 ### 12.2 보존할 성과와 주장 한계
 
@@ -517,26 +520,33 @@ raw-spatial v2 attachment
 `stackup_layers`, `dielectric_points`가 없어 `STOP_RAW_SPATIAL_V3_ABSENT`다.
 Old AdjacentGap/Dispersive plane stamps도 persisted physical owner ID가 없어
 disjoint replacement ledger를 증명할 수 없다. 17DS review는 **DONE**, candidate는
-**NOT READY**, W7은 **BLOCKED**다. 17DT는 sole **ACTIVE**로, 원본 SPD
-`D:\S4LB002-2Para_260729_1_injected.spd` (1,116,717,287 bytes;
-SHA-256 `40cb44b2376f59d6b606eb9b4d138204fe51b2dc6b3332d3b7c0e7d4202866d2`)에서
-planned output `D:\SPD-Decap-PI-Evaluator-W7\<technical_commit>\260729-17dt-raw-spatial-v3`를
-fresh `import-save-only --include-plane-sheet-payload`로 한 번 생성한다. 허용 파일은
-이 문서와 Product 문서, `scripts/benchmark_raw_spd_powersi_correlation.py`,
-`tests/test_benchmark_raw_spd_powersi_correlation.py`뿐이며, untracked
-`accuracy_parse.py`는 보존·미수정한다. 이는 runner/test seam과 raw-SPD evidence
-path만 변경하며 `src`/GUI/physics/profile/frequency solve/Touchstone/correlation/
-build/release는 실행·변경하지 않는다. Expected
-cross-checks are project binding
-`03b6610676c90a5507fa402a15ae11c00c0d669f04decb98fc1051756c76acbb`, certificate
-`7aae1818793a81e1e32f021b1c92952085eb8ccfb9e64669337cf2d06b24c2fe`, topology
-`685e0f05cef519e79d297907d3dded2752fcf6f6a38ee38de957fcbcfa7ea76c`, and frozen
-candidate size 796,205,663 bytes. Budget is V0 once, focused test selection once,
-one import-save generation with 3-hour hard wall, temporary storage ≥16 GiB and
-output storage ≥5 GiB, no retry; stop on source/CLI/v3 manifest-table-count-hash/
-full-loader/cancellation/resource failure and preserve partial evidence. This
-does not select a physical owner or change `Y_global`/`Zii`; exact rail footprint
-join and old-plane owner-off remain a later bounded gate.
+**NOT READY**, W7은 **BLOCKED**다. 17DT는 internal v3 reproduction **DONE**
+(`internal v3 PASS / W6 comparability STOP_IDENTITY_DRIFT`)이며, 17DU가 sole
+**ACTIVE**다. 17DU는 저장된 current-lineage candidate만 읽어
+`ADC_VDD_180_VQPS_SYS_1_AON/0`의 3 PWR + 3 return Device pin을
+anchor/contact→incident Via→raw owner→compiled first edge/landing endpoint→raw
+node 및 target-layer pad-shape→source-bound ordered-copper proper containment으로
+검증한다. 성공 상태는 `PASS_LOCAL_SEAM_ONLY`지만 old-plane owner-off/global
+assembly/W6 causal comparison/Zii improvement는 주장하지 않는다. 허용 파일은
+이 문서와 Product 문서, `scripts/audit_current_lineage_rail_footprint.py`,
+`tests/test_audit_current_lineage_rail_footprint.py`뿐이며 untracked
+`accuracy_parse.py`는 보존·미수정한다. raw SPD/W6/Touchstone/correlation/solver/
+GUI/physics/profile/build/release는 읽거나 실행하지 않는다. Expected
+current 17DT input identities are candidate 911,542,390 bytes / SHA-256
+`fbe6abeb5655918134ecb47235edfd3b81b891ed5ec95545e03c9651937c6bcc`, report 8,622
+bytes / SHA-256 `87d83364998ba09639cf36b30e34559cf598da04f653309967145a4dd1681f2f`,
+source SHA-256 `40cb44b2376f59d6b606eb9b4d138204fe51b2dc6b3332d3b7c0e7d4202866d2`;
+17DU expected manifest identities are project binding
+`52b04151f8c46ad2bc903dbf4e62855e0e29042b428ce38a4aafc9e98c519760`, certificate
+`fac8e711e65a3fe4f82d3d32fd7cb862bcf2781e02e5037fb4f16ba5a07c46b3`, topology
+`a12a76a1060cb466b3a35f4e43165e1db6e7a28c96e8a071cb0ea01e9945c6ef`, raw geometry
+`bdfecc328264d28b6e2f35a6dcb096a42373a4cbed799a5de51403f71787623e`, raw logical
+`519fda0cc425d24fc61baaeb529d55240bcc085c5dca4bea5c528616e9fefb10`. Budget is
+one read-only audit, one focused test selection, bounded phase/decode/temp
+preflights, and a coordinator-enforced external 30-minute/RSS hard wall with no
+retry; stop on identity/loader/contact/geometry/cancellation/resource failure
+and persist only a bounded STOP envelope with the failure reason. This does not select a physical owner or change
+`Y_global`/`Zii`; old-plane owner-off/global assembly remain out of scope.
 
 ### 12.4 재개 조건
 
@@ -547,7 +557,7 @@ flowchart LR
   D[17DG foundation] -. production binding 없음 .-> C
   E[17DO coverage] --> F[17DP owner identity gap]
   F --> C
-  C --> G[ACTIVE 17DT: v3 reproduction only]
+  C --> G[ACTIVE 17DU: local seam audit only]
   H[source-certified rail-complete candidate<br/>deterministic stamp<br/>falsifiable physical/analytic limiting-case invariant<br/>disjoint owner ledger] --> I[사용자 명시 승인]
   I --> J[one physical change]
   J --> K[focused evidence]
