@@ -80,9 +80,18 @@ def _real(value: Any, label: str, minimum: float | None = None) -> float:
 def _obj_map(value: Any, label: str) -> dict[str, Any]:
     if isinstance(value, Mapping):
         return dict(value)
+    model_dump = getattr(value, "model_dump", None)
+    if callable(model_dump):
+        try:
+            dumped = model_dump(mode="python")
+        except Exception as exc:
+            _fail("SOURCE_PLANE_OWNERSHIP_IR_ROW_INVALID", f"{label} model_dump failed: {exc}")
+        if isinstance(dumped, Mapping):
+            return dict(dumped)
+        _fail("SOURCE_PLANE_OWNERSHIP_IR_ROW_INVALID", f"{label} model_dump must return a Mapping")
     if is_dataclass(value) and not isinstance(value, type):
         return {field.name: getattr(value, field.name) for field in fields(value)}
-    _fail("SOURCE_PLANE_OWNERSHIP_IR_ROW_INVALID", f"{label} must be a Mapping or dataclass")
+    _fail("SOURCE_PLANE_OWNERSHIP_IR_ROW_INVALID", f"{label} must be a Mapping, dataclass, or Pydantic model")
 
 
 def _rows(value: Any, label: str, remaining: int, cancelled: Any) -> list[dict[str, Any]]:

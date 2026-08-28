@@ -52,10 +52,22 @@ from .spd_routing import (
     merge_spd_routing_net_roles,
     parse_spd_routing_net_roles,
 )
+from ...source_plane_ownership_ir import MAX_SOURCE_PLANE_OWNERSHIP_IR_ROWS
 
 
 class SpdImportError(ValueError):
     """Raised when an SPD source cannot be opened or analysis is cancelled."""
+
+
+def _append_ownership_provenance(
+    provenance: dict[str, Any], section: str, row: Mapping[str, Any]
+) -> None:
+    total = sum(len(value) for value in provenance.values() if isinstance(value, list))
+    if total >= MAX_SOURCE_PLANE_OWNERSHIP_IR_ROWS:
+        raise SpdImportError(
+            "SOURCE_PLANE_OWNERSHIP_IR_BOUND_EXCEEDED: provenance row bound exceeded"
+        )
+    provenance.setdefault(section, []).append(dict(row))
 
 
 @dataclass(frozen=True, slots=True)
@@ -1969,6 +1981,9 @@ class SpdAnalysis:
     shared_pad_clusters: tuple[SpdSharedPadCluster, ...] = ()
     routing_extraction: SpdRoutingExtraction | None = None
     device_terminal_via_endpoints: tuple[SpdDeviceTerminalViaEndpoint, ...] = ()
+    # Compact source identities gathered during the existing mmap scans.  This
+    # is intentionally metadata-only (no source bytes or geometry objects).
+    source_plane_ownership_draft: Mapping[str, Any] | None = None
 
     @property
     def partial_models(self) -> dict[str, PassiveSubcircuitModel]:
@@ -3290,7 +3305,8 @@ def _frequency_scale(header: bytes) -> float | None:
 
 
 def _parse_materials(
-    data: mmap.mmap, start: int, end: int, diagnostics: list[SpdDiagnostic]
+    data: mmap.mmap, start: int, end: int, diagnostics: list[SpdDiagnostic],
+    source_provenance: dict[str, Any] | None = None,
 ) -> tuple[dict[str, _DielectricMaterial], dict[str, float]]:
     dielectrics: dict[str, _DielectricMaterial] = {}
     metals: dict[str, float] = {}
@@ -3298,11 +3314,17 @@ def _parse_materials(
     name = ""
     rows: list[tuple[float, ...]] = []
     scale: float | None = None
+    block_start: int | None = None
+    block_end: int | None = None
 
-    def flush() -> None:
-        nonlocal kind, name, rows, scale
+    def physical_end(offset: int) -> int:
+        newline = data.find(b"\n", offset, end)
+        return end if newline < 0 else newline + 1
+
+    def flush(end_offset: int | None = None) -> None:
+        nonlocal kind, name, rows, scale, block_start, block_end
         if not kind or not name or not rows:
-            kind, name, rows, scale = None, "", [], None
+            kind, name, rows, scale, block_start, block_end = None, "", [], None, None, None
             return
         if scale is not None:
             valid = [row for row in rows if row[0] > 0]
@@ -3343,19 +3365,40 @@ def _parse_materials(
             )
         elif kind == "metal" and len(chosen) >= 2:
             metals[name.casefold()] = chosen[1]
+        if source_provenance is not None and block_start is not None:
+            stop = end_offset if end_offset is not None else block_end
+            if stop is None or stop <= block_start:
+                stop = min(end, block_start + len(name.encode("utf-8")) + 1)
+            record_id = f"material:{name}"
+            _append_ownership_provenance(source_provenance, "source_records", {
+                "ordinal": len(source_provenance.get("source_records", ())),
+                "record_id": record_id,
+                "kind": "Material",
+                "name": name,
+                "logical_net": None,
+                "layer": None,
+                "source_offset": block_start,
+                "source_end": min(end, stop),
+                "source_record_sha256": hashlib.sha256(bytes(data[block_start:min(end, stop)])).hexdigest(),
+                "raw_ordinal": len(source_provenance.get("source_records", ())),
+            })
         kind, name, rows, scale = None, "", [], None
+        block_start = block_end = None
 
-    for _, raw in _iter_lines(data, start, end):
+    for offset, raw in _iter_lines(data, start, end):
         stripped = raw.strip()
         folded = stripped.lower()
         if folded.startswith(b".dielectricmodel "):
-            flush()
+            flush(offset)
             kind, name = "dielectric", _decode(stripped.split(None, 1)[1])
+            block_start = offset
         elif folded.startswith(b".metalmodel "):
-            flush()
+            flush(offset)
             kind, name = "metal", _decode(stripped.split(None, 1)[1])
+            block_start = offset
         elif folded.startswith((b".enddielectricmodel", b".endmetalmodel")):
-            flush()
+            block_end = physical_end(offset)
+            flush(block_end)
         elif kind and stripped.startswith(b"*"):
             detected = _frequency_scale(stripped)
             if detected is not None:
@@ -3367,7 +3410,7 @@ def _parse_materials(
                 continue
             if numbers and all(isfinite(value) for value in numbers):
                 rows.append(numbers)
-    flush()
+    flush(end)
     if not dielectrics:
         diagnostics.append(SpdDiagnostic("warning", "DIELECTRIC_MODELS_MISSING", "No usable .DielectricModel property table was found."))
     if not metals:
@@ -3384,10 +3427,17 @@ def _parse_layers(
     metals: dict[str, float],
     selected_keys: set[str],
     diagnostics: list[SpdDiagnostic],
+    source_provenance: dict[str, Any] | None = None,
 ) -> tuple[StackupLayer, ...]:
     result: list[StackupLayer] = []
     seen: set[str] = set()
-    for _, raw in _iter_lines(data, start, end):
+    material_record_ids = {
+        str(row.get("name", "")).casefold(): str(row.get("record_id"))
+        for row in (source_provenance or {}).get("source_records", ())
+        if isinstance(row, Mapping) and row.get("kind") == "Material"
+        and isinstance(row.get("name"), str) and isinstance(row.get("record_id"), str)
+    }
+    for offset, raw in _iter_lines(data, start, end):
         stripped = raw.strip()
         if not stripped or stripped.startswith((b"*", b"+", b".")) or b"Thickness" not in stripped:
             continue
@@ -3462,6 +3512,49 @@ def _parse_layers(
                     pwr_nets=nets,
                 )
             )
+            if source_provenance is not None:
+                layer_record_id = f"layer:{name}"
+                has_material_record = material_model is not None or material_key in metals
+                if has_material_record:
+                    material_record_id = material_record_ids.get(material_key)
+                    if material_record_id is None:
+                        raise SpdImportError(
+                            f"SOURCE_PLANE_OWNERSHIP_IR_INCOMPLETE: material source record is absent for {material!r}"
+                        )
+                else:
+                    material_record_id = layer_record_id
+                material_origin = "material_model" if has_material_record else "source"
+                conductivity_origin = "source" if conductivity_raw else ("material_model" if conductivity is not None and material_key in metals else "unavailable")
+                _append_ownership_provenance(source_provenance, "stackup_layers", {
+                    "ordinal": len(source_provenance.get("stackup_layers", ())),
+                    "layer_name": name,
+                    "layer_kind": "conductor" if conductor else "dielectric",
+                    "thickness_um": thickness,
+                    "thickness_origin": "source",
+                    "thickness_source_record_id": layer_record_id,
+                    "conductivity_s_per_m": conductivity,
+                    "conductivity_origin": conductivity_origin,
+                    "conductivity_source_record_id": layer_record_id if conductivity is not None and conductivity_origin == "source" else (material_record_id if conductivity is not None else None),
+                    "material_name": material or name,
+                    "material_origin": material_origin,
+                    "material_source_record_id": material_record_id,
+                })
+                if not conductor and material_model is not None:
+                    for point_ordinal, item in enumerate(material_model.properties):
+                        _append_ownership_provenance(source_provenance, "dielectric_points", {
+                            "ordinal": len(source_provenance.get("dielectric_points", ())),
+                            "layer_name": name,
+                            "point_ordinal": point_ordinal,
+                            "frequency_hz": item.frequency_hz,
+                            "frequency_origin": "material_model",
+                            "frequency_source_record_id": material_record_id,
+                            "epsilon_r": float(dk) if permittivity_raw else item.dk,
+                            "epsilon_origin": "layer_override" if permittivity_raw else "material_model",
+                            "epsilon_source_record_id": layer_record_id if permittivity_raw else material_record_id,
+                            "loss_tangent": float(df) if loss_raw else item.df,
+                            "loss_tangent_origin": "layer_override" if loss_raw else "material_model",
+                            "loss_tangent_source_record_id": layer_record_id if loss_raw else material_record_id,
+                        })
             seen.add(key)
         except ValueError as exc:
             diagnostics.append(SpdDiagnostic("warning", "LAYER_INVALID", f"Layer {name!r} was skipped: {exc}."))
@@ -8881,6 +8974,7 @@ def analyze_spd(
     progress: ProgressCallback | None = None,
     is_cancelled: CancelCallback | None = None,
     scope: SpdAnalysisScope = "selected_pi",
+    source_plane_ownership: bool = False,
 ) -> SpdAnalysis:
     """Analyze an SPD without materializing the source file in memory."""
 
@@ -8908,6 +9002,7 @@ def analyze_spd(
         raise SpdImportError(f"unsupported SPD analysis scope: {scope!r}")
     gnd_keys = {item.casefold() for item in ground_aliases}
     diagnostics: list[SpdDiagnostic] = []
+    source_provenance: dict[str, Any] | None = {"source_records": []} if source_plane_ownership else None
 
     try:
         with source_path.open("rb") as handle, mmap.mmap(handle.fileno(), 0, access=mmap.ACCESS_READ) as data:
@@ -8976,7 +9071,7 @@ def analyze_spd(
                 else _line_end(data, material_end_marker, len(data))
             )
             dielectrics, metals = _parse_materials(
-                data, material_start, material_end, diagnostics
+                data, material_start, material_end, diagnostics, source_provenance
             )
             layer_start = layer_marker if layer_marker >= 0 else shape_end
             layer_end = (
@@ -9158,7 +9253,7 @@ def analyze_spd(
             )
 
             reporter.report(30, "Building stack-up")
-            layers = _parse_layers(data, layer_start, layer_end, layer_nets, dielectrics, metals, plane_keys, diagnostics)
+            layers = _parse_layers(data, layer_start, layer_end, layer_nets, dielectrics, metals, plane_keys, diagnostics, source_provenance)
             top_layer = next((item.name for item in layers if item.is_conductor), None)
 
             reporter.report(35, "Reading padstack definitions")
@@ -9537,6 +9632,7 @@ def analyze_spd(
                 shared_pad_clusters=shared_pad.clusters,
                 routing_extraction=routing_extraction,
                 device_terminal_via_endpoints=device_terminal_via_endpoints,
+                source_plane_ownership_draft=source_provenance,
             )
     except SpdImportError:
         raise

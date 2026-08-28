@@ -1,6 +1,6 @@
 # SPD Decap PI Evaluator v0.23.1 — Source-derived physical IR
 
-- 상태: **ACCEPTED / Phase 1 DONE / Phase 2 ACTIVE**
+- 상태: **ACCEPTED / Phase 1/2 DONE / Phase 3 ACTIVE (shadow-only)**
 - 스키마: `source-plane-ownership-ir-v1`
 - 최종 개정: 2026-08-28 (Asia/Seoul)
 
@@ -29,7 +29,8 @@ flowchart LR
   D --> E[rail PWR/return binding]
   E --> F[compiler-assigned plane owner]
   F --> G[replacement ledger]
-  G --> H[향후 단일 physical block]
+  G --> H[Phase 3 shadow patch witness]
+  H -. 별도 승인 전 연결 금지 .-> K[production Y_global / Zii]
   I[raw-v3 geometry/material] -. hash reference .-> B
   J[compiled finite topology] -. hash/owner reference .-> D
 ```
@@ -107,16 +108,34 @@ Closure evidence: `python -m pytest -q tests/test_source_plane_ownership_ir.py`
 
 ### Phase 2 — importer producer seam
 
-ACTIVE. source span 수집, cleanup 전 draft 생성, raw/compiled identity finalization과
-scenario envelope 검증을 작업 기준 12.6의 별도 whitelist로 연다. 이 단계도
-`Zii`를 변경하지 않는다.
+DONE. source span 수집, cleanup 전 draft 생성, raw/compiled identity finalization과
+scenario envelope 검증을 작업 기준 12.6의 whitelist로 완료했다. 두 full-file
+실행에서 공통 guard 3개는 PASS했고 fixture 결함을 순차 수정했다. 이후 단일
+end-to-end producer node로 축소해 certificate terminal-owner projection, source size
+hand-off와 Pydantic envelope 변환을 바로잡았으며 최종 결과는
+`1 passed in 1.39s`다. 이 단계는 `Zii`를 변경하지 않았다.
 
-### Phase 3 — single physical consumer
+### Phase 3 — shadow-only source-plane patch consumer
 
-source-certified PWR/return surface와 complete terminal footprint 하나를 선택해
-surface-patch plane current-spreading R/L block을 old plane owner와 disjoint하게
-교체한다. uniform-strip R/L과 `C=epsilon0*epsilonr*A/d`를 각각 물리 limiting-case로
-검증한 뒤에만 bounded correlation gate를 고려한다.
+ACTIVE. validated IR/raw-v3에서 source-certified PWR/return surface와 complete
+terminal footprint 하나를 선택해 `source-plane-patch-v1` finite-port shadow witness를
+만든다. production stamp를 교체하지 않으며 owner inventory, `Y_global`, `Zii`도
+변경하지 않는다.
+
+```mermaid
+flowchart LR
+  A[source-plane ownership IR] --> C{identity + owner ledger exact?}
+  B[raw-spatial v3 geometry] --> C
+  C -->|아니오| S[STOP]
+  C -->|예| D[ordered surface patch]
+  D --> E[Rdc / L / C analytic gate]
+  E -->|relative error <= 1e-10| F[shadow finite-port witness]
+  F -. production 연결 금지 .-> G[Y_global / Zii]
+```
+
+Whitelist와 검증 예산은 작업 기준 12.7이 권위 있다. Phase 3 PASS도 analytic
+limiting case와 owner hand-off prerequisite만 증명한다. production replacement,
+mesh convergence, causal broadband A/B, PowerSI correlation과 holdout은 별도 단계다.
 
 ## 7. 주장 한계
 
