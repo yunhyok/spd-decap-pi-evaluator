@@ -1,9 +1,9 @@
 # SPD Decap PI Evaluator 작업 기준
 
 - 적용 제품: **SPD Decap PI Evaluator v0.23.1**
-- 문서 버전: **1.153**
-- 상위 기준: [목적·기술 기준](PRODUCT_PURPOSE_AND_TECHNICAL_BASELINE.md) v1.152
-- 현재 상태: W6 numerical FAIL; W7 BLOCKED; ACTIVE 17DU; 17DG standalone/no Zii change; 17DK–17DP validation-only; 17DS candidate gate **NOT READY/STOP**; 17DT DONE (`internal v3 PASS / W6 comparability STOP_IDENTITY_DRIFT`); 17DU read-only local seam audit is the sole active follow-up.
+- 문서 버전: **1.154**
+- 상위 기준: [목적·기술 기준](PRODUCT_PURPOSE_AND_TECHNICAL_BASELINE.md) v1.153
+- 현재 상태: W6 numerical FAIL; W7 BLOCKED; ACTIVE NONE; 17DG standalone/no Zii change; 17DK–17DP validation-only; 17DS candidate gate **NOT READY/STOP**; 17DT DONE (`internal v3 PASS / W6 comparability STOP_IDENTITY_DRIFT`); 17DU DONE (`STOP_AUDIT_CONTRACT_MISMATCH`).
 - 최종 개정: 2026-08-28 (Asia/Seoul)
 
 ## 1. 압축 후 즉시 복구 카드
@@ -14,10 +14,10 @@ context가 압축되거나 새 session에서 작업을 재개하면 이 표만 �
 |---|---|
 | 변하지 않는 목적 | source-derived single-rail `Zii`의 PowerSI 근접 정확성과 일반화 |
 | 현재 branch | `main`만 사용 |
-| 현재 assessment | W6-BASE 260729 numerical FAIL; W7 BLOCKED; 17DS candidate gate NOT READY/STOP; 17DT DONE (`internal v3 PASS / W6 comparability STOP_IDENTITY_DRIFT`); 17DU candidate gate **PASS_LOCAL_SEAM_ONLY** scope, otherwise NOT READY/STOP |
-| 현재 active work item | 17DU — one read-only current-lineage rail footprint seam audit + focused test |
+| 현재 assessment | W6-BASE 260729 numerical FAIL; W7 BLOCKED; 17DS candidate gate NOT READY/STOP; 17DT DONE (`internal v3 PASS / W6 comparability STOP_IDENTITY_DRIFT`); 17DU DONE with `STOP_AUDIT_CONTRACT_MISMATCH`, no local seam evidence |
+| 현재 active work item | NONE — 17DU is closed and preserved as a historical one-shot contract |
 | 현재 정확성 상태 | `260729 retrospective FAIL`; unseen/generalization `unknown / not_run` |
-| current authorization | 17DU four-file whitelist only: read-only candidate audit + focused test; no W6 mutation, raw SPD reread, solver/physics/profile/GUI, production solve, build/release |
+| current authorization | ACTIVE NONE; no new candidate read, raw SPD/W6/Touchstone/correlation/solver/physics/profile/GUI, production solve, build/release; 17DU script/test remain immutable historical evidence |
 | 정확한 재개 조건 | source-certified rail-complete physical candidate + deterministic stamp + falsifiable physical/analytic limiting-case invariant + disjoint owner ledger 확보 및 사용자 명시 승인; 이후에만 one physical change → focused evidence → new gate |
 | 핵심 증거 | [W6-BASE completed evidence](#w6-base-completed-evidence-260729), [W7 결과 재평가](#12-w7-결과-재평가와-후속-과제-판정) |
 
@@ -96,7 +96,7 @@ disjoint owner ledger 확보와 사용자 명시 승인
 ## 4. 작업 항목 register
 
 상태 어휘는 `READY`, `ACTIVE`, `BLOCKED`, `DEFERRED`, `DONE`만 사용한다.
-동시에 `ACTIVE`는 하나만 허용하며 현재는 **17DU**이다. 완료된 미시적 item을
+동시에 `ACTIVE`는 하나만 허용하며 현재는 **NONE**이다. 완료된 미시적 item을
 다시 펼쳐 읽지 말고 아래 phase-level 결론과 Git history를 사용한다.
 
 | ID | 순서 | 상태 | 작업 묶음 | 완료 기준·현재 결론 |
@@ -127,7 +127,7 @@ disjoint owner ledger 확보와 사용자 명시 승인
 | `W7-PHYS-CANDIDATE-REVIEW` | 17DR | DONE | source/provenance/ownership feasibility candidate gate review | review 완료; candidate 결과 **NOT READY/STOP**; 상위 W7 **BLOCKED** / **ACTIVE NONE** |
 | `W7-PHYS-CANDIDATE-REVIEW-CLOSURE` | 17DS | DONE | exact source-only bare-development rail candidate closure | `ADC_VDD_180_VQPS_SYS_1_AON/0` subject review 완료; raw-spatial v2 only로 `STOP_RAW_SPATIAL_V3_ABSENT`; candidate **NOT READY/STOP**; 상위 W7 **BLOCKED** |
 | `W7-PHYS-V3-REPRODUCTION` | 17DT | DONE | fresh import-save-only source raw-spatial v3 reproduction | internal v3 PASS; W6 comparability `STOP_IDENTITY_DRIFT`; no physics/profile/GUI change |
-| `W7-PHYS-LOCAL-SEAM` | 17DU | ACTIVE | one read-only current-lineage rail footprint seam audit + focused test | `PASS_LOCAL_SEAM_ONLY` may prove six Device pin owner/landing/node and pad-shape containment rows; W7 remains BLOCKED and global replacement evidence is out of scope |
+| `W7-PHYS-LOCAL-SEAM` | 17DU | DONE | one read-only current-lineage rail footprint seam audit + focused test | execution `STOP_AUDIT_CONTRACT_MISMATCH`; no local seam evidence; W7 remains BLOCKED and production physics/`Zii` unchanged |
 | `W7-PHYS-PROSPECTIVE` | next | BLOCKED | 단일 source-derived physical candidate의 causal checkpoint | geometry/material provenance, rail-complete 범위, deterministic stamp, falsifiable physical/analytic limiting-case invariant, disjoint owner ledger 및 사용자 명시 승인 후에만 READY 가능 |
 | `W8-REL` | 18 | BLOCKED | completed known-case solve를 release gate에 연결하고 최종 전달 | accuracy/product gate와 exact release commit 필요 |
 | `D-DIST` | - | DEFERRED | Distribution routing/DRC scope 확대 | 사용자가 implementation-ready/DRC 목표로 승격할 때만 |
@@ -472,8 +472,8 @@ falsifiable physical/analytic limiting-case invariant + disjoint owner ledger와
 - W7은 source/provenance와 수학·운영 기반을 개선했지만 production network,
   계산된 `Zii`, PowerSI correlation을 바꾸지 않았다.
 - 따라서 현재 product risk는 그대로 **외부 정확성 미달**이며, sole ACTIVE는
-  **17DU**이다. 17DT는 internal v3 PASS / W6 comparability STOP_IDENTITY_DRIFT로
-  종료되었다.
+  **NONE**이다. 17DT는 internal v3 PASS / W6 comparability STOP_IDENTITY_DRIFT로
+  종료되었고 17DU도 `STOP_AUDIT_CONTRACT_MISMATCH`로 종료되었다.
 
 ### 12.2 보존할 성과와 주장 한계
 
@@ -521,14 +521,18 @@ raw-spatial v2 attachment
 Old AdjacentGap/Dispersive plane stamps도 persisted physical owner ID가 없어
 disjoint replacement ledger를 증명할 수 없다. 17DS review는 **DONE**, candidate는
 **NOT READY**, W7은 **BLOCKED**다. 17DT는 internal v3 reproduction **DONE**
-(`internal v3 PASS / W6 comparability STOP_IDENTITY_DRIFT`)이며, 17DU가 sole
-**ACTIVE**다. 17DU는 저장된 current-lineage candidate만 읽어
-`ADC_VDD_180_VQPS_SYS_1_AON/0`의 3 PWR + 3 return Device pin을
-anchor/contact→incident Via→raw owner→compiled first edge/landing endpoint→raw
-node 및 target-layer pad-shape→source-bound ordered-copper proper containment으로
-검증한다. 성공 상태는 `PASS_LOCAL_SEAM_ONLY`지만 old-plane owner-off/global
-assembly/W6 causal comparison/Zii improvement는 주장하지 않는다. 허용 파일은
-이 문서와 Product 문서, `scripts/audit_current_lineage_rail_footprint.py`,
+(`internal v3 PASS / W6 comparability STOP_IDENTITY_DRIFT`)이며, 17DU는
+`STOP_AUDIT_CONTRACT_MISMATCH`로 DONE/STOP 되었다. 실행 HEAD는
+`36aacaf18dd09da66fae249b4756a8e082e51b3e`, runtime 160.5 s, max RSS 7.48 GiB,
+exit 2, no retry다. Output은
+`D:\SPD-Decap-PI-Evaluator-W7\36aacaf18dd09da66fae249b4756a8e082e51b3e\260729-17du-current-lineage-rail-footprint\rail_footprint_audit.json`
+(222 bytes, SHA-256 `BD175CB7C095A966923D92E305C248EB6EC64954A878CE0FB9819BBB19BEB72B`)이며
+error는 `target compiled rail port is absent or has unexpected net pair`이고 local
+seam evidence는 생성되지 않았다. Root cause는 compiler `selected_net=rail.net`과
+power contact/Via logical NET `ADC_VDD_180_VQPS_SYS_1_AON/0`를 physical
+layer/artwork NET `OTHER_POWER1`과 혼동한 계약 불일치다. 이 conflation은
+contact/Via/surface lookup과 success stamp에도 퍼지므로 첫 guard만 바꾸는 수정은
+유효하지 않다. 허용 파일은 이 문서와 Product 문서, `scripts/audit_current_lineage_rail_footprint.py`,
 `tests/test_audit_current_lineage_rail_footprint.py`뿐이며 untracked
 `accuracy_parse.py`는 보존·미수정한다. raw SPD/W6/Touchstone/correlation/solver/
 GUI/physics/profile/build/release는 읽거나 실행하지 않는다. Expected
@@ -546,7 +550,10 @@ one read-only audit, one focused test selection, bounded phase/decode/temp
 preflights, and a coordinator-enforced external 30-minute/RSS hard wall with no
 retry; stop on identity/loader/contact/geometry/cancellation/resource failure
 and persist only a bounded STOP envelope with the failure reason. This does not select a physical owner or change
-`Y_global`/`Zii`; old-plane owner-off/global assembly remain out of scope.
+`Y_global`/`Zii`; old-plane owner-off/global assembly remain out of scope. Next work is
+not active: a separately frozen metadata-only bridge gate would need logical
+rail/contact/Via namespace, physical artwork layer+NET namespace, and an authoritative
+bridge key before any new candidate read.
 
 ### 12.4 재개 조건
 
@@ -557,7 +564,7 @@ flowchart LR
   D[17DG foundation] -. production binding 없음 .-> C
   E[17DO coverage] --> F[17DP owner identity gap]
   F --> C
-  C --> G[ACTIVE 17DU: local seam audit only]
+  C --> G[ACTIVE NONE: 17DU closed STOP_AUDIT_CONTRACT_MISMATCH]
   H[source-certified rail-complete candidate<br/>deterministic stamp<br/>falsifiable physical/analytic limiting-case invariant<br/>disjoint owner ledger] --> I[사용자 명시 승인]
   I --> J[one physical change]
   J --> K[focused evidence]
