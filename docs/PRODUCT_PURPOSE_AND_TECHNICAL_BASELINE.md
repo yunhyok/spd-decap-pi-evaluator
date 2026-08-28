@@ -1,12 +1,12 @@
 # SPD Decap PI Evaluator 목적·기술 기준
 
 - 적용 제품: **SPD Decap PI Evaluator v0.23.1**
-- 문서 버전: **1.158**
+- 문서 버전: **1.159**
 - W5 approved/machine-frozen source-before: `main` commit `027ac7a09a3eded15f45c41860945f9d4c7f488d`
-- 상태: **G0 기준 문서** — W5 DONE; W6-BASE 260729 numerical FAIL; W7-PHYS BLOCKED; W7-SOURCE-IR Phase 1 DONE / Phase 2 READY; ACTIVE NONE.
+- 상태: **G0 기준 문서** — W5 DONE; W6-BASE 260729 numerical FAIL; W7-PHYS BLOCKED; W7-SOURCE-IR Phase 1 DONE / Phase 2 ACTIVE.
 - 현재 평가: 17DV는 persisted artifact의 authoritative join 부재를 확인했지만 원본 SPD의 정보 부재를 증명하지 않았다. 사용자는 PowerSI 근접 정확도를 위해 원본 SPD에서 필요한 data를 추출해 새 DB를 구성하도록 명시 승인했다. 따라서 raw-v3 보강/추가 audit 대신 import-time `source-plane-ownership-ir-v1` prerequisite를 시작한다.
-- Sole ACTIVE item (current): **NONE**. `W7-SOURCE-IR-P1` storage contract는 DONE이고 importer producer seam인 Phase 2가 READY다. 17DU/17DV는 immutable DONE/STOP이고 production physics/`Zii`는 unchanged다.
-- 현재 권한: Phase 1 다섯 파일의 closure만 확정한다. Phase 2는 작업 기준 문서의 별도 whitelist/검증 예산으로 전환한 뒤 시작하며, solver/raw-v3 schema/GUI/profile, production rerun, Touchstone/W6 correlation, build/release는 계속 금지한다.
+- Sole ACTIVE item (current): **W7-SOURCE-IR-P2** — importer producer seam과 atomic scenario envelope 결속. Phase 1은 DONE이고 17DU/17DV는 immutable DONE/STOP이며 production physics/`Zii`는 unchanged다.
+- 현재 권한: 작업 기준 12.6의 여덟 파일과 V0/V1만 허용한다. solver/raw-v3 schema/GUI/profile, production rerun, Touchstone/W6 correlation, build/release는 계속 금지한다.
 - 물리 작업 재개 조건: IR prerequisite 완료 후에도 geometry/material provenance, physical limiting-case invariant, rail-complete 적용 범위, deterministic stamp와 실제 consumer에 결속된 disjoint owner ledger를 갖춘 단일 physical candidate가 필요하다.
 - 최종 개정: 2026-08-28 (Asia/Seoul)
 
@@ -354,7 +354,7 @@ flowchart TD
 | source-derived IR Phase 1 | DONE. `source-plane-ownership-ir-v1`은 필드별 Layer/Material source record, PadDef+Regular terminal footprint, exact rail-bound island와 retained/plane owner exact-once ledger를 fail-closed 보존한다. 선택 rail 총 100,000행 상한과 complete-only terminal 계약을 적용하며 focused synthetic 결과는 `7 passed in 0.84s`다. 이는 storage prerequisite만 증명한다. |
 | 열지 않는 후보 | Trace R/L은 source trace-width/return assignment가 incomplete하고, Via return/mutual은 source-complete plating/fill/return-plane contract가 없다. Pad/anti-pad는 complete antipad/replacement boundary가 없고, dielectric은 scalar/table dispersion이 이미 active라 temperature-less model로 temperature variant를 source-faithful하게 표현할 수 없다. GUI `include_plane_sheet_payload` 플래그만 켜는 것은 데이터만 만들 뿐 physics를 바꾸지 않으므로 금지한다. |
 | 후속 필요성 | 현 artifact만 이용한 Via/sheet/profile ablation은 여러 누락 물리 항을 식별하지 못하므로 실행하지 않는다. owner-manifest/schema 작업도 선택된 물리 후보 없이 진행하면 validation churn이다. |
-| 현재 권한 | `W7-SOURCE-IR-P1 DONE`, `W7-SOURCE-IR-P2 READY`, ACTIVE NONE. Phase 2는 별도 transition에서 importer producer seam만 열며 17DU/17DV는 preserved immutable DONE/STOP으로 재실행하지 않는다. |
+| 현재 권한 | `W7-SOURCE-IR-P1 DONE`, `W7-SOURCE-IR-P2 ACTIVE`. 작업 기준 12.6의 importer producer seam만 열며 17DU/17DV는 preserved immutable DONE/STOP으로 재실행하지 않는다. |
 | 재개 조건 | Phase 1/2 IR은 prerequisite다. source-derived geometry/material 근거, falsifiable physical/analytic limiting-case invariant, rail-complete 범위, deterministic stamp와 실제 stamp inventory에 결속된 disjoint owner ledger가 확보된 뒤에만 physics item을 하나 연다. |
 
 세부 실행 이력과 exact artifact identity는

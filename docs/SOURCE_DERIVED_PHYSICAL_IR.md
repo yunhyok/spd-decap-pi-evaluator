@@ -1,6 +1,6 @@
 # SPD Decap PI Evaluator v0.23.1 — Source-derived physical IR
 
-- 상태: **ACCEPTED / Phase 1 DONE / Phase 2 READY**
+- 상태: **ACCEPTED / Phase 1 DONE / Phase 2 ACTIVE**
 - 스키마: `source-plane-ownership-ir-v1`
 - 최종 개정: 2026-08-28 (Asia/Seoul)
 
@@ -107,7 +107,7 @@ Closure evidence: `python -m pytest -q tests/test_source_plane_ownership_ir.py`
 
 ### Phase 2 — importer producer seam
 
-READY. source span 수집, cleanup 전 draft 생성, raw/compiled identity finalization과
+ACTIVE. source span 수집, cleanup 전 draft 생성, raw/compiled identity finalization과
 scenario envelope 검증을 작업 기준 12.6의 별도 whitelist로 연다. 이 단계도
 `Zii`를 변경하지 않는다.
 
