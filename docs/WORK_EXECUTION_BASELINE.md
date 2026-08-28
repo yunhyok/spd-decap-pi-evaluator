@@ -1,8 +1,8 @@
 # SPD Decap PI Evaluator 작업 기준
 
 - 적용 제품: **SPD Decap PI Evaluator v0.23.1**
-- 문서 버전: **1.155**
-- 상위 기준: [목적·기술 기준](PRODUCT_PURPOSE_AND_TECHNICAL_BASELINE.md) v1.154
+- 문서 버전: **1.156**
+- 상위 기준: [목적·기술 기준](PRODUCT_PURPOSE_AND_TECHNICAL_BASELINE.md) v1.155
 - 현재 상태: W6 numerical FAIL; W7 BLOCKED; ACTIVE 17DV; 17DG standalone/no Zii change; 17DK–17DP validation-only; 17DS candidate gate **NOT READY/STOP**; 17DT DONE (`internal v3 PASS / W6 comparability STOP_IDENTITY_DRIFT`); 17DU immutable DONE (`STOP_AUDIT_CONTRACT_MISMATCH`); 17DV metadata-only bridge gate ACTIVE under standing preapproval.
 - 최종 개정: 2026-08-28 (Asia/Seoul)
 
@@ -128,7 +128,7 @@ disjoint owner ledger 확보와 사용자 명시 승인
 | `W7-PHYS-CANDIDATE-REVIEW-CLOSURE` | 17DS | DONE | exact source-only bare-development rail candidate closure | `ADC_VDD_180_VQPS_SYS_1_AON/0` subject review 완료; raw-spatial v2 only로 `STOP_RAW_SPATIAL_V3_ABSENT`; candidate **NOT READY/STOP**; 상위 W7 **BLOCKED** |
 | `W7-PHYS-V3-REPRODUCTION` | 17DT | DONE | fresh import-save-only source raw-spatial v3 reproduction | internal v3 PASS; W6 comparability `STOP_IDENTITY_DRIFT`; no physics/profile/GUI change |
 | `W7-PHYS-LOCAL-SEAM` | 17DU | DONE | one read-only current-lineage rail footprint seam audit + focused test | execution `STOP_AUDIT_CONTRACT_MISMATCH`; no local seam evidence; W7 remains BLOCKED and production physics/`Zii` unchanged |
-| `W7-PHYS-METADATA-BRIDGE` | 17DV | ACTIVE | one-shot read-only metadata-only logical-to-physical bridge gate | `PASS_METADATA_BRIDGE_ONLY` ceiling; STOP contracts `STOP_INPUT_IDENTITY`, `STOP_CONTRACT_UNSUPPORTED`, `STOP_NO_AUTHORITATIVE_BRIDGE`, `STOP_RESOURCE_OR_CANCELLED`; no raw-spatial loader/import, plane payload/decode, containment, or physics |
+| `W7-PHYS-METADATA-BRIDGE` | 17DV | ACTIVE | one-shot read-only metadata-only logical-to-physical bridge gate | `PASS_METADATA_BRIDGE_ONLY` ceiling; STOP contracts `STOP_INPUT_IDENTITY`, `STOP_CONTRACT_UNSUPPORTED`, `STOP_NO_AUTHORITATIVE_BRIDGE`, `STOP_RESOURCE_OR_CANCELLED`; no raw-spatial loader/import, plane payload/decode, containment, or physics; frozen four-file whitelist is the 17DV script/test plus Product/Work docs, with `accuracy_parse.py` preserved and excluded |
 | `W7-PHYS-PROSPECTIVE` | next | BLOCKED | 단일 source-derived physical candidate의 causal checkpoint | geometry/material provenance, rail-complete 범위, deterministic stamp, falsifiable physical/analytic limiting-case invariant, disjoint owner ledger 및 사용자 명시 승인 후에만 READY 가능 |
 | `W8-REL` | 18 | BLOCKED | completed known-case solve를 release gate에 연결하고 최종 전달 | accuracy/product gate와 exact release commit 필요 |
 | `D-DIST` | - | DEFERRED | Distribution routing/DRC scope 확대 | 사용자가 implementation-ready/DRC 목표로 승격할 때만 |
