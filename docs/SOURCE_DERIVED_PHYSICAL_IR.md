@@ -1,11 +1,11 @@
 # SPD Decap PI Evaluator v0.23.1 — Source-derived physical IR
 
-- 문서 버전: **1.6**
+- 문서 버전: **1.7**
 - 계약 상태: **ACCEPTED** — source-derived provenance/ownership prerequisite의 기술 기준
-- committed 구현: `source-plane-ownership-ir-v1` + Phase 3 shadow consumer + v2 `contact_boundary` (`3b76af4`) + P0 (`4dc855a`) + P1 (`f823a53`) + P2 (`90f6b54`) + P3 quotient audit (`b8a79f1`)
-- runtime acceptance: **Phase 4, P0, P1, P2 및 P3 focused PASS / Sol ACCEPT; P3 semantic result STOP / prerequisite-only**
+- committed 구현: `source-plane-ownership-ir-v1` + Phase 3 shadow consumer + v2 `contact_boundary` (`3b76af4`) + P0 (`4dc855a`) + P1 (`f823a53`) + P2 (`90f6b54`) + P3 (`b8a79f1`) + P4 base cut-set (`39fd4fa`)
+- runtime acceptance: **Phase 4, P0, P1, P2, P3 및 P4 focused PASS / Sol ACCEPT; P3 semantic STOP, P4 structural CLOSED / prerequisite-only**
 - production 상태: solver, owner-off, `Y_global`, `Zii` **unchanged**
-- 현재 작업 상태: **W7-PHYS-PROSPECTIVE-P4 ACTIVE** — selected ideal class의 base-network closed cut-set만 shadow audit
+- 현재 작업 상태: **W7-PHYS-PROSPECTIVE-P5 ACTIVE** — contact-interface rewire/old-edge disable/P1 stamp의 deterministic shadow plan만 구성
 - 최종 개정: 2026-08-29 (Asia/Seoul)
 
 ## 1. 목적
@@ -39,8 +39,9 @@ flowchart LR
   M --> N[P1 contact-complete shadow N-port DONE]
   N --> O[P2 old-edge identity bijection DONE]
   O --> P[P3 quotient audit DONE / RANK LOSS STOP]
-  P --> Q[P4 closed base cut-set ACTIVE]
-  Q -. node split과 owner-off 전 연결 금지 .-> K[production Y_global / Zii]
+  P --> Q[P4 closed base cut-set DONE]
+  Q --> R[P5 shadow contact rewire plan ACTIVE]
+  R -. production seam 전 연결 금지 .-> K[production Y_global / Zii]
   I[raw-v3 geometry/material] -. hash reference .-> B
   J[compiled finite topology] -. hash/owner reference .-> D
 ```
@@ -66,7 +67,8 @@ plane owner는 source identity에 결속해 importer/compiler가 결정적으로
 | contact N-port (P1) | P0 ordered contact 전부의 1 GHz finite-port admittance, constraint, diagnostics와 input identity | `f823a53` accepted shadow prerequisite |
 | owner-off candidate audit (P2) | P1/raw/substrate identity, contact↔finite-link↔production-port chain, selected incident old-edge fingerprint closed set | `90f6b54` accepted shadow prerequisite; `replacement_ready=false` |
 | quotient representability (P3) | N-contact admittance가 현 PWR/GND ideal quotient에서 보존되는지의 projector residual | `b8a79f1` DONE/STOP; `CONTACT_INTERFACE_RANK_LOSS` |
-| closed base cut-set (P4) | selected ideal class의 full preimage와 contact/old-Maxwell 외부 adjacency exact closure | ACTIVE; base network prerequisite만, `split_ready=false` |
+| closed base cut-set (P4) | selected ideal class의 full preimage와 contact/old-Maxwell 외부 adjacency exact closure | `39fd4fa` DONE/CLOSED; `split_ready=false` |
+| shadow contact rewire plan (P5) | contact별 interface node, retained finite-link rewire, P2 disable set과 P1 stamp identity | ACTIVE; plan-only, production topology/stamp 불변 |
 | replacement | replaced/retained set hash와 상태 | Phase 1은 `prerequisite_only`만 허용 |
 
 ## 4. 불변조건
@@ -109,7 +111,8 @@ plane owner는 source identity에 결속해 importer/compiler가 결정적으로
 | P1 | committed `f823a53` | focused `1 passed in 1.58s`; Sol identity review 반영 | DONE | exact 1 GHz shadow N-port만; production owner-off 없음 |
 | P2 | committed `90f6b54` | 최초 contract FAIL 뒤 fixture 유지·identity 교정; focused `1 passed in 1.49s`; Sol ACCEPT | DONE | candidate old-edge closed set만; `replacement_ready=false` |
 | P3 | committed `b8a79f1` | focused `1 passed in 1.51s`; Sol ACCEPT; semantic STOP | DONE | `CONTACT_INTERFACE_RANK_LOSS`; topology/production 불변 |
-| P4 | consumer/test whitelist | selected base cut-set closure 지정 node | ACTIVE | base structural prerequisite만; node split/production 불변 |
+| P4 | committed `39fd4fa` | 최초 negative fixture contract FAIL 뒤 corrected focused `1 passed in 1.53s`; Sol ACCEPT | DONE | base cut-set CLOSED; `split_ready=false`; production 불변 |
+| P5 | consumer/test whitelist | deterministic shadow contact rewire plan 지정 node | ACTIVE | plan-only; topology/stamp/solve 불변 |
 
 `DONE`은 해당 Phase의 선언 범위가 종료됐다는 뜻이며 current release, production
 acceptance 또는 PowerSI 정확성을 뜻하지 않는다. Phase 4의 exact 실행 이력과 검증
@@ -250,8 +253,9 @@ Sol 정적 검토는 최초 `input_sha256`가 authenticated ownership logical-ro
 
 P2는 P1 N-port가 대체할 production adjacent-gap Maxwell old edge를 exact fingerprint로
 전수 식별했다. 그러나 현 production은 각 P/G artwork component를 ideal node 하나로 축약한다.
-P3 결과 현 quotient는 contact-space mode를 보존하지 못했다. 따라서 contact-interface node
-분리의 base-network 구조 전제인 P4를 닫기 전에는 owner-off나 replacement stamp를 만들지 않는다.
+P3 결과 현 quotient는 contact-space mode를 보존하지 못했고 P4는 contact-interface node 분리의
+base-network cut-set 전제를 닫았다. 그러나 P5가 exact rewire/disable/stamp plan을 결속하기 전에는
+owner-off나 production replacement stamp를 만들지 않는다.
 
 ### P2 — incident old-edge identity/bijection
 
@@ -278,7 +282,7 @@ current-spreading mode를 보존하지 못함을 확정한다. tolerance 완화,
 
 ### P4 — selected base cut-set closure
 
-ACTIVE / shadow structural prerequisite-only. termination/scenario 없는 base
+DONE / shadow structural prerequisite-only. termination/scenario 없는 base
 `compile_layerwise_substrate` network에서 role별 full `reduced_node_index()` preimage가 P2
 component islands와 P3 contact `finite_vertex_id`의 합집합과 정확히 같은지 판정한다. 이 class에
 닿는 ideal link는 같은 role 내부에서 닫혀야 하며, class를 가로지르는 finite link는 P2 contact
@@ -286,11 +290,27 @@ edge와, sparse Maxwell adjacency는 P2 incident fingerprint와 각각 exact equ
 base port 직접 부착, extra vertex/edge/owner, cross-role ideal link는 STOP한다. PASS여도
 `split_ready=false`이며 scenario/termination adjacency는 split 설계 뒤 별도 bound-network gate다.
 
+최초 node는 본체의 정상 `closed` 경로 뒤 negative fixture에 extra `via_links`만 추가하고 compiled
+`_finite_links`를 함께 갱신하지 않아 `1 failed in 1.90s`였다. 이는 frozen network constructor가
+fixture 불변조건을 차단한 test-contract 오류다. 두 inventory를 함께 구성하도록 fixture만 교정한
+재실행은 `1 passed in 1.53s`, Sol 최종 검토는 ACCEPT, 기술 commit은 `39fd4fa`다. 결과는
+`status=closed`, `split_ready=false`, production topology/solver/`Zii` 불변이다.
+
+### P5 — shadow contact rewire plan
+
+ACTIVE / plan-only. P4를 한 번 호출하고 내부 P3→P2 chain을 재사용한다. 각 contact에 P4 hash와
+contact identity로 unique interface node를 만들고, retained `finite_parallel_rl` link는 selected
+endpoint만 그 node로 바꾸는 계획을 만든다. link ID, external endpoint, count, R/L, retained Via
+owners는 exact 보존한다. P2 old Maxwell fingerprints 전부를 exact-once disable set으로, P1 ordered
+N-port와 matrix/constraint identity를 planned stamp로 결속한다. virtual transform 뒤 old selected
+class의 external degree가 0이어야 한다. 결과는 `status=planned`, `shadow_only=true`,
+`production_ready=false`, `replacement_ready=false`이며 실제 graph/matrix는 수정하지 않는다.
+
 ## 7. 주장 한계
 
-- Phase 1/2/3/4와 P0/P1/P2/P3 focused PASS는 source identity, ownership, shadow analytic,
-  finite-boundary, direct artwork coverage, one-frequency N-port와 구조적 rank-loss prerequisite만
-  증명한다. P3의 PASS는 함수·판정 계약 실행 성공이고 결과 자체는 STOP이다.
+- Phase 1/2/3/4와 P0/P1/P2/P3/P4 focused PASS는 source identity, ownership, shadow analytic,
+  finite-boundary, direct artwork coverage, one-frequency N-port, 구조적 rank-loss와 base cut-set
+  prerequisite만 증명한다. P3의 PASS는 함수·판정 계약 실행 성공이고 결과 자체는 STOP이다.
 - reciprocity, passivity, deterministic replay는 non-regression이며 PowerSI 정확도
   개선 증거가 아니다.
 - PowerSI 데이터는 comparison gate에만 사용하고 parameter fitting 입력으로 쓰지
