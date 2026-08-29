@@ -249,3 +249,29 @@ def test_source_plane_patch_contact_quotient_representability(tmp_path: Path):
     assert first["p1_input_sha256"] == patch["input_sha256"] and len(first["p1_output_sha256"]) == len(first["projector_sha256"]) == len(first["p2_audit_sha256"]) == 64
     with pytest.raises(consumer.SourcePlanePatchError, match="CONTACT_QUOTIENT_INVALID"):
         consumer.audit_source_plane_patch_contact_quotient_representability(own, imported.attachments, raw, {**patch, "admittance_s": []}, substrate, rail_id="VDD_CORE/1")
+
+
+def test_source_plane_patch_selected_base_cutset_is_closed(tmp_path: Path):
+    imported = _v2_import(tmp_path)
+    project = imported.scenario.base_project
+    own = project.metadata["spd_import"]["source_plane_ownership_ir"]
+    raw = project.metadata["spd_import"]["raw_spatial_contact_asset"]
+    substrate = compile_layerwise_substrate(project, imported.attachments, required_rail_id="VDD_CORE/1", require_plane_sheet_payload=True)
+    patch = consumer.evaluate_source_plane_contact_condensation(own, imported.attachments, raw, imported.attachments, rail_id="VDD_CORE/1", frequency_hz=1.0e9, cell_um=1000.0)
+    first = consumer.audit_source_plane_patch_selected_base_cutset(own, imported.attachments, raw, patch, substrate, rail_id="VDD_CORE/1")
+    second = consumer.audit_source_plane_patch_selected_base_cutset(own, imported.attachments, raw, patch, substrate, rail_id="VDD_CORE/1")
+    assert first == second and first["status"] == "closed" and first["shadow_only"] is True
+    assert first["split_ready"] is False and first["replacement_ready"] is False
+    assert set(first["component_identity"]) == {"power", "ground"}
+    assert first["source_sha256"] == raw["source_sha256"]
+    assert len(first["p3_input_identity_sha256"]) == len(first["p2_audit_sha256"]) == len(first["substrate_identity_sha256"]) == 64
+    assert len(first["base_cutset_sha256"]) == len(first["old_edge_set_sha256"]) == 64
+    assert first["contact_mapping"] and all(item["finite_edge_id"] and item["owner_ids"] for item in first["contact_mapping"])
+    expected_edges = {str(item["finite_edge_id"]).casefold() for item in first["contact_mapping"]}
+    finite = tuple(link for link in substrate.network.via_links if str(link.mode) == "finite_parallel_rl" and str(link.link_id).casefold() in expected_edges)
+    assert finite
+    extra = replace(finite[0], link_id=f"{finite[0].link_id}-extra", owner_ids=("via:extra-owner",))
+    extra_finite = (substrate.network.reduced_node_index(extra.first_node_id), substrate.network.reduced_node_index(extra.second_node_id), extra)
+    extra_network = replace(substrate.network, via_links=(*substrate.network.via_links, extra), _finite_links=(*substrate.network._finite_links, extra_finite))
+    stopped = consumer.audit_source_plane_patch_selected_base_cutset(own, imported.attachments, raw, patch, replace(substrate, network=extra_network), rail_id="VDD_CORE/1")
+    assert stopped["status"] == "stopped" and stopped["code"] == "BASE_CUTSET_CONTACT_EDGE_MISSING_OR_EXTRA"
