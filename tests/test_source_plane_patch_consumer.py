@@ -229,3 +229,23 @@ def test_source_plane_patch_owner_off_shadow_audit_mini_spd(tmp_path: Path):
     tampered_provenance = {**dict(substrate.provenance), "raw_spatial_v3_manifest_sha256": _h("b")}
     with pytest.raises(consumer.SourcePlanePatchError):
         consumer.audit_source_plane_patch_owner_off(own, imported.attachments, raw, patch, replace(substrate, provenance=tampered_provenance), rail_id="VDD_CORE/1")
+
+
+def test_source_plane_patch_contact_quotient_representability(tmp_path: Path):
+    imported = _v2_import(tmp_path)
+    project = imported.scenario.base_project
+    own = project.metadata["spd_import"]["source_plane_ownership_ir"]
+    raw = project.metadata["spd_import"]["raw_spatial_contact_asset"]
+    substrate = compile_layerwise_substrate(project, imported.attachments, required_rail_id="VDD_CORE/1", require_plane_sheet_payload=True)
+    patch = consumer.evaluate_source_plane_contact_condensation(own, imported.attachments, raw, imported.attachments, rail_id="VDD_CORE/1", frequency_hz=1.0e9, cell_um=1000.0)
+    first = consumer.audit_source_plane_patch_contact_quotient_representability(own, imported.attachments, raw, patch, substrate, rail_id="VDD_CORE/1")
+    second = consumer.audit_source_plane_patch_contact_quotient_representability(own, imported.attachments, raw, patch, substrate, rail_id="VDD_CORE/1")
+    assert first == second
+    assert first["shadow_only"] is True and first["replacement_ready"] is False
+    assert first["status"] == "stopped" and first["code"] == "CONTACT_INTERFACE_RANK_LOSS"
+    assert first["quotient_representable"] is False and first["residual_norm_2"] > first["threshold"]
+    assert len(first["contact_mapping"]) == len(patch["contact_ids"])
+    assert len(first["B"]) == 2 and all(len(row) == len(patch["contact_ids"]) for row in first["B"])
+    assert first["p1_input_sha256"] == patch["input_sha256"] and len(first["p1_output_sha256"]) == len(first["projector_sha256"]) == len(first["p2_audit_sha256"]) == 64
+    with pytest.raises(consumer.SourcePlanePatchError, match="CONTACT_QUOTIENT_INVALID"):
+        consumer.audit_source_plane_patch_contact_quotient_representability(own, imported.attachments, raw, {**patch, "admittance_s": []}, substrate, rail_id="VDD_CORE/1")

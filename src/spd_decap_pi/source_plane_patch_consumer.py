@@ -1150,4 +1150,161 @@ def audit_source_plane_patch_owner_off(
         _fail(f"OWNER_OFF_AUDIT_INVALID: {exc}")
 
 
-__all__ = ["SourcePlanePatchError", "consume_source_plane_patch", "evaluate_source_plane_contact_admissibility", "evaluate_source_plane_contact_condensation", "audit_source_plane_patch_owner_off"]
+def audit_source_plane_patch_contact_quotient_representability(
+    ownership_manifest: Mapping[str, Any],
+    ownership_attachments: Mapping[str, bytes],
+    raw_manifest: Mapping[str, Any],
+    patch_result: Mapping[str, Any],
+    substrate: Any,
+    *,
+    rail_id: str,
+) -> Mapping[str, Any]:
+    """Audit whether the P1 contact space survives the production P/G quotient."""
+    try:
+        rail_id = _text(rail_id, "rail_id")
+        p2_audit = audit_source_plane_patch_owner_off(
+            ownership_manifest,
+            ownership_attachments,
+            raw_manifest,
+            patch_result,
+            substrate,
+            rail_id=rail_id,
+        )
+        if (
+            not isinstance(patch_result, Mapping)
+            or patch_result.get("schema_version") != "source-plane-contact-condensation-v1"
+            or patch_result.get("shadow_only") is not True
+            or patch_result.get("status") != "complete"
+        ):
+            _fail("CONTACT_QUOTIENT_INVALID: P1 patch result is malformed")
+        p1_input_sha = str(patch_result.get("input_sha256", ""))
+        if len(p1_input_sha) != 64 or p1_input_sha != p1_input_sha.casefold() or any(character not in "0123456789abcdef" for character in p1_input_sha):
+            _fail("CONTACT_QUOTIENT_INVALID: P1 input hash is malformed")
+        if str(patch_result.get("source_sha256", "")) != str(raw_manifest.get("source_sha256", "")) or str(patch_result.get("raw_manifest_sha256", "")) != str(ownership_manifest.get("raw_manifest_sha256", "")):
+            _fail("CONTACT_QUOTIENT_INVALID: P1 identity differs")
+        p2_audit_sha = str(p2_audit.get("audit_sha256", ""))
+        if len(p2_audit_sha) != 64 or p2_audit_sha != p2_audit_sha.casefold() or any(character not in "0123456789abcdef" for character in p2_audit_sha):
+            _fail("CONTACT_QUOTIENT_INVALID: P2 audit identity is malformed")
+        total = [0]
+        with load_source_plane_ownership_ir(
+            ownership_manifest,
+            ownership_attachments,
+            expected_source_sha256=str(raw_manifest["source_sha256"]),
+            expected_project_binding_sha256=str(raw_manifest["project_binding_sha256"]),
+            expected_certificate_evidence_sha256=str(raw_manifest["certificate_evidence_sha256"]),
+            expected_compiled_topology_identity_sha256=str(raw_manifest["compiled_topology_identity_sha256"]),
+            expected_raw_manifest_sha256=str(ownership_manifest["raw_manifest_sha256"]),
+            expected_raw_geometry_identity_sha256=str(raw_manifest["geometry_identity_sha256"]),
+            expected_raw_logical_rows_sha256=str(raw_manifest["logical_rows_sha256"]),
+            expected_raw_plane_sheet_sha256=str(raw_manifest["plane_sheet_payload_sha256"]),
+            expected_app_version=str(ownership_manifest.get("app_version", "")),
+        ) as loaded:
+            contacts = sorted(
+                _rows(loaded, "contact_boundary", MAX_SOURCE_PLANE_OWNERSHIP_IR_ROWS, total),
+                key=lambda row: (int(row.get("ordinal", 0)), str(row.get("contact_id", "")).casefold()),
+            )
+        p1_contact_ids = tuple(str(item) for item in patch_result.get("contact_ids", ()))
+        p1_owner_kinds = tuple(str(item) for item in patch_result.get("owner_kinds", ()))
+        expected_contacts = tuple((str(row.get("contact_id", "")), str(row.get("owner_kind", ""))) for row in contacts)
+        if tuple(zip(p1_contact_ids, p1_owner_kinds, strict=True)) != expected_contacts:
+            _fail("CONTACT_QUOTIENT_INVALID: P1 contact order differs")
+        p2_contact_map = [
+            {key: row.get(key) for key in ("contact_id", "owner_kind", "island_id", "component_id", "finite_vertex_id", "finite_edge_id", "plane_endpoint_node_id", "external_endpoint_node_id", "owner_ids_json")}
+            for row in contacts
+        ]
+        contact_map_sha = sha256(concrete_canonical_json_bytes(p2_contact_map)).hexdigest()
+        if str(p2_audit.get("contact_map_sha256", "")) != contact_map_sha:
+            _fail("CONTACT_QUOTIENT_INVALID: P2 contact map differs")
+        component_identity = p2_audit.get("component_identity")
+        if not isinstance(component_identity, Mapping) or set(component_identity) != {"power", "ground"}:
+            _fail("CONTACT_QUOTIENT_INVALID: P2 component identity is malformed")
+        island_role: dict[str, str] = {}
+        role_reduced: dict[str, int] = {}
+        for role in ("power", "ground"):
+            identity = component_identity.get(role)
+            islands_for_role = identity.get("islands") if isinstance(identity, Mapping) else None
+            reduced_for_role = identity.get("reduced_index") if isinstance(identity, Mapping) else None
+            if not isinstance(islands_for_role, list) or not islands_for_role or not isinstance(reduced_for_role, int):
+                _fail("CONTACT_QUOTIENT_INVALID: P2 component identity is malformed")
+            role_reduced[role] = reduced_for_role
+            for value in islands_for_role:
+                folded = str(value).casefold()
+                if not folded or folded in island_role:
+                    _fail("CONTACT_QUOTIENT_INVALID: P2 component island identity is duplicated")
+                island_role[folded] = role
+        mapping: list[dict[str, Any]] = []
+        B = np.zeros((2, len(contacts)), dtype=np.float64)
+        for index, contact in enumerate(contacts):
+            island_id = str(contact.get("island_id", "")).casefold()
+            finite_vertex_id = str(contact.get("finite_vertex_id", "")).strip()
+            role = island_role.get(island_id)
+            if role is None:
+                _fail("CONTACT_QUOTIENT_INVALID: contact does not map to exactly one quotient component")
+            try:
+                mapped_reduced = int(substrate.network.reduced_node_index(finite_vertex_id))
+            except Exception as exc:
+                _fail(f"CONTACT_QUOTIENT_INVALID: contact finite vertex mapping is absent: {exc}")
+            if mapped_reduced != role_reduced[role]:
+                _fail("CONTACT_QUOTIENT_INVALID: contact does not map to exactly one quotient component")
+            role_index = 0 if role == "power" else 1
+            B[role_index, index] = 1.0
+            mapping.append({"contact_id": str(contact.get("contact_id", "")), "owner_kind": str(contact.get("owner_kind", "")), "island_id": str(contact.get("island_id", "")), "component_id": str(contact.get("component_id", "")), "finite_vertex_id": finite_vertex_id, "reduced_index": role_reduced[role], "role": role})
+        counts = B.sum(axis=1)
+        if len(contacts) == 0 or np.any(counts <= 0.0):
+            _fail("CONTACT_QUOTIENT_INVALID: quotient contact rows are empty")
+        raw_admittance = patch_result.get("admittance_s")
+        if not isinstance(raw_admittance, list) or len(raw_admittance) != len(contacts):
+            _fail("CONTACT_QUOTIENT_INVALID: P1 admittance shape is malformed")
+        Y = np.empty((len(contacts), len(contacts)), dtype=np.complex128)
+        for row_index, row in enumerate(raw_admittance):
+            if not isinstance(row, list) or len(row) != len(contacts):
+                _fail("CONTACT_QUOTIENT_INVALID: P1 admittance shape is malformed")
+            for column_index, value in enumerate(row):
+                if not isinstance(value, list) or len(value) != 2:
+                    _fail("CONTACT_QUOTIENT_INVALID: P1 admittance entry is malformed")
+                real, imag = float(value[0]), float(value[1])
+                if not math.isfinite(real) or not math.isfinite(imag):
+                    _fail("CONTACT_QUOTIENT_INVALID: P1 admittance is non-finite")
+                Y[row_index, column_index] = complex(real, imag)
+        raw_constraint = patch_result.get("terminal_constraint_matrix")
+        if not isinstance(raw_constraint, list) or len(raw_constraint) != len(contacts) or not raw_constraint or any(not isinstance(row, list) or not row for row in raw_constraint):
+            _fail("CONTACT_QUOTIENT_INVALID: P1 constraint shape is malformed")
+        constraint = np.asarray(raw_constraint, dtype=np.float64)
+        if constraint.ndim != 2 or constraint.shape[0] != len(contacts) or not np.all(np.isfinite(constraint)):
+            _fail("CONTACT_QUOTIENT_INVALID: P1 constraint is non-finite")
+        y_norm = float(np.linalg.norm(Y, 2))
+        if not math.isfinite(y_norm) or y_norm <= 0.0:
+            _fail("CONTACT_QUOTIENT_INVALID: P1 admittance norm is non-finite")
+        reciprocity_norm = float(np.linalg.norm(Y - Y.T, 2) / max(y_norm, 1.0e-30))
+        gauge_scale = max(y_norm * float(np.linalg.norm(constraint, 2)), 1.0e-30)
+        gauge_residual = max(float(np.linalg.norm(Y @ constraint, 2)) / gauge_scale, float(np.linalg.norm(constraint.T @ Y, 2)) / gauge_scale)
+        singular_values = np.linalg.svd(Y, compute_uv=False)
+        rank_tolerance = max(float(singular_values[0]) * 1.0e-12 if singular_values.size else 0.0, np.finfo(np.float64).eps * max(len(contacts), 1) * 10.0)
+        if singular_values.size and np.any(np.isclose(singular_values, rank_tolerance, rtol=0.1, atol=rank_tolerance * 0.1)):
+            _fail("CONTACT_QUOTIENT_INVALID: P1 admittance rank is ambiguous")
+        y_rank = int(np.count_nonzero(singular_values > rank_tolerance))
+        constraint_singular_values = np.linalg.svd(constraint, compute_uv=False)
+        constraint_tolerance = max(float(constraint_singular_values[0]) * 1.0e-12 if constraint_singular_values.size else 0.0, np.finfo(np.float64).eps * max(len(contacts), 1) * 10.0)
+        if constraint_singular_values.size and np.any(np.isclose(constraint_singular_values, constraint_tolerance, rtol=0.1, atol=constraint_tolerance * 0.1)):
+            _fail("CONTACT_QUOTIENT_INVALID: P1 constraint rank is ambiguous")
+        constraint_rank = int(np.count_nonzero(constraint_singular_values > constraint_tolerance))
+        if not math.isfinite(reciprocity_norm) or reciprocity_norm > 1.0e-12 or not math.isfinite(gauge_residual) or gauge_residual > 1.0e-12 or y_rank >= len(contacts) or constraint_rank <= 0 or y_rank != len(contacts) - constraint_rank:
+            _fail("CONTACT_QUOTIENT_INVALID: P1 reciprocity or gauge/null validation failed")
+        Q = B.T @ np.diag(1.0 / counts) @ B
+        R = Y - Q @ Y @ Q
+        residual_norm = float(np.linalg.norm(R, 2))
+        threshold = max(y_norm * 1.0e-12, 1.0e-30)
+        quotient_representable = math.isfinite(residual_norm) and residual_norm <= threshold
+        projector_identity = {"B": B.tolist(), "contact_counts": [float(value) for value in counts.tolist()]}
+        projector_sha = sha256(concrete_canonical_json_bytes(projector_identity)).hexdigest()
+        p1_output_identity = {"contact_ids": list(p1_contact_ids), "owner_kinds": list(p1_owner_kinds), "admittance_s": [[[float(value.real), float(value.imag)] for value in row] for row in Y.tolist()], "terminal_constraint_matrix": [[float(value) for value in row] for row in constraint.tolist()]}
+        p1_output_sha = sha256(concrete_canonical_json_bytes(p1_output_identity)).hexdigest()
+        identity = {"p1_input_sha256": p1_input_sha, "p1_output_sha256": p1_output_sha, "p2_audit_sha256": p2_audit_sha, "rail_id": rail_id, "contact_map_sha256": contact_map_sha, "projector_sha256": projector_sha, "mapping": mapping, "residual_norm_2": residual_norm, "admittance_norm_2": y_norm, "threshold": threshold}
+        return {"schema_version": "source-plane-contact-quotient-representability-v1", "shadow_only": True, "status": "representable" if quotient_representable else "stopped", "code": None if quotient_representable else "CONTACT_INTERFACE_RANK_LOSS", "quotient_representable": quotient_representable, "replacement_ready": False, "rail_id": rail_id, "source_sha256": raw_manifest["source_sha256"], "p1_input_sha256": p1_input_sha, "p1_output_sha256": p1_output_sha, "p2_audit_sha256": p2_audit_sha, "contact_map_sha256": contact_map_sha, "projector_sha256": projector_sha, "contact_mapping": mapping, "B": B.tolist(), "contact_counts": [float(value) for value in counts.tolist()], "residual_norm_2": residual_norm, "admittance_norm_2": y_norm, "threshold": threshold, "reciprocity_residual": reciprocity_norm, "gauge_null_residual": gauge_residual, "admittance_rank": y_rank, "constraint_rank": constraint_rank, "input_identity_sha256": sha256(concrete_canonical_json_bytes(identity)).hexdigest()}
+    except SourcePlanePatchError:
+        raise
+    except Exception as exc:
+        _fail(f"CONTACT_QUOTIENT_INVALID: {exc}")
+
+
+__all__ = ["SourcePlanePatchError", "consume_source_plane_patch", "evaluate_source_plane_contact_admissibility", "evaluate_source_plane_contact_condensation", "audit_source_plane_patch_owner_off", "audit_source_plane_patch_contact_quotient_representability"]
