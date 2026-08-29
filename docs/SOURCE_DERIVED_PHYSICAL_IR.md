@@ -1,11 +1,11 @@
 # SPD Decap PI Evaluator v0.23.1 — Source-derived physical IR
 
-- 문서 버전: **1.8**
+- 문서 버전: **1.9**
 - 계약 상태: **ACCEPTED** — source-derived provenance/ownership prerequisite의 기술 기준
-- committed 구현: `source-plane-ownership-ir-v1` + Phase 3 shadow consumer + v2 `contact_boundary` (`3b76af4`) + P0 (`4dc855a`) + P1 (`f823a53`) + P2 (`90f6b54`) + P3 (`b8a79f1`) + P4 base cut-set (`39fd4fa`) + P5 shadow rewire plan (`d7e7278`)
-- runtime acceptance: **Phase 4, P0, P1, P2, P3, P4 및 P5 focused PASS / Sol ACCEPT; P3 semantic STOP, P4 structural CLOSED, P5 PLANNED / prerequisite-only**
+- committed 구현: `source-plane-ownership-ir-v1` + Phase 3 shadow consumer + v2 `contact_boundary` (`3b76af4`) + P0 (`4dc855a`) + P1 (`f823a53`) + P2 (`90f6b54`) + P3 (`b8a79f1`) + P4 base cut-set (`39fd4fa`) + P5 shadow rewire plan (`d7e7278`) + P6 scenario commutation audit (`6793bb2`)
+- runtime acceptance: **Phase 4와 P0–P6 focused PASS / Sol ACCEPT; P3 semantic STOP, P4 structural CLOSED, P5 PLANNED, P6 PASSED / prerequisite-only**
 - production 상태: solver, owner-off, `Y_global`, `Zii` **unchanged**
-- 현재 작업 상태: **W7-PHYS-PROSPECTIVE-P6 ACTIVE** — P5 contact 경계와 scenario network/termination binding의 read-only commutation audit
+- 현재 작업 상태: **W7-PHYS-PROSPECTIVE-P7 ACTIVE** — exact 1 GHz atomic replacement recipe의 read-only audit
 - 최종 개정: 2026-08-29 (Asia/Seoul)
 
 ## 1. 목적
@@ -41,8 +41,9 @@ flowchart LR
   O --> P[P3 quotient audit DONE / RANK LOSS STOP]
   P --> Q[P4 closed base cut-set DONE]
   Q --> R[P5 shadow contact rewire plan DONE]
-  R --> S[P6 scenario commutation audit ACTIVE]
-  S -. production seam 전 연결 금지 .-> K[production Y_global / Zii]
+  R --> S[P6 scenario commutation audit DONE]
+  S --> T[P7 one-frequency atomic recipe audit ACTIVE]
+  T -. production seam 전 연결 금지 .-> K[production Y_global / Zii]
   I[raw-v3 geometry/material] -. hash reference .-> B
   J[compiled finite topology] -. hash/owner reference .-> D
 ```
@@ -70,7 +71,8 @@ plane owner는 source identity에 결속해 importer/compiler가 결정적으로
 | quotient representability (P3) | N-contact admittance가 현 PWR/GND ideal quotient에서 보존되는지의 projector residual | `b8a79f1` DONE/STOP; `CONTACT_INTERFACE_RANK_LOSS` |
 | closed base cut-set (P4) | selected ideal class의 full preimage와 contact/old-Maxwell 외부 adjacency exact closure | `39fd4fa` DONE/CLOSED; `split_ready=false` |
 | shadow contact rewire plan (P5) | contact별 interface node, retained finite-link rewire, P2 disable set과 P1 stamp identity | `d7e7278` DONE/PLANNED; plan-only, production topology/stamp 불변 |
-| scenario commutation audit (P6) | P5 contact edge와 scenario/termination bound network의 exact structural compatibility | ACTIVE; read-only, production topology/stamp 불변 |
+| scenario commutation audit (P6) | P5 contact edge와 scenario/termination bound network의 exact structural compatibility | `6793bb2` DONE/PASSED; read-only, production topology/stamp 불변 |
+| atomic replacement recipe (P7) | exact 1 GHz old-Maxwell 제거, finite-link rewire와 P1 N-port 추가의 no-double-counting ledger | ACTIVE; read-only, production topology/stamp 불변 |
 | replacement | replaced/retained set hash와 상태 | Phase 1은 `prerequisite_only`만 허용 |
 
 ## 4. 불변조건
@@ -115,7 +117,8 @@ plane owner는 source identity에 결속해 importer/compiler가 결정적으로
 | P3 | committed `b8a79f1` | focused `1 passed in 1.51s`; Sol ACCEPT; semantic STOP | DONE | `CONTACT_INTERFACE_RANK_LOSS`; topology/production 불변 |
 | P4 | committed `39fd4fa` | 최초 negative fixture contract FAIL 뒤 corrected focused `1 passed in 1.53s`; Sol ACCEPT | DONE | base cut-set CLOSED; `split_ready=false`; production 불변 |
 | P5 | committed `d7e7278` | focused `1 passed in 1.73s`; Sol ACCEPT | DONE | deterministic plan-only; topology/stamp/solve 불변 |
-| P6 | consumer/test whitelist | shadow rewire–scenario commutation 지정 node | ACTIVE | read-only; scenario/compiler/termination/solve 불변 |
+| P6 | committed `6793bb2` | final focused `1 passed in 1.42s`; Sol ACCEPT | DONE | scenario/termination 구조 호환성만; production 불변 |
+| P7 | consumer/test whitelist | one-frequency atomic replacement recipe 지정 node | ACTIVE | read-only; core network/compiler/solver 불변 |
 
 `DONE`은 해당 Phase의 선언 범위가 종료됐다는 뜻이며 current release, production
 acceptance 또는 PowerSI 정확성을 뜻하지 않는다. Phase 4의 exact 실행 이력과 검증
@@ -258,8 +261,10 @@ P2는 P1 N-port가 대체할 production adjacent-gap Maxwell old edge를 exact f
 전수 식별했다. 그러나 현 production은 각 P/G artwork component를 ideal node 하나로 축약한다.
 P3 결과 현 quotient는 contact-space mode를 보존하지 못했고 P4는 contact-interface node 분리의
 base-network cut-set 전제를 닫았다. P5는 exact rewire/disable/stamp shadow plan까지 결속했다.
-이제 실제 scenario/termination binding이 그 contact basis를 보존하는지 P6에서 닫기 전에는
-owner-off나 production replacement stamp를 만들지 않는다.
+P6는 실제 scenario/termination binding이 그 contact basis를 보존함을 닫았다. 이제 exact
+1 GHz에서 production old-Maxwell 계수 제거, finite-link rewire와 P1 N-port 추가가 하나의
+atomic no-double-counting recipe로 결속되는지 P7에서 닫기 전에는 owner-off나 production
+replacement stamp를 만들지 않는다.
 
 ### P2 — incident old-edge identity/bijection
 
@@ -313,7 +318,7 @@ class의 external degree가 0이어야 한다. 지정 node는 `1 passed in 1.73s
 
 ### P6 — shadow rewire–scenario commutation audit
 
-ACTIVE / read-only prerequisite. P5 결과, 동일 base substrate와 기존 compiler가 생성한
+DONE / read-only prerequisite. P5 결과, 동일 base substrate와 기존 compiler가 생성한
 `LayerwiseScenarioNetworkBinding`을 입력으로 받는다. scenario identity/plan, surface/link manifest,
 termination manifest와 P5 `shadow_split_sha256`를 결속하고, 모든 contact finite edge가 exact-once로
 남아 endpoint/mode/count/R/L/owner 순서를 보존하는지 판정한다. scenario topology-only link,
@@ -322,11 +327,32 @@ source contact가 suppress/retarget되어 owner만 새 route로 옮겨진 경우
 `SCENARIO_REWIRE_SOURCE_EDGE_SUPPRESSED`로 중단한다. PASS여도 구조적 호환성만 뜻하며 production
 topology/owner-off/stamp/solve와 `Zii`는 변경하지 않는다.
 
+최초 지정 node는 `1 passed in 2.43s`였으나 Sol이 surface loop의 O(V×K) lookup과 반복
+boundary union을 REJECT했다. lookup/boundary set을 한 번만 만들고 전체 surface tuple 복제를
+제거한 뒤 최종 지정 node는 `1 passed in 1.42s`, Sol 재검토는 ACCEPT였다. 기술 commit은
+`6793bb2`다. 추가 비용은 `O(V + L + P + T + K)` 시간과
+`O(V_selected + K + P + T)` 메모리이며 결과는 `status=passed`, `shadow_only=true`,
+`production_ready=false`, `replacement_ready=false`다.
+
+### P7 — one-frequency atomic replacement recipe audit
+
+ACTIVE / read-only stamp prerequisite. accepted P1 patch, P5 rewire plan, P6 commutation result,
+동일 substrate/scenario binding과 P1 exact 1 GHz source point만 입력으로 사용한다. P5 disabled
+fingerprint마다 scenario partial의 old Maxwell 항을 exact-once 재식별하고 production과 같은
+`Dk(f)·(1-j·Df(f))/nominal_Dk` 계수로 `y_old`를 기록한다. retained finite branch는 owner/R/L/count와
+old/new admittance를 보존하며, P1 contact 순서와 P5 interface 순서를 exact 결속한다.
+
+출력은 ordered `remove_old_maxwell`, `rewire_finite`, `add_p1_nport` ledger와 deterministic recipe
+SHA뿐이다. interpolation, broadband, global matrix와 solver를 만들지 않는다. old edge/source point가
+없거나 중복되거나 contact order·owner·algebra가 다르면 STOP한다. PASS여도 현재 source point 한
+주파수에서 atomic no-double-counting recipe가 존재한다는 뜻만 가지며 production readiness와
+PowerSI 정확성을 주장하지 않는다.
+
 ## 7. 주장 한계
 
-- Phase 1/2/3/4와 P0/P1/P2/P3/P4/P5 focused PASS는 source identity, ownership, shadow analytic,
+- Phase 1/2/3/4와 P0/P1/P2/P3/P4/P5/P6 focused PASS는 source identity, ownership, shadow analytic,
   finite-boundary, direct artwork coverage, one-frequency N-port, 구조적 rank-loss, base cut-set과
-  shadow rewire plan prerequisite만 증명한다. P3의 PASS는 함수·판정 계약 실행 성공이고 결과 자체는 STOP이다.
+  shadow rewire plan 및 scenario commutation prerequisite만 증명한다. P3의 PASS는 함수·판정 계약 실행 성공이고 결과 자체는 STOP이다.
 - reciprocity, passivity, deterministic replay는 non-regression이며 PowerSI 정확도
   개선 증거가 아니다.
 - PowerSI 데이터는 comparison gate에만 사용하고 parameter fitting 입력으로 쓰지

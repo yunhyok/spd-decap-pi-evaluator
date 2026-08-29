@@ -1,9 +1,9 @@
 # SPD Decap PI Evaluator 작업 기준
 
 - 적용 제품: **SPD Decap PI Evaluator v0.23.1**
-- 문서 버전: **1.174**
-- 상위 기준: [목적·기술 기준](PRODUCT_PURPOSE_AND_TECHNICAL_BASELINE.md) v1.173
-- 현재 상태: W6 numerical FAIL; W7-SOURCE-IR-P1/P2/P3/P4 및 W7-PHYS-PROSPECTIVE-P0/P1/P2/P4/P5 DONE, P3 DONE/STOP; W7-PHYS-PROSPECTIVE-P6 ACTIVE; production physics/`Zii` unchanged.
+- 문서 버전: **1.175**
+- 상위 기준: [목적·기술 기준](PRODUCT_PURPOSE_AND_TECHNICAL_BASELINE.md) v1.174
+- 현재 상태: W6 numerical FAIL; W7-SOURCE-IR-P1/P2/P3/P4 및 W7-PHYS-PROSPECTIVE-P0/P1/P2/P4/P5/P6 DONE, P3 DONE/STOP; W7-PHYS-PROSPECTIVE-P7 ACTIVE; production physics/`Zii` unchanged.
 - 최종 개정: 2026-08-29 (Asia/Seoul)
 
 ## 1. 압축 후 즉시 복구 카드
@@ -15,13 +15,13 @@ context가 압축되거나 새 session에서 작업을 재개하면 이 표만 �
 | 변하지 않는 목적 | source-derived single-rail `Zii`의 PowerSI 근접 정확성과 일반화 |
 | 기본 복구 문서 | 목적·기술 기준 → Source-derived physical IR → 이 작업 기준, 세 문서 |
 | 현재 branch | `main`만 사용 |
-| 이 문서 정리의 source-before HEAD | `d7e7278` (`feat: plan shadow contact rewires`) |
-| 현재 assessment | W6-BASE numerical FAIL; Phase 4/P0/P1/P2/P4/P5는 prerequisite/shadow 범위 DONE; P3는 `CONTACT_INTERFACE_RANK_LOSS` STOP, P4는 base cut-set CLOSED, P5는 deterministic shadow plan PLANNED; production physics와 정확성은 미변경 |
-| 현재 active work item | **W7-PHYS-PROSPECTIVE-P6 / SCENARIO-01-SHADOW-REWIRE-COMMUTATION-AUDIT** — P5 contact 경계와 scenario network/termination binding의 read-only 호환성 판정 |
+| 이 문서 정리의 source-before HEAD | `6793bb2` (`feat: audit scenario shadow rewire commutation`) |
+| 현재 assessment | W6-BASE numerical FAIL; Phase 4/P0/P1/P2/P4/P5/P6는 prerequisite/shadow 범위 DONE; P3는 `CONTACT_INTERFACE_RANK_LOSS` STOP, P4는 base cut-set CLOSED, P5는 PLANNED, P6는 scenario commutation PASSED; production physics와 정확성은 미변경 |
+| 현재 active work item | **W7-PHYS-PROSPECTIVE-P7 / STAMP-PREREQ-01-ONE-FREQUENCY-ATOMIC-REPLACEMENT-RECIPE-AUDIT** — exact 1 GHz owner-off/rewire/P1-add ledger의 atomicity 판정 |
 | 현재 정확성 상태 | `260729 retrospective FAIL`; unseen/generalization `unknown / not_run` |
-| current authorization | 사용량 제한점까지의 사용자 사전 승인에 따라 P6 ACTIVE; consumer + focused test 두 파일, 지정 pytest node 1회; main-only, `accuracy_parse.py` 보존 |
-| 다음 후보 gate | P6 acceptance — P5 source contact edge·owner·partial·port·termination 경계가 scenario binding에서 exact-once 보존되는지 판정 |
-| 정확한 재개 조건 | P6 PASS 뒤에만 production assembly prerequisite를 검토; suppress/retarget/drift/bypass STOP이면 후속 assembly를 열지 않음 |
+| current authorization | 사용량 제한점까지의 사용자 사전 승인에 따라 P7 ACTIVE; consumer + focused test 두 파일, 지정 pytest node 1회; main-only, `accuracy_parse.py` 보존 |
+| 다음 후보 gate | P7 acceptance — exact 1 GHz old Maxwell 제거, finite-link rewire와 P1 N-port 추가가 no-double-counting recipe로 결속되는지 판정 |
+| 정확한 재개 조건 | P7 PASS 뒤에만 production assembly seam을 검토; identity/old-edge/source-point/contact-order/owner/algebra STOP이면 core seam을 열지 않음 |
 | 핵심 증거 | [W6-BASE completed evidence](#w6-base-completed-evidence-260729), [W7 결과 재평가](#12-w7-결과-재평가와-후속-과제-판정) |
 
 최초 목적은 [목적·기술 기준 2장](PRODUCT_PURPOSE_AND_TECHNICAL_BASELINE.md#2-최우선-목적),
@@ -32,13 +32,13 @@ context가 압축되거나 새 session에서 작업을 재개하면 이 표만 �
 
 | 구분 | 현재 권위 |
 |---|---|
-| accepted / committed | Phase 1 `82370b6`, Phase 2 `75ac0a0`, Phase 3 `5d2c353`, Phase 4 `3b76af4`, P0 `4dc855a`, P1 `f823a53`, P2 `90f6b54`, P3 `b8a79f1`, P4 `39fd4fa`, P5 `d7e7278`; 모두 prerequisite/shadow 범위이며 production `Y_global`/`Zii` 불변 |
-| current candidate | P6는 아직 코드 미구현; consumer/test 두 파일과 단일 node budget만 ACTIVE |
-| static evidence | P5 Sol 최종 ACCEPT; scenario compiler는 suppressed contact를 제거하고 retarget owner를 새 route로 옮기므로 production seam 전에 exact commutation audit가 필요 |
-| runtime evidence | P5 지정 node `1 passed in 1.73s`; deterministic PLANNED, tuple identity/finite-link metadata/disable SHA/owner separation/passivity STOP 포함 |
-| runtime 미증명 | P5 contact 경계가 scenario network와 termination binding 뒤에도 exact-once 보존되는지 여부 |
+| accepted / committed | Phase 1 `82370b6`, Phase 2 `75ac0a0`, Phase 3 `5d2c353`, Phase 4 `3b76af4`, P0 `4dc855a`, P1 `f823a53`, P2 `90f6b54`, P3 `b8a79f1`, P4 `39fd4fa`, P5 `d7e7278`, P6 `6793bb2`; 모두 prerequisite/shadow 범위이며 production `Y_global`/`Zii` 불변 |
+| current candidate | P7는 아직 코드 미구현; consumer/test 두 파일과 단일 node budget만 ACTIVE |
+| static evidence | P6 Sol 최종 ACCEPT; scenario/termination 구조는 호환되지만 old Maxwell의 실제 frequency-local 계수와 P1 add ledger는 아직 결속되지 않음 |
+| runtime evidence | P6 최종 지정 node `1 passed in 1.42s`; exact edge/class/owner/partial/port/termination 보존과 deterministic readiness-false 포함 |
+| runtime 미증명 | exact 1 GHz에서 old Maxwell 제거·finite rewire·P1 N-port 추가가 atomic no-double-counting recipe인지 여부 |
 | 별도 사용자 파일 | untracked `accuracy_parse.py`; 보존·미수정·미stage |
-| candidate staging / acceptance | P5 기술 commit은 accepted PLANNED prerequisite; P6는 read-only ACTIVE이고 production/release acceptance가 아님 |
+| candidate staging / acceptance | P6 기술 commit은 accepted PASSED prerequisite; P7은 read-only ACTIVE이고 production/release acceptance가 아님 |
 
 ## 2. 문서 사용 규칙
 
@@ -113,7 +113,7 @@ disjoint owner ledger 확보와 사용자 명시 승인
 ## 4. 작업 항목 register
 
 상태 어휘는 `READY`, `ACTIVE`, `BLOCKED`, `DEFERRED`, `DONE`만 사용한다.
-동시에 `ACTIVE`는 하나만 허용하며 현재는 **W7-PHYS-PROSPECTIVE-P6**다. 완료된 미시적 item을
+동시에 `ACTIVE`는 하나만 허용하며 현재는 **W7-PHYS-PROSPECTIVE-P7**이다. 완료된 미시적 item을
 다시 펼쳐 읽지 말고 아래 phase-level 결론과 Git history를 사용한다.
 상태와 증거 축은 분리한다. `DONE`은 선언한 범위의 종료일 뿐 current commit,
 production acceptance, runtime PASS 또는 PowerSI 정확성을 자동으로 뜻하지 않는다.
@@ -160,7 +160,8 @@ dirty/static/runtime/commit 상태는 복구 카드 1.1에 별도로 기록한�
 | `W7-PHYS-PROSPECTIVE-P3` | P3 | DONE | P1 contact-space의 production quotient representability | commit `b8a79f1`; focused `1 passed in 1.51s`; Sol ACCEPT; `CONTACT_INTERFACE_RANK_LOSS` STOP; production 불변 |
 | `W7-PHYS-PROSPECTIVE-P4` | P4 | DONE | selected ideal class의 base-network closed cut-set | commit `39fd4fa`; corrected focused `1 passed in 1.53s`; Sol ACCEPT; CLOSED, `split_ready=false` |
 | `W7-PHYS-PROSPECTIVE-P5` | P5 | DONE | deterministic shadow contact rewire plan | commit `d7e7278`; focused `1 passed in 1.73s`; Sol ACCEPT; PLANNED, production/replacement readiness false |
-| `W7-PHYS-PROSPECTIVE-P6` | next | ACTIVE | shadow rewire–scenario commutation audit | P5 contact edge·owner·partial·port·termination boundary exact preservation; read-only, production 불변 |
+| `W7-PHYS-PROSPECTIVE-P6` | P6 | DONE | shadow rewire–scenario commutation audit | commit `6793bb2`; final focused `1 passed in 1.42s`; Sol ACCEPT; PASSED, production/replacement readiness false |
+| `W7-PHYS-PROSPECTIVE-P7` | next | ACTIVE | one-frequency atomic replacement recipe audit | exact 1 GHz old-Maxwell remove + finite rewire + P1 add ledger; read-only, production 불변 |
 | `W8-REL` | 18 | BLOCKED | completed known-case solve를 release gate에 연결하고 최종 전달 | accuracy/product gate와 exact release commit 필요 |
 | `D-DIST` | - | DEFERRED | Distribution routing/DRC scope 확대 | 사용자가 implementation-ready/DRC 목표로 승격할 때만 |
 | `D-DOC` | - | DEFERRED | README와 동결 연구 배너 정리 | current work를 방해할 때 별도 문서 묶음으로 처리 |
@@ -489,6 +490,8 @@ remote/full suite, installer/release는 수행하지 않았다.
 | `D-026` | P4 CLOSED를 production split로 승격하지 않고 P5에서 contact별 interface node, retained finite-link endpoint rewire, P2 old-edge disable과 P1 stamp identity의 deterministic shadow plan만 두 파일·단일 node로 구성 | 확정 |
 | `D-027` | P5 지정 node `1 passed in 1.73s`, Sol ACCEPT, commit `d7e7278`로 deterministic shadow plan을 닫되 실제 topology/partial/stamp/owner-off/solve는 변경하지 않고 readiness false를 유지 | 확정 |
 | `D-028` | P5 base plan을 production assembly로 승격하지 않고 P6에서 기존 scenario network/termination binding과의 commutation만 두 파일·단일 node로 read-only 판정; source contact suppress/retarget/drift/bypass는 STOP | 확정 |
+| `D-029` | P6 최초 focused PASS 뒤 Sol이 O(V×K) lookup과 반복 boundary union을 REJECT; 선형 set 재사용과 전체 surface tuple 복제 제거 후 final `1 passed in 1.42s`, Sol ACCEPT, commit `6793bb2`로 구조 호환성만 닫음 | 확정 |
+| `D-030` | P6 PASS를 production seam으로 승격하지 않고 P7에서 exact 1 GHz old-Maxwell 제거·finite-link rewire·P1 N-port 추가의 atomic shadow recipe만 두 파일·단일 node로 판정 | 확정 |
 
 ## 11. 현재 evidence와 비재사용 경계
 
@@ -522,9 +525,9 @@ falsifiable physical/analytic limiting-case invariant + disjoint owner ledger와
 - W7은 source/provenance와 수학·운영 기반을 개선했지만 production network,
   계산된 `Zii`, PowerSI correlation을 바꾸지 않았다.
 - 따라서 현재 product risk는 그대로 **외부 정확성 미달**이며, sole ACTIVE는
-  **W7-PHYS-PROSPECTIVE-P6**다. P3는 `CONTACT_INTERFACE_RANK_LOSS` STOP, P4는 base cut-set
-  CLOSED, P5는 deterministic shadow plan PLANNED로 닫혔고 P6도 production physics가 아닌
-  scenario/termination structural-compatibility gate다.
+  **W7-PHYS-PROSPECTIVE-P7**이다. P3는 `CONTACT_INTERFACE_RANK_LOSS` STOP, P4는 base cut-set
+  CLOSED, P5는 deterministic shadow plan PLANNED, P6는 scenario/termination commutation
+  PASSED로 닫혔다. P7도 production physics가 아닌 one-frequency stamp prerequisite다.
   17DT는 internal v3 PASS / W6 comparability STOP_IDENTITY_DRIFT로 종료되었고
   17DU도 `STOP_AUDIT_CONTRACT_MISMATCH`, 17DV도
   `STOP_NO_AUTHORITATIVE_BRIDGE`로 종료되었다.
@@ -648,8 +651,9 @@ W7은 BLOCKED, ACTIVE는 NONE이었다. 이후 D-011/D-012/D-013/D-015/D-017이 
 P1/P2/P3/P4와 contact admissibility P0, contact-complete N-port P1을 prerequisite/shadow
 범위에서 닫았고 P2도 incident old-edge identity를 `90f6b54`에서 닫았다. P3는
 `b8a79f1`에서 quotient rank loss STOP으로, P4는 `39fd4fa`에서 base cut-set CLOSED로,
-P5는 `d7e7278`에서 deterministic shadow plan PLANNED로 닫혔다. 현재 P6는 그 contact 경계가
-scenario network/termination binding에서도 보존되는지만 판정한다. production physical candidate는 아래
+P5는 `d7e7278`에서 deterministic shadow plan PLANNED, P6는 `6793bb2`에서 scenario/termination
+commutation PASSED로 닫혔다. 현재 P7은 exact 1 GHz replacement ledger의 atomicity만 판정한다.
+production physical candidate는 아래
 조건을 여전히 요구한다. 17DW나
 새 metadata/raw/schema/owner audit은 열지 않고 production seam은 BLOCKED다.
 
@@ -680,8 +684,9 @@ flowchart LR
   S2 --> C2{ideal-class preimage와 외부 adjacency exact closure?}
   C2 -->|아니오| S[STOP / production physics BLOCKED]
   C2 -->|예| P5[P5 shadow contact rewire plan DONE]
-  P5 --> P6[P6 scenario commutation audit ACTIVE]
-  P6 --> H
+  P5 --> P6[P6 scenario commutation audit DONE]
+  P6 --> P7[P7 one-frequency atomic recipe audit ACTIVE]
+  P7 --> H
   R -->|예| H
   D[17DG foundation] -. production binding 필요 .-> H
   E[17DO/17DP owner evidence] -. identity join 필요 .-> H
@@ -692,11 +697,11 @@ flowchart LR
 ```
 
 Phase 4는 commit `3b76af4`, P0는 `4dc855a`, P1은 `f823a53`, P2는 `90f6b54`,
-P3는 `b8a79f1`, P4는 `39fd4fa`, P5는 `d7e7278`의 prerequisite 범위에서 DONE이다.
-P3 semantic result는 `CONTACT_INTERFACE_RANK_LOSS` STOP, P4는 CLOSED, P5는 PLANNED다.
-현재 하나뿐인 ACTIVE item은 `W7-PHYS-PROSPECTIVE-P6`이며 P5 contact edge가 scenario/termination
-binding에서 suppress/retarget/drift/bypass되지 않는지만 판정한다. P6 PASS 뒤에만 production
-integration 전 다음 prerequisite를 검토하며,
+P3는 `b8a79f1`, P4는 `39fd4fa`, P5는 `d7e7278`, P6는 `6793bb2`의 prerequisite 범위에서 DONE이다.
+P3 semantic result는 `CONTACT_INTERFACE_RANK_LOSS` STOP, P4는 CLOSED, P5는 PLANNED,
+P6는 PASSED다. 현재 하나뿐인 ACTIVE item은 `W7-PHYS-PROSPECTIVE-P7`이며 exact 1 GHz에서
+old-Maxwell remove, finite-link rewire와 P1 N-port add가 atomic ledger인지 판정한다. P7 PASS 뒤에만
+production integration 전 다음 prerequisite를 검토하며,
 physical item은 아래 조건을 모두 만족할 때 하나만 연다.
 
 1. source-derived geometry/material provenance가 있다.
@@ -1104,7 +1109,7 @@ nodes/links/partials/ports tuple identity는 바뀌지 않았고 actual matrix p
 검증한다. scenario suppress/retarget/add, mounted termination, 실제 partial 제거, production N-port
 stamp, global solve, `Y_global`, `Zii`, W6/PowerSI는 수행하지 않았다.
 
-### 12.16 W7-PHYS-PROSPECTIVE-P6 / SCENARIO-01-SHADOW-REWIRE-COMMUTATION-AUDIT active gate
+### 12.16 W7-PHYS-PROSPECTIVE-P6 / SCENARIO-01-SHADOW-REWIRE-COMMUTATION-AUDIT closure
 
 목적은 **P5가 base substrate에서 계획한 contact split 경계가 기존 scenario network와 termination
 binding 뒤에도 exact-once 보존되는지 read-only로 판정하는 것**이다. P5 결과, 동일 base
@@ -1126,15 +1131,60 @@ termination owner 모두와 disjoint여야 한다. source edge가 scenario retar
 새 route로 이동한 경우에도 P1 terminal basis가 달라지므로 `SCENARIO_REWIRE_SOURCE_EDGE_SUPPRESSED`
 STOP이다.
 
-Acceptance budget은 Luna 구현 중 실행 없음, 아래 focused node 한 번, 그 결과의 Sol 정적 검토
-한 번이다.
+Acceptance budget은 Luna 구현 중 실행 없음, 아래 focused node와 Sol 정적 검토로 제한했다.
 
 ```powershell
 python -m pytest -q tests/test_source_plane_patch_consumer.py::test_source_plane_patch_shadow_rewire_commutes_with_scenario_binding
 ```
 
-추가 비용은 link 한 번 스캔 기준 `O(L + P + T + K)` 시간, `O(K + P + T)` 메모리다. 별도 matrix,
-solver, schema, config를 만들지 않는다. 결과는 deterministic `shadow_only=true`,
+최초 실행은 `1 passed in 2.43s`였지만 Sol이 surface loop의 O(V×K) lookup과 port/link/termination
+loop마다 반복되는 boundary union을 REJECT했다. lookup/boundary set을 한 번만 만들고 전체 surface
+tuple 복제를 제거한 뒤 최종 실행은 `1 passed in 1.42s`, Sol 재검토는 ACCEPT였다. 기술 commit은
+`6793bb2`이고 `git diff --check`도 PASS였다.
+
+추가 비용은 `O(V + L + P + T + K)` 시간, `O(V_selected + K + P + T)` 메모리다. 별도 matrix,
+solver, schema, config를 만들지 않았다. 결과는 deterministic `status=passed`, `shadow_only=true`,
 `production_ready=false`, `replacement_ready=false`다. 실제 topology rewire/P2 disable/P1 stamp,
 scenario compiler·termination 수정, global MNA 복제, production solve, `Y_global`, `Zii`, W6/PowerSI는
-금지한다. semantic STOP이면 후속 assembly 작업을 열지 않는다.
+수행하지 않았다.
+
+### 12.17 W7-PHYS-PROSPECTIVE-P7 / STAMP-PREREQ-01-ONE-FREQUENCY-ATOMIC-REPLACEMENT-RECIPE-AUDIT active gate
+
+목적은 **P5/P6 경계를 exact 1 GHz의 작은 shadow stamp recipe로 환원하여 old Maxwell 제거,
+finite-link rewire와 P1 N-port 추가가 중복·누락 없이 원자적으로 표현되는지 판정하는 것**이다.
+accepted P1 patch, P5 plan, P6 result, 동일 substrate/scenario binding과 P1 exact frequency만
+입력으로 사용한다. core network/compiler/solver에는 seam을 만들지 않는다.
+
+Exact whitelist:
+
+1. `src/spd_decap_pi/source_plane_patch_consumer.py`
+2. `tests/test_source_plane_patch_consumer.py`
+3. 이 세 canonical 문서(상태 기록만)
+
+P1 input/output, P5 `shadow_split_sha256`, P6 `scenario_commutation_sha256`, substrate/scenario/plan/
+link/termination identity와 P2 `old_edge_set_sha256`를 exact 결속한다. 출력은 ordered
+`remove_old_maxwell`, `rewire_finite`, `add_p1_nport` ledger와 deterministic recipe SHA뿐이다.
+각 disabled fingerprint는 scenario partial에서 exact-once 재식별하고 production과 같은
+`y_old(f) = j·2πf·[Dk(f)·(1-j·Df(f))/nominal_Dk]·C_edge`를 기록한다. exact source point가
+없으면 interpolation하지 않고 STOP한다. finite branch의 R/L/count/owner와 old/new admittance,
+P1 contact와 P5 interface 순서, owner disjointness, finite/reciprocal/gauge compatibility가 모두
+exact해야 한다. replacement delta 자체에 passivity를 요구하지 않는다.
+
+STOP 코드는 `LOCAL_REPLACEMENT_IDENTITY_MISMATCH`,
+`LOCAL_REPLACEMENT_OLD_EDGE_MISSING_OR_DUPLICATED`,
+`LOCAL_REPLACEMENT_SOURCE_POINT_UNAVAILABLE`, `LOCAL_REPLACEMENT_CONTACT_ORDER_MISMATCH`,
+`LOCAL_REPLACEMENT_OWNER_CONFLICT`, `LOCAL_REPLACEMENT_ALGEBRA_INVALID`로 제한한다.
+
+Acceptance budget은 Luna 구현 중 실행 없음, 아래 focused node 한 번, 그 결과의 Sol 정적 검토
+한 번이다.
+
+```powershell
+python -m pytest -q tests/test_source_plane_patch_consumer.py::test_source_plane_patch_shadow_local_replacement_recipe_is_atomic
+```
+
+추가 비용은 `O(E + L + N²)` 시간과 ordered edge/contact ledger `O(K)` 메모리다. global/network-sized
+matrix, 실제 node split/partial 제거/N-port stamp, broadband/interpolation/mesh convergence, solver,
+`Y_global`, `Zii`, W6/PowerSI와 새 schema/config는 금지한다. PASS여도 current source point 한
+주파수에서 atomic no-double-counting recipe가 존재한다는 뜻뿐이며 `production_ready=false`,
+`replacement_ready=false`다. semantic STOP이면 assembly seam을 열지 않고 P1/P2 material-frequency
+identity 또는 P5 mapping으로 돌아간다.
