@@ -1,9 +1,9 @@
 # SPD Decap PI Evaluator 작업 기준
 
 - 적용 제품: **SPD Decap PI Evaluator v0.23.1**
-- 문서 버전: **1.169**
-- 상위 기준: [목적·기술 기준](PRODUCT_PURPOSE_AND_TECHNICAL_BASELINE.md) v1.168
-- 현재 상태: W6 numerical FAIL; W7-SOURCE-IR-P1/P2/P3/P4 및 W7-PHYS-PROSPECTIVE-P0 DONE; W7-PHYS-PROSPECTIVE-P1 ACTIVE; production physics/`Zii` unchanged.
+- 문서 버전: **1.170**
+- 상위 기준: [목적·기술 기준](PRODUCT_PURPOSE_AND_TECHNICAL_BASELINE.md) v1.169
+- 현재 상태: W6 numerical FAIL; W7-SOURCE-IR-P1/P2/P3/P4 및 W7-PHYS-PROSPECTIVE-P0/P1 DONE; W7-PHYS-PROSPECTIVE-P2 ACTIVE; production physics/`Zii` unchanged.
 - 최종 개정: 2026-08-29 (Asia/Seoul)
 
 ## 1. 압축 후 즉시 복구 카드
@@ -15,13 +15,13 @@ context가 압축되거나 새 session에서 작업을 재개하면 이 표만 �
 | 변하지 않는 목적 | source-derived single-rail `Zii`의 PowerSI 근접 정확성과 일반화 |
 | 기본 복구 문서 | 목적·기술 기준 → Source-derived physical IR → 이 작업 기준, 세 문서 |
 | 현재 branch | `main`만 사용 |
-| 이 문서 정리의 source-before HEAD | `4dc855a` (`feat: validate source contact artwork coverage`) |
-| 현재 assessment | W6-BASE numerical FAIL; Phase 4 v2 boundary와 P0 direct artwork full coverage는 prerequisite 범위 DONE; production physics와 정확성은 미변경 |
-| 현재 active work item | **W7-PHYS-PROSPECTIVE-P1** — 모든 적격 v2 contact의 contact-complete shadow N-port condensation |
+| 이 문서 정리의 source-before HEAD | `f823a53` (`feat: condense source contacts into shadow n-port`) |
+| 현재 assessment | W6-BASE numerical FAIL; Phase 4/P0/P1은 prerequisite/shadow 범위 DONE; production physics와 정확성은 미변경 |
+| 현재 active work item | **W7-PHYS-PROSPECTIVE-P2 / OWNOFF-01** — P1↔production incident old-edge identity bijection shadow audit |
 | 현재 정확성 상태 | `260729 retrospective FAIL`; unseen/generalization `unknown / not_run` |
-| current authorization | 사용량 제한점까지의 사용자 사전 승인에 따라 P1 ACTIVE; `source_plane_patch_consumer.py` + focused test, 지정 pytest node 1회; main-only, `accuracy_parse.py` 보존 |
-| 다음 후보 gate | P1 acceptance — exact source-tabulated 1 GHz에서 contact exact-once N×N condensation 또는 deterministic STOP |
-| 정확한 재개 조건 | P1 PASS 뒤에만 old adjacent-gap owner-off identity seam을 새 gate로 문서화; P1에서 core/schema/production 변경이 필요하면 STOP |
+| current authorization | 사용량 제한점까지의 사용자 사전 승인에 따라 P2 ACTIVE; consumer + focused test + `layerwise_network.py` provenance key 한 개, 지정 pytest node 1회; main-only, `accuracy_parse.py` 보존 |
+| 다음 후보 gate | P2 acceptance — selected P/G component incident old Maxwell edge의 closed-set bijection과 deterministic fingerprint 또는 STOP |
+| 정확한 재개 조건 | P2 PASS 뒤에만 fingerprint-driven shadow owner-off experiment를 새 gate로 문서화; partial/schema/production assembly 변경이 필요하면 STOP |
 | 핵심 증거 | [W6-BASE completed evidence](#w6-base-completed-evidence-260729), [W7 결과 재평가](#12-w7-결과-재평가와-후속-과제-판정) |
 
 최초 목적은 [목적·기술 기준 2장](PRODUCT_PURPOSE_AND_TECHNICAL_BASELINE.md#2-최우선-목적),
@@ -32,13 +32,13 @@ context가 압축되거나 새 session에서 작업을 재개하면 이 표만 �
 
 | 구분 | 현재 권위 |
 |---|---|
-| accepted / committed | Phase 1 `82370b6`, Phase 2 `75ac0a0`, Phase 3 `5d2c353`, Phase 4 `3b76af4`, P0 `4dc855a`; 모두 prerequisite/shadow 범위이며 production `Y_global`/`Zii` 불변 |
-| current candidate | P1은 아직 코드 미구현; 두 파일 whitelist와 단일 node budget만 ACTIVE |
-| static evidence | P0 Sol ACCEPT; P1 prospective Sol review는 owner-off 전에 all-contact concrete N-port matrix가 먼저 필요하다고 판정 |
-| runtime evidence | P0 최종 focused node `1 passed in 1.51s`; device/decap/other full coverage와 boundary-overrun `CONTACT_NOT_FULLY_COVERED` 포함 |
-| runtime 미증명 | 모든 contact exact-once N×N matrix, finite diagnostics와 deterministic replay |
+| accepted / committed | Phase 1 `82370b6`, Phase 2 `75ac0a0`, Phase 3 `5d2c353`, Phase 4 `3b76af4`, P0 `4dc855a`, P1 `f823a53`; 모두 prerequisite/shadow 범위이며 production `Y_global`/`Zii` 불변 |
+| current candidate | P2는 아직 코드 미구현; 세 파일 whitelist와 단일 node budget만 ACTIVE |
+| static evidence | P1 Sol identity fix 뒤 ACCEPT 범위 충족; P2 Sol review는 old partial owner ID 및 P1↔substrate raw identity 노출 부재로 direct owner-off STOP 판정 |
+| runtime evidence | P1 지정 node `1 passed in 1.58s`; contact exact order, 유한 N×N/constraint/diagnostics, deterministic repeat 포함 |
+| runtime 미증명 | P1 input↔production substrate identity 및 selected component incident old-edge closed-set bijection |
 | 별도 사용자 파일 | untracked `accuracy_parse.py`; 보존·미수정·미stage |
-| candidate staging / acceptance | P0 기술 commit은 accepted; P1은 shadow-only ACTIVE이고 production/release acceptance가 아님 |
+| candidate staging / acceptance | P1 기술 commit은 accepted prerequisite; P2는 shadow-only ACTIVE이고 production/release acceptance가 아님 |
 
 ## 2. 문서 사용 규칙
 
@@ -113,7 +113,7 @@ disjoint owner ledger 확보와 사용자 명시 승인
 ## 4. 작업 항목 register
 
 상태 어휘는 `READY`, `ACTIVE`, `BLOCKED`, `DEFERRED`, `DONE`만 사용한다.
-동시에 `ACTIVE`는 하나만 허용하며 현재는 **W7-PHYS-PROSPECTIVE-P1**이다. 완료된 미시적 item을
+동시에 `ACTIVE`는 하나만 허용하며 현재는 **W7-PHYS-PROSPECTIVE-P2**다. 완료된 미시적 item을
 다시 펼쳐 읽지 말고 아래 phase-level 결론과 Git history를 사용한다.
 상태와 증거 축은 분리한다. `DONE`은 선언한 범위의 종료일 뿐 current commit,
 production acceptance, runtime PASS 또는 PowerSI 정확성을 자동으로 뜻하지 않는다.
@@ -155,7 +155,8 @@ dirty/static/runtime/commit 상태는 복구 카드 1.1에 별도로 기록한�
 | `W7-SOURCE-IR-P4` | IR-4 | DONE | quotient-authoritative contact-complete ownership IR v2 | R2 fixture/acceptance 부정합 분류, R3/R5 focused PASS, R6 Sol ACCEPT; commit `3b76af4`; prerequisite-only |
 | `W7-SOURCE-IR-P4-R2-CAUSE` | IR-4R2 | DONE | decap boundary 부재의 단일 causal contract | C1 isolated Node3 때문에 Trace11 quotient union이 생기지 않아 Via11이 leaf-prune된 fixture 원인으로 정적 확정 |
 | `W7-PHYS-PROSPECTIVE-P0` | P0 | DONE | contact-to-artwork finite-port admissibility | commit `4dc855a`; final focused `1 passed in 1.51s`; Sol ACCEPT; production 불변 |
-| `W7-PHYS-PROSPECTIVE-P1` | next | ACTIVE | contact-complete shadow N-port condensation | exact source-tabulated 1 GHz에서 P0 contact 전수의 exact-once N×N condensation과 diagnostics를 단일 node로 판정 |
+| `W7-PHYS-PROSPECTIVE-P1` | P1 | DONE | contact-complete shadow N-port condensation | commit `f823a53`; focused `1 passed in 1.58s`; Sol identity review 반영; production 불변 |
+| `W7-PHYS-PROSPECTIVE-P2` | next | ACTIVE | P1↔production incident old-edge identity bijection | raw-v3 manifest provenance를 노출하고 selected P/G component incident Maxwell edge closed set/fingerprint를 shadow-only 단일 node로 판정 |
 | `W8-REL` | 18 | BLOCKED | completed known-case solve를 release gate에 연결하고 최종 전달 | accuracy/product gate와 exact release commit 필요 |
 | `D-DIST` | - | DEFERRED | Distribution routing/DRC scope 확대 | 사용자가 implementation-ready/DRC 목표로 승격할 때만 |
 | `D-DOC` | - | DEFERRED | README와 동결 연구 배너 정리 | current work를 방해할 때 별도 문서 묶음으로 처리 |
@@ -474,6 +475,8 @@ remote/full suite, installer/release는 수행하지 않았다.
 | `D-016` | 사용자 사전 승인 범위에서 `W7-PHYS-PROSPECTIVE-P0`를 shadow-only로 열고 두 파일·단일 pytest node로 contact-to-artwork admissibility만 판정 | 확정 |
 | `D-017` | P0를 별도 read-only evaluator로 닫고 boundary-overrun negative와 trust-boundary cross-binding을 통과한 commit `4dc855a`를 accepted prerequisite로 기록; production consumer/solver/`Zii` 불변 | 확정 |
 | `D-018` | owner-off보다 먼저 `W7-PHYS-PROSPECTIVE-P1`을 열어 기존 surface-patch operator로 모든 적격 contact의 1 GHz shadow N-port를 만들고, 두 파일·단일 pytest node 밖의 변경 필요 시 STOP | 확정 |
+| `D-019` | P1 지정 node `1 passed in 1.58s`와 Sol 검토의 ownership logical-row identity 한 필드 보완 뒤 commit `f823a53`을 accepted shadow prerequisite로 기록; 계산 변경이 아닌 hash identity 보완은 재실행하지 않음 | 확정 |
+| `D-020` | direct owner-off는 old partial owner/P1↔substrate identity 부재로 STOP. P2는 기존 raw-v3 manifest SHA provenance key 한 개와 read-only incident-edge fingerprint audit만 세 파일·단일 node로 허용 | 확정 |
 
 ## 11. 현재 evidence와 비재사용 경계
 
@@ -628,8 +631,8 @@ selected pair provenance, `raw_spatial_loaded=false`, and exclusive output; one 
 retry, internal 480 s and external 600 s wall, coordinator RSS 10 GiB, temp 4 GiB,
 output 8 MiB, target anchors ≤2 and vertex-surface links ≤4096. 17DV closure 당시
 W7은 BLOCKED, ACTIVE는 NONE이었다. 이후 D-011/D-012/D-013/D-015/D-017이 source IR
-P1/P2/P3/P4와 contact admissibility P0를 prerequisite/shadow 범위에서 닫았다. 현재 P1은
-모든 적격 contact의 concrete shadow N-port만 판정하며 production physical candidate는 아래
+P1/P2/P3/P4와 contact admissibility P0, contact-complete N-port P1을 prerequisite/shadow
+범위에서 닫았다. 현재 P2는 P1↔production old-edge identity bijection만 판정하며 production physical candidate는 아래
 조건을 여전히 요구한다. 17DW나
 새 metadata/raw/schema/owner audit은 열지 않고 production seam은 BLOCKED다.
 
@@ -648,10 +651,13 @@ flowchart LR
   Q --> T[P0 contact-to-artwork admissibility DONE]
   T --> U{all contacts direct same-net full coverage?}
   U -->|아니오| S[STOP / production physics BLOCKED]
-  U -->|예| V[P1 all-contact shadow N-port ACTIVE]
+  U -->|예| V[P1 all-contact shadow N-port DONE]
   V --> W{finite deterministic N×N + diagnostics?}
   W -->|아니오| S
-  W -->|예| H
+  W -->|예| X[P2 incident old-edge bijection ACTIVE]
+  X --> Y{P1/substrate/edge identity closed?}
+  Y -->|아니오| S
+  Y -->|예| H
   D[17DG foundation] -. production binding 필요 .-> H
   E[17DO/17DP owner evidence] -. identity join 필요 .-> H
   H[source-certified rail-complete candidate<br/>deterministic stamp<br/>falsifiable physical/analytic limiting-case invariant<br/>disjoint owner ledger] --> I[new bounded gate]
@@ -660,10 +666,10 @@ flowchart LR
   K --> L[new bounded gate]
 ```
 
-Phase 4는 commit `3b76af4`, P0는 commit `4dc855a`의 prerequisite 범위에서 DONE이다.
-현재 하나뿐인 ACTIVE item은 `W7-PHYS-PROSPECTIVE-P1`이며 모든 적격 v2 contact를 한꺼번에
-포함하는 source-derived shadow N-port가 실제로 생성 가능한지만 판정한다. P1 PASS 뒤에만
-old adjacent-gap owner-off identity seam을 검토하며,
+Phase 4는 commit `3b76af4`, P0는 `4dc855a`, P1은 `f823a53`의 prerequisite 범위에서 DONE이다.
+현재 하나뿐인 ACTIVE item은 `W7-PHYS-PROSPECTIVE-P2`이며 P1 input과 production substrate,
+selected component incident old Maxwell edge가 exact closed-set bijection을 이루는지만 판정한다.
+P2 PASS 뒤에만 fingerprint-driven shadow owner-off experiment를 검토하며,
 physical item은 아래 조건을 모두 만족할 때 하나만 연다.
 
 1. source-derived geometry/material provenance가 있다.
@@ -772,8 +778,8 @@ Closure evidence:
   build/release는 실행하지 않았다.
 
 Phase 3 DONE은 source-derived analytic/owner hand-off prerequisite만 증명한다. 이후
-Phase 4가 contact boundary를, P0가 direct artwork full coverage를 닫았다. 현재 P1도
-production seam이 아니라 contact-complete shadow N-port에 한정한다.
+Phase 4가 contact boundary를, P0가 direct artwork full coverage를, P1이 contact-complete
+shadow N-port를 닫았다. 현재 P2도 production seam이 아니라 old-edge identity audit에 한정한다.
 
 ### 12.8 W7-SOURCE-IR-P4 contract and historical validation
 
@@ -874,7 +880,7 @@ P0는 v2 `device/decap/other` contact의 exact footprint가 selected same-net or
 production owner-off, `Y_global`/`Zii`, PowerSI 정확성은 주장하지 않는다. 기존
 `consume_source_plane_patch()` body/output 의미는 바꾸지 않았다.
 
-### 12.11 W7-PHYS-PROSPECTIVE-P1 active gate
+### 12.11 W7-PHYS-PROSPECTIVE-P1 final closure
 
 목적은 **P0 contact 전부를 동시에 포함하는 concrete shadow N-port admittance를 기존
 gauge-safe surface-patch operator로 만들 수 있는지** 하나만 falsify하는 것이다. owner-off는
@@ -895,7 +901,7 @@ hash를 `shadow_only` witness로 반환한다. `frequency_hz`와 `cell_um`은 �
 knob로 두되 interpolation이나 mesh convergence를 주장하지 않는다.
 
 Acceptance budget은 Luna 구현 중 실행 없음, 다음 focused node 한 번, PASS 뒤 Sol 정적 검토
-한 번과 `git diff --check` 한 번이다.
+한 번과 `git diff --check` 한 번으로 소진했다.
 
 ```powershell
 python -m pytest -q tests/test_source_plane_patch_consumer.py::test_v2_contact_complete_shadow_nport_condensation
@@ -907,3 +913,53 @@ selected PWR/GND가 source-certified 인접 pair가 아님, 정확한 1 GHz diel
 conductivity 부재, contact 누락/중복, mesh bound/geometry ambiguity, return mode/rank/condition/
 residual/reciprocity/passivity 실패, nondeterminism, 또는 core operator/schema/Layerwise/
 evaluation/owner-off 변경 필요. replacement ledger는 계속 `prerequisite_only`다.
+
+상태는 **DONE / shadow prerequisite-only**이며 기술 commit은 `f823a53`다. 지정 node는
+`1 passed in 1.58s`였다. 결과는 P0 accepted `(contact_id, owner_kind)` 순서와 condensation
+port ID를 exact하게 대조하고 모든 contact의 N×N admittance, terminal constraint, 기존
+수치 diagnostics와 input-only SHA를 반환한다. Sol 정적 검토는 최초 input identity가
+ownership logical-row SHA를 누락했다고 REJECT했고 Luna가 해당 한 필드만 추가했다. 계산,
+port, 행렬과 test contract가 바뀌지 않아 node를 재실행하지 않았으며 나머지 항목은 ACCEPT됐다.
+
+P1 PASS는 one-frequency/fixed-mesh shadow matrix 생성 가능성만 증명한다. PowerSI/`Zii`
+정확도, broadband/interpolation, mesh convergence, unseen generalization, other-net exclusion,
+old Maxwell C 제거, production no-double-counting과 owner-off는 주장하지 않는다.
+
+### 12.12 W7-PHYS-PROSPECTIVE-P2 / OWNOFF-01 active gate
+
+목적은 **P1 N-port가 미래에 대체할 production adjacent-gap Maxwell old edge 집합을 exact
+identity로 전수 식별할 수 있는지** 하나만 falsify하는 것이다. 현행
+`AdjacentGapMaxwellPartial`은 layer pair, island names와 matrix만 가지며 owner ID가 없고,
+P1 결과도 production substrate identity를 직접 결속하지 않으므로 owner-off 자체는 금지한다.
+
+Exact whitelist:
+
+1. `src/spd_decap_pi/source_plane_patch_consumer.py`
+2. `tests/test_source_plane_patch_consumer.py`
+3. `src/spd_decap_pi/_core/solver/layerwise_network.py` — 이미 substrate identity에 들어가는
+   `raw_spatial_v3_manifest_sha256`를 read-only provenance key로 노출하는 한 줄만
+4. 이 세 canonical 문서(상태 기록만)
+
+새 partial/schema/core abstraction은 만들지 않는다. 이미 compile된
+`LayerwiseNetworkSubstrate`의 `network.surface_node_ids`, pre-collapse `network.partials`와
+`reduced_node_index()`를 읽고, P1/IR/raw/substrate source 및 raw-v3 manifest identity를
+교차 결속한다. 선택 P/G component island에 incident한 sparse Maxwell off-diagonal의
+`row < column`, negative edge를 한 번씩 취해 layer pair, directed upper/lower island,
+`float(C).hex()`와 substrate identity의 canonical fingerprint를 만든다. symmetry와 네
+Laplacian 항이 exact하게 복원되지 않거나 incident edge가 제3 component로 향하면 STOP한다.
+Via/device/decap/other owner는 모두 retained이며 수정하지 않는다.
+
+Acceptance budget은 Luna 구현 중 실행 없음, 아래 focused node 한 번, PASS 뒤 Sol 정적 검토
+한 번과 `git diff --check` 한 번이다.
+
+```powershell
+python -m pytest -q tests/test_source_plane_patch_consumer.py::test_source_plane_patch_owner_off_shadow_audit_mini_spd
+```
+
+한 node에서 source/raw/substrate binding, exact contact map, selected incident-edge closed set,
+deterministic edge/audit SHA와 raw/substrate tamper의 fail-closed를 확인한다. production assembly,
+frequency solve, `Zii`, GUI/profile, W6/PowerSI는 실행하지 않는다. 다음이면 즉시 STOP한다:
+raw-v3 manifest SHA를 exact substrate에 결속할 수 없음, selected island의 physical/reduced node
+mapping이 누락·복수, partial matrix 비대칭/비-Laplacian/nonfinite, incident third-node edge,
+contact↔quotient endpoint 불일치, disabled candidate와 retained owner 교집합, 또는 whitelist 밖
+partial/assembly/owner-off 변경 필요. PASS 뒤에도 candidate old-edge set 식별만 주장한다.

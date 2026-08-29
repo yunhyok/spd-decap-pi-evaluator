@@ -1,11 +1,11 @@
 # SPD Decap PI Evaluator v0.23.1 — Source-derived physical IR
 
-- 문서 버전: **1.3**
+- 문서 버전: **1.4**
 - 계약 상태: **ACCEPTED** — source-derived provenance/ownership prerequisite의 기술 기준
-- committed 구현: `source-plane-ownership-ir-v1` + Phase 3 shadow consumer + `source-plane-ownership-ir-v2` `contact_boundary` (`3b76af4`) + P0 artwork admissibility (`4dc855a`)
-- runtime acceptance: **Phase 4 및 P0 focused PASS / Sol ACCEPT / prerequisite-only**
+- committed 구현: `source-plane-ownership-ir-v1` + Phase 3 shadow consumer + v2 `contact_boundary` (`3b76af4`) + P0 artwork admissibility (`4dc855a`) + P1 shadow N-port (`f823a53`)
+- runtime acceptance: **Phase 4, P0 및 P1 focused PASS / Sol ACCEPT 범위 충족 / prerequisite-only**
 - production 상태: solver, owner-off, `Y_global`, `Zii` **unchanged**
-- 현재 작업 상태: **W7-PHYS-PROSPECTIVE-P1 ACTIVE** — 모든 적격 contact의 1 GHz shadow N-port condensation만 판정
+- 현재 작업 상태: **W7-PHYS-PROSPECTIVE-P2 ACTIVE** — P1↔production old-edge identity/bijection만 shadow audit
 - 최종 개정: 2026-08-29 (Asia/Seoul)
 
 ## 1. 목적
@@ -36,8 +36,9 @@ flowchart LR
   G --> H[Phase 3 shadow patch witness DONE]
   H --> L[Phase 4 all-contact boundary IR v2 DONE]
   L --> M[P0 contact-to-artwork admissibility DONE]
-  M --> N[P1 contact-complete shadow N-port ACTIVE]
-  N -. owner-off gate 전 연결 금지 .-> K[production Y_global / Zii]
+  M --> N[P1 contact-complete shadow N-port DONE]
+  N --> O[P2 old-edge identity bijection ACTIVE]
+  O -. owner-off gate 전 연결 금지 .-> K[production Y_global / Zii]
   I[raw-v3 geometry/material] -. hash reference .-> B
   J[compiled finite topology] -. hash/owner reference .-> D
 ```
@@ -59,7 +60,8 @@ plane owner는 source identity에 결속해 importer/compiler가 결정적으로
 | terminal | branch/pin→Node→Via→finite vertex/edge→exact rail island→PadDef+Regular footprint | 전체 chain이 있어야 complete |
 | ownership | retained Via/device/terminal owner와 declared plane owner | namespace disjoint, exact-once |
 | contact boundary (v2) | selected P/G component incident edge, boundary-side Via, endpoint/rotation/pad provenance, Device/decap/other 보강 | `3b76af4` accepted prerequisite |
-| contact admissibility (P0) | v2 contact exact footprint와 selected same-net ordered artwork의 direct full coverage | `4dc855a` accepted shadow prerequisite; N-port/production port 의미는 P1 전 금지 |
+| contact admissibility (P0) | v2 contact exact footprint와 selected same-net ordered artwork의 direct full coverage | `4dc855a` accepted shadow prerequisite |
+| contact N-port (P1) | P0 ordered contact 전부의 1 GHz finite-port admittance, constraint, diagnostics와 input identity | `f823a53` accepted shadow prerequisite; old edge/production owner 의미는 P2 전 금지 |
 | replacement | replaced/retained set hash와 상태 | Phase 1은 `prerequisite_only`만 허용 |
 
 ## 4. 불변조건
@@ -99,6 +101,7 @@ plane owner는 source identity에 결속해 importer/compiler가 결정적으로
 | 3 | committed `5d2c353` | analytic/deterministic shadow gate PASS | DONE | `Y_global`/`Zii` 미연결 |
 | 4 | committed `3b76af4` | focused `1 passed in 1.39s`; Sol ACCEPT | DONE | finite boundary provenance prerequisite만; 정확도 주장 금지 |
 | P0 | committed `4dc855a` | focused `1 passed in 1.51s`; Sol ACCEPT | DONE | direct artwork full-coverage prerequisite만; production 연결 없음 |
+| P1 | committed `f823a53` | focused `1 passed in 1.58s`; Sol identity review 반영 | DONE | exact 1 GHz shadow N-port만; production owner-off 없음 |
 
 `DONE`은 해당 Phase의 선언 범위가 종료됐다는 뜻이며 current release, production
 acceptance 또는 PowerSI 정확성을 뜻하지 않는다. Phase 4의 exact 실행 이력과 검증
@@ -222,15 +225,31 @@ Via layer 교차 결속을 추가했고 최종 지정 node는 `1 passed in 1.51s
 교정은 runtime 의미를 바꾸지 않아 재실행하지 않았으며 Sol이 ACCEPT했다. 기술 commit은
 `4dc855a`다.
 
-다음 단일 질문은 P0를 통과한 `device/decap/other` contact 전부를 빠짐없이 포함하는 실제 N×N
-shadow admittance를 기존 gauge-safe surface-patch operator로 만들 수 있는지다.
-`W7-PHYS-PROSPECTIVE-P1`은 exact source-tabulated 1 GHz 한 점과 고정 mesh에서만 이를 판정하며,
-core operator/schema, production owner-off 또는 `Y_global` 연결이 필요하면 STOP한다.
+### P1 — contact-complete shadow N-port condensation
+
+DONE / shadow prerequisite-only. `evaluate_source_plane_contact_condensation()`은 P0 accepted
+contact 순서와 `(contact_id, owner_kind)`를 다시 대조하고 selected ordered artwork, IR↔raw
+stackup/material provenance와 exact source-tabulated frequency point를 기존 surface-patch
+operator에 전달한다. 1 GHz, 1000 um fixed mesh의 지정 node는 모든 `device/decap/other`
+contact를 포함한 유한 N×N admittance, terminal constraint, gauge/solve/reciprocity/passivity/
+condition diagnostics와 deterministic replay를 `1 passed in 1.58s`로 닫았다.
+
+Sol 정적 검토는 최초 `input_sha256`가 authenticated ownership logical-row identity를 누락해
+서로 다른 유효 sidecar가 같은 hash를 만들 수 있다고 REJECT했다. Luna가
+`ownership_logical_rows_sha256` 한 필드만 input identity에 추가했고 계산/행렬/port 의미가
+바뀌지 않아 node를 재실행하지 않았다. 나머지 항목은 Sol이 ACCEPT했으며 기술 commit은
+`f823a53`다.
+
+다음 단일 질문은 P1 N-port가 대체해야 할 production old adjacent-gap Maxwell edge를 exact
+fingerprint로 전수 식별할 수 있는지다. 현재 partial에는 owner ID가 없고 P1 결과와 production
+substrate의 raw-v3 manifest binding도 노출되지 않으므로 곧바로 owner-off하면 STOP한다.
+`W7-PHYS-PROSPECTIVE-P2`는 기존 substrate identity와 pre-collapse partial을 읽는 shadow
+bijection audit만 수행하며 production partial/assembly나 `Y_global`은 바꾸지 않는다.
 
 ## 7. 주장 한계
 
-- Phase 1/2/3/4와 P0 PASS는 source identity, ownership, shadow analytic, finite-boundary와
-  direct artwork coverage prerequisite만 증명한다. 각 historical failure는 해당 과거 fixture 결과에만 적용한다.
+- Phase 1/2/3/4와 P0/P1 PASS는 source identity, ownership, shadow analytic, finite-boundary,
+  direct artwork coverage와 one-frequency N-port prerequisite만 증명한다. 각 historical failure는 해당 과거 fixture 결과에만 적용한다.
 - reciprocity, passivity, deterministic replay는 non-regression이며 PowerSI 정확도
   개선 증거가 아니다.
 - PowerSI 데이터는 comparison gate에만 사용하고 parameter fitting 입력으로 쓰지
