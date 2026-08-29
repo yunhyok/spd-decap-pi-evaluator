@@ -1,12 +1,12 @@
 # SPD Decap PI Evaluator v0.23.1 — Source-derived physical IR
 
-- 문서 버전: **1.13**
+- 문서 버전: **1.14**
 - 계약 상태: **ACCEPTED** — source-derived provenance/ownership prerequisite의 기술 기준
-- committed 구현: `source-plane-ownership-ir-v1` + Phase 3 shadow consumer + v2 `contact_boundary` (`3b76af4`) + P0 (`4dc855a`) + P1 (`f823a53`) + P2 (`90f6b54`) + P3 (`b8a79f1`) + P4 base cut-set (`39fd4fa`) + P5 shadow rewire plan (`d7e7278`) + P6 scenario commutation audit (`6793bb2`) + P7 atomic recipe (`f1c2968`) + P8 topology embedding (`abf79cf`) + P9 nodal-block binding (`593e070`) + P10 component closure (`7f9c498`)
-- runtime acceptance: **Phase 4와 P0–P10 focused PASS / Sol ACCEPT; P3 semantic STOP, P4 structural CLOSED, P5 PLANNED, P6/P7 PASSED, P8 materialized, P9 bound, P10 component-closed / prerequisite-only**
+- committed 구현: `source-plane-ownership-ir-v1` + Phase 3 shadow consumer + v2 `contact_boundary` (`3b76af4`) + P0 (`4dc855a`) + P1 (`f823a53`) + P2 (`90f6b54`) + P3 (`b8a79f1`) + P4 base cut-set (`39fd4fa`) + P5 shadow rewire plan (`d7e7278`) + P6 scenario commutation audit (`6793bb2`) + P7 atomic recipe (`f1c2968`) + P8 topology embedding (`abf79cf`) + P9 nodal-block binding (`593e070`) + P10 component closure (`7f9c498`) + P11 supplemental solve gate (`e8d029a`)
+- runtime acceptance: **Phase 4와 P0–P10 focused PASS / Sol ACCEPT; P3 semantic STOP, P4 structural CLOSED, P5 PLANNED, P6/P7 PASSED, P8 materialized, P9 bound, P10 component-closed; P11 focused test PASS / numerical result STOP**
 - production 상태: solver, owner-off, `Y_global`, `Zii` **unchanged**
-- 현재 작업 상태: **W7-PHYS-PROSPECTIVE-P11 ACTIVE** — exact 1 GHz shadow P1 supplemental assembly/solve
-- P10 closure: commit `7f9c498`, 최종 지정 node `1 passed in 1.56s`, Sol ACCEPT; component/P1 connectivity verified, stamp/matrix/solve false, readiness false, production unchanged
+- 현재 작업 상태: **ACTIVE NONE** — P11 exact 1 GHz shadow P1 supplemental solve는 numerical DONE/STOP
+- P11 closure: commit `e8d029a`, 최종 지정 node `1 passed in 1.55s`, Sol ACCEPT; pivot ratio `1.900e15`, condition-1 lower bound `1.096e17`, `SHADOW_SOLVE_NUMERICAL_FAILURE`; trusted stamp/matrix/solve/readiness false, production unchanged
 - 최종 개정: 2026-08-30 (Asia/Seoul)
 
 ## 1. 목적
@@ -47,8 +47,9 @@ flowchart LR
   T --> U[P8 shadow topology/index materialization DONE]
   U --> V[P9 shadow P1 nodal-block binding DONE]
   V --> W[P10 augmented component closure DONE]
-  W --> X[P11 exact 1 GHz shadow augmented solve ACTIVE]
-  X -. hold: production wiring 금지 .-> K[production Y_global / Zii]
+  W --> X[P11 exact 1 GHz shadow augmented solve DONE / NUMERICAL STOP]
+  X --> Y[ACTIVE NONE / cause isolation required]
+  Y -. hold: production wiring 금지 .-> K[production Y_global / Zii]
   I[raw-v3 geometry/material] -. hash reference .-> B
   J[compiled finite topology] -. hash/owner reference .-> D
 ```
@@ -81,7 +82,7 @@ plane owner는 source identity에 결속해 importer/compiler가 결정적으로
 | shadow topology/index materialization (P8) | P6 old class 제거, P7 interface/finite-link을 기존 immutable network에 materialize하고 shadow termination을 재결속 | `abf79cf` DONE/PASSED; `solve_eligible=false`, production topology/stamp 불변 |
 | shadow P1 nodal-block binding (P9) | P1 N-port를 P8 interface/reduced index와 P7 owner ledger에 기존 `NodalAdmittanceBlock`으로 결속 | `593e070` DONE/PASSED; `p1_stamp_applied=false`, production assembly 불변 |
 | augmented component closure (P10) | P8 base·mounted termination·P1 support graph를 합친 component/port-bearing pruning closure | `7f9c498` DONE/PASSED; no matrix application/solve, production assembly 불변 |
-| exact 1 GHz shadow augmented solve (P11) | 기존 Layer-Surface assembly/gauge/factor/residual 경로에 P1 supplemental block을 실제 적용 | ACTIVE; ephemeral MINI shadow-only, production caller/cache 불변 |
+| exact 1 GHz shadow augmented solve (P11) | 기존 Layer-Surface assembly/gauge/factor/residual 경로에 P1 supplemental block을 실제 적용 | `e8d029a` DONE/STOP; matrix/factor reached, forward reliability rejected; production caller/cache 불변 |
 | replacement | replaced/retained set hash와 상태 | Phase 1은 `prerequisite_only`만 허용 |
 
 ## 4. 불변조건
@@ -131,7 +132,7 @@ plane owner는 source identity에 결속해 importer/compiler가 결정적으로
 | P8 | committed `abf79cf` | final focused `1 passed in 1.60s`; Sol ACCEPT | DONE | topology materialized; P1 stamp/solve readiness false; production 불변 |
 | P9 | committed `593e070` | final focused `1 passed in 1.60s`; Sol ACCEPT | DONE | exact 1 GHz binding prerequisite only; no matrix application/solve |
 | P10 | committed `7f9c498` | final focused `1 passed in 1.56s`; Sol ACCEPT | DONE | exact 1 GHz partition/pruning prerequisite only; no matrix application/solve |
-| P11 | consumer/core/test whitelist | exact 1 GHz shadow augmented solve 지정 node | ACTIVE | supplemental path only; production caller/cache/wiring unchanged |
+| P11 | committed `e8d029a` | final focused `1 passed in 1.55s`; Sol ACCEPT; deterministic numerical STOP | DONE | pivot `1.900e15` > `1e13`; no trusted solve; production caller/cache/wiring unchanged |
 
 `DONE`은 해당 Phase의 선언 범위가 종료됐다는 뜻이며 current release, production
 acceptance 또는 PowerSI 정확성을 뜻하지 않는다. Phase 4의 exact 실행 이력과 검증
@@ -436,7 +437,7 @@ PowerSI, W6, Distribution과 production 변경은 수행하지 않았다.
 
 ### P11 — exact 1 GHz shadow P1-augmented solve
 
-ACTIVE / first value-application gate. `global_mna.evaluate_nodal_admittance_block(block, frequency_hz)` 공개 helper로
+DONE/STOP / first value-application gate. `global_mna.evaluate_nodal_admittance_block(block, frequency_hz)` 공개 helper로
 finite shape, complex-symmetric reciprocity, Hermitian passivity와 floating zero row/column sum을 한 번 구현해
 기존 Global-MNA와 Layer-Surface supplemental path가 함께 사용한다. 기존
 `CompiledLayerSurfaceNetwork.solve(..., supplemental_nodal_admittance: NodalAdmittanceBlock | None = None)`에
@@ -462,12 +463,17 @@ PASS는 `component_closure_verified=true`, `p1_stamp_applied=true`, `global_matr
 STOP 코드는 `SHADOW_SOLVE_PREREQUISITE_STOPPED`, `SHADOW_SOLVE_IDENTITY_MISMATCH`,
 `SHADOW_SOLVE_OWNER_CONFLICT`, `SHADOW_SOLVE_STAMP_INVALID`, `SHADOW_SOLVE_COMPONENT_MISMATCH`,
 `SHADOW_SOLVE_NUMERICAL_FAILURE` 여섯 개다. focused node는
-`test_source_plane_patch_shadow_one_frequency_augmented_solve` 하나다. Positive는 accepted P10 fixture의 deterministic
-replay, actual P1/matrix/solve flags, ordered finite port admittance, core solve identity, pivot/residual gate와 원본
-substrate/network/CSC/cache 불변을 확인한다. Negative는 accepted P10 audit의 `component_closure_sha256`만 다른 유효
-SHA로 바꾸고 solve 전 identity STOP을 확인한다. P11 stamp 증분은 `O(N²+L+T)` 시간,
+`test_source_plane_patch_shadow_one_frequency_augmented_solve` 하나다. Accepted P10 MINI chain은 P1 적용 뒤
+reciprocity/row-sum을 통과하고 factor gate까지 도달했지만 pivot ratio `1.900e15`, condition-1 lower bound
+`1.096e17`로 기존 `1e13` forward-reliability 한계를 초과해 `SHADOW_SOLVE_NUMERICAL_FAILURE` STOP했다.
+backward residual `7.308e-17`은 ill-conditioned 해의 forward accuracy 증거가 아니다. 최종 matrix SHA는
+`b0680d39fcc0f9bad2c6e619b6910fd3e52765a610b940e31f7dc6cb1be79c0e`다. Focused test는 deterministic STOP,
+accepted flags/readiness false, solve/port output 부재와 원본 substrate/network/CSC/cache 불변을 확인한다. Negative는
+P10 `component_closure_sha256`을 다른 유효 SHA로 바꾸고 P9 호출 전 identity STOP을 확인한다. 최종 evidence는
+commit `e8d029a`, `1 passed in 1.55s`, Sol ACCEPT다. P11 stamp 증분은 `O(N²+L+T)` 시간,
 `O(N²+R)` 메모리이고 전체 sparse factor/solve 비용은 기존 LU fill-in에 의존한다. dense `V×V` matrix나 새 solver는
-만들지 않는다. PASS도 MINI fixture exact 1 GHz shadow execution만 증명하며 `Zii` correlation, PowerSI 개선,
+만들지 않았다. threshold/fallback/gauge/reordering/fixture capacitance는 바꾸지 않았다. 이 STOP은 현재 synthetic
+MINI chain의 exact 1 GHz forward-reliable solve 실패만 뜻하며 실제 SPD/`Zii` correlation, PowerSI 개선,
 broadband/mesh convergence/unseen generalization, production wiring/cache/profile, W6와 Distribution은 미주장·금지다.
 
 ## 7. 주장 한계
@@ -475,6 +481,8 @@ broadband/mesh convergence/unseen generalization, production wiring/cache/profil
 - Phase 1/2/3/4와 P0–P10 focused PASS는 source identity, ownership, shadow analytic,
   finite-boundary, direct artwork coverage, one-frequency N-port, 구조적 rank-loss, base cut-set,
   shadow rewire/atomic recipe와 topology embedding prerequisite만 증명한다. P3의 PASS는 함수·판정 계약 실행 성공이고 결과 자체는 STOP이다.
+- P11 focused PASS는 fail-closed numerical STOP의 deterministic 재현 성공이다. trusted solve 또는 실제 SPD/PowerSI
+  accuracy failure를 뜻하지 않는다.
 - reciprocity, passivity, deterministic replay는 non-regression이며 PowerSI 정확도
   개선 증거가 아니다.
 - PowerSI 데이터는 comparison gate에만 사용하고 parameter fitting 입력으로 쓰지
