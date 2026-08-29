@@ -1,11 +1,11 @@
 # SPD Decap PI Evaluator v0.23.1 — Source-derived physical IR
 
-- 문서 버전: **1.4**
+- 문서 버전: **1.5**
 - 계약 상태: **ACCEPTED** — source-derived provenance/ownership prerequisite의 기술 기준
-- committed 구현: `source-plane-ownership-ir-v1` + Phase 3 shadow consumer + v2 `contact_boundary` (`3b76af4`) + P0 artwork admissibility (`4dc855a`) + P1 shadow N-port (`f823a53`)
-- runtime acceptance: **Phase 4, P0 및 P1 focused PASS / Sol ACCEPT 범위 충족 / prerequisite-only**
+- committed 구현: `source-plane-ownership-ir-v1` + Phase 3 shadow consumer + v2 `contact_boundary` (`3b76af4`) + P0 (`4dc855a`) + P1 (`f823a53`) + P2 owner-off candidate audit (`90f6b54`)
+- runtime acceptance: **Phase 4, P0, P1 및 P2 focused PASS / Sol ACCEPT 범위 충족 / prerequisite-only**
 - production 상태: solver, owner-off, `Y_global`, `Zii` **unchanged**
-- 현재 작업 상태: **W7-PHYS-PROSPECTIVE-P2 ACTIVE** — P1↔production old-edge identity/bijection만 shadow audit
+- 현재 작업 상태: **W7-PHYS-PROSPECTIVE-P3 ACTIVE** — P1 contact space의 production quotient representability만 shadow audit
 - 최종 개정: 2026-08-29 (Asia/Seoul)
 
 ## 1. 목적
@@ -37,8 +37,9 @@ flowchart LR
   H --> L[Phase 4 all-contact boundary IR v2 DONE]
   L --> M[P0 contact-to-artwork admissibility DONE]
   M --> N[P1 contact-complete shadow N-port DONE]
-  N --> O[P2 old-edge identity bijection ACTIVE]
-  O -. owner-off gate 전 연결 금지 .-> K[production Y_global / Zii]
+  N --> O[P2 old-edge identity bijection DONE]
+  O --> P[P3 contact quotient representability ACTIVE]
+  P -. owner-off gate 전 연결 금지 .-> K[production Y_global / Zii]
   I[raw-v3 geometry/material] -. hash reference .-> B
   J[compiled finite topology] -. hash/owner reference .-> D
 ```
@@ -61,7 +62,9 @@ plane owner는 source identity에 결속해 importer/compiler가 결정적으로
 | ownership | retained Via/device/terminal owner와 declared plane owner | namespace disjoint, exact-once |
 | contact boundary (v2) | selected P/G component incident edge, boundary-side Via, endpoint/rotation/pad provenance, Device/decap/other 보강 | `3b76af4` accepted prerequisite |
 | contact admissibility (P0) | v2 contact exact footprint와 selected same-net ordered artwork의 direct full coverage | `4dc855a` accepted shadow prerequisite |
-| contact N-port (P1) | P0 ordered contact 전부의 1 GHz finite-port admittance, constraint, diagnostics와 input identity | `f823a53` accepted shadow prerequisite; old edge/production owner 의미는 P2 전 금지 |
+| contact N-port (P1) | P0 ordered contact 전부의 1 GHz finite-port admittance, constraint, diagnostics와 input identity | `f823a53` accepted shadow prerequisite |
+| owner-off candidate audit (P2) | P1/raw/substrate identity, contact↔finite-link↔production-port chain, selected incident old-edge fingerprint closed set | `90f6b54` accepted shadow prerequisite; `replacement_ready=false` |
+| quotient representability (P3) | N-contact admittance가 현 PWR/GND ideal quotient에서 보존되는지의 projector residual | ACTIVE; owner-off/stamp 전 attachability falsification만 |
 | replacement | replaced/retained set hash와 상태 | Phase 1은 `prerequisite_only`만 허용 |
 
 ## 4. 불변조건
@@ -102,6 +105,8 @@ plane owner는 source identity에 결속해 importer/compiler가 결정적으로
 | 4 | committed `3b76af4` | focused `1 passed in 1.39s`; Sol ACCEPT | DONE | finite boundary provenance prerequisite만; 정확도 주장 금지 |
 | P0 | committed `4dc855a` | focused `1 passed in 1.51s`; Sol ACCEPT | DONE | direct artwork full-coverage prerequisite만; production 연결 없음 |
 | P1 | committed `f823a53` | focused `1 passed in 1.58s`; Sol identity review 반영 | DONE | exact 1 GHz shadow N-port만; production owner-off 없음 |
+| P2 | committed `90f6b54` | 최초 contract FAIL 뒤 fixture 유지·identity 교정; focused `1 passed in 1.49s`; Sol ACCEPT | DONE | candidate old-edge closed set만; `replacement_ready=false` |
+| P3 | consumer/test whitelist | contact quotient projector residual 지정 node | ACTIVE | attachability 판정만; topology/production 불변 |
 
 `DONE`은 해당 Phase의 선언 범위가 종료됐다는 뜻이며 current release, production
 acceptance 또는 PowerSI 정확성을 뜻하지 않는다. Phase 4의 exact 실행 이력과 검증
@@ -240,11 +245,31 @@ Sol 정적 검토는 최초 `input_sha256`가 authenticated ownership logical-ro
 바뀌지 않아 node를 재실행하지 않았다. 나머지 항목은 Sol이 ACCEPT했으며 기술 commit은
 `f823a53`다.
 
-다음 단일 질문은 P1 N-port가 대체해야 할 production old adjacent-gap Maxwell edge를 exact
-fingerprint로 전수 식별할 수 있는지다. 현재 partial에는 owner ID가 없고 P1 결과와 production
-substrate의 raw-v3 manifest binding도 노출되지 않으므로 곧바로 owner-off하면 STOP한다.
-`W7-PHYS-PROSPECTIVE-P2`는 기존 substrate identity와 pre-collapse partial을 읽는 shadow
-bijection audit만 수행하며 production partial/assembly나 `Y_global`은 바꾸지 않는다.
+P2는 P1 N-port가 대체할 production adjacent-gap Maxwell old edge를 exact fingerprint로
+전수 식별했다. 그러나 현 production은 각 P/G artwork component를 ideal node 하나로 축약한다.
+따라서 P3에서 contact-space mode가 이 quotient에 투영되어도 보존되는지 확인하기 전에는
+owner-off나 replacement stamp를 만들지 않는다.
+
+### P2 — incident old-edge identity/bijection
+
+DONE / shadow prerequisite-only. `audit_source_plane_patch_owner_off()`는 P1/raw/ownership/
+substrate identity를 결속하고, physical artwork component→contact plane-side quotient vertex→
+retained finite R/L edge/owner→external terminal vertex→production port chain을 검증한다.
+선택 component incident sparse Maxwell edge를 전수 스캔해 canonical fingerprint closed set을
+만들며 production network는 수정하지 않는다.
+
+최초 지정 node는 physical island와 external production port를 동일시한 audit contract 때문에
+`1 failed in 1.77s`였다. fixture의 retained Via 경계가 옳아 fixture를 완화하지 않고 위 identity
+chain으로 교정했다. 재실행은 `1 passed in 1.49s`, Sol 최종 정적 검토는 ACCEPT였고 기술
+commit은 `90f6b54`다. 결과는 계속 `shadow_only=true`, `replacement_ready=false`다.
+
+### P3 — contact quotient representability
+
+ACTIVE / shadow falsification-only. contact one-hot map `B`를 reduced PWR/GND 두 행으로 만들고
+`Q = B.T @ diag(1 / contact_count_per_node) @ B`로 contact-space projector를 구성한다.
+`R = Y - Q @ Y @ Q`의 2-norm이 `max(||Y||₂ × 1e-12, 1e-30)` 안일 때만 현 quotient가
+P1 모드를 보존한다고 판정한다. 초과하면 `CONTACT_INTERFACE_RANK_LOSS`로 STOP하며 tolerance
+완화, contact 병합, topology 분할은 이 gate에 포함하지 않는다.
 
 ## 7. 주장 한계
 

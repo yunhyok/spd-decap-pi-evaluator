@@ -1,12 +1,12 @@
 # SPD Decap PI Evaluator 목적·기술 기준
 
 - 적용 제품: **SPD Decap PI Evaluator v0.23.1**
-- 문서 버전: **1.169**
+- 문서 버전: **1.170**
 - W5 approved/machine-frozen source-before: `main` commit `027ac7a09a3eded15f45c41860945f9d4c7f488d`
-- 상태: **G0 기준 문서** — W5 DONE; W6-BASE 260729 numerical FAIL; W7-SOURCE-IR Phase 1/2/3/4 DONE (모두 shadow/prerequisite 범위); W7 production physics는 아직 BLOCKED다.
-- 현재 평가: W6-BASE는 PowerSI 수치 기준 FAIL이고 unseen/generalization은 `unknown / not_run`이다. Source IR Phase 4, P0와 1 GHz contact-complete shadow N-port P1은 각각 commit `3b76af4`, `4dc855a`, `f823a53`에서 닫혔지만 production solver, owner-off, `Y_global`과 `Zii`는 바뀌지 않았다.
-- Sole ACTIVE item (current): **`W7-PHYS-PROSPECTIVE-P2 / OWNOFF-01-INCIDENT-EDGE-BIJECTION`** — P1 N-port와 production adjacent-gap Maxwell old edge 사이의 exact identity/bijection 가능 여부만 shadow audit한다.
-- 현재 권한: main-only와 `accuracy_parse.py` 보존을 유지한다. P2는 consumer와 focused test, `layerwise_network.py`의 기존 raw-v3 manifest SHA provenance key 한 개 노출로 제한하며 partial/schema/core assembly, production stamp/owner-off, W6/PowerSI 실행은 금지한다.
+- 상태: **G0 기준 문서** — W5 DONE; W6-BASE 260729 numerical FAIL; W7-SOURCE-IR Phase 1/2/3/4와 W7-PHYS-PROSPECTIVE-P0/P1/P2 DONE (모두 shadow/prerequisite 범위); W7 production physics는 아직 BLOCKED다.
+- 현재 평가: W6-BASE는 PowerSI 수치 기준 FAIL이고 unseen/generalization은 `unknown / not_run`이다. P2는 commit `90f6b54`에서 candidate old-edge closed set을 식별했지만 `replacement_ready=false`이며 production solver, owner-off, `Y_global`과 `Zii`는 바뀌지 않았다.
+- Sole ACTIVE item (current): **`W7-PHYS-PROSPECTIVE-P3 / OWNOFF-02-CONTACT-QUOTIENT-REPRESENTABILITY`** — P1 N-contact admittance가 현 production의 PWR/GND 두 ideal quotient node에서 손실 없이 표현 가능한지만 shadow audit한다.
+- 현재 권한: main-only와 `accuracy_parse.py` 보존을 유지한다. P3는 consumer와 focused test 두 파일, 지정 pytest node 한 번으로 제한하며 topology/contact node, partial/schema/core assembly, production stamp/owner-off, W6/PowerSI 실행은 금지한다.
 - 물리 작업 재개 조건: IR prerequisite 완료 후에도 geometry/material provenance, physical limiting-case invariant, rail-complete 적용 범위, deterministic stamp와 실제 consumer에 결속된 disjoint owner ledger를 갖춘 단일 physical candidate가 필요하다.
 - 최종 개정: 2026-08-29 (Asia/Seoul)
 
@@ -337,10 +337,10 @@ flowchart TD
 | 제품 기반 | W0–W5에서 목적·작업 통제, product-core truth, SPD/I/O 안전성, CI, solver fail-closed guard와 frozen accuracy gate를 확보했다. |
 | 외부 정확성 | W6-BASE 260729는 완료된 수치 결과지만 PowerSI 기준 **FAIL**이다. unseen/generalization은 `unknown / not_run`이다. |
 | Source IR 성과 | Phase 1/2는 canonical source/provenance IR과 importer seam, Phase 3은 deterministic shadow finite-port witness, Phase 4는 quotient-authoritative all-contact v2를 commit `3b76af4`에서 완료했다. 세부 계약은 [Source-derived physical IR](SOURCE_DERIVED_PHYSICAL_IR.md)이 권위 있다. |
-| Source IR 한계 | Phase 4는 finite boundary identity를, P0는 artwork coverage를, P1은 exact 1 GHz shadow N-port를 증명했다. old Maxwell edge owner identity, replacement readiness와 PowerSI 정확성은 아직 증명하지 않았다. |
+| Source IR 한계 | Phase 4는 finite boundary identity를, P0는 artwork coverage를, P1은 exact 1 GHz shadow N-port를, P2는 candidate old Maxwell edge closed-set identity를 증명했다. contact quotient representability, replacement readiness와 PowerSI 정확성은 아직 증명하지 않았다. |
 | 생산 물리 상태 | surface-patch plane current-spreading R/L이 유일한 credible direction이지만 deterministic replacement stamp, production global assembly와 disjoint owner-off ledger가 없어 **NOT READY/STOP**이다. |
-| 현재 작업 상태 | `W7-PHYS-PROSPECTIVE-P2 ACTIVE`. P1 input과 production substrate 및 incident old edge fingerprint의 identity만 판정하며 production `Y_global`/`Zii`는 변경하지 않는다. |
-| 현재 gate | selected P/G component에 incident한 모든 pre-collapse Maxwell off-diagonal edge가 두 component 사이로만 닫히고 P1/substrate/contact mapping과 deterministic bijection을 이루는지 단일 focused node로 판정한다. |
+| 현재 작업 상태 | `W7-PHYS-PROSPECTIVE-P3 ACTIVE`. P1 contact space를 현 두 production quotient node로 투영할 때의 mode-loss residual만 판정하며 production `Y_global`/`Zii`는 변경하지 않는다. |
+| 현재 gate | exact contact→reduced-node one-hot map의 projector `Q`에 대해 `Y - QYQ`가 기존 `1e-12` rank 기준 안인지 단일 focused node로 판정한다. 초과하면 `CONTACT_INTERFACE_RANK_LOSS`로 STOP한다. |
 
 세부 실행 이력, exact artifact identity와 current dirty file set은
 [작업 기준](WORK_EXECUTION_BASELINE.md)에만 둔다. 이전 미시적 실행 이력은 Git
