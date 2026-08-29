@@ -1,13 +1,13 @@
 # SPD Decap PI Evaluator 목적·기술 기준
 
 - 적용 제품: **SPD Decap PI Evaluator v0.23.1**
-- 문서 버전: **1.179**
+- 문서 버전: **1.180**
 - W5 approved/machine-frozen source-before: `main` commit `027ac7a09a3eded15f45c41860945f9d4c7f488d`
 - 상태: **G0 기준 문서** — W5 DONE; W6-BASE 260729 numerical FAIL; W7-SOURCE-IR Phase 1/2/3/4와 W7-PHYS-PROSPECTIVE-P0/P1/P2/P4/P5/P6/P7/P8/P9/P10/P11 DONE, P3/P11 DONE/STOP (모두 shadow/prerequisite 범위); W7 production physics는 아직 BLOCKED다.
 - 현재 평가: W6-BASE는 PowerSI 수치 기준 FAIL이고 unseen/generalization은 `unknown / not_run`이다. P11은 commit `e8d029a`에서 exact 1 GHz P1 supplemental matrix를 기존 Layer-Surface 경로에 적용해 reciprocity/row-sum 뒤 factor gate까지 도달했지만, pivot ratio `1.900e15`와 condition-1 lower bound `1.096e17`로 기존 `1e13` forward-reliability 한계를 초과해 `SHADOW_SOLVE_NUMERICAL_FAILURE` STOP했다. 작은 backward residual `7.308e-17`은 forward accuracy 증거가 아니다. production solver caller, cache, topology, owner-off, `Y_global`과 `Zii`는 바뀌지 않았다.
 - Sole ACTIVE item (current): **NONE** — P11 numerical STOP 뒤 production wiring/broadband gate는 열지 않는다.
 - P11 closure: commit `e8d029a`, 최종 지정 node `1 passed in 1.55s`, Sol ACCEPT; matrix SHA `b0680d39fcc0f9bad2c6e619b6910fd3e52765a610b940e31f7dc6cb1be79c0e`; accepted stamp/matrix/solve/readiness flags false, production unchanged.
-- 현재 권한: main-only와 `accuracy_parse.py` 보존을 유지한다. threshold/fallback/gauge/reordering/fixture capacitance를 바꾸거나 production wiring, broadband, Distribution, W6/PowerSI fitting·comparison, release를 여는 것은 금지한다. 후속 item은 P11 ill-conditioning을 one-model source-derived 문제로 분리할 수 있는 prospective review 뒤에만 정의한다.
+- 현재 권한: main-only와 `accuracy_parse.py` 보존을 유지한다. P12 prospective review는 NO-GO다. 현재 synthetic MINI의 spectral/nullspace 분석, threshold/fallback/gauge/reordering/fixture capacitance 변경과 production wiring, broadband, Distribution, W6/PowerSI fitting·comparison, release를 여는 것은 금지한다. 재개에는 original-SPD hash-bound·synthetic-free scenario, P0–P10 closure, 한 source-derived owner와 한 PowerSI error component를 잇는 사전 가설이 모두 필요하다.
 - 물리 작업 재개 조건: IR prerequisite 완료 후에도 geometry/material provenance, physical limiting-case invariant, rail-complete 적용 범위, deterministic stamp와 실제 consumer에 결속된 disjoint owner ledger를 갖춘 단일 physical candidate가 필요하다.
 - 최종 개정: 2026-08-30 (Asia/Seoul)
 
@@ -344,7 +344,7 @@ flowchart TD
 | Source IR 한계 | P0–P10은 contact admissibility부터 exact 1 GHz atomic replacement recipe, shadow topology/P1 block binding과 augmented component/pruning closure까지의 prerequisite를 증명했다. P11은 actual shadow matrix/factor gate를 실행했지만 forward reliability STOP했다. trusted solve, production assembly와 `Zii` 연결, PowerSI 근접 정확성은 증명하지 않았다. |
 | 생산 물리 상태 | surface-patch plane current-spreading R/L이 유일한 credible direction이지만 deterministic replacement stamp, production global assembly와 disjoint owner-off ledger가 없어 **NOT READY/STOP**이다. |
 | 현재 작업 상태 | `ACTIVE NONE`. P11은 `SHADOW_SOLVE_NUMERICAL_FAILURE` DONE/STOP이며 production wiring과 broadband gate를 열지 않는다. |
-| 현재 gate | P11 matrix는 reciprocity/row-sum을 통과했으나 pivot ratio `1.900e15`와 condition lower bound `1.096e17`로 forward reliability를 잃었다. threshold/fallback/fixture tuning 없이 원인을 한 owning model로 분리하는 prospective review만 다음 후보가 될 수 있다. |
+| 현재 gate | P12는 열지 않는다. 현 P11 matrix에는 임의 `1e-12 F` synthetic bridge가 포함되어 weak-mode attribution이 실제 SPD owning block을 식별하지 못한다. original-SPD hash-bound·synthetic-free P0–P10 chain과 one-model/one-error 사전 가설이 생길 때만 기존 P11을 1회 재사용한다. |
 
 세부 실행 이력, exact artifact identity와 current dirty file set은
 [작업 기준](WORK_EXECUTION_BASELINE.md)에만 둔다. 이전 미시적 실행 이력은 Git

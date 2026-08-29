@@ -1,11 +1,11 @@
 # SPD Decap PI Evaluator v0.23.1 — Source-derived physical IR
 
-- 문서 버전: **1.14**
+- 문서 버전: **1.15**
 - 계약 상태: **ACCEPTED** — source-derived provenance/ownership prerequisite의 기술 기준
 - committed 구현: `source-plane-ownership-ir-v1` + Phase 3 shadow consumer + v2 `contact_boundary` (`3b76af4`) + P0 (`4dc855a`) + P1 (`f823a53`) + P2 (`90f6b54`) + P3 (`b8a79f1`) + P4 base cut-set (`39fd4fa`) + P5 shadow rewire plan (`d7e7278`) + P6 scenario commutation audit (`6793bb2`) + P7 atomic recipe (`f1c2968`) + P8 topology embedding (`abf79cf`) + P9 nodal-block binding (`593e070`) + P10 component closure (`7f9c498`) + P11 supplemental solve gate (`e8d029a`)
 - runtime acceptance: **Phase 4와 P0–P10 focused PASS / Sol ACCEPT; P3 semantic STOP, P4 structural CLOSED, P5 PLANNED, P6/P7 PASSED, P8 materialized, P9 bound, P10 component-closed; P11 focused test PASS / numerical result STOP**
 - production 상태: solver, owner-off, `Y_global`, `Zii` **unchanged**
-- 현재 작업 상태: **ACTIVE NONE** — P11 exact 1 GHz shadow P1 supplemental solve는 numerical DONE/STOP
+- 현재 작업 상태: **ACTIVE NONE / P12 NO-GO** — P11 exact 1 GHz shadow P1 supplemental solve는 numerical DONE/STOP; synthetic MINI weak-mode 후속 분석 금지
 - P11 closure: commit `e8d029a`, 최종 지정 node `1 passed in 1.55s`, Sol ACCEPT; pivot ratio `1.900e15`, condition-1 lower bound `1.096e17`, `SHADOW_SOLVE_NUMERICAL_FAILURE`; trusted stamp/matrix/solve/readiness false, production unchanged
 - 최종 개정: 2026-08-30 (Asia/Seoul)
 
@@ -48,7 +48,7 @@ flowchart LR
   U --> V[P9 shadow P1 nodal-block binding DONE]
   V --> W[P10 augmented component closure DONE]
   W --> X[P11 exact 1 GHz shadow augmented solve DONE / NUMERICAL STOP]
-  X --> Y[ACTIVE NONE / cause isolation required]
+  X --> Y[ACTIVE NONE / P12 NO-GO]
   Y -. hold: production wiring 금지 .-> K[production Y_global / Zii]
   I[raw-v3 geometry/material] -. hash reference .-> B
   J[compiled finite topology] -. hash/owner reference .-> D
@@ -475,6 +475,13 @@ commit `e8d029a`, `1 passed in 1.55s`, Sol ACCEPT다. P11 stamp 증분은 `O(N²
 만들지 않았다. threshold/fallback/gauge/reordering/fixture capacitance는 바꾸지 않았다. 이 STOP은 현재 synthetic
 MINI chain의 exact 1 GHz forward-reliable solve 실패만 뜻하며 실제 SPD/`Zii` correlation, PowerSI 개선,
 broadband/mesh convergence/unseen generalization, production wiring/cache/profile, W6와 Distribution은 미주장·금지다.
+
+P12 prospective review는 NO-GO다. P11 matrix에는 구조 closure를 위한 임의 `1e-12 F` synthetic bridge가
+함께 들어가므로 base/P1 weak-mode attribution을 추가해도 실제 SPD의 owning physical block을 식별하지 못한다.
+P3가 이미 current two-node quotient의 P1 contact-mode rank loss를 증명했고, per-block attribution에는 assembly
+복제 또는 새 diagnostic carrier가 필요해 현 증거 수준에서는 validation churn이다. 재개에는 original-SPD에서
+hash-bound로 만든 synthetic-free scenario, 같은 P0–P10 closure, 한 source-derived owner와 한 PowerSI error
+component를 잇는 no-fit 사전 가설이 모두 필요하다. 그때만 기존 P11을 값 변경 없이 한 번 재사용한다.
 
 ## 7. 주장 한계
 

@@ -1,8 +1,8 @@
 # SPD Decap PI Evaluator 작업 기준
 
 - 적용 제품: **SPD Decap PI Evaluator v0.23.1**
-- 문서 버전: **1.180**
-- 상위 기준: [목적·기술 기준](PRODUCT_PURPOSE_AND_TECHNICAL_BASELINE.md) v1.179
+- 문서 버전: **1.181**
+- 상위 기준: [목적·기술 기준](PRODUCT_PURPOSE_AND_TECHNICAL_BASELINE.md) v1.180
 - 현재 상태: W6 numerical FAIL; W7-SOURCE-IR-P1/P2/P3/P4 및 W7-PHYS-PROSPECTIVE-P0/P1/P2/P3/P4/P5/P6/P7/P8/P9/P10/P11 DONE, P3/P11 DONE/STOP; ACTIVE NONE; production physics/`Zii` unchanged.
 - 최종 개정: 2026-08-30 (Asia/Seoul)
 
@@ -19,9 +19,9 @@ context가 압축되거나 새 session에서 작업을 재개하면 이 표만 �
 | 현재 assessment | W6-BASE numerical FAIL; Phase 4/P0–P11은 prerequisite/shadow 범위 DONE; P3는 `CONTACT_INTERFACE_RANK_LOSS`, P11은 `SHADOW_SOLVE_NUMERICAL_FAILURE` STOP이다. P11 matrix는 reciprocity/row-sum 뒤 factor gate까지 도달했지만 pivot `1.900e15`와 condition lower bound `1.096e17`로 forward reliability를 잃었다. production physics와 정확성은 미변경 |
 | 현재 active work item | **NONE** — P11 numerical STOP 뒤 production wiring/broadband gate 보류 |
 | 현재 정확성 상태 | `260729 retrospective FAIL`; unseen/generalization `unknown / not_run` |
-| current authorization | main-only, `accuracy_parse.py` 보존. P11 기술·문서 closure만 허용; threshold/fallback/gauge/reordering/fixture capacitance와 production wiring/broadband 변경 금지 |
-| 다음 후보 gate | prospective review — 현재 MINI ill-conditioning을 source-derived P1 rank, retained assembly 또는 synthetic bridge 중 한 owning block으로 분리할 수 있는지 검토 |
-| 정확한 재개 조건 | source-derived one-model invariant와 focused no-fit evidence가 먼저 정의되어야 한다. 정의 실패 시 ACTIVE NONE 유지; production/broadband gate는 열지 않음 |
+| current authorization | main-only, `accuracy_parse.py` 보존. P12 NO-GO; synthetic MINI 분석, threshold/fallback/gauge/reordering/fixture capacitance와 production wiring/broadband 변경 금지 |
+| 다음 후보 gate | **NONE** — 현 synthetic P11 matrix의 weak-mode attribution은 실제 SPD owning block을 식별하지 못함 |
+| 정확한 재개 조건 | original-SPD hash-bound·synthetic-free scenario가 P0–P10을 통과하고, 한 source-derived owning block과 한 PowerSI error component를 잇는 no-fit 사전 가설이 있어야 한다. 그때만 기존 P11 1회 실행 |
 | 핵심 증거 | [W6-BASE completed evidence](#w6-base-completed-evidence-260729), [W7 결과 재평가](#12-w7-결과-재평가와-후속-과제-판정) |
 
 최초 목적은 [목적·기술 기준 2장](PRODUCT_PURPOSE_AND_TECHNICAL_BASELINE.md#2-최우선-목적),
@@ -33,8 +33,8 @@ context가 압축되거나 새 session에서 작업을 재개하면 이 표만 �
 | 구분 | 현재 권위 |
 |---|---|
 | accepted / committed | Phase 1 `82370b6`, Phase 2 `75ac0a0`, Phase 3 `5d2c353`, Phase 4 `3b76af4`, P0 `4dc855a`, P1 `f823a53`, P2 `90f6b54`, P3 `b8a79f1`, P4 `39fd4fa`, P5 `d7e7278`, P6 `6793bb2`, P7 `f1c2968`, P8 `abf79cf`, P9 `593e070`, P10 `7f9c498`, P11 `e8d029a`; 모두 prerequisite/shadow 범위이며 production `Y_global`/`Zii` 불변 |
-| current candidate | ACTIVE NONE; P11 exact 1 GHz MINI numerical STOP의 prospective cause-isolation 여부만 다음 검토 후보 |
-| static evidence | P11 Sol ACCEPT; default `None` arithmetic/cache identity 불변, supplemental cache-ineligible, P10/P9/block/owner/termination identity와 original inventory/CSC/cache 불변 확인 |
+| current candidate | ACTIVE NONE; P12 prospective review NO-GO, 추가 synthetic MINI analysis 금지 |
+| static evidence | P11 Sol ACCEPT; default `None` arithmetic/cache identity 불변, supplemental cache-ineligible, P10/P9/block/owner/termination identity와 original inventory/CSC/cache 불변 확인. P12 review는 synthetic bridge 때문에 actual owning-block attribution이 non-identifying이라고 판정 |
 | runtime evidence | P11 최종 지정 node `1 passed in 1.55s`; deterministic `SHADOW_SOLVE_NUMERICAL_FAILURE`, pivot `1.900e15`, residual `7.308e-17`, condition lower bound `1.096e17`, matrix SHA `b0680d39fcc0f9bad2c6e619b6910fd3e52765a610b940e31f7dc6cb1be79c0e` |
 | runtime 미증명 | forward-reliable trusted solve, P11 ill-conditioning의 owning model, 실제 SPD/PowerSI 영향 |
 | 별도 사용자 파일 | untracked `accuracy_parse.py`; 보존·미수정·미stage |
@@ -496,6 +496,7 @@ remote/full suite, installer/release는 수행하지 않았다.
 | `D-028` | P5 base plan을 production assembly로 승격하지 않고 P6에서 기존 scenario network/termination binding과의 commutation만 두 파일·단일 node로 read-only 판정; source contact suppress/retarget/drift/bypass는 STOP | 확정 |
 | `D-029` | P6 최초 focused PASS 뒤 Sol이 O(V×K) lookup과 반복 boundary union을 REJECT; 선형 set 재사용과 전체 surface tuple 복제 제거 후 final `1 passed in 1.42s`, Sol ACCEPT, commit `6793bb2`로 구조 호환성만 닫음 | 확정 |
 | `D-030` | P6 PASS를 production seam으로 승격하지 않고 P7에서 exact 1 GHz old-Maxwell 제거·finite-link rewire·P1 N-port 추가의 atomic shadow recipe만 두 파일·단일 node로 판정 | 확정 |
+| `D-031` | P11 commit `e8d029a`와 focused `1 passed in 1.55s`로 exact 1 GHz supplemental factor gate를 닫되 결과는 `SHADOW_SOLVE_NUMERICAL_FAILURE` STOP으로 수용한다. synthetic `1e-12 F` bridge가 포함된 weak-mode attribution P12는 non-identifying/YAGNI라 열지 않고 ACTIVE NONE 유지 | 확정 |
 
 ## 11. 현재 evidence와 비재사용 경계
 
@@ -702,7 +703,7 @@ flowchart LR
   P8 --> P9[P9 shadow P1 nodal-block binding DONE]
   P9 --> P10[P10 augmented component closure DONE]
   P10 --> P11[P11 exact 1 GHz shadow augmented solve DONE / NUMERICAL STOP]
-  P11 --> A0[ACTIVE NONE / cause isolation review 필요]
+  P11 --> A0[ACTIVE NONE / P12 NO-GO]
   A0 --> H[hold: production wiring 보류]
   R -->|예| H
   D[17DG foundation] -. production binding 필요 .-> H
@@ -719,9 +720,9 @@ P8은 `abf79cf`, P9은 `593e070`, P10은 `7f9c498`, P11은 `e8d029a`의 prerequi
 범위에서 DONE이다.
 P3 semantic result는 `CONTACT_INTERFACE_RANK_LOSS` STOP, P4는 CLOSED, P5는 PLANNED,
 P6와 P7은 PASSED고 P8은 materialized, P9은 bound, P10은 component-closed다. P11은 factor
-forward-reliability numerical STOP이고 current ACTIVE는 NONE이다. threshold/fallback/gauge/reordering/
-fixture tuning 없이 P11 ill-conditioning을 one-model source-derived 원인으로 분리할 수 있을 때만 다음 gate를 정의하며,
-physical item은 아래 조건을 모두 만족할 때 하나만 연다.
+forward-reliability numerical STOP이고 current ACTIVE는 NONE이다. 후속 review는 synthetic bridge가 섞인
+현 matrix의 cause isolation이 non-identifying이라고 판정해 P12를 열지 않았다. physical item은 아래 조건을
+모두 만족할 때 하나만 연다.
 
 1. source-derived geometry/material provenance가 있다.
 2. 대상 rail 전체에 적용 가능한 physical model 또는 omitted-block candidate다.
@@ -1390,5 +1391,23 @@ P10 `component_closure_sha256`을 다른 유효 SHA로 바꾸고 monkeypatch로 
 dense `V×V` matrix나 새 solver는 만들지 않았고 threshold/fallback/gauge/reordering/fixture capacitance도
 바꾸지 않았다. 이 STOP은 synthetic MINI chain의 exact 1 GHz forward-reliable solve 실패만 뜻한다.
 실제 SPD/`Zii` correlation, PowerSI 개선, mesh convergence, unseen generalization, production wiring/cache/profile,
-broadband, W6, Distribution은 미주장·금지다. 후속 gate는 이 ill-conditioning을 source-derived one-model
-원인으로 분리할 수 있는 prospective review 뒤에만 정의한다.
+broadband, W6, Distribution은 미주장·금지다. 후속 prospective review 결과 현 synthetic matrix의
+source-derived one-model 원인 분리는 non-identifying이므로 P12를 열지 않는다.
+
+### 12.22 P11 후속 prospective review / P12 NO-GO
+
+P12는 열지 않는다. P11 실패 행렬에는 source-derived P1과 P8 structural closure를 위한 임의
+`1e-12 F` synthetic partial이 함께 들어 있다. 이 matrix를 대상으로 base/P1 weak-mode 또는 nullspace를
+추가 분석해도 현재 합성 회로의 약한 항만 설명할 뿐 실제 SPD의 owning physical block이나 PowerSI `Zii`
+error component를 식별하지 못한다. P3는 이미 current two-node quotient가 P1 contact mode를 보존하지
+못한다는 `CONTACT_INTERFACE_RANK_LOSS`를 증명했다. 더 강한 결론 없이 production assembly를 복제하거나
+새 diagnostic carrier를 만드는 것은 validation churn이다.
+
+재개 조건은 다음 네 가지다.
+
+1. actual original SPD에서 hash-bound로 생성되고 synthetic partial이 없는 scenario가 있다.
+2. 그 scenario가 P0–P10 identity, ownership, component closure를 그대로 통과한다.
+3. 한 source-derived owning block과 한 PowerSI error component를 연결하는 no-fit 사전 가설과 불변식이 있다.
+4. 값, threshold, fixture를 조정하지 않고 기존 P11을 한 번 실행해 그 가설을 반증할 수 있다.
+
+조건을 모두 만족하기 전에는 P12 ID/API/schema/test를 만들지 않고 ACTIVE NONE을 유지한다.
