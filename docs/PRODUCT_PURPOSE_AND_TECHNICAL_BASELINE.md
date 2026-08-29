@@ -1,12 +1,13 @@
 # SPD Decap PI Evaluator 목적·기술 기준
 
 - 적용 제품: **SPD Decap PI Evaluator v0.23.1**
-- 문서 버전: **1.174**
+- 문서 버전: **1.175**
 - W5 approved/machine-frozen source-before: `main` commit `027ac7a09a3eded15f45c41860945f9d4c7f488d`
-- 상태: **G0 기준 문서** — W5 DONE; W6-BASE 260729 numerical FAIL; W7-SOURCE-IR Phase 1/2/3/4와 W7-PHYS-PROSPECTIVE-P0/P1/P2/P4/P5/P6 DONE, P3 DONE/STOP (모두 shadow/prerequisite 범위); W7 production physics는 아직 BLOCKED다.
+- 상태: **G0 기준 문서** — W5 DONE; W6-BASE 260729 numerical FAIL; W7-SOURCE-IR Phase 1/2/3/4와 W7-PHYS-PROSPECTIVE-P0/P1/P2/P4/P5/P6/P7 DONE, P3 DONE/STOP (모두 shadow/prerequisite 범위); W7 production physics는 아직 BLOCKED다.
 - 현재 평가: W6-BASE는 PowerSI 수치 기준 FAIL이고 unseen/generalization은 `unknown / not_run`이다. P6는 commit `6793bb2`에서 P5 contact 경계가 실제 scenario/termination binding에서도 exact-once 보존됨을 닫았지만 `production_ready=false`, `replacement_ready=false`다. production solver, topology, owner-off, `Y_global`과 `Zii`는 바뀌지 않았다.
-- Sole ACTIVE item (current): **`W7-PHYS-PROSPECTIVE-P7 / STAMP-PREREQ-01-ONE-FREQUENCY-ATOMIC-REPLACEMENT-RECIPE-AUDIT`** — exact 1 GHz에서 old Maxwell 제거, finite-link rewire와 P1 N-port 추가가 중복·누락 없는 하나의 shadow recipe로 표현되는지 판정한다.
-- 현재 권한: main-only와 `accuracy_parse.py` 보존을 유지한다. P7은 consumer와 focused test 두 파일, 지정 pytest node 한 번으로 제한하며 실제 topology/partial/N-port stamp, core network·scenario compiler·solver 수정, global solve, broadband/interpolation, W6/PowerSI 실행은 금지한다.
+- Sole ACTIVE item (current): **`W7-PHYS-PROSPECTIVE-P8 / ASSEMBLY-PREREQ-01-SHADOW-TOPOLOGY-INDEX-EMBEDDING`** — accepted P6/P7 경계를 이용해 single-rail `Zii` 조립 전제인 shadow topology materialization을 판정한다.
+- P7 closure: commit `f1c2968`, 지정 node `1 passed in 1.58s`, Sol ACCEPT; `status=passed`, `shadow_only=true`, `production_ready=false`, `replacement_ready=false`, production unchanged.
+- 현재 권한: main-only와 `accuracy_parse.py` 보존을 유지한다. P8은 consumer와 focused test 두 파일 범위의 shadow topology/index embedding만 허용하며 P1 stamp, solver/Y_global/Zii, Distribution, broadband, W6/PowerSI와 production 변경은 금지한다.
 - 물리 작업 재개 조건: IR prerequisite 완료 후에도 geometry/material provenance, physical limiting-case invariant, rail-complete 적용 범위, deterministic stamp와 실제 consumer에 결속된 disjoint owner ledger를 갖춘 단일 physical candidate가 필요하다.
 - 최종 개정: 2026-08-29 (Asia/Seoul)
 
@@ -340,10 +341,10 @@ flowchart TD
 | 제품 기반 | W0–W5에서 목적·작업 통제, product-core truth, SPD/I/O 안전성, CI, solver fail-closed guard와 frozen accuracy gate를 확보했다. |
 | 외부 정확성 | W6-BASE 260729는 완료된 수치 결과지만 PowerSI 기준 **FAIL**이다. unseen/generalization은 `unknown / not_run`이다. |
 | Source IR 성과 | Phase 1/2는 canonical source/provenance IR과 importer seam, Phase 3은 deterministic shadow finite-port witness, Phase 4는 quotient-authoritative all-contact v2를 commit `3b76af4`에서 완료했다. 세부 계약은 [Source-derived physical IR](SOURCE_DERIVED_PHYSICAL_IR.md)이 권위 있다. |
-| Source IR 한계 | Phase 4는 finite boundary identity를, P0는 artwork coverage를, P1은 exact 1 GHz shadow N-port를, P2는 candidate old Maxwell edge closed-set identity를 증명했다. P3는 현 two-node quotient의 structural rank loss를, P4는 base cut-set closure를 확정했고 P5는 contact-interface rewire/stamp shadow plan을 닫았다. P6는 실제 scenario/termination 경계 호환성을 닫았지만 frequency-local owner-off 계수, atomic replacement recipe, replacement readiness와 PowerSI 정확성은 아직 증명하지 않았다. |
+| Source IR 한계 | P0–P7은 contact admissibility부터 exact 1 GHz atomic replacement recipe까지의 shadow prerequisite를 증명했다. 그러나 topology embedding, P1 stamp 적용, production assembly와 `Zii` 연결, PowerSI 근접 정확성은 아직 증명하지 않았다. |
 | 생산 물리 상태 | surface-patch plane current-spreading R/L이 유일한 credible direction이지만 deterministic replacement stamp, production global assembly와 disjoint owner-off ledger가 없어 **NOT READY/STOP**이다. |
-| 현재 작업 상태 | `W7-PHYS-PROSPECTIVE-P7 ACTIVE`. accepted P1/P5/P6와 동일 scenario binding을 입력으로 exact 1 GHz atomic replacement recipe만 판정한다. |
-| 현재 gate | disabled old Maxwell edge의 production frequency coefficient, finite-link rewire와 P1 contact/interface order가 exact하지 않으면 STOP한다. PASS여도 one-frequency shadow recipe 존재만 뜻하며 `production_ready=false`, `replacement_ready=false`다. |
+| 현재 작업 상태 | `W7-PHYS-PROSPECTIVE-P8 ACTIVE`. accepted P6/P7와 동일 binding을 입력으로 P6 old class 제거, P7 interface/finite-link embedding과 immutable topology/index consistency만 판정한다. |
+| 현재 gate | old class/partial/link escape, interface collapse 또는 topology representation 불가이면 STOP한다. PASS여도 single-rail `Zii` assembly 전제의 shadow embedding만 뜻하며 `solve_eligible=false`, `production_ready=false`, `replacement_ready=false`다. |
 
 세부 실행 이력, exact artifact identity와 current dirty file set은
 [작업 기준](WORK_EXECUTION_BASELINE.md)에만 둔다. 이전 미시적 실행 이력은 Git
