@@ -1,9 +1,9 @@
 # SPD Decap PI Evaluator 작업 기준
 
 - 적용 제품: **SPD Decap PI Evaluator v0.23.1**
-- 문서 버전: **1.171**
-- 상위 기준: [목적·기술 기준](PRODUCT_PURPOSE_AND_TECHNICAL_BASELINE.md) v1.170
-- 현재 상태: W6 numerical FAIL; W7-SOURCE-IR-P1/P2/P3/P4 및 W7-PHYS-PROSPECTIVE-P0/P1/P2 DONE; W7-PHYS-PROSPECTIVE-P3 ACTIVE; production physics/`Zii` unchanged.
+- 문서 버전: **1.172**
+- 상위 기준: [목적·기술 기준](PRODUCT_PURPOSE_AND_TECHNICAL_BASELINE.md) v1.171
+- 현재 상태: W6 numerical FAIL; W7-SOURCE-IR-P1/P2/P3/P4 및 W7-PHYS-PROSPECTIVE-P0/P1/P2 DONE, P3 DONE/STOP; W7-PHYS-PROSPECTIVE-P4 ACTIVE; production physics/`Zii` unchanged.
 - 최종 개정: 2026-08-29 (Asia/Seoul)
 
 ## 1. 압축 후 즉시 복구 카드
@@ -15,13 +15,13 @@ context가 압축되거나 새 session에서 작업을 재개하면 이 표만 �
 | 변하지 않는 목적 | source-derived single-rail `Zii`의 PowerSI 근접 정확성과 일반화 |
 | 기본 복구 문서 | 목적·기술 기준 → Source-derived physical IR → 이 작업 기준, 세 문서 |
 | 현재 branch | `main`만 사용 |
-| 이 문서 정리의 source-before HEAD | `90f6b54` (`feat: audit source plane owner-off candidates`) |
-| 현재 assessment | W6-BASE numerical FAIL; Phase 4/P0/P1/P2는 prerequisite/shadow 범위 DONE; production physics와 정확성은 미변경 |
-| 현재 active work item | **W7-PHYS-PROSPECTIVE-P3 / OWNOFF-02** — P1 contact-space의 production quotient representability shadow audit |
+| 이 문서 정리의 source-before HEAD | `b8a79f1` (`feat: audit contact quotient representability`) |
+| 현재 assessment | W6-BASE numerical FAIL; Phase 4/P0/P1/P2는 prerequisite/shadow 범위 DONE; P3는 `CONTACT_INTERFACE_RANK_LOSS` STOP; production physics와 정확성은 미변경 |
+| 현재 active work item | **W7-PHYS-PROSPECTIVE-P4 / SPLIT-PREREQ-01-CLOSED-BASE-CUTSET** — selected ideal class의 base-network closed cut-set shadow audit |
 | 현재 정확성 상태 | `260729 retrospective FAIL`; unseen/generalization `unknown / not_run` |
-| current authorization | 사용량 제한점까지의 사용자 사전 승인에 따라 P3 ACTIVE; consumer + focused test 두 파일, 지정 pytest node 1회; main-only, `accuracy_parse.py` 보존 |
-| 다음 후보 gate | P3 acceptance — exact contact one-hot map과 quotient projector residual PASS 또는 `CONTACT_INTERFACE_RANK_LOSS` STOP |
-| 정확한 재개 조건 | P3 PASS 뒤에만 fingerprint-driven shadow replacement stamp를 검토; STOP이면 contact-interface node 분리를 별도 structural prerequisite로 문서화 |
+| current authorization | 사용량 제한점까지의 사용자 사전 승인에 따라 P4 ACTIVE; consumer + focused test 두 파일, 지정 pytest node 1회; main-only, `accuracy_parse.py` 보존 |
+| 다음 후보 gate | P4 acceptance — full ideal-class preimage와 contact/old-Maxwell 외부 adjacency exact closure |
+| 정확한 재개 조건 | P4 CLOSED 뒤에만 contact-interface node split 설계를 검토; STOP이면 원인을 문서화하고 topology를 바꾸지 않음 |
 | 핵심 증거 | [W6-BASE completed evidence](#w6-base-completed-evidence-260729), [W7 결과 재평가](#12-w7-결과-재평가와-후속-과제-판정) |
 
 최초 목적은 [목적·기술 기준 2장](PRODUCT_PURPOSE_AND_TECHNICAL_BASELINE.md#2-최우선-목적),
@@ -32,13 +32,13 @@ context가 압축되거나 새 session에서 작업을 재개하면 이 표만 �
 
 | 구분 | 현재 권위 |
 |---|---|
-| accepted / committed | Phase 1 `82370b6`, Phase 2 `75ac0a0`, Phase 3 `5d2c353`, Phase 4 `3b76af4`, P0 `4dc855a`, P1 `f823a53`, P2 `90f6b54`; 모두 prerequisite/shadow 범위이며 production `Y_global`/`Zii` 불변 |
-| current candidate | P3는 아직 코드 미구현; consumer/test 두 파일과 단일 node budget만 ACTIVE |
-| static evidence | P2 Sol 최종 ACCEPT; P3는 N-contact mode를 현 두 ideal reduced node가 보존하는지 먼저 falsify해야 함 |
-| runtime evidence | P2 최초 contract `1 failed in 1.77s`, fixture 유지·identity 교정 뒤 `1 passed in 1.49s`; deterministic candidate edge/audit SHA와 tamper rejection 포함 |
-| runtime 미증명 | P1 N-contact admittance의 production two-node quotient representability |
+| accepted / committed | Phase 1 `82370b6`, Phase 2 `75ac0a0`, Phase 3 `5d2c353`, Phase 4 `3b76af4`, P0 `4dc855a`, P1 `f823a53`, P2 `90f6b54`, P3 `b8a79f1`; 모두 prerequisite/shadow 범위이며 production `Y_global`/`Zii` 불변 |
+| current candidate | P4는 아직 코드 미구현; consumer/test 두 파일과 단일 node budget만 ACTIVE |
+| static evidence | P3 Sol 최종 ACCEPT; P4는 node split 전 base ideal-class cut-set closure를 먼저 증명해야 함 |
+| runtime evidence | P3 지정 node `1 passed in 1.51s`; deterministic `CONTACT_INTERFACE_RANK_LOSS` STOP과 tamper rejection 포함 |
+| runtime 미증명 | selected ideal class의 base-network cut-set closure |
 | 별도 사용자 파일 | untracked `accuracy_parse.py`; 보존·미수정·미stage |
-| candidate staging / acceptance | P2 기술 commit은 accepted prerequisite; P3는 shadow-only ACTIVE이고 production/release acceptance가 아님 |
+| candidate staging / acceptance | P3 기술 commit은 accepted STOP prerequisite; P4는 shadow-only ACTIVE이고 production/release acceptance가 아님 |
 
 ## 2. 문서 사용 규칙
 
@@ -113,7 +113,7 @@ disjoint owner ledger 확보와 사용자 명시 승인
 ## 4. 작업 항목 register
 
 상태 어휘는 `READY`, `ACTIVE`, `BLOCKED`, `DEFERRED`, `DONE`만 사용한다.
-동시에 `ACTIVE`는 하나만 허용하며 현재는 **W7-PHYS-PROSPECTIVE-P3**다. 완료된 미시적 item을
+동시에 `ACTIVE`는 하나만 허용하며 현재는 **W7-PHYS-PROSPECTIVE-P4**다. 완료된 미시적 item을
 다시 펼쳐 읽지 말고 아래 phase-level 결론과 Git history를 사용한다.
 상태와 증거 축은 분리한다. `DONE`은 선언한 범위의 종료일 뿐 current commit,
 production acceptance, runtime PASS 또는 PowerSI 정확성을 자동으로 뜻하지 않는다.
@@ -157,7 +157,8 @@ dirty/static/runtime/commit 상태는 복구 카드 1.1에 별도로 기록한�
 | `W7-PHYS-PROSPECTIVE-P0` | P0 | DONE | contact-to-artwork finite-port admissibility | commit `4dc855a`; final focused `1 passed in 1.51s`; Sol ACCEPT; production 불변 |
 | `W7-PHYS-PROSPECTIVE-P1` | P1 | DONE | contact-complete shadow N-port condensation | commit `f823a53`; focused `1 passed in 1.58s`; Sol identity review 반영; production 불변 |
 | `W7-PHYS-PROSPECTIVE-P2` | P2 | DONE | P1↔production incident old-edge identity bijection | commit `90f6b54`; corrected focused `1 passed in 1.49s`; Sol ACCEPT; candidate closed set만, `replacement_ready=false` |
-| `W7-PHYS-PROSPECTIVE-P3` | next | ACTIVE | P1 contact-space의 production quotient representability | exact one-hot projector residual을 consumer/test 단일 node로 판정; topology/owner-off/assembly 불변 |
+| `W7-PHYS-PROSPECTIVE-P3` | P3 | DONE | P1 contact-space의 production quotient representability | commit `b8a79f1`; focused `1 passed in 1.51s`; Sol ACCEPT; `CONTACT_INTERFACE_RANK_LOSS` STOP; production 불변 |
+| `W7-PHYS-PROSPECTIVE-P4` | next | ACTIVE | selected ideal class의 base-network closed cut-set | full preimage와 contact/old-Maxwell 외부 adjacency를 consumer/test 단일 node로 판정; `split_ready=false` |
 | `W8-REL` | 18 | BLOCKED | completed known-case solve를 release gate에 연결하고 최종 전달 | accuracy/product gate와 exact release commit 필요 |
 | `D-DIST` | - | DEFERRED | Distribution routing/DRC scope 확대 | 사용자가 implementation-ready/DRC 목표로 승격할 때만 |
 | `D-DOC` | - | DEFERRED | README와 동결 연구 배너 정리 | current work를 방해할 때 별도 문서 묶음으로 처리 |
@@ -480,6 +481,8 @@ remote/full suite, installer/release는 수행하지 않았다.
 | `D-020` | direct owner-off는 old partial owner/P1↔substrate identity 부재로 STOP. P2는 기존 raw-v3 manifest SHA provenance key 한 개와 read-only incident-edge fingerprint audit만 세 파일·단일 node로 허용 | 확정 |
 | `D-021` | P2 최초 node의 physical-island↔external-port 동일성 가정은 fixture가 아니라 audit contract 오류로 분류; retained Via 경계를 보존해 5단계 identity chain으로 교정하고 `90f6b54`, `1 passed in 1.49s`, Sol ACCEPT로 닫음 | 확정 |
 | `D-022` | P2 fingerprint를 곧바로 owner-off하지 않고 P1 N-contact admittance가 현 P/G two-node ideal quotient에서 보존되는지를 P3 projector residual 단일 gate로 먼저 판정 | 확정 |
+| `D-023` | P3 지정 node `1 passed in 1.51s`, Sol ACCEPT, commit `b8a79f1`로 audit 실행은 닫되 결과는 `CONTACT_INTERFACE_RANK_LOSS` STOP으로 기록; tolerance/quotient/topology를 바꾸지 않음 | 확정 |
+| `D-024` | contact-interface node split 설계 전에 base `compile_layerwise_substrate`의 selected ideal-class preimage와 contact/old-Maxwell cut-set closure만 P4 두 파일·단일 node로 판정; termination/scenario는 후속 bound-network gate로 분리 | 확정 |
 
 ## 11. 현재 evidence와 비재사용 경계
 
@@ -513,7 +516,8 @@ falsifiable physical/analytic limiting-case invariant + disjoint owner ledger와
 - W7은 source/provenance와 수학·운영 기반을 개선했지만 production network,
   계산된 `Zii`, PowerSI correlation을 바꾸지 않았다.
 - 따라서 현재 product risk는 그대로 **외부 정확성 미달**이며, sole ACTIVE는
-  **W7-PHYS-PROSPECTIVE-P3**다. 이는 production physics가 아니라 shadow representability gate다.
+  **W7-PHYS-PROSPECTIVE-P4**다. P3는 `CONTACT_INTERFACE_RANK_LOSS` STOP으로 닫혔고,
+  P4는 production physics가 아닌 base-network structural prerequisite다.
   17DT는 internal v3 PASS / W6 comparability STOP_IDENTITY_DRIFT로 종료되었고
   17DU도 `STOP_AUDIT_CONTRACT_MISMATCH`, 17DV도
   `STOP_NO_AUTHORITATIVE_BRIDGE`로 종료되었다.
@@ -635,8 +639,9 @@ retry, internal 480 s and external 600 s wall, coordinator RSS 10 GiB, temp 4 Gi
 output 8 MiB, target anchors ≤2 and vertex-surface links ≤4096. 17DV closure 당시
 W7은 BLOCKED, ACTIVE는 NONE이었다. 이후 D-011/D-012/D-013/D-015/D-017이 source IR
 P1/P2/P3/P4와 contact admissibility P0, contact-complete N-port P1을 prerequisite/shadow
-범위에서 닫았고 P2도 incident old-edge identity를 `90f6b54`에서 닫았다. 현재 P3는
-P1 contact space의 production quotient representability만 판정하며 production physical candidate는 아래
+범위에서 닫았고 P2도 incident old-edge identity를 `90f6b54`에서 닫았다. P3는
+`b8a79f1`에서 quotient rank loss STOP으로 닫혔으며, 현재 P4는 selected ideal class의
+base cut-set closure만 판정한다. production physical candidate는 아래
 조건을 여전히 요구한다. 17DW나
 새 metadata/raw/schema/owner audit은 열지 않고 production seam은 BLOCKED다.
 
@@ -661,9 +666,12 @@ flowchart LR
   W -->|예| X[P2 incident old-edge bijection DONE]
   X --> Y{P1/substrate/edge identity closed?}
   Y -->|아니오| S
-  Y -->|예| Z[P3 contact quotient representability ACTIVE]
+  Y -->|예| Z[P3 quotient audit DONE / RANK LOSS STOP]
   Z --> R{Y - QYQ residual within rank tolerance?}
-  R -->|아니오| S2[STOP / contact-interface node split prerequisite]
+  R -->|아니오| S2[P4 closed base cut-set ACTIVE]
+  S2 --> C2{ideal-class preimage와 외부 adjacency exact closure?}
+  C2 -->|아니오| S[STOP / production physics BLOCKED]
+  C2 -->|예| H
   R -->|예| H
   D[17DG foundation] -. production binding 필요 .-> H
   E[17DO/17DP owner evidence] -. identity join 필요 .-> H
@@ -673,10 +681,11 @@ flowchart LR
   K --> L[new bounded gate]
 ```
 
-Phase 4는 commit `3b76af4`, P0는 `4dc855a`, P1은 `f823a53`, P2는 `90f6b54`의
-prerequisite 범위에서 DONE이다. 현재 하나뿐인 ACTIVE item은 `W7-PHYS-PROSPECTIVE-P3`이며
-P1 contact-space mode가 현 production quotient에서 손실 없이 표현되는지만 판정한다.
-P3 PASS 뒤에만 fingerprint-driven shadow replacement stamp를 검토하며,
+Phase 4는 commit `3b76af4`, P0는 `4dc855a`, P1은 `f823a53`, P2는 `90f6b54`,
+P3는 `b8a79f1`의 prerequisite 범위에서 DONE이다. P3 semantic result는
+`CONTACT_INTERFACE_RANK_LOSS` STOP이다. 현재 하나뿐인 ACTIVE item은
+`W7-PHYS-PROSPECTIVE-P4`이며 base selected ideal-class cut-set만 판정한다.
+P4 CLOSED 뒤에만 contact-interface node split 설계를 검토하며,
 physical item은 아래 조건을 모두 만족할 때 하나만 연다.
 
 1. source-derived geometry/material provenance가 있다.
@@ -980,7 +989,7 @@ mapping이 누락·복수, partial matrix 비대칭/비-Laplacian/nonfinite, inc
 contact↔quotient endpoint 불일치, disabled candidate와 retained owner 교집합, 또는 whitelist 밖
 partial/assembly/owner-off 변경 필요. P2 DONE 뒤에도 candidate old-edge set 식별만 주장한다.
 
-### 12.13 W7-PHYS-PROSPECTIVE-P3 / OWNOFF-02 active gate
+### 12.13 W7-PHYS-PROSPECTIVE-P3 / OWNOFF-02 closure
 
 목적은 **P1 N-contact admittance를 현 production의 PWR/GND 두 ideal reduced-node quotient에
 투영해도 current-spreading mode가 손실되지 않는지** 하나만 falsify하는 것이다. P2의 각
@@ -999,14 +1008,46 @@ map이며 모든 contact를 정확히 한 번 포함해야 한다. `Q = B.T @ di
 `R = Y - Q @ Y @ Q`로 두고 `||R||₂ <= max(||Y||₂ × 1e-12, 1e-30)`일 때만 representable이다.
 
 Acceptance budget은 Luna 구현 중 실행 없음, 아래 focused node 한 번, 그 결과의 Sol 정적 검토
-한 번이다.
+한 번이었다.
 
 ```powershell
 python -m pytest -q tests/test_source_plane_patch_consumer.py::test_source_plane_patch_contact_quotient_representability
 ```
 
-contact 누락·중복, selected P/G 밖 mapping, malformed/nonfinite P1 matrix/constraint, P1/P2 identity
-불일치, residual 초과·경계 모호, tolerance 완화나 contact 병합/topology 변경 필요 시 STOP한다.
-residual 초과는 `CONTACT_INTERFACE_RANK_LOSS`로 기록하고 production contact-interface node 분리를
-별도 structural prerequisite로 검토한다. owner-off, replacement stamp, partial/schema/core,
-`Y_global`, `Zii`, W6/PowerSI는 금지한다.
+지정 node는 `1 passed in 1.51s`, Sol 최종 정적 검토는 ACCEPT, `git diff --check`는 PASS였고
+기술 commit은 `b8a79f1`이다. 함수·판정 계약은 통과했지만 deterministic semantic result는
+`CONTACT_INTERFACE_RANK_LOSS` STOP이다. 현 production two-node ideal quotient는 P1 contact-space
+mode를 보존하지 못한다. tolerance 완화, contact 병합, topology 변경, owner-off, replacement
+stamp, partial/schema/core, `Y_global`, `Zii`, W6/PowerSI는 수행하지 않았다.
+
+### 12.14 W7-PHYS-PROSPECTIVE-P4 / SPLIT-PREREQ-01-CLOSED-BASE-CUTSET active gate
+
+목적은 termination/scenario가 없는 base `compile_layerwise_substrate` network에서 selected
+PWR/GND ideal class의 외부 adjacency가 **P2 contact `finite_parallel_rl` edge와 P2 incident old
+Maxwell edge뿐인지** 하나만 판정하는 것이다. role별 허용 class는 P2 component islands와 P3
+contact `finite_vertex_id`의 합집합이며, full `reduced_node_index()` preimage가 이 집합과
+case-insensitive exact equality여야 한다.
+
+Exact whitelist:
+
+1. `src/spd_decap_pi/source_plane_patch_consumer.py`
+2. `tests/test_source_plane_patch_consumer.py`
+3. 이 세 canonical 문서(상태 기록만)
+
+P4는 P3를 한 번만 호출하고 그 내부 P2 결과를 재사용한다. class에 닿는
+`topology_only_ideal` link는 같은 role 허용 집합 안에서 닫혀야 하고, crossing
+`finite_parallel_rl` link와 owner는 P2/IR contact set과 exact-once 일치해야 한다. P2 incident
+fingerprint 밖 Maxwell adjacency, base port 직접 부착, extra vertex/edge/owner, cross-role ideal
+link는 STOP한다. deterministic `base_cutset_sha256`를 만들되 PASS여도 `split_ready=false`다.
+
+Acceptance budget은 Luna 구현 중 실행 없음, 아래 focused node 한 번, 그 결과의 Sol 정적 검토
+한 번이다.
+
+```powershell
+python -m pytest -q tests/test_source_plane_patch_consumer.py::test_source_plane_patch_selected_base_cutset_is_closed
+```
+
+시간은 기존 P2 partial 결과를 재사용해 `O(V + L + P + K)`, 메모리는 `O(V + K)`로 제한한다.
+core topology/contact node split, owner-off, scenario/termination, solve, `Y_global`, `Zii`,
+W6/PowerSI는 금지한다. scenario가 suppress/retarget/add하는 link와 mounted termination adjacency는
+split 설계 뒤 production integration 전에 별도 bound-network gate에서 판정한다.

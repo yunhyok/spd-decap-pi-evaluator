@@ -1,12 +1,12 @@
 # SPD Decap PI Evaluator 목적·기술 기준
 
 - 적용 제품: **SPD Decap PI Evaluator v0.23.1**
-- 문서 버전: **1.170**
+- 문서 버전: **1.171**
 - W5 approved/machine-frozen source-before: `main` commit `027ac7a09a3eded15f45c41860945f9d4c7f488d`
-- 상태: **G0 기준 문서** — W5 DONE; W6-BASE 260729 numerical FAIL; W7-SOURCE-IR Phase 1/2/3/4와 W7-PHYS-PROSPECTIVE-P0/P1/P2 DONE (모두 shadow/prerequisite 범위); W7 production physics는 아직 BLOCKED다.
-- 현재 평가: W6-BASE는 PowerSI 수치 기준 FAIL이고 unseen/generalization은 `unknown / not_run`이다. P2는 commit `90f6b54`에서 candidate old-edge closed set을 식별했지만 `replacement_ready=false`이며 production solver, owner-off, `Y_global`과 `Zii`는 바뀌지 않았다.
-- Sole ACTIVE item (current): **`W7-PHYS-PROSPECTIVE-P3 / OWNOFF-02-CONTACT-QUOTIENT-REPRESENTABILITY`** — P1 N-contact admittance가 현 production의 PWR/GND 두 ideal quotient node에서 손실 없이 표현 가능한지만 shadow audit한다.
-- 현재 권한: main-only와 `accuracy_parse.py` 보존을 유지한다. P3는 consumer와 focused test 두 파일, 지정 pytest node 한 번으로 제한하며 topology/contact node, partial/schema/core assembly, production stamp/owner-off, W6/PowerSI 실행은 금지한다.
+- 상태: **G0 기준 문서** — W5 DONE; W6-BASE 260729 numerical FAIL; W7-SOURCE-IR Phase 1/2/3/4와 W7-PHYS-PROSPECTIVE-P0/P1/P2 DONE, P3 DONE/STOP (모두 shadow/prerequisite 범위); W7 production physics는 아직 BLOCKED다.
+- 현재 평가: W6-BASE는 PowerSI 수치 기준 FAIL이고 unseen/generalization은 `unknown / not_run`이다. P3는 commit `b8a79f1`에서 현 two-node quotient가 P1 contact-space mode를 보존하지 못함을 `CONTACT_INTERFACE_RANK_LOSS`로 확정했다. production solver, owner-off, `Y_global`과 `Zii`는 바뀌지 않았다.
+- Sole ACTIVE item (current): **`W7-PHYS-PROSPECTIVE-P4 / SPLIT-PREREQ-01-CLOSED-BASE-CUTSET`** — base `compile_layerwise_substrate` network에서 selected PWR/GND ideal class의 외부 adjacency가 P2 contact finite edge와 incident old Maxwell edge뿐인지 shadow audit한다.
+- 현재 권한: main-only와 `accuracy_parse.py` 보존을 유지한다. P4는 consumer와 focused test 두 파일, 지정 pytest node 한 번으로 제한하며 topology/contact node split, partial/schema/core assembly, production stamp/owner-off, scenario/termination, W6/PowerSI 실행은 금지한다.
 - 물리 작업 재개 조건: IR prerequisite 완료 후에도 geometry/material provenance, physical limiting-case invariant, rail-complete 적용 범위, deterministic stamp와 실제 consumer에 결속된 disjoint owner ledger를 갖춘 단일 physical candidate가 필요하다.
 - 최종 개정: 2026-08-29 (Asia/Seoul)
 
@@ -158,7 +158,8 @@ quasi-static circuit model이며 다음을 충분히 표현하지 않는다.
 | Source IR | Phase 1/2/3/4 committed; Phase 4 `3b76af4` | prerequisite/shadow 범위; schema 상세는 Source-derived IR 문서 |
 | contact admissibility | P0 `4dc855a`, focused PASS / Sol ACCEPT | 모든 v2 contact의 direct same-net artwork full coverage만 증명; production port/stamp 아님 |
 | contact-complete N-port | P1 `f823a53`, focused `1 passed in 1.58s`; Sol conditional ACCEPT 뒤 identity fix | exact 1 GHz shadow N×N/constraint/diagnostics만 증명; production owner-off 아님 |
-| production `Y_global` / `Zii` | P1 이후에도 변경 없음 | IR·shadow PASS·import 성공을 정확도 개선으로 해석하지 않음 |
+| contact quotient | P3 `b8a79f1`, focused `1 passed in 1.51s`; Sol ACCEPT; semantic STOP `CONTACT_INTERFACE_RANK_LOSS` | 현 PWR/GND two-node ideal quotient는 P1 current-spreading mode를 보존하지 못함; topology split 자체는 미구현 |
+| production `Y_global` / `Zii` | P3 이후에도 변경 없음 | IR·shadow PASS·import 성공을 정확도 개선으로 해석하지 않음 |
 | historical v0.23.0 attestation | import/save/92-rail solver entry만 verified | frequency solve·Touchstone comparison·현행 release 근거로 재사용 금지 |
 
 과거 validation placeholder, report-level pass, 작은 backward residual,
@@ -337,10 +338,10 @@ flowchart TD
 | 제품 기반 | W0–W5에서 목적·작업 통제, product-core truth, SPD/I/O 안전성, CI, solver fail-closed guard와 frozen accuracy gate를 확보했다. |
 | 외부 정확성 | W6-BASE 260729는 완료된 수치 결과지만 PowerSI 기준 **FAIL**이다. unseen/generalization은 `unknown / not_run`이다. |
 | Source IR 성과 | Phase 1/2는 canonical source/provenance IR과 importer seam, Phase 3은 deterministic shadow finite-port witness, Phase 4는 quotient-authoritative all-contact v2를 commit `3b76af4`에서 완료했다. 세부 계약은 [Source-derived physical IR](SOURCE_DERIVED_PHYSICAL_IR.md)이 권위 있다. |
-| Source IR 한계 | Phase 4는 finite boundary identity를, P0는 artwork coverage를, P1은 exact 1 GHz shadow N-port를, P2는 candidate old Maxwell edge closed-set identity를 증명했다. contact quotient representability, replacement readiness와 PowerSI 정확성은 아직 증명하지 않았다. |
+| Source IR 한계 | Phase 4는 finite boundary identity를, P0는 artwork coverage를, P1은 exact 1 GHz shadow N-port를, P2는 candidate old Maxwell edge closed-set identity를 증명했다. P3는 현 two-node quotient의 structural rank loss를 확정했지만 contact-interface node split, replacement readiness와 PowerSI 정확성은 아직 증명하지 않았다. |
 | 생산 물리 상태 | surface-patch plane current-spreading R/L이 유일한 credible direction이지만 deterministic replacement stamp, production global assembly와 disjoint owner-off ledger가 없어 **NOT READY/STOP**이다. |
-| 현재 작업 상태 | `W7-PHYS-PROSPECTIVE-P3 ACTIVE`. P1 contact space를 현 두 production quotient node로 투영할 때의 mode-loss residual만 판정하며 production `Y_global`/`Zii`는 변경하지 않는다. |
-| 현재 gate | exact contact→reduced-node one-hot map의 projector `Q`에 대해 `Y - QYQ`가 기존 `1e-12` rank 기준 안인지 단일 focused node로 판정한다. 초과하면 `CONTACT_INTERFACE_RANK_LOSS`로 STOP한다. |
+| 현재 작업 상태 | `W7-PHYS-PROSPECTIVE-P4 ACTIVE`. termination/scenario 없는 base network에서 selected ideal class의 closed cut-set만 판정하며 production `Y_global`/`Zii`는 변경하지 않는다. |
+| 현재 gate | role별 full reduced-node preimage가 P2 islands와 P3 contact finite vertices의 합집합과 정확히 같고, 외부 adjacency가 P2 contact finite edge와 incident old Maxwell edge뿐인지 단일 focused node로 판정한다. PASS여도 `split_ready=false`다. |
 
 세부 실행 이력, exact artifact identity와 current dirty file set은
 [작업 기준](WORK_EXECUTION_BASELINE.md)에만 둔다. 이전 미시적 실행 이력은 Git
