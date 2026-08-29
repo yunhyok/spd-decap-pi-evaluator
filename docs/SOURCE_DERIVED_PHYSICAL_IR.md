@@ -1,12 +1,12 @@
 # SPD Decap PI Evaluator v0.23.1 — Source-derived physical IR
 
-- 문서 버전: **1.10**
+- 문서 버전: **1.11**
 - 계약 상태: **ACCEPTED** — source-derived provenance/ownership prerequisite의 기술 기준
-- committed 구현: `source-plane-ownership-ir-v1` + Phase 3 shadow consumer + v2 `contact_boundary` (`3b76af4`) + P0 (`4dc855a`) + P1 (`f823a53`) + P2 (`90f6b54`) + P3 (`b8a79f1`) + P4 base cut-set (`39fd4fa`) + P5 shadow rewire plan (`d7e7278`) + P6 scenario commutation audit (`6793bb2`) + P7 atomic recipe (`f1c2968`)
-- runtime acceptance: **Phase 4와 P0–P7 focused PASS / Sol ACCEPT; P3 semantic STOP, P4 structural CLOSED, P5 PLANNED, P6/P7 PASSED / prerequisite-only**
+- committed 구현: `source-plane-ownership-ir-v1` + Phase 3 shadow consumer + v2 `contact_boundary` (`3b76af4`) + P0 (`4dc855a`) + P1 (`f823a53`) + P2 (`90f6b54`) + P3 (`b8a79f1`) + P4 base cut-set (`39fd4fa`) + P5 shadow rewire plan (`d7e7278`) + P6 scenario commutation audit (`6793bb2`) + P7 atomic recipe (`f1c2968`) + P8 topology embedding (`abf79cf`)
+- runtime acceptance: **Phase 4와 P0–P8 focused PASS / Sol ACCEPT; P3 semantic STOP, P4 structural CLOSED, P5 PLANNED, P6/P7 PASSED, P8 materialized / prerequisite-only**
 - production 상태: solver, owner-off, `Y_global`, `Zii` **unchanged**
-- 현재 작업 상태: **W7-PHYS-PROSPECTIVE-P8 ACTIVE** — shadow topology/index embedding의 shadow-only materialization
-- P7 closure: commit `f1c2968`, 지정 node `1 passed in 1.58s`, Sol ACCEPT; `status=passed`, `shadow_only=true`, `production_ready=false`, `replacement_ready=false`, production unchanged
+- 현재 작업 상태: **W7-PHYS-PROSPECTIVE-P9 ACTIVE** — exact 1 GHz P1 N-port의 shadow `NodalAdmittanceBlock` binding
+- P8 closure: commit `abf79cf`, 최종 지정 node `1 passed in 1.60s`, Sol ACCEPT; `topology_materialized=true`, `p1_stamp_applied=false`, `solve_eligible=false`, readiness false, production unchanged
 - 최종 개정: 2026-08-29 (Asia/Seoul)
 
 ## 1. 목적
@@ -44,8 +44,9 @@ flowchart LR
   Q --> R[P5 shadow contact rewire plan DONE]
   R --> S[P6 scenario commutation audit DONE]
   S --> T[P7 one-frequency atomic recipe audit DONE]
-  T --> U[P8 shadow topology/index materialization ACTIVE]
-  U -. hold: production seam 전 연결 금지 .-> K[production Y_global / Zii]
+  T --> U[P8 shadow topology/index materialization DONE]
+  U --> V[P9 shadow P1 nodal-block binding ACTIVE]
+  V -. hold: production seam 전 연결 금지 .-> K[production Y_global / Zii]
   I[raw-v3 geometry/material] -. hash reference .-> B
   J[compiled finite topology] -. hash/owner reference .-> D
 ```
@@ -75,7 +76,8 @@ plane owner는 source identity에 결속해 importer/compiler가 결정적으로
 | shadow contact rewire plan (P5) | contact별 interface node, retained finite-link rewire, P2 disable set과 P1 stamp identity | `d7e7278` DONE/PLANNED; plan-only, production topology/stamp 불변 |
 | scenario commutation audit (P6) | P5 contact edge와 scenario/termination bound network의 exact structural compatibility | `6793bb2` DONE/PASSED; read-only, production topology/stamp 불변 |
 | atomic replacement recipe (P7) | exact 1 GHz old-Maxwell 제거, finite-link rewire와 P1 N-port 추가의 no-double-counting ledger | `f1c2968` DONE/PASSED; read-only, production topology/stamp 불변 |
-| shadow topology/index materialization (P8) | P6 old class 제거, P7 interface/finite-link을 기존 immutable network에 materialize하고 port/termination mapping을 재검증 | ACTIVE; `solve_eligible=false`, production topology/stamp 불변 |
+| shadow topology/index materialization (P8) | P6 old class 제거, P7 interface/finite-link을 기존 immutable network에 materialize하고 shadow termination을 재결속 | `abf79cf` DONE/PASSED; `solve_eligible=false`, production topology/stamp 불변 |
+| shadow P1 nodal-block binding (P9) | P1 N-port를 P8 interface/reduced index와 P7 owner ledger에 기존 `NodalAdmittanceBlock`으로 결속 | ACTIVE; `p1_stamp_applied=false`, production assembly 불변 |
 | replacement | replaced/retained set hash와 상태 | Phase 1은 `prerequisite_only`만 허용 |
 
 ## 4. 불변조건
@@ -122,7 +124,8 @@ plane owner는 source identity에 결속해 importer/compiler가 결정적으로
 | P5 | committed `d7e7278` | focused `1 passed in 1.73s`; Sol ACCEPT | DONE | deterministic plan-only; topology/stamp/solve 불변 |
 | P6 | committed `6793bb2` | final focused `1 passed in 1.42s`; Sol ACCEPT | DONE | scenario/termination 구조 호환성만; production 불변 |
 | P7 | committed `f1c2968` | focused `1 passed in 1.58s`; Sol ACCEPT | DONE | passed shadow recipe; readiness false; production 불변 |
-| P8 | consumer/test whitelist | shadow topology/index embedding 지정 node | ACTIVE | single-rail `Zii` assembly prerequisite only; no production seam |
+| P8 | committed `abf79cf` | final focused `1 passed in 1.60s`; Sol ACCEPT | DONE | topology materialized; P1 stamp/solve readiness false; production 불변 |
+| P9 | consumer/test whitelist | shadow P1 nodal-block binding 지정 node | ACTIVE | exact 1 GHz binding prerequisite only; no matrix application/solve |
 
 `DONE`은 해당 Phase의 선언 범위가 종료됐다는 뜻이며 current release, production
 acceptance 또는 PowerSI 정확성을 뜻하지 않는다. Phase 4의 exact 실행 이력과 검증
@@ -356,27 +359,54 @@ Closure evidence: technical commit `f1c2968`; 지정 node `1 passed in 1.58s`; S
 `status=passed`, `shadow_only=true`, `production_ready=false`, `replacement_ready=false`이며 production
 network, solver, `Y_global`, `Zii`는 변경하지 않았다.
 
-### P8 — assembly prerequisite shadow topology/index embedding
+### P8 — assembly prerequisite shadow topology/index embedding (closure)
 
-ACTIVE / shadow-only materialization prerequisite. P6 commutation result, P7 recipe result와 동일한
-`LayerwiseScenarioNetworkBinding`을 입력으로 `materialize_source_plane_patch_shadow_topology_embedding()`을
-호출한다. P6 old class를 제거하고 P7 interface를 contact 순서대로 추가하며, P7 finite link만 metadata를
-보존해 재배선하고 touched partial의 행/열만 축소한다. untouched wrapper/dispersion은 재사용하고 empty
-partial은 버린 뒤 기존 ports와 termination mapping을 한 번 검증한다. 출력은 immutable compiled network와
-ordered interface→reduced-index, surface/partial/link/port manifest 및 topology hash를 포함하지만
-`topology_materialized=true`, `p1_stamp_applied=false`, `solve_eligible=false`, readiness false를 유지한다.
+DONE / shadow-only materialization prerequisite. `materialize_source_plane_patch_shadow_topology_embedding()`은
+P6 pass identity와 P7 recipe hash를 다시 계산해 동일 binding에 결속한 뒤 P6 old class를 제거하고 P7
+interface를 contact 순서대로 추가한다. finite link는 R/L/count/mode/owner를 보존해 재배선하고 touched
+partial의 행/열만 축소하며 untouched wrapper/dispersion은 재사용한다. empty partial은 버리고 기존 ports는
+exact 유지한다. 원본 termination manifest가 전체 원본 surface inventory에 결속되므로 기존 compiled
+cluster source를 shadow surface inventory로 ephemeral 재컴파일해 mapping과 manifest SHA를 검증한다.
 
-STOP 코드는 `SHADOW_EMBEDDING_IDENTITY_MISMATCH`, `SHADOW_EMBEDDING_OLD_CLASS_INCOMPLETE`,
+출력은 immutable compiled network와 ordered interface→unique reduced-index,
+surface/partial/link/port/termination manifest 및 topology hash를 포함한다. `topology_materialized=true`지만
+`p1_stamp_applied=false`, `solve_eligible=false`, readiness false다. STOP 코드는
+`SHADOW_EMBEDDING_IDENTITY_MISMATCH`, `SHADOW_EMBEDDING_OLD_CLASS_INCOMPLETE`,
 `SHADOW_EMBEDDING_PARTIAL_ESCAPE`, `SHADOW_EMBEDDING_LINK_ESCAPE`,
-`SHADOW_EMBEDDING_INTERFACE_COLLAPSED`, `SHADOW_EMBEDDING_UNREPRESENTABLE` 여섯 개로 제한한다.
-이는 Distribution이 아니라 P3 contact-mode loss를 피하기 위한 single-rail `Zii` assembly 전제이며,
-production seam·solver·P1 stamp에는 연결하지 않는다.
+`SHADOW_EMBEDDING_INTERFACE_COLLAPSED`, `SHADOW_EMBEDDING_UNREPRESENTABLE` 여섯 개다.
+
+Closure evidence: technical commit `abf79cf`; 최종 지정 node `1 passed in 1.60s`; Sol ACCEPT.
+P6 old-class tamper는 identity mismatch로 차단되고, all-partials-removed 입력은 unrepresentable STOP이다.
+production topology/cache/profile, solver, `Y_global`, `Zii`는 변경하지 않았다.
+
+### P9 — shadow P1 nodal-block binding
+
+ACTIVE / stamp-binding prerequisite. 공개 함수는
+`bind_source_plane_patch_shadow_nport_block(patch_result, commutation_result, recipe_result, binding, *, rail_id)`이며
+내부에서 P8을 정확히 한 번 호출한다. PASS는 P8 shadow network, 기존 `NodalAdmittanceBlock`,
+`source-plane-shadow-nport-block-binding-v1` audit을 반환하고 STOP은 `(None, None, audit)`이다. 새 carrier나
+core seam을 만들지 않는다.
+
+block node는 P7 interface exact order, owner는 P7 added-P1 owner exact order, ID는
+`source-plane-shadow-p1-nport:{p1_output_sha256}`다. P1 `admittance_s`만 새 read-only `complex128` local
+matrix로 복사한다. 후속 assembly 의미는 ordered interface의 P8 reduced index `r_i`에 대해
+`A[r_i,r_j] += Y_P1[i,j]`지만 P9은 실제 matrix에 적용하지 않는다. 이미 condensed된 Y에
+`terminal_constraint_matrix`를 다시 stamp하지 않는다.
+
+audit은 P1/P7/P8/scenario/termination/boundary identity, ordered contact/interface/reduced index,
+block/owner/matrix identity와 `p1_stamp_bound=true`, `p1_stamp_applied=false`, `solve_eligible=false`, readiness
+false를 기록한다. STOP 코드는 `SHADOW_NPORT_PREREQUISITE_STOPPED`, `SHADOW_NPORT_IDENTITY_MISMATCH`,
+`SHADOW_NPORT_CONTACT_ORDER_MISMATCH`, `SHADOW_NPORT_INTERFACE_BINDING_MISMATCH`,
+`SHADOW_NPORT_OWNER_CONFLICT`, `SHADOW_NPORT_MATRIX_UNREPRESENTABLE` 여섯 개로 제한한다. focused node는
+`test_source_plane_patch_shadow_nport_block_binding` 하나이며, positive deterministic/read-only binding과
+다른 `cell_um`의 유효 체인을 섞은 identity-mismatch negative를 함께 검증한다. 증분 비용은 `O(N²+N)`
+시간·메모리이고 actual assembly/solve/`Zii`, broadband, PowerSI, W6, Distribution은 금지한다.
 
 ## 7. 주장 한계
 
-- Phase 1/2/3/4와 P0/P1/P2/P3/P4/P5/P6 focused PASS는 source identity, ownership, shadow analytic,
-  finite-boundary, direct artwork coverage, one-frequency N-port, 구조적 rank-loss, base cut-set과
-  shadow rewire plan 및 scenario commutation prerequisite만 증명한다. P3의 PASS는 함수·판정 계약 실행 성공이고 결과 자체는 STOP이다.
+- Phase 1/2/3/4와 P0–P8 focused PASS는 source identity, ownership, shadow analytic,
+  finite-boundary, direct artwork coverage, one-frequency N-port, 구조적 rank-loss, base cut-set,
+  shadow rewire/atomic recipe와 topology embedding prerequisite만 증명한다. P3의 PASS는 함수·판정 계약 실행 성공이고 결과 자체는 STOP이다.
 - reciprocity, passivity, deterministic replay는 non-regression이며 PowerSI 정확도
   개선 증거가 아니다.
 - PowerSI 데이터는 comparison gate에만 사용하고 parameter fitting 입력으로 쓰지
