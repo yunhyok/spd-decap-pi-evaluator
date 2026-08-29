@@ -2835,6 +2835,19 @@ def _parse_contacts(
     selected_via_keys: set[tuple[Any, ...]] | None = None,
 ) -> tuple[int, int, int]:
     node_span, trace_span, via_span = spans
+    if selected_node_keys is not None and selected_via_keys:
+        # Ownership-only bounded pre-scan: selected Via endpoint Nodes are
+        # required even when the request did not enumerate both endpoints.
+        with path.open("rb") as handle:
+            for record in _frame_section(handle, via_span, b"Via"):
+                parsed_via = _parse_via(record, padstack_by_fold, layer_by_fold)
+                via_key = (str(parsed_via[3]).casefold(), str(parsed_via[1]).casefold())
+                if via_key in selected_via_keys:
+                    derived = {(str(parsed_via[3]).casefold(), str(parsed_via[5]).casefold()), (str(parsed_via[3]).casefold(), str(parsed_via[7]).casefold())}
+                    missing = derived - selected_node_keys
+                    if sum(len(value) for value in (selected_node_keys, selected_via_keys)) + len(missing) > MAX_SOURCE_PLANE_OWNERSHIP_IR_ROWS:
+                        _fail("RAW_SPATIAL_BOUND_EXCEEDED", "selected Via endpoint Node keys exceed ownership bound")
+                    selected_node_keys.update(missing)
     node_batch = _Batch(
         connection,
         "INSERT INTO nodes VALUES (?,?,?,?,?,?,?,?,?,?,?,?,NULL,NULL,NULL)",
@@ -2852,7 +2865,7 @@ def _parse_contacts(
             selected_node = selected_node_keys is None or node_key in selected_node_keys or (parsed_node[3] is None and any(key[1] == node_key[1] for key in selected_node_keys))
             if ownership_records is not None and selected_node:
                 node_id = f"node:{parsed_node[1]}:{parsed_node[3] or ''}"
-                _ownership_record_append(ownership_records, {"record_id": node_id, "source_record_id": node_id, "kind": "Node", "node_id": parsed_node[1], "logical_net": parsed_node[3], "resolved_net": parsed_node[3], "layer": parsed_node[7], "lookup_key": node_key, "source_offset": record.source_offset, "source_end": record.source_offset + len(record.exact_bytes), "source_record_sha256": parsed_node[11], "raw_ordinal": record.ordinal})
+                _ownership_record_append(ownership_records, {"record_id": node_id, "source_record_id": node_id, "kind": "Node", "node_id": parsed_node[1], "logical_net": parsed_node[3], "resolved_net": parsed_node[3], "layer": parsed_node[7], "x_pm": parsed_node[5], "y_pm": parsed_node[6], "padstack": parsed_node[9], "rotation_microdegrees": parsed_node[10], "lookup_key": node_key, "source_offset": record.source_offset, "source_end": record.source_offset + len(record.exact_bytes), "source_record_sha256": parsed_node[11], "raw_ordinal": record.ordinal})
     node_batch.flush()
 
     trace_batch = _Batch(
@@ -2968,7 +2981,7 @@ def _parse_contacts(
             via_key = (str(parsed_via[3]).casefold(), str(parsed_via[1]).casefold())
             if ownership_records is not None and (selected_via_keys is None or via_key in selected_via_keys):
                 via_id = f"via:{parsed_via[1]}:{parsed_via[3]}"
-                _ownership_record_append(ownership_records, {"record_id": via_id, "source_record_id": via_id, "kind": "Via", "via_id": parsed_via[1], "net_name": parsed_via[3], "logical_net": parsed_via[3], "layer": None, "lookup_key": via_key, "source_offset": record.source_offset, "source_end": record.source_offset + len(record.exact_bytes), "source_record_sha256": parsed_via[12], "raw_ordinal": record.ordinal})
+                _ownership_record_append(ownership_records, {"record_id": via_id, "source_record_id": via_id, "kind": "Via", "via_id": parsed_via[1], "net_name": parsed_via[3], "logical_net": parsed_via[3], "layer": None, "start_node_id": parsed_via[5], "end_node_id": parsed_via[7], "padstack": parsed_via[9], "rotation_microdegrees": parsed_via[11], "lookup_key": via_key, "source_offset": record.source_offset, "source_end": record.source_offset + len(record.exact_bytes), "source_record_sha256": parsed_via[12], "raw_ordinal": record.ordinal})
             net, net_fold = parsed_via[3], parsed_via[4]
             for node_id, node_fold in (
                 (parsed_via[5], parsed_via[6]),
@@ -3262,6 +3275,8 @@ def _compile_snapshot(
             (ownership_selection or {}).get("node_keys"),
             (ownership_selection or {}).get("via_keys"),
         )
+        if ownership_selection is not None and sum(len(values) for values in ownership_selection.values()) > MAX_SOURCE_PLANE_OWNERSHIP_IR_ROWS:
+            _fail("RAW_SPATIAL_BOUND_EXCEEDED", "expanded ownership selection exceeds its row bound")
         _resolve_contacts(
             connection,
             surface_keys,
@@ -3287,6 +3302,8 @@ def _compile_snapshot(
                 item["resolved_net"] = net
                 item["logical_net"] = net
                 item["lookup_key"] = (net.casefold(), node_fold)
+                item["record_id"] = f"node:{item.get('node_id', '')}:{net}"
+                item["source_record_id"] = item["record_id"]
         connection.commit()
         if spool_path.stat().st_size > _MAX_SPOOL_BYTES:
             _fail(
@@ -3408,6 +3425,13 @@ def _compile_snapshot(
                             _ownership_record_append(records, material_record)
             if not records:
                 _fail("RAW_SPATIAL_OWNERSHIP_EVIDENCE_INCOMPLETE", "selected ownership source records are absent")
+            for item in records:
+                if item.get("kind") == "Node" and not item.get("resolved_net"):
+                    resolved = connection.execute("SELECT resolved_net FROM nodes WHERE node_fold=?", (str(item.get("node_id", "")).casefold(),)).fetchone()
+                    if resolved is not None and resolved[0]:
+                        item["resolved_net"] = resolved[0]
+                        item["logical_net"] = resolved[0]
+                        item["lookup_key"] = (str(resolved[0]).casefold(), str(item.get("node_id", "")).casefold())
             seen_ids: set[str] = set()
             lookup: dict[str, dict[tuple[Any, ...], str]] = {}
             for item in records:
@@ -3479,10 +3503,24 @@ def _compile_snapshot(
             nodes_context: list[dict[str, Any]] = []
             vias_context: list[dict[str, Any]] = []
             for item in records:
-                if item.get("kind") == "Node": context_append(nodes_context, item)
-                elif item.get("kind") == "Via": context_append(vias_context, item)
+                if item.get("kind") == "Node":
+                    enriched = dict(item)
+                    if not enriched.get("resolved_net"):
+                        resolved = connection.execute("SELECT resolved_net,net_status,layer_id,x_pm,y_pm,padstack_id,rotation,source_sha FROM nodes WHERE source_sha=?", (item.get("source_record_sha256"),)).fetchone()
+                        if resolved is not None:
+                            enriched.update({"resolved_net": resolved[0], "net_status": resolved[1], "layer": resolved[2], "x_pm": resolved[3], "y_pm": resolved[4], "padstack": resolved[5], "rotation_microdegrees": resolved[6], "source_sha256": resolved[7]})
+                            enriched["lookup_key"] = (str(resolved[0] or "").casefold(), str(item.get("node_id", "")).casefold())
+                    context_append(nodes_context, enriched)
+                elif item.get("kind") == "Via":
+                    enriched = dict(item)
+                    context_append(vias_context, enriched)
             ownership_context["nodes"] = nodes_context
             ownership_context["vias"] = vias_context
+            ownership_context["raw_selection"] = {
+                key: [list(value) if isinstance(value, tuple) else value for value in sorted(values)]
+                if isinstance(values, set) else values
+                for key, values in (ownership_selection or {}).items()
+            }
             pad_shapes: list[dict[str, Any]] = []
             for item in records:
                 if item.get("kind") != "Regular":

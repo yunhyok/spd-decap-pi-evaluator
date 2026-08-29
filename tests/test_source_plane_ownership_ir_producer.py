@@ -3,6 +3,8 @@ from __future__ import annotations
 from pathlib import Path
 from hashlib import sha256
 from dataclasses import asdict
+from copy import deepcopy
+import json
 
 import pytest
 
@@ -14,6 +16,7 @@ from spd_decap_pi.raw_spatial_contact_compiler import (
     compile_raw_spatial_contact_asset,
 )
 from spd_decap_pi.source_plane_ownership_ir import (
+    SourcePlaneOwnershipIRError,
     load_source_plane_ownership_ir,
     validate_project_source_plane_ownership_ir_envelope,
 )
@@ -90,7 +93,9 @@ def test_source_plane_ownership_producer_roundtrip_and_atomic_failure(
             "Node7!!7::VDD_CORE/1 X = 0.5mm Y = 0mm Layer = Signal$PWR PadStack = DR-0102_60\n"
             "Node8!!8::VDD_CORE/1 X = 1mm Y = 2mm Layer = Signal$PWR PadStack = DR-0102_60\n"
             "Node9!!9::DGND X = 0.1mm Y = 0mm Layer = Signal$GND PadStack = DR-0102_60\n"
-            "Node10!!10::DGND X = 1.2mm Y = 2mm Layer = Signal$GND PadStack = DR-0102_60",
+            "Node10!!10::DGND X = 1.2mm Y = 2mm Layer = Signal$GND PadStack = DR-0102_60\n"
+            "Node11!!11::VDD_CORE/1 X = 1.5mm Y = 2mm Layer = Signal$PWR PadStack = DR-0102_60\n"
+            "Node12!!12::VDD_CORE/1 X = 1.5mm Y = 2mm Layer = Signal$TOP PadStack = DR-0102_60",
         )
         .replace(
             "Via1::VDD_CORE/1 UpperNode = Node1 LowerNode = Node3 PadStack = DR-0102_60",
@@ -100,9 +105,15 @@ def test_source_plane_ownership_producer_roundtrip_and_atomic_failure(
             "Via2::DGND UpperNode = Node2 LowerNode = Node4 PadStack = DR-0102_60",
             "Via2::DGND UpperNode = Node2 LowerNode = Node9 PadStack = DR-0102_60\n"
             "Via7::VDD_CORE/1 UpperNode = Node3 LowerNode = Node8 PadStack = DR-0102_60\n"
-            "Via9::DGND UpperNode = Node4 LowerNode = Node10 PadStack = DR-0102_60",
+            "Via9::DGND UpperNode = Node4 LowerNode = Node10 PadStack = DR-0102_60\n"
+            "Via11::VDD_CORE/1 UpperNode = Node12 LowerNode = Node11 PadStack = DR-0102_60 AbsoluteRotation = 4.5",
         )
-        .replace("* Via description lines", "* Trace description lines\n* Via description lines")
+        .replace(
+            "* Via description lines",
+            "* Trace description lines\n"
+            "Trace11::VDD_CORE/1 StartingNode = Node1 EndingNode = Node12 Width = 0.10mm\n"
+            "* Via description lines",
+        )
         .replace("Medium$D1 Thickness = 0.10mm Material = ABF", "Medium$D1 Thickness = 0.10mm Material = abf")
         .replace(
             ".PadDef Signal$PWR\nRegular Circle 0.03mm\n.EndPadDef",
@@ -114,6 +125,24 @@ def test_source_plane_ownership_producer_roundtrip_and_atomic_failure(
     source.write_text(payload, encoding="ascii")
     original = source.read_bytes()
 
+    ownership_capture: dict[str, object] = {}
+    original_compile = spd_adapter.compile_raw_spatial_contact_asset
+    original_build = spd_adapter.build_source_plane_ownership_ir
+
+    def capture_ownership_request(*args: object, **kwargs: object):
+        request = kwargs.get("source_plane_ownership_request")
+        if isinstance(request, dict):
+            ownership_capture["certificate_snapshot"] = request.get("certificate_snapshot")
+        return original_compile(*args, **kwargs)
+
+    monkeypatch.setattr(spd_adapter, "compile_raw_spatial_contact_asset", capture_ownership_request)
+
+    def capture_ownership_draft(*args: object, **kwargs: object):
+        draft = args[0] if args else kwargs.get("draft")
+        ownership_capture["draft"] = deepcopy(draft)
+        return original_build(*args, **kwargs)
+
+    monkeypatch.setattr(spd_adapter, "build_source_plane_ownership_ir", capture_ownership_draft)
     imported = spd_adapter.import_spd_scenario(
         source, source_plane_ownership_rail_id="VDD_CORE/1"
     )
@@ -161,6 +190,7 @@ def test_source_plane_ownership_producer_roundtrip_and_atomic_failure(
             "primitive_island_edges", "stackup_layers", "dielectric_points",
             "rail_bindings", "terminal_bindings", "retained_owner_refs",
             "plane_owner_scopes", "replacement_ledger", "replacement_ledger_members",
+            "contact_boundary",
         }
         assert set(manifest["counts"]) == expected_sections
         assert all(manifest["counts"][name] > 0 for name in expected_sections)
@@ -168,6 +198,105 @@ def test_source_plane_ownership_producer_roundtrip_and_atomic_failure(
         assert len(list(loaded.iter_section("plane_owner_scopes"))) == 2
         assert len(list(loaded.iter_section("terminal_bindings"))) >= 2
         assert all(row["status"] == "complete" for row in loaded.iter_section("terminal_bindings"))
+        contacts = list(loaded.iter_section("contact_boundary"))
+        assert contacts
+        assert any(str(row["owner_kind"]).casefold() == "decap" for row in contacts)
+        generic = [row for row in contacts if str(row["via_id"]).casefold() == "via11"]
+        assert len(generic) == 1
+        generic = generic[0]
+        assert generic["owner_kind"] == "other"
+        assert [str(owner).casefold() for owner in json.loads(generic["owner_ids_json"])] == ["via:via11"]
+        assert generic["plane_endpoint_node_id"] == "Node11"
+        assert generic["external_endpoint_node_id"] == "Node12"
+        assert generic["opposite_endpoint_node_id"] == "Node12"
+        assert generic["source_node_record_id"].startswith("node:Node11:")
+        assert generic["plane_endpoint_node_record_id"] == generic["source_node_record_id"]
+        assert generic["external_endpoint_node_record_id"].startswith("node:Node12:")
+        assert generic["opposite_endpoint_node_record_id"] == generic["external_endpoint_node_record_id"]
+        assert float(generic["rotation_degrees"]) == 4.5
+        assert generic["padstack_id"] == "DR-0102_60"
+        assert all(row["status"] == "complete" and row["issues_json"] == "[]" for row in contacts)
+        assert all(row["owner_ids_json"].startswith("[") for row in contacts)
+        certificate_snapshot = ownership_capture.get("certificate_snapshot")
+        assert isinstance(certificate_snapshot, dict)
+        boundary_rows = certificate_snapshot.get("contact_boundary")
+        assert isinstance(boundary_rows, list) and boundary_rows
+        generic_boundary = [
+            item for item in boundary_rows
+            if str(item.get("via_id", "")).casefold() == "via11"
+        ]
+        assert len(generic_boundary) == 1
+        generic_boundary = generic_boundary[0]
+        assert [str(owner).casefold() for owner in generic_boundary["owner_ids"]] == ["via:via11"]
+        quotient = certificate_snapshot["finite_via_quotient"]
+        quotient_edges = [
+            item for item in quotient["edges"]
+            if str(item.get("edge_id", "")).casefold()
+            == str(generic_boundary["finite_edge_id"]).casefold()
+        ]
+        assert len(quotient_edges) == 1
+        generic_edge = quotient_edges[0]
+        assert [str(owner).casefold() for owner in generic_edge["owner_ids"]] == ["via:via11"]
+        assert len(generic_edge["series_terms"]) == 1
+        assert generic_edge["parallel_path_count"] == 1
+        assert str(generic_edge["mode"]).casefold() == "retained_explicit"
+        expected_authority = [
+            [
+                str(item["component_id"]).casefold(),
+                str(item["island_id"]).casefold(),
+                str(item["finite_vertex_id"]).casefold(),
+                str(item["finite_edge_id"]).casefold(),
+                str(owner).casefold(),
+            ]
+            for item in boundary_rows
+            for owner in item["owner_ids"]
+        ]
+        actual_authority = [
+            [
+                str(row["component_id"]).casefold(),
+                str(row["island_id"]).casefold(),
+                str(row["finite_vertex_id"]).casefold(),
+                str(row["finite_edge_id"]).casefold(),
+                str(owner).casefold(),
+            ]
+            for row in contacts
+            for owner in json.loads(row["owner_ids_json"])
+        ]
+        assert expected_authority == actual_authority
+        assert set(map(tuple, expected_authority)) == set(map(tuple, actual_authority))
+        coverage = certificate_snapshot.get("contact_boundary_coverage")
+        assert isinstance(coverage, dict)
+        assert len(expected_authority) == len(actual_authority) == int(coverage["count"])
+        assert sha256(concrete_canonical_json_bytes(expected_authority)).hexdigest() == coverage["sha256"]
+        captured_draft = ownership_capture.get("draft")
+        assert isinstance(captured_draft, dict)
+        source_records = captured_draft["source_records"]
+        assert isinstance(source_records, list)
+        draft_contact = next(row for row in captured_draft["contact_boundary"] if str(row["via_id"]).casefold() == "via11")
+        other_via = next(row["record_id"] for row in source_records if str(row.get("kind", "")).casefold() == "via" and str(row["record_id"]).casefold() != str(draft_contact["via_record_id"]).casefold())
+        other_node = next(row["record_id"] for row in source_records if str(row.get("kind", "")).casefold() == "node" and str(row["record_id"]).casefold() != str(draft_contact["source_node_record_id"]).casefold())
+        other_paddef = next(row["record_id"] for row in source_records if str(row.get("kind", "")).casefold() == "paddef" and str(row.get("layer", "")).casefold() != str(draft_contact["endpoint_layer"]).casefold())
+        other_regular = next(row["record_id"] for row in source_records if str(row.get("kind", "")).casefold() == "regular" and str(row.get("layer", "")).casefold() != str(draft_contact["endpoint_layer"]).casefold())
+
+        def assert_contact_rejected(mutate):
+            candidate = deepcopy(captured_draft)
+            contact = next(row for row in candidate["contact_boundary"] if str(row["via_id"]).casefold() == "via11")
+            mutate(contact)
+            with pytest.raises(SourcePlaneOwnershipIRError) as failure:
+                original_build(candidate)
+            assert failure.value.code == "SOURCE_PLANE_OWNERSHIP_IR_CONTACT_INVALID"
+
+        for mutate in (
+            lambda contact: contact.__setitem__("net", "ALTERED_NET"),
+            lambda contact: contact.__setitem__("plane_endpoint_node_id", contact["external_endpoint_node_id"]),
+            lambda contact: contact.__setitem__("opposite_endpoint_node_id", contact["endpoint_node_id"]),
+            lambda contact: contact.__setitem__("via_record_id", other_via),
+            lambda contact: (contact.__setitem__("source_node_record_id", other_node), contact.__setitem__("plane_endpoint_node_record_id", other_node)),
+            lambda contact: contact.__setitem__("padstack_id", "ALTERED_PADSTACK"),
+            lambda contact: (contact.__setitem__("paddef_source_record_id", other_paddef), contact.__setitem__("regular_source_record_id", other_regular)),
+            lambda contact: contact.__setitem__("rotation_degrees", 180.0),
+        ):
+            assert_contact_rejected(mutate)
         original_bytes = source.read_bytes()
         kinds = {
             row["record_id"].casefold(): row["kind"]

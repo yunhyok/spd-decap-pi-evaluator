@@ -15,6 +15,9 @@ SOURCE_PLANE_OWNERSHIP_IR_METADATA_KEY: Final = "source_plane_ownership_ir"
 SOURCE_PLANE_OWNERSHIP_IR_SCHEMA: Final = "source-plane-ownership-ir-v1"
 SOURCE_PLANE_OWNERSHIP_IR_PAYLOAD_SCHEMA: Final = "source-plane-ownership-sqlite-v1"
 SOURCE_PLANE_OWNERSHIP_IR_COMPILER_ID: Final = "source-plane-ownership-ir-compiler-v1"
+SOURCE_PLANE_OWNERSHIP_IR_V2_SCHEMA: Final = "source-plane-ownership-ir-v2"
+SOURCE_PLANE_OWNERSHIP_IR_V2_PAYLOAD_SCHEMA: Final = "source-plane-ownership-sqlite-v2"
+SOURCE_PLANE_OWNERSHIP_IR_V2_COMPILER_ID: Final = "source-plane-ownership-ir-compiler-v2"
 SOURCE_PLANE_OWNERSHIP_IR_PREFIX: Final = "ownership/"
 SOURCE_PLANE_OWNERSHIP_IR_COMPRESSION: Final = "zlib"
 MAX_SOURCE_PLANE_OWNERSHIP_IR_COMPRESSED_BYTES: Final = 512 * 1024 * 1024
@@ -25,6 +28,7 @@ MAX_SOURCE_PLANE_OWNERSHIP_IR_QUERY_ROWS: Final = 100_000
 _APP_ID: Final = 0x53504F57
 _USER_VERSION: Final = 1
 _SECTIONS: Final = ("source_records", "surfaces", "primitives", "islands", "primitive_island_edges", "stackup_layers", "dielectric_points", "rail_bindings", "terminal_bindings", "retained_owner_refs", "plane_owner_scopes", "replacement_ledger", "replacement_ledger_members")
+_V2_SECTIONS: Final = _SECTIONS + ("contact_boundary",)
 _MANIFEST_KEYS: Final = frozenset({"storage_schema", "payload_schema", "compiler_id", "app_version", "source_sha256", "source_size_bytes", "target_rail_id", "project_binding_sha256", "certificate_evidence_sha256", "compiled_topology_identity_sha256", "raw_manifest_sha256", "raw_geometry_identity_sha256", "raw_logical_rows_sha256", "raw_plane_sheet_sha256", "logical_rows_sha256", "asset_name", "compression", "compressed_size_bytes", "compressed_sha256", "uncompressed_size_bytes", "uncompressed_sha256", "counts"})
 
 
@@ -142,6 +146,11 @@ CREATE TABLE replacement_ledger_members(ledger_id TEXT NOT NULL, owner_id TEXT N
 CREATE TABLE section_ledger(section_name TEXT PRIMARY KEY NOT NULL, row_count INTEGER NOT NULL, logical_sha256 TEXT NOT NULL) WITHOUT ROWID;
 """
 
+_CONTACT_BOUNDARY_SQL = """
+CREATE TABLE contact_boundary(ordinal INTEGER PRIMARY KEY, contact_id TEXT NOT NULL, owner_kind TEXT NOT NULL, net TEXT NOT NULL, via_id TEXT NOT NULL, endpoint_node_id TEXT NOT NULL, opposite_endpoint_node_id TEXT, plane_endpoint_node_id TEXT NOT NULL, external_endpoint_node_id TEXT NOT NULL, endpoint_layer TEXT NOT NULL, island_id TEXT NOT NULL, component_id TEXT NOT NULL, padstack_id TEXT NOT NULL, rotation_degrees REAL NOT NULL, source_node_record_id TEXT NOT NULL, opposite_endpoint_node_record_id TEXT, plane_endpoint_node_record_id TEXT NOT NULL, external_endpoint_node_record_id TEXT NOT NULL, via_record_id TEXT NOT NULL, paddef_source_record_id TEXT NOT NULL, regular_source_record_id TEXT NOT NULL, raw_pad_shape_ordinal INTEGER NOT NULL, raw_pad_shape_sha256 TEXT NOT NULL, finite_vertex_id TEXT NOT NULL, finite_edge_id TEXT NOT NULL, owner_ids_json TEXT NOT NULL, status TEXT NOT NULL, issues_json TEXT NOT NULL, UNIQUE(contact_id COLLATE NOCASE), FOREIGN KEY(source_node_record_id) REFERENCES source_records(record_id), FOREIGN KEY(opposite_endpoint_node_record_id) REFERENCES source_records(record_id), FOREIGN KEY(plane_endpoint_node_record_id) REFERENCES source_records(record_id), FOREIGN KEY(external_endpoint_node_record_id) REFERENCES source_records(record_id), FOREIGN KEY(via_record_id) REFERENCES source_records(record_id), FOREIGN KEY(paddef_source_record_id) REFERENCES source_records(record_id), FOREIGN KEY(regular_source_record_id) REFERENCES source_records(record_id), FOREIGN KEY(island_id) REFERENCES islands(island_id)) WITHOUT ROWID;
+"""
+_CREATE_SQL_V2 = _CREATE_SQL.replace('CREATE TABLE section_ledger', _CONTACT_BOUNDARY_SQL + 'CREATE TABLE section_ledger')
+
 _COLUMNS: Final[dict[str, tuple[str, ...]]] = {
     "source_records": ("ordinal", "record_id", "kind", "source_offset", "source_end", "source_record_sha256", "logical_net", "layer"),
     "surfaces": ("ordinal", "surface_id", "artwork_net", "layer", "geometry_asset_name", "geometry_asset_sha256", "island_manifest_sha256", "source_lineage_sha256", "component_count"),
@@ -157,6 +166,10 @@ _COLUMNS: Final[dict[str, tuple[str, ...]]] = {
     "replacement_ledger": ("ordinal", "ledger_id", "replaced_set_sha256", "retained_set_sha256", "intersection_count", "replaced_count", "retained_count", "status"),
     "replacement_ledger_members": ("ledger_id", "owner_id", "action"),
 }
+_COLUMNS_V2: Final[dict[str, tuple[str, ...]]] = {
+    **_COLUMNS,
+    "contact_boundary": ("ordinal", "contact_id", "owner_kind", "net", "via_id", "endpoint_node_id", "opposite_endpoint_node_id", "plane_endpoint_node_id", "external_endpoint_node_id", "endpoint_layer", "island_id", "component_id", "padstack_id", "rotation_degrees", "source_node_record_id", "opposite_endpoint_node_record_id", "plane_endpoint_node_record_id", "external_endpoint_node_record_id", "via_record_id", "paddef_source_record_id", "regular_source_record_id", "raw_pad_shape_ordinal", "raw_pad_shape_sha256", "finite_vertex_id", "finite_edge_id", "owner_ids_json", "status", "issues_json"),
+}
 
 
 def _normalize(draft: Any, kwargs: Mapping[str, Any], cancelled: Any) -> dict[str, Any]:
@@ -165,14 +178,16 @@ def _normalize(draft: Any, kwargs: Mapping[str, Any], cancelled: Any) -> dict[st
     result["source_sha256"] = _sha(data.get("source_sha256"), "source_sha256"); result["source_size_bytes"] = _integer(data.get("source_size_bytes"), "source_size_bytes", 1)
     for key in ("project_binding_sha256", "certificate_evidence_sha256", "compiled_topology_identity_sha256", "raw_manifest_sha256", "raw_geometry_identity_sha256", "raw_logical_rows_sha256", "raw_plane_sheet_sha256"): result[key] = _sha(data.get(key), key)
     remaining = MAX_SOURCE_PLANE_OWNERSHIP_IR_ROWS
-    for section in _SECTIONS:
+    sections = _V2_SECTIONS if "contact_boundary" in data else _SECTIONS
+    for section in sections:
         result[section] = _rows(data.get(section), section, remaining, cancelled); remaining -= len(result[section])
     return result
 
 
 def _validate_rows(data: dict[str, Any]) -> None:
+    sections = _V2_SECTIONS if "contact_boundary" in data else _SECTIONS
     total = 0
-    for section in _SECTIONS:
+    for section in sections:
         rows = data[section]; total += len(rows)
         if total > MAX_SOURCE_PLANE_OWNERSHIP_IR_ROWS: _fail("SOURCE_PLANE_OWNERSHIP_IR_BOUND_EXCEEDED", "row count exceeds bound")
         if section not in {"primitive_island_edges", "replacement_ledger_members"}:
@@ -367,10 +382,56 @@ def _validate_rows(data: dict[str, Any]) -> None:
     for lid, header in ledgers.items():
         rows = memberships.get(lid, []); replaced = {str(row["owner_id"]).casefold() for row in rows if row["action"] == "replaced"}; retained = {str(row["owner_id"]).casefold() for row in rows if row["action"] == "retained"}
         if replaced & retained or _integer(header["intersection_count"], "intersection_count") != 0 or _integer(header["replaced_count"], "replaced_count") != len(replaced) or _integer(header["retained_count"], "retained_count") != len(retained) or header["replaced_set_sha256"] != _hash_owner_set(replaced) or header["retained_set_sha256"] != _hash_owner_set(retained): _fail("SOURCE_PLANE_OWNERSHIP_IR_REPLACEMENT_INVALID", "replacement ledger counts/hash/intersection differ")
+    if "contact_boundary" in data:
+        contact_ids: set[str] = set()
+        expanded_contact_owners: set[str] = set()
+        seen_edge_ids: set[str] = set()
+        seen_contact_owner_ids: set[str] = set()
+        for row in data["contact_boundary"]:
+            cid = _text(row.get("contact_id"), "contact.contact_id"); net = _text(row.get("net"), "contact.net"); via = _text(row.get("via_id"), "contact.via_id"); endpoint = _text(row.get("endpoint_node_id"), "contact.endpoint_node_id"); layer = _text(row.get("endpoint_layer"), "contact.endpoint_layer"); island = _text(row.get("island_id"), "contact.island_id"); component = _text(row.get("component_id"), "contact.component_id"); padstack = _text(row.get("padstack_id"), "contact.padstack_id"); assert cid and net and via and endpoint and layer and island and component and padstack
+            if row.get("ordinal", len(contact_ids)) != len(contact_ids): _fail("SOURCE_PLANE_OWNERSHIP_IR_ORDER_INVALID", "contact ordinals are not contiguous")
+            if cid.casefold() in contact_ids or island.casefold() not in islands or str(islands[island.casefold()]["component_id"]).casefold() != component.casefold() or str(surfaces[str(islands[island.casefold()]["surface_id"]).casefold()]["layer"]).casefold() != layer.casefold(): _fail("SOURCE_PLANE_OWNERSHIP_IR_CONTACT_INVALID", "contact island/component/layer relation is invalid")
+            contact_ids.add(cid.casefold()); owner_kind = _text(row.get("owner_kind"), "contact.owner_kind"); opposite_endpoint = _text(row.get("opposite_endpoint_node_id"), "contact.opposite_endpoint_node_id"); plane_endpoint = _text(row.get("plane_endpoint_node_id"), "contact.plane_endpoint_node_id"); external_endpoint = _text(row.get("external_endpoint_node_id"), "contact.external_endpoint_node_id"); rotation = _real(row.get("rotation_degrees"), "contact.rotation_degrees")
+            if owner_kind not in {"device", "decap", "other"}: _fail("SOURCE_PLANE_OWNERSHIP_IR_CONTACT_INVALID", "contact owner kind is invalid")
+            if endpoint.casefold() != plane_endpoint.casefold() or opposite_endpoint.casefold() != external_endpoint.casefold(): _fail("SOURCE_PLANE_OWNERSHIP_IR_CONTACT_INVALID", "contact endpoint aliases differ")
+            if not -180 <= rotation < 180: _fail("SOURCE_PLANE_OWNERSHIP_IR_CONTACT_INVALID", "contact rotation is outside normalized range")
+            for key in ("source_node_record_id", "plane_endpoint_node_record_id", "external_endpoint_node_record_id", "opposite_endpoint_node_record_id", "via_record_id", "paddef_source_record_id", "regular_source_record_id"):
+                ref = _text(row.get(key), f"contact.{key}")
+                assert ref
+                if ref.casefold() not in records or ref != records[ref.casefold()]["record_id"]: _fail("SOURCE_PLANE_OWNERSHIP_IR_CONTACT_INVALID", "contact source reference is unknown")
+            if any(str(records[str(row[key]).casefold()].get("kind", "")).casefold() != expected for key, expected in (("source_node_record_id", "node"), ("plane_endpoint_node_record_id", "node"), ("external_endpoint_node_record_id", "node"), ("via_record_id", "via"), ("paddef_source_record_id", "paddef"), ("regular_source_record_id", "regular"))): _fail("SOURCE_PLANE_OWNERSHIP_IR_CONTACT_INVALID", "contact source kind differs")
+            if row.get("opposite_endpoint_node_record_id") is not None and str(records[str(row["opposite_endpoint_node_record_id"]).casefold()].get("kind", "")).casefold() != "node": _fail("SOURCE_PLANE_OWNERSHIP_IR_CONTACT_INVALID", "opposite endpoint source kind differs")
+            if str(row.get("source_node_record_id", "")).casefold() != str(row.get("plane_endpoint_node_record_id", "")).casefold(): _fail("SOURCE_PLANE_OWNERSHIP_IR_CONTACT_INVALID", "plane source reference differs")
+            source_record = records[str(row["source_node_record_id"]).casefold()]; plane_record = records[str(row["plane_endpoint_node_record_id"]).casefold()]; external_record = records[str(row["external_endpoint_node_record_id"]).casefold()]; opposite_record = records[str(row["opposite_endpoint_node_record_id"]).casefold()]; via_record = records[str(row["via_record_id"]).casefold()]; paddef_record = records[str(row["paddef_source_record_id"]).casefold()]; regular_record = records[str(row["regular_source_record_id"]).casefold()]
+            expected_plane = f"node:{plane_endpoint}:{net}"; expected_external = f"node:{external_endpoint}:{net}"; expected_via = f"via:{via}:{net}"
+            if any(str(row[key]).casefold() != expected.casefold() for key, expected in (("source_node_record_id", expected_plane), ("plane_endpoint_node_record_id", expected_plane), ("external_endpoint_node_record_id", expected_external), ("opposite_endpoint_node_record_id", expected_external), ("via_record_id", expected_via))) or not str(row["paddef_source_record_id"]).casefold().startswith(f"paddef:{padstack}:{layer}:".casefold()) or not str(row["regular_source_record_id"]).casefold().startswith(f"regular:{padstack}:{layer}:".casefold()): _fail("SOURCE_PLANE_OWNERSHIP_IR_CONTACT_INVALID", "contact source identity differs")
+            if any(str(record.get("logical_net", "")).casefold() != net.casefold() for record in (source_record, plane_record, external_record, opposite_record, via_record)) or any(str(record.get("layer", "")).casefold() != layer.casefold() for record in (plane_record, paddef_record, regular_record)): _fail("SOURCE_PLANE_OWNERSHIP_IR_CONTACT_INVALID", "contact source net/layer differs")
+            _integer(row.get("raw_pad_shape_ordinal"), "contact.raw_pad_shape_ordinal"); _sha(row.get("raw_pad_shape_sha256"), "contact.raw_pad_shape_sha256"); _text(row.get("finite_vertex_id"), "contact.finite_vertex_id"); edge = _text(row.get("finite_edge_id"), "contact.finite_edge_id"); assert edge
+            edge_key = edge.casefold()
+            if edge_key in seen_edge_ids: _fail("SOURCE_PLANE_OWNERSHIP_IR_CONTACT_INVALID", "finite edge occurs in multiple contacts")
+            seen_edge_ids.add(edge_key)
+            try:
+                owners = json.loads(row.get("owner_ids_json"));
+                if not isinstance(owners, list) or not owners or any(not isinstance(owner, str) or not owner.strip() for owner in owners) or _canonical(owners).decode("utf-8") != row.get("owner_ids_json"): raise ValueError
+            except (TypeError, ValueError, json.JSONDecodeError): _fail("SOURCE_PLANE_OWNERSHIP_IR_CONTACT_INVALID", "contact owner set is not canonical JSON")
+            owner_set = {owner.casefold() for owner in owners}
+            edge_owner_set = {owner for owner, ref in retained_lookup.items() if str(ref.get("edge_id", "")).casefold() == edge.casefold()}
+            if len(owner_set) != len(owners) or owner_set != edge_owner_set or not owner_set <= owner_ids or f"via:{via}".casefold() not in owner_set: _fail("SOURCE_PLANE_OWNERSHIP_IR_CONTACT_INVALID", "contact owner set is unknown or differs from finite edge")
+            if seen_contact_owner_ids & owner_set: _fail("SOURCE_PLANE_OWNERSHIP_IR_CONTACT_INVALID", "contact owner occurs more than once")
+            seen_contact_owner_ids.update(owner_set)
+            expanded_contact_owners.update(owner_set)
+            status = _text(row.get("status"), "contact.status"); issue = row.get("issues_json")
+            if status != "complete": _fail("SOURCE_PLANE_OWNERSHIP_IR_CONTACT_INVALID", "contact status must be complete")
+            try:
+                parsed = json.loads(issue)
+                if _canonical(parsed).decode("utf-8") != issue or parsed != []: raise ValueError
+            except (TypeError, ValueError, json.JSONDecodeError): _fail("SOURCE_PLANE_OWNERSHIP_IR_CONTACT_INVALID", "contact issues_json must be []")
+        finite_owner_set = {owner for owner, ref in retained_lookup.items() if str(ref.get("namespace", "")).casefold() == "finite-via"}
+        if expanded_contact_owners != finite_owner_set: _fail("SOURCE_PLANE_OWNERSHIP_IR_CONTACT_INVALID", "contact owner coverage differs from retained finite-via owners")
 
 
-def _section_digest(connection: sqlite3.Connection, section: str, cancelled: Any = None) -> tuple[int, str]:
-    digest = sha256(); count = 0; callback = cancelled or (lambda: False); order = ",".join(_COLUMNS[section])
+def _section_digest(connection: sqlite3.Connection, section: str, cancelled: Any = None, *, columns: Mapping[str, tuple[str, ...]] | None = None) -> tuple[int, str]:
+    digest = sha256(); count = 0; callback = cancelled or (lambda: False); selected_columns = (columns or _COLUMNS)[section]; order = ",".join(selected_columns)
     for row in connection.execute(f"SELECT {order} FROM {section} ORDER BY {order}"):
         if callback(): _fail("SOURCE_PLANE_OWNERSHIP_IR_CANCELLED", "operation cancelled")
         digest.update(_canonical(list(row))); digest.update(b"\n"); count += 1
@@ -379,8 +440,8 @@ def _section_digest(connection: sqlite3.Connection, section: str, cancelled: Any
 
 _META_KEYS = ("storage_schema", "payload_schema", "compiler_id", "app_version", "source_sha256", "source_size_bytes", "target_rail_id", "project_binding_sha256", "certificate_evidence_sha256", "compiled_topology_identity_sha256", "raw_manifest_sha256", "raw_geometry_identity_sha256", "raw_logical_rows_sha256", "raw_plane_sheet_sha256", "logical_rows_sha256")
 
-def _binding_map(data: Mapping[str, Any], logical: str | None = None) -> dict[str, Any]:
-    result = {"storage_schema": SOURCE_PLANE_OWNERSHIP_IR_SCHEMA, "payload_schema": SOURCE_PLANE_OWNERSHIP_IR_PAYLOAD_SCHEMA, "compiler_id": SOURCE_PLANE_OWNERSHIP_IR_COMPILER_ID}
+def _binding_map(data: Mapping[str, Any], logical: str | None = None, *, v2: bool = False) -> dict[str, Any]:
+    result = {"storage_schema": SOURCE_PLANE_OWNERSHIP_IR_V2_SCHEMA if v2 else SOURCE_PLANE_OWNERSHIP_IR_SCHEMA, "payload_schema": SOURCE_PLANE_OWNERSHIP_IR_V2_PAYLOAD_SCHEMA if v2 else SOURCE_PLANE_OWNERSHIP_IR_PAYLOAD_SCHEMA, "compiler_id": SOURCE_PLANE_OWNERSHIP_IR_V2_COMPILER_ID if v2 else SOURCE_PLANE_OWNERSHIP_IR_COMPILER_ID}
     result.update({key: data[key] for key in ("app_version", "source_sha256", "source_size_bytes", "target_rail_id", "project_binding_sha256", "certificate_evidence_sha256", "compiled_topology_identity_sha256", "raw_manifest_sha256", "raw_geometry_identity_sha256", "raw_logical_rows_sha256", "raw_plane_sheet_sha256")})
     if logical is not None: result["logical_rows_sha256"] = logical
     return result
@@ -405,30 +466,30 @@ def _stream_compress(path: Path, cancelled: Any) -> tuple[bytes, int, str]:
 
 def build_source_plane_ownership_ir(draft: Any = None, *, batch_rows: int = 10_000, is_cancelled: Any = None, **kwargs: Any) -> tuple[dict[str, Any], tuple[str, bytes]]:
     if type(batch_rows) is not int or not 1 <= batch_rows <= MAX_SOURCE_PLANE_OWNERSHIP_IR_QUERY_ROWS: _fail("SOURCE_PLANE_OWNERSHIP_IR_BATCH_INVALID", "batch_rows is outside its bound")
-    cancelled = is_cancelled or (lambda: False); data = _normalize(draft, kwargs, cancelled); _validate_rows(data)
+    cancelled = is_cancelled or (lambda: False); data = _normalize(draft, kwargs, cancelled); v2 = "contact_boundary" in data; sections = _V2_SECTIONS if v2 else _SECTIONS; columns = _COLUMNS_V2 if v2 else _COLUMNS; create_sql = _CREATE_SQL_V2 if v2 else _CREATE_SQL; _validate_rows(data)
     with tempfile.TemporaryDirectory(prefix="spdpi-ownership-") as directory:
-        path = Path(directory) / "ownership.sqlite"; connection = sqlite3.connect(path); connection.executescript(_CREATE_SQL)
+        path = Path(directory) / "ownership.sqlite"; connection = sqlite3.connect(path); connection.executescript(create_sql)
         try:
-            for section in _SECTIONS:
-                columns = _COLUMNS[section]; rows = data[section]
+            for section in sections:
+                section_columns = columns[section]; rows = data[section]
                 for offset in range(0, len(rows), batch_rows):
                     if cancelled(): _fail("SOURCE_PLANE_OWNERSHIP_IR_CANCELLED", "operation cancelled")
                     for index, row in enumerate(rows[offset:offset + batch_rows], offset):
-                        values = dict(row); values.setdefault("ordinal", index); values = [values.get(column) for column in columns]
-                        connection.execute(f"INSERT INTO {section} ({','.join(columns)}) VALUES ({','.join('?' for _ in columns)})", values)
+                        values = dict(row); values.setdefault("ordinal", index); values = [values.get(column) for column in section_columns]
+                        connection.execute(f"INSERT INTO {section} ({','.join(section_columns)}) VALUES ({','.join('?' for _ in section_columns)})", values)
             section_hashes: dict[str, str] = {}; counts: dict[str, int] = {}
-            for section in _SECTIONS: counts[section], section_hashes[section] = _section_digest(connection, section, cancelled)
-            for section in _SECTIONS: connection.execute("INSERT INTO section_ledger VALUES(?,?,?)", (section, counts[section], section_hashes[section]))
-            logical = _logical_hash(_binding_map(data), counts, section_hashes)
-            for key, value in {**_binding_map(data), "logical_rows_sha256": logical}.items(): connection.execute("INSERT INTO meta VALUES(?,?)", (key, str(value)))
+            for section in sections: counts[section], section_hashes[section] = _section_digest(connection, section, cancelled, columns=columns)
+            for section in sections: connection.execute("INSERT INTO section_ledger VALUES(?,?,?)", (section, counts[section], section_hashes[section]))
+            logical = _logical_hash(_binding_map(data, v2=v2), counts, section_hashes)
+            for key, value in {**_binding_map(data, v2=v2), "logical_rows_sha256": logical}.items(): connection.execute("INSERT INTO meta VALUES(?,?)", (key, str(value)))
             connection.commit()
         except sqlite3.Error as exc:
             _fail("SOURCE_PLANE_OWNERSHIP_IR_DATABASE_INVALID", str(exc))
         finally: connection.close()
         compressed, raw_size, raw_sha = _stream_compress(path, cancelled)
     if len(compressed) > MAX_SOURCE_PLANE_OWNERSHIP_IR_COMPRESSED_BYTES or raw_size > len(compressed) * 256 + 8 * 1024 * 1024: _fail("SOURCE_PLANE_OWNERSHIP_IR_BOUND_EXCEEDED", "compressed expansion exceeds bound")
-    logical = _logical_hash(_binding_map(data), counts, section_hashes); asset = f"{SOURCE_PLANE_OWNERSHIP_IR_PREFIX}source-plane-ownership-ir-v1-{data['source_sha256'][:16]}.sqlite.zlib"
-    manifest = {"storage_schema": SOURCE_PLANE_OWNERSHIP_IR_SCHEMA, "payload_schema": SOURCE_PLANE_OWNERSHIP_IR_PAYLOAD_SCHEMA, "compiler_id": SOURCE_PLANE_OWNERSHIP_IR_COMPILER_ID, "app_version": data["app_version"], "source_sha256": data["source_sha256"], "source_size_bytes": data["source_size_bytes"], "target_rail_id": data["target_rail_id"], "project_binding_sha256": data["project_binding_sha256"], "certificate_evidence_sha256": data["certificate_evidence_sha256"], "compiled_topology_identity_sha256": data["compiled_topology_identity_sha256"], "raw_manifest_sha256": data["raw_manifest_sha256"], "raw_geometry_identity_sha256": data["raw_geometry_identity_sha256"], "raw_logical_rows_sha256": data["raw_logical_rows_sha256"], "raw_plane_sheet_sha256": data["raw_plane_sheet_sha256"], "logical_rows_sha256": logical, "asset_name": asset, "compression": SOURCE_PLANE_OWNERSHIP_IR_COMPRESSION, "compressed_size_bytes": len(compressed), "compressed_sha256": sha256(compressed).hexdigest(), "uncompressed_size_bytes": raw_size, "uncompressed_sha256": raw_sha, "counts": counts}
+    logical = _logical_hash(_binding_map(data, v2=v2), counts, section_hashes); version_tag = "v2" if v2 else "v1"; asset = f"{SOURCE_PLANE_OWNERSHIP_IR_PREFIX}source-plane-ownership-ir-{version_tag}-{data['source_sha256'][:16]}.sqlite.zlib"; identity = _binding_map(data, v2=v2)
+    manifest = {**identity, "app_version": data["app_version"], "source_sha256": data["source_sha256"], "source_size_bytes": data["source_size_bytes"], "target_rail_id": data["target_rail_id"], "project_binding_sha256": data["project_binding_sha256"], "certificate_evidence_sha256": data["certificate_evidence_sha256"], "compiled_topology_identity_sha256": data["compiled_topology_identity_sha256"], "raw_manifest_sha256": data["raw_manifest_sha256"], "raw_geometry_identity_sha256": data["raw_geometry_identity_sha256"], "raw_logical_rows_sha256": data["raw_logical_rows_sha256"], "raw_plane_sheet_sha256": data["raw_plane_sheet_sha256"], "logical_rows_sha256": logical, "asset_name": asset, "compression": SOURCE_PLANE_OWNERSHIP_IR_COMPRESSION, "compressed_size_bytes": len(compressed), "compressed_sha256": sha256(compressed).hexdigest(), "uncompressed_size_bytes": raw_size, "uncompressed_sha256": raw_sha, "counts": counts}
     return manifest, (asset, compressed)
 
 
@@ -436,28 +497,36 @@ def _validate_manifest(manifest: Mapping[str, Any]) -> dict[str, Any]:
     if not isinstance(manifest, Mapping) or set(manifest) != _MANIFEST_KEYS: _fail("SOURCE_PLANE_OWNERSHIP_IR_MANIFEST_INVALID", "manifest keys differ")
     result = dict(manifest)
     for key in ("storage_schema", "payload_schema", "compiler_id", "compression", "asset_name", "app_version", "target_rail_id"): _text(result.get(key), key)
-    if (result["storage_schema"], result["payload_schema"], result["compiler_id"], result["compression"]) != (SOURCE_PLANE_OWNERSHIP_IR_SCHEMA, SOURCE_PLANE_OWNERSHIP_IR_PAYLOAD_SCHEMA, SOURCE_PLANE_OWNERSHIP_IR_COMPILER_ID, SOURCE_PLANE_OWNERSHIP_IR_COMPRESSION): _fail("SOURCE_PLANE_OWNERSHIP_IR_MANIFEST_INVALID", "manifest identity differs")
+    identities = ((SOURCE_PLANE_OWNERSHIP_IR_SCHEMA, SOURCE_PLANE_OWNERSHIP_IR_PAYLOAD_SCHEMA, SOURCE_PLANE_OWNERSHIP_IR_COMPILER_ID, "v1"), (SOURCE_PLANE_OWNERSHIP_IR_V2_SCHEMA, SOURCE_PLANE_OWNERSHIP_IR_V2_PAYLOAD_SCHEMA, SOURCE_PLANE_OWNERSHIP_IR_V2_COMPILER_ID, "v2"))
+    matched = next((item for item in identities if result["storage_schema"] == item[0] and result["payload_schema"] == item[1] and result["compiler_id"] == item[2]), None)
+    if matched is None or result["compression"] != SOURCE_PLANE_OWNERSHIP_IR_COMPRESSION: _fail("SOURCE_PLANE_OWNERSHIP_IR_MANIFEST_INVALID", "manifest identity differs")
     for key in ("source_sha256", "project_binding_sha256", "certificate_evidence_sha256", "compiled_topology_identity_sha256", "raw_manifest_sha256", "raw_geometry_identity_sha256", "raw_logical_rows_sha256", "raw_plane_sheet_sha256", "logical_rows_sha256", "compressed_sha256", "uncompressed_sha256"): _sha(result.get(key), key)
     _integer(result["source_size_bytes"], "source_size_bytes", 1); _integer(result["compressed_size_bytes"], "compressed_size_bytes", 1); _integer(result["uncompressed_size_bytes"], "uncompressed_size_bytes", 1)
     if result["compressed_size_bytes"] > MAX_SOURCE_PLANE_OWNERSHIP_IR_COMPRESSED_BYTES or result["uncompressed_size_bytes"] > MAX_SOURCE_PLANE_OWNERSHIP_IR_UNCOMPRESSED_BYTES or result["uncompressed_size_bytes"] > result["compressed_size_bytes"] * 256 + 8 * 1024 * 1024: _fail("SOURCE_PLANE_OWNERSHIP_IR_BOUND_EXCEEDED", "manifest payload bounds differ")
-    if result["asset_name"] != f"{SOURCE_PLANE_OWNERSHIP_IR_PREFIX}source-plane-ownership-ir-v1-{result['source_sha256'][:16]}.sqlite.zlib": _fail("SOURCE_PLANE_OWNERSHIP_IR_MANIFEST_INVALID", "asset name is not source-derived")
+    if result["asset_name"] != f"{SOURCE_PLANE_OWNERSHIP_IR_PREFIX}source-plane-ownership-ir-{matched[3]}-{result['source_sha256'][:16]}.sqlite.zlib": _fail("SOURCE_PLANE_OWNERSHIP_IR_MANIFEST_INVALID", "asset name is not source-derived")
     counts = result["counts"]
-    if not isinstance(counts, Mapping) or set(counts) != set(_SECTIONS) or any(type(value) is not int or value < 0 or value > MAX_SOURCE_PLANE_OWNERSHIP_IR_ROWS for value in counts.values()) or sum(counts.values()) > MAX_SOURCE_PLANE_OWNERSHIP_IR_ROWS: _fail("SOURCE_PLANE_OWNERSHIP_IR_MANIFEST_INVALID", "manifest counts differ")
+    sections = _V2_SECTIONS if matched[3] == "v2" else _SECTIONS
+    if not isinstance(counts, Mapping) or set(counts) != set(sections) or any(type(value) is not int or value < 0 or value > MAX_SOURCE_PLANE_OWNERSHIP_IR_ROWS for value in counts.values()) or sum(counts.values()) > MAX_SOURCE_PLANE_OWNERSHIP_IR_ROWS: _fail("SOURCE_PLANE_OWNERSHIP_IR_MANIFEST_INVALID", "manifest counts differ")
     return result
 
 
-def _validate_schema(connection: sqlite3.Connection, cancelled: Any = None) -> None:
+def _manifest_v2(manifest: Mapping[str, Any]) -> bool:
+    return manifest.get("storage_schema") == SOURCE_PLANE_OWNERSHIP_IR_V2_SCHEMA
+
+
+def _validate_schema(connection: sqlite3.Connection, cancelled: Any = None, *, v2: bool = False) -> None:
     callback = cancelled or (lambda: False)
+    sections = _V2_SECTIONS if v2 else _SECTIONS; columns = _COLUMNS_V2 if v2 else _COLUMNS; create_sql = _CREATE_SQL_V2 if v2 else _CREATE_SQL
     connection.execute("PRAGMA trusted_schema=OFF"); connection.set_progress_handler(lambda: 1 if callback() else 0, 1000)
     if connection.execute("PRAGMA application_id").fetchone()[0] != _APP_ID or connection.execute("PRAGMA user_version").fetchone()[0] != _USER_VERSION: _fail("SOURCE_PLANE_OWNERSHIP_IR_DATABASE_INVALID", "SQLite identity differs")
-    expected = set(_SECTIONS) | {"meta", "section_ledger"}; actual = {row[0] for row in connection.execute("SELECT name FROM sqlite_master WHERE type='table'")}
+    expected = set(sections) | {"meta", "section_ledger"}; actual = {row[0] for row in connection.execute("SELECT name FROM sqlite_master WHERE type='table'")}
     if actual != expected: _fail("SOURCE_PLANE_OWNERSHIP_IR_DATABASE_INVALID", "SQLite table set differs")
     if {row[0] for row in connection.execute("SELECT name FROM sqlite_master WHERE type IN ('index','trigger','view') AND name NOT LIKE 'sqlite_autoindex_%'")}: _fail("SOURCE_PLANE_OWNERSHIP_IR_DATABASE_INVALID", "SQLite contains undeclared objects")
-    for table, columns in {**_COLUMNS, "meta": ("key", "value"), "section_ledger": ("section_name", "row_count", "logical_sha256")}.items():
-        if tuple(row[1] for row in connection.execute(f"PRAGMA table_info({table})")) != columns: _fail("SOURCE_PLANE_OWNERSHIP_IR_DATABASE_INVALID", f"{table} columns differ")
+    for table, expected_columns in {**columns, "meta": ("key", "value"), "section_ledger": ("section_name", "row_count", "logical_sha256")}.items():
+        if tuple(row[1] for row in connection.execute(f"PRAGMA table_info({table})")) != expected_columns: _fail("SOURCE_PLANE_OWNERSHIP_IR_DATABASE_INVALID", f"{table} columns differ")
     if list(connection.execute("PRAGMA foreign_key_check")): _fail("SOURCE_PLANE_OWNERSHIP_IR_DATABASE_INVALID", "foreign key check failed")
     if connection.execute("PRAGMA integrity_check").fetchone()[0] != "ok": _fail("SOURCE_PLANE_OWNERSHIP_IR_DATABASE_INVALID", "SQLite integrity check failed")
-    expected = sqlite3.connect(":memory:"); expected.executescript(_CREATE_SQL)
+    expected = sqlite3.connect(":memory:"); expected.executescript(create_sql)
     actual_sql = {row[0]: " ".join((row[1] or "").lower().split()) for row in connection.execute("SELECT name,sql FROM sqlite_master WHERE type='table'")}
     expected_sql = {row[0]: " ".join((row[1] or "").lower().split()) for row in expected.execute("SELECT name,sql FROM sqlite_master WHERE type='table'")}
     expected.close()
@@ -499,17 +568,18 @@ class LoadedSourcePlaneOwnershipIR:
     def __exit__(self, *_args: Any) -> None: self.close()
     def iter_section(self, section: str, *, batch_rows: int = 1000) -> Iterator[dict[str, Any]]:
         if self._connection is None: _fail("SOURCE_PLANE_OWNERSHIP_IR_CLOSED", "asset is closed")
-        if section not in _SECTIONS: _fail("SOURCE_PLANE_OWNERSHIP_IR_SECTION_INVALID", "unknown section")
+        columns = _COLUMNS_V2 if _manifest_v2(self.manifest) else _COLUMNS; sections = _V2_SECTIONS if _manifest_v2(self.manifest) else _SECTIONS
+        if section not in sections: _fail("SOURCE_PLANE_OWNERSHIP_IR_SECTION_INVALID", "unknown section")
         if type(batch_rows) is not int or not 1 <= batch_rows <= MAX_SOURCE_PLANE_OWNERSHIP_IR_QUERY_ROWS: _fail("SOURCE_PLANE_OWNERSHIP_IR_BATCH_INVALID", "batch_rows is outside its bound")
-        cursor = self._connection.execute(f"SELECT {','.join(_COLUMNS[section])} FROM {section} ORDER BY {','.join(_COLUMNS[section])}")
+        cursor = self._connection.execute(f"SELECT {','.join(columns[section])} FROM {section} ORDER BY {','.join(columns[section])}")
         while rows := cursor.fetchmany(batch_rows):
-            for row in rows: yield dict(zip(_COLUMNS[section], row, strict=True))
+            for row in rows: yield dict(zip(columns[section], row, strict=True))
 
 class _TableRows:
-    def __init__(self, connection: sqlite3.Connection, section: str) -> None:
-        self.connection = connection; self.section = section
+    def __init__(self, connection: sqlite3.Connection, section: str, columns: Mapping[str, tuple[str, ...]]) -> None:
+        self.connection = connection; self.section = section; self.columns = columns
     def __iter__(self) -> Iterator[dict[str, Any]]:
-        columns = _COLUMNS[self.section]; order = ",".join(columns)
+        columns = self.columns[self.section]; order = ",".join(columns)
         for row in self.connection.execute(f"SELECT {order} FROM {self.section} ORDER BY {order}"):
             yield dict(zip(columns, row, strict=True))
     def __len__(self) -> int:
@@ -532,19 +602,20 @@ def load_source_plane_ownership_ir(manifest: Mapping[str, Any], attachments: Map
     try:
         size, digest = _incremental_decompress(payload, validated["uncompressed_size_bytes"], cancelled, path)
         if size != validated["uncompressed_size_bytes"] or digest != validated["uncompressed_sha256"]: _fail("SOURCE_PLANE_OWNERSHIP_IR_ATTACHMENT_INVALID", "uncompressed hash/size differs")
-        connection = sqlite3.connect(f"file:{path.as_posix()}?mode=ro&immutable=1", uri=True); connection.execute("PRAGMA query_only=ON"); _validate_schema(connection, cancelled)
+        connection = sqlite3.connect(f"file:{path.as_posix()}?mode=ro&immutable=1", uri=True); connection.execute("PRAGMA query_only=ON"); _validate_schema(connection, cancelled, v2=_manifest_v2(validated))
         meta = {row[0]: row[1] for row in connection.execute("SELECT key,value FROM meta")}
         if set(meta) != set(_META_KEYS): _fail("SOURCE_PLANE_OWNERSHIP_IR_DATABASE_INVALID", "meta identity set differs")
         for key in _META_KEYS[:-1]:
-            expected_value = _binding_map(validated).get(key)
+            expected_value = _binding_map(validated, v2=_manifest_v2(validated)).get(key)
             if str(expected_value) != meta[key]: _fail("SOURCE_PLANE_OWNERSHIP_IR_DATABASE_INVALID", f"meta identity {key} differs")
-        if {row[0] for row in connection.execute("SELECT section_name FROM section_ledger")} != set(_SECTIONS): _fail("SOURCE_PLANE_OWNERSHIP_IR_DATABASE_INVALID", "section ledger set differs")
+        sections = _V2_SECTIONS if _manifest_v2(validated) else _SECTIONS; columns = _COLUMNS_V2 if _manifest_v2(validated) else _COLUMNS
+        if {row[0] for row in connection.execute("SELECT section_name FROM section_ledger")} != set(sections): _fail("SOURCE_PLANE_OWNERSHIP_IR_DATABASE_INVALID", "section ledger set differs")
         counts: dict[str, int] = {}; hashes: dict[str, str] = {}
-        for section in _SECTIONS:
-            counts[section], hashes[section] = _section_digest(connection, section, cancelled); ledger = connection.execute("SELECT row_count,logical_sha256 FROM section_ledger WHERE section_name=?", (section,)).fetchone()
+        for section in sections:
+            counts[section], hashes[section] = _section_digest(connection, section, cancelled, columns=columns); ledger = connection.execute("SELECT row_count,logical_sha256 FROM section_ledger WHERE section_name=?", (section,)).fetchone()
             if ledger != (counts[section], hashes[section]) or counts[section] != validated["counts"][section]: _fail("SOURCE_PLANE_OWNERSHIP_IR_DATABASE_INVALID", f"{section} ledger differs")
-        if _logical_hash(_binding_map(validated), counts, hashes) != validated["logical_rows_sha256"] or meta["logical_rows_sha256"] != validated["logical_rows_sha256"]: _fail("SOURCE_PLANE_OWNERSHIP_IR_DATABASE_INVALID", "logical rows hash differs")
-        draft = {section: _TableRows(connection, section) for section in _SECTIONS}; draft.update({"app_version": validated["app_version"], "source_sha256": validated["source_sha256"], "source_size_bytes": validated["source_size_bytes"], "target_rail_id": validated["target_rail_id"], **{key: validated[key] for key in ("project_binding_sha256", "certificate_evidence_sha256", "compiled_topology_identity_sha256", "raw_manifest_sha256", "raw_geometry_identity_sha256", "raw_logical_rows_sha256", "raw_plane_sheet_sha256")}}); _validate_rows(draft)
+        if _logical_hash(_binding_map(validated, v2=_manifest_v2(validated)), counts, hashes) != validated["logical_rows_sha256"] or meta["logical_rows_sha256"] != validated["logical_rows_sha256"]: _fail("SOURCE_PLANE_OWNERSHIP_IR_DATABASE_INVALID", "logical rows hash differs")
+        draft = {section: _TableRows(connection, section, columns) for section in sections}; draft.update({"app_version": validated["app_version"], "source_sha256": validated["source_sha256"], "source_size_bytes": validated["source_size_bytes"], "target_rail_id": validated["target_rail_id"], **{key: validated[key] for key in ("project_binding_sha256", "certificate_evidence_sha256", "compiled_topology_identity_sha256", "raw_manifest_sha256", "raw_geometry_identity_sha256", "raw_logical_rows_sha256", "raw_plane_sheet_sha256")}}); _validate_rows(draft)
         return LoadedSourcePlaneOwnershipIR(connection, temporary, validated)
     except sqlite3.Error as exc:
         if "connection" in locals(): connection.close()
