@@ -1,13 +1,13 @@
 # SPD Decap PI Evaluator 목적·기술 기준
 
 - 적용 제품: **SPD Decap PI Evaluator v0.23.1**
-- 문서 버전: **1.176**
+- 문서 버전: **1.177**
 - W5 approved/machine-frozen source-before: `main` commit `027ac7a09a3eded15f45c41860945f9d4c7f488d`
-- 상태: **G0 기준 문서** — W5 DONE; W6-BASE 260729 numerical FAIL; W7-SOURCE-IR Phase 1/2/3/4와 W7-PHYS-PROSPECTIVE-P0/P1/P2/P4/P5/P6/P7/P8 DONE, P3 DONE/STOP (모두 shadow/prerequisite 범위); W7 production physics는 아직 BLOCKED다.
-- 현재 평가: W6-BASE는 PowerSI 수치 기준 FAIL이고 unseen/generalization은 `unknown / not_run`이다. P8은 commit `abf79cf`에서 P6 old class 제거, P7 interface/finite-link embedding, shadow termination 재결속을 닫았지만 `p1_stamp_applied=false`, `solve_eligible=false`다. production solver, topology, owner-off, `Y_global`과 `Zii`는 바뀌지 않았다.
-- Sole ACTIVE item (current): **`W7-PHYS-PROSPECTIVE-P9 / STAMP-BIND-01-SHADOW-P1-NODAL-BLOCK-BINDING`** — accepted P1/P7/P8 identity를 기존 `NodalAdmittanceBlock`에 결속해 one-frequency shadow stamp 전제를 판정한다.
-- P8 closure: commit `abf79cf`, 최종 지정 node `1 passed in 1.60s`, Sol ACCEPT; `topology_materialized=true`, `p1_stamp_applied=false`, `solve_eligible=false`, readiness false, production unchanged.
-- 현재 권한: main-only와 `accuracy_parse.py` 보존을 유지한다. P9은 consumer와 focused test 두 파일 범위의 shadow P1 block binding만 허용하며 실제 matrix 적용, solver/`Y_global`/`Zii`, Distribution, broadband, W6/PowerSI와 production 변경은 금지한다.
+- 상태: **G0 기준 문서** — W5 DONE; W6-BASE 260729 numerical FAIL; W7-SOURCE-IR Phase 1/2/3/4와 W7-PHYS-PROSPECTIVE-P0/P1/P2/P4/P5/P6/P7/P8/P9 DONE, P3 DONE/STOP (모두 shadow/prerequisite 범위); W7 production physics는 아직 BLOCKED다.
+- 현재 평가: W6-BASE는 PowerSI 수치 기준 FAIL이고 unseen/generalization은 `unknown / not_run`이다. P9은 commit `593e070`에서 accepted P1 N-port를 P8 interface/reduced index와 P7 owner ledger에 기존 read-only `NodalAdmittanceBlock`으로 결속했지만 `p1_stamp_applied=false`, `solve_eligible=false`다. production solver, topology, owner-off, `Y_global`과 `Zii`는 바뀌지 않았다.
+- Sole ACTIVE item (current): **`W7-PHYS-PROSPECTIVE-P10 / ASSEMBLY-PREREQ-02-SHADOW-AUGMENTED-COMPONENT-CLOSURE`** — P1 nonzero graph를 P8 shadow/termination graph에 더한 component·port-bearing pruning closure를 exact 1 GHz에서 판정한다.
+- P9 closure: commit `593e070`, 최종 지정 node `1 passed in 1.60s`, Sol ACCEPT; `topology_materialized=true`, `p1_stamp_bound=true`, `p1_stamp_applied=false`, `solve_eligible=false`, readiness false, production unchanged.
+- 현재 권한: main-only와 `accuracy_parse.py` 보존을 유지한다. P10은 consumer와 focused test 두 파일 및 canonical 문서 상태 갱신 범위의 shadow component closure만 허용하며 core seam, 실제 matrix 적용, solver/`Y_global`/`Zii`, Distribution, broadband, W6/PowerSI와 production 변경은 금지한다.
 - 물리 작업 재개 조건: IR prerequisite 완료 후에도 geometry/material provenance, physical limiting-case invariant, rail-complete 적용 범위, deterministic stamp와 실제 consumer에 결속된 disjoint owner ledger를 갖춘 단일 physical candidate가 필요하다.
 - 최종 개정: 2026-08-29 (Asia/Seoul)
 
@@ -341,10 +341,10 @@ flowchart TD
 | 제품 기반 | W0–W5에서 목적·작업 통제, product-core truth, SPD/I/O 안전성, CI, solver fail-closed guard와 frozen accuracy gate를 확보했다. |
 | 외부 정확성 | W6-BASE 260729는 완료된 수치 결과지만 PowerSI 기준 **FAIL**이다. unseen/generalization은 `unknown / not_run`이다. |
 | Source IR 성과 | Phase 1/2는 canonical source/provenance IR과 importer seam, Phase 3은 deterministic shadow finite-port witness, Phase 4는 quotient-authoritative all-contact v2를 commit `3b76af4`에서 완료했다. 세부 계약은 [Source-derived physical IR](SOURCE_DERIVED_PHYSICAL_IR.md)이 권위 있다. |
-| Source IR 한계 | P0–P8은 contact admissibility부터 exact 1 GHz atomic replacement recipe와 shadow topology embedding까지의 prerequisite를 증명했다. 그러나 P1 block 결속·실제 stamp 적용, production assembly와 `Zii` 연결, PowerSI 근접 정확성은 아직 증명하지 않았다. |
+| Source IR 한계 | P0–P9은 contact admissibility부터 exact 1 GHz atomic replacement recipe, shadow topology embedding과 P1 block 결속까지의 prerequisite를 증명했다. 그러나 augmented component/pruning closure, 실제 stamp 적용, production assembly와 `Zii` 연결, PowerSI 근접 정확성은 아직 증명하지 않았다. |
 | 생산 물리 상태 | surface-patch plane current-spreading R/L이 유일한 credible direction이지만 deterministic replacement stamp, production global assembly와 disjoint owner-off ledger가 없어 **NOT READY/STOP**이다. |
-| 현재 작업 상태 | `W7-PHYS-PROSPECTIVE-P9 ACTIVE`. accepted P1/P7/P8 identity와 contact/interface/owner 순서를 기존 `NodalAdmittanceBlock`에 결속할 수 있는지만 판정한다. |
-| 현재 gate | prerequisite/identity/contact/interface/owner/matrix 결속이 다르면 STOP한다. PASS여도 exact 1 GHz P1 N-port의 shadow block binding만 뜻하며 `p1_stamp_applied=false`, `solve_eligible=false`, `production_ready=false`, `replacement_ready=false`다. |
+| 현재 작업 상태 | `W7-PHYS-PROSPECTIVE-P10 ACTIVE`. P8 base·mounted termination·P1 nonzero graph를 합친 component partition에서 port가 끊기지 않고 P1 interface가 port-bearing pruning에 남는지만 판정한다. |
+| 현재 gate | prerequisite/identity/topology/termination/port/interface closure가 다르면 STOP한다. PASS여도 exact 1 GHz shadow component closure만 뜻하며 `p1_stamp_applied=false`, `global_matrix_assembled=false`, `solve_eligible=false`, `production_ready=false`, `replacement_ready=false`다. |
 
 세부 실행 이력, exact artifact identity와 current dirty file set은
 [작업 기준](WORK_EXECUTION_BASELINE.md)에만 둔다. 이전 미시적 실행 이력은 Git
