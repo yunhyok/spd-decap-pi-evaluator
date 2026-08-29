@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from copy import deepcopy
-from dataclasses import replace
+from dataclasses import asdict, replace
 from hashlib import sha256
 import json
 import math
@@ -307,3 +307,54 @@ def test_source_plane_patch_shadow_contact_rewire_plan(tmp_path: Path):
     bad_patch = {**patch, "diagnostics": {**patch["diagnostics"], "passivity_min_eigenvalue_s": -1.0, "passivity_tolerance_s": 0.0}}
     stopped = consumer.plan_source_plane_patch_shadow_contact_rewire(own, imported.attachments, raw, bad_patch, substrate, rail_id="VDD_CORE/1")
     assert stopped["status"] == "stopped" and stopped["code"] == "SHADOW_REWIRE_PASSIVITY_INVALID"
+
+
+def test_source_plane_patch_shadow_rewire_commutes_with_scenario_binding(tmp_path: Path):
+    from spd_decap_pi._core.solver.layer_surface_network import compile_layer_surface_network
+    from spd_decap_pi.layerwise_scenario_topology import compile_layerwise_scenario_network
+    from spd_decap_pi.scenario_topology_plan import ScenarioTopologyPlan, SCENARIO_TOPOLOGY_PLAN_SCHEMA
+
+    imported = _v2_import(tmp_path)
+    project = imported.scenario.base_project
+    own = project.metadata["spd_import"]["source_plane_ownership_ir"]
+    raw = project.metadata["spd_import"]["raw_spatial_contact_asset"]
+    substrate = compile_layerwise_substrate(project, imported.attachments, required_rail_id="VDD_CORE/1", require_plane_sheet_payload=True)
+    rewire_plan = consumer.plan_source_plane_patch_shadow_contact_rewire(
+        own, imported.attachments, raw,
+        consumer.evaluate_source_plane_contact_condensation(own, imported.attachments, raw, imported.attachments, rail_id="VDD_CORE/1", frequency_hz=1.0e9, cell_um=1000.0),
+        substrate, rail_id="VDD_CORE/1",
+    )
+    source_sha = substrate.provenance["source_sha256"]
+    certificate_sha = next(
+        substrate.provenance[key]
+        for key in ("surface_connectivity_evidence_sha256", "finite_route_certificate_sha256", "finite_via_certificate_sha256")
+        if substrate.provenance.get(key)
+    )
+    empty = ScenarioTopologyPlan(
+        schema_version=SCENARIO_TOPOLOGY_PLAN_SCHEMA,
+        source_sha256=source_sha,
+        connection_evidence_sha256=_h("a"),
+        source_contact_manifest_sha256=_h("b"),
+        retarget_route_manifest_sha256=_h("c"),
+        finite_route_certificate_sha256=certificate_sha,
+        terminal_nodes=(), active_topology_links=(), active_retarget_routes=(),
+        cap_body_requests=(), suppressed_base_cut_ids=(), source_owner_partition=(),
+        plan_sha256=_h("d"),
+    )
+    payload = asdict(empty)
+    payload.pop("plan_sha256")
+    empty = replace(empty, plan_sha256=sha256((json.dumps(payload, ensure_ascii=False, sort_keys=True, separators=(",", ":")) + "\n").encode("utf-8")).hexdigest())
+    binding = compile_layerwise_scenario_network(base_substrate=substrate, plan=empty, cap_models={})
+    first = consumer.audit_source_plane_patch_shadow_rewire_commutation(rewire_plan, substrate, binding, rail_id="VDD_CORE/1")
+    second = consumer.audit_source_plane_patch_shadow_rewire_commutation(rewire_plan, substrate, binding, rail_id="VDD_CORE/1")
+    assert first == second and first["shadow_only"] is True
+    assert first["production_ready"] is False and first["replacement_ready"] is False
+    assert len(first["shadow_split_sha256"]) == len(first["scenario_commutation_sha256"]) == 64
+    assert first["status"] == "passed" and first["code"] is None
+    assert len(first["port_termination_boundary_sha256"]) == 64
+    edge_id = str(rewire_plan["rewire_rows"][0]["old_finite_edge_id"]).casefold()
+    links = tuple(link for link in binding.network.via_links if link.link_id.casefold() != edge_id)
+    network = compile_layer_surface_network(binding.network.surface_node_ids, partials=binding.network.partials, via_links=links, ports=binding.network.ports)
+    stopped_binding = replace(binding, network=network)
+    stopped = consumer.audit_source_plane_patch_shadow_rewire_commutation(rewire_plan, substrate, stopped_binding, rail_id="VDD_CORE/1")
+    assert stopped["status"] == "stopped" and stopped["code"] == "SCENARIO_REWIRE_SOURCE_EDGE_SUPPRESSED"

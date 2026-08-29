@@ -24,6 +24,7 @@ from .source_plane_ownership_ir import (
 )
 from ._core.geometry.ordered_boolean import ordered_spd_geometry
 from ._core.solver.mfdm import EPSILON_0_F_PER_M, MU_0_H_PER_M
+from ._core.solver.layerwise_network import LayerwiseScenarioNetworkBinding
 from ._core.solver.surface_patch_plane import (
     SurfacePatchArtwork,
     SurfacePatchConductor,
@@ -1595,4 +1596,345 @@ def plan_source_plane_patch_shadow_contact_rewire(
     return {"schema_version": "source-plane-shadow-contact-rewire-plan-v1", "status": "planned", "code": None, "shadow_only": True, "production_ready": False, "replacement_ready": False, "rail_id": rail_id, "source_sha256": raw_manifest["source_sha256"], "base_cutset_sha256": identities[0], "p3_input_identity_sha256": identities[1], "p2_audit_sha256": identities[2], "p1_input_sha256": identities[3], "p1_output_sha256": identities[4], "old_edge_set_sha256": identities[5], "substrate_identity_sha256": identities[6], "rewire_rows": rewires, "disabled_old_edge_fingerprints": disabled, "planned_block_owner_ids": planned_owner_ids, "retained_contact_finite_owner_ids": retained, "old_selected_external_degree_after_plan": 0, "planned_stamp": stamp, "shadow_split_sha256": sha256(concrete_canonical_json_bytes(identity)).hexdigest()}
 
 
-__all__ = ["SourcePlanePatchError", "consume_source_plane_patch", "evaluate_source_plane_contact_admissibility", "evaluate_source_plane_contact_condensation", "audit_source_plane_patch_owner_off", "audit_source_plane_patch_contact_quotient_representability", "audit_source_plane_patch_selected_base_cutset", "plan_source_plane_patch_shadow_contact_rewire"]
+def audit_source_plane_patch_shadow_rewire_commutation(
+    rewire_plan: Mapping[str, Any],
+    substrate: Any,
+    binding: Any,
+    *,
+    rail_id: str,
+) -> Mapping[str, Any]:
+    """Audit P5's contact boundary against one compiled scenario binding.
+
+    The audit is deliberately structural.  It never applies the planned
+    interface nodes, mutates a network, or invokes a solver.
+    """
+    rail_id = _text(rail_id, "rail_id")
+    plan = rewire_plan
+    if not isinstance(plan, Mapping):
+        _fail("SCENARIO_REWIRE_INVALID: P5 result is not a mapping")
+
+    def digest(value: Any, label: str) -> str:
+        if not isinstance(value, str):
+            _fail(f"SCENARIO_REWIRE_INVALID: {label} is not SHA-256")
+        value = value.strip()
+        if len(value) != 64 or value != value.casefold() or any(
+            character not in "0123456789abcdef" for character in value
+        ):
+            _fail(f"SCENARIO_REWIRE_INVALID: {label} is not SHA-256")
+        return value
+
+    if (
+        plan.get("schema_version") != "source-plane-shadow-contact-rewire-plan-v1"
+        or plan.get("status") != "planned"
+        or plan.get("shadow_only") is not True
+        or plan.get("production_ready") is not False
+        or plan.get("replacement_ready") is not False
+    ):
+        _fail("SCENARIO_REWIRE_INVALID: P5 plan is not shadow/planned")
+    source_sha = digest(plan.get("source_sha256"), "P5 source")
+    substrate_provenance = getattr(substrate, "provenance", None)
+    if not isinstance(substrate_provenance, Mapping):
+        _fail("SCENARIO_REWIRE_INVALID: substrate provenance is absent")
+    source_identity = digest(substrate_provenance.get("source_sha256"), "substrate source")
+    if source_sha != source_identity:
+        _fail("SCENARIO_REWIRE_INVALID: P5 source differs from substrate source")
+    p5_keys = (
+        "base_cutset_sha256",
+        "p3_input_identity_sha256",
+        "p2_audit_sha256",
+        "p1_input_sha256",
+        "p1_output_sha256",
+        "old_edge_set_sha256",
+        "substrate_identity_sha256",
+        "shadow_split_sha256",
+    )
+    p5_ids = {key: digest(plan.get(key), f"P5 {key}") for key in p5_keys}
+    if str(plan.get("rail_id", "")).casefold() != rail_id.casefold():
+        _fail("SCENARIO_REWIRE_INVALID: P5 rail differs")
+
+    stamp = plan.get("planned_stamp")
+    rows = plan.get("rewire_rows")
+    disabled = plan.get("disabled_old_edge_fingerprints")
+    planned_owners = plan.get("planned_block_owner_ids")
+    retained_owners = plan.get("retained_contact_finite_owner_ids")
+    if (
+        not isinstance(stamp, Mapping)
+        or not isinstance(rows, list)
+        or not rows
+        or any(not isinstance(row, Mapping) for row in rows)
+        or not isinstance(disabled, list)
+        or not isinstance(planned_owners, list)
+        or not isinstance(retained_owners, list)
+    ):
+        _fail("SCENARIO_REWIRE_INVALID: P5 disclosures are incomplete")
+    if any(digest(value, "P5 disabled edge") != value for value in disabled):
+        _fail("SCENARIO_REWIRE_INVALID: P5 disabled edge set is malformed")
+    if any(not isinstance(value, str) or not value.strip() for value in (*planned_owners, *retained_owners)):
+        _fail("SCENARIO_REWIRE_INVALID: P5 owner disclosure is malformed")
+    if len({value.casefold() for value in planned_owners}) != len(planned_owners):
+        _fail("SCENARIO_REWIRE_INVALID: P5 planned owners are duplicated")
+    if len({value.casefold() for value in retained_owners}) != len(retained_owners):
+        _fail("SCENARIO_REWIRE_INVALID: P5 retained owners are duplicated")
+    if {value.casefold() for value in planned_owners} & {value.casefold() for value in retained_owners}:
+        _fail("SCENARIO_REWIRE_INVALID: P5 owner sets overlap")
+    interfaces = stamp.get("contact_interfaces")
+    if not isinstance(interfaces, list) or len(interfaces) != len(rows):
+        _fail("SCENARIO_REWIRE_INVALID: P5 interface disclosure is malformed")
+    interface_ids = [str(row.get("interface_node_id", "")) for row in interfaces if isinstance(row, Mapping)]
+    if len(interface_ids) != len(rows) or any(not value.strip() for value in interface_ids) or len({value.casefold() for value in interface_ids}) != len(interface_ids):
+        _fail("SCENARIO_REWIRE_INVALID: P5 interface IDs are malformed")
+
+    # Reconstruct P5's identity envelope so the scenario result cannot detach
+    # from a different plan payload while retaining the same displayed SHA.
+    common = {
+        "rail_id": rail_id,
+        "source_sha256": source_sha,
+        "base_cutset_sha256": p5_ids["base_cutset_sha256"],
+        "p3_input_identity_sha256": p5_ids["p3_input_identity_sha256"],
+        "p2_audit_sha256": p5_ids["p2_audit_sha256"],
+        "p1_input_sha256": p5_ids["p1_input_sha256"],
+        "p1_output_sha256": p5_ids["p1_output_sha256"],
+        "old_edge_set_sha256": p5_ids["old_edge_set_sha256"],
+        "substrate_identity_sha256": p5_ids["substrate_identity_sha256"],
+    }
+    plan_identity = {
+        **common,
+        "contact_ids": [row.get("contact_id") for row in rows],
+        "rewires": rows,
+        "disabled_old_edge_fingerprints": disabled,
+        "planned_block_owner_ids": planned_owners,
+        "retained_contact_finite_owner_ids": retained_owners,
+        "stamp": dict(stamp),
+    }
+    if sha256(concrete_canonical_json_bytes(plan_identity)).hexdigest() != p5_ids["shadow_split_sha256"]:
+        _fail("SCENARIO_REWIRE_INVALID: P5 shadow split identity differs")
+
+    base_network = getattr(substrate, "network", None)
+    scenario_network = getattr(binding, "network", None)
+    termination = getattr(binding, "termination_manifest", None)
+    if (
+        not isinstance(binding, LayerwiseScenarioNetworkBinding)
+        or base_network is None
+        or scenario_network is None
+        or termination is None
+    ):
+        _fail("SCENARIO_REWIRE_INVALID: substrate/binding network is absent")
+    base_id = digest(getattr(substrate, "substrate_identity_sha256", ""), "base substrate")
+    binding_base = digest(getattr(binding, "base_substrate_identity_sha256", ""), "binding base")
+    scenario_id = digest(getattr(binding, "scenario_identity_sha256", ""), "scenario identity")
+    plan_id = digest(getattr(binding, "plan_sha256", ""), "scenario plan")
+    termination_id = digest(getattr(termination, "manifest_sha256", ""), "termination manifest")
+    provenance = getattr(binding, "provenance", None)
+    if not isinstance(provenance, Mapping):
+        _fail("SCENARIO_REWIRE_INVALID: binding provenance is absent")
+    surface_manifest = digest(provenance.get("scenario_surface_node_manifest_sha256"), "scenario surface manifest")
+    link_manifest = digest(provenance.get("scenario_link_manifest_sha256"), "scenario link manifest")
+    provenance_scenario_id = digest(provenance.get("scenario_identity_sha256"), "provenance scenario identity")
+    provenance_plan_id = digest(provenance.get("scenario_plan_sha256"), "provenance scenario plan")
+    common.update({
+        "shadow_split_sha256": p5_ids["shadow_split_sha256"],
+        "scenario_identity_sha256": scenario_id,
+        "scenario_plan_sha256": plan_id,
+        "scenario_surface_node_manifest_sha256": surface_manifest,
+        "scenario_link_manifest_sha256": link_manifest,
+        "termination_manifest_sha256": termination_id,
+    })
+
+    def stopped(code: str, detail: str, evidence: Mapping[str, Any]) -> Mapping[str, Any]:
+        payload = {**common, "code": code, "detail": detail, "evidence": dict(evidence)}
+        return {
+            "schema_version": "source-plane-shadow-rewire-commutation-v1",
+            "status": "stopped",
+            "code": code,
+            "detail": detail,
+            "shadow_only": True,
+            "production_ready": False,
+            "replacement_ready": False,
+            **common,
+            "evidence": dict(evidence),
+            "scenario_commutation_sha256": sha256(concrete_canonical_json_bytes(payload)).hexdigest(),
+        }
+
+    if binding_base != base_id or p5_ids["substrate_identity_sha256"] != base_id:
+        return stopped("SCENARIO_REWIRE_IDENTITY_MISMATCH", "base substrate identity differs", {"base_substrate_identity_sha256": base_id, "binding_base_substrate_identity_sha256": binding_base, "p5_substrate_identity_sha256": p5_ids["substrate_identity_sha256"]})
+    if provenance_scenario_id != scenario_id or provenance_plan_id != plan_id:
+        return stopped("SCENARIO_REWIRE_IDENTITY_MISMATCH", "scenario provenance identity differs", {"scenario_identity_sha256": scenario_id, "provenance_scenario_identity_sha256": provenance_scenario_id, "scenario_plan_sha256": plan_id, "provenance_scenario_plan_sha256": provenance_plan_id})
+
+    def sequence_sha256(values: Any) -> str:
+        digest = sha256()
+        digest.update(b"[")
+        for ordinal, value in enumerate(values):
+            if ordinal:
+                digest.update(b",")
+            encoded = concrete_canonical_json_bytes(value)
+            digest.update(encoded[:-1] if encoded.endswith(b"\n") else encoded)
+        digest.update(b"]\n")
+        return digest.hexdigest()
+
+    expected_surface_manifest = sequence_sha256(str(value).casefold() for value in getattr(scenario_network, "surface_node_ids", ()))
+    def network_ports(network: Any) -> tuple[tuple[str, str, str], ...]:
+        values: list[tuple[str, str, str]] = []
+        for port in tuple(getattr(network, "ports", ())):
+            values.append((str(port.port_id), str(port.positive_node_id), str(port.negative_node_id)))
+        if len({value[0].casefold() for value in values}) != len(values):
+            _fail("SCENARIO_REWIRE_INVALID: port IDs are duplicated")
+        return tuple(sorted(values, key=lambda value: (value[0].casefold(), value[0])))
+
+    base_ports = network_ports(base_network)
+    scenario_ports = network_ports(scenario_network)
+    if scenario_ports != base_ports:
+        return stopped("SCENARIO_REWIRE_IDENTITY_MISMATCH", "scenario port inventory differs", {"base_ports": base_ports, "scenario_ports": scenario_ports})
+
+    selected_display = {str(row.get("selected_old_endpoint", "")) for row in rows}
+    selected = {value.casefold() for value in selected_display}
+    if not selected or any(not value.strip() for value in selected_display):
+        _fail("SCENARIO_REWIRE_INVALID: selected old endpoint disclosure is malformed")
+    try:
+        base_selected_reduced = {
+            value.casefold(): int(base_network.reduced_node_index(value))
+            for value in selected_display
+        }
+        selected_reduced = set(base_selected_reduced.values())
+        base_preimages: dict[int, set[str]] = {}
+        for value in getattr(base_network, "surface_node_ids", ()):
+            reduced = int(base_network.reduced_node_index(value))
+            if reduced in selected_reduced:
+                base_preimages.setdefault(reduced, set()).add(str(value).casefold())
+        old_class = set().union(*base_preimages.values())
+    except Exception as exc:
+        _fail(f"SCENARIO_REWIRE_INVALID: source selected class is malformed: {exc}")
+    if not selected_reduced or not old_class:
+        _fail("SCENARIO_REWIRE_INVALID: source selected class is empty")
+    interface_keys = {value.casefold() for value in interface_ids}
+    scenario_surface_ids = getattr(scenario_network, "surface_node_ids", ())
+    try:
+        scenario_selected_reduced = {
+            value.casefold(): int(scenario_network.reduced_node_index(value))
+            for value in selected_display
+        }
+        pairs: dict[int, set[int]] = {}
+        for key, base_reduced in base_selected_reduced.items():
+            pairs.setdefault(base_reduced, set()).add(scenario_selected_reduced[key])
+        if any(len(values) != 1 for values in pairs.values()) or len({next(iter(values)) for values in pairs.values()}) != len(pairs):
+            return stopped("SCENARIO_REWIRE_SOURCE_EDGE_DRIFT", "scenario selected classes were merged or split", {})
+        scenario_reduced_values = set(scenario_selected_reduced.values())
+        scenario_preimages: dict[int, set[str]] = {}
+        for value in scenario_surface_ids:
+            reduced = int(scenario_network.reduced_node_index(value))
+            if reduced in scenario_reduced_values:
+                scenario_preimages.setdefault(reduced, set()).add(value.casefold())
+        for base_reduced, scenario_values in pairs.items():
+            scenario_reduced = next(iter(scenario_values))
+            if base_preimages.get(base_reduced, set()) != scenario_preimages.get(scenario_reduced, set()):
+                return stopped("SCENARIO_REWIRE_SOURCE_EDGE_DRIFT", "scenario selected class members differ", {"base_reduced": base_reduced, "scenario_reduced": scenario_reduced})
+        scenario_old_class = set().union(*scenario_preimages.values())
+    except Exception as exc:
+        return stopped("SCENARIO_REWIRE_SOURCE_EDGE_DRIFT", "scenario selected class is not preserved", {"error": str(exc)})
+    if scenario_old_class != old_class:
+        return stopped("SCENARIO_REWIRE_SOURCE_EDGE_DRIFT", "scenario selected class differs", {"base_class": sorted(old_class), "scenario_class": sorted(scenario_old_class)})
+    boundary_keys = old_class | interface_keys
+    if any(value.casefold() in interface_keys for value in scenario_surface_ids):
+        return stopped("SCENARIO_REWIRE_BOUNDARY_BYPASS", "planned interface node already exists in scenario network", {"interfaces": interface_ids})
+    for _port_id, positive, negative in scenario_ports:
+        if {positive.casefold(), negative.casefold()} & boundary_keys:
+            return stopped("SCENARIO_REWIRE_BOUNDARY_BYPASS", "port endpoint bypasses source-plane boundary", {"port_id": _port_id})
+
+    expected_rows = {str(row.get("old_finite_edge_id", "")).casefold(): row for row in rows}
+    rewire_keys = set(expected_rows)
+    if len(rewire_keys) != len(rows) or any(not key for key in rewire_keys):
+        _fail("SCENARIO_REWIRE_INVALID: P5 edge IDs are malformed")
+    planned_owner_keys = {value.casefold() for value in planned_owners}
+    seen_edges: set[str] = set()
+    manifest_digest = sha256(b"[")
+    for ordinal, link in enumerate(getattr(scenario_network, "via_links", ())):
+        if ordinal:
+            manifest_digest.update(b",")
+        encoded = concrete_canonical_json_bytes({"link_id": link.link_id.casefold(), "first_node_id": link.first_node_id.casefold(), "second_node_id": link.second_node_id.casefold(), "count": link.count, "mode": link.mode, "resistance_ohm_per_via": link.resistance_ohm_per_via, "inductance_h_per_via": link.inductance_h_per_via, "owner_ids": sorted(owner.casefold() for owner in link.owner_ids)})
+        manifest_digest.update(encoded[:-1] if encoded.endswith(b"\n") else encoded)
+        edge_key = str(link.link_id).casefold()
+        owner_keys = {str(owner).casefold() for owner in link.owner_ids}
+        if planned_owner_keys & owner_keys:
+            return stopped("SCENARIO_REWIRE_BOUNDARY_BYPASS", "planned plane owner is present in scenario links", {"link_id": edge_key})
+        endpoints = {str(link.first_node_id).casefold(), str(link.second_node_id).casefold()}
+        row = expected_rows.get(edge_key)
+        if row is None:
+            if endpoints & boundary_keys and not (str(link.mode) == "topology_only_ideal" and endpoints <= old_class):
+                return stopped("SCENARIO_REWIRE_BOUNDARY_BYPASS", "scenario link crosses source-plane boundary", {"link_id": edge_key})
+            continue
+        if edge_key in seen_edges:
+            return stopped("SCENARIO_REWIRE_SOURCE_EDGE_DRIFT", "P5 source edge is not exact-once", {"link_id": edge_key})
+        selected_endpoint = str(row.get("selected_old_endpoint", ""))
+        external_endpoint = str(row.get("external_endpoint", ""))
+        try:
+            metadata_drift = (
+                str(link.mode) != str(row.get("mode"))
+                or int(link.count) != int(row.get("count"))
+                or tuple(str(owner) for owner in link.owner_ids) != tuple(str(owner) for owner in row.get("owner_ids", ()))
+                or endpoints != {selected_endpoint.casefold(), external_endpoint.casefold()}
+                or float(link.resistance_ohm_per_via).hex() != str(row.get("resistance_ohm_per_via_hex"))
+                or float(link.inductance_h_per_via).hex() != str(row.get("inductance_h_per_via_hex"))
+            )
+        except (AttributeError, TypeError, ValueError) as exc:
+            _fail(f"SCENARIO_REWIRE_INVALID: scenario source edge metadata is malformed: {exc}")
+        if metadata_drift:
+            return stopped("SCENARIO_REWIRE_SOURCE_EDGE_DRIFT", "scenario source edge metadata differs", {"link_id": edge_key})
+        seen_edges.add(edge_key)
+    manifest_digest.update(b"]\n")
+    expected_link_manifest = manifest_digest.hexdigest()
+    if seen_edges != rewire_keys:
+        return stopped("SCENARIO_REWIRE_SOURCE_EDGE_SUPPRESSED", "P5 source edge is absent from scenario network", {"expected": sorted(rewire_keys), "seen": sorted(seen_edges)})
+    if surface_manifest != expected_surface_manifest or link_manifest != expected_link_manifest:
+        return stopped("SCENARIO_REWIRE_IDENTITY_MISMATCH", "scenario network manifest differs from binding provenance", {"surface_manifest": surface_manifest, "expected_surface_manifest": expected_surface_manifest, "link_manifest": link_manifest, "expected_link_manifest": expected_link_manifest})
+
+    termination_owner_ids: set[str] = set()
+    for cluster in tuple(getattr(termination, "clusters", ())):
+        source = getattr(cluster, "source", None)
+        if source is None:
+            _fail("SCENARIO_REWIRE_INVALID: termination cluster source is absent")
+        surface_endpoints = {
+            str(getattr(source, "positive_surface_node_id", "")).casefold(),
+            str(getattr(source, "negative_surface_node_id", "")).casefold(),
+        }
+        if surface_endpoints & boundary_keys:
+            return stopped("SCENARIO_REWIRE_BOUNDARY_BYPASS", "termination surface bypasses source-plane boundary", {"cluster_id": str(getattr(source, "cluster_id", ""))})
+        termination_owner_ids.update(str(owner).casefold() for owner in getattr(cluster, "owner_ids", ()))
+    if {value.casefold() for value in planned_owners} & termination_owner_ids:
+        return stopped("SCENARIO_REWIRE_BOUNDARY_BYPASS", "termination owner overlaps planned plane owner", {})
+    if getattr(scenario_network, "partials", None) is not getattr(base_network, "partials", None):
+        return stopped("SCENARIO_REWIRE_SOURCE_EDGE_DRIFT", "scenario partial objects were not reused", {})
+    boundary_identity = {
+        "port_inventory": scenario_ports,
+        "termination_manifest_sha256": termination_id,
+        "termination_owner_ids": sorted(termination_owner_ids),
+        "old_selected_class_node_ids": sorted(old_class),
+    }
+    boundary_sha = sha256(concrete_canonical_json_bytes(boundary_identity)).hexdigest()
+
+    identity = {
+        **common,
+        "rewire_rows": rows,
+        "port_inventory": scenario_ports,
+        "planned_interface_node_ids": interface_ids,
+        "old_selected_class_node_ids": sorted(old_class),
+        "termination_owner_ids": sorted(termination_owner_ids),
+        "port_termination_boundary_sha256": boundary_sha,
+    }
+    return {
+        "schema_version": "source-plane-shadow-rewire-commutation-v1",
+        "status": "passed",
+        "code": None,
+        "detail": None,
+        "shadow_only": True,
+        "production_ready": False,
+        "replacement_ready": False,
+        **common,
+        "rewire_rows": rows,
+        "port_inventory": scenario_ports,
+        "planned_interface_node_ids": interface_ids,
+        "old_selected_class_node_ids": sorted(old_class),
+        "port_termination_boundary_sha256": boundary_sha,
+        "scenario_commutation_sha256": sha256(concrete_canonical_json_bytes(identity)).hexdigest(),
+    }
+
+
+__all__ = ["SourcePlanePatchError", "consume_source_plane_patch", "evaluate_source_plane_contact_admissibility", "evaluate_source_plane_contact_condensation", "audit_source_plane_patch_owner_off", "audit_source_plane_patch_contact_quotient_representability", "audit_source_plane_patch_selected_base_cutset", "plan_source_plane_patch_shadow_contact_rewire", "audit_source_plane_patch_shadow_rewire_commutation"]
