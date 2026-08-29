@@ -528,3 +528,62 @@ def test_source_plane_patch_shadow_nport_block_binding(tmp_path: Path):
     tampered_patch = {**patch, "input_sha256": tampered_input}
     none_network, none_block, stopped = consumer.bind_source_plane_patch_shadow_nport_block(tampered_patch, commutation, recipe, binding, rail_id="VDD_CORE/1")
     assert none_network is None and none_block is None and stopped["status"] == "stopped" and stopped["code"] == "SHADOW_NPORT_IDENTITY_MISMATCH"
+
+
+def test_source_plane_patch_shadow_augmented_component_closure(tmp_path: Path):
+    imported = _v2_import(tmp_path)
+    project = imported.scenario.base_project
+    own = project.metadata["spd_import"]["source_plane_ownership_ir"]
+    raw = project.metadata["spd_import"]["raw_spatial_contact_asset"]
+    substrate = compile_layerwise_substrate(project, imported.attachments, required_rail_id="VDD_CORE/1", require_plane_sheet_payload=True)
+    patch = consumer.evaluate_source_plane_contact_condensation(own, imported.attachments, raw, imported.attachments, rail_id="VDD_CORE/1", frequency_hz=1.0e9, cell_um=1000.0)
+    seed = consumer.plan_source_plane_patch_shadow_contact_rewire(own, imported.attachments, raw, patch, substrate, rail_id="VDD_CORE/1")
+    assert seed["status"] == "planned"
+    external = tuple(dict.fromkeys(str(row["external_endpoint"]) for row in seed["rewire_rows"]))
+    assert len(external) >= 2 and external[0] != external[1]
+    from scipy.sparse import csc_matrix
+    from spd_decap_pi._core.solver.layer_surface_network import compile_layer_surface_network
+    template = substrate.network.partials[0]
+    cap = 1.0e-12
+    augmented_wrapper = replace(template, partial=replace(template.partial, net_names=external[:2], maxwell_capacitance_f=csc_matrix([[cap, -cap], [-cap, cap]], dtype=float)))
+    augmented_network = compile_layer_surface_network(substrate.network.surface_node_ids, partials=substrate.network.partials + (augmented_wrapper,), via_links=substrate.network.via_links, ports=substrate.network.ports)
+    augmented_identity = sha256(consumer.concrete_canonical_json_bytes({"base": substrate.substrate_identity_sha256, "p10": "augmented", "external": external[:2]})).hexdigest()
+    substrate = replace(substrate, network=augmented_network, substrate_identity_sha256=augmented_identity, provenance={**substrate.provenance, "substrate_identity_sha256": augmented_identity})
+    rewire = consumer.plan_source_plane_patch_shadow_contact_rewire(own, imported.attachments, raw, patch, substrate, rail_id="VDD_CORE/1")
+    binding = _empty_scenario_binding(substrate)
+    commutation = consumer.audit_source_plane_patch_shadow_rewire_commutation(rewire, substrate, binding, rail_id="VDD_CORE/1")
+    recipe = consumer.audit_source_plane_patch_shadow_local_replacement_recipe(patch, rewire, commutation, binding, rail_id="VDD_CORE/1")
+    original = (substrate.network.surface_node_ids, substrate.network.via_links, substrate.network.partials, substrate.network.ports)
+    matched_ordinal = int(recipe["remove_old_maxwell"][0]["partial_ordinal"])
+    original_csc = substrate.network.partials[matched_ordinal].partial.maxwell_capacitance_f
+    original_csc_snapshot = (tuple(original_csc.data), tuple(original_csc.indices), tuple(original_csc.indptr))
+    original_csc_flags = (bool(original_csc.data.flags.writeable), bool(original_csc.indices.flags.writeable), bool(original_csc.indptr.flags.writeable))
+    first = consumer.audit_source_plane_patch_shadow_augmented_component_closure(patch, commutation, recipe, binding, rail_id="VDD_CORE/1")
+    second = consumer.audit_source_plane_patch_shadow_augmented_component_closure(patch, commutation, recipe, binding, rail_id="VDD_CORE/1")
+    assert first == second and first["status"] == "passed" and first["shadow_only"] is True
+    assert first["component_closure_verified"] is True and first["p1_connectivity_accounted"] is True and first["p1_stamp_applied"] is False and first["global_matrix_assembled"] is False and first["solve_eligible"] is False and first["production_ready"] is False and first["replacement_ready"] is False
+    assert first["port_components"] and len(first["interface_components"]) == len(recipe["add_p1_nport"]["interface_node_ids"])
+    assert len(first["augmented_components"]) <= len(first["base_components"])
+    port_representatives = {row["component_representative_surface_node_id"] for row in first["port_components"]}
+    assert all(row["component_representative_surface_node_id"] in port_representatives for row in first["interface_components"])
+    assert first["block_id"] == f"source-plane-shadow-p1-nport:{first['p1_output_sha256']}" and len(first["admittance_sha256"]) == 64
+    for key in ("base_component_manifest_sha256", "augmented_component_manifest_sha256", "p1_structural_edge_sha256", "component_closure_sha256"):
+        assert len(first[key]) == 64
+    assert substrate.network.surface_node_ids is original[0] and substrate.network.via_links is original[1] and substrate.network.partials is original[2] and substrate.network.ports is original[3]
+    assert (tuple(original_csc.data), tuple(original_csc.indices), tuple(original_csc.indptr)) == original_csc_snapshot
+    assert (bool(original_csc.data.flags.writeable), bool(original_csc.indices.flags.writeable), bool(original_csc.indptr.flags.writeable)) == original_csc_flags
+
+    from spd_decap_pi._core.solver.layer_surface_network import LayerSurfacePort
+    isolated = "P10_ISOLATED"
+    isolated_port = LayerSurfacePort("p10-isolated", isolated, external[0])
+    isolated_network = compile_layer_surface_network(substrate.network.surface_node_ids + (isolated,), partials=substrate.network.partials, via_links=substrate.network.via_links, ports=substrate.network.ports + (isolated_port,))
+    isolated_identity = sha256(consumer.concrete_canonical_json_bytes({"base": substrate.substrate_identity_sha256, "p10": "isolated"})).hexdigest()
+    isolated_substrate = replace(substrate, network=isolated_network, substrate_identity_sha256=isolated_identity, provenance={**substrate.provenance, "substrate_identity_sha256": isolated_identity})
+    isolated_rewire = consumer.plan_source_plane_patch_shadow_contact_rewire(own, imported.attachments, raw, patch, isolated_substrate, rail_id="VDD_CORE/1")
+    isolated_binding = _empty_scenario_binding(isolated_substrate)
+    isolated_commutation = consumer.audit_source_plane_patch_shadow_rewire_commutation(isolated_rewire, isolated_substrate, isolated_binding, rail_id="VDD_CORE/1")
+    isolated_recipe = consumer.audit_source_plane_patch_shadow_local_replacement_recipe(patch, isolated_rewire, isolated_commutation, isolated_binding, rail_id="VDD_CORE/1")
+    p9_network, p9_block, p9_audit = consumer.bind_source_plane_patch_shadow_nport_block(patch, isolated_commutation, isolated_recipe, isolated_binding, rail_id="VDD_CORE/1")
+    assert p9_network is not None and p9_block is not None and p9_audit["status"] == "passed"
+    stopped = consumer.audit_source_plane_patch_shadow_augmented_component_closure(patch, isolated_commutation, isolated_recipe, isolated_binding, rail_id="VDD_CORE/1")
+    assert stopped["status"] == "stopped" and stopped["code"] == "SHADOW_COMPONENT_PORT_DISCONNECTED"

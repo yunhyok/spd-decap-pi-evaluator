@@ -2500,4 +2500,185 @@ def bind_source_plane_patch_shadow_nport_block(
     return shadow_network, block, audit
 
 
-__all__ = ["SourcePlanePatchError", "consume_source_plane_patch", "evaluate_source_plane_contact_admissibility", "evaluate_source_plane_contact_condensation", "audit_source_plane_patch_owner_off", "audit_source_plane_patch_contact_quotient_representability", "audit_source_plane_patch_selected_base_cutset", "plan_source_plane_patch_shadow_contact_rewire", "audit_source_plane_patch_shadow_rewire_commutation", "audit_source_plane_patch_shadow_local_replacement_recipe", "materialize_source_plane_patch_shadow_topology_embedding", "bind_source_plane_patch_shadow_nport_block"]
+def audit_source_plane_patch_shadow_augmented_component_closure(
+    patch_result: Mapping[str, Any],
+    commutation_result: Mapping[str, Any],
+    recipe_result: Mapping[str, Any],
+    binding: LayerwiseScenarioNetworkBinding,
+    *,
+    rail_id: str,
+) -> Mapping[str, Any]:
+    """Audit P8 base, termination, and P9 N-port component closure."""
+    rail_id = _text(rail_id, "rail_id")
+
+    def digest(value: Any, label: str) -> str:
+        if not isinstance(value, str):
+            _fail(f"SHADOW_COMPONENT_INVALID: {label} is not SHA-256")
+        value = value.strip()
+        if len(value) != 64 or value != value.casefold() or any(char not in "0123456789abcdef" for char in value):
+            _fail(f"SHADOW_COMPONENT_INVALID: {label} is not SHA-256")
+        return value
+
+    if not isinstance(patch_result, Mapping) or not isinstance(commutation_result, Mapping) or not isinstance(recipe_result, Mapping) or not isinstance(binding, LayerwiseScenarioNetworkBinding):
+        _fail("SHADOW_COMPONENT_INVALID: P1/P6/P7/binding input is malformed")
+    shadow_network, block, p9 = bind_source_plane_patch_shadow_nport_block(patch_result, commutation_result, recipe_result, binding, rail_id=rail_id)
+
+    def stopped(code: str, detail: str, identity: Mapping[str, Any]) -> Mapping[str, Any]:
+        payload = {"schema_version": "source-plane-shadow-augmented-component-closure-v1", "shadow_only": True, "component_closure_verified": False, "p1_connectivity_accounted": False, "p1_stamp_applied": False, "global_matrix_assembled": False, "solve_eligible": False, "production_ready": False, "replacement_ready": False, **identity, "status": "stopped", "code": code, "detail": detail}
+        return {**payload, "component_closure_sha256": sha256(concrete_canonical_json_bytes(payload)).hexdigest()}
+
+    if shadow_network is None or block is None or not isinstance(p9, Mapping) or p9.get("status") != "passed":
+        return stopped("SHADOW_COMPONENT_PREREQUISITE_STOPPED", "P9 N-port prerequisite did not pass", {"schema_version": "source-plane-shadow-augmented-component-closure-v1", "shadow_only": True, "component_closure_verified": False, "p1_connectivity_accounted": False, "p1_stamp_applied": False, "global_matrix_assembled": False, "solve_eligible": False, "production_ready": False, "replacement_ready": False, "rail_id": rail_id})
+
+    p9_hash = digest(p9.get("nport_binding_sha256"), "P9 binding")
+    p9_payload = {key: value for key, value in p9.items() if key != "nport_binding_sha256"}
+    if sha256(concrete_canonical_json_bytes(p9_payload)).hexdigest() != p9_hash:
+        return stopped("SHADOW_COMPONENT_IDENTITY_MISMATCH", "P9 audit hash differs", {"schema_version": "source-plane-shadow-augmented-component-closure-v1", "shadow_only": True, "rail_id": rail_id, "p9_nport_binding_sha256": p9_hash})
+
+    p9_fields = ("source_sha256", "p1_input_sha256", "p1_output_sha256", "substrate_identity_sha256", "shadow_split_sha256", "scenario_identity_sha256", "scenario_plan_sha256", "scenario_commutation_sha256", "scenario_surface_node_manifest_sha256", "scenario_link_manifest_sha256", "termination_manifest_sha256", "port_termination_boundary_sha256", "p7_deterministic_recipe_sha256", "p8_shadow_termination_manifest_sha256", "p8_shadow_network_identity_sha256", "p8_topology_embedding_sha256")
+    p9_ids = {key: digest(p9.get(key), f"P9 {key}") for key in p9_fields}
+    p1_input = digest(patch_result.get("input_sha256"), "P1 input")
+    source_sha = digest(patch_result.get("source_sha256"), "P1 source")
+    if str(patch_result.get("rail_id", "")).casefold() != rail_id.casefold() or p9.get("frequency_hz_hex") != float(1.0e9).hex() or p9_ids["source_sha256"] != source_sha or p9_ids["p1_input_sha256"] != p1_input or p9_ids["p1_output_sha256"] != digest(recipe_result.get("p1_output_sha256"), "P7 output") or p9_ids["shadow_split_sha256"] != digest(recipe_result.get("shadow_split_sha256"), "P7 shadow split") or p9_ids["scenario_commutation_sha256"] != digest(commutation_result.get("scenario_commutation_sha256"), "P6 commutation") or p9_ids["scenario_surface_node_manifest_sha256"] != digest(binding.provenance.get("scenario_surface_node_manifest_sha256"), "binding surface manifest") or p9_ids["scenario_link_manifest_sha256"] != digest(binding.provenance.get("scenario_link_manifest_sha256"), "binding link manifest") or p9_ids["scenario_identity_sha256"] != digest(binding.scenario_identity_sha256, "scenario identity") or p9_ids["scenario_plan_sha256"] != digest(binding.plan_sha256, "scenario plan") or p9_ids["termination_manifest_sha256"] != digest(binding.termination_manifest.manifest_sha256, "termination manifest") or p9_ids["port_termination_boundary_sha256"] != digest(commutation_result.get("port_termination_boundary_sha256"), "P6 boundary") or p9_ids["p7_deterministic_recipe_sha256"] != digest(recipe_result.get("deterministic_recipe_sha256"), "P7 recipe"):
+        return stopped("SHADOW_COMPONENT_IDENTITY_MISMATCH", "P9 identity chain differs", {"schema_version": "source-plane-shadow-augmented-component-closure-v1", "shadow_only": True, "rail_id": rail_id, "p9_nport_binding_sha256": p9_hash})
+
+    matrix = block.admittance_s
+    interfaces = tuple(block.node_ids)
+    if tuple(p9.get("interface_node_ids", ())) != interfaces or tuple(p9.get("owner_ids", ())) != tuple(block.owner_ids) or block.block_id != f"source-plane-shadow-p1-nport:{p9_ids['p1_output_sha256']}":
+        return stopped("SHADOW_COMPONENT_IDENTITY_MISMATCH", "P9 block identity differs", {"schema_version": "source-plane-shadow-augmented-component-closure-v1", "shadow_only": True, "rail_id": rail_id, "p9_nport_binding_sha256": p9_hash})
+    try:
+        matrix_array = np.asarray(matrix, dtype=np.complex128)
+        matrix_rows = [[{"real": float(matrix_array[row, column].real).hex(), "imag": float(matrix_array[row, column].imag).hex()} for column in range(matrix_array.shape[1])] for row in range(matrix_array.shape[0])]
+        matrix_hash = sha256(concrete_canonical_json_bytes({"shape": list(matrix_array.shape), "row_major": matrix_rows})).hexdigest()
+    except Exception as exc:
+        return stopped("SHADOW_COMPONENT_IDENTITY_MISMATCH", f"P9 block matrix is malformed: {exc}", {"schema_version": "source-plane-shadow-augmented-component-closure-v1", "shadow_only": True, "rail_id": rail_id, "p9_nport_binding_sha256": p9_hash})
+    if matrix_hash != digest(p9.get("admittance_sha256"), "P9 admittance") or matrix_array.ndim != 2 or matrix_array.shape[0] != matrix_array.shape[1] or matrix_array.shape[0] != len(interfaces) or not np.all(np.isfinite(matrix_array)):
+        return stopped("SHADOW_COMPONENT_IDENTITY_MISMATCH", "P9 matrix identity differs", {"schema_version": "source-plane-shadow-augmented-component-closure-v1", "shadow_only": True, "rail_id": rail_id, "p9_nport_binding_sha256": p9_hash})
+
+    try:
+        shadow_manifest = compile_layer_surface_termination_manifest(shadow_network.surface_node_ids, tuple(cluster.source for cluster in binding.termination_manifest.clusters))
+        termination_mapping = shadow_network.termination_reduced_node_mapping(shadow_manifest)
+        evaluated = shadow_manifest.evaluate([1.0e9], selected_rail_id=rail_id, base_network_identity_sha256=p9_ids["p8_shadow_network_identity_sha256"])
+        if len(evaluated.stamps) != len(shadow_manifest.clusters):
+            raise ValueError("termination stamp count differs")
+        for stamp, cluster in zip(evaluated.stamps, shadow_manifest.clusters, strict=True):
+            if stamp.cluster_id != cluster.source.cluster_id or stamp.positive_node_index != cluster.positive_global_index or stamp.negative_node_index != cluster.negative_global_index:
+                raise ValueError("termination stamp order differs")
+    except Exception as exc:
+        return stopped("SHADOW_COMPONENT_TERMINATION_MISMATCH", f"shadow termination mapping failed: {exc}", {"schema_version": "source-plane-shadow-augmented-component-closure-v1", "shadow_only": True, "rail_id": rail_id, "p9_nport_binding_sha256": p9_hash})
+    if shadow_manifest.manifest_sha256 != p9_ids["p8_shadow_termination_manifest_sha256"]:
+        return stopped("SHADOW_COMPONENT_TERMINATION_MISMATCH", "shadow termination manifest differs", {"schema_version": "source-plane-shadow-augmented-component-closure-v1", "shadow_only": True, "rail_id": rail_id, "p9_nport_binding_sha256": p9_hash})
+
+    reduced_ids = getattr(shadow_network, "_reduced_node_ids", None); compiled_components = getattr(shadow_network, "_components", None)
+    if not isinstance(reduced_ids, tuple) or not reduced_ids or not isinstance(compiled_components, tuple) or any(not isinstance(group, tuple) or not group for group in compiled_components):
+        return stopped("SHADOW_COMPONENT_TOPOLOGY_MISMATCH", "authoritative component partition is malformed", {"schema_version": "source-plane-shadow-augmented-component-closure-v1", "shadow_only": True, "rail_id": rail_id, "p9_nport_binding_sha256": p9_hash})
+    reduced_count = len(reduced_ids); flat = [int(node) for group in compiled_components for node in group]
+    if sorted(flat) != list(range(reduced_count)) or len(flat) != len(set(flat)):
+        return stopped("SHADOW_COMPONENT_TOPOLOGY_MISMATCH", "component partition is not contiguous", {"schema_version": "source-plane-shadow-augmented-component-closure-v1", "shadow_only": True, "rail_id": rail_id, "p9_nport_binding_sha256": p9_hash})
+    representative_by_reduced: dict[int, str] = {}
+    for node in shadow_network.surface_node_ids:
+        try:
+            representative_by_reduced.setdefault(int(shadow_network.reduced_node_index(node)), str(node))
+        except Exception as exc:
+            return stopped("SHADOW_COMPONENT_TOPOLOGY_MISMATCH", f"surface reduced mapping failed: {exc}", {"schema_version": "source-plane-shadow-augmented-component-closure-v1", "shadow_only": True, "rail_id": rail_id, "p9_nport_binding_sha256": p9_hash})
+    if len(representative_by_reduced) != reduced_count:
+        return stopped("SHADOW_COMPONENT_TOPOLOGY_MISMATCH", "reduced nodes lack surface representatives", {"schema_version": "source-plane-shadow-augmented-component-closure-v1", "shadow_only": True, "rail_id": rail_id, "p9_nport_binding_sha256": p9_hash})
+    parent = list(range(reduced_count))
+    def find(value: int) -> int:
+        while parent[value] != value:
+            parent[value] = parent[parent[value]]; value = parent[value]
+        return value
+    def union(first: int, second: int) -> None:
+        left, right = find(first), find(second)
+        if left != right:
+            parent[max(left, right)] = min(left, right)
+    for wrapped in shadow_network.partials:
+        partial = wrapped.partial; names = tuple(partial.net_names)
+        try:
+            local_reduced = [int(shadow_network.reduced_node_index(node)) for node in names]
+            matrix = csc_matrix(partial.maxwell_capacitance_f, copy=True)
+            if matrix.shape != (len(names), len(names)):
+                raise ValueError("partial matrix shape differs")
+            rows: list[int] = []; columns: list[int] = []; values: list[float] = []
+            for column in range(matrix.shape[1]):
+                for offset in range(int(matrix.indptr[column]), int(matrix.indptr[column + 1])):
+                    rows.append(local_reduced[int(matrix.indices[offset])]); columns.append(local_reduced[column]); values.append(float(matrix.data[offset]))
+            reduced_matrix = csc_matrix((values, (rows, columns)), shape=(reduced_count, reduced_count), dtype=float)
+            reduced_matrix.sum_duplicates(); reduced_matrix.eliminate_zeros()
+            for column in range(reduced_matrix.shape[1]):
+                for offset in range(int(reduced_matrix.indptr[column]), int(reduced_matrix.indptr[column + 1])):
+                    row = int(reduced_matrix.indices[offset])
+                    if row != column and float(reduced_matrix.data[offset]) != 0.0:
+                        union(row, column)
+        except Exception as exc:
+            return stopped("SHADOW_COMPONENT_TOPOLOGY_MISMATCH", f"partial connectivity reconstruction failed: {exc}", {"schema_version": "source-plane-shadow-augmented-component-closure-v1", "shadow_only": True, "rail_id": rail_id, "p9_nport_binding_sha256": p9_hash})
+    for link in shadow_network.via_links:
+        try:
+            first = int(shadow_network.reduced_node_index(link.first_node_id)); second = int(shadow_network.reduced_node_index(link.second_node_id))
+        except Exception as exc:
+            return stopped("SHADOW_COMPONENT_TOPOLOGY_MISMATCH", f"via reduced mapping failed: {exc}", {"schema_version": "source-plane-shadow-augmented-component-closure-v1", "shadow_only": True, "rail_id": rail_id, "p9_nport_binding_sha256": p9_hash})
+        if link.mode == "finite_parallel_rl":
+            if first == second:
+                return stopped("SHADOW_COMPONENT_TOPOLOGY_MISMATCH", "finite via self-loop is invalid", {"schema_version": "source-plane-shadow-augmented-component-closure-v1", "shadow_only": True, "rail_id": rail_id, "p9_nport_binding_sha256": p9_hash})
+            union(first, second)
+        elif link.mode != "topology_only_ideal" or first != second:
+            return stopped("SHADOW_COMPONENT_TOPOLOGY_MISMATCH", "topology-only via is not ideal", {"schema_version": "source-plane-shadow-augmented-component-closure-v1", "shadow_only": True, "rail_id": rail_id, "p9_nport_binding_sha256": p9_hash})
+    reconstructed_groups: dict[int, list[int]] = {}
+    for node in range(reduced_count):
+        reconstructed_groups.setdefault(find(node), []).append(node)
+    components = tuple(sorted((tuple(members) for members in reconstructed_groups.values()), key=lambda group: group[0]))
+    compiled_groups = tuple(sorted((tuple(sorted(int(node) for node in group)) for group in compiled_components), key=lambda group: group[0]))
+    if components != compiled_groups:
+        return stopped("SHADOW_COMPONENT_TOPOLOGY_MISMATCH", "reconstructed partition differs from compiled partition", {"schema_version": "source-plane-shadow-augmented-component-closure-v1", "shadow_only": True, "rail_id": rail_id, "p9_nport_binding_sha256": p9_hash})
+    for stamp in evaluated.stamps:
+        positive = int(termination_mapping[stamp.positive_node_index]); negative = int(termination_mapping[stamp.negative_node_index])
+        if positive == negative:
+            return stopped("SHADOW_COMPONENT_TERMINATION_MISMATCH", "termination endpoints collapsed", {"schema_version": "source-plane-shadow-augmented-component-closure-v1", "shadow_only": True, "rail_id": rail_id, "p9_nport_binding_sha256": p9_hash})
+        union(positive, negative)
+    p1_edges: list[dict[str, Any]] = []
+    if matrix_array.shape[0] != len(interfaces):
+        return stopped("SHADOW_COMPONENT_IDENTITY_MISMATCH", "P9 matrix/interface shape differs", {"schema_version": "source-plane-shadow-augmented-component-closure-v1", "shadow_only": True, "rail_id": rail_id, "p9_nport_binding_sha256": p9_hash})
+    try:
+        interface_reduced = [int(shadow_network.reduced_node_index(node)) for node in interfaces]
+    except Exception as exc:
+        return stopped("SHADOW_COMPONENT_TOPOLOGY_MISMATCH", f"P1 interface mapping failed: {exc}", {"schema_version": "source-plane-shadow-augmented-component-closure-v1", "shadow_only": True, "rail_id": rail_id, "p9_nport_binding_sha256": p9_hash})
+    for row in range(matrix_array.shape[0]):
+        for column in range(row + 1, matrix_array.shape[1]):
+            value = matrix_array[row, column]
+            reverse = matrix_array[column, row]
+            if (value != 0j) != (reverse != 0j):
+                return stopped("SHADOW_COMPONENT_TOPOLOGY_MISMATCH", "P1 structural support is not reciprocal", {"schema_version": "source-plane-shadow-augmented-component-closure-v1", "shadow_only": True, "rail_id": rail_id, "p9_nport_binding_sha256": p9_hash})
+            if value != 0j:
+                first_endpoint, second_endpoint = sorted(((interface_reduced[row], interfaces[row]), (interface_reduced[column], interfaces[column])), key=lambda item: (item[0], item[1].casefold(), item[1]))
+                first_reduced, first_interface = first_endpoint
+                second_reduced, second_interface = second_endpoint
+                if first_reduced != second_reduced:
+                    union(first_reduced, second_reduced); p1_edges.append({"first_reduced_index": first_reduced, "second_reduced_index": second_reduced, "first_interface_node_id": first_interface, "second_interface_node_id": second_interface, "row": row, "column": column})
+    p1_edge_sha = sha256(concrete_canonical_json_bytes(p1_edges)).hexdigest()
+    groups: dict[int, list[int]] = {}
+    for node in range(reduced_count):
+        groups.setdefault(find(node), []).append(node)
+    representative_by_root = {root: representative_by_reduced[members[0]] for root, members in groups.items()}
+    base_manifest = [{"representative_surface_node_id": representative_by_reduced[group[0]], "reduced_indices": list(group)} for group in components]
+    augmented_manifest = [{"representative_surface_node_id": representative_by_root[root], "reduced_indices": members} for root, members in sorted(groups.items(), key=lambda item: item[1][0])]
+    base_manifest_sha = sha256(concrete_canonical_json_bytes(base_manifest)).hexdigest(); augmented_manifest_sha = sha256(concrete_canonical_json_bytes(augmented_manifest)).hexdigest()
+    port_disclosures: list[dict[str, Any]] = []; port_roots: set[int] = set()
+    for port in shadow_network.ports:
+        try:
+            positive = int(shadow_network.reduced_node_index(port.positive_node_id)); negative = int(shadow_network.reduced_node_index(port.negative_node_id))
+        except Exception as exc:
+            return stopped("SHADOW_COMPONENT_TOPOLOGY_MISMATCH", f"port reduced mapping failed: {exc}", {"schema_version": "source-plane-shadow-augmented-component-closure-v1", "shadow_only": True, "rail_id": rail_id, "p9_nport_binding_sha256": p9_hash})
+        positive_root, negative_root = find(positive), find(negative)
+        if positive_root != negative_root:
+            return stopped("SHADOW_COMPONENT_PORT_DISCONNECTED", "port spans augmented components", {"schema_version": "source-plane-shadow-augmented-component-closure-v1", "shadow_only": True, "rail_id": rail_id, "p9_nport_binding_sha256": p9_hash, "port_id": port.port_id})
+        port_roots.add(positive_root); port_disclosures.append({"port_id": port.port_id, "positive_reduced_index": positive, "negative_reduced_index": negative, "component_representative_surface_node_id": representative_by_root[positive_root]})
+    interface_disclosures: list[dict[str, Any]] = []
+    for interface, reduced in zip(interfaces, interface_reduced, strict=True):
+        root = find(reduced); interface_disclosures.append({"interface_node_id": interface, "reduced_index": reduced, "component_representative_surface_node_id": representative_by_root[root]})
+        if root not in port_roots:
+            return stopped("SHADOW_COMPONENT_P1_PRUNED", "P1 interface is not port-bearing", {"schema_version": "source-plane-shadow-augmented-component-closure-v1", "shadow_only": True, "rail_id": rail_id, "p9_nport_binding_sha256": p9_hash, "interface_node_id": interface})
+    common = {"schema_version": "source-plane-shadow-augmented-component-closure-v1", "status": "passed", "code": None, "shadow_only": True, "component_closure_verified": True, "p1_connectivity_accounted": True, "p1_stamp_applied": False, "global_matrix_assembled": False, "solve_eligible": False, "production_ready": False, "replacement_ready": False, "rail_id": rail_id, "p9_nport_binding_sha256": p9_hash, "source_sha256": p9_ids["source_sha256"], "p1_input_sha256": p9_ids["p1_input_sha256"], "p1_output_sha256": p9_ids["p1_output_sha256"], "substrate_identity_sha256": p9_ids["substrate_identity_sha256"], "shadow_split_sha256": p9_ids["shadow_split_sha256"], "scenario_commutation_sha256": p9_ids["scenario_commutation_sha256"], "scenario_surface_node_manifest_sha256": p9_ids["scenario_surface_node_manifest_sha256"], "scenario_link_manifest_sha256": p9_ids["scenario_link_manifest_sha256"], "p8_topology_embedding_sha256": p9_ids["p8_topology_embedding_sha256"], "p8_shadow_network_identity_sha256": p9_ids["p8_shadow_network_identity_sha256"], "p8_shadow_termination_manifest_sha256": p9_ids["p8_shadow_termination_manifest_sha256"], "p7_deterministic_recipe_sha256": p9_ids["p7_deterministic_recipe_sha256"], "scenario_identity_sha256": p9_ids["scenario_identity_sha256"], "scenario_plan_sha256": p9_ids["scenario_plan_sha256"], "termination_manifest_sha256": p9_ids["termination_manifest_sha256"], "port_termination_boundary_sha256": p9_ids["port_termination_boundary_sha256"], "block_id": block.block_id, "admittance_sha256": matrix_hash, "base_component_manifest_sha256": base_manifest_sha, "augmented_component_manifest_sha256": augmented_manifest_sha, "p1_structural_edge_sha256": p1_edge_sha, "base_components": base_manifest, "augmented_components": augmented_manifest, "port_components": port_disclosures, "interface_components": interface_disclosures, "component_reduced_node_count": reduced_count}
+    return {**common, "component_closure_sha256": sha256(concrete_canonical_json_bytes(common)).hexdigest()}
+
+
+__all__ = ["SourcePlanePatchError", "consume_source_plane_patch", "evaluate_source_plane_contact_admissibility", "evaluate_source_plane_contact_condensation", "audit_source_plane_patch_owner_off", "audit_source_plane_patch_contact_quotient_representability", "audit_source_plane_patch_selected_base_cutset", "plan_source_plane_patch_shadow_contact_rewire", "audit_source_plane_patch_shadow_rewire_commutation", "audit_source_plane_patch_shadow_local_replacement_recipe", "materialize_source_plane_patch_shadow_topology_embedding", "bind_source_plane_patch_shadow_nport_block", "audit_source_plane_patch_shadow_augmented_component_closure"]
