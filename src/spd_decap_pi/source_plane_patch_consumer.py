@@ -25,6 +25,7 @@ from .source_plane_ownership_ir import (
 from ._core.geometry.ordered_boolean import ordered_spd_geometry
 from ._core.solver.mfdm import EPSILON_0_F_PER_M, MU_0_H_PER_M
 from ._core.solver.layerwise_network import LayerwiseScenarioNetworkBinding
+from ._core.solver.global_mna import NodalAdmittanceBlock
 from ._core.solver.layer_surface_network import CompiledLayerSurfaceNetwork, compile_layer_surface_network
 from ._core.solver.layer_surface_termination import compile_layer_surface_termination_manifest
 from ._core.solver.surface_patch_plane import (
@@ -2365,4 +2366,138 @@ def materialize_source_plane_patch_shadow_topology_embedding(
     return shadow_network, audit
 
 
-__all__ = ["SourcePlanePatchError", "consume_source_plane_patch", "evaluate_source_plane_contact_admissibility", "evaluate_source_plane_contact_condensation", "audit_source_plane_patch_owner_off", "audit_source_plane_patch_contact_quotient_representability", "audit_source_plane_patch_selected_base_cutset", "plan_source_plane_patch_shadow_contact_rewire", "audit_source_plane_patch_shadow_rewire_commutation", "audit_source_plane_patch_shadow_local_replacement_recipe", "materialize_source_plane_patch_shadow_topology_embedding"]
+def bind_source_plane_patch_shadow_nport_block(
+    patch_result: Mapping[str, Any],
+    commutation_result: Mapping[str, Any],
+    recipe_result: Mapping[str, Any],
+    binding: LayerwiseScenarioNetworkBinding,
+    *,
+    rail_id: str,
+) -> tuple[CompiledLayerSurfaceNetwork | None, NodalAdmittanceBlock | None, Mapping[str, Any]]:
+    """Bind the accepted one-frequency P1 N-port to an ephemeral P8 network."""
+    rail_id = _text(rail_id, "rail_id")
+
+    def digest(value: Any, label: str) -> str:
+        if not isinstance(value, str):
+            _fail(f"SHADOW_NPORT_INVALID: {label} is not SHA-256")
+        value = value.strip()
+        if len(value) != 64 or value != value.casefold() or any(char not in "0123456789abcdef" for char in value):
+            _fail(f"SHADOW_NPORT_INVALID: {label} is not SHA-256")
+        return value
+
+    if not isinstance(patch_result, Mapping) or patch_result.get("schema_version") != "source-plane-contact-condensation-v1" or patch_result.get("status") != "complete" or patch_result.get("shadow_only") is not True:
+        _fail("SHADOW_NPORT_INVALID: P1 is not complete shadow output")
+    if not isinstance(commutation_result, Mapping) or commutation_result.get("schema_version") != "source-plane-shadow-rewire-commutation-v1" or commutation_result.get("status") != "passed" or commutation_result.get("shadow_only") is not True or commutation_result.get("production_ready") is not False or commutation_result.get("replacement_ready") is not False:
+        _fail("SHADOW_NPORT_INVALID: P6 is not passed shadow output")
+    if not isinstance(recipe_result, Mapping) or recipe_result.get("schema_version") != "source-plane-shadow-local-replacement-recipe-v1" or recipe_result.get("status") != "passed" or recipe_result.get("shadow_only") is not True or recipe_result.get("production_ready") is not False or recipe_result.get("replacement_ready") is not False:
+        _fail("SHADOW_NPORT_INVALID: P7 is not passed shadow output")
+    if not isinstance(binding, LayerwiseScenarioNetworkBinding):
+        _fail("SHADOW_NPORT_INVALID: scenario binding type is invalid")
+
+    shadow_network, p8 = materialize_source_plane_patch_shadow_topology_embedding(commutation_result, recipe_result, binding, rail_id=rail_id)
+    if not isinstance(p8, Mapping):
+        _fail("SHADOW_NPORT_INVALID: P8 result is malformed")
+
+    def stopped(code: str, detail: str, identity: Mapping[str, Any]) -> tuple[None, None, Mapping[str, Any]]:
+        payload = {**identity, "status": "stopped", "code": code, "detail": detail}
+        return None, None, {**payload, "nport_binding_sha256": sha256(concrete_canonical_json_bytes(payload)).hexdigest()}
+
+    if shadow_network is None or p8.get("status") != "passed" or p8.get("topology_materialized") is not True:
+        identity = {"schema_version": "source-plane-shadow-nport-block-binding-v1", "shadow_only": True, "topology_materialized": False, "p1_stamp_bound": False, "p1_stamp_applied": False, "solve_eligible": False, "production_ready": False, "replacement_ready": False, "rail_id": rail_id, "p8_status": p8.get("status"), "p8_code": p8.get("code")}
+        return stopped("SHADOW_NPORT_PREREQUISITE_STOPPED", "P8 topology prerequisite did not pass", identity)
+
+    def stream_hash(payload: Any) -> str:
+        value = sha256()
+        for chunk in iter_concrete_canonical_json_bytes(payload):
+            value.update(chunk)
+        return value.hexdigest()
+
+    contacts = patch_result.get("contact_ids"); owner_kinds = patch_result.get("owner_kinds"); raw_admittance = patch_result.get("admittance_s"); raw_constraints = patch_result.get("terminal_constraint_matrix")
+    if not all(isinstance(value, list) for value in (contacts, owner_kinds, raw_admittance, raw_constraints)) or not contacts or len(owner_kinds) != len(contacts) or len(raw_admittance) != len(contacts) or any(not isinstance(value, str) or not value.strip() for value in (*contacts, *owner_kinds)):
+        _fail("SHADOW_NPORT_INVALID: P1 output payload is malformed")
+    count = len(contacts)
+    matrix = np.empty((count, count), dtype=np.complex128)
+    for row_index, row in enumerate(raw_admittance):
+        if not isinstance(row, list) or len(row) != count:
+            _fail("SHADOW_NPORT_INVALID: P1 admittance shape is malformed")
+        for column_index, entry in enumerate(row):
+            if not isinstance(entry, list) or len(entry) != 2:
+                _fail("SHADOW_NPORT_INVALID: P1 admittance entry is malformed")
+            try:
+                real, imag = float(entry[0]), float(entry[1])
+            except (TypeError, ValueError) as exc:
+                _fail(f"SHADOW_NPORT_INVALID: P1 admittance entry is malformed: {exc}")
+            if not math.isfinite(real) or not math.isfinite(imag):
+                _fail("SHADOW_NPORT_INVALID: P1 admittance is non-finite")
+            matrix[row_index, column_index] = complex(real, imag)
+    if len(raw_constraints) != count or any(not isinstance(row, list) or not row for row in raw_constraints):
+        _fail("SHADOW_NPORT_INVALID: P1 constraint shape is malformed")
+    try:
+        constraint = np.asarray(raw_constraints, dtype=np.float64)
+    except (TypeError, ValueError) as exc:
+        _fail(f"SHADOW_NPORT_INVALID: P1 constraint is malformed: {exc}")
+    if constraint.ndim != 2 or constraint.shape[0] != count or not np.all(np.isfinite(constraint)):
+        _fail("SHADOW_NPORT_INVALID: P1 constraint is malformed")
+    p1_output = stream_hash({"contact_ids": contacts, "owner_kinds": owner_kinds, "admittance_s": raw_admittance, "terminal_constraint_matrix": raw_constraints})
+    p1_input = digest(patch_result.get("input_sha256"), "P1 input")
+    source_sha = digest(patch_result.get("source_sha256"), "P1 source")
+    p8_fields = ("source_sha256", "p1_input_sha256", "p1_output_sha256", "substrate_identity_sha256", "shadow_split_sha256", "scenario_identity_sha256", "scenario_plan_sha256", "scenario_commutation_sha256", "scenario_surface_node_manifest_sha256", "scenario_link_manifest_sha256", "termination_manifest_sha256", "port_termination_boundary_sha256", "p7_deterministic_recipe_sha256", "shadow_termination_manifest_sha256", "shadow_network_identity_sha256", "topology_embedding_sha256")
+    p8_ids = {key: digest(p8.get(key), f"P8 {key}") for key in p8_fields}
+    p7_source = digest(recipe_result.get("source_sha256"), "P7 source"); p6_source = digest(commutation_result.get("source_sha256"), "P6 source")
+    p7_input = digest(recipe_result.get("p1_input_sha256"), "P7 input"); p6_input = digest(commutation_result.get("p1_input_sha256"), "P6 input")
+    p7_output = digest(recipe_result.get("p1_output_sha256"), "P7 output"); p6_output = digest(commutation_result.get("p1_output_sha256"), "P6 output")
+    p7_substrate = digest(recipe_result.get("substrate_identity_sha256"), "P7 substrate"); p6_substrate = digest(commutation_result.get("substrate_identity_sha256"), "P6 substrate")
+    p7_shadow = digest(recipe_result.get("shadow_split_sha256"), "P7 shadow split"); p6_shadow = digest(commutation_result.get("shadow_split_sha256"), "P6 shadow split")
+    p7_commutation = digest(recipe_result.get("scenario_commutation_sha256"), "P7 commutation"); p6_commutation = digest(commutation_result.get("scenario_commutation_sha256"), "P6 commutation"); p7_recipe = digest(recipe_result.get("deterministic_recipe_sha256"), "P7 recipe")
+    scenario_id = digest(binding.scenario_identity_sha256, "scenario identity"); scenario_plan = digest(binding.plan_sha256, "scenario plan"); binding_base = digest(binding.base_substrate_identity_sha256, "binding base")
+    provenance = binding.provenance
+    if not isinstance(provenance, Mapping):
+        _fail("SHADOW_NPORT_INVALID: binding provenance is absent")
+    provenance_surface = digest(provenance.get("scenario_surface_node_manifest_sha256"), "binding surface manifest"); provenance_link = digest(provenance.get("scenario_link_manifest_sha256"), "binding link manifest")
+    try:
+        frequency_hz = float(patch_result.get("frequency_hz"))
+    except (TypeError, ValueError) as exc:
+        _fail(f"SHADOW_NPORT_INVALID: P1 frequency is malformed: {exc}")
+    if not math.isfinite(frequency_hz) or frequency_hz <= 0.0:
+        _fail("SHADOW_NPORT_INVALID: frequency is non-finite")
+    common = {"schema_version": "source-plane-shadow-nport-block-binding-v1", "shadow_only": True, "topology_materialized": True, "p1_stamp_bound": False, "p1_stamp_applied": False, "solve_eligible": False, "production_ready": False, "replacement_ready": False, "rail_id": rail_id, "frequency_hz": frequency_hz, "frequency_hz_hex": frequency_hz.hex(), "source_sha256": source_sha, "p1_input_sha256": p1_input, "p1_output_sha256": p1_output, "substrate_identity_sha256": p8_ids["substrate_identity_sha256"], "shadow_split_sha256": p8_ids["shadow_split_sha256"], "scenario_identity_sha256": scenario_id, "scenario_plan_sha256": scenario_plan, "scenario_commutation_sha256": p8_ids["scenario_commutation_sha256"], "scenario_surface_node_manifest_sha256": p8_ids["scenario_surface_node_manifest_sha256"], "scenario_link_manifest_sha256": p8_ids["scenario_link_manifest_sha256"], "termination_manifest_sha256": p8_ids["termination_manifest_sha256"], "port_termination_boundary_sha256": p8_ids["port_termination_boundary_sha256"], "p7_deterministic_recipe_sha256": p8_ids["p7_deterministic_recipe_sha256"], "p8_shadow_termination_manifest_sha256": p8_ids["shadow_termination_manifest_sha256"], "p8_shadow_network_identity_sha256": p8_ids["shadow_network_identity_sha256"], "p8_topology_embedding_sha256": p8_ids["topology_embedding_sha256"]}
+    if source_sha != p7_source or source_sha != p6_source or p8_ids["source_sha256"] != source_sha or p8_ids["p1_input_sha256"] != p1_input or p8_ids["p1_output_sha256"] != p1_output or p7_input != p1_input or p6_input != p1_input or p7_output != p1_output or p6_output != p1_output or p7_substrate != p8_ids["substrate_identity_sha256"] or p6_substrate != p8_ids["substrate_identity_sha256"] or binding_base != p8_ids["substrate_identity_sha256"] or p7_shadow != p8_ids["shadow_split_sha256"] or p6_shadow != p8_ids["shadow_split_sha256"] or p7_commutation != p6_commutation or p8_ids["scenario_commutation_sha256"] != p6_commutation or p8_ids["scenario_identity_sha256"] != scenario_id or p8_ids["scenario_plan_sha256"] != scenario_plan or p8_ids["scenario_surface_node_manifest_sha256"] != provenance_surface or p8_ids["scenario_link_manifest_sha256"] != provenance_link or p8_ids["scenario_surface_node_manifest_sha256"] != digest(recipe_result.get("scenario_surface_node_manifest_sha256"), "P7 surface manifest") or p8_ids["scenario_link_manifest_sha256"] != digest(recipe_result.get("scenario_link_manifest_sha256"), "P7 link manifest") or p8_ids["termination_manifest_sha256"] != digest(binding.termination_manifest.manifest_sha256, "termination manifest") or p8_ids["termination_manifest_sha256"] != digest(recipe_result.get("termination_manifest_sha256"), "P7 termination") or p8_ids["port_termination_boundary_sha256"] != digest(commutation_result.get("port_termination_boundary_sha256"), "P6 boundary") or p8_ids["p7_deterministic_recipe_sha256"] != p7_recipe or frequency_hz != 1.0e9 or str(patch_result.get("rail_id", "")).casefold() != rail_id.casefold() or str(commutation_result.get("rail_id", "")).casefold() != rail_id.casefold() or str(recipe_result.get("rail_id", "")).casefold() != rail_id.casefold() or str(p8.get("rail_id", "")).casefold() != rail_id.casefold():
+        return stopped("SHADOW_NPORT_IDENTITY_MISMATCH", "P1/P6/P7/P8 identity differs", common)
+    add_p1 = recipe_result.get("add_p1_nport"); ledger = recipe_result.get("owner_ledger"); p7_rows = recipe_result.get("rewire_finite"); p6_rows = commutation_result.get("rewire_rows"); embedding = p8.get("interface_embedding")
+    if not isinstance(add_p1, Mapping) or not isinstance(ledger, Mapping) or not isinstance(p7_rows, list) or not isinstance(p6_rows, list) or not isinstance(embedding, list) or any(not isinstance(row, Mapping) for row in (*p7_rows, *p6_rows, *embedding)):
+        _fail("SHADOW_NPORT_INVALID: P7/P8 disclosures are malformed")
+    p7_contacts = add_p1.get("contact_ids"); interfaces = add_p1.get("interface_node_ids"); added_owners = ledger.get("added_p1_block_owner_ids"); removed_owners = ledger.get("removed_old_block_owner_ids"); retained_owners = ledger.get("retained_finite_owner_ids")
+    if not all(isinstance(value, list) for value in (p7_contacts, interfaces, added_owners, removed_owners, retained_owners)) or not interfaces or len(p7_contacts) != count or [row.get("contact_id") for row in p7_rows] != contacts or [row.get("contact_id") for row in p6_rows] != contacts or [row.get("contact_id") for row in embedding] != contacts or p7_contacts != contacts:
+        return stopped("SHADOW_NPORT_CONTACT_ORDER_MISMATCH", "P1/P6/P7 contact order differs", common)
+    if [row.get("interface_node_id") for row in embedding] != interfaces or len(embedding) != len(interfaces) or len({str(value).casefold() for value in interfaces}) != len(interfaces):
+        return stopped("SHADOW_NPORT_INTERFACE_BINDING_MISMATCH", "P8 interface order differs", common)
+    if any(not isinstance(value, str) or not value.strip() for value in (*interfaces, *added_owners, *removed_owners, *retained_owners)):
+        _fail("SHADOW_NPORT_INVALID: owner/interface identity is malformed")
+    if len({value.casefold() for value in added_owners}) != len(added_owners) or len({value.casefold() for value in removed_owners}) != len(removed_owners) or len({value.casefold() for value in retained_owners}) != len(retained_owners) or {value.casefold() for value in added_owners} & {value.casefold() for value in retained_owners} or removed_owners != added_owners or add_p1.get("planned_owner_ids") != added_owners:
+        return stopped("SHADOW_NPORT_OWNER_CONFLICT", "P7 owner ledger is not disjoint", common)
+    reduced_indices: list[int] = []
+    for row, interface in zip(embedding, interfaces, strict=True):
+        if not isinstance(row, Mapping):
+            _fail("SHADOW_NPORT_INVALID: P8 interface row is malformed")
+        try:
+            reduced = int(row["reduced_index"])
+            actual_reduced = int(shadow_network.reduced_node_index(interface))
+        except (KeyError, TypeError, ValueError, AttributeError) as exc:
+            return stopped("SHADOW_NPORT_INTERFACE_BINDING_MISMATCH", f"interface reduced index is unavailable: {exc}", common)
+        if reduced != actual_reduced or reduced in reduced_indices:
+            return stopped("SHADOW_NPORT_INTERFACE_BINDING_MISMATCH", "interface reduced index differs", common)
+        reduced_indices.append(reduced)
+    try:
+        block_id = f"source-plane-shadow-p1-nport:{p1_output}"
+        matrix.setflags(write=False)
+        block = NodalAdmittanceBlock(tuple(interfaces), matrix, block_id, tuple(added_owners))
+    except Exception as exc:
+        return stopped("SHADOW_NPORT_MATRIX_UNREPRESENTABLE", f"N-port block is not representable: {exc}", common)
+    matrix_rows = [[{"real": float(matrix[row, column].real).hex(), "imag": float(matrix[row, column].imag).hex()} for column in range(count)] for row in range(count)]
+    matrix_sha = sha256(concrete_canonical_json_bytes({"shape": [count, count], "row_major": matrix_rows})).hexdigest()
+    audit_identity = {**common, "status": "passed", "code": None, "p1_stamp_bound": True, "contact_ids": list(contacts), "interface_node_ids": list(interfaces), "reduced_indices": reduced_indices, "block_id": block_id, "owner_ids": list(added_owners), "admittance_shape": [count, count], "admittance_sha256": matrix_sha}
+    audit = {**audit_identity, "nport_binding_sha256": sha256(concrete_canonical_json_bytes(audit_identity)).hexdigest()}
+    return shadow_network, block, audit
+
+
+__all__ = ["SourcePlanePatchError", "consume_source_plane_patch", "evaluate_source_plane_contact_admissibility", "evaluate_source_plane_contact_condensation", "audit_source_plane_patch_owner_off", "audit_source_plane_patch_contact_quotient_representability", "audit_source_plane_patch_selected_base_cutset", "plan_source_plane_patch_shadow_contact_rewire", "audit_source_plane_patch_shadow_rewire_commutation", "audit_source_plane_patch_shadow_local_replacement_recipe", "materialize_source_plane_patch_shadow_topology_embedding", "bind_source_plane_patch_shadow_nport_block"]
