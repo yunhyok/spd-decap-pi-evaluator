@@ -16,7 +16,7 @@ from typing import Any
 import numpy as np
 from scipy.sparse import issparse
 
-from .canonical_json import concrete_canonical_json_bytes
+from .canonical_json import concrete_canonical_json_bytes, iter_concrete_canonical_json_bytes
 from .raw_spatial_contact_asset import load_raw_spatial_contact_asset
 from .source_plane_ownership_ir import (
     MAX_SOURCE_PLANE_OWNERSHIP_IR_ROWS,
@@ -1591,7 +1591,7 @@ def plan_source_plane_patch_shadow_contact_rewire(
     if passivity_min < -passivity_tolerance:
         return stopped("SHADOW_REWIRE_PASSIVITY_INVALID", "P1 passivity diagnostic is below tolerance", {"passivity_min_eigenvalue_s": passivity_min, "passivity_tolerance_s": passivity_tolerance})
     planned_owner_ids = list(candidate)
-    stamp = {"contact_interfaces": ordered_interfaces, "p1_input_sha256": identities[3], "p1_output_sha256": identities[4], "frequency_hz": frequency_hz, "cell_um": cell_um, "admittance_shape": [len(raw_admittance), len(raw_admittance[0])], "constraint_shape": [len(raw_constraint), len(raw_constraint[0])], "passivity_diagnostics_sha256": passivity_sha, "owner_ids": planned_owner_ids}
+    stamp = {"contact_interfaces": ordered_interfaces, "contact_interface_node_ids": [item["interface_node_id"] for item in ordered_interfaces], "p1_input_sha256": identities[3], "p1_output_sha256": identities[4], "frequency_hz": frequency_hz, "cell_um": cell_um, "admittance_shape": [len(raw_admittance), len(raw_admittance[0])], "constraint_shape": [len(raw_constraint), len(raw_constraint[0])], "passivity_diagnostics_sha256": passivity_sha, "owner_ids": planned_owner_ids}
     identity = {**common, "contact_ids": [row["contact_id"] for row in rewires], "rewires": rewires, "disabled_old_edge_fingerprints": disabled, "planned_block_owner_ids": planned_owner_ids, "retained_contact_finite_owner_ids": retained, "stamp": stamp}
     return {"schema_version": "source-plane-shadow-contact-rewire-plan-v1", "status": "planned", "code": None, "shadow_only": True, "production_ready": False, "replacement_ready": False, "rail_id": rail_id, "source_sha256": raw_manifest["source_sha256"], "base_cutset_sha256": identities[0], "p3_input_identity_sha256": identities[1], "p2_audit_sha256": identities[2], "p1_input_sha256": identities[3], "p1_output_sha256": identities[4], "old_edge_set_sha256": identities[5], "substrate_identity_sha256": identities[6], "rewire_rows": rewires, "disabled_old_edge_fingerprints": disabled, "planned_block_owner_ids": planned_owner_ids, "retained_contact_finite_owner_ids": retained, "old_selected_external_degree_after_plan": 0, "planned_stamp": stamp, "shadow_split_sha256": sha256(concrete_canonical_json_bytes(identity)).hexdigest()}
 
@@ -1937,4 +1937,197 @@ def audit_source_plane_patch_shadow_rewire_commutation(
     }
 
 
-__all__ = ["SourcePlanePatchError", "consume_source_plane_patch", "evaluate_source_plane_contact_admissibility", "evaluate_source_plane_contact_condensation", "audit_source_plane_patch_owner_off", "audit_source_plane_patch_contact_quotient_representability", "audit_source_plane_patch_selected_base_cutset", "plan_source_plane_patch_shadow_contact_rewire", "audit_source_plane_patch_shadow_rewire_commutation"]
+def audit_source_plane_patch_shadow_local_replacement_recipe(
+    patch_result: Mapping[str, Any],
+    rewire_plan: Mapping[str, Any],
+    commutation_result: Mapping[str, Any],
+    binding: LayerwiseScenarioNetworkBinding,
+    *,
+    rail_id: str,
+) -> Mapping[str, Any]:
+    """Build a bounded, shadow-only local replacement recipe."""
+    rail_id = _text(rail_id, "rail_id")
+
+    def digest(value: Any, label: str) -> str:
+        if not isinstance(value, str):
+            _fail(f"LOCAL_REPLACEMENT_INVALID: {label} is not SHA-256")
+        value = value.strip()
+        if len(value) != 64 or value != value.casefold() or any(c not in "0123456789abcdef" for c in value):
+            _fail(f"LOCAL_REPLACEMENT_INVALID: {label} is not SHA-256")
+        return value
+
+    if not isinstance(patch_result, Mapping) or patch_result.get("schema_version") != "source-plane-contact-condensation-v1" or patch_result.get("status") != "complete" or patch_result.get("shadow_only") is not True:
+        _fail("LOCAL_REPLACEMENT_INVALID: P1 is not complete shadow output")
+    if not isinstance(rewire_plan, Mapping) or rewire_plan.get("schema_version") != "source-plane-shadow-contact-rewire-plan-v1" or rewire_plan.get("status") != "planned" or rewire_plan.get("shadow_only") is not True or rewire_plan.get("production_ready") is not False or rewire_plan.get("replacement_ready") is not False:
+        _fail("LOCAL_REPLACEMENT_INVALID: P5 is not planned shadow output")
+    if not isinstance(commutation_result, Mapping) or commutation_result.get("schema_version") != "source-plane-shadow-rewire-commutation-v1" or commutation_result.get("status") != "passed" or commutation_result.get("code") is not None or commutation_result.get("shadow_only") is not True or commutation_result.get("production_ready") is not False or commutation_result.get("replacement_ready") is not False:
+        _fail("LOCAL_REPLACEMENT_INVALID: P6 is not passed shadow output")
+    if not isinstance(binding, LayerwiseScenarioNetworkBinding):
+        _fail("LOCAL_REPLACEMENT_INVALID: scenario binding type is invalid")
+
+    def stream_hash(payload: Any) -> str:
+        value = sha256()
+        for chunk in iter_concrete_canonical_json_bytes(payload):
+            value.update(chunk)
+        return value.hexdigest()
+
+    contacts = patch_result.get("contact_ids")
+    owner_kinds = patch_result.get("owner_kinds")
+    admittance = patch_result.get("admittance_s")
+    constraints = patch_result.get("terminal_constraint_matrix")
+    if not all(isinstance(value, list) for value in (contacts, owner_kinds, admittance, constraints)):
+        _fail("LOCAL_REPLACEMENT_INVALID: P1 payload is incomplete")
+    p1_output = stream_hash({"contact_ids": contacts, "owner_kinds": owner_kinds, "admittance_s": admittance, "terminal_constraint_matrix": constraints})
+    p1_input = digest(patch_result.get("input_sha256"), "P1 input")
+    source_sha = digest(patch_result.get("source_sha256"), "P1 source")
+    patch_rail = str(patch_result.get("rail_id", ""))
+    p5_input = digest(rewire_plan.get("p1_input_sha256"), "P5 input")
+    p6_input = digest(commutation_result.get("p1_input_sha256"), "P6 input")
+    p5_output = digest(rewire_plan.get("p1_output_sha256"), "P5 output")
+    p6_output = digest(commutation_result.get("p1_output_sha256"), "P6 output")
+    source_p5 = digest(rewire_plan.get("source_sha256"), "P5 source")
+    source_p6 = digest(commutation_result.get("source_sha256"), "P6 source")
+    rail_p5 = str(rewire_plan.get("rail_id", "")); rail_p6 = str(commutation_result.get("rail_id", ""))
+    old_edge_set = digest(rewire_plan.get("old_edge_set_sha256"), "P5 old edge set")
+    old_edge_set_p6 = digest(commutation_result.get("old_edge_set_sha256"), "P6 old edge set")
+    substrate_id = digest(rewire_plan.get("substrate_identity_sha256"), "P5 substrate")
+    substrate_p6 = digest(commutation_result.get("substrate_identity_sha256"), "P6 substrate")
+    shadow_split = digest(rewire_plan.get("shadow_split_sha256"), "P5 shadow split")
+    shadow_split_p6 = digest(commutation_result.get("shadow_split_sha256"), "P6 shadow split")
+    scenario_commutation = digest(commutation_result.get("scenario_commutation_sha256"), "P6 commutation")
+    scenario_id = digest(binding.scenario_identity_sha256, "scenario")
+    scenario_plan = digest(binding.plan_sha256, "scenario plan")
+    termination_id = digest(binding.termination_manifest.manifest_sha256, "termination")
+    binding_base = digest(binding.base_substrate_identity_sha256, "binding base")
+    provenance = binding.provenance
+    if not isinstance(provenance, Mapping):
+        _fail("LOCAL_REPLACEMENT_INVALID: binding provenance is absent")
+    surface_manifest = digest(provenance.get("scenario_surface_node_manifest_sha256"), "scenario surface manifest")
+    link_manifest = digest(provenance.get("scenario_link_manifest_sha256"), "scenario link manifest")
+    p6_surface_manifest = digest(commutation_result.get("scenario_surface_node_manifest_sha256"), "P6 surface manifest")
+    p6_link_manifest = digest(commutation_result.get("scenario_link_manifest_sha256"), "P6 link manifest")
+    boundary = digest(commutation_result.get("port_termination_boundary_sha256"), "P6 boundary")
+
+    def stopped(code: str, detail: str, evidence: Mapping[str, Any] | None = None) -> Mapping[str, Any]:
+        identity = {"rail_id": rail_id, "source_sha256": source_sha, "p1_input_sha256": p1_input, "p1_output_sha256": p1_output, "shadow_split_sha256": shadow_split, "scenario_commutation_sha256": scenario_commutation, "code": code, "detail": detail, "evidence": dict(evidence or {})}
+        return {"schema_version": "source-plane-shadow-local-replacement-recipe-v1", "status": "stopped", "code": code, "shadow_only": True, "production_ready": False, "replacement_ready": False, **identity, "deterministic_recipe_sha256": sha256(concrete_canonical_json_bytes(identity)).hexdigest()}
+
+    if source_p5 != source_sha or source_p6 != source_sha or patch_rail.casefold() != rail_id.casefold() or rail_p5.casefold() != rail_id.casefold() or rail_p6.casefold() != rail_id.casefold() or p5_input != p1_input or p6_input != p1_input or p5_output != p1_output or p6_output != p1_output or old_edge_set_p6 != old_edge_set or substrate_p6 != substrate_id or shadow_split_p6 != shadow_split:
+        return stopped("LOCAL_REPLACEMENT_IDENTITY_MISMATCH", "P1/P5/P6 identity differs")
+    if binding_base != substrate_id or scenario_id != digest(commutation_result.get("scenario_identity_sha256"), "P6 scenario") or scenario_plan != digest(commutation_result.get("scenario_plan_sha256"), "P6 plan") or termination_id != digest(commutation_result.get("termination_manifest_sha256"), "P6 termination"):
+        return stopped("LOCAL_REPLACEMENT_IDENTITY_MISMATCH", "scenario identity differs")
+    if p6_surface_manifest != surface_manifest or p6_link_manifest != link_manifest:
+        return stopped("LOCAL_REPLACEMENT_IDENTITY_MISMATCH", "scenario provenance differs")
+    p5_rows = rewire_plan.get("rewire_rows"); p6_rows = commutation_result.get("rewire_rows"); stamp = rewire_plan.get("planned_stamp")
+    if not isinstance(p5_rows, list) or not isinstance(p6_rows, list) or not isinstance(stamp, Mapping) or any(not isinstance(row, Mapping) for row in (*p5_rows, *p6_rows)):
+        _fail("LOCAL_REPLACEMENT_INVALID: rewire disclosures are malformed")
+    interfaces = stamp.get("contact_interfaces")
+    planned_interfaces = commutation_result.get("planned_interface_node_ids")
+    stamp_interface_ids = stamp.get("contact_interface_node_ids")
+    if not isinstance(interfaces, list) or not isinstance(planned_interfaces, list) or not isinstance(stamp_interface_ids, list) or [row.get("contact_id") for row in p5_rows] != contacts or p5_rows != p6_rows or [row.get("new_interface_node_id") for row in p5_rows] != stamp_interface_ids or [row.get("contact_id") for row in interfaces] != contacts or [row.get("interface_node_id") for row in interfaces] != stamp_interface_ids or stamp_interface_ids != planned_interfaces:
+        return stopped("LOCAL_REPLACEMENT_CONTACT_ORDER_MISMATCH", "contact/interface order differs")
+    planned_owners = rewire_plan.get("planned_block_owner_ids"); retained_owners = rewire_plan.get("retained_contact_finite_owner_ids")
+    if not isinstance(planned_owners, list) or not isinstance(retained_owners, list) or any(not isinstance(owner, str) or not owner.strip() for owner in (*planned_owners, *retained_owners)) or len({owner.casefold() for owner in planned_owners}) != len(planned_owners) or len({owner.casefold() for owner in retained_owners}) != len(retained_owners) or stamp.get("owner_ids") != planned_owners:
+        _fail("LOCAL_REPLACEMENT_INVALID: owner ledger is malformed")
+    expected_retained = sorted({str(owner) for row in p5_rows for owner in row.get("owner_ids", ())}, key=str.casefold)
+    if retained_owners != expected_retained or {str(owner).casefold() for owner in planned_owners} & {str(owner).casefold() for owner in retained_owners}:
+        return stopped("LOCAL_REPLACEMENT_OWNER_CONFLICT", "owner ledger overlaps")
+    diagnostics = patch_result.get("diagnostics")
+    try:
+        frequency_hz = float(patch_result["frequency_hz"]); passivity_min = float(diagnostics["passivity_min_eigenvalue_s"]); passivity_tolerance = float(diagnostics["passivity_tolerance_s"]); stamp_frequency = float(stamp["frequency_hz"])
+    except (KeyError, TypeError, ValueError) as exc:
+        _fail(f"LOCAL_REPLACEMENT_INVALID: diagnostics/frequency malformed: {exc}")
+    if not isinstance(diagnostics, Mapping) or not math.isfinite(frequency_hz) or frequency_hz <= 0.0 or frequency_hz != 1.0e9 or stamp_frequency != frequency_hz or not math.isfinite(passivity_min) or not math.isfinite(passivity_tolerance):
+        _fail("LOCAL_REPLACEMENT_INVALID: diagnostics/frequency malformed")
+    passivity_sha = sha256(concrete_canonical_json_bytes({"passivity_min_eigenvalue_s": passivity_min, "passivity_tolerance_s": passivity_tolerance, "diagnostics": dict(diagnostics)})).hexdigest()
+    if passivity_sha != digest(stamp.get("passivity_diagnostics_sha256"), "P5 passivity"):
+        return stopped("LOCAL_REPLACEMENT_IDENTITY_MISMATCH", "passivity diagnostics differ")
+    disabled = rewire_plan.get("disabled_old_edge_fingerprints")
+    if not isinstance(disabled, list) or disabled != sorted(disabled) or any(digest(value, "disabled edge") != value for value in disabled) or len(disabled) != len(set(disabled)) or sha256(concrete_canonical_json_bytes(disabled)).hexdigest() != old_edge_set:
+        _fail("LOCAL_REPLACEMENT_INVALID: disabled fingerprint set is malformed")
+    network = binding.network; wanted = set(disabled); matched: list[dict[str, Any]] = []
+    for partial_ordinal, wrapped in enumerate(network.partials):
+        partial = wrapped.partial; matrix = partial.maxwell_capacitance_f; names = partial.net_names
+        if not all(hasattr(matrix, key) for key in ("shape", "indptr", "indices", "data")) or matrix.shape != (len(names), len(names)):
+            _fail("LOCAL_REPLACEMENT_INVALID: Maxwell partial is not CSC")
+        for column in range(matrix.shape[1]):
+            for offset in range(int(matrix.indptr[column]), int(matrix.indptr[column + 1])):
+                row_index = int(matrix.indices[offset]); value = float(matrix.data[offset])
+                if row_index >= column or value >= 0.0:
+                    continue
+                candidates = []
+                for upper_id, lower_id in ((names[row_index], names[column]), (names[column], names[row_index])):
+                    payload = {"substrate_identity_sha256": substrate_id, "upper_layer": str(partial.upper_layer), "lower_layer": str(partial.lower_layer), "upper_island_id": upper_id, "lower_island_id": lower_id, "capacitance_f_hex": float(-value).hex()}
+                    fingerprint = sha256(concrete_canonical_json_bytes(payload)).hexdigest()
+                    if fingerprint in wanted:
+                        candidates.append((fingerprint, payload))
+                if len(candidates) > 1:
+                    return stopped("LOCAL_REPLACEMENT_OLD_EDGE_MISSING_OR_DUPLICATED", "old edge direction is ambiguous")
+                if candidates:
+                    fingerprint, payload = candidates[0]
+                    matched.append({"fingerprint": fingerprint, "partial_ordinal": partial_ordinal, **payload})
+    if len(matched) != len(wanted) or {row["fingerprint"] for row in matched} != wanted:
+        return stopped("LOCAL_REPLACEMENT_OLD_EDGE_MISSING_OR_DUPLICATED", "old Maxwell edge is missing or duplicated")
+    matched_ordinals = sorted({int(row["partial_ordinal"]) for row in matched})
+    dispersion_by_ordinal: dict[int, dict[str, Any]] = {}; effective_by_ordinal: dict[int, complex] = {}
+    for partial_ordinal in matched_ordinals:
+        wrapped = network.partials[partial_ordinal]; partial = wrapped.partial; dispersion = wrapped.dispersion; layers = getattr(dispersion, "layers", None)
+        if layers is None:
+            if partial.separation_m is None:
+                _fail("LOCAL_REPLACEMENT_INVALID: direct dielectric separation is absent")
+            layers = ((float(partial.separation_m) * 1.0e6, dispersion),)
+        materials: list[dict[str, Any]] = []
+        for source_point_ordinal, (thickness_um, material) in enumerate(layers):
+            frequencies = tuple(float(value) for value in material.frequencies_hz); points = [index for index, value in enumerate(frequencies) if value == frequency_hz]
+            if len(points) != 1:
+                return stopped("LOCAL_REPLACEMENT_SOURCE_POINT_UNAVAILABLE", "dielectric source point is unavailable", {"partial_ordinal": partial_ordinal, "source_point_ordinal": source_point_ordinal})
+            point = points[0]; dk = float(material.relative_permittivities[point]); df = float(material.loss_tangents[point])
+            if not all(math.isfinite(value) for value in (float(thickness_um), dk, df)):
+                return stopped("LOCAL_REPLACEMENT_ALGEBRA_INVALID", "dielectric source point is non-finite", {"partial_ordinal": partial_ordinal, "source_point_ordinal": source_point_ordinal})
+            materials.append({"ordinal": source_point_ordinal, "thickness_um_hex": float(thickness_um).hex(), "source_point_ordinal": point, "frequency_hz_hex": frequency_hz.hex(), "dk_hex": dk.hex(), "df_hex": df.hex()})
+        effective_dk, effective_df = dispersion.interpolate((frequency_hz,)); dk_value = float(effective_dk[0]); df_value = float(effective_df[0]); nominal = float(partial.nominal_relative_permittivity)
+        coefficient = 1j * 2.0 * math.pi * frequency_hz * (dk_value * (1.0 - 1j * df_value) / nominal)
+        if not all(math.isfinite(value) for value in (dk_value, df_value, nominal, coefficient.real, coefficient.imag)) or nominal <= 0.0:
+            return stopped("LOCAL_REPLACEMENT_ALGEBRA_INVALID", "dielectric admittance is non-finite", {"partial_ordinal": partial_ordinal})
+        effective_by_ordinal[partial_ordinal] = coefficient
+        dispersion_by_ordinal[partial_ordinal] = {"partial_ordinal": partial_ordinal, "frequency_hz_hex": frequency_hz.hex(), "effective_dk_hex": dk_value.hex(), "effective_df_hex": df_value.hex(), "nominal_dk_hex": nominal.hex(), "materials": materials}
+    for row in matched:
+        edge_y = effective_by_ordinal[int(row["partial_ordinal"])] * float.fromhex(row["capacitance_f_hex"])
+        if not all(math.isfinite(value) for value in (edge_y.real, edge_y.imag)):
+            return stopped("LOCAL_REPLACEMENT_ALGEBRA_INVALID", "Maxwell admittance is non-finite", {"partial_ordinal": row["partial_ordinal"]})
+        row["frequency_hz_hex"] = frequency_hz.hex(); row["admittance_real_hex"] = float(edge_y.real).hex(); row["admittance_imag_hex"] = float(edge_y.imag).hex(); row["dispersion"] = dispersion_by_ordinal[int(row["partial_ordinal"])]
+    by_edge = {str(row.get("old_finite_edge_id", "")).casefold(): row for row in p5_rows}
+    if len(by_edge) != len(p5_rows):
+        _fail("LOCAL_REPLACEMENT_INVALID: old finite edge IDs are duplicated")
+    found: dict[str, dict[str, Any]] = {}
+    for link in network.via_links:
+        key = str(link.link_id).casefold(); row = by_edge.get(key)
+        if row is None:
+            continue
+        if key in found:
+            return stopped("LOCAL_REPLACEMENT_OLD_EDGE_MISSING_OR_DUPLICATED", "finite contact edge is duplicated")
+        expected_rl = (str(row.get("resistance_ohm_per_via_hex", "")), str(row.get("inductance_h_per_via_hex", "")))
+        actual_rl = (float(link.resistance_ohm_per_via).hex(), float(link.inductance_h_per_via).hex())
+        if str(link.mode) != str(row.get("mode")) or tuple(link.owner_ids) != tuple(row.get("owner_ids", ())) or int(link.count) != int(row.get("count")) or actual_rl != expected_rl:
+            return stopped("LOCAL_REPLACEMENT_OLD_EDGE_MISSING_OR_DUPLICATED", "finite contact metadata differs", {"link_id": link.link_id})
+        selected = str(row.get("selected_old_endpoint", "")); external = str(row.get("external_endpoint", ""))
+        if {selected, external} != {str(link.first_node_id), str(link.second_node_id)} or selected == external:
+            return stopped("LOCAL_REPLACEMENT_OLD_EDGE_MISSING_OR_DUPLICATED", "finite contact endpoints differ", {"link_id": link.link_id})
+        denominator = complex(float(link.resistance_ohm_per_via), 2.0 * math.pi * frequency_hz * float(link.inductance_h_per_via))
+        if denominator == 0j:
+            return stopped("LOCAL_REPLACEMENT_ALGEBRA_INVALID", "finite branch denominator is zero", {"link_id": link.link_id})
+        y = float(link.count) / denominator
+        if not all(math.isfinite(value) for value in (denominator.real, denominator.imag, y.real, y.imag)):
+            return stopped("LOCAL_REPLACEMENT_ALGEBRA_INVALID", "finite branch admittance is invalid", {"link_id": link.link_id})
+        interface = str(row.get("new_interface_node_id", "")); new_pair = (interface, external) if selected == str(link.first_node_id) else (external, interface)
+        found[key] = {"contact_id": row.get("contact_id"), "old_finite_edge_id": link.link_id, "old_endpoint_pair": [str(link.first_node_id), str(link.second_node_id)], "new_endpoint_pair": list(new_pair), "selected_old_endpoint": selected, "external_endpoint": external, "new_interface_node_id": interface, "mode": str(link.mode), "count": int(link.count), "resistance_ohm_per_via_hex": actual_rl[0], "inductance_h_per_via_hex": actual_rl[1], "owner_ids": list(link.owner_ids), "admittance_real_hex": float(y.real).hex(), "admittance_imag_hex": float(y.imag).hex()}
+    if set(found) != set(by_edge):
+        return stopped("LOCAL_REPLACEMENT_OLD_EDGE_MISSING_OR_DUPLICATED", "finite contact edge is missing")
+    rewire_finite = [found[str(row["old_finite_edge_id"]).casefold()] for row in p5_rows]
+    owner_ledger = {"removed_old_block_owner_ids": list(planned_owners), "added_p1_block_owner_ids": list(planned_owners), "retained_finite_owner_ids": list(retained_owners)}
+    add_p1 = {"contact_ids": list(contacts), "interface_node_ids": list(planned_interfaces), "planned_owner_ids": list(planned_owners), "p1_input_sha256": p1_input, "p1_output_sha256": p1_output, "admittance_shape": [len(admittance), len(admittance[0]) if admittance else 0], "constraint_shape": [len(constraints), len(constraints[0]) if constraints else 0], "passivity_diagnostics_sha256": passivity_sha}
+    recipe_identity = {"rail_id": rail_id, "source_sha256": source_sha, "p1_input_sha256": p1_input, "p1_output_sha256": p1_output, "old_edge_set_sha256": old_edge_set, "substrate_identity_sha256": substrate_id, "shadow_split_sha256": shadow_split, "scenario_identity_sha256": scenario_id, "scenario_plan_sha256": scenario_plan, "scenario_commutation_sha256": scenario_commutation, "scenario_surface_node_manifest_sha256": surface_manifest, "scenario_link_manifest_sha256": link_manifest, "termination_manifest_sha256": termination_id, "port_termination_boundary_sha256": boundary, "remove_old_maxwell": matched, "rewire_finite": rewire_finite, "owner_ledger": owner_ledger, "add_p1_nport": add_p1}
+    return {"schema_version": "source-plane-shadow-local-replacement-recipe-v1", "status": "passed", "code": None, "shadow_only": True, "production_ready": False, "replacement_ready": False, **{key: recipe_identity[key] for key in ("rail_id", "source_sha256", "p1_input_sha256", "p1_output_sha256", "old_edge_set_sha256", "substrate_identity_sha256", "shadow_split_sha256", "scenario_identity_sha256", "scenario_plan_sha256", "scenario_commutation_sha256", "scenario_surface_node_manifest_sha256", "scenario_link_manifest_sha256", "termination_manifest_sha256", "port_termination_boundary_sha256")}, "remove_old_maxwell": matched, "rewire_finite": rewire_finite, "owner_ledger": owner_ledger, "add_p1_nport": add_p1, "deterministic_recipe_sha256": sha256(concrete_canonical_json_bytes(recipe_identity)).hexdigest()}
+
+
+__all__ = ["SourcePlanePatchError", "consume_source_plane_patch", "evaluate_source_plane_contact_admissibility", "evaluate_source_plane_contact_condensation", "audit_source_plane_patch_owner_off", "audit_source_plane_patch_contact_quotient_representability", "audit_source_plane_patch_selected_base_cutset", "plan_source_plane_patch_shadow_contact_rewire", "audit_source_plane_patch_shadow_rewire_commutation", "audit_source_plane_patch_shadow_local_replacement_recipe"]

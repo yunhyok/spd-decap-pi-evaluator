@@ -34,6 +34,33 @@ def _h(ch: str) -> str:
     return ch * 64
 
 
+def _empty_scenario_binding(substrate):
+    from spd_decap_pi.layerwise_scenario_topology import compile_layerwise_scenario_network
+    from spd_decap_pi.scenario_topology_plan import ScenarioTopologyPlan, SCENARIO_TOPOLOGY_PLAN_SCHEMA
+
+    source_sha = substrate.provenance["source_sha256"]
+    certificate_sha = next(
+        substrate.provenance[key]
+        for key in ("surface_connectivity_evidence_sha256", "finite_route_certificate_sha256", "finite_via_certificate_sha256")
+        if substrate.provenance.get(key)
+    )
+    empty = ScenarioTopologyPlan(
+        schema_version=SCENARIO_TOPOLOGY_PLAN_SCHEMA,
+        source_sha256=source_sha,
+        connection_evidence_sha256=_h("a"),
+        source_contact_manifest_sha256=_h("b"),
+        retarget_route_manifest_sha256=_h("c"),
+        finite_route_certificate_sha256=certificate_sha,
+        terminal_nodes=(), active_topology_links=(), active_retarget_routes=(),
+        cap_body_requests=(), suppressed_base_cut_ids=(), source_owner_partition=(),
+        plan_sha256=_h("d"),
+    )
+    payload = asdict(empty)
+    payload.pop("plan_sha256")
+    empty = replace(empty, plan_sha256=sha256((json.dumps(payload, ensure_ascii=False, sort_keys=True, separators=(",", ":")) + "\n").encode("utf-8")).hexdigest())
+    return compile_layerwise_scenario_network(base_substrate=substrate, plan=empty, cap_models={})
+
+
 def _assets(tmp_path):
     source = b"NNNN" + b" " * 146 + b"VV"
     path = tmp_path / "coupon.spd"
@@ -311,8 +338,6 @@ def test_source_plane_patch_shadow_contact_rewire_plan(tmp_path: Path):
 
 def test_source_plane_patch_shadow_rewire_commutes_with_scenario_binding(tmp_path: Path):
     from spd_decap_pi._core.solver.layer_surface_network import compile_layer_surface_network
-    from spd_decap_pi.layerwise_scenario_topology import compile_layerwise_scenario_network
-    from spd_decap_pi.scenario_topology_plan import ScenarioTopologyPlan, SCENARIO_TOPOLOGY_PLAN_SCHEMA
 
     imported = _v2_import(tmp_path)
     project = imported.scenario.base_project
@@ -324,27 +349,7 @@ def test_source_plane_patch_shadow_rewire_commutes_with_scenario_binding(tmp_pat
         consumer.evaluate_source_plane_contact_condensation(own, imported.attachments, raw, imported.attachments, rail_id="VDD_CORE/1", frequency_hz=1.0e9, cell_um=1000.0),
         substrate, rail_id="VDD_CORE/1",
     )
-    source_sha = substrate.provenance["source_sha256"]
-    certificate_sha = next(
-        substrate.provenance[key]
-        for key in ("surface_connectivity_evidence_sha256", "finite_route_certificate_sha256", "finite_via_certificate_sha256")
-        if substrate.provenance.get(key)
-    )
-    empty = ScenarioTopologyPlan(
-        schema_version=SCENARIO_TOPOLOGY_PLAN_SCHEMA,
-        source_sha256=source_sha,
-        connection_evidence_sha256=_h("a"),
-        source_contact_manifest_sha256=_h("b"),
-        retarget_route_manifest_sha256=_h("c"),
-        finite_route_certificate_sha256=certificate_sha,
-        terminal_nodes=(), active_topology_links=(), active_retarget_routes=(),
-        cap_body_requests=(), suppressed_base_cut_ids=(), source_owner_partition=(),
-        plan_sha256=_h("d"),
-    )
-    payload = asdict(empty)
-    payload.pop("plan_sha256")
-    empty = replace(empty, plan_sha256=sha256((json.dumps(payload, ensure_ascii=False, sort_keys=True, separators=(",", ":")) + "\n").encode("utf-8")).hexdigest())
-    binding = compile_layerwise_scenario_network(base_substrate=substrate, plan=empty, cap_models={})
+    binding = _empty_scenario_binding(substrate)
     first = consumer.audit_source_plane_patch_shadow_rewire_commutation(rewire_plan, substrate, binding, rail_id="VDD_CORE/1")
     second = consumer.audit_source_plane_patch_shadow_rewire_commutation(rewire_plan, substrate, binding, rail_id="VDD_CORE/1")
     assert first == second and first["shadow_only"] is True
@@ -358,3 +363,46 @@ def test_source_plane_patch_shadow_rewire_commutes_with_scenario_binding(tmp_pat
     stopped_binding = replace(binding, network=network)
     stopped = consumer.audit_source_plane_patch_shadow_rewire_commutation(rewire_plan, substrate, stopped_binding, rail_id="VDD_CORE/1")
     assert stopped["status"] == "stopped" and stopped["code"] == "SCENARIO_REWIRE_SOURCE_EDGE_SUPPRESSED"
+
+
+def test_source_plane_patch_shadow_local_replacement_recipe_is_atomic(tmp_path: Path):
+    from spd_decap_pi._core.solver.layer_surface_network import compile_layer_surface_network
+
+    imported = _v2_import(tmp_path)
+    project = imported.scenario.base_project
+    own = project.metadata["spd_import"]["source_plane_ownership_ir"]
+    raw = project.metadata["spd_import"]["raw_spatial_contact_asset"]
+    substrate = compile_layerwise_substrate(project, imported.attachments, required_rail_id="VDD_CORE/1", require_plane_sheet_payload=True)
+    patch = consumer.evaluate_source_plane_contact_condensation(own, imported.attachments, raw, imported.attachments, rail_id="VDD_CORE/1", frequency_hz=1.0e9, cell_um=1000.0)
+    rewire = consumer.plan_source_plane_patch_shadow_contact_rewire(own, imported.attachments, raw, patch, substrate, rail_id="VDD_CORE/1")
+    binding = _empty_scenario_binding(substrate)
+    original_nodes, original_links, original_partials, original_ports = (substrate.network.surface_node_ids, substrate.network.via_links, substrate.network.partials, substrate.network.ports)
+    commutation = consumer.audit_source_plane_patch_shadow_rewire_commutation(rewire, substrate, binding, rail_id="VDD_CORE/1")
+    first = consumer.audit_source_plane_patch_shadow_local_replacement_recipe(patch, rewire, commutation, binding, rail_id="VDD_CORE/1")
+    second = consumer.audit_source_plane_patch_shadow_local_replacement_recipe(patch, rewire, commutation, binding, rail_id="VDD_CORE/1")
+    assert first == second and first["status"] == "passed" and first["shadow_only"] is True
+    assert first["production_ready"] is False and first["replacement_ready"] is False
+    assert first["remove_old_maxwell"] and first["rewire_finite"] and first["owner_ledger"]
+    assert len(first["deterministic_recipe_sha256"]) == 64
+    assert [row["contact_id"] for row in first["rewire_finite"]] == list(patch["contact_ids"])
+    assert first["owner_ledger"]["removed_old_block_owner_ids"] == rewire["planned_block_owner_ids"]
+    assert first["owner_ledger"]["added_p1_block_owner_ids"] == rewire["planned_block_owner_ids"]
+    assert first["owner_ledger"]["retained_finite_owner_ids"] == rewire["retained_contact_finite_owner_ids"]
+    assert tuple(item["new_interface_node_id"] for item in first["rewire_finite"]) == tuple(first["add_p1_nport"]["interface_node_ids"])
+    assert substrate.network.surface_node_ids is original_nodes and substrate.network.via_links is original_links and substrate.network.partials is original_partials and substrate.network.ports is original_ports
+    matched_ordinal = int(first["remove_old_maxwell"][0]["partial_ordinal"])
+    partial = substrate.network.partials[matched_ordinal]
+    material = partial.dispersion.layers[0][1] if hasattr(partial.dispersion, "layers") else partial.dispersion
+    changed_material = replace(material, frequencies_hz=(2.0e9,), relative_permittivities=(float(material.relative_permittivities[0]),), loss_tangents=(float(material.loss_tangents[0]),))
+    changed_dispersion = replace(partial.dispersion, layers=tuple((thickness, replace(material, frequencies_hz=(2.0e9,), relative_permittivities=(float(material.relative_permittivities[0]),), loss_tangents=(float(material.loss_tangents[0]),))) for thickness, material in partial.dispersion.layers)) if hasattr(partial.dispersion, "layers") else changed_material
+    changed_partial = replace(partial, dispersion=changed_dispersion)
+    changed_partials_list = list(substrate.network.partials)
+    changed_partials_list[matched_ordinal] = changed_partial
+    changed_partials = tuple(changed_partials_list)
+    changed_network = compile_layer_surface_network(substrate.network.surface_node_ids, partials=changed_partials, via_links=substrate.network.via_links, ports=substrate.network.ports)
+    changed_substrate = replace(substrate, network=changed_network)
+    changed_binding = _empty_scenario_binding(changed_substrate)
+    changed_commutation = consumer.audit_source_plane_patch_shadow_rewire_commutation(rewire, changed_substrate, changed_binding, rail_id="VDD_CORE/1")
+    assert changed_commutation["status"] == "passed"
+    stopped = consumer.audit_source_plane_patch_shadow_local_replacement_recipe(patch, rewire, changed_commutation, changed_binding, rail_id="VDD_CORE/1")
+    assert stopped["status"] == "stopped" and stopped["code"] == "LOCAL_REPLACEMENT_SOURCE_POINT_UNAVAILABLE"
