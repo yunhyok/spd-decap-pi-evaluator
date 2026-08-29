@@ -3,6 +3,7 @@ from __future__ import annotations
 from copy import deepcopy
 from hashlib import sha256
 import json
+import math
 from pathlib import Path
 
 import pytest
@@ -175,3 +176,26 @@ def test_v2_contact_admissibility_and_atomic_rejection(tmp_path: Path):
     outside_raw = outside_project.metadata["spd_import"]["raw_spatial_contact_asset"]
     with pytest.raises(consumer.SourcePlanePatchError, match="CONTACT_NOT_FULLY_COVERED"):
         consumer.evaluate_source_plane_contact_admissibility(outside_own, outside.attachments, outside_raw, outside.attachments, rail_id="VDD_CORE/1")
+
+
+def test_v2_contact_complete_shadow_nport_condensation(tmp_path: Path):
+    imported = _v2_import(tmp_path)
+    project = imported.scenario.base_project
+    own = project.metadata["spd_import"]["source_plane_ownership_ir"]
+    raw = project.metadata["spd_import"]["raw_spatial_contact_asset"]
+    kwargs = {"rail_id": "vdd_core/1", "frequency_hz": 1.0e9, "cell_um": 1000.0}
+    p0 = consumer.evaluate_source_plane_contact_admissibility(own, imported.attachments, raw, imported.attachments, rail_id=kwargs["rail_id"])
+    first = consumer.evaluate_source_plane_contact_condensation(own, imported.attachments, raw, imported.attachments, **kwargs)
+    second = consumer.evaluate_source_plane_contact_condensation(own, imported.attachments, raw, imported.attachments, **kwargs)
+    assert first == second and first["shadow_only"] is True and first["status"] == "complete"
+    assert len(first["contact_ids"]) == len(first["owner_kinds"]) >= 3
+    assert first["contact_ids"] == [row["contact_id"] for row in p0["contacts"]]
+    assert {str(kind).casefold() for kind in first["owner_kinds"]} >= {"device", "decap", "other"}
+    assert len(first["admittance_s"]) == len(first["contact_ids"])
+    assert all(len(row) == len(first["contact_ids"]) for row in first["admittance_s"])
+    assert all(len(value) == 2 and all(math.isfinite(float(item)) for item in value) for row in first["admittance_s"] for value in row)
+    assert first["input_sha256"] == second["input_sha256"]
+    assert len(first["terminal_constraint_matrix"]) == len(first["contact_ids"])
+    assert first["terminal_constraint_matrix"] and len({len(row) for row in first["terminal_constraint_matrix"]}) == 1
+    assert all(row and all(math.isfinite(float(value)) for value in row) for row in first["terminal_constraint_matrix"])
+    assert all(math.isfinite(float(value)) for value in first["diagnostics"].values())

@@ -738,4 +738,140 @@ def evaluate_source_plane_contact_admissibility(
         _fail(f"CONTACT_ADMISSIBILITY_INVALID: {exc}")
 
 
-__all__ = ["SourcePlanePatchError", "consume_source_plane_patch", "evaluate_source_plane_contact_admissibility"]
+def evaluate_source_plane_contact_condensation(
+    ownership_manifest: Mapping[str, Any],
+    ownership_attachments: Mapping[str, bytes],
+    raw_manifest: Mapping[str, Any],
+    raw_attachments: Mapping[str, bytes],
+    *,
+    rail_id: str,
+    frequency_hz: float,
+    cell_um: float,
+) -> Mapping[str, Any]:
+    """Return a shadow-only finite-port N-port for every authenticated contact."""
+    if not isinstance(frequency_hz, (int, float)) or isinstance(frequency_hz, bool) or not math.isfinite(float(frequency_hz)) or frequency_hz <= 0.0:
+        _fail("CONTACT_ADMISSIBILITY_INVALID: frequency_hz is invalid")
+    if not isinstance(cell_um, (int, float)) or isinstance(cell_um, bool) or not math.isfinite(float(cell_um)) or cell_um <= 0.0:
+        _fail("CONTACT_ADMISSIBILITY_INVALID: cell_um is invalid")
+    admissibility = evaluate_source_plane_contact_admissibility(ownership_manifest, ownership_attachments, raw_manifest, raw_attachments, rail_id=rail_id)
+    canonical_rail = str(admissibility["rail_id"])
+    total = [0]
+    with load_source_plane_ownership_ir(
+        ownership_manifest, ownership_attachments,
+        expected_source_sha256=str(raw_manifest["source_sha256"]),
+        expected_project_binding_sha256=str(raw_manifest["project_binding_sha256"]),
+        expected_certificate_evidence_sha256=str(raw_manifest["certificate_evidence_sha256"]),
+        expected_compiled_topology_identity_sha256=str(raw_manifest["compiled_topology_identity_sha256"]),
+        expected_raw_manifest_sha256=str(ownership_manifest["raw_manifest_sha256"]),
+        expected_raw_geometry_identity_sha256=str(raw_manifest["geometry_identity_sha256"]),
+        expected_raw_logical_rows_sha256=str(raw_manifest["logical_rows_sha256"]),
+        expected_raw_plane_sheet_sha256=str(raw_manifest["plane_sheet_payload_sha256"]),
+        expected_app_version=str(ownership_manifest.get("app_version", "")),
+    ) as loaded:
+        sections = ("source_records", "surfaces", "primitives", "islands", "rail_bindings", "contact_boundary", "stackup_layers", "dielectric_points")
+        ir = {section: _rows(loaded, section, MAX_SOURCE_PLANE_OWNERSHIP_IR_ROWS, total) for section in sections}
+    contacts = sorted(ir["contact_boundary"], key=lambda row: (int(row.get("ordinal", 0)), str(row.get("contact_id", "")).casefold()))
+    bindings = [row for row in ir["rail_bindings"] if str(row.get("rail_id", "")).casefold() == canonical_rail.casefold() and row.get("state") == "source_bound"]
+    source_records = ir["source_records"]
+    records = {str(row.get("record_id", "")).casefold(): row for row in source_records}
+    surfaces = {str(row.get("surface_id", "")).casefold(): row for row in ir["surfaces"]}
+    selected_surface_ids = {str(row.get("surface_id", "")).casefold() for row in bindings}
+    selected_primitives = [row for row in ir["primitives"] if str(row.get("surface_id", "")).casefold() in selected_surface_ids]
+    ordinals = {int(row.get("raw_primitive_ordinal", -1)) for row in selected_primitives}
+    node_shas: set[str] = set(); via_shas: set[str] = set(); endpoint_ids: set[str] = set(); pad_keys: set[tuple[str, str, int, str]] = set()
+    for contact in contacts:
+        endpoint_ids.update(str(contact.get(key, "")).casefold() for key in ("endpoint_node_id", "opposite_endpoint_node_id", "plane_endpoint_node_id", "external_endpoint_node_id") if str(contact.get(key, "")).strip())
+        for key, target in (("source_node_record_id", node_shas), ("opposite_endpoint_node_record_id", node_shas), ("plane_endpoint_node_record_id", node_shas), ("external_endpoint_node_record_id", node_shas), ("via_record_id", via_shas)):
+            record = records.get(str(contact.get(key, "")).casefold())
+            if record is None:
+                _fail("CONTACT_ADMISSIBILITY_INVALID: contact source record is absent")
+            target.add(str(record["source_record_sha256"]))
+        pad_keys.add((str(contact.get("padstack_id", "")).casefold(), str(contact.get("endpoint_layer", "")).casefold(), int(contact.get("raw_pad_shape_ordinal", -1)), str(contact.get("raw_pad_shape_sha256", ""))))
+    with load_raw_spatial_contact_asset(
+        raw_manifest, raw_attachments,
+        expected_source_sha256=str(raw_manifest["source_sha256"]),
+        expected_project_binding_sha256=str(raw_manifest["project_binding_sha256"]),
+        expected_certificate_evidence_sha256=str(raw_manifest["certificate_evidence_sha256"]),
+        expected_compiled_topology_identity_sha256=str(raw_manifest["compiled_topology_identity_sha256"]),
+        expected_geometry_identity_sha256=str(raw_manifest["geometry_identity_sha256"]), require_plane_sheet_payload=True,
+    ) as raw:
+        raw_total = [0]
+        primitives = _raw_rows(raw, "plane_primitives", MAX_SOURCE_PLANE_OWNERSHIP_IR_ROWS, raw_total, lambda row: int(row.primitive_ordinal) in ordinals)
+        vertices = _raw_rows(raw, "plane_vertices", MAX_SOURCE_PLANE_OWNERSHIP_IR_ROWS, raw_total, lambda row: int(row.primitive_ordinal) in ordinals)
+        circles = _raw_rows(raw, "plane_circles", MAX_SOURCE_PLANE_OWNERSHIP_IR_ROWS, raw_total, lambda row: int(row.primitive_ordinal) in ordinals)
+        nodes = _raw_rows(raw, "nodes", MAX_SOURCE_PLANE_OWNERSHIP_IR_ROWS, raw_total, lambda row: str(row.source_record_sha256) in node_shas or str(row.node_id).casefold() in endpoint_ids)
+        vias = _raw_rows(raw, "vias", MAX_SOURCE_PLANE_OWNERSHIP_IR_ROWS, raw_total, lambda row: str(row.source_record_sha256) in via_shas)
+        pads = _raw_rows(raw, "pad_shapes", MAX_SOURCE_PLANE_OWNERSHIP_IR_ROWS, raw_total, lambda row: (str(row.padstack_id).casefold(), str(row.layer_id).casefold(), int(row.ordinal), str(row.source_record_sha256)) in pad_keys)
+        stackup = _raw_rows(raw, "stackup_layers", MAX_SOURCE_PLANE_OWNERSHIP_IR_ROWS, raw_total)
+        points = _raw_rows(raw, "dielectric_points", MAX_SOURCE_PLANE_OWNERSHIP_IR_ROWS, raw_total)
+    geometries = {}
+    for sid in selected_surface_ids:
+        surface = surfaces.get(sid)
+        if surface is None:
+            _fail("CONTACT_SURFACE_BINDING_INVALID: selected surface is absent")
+        try:
+            geometries[sid] = _surface_geometry(surface, primitives, vertices, circles, [row for row in selected_primitives if str(row.get("surface_id", "")).casefold() == sid])
+        except SourcePlanePatchError as exc:
+            _fail(f"CONTACT_GEOMETRY_INVALID: {exc}")
+    metadata = _contact_raw_gate(contacts, source_records, nodes, vias, pads, bindings)
+    if [(str(row["contact_id"]), str(row["owner_kind"])) for row in metadata] != [(str(row["contact_id"]), str(row["owner_kind"])) for row in admissibility["contacts"]]:
+        _fail("CONTACT_CONDENSATION_INVALID: admissibility contact order differs")
+    layer_by_name = {str(row.layer_name).casefold(): row for row in stackup}
+    rail_layers = {str(row.get("role", "")).casefold(): str(row.get("layer", "")) for row in bindings}
+    if set(rail_layers) != {"power", "ground"} or any(layer.casefold() not in layer_by_name for layer in rail_layers.values()):
+        _fail("CONTACT_SURFACE_BINDING_INVALID: rail conductor layer is absent")
+    power_layer, ground_layer = rail_layers["power"], rail_layers["ground"]
+    indices = {name: index for index, name in enumerate(str(row.layer_name).casefold() for row in stackup)}
+    lo, hi = sorted((indices[power_layer.casefold()], indices[ground_layer.casefold()]))
+    between = stackup[lo + 1:hi]
+    if len(between) != 1 or str(between[0].layer_kind).casefold() != "dielectric":
+        _fail("CONTACT_SURFACE_BINDING_INVALID: adjacent conductor pair is not exact")
+    dielectric = between[0]
+    ir_stackup = {str(row.get("layer_name", "")).casefold(): row for row in ir["stackup_layers"]}
+    for row in stackup[lo:hi + 1]:
+        ir_row = ir_stackup.get(str(row.layer_name).casefold())
+        if (ir_row is None or int(ir_row.get("raw_layer_ordinal", -1)) != int(row.layer_ordinal)
+                or str(ir_row.get("raw_layer_sha256", "")) != _row_hash(row)
+                or str(ir_row.get("layer_kind", "")).casefold() != str(row.layer_kind).casefold()
+                or str(ir_row.get("layer_name", "")).casefold() != str(row.layer_name).casefold()
+                or float(ir_row.get("thickness_um", -1.0)) != float(row.thickness_um)
+                or ir_row.get("conductivity_s_per_m") != row.conductivity_s_per_m
+                or str(ir_row.get("material_name", "")) != str(row.material_name)):
+            _fail("CONTACT_ADMISSIBILITY_INVALID: IR/raw stackup provenance differs")
+    selected_points = [row for row in points if int(row.layer_ordinal) == int(dielectric.layer_ordinal) and float(row.frequency_hz) == float(frequency_hz)]
+    if len(selected_points) != 1:
+        _fail("CONTACT_ADMISSIBILITY_INVALID: exact source material point is absent or ambiguous")
+    point = selected_points[0]
+    ir_point = next((row for row in ir["dielectric_points"] if str(row.get("layer_name", "")).casefold() == str(dielectric.layer_name).casefold() and int(row.get("point_ordinal", -1)) == int(point.point_ordinal)), None)
+    if (ir_point is None or int(ir_point.get("raw_dielectric_ordinal", -1)) != list(points).index(point)
+            or str(ir_point.get("raw_dielectric_sha256", "")) != _row_hash(point)
+            or float(ir_point.get("frequency_hz", -1.0)) != float(point.frequency_hz)
+            or float(ir_point.get("epsilon_r", -1.0)) != float(point.epsilon_r)
+            or float(ir_point.get("loss_tangent", -1.0)) != float(point.loss_tangent)):
+        _fail("CONTACT_ADMISSIBILITY_INVALID: IR/raw dielectric provenance differs")
+    try:
+        artworks = tuple(SurfacePatchArtwork(str(row.get("layer", "")), str(row.get("artwork_net", "")), geometries[str(row.get("surface_id", "")).casefold()]) for row in bindings)
+        conductor_rows = stackup[lo:hi + 1]
+        conductors = {str(row.layer_name): SurfacePatchConductor(float(row.conductivity_s_per_m), float(row.thickness_um) * 1e-6, provenance=f"raw:{row.layer_ordinal}") for row in conductor_rows if str(row.layer_kind).casefold() == "conductor" and row.conductivity_s_per_m is not None}
+        if len(conductors) != 2:
+            _fail("CONTACT_ADMISSIBILITY_INVALID: conductor thickness or conductivity is unavailable")
+        layer_order = tuple(str(row.layer_name) for row in conductor_rows if str(row.layer_kind).casefold() == "conductor")
+        mesh = SurfacePatchMesh.uniform(layer_order=layer_order, artwork=artworks, cell_um=float(cell_um), max_cells=MAX_SOURCE_PLANE_OWNERSHIP_IR_ROWS)
+        model = SurfacePatchDielectric(str(stackup[lo].layer_name), str(stackup[hi].layer_name), float(dielectric.thickness_um) * 1e-6, float(point.epsilon_r), float(point.loss_tangent), provenance=f"raw:{dielectric.layer_ordinal}:{point.point_ordinal}")
+        operator = compile_surface_patch_plane(mesh, conductors=conductors, dielectrics=(model,))
+        ports = tuple(item["port"] for item in metadata)
+        condensation = operator.condense_finite_ports(float(frequency_hz), ports)
+    except SourcePlanePatchError:
+        raise
+    except Exception as exc:
+        _fail(f"CONTACT_CONDENSATION_INVALID: {exc}")
+    if tuple(condensation.port_ids) != tuple(item["contact_id"] for item in metadata):
+        _fail("CONTACT_CONDENSATION_INVALID: condensation contact order differs")
+    diagnostics = {name: float(getattr(condensation, name)) for name in ("solve_residual", "compatible_current_residual", "gauge_residual", "reciprocity_relative", "passivity_min_eigenvalue_s", "passivity_tolerance_s", "terminal_condition")}
+    contact_ids = list(condensation.port_ids)
+    input_identity = {"source_sha256": ownership_manifest["source_sha256"], "ownership_logical_rows_sha256": str(ownership_manifest["logical_rows_sha256"]), "raw_manifest_sha256": ownership_manifest["raw_manifest_sha256"], "rail_id": canonical_rail, "frequency_hz": float(frequency_hz), "cell_um": float(cell_um), "contact_ids": contact_ids, "owner_kinds": [item["owner_kind"] for item in metadata], "surface_ids": [item["surface_id"] for item in metadata], "layers": [{"layer_ordinal": int(row.layer_ordinal), "layer_name": str(row.layer_name), "raw_layer_sha256": _row_hash(row), "thickness_um": float(row.thickness_um), "conductivity_s_per_m": row.conductivity_s_per_m, "material_name": str(row.material_name)} for row in conductor_rows] + [{"layer_ordinal": int(dielectric.layer_ordinal), "layer_name": str(dielectric.layer_name), "raw_layer_sha256": _row_hash(dielectric), "thickness_um": float(dielectric.thickness_um), "material_name": str(dielectric.material_name)}], "material": {"layer_ordinal": int(dielectric.layer_ordinal), "point_ordinal": int(point.point_ordinal), "raw_dielectric_sha256": _row_hash(point), "frequency_hz": float(point.frequency_hz), "epsilon_r": float(point.epsilon_r), "loss_tangent": float(point.loss_tangent)}}
+    result: dict[str, Any] = {"schema_version": "source-plane-contact-condensation-v1", "shadow_only": True, "status": "complete", "rail_id": canonical_rail, "frequency_hz": float(frequency_hz), "cell_um": float(cell_um), "source_sha256": ownership_manifest["source_sha256"], "raw_manifest_sha256": ownership_manifest["raw_manifest_sha256"], "contact_ids": contact_ids, "owner_kinds": [item["owner_kind"] for item in metadata], "admittance_s": [[[float(value.real), float(value.imag)] for value in row] for row in condensation.terminal_admittance_s.tolist()], "terminal_constraint_matrix": [[float(value) for value in row] for row in condensation.terminal_constraint_matrix.tolist()], "diagnostics": diagnostics, "mesh_diagnostics": _object_mapping(mesh.diagnostics), "operator_diagnostics": _object_mapping(operator.diagnostics), "input_sha256": sha256(concrete_canonical_json_bytes(input_identity)).hexdigest()}
+    return result
+
+
+__all__ = ["SourcePlanePatchError", "consume_source_plane_patch", "evaluate_source_plane_contact_admissibility", "evaluate_source_plane_contact_condensation"]
