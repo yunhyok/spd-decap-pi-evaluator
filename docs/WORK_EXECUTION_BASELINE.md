@@ -1,9 +1,9 @@
 # SPD Decap PI Evaluator 작업 기준
 
 - 적용 제품: **SPD Decap PI Evaluator v0.23.1**
-- 문서 버전: **1.173**
-- 상위 기준: [목적·기술 기준](PRODUCT_PURPOSE_AND_TECHNICAL_BASELINE.md) v1.172
-- 현재 상태: W6 numerical FAIL; W7-SOURCE-IR-P1/P2/P3/P4 및 W7-PHYS-PROSPECTIVE-P0/P1/P2/P4 DONE, P3 DONE/STOP; W7-PHYS-PROSPECTIVE-P5 ACTIVE; production physics/`Zii` unchanged.
+- 문서 버전: **1.174**
+- 상위 기준: [목적·기술 기준](PRODUCT_PURPOSE_AND_TECHNICAL_BASELINE.md) v1.173
+- 현재 상태: W6 numerical FAIL; W7-SOURCE-IR-P1/P2/P3/P4 및 W7-PHYS-PROSPECTIVE-P0/P1/P2/P4/P5 DONE, P3 DONE/STOP; W7-PHYS-PROSPECTIVE-P6 ACTIVE; production physics/`Zii` unchanged.
 - 최종 개정: 2026-08-29 (Asia/Seoul)
 
 ## 1. 압축 후 즉시 복구 카드
@@ -15,13 +15,13 @@ context가 압축되거나 새 session에서 작업을 재개하면 이 표만 �
 | 변하지 않는 목적 | source-derived single-rail `Zii`의 PowerSI 근접 정확성과 일반화 |
 | 기본 복구 문서 | 목적·기술 기준 → Source-derived physical IR → 이 작업 기준, 세 문서 |
 | 현재 branch | `main`만 사용 |
-| 이 문서 정리의 source-before HEAD | `39fd4fa` (`feat: audit selected base cutset closure`) |
-| 현재 assessment | W6-BASE numerical FAIL; Phase 4/P0/P1/P2/P4는 prerequisite/shadow 범위 DONE; P3는 `CONTACT_INTERFACE_RANK_LOSS` STOP, P4는 base cut-set CLOSED; production physics와 정확성은 미변경 |
-| 현재 active work item | **W7-PHYS-PROSPECTIVE-P5 / SPLIT-01-SHADOW-CONTACT-REWIRE-PLAN** — contact별 rewire/old-edge disable/P1 stamp의 deterministic shadow plan |
+| 이 문서 정리의 source-before HEAD | `d7e7278` (`feat: plan shadow contact rewires`) |
+| 현재 assessment | W6-BASE numerical FAIL; Phase 4/P0/P1/P2/P4/P5는 prerequisite/shadow 범위 DONE; P3는 `CONTACT_INTERFACE_RANK_LOSS` STOP, P4는 base cut-set CLOSED, P5는 deterministic shadow plan PLANNED; production physics와 정확성은 미변경 |
+| 현재 active work item | **W7-PHYS-PROSPECTIVE-P6 / SCENARIO-01-SHADOW-REWIRE-COMMUTATION-AUDIT** — P5 contact 경계와 scenario network/termination binding의 read-only 호환성 판정 |
 | 현재 정확성 상태 | `260729 retrospective FAIL`; unseen/generalization `unknown / not_run` |
-| current authorization | 사용량 제한점까지의 사용자 사전 승인에 따라 P5 ACTIVE; consumer + focused test 두 파일, 지정 pytest node 1회; main-only, `accuracy_parse.py` 보존 |
-| 다음 후보 gate | P5 acceptance — unique interface node, exact finite-link rewire, P2 disable set과 P1 stamp identity의 deterministic plan |
-| 정확한 재개 조건 | P5 PLANNED 뒤에만 production integration 전 bound-network/scenario prerequisite를 검토; STOP이면 실제 topology를 바꾸지 않음 |
+| current authorization | 사용량 제한점까지의 사용자 사전 승인에 따라 P6 ACTIVE; consumer + focused test 두 파일, 지정 pytest node 1회; main-only, `accuracy_parse.py` 보존 |
+| 다음 후보 gate | P6 acceptance — P5 source contact edge·owner·partial·port·termination 경계가 scenario binding에서 exact-once 보존되는지 판정 |
+| 정확한 재개 조건 | P6 PASS 뒤에만 production assembly prerequisite를 검토; suppress/retarget/drift/bypass STOP이면 후속 assembly를 열지 않음 |
 | 핵심 증거 | [W6-BASE completed evidence](#w6-base-completed-evidence-260729), [W7 결과 재평가](#12-w7-결과-재평가와-후속-과제-판정) |
 
 최초 목적은 [목적·기술 기준 2장](PRODUCT_PURPOSE_AND_TECHNICAL_BASELINE.md#2-최우선-목적),
@@ -32,13 +32,13 @@ context가 압축되거나 새 session에서 작업을 재개하면 이 표만 �
 
 | 구분 | 현재 권위 |
 |---|---|
-| accepted / committed | Phase 1 `82370b6`, Phase 2 `75ac0a0`, Phase 3 `5d2c353`, Phase 4 `3b76af4`, P0 `4dc855a`, P1 `f823a53`, P2 `90f6b54`, P3 `b8a79f1`, P4 `39fd4fa`; 모두 prerequisite/shadow 범위이며 production `Y_global`/`Zii` 불변 |
-| current candidate | P5는 아직 코드 미구현; consumer/test 두 파일과 단일 node budget만 ACTIVE |
-| static evidence | P4 Sol 최종 ACCEPT; P5는 production seam 전에 contact-wise rewire/disable/stamp plan을 먼저 닫아야 함 |
-| runtime evidence | P4 최초 negative fixture contract `1 failed in 1.90s`; fixture-only 교정 뒤 `1 passed in 1.53s`; deterministic CLOSED와 extra-edge STOP 포함 |
-| runtime 미증명 | contact별 shadow rewire/disable/stamp plan의 exact closure |
+| accepted / committed | Phase 1 `82370b6`, Phase 2 `75ac0a0`, Phase 3 `5d2c353`, Phase 4 `3b76af4`, P0 `4dc855a`, P1 `f823a53`, P2 `90f6b54`, P3 `b8a79f1`, P4 `39fd4fa`, P5 `d7e7278`; 모두 prerequisite/shadow 범위이며 production `Y_global`/`Zii` 불변 |
+| current candidate | P6는 아직 코드 미구현; consumer/test 두 파일과 단일 node budget만 ACTIVE |
+| static evidence | P5 Sol 최종 ACCEPT; scenario compiler는 suppressed contact를 제거하고 retarget owner를 새 route로 옮기므로 production seam 전에 exact commutation audit가 필요 |
+| runtime evidence | P5 지정 node `1 passed in 1.73s`; deterministic PLANNED, tuple identity/finite-link metadata/disable SHA/owner separation/passivity STOP 포함 |
+| runtime 미증명 | P5 contact 경계가 scenario network와 termination binding 뒤에도 exact-once 보존되는지 여부 |
 | 별도 사용자 파일 | untracked `accuracy_parse.py`; 보존·미수정·미stage |
-| candidate staging / acceptance | P4 기술 commit은 accepted CLOSED prerequisite; P5는 plan-only ACTIVE이고 production/release acceptance가 아님 |
+| candidate staging / acceptance | P5 기술 commit은 accepted PLANNED prerequisite; P6는 read-only ACTIVE이고 production/release acceptance가 아님 |
 
 ## 2. 문서 사용 규칙
 
@@ -113,7 +113,7 @@ disjoint owner ledger 확보와 사용자 명시 승인
 ## 4. 작업 항목 register
 
 상태 어휘는 `READY`, `ACTIVE`, `BLOCKED`, `DEFERRED`, `DONE`만 사용한다.
-동시에 `ACTIVE`는 하나만 허용하며 현재는 **W7-PHYS-PROSPECTIVE-P5**다. 완료된 미시적 item을
+동시에 `ACTIVE`는 하나만 허용하며 현재는 **W7-PHYS-PROSPECTIVE-P6**다. 완료된 미시적 item을
 다시 펼쳐 읽지 말고 아래 phase-level 결론과 Git history를 사용한다.
 상태와 증거 축은 분리한다. `DONE`은 선언한 범위의 종료일 뿐 current commit,
 production acceptance, runtime PASS 또는 PowerSI 정확성을 자동으로 뜻하지 않는다.
@@ -159,7 +159,8 @@ dirty/static/runtime/commit 상태는 복구 카드 1.1에 별도로 기록한�
 | `W7-PHYS-PROSPECTIVE-P2` | P2 | DONE | P1↔production incident old-edge identity bijection | commit `90f6b54`; corrected focused `1 passed in 1.49s`; Sol ACCEPT; candidate closed set만, `replacement_ready=false` |
 | `W7-PHYS-PROSPECTIVE-P3` | P3 | DONE | P1 contact-space의 production quotient representability | commit `b8a79f1`; focused `1 passed in 1.51s`; Sol ACCEPT; `CONTACT_INTERFACE_RANK_LOSS` STOP; production 불변 |
 | `W7-PHYS-PROSPECTIVE-P4` | P4 | DONE | selected ideal class의 base-network closed cut-set | commit `39fd4fa`; corrected focused `1 passed in 1.53s`; Sol ACCEPT; CLOSED, `split_ready=false` |
-| `W7-PHYS-PROSPECTIVE-P5` | next | ACTIVE | deterministic shadow contact rewire plan | unique interface node + exact finite-link rewire + P2 disable set + P1 stamp identity; production 불변 |
+| `W7-PHYS-PROSPECTIVE-P5` | P5 | DONE | deterministic shadow contact rewire plan | commit `d7e7278`; focused `1 passed in 1.73s`; Sol ACCEPT; PLANNED, production/replacement readiness false |
+| `W7-PHYS-PROSPECTIVE-P6` | next | ACTIVE | shadow rewire–scenario commutation audit | P5 contact edge·owner·partial·port·termination boundary exact preservation; read-only, production 불변 |
 | `W8-REL` | 18 | BLOCKED | completed known-case solve를 release gate에 연결하고 최종 전달 | accuracy/product gate와 exact release commit 필요 |
 | `D-DIST` | - | DEFERRED | Distribution routing/DRC scope 확대 | 사용자가 implementation-ready/DRC 목표로 승격할 때만 |
 | `D-DOC` | - | DEFERRED | README와 동결 연구 배너 정리 | current work를 방해할 때 별도 문서 묶음으로 처리 |
@@ -486,6 +487,8 @@ remote/full suite, installer/release는 수행하지 않았다.
 | `D-024` | contact-interface node split 설계 전에 base `compile_layerwise_substrate`의 selected ideal-class preimage와 contact/old-Maxwell cut-set closure만 P4 두 파일·단일 node로 판정; termination/scenario는 후속 bound-network gate로 분리 | 확정 |
 | `D-025` | P4 최초 node의 실패는 extra `via_links`와 compiled `_finite_links`를 불일치시킨 negative fixture contract 오류로 분류; 두 inventory만 함께 교정해 `1 passed in 1.53s`, Sol ACCEPT, commit `39fd4fa`로 base cut-set CLOSED를 확정 | 확정 |
 | `D-026` | P4 CLOSED를 production split로 승격하지 않고 P5에서 contact별 interface node, retained finite-link endpoint rewire, P2 old-edge disable과 P1 stamp identity의 deterministic shadow plan만 두 파일·단일 node로 구성 | 확정 |
+| `D-027` | P5 지정 node `1 passed in 1.73s`, Sol ACCEPT, commit `d7e7278`로 deterministic shadow plan을 닫되 실제 topology/partial/stamp/owner-off/solve는 변경하지 않고 readiness false를 유지 | 확정 |
+| `D-028` | P5 base plan을 production assembly로 승격하지 않고 P6에서 기존 scenario network/termination binding과의 commutation만 두 파일·단일 node로 read-only 판정; source contact suppress/retarget/drift/bypass는 STOP | 확정 |
 
 ## 11. 현재 evidence와 비재사용 경계
 
@@ -519,8 +522,9 @@ falsifiable physical/analytic limiting-case invariant + disjoint owner ledger와
 - W7은 source/provenance와 수학·운영 기반을 개선했지만 production network,
   계산된 `Zii`, PowerSI correlation을 바꾸지 않았다.
 - 따라서 현재 product risk는 그대로 **외부 정확성 미달**이며, sole ACTIVE는
-  **W7-PHYS-PROSPECTIVE-P5**다. P3는 `CONTACT_INTERFACE_RANK_LOSS` STOP, P4는 base cut-set
-  CLOSED로 닫혔고 P5도 production physics가 아닌 shadow transform-plan gate다.
+  **W7-PHYS-PROSPECTIVE-P6**다. P3는 `CONTACT_INTERFACE_RANK_LOSS` STOP, P4는 base cut-set
+  CLOSED, P5는 deterministic shadow plan PLANNED로 닫혔고 P6도 production physics가 아닌
+  scenario/termination structural-compatibility gate다.
   17DT는 internal v3 PASS / W6 comparability STOP_IDENTITY_DRIFT로 종료되었고
   17DU도 `STOP_AUDIT_CONTRACT_MISMATCH`, 17DV도
   `STOP_NO_AUTHORITATIVE_BRIDGE`로 종료되었다.
@@ -643,8 +647,9 @@ output 8 MiB, target anchors ≤2 and vertex-surface links ≤4096. 17DV closure
 W7은 BLOCKED, ACTIVE는 NONE이었다. 이후 D-011/D-012/D-013/D-015/D-017이 source IR
 P1/P2/P3/P4와 contact admissibility P0, contact-complete N-port P1을 prerequisite/shadow
 범위에서 닫았고 P2도 incident old-edge identity를 `90f6b54`에서 닫았다. P3는
-`b8a79f1`에서 quotient rank loss STOP으로, P4는 `39fd4fa`에서 base cut-set CLOSED로 닫혔다.
-현재 P5는 contact-wise shadow rewire/disable/stamp plan만 판정한다. production physical candidate는 아래
+`b8a79f1`에서 quotient rank loss STOP으로, P4는 `39fd4fa`에서 base cut-set CLOSED로,
+P5는 `d7e7278`에서 deterministic shadow plan PLANNED로 닫혔다. 현재 P6는 그 contact 경계가
+scenario network/termination binding에서도 보존되는지만 판정한다. production physical candidate는 아래
 조건을 여전히 요구한다. 17DW나
 새 metadata/raw/schema/owner audit은 열지 않고 production seam은 BLOCKED다.
 
@@ -674,8 +679,9 @@ flowchart LR
   R -->|아니오| S2[P4 closed base cut-set DONE]
   S2 --> C2{ideal-class preimage와 외부 adjacency exact closure?}
   C2 -->|아니오| S[STOP / production physics BLOCKED]
-  C2 -->|예| P5[P5 shadow contact rewire plan ACTIVE]
-  P5 --> H
+  C2 -->|예| P5[P5 shadow contact rewire plan DONE]
+  P5 --> P6[P6 scenario commutation audit ACTIVE]
+  P6 --> H
   R -->|예| H
   D[17DG foundation] -. production binding 필요 .-> H
   E[17DO/17DP owner evidence] -. identity join 필요 .-> H
@@ -686,10 +692,11 @@ flowchart LR
 ```
 
 Phase 4는 commit `3b76af4`, P0는 `4dc855a`, P1은 `f823a53`, P2는 `90f6b54`,
-P3는 `b8a79f1`, P4는 `39fd4fa`의 prerequisite 범위에서 DONE이다. P3 semantic result는
-`CONTACT_INTERFACE_RANK_LOSS` STOP, P4는 CLOSED다. 현재 하나뿐인 ACTIVE item은
-`W7-PHYS-PROSPECTIVE-P5`이며 contact-wise shadow rewire/disable/stamp plan만 구성한다.
-P5 PLANNED 뒤에만 production integration 전 bound-network prerequisite를 검토하며,
+P3는 `b8a79f1`, P4는 `39fd4fa`, P5는 `d7e7278`의 prerequisite 범위에서 DONE이다.
+P3 semantic result는 `CONTACT_INTERFACE_RANK_LOSS` STOP, P4는 CLOSED, P5는 PLANNED다.
+현재 하나뿐인 ACTIVE item은 `W7-PHYS-PROSPECTIVE-P6`이며 P5 contact edge가 scenario/termination
+binding에서 suppress/retarget/drift/bypass되지 않는지만 판정한다. P6 PASS 뒤에만 production
+integration 전 다음 prerequisite를 검토하며,
 physical item은 아래 조건을 모두 만족할 때 하나만 연다.
 
 1. source-derived geometry/material provenance가 있다.
@@ -1062,7 +1069,7 @@ core topology/contact node split, owner-off, scenario/termination, solve, `Y_glo
 W6/PowerSI는 금지한다. scenario가 suppress/retarget/add하는 link와 mounted termination adjacency는
 split 설계 뒤 production integration 전에 별도 bound-network gate에서 판정한다.
 
-### 12.15 W7-PHYS-PROSPECTIVE-P5 / SPLIT-01-SHADOW-CONTACT-REWIRE-PLAN active gate
+### 12.15 W7-PHYS-PROSPECTIVE-P5 / SPLIT-01-SHADOW-CONTACT-REWIRE-PLAN closure
 
 목적은 **P4 closed cut-set을 실제 graph에 적용하지 않고 contact별 interface-node rewire,
 P2 old-edge disable, P1 N-port stamp를 하나의 deterministic plan으로 결속하는 것**이다. P4를
@@ -1082,7 +1089,7 @@ exact-once disable set이며 P1 ordered contact matrix/constraint, frequency/cel
 stamp identity를 결속한다. virtual transform 뒤 old selected class external degree는 0이어야 한다.
 
 Acceptance budget은 Luna 구현 중 실행 없음, 아래 focused node 한 번, 그 결과의 Sol 정적 검토
-한 번이다.
+한 번이었다.
 
 ```powershell
 python -m pytest -q tests/test_source_plane_patch_consumer.py::test_source_plane_patch_shadow_contact_rewire_plan
@@ -1090,6 +1097,44 @@ python -m pytest -q tests/test_source_plane_patch_consumer.py::test_source_plane
 
 P5 plan 자체의 추가 비용은 `O(L + K + N²)` 시간, `O(K + N²)` 메모리이며 P1 matrix를 복제하지
 않고 기존 representation을 검증·hash한다. P4→P3 chain을 포함한 총 비용에는 기존 SVD의
-`O(N³)`가 남는다. 결과는 `status=planned`, `shadow_only=true`, `production_ready=false`,
-`replacement_ready=false`다. scenario suppress/retarget/add, mounted termination, 실제 partial
-제거, production N-port stamp, global solve, `Y_global`, `Zii`, W6/PowerSI는 금지한다.
+`O(N³)`가 남는다. 지정 node는 `1 passed in 1.73s`, Sol 최종 정적 검토는 ACCEPT,
+`git diff --check`는 PASS였고 기술 commit은 `d7e7278`이다. 결과는 `status=planned`,
+`shadow_only=true`, `production_ready=false`, `replacement_ready=false`다. production network의
+nodes/links/partials/ports tuple identity는 바뀌지 않았고 actual matrix passivity도 P3에서 다시
+검증한다. scenario suppress/retarget/add, mounted termination, 실제 partial 제거, production N-port
+stamp, global solve, `Y_global`, `Zii`, W6/PowerSI는 수행하지 않았다.
+
+### 12.16 W7-PHYS-PROSPECTIVE-P6 / SCENARIO-01-SHADOW-REWIRE-COMMUTATION-AUDIT active gate
+
+목적은 **P5가 base substrate에서 계획한 contact split 경계가 기존 scenario network와 termination
+binding 뒤에도 exact-once 보존되는지 read-only로 판정하는 것**이다. P5 결과, 동일 base
+substrate와 기존 compiler가 만든 `LayerwiseScenarioNetworkBinding`만 입력으로 사용하며 scenario
+compiler나 termination manifest를 수정하지 않는다.
+
+Exact whitelist:
+
+1. `src/spd_decap_pi/source_plane_patch_consumer.py`
+2. `tests/test_source_plane_patch_consumer.py`
+3. 이 세 canonical 문서(상태 기록만)
+
+`shadow_split_sha256`, base/substrate identity, scenario identity/plan hash, scenario surface/link
+manifest hash와 termination manifest hash를 결속한다. P5 contact 순서별 finite link는 scenario
+network에도 exact-once 존재하고 endpoint/mode/count/R/L hex/owner 순서가 같아야 한다. base
+partials와 port inventory는 그대로여야 하며 scenario topology-only link와 termination은 P5 old
+selected class 또는 예정 interface 경계를 우회할 수 없다. P5 plane-block owner는 retained Via와
+termination owner 모두와 disjoint여야 한다. source edge가 scenario retarget으로 제거되고 owner만
+새 route로 이동한 경우에도 P1 terminal basis가 달라지므로 `SCENARIO_REWIRE_SOURCE_EDGE_SUPPRESSED`
+STOP이다.
+
+Acceptance budget은 Luna 구현 중 실행 없음, 아래 focused node 한 번, 그 결과의 Sol 정적 검토
+한 번이다.
+
+```powershell
+python -m pytest -q tests/test_source_plane_patch_consumer.py::test_source_plane_patch_shadow_rewire_commutes_with_scenario_binding
+```
+
+추가 비용은 link 한 번 스캔 기준 `O(L + P + T + K)` 시간, `O(K + P + T)` 메모리다. 별도 matrix,
+solver, schema, config를 만들지 않는다. 결과는 deterministic `shadow_only=true`,
+`production_ready=false`, `replacement_ready=false`다. 실제 topology rewire/P2 disable/P1 stamp,
+scenario compiler·termination 수정, global MNA 복제, production solve, `Y_global`, `Zii`, W6/PowerSI는
+금지한다. semantic STOP이면 후속 assembly 작업을 열지 않는다.

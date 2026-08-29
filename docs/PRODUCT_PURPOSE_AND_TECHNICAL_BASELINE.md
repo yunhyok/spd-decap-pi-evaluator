@@ -1,12 +1,12 @@
 # SPD Decap PI Evaluator 목적·기술 기준
 
 - 적용 제품: **SPD Decap PI Evaluator v0.23.1**
-- 문서 버전: **1.172**
+- 문서 버전: **1.173**
 - W5 approved/machine-frozen source-before: `main` commit `027ac7a09a3eded15f45c41860945f9d4c7f488d`
-- 상태: **G0 기준 문서** — W5 DONE; W6-BASE 260729 numerical FAIL; W7-SOURCE-IR Phase 1/2/3/4와 W7-PHYS-PROSPECTIVE-P0/P1/P2/P4 DONE, P3 DONE/STOP (모두 shadow/prerequisite 범위); W7 production physics는 아직 BLOCKED다.
-- 현재 평가: W6-BASE는 PowerSI 수치 기준 FAIL이고 unseen/generalization은 `unknown / not_run`이다. P4는 commit `39fd4fa`에서 selected ideal class의 base cut-set이 닫혔음을 확인했지만 `split_ready=false`다. production solver, topology, owner-off, `Y_global`과 `Zii`는 바뀌지 않았다.
-- Sole ACTIVE item (current): **`W7-PHYS-PROSPECTIVE-P5 / SPLIT-01-SHADOW-CONTACT-REWIRE-PLAN`** — contact별 interface node, retained finite-link endpoint rewire, P2 old-edge disable과 P1 N-port stamp를 하나의 deterministic shadow plan으로 결속한다.
-- 현재 권한: main-only와 `accuracy_parse.py` 보존을 유지한다. P5는 consumer와 focused test 두 파일, 지정 pytest node 한 번으로 제한하며 실제 topology/partial/schema/core assembly, production stamp/owner-off, scenario/termination, global solve, W6/PowerSI 실행은 금지한다.
+- 상태: **G0 기준 문서** — W5 DONE; W6-BASE 260729 numerical FAIL; W7-SOURCE-IR Phase 1/2/3/4와 W7-PHYS-PROSPECTIVE-P0/P1/P2/P4/P5 DONE, P3 DONE/STOP (모두 shadow/prerequisite 범위); W7 production physics는 아직 BLOCKED다.
+- 현재 평가: W6-BASE는 PowerSI 수치 기준 FAIL이고 unseen/generalization은 `unknown / not_run`이다. P5는 commit `d7e7278`에서 contact별 interface rewire, P2 old-edge disable과 P1 stamp를 deterministic shadow plan으로 닫았지만 `production_ready=false`, `replacement_ready=false`다. production solver, topology, owner-off, `Y_global`과 `Zii`는 바뀌지 않았다.
+- Sole ACTIVE item (current): **`W7-PHYS-PROSPECTIVE-P6 / SCENARIO-01-SHADOW-REWIRE-COMMUTATION-AUDIT`** — P5의 base contact 경계가 실제 scenario network와 termination binding 뒤에도 exact-once 보존되는지 read-only로 판정한다.
+- 현재 권한: main-only와 `accuracy_parse.py` 보존을 유지한다. P6는 consumer와 focused test 두 파일, 지정 pytest node 한 번으로 제한하며 실제 topology rewire/old-edge disable/P1 stamp, scenario compiler·termination 수정, global solve, W6/PowerSI 실행은 금지한다.
 - 물리 작업 재개 조건: IR prerequisite 완료 후에도 geometry/material provenance, physical limiting-case invariant, rail-complete 적용 범위, deterministic stamp와 실제 consumer에 결속된 disjoint owner ledger를 갖춘 단일 physical candidate가 필요하다.
 - 최종 개정: 2026-08-29 (Asia/Seoul)
 
@@ -339,10 +339,10 @@ flowchart TD
 | 제품 기반 | W0–W5에서 목적·작업 통제, product-core truth, SPD/I/O 안전성, CI, solver fail-closed guard와 frozen accuracy gate를 확보했다. |
 | 외부 정확성 | W6-BASE 260729는 완료된 수치 결과지만 PowerSI 기준 **FAIL**이다. unseen/generalization은 `unknown / not_run`이다. |
 | Source IR 성과 | Phase 1/2는 canonical source/provenance IR과 importer seam, Phase 3은 deterministic shadow finite-port witness, Phase 4는 quotient-authoritative all-contact v2를 commit `3b76af4`에서 완료했다. 세부 계약은 [Source-derived physical IR](SOURCE_DERIVED_PHYSICAL_IR.md)이 권위 있다. |
-| Source IR 한계 | Phase 4는 finite boundary identity를, P0는 artwork coverage를, P1은 exact 1 GHz shadow N-port를, P2는 candidate old Maxwell edge closed-set identity를 증명했다. P3는 현 two-node quotient의 structural rank loss를, P4는 base cut-set closure를 확정했지만 contact-interface rewire/stamp plan, replacement readiness와 PowerSI 정확성은 아직 증명하지 않았다. |
+| Source IR 한계 | Phase 4는 finite boundary identity를, P0는 artwork coverage를, P1은 exact 1 GHz shadow N-port를, P2는 candidate old Maxwell edge closed-set identity를 증명했다. P3는 현 two-node quotient의 structural rank loss를, P4는 base cut-set closure를 확정했고 P5는 contact-interface rewire/stamp shadow plan을 닫았다. 실제 scenario/termination 경계 호환성, replacement readiness와 PowerSI 정확성은 아직 증명하지 않았다. |
 | 생산 물리 상태 | surface-patch plane current-spreading R/L이 유일한 credible direction이지만 deterministic replacement stamp, production global assembly와 disjoint owner-off ledger가 없어 **NOT READY/STOP**이다. |
-| 현재 작업 상태 | `W7-PHYS-PROSPECTIVE-P5 ACTIVE`. P4 closed base cut-set으로부터 contact별 interface rewire와 P1/P2 replacement ownership의 deterministic shadow plan만 만든다. |
-| 현재 gate | finite link의 selected endpoint만 unique interface node로 교체하고 나머지 R/L/count/owner identity는 보존하며, P2 old-edge exact disable set과 P1 contact order/matrix hash를 결속한다. PASS여도 `production_ready=false`, `replacement_ready=false`다. |
+| 현재 작업 상태 | `W7-PHYS-PROSPECTIVE-P6 ACTIVE`. P5 shadow plan과 기존 scenario binding을 입력으로 contact edge·owner·partial·port·termination 경계의 commutation만 판정한다. |
+| 현재 gate | scenario가 P5 contact finite edge를 suppress/retarget/drift시키거나 old selected class를 우회하면 STOP한다. PASS여도 구조적 호환성만 뜻하며 `production_ready=false`, `replacement_ready=false`다. |
 
 세부 실행 이력, exact artifact identity와 current dirty file set은
 [작업 기준](WORK_EXECUTION_BASELINE.md)에만 둔다. 이전 미시적 실행 이력은 Git
