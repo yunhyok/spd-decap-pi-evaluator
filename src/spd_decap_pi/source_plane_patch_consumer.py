@@ -237,6 +237,97 @@ def _terminal_raw_gate(terminals: tuple[dict[str, Any], dict[str, Any]], source_
     return footprints[0], footprints[1]
 
 
+def _contact_raw_gate(
+    contacts: list[dict[str, Any]],
+    source_records: list[dict[str, Any]],
+    nodes: list[Any],
+    vias: list[Any],
+    pads: list[Any],
+    rail_bindings: list[dict[str, Any]],
+) -> tuple[dict[str, Any], ...]:
+    """Reconstruct v2 contact footprints and bind them to selected artwork."""
+    from shapely.affinity import rotate
+    from shapely.geometry import Point, box
+
+    records = {str(row.get("record_id", "")).casefold(): row for row in source_records}
+    metadata: list[dict[str, Any]] = []
+    for contact in contacts:
+        net = _text(contact.get("net"), "contact net")
+        layer = _text(contact.get("endpoint_layer"), "contact layer")
+        matches = [
+            row for row in rail_bindings
+            if str(row.get("logical_net", "")).casefold() == net.casefold()
+            and str(row.get("layer", "")).casefold() == layer.casefold()
+        ]
+        if len(matches) != 1:
+            _fail("CONTACT_ADMISSIBILITY_INVALID: selected rail binding is ambiguous")
+        artwork_net = _text(matches[0].get("artwork_net"), "contact artwork net")
+        plane_id = _text(contact.get("plane_endpoint_node_id"), "contact plane Node")
+        external_id = _text(contact.get("external_endpoint_node_id"), "contact external Node")
+        plane_record_id = _text(contact.get("plane_endpoint_node_record_id"), "contact plane Node record")
+        external_record_id = _text(contact.get("external_endpoint_node_record_id"), "contact external Node record")
+        via_record_id = _text(contact.get("via_record_id"), "contact Via record")
+        paddef_id = _text(contact.get("paddef_source_record_id"), "contact PadDef record")
+        regular_id = _text(contact.get("regular_source_record_id"), "contact Regular record")
+        refs = {name: records.get(value.casefold()) for name, value in (("plane", plane_record_id), ("external", external_record_id), ("via", via_record_id), ("paddef", paddef_id), ("regular", regular_id))}
+        if any(value is None for value in refs.values()):
+            _fail("CONTACT_ADMISSIBILITY_INVALID: contact source record is absent")
+        if str(refs["plane"].get("kind", "")).casefold() != "node" or str(refs["external"].get("kind", "")).casefold() != "node" or str(refs["via"].get("kind", "")).casefold() != "via" or str(refs["paddef"].get("kind", "")).casefold() != "paddef" or str(refs["regular"].get("kind", "")).casefold() != "regular":
+            _fail("CONTACT_ADMISSIBILITY_INVALID: contact source record kind differs")
+        if plane_record_id.casefold() != str(contact.get("source_node_record_id", "")).casefold() or plane_id.casefold() != str(contact.get("endpoint_node_id", "")).casefold() or str(contact.get("opposite_endpoint_node_id", "")).casefold() != external_id.casefold():
+            _fail("CONTACT_ADMISSIBILITY_INVALID: contact endpoint aliases differ")
+        expected_via = f"via:{str(contact.get('via_id', '')).strip()}:{net}"
+        if via_record_id.casefold() != expected_via.casefold() or not paddef_id.casefold().startswith(f"paddef:{str(contact.get('padstack_id', '')).strip()}:{layer}:".casefold()) or not regular_id.casefold().startswith(f"regular:{str(contact.get('padstack_id', '')).strip()}:{layer}:".casefold()):
+            _fail("CONTACT_ADMISSIBILITY_INVALID: contact source identity differs")
+        for name in ("plane", "external", "via"):
+            if str(refs[name].get("logical_net", "")).casefold() != net.casefold():
+                _fail("CONTACT_ADMISSIBILITY_INVALID: contact source net differs")
+        if any(str(refs[name].get("layer", "")).casefold() != layer.casefold() for name in ("plane", "paddef", "regular")):
+            _fail("CONTACT_ADMISSIBILITY_INVALID: contact source layer differs")
+        plane_matches = [row for row in nodes if str(row.node_id).casefold() == plane_id.casefold() and str(row.net_name or "").casefold() == net.casefold() and str(row.layer_id).casefold() == layer.casefold() and str(row.source_record_sha256) == str(refs["plane"].get("source_record_sha256"))]
+        external_matches = [row for row in nodes if str(row.node_id).casefold() == external_id.casefold() and str(row.net_name or "").casefold() == net.casefold() and str(row.source_record_sha256) == str(refs["external"].get("source_record_sha256"))]
+        via_matches = [row for row in vias if str(row.via_id).casefold() == str(contact.get("via_id", "")).casefold() and str(row.net_name or "").casefold() == net.casefold() and str(row.source_record_sha256) == str(refs["via"].get("source_record_sha256"))]
+        if len(plane_matches) != 1 or len(external_matches) != 1 or len(via_matches) != 1:
+            _fail("CONTACT_ADMISSIBILITY_INVALID: contact raw provenance is ambiguous")
+        plane, external, via = plane_matches[0], external_matches[0], via_matches[0]
+        if via.status != "EXACT" or str(via.padstack_id).casefold() != str(contact.get("padstack_id", "")).casefold():
+            _fail("CONTACT_ADMISSIBILITY_INVALID: contact Via is not exact or padstack differs")
+        if plane_id.casefold() == external_id.casefold():
+            _fail("CONTACT_ADMISSIBILITY_INVALID: contact endpoints must differ")
+        if plane_id.casefold() == str(via.start_node_id).casefold() and external_id.casefold() == str(via.end_node_id).casefold():
+            plane_layer, plane_xy = str(via.start_layer_id), (via.start_x_pm, via.start_y_pm)
+            external_layer, external_xy = str(via.end_layer_id), (via.end_x_pm, via.end_y_pm)
+        elif plane_id.casefold() == str(via.end_node_id).casefold() and external_id.casefold() == str(via.start_node_id).casefold():
+            plane_layer, plane_xy = str(via.end_layer_id), (via.end_x_pm, via.end_y_pm)
+            external_layer, external_xy = str(via.start_layer_id), (via.start_x_pm, via.start_y_pm)
+        else:
+            _fail("CONTACT_ADMISSIBILITY_INVALID: contact endpoint coordinates differ")
+        if plane_layer.casefold() != layer.casefold() or (plane.x_pm, plane.y_pm) != plane_xy or str(external.layer_id).casefold() != external_layer.casefold() or (external.x_pm, external.y_pm) != external_xy:
+            _fail("CONTACT_ADMISSIBILITY_INVALID: contact Via endpoint layer/coordinate differs")
+        if str(refs["external"].get("layer", "")).casefold() != external_layer.casefold():
+            _fail("CONTACT_ADMISSIBILITY_INVALID: contact external source layer differs")
+        rotation = float(contact.get("rotation_degrees"))
+        normalized = ((float(via.rotation_microdegrees) / 1_000_000.0 + 180.0) % 360.0) - 180.0
+        if not -180.0 <= rotation < 180.0 or not math.isclose(rotation, normalized, rel_tol=0.0, abs_tol=1.0e-9):
+            _fail("CONTACT_ADMISSIBILITY_INVALID: contact rotation differs")
+        pad_matches = [row for row in pads if str(row.padstack_id).casefold() == str(contact.get("padstack_id", "")).casefold() and str(row.layer_id).casefold() == layer.casefold() and int(row.ordinal) == int(contact.get("raw_pad_shape_ordinal", -1)) and str(row.source_record_sha256) == str(contact.get("raw_pad_shape_sha256", ""))]
+        if len(pad_matches) != 1:
+            _fail("CONTACT_ADMISSIBILITY_INVALID: contact PadShape provenance differs")
+        pad = pad_matches[0]
+        x_um, y_um = float(plane.x_pm) * 1e-6, float(plane.y_pm) * 1e-6
+        width_um, height_um = float(pad.width_pm) * 1e-6, float(pad.height_pm) * 1e-6
+        if pad.shape_kind == "CIRCLE":
+            footprint = Point(x_um, y_um).buffer(width_um / 2.0, quad_segs=64)
+        else:
+            footprint = box(x_um - width_um / 2.0, y_um - height_um / 2.0, x_um + width_um / 2.0, y_um + height_um / 2.0)
+            if rotation:
+                footprint = rotate(footprint, rotation, origin=(x_um, y_um))
+        cid = _text(contact.get("contact_id"), "contact id")
+        port = SurfacePatchFinitePort(cid, layer, artwork_net, footprint, "source-plane-ownership-ir-v2")
+        metadata.append({"contact_id": cid, "owner_kind": _text(contact.get("owner_kind"), "contact owner kind"), "port": port, "surface_id": str(matches[0].get("surface_id", "")).casefold(), "artwork_net": artwork_net})
+    return tuple(metadata)
+
+
 def _surface_geometry(surface: Mapping[str, Any], primitives: list[Any], vertices: list[Any], circles: list[Any], expected_ir: list[Mapping[str, Any]]) -> Any:
     name = _text(surface.get("geometry_asset_name"), "surface geometry asset")
     asset_sha = _text(surface.get("geometry_asset_sha256"), "surface geometry hash")
@@ -519,4 +610,132 @@ def consume_source_plane_patch(
     return result
 
 
-__all__ = ["SourcePlanePatchError", "consume_source_plane_patch"]
+def evaluate_source_plane_contact_admissibility(
+    ownership_manifest: Mapping[str, Any],
+    ownership_attachments: Mapping[str, bytes],
+    raw_manifest: Mapping[str, Any],
+    raw_attachments: Mapping[str, bytes],
+    *,
+    rail_id: str,
+) -> Mapping[str, Any]:
+    """Check v2 contact footprints against their selected source artwork."""
+    rail_id = _text(rail_id, "rail_id")
+    if not isinstance(ownership_manifest, Mapping) or not isinstance(raw_manifest, Mapping):
+        _fail("CONTACT_ADMISSIBILITY_INVALID: asset manifests are not mappings")
+    manifest_rail = ownership_manifest.get("target_rail_id")
+    if not isinstance(manifest_rail, str) or not manifest_rail.strip():
+        _fail("CONTACT_SURFACE_BINDING_INVALID: ownership target rail is absent")
+    manifest_rail = _text(manifest_rail, "ownership target rail")
+    if manifest_rail.casefold() != rail_id.casefold():
+        _fail("CONTACT_SURFACE_BINDING_INVALID: requested rail differs from ownership target rail")
+    rail_id = manifest_rail
+    if "contact_boundary" not in ownership_manifest.get("counts", {}):
+        _fail("CONTACT_IR_V2_REQUIRED: ownership IR v2 is required")
+    try:
+        _binding_check(ownership_manifest, raw_manifest)
+        ir_total = [0]
+        with load_source_plane_ownership_ir(
+            ownership_manifest,
+            ownership_attachments,
+            expected_source_sha256=str(raw_manifest["source_sha256"]),
+            expected_project_binding_sha256=str(raw_manifest["project_binding_sha256"]),
+            expected_certificate_evidence_sha256=str(raw_manifest["certificate_evidence_sha256"]),
+            expected_compiled_topology_identity_sha256=str(raw_manifest["compiled_topology_identity_sha256"]),
+            expected_raw_manifest_sha256=str(ownership_manifest["raw_manifest_sha256"]),
+            expected_raw_geometry_identity_sha256=str(raw_manifest["geometry_identity_sha256"]),
+            expected_raw_logical_rows_sha256=str(raw_manifest["logical_rows_sha256"]),
+            expected_raw_plane_sheet_sha256=str(raw_manifest["plane_sheet_payload_sha256"]),
+            expected_app_version=str(ownership_manifest.get("app_version", "")),
+        ) as ownership:
+            sections = ("source_records", "surfaces", "primitives", "islands", "rail_bindings", "contact_boundary")
+            ir_rows = {section: _rows(ownership, section, MAX_SOURCE_PLANE_OWNERSHIP_IR_ROWS, ir_total) for section in sections}
+        contacts = sorted(ir_rows["contact_boundary"], key=lambda row: (int(row.get("ordinal", 0)), str(row.get("contact_id", "")).casefold()))
+        if not contacts:
+            _fail("CONTACT_BOUNDARY_EMPTY: no contact boundaries are present")
+        bindings = [row for row in ir_rows["rail_bindings"] if str(row.get("rail_id", "")).casefold() == rail_id.casefold() and row.get("state") == "source_bound"]
+        if len(bindings) != 2 or {str(row.get("role", "")).casefold() for row in bindings} != {"power", "ground"}:
+            _fail("CONTACT_SURFACE_BINDING_INVALID: selected rail bindings are incomplete")
+        source_records = ir_rows["source_records"]
+        source_by_id = {str(row.get("record_id", "")).casefold(): row for row in source_records}
+        if len(source_by_id) != len(source_records):
+            _fail("CONTACT_ADMISSIBILITY_INVALID: source-record identity is ambiguous")
+        islands = {str(row.get("island_id", "")).casefold(): row for row in ir_rows["islands"]}
+        surfaces = {str(row.get("surface_id", "")).casefold(): row for row in ir_rows["surfaces"]}
+        target_surface_ids: set[str] = set()
+        node_record_shas: set[str] = set()
+        via_record_shas: set[str] = set()
+        endpoint_ids: set[str] = set()
+        pad_keys: set[tuple[str, str, int, str]] = set()
+        for contact in contacts:
+            net = _text(contact.get("net"), "contact net")
+            layer = _text(contact.get("endpoint_layer"), "contact layer")
+            matched = [row for row in bindings if str(row.get("logical_net", "")).casefold() == net.casefold() and str(row.get("layer", "")).casefold() == layer.casefold()]
+            if len(matched) != 1:
+                _fail("CONTACT_SURFACE_BINDING_INVALID: contact rail binding is ambiguous")
+            binding = matched[0]
+            island = islands.get(str(contact.get("island_id", "")).casefold())
+            if island is None or str(island.get("surface_id", "")).casefold() != str(binding.get("surface_id", "")).casefold() or str(island.get("component_id", "")).casefold() != str(contact.get("component_id", "")).casefold() or str(island.get("island_id", "")).casefold() != str(binding.get("island_id", "")).casefold():
+                _fail("CONTACT_SURFACE_BINDING_INVALID: contact island/component differs from rail binding")
+            target_surface_ids.add(str(binding.get("surface_id", "")).casefold())
+            endpoint_ids.update(str(contact.get(key, "")).casefold() for key in ("endpoint_node_id", "opposite_endpoint_node_id", "plane_endpoint_node_id", "external_endpoint_node_id") if str(contact.get(key, "")).strip())
+            for key, target in (("source_node_record_id", node_record_shas), ("opposite_endpoint_node_record_id", node_record_shas), ("plane_endpoint_node_record_id", node_record_shas), ("external_endpoint_node_record_id", node_record_shas), ("via_record_id", via_record_shas)):
+                record = source_by_id.get(str(contact.get(key, "")).casefold())
+                if record is None or not str(record.get("source_record_sha256", "")).strip():
+                    _fail("CONTACT_ADMISSIBILITY_INVALID: contact source record provenance is absent")
+                target.add(str(record["source_record_sha256"]))
+            pad_keys.add((str(contact.get("padstack_id", "")).casefold(), layer.casefold(), int(contact.get("raw_pad_shape_ordinal", -1)), str(contact.get("raw_pad_shape_sha256", ""))))
+        selected_primitives = [row for row in ir_rows["primitives"] if str(row.get("surface_id", "")).casefold() in target_surface_ids]
+        selected_ordinals = {int(row.get("raw_primitive_ordinal", -1)) for row in selected_primitives}
+        with load_raw_spatial_contact_asset(
+            raw_manifest,
+            raw_attachments,
+            expected_source_sha256=str(raw_manifest["source_sha256"]),
+            expected_project_binding_sha256=str(raw_manifest["project_binding_sha256"]),
+            expected_certificate_evidence_sha256=str(raw_manifest["certificate_evidence_sha256"]),
+            expected_compiled_topology_identity_sha256=str(raw_manifest["compiled_topology_identity_sha256"]),
+            expected_geometry_identity_sha256=str(raw_manifest["geometry_identity_sha256"]),
+            require_plane_sheet_payload=True,
+        ) as raw:
+            raw_total = [0]
+            raw_primitives = _raw_rows(raw, "plane_primitives", MAX_SOURCE_PLANE_OWNERSHIP_IR_ROWS, raw_total, lambda row: int(row.primitive_ordinal) in selected_ordinals)
+            raw_vertices = _raw_rows(raw, "plane_vertices", MAX_SOURCE_PLANE_OWNERSHIP_IR_ROWS, raw_total, lambda row: int(row.primitive_ordinal) in selected_ordinals)
+            raw_circles = _raw_rows(raw, "plane_circles", MAX_SOURCE_PLANE_OWNERSHIP_IR_ROWS, raw_total, lambda row: int(row.primitive_ordinal) in selected_ordinals)
+            raw_nodes = _raw_rows(raw, "nodes", MAX_SOURCE_PLANE_OWNERSHIP_IR_ROWS, raw_total, lambda row: str(row.source_record_sha256) in node_record_shas or str(row.node_id).casefold() in endpoint_ids)
+            raw_vias = _raw_rows(raw, "vias", MAX_SOURCE_PLANE_OWNERSHIP_IR_ROWS, raw_total, lambda row: str(row.source_record_sha256) in via_record_shas)
+            raw_pads = _raw_rows(raw, "pad_shapes", MAX_SOURCE_PLANE_OWNERSHIP_IR_ROWS, raw_total, lambda row: (str(row.padstack_id).casefold(), str(row.layer_id).casefold(), int(row.ordinal), str(row.source_record_sha256)) in pad_keys)
+        geometries: dict[str, Any] = {}
+        for sid in target_surface_ids:
+            surface = surfaces.get(sid)
+            if surface is None:
+                _fail("CONTACT_SURFACE_BINDING_INVALID: selected surface is absent")
+            expected = [row for row in selected_primitives if str(row.get("surface_id", "")).casefold() == sid]
+            try:
+                geometries[sid] = _surface_geometry(surface, raw_primitives, raw_vertices, raw_circles, expected)
+            except SourcePlanePatchError as exc:
+                _fail(f"CONTACT_GEOMETRY_INVALID: {exc}")
+        metadata = _contact_raw_gate(contacts, source_records, raw_nodes, raw_vias, raw_pads, bindings)
+        rows: list[dict[str, Any]] = []
+        for contact, item in zip(contacts, metadata, strict=True):
+            surface_id = item["surface_id"]
+            footprint = item["port"].geometry_um
+            requested = float(footprint.area)
+            try:
+                covered = float(geometries[surface_id].intersection(footprint).area)
+            except Exception as exc:
+                _fail(f"CONTACT_GEOMETRY_INVALID: contact intersection failed: {exc}")
+            tolerance = max(requested * 1.0e-10, 1.0e-9)
+            if not math.isfinite(requested) or not math.isfinite(covered):
+                _fail("CONTACT_GEOMETRY_INVALID: contact area is nonfinite")
+            if covered <= 0.0 or abs(covered - requested) > tolerance:
+                _fail(f"CONTACT_NOT_FULLY_COVERED: contact {contact.get('contact_id', '')!r} is not fully covered")
+            rows.append({"contact_id": item["contact_id"], "owner_kind": item["owner_kind"], "logical_net": str(contact["net"]), "layer": str(contact["endpoint_layer"]), "artwork_net": item["artwork_net"], "covered_area_m2": covered * 1.0e-12})
+        result: dict[str, Any] = {"schema_version": "source-plane-contact-admissibility-v1", "shadow_only": True, "status": "complete", "rail_id": rail_id, "source_sha256": ownership_manifest["source_sha256"], "raw_manifest_sha256": ownership_manifest["raw_manifest_sha256"], "contacts": rows}
+        result["witness_sha256"] = sha256(concrete_canonical_json_bytes(result)).hexdigest()
+        return result
+    except SourcePlanePatchError:
+        raise
+    except Exception as exc:
+        _fail(f"CONTACT_ADMISSIBILITY_INVALID: {exc}")
+
+
+__all__ = ["SourcePlanePatchError", "consume_source_plane_patch", "evaluate_source_plane_contact_admissibility"]
