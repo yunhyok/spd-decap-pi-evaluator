@@ -1,12 +1,12 @@
 # SPD Decap PI Evaluator 목적·기술 기준
 
 - 적용 제품: **SPD Decap PI Evaluator v0.23.1**
-- 문서 버전: **1.167**
+- 문서 버전: **1.168**
 - W5 approved/machine-frozen source-before: `main` commit `027ac7a09a3eded15f45c41860945f9d4c7f488d`
 - 상태: **G0 기준 문서** — W5 DONE; W6-BASE 260729 numerical FAIL; W7-SOURCE-IR Phase 1/2/3/4 DONE (모두 shadow/prerequisite 범위); W7 production physics는 아직 BLOCKED다.
-- 현재 평가: W6-BASE는 PowerSI 수치 기준 FAIL이고 unseen/generalization은 `unknown / not_run`이다. Source IR Phase 4 v2 contact boundary는 commit `3b76af4`와 focused runtime/Sol acceptance로 닫혔지만 production solver, owner-off, `Y_global`과 `Zii`는 바뀌지 않았다.
-- Sole ACTIVE item (current): **`W7-PHYS-PROSPECTIVE-P0`** — 모든 v2 contact의 direct same-net artwork full-coverage와 patch-port 적격성만 shadow 경로에서 판정한다.
-- 현재 권한: main-only와 `accuracy_parse.py` 보존을 유지한다. P0는 `source_plane_patch_consumer.py`와 focused test 한 파일, 단일 pytest node로 제한하며 schema, production solver/profile/stamp, owner-off, W6/PowerSI 실행은 금지한다.
+- 현재 평가: W6-BASE는 PowerSI 수치 기준 FAIL이고 unseen/generalization은 `unknown / not_run`이다. Source IR Phase 4와 shadow contact admissibility P0는 각각 commit `3b76af4`, `4dc855a`에서 닫혔지만 production solver, owner-off, `Y_global`과 `Zii`는 바뀌지 않았다.
+- Sole ACTIVE item (current): **`W7-PHYS-PROSPECTIVE-P1`** — P0를 통과한 모든 contact를 한 번에 포함하는 source-derived shadow N-port condensation을 정확한 source-tabulated 1 GHz 한 점에서 판정한다.
+- 현재 권한: main-only와 `accuracy_parse.py` 보존을 유지한다. P1은 `source_plane_patch_consumer.py`와 focused test 한 파일, 단일 pytest node로 제한하며 core operator/schema, production solver/profile/stamp, owner-off, W6/PowerSI 실행은 금지한다.
 - 물리 작업 재개 조건: IR prerequisite 완료 후에도 geometry/material provenance, physical limiting-case invariant, rail-complete 적용 범위, deterministic stamp와 실제 consumer에 결속된 disjoint owner ledger를 갖춘 단일 physical candidate가 필요하다.
 - 최종 개정: 2026-08-29 (Asia/Seoul)
 
@@ -156,7 +156,8 @@ quasi-static circuit model이며 다음을 충분히 표현하지 않는다.
 | 외부 정확성 | W6-BASE 260729 retrospective numerical **FAIL** | completed evidence지만 PowerSI accuracy promotion 실패; exact 이력은 작업 기준 |
 | unseen/generalization | `unknown / not_run` | 개발 case FAIL 동안 승격·실행 금지 |
 | Source IR | Phase 1/2/3/4 committed; Phase 4 `3b76af4` | prerequisite/shadow 범위; schema 상세는 Source-derived IR 문서 |
-| production `Y_global` / `Zii` | Phase 4 이후에도 변경 없음 | IR·focused PASS·import 성공을 정확도 개선으로 해석하지 않음 |
+| contact admissibility | P0 `4dc855a`, focused PASS / Sol ACCEPT | 모든 v2 contact의 direct same-net artwork full coverage만 증명; production port/stamp 아님 |
+| production `Y_global` / `Zii` | P0 이후에도 변경 없음 | IR·shadow PASS·import 성공을 정확도 개선으로 해석하지 않음 |
 | historical v0.23.0 attestation | import/save/92-rail solver entry만 verified | frequency solve·Touchstone comparison·현행 release 근거로 재사용 금지 |
 
 과거 validation placeholder, report-level pass, 작은 backward residual,
@@ -335,10 +336,10 @@ flowchart TD
 | 제품 기반 | W0–W5에서 목적·작업 통제, product-core truth, SPD/I/O 안전성, CI, solver fail-closed guard와 frozen accuracy gate를 확보했다. |
 | 외부 정확성 | W6-BASE 260729는 완료된 수치 결과지만 PowerSI 기준 **FAIL**이다. unseen/generalization은 `unknown / not_run`이다. |
 | Source IR 성과 | Phase 1/2는 canonical source/provenance IR과 importer seam, Phase 3은 deterministic shadow finite-port witness, Phase 4는 quotient-authoritative all-contact v2를 commit `3b76af4`에서 완료했다. 세부 계약은 [Source-derived physical IR](SOURCE_DERIVED_PHYSICAL_IR.md)이 권위 있다. |
-| Source IR 한계 | Phase 4 PASS는 finite equivalence-boundary의 identity/provenance 완전성만 증명한다. direct artwork overlap, physical patch-port 적격성, replacement readiness와 PowerSI 정확성은 아직 증명하지 않았다. |
+| Source IR 한계 | Phase 4는 finite equivalence-boundary identity/provenance를, P0는 direct same-net artwork full coverage를 증명했다. contact-complete N-port, replacement readiness와 PowerSI 정확성은 아직 증명하지 않았다. |
 | 생산 물리 상태 | surface-patch plane current-spreading R/L이 유일한 credible direction이지만 deterministic replacement stamp, production global assembly와 disjoint owner-off ledger가 없어 **NOT READY/STOP**이다. |
-| 현재 작업 상태 | `W7-PHYS-PROSPECTIVE-P0 ACTIVE`. shadow contact-to-artwork admissibility만 판정하며 production `Y_global`/`Zii`는 변경하지 않는다. |
-| 현재 gate | 모든 v2 `device/decap/other` contact의 exact footprint가 selected same-net artwork에 full coverage되는지 단일 focused node로 판정한다. 하나라도 불완전하거나 trace landing을 추정해야 하면 전체 후보를 STOP한다. |
+| 현재 작업 상태 | `W7-PHYS-PROSPECTIVE-P1 ACTIVE`. 모든 적격 contact의 shadow N-port condensation만 판정하며 production `Y_global`/`Zii`는 변경하지 않는다. |
+| 현재 gate | exact source-tabulated 1 GHz와 고정 mesh에서 모든 v2 `device/decap/other` contact를 exact-once 포함한 유한 N×N admittance, gauge/solve/reciprocity/passivity diagnostics와 deterministic replay를 단일 focused node로 판정한다. |
 
 세부 실행 이력, exact artifact identity와 current dirty file set은
 [작업 기준](WORK_EXECUTION_BASELINE.md)에만 둔다. 이전 미시적 실행 이력은 Git
