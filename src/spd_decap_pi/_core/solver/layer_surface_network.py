@@ -38,6 +38,7 @@ from .layer_surface_termination import (
     scoped_impedance_model_identity_cache,
 )
 from .uniform_c00 import DispersiveAdjacentGap
+from .global_mna import NodalAdmittanceBlock, evaluate_nodal_admittance_block
 
 
 _TINY = 1.0e-30
@@ -1049,10 +1050,12 @@ class CompiledLayerSurfaceNetwork:
         active_finite_links: Sequence[
             tuple[int, int, LayerSurfaceViaLink]
         ],
+        supplemental_edges: Sequence[tuple[int, int]] = (),
     ) -> tuple[tuple[tuple[int, ...], ...], tuple[int, ...]]:
         if (
             not mapped
             and len(active_finite_links) == len(self._finite_links)
+            and not supplemental_edges
         ):
             return self._components, self._component_by_node
         connectivity = _UnionFind(len(self._reduced_node_ids))
@@ -1073,6 +1076,8 @@ class CompiledLayerSurfaceNetwork:
                 connectivity.union(first, second)
         for positive, negative, _stamp in mapped:
             connectivity.union(positive, negative)
+        for first, second in supplemental_edges:
+            connectivity.union(first, second)
         members_by_root: dict[int, list[int]] = {}
         for node in range(len(self._reduced_node_ids)):
             members_by_root.setdefault(connectivity.find(node), []).append(node)
@@ -1833,6 +1838,7 @@ class CompiledLayerSurfaceNetwork:
         base_network_identity_sha256: str | None = None,
         progress: Callable[[int, int], None] | None = None,
         is_cancelled: Callable[[], bool] | None = None,
+        supplemental_nodal_admittance: NodalAdmittanceBlock | None = None,
     ) -> LayerSurfaceSolveResult:
         # Detach from a caller-owned ndarray before the first validation,
         # interpolation, identity hash, or worker dispatch.  Otherwise a
@@ -1854,6 +1860,41 @@ class CompiledLayerSurfaceNetwork:
             or np.any(frequencies <= 0.0)
         ):
             raise LayerSurfaceNetworkError("frequencies must be finite and positive")
+        supplemental_stamp: csc_matrix | None = None
+        supplemental_reduced_nodes: tuple[int, ...] = ()
+        supplemental_edges: tuple[tuple[int, int], ...] = ()
+        if supplemental_nodal_admittance is not None:
+            if not isinstance(supplemental_nodal_admittance, NodalAdmittanceBlock):
+                raise LayerSurfaceNetworkError("supplemental nodal admittance must be a NodalAdmittanceBlock")
+            if frequencies.size != 1:
+                raise LayerSurfaceNetworkError("supplemental nodal admittance requires exactly one frequency")
+            supplemental_stamp = evaluate_nodal_admittance_block(
+                supplemental_nodal_admittance, float(frequencies[0])
+            )
+            try:
+                supplemental_reduced_nodes = tuple(
+                    int(self.reduced_node_index(node))
+                    for node in supplemental_nodal_admittance.node_ids
+                )
+            except LayerSurfaceNetworkError as exc:
+                raise LayerSurfaceNetworkError(
+                    f"supplemental nodal admittance mapping failed: {exc}"
+                ) from exc
+            if len(set(supplemental_reduced_nodes)) != len(supplemental_reduced_nodes):
+                raise LayerSurfaceNetworkError("supplemental nodal admittance nodes collapse under ideal topology")
+            supplemental_edges = tuple(
+                (supplemental_reduced_nodes[row], supplemental_reduced_nodes[column])
+                for column in range(supplemental_stamp.shape[1])
+                for offset in range(int(supplemental_stamp.indptr[column]), int(supplemental_stamp.indptr[column + 1]))
+                for row in (int(supplemental_stamp.indices[offset]),)
+                if row != column and supplemental_stamp.data[offset] != 0j
+            )
+            supplemental_owner_keys = tuple(owner.casefold() for owner in supplemental_nodal_admittance.owner_ids)
+            if len(set(supplemental_owner_keys)) != len(supplemental_owner_keys):
+                raise LayerSurfaceNetworkError("supplemental nodal owners are duplicated")
+            via_owners = {owner.casefold() for link in self.via_links for owner in link.owner_ids}
+            if supplemental_owner_keys and via_owners & set(supplemental_owner_keys):
+                raise LayerSurfaceNetworkError("supplemental nodal owner conflicts with Via owner")
         report = progress or (lambda _completed, _total: None)
         cancelled = is_cancelled or (lambda: False)
         if cancelled():
@@ -1882,6 +1923,10 @@ class CompiledLayerSurfaceNetwork:
         disabled_ids = self._resolved_disabled_via_link_ids(
             disabled_via_link_ids
         )
+        if supplemental_nodal_admittance is not None and disabled_ids:
+            raise LayerSurfaceNetworkError(
+                "supplemental nodal admittance cannot be combined with disabled Via links"
+            )
         if disabled_ids and base_network_identity_sha256 is None:
             raise LayerSurfaceNetworkError(
                 "finite-link suppression requires a hash-bound base network identity"
@@ -1908,11 +1953,30 @@ class CompiledLayerSurfaceNetwork:
                 "via_snapshot": solve_via_snapshot,
             }
         )
-        frequency_cache_binding = self._frequency_result_cache_binding(
-            termination_manifest=termination_manifest,
-            base_network_identity_sha256=base_network_identity_sha256,
-            disabled_via_link_ids=disabled_ids,
-            finite_stamp_sha256=via_snapshot_sha256,
+        supplemental_identity_sha256 = None
+        if supplemental_nodal_admittance is not None and supplemental_stamp is not None:
+            supplemental_identity_sha256 = _identity_sha256(
+                {
+                    "schema": "layer-surface-supplemental-nodal-v1",
+                    "block_id": supplemental_nodal_admittance.block_id,
+                    "node_ids": supplemental_nodal_admittance.node_ids,
+                    "reduced_nodes": supplemental_reduced_nodes,
+                    "owner_ids": supplemental_nodal_admittance.owner_ids,
+                    "shape": supplemental_stamp.shape,
+                    "indptr": tuple(int(value) for value in supplemental_stamp.indptr),
+                    "indices": tuple(int(value) for value in supplemental_stamp.indices),
+                    "data": tuple(complex(value).real.hex() + ":" + complex(value).imag.hex() for value in supplemental_stamp.data),
+                }
+            )
+        frequency_cache_binding = (
+            None
+            if supplemental_nodal_admittance is not None
+            else self._frequency_result_cache_binding(
+                termination_manifest=termination_manifest,
+                base_network_identity_sha256=base_network_identity_sha256,
+                disabled_via_link_ids=disabled_ids,
+                finite_stamp_sha256=via_snapshot_sha256,
+            )
         )
         if (
             frequency_cache_binding is not None
@@ -1944,10 +2008,24 @@ class CompiledLayerSurfaceNetwork:
             selected_rail_id,
             base_network_identity_sha256,
         )
+        if supplemental_nodal_admittance is not None:
+            termination_owners = {
+                owner.casefold()
+                for _positive, _negative, stamp in mapped_terminations
+                for owner in stamp.owner_ids
+            }
+            if termination_owners & {
+                owner.casefold()
+                for owner in supplemental_nodal_admittance.owner_ids
+            }:
+                raise LayerSurfaceNetworkError(
+                    "supplemental nodal owner conflicts with termination owner"
+                )
         solve_components, solve_component_by_node = (
             self._components_with_terminations(
                 mapped_terminations,
                 active_finite_links,
+                supplemental_edges,
             )
         )
 
@@ -1992,6 +2070,15 @@ class CompiledLayerSurfaceNetwork:
             active_global_nodes.size, dtype=np.int64
         )
         active_node_count = int(active_global_nodes.size)
+        supplemental_active_nodes: tuple[int, ...] = ()
+        if supplemental_nodal_admittance is not None:
+            supplemental_active_nodes = tuple(
+                int(global_to_active[node]) for node in supplemental_reduced_nodes
+            )
+            if any(node < 0 for node in supplemental_active_nodes):
+                raise LayerSurfaceNetworkError(
+                    "supplemental nodal component is not port-bearing"
+                )
         if active_node_count == total_node_count:
             active_partials = self._collapsed_partials
         else:
@@ -2114,10 +2201,12 @@ class CompiledLayerSurfaceNetwork:
         )
         node_count = active_node_count
         stop_requested = Event()
+        final_matrix_identity: str | None = None
 
         def solve_frequency_reserved(
             frequency_index: int,
         ) -> _FrequencySolveResult:
+            nonlocal final_matrix_identity
             if stop_requested.is_set():
                 raise RuntimeError("layer-surface solve cancelled")
             frequency = float(frequencies[frequency_index])
@@ -2169,6 +2258,21 @@ class CompiledLayerSurfaceNetwork:
                 matrix = matrix + csc_matrix(
                     (data, (rows, columns)), shape=(node_count, node_count)
                 )
+            if supplemental_stamp is not None:
+                rows = []
+                columns = []
+                data = []
+                for column in range(supplemental_stamp.shape[1]):
+                    for offset in range(
+                        int(supplemental_stamp.indptr[column]),
+                        int(supplemental_stamp.indptr[column + 1]),
+                    ):
+                        rows.append(supplemental_active_nodes[int(supplemental_stamp.indices[offset])])
+                        columns.append(supplemental_active_nodes[column])
+                        data.append(supplemental_stamp.data[offset])
+                matrix = matrix + csc_matrix(
+                    (data, (rows, columns)), shape=(node_count, node_count)
+                )
             matrix.sum_duplicates()
             matrix.eliminate_zeros()
             if not np.all(np.isfinite(matrix.data)):
@@ -2192,6 +2296,8 @@ class CompiledLayerSurfaceNetwork:
             matrix_identity = sha256(
                 b"layer-surface-frequency-matrix-v1\0"
             )
+            if supplemental_identity_sha256 is not None:
+                matrix_identity.update(supplemental_identity_sha256.encode("ascii"))
             matrix_identity.update(frequency_bits_by_index[frequency_index])
             matrix_identity.update(
                 np.asarray(matrix.shape, dtype="<i8").tobytes(order="C")
@@ -2212,6 +2318,8 @@ class CompiledLayerSurfaceNetwork:
                 frequency_bits_by_index[frequency_index]
                 + matrix_identity.digest()
             )
+            if supplemental_identity_sha256 is not None:
+                final_matrix_identity = matrix_identity.hexdigest()
             cached = self._frequency_result_cache_get(
                 frequency_cache_binding,
                 point_cache_identity,
@@ -2592,21 +2700,29 @@ class CompiledLayerSurfaceNetwork:
             else evaluated_terminations.cache_identity_sha256
         )
         solve_identity = base_solve_identity
+        if supplemental_identity_sha256 is not None:
+            solve_identity = _identity_sha256(
+                {
+                    "schema": "layer-surface-supplemental-solve-v1",
+                    "base_solve_identity_sha256": base_solve_identity,
+                    "supplemental_identity_sha256": supplemental_identity_sha256,
+                    "final_matrix_identity_sha256": final_matrix_identity,
+                }
+            )
         if disabled_ids:
             frequency_sha256 = sha256(
                 np.asarray(frequencies, dtype="<f8").tobytes(order="C")
             ).hexdigest()
-            solve_identity = _identity_sha256(
-                {
-                    "schema": "layer-surface-solve-with-via-suppression-v1",
-                    "base_network_identity_sha256": str(
-                        base_network_identity_sha256
-                    ).casefold(),
-                    "base_solve_identity_sha256": base_solve_identity,
-                    "frequency_grid_sha256": frequency_sha256,
-                    "disabled_via_link_ids": list(disabled_ids),
-                }
-            )
+            identity_payload = {
+                "schema": "layer-surface-solve-with-via-suppression-v1",
+                "base_network_identity_sha256": str(
+                    base_network_identity_sha256
+                ).casefold(),
+                "base_solve_identity_sha256": base_solve_identity,
+                "frequency_grid_sha256": frequency_sha256,
+                "disabled_via_link_ids": list(disabled_ids),
+            }
+            solve_identity = _identity_sha256(identity_payload)
 
         result = LayerSurfaceSolveResult(
             frequencies_hz=frequencies,

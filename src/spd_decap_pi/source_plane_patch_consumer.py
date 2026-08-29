@@ -25,9 +25,9 @@ from .source_plane_ownership_ir import (
 from ._core.geometry.ordered_boolean import ordered_spd_geometry
 from ._core.solver.mfdm import EPSILON_0_F_PER_M, MU_0_H_PER_M
 from ._core.solver.layerwise_network import LayerwiseScenarioNetworkBinding
-from ._core.solver.global_mna import NodalAdmittanceBlock
-from ._core.solver.layer_surface_network import CompiledLayerSurfaceNetwork, compile_layer_surface_network
-from ._core.solver.layer_surface_termination import compile_layer_surface_termination_manifest
+from ._core.solver.global_mna import GlobalMnaError, NodalAdmittanceBlock
+from ._core.solver.layer_surface_network import CompiledLayerSurfaceNetwork, LayerSurfaceNetworkError, compile_layer_surface_network
+from ._core.solver.layer_surface_termination import LayerSurfaceTerminationError, compile_layer_surface_termination_manifest
 from ._core.solver.surface_patch_plane import (
     SurfacePatchArtwork,
     SurfacePatchConductor,
@@ -2681,4 +2681,102 @@ def audit_source_plane_patch_shadow_augmented_component_closure(
     return {**common, "component_closure_sha256": sha256(concrete_canonical_json_bytes(common)).hexdigest()}
 
 
-__all__ = ["SourcePlanePatchError", "consume_source_plane_patch", "evaluate_source_plane_contact_admissibility", "evaluate_source_plane_contact_condensation", "audit_source_plane_patch_owner_off", "audit_source_plane_patch_contact_quotient_representability", "audit_source_plane_patch_selected_base_cutset", "plan_source_plane_patch_shadow_contact_rewire", "audit_source_plane_patch_shadow_rewire_commutation", "audit_source_plane_patch_shadow_local_replacement_recipe", "materialize_source_plane_patch_shadow_topology_embedding", "bind_source_plane_patch_shadow_nport_block", "audit_source_plane_patch_shadow_augmented_component_closure"]
+def audit_source_plane_patch_shadow_one_frequency_solve(
+    patch_result: Mapping[str, Any],
+    commutation_result: Mapping[str, Any],
+    recipe_result: Mapping[str, Any],
+    component_closure_result: Mapping[str, Any],
+    binding: LayerwiseScenarioNetworkBinding,
+    *,
+    rail_id: str,
+) -> Mapping[str, Any]:
+    """Apply the accepted P1 block in one ephemeral exact-frequency solve."""
+    rail_id = _text(rail_id, "rail_id")
+
+    def digest(value: Any, label: str) -> str:
+        if not isinstance(value, str):
+            _fail(f"SHADOW_SOLVE_INVALID: {label} is not SHA-256")
+        value = value.strip()
+        if len(value) != 64 or value != value.casefold() or any(char not in "0123456789abcdef" for char in value):
+            _fail(f"SHADOW_SOLVE_INVALID: {label} is not SHA-256")
+        return value
+
+    if not all(isinstance(value, Mapping) for value in (patch_result, commutation_result, recipe_result, component_closure_result)) or not isinstance(binding, LayerwiseScenarioNetworkBinding):
+        _fail("SHADOW_SOLVE_INVALID: prerequisite payload is malformed")
+    if component_closure_result.get("schema_version") != "source-plane-shadow-augmented-component-closure-v1":
+        _fail("SHADOW_SOLVE_INVALID: P10 schema is invalid")
+
+    def stopped(code: str, detail: str, identity: Mapping[str, Any]) -> Mapping[str, Any]:
+        payload = {**identity, "status": "stopped", "code": code, "detail": detail, "component_closure_verified": False, "p1_stamp_applied": False, "global_matrix_assembled": False, "one_frequency_shadow_solve_executed": False, "cache_reuse_eligible": False, "solve_eligible": False, "production_ready": False, "replacement_ready": False}
+        return {**payload, "audit_sha256": sha256(concrete_canonical_json_bytes(payload)).hexdigest()}
+
+    p10_hash = digest(component_closure_result.get("component_closure_sha256"), "P10 closure")
+    p10_payload = {key: value for key, value in component_closure_result.items() if key != "component_closure_sha256"}
+    if sha256(concrete_canonical_json_bytes(p10_payload)).hexdigest() != p10_hash:
+        return stopped("SHADOW_SOLVE_IDENTITY_MISMATCH", "P10 closure identity differs", {"schema_version": "source-plane-shadow-one-frequency-p1-augmented-solve-v1", "shadow_only": True, "rail_id": rail_id, "component_closure_sha256": p10_hash})
+    if component_closure_result.get("status") != "passed" or component_closure_result.get("shadow_only") is not True or component_closure_result.get("component_closure_verified") is not True or component_closure_result.get("p1_connectivity_accounted") is not True or component_closure_result.get("p1_stamp_applied") is not False or component_closure_result.get("global_matrix_assembled") is not False or component_closure_result.get("solve_eligible") is not False or component_closure_result.get("production_ready") is not False or component_closure_result.get("replacement_ready") is not False:
+        return stopped("SHADOW_SOLVE_PREREQUISITE_STOPPED", "P10 component closure is not passed shadow output", {"schema_version": "source-plane-shadow-one-frequency-p1-augmented-solve-v1", "shadow_only": True, "rail_id": rail_id, "component_closure_sha256": p10_hash})
+
+    shadow_network, block, p9 = bind_source_plane_patch_shadow_nport_block(patch_result, commutation_result, recipe_result, binding, rail_id=rail_id)
+    if shadow_network is None or block is None or p9.get("status") != "passed":
+        return stopped("SHADOW_SOLVE_PREREQUISITE_STOPPED", "P9 N-port binding did not pass", {"schema_version": "source-plane-shadow-one-frequency-p1-augmented-solve-v1", "shadow_only": True, "rail_id": rail_id, "component_closure_sha256": p10_hash, "p9_status": p9.get("status"), "p9_code": p9.get("code")})
+    p9_hash = digest(p9.get("nport_binding_sha256"), "P9 binding")
+    p9_payload = {key: value for key, value in p9.items() if key != "nport_binding_sha256"}
+    if sha256(concrete_canonical_json_bytes(p9_payload)).hexdigest() != p9_hash:
+        return stopped("SHADOW_SOLVE_IDENTITY_MISMATCH", "P9 binding identity differs", {"schema_version": "source-plane-shadow-one-frequency-p1-augmented-solve-v1", "shadow_only": True, "rail_id": rail_id, "component_closure_sha256": p10_hash, "p9_nport_binding_sha256": p9_hash})
+    chain_keys = ("source_sha256", "p1_input_sha256", "p1_output_sha256", "substrate_identity_sha256", "shadow_split_sha256", "scenario_commutation_sha256", "scenario_surface_node_manifest_sha256", "scenario_link_manifest_sha256", "scenario_identity_sha256", "scenario_plan_sha256", "termination_manifest_sha256", "port_termination_boundary_sha256", "p7_deterministic_recipe_sha256", "p8_topology_embedding_sha256", "p8_shadow_network_identity_sha256", "p8_shadow_termination_manifest_sha256")
+    interface_rows = component_closure_result.get("interface_components")
+    if not isinstance(interface_rows, list) or any(not isinstance(row, Mapping) for row in interface_rows):
+        _fail("SHADOW_SOLVE_INVALID: P10 interface disclosure is malformed")
+    p10_interfaces = [row.get("interface_node_id") for row in interface_rows]
+    p10_owner_ids = component_closure_result.get("owner_ids")
+    if p10_owner_ids is None:
+        ledger = recipe_result.get("owner_ledger")
+        p10_owner_ids = ledger.get("added_p1_block_owner_ids") if isinstance(ledger, Mapping) else None
+    if not isinstance(p10_owner_ids, list):
+        _fail("SHADOW_SOLVE_INVALID: P10 owner disclosure is malformed")
+    if any(component_closure_result.get(key) != p9.get(key) for key in chain_keys) or component_closure_result.get("p9_nport_binding_sha256") != p9_hash or component_closure_result.get("block_id") != block.block_id or p9.get("block_id") != block.block_id or component_closure_result.get("admittance_sha256") != p9.get("admittance_sha256") or p10_interfaces != list(block.node_ids) or p9.get("interface_node_ids") != list(block.node_ids) or p10_owner_ids != list(block.owner_ids) or p9.get("owner_ids") != list(block.owner_ids) or str(component_closure_result.get("rail_id", "")).casefold() != rail_id.casefold() or str(patch_result.get("rail_id", "")).casefold() != rail_id.casefold():
+        return stopped("SHADOW_SOLVE_IDENTITY_MISMATCH", "P9/P10 identity chain differs", {"schema_version": "source-plane-shadow-one-frequency-p1-augmented-solve-v1", "shadow_only": True, "rail_id": rail_id, "component_closure_sha256": p10_hash, "p9_nport_binding_sha256": p9_hash})
+    retained_owner_ids = {owner.casefold() for link in shadow_network.via_links for owner in link.owner_ids}
+    retained_owner_ids.update(owner.casefold() for cluster in binding.termination_manifest.clusters for owner in cluster.owner_ids)
+    if retained_owner_ids & {owner.casefold() for owner in block.owner_ids}:
+        return stopped("SHADOW_SOLVE_OWNER_CONFLICT", "P1 owner overlaps retained Via/termination ownership", {"schema_version": "source-plane-shadow-one-frequency-p1-augmented-solve-v1", "shadow_only": True, "rail_id": rail_id, "component_closure_sha256": p10_hash, "p9_nport_binding_sha256": p9_hash})
+    try:
+        frequency_hz = float(patch_result.get("frequency_hz"))
+    except (TypeError, ValueError) as exc:
+        _fail(f"SHADOW_SOLVE_INVALID: frequency is malformed: {exc}")
+    if not math.isfinite(frequency_hz) or frequency_hz <= 0.0 or frequency_hz != 1.0e9:
+        return stopped("SHADOW_SOLVE_STAMP_INVALID", "P1 solve frequency is not exact 1 GHz", {"schema_version": "source-plane-shadow-one-frequency-p1-augmented-solve-v1", "shadow_only": True, "rail_id": rail_id, "component_closure_sha256": p10_hash, "p9_nport_binding_sha256": p9_hash, "frequency_hz": frequency_hz})
+    try:
+        termination_manifest = compile_layer_surface_termination_manifest(shadow_network.surface_node_ids, tuple(cluster.source for cluster in binding.termination_manifest.clusters))
+    except (LayerSurfaceNetworkError, LayerSurfaceTerminationError) as exc:
+        return stopped("SHADOW_SOLVE_COMPONENT_MISMATCH", f"shadow termination compilation failed: {exc}", {"schema_version": "source-plane-shadow-one-frequency-p1-augmented-solve-v1", "shadow_only": True, "rail_id": rail_id, "component_closure_sha256": p10_hash, "p9_nport_binding_sha256": p9_hash, "frequency_hz": frequency_hz})
+    if termination_manifest.manifest_sha256 != p9.get("p8_shadow_termination_manifest_sha256"):
+        return stopped("SHADOW_SOLVE_IDENTITY_MISMATCH", "shadow termination identity differs", {"schema_version": "source-plane-shadow-one-frequency-p1-augmented-solve-v1", "shadow_only": True, "rail_id": rail_id, "component_closure_sha256": p10_hash, "p9_nport_binding_sha256": p9_hash, "frequency_hz": frequency_hz})
+    try:
+        solve_result = shadow_network.solve([frequency_hz], termination_manifest=termination_manifest, selected_rail_id=rail_id, base_network_identity_sha256=p9["p8_shadow_network_identity_sha256"], supplemental_nodal_admittance=block)
+    except GlobalMnaError as exc:
+        return stopped("SHADOW_SOLVE_STAMP_INVALID", f"supplemental stamp failed: {exc}", {"schema_version": "source-plane-shadow-one-frequency-p1-augmented-solve-v1", "shadow_only": True, "rail_id": rail_id, "component_closure_sha256": p10_hash, "p9_nport_binding_sha256": p9_hash, "frequency_hz": frequency_hz})
+    except LayerSurfaceNetworkError as exc:
+        return stopped("SHADOW_SOLVE_NUMERICAL_FAILURE", f"supplemental shadow solve failed: {exc}", {"schema_version": "source-plane-shadow-one-frequency-p1-augmented-solve-v1", "shadow_only": True, "rail_id": rail_id, "component_closure_sha256": p10_hash, "p9_nport_binding_sha256": p9_hash, "frequency_hz": frequency_hz})
+    diagnostics = solve_result.diagnostics
+    if diagnostics.termination_manifest_sha256 != termination_manifest.manifest_sha256 or diagnostics.termination_manifest_sha256 != p9.get("p8_shadow_termination_manifest_sha256"):
+        return stopped("SHADOW_SOLVE_IDENTITY_MISMATCH", "core termination identity differs", {"schema_version": "source-plane-shadow-one-frequency-p1-augmented-solve-v1", "shadow_only": True, "rail_id": rail_id, "component_closure_sha256": p10_hash, "p9_nport_binding_sha256": p9_hash, "frequency_hz": frequency_hz})
+    solve_identity = diagnostics.solve_identity_sha256
+    if not isinstance(solve_identity, str) or len(solve_identity) != 64:
+        return stopped("SHADOW_SOLVE_NUMERICAL_FAILURE", "core solve identity is unavailable", {"schema_version": "source-plane-shadow-one-frequency-p1-augmented-solve-v1", "shadow_only": True, "rail_id": rail_id, "component_closure_sha256": p10_hash, "p9_nport_binding_sha256": p9_hash, "frequency_hz": frequency_hz})
+    port_rows: list[dict[str, Any]] = []
+    for port in shadow_network.ports:
+        values = solve_result.effective_admittance_by_port.get(port.port_id)
+        if values is None or len(values) != 1:
+            return stopped("SHADOW_SOLVE_NUMERICAL_FAILURE", "port solve result is incomplete", {"schema_version": "source-plane-shadow-one-frequency-p1-augmented-solve-v1", "shadow_only": True, "rail_id": rail_id, "component_closure_sha256": p10_hash, "p9_nport_binding_sha256": p9_hash, "frequency_hz": frequency_hz})
+        value = complex(values[0])
+        if not math.isfinite(value.real) or not math.isfinite(value.imag):
+            return stopped("SHADOW_SOLVE_NUMERICAL_FAILURE", "port admittance is non-finite", {"schema_version": "source-plane-shadow-one-frequency-p1-augmented-solve-v1", "shadow_only": True, "rail_id": rail_id, "component_closure_sha256": p10_hash, "p9_nport_binding_sha256": p9_hash, "frequency_hz": frequency_hz})
+        port_rows.append({"port_id": port.port_id, "real": value.real.hex(), "imag": value.imag.hex()})
+    port_sha = sha256(concrete_canonical_json_bytes(port_rows)).hexdigest()
+    common = {"schema_version": "source-plane-shadow-one-frequency-p1-augmented-solve-v1", "shadow_only": True, "component_closure_verified": True, "p1_stamp_applied": True, "global_matrix_assembled": True, "one_frequency_shadow_solve_executed": True, "cache_reuse_eligible": False, "solve_eligible": False, "production_ready": False, "replacement_ready": False, "status": "passed", "code": None, "rail_id": rail_id, "frequency_hz": frequency_hz, "frequency_hz_hex": frequency_hz.hex(), "component_closure_sha256": p10_hash, "p9_nport_binding_sha256": p9_hash, "block_id": block.block_id, "p1_output_sha256": p9["p1_output_sha256"], "interface_node_ids": list(block.node_ids), "owner_ids": list(block.owner_ids), "admittance_sha256": p9["admittance_sha256"], "solve_identity_sha256": solve_identity, "port_admittance_sha256": port_sha, "port_admittance": port_rows, "active_reduced_node_count": diagnostics.active_reduced_node_count, "pruned_portless_node_count": diagnostics.pruned_portless_node_count, "structural_component_count": diagnostics.structural_component_count, "maximum_factor_pivot_ratio": diagnostics.maximum_factor_pivot_ratio, "maximum_relative_residual": diagnostics.maximum_relative_residual, "termination_manifest_sha256": p9["termination_manifest_sha256"], "p8_shadow_termination_manifest_sha256": p9["p8_shadow_termination_manifest_sha256"], "core_termination_manifest_sha256": diagnostics.termination_manifest_sha256, **{key: p9[key] for key in chain_keys}}
+    return {**common, "audit_sha256": sha256(concrete_canonical_json_bytes(common)).hexdigest()}
+
+
+__all__ = ["SourcePlanePatchError", "consume_source_plane_patch", "evaluate_source_plane_contact_admissibility", "evaluate_source_plane_contact_condensation", "audit_source_plane_patch_owner_off", "audit_source_plane_patch_contact_quotient_representability", "audit_source_plane_patch_selected_base_cutset", "plan_source_plane_patch_shadow_contact_rewire", "audit_source_plane_patch_shadow_rewire_commutation", "audit_source_plane_patch_shadow_local_replacement_recipe", "materialize_source_plane_patch_shadow_topology_embedding", "bind_source_plane_patch_shadow_nport_block", "audit_source_plane_patch_shadow_augmented_component_closure", "audit_source_plane_patch_shadow_one_frequency_solve"]

@@ -236,6 +236,40 @@ class NodalAdmittanceBlock:
         )
 
 
+def evaluate_nodal_admittance_block(
+    block: NodalAdmittanceBlock, frequency_hz: float
+) -> csc_matrix:
+    """Evaluate and validate one floating-indefinite nodal stamp."""
+
+    if not isinstance(block, NodalAdmittanceBlock):
+        raise GlobalMnaError("block must be a NodalAdmittanceBlock")
+    frequency = _finite_frequency(frequency_hz)
+    stamp = _evaluate_sparse(
+        block.admittance_s,
+        frequency,
+        (len(block.node_ids), len(block.node_ids)),
+        name=f"nodal block {block.block_id!r} admittance",
+    )
+    absolute, relative = _complex_symmetric_error(stamp)
+    if absolute > _RECIPROCITY_ABS_LIMIT and relative > _RECIPROCITY_REL_LIMIT:
+        raise GlobalMnaError(
+            f"nodal block {block.block_id!r} violates complex-symmetric reciprocity"
+        )
+    _require_local_passivity(stamp, name=f"nodal block {block.block_id!r}")
+    ones = np.ones(stamp.shape[0], dtype=np.complex128)
+    null_error = max(
+        float(np.max(np.abs(stamp @ ones), initial=0.0)),
+        float(np.max(np.abs(stamp.T @ ones), initial=0.0)),
+    )
+    null_tolerance = max(1.0e-14, float(sparse_norm(stamp)) * 1.0e-10)
+    if null_error > null_tolerance:
+        raise GlobalMnaError(
+            f"nodal block {block.block_id!r} is grounded/reduced; "
+            "floating_indefinite stamps require zero row and column sums"
+        )
+    return stamp
+
+
 @dataclass(frozen=True, slots=True)
 class SeriesBranchBlock:
     """Coupled series branches, with positive-to-negative endpoint incidence."""
@@ -524,27 +558,7 @@ def _assemble_nodal_admittance(operator: GlobalMnaOperator, frequency_hz: float)
     count = len(operator.node_ids)
     result = csc_matrix((count, count), dtype=np.complex128)
     for block, positions in zip(operator.nodal_blocks, operator._nodal_indices, strict=True):
-        stamp = _evaluate_sparse(
-            block.admittance_s,
-            frequency_hz,
-            (len(positions), len(positions)),
-            name=f"nodal block {block.block_id!r} admittance",
-        )
-        absolute, relative = _complex_symmetric_error(stamp)
-        if absolute > _RECIPROCITY_ABS_LIMIT and relative > _RECIPROCITY_REL_LIMIT:
-            raise GlobalMnaError(f"nodal block {block.block_id!r} violates complex-symmetric reciprocity")
-        _require_local_passivity(stamp, name=f"nodal block {block.block_id!r}")
-        ones = np.ones(stamp.shape[0], dtype=np.complex128)
-        null_error = max(
-            float(np.max(np.abs(stamp @ ones), initial=0.0)),
-            float(np.max(np.abs(stamp.T @ ones), initial=0.0)),
-        )
-        null_tolerance = max(1.0e-14, float(sparse_norm(stamp)) * 1.0e-10)
-        if null_error > null_tolerance:
-            raise GlobalMnaError(
-                f"nodal block {block.block_id!r} is grounded/reduced; "
-                "floating_indefinite stamps require zero row and column sums"
-            )
+        stamp = evaluate_nodal_admittance_block(block, frequency_hz)
         local = stamp.tocoo()
         result += csc_matrix(
             (local.data, (positions[local.row], positions[local.col])),
@@ -995,6 +1009,7 @@ __all__ = [
     "NodalAdmittanceBlock",
     "SeriesBranchBlock",
     "compile_global_mna",
+    "evaluate_nodal_admittance_block",
     "filled_microvia_branch_block",
     "inspect_filled_microvia_reference",
     "solve_global_mna",

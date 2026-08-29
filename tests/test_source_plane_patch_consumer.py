@@ -587,3 +587,49 @@ def test_source_plane_patch_shadow_augmented_component_closure(tmp_path: Path):
     assert p9_network is not None and p9_block is not None and p9_audit["status"] == "passed"
     stopped = consumer.audit_source_plane_patch_shadow_augmented_component_closure(patch, isolated_commutation, isolated_recipe, isolated_binding, rail_id="VDD_CORE/1")
     assert stopped["status"] == "stopped" and stopped["code"] == "SHADOW_COMPONENT_PORT_DISCONNECTED"
+
+
+def test_source_plane_patch_shadow_one_frequency_augmented_solve(tmp_path: Path, monkeypatch):
+    imported = _v2_import(tmp_path)
+    project = imported.scenario.base_project
+    own = project.metadata["spd_import"]["source_plane_ownership_ir"]
+    raw = project.metadata["spd_import"]["raw_spatial_contact_asset"]
+    substrate = compile_layerwise_substrate(project, imported.attachments, required_rail_id="VDD_CORE/1", require_plane_sheet_payload=True)
+    patch = consumer.evaluate_source_plane_contact_condensation(own, imported.attachments, raw, imported.attachments, rail_id="VDD_CORE/1", frequency_hz=1.0e9, cell_um=1000.0)
+    seed = consumer.plan_source_plane_patch_shadow_contact_rewire(own, imported.attachments, raw, patch, substrate, rail_id="VDD_CORE/1")
+    external = tuple(dict.fromkeys(str(row["external_endpoint"]) for row in seed["rewire_rows"]))
+    assert len(external) >= 2 and external[0] != external[1]
+    from scipy.sparse import csc_matrix
+    from spd_decap_pi._core.solver.layer_surface_network import compile_layer_surface_network
+    template = substrate.network.partials[0]
+    cap = 1.0e-12
+    augmented_wrapper = replace(template, partial=replace(template.partial, net_names=external[:2], maxwell_capacitance_f=csc_matrix([[cap, -cap], [-cap, cap]], dtype=float)))
+    augmented_network = compile_layer_surface_network(substrate.network.surface_node_ids, partials=substrate.network.partials + (augmented_wrapper,), via_links=substrate.network.via_links, ports=substrate.network.ports)
+    augmented_identity = sha256(consumer.concrete_canonical_json_bytes({"base": substrate.substrate_identity_sha256, "p11": "augmented", "external": external[:2]})).hexdigest()
+    substrate = replace(substrate, network=augmented_network, substrate_identity_sha256=augmented_identity, provenance={**substrate.provenance, "substrate_identity_sha256": augmented_identity})
+    rewire = consumer.plan_source_plane_patch_shadow_contact_rewire(own, imported.attachments, raw, patch, substrate, rail_id="VDD_CORE/1")
+    binding = _empty_scenario_binding(substrate)
+    commutation = consumer.audit_source_plane_patch_shadow_rewire_commutation(rewire, substrate, binding, rail_id="VDD_CORE/1")
+    recipe = consumer.audit_source_plane_patch_shadow_local_replacement_recipe(patch, rewire, commutation, binding, rail_id="VDD_CORE/1")
+    closure = consumer.audit_source_plane_patch_shadow_augmented_component_closure(patch, commutation, recipe, binding, rail_id="VDD_CORE/1")
+    assert closure["status"] == "passed"
+    original_inventory = (substrate.network.surface_node_ids, substrate.network.via_links, substrate.network.partials, substrate.network.ports)
+    matched_ordinal = int(recipe["remove_old_maxwell"][0]["partial_ordinal"])
+    original_csc = substrate.network.partials[matched_ordinal].partial.maxwell_capacitance_f
+    original_csc_snapshot = (tuple(original_csc.data), tuple(original_csc.indices), tuple(original_csc.indptr))
+    original_csc_flags = (bool(original_csc.data.flags.writeable), bool(original_csc.indices.flags.writeable), bool(original_csc.indptr.flags.writeable))
+    cache_snapshot = (tuple(substrate.network._frequency_result_cache.items()), tuple(substrate.network._frequency_result_cache_bindings.items()), dict(substrate.network._frequency_result_cache_state_counts), dict(substrate.network._frequency_result_cache_binding_bytes), substrate.network._frequency_result_cache_bytes)
+    first = consumer.audit_source_plane_patch_shadow_one_frequency_solve(patch, commutation, recipe, closure, binding, rail_id="VDD_CORE/1")
+    second = consumer.audit_source_plane_patch_shadow_one_frequency_solve(patch, commutation, recipe, closure, binding, rail_id="VDD_CORE/1")
+    assert first == second and first["status"] == "stopped" and first["code"] == "SHADOW_SOLVE_NUMERICAL_FAILURE" and first["shadow_only"] is True
+    assert "forward-reliability pivot ratio is excessive" in first["detail"] and "(1.900e+15" in first["detail"] and "component_index=0" in first["detail"] and "retained_nodes=8" in first["detail"] and "backward_residual=7.308e-17" in first["detail"] and "condition_1_lower_bound=1.096e+17" in first["detail"] and "matrix_sha256=b0680d39fcc0f9bad2c6e619b6910fd3e52765a610b940e31f7dc6cb1be79c0e" in first["detail"]
+    assert first["component_closure_verified"] is False and first["p1_stamp_applied"] is False and first["global_matrix_assembled"] is False and first["one_frequency_shadow_solve_executed"] is False and first["cache_reuse_eligible"] is False and first["solve_eligible"] is False and first["production_ready"] is False and first["replacement_ready"] is False and "solve_identity_sha256" not in first and "port_admittance" not in first and len(first["audit_sha256"]) == 64
+    assert substrate.network.surface_node_ids is original_inventory[0] and substrate.network.via_links is original_inventory[1] and substrate.network.partials is original_inventory[2] and substrate.network.ports is original_inventory[3]
+    assert (tuple(original_csc.data), tuple(original_csc.indices), tuple(original_csc.indptr)) == original_csc_snapshot and (bool(original_csc.data.flags.writeable), bool(original_csc.indices.flags.writeable), bool(original_csc.indptr.flags.writeable)) == original_csc_flags
+    assert (tuple(substrate.network._frequency_result_cache.items()), tuple(substrate.network._frequency_result_cache_bindings.items()), dict(substrate.network._frequency_result_cache_state_counts), dict(substrate.network._frequency_result_cache_binding_bytes), substrate.network._frequency_result_cache_bytes) == cache_snapshot
+    tampered = {**closure, "component_closure_sha256": _h("f")}
+    def unexpected_p9(*_args, **_kwargs):
+        raise AssertionError("P9 must not be called for invalid P10 identity")
+    monkeypatch.setattr(consumer, "bind_source_plane_patch_shadow_nport_block", unexpected_p9)
+    stopped = consumer.audit_source_plane_patch_shadow_one_frequency_solve(patch, commutation, recipe, tampered, binding, rail_id="VDD_CORE/1")
+    assert stopped["status"] == "stopped" and stopped["code"] == "SHADOW_SOLVE_IDENTITY_MISMATCH" and stopped["p1_stamp_applied"] is False and stopped["global_matrix_assembled"] is False and "solve_identity_sha256" not in stopped and "port_admittance" not in stopped and len(stopped["audit_sha256"]) == 64
