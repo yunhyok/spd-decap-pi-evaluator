@@ -1273,6 +1273,14 @@ def audit_source_plane_patch_contact_quotient_representability(
                 if not math.isfinite(real) or not math.isfinite(imag):
                     _fail("CONTACT_QUOTIENT_INVALID: P1 admittance is non-finite")
                 Y[row_index, column_index] = complex(real, imag)
+        hermitian_conductance = (Y + Y.conj().T) * 0.5
+        passivity_tolerance = max(float(np.linalg.norm(hermitian_conductance)) * 1.0e-10, float(np.linalg.norm(Y)) * 1.0e-14, 1.0e-24)
+        try:
+            passivity_minimum = float(np.min(np.linalg.eigvalsh(hermitian_conductance)))
+        except Exception as exc:
+            _fail(f"CONTACT_QUOTIENT_INVALID: P1 passivity eigensolve failed: {exc}")
+        if not math.isfinite(passivity_minimum) or passivity_minimum < -passivity_tolerance:
+            _fail("CONTACT_QUOTIENT_INVALID: P1 passivity minimum is below tolerance")
         raw_constraint = patch_result.get("terminal_constraint_matrix")
         if not isinstance(raw_constraint, list) or len(raw_constraint) != len(contacts) or not raw_constraint or any(not isinstance(row, list) or not row for row in raw_constraint):
             _fail("CONTACT_QUOTIENT_INVALID: P1 constraint shape is malformed")
@@ -1307,8 +1315,12 @@ def audit_source_plane_patch_contact_quotient_representability(
         p1_output_identity = {"contact_ids": list(p1_contact_ids), "owner_kinds": list(p1_owner_kinds), "admittance_s": [[[float(value.real), float(value.imag)] for value in row] for row in Y.tolist()], "terminal_constraint_matrix": [[float(value) for value in row] for row in constraint.tolist()]}
         p1_output_sha = sha256(concrete_canonical_json_bytes(p1_output_identity)).hexdigest()
         incident_fingerprints = sorted(str(row.get("fingerprint", "")) for row in p2_audit.get("incident_edges", ()) if isinstance(row, Mapping))
-        identity = {"p1_input_sha256": p1_input_sha, "p1_output_sha256": p1_output_sha, "p2_audit_sha256": p2_audit_sha, "p2_component_identity": component_identity, "p2_old_edge_set_sha256": str(p2_audit.get("old_edge_set_sha256", "")), "p2_incident_fingerprints": incident_fingerprints, "rail_id": rail_id, "contact_map_sha256": contact_map_sha, "projector_sha256": projector_sha, "mapping": mapping, "residual_norm_2": residual_norm, "admittance_norm_2": y_norm, "threshold": threshold}
-        return {"schema_version": "source-plane-contact-quotient-representability-v1", "shadow_only": True, "status": "representable" if quotient_representable else "stopped", "code": None if quotient_representable else "CONTACT_INTERFACE_RANK_LOSS", "quotient_representable": quotient_representable, "replacement_ready": False, "rail_id": rail_id, "source_sha256": raw_manifest["source_sha256"], "p1_input_sha256": p1_input_sha, "p1_output_sha256": p1_output_sha, "p2_audit_sha256": p2_audit_sha, "p2_old_edge_set_sha256": str(p2_audit.get("old_edge_set_sha256", "")), "p2_component_identity": component_identity, "p2_incident_edges": list(p2_audit.get("incident_edges", ())), "contact_map_sha256": contact_map_sha, "projector_sha256": projector_sha, "contact_mapping": mapping, "B": B.tolist(), "contact_counts": [float(value) for value in counts.tolist()], "residual_norm_2": residual_norm, "admittance_norm_2": y_norm, "threshold": threshold, "reciprocity_residual": reciprocity_norm, "gauge_null_residual": gauge_residual, "admittance_rank": y_rank, "constraint_rank": constraint_rank, "input_identity_sha256": sha256(concrete_canonical_json_bytes(identity)).hexdigest()}
+        raw_candidate_replaced_owner_ids = p2_audit.get("candidate_replaced_owner_ids")
+        if not isinstance(raw_candidate_replaced_owner_ids, list) or not raw_candidate_replaced_owner_ids or any(not isinstance(value, str) or not value.strip() for value in raw_candidate_replaced_owner_ids) or len({value.casefold() for value in raw_candidate_replaced_owner_ids}) != len(raw_candidate_replaced_owner_ids) or raw_candidate_replaced_owner_ids != sorted(raw_candidate_replaced_owner_ids, key=str.casefold):
+            _fail("CONTACT_QUOTIENT_INVALID: P2 candidate owner identity is malformed")
+        candidate_replaced_owner_ids = list(raw_candidate_replaced_owner_ids)
+        identity = {"p1_input_sha256": p1_input_sha, "p1_output_sha256": p1_output_sha, "p2_audit_sha256": p2_audit_sha, "p2_component_identity": component_identity, "p2_candidate_replaced_owner_ids": candidate_replaced_owner_ids, "p2_old_edge_set_sha256": str(p2_audit.get("old_edge_set_sha256", "")), "p2_incident_fingerprints": incident_fingerprints, "rail_id": rail_id, "contact_map_sha256": contact_map_sha, "projector_sha256": projector_sha, "mapping": mapping, "residual_norm_2": residual_norm, "admittance_norm_2": y_norm, "threshold": threshold}
+        return {"schema_version": "source-plane-contact-quotient-representability-v1", "shadow_only": True, "status": "representable" if quotient_representable else "stopped", "code": None if quotient_representable else "CONTACT_INTERFACE_RANK_LOSS", "quotient_representable": quotient_representable, "replacement_ready": False, "rail_id": rail_id, "source_sha256": raw_manifest["source_sha256"], "p1_input_sha256": p1_input_sha, "p1_output_sha256": p1_output_sha, "p2_audit_sha256": p2_audit_sha, "p2_candidate_replaced_owner_ids": candidate_replaced_owner_ids, "p2_old_edge_set_sha256": str(p2_audit.get("old_edge_set_sha256", "")), "p2_component_identity": component_identity, "p2_incident_edges": list(p2_audit.get("incident_edges", ())), "contact_map_sha256": contact_map_sha, "projector_sha256": projector_sha, "contact_mapping": mapping, "B": B.tolist(), "contact_counts": [float(value) for value in counts.tolist()], "residual_norm_2": residual_norm, "admittance_norm_2": y_norm, "threshold": threshold, "reciprocity_residual": reciprocity_norm, "gauge_null_residual": gauge_residual, "admittance_rank": y_rank, "constraint_rank": constraint_rank, "input_identity_sha256": sha256(concrete_canonical_json_bytes(identity)).hexdigest()}
     except SourcePlanePatchError:
         raise
     except Exception as exc:
@@ -1337,8 +1349,11 @@ def audit_source_plane_patch_selected_base_cutset(
     old_edge_set_sha = str(p3.get("p2_old_edge_set_sha256", ""))
     p3_input_sha = str(p3.get("input_identity_sha256", ""))
     p2_audit_sha = str(p3.get("p2_audit_sha256", ""))
+    p1_input_sha = str(p3.get("p1_input_sha256", ""))
+    p1_output_sha = str(p3.get("p1_output_sha256", ""))
+    candidate_replaced_owner_ids = p3.get("p2_candidate_replaced_owner_ids")
     substrate_identity = str(getattr(substrate, "substrate_identity_sha256", ""))
-    if not isinstance(component_identity, Mapping) or set(component_identity) != {"power", "ground"} or not isinstance(mapping, list) or not isinstance(incident_edges, list) or len(old_edge_set_sha) != 64 or len(p3_input_sha) != 64 or len(p2_audit_sha) != 64 or len(substrate_identity) != 64 or any(value != value.casefold() or any(character not in "0123456789abcdef" for character in value) for value in (old_edge_set_sha, p3_input_sha, p2_audit_sha, substrate_identity)):
+    if not isinstance(component_identity, Mapping) or set(component_identity) != {"power", "ground"} or not isinstance(mapping, list) or not isinstance(incident_edges, list) or not isinstance(candidate_replaced_owner_ids, list) or len(old_edge_set_sha) != 64 or len(p3_input_sha) != 64 or len(p2_audit_sha) != 64 or len(p1_input_sha) != 64 or len(p1_output_sha) != 64 or len(substrate_identity) != 64 or any(value != value.casefold() or any(character not in "0123456789abcdef" for character in value) for value in (old_edge_set_sha, p3_input_sha, p2_audit_sha, p1_input_sha, p1_output_sha, substrate_identity)):
         _fail("BASE_CUTSET_INVALID: P2/P3 identity is incomplete")
     if p3.get("status") != "stopped" or p3.get("code") != "CONTACT_INTERFACE_RANK_LOSS" or p3.get("quotient_representable") is not False or p3.get("replacement_ready") is not False:
         _fail("BASE_CUTSET_IDENTITY_MISMATCH: P3 gate status differs")
@@ -1347,10 +1362,10 @@ def audit_source_plane_patch_selected_base_cutset(
     fingerprints = [str(row.get("fingerprint", "")) for row in incident_edges if isinstance(row, Mapping)]
     if len(fingerprints) != len(incident_edges) or len(set(fingerprints)) != len(fingerprints) or sha256(concrete_canonical_json_bytes(sorted(fingerprints))).hexdigest() != old_edge_set_sha:
         _fail("BASE_CUTSET_IDENTITY_MISMATCH: P2 old-edge fingerprint differs")
-    common_identity = {"rail_id": rail_id, "source_sha256": str(raw_manifest["source_sha256"]), "substrate_identity_sha256": substrate_identity, "p3_input_identity_sha256": p3_input_sha, "p2_audit_sha256": p2_audit_sha, "p2_component_identity": component_identity, "contact_mapping": mapping, "old_edge_set_sha256": old_edge_set_sha, "incident_fingerprints": sorted(fingerprints)}
+    common_identity = {"rail_id": rail_id, "source_sha256": str(raw_manifest["source_sha256"]), "substrate_identity_sha256": substrate_identity, "p3_input_identity_sha256": p3_input_sha, "p2_audit_sha256": p2_audit_sha, "p1_input_sha256": p1_input_sha, "p1_output_sha256": p1_output_sha, "p2_component_identity": component_identity, "p2_candidate_replaced_owner_ids": candidate_replaced_owner_ids, "contact_mapping": mapping, "old_edge_set_sha256": old_edge_set_sha, "incident_fingerprints": sorted(fingerprints)}
     def stopped(code: str, detail: str, evidence: Mapping[str, Any] | None = None) -> Mapping[str, Any]:
         payload = {**common_identity, "code": code, "detail": detail, "evidence": dict(evidence or {})}
-        return {"schema_version": "source-plane-selected-base-cutset-v1", "shadow_only": True, "status": "stopped", "code": code, "detail": detail, "replacement_ready": False, "split_ready": False, "rail_id": rail_id, "source_sha256": raw_manifest["source_sha256"], "component_identity": component_identity, "contact_mapping": mapping, "old_edge_set_sha256": old_edge_set_sha, "p3_input_identity_sha256": p3_input_sha, "p2_audit_sha256": p2_audit_sha, "substrate_identity_sha256": substrate_identity, "base_cutset_sha256": sha256(concrete_canonical_json_bytes(payload)).hexdigest()}
+        return {"schema_version": "source-plane-selected-base-cutset-v1", "shadow_only": True, "status": "stopped", "code": code, "detail": detail, "replacement_ready": False, "split_ready": False, "rail_id": rail_id, "source_sha256": raw_manifest["source_sha256"], "component_identity": component_identity, "contact_mapping": mapping, "old_edge_set_sha256": old_edge_set_sha, "p3_input_identity_sha256": p3_input_sha, "p2_audit_sha256": p2_audit_sha, "p1_input_sha256": p1_input_sha, "p1_output_sha256": p1_output_sha, "p2_candidate_replaced_owner_ids": candidate_replaced_owner_ids, "substrate_identity_sha256": substrate_identity, "base_cutset_sha256": sha256(concrete_canonical_json_bytes(payload)).hexdigest()}
     network = getattr(substrate, "network", None)
     surface_nodes = tuple(getattr(network, "surface_node_ids", ()))
     if not surface_nodes or len({str(item).casefold() for item in surface_nodes}) != len(surface_nodes):
@@ -1462,7 +1477,122 @@ def audit_source_plane_patch_selected_base_cutset(
         seen_edges.add(edge_key)
     if seen_edges != set(expected_edges):
         return stopped("BASE_CUTSET_CONTACT_EDGE_MISSING_OR_EXTRA", "P2 contact finite edge is absent from network", {"expected": sorted(expected_edges), "seen": sorted(seen_edges)})
-    return {"schema_version": "source-plane-selected-base-cutset-v1", "shadow_only": True, "status": "closed", "code": None, "rail_id": rail_id, "source_sha256": raw_manifest["source_sha256"], "component_identity": component_identity, "contact_mapping": mapping, "incident_edges": incident_edges, "old_edge_set_sha256": old_edge_set_sha, "p3_input_identity_sha256": p3_input_sha, "p2_audit_sha256": p2_audit_sha, "substrate_identity_sha256": substrate_identity, "split_ready": False, "replacement_ready": False, "base_cutset_sha256": sha256(concrete_canonical_json_bytes(common_identity)).hexdigest()}
+    return {"schema_version": "source-plane-selected-base-cutset-v1", "shadow_only": True, "status": "closed", "code": None, "rail_id": rail_id, "source_sha256": raw_manifest["source_sha256"], "component_identity": component_identity, "contact_mapping": mapping, "incident_edges": incident_edges, "old_edge_set_sha256": old_edge_set_sha, "p3_input_identity_sha256": p3_input_sha, "p2_audit_sha256": p2_audit_sha, "p1_input_sha256": p1_input_sha, "p1_output_sha256": p1_output_sha, "p2_candidate_replaced_owner_ids": candidate_replaced_owner_ids, "substrate_identity_sha256": substrate_identity, "split_ready": False, "replacement_ready": False, "base_cutset_sha256": sha256(concrete_canonical_json_bytes(common_identity)).hexdigest()}
 
 
-__all__ = ["SourcePlanePatchError", "consume_source_plane_patch", "evaluate_source_plane_contact_admissibility", "evaluate_source_plane_contact_condensation", "audit_source_plane_patch_owner_off", "audit_source_plane_patch_contact_quotient_representability", "audit_source_plane_patch_selected_base_cutset"]
+def plan_source_plane_patch_shadow_contact_rewire(
+    ownership_manifest: Mapping[str, Any],
+    ownership_attachments: Mapping[str, bytes],
+    raw_manifest: Mapping[str, Any],
+    patch_result: Mapping[str, Any],
+    substrate: Any,
+    *,
+    rail_id: str,
+) -> Mapping[str, Any]:
+    """Plan (without applying) a contact-interface shadow rewire."""
+    rail_id = _text(rail_id, "rail_id")
+    p4 = audit_source_plane_patch_selected_base_cutset(ownership_manifest, ownership_attachments, raw_manifest, patch_result, substrate, rail_id=rail_id)
+    if not isinstance(p4, Mapping) or p4.get("schema_version") != "source-plane-selected-base-cutset-v1" or p4.get("status") != "closed" or p4.get("code") is not None or p4.get("shadow_only") is not True or p4.get("split_ready") is not False or p4.get("replacement_ready") is not False:
+        _fail("SHADOW_REWIRE_INVALID: P4 result is not closed")
+    mapping = p4.get("contact_mapping"); component_identity = p4.get("component_identity"); incident_edges = p4.get("incident_edges")
+    source_sha = str(p4.get("source_sha256", ""))
+    identities = tuple(str(p4.get(key, "")) for key in ("base_cutset_sha256", "p3_input_identity_sha256", "p2_audit_sha256", "p1_input_sha256", "p1_output_sha256", "old_edge_set_sha256", "substrate_identity_sha256"))
+    if len(source_sha) != 64 or source_sha != source_sha.casefold() or any(character not in "0123456789abcdef" for character in source_sha) or source_sha != str(raw_manifest.get("source_sha256", "")) or not isinstance(mapping, list) or not mapping or not isinstance(component_identity, Mapping) or set(component_identity) != {"power", "ground"} or not isinstance(incident_edges, list) or any(len(value) != 64 or value != value.casefold() or any(character not in "0123456789abcdef" for character in value) for value in identities):
+        _fail("SHADOW_REWIRE_INVALID: P4 identity is malformed")
+    contact_ids = patch_result.get("contact_ids") if isinstance(patch_result, Mapping) else None
+    if not isinstance(contact_ids, list) or not contact_ids or tuple(str(row.get("contact_id", "")) for row in mapping) != tuple(str(value) for value in contact_ids):
+        _fail("SHADOW_REWIRE_INVALID: P4 contact order differs from P1")
+    try:
+        frequency_hz, cell_um = float(patch_result.get("frequency_hz")), float(patch_result.get("cell_um"))
+    except (TypeError, ValueError) as exc:
+        _fail(f"SHADOW_REWIRE_INVALID: P1 frequency/cell is malformed: {exc}")
+    if not math.isfinite(frequency_hz) or frequency_hz <= 0.0 or not math.isfinite(cell_um) or cell_um <= 0.0:
+        _fail("SHADOW_REWIRE_INVALID: P1 frequency/cell is non-positive")
+    diagnostics = patch_result.get("diagnostics")
+    if not isinstance(diagnostics, Mapping):
+        _fail("SHADOW_REWIRE_INVALID: P1 diagnostics are non-finite")
+    try:
+        diagnostic_values = tuple(float(value) for value in diagnostics.values())
+    except (TypeError, ValueError) as exc:
+        _fail(f"SHADOW_REWIRE_INVALID: P1 diagnostics are malformed: {exc}")
+    if any(not math.isfinite(value) for value in diagnostic_values):
+        _fail("SHADOW_REWIRE_INVALID: P1 diagnostics are non-finite")
+    try:
+        passivity_min = float(diagnostics["passivity_min_eigenvalue_s"]); passivity_tolerance = float(diagnostics["passivity_tolerance_s"])
+    except (KeyError, TypeError, ValueError) as exc:
+        _fail(f"SHADOW_REWIRE_INVALID: P1 passivity diagnostics are malformed: {exc}")
+    if not math.isfinite(passivity_min) or not math.isfinite(passivity_tolerance) or passivity_tolerance < 0.0:
+        _fail("SHADOW_REWIRE_INVALID: P1 passivity diagnostics are malformed")
+    common = {"rail_id": rail_id, "source_sha256": str(raw_manifest["source_sha256"]), "base_cutset_sha256": identities[0], "p3_input_identity_sha256": identities[1], "p2_audit_sha256": identities[2], "p1_input_sha256": identities[3], "p1_output_sha256": identities[4], "old_edge_set_sha256": identities[5], "substrate_identity_sha256": identities[6]}
+    def stopped(code: str, detail: str, evidence: Mapping[str, Any] | None = None) -> Mapping[str, Any]:
+        payload = {**common, "code": code, "detail": detail, "evidence": dict(evidence or {})}
+        return {"schema_version": "source-plane-shadow-contact-rewire-plan-v1", "status": "stopped", "code": code, "detail": detail, "shadow_only": True, "production_ready": False, "replacement_ready": False, "rail_id": rail_id, "source_sha256": raw_manifest["source_sha256"], "base_cutset_sha256": identities[0], "p3_input_identity_sha256": identities[1], "p2_audit_sha256": identities[2], "p1_input_sha256": identities[3], "p1_output_sha256": identities[4], "old_edge_set_sha256": identities[5], "substrate_identity_sha256": identities[6], "shadow_split_sha256": sha256(concrete_canonical_json_bytes(payload)).hexdigest()}
+    network = getattr(substrate, "network", None)
+    surface_nodes = tuple(getattr(network, "surface_node_ids", ()))
+    old_class = {str(value).casefold() for role in ("power", "ground") for value in component_identity[role].get("islands", ())}
+    old_class.update(str(row.get("finite_vertex_id", "")).casefold() for row in mapping)
+    surface_keys = {str(value).casefold() for value in surface_nodes}
+    if not old_class or len(old_class) != len(surface_keys & old_class):
+        _fail("SHADOW_REWIRE_INVALID: P4 old class is malformed")
+    generated: set[str] = set(); interface_by_contact: dict[str, str] = {}; ordered_interfaces: list[dict[str, str]] = []
+    for ordinal, row in enumerate(mapping):
+        contact_id = str(row.get("contact_id", "")).strip(); edge_id = str(row.get("finite_edge_id", "")).strip()
+        digest = sha256(concrete_canonical_json_bytes({"base_cutset_sha256": identities[0], "ordinal": ordinal, "contact_id": contact_id, "finite_edge_id": edge_id})).hexdigest()
+        interface_id = f"spd-source-plane-interface:{digest[:32]}"
+        key = interface_id.casefold()
+        if key in generated or key in surface_keys:
+            return stopped("SHADOW_REWIRE_INTERFACE_COLLISION", "generated interface node collides with network inventory", {"contact_id": contact_id, "interface_node_id": interface_id})
+        generated.add(key); interface_by_contact[contact_id.casefold()] = interface_id; ordered_interfaces.append({"contact_id": contact_id, "interface_node_id": interface_id})
+    edge_keys_in_order = [str(row.get("finite_edge_id", "")).casefold() for row in mapping]
+    if len(edge_keys_in_order) != len(set(edge_keys_in_order)):
+        _fail("SHADOW_REWIRE_INVALID: P4 finite edge identity is duplicated")
+    expected = {key: row for key, row in zip(edge_keys_in_order, mapping, strict=True)}; seen_edges: set[str] = set(); seen_owners: set[str] = set(); rewires_by_edge: dict[str, dict[str, Any]] = {}
+    try:
+        links = tuple(getattr(network, "via_links", ()))
+    except Exception as exc:
+        _fail(f"SHADOW_REWIRE_INVALID: network link inventory is malformed: {exc}")
+    for link in links:
+        first, second = str(getattr(link, "first_node_id", "")), str(getattr(link, "second_node_id", "")); endpoints = (first, second); inside = [item for item in endpoints if item.casefold() in old_class]
+        if len(inside) != 1:
+            continue
+        edge_key = str(getattr(link, "link_id", "")).casefold(); row = expected.get(edge_key)
+        if row is None:
+            return stopped("SHADOW_REWIRE_CONTACT_EDGE_MISSING_OR_EXTRA", "crossing finite link is not an expected contact", {"link_id": edge_key})
+        if str(getattr(link, "mode", "")) != "finite_parallel_rl":
+            return stopped("SHADOW_REWIRE_CONTACT_MODE_MISMATCH", "contact link mode differs", {"link_id": edge_key})
+        selected, external = inside[0], second if inside[0].casefold() == first.casefold() else first
+        if selected.casefold() != str(row.get("finite_vertex_id", "")).casefold() or external.casefold() in old_class:
+            return stopped("SHADOW_REWIRE_CONTACT_ENDPOINT_MISMATCH", "contact link endpoint differs", {"link_id": edge_key})
+        owners = tuple(str(owner) for owner in getattr(link, "owner_ids", ())); owner_keys = {owner.casefold() for owner in owners}
+        expected_owners = tuple(str(owner) for owner in row.get("owner_ids", ()))
+        if owners != expected_owners or len(owner_keys) != len(owners) or seen_owners & owner_keys:
+            return stopped("SHADOW_REWIRE_CONTACT_OWNER_MISMATCH", "contact link owners differ or repeat", {"link_id": edge_key})
+        try:
+            count = int(getattr(link, "count")); resistance = float(getattr(link, "resistance_ohm_per_via")); inductance = float(getattr(link, "inductance_h_per_via"))
+        except (TypeError, ValueError) as exc:
+            _fail(f"SHADOW_REWIRE_INVALID: contact R/L metadata is malformed: {exc}")
+        if count < 1 or not math.isfinite(resistance) or not math.isfinite(inductance) or resistance < 0.0 or inductance < 0.0 or (resistance == 0.0 and inductance == 0.0):
+            return stopped("SHADOW_REWIRE_CONTACT_RL_INVALID", "contact R/L metadata is not finite/passive", {"link_id": edge_key})
+        rewires_by_edge[edge_key] = {"contact_id": str(row.get("contact_id", "")), "old_finite_edge_id": str(getattr(link, "link_id", "")), "new_interface_node_id": interface_by_contact[str(row.get("contact_id", "")).casefold()], "selected_old_endpoint": selected, "external_endpoint": external, "count": count, "mode": "finite_parallel_rl", "owner_ids": list(owners), "resistance_ohm_per_via_hex": resistance.hex(), "inductance_h_per_via_hex": inductance.hex()}; seen_edges.add(edge_key); seen_owners.update(owner_keys)
+    if seen_edges != set(expected) or len(rewires_by_edge) != len(mapping):
+        return stopped("SHADOW_REWIRE_CONTACT_EDGE_MISSING_OR_EXTRA", "expected contact crossing set differs", {"expected": sorted(expected), "seen": sorted(seen_edges)})
+    rewires = [rewires_by_edge[key] for key in edge_keys_in_order]
+    disabled = sorted(str(row.get("fingerprint", "")) for row in incident_edges)
+    if len(disabled) != len(set(disabled)) or any(len(value) != 64 for value in disabled) or sha256(concrete_canonical_json_bytes(disabled)).hexdigest() != identities[5]:
+        _fail("SHADOW_REWIRE_INVALID: P4 disabled-edge set is malformed")
+    candidate = p4.get("p2_candidate_replaced_owner_ids"); retained = sorted({str(owner) for row in mapping for owner in row.get("owner_ids", ())}, key=str.casefold)
+    if not isinstance(candidate, list) or not candidate or any(not isinstance(value, str) or not value.strip() for value in candidate) or len({str(value).casefold() for value in candidate}) != len(candidate) or candidate != sorted(candidate, key=str.casefold) or {str(value).casefold() for value in candidate} & {value.casefold() for value in retained}:
+        _fail("SHADOW_REWIRE_INVALID: planned owner sets overlap or are malformed")
+    passivity_identity = {"passivity_min_eigenvalue_s": passivity_min, "passivity_tolerance_s": passivity_tolerance, "diagnostics": dict(diagnostics)}; passivity_sha = sha256(concrete_canonical_json_bytes(passivity_identity)).hexdigest()
+    raw_admittance, raw_constraint = patch_result.get("admittance_s"), patch_result.get("terminal_constraint_matrix")
+    if not isinstance(raw_admittance, list) or len(raw_admittance) != len(mapping) or any(not isinstance(row, list) or len(row) != len(mapping) for row in raw_admittance) or not isinstance(raw_constraint, list) or len(raw_constraint) != len(mapping) or any(not isinstance(row, list) or not row for row in raw_constraint):
+        _fail("SHADOW_REWIRE_INVALID: P1 matrix shape differs")
+    if passivity_min < -passivity_tolerance:
+        return stopped("SHADOW_REWIRE_PASSIVITY_INVALID", "P1 passivity diagnostic is below tolerance", {"passivity_min_eigenvalue_s": passivity_min, "passivity_tolerance_s": passivity_tolerance})
+    planned_owner_ids = list(candidate)
+    stamp = {"contact_interfaces": ordered_interfaces, "p1_input_sha256": identities[3], "p1_output_sha256": identities[4], "frequency_hz": frequency_hz, "cell_um": cell_um, "admittance_shape": [len(raw_admittance), len(raw_admittance[0])], "constraint_shape": [len(raw_constraint), len(raw_constraint[0])], "passivity_diagnostics_sha256": passivity_sha, "owner_ids": planned_owner_ids}
+    identity = {**common, "contact_ids": [row["contact_id"] for row in rewires], "rewires": rewires, "disabled_old_edge_fingerprints": disabled, "planned_block_owner_ids": planned_owner_ids, "retained_contact_finite_owner_ids": retained, "stamp": stamp}
+    return {"schema_version": "source-plane-shadow-contact-rewire-plan-v1", "status": "planned", "code": None, "shadow_only": True, "production_ready": False, "replacement_ready": False, "rail_id": rail_id, "source_sha256": raw_manifest["source_sha256"], "base_cutset_sha256": identities[0], "p3_input_identity_sha256": identities[1], "p2_audit_sha256": identities[2], "p1_input_sha256": identities[3], "p1_output_sha256": identities[4], "old_edge_set_sha256": identities[5], "substrate_identity_sha256": identities[6], "rewire_rows": rewires, "disabled_old_edge_fingerprints": disabled, "planned_block_owner_ids": planned_owner_ids, "retained_contact_finite_owner_ids": retained, "old_selected_external_degree_after_plan": 0, "planned_stamp": stamp, "shadow_split_sha256": sha256(concrete_canonical_json_bytes(identity)).hexdigest()}
+
+
+__all__ = ["SourcePlanePatchError", "consume_source_plane_patch", "evaluate_source_plane_contact_admissibility", "evaluate_source_plane_contact_condensation", "audit_source_plane_patch_owner_off", "audit_source_plane_patch_contact_quotient_representability", "audit_source_plane_patch_selected_base_cutset", "plan_source_plane_patch_shadow_contact_rewire"]

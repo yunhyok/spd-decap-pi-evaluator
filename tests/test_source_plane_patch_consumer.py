@@ -275,3 +275,35 @@ def test_source_plane_patch_selected_base_cutset_is_closed(tmp_path: Path):
     extra_network = replace(substrate.network, via_links=(*substrate.network.via_links, extra), _finite_links=(*substrate.network._finite_links, extra_finite))
     stopped = consumer.audit_source_plane_patch_selected_base_cutset(own, imported.attachments, raw, patch, replace(substrate, network=extra_network), rail_id="VDD_CORE/1")
     assert stopped["status"] == "stopped" and stopped["code"] == "BASE_CUTSET_CONTACT_EDGE_MISSING_OR_EXTRA"
+
+
+def test_source_plane_patch_shadow_contact_rewire_plan(tmp_path: Path):
+    imported = _v2_import(tmp_path)
+    project = imported.scenario.base_project
+    own = project.metadata["spd_import"]["source_plane_ownership_ir"]
+    raw = project.metadata["spd_import"]["raw_spatial_contact_asset"]
+    substrate = compile_layerwise_substrate(project, imported.attachments, required_rail_id="VDD_CORE/1", require_plane_sheet_payload=True)
+    patch = consumer.evaluate_source_plane_contact_condensation(own, imported.attachments, raw, imported.attachments, rail_id="VDD_CORE/1", frequency_hz=1.0e9, cell_um=1000.0)
+    original_nodes, original_links = substrate.network.surface_node_ids, substrate.network.via_links
+    original_partials, original_ports = substrate.network.partials, substrate.network.ports
+    first = consumer.plan_source_plane_patch_shadow_contact_rewire(own, imported.attachments, raw, patch, substrate, rail_id="VDD_CORE/1")
+    second = consumer.plan_source_plane_patch_shadow_contact_rewire(own, imported.attachments, raw, patch, substrate, rail_id="VDD_CORE/1")
+    assert first == second and first["status"] == "planned" and first["shadow_only"] is True
+    assert first["production_ready"] is False and first["replacement_ready"] is False and first["old_selected_external_degree_after_plan"] == 0
+    interfaces = [row["new_interface_node_id"] for row in first["rewire_rows"]]
+    assert len(interfaces) == len(set(item.casefold() for item in interfaces)) and not set(item.casefold() for item in interfaces) & set(item.casefold() for item in original_nodes)
+    original_by_id = {str(link.link_id).casefold(): link for link in original_links}
+    for row in first["rewire_rows"]:
+        link = original_by_id[row["old_finite_edge_id"].casefold()]
+        assert row["external_endpoint"] in {link.first_node_id, link.second_node_id} and row["count"] == link.count and row["mode"] == link.mode and row["owner_ids"] == list(link.owner_ids)
+        assert row["resistance_ohm_per_via_hex"] == link.resistance_ohm_per_via.hex() and row["inductance_h_per_via_hex"] == link.inductance_h_per_via.hex()
+    disabled = first["disabled_old_edge_fingerprints"]
+    assert disabled and disabled == sorted(set(disabled)) and sha256(consumer.concrete_canonical_json_bytes(disabled)).hexdigest() == first["old_edge_set_sha256"]
+    assert [row["contact_id"] for row in first["rewire_rows"]] == patch["contact_ids"] and len(first["rewire_rows"]) == len(patch["contact_ids"])
+    assert first["planned_stamp"]["owner_ids"] == first["planned_block_owner_ids"]
+    assert not set(item.casefold() for item in first["planned_block_owner_ids"]) & set(item.casefold() for item in first["retained_contact_finite_owner_ids"])
+    assert len(first["shadow_split_sha256"]) == 64
+    assert substrate.network.surface_node_ids is original_nodes and substrate.network.via_links is original_links and substrate.network.partials is original_partials and substrate.network.ports is original_ports
+    bad_patch = {**patch, "diagnostics": {**patch["diagnostics"], "passivity_min_eigenvalue_s": -1.0, "passivity_tolerance_s": 0.0}}
+    stopped = consumer.plan_source_plane_patch_shadow_contact_rewire(own, imported.attachments, raw, bad_patch, substrate, rail_id="VDD_CORE/1")
+    assert stopped["status"] == "stopped" and stopped["code"] == "SHADOW_REWIRE_PASSIVITY_INVALID"
