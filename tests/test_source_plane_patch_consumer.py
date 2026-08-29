@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from copy import deepcopy
+from dataclasses import replace
 from hashlib import sha256
 import json
 import math
@@ -10,6 +11,7 @@ import pytest
 
 from spd_decap_pi import source_plane_patch_consumer as consumer
 from spd_decap_pi import spd_adapter
+from spd_decap_pi._core.solver.layerwise_network import compile_layerwise_substrate
 from test_io_spd import MINI_SPD
 from spd_decap_pi.raw_spatial_contact_asset import (
     RawSpatialLayerRow,
@@ -199,3 +201,31 @@ def test_v2_contact_complete_shadow_nport_condensation(tmp_path: Path):
     assert first["terminal_constraint_matrix"] and len({len(row) for row in first["terminal_constraint_matrix"]}) == 1
     assert all(row and all(math.isfinite(float(value)) for value in row) for row in first["terminal_constraint_matrix"])
     assert all(math.isfinite(float(value)) for value in first["diagnostics"].values())
+
+
+def test_source_plane_patch_owner_off_shadow_audit_mini_spd(tmp_path: Path):
+    imported = _v2_import(tmp_path)
+    project = imported.scenario.base_project
+    own = project.metadata["spd_import"]["source_plane_ownership_ir"]
+    raw = project.metadata["spd_import"]["raw_spatial_contact_asset"]
+    substrate = compile_layerwise_substrate(project, imported.attachments, required_rail_id="VDD_CORE/1", require_plane_sheet_payload=True)
+    patch = consumer.evaluate_source_plane_contact_condensation(own, imported.attachments, raw, imported.attachments, rail_id="VDD_CORE/1", frequency_hz=1.0e9, cell_um=1000.0)
+    first = consumer.audit_source_plane_patch_owner_off(own, imported.attachments, raw, patch, substrate, rail_id="VDD_CORE/1")
+    second = consumer.audit_source_plane_patch_owner_off(own, imported.attachments, raw, patch, substrate, rail_id="VDD_CORE/1")
+    assert first == second and first["shadow_only"] is True and first["replacement_ready"] is False
+    assert first["status"] == "candidate_identified" and first["incident_edges"]
+    assert len({item["fingerprint"] for item in first["incident_edges"]}) == len(first["incident_edges"])
+    assert first["source_sha256"] == patch["source_sha256"] == raw["source_sha256"]
+    assert set(first["component_identity"]) == {"power", "ground"}
+    assert all(len(first["component_identity"][role]["islands"]) >= 1 for role in ("power", "ground"))
+    assert set(first["terminal_anchor_identity"]) == {"power", "ground"}
+    assert all(first["terminal_anchor_identity"][role]["anchor_node_ids"] and first["terminal_anchor_identity"][role]["expected_port_node_id"] for role in ("power", "ground"))
+    assert len(first["candidate_scopes"]) == 2
+    assert len(first["candidate_replaced_owner_ids"]) == 2
+    assert first["retained_owner_count"] >= 2 and len(first["retained_owner_ids_sha256"]) == 64
+    assert len(first["old_edge_set_sha256"]) == len(first["contact_map_sha256"]) == len(first["audit_sha256"]) == 64
+    with pytest.raises(consumer.SourcePlanePatchError):
+        consumer.audit_source_plane_patch_owner_off(own, imported.attachments, raw, {**patch, "raw_manifest_sha256": _h("a")}, substrate, rail_id="VDD_CORE/1")
+    tampered_provenance = {**dict(substrate.provenance), "raw_spatial_v3_manifest_sha256": _h("b")}
+    with pytest.raises(consumer.SourcePlanePatchError):
+        consumer.audit_source_plane_patch_owner_off(own, imported.attachments, raw, patch, replace(substrate, provenance=tampered_provenance), rail_id="VDD_CORE/1")

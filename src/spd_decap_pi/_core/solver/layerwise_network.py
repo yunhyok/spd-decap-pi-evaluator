@@ -4289,6 +4289,11 @@ def compile_layerwise_substrate(
         "static_compiler_algorithm_sha256": static_sha256,
         **terminal_ownership_disclosure,
         "source_sha256": source_sha256,
+        **(
+            {"raw_spatial_v3_manifest_sha256": raw_spatial_manifest_sha256}
+            if raw_spatial_manifest_sha256 is not None
+            else {}
+        ),
         "geometry_manifest_sha256": geometry_sha256,
         "material_manifest_sha256": material_sha256,
         "ground_alias_manifest_sha256": sha256(

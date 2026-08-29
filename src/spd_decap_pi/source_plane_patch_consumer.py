@@ -13,6 +13,9 @@ import json
 import math
 from typing import Any
 
+import numpy as np
+from scipy.sparse import issparse
+
 from .canonical_json import concrete_canonical_json_bytes
 from .raw_spatial_contact_asset import load_raw_spatial_contact_asset
 from .source_plane_ownership_ir import (
@@ -874,4 +877,277 @@ def evaluate_source_plane_contact_condensation(
     return result
 
 
-__all__ = ["SourcePlanePatchError", "consume_source_plane_patch", "evaluate_source_plane_contact_admissibility", "evaluate_source_plane_contact_condensation"]
+def audit_source_plane_patch_owner_off(
+    ownership_manifest: Mapping[str, Any],
+    ownership_attachments: Mapping[str, bytes],
+    raw_manifest: Mapping[str, Any],
+    patch_result: Mapping[str, Any],
+    substrate: Any,
+    *,
+    rail_id: str,
+) -> Mapping[str, Any]:
+    """Identify, without mutation, old adjacent-gap edges eligible for owner-off."""
+    try:
+        rail_id = _text(rail_id, "rail_id")
+        if not isinstance(patch_result, Mapping) or patch_result.get("schema_version") != "source-plane-contact-condensation-v1" or patch_result.get("shadow_only") is not True or patch_result.get("status") != "complete":
+            _fail("OWNER_OFF_AUDIT_INVALID: patch result is not a complete shadow condensation")
+        manifest_raw_sha = sha256(concrete_canonical_json_bytes(dict(raw_manifest))).hexdigest()
+        provenance = getattr(substrate, "provenance", None)
+        if not isinstance(provenance, Mapping) or manifest_raw_sha != str(ownership_manifest.get("raw_manifest_sha256")) or manifest_raw_sha != str(patch_result.get("raw_manifest_sha256")) or manifest_raw_sha != str(provenance.get("raw_spatial_v3_manifest_sha256")) or str(ownership_manifest.get("source_sha256")) != str(raw_manifest.get("source_sha256")) or str(patch_result.get("source_sha256")) != str(raw_manifest.get("source_sha256")) or str(provenance.get("source_sha256")) != str(raw_manifest.get("source_sha256")):
+            _fail("OWNER_OFF_AUDIT_INVALID: source/raw identity differs")
+        if not str(provenance.get("substrate_identity_sha256", "")).strip() or str(getattr(substrate, "substrate_identity_sha256", "")) != str(provenance["substrate_identity_sha256"]):
+            _fail("OWNER_OFF_AUDIT_INVALID: substrate identity differs")
+        if str(patch_result.get("rail_id", "")).casefold() != rail_id.casefold():
+            _fail("OWNER_OFF_AUDIT_INVALID: patch rail differs")
+        if not any(str(key).casefold() == rail_id.casefold() for key in getattr(substrate, "port_by_rail_key", {})):
+            _fail("OWNER_OFF_AUDIT_INVALID: requested rail port is absent")
+        total = [0]
+        with load_source_plane_ownership_ir(ownership_manifest, ownership_attachments, expected_source_sha256=str(raw_manifest["source_sha256"]), expected_project_binding_sha256=str(raw_manifest["project_binding_sha256"]), expected_certificate_evidence_sha256=str(raw_manifest["certificate_evidence_sha256"]), expected_compiled_topology_identity_sha256=str(raw_manifest["compiled_topology_identity_sha256"]), expected_raw_manifest_sha256=str(ownership_manifest["raw_manifest_sha256"]), expected_raw_geometry_identity_sha256=str(raw_manifest["geometry_identity_sha256"]), expected_raw_logical_rows_sha256=str(raw_manifest["logical_rows_sha256"]), expected_raw_plane_sheet_sha256=str(raw_manifest["plane_sheet_payload_sha256"]), expected_app_version=str(ownership_manifest.get("app_version", ""))) as loaded:
+            sections = ("surfaces", "primitives", "islands", "primitive_island_edges", "rail_bindings", "terminal_bindings", "contact_boundary", "retained_owner_refs", "plane_owner_scopes", "replacement_ledger", "replacement_ledger_members")
+            ir = {section: _rows(loaded, section, MAX_SOURCE_PLANE_OWNERSHIP_IR_ROWS, total) for section in sections}
+        bindings = [row for row in ir["rail_bindings"] if str(row.get("rail_id", "")).casefold() == rail_id.casefold() and row.get("state") == "source_bound"]
+        if len(bindings) != 2 or {str(row.get("role", "")).casefold() for row in bindings} != {"power", "ground"}:
+            _fail("OWNER_OFF_AUDIT_INVALID: selected rail bindings are incomplete")
+        contacts = sorted(ir["contact_boundary"], key=lambda row: (int(row.get("ordinal", 0)), str(row.get("contact_id", "")).casefold()))
+        expected_contacts = [(str(row.get("contact_id")), str(row.get("owner_kind"))) for row in contacts]
+        actual_contacts = list(zip(patch_result.get("contact_ids", ()), patch_result.get("owner_kinds", ()), strict=True))
+        if actual_contacts != expected_contacts:
+            _fail("OWNER_OFF_AUDIT_INVALID: patch contact order differs")
+        islands = {str(row.get("island_id", "")).casefold(): row for row in ir["islands"]}
+        surface_by_id = {str(row.get("surface_id", "")).casefold(): row for row in ir["surfaces"]}
+        selected: dict[str, set[str]] = {}
+        selected_reduced: dict[str, set[int]] = {}
+        for role in ("power", "ground"):
+            binding = next(row for row in bindings if str(row.get("role", "")).casefold() == role)
+            anchor = islands.get(str(binding.get("island_id", "")).casefold())
+            if anchor is None:
+                _fail("OWNER_OFF_AUDIT_INVALID: selected island is absent")
+            selected[role] = {str(row.get("island_id", "")).casefold() for row in ir["islands"] if str(row.get("surface_id", "")).casefold() == str(binding.get("surface_id", "")).casefold() and str(row.get("component_id", "")).casefold() == str(anchor.get("component_id", "")).casefold()}
+            if not selected[role]:
+                _fail("OWNER_OFF_AUDIT_INVALID: selected component island set is empty")
+            try:
+                selected_reduced[role] = {int(substrate.network.reduced_node_index(str(islands[item].get("island_id", "")))) for item in selected[role]}
+            except Exception as exc:
+                _fail(f"OWNER_OFF_AUDIT_INVALID: selected island mapping is absent: {exc}")
+            if str(binding.get("island_id", "")).casefold() not in selected[role] or len(selected_reduced[role]) != 1:
+                _fail("OWNER_OFF_AUDIT_INVALID: selected component is not one reduced node")
+        if selected_reduced["power"] & selected_reduced["ground"]:
+            _fail("OWNER_OFF_AUDIT_INVALID: selected power/ground reduced nodes overlap")
+        port = next((value for key, value in getattr(substrate, "port_by_rail_key", {}).items() if str(key).casefold() == rail_id.casefold()), None)
+        if port is None:
+            _fail("OWNER_OFF_AUDIT_INVALID: production rail port is absent")
+        if len({str(row[0]).casefold() for row in expected_contacts}) != len(expected_contacts):
+            _fail("OWNER_OFF_AUDIT_INVALID: contact IDs are duplicated")
+        selected_all = selected["power"] | selected["ground"]
+        for contact in contacts:
+            contact_island = str(contact.get("island_id", "")).casefold()
+            if contact_island not in selected_all or str(contact.get("component_id", "")).casefold() != str(islands[contact_island].get("component_id", "")).casefold():
+                _fail("OWNER_OFF_AUDIT_INVALID: contact is outside selected components")
+        contacts_by_edge: dict[tuple[str, str], list[Mapping[str, Any]]] = {}
+        for contact in contacts:
+            contact_key = (str(contact.get("island_id", "")).casefold(), str(contact.get("finite_edge_id", "")).casefold())
+            contacts_by_edge.setdefault(contact_key, []).append(contact)
+        terminal_rows_by_role: dict[str, list[Mapping[str, Any]]] = {}
+        required_edge_keys: set[str] = set()
+        for role in ("power", "ground"):
+            terminal_rows = [row for row in ir["terminal_bindings"] if str(row.get("rail_id", "")).casefold() == rail_id.casefold() and str(row.get("role", "")).casefold() == role]
+            if not terminal_rows:
+                _fail("OWNER_OFF_AUDIT_INVALID: complete terminal binding is absent")
+            terminal_rows_by_role[role] = terminal_rows
+            for terminal in terminal_rows:
+                if str(terminal.get("status", "")).casefold() != "complete" or str(terminal.get("island_id", "")).casefold() not in selected[role]:
+                    _fail("OWNER_OFF_AUDIT_INVALID: terminal binding is outside selected component")
+                finite_edge_id = str(terminal.get("finite_edge_id", "")).strip()
+                if not finite_edge_id:
+                    _fail("OWNER_OFF_AUDIT_INVALID: terminal finite identity is incomplete")
+                required_edge_keys.add(finite_edge_id.casefold())
+        links_by_edge: dict[str, list[Any]] = {}
+        for link in getattr(substrate.network, "via_links", ()):
+            edge_key = str(getattr(link, "link_id", "")).casefold()
+            if edge_key in required_edge_keys:
+                links_by_edge.setdefault(edge_key, []).append(link)
+        terminal_pairs: list[tuple[str, Mapping[str, Any], list[str], Any]] = []
+        terminal_identity: dict[str, dict[str, Any]] = {}
+        for role in ("power", "ground"):
+            terminal_rows = terminal_rows_by_role[role]
+            role_rows: list[dict[str, Any]] = []
+            for terminal in terminal_rows:
+                island_id = str(terminal.get("island_id", "")).strip()
+                finite_vertex_id = str(terminal.get("finite_vertex_id", "")).strip()
+                finite_edge_id = str(terminal.get("finite_edge_id", "")).strip()
+                via_owner_id = str(terminal.get("via_owner_id", "")).strip()
+                if not island_id or not finite_vertex_id or not finite_edge_id or not via_owner_id:
+                    _fail("OWNER_OFF_AUDIT_INVALID: terminal finite identity is incomplete")
+                matches = contacts_by_edge.get((island_id.casefold(), finite_edge_id.casefold()), [])
+                if len(matches) != 1:
+                    _fail("OWNER_OFF_AUDIT_INVALID: terminal/contact edge join is ambiguous")
+                contact = matches[0]
+                contact_vertex_id = str(contact.get("finite_vertex_id", "")).strip()
+                if not contact_vertex_id:
+                    _fail("OWNER_OFF_AUDIT_INVALID: contact finite vertex is absent")
+                try:
+                    contact_reduced = int(substrate.network.reduced_node_index(contact_vertex_id))
+                except Exception as exc:
+                    _fail(f"OWNER_OFF_AUDIT_INVALID: contact finite vertex mapping is absent: {exc}")
+                if contact_reduced != next(iter(selected_reduced[role])):
+                    _fail("OWNER_OFF_AUDIT_INVALID: contact finite vertex is outside selected component")
+                try:
+                    owner_ids = json.loads(str(contact.get("owner_ids_json", "")))
+                except (TypeError, ValueError, json.JSONDecodeError) as exc:
+                    _fail(f"OWNER_OFF_AUDIT_INVALID: contact owner set is invalid: {exc}")
+                if not isinstance(owner_ids, list) or not owner_ids or any(not isinstance(owner, str) or not owner.strip() for owner in owner_ids):
+                    _fail("OWNER_OFF_AUDIT_INVALID: contact owner set is invalid")
+                links = [link for link in links_by_edge.get(finite_edge_id.casefold(), ()) if str(getattr(link, "mode", "")) == "finite_parallel_rl"]
+                if len(links) != 1:
+                    _fail("OWNER_OFF_AUDIT_INVALID: terminal finite link is absent or ambiguous")
+                link = links[0]
+                endpoint_ids = {str(getattr(link, "first_node_id", "")).casefold(), str(getattr(link, "second_node_id", "")).casefold()}
+                if finite_vertex_id.casefold() not in endpoint_ids or contact_vertex_id.casefold() not in endpoint_ids:
+                    _fail("OWNER_OFF_AUDIT_INVALID: terminal finite link endpoints differ")
+                link_owners = tuple(str(owner).casefold() for owner in getattr(link, "owner_ids", ()))
+                contact_owners = tuple(str(owner).casefold() for owner in owner_ids)
+                if link_owners != contact_owners:
+                    _fail("OWNER_OFF_AUDIT_INVALID: terminal finite link owners differ")
+                terminal_pairs.append((via_owner_id, contact, owner_ids, link))
+                role_rows.append({"terminal_id": str(terminal.get("terminal_id", "")), "island_id": island_id, "finite_vertex_id": finite_vertex_id, "finite_edge_id": finite_edge_id, "via_owner_id": via_owner_id})
+            anchor_by_key: dict[str, str] = {}
+            for row in terminal_rows:
+                value = str(row.get("finite_vertex_id", "")).strip()
+                folded = value.casefold()
+                if folded in anchor_by_key and anchor_by_key[folded] != value:
+                    _fail("OWNER_OFF_AUDIT_INVALID: terminal anchor identity is ambiguous")
+                anchor_by_key[folded] = value
+            anchor_node_ids = tuple(sorted(anchor_by_key.values(), key=lambda item: (item.casefold(), item)))
+            if not anchor_node_ids:
+                _fail("OWNER_OFF_AUDIT_INVALID: terminal anchor nodes are absent")
+            terminal_identity[role] = {"anchor_node_ids": list(anchor_node_ids), "terminal_rows": role_rows}
+        expected_port_nodes: dict[str, str] = {}
+        network_inventory = set(getattr(substrate.network, "surface_node_ids", ()))
+        for role in ("power", "ground"):
+            anchor_node_ids = tuple(str(item) for item in terminal_identity[role]["anchor_node_ids"])
+            if any(item not in network_inventory for item in anchor_node_ids):
+                _fail("OWNER_OFF_AUDIT_INVALID: terminal anchor node is absent from network")
+            if len(anchor_node_ids) == 1:
+                expected = anchor_node_ids[0]
+            else:
+                payload = {"schema": "finite-via-external-device-supernode-v1", "rail_id": rail_id.casefold(), "role": role, "anchor_node_ids": list(anchor_node_ids)}
+                expected = f"spd-device-port-node:{sha256(concrete_canonical_json_bytes(payload)).hexdigest()[:24]}"
+                try:
+                    if not all(substrate.network.surfaces_share_ideal_node(expected, anchor) for anchor in anchor_node_ids):
+                        _fail("OWNER_OFF_AUDIT_INVALID: terminal supernode topology differs")
+                except Exception as exc:
+                    _fail(f"OWNER_OFF_AUDIT_INVALID: terminal supernode mapping is absent: {exc}")
+            if expected not in network_inventory:
+                _fail("OWNER_OFF_AUDIT_INVALID: expected terminal port node is absent from network")
+            expected_port_nodes[role] = expected
+            terminal_identity[role]["expected_port_node_id"] = expected
+        if str(getattr(port, "positive_node_id", "")) != expected_port_nodes["power"] or str(getattr(port, "negative_node_id", "")) != expected_port_nodes["ground"]:
+            _fail("OWNER_OFF_AUDIT_INVALID: production rail port identity differs")
+        edges_by_primitive: dict[str, list[Mapping[str, Any]]] = {}
+        for edge in ir["primitive_island_edges"]:
+            edges_by_primitive.setdefault(str(edge.get("primitive_id", "")).casefold(), []).append(edge)
+        for binding in bindings:
+            sid = str(binding.get("surface_id", "")).casefold(); role = str(binding.get("role", "")).casefold(); component = str(islands[str(binding.get("island_id", "")).casefold()].get("component_id", ""))
+            if sid not in surface_by_id:
+                _fail("OWNER_OFF_AUDIT_INVALID: selected surface is absent")
+            for primitive in ir["primitives"]:
+                if str(primitive.get("surface_id", "")).casefold() != sid or str(primitive.get("effect_status", "")).casefold() != "retained":
+                    continue
+                edges = edges_by_primitive.get(str(primitive.get("primitive_id", "")).casefold(), [])
+                if not edges or any(str(edge.get("island_id", "")).casefold() not in selected[role] for edge in edges) or any(str(islands[str(edge.get("island_id", "")).casefold()].get("component_id", "")).casefold() != component.casefold() for edge in edges):
+                    _fail("OWNER_OFF_AUDIT_INVALID: retained primitive component is ambiguous")
+        contact_map = [{key: row.get(key) for key in ("contact_id", "owner_kind", "island_id", "component_id", "finite_vertex_id", "finite_edge_id", "plane_endpoint_node_id", "external_endpoint_node_id", "owner_ids_json")} for row in contacts]
+        contact_map_sha = sha256(concrete_canonical_json_bytes(contact_map)).hexdigest()
+        scopes = [row for row in ir["plane_owner_scopes"] if str(row.get("rail_id", "")).casefold() == rail_id.casefold() and row.get("state") == "declared_unconsumed" and int(row.get("owner_count", 0)) == 1]
+        if len(scopes) != 2 or {str(row.get("role", "")).casefold() for row in scopes} != {"power", "ground"}:
+            _fail("OWNER_OFF_AUDIT_INVALID: plane owner scopes are not prerequisite-only")
+        if len(ir["replacement_ledger"]) != 1 or ir["replacement_ledger"][0].get("status") != "prerequisite_only":
+            _fail("OWNER_OFF_AUDIT_INVALID: replacement ledger is not prerequisite-only")
+        ledger_id = str(ir["replacement_ledger"][0].get("ledger_id", "")).casefold()
+        members = ir["replacement_ledger_members"]
+        if any(str(row.get("ledger_id", "")).casefold() != ledger_id for row in members):
+            _fail("OWNER_OFF_AUDIT_INVALID: replacement ledger membership differs")
+        replaced_owners = sorted({str(row.get("owner_id")) for row in members if row.get("action") == "replaced"}, key=str.casefold)
+        retained_owners = sorted({str(row.get("owner_id")) for row in members if row.get("action") == "retained"}, key=str.casefold)
+        scope_owners = sorted({str(row.get("compiler_owner_id")) for row in scopes}, key=str.casefold)
+        retained_refs = sorted({str(row.get("owner_id")) for row in ir["retained_owner_refs"]}, key=str.casefold)
+        if {item.casefold() for item in replaced_owners} != {item.casefold() for item in scope_owners} or {item.casefold() for item in retained_owners} != {item.casefold() for item in retained_refs} or {item.casefold() for item in replaced_owners} & {item.casefold() for item in retained_owners}:
+            _fail("OWNER_OFF_AUDIT_INVALID: owner replacement sets overlap")
+        retained_owner_keys = {item.casefold() for item in retained_owners}
+        for via_owner_id, _contact, owner_ids, _link in terminal_pairs:
+            if via_owner_id.casefold() not in {str(owner).casefold() for owner in owner_ids} or any(str(owner).casefold() not in retained_owner_keys for owner in owner_ids):
+                _fail("OWNER_OFF_AUDIT_INVALID: terminal finite owner is not retained")
+        incidents: list[dict[str, Any]] = []
+        edge_keys: set[tuple[str, str, str, str]] = set()
+        for wrapped in getattr(substrate.network, "partials", ()):
+            partial = wrapped.partial
+            names = tuple(str(name) for name in partial.net_names)
+            matrix = partial.maxwell_capacitance_f
+            if not issparse(matrix) or matrix.ndim != 2 or matrix.shape[0] != matrix.shape[1] or matrix.shape[0] != len(names):
+                _fail("OWNER_OFF_AUDIT_INVALID: old partial matrix is not finite symmetric")
+            matrix = matrix.tocoo(copy=False)
+            scale = max(float(np.max(np.abs(matrix.data), initial=0.0)), 1.0e-30)
+            tolerance = max(1.0e-24, scale * 1.0e-10)
+            difference = matrix.tocsr() - matrix.T.tocsr()
+            if not np.all(np.isfinite(matrix.data)) or (difference.nnz and float(np.max(np.abs(difference.data))) > tolerance):
+                _fail("OWNER_OFF_AUDIT_INVALID: old partial is not finite symmetric")
+            row_sums = np.asarray(matrix.tocsr().sum(axis=1), dtype=np.float64).ravel()
+            if float(np.max(np.abs(row_sums), initial=0.0)) > tolerance:
+                _fail("OWNER_OFF_AUDIT_INVALID: old partial row-sum check failed")
+            diagonal = np.asarray(matrix.tocsr().diagonal(), dtype=np.float64)
+            if np.any(diagonal <= 0.0):
+                _fail("OWNER_OFF_AUDIT_INVALID: old partial diagonal is not positive")
+            offdiag_by_row = np.zeros(matrix.shape[0], dtype=np.float64)
+            for row, column, value in zip(matrix.row, matrix.col, matrix.data, strict=True):
+                if row != column:
+                    if value > 0.0:
+                        _fail("OWNER_OFF_AUDIT_INVALID: old partial has positive off-diagonal")
+                    offdiag_by_row[int(row)] += float(value)
+            if not np.allclose(diagonal, -offdiag_by_row, rtol=1.0e-12, atol=tolerance):
+                _fail("OWNER_OFF_AUDIT_INVALID: old partial Laplacian reconstruction differs")
+            for row, column, value in zip(matrix.row, matrix.col, matrix.data, strict=True):
+                if row >= column or value >= 0.0:
+                    continue
+                endpoints = (names[int(row)], names[int(column)])
+                endpoint_roles = [{role for role in ("power", "ground") if endpoint.casefold() in selected[role]} for endpoint in endpoints]
+                incident = [bool(roles) for roles in endpoint_roles]
+                if not any(incident):
+                    continue
+                if not all(incident) or {next(iter(roles)) for roles in endpoint_roles} != {"power", "ground"}:
+                    _fail("OWNER_OFF_AUDIT_INVALID: incident edge is not selected P/G pair")
+                endpoint_layers = [str(surface_by_id.get(str(islands.get(endpoint.casefold(), {}).get("surface_id", "")).casefold(), {}).get("layer", "")) for endpoint in endpoints]
+                if {layer.casefold() for layer in endpoint_layers} != {str(partial.upper_layer).casefold(), str(partial.lower_layer).casefold()}:
+                    _fail("OWNER_OFF_AUDIT_INVALID: partial endpoint layers differ")
+                if endpoint_layers[0].casefold() == str(partial.upper_layer).casefold() and endpoint_layers[1].casefold() == str(partial.lower_layer).casefold():
+                    upper_id, lower_id = endpoints
+                elif endpoint_layers[1].casefold() == str(partial.upper_layer).casefold() and endpoint_layers[0].casefold() == str(partial.lower_layer).casefold():
+                    upper_id, lower_id = endpoints[1], endpoints[0]
+                else:
+                    _fail("OWNER_OFF_AUDIT_INVALID: partial endpoint orientation is ambiguous")
+                edge_key = (str(partial.upper_layer).casefold(), str(partial.lower_layer).casefold(), str(upper_id).casefold(), str(lower_id).casefold())
+                if edge_key in edge_keys:
+                    _fail("OWNER_OFF_AUDIT_INVALID: canonical old edge is duplicated")
+                edge_keys.add(edge_key)
+                payload = {"substrate_identity_sha256": str(substrate.substrate_identity_sha256), "upper_layer": str(partial.upper_layer), "lower_layer": str(partial.lower_layer), "upper_island_id": upper_id, "lower_island_id": lower_id, "capacitance_f_hex": float(-value).hex()}
+                incidents.append({"fingerprint": sha256(concrete_canonical_json_bytes(payload)).hexdigest(), **payload})
+        if not incidents:
+            _fail("OWNER_OFF_AUDIT_INVALID: no selected incident old edges")
+        fingerprints = sorted({str(item["fingerprint"]) for item in incidents})
+        if len(fingerprints) != len(incidents):
+            _fail("OWNER_OFF_AUDIT_INVALID: old edge fingerprints are duplicated")
+        old_edge_set_sha = sha256(concrete_canonical_json_bytes(fingerprints)).hexdigest()
+        input_sha = str(patch_result.get("input_sha256", ""))
+        if len(input_sha) != 64 or input_sha != input_sha.casefold() or any(character not in "0123456789abcdef" for character in input_sha):
+            _fail("OWNER_OFF_AUDIT_INVALID: patch input hash is absent")
+        component_identity = {role: {"islands": sorted(str(islands[item].get("island_id", "")) for item in selected[role]), "reduced_index": next(iter(selected_reduced[role]))} for role in ("power", "ground")}
+        scope_identity = [{"role": str(row.get("role")), "scope_id": str(row.get("scope_id")), "compiler_owner_id": str(row.get("compiler_owner_id"))} for row in sorted(scopes, key=lambda item: str(item.get("role", "")).casefold())]
+        audit_identity = {"patch_input_sha256": input_sha, "substrate_identity_sha256": str(substrate.substrate_identity_sha256), "ownership_logical_rows_sha256": str(ownership_manifest.get("logical_rows_sha256")), "raw_spatial_v3_manifest_sha256": manifest_raw_sha, "rail_id": rail_id, "contact_map_sha256": contact_map_sha, "old_edge_set_sha256": old_edge_set_sha, "components": component_identity, "scopes": scope_identity, "replaced_owner_ids": replaced_owners, "terminal_anchor_identity": terminal_identity}
+        result = {"schema_version": "source-plane-owner-off-audit-v1", "shadow_only": True, "status": "candidate_identified", "rail_id": rail_id, "source_sha256": raw_manifest["source_sha256"], "contact_map_sha256": contact_map_sha, "old_edge_set_sha256": old_edge_set_sha, "incident_edges": incidents, "component_identity": component_identity, "terminal_anchor_identity": terminal_identity, "candidate_scopes": scope_identity, "candidate_replaced_owner_ids": replaced_owners, "retained_owner_count": len(retained_owners), "retained_owner_ids_sha256": sha256(concrete_canonical_json_bytes([item.casefold() for item in retained_owners])).hexdigest(), "replacement_ready": False, "audit_sha256": sha256(concrete_canonical_json_bytes(audit_identity)).hexdigest()}
+        return result
+    except SourcePlanePatchError:
+        raise
+    except Exception as exc:
+        _fail(f"OWNER_OFF_AUDIT_INVALID: {exc}")
+
+
+__all__ = ["SourcePlanePatchError", "consume_source_plane_patch", "evaluate_source_plane_contact_admissibility", "evaluate_source_plane_contact_condensation", "audit_source_plane_patch_owner_off"]
