@@ -1,11 +1,11 @@
 # SPD Decap PI Evaluator v0.23.1 — Source-derived physical IR
 
-- 문서 버전: **1.1**
+- 문서 버전: **1.2**
 - 계약 상태: **ACCEPTED** — source-derived provenance/ownership prerequisite의 기술 기준
-- committed 구현: `source-plane-ownership-ir-v1` producer/loader + Phase 3 shadow consumer
-- worktree candidate: `source-plane-ownership-ir-v2` `contact_boundary`; **STATIC-GO only, uncommitted**
-- runtime acceptance: **FAILED / Phase 4 BLOCKED / candidate not accepted**
-- 현재 작업 상태: **ACTIVE NONE**
+- committed 구현: `source-plane-ownership-ir-v1` + Phase 3 shadow consumer + `source-plane-ownership-ir-v2` `contact_boundary` (`3b76af4`)
+- runtime acceptance: **Phase 4 focused PASS / Sol ACCEPT / prerequisite-only**
+- production 상태: solver, owner-off, `Y_global`, `Zii` **unchanged**
+- 현재 작업 상태: **W7-PHYS-PROSPECTIVE-P0 ACTIVE** — contact-to-artwork finite-port admissibility만 판정
 - 최종 개정: 2026-08-29 (Asia/Seoul)
 
 ## 1. 목적
@@ -34,8 +34,9 @@ flowchart LR
   E --> F[compiler-assigned plane owner]
   F --> G[replacement ledger]
   G --> H[Phase 3 shadow patch witness DONE]
-  H --> L[Phase 4 all-contact boundary IR v2 BLOCKED]
-  L -. owner-off/N-port gate 전 연결 금지 .-> K[production Y_global / Zii]
+  H --> L[Phase 4 all-contact boundary IR v2 DONE]
+  L --> M[P0 contact-to-artwork admissibility]
+  M -. owner-off/N-port gate 전 연결 금지 .-> K[production Y_global / Zii]
   I[raw-v3 geometry/material] -. hash reference .-> B
   J[compiled finite topology] -. hash/owner reference .-> D
 ```
@@ -56,7 +57,7 @@ plane owner는 source identity에 결속해 importer/compiler가 결정적으로
 | rail | logical NET, artwork NET, layer, PWR/return surface | layer display token을 NET으로 사용하지 않음 |
 | terminal | branch/pin→Node→Via→finite vertex/edge→exact rail island→PadDef+Regular footprint | 전체 chain이 있어야 complete |
 | ownership | retained Via/device/terminal owner와 declared plane owner | namespace disjoint, exact-once |
-| contact boundary (v2 candidate) | selected P/G component incident edge, boundary-side Via, endpoint/rotation/pad provenance, Device/decap/other 보강 | uncommitted; runtime acceptance 전 canonical relation으로 승격 금지 |
+| contact boundary (v2) | selected P/G component incident edge, boundary-side Via, endpoint/rotation/pad provenance, Device/decap/other 보강 | `3b76af4` accepted prerequisite; direct artwork/production port 의미는 P0 전 금지 |
 | replacement | replaced/retained set hash와 상태 | Phase 1은 `prerequisite_only`만 허용 |
 
 ## 4. 불변조건
@@ -94,11 +95,11 @@ plane owner는 source identity에 결속해 importer/compiler가 결정적으로
 | 1 | committed `82370b6` | focused storage contract PASS | DONE | source/provenance storage prerequisite만 |
 | 2 | committed `75ac0a0` | focused end-to-end producer PASS | DONE | import-time atomic binding만 |
 | 3 | committed `5d2c353` | analytic/deterministic shadow gate PASS | DONE | `Y_global`/`Zii` 미연결 |
-| 4 | dirty 3 production + 1 test file | static GO; focused runtime FAILED | BLOCKED | v2/contact completeness/정확도 주장 금지 |
+| 4 | committed `3b76af4` | focused `1 passed in 1.39s`; Sol ACCEPT | DONE | finite boundary provenance prerequisite만; 정확도 주장 금지 |
 
 `DONE`은 해당 Phase의 선언 범위가 종료됐다는 뜻이며 current release, production
-acceptance 또는 PowerSI 정확성을 뜻하지 않는다. Phase 4의 exact Git 상태와 실행 이력,
-소진된 budget은 작업 기준 1장과 12.8이 권위 있다.
+acceptance 또는 PowerSI 정확성을 뜻하지 않는다. Phase 4의 exact 실행 이력과 검증
+예산은 작업 기준 1장과 12.8–12.9가 권위 있다.
 
 ### Phase 1 — storage contract
 
@@ -163,7 +164,7 @@ mesh convergence, causal broadband A/B, PowerSI correlation과 holdout은 별도
 
 ### Phase 4 — contact-complete import-time boundary
 
-BLOCKED. Phase 3의 두 Device terminal은 analytic witness에는 충분하지만 production
+DONE / prerequisite-only. Phase 3의 두 Device terminal은 analytic witness에는 충분하지만 production
 loaded plane replacement의 경계로는 충분하지 않다. target rail의 P/G anchor가
 증명한 두 surface-equivalence component를 먼저 고정하고, finite-via quotient에서 그
 component vertex에 incident한 모든 edge와 전체 owner를 권위 inventory로 선택한다.
@@ -192,23 +193,22 @@ partial, solver, `Y_global`과 `Zii`는 바꾸지 않는다.
 
 | 축 | 현재 사실 | 주장 금지 |
 |---|---|---|
-| worktree 구현 | v2 schema/loader, quotient-authoritative boundary selection, raw endpoint/rotation/pad provenance와 authority coverage candidate가 3 production + 1 focused test 파일에 존재 | committed 또는 accepted 구현 |
-| 정적 증거 | 최종 trace-terminal fixture와 candidate가 Sol 검토에서 GO | runtime PASS, source completeness |
-| runtime 관찰 | import와 v2 asset load 후 persisted `contact_boundary`에 `owner_kind=decap` 행이 없어 focused node가 `1 failed in 1.70s` | decap 분류 로직 결함으로 단정 |
-| 미실행 acceptance | Via11 `other`, Node11/Node12, rotation/padstack, canonical authority list/set/count/SHA assertion | v2/contact completeness, replacement readiness |
+| committed 구현 | v2 schema/loader, quotient-authoritative boundary selection, raw endpoint/rotation/pad provenance와 authority coverage가 commit `3b76af4`의 3 production + 1 focused test 파일에 존재 | release 또는 production solver acceptance |
+| causal closure | R2 read-only 추적으로 C1의 isolated Node3 때문에 Trace11 quotient union이 생기지 않아 Via11이 leaf-prune된 fixture/acceptance 부정합으로 분류 | production enumerator/join 결함으로 재분류 |
+| runtime 증거 | decap Via7/Node8을 복원하고 Trace11을 non-isolated Node1에서 시작한 fixture에서 Via11 `other`, Node11/Node12, 4.5도 rotation/padstack, canonical authority list/set/count/SHA와 atomic failure가 PASS; 최종 `1 passed in 1.39s` | direct artwork coverage, replacement readiness |
+| validation hardening | v2 Node/Via/PadDef/Regular identity, net/layer, endpoint alias, normalized rotation을 교차 결속하고 landing enrichment를 `O(B+L)`로 인덱싱; Sol 재검토 ACCEPT | PowerSI accuracy 또는 성능 benchmark |
 | production | solver, current patch consumer, owner-off, `Y_global`, `Zii` 변경 없음 | 정확도 개선 또는 PowerSI 상관 개선 |
 
-과거 두 fixture failure와 R1 exact 명령·line은 작업 기준 12.8에만 둔다. 다음 기술
-질문은 decap row 부재가 (a) quotient incident 모집단, (b) terminal landing kind 보강
-join, (c) fixture/test 요구의 부정합 중 어디에서 발생했는지다. 이 분류는
-`W7-SOURCE-IR-P4-R2-CAUSE` READY gate이며, 사용자 승인 전 코드·fixture·pytest를
-수정하거나 실행하지 않는다.
+R4의 첫 검증은 `spd_adapter.py` 들여쓰기 오류로 collection 전에 중단됐고 같은 노드에서
+재실행하지 않았다. 별도 R5 문법 교정 뒤 지정 node를 한 번 실행해 `1 passed in 1.39s`를
+얻었고 R6 Sol 재검토가 ACCEPT했다. 다음 단일 질문은 모든 v2 contact의 exact footprint가
+selected same-net artwork의 물리 patch port로 직접 적격한지다. `W7-PHYS-PROSPECTIVE-P0`는
+이를 shadow-only로 판정하며 추정 geometry, schema 확대 또는 production 연결이 필요하면 STOP한다.
 
 ## 7. 주장 한계
 
-- Phase 1/2/3 PASS는 source identity, ownership과 shadow analytic prerequisite만
-  증명한다. Phase 4 failure는 해당 fixture의 persisted 결과에 decap row가 없었다는
-  사실만 증명한다.
+- Phase 1/2/3/4 PASS는 source identity, ownership, shadow analytic과 finite-boundary
+  prerequisite만 증명한다. Phase 4의 historical failure는 해당 과거 fixture 결과에만 적용한다.
 - reciprocity, passivity, deterministic replay는 non-regression이며 PowerSI 정확도
   개선 증거가 아니다.
 - PowerSI 데이터는 comparison gate에만 사용하고 parameter fitting 입력으로 쓰지
