@@ -1,7 +1,11 @@
 # SPD Decap PI Evaluator v0.23.1 — Source-derived physical IR
 
-- 상태: **ACCEPTED / Phase 1/2/3 DONE; Phase 4 BLOCKED (candidate not accepted)**
-- 스키마: `source-plane-ownership-ir-v1` DONE → contact-complete `source-plane-ownership-ir-v2` BLOCKED candidate
+- 문서 버전: **1.1**
+- 계약 상태: **ACCEPTED** — source-derived provenance/ownership prerequisite의 기술 기준
+- committed 구현: `source-plane-ownership-ir-v1` producer/loader + Phase 3 shadow consumer
+- worktree candidate: `source-plane-ownership-ir-v2` `contact_boundary`; **STATIC-GO only, uncommitted**
+- runtime acceptance: **FAILED / Phase 4 BLOCKED / candidate not accepted**
+- 현재 작업 상태: **ACTIVE NONE**
 - 최종 개정: 2026-08-29 (Asia/Seoul)
 
 ## 1. 목적
@@ -52,6 +56,7 @@ plane owner는 source identity에 결속해 importer/compiler가 결정적으로
 | rail | logical NET, artwork NET, layer, PWR/return surface | layer display token을 NET으로 사용하지 않음 |
 | terminal | branch/pin→Node→Via→finite vertex/edge→exact rail island→PadDef+Regular footprint | 전체 chain이 있어야 complete |
 | ownership | retained Via/device/terminal owner와 declared plane owner | namespace disjoint, exact-once |
+| contact boundary (v2 candidate) | selected P/G component incident edge, boundary-side Via, endpoint/rotation/pad provenance, Device/decap/other 보강 | uncommitted; runtime acceptance 전 canonical relation으로 승격 금지 |
 | replacement | replaced/retained set hash와 상태 | Phase 1은 `prerequisite_only`만 허용 |
 
 ## 4. 불변조건
@@ -83,6 +88,17 @@ plane owner는 source identity에 결속해 importer/compiler가 결정적으로
 6. 실패하면 draft와 임시 DB를 폐기하고 부분 attachment를 남기지 않는다.
 
 ## 6. 단계와 검증 예산
+
+| Phase | 구현 위치 | 증거 | 현재 판정 | production 의미 |
+|---|---|---|---|---|
+| 1 | committed `82370b6` | focused storage contract PASS | DONE | source/provenance storage prerequisite만 |
+| 2 | committed `75ac0a0` | focused end-to-end producer PASS | DONE | import-time atomic binding만 |
+| 3 | committed `5d2c353` | analytic/deterministic shadow gate PASS | DONE | `Y_global`/`Zii` 미연결 |
+| 4 | dirty 3 production + 1 test file | static GO; focused runtime FAILED | BLOCKED | v2/contact completeness/정확도 주장 금지 |
+
+`DONE`은 해당 Phase의 선언 범위가 종료됐다는 뜻이며 current release, production
+acceptance 또는 PowerSI 정확성을 뜻하지 않는다. Phase 4의 exact Git 상태와 실행 이력,
+소진된 budget은 작업 기준 1장과 12.8이 권위 있다.
 
 ### Phase 1 — storage contract
 
@@ -172,32 +188,27 @@ Whitelist, 검증 예산과 STOP 조건은 작업 기준 12.8이 권위 있다. 
 replacement ledger는 `prerequisite_only`이고 current patch consumer, adjacent-gap
 partial, solver, `Y_global`과 `Zii`는 바꾸지 않는다.
 
-구현 candidate는 raw Via endpoint/rotation, quotient owner 방향, v1/v2 loader와
-edge/owner exact-once까지 Sol 정적 GO를 받았다. 그러나 첫 focused file은 generic Via가
-retained quotient에 남지 않아 `3 passed, 1 failed in 2.77s`, 허용된 fixture 수정 뒤
-동일 node는 중간 GND-layer 경로가 power anchor representative island를 selected PWR
-surface 밖으로 바꿔 `1 failed in 1.42s`로 fail-closed됐다. 작업 기준의 1회 fixture
-수정·재실행 예산을 소진했으므로 v2 asset, contact completeness와 Phase 4 PASS를
-주장하지 않는다. candidate diff는 승인·커밋된 기준이 아니다.
+현재 Phase 4 증거는 다음처럼 분리한다.
 
-2026-08-29 사용자 재개 지시로 R1을 한 번 열었다. R1은 P/G anchor island를 보존하는
-source-valid retained nonterminal fixture를 Sol이 먼저 정적으로 고정하고, Luna가 테스트
-파일만 1회 수정한 뒤 Sol 검토와 실패했던 node 1회 실행으로 끝낸다. 실패하면 추가
-fixture 반복 없이 다시 BLOCKED로 닫는다.
+| 축 | 현재 사실 | 주장 금지 |
+|---|---|---|
+| worktree 구현 | v2 schema/loader, quotient-authoritative boundary selection, raw endpoint/rotation/pad provenance와 authority coverage candidate가 3 production + 1 focused test 파일에 존재 | committed 또는 accepted 구현 |
+| 정적 증거 | 최종 trace-terminal fixture와 candidate가 Sol 검토에서 GO | runtime PASS, source completeness |
+| runtime 관찰 | import와 v2 asset load 후 persisted `contact_boundary`에 `owner_kind=decap` 행이 없어 focused node가 `1 failed in 1.70s` | decap 분류 로직 결함으로 단정 |
+| 미실행 acceptance | Via11 `other`, Node11/Node12, rotation/padstack, canonical authority list/set/count/SHA assertion | v2/contact completeness, replacement readiness |
+| production | solver, current patch consumer, owner-off, `Y_global`, `Zii` 변경 없음 | 정확도 개선 또는 PowerSI 상관 개선 |
 
-R1은 Device Via1/Node7 PWR와 Via2/Node9 GND anchor를 원복하고, 기존 검증 topology와
-같은 `Node3--Trace11--Node12(TOP)--Via11--Node11(PWR)` 경로를 사용했다. Sol 정적
-검토는 Via11의 단일 `retained_explicit` edge, `other` 분류, owner 방향과 raw provenance에
-GO를 주었다. 단일 허용 node는 import와 v2 asset load까지 진행했으나 persisted
-`contact_boundary`에 `owner_kind=decap` 행이 하나도 없어
-`tests/test_source_plane_ownership_ir_producer.py:191`에서 `1 failed in 1.70s`로 끝났다.
-뒤의 Via11/authority assertion은 실행되지 않았으므로 runtime completeness를 주장하지
-않는다. fixture·코드 추가 수정과 재실행은 금지하며 candidate diff는 승인·커밋된 기준이
-아니다.
+과거 두 fixture failure와 R1 exact 명령·line은 작업 기준 12.8에만 둔다. 다음 기술
+질문은 decap row 부재가 (a) quotient incident 모집단, (b) terminal landing kind 보강
+join, (c) fixture/test 요구의 부정합 중 어디에서 발생했는지다. 이 분류는
+`W7-SOURCE-IR-P4-R2-CAUSE` READY gate이며, 사용자 승인 전 코드·fixture·pytest를
+수정하거나 실행하지 않는다.
 
 ## 7. 주장 한계
 
-- Phase 1/2/3 PASS와 Phase 4 결과는 source identity, ownership, contact boundary와 shadow analytic prerequisite만 증명한다.
+- Phase 1/2/3 PASS는 source identity, ownership과 shadow analytic prerequisite만
+  증명한다. Phase 4 failure는 해당 fixture의 persisted 결과에 decap row가 없었다는
+  사실만 증명한다.
 - reciprocity, passivity, deterministic replay는 non-regression이며 PowerSI 정확도
   개선 증거가 아니다.
 - PowerSI 데이터는 comparison gate에만 사용하고 parameter fitting 입력으로 쓰지

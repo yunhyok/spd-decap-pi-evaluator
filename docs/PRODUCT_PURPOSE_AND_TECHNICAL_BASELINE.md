@@ -1,12 +1,12 @@
 # SPD Decap PI Evaluator 목적·기술 기준
 
 - 적용 제품: **SPD Decap PI Evaluator v0.23.1**
-- 문서 버전: **1.165**
+- 문서 버전: **1.166**
 - W5 approved/machine-frozen source-before: `main` commit `027ac7a09a3eded15f45c41860945f9d4c7f488d`
 - 상태: **G0 기준 문서** — W5 DONE; W6-BASE 260729 numerical FAIL; W7-PHYS BLOCKED; W7-SOURCE-IR Phase 1/2/3 DONE, Phase 4 BLOCKED (모두 shadow/prerequisite 범위).
-- 현재 평가: Phase 3의 Device P/G 2-contact witness만으로는 동일 rail-bound component에 연결된 mounted decap와 다른 finite contact의 공간 전류 경계를 보존할 수 없다. Phase 4-R1은 P/G anchor를 보존하는 proven trace-terminal fixture와 Sol 정적 GO까지 닫았지만, 단일 허용 node에서 persisted `contact_boundary`에 `owner_kind=decap` 행이 없어 `1 failed in 1.70s`로 끝났다. v2 candidate는 승인되지 않았다.
+- 현재 평가: W6-BASE는 PowerSI 수치 기준 FAIL이고 unseen/generalization은 `unknown / not_run`이다. Source IR Phase 1/2/3은 committed prerequisite/shadow 범위에서 완료됐지만 Phase 4 v2 candidate는 runtime acceptance를 통과하지 못해 BLOCKED다. exact 실행 이력은 작업 기준, schema 주장 범위는 Source-derived IR 문서가 권위 있다.
 - Sole ACTIVE item (current): **NONE.** Phase 4-R1 검증 예산을 소진했고 production physics/`Zii`는 unchanged다.
-- 현재 권한: 추가 fixture 수정·pytest 재실행·direct-artwork/adjacent-gap/production physics 작업은 열려 있지 않다. main-only와 `accuracy_parse.py` 보존을 유지하며, 재개 전에는 decap boundary 분류 누락의 causal contract와 새 단일 검증 예산을 먼저 문서로 승인해야 한다.
+- 현재 권한: 추가 fixture 수정·pytest 재실행·direct-artwork/adjacent-gap/production physics 작업은 열려 있지 않다. main-only와 `accuracy_parse.py` 보존을 유지하며, 다음 후보는 decap boundary 부재를 실행 없이 분류하는 READY gate뿐이다. 구현·검증은 별도 사용자 승인 전 시작하지 않는다.
 - 물리 작업 재개 조건: IR prerequisite 완료 후에도 geometry/material provenance, physical limiting-case invariant, rail-complete 적용 범위, deterministic stamp와 실제 consumer에 결속된 disjoint owner ledger를 갖춘 단일 physical candidate가 필요하다.
 - 최종 개정: 2026-08-29 (Asia/Seoul)
 
@@ -14,7 +14,7 @@
 
 이 문서는 프로그램의 **왜**, **무엇**, **합격의 의미**, **넘지 말아야 할
 경계**를 고정한다. 작업 목록, 구현 순서, 진행 상황, 검증 실행 기록은 이
-문서에 누적하지 않는다. 그것들은 추후 별도로 만들 **작업 기준 문서**에서
+문서에 누적하지 않는다. 그것들은 **작업 기준 문서**에서
 관리한다.
 
 권위는 두 축으로 구분한다.
@@ -148,27 +148,21 @@ quasi-static circuit model이며 다음을 충분히 표현하지 않는다.
 `verified + passed`도 명시된 coupon, parser, import 또는 gate 범위만 통과했다는
 뜻이다. product accuracy, performance, release까지 자동 승격하지 않는다.
 
-### 6.1 G0 작성 시점의 상태
+### 6.1 현재 제품 판정
 
-| 주장 | 적용 대상 | 증거 상태 | 실행 결과 | 해석 |
-|---|---|---|---|---|
-| 제품명·버전 identity | current v0.23.0 / `0f24363c` | verified | passed | source, title, package, installer metadata 범위 |
-| production-size import·save·92-rail solver entry | current v0.23.0 attestation | verified | passed | import/save/entry 범위에 한함 |
-| 같은 attestation의 frequency solve·Touchstone comparison | current v0.23.0 | verified | not_run | `frequency_solves_executed=0`, `touchstone_read=false` |
-| 현행 default solver의 PowerSI 정확성 | current v0.23.0 / 260729 retrospective | provisional | failed | completed manifest·sidecar와 offline verifier exit 2가 무결성을 확인했으며, bare/loaded macro가 각 limit을 초과했다; unseen/generalization은 아직 unknown/not_run |
-| 260804 terminal-complete loaded correlation | historical v0.22.0 | provisional | failed | 문서상 critical-band `16.743 dB`, `44.28°`; raw report가 Git에 없어 current 결과로 재사용 불가 |
-| 목표 장비의 시간·memory promotion | current | unknown | not_run | workstation 또는 import-only 수치로 승격 금지 |
-| product-core CI 회귀 차단 | current bounded selection | verified | passed | V3 `361 passed, 1 skipped in 22.88s`, local v0.13 bundle skip |
+| 주장 | 현재 판정 | 해석·권위 문서 |
+|---|---|---|
+| 제품 identity | SPD Decap PI Evaluator v0.23.1 | title/package의 현행 identity. release 상태는 별도 확인 대상 |
+| 외부 정확성 | W6-BASE 260729 retrospective numerical **FAIL** | completed evidence지만 PowerSI accuracy promotion 실패; exact 이력은 작업 기준 |
+| unseen/generalization | `unknown / not_run` | 개발 case FAIL 동안 승격·실행 금지 |
+| Source IR | Phase 1/2/3 committed, Phase 4 BLOCKED | prerequisite/shadow 범위; schema 상세는 Source-derived IR 문서 |
+| production `Y_global` / `Zii` | Phase 3 이후 변경 없음 | IR·정적 GO·import 성공을 정확도 개선으로 해석하지 않음 |
+| historical v0.23.0 attestation | import/save/92-rail solver entry만 verified | frequency solve·Touchstone comparison·현행 release 근거로 재사용 금지 |
 
-현재 GUI의 `layerwise validation pending` 표시는 이 상태와 일치한다. 과거
-validation 문서의 placeholder, report-level pass, 작은 backward residual,
-import/save 성공은 PowerSI accuracy promotion이 아니다.
-
-W5 이전에는 제품 수준 PowerSI 수치 합격선이 **미확정**이었다. W5에서
-`1.00/1.25 dB` 등을 포함한 수치와 reference partition을 승인해
-machine-frozen policy로 고정했다. 260729 retrospective는 completed numerical
-FAIL이며, unseen/generalization과 260804/P5는 여전히 `unknown / not_run`이다.
-local mesh/oracle convergence 수치를 제품 PowerSI gate로 전용해서는 안 된다.
+과거 validation placeholder, report-level pass, 작은 backward residual,
+import/save 성공은 PowerSI accuracy promotion이 아니다. W5 이전 합격선은 역사적이며,
+현행 수치 정책은 아래 6.2가 권위 있다. exact commit, artifact, runtime과 test 이력은
+[작업 기준](WORK_EXECUTION_BASELINE.md)에만 둔다.
 
 ### 6.2 W5-GATE approved/machine-frozen policy
 
@@ -202,7 +196,7 @@ W5 threshold, partition, run manifest는 사용자 승인으로 **machine-frozen
 retrospective baseline**뿐이다. 이것을 unseen generalization 또는 제품
 PowerSI 합격으로 재사용할 수 없다.
 
-현재 trust identity는 benchmark base normalized SHA
+W5 frozen trust identity는 benchmark base normalized SHA
 `d43b868629464f408ea19362daa78fc369d2fd446cf3d458cfdc044ccbf57f08`, adapter
 `6b7e399b4a843028ce754ac9154b8ce1a4575b1581c8d6007cebf26f94e6d440`, v6
 validator `3f26b2aa7880cd9aff89cd5407643c934367764b590db98962cbc30bfa1b04a0`,
@@ -212,16 +206,10 @@ controller `b7d5b87d97e1441ccaa950a1fbe50a49f599483e68acee99596eda7dd612262d`이
 기존 v5 validator, known-case policy와 historical fixtures는 byte-identical로
 보존되며, W6 controller는 `blocked_partial`에서 부분 결과를 점수화하지 않는다.
 
-첫 W6 260729 실행은 source HEAD
-`46d17dc73381d4292ea342d7a10e85d4f2e338f6`와 immutable root
-`D:\SPD-Decap-PI-Evaluator-W6\46d17dc73381d4292ea342d7a10e85d4f2e338f6\260729`에
-결속된다. tombstone `blocked_partial.json` SHA는
-`b81525bd47744dc1ea5c75bb26f20ea354246ad88b8ce5bc9aef131cb50c09f7`이며 phase1
-passed, phase2 exit2, v6 not_started, scoring refused였다. 이 결과는 old policy
-`c362acb01ef28cefbbd1d32753f86bccafbdd53355b42eda83c03a6ea810698b`에 결속되므로
-새 policy로 소급 검증하지 않고 root도 재사용하지 않는다. W6-BLOCK-A는 layerwise
-diagnostic/correlation의 누락 terminal-complete argument를 adapter에서만 보강한
-DONE 묶음이며 base/solver/pivot gate/physics는 변경하지 않았다.
+W6의 tombstone, immutable root, exact 실행 SHA와 BLOCK-A–E 이력은
+[작업 기준](WORK_EXECUTION_BASELINE.md#w6-base-completed-evidence-260729)에만 둔다.
+과거 blocked-partial 또는 old-policy 결과를 현행 completed W6-BASE로 재분류하거나
+새 policy로 소급 검증하지 않는다.
 
 ## 7. Promotion gate
 
@@ -301,12 +289,13 @@ flowchart TD
   sign-off로 부르지 않는다.
 - AI는 solver 결과나 design state를 직접 변경하지 않는다.
 
-## 10. 두 기준 문서를 이용한 작업 방식
+## 10. 세 기준 문서를 이용한 작업 방식
 
-새 작업과 context가 재개될 때 기본 입력은 다음 두 문서로 제한한다.
+새 작업과 context가 재개될 때 기본 입력은 다음 세 문서로 제한한다.
 
-1. 이 **목적·기술 기준 문서**
-2. [**작업 기준 문서**](WORK_EXECUTION_BASELINE.md)
+1. 이 **목적·기술 기준 문서** — 목적, 합격선, 우선순위와 금지 경계
+2. [**Source-derived physical IR**](SOURCE_DERIVED_PHYSICAL_IR.md) — 현행 source IR 계약, schema와 기술 주장 범위
+3. [**작업 기준 문서**](WORK_EXECUTION_BASELINE.md) — current Git/evidence 상태, 실행 예산, 이력과 다음 승인 gate
 
 필요한 subsystem 문서와 source는 현재 작업 범위에 따라 선택해서 읽는다. 과거
 연구 문서 전체를 세션 시작 조건으로 삼지 않는다.
@@ -322,6 +311,8 @@ flowchart TD
 
 ## 11. 관련 문서와 해석 범위
 
+- [Source-derived physical IR](SOURCE_DERIVED_PHYSICAL_IR.md): source-derived
+  canonical IR의 현행 기술 계약. Phase별 실행 이력과 current Git 권위는 작업 기준에 둔다.
 - [Evaluation Accuracy and Modeling Boundary](EVALUATION_ACCURACY.md): 현행
   Evaluation 수식·modeling 상세. 일부 과거 validation 서술은 역사적 범위다.
 - [Evaluation Solver Deep-Research Decision Record](EVALUATION_SOLVER_DEEP_RESEARCH_2026-08-04.md):
@@ -343,23 +334,12 @@ flowchart TD
 |---|---|
 | 제품 기반 | W0–W5에서 목적·작업 통제, product-core truth, SPD/I/O 안전성, CI, solver fail-closed guard와 frozen accuracy gate를 확보했다. |
 | 외부 정확성 | W6-BASE 260729는 완료된 수치 결과지만 PowerSI 기준 **FAIL**이다. unseen/generalization은 `unknown / not_run`이다. |
-| W7의 유효 성과 | 17DG의 sparse gauge-safe finite-port condensation은 재사용 가능한 standalone 수학 기반이다. 17DL/17DN은 audit API/lifecycle 결함을 고쳤고, 17DO는 source coverage의 실제 한계를 계량했다. |
-| W7의 한계 | overall 17DO strict coverage는 terminal 30,526/63,872 complete와 via-pair gaps로 **BLOCKED/STOP**이다. 다만 nested `surface.production_compile`/`rail_port_audit`는 92/92 rail, 42,674 binding pins, 1,692,366 finite links, 1,729,871 owners를 complete로 확인했고 canonical W6 finite-via links는 1,692,389개다. 현재 17DS blocker는 rail 자체 불완전이 아니라 authoritative point/topology owner 집합과 raw-v3 finite-area PWR/return patch footprint 및 replaced-plane owners 사이 identity-level join, production global assembly, replacement owner-off 증거의 부재다. |
-| 17DR candidate gate | physical gate는 `C=ε₀εrA/d`와 uniform-strip series R/L analytic limits로 분리하고, 17DG는 별도의 gauge-safe finite-port condensation foundation으로 둔다(게이지/reciprocity/passivity는 physical limiting-case invariant가 아님). source/provenance/ownership feasibility 기준 sole credible next direction은 **surface-patch plane current-spreading R/L replacement**이지만 deterministic production replacement stamp와 global port/owner seam이 없어 W6 원인 또는 정확도 개선 판정이 아닌 **NOT READY/STOP**이다. |
-| 17DS closure | exact source-only subject `ADC_VDD_180_VQPS_SYS_1_AON/0` (selected layer labels `Signal$L30(OTHER_POWER1)` / `Signal$L29(DGND)`, active selected caps 0, device branches/pins 3/6, both endpoints authoritative finite-via vertices). Selection: eligible bare → both endpoints finite-Via → minimum branch/pin → canonical rail ID. Frozen candidate SHA `8b02836c03aa38c447fba37ddd30434a3e4ed34ce772654fa5bc3a8512543320` has only raw-spatial v2 `attachments/spatial/raw-spatial-contact-v2-40cb44b2376f59d6.sqlite.zlib` (attachment SHA `275c839633a37f3de3f76fd502d3a790d7c48da82e9ca156700449d1fa71f9c4`); v3 plane primitives/vertices/circles, stackup, and dielectric rows are absent: `STOP_RAW_SPATIAL_V3_ABSENT`. Old AdjacentGap/Dispersive plane stamps also lack persisted physical owner IDs, so disjoint replacement ownership is unprovable. Review **DONE**, candidate **NOT READY**, W7 **BLOCKED**, `ACTIVE NONE`. |
-| 17DT activation | Raw SPD contains source plane/stackup/material data. Fresh import-save-only v3 reproduction completed internally, but W6 comparison is `STOP_IDENTITY_DRIFT`; no production physics changed. |
-| 17DU closure | DONE with `STOP_AUDIT_CONTRACT_MISMATCH`; execution HEAD `36aacaf18dd09da66fae249b4756a8e082e51b3e`, runtime 160.5 s, max RSS 7.48 GiB, exit 2, no retry. Output `D:\SPD-Decap-PI-Evaluator-W7\36aacaf18dd09da66fae249b4756a8e082e51b3e\260729-17du-current-lineage-rail-footprint\rail_footprint_audit.json` (222 bytes, SHA-256 `BD175CB7C095A966923D92E305C248EB6EC64954A878CE0FB9819BBB19BEB72B`) contained error `target compiled rail port is absent or has unexpected net pair`; no local seam evidence was produced. Root cause is logical rail/contact/Via NET `ADC_VDD_180_VQPS_SYS_1_AON/0` versus physical layer-label token `Signal$L30(OTHER_POWER1)`, so changing only the first guard would leave contact/Via/surface lookup and success-stamp conflation. W7 remains BLOCKED; production physics/`Zii` unchanged. |
-| 17DV metadata bridge | DONE with `STOP_NO_AUTHORITATIVE_BRIDGE`; execution HEAD `11ef7af81ba087c0d9ec7442ba43940a23c734d9`, runtime 172.429 s, peak RSS 7,324,794,880 bytes, exit 2, no retry. Output `D:\SPD-Decap-PI-Evaluator-W7\11ef7af81ba087c0d9ec7442ba43940a23c734d9\260729-17dv-metadata-bridge\metadata_bridge_audit.json` (227 bytes, SHA-256 `86C3330EA47974167FE987821631A5F0FCB5DF9C4A56617A8574B5934D9CDB5A`) reported `artwork island has no unique plane geometry record`. This proves only that the frozen metadata bridge could not uniquely bind the selected finite-surface island to component/geometry/project plane metadata; it does not distinguish zero vs multiple matches or PWR vs GND, and does not prove raw artwork/physical-link absence, direction, PowerSI effect, W6 causality, global assembly, rail completeness, or owner-ledger state. 17DV is immutable and not retried; the historical four-file whitelist remains execution scope. |
-| source-derived IR pivot | 2026-08-28 사용자 결정으로 기존 prospective NO-GO의 `no-schema/no-raw` 권한 제한은 superseded되었다. 원본 SPD에서 source span, plane Boolean lineage, material origin, terminal footprint와 compiler-assigned plane owner를 보존하는 compact hash-bound SQLite를 새 prerequisite로 연다. 세부 계약은 [Source-derived physical IR](SOURCE_DERIVED_PHYSICAL_IR.md)에 둔다. |
-| source-derived IR Phase 1 | DONE. `source-plane-ownership-ir-v1`은 필드별 Layer/Material source record, PadDef+Regular terminal footprint, exact rail-bound island와 retained/plane owner exact-once ledger를 fail-closed 보존한다. 선택 rail 총 100,000행 상한과 complete-only terminal 계약을 적용하며 focused synthetic 결과는 `7 passed in 0.84s`다. 이는 storage prerequisite만 증명한다. |
-| source-derived IR Phase 2 | DONE. importer가 exact SPD span/record, cleanup 전 primitive↔island 관계, complete terminal chain과 raw/compiled identity를 한 원자적 scenario envelope에 결속한다. 두 full-file 실행은 각각 fixture 결함으로 `3 passed, 1 failed`였고, fixture와 producer integration seam을 수정한 뒤 축소한 end-to-end node가 `1 passed in 1.39s`로 닫혔다. production SPD/solver/W6는 실행하지 않았다. |
-| source-derived IR Phase 3 | DONE (shadow-only). validated IR/raw-v3에서 선택 rail의 PWR/return patch, stackup/material과 complete terminal footprint를 exact join해 deterministic finite-port witness를 만들었다. uniform-strip 양면 `Rdc`, `L=mu0*d*ell/w`, `C=epsilon0*epsilon_r*A/d` gate를 `<=1e-10`으로 닫았다. 첫 focused file은 float canonicalization fixture 결함으로 `1 failed, 1 passed in 1.30s`, fixture 수정 뒤 exact happy node는 `1 passed in 0.97s`였다. `NodalAdmittanceBlock`, production owner inventory, `Y_global`과 `Zii`는 변경하지 않았다. |
-| source-derived IR Phase 4 | **BLOCKED / candidate not accepted.** 이전 실행은 `3 passed, 1 failed in 2.77s`, 허용된 fixture 수정 뒤 `1 failed in 1.42s`였다. R1은 Device P/G anchor를 원복하고 proven trace-terminal topology로 generic Via를 구성해 Sol 정적 GO를 받았으나, 단일 허용 node가 persisted `contact_boundary`의 decap 분류 부재로 `1 failed in 1.70s`였다. 추가 반복은 금지하며 production stamp/`Zii`는 불변이다. |
-| 열지 않는 후보 | Trace R/L은 source trace-width/return assignment가 incomplete하고, Via return/mutual은 source-complete plating/fill/return-plane contract가 없다. Pad/anti-pad는 complete antipad/replacement boundary가 없고, dielectric은 scalar/table dispersion이 이미 active라 temperature-less model로 temperature variant를 source-faithful하게 표현할 수 없다. GUI `include_plane_sheet_payload` 플래그만 켜는 것은 데이터만 만들 뿐 physics를 바꾸지 않으므로 금지한다. |
-| 후속 필요성 | 현 artifact만 이용한 Via/sheet/profile ablation은 여러 누락 물리 항을 식별하지 못하므로 실행하지 않는다. owner-manifest/schema 작업도 선택된 물리 후보 없이 진행하면 validation churn이다. |
-| 현재 권한 | `W7-SOURCE-IR-P1/P2/P3 DONE`, `P4-R1 BLOCKED`, `ACTIVE NONE`. R1의 fixture 수정·정적 검토·동일 node 1회 실행 예산은 소진됐다. 17DU/17DV는 preserved immutable DONE/STOP으로 재실행하지 않는다. |
-| 재개 조건 | persisted boundary에서 mounted decap 분류가 왜 누락되는지 quotient 모집단과 terminal 보강 계약을 정적으로 한 causal item으로 고정하고 새 단일 검증 예산을 명시해야 한다. 그 PASS 전 direct-artwork contact 분류와 adjacent-gap pre-collapse owner inventory는 열지 않는다. |
+| Source IR 성과 | Phase 1/2는 canonical source/provenance IR과 importer seam, Phase 3은 deterministic shadow finite-port witness를 committed 범위에서 완료했다. 세부 계약은 [Source-derived physical IR](SOURCE_DERIVED_PHYSICAL_IR.md)이 권위 있다. |
+| Source IR 한계 | Phase 4 contact-complete v2는 uncommitted worktree candidate이며 static GO만 있다. focused runtime acceptance는 decap boundary 부재에서 실패했고, generic Via와 canonical authority 검증은 실행되지 않았다. |
+| 생산 물리 상태 | surface-patch plane current-spreading R/L이 유일한 credible direction이지만 Phase 4 contact/owner prerequisite, deterministic replacement stamp, global assembly와 owner-off ledger가 없어 **NOT READY/STOP**이다. |
+| 현재 작업 상태 | `ACTIVE NONE`. Phase 4/R1 실행 예산은 소진됐고 production `Y_global`/`Zii`는 변경되지 않았다. |
+| 다음 승인 gate | `W7-SOURCE-IR-P4-R2-CAUSE` READY. decap row 부재를 quotient 모집단, terminal-kind 보강 join, fixture 요구 부정합 중 하나로 실행 없이 분류한다. 별도 승인 전 코드·fixture·pytest는 금지한다. |
 
-세부 실행 이력과 exact artifact identity는
-[작업 기준](WORK_EXECUTION_BASELINE.md)에 두고 이 문서에 다시 복제하지 않는다.
-이전 미시적 실행 이력은 Git history로 추적한다.
+세부 실행 이력, exact artifact identity와 current dirty file set은
+[작업 기준](WORK_EXECUTION_BASELINE.md)에만 둔다. 이전 미시적 실행 이력은 Git
+history로 추적하며, 이 문서에는 다시 복제하지 않는다.

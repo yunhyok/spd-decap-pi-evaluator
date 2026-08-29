@@ -1,8 +1,8 @@
 # SPD Decap PI Evaluator 작업 기준
 
 - 적용 제품: **SPD Decap PI Evaluator v0.23.1**
-- 문서 버전: **1.166**
-- 상위 기준: [목적·기술 기준](PRODUCT_PURPOSE_AND_TECHNICAL_BASELINE.md) v1.165
+- 문서 버전: **1.167**
+- 상위 기준: [목적·기술 기준](PRODUCT_PURPOSE_AND_TECHNICAL_BASELINE.md) v1.166
 - 현재 상태: W6 numerical FAIL; W7-PHYS BLOCKED; W7-SOURCE-IR-P1/P2/P3 DONE; P4-R1 BLOCKED; 17DG standalone/no Zii change; 17DT/17DU/17DV immutable DONE/STOP.
 - 최종 개정: 2026-08-29 (Asia/Seoul)
 
@@ -13,26 +13,42 @@ context가 압축되거나 새 session에서 작업을 재개하면 이 표만 �
 | 항목 | 현재 값 |
 |---|---|
 | 변하지 않는 목적 | source-derived single-rail `Zii`의 PowerSI 근접 정확성과 일반화 |
+| 기본 복구 문서 | 목적·기술 기준 → Source-derived physical IR → 이 작업 기준, 세 문서 |
 | 현재 branch | `main`만 사용 |
+| 이 문서 정리의 source-before HEAD | `d417681` (`docs: record phase 4 R1 validation stop`) |
 | 현재 assessment | W6-BASE numerical FAIL; 17DV persisted bridge STOP은 유효하나 원본 SPD 정보 부재 주장은 하지 않음; source-derived canonical IR prerequisite 승인 |
 | 현재 active work item | **NONE** — P4-R1 단일 node 실패 후 no-repeat 계약으로 BLOCKED |
 | 현재 정확성 상태 | `260729 retrospective FAIL`; unseen/generalization `unknown / not_run` |
 | current authorization | P4-R1 검증 예산 소진; 추가 fixture/pytest/direct-artwork/adjacent-gap/production physics 권한 없음; main-only, `accuracy_parse.py` 보존 |
-| 정확한 재개 조건 | persisted boundary의 decap 분류 누락 원인을 quotient 모집단과 terminal 보강 계약에서 한 causal item으로 정적으로 고정하고 새 단일 검증 예산을 명시; 그 전 production `Zii` 변경 금지 |
+| 다음 후보 gate | `W7-SOURCE-IR-P4-R2-CAUSE` READY, 미승인 — decap row 부재를 실행 없이 한 원인으로 분류 |
+| 정확한 재개 조건 | causal conclusion, 최소 수정 whitelist와 실패 node 단 1회 budget을 사용자가 승인; 그 전 production `Zii` 변경 금지 |
 | 핵심 증거 | [W6-BASE completed evidence](#w6-base-completed-evidence-260729), [W7 결과 재평가](#12-w7-결과-재평가와-후속-과제-판정) |
 
 최초 목적은 [목적·기술 기준 2장](PRODUCT_PURPOSE_AND_TECHNICAL_BASELINE.md#2-최우선-목적),
 현재 증거 상태는 [6장](PRODUCT_PURPOSE_AND_TECHNICAL_BASELINE.md#6-증거와-상태-표기)이
 권위 있다. 이 문서는 그것을 재정의하지 않는다.
 
+### 1.1 현재 구현·증거 경계
+
+| 구분 | 현재 권위 |
+|---|---|
+| accepted / committed | Phase 1 `82370b6`, Phase 2 `75ac0a0`, Phase 3 `5d2c353`; 모두 prerequisite/shadow 범위이며 production `Y_global`/`Zii` 불변 |
+| uncommitted candidate | `raw_spatial_contact_compiler.py`, `source_plane_ownership_ir.py`, `spd_adapter.py`, `test_source_plane_ownership_ir_producer.py`의 tracked 4-file diff |
+| static evidence | Phase 4 v2 candidate와 최종 trace-terminal fixture에 대한 Sol GO |
+| runtime evidence | import/v2 load 뒤 persisted decap row 부재로 focused node `1 failed in 1.70s` |
+| runtime 미증명 | Via11 `other`, endpoint/rotation/padstack, canonical authority list/set/count/SHA |
+| 별도 사용자 파일 | untracked `accuracy_parse.py`; 보존·미수정·미stage |
+| candidate staging / acceptance | production/test candidate는 미stage·미수용; 문서 개정과 분리; `ACTIVE NONE` |
+
 ## 2. 문서 사용 규칙
 
-### 2.1 두 문서만 기본 context로 사용
+### 2.1 세 문서만 기본 context로 사용
 
-작업 시작 시 기본 입력은 다음 두 개뿐이다.
+작업 시작 시 기본 입력은 다음 세 개뿐이다.
 
-1. `PRODUCT_PURPOSE_AND_TECHNICAL_BASELINE.md`
-2. `WORK_EXECUTION_BASELINE.md`
+1. `PRODUCT_PURPOSE_AND_TECHNICAL_BASELINE.md` — 목적·합격선·금지 경계
+2. `SOURCE_DERIVED_PHYSICAL_IR.md` — source IR 계약·schema·기술 주장 범위
+3. `WORK_EXECUTION_BASELINE.md` — current Git/evidence·실행 예산·다음 승인 gate
 
 active work item에 명시된 source/test/subsystem 문서만 추가로 읽는다. 전체
 `docs/evaluation-research`, session log, 과거 release note 또는 branch 역사를
@@ -49,7 +65,8 @@ active work item에 명시된 source/test/subsystem 문서만 추가로 읽는�
 
 목적, 제품 sign-off 범위 또는 PowerSI 수치 합격선은 이 문서에서 임의로 바꾸지
 않는다. W6 one-run production authority는 260729 completed numerical FAIL과
-함께 소진되었고 W7 audit는 source-owner-gap으로 종료되었다. 향후 production
+함께 소진되었다. historical W7 audit의 source-owner gap은 Source IR Phase 1–3으로
+일부 prerequisite를 확보했지만 Phase 4 contact boundary에서 다시 BLOCKED다. 향후 production
 rerun은 source-certified rail-complete physical candidate, deterministic stamp,
 falsifiable physical/analytic limiting-case invariant, disjoint owner ledger를 확보하고
 사용자가 명시 승인한 경우에만 고려한다. 재개 후
@@ -76,7 +93,7 @@ retry, threshold/fallback 변경은 승인되지 않았다.
 
 | 단계 | 목적 | 종료 조건 | 고비용 검증 |
 |---|---|---|---|
-| `W0` | 두 canonical 문서 고정 | 목적/작업 문서 상호 링크와 문서 검증 | 금지 |
+| `W0` | 세 canonical 문서 고정 | 목적/IR/작업 문서 상호 링크와 문서 검증 | 금지 |
 | `W1` | product-core test truth 복원 | stale test 계약 정리, bounded core selection 확정 | 금지 |
 | `W2` | 범위가 확정된 SPD/I/O 결함 수정 | focused checks 통과, 실제 결함별 회귀 check 존재 | 금지 |
 | `W3` | product-core CI gate 활성화 | W1/W2 묶음이 한 번의 core suite에서 green | production solve 금지 |
@@ -98,6 +115,9 @@ disjoint owner ledger 확보와 사용자 명시 승인
 상태 어휘는 `READY`, `ACTIVE`, `BLOCKED`, `DEFERRED`, `DONE`만 사용한다.
 동시에 `ACTIVE`는 하나만 허용하며 현재는 **NONE**이다. 완료된 미시적 item을
 다시 펼쳐 읽지 말고 아래 phase-level 결론과 Git history를 사용한다.
+상태와 증거 축은 분리한다. `DONE`은 선언한 범위의 종료일 뿐 current commit,
+production acceptance, runtime PASS 또는 PowerSI 정확성을 자동으로 뜻하지 않는다.
+dirty/static/runtime/commit 상태는 복구 카드 1.1에 별도로 기록한다.
 
 | ID | 순서 | 상태 | 작업 묶음 | 완료 기준·현재 결론 |
 |---|---:|---|---|---|
@@ -133,6 +153,7 @@ disjoint owner ledger 확보와 사용자 명시 승인
 | `W7-SOURCE-IR-P2` | IR-2 | DONE | import-time producer seam과 atomic scenario envelope 결속 | exact SPD spans/records, cleanup 전 live relation, raw/compiled identity finalization; combined focused evidence green, final end-to-end node `1 passed in 1.39s` |
 | `W7-SOURCE-IR-P3` | IR-3 | DONE | source-plane patch shadow finite-port witness | exact IR/raw/owner join, analytic R/L/C와 deterministic finite-port witness PASS; production stamp/owner/`Zii` 불변 |
 | `W7-SOURCE-IR-P4` | IR-4 | BLOCKED | quotient-authoritative contact-complete ownership IR v2 R1 | proven trace-terminal fixture와 Sol 정적 GO 뒤 단일 node가 persisted decap boundary 부재로 `1 failed in 1.70s`; no retry; v2 candidate not accepted |
+| `W7-SOURCE-IR-P4-R2-CAUSE` | IR-4R2 | READY | decap boundary 부재의 단일 causal contract | dirty 4-file diff와 committed quotient/terminal 경로의 read-only 추적만 제안; 사용자 승인 전 ACTIVE 전환·수정·실행 금지 |
 | `W7-PHYS-PROSPECTIVE` | next | BLOCKED | 단일 source-derived physical candidate의 causal checkpoint | geometry/material provenance, rail-complete 범위, deterministic stamp, falsifiable physical/analytic limiting-case invariant, disjoint owner ledger 및 사용자 명시 승인 후에만 READY 가능 |
 | `W8-REL` | 18 | BLOCKED | completed known-case solve를 release gate에 연결하고 최종 전달 | accuracy/product gate와 exact release commit 필요 |
 | `D-DIST` | - | DEFERRED | Distribution routing/DRC scope 확대 | 사용자가 implementation-ready/DRC 목표로 승격할 때만 |
@@ -399,7 +420,7 @@ remote/full suite, installer/release는 수행하지 않았다.
 
 ## 8. Context 압축·새 session 복구 절차
 
-1. 상위 목적 문서와 이 문서의 `압축 후 즉시 복구 카드`만 읽는다.
+1. 상위 목적 문서, Source-derived physical IR와 이 문서의 `압축 후 즉시 복구 카드`를 순서대로 읽는다.
 2. `git branch --show-current`, `git rev-parse HEAD`, `git status --short`로 실제
    checkout을 확인한다.
 3. `main`이 아니거나 recorded source 기준과 예상하지 않은 차이가 있으면 작업을
@@ -439,7 +460,7 @@ remote/full suite, installer/release는 수행하지 않았다.
 | `D-003` | PowerSI는 comparison-only이며 fitting 입력이 아님 | 확정 |
 | `D-004` | W5 이전 제품 PowerSI 수치 합격선은 사용자 승인 전 미확정 | W5에서 superseded; historical decision |
 | `D-005` | 작은 수정마다 전체 검증하지 않고 frozen milestone에서 1회 실행 | 확정 |
-| `D-006` | context 기본 입력은 두 canonical 문서뿐 | 확정 |
+| `D-006` | context 기본 입력은 목적·Source IR·작업의 세 canonical 문서뿐 | 확정 |
 | `D-007` | historical closure에서 다음 item을 자동 시작하지 않음 | D-008로 superseded |
 | `D-008` | artifact-only ablation은 non-identifying이며 owner-manifest/schema continuation은 지금 진행하지 않음; ACTIVE NONE 유지 | historical; D-009 supersedes only for approved 17DT scope |
 | `D-009` | 사용자 승인 17DT에 한해 fresh import-save-only raw-spatial v3 reproduction을 네 파일 whitelist로 실행; `accuracy_parse.py`는 보존·미수정 | 확정 |
@@ -447,6 +468,7 @@ remote/full suite, installer/release는 수행하지 않았다.
 | `D-011` | 17DV는 persisted join 부재만 증명한다. 2026-08-28 사용자 승인으로 원본 SPD 기반 canonical IR을 새 prerequisite로 열되 raw-v3를 변경하거나 solve-time 재파싱하지 않음 | 확정 |
 | `D-012` | Phase 2 producer seam을 combined focused evidence로 닫고, 다음 단계는 production assembly가 아닌 `source-plane-patch-v1` shadow consumer로 제한 | 확정 |
 | `D-013` | Phase 3 shadow consumer를 exact selected-rail provenance와 analytic R/L/C gate로 닫되 production `NodalAdmittanceBlock`, owner inventory, `Y_global`/`Zii`에는 연결하지 않고 ACTIVE NONE으로 복귀 | 확정 |
+| `D-014` | Phase 4는 contract·commit·static·runtime·production 상태를 분리해 기록한다. 현재 v2 candidate는 static GO지만 runtime FAIL·미수용이며, `P4-R2-CAUSE`는 READY일 뿐 사용자 승인 전 실행하지 않음 | 확정 |
 
 ## 11. 현재 evidence와 비재사용 경계
 
@@ -611,21 +633,33 @@ audit은 열지 않으며 prospective production seam은 BLOCKED다.
 flowchart LR
   A[W6 PowerSI FAIL] --> B[17DS: plane current-spreading R/L만 credible]
   B --> C[finite-area PWR/return footprint와 old-plane owner-off joint ledger 없음]
-  D[17DG foundation] -. production binding 없음 .-> C
-  E[17DO coverage] --> F[17DP owner identity gap]
-  F --> C
   C --> G[17DV DONE: persisted bridge STOP]
   G --> M[W7-SOURCE-IR-P1: source identity/owner DB DONE]
   M --> N[W7-SOURCE-IR-P2: importer producer seam DONE]
   N --> O[W7-SOURCE-IR-P3: shadow analytic/owner gate DONE]
-  O --> H
+  O --> P[W7-SOURCE-IR-P4: static GO / runtime FAILED]
+  P --> Q[P4-R2-CAUSE READY: read-only causal classification]
+  Q --> R{one cause + whitelist + one-node budget approved?}
+  R -->|아니오| S[BLOCKED / ACTIVE NONE]
+  R -->|예| T[one minimal change + one focused node]
+  T --> U{contact/authority acceptance PASS?}
+  U -->|아니오| S
+  U -->|예| H
+  D[17DG foundation] -. production binding 필요 .-> H
+  E[17DO/17DP owner evidence] -. identity join 필요 .-> H
   H[source-certified rail-complete candidate<br/>deterministic stamp<br/>falsifiable physical/analytic limiting-case invariant<br/>disjoint owner ledger] --> I[사용자 명시 승인]
   I --> J[one physical change]
   J --> K[focused evidence]
   K --> L[new bounded gate]
 ```
 
-다음 work item은 아래 조건을 모두 만족할 때 하나만 연다.
+즉시 다음 후보는 `W7-SOURCE-IR-P4-R2-CAUSE` 하나이며 상태는 READY다. 실행 없이
+decap row 부재를 하나의 falsifiable 원인으로 고정하고 최소 수정 whitelist와 실패 node
+단 1회 budget을 제시하는 것까지만 허용 후보로 삼는다. 사용자 승인 전 ACTIVE로 바꾸지
+않고 코드·fixture·pytest를 수정하거나 실행하지 않는다.
+
+Phase 4 acceptance가 PASS한 뒤에만 physical work item을 검토한다. physical item은 아래
+조건을 모두 만족할 때 하나만 연다.
 
 1. source-derived geometry/material provenance가 있다.
 2. 대상 rail 전체에 적용 가능한 physical model 또는 omitted-block candidate다.
@@ -767,7 +801,9 @@ network scanner, `_core/io/spd.py`, current patch consumer, solver/evaluator/sce
 profile, production stamp와 `Zii`는 변경하지 않는다. ledger status는 계속
 `prerequisite_only`이며 `replacement_ready`를 기록하지 않는다.
 
-검증 예산은 구현 중 실행 없음, Luna 구현 완료 뒤
+#### Historical Phase 4/R1 validation budget — CONSUMED, DO NOT REUSE
+
+초기 Phase 4 예산은 구현 중 실행 없음, Luna 구현 완료 뒤
 `python -m pytest -q tests/test_source_plane_ownership_ir_producer.py` 한 번, Sol 정적
 diff review 한 번, `git diff --check` 한 번이다. full suite, 기존 test 재실행,
 production SPD, W6/Touchstone, build/release는 금지한다. 첫 focused failure가 실제
@@ -793,8 +829,9 @@ retained quotient contact가 아니어서 IR generic row가 없었던 것이다.
 PWR surface에 속하지 않아 fail-closed됐다.
 
 따라서 12.8의 fixture 수정·재실행 예산은 소진됐고 추가 실행, adjacent-gap inventory,
-direct-artwork gate와 production physics는 열지 않는다. 현재 7-file worktree candidate는
-승인·커밋된 기준이 아니다. 재개하려면 P/G anchor island를 바꾸지 않는 unselected
+direct-artwork gate와 production physics는 열지 않는다. 당시 whitelist는 문서 3개와
+production/test 4개였지만 문서 closure는 committed됐고 현재 dirty candidate는 tracked
+production/test 4개뿐이다. candidate는 승인·커밋된 기준이 아니다. 재개하려면 P/G anchor island를 바꾸지 않는 unselected
 conductor intermediate 또는 동등한 source-valid retained topology를 먼저 문서로 고정하고,
 추가 focused 실행 예산을 명시해야 한다.
 
@@ -819,7 +856,26 @@ canonical authority list/set/count/SHA assertion은 실행되지 않았으므로
 간주하지 않는다.
 
 no-repeat 계약에 따라 추가 fixture·생산 코드 수정, pytest 재실행, direct-artwork gate,
-adjacent-gap inventory와 production physics는 열지 않는다. 현재 7-file candidate 중
-생산 코드와 테스트 diff는 승인·커밋하지 않고 보존한다. 재개하려면 decap boundary가
+adjacent-gap inventory와 production physics는 열지 않는다. 현재 dirty 4-file production/test
+diff는 승인·커밋하지 않고 보존한다. 재개하려면 decap boundary가
 quotient incident 모집단에서 누락되는지, terminal kind 보강에서 누락되는지를 실행 없이
 먼저 분리하는 새 causal contract와 단일 검증 예산을 문서로 승인해야 한다.
+
+### 12.9 W7-SOURCE-IR-P4-R2-CAUSE proposed gate
+
+상태는 **READY / not authorized**다. 목적은 실행 없이 persisted decap boundary 부재를
+다음 셋 중 정확히 하나로 분류하는 것이다.
+
+1. selected component의 quotient-incident 모집단에서 decap edge가 누락됨
+2. edge는 있으나 `terminal_landing_contacts`의 Via/kind 보강 join에서 누락됨
+3. fixture topology와 `owner_kind=decap` acceptance 요구가 서로 부정합함
+
+허용 후보 범위는 current dirty 4-file diff와 committed quotient/terminal contract의
+read-only caller 추적뿐이다. 코드·fixture·문서 추가 수정, pytest/import/build,
+production SPD, W6/Touchstone, solver/physics/profile/GUI/release는 금지한다.
+
+완료 조건은 하나의 falsifiable cause, 해당 source/function 경로, 최소 수정 whitelist,
+실패 node 단 1회만 포함한 별도 validation budget과 STOP 조건을 제시하는 것이다. 정적
+근거만으로 원인을 하나로 고정할 수 없거나 runtime 관찰이 먼저 필요하면 BLOCKED를
+유지한다. 사용자가 causal conclusion과 exact whitelist/budget을 승인하기 전에는
+`ACTIVE`로 전환하거나 구현하지 않는다.
