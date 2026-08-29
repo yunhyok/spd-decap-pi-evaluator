@@ -406,3 +406,77 @@ def test_source_plane_patch_shadow_local_replacement_recipe_is_atomic(tmp_path: 
     assert changed_commutation["status"] == "passed"
     stopped = consumer.audit_source_plane_patch_shadow_local_replacement_recipe(patch, rewire, changed_commutation, changed_binding, rail_id="VDD_CORE/1")
     assert stopped["status"] == "stopped" and stopped["code"] == "LOCAL_REPLACEMENT_SOURCE_POINT_UNAVAILABLE"
+
+
+def test_source_plane_patch_shadow_topology_embedding_is_complete(tmp_path: Path):
+    imported = _v2_import(tmp_path)
+    project = imported.scenario.base_project
+    own = project.metadata["spd_import"]["source_plane_ownership_ir"]
+    raw = project.metadata["spd_import"]["raw_spatial_contact_asset"]
+    substrate = compile_layerwise_substrate(project, imported.attachments, required_rail_id="VDD_CORE/1", require_plane_sheet_payload=True)
+    patch = consumer.evaluate_source_plane_contact_condensation(own, imported.attachments, raw, imported.attachments, rail_id="VDD_CORE/1", frequency_hz=1.0e9, cell_um=1000.0)
+    seed_rewire = consumer.plan_source_plane_patch_shadow_contact_rewire(own, imported.attachments, raw, patch, substrate, rail_id="VDD_CORE/1")
+    assert seed_rewire["status"] == "planned"
+    seed_external = tuple(dict.fromkeys(str(row["external_endpoint"]) for row in seed_rewire["rewire_rows"]))
+    assert len(seed_external) >= 2 and seed_external[0] != seed_external[1]
+    from scipy.sparse import csc_matrix
+    from spd_decap_pi._core.solver.layer_surface_network import compile_layer_surface_network
+    template_wrapper = substrate.network.partials[0]
+    capacitance = 1.0e-12
+    augmented_matrix = csc_matrix([[capacitance, -capacitance], [-capacitance, capacitance]], dtype=float)
+    augmented_partial = replace(template_wrapper.partial, net_names=tuple(seed_external[:2]), maxwell_capacitance_f=augmented_matrix)
+    augmented_wrapper = replace(template_wrapper, partial=augmented_partial)
+    augmented_network = compile_layer_surface_network(substrate.network.surface_node_ids, partials=substrate.network.partials + (augmented_wrapper,), via_links=substrate.network.via_links, ports=substrate.network.ports)
+    augmented_identity = sha256(consumer.concrete_canonical_json_bytes({"base": substrate.substrate_identity_sha256, "p8": "augmented", "external": seed_external[:2]})).hexdigest()
+    substrate = replace(substrate, network=augmented_network, substrate_identity_sha256=augmented_identity, provenance={**substrate.provenance, "substrate_identity_sha256": augmented_identity})
+    rewire = consumer.plan_source_plane_patch_shadow_contact_rewire(own, imported.attachments, raw, patch, substrate, rail_id="VDD_CORE/1")
+    binding = _empty_scenario_binding(substrate)
+    commutation = consumer.audit_source_plane_patch_shadow_rewire_commutation(rewire, substrate, binding, rail_id="VDD_CORE/1")
+    recipe = consumer.audit_source_plane_patch_shadow_local_replacement_recipe(patch, rewire, commutation, binding, rail_id="VDD_CORE/1")
+    original = (substrate.network.surface_node_ids, substrate.network.via_links, substrate.network.partials, substrate.network.ports)
+    edge = recipe["remove_old_maxwell"][0]
+    matched_ordinal = int(edge["partial_ordinal"])
+    original_csc = substrate.network.partials[matched_ordinal].partial.maxwell_capacitance_f
+    original_csc_snapshot = (tuple(original_csc.data), tuple(original_csc.indices), tuple(original_csc.indptr))
+    shadow_network, first = consumer.materialize_source_plane_patch_shadow_topology_embedding(commutation, recipe, binding, rail_id="VDD_CORE/1")
+    second_network, second = consumer.materialize_source_plane_patch_shadow_topology_embedding(commutation, recipe, binding, rail_id="VDD_CORE/1")
+    assert first == second and first["status"] == "passed" and first["shadow_only"] is True
+    assert first["topology_materialized"] is True and first["p1_stamp_applied"] is False and first["solve_eligible"] is False and first["production_ready"] is False and first["replacement_ready"] is False
+    assert shadow_network is not None and second_network is not None and type(shadow_network) is type(second_network)
+    assert shadow_network.surface_node_ids == second_network.surface_node_ids and shadow_network.via_links == second_network.via_links and shadow_network.ports == second_network.ports
+    assert any(partial is augmented_wrapper for partial in shadow_network.partials)
+    assert [row["interface_node_id"] for row in first["interface_embedding"]] == recipe["add_p1_nport"]["interface_node_ids"]
+    old_keys = {str(value).casefold() for value in commutation["old_selected_class_node_ids"]}
+    assert not old_keys & {str(value).casefold() for value in shadow_network.surface_node_ids}
+    assert tuple(shadow_network.surface_node_ids[-len(recipe["add_p1_nport"]["interface_node_ids"]):]) == tuple(recipe["add_p1_nport"]["interface_node_ids"])
+    assert len({row["reduced_index"] for row in first["interface_embedding"]}) == len(first["interface_embedding"])
+    for key in ("shadow_surface_manifest_sha256", "shadow_partial_manifest_sha256", "shadow_link_manifest_sha256", "shadow_port_manifest_sha256", "shadow_termination_manifest_sha256", "shadow_network_identity_sha256", "topology_embedding_sha256"):
+        assert len(first[key]) == 64
+    assert shadow_network.ports is binding.network.ports
+    from spd_decap_pi._core.solver.layer_surface_termination import compile_layer_surface_termination_manifest
+    shadow_termination_manifest = compile_layer_surface_termination_manifest(shadow_network.surface_node_ids, tuple(cluster.source for cluster in binding.termination_manifest.clusters))
+    assert shadow_termination_manifest.manifest_sha256 == first["shadow_termination_manifest_sha256"]
+    shadow_network.termination_reduced_node_mapping(shadow_termination_manifest)
+    assert substrate.network.surface_node_ids is original[0] and substrate.network.via_links is original[1] and substrate.network.partials is original[2] and substrate.network.ports is original[3]
+    retained_seed = next(value for value in seed_external if value.casefold() not in {str(item).casefold() for item in commutation["old_selected_class_node_ids"]})
+    tampered_commutation = {**commutation, "old_selected_class_node_ids": list(commutation["old_selected_class_node_ids"]) + [retained_seed]}
+    tampered_network, tampered = consumer.materialize_source_plane_patch_shadow_topology_embedding(tampered_commutation, recipe, binding, rail_id="VDD_CORE/1")
+    assert tampered_network is None and tampered["status"] == "stopped" and tampered["code"] == "SHADOW_EMBEDDING_IDENTITY_MISMATCH"
+
+    original_partial = substrate.network.partials[matched_ordinal]
+    upper, lower = str(edge["upper_island_id"]), str(edge["lower_island_id"])
+    capacitance = float.fromhex(edge["capacitance_f_hex"])
+    narrow_matrix = csc_matrix([[capacitance, -capacitance], [-capacitance, capacitance]], dtype=float)
+    narrow_partial = replace(original_partial.partial, net_names=(upper, lower), maxwell_capacitance_f=narrow_matrix)
+    narrow_wrapper = replace(original_partial, partial=narrow_partial)
+    narrow_network = compile_layer_surface_network(substrate.network.surface_node_ids, partials=(narrow_wrapper,), via_links=substrate.network.via_links, ports=substrate.network.ports)
+    narrow_identity = sha256(consumer.concrete_canonical_json_bytes({"base": substrate.substrate_identity_sha256, "p8": "narrow"})).hexdigest()
+    narrow_substrate = replace(substrate, network=narrow_network, substrate_identity_sha256=narrow_identity, provenance={**substrate.provenance, "substrate_identity_sha256": narrow_identity})
+    narrow_rewire = consumer.plan_source_plane_patch_shadow_contact_rewire(own, imported.attachments, raw, patch, narrow_substrate, rail_id="VDD_CORE/1")
+    narrow_binding = _empty_scenario_binding(narrow_substrate)
+    narrow_commutation = consumer.audit_source_plane_patch_shadow_rewire_commutation(narrow_rewire, narrow_substrate, narrow_binding, rail_id="VDD_CORE/1")
+    narrow_recipe = consumer.audit_source_plane_patch_shadow_local_replacement_recipe(patch, narrow_rewire, narrow_commutation, narrow_binding, rail_id="VDD_CORE/1")
+    assert narrow_commutation["status"] == "passed" and narrow_recipe["status"] == "passed"
+    none_network, stopped = consumer.materialize_source_plane_patch_shadow_topology_embedding(narrow_commutation, narrow_recipe, narrow_binding, rail_id="VDD_CORE/1")
+    assert none_network is None and stopped["status"] == "stopped" and stopped["code"] == "SHADOW_EMBEDDING_UNREPRESENTABLE"
+    assert (tuple(original_csc.data), tuple(original_csc.indices), tuple(original_csc.indptr)) == original_csc_snapshot

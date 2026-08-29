@@ -1,20 +1,20 @@
 """Shadow-only source-plane patch witness (Phase 3).
 
 This module consumes the authenticated Phase-1 ownership sidecar and raw-v3
-plane sheet.  It deliberately returns data only; production MNA/Y/Z paths are
-not touched.
+plane sheet.  It deliberately returns shadow data/ephemeral networks only;
+production MNA/Y/Z paths are not touched.
 """
 from __future__ import annotations
 
 from collections.abc import Mapping
-from dataclasses import fields, is_dataclass
+from dataclasses import fields, is_dataclass, replace
 from hashlib import sha256
 import json
 import math
 from typing import Any
 
 import numpy as np
-from scipy.sparse import issparse
+from scipy.sparse import csc_matrix, issparse
 
 from .canonical_json import concrete_canonical_json_bytes, iter_concrete_canonical_json_bytes
 from .raw_spatial_contact_asset import load_raw_spatial_contact_asset
@@ -25,6 +25,8 @@ from .source_plane_ownership_ir import (
 from ._core.geometry.ordered_boolean import ordered_spd_geometry
 from ._core.solver.mfdm import EPSILON_0_F_PER_M, MU_0_H_PER_M
 from ._core.solver.layerwise_network import LayerwiseScenarioNetworkBinding
+from ._core.solver.layer_surface_network import CompiledLayerSurfaceNetwork, compile_layer_surface_network
+from ._core.solver.layer_surface_termination import compile_layer_surface_termination_manifest
 from ._core.solver.surface_patch_plane import (
     SurfacePatchArtwork,
     SurfacePatchConductor,
@@ -2130,4 +2132,237 @@ def audit_source_plane_patch_shadow_local_replacement_recipe(
     return {"schema_version": "source-plane-shadow-local-replacement-recipe-v1", "status": "passed", "code": None, "shadow_only": True, "production_ready": False, "replacement_ready": False, **{key: recipe_identity[key] for key in ("rail_id", "source_sha256", "p1_input_sha256", "p1_output_sha256", "old_edge_set_sha256", "substrate_identity_sha256", "shadow_split_sha256", "scenario_identity_sha256", "scenario_plan_sha256", "scenario_commutation_sha256", "scenario_surface_node_manifest_sha256", "scenario_link_manifest_sha256", "termination_manifest_sha256", "port_termination_boundary_sha256")}, "remove_old_maxwell": matched, "rewire_finite": rewire_finite, "owner_ledger": owner_ledger, "add_p1_nport": add_p1, "deterministic_recipe_sha256": sha256(concrete_canonical_json_bytes(recipe_identity)).hexdigest()}
 
 
-__all__ = ["SourcePlanePatchError", "consume_source_plane_patch", "evaluate_source_plane_contact_admissibility", "evaluate_source_plane_contact_condensation", "audit_source_plane_patch_owner_off", "audit_source_plane_patch_contact_quotient_representability", "audit_source_plane_patch_selected_base_cutset", "plan_source_plane_patch_shadow_contact_rewire", "audit_source_plane_patch_shadow_rewire_commutation", "audit_source_plane_patch_shadow_local_replacement_recipe"]
+def materialize_source_plane_patch_shadow_topology_embedding(
+    commutation_result: Mapping[str, Any],
+    recipe_result: Mapping[str, Any],
+    binding: LayerwiseScenarioNetworkBinding,
+    *,
+    rail_id: str,
+) -> tuple[CompiledLayerSurfaceNetwork | None, Mapping[str, Any]]:
+    """Materialize P6/P7 topology into one ephemeral immutable shadow network."""
+    rail_id = _text(rail_id, "rail_id")
+
+    def digest(value: Any, label: str) -> str:
+        if not isinstance(value, str):
+            _fail(f"SHADOW_EMBEDDING_INVALID: {label} is not SHA-256")
+        value = value.strip()
+        if len(value) != 64 or value != value.casefold() or any(character not in "0123456789abcdef" for character in value):
+            _fail(f"SHADOW_EMBEDDING_INVALID: {label} is not SHA-256")
+        return value
+
+    if not isinstance(commutation_result, Mapping) or commutation_result.get("schema_version") != "source-plane-shadow-rewire-commutation-v1" or commutation_result.get("status") != "passed" or commutation_result.get("code") is not None or commutation_result.get("shadow_only") is not True or commutation_result.get("production_ready") is not False or commutation_result.get("replacement_ready") is not False:
+        _fail("SHADOW_EMBEDDING_INVALID: P6 is not passed shadow output")
+    if not isinstance(recipe_result, Mapping) or recipe_result.get("schema_version") != "source-plane-shadow-local-replacement-recipe-v1" or recipe_result.get("status") != "passed" or recipe_result.get("code") is not None or recipe_result.get("shadow_only") is not True or recipe_result.get("production_ready") is not False or recipe_result.get("replacement_ready") is not False:
+        _fail("SHADOW_EMBEDDING_INVALID: P7 is not passed shadow output")
+    if not isinstance(binding, LayerwiseScenarioNetworkBinding):
+        _fail("SHADOW_EMBEDDING_INVALID: scenario binding type is invalid")
+
+    def sequence_hash(values: Any) -> str:
+        result = sha256(); result.update(b"[")
+        for ordinal, value in enumerate(values):
+            if ordinal:
+                result.update(b",")
+            encoded = concrete_canonical_json_bytes(value)
+            result.update(encoded[:-1] if encoded.endswith(b"\n") else encoded)
+        result.update(b"]\n")
+        return result.hexdigest()
+
+    source_sha = digest(commutation_result.get("source_sha256"), "P6 source")
+    recipe_source = digest(recipe_result.get("source_sha256"), "P7 source")
+    p6_rail = str(commutation_result.get("rail_id", "")); p7_rail = str(recipe_result.get("rail_id", ""))
+    p6_input = digest(commutation_result.get("p1_input_sha256"), "P6 input"); p7_input = digest(recipe_result.get("p1_input_sha256"), "P7 input")
+    p6_output = digest(commutation_result.get("p1_output_sha256"), "P6 output"); p7_output = digest(recipe_result.get("p1_output_sha256"), "P7 output")
+    p6_substrate = digest(commutation_result.get("substrate_identity_sha256"), "P6 substrate"); p7_substrate = digest(recipe_result.get("substrate_identity_sha256"), "P7 substrate")
+    p6_shadow = digest(commutation_result.get("shadow_split_sha256"), "P6 shadow split"); p7_shadow = digest(recipe_result.get("shadow_split_sha256"), "P7 shadow split")
+    p6_old_edge = digest(commutation_result.get("old_edge_set_sha256"), "P6 old edge"); p7_old_edge = digest(recipe_result.get("old_edge_set_sha256"), "P7 old edge")
+    scenario_id = digest(binding.scenario_identity_sha256, "scenario identity"); scenario_plan = digest(binding.plan_sha256, "scenario plan"); termination_id = digest(binding.termination_manifest.manifest_sha256, "termination manifest")
+    scenario_commutation = digest(commutation_result.get("scenario_commutation_sha256"), "P6 commutation")
+    surface_manifest = digest(commutation_result.get("scenario_surface_node_manifest_sha256"), "P6 surface manifest"); link_manifest = digest(commutation_result.get("scenario_link_manifest_sha256"), "P6 link manifest"); boundary = digest(commutation_result.get("port_termination_boundary_sha256"), "P6 boundary")
+    p7_scenario = digest(recipe_result.get("scenario_identity_sha256"), "P7 scenario"); p7_plan = digest(recipe_result.get("scenario_plan_sha256"), "P7 plan"); p7_termination = digest(recipe_result.get("termination_manifest_sha256"), "P7 termination"); p7_surface = digest(recipe_result.get("scenario_surface_node_manifest_sha256"), "P7 surface manifest"); p7_link = digest(recipe_result.get("scenario_link_manifest_sha256"), "P7 link manifest"); p7_boundary = digest(recipe_result.get("port_termination_boundary_sha256"), "P7 boundary"); p7_commutation = digest(recipe_result.get("scenario_commutation_sha256"), "P7 commutation")
+    p7_recipe_hash = digest(recipe_result.get("deterministic_recipe_sha256"), "P7 recipe")
+    p7_nport = recipe_result.get("add_p1_nport")
+    if not isinstance(p7_nport, Mapping) or not isinstance(p7_nport.get("interface_node_ids"), list):
+        _fail("SHADOW_EMBEDDING_INVALID: P7 interface disclosure is malformed")
+    p7_interfaces = p7_nport["interface_node_ids"]
+    provenance = binding.provenance
+    if not isinstance(provenance, Mapping):
+        _fail("SHADOW_EMBEDDING_INVALID: binding provenance is absent")
+    common = {"schema_version": "source-plane-shadow-topology-embedding-v1", "shadow_only": True, "p1_stamp_applied": False, "solve_eligible": False, "production_ready": False, "replacement_ready": False, "rail_id": rail_id, "source_sha256": source_sha, "p1_input_sha256": p7_input, "p1_output_sha256": p7_output, "old_edge_set_sha256": p7_old_edge, "substrate_identity_sha256": p7_substrate, "shadow_split_sha256": p7_shadow, "scenario_identity_sha256": scenario_id, "scenario_plan_sha256": scenario_plan, "scenario_commutation_sha256": scenario_commutation, "scenario_surface_node_manifest_sha256": surface_manifest, "scenario_link_manifest_sha256": link_manifest, "termination_manifest_sha256": termination_id, "port_termination_boundary_sha256": boundary, "p7_deterministic_recipe_sha256": p7_recipe_hash}
+
+    def stopped(code: str, detail: str) -> tuple[None, Mapping[str, Any]]:
+        identity = {**common, "status": "stopped", "topology_materialized": False, "code": code, "detail": detail}
+        return None, {**identity, "topology_embedding_sha256": sha256(concrete_canonical_json_bytes(identity)).hexdigest()}
+
+    if source_sha != recipe_source or p6_rail.casefold() != rail_id.casefold() or p7_rail.casefold() != rail_id.casefold() or p6_input != p7_input or p6_output != p7_output or p6_substrate != p7_substrate or p6_shadow != p7_shadow or p6_old_edge != p7_old_edge or p6_substrate != digest(binding.base_substrate_identity_sha256, "binding base") or scenario_id != digest(commutation_result.get("scenario_identity_sha256"), "P6 scenario") or scenario_plan != digest(commutation_result.get("scenario_plan_sha256"), "P6 plan") or termination_id != digest(commutation_result.get("termination_manifest_sha256"), "P6 termination") or p7_scenario != scenario_id or p7_plan != scenario_plan or p7_termination != termination_id or p7_surface != surface_manifest or p7_link != link_manifest or p7_boundary != boundary or p7_commutation != scenario_commutation or p7_interfaces != commutation_result.get("planned_interface_node_ids") or surface_manifest != digest(provenance.get("scenario_surface_node_manifest_sha256"), "binding surface manifest") or link_manifest != digest(provenance.get("scenario_link_manifest_sha256"), "binding link manifest") or scenario_id != digest(provenance.get("scenario_identity_sha256"), "binding scenario identity") or scenario_plan != digest(provenance.get("scenario_plan_sha256"), "binding scenario plan"):
+        return stopped("SHADOW_EMBEDDING_IDENTITY_MISMATCH", "identity chain differs")
+
+    add_p1 = recipe_result.get("add_p1_nport"); remove_rows = recipe_result.get("remove_old_maxwell"); rewire_rows = recipe_result.get("rewire_finite")
+    if not isinstance(add_p1, Mapping) or not isinstance(remove_rows, list) or not isinstance(rewire_rows, list):
+        _fail("SHADOW_EMBEDDING_INVALID: P7 recipe disclosures are malformed")
+    recipe_identity = {key: recipe_result.get(key) for key in ("rail_id", "source_sha256", "p1_input_sha256", "p1_output_sha256", "old_edge_set_sha256", "substrate_identity_sha256", "shadow_split_sha256", "scenario_identity_sha256", "scenario_plan_sha256", "scenario_commutation_sha256", "scenario_surface_node_manifest_sha256", "scenario_link_manifest_sha256", "termination_manifest_sha256", "port_termination_boundary_sha256")}
+    recipe_identity.update({"remove_old_maxwell": remove_rows, "rewire_finite": rewire_rows, "owner_ledger": recipe_result.get("owner_ledger"), "add_p1_nport": add_p1})
+    if p7_recipe_hash != sha256(concrete_canonical_json_bytes(recipe_identity)).hexdigest():
+        return stopped("SHADOW_EMBEDDING_IDENTITY_MISMATCH", "P7 recipe hash differs")
+
+    p6_common_keys = ("source_sha256", "base_cutset_sha256", "p3_input_identity_sha256", "p2_audit_sha256", "p1_input_sha256", "p1_output_sha256", "old_edge_set_sha256", "substrate_identity_sha256", "shadow_split_sha256", "scenario_identity_sha256", "scenario_plan_sha256", "scenario_surface_node_manifest_sha256", "scenario_link_manifest_sha256", "termination_manifest_sha256", "port_termination_boundary_sha256")
+    p6_identity = {"rail_id": commutation_result.get("rail_id")}
+    if not isinstance(p6_identity["rail_id"], str):
+        _fail("SHADOW_EMBEDDING_INVALID: P6 rail disclosure is malformed")
+    for key in p6_common_keys:
+        p6_identity[key] = digest(commutation_result.get(key), f"P6 {key}")
+    p6_rows = commutation_result.get("rewire_rows"); p6_ports = commutation_result.get("port_inventory"); p6_interfaces = commutation_result.get("planned_interface_node_ids"); p6_old_values = commutation_result.get("old_selected_class_node_ids")
+    if not isinstance(p6_rows, list) or not isinstance(p6_ports, (list, tuple)) or not isinstance(p6_interfaces, list) or not isinstance(p6_old_values, list):
+        _fail("SHADOW_EMBEDDING_INVALID: P6 identity disclosure is malformed")
+    termination_owner_ids: set[str] = set()
+    for cluster in tuple(binding.termination_manifest.clusters):
+        owners = getattr(cluster, "owner_ids", None)
+        if not isinstance(owners, tuple):
+            _fail("SHADOW_EMBEDDING_INVALID: termination owner disclosure is malformed")
+        termination_owner_ids.update(str(owner).casefold() for owner in owners)
+    p6_identity.update({"rewire_rows": p6_rows, "port_inventory": p6_ports, "planned_interface_node_ids": p6_interfaces, "old_selected_class_node_ids": p6_old_values, "termination_owner_ids": sorted(termination_owner_ids)})
+    if sha256(concrete_canonical_json_bytes(p6_identity)).hexdigest() != scenario_commutation:
+        return stopped("SHADOW_EMBEDDING_IDENTITY_MISMATCH", "P6 commutation identity differs")
+
+    old_values = commutation_result.get("old_selected_class_node_ids"); interface_ids = add_p1.get("interface_node_ids")
+    if not isinstance(old_values, list) or not old_values or any(not isinstance(value, str) or not value.strip() for value in old_values) or old_values != sorted(set(old_values), key=str.casefold) or not isinstance(interface_ids, list) or not interface_ids or any(not isinstance(value, str) or not value.strip() for value in interface_ids) or len(interface_ids) != len(set(str(value).casefold() for value in interface_ids)) or any(not isinstance(row, Mapping) for row in rewire_rows) or [row.get("new_interface_node_id") for row in rewire_rows] != interface_ids:
+        _fail("SHADOW_EMBEDDING_INVALID: class/interface order is malformed")
+    old_keys = {str(value).casefold() for value in old_values}; interface_keys = {str(value).casefold() for value in interface_ids}
+    surface_nodes = tuple(binding.network.surface_node_ids)
+    surface_keys = {str(value).casefold() for value in surface_nodes}
+    if old_keys != old_keys & surface_keys:
+        return stopped("SHADOW_EMBEDDING_OLD_CLASS_INCOMPLETE", "old class is not a surface subset")
+    if any(str(value).casefold() in surface_keys for value in interface_ids):
+        return stopped("SHADOW_EMBEDDING_INTERFACE_COLLAPSED", "interfaces collide with retained surfaces")
+    retained_surface_nodes = tuple(node for node in surface_nodes if str(node).casefold() not in old_keys)
+    append_nodes = retained_surface_nodes + tuple(str(value) for value in interface_ids)
+    network_partials = binding.network.partials
+    expected_remove: dict[int, list[Mapping[str, Any]]] = {}
+    expected_edge_lookup: dict[tuple[int, tuple[str, str], str], Mapping[str, Any]] = {}
+    for row in remove_rows:
+        if not isinstance(row, Mapping):
+            _fail("SHADOW_EMBEDDING_INVALID: P7 old-Maxwell row is malformed")
+        ordinal = row.get("partial_ordinal")
+        if not isinstance(ordinal, int) or isinstance(ordinal, bool) or ordinal < 0 or ordinal >= len(network_partials):
+            return stopped("SHADOW_EMBEDDING_OLD_CLASS_INCOMPLETE", "P7 partial ordinal is malformed")
+        expected_remove.setdefault(ordinal, []).append(row)
+        partial_ref = network_partials[ordinal].partial
+        fingerprint = row.get("fingerprint")
+        fingerprint_payload = {"substrate_identity_sha256": p7_substrate, "upper_layer": str(row.get("upper_layer", "")), "lower_layer": str(row.get("lower_layer", "")), "upper_island_id": row.get("upper_island_id"), "lower_island_id": row.get("lower_island_id"), "capacitance_f_hex": row.get("capacitance_f_hex")}
+        if str(row.get("upper_island_id", "")).casefold() not in old_keys or str(row.get("lower_island_id", "")).casefold() not in old_keys or not isinstance(fingerprint, str) or str(row.get("upper_layer", "")) != str(partial_ref.upper_layer) or str(row.get("lower_layer", "")) != str(partial_ref.lower_layer) or sha256(concrete_canonical_json_bytes(fingerprint_payload)).hexdigest() != fingerprint:
+            return stopped("SHADOW_EMBEDDING_OLD_CLASS_INCOMPLETE", "P7 edge leaves old class")
+        edge_key = (ordinal, tuple(sorted((str(row.get("upper_island_id")).casefold(), str(row.get("lower_island_id")).casefold()))), str(row.get("capacitance_f_hex")))
+        if edge_key in expected_edge_lookup:
+            return stopped("SHADOW_EMBEDDING_OLD_CLASS_INCOMPLETE", "P7 old-Maxwell edge is ambiguous")
+        expected_edge_lookup[edge_key] = row
+    fingerprints = [str(row.get("fingerprint")) for rows in expected_remove.values() for row in rows]
+    if len(fingerprints) != len(set(fingerprints)):
+        return stopped("SHADOW_EMBEDDING_OLD_CLASS_INCOMPLETE", "P7 old-edge fingerprint is duplicated")
+    partials: list[tuple[int, Any]] = []; dropped_partials: list[int] = []; touched_ordinals: set[int] = set(); matched_remove_counts = {fingerprint: 0 for fingerprint in fingerprints}
+    for ordinal, wrapped in enumerate(binding.network.partials):
+        partial = wrapped.partial; names = tuple(str(value) for value in partial.net_names); name_keys = tuple(value.casefold() for value in names); touched = any(value in old_keys for value in name_keys)
+        if not touched:
+            partials.append((ordinal, wrapped)); continue
+        touched_ordinals.add(ordinal); matrix = partial.maxwell_capacitance_f
+        matrix = matrix.tocsc(copy=False) if issparse(matrix) else csc_matrix(matrix)
+        if matrix.shape != (len(names), len(names)):
+            return stopped("SHADOW_EMBEDDING_PARTIAL_ESCAPE", "partial matrix shape differs")
+        for column in range(matrix.shape[1]):
+            for offset in range(int(matrix.indptr[column]), int(matrix.indptr[column + 1])):
+                row_index = int(matrix.indices[offset]); value = float(matrix.data[offset])
+                if row_index == column or value == 0.0:
+                    continue
+                left_old = name_keys[row_index] in old_keys; right_old = name_keys[column] in old_keys
+                if left_old != right_old:
+                    return stopped("SHADOW_EMBEDDING_PARTIAL_ESCAPE", "partial has old-to-retained coupling")
+                if row_index < column:
+                    edge_key = (ordinal, tuple(sorted((name_keys[row_index], name_keys[column]))), float(-value).hex())
+                    expected = expected_edge_lookup.get(edge_key)
+                    if expected is not None:
+                        matched_remove_counts[str(expected.get("fingerprint"))] += 1
+        keep = [index for index, key in enumerate(name_keys) if key not in old_keys]
+        if not keep:
+            dropped_partials.append(ordinal); continue
+        retained_matrix = matrix[keep, :][:, keep].tocsc(); retained_matrix.eliminate_zeros()
+        if retained_matrix.nnz == 0:
+            dropped_partials.append(ordinal); continue
+        try:
+            new_partial = replace(partial, net_names=tuple(names[index] for index in keep), maxwell_capacitance_f=retained_matrix)
+            partials.append((ordinal, replace(wrapped, partial=new_partial)))
+        except Exception:
+            return stopped("SHADOW_EMBEDDING_UNREPRESENTABLE", "partial replacement is invalid")
+    if any(count != 1 for count in matched_remove_counts.values()) or not set(expected_remove).issubset(touched_ordinals):
+        return stopped("SHADOW_EMBEDDING_OLD_CLASS_INCOMPLETE", "P7 old-Maxwell partial is absent")
+    expected_links = {str(row.get("old_finite_edge_id", "")).casefold(): row for row in rewire_rows if isinstance(row, Mapping)}
+    if len(expected_links) != len(rewire_rows):
+        return stopped("SHADOW_EMBEDDING_LINK_ESCAPE", "P7 finite-link IDs are duplicated")
+    found_links: set[str] = set(); links: list[Any] = []
+    for link in binding.network.via_links:
+        first = str(link.first_node_id); second = str(link.second_node_id); first_old = first.casefold() in old_keys; second_old = second.casefold() in old_keys; key = str(link.link_id).casefold()
+        if first_old and second_old:
+            if str(link.mode) != "topology_only_ideal":
+                return stopped("SHADOW_EMBEDDING_LINK_ESCAPE", "finite old-class link is not removable")
+            continue
+        if first_old != second_old:
+            row = expected_links.get(key)
+            if row is None or str(link.mode) != "finite_parallel_rl" or found_links & {key}:
+                return stopped("SHADOW_EMBEDDING_LINK_ESCAPE", "old boundary link lacks exact P7 rewire")
+            selected = str(row.get("selected_old_endpoint", "")); external = str(row.get("external_endpoint", "")); interface = str(row.get("new_interface_node_id", ""))
+            old_pair = row.get("old_endpoint_pair"); new_pair = row.get("new_endpoint_pair")
+            expected_new_pair = [interface if first == selected else first, interface if second == selected else second]
+            try:
+                expected_mode = str(row["mode"]); expected_count = int(row["count"]); expected_owners = tuple(row["owner_ids"])
+                expected_resistance = str(row["resistance_ohm_per_via_hex"]); expected_inductance = str(row["inductance_h_per_via_hex"])
+                actual_resistance = float(link.resistance_ohm_per_via).hex(); actual_inductance = float(link.inductance_h_per_via).hex()
+            except (KeyError, TypeError, ValueError, AttributeError) as exc:
+                _fail(f"SHADOW_EMBEDDING_INVALID: link disclosure is malformed: {exc}")
+            if not isinstance(old_pair, list) or not isinstance(new_pair, list) or old_pair != [first, second] or new_pair != expected_new_pair or selected not in {first, second} or external not in {first, second} or selected == external or interface.casefold() not in interface_keys or expected_mode != str(link.mode) or expected_count != int(link.count) or expected_owners != tuple(link.owner_ids) or expected_resistance != actual_resistance or expected_inductance != actual_inductance:
+                return stopped("SHADOW_EMBEDDING_LINK_ESCAPE", "P7 endpoint mapping differs")
+            kwargs = {"first_node_id": expected_new_pair[0], "second_node_id": expected_new_pair[1]}
+            try:
+                links.append(replace(link, **kwargs))
+            except Exception:
+                return stopped("SHADOW_EMBEDDING_UNREPRESENTABLE", "finite-link replacement is invalid")
+            found_links.add(key); continue
+        if key in expected_links:
+            return stopped("SHADOW_EMBEDDING_LINK_ESCAPE", "P7 edge does not touch old class")
+        links.append(link)
+    if found_links != set(expected_links):
+        return stopped("SHADOW_EMBEDDING_LINK_ESCAPE", "P7 finite link is missing")
+    if not partials:
+        return stopped("SHADOW_EMBEDDING_UNREPRESENTABLE", "all partials were removed")
+    try:
+        shadow_network = compile_layer_surface_network(append_nodes, partials=tuple(wrapper for _ordinal, wrapper in partials), via_links=tuple(links), ports=binding.network.ports)
+        shadow_termination_manifest = compile_layer_surface_termination_manifest(shadow_network.surface_node_ids, tuple(cluster.source for cluster in binding.termination_manifest.clusters))
+        shadow_network.termination_reduced_node_mapping(shadow_termination_manifest)
+    except Exception:
+        return stopped("SHADOW_EMBEDDING_UNREPRESENTABLE", "shadow topology is not representable")
+    interface_embedding: list[dict[str, Any]] = []
+    seen_reduced: set[int] = set()
+    try:
+        for row in rewire_rows:
+            interface = str(row.get("new_interface_node_id")); finite_edge_id = str(row.get("old_finite_edge_id")); external_endpoint = str(row.get("external_endpoint")); contact_id = str(row.get("contact_id"))
+            reduced = int(shadow_network.reduced_node_index(str(interface)))
+            if reduced in seen_reduced:
+                return stopped("SHADOW_EMBEDDING_INTERFACE_COLLAPSED", "interfaces share a reduced node")
+            seen_reduced.add(reduced); interface_embedding.append({"contact_id": contact_id, "interface_node_id": interface, "reduced_index": reduced, "finite_edge_id": finite_edge_id, "external_endpoint": external_endpoint})
+    except Exception:
+        return stopped("SHADOW_EMBEDDING_INTERFACE_COLLAPSED", "interface reduced index is unavailable")
+    surface_hash = sequence_hash(append_nodes)
+    def partial_payloads():
+        for original_ordinal, wrapped in partials:
+            partial = wrapped.partial; matrix = partial.maxwell_capacitance_f
+            matrix = matrix.tocsc(copy=False) if issparse(matrix) else csc_matrix(matrix)
+            yield {"original_ordinal": original_ordinal, "upper_layer": partial.upper_layer, "lower_layer": partial.lower_layer, "nominal_relative_permittivity": float(partial.nominal_relative_permittivity).hex(), "separation_m_hex": None if partial.separation_m is None else float(partial.separation_m).hex(), "net_names": tuple(partial.net_names), "shape": tuple(int(value) for value in matrix.shape), "indptr": tuple(int(value) for value in matrix.indptr), "indices": tuple(int(value) for value in matrix.indices), "data": tuple(float(value).hex() for value in matrix.data)}
+    partial_hash = sequence_hash(partial_payloads())
+    link_hash = sequence_hash({"link_id": link.link_id, "first_node_id": link.first_node_id, "second_node_id": link.second_node_id, "mode": link.mode, "count": link.count, "resistance_ohm_per_via": link.resistance_ohm_per_via, "inductance_h_per_via": link.inductance_h_per_via, "owner_ids": link.owner_ids} for link in links)
+    port_hash = sequence_hash({"port_id": port.port_id, "positive_node_id": port.positive_node_id, "negative_node_id": port.negative_node_id} for port in shadow_network.ports)
+    shadow_surface_manifest = surface_hash; shadow_partial_manifest = partial_hash; shadow_link_manifest = link_hash; shadow_port_manifest = port_hash
+    shadow_termination_manifest_sha256 = shadow_termination_manifest.manifest_sha256
+    network_identity = {"base_substrate_identity_sha256": p7_substrate, "scenario_identity_sha256": scenario_id, "scenario_plan_sha256": scenario_plan, "p7_deterministic_recipe_sha256": p7_recipe_hash, "shadow_surface_manifest_sha256": shadow_surface_manifest, "shadow_partial_manifest_sha256": shadow_partial_manifest, "shadow_link_manifest_sha256": shadow_link_manifest, "shadow_port_manifest_sha256": shadow_port_manifest, "shadow_termination_manifest_sha256": shadow_termination_manifest_sha256, "interface_embedding": interface_embedding}
+    shadow_network_identity = sha256(concrete_canonical_json_bytes(network_identity)).hexdigest()
+    audit = {**common, "status": "passed", "topology_materialized": True, "removed_old_class_node_ids": list(old_values), "interface_embedding": interface_embedding, "dropped_partial_ordinals": dropped_partials, "shadow_surface_manifest_sha256": shadow_surface_manifest, "shadow_partial_manifest_sha256": shadow_partial_manifest, "shadow_link_manifest_sha256": shadow_link_manifest, "shadow_port_manifest_sha256": shadow_port_manifest, "shadow_termination_manifest_sha256": shadow_termination_manifest_sha256, "shadow_network_identity_sha256": shadow_network_identity}
+    audit["topology_embedding_sha256"] = sha256(concrete_canonical_json_bytes(audit)).hexdigest()
+    return shadow_network, audit
+
+
+__all__ = ["SourcePlanePatchError", "consume_source_plane_patch", "evaluate_source_plane_contact_admissibility", "evaluate_source_plane_contact_condensation", "audit_source_plane_patch_owner_off", "audit_source_plane_patch_contact_quotient_representability", "audit_source_plane_patch_selected_base_cutset", "plan_source_plane_patch_shadow_contact_rewire", "audit_source_plane_patch_shadow_rewire_commutation", "audit_source_plane_patch_shadow_local_replacement_recipe", "materialize_source_plane_patch_shadow_topology_embedding"]
