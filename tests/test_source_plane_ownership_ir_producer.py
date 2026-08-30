@@ -25,54 +25,11 @@ from spd_decap_pi.canonical_json import concrete_canonical_json_bytes
 from spd_decap_pi.raw_spatial_contact_asset import RAW_SPATIAL_CONTACT_ASSET_METADATA_KEY
 from spd_decap_pi.raw_spatial_contact_asset import load_raw_spatial_contact_asset
 from spd_decap_pi.compiled_topology_asset import COMPILED_TOPOLOGY_ASSET_METADATA_KEY
+from spd_decap_pi.surface_certificate_asset import canonical_surface_certificate_sha256
 
 
-def test_ownership_request_and_callback_are_atomic_pair() -> None:
-    missing = Path("does-not-exist.spd")
-    callback = lambda *_args: None
-    with pytest.raises(RawSpatialCompilerError, match="request and callback"):
-        compile_raw_spatial_contact_asset(
-            missing,
-            analysis=object(),
-            project=object(),
-            attachments={},
-            source_plane_ownership_request={},
-        )
-    with pytest.raises(RawSpatialCompilerError, match="request and callback"):
-        compile_raw_spatial_contact_asset(
-            missing,
-            analysis=object(),
-            project=object(),
-            attachments={},
-            source_plane_ownership_callback=callback,
-        )
-
-
-def test_ownership_selection_bound_is_checked_before_capture(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr(raw_spatial_contact_compiler, "MAX_SOURCE_PLANE_OWNERSHIP_IR_ROWS", 1)
-    with pytest.raises(RawSpatialCompilerError, match="ownership selection exceeds"):
-        raw_spatial_contact_compiler._ownership_selection(
-            {
-                "surface_keys": [("PWR", "L1"), ("GND", "L2")],
-                "node_keys": [], "via_keys": [], "pad_keys": [],
-                "layer_keys": [], "material_keys": [],
-            }
-        )
-
-
-def test_ownership_record_append_bound_stops_before_second_row(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr(raw_spatial_contact_compiler, "MAX_SOURCE_PLANE_OWNERSHIP_IR_ROWS", 1)
-    records: list[dict[str, object]] = []
-    raw_spatial_contact_compiler._ownership_record_append(records, {"record_id": "r0"})
-    with pytest.raises(RawSpatialCompilerError, match="ownership source-record bound exceeded"):
-        raw_spatial_contact_compiler._ownership_record_append(records, {"record_id": "r1"})
-    assert len(records) == 1
-
-
-def test_source_plane_ownership_producer_roundtrip_and_atomic_failure(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    payload = (
+def _ownership_fixture_payload() -> str:
+    return (
         MINI_SPD.replace("LEGACY_SOURCE_GRAPH_UNAVAILABLE", "TRACE_VIA_COMPONENTS_AVAILABLE")
         .replace("VDD_CORE/0", "VDD_CORE/1")
         .replace(
@@ -121,6 +78,205 @@ def test_source_plane_ownership_producer_roundtrip_and_atomic_failure(
             ".PadDef Signal$GND\nRegular Circle 0.03mm\n.EndPadDef",
         )
     )
+
+
+def test_ownership_request_and_callback_are_atomic_pair() -> None:
+    missing = Path("does-not-exist.spd")
+    callback = lambda *_args: None
+    with pytest.raises(RawSpatialCompilerError, match="request and callback"):
+        compile_raw_spatial_contact_asset(
+            missing,
+            analysis=object(),
+            project=object(),
+            attachments={},
+            source_plane_ownership_request={},
+        )
+    with pytest.raises(RawSpatialCompilerError, match="request and callback"):
+        compile_raw_spatial_contact_asset(
+            missing,
+            analysis=object(),
+            project=object(),
+            attachments={},
+            source_plane_ownership_callback=callback,
+        )
+
+
+def test_ownership_selection_bound_is_checked_before_capture(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(raw_spatial_contact_compiler, "MAX_SOURCE_PLANE_OWNERSHIP_IR_ROWS", 1)
+    with pytest.raises(RawSpatialCompilerError, match="ownership selection exceeds"):
+        raw_spatial_contact_compiler._ownership_selection(
+            {
+                "surface_keys": [("PWR", "L1"), ("GND", "L2")],
+                "node_keys": [], "via_keys": [], "pad_keys": [],
+                "layer_keys": [], "material_keys": [],
+            }
+        )
+
+
+def test_ownership_record_append_bound_stops_before_second_row(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(raw_spatial_contact_compiler, "MAX_SOURCE_PLANE_OWNERSHIP_IR_ROWS", 1)
+    records: list[dict[str, object]] = []
+    raw_spatial_contact_compiler._ownership_record_append(records, {"record_id": "r0"})
+    with pytest.raises(RawSpatialCompilerError, match="ownership source-record bound exceeded"):
+        raw_spatial_contact_compiler._ownership_record_append(records, {"record_id": "r1"})
+    assert len(records) == 1
+
+
+def test_source_plane_ownership_component_layer_is_authoritative_for_mismatched_endpoint(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    source = tmp_path / "ownership-component-layer.spd"
+    source.write_text(_ownership_fixture_payload(), encoding="ascii")
+    original_certificate = spd_adapter._layer_surface_connectivity_certificate
+    original_compile = spd_adapter.compile_raw_spatial_contact_asset
+    original_build = spd_adapter.build_source_plane_ownership_ir
+    captured: dict[str, object] = {}
+    compile_calls = {"count": 0}
+
+    def mutate_certificate(*args: object, **kwargs: object):
+        certificate = original_certificate(*args, **kwargs)
+        target_pins = {
+            str(item.get("pin_id", "")).strip().casefold()
+            for item in certificate.get("rail_anchor_bindings", ())
+            if isinstance(item, dict)
+            and str(item.get("rail_id", "")).strip().casefold() == "vdd_core/1"
+        }
+        changed = False
+        for contact in certificate.get("terminal_contacts", ()):
+            if (
+                isinstance(contact, dict)
+                and str(contact.get("pin_id", "")).strip().casefold() in target_pins
+                and str(contact.get("contact_component_layer", "")).strip().casefold()
+                != "signal$top"
+            ):
+                contact["endpoint_layer"] = "Signal$TOP"
+                changed = True
+        assert changed
+        certificate["evidence_sha256"] = canonical_surface_certificate_sha256(
+            {key: value for key, value in certificate.items() if key != "evidence_sha256"}
+        )
+        captured["certificate"] = certificate
+        return certificate
+
+    def capture_request(*args: object, **kwargs: object):
+        compile_calls["count"] += 1
+        request = kwargs.get("source_plane_ownership_request")
+        if isinstance(request, dict):
+            captured["request"] = deepcopy(request)
+        return original_compile(*args, **kwargs)
+
+    def capture_draft(*args: object, **kwargs: object):
+        draft = args[0] if args else kwargs.get("draft")
+        captured["draft"] = deepcopy(draft)
+        return original_build(*args, **kwargs)
+
+    monkeypatch.setattr(
+        spd_adapter, "_layer_surface_connectivity_certificate", mutate_certificate
+    )
+    monkeypatch.setattr(
+        spd_adapter, "compile_raw_spatial_contact_asset", capture_request
+    )
+    monkeypatch.setattr(spd_adapter, "build_source_plane_ownership_ir", capture_draft)
+
+    imported = spd_adapter.import_spd_scenario(
+        source, source_plane_ownership_rail_id="VDD_CORE/1"
+    )
+    request = captured["request"]
+    assert isinstance(request, dict)
+    snapshot = request["certificate_snapshot"]
+    assert isinstance(snapshot, dict)
+    contacts = {
+        str(item["pin_id"]).casefold(): item
+        for item in snapshot["terminal_contacts"]
+    }
+    mismatched = [
+        item
+        for item in contacts.values()
+        if str(item.get("endpoint_layer", "")).casefold()
+        != str(item.get("contact_component_layer", "")).casefold()
+    ]
+    assert mismatched
+    assert all(
+        str(item["endpoint_layer"]).casefold() == "signal$top"
+        for item in mismatched
+    )
+    raw_selection = request["raw_selection"]
+    assert isinstance(raw_selection, dict)
+    raw_pad_keys = {
+        tuple(str(value).casefold() for value in key)
+        for key in raw_selection["pad_keys"]
+    }
+    assert all(
+        (
+            str(item["incident_padstack"]).casefold(),
+            str(item["endpoint_layer"]).casefold(),
+        )
+        in raw_pad_keys
+        for item in mismatched
+    )
+    draft = captured["draft"]
+    assert isinstance(draft, dict)
+    terminal_rows = list(draft["terminal_bindings"])
+    assert terminal_rows
+    source_records = {
+        str(row["record_id"]).casefold(): row
+        for row in draft["source_records"]
+    }
+    assert all(
+        str(source_records[str(row[field]).casefold()]["layer"]).casefold()
+        == "signal$top"
+        for row in terminal_rows
+        for field in ("paddef_source_record_id", "regular_source_record_id")
+    )
+    assert all(
+        str(row["layer"]).casefold()
+        == str(contacts[str(row["pin_id"]).casefold()]["contact_component_layer"]).casefold()
+        for row in terminal_rows
+    )
+    assert imported.scenario.base_project.metadata["spd_import"]
+
+    def mismatch_certificate(*args: object, **kwargs: object):
+        certificate = original_certificate(*args, **kwargs)
+        target_pins = {
+            str(item.get("pin_id", "")).strip().casefold()
+            for item in certificate.get("rail_anchor_bindings", ())
+            if isinstance(item, dict)
+            and str(item.get("rail_id", "")).strip().casefold() == "vdd_core/1"
+        }
+        for contact in certificate.get("terminal_contacts", ()):
+            if (
+                isinstance(contact, dict)
+                and str(contact.get("pin_id", "")).strip().casefold() in target_pins
+            ):
+                component_id = str(contact.get("contact_component_id", "")).strip().casefold()
+                component = next(
+                    item
+                    for item in certificate["surface_equivalence_components"]
+                    if str(item.get("component_id", "")).strip().casefold()
+                    == component_id
+                )
+                component["representative_island_id"] = "tampered-island"
+                certificate["evidence_sha256"] = canonical_surface_certificate_sha256(
+                    {key: value for key, value in certificate.items() if key != "evidence_sha256"}
+                )
+                return certificate
+        raise AssertionError("target rail contact is absent")
+
+    compile_calls["count"] = 0
+    monkeypatch.setattr(
+        spd_adapter, "_layer_surface_connectivity_certificate", mismatch_certificate
+    )
+    with pytest.raises(SpdImportError, match="target anchor terminal contact is incomplete"):
+        spd_adapter.import_spd_scenario(
+            source, source_plane_ownership_rail_id="VDD_CORE/1"
+        )
+    assert compile_calls["count"] == 0
+
+
+def test_source_plane_ownership_producer_roundtrip_and_atomic_failure(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    payload = _ownership_fixture_payload()
     source = tmp_path / "ownership-producer.spd"
     source.write_text(payload, encoding="ascii")
     original = source.read_bytes()
