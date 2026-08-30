@@ -1,11 +1,11 @@
 # SPD Decap PI Evaluator v0.23.1 — Source-derived physical IR
 
-- 문서 버전: **1.16**
+- 문서 버전: **1.17**
 - 계약 상태: **ACCEPTED** — source-derived provenance/ownership prerequisite의 기술 기준
 - committed 구현: `source-plane-ownership-ir-v1` + Phase 3 shadow consumer + v2 `contact_boundary` (`3b76af4`) + P0 (`4dc855a`) + P1 (`f823a53`) + P2 (`90f6b54`) + P3 (`b8a79f1`) + P4 base cut-set (`39fd4fa`) + P5 shadow rewire plan (`d7e7278`) + P6 scenario commutation audit (`6793bb2`) + P7 atomic recipe (`f1c2968`) + P8 topology embedding (`abf79cf`) + P9 nodal-block binding (`593e070`) + P10 component closure (`7f9c498`) + P11 supplemental solve gate (`e8d029a`)
 - runtime acceptance: **Phase 4와 P0–P10 focused PASS / Sol ACCEPT; P3 semantic STOP, P4 structural CLOSED, P5 PLANNED, P6/P7 PASSED, P8 materialized, P9 bound, P10 component-closed; P11 focused test PASS / numerical result STOP**
 - production 상태: solver, owner-off, `Y_global`, `Zii` **unchanged**
-- 현재 작업 상태: **`W7-PHYS-ACTUAL-P0` ACTIVE / P12 NO-GO** — 기존 importer/save/load seam으로 실제 260729 원본 SPD의 source-IR scenario만 1회 생성; synthetic MINI weak-mode 후속 분석 금지
+- 현재 작업 상태: **`W7-PHYS-ACTUAL-P0` DONE/STOP, `W7-PHYS-ACTUAL-P0-FIX-01` ACTIVE / P12 NO-GO** — 실제 260729 원본 SPD 1회 실행은 selected component island를 raw endpoint layer와 결합한 selector 오류에서 중단; 별도 최소 fix·focused regression만 진행
 - P11 closure: commit `e8d029a`, 최종 지정 node `1 passed in 1.55s`, Sol ACCEPT; pivot ratio `1.900e15`, condition-1 lower bound `1.096e17`, `SHADOW_SOLVE_NUMERICAL_FAILURE`; trusted stamp/matrix/solve/readiness false, production unchanged
 - 최종 개정: 2026-08-30 (Asia/Seoul)
 
@@ -49,8 +49,10 @@ flowchart LR
   V --> W[P10 augmented component closure DONE]
   W --> X[P11 exact 1 GHz shadow augmented solve DONE / NUMERICAL STOP]
   X --> Y[P12 NO-GO]
-  Y -. independent prerequisite .-> AP0[W7-PHYS-ACTUAL-P0 ACTIVE<br/>fresh original-SPD source-IR]
-  AP0 --> APN[PASS 뒤 actual P0-P10 별도 gate]
+  Y -. independent prerequisite .-> AP0[W7-PHYS-ACTUAL-P0 DONE / STOP<br/>selector identity mismatch]
+  AP0 --> AF[W7-PHYS-ACTUAL-P0-FIX-01 ACTIVE<br/>component-layer selector fix]
+  AF -. ACCEPT 뒤 별도 문서 gate .-> AP1[successor original-SPD one-shot]
+  AP1 --> APN[PASS 뒤 actual P0-P10 별도 gate]
   APN -. hold: production wiring 금지 .-> K[production Y_global / Zii]
   I[raw-v3 geometry/material] -. hash reference .-> B
   J[compiled finite topology] -. hash/owner reference .-> D
@@ -135,7 +137,8 @@ plane owner는 source identity에 결속해 importer/compiler가 결정적으로
 | P9 | committed `593e070` | final focused `1 passed in 1.60s`; Sol ACCEPT | DONE | exact 1 GHz binding prerequisite only; no matrix application/solve |
 | P10 | committed `7f9c498` | final focused `1 passed in 1.56s`; Sol ACCEPT | DONE | exact 1 GHz partition/pruning prerequisite only; no matrix application/solve |
 | P11 | committed `e8d029a` | final focused `1 passed in 1.55s`; Sol ACCEPT; deterministic numerical STOP | DONE | pivot `1.900e15` > `1e13`; no trusted solve; production caller/cache/wiring unchanged |
-| Actual-P0 | existing importer/save/load seam; no product-code change | one current-main original-SPD import/save/reload and identity/ownership validation | ACTIVE | zero frequency solve, Touchstone read, P0-P11; prerequisite only |
+| Actual-P0 | existing importer/save/load seam; no product-code change | commit `ff3327c`, import 1/save 0/load 0, 3,357.744 s, report SHA `e942787a…c1d` | DONE | selector/identity-contract STOP; scenario absent; zero solve/Touchstone/P0-P11 |
+| Actual-P0-FIX-01 | `spd_adapter.py` + producer focused regression | component-row canonical surface identity, raw endpoint provenance separation | ACTIVE | original SPD run, schema/API/solver/physics changes forbidden |
 
 `DONE`은 해당 Phase의 선언 범위가 종료됐다는 뜻이며 current release, production
 acceptance 또는 PowerSI 정확성을 뜻하지 않는다. Phase 4의 exact 실행 이력과 검증
@@ -514,6 +517,44 @@ chain과 source hash가 일치하고, source-plane ownership IR이 exact rail/la
 그 commit의 새 빈 root에서 정확히 한 번이며 재시도하지 않는다. 이 gate에서는
 frequency solve, Touchstone read, P0-P11, production owner-off/wiring, threshold/value/fixture
 변경을 수행하지 않는다. 실패·취소·resource stop은 그대로 STOP으로 폐쇄한다.
+
+Closure result는 **DONE/STOP**이다. `main` commit
+`ff3327c0ed093c71398fd293b445a1eb91529ea1`에서 import를 정확히 한 번 실행했고
+3,357.7441885 s 뒤
+`SOURCE_PLANE_OWNERSHIP_IR_INCOMPLETE: anchor representative island is not on selected surface`
+에서 fail-closed 중단됐다. call count는 import 1, save 0, load 0이고 frequency solve 0,
+Touchstone false, P0–P11 미실행이다. 마지막 progress는 3,351.847 s의
+`Compiled layer-surface connectivity certificate evidence`였다. scenario candidate는 없고 output
+root에는 coordinator evidence envelope
+`actual_source_ir_generation_report.json`만 남았다(10,582 bytes, SHA-256
+`e942787a8363f68be0a17abedfe9b3562c1a35475fa0972736a9b67f5ec93c1d`). frozen raw-v3
+identity chain과 synthetic-free resume condition은 scenario 부재로 **pending/not evaluated**이며,
+기존 root와 실행을 PASS로 재분류하거나 재시도하지 않는다.
+
+### W7-PHYS-ACTUAL-P0-FIX-01 — ownership selected-surface identity correction
+
+정적 원인은 raw SPD/geometry 부재가 아니라 v4 certificate의 두 layer 의미를 섞은 selector contract다.
+`endpoint_layer`는 terminal 첫 Via의 raw/internal endpoint provenance이고,
+`contact_component_layer`와 `representative_island_id`/`contact_component_id`는 finite branch/cycle로
+도달한 required rail surface component를 나타낸다. 현 producer는 후자의 island/component를 전자의
+layer와 결합해 snapshot을 검사하므로 두 layer가 다른 실제 보드에서 거짓 불일치를 만든다.
+
+이 fix의 sole authority는 certificate `surface_equivalence_components`에서
+`contact_component_id`를 exact-join한 canonical `(net, layer, representative_island_id,
+component_id)`다. power/ground 각 row는 configured target rail surface와 snapshot inventory에
+정확히 일치해야 한다. contact의 net/component-layer/representative-island도 component row와 다르면
+fallback 없이 STOP한다. raw Node/Via/PadDef/Regular provenance에는 기존 `endpoint_layer`를 그대로
+사용한다. guard 제거, first-island 선택, alias 추정, API/schema 변경은 허용하지 않는다.
+
+변경 whitelist는 `src/spd_decap_pi/spd_adapter.py`,
+`tests/test_source_plane_ownership_ir_producer.py`와 이 세 기준 문서뿐이다. acceptance는
+“immediate endpoint layer != required component layer”인 focused fixture에서 ownership import가
+통과하고, selected surface/component/island는 exact 일치하며 raw terminal pad layer provenance는
+보존되는 것이다. component net/layer/island tamper는 raw asset build 전에 deterministic STOP해야 한다.
+검증은 새 focused node와 기존 direct-layer producer node만 각 한 번 실행한다. 원본 SPD import,
+save/reload, solver, P12, Touchstone, P0–P11, owner-off/wiring/cache/profile은 이 gate에서 금지한다.
+fix ACCEPT 뒤에도 successor Actual-P0는 자동 실행하지 않고 exact fix commit과 새 빈 root를 동결한
+별도 one-shot/retry-0 gate로만 연다.
 
 후속 no-fit 가설은 old owner에 더하는 것이 아니라 L30/L29의 exact old-Maxwell owner를
 source-derived P1 N-port로 교체하는 것이다. `ΔC = Ceff(P1) - Ceff(old owner)`를 정의하고

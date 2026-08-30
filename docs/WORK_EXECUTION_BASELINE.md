@@ -1,9 +1,9 @@
 # SPD Decap PI Evaluator 작업 기준
 
 - 적용 제품: **SPD Decap PI Evaluator v0.23.1**
-- 문서 버전: **1.182**
-- 상위 기준: [목적·기술 기준](PRODUCT_PURPOSE_AND_TECHNICAL_BASELINE.md) v1.181
-- 현재 상태: W6 numerical FAIL; W7-SOURCE-IR-P1/P2/P3/P4 및 W7-PHYS-PROSPECTIVE-P0/P1/P2/P3/P4/P5/P6/P7/P8/P9/P10/P11 DONE, P3/P11 DONE/STOP; `W7-PHYS-ACTUAL-P0` ACTIVE; production physics/`Zii` unchanged.
+- 문서 버전: **1.183**
+- 상위 기준: [목적·기술 기준](PRODUCT_PURPOSE_AND_TECHNICAL_BASELINE.md) v1.182
+- 현재 상태: W6 numerical FAIL; W7-SOURCE-IR-P1/P2/P3/P4 및 W7-PHYS-PROSPECTIVE-P0/P1/P2/P3/P4/P5/P6/P7/P8/P9/P10/P11 DONE, P3/P11 DONE/STOP; `W7-PHYS-ACTUAL-P0` DONE/STOP; `W7-PHYS-ACTUAL-P0-FIX-01` ACTIVE; production physics/`Zii` unchanged.
 - 최종 개정: 2026-08-30 (Asia/Seoul)
 
 ## 1. 압축 후 즉시 복구 카드
@@ -15,13 +15,13 @@ context가 압축되거나 새 session에서 작업을 재개하면 이 표만 �
 | 변하지 않는 목적 | source-derived single-rail `Zii`의 PowerSI 근접 정확성과 일반화 |
 | 기본 복구 문서 | 목적·기술 기준 → Source-derived physical IR → 이 작업 기준, 세 문서 |
 | 현재 branch | `main`만 사용 |
-| 이 문서 정리의 source-before HEAD | `c1a56ee` (P12 prospective NO-GO docs closure) |
-| 현재 assessment | W6-BASE numerical FAIL; Phase 4/P0–P11은 prerequisite/shadow 범위 DONE; P3는 `CONTACT_INTERFACE_RANK_LOSS`, P11은 `SHADOW_SOLVE_NUMERICAL_FAILURE` STOP이다. 실제 260729 원본 SPD와 current-main source-IR importer seam이 확인되어 generation prerequisite 하나만 열었다. production physics와 정확성은 미변경 |
-| 현재 active work item | **`W7-PHYS-ACTUAL-P0` / `ACTUAL-SPD-SOURCE-IR-SCENARIO-01`** — fresh import/save/reload 1회, identity·ownership만 판정 |
+| 이 문서 정리의 source-before HEAD | `ff3327c` (Actual-P0 one-shot contract docs closure) |
+| 현재 assessment | W6-BASE numerical FAIL; Phase 4/P0–P11은 prerequisite/shadow 범위 DONE; P3/P11은 각각 rank-loss/numerical STOP이다. Actual-P0는 원본 SPD 1회 import 뒤 endpoint-layer/component-layer selector 불일치로 STOP했고 scenario는 없다. production physics와 정확성은 미변경 |
+| 현재 active work item | **`W7-PHYS-ACTUAL-P0-FIX-01` / `OWNERSHIP-SURFACE-LAYER-BINDING-01`** — certificate component-row exact join + focused regression만 |
 | 현재 정확성 상태 | `260729 retrospective FAIL`; unseen/generalization `unknown / not_run` |
-| current authorization | main-only, `accuracy_parse.py` 보존. 기존 importer/save/load API만 사용한 source-IR generation 1회 허용; P12, solve/Touchstone/P0-P11, threshold/fallback/gauge/reordering/fixture/production wiring 변경 금지 |
-| 다음 후보 gate | generation PASS 뒤 **actual-scenario P0-P10 identity/ownership/component closure**를 별도 gate로 문서화; 지금은 실행 금지 |
-| 정확한 재개 조건 | current gate에서 original-SPD hash-bound·synthetic-free scenario를 만든 뒤, 별도 gate의 P0-P10 closure와 one-owner/one-error no-fit 가설을 모두 만족할 때만 기존 P11을 값 변경 없이 1회 실행 |
+| current authorization | main-only, `accuracy_parse.py` 보존. `spd_adapter.py`, producer focused test와 세 기준 문서의 selector fix만 허용; original-SPD 재실행, P12, solve/Touchstone/P0-P11, threshold/fallback/gauge/reordering/fixture tuning/production wiring 변경 금지 |
+| 다음 후보 gate | fix ACCEPT 뒤 exact fix commit·새 empty root를 동결한 **successor Actual-P0 one-shot/retry-0**를 별도 문서화; 지금은 실행 금지 |
+| 정확한 재개 조건 | current fix가 focused ACCEPT된 뒤 successor one-shot gate에서 original-SPD hash-bound·synthetic-free scenario를 만들고, 별도 P0-P10 closure와 one-owner/one-error no-fit 가설을 모두 만족할 때만 기존 P11을 값 변경 없이 1회 실행 |
 | 핵심 증거 | [W6-BASE completed evidence](#w6-base-completed-evidence-260729), [W7 결과 재평가](#12-w7-결과-재평가와-후속-과제-판정) |
 
 최초 목적은 [목적·기술 기준 2장](PRODUCT_PURPOSE_AND_TECHNICAL_BASELINE.md#2-최우선-목적),
@@ -33,12 +33,12 @@ context가 압축되거나 새 session에서 작업을 재개하면 이 표만 �
 | 구분 | 현재 권위 |
 |---|---|
 | accepted / committed | Phase 1 `82370b6`, Phase 2 `75ac0a0`, Phase 3 `5d2c353`, Phase 4 `3b76af4`, P0 `4dc855a`, P1 `f823a53`, P2 `90f6b54`, P3 `b8a79f1`, P4 `39fd4fa`, P5 `d7e7278`, P6 `6793bb2`, P7 `f1c2968`, P8 `abf79cf`, P9 `593e070`, P10 `7f9c498`, P11 `e8d029a`; 모두 prerequisite/shadow 범위이며 production `Y_global`/`Zii` 불변 |
-| current candidate | `W7-PHYS-ACTUAL-P0` ACTIVE; P12 prospective review NO-GO, 추가 synthetic MINI analysis 금지 |
+| current candidate | `W7-PHYS-ACTUAL-P0-FIX-01` ACTIVE; Actual-P0 one-shot은 영구 DONE/STOP; P12 prospective review NO-GO, 추가 synthetic MINI spectral analysis 금지 |
 | static evidence | P11 Sol ACCEPT; default `None` arithmetic/cache identity 불변, supplemental cache-ineligible, P10/P9/block/owner/termination identity와 original inventory/CSC/cache 불변 확인. P12 review는 synthetic bridge 때문에 actual owning-block attribution이 non-identifying이라고 판정 |
-| runtime evidence | P11 최종 지정 node `1 passed in 1.55s`; deterministic `SHADOW_SOLVE_NUMERICAL_FAILURE`, pivot `1.900e15`, residual `7.308e-17`, condition lower bound `1.096e17`, matrix SHA `b0680d39fcc0f9bad2c6e619b6910fd3e52765a610b940e31f7dc6cb1be79c0e` |
-| runtime 미증명 | current gate import/save/reload 결과, actual-scenario P0-P11, forward-reliable trusted solve, 실제 SPD/PowerSI 영향 |
+| runtime evidence | Actual-P0: commit `ff3327c`, runtime 3,357.7441885 s, import/save/load `1/0/0`, solve 0, report SHA `e942787a8363f68be0a17abedfe9b3562c1a35475fa0972736a9b67f5ec93c1d`, selector guard STOP. P11 evidence는 기존 그대로 유지 |
+| runtime 미증명 | source-IR scenario/save/reload, frozen raw-v3 chain 재검증, successor actual P0-P11, forward-reliable trusted solve, 실제 SPD/PowerSI 영향 |
 | 별도 사용자 파일 | untracked `accuracy_parse.py`; 보존·미수정·미stage |
-| candidate staging / acceptance | current gate는 scenario prerequisite 생성만; production/release/PowerSI acceptance가 아님 |
+| candidate staging / acceptance | current gate는 selector contract fix만; scenario generation과 production/release/PowerSI acceptance가 아님 |
 
 ## 2. 문서 사용 규칙
 
@@ -113,7 +113,7 @@ disjoint owner ledger 확보와 사용자 명시 승인
 ## 4. 작업 항목 register
 
 상태 어휘는 `READY`, `ACTIVE`, `BLOCKED`, `DEFERRED`, `DONE`만 사용한다.
-동시에 `ACTIVE`는 하나만 허용하며 현재는 **`W7-PHYS-ACTUAL-P0`**이다. 완료된 미시적 item을
+동시에 `ACTIVE`는 하나만 허용하며 현재는 **`W7-PHYS-ACTUAL-P0-FIX-01`**이다. 완료된 미시적 item을
 다시 펼쳐 읽지 말고 아래 phase-level 결론과 Git history를 사용한다.
 상태와 증거 축은 분리한다. `DONE`은 선언한 범위의 종료일 뿐 current commit,
 production acceptance, runtime PASS 또는 PowerSI 정확성을 자동으로 뜻하지 않는다.
@@ -166,7 +166,8 @@ dirty/static/runtime/commit 상태는 복구 카드 1.1에 별도로 기록한�
 | `W7-PHYS-PROSPECTIVE-P9` | 20 | DONE | shadow P1 nodal-block binding | commit `593e070`; final focused `1 passed in 1.60s`; Sol ACCEPT; bound, actual stamp/solve 금지 |
 | `W7-PHYS-PROSPECTIVE-P10` | 21 | DONE | shadow augmented component closure | commit `7f9c498`; final focused `1 passed in 1.56s`; Sol ACCEPT; component/pruning closed, actual stamp/solve 미수행 |
 | `W7-PHYS-PROSPECTIVE-P11` | 22 | DONE | exact 1 GHz shadow P1-augmented solve | commit `e8d029a`; final focused `1 passed in 1.55s`; Sol ACCEPT; `SHADOW_SOLVE_NUMERICAL_FAILURE` STOP, production wiring/cache 불변 |
-| `W7-PHYS-ACTUAL-P0` | 23 | ACTIVE | actual original-SPD source-IR scenario generation | current-main existing importer/save/load seam, 새 빈 root, 정확히 1회·무재시도; identity/ownership/save-reload만 판정; solve/Touchstone/P0-P11 금지 |
+| `W7-PHYS-ACTUAL-P0` | 23 | DONE | actual original-SPD source-IR scenario generation | commit `ff3327c`; import/save/load `1/0/0`, 3,357.744 s; selector identity STOP, scenario absent; no retry |
+| `W7-PHYS-ACTUAL-P0-FIX-01` | 24 | ACTIVE | ownership selected-surface identity correction | component-row canonical layer/island/component와 raw endpoint provenance 분리; two-file minimal code/test; original SPD/solve 금지 |
 | `W8-REL` | 18 | BLOCKED | completed known-case solve를 release gate에 연결하고 최종 전달 | accuracy/product gate와 exact release commit 필요 |
 | `D-DIST` | - | DEFERRED | Distribution routing/DRC scope 확대 | 사용자가 implementation-ready/DRC 목표로 승격할 때만 |
 | `D-DOC` | - | DEFERRED | README와 동결 연구 배너 정리 | current work를 방해할 때 별도 문서 묶음으로 처리 |
@@ -499,6 +500,7 @@ remote/full suite, installer/release는 수행하지 않았다.
 | `D-030` | P6 PASS를 production seam으로 승격하지 않고 P7에서 exact 1 GHz old-Maxwell 제거·finite-link rewire·P1 N-port 추가의 atomic shadow recipe만 두 파일·단일 node로 판정 | 확정 |
 | `D-031` | P11 commit `e8d029a`와 focused `1 passed in 1.55s`로 exact 1 GHz supplemental factor gate를 닫되 결과는 `SHADOW_SOLVE_NUMERICAL_FAILURE` STOP으로 수용한다. synthetic `1e-12 F` bridge가 포함된 weak-mode attribution P12는 non-identifying/YAGNI라 열지 않고 ACTIVE NONE 유지 | 확정 |
 | `D-032` | P12 NO-GO를 유지한 채 실제 260729 원본 SPD로 `W7-PHYS-ACTUAL-P0` source-IR generation prerequisite만 연다. 새 제품 코드 없이 기존 importer/save/load를 정확히 1회 실행하고, solve/Touchstone/P0-P11은 다음 별도 gate까지 금지한다 | 확정 |
+| `D-033` | Actual-P0 one-shot은 report SHA `e942787a…c1d`의 selector guard STOP으로 영구 폐쇄한다. 원인은 selected component island를 raw `endpoint_layer`와 결합한 identity-contract bug다. `W7-PHYS-ACTUAL-P0-FIX-01`에서 certificate component-row canonical surface identity와 raw endpoint provenance만 분리하고 focused regression으로 닫으며, 원본 SPD 재실행은 successor 별도 gate까지 금지한다 | 확정 |
 
 ## 11. 현재 evidence와 비재사용 경계
 
@@ -532,7 +534,7 @@ falsifiable physical/analytic limiting-case invariant + disjoint owner ledger와
 - W7은 source/provenance와 수학·운영 기반을 개선했지만 production network,
   계산된 `Zii`, PowerSI correlation을 바꾸지 않았다.
 - 따라서 현재 product risk는 그대로 **외부 정확성 미달**이며, current ACTIVE는
-  **`W7-PHYS-ACTUAL-P0`** source-IR generation prerequisite 하나다. P3는 `CONTACT_INTERFACE_RANK_LOSS` STOP, P4는 base cut-set
+  **`W7-PHYS-ACTUAL-P0-FIX-01`** selector correction 하나다. Actual-P0 generation은 scenario 없이 DONE/STOP했다. P3는 `CONTACT_INTERFACE_RANK_LOSS` STOP, P4는 base cut-set
   CLOSED, P5는 deterministic shadow plan PLANNED, P6는 scenario/termination commutation
   PASSED로 닫혔다. P7은 `f1c2968`에서 one-frequency stamp prerequisite PASS로 닫혔고,
   P8은 `abf79cf`에서 shadow topology/index materialization prerequisite를 닫았고 P9도
@@ -706,8 +708,10 @@ flowchart LR
   P9 --> P10[P10 augmented component closure DONE]
   P10 --> P11[P11 exact 1 GHz shadow augmented solve DONE / NUMERICAL STOP]
   P11 --> A0[P12 NO-GO]
-  A0 -. independent prerequisite .-> AP0[W7-PHYS-ACTUAL-P0 ACTIVE<br/>fresh source-IR generation]
-  AP0 --> APG{identity + ownership + save/reload PASS?}
+  A0 -. independent prerequisite .-> AP0[W7-PHYS-ACTUAL-P0 DONE / STOP<br/>selector identity mismatch]
+  AP0 --> AF[W7-PHYS-ACTUAL-P0-FIX-01 ACTIVE<br/>component-layer selector fix]
+  AF -. ACCEPT 뒤 별도 문서 gate .-> AP1[successor original-SPD one-shot]
+  AP1 --> APG{identity + ownership + save/reload PASS?}
   APG -->|아니오| S
   APG -->|예| APN[actual P0-P10 별도 gate]
   APN --> H[hold: production wiring 보류]
@@ -726,8 +730,8 @@ P8은 `abf79cf`, P9은 `593e070`, P10은 `7f9c498`, P11은 `e8d029a`의 prerequi
 범위에서 DONE이다.
 P3 semantic result는 `CONTACT_INTERFACE_RANK_LOSS` STOP, P4는 CLOSED, P5는 PLANNED,
 P6와 P7은 PASSED고 P8은 materialized, P9은 bound, P10은 component-closed다. P11은 factor
-forward-reliability numerical STOP이고 P12는 NO-GO다. current ACTIVE는 actual original-SPD
-source-IR generation prerequisite 하나이며 production physical item은 아니다. generation PASS 뒤에도
+forward-reliability numerical STOP이고 P12는 NO-GO다. Actual-P0 original-SPD one-shot은 selector
+identity mismatch로 DONE/STOP했고 current ACTIVE는 bounded selector fix 하나이며 production physical item은 아니다. successor generation PASS 뒤에도
 아래 조건을 실제 scenario에서 별도 gate로 확인한 다음 physical item을 하나만 연다.
 
 1. source-derived geometry/material provenance가 있다.
@@ -1460,6 +1464,48 @@ PASS는 source/hash와 raw-v3 identity chain이 frozen 17DT와 같고, source-pl
 IR이 exact rail/L30/L29에 결속되고 contact/owner ledger complete, synthetic partial absent,
 atomic save/reload 뒤 같은 identity가 검증될 때만 가능하다. 이 gate에서는 그 외 수치
 정확성을 주장하지 않는다.
+
+Closure는 **DONE/STOP**이다. clean `main`의 exact contract commit
+`ff3327c0ed093c71398fd293b445a1eb91529ea1`과 새 root에서 importer를 정확히 한 번 호출했다.
+3,357.7441885 s 뒤 `spd_adapter.py:7911`의
+`SOURCE_PLANE_OWNERSHIP_IR_INCOMPLETE: anchor representative island is not on selected surface`
+에서 종료했고 save/load는 호출되지 않았다. frequency solve 0, Touchstone false, P0–P11 false다.
+마지막 progress는 3,351.847 s의 layer-surface certificate compile 완료다. output은
+`D:\SPD-Decap-PI-Evaluator-W7\ff3327c0ed093c71398fd293b445a1eb91529ea1\260729-actual-source-ir\actual_source_ir_generation_report.json`
+하나뿐이며 10,582 bytes, SHA-256
+`e942787a8363f68be0a17abedfe9b3562c1a35475fa0972736a9b67f5ec93c1d`다. scenario가 없으므로
+resume condition 1은 pending, 2/4는 not evaluated, no-fit 가설은 preregistered/not evaluated다.
+이 실행과 root는 재시도·부분 재사용·PASS 재분류하지 않는다.
+
+### 12.24 W7-PHYS-ACTUAL-P0-FIX-01 / OWNERSHIP-SURFACE-LAYER-BINDING-01
+
+목적은 실패 guard를 완화하는 것이 아니라 selector identity의 두 layer 의미를 바로잡는 것이다.
+v4 terminal certificate는 first-Via immediate `endpoint_layer`와 finite branch/cycle을 통해 선택된
+required surface의 `contact_component_layer`를 별도로 가진다. `representative_island_id`와
+`contact_component_id`는 후자에 속하지만 현 producer가 전자와 묶어 snapshot을 조회해 actual SPD에서
+거짓 불일치를 만들었다. raw geometry/island가 없다는 결론은 지지되지 않는다.
+
+Frozen implementation contract:
+
+- whitelist: `src/spd_decap_pi/spd_adapter.py`,
+  `tests/test_source_plane_ownership_ir_producer.py`, 이 세 canonical 문서
+- certificate `surface_equivalence_components`를 `contact_component_id`로 exact unique join하고,
+  canonical `(net, layer, representative_island_id, component_id)`만 selected-surface identity로 사용
+- power/ground component row가 configured rail PWR/GND surface, ownership snapshot과 exact 일치해야 함
+- contact의 net/component layer/representative island가 component row와 다르면 fallback 없이 STOP
+- raw Node/Via/PadDef/Regular selection은 기존 immediate `endpoint_layer` provenance를 보존하고,
+  persisted ownership terminal surface layer는 canonical component layer를 사용
+- guard 제거, first-island 선택, alias 추정, API/schema/analysis ID/owner 의미 변경 금지
+- original SPD import/save/reload, solver, Touchstone, P0–P12, production owner-off/wiring/cache/profile,
+  threshold/fallback/gauge/reordering/fixture tuning, build/release 금지
+
+Acceptance는 immediate endpoint layer와 required component layer가 다른 focused producer fixture가
+PASS하고 selected surface/component/island와 persisted terminal surface layer가 component row에 exact
+결속되며 raw terminal pad provenance는 immediate endpoint layer에 남는 것이다. component
+net/layer/island tamper는 raw compiler 전에 deterministic STOP해야 한다. 검증 예산은 새 focused node와
+기존 direct-layer producer node를 각 한 번 실행하는 것뿐이다. fix ACCEPT 뒤 successor Actual-P0도
+자동 실행하지 않는다. exact fix commit, clean `main`, 새 empty root를 별도 문서 gate로 동결한 뒤
+정확히 1회/retry 0으로만 허용한다.
 
 No-fit follow-up hypothesis는 completed W6 mode-12 bare-rail evidence에 사전 등록한다.
 100 kHz와 1 MHz signed error는 각각 `+1.555225 dB`, `+1.554217 dB`이고 inferred capacitance
