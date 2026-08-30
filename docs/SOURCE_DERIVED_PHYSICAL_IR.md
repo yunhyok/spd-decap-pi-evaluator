@@ -1,11 +1,11 @@
 # SPD Decap PI Evaluator v0.23.1 — Source-derived physical IR
 
-- 문서 버전: **1.15**
+- 문서 버전: **1.16**
 - 계약 상태: **ACCEPTED** — source-derived provenance/ownership prerequisite의 기술 기준
 - committed 구현: `source-plane-ownership-ir-v1` + Phase 3 shadow consumer + v2 `contact_boundary` (`3b76af4`) + P0 (`4dc855a`) + P1 (`f823a53`) + P2 (`90f6b54`) + P3 (`b8a79f1`) + P4 base cut-set (`39fd4fa`) + P5 shadow rewire plan (`d7e7278`) + P6 scenario commutation audit (`6793bb2`) + P7 atomic recipe (`f1c2968`) + P8 topology embedding (`abf79cf`) + P9 nodal-block binding (`593e070`) + P10 component closure (`7f9c498`) + P11 supplemental solve gate (`e8d029a`)
 - runtime acceptance: **Phase 4와 P0–P10 focused PASS / Sol ACCEPT; P3 semantic STOP, P4 structural CLOSED, P5 PLANNED, P6/P7 PASSED, P8 materialized, P9 bound, P10 component-closed; P11 focused test PASS / numerical result STOP**
 - production 상태: solver, owner-off, `Y_global`, `Zii` **unchanged**
-- 현재 작업 상태: **ACTIVE NONE / P12 NO-GO** — P11 exact 1 GHz shadow P1 supplemental solve는 numerical DONE/STOP; synthetic MINI weak-mode 후속 분석 금지
+- 현재 작업 상태: **`W7-PHYS-ACTUAL-P0` ACTIVE / P12 NO-GO** — 기존 importer/save/load seam으로 실제 260729 원본 SPD의 source-IR scenario만 1회 생성; synthetic MINI weak-mode 후속 분석 금지
 - P11 closure: commit `e8d029a`, 최종 지정 node `1 passed in 1.55s`, Sol ACCEPT; pivot ratio `1.900e15`, condition-1 lower bound `1.096e17`, `SHADOW_SOLVE_NUMERICAL_FAILURE`; trusted stamp/matrix/solve/readiness false, production unchanged
 - 최종 개정: 2026-08-30 (Asia/Seoul)
 
@@ -48,8 +48,10 @@ flowchart LR
   U --> V[P9 shadow P1 nodal-block binding DONE]
   V --> W[P10 augmented component closure DONE]
   W --> X[P11 exact 1 GHz shadow augmented solve DONE / NUMERICAL STOP]
-  X --> Y[ACTIVE NONE / P12 NO-GO]
-  Y -. hold: production wiring 금지 .-> K[production Y_global / Zii]
+  X --> Y[P12 NO-GO]
+  Y -. independent prerequisite .-> AP0[W7-PHYS-ACTUAL-P0 ACTIVE<br/>fresh original-SPD source-IR]
+  AP0 --> APN[PASS 뒤 actual P0-P10 별도 gate]
+  APN -. hold: production wiring 금지 .-> K[production Y_global / Zii]
   I[raw-v3 geometry/material] -. hash reference .-> B
   J[compiled finite topology] -. hash/owner reference .-> D
 ```
@@ -133,6 +135,7 @@ plane owner는 source identity에 결속해 importer/compiler가 결정적으로
 | P9 | committed `593e070` | final focused `1 passed in 1.60s`; Sol ACCEPT | DONE | exact 1 GHz binding prerequisite only; no matrix application/solve |
 | P10 | committed `7f9c498` | final focused `1 passed in 1.56s`; Sol ACCEPT | DONE | exact 1 GHz partition/pruning prerequisite only; no matrix application/solve |
 | P11 | committed `e8d029a` | final focused `1 passed in 1.55s`; Sol ACCEPT; deterministic numerical STOP | DONE | pivot `1.900e15` > `1e13`; no trusted solve; production caller/cache/wiring unchanged |
+| Actual-P0 | existing importer/save/load seam; no product-code change | one current-main original-SPD import/save/reload and identity/ownership validation | ACTIVE | zero frequency solve, Touchstone read, P0-P11; prerequisite only |
 
 `DONE`은 해당 Phase의 선언 범위가 종료됐다는 뜻이며 current release, production
 acceptance 또는 PowerSI 정확성을 뜻하지 않는다. Phase 4의 exact 실행 이력과 검증
@@ -482,6 +485,43 @@ P3가 이미 current two-node quotient의 P1 contact-mode rank loss를 증명했
 복제 또는 새 diagnostic carrier가 필요해 현 증거 수준에서는 validation churn이다. 재개에는 original-SPD에서
 hash-bound로 만든 synthetic-free scenario, 같은 P0–P10 closure, 한 source-derived owner와 한 PowerSI error
 component를 잇는 no-fit 사전 가설이 모두 필요하다. 그때만 기존 P11을 값 변경 없이 한 번 재사용한다.
+
+### W7-PHYS-ACTUAL-P0 — original-SPD source-IR scenario generation
+
+이 gate는 새 parser, schema, builder 또는 solver를 만들지 않는다. 기존
+`import_spd_scenario(..., source_plane_ownership_rail_id=...)`, atomic scenario save와
+bundle reload 경로만 재사용한다. 입력은 `D:\S4LB002-2Para_260729_1_injected.spd`
+(1,116,717,287 bytes, SHA-256
+`40cb44b2376f59d6b606eb9b4d138204fe51b2dc6b3332d3b7c0e7d4202866d2`)이고 대상은
+bare rail `ADC_VDD_180_VQPS_SYS_1_AON/0`, PWR/return layer
+`Signal$L30(OTHER_POWER1)` / `Signal$L29(DGND)`다.
+
+Expected raw-v3 identity는 frozen 17DT의 canonical manifest
+`802439b57bf60af1ae82299ae26a4fb777215c5665e813ac6ac893e32d56d71d`, compressed asset
+`c5f7085edcf9d0e638f01602633f9df158472eb8e2959989d9fa7693e504947a`, geometry
+`bdfecc328264d28b6e2f35a6dcb096a42373a4cbed799a5de51403f71787623e`, logical
+`519fda0cc425d24fc61baaeb529d55240bcc085c5dca4bea5c528616e9fefb10`, plane sheet
+`e266286afe42425b8df1bfa4db85f5e2556140905f42cd8ba156f585e301c6b5`, project binding
+`52b04151f8c46ad2bc903dbf4e62855e0e29042b428ce38a4aafc9e98c519760`, certificate
+`fac8e711e65a3fe4f82d3d32fd7cb862bcf2781e02e5037fb4f16ba5a07c46b3`, topology
+`a12a76a1060cb466b3a35f4e43165e1db6e7a28c96e8a071cb0ea01e9945c6ef`다. PASS는 이
+chain과 source hash가 일치하고, source-plane ownership IR이 exact rail/layer pair에
+결속되며 contact/owner ledger가 complete이고 synthetic partial이 없고, save/reload 뒤
+동일하게 검증될 때만 가능하다.
+
+실행 전 branch가 `main`, tracked working tree가 clean, `HEAD`가 작업 기준의
+`contract-commit`과 정확히 같아야 하며 하나라도 다르면 import 전에 STOP한다. 실행 예산은
+그 commit의 새 빈 root에서 정확히 한 번이며 재시도하지 않는다. 이 gate에서는
+frequency solve, Touchstone read, P0-P11, production owner-off/wiring, threshold/value/fixture
+변경을 수행하지 않는다. 실패·취소·resource stop은 그대로 STOP으로 폐쇄한다.
+
+후속 no-fit 가설은 old owner에 더하는 것이 아니라 L30/L29의 exact old-Maxwell owner를
+source-derived P1 N-port로 교체하는 것이다. `ΔC = Ceff(P1) - Ceff(old owner)`를 정의하고
+`35.516437 pF <= ΔC <= 183.967942 pF`만 기존 100 kHz와 1 MHz 두 anchor를 모두 기존
+`±1 dB` 범위로 옮길 수 있는 사전 허용 구간으로 둔다. 후속 별도 gate는 owner-off/addition
+disjointness 실패, 구간 이탈, 어느 anchor든 악화, 새 low-band local peak 발생 시 reject한다.
+P11 1 GHz gate만으로 이 두 anchor를 증명하지 않으므로 accuracy promotion 전 bounded
+two-anchor checkpoint를 별도로 요구한다.
 
 ## 7. 주장 한계
 
