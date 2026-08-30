@@ -1,11 +1,11 @@
 # SPD Decap PI Evaluator v0.23.1 — Source-derived physical IR
 
-- 문서 버전: **1.18**
+- 문서 버전: **1.19**
 - 계약 상태: **ACCEPTED** — source-derived provenance/ownership prerequisite의 기술 기준
 - committed 구현: `source-plane-ownership-ir-v1` + Phase 3 shadow consumer + v2 `contact_boundary` (`3b76af4`) + P0 (`4dc855a`) + P1 (`f823a53`) + P2 (`90f6b54`) + P3 (`b8a79f1`) + P4 base cut-set (`39fd4fa`) + P5 shadow rewire plan (`d7e7278`) + P6 scenario commutation audit (`6793bb2`) + P7 atomic recipe (`f1c2968`) + P8 topology embedding (`abf79cf`) + P9 nodal-block binding (`593e070`) + P10 component closure (`7f9c498`) + P11 supplemental solve gate (`e8d029a`) + ownership component-layer selector fix (`b0b90db`)
 - runtime acceptance: **Phase 4와 P0–P10 focused PASS / Sol ACCEPT; P3 semantic STOP, P4 structural CLOSED, P5 PLANNED, P6/P7 PASSED, P8 materialized, P9 bound, P10 component-closed; P11 focused test PASS / numerical result STOP**
 - production 상태: solver, owner-off, `Y_global`, `Zii` **unchanged**
-- 현재 작업 상태: **`W7-PHYS-ACTUAL-P0` DONE/STOP, `W7-PHYS-ACTUAL-P0-FIX-01` DONE/ACCEPT, `W7-PHYS-ACTUAL-P0-R1` ACTIVE / P12 NO-GO** — accepted fix commit 뒤 새 exact-main/empty-root original-SPD one-shot만 진행
+- 현재 작업 상태: **Actual-P0/R1 DONE/STOP, FIX-01 DONE/ACCEPT, `W7-PHYS-ACTUAL-P0-FIX-02` ACTIVE / P12 NO-GO** — `None` component identity와 `0 / 1 / >1` candidate 분류의 focused selector gate만 진행
 - P11 closure: commit `e8d029a`, 최종 지정 node `1 passed in 1.55s`, Sol ACCEPT; pivot ratio `1.900e15`, condition-1 lower bound `1.096e17`, `SHADOW_SOLVE_NUMERICAL_FAILURE`; trusted stamp/matrix/solve/readiness false, production unchanged
 - 최종 개정: 2026-08-30 (Asia/Seoul)
 
@@ -51,8 +51,9 @@ flowchart LR
   X --> Y[P12 NO-GO]
   Y -. independent prerequisite .-> AP0[W7-PHYS-ACTUAL-P0 DONE / STOP<br/>selector identity mismatch]
   AP0 --> AF[W7-PHYS-ACTUAL-P0-FIX-01 DONE / ACCEPT<br/>component-layer selector fix]
-  AF -. separate frozen gate .-> AP1[W7-PHYS-ACTUAL-P0-R1 ACTIVE<br/>successor original-SPD one-shot]
-  AP1 --> APN[PASS 뒤 actual P0-P10 별도 gate]
+  AF -. separate frozen gate .-> AP1[W7-PHYS-ACTUAL-P0-R1 DONE / STOP<br/>component candidate identity unclassified]
+  AP1 --> AF2[W7-PHYS-ACTUAL-P0-FIX-02 ACTIVE<br/>0 / 1 / multiple deterministic classification]
+  AF2 -. ACCEPT 뒤 별도 계약 .-> APN[successor original-SPD gate]
   APN -. hold: production wiring 금지 .-> K[production Y_global / Zii]
   I[raw-v3 geometry/material] -. hash reference .-> B
   J[compiled finite topology] -. hash/owner reference .-> D
@@ -139,7 +140,8 @@ plane owner는 source identity에 결속해 importer/compiler가 결정적으로
 | P11 | committed `e8d029a` | final focused `1 passed in 1.55s`; Sol ACCEPT; deterministic numerical STOP | DONE | pivot `1.900e15` > `1e13`; no trusted solve; production caller/cache/wiring unchanged |
 | Actual-P0 | existing importer/save/load seam; no product-code change | commit `ff3327c`, import 1/save 0/load 0, 3,357.744 s, report SHA `e942787a…c1d` | DONE | selector/identity-contract STOP; scenario absent; zero solve/Touchstone/P0-P11 |
 | Actual-P0-FIX-01 | commit `b0b90db`; two-file minimal change | mismatch/direct focused `1 passed in 1.33s` / `1 passed in 1.42s`; Sol ACCEPT | DONE | component-row surface identity와 raw endpoint provenance 분리; production unchanged |
-| Actual-P0-R1 | accepted importer/save/load seam | new exact-main/empty-root import/save/reload one-shot | ACTIVE | retry 0, zero solve/Touchstone/P0-P11; prerequisite only |
+| Actual-P0-R1 | accepted importer/save/load seam | commit `0ac15e8`, import/save/load `1/0/0`, 3,368.603 s, report SHA `3d009c61…76b5` | DONE | `None`/candidate cardinality가 가려진 selector STOP; scenario absent; zero solve/Touchstone/P0-P12 |
+| Actual-P0-FIX-02 | existing selector seam; two-file bound | zero/one/multiple/tamper focused classification | ACTIVE | 원본 SPD·solve 없음; first-match/dedupe/fallback 금지 |
 
 `DONE`은 해당 Phase의 선언 범위가 종료됐다는 뜻이며 current release, production
 acceptance 또는 PowerSI 정확성을 뜻하지 않는다. Phase 4의 exact 실행 이력과 검증
@@ -579,6 +581,37 @@ ownership/contact/owner ledger, synthetic partial absent와 save/reload 동일�
 가능하다. failure/cancel/resource stop이면 partial을 재사용하지 않고 R1을 DONE/STOP으로 닫는다.
 frequency solve, Touchstone, P0–P11, 새 코드/test/schema, production wiring/cache/profile, fitting과
 threshold/value/fixture 변경은 금지한다.
+
+R1 closure는 **DONE/STOP**이다. clean `main`의 exact contract commit
+`0ac15e89fa65981ae732238aa3b1646656acce22`와 새 empty root에서 importer를 정확히 한 번
+실행했고 3,368.6026986 s 뒤 `spd_adapter.py:7913`의
+`SOURCE_PLANE_OWNERSHIP_IR_INCOMPLETE: target anchor component identity is not unique`에서
+중단됐다. save/load, verify, solve, Touchstone와 P0–P12는 모두 0이다. output root에는
+`actual_source_ir_generation_r1_report.json` 하나만 있으며 22,879 bytes, SHA-256
+`3d009c619611adfb7ef81a0180f9faa6741bc55fe6991e89a3caaf21117676b5`다. scenario와 partial은
+없고 이 root/실행은 재시도·부분 재사용·PASS 재분류하지 않는다.
+
+R1의 미분류 직접 원인은 selector의 null/cardinality 계약 결함이다. underlying source/provenance 상태는
+zero와 multiple의 실제 분류 전까지 미확정이다. producer는 candidate가
+정확히 하나가 아니면 singular component/island/layer를 Python `None`으로 기록한다. Actual-P0와
+FIX-01 selector는 이를 먼저 `str(...)`로 바꿔 `"None"`을 identity처럼 처리했으므로, 앞선 snapshot
+STOP은 component가 실제 존재했다는 증거가 아니다. R1 report에는 candidate IDs가 없어 zero와
+multiple 중 어느 쪽인지는 아직 미확정이다.
+
+### W7-PHYS-ACTUAL-P0-FIX-02 — candidate cardinality classifier
+
+FIX-02는 물리 component를 새로 고르거나 합치지 않는다. 기존 `contact_component_ids`와
+`reachable_required_component_ids`를 exact sequence로 검증하고 `0 / 1 / >1`을 서로 다른
+deterministic STOP으로 분류한다. 정확히 하나일 때만 singular component ID/evidence, net, required
+layer와 representative-island membership을 certificate row와 exact join한다. 같은 검증을 raw compiler
+전 selector와 ownership callback 양쪽에 적용한다.
+
+변경 whitelist는 `src/spd_decap_pi/spd_adapter.py`,
+`tests/test_source_plane_ownership_ir_producer.py`와 이 세 canonical 문서뿐이다. focused acceptance는
+zero, one, multiple, tampered component row 네 경우이며 invalid case는 raw compiler 전에 STOP해야 한다.
+`None` 문자열화, 정렬 첫 항목, first-match, component dedupe/merge, alias/fallback, API/schema/analysis ID
+추가, 원본 SPD import/R1 재시도/R2, solve/Touchstone/P0–P12와 production 변경은 금지한다. FIX-02
+focused PASS와 Sol ACCEPT 뒤에만 새 empty root의 successor original-SPD gate를 별도 문서로 열 수 있다.
 
 후속 no-fit 가설은 old owner에 더하는 것이 아니라 L30/L29의 exact old-Maxwell owner를
 source-derived P1 N-port로 교체하는 것이다. `ΔC = Ceff(P1) - Ceff(old owner)`를 정의하고
