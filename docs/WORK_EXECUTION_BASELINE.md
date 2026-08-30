@@ -1,9 +1,9 @@
 # SPD Decap PI Evaluator 작업 기준
 
 - 적용 제품: **SPD Decap PI Evaluator v0.23.1**
-- 문서 버전: **1.188**
-- 상위 기준: [목적·기술 기준](PRODUCT_PURPOSE_AND_TECHNICAL_BASELINE.md) v1.187
-- 현재 상태: W6 numerical FAIL; W7-SOURCE-IR-P1/P2/P3/P4 및 W7-PHYS-PROSPECTIVE-P0/P1/P2/P3/P4/P5/P6/P7/P8/P9/P10/P11 DONE, P3/P11 DONE/STOP; Actual-P0/R1/R2와 R2-MULTI-TOPOLOGY-DIAG-01 DONE/STOP; FIX-01/FIX-02 DONE/ACCEPT; `W7-PHYS-R2-STORAGE-METADATA-RECOVERY-01` ACTIVE; production physics/`Zii` unchanged.
+- 문서 버전: **1.190**
+- 상위 기준: [목적·기술 기준](PRODUCT_PURPOSE_AND_TECHNICAL_BASELINE.md) v1.189
+- 현재 상태: W6 numerical FAIL; W7-SOURCE-IR-P1/P2/P3/P4 및 W7-PHYS-PROSPECTIVE-P0/P1/P2/P3/P4/P5/P6/P7/P8/P9/P10/P11 DONE, P3/P11 DONE/STOP; Actual-P0/R1/R2, DIAG-01과 Recovery-01 DONE/STOP; FIX-01/FIX-02 DONE/ACCEPT; `W7-PHYS-SOURCE-ANCHOR-COMPONENT-EVIDENCE-01` ACTIVE; production physics/`Zii` unchanged.
 - 최종 개정: 2026-08-30 (Asia/Seoul)
 
 ## 1. 압축 후 즉시 복구 카드
@@ -15,13 +15,13 @@ context가 압축되거나 새 session에서 작업을 재개하면 이 표만 �
 | 변하지 않는 목적 | source-derived single-rail `Zii`의 PowerSI 근접 정확성과 일반화 |
 | 기본 복구 문서 | 목적·기술 기준 → Source-derived physical IR → 이 작업 기준, 세 문서 |
 | 현재 branch | `main`만 사용 |
-| 이 문서 정리의 source-before HEAD | `e9c0e545` (DIAG-01 exact docs contract commit) |
-| 현재 assessment | W6-BASE numerical FAIL; Phase 4/P0–P11은 prerequisite/shadow 범위 DONE; Actual-P0/R1/R2는 scenario 없이 STOP, DIAG-01은 report-finalization STOP, FIX-01/FIX-02는 DONE/ACCEPT다. R2의 actual multiple 외 topology 의미와 production 정확성은 미변경 |
-| 현재 active work item | **`W7-PHYS-R2-STORAGE-METADATA-RECOVERY-01`** — full bundle 재로드 없이 exact certificate descriptor만 bounded stream 판정 |
+| 이 문서 정리의 source-before HEAD | `96b0a6235b8139671c90be94dceea4a9a573f6d2` (Recovery-01 exact docs contract commit) |
+| 현재 assessment | W6-BASE numerical FAIL; Phase 4/P0–P11은 prerequisite/shadow 범위 DONE. Recovery-01은 persisted compiled-only execution PASS/scientific STOP이며 storage는 더 이상 unpersisted가 아니다. R2 multiple-candidate의 valid one-to-many/partition 의미와 production 정확성은 미증명·미변경 |
+| 현재 active work item | **`W7-PHYS-SOURCE-ANCHOR-COMPONENT-EVIDENCE-01`** — Recovery-01 compiled-only identity를 context-only로 사용하고 producer-time evidence만 bounded 관찰 |
 | 현재 정확성 상태 | `260729 retrospective FAIL`; unseen/generalization `unknown / not_run` |
-| current authorization | main-only, `accuracy_parse.py` 보존. candidate/validation report/DIAG-01 report의 metadata-stream one-shot/new report root만 허용; full bundle load, Actual-P0/R1/R2/DIAG-01 rerun, original SPD, code/test/schema, raw-v3 재구성, solve/Touchstone/P0-P12, production wiring 금지 |
-| 다음 후보 gate | compiled-only STOP이면 필수 contact partition evidence persistence를 별도 설계한다. full storage PASS여도 topology diagnostic을 자동 실행하지 않고 별도 문서 gate를 요구한다. |
-| 정확한 재개 조건 | exact descriptor storage mode가 먼저 persist되어야 한다. topology 의미 판정은 full canonical certificate availability가 증명된 별도 gate에서만 가능하다. |
+| current authorization | main-only, `accuracy_parse.py` 보존. 현재 phase는 static coordinator prep only다. docs contract commit+self-check+Sol ACCEPT 뒤에만 one high-level original-SPD import/analyze와 ephemeral observer/report를 허용한다. candidate/ZIP/Recovery artifact 재읽기, original full-v4 builder/materialize/hash, raw/compiled payload, ownership IR, save/load/reload, solve/Touchstone/P0-P12/fitting과 retry는 금지한다. target은 3개 device branch의 6개 role-pin contact이며 primary report와 sibling launcher receipt를 분리한다. |
+| 다음 후보 gate | `W7-PHYS-SOURCE-ANCHOR-COMPONENT-EVIDENCE-01` producer-time observer를 먼저 PASS/STOP한다. selector-defect diagnostic PASS만 별도 review로 남기며 FIX-03은 별도 docs/code/test frozen contract와 review gate를 통해서만 열고 자동 실행하지 않는다. |
+| 정확한 재개 조건 | Recovery storage context는 persist되어 있다. 저장된 full certificate가 absent여도 successor는 full-v4 call seam의 authoritative producer-time data에서 bounded selector-defect diagnostic만 판정할 수 있다. PASS는 diagnostic-only이며 FIX-03/production은 별도 frozen contract/review gate다. |
 | 핵심 증거 | [W6-BASE completed evidence](#w6-base-completed-evidence-260729), [W7 결과 재평가](#12-w7-결과-재평가와-후속-과제-판정) |
 
 최초 목적은 [목적·기술 기준 2장](PRODUCT_PURPOSE_AND_TECHNICAL_BASELINE.md#2-최우선-목적),
@@ -33,12 +33,12 @@ context가 압축되거나 새 session에서 작업을 재개하면 이 표만 �
 | 구분 | 현재 권위 |
 |---|---|
 | accepted / committed | Phase 1 `82370b6`, Phase 2 `75ac0a0`, Phase 3 `5d2c353`, Phase 4 `3b76af4`, P0 `4dc855a`, P1 `f823a53`, P2 `90f6b54`, P3 `b8a79f1`, P4 `39fd4fa`, P5 `d7e7278`, P6 `6793bb2`, P7 `f1c2968`, P8 `abf79cf`, P9 `593e070`, P10 `7f9c498`, P11 `e8d029a`; 모두 prerequisite/shadow 범위이며 production `Y_global`/`Zii` 불변 |
-| current candidate | `W7-PHYS-R2-STORAGE-METADATA-RECOVERY-01` ACTIVE; Actual-P0/R1/R2와 DIAG-01은 영구 DONE/STOP, FIX-01/FIX-02는 DONE/ACCEPT; P12 prospective review NO-GO |
+| current candidate | `W7-PHYS-SOURCE-ANCHOR-COMPONENT-EVIDENCE-01` ACTIVE; Recovery-01/DIAG-01은 영구 DONE/STOP, FIX-01/FIX-02는 DONE/ACCEPT; P12 prospective review NO-GO |
 | static evidence | P11 Sol ACCEPT; default `None` arithmetic/cache identity 불변, supplemental cache-ineligible, P10/P9/block/owner/termination identity와 original inventory/CSC/cache 불변 확인. P12 review는 synthetic bridge 때문에 actual owning-block attribution이 non-identifying이라고 판정 |
-| runtime evidence | R2 exact multiple STOP은 유지한다. DIAG-01 commit `e9c0e545`, candidate hash/report read/bundle load 각 1 뒤 `ZoneInfoNotFoundError`; failure report 3,283 bytes/SHA `725ec8b4…a53c`, retry/hydrate/raw/original SPD/solve 0 |
-| runtime 미증명 | DIAG-01 storage mode와 topology disposition, multiple candidate의 valid one-to-many/partition defect 의미, source-IR scenario/save/reload, successor actual P0-P11, trusted solve와 실제 SPD/PowerSI 영향 |
+| runtime evidence | R2 exact multiple STOP은 유지한다. Recovery-01 report는 exact root에 persisted compiled-only execution PASS/scientific STOP으로 고정됐다. successor 정상 완료 경로는 retry 0과 runtime guard(compiled-raw/ownership/externalizer) 0만 계수하며, save/load·solver·artifact 등은 `not_requested_by_coordinator` 정적 제어흐름 주장이다. timeout/interrupt/unexpected communicate에서는 child call/runtime guard를 `not_evaluated_after_termination`으로 남긴다 |
+| runtime 미증명 | multiple candidate의 valid one-to-many/partition defect 의미, successor producer observer evidence, source-IR save/reload, trusted solve와 실제 SPD/PowerSI 영향은 미증명이다. Recovery storage는 persisted context이며 재분류하지 않는다 |
 | 별도 사용자 파일 | untracked `accuracy_parse.py`; 보존·미수정·미stage |
-| candidate staging / acceptance | current artifact diagnostic은 multiple topology semantics prerequisite만; production/release/PowerSI acceptance가 아님 |
+| candidate staging / acceptance | current source diagnostic은 multiple topology semantics prerequisite만; production/release/PowerSI acceptance가 아님 |
 
 ## 2. 문서 사용 규칙
 
@@ -113,7 +113,7 @@ disjoint owner ledger 확보와 사용자 명시 승인
 ## 4. 작업 항목 register
 
 상태 어휘는 `READY`, `ACTIVE`, `BLOCKED`, `DEFERRED`, `DONE`만 사용한다.
-동시에 `ACTIVE`는 하나만 허용하며 현재는 **`W7-PHYS-R2-STORAGE-METADATA-RECOVERY-01`**다. 완료된 미시적 item을
+동시에 `ACTIVE`는 하나만 허용하며 현재는 **`W7-PHYS-SOURCE-ANCHOR-COMPONENT-EVIDENCE-01`**다. 완료된 미시적 item을
 다시 펼쳐 읽지 말고 아래 phase-level 결론과 Git history를 사용한다.
 상태와 증거 축은 분리한다. `DONE`은 선언한 범위의 종료일 뿐 current commit,
 production acceptance, runtime PASS 또는 PowerSI 정확성을 자동으로 뜻하지 않는다.
@@ -171,8 +171,9 @@ dirty/static/runtime/commit 상태는 복구 카드 1.1에 별도로 기록한�
 | `W7-PHYS-ACTUAL-P0-R1` | 25 | DONE | successor actual original-SPD source-IR generation | commit `0ac15e8`; import/save/load `1/0/0`, 3,368.603 s; candidate identity unclassified STOP, scenario absent; retry 0 |
 | `W7-PHYS-ACTUAL-P0-FIX-02` | 26 | DONE | ownership component candidate cardinality classifier | commit `6fc06dd`; focused two nodes PASS; Sol ACCEPT; production unchanged |
 | `W7-PHYS-ACTUAL-P0-R2` | 27 | DONE | successor actual candidate diagnostic one-shot | commit `ff8613c`; import/save/load `1/0/0`; actual multiple STOP; retry 0 |
-| `W7-PHYS-R2-MULTI-TOPOLOGY-DIAG-01` | 28 | DONE | frozen artifact multiple-topology semantics | bundle load 뒤 report-finalization STOP; report SHA `725ec8b4…a53c`; retry 0 |
-| `W7-PHYS-R2-STORAGE-METADATA-RECOVERY-01` | 29 | ACTIVE | exact certificate storage descriptor stream | scenario stream 1; bundle/hydrate/raw/original SPD/code/solve 0; retry 0 |
+| `W7-PHYS-R2-MULTI-TOPOLOGY-DIAG-01` | 28 | DONE | frozen artifact multiple-topology semantics | bundle load 뒤 report-finalization **BLOCKED/STOP**; report SHA `725ec8b4…a53c`; no topology claim; retry 0 |
+| `W7-PHYS-R2-STORAGE-METADATA-RECOVERY-01` | 29 | DONE | exact certificate storage descriptor stream | execution PASS; compiled-only; scientific `STOP_FULL_CERTIFICATE_UNAVAILABLE`; report 3,092 bytes/SHA `fbd4f9d4593af4d3b58828f6ca7c17a85b4d6d1fc62c7afcd29b6b7c9c9319e3`; scenario 760,816,272 bytes/SHA `15115693d43bdfe69bfcf2d17faeb465da0adac640072183ee24eeea414fa9d9`; full surface absent; no topology claim |
+| `W7-PHYS-SOURCE-ANCHOR-COMPONENT-EVIDENCE-01` | 30 | ACTIVE | producer-time source anchor/component evidence observer | Recovery-01 context-only; target bounded evidence; normal observer-reached import/analyze/observer/report `1/1/1/1`; runtime guard는 compiled-raw/ownership/externalizer만 계수하고 나머지는 `not_requested_by_coordinator`; retry 0 (forced termination call values are `not_evaluated_after_termination`) |
 | `W8-REL` | 18 | BLOCKED | completed known-case solve를 release gate에 연결하고 최종 전달 | accuracy/product gate와 exact release commit 필요 |
 | `D-DIST` | - | DEFERRED | Distribution routing/DRC scope 확대 | 사용자가 implementation-ready/DRC 목표로 승격할 때만 |
 | `D-DOC` | - | DEFERRED | README와 동결 연구 배너 정리 | current work를 방해할 때 별도 문서 묶음으로 처리 |
@@ -511,6 +512,7 @@ remote/full suite, installer/release는 수행하지 않았다.
 | `D-036` | FIX-02를 commit `6fc06dd`, focused `1 passed in 1.55s`/`1 passed in 1.41s`와 Sol ACCEPT로 닫는다. 별도 docs commit/new empty root의 R2에서 실제 candidate cardinality를 import 1회, 조건부 save/load 각 최대 1회, retry 0으로만 분류한다. R1 root는 재사용하지 않고 solve/Touchstone/P0-P12는 금지한다 | 확정 |
 | `D-037` | R2를 report SHA `b55ca2fa…44fe8`, import/save/load `1/0/0`의 actual multiple STOP으로 영구 폐쇄한다. 다음 artifact-only gate는 frozen 17DT candidate에서 full certificate가 있을 때만 exact-set topology/provenance를 판정하고 compiled-only이면 `STOP_FULL_CERTIFICATE_UNAVAILABLE`; raw-v3 재구성과 R2/R3는 금지한다 | 확정 |
 | `D-038` | DIAG-01을 report SHA `725ec8b4…a53c`의 report-finalization STOP으로 영구 폐쇄한다. bundle 재로드 대신 exact JSON path의 storage descriptor만 bounded stream하는 successor를 열고, fixed +09:00 timestamp/atomic writer를 input read 전에 self-check한다. storage PASS도 topology 판정으로 자동 승격하지 않는다 | 확정 |
+| `D-039` | Recovery-01을 report `D:\SPD-Decap-PI-Evaluator-W7\96b0a6235b8139671c90be94dceea4a9a573f6d2\260729-r2-storage-metadata-recovery-01\r2_storage_metadata_recovery_report.json` (3,092 bytes, SHA `fbd4f9d4593af4d3b58828f6ca7c17a85b4d6d1fc62c7afcd29b6b7c9c9319e3`)의 execution PASS/scientific `STOP_FULL_CERTIFICATE_UNAVAILABLE`로 영구 폐쇄한다. compiled-only context만 보존하고 topology 주장은 금지한다. successor `W7-PHYS-SOURCE-ANCHOR-COMPONENT-EVIDENCE-01`은 initially absent `D:\SPD-Decap-PI-Evaluator-W7\{contract-commit}\260729-source-anchor-component-evidence-01\source_anchor_component_evidence_report.json` 하나와 별도 sibling launcher receipt를 <=1 MiB/<=64 KiB atomic writer로 남기며, STARTED receipt는 finalization 실패에도 보존한다. docs contract commit+self-check+Sol ACCEPT 전에는 실행하지 않는다. 제품 code/test/schema 변경 0, runtime guard는 compiled-raw/ownership/externalizer만 계수하고 나머지 금지 항목은 `not_requested_by_coordinator` 정적 제어흐름 주장으로 남긴다. 정상 완료 retry 0이며 timeout/interrupt/unexpected communicate의 child call/runtime guard는 `not_evaluated_after_termination`으로 기록한다. preflight/input/cardinality/partition/component/finite/provenance/observer/resource/report-finalization/unexpected STOP을 fail-closed로 기록한다 | 확정 |
 
 ## 11. 현재 evidence와 비재사용 경계
 
@@ -544,7 +546,7 @@ falsifiable physical/analytic limiting-case invariant + disjoint owner ledger와
 - W7은 source/provenance와 수학·운영 기반을 개선했지만 production network,
   계산된 `Zii`, PowerSI correlation을 바꾸지 않았다.
 - 따라서 현재 product risk는 그대로 **외부 정확성 미달**이며, current ACTIVE는
-  **`W7-PHYS-R2-STORAGE-METADATA-RECOVERY-01`** storage metadata recovery prerequisite 하나다.
+  **`W7-PHYS-SOURCE-ANCHOR-COMPONENT-EVIDENCE-01`** producer-time evidence observer prerequisite 하나다.
   Actual-P0/R1/R2는 scenario 없이 DONE/STOP했고 FIX-01/FIX-02는 DONE/ACCEPT다. P3는 `CONTACT_INTERFACE_RANK_LOSS` STOP, P4는 base cut-set
   CLOSED, P5는 deterministic shadow plan PLANNED, P6는 scenario/termination commutation
   PASSED로 닫혔다. P7은 `f1c2968`에서 one-frequency stamp prerequisite PASS로 닫혔고,
@@ -725,10 +727,10 @@ flowchart LR
   AP1 --> AF2[W7-PHYS-ACTUAL-P0-FIX-02 DONE / ACCEPT<br/>0 / 1 / multiple deterministic classification]
   AF2 -. separate frozen gate .-> APG[W7-PHYS-ACTUAL-P0-R2 DONE / STOP<br/>actual multiple]
   APG --> AM[W7-PHYS-R2-MULTI-TOPOLOGY-DIAG-01 DONE / STOP<br/>report finalization failure]
-  AM --> SM{W7-PHYS-R2-STORAGE-METADATA-RECOVERY-01 ACTIVE}
-  SM -->|compiled-only / invalid / bound exceeded| S
-  SM -->|PASS_FULL_CERTIFICATE_STORAGE_AVAILABLE| APN[별도 topology diagnostic candidate]
-  APN --> H[hold: production wiring 보류]
+  AM --> SM[W7-PHYS-R2-STORAGE-METADATA-RECOVERY-01 DONE / STOP<br/>compiled-only storage context]
+  SM --> SA{W7-PHYS-SOURCE-ANCHOR-COMPONENT-EVIDENCE-01 ACTIVE}
+  SA -->|PASS selector-defect candidate| SR[separate review; never production directly]
+  SA -->|STOP| SX[W7 remains BLOCKED]
   R -->|예| H
   D[17DG foundation] -. production binding 필요 .-> H
   E[17DO/17DP owner evidence] -. identity join 필요 .-> H
@@ -746,7 +748,7 @@ P3 semantic result는 `CONTACT_INTERFACE_RANK_LOSS` STOP, P4는 CLOSED, P5는 PL
 P6와 P7은 PASSED고 P8은 materialized, P9은 bound, P10은 component-closed다. P11은 factor
 forward-reliability numerical STOP이고 P12는 NO-GO다. Actual-P0와 R1 original-SPD one-shot은 selector
 identity mismatch로 DONE/STOP했고 FIX-01/FIX-02는 DONE/ACCEPT다. R2는 actual multiple STOP으로
-닫혔고 DIAG-01도 report-finalization STOP으로 닫혔다. current ACTIVE는 storage metadata recovery 하나이며 production physical item은 아니다. 이 gate가 PASS해도
+닫혔고 DIAG-01도 report-finalization STOP으로 닫혔다. current ACTIVE는 producer-time source anchor/component evidence observer 하나이며 production physical item은 아니다. Recovery-01은 compiled-only context만 제공하므로 이 gate가 PASS해도
 아래 조건을 실제 scenario에서 별도 gate로 확인한 다음 physical item을 하나만 연다.
 
 1. source-derived geometry/material provenance가 있다.
@@ -1685,9 +1687,10 @@ mode/topology disposition은 persist되지 않았다. root의 유일한 failure 
 ### 12.29 W7-PHYS-R2-STORAGE-METADATA-RECOVERY-01
 
 목적은 DIAG-01 재실행 없이 frozen ZIP의 certificate storage mode만 persist하는 것이다.
+실행은 **DONE / execution PASS / scientific `STOP_FULL_CERTIFICATE_UNAVAILABLE`**로 종료됐다.
 
-- preflight: `{contract-commit}`은 exact `e9c0e545d17e4707122dfce0e16b1377f9b50c49`의 단일 docs-only
-  child이고 변경 파일은 세 canonical 문서뿐이다. clean `main`, exact HEAD, 새 root absent를 요구한다.
+- preflight: Recovery contract 자체는 exact `96b0a6235b8139671c90be94dceea4a9a573f6d2`이며
+  `e9c0e545d17e4707122dfce0e16b1377f9b50c49`의 단일 docs-only child이고 변경 파일은 세 canonical 문서뿐이다. Future successor `{contract-commit}`은 Recovery commit의 단일 docs-only child로서 동일한 세 문서만 변경하고 clean `main`, exact HEAD, 새 root absent를 요구한다.
 - input: 17DT candidate 911,542,390 bytes/SHA
   `fbe6abeb5655918134ecb47235edfd3b81b891ed5ec95545e03c9651937c6bcc`, validation report 8,622
   bytes/SHA `87d83364998ba09639cf36b30e34559cf598da04f653309967145a4dd1681f2f`, DIAG-01 report
@@ -1707,7 +1710,81 @@ mode/topology disposition은 persist되지 않았다. root의 유일한 failure 
 - budget: candidate hash 1, validation report read 1, DIAG-01 report read 1, ZIP central-directory read 1,
   manifest read 1, scenario stream 1, storage descriptor validator <=1, retry 0. bundle/hydrate/raw/attachment
   payload/original SPD/import/save, code/test/schema, solver/Touchstone/P0-P12/synthetic/fitting은 0.
-- output: `D:\SPD-Decap-PI-Evaluator-W7\{contract-commit}\260729-r2-storage-metadata-recovery-01\r2_storage_metadata_recovery_report.json` 하나. fixed `timezone(timedelta(hours=9))`와 atomic writer를 input read 전에 self-check하고 success/failure 모두 같은 writer를 쓴다.
+- output: `D:\SPD-Decap-PI-Evaluator-W7\96b0a6235b8139671c90be94dceea4a9a573f6d2\260729-r2-storage-metadata-recovery-01\r2_storage_metadata_recovery_report.json` 하나 (3,092 bytes, SHA-256 `fbd4f9d4593af4d3b58828f6ca7c17a85b4d6d1fc62c7afcd29b6b7c9c9319e3`). scenario는 760,816,272 bytes/SHA `15115693d43bdfe69bfcf2d17faeb465da0adac640072183ee24eeea414fa9d9`, descriptor는 499 bytes이며 compiled-only다. full surface identity 8,437,824,570 bytes/SHA `1c3bfb03aa3201f47e831824e8acb1a9d95f6cfd5c2a782467e8c5019f33c17a`는 absent다. fixed `timezone(timedelta(hours=9))`와 atomic writer를 input read 전에 self-check했다.
+
+### 12.30 W7-PHYS-SOURCE-ANCHOR-COMPONENT-EVIDENCE-01
+
+Recovery-01은 execution PASS/scientific `STOP_FULL_CERTIFICATE_UNAVAILABLE`로 닫혔다. report는
+`D:\SPD-Decap-PI-Evaluator-W7\96b0a6235b8139671c90be94dceea4a9a573f6d2\260729-r2-storage-metadata-recovery-01\r2_storage_metadata_recovery_report.json`
+(3,092 bytes, SHA-256 `fbd4f9d4593af4d3b58828f6ca7c17a85b4d6d1fc62c7afcd29b6b7c9c9319e3`)이고,
+compiled-only descriptor 499 bytes와 scenario 760,816,272 bytes/SHA `15115693d43bdfe69bfcf2d17faeb465da0adac640072183ee24eeea414fa9d9`를 보존한다.
+full surface identity 8,437,824,570 bytes/SHA `1c3bfb03aa3201f47e831824e8acb1a9d95f6cfd5c2a782467e8c5019f33c17a`는 absent이며 모든 identity는
+`context_only_not_recomputed`다.
+
+새 successor는 product code/test/schema 변경 없이 `spd_adapter._layer_surface_connectivity_certificate`
+호출부에 ephemeral wrapper를 두고, authoritative project/source/rail_anchor_bindings/contact_seeds/
+landing_by_pin/reachability에서 target-only bounded (<=1 MiB) evidence를 producer 시점에 관찰한다.
+frozen coordinator는 `D:\SPD-Decap-PI-Evaluator-W7\_coordinator_temp\source_anchor_component_evidence.py`
+(69,919 bytes, SHA-256 `3bf566baeceac42a14416f72c91950a4e3d830801928eb4dd77344ee0340e015`)이며 self-check와
+in-memory compile이 PASS였고 Sol ACCEPT를 받았으며 P0/P1은 없다. 원본 source/import/artifact/output에는 접근하지 않았다.
+대상은 `ADC_VDD_180_VQPS_SYS_1_AON/0`, power logical net `ADC_VDD_180_VQPS_SYS_1_AON/0`/L30
+(`Signal$L30(OTHER_POWER1)`은 source layer label/provenance token), ground logical `DGND`/L29
+(`Signal$L29(DGND)` source label)로 고정하고
+source/rail/anchor/contact/landing/reachability exact join을 요구한다.
+pre-freeze self-check는 synthetic/in-memory only이며 source/import와 actual synthetic/test counter는 0이다.
+sentinel은 selector/raw compiler보다 먼저 실행한다. exact target rail 1개, device branch 3개,
+각 branch의 power+ground 6개 unique contact를 요구하며 seed `status=pending`에서 landing,
+incident/opposite, remote projection, immediate endpoint와 finite witness로 completeness를 다시
+계산한다. 정상 observer-reached 경로는 import/analyze/observer/report `1/1/1/1`, retry 0이며 runtime guard는
+compiled-raw/ownership/externalizer만 계수한다. save/load/reload, solver/Touchstone/P0–P12, fitting과
+candidate/ZIP/Recovery artifact는 `not_requested_by_coordinator` 정적 제어흐름 주장이다. timeout/interrupt/
+unexpected communicate에서는 child call/runtime guard를 `not_evaluated_after_termination`으로 기록한다.
+selector-defect 후보 PASS는 별도 review로만 남고 production으로 직접 연결하지 않는다. Sol review와
+ephemeral self-check 전에는 실제 실행을 승인하지 않는다.
+
+context-only identity chain은 raw canonical `802439b57bf60af1ae82299ae26a4fb777215c5665e813ac6ac893e32d56d71d`,
+raw compressed `c5f7085edcf9d0e638f01602633f9df158472eb8e2959989d9fa7693e504947a`, geometry
+`bdfecc328264d28b6e2f35a6dcb096a42373a4cbed799a5de51403f71787623e`, logical
+`519fda0cc425d24fc61baaeb529d55240bcc085c5dca4bea5c528616e9fefb10`, plane sheet
+`e266286afe42425b8df1bfa4db85f5e2556140905f42cd8ba156f585e301c6b5`, project `52b04151f8c46ad2bc903dbf4e62855e0e29042b428ce38a4aafc9e98c519760`,
+certificate `fac8e711e65a3fe4f82d3d32fd7cb862bcf2781e02e5037fb4f16ba5a07c46b3`, topology
+`a12a76a1060cb466b3a35f4e43165e1db6e7a28c96e8a071cb0ea01e9945c6ef`, source
+`40cb44b2376f59d6b606eb9b4d138204fe51b2dc6b3332d3b7c0e7d4202866d2`, absent surface full SHA
+`1c3bfb03aa3201f47e831824e8acb1a9d95f6cfd5c2a782467e8c5019f33c17a`이며 모두
+`context_only_not_recomputed`다. 필수 per-contact evidence는 source key/landing/incident/opposite/
+padstack/path/issues, surface layers/islands, immediate islands, ordered candidate IDs, 모든 component
+row의 full evidence/component ID/proof/contacted islands, disjointness/candidate-set SHA, finite witness
+counts/cycle rank/retained-surface counts+hashes/witness SHA다.
+
+`C_contact`는 full remote surface-island를 logical net+role layer로 투영하고, `C_graph_all`은 모든
+authoritative finite target-net edge, `C_graph_complete`는 endpoint-valid이며
+`physical_model_status=complete`인 edge로 독립 산출한다. 모든 contact에서 세 집합이 nonempty exact-equal이어야
+하며 exact proof/witness, required-surface candidate의 contact 내 exact-once/disjointness를 만족해야 한다.
+직접 via path는 first edge의 exact-unique incident terminal/net/complete/owner witness를 추가 요구하고
+trace path는 first edge가 비어도 된다. `PASS_VALID_MULTI_COMPONENT_BOUNDARY_SELECTOR_DEFECT`는 power/ground exact-complete, 하나 이상의
+contact에서 2개 이상 distinct candidate, exact net/layer, contact 내 required-role candidate의 pairwise-disjoint islands, required-surface
+contact island exact-once mapping, finite reachability와 proof/contact complete일 때만 허용한다. 그 외에는
+`STOP_MULTIPLE_NOT_REPRODUCED`, `STOP_TARGET_CONTACT_MISSING_OR_AMBIGUOUS`, `STOP_SOURCE_PARTITION_INVALID`,
+`STOP_COMPONENT_ID_COLLISION`, `STOP_FINITE_REACHABILITY_INCOMPLETE`, `STOP_PROVENANCE_INCOMPLETE`,
+`STOP_INPUT_IDENTITY`, `STOP_OBSERVER_NOT_REACHED`, `STOP_RESOURCE_OR_CANCELLED` 중 하나로 닫는다.
+preflight와 report-finalization 실패 및 unexpected 예외도 각각 명시된 STOP disposition으로
+`STOP_PREFLIGHT`, `STOP_REPORT_FINALIZATION_FAILED`, `STOP_UNEXPECTED` disposition으로 fail-closed 기록하며 자동 재시도하지 않는다. receipt finalizer는 현재 소유한 STARTED, 동일 launch_id와
+product/version/contract/coordinator/source path-size-stat/started_at binding, terminal payload만 허용하며
+binding drift와 second overwrite를 거부하고, child는 import 직전 예약 root가 정확히 비어 있음을 확인한다.
+output은 initially absent root
+`D:\SPD-Decap-PI-Evaluator-W7\{contract-commit}\260729-source-anchor-component-evidence-01\` 아래
+`source_anchor_component_evidence_report.json` 하나(<=1 MiB)와 별도 sibling launcher receipt(<=64 KiB)이며
+두 파일은 독립적인 exclusive publisher다. receipt는 소유한 STARTED 파일만 finalization으로 교체하고 partial file을 남기지 않는다. one-shot budget은 import 1, internal analyze/source-graph pass 1,
+observer 1, atomic report 1, retry 0; original full-v4 builder/materialization/hash, compiled/raw production/
+payload load, ownership IR build, save/load/reload, solve/Touchstone/P0–P12/fitting, candidate/ZIP/Recovery
+artifact read는 모두 0이다. pre-run unique/multiple/overlap self-check, exact projection equality와 full-v4/raw
+compiler zero 및 Sol ACCEPT가 확인됐고, PASS는 diagnostic-only로 FIX-03 또는 production을
+자동 승인하지 않는다.
+finite graph는 target NET/incident vertex·edge만 한 번 index하고 target vertex 262,144개, edge 524,288개,
+contact connected vertex 65,536개의 hard bound를 둔다. 여섯 contact는 shared index와 exact-unique
+`edge_by_id`를 재사용한다. runtime guard counter는 compiled-raw/ownership/externalizer에만 적용하며
+save/load/reload, solver/Touchstone/P0–P12/fitting, candidate/ZIP/Recovery read, original full-v4 및
+actual synthetic/test는 `not_requested_by_coordinator` static-control-flow claim으로 기록한다.
 
 No-fit follow-up hypothesis는 completed W6 mode-12 bare-rail evidence에 사전 등록한다.
 100 kHz와 1 MHz signed error는 각각 `+1.555225 dB`, `+1.554217 dB`이고 inferred capacitance
