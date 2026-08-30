@@ -1,11 +1,11 @@
 # SPD Decap PI Evaluator v0.23.1 — Source-derived physical IR
 
-- 문서 버전: **1.20**
+- 문서 버전: **1.21**
 - 계약 상태: **ACCEPTED** — source-derived provenance/ownership prerequisite의 기술 기준
 - committed 구현: `source-plane-ownership-ir-v1` + Phase 3 shadow consumer + v2 `contact_boundary` (`3b76af4`) + P0 (`4dc855a`) + P1 (`f823a53`) + P2 (`90f6b54`) + P3 (`b8a79f1`) + P4 base cut-set (`39fd4fa`) + P5 shadow rewire plan (`d7e7278`) + P6 scenario commutation audit (`6793bb2`) + P7 atomic recipe (`f1c2968`) + P8 topology embedding (`abf79cf`) + P9 nodal-block binding (`593e070`) + P10 component closure (`7f9c498`) + P11 supplemental solve gate (`e8d029a`) + ownership component-layer selector fix (`b0b90db`) + component-cardinality classifier (`6fc06dd`)
 - runtime acceptance: **Phase 4와 P0–P10 focused PASS / Sol ACCEPT; P3 semantic STOP, P4 structural CLOSED, P5 PLANNED, P6/P7 PASSED, P8 materialized, P9 bound, P10 component-closed; P11 focused test PASS / numerical result STOP**
 - production 상태: solver, owner-off, `Y_global`, `Zii` **unchanged**
-- 현재 작업 상태: **Actual-P0/R1 DONE/STOP, FIX-01/FIX-02 DONE/ACCEPT, `W7-PHYS-ACTUAL-P0-R2` ACTIVE / P12 NO-GO** — 실제 원본 SPD candidate cardinality를 분류하는 별도 retry-0 diagnostic gate만 진행
+- 현재 작업 상태: **Actual-P0/R1/R2 DONE/STOP, FIX-01/FIX-02 DONE/ACCEPT, `W7-PHYS-R2-MULTI-TOPOLOGY-DIAG-01` ACTIVE / P12 NO-GO** — frozen 17DT artifact에서 multiple topology 의미만 판정
 - P11 closure: commit `e8d029a`, 최종 지정 node `1 passed in 1.55s`, Sol ACCEPT; pivot ratio `1.900e15`, condition-1 lower bound `1.096e17`, `SHADOW_SOLVE_NUMERICAL_FAILURE`; trusted stamp/matrix/solve/readiness false, production unchanged
 - 최종 개정: 2026-08-30 (Asia/Seoul)
 
@@ -53,8 +53,10 @@ flowchart LR
   AP0 --> AF[W7-PHYS-ACTUAL-P0-FIX-01 DONE / ACCEPT<br/>component-layer selector fix]
   AF -. separate frozen gate .-> AP1[W7-PHYS-ACTUAL-P0-R1 DONE / STOP<br/>component candidate identity unclassified]
   AP1 --> AF2[W7-PHYS-ACTUAL-P0-FIX-02 DONE / ACCEPT<br/>0 / 1 / multiple deterministic classification]
-  AF2 -. separate frozen gate .-> AP2[W7-PHYS-ACTUAL-P0-R2 ACTIVE<br/>actual candidate diagnostic one-shot]
-  AP2 -. hold: 별도 gate .-> APN[actual P0-P10]
+  AF2 -. separate frozen gate .-> AP2[W7-PHYS-ACTUAL-P0-R2 DONE / STOP<br/>actual candidate multiple]
+  AP2 --> AM{W7-PHYS-R2-MULTI-TOPOLOGY-DIAG-01 ACTIVE<br/>artifact-only exact topology semantics}
+  AM -->|compiled-only / partition-provenance defect| AMS[STOP<br/>별도 evidence 또는 repair gate]
+  AM -->|PASS_VALID_ONE_TO_MANY_TOPOLOGY| APN[actual P0-P10 별도 successor candidate]
   APN -. hold: production wiring 금지 .-> K[production Y_global / Zii]
   I[raw-v3 geometry/material] -. hash reference .-> B
   J[compiled finite topology] -. hash/owner reference .-> D
@@ -143,7 +145,8 @@ plane owner는 source identity에 결속해 importer/compiler가 결정적으로
 | Actual-P0-FIX-01 | commit `b0b90db`; two-file minimal change | mismatch/direct focused `1 passed in 1.33s` / `1 passed in 1.42s`; Sol ACCEPT | DONE | component-row surface identity와 raw endpoint provenance 분리; production unchanged |
 | Actual-P0-R1 | accepted importer/save/load seam | commit `0ac15e8`, import/save/load `1/0/0`, 3,368.603 s, report SHA `3d009c61…76b5` | DONE | `None`/candidate cardinality가 가려진 selector STOP; scenario absent; zero solve/Touchstone/P0-P12 |
 | Actual-P0-FIX-02 | commit `6fc06dd`; existing selector seam | mismatch/cardinality focused `1 passed in 1.55s`; direct producer `1 passed in 1.41s`; Sol ACCEPT | DONE | exact zero/one/multiple/tamper 분류; production unchanged |
-| Actual-P0-R2 | accepted importer/save/load seam | exact-main/new-root/retry-0 one-shot | ACTIVE | 실제 candidate 분류만; solve/Touchstone/P0-P12 금지 |
+| Actual-P0-R2 | accepted importer seam | commit `ff8613c`, import/save/load `1/0/0`, 3,354.484 s, report SHA `b55ca2fa…44fe8` | DONE | actual candidate multiple STOP; identity/ownership not evaluated |
+| R2-MULTI-TOPOLOGY-DIAG-01 | frozen 17DT artifact + existing validators | artifact load 1, conditional certificate/raw load each <=1, retry 0 | ACTIVE | topology semantics only; production/accuracy unchanged |
 
 `DONE`은 해당 Phase의 선언 범위가 종료됐다는 뜻이며 current release, production
 acceptance 또는 PowerSI 정확성을 뜻하지 않는다. Phase 4의 exact 실행 이력과 검증
@@ -651,6 +654,56 @@ scenario/partial/root를 재사용하지 않는다. singular one + save/reload P
 증명하며 PowerSI 정확성이나 production readiness가 아니다. 실행 중 code/test/docs/schema 수정,
 frequency solve, Touchstone, P0-P12, synthetic injection, first-match/dedupe/fallback, production
 owner-off/wiring/cache/profile, fitting/threshold/value/fixture 변경과 build/release는 금지한다.
+
+R2 closure는 **DONE/STOP**이다. clean `main`, exact docs contract commit
+`ff8613c86014a412cd76f5acf3d56b0c4b3ba94b`, 시작 전 absent였던
+`D:\SPD-Decap-PI-Evaluator-W7\ff8613c86014a412cd76f5acf3d56b0c4b3ba94b\260729-actual-source-ir-r2`
+에서 importer를 정확히 한 번 실행했다. 3,354.484 s 뒤
+`SOURCE_PLANE_OWNERSHIP_IR_INCOMPLETE: target anchor component candidates are multiple`로 import
+단계에서 중단했다. candidate cardinality는 **multiple**이며 save/load, 세 envelope validator,
+ownership loader, solve, Touchstone, P0-P12와 synthetic injection은 모두 0, retry도 0이다.
+
+root에는 `actual_source_ir_generation_r2_report.json` 하나만 있으며 23,894 bytes, SHA-256
+`b55ca2fa4740dd91516a624c6995f1f0d1371aea8f72f5bcfd168c4c21844fe8`다. 조기 STOP이라
+frozen identity/ownership과 resume conditions는 `not_evaluated`다. 이 결과는 component 후보가 실제로
+복수라는 것만 증명하며 valid one-to-many인지 producer partition/provenance 결함인지는 증명하지 않는다.
+R2 실행/root/report는 재시도·부분 재사용·PASS 재분류하지 않는다.
+
+### W7-PHYS-R2-MULTI-TOPOLOGY-DIAG-01 — frozen artifact topology semantics
+
+다음 gate는 original SPD를 다시 읽지 않는다. frozen 17DT candidate
+`D:\SPD-Decap-PI-Evaluator-W7\2928ca73ffa0d0d1421cd393939b6fea1d025f42\260729-17dt-raw-spatial-v3\S4LB002-2Para_260729_1_injected_candidate.spdpi`
+(911,542,390 bytes, SHA-256
+`fbe6abeb5655918134ecb47235edfd3b81b891ed5ec95545e03c9651937c6bcc`)와 같은 root의
+`import_save_validation_report.json` (8,622 bytes, SHA-256
+`87d83364998ba09639cf36b30e34559cf598da04f653309967145a4dd1681f2f`)만 한 번 검증한다.
+
+`{contract-commit}`은 exact
+`ff8613c86014a412cd76f5acf3d56b0c4b3ba94b`의 단일 child여야 하며, 그 commit의 변경 파일은
+세 canonical 문서뿐이어야 한다. preflight는 `main`, tracked clean, `HEAD == {contract-commit}`과
+두 input size/SHA, 새 report root absent를 함께 검증한다.
+
+full canonical certificate를 hydrate할 수 있을 때만 exact target rail
+`ADC_VDD_180_VQPS_SYS_1_AON/0`의 power `Signal$L30(OTHER_POWER1)`와 ground
+`Signal$L29(DGND)` 역할을 판정한다. 각 target contact마다 후보 집합 `C_contact`와 graph에서 도출한
+집합 `C_graph`가 exact-set으로 같아야 하며, role/contact 간 candidate 수를 합산하지 않는다. 각 집합은
+component-row exact-unique join, net/layer, disjoint island sets, canonical evidence hash, exposed quotient
+vertex의 complete-edge reachability, raw-v3 Via owner witness path를 모두 만족해야 한다. target contact가
+0개이거나 어떤 contact라도 `C_contact != C_graph`이면 `STOP_PARTITION_OR_PROVENANCE_DEFECT`다. 모든
+contact가 exact witness를 통과하고 그중 적어도 한 contact가 `|C_contact| >= 2`일 때만
+`PASS_VALID_ONE_TO_MANY_TOPOLOGY`다.
+
+certificate가 compiled-only이면 즉시 `STOP_FULL_CERTIFICATE_UNAVAILABLE`다. compact surface view는
+component rows만, external view는 pin/net/quotient/incident-Via만 보존하고
+`contact_component_ids`를 보존하지 않는다. 이 경우 raw-v3만으로 producer partition/reachability를
+재구성하거나 first-match/dedupe/merge하지 않는다. output은 새 absent root의
+`r2_multiple_topology_diagnostic_report.json` 하나뿐이며 coordinator evidence envelope이지 product
+schema/API가 아니다.
+
+호출 예산은 candidate hash 1, validation-report read 1, `load_scenario_bundle` 1, certificate hydration
+최대 1, full-certificate PASS 뒤 raw-v3 load 최대 1, retry 0이다. compiled-only이면 hydration/raw-v3
+load는 0이다. original SPD/import/save/reload, code/test/schema, solver/Touchstone/P0-P12, synthetic,
+fitting과 production 변경은 모두 0이다. 모든 결과는 자동 재실행/R3 없이 별도 후속 gate를 요구한다.
 
 후속 no-fit 가설은 old owner에 더하는 것이 아니라 L30/L29의 exact old-Maxwell owner를
 source-derived P1 N-port로 교체하는 것이다. `ΔC = Ceff(P1) - Ceff(old owner)`를 정의하고

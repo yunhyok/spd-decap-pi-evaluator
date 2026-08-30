@@ -1,13 +1,13 @@
 # SPD Decap PI Evaluator 목적·기술 기준
 
 - 적용 제품: **SPD Decap PI Evaluator v0.23.1**
-- 문서 버전: **1.185**
+- 문서 버전: **1.186**
 - W5 approved/machine-frozen source-before: `main` commit `027ac7a09a3eded15f45c41860945f9d4c7f488d`
-- 상태: **G0 기준 문서** — W5 DONE; W6-BASE 260729 numerical FAIL; W7-SOURCE-IR Phase 1/2/3/4와 W7-PHYS-PROSPECTIVE-P0/P1/P2/P4/P5/P6/P7/P8/P9/P10/P11 DONE, P3/P11 DONE/STOP (모두 shadow/prerequisite 범위); `W7-PHYS-ACTUAL-P0`와 successor R1은 scenario 없이 DONE/STOP, FIX-01과 FIX-02는 각각 commit `b0b90db`, `6fc06dd`에서 DONE/ACCEPT다. `W7-PHYS-ACTUAL-P0-R2`만 ACTIVE이고 W7 production physics는 아직 BLOCKED다.
+- 상태: **G0 기준 문서** — W5 DONE; W6-BASE 260729 numerical FAIL; W7-SOURCE-IR Phase 1/2/3/4와 W7-PHYS-PROSPECTIVE-P0/P1/P2/P4/P5/P6/P7/P8/P9/P10/P11 DONE, P3/P11 DONE/STOP (모두 shadow/prerequisite 범위); Actual-P0/R1/R2는 scenario 없이 DONE/STOP, FIX-01/FIX-02는 DONE/ACCEPT다. `W7-PHYS-R2-MULTI-TOPOLOGY-DIAG-01`만 ACTIVE이고 W7 production physics는 아직 BLOCKED다.
 - 현재 평가: W6-BASE는 PowerSI 수치 기준 FAIL이고 unseen/generalization은 `unknown / not_run`이다. P11은 commit `e8d029a`에서 exact 1 GHz P1 supplemental matrix를 기존 Layer-Surface 경로에 적용해 reciprocity/row-sum 뒤 factor gate까지 도달했지만, pivot ratio `1.900e15`와 condition-1 lower bound `1.096e17`로 기존 `1e13` forward-reliability 한계를 초과해 `SHADOW_SOLVE_NUMERICAL_FAILURE` STOP했다. 작은 backward residual `7.308e-17`은 forward accuracy 증거가 아니다. production solver caller, cache, topology, owner-off, `Y_global`과 `Zii`는 바뀌지 않았다.
-- Sole ACTIVE item (current): **`W7-PHYS-ACTUAL-P0-R2`** — FIX-02가 구분한 target contact candidate의 실제 cardinality를 같은 원본 SPD에서 정확히 한 번 분류하는 successor diagnostic gate다. zero/multiple은 그대로 STOP하고 singular one일 때만 기존 scenario save/reload를 진행한다. production wiring/broadband와 P12는 열지 않는다.
+- Sole ACTIVE item (current): **`W7-PHYS-R2-MULTI-TOPOLOGY-DIAG-01`** — R2가 확정한 multiple candidate가 valid one-to-many topology인지 partition/provenance defect인지 frozen 17DT artifact에서 한 번만 판정한다. full certificate가 없으면 재구성하지 않고 STOP한다. original SPD, production wiring/broadband와 P12는 열지 않는다.
 - P11 closure: commit `e8d029a`, 최종 지정 node `1 passed in 1.55s`, Sol ACCEPT; matrix SHA `b0680d39fcc0f9bad2c6e619b6910fd3e52765a610b940e31f7dc6cb1be79c0e`; accepted stamp/matrix/solve/readiness flags false, production unchanged.
-- 현재 권한: main-only와 `accuracy_parse.py` 보존을 유지한다. P12 prospective review는 NO-GO다. 허용 범위는 세 기준 문서에 동결한 R2 coordinator one-shot과 그 새 output root뿐이다. R1 재시도·부분 재사용, 코드/test/schema 수정, first-match/dedupe/fallback, synthetic MINI spectral/nullspace 분석, threshold/gauge/reordering/fixture capacitance 변경, solve/Touchstone/P0-P12, production wiring, broadband, Distribution, W6/PowerSI fitting·comparison과 release는 금지한다.
+- 현재 권한: main-only와 `accuracy_parse.py` 보존을 유지한다. P12 prospective review는 NO-GO다. 허용 범위는 세 기준 문서와 frozen 17DT candidate/validation report의 artifact-only one-shot, 새 bounded report root뿐이다. Actual-P0/R1/R2 재실행·부분 재사용, original SPD, 코드/test/schema 수정, raw-v3 단독 재구성, first-match/dedupe/fallback, solve/Touchstone/P0-P12, production wiring, broadband, Distribution, fitting·comparison과 release는 금지한다.
 - 물리 작업 재개 조건: IR prerequisite 완료 후에도 geometry/material provenance, physical limiting-case invariant, rail-complete 적용 범위, deterministic stamp와 실제 consumer에 결속된 disjoint owner ledger를 갖춘 단일 physical candidate가 필요하다.
 - 최종 개정: 2026-08-30 (Asia/Seoul)
 
@@ -343,8 +343,8 @@ flowchart TD
 | Source IR 성과 | Phase 1/2는 canonical source/provenance IR과 importer seam, Phase 3은 deterministic shadow finite-port witness, Phase 4는 quotient-authoritative all-contact v2를 commit `3b76af4`에서 완료했다. 세부 계약은 [Source-derived physical IR](SOURCE_DERIVED_PHYSICAL_IR.md)이 권위 있다. |
 | Source IR 한계 | P0–P10은 contact admissibility부터 exact 1 GHz atomic replacement recipe, shadow topology/P1 block binding과 augmented component/pruning closure까지의 prerequisite를 증명했다. P11은 actual shadow matrix/factor gate를 실행했지만 forward reliability STOP했다. trusted solve, production assembly와 `Zii` 연결, PowerSI 근접 정확성은 증명하지 않았다. |
 | 생산 물리 상태 | surface-patch plane current-spreading R/L이 유일한 credible direction이지만 deterministic replacement stamp, production global assembly와 disjoint owner-off ledger가 없어 **NOT READY/STOP**이다. |
-| 현재 작업 상태 | `W7-PHYS-ACTUAL-P0`와 successor R1은 scenario 없이 영구 DONE/STOP했다. FIX-01은 commit `b0b90db`, FIX-02는 commit `6fc06dd`와 focused PASS/Sol ACCEPT로 DONE이다. `W7-PHYS-ACTUAL-P0-R2`만 ACTIVE다. |
-| 현재 gate | R1 report(22,879 bytes, SHA-256 `3d009c61…76b5`)와 root는 불변 보존한다. R2는 별도 exact-main commit/new empty root에서 import 1회, 조건부 save/reload 각 최대 1회, retry 0으로 실제 candidate가 zero/one/multiple인지 분류한다. solve와 정확성 주장은 금지한다. |
+| 현재 작업 상태 | Actual-P0/R1/R2는 scenario 없이 영구 DONE/STOP했다. FIX-01/FIX-02는 DONE/ACCEPT다. `W7-PHYS-R2-MULTI-TOPOLOGY-DIAG-01`만 ACTIVE다. |
+| 현재 gate | R2 report(23,894 bytes, SHA-256 `b55ca2fa…44fe8`)는 import/save/load `1/0/0`과 exact multiple STOP을 확정했다. 다음 gate는 frozen 17DT artifact의 certificate 저장 형태와 exact candidate/component/reachability/owner provenance만 읽는다. compiled-only이면 `STOP_FULL_CERTIFICATE_UNAVAILABLE`이며 raw-v3 재구성은 금지한다. |
 | 사전 물리 가설 | 대상 bare rail의 exact old-Maxwell owner를 source-derived P1 N-port로 **교체**할 때의 순 capacitance 변화 `ΔC = Ceff(P1) - Ceff(old owner)`가 기존 100 kHz/1 MHz PowerSI 오차 성분을 설명할 수 있는지를 후속 별도 gate에서 무피팅으로 반증한다. actual scenario 생성 자체는 정확도 개선 증거가 아니다. |
 
 세부 실행 이력, exact artifact identity와 current dirty file set은
