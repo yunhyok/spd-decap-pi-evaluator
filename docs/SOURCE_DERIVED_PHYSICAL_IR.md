@@ -1,11 +1,11 @@
 # SPD Decap PI Evaluator v0.23.1 — Source-derived physical IR
 
-- 문서 버전: **1.24**
+- 문서 버전: **1.25**
 - 계약 상태: **ACCEPTED** — source-derived provenance/ownership prerequisite의 기술 기준
 - committed 구현: `source-plane-ownership-ir-v1` + Phase 3 shadow consumer + v2 `contact_boundary` (`3b76af4`) + P0 (`4dc855a`) + P1 (`f823a53`) + P2 (`90f6b54`) + P3 (`b8a79f1`) + P4 base cut-set (`39fd4fa`) + P5 shadow rewire plan (`d7e7278`) + P6 scenario commutation audit (`6793bb2`) + P7 atomic recipe (`f1c2968`) + P8 topology embedding (`abf79cf`) + P9 nodal-block binding (`593e070`) + P10 component closure (`7f9c498`) + P11 supplemental solve gate (`e8d029a`) + ownership component-layer selector fix (`b0b90db`) + component-cardinality classifier (`6fc06dd`)
 - runtime acceptance: **Phase 4와 P0–P10 focused PASS / Sol ACCEPT; P3 semantic STOP, P4 structural CLOSED, P5 PLANNED, P6/P7 PASSED, P8 materialized, P9 bound, P10 component-closed; P11 focused test PASS / numerical result STOP**
 - production 상태: solver, owner-off, `Y_global`, `Zii` **unchanged**
-- 현재 작업 상태: **Actual-P0/R1/R2, R2-MULTI-TOPOLOGY-DIAG-01과 Recovery-01 DONE/STOP, FIX-01/FIX-02 DONE/ACCEPT, `W7-PHYS-SOURCE-ANCHOR-COMPONENT-EVIDENCE-01` ACTIVE / P12 NO-GO** — Recovery report는 3,092 bytes, SHA-256 `fbd4f9d4593af4d3b58828f6ca7c17a85b4d6d1fc62c7afcd29b6b7c9c9319e3`이며 compiled-only context다.
+- 현재 작업 상태: **Actual-P0/R1/R2, R2-MULTI-TOPOLOGY-DIAG-01과 Recovery-01 DONE/STOP, FIX-01/FIX-02 DONE/ACCEPT, old `W7-PHYS-SOURCE-ANCHOR-COMPONENT-EVIDENCE-01` DONE/`STOP_RESOURCE_OR_CANCELLED`, `W7-PHYS-SOURCE-ANCHOR-LEAN-DSU-EVIDENCE-01` ACTIVE / P12 NO-GO** — Recovery report는 3,092 bytes, SHA-256 `fbd4f9d4593af4d3b58828f6ca7c17a85b4d6d1fc62c7afcd29b6b7c9c9319e3`이며 compiled-only context다.
 - P11 closure: commit `e8d029a`, 최종 지정 node `1 passed in 1.55s`, Sol ACCEPT; pivot ratio `1.900e15`, condition-1 lower bound `1.096e17`, `SHADOW_SOLVE_NUMERICAL_FAILURE`; trusted stamp/matrix/solve/readiness false, production unchanged
 - 최종 개정: 2026-08-30 (Asia/Seoul)
 
@@ -56,9 +56,10 @@ flowchart LR
   AF2 -. separate frozen gate .-> AP2[W7-PHYS-ACTUAL-P0-R2 DONE / STOP<br/>actual candidate multiple]
   AP2 --> AM[W7-PHYS-R2-MULTI-TOPOLOGY-DIAG-01 DONE / STOP<br/>report finalization failure]
   AM --> SM[W7-PHYS-R2-STORAGE-METADATA-RECOVERY-01 DONE / STOP<br/>compiled-only storage context]
-  SM --> SA{W7-PHYS-SOURCE-ANCHOR-COMPONENT-EVIDENCE-01 ACTIVE<br/>producer-time bounded observer}
-  SA -->|PASS selector-defect candidate| SD[separate review / no production wiring]
-  SA -->|STOP| SX[remain BLOCKED]
+  SM --> SA{old component observer STOP_RESOURCE_OR_CANCELLED}
+  SA --> LD{W7-PHYS-SOURCE-ANCHOR-LEAN-DSU-EVIDENCE-01 ACTIVE<br/>producer-time bounded observer}
+  LD -->|PASS selector-defect candidate| SD[separate review / no production wiring]
+  LD -->|STOP| SX[remain BLOCKED]
   I[raw-v3 geometry/material] -. hash reference .-> B
   J[compiled finite topology] -. hash/owner reference .-> D
 ```
@@ -149,7 +150,8 @@ plane owner는 source identity에 결속해 importer/compiler가 결정적으로
 | Actual-P0-R2 | accepted importer seam | commit `ff8613c`, import/save/load `1/0/0`, 3,354.484 s, report SHA `b55ca2fa…44fe8` | DONE | actual candidate multiple STOP; identity/ownership not evaluated |
 | R2-MULTI-TOPOLOGY-DIAG-01 | frozen 17DT artifact + existing validators | candidate hash/report read/bundle load `1/1/1`; failure report SHA `725ec8b4…a53c` | DONE | report-finalization **BLOCKED/STOP**; storage/topology not persisted; no topology claim; retry 0 |
 | R2-STORAGE-METADATA-RECOVERY-01 | frozen ZIP + exact descriptor path | scenario 760,816,272 bytes/SHA `15115693d43bdfe69bfcf2d17faeb465da0adac640072183ee24eeea414fa9d9`; descriptor 499 bytes; report 3,092 bytes/SHA `fbd4f9d4593af4d3b58828f6ca7c17a85b4d6d1fc62c7afcd29b6b7c9c9319e3`; calls/forbidden budget exact | DONE | execution PASS; compiled-only; scientific `STOP_FULL_CERTIFICATE_UNAVAILABLE`; full surface identity absent; no topology claim |
-| W7-PHYS-SOURCE-ANCHOR-COMPONENT-EVIDENCE-01 | Recovery-01 context-only identity | producer-time observer; normal observer-reached import/analyze/observer/report `1/1/1/1`; runtime guard는 compiled-raw/ownership/externalizer만 계수하고 나머지는 `not_requested_by_coordinator`; retry 0; forced termination은 `not_evaluated_after_termination` | ACTIVE | selector-defect candidate or STOP; never direct production wiring |
+| W7-PHYS-SOURCE-ANCHOR-COMPONENT-EVIDENCE-01 | Recovery-01 context-only identity | target census cap에서 `STOP_RESOURCE_OR_CANCELLED`로 영구 종료; 재시도/재사용 없음 | DONE/STOP | successor lean DSU로만 진단 |
+| W7-PHYS-SOURCE-ANCHOR-LEAN-DSU-EVIDENCE-01 | Recovery-01 context-only identity | producer-time lean DSU observer; V1/V2/E1/E2/V3, normal observer-reached import/analyze/observer/report `1/1/1/1`; runtime guard compiled-raw/ownership/externalizer만 계수 | ACTIVE | selector-defect candidate or STOP; never direct production wiring |
 
 `DONE`은 해당 Phase의 선언 범위가 종료됐다는 뜻이며 current release, production
 acceptance 또는 PowerSI 정확성을 뜻하지 않는다. Phase 4의 exact 실행 이력과 검증
@@ -753,16 +755,16 @@ solve/Touchstone/P0-P12/synthetic/fitting은 모두 0이다.
 timestamp helper는 input read 전에 fixed `timezone(timedelta(hours=9))`로 self-check하고, success/failure
 모두 동일 helper와 atomic report writer를 사용한다.
 
-### W7-PHYS-SOURCE-ANCHOR-COMPONENT-EVIDENCE-01 — producer-time observer
+### W7-PHYS-SOURCE-ANCHOR-COMPONENT-EVIDENCE-01 — DONE/STOP_RESOURCE_OR_CANCELLED
 
 Recovery-01은 execution PASS이지만 compiled-only이며 scientific disposition은
 `STOP_FULL_CERTIFICATE_UNAVAILABLE`이다. 보존된 scenario identity
 `760,816,272` bytes/SHA `15115693d43bdfe69bfcf2d17faeb465da0adac640072183ee24eeea414fa9d9`, descriptor 499 bytes와 full-surface identity
 `8,437,824,570` bytes/SHA `1c3bfb03aa3201f47e831824e8acb1a9d95f6cfd5c2a782467e8c5019f33c17a` absent는 **context_only_not_recomputed**로만
-사용한다. 새 ephemeral wrapper는 `spd_adapter._layer_surface_connectivity_certificate`
+사용한다. 이 old gate의 ephemeral wrapper는 `spd_adapter._layer_surface_connectivity_certificate`
 호출 시점에 authoritative project/source/rail_anchor_bindings/contact_seeds/
 landing_by_pin/reachability를 읽어 target-only bounded (<=1 MiB) evidence를 관찰한다.
-고정 coordinator는 `D:\SPD-Decap-PI-Evaluator-W7\_coordinator_temp\source_anchor_component_evidence.py`
+이 old gate는 target census cap을 만나 `STOP_RESOURCE_OR_CANCELLED`로 영구 종료했다. 고정 coordinator는 `D:\SPD-Decap-PI-Evaluator-W7\_coordinator_temp\source_anchor_component_evidence.py`
 (69,919 bytes, SHA-256 `3bf566baeceac42a14416f72c91950a4e3d830801928eb4dd77344ee0340e015`)이며 self-check와
 in-memory compile은 PASS였고 Sol ACCEPT를 받았으며 P0/P1은 없다. 원본 source/import/artifact/output에는 접근하지 않았다.
 launcher는 exact preflight 후 `launch_id`와 source stat을 담은 exclusive no-clobber STARTED sibling receipt를
@@ -818,6 +820,45 @@ preflight, report-finalization, unexpected 예외도 각각 `STOP_PREFLIGHT`, `S
 receipt finalizer는 현재 소유한 STARTED, 동일 launch_id와 product/version/contract/coordinator/source
 path-size-stat/started_at binding, terminal payload만 허용하며 binding drift와 second overwrite를 거부한다.
 child는 import 직전 예약 root가 정확히 비어 있음을 확인한다.
+
+### W7-PHYS-SOURCE-ANCHOR-LEAN-DSU-EVIDENCE-01 — ACTIVE
+
+old component-evidence gate의 `STOP_RESOURCE_OR_CANCELLED` 이후 sole ACTIVE successor다. frozen
+ephemeral coordinator는 `D:\SPD-Decap-PI-Evaluator-W7\_coordinator_temp\source_anchor_lean_dsu_evidence.py`
+(109,333 bytes, SHA-256 `ff2ce1af1528033ec378354988bd8cc7cf1fc381e7e2f511629e140bcadb7d35`)이며
+self-check와 in-memory compile 각각 1회 PASS, `measured_aux_bytes_per_vertex=195.83`
+(195.83 B/target vertex <=256 B) PASS, Sol final ACCEPT, P0/P1 없음으로 동결됐다. future
+contract commit은 `95fd4d940019515aaef9dd43c38f4fb5301d7aeb`의 단일 docs-only child이고 정확히 이 세
+문서만 바꾼 clean `main`/exact HEAD여야 한다.
+
+authoritative source는 `D:\S4LB002-2Para_260729_1_injected.spd` (1,116,717,287 bytes)이며 producer
+observed source SHA는 `40cb44b2376f59d6b606eb9b4d138204fe51b2dc6b3332d3b7c0e7d4202866d2`와 exact
+일치해야 한다. raw canonical/compressed, geometry, logical, plane sheet, project, certificate,
+topology의 8-hash context chain은 위 DONE block에 열거된 값 그대로 `context_only_not_recomputed`로
+참조한다.
+
+observer는 `spd_adapter._layer_surface_connectivity_certificate` 호출부에서 authoritative
+project/source/rail_anchor_bindings/contact_seeds/landing_by_pin/reachability만 읽는다. target rail은
+정확히 하나, 세 device branch의 power/ground 6 contacts이며 logical power net
+`ADC_VDD_180_VQPS_SYS_1_AON/0`/L30, ground `DGND`/L29다. `Signal$L30(OTHER_POWER1)`은 source layer
+label/provenance token일 뿐 lookup net이 아니다. seed `status=pending`에서 landing, terminal,
+remote projection, immediate endpoint와 finite witness를 재계산한다.
+
+lean DSU는 정확히 V1/V2/E1/E2/V3(3 vertex + 2 edge pass)로 target census 후 typed flat arrays와 두
+DSU를 사용한다. 최대 target vertex 4,194,304, estimated auxiliary 1 GiB/256 B per target vertex,
+Windows available RAM 3 GiB 이상을 요구하고, seed-root와 두 required surface만 보존하며 global
+adjacency/record graph는 만들지 않는다. 여섯 contact가 공유 index/edge identity를 재사용하고 global
+diagnostics sample은 SHA digest 최대 4,096개다. 정상 observer-reached 경로는 import/analyze/observer/report
+`1/1/1/1`, retry 0이며 runtime guard는 compiled-raw/ownership/externalizer만 계수한다. report는
+<=1 MiB, sibling launcher receipt는 <=64 KiB다.
+
+future output은 initially absent root 아래
+`D:\SPD-Decap-PI-Evaluator-W7\{contract-commit}\260729-source-anchor-lean-dsu-evidence-01\source_anchor_lean_dsu_evidence_report.json`
+하나와 sibling `260729-source-anchor-lean-dsu-evidence-01.launcher-receipt.json`이다. 원본 SPD는
+정확히 1회만 허용하며 retry는 없다. `STOP_PREFLIGHT`, `STOP_REPORT_FINALIZATION_FAILED`,
+`STOP_UNEXPECTED`를 포함한 cardinality/partition/component/finite/provenance/input/resource/cancel
+STOP은 fail-closed로 영구 종료한다. PASS는 selector-defect diagnostic-only evidence이며 FIX-03/P12,
+production/PowerSI accuracy로 자동 승격되지 않는다. 제품 code/test/schema/solver/Zii는 변경하지 않는다.
 
 후속 no-fit 가설은 old owner에 더하는 것이 아니라 L30/L29의 exact old-Maxwell owner를
 source-derived P1 N-port로 교체하는 것이다. `ΔC = Ceff(P1) - Ceff(old owner)`를 정의하고
