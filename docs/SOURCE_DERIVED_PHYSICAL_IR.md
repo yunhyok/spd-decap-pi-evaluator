@@ -1,12 +1,12 @@
 # SPD Decap PI Evaluator v0.23.1 — Source-derived physical IR
 
-- 문서 버전: **1.26**
+- 문서 버전: **1.27**
 - 계약 상태: **ACCEPTED** — source-derived provenance/ownership prerequisite의 기술 기준
 - committed 구현: `source-plane-ownership-ir-v1` + Phase 3 shadow consumer + v2 `contact_boundary` (`3b76af4`) + P0 (`4dc855a`) + P1 (`f823a53`) + P2 (`90f6b54`) + P3 (`b8a79f1`) + P4 base cut-set (`39fd4fa`) + P5 shadow rewire plan (`d7e7278`) + P6 scenario commutation audit (`6793bb2`) + P7 atomic recipe (`f1c2968`) + P8 topology embedding (`abf79cf`) + P9 nodal-block binding (`593e070`) + P10 component closure (`7f9c498`) + P11 supplemental solve gate (`e8d029a`) + ownership component-layer selector fix (`b0b90db`) + component-cardinality classifier (`6fc06dd`)
 - runtime acceptance: **Phase 4와 P0–P10 focused PASS / Sol ACCEPT; P3 semantic STOP, P4 structural CLOSED, P5 PLANNED, P6/P7 PASSED, P8 materialized, P9 bound, P10 component-closed; P11 focused test PASS / numerical result STOP**
 - production 상태: solver, owner-off, `Y_global`, `Zii` **unchanged**
-- 현재 작업 상태: **Actual-P0/R1/R2, R2-MULTI-TOPOLOGY-DIAG-01과 Recovery-01 DONE/STOP, FIX-01/FIX-02 DONE/ACCEPT, `W7-PHYS-SOURCE-ANCHOR-LEAN-DSU-EVIDENCE-01` DONE/`STOP_TARGET_CONTACT_MISSING_OR_AMBIGUOUS`**다.
-  `W7-PHYS-SOURCE-ANCHOR-LEAN-DSU-EVIDENCE-02` ACTIVE / P12 NO-GO — Recovery report는 3,092 bytes, SHA-256 `fbd4f9d4593af4d3b58828f6ca7c17a85b4d6d1fc62c7afcd29b6b7c9c9319e3`이며 compiled-only context다.
+- 현재 작업 상태: **Actual-P0/R1/R2, R2-MULTI-TOPOLOGY-DIAG-01과 Recovery-01 DONE/STOP, FIX-01/FIX-02 DONE/ACCEPT, DSU-01 `STOP_TARGET_CONTACT_MISSING_OR_AMBIGUOUS`, DSU-02 `STOP_PROVENANCE_INCOMPLETE`**다.
+  `W7-PHYS-SOURCE-ANCHOR-LEAN-DSU-EVIDENCE-03` ACTIVE / P12 NO-GO — Recovery report는 3,092 bytes, SHA-256 `fbd4f9d4593af4d3b58828f6ca7c17a85b4d6d1fc62c7afcd29b6b7c9c9319e3`이며 compiled-only context다.
 - P11 closure: commit `e8d029a`, 최종 지정 node `1 passed in 1.55s`, Sol ACCEPT; pivot ratio `1.900e15`, condition-1 lower bound `1.096e17`, `SHADOW_SOLVE_NUMERICAL_FAILURE`; trusted stamp/matrix/solve/readiness false, production unchanged
 - 최종 개정: 2026-08-31 (Asia/Seoul)
 
@@ -59,9 +59,10 @@ flowchart LR
   AM --> SM[W7-PHYS-R2-STORAGE-METADATA-RECOVERY-01 DONE / STOP<br/>compiled-only storage context]
   SM --> SA{old component observer STOP_RESOURCE_OR_CANCELLED}
   SA --> LD{W7-PHYS-SOURCE-ANCHOR-LEAN-DSU-EVIDENCE-01 DONE / STOP_TARGET_CONTACT_MISSING_OR_AMBIGUOUS}
-  LD --> LD2{W7-PHYS-SOURCE-ANCHOR-LEAN-DSU-EVIDENCE-02 ACTIVE<br/>producer-time bounded observer}
-  LD2 -->|PASS selector-defect candidate| SD[separate review / no production wiring]
-  LD2 -->|STOP| SX[remain BLOCKED]
+  LD --> LD2{W7-PHYS-SOURCE-ANCHOR-LEAN-DSU-EVIDENCE-02 DONE / STOP_PROVENANCE_INCOMPLETE}
+  LD2 --> LD3{W7-PHYS-SOURCE-ANCHOR-LEAN-DSU-EVIDENCE-03 ACTIVE<br/>producer-time bounded observer}
+  LD3 -->|PASS selector-defect candidate| SD[separate review / no production wiring]
+  LD3 -->|STOP| SX[remain BLOCKED]
   I[raw-v3 geometry/material] -. hash reference .-> B
   J[compiled finite topology] -. hash/owner reference .-> D
 ```
@@ -153,8 +154,9 @@ plane owner는 source identity에 결속해 importer/compiler가 결정적으로
 | R2-MULTI-TOPOLOGY-DIAG-01 | frozen 17DT artifact + existing validators | candidate hash/report read/bundle load `1/1/1`; failure report SHA `725ec8b4…a53c` | DONE | report-finalization **BLOCKED/STOP**; storage/topology not persisted; no topology claim; retry 0 |
 | R2-STORAGE-METADATA-RECOVERY-01 | frozen ZIP + exact descriptor path | scenario 760,816,272 bytes/SHA `15115693d43bdfe69bfcf2d17faeb465da0adac640072183ee24eeea414fa9d9`; descriptor 499 bytes; report 3,092 bytes/SHA `fbd4f9d4593af4d3b58828f6ca7c17a85b4d6d1fc62c7afcd29b6b7c9c9319e3`; calls/forbidden budget exact | DONE | execution PASS; compiled-only; scientific `STOP_FULL_CERTIFICATE_UNAVAILABLE`; full surface identity absent; no topology claim |
 | W7-PHYS-SOURCE-ANCHOR-COMPONENT-EVIDENCE-01 | Recovery-01 context-only identity | target census cap에서 `STOP_RESOURCE_OR_CANCELLED`로 영구 종료; 재시도/재사용 없음 | DONE/STOP | successor DSU-01로만 진단 |
-| W7-PHYS-SOURCE-ANCHOR-LEAN-DSU-EVIDENCE-01 | Recovery-01 context-only identity | contract `fb45d2fdb9c7e447935073e082ac557209a317f6`; pre-graph target-rail identity guard STOP으로 `STOP_TARGET_CONTACT_MISSING_OR_AMBIGUOUS`; calls `1/1/1/1`, retry 0, guards 0; V1/V2/E1/E2/V3 not evaluated | DONE/STOP | successor DSU-02로만 진단 |
-| W7-PHYS-SOURCE-ANCHOR-LEAN-DSU-EVIDENCE-02 | Recovery-01 context-only identity | producer-time lean DSU observer; full semantic layer labels; V1/V2/E1/E2/V3, normal observer-reached import/analyze/observer/report `1/1/1/1`; runtime guard compiled-raw/ownership/externalizer만 계수 | ACTIVE | selector-defect candidate or STOP; never direct production wiring |
+| W7-PHYS-SOURCE-ANCHOR-LEAN-DSU-EVIDENCE-01 | Recovery-01 context-only identity | contract `fb45d2fdb9c7e447935073e082ac557209a317f6`; pre-graph target-rail identity guard STOP으로 `STOP_TARGET_CONTACT_MISSING_OR_AMBIGUOUS`; calls `1/1/1/1`, retry 0, guards 0; V1/V2/E1/E2/V3 not evaluated | DONE/STOP | historical successor chain proceeds through DSU-02 then DSU-03 |
+| W7-PHYS-SOURCE-ANCHOR-LEAN-DSU-EVIDENCE-02 | Recovery-01 context-only identity | pre-graph immediate landing singleton-island guard에서 `STOP_PROVENANCE_INCOMPLETE`; report/receipt persisted; V1/V2/E1/E2/V3 not evaluated | DONE/STOP | successor DSU-03으로만 진단 |
+| W7-PHYS-SOURCE-ANCHOR-LEAN-DSU-EVIDENCE-03 | Recovery-01 context-only identity | producer-time lean DSU observer; full semantic layer labels; immediate exact-one layer/nonempty unique islands와 exact component join; V1/V2/E1/E2/V3, normal observer-reached import/analyze/observer/report `1/1/1/1` | ACTIVE | selector-defect candidate or STOP; never direct production wiring |
 
 `DONE`은 해당 Phase의 선언 범위가 종료됐다는 뜻이며 current release, production
 acceptance 또는 PowerSI 정확성을 뜻하지 않는다. Phase 4의 exact 실행 이력과 검증
@@ -838,15 +840,22 @@ import/analyze/observer/report `1/1/1/1`, retry 0, guards 0이며 V1/V2/E1/E2/V3
 17DV earlier rail/pair guard 통과 뒤 later geometry STOP과 same 17DT scenario의 selected-plane full labels 및 17DV→DSU-01 사이 unchanged rail-construction semantics 및 DSU-01 shorthand
 exact guard의 contract mismatch로 정적 확정했으며 새 tuple 관측을 주장하지 않는다. 재시도/재사용/재실행하지 않는다.
 
-### W7-PHYS-SOURCE-ANCHOR-LEAN-DSU-EVIDENCE-02 — ACTIVE
+### W7-PHYS-SOURCE-ANCHOR-LEAN-DSU-EVIDENCE-02 — DONE/STOP_PROVENANCE_INCOMPLETE
 
-DSU-01의 `STOP_TARGET_CONTACT_MISSING_OR_AMBIGUOUS` 이후 sole ACTIVE successor다. frozen
+DSU-01 이후 실행한 DSU-02는 `STOP_PROVENANCE_INCOMPLETE`로 영구 종료됐다. frozen
 ephemeral coordinator는 `D:\SPD-Decap-PI-Evaluator-W7\_coordinator_temp\source_anchor_lean_dsu_evidence_v2.py`
 (110,605 bytes, SHA-256 `b9d56f959b9a7795b6dbb83fd6e33c515c91d19c97c845f5614d31e33c792092`)이며
 final exact-hash self-check PASS, `measured_aux_bytes_per_vertex=196.06`
 (196.06 B/target vertex <=256 B) PASS, Sol ACCEPT, P0/P1 없음으로 동결됐다. contract
-commit은 `fb45d2fdb9c7e447935073e082ac557209a317f6`의 단일 docs-only child이고 정확히 이 세
-문서만 바꾼 clean `main`/exact HEAD여야 한다.
+실행 contract `4f6e063be4b16f261eaa2fdd7ff3927dd1de92f5`는 `fb45d2fdb9c7e447935073e082ac557209a317f6`의 단일 docs-only child였고 정확히 이 세 문서만 바꾼 clean `main`/exact HEAD였다.
+
+DSU-02 one-shot은 child 2,740.791 s/launcher 2,745.004 s, exit 1로 종료됐다. report는
+`D:\SPD-Decap-PI-Evaluator-W7\4f6e063be4b16f261eaa2fdd7ff3927dd1de92f5\260729-source-anchor-lean-dsu-evidence-02\source_anchor_lean_dsu_evidence_report.json`
+(1,048 bytes, SHA-256 `17fdb08c7bade28090909ec846d1041e6ecea4490ce08725e35fd3fb5b575e1c`), receipt는
+`D:\SPD-Decap-PI-Evaluator-W7\4f6e063be4b16f261eaa2fdd7ff3927dd1de92f5\260729-source-anchor-lean-dsu-evidence-02.launcher-receipt.json`
+(2,238 bytes/SHA-256 `12e7ab7e6a8f429be7aef624bfc4c468d8d5c26575bd6d49c46d9813a37fcb16`)다. disposition은
+`STOP_PROVENANCE_INCOMPLETE`, error는 `ground immediate landing contact is invalid`, calls import/analyze/observer/report `1/1/1/1`, retry/guards 0이며
+V1/V2/E1/E2/V3는 not evaluated다. singleton-island guard가 과도해 actual map의 empty 대 valid multi-island가 미분류된 것이며 source/product defect를 주장하지 않는다. 재시도/재사용/재실행하지 않는다.
 
 authoritative source는 `D:\S4LB002-2Para_260729_1_injected.spd` (1,116,717,287 bytes)이며 producer
 observed source SHA는 `40cb44b2376f59d6b606eb9b4d138204fe51b2dc6b3332d3b7c0e7d4202866d2`와 exact
@@ -869,13 +878,21 @@ diagnostics sample은 SHA digest 최대 4,096개다. 정상 observer-reached 경
 `1/1/1/1`, retry 0이며 runtime guard는 compiled-raw/ownership/externalizer만 계수한다. report는
 <=1 MiB, sibling launcher receipt는 <=64 KiB다.
 
-future output은 initially absent root 아래
-`D:\SPD-Decap-PI-Evaluator-W7\{contract-commit}\260729-source-anchor-lean-dsu-evidence-02\source_anchor_lean_dsu_evidence_report.json`
-하나와 sibling `260729-source-anchor-lean-dsu-evidence-02.launcher-receipt.json`이다. 원본 SPD는
-정확히 1회만 허용하며 retry는 없다. `STOP_PREFLIGHT`, `STOP_REPORT_FINALIZATION_FAILED`,
+historical output은 위 one-shot에서 persisted report와 sibling receipt로 실현됐으며 추가 output/rerun은 없다. 원본 SPD는
+정확히 1회만 허용됐고 retry는 없다. `STOP_PREFLIGHT`, `STOP_REPORT_FINALIZATION_FAILED`,
 `STOP_UNEXPECTED`를 포함한 cardinality/partition/component/finite/provenance/input/resource/cancel
 STOP은 fail-closed로 영구 종료한다. PASS는 selector-defect diagnostic-only evidence이며 FIX-03/P12,
 production/PowerSI accuracy로 자동 승격되지 않는다. 제품 code/test/schema/solver/Zii는 변경하지 않는다.
+
+### W7-PHYS-SOURCE-ANCHOR-LEAN-DSU-EVIDENCE-03 — ACTIVE
+
+DSU-02의 `STOP_PROVENANCE_INCOMPLETE` 이후 sole ACTIVE successor다. ephemeral coordinator는
+`D:\SPD-Decap-PI-Evaluator-W7\_coordinator_temp\source_anchor_lean_dsu_evidence_v3.py`
+(115,960 bytes, SHA-256 `fb6dc30adabd8c93453dcc0791bf99f2464d49b8c90c76c8ce74f9dbd1a93402`)이며 final exact-hash self-check PASS,
+`measured_aux_bytes_per_vertex=195.79` (195.79 B/target vertex <=256 B) PASS, Sol ACCEPT, P0/P1 없음으로 동결됐다. contract
+commit은 `4f6e063be4b16f261eaa2fdd7ff3927dd1de92f5`의 단일 docs-only child이고 정확히 이 세 문서만 바꾼 clean `main`/exact HEAD여야 한다.
+원본 SPD import/analyze/observer/report는 별도 gate에서 정확히 `1/1/1/1`, retry 0으로만 허용한다.
+immediate contact는 required full semantic layer exact-one, nonempty/nonblank/casefold-unique island set, logical net+layer의 exact-one component whole-set match를 요구하며 singleton/multi-island 모두 기존 3V+2E DSU로 진행한다. empty map, blank/duplicate island, wrong layer, component mismatch는 bounded count+SHA diagnostics와 `STOP_PROVENANCE_INCOMPLETE`로 닫는다. PASS는 diagnostic-only이며 production/FIX-03/P12/PowerSI 정확성으로 자동 승격하지 않는다. output root는 initially absent `D:\SPD-Decap-PI-Evaluator-W7\{contract-commit}\260729-source-anchor-lean-dsu-evidence-03\`이고, primary report는 그 root의 `source_anchor_lean_dsu_evidence_report.json`, sibling receipt는 `D:\SPD-Decap-PI-Evaluator-W7\{contract-commit}\260729-source-anchor-lean-dsu-evidence-03.launcher-receipt.json`다. 기존 resource/forbidden/report protocol은 변경하지 않는다.
 
 후속 no-fit 가설은 old owner에 더하는 것이 아니라 L30/L29의 exact old-Maxwell owner를
 source-derived P1 N-port로 교체하는 것이다. `ΔC = Ceff(P1) - Ceff(old owner)`를 정의하고
