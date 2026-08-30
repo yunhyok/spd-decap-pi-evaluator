@@ -6649,6 +6649,80 @@ def _build_mlo_landing_certificates(
     }
 
 
+def _source_plane_contact_component(
+    contact: Mapping[str, Any],
+    component_rows: Sequence[Mapping[str, Any]],
+    *,
+    error_prefix: str,
+) -> Mapping[str, Any]:
+    """Resolve one contact's retained component evidence without coercion."""
+
+    def sequence(value: Any, label: str) -> tuple[Any, ...]:
+        if not isinstance(value, Sequence) or isinstance(
+            value, (str, bytes, bytearray)
+        ):
+            raise SpdImportError(f"{error_prefix}: {label} is invalid")
+        return tuple(value)
+
+    ids = sequence(contact.get("contact_component_ids"), "contact component ids")
+    reachable = sequence(
+        contact.get("reachable_required_component_ids"),
+        "reachable required component ids",
+    )
+    if ids != reachable:
+        raise SpdImportError(f"{error_prefix}: contact and reachable component ids disagree")
+    if not ids:
+        raise SpdImportError(f"{error_prefix}: target anchor component candidates are zero")
+    if len(ids) > 1:
+        raise SpdImportError(f"{error_prefix}: target anchor component candidates are multiple")
+    candidate = ids[0]
+    if type(candidate) is not str or not candidate.strip() or candidate != candidate.strip():
+        raise SpdImportError(f"{error_prefix}: contact component id is invalid")
+    singular = contact.get("contact_component_id")
+    if (
+        type(singular) is not str
+        or not singular.strip()
+        or singular != singular.strip()
+        or singular != candidate
+    ):
+        raise SpdImportError(f"{error_prefix}: contact singular component id disagrees")
+    matches = [
+        row for row in component_rows
+        if isinstance(row, Mapping)
+        and type(row.get("component_id")) is str
+        and row["component_id"].strip().casefold() == candidate.casefold()
+    ]
+    if len(matches) != 1:
+        raise SpdImportError(f"{error_prefix}: component row identity is not unique")
+    component = matches[0]
+    row_evidence = component.get("component_evidence_sha256")
+    singular_evidence = contact.get("contact_component_evidence_sha256")
+    evidence_rows = sequence(
+        contact.get("contact_component_evidence_sha256s"),
+        "contact component evidence SHA-256s",
+    )
+    if (
+        type(row_evidence) is not str or not row_evidence.strip()
+        or type(singular_evidence) is not str or not singular_evidence.strip()
+        or len(evidence_rows) != 1
+        or type(evidence_rows[0]) is not str
+        or evidence_rows[0].strip().casefold() != singular_evidence.strip().casefold()
+        or singular_evidence.strip().casefold() != row_evidence.strip().casefold()
+    ):
+        raise SpdImportError(f"{error_prefix}: contact component evidence disagrees")
+    component_islands = sequence(component.get("island_ids"), "component island ids")
+    contact_islands = sequence(
+        contact.get("contact_component_island_ids"),
+        "contact component island ids",
+    )
+    if tuple(contact_islands) != tuple(component_islands):
+        raise SpdImportError(f"{error_prefix}: contact component island ids disagree")
+    issues = sequence(contact.get("issues"), "contact issues")
+    if contact.get("status") != "complete" or issues:
+        raise SpdImportError(f"{error_prefix}: target anchor terminal contact is incomplete")
+    return component
+
+
 def import_spd_scenario(
     path: str | Path,
     *,
@@ -7902,16 +7976,11 @@ def import_spd_scenario(
             role = str(anchor.get("role", "")).strip().casefold(); pin = str(anchor.get("pin_id", "")).strip().casefold(); contact = contacts_by_pin.get(pin)
             if role not in {"power", "ground"} or contact is None:
                 raise SpdImportError("SOURCE_PLANE_OWNERSHIP_IR_INCOMPLETE: target anchor terminal contact is absent")
-            component_id = str(contact.get("contact_component_id", "")).strip()
-            matching_components = [
-                item
-                for item in certificate_component_rows
-                if str(item.get("component_id", "")).strip().casefold()
-                == component_id.casefold()
-            ]
-            if len(matching_components) != 1:
-                raise SpdImportError("SOURCE_PLANE_OWNERSHIP_IR_INCOMPLETE: target anchor component identity is not unique")
-            component = matching_components[0]
+            component = _source_plane_contact_component(
+                contact,
+                certificate_component_rows,
+                error_prefix="SOURCE_PLANE_OWNERSHIP_IR_INCOMPLETE",
+            )
             canonical_identity = tuple(
                 str(component.get(key, "")).strip()
                 for key in ("net", "layer", "representative_island_id", "component_id")
@@ -8812,14 +8881,15 @@ def import_spd_scenario(
                 endpoint_layer = str(contact.get("endpoint_layer", "")).strip()
                 component_layer = str(contact.get("contact_component_layer", "")).strip()
                 padstack = str(contact.get("incident_padstack", "")).strip()
-                matching_components = [
-                    item
-                    for item in certificate.get("surface_equivalence_components", ())
-                    if isinstance(item, Mapping)
-                    and component_id.casefold()
-                    == str(item.get("component_id", "")).strip().casefold()
-                ]
-                component_row = matching_components[0] if len(matching_components) == 1 else None
+                component_row = _source_plane_contact_component(
+                    contact,
+                    [
+                        item
+                        for item in certificate.get("surface_equivalence_components", ())
+                        if isinstance(item, Mapping)
+                    ],
+                    error_prefix="SOURCE_PLANE_OWNERSHIP_IR_TERMINAL_INCOMPLETE",
+                )
                 component_islands = {
                     str(value).strip().casefold()
                     for value in component_row.get("island_ids", ())

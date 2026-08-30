@@ -235,6 +235,50 @@ def test_source_plane_ownership_component_layer_is_authoritative_for_mismatched_
     )
     assert imported.scenario.base_project.metadata["spd_import"]
 
+    def candidate_certificate(mode: str, *args: object, **kwargs: object):
+        certificate = original_certificate(*args, **kwargs)
+        target_pins = {
+            str(item.get("pin_id", "")).strip().casefold()
+            for item in certificate.get("rail_anchor_bindings", ())
+            if isinstance(item, dict)
+            and str(item.get("rail_id", "")).strip().casefold() == "vdd_core/1"
+        }
+        for contact in certificate.get("terminal_contacts", ()):
+            if not isinstance(contact, dict) or str(contact.get("pin_id", "")).strip().casefold() not in target_pins:
+                continue
+            component_id = str(contact.get("contact_component_id", "")).strip()
+            if mode == "zero":
+                contact["contact_component_ids"] = []
+                contact["reachable_required_component_ids"] = []
+                contact["contact_component_id"] = None
+                contact["contact_component_evidence_sha256s"] = []
+                contact["contact_component_evidence_sha256"] = None
+            else:
+                contact["contact_component_ids"] = [component_id, component_id + "-ambiguous"]
+                contact["reachable_required_component_ids"] = [component_id, component_id + "-ambiguous"]
+                contact["contact_component_id"] = None
+        certificate["evidence_sha256"] = canonical_surface_certificate_sha256(
+            {key: value for key, value in certificate.items() if key != "evidence_sha256"}
+        )
+        return certificate
+
+    for mode, expected in (("zero", "candidates are zero"), ("multiple", "candidates are multiple")):
+        compile_calls["count"] = 0
+
+        def invalid_certificate(*args: object, _mode: str = mode, **kwargs: object):
+            # Keep the original producer invocation and mutate only its
+            # retained certificate witness; no raw compiler should be reached.
+            return candidate_certificate(_mode, *args, **kwargs)
+
+        monkeypatch.setattr(
+            spd_adapter, "_layer_surface_connectivity_certificate", invalid_certificate
+        )
+        with pytest.raises(SpdImportError, match=expected):
+            spd_adapter.import_spd_scenario(
+                source, source_plane_ownership_rail_id="VDD_CORE/1"
+            )
+        assert compile_calls["count"] == 0
+
     def mismatch_certificate(*args: object, **kwargs: object):
         certificate = original_certificate(*args, **kwargs)
         target_pins = {
