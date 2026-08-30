@@ -1,11 +1,11 @@
 # SPD Decap PI Evaluator v0.23.1 — Source-derived physical IR
 
-- 문서 버전: **1.21**
+- 문서 버전: **1.22**
 - 계약 상태: **ACCEPTED** — source-derived provenance/ownership prerequisite의 기술 기준
 - committed 구현: `source-plane-ownership-ir-v1` + Phase 3 shadow consumer + v2 `contact_boundary` (`3b76af4`) + P0 (`4dc855a`) + P1 (`f823a53`) + P2 (`90f6b54`) + P3 (`b8a79f1`) + P4 base cut-set (`39fd4fa`) + P5 shadow rewire plan (`d7e7278`) + P6 scenario commutation audit (`6793bb2`) + P7 atomic recipe (`f1c2968`) + P8 topology embedding (`abf79cf`) + P9 nodal-block binding (`593e070`) + P10 component closure (`7f9c498`) + P11 supplemental solve gate (`e8d029a`) + ownership component-layer selector fix (`b0b90db`) + component-cardinality classifier (`6fc06dd`)
 - runtime acceptance: **Phase 4와 P0–P10 focused PASS / Sol ACCEPT; P3 semantic STOP, P4 structural CLOSED, P5 PLANNED, P6/P7 PASSED, P8 materialized, P9 bound, P10 component-closed; P11 focused test PASS / numerical result STOP**
 - production 상태: solver, owner-off, `Y_global`, `Zii` **unchanged**
-- 현재 작업 상태: **Actual-P0/R1/R2 DONE/STOP, FIX-01/FIX-02 DONE/ACCEPT, `W7-PHYS-R2-MULTI-TOPOLOGY-DIAG-01` ACTIVE / P12 NO-GO** — frozen 17DT artifact에서 multiple topology 의미만 판정
+- 현재 작업 상태: **Actual-P0/R1/R2와 R2-MULTI-TOPOLOGY-DIAG-01 DONE/STOP, FIX-01/FIX-02 DONE/ACCEPT, `W7-PHYS-R2-STORAGE-METADATA-RECOVERY-01` ACTIVE / P12 NO-GO** — frozen ZIP의 certificate storage descriptor만 bounded stream 판정
 - P11 closure: commit `e8d029a`, 최종 지정 node `1 passed in 1.55s`, Sol ACCEPT; pivot ratio `1.900e15`, condition-1 lower bound `1.096e17`, `SHADOW_SOLVE_NUMERICAL_FAILURE`; trusted stamp/matrix/solve/readiness false, production unchanged
 - 최종 개정: 2026-08-30 (Asia/Seoul)
 
@@ -54,9 +54,10 @@ flowchart LR
   AF -. separate frozen gate .-> AP1[W7-PHYS-ACTUAL-P0-R1 DONE / STOP<br/>component candidate identity unclassified]
   AP1 --> AF2[W7-PHYS-ACTUAL-P0-FIX-02 DONE / ACCEPT<br/>0 / 1 / multiple deterministic classification]
   AF2 -. separate frozen gate .-> AP2[W7-PHYS-ACTUAL-P0-R2 DONE / STOP<br/>actual candidate multiple]
-  AP2 --> AM{W7-PHYS-R2-MULTI-TOPOLOGY-DIAG-01 ACTIVE<br/>artifact-only exact topology semantics}
-  AM -->|compiled-only / partition-provenance defect| AMS[STOP<br/>별도 evidence 또는 repair gate]
-  AM -->|PASS_VALID_ONE_TO_MANY_TOPOLOGY| APN[actual P0-P10 별도 successor candidate]
+  AP2 --> AM[W7-PHYS-R2-MULTI-TOPOLOGY-DIAG-01 DONE / STOP<br/>report finalization failure]
+  AM --> SM{W7-PHYS-R2-STORAGE-METADATA-RECOVERY-01 ACTIVE<br/>exact descriptor stream only}
+  SM -->|compiled-only / invalid / bound exceeded| AMS[STOP<br/>별도 evidence persistence gate]
+  SM -->|PASS_FULL_CERTIFICATE_STORAGE_AVAILABLE| APN[별도 topology diagnostic candidate]
   APN -. hold: production wiring 금지 .-> K[production Y_global / Zii]
   I[raw-v3 geometry/material] -. hash reference .-> B
   J[compiled finite topology] -. hash/owner reference .-> D
@@ -146,7 +147,8 @@ plane owner는 source identity에 결속해 importer/compiler가 결정적으로
 | Actual-P0-R1 | accepted importer/save/load seam | commit `0ac15e8`, import/save/load `1/0/0`, 3,368.603 s, report SHA `3d009c61…76b5` | DONE | `None`/candidate cardinality가 가려진 selector STOP; scenario absent; zero solve/Touchstone/P0-P12 |
 | Actual-P0-FIX-02 | commit `6fc06dd`; existing selector seam | mismatch/cardinality focused `1 passed in 1.55s`; direct producer `1 passed in 1.41s`; Sol ACCEPT | DONE | exact zero/one/multiple/tamper 분류; production unchanged |
 | Actual-P0-R2 | accepted importer seam | commit `ff8613c`, import/save/load `1/0/0`, 3,354.484 s, report SHA `b55ca2fa…44fe8` | DONE | actual candidate multiple STOP; identity/ownership not evaluated |
-| R2-MULTI-TOPOLOGY-DIAG-01 | frozen 17DT artifact + existing validators | artifact load 1, conditional certificate/raw load each <=1, retry 0 | ACTIVE | topology semantics only; production/accuracy unchanged |
+| R2-MULTI-TOPOLOGY-DIAG-01 | frozen 17DT artifact + existing validators | candidate hash/report read/bundle load `1/1/1`; failure report SHA `725ec8b4…a53c` | DONE | report-finalization STOP; storage/topology not persisted; retry 0 |
+| R2-STORAGE-METADATA-RECOVERY-01 | frozen ZIP + exact descriptor path | scenario stream 1; bundle/hydrate/raw load 0; retry 0 | ACTIVE | storage availability only; production/accuracy unchanged |
 
 `DONE`은 해당 Phase의 선언 범위가 종료됐다는 뜻이며 current release, production
 acceptance 또는 PowerSI 정확성을 뜻하지 않는다. Phase 4의 exact 실행 이력과 검증
@@ -704,6 +706,41 @@ schema/API가 아니다.
 최대 1, full-certificate PASS 뒤 raw-v3 load 최대 1, retry 0이다. compiled-only이면 hydration/raw-v3
 load는 0이다. original SPD/import/save/reload, code/test/schema, solver/Touchstone/P0-P12, synthetic,
 fitting과 production 변경은 모두 0이다. 모든 결과는 자동 재실행/R3 없이 별도 후속 gate를 요구한다.
+
+DIAG-01 closure는 **DONE/STOP**이다. exact contract commit
+`e9c0e545d17e4707122dfce0e16b1377f9b50c49`에서 candidate hash, validation-report read와
+`load_scenario_bundle`를 각각 1회 완료했지만, atomic report 직전 Windows Python의
+`ZoneInfo("Asia/Seoul")`가 `tzdata` 부재로 실패했다. storage mode와 topology disposition은
+persist되지 않았다. root에는 failure report 하나만 있다: 3,283 bytes, SHA-256
+`725ec8b45961e5b2902248e9e805c10c462481f564e71bc464757c1dfc02a53c`.
+hydrate/raw load/original SPD/solve는 0이다. 이 실행/root는 재실행·부분 재사용·결과 추정하지 않는다.
+
+### W7-PHYS-R2-STORAGE-METADATA-RECOVERY-01 — exact descriptor stream
+
+successor는 전체 bundle을 다시 materialize하지 않는다. `{contract-commit}`은 exact
+`e9c0e545d17e4707122dfce0e16b1377f9b50c49`의 단일 docs-only child이고 변경 파일은 세 canonical
+문서뿐이어야 한다. candidate/validation report와 DIAG-01 failure report의 size/SHA를 고정하고,
+ZIP `manifest.json`과 `scenario.json`을 한 번씩 읽는다. scenario size/SHA를 manifest와 대조하면서
+token-aware exact path
+`normalized_project.metadata.spd_import.layerwise_surface_connectivity_certificate`가 정확히 한 번
+존재하는지 검증하고, 전체 JSON value가 1 MiB 안에서 닫힐 때만 분류한다.
+
+validated compiled-only descriptor이고 bound compiled/raw attachment가 manifest와 central directory에
+exact once 존재하며 full surface attachment가 없을 때 execution classification은 PASS지만 scientific
+disposition은 `STOP_FULL_CERTIFICATE_UNAVAILABLE`다. external full-asset descriptor는 `asset_name`이
+manifest와 central directory에 exact once 존재하고 size/SHA가 일치할 때, bounded inline v4는 전체
+value가 1 MiB 안에서 닫히고 exact schema일 때만 `PASS_FULL_CERTIFICATE_STORAGE_AVAILABLE`다. 이 PASS는
+storage availability만 뜻하며 topology 판정이나 자동 successor 실행을 허용하지 않는다. input
+size/SHA 불일치는 `STOP_INPUT_IDENTITY`, duplicate/path mismatch/malformed/member inconsistency는
+`STOP_STORAGE_METADATA_INVALID`, 1 MiB 초과 inline value는
+`STOP_DESCRIPTOR_CAPTURE_BOUND_EXCEEDED`다. raw-v3로 contact partition을 재구성하지 않는다.
+
+호출 예산은 candidate hash 1, validation report read 1, DIAG-01 report read 1, ZIP central-directory read 1,
+manifest read 1, scenario stream 1, storage-stub validator 최대 1, retry 0이다. `load_scenario_bundle`,
+hydrate/raw load, attachment payload load, original SPD/import/save/reload, code/test/schema,
+solve/Touchstone/P0-P12/synthetic/fitting은 모두 0이다.
+timestamp helper는 input read 전에 fixed `timezone(timedelta(hours=9))`로 self-check하고, success/failure
+모두 동일 helper와 atomic report writer를 사용한다.
 
 후속 no-fit 가설은 old owner에 더하는 것이 아니라 L30/L29의 exact old-Maxwell owner를
 source-derived P1 N-port로 교체하는 것이다. `ΔC = Ceff(P1) - Ceff(old owner)`를 정의하고
