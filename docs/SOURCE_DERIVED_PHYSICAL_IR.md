@@ -1,13 +1,13 @@
 # SPD Decap PI Evaluator v0.23.1 — Source-derived physical IR
 
-- 문서 버전: **1.44**
+- 문서 버전: **1.45**
 - 계약 상태: **ACCEPTED** — source-derived provenance/ownership prerequisite의 기술 기준
 - committed 구현: `source-plane-ownership-ir-v1` + Phase 3 shadow consumer + v2 `contact_boundary` (`3b76af4`) + P0 (`4dc855a`) + P1 (`f823a53`) + P2 (`90f6b54`) + P3 (`b8a79f1`) + P4 base cut-set (`39fd4fa`) + P5 shadow rewire plan (`d7e7278`) + P6 scenario commutation audit (`6793bb2`) + P7 atomic recipe (`f1c2968`) + P8 topology embedding (`abf79cf`) + P9 nodal-block binding (`593e070`) + P10 component closure (`7f9c498`) + P11 supplemental solve gate (`e8d029a`) + ownership component-layer selector fix (`b0b90db`) + component-cardinality classifier (`6fc06dd`) + W7 owner-join closure (`2b27e30c6fe41f03281d3943568d0905d84d8af3`)
 - runtime acceptance: **Phase 4와 P0–P10 focused PASS / Sol ACCEPT; P3 semantic STOP, P4 structural CLOSED, P5 PLANNED, P6/P7 PASSED, P8 materialized, P9 bound, P10 component-closed; P11 focused test PASS / numerical result STOP; W7 owner-join commit `2b27e30c6fe41f03281d3943568d0905d84d8af3` DONE/ACCEPT with producer-only corrected rerun `1 passed in 1.52s` (consumer not rerun)**. This is read-only prerequisite evidence and does not claim actual production global-multi compile, original-SPD success, or PowerSI improvement.
 - production 상태: solver, owner-off, `Y_global`, `Zii` **unchanged**
 - 현재 작업 상태: **Actual-P0/R1/R2, R2-MULTI-TOPOLOGY-DIAG-01, Recovery-01과 DSU-01–05 DONE/STOP, FIX-01/FIX-02 DONE/ACCEPT**다.
-  DSU-05는 `STOP_MULTIPLE_NOT_REPRODUCED`; W7-PHYS BLOCKED이며 현재 sole ACTIVE는 **W7-PHYS-OWNER-JOIN-ORIGINAL-SPD-EVIDENCE-04 / FROZEN / READY_TO_EXECUTE**다. Original-SPD EVIDENCE-01/-02는 retry-0 DONE/STOP, EVIDENCE-03은 `STOP_UNEXPECTED`로 DONE/STOP이고 quotient-scope FIX-01과 terminal pad-layer test-oracle FIX-01은 DONE/ACCEPT다. P12는 NO-GO다.
-- active contract는 `W7-PHYS-OWNER-JOIN-ORIGINAL-SPD-EVIDENCE-04`이다. Base `6359170fd4d1be424dbaf7e0863b37fae37c8caf`; exact Python312 `-I -B` four-symbol preflight, `_04.py` compile/self-check each one PASS; coordinator 52,836 B/SHA `81798167799450e16e8bce1d172a32de6c6b849b32858cde9fec457fa152a67f`. Actual contract is the base's exact-three-doc direct child, with one new-root parent launch/retry 0. Production/PowerSI improvement remains unproved/0.
+  DSU-05는 `STOP_MULTIPLE_NOT_REPRODUCED`; W7-PHYS BLOCKED이며 현재 sole ACTIVE는 **NONE / READY_FOR_SUCCESSOR_CAUSAL_FREEZE**다. Original-SPD EVIDENCE-01/-02/-04는 retry-0 DONE/STOP, EVIDENCE-03은 `STOP_UNEXPECTED`로 DONE/STOP이고 quotient-scope FIX-01과 terminal pad-layer test-oracle FIX-01은 DONE/ACCEPT다. P12는 NO-GO다.
+- active contract는 없다. EVIDENCE-04 exact contract `e6575c076718fd99c6a51b85d9b4bcc57d1712e2`는 compact ownership-request 100,000-row bound에서 `STOP_IMPORT_OR_OWNERSHIP`로 닫혔다. 이 provisional aggregate는 겹치는 중간 표현을 합산하며 final IR row count가 아니다. 후속은 이 precheck만 제거하고 local/raw/final cap을 보존하는 별도 최소 gate여야 한다. Production/PowerSI improvement remains unproved/0.
 - P11 closure: commit `e8d029a`, 최종 지정 node `1 passed in 1.55s`, Sol ACCEPT; pivot ratio `1.900e15`, condition-1 lower bound `1.096e17`, `SHADOW_SOLVE_NUMERICAL_FAILURE`; trusted stamp/matrix/solve/readiness false, production unchanged
 - 최종 개정: 2026-08-31 (Asia/Seoul)
 
@@ -74,7 +74,8 @@ flowchart LR
   PF --> TF[W7-PHYS-OWNER-JOIN-TERMINAL-PAD-LAYER-TEST-ORACLE-FIX-01<br/>DONE / ACCEPT<br/>1 passed in 1.60s]
   TF --> EG3[W7-PHYS-OWNER-JOIN-ORIGINAL-SPD-EVIDENCE-03<br/>DONE / STOP_UNEXPECTED<br/>missing httpx before import]
   EG3 --> IP[Python312 exact import-stack preflight<br/>PASS / no SPD]
-  IP --> EG4[W7-PHYS-OWNER-JOIN-ORIGINAL-SPD-EVIDENCE-04<br/>FROZEN / READY_TO_EXECUTE]
+  IP --> EG4[W7-PHYS-OWNER-JOIN-ORIGINAL-SPD-EVIDENCE-04<br/>DONE / STOP_IMPORT_OR_OWNERSHIP<br/>compact request row bound]
+  EG4 --> NX[ACTIVE NONE<br/>compact request aggregate fix freeze required]
   I[raw-v3 geometry/material] -. hash reference .-> B
   J[compiled finite topology] -. hash/owner reference .-> D
 ```
@@ -949,7 +950,7 @@ P11 1 GHz gate만으로 이 두 anchor를 증명하지 않으므로 accuracy pro
 two-anchor checkpoint를 별도로 요구한다.
 
 Post-DSU-05 readiness는 **NOT_READY/STOP**이다. candidate old-Maxwell owner를 source-derived P1 N-port atomic replacement로 바꾸려면, 선택된 L30/L29 finite-area source footprint/P1 terminal identity를 실제 `Y_global`이 소비하는 정확한 old-Maxwell owner closed set에 hash-bound bijectively join하는 ledger가 필요하다. 이 ledger가 rail-complete scope와 replaced/retained disjoint partition을 증명해야 하지만, DSU-05의 count/SHA-only IDs, compiled-only Recovery, full certificate/ownership IR 부재와 exact join key 부재로는 구성할 수 없다. 따라서 admissible next gate, DSU-06/FIX-03/P12/production/rerun은 없고 ACTIVE NONE이며 PowerSI numerical improvement는 0이다.
-이 문장은 74d readiness audit 당시의 historical conclusion이며, 당시 §8의 W7-PHYS-OWNER-JOIN-EVIDENCE-01이 이를 supersede했다. 이후 §9 closure가 §8을 닫았고, §10/§12/§15 original-SPD gates는 permanent DONE/STOP, §11 quotient-scope fix와 §14 test-oracle fix는 DONE/ACCEPT다. §13 terminal pad-layer FIX-01은 test-oracle false negative로 DONE/STOP했다. 현재 sole ACTIVE는 §17 EVIDENCE-04 / FROZEN / READY_TO_EXECUTE다.
+이 문장은 74d readiness audit 당시의 historical conclusion이며, 당시 §8의 W7-PHYS-OWNER-JOIN-EVIDENCE-01이 이를 supersede했다. 이후 §9 closure가 §8을 닫았고, §10/§12/§15/§17 original-SPD gates는 permanent DONE/STOP, §11 quotient-scope fix와 §14 test-oracle fix는 DONE/ACCEPT다. §13 terminal pad-layer FIX-01은 test-oracle false negative로 DONE/STOP했다. 현재 sole ACTIVE는 NONE / READY_FOR_SUCCESSOR_CAUSAL_FREEZE다.
 
 ## 7. 주장 한계
 
@@ -1123,7 +1124,7 @@ The child failed while loading modules before `import_spd_scenario`; only expect
 observed source SHA, import/compile/P1/owner-join evidence exists. Finalized terminal counters/report/receipt accept the
 coordinator lifecycle, not the scientific gate. Retry/reuse/rerun is forbidden.
 
-## 16. EVIDENCE-04 interpreter preflight prerequisite — READY / NOT_EXECUTED
+## 16. EVIDENCE-04 interpreter preflight prerequisite — DONE / PASS
 
 Choose one absolute project interpreter, invoke it with `-I`, explicitly insert the repository `src` path, and perform
 one no-SPD import-stack preflight for the exact coordinator symbols `import_spd_scenario`,
@@ -1134,7 +1135,7 @@ one self-check using the same interpreter. Only then may a new exact-three-doc d
 frozen. No product code change or old gate/root reuse is allowed. Claim ceiling remains shadow owner-join evidence;
 PowerSI improvement remains 0.
 
-## 17. W7-PHYS-OWNER-JOIN-ORIGINAL-SPD-EVIDENCE-04 — FROZEN / READY_TO_EXECUTE
+## 17. W7-PHYS-OWNER-JOIN-ORIGINAL-SPD-EVIDENCE-04 — DONE / STOP_IMPORT_OR_OWNERSHIP
 
 Base/source-before is `6359170fd4d1be424dbaf7e0863b37fae37c8caf`. Bind exact interpreter
 `C:\Users\User\AppData\Local\Programs\Python\Python312\python.exe` with `-I -B`. Its one no-SPD four-symbol import
@@ -1153,3 +1154,14 @@ Sol acceptance, one parent launch under the frozen Python312 `-I -B` with exact 
 Inherited lock/no-clobber, confirmed-termination/STARTED receipt, source pre/post identity, counter ledger and no old-
 root/patch/reuse/rerun rules bind the run. Claim ceiling is importer, compile, P1 and shadow owner-join evidence only;
 production/PowerSI improvement remains unproved/0.
+
+Exact contract `e6575c076718fd99c6a51b85d9b4bcc57d1712e2` launched once and exited 1 after
+3,269.36 s with `SOURCE_PLANE_OWNERSHIP_IR_BOUND_EXCEEDED: compact ownership request exceeds the bounded row limit`.
+Calls were import/compile/P1/observer/report `1/0/0/0/1`, retry 0. Report is 1,123 B/SHA-256
+`81bad4e4350c4bb564fd213f9c70eea6edceb422d0fa11dc9492136f21699ef0`; sibling receipt is 1,101 B/SHA-256
+`d0bae25889f183d9cc344e0110843145564df6e9082b1655ab134fdd0b6a37cd`. Import did not return, therefore only
+expected source identity/stat is recorded; observed source SHA, compile/P1/owner-join and physics claims are absent.
+This gate/root is immutable and cannot be retried or reused. The failing provisional aggregate overlaps already-
+materialized surface, certificate, raw-selection and draft representations and is not the final persisted IR row count.
+A successor may remove only that aggregate precheck while preserving all local/raw/final 100,000-row caps. No cap
+raise, SQLite/schema change or broader redesign is justified; PowerSI improvement remains 0.
