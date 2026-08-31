@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 from hashlib import sha256
-from dataclasses import asdict
+from dataclasses import asdict, replace
 from copy import deepcopy
 import json
 
@@ -16,6 +16,7 @@ from spd_decap_pi.raw_spatial_contact_compiler import (
     compile_raw_spatial_contact_asset,
 )
 from spd_decap_pi.source_plane_ownership_ir import (
+    MAX_SOURCE_PLANE_OWNERSHIP_IR_ROWS as AUTHORITATIVE_IR_ROW_CAP,
     SourcePlaneOwnershipIRError,
     load_source_plane_ownership_ir,
     validate_project_source_plane_ownership_ir_envelope,
@@ -628,6 +629,95 @@ def test_source_plane_ownership_filters_global_quotient_before_selected_row_boun
     assert snapshot_ids == selected_ids | adjacent_ids | anchor_ids
     assert not any(":unrelated-global-" in item for item in snapshot_ids)
     assert imported.scenario.base_project.metadata["spd_import"]
+
+
+def test_source_plane_ownership_provisional_request_aggregate_does_not_consume_final_ir_row_cap(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    source = tmp_path / "ownership-provisional-aggregate.spd"
+    source.write_text(_ownership_fixture_payload(), encoding="ascii")
+    synthetic_cap = 48
+    original_analyze = spd_adapter.analyze_spd
+    original_compile = spd_adapter.compile_raw_spatial_contact_asset
+    original_build = spd_adapter.build_source_plane_ownership_ir
+    calls = {"raw": 0, "final": 0}
+    captured: dict[str, object] = {}
+
+    def inflate_provisional_draft(*args: object, **kwargs: object):
+        analysis = original_analyze(*args, **kwargs)
+        draft = analysis.source_plane_ownership_draft
+        assert isinstance(draft, dict)
+        rows = [dict(row) for row in draft.get("stackup_layers", ()) if isinstance(row, dict)]
+        selected = [
+            row
+            for row in rows
+            if str(row.get("layer_name", "")).strip().casefold()
+            in {"signal$pwr", "signal$gnd", "medium$d2"}
+        ]
+        assert selected
+        selected_count = sum(
+            str(row.get("layer_name", "")).strip().casefold()
+            in {"signal$pwr", "signal$gnd", "medium$d2"}
+            for row in rows
+        )
+        rows.extend(dict(selected[index % len(selected)]) for index in range(30 - selected_count))
+        inflated = dict(draft)
+        inflated["stackup_layers"] = rows
+        return replace(analysis, source_plane_ownership_draft=inflated)
+
+    def capture_compile(*args: object, **kwargs: object):
+        calls["raw"] += 1
+        request = kwargs.get("source_plane_ownership_request")
+        assert isinstance(request, dict)
+        captured["request"] = deepcopy(request)
+        return original_compile(*args, **kwargs)
+
+    def capture_build(*args: object, **kwargs: object):
+        calls["final"] += 1
+        return original_build(*args, **kwargs)
+
+    monkeypatch.setattr(spd_adapter, "analyze_spd", inflate_provisional_draft)
+    monkeypatch.setattr(spd_adapter, "MAX_SOURCE_PLANE_OWNERSHIP_IR_ROWS", synthetic_cap)
+    monkeypatch.setattr(spd_adapter, "compile_raw_spatial_contact_asset", capture_compile)
+    monkeypatch.setattr(spd_adapter, "build_source_plane_ownership_ir", capture_build)
+
+    imported = spd_adapter.import_spd_scenario(
+        source, source_plane_ownership_rail_id="VDD_CORE/1"
+    )
+    assert calls == {"raw": 1, "final": 1}
+    request = captured["request"]
+    assert isinstance(request, dict)
+    surface_snapshot = request["surface_snapshot"]
+    certificate = request["certificate_snapshot"]
+    raw_selection = request["raw_selection"]
+    compact_draft = request["draft"]
+    assert all(isinstance(item, dict) for item in (surface_snapshot, certificate, raw_selection, compact_draft))
+    surface_group = sum(
+        len(surface_snapshot.get(section, ()))
+        for section in ("surfaces", "islands", "primitives", "primitive_island_edges")
+    )
+    certificate_group = sum(
+        len(certificate.get(section, ()))
+        for section in ("rail_anchor_bindings", "terminal_contacts", "contact_boundary", "surface_equivalence_components")
+    ) + int(certificate.get("contact_boundary_coverage", {}).get("count", 0)) + sum(
+        len(certificate.get("finite_via_quotient", {}).get(section, ()))
+        for section in ("vertices", "edges", "terminal_bindings")
+    )
+    raw_group = sum(
+        len(raw_selection.get(section, ()))
+        for section in ("surface_keys", "node_keys", "via_keys", "pad_keys", "layer_keys", "material_keys")
+    )
+    draft_group = sum(
+        len(compact_draft.get(section, ()))
+        for section in ("stackup_layers", "dielectric_points", "source_records")
+    )
+    groups = (surface_group, certificate_group, raw_group, draft_group)
+    assert max(groups) <= synthetic_cap
+    assert sum(groups) > synthetic_cap
+
+    manifest = imported.scenario.base_project.metadata["spd_import"]["source_plane_ownership_ir"]
+    assert isinstance(manifest, dict)
+    assert sum(manifest["counts"].values()) <= AUTHORITATIVE_IR_ROW_CAP
 
 
 def test_source_plane_ownership_producer_roundtrip_and_atomic_failure(

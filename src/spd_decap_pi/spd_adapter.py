@@ -8360,28 +8360,6 @@ def import_spd_scenario(
             "dielectric_points": compact_dielectric_rows,
             "source_records": compact_material_rows,
         }
-        compact_row_count = (
-            sum(
-                len(ownership_surface_snapshot.get(section, ()))
-                for section in ("surfaces", "islands", "primitives", "primitive_island_edges")
-            )
-            + sum(
-                len(certificate_snapshot.get(section, ()))
-                for section in ("rail_anchor_bindings", "terminal_contacts", "contact_boundary", "surface_equivalence_components")
-            )
-            + int(certificate_snapshot.get("contact_boundary_coverage", {}).get("count", 0))
-            + sum(
-                len(certificate_snapshot.get("finite_via_quotient", {}).get(section, ()))
-                for section in ("vertices", "edges", "terminal_bindings")
-            )
-            + sum(len(ownership_request["raw_selection"].get(section, ())) for section in ("surface_keys", "node_keys", "via_keys", "pad_keys", "layer_keys", "material_keys"))
-            + sum(len(compact_draft.get(section, ())) for section in ("stackup_layers", "dielectric_points", "source_records"))
-        )
-        if compact_row_count > MAX_SOURCE_PLANE_OWNERSHIP_IR_ROWS:
-            raise SpdImportError(
-                "SOURCE_PLANE_OWNERSHIP_IR_BOUND_EXCEEDED: compact ownership "
-                "request exceeds the bounded row limit"
-            )
         ownership_request["draft"] = compact_draft
     del ground_reachability
     surface_connectivity_diagnostics: list[SpdDiagnostic] = []
