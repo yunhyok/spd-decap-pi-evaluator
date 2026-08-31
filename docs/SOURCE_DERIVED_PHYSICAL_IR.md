@@ -1,6 +1,6 @@
 # SPD Decap PI Evaluator v0.23.1 — Source-derived physical IR
 
-- 문서 버전: **1.30**
+- 문서 버전: **1.31**
 - 계약 상태: **ACCEPTED** — source-derived provenance/ownership prerequisite의 기술 기준
 - committed 구현: `source-plane-ownership-ir-v1` + Phase 3 shadow consumer + v2 `contact_boundary` (`3b76af4`) + P0 (`4dc855a`) + P1 (`f823a53`) + P2 (`90f6b54`) + P3 (`b8a79f1`) + P4 base cut-set (`39fd4fa`) + P5 shadow rewire plan (`d7e7278`) + P6 scenario commutation audit (`6793bb2`) + P7 atomic recipe (`f1c2968`) + P8 topology embedding (`abf79cf`) + P9 nodal-block binding (`593e070`) + P10 component closure (`7f9c498`) + P11 supplemental solve gate (`e8d029a`) + ownership component-layer selector fix (`b0b90db`) + component-cardinality classifier (`6fc06dd`)
 - runtime acceptance: **Phase 4와 P0–P10 focused PASS / Sol ACCEPT; P3 semantic STOP, P4 structural CLOSED, P5 PLANNED, P6/P7 PASSED, P8 materialized, P9 bound, P10 component-closed; P11 focused test PASS / numerical result STOP**
@@ -936,6 +936,8 @@ source-derived P1 N-port로 교체하는 것이다. `ΔC = Ceff(P1) - Ceff(old o
 disjointness 실패, 구간 이탈, 어느 anchor든 악화, 새 low-band local peak 발생 시 reject한다.
 P11 1 GHz gate만으로 이 두 anchor를 증명하지 않으므로 accuracy promotion 전 bounded
 two-anchor checkpoint를 별도로 요구한다.
+
+Post-DSU-05 readiness는 **NOT_READY/STOP**이다. candidate old-Maxwell owner를 source-derived P1 N-port atomic replacement로 바꾸려면, 선택된 L30/L29 finite-area source footprint/P1 terminal identity를 실제 `Y_global`이 소비하는 정확한 old-Maxwell owner closed set에 hash-bound bijectively join하는 ledger가 필요하다. 이 ledger가 rail-complete scope와 replaced/retained disjoint partition을 증명해야 하지만, DSU-05의 count/SHA-only IDs, compiled-only Recovery, full certificate/ownership IR 부재와 exact join key 부재로는 구성할 수 없다. 따라서 admissible next gate, DSU-06/FIX-03/P12/production/rerun은 없고 ACTIVE NONE이며 PowerSI numerical improvement는 0이다.
 
 ## 7. 주장 한계
 

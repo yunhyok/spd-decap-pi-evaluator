@@ -1,8 +1,8 @@
 # SPD Decap PI Evaluator 작업 기준
 
 - 적용 제품: **SPD Decap PI Evaluator v0.23.1**
-- 문서 버전: **1.196**
-- 상위 기준: [목적·기술 기준](PRODUCT_PURPOSE_AND_TECHNICAL_BASELINE.md) v1.195
+- 문서 버전: **1.197**
+- 상위 기준: [목적·기술 기준](PRODUCT_PURPOSE_AND_TECHNICAL_BASELINE.md) v1.196
 - 현재 상태: W6 numerical FAIL; W7-SOURCE-IR-P1/P2/P3/P4 및 W7-PHYS-PROSPECTIVE-P0/P1/P2/P3/P4/P5/P6/P7/P8/P9/P10/P11 DONE, P3/P11 DONE/STOP; Actual-P0/R1/R2, DIAG-01과 Recovery-01 DONE/STOP; FIX-01/FIX-02 DONE/ACCEPT; `W7-PHYS-SOURCE-ANCHOR-LEAN-DSU-EVIDENCE-01` DONE/`STOP_TARGET_CONTACT_MISSING_OR_AMBIGUOUS`다.
   `W7-PHYS-SOURCE-ANCHOR-LEAN-DSU-EVIDENCE-02`/`03`/`04` DONE/`STOP_PROVENANCE_INCOMPLETE`다.
   `W7-PHYS-SOURCE-ANCHOR-LEAN-DSU-EVIDENCE-05` DONE/`STOP_MULTIPLE_NOT_REPRODUCED`; W7-PHYS BLOCKED / ACTIVE NONE; production physics/`Zii` unchanged.
@@ -17,12 +17,12 @@ context가 압축되거나 새 session에서 작업을 재개하면 이 표만 �
 | 변하지 않는 목적 | source-derived single-rail `Zii`의 PowerSI 근접 정확성과 일반화 |
 | 기본 복구 문서 | 목적·기술 기준 → Source-derived physical IR → 이 작업 기준, 세 문서 |
 | 현재 branch | `main`만 사용 |
-| 이 문서 정리의 source-before HEAD | `314f3a64aefb7b60c975a93cc7e6d701ab3debc4` (DSU-05 frozen contract; this closure is its docs-only child) |
+| 이 문서 정리의 source-before HEAD | `d69e4fc44d404f7914bd73cbec494cdf339a7aaa` (DSU-05 readiness closure; this closure is its docs-only child) |
 | 현재 assessment | W6-BASE numerical FAIL; Phase 4/P0–P11은 prerequisite/shadow 범위 DONE. DSU-05의 선택된 6-contact source boundary는 모두 singleton이며 all/complete graph가 동일해 R2 multiple-selector 가설이 재현되지 않았다. 제품 solver/owner-off/`Y_global`/`Zii`와 W6 PowerSI 수치는 변경되지 않아 수치 격차 개선은 0이다(새 percentage metric이 아니라 실측 improvement absence) |
 | 현재 active work item | **NONE** — DSU-05는 `STOP_MULTIPLE_NOT_REPRODUCED`; W7-PHYS는 새 admissible causal block 부재로 BLOCKED |
 | 현재 정확성 상태 | `260729 retrospective FAIL`; unseen/generalization `unknown / not_run` |
 | current authorization | main-only, `accuracy_parse.py` 보존. DSU-05 one-shot은 종료됐으며 원본 SPD 재실행, DSU-06, FIX-03, P12, production wiring, solve/Touchstone/fitting과 release 승격은 금지한다. 현재 허용 범위는 이 closure의 세 문서뿐이다. |
-| 다음 후보 gate | **NONE** — source-boundary multiple-selector 후보는 미재현으로 닫혔다. 같은 관찰을 반복하는 DSU-06은 YAGNI다. |
+| 다음 후보 gate | **NONE** — hash-bound source-to-production replacement-owner join ledger가 없어 old-Maxwell owner 교체 후보를 admissibly 연결할 수 없다. source-boundary multiple-selector 후보는 미재현으로 닫혔고 같은 관찰을 반복하는 DSU-06도 YAGNI다. |
 | 정확한 재개 조건 | PowerSI 오차를 설명할 별도의 source-derived physical block, authoritative owner relation, deterministic replacement stamp, 무피팅 limiting-case invariant와 disjoint owner ledger가 함께 식별되고 frozen contract review를 통과해야 한다. |
 | 핵심 증거 | [W6-BASE completed evidence](#w6-base-completed-evidence-260729), [W7 결과 재평가](#12-w7-결과-재평가와-후속-과제-판정) |
 
@@ -528,6 +528,7 @@ remote/full suite, installer/release는 수행하지 않았다.
 | `D-045` | DSU-03을 exact `35b11484eabfce80d27c7a273b92fd68c5f37102` artifact의 `STOP_PROVENANCE_INCOMPLETE`로 영구 DONE/STOP한다. actual immediate `Signal$L02(DGND)`와 remote selected `Signal$L29(DGND)` 동일성 과잉 guard의 pre-graph STOP이며 source/product 결손이나 L02 component 부재를 주장하지 않는다. 재시도/재사용/재실행과 별도 layer diagnostic은 YAGNI다. sole ACTIVE DSU-04는 119,092-byte/`df2c43d45f8b86a016015b4163cddeabcda8211a59520a88cb9cf1fc677634ee` coordinator의 compile/self-check PASS와 Sol final ACCEPT 뒤에만 -04 one-shot을 연다. PASS도 production/FIX-03/P12/PowerSI 정확성으로 자동 승격하지 않는다 | 확정 |
 | `D-046` | DSU-04를 exact contract `28845c0bd718d61fb611414005d1b325b19a9eca`의 report 1,567 bytes/SHA `72ca6d6eaeb81d39c91785a4c6243ee34f769f1d6ea07f74e03d6b78e7cad389`, receipt 2,238 bytes/SHA `01e4618f9b9af0024fabfe1ad13db148482a9d1b8eaa2a29884507797cd0b64c`, `STOP_PROVENANCE_INCOMPLETE`로 영구 DONE/STOP한다. empty immediate는 제품 direct/trace finite-path에서 허용되므로 source/product defect가 아니라 observer 과잉 계약이며 no retry/reuse/rerun이다. sole ACTIVE DSU-05는 119,869-byte/`601e7404f85d4ce64c43203a1af94b28144c82e516651f6a241d75b3f6c8d9bb` coordinator의 compile/self-check 각 1회 PASS, 195.51 B/target vertex와 Sol ACCEPT 뒤에만 -05 one-shot을 연다. PASS도 production/FIX-03/P12/PowerSI 정확성으로 자동 승격하지 않는다 | 확정 |
 | `D-047` | DSU-05를 exact contract `314f3a64aefb7b60c975a93cc7e6d701ab3debc4`의 report 289,336 bytes/SHA `368c3e2d15c45ba93f5c0eea49b8cf9149efa18deed79cf9c4d341abe28361ba`, receipt 2,246 bytes/SHA `e70af4cb45129829c9d11e4ed1b14bfc3643af0edab518752d27923f19b81837`, `STOP_MULTIPLE_NOT_REPRODUCED`로 영구 DONE/STOP한다. 3V+2E PASS와 선택된 6-contact의 direct/complete/singleton 및 all/complete 동일성 때문에 source-boundary multiple-selector 가설은 미재현이다. product/PowerSI 승격은 없고 DSU-06/FIX-03/P12/production wiring/rerun을 열지 않으며 W7-PHYS BLOCKED / ACTIVE NONE으로 복귀한다 | 확정 |
+| `D-048` | post-DSU-05 candidate old-Maxwell owner → source-derived P1 N-port atomic replacement는 **NOT_READY/STOP**이다. 선택된 L30/L29 finite-area source footprint/P1 terminal identity와 실제 `Y_global` 소비 old-Maxwell owner closed set을 bijective하게 잇는 hash-bound source-to-production replacement-owner join ledger가 rail-complete scope와 replaced/retained disjoint partition을 증명해야 한다. DSU-05 count/SHA-only ID, compiled-only Recovery, full certificate/ownership IR 부재와 exact join key 부재로 구성할 수 없으므로 admissible next gate가 없고 DSU-06/FIX-03/P12/production/rerun을 열지 않는다. ACTIVE NONE, PowerSI numerical improvement 0 | 확정 |
 
 ## 11. 현재 evidence와 비재사용 경계
 
@@ -1847,6 +1848,20 @@ primary report는
 graph gate는 V1/V2/V3 각 784,687과 E1/E2 각 1,692,389로 3V+2E PASS했다. census는 total 784,687/target 383,864(power 129, ground 383,735), component row는 2개다. 3개 ground/3개 power contact 모두 `direct_via_landing`, complete/issues 0, candidate/first-edge count 1이고 `C_contact == C_graph_all == C_graph_complete`의 count/hash가 동일하다. all/complete root도 exact 동일하며 ground root 4746은 V 382,889/E 1,067,321/branch 220/cycle rank 684,433, power root 12421은 V 129/E 201/branch 4/cycle rank 73이다.
 
 disposition은 `STOP_MULTIPLE_NOT_REPRODUCED`다. 선택된 6-contact source boundary에서 R2 multiple-selector 가설은 재현되지 않았고 source partition/finite reachability 결함 증거도 없다. 제품 solver/PowerSI 수치 개선이나 topology 승격은 아니므로 DSU-06, FIX-03/P12, production wiring과 원본 재실행을 열지 않는다. W7-PHYS는 BLOCKED, sole ACTIVE는 NONE이다.
+
+### 12.36 Post-DSU-05 readiness audit — NOT_READY/STOP
+
+candidate old-Maxwell owner를 source-derived P1 N-port atomic replacement로 바꾸는 다음 gate는, 선택된 L30/L29 finite-area source footprint/P1 terminal identity와 실제 `Y_global`이 소비하는 정확한 old-Maxwell owner closed set을 bijectively 매핑하는 hash-bound source-to-production replacement-owner join ledger가 있어야 한다. 이 ledger는 rail-complete scope와 replaced/retained disjoint partition을 증명해야 한다. DSU-05는 exact IDs를 count/SHA로만 남겼고 Recovery는 compiled-only(3,092 B)이며 full certificate/ownership IR과 exact join key가 없어 기존 산출물로 구성할 수 없다.
+
+read-only audit budget: DSU-05 report 289,336 B + Recovery report 3,092 B = **292,428 B**, JSON **2**; original/scenario/compiled/raw payload reads **0**. 따라서 admissible next gate는 없고 DSU-06/FIX-03/P12/production/rerun을 열지 않는다. W7-PHYS BLOCKED, ACTIVE NONE, PowerSI numerical improvement **0**이다.
+
+| readiness prerequisite | status | reason |
+|---|---|---|
+| source-derived geometry/material provenance | YES | Phase 1–4 established; candidate-specific owner join absent |
+| rail-complete candidate/scope | NO | missing hash-bound source-to-production join ledger |
+| deterministic replacement stamp | DEFINED/SHADOW-ONLY | production not applied |
+| falsifiable limiting/no-fit criterion | DEFINED/NOT_EVALUATED | preregistered `ΔC` interval/two-anchor reject criterion |
+| disjoint production owner ledger | NO | same missing join ledger |
 
 #### Historical old-gate evidence
 

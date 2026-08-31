@@ -1,7 +1,7 @@
 # SPD Decap PI Evaluator 목적·기술 기준
 
 - 적용 제품: **SPD Decap PI Evaluator v0.23.1**
-- 문서 버전: **1.195**
+- 문서 버전: **1.196**
 - W5 approved/machine-frozen source-before: `main` commit `027ac7a09a3eded15f45c41860945f9d4c7f488d`
 - 상태: **G0 기준 문서** — W5 DONE; W6-BASE 260729 numerical FAIL; W7-SOURCE-IR Phase 1/2/3/4와 W7-PHYS-PROSPECTIVE-P0/P1/P2/P4/P5/P6/P7/P8/P9/P10/P11 DONE, P3/P11 DONE/STOP (모두 shadow/prerequisite 범위); Actual-P0/R1/R2와 R2-MULTI-TOPOLOGY-DIAG-01 및 Recovery-01은 DONE/STOP, FIX-01/FIX-02는 DONE/ACCEPT다. `W7-PHYS-SOURCE-ANCHOR-LEAN-DSU-EVIDENCE-01`은 DONE/`STOP_TARGET_CONTACT_MISSING_OR_AMBIGUOUS`다.
   DSU-02/DSU-03/DSU-04는 각각 `STOP_PROVENANCE_INCOMPLETE`, DSU-05는 `STOP_MULTIPLE_NOT_REPRODUCED`로 영구 종료됐다.
@@ -16,6 +16,8 @@
 - coordinator freeze: historical DSU-05 coordinator는 `D:\SPD-Decap-PI-Evaluator-W7\_coordinator_temp\source_anchor_lean_dsu_evidence_v5.py` (119,869 bytes, SHA-256 `601e7404f85d4ce64c43203a1af94b28144c82e516651f6a241d75b3f6c8d9bb`)이며 in-memory compile/self-check 각 1회 PASS, 195.51 bytes/target vertex와 Sol final ACCEPT를 기록한다. exact contract는 docs-only commit `314f3a64aefb7b60c975a93cc7e6d701ab3debc4`다.
 - DSU-05 closure: 원본 SPD `D:\S4LB002-2Para_260729_1_injected.spd` (1,116,717,287 bytes, observed SHA-256 `40cb44b2376f59d6b606eb9b4d138204fe51b2dc6b3332d3b7c0e7d4202866d2`) one-shot은 `STOP_MULTIPLE_NOT_REPRODUCED`로 종료됐다. report는 289,336 bytes/SHA-256 `368c3e2d15c45ba93f5c0eea49b8cf9149efa18deed79cf9c4d341abe28361ba`, sibling receipt는 2,246 bytes/SHA-256 `e70af4cb45129829c9d11e4ed1b14bfc3643af0edab518752d27923f19b81837`다. child 2,845.614 s/launcher 2,851.766 s, exit 1, import/analyze/observer/report `1/1/1/1`, retry와 세 runtime guard 0이다.
 - DSU-05 finding: V1/V2/V3 각 784,687, E1/E2 각 1,692,389로 3V+2E graph gate를 통과했다. 6개 contact 모두 `direct_via_landing`, complete/issues 0이며 `C_contact == C_graph_all == C_graph_complete`가 count 1과 동일 hash로 성립했다. source-boundary multiple-selector 가설은 이 범위에서 재현되지 않았고 제품 solver/PowerSI 정확성 개선 증거는 아니다.
+- Post-DSU-05 readiness: candidate old-Maxwell owner를 source-derived P1 N-port atomic replacement로 바꾸는 안은 **NOT_READY/STOP**이다. 선택된 L30/L29 finite-area source footprint/P1 terminal identity와 실제 `Y_global`이 소비하는 정확한 old-Maxwell owner closed set을 bijective하게 잇는 hash-bound source-to-production replacement-owner join ledger가 없다. 이 ledger가 rail-complete scope와 replaced/retained disjoint partition을 증명해야 한다.
+- DSU-05 count/SHA-only evidence, compiled-only Recovery와 full certificate/ownership IR 부재로는 exact join key를 만들 수 없다. 따라서 admissible next gate가 없고 DSU-06/FIX-03/P12/production/rerun을 열지 않으며 ACTIVE NONE, PowerSI numerical improvement는 0이다.
 - 물리 작업 재개 조건: IR prerequisite 완료 후에도 geometry/material provenance, physical limiting-case invariant, rail-complete 적용 범위, deterministic stamp와 실제 consumer에 결속된 disjoint owner ledger를 갖춘 단일 physical candidate가 필요하다.
 - 최종 개정: 2026-08-31 (Asia/Seoul)
 
