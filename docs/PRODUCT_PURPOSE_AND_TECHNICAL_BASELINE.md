@@ -1,16 +1,16 @@
 # SPD Decap PI Evaluator 목적·기술 기준
 
 - 적용 제품: **SPD Decap PI Evaluator v0.23.1**
-- 문서 버전: **1.203**
+- 문서 버전: **1.204**
 - W5 approved/machine-frozen source-before: `main` commit `027ac7a09a3eded15f45c41860945f9d4c7f488d`
 - 상태: **G0 기준 문서** — W5 DONE; W6-BASE 260729 numerical FAIL; W7-SOURCE-IR Phase 1/2/3/4와 W7-PHYS-PROSPECTIVE-P0/P1/P2/P4/P5/P6/P7/P8/P9/P10/P11 DONE, P3/P11 DONE/STOP (모두 shadow/prerequisite 범위); Actual-P0/R1/R2와 R2-MULTI-TOPOLOGY-DIAG-01 및 Recovery-01은 DONE/STOP, FIX-01/FIX-02는 DONE/ACCEPT다. `W7-PHYS-SOURCE-ANCHOR-LEAN-DSU-EVIDENCE-01`은 DONE/`STOP_TARGET_CONTACT_MISSING_OR_AMBIGUOUS`다.
   DSU-02/DSU-03/DSU-04는 각각 `STOP_PROVENANCE_INCOMPLETE`, DSU-05는 `STOP_MULTIPLE_NOT_REPRODUCED`로 영구 종료됐다.
-  W7 production physics는 BLOCKED이고 sole ACTIVE는 **W7-PHYS-OWNER-JOIN-ORIGINAL-SPD-EVIDENCE-02** (FROZEN / READY_TO_EXECUTE)다. W7-PHYS-OWNER-JOIN-QUOTIENT-SCOPE-FIX-01은 DONE/ACCEPT로 닫혔고, 이전 -01 gate는 DONE/STOP_IMPORT_OR_OWNERSHIP로 영구 닫혔다.
+  W7 production physics는 BLOCKED이고 sole ACTIVE는 **W7-PHYS-OWNER-JOIN-TERMINAL-PAD-LAYER-FIX-01** (FROZEN / READY_FOR_IMPLEMENTATION)이다. Original-SPD EVIDENCE-01/-02는 DONE/STOP_IMPORT_OR_OWNERSHIP로 영구 닫혔고 quotient-scope FIX-01은 DONE/ACCEPT다.
 - 현재 평가: W6-BASE는 PowerSI 수치 기준 FAIL이고 unseen/generalization은 `unknown / not_run`이다. P11은 commit `e8d029a`에서 exact 1 GHz P1 supplemental matrix를 기존 Layer-Surface 경로에 적용해 reciprocity/row-sum 뒤 factor gate까지 도달했지만, pivot ratio `1.900e15`와 condition-1 lower bound `1.096e17`로 기존 `1e13` forward-reliability 한계를 초과해 `SHADOW_SOLVE_NUMERICAL_FAILURE` STOP했다. 작은 backward residual `7.308e-17`은 forward accuracy 증거가 아니다. production solver caller, cache, topology, owner-off, `Y_global`과 `Zii`는 바뀌지 않았다.
 - 제품 solver/owner-off/`Y_global`/`Zii`와 W6 PowerSI 수치는 변경되지 않았으므로 수치 격차 개선은 0이다(새 percentage metric이 아니라 실측 improvement absence를 뜻한다).
-- Sole ACTIVE item (current): **W7-PHYS-OWNER-JOIN-ORIGINAL-SPD-EVIDENCE-02** — **FROZEN / READY_TO_EXECUTE**. FIX-01 is DONE/ACCEPT at `1765731b411bd2a3c0a4a425b8e4c74232c6b289`; old -01 gate is permanent DONE/STOP retry 0/no rerun. Frozen coordinator `D:\SPD-Decap-PI-Evaluator-W7\_coordinator_temp\production_owner_join_original_spd_evidence_02.py` is 52,836 bytes, SHA-256 `3fe3b6057ae51986ddf83d98cac5222cb7a538d8e850e45427c488b5acde0c98`; exact-six-line static ACCEPT, source compile exactly once exit 0 (`SOURCE_COMPILE PASS`), self-check exactly once exit 0 with matching SHA, Sol `EXECUTION_ACCEPT_FOR_DOCS_FREEZE`, P0/P1 none. Base/source-before is `1765731b411bd2a3c0a4a425b8e4c74232c6b289`; execution contract is the new docs-only direct child and its runtime hash is not pre-stated. Original SPD input/rail/frequency/geometry is unchanged; output root/report/receipt are new -02 names. No production owner-off/wiring/solve/`Y_global`/`Zii`/PowerSI promotion; improvement remains 0.
+- Sole ACTIVE item (current): **W7-PHYS-OWNER-JOIN-TERMINAL-PAD-LAYER-FIX-01** — **FROZEN / READY_FOR_IMPLEMENTATION** at source-before `8609c806443b4df18a9ad9b55e56987ec8bcbaec`. EVIDENCE-02 is permanent DONE/STOP retry 0/no rerun: import/compile/P1/observer/report `1/0/0/0/1`, error `SOURCE_PLANE_OWNERSHIP_IR_INCOMPLETE: terminal raw selection is ambiguous`. The accepted causal scope is the obsolete optional immediate `endpoint_layer` pad join; retained SPD `source_layer` is authoritative for the external terminal PadDef/Regular lookup, while selected `component_layer` remains authoritative for the rail island binding. Only `spd_adapter.py`, one existing producer test, and these three docs may change. No schema/raw compiler/solver/coordinator/original-SPD run or production/PowerSI promotion; improvement remains 0.
 - P11 closure: commit `e8d029a`, 최종 지정 node `1 passed in 1.55s`, Sol ACCEPT; matrix SHA `b0680d39fcc0f9bad2c6e619b6910fd3e52765a610b940e31f7dc6cb1be79c0e`; accepted stamp/matrix/solve/readiness flags false, production unchanged.
-- 현재 권한: main-only와 `accuracy_parse.py` 보존을 유지한다. -02 coordinator/docs freeze가 완료되어 정확한 parent one-shot 1회만 허용한다. Input source/rail/frequency/cell, 7200 s timeout, report/receipt bounds와 claim ceiling을 유지하며 retry 0/no patch/reuse/rerun이다. Timeout/interrupt 미확정은 STARTED receipt와 `not_evaluated_after_termination`을 보존한다. Production owner-off/wiring/solve/`Y_global`/`Zii`/PowerSI 승격과 accuracy claim은 금지한다.
+- 현재 권한: main-only와 `accuracy_parse.py` 보존을 유지한다. FIX-01은 문서 동결 뒤 Luna가 정확히 두 구현/테스트 파일만 수정하고 Sol 정적 ACCEPT 뒤 기존 producer test node를 pytest 한 번만 실행한다. 전체 suite, compileall, original-SPD, schema/raw compiler/solver/coordinator 변경과 EVIDENCE-01/-02 재실행은 금지한다. Production owner-off/wiring/solve/`Y_global`/`Zii`/PowerSI 승격과 accuracy claim도 금지한다.
 - DSU-03 closure: contract `35b11484eabfce80d27c7a273b92fd68c5f37102`, frozen coordinator 115,960 bytes/SHA-256 `fb6dc30adabd8c93453dcc0791bf99f2464d49b8c90c76c8ce74f9dbd1a93402`, report 1,511 bytes/SHA-256 `c052258fe5ab389169b7e4d33853d90dcc29394057cb186f2ed548b2aead6b17`, sibling receipt 2,238 bytes/SHA-256 `fee03ea53c5c7d4a308711a94cd9ff5ee2b45eacb1f29b5941b44ba36ce2caae`다. calls는 `1/1/1/1`, retry/runtime guards 0이고 V1/V2/E1/E2/V3는 미평가다. observed immediate layer는 `Signal$L02(DGND)`이고 remote selected ground는 `Signal$L29(DGND)`인데 둘의 동일성을 강제한 observer 계약 때문에 pre-graph STOP했다. 이는 source/product data 결손이 아니며 재시도·재사용·재실행하지 않는다.
 - DSU-04 closure: contract `28845c0bd718d61fb611414005d1b325b19a9eca`, frozen coordinator 119,092 bytes/SHA-256 `df2c43d45f8b86a016015b4163cddeabcda8211a59520a88cb9cf1fc677634ee`, report 1,567 bytes/SHA-256 `72ca6d6eaeb81d39c91785a4c6243ee34f769f1d6ea07f74e03d6b78e7cad389`, sibling receipt 2,238 bytes/SHA-256 `01e4618f9b9af0024fabfe1ad13db148482a9d1b8eaa2a29884507797cd0b64c`다. calls는 `1/1/1/1`, retry/runtime guards 0이고 `power immediate landing contact is invalid`에서 pre-graph STOP했다. immediate map 0은 제품의 direct/trace finite-path 계약에서 허용되므로 source/product 결손이 아니라 observer 과잉 계약이며, actual path와 V1/V2/E1/E2/V3는 미평가다. 재시도·재사용·재실행하지 않는다.
 - coordinator freeze: historical DSU-05 coordinator는 `D:\SPD-Decap-PI-Evaluator-W7\_coordinator_temp\source_anchor_lean_dsu_evidence_v5.py` (119,869 bytes, SHA-256 `601e7404f85d4ce64c43203a1af94b28144c82e516651f6a241d75b3f6c8d9bb`)이며 in-memory compile/self-check 각 1회 PASS, 195.51 bytes/target vertex와 Sol final ACCEPT를 기록한다. exact contract는 docs-only commit `314f3a64aefb7b60c975a93cc7e6d701ab3debc4`다.
@@ -354,8 +354,8 @@ flowchart TD
 | Source IR 한계 | P0–P10은 contact admissibility부터 exact 1 GHz atomic replacement recipe, shadow topology/P1 block binding과 augmented component/pruning closure까지의 prerequisite를 증명했다. P11은 actual shadow matrix/factor gate를 실행했지만 forward reliability STOP했다. trusted solve, production assembly와 `Zii` 연결, PowerSI 근접 정확성은 증명하지 않았다. |
 | 생산 물리 상태 | surface-patch plane current-spreading R/L이 유일한 credible direction이지만 deterministic replacement stamp, production global assembly와 disjoint owner-off ledger가 없어 **NOT READY/STOP**이다. |
 | 현재 작업 상태 | Actual-P0/R1/R2, DIAG-01, Recovery-01과 DSU-01–05는 영구 DONE/STOP했다. FIX-01/FIX-02는 DONE/ACCEPT다. DSU-05는 exact contract `314f3a64aefb7b60c975a93cc7e6d701ab3debc4`에서 `STOP_MULTIPLE_NOT_REPRODUCED`로 닫혔다. |
-| 현재 ACTIVE | **W7-PHYS-OWNER-JOIN-ORIGINAL-SPD-EVIDENCE-02** — **FROZEN / READY_TO_EXECUTE**; coordinator 52,836 bytes/SHA `3fe3b6057ae51986ddf83d98cac5222cb7a538d8e850e45427c488b5acde0c98`, Sol `EXECUTION_ACCEPT_FOR_DOCS_FREEZE` |
-| 현재 gate | **W7-PHYS-OWNER-JOIN-ORIGINAL-SPD-EVIDENCE-02** — exact parent one-shot 1회, retry 0; output root/report/receipt are new -02 names and no production/PowerSI promotion is allowed. |
+| 현재 ACTIVE | **W7-PHYS-OWNER-JOIN-TERMINAL-PAD-LAYER-FIX-01** — **FROZEN / READY_FOR_IMPLEMENTATION**; retained `source_layer` terminal pad provenance correction, synthetic-only |
+| 현재 gate | **W7-PHYS-OWNER-JOIN-TERMINAL-PAD-LAYER-FIX-01** — Luna two-file edit, Sol static ACCEPT, existing producer pytest node exactly once; no original-SPD/production/PowerSI run |
 | 사전 물리 가설 | 대상 bare rail의 exact old-Maxwell owner를 source-derived P1 N-port로 **교체**할 때의 순 capacitance 변화 `ΔC = Ceff(P1) - Ceff(old owner)`가 기존 100 kHz/1 MHz PowerSI 오차 성분을 설명할 수 있는지를 후속 별도 gate에서 무피팅으로 반증한다. actual scenario 생성 자체는 정확도 개선 증거가 아니다. |
 
 세부 실행 이력, exact artifact identity와 current dirty file set은
@@ -442,32 +442,39 @@ selected-edge endpoint and anchor ID collection, original-order second-pass boun
 duplicate/missing/projected-cap fail-close are now covered. Cap/schema/solver/physics are unchanged. Evidence is
 synthetic+MINI only; no original-SPD import/compile/P1/owner-join/`Y_global`/`Zii`/PowerSI improvement is proven (0).
 
-## 17. W7-PHYS-OWNER-JOIN-ORIGINAL-SPD-EVIDENCE-02 — FROZEN / READY_TO_EXECUTE
+## 17. W7-PHYS-OWNER-JOIN-ORIGINAL-SPD-EVIDENCE-02 — DONE/STOP_IMPORT_OR_OWNERSHIP
 
-Base/source-before is `1765731b411bd2a3c0a4a425b8e4c74232c6b289`; the execution contract is the new docs-only direct child
-changing exactly these three canonical docs (Product, Source-derived physical IR, and Work execution baseline), and its
-actual commit hash is supplied at runtime, not invented here. Frozen coordinator
-`D:\SPD-Decap-PI-Evaluator-W7\_coordinator_temp\production_owner_join_original_spd_evidence_02.py` is 52,836 bytes,
-SHA-256 `3fe3b6057ae51986ddf83d98cac5222cb7a538d8e850e45427c488b5acde0c98`; exact six-line static ACCEPT, source
-compile exactly once exit 0 (`SOURCE_COMPILE PASS`), self-check exactly once exit 0 with matching SHA, Sol
-`EXECUTION_ACCEPT_FOR_DOCS_FREEZE`, P0/P1 none. Compile/self-check are consumed and must not rerun.
+The exact contract `8609c806443b4df18a9ad9b55e56987ec8bcbaec` one-shot exited 1 after
+3,357.609 s with `SpdImportError` detail
+`SOURCE_PLANE_OWNERSHIP_IR_INCOMPLETE: terminal raw selection is ambiguous`.
+Calls were import/compile/P1/observer/report `1/0/0/0/1`, retry 0. The report is
+`D:\SPD-Decap-PI-Evaluator-W7\8609c806443b4df18a9ad9b55e56987ec8bcbaec\260729-production-owner-join-original-spd-evidence-02\production_owner_join_original_spd_evidence_02_report.json`
+(1,099 B, SHA-256 `9063679e9b055e7964ff981f788ab6907d88dce5e651d4373870eae2903e44f2`);
+the sibling receipt is 1,100 B, SHA-256
+`7645918d9fddca34cd401d61ba89653453f47b01c20ac605f92aa5a4a0fb15c8`.
+Import did not return, so the report records only expected source SHA/stat and no observed source SHA is claimed.
+Import timing and peak RSS are unavailable/misattributed; total time is the only usable timing. This gate and -01 are
+permanent retry-0 DONE/STOP and must not be patched, reused, or rerun.
 
-Fixed input is `D:\S4LB002-2Para_260729_1_injected.spd` (1,116,717,287 B, expected SHA-256
-`40cb44b2376f59d6b606eb9b4d138204fe51b2dc6b3332d3b7c0e7d4202866d2`), rail
-`ADC_VDD_180_VQPS_SYS_1_AON/0`, frequency 1e9 Hz, cell 1000.0 um, timeout 7200 s. The parent launches exactly once,
-retry 0, with no patch/reuse/rerun. Root is
-`D:\SPD-Decap-PI-Evaluator-W7\<contract>\260729-production-owner-join-original-spd-evidence-02`; report is
-`production_owner_join_original_spd_evidence_02_report.json`; sibling receipt is
-`260729-production-owner-join-original-spd-evidence-02.launcher-receipt.json`. Root/report/receipt are absent before
-launch; report and receipt bounds and claim ceiling remain unchanged. Timeout/interrupt uncertainty preserves STARTED
-receipt and calls=`not_evaluated_after_termination`.
+Static causal review does not interpret the composite error label as source ambiguity. The same-source/rail DSU-05
+history established six direct/complete/first-edge contacts; v4 legitimately completes a remote component path without
+an immediate artwork-derived `endpoint_layer`. The ownership producer nevertheless selected and later joined terminal
+PadDef/Regular rows by `(incident_padstack, endpoint_layer)`. This obsolete optional-field dependency stopped before the
+raw compiler/callback/ownership IR. EVIDENCE-02 alone cannot re-prove the six contacts because import did not return.
 
-The exact parent command is:
+## 18. W7-PHYS-OWNER-JOIN-TERMINAL-PAD-LAYER-FIX-01 — FROZEN / READY_FOR_IMPLEMENTATION
 
-```powershell
-$contractCommit = (git -C 'C:\Users\User\Documents\ChatGPT\SPD Decap PI Evaluator' rev-parse HEAD).Trim()
-& 'C:\Users\User\AppData\Local\Programs\Python\Python312\python.exe' -I -B 'D:\SPD-Decap-PI-Evaluator-W7\_coordinator_temp\production_owner_join_original_spd_evidence_02.py' --repo 'C:\Users\User\Documents\ChatGPT\SPD Decap PI Evaluator' --contract-commit $contractCommit --expected-coordinator-sha256 '3fe3b6057ae51986ddf83d98cac5222cb7a538d8e850e45427c488b5acde0c98'
-```
+Source-before is `8609c806443b4df18a9ad9b55e56987ec8bcbaec`. For target terminals only, raw pad selection and callback join use
+the retained SPD `source_layer`; the callback also fails closed unless the selected raw Node layer matches it. The
+selected rail `component_layer` remains authoritative for terminal island/layer binding. Boundary pad keys,
+`via_record_required=1`, Via/Pad provenance, finite-edge/owner checks, IR schema and raw compiler remain unchanged.
+Trace-terminal schema support is explicitly out of scope.
 
-Only PASS/STOP evidence-gate outcomes are allowed. No production owner-off/wiring/solve/`Y_global`/`Zii`/PowerSI
-promotion or accuracy claim is made; improvement remains **0**. The old -01 gate is permanent DONE/STOP and never rerun.
+Allowed scope is `src/spd_decap_pi/spd_adapter.py`,
+`tests/test_source_plane_ownership_ir_producer.py`, and these three canonical docs. The existing node
+`test_source_plane_ownership_component_layer_is_authoritative_for_mismatched_endpoint` must cover a direct/complete
+terminal with `endpoint_layer=None`, retained `source_layer=Signal$TOP`, source-layer raw pad/provenance selection,
+component-layer terminal binding, and source-layer/raw-Node mismatch STOP while retaining its zero/multiple component
+STOP checks. After Sol static ACCEPT, exactly one pytest invocation of that node is allowed; no retry, full suite,
+compileall, original-SPD, solver, coordinator, production or PowerSI run. Claim ceiling is synthetic importer/ownership
+producer semantics only; numerical improvement remains **0**.
