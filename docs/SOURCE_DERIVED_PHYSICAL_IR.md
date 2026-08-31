@@ -1,12 +1,13 @@
 # SPD Decap PI Evaluator v0.23.1 — Source-derived physical IR
 
-- 문서 버전: **1.31**
+- 문서 버전: **1.32**
 - 계약 상태: **ACCEPTED** — source-derived provenance/ownership prerequisite의 기술 기준
 - committed 구현: `source-plane-ownership-ir-v1` + Phase 3 shadow consumer + v2 `contact_boundary` (`3b76af4`) + P0 (`4dc855a`) + P1 (`f823a53`) + P2 (`90f6b54`) + P3 (`b8a79f1`) + P4 base cut-set (`39fd4fa`) + P5 shadow rewire plan (`d7e7278`) + P6 scenario commutation audit (`6793bb2`) + P7 atomic recipe (`f1c2968`) + P8 topology embedding (`abf79cf`) + P9 nodal-block binding (`593e070`) + P10 component closure (`7f9c498`) + P11 supplemental solve gate (`e8d029a`) + ownership component-layer selector fix (`b0b90db`) + component-cardinality classifier (`6fc06dd`)
 - runtime acceptance: **Phase 4와 P0–P10 focused PASS / Sol ACCEPT; P3 semantic STOP, P4 structural CLOSED, P5 PLANNED, P6/P7 PASSED, P8 materialized, P9 bound, P10 component-closed; P11 focused test PASS / numerical result STOP**
 - production 상태: solver, owner-off, `Y_global`, `Zii` **unchanged**
 - 현재 작업 상태: **Actual-P0/R1/R2, R2-MULTI-TOPOLOGY-DIAG-01, Recovery-01과 DSU-01–05 DONE/STOP, FIX-01/FIX-02 DONE/ACCEPT**다.
-  DSU-05는 `STOP_MULTIPLE_NOT_REPRODUCED`; W7-PHYS BLOCKED / ACTIVE NONE / P12 NO-GO다.
+  DSU-05는 `STOP_MULTIPLE_NOT_REPRODUCED`; W7-PHYS BLOCKED이며 sole ACTIVE는 **W7-PHYS-OWNER-JOIN-EVIDENCE-01**이다. P12 NO-GO다.
+- active contract는 source-before exact `main` HEAD `74d49077ec6f67a7bdebe1e1815da4f2c7897771`에서 owner-join evidence만 다루며 physics/solver/`Y_global`/`Zii`와 PowerSI 수치 개선(0)은 불변이다.
 - P11 closure: commit `e8d029a`, 최종 지정 node `1 passed in 1.55s`, Sol ACCEPT; pivot ratio `1.900e15`, condition-1 lower bound `1.096e17`, `SHADOW_SOLVE_NUMERICAL_FAILURE`; trusted stamp/matrix/solve/readiness false, production unchanged
 - 최종 개정: 2026-08-31 (Asia/Seoul)
 
@@ -64,6 +65,7 @@ flowchart LR
   LD3 --> LD4{W7-PHYS-SOURCE-ANCHOR-LEAN-DSU-EVIDENCE-04 DONE / STOP<br/>empty immediate overstrict contract}
   LD4 --> LD5[W7-PHYS-SOURCE-ANCHOR-LEAN-DSU-EVIDENCE-05 DONE / STOP<br/>multiple candidate not reproduced]
   LD5 --> SX[W7 remains BLOCKED<br/>ACTIVE NONE]
+  SX --> OJ[W7-PHYS-OWNER-JOIN-EVIDENCE-01 ACTIVE]
   I[raw-v3 geometry/material] -. hash reference .-> B
   J[compiled finite topology] -. hash/owner reference .-> D
 ```
@@ -938,6 +940,7 @@ P11 1 GHz gate만으로 이 두 anchor를 증명하지 않으므로 accuracy pro
 two-anchor checkpoint를 별도로 요구한다.
 
 Post-DSU-05 readiness는 **NOT_READY/STOP**이다. candidate old-Maxwell owner를 source-derived P1 N-port atomic replacement로 바꾸려면, 선택된 L30/L29 finite-area source footprint/P1 terminal identity를 실제 `Y_global`이 소비하는 정확한 old-Maxwell owner closed set에 hash-bound bijectively join하는 ledger가 필요하다. 이 ledger가 rail-complete scope와 replaced/retained disjoint partition을 증명해야 하지만, DSU-05의 count/SHA-only IDs, compiled-only Recovery, full certificate/ownership IR 부재와 exact join key 부재로는 구성할 수 없다. 따라서 admissible next gate, DSU-06/FIX-03/P12/production/rerun은 없고 ACTIVE NONE이며 PowerSI numerical improvement는 0이다.
+이 문장은 74d readiness audit 당시의 historical conclusion이며, 현행 sole ACTIVE는 아래 §8의 W7-PHYS-OWNER-JOIN-EVIDENCE-01이 supersede한다.
 
 ## 7. 주장 한계
 
@@ -951,3 +954,46 @@ Post-DSU-05 readiness는 **NOT_READY/STOP**이다. candidate old-Maxwell owner�
 - PowerSI 데이터는 comparison gate에만 사용하고 parameter fitting 입력으로 쓰지
   않는다.
 - 17DU/17DV historical STOP은 재실행하거나 성공으로 재분류하지 않는다.
+
+## 8. W7-PHYS-OWNER-JOIN-EVIDENCE-01 — ACTIVE contract
+
+source-before는 exact `main` HEAD `74d49077ec6f67a7bdebe1e1815da4f2c7897771`이다.
+이 gate는 source-derived P1 replacement와 production old-Maxwell owner의 hash-bound
+join evidence만 만든다. physics/solver/`Y_global`/`Zii`와 PowerSI numerical
+improvement(0)는 불변이다. Global contact에 서로 다른 required rail layer의 component
+후보가 함께 존재할 수 있으므로 exact-one은 per-rail이며, global singular identity를
+요구한 ownership-private selector가 accepted root cause다.
+
+### Phase A — producer selector correction
+
+수정 범위는 `src/spd_decap_pi/spd_adapter.py`와
+`tests/test_source_plane_ownership_ir_producer.py`뿐이다. Full global
+candidate/evidence closure를 먼저 검증하고, 그 결과를 exact
+`(expected_net, expected_layer)`로 project하여 count가 1인 경우만 통과시킨다. 같은
+target pair가 0개 또는 2개 이상이면 동일하게 STOP하며 contact singular alias는
+승격하지 않는다. Global certificate/compiled topology schema와 hash는 유지하고
+`layerwise_network.py`는 수정하지 않는다.
+
+### Phase B — read-only consumer observer
+
+기존 P2/P3/P4/P7 및 `source-plane-ownership-ir-v2`를 재사용하며 수정 범위는
+`src/spd_decap_pi/source_plane_patch_consumer.py`와
+`tests/test_source_plane_patch_consumer.py`뿐이다. Source/P1 contact row와 exact
+production old-Maxwell row를 기존 fingerprint
+`SHA256(substrate_identity, upper_layer, lower_layer, upper_island_id,
+lower_island_id, capacitance_f_hex)`로 결속하고 partial ordinal, reduced coordinates,
+aggregation count, action ledger, replaced/retained disjoint hashes와 final report SHA를
+출력한다. Persisted DB/table/schema/asset 변경은 0이며 반환되는 read-only observer
+report object 하나만 허용한다. `shadow_only=true`, `replacement_ready=false`,
+`production_ready=false`를 내고 hash/identity/coverage/disjointness/partial exact-one/
+reduced-coordinate 불일치는 fail-closed한다.
+
+전체 suite, `python -m compileall`, extra pytest와 original SPD/scenario save-load/
+numerical solve/Touchstone/P12, owner-off production wiring, fitting, release/build/version
+bump는 이 gate에서 금지한다. Batched implementation 후 Sol static code review 다음에
+아래 executable test node 정확히 2개를 각각 1회만 실행한다.
+`tests/test_source_plane_ownership_ir_producer.py::test_source_plane_ownership_component_layer_is_authoritative_for_mismatched_endpoint`
+및 `tests/test_source_plane_patch_consumer.py::test_source_plane_patch_owner_off_shadow_audit_mini_spd`.
+`git diff --check`와 tracked diff review는 static check로서 executable 횟수에 포함되지
+않으며 closure 직전 전체 gate 기준 각 최대 1회다. 두 Phase PASS, Sol ACCEPT, exact tracked
+diff review와 docs closure commit 전에는 후속 original-SPD one-shot을 ready로 간주하지 않는다.
