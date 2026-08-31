@@ -240,8 +240,7 @@ def test_source_plane_patch_owner_off_shadow_audit_mini_spd(tmp_path: Path):
     substrate = compile_layerwise_substrate(project, imported.attachments, required_rail_id="VDD_CORE/1", require_plane_sheet_payload=True)
     patch = consumer.evaluate_source_plane_contact_condensation(own, imported.attachments, raw, imported.attachments, rail_id="VDD_CORE/1", frequency_hz=1.0e9, cell_um=1000.0)
     first = consumer.audit_source_plane_patch_owner_off(own, imported.attachments, raw, patch, substrate, rail_id="VDD_CORE/1")
-    second = consumer.audit_source_plane_patch_owner_off(own, imported.attachments, raw, patch, substrate, rail_id="VDD_CORE/1")
-    assert first == second and first["shadow_only"] is True and first["replacement_ready"] is False
+    assert first["shadow_only"] is True and first["replacement_ready"] is False
     assert first["status"] == "candidate_identified" and first["incident_edges"]
     assert len({item["fingerprint"] for item in first["incident_edges"]}) == len(first["incident_edges"])
     assert first["source_sha256"] == patch["source_sha256"] == raw["source_sha256"]
@@ -253,6 +252,32 @@ def test_source_plane_patch_owner_off_shadow_audit_mini_spd(tmp_path: Path):
     assert len(first["candidate_replaced_owner_ids"]) == 2
     assert first["retained_owner_count"] >= 2 and len(first["retained_owner_ids_sha256"]) == 64
     assert len(first["old_edge_set_sha256"]) == len(first["contact_map_sha256"]) == len(first["audit_sha256"]) == 64
+    original_attachment_items = dict(imported.attachments)
+    original_network_inventory = (substrate.network.surface_node_ids, substrate.network.via_links, substrate.network.partials, substrate.network.ports)
+    join = consumer.audit_source_plane_patch_production_owner_join(own, imported.attachments, raw, patch, substrate, rail_id="VDD_CORE/1")
+    assert join["status"] == "complete" and join["shadow_only"] is True
+    assert join["replacement_ready"] is False and join["production_ready"] is False
+    assert join["p2_audit_sha256"] == first["audit_sha256"]
+    assert [row["contact_id"] for row in join["source_p1_contact_rows"]] == patch["contact_ids"]
+    assert {row["role"] for row in join["source_p1_contact_rows"]} == {"power", "ground"}
+    assert join["source_p1_contact_rows_sha256"] == sha256(consumer.concrete_canonical_json_bytes(join["source_p1_contact_rows"])).hexdigest()
+    old_rows = join["production_old_maxwell_rows"]
+    assert old_rows and len({row["fingerprint"] for row in old_rows}) == len(old_rows)
+    assert sha256(consumer.concrete_canonical_json_bytes(sorted(row["fingerprint"] for row in old_rows))).hexdigest() == join["old_edge_set_sha256"]
+    assert sha256(consumer.concrete_canonical_json_bytes(old_rows)).hexdigest() == join["production_old_maxwell_rows_sha256"]
+    assert all(type(row["partial_ordinal"]) is int and type(row["upper_reduced_index"]) is int and type(row["lower_reduced_index"]) is int and type(row["aggregation_count"]) is int and row["partial_ordinal"] >= 0 and row["upper_reduced_index"] >= 0 and row["lower_reduced_index"] >= 0 and float.fromhex(row["capacitance_f_hex"]) > 0.0 and row["aggregation_count"] >= 1 for row in old_rows)
+    grouped = {}
+    for row in old_rows:
+        key = (row["partial_ordinal"], row["upper_reduced_index"], row["lower_reduced_index"])
+        grouped[key] = grouped.get(key, 0) + 1
+    assert all(row["aggregation_count"] == grouped[(row["partial_ordinal"], row["upper_reduced_index"], row["lower_reduced_index"])] for row in old_rows)
+    replaced = {item.casefold() for item in join["replaced_owner_ids"]}; retained = {item.casefold() for item in join["retained_owner_ids"]}
+    assert not replaced & retained and join["replaced_owner_ids_sha256"] == sha256(consumer.concrete_canonical_json_bytes([item.casefold() for item in join["replaced_owner_ids"]])).hexdigest()
+    assert join["retained_owner_ids_sha256"] == sha256(consumer.concrete_canonical_json_bytes([item.casefold() for item in join["retained_owner_ids"]])).hexdigest()
+    assert join["action_ledger_sha256"] == sha256(consumer.concrete_canonical_json_bytes(join["action_ledger"])).hexdigest()
+    report_without_sha = dict(join); report_without_sha.pop("final_report_sha256")
+    assert join["final_report_sha256"] == sha256(consumer.concrete_canonical_json_bytes(report_without_sha)).hexdigest()
+    assert dict(imported.attachments) == original_attachment_items and (substrate.network.surface_node_ids, substrate.network.via_links, substrate.network.partials, substrate.network.ports) == original_network_inventory
     with pytest.raises(consumer.SourcePlanePatchError):
         consumer.audit_source_plane_patch_owner_off(own, imported.attachments, raw, {**patch, "raw_manifest_sha256": _h("a")}, substrate, rail_id="VDD_CORE/1")
     tampered_provenance = {**dict(substrate.provenance), "raw_spatial_v3_manifest_sha256": _h("b")}

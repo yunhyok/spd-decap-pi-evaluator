@@ -1083,7 +1083,7 @@ def audit_source_plane_patch_owner_off(
                 _fail("OWNER_OFF_AUDIT_INVALID: terminal finite owner is not retained")
         incidents: list[dict[str, Any]] = []
         edge_keys: set[tuple[str, str, str, str]] = set()
-        for wrapped in getattr(substrate.network, "partials", ()):
+        for partial_ordinal, wrapped in enumerate(getattr(substrate.network, "partials", ())):
             partial = wrapped.partial
             names = tuple(str(name) for name in partial.net_names)
             matrix = partial.maxwell_capacitance_f
@@ -1132,10 +1132,22 @@ def audit_source_plane_patch_owner_off(
                 if edge_key in edge_keys:
                     _fail("OWNER_OFF_AUDIT_INVALID: canonical old edge is duplicated")
                 edge_keys.add(edge_key)
+                try:
+                    upper_reduced_index = int(substrate.network.reduced_node_index(upper_id))
+                    lower_reduced_index = int(substrate.network.reduced_node_index(lower_id))
+                except (TypeError, ValueError, OverflowError, KeyError) as exc:
+                    _fail(f"OWNER_OFF_AUDIT_INVALID: partial reduced mapping is absent: {exc}")
                 payload = {"substrate_identity_sha256": str(substrate.substrate_identity_sha256), "upper_layer": str(partial.upper_layer), "lower_layer": str(partial.lower_layer), "upper_island_id": upper_id, "lower_island_id": lower_id, "capacitance_f_hex": float(-value).hex()}
-                incidents.append({"fingerprint": sha256(concrete_canonical_json_bytes(payload)).hexdigest(), **payload})
+                incidents.append({"fingerprint": sha256(concrete_canonical_json_bytes(payload)).hexdigest(), "partial_ordinal": partial_ordinal, "upper_reduced_index": upper_reduced_index, "lower_reduced_index": lower_reduced_index, "aggregation_count": 0, **payload})
         if not incidents:
             _fail("OWNER_OFF_AUDIT_INVALID: no selected incident old edges")
+        aggregation_counts: dict[tuple[int, int, int], int] = {}
+        for incident in incidents:
+            group = (int(incident["partial_ordinal"]), int(incident["upper_reduced_index"]), int(incident["lower_reduced_index"]))
+            aggregation_counts[group] = aggregation_counts.get(group, 0) + 1
+        for incident in incidents:
+            group = (int(incident["partial_ordinal"]), int(incident["upper_reduced_index"]), int(incident["lower_reduced_index"]))
+            incident["aggregation_count"] = aggregation_counts[group]
         fingerprints = sorted({str(item["fingerprint"]) for item in incidents})
         if len(fingerprints) != len(incidents):
             _fail("OWNER_OFF_AUDIT_INVALID: old edge fingerprints are duplicated")
@@ -1324,7 +1336,7 @@ def audit_source_plane_patch_contact_quotient_representability(
             _fail("CONTACT_QUOTIENT_INVALID: P2 candidate owner identity is malformed")
         candidate_replaced_owner_ids = list(raw_candidate_replaced_owner_ids)
         identity = {"p1_input_sha256": p1_input_sha, "p1_output_sha256": p1_output_sha, "p2_audit_sha256": p2_audit_sha, "p2_component_identity": component_identity, "p2_candidate_replaced_owner_ids": candidate_replaced_owner_ids, "p2_old_edge_set_sha256": str(p2_audit.get("old_edge_set_sha256", "")), "p2_incident_fingerprints": incident_fingerprints, "rail_id": rail_id, "contact_map_sha256": contact_map_sha, "projector_sha256": projector_sha, "mapping": mapping, "residual_norm_2": residual_norm, "admittance_norm_2": y_norm, "threshold": threshold}
-        return {"schema_version": "source-plane-contact-quotient-representability-v1", "shadow_only": True, "status": "representable" if quotient_representable else "stopped", "code": None if quotient_representable else "CONTACT_INTERFACE_RANK_LOSS", "quotient_representable": quotient_representable, "replacement_ready": False, "rail_id": rail_id, "source_sha256": raw_manifest["source_sha256"], "p1_input_sha256": p1_input_sha, "p1_output_sha256": p1_output_sha, "p2_audit_sha256": p2_audit_sha, "p2_candidate_replaced_owner_ids": candidate_replaced_owner_ids, "p2_old_edge_set_sha256": str(p2_audit.get("old_edge_set_sha256", "")), "p2_component_identity": component_identity, "p2_incident_edges": list(p2_audit.get("incident_edges", ())), "contact_map_sha256": contact_map_sha, "projector_sha256": projector_sha, "contact_mapping": mapping, "B": B.tolist(), "contact_counts": [float(value) for value in counts.tolist()], "residual_norm_2": residual_norm, "admittance_norm_2": y_norm, "threshold": threshold, "reciprocity_residual": reciprocity_norm, "gauge_null_residual": gauge_residual, "admittance_rank": y_rank, "constraint_rank": constraint_rank, "input_identity_sha256": sha256(concrete_canonical_json_bytes(identity)).hexdigest()}
+        return {"schema_version": "source-plane-contact-quotient-representability-v1", "shadow_only": True, "status": "representable" if quotient_representable else "stopped", "code": None if quotient_representable else "CONTACT_INTERFACE_RANK_LOSS", "quotient_representable": quotient_representable, "replacement_ready": False, "rail_id": rail_id, "source_sha256": raw_manifest["source_sha256"], "p1_input_sha256": p1_input_sha, "p1_output_sha256": p1_output_sha, "p2_audit_sha256": p2_audit_sha, "p2_candidate_replaced_owner_ids": candidate_replaced_owner_ids, "p2_retained_owner_ids_sha256": str(p2_audit.get("retained_owner_ids_sha256", "")), "p2_old_edge_set_sha256": str(p2_audit.get("old_edge_set_sha256", "")), "p2_component_identity": component_identity, "p2_incident_edges": list(p2_audit.get("incident_edges", ())), "contact_map_sha256": contact_map_sha, "projector_sha256": projector_sha, "contact_mapping": mapping, "B": B.tolist(), "contact_counts": [float(value) for value in counts.tolist()], "residual_norm_2": residual_norm, "admittance_norm_2": y_norm, "threshold": threshold, "reciprocity_residual": reciprocity_norm, "gauge_null_residual": gauge_residual, "admittance_rank": y_rank, "constraint_rank": constraint_rank, "input_identity_sha256": sha256(concrete_canonical_json_bytes(identity)).hexdigest()}
     except SourcePlanePatchError:
         raise
     except Exception as exc:
@@ -1356,8 +1368,9 @@ def audit_source_plane_patch_selected_base_cutset(
     p1_input_sha = str(p3.get("p1_input_sha256", ""))
     p1_output_sha = str(p3.get("p1_output_sha256", ""))
     candidate_replaced_owner_ids = p3.get("p2_candidate_replaced_owner_ids")
+    retained_owner_ids_sha = str(p3.get("p2_retained_owner_ids_sha256", ""))
     substrate_identity = str(getattr(substrate, "substrate_identity_sha256", ""))
-    if not isinstance(component_identity, Mapping) or set(component_identity) != {"power", "ground"} or not isinstance(mapping, list) or not isinstance(incident_edges, list) or not isinstance(candidate_replaced_owner_ids, list) or len(old_edge_set_sha) != 64 or len(p3_input_sha) != 64 or len(p2_audit_sha) != 64 or len(p1_input_sha) != 64 or len(p1_output_sha) != 64 or len(substrate_identity) != 64 or any(value != value.casefold() or any(character not in "0123456789abcdef" for character in value) for value in (old_edge_set_sha, p3_input_sha, p2_audit_sha, p1_input_sha, p1_output_sha, substrate_identity)):
+    if not isinstance(component_identity, Mapping) or set(component_identity) != {"power", "ground"} or not isinstance(mapping, list) or not isinstance(incident_edges, list) or not isinstance(candidate_replaced_owner_ids, list) or len(old_edge_set_sha) != 64 or len(retained_owner_ids_sha) != 64 or len(p3_input_sha) != 64 or len(p2_audit_sha) != 64 or len(p1_input_sha) != 64 or len(p1_output_sha) != 64 or len(substrate_identity) != 64 or any(value != value.casefold() or any(character not in "0123456789abcdef" for character in value) for value in (old_edge_set_sha, retained_owner_ids_sha, p3_input_sha, p2_audit_sha, p1_input_sha, p1_output_sha, substrate_identity)):
         _fail("BASE_CUTSET_INVALID: P2/P3 identity is incomplete")
     if p3.get("status") != "stopped" or p3.get("code") != "CONTACT_INTERFACE_RANK_LOSS" or p3.get("quotient_representable") is not False or p3.get("replacement_ready") is not False:
         _fail("BASE_CUTSET_IDENTITY_MISMATCH: P3 gate status differs")
@@ -1366,10 +1379,12 @@ def audit_source_plane_patch_selected_base_cutset(
     fingerprints = [str(row.get("fingerprint", "")) for row in incident_edges if isinstance(row, Mapping)]
     if len(fingerprints) != len(incident_edges) or len(set(fingerprints)) != len(fingerprints) or sha256(concrete_canonical_json_bytes(sorted(fingerprints))).hexdigest() != old_edge_set_sha:
         _fail("BASE_CUTSET_IDENTITY_MISMATCH: P2 old-edge fingerprint differs")
+    # Keep the historical P4 identity immutable; the retained-owner hash is
+    # additive pass-through evidence consumed only by the production composer.
     common_identity = {"rail_id": rail_id, "source_sha256": str(raw_manifest["source_sha256"]), "substrate_identity_sha256": substrate_identity, "p3_input_identity_sha256": p3_input_sha, "p2_audit_sha256": p2_audit_sha, "p1_input_sha256": p1_input_sha, "p1_output_sha256": p1_output_sha, "p2_component_identity": component_identity, "p2_candidate_replaced_owner_ids": candidate_replaced_owner_ids, "contact_mapping": mapping, "old_edge_set_sha256": old_edge_set_sha, "incident_fingerprints": sorted(fingerprints)}
     def stopped(code: str, detail: str, evidence: Mapping[str, Any] | None = None) -> Mapping[str, Any]:
         payload = {**common_identity, "code": code, "detail": detail, "evidence": dict(evidence or {})}
-        return {"schema_version": "source-plane-selected-base-cutset-v1", "shadow_only": True, "status": "stopped", "code": code, "detail": detail, "replacement_ready": False, "split_ready": False, "rail_id": rail_id, "source_sha256": raw_manifest["source_sha256"], "component_identity": component_identity, "contact_mapping": mapping, "old_edge_set_sha256": old_edge_set_sha, "p3_input_identity_sha256": p3_input_sha, "p2_audit_sha256": p2_audit_sha, "p1_input_sha256": p1_input_sha, "p1_output_sha256": p1_output_sha, "p2_candidate_replaced_owner_ids": candidate_replaced_owner_ids, "substrate_identity_sha256": substrate_identity, "base_cutset_sha256": sha256(concrete_canonical_json_bytes(payload)).hexdigest()}
+        return {"schema_version": "source-plane-selected-base-cutset-v1", "shadow_only": True, "status": "stopped", "code": code, "detail": detail, "replacement_ready": False, "split_ready": False, "rail_id": rail_id, "source_sha256": raw_manifest["source_sha256"], "component_identity": component_identity, "contact_mapping": mapping, "old_edge_set_sha256": old_edge_set_sha, "p3_input_identity_sha256": p3_input_sha, "p2_audit_sha256": p2_audit_sha, "p1_input_sha256": p1_input_sha, "p1_output_sha256": p1_output_sha, "p2_candidate_replaced_owner_ids": candidate_replaced_owner_ids, "p2_retained_owner_ids_sha256": retained_owner_ids_sha, "substrate_identity_sha256": substrate_identity, "base_cutset_sha256": sha256(concrete_canonical_json_bytes(payload)).hexdigest()}
     network = getattr(substrate, "network", None)
     surface_nodes = tuple(getattr(network, "surface_node_ids", ()))
     if not surface_nodes or len({str(item).casefold() for item in surface_nodes}) != len(surface_nodes):
@@ -1481,7 +1496,224 @@ def audit_source_plane_patch_selected_base_cutset(
         seen_edges.add(edge_key)
     if seen_edges != set(expected_edges):
         return stopped("BASE_CUTSET_CONTACT_EDGE_MISSING_OR_EXTRA", "P2 contact finite edge is absent from network", {"expected": sorted(expected_edges), "seen": sorted(seen_edges)})
-    return {"schema_version": "source-plane-selected-base-cutset-v1", "shadow_only": True, "status": "closed", "code": None, "rail_id": rail_id, "source_sha256": raw_manifest["source_sha256"], "component_identity": component_identity, "contact_mapping": mapping, "incident_edges": incident_edges, "old_edge_set_sha256": old_edge_set_sha, "p3_input_identity_sha256": p3_input_sha, "p2_audit_sha256": p2_audit_sha, "p1_input_sha256": p1_input_sha, "p1_output_sha256": p1_output_sha, "p2_candidate_replaced_owner_ids": candidate_replaced_owner_ids, "substrate_identity_sha256": substrate_identity, "split_ready": False, "replacement_ready": False, "base_cutset_sha256": sha256(concrete_canonical_json_bytes(common_identity)).hexdigest()}
+    return {"schema_version": "source-plane-selected-base-cutset-v1", "shadow_only": True, "status": "closed", "code": None, "rail_id": rail_id, "source_sha256": raw_manifest["source_sha256"], "component_identity": component_identity, "contact_mapping": mapping, "incident_edges": incident_edges, "old_edge_set_sha256": old_edge_set_sha, "p3_input_identity_sha256": p3_input_sha, "p2_audit_sha256": p2_audit_sha, "p1_input_sha256": p1_input_sha, "p1_output_sha256": p1_output_sha, "p2_candidate_replaced_owner_ids": candidate_replaced_owner_ids, "p2_retained_owner_ids_sha256": retained_owner_ids_sha, "substrate_identity_sha256": substrate_identity, "split_ready": False, "replacement_ready": False, "base_cutset_sha256": sha256(concrete_canonical_json_bytes(common_identity)).hexdigest()}
+
+
+def audit_source_plane_patch_production_owner_join(
+    ownership_manifest: Mapping[str, Any],
+    ownership_attachments: Mapping[str, bytes],
+    raw_manifest: Mapping[str, Any],
+    patch_result: Mapping[str, Any],
+    substrate: Any,
+    *,
+    rail_id: str,
+) -> Mapping[str, Any]:
+    """Compose one immutable, read-only P1-to-production owner-join report."""
+    try:
+        rail_id = _text(rail_id, "rail_id")
+        p4 = audit_source_plane_patch_selected_base_cutset(
+            ownership_manifest, ownership_attachments, raw_manifest, patch_result, substrate, rail_id=rail_id
+        )
+        if (
+            not isinstance(p4, Mapping)
+            or p4.get("schema_version") != "source-plane-selected-base-cutset-v1"
+            or p4.get("status") != "closed"
+            or p4.get("code") is not None
+            or p4.get("shadow_only") is not True
+            or p4.get("split_ready") is not False
+            or p4.get("replacement_ready") is not False
+        ):
+            _fail("PRODUCTION_OWNER_JOIN_INVALID: P4 result is not closed")
+
+        def digest(value: Any, label: str) -> str:
+            if not isinstance(value, str) or not value or value != value.strip():
+                _fail(f"PRODUCTION_OWNER_JOIN_INVALID: {label} hash is malformed")
+            text = value
+            if len(text) != 64 or text != text.casefold() or any(ch not in "0123456789abcdef" for ch in text):
+                _fail(f"PRODUCTION_OWNER_JOIN_INVALID: {label} hash is malformed")
+            return text
+
+        source_sha = digest(p4.get("source_sha256"), "source")
+        raw_sha = sha256(concrete_canonical_json_bytes(dict(raw_manifest))).hexdigest()
+        raw_source_sha = raw_manifest.get("source_sha256")
+        own_raw_sha = ownership_manifest.get("raw_manifest_sha256")
+        patch_raw_sha = patch_result.get("raw_manifest_sha256")
+        if not isinstance(raw_source_sha, str) or not isinstance(own_raw_sha, str) or not isinstance(patch_raw_sha, str) or source_sha != raw_source_sha or own_raw_sha != raw_sha or patch_raw_sha != own_raw_sha:
+            _fail("PRODUCTION_OWNER_JOIN_INVALID: source/raw identity differs")
+        substrate_identity = digest(p4.get("substrate_identity_sha256"), "substrate")
+        substrate_identity_value = getattr(substrate, "substrate_identity_sha256", None)
+        if not isinstance(substrate_identity_value, str) or substrate_identity != substrate_identity_value:
+            _fail("PRODUCTION_OWNER_JOIN_INVALID: substrate identity differs")
+        base_cutset_sha = digest(p4.get("base_cutset_sha256"), "P4")
+        p3_input_sha = digest(p4.get("p3_input_identity_sha256"), "P3")
+        p2_audit_sha = digest(p4.get("p2_audit_sha256"), "P2")
+        p1_input_sha = digest(p4.get("p1_input_sha256"), "P1 input")
+        p1_output_sha = digest(p4.get("p1_output_sha256"), "P1 output")
+        old_edge_set_sha = digest(p4.get("old_edge_set_sha256"), "old-edge")
+        retained_authoritative_sha = digest(p4.get("p2_retained_owner_ids_sha256"), "retained-owner")
+
+        if not isinstance(patch_result, Mapping) or patch_result.get("schema_version") != "source-plane-contact-condensation-v1" or patch_result.get("status") != "complete" or patch_result.get("shadow_only") is not True or patch_result.get("input_sha256") != p1_input_sha:
+            _fail("PRODUCTION_OWNER_JOIN_INVALID: P1 result identity differs")
+        mapping = p4.get("contact_mapping")
+        contact_ids = patch_result.get("contact_ids")
+        owner_kinds = patch_result.get("owner_kinds")
+        if not isinstance(mapping, list) or not isinstance(contact_ids, list) or not isinstance(owner_kinds, list) or len(mapping) != len(contact_ids) or len(mapping) != len(owner_kinds) or not mapping:
+            _fail("PRODUCTION_OWNER_JOIN_INVALID: P1 contact closure is malformed")
+        contact_rows: list[dict[str, Any]] = []
+        seen_contacts: set[str] = set()
+        owner_union: dict[str, str] = {}
+        for index, row in enumerate(mapping):
+            if not isinstance(row, Mapping):
+                _fail("PRODUCTION_OWNER_JOIN_INVALID: P1 contact row is malformed")
+            contact_raw = row.get("contact_id"); role_raw = row.get("role"); owner_kind_raw = row.get("owner_kind")
+            if any(not isinstance(value, str) or not value or value != value.strip() for value in (contact_raw, role_raw, owner_kind_raw)):
+                _fail("PRODUCTION_OWNER_JOIN_INVALID: P1 contact order or role differs")
+            contact_id = contact_raw; role = role_raw.casefold(); owner_kind = owner_kind_raw
+            if contact_id.casefold() in seen_contacts or not isinstance(contact_ids[index], str) or not isinstance(owner_kinds[index], str) or contact_ids[index] != contact_id or owner_kinds[index] != owner_kind or role not in {"power", "ground"}:
+                _fail("PRODUCTION_OWNER_JOIN_INVALID: P1 contact order or role differs")
+            reduced_index = row.get("reduced_index")
+            if isinstance(reduced_index, bool) or not isinstance(reduced_index, int) or reduced_index < 0:
+                _fail("PRODUCTION_OWNER_JOIN_INVALID: P1 reduced coordinate is malformed")
+            owners = row.get("owner_ids")
+            if not isinstance(owners, list) or not owners or any(not isinstance(owner, str) or not owner.strip() or owner != owner.strip() for owner in owners) or len({owner.casefold() for owner in owners}) != len(owners):
+                _fail("PRODUCTION_OWNER_JOIN_INVALID: P1 owner set is malformed")
+            seen_contacts.add(contact_id.casefold())
+            for owner in owners:
+                owner_union.setdefault(owner.casefold(), owner)
+            contact_rows.append(dict(row))
+        if {row["role"].casefold() for row in contact_rows} != {"power", "ground"}:
+            _fail("PRODUCTION_OWNER_JOIN_INVALID: P1 roles are incomplete")
+        contact_rows_sha = sha256(concrete_canonical_json_bytes(contact_rows)).hexdigest()
+
+        network = getattr(substrate, "network", None)
+        partials = tuple(getattr(network, "partials", ()))
+        collapsed = tuple(getattr(network, "_collapsed_partials", ()))
+        if not partials or len(collapsed) != len(partials):
+            _fail("PRODUCTION_OWNER_JOIN_INVALID: partial inventory is malformed")
+        reduced_names = tuple(getattr(network, "_reduced_node_ids", ()))
+        if not reduced_names:
+            _fail("PRODUCTION_OWNER_JOIN_INVALID: reduced inventory is malformed")
+        reduced_count = len(reduced_names)
+        for matrix in collapsed:
+            if not issparse(matrix) or matrix.shape != (reduced_count, reduced_count) or not np.all(np.isfinite(matrix.data)):
+                _fail("PRODUCTION_OWNER_JOIN_INVALID: collapsed partial inventory is malformed")
+
+        old_rows = p4.get("incident_edges")
+        if not isinstance(old_rows, list) or not old_rows:
+            _fail("PRODUCTION_OWNER_JOIN_INVALID: P2 incident closure is empty")
+        groups: dict[tuple[int, int, int], list[float]] = {}
+        checked_rows: list[dict[str, Any]] = []
+        raw_csr_cache: dict[int, Any] = {}
+        collapsed_csr_cache: dict[int, Any] = {}
+        partial_meta_cache: dict[int, tuple[Any, tuple[str, ...], dict[str, tuple[int, str]], Any]] = {}
+        for raw_row in old_rows:
+            if not isinstance(raw_row, Mapping):
+                _fail("PRODUCTION_OWNER_JOIN_INVALID: P2 incident row is malformed")
+            row = dict(raw_row)
+            fingerprint = digest(row.get("fingerprint"), "incident")
+            ordinal_raw = row.get("partial_ordinal"); upper_reduced_raw = row.get("upper_reduced_index"); lower_reduced_raw = row.get("lower_reduced_index"); aggregation_raw = row.get("aggregation_count")
+            if any(isinstance(value, bool) or not isinstance(value, int) for value in (ordinal_raw, upper_reduced_raw, lower_reduced_raw, aggregation_raw)):
+                _fail("PRODUCTION_OWNER_JOIN_INVALID: P2 reduced coordinates are malformed")
+            ordinal = ordinal_raw; upper_reduced = upper_reduced_raw; lower_reduced = lower_reduced_raw; aggregation = aggregation_raw
+            if ordinal < 0 or ordinal >= len(partials) or upper_reduced < 0 or lower_reduced < 0 or aggregation <= 0 or upper_reduced >= reduced_count or lower_reduced >= reduced_count:
+                _fail("PRODUCTION_OWNER_JOIN_INVALID: P2 reduced coordinates are out of range")
+            upper_layer_raw = row.get("upper_layer"); lower_layer_raw = row.get("lower_layer"); upper_id_raw = row.get("upper_island_id"); lower_id_raw = row.get("lower_island_id"); cap_hex_raw = row.get("capacitance_f_hex")
+            if any(not isinstance(value, str) or not value or value != value.strip() for value in (upper_layer_raw, lower_layer_raw, upper_id_raw, lower_id_raw, cap_hex_raw)):
+                _fail("PRODUCTION_OWNER_JOIN_INVALID: P2 edge identity is incomplete")
+            upper_layer = upper_layer_raw; lower_layer = lower_layer_raw; upper_id = upper_id_raw; lower_id = lower_id_raw; cap_hex = cap_hex_raw
+            try:
+                capacitance = float.fromhex(cap_hex)
+            except (TypeError, ValueError, OverflowError):
+                _fail("PRODUCTION_OWNER_JOIN_INVALID: P2 capacitance is malformed")
+            if not math.isfinite(capacitance) or capacitance <= 0.0:
+                _fail("PRODUCTION_OWNER_JOIN_INVALID: P2 capacitance is malformed")
+            metadata = partial_meta_cache.get(ordinal)
+            if metadata is None:
+                partial = getattr(partials[ordinal], "partial", None)
+                raw_names = getattr(partial, "net_names", ())
+                if not isinstance(raw_names, (tuple, list)) or not raw_names or any(not isinstance(name, str) or not name or name != name.strip() for name in raw_names) or len({name.casefold() for name in raw_names}) != len(raw_names):
+                    _fail("PRODUCTION_OWNER_JOIN_INVALID: partial net-name inventory is malformed")
+                names = tuple(raw_names)
+                name_by_key = {name.casefold(): (index, name) for index, name in enumerate(names)}
+                matrix = getattr(partial, "maxwell_capacitance_f", None)
+                if not issparse(matrix) or matrix.shape != (len(names), len(names)):
+                    _fail("PRODUCTION_OWNER_JOIN_INVALID: P2 partial matrix is malformed")
+                metadata = (partial, names, name_by_key, matrix)
+                partial_meta_cache[ordinal] = metadata
+            partial, names, name_by_key, matrix = metadata
+            partial_upper_layer = getattr(partial, "upper_layer", None); partial_lower_layer = getattr(partial, "lower_layer", None)
+            if any(not isinstance(value, str) or not value or value != value.strip() for value in (partial_upper_layer, partial_lower_layer)) or partial_upper_layer.casefold() != upper_layer.casefold() or partial_lower_layer.casefold() != lower_layer.casefold() or upper_id.casefold() not in name_by_key or lower_id.casefold() not in name_by_key or upper_id.casefold() == lower_id.casefold():
+                _fail("PRODUCTION_OWNER_JOIN_INVALID: P2 endpoint identity differs")
+            upper_index, canonical_upper = name_by_key[upper_id.casefold()]; lower_index, canonical_lower = name_by_key[lower_id.casefold()]
+            raw_csr = raw_csr_cache.get(ordinal)
+            if raw_csr is None:
+                raw_csr = matrix.tocsr()
+                raw_csr_cache[ordinal] = raw_csr
+            actual_value = float(raw_csr[upper_index, lower_index])
+            if not math.isfinite(actual_value) or actual_value >= 0.0 or not np.isclose(-actual_value, capacitance, rtol=1.0e-12, atol=max(1.0e-24, capacitance * 1.0e-10)):
+                _fail("PRODUCTION_OWNER_JOIN_INVALID: P2 capacitance differs from partial")
+            try:
+                actual_upper_reduced = network.reduced_node_index(canonical_upper)
+                actual_lower_reduced = network.reduced_node_index(canonical_lower)
+                if any(isinstance(value, bool) or not isinstance(value, int) for value in (actual_upper_reduced, actual_lower_reduced)) or actual_upper_reduced != upper_reduced or actual_lower_reduced != lower_reduced:
+                    _fail("PRODUCTION_OWNER_JOIN_INVALID: P2 reduced mapping differs")
+            except Exception as exc:
+                _fail(f"PRODUCTION_OWNER_JOIN_INVALID: P2 reduced mapping is absent: {exc}")
+            payload = {"substrate_identity_sha256": substrate_identity, "upper_layer": upper_layer, "lower_layer": lower_layer, "upper_island_id": canonical_upper, "lower_island_id": canonical_lower, "capacitance_f_hex": cap_hex}
+            if sha256(concrete_canonical_json_bytes(payload)).hexdigest() != fingerprint:
+                _fail("PRODUCTION_OWNER_JOIN_INVALID: P2 fingerprint differs")
+            group = (ordinal, upper_reduced, lower_reduced)
+            groups.setdefault(group, []).append(capacitance)
+            row.update(payload)
+            row["partial_ordinal"] = ordinal; row["upper_reduced_index"] = upper_reduced; row["lower_reduced_index"] = lower_reduced; row["aggregation_count"] = aggregation
+            checked_rows.append(row)
+        for row in checked_rows:
+            group = (row["partial_ordinal"], row["upper_reduced_index"], row["lower_reduced_index"])
+            if row["aggregation_count"] != len(groups[group]):
+                _fail("PRODUCTION_OWNER_JOIN_INVALID: P2 aggregation count differs")
+        for ordinal, upper_reduced, lower_reduced in groups:
+            group = (ordinal, upper_reduced, lower_reduced)
+            collapsed_csr = collapsed_csr_cache.get(ordinal)
+            if collapsed_csr is None:
+                collapsed_csr = collapsed[ordinal].tocsr()
+                collapsed_csr_cache[ordinal] = collapsed_csr
+            collapsed_value = float(collapsed_csr[upper_reduced, lower_reduced])
+            expected_value = -sum(groups[group])
+            if not math.isfinite(collapsed_value) or not np.isclose(collapsed_value, expected_value, rtol=1.0e-12, atol=max(1.0e-24, abs(expected_value) * 1.0e-10)):
+                _fail("PRODUCTION_OWNER_JOIN_INVALID: reduced-coordinate capacitance differs")
+        edge_fingerprints = sorted(row["fingerprint"] for row in checked_rows)
+        if sha256(concrete_canonical_json_bytes(edge_fingerprints)).hexdigest() != old_edge_set_sha:
+            _fail("PRODUCTION_OWNER_JOIN_INVALID: old-edge coverage differs")
+        old_rows_sha = sha256(concrete_canonical_json_bytes(checked_rows)).hexdigest()
+
+        replaced_raw = p4.get("p2_candidate_replaced_owner_ids")
+        if not isinstance(replaced_raw, list) or not replaced_raw or any(not isinstance(owner, str) or not owner.strip() or owner != owner.strip() for owner in replaced_raw) or len({owner.casefold() for owner in replaced_raw}) != len(replaced_raw):
+            _fail("PRODUCTION_OWNER_JOIN_INVALID: replaced owner set is malformed")
+        replaced = sorted(replaced_raw, key=lambda value: (value.casefold(), value))
+        retained = sorted(owner_union.values(), key=lambda value: (value.casefold(), value))
+        if {owner.casefold() for owner in replaced} & {owner.casefold() for owner in retained}:
+            _fail("PRODUCTION_OWNER_JOIN_INVALID: owner replacement sets overlap")
+        replaced_sha = sha256(concrete_canonical_json_bytes([owner.casefold() for owner in replaced])).hexdigest()
+        retained_sha = sha256(concrete_canonical_json_bytes([owner.casefold() for owner in retained])).hexdigest()
+        if retained_sha != retained_authoritative_sha:
+            _fail("PRODUCTION_OWNER_JOIN_INVALID: retained owner hash differs")
+        ledger = [{"owner_id": owner, "action": "replaced"} for owner in replaced] + [{"owner_id": owner, "action": "retained"} for owner in retained]
+        ledger.sort(key=lambda item: (item["owner_id"].casefold(), item["owner_id"], item["action"]))
+        ledger_sha = sha256(concrete_canonical_json_bytes(ledger)).hexdigest()
+        report: dict[str, Any] = {
+            "schema_version": "source-plane-production-owner-join-evidence-v1", "status": "complete", "shadow_only": True, "replacement_ready": False, "production_ready": False, "rail_id": rail_id,
+            "source_sha256": source_sha, "raw_manifest_sha256": raw_sha, "substrate_identity_sha256": substrate_identity,
+            "p1_input_sha256": p1_input_sha, "p1_output_sha256": p1_output_sha, "p2_audit_sha256": p2_audit_sha, "p2_retained_owner_ids_sha256": retained_authoritative_sha, "p3_input_identity_sha256": p3_input_sha, "p4_base_cutset_sha256": base_cutset_sha,
+            "source_p1_contact_rows": contact_rows, "source_p1_contact_rows_sha256": contact_rows_sha,
+            "production_old_maxwell_rows": checked_rows, "production_old_maxwell_rows_sha256": old_rows_sha, "old_edge_set_sha256": old_edge_set_sha, "p2_old_edge_set_sha256": old_edge_set_sha,
+            "action_ledger": ledger, "action_ledger_sha256": ledger_sha, "replaced_owner_ids": replaced, "retained_owner_ids": retained, "replaced_owner_ids_sha256": replaced_sha, "retained_owner_ids_sha256": retained_sha,
+        }
+        report["final_report_sha256"] = sha256(concrete_canonical_json_bytes(report)).hexdigest()
+        return report
+    except SourcePlanePatchError:
+        raise
+    except Exception as exc:
+        _fail(f"PRODUCTION_OWNER_JOIN_INVALID: {exc}")
 
 
 def plan_source_plane_patch_shadow_contact_rewire(
@@ -2779,4 +3011,4 @@ def audit_source_plane_patch_shadow_one_frequency_solve(
     return {**common, "audit_sha256": sha256(concrete_canonical_json_bytes(common)).hexdigest()}
 
 
-__all__ = ["SourcePlanePatchError", "consume_source_plane_patch", "evaluate_source_plane_contact_admissibility", "evaluate_source_plane_contact_condensation", "audit_source_plane_patch_owner_off", "audit_source_plane_patch_contact_quotient_representability", "audit_source_plane_patch_selected_base_cutset", "plan_source_plane_patch_shadow_contact_rewire", "audit_source_plane_patch_shadow_rewire_commutation", "audit_source_plane_patch_shadow_local_replacement_recipe", "materialize_source_plane_patch_shadow_topology_embedding", "bind_source_plane_patch_shadow_nport_block", "audit_source_plane_patch_shadow_augmented_component_closure", "audit_source_plane_patch_shadow_one_frequency_solve"]
+__all__ = ["SourcePlanePatchError", "consume_source_plane_patch", "evaluate_source_plane_contact_admissibility", "evaluate_source_plane_contact_condensation", "audit_source_plane_patch_owner_off", "audit_source_plane_patch_contact_quotient_representability", "audit_source_plane_patch_selected_base_cutset", "audit_source_plane_patch_production_owner_join", "plan_source_plane_patch_shadow_contact_rewire", "audit_source_plane_patch_shadow_rewire_commutation", "audit_source_plane_patch_shadow_local_replacement_recipe", "materialize_source_plane_patch_shadow_topology_embedding", "bind_source_plane_patch_shadow_nport_block", "audit_source_plane_patch_shadow_augmented_component_closure", "audit_source_plane_patch_shadow_one_frequency_solve"]

@@ -6653,9 +6653,11 @@ def _source_plane_contact_component(
     contact: Mapping[str, Any],
     component_rows: Sequence[Mapping[str, Any]],
     *,
+    expected_net: str,
+    expected_layer: str,
     error_prefix: str,
 ) -> Mapping[str, Any]:
-    """Resolve one contact's retained component evidence without coercion."""
+    """Resolve one contact's expected-rail component after global closure validation."""
 
     def sequence(value: Any, label: str) -> tuple[Any, ...]:
         if not isinstance(value, Sequence) or isinstance(
@@ -6664,6 +6666,15 @@ def _source_plane_contact_component(
             raise SpdImportError(f"{error_prefix}: {label} is invalid")
         return tuple(value)
 
+    if (
+        type(expected_net) is not str
+        or not expected_net.strip()
+        or expected_net != expected_net.strip()
+        or type(expected_layer) is not str
+        or not expected_layer.strip()
+        or expected_layer != expected_layer.strip()
+    ):
+        raise SpdImportError(f"{error_prefix}: expected component net/layer is invalid")
     ids = sequence(contact.get("contact_component_ids"), "contact component ids")
     reachable = sequence(
         contact.get("reachable_required_component_ids"),
@@ -6673,54 +6684,121 @@ def _source_plane_contact_component(
         raise SpdImportError(f"{error_prefix}: contact and reachable component ids disagree")
     if not ids:
         raise SpdImportError(f"{error_prefix}: target anchor component candidates are zero")
-    if len(ids) > 1:
-        raise SpdImportError(f"{error_prefix}: target anchor component candidates are multiple")
-    candidate = ids[0]
-    if type(candidate) is not str or not candidate.strip() or candidate != candidate.strip():
-        raise SpdImportError(f"{error_prefix}: contact component id is invalid")
-    singular = contact.get("contact_component_id")
-    if (
-        type(singular) is not str
-        or not singular.strip()
-        or singular != singular.strip()
-        or singular != candidate
-    ):
-        raise SpdImportError(f"{error_prefix}: contact singular component id disagrees")
-    matches = [
-        row for row in component_rows
-        if isinstance(row, Mapping)
-        and type(row.get("component_id")) is str
-        and row["component_id"].strip().casefold() == candidate.casefold()
-    ]
-    if len(matches) != 1:
-        raise SpdImportError(f"{error_prefix}: component row identity is not unique")
-    component = matches[0]
-    row_evidence = component.get("component_evidence_sha256")
-    singular_evidence = contact.get("contact_component_evidence_sha256")
+    normalized_ids: list[str] = []
+    seen_ids: set[str] = set()
+    for candidate in ids:
+        if type(candidate) is not str or not candidate.strip() or candidate != candidate.strip():
+            raise SpdImportError(f"{error_prefix}: contact component id is invalid")
+        folded = candidate.casefold()
+        if folded in seen_ids:
+            raise SpdImportError(f"{error_prefix}: contact component ids are not unique")
+        seen_ids.add(folded)
+        normalized_ids.append(candidate)
     evidence_rows = sequence(
         contact.get("contact_component_evidence_sha256s"),
         "contact component evidence SHA-256s",
     )
-    if (
-        type(row_evidence) is not str or not row_evidence.strip()
-        or type(singular_evidence) is not str or not singular_evidence.strip()
-        or len(evidence_rows) != 1
-        or type(evidence_rows[0]) is not str
-        or evidence_rows[0].strip().casefold() != singular_evidence.strip().casefold()
-        or singular_evidence.strip().casefold() != row_evidence.strip().casefold()
-    ):
-        raise SpdImportError(f"{error_prefix}: contact component evidence disagrees")
-    component_islands = sequence(component.get("island_ids"), "component island ids")
+    if len(evidence_rows) != len(normalized_ids):
+        raise SpdImportError(f"{error_prefix}: contact component evidence sequence is misaligned")
+    normalized_evidence: list[str] = []
+    for evidence in evidence_rows:
+        if type(evidence) is not str or not evidence.strip() or evidence != evidence.strip():
+            raise SpdImportError(f"{error_prefix}: contact component evidence is invalid")
+        normalized_evidence.append(evidence)
+    contact_net = contact.get("net")
+    if type(contact_net) is not str or not contact_net.strip() or contact_net != contact_net.strip():
+        raise SpdImportError(f"{error_prefix}: contact net is invalid")
+    matches_by_id: dict[str, Mapping[str, Any]] = {}
+    for candidate in normalized_ids:
+        matches = [
+            row for row in component_rows
+            if isinstance(row, Mapping)
+            and type(row.get("component_id")) is str
+            and row["component_id"].strip().casefold() == candidate.casefold()
+        ]
+        if len(matches) != 1:
+            raise SpdImportError(f"{error_prefix}: component row identity is not unique")
+        row = matches[0]
+        row_id = row.get("component_id")
+        row_net = row.get("net")
+        row_layer = row.get("layer")
+        row_evidence = row.get("component_evidence_sha256")
+        row_islands = sequence(row.get("island_ids"), "component island ids")
+        if (
+            row.get("contact_status") != "complete"
+            or type(row_id) is not str
+            or not row_id.strip()
+            or row_id != row_id.strip()
+            or type(row_net) is not str
+            or not row_net.strip()
+            or row_net != row_net.strip()
+            or type(row_layer) is not str
+            or not row_layer.strip()
+            or row_layer != row_layer.strip()
+            or type(row_evidence) is not str
+            or not row_evidence.strip()
+            or row_evidence != row_evidence.strip()
+            or not row_islands
+            or any(type(island) is not str or not island.strip() or island != island.strip() for island in row_islands)
+            or len({island.casefold() for island in row_islands}) != len(row_islands)
+            or type(row.get("representative_island_id")) is not str
+            or row["representative_island_id"].strip().casefold() not in {island.casefold() for island in row_islands}
+            or row_net.casefold() != contact_net.casefold()
+        ):
+            raise SpdImportError(f"{error_prefix}: component row evidence is incomplete")
+        matches_by_id[candidate.casefold()] = row
+    for candidate, evidence in zip(normalized_ids, normalized_evidence):
+        row = matches_by_id[candidate.casefold()]
+        if row["component_evidence_sha256"].casefold() != evidence.casefold():
+            raise SpdImportError(f"{error_prefix}: contact component evidence disagrees")
     contact_islands = sequence(
         contact.get("contact_component_island_ids"),
         "contact component island ids",
     )
-    if tuple(contact_islands) != tuple(component_islands):
+    expected_islands = tuple(
+        sorted(
+            {
+                island
+                for row in matches_by_id.values()
+                for island in row["island_ids"]
+            }
+        )
+    )
+    if tuple(contact_islands) != expected_islands:
         raise SpdImportError(f"{error_prefix}: contact component island ids disagree")
     issues = sequence(contact.get("issues"), "contact issues")
     if contact.get("status") != "complete" or issues:
         raise SpdImportError(f"{error_prefix}: target anchor terminal contact is incomplete")
-    return component
+    singular = contact.get("contact_component_id")
+    singular_evidence = contact.get("contact_component_evidence_sha256")
+    singular_representative = contact.get("representative_island_id")
+    singular_layer = contact.get("contact_component_layer")
+    if len(normalized_ids) == 1:
+        component = matches_by_id[normalized_ids[0].casefold()]
+        aliases = (singular, singular_evidence, singular_representative, singular_layer)
+        if any(value is not None for value in aliases) and (
+            type(singular) is not str
+            or singular.strip().casefold() != normalized_ids[0].casefold()
+            or type(singular_evidence) is not str
+            or singular_evidence.strip().casefold() != normalized_evidence[0].casefold()
+            or type(singular_representative) is not str
+            or singular_representative.strip().casefold() != str(component["representative_island_id"]).casefold()
+            or type(singular_layer) is not str
+            or singular_layer.strip().casefold() != str(component["layer"]).casefold()
+        ):
+            raise SpdImportError(f"{error_prefix}: contact singular component aliases disagree")
+    elif any(value is not None for value in (singular, singular_evidence, singular_representative, singular_layer)):
+        raise SpdImportError(f"{error_prefix}: contact singular component aliases are not empty")
+    selected = [
+        row for row in matches_by_id.values()
+        if row["net"].casefold() == expected_net.casefold()
+        and row["layer"].casefold() == expected_layer.casefold()
+    ]
+    if not selected:
+        raise SpdImportError(f"{error_prefix}: target anchor component candidates are zero")
+    if len(selected) > 1:
+        raise SpdImportError(f"{error_prefix}: target anchor component candidates are multiple")
+    return selected[0]
 
 
 def import_spd_scenario(
@@ -7976,9 +8054,13 @@ def import_spd_scenario(
             role = str(anchor.get("role", "")).strip().casefold(); pin = str(anchor.get("pin_id", "")).strip().casefold(); contact = contacts_by_pin.get(pin)
             if role not in {"power", "ground"} or contact is None:
                 raise SpdImportError("SOURCE_PLANE_OWNERSHIP_IR_INCOMPLETE: target anchor terminal contact is absent")
+            expected_net = target_rail.net if role == "power" else ground_net
+            expected_layer = target_rail.pwr_layer if role == "power" else target_rail.gnd_layer
             component = _source_plane_contact_component(
                 contact,
                 certificate_component_rows,
+                expected_net=expected_net,
+                expected_layer=expected_layer,
                 error_prefix="SOURCE_PLANE_OWNERSHIP_IR_INCOMPLETE",
             )
             canonical_identity = tuple(
@@ -7990,22 +8072,13 @@ def import_spd_scenario(
                 for value in component.get("island_ids", ())
                 if str(value).strip()
             }
-            contact_identity = tuple(
-                str(contact.get(key, "")).strip()
-                for key in ("net", "contact_component_layer", "representative_island_id", "contact_component_id")
-            )
-            expected_net = target_rail.net if role == "power" else ground_net
-            expected_layer = target_rail.pwr_layer if role == "power" else target_rail.gnd_layer
             if (
                 not all(canonical_identity)
                 or canonical_identity[2].casefold() not in canonical_islands
                 or canonical_identity[0].casefold() != str(expected_net).strip().casefold()
                 or canonical_identity[1].casefold() != str(expected_layer).strip().casefold()
-                or not all(contact_identity)
             ):
                 raise SpdImportError("SOURCE_PLANE_OWNERSHIP_IR_INCOMPLETE: target anchor terminal contact is incomplete")
-            if tuple(value.casefold() for value in contact_identity) != tuple(value.casefold() for value in canonical_identity):
-                raise SpdImportError("SOURCE_PLANE_OWNERSHIP_IR_INCOMPLETE: target anchor component identity disagrees")
             folded = tuple(value.casefold() for value in canonical_identity)
             if role in role_identity and role_identity[role] != folded:
                 raise SpdImportError("SOURCE_PLANE_OWNERSHIP_IR_INCOMPLETE: target rail anchors disagree")
@@ -8017,12 +8090,18 @@ def import_spd_scenario(
         for net, layer, island, _component in role_identity.values():
             if (net, layer) not in snapshot_islands or island not in snapshot_islands[(net, layer)]:
                 raise SpdImportError("SOURCE_PLANE_OWNERSHIP_IR_INCOMPLETE: anchor representative island is not on selected surface")
-        selected_components = {identity[3] for identity in role_identity.values()}
+        role_components = {identity[3] for identity in role_identity.values()}
+        snapshot_components = {
+            str(component_id).strip().casefold()
+            for _anchor, contact in anchor_contacts
+            for component_id in contact.get("contact_component_ids", ())
+            if isinstance(component_id, str) and component_id.strip()
+        }
         certificate_components = [
             item
             for item in certificate_component_rows
             if str(item.get("component_id", "")).strip().casefold()
-            in selected_components
+            in snapshot_components
         ]
         quotient = surface_connectivity_certificate.get("finite_via_quotient", {})
         if not isinstance(quotient, Mapping):
@@ -8038,7 +8117,7 @@ def import_spd_scenario(
         selected_component_by_vertex: dict[str, str] = {}
         for vid, vertex in vertices.items():
             retained = [str(value).casefold() for value in vertex.get("retained_component_ids", ())]
-            selected_retained = sorted(set(retained) & selected_components)
+            selected_retained = sorted(set(retained) & role_components)
             if len(selected_retained) > 1:
                 raise SpdImportError("SOURCE_PLANE_OWNERSHIP_IR_INCOMPLETE: selected vertex spans multiple rail components")
             if len(selected_retained) == 1:
@@ -8876,11 +8955,10 @@ def import_spd_scenario(
                     raise SpdImportError(
                         "SOURCE_PLANE_OWNERSHIP_IR_TERMINAL_INCOMPLETE: terminal finite owner identity is inconsistent"
                     )
-                island_id = str(contact.get("representative_island_id", "")).strip()
-                component_id = str(contact.get("contact_component_id", "")).strip()
                 endpoint_layer = str(contact.get("endpoint_layer", "")).strip()
-                component_layer = str(contact.get("contact_component_layer", "")).strip()
                 padstack = str(contact.get("incident_padstack", "")).strip()
+                expected_net = target_rail.net if role == "power" else ground_net
+                expected_layer = target_rail.pwr_layer if role == "power" else target_rail.gnd_layer
                 component_row = _source_plane_contact_component(
                     contact,
                     [
@@ -8888,13 +8966,18 @@ def import_spd_scenario(
                         for item in certificate.get("surface_equivalence_components", ())
                         if isinstance(item, Mapping)
                     ],
+                    expected_net=expected_net,
+                    expected_layer=expected_layer,
                     error_prefix="SOURCE_PLANE_OWNERSHIP_IR_TERMINAL_INCOMPLETE",
                 )
+                component_id = str(component_row.get("component_id", "")).strip()
+                component_layer = str(component_row.get("layer", "")).strip()
+                island_id = str(component_row.get("representative_island_id", "")).strip()
                 component_islands = {
                     str(value).strip().casefold()
                     for value in component_row.get("island_ids", ())
-                } if component_row is not None else set()
-                if component_row is None or not component_layer or island_id.casefold() not in component_islands or str(component_row.get("representative_island_id", "")).strip().casefold() not in component_islands or str(component_row.get("layer", "")).casefold() != component_layer.casefold() or str(component_row.get("net", "")).casefold() != net.casefold():
+                }
+                if not component_layer or not island_id or island_id.casefold() not in component_islands or str(component_row.get("net", "")).casefold() != net.casefold():
                     raise SpdImportError("SOURCE_PLANE_OWNERSHIP_IR_TERMINAL_INCOMPLETE: terminal component/island/layer join is inconsistent")
                 pad = pad_lookup.get((padstack.casefold(), endpoint_layer.casefold()))
                 if pad is None:

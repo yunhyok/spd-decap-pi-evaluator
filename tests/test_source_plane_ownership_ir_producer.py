@@ -162,7 +162,41 @@ def test_source_plane_ownership_component_layer_is_authoritative_for_mismatched_
         compile_calls["count"] += 1
         request = kwargs.get("source_plane_ownership_request")
         if isinstance(request, dict):
+            request = deepcopy(request)
+            snapshot = request.get("certificate_snapshot")
+            assert isinstance(snapshot, dict)
+            target_pins = {
+                str(item.get("pin_id", "")).strip().casefold()
+                for item in snapshot.get("rail_anchor_bindings", ())
+                if isinstance(item, dict)
+                and str(item.get("rail_id", "")).strip().casefold() == "vdd_core/1"
+            }
+            changed = False
+            for contact in snapshot.get("terminal_contacts", ()):
+                if not isinstance(contact, dict) or str(contact.get("pin_id", "")).strip().casefold() not in target_pins:
+                    continue
+                component_id = str(contact.get("contact_component_id", "")).strip()
+                base_component = next(
+                    item for item in snapshot["surface_equivalence_components"]
+                    if str(item.get("component_id", "")).strip().casefold() == component_id.casefold()
+                )
+                cross_layer = deepcopy(base_component)
+                cross_layer["layer"] = "Signal$TOP"
+                cross_layer["component_id"] = f"{component_id}-cross-layer-{str(contact['pin_id']).strip()}"
+                cross_layer["component_evidence_sha256"] = sha256(cross_layer["component_id"].encode()).hexdigest()
+                snapshot["surface_equivalence_components"].append(cross_layer)
+                contact["contact_component_ids"] = [component_id, cross_layer["component_id"]]
+                contact["reachable_required_component_ids"] = list(contact["contact_component_ids"])
+                contact["contact_component_evidence_sha256s"] = [base_component["component_evidence_sha256"], cross_layer["component_evidence_sha256"]]
+                contact["contact_component_id"] = None
+                contact["contact_component_evidence_sha256"] = None
+                contact["representative_island_id"] = None
+                contact["contact_component_layer"] = None
+                contact["contact_component_island_ids"] = sorted({str(island_id) for island_id in base_component["island_ids"]})
+                changed = True
+            assert changed
             captured["request"] = deepcopy(request)
+            kwargs = {**kwargs, "source_plane_ownership_request": request}
         return original_compile(*args, **kwargs)
 
     def capture_draft(*args: object, **kwargs: object):
@@ -185,6 +219,10 @@ def test_source_plane_ownership_component_layer_is_authoritative_for_mismatched_
     assert isinstance(request, dict)
     snapshot = request["certificate_snapshot"]
     assert isinstance(snapshot, dict)
+    snapshot_components = {
+        str(item["component_id"]).casefold(): item
+        for item in snapshot["surface_equivalence_components"]
+    }
     contacts = {
         str(item["pin_id"]).casefold(): item
         for item in snapshot["terminal_contacts"]
@@ -230,7 +268,33 @@ def test_source_plane_ownership_component_layer_is_authoritative_for_mismatched_
     )
     assert all(
         str(row["layer"]).casefold()
-        == str(contacts[str(row["pin_id"]).casefold()]["contact_component_layer"]).casefold()
+        == str(snapshot_components[str(row["component_id"]).casefold()]["layer"]).casefold()
+        for row in terminal_rows
+    )
+    multi_contacts = [
+        item for item in contacts.values()
+        if len(item["contact_component_ids"]) > 1
+    ]
+    assert multi_contacts
+    assert all(
+        item["contact_component_id"] is None
+        and item["contact_component_evidence_sha256"] is None
+        and item["representative_island_id"] is None
+        and item["contact_component_layer"] is None
+        for item in multi_contacts
+    )
+    assert all(
+        str(component_id).casefold() in snapshot_components
+        for item in multi_contacts
+        for component_id in item["contact_component_ids"]
+    )
+    assert all(
+        str(row["island_id"]).casefold()
+        == str(snapshot_components[str(row["component_id"]).casefold()]["representative_island_id"]).casefold()
+        for row in terminal_rows
+    )
+    assert all(
+        str(row["layer"]).casefold() in {"signal$pwr", "signal$gnd"}
         for row in terminal_rows
     )
     assert imported.scenario.base_project.metadata["spd_import"]
@@ -254,9 +318,41 @@ def test_source_plane_ownership_component_layer_is_authoritative_for_mismatched_
                 contact["contact_component_evidence_sha256s"] = []
                 contact["contact_component_evidence_sha256"] = None
             else:
-                contact["contact_component_ids"] = [component_id, component_id + "-ambiguous"]
-                contact["reachable_required_component_ids"] = [component_id, component_id + "-ambiguous"]
+                base_component = next(
+                    item
+                    for item in certificate["surface_equivalence_components"]
+                    if str(item.get("component_id", "")).strip().casefold()
+                    == component_id.casefold()
+                )
+                duplicate = deepcopy(base_component)
+                duplicate["component_id"] = (
+                    f"{component_id}-ambiguous-{str(contact['pin_id']).strip()}"
+                )
+                duplicate["component_evidence_sha256"] = sha256(
+                    duplicate["component_id"].encode()
+                ).hexdigest()
+                certificate["surface_equivalence_components"].append(duplicate)
+                contact["contact_component_ids"] = [
+                    component_id,
+                    duplicate["component_id"],
+                ]
+                contact["reachable_required_component_ids"] = list(
+                    contact["contact_component_ids"]
+                )
+                contact["contact_component_evidence_sha256s"] = [
+                    base_component["component_evidence_sha256"],
+                    duplicate["component_evidence_sha256"],
+                ]
                 contact["contact_component_id"] = None
+                contact["contact_component_evidence_sha256"] = None
+                contact["representative_island_id"] = None
+                contact["contact_component_layer"] = None
+                contact["contact_component_island_ids"] = sorted(
+                    {
+                        str(island_id)
+                        for island_id in base_component["island_ids"]
+                    }
+                )
         certificate["evidence_sha256"] = canonical_surface_certificate_sha256(
             {key: value for key, value in certificate.items() if key != "evidence_sha256"}
         )
@@ -310,7 +406,7 @@ def test_source_plane_ownership_component_layer_is_authoritative_for_mismatched_
     monkeypatch.setattr(
         spd_adapter, "_layer_surface_connectivity_certificate", mismatch_certificate
     )
-    with pytest.raises(SpdImportError, match="target anchor terminal contact is incomplete"):
+    with pytest.raises(SpdImportError, match="component row evidence is incomplete"):
         spd_adapter.import_spd_scenario(
             source, source_plane_ownership_rail_id="VDD_CORE/1"
         )
