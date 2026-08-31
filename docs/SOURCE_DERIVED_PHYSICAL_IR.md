@@ -1,13 +1,13 @@
 # SPD Decap PI Evaluator v0.23.1 — Source-derived physical IR
 
-- 문서 버전: **1.48**
+- 문서 버전: **1.49**
 - 계약 상태: **ACCEPTED** — source-derived provenance/ownership prerequisite의 기술 기준
 - committed 구현: `source-plane-ownership-ir-v1` + Phase 3 shadow consumer + v2 `contact_boundary` (`3b76af4`) + P0 (`4dc855a`) + P1 (`f823a53`) + P2 (`90f6b54`) + P3 (`b8a79f1`) + P4 base cut-set (`39fd4fa`) + P5 shadow rewire plan (`d7e7278`) + P6 scenario commutation audit (`6793bb2`) + P7 atomic recipe (`f1c2968`) + P8 topology embedding (`abf79cf`) + P9 nodal-block binding (`593e070`) + P10 component closure (`7f9c498`) + P11 supplemental solve gate (`e8d029a`) + ownership component-layer selector fix (`b0b90db`) + component-cardinality classifier (`6fc06dd`) + W7 owner-join closure (`2b27e30c6fe41f03281d3943568d0905d84d8af3`)
 - runtime acceptance: **Phase 4와 P0–P10 focused PASS / Sol ACCEPT; P3 semantic STOP, P4 structural CLOSED, P5 PLANNED, P6/P7 PASSED, P8 materialized, P9 bound, P10 component-closed; P11 focused test PASS / numerical result STOP; W7 owner-join commit `2b27e30c6fe41f03281d3943568d0905d84d8af3` DONE/ACCEPT with producer-only corrected rerun `1 passed in 1.52s` (consumer not rerun)**. This is read-only prerequisite evidence and does not claim actual production global-multi compile, original-SPD success, or PowerSI improvement.
 - production 상태: solver, owner-off, `Y_global`, `Zii` **unchanged**
 - 현재 작업 상태: **Actual-P0/R1/R2, R2-MULTI-TOPOLOGY-DIAG-01, Recovery-01과 DSU-01–05 DONE/STOP, FIX-01/FIX-02 DONE/ACCEPT**다.
-  DSU-05는 `STOP_MULTIPLE_NOT_REPRODUCED`; W7-PHYS BLOCKED이며 현재 sole ACTIVE는 **W7-PHYS-OWNER-JOIN-ORIGINAL-SPD-EVIDENCE-05 / FROZEN / READY_TO_EXECUTE**다. Original-SPD EVIDENCE-01/-02/-04는 retry-0 DONE/STOP, EVIDENCE-03은 `STOP_UNEXPECTED`로 DONE/STOP이고 quotient-scope FIX-01, terminal pad-layer test-oracle FIX-01과 compact-request-bound FIX-01은 DONE/ACCEPT다. P12는 NO-GO다.
-- active contract는 EVIDENCE-05다. Base `88e23784435490f374454df1fbc19c7bdc05ab4a`; distinct coordinator compile/self-check 각 1회 PASS 및 Sol static ACCEPT 뒤 exact-three-doc direct child와 empty root를 동결한다. Production/PowerSI improvement remains unproved/0.
+  DSU-05는 `STOP_MULTIPLE_NOT_REPRODUCED`; W7-PHYS BLOCKED이며 현재 sole ACTIVE는 **NONE / READY_FOR_COUNT_DIAGNOSTIC_FREEZE**다. Original-SPD EVIDENCE-01/-02/-04/-05는 retry-0 DONE/STOP, EVIDENCE-03은 `STOP_UNEXPECTED`로 DONE/STOP이고 quotient-scope FIX-01, terminal pad-layer test-oracle FIX-01과 compact-request-bound FIX-01은 DONE/ACCEPT다. P12는 NO-GO다.
+- active contract는 없다. EVIDENCE-05는 exact Node+Via source-record subtotal `>100,000`을 증명했지만 complete required count는 unknown이다. 다음 허용 후보는 separately frozen count-only diagnostic뿐이다. Production/PowerSI improvement remains unproved/0.
 - P11 closure: commit `e8d029a`, 최종 지정 node `1 passed in 1.55s`, Sol ACCEPT; pivot ratio `1.900e15`, condition-1 lower bound `1.096e17`, `SHADOW_SOLVE_NUMERICAL_FAILURE`; trusted stamp/matrix/solve/readiness false, production unchanged
 - 최종 개정: 2026-08-31 (Asia/Seoul)
 
@@ -76,7 +76,8 @@ flowchart LR
   EG3 --> IP[Python312 exact import-stack preflight<br/>PASS / no SPD]
   IP --> EG4[W7-PHYS-OWNER-JOIN-ORIGINAL-SPD-EVIDENCE-04<br/>DONE / STOP_IMPORT_OR_OWNERSHIP<br/>compact request row bound]
   EG4 --> NX[W7-PHYS-OWNER-JOIN-COMPACT-REQUEST-BOUND-FIX-01<br/>DONE / ACCEPT<br/>1 passed in 1.65s]
-  NX --> NF[W7-PHYS-OWNER-JOIN-ORIGINAL-SPD-EVIDENCE-05<br/>FROZEN / READY_TO_EXECUTE]
+  NX --> NF[W7-PHYS-OWNER-JOIN-ORIGINAL-SPD-EVIDENCE-05<br/>DONE / STOP_IMPORT_OR_OWNERSHIP<br/>Node+Via subtotal > 100000]
+  NF --> CD[ACTIVE NONE<br/>READY_FOR_COUNT_DIAGNOSTIC_FREEZE]
   I[raw-v3 geometry/material] -. hash reference .-> B
   J[compiled finite topology] -. hash/owner reference .-> D
 ```
@@ -951,7 +952,7 @@ P11 1 GHz gate만으로 이 두 anchor를 증명하지 않으므로 accuracy pro
 two-anchor checkpoint를 별도로 요구한다.
 
 Post-DSU-05 readiness는 **NOT_READY/STOP**이다. candidate old-Maxwell owner를 source-derived P1 N-port atomic replacement로 바꾸려면, 선택된 L30/L29 finite-area source footprint/P1 terminal identity를 실제 `Y_global`이 소비하는 정확한 old-Maxwell owner closed set에 hash-bound bijectively join하는 ledger가 필요하다. 이 ledger가 rail-complete scope와 replaced/retained disjoint partition을 증명해야 하지만, DSU-05의 count/SHA-only IDs, compiled-only Recovery, full certificate/ownership IR 부재와 exact join key 부재로는 구성할 수 없다. 따라서 admissible next gate, DSU-06/FIX-03/P12/production/rerun은 없고 ACTIVE NONE이며 PowerSI numerical improvement는 0이다.
-이 문장은 74d readiness audit 당시의 historical conclusion이며, 당시 §8의 W7-PHYS-OWNER-JOIN-EVIDENCE-01이 이를 supersede했다. 이후 §9 closure가 §8을 닫았고, §10/§12/§15/§17 original-SPD gates는 permanent DONE/STOP, §11 quotient-scope fix와 §14/§18 fixes는 DONE/ACCEPT다. §13 terminal pad-layer FIX-01은 test-oracle false negative로 DONE/STOP했다. 현재 sole ACTIVE는 §19 EVIDENCE-05 / FROZEN / READY_TO_EXECUTE다.
+이 문장은 74d readiness audit 당시의 historical conclusion이며, 당시 §8의 W7-PHYS-OWNER-JOIN-EVIDENCE-01이 이를 supersede했다. 이후 §9 closure가 §8을 닫았고, §10/§12/§15/§17/§19 original-SPD gates는 permanent DONE/STOP, §11 quotient-scope fix와 §14/§18 fixes는 DONE/ACCEPT다. §13 terminal pad-layer FIX-01은 test-oracle false negative로 DONE/STOP했다. 현재 sole ACTIVE는 NONE / READY_FOR_COUNT_DIAGNOSTIC_FREEZE다.
 
 ## 7. 주장 한계
 
@@ -1188,7 +1189,7 @@ ran once under Python312 and returned `1 passed in 1.65s`; final verdict was `CO
 schema, terminal source-layer semantics and solver remain unchanged. No retry/full suite/original-SPD/production/
 PowerSI run occurred. The accepted claim remains synthetic importer/ownership-producer semantics; improvement is 0.
 
-## 19. W7-PHYS-OWNER-JOIN-ORIGINAL-SPD-EVIDENCE-05 — FROZEN / READY_TO_EXECUTE
+## 19. W7-PHYS-OWNER-JOIN-ORIGINAL-SPD-EVIDENCE-05 — DONE / STOP_IMPORT_OR_OWNERSHIP
 
 Base/source-before is exact `88e23784435490f374454df1fbc19c7bdc05ab4a`. Use only
 `C:\Users\User\AppData\Local\Programs\Python\Python312\python.exe -I -B`. Coordinator
@@ -1206,3 +1207,16 @@ Sol acceptance, one parent launch with exact repo/contract/coordinator SHA is al
 confirmed-termination/STARTED receipt, source pre/post identity and call/disposition ledger. EVIDENCE-01–04 reuse,
 rerun and patch are forbidden. Claim ceiling is importer, compile, P1 and shadow owner-join only; production wiring/
 solve/`Y_global`/`Zii`, PowerSI sign-off and improvement remain unproved/0.
+
+Exact contract `db84e47079524c13042a9b50d6d6f884a376b686` ran once, exited 1 after 4,255.875 s and finalized
+`STOP_IMPORT_OR_OWNERSHIP`, calls import/compile/P1/observer/report `1/0/0/0/1`, retry 0. Error is
+`RawSpatialCompilerError: selected Via endpoint Node keys exceed ownership bound`. Report is 1,059 B/SHA-256
+`98dd5ceb83ce93b13a3d21637f51ac2bdccbc7126c0b016bb1574facecd8b5d1`; receipt is 1,101 B/SHA-256
+`fa357da90d5cee85ff7d19d37952dfb4aa6a6cba1540f139cadcd6045a821160`.
+
+The prior provisional aggregate was passed, so FIX-01 was effective for that defect. The nested raw compiler then
+expanded every selected Via to required endpoint Node keys and proved a disjoint Node+Via source-record subtotal of
+100,001 or 100,002 at the first crossing. This is an authoritative provenance lower bound, not overlapping draft
+representations; the complete count is unknown. No observed source SHA, successful raw manifest/ownership IR,
+layerwise compile/P1/owner-join/PowerSI claim exists. This gate is immutable. Next admissible work is a separately
+frozen count-only diagnostic; deleting the guard, raising the cap or redesigning schema before exact counts is NO-GO.
