@@ -1,11 +1,11 @@
 # SPD Decap PI Evaluator 작업 기준
 
 - 적용 제품: **SPD Decap PI Evaluator v0.23.1**
-- 문서 버전: **1.213**
-- 상위 기준: [목적·기술 기준](PRODUCT_PURPOSE_AND_TECHNICAL_BASELINE.md) v1.212; [Source-derived physical IR](SOURCE_DERIVED_PHYSICAL_IR.md) v1.47
+- 문서 버전: **1.214**
+- 상위 기준: [목적·기술 기준](PRODUCT_PURPOSE_AND_TECHNICAL_BASELINE.md) v1.213; [Source-derived physical IR](SOURCE_DERIVED_PHYSICAL_IR.md) v1.48
 - 현재 상태: W6 numerical FAIL; W7-SOURCE-IR-P1/P2/P3/P4 및 W7-PHYS-PROSPECTIVE-P0/P1/P2/P3/P4/P5/P6/P7/P8/P9/P10/P11 DONE, P3/P11 DONE/STOP; Actual-P0/R1/R2, DIAG-01과 Recovery-01 DONE/STOP; FIX-01/FIX-02 DONE/ACCEPT; `W7-PHYS-SOURCE-ANCHOR-LEAN-DSU-EVIDENCE-01` DONE/`STOP_TARGET_CONTACT_MISSING_OR_AMBIGUOUS`다.
   `W7-PHYS-SOURCE-ANCHOR-LEAN-DSU-EVIDENCE-02`/`03`/`04` DONE/`STOP_PROVENANCE_INCOMPLETE`다.
-  `W7-PHYS-SOURCE-ANCHOR-LEAN-DSU-EVIDENCE-05` DONE/`STOP_MULTIPLE_NOT_REPRODUCED`; W7-PHYS production physics remains BLOCKED. Terminal pad-layer FIX-01 is DONE/`STOP_TEST_ORACLE_FALSE_NEGATIVE`; its test-oracle FIX-01 successor is DONE/ACCEPT. Original-SPD EVIDENCE-01/-02/-04 are DONE/`STOP_IMPORT_OR_OWNERSHIP`, EVIDENCE-03 is DONE/`STOP_UNEXPECTED`; compact-request-bound FIX-01 is DONE/ACCEPT and current sole ACTIVE is **NONE / READY_FOR_SUCCESSOR_FREEZE**. Production physics/`Zii` are unchanged.
+  `W7-PHYS-SOURCE-ANCHOR-LEAN-DSU-EVIDENCE-05` DONE/`STOP_MULTIPLE_NOT_REPRODUCED`; W7-PHYS production physics remains BLOCKED. Terminal pad-layer FIX-01 is DONE/`STOP_TEST_ORACLE_FALSE_NEGATIVE`; its test-oracle FIX-01 successor is DONE/ACCEPT. Original-SPD EVIDENCE-01/-02/-04 are DONE/`STOP_IMPORT_OR_OWNERSHIP`, EVIDENCE-03 is DONE/`STOP_UNEXPECTED`; compact-request-bound FIX-01 is DONE/ACCEPT and current sole ACTIVE is **W7-PHYS-OWNER-JOIN-ORIGINAL-SPD-EVIDENCE-05 / FROZEN / READY_TO_EXECUTE**. Production physics/`Zii` are unchanged.
 - 최종 개정: 2026-08-31 (Asia/Seoul)
 
 ## 1. 압축 후 즉시 복구 카드
@@ -17,12 +17,12 @@ context가 압축되거나 새 session에서 작업을 재개하면 이 표만 �
 | 변하지 않는 목적 | source-derived single-rail `Zii`의 PowerSI 근접 정확성과 일반화 |
 | 기본 복구 문서 | 목적·기술 기준 → Source-derived physical IR → 이 작업 기준, 세 문서 |
 | 현재 branch | `main`만 사용 |
-| 이 문서 정리의 source-before/implementation base parent | `af84334008d43ce5fe7cf23cadde4c4d9ae5c276` (accepted compact-request-bound FIX-01) |
+| 이 문서 정리의 source-before/implementation base parent | `88e23784435490f374454df1fbc19c7bdc05ab4a` (compact-request-bound FIX-01 closure) |
 | 현재 assessment | W6-BASE numerical FAIL; Phase 4/P0–P11은 prerequisite/shadow 범위 DONE. DSU-05의 선택된 6-contact source boundary는 모두 singleton이며 all/complete graph가 동일해 R2 multiple-selector 가설이 재현되지 않았다. 제품 solver/owner-off/`Y_global`/`Zii`와 W6 PowerSI 수치는 변경되지 않아 수치 격차 개선은 0이다(새 percentage metric이 아니라 실측 improvement absence) |
-| 현재 active work item | **NONE / READY_FOR_SUCCESSOR_FREEZE** |
+| 현재 active work item | **W7-PHYS-OWNER-JOIN-ORIGINAL-SPD-EVIDENCE-05 / FROZEN / READY_TO_EXECUTE** |
 | 현재 정확성 상태 | `260729 retrospective FAIL`; unseen/generalization `unknown / not_run` |
-| current authorization | `main`-only, `accuracy_parse.py` 보존. FIX-01 test는 소진됐고 재실행 금지. Distinct original-SPD successor는 새 coordinator/exact-three-doc contract/empty root와 Sol acceptance 뒤에만 동결한다. |
-| 다음 gate | **distinct W7-PHYS-OWNER-JOIN-ORIGINAL-SPD-EVIDENCE-05 freeze** — old root/coordinator 재사용 없이 parent one-shot/retry 0 준비 |
+| current authorization | `main`-only, `accuracy_parse.py` 보존. EVIDENCE-05 compile/self-check는 소진됐고 재실행 금지. Exact contract/root absence와 Sol acceptance 뒤 parent one-shot/retry 0만 허용한다. |
+| 다음 gate | **W7-PHYS-OWNER-JOIN-ORIGINAL-SPD-EVIDENCE-05 launch** — old root/coordinator 재사용 없이 distinct empty root에 1회 |
 | 정확한 재개 조건 | PowerSI 오차를 설명할 별도의 source-derived physical block, authoritative owner relation, deterministic replacement stamp, 무피팅 limiting-case invariant와 disjoint owner ledger가 함께 식별되고 frozen contract review를 통과해야 한다. |
 | 핵심 증거 | [W6-BASE completed evidence](#w6-base-completed-evidence-260729), [W7 결과 재평가](#12-w7-결과-재평가와-후속-과제-판정) |
 
@@ -35,12 +35,12 @@ context가 압축되거나 새 session에서 작업을 재개하면 이 표만 �
 | 구분 | 현재 권위 |
 |---|---|
 | accepted / committed | Phase 1 `82370b6`, Phase 2 `75ac0a0`, Phase 3 `5d2c353`, Phase 4 `3b76af4`, P0 `4dc855a`, P1 `f823a53`, P2 `90f6b54`, P3 `b8a79f1`, P4 `39fd4fa`, P5 `d7e7278`, P6 `6793bb2`, P7 `f1c2968`, P8 `abf79cf`, P9 `593e070`, P10 `7f9c498`, P11 `e8d029a`, W7 owner-join `2b27e30c6fe41f03281d3943568d0905d84d8af3` DONE/ACCEPT read-only closure; 모두 prerequisite/shadow 범위이며 production `Y_global`/`Zii` 불변 |
-| current candidate | DSU-01–05, Recovery-01/DIAG-01과 original-SPD EVIDENCE-01/-02/-03/-04는 영구 DONE/STOP; owner-join, quotient-scope, terminal pad-layer test-oracle 및 compact-request-bound fixes are DONE/ACCEPT; P12 prospective review NO-GO; ACTIVE NONE |
+| current candidate | DSU-01–05, Recovery-01/DIAG-01과 original-SPD EVIDENCE-01/-02/-03/-04는 영구 DONE/STOP; owner-join, quotient-scope, terminal pad-layer test-oracle 및 compact-request-bound fixes are DONE/ACCEPT; P12 prospective review NO-GO; EVIDENCE-05 sole ACTIVE |
 | static evidence | P11 Sol ACCEPT; default `None` arithmetic/cache identity 불변, supplemental cache-ineligible, P10/P9/block/owner/termination identity와 original inventory/CSC/cache 불변 확인. P12 review는 synthetic bridge 때문에 actual owning-block attribution이 non-identifying이라고 판정 |
 | runtime evidence | DSU-05 report/receipt는 exact root에 persisted됐다. import/analyze/observer/report `1/1/1/1`, retry와 세 runtime guard 0, 3V+2E PASS, 6 contacts direct/complete/singleton, all/complete root exact 동일이다. R2 compiled-artifact multiple 기록은 historical evidence로 유지하지만 선택된 source boundary에서는 재현되지 않았다. |
 | runtime 미증명 | old-owner replacement, trusted solve와 실제 SPD/PowerSI 영향은 미증명이다. DSU-05는 source boundary 진단이며 production topology 또는 accuracy evidence가 아니다. |
 | 별도 사용자 파일 | untracked `accuracy_parse.py`; 보존·미수정·미stage |
-| candidate staging / acceptance | compact-request-bound FIX-01 commit `af84334`; sole node `1 passed in 1.65s`; Sol `CODE_TEST_ACCEPT`; successor evidence not yet frozen |
+| candidate staging / acceptance | EVIDENCE-05 coordinator 52,836 B/SHA `18a20673...e104c`; exact six-line static ACCEPT; compile/self-check each one PASS; docs contract pending commit/Sol exact acceptance |
 
 ## 2. 문서 사용 규칙
 
@@ -115,7 +115,7 @@ disjoint owner ledger 확보와 사용자 명시 승인
 ## 4. 작업 항목 register
 
 상태 어휘는 `READY`, `ACTIVE`, `BLOCKED`, `DEFERRED`, `DONE`만 사용한다.
-동시에 `ACTIVE`는 하나만 허용하며 현재 sole ACTIVE는 **NONE / READY_FOR_SUCCESSOR_FREEZE**다. 완료된 미시적 item을
+동시에 `ACTIVE`는 하나만 허용하며 현재 sole ACTIVE는 **W7-PHYS-OWNER-JOIN-ORIGINAL-SPD-EVIDENCE-05**다. 완료된 미시적 item을
 다시 펼쳐 읽지 말고 아래 phase-level 결론과 Git history를 사용한다.
 상태와 증거 축은 분리한다. `DONE`은 선언한 범위의 종료일 뿐 current commit,
 production acceptance, runtime PASS 또는 PowerSI 정확성을 자동으로 뜻하지 않는다.
@@ -187,6 +187,7 @@ dirty/static/runtime/commit 상태는 복구 카드 1.1에 별도로 기록한�
 | `W7-PHYS-OWNER-JOIN-ORIGINAL-SPD-EVIDENCE-03` | 39 | DONE/STOP_UNEXPECTED | terminal source-layer fix 뒤 original-SPD owner-join one-shot | bundled interpreter missing `httpx` before import; calls `0/0/0/0/1`, retry 0; report/receipt finalized; no rerun |
 | `W7-PHYS-OWNER-JOIN-ORIGINAL-SPD-EVIDENCE-04` | 40 | DONE/STOP_IMPORT_OR_OWNERSHIP | project-interpreter-bound original-SPD owner-join one-shot | exact contract `e6575c0`; compact ownership request exceeded the bounded row limit; calls `1/0/0/0/1`, retry 0; no rerun |
 | `W7-PHYS-OWNER-JOIN-COMPACT-REQUEST-BOUND-FIX-01` | 41 | DONE/ACCEPT | remove non-authoritative overlapping provisional row aggregate | commit `af84334`; all actual caps unchanged; sole node `1 passed in 1.65s`; Sol `CODE_TEST_ACCEPT` |
+| `W7-PHYS-OWNER-JOIN-ORIGINAL-SPD-EVIDENCE-05` | 42 | ACTIVE | distinct post-fix original-SPD owner-join one-shot | base `88e2378`; coordinator static/compile/self-check PASS; exact docs contract/root/Sol acceptance then one launch/retry 0 |
 | `W8-REL` | 18 | BLOCKED | completed known-case solve를 release gate에 연결하고 최종 전달 | accuracy/product gate와 exact release commit 필요 |
 | `D-DIST` | - | DEFERRED | Distribution routing/DRC scope 확대 | 사용자가 implementation-ready/DRC 목표로 승격할 때만 |
 | `D-DOC` | - | DEFERRED | README와 동결 연구 배너 정리 | current work를 방해할 때 별도 문서 묶음으로 처리 |
@@ -549,6 +550,7 @@ remote/full suite, installer/release는 수행하지 않았다.
 | `D-060` | EVIDENCE-04 exact contract `e6575c076718fd99c6a51b85d9b4bcc57d1712e2`의 one-shot을 exit 1, 3,269.36 s, `STOP_IMPORT_OR_OWNERSHIP`, calls import/compile/P1/observer/report `1/0/0/0/1`, retry 0으로 영구 닫는다. Error는 `SOURCE_PLANE_OWNERSHIP_IR_BOUND_EXCEEDED: compact ownership request exceeds the bounded row limit`; report 1,123 B/SHA `81bad4e4350c4bb564fd213f9c70eea6edceb422d0fa11dc9492136f21699ef0`, receipt 1,101 B/SHA `d0bae25889f183d9cc344e0110843145564df6e9082b1655ab134fdd0b6a37cd`다. Import 미반환으로 observed source SHA/compile/P1/owner-join claim은 없다. ACTIVE NONE으로 복귀하고 old root/retry/patch/rerun을 금지한다. 실패한 check는 이미 materialize된 selected-rail surface/certificate/raw-selection/draft의 겹치는 provisional 표현을 합산하며 authoritative final IR count가 아니다. 후속은 이 aggregate precheck만 제거하고 local/raw/final cap을 보존하는 별도 freeze를 요구한다; cap raise/SQLite/schema/broader redesign은 이 증거로 열지 않는다 | 확정 |
 | `D-061` | sole ACTIVE를 `W7-PHYS-OWNER-JOIN-COMPACT-REQUEST-BOUND-FIX-01` FROZEN/READY_FOR_IMPLEMENTATION으로 연다. Base는 exact `0775f38e9d569e3144f8aac56729d8cabc3e61e1`; whitelist는 `spd_adapter.py`, existing producer test와 canonical docs 3개다. `compact_row_count` 계산/STOP만 삭제하고 `compact_draft` assignment, terminal source-layer semantics, local/raw/final 100,000-row caps와 schema/solver를 보존한다. 신규 node `test_source_plane_ownership_provisional_request_aggregate_does_not_consume_final_ir_row_cap`를 Sol static ACCEPT 뒤 1회만 실행한다. Cap raise/SQLite/schema/new abstraction/raw compiler/original-SPD/full-suite/production/PowerSI는 금지하며 claim ceiling은 synthetic importer/ownership producer, improvement 0이다 | 확정 |
 | `D-062` | compact-request-bound FIX-01을 implementation commit `af84334008d43ce5fe7cf23cadde4c4d9ae5c276`, sole Python312 invocation exit 0 / `1 passed in 1.65s`, Sol `CODE_TEST_ACCEPT`, P0-P3 none으로 DONE/ACCEPT한다. Product delta는 provisional aggregate/STOP 22줄 삭제뿐이고 local/raw/final caps, schema, terminal source-layer, solver는 불변이다. Test/retry/full-suite/original-SPD/production/PowerSI는 추가 실행하지 않는다. ACTIVE NONE / READY_FOR_SUCCESSOR_FREEZE로 복귀하며 distinct EVIDENCE-05는 새 coordinator/docs contract/root와 Sol acceptance 뒤에만 열 수 있다 | 확정 |
+| `D-063` | `W7-PHYS-OWNER-JOIN-ORIGINAL-SPD-EVIDENCE-05`를 base `88e23784435490f374454df1fbc19c7bdc05ab4a`의 exact-three-doc direct child로 FROZEN/READY_TO_EXECUTE한다. Python312 `-I -B`, distinct coordinator 52,836 B/SHA `18a206735c25c8f58fae52542b6f96fb806fd6144c0ff65679929805fe1e104c`, exact-six-line static ACCEPT와 source compile/self-check 각 1회 PASS를 동결한다. Exact contract/root/report/receipt absent와 tracked-clean 및 Sol acceptance 뒤 parent launch 1회/retry 0만 허용한다. EVIDENCE-01–04 reuse/rerun/patch를 금지하고 lock/no-clobber, STARTED receipt, source identity와 ledger를 보존한다. Claim ceiling은 import/compile/P1/shadow owner-join이며 production/PowerSI improvement는 미증명/0이다 | 확정 |
 
 ## 11. 현재 evidence와 비재사용 경계
 
@@ -581,7 +583,7 @@ falsifiable physical/analytic limiting-case invariant + disjoint owner ledger와
   `unknown / not_run`이다.
 - W7은 source/provenance와 수학·운영 기반을 개선했지만 production network,
   계산된 `Zii`, PowerSI correlation을 바꾸지 않았다.
-- 따라서 현재 product risk는 그대로 **외부 정확성 미달**이다. **W7-PHYS-OWNER-JOIN-QUOTIENT-SCOPE-FIX-01**은 DONE/ACCEPT다. W7-PHYS-OWNER-JOIN-EVIDENCE-01은 DONE/ACCEPT로 닫혔고 original-SPD EVIDENCE-01/-02/-04는 DONE/`STOP_IMPORT_OR_OWNERSHIP`, EVIDENCE-03은 missing `httpx`의 pre-import `STOP_UNEXPECTED`로 영구 닫혔다. Terminal pad-layer test-oracle successor와 compact-request-bound FIX-01은 DONE/ACCEPT다. 현재 sole ACTIVE는 **NONE / READY_FOR_SUCCESSOR_FREEZE**다.
+- 따라서 현재 product risk는 그대로 **외부 정확성 미달**이다. **W7-PHYS-OWNER-JOIN-QUOTIENT-SCOPE-FIX-01**은 DONE/ACCEPT다. W7-PHYS-OWNER-JOIN-EVIDENCE-01은 DONE/ACCEPT로 닫혔고 original-SPD EVIDENCE-01/-02/-04는 DONE/`STOP_IMPORT_OR_OWNERSHIP`, EVIDENCE-03은 missing `httpx`의 pre-import `STOP_UNEXPECTED`로 영구 닫혔다. Terminal pad-layer test-oracle successor와 compact-request-bound FIX-01은 DONE/ACCEPT다. 현재 sole ACTIVE는 **W7-PHYS-OWNER-JOIN-ORIGINAL-SPD-EVIDENCE-05 / FROZEN / READY_TO_EXECUTE**다.
   DSU-05는 `STOP_MULTIPLE_NOT_REPRODUCED`로 DONE했고 W7-PHYS는 BLOCKED다.
   Actual-P0/R1/R2는 scenario 없이 DONE/STOP했고 FIX-01/FIX-02는 DONE/ACCEPT다. P3는 `CONTACT_INTERFACE_RANK_LOSS` STOP, P4는 base cut-set
   CLOSED, P5는 deterministic shadow plan PLANNED, P6는 scenario/termination commutation
@@ -782,7 +784,7 @@ flowchart LR
   EG3 --> IP[Python312 exact import-stack preflight<br/>PASS / no SPD]
   IP --> EG4[W7-PHYS-OWNER-JOIN-ORIGINAL-SPD-EVIDENCE-04<br/>DONE / STOP_IMPORT_OR_OWNERSHIP<br/>compact request row bound]
   EG4 --> SG[W7-PHYS-OWNER-JOIN-COMPACT-REQUEST-BOUND-FIX-01<br/>DONE / ACCEPT<br/>1 passed in 1.65s]
-  SG --> SN[ACTIVE NONE<br/>READY_FOR_SUCCESSOR_FREEZE]
+  SG --> SN[W7-PHYS-OWNER-JOIN-ORIGINAL-SPD-EVIDENCE-05<br/>FROZEN / READY_TO_EXECUTE]
   R -->|예| H
   D[17DG foundation] -. production binding 필요 .-> H
   E[17DO/17DP owner evidence] -. identity join 필요 .-> H
@@ -800,7 +802,7 @@ P3 semantic result는 `CONTACT_INTERFACE_RANK_LOSS` STOP, P4는 CLOSED, P5는 PL
 P6와 P7은 PASSED고 P8은 materialized, P9은 bound, P10은 component-closed다. P11은 factor
 forward-reliability numerical STOP이고 P12는 NO-GO다. Actual-P0와 R1 original-SPD one-shot은 selector
 identity mismatch로 DONE/STOP했고 FIX-01/FIX-02는 DONE/ACCEPT다. R2는 actual multiple STOP으로
-닫혔고 DIAG-01도 report-finalization STOP으로 닫혔다. old component evidence와 DSU-01–05는 모두 DONE/STOP했고 W7-PHYS-OWNER-JOIN-EVIDENCE-01은 DONE/ACCEPT로 닫혔다. **W7-PHYS-OWNER-JOIN-ORIGINAL-SPD-EVIDENCE-01/-02/-03/-04**는 영구 DONE/STOP이고, **W7-PHYS-OWNER-JOIN-QUOTIENT-SCOPE-FIX-01**, terminal pad-layer test-oracle와 compact-request-bound fixes는 DONE/ACCEPT다. 현재 sole ACTIVE는 **NONE / READY_FOR_SUCCESSOR_FREEZE**다. 아래 조건은 그 다음 physical promotion gate를 열 때도 계속 적용한다.
+닫혔고 DIAG-01도 report-finalization STOP으로 닫혔다. old component evidence와 DSU-01–05는 모두 DONE/STOP했고 W7-PHYS-OWNER-JOIN-EVIDENCE-01은 DONE/ACCEPT로 닫혔다. **W7-PHYS-OWNER-JOIN-ORIGINAL-SPD-EVIDENCE-01/-02/-03/-04**는 영구 DONE/STOP이고, **W7-PHYS-OWNER-JOIN-QUOTIENT-SCOPE-FIX-01**, terminal pad-layer test-oracle와 compact-request-bound fixes는 DONE/ACCEPT다. 현재 sole ACTIVE는 **W7-PHYS-OWNER-JOIN-ORIGINAL-SPD-EVIDENCE-05 / FROZEN / READY_TO_EXECUTE**다. 아래 조건은 그 다음 physical promotion gate를 열 때도 계속 적용한다.
 
 1. source-derived geometry/material provenance가 있다.
 2. 대상 rail 전체에 적용 가능한 physical model 또는 omitted-block candidate다.
@@ -2185,3 +2187,25 @@ two-file diff with P0-P3 none. The sole authorized Python312 invocation exited 0
 verdict is `CODE_TEST_ACCEPT`, P0-P3 none. No retry, full suite, original SPD, cap/schema/raw compiler/solver,
 production or PowerSI run occurred. The code gate is DONE/ACCEPT, ACTIVE returns to NONE / READY_FOR_SUCCESSOR_FREEZE,
 and claim ceiling remains synthetic importer/ownership-producer semantics with improvement 0.
+
+### 12.48 W7-PHYS-OWNER-JOIN-ORIGINAL-SPD-EVIDENCE-05 — FROZEN / READY_TO_EXECUTE
+
+Base/source-before is exact `88e23784435490f374454df1fbc19c7bdc05ab4a`. Bind absolute
+`C:\Users\User\AppData\Local\Programs\Python\Python312\python.exe -I -B`. Distinct coordinator
+`D:\SPD-Decap-PI-Evaluator-W7\_coordinator_temp\production_owner_join_original_spd_evidence_05.py` is 52,836 B/SHA
+`18a206735c25c8f58fae52542b6f96fb806fd6144c0ff65679929805fe1e104c`. The exact six-line identity diff received
+Sol static ACCEPT; source compile and self-check each passed once. These checks are consumed and cannot repeat. The
+EVIDENCE-04 interpreter preflight is not repeated or claimed for EVIDENCE-05.
+
+This freeze commit must be the base's direct child changing only the three canonical docs on tracked-clean `main`.
+Frozen source is `D:\S4LB002-2Para_260729_1_injected.spd`, 1,116,717,287 B, expected SHA-256
+`40cb44b2376f59d6b606eb9b4d138204fe51b2dc6b3332d3b7c0e7d4202866d2`; rail is
+`ADC_VDD_180_VQPS_SYS_1_AON/0`, frequency `1e9` Hz, cell `1000` um and timeout `7200` s. New root is
+`D:\SPD-Decap-PI-Evaluator-W7\<contract>\260729-production-owner-join-original-spd-evidence-05`; root, report
+`production_owner_join_original_spd_evidence_05_report.json` and sibling receipt must all be absent.
+
+After Sol exact-contract acceptance, execute one parent launch under the frozen interpreter with exact repo, contract
+and coordinator SHA; retry is 0. Preserve same-handle lock, exclusive no-clobber publication, confirmed-termination/
+STARTED receipt, source pre/post identity, counter and disposition ledger. EVIDENCE-01–04 coordinator/root/report/
+receipt reuse, rerun and patch are forbidden. Claim ceiling is importer, compile, P1 and shadow owner-join evidence only;
+production wiring/solve/`Y_global`/`Zii`, PowerSI sign-off and numerical improvement remain unproved/0.
