@@ -1,13 +1,13 @@
 # SPD Decap PI Evaluator v0.23.1 — Source-derived physical IR
 
-- 문서 버전: **1.53**
+- 문서 버전: **1.54**
 - 계약 상태: **ACCEPTED** — source-derived provenance/ownership prerequisite의 기술 기준
 - committed 구현: `source-plane-ownership-ir-v1` + Phase 3 shadow consumer + v2 `contact_boundary` (`3b76af4`) + P0 (`4dc855a`) + P1 (`f823a53`) + P2 (`90f6b54`) + P3 (`b8a79f1`) + P4 base cut-set (`39fd4fa`) + P5 shadow rewire plan (`d7e7278`) + P6 scenario commutation audit (`6793bb2`) + P7 atomic recipe (`f1c2968`) + P8 topology embedding (`abf79cf`) + P9 nodal-block binding (`593e070`) + P10 component closure (`7f9c498`) + P11 supplemental solve gate (`e8d029a`) + ownership component-layer selector fix (`b0b90db`) + component-cardinality classifier (`6fc06dd`) + W7 owner-join closure (`2b27e30c6fe41f03281d3943568d0905d84d8af3`)
 - runtime acceptance: **Phase 4와 P0–P10 focused PASS / Sol ACCEPT; P3 semantic STOP, P4 structural CLOSED, P5 PLANNED, P6/P7 PASSED, P8 materialized, P9 bound, P10 component-closed; P11 focused test PASS / numerical result STOP; W7 owner-join commit `2b27e30c6fe41f03281d3943568d0905d84d8af3` DONE/ACCEPT with producer-only corrected rerun `1 passed in 1.52s` (consumer not rerun)**. This is read-only prerequisite evidence and does not claim actual production global-multi compile, original-SPD success, or PowerSI improvement.
 - production 상태: solver, owner-off, `Y_global`, `Zii` **unchanged**
 - 현재 작업 상태: **Actual-P0/R1/R2, R2-MULTI-TOPOLOGY-DIAG-01, Recovery-01과 DSU-01–05 DONE/STOP, FIX-01/FIX-02 DONE/ACCEPT**다.
-  DSU-05는 `STOP_MULTIPLE_NOT_REPRODUCED`; W7-PHYS BLOCKED다. OWNERSHIP-COUNT-DIAG-01/-02는 DONE/`STOP_RESOURCE_OR_CANCELLED`이다. STREAMED-IR-300K-FIX-01의 최초 run은 test body 전 `STOP_TEST_COLLECTION_SYNTAX`이고 현재 sole ACTIVE는 **W7-PHYS-OWNER-JOIN-OWNERSHIP-STREAMED-IR-300K-COLLECTION-FIX-01 / FROZEN / READY_FOR_IMPLEMENTATION**이다. Original-SPD EVIDENCE-01/-02/-04/-05는 retry-0 DONE/STOP, EVIDENCE-03은 `STOP_UNEXPECTED`로 DONE/STOP이고 quotient-scope FIX-01, terminal pad-layer test-oracle FIX-01과 compact-request-bound FIX-01은 DONE/ACCEPT다. P12는 NO-GO다.
-- active contract는 중복 module docstring 한 줄만 삭제하는 collection successor다. 정적 승인된 six-file streamed implementation, external v2 schema와 solver는 그 외 불변이다. Production/PowerSI improvement remains unproved/0.
+  DSU-05는 `STOP_MULTIPLE_NOT_REPRODUCED`; W7-PHYS BLOCKED다. OWNERSHIP-COUNT-DIAG-01/-02는 DONE/`STOP_RESOURCE_OR_CANCELLED`이다. STREAMED-IR-300K-FIX-01은 `STOP_TEST_COLLECTION_SYNTAX`, collection-fix successor는 `STOP_TEST_FAILURE_AND_RUNTIME_BUDGET`으로 DONE이며 현재 sole ACTIVE는 **W7-PHYS-OWNER-JOIN-OWNERSHIP-STREAMED-IR-300K-VALIDATION-RUNTIME-FIX-01 / FROZEN / READY_FOR_IMPLEMENTATION**이다. Original-SPD EVIDENCE-01/-02/-04/-05는 retry-0 DONE/STOP, EVIDENCE-03은 `STOP_UNEXPECTED`로 DONE/STOP이고 quotient-scope FIX-01, terminal pad-layer test-oracle FIX-01과 compact-request-bound FIX-01은 DONE/ACCEPT다. P12는 NO-GO다.
+- active contract는 external v2 의미를 보존하면서 `_validate_spooled_rows`의 확정적 superlinear folded joins만 교정하는 source-only successor다. Tests, six-file transport semantics와 solver는 불변이다. Production/PowerSI improvement remains unproved/0.
 - P11 closure: commit `e8d029a`, 최종 지정 node `1 passed in 1.55s`, Sol ACCEPT; pivot ratio `1.900e15`, condition-1 lower bound `1.096e17`, `SHADOW_SOLVE_NUMERICAL_FAILURE`; trusted stamp/matrix/solve/readiness false, production unchanged
 - 최종 개정: 2026-09-01 (Asia/Seoul)
 
@@ -80,7 +80,8 @@ flowchart LR
   NF --> CD[W7-PHYS-OWNER-JOIN-OWNERSHIP-COUNT-DIAG-01<br/>DONE / STOP_RESOURCE_OR_CANCELLED<br/>working-set result ambiguous; counts lost]
   CD --> CD2[W7-PHYS-OWNER-JOIN-OWNERSHIP-COUNT-DIAG-02<br/>DONE / STOP_RESOURCE_OR_CANCELLED<br/>counts preserved; peak 13.09 GiB]
   CD2 --> ST[W7-PHYS-OWNER-JOIN-OWNERSHIP-STREAMED-IR-300K-FIX-01<br/>DONE / STOP_TEST_COLLECTION_SYNTAX]
-  ST --> CF[W7-PHYS-OWNER-JOIN-OWNERSHIP-STREAMED-IR-300K-COLLECTION-FIX-01<br/>FROZEN / READY_FOR_IMPLEMENTATION]
+  ST --> CF[W7-PHYS-OWNER-JOIN-OWNERSHIP-STREAMED-IR-300K-COLLECTION-FIX-01<br/>DONE / STOP_TEST_FAILURE_AND_RUNTIME_BUDGET]
+  CF --> VR[W7-PHYS-OWNER-JOIN-OWNERSHIP-STREAMED-IR-300K-VALIDATION-RUNTIME-FIX-01<br/>FROZEN / READY_FOR_IMPLEMENTATION]
   I[raw-v3 geometry/material] -. hash reference .-> B
   J[compiled finite topology] -. hash/owner reference .-> D
 ```
@@ -955,7 +956,7 @@ P11 1 GHz gate만으로 이 두 anchor를 증명하지 않으므로 accuracy pro
 two-anchor checkpoint를 별도로 요구한다.
 
 Post-DSU-05 readiness는 **NOT_READY/STOP**이다. candidate old-Maxwell owner를 source-derived P1 N-port atomic replacement로 바꾸려면, 선택된 L30/L29 finite-area source footprint/P1 terminal identity를 실제 `Y_global`이 소비하는 정확한 old-Maxwell owner closed set에 hash-bound bijectively join하는 ledger가 필요하다. 이 ledger가 rail-complete scope와 replaced/retained disjoint partition을 증명해야 하지만, DSU-05의 count/SHA-only IDs, compiled-only Recovery, full certificate/ownership IR 부재와 exact join key 부재로는 구성할 수 없다. 따라서 admissible next gate, DSU-06/FIX-03/P12/production/rerun은 없고 ACTIVE NONE이며 PowerSI numerical improvement는 0이다.
-이 문장은 74d readiness audit 당시의 historical conclusion이며, 당시 §8의 W7-PHYS-OWNER-JOIN-EVIDENCE-01이 이를 supersede했다. 이후 §9 closure가 §8을 닫았고, §10/§12/§15/§17/§19 original-SPD gates와 §20 DIAG-01, §21 DIAG-02는 permanent DONE/STOP, §11 quotient-scope fix와 §14/§18 fixes는 DONE/ACCEPT다. §13 terminal pad-layer FIX-01은 test-oracle false negative로 DONE/STOP했다. §22 streamed-IR FIX-01도 collection syntax STOP이며 현재 sole ACTIVE는 §23 collection-fix successor다.
+이 문장은 74d readiness audit 당시의 historical conclusion이며, 당시 §8의 W7-PHYS-OWNER-JOIN-EVIDENCE-01이 이를 supersede했다. 이후 §9 closure가 §8을 닫았고, §10/§12/§15/§17/§19 original-SPD gates와 §20 DIAG-01, §21 DIAG-02는 permanent DONE/STOP, §11 quotient-scope fix와 §14/§18 fixes는 DONE/ACCEPT다. §13 terminal pad-layer FIX-01은 test-oracle false negative로 DONE/STOP했다. §22 streamed-IR FIX-01과 §23 collection-fix도 DONE/STOP이며 현재 sole ACTIVE는 §24 validation-runtime successor다.
 
 ## 7. 주장 한계
 
@@ -1304,9 +1305,30 @@ The six-file implementation received Sol `STATIC_ACCEPT`, but its first and only
 during collection: exit 1, `3 errors in 1.98s`, and zero test bodies executed. A stale first one-line module docstring
 made the line-9 future import illegal. The failed invocation is final and cannot be reused or rerun.
 
-## 23. W7-PHYS-OWNER-JOIN-OWNERSHIP-STREAMED-IR-300K-COLLECTION-FIX-01 — FROZEN / READY_FOR_IMPLEMENTATION
+## 23. W7-PHYS-OWNER-JOIN-OWNERSHIP-STREAMED-IR-300K-COLLECTION-FIX-01 — DONE / STOP_TEST_FAILURE_AND_RUNTIME_BUDGET
 
-Delete only the stale first docstring line in `source_plane_ownership_ir.py`; preserve all remaining product and test
-bytes. Sol static review must precede one fresh invocation of the same 15 focused nodes. Passing this successor proves
-only the synthetic small/pressure/cap/cancellation contract. It does not fix the upstream 13.09 GiB recovery peak,
-run original SPD, alter a solver/owner stamp, or improve PowerSI correlation.
+The stale first docstring line was deleted and the resulting ownership IR SHA-256 is
+`59C85203333561158C1C91699EEAB02C6BD24734EF726E844D81B0E4604906B7`; all tests and other product bytes remained
+frozen. Sol static review accepted the exact one-line delta.
+
+The sole fresh 15-node invocation emitted `.....F...`. The pressure test failed, but the traceback had not been printed
+before the run proceeded, so its exception/cause is unknown. The exact 300,000-row parameter then remained CPU-active
+until the parent enforced a 5,400 s wall budget. It was interrupted with exit 1; later parameter, cleanup and producer
+nodes were not reached and no final summary exists. Progress dots are not reused as acceptance evidence.
+
+Static analysis separately proved that the component-count validator used a 149,977 by 149,977 correlated folded
+surface scan. Pressure-sized Shape/source, retained-edge and owner-ledger relations also had avoidable superlinear
+plans or, for owner-ledger coverage, depended on an optional automatic index. This establishes a validator
+implementation defect but does not identify the lost pressure failure.
+
+## 24. W7-PHYS-OWNER-JOIN-OWNERSHIP-STREAMED-IR-300K-VALIDATION-RUNTIME-FIX-01 — FROZEN / READY_FOR_IMPLEMENTATION
+
+Modify only `_validate_spooled_rows` in `source_plane_ownership_ir.py`. Use the existing folded TEMP columns with two
+TEMP indexes, an indexed reverse Shape lookup, an outer-surface component comparison and set difference for retained
+primitive witness coverage. Preserve Python Unicode `casefold()` behavior and all validation outcomes. Do not change
+the external v2 tables/payload, caps, hashes, tests, producer/adapter/raw transport, solver or add an abstraction.
+
+After Sol static acceptance, one `-x -vv --tb=long` Python312 invocation may run pressure first and, only on PASS, the
+exact `150000/149977/300000` parameter. The external limit is 600 s. Any first failure/timeout is preserved as a new
+STOP with no rerun. Passing proves only those two synthetic validator cases. It does not fix the upstream 13.09 GiB
+recovery peak, run original SPD, alter a solver/owner stamp, or improve PowerSI correlation.
