@@ -1,16 +1,16 @@
 # SPD Decap PI Evaluator 목적·기술 기준
 
 - 적용 제품: **SPD Decap PI Evaluator v0.23.1**
-- 문서 버전: **1.199**
+- 문서 버전: **1.200**
 - W5 approved/machine-frozen source-before: `main` commit `027ac7a09a3eded15f45c41860945f9d4c7f488d`
 - 상태: **G0 기준 문서** — W5 DONE; W6-BASE 260729 numerical FAIL; W7-SOURCE-IR Phase 1/2/3/4와 W7-PHYS-PROSPECTIVE-P0/P1/P2/P4/P5/P6/P7/P8/P9/P10/P11 DONE, P3/P11 DONE/STOP (모두 shadow/prerequisite 범위); Actual-P0/R1/R2와 R2-MULTI-TOPOLOGY-DIAG-01 및 Recovery-01은 DONE/STOP, FIX-01/FIX-02는 DONE/ACCEPT다. `W7-PHYS-SOURCE-ANCHOR-LEAN-DSU-EVIDENCE-01`은 DONE/`STOP_TARGET_CONTACT_MISSING_OR_AMBIGUOUS`다.
   DSU-02/DSU-03/DSU-04는 각각 `STOP_PROVENANCE_INCOMPLETE`, DSU-05는 `STOP_MULTIPLE_NOT_REPRODUCED`로 영구 종료됐다.
-  W7 production physics는 BLOCKED이고 sole ACTIVE는 **W7-PHYS-OWNER-JOIN-ORIGINAL-SPD-EVIDENCE-01** (GO_FOR_FREEZE / NOT_READY_TO_EXECUTE)이다. W7-PHYS-OWNER-JOIN-EVIDENCE-01은 DONE/ACCEPT로 닫혔다.
+  W7 production physics는 BLOCKED이고 sole ACTIVE는 **W7-PHYS-OWNER-JOIN-ORIGINAL-SPD-EVIDENCE-01** (FROZEN / READY_TO_EXECUTE)이다. W7-PHYS-OWNER-JOIN-EVIDENCE-01은 DONE/ACCEPT로 닫혔다.
 - 현재 평가: W6-BASE는 PowerSI 수치 기준 FAIL이고 unseen/generalization은 `unknown / not_run`이다. P11은 commit `e8d029a`에서 exact 1 GHz P1 supplemental matrix를 기존 Layer-Surface 경로에 적용해 reciprocity/row-sum 뒤 factor gate까지 도달했지만, pivot ratio `1.900e15`와 condition-1 lower bound `1.096e17`로 기존 `1e13` forward-reliability 한계를 초과해 `SHADOW_SOLVE_NUMERICAL_FAILURE` STOP했다. 작은 backward residual `7.308e-17`은 forward accuracy 증거가 아니다. production solver caller, cache, topology, owner-off, `Y_global`과 `Zii`는 바뀌지 않았다.
 - 제품 solver/owner-off/`Y_global`/`Zii`와 W6 PowerSI 수치는 변경되지 않았으므로 수치 격차 개선은 0이다(새 percentage metric이 아니라 실측 improvement absence를 뜻한다).
-- Sole ACTIVE item (current): **W7-PHYS-OWNER-JOIN-ORIGINAL-SPD-EVIDENCE-01** — status GO_FOR_FREEZE / NOT_READY_TO_EXECUTE; source-before clean `main` HEAD `eac6af4b3d66ae31c97c1128a4ffc3034b5447f9`, technical dependency `2b27e30c6fe41f03281d3943568d0905d84d8af3`. Coordinator hash/command/output root are TBD and must not be invented.
+- Sole ACTIVE item (current): **W7-PHYS-OWNER-JOIN-ORIGINAL-SPD-EVIDENCE-01** — status **FROZEN / READY_TO_EXECUTE**; source-before/base parent `main` HEAD `2014f206e756177b94bc71d2a341ef0fecde909a`, technical dependency `2b27e30c6fe41f03281d3943568d0905d84d8af3`. Frozen coordinator `D:\SPD-Decap-PI-Evaluator-W7\_coordinator_temp\production_owner_join_original_spd_evidence.py`, 52,827 bytes, SHA-256 `155ee83d1911f72a1820dc14fa3b2a5cf3de13f11afd35f2bac3043a5d3552af`; source compile exactly once exit 0 (`SOURCE_COMPILE PASS`), self-check exactly once exit 0 (`SELF_CHECK PASS`) with the same SHA; Sol `EXECUTION_ACCEPT`, P0/P1 none. The execution contract is the docs-only commit that is the direct child of `2014f206e756177b94bc71d2a341ef0fecde909a`; its hash is intentionally not pre-stated.
 - P11 closure: commit `e8d029a`, 최종 지정 node `1 passed in 1.55s`, Sol ACCEPT; matrix SHA `b0680d39fcc0f9bad2c6e619b6910fd3e52765a610b940e31f7dc6cb1be79c0e`; accepted stamp/matrix/solve/readiness flags false, production unchanged.
-- 현재 권한: main-only와 `accuracy_parse.py` 보존을 유지한다. 새 successor는 coordinator hash/command/output root가 freeze되고 Sol static ACCEPT될 때까지 실행할 수 없으며, 원본 SPD one-shot 외의 code/test와 physics/solver/`Y_global`/`Zii` 변경은 금지한다. PowerSI numerical improvement는 0이다.
+- 현재 권한: main-only와 `accuracy_parse.py` 보존을 유지한다. 이제 권한은 정확히 이 frozen coordinator의 원본 SPD one-shot 1회이며 retry 0, patch/rerun 없음이다. timeout/interrupt 미확정 종료는 calls=`not_evaluated_after_termination`으로 기록하고 receipt를 STARTED로 유지하며, duplicate claimant는 API/report를 0회 실행한다. parent-owned finalization만 허용하고 physics/solver/`Y_global`/`Zii` 변경과 PowerSI numerical improvement 주장은 금지한다.
 - DSU-03 closure: contract `35b11484eabfce80d27c7a273b92fd68c5f37102`, frozen coordinator 115,960 bytes/SHA-256 `fb6dc30adabd8c93453dcc0791bf99f2464d49b8c90c76c8ce74f9dbd1a93402`, report 1,511 bytes/SHA-256 `c052258fe5ab389169b7e4d33853d90dcc29394057cb186f2ed548b2aead6b17`, sibling receipt 2,238 bytes/SHA-256 `fee03ea53c5c7d4a308711a94cd9ff5ee2b45eacb1f29b5941b44ba36ce2caae`다. calls는 `1/1/1/1`, retry/runtime guards 0이고 V1/V2/E1/E2/V3는 미평가다. observed immediate layer는 `Signal$L02(DGND)`이고 remote selected ground는 `Signal$L29(DGND)`인데 둘의 동일성을 강제한 observer 계약 때문에 pre-graph STOP했다. 이는 source/product data 결손이 아니며 재시도·재사용·재실행하지 않는다.
 - DSU-04 closure: contract `28845c0bd718d61fb611414005d1b325b19a9eca`, frozen coordinator 119,092 bytes/SHA-256 `df2c43d45f8b86a016015b4163cddeabcda8211a59520a88cb9cf1fc677634ee`, report 1,567 bytes/SHA-256 `72ca6d6eaeb81d39c91785a4c6243ee34f769f1d6ea07f74e03d6b78e7cad389`, sibling receipt 2,238 bytes/SHA-256 `01e4618f9b9af0024fabfe1ad13db148482a9d1b8eaa2a29884507797cd0b64c`다. calls는 `1/1/1/1`, retry/runtime guards 0이고 `power immediate landing contact is invalid`에서 pre-graph STOP했다. immediate map 0은 제품의 direct/trace finite-path 계약에서 허용되므로 source/product 결손이 아니라 observer 과잉 계약이며, actual path와 V1/V2/E1/E2/V3는 미평가다. 재시도·재사용·재실행하지 않는다.
 - coordinator freeze: historical DSU-05 coordinator는 `D:\SPD-Decap-PI-Evaluator-W7\_coordinator_temp\source_anchor_lean_dsu_evidence_v5.py` (119,869 bytes, SHA-256 `601e7404f85d4ce64c43203a1af94b28144c82e516651f6a241d75b3f6c8d9bb`)이며 in-memory compile/self-check 각 1회 PASS, 195.51 bytes/target vertex와 Sol final ACCEPT를 기록한다. exact contract는 docs-only commit `314f3a64aefb7b60c975a93cc7e6d701ab3debc4`다.
@@ -354,8 +354,8 @@ flowchart TD
 | Source IR 한계 | P0–P10은 contact admissibility부터 exact 1 GHz atomic replacement recipe, shadow topology/P1 block binding과 augmented component/pruning closure까지의 prerequisite를 증명했다. P11은 actual shadow matrix/factor gate를 실행했지만 forward reliability STOP했다. trusted solve, production assembly와 `Zii` 연결, PowerSI 근접 정확성은 증명하지 않았다. |
 | 생산 물리 상태 | surface-patch plane current-spreading R/L이 유일한 credible direction이지만 deterministic replacement stamp, production global assembly와 disjoint owner-off ledger가 없어 **NOT READY/STOP**이다. |
 | 현재 작업 상태 | Actual-P0/R1/R2, DIAG-01, Recovery-01과 DSU-01–05는 영구 DONE/STOP했다. FIX-01/FIX-02는 DONE/ACCEPT다. DSU-05는 exact contract `314f3a64aefb7b60c975a93cc7e6d701ab3debc4`에서 `STOP_MULTIPLE_NOT_REPRODUCED`로 닫혔다. |
-| 현재 ACTIVE | **W7-PHYS-OWNER-JOIN-ORIGINAL-SPD-EVIDENCE-01** — GO_FOR_FREEZE / NOT_READY_TO_EXECUTE; coordinator freeze and Sol ACCEPT required |
-| 현재 gate | **W7-PHYS-OWNER-JOIN-ORIGINAL-SPD-EVIDENCE-01** — GO_FOR_FREEZE / NOT_READY_TO_EXECUTE. Coordinator가 hash-frozen되고 Sol static ACCEPT될 때까지 execution blocked; production wiring/solve/Touchstone/P12/`Y_global`/`Zii`/PowerSI 승격은 금지한다. |
+| 현재 ACTIVE | **W7-PHYS-OWNER-JOIN-ORIGINAL-SPD-EVIDENCE-01** — **FROZEN / READY_TO_EXECUTE**; coordinator 52,827 bytes/SHA `155ee83d1911f72a1820dc14fa3b2a5cf3de13f11afd35f2bac3043a5d3552af`, Sol `EXECUTION_ACCEPT` |
+| 현재 gate | **W7-PHYS-OWNER-JOIN-ORIGINAL-SPD-EVIDENCE-01** — **FROZEN / READY_TO_EXECUTE**. 정확한 original-SPD one-shot 1회·retry 0·patch/rerun 없음만 허용하며 production wiring/solve/Touchstone/P12/`Y_global`/`Zii`/PowerSI 승격은 금지한다. |
 | 사전 물리 가설 | 대상 bare rail의 exact old-Maxwell owner를 source-derived P1 N-port로 **교체**할 때의 순 capacitance 변화 `ΔC = Ceff(P1) - Ceff(old owner)`가 기존 100 kHz/1 MHz PowerSI 오차 성분을 설명할 수 있는지를 후속 별도 gate에서 무피팅으로 반증한다. actual scenario 생성 자체는 정확도 개선 증거가 아니다. |
 
 세부 실행 이력, exact artifact identity와 current dirty file set은
@@ -418,19 +418,21 @@ production global-multi compile, original-SPD 성공 또는 PowerSI numerical im
 
 ## 15. W7-PHYS-OWNER-JOIN-ORIGINAL-SPD-EVIDENCE-01 — sole ACTIVE freeze phase
 
-source-before clean `main` HEAD is `eac6af4b3d66ae31c97c1128a4ffc3034b5447f9`; technical
+source-before/base parent clean `main` HEAD is `2014f206e756177b94bc71d2a341ef0fecde909a`; technical
 dependency is `2b27e30c6fe41f03281d3943568d0905d84d8af3`. The named original SPD
 `D:\S4LB002-2Para_260729_1_injected.spd` (1,116,717,287 B, expected SHA-256
 `40cb44b2376f59d6b606eb9b4d138204fe51b2dc6b3332d3b7c0e7d4202866d2`) and rail
 `ADC_VDD_180_VQPS_SYS_1_AON/0` are fixed inputs; no separate 1.1 GB prehash is allowed.
 
-Status is **GO_FOR_FREEZE / NOT_READY_TO_EXECUTE** until a new coordinator is hash-frozen
-and Sol-reviewed. The one-shot objective is import → v4 layerwise substrate compile → P1
+Status is **FROZEN / READY_TO_EXECUTE**. The one-shot objective is import → v4 layerwise substrate compile → P1
 at 1e9 Hz/1000 um → one production owner-join observer → one atomic report. Coordinator
-path `D:\SPD-Decap-PI-Evaluator-W7\_coordinator_temp\production_owner_join_original_spd_evidence.py`,
-hash/command/output root remain TBD and must not be invented. Budget is
+path `D:\SPD-Decap-PI-Evaluator-W7\_coordinator_temp\production_owner_join_original_spd_evidence.py` (52,827 bytes,
+SHA-256 `155ee83d1911f72a1820dc14fa3b2a5cf3de13f11afd35f2bac3043a5d3552af`), with source compile exactly once exit 0
+(`SOURCE_COMPILE PASS`), self-check exactly once exit 0 (`SELF_CHECK PASS`) using the same SHA, and Sol
+`EXECUTION_ACCEPT` with P0/P1 none. The execution contract is the docs-only commit that is the direct child of
+`2014f206e756177b94bc71d2a341ef0fecde909a`; its hash is intentionally not pre-stated. Budget is
 import/compile/P1/observer/report `1/1/1/1/1`, retry 0, 7200 s hard wall, report ≤1 MiB,
-receipt ≤64 KiB; coordinator source compile and in-memory self-check each run once before Sol ACCEPT. PASS is
+receipt ≤64 KiB; coordinator source compile and in-memory self-check were each completed exactly once before Sol EXECUTION_ACCEPT and must not be rerun. PASS is
 `PASS_OWNER_JOIN_EVIDENCE_COMPLETE` with complete observer hashes and flags
 `shadow_only=true`, `replacement_ready=false`, `production_ready=false`. STOP preserves the
 underlying product error; no patch/retry. The frozen STOP set is
@@ -441,3 +443,15 @@ underlying product error; no patch/retry. The frozen STOP set is
 topology/external proof is `STOP_LAYERWISE_V4_SUBSTRATE` and must not trigger a
 `layerwise_network.py` patch. No owner-off/wiring/solve/Touchstone/P12/
 `Y_global`/`Zii`/PowerSI/generalization claim is allowed; improvement remains **0**.
+
+The authorized command is exactly:
+
+```powershell
+$contractCommit = (git -C 'C:\Users\User\Documents\ChatGPT\SPD Decap PI Evaluator' rev-parse HEAD).Trim()
+& 'C:\Users\User\AppData\Local\Programs\Python\Python312\python.exe' -I -B 'D:\SPD-Decap-PI-Evaluator-W7\_coordinator_temp\production_owner_join_original_spd_evidence.py' --repo 'C:\Users\User\Documents\ChatGPT\SPD Decap PI Evaluator' --contract-commit $contractCommit --expected-coordinator-sha256 '155ee83d1911f72a1820dc14fa3b2a5cf3de13f11afd35f2bac3043a5d3552af'
+```
+
+Output root is `D:\SPD-Decap-PI-Evaluator-W7\<contractCommit>\260729-production-owner-join-original-spd-evidence-01`;
+the sibling receipt is `...\260729-production-owner-join-original-spd-evidence-01.launcher-receipt.json`, and the
+report is `...\production_owner_join_original_spd_evidence_report.json`. This is the single authorized original-SPD
+execution with retry 0 and no patch/rerun.

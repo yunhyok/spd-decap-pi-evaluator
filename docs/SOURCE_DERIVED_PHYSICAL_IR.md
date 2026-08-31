@@ -1,13 +1,13 @@
 # SPD Decap PI Evaluator v0.23.1 — Source-derived physical IR
 
-- 문서 버전: **1.34**
+- 문서 버전: **1.35**
 - 계약 상태: **ACCEPTED** — source-derived provenance/ownership prerequisite의 기술 기준
 - committed 구현: `source-plane-ownership-ir-v1` + Phase 3 shadow consumer + v2 `contact_boundary` (`3b76af4`) + P0 (`4dc855a`) + P1 (`f823a53`) + P2 (`90f6b54`) + P3 (`b8a79f1`) + P4 base cut-set (`39fd4fa`) + P5 shadow rewire plan (`d7e7278`) + P6 scenario commutation audit (`6793bb2`) + P7 atomic recipe (`f1c2968`) + P8 topology embedding (`abf79cf`) + P9 nodal-block binding (`593e070`) + P10 component closure (`7f9c498`) + P11 supplemental solve gate (`e8d029a`) + ownership component-layer selector fix (`b0b90db`) + component-cardinality classifier (`6fc06dd`) + W7 owner-join closure (`2b27e30c6fe41f03281d3943568d0905d84d8af3`)
 - runtime acceptance: **Phase 4와 P0–P10 focused PASS / Sol ACCEPT; P3 semantic STOP, P4 structural CLOSED, P5 PLANNED, P6/P7 PASSED, P8 materialized, P9 bound, P10 component-closed; P11 focused test PASS / numerical result STOP; W7 owner-join commit `2b27e30c6fe41f03281d3943568d0905d84d8af3` DONE/ACCEPT with producer-only corrected rerun `1 passed in 1.52s` (consumer not rerun)**. This is read-only prerequisite evidence and does not claim actual production global-multi compile, original-SPD success, or PowerSI improvement.
 - production 상태: solver, owner-off, `Y_global`, `Zii` **unchanged**
 - 현재 작업 상태: **Actual-P0/R1/R2, R2-MULTI-TOPOLOGY-DIAG-01, Recovery-01과 DSU-01–05 DONE/STOP, FIX-01/FIX-02 DONE/ACCEPT**다.
-  DSU-05는 `STOP_MULTIPLE_NOT_REPRODUCED`; W7-PHYS BLOCKED이며 현재 sole ACTIVE는 **W7-PHYS-OWNER-JOIN-ORIGINAL-SPD-EVIDENCE-01** (GO_FOR_FREEZE / NOT_READY_TO_EXECUTE)이다. W7-PHYS-OWNER-JOIN-EVIDENCE-01은 DONE/ACCEPT로 닫혔고 P12 NO-GO다.
-- active contract는 `W7-PHYS-OWNER-JOIN-ORIGINAL-SPD-EVIDENCE-01`이다. source-before clean `main` HEAD는 `eac6af4b3d66ae31c97c1128a4ffc3034b5447f9`, technical dependency는 `2b27e30c6fe41f03281d3943568d0905d84d8af3`이며 coordinator hash/command/output root와 Sol static ACCEPT 전에는 실행하지 않는다. physics/solver/`Y_global`/`Zii`와 PowerSI 수치 개선(0)은 불변이다.
+  DSU-05는 `STOP_MULTIPLE_NOT_REPRODUCED`; W7-PHYS BLOCKED이며 현재 sole ACTIVE는 **W7-PHYS-OWNER-JOIN-ORIGINAL-SPD-EVIDENCE-01** (FROZEN / READY_TO_EXECUTE)이다. W7-PHYS-OWNER-JOIN-EVIDENCE-01은 DONE/ACCEPT로 닫혔고 P12 NO-GO다.
+- active contract는 `W7-PHYS-OWNER-JOIN-ORIGINAL-SPD-EVIDENCE-01`이다. source-before/base parent clean `main` HEAD는 `2014f206e756177b94bc71d2a341ef0fecde909a`, technical dependency는 `2b27e30c6fe41f03281d3943568d0905d84d8af3`다. Frozen coordinator는 `D:\SPD-Decap-PI-Evaluator-W7\_coordinator_temp\production_owner_join_original_spd_evidence.py` (52,827 bytes, SHA-256 `155ee83d1911f72a1820dc14fa3b2a5cf3de13f11afd35f2bac3043a5d3552af`)이며 source compile/self-check는 각각 정확히 1회 exit 0 (`SOURCE_COMPILE PASS`/`SELF_CHECK PASS`), Sol은 `EXECUTION_ACCEPT`, P0/P1은 없다. 실행 contract hash는 이 docs-only commit(2014f20의 direct child)이며 hash는 사전 기재하지 않는다. physics/solver/`Y_global`/`Zii`와 PowerSI 수치 개선(0)은 불변이다.
 - P11 closure: commit `e8d029a`, 최종 지정 node `1 passed in 1.55s`, Sol ACCEPT; pivot ratio `1.900e15`, condition-1 lower bound `1.096e17`, `SHADOW_SOLVE_NUMERICAL_FAILURE`; trusted stamp/matrix/solve/readiness false, production unchanged
 - 최종 개정: 2026-08-31 (Asia/Seoul)
 
@@ -66,9 +66,8 @@ flowchart LR
   LD4 --> LD5[W7-PHYS-SOURCE-ANCHOR-LEAN-DSU-EVIDENCE-05 DONE / STOP<br/>multiple candidate not reproduced]
   LD5 --> SX[W7 remains BLOCKED<br/>owner-join prerequisite needed]
   SX --> OJ[W7-PHYS-OWNER-JOIN-EVIDENCE-01 DONE / ACCEPT]
-  OJ --> OG[W7-PHYS-OWNER-JOIN-ORIGINAL-SPD-EVIDENCE-01<br/>ACTIVE / GO FOR FREEZE]
-  OG --> FG{coordinator hash/command/output root frozen<br/>and Sol ACCEPT?}
-  FG -->|no| EB[execution blocked]
+  OJ --> OG[W7-PHYS-OWNER-JOIN-ORIGINAL-SPD-EVIDENCE-01<br/>FROZEN / READY_TO_EXECUTE]
+  OG --> FG{freeze decision: yes<br/>coordinator hash + Sol EXECUTION_ACCEPT}
   FG -->|yes| OS[original-SPD one-shot<br/>budget 1/1/1/1/1]
   I[raw-v3 geometry/material] -. hash reference .-> B
   J[compiled finite topology] -. hash/owner reference .-> D
@@ -1021,20 +1020,23 @@ global-multi compile, original-SPD 성공 또는 PowerSI numerical improvement�
 
 ## 10. W7-PHYS-OWNER-JOIN-ORIGINAL-SPD-EVIDENCE-01 — sole ACTIVE freeze phase
 
-source-before clean `main` HEAD `eac6af4b3d66ae31c97c1128a4ffc3034b5447f9`; technical
+source-before/base parent clean `main` HEAD `2014f206e756177b94bc71d2a341ef0fecde909a`; technical
 dependency `2b27e30c6fe41f03281d3943568d0905d84d8af3`. The fixed input is
 `D:\S4LB002-2Para_260729_1_injected.spd` (1,116,717,287 B, SHA-256
 `40cb44b2376f59d6b606eb9b4d138204fe51b2dc6b3332d3b7c0e7d4202866d2`) and rail
 `ADC_VDD_180_VQPS_SYS_1_AON/0`; no separate prehash is allowed. Status is
-**GO_FOR_FREEZE / NOT_READY_TO_EXECUTE** until a hash-frozen coordinator and Sol static
-ACCEPT. The one-shot pipeline calls
+**FROZEN / READY_TO_EXECUTE**. The frozen coordinator is
+`D:\SPD-Decap-PI-Evaluator-W7\_coordinator_temp\production_owner_join_original_spd_evidence.py`
+(52,827 bytes, SHA-256 `155ee83d1911f72a1820dc14fa3b2a5cf3de13f11afd35f2bac3043a5d3552af`). Source compile and
+self-check each completed exactly once exit 0 (`SOURCE_COMPILE PASS`/`SELF_CHECK PASS`) with the same SHA; Sol is
+`EXECUTION_ACCEPT`, P0/P1 none. The execution contract is the docs-only commit that is the direct child of
+`2014f206e756177b94bc71d2a341ef0fecde909a`; its hash is intentionally not pre-stated. The one-shot pipeline calls
 `import_spd_scenario(..., include_plane_sheet_payload=True, source_plane_ownership_rail_id=rail)`,
 `compile_layerwise_substrate(..., required_rail_id=rail, require_plane_sheet_payload=True)`,
 `evaluate_source_plane_contact_condensation(..., frequency_hz=1e9, cell_um=1000)`,
 and `audit_source_plane_patch_production_owner_join` exactly once each, followed by one
 atomic report, with call budget `1/1/1/1/1`, retry 0,
-7200 s hard wall, report ≤1 MiB and receipt ≤64 KiB. Coordinator path and hash/command/
-output root remain TBD and must not be invented. PASS requires
+7200 s hard wall, report ≤1 MiB and receipt ≤64 KiB. PASS requires
 `PASS_OWNER_JOIN_EVIDENCE_COMPLETE`, complete hash/identity/coverage/partial/reduced checks,
 and flags `shadow_only=true`, `replacement_ready=false`, `production_ready=false`; failures
 use only `STOP_PREFLIGHT`, `STOP_INPUT_IDENTITY`, `STOP_IMPORT_OR_OWNERSHIP`,
@@ -1045,3 +1047,17 @@ product error without patch/retry. Missing persisted v4 topology/external proof 
 `STOP_LAYERWISE_V4_SUBSTRATE`; it does not authorize a `layerwise_network.py` change.
 No prior DSU/Recovery/scenario payload may be supplied. No production,
 PowerSI or solver claim is made; improvement remains **0**.
+
+The authorized PowerShell command is exactly:
+
+```powershell
+$contractCommit = (git -C 'C:\Users\User\Documents\ChatGPT\SPD Decap PI Evaluator' rev-parse HEAD).Trim()
+& 'C:\Users\User\AppData\Local\Programs\Python\Python312\python.exe' -I -B 'D:\SPD-Decap-PI-Evaluator-W7\_coordinator_temp\production_owner_join_original_spd_evidence.py' --repo 'C:\Users\User\Documents\ChatGPT\SPD Decap PI Evaluator' --contract-commit $contractCommit --expected-coordinator-sha256 '155ee83d1911f72a1820dc14fa3b2a5cf3de13f11afd35f2bac3043a5d3552af'
+```
+
+Output root: `D:\SPD-Decap-PI-Evaluator-W7\<contractCommit>\260729-production-owner-join-original-spd-evidence-01`;
+sibling receipt: `...\260729-production-owner-join-original-spd-evidence-01.launcher-receipt.json`; report:
+`...\production_owner_join_original_spd_evidence_report.json`. This exact original-SPD one-shot is authorized once,
+retry 0, with no patch/rerun; timeout/interrupt termination that is not confirmed leaves the receipt STARTED and
+uses calls=`not_evaluated_after_termination`, while a duplicate claimant performs zero API/report calls. Parent-owned
+finalization is required.
