@@ -413,6 +413,174 @@ def test_source_plane_ownership_component_layer_is_authoritative_for_mismatched_
     assert compile_calls["count"] == 0
 
 
+@pytest.mark.parametrize("case_id", ["unrelated_global", "projected_over_cap"])
+def test_source_plane_ownership_filters_global_quotient_before_selected_row_bound(
+    case_id: str, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    source = tmp_path / f"ownership-quotient-{case_id}.spd"
+    source.write_text(_ownership_fixture_payload(), encoding="ascii")
+    original_certificate = spd_adapter._layer_surface_connectivity_certificate
+    original_compile = spd_adapter.compile_raw_spatial_contact_asset
+    original_build = spd_adapter.build_source_plane_ownership_ir
+    captured: dict[str, object] = {}
+    compile_calls = {"count": 0}
+    build_calls = {"count": 0}
+
+    def mutate_certificate(*args: object, **kwargs: object):
+        certificate = deepcopy(original_certificate(*args, **kwargs))
+        quotient = certificate["finite_via_quotient"]
+        vertices = list(quotient["vertices"])
+        anchors = [
+            item for item in certificate.get("rail_anchor_bindings", ())
+            if isinstance(item, dict) and str(item.get("rail_id", "")).casefold() == "vdd_core/1"
+        ]
+        contacts = {
+            str(item.get("pin_id", "")).strip().casefold(): item
+            for item in certificate.get("terminal_contacts", ())
+            if isinstance(item, dict)
+        }
+        role_components = {
+            str(component_id).strip().casefold()
+            for anchor in anchors
+            for component_id in contacts.get(str(anchor.get("pin_id", "")).strip().casefold(), {}).get("contact_component_ids", ())
+            if isinstance(component_id, str) and component_id.strip()
+        }
+        selected = [
+            item for item in vertices
+            if isinstance(item, dict)
+            and any(str(value).casefold() in role_components for value in item.get("retained_component_ids", ()))
+        ]
+        assert selected
+        if case_id == "unrelated_global":
+            monkeypatch.setattr(spd_adapter, "MAX_SOURCE_PLANE_OWNERSHIP_IR_ROWS", 1024)
+            template = deepcopy(vertices[0])
+            template["vertex_id"] = "spd-finite-via-vertex:unrelated-global-template"
+            template["roles"] = []
+            template["terminal_ids"] = []
+            template["retained_component_ids"] = []
+            template["retained_component_evidence_sha256s"] = []
+            template["retained_component_island_ids_by_layer"] = {}
+            template["component_binding_status"] = "complete"
+            template["component_binding_issues"] = []
+            for index in range(1025):
+                extra = deepcopy(template)
+                extra["vertex_id"] = f"spd-finite-via-vertex:unrelated-global-{index}"
+                vertices.append(extra)
+        else:
+            selected_ids = {
+                str(item["vertex_id"]).casefold()
+                for item in selected
+            }
+            required_ids = set(selected_ids)
+            boundary_edges = []
+            for edge in quotient.get("edges", ()):
+                if not isinstance(edge, dict):
+                    continue
+                endpoints = {
+                    str(edge.get("start_vertex_id", "")).casefold(),
+                    str(edge.get("end_vertex_id", "")).casefold(),
+                }
+                if len(endpoints & selected_ids) == 1:
+                    required_ids.update(endpoints)
+                    boundary_edges.append(edge)
+            anchor_ids = {
+                str(contact.get("exposed_quotient_vertex_id", "")).casefold()
+                for anchor in anchors
+                for contact in [contacts[str(anchor.get("pin_id", "")).strip().casefold()]]
+                if contact.get("exposed_quotient_vertex_id")
+            }
+            required_ids.update(anchor_ids)
+            cap = len(required_ids) - 1
+            coverage_count = sum(
+                len(edge.get("owner_ids", ()))
+                for edge in boundary_edges
+            )
+            assert len(selected_ids) <= cap
+            assert len(boundary_edges) <= cap
+            assert coverage_count <= cap
+            assert len(required_ids) > cap
+            monkeypatch.setattr(spd_adapter, "MAX_SOURCE_PLANE_OWNERSHIP_IR_ROWS", cap)
+        quotient["vertices"] = vertices
+        certificate["evidence_sha256"] = canonical_surface_certificate_sha256(
+            {key: value for key, value in certificate.items() if key != "evidence_sha256"}
+        )
+        captured["certificate"] = deepcopy(certificate)
+        return certificate
+
+    def capture_request(*args: object, **kwargs: object):
+        compile_calls["count"] += 1
+        request = kwargs.get("source_plane_ownership_request")
+        if isinstance(request, dict):
+            captured["request"] = deepcopy(request)
+        return original_compile(*args, **kwargs)
+
+    def capture_build(*args: object, **kwargs: object):
+        build_calls["count"] += 1
+        return original_build(*args, **kwargs)
+
+    monkeypatch.setattr(spd_adapter, "_layer_surface_connectivity_certificate", mutate_certificate)
+    monkeypatch.setattr(spd_adapter, "compile_raw_spatial_contact_asset", capture_request)
+    monkeypatch.setattr(spd_adapter, "build_source_plane_ownership_ir", capture_build)
+
+    if case_id == "projected_over_cap":
+        with pytest.raises(
+            SpdImportError,
+            match="SOURCE_PLANE_OWNERSHIP_IR_BOUND_EXCEEDED: projected quotient vertex materialization exceeds bound",
+        ):
+            spd_adapter.import_spd_scenario(source, source_plane_ownership_rail_id="VDD_CORE/1")
+        assert compile_calls["count"] == 0
+        assert build_calls["count"] == 0
+        return
+
+    imported = spd_adapter.import_spd_scenario(source, source_plane_ownership_rail_id="VDD_CORE/1")
+    assert compile_calls["count"] == 1
+    assert build_calls["count"] == 1
+    request = captured["request"]
+    certificate = captured["certificate"]
+    assert isinstance(request, dict) and isinstance(certificate, dict)
+    snapshot = request["certificate_snapshot"]
+    assert isinstance(snapshot, dict)
+    snapshot_vertices = snapshot["finite_via_quotient"]["vertices"]
+    snapshot_ids = {str(item["vertex_id"]).casefold() for item in snapshot_vertices}
+    quotient = certificate["finite_via_quotient"]
+    vertices = quotient["vertices"]
+    anchors = [
+        item for item in certificate["rail_anchor_bindings"]
+        if str(item.get("rail_id", "")).casefold() == "vdd_core/1"
+    ]
+    contacts = {
+        str(item["pin_id"]).casefold(): item
+        for item in certificate["terminal_contacts"]
+    }
+    role_components = {
+        str(component_id).casefold()
+        for anchor in anchors
+        for component_id in contacts[str(anchor["pin_id"]).casefold()].get("contact_component_ids", ())
+    }
+    selected_ids = {
+        str(item["vertex_id"]).casefold()
+        for item in vertices
+        if any(str(value).casefold() in role_components for value in item.get("retained_component_ids", ()))
+    }
+    adjacent_ids = set(selected_ids)
+    for edge in quotient["edges"]:
+        endpoints = {
+            str(edge.get("start_vertex_id", "")).casefold(),
+            str(edge.get("end_vertex_id", "")).casefold(),
+        }
+        if endpoints & selected_ids:
+            adjacent_ids.update(endpoints)
+    anchor_ids = {
+        str(contact.get("exposed_quotient_vertex_id", "")).casefold()
+        for anchor in anchors
+        for contact in [contacts[str(anchor["pin_id"]).casefold()]]
+        if contact.get("exposed_quotient_vertex_id")
+    }
+    assert snapshot_ids == selected_ids | adjacent_ids | anchor_ids
+    assert not any(":unrelated-global-" in item for item in snapshot_ids)
+    assert imported.scenario.base_project.metadata["spd_import"]
+
+
 def test_source_plane_ownership_producer_roundtrip_and_atomic_failure(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

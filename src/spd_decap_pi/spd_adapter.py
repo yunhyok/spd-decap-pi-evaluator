@@ -8106,16 +8106,14 @@ def import_spd_scenario(
         quotient = surface_connectivity_certificate.get("finite_via_quotient", {})
         if not isinstance(quotient, Mapping):
             raise SpdImportError("SOURCE_PLANE_OWNERSHIP_IR_INCOMPLETE: finite quotient is absent")
-        vertices: dict[str, Mapping[str, Any]] = {}
-        for item in quotient.get("vertices", ()):
-            if not isinstance(item, Mapping) or not str(item.get("vertex_id", "")).strip():
-                continue
-            if len(vertices) >= MAX_SOURCE_PLANE_OWNERSHIP_IR_ROWS:
-                raise SpdImportError("SOURCE_PLANE_OWNERSHIP_IR_BOUND_EXCEEDED: quotient vertex materialization exceeds bound")
-            vertices[str(item["vertex_id"]).strip().casefold()] = item
         selected_vertex_by_id: dict[str, Mapping[str, Any]] = {}
         selected_component_by_vertex: dict[str, str] = {}
-        for vid, vertex in vertices.items():
+        quotient_vertices = quotient.get("vertices", ())
+        for item in quotient_vertices:
+            if not isinstance(item, Mapping) or not str(item.get("vertex_id", "")).strip():
+                continue
+            vid = str(item["vertex_id"]).strip().casefold()
+            vertex = item
             retained = [str(value).casefold() for value in vertex.get("retained_component_ids", ())]
             selected_retained = sorted(set(retained) & role_components)
             if len(selected_retained) > 1:
@@ -8126,6 +8124,8 @@ def import_spd_scenario(
                 row_layer = next((value for key, value in rows.items() if str(key).casefold() == binding[1]), None) if isinstance(rows, Mapping) else None
                 if not isinstance(row_layer, (list, tuple, set)) or binding[2] not in {str(value).casefold() for value in row_layer}:
                     raise SpdImportError("SOURCE_PLANE_OWNERSHIP_IR_INCOMPLETE: selected vertex role binding is absent")
+                if vid in selected_vertex_by_id:
+                    raise SpdImportError("SOURCE_PLANE_OWNERSHIP_IR_INCOMPLETE: selected quotient vertex is duplicated")
                 if len(selected_vertex_by_id) >= MAX_SOURCE_PLANE_OWNERSHIP_IR_ROWS:
                     raise SpdImportError("SOURCE_PLANE_OWNERSHIP_IR_BOUND_EXCEEDED: selected vertex materialization exceeds bound")
                 selected_vertex_by_id[vid] = vertex
@@ -8138,7 +8138,11 @@ def import_spd_scenario(
                 continue
             landing_key = (str(item.get("net", "")).casefold(), str(item.get("via_id", "")).casefold())
             landing_by_key[landing_key] = None if landing_key in landing_by_key else item
-        boundary_candidates: list[dict[str, Any]] = []; selected_edge_ids: set[str] = set(); selected_vertex_ids: set[str] = set()
+        boundary_candidates: list[dict[str, Any]] = []; selected_edge_ids: set[str] = set(); selected_vertex_ids: set[str] = set(selected_vertex_by_id); anchor_vertex_ids: set[str] = set()
+        for _anchor, contact in anchor_contacts:
+            anchor_vertex = str(contact.get("exposed_quotient_vertex_id", "")).strip().casefold()
+            if anchor_vertex:
+                anchor_vertex_ids.add(anchor_vertex)
         for edge in quotient.get("edges", ()):
             if not isinstance(edge, Mapping):
                 raise SpdImportError("SOURCE_PLANE_OWNERSHIP_IR_INCOMPLETE: finite edge row is invalid")
@@ -8171,13 +8175,24 @@ def import_spd_scenario(
             raise SpdImportError("SOURCE_PLANE_OWNERSHIP_IR_BOUND_EXCEEDED: owner-expanded coverage exceeds bound")
         coverage_rows = [[item["component_id"].casefold(), item["island_id"].casefold(), item["finite_vertex_id"].casefold(), item["finite_edge_id"].casefold(), owner.casefold()] for item in boundary_candidates for owner in item["owner_ids"]]
         coverage = {"count": len(coverage_rows), "sha256": sha256(concrete_canonical_json_bytes(coverage_rows)).hexdigest()}
-        for _anchor, contact in anchor_contacts:
-            anchor_vertex = str(contact.get("exposed_quotient_vertex_id", "")).strip().casefold()
-            if anchor_vertex:
-                if anchor_vertex not in vertices:
-                    raise SpdImportError("SOURCE_PLANE_OWNERSHIP_IR_INCOMPLETE: anchor terminal vertex is absent")
-                selected_vertex_ids.add(anchor_vertex)
-        certificate_snapshot = {"rail_anchor_bindings": certificate_anchors, "terminal_contacts": [contact for _anchor, contact in anchor_contacts], "contact_boundary": boundary_candidates, "contact_boundary_coverage": coverage, "surface_equivalence_components": certificate_components, "finite_via_quotient": {"vertices": [item for vid, item in vertices.items() if vid in selected_vertex_ids], "edges": [item for item in quotient.get("edges", ()) if isinstance(item, Mapping) and str(item.get("edge_id", "")).casefold() in selected_edge_ids], "terminal_bindings": [item for item in quotient.get("terminal_bindings", ()) if isinstance(item, Mapping) and str(item.get("first_via_quotient_edge_id", "")).casefold() in selected_edge_ids]}}
+        required_vertex_ids = selected_vertex_ids | anchor_vertex_ids
+        vertices: dict[str, Mapping[str, Any]] = {}
+        for item in quotient_vertices:
+            if not isinstance(item, Mapping) or not str(item.get("vertex_id", "")).strip():
+                continue
+            vid = str(item["vertex_id"]).strip().casefold()
+            if vid not in required_vertex_ids:
+                continue
+            if vid in vertices:
+                raise SpdImportError("SOURCE_PLANE_OWNERSHIP_IR_INCOMPLETE: required quotient vertex is duplicated")
+            if len(vertices) >= MAX_SOURCE_PLANE_OWNERSHIP_IR_ROWS:
+                raise SpdImportError("SOURCE_PLANE_OWNERSHIP_IR_BOUND_EXCEEDED: projected quotient vertex materialization exceeds bound")
+            vertices[vid] = item
+        if not anchor_vertex_ids <= set(vertices):
+            raise SpdImportError("SOURCE_PLANE_OWNERSHIP_IR_INCOMPLETE: anchor terminal vertex is absent")
+        if not required_vertex_ids <= set(vertices):
+            raise SpdImportError("SOURCE_PLANE_OWNERSHIP_IR_INCOMPLETE: required quotient vertex is absent")
+        certificate_snapshot = {"rail_anchor_bindings": certificate_anchors, "terminal_contacts": [contact for _anchor, contact in anchor_contacts], "contact_boundary": boundary_candidates, "contact_boundary_coverage": coverage, "surface_equivalence_components": certificate_components, "finite_via_quotient": {"vertices": list(vertices.values()), "edges": [item for item in quotient.get("edges", ()) if isinstance(item, Mapping) and str(item.get("edge_id", "")).casefold() in selected_edge_ids], "terminal_bindings": [item for item in quotient.get("terminal_bindings", ()) if isinstance(item, Mapping) and str(item.get("first_via_quotient_edge_id", "")).casefold() in selected_edge_ids]}}
         boundary_contacts = boundary_candidates
         ownership_request = {
             "surface_snapshot": dict(ownership_surface_snapshot),

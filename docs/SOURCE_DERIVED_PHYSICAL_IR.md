@@ -1,13 +1,13 @@
 # SPD Decap PI Evaluator v0.23.1 — Source-derived physical IR
 
-- 문서 버전: **1.36**
+- 문서 버전: **1.37**
 - 계약 상태: **ACCEPTED** — source-derived provenance/ownership prerequisite의 기술 기준
 - committed 구현: `source-plane-ownership-ir-v1` + Phase 3 shadow consumer + v2 `contact_boundary` (`3b76af4`) + P0 (`4dc855a`) + P1 (`f823a53`) + P2 (`90f6b54`) + P3 (`b8a79f1`) + P4 base cut-set (`39fd4fa`) + P5 shadow rewire plan (`d7e7278`) + P6 scenario commutation audit (`6793bb2`) + P7 atomic recipe (`f1c2968`) + P8 topology embedding (`abf79cf`) + P9 nodal-block binding (`593e070`) + P10 component closure (`7f9c498`) + P11 supplemental solve gate (`e8d029a`) + ownership component-layer selector fix (`b0b90db`) + component-cardinality classifier (`6fc06dd`) + W7 owner-join closure (`2b27e30c6fe41f03281d3943568d0905d84d8af3`)
 - runtime acceptance: **Phase 4와 P0–P10 focused PASS / Sol ACCEPT; P3 semantic STOP, P4 structural CLOSED, P5 PLANNED, P6/P7 PASSED, P8 materialized, P9 bound, P10 component-closed; P11 focused test PASS / numerical result STOP; W7 owner-join commit `2b27e30c6fe41f03281d3943568d0905d84d8af3` DONE/ACCEPT with producer-only corrected rerun `1 passed in 1.52s` (consumer not rerun)**. This is read-only prerequisite evidence and does not claim actual production global-multi compile, original-SPD success, or PowerSI improvement.
 - production 상태: solver, owner-off, `Y_global`, `Zii` **unchanged**
 - 현재 작업 상태: **Actual-P0/R1/R2, R2-MULTI-TOPOLOGY-DIAG-01, Recovery-01과 DSU-01–05 DONE/STOP, FIX-01/FIX-02 DONE/ACCEPT**다.
-  DSU-05는 `STOP_MULTIPLE_NOT_REPRODUCED`; W7-PHYS BLOCKED이며 현재 sole ACTIVE는 **W7-PHYS-OWNER-JOIN-QUOTIENT-SCOPE-FIX-01** (FROZEN / READY_FOR_IMPLEMENTATION)이다. W7-PHYS-OWNER-JOIN-EVIDENCE-01은 DONE/ACCEPT로 닫혔고 P12 NO-GO다.
-- active contract는 `W7-PHYS-OWNER-JOIN-QUOTIENT-SCOPE-FIX-01`이다. 이전 `W7-PHYS-OWNER-JOIN-ORIGINAL-SPD-EVIDENCE-01`은 exact contract `a4e049366a5a1745b9762557d72204f0b1a823de`에서 DONE/`STOP_IMPORT_OR_OWNERSHIP`로 영구 닫혔다 (SpdImportError, `SOURCE_PLANE_OWNERSHIP_IR_BOUND_EXCEEDED: quotient vertex materialization exceeds bound`, calls `1/0/0/0/1`, retry 0, 3536.391 s). 현재 fix는 `spd_adapter.py`와 producer test 및 이 세 docs의 5-file scope에서 exact two-pass rail-local projection을 구현하며, cap raise/physics/solver/wiring/original-SPD rerun은 금지한다. PowerSI 수치 개선은 0이다.
+  DSU-05는 `STOP_MULTIPLE_NOT_REPRODUCED`; W7-PHYS BLOCKED이며 현재 sole ACTIVE는 **NONE / READY_FOR_SUCCESSOR_FREEZE**다. W7-PHYS-OWNER-JOIN-QUOTIENT-SCOPE-FIX-01은 DONE/ACCEPT로 닫혔고 P12 NO-GO다.
+- active contract는 후속 `W7-PHYS-OWNER-JOIN-ORIGINAL-SPD-EVIDENCE-02` freeze 준비다. FIX-01은 synthetic+MINI에서 frozen single invocation exit 0 (`3 passed in 2.06s`)으로 CODE_TEST_ACCEPT, P0/P1 none을 받았다. global quotient cap-before-filter 제거, selected-role first-pass cap, selected-edge endpoint/anchor ID 수집, original-order second-pass bounded projection, duplicate/missing/projected-cap fail-close가 적용됐으며 cap/schema/solver/physics는 불변이다. Original SPD import/compile/P1/owner-join/`Y_global`/`Zii`/PowerSI improvement는 미증명/0이다.
 - P11 closure: commit `e8d029a`, 최종 지정 node `1 passed in 1.55s`, Sol ACCEPT; pivot ratio `1.900e15`, condition-1 lower bound `1.096e17`, `SHADOW_SOLVE_NUMERICAL_FAILURE`; trusted stamp/matrix/solve/readiness false, production unchanged
 - 최종 개정: 2026-08-31 (Asia/Seoul)
 
@@ -67,10 +67,10 @@ flowchart LR
   LD5 --> SX[W7 remains BLOCKED<br/>owner-join prerequisite needed]
   SX --> OJ[W7-PHYS-OWNER-JOIN-EVIDENCE-01 DONE / ACCEPT]
   OJ --> OG[W7-PHYS-OWNER-JOIN-ORIGINAL-SPD-EVIDENCE-01<br/>DONE / STOP_IMPORT_OR_OWNERSHIP]
-  OG --> QF[W7-PHYS-OWNER-JOIN-QUOTIENT-SCOPE-FIX-01<br/>ACTIVE / FROZEN / READY_FOR_IMPLEMENTATION]
-  QF --> QT[focused tests<br/>one parameterized node + one existing node]
-  QT --> FG{separate successor decision<br/>Sol final ACCEPT?}
-  FG -->|yes| OS[new coordinator/commit/empty-root<br/>original-SPD one-shot]
+  OG --> QF[W7-PHYS-OWNER-JOIN-QUOTIENT-SCOPE-FIX-01<br/>DONE / ACCEPT]
+  QF --> QT[focused tests<br/>3 passed in 2.06s / CODE_TEST_ACCEPT]
+  QT --> FG{NONE / READY_FOR_SUCCESSOR_FREEZE<br/>new coordinator + docs contract + Sol acceptance?}
+  FG -->|yes| OS[W7-PHYS-OWNER-JOIN-ORIGINAL-SPD-EVIDENCE-02<br/>new empty-root original-SPD one-shot]
   I[raw-v3 geometry/material] -. hash reference .-> B
   J[compiled finite topology] -. hash/owner reference .-> D
 ```
@@ -1036,15 +1036,17 @@ implementation path: global finite-via-quotient vertices were already produced, 
 duplicated into a casefold dictionary with selected-rail sidecar cap 100,000 before role filtering; at least 100,001
 valid unique vertices were scanned. It does not establish invalid SPD/topology or selected projection size.
 
-## 11. W7-PHYS-OWNER-JOIN-QUOTIENT-SCOPE-FIX-01 — sole ACTIVE
+## 11. W7-PHYS-OWNER-JOIN-QUOTIENT-SCOPE-FIX-01 — DONE/ACCEPT
 
-Status is **FROZEN / READY_FOR_IMPLEMENTATION**. Allowed scope is exactly five files:
-`spd_adapter.py`, `test_source_plane_ownership_ir_producer.py`, and these three docs. Implement a two-pass rail-local
-projection: first bound selected-role vertices, scan edges for adjacent IDs and add anchor IDs, then build the required
-bounded snapshot on the second vertex scan. Preserve missing/duplicate/projected-over-100,000 fail-closed behavior.
-Add parameterized node `test_source_plane_ownership_filters_global_quotient_before_selected_row_bound` covering
-unrelated-global exclusion, selected/adjacent/anchor retention and coverage, and projected-local-over-cap STOP before
-raw compiler/build; retain `test_source_plane_ownership_producer_roundtrip_and_atomic_failure`. Run one focused pytest
-invocation after static diff review, no full suite. Sol final ACCEPT precedes a separate successor coordinator/commit/
-empty-root original-SPD one-shot. No cap raise, schema/SQLite/new abstraction, physics/solver/wiring, or PowerSI claim;
-improvement remains **0**.
+The frozen single invocation exited 0 with `3 passed in 2.06s` (`CODE_TEST_ACCEPT`), P0/P1 none. Product changes
+removed global quotient cap-before-filter materialization and added selected-role first-pass capping, selected-edge
+endpoint/anchor ID collection, original-order second-pass bounded projection, and duplicate/missing/projected-cap
+fail-close. Cap/schema/solver/physics remain unchanged. Evidence is synthetic+MINI only; original-SPD import/compile/P1/
+owner-join/`Y_global`/`Zii`/PowerSI improvement remain unproven/0. The old original-SPD gate is retry 0 DONE/STOP and
+permanently not rerun.
+
+## 12. W7-PHYS-OWNER-JOIN-ORIGINAL-SPD-EVIDENCE-02 — successor freeze preparation
+
+Current status is **NONE / READY_FOR_SUCCESSOR_FREEZE**. A new coordinator, new docs contract commit, new empty root,
+and Sol acceptance are required before execution; no successor run is authorized yet. No production wiring/solver/
+physics change or PowerSI claim is made.
