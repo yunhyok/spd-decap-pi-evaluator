@@ -1,16 +1,16 @@
 # SPD Decap PI Evaluator 목적·기술 기준
 
 - 적용 제품: **SPD Decap PI Evaluator v0.23.1**
-- 문서 버전: **1.204**
+- 문서 버전: **1.205**
 - W5 approved/machine-frozen source-before: `main` commit `027ac7a09a3eded15f45c41860945f9d4c7f488d`
 - 상태: **G0 기준 문서** — W5 DONE; W6-BASE 260729 numerical FAIL; W7-SOURCE-IR Phase 1/2/3/4와 W7-PHYS-PROSPECTIVE-P0/P1/P2/P4/P5/P6/P7/P8/P9/P10/P11 DONE, P3/P11 DONE/STOP (모두 shadow/prerequisite 범위); Actual-P0/R1/R2와 R2-MULTI-TOPOLOGY-DIAG-01 및 Recovery-01은 DONE/STOP, FIX-01/FIX-02는 DONE/ACCEPT다. `W7-PHYS-SOURCE-ANCHOR-LEAN-DSU-EVIDENCE-01`은 DONE/`STOP_TARGET_CONTACT_MISSING_OR_AMBIGUOUS`다.
   DSU-02/DSU-03/DSU-04는 각각 `STOP_PROVENANCE_INCOMPLETE`, DSU-05는 `STOP_MULTIPLE_NOT_REPRODUCED`로 영구 종료됐다.
-  W7 production physics는 BLOCKED이고 sole ACTIVE는 **W7-PHYS-OWNER-JOIN-TERMINAL-PAD-LAYER-FIX-01** (FROZEN / READY_FOR_IMPLEMENTATION)이다. Original-SPD EVIDENCE-01/-02는 DONE/STOP_IMPORT_OR_OWNERSHIP로 영구 닫혔고 quotient-scope FIX-01은 DONE/ACCEPT다.
+  W7 production physics는 BLOCKED이고 sole ACTIVE는 **W7-PHYS-OWNER-JOIN-TERMINAL-PAD-LAYER-TEST-ORACLE-FIX-01** (FROZEN / READY_FOR_IMPLEMENTATION)이다. Original-SPD EVIDENCE-01/-02는 DONE/STOP_IMPORT_OR_OWNERSHIP로 영구 닫혔고 quotient-scope FIX-01은 DONE/ACCEPT다. Terminal pad-layer FIX-01의 제품 diff는 Sol static ACCEPT였지만 최초·유일 focused run은 test-oracle false negative로 DONE/STOP했다.
 - 현재 평가: W6-BASE는 PowerSI 수치 기준 FAIL이고 unseen/generalization은 `unknown / not_run`이다. P11은 commit `e8d029a`에서 exact 1 GHz P1 supplemental matrix를 기존 Layer-Surface 경로에 적용해 reciprocity/row-sum 뒤 factor gate까지 도달했지만, pivot ratio `1.900e15`와 condition-1 lower bound `1.096e17`로 기존 `1e13` forward-reliability 한계를 초과해 `SHADOW_SOLVE_NUMERICAL_FAILURE` STOP했다. 작은 backward residual `7.308e-17`은 forward accuracy 증거가 아니다. production solver caller, cache, topology, owner-off, `Y_global`과 `Zii`는 바뀌지 않았다.
 - 제품 solver/owner-off/`Y_global`/`Zii`와 W6 PowerSI 수치는 변경되지 않았으므로 수치 격차 개선은 0이다(새 percentage metric이 아니라 실측 improvement absence를 뜻한다).
-- Sole ACTIVE item (current): **W7-PHYS-OWNER-JOIN-TERMINAL-PAD-LAYER-FIX-01** — **FROZEN / READY_FOR_IMPLEMENTATION** at source-before `8609c806443b4df18a9ad9b55e56987ec8bcbaec`. EVIDENCE-02 is permanent DONE/STOP retry 0/no rerun: import/compile/P1/observer/report `1/0/0/0/1`, error `SOURCE_PLANE_OWNERSHIP_IR_INCOMPLETE: terminal raw selection is ambiguous`. The accepted causal scope is the obsolete optional immediate `endpoint_layer` pad join; retained SPD `source_layer` is authoritative for the external terminal PadDef/Regular lookup, while selected `component_layer` remains authoritative for the rail island binding. Only `spd_adapter.py`, one existing producer test, and these three docs may change. No schema/raw compiler/solver/coordinator/original-SPD run or production/PowerSI promotion; improvement remains 0.
+- Sole ACTIVE item (current): **W7-PHYS-OWNER-JOIN-TERMINAL-PAD-LAYER-TEST-ORACLE-FIX-01** — **FROZEN / READY_FOR_IMPLEMENTATION** at implementation base parent `8964331b014292d2820373d69549034c04531871`. The preceding product diff remains unchanged and statically accepted. Its one allowed focused run ended `1 failed in 1.65s` before downstream assertions because the test compared `endpoint_layer=None` with deliberately cleared `contact_component_layer=None`; the positive import had already returned. The predecessor is permanent DONE/`STOP_TEST_ORACLE_FALSE_NEGATIVE` and is not rerun. The successor changes only that discriminator from `contact_component_layer` to retained `source_layer`, then permits the same node once. No product/schema/raw compiler/solver/coordinator/original-SPD run or production/PowerSI promotion; improvement remains 0.
 - P11 closure: commit `e8d029a`, 최종 지정 node `1 passed in 1.55s`, Sol ACCEPT; matrix SHA `b0680d39fcc0f9bad2c6e619b6910fd3e52765a610b940e31f7dc6cb1be79c0e`; accepted stamp/matrix/solve/readiness flags false, production unchanged.
-- 현재 권한: main-only와 `accuracy_parse.py` 보존을 유지한다. FIX-01은 문서 동결 뒤 Luna가 정확히 두 구현/테스트 파일만 수정하고 Sol 정적 ACCEPT 뒤 기존 producer test node를 pytest 한 번만 실행한다. 전체 suite, compileall, original-SPD, schema/raw compiler/solver/coordinator 변경과 EVIDENCE-01/-02 재실행은 금지한다. Production owner-off/wiring/solve/`Y_global`/`Zii`/PowerSI 승격과 accuracy claim도 금지한다.
+- 현재 권한: main-only와 `accuracy_parse.py` 보존을 유지한다. Predecessor FIX-01 run은 영구 STOP이며 재실행하지 않는다. Successor docs freeze 뒤 Luna는 기존 producer test의 discriminator만 `contact_component_layer`에서 `source_layer`로 한 줄 수정하고 `spd_adapter.py`를 보존한다. Sol 정적 ACCEPT 뒤 동일 node를 fresh pytest invocation으로 정확히 한 번 실행한다. 전체 suite, compileall, original-SPD, schema/raw compiler/solver/coordinator 변경과 EVIDENCE-01/-02 재실행은 금지한다. Production owner-off/wiring/solve/`Y_global`/`Zii`/PowerSI 승격과 accuracy claim도 금지한다.
 - DSU-03 closure: contract `35b11484eabfce80d27c7a273b92fd68c5f37102`, frozen coordinator 115,960 bytes/SHA-256 `fb6dc30adabd8c93453dcc0791bf99f2464d49b8c90c76c8ce74f9dbd1a93402`, report 1,511 bytes/SHA-256 `c052258fe5ab389169b7e4d33853d90dcc29394057cb186f2ed548b2aead6b17`, sibling receipt 2,238 bytes/SHA-256 `fee03ea53c5c7d4a308711a94cd9ff5ee2b45eacb1f29b5941b44ba36ce2caae`다. calls는 `1/1/1/1`, retry/runtime guards 0이고 V1/V2/E1/E2/V3는 미평가다. observed immediate layer는 `Signal$L02(DGND)`이고 remote selected ground는 `Signal$L29(DGND)`인데 둘의 동일성을 강제한 observer 계약 때문에 pre-graph STOP했다. 이는 source/product data 결손이 아니며 재시도·재사용·재실행하지 않는다.
 - DSU-04 closure: contract `28845c0bd718d61fb611414005d1b325b19a9eca`, frozen coordinator 119,092 bytes/SHA-256 `df2c43d45f8b86a016015b4163cddeabcda8211a59520a88cb9cf1fc677634ee`, report 1,567 bytes/SHA-256 `72ca6d6eaeb81d39c91785a4c6243ee34f769f1d6ea07f74e03d6b78e7cad389`, sibling receipt 2,238 bytes/SHA-256 `01e4618f9b9af0024fabfe1ad13db148482a9d1b8eaa2a29884507797cd0b64c`다. calls는 `1/1/1/1`, retry/runtime guards 0이고 `power immediate landing contact is invalid`에서 pre-graph STOP했다. immediate map 0은 제품의 direct/trace finite-path 계약에서 허용되므로 source/product 결손이 아니라 observer 과잉 계약이며, actual path와 V1/V2/E1/E2/V3는 미평가다. 재시도·재사용·재실행하지 않는다.
 - coordinator freeze: historical DSU-05 coordinator는 `D:\SPD-Decap-PI-Evaluator-W7\_coordinator_temp\source_anchor_lean_dsu_evidence_v5.py` (119,869 bytes, SHA-256 `601e7404f85d4ce64c43203a1af94b28144c82e516651f6a241d75b3f6c8d9bb`)이며 in-memory compile/self-check 각 1회 PASS, 195.51 bytes/target vertex와 Sol final ACCEPT를 기록한다. exact contract는 docs-only commit `314f3a64aefb7b60c975a93cc7e6d701ab3debc4`다.
@@ -354,8 +354,8 @@ flowchart TD
 | Source IR 한계 | P0–P10은 contact admissibility부터 exact 1 GHz atomic replacement recipe, shadow topology/P1 block binding과 augmented component/pruning closure까지의 prerequisite를 증명했다. P11은 actual shadow matrix/factor gate를 실행했지만 forward reliability STOP했다. trusted solve, production assembly와 `Zii` 연결, PowerSI 근접 정확성은 증명하지 않았다. |
 | 생산 물리 상태 | surface-patch plane current-spreading R/L이 유일한 credible direction이지만 deterministic replacement stamp, production global assembly와 disjoint owner-off ledger가 없어 **NOT READY/STOP**이다. |
 | 현재 작업 상태 | Actual-P0/R1/R2, DIAG-01, Recovery-01과 DSU-01–05는 영구 DONE/STOP했다. FIX-01/FIX-02는 DONE/ACCEPT다. DSU-05는 exact contract `314f3a64aefb7b60c975a93cc7e6d701ab3debc4`에서 `STOP_MULTIPLE_NOT_REPRODUCED`로 닫혔다. |
-| 현재 ACTIVE | **W7-PHYS-OWNER-JOIN-TERMINAL-PAD-LAYER-FIX-01** — **FROZEN / READY_FOR_IMPLEMENTATION**; retained `source_layer` terminal pad provenance correction, synthetic-only |
-| 현재 gate | **W7-PHYS-OWNER-JOIN-TERMINAL-PAD-LAYER-FIX-01** — Luna two-file edit, Sol static ACCEPT, existing producer pytest node exactly once; no original-SPD/production/PowerSI run |
+| 현재 ACTIVE | **W7-PHYS-OWNER-JOIN-TERMINAL-PAD-LAYER-TEST-ORACLE-FIX-01** — **FROZEN / READY_FOR_IMPLEMENTATION**; one-line test discriminator correction, synthetic-only |
+| 현재 gate | **W7-PHYS-OWNER-JOIN-TERMINAL-PAD-LAYER-TEST-ORACLE-FIX-01** — Luna one-line test edit, Sol static ACCEPT, existing producer pytest node exactly once; no product/original-SPD/production/PowerSI run |
 | 사전 물리 가설 | 대상 bare rail의 exact old-Maxwell owner를 source-derived P1 N-port로 **교체**할 때의 순 capacitance 변화 `ΔC = Ceff(P1) - Ceff(old owner)`가 기존 100 kHz/1 MHz PowerSI 오차 성분을 설명할 수 있는지를 후속 별도 gate에서 무피팅으로 반증한다. actual scenario 생성 자체는 정확도 개선 증거가 아니다. |
 
 세부 실행 이력, exact artifact identity와 current dirty file set은
@@ -462,7 +462,7 @@ an immediate artwork-derived `endpoint_layer`. The ownership producer neverthele
 PadDef/Regular rows by `(incident_padstack, endpoint_layer)`. This obsolete optional-field dependency stopped before the
 raw compiler/callback/ownership IR. EVIDENCE-02 alone cannot re-prove the six contacts because import did not return.
 
-## 18. W7-PHYS-OWNER-JOIN-TERMINAL-PAD-LAYER-FIX-01 — FROZEN / READY_FOR_IMPLEMENTATION
+## 18. W7-PHYS-OWNER-JOIN-TERMINAL-PAD-LAYER-FIX-01 — DONE / STOP_TEST_ORACLE_FALSE_NEGATIVE
 
 Source-before is `8609c806443b4df18a9ad9b55e56987ec8bcbaec`. For target terminals only, raw pad selection and callback join use
 the retained SPD `source_layer`; the callback also fails closed unless the selected raw Node layer matches it. The
@@ -475,6 +475,17 @@ Allowed scope is `src/spd_decap_pi/spd_adapter.py`,
 `test_source_plane_ownership_component_layer_is_authoritative_for_mismatched_endpoint` must cover a direct/complete
 terminal with `endpoint_layer=None`, retained `source_layer=Signal$TOP`, source-layer raw pad/provenance selection,
 component-layer terminal binding, and source-layer/raw-Node mismatch STOP while retaining its zero/multiple component
-STOP checks. After Sol static ACCEPT, exactly one pytest invocation of that node is allowed; no retry, full suite,
-compileall, original-SPD, solver, coordinator, production or PowerSI run. Claim ceiling is synthetic importer/ownership
-producer semantics only; numerical improvement remains **0**.
+STOP checks. Sol static review accepted the product/test diff with no P0-P3. The only allowed invocation then ended
+`1 failed in 1.65s` at the test's `assert mismatched`: both missing `endpoint_layer` and deliberately cleared
+`contact_component_layer` became the same string `"None"`. The positive import had already returned, but downstream pad,
+terminal and tampered-Node assertions were not reached. This is a deterministic test-oracle false negative, not product
+acceptance or a product-path failure. The invocation is permanent and is not retried.
+
+## 19. W7-PHYS-OWNER-JOIN-TERMINAL-PAD-LAYER-TEST-ORACLE-FIX-01 — FROZEN / READY_FOR_IMPLEMENTATION
+
+Keep the statically accepted `spd_adapter.py` diff byte-for-byte unchanged. In the existing test, change only the
+`mismatched` discriminator from `contact_component_layer` to retained `source_layer`, so `endpoint_layer=None` is
+correctly distinguished from `source_layer=Signal$TOP`. No fixture, product code, assertions, schema or abstraction is
+added. After Sol static ACCEPT, exactly one fresh invocation of the same focused node is allowed. No retry, full suite,
+compileall, original-SPD, solver, coordinator, production or PowerSI run. Claim ceiling remains synthetic importer/
+ownership-producer semantics; numerical improvement remains **0**.
