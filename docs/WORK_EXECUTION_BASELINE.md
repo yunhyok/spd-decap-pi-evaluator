@@ -1,11 +1,11 @@
 # SPD Decap PI Evaluator 작업 기준
 
 - 적용 제품: **SPD Decap PI Evaluator v0.23.1**
-- 문서 버전: **1.198**
-- 상위 기준: [목적·기술 기준](PRODUCT_PURPOSE_AND_TECHNICAL_BASELINE.md) v1.197; [Source-derived physical IR](SOURCE_DERIVED_PHYSICAL_IR.md) v1.32
+- 문서 버전: **1.199**
+- 상위 기준: [목적·기술 기준](PRODUCT_PURPOSE_AND_TECHNICAL_BASELINE.md) v1.198; [Source-derived physical IR](SOURCE_DERIVED_PHYSICAL_IR.md) v1.33
 - 현재 상태: W6 numerical FAIL; W7-SOURCE-IR-P1/P2/P3/P4 및 W7-PHYS-PROSPECTIVE-P0/P1/P2/P3/P4/P5/P6/P7/P8/P9/P10/P11 DONE, P3/P11 DONE/STOP; Actual-P0/R1/R2, DIAG-01과 Recovery-01 DONE/STOP; FIX-01/FIX-02 DONE/ACCEPT; `W7-PHYS-SOURCE-ANCHOR-LEAN-DSU-EVIDENCE-01` DONE/`STOP_TARGET_CONTACT_MISSING_OR_AMBIGUOUS`다.
   `W7-PHYS-SOURCE-ANCHOR-LEAN-DSU-EVIDENCE-02`/`03`/`04` DONE/`STOP_PROVENANCE_INCOMPLETE`다.
-  `W7-PHYS-SOURCE-ANCHOR-LEAN-DSU-EVIDENCE-05` DONE/`STOP_MULTIPLE_NOT_REPRODUCED`; W7-PHYS production physics remains BLOCKED, sole ACTIVE is **W7-PHYS-OWNER-JOIN-EVIDENCE-01**; production physics/`Zii` unchanged.
+  `W7-PHYS-SOURCE-ANCHOR-LEAN-DSU-EVIDENCE-05` DONE/`STOP_MULTIPLE_NOT_REPRODUCED`; W7-PHYS production physics remains BLOCKED, current ACTIVE is **NONE**; W7-PHYS-OWNER-JOIN-EVIDENCE-01 is DONE/ACCEPT; production physics/`Zii` unchanged.
 - 최종 개정: 2026-08-31 (Asia/Seoul)
 
 ## 1. 압축 후 즉시 복구 카드
@@ -19,10 +19,10 @@ context가 압축되거나 새 session에서 작업을 재개하면 이 표만 �
 | 현재 branch | `main`만 사용 |
 | 이 문서 정리의 source-before HEAD | `74d49077ec6f67a7bdebe1e1815da4f2c7897771` (exact main HEAD for W7-PHYS-OWNER-JOIN-EVIDENCE-01) |
 | 현재 assessment | W6-BASE numerical FAIL; Phase 4/P0–P11은 prerequisite/shadow 범위 DONE. DSU-05의 선택된 6-contact source boundary는 모두 singleton이며 all/complete graph가 동일해 R2 multiple-selector 가설이 재현되지 않았다. 제품 solver/owner-off/`Y_global`/`Zii`와 W6 PowerSI 수치는 변경되지 않아 수치 격차 개선은 0이다(새 percentage metric이 아니라 실측 improvement absence) |
-| 현재 active work item | **W7-PHYS-OWNER-JOIN-EVIDENCE-01** — hash-bound source-to-production replacement-owner join evidence; DSU-05는 `STOP_MULTIPLE_NOT_REPRODUCED`, W7 production physics는 BLOCKED |
+| 현재 active work item | **NONE** — W7-PHYS-OWNER-JOIN-EVIDENCE-01 DONE/ACCEPT at technical commit `2b27e30c6fe41f03281d3943568d0905d84d8af3`; W7 production physics remains BLOCKED |
 | 현재 정확성 상태 | `260729 retrospective FAIL`; unseen/generalization `unknown / not_run` |
-| current authorization | main-only, `accuracy_parse.py` 보존. Phase A/B의 명시된 producer/consumer 파일·focused tests와 세 기준 문서만 허용하며 physics/solver/`Y_global`/`Zii`는 불변이다. 원본 SPD, scenario save/load, numerical solve, Touchstone, P12, owner-off production wiring, fitting, release/build/version bump는 금지한다. |
-| 다음 gate | **W7-PHYS-OWNER-JOIN-EVIDENCE-01 ACTIVE** — root cause는 global contact 복수 후보와 per-rail exact-one의 혼동이며, Phase A projection fix와 Phase B read-only join observer만 수행한다. |
+| current authorization | main-only, `accuracy_parse.py` 보존. 닫힌 Phase A/B gate에는 추가 code/test 실행 권한이 없으며, 별도 frozen successor review 전까지 원본 SPD 실행을 포함한 후속 작업을 열지 않는다. physics/solver/`Y_global`/`Zii`는 불변이다. |
+| 다음 gate | 별도 frozen original-SPD one-shot preflight 후보 — **NOT READY/NOT ACTIVE** until reviewed; W7-PHYS-OWNER-JOIN-EVIDENCE-01은 DONE/ACCEPT |
 | 정확한 재개 조건 | PowerSI 오차를 설명할 별도의 source-derived physical block, authoritative owner relation, deterministic replacement stamp, 무피팅 limiting-case invariant와 disjoint owner ledger가 함께 식별되고 frozen contract review를 통과해야 한다. |
 | 핵심 증거 | [W6-BASE completed evidence](#w6-base-completed-evidence-260729), [W7 결과 재평가](#12-w7-결과-재평가와-후속-과제-판정) |
 
@@ -34,13 +34,13 @@ context가 압축되거나 새 session에서 작업을 재개하면 이 표만 �
 
 | 구분 | 현재 권위 |
 |---|---|
-| accepted / committed | Phase 1 `82370b6`, Phase 2 `75ac0a0`, Phase 3 `5d2c353`, Phase 4 `3b76af4`, P0 `4dc855a`, P1 `f823a53`, P2 `90f6b54`, P3 `b8a79f1`, P4 `39fd4fa`, P5 `d7e7278`, P6 `6793bb2`, P7 `f1c2968`, P8 `abf79cf`, P9 `593e070`, P10 `7f9c498`, P11 `e8d029a`; 모두 prerequisite/shadow 범위이며 production `Y_global`/`Zii` 불변 |
-| current candidate | DSU-01 DONE/`STOP_TARGET_CONTACT_MISSING_OR_AMBIGUOUS`; DSU-02/DSU-03/DSU-04 DONE/`STOP_PROVENANCE_INCOMPLETE`; DSU-05 DONE/`STOP_MULTIPLE_NOT_REPRODUCED`; Recovery-01/DIAG-01은 영구 DONE/STOP, FIX-01/FIX-02는 DONE/ACCEPT; P12 prospective review NO-GO; sole ACTIVE `W7-PHYS-OWNER-JOIN-EVIDENCE-01` |
+| accepted / committed | Phase 1 `82370b6`, Phase 2 `75ac0a0`, Phase 3 `5d2c353`, Phase 4 `3b76af4`, P0 `4dc855a`, P1 `f823a53`, P2 `90f6b54`, P3 `b8a79f1`, P4 `39fd4fa`, P5 `d7e7278`, P6 `6793bb2`, P7 `f1c2968`, P8 `abf79cf`, P9 `593e070`, P10 `7f9c498`, P11 `e8d029a`, W7 owner-join `2b27e30c6fe41f03281d3943568d0905d84d8af3` DONE/ACCEPT read-only closure; 모두 prerequisite/shadow 범위이며 production `Y_global`/`Zii` 불변 |
+| current candidate | DSU-01 DONE/`STOP_TARGET_CONTACT_MISSING_OR_AMBIGUOUS`; DSU-02/DSU-03/DSU-04 DONE/`STOP_PROVENANCE_INCOMPLETE`; DSU-05 DONE/`STOP_MULTIPLE_NOT_REPRODUCED`; Recovery-01/DIAG-01은 영구 DONE/STOP, FIX-01/FIX-02는 DONE/ACCEPT; P12 prospective review NO-GO; W7-PHYS-OWNER-JOIN-EVIDENCE-01 DONE/ACCEPT; current ACTIVE NONE |
 | static evidence | P11 Sol ACCEPT; default `None` arithmetic/cache identity 불변, supplemental cache-ineligible, P10/P9/block/owner/termination identity와 original inventory/CSC/cache 불변 확인. P12 review는 synthetic bridge 때문에 actual owning-block attribution이 non-identifying이라고 판정 |
 | runtime evidence | DSU-05 report/receipt는 exact root에 persisted됐다. import/analyze/observer/report `1/1/1/1`, retry와 세 runtime guard 0, 3V+2E PASS, 6 contacts direct/complete/singleton, all/complete root exact 동일이다. R2 compiled-artifact multiple 기록은 historical evidence로 유지하지만 선택된 source boundary에서는 재현되지 않았다. |
 | runtime 미증명 | old-owner replacement, trusted solve와 실제 SPD/PowerSI 영향은 미증명이다. DSU-05는 source boundary 진단이며 production topology 또는 accuracy evidence가 아니다. |
 | 별도 사용자 파일 | untracked `accuracy_parse.py`; 보존·미수정·미stage |
-| candidate staging / acceptance | `W7-PHYS-OWNER-JOIN-EVIDENCE-01` ACTIVE; DSU-05 closure와 이 gate는 production/release/PowerSI acceptance가 아님 |
+| candidate staging / acceptance | W7-PHYS-OWNER-JOIN-EVIDENCE-01 DONE/ACCEPT; current ACTIVE NONE. 다음 original-SPD one-shot preflight는 NOT READY/NOT ACTIVE이며, 이 gate는 production/release/PowerSI acceptance가 아님 |
 
 ## 2. 문서 사용 규칙
 
@@ -562,7 +562,8 @@ falsifiable physical/analytic limiting-case invariant + disjoint owner ledger와
 - W7은 source/provenance와 수학·운영 기반을 개선했지만 production network,
   계산된 `Zii`, PowerSI correlation을 바꾸지 않았다.
 - 따라서 현재 product risk는 그대로 **외부 정확성 미달**이며, current ACTIVE는
-  **W7-PHYS-OWNER-JOIN-EVIDENCE-01**이다.
+  **NONE**이다. W7-PHYS-OWNER-JOIN-EVIDENCE-01은 DONE/ACCEPT로 닫혔고, 다음
+  original-SPD one-shot preflight는 NOT READY/NOT ACTIVE다.
   DSU-05는 `STOP_MULTIPLE_NOT_REPRODUCED`로 DONE했고 W7-PHYS는 BLOCKED다.
   Actual-P0/R1/R2는 scenario 없이 DONE/STOP했고 FIX-01/FIX-02는 DONE/ACCEPT다. P3는 `CONTACT_INTERFACE_RANK_LOSS` STOP, P4는 base cut-set
   CLOSED, P5는 deterministic shadow plan PLANNED, P6는 scenario/termination commutation
@@ -752,7 +753,8 @@ flowchart LR
   LD3 --> LD4{W7-PHYS-SOURCE-ANCHOR-LEAN-DSU-EVIDENCE-04 DONE / STOP_PROVENANCE_INCOMPLETE}
   LD4 --> LD5[W7-PHYS-SOURCE-ANCHOR-LEAN-DSU-EVIDENCE-05 DONE / STOP<br/>multiple candidate not reproduced]
   LD5 --> SX[W7 remains BLOCKED<br/>ACTIVE NONE]
-  SX --> OJ[W7-PHYS-OWNER-JOIN-EVIDENCE-01 ACTIVE]
+  SX --> OJ[W7-PHYS-OWNER-JOIN-EVIDENCE-01 DONE / ACCEPT]
+  OJ --> NX[W7 remains BLOCKED<br/>ACTIVE NONE<br/>original-SPD one-shot NOT FROZEN]
   R -->|예| H
   D[17DG foundation] -. production binding 필요 .-> H
   E[17DO/17DP owner evidence] -. identity join 필요 .-> H
@@ -770,7 +772,7 @@ P3 semantic result는 `CONTACT_INTERFACE_RANK_LOSS` STOP, P4는 CLOSED, P5는 PL
 P6와 P7은 PASSED고 P8은 materialized, P9은 bound, P10은 component-closed다. P11은 factor
 forward-reliability numerical STOP이고 P12는 NO-GO다. Actual-P0와 R1 original-SPD one-shot은 selector
 identity mismatch로 DONE/STOP했고 FIX-01/FIX-02는 DONE/ACCEPT다. R2는 actual multiple STOP으로
-닫혔고 DIAG-01도 report-finalization STOP으로 닫혔다. old component evidence와 DSU-01–05는 모두 DONE/STOP했고 current ACTIVE는 **W7-PHYS-OWNER-JOIN-EVIDENCE-01**이다. 이는 DSU-05의 자동 successor가 아니라 새로 frozen된 evidence gate다. Recovery-01과 DSU-05의 historical closure는 자동 successor 또는 physical item을 열지 않는다. 아래 조건을 만족하는 새 causal block이 식별될 때만 별도 frozen gate를 연다.
+닫혔고 DIAG-01도 report-finalization STOP으로 닫혔다. old component evidence와 DSU-01–05는 모두 DONE/STOP했고 W7-PHYS-OWNER-JOIN-EVIDENCE-01은 DONE/ACCEPT로 닫혔다. 현재 ACTIVE는 **NONE**이며, 다음 original-SPD one-shot은 별도 frozen review 전까지 NOT READY/NOT ACTIVE다. 이 gate는 DSU-05의 자동 successor가 아니라 새로 frozen된 evidence gate였다. Recovery-01과 DSU-05의 historical closure는 자동 successor 또는 physical item을 열지 않는다. 아래 조건을 만족하는 새 causal block이 식별될 때만 별도 frozen gate를 연다.
 
 1. source-derived geometry/material provenance가 있다.
 2. 대상 rail 전체에 적용 가능한 physical model 또는 omitted-block candidate다.
@@ -1918,10 +1920,10 @@ deficit은 `105.501727 pF`, `105.441503 pF`다. L30/L29 exact old-Maxwell owner�
 gate에서 disjoint owner-off/addition, 구간, anchor 비악화와 새 low-band local peak 부재를
 판정한다. 기존 P11은 1 GHz 단일점이므로 이 two-anchor 판정을 대신하지 않는다.
 
-### 12.37 W7-PHYS-OWNER-JOIN-EVIDENCE-01 — sole ACTIVE frozen gate
+### 12.37 W7-PHYS-OWNER-JOIN-EVIDENCE-01 — DONE/ACCEPT closure
 
 이 §12.37은 §12.35/§12.36와 D-047/D-048의 해당 closure 당시 ACTIVE NONE 결론을
-supersede하는 현행 gate이며, 그 기록들은 historical-as-of-that-closure로 보존한다.
+supersede했던 historical gate 기록이며, 아래 §12.38 closure가 이를 supersede한다.
 
 source-before는 exact `main` HEAD `74d49077ec6f67a7bdebe1e1815da4f2c7897771`이다. 목적은
 physics/solver/`Y_global`/`Zii`를 바꾸지 않고 source-derived P1 replacement와
@@ -1960,3 +1962,20 @@ numerical solve, Touchstone, P12, owner-off production wiring, fitting, release/
 bump는 금지한다. Phase A+B focused PASS, Sol ACCEPT, exact tracked diff review와 docs
 closure commit 뒤에만 별도 frozen original-SPD one-shot을 고려할 수 있으며 지금 ready로
 주장하지 않는다.
+
+### 12.38 W7-PHYS-OWNER-JOIN-EVIDENCE-01 closure — DONE/ACCEPT; current ACTIVE NONE
+
+기술 commit `2b27e30c6fe41f03281d3943568d0905d84d8af3`에서 gate를 DONE/ACCEPT로 닫았다.
+Phase A는 global candidate/evidence closure 후 expected `(net, layer)`별 exact-one
+projection을 고정했고, Phase B는 source/P1 contact와 production old-Maxwell rows를
+fingerprint, partial ordinal/reduced aggregation, replaced/retained disjoint ledger 및
+final hash를 갖는 read-only report로 묶었다. persisted DB/table/schema/asset 변경은 0,
+report flags는 `shadow_only=true`, `replacement_ready=false`, `production_ready=false`다.
+첫 두-node validation은 consumer PASS와 producer test-only cloned-island FAIL이었고,
+post-externalization ownership snapshot fixture 보정 후 producer-only rerun은
+`1 passed in 1.52s`; consumer는 재실행하지 않았다. Sol ACCEPT와 tracked scope는 네
+implementation/test 파일로 한정된다. `layerwise_network.py`, production
+wiring/compiler/cache/solver/`Y_global`/`Zii`는 변경되지 않았다. 이 closure는 actual
+production global-multi compile, original-SPD 성공 또는 PowerSI numerical improvement를
+증명하지 않으며 improvement는 **0**이다. 현재 ACTIVE는 **NONE**이고 다음 original-SPD
+one-shot preflight는 별도 frozen review 전까지 NOT READY/NOT ACTIVE다.

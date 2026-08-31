@@ -1,13 +1,13 @@
 # SPD Decap PI Evaluator v0.23.1 — Source-derived physical IR
 
-- 문서 버전: **1.32**
+- 문서 버전: **1.33**
 - 계약 상태: **ACCEPTED** — source-derived provenance/ownership prerequisite의 기술 기준
-- committed 구현: `source-plane-ownership-ir-v1` + Phase 3 shadow consumer + v2 `contact_boundary` (`3b76af4`) + P0 (`4dc855a`) + P1 (`f823a53`) + P2 (`90f6b54`) + P3 (`b8a79f1`) + P4 base cut-set (`39fd4fa`) + P5 shadow rewire plan (`d7e7278`) + P6 scenario commutation audit (`6793bb2`) + P7 atomic recipe (`f1c2968`) + P8 topology embedding (`abf79cf`) + P9 nodal-block binding (`593e070`) + P10 component closure (`7f9c498`) + P11 supplemental solve gate (`e8d029a`) + ownership component-layer selector fix (`b0b90db`) + component-cardinality classifier (`6fc06dd`)
-- runtime acceptance: **Phase 4와 P0–P10 focused PASS / Sol ACCEPT; P3 semantic STOP, P4 structural CLOSED, P5 PLANNED, P6/P7 PASSED, P8 materialized, P9 bound, P10 component-closed; P11 focused test PASS / numerical result STOP**
+- committed 구현: `source-plane-ownership-ir-v1` + Phase 3 shadow consumer + v2 `contact_boundary` (`3b76af4`) + P0 (`4dc855a`) + P1 (`f823a53`) + P2 (`90f6b54`) + P3 (`b8a79f1`) + P4 base cut-set (`39fd4fa`) + P5 shadow rewire plan (`d7e7278`) + P6 scenario commutation audit (`6793bb2`) + P7 atomic recipe (`f1c2968`) + P8 topology embedding (`abf79cf`) + P9 nodal-block binding (`593e070`) + P10 component closure (`7f9c498`) + P11 supplemental solve gate (`e8d029a`) + ownership component-layer selector fix (`b0b90db`) + component-cardinality classifier (`6fc06dd`) + W7 owner-join closure (`2b27e30c6fe41f03281d3943568d0905d84d8af3`)
+- runtime acceptance: **Phase 4와 P0–P10 focused PASS / Sol ACCEPT; P3 semantic STOP, P4 structural CLOSED, P5 PLANNED, P6/P7 PASSED, P8 materialized, P9 bound, P10 component-closed; P11 focused test PASS / numerical result STOP; W7 owner-join commit `2b27e30c6fe41f03281d3943568d0905d84d8af3` DONE/ACCEPT with producer-only corrected rerun `1 passed in 1.52s` (consumer not rerun)**. This is read-only prerequisite evidence and does not claim actual production global-multi compile, original-SPD success, or PowerSI improvement.
 - production 상태: solver, owner-off, `Y_global`, `Zii` **unchanged**
 - 현재 작업 상태: **Actual-P0/R1/R2, R2-MULTI-TOPOLOGY-DIAG-01, Recovery-01과 DSU-01–05 DONE/STOP, FIX-01/FIX-02 DONE/ACCEPT**다.
-  DSU-05는 `STOP_MULTIPLE_NOT_REPRODUCED`; W7-PHYS BLOCKED이며 sole ACTIVE는 **W7-PHYS-OWNER-JOIN-EVIDENCE-01**이다. P12 NO-GO다.
-- active contract는 source-before exact `main` HEAD `74d49077ec6f67a7bdebe1e1815da4f2c7897771`에서 owner-join evidence만 다루며 physics/solver/`Y_global`/`Zii`와 PowerSI 수치 개선(0)은 불변이다.
+  DSU-05는 `STOP_MULTIPLE_NOT_REPRODUCED`; W7-PHYS BLOCKED이며 현재 sole ACTIVE는 **NONE**이다. W7-PHYS-OWNER-JOIN-EVIDENCE-01은 DONE/ACCEPT로 닫혔고 P12 NO-GO다.
+- active contract는 NONE이다. W7-PHYS-OWNER-JOIN-EVIDENCE-01은 source-before exact `main` HEAD `74d49077ec6f67a7bdebe1e1815da4f2c7897771`에서 owner-join evidence를 DONE/ACCEPT로 닫았으며 physics/solver/`Y_global`/`Zii`와 PowerSI 수치 개선(0)은 불변이다. 다음 original-SPD one-shot preflight는 별도 frozen review 전까지 NOT READY/NOT ACTIVE다.
 - P11 closure: commit `e8d029a`, 최종 지정 node `1 passed in 1.55s`, Sol ACCEPT; pivot ratio `1.900e15`, condition-1 lower bound `1.096e17`, `SHADOW_SOLVE_NUMERICAL_FAILURE`; trusted stamp/matrix/solve/readiness false, production unchanged
 - 최종 개정: 2026-08-31 (Asia/Seoul)
 
@@ -65,7 +65,8 @@ flowchart LR
   LD3 --> LD4{W7-PHYS-SOURCE-ANCHOR-LEAN-DSU-EVIDENCE-04 DONE / STOP<br/>empty immediate overstrict contract}
   LD4 --> LD5[W7-PHYS-SOURCE-ANCHOR-LEAN-DSU-EVIDENCE-05 DONE / STOP<br/>multiple candidate not reproduced]
   LD5 --> SX[W7 remains BLOCKED<br/>ACTIVE NONE]
-  SX --> OJ[W7-PHYS-OWNER-JOIN-EVIDENCE-01 ACTIVE]
+  SX --> OJ[W7-PHYS-OWNER-JOIN-EVIDENCE-01 DONE / ACCEPT]
+  OJ --> NX[W7 remains BLOCKED<br/>ACTIVE NONE<br/>original-SPD one-shot NOT FROZEN]
   I[raw-v3 geometry/material] -. hash reference .-> B
   J[compiled finite topology] -. hash/owner reference .-> D
 ```
@@ -940,7 +941,7 @@ P11 1 GHz gate만으로 이 두 anchor를 증명하지 않으므로 accuracy pro
 two-anchor checkpoint를 별도로 요구한다.
 
 Post-DSU-05 readiness는 **NOT_READY/STOP**이다. candidate old-Maxwell owner를 source-derived P1 N-port atomic replacement로 바꾸려면, 선택된 L30/L29 finite-area source footprint/P1 terminal identity를 실제 `Y_global`이 소비하는 정확한 old-Maxwell owner closed set에 hash-bound bijectively join하는 ledger가 필요하다. 이 ledger가 rail-complete scope와 replaced/retained disjoint partition을 증명해야 하지만, DSU-05의 count/SHA-only IDs, compiled-only Recovery, full certificate/ownership IR 부재와 exact join key 부재로는 구성할 수 없다. 따라서 admissible next gate, DSU-06/FIX-03/P12/production/rerun은 없고 ACTIVE NONE이며 PowerSI numerical improvement는 0이다.
-이 문장은 74d readiness audit 당시의 historical conclusion이며, 현행 sole ACTIVE는 아래 §8의 W7-PHYS-OWNER-JOIN-EVIDENCE-01이 supersede한다.
+이 문장은 74d readiness audit 당시의 historical conclusion이며, 당시 §8의 W7-PHYS-OWNER-JOIN-EVIDENCE-01이 이를 supersede했다. 이후 §9 closure가 §8을 supersede했으며 현재 ACTIVE는 NONE이다.
 
 ## 7. 주장 한계
 
@@ -955,7 +956,7 @@ Post-DSU-05 readiness는 **NOT_READY/STOP**이다. candidate old-Maxwell owner�
   않는다.
 - 17DU/17DV historical STOP은 재실행하거나 성공으로 재분류하지 않는다.
 
-## 8. W7-PHYS-OWNER-JOIN-EVIDENCE-01 — ACTIVE contract
+## 8. W7-PHYS-OWNER-JOIN-EVIDENCE-01 — DONE/ACCEPT closure
 
 source-before는 exact `main` HEAD `74d49077ec6f67a7bdebe1e1815da4f2c7897771`이다.
 이 gate는 source-derived P1 replacement와 production old-Maxwell owner의 hash-bound
@@ -997,3 +998,21 @@ bump는 이 gate에서 금지한다. Batched implementation 후 Sol static code 
 `git diff --check`와 tracked diff review는 static check로서 executable 횟수에 포함되지
 않으며 closure 직전 전체 gate 기준 각 최대 1회다. 두 Phase PASS, Sol ACCEPT, exact tracked
 diff review와 docs closure commit 전에는 후속 original-SPD one-shot을 ready로 간주하지 않는다.
+
+## 9. W7-PHYS owner-join closure — current ACTIVE NONE
+
+`W7-PHYS-OWNER-JOIN-EVIDENCE-01`은 technical commit
+`2b27e30c6fe41f03281d3943568d0905d84d8af3`에서 DONE/ACCEPT다. Phase A는 global
+candidate/evidence closure 뒤 expected `(net, layer)`별 exact-one projection을 고정했고,
+Phase B는 source/P1 contact와 production old-Maxwell rows를 기존 fingerprint,
+partial ordinal/reduced aggregation, replaced/retained disjoint hashes로 묶는 read-only
+report를 냈다. persisted DB/table/schema/asset 변경은 0이며 flags는
+`shadow_only=true`, `replacement_ready=false`, `production_ready=false`다. 첫 두-node
+validation은 consumer PASS와 producer test-only cloned-island FAIL이었고, post-
+externalization snapshot fixture 보정 후 producer-only rerun은 `1 passed in 1.52s`였으며
+consumer는 재실행하지 않았다. Sol ACCEPT와 tracked scope는 네 implementation/test
+파일에 한정된다. `layerwise_network.py`, production wiring/compiler/cache/solver/
+`Y_global`/`Zii`는 변경되지 않았다. 이 closure는 actual production global-multi compile,
+original-SPD 성공 또는 PowerSI numerical improvement를 증명하지 않으며 improvement는
+**0**이다. 현재 ACTIVE는 **NONE**이고 다음 original-SPD one-shot preflight는 별도 frozen
+review 전까지 NOT READY/NOT ACTIVE다.
