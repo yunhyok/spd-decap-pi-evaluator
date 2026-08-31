@@ -8237,11 +8237,11 @@ def import_spd_scenario(
         raw_pad_keys = {
             (
                 str(contact.get("incident_padstack", "")).strip().casefold(),
-                str(contact.get("endpoint_layer") or "").strip().casefold(),
+                str(contact.get("source_layer") or "").strip().casefold(),
             )
             for _binding, contact in terminal_rows
             if str(contact.get("incident_padstack", "")).strip()
-            and str(contact.get("endpoint_layer") or "").strip()
+            and str(contact.get("source_layer") or "").strip()
         }
         boundary_node_keys = {
             (str(item.get("net", "")).strip().casefold(), str(item.get("endpoint_node_id", "")).strip().casefold())
@@ -8316,8 +8316,7 @@ def import_spd_scenario(
         }
         expected_via_keys.update(boundary_via_keys)
         if (not raw_node_keys or raw_via_keys != expected_via_keys
-                or any(not str(contact.get("incident_padstack", "")).strip() or not str(contact.get("endpoint_layer") or "").strip() for _binding, contact in terminal_rows)
-                or len(raw_pad_keys) < len({(str(contact.get("incident_padstack", "")).strip().casefold(), str(contact.get("endpoint_layer") or "").strip().casefold()) for _binding, contact in terminal_rows})):
+                or any(not str(contact.get("incident_padstack", "")).strip() or not str(contact.get("source_layer") or "").strip() for _binding, contact in terminal_rows)):
             raise SpdImportError(
                 "SOURCE_PLANE_OWNERSHIP_IR_INCOMPLETE: terminal raw selection is ambiguous"
             )
@@ -8970,7 +8969,7 @@ def import_spd_scenario(
                     raise SpdImportError(
                         "SOURCE_PLANE_OWNERSHIP_IR_TERMINAL_INCOMPLETE: terminal finite owner identity is inconsistent"
                     )
-                endpoint_layer = str(contact.get("endpoint_layer", "")).strip()
+                source_layer = str(contact.get("source_layer", "")).strip()
                 padstack = str(contact.get("incident_padstack", "")).strip()
                 expected_net = target_rail.net if role == "power" else ground_net
                 expected_layer = target_rail.pwr_layer if role == "power" else target_rail.gnd_layer
@@ -8994,7 +8993,9 @@ def import_spd_scenario(
                 }
                 if not component_layer or not island_id or island_id.casefold() not in component_islands or str(component_row.get("net", "")).casefold() != net.casefold():
                     raise SpdImportError("SOURCE_PLANE_OWNERSHIP_IR_TERMINAL_INCOMPLETE: terminal component/island/layer join is inconsistent")
-                pad = pad_lookup.get((padstack.casefold(), endpoint_layer.casefold()))
+                if not source_layer or str(node.get("layer", "")).strip().casefold() != source_layer.casefold():
+                    raise SpdImportError("SOURCE_PLANE_OWNERSHIP_IR_TERMINAL_INCOMPLETE: terminal Node layer differs from retained source layer")
+                pad = pad_lookup.get((padstack.casefold(), source_layer.casefold()))
                 if pad is None:
                     raise SpdImportError("SOURCE_PLANE_OWNERSHIP_IR_TERMINAL_INCOMPLETE: pad shape join is absent")
                 paddef = str(pad.get("paddef_source_record_id", "")).strip()

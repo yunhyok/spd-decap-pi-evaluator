@@ -149,7 +149,7 @@ def test_source_plane_ownership_component_layer_is_authoritative_for_mismatched_
                 and str(contact.get("contact_component_layer", "")).strip().casefold()
                 != "signal$top"
             ):
-                contact["endpoint_layer"] = "Signal$TOP"
+                contact["endpoint_layer"] = None
                 changed = True
         assert changed
         certificate["evidence_sha256"] = canonical_surface_certificate_sha256(
@@ -231,11 +231,15 @@ def test_source_plane_ownership_component_layer_is_authoritative_for_mismatched_
         item
         for item in contacts.values()
         if str(item.get("endpoint_layer", "")).casefold()
-        != str(item.get("contact_component_layer", "")).casefold()
+        != str(item.get("source_layer", "")).casefold()
     ]
     assert mismatched
     assert all(
-        str(item["endpoint_layer"]).casefold() == "signal$top"
+        item.get("endpoint_layer") is None
+        for item in mismatched
+    )
+    assert all(
+        str(item["source_layer"]).casefold() == "signal$top"
         for item in mismatched
     )
     raw_selection = request["raw_selection"]
@@ -247,7 +251,7 @@ def test_source_plane_ownership_component_layer_is_authoritative_for_mismatched_
     assert all(
         (
             str(item["incident_padstack"]).casefold(),
-            str(item["endpoint_layer"]).casefold(),
+            str(item["source_layer"]).casefold(),
         )
         in raw_pad_keys
         for item in mismatched
@@ -411,6 +415,51 @@ def test_source_plane_ownership_component_layer_is_authoritative_for_mismatched_
             source, source_plane_ownership_rail_id="VDD_CORE/1"
         )
     assert compile_calls["count"] == 0
+
+    monkeypatch.setattr(
+        spd_adapter, "_layer_surface_connectivity_certificate", mutate_certificate
+    )
+
+    def mismatched_raw_node_compile(*args: object, **kwargs: object):
+        callback = kwargs.get("source_plane_ownership_callback")
+        assert callback is not None
+
+        def tamper_node(evidence):
+            request = evidence.request
+            snapshot = request["certificate_snapshot"]
+            target = next(
+                item
+                for item in snapshot["terminal_contacts"]
+                if str(item.get("source_layer", "")).strip().casefold() == "signal$top"
+            )
+            target_key = (
+                str(target["net"]).strip().casefold(),
+                str(target["source_node_id"]).strip().casefold(),
+            )
+            for row in evidence.context["nodes"]:
+                key = (
+                    str(row.get("resolved_net", "")).strip().casefold(),
+                    str(row.get("node_id", "")).strip().casefold(),
+                )
+                if key == target_key:
+                    row["layer"] = "Signal$BOTTOM"
+                    break
+            else:
+                raise AssertionError("target raw Node is absent")
+            callback(evidence)
+
+        return original_compile(
+            *args,
+            **{**kwargs, "source_plane_ownership_callback": tamper_node},
+        )
+
+    monkeypatch.setattr(
+        spd_adapter, "compile_raw_spatial_contact_asset", mismatched_raw_node_compile
+    )
+    with pytest.raises(SpdImportError, match="Node layer differs from retained source layer"):
+        spd_adapter.import_spd_scenario(
+            source, source_plane_ownership_rail_id="VDD_CORE/1"
+        )
 
 
 @pytest.mark.parametrize("case_id", ["unrelated_global", "projected_over_cap"])
