@@ -1,11 +1,11 @@
 # SPD Decap PI Evaluator 작업 기준
 
 - 적용 제품: **SPD Decap PI Evaluator v0.23.1**
-- 문서 버전: **1.224**
-- 상위 기준: [목적·기술 기준](PRODUCT_PURPOSE_AND_TECHNICAL_BASELINE.md) v1.223; [Source-derived physical IR](SOURCE_DERIVED_PHYSICAL_IR.md) v1.58
+- 문서 버전: **1.225**
+- 상위 기준: [목적·기술 기준](PRODUCT_PURPOSE_AND_TECHNICAL_BASELINE.md) v1.224; [Source-derived physical IR](SOURCE_DERIVED_PHYSICAL_IR.md) v1.59
 - 현재 상태: W6 numerical FAIL; W7-SOURCE-IR-P1/P2/P3/P4 및 W7-PHYS-PROSPECTIVE-P0/P1/P2/P3/P4/P5/P6/P7/P8/P9/P10/P11 DONE, P3/P11 DONE/STOP; Actual-P0/R1/R2, DIAG-01과 Recovery-01 DONE/STOP; FIX-01/FIX-02 DONE/ACCEPT; `W7-PHYS-SOURCE-ANCHOR-LEAN-DSU-EVIDENCE-01` DONE/`STOP_TARGET_CONTACT_MISSING_OR_AMBIGUOUS`다.
   `W7-PHYS-SOURCE-ANCHOR-LEAN-DSU-EVIDENCE-02`/`03`/`04` DONE/`STOP_PROVENANCE_INCOMPLETE`다.
-  `W7-PHYS-SOURCE-ANCHOR-LEAN-DSU-EVIDENCE-05` DONE/`STOP_MULTIPLE_NOT_REPRODUCED`; W7-PHYS production physics remains BLOCKED. Terminal pad-layer FIX-01 is DONE/`STOP_TEST_ORACLE_FALSE_NEGATIVE`; its test-oracle FIX-01 successor is DONE/ACCEPT. Original-SPD EVIDENCE-01/-02/-04/-05 are DONE/`STOP_IMPORT_OR_OWNERSHIP`, EVIDENCE-03 is DONE/`STOP_UNEXPECTED`; compact-request-bound FIX-01 is DONE/ACCEPT. OWNERSHIP-COUNT-DIAG-01/-02 are DONE/`STOP_RESOURCE_OR_CANCELLED`; STREAMED-IR-300K-FIX-01 is DONE/`STOP_TEST_COLLECTION_SYNTAX`; collection-fix successor is DONE/`STOP_TEST_FAILURE_AND_RUNTIME_BUDGET`; validation-runtime fix is DONE/`ACCEPT_WITH_OUTPUT_LIMITATION`; lightweight acceptance is DONE/`STOP_TEST_ORACLE_COMPOUND_MUTATION`; oracle-fix successor is DONE/`STOP_PRODUCT_SELECTION_VALIDATION_OMISSION`; material-selection fix is DONE/`STOP_PRODUCT_STREAMED_HANDOFF_REGRESSION`; current sole ACTIVE is **W7-PHYS-OWNER-JOIN-OWNERSHIP-STREAMED-IR-STREAMED-HANDOFF-FIX-01 / FROZEN / READY_FOR_IMPLEMENTATION**. Production physics/`Zii` are unchanged.
+  `W7-PHYS-SOURCE-ANCHOR-LEAN-DSU-EVIDENCE-05` DONE/`STOP_MULTIPLE_NOT_REPRODUCED`; W7-PHYS production physics remains BLOCKED. Terminal pad-layer FIX-01 is DONE/`STOP_TEST_ORACLE_FALSE_NEGATIVE`; its test-oracle FIX-01 successor is DONE/ACCEPT. Original-SPD EVIDENCE-01/-02/-04/-05 are DONE/`STOP_IMPORT_OR_OWNERSHIP`, EVIDENCE-03 is DONE/`STOP_UNEXPECTED`; compact-request-bound FIX-01 is DONE/ACCEPT. OWNERSHIP-COUNT-DIAG-01/-02 are DONE/`STOP_RESOURCE_OR_CANCELLED`; STREAMED-IR-300K-FIX-01 is DONE/`STOP_TEST_COLLECTION_SYNTAX`; collection-fix successor is DONE/`STOP_TEST_FAILURE_AND_RUNTIME_BUDGET`; validation-runtime fix is DONE/`ACCEPT_WITH_OUTPUT_LIMITATION`; lightweight acceptance is DONE/`STOP_TEST_ORACLE_COMPOUND_MUTATION`; oracle-fix successor is DONE/`STOP_PRODUCT_SELECTION_VALIDATION_OMISSION`; material-selection fix is DONE/`STOP_PRODUCT_STREAMED_HANDOFF_REGRESSION`; streamed-handoff fix is DONE/`STOP_TEST_CAPTURE_CONNECTION_LEAK`; current sole ACTIVE is **W7-PHYS-OWNER-JOIN-OWNERSHIP-STREAMED-IR-STREAMED-HANDOFF-CAPTURE-CONNECTION-FIX-01 / FROZEN / READY_FOR_IMPLEMENTATION**. Production physics/`Zii` are unchanged.
 - 최종 개정: 2026-09-01 (Asia/Seoul)
 
 ## 1. 압축 후 즉시 복구 카드
@@ -19,10 +19,10 @@ context가 압축되거나 새 session에서 작업을 재개하면 이 표만 �
 | 현재 branch | `main`만 사용 |
 | 이 문서 정리의 source-before/implementation base parent | `f2c98040870b30bf21d778099cc4cb6d2a553ed5` (OWNERSHIP-COUNT-DIAG-02 contract) |
 | 현재 assessment | W6-BASE numerical FAIL; Phase 4/P0–P11은 prerequisite/shadow 범위 DONE. DSU-05의 선택된 6-contact source boundary는 모두 singleton이며 all/complete graph가 동일해 R2 multiple-selector 가설이 재현되지 않았다. 제품 solver/owner-off/`Y_global`/`Zii`와 W6 PowerSI 수치는 변경되지 않아 수치 격차 개선은 0이다(새 percentage metric이 아니라 실측 improvement absence) |
-| 현재 active work item | **W7-PHYS-OWNER-JOIN-OWNERSHIP-STREAMED-IR-STREAMED-HANDOFF-FIX-01 / FROZEN / READY_FOR_IMPLEMENTATION** |
+| 현재 active work item | **W7-PHYS-OWNER-JOIN-OWNERSHIP-STREAMED-IR-STREAMED-HANDOFF-CAPTURE-CONNECTION-FIX-01 / FROZEN / READY_FOR_IMPLEMENTATION** |
 | 현재 정확성 상태 | `260729 retrospective FAIL`; unseen/generalization `unknown / not_run` |
-| current authorization | `main`-only, `accuracy_parse.py` 보존. `raw_spatial_contact_compiler.py`에 predecessor의 stackup/dielectric raw-v3 provenance merge를 현재 spool writer로 그대로 복원하고, `spd_adapter.py`가 그 spool-backed 행을 소비하게 한다. 두 cursor iterator는 iteration 안에서 열고 `finally`로 닫으며 generic insert consumer가 iterator 종료를 소유한다. `source_plane_ownership_ir.py`, 모든 tests, schema/caps/fallback은 동결. Sol static 뒤 12.57의 원인 노드 우선 exact 18 nodes once/300 s. Pressure/exact-300K/full suite/original SPD/solver/production/PowerSI 금지. |
-| 다음 gate | **streamed handoff fix** — raw-v3 provenance 보존과 예외 전 cursor 정리를 한 atomic successor로 구현한 뒤 동일 bounded scope를 fresh/fail-fast로 한 번 |
+| current authorization | `main`-only, `accuracy_parse.py` 보존. `tests/test_source_plane_ownership_ir_producer.py`에 stdlib `contextlib.closing`을 import하고 두 read-only capture의 `with sqlite3.connect(spool.path)`만 `with closing(sqlite3.connect(spool.path))`로 바꾼다. 모든 product/source IR/other tests/schema/caps는 동결. Sol static 뒤 12.58의 원인 노드 우선 exact 18 nodes once/300 s. Pressure/exact-300K/full suite/original SPD/solver/production/PowerSI 금지. |
+| 다음 gate | **capture connection fix** — test capture 두 곳의 SQLite handle을 명시적으로 닫은 뒤 동일 bounded scope를 fresh/fail-fast로 한 번 |
 | 정확한 재개 조건 | PowerSI 오차를 설명할 별도의 source-derived physical block, authoritative owner relation, deterministic replacement stamp, 무피팅 limiting-case invariant와 disjoint owner ledger가 함께 식별되고 frozen contract review를 통과해야 한다. |
 | 핵심 증거 | [W6-BASE completed evidence](#w6-base-completed-evidence-260729), [W7 결과 재평가](#12-w7-결과-재평가와-후속-과제-판정) |
 
@@ -35,12 +35,12 @@ context가 압축되거나 새 session에서 작업을 재개하면 이 표만 �
 | 구분 | 현재 권위 |
 |---|---|
 | accepted / committed | Phase 1 `82370b6`, Phase 2 `75ac0a0`, Phase 3 `5d2c353`, Phase 4 `3b76af4`, P0 `4dc855a`, P1 `f823a53`, P2 `90f6b54`, P3 `b8a79f1`, P4 `39fd4fa`, P5 `d7e7278`, P6 `6793bb2`, P7 `f1c2968`, P8 `abf79cf`, P9 `593e070`, P10 `7f9c498`, P11 `e8d029a`, W7 owner-join `2b27e30c6fe41f03281d3943568d0905d84d8af3` DONE/ACCEPT read-only closure; 모두 prerequisite/shadow 범위이며 production `Y_global`/`Zii` 불변 |
-| current candidate | DSU-01–05, Recovery-01/DIAG-01, original-SPD EVIDENCE-01/-02/-03/-04/-05와 OWNERSHIP-COUNT-DIAG-01/-02는 영구 DONE/STOP; owner-join, quotient-scope, terminal pad-layer test-oracle 및 compact-request-bound fixes are DONE/ACCEPT; streamed-IR-300K FIX-01은 collection STOP, collection-fix는 failure/runtime STOP, validation-runtime fix는 ACCEPT_WITH_OUTPUT_LIMITATION, lightweight acceptance는 oracle STOP, oracle-fix는 product selection omission STOP, material-selection fix는 streamed-handoff regression STOP; P12 prospective review NO-GO; streamed-handoff fix sole ACTIVE |
+| current candidate | DSU-01–05, Recovery-01/DIAG-01, original-SPD EVIDENCE-01/-02/-03/-04/-05와 OWNERSHIP-COUNT-DIAG-01/-02는 영구 DONE/STOP; owner-join, quotient-scope, terminal pad-layer test-oracle 및 compact-request-bound fixes are DONE/ACCEPT; streamed-IR-300K FIX-01은 collection STOP, collection-fix는 failure/runtime STOP, validation-runtime fix는 ACCEPT_WITH_OUTPUT_LIMITATION, lightweight acceptance는 oracle STOP, oracle-fix는 product selection omission STOP, material-selection fix는 streamed-handoff regression STOP, streamed-handoff fix는 test capture connection leak STOP; P12 prospective review NO-GO; capture-connection fix sole ACTIVE |
 | static evidence | P11 Sol ACCEPT; default `None` arithmetic/cache identity 불변, supplemental cache-ineligible, P10/P9/block/owner/termination identity와 original inventory/CSC/cache 불변 확인. P12 review는 synthetic bridge 때문에 actual owning-block attribution이 non-identifying이라고 판정 |
-| runtime evidence | DIAG-02 exact report/receipt가 persisted됐다. WinAPI measured peak 13.09 GiB, current 1.42 GiB, scratch 131.6 MiB; expanded Node/Via 77,852/38,926, six-key selection 116,791, source-record lower bound 122,146, final-v2 lower bound 249,635. Validation-runtime pressure+300K process는 exit 0 / 22.8483887 s. Lightweight run은 oracle STOP, oracle-fix run은 product Material-kind omission STOP이다. Material-fix run은 18 collected 뒤 first node에서 `stackup_layers.raw_layer_ordinal` NOT NULL 실패, `1 failed in 1.87s`, child 1, wrapper 2.6307 s이고 cleanup의 WinError 32가 primary를 가렸다; reusable PASS 0이다. |
+| runtime evidence | DIAG-02 exact report/receipt가 persisted됐다. WinAPI measured peak 13.09 GiB, current 1.42 GiB, scratch 131.6 MiB; expanded Node/Via 77,852/38,926, six-key selection 116,791, source-record lower bound 122,146, final-v2 lower bound 249,635. Validation-runtime pressure+300K process는 exit 0 / 22.8483887 s. Lightweight run은 oracle STOP, oracle-fix run은 product Material-kind omission STOP이다. Material-fix run은 raw-v3 handoff STOP이다. Streamed-handoff run은 18 collected 뒤 first node의 product callback/build가 정상 반환했으나 test capture connection 때문에 WinError 32 cleanup 실패, `1 failed in 2.27s`, child 1, wrapper 2.8645396 s, reusable PASS 0이다. |
 | runtime 미증명 | old-owner replacement, trusted solve와 실제 SPD/PowerSI 영향은 미증명이다. DSU-05는 source boundary 진단이며 production topology 또는 accuracy evidence가 아니다. |
 | 별도 사용자 파일 | untracked `accuracy_parse.py`; 보존·미수정·미stage |
-| candidate staging / acceptance | raw compiler의 proven raw-v3 merge + adapter의 spool consumption/cursor ownership만; source IR/tests 동결; Sol static 뒤 culprit-first 18-node invocation 1회/300 s; accepted pressure/exact-300K와 full suite 재실행 금지 |
+| candidate staging / acceptance | producer test의 두 read-only capture connection close만; 모든 product/source IR/other tests 동결; Sol static 뒤 culprit-first 18-node invocation 1회/300 s; accepted pressure/exact-300K와 full suite 재실행 금지 |
 
 ## 2. 문서 사용 규칙
 
@@ -115,7 +115,7 @@ disjoint owner ledger 확보와 사용자 명시 승인
 ## 4. 작업 항목 register
 
 상태 어휘는 `READY`, `ACTIVE`, `BLOCKED`, `DEFERRED`, `DONE`만 사용한다.
-동시에 `ACTIVE`는 하나만 허용하며 현재 sole ACTIVE는 **W7-PHYS-OWNER-JOIN-OWNERSHIP-STREAMED-IR-STREAMED-HANDOFF-FIX-01**이다. 완료된 미시적 item을
+동시에 `ACTIVE`는 하나만 허용하며 현재 sole ACTIVE는 **W7-PHYS-OWNER-JOIN-OWNERSHIP-STREAMED-IR-STREAMED-HANDOFF-CAPTURE-CONNECTION-FIX-01**이다. 완료된 미시적 item을
 다시 펼쳐 읽지 말고 아래 phase-level 결론과 Git history를 사용한다.
 상태와 증거 축은 분리한다. `DONE`은 선언한 범위의 종료일 뿐 current commit,
 production acceptance, runtime PASS 또는 PowerSI 정확성을 자동으로 뜻하지 않는다.
@@ -196,7 +196,8 @@ dirty/static/runtime/commit 상태는 복구 카드 1.1에 별도로 기록한�
 | `W7-PHYS-OWNER-JOIN-OWNERSHIP-STREAMED-IR-LIGHTWEIGHT-ACCEPTANCE-01` | 48 | DONE/STOP_TEST_ORACLE_COMPOUND_MUTATION | close only still-unproved changed streamed-transport paths | 18 collected; 7 explicit PASS then FK-invalid ledger fixture expected/actual mismatch; exit 1; no rerun |
 | `W7-PHYS-OWNER-JOIN-OWNERSHIP-STREAMED-IR-LIGHTWEIGHT-ACCEPTANCE-ORACLE-FIX-01` | 49 | DONE/STOP_PRODUCT_SELECTION_VALIDATION_OMISSION | preserve FK while testing Unicode folded ledger collision | oracle fixed; 10 explicit PASS then missing Material-kind presence validation false STOP; no rerun |
 | `W7-PHYS-OWNER-JOIN-OWNERSHIP-STREAMED-IR-MATERIAL-SELECTION-FIX-01` | 50 | DONE/STOP_PRODUCT_STREAMED_HANDOFF_REGRESSION | include staged Material rows in generic selected-source presence validation | clause traversed to later callback; raw-v3 provenance missing and eager cursor cleanup masks primary failure; no rerun |
-| `W7-PHYS-OWNER-JOIN-OWNERSHIP-STREAMED-IR-STREAMED-HANDOFF-FIX-01` | 51 | ACTIVE | restore raw-v3 stackup/dielectric provenance and deterministic cursor ownership | two product files only; Sol static; culprit-first exact 18 nodes once/300 s |
+| `W7-PHYS-OWNER-JOIN-OWNERSHIP-STREAMED-IR-STREAMED-HANDOFF-FIX-01` | 51 | DONE/STOP_TEST_CAPTURE_CONNECTION_LEAK | restore raw-v3 stackup/dielectric provenance and deterministic cursor ownership | product static ACCEPT; normal callback/build; test capture leaked connection at cleanup; no rerun |
+| `W7-PHYS-OWNER-JOIN-OWNERSHIP-STREAMED-IR-STREAMED-HANDOFF-CAPTURE-CONNECTION-FIX-01` | 52 | ACTIVE | explicitly close two producer-test read-only SQLite captures | one test file only; product frozen; Sol static; culprit-first exact 18 nodes once/300 s |
 | `W8-REL` | 18 | BLOCKED | completed known-case solve를 release gate에 연결하고 최종 전달 | accuracy/product gate와 exact release commit 필요 |
 | `D-DIST` | - | DEFERRED | Distribution routing/DRC scope 확대 | 사용자가 implementation-ready/DRC 목표로 승격할 때만 |
 | `D-DOC` | - | DEFERRED | README와 동결 연구 배너 정리 | current work를 방해할 때 별도 문서 묶음으로 처리 |
@@ -570,6 +571,7 @@ remote/full suite, installer/release는 수행하지 않았다.
 | `D-071` | LIGHTWEIGHT-ACCEPTANCE-01 sole run은 18 collected, first 7 explicit PASS 뒤 eighth node의 mutation index 10에서 expected `ID_COLLISION`/actual `DATABASE_INVALID`, `1 failed, 7 passed in 6.39s`, child exit 1, wrapper 7.0349161 s로 DONE/`STOP_TEST_ORACLE_COMPOUND_MUTATION`이다. Parent ledger ID만 바꿔 child member가 orphan된 compound fixture가 FK-enabled main copy에서 먼저 정상 거부된 것이며 product bug가 아니다. Partial progress는 gate acceptance로 재사용하지 않는다. Sole ACTIVE ORACLE-FIX-01은 해당 child ledger ID update 한 statement만 추가하고 Sol static 뒤 same exact 18 nodes를 한 번/300 s 실행한다. Product/other tests/pressure/exact-300K/full suite/original SPD/solver/PowerSI는 불변·금지다 | 확정 |
 | `D-072` | ORACLE-FIX-01 sole run은 18 collected, first 10 explicit PASS 뒤 producer component-layer node에서 `RAW_SPATIAL_OWNERSHIP_EVIDENCE_INCOMPLETE`, `1 failed, 10 passed in 7.87s`, child exit 1, wrapper 8.516575 s로 DONE/`STOP_PRODUCT_SELECTION_VALIDATION_OMISSION`이다. Corrected Unicode oracle는 PASS했다. Selected `Material/abf/''`와 `Material/copper/''` source rows는 staged되지만 generic presence SQL kind disjunction에 Material이 없어 둘 다 오탐이다; unordered `LIMIT 1`의 반환 행은 주장하지 않는다. Partial progress는 acceptance에 재사용하지 않는다. Sole ACTIVE MATERIAL-SELECTION-FIX-01은 raw compiler SQL에 Material kind clause 하나만 추가하고 Sol static 뒤 culprit-first exact 18 nodes를 한 번/300 s 실행한다. 다른 product/tests, pressure/exact-300K/full suite/original SPD/solver/PowerSI는 불변·금지다 | 확정 |
 | `D-073` | MATERIAL-SELECTION-FIX-01 sole run은 18 collected 뒤 first culprit node에서 `sqlite3.IntegrityError: NOT NULL constraint failed: stackup_layers.raw_layer_ordinal`, `1 failed in 1.87s`, child exit 1, wrapper 2.6307 s로 DONE/`STOP_PRODUCT_STREAMED_HANDOFF_REGRESSION`이다. Material clause가 later callback까지 열었지만 streamed rewrite가 predecessor의 stackup/dielectric raw-v3 merge를 누락하여 provenance columns를 `None`으로 전달했고, eager cursor generator가 traceback에 남아 TemporaryDirectory cleanup의 WinError 32가 primary를 가렸다. Reusable PASS는 0이고 run은 consumed/no-rerun이다. Sole ACTIVE STREAMED-HANDOFF-FIX-01은 raw compiler에 exact proven merge를 현재 spool writer로 복원하고 adapter가 spool-backed stackup/dielectric을 소비하게 하며 iterator/cursor를 rollback/connection close 전에 닫는다. 두 product files 외 source IR/tests/schema/caps/fallback은 동결하고 Sol static 뒤 culprit-first exact 18 nodes를 한 번/300 s 실행한다. Pressure/exact-300K/full suite/original SPD/solver/production/PowerSI는 불변·금지, improvement는 0이다 | 확정 |
+| `D-074` | STREAMED-HANDOFF-FIX-01은 raw compiler `5B02CC51...45BA2`, adapter `F8E81D7B...13D14`, Sol final STATIC_ACCEPT/P0-P1 none이었으나 sole run은 18 collected 뒤 first node의 normal callback/build 반환 후 TemporaryDirectory가 `raw-spatial-spool.sqlite`를 삭제할 때 WinError 32로 실패했다. Pytest `1 failed in 2.27s`, child exit 1, wrapper 2.8645396 s, reusable PASS 0이고 invocation은 consumed/no-rerun이다. `exc/value/tb=None`과 static trace는 product가 아니라 producer test의 two capture wrappers가 transaction-only `with sqlite3.connect(...)`를 사용해 close를 GC에 맡긴 결함을 확정한다. Policy-rejected Start-Process wrapper는 process 생성 전 거부되어 run으로 세지 않는다. Sole ACTIVE CAPTURE-CONNECTION-FIX-01은 producer test에 stdlib `closing` import와 정확히 두 `with closing(sqlite3.connect(...))`만 허용한다. Product/source IR/other tests/schema/caps 동결, Sol static 뒤 same culprit-first exact 18 nodes once/300 s. Pressure/exact-300K/full suite/original SPD/solver/production/PowerSI 금지, improvement 0 | 확정 |
 
 ## 11. 현재 evidence와 비재사용 경계
 
@@ -602,7 +604,7 @@ falsifiable physical/analytic limiting-case invariant + disjoint owner ledger와
   `unknown / not_run`이다.
 - W7은 source/provenance와 수학·운영 기반을 개선했지만 production network,
   계산된 `Zii`, PowerSI correlation을 바꾸지 않았다.
-- 따라서 현재 product risk는 그대로 **외부 정확성 미달**이다. **W7-PHYS-OWNER-JOIN-QUOTIENT-SCOPE-FIX-01**은 DONE/ACCEPT다. W7-PHYS-OWNER-JOIN-EVIDENCE-01은 DONE/ACCEPT로 닫혔고 original-SPD EVIDENCE-01/-02/-04/-05는 DONE/`STOP_IMPORT_OR_OWNERSHIP`, EVIDENCE-03은 missing `httpx`의 pre-import `STOP_UNEXPECTED`로 영구 닫혔다. Terminal pad-layer test-oracle successor와 compact-request-bound FIX-01은 DONE/ACCEPT다. OWNERSHIP-COUNT-DIAG-01/-02, streamed-IR FIX-01과 collection-fix는 DONE/STOP, validation-runtime fix는 DONE/`ACCEPT_WITH_OUTPUT_LIMITATION`, lightweight acceptance는 DONE/`STOP_TEST_ORACLE_COMPOUND_MUTATION`, oracle-fix는 DONE/`STOP_PRODUCT_SELECTION_VALIDATION_OMISSION`, material-selection fix는 DONE/`STOP_PRODUCT_STREAMED_HANDOFF_REGRESSION`이고 현재 sole ACTIVE는 **W7-PHYS-OWNER-JOIN-OWNERSHIP-STREAMED-IR-STREAMED-HANDOFF-FIX-01 / FROZEN / READY_FOR_IMPLEMENTATION**이다.
+- 따라서 현재 product risk는 그대로 **외부 정확성 미달**이다. **W7-PHYS-OWNER-JOIN-QUOTIENT-SCOPE-FIX-01**은 DONE/ACCEPT다. W7-PHYS-OWNER-JOIN-EVIDENCE-01은 DONE/ACCEPT로 닫혔고 original-SPD EVIDENCE-01/-02/-04/-05는 DONE/`STOP_IMPORT_OR_OWNERSHIP`, EVIDENCE-03은 missing `httpx`의 pre-import `STOP_UNEXPECTED`로 영구 닫혔다. Terminal pad-layer test-oracle successor와 compact-request-bound FIX-01은 DONE/ACCEPT다. OWNERSHIP-COUNT-DIAG-01/-02, streamed-IR FIX-01과 collection-fix는 DONE/STOP, validation-runtime fix는 DONE/`ACCEPT_WITH_OUTPUT_LIMITATION`, lightweight acceptance는 DONE/`STOP_TEST_ORACLE_COMPOUND_MUTATION`, oracle-fix는 DONE/`STOP_PRODUCT_SELECTION_VALIDATION_OMISSION`, material-selection fix는 DONE/`STOP_PRODUCT_STREAMED_HANDOFF_REGRESSION`, streamed-handoff fix는 DONE/`STOP_TEST_CAPTURE_CONNECTION_LEAK`이고 현재 sole ACTIVE는 **W7-PHYS-OWNER-JOIN-OWNERSHIP-STREAMED-IR-STREAMED-HANDOFF-CAPTURE-CONNECTION-FIX-01 / FROZEN / READY_FOR_IMPLEMENTATION**이다.
   DSU-05는 `STOP_MULTIPLE_NOT_REPRODUCED`로 DONE했고 W7-PHYS는 BLOCKED다.
   Actual-P0/R1/R2는 scenario 없이 DONE/STOP했고 FIX-01/FIX-02는 DONE/ACCEPT다. P3는 `CONTACT_INTERFACE_RANK_LOSS` STOP, P4는 base cut-set
   CLOSED, P5는 deterministic shadow plan PLANNED, P6는 scenario/termination commutation
@@ -812,7 +814,8 @@ flowchart LR
   VR --> LA[W7-PHYS-OWNER-JOIN-OWNERSHIP-STREAMED-IR-LIGHTWEIGHT-ACCEPTANCE-01<br/>DONE / STOP_TEST_ORACLE_COMPOUND_MUTATION]
   LA --> OF[W7-PHYS-OWNER-JOIN-OWNERSHIP-STREAMED-IR-LIGHTWEIGHT-ACCEPTANCE-ORACLE-FIX-01<br/>DONE / STOP_PRODUCT_SELECTION_VALIDATION_OMISSION]
   OF --> MS[W7-PHYS-OWNER-JOIN-OWNERSHIP-STREAMED-IR-MATERIAL-SELECTION-FIX-01<br/>DONE / STOP_PRODUCT_STREAMED_HANDOFF_REGRESSION]
-  MS --> SH[W7-PHYS-OWNER-JOIN-OWNERSHIP-STREAMED-IR-STREAMED-HANDOFF-FIX-01<br/>FROZEN / READY_FOR_IMPLEMENTATION]
+  MS --> SH[W7-PHYS-OWNER-JOIN-OWNERSHIP-STREAMED-IR-STREAMED-HANDOFF-FIX-01<br/>DONE / STOP_TEST_CAPTURE_CONNECTION_LEAK]
+  SH --> CC[W7-PHYS-OWNER-JOIN-OWNERSHIP-STREAMED-IR-STREAMED-HANDOFF-CAPTURE-CONNECTION-FIX-01<br/>FROZEN / READY_FOR_IMPLEMENTATION]
   R -->|예| H
   D[17DG foundation] -. production binding 필요 .-> H
   E[17DO/17DP owner evidence] -. identity join 필요 .-> H
@@ -830,7 +833,7 @@ P3 semantic result는 `CONTACT_INTERFACE_RANK_LOSS` STOP, P4는 CLOSED, P5는 PL
 P6와 P7은 PASSED고 P8은 materialized, P9은 bound, P10은 component-closed다. P11은 factor
 forward-reliability numerical STOP이고 P12는 NO-GO다. Actual-P0와 R1 original-SPD one-shot은 selector
 identity mismatch로 DONE/STOP했고 FIX-01/FIX-02는 DONE/ACCEPT다. R2는 actual multiple STOP으로
-닫혔고 DIAG-01/-02도 resource STOP으로 닫혔다. old component evidence와 DSU-01–05는 모두 DONE/STOP했고 W7-PHYS-OWNER-JOIN-EVIDENCE-01은 DONE/ACCEPT로 닫혔다. **W7-PHYS-OWNER-JOIN-ORIGINAL-SPD-EVIDENCE-01/-02/-03/-04/-05**와 ownership-count DIAG-01/-02는 영구 DONE/STOP이고, **W7-PHYS-OWNER-JOIN-QUOTIENT-SCOPE-FIX-01**, terminal pad-layer test-oracle와 compact-request-bound fixes는 DONE/ACCEPT다. streamed-IR FIX-01과 collection-fix는 DONE/STOP, validation-runtime fix는 DONE/`ACCEPT_WITH_OUTPUT_LIMITATION`, lightweight acceptance는 DONE/`STOP_TEST_ORACLE_COMPOUND_MUTATION`, oracle-fix는 DONE/`STOP_PRODUCT_SELECTION_VALIDATION_OMISSION`, material-selection fix는 DONE/`STOP_PRODUCT_STREAMED_HANDOFF_REGRESSION`이고 현재 sole ACTIVE는 **W7-PHYS-OWNER-JOIN-OWNERSHIP-STREAMED-IR-STREAMED-HANDOFF-FIX-01 / FROZEN / READY_FOR_IMPLEMENTATION**이다. 아래 조건은 그 다음 physical promotion gate를 열 때도 계속 적용한다.
+닫혔고 DIAG-01/-02도 resource STOP으로 닫혔다. old component evidence와 DSU-01–05는 모두 DONE/STOP했고 W7-PHYS-OWNER-JOIN-EVIDENCE-01은 DONE/ACCEPT로 닫혔다. **W7-PHYS-OWNER-JOIN-ORIGINAL-SPD-EVIDENCE-01/-02/-03/-04/-05**와 ownership-count DIAG-01/-02는 영구 DONE/STOP이고, **W7-PHYS-OWNER-JOIN-QUOTIENT-SCOPE-FIX-01**, terminal pad-layer test-oracle와 compact-request-bound fixes는 DONE/ACCEPT다. streamed-IR FIX-01과 collection-fix는 DONE/STOP, validation-runtime fix는 DONE/`ACCEPT_WITH_OUTPUT_LIMITATION`, lightweight acceptance는 DONE/`STOP_TEST_ORACLE_COMPOUND_MUTATION`, oracle-fix는 DONE/`STOP_PRODUCT_SELECTION_VALIDATION_OMISSION`, material-selection fix는 DONE/`STOP_PRODUCT_STREAMED_HANDOFF_REGRESSION`, streamed-handoff fix는 DONE/`STOP_TEST_CAPTURE_CONNECTION_LEAK`이고 현재 sole ACTIVE는 **W7-PHYS-OWNER-JOIN-OWNERSHIP-STREAMED-IR-STREAMED-HANDOFF-CAPTURE-CONNECTION-FIX-01 / FROZEN / READY_FOR_IMPLEMENTATION**이다. 아래 조건은 그 다음 physical promotion gate를 열 때도 계속 적용한다.
 
 1. source-derived geometry/material provenance가 있다.
 2. 대상 rail 전체에 적용 가능한 physical model 또는 omitted-block candidate다.
@@ -2553,7 +2556,7 @@ the primary exception in the final traceback. No node passed and no partial resu
 consumed/no-rerun. This establishes only that the Material clause reached the later callback; it does not accept the
 selection fix or any physical/accuracy claim.
 
-### 12.57 W7-PHYS-OWNER-JOIN-OWNERSHIP-STREAMED-IR-STREAMED-HANDOFF-FIX-01 — FROZEN / READY_FOR_IMPLEMENTATION
+### 12.57 W7-PHYS-OWNER-JOIN-OWNERSHIP-STREAMED-IR-STREAMED-HANDOFF-FIX-01 — DONE / STOP_TEST_CAPTURE_CONNECTION_LEAK
 
 Base docs contract is exact `d4d3fab`. The current pre-fix raw compiler SHA-256 is
 `3C3E256C4717C3349F78D537EE92FB52E2AEF3500851408A741C106B9B15BD61` and adapter SHA-256 is
@@ -2607,3 +2610,64 @@ exact-300K cases, redundant `[150000-2-False-150025]`, static-only dataclass che
 SPD, solver, production and PowerSI runs remain excluded. Passing proves only the named synthetic/MINI-SPD streamed
 v2/v3 transport and producer paths. Production owner join, `Y_global`/`Zii`, PowerSI accuracy/performance and release
 remain unproved; numerical improvement remains 0.
+
+The implementation finalized at raw compiler SHA-256
+`5B02CC51677FEB6BCBE537071C7A13342E2036C0F2D7910103118865C3A45BA2` and adapter SHA-256
+`F8E81D7B702E155C51766A8CC0CAC2B3FE3E189450BEB43DAC0811FA9A213D14`. Sol's second static review found no P0/P1;
+source-record FK order, raw/global ordinals and hashes, strict provenance refs, spool-backed sections and iterator-close
+ordering all matched the contract.
+
+The sole fresh run collected all 18 nodes and stopped at the first. Its product callback/build returned normally
+(`TemporaryDirectory.__exit__` received `exc/value/tb=None`), then Windows raised WinError 32 deleting
+`raw-spatial-spool.sqlite`; pytest `1 failed in 2.27s`, child exit 1, wrapper wall 2.8645396 s. No node passed and no
+partial result is reusable. The invocation is consumed/no-rerun. A prior policy-rejected `Start-Process` wrapper attempt
+created no process and is not an execution.
+
+Static tracing found no product survivor. The producer test's `capture_draft` and later `capture_ownership_draft` both
+use `sqlite3.Connection` as a context manager. That context manager ends a transaction but does not close the
+connection, so the read-only capture handle remains GC-dependent during immediate outer temporary cleanup. The first
+wrapper caused this run; the second would expose the same defect at the roundtrip node.
+
+### 12.58 W7-PHYS-OWNER-JOIN-OWNERSHIP-STREAMED-IR-STREAMED-HANDOFF-CAPTURE-CONNECTION-FIX-01 — FROZEN / READY_FOR_IMPLEMENTATION
+
+Base docs contract is exact `f772023`. Freeze raw compiler
+`5B02CC51677FEB6BCBE537071C7A13342E2036C0F2D7910103118865C3A45BA2`, adapter
+`F8E81D7B702E155C51766A8CC0CAC2B3FE3E189450BEB43DAC0811FA9A213D14`, source IR
+`1027E694F6994B4F6B109933617D149A7A5184CD6951050D2C93F67B145079DE`, raw compiler test
+`D51D4E45E0182DC99F60E12D7DB48528F1F38567EBD2A4E245DE416C4EF102BE` and source IR test
+`56AAECB2A83F9E96E81D2F3F77D7EDC67F896E7AAD63BE38999AFAC06FDA8756`. The only editable test is
+`tests/test_source_plane_ownership_ir_producer.py`, pre-fix SHA-256
+`D08714921FDBBB9577DCE4CD4568EB359331B56FCB3FC1CFEFD3DA6DBC6AA3C5`.
+
+Luna may add `from contextlib import closing` and replace exactly the two read-only capture statements with
+`with closing(sqlite3.connect(spool.path)) as connection:`. Do not add GC, sleep, retry, product cleanup or any other
+test/product/schema/cap change. The existing culprit, temp-artifact and producer roundtrip/atomic-failure nodes cover
+success, cleanup and failure paths; no new node is needed.
+
+After Sol static acceptance, run exactly one fresh Python312 process with `-x -vv --tb=long`, in this fail-fast order:
+
+1. `tests/test_source_plane_ownership_ir_producer.py::test_source_plane_ownership_component_layer_is_authoritative_for_mismatched_endpoint`
+2. `tests/test_raw_spatial_contact_compiler.py::test_ownership_selection_duplicate_is_sql_unique_failure`
+3. `tests/test_raw_spatial_contact_compiler.py::test_ownership_selection_cap_exact_pass_plus_one_fails`
+4. `tests/test_raw_spatial_contact_compiler.py::test_ownership_source_staging_keeps_original_spelling_and_canonical_lookup`
+5. `tests/test_source_plane_ownership_ir.py::test_v2_mapping_and_spool_are_logically_equivalent_and_exclude_internal_tables`
+6. `tests/test_source_plane_ownership_ir.py::test_spool_caps_and_cancellation_fail_closed`
+7. `tests/test_source_plane_ownership_ir.py::test_spool_sql_validation_rejects_provenance_mutations`
+8. `tests/test_source_plane_ownership_ir.py::test_spool_sql_contact_identity_and_edge_owner_rejections`
+9. `tests/test_source_plane_ownership_ir.py::test_spool_sql_rejects_origin_scalar_casefold_and_ordinal_holes`
+10. `tests/test_source_plane_ownership_ir.py::test_spool_sql_rejects_contact_opposite_external_node_chain`
+11. `tests/test_source_plane_ownership_ir.py::test_spool_temp_artifacts_are_removed_after_cancel_and_exception`
+12. `tests/test_source_plane_ownership_ir_producer.py::test_source_plane_ownership_filters_global_quotient_before_selected_row_bound[unrelated_global]`
+13. `tests/test_source_plane_ownership_ir_producer.py::test_source_plane_ownership_filters_global_quotient_before_selected_row_bound[projected_over_cap]`
+14. `tests/test_source_plane_ownership_ir_producer.py::test_source_plane_ownership_provisional_request_aggregate_does_not_consume_final_ir_row_cap`
+15. `tests/test_source_plane_ownership_ir_producer.py::test_source_plane_ownership_producer_roundtrip_and_atomic_failure`
+16. `tests/test_raw_spatial_contact_compiler.py::test_ownership_expanded_selection_116791_and_global_cap`
+17. `tests/test_source_plane_ownership_ir.py::test_v2_exact_section_and_total_caps[150001-2-True-None]`
+18. `tests/test_source_plane_ownership_ir.py::test_v2_exact_section_and_total_caps[150000-149978-True-None]`
+
+Capture stdout/stderr and enforce a 300 s external wall limit. Any collection error, failure, timeout or interrupt closes
+this successor as DONE/STOP without rerun; partial progress is not acceptance evidence. The consumed prior 18-node run,
+pressure and exact-300K cases, redundant `[150000-2-False-150025]`, static-only dataclass check, unchanged tests, full
+suite, original SPD, solver, production and PowerSI runs remain excluded. Passing proves only the named
+synthetic/MINI-SPD streamed v2/v3 transport and producer paths. Production owner join, `Y_global`/`Zii`, PowerSI
+accuracy/performance and release remain unproved; numerical improvement remains 0.
