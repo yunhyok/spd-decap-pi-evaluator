@@ -1,13 +1,13 @@
 # SPD Decap PI Evaluator v0.23.1 — Source-derived physical IR
 
-- 문서 버전: **1.42**
+- 문서 버전: **1.43**
 - 계약 상태: **ACCEPTED** — source-derived provenance/ownership prerequisite의 기술 기준
 - committed 구현: `source-plane-ownership-ir-v1` + Phase 3 shadow consumer + v2 `contact_boundary` (`3b76af4`) + P0 (`4dc855a`) + P1 (`f823a53`) + P2 (`90f6b54`) + P3 (`b8a79f1`) + P4 base cut-set (`39fd4fa`) + P5 shadow rewire plan (`d7e7278`) + P6 scenario commutation audit (`6793bb2`) + P7 atomic recipe (`f1c2968`) + P8 topology embedding (`abf79cf`) + P9 nodal-block binding (`593e070`) + P10 component closure (`7f9c498`) + P11 supplemental solve gate (`e8d029a`) + ownership component-layer selector fix (`b0b90db`) + component-cardinality classifier (`6fc06dd`) + W7 owner-join closure (`2b27e30c6fe41f03281d3943568d0905d84d8af3`)
 - runtime acceptance: **Phase 4와 P0–P10 focused PASS / Sol ACCEPT; P3 semantic STOP, P4 structural CLOSED, P5 PLANNED, P6/P7 PASSED, P8 materialized, P9 bound, P10 component-closed; P11 focused test PASS / numerical result STOP; W7 owner-join commit `2b27e30c6fe41f03281d3943568d0905d84d8af3` DONE/ACCEPT with producer-only corrected rerun `1 passed in 1.52s` (consumer not rerun)**. This is read-only prerequisite evidence and does not claim actual production global-multi compile, original-SPD success, or PowerSI improvement.
 - production 상태: solver, owner-off, `Y_global`, `Zii` **unchanged**
 - 현재 작업 상태: **Actual-P0/R1/R2, R2-MULTI-TOPOLOGY-DIAG-01, Recovery-01과 DSU-01–05 DONE/STOP, FIX-01/FIX-02 DONE/ACCEPT**다.
-  DSU-05는 `STOP_MULTIPLE_NOT_REPRODUCED`; W7-PHYS BLOCKED이며 현재 sole ACTIVE는 **W7-PHYS-OWNER-JOIN-ORIGINAL-SPD-EVIDENCE-03 / FROZEN / READY_TO_EXECUTE**다. Original-SPD EVIDENCE-01/-02는 retry-0 DONE/STOP이고 quotient-scope FIX-01과 terminal pad-layer test-oracle FIX-01은 DONE/ACCEPT다. Terminal pad-layer predecessor는 test-oracle false negative로 DONE/STOP했다. P12는 NO-GO다.
-- active contract는 `W7-PHYS-OWNER-JOIN-ORIGINAL-SPD-EVIDENCE-03`이다. Base `2174a3891158a7d210e57ceb86a61937424386e4`, coordinator 52,836 B/SHA `5aef286c9bb936c7d748a8f1b5396f3a27f2bdc3922b076c74e2fb1b90eca0d7`, source compile/self-check 각 1회 PASS를 동결한다. Actual contract는 base의 exact-three-doc direct child여야 하며 새 empty root에서 parent launch 1회/retry 0만 허용한다. Original-SPD result/production/PowerSI improvement는 아직 미증명/0이다.
+  DSU-05는 `STOP_MULTIPLE_NOT_REPRODUCED`; W7-PHYS BLOCKED이며 현재 sole ACTIVE는 **NONE / READY_FOR_SUCCESSOR_PREFLIGHT**다. Original-SPD EVIDENCE-01/-02는 retry-0 DONE/STOP, EVIDENCE-03은 `STOP_UNEXPECTED`로 DONE/STOP이고 quotient-scope FIX-01과 terminal pad-layer test-oracle FIX-01은 DONE/ACCEPT다. Terminal pad-layer predecessor는 test-oracle false negative로 DONE/STOP했다. P12는 NO-GO다.
+- active contract는 없다. EVIDENCE-03 exact contract `1028607852966f5c1f117d84f5b20a243d2b3b3a`는 bundled interpreter의 missing `httpx`로 child module load 중 exit 1/`STOP_UNEXPECTED`, calls `0/0/0/0/1`, retry 0에 종료했다. Import는 시작되지 않았다. 다음 admissible action은 one exact project interpreter로 no-SPD four-symbol import-stack preflight 1회뿐이며, PASS 전 EVIDENCE-04 coordinator/SPD 실행은 금지한다. Production/PowerSI improvement는 미증명/0이다.
 - P11 closure: commit `e8d029a`, 최종 지정 node `1 passed in 1.55s`, Sol ACCEPT; pivot ratio `1.900e15`, condition-1 lower bound `1.096e17`, `SHADOW_SOLVE_NUMERICAL_FAILURE`; trusted stamp/matrix/solve/readiness false, production unchanged
 - 최종 개정: 2026-08-31 (Asia/Seoul)
 
@@ -72,7 +72,8 @@ flowchart LR
   QT --> FG[W7-PHYS-OWNER-JOIN-ORIGINAL-SPD-EVIDENCE-02<br/>DONE / STOP_IMPORT_OR_OWNERSHIP]
   FG --> PF[W7-PHYS-OWNER-JOIN-TERMINAL-PAD-LAYER-FIX-01<br/>DONE / STOP_TEST_ORACLE_FALSE_NEGATIVE]
   PF --> TF[W7-PHYS-OWNER-JOIN-TERMINAL-PAD-LAYER-TEST-ORACLE-FIX-01<br/>DONE / ACCEPT<br/>1 passed in 1.60s]
-  TF --> EG3[W7-PHYS-OWNER-JOIN-ORIGINAL-SPD-EVIDENCE-03<br/>FROZEN / READY_TO_EXECUTE]
+  TF --> EG3[W7-PHYS-OWNER-JOIN-ORIGINAL-SPD-EVIDENCE-03<br/>DONE / STOP_UNEXPECTED<br/>missing httpx before import]
+  EG3 --> IP[ACTIVE NONE<br/>READY_FOR_SUCCESSOR_PREFLIGHT]
   I[raw-v3 geometry/material] -. hash reference .-> B
   J[compiled finite topology] -. hash/owner reference .-> D
 ```
@@ -947,7 +948,7 @@ P11 1 GHz gate만으로 이 두 anchor를 증명하지 않으므로 accuracy pro
 two-anchor checkpoint를 별도로 요구한다.
 
 Post-DSU-05 readiness는 **NOT_READY/STOP**이다. candidate old-Maxwell owner를 source-derived P1 N-port atomic replacement로 바꾸려면, 선택된 L30/L29 finite-area source footprint/P1 terminal identity를 실제 `Y_global`이 소비하는 정확한 old-Maxwell owner closed set에 hash-bound bijectively join하는 ledger가 필요하다. 이 ledger가 rail-complete scope와 replaced/retained disjoint partition을 증명해야 하지만, DSU-05의 count/SHA-only IDs, compiled-only Recovery, full certificate/ownership IR 부재와 exact join key 부재로는 구성할 수 없다. 따라서 admissible next gate, DSU-06/FIX-03/P12/production/rerun은 없고 ACTIVE NONE이며 PowerSI numerical improvement는 0이다.
-이 문장은 74d readiness audit 당시의 historical conclusion이며, 당시 §8의 W7-PHYS-OWNER-JOIN-EVIDENCE-01이 이를 supersede했다. 이후 §9 closure가 §8을 닫았고, §10/§12 original-SPD gates는 permanent DONE/STOP, §11 quotient-scope fix는 DONE/ACCEPT다. §13 terminal pad-layer FIX-01은 test-oracle false negative로 DONE/STOP했고 §14 test-oracle FIX-01은 DONE/ACCEPT다. 현재 sole ACTIVE는 §15 EVIDENCE-03 / FROZEN / READY_TO_EXECUTE다.
+이 문장은 74d readiness audit 당시의 historical conclusion이며, 당시 §8의 W7-PHYS-OWNER-JOIN-EVIDENCE-01이 이를 supersede했다. 이후 §9 closure가 §8을 닫았고, §10/§12/§15 original-SPD gates는 permanent DONE/STOP, §11 quotient-scope fix와 §14 test-oracle fix는 DONE/ACCEPT다. §13 terminal pad-layer FIX-01은 test-oracle false negative로 DONE/STOP했다. 현재 ACTIVE는 NONE / READY_FOR_SUCCESSOR_PREFLIGHT다.
 
 ## 7. 주장 한계
 
@@ -1093,7 +1094,7 @@ invocation of the same focused node was the entire executable budget. At exact d
 raw compiler/schema, solver, coordinator, production or PowerSI work occurred. Claim ceiling remains synthetic importer/
 ownership-producer semantics; numerical improvement remains 0.
 
-## 15. W7-PHYS-OWNER-JOIN-ORIGINAL-SPD-EVIDENCE-03 — FROZEN / READY_TO_EXECUTE
+## 15. W7-PHYS-OWNER-JOIN-ORIGINAL-SPD-EVIDENCE-03 — DONE / STOP_UNEXPECTED
 
 Base/source-before is `2174a3891158a7d210e57ceb86a61937424386e4`. The distinct coordinator
 `D:\SPD-Decap-PI-Evaluator-W7\_coordinator_temp\production_owner_join_original_spd_evidence_03.py` is 52,836 bytes,
@@ -1112,3 +1113,22 @@ retry is 0. The inherited 1 PASS/9 STOP ledger, same-handle lock, exclusive publ
 versus STARTED receipt semantics, source pre/post identity and no patch/reuse/rerun rules are binding. Claim ceiling is
 importer, compile, P1 and shadow owner-join evidence only; no production wiring/solve/`Y_global`/`Zii`, PowerSI sign-off
 or numerical improvement.
+
+Exact contract `1028607852966f5c1f117d84f5b20a243d2b3b3a` exited 1 after 1.328 s with `STOP_UNEXPECTED` and
+`ModuleNotFoundError: No module named 'httpx'`. Calls were import/compile/P1/observer/report `0/0/0/0/1`, retry 0,
+peak RSS 0. Report is 1,033 B/SHA `25fa9f705a053a8cd23387bcb7edee96be1655c4b47d26317d4dc8f0a53cdc35`;
+sibling receipt is 1,092 B/SHA `1438ac1b6a58e8f130fca9931c1d81d354aafe0f805390bda4dddcd418707ee4`.
+The child failed while loading modules before `import_spd_scenario`; only expected source identity/stat is present and no
+observed source SHA, import/compile/P1/owner-join evidence exists. Finalized terminal counters/report/receipt accept the
+coordinator lifecycle, not the scientific gate. Retry/reuse/rerun is forbidden.
+
+## 16. EVIDENCE-04 interpreter preflight prerequisite — READY / NOT_EXECUTED
+
+Choose one absolute project interpreter, invoke it with `-I`, explicitly insert the repository `src` path, and perform
+one no-SPD import-stack preflight for the exact coordinator symbols `import_spd_scenario`,
+`compile_layerwise_substrate`, `evaluate_source_plane_contact_condensation`, and
+`audit_source_plane_patch_production_owner_join`; record exit 0 and `sys.executable`. Failure is EVIDENCE-04 NO-GO.
+A PASS alone permits a distinct `_04.py` and identities, followed by static audit and exactly one source compile plus
+one self-check using the same interpreter. Only then may a new exact-three-doc direct-child contract and empty root be
+frozen. No product code change or old gate/root reuse is allowed. Claim ceiling remains shadow owner-join evidence;
+PowerSI improvement remains 0.
