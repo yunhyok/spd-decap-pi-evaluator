@@ -1,11 +1,11 @@
 # SPD Decap PI Evaluator 작업 기준
 
 - 적용 제품: **SPD Decap PI Evaluator v0.23.1**
-- 문서 버전: **1.221**
-- 상위 기준: [목적·기술 기준](PRODUCT_PURPOSE_AND_TECHNICAL_BASELINE.md) v1.220; [Source-derived physical IR](SOURCE_DERIVED_PHYSICAL_IR.md) v1.55
+- 문서 버전: **1.222**
+- 상위 기준: [목적·기술 기준](PRODUCT_PURPOSE_AND_TECHNICAL_BASELINE.md) v1.221; [Source-derived physical IR](SOURCE_DERIVED_PHYSICAL_IR.md) v1.56
 - 현재 상태: W6 numerical FAIL; W7-SOURCE-IR-P1/P2/P3/P4 및 W7-PHYS-PROSPECTIVE-P0/P1/P2/P3/P4/P5/P6/P7/P8/P9/P10/P11 DONE, P3/P11 DONE/STOP; Actual-P0/R1/R2, DIAG-01과 Recovery-01 DONE/STOP; FIX-01/FIX-02 DONE/ACCEPT; `W7-PHYS-SOURCE-ANCHOR-LEAN-DSU-EVIDENCE-01` DONE/`STOP_TARGET_CONTACT_MISSING_OR_AMBIGUOUS`다.
   `W7-PHYS-SOURCE-ANCHOR-LEAN-DSU-EVIDENCE-02`/`03`/`04` DONE/`STOP_PROVENANCE_INCOMPLETE`다.
-  `W7-PHYS-SOURCE-ANCHOR-LEAN-DSU-EVIDENCE-05` DONE/`STOP_MULTIPLE_NOT_REPRODUCED`; W7-PHYS production physics remains BLOCKED. Terminal pad-layer FIX-01 is DONE/`STOP_TEST_ORACLE_FALSE_NEGATIVE`; its test-oracle FIX-01 successor is DONE/ACCEPT. Original-SPD EVIDENCE-01/-02/-04/-05 are DONE/`STOP_IMPORT_OR_OWNERSHIP`, EVIDENCE-03 is DONE/`STOP_UNEXPECTED`; compact-request-bound FIX-01 is DONE/ACCEPT. OWNERSHIP-COUNT-DIAG-01/-02 are DONE/`STOP_RESOURCE_OR_CANCELLED`; STREAMED-IR-300K-FIX-01 is DONE/`STOP_TEST_COLLECTION_SYNTAX`; collection-fix successor is DONE/`STOP_TEST_FAILURE_AND_RUNTIME_BUDGET`; validation-runtime fix is DONE/`ACCEPT_WITH_OUTPUT_LIMITATION`; current sole ACTIVE is **W7-PHYS-OWNER-JOIN-OWNERSHIP-STREAMED-IR-LIGHTWEIGHT-ACCEPTANCE-01 / FROZEN / READY_TO_EXECUTE**. Production physics/`Zii` are unchanged.
+  `W7-PHYS-SOURCE-ANCHOR-LEAN-DSU-EVIDENCE-05` DONE/`STOP_MULTIPLE_NOT_REPRODUCED`; W7-PHYS production physics remains BLOCKED. Terminal pad-layer FIX-01 is DONE/`STOP_TEST_ORACLE_FALSE_NEGATIVE`; its test-oracle FIX-01 successor is DONE/ACCEPT. Original-SPD EVIDENCE-01/-02/-04/-05 are DONE/`STOP_IMPORT_OR_OWNERSHIP`, EVIDENCE-03 is DONE/`STOP_UNEXPECTED`; compact-request-bound FIX-01 is DONE/ACCEPT. OWNERSHIP-COUNT-DIAG-01/-02 are DONE/`STOP_RESOURCE_OR_CANCELLED`; STREAMED-IR-300K-FIX-01 is DONE/`STOP_TEST_COLLECTION_SYNTAX`; collection-fix successor is DONE/`STOP_TEST_FAILURE_AND_RUNTIME_BUDGET`; validation-runtime fix is DONE/`ACCEPT_WITH_OUTPUT_LIMITATION`; lightweight acceptance is DONE/`STOP_TEST_ORACLE_COMPOUND_MUTATION`; current sole ACTIVE is **W7-PHYS-OWNER-JOIN-OWNERSHIP-STREAMED-IR-LIGHTWEIGHT-ACCEPTANCE-ORACLE-FIX-01 / FROZEN / READY_FOR_IMPLEMENTATION**. Production physics/`Zii` are unchanged.
 - 최종 개정: 2026-09-01 (Asia/Seoul)
 
 ## 1. 압축 후 즉시 복구 카드
@@ -19,10 +19,10 @@ context가 압축되거나 새 session에서 작업을 재개하면 이 표만 �
 | 현재 branch | `main`만 사용 |
 | 이 문서 정리의 source-before/implementation base parent | `f2c98040870b30bf21d778099cc4cb6d2a553ed5` (OWNERSHIP-COUNT-DIAG-02 contract) |
 | 현재 assessment | W6-BASE numerical FAIL; Phase 4/P0–P11은 prerequisite/shadow 범위 DONE. DSU-05의 선택된 6-contact source boundary는 모두 singleton이며 all/complete graph가 동일해 R2 multiple-selector 가설이 재현되지 않았다. 제품 solver/owner-off/`Y_global`/`Zii`와 W6 PowerSI 수치는 변경되지 않아 수치 격차 개선은 0이다(새 percentage metric이 아니라 실측 improvement absence) |
-| 현재 active work item | **W7-PHYS-OWNER-JOIN-OWNERSHIP-STREAMED-IR-LIGHTWEIGHT-ACCEPTANCE-01 / FROZEN / READY_TO_EXECUTE** |
+| 현재 active work item | **W7-PHYS-OWNER-JOIN-OWNERSHIP-STREAMED-IR-LIGHTWEIGHT-ACCEPTANCE-ORACLE-FIX-01 / FROZEN / READY_FOR_IMPLEMENTATION** |
 | 현재 정확성 상태 | `260729 retrospective FAIL`; unseen/generalization `unknown / not_run` |
-| current authorization | `main`-only, `accuracy_parse.py` 보존. Six candidate product/test bytes 동결. 아래 12.54의 18개 exact node만 `-x -vv --tb=long` Python312 invocation 1회, 외부 300 s. Pressure/exact-300K/중복 pass/old 15-node/full suite/original SPD/solver/production/PowerSI 금지. |
-| 다음 gate | **lightweight acceptance** — 아직 미증명인 changed streamed-transport 경계만 cheap-first 단일 invocation으로 닫기 |
+| current authorization | `main`-only, `accuracy_parse.py` 보존. IR test의 mutation-index-10 child ledger ID update 한 statement만 추가; product/other tests 동결. Sol static 뒤 12.54의 same 18 nodes once/300 s. Pressure/exact-300K/full suite/original SPD/solver/production/PowerSI 금지. |
+| 다음 gate | **lightweight acceptance oracle fix** — FK-consistent Unicode collision fixture 후 동일 bounded scope 한 번 |
 | 정확한 재개 조건 | PowerSI 오차를 설명할 별도의 source-derived physical block, authoritative owner relation, deterministic replacement stamp, 무피팅 limiting-case invariant와 disjoint owner ledger가 함께 식별되고 frozen contract review를 통과해야 한다. |
 | 핵심 증거 | [W6-BASE completed evidence](#w6-base-completed-evidence-260729), [W7 결과 재평가](#12-w7-결과-재평가와-후속-과제-판정) |
 
@@ -35,12 +35,12 @@ context가 압축되거나 새 session에서 작업을 재개하면 이 표만 �
 | 구분 | 현재 권위 |
 |---|---|
 | accepted / committed | Phase 1 `82370b6`, Phase 2 `75ac0a0`, Phase 3 `5d2c353`, Phase 4 `3b76af4`, P0 `4dc855a`, P1 `f823a53`, P2 `90f6b54`, P3 `b8a79f1`, P4 `39fd4fa`, P5 `d7e7278`, P6 `6793bb2`, P7 `f1c2968`, P8 `abf79cf`, P9 `593e070`, P10 `7f9c498`, P11 `e8d029a`, W7 owner-join `2b27e30c6fe41f03281d3943568d0905d84d8af3` DONE/ACCEPT read-only closure; 모두 prerequisite/shadow 범위이며 production `Y_global`/`Zii` 불변 |
-| current candidate | DSU-01–05, Recovery-01/DIAG-01, original-SPD EVIDENCE-01/-02/-03/-04/-05와 OWNERSHIP-COUNT-DIAG-01/-02는 영구 DONE/STOP; owner-join, quotient-scope, terminal pad-layer test-oracle 및 compact-request-bound fixes are DONE/ACCEPT; streamed-IR-300K FIX-01은 collection STOP, collection-fix는 failure/runtime STOP, validation-runtime fix는 ACCEPT_WITH_OUTPUT_LIMITATION; P12 prospective review NO-GO; lightweight acceptance sole ACTIVE |
+| current candidate | DSU-01–05, Recovery-01/DIAG-01, original-SPD EVIDENCE-01/-02/-03/-04/-05와 OWNERSHIP-COUNT-DIAG-01/-02는 영구 DONE/STOP; owner-join, quotient-scope, terminal pad-layer test-oracle 및 compact-request-bound fixes are DONE/ACCEPT; streamed-IR-300K FIX-01은 collection STOP, collection-fix는 failure/runtime STOP, validation-runtime fix는 ACCEPT_WITH_OUTPUT_LIMITATION, lightweight acceptance는 oracle STOP; P12 prospective review NO-GO; oracle-fix sole ACTIVE |
 | static evidence | P11 Sol ACCEPT; default `None` arithmetic/cache identity 불변, supplemental cache-ineligible, P10/P9/block/owner/termination identity와 original inventory/CSC/cache 불변 확인. P12 review는 synthetic bridge 때문에 actual owning-block attribution이 non-identifying이라고 판정 |
-| runtime evidence | DIAG-02 exact report/receipt가 persisted됐다. WinAPI measured peak 13.09 GiB, current 1.42 GiB, scratch 131.6 MiB; expanded Node/Via 77,852/38,926, six-key selection 116,791, source-record lower bound 122,146, final-v2 lower bound 249,635. Validation-runtime exact pressure+300K process는 exit 0 / wrapper 22.8483887 s이며 stdout unavailable로 literal pytest summary는 주장하지 않는다. |
+| runtime evidence | DIAG-02 exact report/receipt가 persisted됐다. WinAPI measured peak 13.09 GiB, current 1.42 GiB, scratch 131.6 MiB; expanded Node/Via 77,852/38,926, six-key selection 116,791, source-record lower bound 122,146, final-v2 lower bound 249,635. Validation-runtime pressure+300K process는 exit 0 / 22.8483887 s. Lightweight run은 `1 failed, 7 passed in 6.39s`, oracle STOP이다. |
 | runtime 미증명 | old-owner replacement, trusted solve와 실제 SPD/PowerSI 영향은 미증명이다. DSU-05는 source boundary 진단이며 production topology 또는 accuracy evidence가 아니다. |
 | 별도 사용자 파일 | untracked `accuracy_parse.py`; 보존·미수정·미stage |
-| candidate staging / acceptance | existing dirty six-file transport candidate byte-frozen; Sol `CONTRACT_RECOMMEND`의 18-node remaining acceptance invocation 1회/300 s만 허용; accepted two nodes와 full suite는 재실행 금지 |
+| candidate staging / acceptance | product 3/raw+producer tests 동결; IR test 한-statement oracle fix만; Sol static 뒤 same 18-node invocation 1회/300 s; accepted pressure/exact-300K와 full suite 재실행 금지 |
 
 ## 2. 문서 사용 규칙
 
@@ -115,7 +115,7 @@ disjoint owner ledger 확보와 사용자 명시 승인
 ## 4. 작업 항목 register
 
 상태 어휘는 `READY`, `ACTIVE`, `BLOCKED`, `DEFERRED`, `DONE`만 사용한다.
-동시에 `ACTIVE`는 하나만 허용하며 현재 sole ACTIVE는 **W7-PHYS-OWNER-JOIN-OWNERSHIP-STREAMED-IR-LIGHTWEIGHT-ACCEPTANCE-01**이다. 완료된 미시적 item을
+동시에 `ACTIVE`는 하나만 허용하며 현재 sole ACTIVE는 **W7-PHYS-OWNER-JOIN-OWNERSHIP-STREAMED-IR-LIGHTWEIGHT-ACCEPTANCE-ORACLE-FIX-01**이다. 완료된 미시적 item을
 다시 펼쳐 읽지 말고 아래 phase-level 결론과 Git history를 사용한다.
 상태와 증거 축은 분리한다. `DONE`은 선언한 범위의 종료일 뿐 current commit,
 production acceptance, runtime PASS 또는 PowerSI 정확성을 자동으로 뜻하지 않는다.
@@ -193,7 +193,8 @@ dirty/static/runtime/commit 상태는 복구 카드 1.1에 별도로 기록한�
 | `W7-PHYS-OWNER-JOIN-OWNERSHIP-STREAMED-IR-300K-FIX-01` | 45 | DONE/STOP_TEST_COLLECTION_SYNTAX | spool-backed ownership handoff and separated count bounds | Sol STATIC_ACCEPT; sole run exit 1 during collection, `3 errors in 1.98s`, zero test bodies; no rerun |
 | `W7-PHYS-OWNER-JOIN-OWNERSHIP-STREAMED-IR-300K-COLLECTION-FIX-01` | 46 | DONE/STOP_TEST_FAILURE_AND_RUNTIME_BUDGET | delete duplicate first module docstring and collect the accepted focused scope | one-line delta static ACCEPT; sole run pressure F without traceback, exact-300K CPU-active until 5,400 s parent stop; no rerun |
 | `W7-PHYS-OWNER-JOIN-OWNERSHIP-STREAMED-IR-300K-VALIDATION-RUNTIME-FIX-01` | 47 | DONE/ACCEPT_WITH_OUTPUT_LIMITATION | remove deterministic superlinear folded validation plans | source-only plan fix; Sol no P0/P1; exact two-node process exit 0 / 22.8483887 s; stdout unavailable; no rerun |
-| `W7-PHYS-OWNER-JOIN-OWNERSHIP-STREAMED-IR-LIGHTWEIGHT-ACCEPTANCE-01` | 48 | ACTIVE | close only still-unproved changed streamed-transport paths | product/tests frozen; exact 18 nodes once/300 s; accepted/redundant/unchanged tests omitted |
+| `W7-PHYS-OWNER-JOIN-OWNERSHIP-STREAMED-IR-LIGHTWEIGHT-ACCEPTANCE-01` | 48 | DONE/STOP_TEST_ORACLE_COMPOUND_MUTATION | close only still-unproved changed streamed-transport paths | 18 collected; 7 explicit PASS then FK-invalid ledger fixture expected/actual mismatch; exit 1; no rerun |
+| `W7-PHYS-OWNER-JOIN-OWNERSHIP-STREAMED-IR-LIGHTWEIGHT-ACCEPTANCE-ORACLE-FIX-01` | 49 | ACTIVE | preserve FK while testing Unicode folded ledger collision | one IR-test statement only; Sol static; same exact 18 nodes once/300 s |
 | `W8-REL` | 18 | BLOCKED | completed known-case solve를 release gate에 연결하고 최종 전달 | accuracy/product gate와 exact release commit 필요 |
 | `D-DIST` | - | DEFERRED | Distribution routing/DRC scope 확대 | 사용자가 implementation-ready/DRC 목표로 승격할 때만 |
 | `D-DOC` | - | DEFERRED | README와 동결 연구 배너 정리 | current work를 방해할 때 별도 문서 묶음으로 처리 |
@@ -564,6 +565,7 @@ remote/full suite, installer/release는 수행하지 않았다.
 | `D-068` | STREAMED-IR-300K-FIX-01의 six-file diff는 Sol `STATIC_ACCEPT`/P0-P1 none이었지만 exact sole Python312 invocation은 exit 1, `3 errors in 1.98s`로 collection에서 종료되고 test body는 0개 실행됐다. `source_plane_ownership_ir.py` 선두의 stale one-line docstring과 새 module docstring이 연속되어 line-9 future import가 `SyntaxError`였다. 이 invocation은 DONE/`STOP_TEST_COLLECTION_SYNTAX`로 영구 기록하고 재실행하지 않는다. Sole ACTIVE collection-fix successor는 stale 첫 docstring 한 줄만 삭제하며 나머지 product/test bytes를 보존한다. Sol static ACCEPT 뒤 same 15-node fresh invocation 1회만 허용한다. Original SPD/full suite/upstream recovery/solver/production/PowerSI는 금지하고 improvement는 0이다 | 확정 |
 | `D-069` | COLLECTION-FIX-01의 one-line source delta는 Sol static ACCEPT였으나 sole fresh 15-node run은 `.....F...` 뒤 exit 1이다. Pressure node의 traceback은 pytest finalization 전 유실되어 cause unknown이며, exact `150000/149977/300000` parameter는 약 120 MiB에서 CPU-active인 채 5,400 s parent budget으로 중단됐다. Progress dots는 PASS로 재사용하지 않고 old invocation은 no-rerun이다. Static audit가 component count의 149,977² correlated scan, Shape/source와 retained-edge folded cross-product를 P1으로 확정했고 ledger owner coverage는 optional automatic index 없이는 58,383² worst path임을 확인했다. Sole ACTIVE VALIDATION-RUNTIME-FIX-01은 `source_plane_ownership_ir.py::_validate_spooled_rows`만 TEMP index 2개와 indexed/set-based SQL 3개로 교정하고 tests/나머지 product bytes를 보존한다. Sol static 뒤 pressure first, PASS 시 exact-300K parameter second인 `-x -vv --tb=long` invocation 1회/600 s만 허용한다. 어떤 failure/timeout도 traceback과 함께 새 STOP이며 original SPD/full suite/solver/production/PowerSI improvement는 금지/0이다 | 확정 |
 | `D-070` | VALIDATION-RUNTIME-FIX-01은 ownership IR SHA `1027E694...79DE`, Sol static P0/P1 none, exact ordered two-node process exit 0 / wrapper 22.8483887 s로 DONE/`ACCEPT_WITH_OUTPUT_LIMITATION`이다. Stdout 부재로 literal `2 passed`/per-node duration은 주장하지 않고 fresh exact node IDs/temp DB evidence까지만 인정하며 invocation은 consumed/no-rerun이다. Sole ACTIVE LIGHTWEIGHT-ACCEPTANCE-01은 product/tests byte-frozen, Sol `CONTRACT_RECOMMEND`의 18 exact nodes cheap-first 단일 Python312 invocation 1회/300 s만 허용한다. Static-only dataclass test, redundant section-pass, accepted pressure/exact-300K, unchanged/full suite/original SPD/solver/production/PowerSI는 제외한다 | 확정 |
+| `D-071` | LIGHTWEIGHT-ACCEPTANCE-01 sole run은 18 collected, first 7 explicit PASS 뒤 eighth node의 mutation index 10에서 expected `ID_COLLISION`/actual `DATABASE_INVALID`, `1 failed, 7 passed in 6.39s`, child exit 1, wrapper 7.0349161 s로 DONE/`STOP_TEST_ORACLE_COMPOUND_MUTATION`이다. Parent ledger ID만 바꿔 child member가 orphan된 compound fixture가 FK-enabled main copy에서 먼저 정상 거부된 것이며 product bug가 아니다. Partial progress는 gate acceptance로 재사용하지 않는다. Sole ACTIVE ORACLE-FIX-01은 해당 child ledger ID update 한 statement만 추가하고 Sol static 뒤 same exact 18 nodes를 한 번/300 s 실행한다. Product/other tests/pressure/exact-300K/full suite/original SPD/solver/PowerSI는 불변·금지다 | 확정 |
 
 ## 11. 현재 evidence와 비재사용 경계
 
@@ -596,7 +598,7 @@ falsifiable physical/analytic limiting-case invariant + disjoint owner ledger와
   `unknown / not_run`이다.
 - W7은 source/provenance와 수학·운영 기반을 개선했지만 production network,
   계산된 `Zii`, PowerSI correlation을 바꾸지 않았다.
-- 따라서 현재 product risk는 그대로 **외부 정확성 미달**이다. **W7-PHYS-OWNER-JOIN-QUOTIENT-SCOPE-FIX-01**은 DONE/ACCEPT다. W7-PHYS-OWNER-JOIN-EVIDENCE-01은 DONE/ACCEPT로 닫혔고 original-SPD EVIDENCE-01/-02/-04/-05는 DONE/`STOP_IMPORT_OR_OWNERSHIP`, EVIDENCE-03은 missing `httpx`의 pre-import `STOP_UNEXPECTED`로 영구 닫혔다. Terminal pad-layer test-oracle successor와 compact-request-bound FIX-01은 DONE/ACCEPT다. OWNERSHIP-COUNT-DIAG-01/-02, streamed-IR FIX-01과 collection-fix는 DONE/STOP, validation-runtime fix는 DONE/`ACCEPT_WITH_OUTPUT_LIMITATION`이고 현재 sole ACTIVE는 **W7-PHYS-OWNER-JOIN-OWNERSHIP-STREAMED-IR-LIGHTWEIGHT-ACCEPTANCE-01 / FROZEN / READY_TO_EXECUTE**이다.
+- 따라서 현재 product risk는 그대로 **외부 정확성 미달**이다. **W7-PHYS-OWNER-JOIN-QUOTIENT-SCOPE-FIX-01**은 DONE/ACCEPT다. W7-PHYS-OWNER-JOIN-EVIDENCE-01은 DONE/ACCEPT로 닫혔고 original-SPD EVIDENCE-01/-02/-04/-05는 DONE/`STOP_IMPORT_OR_OWNERSHIP`, EVIDENCE-03은 missing `httpx`의 pre-import `STOP_UNEXPECTED`로 영구 닫혔다. Terminal pad-layer test-oracle successor와 compact-request-bound FIX-01은 DONE/ACCEPT다. OWNERSHIP-COUNT-DIAG-01/-02, streamed-IR FIX-01과 collection-fix는 DONE/STOP, validation-runtime fix는 DONE/`ACCEPT_WITH_OUTPUT_LIMITATION`, lightweight acceptance는 DONE/`STOP_TEST_ORACLE_COMPOUND_MUTATION`이고 현재 sole ACTIVE는 **W7-PHYS-OWNER-JOIN-OWNERSHIP-STREAMED-IR-LIGHTWEIGHT-ACCEPTANCE-ORACLE-FIX-01 / FROZEN / READY_FOR_IMPLEMENTATION**이다.
   DSU-05는 `STOP_MULTIPLE_NOT_REPRODUCED`로 DONE했고 W7-PHYS는 BLOCKED다.
   Actual-P0/R1/R2는 scenario 없이 DONE/STOP했고 FIX-01/FIX-02는 DONE/ACCEPT다. P3는 `CONTACT_INTERFACE_RANK_LOSS` STOP, P4는 base cut-set
   CLOSED, P5는 deterministic shadow plan PLANNED, P6는 scenario/termination commutation
@@ -803,7 +805,8 @@ flowchart LR
   CD2 --> ST[W7-PHYS-OWNER-JOIN-OWNERSHIP-STREAMED-IR-300K-FIX-01<br/>DONE / STOP_TEST_COLLECTION_SYNTAX]
   ST --> CF[W7-PHYS-OWNER-JOIN-OWNERSHIP-STREAMED-IR-300K-COLLECTION-FIX-01<br/>DONE / STOP_TEST_FAILURE_AND_RUNTIME_BUDGET]
   CF --> VR[W7-PHYS-OWNER-JOIN-OWNERSHIP-STREAMED-IR-300K-VALIDATION-RUNTIME-FIX-01<br/>DONE / ACCEPT_WITH_OUTPUT_LIMITATION]
-  VR --> LA[W7-PHYS-OWNER-JOIN-OWNERSHIP-STREAMED-IR-LIGHTWEIGHT-ACCEPTANCE-01<br/>FROZEN / READY_TO_EXECUTE]
+  VR --> LA[W7-PHYS-OWNER-JOIN-OWNERSHIP-STREAMED-IR-LIGHTWEIGHT-ACCEPTANCE-01<br/>DONE / STOP_TEST_ORACLE_COMPOUND_MUTATION]
+  LA --> OF[W7-PHYS-OWNER-JOIN-OWNERSHIP-STREAMED-IR-LIGHTWEIGHT-ACCEPTANCE-ORACLE-FIX-01<br/>FROZEN / READY_FOR_IMPLEMENTATION]
   R -->|예| H
   D[17DG foundation] -. production binding 필요 .-> H
   E[17DO/17DP owner evidence] -. identity join 필요 .-> H
@@ -821,7 +824,7 @@ P3 semantic result는 `CONTACT_INTERFACE_RANK_LOSS` STOP, P4는 CLOSED, P5는 PL
 P6와 P7은 PASSED고 P8은 materialized, P9은 bound, P10은 component-closed다. P11은 factor
 forward-reliability numerical STOP이고 P12는 NO-GO다. Actual-P0와 R1 original-SPD one-shot은 selector
 identity mismatch로 DONE/STOP했고 FIX-01/FIX-02는 DONE/ACCEPT다. R2는 actual multiple STOP으로
-닫혔고 DIAG-01/-02도 resource STOP으로 닫혔다. old component evidence와 DSU-01–05는 모두 DONE/STOP했고 W7-PHYS-OWNER-JOIN-EVIDENCE-01은 DONE/ACCEPT로 닫혔다. **W7-PHYS-OWNER-JOIN-ORIGINAL-SPD-EVIDENCE-01/-02/-03/-04/-05**와 ownership-count DIAG-01/-02는 영구 DONE/STOP이고, **W7-PHYS-OWNER-JOIN-QUOTIENT-SCOPE-FIX-01**, terminal pad-layer test-oracle와 compact-request-bound fixes는 DONE/ACCEPT다. streamed-IR FIX-01과 collection-fix는 DONE/STOP, validation-runtime fix는 DONE/`ACCEPT_WITH_OUTPUT_LIMITATION`이고 현재 sole ACTIVE는 **W7-PHYS-OWNER-JOIN-OWNERSHIP-STREAMED-IR-LIGHTWEIGHT-ACCEPTANCE-01 / FROZEN / READY_TO_EXECUTE**이다. 아래 조건은 그 다음 physical promotion gate를 열 때도 계속 적용한다.
+닫혔고 DIAG-01/-02도 resource STOP으로 닫혔다. old component evidence와 DSU-01–05는 모두 DONE/STOP했고 W7-PHYS-OWNER-JOIN-EVIDENCE-01은 DONE/ACCEPT로 닫혔다. **W7-PHYS-OWNER-JOIN-ORIGINAL-SPD-EVIDENCE-01/-02/-03/-04/-05**와 ownership-count DIAG-01/-02는 영구 DONE/STOP이고, **W7-PHYS-OWNER-JOIN-QUOTIENT-SCOPE-FIX-01**, terminal pad-layer test-oracle와 compact-request-bound fixes는 DONE/ACCEPT다. streamed-IR FIX-01과 collection-fix는 DONE/STOP, validation-runtime fix는 DONE/`ACCEPT_WITH_OUTPUT_LIMITATION`, lightweight acceptance는 DONE/`STOP_TEST_ORACLE_COMPOUND_MUTATION`이고 현재 sole ACTIVE는 **W7-PHYS-OWNER-JOIN-OWNERSHIP-STREAMED-IR-LIGHTWEIGHT-ACCEPTANCE-ORACLE-FIX-01 / FROZEN / READY_FOR_IMPLEMENTATION**이다. 아래 조건은 그 다음 physical promotion gate를 열 때도 계속 적용한다.
 
 1. source-derived geometry/material provenance가 있다.
 2. 대상 rail 전체에 적용 가능한 physical model 또는 omitted-block candidate다.
@@ -2427,7 +2430,7 @@ within wrapper wall 22.8483887 s. Fresh `.pytest_cache` node IDs and ordered tem
 cases executed; stdout was unavailable, so literal `2 passed`, per-node pytest text and durations are not claimed. The
 invocation is consumed/no-rerun.
 
-### 12.54 W7-PHYS-OWNER-JOIN-OWNERSHIP-STREAMED-IR-LIGHTWEIGHT-ACCEPTANCE-01 — FROZEN / READY_TO_EXECUTE
+### 12.54 W7-PHYS-OWNER-JOIN-OWNERSHIP-STREAMED-IR-LIGHTWEIGHT-ACCEPTANCE-01 — DONE / STOP_TEST_ORACLE_COMPOUND_MUTATION
 
 Freeze the six candidate files at raw compiler
 `0612A85B347BD2C034180E949AA1BF9A113CFB5E61B22A7226D689744BF7D9E5`, ownership IR
@@ -2465,3 +2468,25 @@ the redundant `[150000-2-False-150025]`, the accepted pressure/exact-300K nodes 
 Passing proves only these named synthetic/MINI-SPD paths: streamed SQLite transport, v2 logical parity, fail-closed
 bounds/invariants/cleanup and adapter producer branches. It does not prove the original-SPD 13.09 GiB path, production
 owner join, solver/`Y_global`/`Zii`, PowerSI accuracy/performance or release.
+
+The sole run collected all 18 nodes and produced seven explicit PASS results before node 8 failed. Its 0-based mutation
+index 10 expected `SOURCE_PLANE_OWNERSHIP_IR_ID_COLLISION` but received
+`SOURCE_PLANE_OWNERSHIP_IR_DATABASE_INVALID`; final summary `1 failed, 7 passed in 6.39s`, child exit 1, wrapper wall
+7.0349161 s. The fixture changed `replacement_ledger.ledger_id` but left three child member IDs at `ledger:0`; the
+FK-enabled destination therefore rejected the orphan during section copy before `_validate_spooled_rows` could classify
+the Unicode folded collision. Sol and Luna classify this as a test oracle/compound-mutation defect, P0 none, not a
+product defect. The invocation is consumed/no-rerun and its partial progress does not accept this gate.
+
+### 12.55 W7-PHYS-OWNER-JOIN-OWNERSHIP-STREAMED-IR-LIGHTWEIGHT-ACCEPTANCE-ORACLE-FIX-01 — FROZEN / READY_FOR_IMPLEMENTATION
+
+Base docs contract is exact `2988dd5`. Freeze every product file and all tests except
+`tests/test_source_plane_ownership_ir.py`, whose pre-fix SHA-256 is
+`B3324E162E77A8D3C4BE6D0F8FC80A020CE0FD83FDF1EC78B1442EF806D89F32`. Luna may add exactly one statement in mutation
+index 10 to update `replacement_ledger_members.ledger_id` from `ledger:0` to `i̇` alongside its parent. Preserve the
+expected `SOURCE_PLANE_OWNERSHIP_IR_ID_COLLISION`; no product or other test change is allowed.
+
+After Sol static acceptance, run the exact 18 nodes and order already enumerated in section 12.54 once with `-x -vv
+--tb=long`, captured stdout/stderr and an external 300 s limit. Any failure/timeout closes the successor with no rerun.
+Pressure, exact-300K, redundant/unchanged tests and full suite remain excluded. Passing proves only the same named
+synthetic/MINI-SPD streamed transport and producer paths; original SPD, production owner join, solver/`Y_global`/`Zii`,
+PowerSI accuracy/performance and release remain unproved.
