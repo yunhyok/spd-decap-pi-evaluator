@@ -1,11 +1,11 @@
 # SPD Decap PI Evaluator 작업 기준
 
 - 적용 제품: **SPD Decap PI Evaluator v0.23.1**
-- 문서 버전: **1.201**
-- 상위 기준: [목적·기술 기준](PRODUCT_PURPOSE_AND_TECHNICAL_BASELINE.md) v1.200; [Source-derived physical IR](SOURCE_DERIVED_PHYSICAL_IR.md) v1.35
+- 문서 버전: **1.202**
+- 상위 기준: [목적·기술 기준](PRODUCT_PURPOSE_AND_TECHNICAL_BASELINE.md) v1.201; [Source-derived physical IR](SOURCE_DERIVED_PHYSICAL_IR.md) v1.36
 - 현재 상태: W6 numerical FAIL; W7-SOURCE-IR-P1/P2/P3/P4 및 W7-PHYS-PROSPECTIVE-P0/P1/P2/P3/P4/P5/P6/P7/P8/P9/P10/P11 DONE, P3/P11 DONE/STOP; Actual-P0/R1/R2, DIAG-01과 Recovery-01 DONE/STOP; FIX-01/FIX-02 DONE/ACCEPT; `W7-PHYS-SOURCE-ANCHOR-LEAN-DSU-EVIDENCE-01` DONE/`STOP_TARGET_CONTACT_MISSING_OR_AMBIGUOUS`다.
   `W7-PHYS-SOURCE-ANCHOR-LEAN-DSU-EVIDENCE-02`/`03`/`04` DONE/`STOP_PROVENANCE_INCOMPLETE`다.
-  `W7-PHYS-SOURCE-ANCHOR-LEAN-DSU-EVIDENCE-05` DONE/`STOP_MULTIPLE_NOT_REPRODUCED`; W7-PHYS production physics remains BLOCKED. Current sole ACTIVE is **W7-PHYS-OWNER-JOIN-ORIGINAL-SPD-EVIDENCE-01** (FROZEN / READY_TO_EXECUTE); W7-PHYS-OWNER-JOIN-EVIDENCE-01 is DONE/ACCEPT; production physics/`Zii` unchanged.
+  `W7-PHYS-SOURCE-ANCHOR-LEAN-DSU-EVIDENCE-05` DONE/`STOP_MULTIPLE_NOT_REPRODUCED`; W7-PHYS production physics remains BLOCKED. Current sole ACTIVE is **W7-PHYS-OWNER-JOIN-QUOTIENT-SCOPE-FIX-01** (FROZEN / READY_FOR_IMPLEMENTATION); W7-PHYS-OWNER-JOIN-ORIGINAL-SPD-EVIDENCE-01 is permanently DONE/`STOP_IMPORT_OR_OWNERSHIP`; production physics/`Zii` unchanged.
 - 최종 개정: 2026-08-31 (Asia/Seoul)
 
 ## 1. 압축 후 즉시 복구 카드
@@ -17,12 +17,12 @@ context가 압축되거나 새 session에서 작업을 재개하면 이 표만 �
 | 변하지 않는 목적 | source-derived single-rail `Zii`의 PowerSI 근접 정확성과 일반화 |
 | 기본 복구 문서 | 목적·기술 기준 → Source-derived physical IR → 이 작업 기준, 세 문서 |
 | 현재 branch | `main`만 사용 |
-| 이 문서 정리의 source-before/base parent | `2014f206e756177b94bc71d2a341ef0fecde909a` (clean `main` HEAD parent for W7-PHYS-OWNER-JOIN-ORIGINAL-SPD-EVIDENCE-01) |
+| 이 문서 정리의 source-before/base parent | `a4e049366a5a1745b9762557d72204f0b1a823de` (completed original-SPD one-shot contract; closure/fix-freeze source-before) |
 | 현재 assessment | W6-BASE numerical FAIL; Phase 4/P0–P11은 prerequisite/shadow 범위 DONE. DSU-05의 선택된 6-contact source boundary는 모두 singleton이며 all/complete graph가 동일해 R2 multiple-selector 가설이 재현되지 않았다. 제품 solver/owner-off/`Y_global`/`Zii`와 W6 PowerSI 수치는 변경되지 않아 수치 격차 개선은 0이다(새 percentage metric이 아니라 실측 improvement absence) |
-| 현재 active work item | **W7-PHYS-OWNER-JOIN-ORIGINAL-SPD-EVIDENCE-01** — **FROZEN / READY_TO_EXECUTE**; source-before/base parent `2014f206e756177b94bc71d2a341ef0fecde909a`, technical dependency `2b27e30c6fe41f03281d3943568d0905d84d8af3`; coordinator `D:\SPD-Decap-PI-Evaluator-W7\_coordinator_temp\production_owner_join_original_spd_evidence.py`, 52,827 bytes, SHA-256 `155ee83d1911f72a1820dc14fa3b2a5cf3de13f11afd35f2bac3043a5d3552af`, source compile/self-check each exactly once exit 0, Sol `EXECUTION_ACCEPT`, P0/P1 none |
+| 현재 active work item | **W7-PHYS-OWNER-JOIN-QUOTIENT-SCOPE-FIX-01** — **FROZEN / READY_FOR_IMPLEMENTATION**; exact five-file scope (`spd_adapter.py`, producer test, and these three docs), two-pass rail-local projection, two focused tests, no cap raise/physics/solver/wiring/original-SPD rerun |
 | 현재 정확성 상태 | `260729 retrospective FAIL`; unseen/generalization `unknown / not_run` |
-| current authorization | `main`-only, `accuracy_parse.py` 보존. 이제 이 frozen coordinator의 정확한 original-SPD one-shot 1회만 허용하며 retry 0, patch/rerun 없음이다. timeout/interrupt 미확정 종료는 calls=`not_evaluated_after_termination`, receipt STARTED 유지; duplicate claimant는 API/report 0회; parent-owned finalization만 허용한다. |
-| 다음 gate | **W7-PHYS-OWNER-JOIN-ORIGINAL-SPD-EVIDENCE-01 original-SPD one-shot 실행** — **FROZEN / READY_TO_EXECUTE** |
+| current authorization | `main`-only, `accuracy_parse.py` 보존. 현재는 exact five-file quotient-scope fix와 신규 parameterized node 1개(2 cases)+기존 roundtrip node 1개를 한 focused invocation으로 검증한다. Original-SPD run 및 old-gate retry/reuse/rerun은 금지하며 Sol final ACCEPT 전에는 successor one-shot을 열지 않는다. |
+| 다음 gate | **W7-PHYS-OWNER-JOIN-QUOTIENT-SCOPE-FIX-01** implementation + focused validation — **FROZEN / READY_FOR_IMPLEMENTATION** |
 | 정확한 재개 조건 | PowerSI 오차를 설명할 별도의 source-derived physical block, authoritative owner relation, deterministic replacement stamp, 무피팅 limiting-case invariant와 disjoint owner ledger가 함께 식별되고 frozen contract review를 통과해야 한다. |
 | 핵심 증거 | [W6-BASE completed evidence](#w6-base-completed-evidence-260729), [W7 결과 재평가](#12-w7-결과-재평가와-후속-과제-판정) |
 
@@ -35,12 +35,12 @@ context가 압축되거나 새 session에서 작업을 재개하면 이 표만 �
 | 구분 | 현재 권위 |
 |---|---|
 | accepted / committed | Phase 1 `82370b6`, Phase 2 `75ac0a0`, Phase 3 `5d2c353`, Phase 4 `3b76af4`, P0 `4dc855a`, P1 `f823a53`, P2 `90f6b54`, P3 `b8a79f1`, P4 `39fd4fa`, P5 `d7e7278`, P6 `6793bb2`, P7 `f1c2968`, P8 `abf79cf`, P9 `593e070`, P10 `7f9c498`, P11 `e8d029a`, W7 owner-join `2b27e30c6fe41f03281d3943568d0905d84d8af3` DONE/ACCEPT read-only closure; 모두 prerequisite/shadow 범위이며 production `Y_global`/`Zii` 불변 |
-| current candidate | DSU-01–05와 Recovery-01/DIAG-01은 영구 DONE/STOP, FIX-01/FIX-02와 W7-PHYS-OWNER-JOIN-EVIDENCE-01은 DONE/ACCEPT, P12 prospective review는 NO-GO; sole ACTIVE는 W7-PHYS-OWNER-JOIN-ORIGINAL-SPD-EVIDENCE-01 freeze |
+| current candidate | DSU-01–05와 Recovery-01/DIAG-01은 영구 DONE/STOP, FIX-01/FIX-02와 W7-PHYS-OWNER-JOIN-EVIDENCE-01은 DONE/ACCEPT, P12 prospective review는 NO-GO; old original-SPD gate는 DONE/`STOP_IMPORT_OR_OWNERSHIP`; sole ACTIVE는 W7-PHYS-OWNER-JOIN-QUOTIENT-SCOPE-FIX-01 |
 | static evidence | P11 Sol ACCEPT; default `None` arithmetic/cache identity 불변, supplemental cache-ineligible, P10/P9/block/owner/termination identity와 original inventory/CSC/cache 불변 확인. P12 review는 synthetic bridge 때문에 actual owning-block attribution이 non-identifying이라고 판정 |
 | runtime evidence | DSU-05 report/receipt는 exact root에 persisted됐다. import/analyze/observer/report `1/1/1/1`, retry와 세 runtime guard 0, 3V+2E PASS, 6 contacts direct/complete/singleton, all/complete root exact 동일이다. R2 compiled-artifact multiple 기록은 historical evidence로 유지하지만 선택된 source boundary에서는 재현되지 않았다. |
 | runtime 미증명 | old-owner replacement, trusted solve와 실제 SPD/PowerSI 영향은 미증명이다. DSU-05는 source boundary 진단이며 production topology 또는 accuracy evidence가 아니다. |
 | 별도 사용자 파일 | untracked `accuracy_parse.py`; 보존·미수정·미stage |
-| candidate staging / acceptance | W7-PHYS-OWNER-JOIN-EVIDENCE-01 DONE/ACCEPT. Original-SPD successor는 coordinator 52,827 bytes/SHA `155ee83d1911f72a1820dc14fa3b2a5cf3de13f11afd35f2bac3043a5d3552af`, source compile/self-check 각 1회 exit 0, Sol `EXECUTION_ACCEPT`, P0/P1 none으로 **FROZEN / READY_TO_EXECUTE**; production/release/PowerSI acceptance가 아님 |
+| candidate staging / acceptance | W7-PHYS-OWNER-JOIN-EVIDENCE-01 DONE/ACCEPT. Original-SPD gate는 DONE/`STOP_IMPORT_OR_OWNERSHIP`; 현재 quotient-scope fix는 **FROZEN / READY_FOR_IMPLEMENTATION**이며 Sol final ACCEPT와 focused validation 전에는 successor original-SPD one-shot을 열지 않는다 |
 
 ## 2. 문서 사용 규칙
 
@@ -530,6 +530,8 @@ remote/full suite, installer/release는 수행하지 않았다.
 | `D-047` | DSU-05를 exact contract `314f3a64aefb7b60c975a93cc7e6d701ab3debc4`의 report 289,336 bytes/SHA `368c3e2d15c45ba93f5c0eea49b8cf9149efa18deed79cf9c4d341abe28361ba`, receipt 2,246 bytes/SHA `e70af4cb45129829c9d11e4ed1b14bfc3643af0edab518752d27923f19b81837`, `STOP_MULTIPLE_NOT_REPRODUCED`로 영구 DONE/STOP한다. 3V+2E PASS와 선택된 6-contact의 direct/complete/singleton 및 all/complete 동일성 때문에 source-boundary multiple-selector 가설은 미재현이다. product/PowerSI 승격은 없고 DSU-06/FIX-03/P12/production wiring/rerun을 열지 않으며 W7-PHYS BLOCKED / ACTIVE NONE으로 복귀한다 | 확정 |
 | `D-048` | post-DSU-05 candidate old-Maxwell owner → source-derived P1 N-port atomic replacement는 **NOT_READY/STOP**이다. 선택된 L30/L29 finite-area source footprint/P1 terminal identity와 실제 `Y_global` 소비 old-Maxwell owner closed set을 bijective하게 잇는 hash-bound source-to-production replacement-owner join ledger가 rail-complete scope와 replaced/retained disjoint partition을 증명해야 한다. DSU-05 count/SHA-only ID, compiled-only Recovery, full certificate/ownership IR 부재와 exact join key 부재로 구성할 수 없으므로 admissible next gate가 없고 DSU-06/FIX-03/P12/production/rerun을 열지 않는다. ACTIVE NONE, PowerSI numerical improvement 0 | 확정 |
 | `D-049` | `W7-PHYS-OWNER-JOIN-ORIGINAL-SPD-EVIDENCE-01`을 coordinator 52,827 bytes/SHA `155ee83d1911f72a1820dc14fa3b2a5cf3de13f11afd35f2bac3043a5d3552af`, source compile/self-check 각 1회 exit 0, Sol `EXECUTION_ACCEPT`, P0/P1 none으로 **FROZEN / READY_TO_EXECUTE**한다. 실행 contract는 `2014f206e756177b94bc71d2a341ef0fecde909a`의 docs-only direct child이며 hash는 실행 시 확정한다. 정확한 original-SPD one-shot 1회·retry 0·patch/rerun 없음, timeout/interrupt 미확정 시 `not_evaluated_after_termination`과 STARTED receipt 유지, duplicate claimant API/report 0, parent-owned finalization만 허용한다 | 확정 |
+| `D-050` | `W7-PHYS-OWNER-JOIN-ORIGINAL-SPD-EVIDENCE-01`을 exact contract `a4e049366a5a1745b9762557d72204f0b1a823de`의 `DONE/STOP_IMPORT_OR_OWNERSHIP`로 영구 폐쇄한다. exit 1, `SpdImportError`, detail `SOURCE_PLANE_OWNERSHIP_IR_BOUND_EXCEEDED: quotient vertex materialization exceeds bound`, calls `1/0/0/0/1`, retry 0, total 3536.391 s; report/receipt identities를 보존하고 retry/reuse/rerun/patch와 source SHA 주장을 금지한다 | 확정 |
+| `D-051` | sole ACTIVE를 `W7-PHYS-OWNER-JOIN-QUOTIENT-SCOPE-FIX-01` **FROZEN / READY_FOR_IMPLEMENTATION**으로 연다. 정확히 5-file scope에서 두-pass rail-local projection과 parameterized focused test node를 구현하고 한 번의 focused pytest만 허용한다. cap raise, SQLite/schema/new abstraction, physics/solver/wiring, original-SPD run과 old-gate retry/reuse/rerun은 금지하며 Sol final ACCEPT 뒤에만 새 successor one-shot을 연다 | 확정 |
 
 ## 11. 현재 evidence와 비재사용 경계
 
@@ -563,8 +565,7 @@ falsifiable physical/analytic limiting-case invariant + disjoint owner ledger와
 - W7은 source/provenance와 수학·운영 기반을 개선했지만 production network,
   계산된 `Zii`, PowerSI correlation을 바꾸지 않았다.
 - 따라서 현재 product risk는 그대로 **외부 정확성 미달**이며, current sole ACTIVE는
-  **W7-PHYS-OWNER-JOIN-ORIGINAL-SPD-EVIDENCE-01** **FROZEN / READY_TO_EXECUTE**다. W7-PHYS-OWNER-JOIN-EVIDENCE-01은 DONE/ACCEPT로 닫혔고, 다음
-  original-SPD one-shot 1회가 정확한 current authorization이다(retry 0, patch/rerun 없음).
+  **W7-PHYS-OWNER-JOIN-QUOTIENT-SCOPE-FIX-01** **FROZEN / READY_FOR_IMPLEMENTATION**다. W7-PHYS-OWNER-JOIN-EVIDENCE-01은 DONE/ACCEPT로 닫혔고, 기존 original-SPD one-shot은 DONE/`STOP_IMPORT_OR_OWNERSHIP`로 영구 닫혔다. 다음 gate는 exact two-pass fix와 focused tests다.
   DSU-05는 `STOP_MULTIPLE_NOT_REPRODUCED`로 DONE했고 W7-PHYS는 BLOCKED다.
   Actual-P0/R1/R2는 scenario 없이 DONE/STOP했고 FIX-01/FIX-02는 DONE/ACCEPT다. P3는 `CONTACT_INTERFACE_RANK_LOSS` STOP, P4는 base cut-set
   CLOSED, P5는 deterministic shadow plan PLANNED, P6는 scenario/termination commutation
@@ -755,9 +756,11 @@ flowchart LR
   LD4 --> LD5[W7-PHYS-SOURCE-ANCHOR-LEAN-DSU-EVIDENCE-05 DONE / STOP<br/>multiple candidate not reproduced]
   LD5 --> SX[W7 remains BLOCKED<br/>owner-join prerequisite needed]
   SX --> OJ[W7-PHYS-OWNER-JOIN-EVIDENCE-01 DONE / ACCEPT]
-  OJ --> OG[W7-PHYS-OWNER-JOIN-ORIGINAL-SPD-EVIDENCE-01<br/>FROZEN / READY_TO_EXECUTE]
-  OG --> FG{freeze decision: yes<br/>coordinator hash + Sol EXECUTION_ACCEPT}
-  FG -->|yes| OS[original-SPD one-shot<br/>budget 1/1/1/1/1]
+  OJ --> OG[W7-PHYS-OWNER-JOIN-ORIGINAL-SPD-EVIDENCE-01<br/>DONE / STOP_IMPORT_OR_OWNERSHIP]
+  OG --> QF[W7-PHYS-OWNER-JOIN-QUOTIENT-SCOPE-FIX-01<br/>ACTIVE / FROZEN / READY_FOR_IMPLEMENTATION]
+  QF --> QT[focused tests<br/>one parameterized node + one existing node]
+  QT --> FG{separate successor decision<br/>Sol final ACCEPT?}
+  FG -->|yes| OS[new coordinator/commit/empty-root<br/>original-SPD one-shot]
   R -->|예| H
   D[17DG foundation] -. production binding 필요 .-> H
   E[17DO/17DP owner evidence] -. identity join 필요 .-> H
@@ -775,7 +778,7 @@ P3 semantic result는 `CONTACT_INTERFACE_RANK_LOSS` STOP, P4는 CLOSED, P5는 PL
 P6와 P7은 PASSED고 P8은 materialized, P9은 bound, P10은 component-closed다. P11은 factor
 forward-reliability numerical STOP이고 P12는 NO-GO다. Actual-P0와 R1 original-SPD one-shot은 selector
 identity mismatch로 DONE/STOP했고 FIX-01/FIX-02는 DONE/ACCEPT다. R2는 actual multiple STOP으로
-닫혔고 DIAG-01도 report-finalization STOP으로 닫혔다. old component evidence와 DSU-01–05는 모두 DONE/STOP했고 W7-PHYS-OWNER-JOIN-EVIDENCE-01은 DONE/ACCEPT로 닫혔다. 현재 sole ACTIVE는 **W7-PHYS-OWNER-JOIN-ORIGINAL-SPD-EVIDENCE-01**이며 **FROZEN / READY_TO_EXECUTE**다. 이는 coordinator가 동결된 뒤 한 번만 실행하는 evidence gate이고, Recovery-01 또는 DSU-05의 자동 재시도가 아니다. 아래 조건은 그 다음 physical promotion gate를 열 때도 계속 적용한다.
+닫혔고 DIAG-01도 report-finalization STOP으로 닫혔다. old component evidence와 DSU-01–05는 모두 DONE/STOP했고 W7-PHYS-OWNER-JOIN-EVIDENCE-01은 DONE/ACCEPT로 닫혔다. 기존 **W7-PHYS-OWNER-JOIN-ORIGINAL-SPD-EVIDENCE-01**은 DONE/`STOP_IMPORT_OR_OWNERSHIP`로 영구 닫혔고, 현재 sole ACTIVE는 **W7-PHYS-OWNER-JOIN-QUOTIENT-SCOPE-FIX-01** **FROZEN / READY_FOR_IMPLEMENTATION**다. 아래 조건은 그 다음 physical promotion gate를 열 때도 계속 적용한다.
 
 1. source-derived geometry/material provenance가 있다.
 2. 대상 rail 전체에 적용 가능한 physical model 또는 omitted-block candidate다.
@@ -1983,49 +1986,28 @@ historical closure는 actual production global-multi compile, original-SPD 성�
 PowerSI numerical improvement를 증명하지 않으며 improvement는 **0**이다. 아래 §12.39
 successor가 이를 승계한다.
 
-### 12.39 W7-PHYS-OWNER-JOIN-ORIGINAL-SPD-EVIDENCE-01 — sole ACTIVE freeze phase
+### 12.39 W7-PHYS-OWNER-JOIN-ORIGINAL-SPD-EVIDENCE-01 — DONE/STOP_IMPORT_OR_OWNERSHIP
 
-source-before/base parent clean `main` HEAD `2014f206e756177b94bc71d2a341ef0fecde909a`; technical
-dependency `2b27e30c6fe41f03281d3943568d0905d84d8af3`. Fixed input is
-`D:\S4LB002-2Para_260729_1_injected.spd` (1,116,717,287 B, expected SHA-256
-`40cb44b2376f59d6b606eb9b4d138204fe51b2dc6b3332d3b7c0e7d4202866d2`) and rail
-`ADC_VDD_180_VQPS_SYS_1_AON/0`; no separate 1.1 GB prehash. Status is
-**FROZEN / READY_TO_EXECUTE**. Frozen coordinator is
-`D:\SPD-Decap-PI-Evaluator-W7\_coordinator_temp\production_owner_join_original_spd_evidence.py`
-(52,827 bytes, SHA-256 `155ee83d1911f72a1820dc14fa3b2a5cf3de13f11afd35f2bac3043a5d3552af`); source compile/self-check each exactly once exit 0
-(`SOURCE_COMPILE PASS`/`SELF_CHECK PASS`), Sol `EXECUTION_ACCEPT`, P0/P1 none. Execution contract is the docs-only
-commit that is the direct child of `2014f206e756177b94bc71d2a341ef0fecde909a`; its hash is intentionally not pre-stated.
-The one-shot pipeline calls
-`import_spd_scenario(..., include_plane_sheet_payload=True, source_plane_ownership_rail_id=rail)` →
-`compile_layerwise_substrate(..., required_rail_id=rail, require_plane_sheet_payload=True)` →
-`evaluate_source_plane_contact_condensation(..., frequency_hz=1e9, cell_um=1000)` →
-`audit_source_plane_patch_production_owner_join` exactly once, then writes one atomic
-report. Coordinator path is
-`D:\SPD-Decap-PI-Evaluator-W7\_coordinator_temp\production_owner_join_original_spd_evidence.py`;
-Budget `1/1/1/1/1`, retry 0,
-7200 s hard wall, report ≤1 MiB, receipt ≤64 KiB; PASS is `PASS_OWNER_JOIN_EVIDENCE_COMPLETE` with complete checks and flags
-`shadow_only=true`, `replacement_ready=false`, `production_ready=false`; STOP preserves the
-underlying product error and forbids patch/retry. Frozen STOP taxonomy is
-`STOP_PREFLIGHT`, `STOP_INPUT_IDENTITY`, `STOP_IMPORT_OR_OWNERSHIP`,
-`STOP_LAYERWISE_V4_SUBSTRATE`, `STOP_P1_CONDENSATION`,
-`STOP_OWNER_JOIN_INVALID`, `STOP_RESOURCE_OR_CANCELLED`,
-`STOP_REPORT_FINALIZATION_FAILED`, and `STOP_UNEXPECTED`. Missing persisted v4
-topology/external proof is `STOP_LAYERWISE_V4_SUBSTRATE`, never a
-`layerwise_network.py` patch trigger. Do not feed prior DSU/Recovery/scenario payloads.
-Record source stat/importer-observed SHA, per-stage timings and peak RSS. No
-owner-off/wiring/solve/Touchstone/P12/`Y_global`/`Zii`/PowerSI/generalization claim;
-improvement remains **0**.
+Exact contract `a4e049366a5a1745b9762557d72204f0b1a823de` permanently closes the original-SPD one-shot.
+Exit 1, `SpdImportError`, detail `SOURCE_PLANE_OWNERSHIP_IR_BOUND_EXCEEDED: quotient vertex materialization exceeds bound`;
+calls import/compile/P1/observer/report `1/0/0/0/1`, retry 0, total 3536.391 s. Report path
+`D:\SPD-Decap-PI-Evaluator-W7\a4e049366a5a1745b9762557d72204f0b1a823de\260729-production-owner-join-original-spd-evidence-01\production_owner_join_original_spd_evidence_report.json`
+(1,113 B, SHA `131d47a1cdff992d3d94495ba7c132d46bb7d8bffa48cab611136a40f3506b7f`); sibling receipt 1,098 B,
+SHA `8e7fd7232a33a1683e2c552dd4664eee203d143f9515a3c1d4aa2b6a816082c0`. Coordinator 52,827 B/SHA
+`155ee83d1911f72a1820dc14fa3b2a5cf3de13f11afd35f2bac3043a5d3552af` was tracked-clean. Import did not return, so
+only expected source SHA/stat are recorded; observed SHA is not claimed. Import timing and peak RSS are unavailable/
+misattributed, not actual zero. No retry/reuse/rerun/patch. The path scanned at least 100,001 valid unique global
+finite-via-quotient vertices after duplicating them into a casefold dictionary with selected-rail sidecar cap 100,000
+before role filtering; this is not invalid SPD/topology or selected projection evidence.
 
-The authorized PowerShell command is exactly:
+### 12.40 W7-PHYS-OWNER-JOIN-QUOTIENT-SCOPE-FIX-01 — sole ACTIVE
 
-```powershell
-$contractCommit = (git -C 'C:\Users\User\Documents\ChatGPT\SPD Decap PI Evaluator' rev-parse HEAD).Trim()
-& 'C:\Users\User\AppData\Local\Programs\Python\Python312\python.exe' -I -B 'D:\SPD-Decap-PI-Evaluator-W7\_coordinator_temp\production_owner_join_original_spd_evidence.py' --repo 'C:\Users\User\Documents\ChatGPT\SPD Decap PI Evaluator' --contract-commit $contractCommit --expected-coordinator-sha256 '155ee83d1911f72a1820dc14fa3b2a5cf3de13f11afd35f2bac3043a5d3552af'
-```
-
-Output root: `D:\SPD-Decap-PI-Evaluator-W7\<contractCommit>\260729-production-owner-join-original-spd-evidence-01`;
-sibling receipt: `...\260729-production-owner-join-original-spd-evidence-01.launcher-receipt.json`; report:
-`...\production_owner_join_original_spd_evidence_report.json`. This exact original-SPD one-shot is authorized once,
-retry 0, with no patch/rerun; timeout/interrupt termination that is not confirmed leaves receipt STARTED with calls
-`not_evaluated_after_termination`, duplicate claimant performs zero API/report calls, and parent-owned finalization is
-required.
+Status is **FROZEN / READY_FOR_IMPLEMENTATION**. Allowed scope is exactly five files: `spd_adapter.py`,
+`test_source_plane_ownership_ir_producer.py`, and these three docs. Implement exact two-pass rail-local projection:
+first bound selected-role vertices, scan edges for adjacent IDs and add anchor IDs, then build the bounded snapshot on
+the second vertex scan. Preserve missing/duplicate/projected-over-100,000 fail-close behavior. Add parameterized node
+`test_source_plane_ownership_filters_global_quotient_before_selected_row_bound` for unrelated-global exclusion,
+selected/adjacent/anchor retention and coverage, and projected-local-over-cap STOP before raw compiler/build; retain
+`test_source_plane_ownership_producer_roundtrip_and_atomic_failure`. Validate once with one focused pytest invocation
+after static diff review; no full suite. Sol final ACCEPT precedes a separate successor coordinator/commit/empty-root
+one-shot. No cap raise, SQLite/schema/new abstraction, physics/solver/wiring, original-SPD run, or PowerSI improvement claim.
