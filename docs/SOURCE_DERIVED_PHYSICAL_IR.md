@@ -1,13 +1,13 @@
 # SPD Decap PI Evaluator v0.23.1 — Source-derived physical IR
 
-- 문서 버전: **1.54**
+- 문서 버전: **1.55**
 - 계약 상태: **ACCEPTED** — source-derived provenance/ownership prerequisite의 기술 기준
 - committed 구현: `source-plane-ownership-ir-v1` + Phase 3 shadow consumer + v2 `contact_boundary` (`3b76af4`) + P0 (`4dc855a`) + P1 (`f823a53`) + P2 (`90f6b54`) + P3 (`b8a79f1`) + P4 base cut-set (`39fd4fa`) + P5 shadow rewire plan (`d7e7278`) + P6 scenario commutation audit (`6793bb2`) + P7 atomic recipe (`f1c2968`) + P8 topology embedding (`abf79cf`) + P9 nodal-block binding (`593e070`) + P10 component closure (`7f9c498`) + P11 supplemental solve gate (`e8d029a`) + ownership component-layer selector fix (`b0b90db`) + component-cardinality classifier (`6fc06dd`) + W7 owner-join closure (`2b27e30c6fe41f03281d3943568d0905d84d8af3`)
 - runtime acceptance: **Phase 4와 P0–P10 focused PASS / Sol ACCEPT; P3 semantic STOP, P4 structural CLOSED, P5 PLANNED, P6/P7 PASSED, P8 materialized, P9 bound, P10 component-closed; P11 focused test PASS / numerical result STOP; W7 owner-join commit `2b27e30c6fe41f03281d3943568d0905d84d8af3` DONE/ACCEPT with producer-only corrected rerun `1 passed in 1.52s` (consumer not rerun)**. This is read-only prerequisite evidence and does not claim actual production global-multi compile, original-SPD success, or PowerSI improvement.
 - production 상태: solver, owner-off, `Y_global`, `Zii` **unchanged**
 - 현재 작업 상태: **Actual-P0/R1/R2, R2-MULTI-TOPOLOGY-DIAG-01, Recovery-01과 DSU-01–05 DONE/STOP, FIX-01/FIX-02 DONE/ACCEPT**다.
-  DSU-05는 `STOP_MULTIPLE_NOT_REPRODUCED`; W7-PHYS BLOCKED다. OWNERSHIP-COUNT-DIAG-01/-02는 DONE/`STOP_RESOURCE_OR_CANCELLED`이다. STREAMED-IR-300K-FIX-01은 `STOP_TEST_COLLECTION_SYNTAX`, collection-fix successor는 `STOP_TEST_FAILURE_AND_RUNTIME_BUDGET`으로 DONE이며 현재 sole ACTIVE는 **W7-PHYS-OWNER-JOIN-OWNERSHIP-STREAMED-IR-300K-VALIDATION-RUNTIME-FIX-01 / FROZEN / READY_FOR_IMPLEMENTATION**이다. Original-SPD EVIDENCE-01/-02/-04/-05는 retry-0 DONE/STOP, EVIDENCE-03은 `STOP_UNEXPECTED`로 DONE/STOP이고 quotient-scope FIX-01, terminal pad-layer test-oracle FIX-01과 compact-request-bound FIX-01은 DONE/ACCEPT다. P12는 NO-GO다.
-- active contract는 external v2 의미를 보존하면서 `_validate_spooled_rows`의 확정적 superlinear folded joins만 교정하는 source-only successor다. Tests, six-file transport semantics와 solver는 불변이다. Production/PowerSI improvement remains unproved/0.
+  DSU-05는 `STOP_MULTIPLE_NOT_REPRODUCED`; W7-PHYS BLOCKED다. OWNERSHIP-COUNT-DIAG-01/-02는 DONE/`STOP_RESOURCE_OR_CANCELLED`이다. STREAMED-IR-300K-FIX-01은 `STOP_TEST_COLLECTION_SYNTAX`, collection-fix successor는 `STOP_TEST_FAILURE_AND_RUNTIME_BUDGET`, validation-runtime fix는 `ACCEPT_WITH_OUTPUT_LIMITATION`으로 DONE이며 현재 sole ACTIVE는 **W7-PHYS-OWNER-JOIN-OWNERSHIP-STREAMED-IR-LIGHTWEIGHT-ACCEPTANCE-01 / FROZEN / READY_TO_EXECUTE**이다. Original-SPD EVIDENCE-01/-02/-04/-05는 retry-0 DONE/STOP, EVIDENCE-03은 `STOP_UNEXPECTED`로 DONE/STOP이고 quotient-scope FIX-01, terminal pad-layer test-oracle FIX-01과 compact-request-bound FIX-01은 DONE/ACCEPT다. P12는 NO-GO다.
+- active contract는 product/test bytes를 보존하고 아직 미증명인 changed streamed-transport 경계만 18-node 단일 invocation으로 확인한다. Pressure/exact-300K와 중복 경계는 재실행하지 않는다. Production/PowerSI improvement remains unproved/0.
 - P11 closure: commit `e8d029a`, 최종 지정 node `1 passed in 1.55s`, Sol ACCEPT; pivot ratio `1.900e15`, condition-1 lower bound `1.096e17`, `SHADOW_SOLVE_NUMERICAL_FAILURE`; trusted stamp/matrix/solve/readiness false, production unchanged
 - 최종 개정: 2026-09-01 (Asia/Seoul)
 
@@ -81,7 +81,8 @@ flowchart LR
   CD --> CD2[W7-PHYS-OWNER-JOIN-OWNERSHIP-COUNT-DIAG-02<br/>DONE / STOP_RESOURCE_OR_CANCELLED<br/>counts preserved; peak 13.09 GiB]
   CD2 --> ST[W7-PHYS-OWNER-JOIN-OWNERSHIP-STREAMED-IR-300K-FIX-01<br/>DONE / STOP_TEST_COLLECTION_SYNTAX]
   ST --> CF[W7-PHYS-OWNER-JOIN-OWNERSHIP-STREAMED-IR-300K-COLLECTION-FIX-01<br/>DONE / STOP_TEST_FAILURE_AND_RUNTIME_BUDGET]
-  CF --> VR[W7-PHYS-OWNER-JOIN-OWNERSHIP-STREAMED-IR-300K-VALIDATION-RUNTIME-FIX-01<br/>FROZEN / READY_FOR_IMPLEMENTATION]
+  CF --> VR[W7-PHYS-OWNER-JOIN-OWNERSHIP-STREAMED-IR-300K-VALIDATION-RUNTIME-FIX-01<br/>DONE / ACCEPT_WITH_OUTPUT_LIMITATION]
+  VR --> LA[W7-PHYS-OWNER-JOIN-OWNERSHIP-STREAMED-IR-LIGHTWEIGHT-ACCEPTANCE-01<br/>FROZEN / READY_TO_EXECUTE]
   I[raw-v3 geometry/material] -. hash reference .-> B
   J[compiled finite topology] -. hash/owner reference .-> D
 ```
@@ -956,7 +957,7 @@ P11 1 GHz gate만으로 이 두 anchor를 증명하지 않으므로 accuracy pro
 two-anchor checkpoint를 별도로 요구한다.
 
 Post-DSU-05 readiness는 **NOT_READY/STOP**이다. candidate old-Maxwell owner를 source-derived P1 N-port atomic replacement로 바꾸려면, 선택된 L30/L29 finite-area source footprint/P1 terminal identity를 실제 `Y_global`이 소비하는 정확한 old-Maxwell owner closed set에 hash-bound bijectively join하는 ledger가 필요하다. 이 ledger가 rail-complete scope와 replaced/retained disjoint partition을 증명해야 하지만, DSU-05의 count/SHA-only IDs, compiled-only Recovery, full certificate/ownership IR 부재와 exact join key 부재로는 구성할 수 없다. 따라서 admissible next gate, DSU-06/FIX-03/P12/production/rerun은 없고 ACTIVE NONE이며 PowerSI numerical improvement는 0이다.
-이 문장은 74d readiness audit 당시의 historical conclusion이며, 당시 §8의 W7-PHYS-OWNER-JOIN-EVIDENCE-01이 이를 supersede했다. 이후 §9 closure가 §8을 닫았고, §10/§12/§15/§17/§19 original-SPD gates와 §20 DIAG-01, §21 DIAG-02는 permanent DONE/STOP, §11 quotient-scope fix와 §14/§18 fixes는 DONE/ACCEPT다. §13 terminal pad-layer FIX-01은 test-oracle false negative로 DONE/STOP했다. §22 streamed-IR FIX-01과 §23 collection-fix도 DONE/STOP이며 현재 sole ACTIVE는 §24 validation-runtime successor다.
+이 문장은 74d readiness audit 당시의 historical conclusion이며, 당시 §8의 W7-PHYS-OWNER-JOIN-EVIDENCE-01이 이를 supersede했다. 이후 §9 closure가 §8을 닫았고, §10/§12/§15/§17/§19 original-SPD gates와 §20 DIAG-01, §21 DIAG-02는 permanent DONE/STOP, §11 quotient-scope fix와 §14/§18 fixes는 DONE/ACCEPT다. §13 terminal pad-layer FIX-01은 test-oracle false negative로 DONE/STOP했다. §22 streamed-IR FIX-01과 §23 collection-fix는 DONE/STOP, §24 validation-runtime fix는 DONE/`ACCEPT_WITH_OUTPUT_LIMITATION`이며 현재 sole ACTIVE는 §25 lightweight acceptance다.
 
 ## 7. 주장 한계
 
@@ -1321,7 +1322,7 @@ surface scan. Pressure-sized Shape/source, retained-edge and owner-ledger relati
 plans or, for owner-ledger coverage, depended on an optional automatic index. This establishes a validator
 implementation defect but does not identify the lost pressure failure.
 
-## 24. W7-PHYS-OWNER-JOIN-OWNERSHIP-STREAMED-IR-300K-VALIDATION-RUNTIME-FIX-01 — FROZEN / READY_FOR_IMPLEMENTATION
+## 24. W7-PHYS-OWNER-JOIN-OWNERSHIP-STREAMED-IR-300K-VALIDATION-RUNTIME-FIX-01 — DONE / ACCEPT_WITH_OUTPUT_LIMITATION
 
 Modify only `_validate_spooled_rows` in `source_plane_ownership_ir.py`. Use the existing folded TEMP columns with two
 TEMP indexes, an indexed reverse Shape lookup, an outer-surface component comparison and set difference for retained
@@ -1332,3 +1333,18 @@ After Sol static acceptance, one `-x -vv --tb=long` Python312 invocation may run
 exact `150000/149977/300000` parameter. The external limit is 600 s. Any first failure/timeout is preserved as a new
 STOP with no rerun. Passing proves only those two synthetic validator cases. It does not fix the upstream 13.09 GiB
 recovery peak, run original SPD, alter a solver/owner stamp, or improve PowerSI correlation.
+
+Luna's final ownership IR hash is `1027E694F6994B4F6B109933617D149A7A5184CD6951050D2C93F67B145079DE`; Sol static
+review found no P0/P1. The exact ordered two-node process exited 0 within wrapper wall 22.8483887 s. Fresh node IDs and
+temporary databases confirm both requested cases ran in order, but stdout was unavailable, so literal pytest summary and
+per-node durations are outside the evidence. This invocation is consumed/no-rerun.
+
+## 25. W7-PHYS-OWNER-JOIN-OWNERSHIP-STREAMED-IR-LIGHTWEIGHT-ACCEPTANCE-01 — FROZEN / READY_TO_EXECUTE
+
+Keep all six candidate files byte-frozen and run only the 18 exact nodes in the work baseline once with `-x -vv
+--tb=long` and a 300 s external limit. Static-only dataclass shape, redundant 150,000-section success, already accepted
+pressure/exact-300K and unchanged tests are omitted. Any failure or timeout closes this item without rerun.
+
+Success is limited to the named synthetic/MINI-SPD streamed transport, logical parity, fail-closed invariants/cleanup and
+adapter producer branches. It is not original-SPD or production-owner evidence and does not change solver or PowerSI
+accuracy.
