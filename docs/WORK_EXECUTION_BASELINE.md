@@ -1,17 +1,18 @@
 # SPD Decap PI Evaluator v0.23.1 — 작업 기준
 
-- 문서 버전: **3.10**
+- 문서 버전: **3.11**
 - 기준 branch: **main only**
 - current integrated-hardening docs base: `5a270677074868fc3e10ffa26309a208bb151ac3`
 - integrated-hardening implementation commit: `eece8ab944a29a9f6c5ddde17e56de8dbbd2ee6a`
 - 최종 개정: **2026-09-01 (Asia/Seoul)**
 - integrated-hardening lifecycle: **DONE / ACCEPT / COMMITTED @ `eece8ab944a29a9f6c5ddde17e56de8dbbd2ee6a`**
-- current accuracy gate: **A1 DONE / ACCEPT — A2 DONE / ACCEPT_NARROW_CORE_EVIDENCE — V1/A2R/A2S DONE / STOP — A2T DONE / STATIC_ACCEPT — V3G DONE / STATIC_ACCEPT — D-087 DONE / STOP_V3_LAUNCHER_COORDINATOR_SHA_CASE — D-088 DONE / STOP_V3R_IMPORT_OWNERSHIP_TERMINAL_CONTRACT — D-089 DONE / ACCEPT_FOCUSED / COMMITTED @ `54c87d1` — D-090 DONE / STOP_D090_OWNERSHIP_TERMINAL_MULTIBRANCH_CARDINALITY — D-091 DONE / ACCEPT_FOCUSED / COMMITTED @ `6b88c3c` — D-092 DONE / STOP_D092_CONTACT_TERMINAL_OWNER_COVERAGE_PARTITION — D-093 ACTIVE / NOT_IMPLEMENTED**
+- current accuracy gate: **A1 DONE / ACCEPT — A2 DONE / ACCEPT_NARROW_CORE_EVIDENCE — V1/A2R/A2S DONE / STOP — A2T DONE / STATIC_ACCEPT — V3G DONE / STATIC_ACCEPT — D-087 DONE / STOP_V3_LAUNCHER_COORDINATOR_SHA_CASE — D-088 DONE / STOP_V3R_IMPORT_OWNERSHIP_TERMINAL_CONTRACT — D-089 DONE / ACCEPT_FOCUSED / COMMITTED @ `54c87d1` — D-090 DONE / STOP_D090_OWNERSHIP_TERMINAL_MULTIBRANCH_CARDINALITY — D-091 DONE / ACCEPT_FOCUSED / COMMITTED @ `6b88c3c` — D-092 DONE / STOP_D092_CONTACT_TERMINAL_OWNER_COVERAGE_PARTITION — D-093 DONE / ACCEPT_FOCUSED / COMMITTED @ `bebbb80` — D-094 ACTIVE / STATIC_ACCEPT (READY_FOR_SINGLE_D094_RUN / ONE_SHOT_NOT_CONSUMED)**
 - D-089: **DONE / ACCEPT_FOCUSED / COMMITTED @ `54c87d1`** — `W7-ACC-TERMINAL-PATH-KIND-OWNERSHIP-IR-01` / `TERMINAL_PATH_KIND_OWNERSHIP_IR_CONTRACT`.
 - D-090: **DONE / STOP_D090_OWNERSHIP_TERMINAL_MULTIBRANCH_CARDINALITY** — consumed, no-rerun.
 - D-091: **DONE / ACCEPT_FOCUSED / COMMITTED @ `6b88c3c`** — `W7-ACC-OWNERSHIP-TERMINAL-MULTIBRANCH-CARDINALITY-01`.
 - D-092: **DONE / STOP_D092_CONTACT_TERMINAL_OWNER_COVERAGE_PARTITION** — consumed, no-rerun.
-- D-093: **ACTIVE / NOT_IMPLEMENTED** — contact/terminal owner coverage partition successor.
+- D-093: **DONE / ACCEPT_FOCUSED / COMMITTED @ `bebbb80`** — contact/terminal owner coverage partition.
+- D-094: **ACTIVE / STATIC_ACCEPT** — original-SPD source-block census successor; `READY_FOR_SINGLE_D094_RUN / ONE_SHOT_NOT_CONSUMED`.
 - current numerical improvement: **0**
 
 ## 1. 압축 후 즉시 복구 카드
@@ -36,8 +37,10 @@ source 접근 전 STOP했다. 동일 D-087은 재실행하지 않았다. D-088/V
 path-kind ownership IR contract는 완료됐고 D-090은
 `DONE / STOP_D090_OWNERSHIP_TERMINAL_MULTIBRANCH_CARDINALITY`로 소비된 STOP이다. D-091
 focused ownership-terminal multibranch cardinality contract는 완료됐고 D-092는
-contact/terminal owner coverage partition 불일치로 소비된 STOP이다. 다음은 D-093
-focused successor contract `ACTIVE / NOT_IMPLEMENTED` 상태다.
+contact/terminal owner coverage partition 불일치로 소비된 STOP이다. D-093 focused successor
+contract는 `DONE / ACCEPT_FOCUSED / COMMITTED @ bebbb80`로 닫혔고, 다음 D-094
+source-block census successor가 `ACTIVE / STATIC_ACCEPT`이며
+`READY_FOR_SINGLE_D094_RUN / ONE_SHOT_NOT_CONSUMED` qualifier 상태다.
 
 ```mermaid
 flowchart LR
@@ -59,8 +62,9 @@ flowchart LR
     D89 --> D90["D-090 source-block census<br/>DONE / STOP_D090_OWNERSHIP_TERMINAL_MULTIBRANCH_CARDINALITY"]
     D90 --> D91["D-091 focused cardinality contract<br/>DONE / ACCEPT_FOCUSED / COMMITTED 6b88c3c"]
     D91 --> D92["D-092 source-block census<br/>DONE / STOP_D092_CONTACT_TERMINAL_OWNER_COVERAGE_PARTITION"]
-    D92 --> D93["D-093 contact terminal owner coverage partition<br/>ACTIVE / NOT_IMPLEMENTED"]
-    D93 -->|focused ACCEPT 후| A3["production one-shot consideration"]
+    D92 --> D93["D-093 contact terminal owner coverage partition<br/>DONE / ACCEPT_FOCUSED / COMMITTED bebbb80"]
+    D93 --> D94["D-094 source-block census<br/>ACTIVE / STATIC_ACCEPT<br/>READY_FOR_SINGLE_D094_RUN / ONE_SHOT_NOT_CONSUMED"]
+    D94 -->|one-shot PASS 후| A3["production one-shot consideration"]
     D89 -->|STOP| STOPSRC["static diagnosis/replanning"]
 ```
 
@@ -294,7 +298,8 @@ ownership IR contract는 완료됐고 D-090은
 focused ownership-terminal multibranch cardinality contract는
 `DONE / ACCEPT_FOCUSED / COMMITTED @ 6b88c3c`로 닫혔고 D-092는
 `DONE / STOP_D092_CONTACT_TERMINAL_OWNER_COVERAGE_PARTITION`으로 소비됐다. D-093은
-`ACTIVE / NOT_IMPLEMENTED`다.
+`DONE / ACCEPT_FOCUSED / COMMITTED @ bebbb80`로 닫혔고 D-094가
+`ACTIVE / STATIC_ACCEPT`이며 `READY_FOR_SINGLE_D094_RUN / ONE_SHOT_NOT_CONSUMED`다.
 
 ### A1 — W7-ACC-ERROR-BUDGET-01 — DONE / ACCEPT
 
@@ -792,7 +797,9 @@ gap으로 spool `ORDER_INVALID`가 cardinality보다 먼저 발생한 test-only 
 suite/import/solver/P1/PowerSI는 실행하지 않았고 수치 개선은 0이며 D-090은 no-rerun이다.
 후속 D-092 production one-shot successor contract는 contact/terminal owner coverage
 partition 불일치로 `DONE / STOP_D092_CONTACT_TERMINAL_OWNER_COVERAGE_PARTITION`으로
-소비됐다. D-093 focused successor가 `ACTIVE / NOT_IMPLEMENTED`로 열린다.
+소비됐다. D-093 focused successor는 `DONE / ACCEPT_FOCUSED / COMMITTED @ bebbb80`로
+닫혔고 D-094 source-block census successor가 `ACTIVE / STATIC_ACCEPT` 및
+`READY_FOR_SINGLE_D094_RUN / ONE_SHOT_NOT_CONSUMED` qualifier로 열린다.
 
 ### D-092 — W7-ACC-SOURCE-BLOCK-ORIGINAL-SPD-D092-01 — DONE / STOP_D092_CONTACT_TERMINAL_OWNER_COVERAGE_PARTITION
 
@@ -841,24 +848,69 @@ call ledger는 import=1/report=1, compile/census/P1/solve/PowerSI=0, retry=0,
 추가는 금지되고 naive
 subset은 fail-open이다. 동일 D-092는 consumed/no-rerun이다.
 
-### D-093 — W7-ACC-CONTACT-TERMINAL-OWNER-COVERAGE-PARTITION-01 — ACTIVE / NOT_IMPLEMENTED
+### D-093 — W7-ACC-CONTACT-TERMINAL-OWNER-COVERAGE-PARTITION-01 — DONE / ACCEPT_FOCUSED / COMMITTED @ bebbb80
 
 whitelist는 `src/spd_decap_pi/source_plane_ownership_ir.py`와
 `tests/test_source_plane_ownership_ir.py`뿐이다. invariant는
-`R = B union terminal-edge-proven retained owners`이며 terminal proof는 persisted
+persisted finite-via invariant는 `R = B ∪ T`이며 `T`는 terminal-edge-proven retained
+owners다. terminal proof는 persisted
 `terminal_bindings.via_record_required=1`, persisted casefold
 `terminal_bindings.(finite_edge_id, rail_id, island_id) == retained_owner_refs.(edge_id, rail_id, island_id)`,
-retained `retained_owner_refs.owner_kind=via`에 bound된 경우만 인정한다. direct trace는 proof가 아니다. contact checks,
+retained `retained_owner_refs.owner_kind=via`에 bound된 모든 `T`만 인정한다. 즉
+conventional `via_record_required=1` terminal의 exact casefold triple에 bound된
+`owner_kind=via` retained refs만 `T`이며 direct-trace `via_record_required=0`는 proof가 아니다. contact checks,
 uniqueness/schema/adapter/consumer/caps/deps/version은 불변이다. 기존 schema는
 persisted owner accounting을 증명하지만 ordered upstream quotient series는 증명하지
-않는다.
+않는다. implementation은 IR와 focused test만 변경했다. 첫 exact node는
+`1 failed in 0.51s`였으나 SQLite compressed/uncompressed asset를 byte-identical로
+요구한 test-only assertion 오류였고 product logic은 성공했으며 manifest 차이는
+physical artifact hash/size뿐이었다. assertion을 `logical_rows_sha256`와 counts parity로
+바꾼 뒤 같은 node를 재실행해 `1 passed in 1.40s`를 얻었다. Sol static review는
+ACCEPT다.
 
 focused one-node mapping+spool parity는
 `tests/test_source_plane_ownership_ir.py::test_v2_contact_coverage_partitions_terminal_series_owners`다.
 positive overlap/contact와 별도 2-owner terminal edge, negative orphan,
 edge/island/rail/kind mismatch 및 direct-trace를 포함한다. 원본 SPD/full suite/P1/
-solver/PowerSI는 실행하지 않는다. D-093은 이 계약을 구현하기 전까지
-`ACTIVE / NOT_IMPLEMENTED`이며 새 diagram은 만들지 않는다.
+solver/PowerSI는 실행하지 않는다. 수치 개선은 0이며 새 diagram은 만들지 않는다.
+
+### D-094 — W7-ACC-SOURCE-BLOCK-ORIGINAL-SPD-D094-01 — ACTIVE / STATIC_ACCEPT
+
+Readiness qualifiers: `READY_FOR_SINGLE_D094_RUN / ONE_SHOT_NOT_CONSUMED`.
+
+Coordinator는 `D:\SPD-Decap-PI-Evaluator-W7\_coordinator_temp\a2_d094_source_block_census_once.py`이며
+41,620 bytes, SHA-256 `c05c8f19810e8f0b3a8ee552d5b981af665114f62b78627af408bd56105ff43c`다.
+Sol 판정은 `STATIC_ACCEPT_D094_COORDINATOR`다. D-092 coordinator는 immutable하며
+41,620 bytes/SHA-256 `d204d383b8d3f6bb1edb2c9918b00e2589ed7c24f628139413ba3ddd1be378ec`이고
+재실행하지 않는다. D-094는 D-092에서 정확히 4개 label만 변경한 별도 coordinator다.
+source hashes는 adapter `c8c3b284801e3ef91649fea70db97dad1a561f37008f95d894ea81fa4afa146b`,
+ownership IR `3503f9133e880a38c82b2368d99f8f64d11764d210f99dacaef2c81729b0dd68`, consumer
+`21ecabbe53d9135706ce853143306976a4a652e1be42accbd77671af10938ca4`다.
+
+D-087의 frozen source는 `D:\S4LB002-2Para_260729_1_injected.spd`, 1,116,717,287 B,
+SHA-256 `40CB44B2376F59D6B606EB9B4D138204FE51B2DC6B3332D3B7C0E7D4202866D2`이며,
+rail/pair는 `ADC_VDD_180_VQPS_SYS_1_AON/0` 및
+`Signal$L30(OTHER_POWER1)` / `Signal$L29(DGND)`, block은
+`RAIL_REACHABLE_DIELECTRIC_GAP_MAXWELL_GC`다. D-092 call ledger와 fail-closed/
+no-PowerSI 계약도 상속한다. exact contract-head는 READY 문서를 반영한 tracked-clean
+docs commit이며, root는
+`D:\SPD-Decap-PI-Evaluator-W7\<contract-head>\260729-a2-d094-source-block-census-01`이다.
+단일 PowerShell 명령은 다음과 같다.
+
+```powershell
+$contractHead = (git rev-parse HEAD).Trim()
+$coordinatorSha = 'c05c8f19810e8f0b3a8ee552d5b981af665114f62b78627af408bd56105ff43c'
+& 'C:\Users\User\AppData\Local\Programs\Python\Python312\python.exe' -I -B `
+  'D:\SPD-Decap-PI-Evaluator-W7\_coordinator_temp\a2_d094_source_block_census_once.py' `
+  --repo 'C:\Users\User\Documents\ChatGPT\SPD Decap PI Evaluator' `
+  --contract-head $contractHead `
+  --coordinator-sha $coordinatorSha `
+  --root "D:\SPD-Decap-PI-Evaluator-W7\$contractHead\260729-a2-d094-source-block-census-01"
+```
+
+PASS ledger는 import/compile/census/report `1/1/1/1`, P1/solve/PowerSI `0/0/0`,
+retry `0`이며 STOP이면 no-rerun이다. one-shot은 아직 실행하지 않았고 수치 개선은
+0이다. 장시간 실행 확인은 1분 polling 없이 long wait 또는 종료·오류 event 때만 한다.
 
 ## 10. 중단·사용자 검토 조건
 
@@ -881,8 +933,10 @@ D-088은 hash-bound one-shot으로 소비됐고 동일 계약은 재실행하지
 계약은 재실행하지 않는다. D-091 `W7-ACC-OWNERSHIP-TERMINAL-MULTIBRANCH-CARDINALITY-01`은
 `DONE / ACCEPT_FOCUSED / COMMITTED @ 6b88c3c`이고, D-092는
 `DONE / STOP_D092_CONTACT_TERMINAL_OWNER_COVERAGE_PARTITION`으로 소비된
-no-rerun STOP이다. D-093은 `ACTIVE / NOT_IMPLEMENTED`이며 whitelist 밖 변경과
-원본 SPD/full suite/P1/solver/PowerSI 실행은 금지한다.
+no-rerun STOP이다. D-093은 `DONE / ACCEPT_FOCUSED / COMMITTED @ bebbb80`이며 D-094는
+`ACTIVE / STATIC_ACCEPT`와 `READY_FOR_SINGLE_D094_RUN / ONE_SHOT_NOT_CONSUMED` qualifier다.
+whitelist 밖 변경과 원본 SPD/full suite/P1/solver/
+PowerSI 실행은 금지한다.
 새 schema/cap 또는 계약 밖 runtime이 필요하면 즉시 STOP하고 문서를 갱신한다.
 
 ## 11. 승인된 Unicode fixture successor — DONE / ACCEPT / COMMITTED @ eece8ab
