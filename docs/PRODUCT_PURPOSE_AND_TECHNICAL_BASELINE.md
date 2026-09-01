@@ -7,7 +7,7 @@
 - unseen/generalization: **unknown / not_run**
 - 현재 수치 개선: **0** — solver, `Y_global`, `Zii`와 PowerSI 비교 수치는 아직 바뀌지 않았다.
 - 현재 구현 gate: **DONE / ACCEPT / COMMITTED @ `eece8ab944a29a9f6c5ddde17e56de8dbbd2ee6a`**
-- 현재 정확성 gate: **A1 DONE / ACCEPT — A2 DONE / ACCEPT_NARROW_CORE_EVIDENCE — V1/A2R/A2S DONE / STOP — A2T DONE / STATIC_ACCEPT — V3G DONE / STATIC_ACCEPT — D-087 DONE / STOP_V3_LAUNCHER_COORDINATOR_SHA_CASE — D-088 DONE / STOP_V3R_IMPORT_OWNERSHIP_TERMINAL_CONTRACT — D-089 DONE / ACCEPT_FOCUSED / COMMITTED @ `54c87d1` — D-090 DONE / STOP_D090_OWNERSHIP_TERMINAL_MULTIBRANCH_CARDINALITY — D-091 DONE / ACCEPT_FOCUSED / COMMITTED @ `6b88c3c` — D-092 DONE / STOP_D092_CONTACT_TERMINAL_OWNER_COVERAGE_PARTITION — D-093 DONE / ACCEPT_FOCUSED / COMMITTED @ `bebbb80` — D-094 DONE / STOP_D094_COORDINATOR_ROWS_HASH_PROJECTION — D-095 DONE / ACCEPT_FOCUSED — D-096 DONE / ACCEPT — D-097 DONE / STOP_D097_RAW_STACKUP_PROVENANCE_SCOPE / CONSUMED_NO_RERUN — D-097R DONE / STOP_D097R_TERMINAL_ENDPOINT_LAYER_SEMANTICS / CONSUMED_NO_RERUN — D-097S DONE / STOP_D097S_INVALID_DETACHED_FIXTURE_COMPONENT_COVERAGE / CONSUMED_NO_RERUN — D-097T DONE / PASS_FOCUSED / COMMITTED @ `6bdd8a1` — D-098 DONE / STOP_MANIFEST_REPRODUCTION / CONSUMED / NO_RERUN — D-099 DONE / STOP_D099_SQLITE_HANDLE_NOT_CLOSED / CONSUMED / NO_RERUN — D-099R ACTIVE / not_run**
+- 현재 정확성 gate: **A1 DONE / ACCEPT — A2 DONE / ACCEPT_NARROW_CORE_EVIDENCE — V1/A2R/A2S DONE / STOP — A2T DONE / STATIC_ACCEPT — V3G DONE / STATIC_ACCEPT — D-087 DONE / STOP_V3_LAUNCHER_COORDINATOR_SHA_CASE — D-088 DONE / STOP_V3R_IMPORT_OWNERSHIP_TERMINAL_CONTRACT — D-089 DONE / ACCEPT_FOCUSED / COMMITTED @ `54c87d1` — D-090 DONE / STOP_D090_OWNERSHIP_TERMINAL_MULTIBRANCH_CARDINALITY — D-091 DONE / ACCEPT_FOCUSED / COMMITTED @ `6b88c3c` — D-092 DONE / STOP_D092_CONTACT_TERMINAL_OWNER_COVERAGE_PARTITION — D-093 DONE / ACCEPT_FOCUSED / COMMITTED @ `bebbb80` — D-094 DONE / STOP_D094_COORDINATOR_ROWS_HASH_PROJECTION — D-095 DONE / ACCEPT_FOCUSED — D-096 DONE / ACCEPT — D-097 DONE / STOP_D097_RAW_STACKUP_PROVENANCE_SCOPE / CONSUMED_NO_RERUN — D-097R DONE / STOP_D097R_TERMINAL_ENDPOINT_LAYER_SEMANTICS / CONSUMED_NO_RERUN — D-097S DONE / STOP_D097S_INVALID_DETACHED_FIXTURE_COMPONENT_COVERAGE / CONSUMED_NO_RERUN — D-097T DONE / PASS_FOCUSED / COMMITTED @ `6bdd8a1` — D-098 DONE / STOP_MANIFEST_REPRODUCTION / CONSUMED / NO_RERUN — D-099 DONE / STOP_D099_SQLITE_HANDLE_NOT_CLOSED / CONSUMED / NO_RERUN — D-099R DONE / STOP_D099R_TERMINAL_BINDING_PRESENTATION_ORDER / CONSUMED / NO_RERUN — D-100 ACTIVE / not_run**
 
 ## 1. 문서 역할과 권위
 
@@ -162,8 +162,9 @@ flowchart LR
     D97S --> D97T["D-097T selected-island multicomponent provenance<br/>DONE / PASS_FOCUSED"]
     D97T --> D98["D-098 original-SPD source-bound geometry manifest<br/>DONE / STOP_MANIFEST_REPRODUCTION / CONSUMED"]
     D98 --> D99["D-099 ownership logical rows cross-process determinism<br/>DONE / STOP_D099_SQLITE_HANDLE_NOT_CLOSED / CONSUMED"]
-    D99 --> D99R["D-099R SQLite handle closure determinism successor<br/>ACTIVE / not_run"]
-    D99R -->|focused PASS 후| D98S["original-SPD diagnostic successor<br/>number/scope TBD"]
+    D99 --> D99R["D-099R SQLite handle closure determinism successor<br/>DONE / STOP_D099R_TERMINAL_BINDING_PRESENTATION_ORDER / CONSUMED"]
+    D99R --> D100["D-100 terminal binding canonical order<br/>ACTIVE / not_run"]
+    D100 -->|focused PASS 후| D98S["original-SPD diagnostic successor<br/>number/scope TBD"]
     D98S -->|diagnostic completion 후| OC["manufactured/source-bound nonzero deltaC oracle gate<br/>number/scope TBD"]
     OC -->|oracle PASS 후| L["production one-shot consideration"]
     D89 -->|STOP| SSRC["static diagnosis/replanning"]
@@ -539,14 +540,23 @@ import와 DB query까지 완료했지만 `sqlite3.connect` handle이 닫히기 �
 ownership determinism 결론을 내리지 않는다. 원본 SPD/census/fringe/P1/oracle/solver/PowerSI 실행과
 수치 개선은 0이다. D-099는 `STOP_D099_SQLITE_HANDLE_NOT_CLOSED`로 소비하고 재실행하지 않는다.
 
-활성 successor D-099R은 gate `W7-ACC-D099R-OWNERSHIP-LOGICAL-ROWS-CROSS-PROCESS-DETERMINISM-01`이며,
-동일 node `tests/test_source_plane_ownership_ir_producer.py::test_ownership_logical_rows_hash_is_cross_process_order_invariant`를
-static review 뒤 정확히 1회 실행한다. child 내부에서만 `from contextlib import closing`을 추가하고
-`with sqlite3.connect(sqlite_path) as connection:`을 `with closing(sqlite3.connect(sqlite_path)) as connection:`으로
-바꾸며 모든 reversal/assertion/seed/timeout/cleanup은 보존한다. Whole suite/original SPD/census/fringe/
-P1/oracle/solver/PowerSI/new dependency/retry는 금지한다. PASS이면 invariant를 닫고, meaningful RED일
-때만 별도 producer-fix successor를 연다. D-099R PASS 전에는 original-SPD diagnostic successor를 열지 않는다.
-Tracked whitelist는 위 focused test와 이 두 문서로만 제한한다. Producer/IR source 변경은 이 gate에서 금지한다.
+D-099R는 base HEAD `0bd4f578e38f0392140a823c2496d1b80d9c85a7`에서 동일 focused node를 정확히 1회
+실행했고 3.58 s에 1 failed, parent wall은 4.3048687 s였다. Launch 시 test file은 63,690 B,
+SHA-256 `eaff0f7f848315f667a91e4cfa68877ea3559546ebbcb1bf32f4286e8297011c`였다. Binding, selected
+surface/component semantic identities와 anchor count assertions는 통과했다. 유일한 section-ledger
+차이는 `terminal_bindings` row_count 2였다: normal SHA `a4501cba36140b8aa2211aadd6ba5b475a821958c7efca778f7a797477f81644`,
+reversed SHA `ec2a3405462c38ba2258aa83e4aa35b95cacef5d9c608a15a231c0b28366f705`였다. 최종 logical
+assertion에는 도달하지 않았으며, 이는 terminal ordinal presentation dependence의 증거이지
+physical/original-SPD accuracy 결론이 아니다. 원본 SPD/census/fringe/P1/oracle/solver/PowerSI 실행과
+수치 개선은 0이다. D-099R은 `STOP_D099R_TERMINAL_BINDING_PRESENTATION_ORDER`로 소비하고 재실행하지 않는다.
+
+활성 successor D-100은 gate `W7-ACC-D100-OWNERSHIP-TERMINAL-BINDING-CANONICAL-ORDER-01`이다. 정확한
+source 변경 범위는 `spd_adapter`의 `target_anchor_rows` consumer 부근(약 line 9084)에서 stripped
+casefold `branch_id`, `role`, `pin_id`로 canonical sort하고 exact stripped 값으로 tie-break하는 것뿐이며,
+dedupe와 fail-closed ambiguity 보호는 유지한다. Test는 변경하지 않는다. 정확한 focused node를
+static review 뒤 1회 실행하며 모든 ledger와 final logical hash까지 검증한다. Whole suite/original SPD/
+census/fringe/P1/oracle/solver/PowerSI/retry는 금지하고, D-100 failure도 consumed/no-rerun이다.
+Tracked whitelist는 해당 source file, 위 focused test와 이 두 문서로만 제한한다.
 
 그다음 fitting 없이 analytic/manufactured oracle에서 limiting case, passivity,
 reciprocity, conservation, conditioning과 expected error signature를 판정한다.
