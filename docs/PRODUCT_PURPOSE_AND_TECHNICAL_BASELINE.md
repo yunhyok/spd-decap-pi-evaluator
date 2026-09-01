@@ -1,13 +1,13 @@
 # SPD Decap PI Evaluator v0.23.1 — 목적·기술 기준
 
-- 문서 버전: **3.6**
+- 문서 버전: **3.7**
 - 권위: **G0 — 목적, 우선순위, 합격 의미와 비주장 경계**
 - 최종 개정: **2026-09-01 (Asia/Seoul)**
 - 현재 외부 정확성: **W6-BASE 260729 retrospective numerical FAIL**
 - unseen/generalization: **unknown / not_run**
 - 현재 수치 개선: **0** — solver, `Y_global`, `Zii`와 PowerSI 비교 수치는 아직 바뀌지 않았다.
 - 현재 구현 gate: **DONE / ACCEPT / COMMITTED @ `eece8ab944a29a9f6c5ddde17e56de8dbbd2ee6a`**
-- 현재 정확성 gate: **A1 DONE / ACCEPT — A2 DONE / ACCEPT_NARROW_CORE_EVIDENCE — V1/A2R/A2S DONE / STOP — A2T DONE / STATIC_ACCEPT — V3G DONE / STATIC_ACCEPT — D-087 DONE / STOP_V3_LAUNCHER_COORDINATOR_SHA_CASE — D-088 DONE / STOP_V3R_IMPORT_OWNERSHIP_TERMINAL_CONTRACT — D-089 DONE / ACCEPT_FOCUSED / COMMITTED @ `54c87d1` — D-090 READY / ONE_SHOT_NOT_CONSUMED**
+- 현재 정확성 gate: **A1 DONE / ACCEPT — A2 DONE / ACCEPT_NARROW_CORE_EVIDENCE — V1/A2R/A2S DONE / STOP — A2T DONE / STATIC_ACCEPT — V3G DONE / STATIC_ACCEPT — D-087 DONE / STOP_V3_LAUNCHER_COORDINATOR_SHA_CASE — D-088 DONE / STOP_V3R_IMPORT_OWNERSHIP_TERMINAL_CONTRACT — D-089 DONE / ACCEPT_FOCUSED / COMMITTED @ `54c87d1` — D-090 DONE / STOP_D090_OWNERSHIP_TERMINAL_MULTIBRANCH_CARDINALITY — D-091 ACTIVE**
 
 ## 1. 문서 역할과 권위
 
@@ -149,8 +149,9 @@ flowchart LR
     V3G --> C["D-087 single run<br/>STOP: SHA case gate"]
     C --> V3R["D-088 V3R<br/>DONE / STOP_V3R_IMPORT_OWNERSHIP_TERMINAL_CONTRACT"]
     V3R --> D89["D-089 focused contract<br/>DONE / ACCEPT_FOCUSED / COMMITTED 54c87d1"]
-    D89 --> D90["D-090 production one-shot contract freeze<br/>READY / ONE_SHOT_NOT_CONSUMED"]
-    D90 -->|계약 동결 후| L["production one-shot consideration"]
+    D89 --> D90["D-090 source-block census<br/>DONE / STOP_D090_OWNERSHIP_TERMINAL_MULTIBRANCH_CARDINALITY"]
+    D90 --> D91["D-091 focused cardinality contract<br/>ACTIVE"]
+    D91 -->|focused PASS 후| L["production one-shot consideration"]
     D89 -->|STOP| SSRC["static diagnosis/replanning"]
     L --> I["one-owner production integration"]
     I --> A["동결 260729 development A/B 1회"]
@@ -320,10 +321,27 @@ Via/edge/owner를 결속했고 authoritative landing identity는
 owner-series projection과 boundary coverage ledger 불변을 확인했다. product 3개와
 focused test 3개 파일만 변경했으며 schema/version/dependency/solver/P1/PowerSI 변경은
 없다. producer 2 nodes는 `2 passed in 1.57s`, 관련 4 focused nodes도 PASS했다.
-현재 수치 개선은 0이고 원본 SPD/solver/PowerSI는 실행하지 않았다. D-090 production
-one-shot contract freeze는 `READY / ONE_SHOT_NOT_CONSUMED`이며 아직 one-shot은 소비되지
-않았다. D-090은 원본 SPD source-block census completeness gate일 뿐 solver/`Zii`/PowerSI
-개선 실행이 아니다.
+현재 수치 개선은 0이고 solver/P1/PowerSI는 실행되지 않았다. D-090에서 원본 SPD import
+1회가 실행됐지만 source-block census는 fail-closed STOP으로 종료됐다. D-090은
+`DONE / STOP_D090_OWNERSHIP_TERMINAL_MULTIBRANCH_CARDINALITY`로 종료됐고 acceptance는
+REJECT지만 receipt는 유효한 fail-closed STOP이다. execution HEAD는
+`7d7bac4f82546f27a84b6b3d7d4ae7c5bd5a00e8`, receipt는 2,696 bytes/SHA
+`5d6eb3fded5f53491a6d0601c67932e9f92ddbf5a4599ea32a1f7274a0d53f1d`이며
+`STOP_UNEXPECTED`다. 예외는 `SourcePlaneOwnershipIRError: target rail terminal chain must contain complete power and ground`이고
+call ledger는 import=1/report=1, compile/census/P1/solve/PowerSI=0, retry=0,
+`report.present=false`다. 이는 producer가 모든 Device branch의 power/ground를 보존하고
+mapping validator가 복수를 허용하는 반면 spool line 753–755가 exact `(2,1,1)`만 허용하는
+representation/validator mismatch이며 원본 SPD data 부재가 아니다. 동일 D-090은
+재실행하지 않는다.
+
+D-091 `W7-ACC-OWNERSHIP-TERMINAL-MULTIBRANCH-CARDINALITY-01` /
+`ACTIVE`는 mapping의 casefold global role-set 의미와 spool cardinality를 맞춰
+nonempty, power≥1, ground≥1을 허용하고 모든 rows/order를 보존하는 focused contract다.
+기존 duplicate logical key/per-row required0/1/source/pad/island/owner fail-closed는
+유지하며 terminal 2개 축소, adapter/consumer/schema/version/cap/helper/dependency 변경은
+하지 않는다. focused synthetic 1 node는 4-row two-branch roundtrip PASS, missing role
+FAIL 및 witness strict를 검증한다. 원본 SPD/full suite/import/solver/P1/PowerSI와 D-090
+재실행은 금지되며 수치 개선은 0이다.
 
 그다음 fitting 없이 analytic/manufactured oracle에서 limiting case, passivity,
 reciprocity, conservation, conditioning과 expected error signature를 판정한다.

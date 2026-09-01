@@ -1,14 +1,15 @@
 # SPD Decap PI Evaluator v0.23.1 — 작업 기준
 
-- 문서 버전: **3.6**
+- 문서 버전: **3.7**
 - 기준 branch: **main only**
 - current integrated-hardening docs base: `5a270677074868fc3e10ffa26309a208bb151ac3`
 - integrated-hardening implementation commit: `eece8ab944a29a9f6c5ddde17e56de8dbbd2ee6a`
 - 최종 개정: **2026-09-01 (Asia/Seoul)**
 - integrated-hardening lifecycle: **DONE / ACCEPT / COMMITTED @ `eece8ab944a29a9f6c5ddde17e56de8dbbd2ee6a`**
-- current accuracy gate: **A1 DONE / ACCEPT — A2 DONE / ACCEPT_NARROW_CORE_EVIDENCE — V1/A2R/A2S DONE / STOP — A2T DONE / STATIC_ACCEPT — V3G DONE / STATIC_ACCEPT — D-087 DONE / STOP_V3_LAUNCHER_COORDINATOR_SHA_CASE — D-088 DONE / STOP_V3R_IMPORT_OWNERSHIP_TERMINAL_CONTRACT — D-089 DONE / ACCEPT_FOCUSED / COMMITTED @ `54c87d1` — D-090 READY / ONE_SHOT_NOT_CONSUMED**
+- current accuracy gate: **A1 DONE / ACCEPT — A2 DONE / ACCEPT_NARROW_CORE_EVIDENCE — V1/A2R/A2S DONE / STOP — A2T DONE / STATIC_ACCEPT — V3G DONE / STATIC_ACCEPT — D-087 DONE / STOP_V3_LAUNCHER_COORDINATOR_SHA_CASE — D-088 DONE / STOP_V3R_IMPORT_OWNERSHIP_TERMINAL_CONTRACT — D-089 DONE / ACCEPT_FOCUSED / COMMITTED @ `54c87d1` — D-090 DONE / STOP_D090_OWNERSHIP_TERMINAL_MULTIBRANCH_CARDINALITY — D-091 ACTIVE**
 - D-089: **DONE / ACCEPT_FOCUSED / COMMITTED @ `54c87d1`** — `W7-ACC-TERMINAL-PATH-KIND-OWNERSHIP-IR-01` / `TERMINAL_PATH_KIND_OWNERSHIP_IR_CONTRACT`.
-- D-090: **READY / ONE_SHOT_NOT_CONSUMED** — production one-shot contract freeze.
+- D-090: **DONE / STOP_D090_OWNERSHIP_TERMINAL_MULTIBRANCH_CARDINALITY** — consumed, no-rerun.
+- D-091: **ACTIVE** — `W7-ACC-OWNERSHIP-TERMINAL-MULTIBRANCH-CARDINALITY-01` focused contract.
 - current numerical improvement: **0**
 
 ## 1. 압축 후 즉시 복구 카드
@@ -30,8 +31,9 @@ A2S는 그 block 14줄만 삭제하고 exact node를 한 번 실행했지만 syn
 개선은 아직 0이다. D-087은 대문자 SHA가 lowercase-only launcher gate에서 거부되어
 source 접근 전 STOP했다. 동일 D-087은 재실행하지 않았다. D-088/V3R도 새 HEAD/root에서
 정확히 한 번 소비된 STOP이며, 동일 실행은 재실행하지 않는다. D-089 focused terminal
-path-kind ownership IR contract는 완료됐고 D-090 contract는 READY이며 one-shot은 아직
-소비되지 않았다.
+path-kind ownership IR contract는 완료됐고 D-090은
+`DONE / STOP_D090_OWNERSHIP_TERMINAL_MULTIBRANCH_CARDINALITY`로 소비된 STOP이다. 다음은
+D-091 focused ownership-terminal multibranch cardinality contract다.
 
 ```mermaid
 flowchart LR
@@ -50,8 +52,9 @@ flowchart LR
     V3G --> V3["D-087 single run<br/>STOP: SHA case gate"]
     V3 --> V3R["D-088 recovery<br/>DONE / STOP_V3R_IMPORT_OWNERSHIP_TERMINAL_CONTRACT"]
     V3R --> D89["D-089 focused contract<br/>DONE / ACCEPT_FOCUSED / COMMITTED 54c87d1"]
-    D89 --> D90["D-090 production one-shot contract freeze<br/>READY / ONE_SHOT_NOT_CONSUMED"]
-    D90 -->|계약 동결 후| A3["production one-shot consideration"]
+    D89 --> D90["D-090 source-block census<br/>DONE / STOP_D090_OWNERSHIP_TERMINAL_MULTIBRANCH_CARDINALITY"]
+    D90 --> D91["D-091 focused cardinality contract<br/>ACTIVE"]
+    D91 -->|focused PASS 후| A3["production one-shot consideration"]
     D89 -->|STOP| STOPSRC["static diagnosis/replanning"]
 ```
 
@@ -72,7 +75,7 @@ flowchart LR
 - stage와 commit은 explicit path로만 수행한다.
 
 사용량은 Codex Usage Guard v0.1.1로 phase 전환과 delegation/build 전에 확인한다.
-사용자가 지정한 남은 사용량 **50%** 지점에서는 새 expensive phase를 시작하지
+사용자가 지정한 남은 사용량 **30%** 지점에서는 새 expensive phase를 시작하지
 않고 현재 상태를 문서화해 멈춘다.
 
 ## 2. 문서 권위와 갱신 규칙
@@ -280,7 +283,9 @@ predecessor hardening은 `DONE / STOP`이고 승인된 test-only successor는
 실행은 각각 소비된 STOP이다. A2T는 runtime 없이 `DONE / STATIC_ACCEPT`했고 A2는 좁은
 core evidence만으로 종료됐다. D-087은 launcher-only STOP으로 닫혔고 D-088/V3R도
 별도 hash-bound single run을 소비한 STOP으로 닫혔다. D-089 focused terminal path-kind
-ownership IR contract는 완료됐고 D-090 production one-shot contract freeze가 READY 상태다.
+ownership IR contract는 완료됐고 D-090은
+`DONE / STOP_D090_OWNERSHIP_TERMINAL_MULTIBRANCH_CARDINALITY`로 소비된 STOP이다. D-091
+focused ownership-terminal multibranch cardinality contract만 ACTIVE다.
 
 ### A1 — W7-ACC-ERROR-BUDGET-01 — DONE / ACCEPT
 
@@ -749,41 +754,32 @@ Via/edge/owner를 결속했고 authoritative landing identity는
 owner-series projection과 boundary coverage ledger 불변을 확인했다. product 3개와
 focused test 3개 파일만 변경했으며 schema/version/dependency/solver/P1/PowerSI 변경은
 없다. producer 2 nodes는 `2 passed in 1.57s`, 관련 4 focused nodes도 PASS했다.
-현재 수치 개선은 0이고 원본 SPD/solver/PowerSI는 실행하지 않았다. D-090 production
-one-shot contract freeze는 `READY / ONE_SHOT_NOT_CONSUMED`이며 아직 원본 SPD/hash scan,
-import, test 또는 실행을 하지 않았다.
+현재 수치 개선은 0이고 solver/P1/PowerSI는 실행되지 않았다. D-090에서 원본 SPD import
+1회가 실행됐지만 source-block census는 fail-closed STOP으로 종료됐다. D-090은
+`DONE / STOP_D090_OWNERSHIP_TERMINAL_MULTIBRANCH_CARDINALITY`로 종료됐다. acceptance는
+REJECT이나 receipt는 valid fail-closed STOP이다. execution HEAD는
+`7d7bac4f82546f27a84b6b3d7d4ae7c5bd5a00e8`, root는
+`D:\SPD-Decap-PI-Evaluator-W7\7d7bac4f82546f27a84b6b3d7d4ae7c5bd5a00e8\260729-a2-d090-source-block-census-01`,
+receipt `source_block_census_receipt.json`은 2,696 bytes/SHA
+`5d6eb3fded5f53491a6d0601c67932e9f92ddbf5a4599ea32a1f7274a0d53f1d`이며
+status/stage/disposition은 `STOP`/`STOP_UNEXPECTED`/`STOP_UNEXPECTED`다. 예외는
+`SourcePlaneOwnershipIRError: target rail terminal chain must contain complete power and ground`이고
+call ledger는 import=1/report=1, compile/census/P1/solve/PowerSI=0, retry=0,
+`report.present=false`다. Producer는 모든 Device branch의 power/ground를 보존하고 mapping
+validator는 복수를 허용하지만 spool line 753–755가 exact `(2,1,1)`만 허용해 생긴
+representation/validator mismatch이며 원본 SPD data 부재가 아니다. receipt에 actual N은
+없으므로 주장하지 않는다. 동일 D-090은 재실행하지 않는다.
 
-### D-090 — W7-ACC-SOURCE-BLOCK-ORIGINAL-SPD-D090-01 — READY / ONE_SHOT_NOT_CONSUMED
+### D-091 — W7-ACC-OWNERSHIP-TERMINAL-MULTIBRANCH-CARDINALITY-01 — ACTIVE
 
-Coordinator는 `D:\SPD-Decap-PI-Evaluator-W7\_coordinator_temp\a2_d090_source_block_census_once.py`이며
-41,620 bytes, SHA-256 `15bd7b80bbf50a7127f45532352331bd5098ab9870e994110a31c4bded885e16`이다.
-Sol 판정은 `STATIC_ACCEPT_D090_COORDINATOR`, P0–P3는 0이다. 현재 consumer SHA는
-`21ecabbe53d9135706ce853143306976a4a652e1be42accbd77671af10938ca4`, adapter SHA는
-`c8c3b284801e3ef91649fea70db97dad1a561f37008f95d894ea81fa4afa146b`, ownership IR SHA는
-`772e2926e7940f08c14e534d4c95272b45a4eccc271779af26bb494fbe31f7dd`다. 이전 coordinator와
-소비된 root는 불변이며 재사용하지 않는다.
-
-D-087의 source/W6/rail/pair/budget, parent-child 및 fail-closed 계약을 그대로 상속하고,
-새 GATE·OUTPUT_SUFFIX·consumer SHA만 successor에서 바뀐다. exact contract head는 이 문서
-변경을 commit한 뒤의 main tracked-clean HEAD이며 root는
-`D:\SPD-Decap-PI-Evaluator-W7\<contract-head>\260729-a2-d090-source-block-census-01`이다.
-PowerShell 단일 명령은 다음과 같다.
-
-```powershell
-$contractHead = (git rev-parse HEAD).Trim()
-$coordinatorSha = '15bd7b80bbf50a7127f45532352331bd5098ab9870e994110a31c4bded885e16'
-& 'C:\Users\User\AppData\Local\Programs\Python\Python312\python.exe' -I -B `
-  'D:\SPD-Decap-PI-Evaluator-W7\_coordinator_temp\a2_d090_source_block_census_once.py' `
-  --repo 'C:\Users\User\Documents\ChatGPT\SPD Decap PI Evaluator' `
-  --contract-head $contractHead `
-  --coordinator-sha $coordinatorSha `
-  --root "D:\SPD-Decap-PI-Evaluator-W7\$contractHead\260729-a2-d090-source-block-census-01"
-```
-
-PASS ledger는 import/compile/census/report `1/1/1/1`, P1/solve/PowerSI `0/0/0`, retry `0`이며
-STOP이면 no-rerun이다. 이 단계는 원본 SPD source-block census completeness gate일 뿐
-solver/`Zii`/PowerSI 개선 실행이 아니다. 장시간 실행은 1분 폴링하지 않고 최소 5분 long wait
-또는 종료·오류 이벤트 때만 확인한다.
+whitelist는 `src/spd_decap_pi/source_plane_ownership_ir.py`와
+`tests/test_source_plane_ownership_ir.py`뿐이다. 목표는 spool cardinality를 mapping의
+casefold global role-set 의미와 맞춰 nonempty, power≥1, ground≥1을 허용하고 모든 rows/order를
+보존하는 것이다. 기존 duplicate logical key/per-row required0/1/source/pad/island/owner
+fail-closed는 유지하며 terminal 임의 2개 축소, adapter/consumer/schema/version/cap/helper/
+dependency 변경은 금지한다. focused synthetic 1 node는 4-row two-branch mapping+spool
+roundtrip PASS, missing role FAIL 및 witness strict를 검증한다. 원본 SPD/full suite/import/
+solver/P1/PowerSI와 D-090 rerun은 금지한다.
 
 ## 10. 중단·사용자 검토 조건
 
@@ -794,15 +790,17 @@ solver/`Zii`/PowerSI 개선 실행이 아니다. 장시간 실행은 1분 폴링
 - 동일 물리 후보가 두 번째 high-cost 실행을 요구하지만 원인 변경이 없다.
 - 원본 SPD source data, PowerSI reference partition 또는 unseen design이 없다.
 - working tree에 범위 밖 tracked 변경이 생겨 안전하게 분리할 수 없다.
-- 사용량이 사용자가 지정한 50% 남음 지점에 도달한다.
+- 사용량이 사용자가 지정한 30% 남음 지점에 도달한다.
 
 D-089 `W7-ACC-TERMINAL-PATH-KIND-OWNERSHIP-IR-01`은 `DONE / ACCEPT_FOCUSED /
 COMMITTED @ 54c87d1`다. D-088/V3R은 소비된 STOP이며 동일 실행은 허용하지 않는다.
 A2는 `DONE / ACCEPT_NARROW_CORE_EVIDENCE`지만 focused runtime PASS는 아니며
-V1/A2R/A2S와 D-087 실행은 각각 소비된 STOP이다. 제품/test/coordinator 변경은 금지한다.
-D-088은 hash-bound one-shot으로 소비됐고 동일 계약은 재실행하지 않는다. D-090 production
-one-shot contract freeze는 `READY / ONE_SHOT_NOT_CONSUMED`이며 아직 원본 SPD/hash scan,
-import, test 또는 실행을 하지 않았다.
+V1/A2R/A2S와 D-087 실행은 각각 소비된 STOP이다. D-091 whitelist 밖 product/test와
+coordinator 변경은 금지한다.
+D-088은 hash-bound one-shot으로 소비됐고 동일 계약은 재실행하지 않는다. D-090은
+`DONE / STOP_D090_OWNERSHIP_TERMINAL_MULTIBRANCH_CARDINALITY`로 소비된 STOP이며 동일
+계약은 재실행하지 않는다. D-091 `W7-ACC-OWNERSHIP-TERMINAL-MULTIBRANCH-CARDINALITY-01`만
+`ACTIVE`이고, focused PASS 전에는 production one-shot을 고려하지 않는다.
 새 schema/cap 또는 계약 밖 runtime이 필요하면 즉시 STOP하고 문서를 갱신한다.
 
 ## 11. 승인된 Unicode fixture successor — DONE / ACCEPT / COMMITTED @ eece8ab
