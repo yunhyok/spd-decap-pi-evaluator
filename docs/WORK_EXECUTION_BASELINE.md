@@ -6,7 +6,7 @@
 - integrated-hardening implementation commit: `eece8ab944a29a9f6c5ddde17e56de8dbbd2ee6a`
 - 최종 개정: **2026-09-02 (Asia/Seoul)**
 - integrated-hardening lifecycle: **DONE / ACCEPT / COMMITTED @ `eece8ab944a29a9f6c5ddde17e56de8dbbd2ee6a`**
-- current accuracy gate: **A1 DONE / ACCEPT — A2 DONE / ACCEPT_NARROW_CORE_EVIDENCE — V1/A2R/A2S DONE / STOP — A2T DONE / STATIC_ACCEPT — V3G DONE / STATIC_ACCEPT — D-087 DONE / STOP_V3_LAUNCHER_COORDINATOR_SHA_CASE — D-088 DONE / STOP_V3R_IMPORT_OWNERSHIP_TERMINAL_CONTRACT — D-089 DONE / ACCEPT_FOCUSED / COMMITTED @ `54c87d1` — D-090 DONE / STOP_D090_OWNERSHIP_TERMINAL_MULTIBRANCH_CARDINALITY — D-091 DONE / ACCEPT_FOCUSED / COMMITTED @ `6b88c3c` — D-092 DONE / STOP_D092_CONTACT_TERMINAL_OWNER_COVERAGE_PARTITION — D-093 DONE / ACCEPT_FOCUSED / COMMITTED @ `bebbb80` — D-094 DONE / STOP_D094_COORDINATOR_ROWS_HASH_PROJECTION — D-095 DONE / ACCEPT_FOCUSED — D-096 DONE / ACCEPT — D-097 DONE / STOP_D097_RAW_STACKUP_PROVENANCE_SCOPE / CONSUMED_NO_RERUN — D-097R DONE / STOP_D097R_TERMINAL_ENDPOINT_LAYER_SEMANTICS / CONSUMED_NO_RERUN — D-097S DONE / STOP_D097S_INVALID_DETACHED_FIXTURE_COMPONENT_COVERAGE / CONSUMED_NO_RERUN — D-097T DONE / PASS_FOCUSED / COMMITTED @ `6bdd8a1` — D-098 DONE / STOP_MANIFEST_REPRODUCTION / CONSUMED / NO_RERUN — D-099 ACTIVE / not_run**
+- current accuracy gate: **A1 DONE / ACCEPT — A2 DONE / ACCEPT_NARROW_CORE_EVIDENCE — V1/A2R/A2S DONE / STOP — A2T DONE / STATIC_ACCEPT — V3G DONE / STATIC_ACCEPT — D-087 DONE / STOP_V3_LAUNCHER_COORDINATOR_SHA_CASE — D-088 DONE / STOP_V3R_IMPORT_OWNERSHIP_TERMINAL_CONTRACT — D-089 DONE / ACCEPT_FOCUSED / COMMITTED @ `54c87d1` — D-090 DONE / STOP_D090_OWNERSHIP_TERMINAL_MULTIBRANCH_CARDINALITY — D-091 DONE / ACCEPT_FOCUSED / COMMITTED @ `6b88c3c` — D-092 DONE / STOP_D092_CONTACT_TERMINAL_OWNER_COVERAGE_PARTITION — D-093 DONE / ACCEPT_FOCUSED / COMMITTED @ `bebbb80` — D-094 DONE / STOP_D094_COORDINATOR_ROWS_HASH_PROJECTION — D-095 DONE / ACCEPT_FOCUSED — D-096 DONE / ACCEPT — D-097 DONE / STOP_D097_RAW_STACKUP_PROVENANCE_SCOPE / CONSUMED_NO_RERUN — D-097R DONE / STOP_D097R_TERMINAL_ENDPOINT_LAYER_SEMANTICS / CONSUMED_NO_RERUN — D-097S DONE / STOP_D097S_INVALID_DETACHED_FIXTURE_COMPONENT_COVERAGE / CONSUMED_NO_RERUN — D-097T DONE / PASS_FOCUSED / COMMITTED @ `6bdd8a1` — D-098 DONE / STOP_MANIFEST_REPRODUCTION / CONSUMED / NO_RERUN — D-099 DONE / STOP_D099_SQLITE_HANDLE_NOT_CLOSED / CONSUMED / NO_RERUN — D-099R ACTIVE / not_run**
 - D-089: **DONE / ACCEPT_FOCUSED / COMMITTED @ `54c87d1`** — `W7-ACC-TERMINAL-PATH-KIND-OWNERSHIP-IR-01` / `TERMINAL_PATH_KIND_OWNERSHIP_IR_CONTRACT`.
 - D-090: **DONE / STOP_D090_OWNERSHIP_TERMINAL_MULTIBRANCH_CARDINALITY** — consumed, no-rerun.
 - D-091: **DONE / ACCEPT_FOCUSED / COMMITTED @ `6b88c3c`** — `W7-ACC-OWNERSHIP-TERMINAL-MULTIBRANCH-CARDINALITY-01`.
@@ -79,8 +79,9 @@ flowchart LR
     D97R --> D97S["D-097S terminal endpoint provenance<br/>DONE / STOP_D097S_INVALID_DETACHED_FIXTURE_COMPONENT_COVERAGE"]
     D97S --> D97T["D-097T selected-island multicomponent provenance<br/>DONE / PASS_FOCUSED"]
     D97T --> D98["D-098 original-SPD source-bound geometry manifest<br/>DONE / STOP_MANIFEST_REPRODUCTION / CONSUMED"]
-    D98 --> D99["D-099 ownership logical rows cross-process determinism<br/>ACTIVE / not_run"]
-    D99 -->|focused PASS 후| D98S["original-SPD diagnostic successor<br/>number/scope TBD"]
+    D98 --> D99["D-099 ownership logical rows cross-process determinism<br/>DONE / STOP_D099_SQLITE_HANDLE_NOT_CLOSED / CONSUMED"]
+    D99 --> D99R["D-099R SQLite handle closure determinism successor<br/>ACTIVE / not_run"]
+    D99R -->|focused PASS 후| D98S["original-SPD diagnostic successor<br/>number/scope TBD"]
     D98S -->|diagnostic completion 후| OC["manufactured/source-bound nonzero deltaC oracle gate<br/>number/scope TBD"]
     OC -->|oracle PASS 후| A3["production one-shot consideration"]
     D89 -->|STOP| STOPSRC["static diagnosis/replanning"]
@@ -1034,16 +1035,23 @@ physical drift를 의미한다고 주장하지 않는다. D-098은 `STOP_MANIFES
 동일 계약을 재실행하지 않는다. 수치 개선은 0이고 oracle/solver/P1/PowerSI 및 production/release
 readiness 주장은 없다.
 
-D-099는 gate `W7-ACC-D099-OWNERSHIP-LOGICAL-ROWS-CROSS-PROCESS-DETERMINISM-01`이며, 정확한 node
-`tests/test_source_plane_ownership_ir_producer.py::test_ownership_logical_rows_hash_is_cross_process_order_invariant`를
-static review 뒤 정확히 1회 실행한다. 두 fresh process를 distinct `PYTHONHASHSEED`로 실행하고
-valid two-component/anchor/quotient presentation을 정방향/역방향으로 제시하여 per-section count/SHA와
-최종 ownership logical hash가 일치하는지 검증한다. RED이면 canonical island-id ordering,
-primitive-island relation sort, terminal/contact ordinal stable semantic key assignment만 최소 수정 후보로
-삼는다. D-099는 whole suite/original SPD/census/fringe/P1/oracle/solver/PowerSI/new dependency를 허용하지
-않으며, PASS 전에는 새 original-SPD diagnostic successor를 열지 않는다. 후속 실행은 equality gate 전에
-observed ownership manifest와 section ledger를 먼저 보존한다.
-Tracked whitelist는 실제로 필요한 ownership producer/IR source, 위 focused test와 이 두 문서로만 제한한다.
+직전 D-099는 base HEAD `4d2083d0457cd6394ff1d9a8f5d24c39682f1c0b`에서 정확한 focused node를 1회
+실행했으나 2.94 s에 1 failed, parent wall은 4.0406744 s였다. Launch 시 test file은 63,650 B,
+SHA-256 `193e5c4b9a12554414d73e061781e9a520a43a022d7d364d18b1b83893012ec8`였다. Synthetic child는
+import와 DB query까지 완료했지만 `sqlite3.connect` handle이 닫히기 전에 child line 93의
+`sqlite_path.unlink`가 실행되어 Windows `PermissionError`가 `CalledProcessError`를 일으켰다.
+따라서 reversed child와 binding/semantic/section-ledger/logical-hash 비교에는 도달하지 않았으며,
+ownership determinism 결론을 내리지 않는다. 원본 SPD/census/fringe/P1/oracle/solver/PowerSI 실행과
+수치 개선은 0이다. D-099는 `STOP_D099_SQLITE_HANDLE_NOT_CLOSED`로 소비하고 재실행하지 않는다.
+
+활성 successor D-099R은 gate `W7-ACC-D099R-OWNERSHIP-LOGICAL-ROWS-CROSS-PROCESS-DETERMINISM-01`이며,
+동일 node `tests/test_source_plane_ownership_ir_producer.py::test_ownership_logical_rows_hash_is_cross_process_order_invariant`를
+static review 뒤 정확히 1회 실행한다. child 내부에서만 `from contextlib import closing`을 추가하고
+`with sqlite3.connect(sqlite_path) as connection:`을 `with closing(sqlite3.connect(sqlite_path)) as connection:`으로
+바꾸며 모든 reversal/assertion/seed/timeout/cleanup은 보존한다. Whole suite/original SPD/census/fringe/
+P1/oracle/solver/PowerSI/new dependency/retry는 금지한다. PASS이면 invariant를 닫고, meaningful RED일
+때만 별도 producer-fix successor를 연다. D-099R PASS 전에는 original-SPD diagnostic successor를 열지 않는다.
+Tracked whitelist는 위 focused test와 이 두 문서로만 제한한다. Producer/IR source 변경은 이 gate에서 금지한다.
 
 ## 10. 중단·사용자 검토 조건
 
