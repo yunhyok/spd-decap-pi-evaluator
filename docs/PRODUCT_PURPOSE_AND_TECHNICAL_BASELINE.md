@@ -1,13 +1,13 @@
 # SPD Decap PI Evaluator v0.23.1 — 목적·기술 기준
 
-- 문서 버전: **3.13**
+- 문서 버전: **3.14**
 - 권위: **G0 — 목적, 우선순위, 합격 의미와 비주장 경계**
 - 최종 개정: **2026-09-02 (Asia/Seoul)**
 - 현재 외부 정확성: **W6-BASE 260729 retrospective numerical FAIL**
 - unseen/generalization: **unknown / not_run**
 - 현재 수치 개선: **0** — solver, `Y_global`, `Zii`와 PowerSI 비교 수치는 아직 바뀌지 않았다.
 - 현재 구현 gate: **DONE / ACCEPT / COMMITTED @ `eece8ab944a29a9f6c5ddde17e56de8dbbd2ee6a`**
-- 현재 정확성 gate: **A1 DONE / ACCEPT — A2 DONE / ACCEPT_NARROW_CORE_EVIDENCE — V1/A2R/A2S DONE / STOP — A2T DONE / STATIC_ACCEPT — V3G DONE / STATIC_ACCEPT — D-087 DONE / STOP_V3_LAUNCHER_COORDINATOR_SHA_CASE — D-088 DONE / STOP_V3R_IMPORT_OWNERSHIP_TERMINAL_CONTRACT — D-089 DONE / ACCEPT_FOCUSED / COMMITTED @ `54c87d1` — D-090 DONE / STOP_D090_OWNERSHIP_TERMINAL_MULTIBRANCH_CARDINALITY — D-091 DONE / ACCEPT_FOCUSED / COMMITTED @ `6b88c3c` — D-092 DONE / STOP_D092_CONTACT_TERMINAL_OWNER_COVERAGE_PARTITION — D-093 DONE / ACCEPT_FOCUSED / COMMITTED @ `bebbb80` — D-094 DONE / STOP_D094_COORDINATOR_ROWS_HASH_PROJECTION — D-095 DONE / ACCEPT_FOCUSED — D-096 ACTIVE / STATIC_ACCEPT (READY_FOR_SINGLE_D096_RUN / ONE_SHOT_NOT_CONSUMED)**
+- 현재 정확성 gate: **A1 DONE / ACCEPT — A2 DONE / ACCEPT_NARROW_CORE_EVIDENCE — V1/A2R/A2S DONE / STOP — A2T DONE / STATIC_ACCEPT — V3G DONE / STATIC_ACCEPT — D-087 DONE / STOP_V3_LAUNCHER_COORDINATOR_SHA_CASE — D-088 DONE / STOP_V3R_IMPORT_OWNERSHIP_TERMINAL_CONTRACT — D-089 DONE / ACCEPT_FOCUSED / COMMITTED @ `54c87d1` — D-090 DONE / STOP_D090_OWNERSHIP_TERMINAL_MULTIBRANCH_CARDINALITY — D-091 DONE / ACCEPT_FOCUSED / COMMITTED @ `6b88c3c` — D-092 DONE / STOP_D092_CONTACT_TERMINAL_OWNER_COVERAGE_PARTITION — D-093 DONE / ACCEPT_FOCUSED / COMMITTED @ `bebbb80` — D-094 DONE / STOP_D094_COORDINATOR_ROWS_HASH_PROJECTION — D-095 DONE / ACCEPT_FOCUSED — D-096 DONE / ACCEPT — D-097 ACTIVE / not_run**
 
 ## 1. 문서 역할과 권위
 
@@ -155,8 +155,11 @@ flowchart LR
     D92 --> D93["D-093 contact terminal owner coverage partition<br/>DONE / ACCEPT_FOCUSED / COMMITTED bebbb80"]
     D93 --> D94["D-094 source-block census<br/>DONE / STOP_D094_COORDINATOR_ROWS_HASH_PROJECTION"]
     D94 --> D95["D-095 coordinator rows-hash projection<br/>DONE / ACCEPT_FOCUSED"]
-    D95 --> D96["D-096 original-SPD source-block census<br/>ACTIVE / STATIC_ACCEPT<br/>READY_FOR_SINGLE_D096_RUN / ONE_SHOT_NOT_CONSUMED"]
-    D96 -->|one-shot PASS 후| L["production one-shot consideration"]
+    D95 --> D96["D-096 original-SPD source-block census<br/>DONE / ACCEPT<br/>PASS_SOURCE_BLOCK_CENSUS_COMPLETE / CONSUMED_NO_RERUN"]
+    D96 --> D97["D-097 source-bound geometry manifest<br/>ACTIVE / not_run"]
+    D97 -->|focused acceptance 후| D98["D-098 original-SPD geometry manifest one-shot<br/>separate one-shot"]
+    D98 -->|manifest PASS 후| OC["manufactured/source-bound nonzero deltaC oracle gate<br/>number/scope TBD"]
+    OC -->|oracle PASS 후| L["production one-shot consideration"]
     D89 -->|STOP| SSRC["static diagnosis/replanning"]
     L --> I["one-owner production integration"]
     I --> A["동결 260729 development A/B 1회"]
@@ -429,41 +432,66 @@ Coordinator main/original SPD/product import/compile/census/P1/solve/PowerSI는 
 수치 개선은 0이다. repo product/source 변경과 schema/adapter/consumer/caps/deps/version
 변경은 없고 D-095 check는 consumed/no-rerun이다.
 
-### D-096 — W7-ACC-SOURCE-BLOCK-ORIGINAL-SPD-D096-01 — ACTIVE / STATIC_ACCEPT
+### D-096 — W7-ACC-SOURCE-BLOCK-ORIGINAL-SPD-D096-01 — DONE / ACCEPT
 
-Readiness qualifiers: `READY_FOR_SINGLE_D096_RUN / ONE_SHOT_NOT_CONSUMED`.
+Readiness qualifiers: `PASS_SOURCE_BLOCK_CENSUS_COMPLETE / CONSUMED_NO_RERUN`.
+Contract HEAD는 `23e5d3c6b43064b8fd805c234da5f0ccc86b6d4f`이며 root는
+`D:\SPD-Decap-PI-Evaluator-W7\23e5d3c6b43064b8fd805c234da5f0ccc86b6d4f\260729-a2-d096-source-block-census-01`이다.
+Receipt `source_block_census_receipt.json`은 3,895 B, SHA-256
+`4ab8562d9c307b3aaedd54c2839f232dea492467f9fd44bd0b7881975bc9840e`; report는 17,236 B,
+SHA-256 `bb2ad70bbbb5e39af6a673d29adb2e5543675e680d68491cf906aabc2c16f473`다. Elapsed는
+`8286.58578 s` (138m6.59s), disposition은 `PASS_SOURCE_BLOCK_CENSUS_COMPLETE`다.
+Call ledger는 import/compile/census/report `1/1/1/1`, P1/solve/PowerSI `0/0/0`, retry `0`이며
+최종 report `e09f7e20b50c993cc9e540589cc543ec5a651469e0240ff1cb4f1852c7ce42d7`, query
+`9fd6c843765ff80789e293958b0ac5a3d7ccaa24c7144b9fcfba3c538e8f9d31`, rows
+`eebfdb29b2586d77f7486eb77d8c42880e5c93d9bf87b1d134f39ea24425e5f2`, candidate set
+`d00b6f92ec064224030e77cd50bd763502ca2caf0def862f0149655d784c7fb4`, retained
+`53d5171dc735c40cb1b17e2bb47cc3993a41fece5e0d129bd5d11586b5e5dec7`, excluded empty
+`4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945`, ledger
+`425777101d113e8d66dffc9f423a50641ab6536bd8b4792981464a7cbca9f54e`다.
 
-Coordinator는 `D:\SPD-Decap-PI-Evaluator-W7\_coordinator_temp\a2_d096_source_block_census_once.py`;
-42,247 bytes, SHA-256 `684038ee0438d8af9e1b5d9c8c5f4641282ceb912384dce1ad2912d38863baa9`다.
-Sol 판정은 `STATIC_ACCEPT_D096_COORDINATOR`다. D-095 coordinator는 immutable하게
-보존하며 D-096은 그 predecessor와 정확히 4개 label만 다르다. Frozen source는
-`D:\S4LB002-2Para_260729_1_injected.spd`, 1,116,717,287 B, SHA-256
-`40CB44B2376F59D6B606EB9B4D138204FE51B2DC6B3332D3B7C0E7D4202866D2`이며 rail/pair는
-`ADC_VDD_180_VQPS_SYS_1_AON/0` 및 `Signal$L30(OTHER_POWER1)` / `Signal$L29(DGND)`,
-block은 `RAIL_REACHABLE_DIELECTRIC_GAP_MAXWELL_GC`다. Source hashes는 adapter
-`c8c3b284801e3ef91649fea70db97dad1a561f37008f95d894ea81fa4afa146b`, ownership IR
-`3503f9133e880a38c82b2368d99f8f64d11764d210f99dacaef2c81729b0dd68`, consumer
-`21ecabbe53d9135706ce853143306976a4a652e1be42accbd77671af10938ca4`다. D-094의
-fail-closed caps/call ledger와 no-PowerSI 계약을 상속한다.
+Rows는 10개 모두 adjacent이며 candidate/retained/excluded는 `1/9/0`이다. Candidate
+fingerprint는 `a96399ee2022af38d4060b5b66a1d1c246c4a9fead3ff35737857055a832a41d`,
+`L29 DGND reduced2854 <-> L30 power reduced2859`, C는
+`0x1.7613d08aa1b9dp-32 = 0.340221414118078 nF`다. Stack은 `20um Cu / 30um ABF-GL102 /
+20um Cu`이며 equivalent overlap area는 약 `339.043 mm²`다. Source Dk/Df seven points는
+`1MHz 3.4/0.0041; 1GHz 3.3/0.004; 5.8GHz 3.3/0.0044; 10GHz 3.2/0.0046;
+20GHz 3.4/0.0051; 40GHz 3.3/0.0058; 60GHz 3.3/0.006`이다. numerical improvement는
+0이고 flags는 `shadow_only=true`, `replacement_ready=false`, `production_ready=false`다.
 
-Contract HEAD는 이 문서를 반영한 새 tracked-clean docs commit이며 root는
-`D:\SPD-Decap-PI-Evaluator-W7\<contract-head>\260729-a2-d096-source-block-census-01`이다.
-단일 PowerShell invocation은 다음과 같다.
+판정상 이 candidate는 이미 production bulk `epsilon*A/d`와 같아 제거·재삽입은 low-band
+no-op이다. 따라서 G4를 열지 않고 A1 deficit의 31% scaling도 적용하지 않는다. 알려진
+fringe/nonadjacent exclusion은 정성적 경계일 뿐 0이라고 주장하지 않는다. D-096 실행과
+report는 consumed/no-rerun이며 1분 polling 없이 종료·오류 event만 확인한다.
 
-```powershell
-$contractHead = (git rev-parse HEAD).Trim()
-$coordinatorSha = '684038ee0438d8af9e1b5d9c8c5f4641282ceb912384dce1ad2912d38863baa9'
-& 'C:\Users\User\AppData\Local\Programs\Python\Python312\python.exe' -I -B `
-  'D:\SPD-Decap-PI-Evaluator-W7\_coordinator_temp\a2_d096_source_block_census_once.py' `
-  --repo 'C:\Users\User\Documents\ChatGPT\SPD Decap PI Evaluator' `
-  --contract-head $contractHead `
-  --coordinator-sha $coordinatorSha `
-  --root "D:\SPD-Decap-PI-Evaluator-W7\$contractHead\260729-a2-d096-source-block-census-01"
-```
+### D-097 — W7-ACC-D097-SOURCE-BOUND-CANDIDATE-GEOMETRY-MANIFEST-01 — ACTIVE / not_run
 
-PASS ledger는 import/compile/census/report `1/1/1/1`, P1/solve/PowerSI `0/0/0`, retry
-`0`이며 STOP이면 consumed/no-rerun이다. one-shot은 아직 실행하지 않았고 수치 개선은
-0이다. 장시간 실행 확인은 1분 polling 없이 long wait 또는 종료·오류 event 때만 한다.
+D-097 목적은 source-bound candidate geometry manifest와 oracle eligibility를 정하는 것이며
+physics/oracle solve와 product network mutation은 하지 않는다. Existing raw-v3와 ownership
+IR에 polygon/circle/vertex/stack/material data가 있으므로 새 DB/schema/compiler/loader/deps는
+만들지 않는다. D-096은 JSON만 persist했으므로 exact geometry attachment는 D-097 focused
+acceptance 뒤 별도 D-098 fresh original-SPD import에서 생성한다.
+
+Whitelist는 `src/spd_decap_pi/source_plane_patch_consumer.py`와
+`tests/test_source_plane_patch_consumer.py`뿐이다. Generic read-only
+`audit_source_plane_fringe_oracle_readiness(...)`와 최소 helper만 추가하고 D-096 hardcode는
+금지한다. 기존 loader/binding/owner/terminal/surface geometry와 core island split을 재사용한다.
+출력은 census/fingerprint/retained ledger에 bind된 P/G island·surface·primitive·vertex·circle와
+source hashes, normalized island/overlap/P-only/G-only WKB attachment/hash/area/bbox/rings/holes/
+edge/corner/curve flags, stackup+Dk/Df, explicit ground-terminal provenance, crop `NOT_SELECTED`,
+oracle eligibility/resource reason이다. oracle/product solve/PowerSI/replacement/production은
+항상 false로 둔다. ambiguous island, hash/partition drift, unresolved analytic curve, missing
+reference, unbound crop/environment, homogeneous-model mismatch, cap 초과 또는 solver call은
+보수적으로 STOP/ineligible 처리한다.
+
+Focused node는
+`tests/test_source_plane_patch_consumer.py::test_source_plane_fringe_geometry_manifest_binds_exact_candidate_without_solver`이며,
+deterministic positive/tamper checks와 solver/P1/PowerSI traps를 포함한다. Sol static accept 전
+original SPD/full suite/test를 실행하지 않고, accept 후 이 node만 한 번 실행한다. D-097
+accept/commit 뒤 별도 D-098 one-shot에서만 원본 SPD를 한 번 import해 geometry manifest/WKB를
+persist하며 oracle solve는 0이다. D-098은 geometry manifest에 한정하고, 이후 번호와 범위를
+동결하지 않은 별도 `manufactured/source-bound nonzero deltaC oracle gate`가 PASS할 때만
+one-owner production integration을 재검토한다. 사용량 30% threshold와 long-wait 정책을 유지한다.
 
 그다음 fitting 없이 analytic/manufactured oracle에서 limiting case, passivity,
 reciprocity, conservation, conditioning과 expected error signature를 판정한다.
