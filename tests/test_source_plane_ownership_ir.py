@@ -146,6 +146,32 @@ def test_v2_mapping_and_spool_are_logically_equivalent_and_exclude_internal_tabl
     assert spool_asset == repeat_asset
     assert b"internal_only" not in zlib.decompress(spool_asset[1])
 
+def test_v2_spool_preserves_multibranch_terminal_cardinality(tmp_path):
+    value = draft(); value["contact_boundary"] = []
+    value["terminal_bindings"][0]["branch_id"] = value["terminal_bindings"][1]["branch_id"] = "branch:1"
+    for ordinal, row in enumerate(tuple(value["terminal_bindings"]), 2):
+        role = row["role"]; suffix = "p2" if role == "power" else "g2"; owner = "ViaC" if role == "power" else "ViaD"; edge = "edge-c" if role == "power" else "edge-d"
+        value["terminal_bindings"].append({**row, "ordinal": ordinal, "terminal_id": f"term:{suffix}", "branch_id": "branch:2", "pin_id": suffix.upper(), "via_owner_id": owner, "finite_edge_id": edge})
+        value["retained_owner_refs"].append({"ordinal": ordinal, "owner_id": owner, "namespace": f"raw-{owner.casefold()}", "owner_kind": "via", "rail_id": "RAIL/0", "edge_id": edge, "island_id": row["island_id"], "state": "retained"})
+        value["replacement_ledger_members"].append({"ledger_id": "ledger:0", "owner_id": owner, "action": "retained"})
+    value["replacement_ledger"][0].update(retained_count=4, retained_set_sha256=sh({"viaa", "viab", "viac", "viad"}))
+    expected_ids = ["term:p", "term:g", "term:p2", "term:g2"]
+    mapping_manifest, mapping_asset = build_source_plane_ownership_ir(value)
+    assert mapping_manifest["counts"]["terminal_bindings"] == 4
+    with load_source_plane_ownership_ir(mapping_manifest, {mapping_asset[0]: mapping_asset[1]}, expected_app_version="0.23.1", **binds(mapping_manifest)) as loaded:
+        assert [row["terminal_id"] for row in loaded.iter_section("terminal_bindings")] == expected_ids
+    spool_dir = tmp_path / "multibranch"; spool_dir.mkdir()
+    spool_manifest, spool_asset = build_source_plane_ownership_ir_from_spool(_SourcePlaneOwnershipSpool(_spool(spool_dir, value)), _v2_binding(value))
+    assert spool_manifest["logical_rows_sha256"] == mapping_manifest["logical_rows_sha256"] and spool_manifest["counts"]["terminal_bindings"] == 4
+    with load_source_plane_ownership_ir(spool_manifest, {spool_asset[0]: spool_asset[1]}, expected_app_version="0.23.1", **binds(spool_manifest)) as loaded:
+        assert [row["terminal_id"] for row in loaded.iter_section("terminal_bindings")] == expected_ids
+    for role in ("power", "ground"):
+        missing = {**value, "terminal_bindings": [{**row, "ordinal": index} for index, row in enumerate(row for row in value["terminal_bindings"] if row["role"] != role)]}
+        with pytest.raises(SourcePlaneOwnershipIRError) as mapping_error: build_source_plane_ownership_ir(missing)
+        case = tmp_path / f"missing-{role}"; case.mkdir()
+        with pytest.raises(SourcePlaneOwnershipIRError) as spool_error: build_source_plane_ownership_ir_from_spool(_SourcePlaneOwnershipSpool(_spool(case, missing)), _v2_binding(missing))
+        assert mapping_error.value.code == spool_error.value.code == "SOURCE_PLANE_OWNERSHIP_IR_TERMINAL_INCOMPLETE"
+
 def test_spool_caps_and_cancellation_fail_closed(tmp_path, monkeypatch):
     value = draft(); value["contact_boundary"] = []
     monkeypatch.setattr(ownership_ir, "MAX_SOURCE_PLANE_OWNERSHIP_IR_SECTION_ROWS", 1)
