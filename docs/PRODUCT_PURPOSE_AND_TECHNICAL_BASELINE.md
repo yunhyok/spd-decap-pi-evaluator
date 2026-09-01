@@ -1,13 +1,13 @@
 # SPD Decap PI Evaluator v0.23.1 — 목적·기술 기준
 
-- 문서 버전: **3.5**
+- 문서 버전: **3.6**
 - 권위: **G0 — 목적, 우선순위, 합격 의미와 비주장 경계**
 - 최종 개정: **2026-09-01 (Asia/Seoul)**
 - 현재 외부 정확성: **W6-BASE 260729 retrospective numerical FAIL**
 - unseen/generalization: **unknown / not_run**
 - 현재 수치 개선: **0** — solver, `Y_global`, `Zii`와 PowerSI 비교 수치는 아직 바뀌지 않았다.
 - 현재 구현 gate: **DONE / ACCEPT / COMMITTED @ `eece8ab944a29a9f6c5ddde17e56de8dbbd2ee6a`**
-- 현재 정확성 gate: **A1 DONE / ACCEPT — A2 DONE / ACCEPT_NARROW_CORE_EVIDENCE — V1/A2R/A2S DONE / STOP — A2T DONE / STATIC_ACCEPT — V3G DONE / STATIC_ACCEPT — D-087 DONE / STOP_V3_LAUNCHER_COORDINATOR_SHA_CASE — D-088 DONE / STOP_V3R_IMPORT_OWNERSHIP_TERMINAL_CONTRACT — D-089 DONE / ACCEPT_FOCUSED / COMMITTED @ `54c87d1`**
+- 현재 정확성 gate: **A1 DONE / ACCEPT — A2 DONE / ACCEPT_NARROW_CORE_EVIDENCE — V1/A2R/A2S DONE / STOP — A2T DONE / STATIC_ACCEPT — V3G DONE / STATIC_ACCEPT — D-087 DONE / STOP_V3_LAUNCHER_COORDINATOR_SHA_CASE — D-088 DONE / STOP_V3R_IMPORT_OWNERSHIP_TERMINAL_CONTRACT — D-089 DONE / ACCEPT_FOCUSED / COMMITTED @ `54c87d1` — D-090 READY / ONE_SHOT_NOT_CONSUMED**
 
 ## 1. 문서 역할과 권위
 
@@ -149,7 +149,7 @@ flowchart LR
     V3G --> C["D-087 single run<br/>STOP: SHA case gate"]
     C --> V3R["D-088 V3R<br/>DONE / STOP_V3R_IMPORT_OWNERSHIP_TERMINAL_CONTRACT"]
     V3R --> D89["D-089 focused contract<br/>DONE / ACCEPT_FOCUSED / COMMITTED 54c87d1"]
-    D89 --> D90["D-090 production one-shot contract freeze<br/>PLANNED / NOT_STARTED"]
+    D89 --> D90["D-090 production one-shot contract freeze<br/>READY / ONE_SHOT_NOT_CONSUMED"]
     D90 -->|계약 동결 후| L["production one-shot consideration"]
     D89 -->|STOP| SSRC["static diagnosis/replanning"]
     L --> I["one-owner production integration"]
@@ -320,9 +320,10 @@ Via/edge/owner를 결속했고 authoritative landing identity는
 owner-series projection과 boundary coverage ledger 불변을 확인했다. product 3개와
 focused test 3개 파일만 변경했으며 schema/version/dependency/solver/P1/PowerSI 변경은
 없다. producer 2 nodes는 `2 passed in 1.57s`, 관련 4 focused nodes도 PASS했다.
-현재 수치 개선은 0이고 원본 SPD/solver/PowerSI는 실행하지 않았다. 후속 D-090
-production one-shot contract freeze는 `PLANNED / NOT_STARTED`이며 아직 실행·ACTIVE가
-아니다.
+현재 수치 개선은 0이고 원본 SPD/solver/PowerSI는 실행하지 않았다. D-090 production
+one-shot contract freeze는 `READY / ONE_SHOT_NOT_CONSUMED`이며 아직 one-shot은 소비되지
+않았다. D-090은 원본 SPD source-block census completeness gate일 뿐 solver/`Zii`/PowerSI
+개선 실행이 아니다.
 
 그다음 fitting 없이 analytic/manufactured oracle에서 limiting case, passivity,
 reciprocity, conservation, conditioning과 expected error signature를 판정한다.
