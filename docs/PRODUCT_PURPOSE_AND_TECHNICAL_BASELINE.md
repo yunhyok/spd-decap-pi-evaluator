@@ -1,13 +1,13 @@
 # SPD Decap PI Evaluator v0.23.1 — 목적·기술 기준
 
-- 문서 버전: **3.11**
+- 문서 버전: **3.12**
 - 권위: **G0 — 목적, 우선순위, 합격 의미와 비주장 경계**
-- 최종 개정: **2026-09-01 (Asia/Seoul)**
+- 최종 개정: **2026-09-02 (Asia/Seoul)**
 - 현재 외부 정확성: **W6-BASE 260729 retrospective numerical FAIL**
 - unseen/generalization: **unknown / not_run**
 - 현재 수치 개선: **0** — solver, `Y_global`, `Zii`와 PowerSI 비교 수치는 아직 바뀌지 않았다.
 - 현재 구현 gate: **DONE / ACCEPT / COMMITTED @ `eece8ab944a29a9f6c5ddde17e56de8dbbd2ee6a`**
-- 현재 정확성 gate: **A1 DONE / ACCEPT — A2 DONE / ACCEPT_NARROW_CORE_EVIDENCE — V1/A2R/A2S DONE / STOP — A2T DONE / STATIC_ACCEPT — V3G DONE / STATIC_ACCEPT — D-087 DONE / STOP_V3_LAUNCHER_COORDINATOR_SHA_CASE — D-088 DONE / STOP_V3R_IMPORT_OWNERSHIP_TERMINAL_CONTRACT — D-089 DONE / ACCEPT_FOCUSED / COMMITTED @ `54c87d1` — D-090 DONE / STOP_D090_OWNERSHIP_TERMINAL_MULTIBRANCH_CARDINALITY — D-091 DONE / ACCEPT_FOCUSED / COMMITTED @ `6b88c3c` — D-092 DONE / STOP_D092_CONTACT_TERMINAL_OWNER_COVERAGE_PARTITION — D-093 DONE / ACCEPT_FOCUSED / COMMITTED @ `bebbb80` — D-094 ACTIVE / STATIC_ACCEPT (READY_FOR_SINGLE_D094_RUN / ONE_SHOT_NOT_CONSUMED)**
+- 현재 정확성 gate: **A1 DONE / ACCEPT — A2 DONE / ACCEPT_NARROW_CORE_EVIDENCE — V1/A2R/A2S DONE / STOP — A2T DONE / STATIC_ACCEPT — V3G DONE / STATIC_ACCEPT — D-087 DONE / STOP_V3_LAUNCHER_COORDINATOR_SHA_CASE — D-088 DONE / STOP_V3R_IMPORT_OWNERSHIP_TERMINAL_CONTRACT — D-089 DONE / ACCEPT_FOCUSED / COMMITTED @ `54c87d1` — D-090 DONE / STOP_D090_OWNERSHIP_TERMINAL_MULTIBRANCH_CARDINALITY — D-091 DONE / ACCEPT_FOCUSED / COMMITTED @ `6b88c3c` — D-092 DONE / STOP_D092_CONTACT_TERMINAL_OWNER_COVERAGE_PARTITION — D-093 DONE / ACCEPT_FOCUSED / COMMITTED @ `bebbb80` — D-094 DONE / STOP_D094_COORDINATOR_ROWS_HASH_PROJECTION — D-095 ACTIVE / TEST_ONLY_SUCCESSOR_PLANNED**
 
 ## 1. 문서 역할과 권위
 
@@ -153,8 +153,10 @@ flowchart LR
     D90 --> D91["D-091 focused cardinality contract<br/>DONE / ACCEPT_FOCUSED / COMMITTED 6b88c3c"]
     D91 --> D92["D-092 source-block census<br/>DONE / STOP_D092_CONTACT_TERMINAL_OWNER_COVERAGE_PARTITION"]
     D92 --> D93["D-093 contact terminal owner coverage partition<br/>DONE / ACCEPT_FOCUSED / COMMITTED bebbb80"]
-    D93 --> D94["D-094 source-block census<br/>ACTIVE / STATIC_ACCEPT<br/>READY_FOR_SINGLE_D094_RUN / ONE_SHOT_NOT_CONSUMED"]
-    D94 -->|one-shot PASS 후| L["production one-shot consideration"]
+    D93 --> D94["D-094 source-block census<br/>DONE / STOP_D094_COORDINATOR_ROWS_HASH_PROJECTION"]
+    D94 --> D95["D-095 coordinator rows-hash projection<br/>ACTIVE / TEST_ONLY_SUCCESSOR_PLANNED"]
+    D95 -->|focused acceptance 후| D96["D-096 original-SPD source-block census<br/>separate one-shot"]
+    D96 -->|one-shot PASS 후| L["production one-shot consideration"]
     D89 -->|STOP| SSRC["static diagnosis/replanning"]
     L --> I["one-owner production integration"]
     I --> A["동결 260729 development A/B 1회"]
@@ -389,43 +391,40 @@ assertion을 logical_rows_sha256와 counts parity로 바꾼 뒤 같은 node를 �
 focused test만 변경했고 schema/adapter/consumer/caps/deps/version은 그대로다.
 원본 SPD/full suite/P1/solver/PowerSI는 실행하지 않았고 수치 개선은 0이다.
 
-### D-094 — W7-ACC-SOURCE-BLOCK-ORIGINAL-SPD-D094-01 — ACTIVE / STATIC_ACCEPT
+### D-094 — W7-ACC-SOURCE-BLOCK-ORIGINAL-SPD-D094-01 — DONE / STOP_D094_COORDINATOR_ROWS_HASH_PROJECTION
 
-Readiness qualifiers: `READY_FOR_SINGLE_D094_RUN / ONE_SHOT_NOT_CONSUMED`.
+D-094는 소비된 original-SPD one-shot이며 재실행하지 않는다. Coordinator는
+`D:\SPD-Decap-PI-Evaluator-W7\_coordinator_temp\a2_d094_source_block_census_once.py`;
+41,620 bytes, SHA-256
+`c05c8f19810e8f0b3a8ee552d5b981af665114f62b78627af408bd56105ff43c`다. Contract HEAD는
+`b46eed9fa50fe06ddaca30c5002f933407b40668`, root는
+`D:\SPD-Decap-PI-Evaluator-W7\b46eed9fa50fe06ddaca30c5002f933407b40668\260729-a2-d094-source-block-census-01`이다.
+Receipt `source_block_census_receipt.json`은 2,545 bytes,
+SHA-256 `475b3fe4430c54ccfd41342e17c8697792933427387036915dcef79f4f1abef4`다.
 
-Coordinator는 `D:\SPD-Decap-PI-Evaluator-W7\_coordinator_temp\a2_d094_source_block_census_once.py`이며
-41,620 bytes, SHA-256 `c05c8f19810e8f0b3a8ee552d5b981af665114f62b78627af408bd56105ff43c`다.
-Sol 판정은 `STATIC_ACCEPT_D094_COORDINATOR`다. D-092 coordinator는 immutable하게
-보존하며 41,620 bytes/SHA-256 `d204d383b8d3f6bb1edb2c9918b00e2589ed7c24f628139413ba3ddd1be378ec`이고
-재실행하지 않는다. D-094는 D-092에서 정확히 4개 label만 바꾼 별도 coordinator다.
-source hashes는 adapter `c8c3b284801e3ef91649fea70db97dad1a561f37008f95d894ea81fa4afa146b`,
-ownership IR `3503f9133e880a38c82b2368d99f8f64d11764d210f99dacaef2c81729b0dd68`, consumer
-`21ecabbe53d9135706ce853143306976a4a652e1be42accbd77671af10938ca4`다.
+Receipt는 `STOP / STOP_CENSUS / STOP_CENSUS`, elapsed `8058.36384 s`,
+exception `rows hash differs`를 기록한다. Call ledger는 import/compile/census/report
+`1/1/1/1`, P1/solve/PowerSI/retry `0/0/0/0`이고 report는 persisted되지 않았다.
+따라서 실제 row 내용·개수·fingerprint는 주장하지 않는다. Acceptance는 REJECT지만
+receipt는 유효한 fail-closed STOP이다. 수치 개선은 0이다.
 
-D-087의 frozen source는 `D:\S4LB002-2Para_260729_1_injected.spd`, 1,116,717,287 B,
-SHA-256 `40CB44B2376F59D6B606EB9B4D138204FE51B2DC6B3332D3B7C0E7D4202866D2`이며,
-rail/pair는 `ADC_VDD_180_VQPS_SYS_1_AON/0` 및
-`Signal$L30(OTHER_POWER1)` / `Signal$L29(DGND)`, block은
-`RAIL_REACHABLE_DIELECTRIC_GAP_MAXWELL_GC`다. D-092 call ledger와 fail-closed/
-no-PowerSI 계약도 상속한다. exact contract-head는 이 READY 문서를 반영한 tracked-clean
-docs commit이며, root는
-`D:\SPD-Decap-PI-Evaluator-W7\<contract-head>\260729-a2-d094-source-block-census-01`이다.
-단일 PowerShell 명령은 다음과 같다.
+정적 원인은 coordinator가 full row mapping을 hash한 반면, 기존 consumer contract는
+`fingerprint`, `partial_ordinal`, `upper_reduced_index`, `lower_reduced_index`,
+`classification`, `action`, `aggregation_count`의 7-field projection을 `rows_sha256`에
+사용하기 때문이다. 전체 row evidence는 `final_report_sha256`에 계속 커밋된다. D-094
+coordinator와 receipt는 immutable하게 보존하고 재실행하지 않는다.
 
-```powershell
-$contractHead = (git rev-parse HEAD).Trim()
-$coordinatorSha = 'c05c8f19810e8f0b3a8ee552d5b981af665114f62b78627af408bd56105ff43c'
-& 'C:\Users\User\AppData\Local\Programs\Python\Python312\python.exe' -I -B `
-  'D:\SPD-Decap-PI-Evaluator-W7\_coordinator_temp\a2_d094_source_block_census_once.py' `
-  --repo 'C:\Users\User\Documents\ChatGPT\SPD Decap PI Evaluator' `
-  --contract-head $contractHead `
-  --coordinator-sha $coordinatorSha `
-  --root "D:\SPD-Decap-PI-Evaluator-W7\$contractHead\260729-a2-d094-source-block-census-01"
-```
+### D-095 — W7-ACC-SOURCE-BLOCK-COORDINATOR-ROWS-HASH-PROJECTION-01 — ACTIVE / TEST_ONLY_SUCCESSOR_PLANNED
 
-PASS ledger는 import/compile/census/report `1/1/1/1`, P1/solve/PowerSI `0/0/0`,
-retry `0`이며 STOP이면 no-rerun이다. one-shot은 아직 실행하지 않았고 수치 개선은
-0이다. 장시간 실행 확인은 1분 polling 없이 long wait 또는 종료·오류 event 때만 한다.
+D-095는 D-094 원인을 검증하는 focused test-only successor다. 외부 whitelist는
+`D:\SPD-Decap-PI-Evaluator-W7\_coordinator_temp\a2_d095_source_block_census_once.py`와
+`D:\SPD-Decap-PI-Evaluator-W7\_coordinator_temp\a2_d095_rows_hash_projection_check.py` 두 파일뿐이며,
+repo product/source/schema/adapter/consumer/caps/deps/version 변경은 금지한다.
+검증은 synthetic report만 사용하고 원본 SPD/import/compile/census/P1/solve/PowerSI는
+실행하지 않는다. predecessor가 valid projection digest를 reject하고 D-095가 accept,
+full-row digest를 reject하는지와 missing/non-mapping row의 `STOP_CENSUS`, projected
+field mutation의 rows-hash 실패, nonprojected mutation의 stale final-hash 실패를
+확인한다. D-095 acceptance 뒤에만 별도 D-096 original-SPD one-shot을 계획한다.
 
 그다음 fitting 없이 analytic/manufactured oracle에서 limiting case, passivity,
 reciprocity, conservation, conditioning과 expected error signature를 판정한다.
