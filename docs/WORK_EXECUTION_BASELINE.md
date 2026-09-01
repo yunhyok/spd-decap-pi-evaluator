@@ -1,13 +1,13 @@
 # SPD Decap PI Evaluator v0.23.1 — 작업 기준
 
-- 문서 버전: **2.3**
+- 문서 버전: **2.4**
 - 기준 branch: **main only**
 - current integrated-hardening docs base: `5a270677074868fc3e10ffa26309a208bb151ac3`
 - integrated-hardening implementation commit: `eece8ab944a29a9f6c5ddde17e56de8dbbd2ee6a`
 - 최종 개정: **2026-09-01 (Asia/Seoul)**
 - integrated-hardening lifecycle: **DONE / ACCEPT / COMMITTED @ `eece8ab944a29a9f6c5ddde17e56de8dbbd2ee6a`**
-- current accuracy gate: **A1 DONE / ACCEPT — A2 DONE / STOP_V1_LAUNCHER_NO_PYTEST (candidate STATIC_ACCEPT)**
-- sole ACTIVE: **none** — 별도 V1 recovery 계약은 아직 동결·개시되지 않았다.
+- current accuracy gate: **A1 DONE / ACCEPT — A2 DONE / STOP_V1_LAUNCHER_NO_PYTEST — A2R ACTIVE / READY_FOR_SINGLE_V1R**
+- sole ACTIVE: **W7-ACC-SOURCE-BLOCK-V1-LAUNCHER-RECOVERY-01** — interpreter identity와 exact one-node command 동결 완료.
 - current numerical improvement: **0**
 
 ## 1. 압축 후 즉시 복구 카드
@@ -21,7 +21,8 @@ A1은 새 PowerSI run 없이 기존 W6 report를 한 번 읽어 development rail
 `RAIL_REACHABLE_DIELECTRIC_GAP_MAXWELL_GC` 한 block으로 가설을 고정해
 `DONE / ACCEPT`했다. A2는 기존 raw v3/ownership IR을 재사용하는 compile-only
 census 하나로 구현됐고 Sol `STATIC_ACCEPT`를 받았다. focused V1은 test collection
-전에 launcher Python의 pytest 부재로 STOP했으며 수치 개선은 아직 0이다.
+전에 launcher Python의 pytest 부재로 STOP했다. 별도 A2R은 Python 3.12.10 /
+pytest 9.0.3 identity와 exact one-node command를 동결했고 수치 개선은 아직 0이다.
 
 ```mermaid
 flowchart LR
@@ -29,8 +30,10 @@ flowchart LR
     A1 --> A2["A2 source-block materializer<br/>STATIC_ACCEPT"]
     A2 --> M["minimal read-only materializer<br/>no new DB/schema"]
     M --> V1["focused V1<br/>STOP: launcher Python에 pytest 없음"]
-    V1 -->|새 검증 계약에서 PASS할 때만| V3["원본 SPD import + source-only compile<br/>V3 once"]
     V1 -->|현재 결과| STOPV1["DONE / STOP_V1_LAUNCHER_NO_PYTEST"]
+    STOPV1 --> V1R["A2R launcher recovery<br/>READY / exact once"]
+    V1R -->|PASS일 때만| V3["원본 SPD import + source-only compile<br/>V3 once"]
+    V1R -->|FAIL| STOPV1R["DONE / STOP_V1R"]
     V3 -->|census complete / ledger disjoint| A3["A3 one-block research implementation"]
     V3 -->|missing / ambiguous| STOPSRC["DONE / STOP_NOT_READY"]
 ```
@@ -42,9 +45,9 @@ flowchart LR
 - successor 21-node invocation과 A1 V0 audit는 소모됐다. 같은 계약을 반복하지
   않는다.
 - A2 materializer는 정적으로 ACCEPT됐지만 focused V1이 launcher 단계에서
-  STOP했다. 같은 V1 계약을 재실행하거나 원본 SPD V3를 열지 않는다. 별도 복구
-  계약이 승인·동결되기 전에는 P1 condensation, global solver/`Y_global`/`Zii`,
-  PowerSI와 package/release도 실행하지 않는다.
+  STOP했다. 같은 V1 계약을 재실행하거나 원본 SPD V3를 열지 않는다. 동결된 D-084
+  exact V1R 외에는 P1 condensation, global solver/`Y_global`/`Zii`, PowerSI와
+  package/release도 실행하지 않는다.
 - 기존 W6 report는 read-only/hash-bound evidence이며 보정 parameter 생성에 쓰지
   않는다.
 - stage와 commit은 explicit path로만 수행한다.
@@ -469,6 +472,35 @@ pytest가 없어 focused V1이 collection 전에 exit 1로 종료됐다. 제품 
 확인하고, command/interpreter/version을 포함한 별도 V1 recovery 계약을 이 문서에
 먼저 동결하는 것이다. 그 계약의 PASS 전에는 원본 SPD import를 시작하지 않는다.
 
+### D-084 — A2R pytest-capable launcher recovery — ACTIVE / READY_FOR_SINGLE_V1R
+
+read-only filesystem 확인으로 과거 21-node PASS와 같은 Python/pytest 버전의 기존
+설치를 찾았다. Python이나 pytest를 실행해 예행하지 않았으며 다음 identity만
+동결했다.
+
+| 항목 | 동결 값 |
+|---|---|
+| product/test base commit | `dee9055f10543d29ce3590a10672500bf106350d` |
+| source SHA-256 | `63BEA32E1184154539ABD7DFE6B54555131888393FC04E5E12892E9EB730C710` |
+| test SHA-256 | `69449B7FB5FF96A507F1A56C615680DACCDD8247E10201ACFD16D615C6416B79` |
+| Python | `C:\Users\User\AppData\Local\Programs\Python\Python312\python.exe` / file version `3.12.10` |
+| Python SHA-256 | `4D6F5F81A4BCA11191C4C7C6B43632694D0A4CE74E068619D8FDC161D469859A` |
+| pytest metadata | `pytest-9.0.3.dist-info/METADATA` / version `9.0.3` |
+| pytest metadata SHA-256 | `C3966F28791686477BAE35E518736D4CBEA5B626D3A79011215854E2BC670207` |
+
+exact V1R command:
+
+```powershell
+& 'C:\Users\User\AppData\Local\Programs\Python\Python312\python.exe' -m pytest -x -vv --tb=long 'tests/test_source_plane_patch_consumer.py::test_source_plane_source_block_census_is_deterministic_and_fail_closed'
+```
+
+실행 전 조건은 main, 위 source/test hash, 범위 밖 tracked 변경 0이다. fresh process
+한 번, external wall 120 s, collection 1, exit 0과 `1 passed`만 PASS다. 별도
+`--version`, collection-only, 예행 node, retry, full suite, 원본 SPD와 solver는
+실행하지 않는다. PASS면 결과를 두 기준 문서에 기록하고 V3 계약을 다시 열 수 있다.
+collection/failure/timeout/interrupt면 `DONE / STOP_V1R_<CAUSE>`로 닫고 재실행하지
+않는다.
+
 ## 10. 중단·사용자 검토 조건
 
 다음이면 자동 진행을 멈추고 상태와 필요한 결정을 보고한다.
@@ -480,11 +512,11 @@ pytest가 없어 focused V1이 collection 전에 exit 1로 종료됐다. 제품 
 - working tree에 범위 밖 tracked 변경이 생겨 안전하게 분리할 수 없다.
 - 사용량이 사용자가 지정한 50% 남음 지점에 도달한다.
 
-현재 ACTIVE item은 없다. A2 materializer candidate는 Sol `STATIC_ACCEPT`지만
-runtime PASS는 아니며 lifecycle은 `DONE / STOP_V1_LAUNCHER_NO_PYTEST`다. 다음 허용
-작업은 read-only 환경 확인과 별도 recovery 계약의 사전 동결이다. §11은 commit까지
-닫혔으며, 위 두 code/test 경로 밖 제품 변경, 새 schema/cap 또는 계약 밖 runtime이
-필요하면 즉시 STOP하고 문서를 갱신한다.
+현재 ACTIVE item은 D-084의 A2R 하나다. A2 materializer candidate는 Sol
+`STATIC_ACCEPT`지만 runtime PASS는 아니며 predecessor lifecycle은
+`DONE / STOP_V1_LAUNCHER_NO_PYTEST`다. §11은 commit까지 닫혔으며, 위 두 code/test
+경로 밖 제품 변경, 새 schema/cap 또는 계약 밖 runtime이 필요하면 즉시 STOP하고
+문서를 갱신한다.
 
 ## 11. 승인된 Unicode fixture successor — DONE / ACCEPT / COMMITTED @ eece8ab
 

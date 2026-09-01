@@ -1,13 +1,13 @@
 # SPD Decap PI Evaluator v0.23.1 — 목적·기술 기준
 
-- 문서 버전: **2.3**
+- 문서 버전: **2.4**
 - 권위: **G0 — 목적, 우선순위, 합격 의미와 비주장 경계**
 - 최종 개정: **2026-09-01 (Asia/Seoul)**
 - 현재 외부 정확성: **W6-BASE 260729 retrospective numerical FAIL**
 - unseen/generalization: **unknown / not_run**
 - 현재 수치 개선: **0** — solver, `Y_global`, `Zii`와 PowerSI 비교 수치는 아직 바뀌지 않았다.
 - 현재 구현 gate: **DONE / ACCEPT / COMMITTED @ `eece8ab944a29a9f6c5ddde17e56de8dbbd2ee6a`**
-- 현재 정확성 gate: **A1 DONE / ACCEPT — A2 DONE / STOP_V1_LAUNCHER_NO_PYTEST (candidate STATIC_ACCEPT)**
+- 현재 정확성 gate: **A1 DONE / ACCEPT — A2 DONE / STOP_V1_LAUNCHER_NO_PYTEST — A2R ACTIVE / READY_FOR_SINGLE_V1R**
 
 ## 1. 문서 역할과 권위
 
@@ -138,8 +138,10 @@ flowchart LR
     X --> E["A1 error budget<br/>DONE / ACCEPT<br/>one rail · one component · one block"]
     E --> D["A2 source-block materializer<br/>STATIC_ACCEPT<br/>기존 raw v3 + ownership IR"]
     D --> V1["focused V1<br/>STOP: launcher Python에 pytest 없음"]
-    V1 -->|새 검증 계약에서 PASS할 때만| C["원본 SPD 1회<br/>source-only compile + G/C census"]
     V1 -->|현재 결과| SV1["DONE / STOP_V1_LAUNCHER_NO_PYTEST"]
+    SV1 --> V1R["A2R launcher recovery<br/>READY / exact once"]
+    V1R -->|PASS| C["원본 SPD 1회<br/>source-only compile + G/C census"]
+    V1R -->|FAIL| SR["DONE / STOP_V1R"]
     C -->|complete / disjoint| L["analytic/local physics gate"]
     C -->|missing / ambiguous| SSRC["DONE / STOP_NOT_READY"]
     L --> I["one-owner production integration"]
@@ -238,6 +240,10 @@ materializer와 단일 focused test는 Sol 정적 검토에서 `STATIC_ACCEPT`�
 코드 실패나 PASS 증거가 아니며, 같은 계약의 재실행과 상위 V3 원본 SPD import는
 허용하지 않는다. 정확한 명령·hash·영수증과 다음 허용 조건은 작업 기준 문서가
 관리한다.
+
+별도 A2R은 read-only 환경 확인으로 찾은 Python 3.12.10 / pytest 9.0.3 identity와
+정확한 한 node 명령을 새 계약으로 동결한 상태다. 이것은 consumed V1의 재사용이
+아니며, A2R도 정확히 한 번만 실행한다. A2R PASS 전에는 V3를 열지 않는다.
 
 그다음 fitting 없이 analytic/manufactured oracle에서 limiting case, passivity,
 reciprocity, conservation, conditioning과 expected error signature를 판정한다.
