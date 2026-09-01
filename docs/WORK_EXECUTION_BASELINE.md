@@ -1,13 +1,14 @@
 # SPD Decap PI Evaluator v0.23.1 — 작업 기준
 
-- 문서 버전: **3.4**
+- 문서 버전: **3.5**
 - 기준 branch: **main only**
 - current integrated-hardening docs base: `5a270677074868fc3e10ffa26309a208bb151ac3`
 - integrated-hardening implementation commit: `eece8ab944a29a9f6c5ddde17e56de8dbbd2ee6a`
 - 최종 개정: **2026-09-01 (Asia/Seoul)**
 - integrated-hardening lifecycle: **DONE / ACCEPT / COMMITTED @ `eece8ab944a29a9f6c5ddde17e56de8dbbd2ee6a`**
-- current accuracy gate: **A1 DONE / ACCEPT — A2 DONE / ACCEPT_NARROW_CORE_EVIDENCE — V1/A2R/A2S DONE / STOP — A2T DONE / STATIC_ACCEPT — V3G DONE / STATIC_ACCEPT — D-087 DONE / STOP_V3_LAUNCHER_COORDINATOR_SHA_CASE — D-088 DONE / STOP_V3R_IMPORT_OWNERSHIP_TERMINAL_CONTRACT**
-- sole ACTIVE: **D-089 W7-ACC-TERMINAL-PATH-KIND-OWNERSHIP-IR-01** — `TERMINAL_PATH_KIND_OWNERSHIP_IR_CONTRACT`, focused contract only.
+- current accuracy gate: **A1 DONE / ACCEPT — A2 DONE / ACCEPT_NARROW_CORE_EVIDENCE — V1/A2R/A2S DONE / STOP — A2T DONE / STATIC_ACCEPT — V3G DONE / STATIC_ACCEPT — D-087 DONE / STOP_V3_LAUNCHER_COORDINATOR_SHA_CASE — D-088 DONE / STOP_V3R_IMPORT_OWNERSHIP_TERMINAL_CONTRACT — D-089 DONE / ACCEPT_FOCUSED / COMMITTED @ `54c87d1`**
+- D-089: **DONE / ACCEPT_FOCUSED / COMMITTED @ `54c87d1`** — `W7-ACC-TERMINAL-PATH-KIND-OWNERSHIP-IR-01` / `TERMINAL_PATH_KIND_OWNERSHIP_IR_CONTRACT`.
+- next planned item: **D-090 production one-shot contract freeze — PLANNED / NOT_STARTED**.
 - current numerical improvement: **0**
 
 ## 1. 압축 후 즉시 복구 카드
@@ -28,8 +29,9 @@ A2S는 그 block 14줄만 삭제하고 exact node를 한 번 실행했지만 syn
 51줄 삭제했으며 추가 runtime 없이 A2를 `ACCEPT_NARROW_CORE_EVIDENCE`로 닫았다. 수치
 개선은 아직 0이다. D-087은 대문자 SHA가 lowercase-only launcher gate에서 거부되어
 source 접근 전 STOP했다. 동일 D-087은 재실행하지 않았다. D-088/V3R도 새 HEAD/root에서
-정확히 한 번 소비된 STOP이며, 동일 실행은 재실행하지 않는다. 다음 ACTIVE item은 D-089
-focused terminal path-kind ownership IR contract다.
+정확히 한 번 소비된 STOP이며, 동일 실행은 재실행하지 않는다. D-089 focused terminal
+path-kind ownership IR contract는 완료됐고, 다음은 D-090 production one-shot contract
+freeze를 계획만 한다.
 
 ```mermaid
 flowchart LR
@@ -47,8 +49,9 @@ flowchart LR
     AN --> V3G["별도 V3 계약<br/>DONE / STATIC_ACCEPT"]
     V3G --> V3["D-087 single run<br/>STOP: SHA case gate"]
     V3 --> V3R["D-088 recovery<br/>DONE / STOP_V3R_IMPORT_OWNERSHIP_TERMINAL_CONTRACT"]
-    V3R --> D89["D-089 focused contract<br/>ACTIVE"]
-    D89 -->|focused PASS| A3["production one-shot consideration"]
+    V3R --> D89["D-089 focused contract<br/>DONE / ACCEPT_FOCUSED / COMMITTED 54c87d1"]
+    D89 --> D90["D-090 production one-shot contract freeze<br/>PLANNED / NOT_STARTED"]
+    D90 -->|계약 동결 후| A3["production one-shot consideration"]
     D89 -->|STOP| STOPSRC["static diagnosis/replanning"]
 ```
 
@@ -276,8 +279,8 @@ predecessor hardening은 `DONE / STOP`이고 승인된 test-only successor는
 `DONE / ACCEPT`했다. A2 candidate는 Sol `STATIC_ACCEPT`를 받았지만 V1/A2R/A2S
 실행은 각각 소비된 STOP이다. A2T는 runtime 없이 `DONE / STATIC_ACCEPT`했고 A2는 좁은
 core evidence만으로 종료됐다. D-087은 launcher-only STOP으로 닫혔고 D-088/V3R도
-별도 hash-bound single run을 소비한 STOP으로 닫혔다. 현재 ACTIVE item은 D-089 focused
-terminal path-kind ownership IR contract다.
+별도 hash-bound single run을 소비한 STOP으로 닫혔다. D-089 focused terminal path-kind
+ownership IR contract는 완료됐고 D-090 production one-shot contract freeze를 계획만 한다.
 
 ### A1 — W7-ACC-ERROR-BUDGET-01 — DONE / ACCEPT
 
@@ -738,14 +741,16 @@ parser/IR representation mismatch이며 원본 SPD data 부재의 증거가 아�
 role/pin/edge/path-kind가 없어 특정 production row를 어느 P1이 만들었는지는 주장하지
 않으며, observed message는 projected-edge absence와 일관될 뿐이다.
 
-다음 sole ACTIVE item은 D-089 `W7-ACC-TERMINAL-PATH-KIND-OWNERSHIP-IR-01` /
-`TERMINAL_PATH_KIND_OWNERSHIP_IR_CONTRACT`다. target-anchor first edge/endpoints/owner-series
-보존·검증, 기존 `via_record_required` discriminator로 conventional via=1과 direct
-trace=0을 구분하는 exact node/vertex/island/surface provenance, conventional projected
-anchor·valid direct trace·mixed-invalid relation focused synthetic fixture만 허용한다.
-schema expansion/new abstraction, 원본 SPD, full suite, solver, P1, PowerSI, coordinator
-edit와 production rerun은 금지한다. focused PASS 뒤에만 별도 문서화한 production
-one-shot을 검토할 수 있다.
+D-089 `W7-ACC-TERMINAL-PATH-KIND-OWNERSHIP-IR-01` / `TERMINAL_PATH_KIND_OWNERSHIP_IR_CONTRACT`는
+`DONE / ACCEPT_FOCUSED / COMMITTED @ 54c87d1`로 닫혔다. 기존 `via_record_required`로
+conventional=1의 strict Via/edge/retained-owner와 direct-trace=0의 exact NULL
+Via/edge/owner를 결속했고 authoritative landing identity는
+`(via_id, external_endpoint_node_id)`다. target-only conventional first edge/endpoints/
+owner-series projection과 boundary coverage ledger 불변을 확인했다. product 3개와
+focused test 3개 파일만 변경했으며 schema/version/dependency/solver/P1/PowerSI 변경은
+없다. producer 2 nodes는 `2 passed in 1.57s`, 관련 4 focused nodes도 PASS했다.
+현재 수치 개선은 0이고 원본 SPD/solver/PowerSI는 실행하지 않았다. D-090 production
+one-shot contract freeze는 `PLANNED / NOT_STARTED`이며 아직 실행·ACTIVE가 아니다.
 
 ## 10. 중단·사용자 검토 조건
 
@@ -758,14 +763,13 @@ one-shot을 검토할 수 있다.
 - working tree에 범위 밖 tracked 변경이 생겨 안전하게 분리할 수 없다.
 - 사용량이 사용자가 지정한 50% 남음 지점에 도달한다.
 
-현재 ACTIVE item은 D-089 `W7-ACC-TERMINAL-PATH-KIND-OWNERSHIP-IR-01` /
-`TERMINAL_PATH_KIND_OWNERSHIP_IR_CONTRACT` focused contract다. D-088/V3R은 소비된 STOP이며
-동일 실행은 허용하지 않는다.
+D-089 `W7-ACC-TERMINAL-PATH-KIND-OWNERSHIP-IR-01`은 `DONE / ACCEPT_FOCUSED /
+COMMITTED @ 54c87d1`다. D-088/V3R은 소비된 STOP이며 동일 실행은 허용하지 않는다.
 A2는 `DONE / ACCEPT_NARROW_CORE_EVIDENCE`지만 focused runtime PASS는 아니며
 V1/A2R/A2S와 D-087 실행은 각각 소비된 STOP이다. 제품/test/coordinator 변경은 금지한다.
-D-088은 hash-bound one-shot으로 소비됐고 동일 계약은 재실행하지 않는다. D-089 focused
-PASS 뒤에만 별도 문서화한 production one-shot을 검토하며, 새 schema/cap 또는 계약 밖
-runtime이 필요하면 즉시 STOP하고 문서를 갱신한다.
+D-088은 hash-bound one-shot으로 소비됐고 동일 계약은 재실행하지 않는다. D-090 production
+one-shot contract freeze는 `PLANNED / NOT_STARTED`이며 문서화한 계약 동결 전에는 실행하지 않는다.
+새 schema/cap 또는 계약 밖 runtime이 필요하면 즉시 STOP하고 문서를 갱신한다.
 
 ## 11. 승인된 Unicode fixture successor — DONE / ACCEPT / COMMITTED @ eece8ab
 
