@@ -23,6 +23,7 @@ from .source_plane_ownership_ir import (
     load_source_plane_ownership_ir,
 )
 from ._core.geometry.ordered_boolean import ordered_spd_geometry
+from ._core import services as core_services
 from ._core.solver.mfdm import EPSILON_0_F_PER_M, MU_0_H_PER_M
 from ._core.solver.layerwise_network import LayerwiseScenarioNetworkBinding
 from ._core.solver.global_mna import GlobalMnaError, NodalAdmittanceBlock
@@ -253,6 +254,99 @@ def _terminal_raw_gate(terminals: tuple[dict[str, Any], dict[str, Any]], source_
     return footprints[0], footprints[1]
 
 
+def _fringe_terminal_raw_gate(
+    terminals: tuple[dict[str, Any], dict[str, Any]],
+    source_records: list[dict[str, Any]],
+    nodes: list[Any],
+    vias: list[Any],
+    pads: list[Any],
+    rail_bindings: Mapping[str, Mapping[str, Any]],
+    selected_islands: Mapping[str, Mapping[str, Any]],
+) -> tuple[Any, Any, dict[str, dict[str, Any]]]:
+    """Bind D097 source/external terminals and derive their internal nodes."""
+    from shapely.affinity import rotate
+    from shapely.geometry import Point, box
+
+    records = {str(row.get("record_id", "")).casefold(): row for row in source_records}
+    footprints: list[Any] = []
+    evidence: dict[str, dict[str, Any]] = {}
+    for terminal in terminals:
+        if int(terminal.get("via_record_required", 1)) != 1:
+            _fail("terminal fringe gate requires conventional Via record")
+        role = str(terminal.get("role", "")).casefold()
+        binding = rail_bindings.get(role)
+        island = selected_islands.get(role)
+        if binding is None or island is None:
+            _fail("terminal fringe rail binding is absent")
+        node_record = records.get(str(terminal.get("source_node_record_id", "")).casefold())
+        via_record = records.get(str(terminal.get("via_record_id", "")).casefold())
+        if node_record is None or via_record is None or str(node_record.get("kind", "")).casefold() != "node" or str(via_record.get("kind", "")).casefold() != "via":
+            _fail("terminal fringe source Node/Via record is invalid")
+        node_matches = [row for row in nodes if str(row.source_record_sha256) == str(node_record.get("source_record_sha256"))]
+        via_matches = [row for row in vias if str(row.source_record_sha256) == str(via_record.get("source_record_sha256"))]
+        if len(node_matches) != 1 or len(via_matches) != 1:
+            _fail("terminal fringe source Node/Via provenance is ambiguous")
+        source_node = node_matches[0]
+        via = via_matches[0]
+        endpoint_id = str(terminal.get("endpoint_node_id", "")).casefold()
+        if endpoint_id != str(source_node.node_id).casefold() or not endpoint_id:
+            _fail("terminal fringe endpoint is not the source/external Node")
+        net = str(binding.get("logical_net", "")).casefold()
+        if (str(source_node.net_name or "").casefold() != net or str(via.net_name).casefold() != net
+                or str(source_node.padstack_id or "").casefold() != str(terminal.get("padstack_id", "")).casefold()
+                or str(via.padstack_id).casefold() != str(terminal.get("padstack_id", "")).casefold()):
+            _fail("terminal fringe source Node/Via net or padstack differs")
+        via_node_ids = (str(via.start_node_id).casefold(), str(via.end_node_id).casefold())
+        if endpoint_id not in via_node_ids or via_node_ids[0] == via_node_ids[1]:
+            _fail("terminal fringe source/external Node is not a Via endpoint")
+        internal_id = via_node_ids[1] if via_node_ids[0] == endpoint_id else via_node_ids[0]
+        internal_matches = [row for row in nodes if str(row.node_id).casefold() == internal_id and str(row.net_name or "").casefold() == net]
+        if len(internal_matches) != 1:
+            _fail("terminal fringe internal plane Node is absent or ambiguous")
+        internal_node = internal_matches[0]
+        if (str(terminal.get("rail_id", "")).casefold() != str(binding.get("rail_id", "")).casefold()
+                or str(terminal.get("role", "")).casefold() != role
+                or str(terminal.get("island_id", "")).casefold() != str(island.get("island_id", "")).casefold()
+                or str(terminal.get("component_id", "")).casefold() != str(island.get("component_id", "")).casefold()
+                or str(terminal.get("layer", "")).casefold() != str(binding.get("layer", "")).casefold()
+                or str(terminal.get("layer", "")).casefold() != str(internal_node.layer_id).casefold()
+                or str(internal_node.padstack_id or "").casefold() != str(terminal.get("padstack_id", "")).casefold()):
+            _fail("terminal fringe internal layer or padstack differs")
+        source_is_start = str(via.start_node_id).casefold() == endpoint_id
+        source_endpoint = (via.start_x_pm, via.start_y_pm) if source_is_start else (via.end_x_pm, via.end_y_pm)
+        internal_endpoint = (via.end_x_pm, via.end_y_pm) if source_is_start else (via.start_x_pm, via.start_y_pm)
+        if (source_node.x_pm, source_node.y_pm) != source_endpoint or (internal_node.x_pm, internal_node.y_pm) != internal_endpoint:
+            _fail("terminal fringe Node/Via endpoint coordinates differ")
+        expected_source_layer = str(via.start_layer_id if source_is_start else via.end_layer_id).casefold()
+        expected_internal_layer = str(via.end_layer_id if source_is_start else via.start_layer_id).casefold()
+        if str(source_node.layer_id).casefold() != expected_source_layer or str(internal_node.layer_id).casefold() != expected_internal_layer or expected_source_layer == expected_internal_layer:
+            _fail("terminal fringe source/internal Via layers differ")
+        if via.status != "EXACT" or (via.start_x_pm, via.start_y_pm) != (via.end_x_pm, via.end_y_pm):
+            _fail("terminal fringe Via is not exact and non-slanted")
+        canonical_owner = _text(terminal.get("via_owner_id"), "terminal Via owner")
+        if canonical_owner.casefold() != f"via:{via.via_id}".casefold() or str(via.owner_id).casefold() != f"via:{str(via.net_name).casefold()}:{str(via.via_id).casefold()}":
+            _fail("terminal fringe Via owner differs")
+        pad_matches = [row for row in pads if str(row.padstack_id).casefold() == str(terminal.get("padstack_id", "")).casefold() and int(row.ordinal) == int(terminal.get("raw_pad_shape_ordinal", -1)) and str(row.source_record_sha256) == str(terminal.get("raw_pad_shape_sha256", ""))]
+        if len(pad_matches) != 1 or str(pad_matches[0].layer_id).casefold() != str(source_node.layer_id).casefold():
+            _fail("terminal fringe pad-shape provenance differs")
+        paddef = records.get(str(terminal.get("paddef_source_record_id", "")).casefold())
+        regular = records.get(str(terminal.get("regular_source_record_id", "")).casefold())
+        if (paddef is None or regular is None or str(paddef.get("kind", "")).casefold() != "paddef" or str(regular.get("kind", "")).casefold() != "regular" or str(paddef.get("layer", "")).casefold() != str(source_node.layer_id).casefold() or str(regular.get("layer", "")).casefold() != str(source_node.layer_id).casefold()):
+            _fail("terminal fringe PadDef/Regular layer differs")
+        pad = pad_matches[0]
+        x_um, y_um = float(source_node.x_pm) * 1e-6, float(source_node.y_pm) * 1e-6
+        width_um, height_um = float(pad.width_pm) * 1e-6, float(pad.height_pm) * 1e-6
+        if pad.shape_kind == "CIRCLE":
+            footprint = Point(x_um, y_um).buffer(width_um / 2.0, quad_segs=64)
+        else:
+            footprint = box(x_um - width_um / 2.0, y_um - height_um / 2.0, x_um + width_um / 2.0, y_um + height_um / 2.0)
+            if via.rotation_microdegrees:
+                footprint = rotate(footprint, float(via.rotation_microdegrees) / 1_000_000.0, origin=(x_um, y_um))
+        footprints.append(footprint)
+        evidence[role] = {"source_external_node": dict(_object_mapping(source_node)), "internal_plane_node": dict(_object_mapping(internal_node)), "via": dict(_object_mapping(via)), "pad": dict(_object_mapping(pad)), "source_node_sha256": _row_hash(source_node), "internal_node_sha256": _row_hash(internal_node), "via_sha256": _row_hash(via), "pad_sha256": _row_hash(pad)}
+    return footprints[0], footprints[1], evidence
+
+
 def _contact_raw_gate(
     contacts: list[dict[str, Any]],
     source_records: list[dict[str, Any]],
@@ -428,6 +522,450 @@ def _rectangle(geometry: Any) -> tuple[float, float, float, float]:
     if not all(math.isfinite(value) and value > 0.0 for value in (width, length)) or not math.isclose(float(geometry.area), width * length, rel_tol=1e-12, abs_tol=1e-12):
         _fail("patch geometry is not an axis-aligned rectangle")
     return min(width, length), max(width, length), min_x, min_y
+
+
+def _geometry_manifest(geometry: Any, *, curve: bool = False, corner: bool = True) -> tuple[dict[str, Any], bytes]:
+    """Return bounded deterministic geometry facts and normalized WKB."""
+    if geometry is None or not bool(getattr(geometry, "is_valid", False)):
+        _fail("SOURCE_FRINGE_GEOMETRY_INVALID: geometry is invalid")
+    normalized = geometry.normalize()
+    try:
+        from shapely import to_wkb
+        wkb = bytes(to_wkb(normalized, hex=False, output_dimension=2, byte_order=1, include_srid=False))
+    except (ImportError, TypeError) as exc:
+        _fail(f"SOURCE_FRINGE_GEOMETRY_INVALID: fixed WKB unavailable: {exc}")
+    if not wkb:
+        _fail("SOURCE_FRINGE_GEOMETRY_INVALID: normalized WKB is empty")
+    if bool(getattr(normalized, "is_empty", False)):
+        stats = {"wkb_sha256": sha256(wkb).hexdigest(), "wkb_size_bytes": len(wkb), "area_um2": 0.0, "bbox_um": None, "area": 0.0, "bbox": None, "exterior_perimeter_um": 0.0, "hole_perimeter_um": 0.0, "perimeter_um": 0.0, "ring_count": 0, "exterior_ring_count": 0, "hole_count": 0, "vertex_count": 0, "hole_vertex_count": 0, "component_count": 0, "edge_flags": {"has_edge": False, "has_corner": False, "has_curve": bool(curve)}, "curve": bool(curve)}
+        return stats, wkb
+    polygons = tuple(getattr(normalized, "geoms", ())) if str(getattr(normalized, "geom_type", "")) == "MultiPolygon" else (normalized,)
+    if not polygons or len(polygons) > 4096:
+        _fail("SOURCE_FRINGE_GEOMETRY_INVALID: polygon component cap exceeded")
+    holes = sum(len(getattr(poly, "interiors", ())) for poly in polygons)
+    vertices = sum(max(0, len(getattr(poly.exterior, "coords", ())) - 1) for poly in polygons)
+    hole_vertices = sum(max(0, len(ring.coords) - 1) for poly in polygons for ring in getattr(poly, "interiors", ()))
+    perimeter = sum(float(poly.exterior.length) + sum(float(ring.length) for ring in poly.interiors) for poly in polygons)
+    return {
+        "wkb_sha256": sha256(wkb).hexdigest(),
+        "wkb_size_bytes": len(wkb),
+        "area_um2": float(normalized.area),
+        "bbox_um": [float(value) for value in normalized.bounds],
+        "area": float(normalized.area),
+        "bbox": [float(value) for value in normalized.bounds],
+        "exterior_perimeter_um": sum(float(poly.exterior.length) for poly in polygons),
+        "hole_perimeter_um": sum(float(ring.length) for poly in polygons for ring in poly.interiors),
+        "perimeter_um": perimeter,
+        "ring_count": len(polygons) + holes,
+        "exterior_ring_count": len(polygons),
+        "hole_count": holes,
+        "vertex_count": vertices,
+        "hole_vertex_count": hole_vertices,
+        "component_count": len(polygons),
+        "edge_flags": {"has_edge": bool(perimeter > 0.0), "has_corner": bool(corner and vertices > 0), "has_curve": bool(curve)},
+        "curve": bool(curve),
+    }, wkb
+
+
+def _fringe_core_island_geometry(surface: Mapping[str, Any], shape: Any, expected_islands: list[Mapping[str, Any]], selected_island_id: str) -> Any:
+    expected_ids = [str(row.get("island_id", "")).casefold() for row in expected_islands]
+    if not expected_ids or any(not value for value in expected_ids) or len(set(expected_ids)) != len(expected_ids):
+        _fail("SOURCE_FRINGE_CENSUS_INVALID: expected island identity is ambiguous")
+    island_rows = core_services._spd_surface_islands(layer=str(surface.get("layer")), net=str(surface.get("artwork_net")), asset_sha256=str(surface.get("geometry_asset_sha256")), shape=shape)
+    core_ids = [str(item[0]).casefold() for item in island_rows if isinstance(item, tuple) and len(item) == 2 and str(item[0]).strip()]
+    if len(core_ids) != len(island_rows) or len(set(core_ids)) != len(core_ids) or set(core_ids) != set(expected_ids):
+        _fail("SOURCE_FRINGE_CENSUS_INVALID: core island identity differs")
+    selected_id = str(selected_island_id).casefold()
+    matches = [item[1] for item in island_rows if str(item[0]).casefold() == selected_id]
+    if len(matches) != 1:
+        _fail("SOURCE_FRINGE_CENSUS_INVALID: selected island identity is unknown or ambiguous")
+    return matches[0]
+
+
+def _census_identity_gate(census: Mapping[str, Any], *, expected: Mapping[str, Any]) -> tuple[dict[str, Any], dict[str, Any]]:
+    if not isinstance(census, Mapping):
+        _fail("SOURCE_FRINGE_CENSUS_INVALID: census evidence is not a mapping")
+    rows = census.get("rows")
+    if census.get("schema_version") != "source-plane-source-block-census-v1" or census.get("status") != "complete" or census.get("shadow_only") is not True or census.get("replacement_ready") is not False or census.get("production_ready") is not False:
+        _fail("SOURCE_FRINGE_CENSUS_INVALID: census status/flags are invalid")
+    if not isinstance(rows, list) or any(not isinstance(row, Mapping) for row in rows):
+        _fail("SOURCE_FRINGE_CENSUS_INVALID: census rows are invalid")
+    rows = [dict(row) for row in rows]
+    if rows != sorted(rows, key=lambda row: (int(row.get("partial_ordinal", -1)), int(row.get("upper_reduced_index", -1)), int(row.get("lower_reduced_index", -1)), str(row.get("fingerprint", "")))):
+        _fail("SOURCE_FRINGE_CENSUS_INVALID: canonical row order differs")
+    candidate = [row for row in rows if row.get("action") == "candidate"]
+    if len(candidate) != 1:
+        _fail("SOURCE_FRINGE_CENSUS_INVALID: candidate count is not exactly one")
+    candidate_fingerprints = sorted(str(row.get("fingerprint", "")) for row in candidate)
+    if len({item.casefold() for item in (str(row.get("fingerprint", "")) for row in rows)}) != len(rows):
+        _fail("SOURCE_FRINGE_CENSUS_INVALID: duplicate row fingerprint")
+    retained_fingerprints = sorted(str(row.get("fingerprint", "")) for row in rows if row.get("action") == "retained")
+    excluded_fingerprints = sorted(str(row.get("fingerprint", "")) for row in rows if row.get("action") == "excluded")
+    payload = [{key: row[key] for key in ("fingerprint", "partial_ordinal", "upper_reduced_index", "lower_reduced_index", "classification", "action", "aggregation_count")} for row in rows]
+    checks = {
+        "rows_sha256": sha256(concrete_canonical_json_bytes(payload)).hexdigest(),
+        "candidate_fingerprints_sha256": sha256(concrete_canonical_json_bytes(candidate_fingerprints)).hexdigest(),
+        "retained_fingerprints_sha256": sha256(concrete_canonical_json_bytes(retained_fingerprints)).hexdigest(),
+        "excluded_fingerprints_sha256": sha256(concrete_canonical_json_bytes(excluded_fingerprints)).hexdigest(),
+    }
+    for row in rows:
+        for key in ("fingerprint", "classification", "action"):
+            if not str(row.get(key, "")).strip():
+                _fail("SOURCE_FRINGE_CENSUS_INVALID: row identity is incomplete")
+        if row.get("action") not in {"candidate", "retained", "excluded"} or row.get("classification") not in {"adjacent", "source-proven-nonlocal", "missing-source-excluded"}:
+            _fail("SOURCE_FRINGE_CENSUS_INVALID: row partition is invalid")
+    if int(census.get("numeric_row_count", -1)) != len(rows):
+        _fail("SOURCE_FRINGE_CENSUS_INVALID: row count differs")
+    counts = {key: sum(row.get("classification") == key for row in rows) for key in ("adjacent", "source-proven-nonlocal", "missing-source-excluded")}
+    actions = {key: sum(row.get("action") == key for row in rows) for key in ("candidate", "retained", "excluded")}
+    for key, value in (("numeric_row_classification_counts", counts), ("numeric_row_action_counts", actions)):
+        if census.get(key) != value or census.get(f"{key}_sha256") != sha256(concrete_canonical_json_bytes(value)).hexdigest():
+            _fail(f"SOURCE_FRINGE_CENSUS_INVALID: {key} differs")
+    for key, value in checks.items():
+        if census.get(key) != value:
+            _fail(f"SOURCE_FRINGE_CENSUS_INVALID: {key} differs")
+    known_exclusions = census.get("known_exclusions")
+    if (not isinstance(known_exclusions, list)
+            or census.get("known_exclusions_count") != len(known_exclusions)
+            or census.get("known_exclusions_sha256") != sha256(concrete_canonical_json_bytes(known_exclusions)).hexdigest()
+            or any(not isinstance(item, Mapping)
+                   or any(not str(item.get(key, "")).strip() for key in ("mechanism", "classification", "reason_code", "reason"))
+                   or item.get("classification") != "missing-source-excluded"
+                   for item in known_exclusions)):
+        _fail("SOURCE_FRINGE_CENSUS_INVALID: known exclusions differ")
+    for key, value in (("candidate_fingerprints", candidate_fingerprints), ("retained_fingerprints", retained_fingerprints), ("excluded_fingerprints", excluded_fingerprints)):
+        if census.get(key) != value:
+            _fail(f"SOURCE_FRINGE_CENSUS_INVALID: {key} differs")
+    if candidate[0].get("classification") != "adjacent":
+        _fail("SOURCE_FRINGE_CENSUS_INVALID: candidate is not adjacent")
+    payload = {"substrate_identity_sha256": candidate[0].get("substrate_identity_sha256"), "upper_layer": candidate[0].get("upper_layer"), "lower_layer": candidate[0].get("lower_layer"), "upper_island_id": candidate[0].get("upper_island_id"), "lower_island_id": candidate[0].get("lower_island_id"), "capacitance_f_hex": candidate[0].get("capacitance_f_hex")}
+    if candidate[0].get("fingerprint") != sha256(concrete_canonical_json_bytes(payload)).hexdigest():
+        _fail("SOURCE_FRINGE_CENSUS_INVALID: candidate fingerprint differs")
+    without_final = dict(census)
+    without_final.pop("final_report_sha256", None)
+    if census.get("final_report_sha256") != sha256(concrete_canonical_json_bytes(without_final)).hexdigest():
+        _fail("SOURCE_FRINGE_CENSUS_INVALID: final report identity differs")
+    required = ("final_report_sha256", "query_key_sha256", "rows_sha256", "candidate_fingerprints_sha256", "retained_fingerprints_sha256", "excluded_fingerprints_sha256", "replacement_ledger_sha256")
+    for key in required:
+        value = expected.get(key)
+        if not isinstance(value, str) or len(value) != 64 or value != value.casefold() or any(char not in "0123456789abcdef" for char in value) or census.get(key) != value:
+            _fail(f"SOURCE_FRINGE_CENSUS_INVALID: expected {key} differs")
+    for key, value in expected.items():
+        if key not in required and value is not None and census.get(key) != value:
+            _fail(f"SOURCE_FRINGE_CENSUS_INVALID: expected {key} differs")
+    return candidate[0], {"candidate_fingerprints": candidate_fingerprints, "retained_fingerprints": retained_fingerprints, "excluded_fingerprints": excluded_fingerprints}
+
+
+def audit_source_plane_fringe_oracle_readiness(
+    ownership_manifest: Mapping[str, Any],
+    ownership_attachments: Mapping[str, bytes],
+    raw_manifest: Mapping[str, Any],
+    raw_attachments: Mapping[str, bytes],
+    source_block_census: Mapping[str, Any],
+    *,
+    rail_id: str,
+    expected_identities: Mapping[str, Any],
+) -> tuple[Mapping[str, Any], Mapping[str, bytes]]:
+    """Bind one census candidate to source geometry; never run an oracle/solver."""
+    rail_id = _text(rail_id, "rail_id")
+    if not isinstance(ownership_manifest, Mapping) or not isinstance(raw_manifest, Mapping):
+        _fail("SOURCE_FRINGE_CENSUS_INVALID: asset manifests are not mappings")
+    _binding_check(ownership_manifest, raw_manifest)
+    try:
+        candidate, census_ids = _census_identity_gate(source_block_census, expected=expected_identities)
+    except SourcePlanePatchError:
+        raise
+    except Exception as exc:
+        _fail(f"SOURCE_FRINGE_CENSUS_INVALID: {exc}")
+    if str(source_block_census.get("rail_id", "")).casefold() != rail_id.casefold() or source_block_census.get("source_sha256") != raw_manifest.get("source_sha256") or source_block_census.get("raw_manifest_sha256") != sha256(concrete_canonical_json_bytes(dict(raw_manifest))).hexdigest():
+        _fail("SOURCE_FRINGE_CENSUS_INVALID: census source binding differs")
+    try:
+        ir_total = [0]
+        with load_source_plane_ownership_ir(
+            ownership_manifest,
+            ownership_attachments,
+            expected_source_sha256=str(raw_manifest["source_sha256"]),
+            expected_project_binding_sha256=str(raw_manifest["project_binding_sha256"]),
+            expected_certificate_evidence_sha256=str(raw_manifest["certificate_evidence_sha256"]),
+            expected_compiled_topology_identity_sha256=str(raw_manifest["compiled_topology_identity_sha256"]),
+            expected_raw_manifest_sha256=str(ownership_manifest["raw_manifest_sha256"]),
+            expected_raw_geometry_identity_sha256=str(raw_manifest["geometry_identity_sha256"]),
+            expected_raw_logical_rows_sha256=str(raw_manifest["logical_rows_sha256"]),
+            expected_raw_plane_sheet_sha256=str(raw_manifest["plane_sheet_payload_sha256"]),
+            expected_app_version=str(ownership_manifest.get("app_version", "")),
+        ) as loaded:
+            sections = ("source_records", "surfaces", "primitives", "islands", "primitive_island_edges", "stackup_layers", "dielectric_points", "rail_bindings", "terminal_bindings", "retained_owner_refs", "plane_owner_scopes", "replacement_ledger", "replacement_ledger_members")
+            ir = {section: _rows(loaded, section, MAX_SOURCE_PLANE_OWNERSHIP_IR_ROWS, ir_total) for section in sections}
+        power, ground, _ = _owner_gate(ir, rail_id)
+        rail_rows = [row for row in ir["rail_bindings"] if str(row.get("rail_id", "")).casefold() == rail_id.casefold()]
+        bindings = {str(row.get("role", "")).casefold(): row for row in rail_rows}
+        if set(bindings) != {"power", "ground"}:
+            _fail("SOURCE_FRINGE_CENSUS_INVALID: rail bindings are incomplete")
+        query_key = source_block_census.get("query_key")
+        if not isinstance(query_key, Mapping) or source_block_census.get("query_key_sha256") != sha256(concrete_canonical_json_bytes(query_key)).hexdigest() or str(query_key.get("rail_id", "")).casefold() != rail_id.casefold() or source_block_census.get("selected_pair") != [bindings["power"].get("layer"), bindings["ground"].get("layer")]:
+            _fail("SOURCE_FRINGE_CENSUS_INVALID: census query binding differs")
+        if (not isinstance(source_block_census.get("closures"), Mapping)
+                or not isinstance(query_key.get("closures"), Mapping)
+                or not isinstance(query_key.get("reduced_closures"), Mapping)
+                or source_block_census.get("closures") != {role: {"islands": query_key["closures"].get(role), "reduced_indices": query_key["reduced_closures"].get(role)} for role in ("power", "ground")}):
+            _fail("SOURCE_FRINGE_CENSUS_INVALID: closure identity differs")
+        for key, value in (("source_sha256", raw_manifest.get("source_sha256")), ("raw_manifest_sha256", sha256(concrete_canonical_json_bytes(dict(raw_manifest))).hexdigest()), ("raw_geometry_identity_sha256", raw_manifest.get("geometry_identity_sha256")), ("raw_logical_rows_sha256", raw_manifest.get("logical_rows_sha256")), ("raw_plane_sheet_sha256", raw_manifest.get("plane_sheet_payload_sha256")), ("ownership_logical_rows_sha256", ownership_manifest.get("logical_rows_sha256")), ("ownership_certificate_evidence_sha256", ownership_manifest.get("certificate_evidence_sha256")), ("compiled_topology_identity_sha256", ownership_manifest.get("compiled_topology_identity_sha256"))):
+            if query_key.get(key) != value:
+                _fail(f"SOURCE_FRINGE_CENSUS_INVALID: query {key} differs")
+        source_by_id = {str(row.get("record_id", "")).casefold(): row for row in ir["source_records"]}
+        if len(source_by_id) != len(ir["source_records"]):
+            _fail("SOURCE_FRINGE_CENSUS_INVALID: source record identity is ambiguous")
+        endpoint_ids = {"upper": str(candidate.get("upper_island_id", "")).casefold(), "lower": str(candidate.get("lower_island_id", "")).casefold()}
+        endpoint_layers = {"upper": str(candidate.get("upper_layer", "")).casefold(), "lower": str(candidate.get("lower_layer", "")).casefold()}
+        role_layers = {role: str(bindings[role].get("layer", "")).casefold() for role in ("power", "ground")}
+        role_for_endpoint: dict[str, str] = {}
+        closures = source_block_census.get("closures")
+        for endpoint in ("upper", "lower"):
+            matches = [role for role, layer in role_layers.items() if layer == endpoint_layers[endpoint]]
+            if len(matches) != 1:
+                _fail("SOURCE_FRINGE_CENSUS_INVALID: candidate endpoint layer is ambiguous")
+            role_for_endpoint[endpoint] = matches[0]
+        if role_for_endpoint["upper"] == role_for_endpoint["lower"]:
+            _fail("SOURCE_FRINGE_CENSUS_INVALID: candidate endpoints do not span P/G layers")
+        if any(int(candidate.get(f"{endpoint}_reduced_index", -1)) not in {int(item) for item in closures.get(role_for_endpoint[endpoint], {}).get("reduced_indices", ())} for endpoint in ("upper", "lower")):
+            _fail("SOURCE_FRINGE_CENSUS_INVALID: candidate reduced closure differs")
+        candidate_island_ids = {role_for_endpoint[endpoint]: endpoint_ids[endpoint] for endpoint in ("upper", "lower")}
+        island_by_id = {str(row.get("island_id", "")).casefold(): row for row in ir["islands"]}
+        if any(not key or key not in island_by_id for key in candidate_island_ids.values()) or len(set(candidate_island_ids.values())) != 2:
+            _fail("SOURCE_FRINGE_CENSUS_INVALID: candidate island identity is ambiguous")
+        selected_islands = {role: island_by_id[iid] for role, iid in candidate_island_ids.items()}
+        if not isinstance(closures, Mapping) or any(not isinstance(closures.get(role), Mapping) or not isinstance(closures[role].get("islands"), list) or not isinstance(closures[role].get("reduced_indices"), list) or str(selected_islands[role].get("island_id", "")).casefold() not in {str(item).casefold() for item in closures[role]["islands"]} for role in ("power", "ground")):
+            _fail("SOURCE_FRINGE_CENSUS_INVALID: selected closure differs")
+        scope_rows = sorted((row for row in ir["plane_owner_scopes"] if str(row.get("rail_id", "")).casefold() == rail_id.casefold() and row.get("state") == "declared_unconsumed" and int(row.get("owner_count", 0)) == 1), key=lambda row: str(row.get("role", "")).casefold())
+        scope_ids = [str(row.get("compiler_owner_id", "")) for row in scope_rows]
+        if len(scope_rows) != 2 or {str(row.get("role", "")).casefold() for row in scope_rows} != {"power", "ground"} or any(not value.strip() for value in scope_ids) or len({value.casefold() for value in scope_ids}) != 2 or not isinstance(source_block_census.get("candidate_scope_ids"), list) or source_block_census.get("candidate_scope_ids") != scope_ids or source_block_census.get("candidate_scope_ids_sha256") != sha256(concrete_canonical_json_bytes([item.casefold() for item in scope_ids])).hexdigest():
+            _fail("SOURCE_FRINGE_CENSUS_INVALID: candidate scope identity differs")
+        selected_surfaces: dict[str, Mapping[str, Any]] = {}
+        for role, island in selected_islands.items():
+            sid = str(island.get("surface_id", "")).casefold()
+            rows = [row for row in ir["surfaces"] if str(row.get("surface_id", "")).casefold() == sid]
+            expected_sid = str(bindings[role].get("surface_id", "")).casefold()
+            if len(rows) != 1 or sid != expected_sid or str(rows[0].get("layer", "")).casefold() != str(bindings[role].get("layer", "")).casefold():
+                _fail("SOURCE_FRINGE_CENSUS_INVALID: candidate surface identity differs")
+            selected_surfaces[role] = rows[0]
+        selected_primitive_rows = [row for row in ir["primitives"] if str(row.get("surface_id", "")).casefold() in {str(item.get("surface_id", "")).casefold() for item in selected_surfaces.values()}]
+        ordinals = {int(row.get("raw_primitive_ordinal", -1)) for row in selected_primitive_rows}
+        raw_total = [0]
+        with load_raw_spatial_contact_asset(
+            raw_manifest,
+            raw_attachments,
+            expected_source_sha256=str(raw_manifest["source_sha256"]),
+            expected_project_binding_sha256=str(raw_manifest["project_binding_sha256"]),
+            expected_certificate_evidence_sha256=str(raw_manifest["certificate_evidence_sha256"]),
+            expected_compiled_topology_identity_sha256=str(raw_manifest["compiled_topology_identity_sha256"]),
+            expected_geometry_identity_sha256=str(raw_manifest["geometry_identity_sha256"]),
+            require_plane_sheet_payload=True,
+        ) as raw:
+            primitives = _raw_rows(raw, "plane_primitives", MAX_SOURCE_PLANE_OWNERSHIP_IR_ROWS, raw_total, lambda row: int(row.primitive_ordinal) in ordinals)
+            vertices = _raw_rows(raw, "plane_vertices", MAX_SOURCE_PLANE_OWNERSHIP_IR_ROWS, raw_total, lambda row: int(row.primitive_ordinal) in ordinals)
+            circles = _raw_rows(raw, "plane_circles", MAX_SOURCE_PLANE_OWNERSHIP_IR_ROWS, raw_total, lambda row: int(row.primitive_ordinal) in ordinals)
+            surfaces = _raw_rows(raw, "surfaces", MAX_SOURCE_PLANE_OWNERSHIP_IR_ROWS, raw_total, lambda row: str(row.surface_id).casefold() in {str(item.get("surface_id", "")).casefold() for item in selected_surfaces.values()})
+            stackup = _raw_rows(raw, "stackup_layers", MAX_SOURCE_PLANE_OWNERSHIP_IR_ROWS, raw_total)
+            dielectric_points = _raw_rows(raw, "dielectric_points", MAX_SOURCE_PLANE_OWNERSHIP_IR_ROWS, raw_total)
+            terminal_node_record_ids = {str(power.get("source_node_record_id", "")).casefold(), str(ground.get("source_node_record_id", "")).casefold()}
+            terminal_via_record_ids = {str(power.get("via_record_id", "")).casefold(), str(ground.get("via_record_id", "")).casefold()}
+            terminal_node_record_shas = {str(source_by_id[item].get("source_record_sha256")) for item in terminal_node_record_ids if item in source_by_id}
+            terminal_via_record_shas = {str(source_by_id[item].get("source_record_sha256")) for item in terminal_via_record_ids if item in source_by_id}
+            vias = _raw_rows(raw, "vias", MAX_SOURCE_PLANE_OWNERSHIP_IR_ROWS, raw_total, lambda row: str(row.source_record_sha256) in terminal_via_record_shas)
+            terminal_node_keys = {(str(via.net_name).casefold(), str(node_id).casefold()) for via in vias for node_id in (via.start_node_id, via.end_node_id)}
+            terminal_node_keys.update((str(bindings[role].get("logical_net", "")).casefold(), str(item.get("endpoint_node_id", "")).casefold()) for role, item in (("power", power), ("ground", ground)))
+            nodes = _raw_rows(raw, "nodes", MAX_SOURCE_PLANE_OWNERSHIP_IR_ROWS, raw_total, lambda row: str(row.source_record_sha256) in terminal_node_record_shas or (str(row.net_name or "").casefold(), str(row.node_id).casefold()) in terminal_node_keys)
+            pad_keys = {(str(item.get("padstack_id", "")).casefold(), int(item.get("raw_pad_shape_ordinal", -1)), str(item.get("raw_pad_shape_sha256", ""))) for item in (power, ground)}
+            pads = _raw_rows(raw, "pad_shapes", MAX_SOURCE_PLANE_OWNERSHIP_IR_ROWS, raw_total, lambda row: (str(row.padstack_id).casefold(), int(row.ordinal), str(row.source_record_sha256)) in pad_keys)
+        for surface in selected_surfaces.values():
+            sid = str(surface.get("surface_id", "")).casefold()
+            raw_matches = [row for row in surfaces if str(row.surface_id).casefold() == sid and str(row.net_name).casefold() == str(surface.get("artwork_net", "")).casefold() and str(row.layer_id).casefold() == str(surface.get("layer", "")).casefold() and str(row.artwork_asset_sha256) == str(surface.get("geometry_asset_sha256", "")) and str(row.island_manifest_sha256) == str(surface.get("island_manifest_sha256", ""))]
+            if len(raw_matches) != 1:
+                _fail("SOURCE_FRINGE_CENSUS_INVALID: raw surface identity differs")
+        geometries: dict[str, Any] = {}
+        curve_flags: dict[str, bool] = {}
+        ir_stackup = {int(row.get("raw_layer_ordinal", -1)): row for row in ir["stackup_layers"]}
+        layer_positions = {str(row.layer_name).casefold(): index for index, row in enumerate(stackup)}
+        power_pos, ground_pos = layer_positions.get(role_layers["power"]), layer_positions.get(role_layers["ground"])
+        if power_pos is None or ground_pos is None or abs(power_pos - ground_pos) != 2:
+            _fail("SOURCE_FRINGE_CENSUS_INVALID: selected gap is not one dielectric")
+        gap_row = stackup[min(power_pos, ground_pos) + 1]
+        if str(gap_row.layer_kind).casefold() != "dielectric":
+            _fail("SOURCE_FRINGE_CENSUS_INVALID: selected gap is not dielectric")
+        selected_layer_ordinals = {int(stackup[position].layer_ordinal) for position in (min(power_pos, ground_pos), min(power_pos, ground_pos) + 1, max(power_pos, ground_pos))}
+        selected_raw_stackup = [row for row in stackup if int(row.layer_ordinal) in selected_layer_ordinals]
+        if len(selected_raw_stackup) != 3 or {int(row.layer_ordinal) for row in selected_raw_stackup} != selected_layer_ordinals:
+            _fail("SOURCE_FRINGE_CENSUS_INVALID: selected raw stackup coverage differs")
+        if sum(str(row.layer_kind).casefold() == "conductor" for row in selected_raw_stackup) != 2 or sum(str(row.layer_kind).casefold() == "dielectric" for row in selected_raw_stackup) != 1:
+            _fail("SOURCE_FRINGE_CENSUS_INVALID: selected raw conductor-gap-conductor rows differ")
+        if set(ir_stackup) != selected_layer_ordinals:
+            _fail("SOURCE_FRINGE_CENSUS_INVALID: selected IR stackup coverage differs")
+        for row in selected_raw_stackup:
+            witness = ir_stackup.get(int(row.layer_ordinal))
+            if witness is None or witness.get("raw_layer_sha256") != _row_hash(row) or str(witness.get("layer_name", "")).casefold() != str(row.layer_name).casefold() or str(witness.get("layer_kind", "")).casefold() != str(row.layer_kind).casefold() or float(witness.get("thickness_um", -1.0)) != float(row.thickness_um) or witness.get("conductivity_s_per_m") != row.conductivity_s_per_m:
+                _fail("SOURCE_FRINGE_CENSUS_INVALID: raw stackup provenance differs")
+        selected_raw_points = [(global_index, point) for global_index, point in enumerate(dielectric_points) if int(point.layer_ordinal) == int(gap_row.layer_ordinal)]
+        if not selected_raw_points:
+            _fail("SOURCE_FRINGE_CENSUS_INVALID: selected Dk/Df points are absent")
+        point_ordinals = [int(point.point_ordinal) for _index, point in selected_raw_points]
+        frequencies = [float(point.frequency_hz) for _index, point in selected_raw_points]
+        if len(set(point_ordinals)) != len(point_ordinals) or len(set(frequencies)) != len(frequencies) or any(not math.isfinite(value) or value <= 0.0 for value in frequencies):
+            _fail("SOURCE_FRINGE_CENSUS_INVALID: selected Dk/Df frequency identity is invalid")
+        if any(not math.isfinite(float(point.epsilon_r)) or float(point.epsilon_r) <= 0.0 or not math.isfinite(float(point.loss_tangent)) or float(point.loss_tangent) < 0.0 for _index, point in selected_raw_points):
+            _fail("SOURCE_FRINGE_CENSUS_INVALID: selected Dk/Df values are invalid")
+        ir_points = {(int(row.get("raw_dielectric_ordinal", -1)), int(row.get("point_ordinal", -1))): row for row in ir["dielectric_points"]}
+        selected_ir_point_keys = {(global_index, int(point.point_ordinal)) for global_index, point in selected_raw_points}
+        if {(ordinal, point_ordinal) for (ordinal, point_ordinal), row in ir_points.items() if ordinal in {item[0] for item in selected_ir_point_keys} and str(row.get("layer_name", "")).casefold() == str(gap_row.layer_name).casefold()} != selected_ir_point_keys:
+            _fail("SOURCE_FRINGE_CENSUS_INVALID: selected Dk/Df key coverage differs")
+        for ordinal, point in selected_raw_points:
+            witness = ir_points.get((ordinal, int(point.point_ordinal)))
+            if witness is None or str(witness.get("layer_name", "")).casefold() != str(gap_row.layer_name).casefold() or witness.get("raw_dielectric_sha256") != _row_hash(point) or float(witness.get("frequency_hz", -1.0)) != float(point.frequency_hz) or float(witness.get("epsilon_r", -1.0)) != float(point.epsilon_r) or float(witness.get("loss_tangent", -1.0)) != float(point.loss_tangent):
+                _fail("SOURCE_FRINGE_CENSUS_INVALID: raw dielectric provenance differs")
+        selected_layer_names = {str(bindings["power"].get("layer", "")).casefold(), str(bindings["ground"].get("layer", "")).casefold(), str(gap_row.layer_name).casefold()}
+        expected_selected_stackup_rows = sorted((dict(row) for row in ir["stackup_layers"] if str(row.get("layer_name", "")).casefold() in selected_layer_names), key=lambda row: str(row.get("layer_name", "")).casefold())
+        expected_dielectric_source_rows = [dict(row) for row in ir["dielectric_points"] if str(row.get("layer_name", "")).casefold() == str(gap_row.layer_name).casefold()]
+        if source_block_census.get("selected_stackup_rows") != expected_selected_stackup_rows or source_block_census.get("dielectric_source_rows") != expected_dielectric_source_rows:
+            _fail("SOURCE_FRINGE_CENSUS_INVALID: selected material evidence differs")
+        for role, surface in selected_surfaces.items():
+            expected = [row for row in selected_primitive_rows if str(row.get("surface_id", "")).casefold() == str(surface.get("surface_id", "")).casefold()]
+            try:
+                _surface_island_gate(surface, ir["islands"], ir["primitive_island_edges"], {str(row.get("primitive_id", "")).casefold() for row in expected})
+            except SourcePlanePatchError:
+                if int(surface.get("component_count", -1)) <= 1:
+                    raise
+                selected_id = str(selected_islands[role].get("island_id", "")).casefold()
+                related = [row for row in ir["primitive_island_edges"] if str(row.get("island_id", "")).casefold() == selected_id and str(row.get("primitive_id", "")).casefold() in {str(item.get("primitive_id", "")).casefold() for item in expected}]
+                if len([row for row in ir["islands"] if str(row.get("surface_id", "")).casefold() == str(surface.get("surface_id", "")).casefold() and str(row.get("island_id", "")).casefold() == selected_id]) != 1 or not related:
+                    raise
+            geometries[role] = _surface_geometry(surface, primitives, vertices, circles, expected)
+            surface_islands = [row for row in ir["islands"] if str(row.get("surface_id", "")).casefold() == str(surface.get("surface_id", "")).casefold()]
+            geometries[role] = _fringe_core_island_geometry(surface, geometries[role], surface_islands, str(selected_islands[role].get("island_id", "")))
+            selected_primitive_ids = {str(row.get("primitive_id", "")).casefold() for row in ir["primitive_island_edges"] if str(row.get("island_id", "")).casefold() == str(selected_islands[role].get("island_id", "")).casefold() and row.get("witness_kind") in {"positive_area_witness", "negative_boundary_witness"}}
+            curve_flags[role] = any(str(row.get("kind", "")).casefold() == "circle" and str(row.get("effect_status", "")).casefold() == "retained" and str(row.get("primitive_id", "")).casefold() in selected_primitive_ids for row in expected)
+        _power_footprint, ground_footprint, terminal_evidence = _fringe_terminal_raw_gate((power, ground), ir["source_records"], nodes, vias, pads, bindings, selected_islands)
+        ground_evidence = terminal_evidence.get("ground")
+        if not isinstance(ground_evidence, Mapping):
+            _fail("SOURCE_FRINGE_CENSUS_INVALID: ground terminal evidence is absent")
+        ground_raw = {"nodes": [ground_evidence["source_external_node"], ground_evidence["internal_plane_node"]], "vias": [ground_evidence["via"]], "pads": [ground_evidence["pad"]]}
+        if len(ground_raw["nodes"]) != 2 or len(ground_raw["vias"]) != 1 or len(ground_raw["pads"]) != 1:
+            _fail("SOURCE_FRINGE_CENSUS_INVALID: ground terminal raw coverage differs")
+        overlap = geometries["power"].intersection(geometries["ground"])
+        p_only = geometries["power"].difference(geometries["ground"])
+        g_only = geometries["ground"].difference(geometries["power"])
+        if bool(getattr(overlap, "is_empty", True)) or float(getattr(overlap, "area", 0.0)) <= 0.0:
+            _fail("SOURCE_FRINGE_GEOMETRY_INVALID: P/G overlap is empty")
+        geoms = {"island_p": geometries["power"], "island_g": geometries["ground"], "overlap": overlap, "p_only": p_only, "g_only": g_only}
+        attachments: dict[str, bytes] = {}
+        geometry_manifest: dict[str, Any] = {}
+        derived_curve = curve_flags["power"] or curve_flags["ground"]
+        for label, geometry in geoms.items():
+            role = "power" if label == "island_p" else "ground" if label == "island_g" else None
+            curve = curve_flags.get(role, False) if role is not None else derived_curve
+            stats, payload = _geometry_manifest(geometry, curve=curve, corner=not curve)
+            name = f"source-plane-fringe/{str(candidate['fingerprint'])}/{label}.wkb"
+            if len(payload) > 1_048_576 or sum(len(value) for value in attachments.values()) + len(payload) > 4_194_304:
+                _fail("SOURCE_FRINGE_GEOMETRY_INVALID: attachment cap exceeded")
+            attachments[name] = payload
+            geometry_manifest[label] = {**stats, "attachment_name": name, "attachment_sha256": sha256(payload).hexdigest(), "attachment_size_bytes": len(payload)}
+        ledger = ir["replacement_ledger"]
+        members = ir["replacement_ledger_members"]
+        census_ledger = source_block_census.get("owner_ledger")
+        if not isinstance(census_ledger, Mapping) or len(ledger) != 1:
+            _fail("SOURCE_FRINGE_CENSUS_INVALID: replacement ledger is ambiguous")
+        ledger_id = str(ledger[0].get("ledger_id", "")).casefold()
+        member_ids = [str(row.get("owner_id", "")) for row in members]
+        if not ledger_id or any(str(row.get("ledger_id", "")).casefold() != ledger_id for row in members) or any(row.get("action") not in {"replaced", "retained"} for row in members) or any(not owner.strip() for owner in member_ids) or len({owner.casefold() for owner in member_ids}) != len(member_ids):
+            _fail("SOURCE_FRINGE_CENSUS_INVALID: replacement ledger members are invalid")
+        replaced_ids = sorted((owner for owner, row in zip(member_ids, members, strict=True) if row.get("action") == "replaced"), key=lambda value: (value.casefold(), value))
+        retained_ids = sorted((owner for owner, row in zip(member_ids, members, strict=True) if row.get("action") == "retained"), key=lambda value: (value.casefold(), value))
+        if not replaced_ids or not retained_ids or {item.casefold() for item in replaced_ids} & {item.casefold() for item in retained_ids}:
+            _fail("SOURCE_FRINGE_CENSUS_INVALID: replacement ledger partition is invalid")
+        replaced_sha = sha256(concrete_canonical_json_bytes([item.casefold() for item in replaced_ids])).hexdigest()
+        retained_sha = sha256(concrete_canonical_json_bytes([item.casefold() for item in retained_ids])).hexdigest()
+        if ledger[0].get("replaced_count") != len(replaced_ids) or ledger[0].get("retained_count") != len(retained_ids) or str(ledger[0].get("replaced_set_sha256", "")).casefold() != replaced_sha or str(ledger[0].get("retained_set_sha256", "")).casefold() != retained_sha:
+            _fail("SOURCE_FRINGE_CENSUS_INVALID: replacement ledger partition differs")
+        scope_rows = sorted((row for row in ir["plane_owner_scopes"] if str(row.get("rail_id", "")).casefold() == rail_id.casefold() and row.get("state") == "declared_unconsumed" and int(row.get("owner_count", 0)) == 1), key=lambda row: str(row.get("role", "")).casefold())
+        replaced_scope_ids = [str(row.get("compiler_owner_id", "")) for row in scope_rows]
+        replaced_scope_sha = sha256(concrete_canonical_json_bytes([item.casefold() for item in replaced_scope_ids])).hexdigest()
+        if {item.casefold() for item in replaced_scope_ids} != {item.casefold() for item in replaced_ids} or (str(census_ledger.get("ledger_id", "")).casefold() != ledger_id or census_ledger.get("retained_owner_count") != len(retained_ids) or census_ledger.get("retained_owner_ids_sha256") != retained_sha or census_ledger.get("replaced_scope_ids") != replaced_scope_ids or census_ledger.get("replaced_scope_ids_sha256") != replaced_scope_sha):
+            _fail("SOURCE_FRINGE_CENSUS_INVALID: census ledger identity differs")
+        ledger_view = sorted(({"owner_id": owner, "action": row.get("action")} for owner, row in zip(member_ids, members, strict=True)), key=lambda row: (row["owner_id"].casefold(), row["owner_id"], str(row["action"])))
+        ledger_sha = sha256(concrete_canonical_json_bytes(ledger_view)).hexdigest()
+        if ledger_sha != source_block_census.get("replacement_ledger_sha256") or ledger_sha != expected_identities.get("replacement_ledger_sha256") or ledger_sha != census_ledger.get("ledger_sha256"):
+            _fail("SOURCE_FRINGE_CENSUS_INVALID: replacement ledger identity differs")
+        raw_by_ordinal = {int(row.primitive_ordinal): row for row in primitives}
+        witness_rows = [row for row in ir["primitive_island_edges"] if str(row.get("island_id", "")).casefold() in {str(item.get("island_id", "")).casefold() for item in selected_islands.values()} and row.get("witness_kind") in {"positive_area_witness", "negative_boundary_witness"}]
+        witness_primitive_ids = {str(row.get("primitive_id", "")).casefold() for row in witness_rows}
+        report_primitive_rows = [row for row in selected_primitive_rows if str(row.get("primitive_id", "")).casefold() in witness_primitive_ids]
+        report_ordinals = {int(row.get("raw_primitive_ordinal", -1)) for row in report_primitive_rows}
+        raw_vertex_rows = [dict(_object_mapping(row)) for row in vertices if int(row.primitive_ordinal) in report_ordinals]
+        raw_circle_rows = [dict(_object_mapping(row)) for row in circles if int(row.primitive_ordinal) in report_ordinals]
+        selected_raw_primitives = [{**dict(_object_mapping(raw_by_ordinal[item])), "row_sha256": _row_hash(raw_by_ordinal[item])} for item in sorted(report_ordinals) if item in raw_by_ordinal]
+        referenced_ids = {str(row.get("source_record_id", "")).casefold() for row in report_primitive_rows} | {str(power.get(field, "")).casefold() for field in ("source_node_record_id", "via_record_id", "paddef_source_record_id", "regular_source_record_id")} | {str(ground.get(field, "")).casefold() for field in ("source_node_record_id", "via_record_id", "paddef_source_record_id", "regular_source_record_id")}
+        referenced_ids.update(str(row.get(field, "")).casefold() for row in ir["stackup_layers"] if str(row.get("layer_name", "")).casefold() in {str(bindings["power"].get("layer", "")).casefold(), str(bindings["ground"].get("layer", "")).casefold(), str(candidate.get("lower_layer", "")).casefold(), str(candidate.get("upper_layer", "")).casefold(), str(gap_row.layer_name).casefold()} for field in ("thickness_source_record_id", "conductivity_source_record_id", "material_source_record_id") if row.get(field) is not None)
+        referenced_ids.update(str(row.get(field, "")).casefold() for row in ir["dielectric_points"] if str(row.get("layer_name", "")).casefold() == str(gap_row.layer_name).casefold() for field in ("frequency_source_record_id", "epsilon_source_record_id", "loss_tangent_source_record_id") if row.get(field) is not None)
+        referenced_ids.discard("")
+        if any(key not in source_by_id for key in referenced_ids):
+            _fail("SOURCE_FRINGE_CENSUS_INVALID: referenced source record is absent")
+        referenced_records = [dict(source_by_id[key]) for key in sorted(referenced_ids)]
+        report: dict[str, Any] = {"schema_version": "source-plane-fringe-geometry-manifest-v1", "status": "complete", "shadow_only": True, "rail_id": rail_id, "source_sha256": raw_manifest["source_sha256"], "project_binding_sha256": raw_manifest["project_binding_sha256"], "raw_manifest_sha256": sha256(concrete_canonical_json_bytes(dict(raw_manifest))).hexdigest(), "raw_geometry_identity_sha256": raw_manifest.get("geometry_identity_sha256"), "raw_logical_rows_sha256": raw_manifest.get("logical_rows_sha256"), "raw_plane_sheet_sha256": raw_manifest.get("plane_sheet_sha256"), "ownership_logical_rows_sha256": ownership_manifest.get("logical_rows_sha256"), "ownership_certificate_evidence_sha256": ownership_manifest.get("certificate_evidence_sha256"), "compiled_topology_identity_sha256": ownership_manifest.get("compiled_topology_identity_sha256"), "census": {"final_report_sha256": source_block_census["final_report_sha256"], "query_key_sha256": source_block_census.get("query_key_sha256"), "rows_sha256": source_block_census.get("rows_sha256"), **census_ids}, "candidate": dict(candidate), "selected_surfaces": {role: dict(value) for role, value in selected_surfaces.items()}, "selected_islands": {role: dict(value) for role, value in selected_islands.items()}, "selected_primitives": selected_raw_primitives, "selected_vertices": raw_vertex_rows, "selected_circles": raw_circle_rows, "geometry": geometry_manifest, "selected_stackup_rows": [dict(row) for row in ir["stackup_layers"]], "dielectric_source_rows": [dict(row) for row in ir["dielectric_points"]], "source_records": referenced_records, "source_record_count": len(referenced_records), "source_records_sha256": sha256(concrete_canonical_json_bytes(referenced_records)).hexdigest(), "ground_terminal": dict(ground), "owner_ledger": {"ledger_id": ledger[0].get("ledger_id"), "ledger_sha256": ledger_sha, "retained_owner_ids": retained_ids, "retained_owner_ids_sha256": retained_sha, "replaced_scope_ids": replaced_scope_ids, "replaced_scope_ids_sha256": replaced_scope_sha}, "crop": {"state": "NOT_SELECTED", "reason": "derived policy is not source-bound"}, "oracle_eligibility": {"eligible": False, "reason_code": "ANALYTIC_CURVE_UNRESOLVED" if any(curve_flags.values()) else "SOURCE_BOUND_GEOMETRY_ONLY", "reason": "analytic circle curve requires a separately gated oracle" if any(curve_flags.values()) else "oracle execution is a separate gated phase"}, "oracle_executed": False, "solver_executed": False, "powersi_executed": False, "replacement_ready": False, "production_ready": False}
+        report["raw_plane_sheet_sha256"] = raw_manifest.get("plane_sheet_payload_sha256")
+        report["census"]["ledger_sha256"] = source_block_census.get("replacement_ledger_sha256")
+        ground_receipts = {kind: {"count": len(values), "rows": [{**dict(row), "row_sha256": _row_hash(row)} for row in values], "aggregate_sha256": sha256(concrete_canonical_json_bytes([{**dict(row), "row_sha256": _row_hash(row)} for row in values])).hexdigest()} for kind, values in ground_raw.items()}
+        report["ground_terminal_raw"] = {kind: value["rows"] for kind, value in ground_receipts.items()}
+        report["ground_terminal_receipts"] = ground_receipts
+        report["terminal_endpoint_provenance"] = {
+            role: {
+                "source_external_node_id": value["source_external_node"].get("node_id"),
+                "source_external_node_layer": value["source_external_node"].get("layer_id"),
+                "source_external_node_net": value["source_external_node"].get("net_name"),
+                "source_external_node_xy_pm": [value["source_external_node"].get("x_pm"), value["source_external_node"].get("y_pm")],
+                "source_external_node_sha256": value["source_node_sha256"],
+                "internal_plane_node_id": value["internal_plane_node"].get("node_id"),
+                "internal_plane_node_layer": value["internal_plane_node"].get("layer_id"),
+                "internal_plane_node_net": value["internal_plane_node"].get("net_name"),
+                "internal_plane_node_xy_pm": [value["internal_plane_node"].get("x_pm"), value["internal_plane_node"].get("y_pm")],
+                "internal_plane_node_sha256": value["internal_node_sha256"],
+                "via_id": value["via"].get("via_id"),
+                "via_xy_pm": [value["via"].get("start_x_pm"), value["via"].get("start_y_pm"), value["via"].get("end_x_pm"), value["via"].get("end_y_pm")],
+                "via_sha256": value["via_sha256"],
+                "pad_sha256": value["pad_sha256"],
+            }
+            for role, value in sorted(terminal_evidence.items())
+        }
+        footprint_stats, _footprint_wkb = _geometry_manifest(ground_footprint)
+        report["ground_footprint"] = {key: footprint_stats[key] for key in ("wkb_sha256", "wkb_size_bytes", "area_um2", "bbox_um", "perimeter_um")}
+        report["selected_gap"] = {"raw": dict(_object_mapping(gap_row)), "ir": dict(ir_stackup[int(gap_row.layer_ordinal)])}
+        report["selected_stackup_rows"] = [dict(row) for row in ir["stackup_layers"] if str(row.get("layer_name", "")).casefold() in selected_layer_names]
+        if len(report["selected_stackup_rows"]) != 3 or {str(row.get("layer_name", "")).casefold() for row in report["selected_stackup_rows"]} != selected_layer_names:
+            _fail("SOURCE_FRINGE_CENSUS_INVALID: selected IR stackup coverage differs")
+        report["dielectric_source_rows"] = [dict(row) for row in ir["dielectric_points"] if str(row.get("layer_name", "")).casefold() == str(gap_row.layer_name).casefold()]
+        report["selected_raw_stackup_rows"] = [{**dict(_object_mapping(row)), "row_sha256": _row_hash(row)} for row in selected_raw_stackup]
+        report["selected_raw_dielectric_points"] = [{**dict(_object_mapping(point)), "row_sha256": _row_hash(point)} for _index, point in selected_raw_points]
+        report["selected_raw_points"] = report["selected_raw_dielectric_points"]
+        report["raw_stackup_count"] = len(stackup)
+        report["raw_stackup_sha256"] = sha256(concrete_canonical_json_bytes([dict(_object_mapping(row)) for row in stackup])).hexdigest()
+        report["raw_dielectric_count"] = len(dielectric_points)
+        report["raw_dielectric_sha256"] = sha256(concrete_canonical_json_bytes([dict(_object_mapping(row)) for row in dielectric_points])).hexdigest()
+        report["selected_witnesses"] = [{**dict(row), "row_sha256": _row_hash(row)} for row in witness_rows]
+        report["selected_ir_primitives"] = [{**dict(row), "row_sha256": _row_hash(row)} for row in report_primitive_rows]
+        report["selected_raw_surfaces"] = [{**dict(_object_mapping(row)), "row_sha256": _row_hash(row)} for row in surfaces if str(row.surface_id).casefold() in {str(item.get("surface_id", "")).casefold() for item in selected_surfaces.values()}]
+        report["geometry_manifest_sha256"] = sha256(concrete_canonical_json_bytes(geometry_manifest)).hexdigest()
+        report["oracle_reasons"] = {key: {"eligible": False, "executed": False, "reason_code": "ANALYTIC_CURVE_UNRESOLVED" if any(curve_flags.values()) else f"{key.upper()}_REQUIRES_SEPARATE_GATE", "reason": "source-bound manifest only; oracle execution is separately gated", "resource_lower_bound": {"status": "NOT_COMPUTABLE_WITHOUT_CROP"}} for key in ("edge_cell", "fft_bem", "tri_fem", "surface_patch")}
+        report["oracle_reasons_sha256"] = sha256(concrete_canonical_json_bytes(report["oracle_reasons"])).hexdigest()
+        report["p1_stamp_applied"] = False
+        report["global_matrix_assembled"] = False
+        descriptors = [{"name": name, "sha256": sha256(payload).hexdigest(), "size_bytes": len(payload)} for name, payload in sorted(attachments.items(), key=lambda item: item[0].casefold())]
+        report["attachments"] = {"count": len(descriptors), "total_bytes": sum(item["size_bytes"] for item in descriptors), "aggregate_sha256": sha256(concrete_canonical_json_bytes(descriptors)).hexdigest(), "descriptors": descriptors}
+        report["ground_terminal_evidence_sha256"] = sha256(concrete_canonical_json_bytes({"terminal_ir": dict(ground), "footprint": report["ground_footprint"], "receipts": ground_receipts, "endpoint_provenance": report["terminal_endpoint_provenance"]["ground"]})).hexdigest()
+        report["final_report_sha256"] = sha256(concrete_canonical_json_bytes(report)).hexdigest()
+        if len(concrete_canonical_json_bytes(report)) > 1_048_576:
+            _fail("SOURCE_FRINGE_GEOMETRY_INVALID: report cap exceeded")
+        return report, attachments
+    except SourcePlanePatchError:
+        raise
+    except Exception as exc:
+        _fail(f"SOURCE_FRINGE_CENSUS_INVALID: {exc}")
 
 
 def consume_source_plane_patch(
@@ -3372,4 +3910,4 @@ def audit_source_plane_source_block_census(
         _fail(f"SOURCE_BLOCK_CENSUS_INVALID: {exc}")
 
 
-__all__ = ["SourcePlanePatchError", "consume_source_plane_patch", "evaluate_source_plane_contact_admissibility", "evaluate_source_plane_contact_condensation", "audit_source_plane_patch_owner_off", "audit_source_plane_patch_contact_quotient_representability", "audit_source_plane_patch_selected_base_cutset", "audit_source_plane_patch_production_owner_join", "plan_source_plane_patch_shadow_contact_rewire", "audit_source_plane_patch_shadow_rewire_commutation", "audit_source_plane_patch_shadow_local_replacement_recipe", "materialize_source_plane_patch_shadow_topology_embedding", "bind_source_plane_patch_shadow_nport_block", "audit_source_plane_patch_shadow_augmented_component_closure", "audit_source_plane_patch_shadow_one_frequency_solve", "audit_source_plane_source_block_census"]
+__all__ = ["SourcePlanePatchError", "consume_source_plane_patch", "evaluate_source_plane_contact_admissibility", "evaluate_source_plane_contact_condensation", "audit_source_plane_patch_owner_off", "audit_source_plane_patch_contact_quotient_representability", "audit_source_plane_patch_selected_base_cutset", "audit_source_plane_patch_production_owner_join", "plan_source_plane_patch_shadow_contact_rewire", "audit_source_plane_patch_shadow_rewire_commutation", "audit_source_plane_patch_shadow_local_replacement_recipe", "materialize_source_plane_patch_shadow_topology_embedding", "bind_source_plane_patch_shadow_nport_block", "audit_source_plane_patch_shadow_augmented_component_closure", "audit_source_plane_patch_shadow_one_frequency_solve", "audit_source_plane_source_block_census", "audit_source_plane_fringe_oracle_readiness"]

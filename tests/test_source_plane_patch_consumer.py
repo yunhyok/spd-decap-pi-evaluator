@@ -186,7 +186,7 @@ def test_owner_gate_direct_trace_is_null_witness_only():
         consumer._owner_gate(value, "RAIL/0")
 
 
-def _v2_import(tmp_path: Path, *, outside: bool = False):
+def _v2_import(tmp_path: Path, *, outside: bool = False, detached: bool = False):
     payload = (
         MINI_SPD.replace("LEGACY_SOURCE_GRAPH_UNAVAILABLE", "TRACE_VIA_COMPONENTS_AVAILABLE")
         .replace("VDD_CORE/0", "VDD_CORE/1")
@@ -202,6 +202,8 @@ def _v2_import(tmp_path: Path, *, outside: bool = False):
     )
     if outside:
         payload = payload.replace("X = 1.5mm Y = 2mm", "X = 3.995mm Y = 0mm")
+    if detached:
+        payload = payload.replace("Polygon5::VDD_CORE/1+ Sub-element 2mm 2mm 2.2mm 2mm 2.2mm 2.2mm 2mm 2.2mm", "Polygon5::VDD_CORE/1+ Sub-element 6mm 6mm 6.2mm 6mm 6.2mm 6.2mm 6mm 6.2mm")
     source = tmp_path / "v2-consumer.spd"
     source.write_text(payload, encoding="ascii")
     return spd_adapter.import_spd_scenario(source, source_plane_ownership_rail_id="VDD_CORE/1")
@@ -686,7 +688,7 @@ def test_source_plane_source_block_census_is_deterministic_and_fail_closed(tmp_p
     def forbidden(*_args, **_kwargs):
         raise AssertionError("A2 census must not invoke P1 condensation, owner join, or solve")
 
-    for name in ("evaluate_source_plane_contact_condensation", "audit_source_plane_patch_production_owner_join", "audit_source_plane_patch_shadow_one_frequency_solve", "evaluate_nodal_admittance_block"):
+    for name in ("consume_source_plane_patch", "compile_surface_patch_plane", "compile_layer_surface_network", "evaluate_source_plane_contact_condensation", "audit_source_plane_patch_production_owner_join", "audit_source_plane_patch_shadow_one_frequency_solve", "evaluate_nodal_admittance_block", "launch_powersi", "run_powersi", "load_powersi"):
         monkeypatch.setattr(consumer, name, forbidden, raising=False)
     monkeypatch.setattr(type(substrate.network), "solve", forbidden, raising=False)
     first = consumer.audit_source_plane_source_block_census(own, imported.attachments, raw, substrate, rail_id="VDD_CORE/1")
@@ -724,3 +726,175 @@ def test_source_plane_source_block_census_is_deterministic_and_fail_closed(tmp_p
         consumer.audit_source_plane_source_block_census(altered_manifest, altered_attachments, raw, substrate, rail_id="VDD_CORE/1")
     with pytest.raises(consumer.SourcePlanePatchError):
         consumer.audit_source_plane_source_block_census(own, imported.attachments, {**raw, "geometry_identity_sha256": _h("e")}, substrate, rail_id="VDD_CORE/1")
+
+
+def test_source_plane_fringe_geometry_manifest_binds_source_and_internal_terminal_endpoints_without_solver(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
+    imported = _v2_import(tmp_path)
+    project = imported.scenario.base_project
+    own = project.metadata["spd_import"]["source_plane_ownership_ir"]
+    raw = project.metadata["spd_import"]["raw_spatial_contact_asset"]
+    substrate = compile_layerwise_substrate(project, imported.attachments, required_rail_id="VDD_CORE/1", require_plane_sheet_payload=True)
+    census = consumer.audit_source_plane_source_block_census(own, imported.attachments, raw, substrate, rail_id="VDD_CORE/1")
+    def forbidden(*_args, **_kwargs):
+        raise AssertionError("geometry manifest must not execute a solver/oracle")
+    for name in ("consume_source_plane_patch", "compile_surface_patch_plane", "compile_layer_surface_network", "evaluate_source_plane_contact_condensation", "audit_source_plane_patch_production_owner_join", "audit_source_plane_patch_shadow_one_frequency_solve", "evaluate_nodal_admittance_block", "launch_powersi", "run_powersi", "load_powersi"):
+        monkeypatch.setattr(consumer, name, forbidden, raising=False)
+    monkeypatch.setattr(type(substrate.network), "solve", forbidden, raising=False)
+    expected = {key: census[key] for key in ("final_report_sha256", "query_key_sha256", "rows_sha256", "candidate_fingerprints_sha256", "retained_fingerprints_sha256", "excluded_fingerprints_sha256", "replacement_ledger_sha256")}
+    first = consumer.audit_source_plane_fringe_oracle_readiness(own, imported.attachments, raw, imported.attachments, census, rail_id="VDD_CORE/1", expected_identities=expected)
+    second = consumer.audit_source_plane_fringe_oracle_readiness(own, imported.attachments, raw, imported.attachments, census, rail_id="VDD_CORE/1", expected_identities=expected)
+    assert first == second
+    report, attachments = first
+    assert report["status"] == "complete" and report["crop"]["state"] == "NOT_SELECTED"
+    assert report["raw_stackup_count"] == 5
+    with load_raw_spatial_contact_asset(raw, imported.attachments, expected_source_sha256=raw["source_sha256"], expected_project_binding_sha256=raw["project_binding_sha256"], expected_certificate_evidence_sha256=raw["certificate_evidence_sha256"], expected_compiled_topology_identity_sha256=raw["compiled_topology_identity_sha256"], expected_geometry_identity_sha256=raw["geometry_identity_sha256"], require_plane_sheet_payload=True) as loaded_raw:
+        all_stackup = [consumer._object_mapping(row) for row in loaded_raw.iter_stackup_layers()]
+    assert len(all_stackup) == report["raw_stackup_count"] == 5 and report["raw_stackup_sha256"] == sha256(consumer.concrete_canonical_json_bytes(all_stackup)).hexdigest()
+    assert len(report["selected_stackup_rows"]) == len(report["selected_raw_stackup_rows"]) == 3
+    assert {str(row["layer_name"]).casefold() for row in report["selected_stackup_rows"]} == {"signal$pwr", "medium$d2", "signal$gnd"}
+    assert {str(row["layer_name"]).casefold() for row in report["selected_raw_stackup_rows"]} == {"signal$pwr", "medium$d2", "signal$gnd"}
+    layer_to_role = {str(report["selected_surfaces"][role]["layer"]).casefold(): role for role in ("power", "ground")}
+    upper_role = layer_to_role[str(report["candidate"]["upper_layer"]).casefold()]
+    lower_role = layer_to_role[str(report["candidate"]["lower_layer"]).casefold()]
+    assert upper_role != lower_role
+    assert report["selected_islands"][upper_role]["island_id"].casefold() == report["candidate"]["upper_island_id"].casefold()
+    assert report["selected_islands"][lower_role]["island_id"].casefold() == report["candidate"]["lower_island_id"].casefold()
+    assert report["oracle_executed"] is False and report["solver_executed"] is False and report["powersi_executed"] is False
+    assert report["replacement_ready"] is False and report["production_ready"] is False
+    assert set(attachments) == {f"source-plane-fringe/{report['candidate']['fingerprint']}/{name}.wkb" for name in ("island_p", "island_g", "overlap", "p_only", "g_only")}
+    assert all(report["geometry"][name]["attachment_sha256"] == sha256(attachments[report["geometry"][name]["attachment_name"]]).hexdigest() for name in report["geometry"])
+    curve_role = next(role for role, label in (("power", "island_p"), ("ground", "island_g")) if report["geometry"][label]["edge_flags"]["has_curve"])
+    assert report["selected_circles"] and report["geometry"][f"island_{curve_role[0]}"]["edge_flags"]["has_corner"] is False and all(report["geometry"][name]["edge_flags"]["has_curve"] is True and report["geometry"][name]["edge_flags"]["has_corner"] is False for name in ("overlap", "p_only", "g_only"))
+    assert report["oracle_eligibility"]["reason_code"] == "ANALYTIC_CURVE_UNRESOLVED"
+    assert len(report["selected_stackup_rows"]) == 3 and len(report["selected_raw_stackup_rows"]) == 3
+    selected_points = report["selected_raw_dielectric_points"]
+    assert selected_points and len({int(row["point_ordinal"]) for row in selected_points}) == len(selected_points) and len({float(row["frequency_hz"]) for row in selected_points}) == len(selected_points)
+    assert all(math.isfinite(float(row["frequency_hz"])) and float(row["frequency_hz"]) > 0.0 and math.isfinite(float(row["epsilon_r"])) and float(row["epsilon_r"]) > 0.0 and math.isfinite(float(row["loss_tangent"])) and float(row["loss_tangent"]) >= 0.0 for row in selected_points)
+    assert report["selected_ir_primitives"] and report["selected_witnesses"] and all(row["row_sha256"] == consumer._row_hash({key: value for key, value in row.items() if key != "row_sha256"}) for row in report["selected_ir_primitives"] + report["selected_primitives"] + report["selected_witnesses"] + report["selected_raw_stackup_rows"] + report["selected_raw_dielectric_points"])
+    unsigned = dict(report); unsigned.pop("final_report_sha256")
+    assert report["final_report_sha256"] == sha256(consumer.concrete_canonical_json_bytes(unsigned)).hexdigest() and len(consumer.concrete_canonical_json_bytes(report)) <= 1_048_576
+    assert report["attachments"]["count"] == 5 and report["attachments"]["total_bytes"] == sum(item["size_bytes"] for item in report["attachments"]["descriptors"]) and report["attachments"]["aggregate_sha256"] == sha256(consumer.concrete_canonical_json_bytes(report["attachments"]["descriptors"])).hexdigest()
+    receipts = report["ground_terminal_receipts"]
+    assert set(receipts) == {"nodes", "vias", "pads"} and all(item["count"] == len(item["rows"]) and item["aggregate_sha256"] == sha256(consumer.concrete_canonical_json_bytes(item["rows"])).hexdigest() and all(row["row_sha256"] == consumer._row_hash({key: value for key, value in row.items() if key != "row_sha256"}) for row in item["rows"]) for item in receipts.values())
+    ground_provenance = report["terminal_endpoint_provenance"]["ground"]
+    ground_nodes = {str(row["node_id"]).casefold(): row for row in receipts["nodes"]["rows"]}
+    assert set(ground_nodes) == {ground_provenance["source_external_node_id"].casefold(), ground_provenance["internal_plane_node_id"].casefold()}
+    ground_via = receipts["vias"]["rows"][0]
+    source_node = ground_nodes[ground_provenance["source_external_node_id"].casefold()]
+    internal_node = ground_nodes[ground_provenance["internal_plane_node_id"].casefold()]
+    if ground_via["start_node_id"].casefold() == source_node["node_id"].casefold():
+        assert ground_via["start_layer_id"].casefold() == source_node["layer_id"].casefold() and ground_via["end_node_id"].casefold() == internal_node["node_id"].casefold() and ground_via["end_layer_id"].casefold() == internal_node["layer_id"].casefold()
+    else:
+        assert ground_via["end_layer_id"].casefold() == source_node["layer_id"].casefold() and ground_via["start_node_id"].casefold() == internal_node["node_id"].casefold() and ground_via["start_layer_id"].casefold() == internal_node["layer_id"].casefold()
+    assert receipts["pads"]["rows"][0]["layer_id"].casefold() == ground_provenance["source_external_node_layer"].casefold()
+    for role in ("power", "ground"):
+        endpoint = report["terminal_endpoint_provenance"][role]
+        assert endpoint["source_external_node_id"] and endpoint["internal_plane_node_id"] and endpoint["source_external_node_id"].casefold() != endpoint["internal_plane_node_id"].casefold()
+        assert endpoint["internal_plane_node_layer"].casefold() == report["selected_surfaces"][role]["layer"].casefold()
+    assert receipts["nodes"]["count"] == 2 and receipts["vias"]["count"] == 1 and receipts["pads"]["count"] == 1
+    assert report["ground_terminal_evidence_sha256"] == sha256(consumer.concrete_canonical_json_bytes({"terminal_ir": report["ground_terminal"], "footprint": report["ground_footprint"], "receipts": receipts, "endpoint_provenance": report["terminal_endpoint_provenance"]["ground"]})).hexdigest()
+    assert all(set(item) == {"eligible", "executed", "reason_code", "reason", "resource_lower_bound"} and item["eligible"] is False and item["executed"] is False and item["resource_lower_bound"]["status"] == "NOT_COMPUTABLE_WITHOUT_CROP" for item in report["oracle_reasons"].values())
+    assert report["oracle_eligibility"]["eligible"] is False and all(report[key] is False for key in ("oracle_executed", "solver_executed", "powersi_executed", "replacement_ready", "production_ready", "p1_stamp_applied", "global_matrix_assembled"))
+
+    raw_rows_original = consumer._raw_rows
+    power_endpoint = report["terminal_endpoint_provenance"]["power"]["source_external_node_id"].casefold()
+    power_internal = report["terminal_endpoint_provenance"]["power"]["internal_plane_node_id"].casefold()
+    for section, mutate in (
+        ("vias", lambda row: replace(row, start_layer_id=row.end_layer_id, end_layer_id=row.start_layer_id)),
+        ("nodes", lambda row: replace(row, node_id="tampered-alias") if str(row.node_id).casefold() == power_endpoint else row),
+        ("nodes", lambda row: replace(row, layer_id="tampered-internal-layer") if str(row.node_id).casefold() == power_internal else row),
+        ("pad_shapes", lambda row: replace(row, layer_id="tampered-pad-layer") if int(row.ordinal) == int(report["ground_terminal"]["raw_pad_shape_ordinal"]) else row),
+        ("pad_shapes", lambda row: replace(row, ordinal=int(row.ordinal) + 1000) if int(row.ordinal) == int(report["ground_terminal"]["raw_pad_shape_ordinal"]) else row),
+        ("pad_shapes", lambda row: replace(row, source_record_sha256=_h("e")) if int(row.ordinal) == int(report["ground_terminal"]["raw_pad_shape_ordinal"]) else row),
+    ):
+        def tampered_raw_rows(loaded, target_section, cap, total, keep=None, *, _section=section, _mutate=mutate):
+            rows = raw_rows_original(loaded, target_section, cap, total, keep)
+            return [_mutate(row) for row in rows] if target_section == _section else rows
+        monkeypatch.setattr(consumer, "_raw_rows", tampered_raw_rows)
+        with pytest.raises(consumer.SourcePlanePatchError):
+            consumer.audit_source_plane_fringe_oracle_readiness(own, imported.attachments, raw, imported.attachments, census, rail_id="VDD_CORE/1", expected_identities=expected)
+        monkeypatch.setattr(consumer, "_raw_rows", raw_rows_original)
+
+    def rehash(value):
+        tampered = deepcopy(value)
+        unsigned = dict(tampered)
+        unsigned.pop("final_report_sha256", None)
+        tampered["final_report_sha256"] = sha256(consumer.concrete_canonical_json_bytes(unsigned)).hexdigest()
+        return tampered
+
+    original_owner_gate = consumer._owner_gate
+    def tampered_owner_gate(*args, **kwargs):
+        power, ground, owners = original_owner_gate(*args, **kwargs)
+        ground = dict(ground)
+        ground["endpoint_node_id"] = "missing-ground-endpoint"
+        return power, ground, owners
+    monkeypatch.setattr(consumer, "_owner_gate", tampered_owner_gate)
+    with pytest.raises(consumer.SourcePlanePatchError):
+        consumer.audit_source_plane_fringe_oracle_readiness(own, imported.attachments, raw, imported.attachments, census, rail_id="VDD_CORE/1", expected_identities=expected)
+    monkeypatch.setattr(consumer, "_owner_gate", original_owner_gate)
+    def tampered_component_gate(*args, **kwargs):
+        power, ground, owners = original_owner_gate(*args, **kwargs)
+        ground = dict(ground)
+        ground["component_id"] = "tampered-component"
+        return power, ground, owners
+    monkeypatch.setattr(consumer, "_owner_gate", tampered_component_gate)
+    with pytest.raises(consumer.SourcePlanePatchError):
+        consumer.audit_source_plane_fringe_oracle_readiness(own, imported.attachments, raw, imported.attachments, census, rail_id="VDD_CORE/1", expected_identities=expected)
+    monkeypatch.setattr(consumer, "_owner_gate", original_owner_gate)
+
+    for mutate in (
+        lambda value: value["numeric_row_action_counts"].__setitem__("candidate", value["numeric_row_action_counts"]["candidate"] + 1),
+        lambda value: value["closures"]["power"]["reduced_indices"].__setitem__(0, 999999),
+        lambda value: value["candidate_scope_ids"].__setitem__(0, "tampered-scope"),
+        lambda value: value["owner_ledger"].__setitem__("ledger_sha256", _h("e")),
+    ):
+        tampered = rehash(census)
+        mutate(tampered)
+        tampered = rehash(tampered)
+        tampered_expected = {**expected, "final_report_sha256": tampered["final_report_sha256"]}
+        with pytest.raises(consumer.SourcePlanePatchError):
+            consumer.audit_source_plane_fringe_oracle_readiness(own, imported.attachments, raw, imported.attachments, tampered, rail_id="VDD_CORE/1", expected_identities=tampered_expected)
+    for mutate in (
+        lambda value: value["known_exclusions"][0].__setitem__("reason_code", "tampered-exclusion"),
+        lambda value: (value["closures"]["power"]["islands"].append("extra-island"), value["closures"]["power"]["reduced_indices"].append(999999)),
+        lambda value: value["dielectric_source_rows"][0].__setitem__("epsilon_r", float(value["dielectric_source_rows"][0]["epsilon_r"]) + 1.0),
+    ):
+        tampered = rehash(census)
+        mutate(tampered)
+        tampered = rehash(tampered)
+        tampered_expected = {**expected, "final_report_sha256": tampered["final_report_sha256"]}
+        with pytest.raises(consumer.SourcePlanePatchError):
+            consumer.audit_source_plane_fringe_oracle_readiness(own, imported.attachments, raw, imported.attachments, tampered, rail_id="VDD_CORE/1", expected_identities=tampered_expected)
+    tampered_raw = {**raw, "geometry_identity_sha256": _h("e")}
+    with pytest.raises(consumer.SourcePlanePatchError):
+        consumer.audit_source_plane_fringe_oracle_readiness(own, imported.attachments, tampered_raw, imported.attachments, census, rail_id="VDD_CORE/1", expected_identities=expected)
+
+
+def test_source_plane_fringe_multicomponent_surface_selects_exact_island_without_solver(monkeypatch: pytest.MonkeyPatch):
+    from shapely.geometry import box
+
+    forbidden = lambda *_args, **_kwargs: (_ for _ in ()).throw(AssertionError("multicomponent island unit must not execute solver/oracle/import paths"))
+    for name in ("consume_source_plane_patch", "compile_surface_patch_plane", "compile_layer_surface_network", "evaluate_source_plane_contact_condensation", "audit_source_plane_patch_production_owner_join", "audit_source_plane_patch_shadow_one_frequency_solve", "evaluate_nodal_admittance_block", "launch_powersi", "run_powersi", "load_powersi"):
+        monkeypatch.setattr(consumer, name, forbidden, raising=False)
+    surface = {"layer": "Signal$PWR", "artwork_net": "VDD", "geometry_asset_sha256": _h("a")}
+    shape = box(0.0, 0.0, 1.0, 1.0).union(box(3.0, 0.0, 4.0, 1.0))
+    core_rows = consumer.core_services._spd_surface_islands(layer=surface["layer"], net=surface["artwork_net"], asset_sha256=surface["geometry_asset_sha256"], shape=shape)
+    assert len(core_rows) == 2
+    expected = [{"island_id": row[0]} for row in core_rows]
+    first = consumer._fringe_core_island_geometry(surface, shape, expected, core_rows[0][0])
+    second = consumer._fringe_core_island_geometry(surface, shape, expected, core_rows[0][0])
+    full_stats, full_wkb = consumer._geometry_manifest(shape)
+    first_stats, first_wkb = consumer._geometry_manifest(first)
+    second_stats, second_wkb = consumer._geometry_manifest(second)
+    selected_stats, selected_wkb = consumer._geometry_manifest(core_rows[0][1])
+    unselected_stats, unselected_wkb = consumer._geometry_manifest(core_rows[1][1])
+    assert full_stats["component_count"] == 2 and first.geom_type == "Polygon" and first_stats["component_count"] == 1
+    assert first_wkb == selected_wkb and first_stats["wkb_sha256"] == selected_stats["wkb_sha256"]
+    assert first_wkb != unselected_wkb and first_stats["wkb_sha256"] != unselected_stats["wkb_sha256"] and full_wkb != first_wkb
+    assert first_wkb == second_wkb and first_stats["wkb_sha256"] == second_stats["wkb_sha256"] and first_stats == second_stats
+    for bad_expected, selected in ((expected[:1], core_rows[0][0]), (expected + [{"island_id": "extra"}], core_rows[0][0]), (expected + [expected[0]], core_rows[0][0]), (expected, "unknown-island")):
+        with pytest.raises(consumer.SourcePlanePatchError):
+            consumer._fringe_core_island_geometry(surface, shape, bad_expected, selected)
+    monkeypatch.setattr(consumer.core_services, "_spd_surface_islands", lambda **kwargs: tuple(core_rows) + (core_rows[0],))
+    with pytest.raises(consumer.SourcePlanePatchError):
+        consumer._fringe_core_island_geometry(surface, shape, expected, core_rows[0][0])
