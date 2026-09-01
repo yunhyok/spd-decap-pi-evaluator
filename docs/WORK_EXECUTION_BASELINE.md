@@ -1,19 +1,20 @@
 # SPD Decap PI Evaluator v0.23.1 — 작업 기준
 
-- 문서 버전: **3.12**
+- 문서 버전: **3.13**
 - 기준 branch: **main only**
 - current integrated-hardening docs base: `5a270677074868fc3e10ffa26309a208bb151ac3`
 - integrated-hardening implementation commit: `eece8ab944a29a9f6c5ddde17e56de8dbbd2ee6a`
 - 최종 개정: **2026-09-02 (Asia/Seoul)**
 - integrated-hardening lifecycle: **DONE / ACCEPT / COMMITTED @ `eece8ab944a29a9f6c5ddde17e56de8dbbd2ee6a`**
-- current accuracy gate: **A1 DONE / ACCEPT — A2 DONE / ACCEPT_NARROW_CORE_EVIDENCE — V1/A2R/A2S DONE / STOP — A2T DONE / STATIC_ACCEPT — V3G DONE / STATIC_ACCEPT — D-087 DONE / STOP_V3_LAUNCHER_COORDINATOR_SHA_CASE — D-088 DONE / STOP_V3R_IMPORT_OWNERSHIP_TERMINAL_CONTRACT — D-089 DONE / ACCEPT_FOCUSED / COMMITTED @ `54c87d1` — D-090 DONE / STOP_D090_OWNERSHIP_TERMINAL_MULTIBRANCH_CARDINALITY — D-091 DONE / ACCEPT_FOCUSED / COMMITTED @ `6b88c3c` — D-092 DONE / STOP_D092_CONTACT_TERMINAL_OWNER_COVERAGE_PARTITION — D-093 DONE / ACCEPT_FOCUSED / COMMITTED @ `bebbb80` — D-094 DONE / STOP_D094_COORDINATOR_ROWS_HASH_PROJECTION — D-095 ACTIVE / TEST_ONLY_SUCCESSOR_PLANNED**
+- current accuracy gate: **A1 DONE / ACCEPT — A2 DONE / ACCEPT_NARROW_CORE_EVIDENCE — V1/A2R/A2S DONE / STOP — A2T DONE / STATIC_ACCEPT — V3G DONE / STATIC_ACCEPT — D-087 DONE / STOP_V3_LAUNCHER_COORDINATOR_SHA_CASE — D-088 DONE / STOP_V3R_IMPORT_OWNERSHIP_TERMINAL_CONTRACT — D-089 DONE / ACCEPT_FOCUSED / COMMITTED @ `54c87d1` — D-090 DONE / STOP_D090_OWNERSHIP_TERMINAL_MULTIBRANCH_CARDINALITY — D-091 DONE / ACCEPT_FOCUSED / COMMITTED @ `6b88c3c` — D-092 DONE / STOP_D092_CONTACT_TERMINAL_OWNER_COVERAGE_PARTITION — D-093 DONE / ACCEPT_FOCUSED / COMMITTED @ `bebbb80` — D-094 DONE / STOP_D094_COORDINATOR_ROWS_HASH_PROJECTION — D-095 DONE / ACCEPT_FOCUSED — D-096 ACTIVE / STATIC_ACCEPT (READY_FOR_SINGLE_D096_RUN / ONE_SHOT_NOT_CONSUMED)**
 - D-089: **DONE / ACCEPT_FOCUSED / COMMITTED @ `54c87d1`** — `W7-ACC-TERMINAL-PATH-KIND-OWNERSHIP-IR-01` / `TERMINAL_PATH_KIND_OWNERSHIP_IR_CONTRACT`.
 - D-090: **DONE / STOP_D090_OWNERSHIP_TERMINAL_MULTIBRANCH_CARDINALITY** — consumed, no-rerun.
 - D-091: **DONE / ACCEPT_FOCUSED / COMMITTED @ `6b88c3c`** — `W7-ACC-OWNERSHIP-TERMINAL-MULTIBRANCH-CARDINALITY-01`.
 - D-092: **DONE / STOP_D092_CONTACT_TERMINAL_OWNER_COVERAGE_PARTITION** — consumed, no-rerun.
 - D-093: **DONE / ACCEPT_FOCUSED / COMMITTED @ `bebbb80`** — contact/terminal owner coverage partition.
 - D-094: **DONE / STOP_D094_COORDINATOR_ROWS_HASH_PROJECTION** — consumed, no-rerun.
-- D-095: **ACTIVE / TEST_ONLY_SUCCESSOR_PLANNED** — focused coordinator rows-hash projection check.
+- D-095: **DONE / ACCEPT_FOCUSED** — synthetic-only coordinator rows-hash projection check; consumed/no-rerun.
+- D-096: **ACTIVE / STATIC_ACCEPT** — original-SPD source-block census; `READY_FOR_SINGLE_D096_RUN / ONE_SHOT_NOT_CONSUMED`.
 - current numerical improvement: **0**
 
 ## 1. 압축 후 즉시 복구 카드
@@ -40,8 +41,9 @@ path-kind ownership IR contract는 완료됐고 D-090은
 focused ownership-terminal multibranch cardinality contract는 완료됐고 D-092는
 contact/terminal owner coverage partition 불일치로 소비된 STOP이다. D-093 focused successor
 contract는 `DONE / ACCEPT_FOCUSED / COMMITTED @ bebbb80`로 닫혔다. D-094 source-block
-census는 `DONE / STOP_D094_COORDINATOR_ROWS_HASH_PROJECTION`으로 소비됐고, 현재 D-095
-focused test-only successor가 `ACTIVE / TEST_ONLY_SUCCESSOR_PLANNED`다.
+census는 `DONE / STOP_D094_COORDINATOR_ROWS_HASH_PROJECTION`으로 소비됐고, D-095 focused
+successor는 `DONE / ACCEPT_FOCUSED`로 닫혔다. 현재 D-096 original-SPD one-shot이
+`ACTIVE / STATIC_ACCEPT` 및 `READY_FOR_SINGLE_D096_RUN / ONE_SHOT_NOT_CONSUMED`다.
 
 ```mermaid
 flowchart LR
@@ -65,8 +67,8 @@ flowchart LR
     D91 --> D92["D-092 source-block census<br/>DONE / STOP_D092_CONTACT_TERMINAL_OWNER_COVERAGE_PARTITION"]
     D92 --> D93["D-093 contact terminal owner coverage partition<br/>DONE / ACCEPT_FOCUSED / COMMITTED bebbb80"]
     D93 --> D94["D-094 source-block census<br/>DONE / STOP_D094_COORDINATOR_ROWS_HASH_PROJECTION"]
-    D94 --> D95["D-095 coordinator rows-hash projection<br/>ACTIVE / TEST_ONLY_SUCCESSOR_PLANNED"]
-    D95 -->|focused acceptance 후| D96["D-096 original-SPD source-block census<br/>separate one-shot"]
+    D94 --> D95["D-095 coordinator rows-hash projection<br/>DONE / ACCEPT_FOCUSED"]
+    D95 --> D96["D-096 original-SPD source-block census<br/>ACTIVE / STATIC_ACCEPT<br/>READY_FOR_SINGLE_D096_RUN / ONE_SHOT_NOT_CONSUMED"]
     D96 -->|one-shot PASS 후| A3["production one-shot consideration"]
     D89 -->|STOP| STOPSRC["static diagnosis/replanning"]
 ```
@@ -302,8 +304,8 @@ focused ownership-terminal multibranch cardinality contract는
 `DONE / ACCEPT_FOCUSED / COMMITTED @ 6b88c3c`로 닫혔고 D-092는
 `DONE / STOP_D092_CONTACT_TERMINAL_OWNER_COVERAGE_PARTITION`으로 소비됐다. D-093은
 `DONE / ACCEPT_FOCUSED / COMMITTED @ bebbb80`로 닫혔다. D-094는
-`DONE / STOP_D094_COORDINATOR_ROWS_HASH_PROJECTION`으로 소비됐고 D-095가
-`ACTIVE / TEST_ONLY_SUCCESSOR_PLANNED`다.
+`DONE / STOP_D094_COORDINATOR_ROWS_HASH_PROJECTION`으로 소비됐고 D-095는
+`DONE / ACCEPT_FOCUSED`로 닫혔다. D-096이 `ACTIVE / STATIC_ACCEPT`다.
 
 ### A1 — W7-ACC-ERROR-BUDGET-01 — DONE / ACCEPT
 
@@ -804,7 +806,8 @@ partition 불일치로 `DONE / STOP_D092_CONTACT_TERMINAL_OWNER_COVERAGE_PARTITI
 소비됐다. D-093 focused successor는 `DONE / ACCEPT_FOCUSED / COMMITTED @ bebbb80`로
 닫혔다. D-094 source-block census는
 `DONE / STOP_D094_COORDINATOR_ROWS_HASH_PROJECTION`으로 소비됐고 D-095 focused
-successor가 `ACTIVE / TEST_ONLY_SUCCESSOR_PLANNED`로 열린다.
+successor는 `DONE / ACCEPT_FOCUSED`로 닫혔다. D-096 source-block census가
+`ACTIVE / STATIC_ACCEPT` 및 `READY_FOR_SINGLE_D096_RUN / ONE_SHOT_NOT_CONSUMED`로 열린다.
 
 ### D-092 — W7-ACC-SOURCE-BLOCK-ORIGINAL-SPD-D092-01 — DONE / STOP_D092_CONTACT_TERMINAL_OWNER_COVERAGE_PARTITION
 
@@ -902,17 +905,56 @@ fail-closed STOP이다. 수치 개선은 0이다.
 사용하기 때문이다. 전체 row evidence는 `final_report_sha256`에 계속 커밋된다. D-094
 coordinator와 receipt는 immutable하게 보존한다.
 
-### D-095 — W7-ACC-SOURCE-BLOCK-COORDINATOR-ROWS-HASH-PROJECTION-01 — ACTIVE / TEST_ONLY_SUCCESSOR_PLANNED
+### D-095 — W7-ACC-SOURCE-BLOCK-COORDINATOR-ROWS-HASH-PROJECTION-01 — DONE / ACCEPT_FOCUSED
 
-D-095는 D-094 원인을 검증하는 focused test-only successor다. 외부 whitelist는
-`D:\SPD-Decap-PI-Evaluator-W7\_coordinator_temp\a2_d095_source_block_census_once.py`와
-`D:\SPD-Decap-PI-Evaluator-W7\_coordinator_temp\a2_d095_rows_hash_projection_check.py` 두 파일뿐이며,
-repo product/source/schema/adapter/consumer/caps/deps/version 변경은 금지한다.
-검증은 synthetic report만 사용하고 원본 SPD/import/compile/census/P1/solve/PowerSI는
-실행하지 않는다. predecessor가 valid projection digest를 reject하고 D-095가 accept,
-full-row digest를 reject하는지와 missing/non-mapping row의 `STOP_CENSUS`, projected
-field mutation의 rows-hash 실패, nonprojected mutation의 stale final-hash 실패를
-확인한다. D-095 acceptance 뒤에만 별도 D-096 original-SPD one-shot을 계획한다.
+D-095는 synthetic-only focused successor로 소비됐으며 재실행하지 않는다. Coordinator는
+`D:\SPD-Decap-PI-Evaluator-W7\_coordinator_temp\a2_d095_source_block_census_once.py`;
+42,277 bytes, SHA-256 `29e2ec27462a6382acea28b04a6f6e802cc2704816e2c0f04c6fee23074d743f`다.
+단일 check는 `a2_d095_rows_hash_projection_check.py`; 4,883 bytes, SHA-256
+`d8d9e60726cabf63cfea28dc0eab5be0df61bd359fe419f3a34ec67905c538c1`다. Sol은 세 label
+수정 후 `STATIC_ACCEPT`했고, Python 3.12 단일 실행은 exit 0, `0.3282879 s`,
+`D095 rows-hash projection contract: PASS`였다. predecessor D-094의 valid projection
+digest reject, D-095 accept, full-row digest reject, missing/non-mapping `STOP_CENSUS`,
+projected mutation rows-hash 실패, nonprojected mutation stale final-hash 실패를 확인했다.
+Coordinator main/original SPD/product import/compile/census/P1/solve/PowerSI는 모두 0이며
+수치 개선은 0이다. repo product/source 변경과 schema/adapter/consumer/caps/deps/version
+변경은 없고 D-095 check는 consumed/no-rerun이다.
+
+### D-096 — W7-ACC-SOURCE-BLOCK-ORIGINAL-SPD-D096-01 — ACTIVE / STATIC_ACCEPT
+
+Readiness qualifiers: `READY_FOR_SINGLE_D096_RUN / ONE_SHOT_NOT_CONSUMED`.
+
+Coordinator는 `D:\SPD-Decap-PI-Evaluator-W7\_coordinator_temp\a2_d096_source_block_census_once.py`;
+42,247 bytes, SHA-256 `684038ee0438d8af9e1b5d9c8c5f4641282ceb912384dce1ad2912d38863baa9`다.
+Sol 판정은 `STATIC_ACCEPT_D096_COORDINATOR`다. D-095 coordinator는 immutable하게
+보존하며 D-096은 그 predecessor와 정확히 4개 label만 다르다. Frozen source는
+`D:\S4LB002-2Para_260729_1_injected.spd`, 1,116,717,287 B, SHA-256
+`40CB44B2376F59D6B606EB9B4D138204FE51B2DC6B3332D3B7C0E7D4202866D2`이며 rail/pair는
+`ADC_VDD_180_VQPS_SYS_1_AON/0` 및 `Signal$L30(OTHER_POWER1)` / `Signal$L29(DGND)`,
+block은 `RAIL_REACHABLE_DIELECTRIC_GAP_MAXWELL_GC`다. Source hashes는 adapter
+`c8c3b284801e3ef91649fea70db97dad1a561f37008f95d894ea81fa4afa146b`, ownership IR
+`3503f9133e880a38c82b2368d99f8f64d11764d210f99dacaef2c81729b0dd68`, consumer
+`21ecabbe53d9135706ce853143306976a4a652e1be42accbd77671af10938ca4`다. D-094의
+fail-closed caps/call ledger와 no-PowerSI 계약을 상속한다.
+
+Contract HEAD는 이 문서를 반영한 새 tracked-clean docs commit이며 root는
+`D:\SPD-Decap-PI-Evaluator-W7\<contract-head>\260729-a2-d096-source-block-census-01`이다.
+단일 PowerShell invocation은 다음과 같다.
+
+```powershell
+$contractHead = (git rev-parse HEAD).Trim()
+$coordinatorSha = '684038ee0438d8af9e1b5d9c8c5f4641282ceb912384dce1ad2912d38863baa9'
+& 'C:\Users\User\AppData\Local\Programs\Python\Python312\python.exe' -I -B `
+  'D:\SPD-Decap-PI-Evaluator-W7\_coordinator_temp\a2_d096_source_block_census_once.py' `
+  --repo 'C:\Users\User\Documents\ChatGPT\SPD Decap PI Evaluator' `
+  --contract-head $contractHead `
+  --coordinator-sha $coordinatorSha `
+  --root "D:\SPD-Decap-PI-Evaluator-W7\$contractHead\260729-a2-d096-source-block-census-01"
+```
+
+PASS ledger는 import/compile/census/report `1/1/1/1`, P1/solve/PowerSI `0/0/0`, retry
+`0`이며 STOP이면 consumed/no-rerun이다. one-shot은 아직 실행하지 않았고 수치 개선은
+0이다. 장시간 실행 확인은 1분 polling 없이 long wait 또는 종료·오류 event 때만 한다.
 
 ## 10. 중단·사용자 검토 조건
 
@@ -937,7 +979,7 @@ D-088은 hash-bound one-shot으로 소비됐고 동일 계약은 재실행하지
 `DONE / STOP_D092_CONTACT_TERMINAL_OWNER_COVERAGE_PARTITION`으로 소비된
 no-rerun STOP이다. D-093은 `DONE / ACCEPT_FOCUSED / COMMITTED @ bebbb80`이며 D-094는
 `DONE / STOP_D094_COORDINATOR_ROWS_HASH_PROJECTION`으로 소비됐다. D-095는
-`ACTIVE / TEST_ONLY_SUCCESSOR_PLANNED`다.
+`DONE / ACCEPT_FOCUSED`이며 D-096은 `ACTIVE / STATIC_ACCEPT`다.
 whitelist 밖 변경과 원본 SPD/full suite/P1/solver/
 PowerSI 실행은 금지한다.
 새 schema/cap 또는 계약 밖 runtime이 필요하면 즉시 STOP하고 문서를 갱신한다.
