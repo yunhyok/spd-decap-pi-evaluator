@@ -168,6 +168,13 @@ def _owner_gate(rows: Mapping[str, list[dict[str, Any]]], rail_id: str) -> tuple
     selected_owners: list[str] = []
     retained_by_id = {str(row.get("owner_id", "")).casefold(): row for row in retained}
     for terminal in pair.values():
+        required_via = int(terminal.get("via_record_required", 1))
+        if required_via == 0:
+            if any(terminal.get(field) is not None for field in ("via_record_id", "finite_edge_id", "via_owner_id")):
+                _fail("direct trace terminal must not carry Via witness")
+            continue
+        if required_via != 1:
+            _fail("terminal Via discriminator is invalid")
         owner = _text(terminal.get("via_owner_id"), "terminal Via owner")
         ref = retained_by_id.get(owner.casefold())
         if ref is None or str(ref.get("edge_id", "")).casefold() != str(terminal.get("finite_edge_id", "")).casefold() or str(ref.get("island_id", "")).casefold() != str(terminal.get("island_id", "")).casefold():
@@ -183,6 +190,8 @@ def _terminal_raw_gate(terminals: tuple[dict[str, Any], dict[str, Any]], source_
     records = {str(row.get("record_id", "")).casefold(): row for row in source_records}
     footprints: list[Any] = []
     for terminal in terminals:
+        if int(terminal.get("via_record_required", 1)) != 1:
+            _fail("terminal raw gate requires conventional Via record")
         binding = rail_bindings[str(terminal.get("role", "")).casefold()]
         node_record = records.get(str(terminal.get("source_node_record_id", "")).casefold())
         via_record = records.get(str(terminal.get("via_record_id", "")).casefold())

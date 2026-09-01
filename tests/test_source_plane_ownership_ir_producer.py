@@ -1047,3 +1047,51 @@ def test_source_plane_ownership_producer_roundtrip_and_atomic_failure(
         )
     assert source.read_bytes() == original
     assert merge_calls == {"raw": 0, "ir": 0}
+
+
+def test_source_plane_ownership_projects_target_landing_identity_only(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    source = tmp_path / "ownership-target-landing.spd"
+    source.write_text(_ownership_fixture_payload(), encoding="ascii")
+    original_certificate = spd_adapter._layer_surface_connectivity_certificate
+    original_compile = spd_adapter.compile_raw_spatial_contact_asset
+    captured: dict[str, object] = {}
+
+    def mutate_certificate(*args: object, **kwargs: object):
+        certificate = deepcopy(original_certificate(*args, **kwargs))
+        anchors = [row for row in certificate["rail_anchor_bindings"] if str(row.get("rail_id", "")).casefold() == "vdd_core/1"]
+        contacts = {str(row.get("pin_id", "")).casefold(): row for row in certificate["terminal_contacts"]}
+        target = contacts[str(anchors[0]["pin_id"]).casefold()]
+        expected_key = (str(target.get("incident_via_id") or f"source-node:{target.get('source_node_id', '')}").casefold(), str(target.get("external_endpoint_node_id", "")).casefold())
+        terminal = next(row for row in certificate["finite_via_quotient"]["terminal_bindings"] if tuple(str(value).casefold() for value in row["landing_key"]) == expected_key)
+        injected = deepcopy(terminal)
+        injected["external_endpoint_node_id"] = f"{terminal['external_endpoint_node_id']}-NON_TARGET"
+        injected["landing_key"] = [terminal["via_id"], injected["external_endpoint_node_id"]]
+        certificate["finite_via_quotient"]["terminal_bindings"].append(injected)
+        certificate["evidence_sha256"] = canonical_surface_certificate_sha256({key: value for key, value in certificate.items() if key != "evidence_sha256"})
+        return certificate
+
+    def capture_compile(*args: object, **kwargs: object):
+        request = kwargs.get("source_plane_ownership_request")
+        if isinstance(request, dict):
+            captured["snapshot"] = deepcopy(request.get("certificate_snapshot"))
+        return original_compile(*args, **kwargs)
+
+    monkeypatch.setattr(spd_adapter, "_layer_surface_connectivity_certificate", mutate_certificate)
+    monkeypatch.setattr(spd_adapter, "compile_raw_spatial_contact_asset", capture_compile)
+    spd_adapter.import_spd_scenario(source, source_plane_ownership_rail_id="VDD_CORE/1")
+    snapshot = captured["snapshot"]
+    assert isinstance(snapshot, dict)
+    anchors = [row for row in snapshot["rail_anchor_bindings"] if str(row.get("rail_id", "")).casefold() == "vdd_core/1"]
+    contacts = {str(row.get("pin_id", "")).casefold(): row for row in snapshot["terminal_contacts"]}
+    expected = {(str(contacts[str(row["pin_id"]).casefold()].get("incident_via_id") or f"source-node:{contacts[str(row['pin_id']).casefold()].get('source_node_id', '')}").casefold(), str(contacts[str(row["pin_id"]).casefold()].get("external_endpoint_node_id", "")).casefold()) for row in anchors}
+    observed = {tuple(str(value).casefold() for value in row["landing_key"]) for row in snapshot["finite_via_quotient"]["terminal_bindings"]}
+    assert observed == expected
+    assert all("NON_TARGET" not in tuple(str(value) for value in row["landing_key"]) for row in snapshot["finite_via_quotient"]["terminal_bindings"])
+    boundary = snapshot["contact_boundary"]
+    coverage = snapshot["contact_boundary_coverage"]
+    authority = [[str(row["component_id"]).casefold(), str(row["island_id"]).casefold(), str(row["finite_vertex_id"]).casefold(), str(row["finite_edge_id"]).casefold(), str(owner).casefold()] for row in boundary for owner in row["owner_ids"]]
+    assert coverage == {"count": len(authority), "sha256": sha256(concrete_canonical_json_bytes(authority)).hexdigest()}
+    target_edges = [row for row in snapshot["finite_via_quotient"]["edges"] if any(str(row["edge_id"]).casefold() == str(edge["finite_edge_id"]).casefold() for edge in boundary)]
+    assert target_edges and all(row.get("start_vertex_id") and row.get("end_vertex_id") and row.get("owner_ids") and row.get("series_terms") and row.get("parallel_path_count") == 1 for row in target_edges)

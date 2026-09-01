@@ -342,6 +342,26 @@ def test_rail_owner_replacement_failures():
     d=draft(); d["replacement_ledger"][0]["status"]="replacement_ready"
     with pytest.raises(SourcePlaneOwnershipIRError): build_source_plane_ownership_ir(d)
 
+def test_direct_trace_terminal_discriminator_is_roundtrippable_and_fail_closed(tmp_path):
+    direct = draft(); direct["terminal_bindings"][0].update(via_record_required=0, via_record_id=None, finite_edge_id=None, via_owner_id=None)
+    direct["retained_owner_refs"] = [{**row, "ordinal": index} for index, row in enumerate(row for row in direct["retained_owner_refs"] if row["owner_id"] != "ViaA")]
+    direct["replacement_ledger_members"] = [row for row in direct["replacement_ledger_members"] if row["owner_id"] != "ViaA"]
+    direct["replacement_ledger"][0].update(retained_count=1, retained_set_sha256=sh({"viab"}))
+    manifest, asset = build_source_plane_ownership_ir(direct)
+    assert manifest["counts"]["terminal_bindings"] == 2
+    with load_source_plane_ownership_ir(manifest, {asset[0]: asset[1]}, expected_app_version="0.23.1", **binds(manifest)) as loaded:
+        row = next(item for item in loaded.iter_section("terminal_bindings") if item["role"] == "power")
+        assert row["via_record_required"] == 0 and row["via_record_id"] is None and row["finite_edge_id"] is None and row["via_owner_id"] is None
+    spool_path = _spool(tmp_path, direct)
+    spool_manifest, _ = build_source_plane_ownership_ir_from_spool(_SourcePlaneOwnershipSpool(spool_path), _v2_binding(direct))
+    assert spool_manifest["counts"]["terminal_bindings"] == 2
+    bad_path = tmp_path / "bad-direct"; bad_path.mkdir()
+    bad_spool = _spool(bad_path, direct)
+    connection = sqlite3.connect(bad_spool); connection.execute("UPDATE terminal_bindings SET finite_edge_id='edge-forbidden' WHERE terminal_id='term:p'"); connection.commit(); connection.close()
+    with pytest.raises(SourcePlaneOwnershipIRError): build_source_plane_ownership_ir_from_spool(_SourcePlaneOwnershipSpool(bad_spool), _v2_binding(direct))
+    invalid = draft(); invalid["terminal_bindings"][0].update(via_record_required=0, finite_edge_id=None, via_owner_id=None)
+    with pytest.raises(SourcePlaneOwnershipIRError): build_source_plane_ownership_ir(invalid)
+
 def test_manifest_tamper_replay_and_schema():
     m,(name,payload)=build_source_plane_ownership_ir(draft())
     with pytest.raises(SourcePlaneOwnershipIRError): load_source_plane_ownership_ir({**m,"raw_manifest_sha256":h("z")},{name:payload},**{**binds(m),"expected_raw_manifest_sha256":h("z")})

@@ -170,6 +170,22 @@ def test_real_v3_identity_tamper_fails_closed(tmp_path):
     with pytest.raises(consumer.SourcePlanePatchError): consumer.consume_source_plane_patch(own_manifest, {own_asset[0]: own_asset[1]}, {**raw_manifest, "geometry_identity_sha256": _h("e")}, {raw_asset[0]: raw_asset[1]}, rail_id="RAIL/0", frequency_hz=1.0e9, cell_um=1000.0)
 
 
+def test_owner_gate_direct_trace_is_null_witness_only():
+    value = deepcopy(draft())
+    value["terminal_bindings"][0].update(via_record_required=0, via_record_id=None, finite_edge_id=None, via_owner_id=None)
+    value["terminal_bindings"][0]["branch_id"] = value["terminal_bindings"][1]["branch_id"] = "branch:0"
+    value["retained_owner_refs"] = [row for row in value["retained_owner_refs"] if row["owner_id"] != "ViaA"]
+    value["replacement_ledger_members"] = [row for row in value["replacement_ledger_members"] if row["owner_id"] != "ViaA"]
+    value["plane_owner_scopes"].append({"ordinal": 1, "scope_id": "scope:g", "namespace": "plane-ground", "compiler_owner_id": "PlaneOwnerG", "rail_id": "RAIL/0", "role": "ground", "artwork_net": "ART_G", "layer": "L1", "state": "declared_unconsumed", "owner_count": 1})
+    value["replacement_ledger_members"].append({"ledger_id": "ledger:0", "owner_id": "PlaneOwnerG", "action": "replaced"})
+    value["replacement_ledger"][0].update(replaced_count=2, replaced_set_sha256=sha256(consumer.concrete_canonical_json_bytes(["planeowner0", "planeownerg"])).hexdigest())
+    power, ground, owners = consumer._owner_gate(value, "RAIL/0")
+    assert power["via_record_required"] == 0 and ground["via_record_required"] == 1 and owners == ["ViaB"]
+    value["terminal_bindings"][0]["via_owner_id"] = "ViaA"
+    with pytest.raises(consumer.SourcePlanePatchError, match="direct trace terminal must not carry Via witness"):
+        consumer._owner_gate(value, "RAIL/0")
+
+
 def _v2_import(tmp_path: Path, *, outside: bool = False):
     payload = (
         MINI_SPD.replace("LEGACY_SOURCE_GRAPH_UNAVAILABLE", "TRACE_VIA_COMPONENTS_AVAILABLE")
