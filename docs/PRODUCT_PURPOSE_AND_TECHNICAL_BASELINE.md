@@ -1,13 +1,13 @@
 # SPD Decap PI Evaluator v0.23.1 — 목적·기술 기준
 
-- 문서 버전: **3.3**
+- 문서 버전: **3.4**
 - 권위: **G0 — 목적, 우선순위, 합격 의미와 비주장 경계**
 - 최종 개정: **2026-09-01 (Asia/Seoul)**
 - 현재 외부 정확성: **W6-BASE 260729 retrospective numerical FAIL**
 - unseen/generalization: **unknown / not_run**
 - 현재 수치 개선: **0** — solver, `Y_global`, `Zii`와 PowerSI 비교 수치는 아직 바뀌지 않았다.
 - 현재 구현 gate: **DONE / ACCEPT / COMMITTED @ `eece8ab944a29a9f6c5ddde17e56de8dbbd2ee6a`**
-- 현재 정확성 gate: **A1 DONE / ACCEPT — A2 DONE / ACCEPT_NARROW_CORE_EVIDENCE — V1/A2R/A2S DONE / STOP — A2T DONE / STATIC_ACCEPT — V3G DONE / STATIC_ACCEPT — D-087 DONE / STOP_V3_LAUNCHER_COORDINATOR_SHA_CASE — D-088 V3R READY_FOR_SINGLE_V3R**
+- 현재 정확성 gate: **A1 DONE / ACCEPT — A2 DONE / ACCEPT_NARROW_CORE_EVIDENCE — V1/A2R/A2S DONE / STOP — A2T DONE / STATIC_ACCEPT — V3G DONE / STATIC_ACCEPT — D-087 DONE / STOP_V3_LAUNCHER_COORDINATOR_SHA_CASE — D-088 DONE / STOP_V3R_IMPORT_OWNERSHIP_TERMINAL_CONTRACT**
 
 ## 1. 문서 역할과 권위
 
@@ -147,9 +147,10 @@ flowchart LR
     V1T --> AN["A2 narrow core evidence<br/>DONE / ACCEPT"]
     AN --> V3G["별도 V3 계약<br/>DONE / STATIC_ACCEPT"]
     V3G --> C["D-087 single run<br/>STOP: SHA case gate"]
-    C --> V3R["D-088 V3R<br/>READY / lowercase SHA"]
-    V3R -->|complete / disjoint| L["analytic/local physics gate"]
-    V3R -->|missing / ambiguous| SSRC["DONE / STOP_NOT_READY"]
+    C --> V3R["D-088 V3R<br/>DONE / STOP_V3R_IMPORT_OWNERSHIP_TERMINAL_CONTRACT"]
+    V3R --> D89["D-089 focused contract<br/>ACTIVE"]
+    D89 -->|focused PASS| L["production one-shot consideration"]
+    D89 -->|STOP| SSRC["static diagnosis/replanning"]
     L --> I["one-owner production integration"]
     I --> A["동결 260729 development A/B 1회"]
     A -->|PASS| R["260804 retrospective holdout"]
@@ -288,10 +289,36 @@ Touchstone와 PowerSI는 호출하지 않는다.
 `STOP_V3_LAUNCHER_COORDINATOR_SHA_CASE`로 끝났다. import/compile/census/P1/solve/PowerSI/
 report는 모두 0이고 수치·제품·데이터 증거는 늘지 않았다. 동일 D-087은 재실행하지 않는다.
 
-다음 허용 작업은 coordinator와 제품을 바꾸지 않고 lowercase SHA, 새 exact HEAD/root를
-동결한 별도 D-088/V3R 실행 정확히 1회뿐이다. PASS도 원본-SPD
-raw/ownership/compiled Maxwell row census와 ledger completeness만 증명한다. G/C
-replacement, analytic accuracy와 PowerSI 수치 개선은 계속 미증명이며 현재 개선값은 0이다.
+D-088/V3R은 새 exact HEAD `d53ca9cccae7b824fb0cf3076c103d0fee08ab73`와
+`D:\SPD-Decap-PI-Evaluator-W7\d53ca9cccae7b824fb0cf3076c103d0fee08ab73\260729-a2-v3-source-block-census-01`
+root에서 정확히 한 번 소비됐다. `source_block_census_receipt.json`은 2,685 bytes,
+SHA-256 `9c415b58839a3a588c02cadb6adcc3a28f5cc389a4bc8e5314399e2012a7fb35`이며
+status/stage/disposition은 각각 `STOP`/`STOP_UNEXPECTED`/`STOP_UNEXPECTED`다.
+예외는 import-stage fail-closed의
+`SpdImportError: SOURCE_PLANE_OWNERSHIP_IR_TERMINAL_INCOMPLETE: finite edge owner set is absent`다.
+call ledger는 import=1, report=1, compile=0, census=0, P1=0, solve=0, PowerSI=0,
+retry=0, `report.present=false`다. 원본 SPD source-block census가 import 단계에서
+열리지 않아 numerical/product/data completeness 증거와 PowerSI 격차는 변하지 않았다.
+동일 D-088은 재실행하지 않는다. 종료 직후 수행한 정적 diagnosis/replanning에서
+Sol verdict는 **D-088 acceptance
+REJECT**이며 receipt는 유효한 fail-closed STOP으로 인정됐다. P1 evidence는
+`src/spd_decap_pi/spd_adapter.py:8149-8210, 9146-9152`에서 projected certificate가
+target-anchor first edge를 생략할 수 있는데 callback은 이후 이를 요구하는 점과,
+`tests/test_finite_via_layerwise.py:328-350`의 upstream finite-via가 direct-trace
+source-node null edge/owner를 허용하는 반면 `source_plane_ownership_ir.py:359-384,
+742-747`의 ownership IR은 Via/edge/owner를 강제하는 cross-IR mismatch다. 이는
+parser/IR representation mismatch이며 원본 SPD data 부재의 증거가 아니다. receipt에는
+role/pin/edge/path-kind가 없어 특정 production row를 어느 P1이 만들었는지는 주장하지
+않으며, observed message는 projected-edge absence와 일관될 뿐이다.
+
+다음 sole ACTIVE item은 D-089 `W7-ACC-TERMINAL-PATH-KIND-OWNERSHIP-IR-01` /
+`TERMINAL_PATH_KIND_OWNERSHIP_IR_CONTRACT`다. target-anchor first edge/endpoints/owner-series
+보존·검증, 기존 `via_record_required` discriminator로 conventional via=1과 direct
+trace=0을 구분하는 exact node/vertex/island/surface provenance, 그리고 conventional
+projected anchor·valid direct trace·mixed-invalid relation focused synthetic fixture만
+허용한다. schema expansion/new abstraction, 원본 SPD, full suite, solver, P1, PowerSI,
+coordinator edit와 production rerun은 금지하며, focused PASS 뒤 별도 문서화한
+production one-shot만 검토할 수 있다.
 
 그다음 fitting 없이 analytic/manufactured oracle에서 limiting case, passivity,
 reciprocity, conservation, conditioning과 expected error signature를 판정한다.
